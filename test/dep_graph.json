@@ -2155,6 +2155,18 @@
 "native_pentest",
 "native_senml"
 ],
+"src/network_drivers/presentation/codec/codec.cpp": [
+"native_cbor",
+"native_msgpack",
+"native_pentest",
+"native_senml"
+],
+"src/network_drivers/presentation/codec/codec.h": [
+"native_cbor",
+"native_msgpack",
+"native_pentest",
+"native_senml"
+],
 "src/network_drivers/presentation/codec/deflate/deflate.cpp": [
 "native_deflate",
 "native_ws_deflate"
@@ -2683,6 +2695,22 @@
 ],
 "src/network_drivers/presentation/ssh/connection/ssh_conn.h": [
 "native_ssh_conn"
+],
+"src/network_drivers/presentation/ssh/connection/ssh_flow_control.cpp": [
+"native_ssh",
+"native_ssh_comp",
+"native_ssh_conn",
+"native_ssh_hardened",
+"native_ssh_kbdint",
+"native_ssh_pqc"
+],
+"src/network_drivers/presentation/ssh/connection/ssh_flow_control.h": [
+"native_ssh",
+"native_ssh_comp",
+"native_ssh_conn",
+"native_ssh_hardened",
+"native_ssh_kbdint",
+"native_ssh_pqc"
 ],
 "src/network_drivers/presentation/ssh/connection/ssh_forward.h": [
 "native_ssh_conn"
@@ -5308,6 +5336,7 @@
 "native_audit_log",
 "native_bus_capture",
 "native_c37118",
+"native_cbor",
 "native_cia402",
 "native_coaps",
 "native_coaps_server",
@@ -5337,6 +5366,7 @@
 "native_jwt",
 "native_keepalive",
 "native_melsec",
+"native_msgpack",
 "native_ntp_server",
 "native_oidc",
 "native_pentest",
@@ -5349,6 +5379,7 @@
 "native_quic_tls_pqc",
 "native_radio_sniff",
 "native_range",
+"native_senml",
 "native_smb",
 "native_snmp_v3",
 "native_ssh",
@@ -5490,6 +5521,7 @@
 "native",
 "native_accept_gate",
 "native_app",
+"native_cbor",
 "native_coaps",
 "native_coaps_server",
 "native_crypto_kat",
@@ -5507,6 +5539,7 @@
 "native_ipsec_db",
 "native_jwt",
 "native_keepalive",
+"native_msgpack",
 "native_oidc",
 "native_pentest",
 "native_quic_conn",
@@ -5517,6 +5550,7 @@
 "native_range",
 "native_scratch",
 "native_secure_pool",
+"native_senml",
 "native_smb",
 "native_snmp_v3",
 "native_ssh",
