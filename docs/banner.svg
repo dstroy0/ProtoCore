@@ -338,5 +338,5 @@
 
   <!-- Version chip -->
   <rect x="792" y="26" width="76" height="22" rx="11" fill="#121924" stroke="#22303f"/>
-  <text x="830" y="41" font-size="12" font-weight="700" fill="#3ecf7a" text-anchor="middle">v0.0.1</text>
+  <text x="830" y="41" font-size="12" font-weight="700" fill="#3ecf7a" text-anchor="middle">v0.0.2</text>
 </svg>
