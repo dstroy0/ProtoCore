@@ -1363,19 +1363,19 @@ Feature Tables workflow from `docs/footprints.json`.
 | `CONFIG_STORE+CONFIG_IO` | `L7-Application/ConfigExport` | 761,461 | 81,904 |
 | `OTA` | `L7-Application/OTA` | 761,917 | 102,172 |
 | `DNS_RESOLVER` | `L7-Application/DnsResolver` | 762,401 | 83,124 |
-| `PARTITION_MONITOR` | `L7-Application/PartitionMonitor` | 762,709 | 81,844 |
+| `PARTITION_MONITOR` | `L7-Application/PartitionMonitor` | 762,481 | 81,844 |
 | `GRAPHQL` | `L7-Application/GraphQL` | 762,793 | 86,252 |
 | `COAP` | `L7-Application/CoAP` | 763,717 | 85,556 |
-| `TELNET` | `L5-Session/Telnet` | 764,177 | 82,372 |
+| `TELNET` | `L5-Session/Telnet` | 763,929 | 82,372 |
 | `PROVISIONING` | `L7-Application/Provisioning` | 764,721 | 83,472 |
 | `OPCUA` | `L7-Application/OpcUa` | 764,773 | 92,124 |
 | `core/Advanced` | `Foundation/Advanced` | 765,177 | 81,956 |
 | `TELEMETRY` | `L7-Application/Telemetry` | 765,285 | 82,160 |
 | `SNMP` | `L7-Application/SNMP` | 765,393 | 94,292 |
+| `GPIO_MAP` | `L7-Application/GpioMap` | 766,013 | 81,900 |
 | `RELAY` | `L7-Application/PortForward` | 766,141 | 116,452 |
 | `PROMISC+FORWARD+ETHERNET` | `Peripherals/WifiCapture` | 766,213 | 47,584 |
-| `GPIO_MAP` | `L7-Application/GpioMap` | 766,241 | 81,900 |
-| `WEB_TERMINAL` | `L6-Presentation/WebTerminal` | 766,737 | 81,924 |
+| `WEB_TERMINAL` | `L6-Presentation/WebTerminal` | 766,489 | 81,924 |
 | `RTC+TIME_SOURCE+NTP` | `Drivers/Rtc` | 767,177 | 45,388 |
 | `HTTP_CLIENT+WEBHOOK` | `L7-Application/Webhook` | 767,273 | 101,596 |
 | `SMB` | `L7-Application/SmbFileClient` | 768,029 | 68,012 |
@@ -1394,7 +1394,7 @@ Feature Tables workflow from `docs/footprints.json`.
 | `MDNS` | `L7-Application/mDNS` | 781,793 | 83,752 |
 | `NTP` | `L7-Application/SNTP` | 782,189 | 84,392 |
 | `EDGE_CACHE+HTTP_CACHE+HTTP_CLIENT+EDGE_MESH+EDGE_CACHE_SLOTS+EDGE_FETCH_SLOTS+MESH_MAX_PEERS` | `L7-Application/MeshCache` | 782,585 | 115,380 |
-| `DASHBOARD` | `L7-Application/Dashboard` | 783,217 | 82,212 |
+| `DASHBOARD` | `L7-Application/Dashboard` | 782,989 | 82,212 |
 | `MDNS+PROMISC+WIFI_SNIFFER+MDNS_ADAPTIVE` | `L7-Application/MdnsAdaptive` | 783,853 | 83,832 |
 | `IFACE_BRIDGE` | `L7-Application/InterfaceBridge` | 784,405 | 82,684 |
 | `COAP+DTLS` | `L7-Application/CoapSecure` | 787,601 | 111,964 |
@@ -1663,8 +1663,7 @@ The complete set of `PC_ENABLE_*` flags and their defaults, scraped from
 | `PC_ENABLE_RANGE` | `0` | HTTP Range requests / 206 Partial Content (requires PC_ENABLE_FILE_SERVING or PC_ENABLE_EDGE_CACHE). |
 | `PC_ENABLE_RAWL2` | `0` | Opt-in raw Layer-2 Ethernet frame codec. |
 | `PC_ENABLE_RCWL0516` | `0` | RCWL-0516 microwave Doppler presence sensor + the shared one-GPIO presence facade (`services/rcwl0516`). |
-| `PC_ENABLE_REDIS` | `0` | Redis RESP2 wire codec (`services/redis_resp`). |
-| `PC_ENABLE_REDIS` | `0` | Redis RESP2 wire codec (`services/redis_resp`). |
+| `PC_ENABLE_REDIS` | `0` | Redis RESP2/RESP3 wire codec (`services/iot/redis_resp`). |
 | `PC_ENABLE_RELAY` | `0` | Opt-in TCP relay / DNAT port forwarding. |
 | `PC_ENABLE_ROAMING` | `0` | Wi-Fi roaming decision layer (`services/roaming`). |
 | `PC_ENABLE_ROBOTICS` | `0` | OPC UA for Robotics information model. |

@@ -764,21 +764,11 @@ Each **green** node is a parent feature and each **blue** node a child that requ
 | Enabling this... | ...auto-enables |
 | --- | --- |
 | `PC_ENABLE_EDGE_ORIGIN_TLS` | `PC_ENABLE_CLIENT_TLS` |
-| `PC_ENABLE_HTTP_CLIENT` | `PC_ENABLE_DNS_RESOLVER` |
 | `PC_ENABLE_HTTP_CLIENT_TLS` | `PC_ENABLE_CLIENT_TLS` |
-| `PC_ENABLE_MODBUS_RTU` | `PC_ENABLE_MODBUS` |
-| `PC_ENABLE_MQTT` | `PC_ENABLE_DNS_RESOLVER` |
 | `PC_ENABLE_MQTT_TLS` | `PC_ENABLE_CLIENT_TLS` |
-| `PC_ENABLE_NMEA2000` | `PC_ENABLE_J1939` |
-| `PC_ENABLE_NTRIP_CASTER` | `PC_ENABLE_NMEA0183` |
 | `PC_ENABLE_OTA` | `PC_ENABLE_STREAM_BODY` |
-| `PC_ENABLE_RELAY` | `PC_ENABLE_DNS_RESOLVER` |
-| `PC_ENABLE_SENML` | `PC_ENABLE_CBOR` |
-| `PC_ENABLE_SMTP` | `PC_ENABLE_DNS_RESOLVER` |
-| `PC_ENABLE_SPARKPLUG` | `PC_ENABLE_PROTOBUF` |
 | `PC_ENABLE_UPLOAD` | `PC_ENABLE_STREAM_BODY` |
 | `PC_ENABLE_WEBDAV` | `PC_ENABLE_STREAM_BODY` |
-| `PC_ENABLE_WS_CLIENT` | `PC_ENABLE_DNS_RESOLVER` |
 | `PC_ENABLE_WS_CLIENT_TLS` | `PC_ENABLE_CLIENT_TLS` |
 </details>
 
@@ -791,7 +781,7 @@ Each **green** node is a parent feature and each **blue** node a child that requ
 | `PC_ENABLE_TLS` | MAX_TLS_CONNS gt 1 |
 </details>
 
-_40 hard dependencies, 3 PSRAM gates, 17 derived flags._
+_40 hard dependencies, 3 PSRAM gates, 7 derived flags._
 
 <!-- prettier-ignore-end -->
 
@@ -818,9 +808,9 @@ Measured on `esp32dev` (Arduino core). The **default server** baseline (HTTP + W
 | L4 | `KEEPALIVE` | 3.7 KB | 15.3 KB |
 | L4 | `ACCEPT_THROTTLE` | 3.3 KB | 15.3 KB |
 | L5 | `SSH` | 66.6-82.1 KB | 21.8-44.9 KB |
-| L5 | `TELNET` | 11.1 KB | 15.8 KB |
+| L5 | `TELNET` | 10.8 KB | 15.8 KB |
 | L6 | `TLS` | 100.6 KB | 54.5 KB |
-| L6 | `WEB_TERMINAL` | 0.0-13.6 KB | 0.0-15.4 KB |
+| L6 | `WEB_TERMINAL` | 0.0-13.3 KB | 0.0-15.4 KB |
 | L6 | `WS_DEFLATE` | 4.1-8.2 KB | 8.0-23.3 KB |
 | L6 | `MSGPACK` | 7.3 KB | 15.3 KB |
 | L6 | `JWT` | 6.4 KB | 17.7 KB |
@@ -838,7 +828,7 @@ Measured on `esp32dev` (Arduino core). The **default server** baseline (HTTP + W
 | L7 | `RANGE` | 0.6-45.1 KB | 0.0-15.3 KB |
 | L7 | `UPLOAD` | 44.9 KB | 34.9 KB |
 | L7 | `IFACE_BRIDGE` | 30.8 KB | 16.1 KB |
-| L7 | `DASHBOARD` | 29.7 KB | 15.6 KB |
+| L7 | `DASHBOARD` | 29.4 KB | 15.6 KB |
 | L7 | `NTP` | 28.7 KB | 17.8 KB |
 | L7 | `MDNS` | 28.3 KB | 17.1 KB |
 | L7 | `EDGE_CACHE` | 24.5 KB | 51.9 KB |
@@ -849,15 +839,15 @@ Measured on `esp32dev` (Arduino core). The **default server** baseline (HTTP + W
 | L7 | `OIDC` | 15.9 KB | 32.9 KB |
 | L7 | `SMB` | 14.8 KB | 1.8 KB |
 | L7 | `WEBHOOK` | 14.1 KB | 34.6 KB |
-| L7 | `GPIO_MAP` | 13.1 KB | 15.3 KB |
 | L7 | `RELAY` | 13.0 KB | 49.1 KB |
+| L7 | `GPIO_MAP` | 12.9 KB | 15.3 KB |
 | L7 | `SNMP` | 12.3 KB | 27.4 KB |
 | L7 | `TELEMETRY` | 12.1 KB | 15.6 KB |
 | L7 | `OPCUA` | 6.8-11.6 KB | 10.0-25.3 KB |
 | L7 | `PROVISIONING` | 11.6 KB | 16.9 KB |
 | L7 | `COAP` | 10.6 KB | 18.9 KB |
 | L7 | `GRAPHQL` | 9.7 KB | 19.6 KB |
-| L7 | `PARTITION_MONITOR` | 9.6 KB | 15.3 KB |
+| L7 | `PARTITION_MONITOR` | 9.4 KB | 15.3 KB |
 | L7 | `DNS_RESOLVER` | 9.3 KB | 16.5 KB |
 | L7 | `OTA` | 8.9 KB | 35.1 KB |
 | L7 | `CONFIG_IO` | 8.4 KB | 15.3 KB |
