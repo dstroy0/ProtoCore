@@ -1224,7 +1224,6 @@ src/
 │   ├── can.h
 │   ├── crc.h
 │   ├── endian.h
-│   ├── fmtbuf.h
 │   ├── frame.cpp
 │   ├── frame.h
 │   ├── hex.h
