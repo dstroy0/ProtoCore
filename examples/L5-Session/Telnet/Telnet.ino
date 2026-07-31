@@ -33,6 +33,14 @@ static const char *PASSWORD = "YOUR_PASSWORD";
 
 PC server;
 
+// Each reply's shape is a table, declared once. The library builds it by walking the table, so
+// nothing parses a format string at runtime and no line can come out half-written.
+// The fields are {kind, width, literal length, literal}; a valued field takes one argument below.
+static const pc_field REPLY_HEAP[] = {
+    {PC_FK_LIT, 0, 11, "free heap: "}, PC_U32, {PC_FK_LIT, 0, 8, " bytes\r\n"}, PC_END};
+static const pc_field REPLY_UPTIME[] = {{PC_FK_LIT, 0, 8, "uptime: "}, PC_U32, {PC_FK_LIT, 0, 5, " ms\r\n"}, PC_END};
+static const pc_field REPLY_ECHO[] = {{PC_FK_LIT, 0, 6, "echo: "}, PC_STR, {PC_FK_LIT, 0, 2, "\r\n"}, PC_END};
+
 void on_command(const char *line, uint8_t conn_id)
 {
     (void)conn_id;
@@ -42,15 +50,15 @@ void on_command(const char *line, uint8_t conn_id)
     }
     else if (strcmp(line, "heap") == 0)
     {
-        pc_telnet_printf("free heap: %u bytes\r\n", ESP.getFreeHeap());
+        pc_telnet_frame(REPLY_HEAP, (uint32_t)ESP.getFreeHeap());
     }
     else if (strcmp(line, "uptime") == 0)
     {
-        pc_telnet_printf("uptime: %lu ms\r\n", millis());
+        pc_telnet_frame(REPLY_UPTIME, (uint32_t)millis());
     }
     else if (line[0])
     {
-        pc_telnet_printf("echo: %s\r\n", line);
+        pc_telnet_frame(REPLY_ECHO, line);
     }
 }
 

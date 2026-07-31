@@ -4,8 +4,8 @@
 // On-device CCOUNT microbenchmark for services/web_terminal. NOTE: web_terminal is a thin *server
 // binding* - it serves a terminal page and pumps I/O to connected clients over WebSocket + SSE, both
 // of which have their own device benches (performance_benching/device/websocket, performance_benching/device/sse). It
-// has no standalone pure codec of its own, so the only side-effect-free op to time is the line formatter
-// pc_web_terminal_printf (which formats into the outbound buffer; with no clients attached the
+// has no standalone pure codec of its own, so the only side-effect-free op to time is the line builder
+// pc_web_terminal_frame (which builds into the outbound buffer; with no clients attached the
 // broadcast is a no-op) and the client-count getter. Kept for suite completeness; not a throughput
 // number.
 //
@@ -14,6 +14,9 @@
 #include "services/web/web_terminal/web_terminal.h"
 #include <Arduino.h>
 
+static const pc_field BENCH_LINE[] = {{PC_FK_LIT, 0, 7, "sensor="}, PC_U32, {PC_FK_LIT, 0, 4, " rh="}, PC_U32,
+                                      {PC_FK_LIT, 0, 7, "% heap="}, PC_U32, {PC_FK_LIT, 0, 1, "\n"},   PC_END};
+
 static void web_terminal_bench_task(void *)
 {
     for (;;)
@@ -21,8 +24,8 @@ static void web_terminal_bench_task(void *)
         Serial.printf("DB ==== web_terminal device microbench start (CCOUNT @ %u MHz) ====\n",
                       (unsigned)getCpuFrequencyMhz());
         volatile uint32_t sink = 0;
-        DBENCH_OP("pc_web_terminal_printf (format)", 200000, {
-            pc_web_terminal_printf("sensor=%d rh=%d%% heap=%u\n", 214, 48, 131072u);
+        DBENCH_OP("pc_web_terminal_frame (build)", 200000, {
+            pc_web_terminal_frame(BENCH_LINE, (uint32_t)214, (uint32_t)48, (uint32_t)131072);
             sink += 1;
         });
         DBENCH_OP("pc_web_terminal_client_count", 200000, sink += pc_web_terminal_client_count());

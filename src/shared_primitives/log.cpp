@@ -14,7 +14,6 @@
 #if PC_LOG_LEVEL < PC_LOG_LEVEL_NONE
 
 #include <stdarg.h>
-#include <stdio.h>
 
 #if PC_ENABLE_LOGBUF
 #include "services/system/logbuf/logbuf.h"
@@ -32,19 +31,20 @@ void pc_log_set_sink(pc_log_sink_fn cb)
     s_log.sink = cb;
 }
 
-void pc_log_printf(uint8_t level, const char *fmt, ...)
+void pc_log_frame(uint8_t level, const pc_field *spec, ...)
 {
-    if (!fmt)
+    if (!spec)
     {
         return;
     }
 
-    // One line's worth of stack, matching what the ring can store - a message longer than a stored
-    // line would be truncated there anyway, so it is truncated once, here.
+    // One line's worth of stack, matching what the ring can store. A message longer than that is
+    // clipped rather than refused: the ring would clip it anyway, and losing the event entirely is
+    // worse than reading a short one. This is display text, so it takes the clipping build.
     char line[PC_LOG_LINE_LEN];
     va_list ap;
-    va_start(ap, fmt);
-    vsnprintf(line, sizeof(line), fmt, ap);
+    va_start(ap, spec);
+    (void)pc_frame_vbuild_clip(line, sizeof(line), spec, ap);
     va_end(ap);
 
 #if PC_ENABLE_LOGBUF

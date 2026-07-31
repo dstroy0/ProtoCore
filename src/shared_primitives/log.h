@@ -28,6 +28,7 @@
 #define PROTOCORE_LOG_H
 
 #include "protocore_config.h"
+#include "shared_primitives/frame.h"
 #include <stdint.h>
 
 /** @brief Receives an emitted line, already formatted. @p level is a PC_LOG_LEVEL_* value. */
@@ -36,22 +37,28 @@ typedef void (*pc_log_sink_fn)(uint8_t level, const char *line);
 /**
  * @brief Declared, never defined: only ever named inside `sizeof`, so no call is ever generated.
  *
- * Its whole job is to carry the printf format attribute, which is what makes a *discarded* log
- * statement still type-check.
+ * It exists to mark a discarded statement's arguments as used, so a variable read only by a log
+ * does not warn its way into being deleted.
  */
-int pc_log_typecheck(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
+int pc_log_discard_args(const pc_field *spec, ...);
 
-/** @brief The discarded form: type-checks and marks arguments used, emits nothing. */
+/** @brief The discarded form: marks arguments used, emits nothing. */
 #define PC_LOG_DISCARD(...)                                                                                            \
     do                                                                                                                 \
     {                                                                                                                  \
-        (void)sizeof(pc_log_typecheck(__VA_ARGS__));                                                                   \
+        (void)sizeof(pc_log_discard_args(__VA_ARGS__));                                                                \
     } while (0)
 
 #if PC_LOG_LEVEL < PC_LOG_LEVEL_NONE
 
-/** @brief Format a line and route it to the logbuf ring and/or the registered sink. */
-void pc_log_printf(uint8_t level, const char *fmt, ...) __attribute__((format(printf, 2, 3)));
+/**
+ * @brief Build @p spec into a line and route it to the logbuf ring and/or the registered sink.
+ *
+ * A spec, not a format string: the shape of the message is decided when the code is written, so
+ * nothing here parses anything at runtime, and a build whose logs declare no float field links no
+ * float formatter.
+ */
+void pc_log_frame(uint8_t level, const pc_field *spec, ...);
 
 /** @brief Install (or clear, with nullptr) the sink emitted lines are handed to. */
 void pc_log_set_sink(pc_log_sink_fn cb);
@@ -67,25 +74,25 @@ static inline void pc_log_set_sink(pc_log_sink_fn cb)
 #endif // PC_LOG_LEVEL < PC_LOG_LEVEL_NONE
 
 #if PC_LOG_LEVEL <= PC_LOG_LEVEL_DEBUG
-#define PC_LOGD(...) pc_log_printf(PC_LOG_LEVEL_DEBUG, __VA_ARGS__)
+#define PC_LOGD(...) pc_log_frame(PC_LOG_LEVEL_DEBUG, __VA_ARGS__)
 #else
 #define PC_LOGD(...) PC_LOG_DISCARD(__VA_ARGS__)
 #endif
 
 #if PC_LOG_LEVEL <= PC_LOG_LEVEL_INFO
-#define PC_LOGI(...) pc_log_printf(PC_LOG_LEVEL_INFO, __VA_ARGS__)
+#define PC_LOGI(...) pc_log_frame(PC_LOG_LEVEL_INFO, __VA_ARGS__)
 #else
 #define PC_LOGI(...) PC_LOG_DISCARD(__VA_ARGS__)
 #endif
 
 #if PC_LOG_LEVEL <= PC_LOG_LEVEL_WARN
-#define PC_LOGW(...) pc_log_printf(PC_LOG_LEVEL_WARN, __VA_ARGS__)
+#define PC_LOGW(...) pc_log_frame(PC_LOG_LEVEL_WARN, __VA_ARGS__)
 #else
 #define PC_LOGW(...) PC_LOG_DISCARD(__VA_ARGS__)
 #endif
 
 #if PC_LOG_LEVEL <= PC_LOG_LEVEL_ERROR
-#define PC_LOGE(...) pc_log_printf(PC_LOG_LEVEL_ERROR, __VA_ARGS__)
+#define PC_LOGE(...) pc_log_frame(PC_LOG_LEVEL_ERROR, __VA_ARGS__)
 #else
 #define PC_LOGE(...) PC_LOG_DISCARD(__VA_ARGS__)
 #endif

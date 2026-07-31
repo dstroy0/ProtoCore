@@ -24,15 +24,15 @@ server.begin(80);                // also start HTTP; begin() activates every lis
 
 **A line-at-a-time command handler.** The callback receives a fully-edited line
 and the connection id; reply with `pc_telnet_print` / `pc_telnet_println` /
-`pc_telnet_printf`. This example is a minimal shell with `help`, `heap`, `uptime`,
+`pc_telnet_frame`. This example is a minimal shell with `help`, `heap`, `uptime`,
 and an echo fallback:
 
 ```cpp
 void on_command(const char *line, uint8_t conn_id) {
     if (strcmp(line, "heap") == 0)
-        pc_telnet_printf("free heap: %u bytes\r\n", ESP.getFreeHeap());
+        pc_telnet_frame(REPLY_HEAP, (uint32_t)ESP.getFreeHeap());
     else if (line[0])
-        pc_telnet_printf("echo: %s\r\n", line);
+        pc_telnet_frame(REPLY_ECHO, line);
 }
 ```
 
@@ -70,7 +70,7 @@ added explanatory comments:
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
-#include "network_drivers/presentation/telnet/telnet.h" // pc_telnet_on_command / pc_telnet_printf
+#include "network_drivers/presentation/telnet/telnet.h" // pc_telnet_on_command / pc_telnet_frame
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
@@ -84,11 +84,11 @@ void on_command(const char *line, uint8_t conn_id)
     if (strcmp(line, "help") == 0)
         pc_telnet_println("commands: help, heap, uptime, <echo>");
     else if (strcmp(line, "heap") == 0)
-        pc_telnet_printf("free heap: %u bytes\r\n", ESP.getFreeHeap());
+        pc_telnet_frame(REPLY_HEAP, (uint32_t)ESP.getFreeHeap());
     else if (strcmp(line, "uptime") == 0)
-        pc_telnet_printf("uptime: %lu ms\r\n", millis());
+        pc_telnet_frame(REPLY_UPTIME, (uint32_t)millis());
     else if (line[0])                       // non-empty -> echo it
-        pc_telnet_printf("echo: %s\r\n", line);
+        pc_telnet_frame(REPLY_ECHO, line);
 }
 
 void setup()

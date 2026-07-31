@@ -36,6 +36,21 @@ static int counting_arg(void)
     return 42;
 }
 
+// Log frames under test. Each is the message shape the caller declares.
+static const pc_field F_DEBUG[] = {{PC_FK_LIT, 0, 6, "debug "}, PC_I64, PC_END};
+static const pc_field F_EXPENSIVE[] = {{PC_FK_LIT, 0, 10, "expensive "}, PC_I64, PC_END};
+static const pc_field F_HELLO[] = {{PC_FK_LIT, 0, 6, "hello "}, PC_I64, PC_END};
+static const pc_field F_WARN[] = {{PC_FK_LIT, 0, 5, "warn "}, PC_STR, PC_END};
+static const pc_field F_ERR[] = {{PC_FK_LIT, 0, 4, "err "}, PC_U32, PC_END};
+static const pc_field F_VALUE[] = {{PC_FK_LIT, 0, 6, "value "}, PC_I64, PC_END};
+
+static const pc_field F_RING[] = {{PC_FK_LIT, 0, 11, "to the ring"}, PC_END};
+static const pc_field F_I[] = {{PC_FK_LIT, 0, 1, "i"}, PC_END};
+static const pc_field F_W[] = {{PC_FK_LIT, 0, 1, "w"}, PC_END};
+static const pc_field F_E[] = {{PC_FK_LIT, 0, 1, "e"}, PC_END};
+static const pc_field F_STILL[] = {{PC_FK_LIT, 0, 22, "still goes to the ring"}, PC_END};
+static const pc_field F_STR[] = {PC_STR, PC_END};
+
 void setUp()
 {
     s_last_level = 0xFF;
@@ -55,7 +70,7 @@ void tearDown()
 
 void test_debug_is_below_the_floor_and_emits_nothing()
 {
-    PC_LOGD("debug %d", counting_arg());
+    PC_LOGD(F_DEBUG, (int64_t)counting_arg());
     TEST_ASSERT_EQUAL_INT(0, s_sink_calls);
     TEST_ASSERT_EQUAL_UINT16(0, pc_log_count());
 }
@@ -64,22 +79,22 @@ void test_discarded_call_does_not_evaluate_its_arguments()
 {
     // The whole point of a preprocessor filter rather than a runtime `if`: a discarded log must not
     // pay for building its own arguments either.
-    PC_LOGD("expensive %d", counting_arg());
+    PC_LOGD(F_EXPENSIVE, (int64_t)counting_arg());
     TEST_ASSERT_EQUAL_INT(0, s_eval_count);
 }
 
 void test_info_and_above_emit()
 {
-    PC_LOGI("hello %d", 7);
+    PC_LOGI(F_HELLO, (int64_t)7);
     TEST_ASSERT_EQUAL_INT(1, s_sink_calls);
     TEST_ASSERT_EQUAL_UINT8(PC_LOG_LEVEL_INFO, s_last_level);
     TEST_ASSERT_EQUAL_STRING("hello 7", s_last_line);
 
-    PC_LOGW("warn %s", "here");
+    PC_LOGW(F_WARN, "here");
     TEST_ASSERT_EQUAL_UINT8(PC_LOG_LEVEL_WARN, s_last_level);
     TEST_ASSERT_EQUAL_STRING("warn here", s_last_line);
 
-    PC_LOGE("err %u", 3u);
+    PC_LOGE(F_ERR, (uint32_t)3);
     TEST_ASSERT_EQUAL_UINT8(PC_LOG_LEVEL_ERROR, s_last_level);
     TEST_ASSERT_EQUAL_STRING("err 3", s_last_line);
 
@@ -88,7 +103,7 @@ void test_info_and_above_emit()
 
 void test_enabled_call_does_evaluate_its_arguments()
 {
-    PC_LOGI("value %d", counting_arg());
+    PC_LOGI(F_VALUE, (int64_t)counting_arg());
     TEST_ASSERT_EQUAL_INT(1, s_eval_count);
     TEST_ASSERT_EQUAL_STRING("value 42", s_last_line);
 }
@@ -97,7 +112,7 @@ void test_enabled_call_does_evaluate_its_arguments()
 
 void test_emitted_line_also_reaches_the_logbuf_ring()
 {
-    PC_LOGW("to the ring");
+    PC_LOGW(F_RING);
     TEST_ASSERT_EQUAL_UINT16(1, pc_log_count());
     TEST_ASSERT_EQUAL_STRING("W to the ring", pc_log_at(0));
 }
@@ -106,9 +121,9 @@ void test_levels_match_the_logbuf_letters()
 {
     // The PC_LOG_LEVEL_* preprocessor values and pc_log_level's constexprs are two spellings of one
     // scale; if they ever drift, the stored letter is what goes wrong, so assert on that.
-    PC_LOGI("i");
-    PC_LOGW("w");
-    PC_LOGE("e");
+    PC_LOGI(F_I);
+    PC_LOGW(F_W);
+    PC_LOGE(F_E);
     TEST_ASSERT_EQUAL_STRING("I i", pc_log_at(0));
     TEST_ASSERT_EQUAL_STRING("W w", pc_log_at(1));
     TEST_ASSERT_EQUAL_STRING("E e", pc_log_at(2));
@@ -121,7 +136,7 @@ void test_levels_match_the_logbuf_letters()
 void test_no_sink_is_not_a_crash()
 {
     pc_log_set_sink(nullptr);
-    PC_LOGE("still goes to the ring");
+    PC_LOGE(F_STILL);
     TEST_ASSERT_EQUAL_INT(0, s_sink_calls);
     TEST_ASSERT_EQUAL_UINT16(1, pc_log_count());
 }
@@ -133,22 +148,22 @@ void test_long_line_is_truncated_not_overflowed()
     char big[PC_LOG_LINE_LEN * 3];
     memset(big, 'x', sizeof(big) - 1);
     big[sizeof(big) - 1] = '\0';
-    PC_LOGE("%s", big);
+    PC_LOGE(F_STR, big);
     TEST_ASSERT_EQUAL_INT(1, s_sink_calls);
     TEST_ASSERT_TRUE(strlen(s_last_line) < PC_LOG_LINE_LEN);
 }
 
-void test_null_format_is_ignored()
+void test_null_spec_is_ignored()
 {
-    const char *fmt = nullptr;
-    pc_log_printf(PC_LOG_LEVEL_ERROR, fmt);
+    const pc_field *spec = nullptr;
+    pc_log_frame(PC_LOG_LEVEL_ERROR, spec);
     TEST_ASSERT_EQUAL_INT(0, s_sink_calls);
     TEST_ASSERT_EQUAL_UINT16(0, pc_log_count());
 }
 
 void test_empty_message_is_still_a_line()
 {
-    PC_LOGI("%s", "");
+    PC_LOGI(F_STR, "");
     TEST_ASSERT_EQUAL_INT(1, s_sink_calls);
     TEST_ASSERT_EQUAL_STRING("", s_last_line);
     TEST_ASSERT_EQUAL_STRING("I ", pc_log_at(0));
@@ -288,7 +303,7 @@ int main(int, char **)
     RUN_TEST(test_levels_match_the_logbuf_letters);
     RUN_TEST(test_no_sink_is_not_a_crash);
     RUN_TEST(test_long_line_is_truncated_not_overflowed);
-    RUN_TEST(test_null_format_is_ignored);
+    RUN_TEST(test_null_spec_is_ignored);
     RUN_TEST(test_empty_message_is_still_a_line);
     RUN_TEST(test_ring_atomic_wrapper_round_trips);
     RUN_TEST(test_ring_read_byte_and_available);

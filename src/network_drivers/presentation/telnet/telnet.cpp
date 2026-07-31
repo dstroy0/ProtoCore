@@ -13,7 +13,6 @@
 #include "network_drivers/session/proto_handler.h"
 #include "network_drivers/transport/tcp.h"
 #include <stdarg.h>
-#include <stdio.h>
 #include <string.h>
 
 // Telnet protocol bytes (RFC 854 / 858 / 857): wire values compared/emitted, so integer constants
@@ -310,16 +309,16 @@ void pc_telnet_println(const char *s)
     broadcast("\r\n", 2);
 }
 
-void pc_telnet_printf(const char *fmt, ...)
+void pc_telnet_frame(const pc_field *spec, ...)
 {
     char buf[TELNET_BUF_SIZE];
     va_list ap;
-    va_start(ap, fmt);
-    int n = vsnprintf(buf, sizeof(buf), fmt, ap);
+    va_start(ap, spec);
+    size_t n = pc_frame_vbuild(buf, sizeof(buf), spec, ap);
     va_end(ap);
     if (n > 0)
     {
-        broadcast(buf, (size_t)(n < (int)sizeof(buf) ? n : (int)sizeof(buf) - 1));
+        broadcast(buf, n);
     }
 }
 

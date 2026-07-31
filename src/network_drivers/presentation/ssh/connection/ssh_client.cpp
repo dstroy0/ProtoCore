@@ -406,9 +406,26 @@ static bool cli_send(const uint8_t *payload, size_t len)
     return pc_client_send(s_cli.cid, s_cli.wire, wlen);
 }
 
+// Log frames: each message's shape is fixed here, so nothing is parsed when one is emitted.
+static const pc_field LOG_TUNNEL_FAIL[] = {{PC_FK_LIT, 0, 12, "ssh-tunnel: "}, PC_STR, PC_END};
+static const pc_field LOG_TUNNEL_NEGOTIATED[] = {{PC_FK_LIT, 0, 27, "ssh-tunnel: negotiated kex="},
+                                                 PC_STR,
+                                                 {PC_FK_LIT, 0, 9, " hostkey="},
+                                                 PC_STR,
+                                                 {PC_FK_LIT, 0, 8, " cipher="},
+                                                 PC_STR,
+                                                 PC_END};
+static const pc_field LOG_TUNNEL_FWD_OPEN[] = {{PC_FK_LIT, 0, 49, "ssh-tunnel: forwarded-tcpip open, local connect(:"},
+                                               PC_U32,
+                                               {PC_FK_LIT, 0, 6, ") cid="},
+                                               PC_I64,
+                                               PC_END};
+static const pc_field LOG_TUNNEL_UP[] = {
+    {PC_FK_LIT, 0, 31, "ssh-tunnel: up (relay forward :"}, PC_U32, {PC_FK_LIT, 0, 1, ")"}, PC_END};
+
 static void cli_fail(const char *why)
 {
-    PC_LOGW("ssh-tunnel: %s", why);
+    PC_LOGW(LOG_TUNNEL_FAIL, why);
     s_cli.phase = CliPhase::FAILED;
     s_cli.state = pc_ssh_tunnel_state::PC_TUN_FAILED;
     for (int i = 0; i < PC_SSH_CLIENT_MAX_CHANNELS; i++)
@@ -624,7 +641,7 @@ static bool handle_server_kexinit(const uint8_t *p, size_t len)
     s_cli.hostkey = (CliHostkey)hi; // HOSTKEY_NAMES order == CliHostkey order
     static const uint8_t cipher_of[] = {SSH_CIPHER_CHACHA20POLY1305, SSH_CIPHER_AES256GCM, SSH_CIPHER_AES256CTR};
     s_cli.cipher = cipher_of[ci];
-    PC_LOGI("ssh-tunnel: negotiated kex=%s hostkey=%s cipher=%s", KEX_NAMES[ki], HOSTKEY_NAMES[hi], CIPHER_NAMES[ci]);
+    PC_LOGI(LOG_TUNNEL_NEGOTIATED, KEX_NAMES[ki], HOSTKEY_NAMES[hi], CIPHER_NAMES[ci]);
 
     s_cli.mac = SSH_MAC_HMAC_SHA256;
     if (s_cli.cipher == SSH_CIPHER_AES256CTR)
@@ -1175,7 +1192,7 @@ static void handle_channel_open(const uint8_t *p, size_t len)
 
     // Open the local bridge connection (to the device's own service).
     int lc = pc_client_open("127.0.0.1", s_cli.cfg.local_port, 3000);
-    PC_LOGD("ssh-tunnel: forwarded-tcpip open, local connect(:%u) cid=%d", (unsigned)s_cli.cfg.local_port, lc);
+    PC_LOGD(LOG_TUNNEL_FWD_OPEN, (uint32_t)s_cli.cfg.local_port, (int64_t)lc);
     if (lc < 0)
     {
         uint8_t out[64];
@@ -1435,7 +1452,7 @@ static void cli_msg_handler(uint8_t slot, uint8_t type, const uint8_t *payload, 
         {
             s_cli.phase = CliPhase::OPEN;
             s_cli.state = pc_ssh_tunnel_state::PC_TUN_UP;
-            PC_LOGI("ssh-tunnel: up (relay forward :%u)", (unsigned)s_cli.cfg.bind_port);
+            PC_LOGI(LOG_TUNNEL_UP, (uint32_t)s_cli.cfg.bind_port);
         }
         else if (type == SSH_MSG_REQUEST_FAILURE)
         {

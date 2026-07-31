@@ -13,8 +13,12 @@
  * auto-selects ws:// or wss:// from the page's own scheme.
  *
  * @code
+ *   static const pc_field SAID[] = {{PC_FK_LIT, 0, 10, "you said: "}, PC_STR,
+ *                                   {PC_FK_LIT, 0, 1, "\n"}, PC_END};
+ *   static const pc_field UPTIME[] = {{PC_FK_LIT, 0, 7, "uptime "}, PC_U32,
+ *                                     {PC_FK_LIT, 0, 1, "\n"}, PC_END};
  *   void on_cmd(const char *line, uint8_t client) {
- *     pc_web_terminal_printf("you said: %s\n", line);
+ *     pc_web_terminal_frame(SAID, line);
  *   }
  *   void setup() {
  *     // ... wifi + server.on(...) ...
@@ -24,7 +28,7 @@
  *   }
  *   void loop() {
  *     server.handle();
- *     pc_web_terminal_printf("uptime %lu\n", millis()); // device -> browsers
+ *     pc_web_terminal_frame(UPTIME, (uint32_t)millis()); // device -> browsers
  *   }
  * @endcode
  *
@@ -35,6 +39,7 @@
 #define PROTOCORE_WEB_TERMINAL_H
 
 #include "protocore.h"
+#include "shared_primitives/frame.h"
 
 #if PC_ENABLE_WEB_TERMINAL
 
@@ -65,12 +70,13 @@ void pc_web_terminal_print(const char *s);
 /** @brief Like print() but appends a newline. */
 void pc_web_terminal_println(const char *s);
 
-/** @brief printf-style broadcast (capped at TERM_TX_BUF_SIZE). */
-void pc_web_terminal_printf(const char *fmt, ...)
-#if defined(__GNUC__)
-    __attribute__((format(printf, 1, 2)))
-#endif
-    ;
+/**
+ * @brief Build @p spec and broadcast it to every connected browser (capped at TERM_TX_BUF_SIZE).
+ *
+ * The message shape is a `static const pc_field[]` the caller declares, so a terminal line costs a
+ * table walk rather than a format-string parse.
+ */
+void pc_web_terminal_frame(const pc_field *spec, ...);
 
 /** @brief Number of browsers currently connected to the terminal. */
 uint8_t pc_web_terminal_client_count();
@@ -90,7 +96,7 @@ static inline void pc_web_terminal_print(const char *)
 static inline void pc_web_terminal_println(const char *)
 {
 }
-static inline void pc_web_terminal_printf(const char *, ...)
+static inline void pc_web_terminal_frame(const pc_field *, ...)
 {
 }
 static inline uint8_t pc_web_terminal_client_count()

@@ -25591,9 +25591,9 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
   </details>
 
   <details style="margin-left: 20px;">
-    <summary><b>test_null_format_is_ignored</b> &mdash; <i>Null format is ignored</i></summary>
+    <summary><b>test_null_spec_is_ignored</b> &mdash; <i>Null spec is ignored</i></summary>
 
-    * **Objective**: Null format is ignored
+    * **Objective**: Null spec is ignored
     * **Assertions**:
       * <code>Assert equal int (0, s_sink_calls)</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(0, pc_log_count());</code>

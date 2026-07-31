@@ -235,7 +235,8 @@ void test_output_escaping_and_printf()
     TEST_ASSERT_EQUAL_HEX8_ARRAY(expect, out, 4);
 
     tcp_capture_reset();
-    pc_telnet_printf("n=%d", 7);
+    static const pc_field NEQ[] = {{PC_FK_LIT, 0, 2, "n="}, PC_U32, PC_END};
+    pc_telnet_frame(NEQ, (uint32_t)7);
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "n=7"));
 }
 
@@ -343,7 +344,8 @@ void test_print_println_null_and_printf_empty()
     TEST_ASSERT_EQUAL_STRING("\r\n", tcp_captured()); // the unconditional CRLF still goes out
 
     tcp_capture_reset();
-    pc_telnet_printf("");
+    static const pc_field EMPTY[] = {PC_END};
+    pc_telnet_frame(EMPTY);
     TEST_ASSERT_EQUAL_UINT(0, tcp_captured_len());
 }
 

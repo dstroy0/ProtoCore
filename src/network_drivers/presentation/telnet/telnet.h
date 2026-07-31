@@ -26,6 +26,7 @@
 #define PROTOCORE_TELNET_H
 
 #include "protocore_config.h"
+#include "shared_primitives/frame.h"
 #include <stddef.h>
 #include <stdint.h>
 
@@ -45,8 +46,20 @@ void pc_telnet_print(const char *s);
 /** @brief Send text + CRLF to every connected Telnet client. */
 void pc_telnet_println(const char *s);
 
-/** @brief printf-style broadcast to every connected Telnet client (bounded by TELNET_BUF_SIZE). */
-void pc_telnet_printf(const char *fmt, ...);
+/**
+ * @brief Build @p spec and broadcast it to every connected Telnet client.
+ *
+ * The message shape is a `static const pc_field[]` the caller declares, so a console line costs a
+ * table walk rather than a format-string parse, and a line longer than TELNET_BUF_SIZE is dropped
+ * rather than clipped mid-word.
+ *
+ * @code
+ *   static const pc_field HEAP[] = {{PC_FK_LIT, 0, 11, "free heap: "}, PC_U32,
+ *                                   {PC_FK_LIT, 0, 8, " bytes\r\n"}, PC_END};
+ *   pc_telnet_frame(HEAP, ESP.getFreeHeap());
+ * @endcode
+ */
+void pc_telnet_frame(const pc_field *spec, ...);
 
 /** @brief Number of connected Telnet clients. */
 uint8_t pc_telnet_client_count();

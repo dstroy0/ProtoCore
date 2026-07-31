@@ -647,7 +647,8 @@
         "+<network_drivers/application/web_assets.cpp>",
         "+<services/web/web_terminal/web_terminal.cpp>",
         "+<services/timing_position/ntp_service/ntp_service.cpp>",
-        "+<board_drivers/hal/portable/portable_platform.cpp>"
+        "+<board_drivers/hal/portable/portable_platform.cpp>",
+        "+<shared_primitives/frame.cpp>"
       ],
       "tests": [
         "test_auth",
@@ -709,7 +710,8 @@
         "+<network_drivers/application/web_assets.cpp>",
         "+<services/web/web_terminal/web_terminal.cpp>",
         "+<services/file_transfer/webdav/webdav.cpp>",
-        "+<board_drivers/hal/portable/portable_platform.cpp>"
+        "+<board_drivers/hal/portable/portable_platform.cpp>",
+        "+<shared_primitives/frame.cpp>"
       ],
       "tests": ["test_webdav_handler"]
     },
@@ -761,7 +763,8 @@
         "+<network_drivers/network/ip.cpp>",
         "+<network_drivers/transport/tcp.cpp>",
         "+<network_drivers/transport/listener.cpp>",
-        "+<network_drivers/presentation/telnet/telnet.cpp>"
+        "+<network_drivers/presentation/telnet/telnet.cpp>",
+        "+<shared_primitives/frame.cpp>"
       ],
       "tests": ["test_telnet"]
     },
@@ -2442,7 +2445,8 @@
       "flags": ["-DPC_ENABLE_LOGBUF=1", "-DPC_LOG_LEVEL=PC_LOG_LEVEL_INFO"],
       "src": [
         "+<services/system/logbuf/logbuf.cpp>",
-        "+<shared_primitives/log.cpp>"
+        "+<shared_primitives/log.cpp>",
+        "+<shared_primitives/frame.cpp>"
       ],
       "tests": ["test_log"]
     },

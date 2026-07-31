@@ -31,6 +31,30 @@ struct FtpSessionCtx
 };
 static FtpSessionCtx s_ftp = {-1, -1, {0}, 0, 0, {0}, {0}};
 
+// Log frames. Each is the shape of one message, fixed when the code was written, so the logger
+// builds it without parsing anything and a level that is compiled out costs the spec nothing.
+static const pc_field LOG_BUILD_FAILED[] = {{PC_FK_LIT, 0, 18, "ftp: cannot build "}, PC_STR, PC_END};
+static const pc_field LOG_SENT[] = {{PC_FK_LIT, 0, 5, "ftp> "}, PC_STR, PC_END};
+static const pc_field LOG_REPLY[] = {{PC_FK_LIT, 0, 5, "ftp< "}, PC_U32, PC_END};
+static const pc_field LOG_REPLY_TOO_BIG[] = {
+    {PC_FK_LIT, 0, 41, "ftp: reply larger than PC_FTP_REPLY_BUF ("}, PC_U32, {PC_FK_LIT, 0, 1, ")"}, PC_END};
+static const pc_field LOG_CTRL_CLOSED[] = {
+    {PC_FK_LIT, 0, 25, "ftp: control closed with "}, PC_U32, {PC_FK_LIT, 0, 15, " bytes buffered"}, PC_END};
+static const pc_field LOG_REPLY_TIMEOUT[] = {
+    {PC_FK_LIT, 0, 20, "ftp: reply timeout, "}, PC_U32, {PC_FK_LIT, 0, 15, " bytes buffered"}, PC_END};
+static const pc_field LOG_DATA_CONNECT_FAILED[] = {{PC_FK_LIT, 0, 21, "ftp: data connect to "},
+                                                   PC_STR,
+                                                   {PC_FK_LIT, 0, 1, ":"},
+                                                   PC_U32,
+                                                   {PC_FK_LIT, 0, 7, " failed"},
+                                                   PC_END};
+static const pc_field LOG_CTRL_CONNECT_FAILED[] = {{PC_FK_LIT, 0, 24, "ftp: control connect to "},
+                                                   PC_STR,
+                                                   {PC_FK_LIT, 0, 1, ":"},
+                                                   PC_U32,
+                                                   {PC_FK_LIT, 0, 7, " failed"},
+                                                   PC_END};
+
 // ---------------------------------------------------------------------------
 // Control channel
 // ---------------------------------------------------------------------------
@@ -41,10 +65,10 @@ static bool ftp_send(const char *verb, const char *arg)
     size_t n = pc_ftp_build_command(s_ftp.cmd, sizeof(s_ftp.cmd), verb, arg);
     if (n == 0)
     {
-        PC_LOGW("ftp: cannot build %s", verb);
+        PC_LOGW(LOG_BUILD_FAILED, verb);
         return false;
     }
-    PC_LOGD("ftp> %s", verb);
+    PC_LOGD(LOG_SENT, verb);
     return pc_client_send(s_ftp.ctrl, s_ftp.cmd, n);
 }
 
@@ -75,23 +99,23 @@ static bool ftp_await(int *code, size_t *rlen)
             {
                 *rlen = consumed;
             }
-            PC_LOGD("ftp< %d", *code);
+            PC_LOGD(LOG_REPLY, (uint32_t)*code);
             return true;
         }
         if (s_ftp.rx_len == sizeof(s_ftp.rx))
         {
-            PC_LOGW("ftp: reply larger than PC_FTP_REPLY_BUF (%u)", (unsigned)sizeof(s_ftp.rx));
+            PC_LOGW(LOG_REPLY_TOO_BIG, (uint32_t)sizeof(s_ftp.rx));
             return false; // a reply that cannot fit is malformed, not incomplete
         }
         if (pc_client_is_closed(s_ftp.ctrl) && pc_client_available(s_ftp.ctrl) == 0)
         {
-            PC_LOGW("ftp: control closed with %u bytes buffered", (unsigned)s_ftp.rx_len);
+            PC_LOGW(LOG_CTRL_CLOSED, (uint32_t)s_ftp.rx_len);
             return false;
         }
         // pc_millis is monotonic, so the subtraction is wrap-safe across a rollover.
         if ((int32_t)(pc_millis() - deadline) >= 0)
         {
-            PC_LOGW("ftp: reply timeout, %u bytes buffered", (unsigned)s_ftp.rx_len);
+            PC_LOGW(LOG_REPLY_TIMEOUT, (uint32_t)s_ftp.rx_len);
             return false;
         }
 
@@ -166,7 +190,7 @@ static bool ftp_open_data(const FtpTarget *target)
     s_ftp.data = pc_client_open(host, port, PC_FTP_TIMEOUT_MS);
     if (s_ftp.data < 0)
     {
-        PC_LOGW("ftp: data connect to %s:%u failed", host, (unsigned)port);
+        PC_LOGW(LOG_DATA_CONNECT_FAILED, host, (uint32_t)port);
     }
     return s_ftp.data >= 0;
 }
@@ -209,7 +233,7 @@ bool pc_ftp_store(const FtpTarget *target, const char *remote_path, size_t total
     s_ftp.ctrl = pc_client_open(target->host, ctrl_port, PC_FTP_TIMEOUT_MS);
     if (s_ftp.ctrl < 0)
     {
-        PC_LOGW("ftp: control connect to %s:%u failed", target->host, (unsigned)ctrl_port);
+        PC_LOGW(LOG_CTRL_CONNECT_FAILED, target->host, (uint32_t)ctrl_port);
         return false;
     }
 

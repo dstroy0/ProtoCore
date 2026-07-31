@@ -119,6 +119,16 @@ size_t pc_frame_build(char *out, size_t cap, const pc_field *spec, ...);
 size_t pc_frame_vbuild(char *out, size_t cap, const pc_field *spec, va_list ap);
 
 /**
+ * @brief va_list form for DISPLAY text: appends as much as fits and stops, instead of refusing.
+ *
+ * For a log line or a console message, where a short rendering carries the event and a refused one
+ * loses it. Never for a protocol field - a clipped frame has no terminator and desynchronizes the
+ * peer, which is what the refusing form exists to prevent. Numbers are still all-or-nothing in this
+ * mode, because half a number reads as a different number.
+ */
+size_t pc_frame_vbuild_clip(char *out, size_t cap, const pc_field *spec, va_list ap);
+
+/**
  * @brief Append @p spec to the NUL-terminated contents already in @p out.
  *
  * The append idiom this library uses for header and cookie accumulation: on overflow the buffer is

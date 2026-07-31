@@ -5450,7 +5450,7 @@
 #endif
 
 /**
- * @brief Stack scratch for pc_web_terminal_printf()/println() formatting.
+ * @brief Stack scratch for pc_web_terminal_frame()/println() line building.
  *
  * One formatted terminal line must fit in this many bytes (longer is truncated).
  * Allocated on the stack only during the call - no persistent RAM cost.

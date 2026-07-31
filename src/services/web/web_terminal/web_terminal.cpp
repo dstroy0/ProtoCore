@@ -16,7 +16,6 @@
 #include "network_drivers/application/web_assets.h" // PC_TERMINAL_PAGE
 #include "shared_primitives/mime.h"
 #include <stdarg.h>
-#include <stdio.h>
 #include <string.h>
 
 // ---------------------------------------------------------------------------
@@ -141,12 +140,14 @@ void pc_web_terminal_println(const char *s)
     pc_web_terminal_print(buf);
 }
 
-void pc_web_terminal_printf(const char *fmt, ...)
+void pc_web_terminal_frame(const pc_field *spec, ...)
 {
     char buf[TERM_TX_BUF_SIZE];
     va_list ap;
-    va_start(ap, fmt);
-    vsnprintf(buf, sizeof(buf), fmt, ap);
+    va_start(ap, spec);
+    // A frame that does not fit leaves buf a valid empty string, so the print is a no-op rather
+    // than a partial line.
+    (void)pc_frame_vbuild(buf, sizeof(buf), spec, ap);
     va_end(ap);
     pc_web_terminal_print(buf);
 }
