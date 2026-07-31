@@ -25582,12 +25582,12 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
   </details>
 
   <details style="margin-left: 20px;">
-    <summary><b>test_long_line_is_truncated_not_overflowed</b> &mdash; <i>Long line is truncated not overflowed</i></summary>
+    <summary><b>test_line_that_does_not_fit_is_refused</b> &mdash; <i>Line that does not fit is refused</i></summary>
 
-    * **Objective**: Long line is truncated not overflowed
+    * **Objective**: Line that does not fit is refused
     * **Assertions**:
       * <code>Assert equal int (1, s_sink_calls)</code>
-      * <code>Assert true (strlen(s_last_line) &lt; PC_LOG_LINE_LEN)</code>
+      * <code>Assert equal string ("", s_last_line)</code>
   </details>
 
   <details style="margin-left: 20px;">
