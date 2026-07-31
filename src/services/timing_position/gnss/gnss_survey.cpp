@@ -13,7 +13,7 @@
 #include <math.h>
 #include <string.h>
 
-#if PC_ENABLE_NMEA0183
+#if PC_NEED_NMEA0183
 #include "services/timing_position/nmea0183/nmea0183.h"
 #include "shared_primitives/numparse.h"
 #endif
@@ -164,7 +164,7 @@ bool pc_gnss_survey_complete(const GnssSurvey *s, uint32_t min_obs, double acc_l
 // GGA -> geodetic (only when the NMEA 0183 codec is available).
 // ---------------------------------------------------------------------------------------------
 
-#if PC_ENABLE_NMEA0183
+#if PC_NEED_NMEA0183
 
 namespace
 {
@@ -249,6 +249,6 @@ bool pc_gnss_survey_add_gga(GnssSurvey *s, const Nmea0183 *m)
     return true;
 }
 
-#endif // PC_ENABLE_NMEA0183
+#endif // PC_NEED_NMEA0183
 
 #endif // PC_ENABLE_NTRIP_CASTER

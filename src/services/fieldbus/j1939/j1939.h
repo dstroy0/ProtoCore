@@ -29,7 +29,7 @@
 
 #include "protocore_config.h"
 
-#if PC_ENABLE_J1939
+#if PC_NEED_J1939
 
 #include "shared_primitives/can.h"
 #include <stddef.h>
@@ -310,5 +310,5 @@ struct J1939Dm1
  */
 bool pc_j1939_decode_dm1(const uint8_t *body, size_t len, J1939Dm1 *out, J1939Dtc *out_dtcs, size_t max);
 
-#endif // PC_ENABLE_J1939
+#endif // PC_NEED_J1939
 #endif // PROTOCORE_J1939_H

@@ -8,7 +8,7 @@
 
 #include "cbor.h"
 
-#if PC_ENABLE_CBOR
+#if PC_NEED_CBOR
 
 #include "shared_primitives/bytes.h"
 #include <string.h>
@@ -406,4 +406,4 @@ bool pc_cbor_read_map(CborReader *r, size_t *count)
     return true;
 }
 
-#endif // PC_ENABLE_CBOR
+#endif // PC_NEED_CBOR

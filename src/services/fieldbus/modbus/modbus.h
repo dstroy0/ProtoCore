@@ -36,7 +36,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#if PC_ENABLE_MODBUS
+#if PC_NEED_MODBUS
 
 /** @brief Modbus function codes (Modbus Application Protocol §6). */
 enum class ModbusFunction : uint8_t
@@ -137,6 +137,6 @@ void pc_modbus_rx(uint8_t slot);
 struct ProtoHandler;
 const struct ProtoHandler *pc_modbus_proto_handler(void);
 
-#endif // PC_ENABLE_MODBUS
+#endif // PC_NEED_MODBUS
 
 #endif // PROTOCORE_MODBUS_H

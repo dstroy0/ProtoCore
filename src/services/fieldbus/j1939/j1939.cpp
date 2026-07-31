@@ -8,7 +8,7 @@
 
 #include "services/fieldbus/j1939/j1939.h"
 
-#if PC_ENABLE_J1939
+#if PC_NEED_J1939
 
 #include <string.h>
 
@@ -473,4 +473,4 @@ bool pc_j1939_decode_dm1(const uint8_t *body, size_t len, J1939Dm1 *out, J1939Dt
     return true;
 }
 
-#endif // PC_ENABLE_J1939
+#endif // PC_NEED_J1939

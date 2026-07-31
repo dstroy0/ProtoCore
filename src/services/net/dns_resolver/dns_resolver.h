@@ -23,7 +23,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#if PC_ENABLE_DNS_RESOLVER
+#if PC_NEED_DNS_RESOLVER
 
 /** @brief IPv4 address category (RFC special-purpose ranges). */
 enum class pc_ip_class : uint8_t
@@ -75,5 +75,5 @@ bool pc_dns_resolver_resolve_verified(const char *host, uint32_t *out_ip);
 void pc_dns_resolver_test_set_resolve(bool ok, uint32_t ip);
 #endif
 
-#endif // PC_ENABLE_DNS_RESOLVER
+#endif // PC_NEED_DNS_RESOLVER
 #endif // PROTOCORE_DNS_RESOLVER_H

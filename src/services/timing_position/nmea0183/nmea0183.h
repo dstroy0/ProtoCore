@@ -24,7 +24,7 @@
 
 #include "protocore_config.h"
 
-#if PC_ENABLE_NMEA0183
+#if PC_NEED_NMEA0183
 
 #include <stddef.h>
 #include <stdint.h>
@@ -282,5 +282,5 @@ struct pc_nmea_vlw
  */
 bool pc_nmea0183_parse_vlw(const Nmea0183 *m, pc_nmea_vlw *out);
 
-#endif // PC_ENABLE_NMEA0183
+#endif // PC_NEED_NMEA0183
 #endif // PROTOCORE_NMEA0183_H

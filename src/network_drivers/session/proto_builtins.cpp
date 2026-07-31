@@ -26,7 +26,7 @@
 #if PC_ENABLE_SSH
 #include "network_drivers/presentation/ssh/connection/ssh_conn.h"
 #endif
-#if PC_ENABLE_MODBUS
+#if PC_NEED_MODBUS
 #include "services/fieldbus/modbus/modbus.h"
 #endif
 #if PC_ENABLE_OPCUA
@@ -56,7 +56,7 @@ void proto_register_builtins(void)
     register_if(ConnProto::PROTO_SSH, ssh_proto_handler());
     // GCOVR_EXCL_STOP
 #endif
-#if PC_ENABLE_MODBUS
+#if PC_NEED_MODBUS
     register_if(ConnProto::PROTO_MODBUS, pc_modbus_proto_handler());
 #endif
 #if PC_ENABLE_OPCUA

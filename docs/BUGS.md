@@ -15,7 +15,7 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 - **Symptom:** every one of the 152 example sketches failed at link with
   `multiple definition of 'PC_DASHBOARD_PAGE'`, and the same for `PC_PROV_FORM`,
   `PC_PROV_SAVED_HTML`, `PC_TERMINAL_PAGE`, `PC_SERVICE_WORKER`, `PC_STATS_JSON`, `PC_METRICS_PROM`.
-- **Root cause:** `src/network_drivers/application/web.cpp` was a byte-identical copy of
+- **Root cause:** a now-deleted `web.cpp`, beside `web_assets.cpp` in `src/network_drivers/application/`, was a byte-identical copy of
   `web_assets.cpp`, and `web.h` was `web_assets.h` with only its include guard renamed - its file
   banner still read `@file web_assets.h`. Both were tracked. Arduino compiles every `.cpp` under a
   library's `src/`, so both copies were compiled and both defined the same symbols. They are

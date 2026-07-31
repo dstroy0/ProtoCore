@@ -9,7 +9,7 @@
 #include "services/fieldbus/modbus/modbus.h"
 #include "shared_primitives/crc.h" // PC_CRC16_MODBUS
 
-#if PC_ENABLE_MODBUS
+#if PC_NEED_MODBUS
 
 #include <string.h>
 
@@ -599,4 +599,4 @@ const ProtoHandler *pc_modbus_proto_handler(void)
 
 #endif // ARDUINO
 
-#endif // PC_ENABLE_MODBUS
+#endif // PC_NEED_MODBUS

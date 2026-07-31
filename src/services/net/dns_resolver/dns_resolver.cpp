@@ -11,7 +11,7 @@
 
 #include "services/net/dns_resolver/dns_resolver.h"
 
-#if PC_ENABLE_DNS_RESOLVER
+#if PC_NEED_DNS_RESOLVER
 
 #if defined(ARDUINO)
 #include "lwip/def.h"
@@ -218,4 +218,4 @@ bool pc_dns_resolver_resolve_verified(const char *host, uint32_t *out_ip)
     return true;
 }
 
-#endif // PC_ENABLE_DNS_RESOLVER
+#endif // PC_NEED_DNS_RESOLVER

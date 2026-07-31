@@ -25,7 +25,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#if PC_ENABLE_CBOR
+#if PC_NEED_CBOR
 
 /** @brief CBOR encoder state over a caller-provided buffer. */
 struct CborWriter
@@ -103,5 +103,5 @@ bool pc_cbor_read_bytes(CborReader *r, const uint8_t **out, size_t *len); ///< b
 bool pc_cbor_read_array(CborReader *r, size_t *count);                    ///< definite-length array header
 bool pc_cbor_read_map(CborReader *r, size_t *count);                      ///< definite-length map header
 
-#endif // PC_ENABLE_CBOR
+#endif // PC_NEED_CBOR
 #endif // PROTOCORE_CBOR_H

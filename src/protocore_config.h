@@ -203,6 +203,16 @@
  * (bottom of this file) enforces the floor so a lowered stack is caught at
  * compile time.
  */
+// True when any feature that runs the SSH-class handshake is built. Derived, not configurable, and
+// defined unconditionally: a predicate that exists only inside one #ifndef is a trap for the next
+// person who tests it further down, where it would silently read 0.
+#if (defined(PC_ENABLE_SSH) && PC_ENABLE_SSH) || (defined(PC_ENABLE_SSH_CLIENT) && PC_ENABLE_SSH_CLIENT) ||            \
+    (defined(PC_ENABLE_HTTP3) && PC_ENABLE_HTTP3)
+#define PC_SSH_ANY 1
+#else
+#define PC_SSH_ANY 0
+#endif
+
 #ifndef PC_WORKER_TASK_STACK
 // SSH (curve25519 + ssh-ed25519, server OR the reverse-SSH client) and HTTP/3 (the QUIC TLS-1.3
 // handshake reuses the same pc_ed25519 signer for CertificateVerify) all peak at ~10.5 KB on the
@@ -210,15 +220,6 @@
 // tracks the matching floor so a hybrid build is provisioned, not starved; the guard at the bottom of
 // this file is the backstop when the stack is set by hand. (A flag set only in the config block below,
 // not via -D, is still undefined here and reads as 0 - the guard then catches any shortfall.)
-// Evaluate the `defined()` tests directly in a #if and reduce to a plain 0/1 token: a function-like macro that
-// itself expands to `defined()` is undefined behavior when used in the #if below (C11 6.10.1p4 - `defined`
-// produced by macro expansion), even though GCC/Clang happen to accept it.
-#if (defined(PC_ENABLE_SSH) && PC_ENABLE_SSH) || (defined(PC_ENABLE_SSH_CLIENT) && PC_ENABLE_SSH_CLIENT) ||            \
-    (defined(PC_ENABLE_HTTP3) && PC_ENABLE_HTTP3)
-#define PC_SSH_ANY 1
-#else
-#define PC_SSH_ANY 0
-#endif
 // sntrup761x25519-sha512 (on by default with the PQC hybrid, but a standalone -D can enable it without
 // ML-KEM) is the heavy case: the reverse-SSH CLIENT runs KeyGen+Decaps whose FO re-encrypt peaks ~32 KB,
 // the SERVER runs Encaps only (~22 KB). ML-KEM alone stays at 16 KB, so a build that explicitly drops
@@ -238,7 +239,6 @@
 #else
 #define PC_WORKER_TASK_STACK 8192
 #endif
-#undef PC_SSH_ANY
 #endif
 
 /**
@@ -1454,10 +1454,10 @@
 #ifndef PC_ENABLE_MODBUS_RTU
 #define PC_ENABLE_MODBUS_RTU 0
 #endif
-#if PC_ENABLE_MODBUS_RTU && !PC_ENABLE_MODBUS
-#undef PC_ENABLE_MODBUS
-#define PC_ENABLE_MODBUS 1
-#endif
+// RTU is a framing over the same PDU codec, so it needs Modbus compiled in. The requirement is
+// derived rather than written back over PC_ENABLE_MODBUS: a user's flag is an input and stays one,
+// so -DPC_ENABLE_MODBUS=0 keeps meaning what it says. Code guards on PC_NEED_MODBUS.
+#define PC_NEED_MODBUS (PC_ENABLE_MODBUS || PC_ENABLE_MODBUS_RTU)
 
 /**
  * @brief CloudEvents v1.0 (CNCF) event envelope (structured JSON + binary headers).
@@ -1473,12 +1473,14 @@
 #endif
 
 /**
- * @brief Redis RESP2 wire codec (`services/redis_resp`).
+ * @brief Redis RESP2/RESP3 wire codec (`services/iot/redis_resp`).
  *
- * Default off. A zero-heap command encoder (`pc_resp_encode_command`, array of bulk
- * strings) + a cursor reply parser (`pc_resp_parse`: simple / error / integer / bulk /
- * array / nil) so the device can drive a Redis server over the shipped outbound
- * client transport. Pure codec, host-tested; the connection is the application's.
+ * Default off. A zero-heap command encoder (a command becomes a RESP array of bulk strings) and a
+ * streaming reply decoder that reads one value at a time, so an arbitrarily nested reply is walked
+ * with only the caller's loop state and never a tree allocation. Covers RESP2 and the RESP3
+ * additions (null / boolean / double / big number / bulk error / verbatim / map / set / push).
+ * Pure codec - you hand it byte buffers; the connection is the application's. Host-tested against
+ * the spec vectors and a real redis-server.
  */
 #ifndef PC_ENABLE_REDIS
 #define PC_ENABLE_REDIS 0
@@ -1689,10 +1691,8 @@
 #ifndef PC_ENABLE_NMEA2000
 #define PC_ENABLE_NMEA2000 0
 #endif
-#if PC_ENABLE_NMEA2000 && !PC_ENABLE_J1939
-#undef PC_ENABLE_J1939
-#define PC_ENABLE_J1939 1 // NMEA 2000 reuses the J1939 identifier codec
-#endif
+// NMEA 2000 reuses the J1939 identifier codec, so it needs J1939 compiled in.
+#define PC_NEED_J1939 (PC_ENABLE_J1939 || PC_ENABLE_NMEA2000)
 
 /**
  * @brief Wired M-Bus (Meter-Bus, EN 13757) frame codec (`services/mbus`).
@@ -2029,10 +2029,8 @@
 #ifndef PC_ENABLE_SENML
 #define PC_ENABLE_SENML 0
 #endif
-#if PC_ENABLE_SENML && !PC_ENABLE_CBOR
-#undef PC_ENABLE_CBOR
-#define PC_ENABLE_CBOR 1
-#endif
+// SenML's binary form is CBOR, so it needs the CBOR codec compiled in.
+#define PC_NEED_CBOR (PC_ENABLE_CBOR || PC_ENABLE_SENML)
 
 /**
  * @brief Allen-Bradley DF1 full-duplex frame codec (`services/df1`).
@@ -2266,10 +2264,8 @@
 #ifndef PC_ENABLE_SPARKPLUG
 #define PC_ENABLE_SPARKPLUG 0
 #endif
-#if PC_ENABLE_SPARKPLUG && !PC_ENABLE_PROTOBUF
-#undef PC_ENABLE_PROTOBUF
-#define PC_ENABLE_PROTOBUF 1
-#endif
+// Sparkplug B payloads are protobuf messages, so it needs the protobuf codec compiled in.
+#define PC_NEED_PROTOBUF (PC_ENABLE_PROTOBUF || PC_ENABLE_SPARKPLUG)
 
 /** @brief Max serialized size of one Sparkplug B metric submessage (stack temp, bytes). */
 #ifndef PC_SPB_METRIC_MAX
@@ -3677,20 +3673,6 @@
 #endif
 
 /**
- * @brief Opt-in Redis RESP wire codec (PC_ENABLE_REDIS).
- *
- * services/redis is the pure wire layer of a Redis client: a RESP command encoder (a command becomes a
- * RESP array of bulk strings) and a streaming, zero-heap reply decoder that reads one value at a time, so
- * arbitrarily nested replies are walked with only the caller's loop state (no tree allocation). Covers
- * RESP2 and the RESP3 additions (null / boolean / double / big number / bulk error / verbatim / map / set
- * / push). Pure (no I/O; you hand it byte buffers); host-tested against spec vectors and a real
- * redis-server. Default off.
- */
-#ifndef PC_ENABLE_REDIS
-#define PC_ENABLE_REDIS 0
-#endif
-
-/**
  * @brief Opt-in CNC RS-232 DNC drip-feed codec (PC_ENABLE_DNC).
  *
  * services/machine_tool/dnc is the transport-agnostic framing + tape-code layer that streams a G-code program
@@ -3812,11 +3794,8 @@
 #define PC_NTRIP_MAX_ROVERS 4
 #endif
 
-// The base surveys in from the receiver's GGA fixes, so the NTRIP caster implies the NMEA 0183 codec.
-#if PC_ENABLE_NTRIP_CASTER && !PC_ENABLE_NMEA0183
-#undef PC_ENABLE_NMEA0183
-#define PC_ENABLE_NMEA0183 1
-#endif
+// The base surveys in from the receiver's GGA fixes, so the NTRIP caster needs the NMEA 0183 codec.
+#define PC_NEED_NMEA0183 (PC_ENABLE_NMEA0183 || PC_ENABLE_NTRIP_CASTER)
 
 /** @brief Max length (incl. NUL) of an NTRIP mountpoint name the caster serves. */
 #ifndef PC_NTRIP_MOUNT_MAX
@@ -5363,13 +5342,14 @@
 // resolves to the !NEED stub that returns -1, so the feature silently never connects on device.
 #if PC_ENABLE_HTTP_CLIENT || PC_ENABLE_MQTT || PC_ENABLE_WS_CLIENT || PC_ENABLE_RELAY || PC_ENABLE_SMTP ||             \
     PC_SSH_PORT_FORWARD || PC_ENABLE_SMB || PC_ENABLE_DNC || PC_ENABLE_FTP_SESSION || PC_ENABLE_SSH_CLIENT
-#undef PC_ENABLE_DNS_RESOLVER
-#define PC_ENABLE_DNS_RESOLVER 1
 #define PC_NEED_CLIENT 1
 #endif
 #ifndef PC_NEED_CLIENT
 #define PC_NEED_CLIENT 0
 #endif
+
+// The client dials by name, so anything that needs the client needs the resolver.
+#define PC_NEED_DNS_RESOLVER (PC_ENABLE_DNS_RESOLVER || PC_NEED_CLIENT)
 
 // ---------------------------------------------------------------------------
 // Full Authorization-header capture (internal)
@@ -6848,7 +6828,7 @@ enum class pc_iface : uint8_t
 #endif
 #endif
 
-#if PC_ENABLE_MODBUS
+#if PC_NEED_MODBUS
 #if PC_MODBUS_COILS < 1 || PC_MODBUS_DISCRETE_INPUTS < 1 || PC_MODBUS_HOLDING_REGS < 1 || PC_MODBUS_INPUT_REGS < 1
 #error "ProtoCore: each PC_MODBUS_* table size must be >= 1 when PC_ENABLE_MODBUS is set"
 #endif
@@ -7221,19 +7201,19 @@ static_assert((unsigned)ConnProto::PROTO_MESH < PC_PROTO_MAX, "PC_PROTO_MAX must
 #endif
 #endif // PC_ENABLE_GRAPHQL
 
-#if PC_ENABLE_J1939
+#if PC_NEED_J1939
 // -- J1939 (services/j1939; also built when NMEA 2000 is enabled) --
 #ifndef PC_J1939_TP_MAX
 #define PC_J1939_TP_MAX 256 ///< max reassembled TP message (spec allows up to 1785); sized down for RAM
 #endif
-#endif // PC_ENABLE_J1939
+#endif // PC_NEED_J1939
 
-#if PC_ENABLE_NMEA0183
+#if PC_NEED_NMEA0183
 // -- NMEA 0183 (services/timing_position/nmea0183) --
 #ifndef PC_NMEA0183_MAX_FIELDS
 #define PC_NMEA0183_MAX_FIELDS 26 ///< max comma-separated fields (incl. the address field)
 #endif
-#endif // PC_ENABLE_NMEA0183
+#endif // PC_NEED_NMEA0183
 
 #if PC_ENABLE_UBX
 // -- UBX (services/timing_position/ubx) --
@@ -7267,9 +7247,8 @@ static_assert((unsigned)ConnProto::PROTO_MESH < PC_PROTO_MAX, "PC_PROTO_MAX must
 
 #if PC_ENABLE_OIDC
 // -- OIDC (services/security/oidc) --
-#ifndef PC_OIDC_MAX_LEN
-#define PC_OIDC_MAX_LEN 1600 ///< Max accepted ID-token length.
-#endif
+// PC_OIDC_MAX_LEN is declared unconditionally with PC_ENABLE_OIDC above, because PC_AUTH_HDR_CAP
+// sizes the Authorization buffer from it and that runs before this block.
 #ifndef PC_OIDC_SUB_LEN
 #define PC_OIDC_SUB_LEN 64 ///< Captured `sub` claim buffer.
 #endif

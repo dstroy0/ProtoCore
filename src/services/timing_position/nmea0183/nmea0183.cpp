@@ -8,7 +8,7 @@
 
 #include "services/timing_position/nmea0183/nmea0183.h"
 
-#if PC_ENABLE_NMEA0183
+#if PC_NEED_NMEA0183
 
 #include "shared_primitives/numparse.h"
 #include <string.h>
@@ -536,4 +536,4 @@ bool pc_nmea0183_parse_vlw(const Nmea0183 *m, pc_nmea_vlw *out)
     return true;
 }
 
-#endif // PC_ENABLE_NMEA0183
+#endif // PC_NEED_NMEA0183

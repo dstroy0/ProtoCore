@@ -8,7 +8,7 @@
 
 #include "services/iot/protobuf/protobuf.h"
 
-#if PC_ENABLE_PROTOBUF
+#if PC_NEED_PROTOBUF
 
 #include <string.h>
 
@@ -285,4 +285,4 @@ double pc_pb_double_bits(uint64_t bits)
     return d;
 }
 
-#endif // PC_ENABLE_PROTOBUF
+#endif // PC_NEED_PROTOBUF

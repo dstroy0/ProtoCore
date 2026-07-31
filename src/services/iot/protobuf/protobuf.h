@@ -29,7 +29,7 @@
 
 #include "protocore_config.h"
 
-#if PC_ENABLE_PROTOBUF
+#if PC_NEED_PROTOBUF
 
 #include <stddef.h>
 #include <stdint.h>
@@ -100,6 +100,6 @@ int32_t pc_pb_zigzag32(uint32_t v);
 float pc_pb_float_bits(uint32_t bits);
 double pc_pb_double_bits(uint64_t bits);
 
-#endif // PC_ENABLE_PROTOBUF
+#endif // PC_NEED_PROTOBUF
 
 #endif // PROTOCORE_PROTOBUF_H
