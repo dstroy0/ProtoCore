@@ -108,7 +108,7 @@
     "example": "L7-Application/Dashboard",
     "flags": "-DPC_ENABLE_DASHBOARD=1",
     "board": "esp32dev",
-    "flash_bytes": 783217,
+    "flash_bytes": 782989,
     "ram_bytes": 82212
   },
   "DEVICE_ID": {
@@ -248,7 +248,7 @@
     "example": "L7-Application/GpioMap",
     "flags": "-DPC_ENABLE_GPIO_MAP=1",
     "board": "esp32dev",
-    "flash_bytes": 766241,
+    "flash_bytes": 766013,
     "ram_bytes": 81900
   },
   "GRAPHQL": {
@@ -549,7 +549,7 @@
     "example": "L7-Application/PartitionMonitor",
     "flags": "-DPC_ENABLE_PARTITION_MONITOR=1",
     "board": "esp32dev",
-    "flash_bytes": 762709,
+    "flash_bytes": 762481,
     "ram_bytes": 81844
   },
   "PCA9685": {
@@ -766,7 +766,7 @@
     "example": "L5-Session/Telnet",
     "flags": "-DPC_ENABLE_TELNET=1",
     "board": "esp32dev",
-    "flash_bytes": 764177,
+    "flash_bytes": 763929,
     "ram_bytes": 82372
   },
   "THREAD+GATEWAY": {
@@ -871,7 +871,7 @@
     "example": "L6-Presentation/WebTerminal",
     "flags": "-DPC_ENABLE_WEB_TERMINAL=1",
     "board": "esp32dev",
-    "flash_bytes": 766737,
+    "flash_bytes": 766489,
     "ram_bytes": 81924
   },
   "WIFI_SNIFFER+PROMISC": {

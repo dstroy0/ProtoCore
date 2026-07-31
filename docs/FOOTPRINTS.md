@@ -23,7 +23,7 @@ from each example's `pio ci` size report and aggregated into
 | `CONFIG_STORE+CONFIG_IO`                                                                                  | L7-Application/ConfigExport          | 743.6 KB (58.1%) | 80.0 KB (25.0%)  |
 | `CONTROL`                                                                                                 | L7-Application/PidTuning             | 740.8 KB (57.9%) | 87.8 KB (27.4%)  |
 | `CSRF`                                                                                                    | L7-Application/Csrf                  | 741.1 KB (57.9%) | 81.3 KB (25.4%)  |
-| `DASHBOARD`                                                                                               | L7-Application/Dashboard             | 764.9 KB (59.8%) | 80.3 KB (25.1%)  |
+| `DASHBOARD`                                                                                               | L7-Application/Dashboard             | 764.6 KB (59.7%) | 80.3 KB (25.1%)  |
 | `DEVICE_ID`                                                                                               | L7-Application/DeviceUuid            | 738.9 KB (57.7%) | 80.0 KB (25.0%)  |
 | `DIAG`                                                                                                    | L7-Application/Diagnostics           | 739.3 KB (57.8%) | 79.9 KB (25.0%)  |
 | `DIFFSERV`                                                                                                | L4-Transport/DiffServ                | 738.9 KB (57.7%) | 79.9 KB (25.0%)  |
@@ -43,7 +43,7 @@ from each example's `pio ci` size report and aggregated into
 | `ETHERNET+ETH_W5500+ETH_W5500_CS+ETH_W5500_RST+ETH_W5500_INT+ETH_W5500_SCK+ETH_W5500_MISO+ETH_W5500_MOSI` | Peripherals/EthernetW5500            | 777.1 KB (60.7%) | 80.0 KB (25.0%)  |
 | `EXC_DECODER+FTP+FTP_SESSION`                                                                             | L7-Application/CoreDump              | 825.0 KB (64.5%) | 81.5 KB (25.5%)  |
 | `GPIB`                                                                                                    | L7-Application/Gpib                  | 709.0 KB (55.4%) | 42.6 KB (13.3%)  |
-| `GPIO_MAP`                                                                                                | L7-Application/GpioMap               | 748.3 KB (58.5%) | 80.0 KB (25.0%)  |
+| `GPIO_MAP`                                                                                                | L7-Application/GpioMap               | 748.1 KB (58.4%) | 80.0 KB (25.0%)  |
 | `GRAPHQL`                                                                                                 | L7-Application/GraphQL               | 744.9 KB (58.2%) | 84.2 KB (26.3%)  |
 | `GUARDRAILS`                                                                                              | L7-Application/Guardrails            | 739.4 KB (57.8%) | 79.9 KB (25.0%)  |
 | `HAAS_MDC`                                                                                                | L7-Application/HaasMdc               | 709.1 KB (55.4%) | 42.4 KB (13.3%)  |
@@ -86,7 +86,7 @@ from each example's `pio ci` size report and aggregated into
 | `OTA`                                                                                                     | L7-Application/OTA                   | 744.1 KB (58.1%) | 99.8 KB (31.2%)  |
 | `OTA_ROLLBACK`                                                                                            | L7-Application/OtaRollback           | 739.7 KB (57.8%) | 79.9 KB (25.0%)  |
 | `PACKML`                                                                                                  | L7-Application/PackML                | 741.0 KB (57.9%) | 80.0 KB (25.0%)  |
-| `PARTITION_MONITOR`                                                                                       | L7-Application/PartitionMonitor      | 744.8 KB (58.2%) | 79.9 KB (25.0%)  |
+| `PARTITION_MONITOR`                                                                                       | L7-Application/PartitionMonitor      | 744.6 KB (58.2%) | 79.9 KB (25.0%)  |
 | `PCA9685`                                                                                                 | Drivers/Pca9685                      | 277.9 KB (21.7%) | 21.3 KB (6.7%)   |
 | `PER_IP_THROTTLE`                                                                                         | L4-Transport/PerIpThrottle           | 739.0 KB (57.7%) | 80.4 KB (25.1%)  |
 | `PN532+GATEWAY`                                                                                           | Drivers/NfcGateway                   | 281.4 KB (22.0%) | 21.4 KB (6.7%)   |
@@ -117,7 +117,7 @@ from each example's `pio ci` size report and aggregated into
 | `STATSD`                                                                                                  | L7-Application/StatsdMetrics         | 711.5 KB (55.6%) | 44.1 KB (13.8%)  |
 | `SYSLOG`                                                                                                  | L7-Application/Syslog                | 742.5 KB (58.0%) | 81.8 KB (25.6%)  |
 | `TELEMETRY`                                                                                               | L7-Application/Telemetry             | 747.3 KB (58.4%) | 80.2 KB (25.1%)  |
-| `TELNET`                                                                                                  | L5-Session/Telnet                    | 746.3 KB (58.3%) | 80.4 KB (25.1%)  |
+| `TELNET`                                                                                                  | L5-Session/Telnet                    | 746.0 KB (58.3%) | 80.4 KB (25.1%)  |
 | `THREAD+GATEWAY`                                                                                          | Drivers/ThreadGateway                | 265.5 KB (20.7%) | 22.1 KB (6.9%)   |
 | `TLS`                                                                                                     | L6-Presentation/SecureWebSocket      | 835.8 KB (65.3%) | 119.2 KB (37.2%) |
 | `TLS+MTLS`                                                                                                | L4-Transport/mTLS                    | 836.7 KB (65.4%) | 119.5 KB (37.3%) |
@@ -132,7 +132,7 @@ from each example's `pio ci` size report and aggregated into
 | `VXI11`                                                                                                   | L7-Application/Vxi11                 | 709.3 KB (55.4%) | 43.2 KB (13.5%)  |
 | `WEBDAV`                                                                                                  | L7-Application/WebDav                | 801.8 KB (62.6%) | 102.9 KB (32.2%) |
 | `WEBDAV+WEBDAV_MAX_ENTRIES+WEBDAV_BUF_SIZE`                                                               | L7-Application/WebDav                | 809.2 KB (63.2%) | 90.2 KB (28.2%)  |
-| `WEB_TERMINAL`                                                                                            | L6-Presentation/WebTerminal          | 748.8 KB (58.5%) | 80.0 KB (25.0%)  |
+| `WEB_TERMINAL`                                                                                            | L6-Presentation/WebTerminal          | 748.5 KB (58.5%) | 80.0 KB (25.0%)  |
 | `WIFI_SNIFFER+PROMISC`                                                                                    | Peripherals/WifiSniffer              | 709.1 KB (55.4%) | 42.6 KB (13.3%)  |
 | `WS_CLIENT+TLS+WS_CLIENT_TLS`                                                                             | L7-Application/WebSocketClient       | 811.8 KB (63.4%) | 117.7 KB (36.8%) |
 | `WS_CLIENT+TLS+WS_CLIENT_TLS+WS_CLIENT_BUF_SIZE`                                                          | L7-Application/WebSocketClient       | 812.3 KB (63.5%) | 120.7 KB (37.7%) |
