@@ -6,7 +6,7 @@
  * @brief Flash wear-leveling slot selector core (see wearlevel.h).
  */
 
-#include "services/storage/wearlevel/wearlevel.h"
+#include "server/filesystem/wearlevel.h"
 
 #if PC_ENABLE_WEARLEVEL
 

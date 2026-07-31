@@ -10,7 +10,7 @@
  */
 
 #include "services/storage/config_io/config_io.h"
-#include "shared_primitives/strbuf.h" // pc_sb frame builder
+#include "shared_primitives/frame.h" // the one frame engine
 
 #if PC_ENABLE_CONFIG_IO
 
@@ -18,6 +18,9 @@
 #include "shared_primitives/numparse.h"
 #include <stdio.h>
 #include <string.h>
+
+// An exported u32 field is one number.
+static const pc_field CFG_U32[] = {PC_U32, PC_END};
 
 namespace
 {
@@ -76,12 +79,8 @@ int pc_config_export(const char *ns, const pc_cfg_field *fields, size_t n, char 
         char val[PC_VAL_MAX];
         if (fields[i].type == pc_cfg_type::PC_CFG_U32)
         {
-            pc_sb sb_val = {val, sizeof(val), 0, true};
-            pc_sb_u32(&sb_val, (uint32_t)((unsigned)pc_config_get_u32(fields[i].key, 0)));
-            if (pc_sb_finish(&sb_val) == 0)
-            {
-                val[0] = '\0';
-            }
+            // Fails closed to an empty string on its own, so there is no failure arm to write here.
+            pc_frame_build(val, sizeof(val), CFG_U32, (uint32_t)pc_config_get_u32(fields[i].key, 0));
         }
         else
         {

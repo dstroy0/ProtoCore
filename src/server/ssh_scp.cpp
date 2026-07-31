@@ -3,23 +3,27 @@
 
 /**
  * @file ssh_scp.cpp
- * @brief SCP server - fs::FS binding (SINK direction). See ssh_scp.h.
+ * @brief SCP server - the rcp SINK state machine. See ssh_scp.h.
  *
  * Drives the rcp SINK protocol over an SSH `exec "scp -t <path>"` channel: send a ready ack, read the client's
- * `C<mode> <size> <name>` control line, ack it, stream <size> data bytes straight to an fs::FS file, read the
- * trailing end-of-record byte, and send the final ack. One file per transfer (no -r); the SOURCE direction
- * (`scp -f`) replies "use sftp get". Every path is checked for `..` traversal before opening the file.
+ * `C<mode> <size> <name>` control line, ack it, stream <size> data bytes straight to the file, read the trailing
+ * end-of-record byte, and send the final ack. One file per transfer (no -r); the SOURCE direction (`scp -f`)
+ * replies "use sftp get".
+ *
+ * The destination reaches storage as the two pieces it already is - the `-t` target and, when that target is a
+ * directory, the control line's filename - so the accessor frames the whole path once. Resolving it here would
+ * put a root, a path buffer, its capacity, and a copy of the `..` guard into a protocol server.
  */
 
 #include "server/ssh_scp.h"
-#include "shared_primitives/strbuf.h" // pc_sb frame builder
 
 #if PC_ENABLE_SSH_SCP
 
 #include "network_drivers/presentation/ssh/connection/ssh_channel.h"
 #include "network_drivers/presentation/ssh/connection/ssh_conn.h"
-#include "server/fs_path.h"
+#include "server/filesystem/filesystem.h"
 #include "services/file_transfer/scp/scp.h"
+#include "shared_primitives/swar.h" // the bounded word-at-a-time length scan
 #include <string.h>
 
 namespace
@@ -38,44 +42,64 @@ struct ScpConn
     uint8_t slot;
     uint32_t channel;
     ScpSt st;
-    char dest[PC_SFTP_PATH_MAX]; ///< the -t target (a file, or a dir if it ends with '/')
+    char dest[PC_FILESYSTEM_PATH_MAX]; ///< the -t target (a file, or a dir if it ends with '/')
     bool dest_is_dir;
-    fs::File file;
+    int fh;             ///< open file handle, or -1
     uint64_t remaining; ///< data bytes still to receive
     bool err;
     uint16_t cl_len; ///< control-line accumulator length
-    char cl[PC_SFTP_PATH_MAX + 64];
+    char cl[PC_FILESYSTEM_PATH_MAX + 64];
 };
 
+// All SCP state in one owned instance (internal linkage), the work buffer included: a stack array is
+// the one allocation the fixed-footprint accounting cannot see, and the buffer does not outlive the
+// callback that fills it, so one serves every slot.
 struct SshScpCtx
 {
-    fs::FS *fs = nullptr;
-    const char *root = "/";
     bool registered = false;
     ScpConn conns[MAX_SSH_CONNS];
+    char leaf[PC_FILESYSTEM_PATH_MAX]; ///< one control line's filename, live only until the open
 };
 SshScpCtx s_scp;
+
+// An error ack is a status byte, a message, and a terminator, and all three are fixed - so each one
+// is a single rodata string, sent as it stands. Staging one in a buffer would copy a constant and
+// then scan the copy for a length the compiler already had.
+//
+// The status byte is spelled as its own literal so the concatenation boundary is explicit: written
+// as one string, "\x02c" would be read as the single byte 0x2C, because a hex escape consumes every
+// hex digit that follows it and 'c' is one.
+static const char SCP_ERR_NO_SOURCE[] = "\x02"
+                                        "scp download not supported; use sftp get\n";
+static const char SCP_ERR_BAD_CMD[] = "\x02"
+                                      "unsupported scp command\n";
+static const char SCP_ERR_BAD_RECORD[] = "\x02"
+                                         "unsupported scp record\n";
+static const char SCP_ERR_CREATE[] = "\x02"
+                                     "cannot create file\n";
+static const char SCP_ERR_WRITE[] = "\x02"
+                                    "write error\n";
 
 void ack(ScpConn *c, uint8_t byte)
 {
     pc_ssh_conn_send(c->slot, c->channel, &byte, 1);
 }
-void err_ack(ScpConn *c, const char *msg)
+/** @brief Send one complete error record. @p len is `sizeof(record) - 1`, resolved at compile time. */
+void err_ack(ScpConn *c, const char *rec, size_t len)
 {
-    uint8_t buf[96];
-    buf[0] = PC_SCP_ACK_ERROR;
-    size_t ml = strnlen(msg, sizeof(buf) - 3);
-    memcpy(buf + 1, msg, ml);
-    buf[1 + ml] = '\n';
-    pc_ssh_conn_send(c->slot, c->channel, buf, 2 + ml);
+    pc_ssh_conn_send(c->slot, c->channel, reinterpret_cast<const uint8_t *>(rec), len);
+}
+void close_file(ScpConn *c)
+{
+    if (c->fh >= 0)
+    {
+        pc_fs_close(c->fh);
+        c->fh = -1;
+    }
 }
 void pc_scp_end(ScpConn *c)
 {
-    if (c->file)
-    {
-        c->file.close();
-    }
-    c->file = fs::File();
+    close_file(c);
     c->active = false;
     pc_ssh_conn_close_channel(c->slot, c->channel);
 }
@@ -87,64 +111,35 @@ void pc_scp_on_open(uint8_t slot, uint32_t channel, const char *cmd, size_t cmd_
         return;
     }
     ScpConn *c = &s_scp.conns[slot];
-    if (c->file)
-    {
-        c->file.close();
-    }
-    c->file = fs::File();
+    close_file(c);
     c->active = true;
     c->slot = slot;
     c->channel = channel;
     c->err = false;
     c->cl_len = 0;
 
-    char path[PC_SFTP_PATH_MAX];
-    ScpMode mode = pc_scp_parse_cmd(cmd, cmd_len, path, sizeof(path));
+    // Parsed straight into the field that keeps it. Parsing into scratch and copying would move a
+    // whole path twice and then rescan the copy for a length the parse already walked past.
+    ScpMode mode = pc_scp_parse_cmd(cmd, cmd_len, c->dest, sizeof(c->dest));
     if (mode == ScpMode::SINK)
     {
-        size_t pl = strnlen(path, sizeof(path));
-        c->dest_is_dir = (pl > 0 && path[pl - 1] == '/');
-        strncpy(c->dest, path, sizeof(c->dest) - 1);
-        c->dest[sizeof(c->dest) - 1] = '\0';
+        // A '/' terminator is what makes the target a directory, and it is also the separator the
+        // accessor's join relies on, so the flag and the string agree without either being rebuilt.
+        size_t pl = pc_swar_scan_nul(c->dest, sizeof(c->dest));
+        c->dest_is_dir = (pl > 0 && c->dest[pl - 1] == '/');
         c->st = ScpSt::WAIT_CLINE;
         ack(c, PC_SCP_ACK_OK); // ready for the control line
     }
     else if (mode == ScpMode::SOURCE)
     {
-        err_ack(c, "scp download not supported; use sftp get");
+        err_ack(c, SCP_ERR_NO_SOURCE, sizeof(SCP_ERR_NO_SOURCE) - 1);
         pc_scp_end(c);
     }
     else
     {
-        err_ack(c, "unsupported scp command");
+        err_ack(c, SCP_ERR_BAD_CMD, sizeof(SCP_ERR_BAD_CMD) - 1);
         pc_scp_end(c);
     }
-}
-
-// Resolve the on-disk destination for a received file named @p name.
-bool pc_scp_resolve_dest(ScpConn *c, const char *name, char *out, size_t cap)
-{
-    char sub[PC_SFTP_PATH_MAX + 96];
-    if (c->dest_is_dir)
-    {
-        pc_sb sb_sub = {sub, sizeof(sub), 0, true};
-        pc_sb_put(&sb_sub, c->dest);
-        pc_sb_put(&sb_sub, name);
-        if (pc_sb_finish(&sb_sub) == 0)
-        {
-            sub[0] = '\0'; // c->dest ends with '/'
-        }
-    }
-    else
-    {
-        pc_sb sb_sub2 = {sub, sizeof(sub), 0, true};
-        pc_sb_put(&sb_sub2, c->dest);
-        if (pc_sb_finish(&sb_sub2) == 0)
-        {
-            sub[0] = '\0';
-        }
-    }
-    return fs_path_resolve(s_scp.root, sub, out, cap) == 0;
 }
 
 void pc_scp_on_data(uint8_t slot, uint32_t channel, const uint8_t *data, size_t len)
@@ -187,24 +182,19 @@ void pc_scp_on_data(uint8_t slot, uint32_t channel, const uint8_t *data, size_t 
 
             uint32_t mode = 0;
             uint64_t size = 0;
-            char name[PC_SFTP_PATH_MAX];
-            if (!pc_scp_parse_cline(c->cl, c->cl_len, &mode, &size, name, sizeof(name)))
+            if (!pc_scp_parse_cline(c->cl, c->cl_len, &mode, &size, s_scp.leaf, sizeof(s_scp.leaf)))
             {
-                err_ack(c, "unsupported scp record"); // e.g. a D/E directory record (no -r support)
+                // e.g. a D/E directory record (no -r support)
+                err_ack(c, SCP_ERR_BAD_RECORD, sizeof(SCP_ERR_BAD_RECORD) - 1);
                 pc_scp_end(c);
                 return;
             }
-            char disk[PC_SFTP_PATH_MAX];
-            if (!pc_scp_resolve_dest(c, name, disk, sizeof(disk)))
+            // A directory target takes the control line's filename; a file target is the whole
+            // destination on its own. Either way the accessor gets the pieces and frames once.
+            c->fh = pc_fs_open(c->dest, c->dest_is_dir ? s_scp.leaf : "", pc_mnt_mode::PC_MNT_WRITE);
+            if (c->fh < 0)
             {
-                err_ack(c, "bad path");
-                pc_scp_end(c);
-                return;
-            }
-            c->file = s_scp.fs->open(disk, "w");
-            if (!c->file)
-            {
-                err_ack(c, "cannot create file");
+                err_ack(c, SCP_ERR_CREATE, sizeof(SCP_ERR_CREATE) - 1);
                 pc_scp_end(c);
                 return;
             }
@@ -217,7 +207,7 @@ void pc_scp_on_data(uint8_t slot, uint32_t channel, const uint8_t *data, size_t 
         if (c->st == ScpSt::RECV)
         {
             size_t take = (len < c->remaining) ? len : (size_t)c->remaining;
-            if (c->file.write(data, take) != take)
+            if (pc_fs_write(c->fh, data, take) != (int)take)
             {
                 c->err = true;
             }
@@ -234,14 +224,10 @@ void pc_scp_on_data(uint8_t slot, uint32_t channel, const uint8_t *data, size_t 
         {
             data++; // consume the end-of-record byte (0)
             len--;
-            if (c->file)
-            {
-                c->file.close();
-            }
-            c->file = fs::File();
+            close_file(c);
             if (c->err)
             {
-                err_ack(c, "write error");
+                err_ack(c, SCP_ERR_WRITE, sizeof(SCP_ERR_WRITE) - 1);
             }
             else
             {
@@ -255,18 +241,14 @@ void pc_scp_on_data(uint8_t slot, uint32_t channel, const uint8_t *data, size_t 
 }
 } // namespace
 
-void pc_ssh_scp_begin(fs::FS &fs, const char *root)
+void pc_ssh_scp_begin(void)
 {
-    s_scp.fs = &fs;
-    s_scp.root = (root && root[0]) ? root : "/";
     for (int i = 0; i < MAX_SSH_CONNS; i++)
     {
         s_scp.conns[i].active = false;
-        if (s_scp.conns[i].file)
-        {
-            s_scp.conns[i].file.close();
-        }
-        s_scp.conns[i].file = fs::File();
+        // BSS zeroes this table, and 0 is a valid handle, so the free marker is set rather than
+        // assumed - closing handle 0 here would take a file another server had open.
+        s_scp.conns[i].fh = -1;
     }
     if (!s_scp.registered)
     {

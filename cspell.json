@@ -424,6 +424,8 @@
     "gameboy",
     "Gbit",
     "gcda",
+    "gcode",
+    "gcodepart",
     "gcov",
     "gcovr",
     "gdbm",

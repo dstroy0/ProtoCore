@@ -13,7 +13,7 @@
 #include "network_drivers/presentation/ssh/crypto/ssh_rsa.h"          // pc_rsa_verify(), PC_RSA_KEY_BYTES
 #include "network_drivers/presentation/ssh/transport/ssh_packet.h"    // SSH_MSG_* constants
 #include "network_drivers/presentation/ssh/transport/ssh_transport.h" // ssh_sess[], SshPhase
-#include "server/mmgr/scratch.h"                                      // pc_scratch_span() for the verify buffers
+#include "server/mmgr/plaintext.h"                                    // pc_plaintext_span() for the verify buffers
 #include "server/mmgr/secure.h"
 #include "shared_primitives/bytes.h"  // pc_rd_str() - the RFC 4251 sec 5 string reader
 #include "shared_primitives/endian.h" // pc_wr32be() - the one source of truth for wire integers
@@ -470,13 +470,13 @@ static int pc_ssh_auth_handle_pubkey(uint8_t i, const SshAuthReq *req, uint8_t *
     // Borrowed for this dispatch rather than carried on the worker stack. This function sits on the
     // deepest call chain in the library (dispatch -> auth -> ed25519 verify -> ed_add), so the key
     // material and the signed-data staging buffer are what drive the worker stack requirement.
-    // pc_scratch_span binds each capacity to its allocation, so the bounds below are the reserved
+    // pc_plaintext_span binds each capacity to its allocation, so the bounds below are the reserved
     // sizes rather than a second set of constants that has to be kept in step by hand.
-    ScratchBorrow n_be_b(PC_RSA_KEY_BYTES, 4);
+    PlaintextBorrow n_be_b(PC_RSA_KEY_BYTES, 4);
     const pc_span &n_be = n_be_b.span();
-    pc_span e_be = pc_scratch_span(4, 4);
-    pc_span ed_pub = pc_scratch_span(32, 4);
-    pc_span ec_pub = pc_scratch_span(PC_ECDSA_P256_PUB_LEN, 4);
+    pc_span e_be = pc_plaintext_span(4, 4);
+    pc_span ed_pub = pc_plaintext_span(32, 4);
+    pc_span ec_pub = pc_plaintext_span(PC_ECDSA_P256_PUB_LEN, 4);
     if (!pc_span_ok(n_be) || !pc_span_ok(e_be) || !pc_span_ok(ed_pub) || !pc_span_ok(ec_pub))
     {
         return pc_ssh_auth_build_failure(out, out_len, cap, false); // arena exhausted: fail closed
@@ -508,7 +508,7 @@ static int pc_ssh_auth_handle_pubkey(uint8_t i, const SshAuthReq *req, uint8_t *
     // Verify the signature over string(session_id) || signed_prefix. The session_id is the first KEX's
     // exchange hash: 32 bytes (SHA-256 methods) or 64 (sntrup761x25519-sha512).
     const size_t sid_len = ssh_sess[i].session_id_len;
-    pc_span signed_data = pc_scratch_span(SSH_PKT_BUF_SIZE + 4 + SSH_KEXHASH_MAX_LEN, 4);
+    pc_span signed_data = pc_plaintext_span(SSH_PKT_BUF_SIZE + 4 + SSH_KEXHASH_MAX_LEN, 4);
     if (!pc_span_ok(signed_data))
     {
         return pc_ssh_auth_build_failure(out, out_len, cap, false); // arena exhausted: fail closed
@@ -536,7 +536,7 @@ static int pc_ssh_auth_handle_pubkey(uint8_t i, const SshAuthReq *req, uint8_t *
     }
     else if (is_ecdsa)
     {
-        pc_span ec_sig = pc_scratch_span(PC_ECDSA_P256_SIG_LEN, 4);
+        pc_span ec_sig = pc_plaintext_span(PC_ECDSA_P256_SIG_LEN, 4);
         sig_ok = pc_span_ok(ec_sig) && parse_ecdsa_sig(req->signature, req->signature_len, ec_sig.buf) &&
                  pc_ecdsa_p256_verify(ec_pub.buf, signed_data.buf, sd, ec_sig.buf);
     }

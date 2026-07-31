@@ -23,7 +23,7 @@
 #if PC_ENABLE_WS_DEFLATE
 #include "network_drivers/presentation/codec/deflate/deflate.h"
 #include "network_drivers/presentation/codec/inflate/inflate.h"
-#include "server/mmgr/scratch.h"
+#include "server/mmgr/plaintext.h"
 #endif
 
 WsConn ws_pool[MAX_WS_CONNS];
@@ -180,14 +180,14 @@ bool ws_send_frame(WsConn *ws, WsOpcode opcode, const uint8_t *payload, uint16_t
     // PC_WS_DEFLATE_MAX bounds what the compressor accepts, so the borrow below has a compile-time
     // worst case and cannot fail. A longer message is sent uncompressed, which the per-message RSV1
     // flag makes legal.
-    static_assert(PC_SCRATCH_WORK_WS_SEND <= PC_SCRATCH_ARENA_SIZE, "WS deflate scratch exceeds the arena");
-    ScratchScope scope;
+    static_assert(PC_PLAINTEXT_WORK_WS_SEND <= PC_PLAINTEXT_ARENA_SIZE, "WS deflate scratch exceeds the arena");
+    PlaintextScope scope;
     if (ws->pmd && len > 0 && len <= PC_WS_DEFLATE_MAX &&
         (opcode == WsOpcode::WS_OP_TEXT || opcode == WsOpcode::WS_OP_BINARY))
     {
         size_t cap = (size_t)len + len / 8 + 16; // static-Huffman worst-case headroom
-        void *scr = scratch_alloc(DEFLATE_SCRATCH_SIZE, 16);
-        uint8_t *cbuf = (uint8_t *)scratch_alloc(cap, 1);
+        void *scr = pc_plaintext_alloc(DEFLATE_SCRATCH_SIZE, 16);
+        uint8_t *cbuf = (uint8_t *)pc_plaintext_alloc(cap, 1);
         if (scr && cbuf)
         {
             size_t clen = 0;
@@ -311,12 +311,12 @@ static void ws_finish_frame(WsConn *ws, TcpConn *conn)
         {
             // The parser closes 1009 before msg_len passes WS_FRAME_SIZE, so all three borrows are
             // bounded and cannot fail.
-            static_assert(PC_SCRATCH_WORK_WS_RECV <= PC_SCRATCH_ARENA_SIZE, "WS inflate scratch exceeds the arena");
-            ScratchScope scope;
+            static_assert(PC_PLAINTEXT_WORK_WS_RECV <= PC_PLAINTEXT_ARENA_SIZE, "WS inflate scratch exceeds the arena");
+            PlaintextScope scope;
             size_t comp_len = ws->msg_len;
-            uint8_t *in = (uint8_t *)scratch_alloc(comp_len + 4, 1);
-            uint8_t *out = (uint8_t *)scratch_alloc(WS_FRAME_SIZE, 1);
-            uint8_t *tbl = (uint8_t *)scratch_alloc(INFLATE_SCRATCH_SIZE, 16);
+            uint8_t *in = (uint8_t *)pc_plaintext_alloc(comp_len + 4, 1);
+            uint8_t *out = (uint8_t *)pc_plaintext_alloc(WS_FRAME_SIZE, 1);
+            uint8_t *tbl = (uint8_t *)pc_plaintext_alloc(INFLATE_SCRATCH_SIZE, 16);
             if (!in || !out || !tbl)
             {
                 ws_close(ws, WsCloseCode::WS_CLOSE_PROTOCOL); // arena exhausted: fail closed

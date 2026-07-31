@@ -42,6 +42,8 @@
 #include "network_drivers/session/worker.h"
 #include "network_drivers/tls/tls.h"
 #include "network_drivers/transport/listener.h"
+#include "server/mmgr/plaintext.h"   // the diag document is borrowed, not a stack array
+#include "shared_primitives/frame.h" // the diag document is a frame spec, not a concatenation
 #include "shared_primitives/hex.h"
 #include "shared_primitives/strbuf.h" // pc_sb frame builder
 #include "shared_primitives/mime.h"
@@ -1445,9 +1447,150 @@ bool PC::defer(uint8_t slot, pc_deferred_fn fn, void *arg) const
 // ---------------------------------------------------------------------------
 
 #if PC_ENABLE_DIAG
+
+// The build-info document. Every value is a compile-time constant, so nothing is discovered at
+// runtime: each flag selects one of two literals and each sizing constant renders as a decimal.
+// It is a frame like every other frame here, so the conversions come from the one engine that is
+// tested rather than from a private set of preprocessor pastes.
+static const pc_field DIAG_DOC[] = {
+    {PC_FK_LIT, 0, 31, "{\"lib\":\"ProtoCore\",\"features\":{"},
+    {PC_FK_LIT, 0, 12, "\"websocket\":"},
+    PC_STR,
+    {PC_FK_LIT, 0, 7, ",\"sse\":"},
+    PC_STR,
+    {PC_FK_LIT, 0, 13, ",\"multipart\":"},
+    PC_STR,
+    {PC_FK_LIT, 0, 16, ",\"file_serving\":"},
+    PC_STR,
+    {PC_FK_LIT, 0, 8, ",\"auth\":"},
+    PC_STR,
+    {PC_FK_LIT, 0, 10, ",\"webdav\":"},
+    PC_STR,
+    {PC_FK_LIT, 0, 8, ",\"coap\":"},
+    PC_STR,
+    {PC_FK_LIT, 0, 8, ",\"snmp\":"},
+    PC_STR,
+    {PC_FK_LIT, 0, 9, ",\"opcua\":"},
+    PC_STR,
+    {PC_FK_LIT, 0, 9, ",\"umati\":"},
+    PC_STR,
+    {PC_FK_LIT, 0, 10, ",\"modbus\":"},
+    PC_STR,
+    {PC_FK_LIT, 0, 8, ",\"mqtt\":"},
+    PC_STR,
+    {PC_FK_LIT, 0, 13, ",\"mtconnect\":"},
+    PC_STR,
+    {PC_FK_LIT, 0, 9, ",\"redis\":"},
+    PC_STR,
+    {PC_FK_LIT, 0, 7, ",\"ftp\":"},
+    PC_STR,
+    {PC_FK_LIT, 0, 8, ",\"smtp\":"},
+    PC_STR,
+    {PC_FK_LIT, 0, 7, ",\"smb\":"},
+    PC_STR,
+    {PC_FK_LIT, 0, 10, ",\"syslog\":"},
+    PC_STR,
+    {PC_FK_LIT, 0, 17, ",\"pc_ntp_server\":"},
+    PC_STR,
+    {PC_FK_LIT, 0, 14, ",\"dns_server\":"},
+    PC_STR,
+    {PC_FK_LIT, 0, 8, ",\"nats\":"},
+    PC_STR,
+    {PC_FK_LIT, 0, 9, ",\"stomp\":"},
+    PC_STR,
+    {PC_FK_LIT, 0, 10, ",\"statsd\":"},
+    PC_STR,
+    {PC_FK_LIT, 0, 7, ",\"jwt\":"},
+    PC_STR,
+    {PC_FK_LIT, 0, 7, ",\"tls\":"},
+    PC_STR,
+    {PC_FK_LIT, 0, 9, ",\"http2\":"},
+    PC_STR,
+    {PC_FK_LIT, 0, 9, ",\"http3\":"},
+    PC_STR,
+    {PC_FK_LIT, 0, 7, ",\"ssh\":"},
+    PC_STR,
+    {PC_FK_LIT, 0, 14, ",\"ws_deflate\":"},
+    PC_STR,
+    {PC_FK_LIT, 0, 9, ",\"range\":"},
+    PC_STR,
+    {PC_FK_LIT, 0, 8, ",\"csrf\":"},
+    PC_STR,
+    {PC_FK_LIT, 0, 19, ",\"accept_throttle\":"},
+    PC_STR,
+    {PC_FK_LIT, 0, 19, ",\"per_ip_throttle\":"},
+    PC_STR,
+    {PC_FK_LIT, 0, 16, ",\"auth_lockout\":"},
+    PC_STR,
+    {PC_FK_LIT, 0, 12, "},\"config\":{"},
+    {PC_FK_LIT, 0, 12, "\"MAX_CONNS\":"},
+    PC_U32,
+    {PC_FK_LIT, 0, 15, ",\"RX_BUF_SIZE\":"},
+    PC_U32,
+    {PC_FK_LIT, 0, 17, ",\"BODY_BUF_SIZE\":"},
+    PC_U32,
+    {PC_FK_LIT, 0, 14, ",\"MAX_ROUTES\":"},
+    PC_U32,
+    {PC_FK_LIT, 0, 15, ",\"MAX_HEADERS\":"},
+    PC_U32,
+    {PC_FK_LIT, 0, 16, ",\"MAX_PATH_LEN\":"},
+    PC_U32,
+    {PC_FK_LIT, 0, 15, ",\"MAX_KEY_LEN\":"},
+    PC_U32,
+    {PC_FK_LIT, 0, 15, ",\"MAX_VAL_LEN\":"},
+    PC_U32,
+    {PC_FK_LIT, 0, 17, ",\"MAX_QUERY_LEN\":"},
+    PC_U32,
+    {PC_FK_LIT, 0, 20, ",\"MAX_QUERY_PARAMS\":"},
+    PC_U32,
+    {PC_FK_LIT, 0, 19, ",\"CONN_TIMEOUT_MS\":"},
+    PC_U32,
+    {PC_FK_LIT, 0, 21, ",\"RESP_HDR_BUF_SIZE\":"},
+    PC_U32,
+    {PC_FK_LIT, 0, 19, ",\"WS_HDR_BUF_SIZE\":"},
+    PC_U32,
+    {PC_FK_LIT, 0, 21, ",\"CORS_HDR_BUF_SIZE\":"},
+    PC_U32,
+    {PC_FK_LIT, 0, 19, ",\"EVT_QUEUE_DEPTH\":"},
+    PC_U32,
+    {PC_FK_LIT, 0, 2, "}}"},
+    PC_END,
+};
+
+// Worst case: every flag rendering as the longer "false", every size at a uint32_t's ten digits.
+#define PC_PLAINTEXT_WORK_DIAG 975
+static_assert(PC_PLAINTEXT_WORK_DIAG <= PC_PLAINTEXT_ARENA_SIZE, "diag document exceeds the arena");
+
 void PC::diag(uint8_t slot_id)
 {
-    send(slot_id, 200, PC_MIME_JSON, PC_DIAG_JSON);
+    PlaintextScope scope;
+    char *doc = (char *)pc_plaintext_alloc(PC_PLAINTEXT_WORK_DIAG, 1);
+    if (doc == nullptr ||
+        pc_frame_build(
+            doc, PC_PLAINTEXT_WORK_DIAG, DIAG_DOC, PC_ENABLE_WEBSOCKET ? "true" : "false",
+            PC_ENABLE_SSE ? "true" : "false", PC_ENABLE_MULTIPART ? "true" : "false",
+            PC_ENABLE_FILE_SERVING ? "true" : "false", PC_ENABLE_AUTH ? "true" : "false",
+            PC_ENABLE_WEBDAV ? "true" : "false", PC_ENABLE_COAP ? "true" : "false", PC_ENABLE_SNMP ? "true" : "false",
+            PC_ENABLE_OPCUA ? "true" : "false", PC_ENABLE_UMATI ? "true" : "false", PC_ENABLE_MODBUS ? "true" : "false",
+            PC_ENABLE_MQTT ? "true" : "false", PC_ENABLE_MTCONNECT ? "true" : "false",
+            PC_ENABLE_REDIS ? "true" : "false", PC_ENABLE_FTP ? "true" : "false", PC_ENABLE_SMTP ? "true" : "false",
+            PC_ENABLE_SMB ? "true" : "false", PC_ENABLE_SYSLOG ? "true" : "false",
+            PC_ENABLE_NTP_SERVER ? "true" : "false", PC_ENABLE_DNS_SERVER ? "true" : "false",
+            PC_ENABLE_NATS ? "true" : "false", PC_ENABLE_STOMP ? "true" : "false", PC_ENABLE_STATSD ? "true" : "false",
+            PC_ENABLE_JWT ? "true" : "false", PC_ENABLE_TLS ? "true" : "false", PC_ENABLE_HTTP2 ? "true" : "false",
+            PC_ENABLE_HTTP3 ? "true" : "false", PC_ENABLE_SSH ? "true" : "false",
+            PC_ENABLE_WS_DEFLATE ? "true" : "false", PC_ENABLE_RANGE ? "true" : "false",
+            PC_ENABLE_CSRF ? "true" : "false", PC_ENABLE_ACCEPT_THROTTLE ? "true" : "false",
+            PC_ENABLE_PER_IP_THROTTLE ? "true" : "false", PC_ENABLE_AUTH_LOCKOUT ? "true" : "false",
+            (uint32_t)MAX_CONNS, (uint32_t)RX_BUF_SIZE, (uint32_t)BODY_BUF_SIZE, (uint32_t)MAX_ROUTES,
+            (uint32_t)MAX_HEADERS, (uint32_t)MAX_PATH_LEN, (uint32_t)MAX_KEY_LEN, (uint32_t)MAX_VAL_LEN,
+            (uint32_t)MAX_QUERY_LEN, (uint32_t)MAX_QUERY_PARAMS, (uint32_t)CONN_TIMEOUT_MS, (uint32_t)RESP_HDR_BUF_SIZE,
+            (uint32_t)WS_HDR_BUF_SIZE, (uint32_t)CORS_HDR_BUF_SIZE, (uint32_t)EVT_QUEUE_DEPTH) == 0)
+    {
+        send(slot_id, 503, PC_MIME_TEXT_PLAIN, ""); // fail closed: no partial document reaches the wire
+        return;
+    }
+    send(slot_id, 200, PC_MIME_JSON, doc);
 }
 #endif
 

@@ -11,7 +11,7 @@
  */
 
 #include "csrf.h"
-#include "shared_primitives/strbuf.h" // pc_sb frame builder
+#include "shared_primitives/frame.h" // the one frame engine
 
 #if PC_ENABLE_CSRF
 
@@ -19,6 +19,9 @@
 #include "shared_primitives/hex.h"
 #include <stdio.h>
 #include <string.h>
+
+// nonce-hex "." signature-hex
+static const pc_field CSRF_TOKEN[] = {PC_STR, {PC_FK_LIT, 0, 1, "."}, PC_STR, PC_END};
 
 namespace
 {
@@ -86,17 +89,8 @@ int pc_csrf_issue(char *out, size_t cap)
     pc_hex_encode(nonce, CSRF_NONCE_BYTES, nhex);
     sign_nonce(s_csrf, nonce, CSRF_NONCE_BYTES, shex);
 
-    pc_sb sb_out = {out, cap, 0, true};
-    pc_sb_put(&sb_out, nhex);
-    pc_sb_put(&sb_out, ".");
-    pc_sb_put(&sb_out, shex);
-    int n = (int)pc_sb_finish(&sb_out);
-    // Both guard halves are unreachable given this function's own invariants: nhex/shex are
-    // fixed-length hex strings, so n is always exactly CSRF_NONCE_BYTES*2 + 1 + CSRF_SIG_BYTES*2
-    // (41) and snprintf cannot go negative on this encoding-error-free format; cap is already
-    // guaranteed >= CSRF_TOKEN_BUF (48) by the guard above, which exceeds 41. Kept as the one
-    // place that would otherwise return a bogus length or read out of bounds.
-    return (n > 0 && (size_t)n < cap) ? n : 0; // GCOVR_EXCL_BR_LINE
+    // The frame's contract is this function's contract: the length written, or 0 and out emptied.
+    return pc_frame_build(out, cap, CSRF_TOKEN, nhex, shex);
 }
 
 bool pc_csrf_verify(const char *token)

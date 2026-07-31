@@ -7,7 +7,7 @@
 // ATTRS / NAME), a hand-built PC_SSH_FXP_OPEN request parsed back, a multi-entry NAME via the writer API, the
 // ls -l longname formatter, reader bounds safety, and builder overflow. Pure host tests (no fs, no SSH).
 
-#include "server/fs_path.h"
+#include "server/filesystem/filesystem.h"
 #include "services/file_transfer/sftp/sftp.h"
 #include <stdint.h>
 #include <string.h>
@@ -314,24 +314,24 @@ static void test_builder_overflow()
     TEST_ASSERT_EQUAL_UINT(0, pc_sftp_build_data(1, "0123456789", 10, tiny, sizeof(tiny)));
 }
 
-// --- shared path-traversal guard (server/fs_path.h) ----------------------------------------------
-static void test_fs_path_resolve()
+// --- shared path-traversal guard (server/filesystem/filesystem.h) -------------------------------------------
+static void test_pc_fs_resolve()
 {
     char out[128];
-    TEST_ASSERT_EQUAL_INT(0, fs_path_resolve("/gcode", "/part.nc", out, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, pc_fs_resolve("/gcode/", "/part.nc", "", out, sizeof(out)));
     TEST_ASSERT_EQUAL_STRING("/gcode/part.nc", out);
     // root "/" + "/x" collapses the double slash
-    TEST_ASSERT_EQUAL_INT(0, fs_path_resolve("/", "/x", out, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, pc_fs_resolve("/", "/x", "", out, sizeof(out)));
     TEST_ASSERT_EQUAL_STRING("/x", out);
     // a trailing slash is dropped
-    TEST_ASSERT_EQUAL_INT(0, fs_path_resolve("/gcode", "/sub/", out, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, pc_fs_resolve("/gcode/", "/sub/", "", out, sizeof(out)));
     TEST_ASSERT_EQUAL_STRING("/gcode/sub", out);
     // traversal is refused
-    TEST_ASSERT_EQUAL_INT(-1, fs_path_resolve("/gcode", "/../etc/passwd", out, sizeof(out)));
-    TEST_ASSERT_EQUAL_INT(-1, fs_path_resolve("/gcode", "/sub/../../x", out, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(-1, pc_fs_resolve("/gcode/", "/../etc/passwd", "", out, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(-1, pc_fs_resolve("/gcode/", "/sub/../../x", "", out, sizeof(out)));
     // overflow is refused
     char small[8];
-    TEST_ASSERT_EQUAL_INT(-2, fs_path_resolve("/gcode", "/a-very-long-subpath-name", small, sizeof(small)));
+    TEST_ASSERT_EQUAL_INT(-2, pc_fs_resolve("/gcode/", "/a-very-long-subpath-name", "", small, sizeof(small)));
 }
 
 // --- reader / writer failure latching -------------------------------------------------------------
@@ -532,7 +532,7 @@ static void test_longname_truncates_to_the_buffer()
 int main()
 {
     UNITY_BEGIN();
-    RUN_TEST(test_fs_path_resolve);
+    RUN_TEST(test_pc_fs_resolve);
     RUN_TEST(test_rw_roundtrip);
     RUN_TEST(test_reader_bounds);
     RUN_TEST(test_attrs_roundtrip);

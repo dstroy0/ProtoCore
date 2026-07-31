@@ -9,7 +9,7 @@
 
 #include "crypto/asymmetric/bignum.h"                        // bn_* direct coverage
 #include "network_drivers/presentation/ssh/crypto/ssh_rsa.h" // in-test RS256 signing
-#include "server/mmgr/scratch.h"
+#include "server/mmgr/plaintext.h"
 #include "services/security/oidc/oidc.h"
 #include <stdint.h>
 #include <stdio.h>
@@ -158,13 +158,13 @@ void test_oidc_parse_edge_guards()
                           pc_oidc_verify_with_key(hdr_negnum, strlen(hdr_negnum), &key, ISS, AUD, NOW, nullptr));
 
     // Scratch arena exhausted before the decode buffers can be borrowed -> fail closed.
-    scratch_reset();
-    while (scratch_alloc(256, 1))
+    pc_plaintext_reset();
+    while (pc_plaintext_alloc(256, 1))
     {
     }
     TEST_ASSERT_EQUAL_INT(pc_oidc_result::PC_OIDC_ERR_FORMAT,
                           pc_oidc_verify_with_key(K_TOK_VALID, strlen(K_TOK_VALID), &key, ISS, AUD, NOW, nullptr));
-    scratch_reset();
+    pc_plaintext_reset();
 
     // A JWK whose modulus base64url-decodes to nothing -> parse_rsa_jwk fails.
     static const char *K_JWKS_BADN = "{\"keys\":[{\"kty\":\"RSA\",\"kid\":\"bad\",\"n\":\"\",\"e\":\"AQAB\"}]}";
@@ -691,10 +691,10 @@ void test_verify_exp_required_nbf_past()
 // to succeed or fail individually.
 static void scratch_leave(size_t keep)
 {
-    scratch_reset();
-    size_t cap = scratch_capacity();
+    pc_plaintext_reset();
+    size_t cap = pc_plaintext_capacity();
     TEST_ASSERT_TRUE(cap > keep);
-    TEST_ASSERT_NOT_NULL(scratch_alloc(cap - keep, 1));
+    TEST_ASSERT_NOT_NULL(pc_plaintext_alloc(cap - keep, 1));
 }
 
 // verify_with_key borrows four buffers from the scratch arena and must fail closed if ANY of
@@ -730,7 +730,7 @@ void test_verify_scratch_partial_exhaustion()
     scratch_leave(HDR + SIG + PL + ISSC);
     TEST_ASSERT_EQUAL_INT(pc_oidc_result::PC_OIDC_OK,
                           pc_oidc_verify_with_key(K_TOK_VALID, strlen(K_TOK_VALID), &key, ISS, AUD, NOW, nullptr));
-    scratch_reset();
+    pc_plaintext_reset();
 }
 
 // --- pc_bignum.cpp direct coverage --------------------------------------------------

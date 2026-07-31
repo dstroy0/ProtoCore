@@ -1,0 +1,116 @@
+// Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+/**
+ * @file mnt.h
+ * @brief The mount: which store is behind the filesystem, and the vtable it answers through
+ *        (PC_ENABLE_MNT).
+ *
+ * This file answers one question - *what is mounted* - and nothing else. The operations a caller
+ * performs live on the filesystem accessor (server/filesystem.h), which resolves a request path
+ * against its root and then dispatches here. Splitting it that way means a backend author
+ * implements storage and never touches path policy, and the `..` guard cannot be bypassed by
+ * reaching a backend directly.
+ *
+ * Two backends ship:
+ *
+ *  - **RAM** (built-in, host-testable, zero-heap): a fixed pool of PC_MNT_RAM_FILES files of up to
+ *    PC_MNT_RAM_FILE_SIZE bytes each, all in BSS - deterministic, bounded, and identical on host
+ *    and target. It is what lets the SFTP/SCP/WebDAV servers run under a native test.
+ *
+ *  - **Arduino FS** (board layer): wraps a real `fs::FS` (LittleFS / SD / SPIFFS) for persistent
+ *    storage. It lives in board_drivers/ because it speaks a vendor framework, which the core does
+ *    not.
+ *
+ * Handles are small ints the backend assigns, and a directory cursor is one of them - so ::close
+ * releases either kind and there is no second lifetime to get wrong. Every entry point fails
+ * closed (-1 / false) when nothing is mounted.
+ *
+ * Single-accessor like the other services: use it from one context (a worker / loop), not
+ * concurrently.
+ *
+ * @author  Douglas Quigg (dstroy0)
+ * @date    2026
+ */
+
+#ifndef PROTOCORE_MNT_H
+#define PROTOCORE_MNT_H
+
+#include "protocore_config.h"
+#include <stddef.h>
+#include <stdint.h>
+
+#if PC_ENABLE_MNT
+
+/** @brief Open modes. */
+enum class pc_mnt_mode : uint8_t
+{
+    PC_MNT_READ = 0,   ///< Read existing file (fails if absent).
+    PC_MNT_WRITE = 1,  ///< Create/truncate for writing.
+    PC_MNT_APPEND = 2, ///< Create/open for appending at end.
+};
+
+/**
+ * @brief What a stat and a directory entry both answer: the facts about one file, and no name.
+ *
+ * The name is deliberately absent. A name buffer welded into this struct would set one length for
+ * every consumer, and the consumers do not agree: the SFTP codec sizes its entry scratch from what
+ * one NAME response must hold, WebDAV from an href, the RAM backend from its own file table. Each
+ * translation unit derives the length it needs and passes a buffer, so this type stays the four
+ * facts and carries no policy.
+ *
+ * Stat and readdir share it because they answer the same question about the same directory record
+ * - asking a backend for a size, then whether it is a directory, then its mtime is three lookups
+ * of one record, which on FAT is three seeks to learn what the first read already had.
+ */
+struct pc_mnt_stat
+{
+    bool is_dir;
+    uint64_t size;  ///< 0 for a directory
+    uint32_t mtime; ///< unix epoch seconds, 0 if the backend keeps no timestamp
+};
+
+/**
+ * @brief A storage backend. Each open call returns a small handle (>= 0) or -1.
+ *
+ * Implement this to add a backend; the built-in RAM backend is returned by pc_mnt_ram().
+ */
+struct pc_mnt_backend
+{
+    int (*open)(const char *path, int mode);             ///< -> handle (>=0) or -1.
+    int (*read)(int handle, void *buf, size_t n);        ///< bytes read, or -1.
+    int (*write)(int handle, const void *buf, size_t n); ///< bytes written, or -1.
+    void (*close)(int handle);                           ///< release a file OR directory handle.
+    bool (*seek)(int handle, uint64_t off);              ///< absolute seek; false if unsupported.
+    long (*size)(const char *path);                      ///< file size, or -1 if absent.
+    bool (*exists)(const char *path);                    ///< true if the path exists.
+    bool (*remove)(const char *path);                    ///< delete a file; true on success.
+    bool (*rename)(const char *from, const char *to);    ///< rename; true on success.
+    bool (*mkdir)(const char *path);                     ///< create a directory; true on success.
+    bool (*rmdir)(const char *path);                     ///< remove an empty directory; true on success.
+    bool (*stat)(const char *path, pc_mnt_stat *out);    ///< fill @p out for @p path; false if absent.
+    int (*opendir)(const char *path);                    ///< -> directory handle (>=0) or -1.
+    /** @brief Next entry: facts into @p out, name into @p name (NUL-terminated). False at end. */
+    bool (*readdir)(int handle, pc_mnt_stat *out, char *name, size_t name_cap);
+};
+
+/** @brief Mount the active backend (call once at setup; nullptr unmounts). */
+void pc_mnt_mount(const pc_mnt_backend *backend);
+
+/**
+ * @brief The mounted backend, or nullptr if nothing is mounted.
+ *
+ * The filesystem accessor dispatches through this. It is exposed rather than kept private because
+ * the alternative - a forwarding entry point here for every operation - would be a second copy of
+ * the vtable written by hand, and the two would drift the first time one gained a call.
+ */
+const pc_mnt_backend *pc_mnt_active(void);
+
+/** @brief The built-in deterministic RAM backend (fixed BSS pool, no heap). */
+const pc_mnt_backend *pc_mnt_ram(void);
+
+/** @brief Clear the RAM backend (all files, directories, and open handles). */
+void pc_mnt_ram_format(void);
+
+#endif // PC_ENABLE_MNT
+#endif // PROTOCORE_MNT_H

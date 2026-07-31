@@ -12,7 +12,7 @@
 #include "network_drivers/presentation/ssh/transport/ssh_dh.h"
 #include "network_drivers/presentation/ssh/transport/ssh_packet.h"
 #include "network_drivers/presentation/ssh/transport/ssh_transport.h"
-#include "server/mmgr/scratch.h"
+#include "server/mmgr/plaintext.h"
 #if PC_ENABLE_SSH_ZLIB
 #include "network_drivers/presentation/ssh/transport/ssh_comp.h"
 #endif
@@ -80,9 +80,9 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
 
     // The reply buffer is borrowed for this dispatch, not carried on the worker stack: it is the
     // single largest frame on the SSH path and the handshake below it (curve25519 / ed25519) is
-    // already the deepest call chain in the library. pc_scratch_span binds the capacity to the
+    // already the deepest call chain in the library. pc_plaintext_span binds the capacity to the
     // allocation, so every `reply.cap` below is the number that was actually reserved.
-    ScratchBorrow reply_b(SSH_PKT_BUF_SIZE, 16);
+    PlaintextBorrow reply_b(SSH_PKT_BUF_SIZE, 16);
     const pc_span &reply = reply_b.span();
     if (!pc_span_ok(reply))
     {

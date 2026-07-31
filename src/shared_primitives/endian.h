@@ -3,18 +3,16 @@
 
 /**
  * @file endian.h
- * @brief Fixed-width integer serializers into a raw @c uint8_t* buffer - one source of truth.
+ * @brief A fixed width moved between an integer and the bytes at a pointer.
  *
- * Every binary codec (ADS, AMQP, C37.118, NetFlow, WAL, SHA-1/256, NTLMSSP/SMB2, ...) had its own
- * byte-for-byte copy of these little-/big-endian pack/unpack helpers under a different local name
- * (@c put16le / @c put16 / @c wr16 / @c store_be32 / @c put_u32 ...). They now live here once.
+ * A width is all this file knows, so the bound is not its to check. shared_primitives/span.h holds
+ * the bound and hands out a pointer to bytes it has already proven; a width is read or written there.
  *
- * Writers return the number of bytes written (2/4/8) so a caller can advance an offset; a caller that
- * only needs the side effect simply ignores the return. Readers assume @p p has at least the width in
- * range - callers bounds-check the buffer, as the hand-rolled copies did.
+ * Writers return their width (2/4/8) so a caller can advance by it.
  *
- * Header-only and pure (only @c <stdint.h> / @c <stddef.h>) so it is host-testable and identical on
- * device + host, and carries zero link cost when unused.
+ * Byte at a time, never a cast to a wider pointer: correct where loads must be aligned, and correct
+ * on either byte order. Header-only and pure (@c <stdint.h> / @c <stddef.h>), so it costs nothing
+ * when unused.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026

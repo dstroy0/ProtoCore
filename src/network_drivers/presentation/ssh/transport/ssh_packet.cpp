@@ -16,7 +16,7 @@
 #include "network_drivers/presentation/ssh/transport/ssh_comp.h"
 #include "network_drivers/presentation/ssh/transport/ssh_zlib.h" // ssh_deflate_bound
 #endif
-#include "server/mmgr/scratch.h"
+#include "server/mmgr/plaintext.h"
 #include "server/mmgr/secure.h"
 #include <string.h>
 
@@ -198,11 +198,11 @@ int ssh_pkt_send(uint8_t i, const uint8_t *payload, size_t payload_len, uint8_t 
     // stream is active. The compressor is stateful (context takeover), so this call must be followed
     // by a full send - the same atomicity the stateful cipher below already requires. The wire buffer
     // is sized (SSH_WIRE_CAP) so the compressed payload can never overflow out_cap and desync.
-    ScratchScope comp_scope;
+    PlaintextScope comp_scope;
     if (ssh_comp_s2c_active(i))
     {
         size_t bound = ssh_deflate_bound(payload_len);
-        uint8_t *cbuf = (uint8_t *)scratch_alloc(bound, 16);
+        uint8_t *cbuf = (uint8_t *)pc_plaintext_alloc(bound, 16);
         size_t clen = 0;
         if (!cbuf || ssh_comp_s2c(i, payload, payload_len, cbuf, bound, &clen) != 0)
         {
@@ -323,8 +323,8 @@ static int ssh_dispatch_payload(uint8_t i, const uint8_t *payload, size_t payloa
 #if PC_ENABLE_SSH_ZLIB
     if (ssh_comp_c2s_active(i))
     {
-        ScratchScope inflate_scope;
-        uint8_t *dbuf = (uint8_t *)scratch_alloc(SSH_PKT_BUF_SIZE, 16);
+        PlaintextScope inflate_scope;
+        uint8_t *dbuf = (uint8_t *)pc_plaintext_alloc(SSH_PKT_BUF_SIZE, 16);
         size_t dlen = 0;
         if (!dbuf || ssh_comp_c2s(i, payload, payload_len, dbuf, SSH_PKT_BUF_SIZE, &dlen) != 0)
         {
@@ -367,8 +367,8 @@ static int ssh_recv_chachapoly(uint8_t i, SshPacketState *s, const SshKeyMat *km
     }
 
     const size_t scratch_sz = 4 + pkt_len; // plaintext = length(4) || (pad_len||payload||pad)
-    ScratchScope scratch_scope;
-    uint8_t *scratch = (uint8_t *)scratch_alloc(scratch_sz, 16);
+    PlaintextScope scratch_scope;
+    uint8_t *scratch = (uint8_t *)pc_plaintext_alloc(scratch_sz, 16);
     if (!scratch)
     {
         pc_secure_wipe(s->rx_buf, s->rx_len);
@@ -432,8 +432,8 @@ static int ssh_recv_aesgcm(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_msg_
     }
 
     const size_t scratch_sz = pkt_len; // plaintext = padding_length || payload || padding
-    ScratchScope scratch_scope;
-    uint8_t *scratch = (uint8_t *)scratch_alloc(scratch_sz, 16);
+    PlaintextScope scratch_scope;
+    uint8_t *scratch = (uint8_t *)pc_plaintext_alloc(scratch_sz, 16);
     if (!scratch)
     {
         pc_secure_wipe(s->rx_buf, s->rx_len);
@@ -518,8 +518,8 @@ static int ssh_recv_ctr_etm(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_msg
 
     // MAC verified -> decrypt the payload (advances c2s_ctx by exactly pkt_len/16 blocks).
     const size_t scratch_sz = SSH_PKT_BUF_SIZE;
-    ScratchScope scratch_scope;
-    uint8_t *scratch = (uint8_t *)scratch_alloc(scratch_sz, 16);
+    PlaintextScope scratch_scope;
+    uint8_t *scratch = (uint8_t *)pc_plaintext_alloc(scratch_sz, 16);
     if (!scratch)
     {
         pc_secure_wipe(s->rx_buf, s->rx_len);
@@ -587,8 +587,8 @@ static int ssh_recv_ctr_emac(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_ms
     // one call reuse the same space instead of accumulating; an exhausted
     // arena fails closed (discard + disconnect).
     const size_t scratch_sz = SSH_PKT_BUF_SIZE + 64;
-    ScratchScope scratch_scope;
-    uint8_t *scratch = (uint8_t *)scratch_alloc(scratch_sz, 16);
+    PlaintextScope scratch_scope;
+    uint8_t *scratch = (uint8_t *)pc_plaintext_alloc(scratch_sz, 16);
     if (!scratch)
     {
         pc_secure_wipe(s->rx_buf, s->rx_len);

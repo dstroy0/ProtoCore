@@ -71,7 +71,7 @@ To isolate our application code from physical hardware and the operating system'
 
 <!-- BEGIN GENERATED test-environments (edit test/test_matrix.json, run test/gen_test_readme.py) -->
 
-The native test matrix has **278 environments**, one per feature, generated from [test_matrix.json](test_matrix.json) into [platformio.ini](../platformio.ini) by [gen_test_envs.py](gen_test_envs.py). Each compiles a strict per-feature slice of `src/` with its own flags and runs that feature's suite in isolation, so "this feature builds and tests on its own" stays guaranteed.
+The native test matrix has **280 environments**, one per feature, generated from [test_matrix.json](test_matrix.json) into [platformio.ini](../platformio.ini) by [gen_test_envs.py](gen_test_envs.py). Each compiles a strict per-feature slice of `src/` with its own flags and runs that feature's suite in isolation, so "this feature builds and tests on its own" stays guaranteed.
 
 | Environment | Feature flag(s) | Test suite(s) | Purpose |
 | :--- | :--- | :--- | :--- |
@@ -104,7 +104,7 @@ The native test matrix has **278 environments**, one per feature, generated from
 | `native_coap_observe` | `PC_ENABLE_COAP=1`, `PC_ENABLE_COAP_BLOCK=1`, `PC_COAP_BLOCK_SZX_MAX=2`, `PC_COAP_BLOCK1_MAX=128`, `PC_ENABLE_COAP_OBSERVE=1` | `test_coap` | CoAP with resource observation (RFC 7641) enabled. |
 | `native_coaps` | `PC_ENABLE_DTLS=1`, `PC_ENABLE_COAP=1` | `test_coaps` | CoAP over DTLS (services/iot/coap/coaps, RFC 7252 sec 9): the bridge that drives a DtlsConn handshake and, once established, unwraps each epoch-3 application record, answers it with coap_server_proces... |
 | `native_coaps_server` | `PC_ENABLE_DTLS=1`, `PC_ENABLE_COAP=1` | `test_coaps_server` | CoAP-over-DTLS server front-end (services/iot/coap/coaps_server): the per-peer DtlsConn pool + ingest/poll seam on top of pc_coaps_process(). |
-| `native_codeql` | `PC_ENABLE_CSRF=1`, `PC_ENABLE_AUTH_LOCKOUT=1`, `PC_ENABLE_IP_ALLOWLIST=1`, `PC_ENABLE_WS_DEFLATE=1`, `PC_ENABLE_TIME_SOURCE=1`, `PC_ENABLE_CONFIG_STORE=1`, `PC_ENABLE_DEVICE_ID=1`, `PC_ENABLE_TELEMETRY=1`, `PC_ENABLE_DASHBOARD=1`, `PC_ENABLE_PARTITION_MONITOR=1`, `PC_ENABLE_CBOR=1`, `PC_ENABLE_MSGPACK=1`, `PC_ENABLE_GPIO_MAP=1`, `PC_ENABLE_UDP_TELEMETRY=1`, `PC_ENABLE_GUARDRAILS=1`, `PC_ENABLE_FAILSAFE=1`, `PC_ENABLE_SLEEP_SCHED=1`, `PC_ENABLE_WEARLEVEL=1`, `PC_ENABLE_NETADAPT=1`, `PC_ENABLE_DSHOT=1`, `PC_ENABLE_HART=1`, `PC_ENABLE_NTS=1`, `PC_ENABLE_DDS=1`, `PC_ENABLE_XMPP=1`, `PC_ENABLE_RAWL2=1`, `PC_ENABLE_SPA_ROUTER=1`, `PC_ENABLE_GOOSE=1`, `PC_ENABLE_MTCONNECT=1`, `PC_ENABLE_J2735=1`, `PC_ENABLE_NEMA_TS2=1`, `PC_ENABLE_SNP=1`, `PC_ENABLE_DIRECTNET=1`, `PC_ENABLE_SEP2=1`, `PC_ENABLE_PROFINET=1`, `PC_ENABLE_NTCIP=1`, `PC_ENABLE_OPENADR=1`, `PC_ENABLE_MMS=1`, `PC_ENABLE_CCLINK=1`, `PC_ENABLE_POWERLINK=1`, `PC_ENABLE_SERCOS=1`, `PC_ENABLE_PROFIBUS=1`, `PC_ENABLE_LONWORKS=1`, `PC_ENABLE_MBPLUS=1`, `PC_ENABLE_INTERBUS=1`, `PC_ENABLE_ICCP=1`, `PC_ENABLE_WAVE=1`, `PC_ENABLE_UTMC=1`, `PC_ENABLE_OCIT=1`, `PC_ENABLE_ATC=1`, `PC_ENABLE_SOUTHBOUND=1`, `PC_ENABLE_EXC_DECODER=1`, `PC_ENABLE_HTTP_DELIVERY=1`, `PC_ENABLE_HW_HEALTH=1`, `PC_ENABLE_MDNS_ADAPTIVE=1`, `PC_ENABLE_SOCKPOOL=1`, `PC_ENABLE_PSRAM_POOL=1`, `PC_ENABLE_HAPPY_EYEBALLS=1`, `PC_ENABLE_WIFI_SNIFFER=1`, `PC_ENABLE_LINK_MANAGER=1`, `PC_ENABLE_CC1101=1`, `PC_ENABLE_FDC2214=1`, `PC_ENABLE_LDC1614=1`, `PC_ENABLE_VL53L0X=1`, `PC_ENABLE_RADIO_SNIFF=1`, `PC_ENABLE_BLE_GATT=1`, `PC_ENABLE_TLS_POLICY=1`, `PC_ENABLE_WISUN=1`, `PC_ENABLE_LOGBUF=1`, `PC_ENABLE_OTA_ROLLBACK=1`, `PC_ENABLE_TOTP=1`, `PC_ENABLE_WEBHOOK=1`, `PC_ENABLE_RADIO_POWER=1`, `PC_ENABLE_AUDIT_LOG=1`, `PC_ENABLE_OIDC=1`, `PC_ENABLE_VFS=1`, `PC_ENABLE_GRAPHQL=1`, `PC_ENABLE_ESPNOW=1`, `PC_ENABLE_OAUTH2=1`, `PC_ENABLE_OPCUA=1`, `PC_ENABLE_OPCUA_CLIENT=1` | `test_dispatch` | CodeQL coverage env: the full app compiled with every new feature flag ON so CodeQL traces the integration paths (CSRF / lockout / allowlist gates, permessage-deflate) AND the new service modules, whi... |
+| `native_codeql` | `PC_ENABLE_CSRF=1`, `PC_ENABLE_AUTH_LOCKOUT=1`, `PC_ENABLE_IP_ALLOWLIST=1`, `PC_ENABLE_WS_DEFLATE=1`, `PC_ENABLE_TIME_SOURCE=1`, `PC_ENABLE_CONFIG_STORE=1`, `PC_ENABLE_DEVICE_ID=1`, `PC_ENABLE_TELEMETRY=1`, `PC_ENABLE_DASHBOARD=1`, `PC_ENABLE_PARTITION_MONITOR=1`, `PC_ENABLE_CBOR=1`, `PC_ENABLE_MSGPACK=1`, `PC_ENABLE_GPIO_MAP=1`, `PC_ENABLE_UDP_TELEMETRY=1`, `PC_ENABLE_GUARDRAILS=1`, `PC_ENABLE_FAILSAFE=1`, `PC_ENABLE_SLEEP_SCHED=1`, `PC_ENABLE_WEARLEVEL=1`, `PC_ENABLE_NETADAPT=1`, `PC_ENABLE_DSHOT=1`, `PC_ENABLE_HART=1`, `PC_ENABLE_NTS=1`, `PC_ENABLE_DDS=1`, `PC_ENABLE_XMPP=1`, `PC_ENABLE_RAWL2=1`, `PC_ENABLE_SPA_ROUTER=1`, `PC_ENABLE_GOOSE=1`, `PC_ENABLE_MTCONNECT=1`, `PC_ENABLE_J2735=1`, `PC_ENABLE_NEMA_TS2=1`, `PC_ENABLE_SNP=1`, `PC_ENABLE_DIRECTNET=1`, `PC_ENABLE_SEP2=1`, `PC_ENABLE_PROFINET=1`, `PC_ENABLE_NTCIP=1`, `PC_ENABLE_OPENADR=1`, `PC_ENABLE_MMS=1`, `PC_ENABLE_CCLINK=1`, `PC_ENABLE_POWERLINK=1`, `PC_ENABLE_SERCOS=1`, `PC_ENABLE_PROFIBUS=1`, `PC_ENABLE_LONWORKS=1`, `PC_ENABLE_MBPLUS=1`, `PC_ENABLE_INTERBUS=1`, `PC_ENABLE_ICCP=1`, `PC_ENABLE_WAVE=1`, `PC_ENABLE_UTMC=1`, `PC_ENABLE_OCIT=1`, `PC_ENABLE_ATC=1`, `PC_ENABLE_SOUTHBOUND=1`, `PC_ENABLE_EXC_DECODER=1`, `PC_ENABLE_HTTP_DELIVERY=1`, `PC_ENABLE_HW_HEALTH=1`, `PC_ENABLE_MDNS_ADAPTIVE=1`, `PC_ENABLE_SOCKPOOL=1`, `PC_ENABLE_PSRAM_POOL=1`, `PC_ENABLE_HAPPY_EYEBALLS=1`, `PC_ENABLE_WIFI_SNIFFER=1`, `PC_ENABLE_LINK_MANAGER=1`, `PC_ENABLE_CC1101=1`, `PC_ENABLE_FDC2214=1`, `PC_ENABLE_LDC1614=1`, `PC_ENABLE_VL53L0X=1`, `PC_ENABLE_RADIO_SNIFF=1`, `PC_ENABLE_BLE_GATT=1`, `PC_ENABLE_TLS_POLICY=1`, `PC_ENABLE_WISUN=1`, `PC_ENABLE_LOGBUF=1`, `PC_ENABLE_OTA_ROLLBACK=1`, `PC_ENABLE_TOTP=1`, `PC_ENABLE_WEBHOOK=1`, `PC_ENABLE_RADIO_POWER=1`, `PC_ENABLE_AUDIT_LOG=1`, `PC_ENABLE_OIDC=1`, `PC_ENABLE_MNT=1`, `PC_ENABLE_GRAPHQL=1`, `PC_ENABLE_ESPNOW=1`, `PC_ENABLE_OAUTH2=1`, `PC_ENABLE_OPCUA=1`, `PC_ENABLE_OPCUA_CLIENT=1` | `test_dispatch` | CodeQL coverage env: the full app compiled with every new feature flag ON so CodeQL traces the integration paths (CSRF / lockout / allowlist gates, permessage-deflate) AND the new service modules, whi... |
 | `native_compliance` | default | `test_compliance` | RFC-compliance suite: builds with all enforcement at production defaults (PC_ENFORCE_HOST_HEADER=1) and exercises the strict behaviors. |
 | `native_concurrency` | `O1`, `pthread` | `test_concurrency` | Concurrency proof for the cross-thread slot fields (pc_atomic state / rx_head / rx_tail). |
 | `native_config_io` | `PC_ENABLE_CONFIG_STORE=1`, `PC_ENABLE_CONFIG_IO=1` | `test_config_io` | Schema-driven config export/restore (services/storage/config_io) over the config store; round-trip host-tested against the in-memory backend. |
@@ -208,6 +208,7 @@ The native test matrix has **278 environments**, one per feature, generated from
 | `native_mdns_adaptive` | `PC_ENABLE_MDNS_ADAPTIVE=1` | `test_mdns_adaptive` | Adaptive mDNS beacon scheduling (services/net/mdns_adaptive): RF-contention backoff/recovery of the announce interval, the TTL/2 continuous-refresher cadence, the announce-due check, and the auto-slee... |
 | `native_melsec` | `PC_ENABLE_MELSEC=1` | `test_melsec` | Mitsubishi MELSEC MC binary 3E codec (services/fieldbus/melsec): the batch-read request builder (little-endian, subheader 0x5000, command 0x0401, device code + 24-bit head device) + the 0xD000 respons... |
 | `native_mms` | `PC_ENABLE_MMS=1` | `test_mms` | IEC 61850 MMS PDU codec (services/energy/mms): the BER confirmed-request/response Read PDUs (invokeID + read service + named ObjectName), build + parse. |
+| `native_mnt` | `PC_ENABLE_MNT=1` | `test_mnt` | Mounted storage (server/filesystem/mnt) - the backend vtable and its built-in RAM backend, host-tested through that backend (the Arduino FS backend is board-layer and HW-verified). |
 | `native_modbus` | `PC_ENABLE_MODBUS=1`, `PC_ENABLE_MODBUS_RTU=1` | `test_modbus` | Modbus TCP slave core + RTU framing (Modbus Application Protocol): the data model + MBAP/PDU codec + the RTU ADU codec (CRC16 + [addr][PDU][CRC]). |
 | `native_modbus_master` | `PC_ENABLE_MODBUS=1`, `PC_ENABLE_MODBUS_MASTER=1` | `test_modbus_master` | Modbus master codec + scanner (services/fieldbus/modbus/modbus_master): build read requests, parse responses; host-tested as a round-trip against the slave codec. |
 | `native_mpr121` | `PC_ENABLE_MPR121=1` | `test_mpr121` | MPR121 capacitive-touch codec (services/peripherals/mpr121): decoding the touch-status word into an electrode bitmask (masking proximity / over-current), the per-electrode touched test, the proximity ... |
@@ -239,7 +240,9 @@ The native test matrix has **278 environments**, one per feature, generated from
 | `native_partition` | `PC_ENABLE_PARTITION_MONITOR=1` | `test_partition_monitor` | Flash partition-map monitor (services/storage/partition_monitor core): the kind classifier + JSON serializer host-test here; the esp_partition walk is ESP32-only. |
 | `native_pca9685` | `PC_ENABLE_PCA9685=1` | `test_pca9685` | PCA9685 PWM/servo codec (services/peripherals/pca9685): the PRESCALE computation from a PWM frequency (with clamping), the per-channel register address, the servo pulse-width -> 12-bit count conversio... |
 | `native_pentest` | `PC_ENABLE_MODBUS=1`, `PC_ENABLE_MODBUS_MASTER=1`, `PC_ENABLE_TOTP=1`, `PC_ENABLE_MULTIPART=1`, `PC_ENABLE_CBOR=1`, `PC_ENABLE_MSGPACK=1`, `PC_ENABLE_COAP=1`, `PC_ENABLE_COAP_BLOCK=1`, `PC_COAP_BLOCK_SZX_MAX=2`, `PC_COAP_BLOCK1_MAX=128`, `PC_ENABLE_SNMP=1`, `PC_ENABLE_SQLITE=1`, `PC_ENABLE_REDIS=1`, `PC_ENABLE_OPCUA=1`, `PC_ENABLE_GRAPHQL=1`, `PC_ENABLE_DNS_SERVER=1`, `PC_ENABLE_DNP3=1`, `PC_ENABLE_STOMP=1`, `PC_ENABLE_SMB=1`, `PC_ENABLE_DNC=1`, `PC_ENABLE_FTP=1`, `PC_ENABLE_FINS=1`, `PC_ENABLE_MELSEC=1`, `PC_ENABLE_CIP=1`, `PC_ENABLE_ENIP=1`, `PC_ENABLE_DF1=1`, `PC_ENABLE_BACNET=1`, `PC_ENABLE_COTP=1`, `PC_ENABLE_C37118=1`, `PC_ENABLE_JWT=1`, `PC_ENABLE_DIRECTNET=1`, `PC_ENABLE_CCLINK=1`, `PC_ENABLE_AMQP=1`, `PC_ENABLE_MMS=1`, `PC_ENABLE_DDS=1`, `PC_ENABLE_WEBDAV=1`, `PC_ENABLE_HTTP2=1`, `PC_ENABLE_HTTP3=1` | `test_pentest` | Adversarial / pentest harness - run SEPARATELY (`pio test -e native_pentest`), NOT part of run_tests.sh. |
+| `native_plaintext` | default | `test_plaintext` | The plaintext pool accessor (server/mmgr/plaintext): bump-allocate + reset semantics, alignment, and fail-closed exhaustion. |
 | `native_pn532` | `PC_ENABLE_PN532=1`, `PC_PN532_MAX_DATA=8` | `test_pn532` | PN532 NFC frame codec (services/peripherals/pn532), v5 radio plugin: the normal-information-frame build/parse against the documented GetFirmwareVersion command + response frames (LEN/LCS + DCS checksu... |
+| `native_pool_workers` | `PC_WORKER_COUNT=2` | `test_plaintext`, `test_secure_pool` | Both pool accessors at PC_WORKER_COUNT=2. |
 | `native_power_mgmt` | `PC_ENABLE_POWER_MGMT=1` | `test_power_mgmt` | SoC power governor (services/system/power_mgmt): the pure clock decision from load, die temperature and reset reason - load-based scaling, the thermal hysteresis that stops a part parked at the limit ... |
 | `native_powerlink` | `PC_ENABLE_POWERLINK=1` | `test_powerlink` | Ethernet POWERLINK basic frame codec (services/fieldbus/powerlink): the EPL cyclic frames ([messageType][dest][source][payload]) - SoC/PReq/PRes/SoA - build + parse, over raw L2 (0x88AB). |
 | `native_pqc` | `PC_ENABLE_PQC_KEX=1` | `test_pqc_sha3`, `test_pqc_mlkem`, `test_pqc_sntrup761` | Post-quantum hybrid KEX primitives (network_drivers/presentation/pqc): the Keccak/SHA-3/SHAKE sponge (FIPS 202) and ML-KEM-768 Encaps (FIPS 203) - the responder half of the mlkem768x25519-sha256 (SSH)... |
@@ -277,9 +280,8 @@ The native test matrix has **278 environments**, one per feature, generated from
 | `native_s7comm` | `PC_ENABLE_S7COMM=1` | `test_s7comm` | Siemens S7comm PDU codec (services/fieldbus/s7comm): the Setup Communication + Read Var request builders, the header parser, and the response data-item reader (length-in-bits + even padding). |
 | `native_safety_scl` | `PC_ENABLE_SAFETY_SCL=1` | `test_safety_scl` | IEC 61784-3 black-channel Safety Communication Layer primitives (services/machine_tool/safety_scl): the monitoring-counter state machine, the receive watchdog, and the fail-safe latch the four safety ... |
 | `native_sb_modbus` | `PC_ENABLE_SOUTHBOUND=1`, `PC_ENABLE_MODBUS=1`, `PC_ENABLE_MODBUS_MASTER=1` | `test_sb_modbus` | Modbus-master southbound driver adapter (services/net/southbound/sb_modbus): binds the transport-agnostic Modbus TCP master codec into the southbound driver framework, so an app reads/writes register ... |
-| `native_scp` | `PC_ENABLE_SSH=1`, `PC_ENABLE_FILE_SERVING=1`, `PC_ENABLE_SSH_SCP=1` | `test_scp` | SCP (RCP) protocol wire codec (services/file_transfer/scp): parse an `scp -t/-f <path>` exec command into its sink/source role + target, parse + build the `C<mode> <size> <name>` control line (octal m... |
+| `native_scp` | `PC_ENABLE_SSH=1`, `PC_ENABLE_SSH_SCP=1`, `PC_ENABLE_MNT=1` | `test_scp` | SCP (RCP) protocol wire codec (services/file_transfer/scp): parse an `scp -t/-f <path>` exec command into its sink/source role + target, parse + build the `C<mode> <size> <name>` control line (octal m... |
 | `native_scpi` | `PC_ENABLE_SCPI=1`, `UNITY_INCLUDE_DOUBLE` | `test_scpi` | SCPI / IEEE 488.2 instrument-control codec (services/instrumentation/scpi): the command builder (:-hierarchy header + params + terminator), the response parsers (numeric NR1/NR2/NR3, boolean, quoted s... |
-| `native_scratch` | default | `test_scratch` | Shared per-dispatch scratch arena (session/scratch): bump-allocate + reset semantics, alignment, and fail-closed exhaustion. |
 | `native_sdi12` | `PC_ENABLE_SDI12=1` | `test_sdi12` | SDI-12 sensor-bus codec (services/peripherals/sdi12): the command builders, the measurement response parser (atttn), the data-value splitter, and the SDI-12 CRC (compute/encode/verify). |
 | `native_secure_pool` | default | `test_secure_pool` | The secure pool accessor (server/mmgr/secure): the SAME pool mechanism as the plaintext side (server/mmgr/arena) instantiated a second time at a disjoint address, so only what differs is covered here ... |
 | `native_sen0192` | `PC_ENABLE_SEN0192=1` | `test_sen0192` | SEN0192 microwave motion sensor presence state machine (services/peripherals/sen0192): presence asserts on an active sample and holds for the configured window after the last active sample, clears aft... |
@@ -299,7 +301,7 @@ The native test matrix has **278 environments**, one per feature, generated from
 | `native_sockpool` | `PC_ENABLE_SOCKPOOL=1` | `test_sockpool` | Dynamic socket recycling (services/net/sockpool): a fixed LRU connection-slot pool - acquire (free slot, else recycle the least-recently-used and report the evicted id), touch, release, find, and in-u... |
 | `native_southbound` | `PC_ENABLE_SOUTHBOUND=1` | `test_southbound` | Southbound protocol-driver framework (services/net/southbound): the bounded driver registry (register / find / clear / count) and the name-dispatched read/write/read_block/write_block facade, includin... |
 | `native_spa_router` | `PC_ENABLE_SPA_ROUTER=1` | `test_spa_router` | Single-page-app micro-routing (services/web/spa_router): the serve-file / serve-shell / passthrough decision from a request path (extension test + API prefix). |
-| `native_span` | default | `test_span` | The bounded byte region (shared_primitives/span.h): a pointer and the capacity that belongs to it, bound together. |
+| `native_span` | default | `test_span` | The bounded byte region (server/mmgr/span.h): a pointer and the capacity that belongs to it, bound together. |
 | `native_sparkplug` | `PC_ENABLE_SPARKPLUG=1` | `test_sparkplug` | Sparkplug B codec (services/iot/sparkplug): the topic builder + the Metric / Payload protobuf serializers (over the protobuf codec). |
 | `native_sqlite` | `PC_ENABLE_SQLITE=1` | `test_sqlite` | SQLite3 on-disk file-format reader (services/storage/sqlite): the 100-byte database header, the b-tree page header, the record varint, and record serial types, parsed by hand. |
 | `native_ssh` | `PC_SSH_MAX_CHANNELS=3`, `PC_ENABLE_SSH=1`, `PC_ENABLE_FILE_SERVING=1`, `PC_ENABLE_SSH_SFTP=1`, `PC_ENABLE_SSH_SCP=1` | `test_ssh_crypto`, `test_ssh_transport`, `test_ssh_auth`, `test_ssh_channel`, `test_ssh_server` | SSH crypto layer (native software paths only, no mbedtls dependency); channels multiplexed (PC_SSH_MAX_CHANNELS=3) to exercise routing; SFTP/SCP subsystem routing on (FILE_SERVING satisfies the guard) |
@@ -313,11 +315,12 @@ The native test matrix has **278 environments**, one per feature, generated from
 | `native_ssh_inflate` | `PC_ENABLE_SSH=1`, `PC_ENABLE_SSH_ZLIB=1` | `test_ssh_inflate` | SSH client-to-server resumable INFLATE (ssh_inflate): decompresses OpenSSH's per-packet Z_PARTIAL_FLUSH zlib stream across packets with a 32 KB context-takeover window. |
 | `native_ssh_kbdint` | `PC_ENABLE_SSH=1`, `PC_ENABLE_SSH_KEYBOARD_INTERACTIVE=1` | `test_ssh_kbdint`, `test_ssh_auth` | SSH keyboard-interactive auth (RFC 4256) built with PC_ENABLE_SSH_KEYBOARD_INTERACTIVE=1: the server sends one non-echoed Password prompt (INFO_REQUEST) and verifies the INFO_RESPONSE via the password... |
 | `native_ssh_pqc` | `PC_SSH_MAX_CHANNELS=3`, `PC_ENABLE_PQC_KEX=1` | `test_ssh_pqc` | mlkem768x25519-sha256 SSH hybrid KEX (draft-ietf-sshm-mlkem-hybrid-kex) end to end: the full SSH transport built with PC_ENABLE_PQC_KEX=1 plus the ML-KEM-768 / SHA-3 core. |
-| `native_ssh_sftp` | `PC_ENABLE_SSH=1`, `PC_ENABLE_FILE_SERVING=1`, `PC_ENABLE_SSH_SFTP=1` | `test_ssh_sftp` | SFTP protocol v3 wire codec (services/file_transfer/sftp): the SSH_FXP_* request reader + response builders (VERSION / STATUS / HANDLE / DATA / ATTRS / NAME), the ATTRS blob encode/decode round-trip (... |
+| `native_ssh_sftp` | `PC_ENABLE_SSH=1`, `PC_ENABLE_SSH_SFTP=1`, `PC_ENABLE_MNT=1` | `test_ssh_sftp` | SFTP protocol v3 wire codec (services/file_transfer/sftp): the SSH_FXP_* request reader + response builders (VERSION / STATUS / HANDLE / DATA / ATTRS / NAME), the ATTRS blob encode/decode round-trip (... |
 | `native_ssh_zlib` | `PC_ENABLE_SSH=1`, `PC_ENABLE_SSH_ZLIB=1`, `PC_ENABLE_WS_DEFLATE=1` | `test_ssh_zlib` | SSH server-to-client streaming compressor (zlib@openssh.com / zlib): a context-takeover DEFLATE stream (persistent sliding window across packets, sync-flush per packet, zlib wrapper). |
 | `native_statsd` | `PC_ENABLE_STATSD=1` | `test_statsd` | StatsD metrics client (services/iot/statsd): the pure line formatter (name:value\|type, sample rate, DogStatsD tags) plus the count/gauge/timing/set emit helpers, whose sent bytes are captured through... |
 | `native_stomp` | `PC_ENABLE_STOMP=1` | `test_stomp` | STOMP 1.2 frame codec (services/iot/stomp): the zero-heap frame builder (command + escaped headers + NUL body) + the non-mutating parser (command/header slices/body, honoring content-length) + escape/... |
 | `native_sunspec` | `PC_ENABLE_SUNSPEC=1` | `test_sunspec` | SunSpec Modbus model codec (services/energy/sunspec): the map writer (marker / model headers / points / end model) + the model-chain walker + typed point readers (u16 / i16 / u32 / i32 / string). |
+| `native_swar` | default | `test_swar` | Lane math (shared_primitives/swar.h): one 32-bit word as four byte lanes. |
 | `native_syslog` | `PC_ENABLE_SYSLOG=1` | `test_syslog` | Syslog client (RFC 5424) line formatter. |
 | `native_telemetry` | `PC_ENABLE_TELEMETRY=1` | `test_telemetry` | Telemetry math (services/iot/telemetry): moving-window stats, rate-of-change, and totalizer. |
 | `native_telnet` | `PC_ENABLE_TELNET=1` | `test_telnet` | Telnet server (RFC 854 IAC negotiation + line editing) wired through the real transport ring buffer; output checked via the tcp_write capture mock. |
@@ -335,13 +338,12 @@ The native test matrix has **278 environments**, one per feature, generated from
 | `native_umati` | `PC_ENABLE_OPCUA=1`, `PC_ENABLE_UMATI=1` | `test_umati` | umati / OPC UA for Machine Tools (OPC 40501-1) MachineTool model (services/machine_tool/umati) - the Browse hierarchy + the Read resolver over a bound UmatiMachineTool are host-tested here. |
 | `native_upload` | `PC_ENFORCE_HOST_HEADER=0`, `PC_ENABLE_UPLOAD=1`, `BODY_BUF_SIZE=64` | `test_upload` | Streaming file upload: POST body -> FS file via the parser streaming hook. |
 | `native_utmc` | `PC_ENABLE_UTMC=1` | `test_utmc` | UTMC common-database codec (services/transportation/utmc): the UTMCRequest (object id) and UTMCResponse (value + quality + timestamp) HTTP/XML documents build + the request-id parse, escaped. |
-| `native_vfs` | `PC_ENABLE_VFS=1` | `test_vfs` | Unified VFS wrapper (services/storage/vfs) - host-tested through its built-in RAM backend (the Arduino FS backend is ESP32-only and HW-verified). |
 | `native_vl53l0x` | `PC_ENABLE_VL53L0X=1` | `test_vl53l0x` | VL53L0X time-of-flight ranging codec (services/peripherals/vl53l0x): the range byte-pair combine to millimeters, the interrupt-status data-ready decode, and the device range-status validity check. |
 | `native_vxi11` | `PC_ENABLE_VXI11=1` | `test_vxi11` | VXI-11 (TCP/IP Instrument Protocol) codec over ONC RPC / XDR (services/instrumentation/vxi11): the XDR write/read helpers (4-byte-aligned, big-endian, length-prefixed opaque/string), the ONC-RPC recor... |
 | `native_wal` | `PC_ENABLE_WAL=1` | `test_wal`, `test_wal_store` | Write-ahead store for atomic buffer-to-flash storage (services/storage/wal): CRC32 record framing + crash-recovery replay (the atomicity core), plus the A/B superblock + checkpoint + mount layer over ... |
 | `native_wamp` | `PC_ENABLE_WAMP=1` | `test_wamp` | WAMP messaging codec (services/iot/wamp): the JSON-array message builders (HELLO / SUBSCRIBE / PUBLISH / CALL / REGISTER / YIELD / GOODBYE over JsonWriter) + the positional array parser (type / ids / ... |
 | `native_wave` | `PC_ENABLE_WAVE=1` | `test_wave` | IEEE 1609 WAVE codec (services/transportation/wave): the 1609.3 WSMP header (version + P-encoded PSID + length) build + parse, the PSID p-encoding, and the 1609.2 secured-message envelope header. |
-| `native_wearlevel` | `PC_ENABLE_WEARLEVEL=1` | `test_wearlevel` | Flash wear-leveling slot selector (services/storage/wearlevel): least-worn pick (ties -> lowest index), saturating mark, and the wear-imbalance spread metric. |
+| `native_wearlevel` | `PC_ENABLE_WEARLEVEL=1` | `test_wearlevel` | Flash wear-leveling slot selector (server/filesystem/wearlevel): least-worn pick (ties -> lowest index), saturating mark, and the wear-imbalance spread metric. |
 | `native_webdav` | `PC_ENABLE_WEBDAV=1` | `test_webdav` | WebDAV server core (RFC 4918): method classification, header parsing, XML escaping, and the 207 Multi-Status builder. |
 | `native_webdav_handler` | `BODY_BUF_SIZE=512`, `PC_ENFORCE_HOST_HEADER=0`, `PC_ENABLE_WEBDAV=1`, `PC_ENABLE_FILE_SERVING=1`, `PC_ENABLE_WEB_TERMINAL=1` | `test_webdav_handler` | WebDAV request handler over a directory-capable FS mock (recursive COPY/MOVE/DELETE) |
 | `native_webhook` | `PC_ENABLE_WEBHOOK=1` | `test_webhook` | Webhook / IFTTT builders (services/net/webhook): IFTTT URL + value1/2/3 JSON payload, host-tested. |
@@ -568,7 +570,7 @@ We test session and socket race conditions by interleaved function calling:
 
 <!-- BEGIN GENERATED test-directory (run test/gen_test_readme.py) -->
 
-A thorough directory of all **5243 test cases** across **293 suites**. Expand a suite to see its test cases, and a test case to see its objective and assertions.
+A thorough directory of all **5252 test cases** across **294 suites**. Expand a suite to see its test cases, and a test case to see its objective and assertions.
 
 <details>
 <summary><b>test_accept_gate (19 tests)</b></summary>
@@ -27495,6 +27497,266 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
 </details>
 
 <details>
+<summary><b>test_mnt (22 tests)</b></summary>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_root_without_trailing_slash</b> &mdash; <i>The file landed inside the root, not glued onto its name.</i></summary>
+
+    * **Objective**: The file landed inside the root, not glued onto its name.
+    * **Assertions**:
+      * <code>Assert true (pc_fs_write_file("/p.nc", "", "G0", 2))</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(2, pc_fs_size("/p.nc", ""));</code>
+      * <code>Assert true (pc_fs_exists("/gcode/p.nc", ""))</code>
+      * <code>Assert false (pc_fs_exists("/gcodep.nc", ""))</code>
+      * <code>Assert true (pc_fs_exists("/p.nc", ""))</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_leaf_joins_onto_a_directory</b> &mdash; <i>Traversal is refused in the leaf as well as the dir.</i></summary>
+
+    * **Objective**: Traversal is refused in the leaf as well as the dir.
+    * **Assertions**:
+      * <code>Assert true (pc_fs_mkdir("/d", ""))</code>
+      * <code>Assert true (pc_fs_write_file("/d/", "f.txt", "xy", 2))</code>
+      * <code>Assert true (pc_fs_exists("/d/f.txt", ""))</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(2, pc_fs_size("/d/", "f.txt"));</code>
+      * <code>Assert false (pc_fs_write_file("/d/", "../esc", "x", 1))</code>
+      * <code>Assert false (pc_fs_write_file("/../d/", "f.txt", "x", 1))</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_write_then_read_file</b> &mdash; <i>Write then read file</i></summary>
+
+    * **Objective**: Write then read file
+    * **Assertions**:
+      * <code>Assert true (pc_fs_write_file("/a.txt", "", msg, strlen(msg)))</code>
+      * <code>Assert true (pc_fs_exists("/a.txt", ""))</code>
+      * <code>TEST_ASSERT_EQUAL_INT32((long)strlen(msg), pc_fs_size("/a.txt", ""));</code>
+      * <code>TEST_ASSERT_EQUAL_INT32((long)strlen(msg), n);</code>
+      * <code>Assert equal string (msg, buf)</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_streamed_write_and_read</b> &mdash; <i>Streamed write and read</i></summary>
+
+    * **Objective**: Streamed write and read
+    * **Assertions**:
+      * <code>Assert true (h &gt;= 0)</code>
+      * <code>Assert equal int (3, pc_fs_write(h, "abc", 3))</code>
+      * <code>Assert equal int (3, pc_fs_write(h, "def", 3))</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(6, pc_fs_size("/s.bin", ""));</code>
+      * <code>Assert true (h &gt;= 0)</code>
+      * <code>Assert equal int (4, pc_fs_read(h, buf, 4))</code>
+      * <code>Assert equal string ("abcd", buf)</code>
+      * <code>Assert equal int (2, pc_fs_read(h, buf, 4))</code>
+      * <code>Assert equal int (0, pc_fs_read(h, buf, 4))</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_write_mode_truncates</b> &mdash; <i>Write mode truncates</i></summary>
+
+    * **Objective**: Write mode truncates
+    * **Assertions**:
+      * <code>TEST_ASSERT_EQUAL_INT32(5, pc_fs_size("/t.txt", ""));</code>
+      * <code>Assert equal string ("short", buf)</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_append_extends</b> &mdash; <i>Append extends</i></summary>
+
+    * **Objective**: Append extends
+    * **Assertions**:
+      * <code>Assert true (h &gt;= 0)</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(12, pc_fs_size("/log", ""));</code>
+      * <code>Assert equal string ("line1\\nline2\\n", buf)</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_remove_and_rename</b> &mdash; <i>Remove and rename</i></summary>
+
+    * **Objective**: Remove and rename
+    * **Assertions**:
+      * <code>Assert true (pc_fs_rename("/old", "", "/new", ""))</code>
+      * <code>Assert false (pc_fs_exists("/old", ""))</code>
+      * <code>Assert true (pc_fs_exists("/new", ""))</code>
+      * <code>Assert equal string ("data", buf)</code>
+      * <code>Assert true (pc_fs_remove("/new", ""))</code>
+      * <code>Assert false (pc_fs_exists("/new", ""))</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(-1, pc_fs_size("/new", ""));</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_missing_file_fails_closed</b> &mdash; <i>Missing file fails closed</i></summary>
+
+    * **Objective**: Missing file fails closed
+    * **Assertions**:
+      * <code>Assert false (pc_fs_exists("/nope", ""))</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(-1, pc_fs_size("/nope", ""));</code>
+      * <code>Assert true (pc_fs_open("/nope", "", pc_mnt_mode::PC_MNT_READ) &lt; 0)</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(-1, pc_fs_read_file("/nope", "", buf, sizeof(buf)));</code>
+      * <code>Assert false (pc_fs_remove("/nope", ""))</code>
+      * <code>Assert false (pc_fs_rename("/nope", "", "/x", ""))</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_read_buffer_too_small_fails_closed</b> &mdash; <i>Read buffer too small fails closed</i></summary>
+
+    * **Objective**: Read buffer too small fails closed
+    * **Assertions**:
+      * <code>TEST_ASSERT_EQUAL_INT32(-1, pc_fs_read_file("/big", "", tiny, sizeof(tiny)));</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_file_full_is_bounded</b> &mdash; <i>Never exceeds the fixed per-file capacity (fail-closed, no overflow).</i></summary>
+
+    * **Objective**: Never exceeds the fixed per-file capacity (fail-closed, no overflow).
+    * **Assertions**:
+      * <code>Assert true (h &gt;= 0)</code>
+      * <code>TEST_ASSERT_EQUAL_INT32((long)PC_MNT_RAM_FILE_SIZE, pc_fs_size("/full", ""));</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(PC_MNT_RAM_FILE_SIZE, (uint32_t)written);</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_file_pool_exhaustion</b> &mdash; <i>One more distinct file must fail (pool full), not corrupt anything.</i></summary>
+
+    * **Objective**: One more distinct file must fail (pool full), not corrupt anything.
+    * **Assertions**:
+      * <code>Assert true (pc_fs_write_file(name, "", "x", 1))</code>
+      * <code>Assert false (pc_fs_write_file("/overflow", "", "x", 1))</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_handle_pool_exhaustion</b> &mdash; <i>Handle pool exhaustion</i></summary>
+
+    * **Objective**: Handle pool exhaustion
+    * **Assertions**:
+      * <code>Assert true (handles[i] &gt;= 0)</code>
+      * <code>Assert true (pc_fs_open("/h", "", pc_mnt_mode::PC_MNT_READ) &lt; 0)</code>
+      * <code>Assert true (pc_fs_open("/h", "", pc_mnt_mode::PC_MNT_READ) &gt;= 0)</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_unmounted_fails_closed</b> &mdash; <i>Unmounted fails closed</i></summary>
+
+    * **Objective**: Unmounted fails closed
+    * **Assertions**:
+      * <code>Assert true (pc_fs_open("/a", "", pc_mnt_mode::PC_MNT_READ) &lt; 0)</code>
+      * <code>Assert false (pc_fs_exists("/a", ""))</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(-1, pc_fs_size("/a", ""));</code>
+      * <code>Assert false (pc_fs_write_file("/a", "", "x", 1))</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_ram_guard_subconditions</b> &mdash; <i>Null path and an over-long name both fail closed on open.</i></summary>
+
+    * **Objective**: Null path and an over-long name both fail closed on open.
+    * **Assertions**:
+      * <code>Assert equal int (-1, pc_fs_open(nullptr, "", pc_mnt_mode::PC_MNT_WRITE))</code>
+      * <code>Assert equal int (-1, pc_fs_open(longname, "", pc_mnt_mode::PC_MNT_WRITE))</code>
+      * <code>Assert equal int (-1, pc_fs_read(999, b, sizeof(b)))</code>
+      * <code>Assert equal int (-1, pc_fs_write(999, b, sizeof(b)))</code>
+      * <code>Assert true (pc_fs_read_file("/nope", "", b, sizeof(b)) &lt; 0)</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_unmounted_all_entry_points</b> &mdash; <i>Unmounted all entry points</i></summary>
+
+    * **Objective**: Unmounted all entry points
+    * **Assertions**:
+      * <code>Assert equal int (-1, pc_fs_read(0, b, sizeof(b)))</code>
+      * <code>Assert equal int (-1, pc_fs_write(0, b, sizeof(b)))</code>
+      * <code>Assert false (pc_fs_remove("/a", ""))</code>
+      * <code>Assert false (pc_fs_rename("/a", "", "/b", ""))</code>
+      * <code>Assert true (pc_fs_read_file("/a", "", b, sizeof(b)) &lt; 0)</code>
+      * <code>Assert true (pc_fs_write_file("/a", "", "x", 1))</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_handle_validity_edges</b> &mdash; <i>In range, but no longer open.</i></summary>
+
+    * **Objective**: In range, but no longer open.
+    * **Assertions**:
+      * <code>Assert equal int (-1, pc_fs_read(-1, b, sizeof(b)))</code>
+      * <code>Assert equal int (-1, pc_fs_write(-1, b, sizeof(b)))</code>
+      * <code>Assert true (pc_fs_write_file("/hv", "", "data", 4))</code>
+      * <code>Assert true (h &gt;= 0)</code>
+      * <code>Assert equal int (-1, pc_fs_read(h, b, sizeof(b)))</code>
+      * <code>Assert equal int (-1, pc_fs_write(h, b, sizeof(b)))</code>
+      * <code>Assert true (pc_fs_open("/hv", "", pc_mnt_mode::PC_MNT_READ) &gt;= 0)</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_write_to_read_handle_rejected</b> &mdash; <i>Write to read handle rejected</i></summary>
+
+    * **Objective**: Write to read handle rejected
+    * **Assertions**:
+      * <code>Assert true (pc_fs_write_file("/ro", "", "data", 4))</code>
+      * <code>Assert true (h &gt;= 0)</code>
+      * <code>Assert equal int (-1, pc_fs_write(h, "xx", 2))</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(4, pc_fs_size("/ro", ""));</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_rename_argument_guards</b> &mdash; <i>Rename argument guards</i></summary>
+
+    * **Objective**: Rename argument guards
+    * **Assertions**:
+      * <code>Assert true (pc_fs_write_file("/r1", "", "data", 4))</code>
+      * <code>Assert false (pc_fs_rename(nullptr, "", "/r2", ""))</code>
+      * <code>Assert false (pc_fs_rename("/r1", "", nullptr, ""))</code>
+      * <code>Assert false (pc_fs_rename("/r1", "", longname, ""))</code>
+      * <code>Assert true (pc_fs_exists("/r1", ""))</code>
+      * <code>Assert false (pc_fs_exists("/r2", ""))</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_rename_overwrites_destination</b> &mdash; <i>Rename overwrites destination</i></summary>
+
+    * **Objective**: Rename overwrites destination
+    * **Assertions**:
+      * <code>Assert true (pc_fs_write_file("/src", "", "NEW", 3))</code>
+      * <code>Assert true (pc_fs_write_file("/dst", "", "oldcontent", 10))</code>
+      * <code>Assert true (pc_fs_rename("/src", "", "/dst", ""))</code>
+      * <code>Assert false (pc_fs_exists("/src", ""))</code>
+      * <code>Assert true (pc_fs_exists("/dst", ""))</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(3, pc_fs_size("/dst", "")); // the source's contents won</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(3, n);</code>
+      * <code>Assert equal string ("NEW", buf)</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_read_file_handle_exhaustion</b> &mdash; <i>Read file handle exhaustion</i></summary>
+
+    * **Objective**: Read file handle exhaustion
+    * **Assertions**:
+      * <code>Assert true (pc_fs_write_file("/rf", "", "0123456789", 10))</code>
+      * <code>Assert true (handles[i] &gt;= 0)</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(-1, pc_fs_read_file("/rf", "", buf, sizeof(buf)));</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(10, pc_fs_read_file("/rf", "", buf, sizeof(buf))); // works again</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_write_file_larger_than_capacity</b> &mdash; <i>Write file larger than capacity</i></summary>
+
+    * **Objective**: Write file larger than capacity
+    * **Assertions**:
+      * <code>Assert false (pc_fs_write_file("/cap", "", big, sizeof(big)))</code>
+      * <code>TEST_ASSERT_EQUAL_INT32((long)PC_MNT_RAM_FILE_SIZE, pc_fs_size("/cap", ""));</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_zero_progress_backend_terminates</b> &mdash; <i>Zero progress backend terminates</i></summary>
+
+    * **Objective**: Zero progress backend terminates
+    * **Assertions**:
+      * <code>TEST_ASSERT_EQUAL_INT32(0, pc_fs_read_file("/x", "", buf, sizeof(buf))); // gave up at 0 bytes</code>
+      * <code>Assert false (pc_fs_write_file("/x", "", "abcd", 4))</code>
+      * <code>Assert true (pc_fs_write_file("/x", "", "abcd", 4))</code>
+  </details>
+
+</details>
+
+<details>
 <summary><b>test_modbus (30 tests)</b></summary>
 
   <details style="margin-left: 20px;">
@@ -32676,7 +32938,7 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
       * <code>TEST_ASSERT_EQUAL_INT(pc_oidc_result::PC_OIDC_ERR_EXPIRED,</code>
       * <code>TEST_ASSERT_EQUAL_INT(pc_oidc_result::PC_OIDC_OK,</code>
       * <code>Assert true (cap &gt; keep)</code>
-      * <code>Assert not null (scratch_alloc(cap - keep, 1))</code>
+      * <code>Assert not null (pc_plaintext_alloc(cap - keep, 1))</code>
       * <code>Assert true (pc_oidc_jwks_find(K_JWKS, "test-key-1", &key))</code>
       * <code>TEST_ASSERT_EQUAL_INT(pc_oidc_result::PC_OIDC_ERR_FORMAT,</code>
       * <code>TEST_ASSERT_EQUAL_INT(pc_oidc_result::PC_OIDC_ERR_FORMAT,</code>
@@ -32768,7 +33030,7 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
       * <code>TEST_ASSERT_EQUAL_INT(pc_oidc_result::PC_OIDC_ERR_EXPIRED,</code>
       * <code>TEST_ASSERT_EQUAL_INT(pc_oidc_result::PC_OIDC_OK,</code>
       * <code>Assert true (cap &gt; keep)</code>
-      * <code>Assert not null (scratch_alloc(cap - keep, 1))</code>
+      * <code>Assert not null (pc_plaintext_alloc(cap - keep, 1))</code>
       * <code>Assert true (pc_oidc_jwks_find(K_JWKS, "test-key-1", &key))</code>
       * <code>TEST_ASSERT_EQUAL_INT(pc_oidc_result::PC_OIDC_ERR_FORMAT,</code>
       * <code>TEST_ASSERT_EQUAL_INT(pc_oidc_result::PC_OIDC_ERR_FORMAT,</code>
@@ -32885,7 +33147,7 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
       * <code>TEST_ASSERT_EQUAL_INT(pc_oidc_result::PC_OIDC_ERR_EXPIRED,</code>
       * <code>TEST_ASSERT_EQUAL_INT(pc_oidc_result::PC_OIDC_OK,</code>
       * <code>Assert true (cap &gt; keep)</code>
-      * <code>Assert not null (scratch_alloc(cap - keep, 1))</code>
+      * <code>Assert not null (pc_plaintext_alloc(cap - keep, 1))</code>
       * <code>Assert true (pc_oidc_jwks_find(K_JWKS, "test-key-1", &key))</code>
       * <code>TEST_ASSERT_EQUAL_INT(pc_oidc_result::PC_OIDC_ERR_FORMAT,</code>
       * <code>TEST_ASSERT_EQUAL_INT(pc_oidc_result::PC_OIDC_ERR_FORMAT,</code>
@@ -33068,7 +33330,7 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
       * <code>TEST_ASSERT_EQUAL_INT(pc_oidc_result::PC_OIDC_ERR_EXPIRED,</code>
       * <code>TEST_ASSERT_EQUAL_INT(pc_oidc_result::PC_OIDC_OK,</code>
       * <code>Assert true (cap &gt; keep)</code>
-      * <code>Assert not null (scratch_alloc(cap - keep, 1))</code>
+      * <code>Assert not null (pc_plaintext_alloc(cap - keep, 1))</code>
       * <code>Assert true (pc_oidc_jwks_find(K_JWKS, "test-key-1", &key))</code>
       * <code>TEST_ASSERT_EQUAL_INT(pc_oidc_result::PC_OIDC_ERR_FORMAT,</code>
       * <code>TEST_ASSERT_EQUAL_INT(pc_oidc_result::PC_OIDC_ERR_FORMAT,</code>
@@ -33222,7 +33484,7 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
       * <code>TEST_ASSERT_EQUAL_INT(pc_oidc_result::PC_OIDC_ERR_EXPIRED,</code>
       * <code>TEST_ASSERT_EQUAL_INT(pc_oidc_result::PC_OIDC_OK,</code>
       * <code>Assert true (cap &gt; keep)</code>
-      * <code>Assert not null (scratch_alloc(cap - keep, 1))</code>
+      * <code>Assert not null (pc_plaintext_alloc(cap - keep, 1))</code>
       * <code>Assert true (pc_oidc_jwks_find(K_JWKS, "test-key-1", &key))</code>
       * <code>TEST_ASSERT_EQUAL_INT(pc_oidc_result::PC_OIDC_ERR_FORMAT,</code>
       * <code>TEST_ASSERT_EQUAL_INT(pc_oidc_result::PC_OIDC_ERR_FORMAT,</code>
@@ -36689,6 +36951,174 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
     <summary><b>test_qpack_structured_fuzz</b> &mdash; <i>Qpack structured fuzz</i></summary>
 
     * **Objective**: Qpack structured fuzz
+  </details>
+
+</details>
+
+<details>
+<summary><b>test_plaintext (17 tests)</b></summary>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_high_water_starts_at_zero</b> &mdash; <i>High water starts at zero</i></summary>
+
+    * **Objective**: High water starts at zero
+    * **Assertions**:
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_plaintext_high_water());</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_zero_align_uses_default</b> &mdash; <i>Zero align uses default</i></summary>
+
+    * **Objective**: Zero align uses default
+    * **Assertions**:
+      * <code>Assert not null (p)</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, (uintptr_t)p % 8); // default alignment is at least 8</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_alloc_returns_nonnull_and_advances_used</b> &mdash; <i>Alloc returns nonnull and advances used</i></summary>
+
+    * **Objective**: Alloc returns nonnull and advances used
+    * **Assertions**:
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_plaintext_used());</code>
+      * <code>Assert not null (p)</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(16, pc_plaintext_used());</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_sequential_allocs_are_distinct_and_non_overlapping</b> &mdash; <i>Distinct and non-overlapping is the guarantee; the DIRECTION is not. The pool's scratch end</i></summary>
+
+    * **Objective**: Distinct and non-overlapping is the guarantee; the DIRECTION is not. The pool's scratch end
+    * **Assertions**:
+      * <code>Assert not null (a)</code>
+      * <code>Assert not null (b)</code>
+      * <code>Assert true (hi &gt;= lo + 8)</code>
+      * <code>Assert true (pc_plaintext_used() &gt;= 16)</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_reset_frees_all_and_reuses_base</b> &mdash; <i>Reset frees all and reuses base</i></summary>
+
+    * **Objective**: Reset frees all and reuses base
+    * **Assertions**:
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_plaintext_used());</code>
+      * <code>Assert equal ptr (first, again)</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_alignment_is_honored</b> &mdash; <i>Alignment is honored</i></summary>
+
+    * **Objective**: Alignment is honored
+    * **Assertions**:
+      * <code>Assert not null (p16)</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, (uintptr_t)p16 % 16);</code>
+      * <code>Assert not null (p32)</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, (uintptr_t)p32 % 32);</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_exhaustion_returns_null_without_corrupting_arena</b> &mdash; <i>Exhaustion returns null without corrupting arena</i></summary>
+
+    * **Objective**: Exhaustion returns null without corrupting arena
+    * **Assertions**:
+      * <code>Assert not null (whole)</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(cap, pc_plaintext_used());</code>
+      * <code>Assert null (over)</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(cap, pc_plaintext_used()); // the failed alloc did not advance</code>
+      * <code>Assert not null (pc_plaintext_alloc(1, 1))</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_alloc_larger_than_capacity_returns_null</b> &mdash; <i>Alloc larger than capacity returns null</i></summary>
+
+    * **Objective**: Alloc larger than capacity returns null
+    * **Assertions**:
+      * <code>Assert null (pc_plaintext_alloc(pc_plaintext_capacity() + 1, 1))</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_plaintext_used());</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_alignment_padding_cannot_overflow_arena</b> &mdash; <i>Fill to one byte below capacity, then a large-alignment request whose</i></summary>
+
+    * **Objective**: Fill to one byte below capacity, then a large-alignment request whose
+    * **Assertions**:
+      * <code>Assert not null (bulk)</code>
+      * <code>Assert null (pc_plaintext_alloc(1, 64))</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_high_water_bounds</b> &mdash; <i>High water bounds</i></summary>
+
+    * **Objective**: High water bounds
+    * **Assertions**:
+      * <code>Assert true (pc_plaintext_high_water() &gt;= pc_plaintext_used())</code>
+      * <code>Assert true (pc_plaintext_high_water() &lt;= pc_plaintext_capacity())</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_zero_size_alloc_returns_nonnull_when_space</b> &mdash; <i>Zero size alloc returns nonnull when space</i></summary>
+
+    * **Objective**: Zero size alloc returns nonnull when space
+    * **Assertions**:
+      * <code>Assert not null (pc_plaintext_alloc(0, 1))</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_mark_release_reclaims</b> &mdash; <i>The guarantee: release restores usage to exactly where the mark was taken.</i></summary>
+
+    * **Objective**: The guarantee: release restores usage to exactly where the mark was taken.
+    * **Assertions**:
+      * <code>Assert true (pc_plaintext_used() &gt;= after_first + 200)</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(after_first, pc_plaintext_used());</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_release_allows_reuse_of_same_region</b> &mdash; <i>Release allows reuse of same region</i></summary>
+
+    * **Objective**: Release allows reuse of same region
+    * **Assertions**:
+      * <code>Assert equal ptr (a, b)</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_plaintext_scope_releases_on_scope_exit</b> &mdash; <i>Plaintext scope releases on scope exit</i></summary>
+
+    * **Objective**: Plaintext scope releases on scope exit
+    * **Assertions**:
+      * <code>Assert true (pc_plaintext_used() &gt;= outside + 500)</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(outside, pc_plaintext_used());</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_nested_scopes_reclaim_lifo</b> &mdash; <i>Nested scopes reclaim lifo</i></summary>
+
+    * **Objective**: Nested scopes reclaim lifo
+    * **Assertions**:
+      * <code>Assert true (pc_plaintext_used() &gt; after_outer)</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(after_outer, pc_plaintext_used());</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_sequential_scopes_do_not_accumulate</b> &mdash; <i>Mirrors ssh_pkt_recv's multi-packet loop: each iteration borrows then</i></summary>
+
+    * **Objective**: Mirrors ssh_pkt_recv's multi-packet loop: each iteration borrows then
+    * **Assertions**:
+      * <code>Assert not null (p)</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_plaintext_used());</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_borrow_comes_from_the_callers_slot</b> &mdash; <i>Borrow comes from the callers slot</i></summary>
+
+    * **Objective**: Borrow comes from the callers slot
+    * **Assertions**:
+      * <code>Assert not null (own)</code>
+      * <code>Assert equal int (0, pc_plaintext_slot_of(own))</code>
+      * <code>Assert equal int (1, pc_plaintext_slot_of(w1))</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_plaintext_used());</code>
+      * <code>Assert equal int (PC_GHOST_WORKER_SLOT, pc_plaintext_slot_of(neg))</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_plaintext_used());</code>
+      * <code>Assert equal int (PC_GHOST_WORKER_SLOT, pc_plaintext_slot_of(big))</code>
   </details>
 
 </details>
@@ -44134,172 +44564,6 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
     * **Assertions**:
       * <code>Assert false (pc_scpi_match("SYST_", 5, "SYSTem"))</code>
       * <code>Assert false (pc_scpi_match("SYST~", 5, "SYSTem"))</code>
-  </details>
-
-</details>
-
-<details>
-<summary><b>test_scratch (17 tests)</b></summary>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_high_water_starts_at_zero</b> &mdash; <i>High water starts at zero</i></summary>
-
-    * **Objective**: High water starts at zero
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(0, scratch_high_water());</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_zero_align_uses_default</b> &mdash; <i>Zero align uses default</i></summary>
-
-    * **Objective**: Zero align uses default
-    * **Assertions**:
-      * <code>Assert not null (p)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, (uintptr_t)p % 8); // default alignment is at least 8</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_alloc_returns_nonnull_and_advances_used</b> &mdash; <i>Alloc returns nonnull and advances used</i></summary>
-
-    * **Objective**: Alloc returns nonnull and advances used
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(0, scratch_used());</code>
-      * <code>Assert not null (p)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(16, scratch_used());</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_sequential_allocs_are_distinct_and_non_overlapping</b> &mdash; <i>Distinct and non-overlapping is the guarantee; the DIRECTION is not. The pool's scratch end</i></summary>
-
-    * **Objective**: Distinct and non-overlapping is the guarantee; the DIRECTION is not. The pool's scratch end
-    * **Assertions**:
-      * <code>Assert not null (a)</code>
-      * <code>Assert not null (b)</code>
-      * <code>Assert true (hi &gt;= lo + 8)</code>
-      * <code>Assert true (scratch_used() &gt;= 16)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_reset_frees_all_and_reuses_base</b> &mdash; <i>Reset frees all and reuses base</i></summary>
-
-    * **Objective**: Reset frees all and reuses base
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(0, scratch_used());</code>
-      * <code>Assert equal ptr (first, again)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_alignment_is_honored</b> &mdash; <i>Alignment is honored</i></summary>
-
-    * **Objective**: Alignment is honored
-    * **Assertions**:
-      * <code>Assert not null (p16)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, (uintptr_t)p16 % 16);</code>
-      * <code>Assert not null (p32)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, (uintptr_t)p32 % 32);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_exhaustion_returns_null_without_corrupting_arena</b> &mdash; <i>Exhaustion returns null without corrupting arena</i></summary>
-
-    * **Objective**: Exhaustion returns null without corrupting arena
-    * **Assertions**:
-      * <code>Assert not null (whole)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(cap, scratch_used());</code>
-      * <code>Assert null (over)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(cap, scratch_used()); // the failed alloc did not advance</code>
-      * <code>Assert not null (scratch_alloc(1, 1))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_alloc_larger_than_capacity_returns_null</b> &mdash; <i>Alloc larger than capacity returns null</i></summary>
-
-    * **Objective**: Alloc larger than capacity returns null
-    * **Assertions**:
-      * <code>Assert null (scratch_alloc(scratch_capacity() + 1, 1))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, scratch_used());</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_alignment_padding_cannot_overflow_arena</b> &mdash; <i>Fill to one byte below capacity, then a large-alignment request whose</i></summary>
-
-    * **Objective**: Fill to one byte below capacity, then a large-alignment request whose
-    * **Assertions**:
-      * <code>Assert not null (bulk)</code>
-      * <code>Assert null (scratch_alloc(1, 64))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_high_water_bounds</b> &mdash; <i>High water bounds</i></summary>
-
-    * **Objective**: High water bounds
-    * **Assertions**:
-      * <code>Assert true (scratch_high_water() &gt;= scratch_used())</code>
-      * <code>Assert true (scratch_high_water() &lt;= scratch_capacity())</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_zero_size_alloc_returns_nonnull_when_space</b> &mdash; <i>Zero size alloc returns nonnull when space</i></summary>
-
-    * **Objective**: Zero size alloc returns nonnull when space
-    * **Assertions**:
-      * <code>Assert not null (scratch_alloc(0, 1))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_mark_release_reclaims</b> &mdash; <i>The guarantee: release restores usage to exactly where the mark was taken.</i></summary>
-
-    * **Objective**: The guarantee: release restores usage to exactly where the mark was taken.
-    * **Assertions**:
-      * <code>Assert true (scratch_used() &gt;= after_first + 200)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(after_first, scratch_used());</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_release_allows_reuse_of_same_region</b> &mdash; <i>Release allows reuse of same region</i></summary>
-
-    * **Objective**: Release allows reuse of same region
-    * **Assertions**:
-      * <code>Assert equal ptr (a, b)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_scratch_scope_releases_on_scope_exit</b> &mdash; <i>Scratch scope releases on scope exit</i></summary>
-
-    * **Objective**: Scratch scope releases on scope exit
-    * **Assertions**:
-      * <code>Assert true (scratch_used() &gt;= outside + 500)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(outside, scratch_used());</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_nested_scopes_reclaim_lifo</b> &mdash; <i>Nested scopes reclaim lifo</i></summary>
-
-    * **Objective**: Nested scopes reclaim lifo
-    * **Assertions**:
-      * <code>Assert true (scratch_used() &gt; after_outer)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(after_outer, scratch_used());</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_sequential_scopes_do_not_accumulate</b> &mdash; <i>Mirrors ssh_pkt_recv's multi-packet loop: each iteration borrows then</i></summary>
-
-    * **Objective**: Mirrors ssh_pkt_recv's multi-packet loop: each iteration borrows then
-    * **Assertions**:
-      * <code>Assert not null (p)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, scratch_used());</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_cur_worker_clamps_out_of_range_ids</b> &mdash; <i>Cur worker clamps out of range ids</i></summary>
-
-    * **Objective**: Cur worker clamps out of range ids
-    * **Assertions**:
-      * <code>Assert not null (base)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, scratch_used());</code>
-      * <code>Assert equal ptr (base, neg)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, scratch_used());</code>
-      * <code>Assert equal ptr (base, big)</code>
   </details>
 
 </details>
@@ -52111,8 +52375,8 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
 
     * **Objective**: Conn outbound arena fits payload not wire
     * **Assertions**:
-      * <code>Assert not null (scratch_alloc(16, 1))</code>
-      * <code>Assert true (scratch_capacity() - scratch_used() &gt;= SSH_PKT_BUF_SIZE)</code>
+      * <code>Assert not null (pc_plaintext_alloc(16, 1))</code>
+      * <code>Assert true (pc_plaintext_capacity() - pc_plaintext_used() &gt;= SSH_PKT_BUF_SIZE)</code>
       * <code>Assert equal int (-1, pc_ssh_conn_send(j, 0, data, sizeof(data)))</code>
       * <code>Assert equal int (-1, pc_ssh_conn_open_forwarded(j, "10.0.0.1", 80, "1.2.3.4", 90))</code>
   </details>
@@ -54712,6 +54976,85 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
       * <code>TEST_ASSERT_EQUAL_size_t(0, pc_sunspec_writer_finish(&w2));</code>
       * <code>Assert false (pc_sunspec_write_end_model(&w3))</code>
       * <code>TEST_ASSERT_EQUAL_size_t(0, pc_sunspec_writer_finish(&w3));</code>
+  </details>
+
+</details>
+
+<details>
+<summary><b>test_swar (7 tests)</b></summary>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_has_zero_finds_any_lane</b> &mdash; <i>A lane whose high bit is already set is not a zero lane - the `& ~w` term is what rules it out.</i></summary>
+
+    * **Objective**: A lane whose high bit is already set is not a zero lane - the `& ~w` term is what rules it out.
+    * **Assertions**:
+      * <code>Assert true (pc_swar_has_zero(0x00FFFFFFu) != 0)</code>
+      * <code>Assert true (pc_swar_has_zero(0xFF00FFFFu) != 0)</code>
+      * <code>Assert true (pc_swar_has_zero(0xFFFF00FFu) != 0)</code>
+      * <code>Assert true (pc_swar_has_zero(0xFFFFFF00u) != 0)</code>
+      * <code>Assert true (pc_swar_has_zero(0x00000000u) != 0)</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(0, pc_swar_has_zero(0xFFFFFFFFu));</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(0, pc_swar_has_zero(0x01010101u));</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(0, pc_swar_has_zero(0x80808080u));</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(0, pc_swar_has_zero(0x80010280u));</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_zero_lane_from_mask</b> &mdash; <i>With several zero lanes the answer is the first in address order, not any of the others.</i></summary>
+
+    * **Objective**: With several zero lanes the answer is the first in address order, not any of the others.
+    * **Assertions**:
+      * <code>Assert true (m != 0)</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(at, pc_swar_zero_lane(m));</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(1, pc_swar_zero_lane(pc_swar_has_zero(pc_swar_load(two))));</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_scan_nul_matches_strnlen</b> &mdash; <i>Scan nul matches strnlen</i></summary>
+
+    * **Objective**: Scan nul matches strnlen
+    * **Assertions**:
+      * <code>TEST_ASSERT_EQUAL_UINT32(strnlen(buf, cap), pc_swar_scan_nul(buf, cap));</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_scan_nul_absent_returns_cap</b> &mdash; <i>Scan nul absent returns cap</i></summary>
+
+    * **Objective**: Scan nul absent returns cap
+    * **Assertions**:
+      * <code>TEST_ASSERT_EQUAL_UINT32(cap, pc_swar_scan_nul(buf, cap));</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_scan_nul_ignores_high_bytes</b> &mdash; <i>Scan nul ignores high bytes</i></summary>
+
+    * **Objective**: Scan nul ignores high bytes
+    * **Assertions**:
+      * <code>TEST_ASSERT_EQUAL_UINT32(5, pc_swar_scan_nul(buf, sizeof(buf)));</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_scan_nul_unaligned</b> &mdash; <i>Scan nul unaligned</i></summary>
+
+    * **Objective**: Scan nul unaligned
+    * **Assertions**:
+      * <code>TEST_ASSERT_EQUAL_UINT32(9, pc_swar_scan_nul(buf + off, sizeof(buf) - off));</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_lane_compares</b> &mdash; <i>Every lane is >= '0'.</i></summary>
+
+    * **Objective**: Every lane is >= '0'.
+    * **Assertions**:
+      * <code>TEST_ASSERT_EQUAL_UINT32(0x80808080u, pc_swar_ge(w, '0'));</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(0x00000080u, pc_swar_ge(w, 'a'));</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(0x80800000u, pc_swar_le(w, 'A'));</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(0x80008000u, pc_swar_ge(w, 'A') & pc_swar_le(w, 'Z'));</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(0xFFFFFFFFu, pc_swar_spread(0x80808080u));</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(0x000000FFu, pc_swar_spread(0x00000080u));</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(0x00000000u, pc_swar_spread(0x00000000u));</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(0x00000000u, pc_swar_sub7(0x30303030u, '0'));</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(0x01010101u, pc_swar_sub7(0x31313131u, '0'));</code>
   </details>
 
 </details>
@@ -58144,241 +58487,6 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
 </details>
 
 <details>
-<summary><b>test_vfs (20 tests)</b></summary>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_write_then_read_file</b> &mdash; <i>Write then read file</i></summary>
-
-    * **Objective**: Write then read file
-    * **Assertions**:
-      * <code>Assert true (pc_vfs_write_file("/a.txt", msg, strlen(msg)))</code>
-      * <code>Assert true (pc_vfs_exists("/a.txt"))</code>
-      * <code>TEST_ASSERT_EQUAL_INT32((long)strlen(msg), pc_vfs_size("/a.txt"));</code>
-      * <code>TEST_ASSERT_EQUAL_INT32((long)strlen(msg), n);</code>
-      * <code>Assert equal string (msg, buf)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_streamed_write_and_read</b> &mdash; <i>Streamed write and read</i></summary>
-
-    * **Objective**: Streamed write and read
-    * **Assertions**:
-      * <code>Assert true (h &gt;= 0)</code>
-      * <code>Assert equal int (3, pc_vfs_write(h, "abc", 3))</code>
-      * <code>Assert equal int (3, pc_vfs_write(h, "def", 3))</code>
-      * <code>TEST_ASSERT_EQUAL_INT32(6, pc_vfs_size("/s.bin"));</code>
-      * <code>Assert true (h &gt;= 0)</code>
-      * <code>Assert equal int (4, pc_vfs_read(h, buf, 4))</code>
-      * <code>Assert equal string ("abcd", buf)</code>
-      * <code>Assert equal int (2, pc_vfs_read(h, buf, 4))</code>
-      * <code>Assert equal int (0, pc_vfs_read(h, buf, 4))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_write_mode_truncates</b> &mdash; <i>Write mode truncates</i></summary>
-
-    * **Objective**: Write mode truncates
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_INT32(5, pc_vfs_size("/t.txt"));</code>
-      * <code>Assert equal string ("short", buf)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_append_extends</b> &mdash; <i>Append extends</i></summary>
-
-    * **Objective**: Append extends
-    * **Assertions**:
-      * <code>Assert true (h &gt;= 0)</code>
-      * <code>TEST_ASSERT_EQUAL_INT32(12, pc_vfs_size("/log"));</code>
-      * <code>Assert equal string ("line1\\nline2\\n", buf)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_remove_and_rename</b> &mdash; <i>Remove and rename</i></summary>
-
-    * **Objective**: Remove and rename
-    * **Assertions**:
-      * <code>Assert true (pc_vfs_rename("/old", "/new"))</code>
-      * <code>Assert false (pc_vfs_exists("/old"))</code>
-      * <code>Assert true (pc_vfs_exists("/new"))</code>
-      * <code>Assert equal string ("data", buf)</code>
-      * <code>Assert true (pc_vfs_remove("/new"))</code>
-      * <code>Assert false (pc_vfs_exists("/new"))</code>
-      * <code>TEST_ASSERT_EQUAL_INT32(-1, pc_vfs_size("/new"));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_missing_file_fails_closed</b> &mdash; <i>Missing file fails closed</i></summary>
-
-    * **Objective**: Missing file fails closed
-    * **Assertions**:
-      * <code>Assert false (pc_vfs_exists("/nope"))</code>
-      * <code>TEST_ASSERT_EQUAL_INT32(-1, pc_vfs_size("/nope"));</code>
-      * <code>Assert true (pc_vfs_open("/nope", pc_vfs_mode::PC_VFS_READ) &lt; 0)</code>
-      * <code>TEST_ASSERT_EQUAL_INT32(-1, pc_vfs_read_file("/nope", buf, sizeof(buf)));</code>
-      * <code>Assert false (pc_vfs_remove("/nope"))</code>
-      * <code>Assert false (pc_vfs_rename("/nope", "/x"))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_read_buffer_too_small_fails_closed</b> &mdash; <i>Read buffer too small fails closed</i></summary>
-
-    * **Objective**: Read buffer too small fails closed
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_INT32(-1, pc_vfs_read_file("/big", tiny, sizeof(tiny)));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_file_full_is_bounded</b> &mdash; <i>Never exceeds the fixed per-file capacity (fail-closed, no overflow).</i></summary>
-
-    * **Objective**: Never exceeds the fixed per-file capacity (fail-closed, no overflow).
-    * **Assertions**:
-      * <code>Assert true (h &gt;= 0)</code>
-      * <code>TEST_ASSERT_EQUAL_INT32((long)PC_VFS_RAM_FILE_SIZE, pc_vfs_size("/full"));</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(PC_VFS_RAM_FILE_SIZE, (uint32_t)written);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_file_pool_exhaustion</b> &mdash; <i>One more distinct file must fail (pool full), not corrupt anything.</i></summary>
-
-    * **Objective**: One more distinct file must fail (pool full), not corrupt anything.
-    * **Assertions**:
-      * <code>Assert true (pc_vfs_write_file(name, "x", 1))</code>
-      * <code>Assert false (pc_vfs_write_file("/overflow", "x", 1))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_handle_pool_exhaustion</b> &mdash; <i>Handle pool exhaustion</i></summary>
-
-    * **Objective**: Handle pool exhaustion
-    * **Assertions**:
-      * <code>Assert true (handles[i] &gt;= 0)</code>
-      * <code>Assert true (pc_vfs_open("/h", pc_vfs_mode::PC_VFS_READ) &lt; 0)</code>
-      * <code>Assert true (pc_vfs_open("/h", pc_vfs_mode::PC_VFS_READ) &gt;= 0)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_unmounted_fails_closed</b> &mdash; <i>Unmounted fails closed</i></summary>
-
-    * **Objective**: Unmounted fails closed
-    * **Assertions**:
-      * <code>Assert true (pc_vfs_open("/a", pc_vfs_mode::PC_VFS_READ) &lt; 0)</code>
-      * <code>Assert false (pc_vfs_exists("/a"))</code>
-      * <code>TEST_ASSERT_EQUAL_INT32(-1, pc_vfs_size("/a"));</code>
-      * <code>Assert false (pc_vfs_write_file("/a", "x", 1))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_ram_guard_subconditions</b> &mdash; <i>Null path and an over-long name both fail closed on open.</i></summary>
-
-    * **Objective**: Null path and an over-long name both fail closed on open.
-    * **Assertions**:
-      * <code>Assert equal int (-1, pc_vfs_open(nullptr, pc_vfs_mode::PC_VFS_WRITE))</code>
-      * <code>Assert equal int (-1, pc_vfs_open(longname, pc_vfs_mode::PC_VFS_WRITE))</code>
-      * <code>Assert equal int (-1, pc_vfs_read(999, b, sizeof(b)))</code>
-      * <code>Assert equal int (-1, pc_vfs_write(999, b, sizeof(b)))</code>
-      * <code>Assert true (pc_vfs_read_file("/nope", b, sizeof(b)) &lt; 0)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_unmounted_all_entry_points</b> &mdash; <i>Unmounted all entry points</i></summary>
-
-    * **Objective**: Unmounted all entry points
-    * **Assertions**:
-      * <code>Assert equal int (-1, pc_vfs_read(0, b, sizeof(b)))</code>
-      * <code>Assert equal int (-1, pc_vfs_write(0, b, sizeof(b)))</code>
-      * <code>Assert false (pc_vfs_remove("/a"))</code>
-      * <code>Assert false (pc_vfs_rename("/a", "/b"))</code>
-      * <code>Assert true (pc_vfs_read_file("/a", b, sizeof(b)) &lt; 0)</code>
-      * <code>Assert true (pc_vfs_write_file("/a", "x", 1))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_handle_validity_edges</b> &mdash; <i>In range, but no longer open.</i></summary>
-
-    * **Objective**: In range, but no longer open.
-    * **Assertions**:
-      * <code>Assert equal int (-1, pc_vfs_read(-1, b, sizeof(b)))</code>
-      * <code>Assert equal int (-1, pc_vfs_write(-1, b, sizeof(b)))</code>
-      * <code>Assert true (pc_vfs_write_file("/hv", "data", 4))</code>
-      * <code>Assert true (h &gt;= 0)</code>
-      * <code>Assert equal int (-1, pc_vfs_read(h, b, sizeof(b)))</code>
-      * <code>Assert equal int (-1, pc_vfs_write(h, b, sizeof(b)))</code>
-      * <code>Assert true (pc_vfs_open("/hv", pc_vfs_mode::PC_VFS_READ) &gt;= 0)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_write_to_read_handle_rejected</b> &mdash; <i>Write to read handle rejected</i></summary>
-
-    * **Objective**: Write to read handle rejected
-    * **Assertions**:
-      * <code>Assert true (pc_vfs_write_file("/ro", "data", 4))</code>
-      * <code>Assert true (h &gt;= 0)</code>
-      * <code>Assert equal int (-1, pc_vfs_write(h, "xx", 2))</code>
-      * <code>TEST_ASSERT_EQUAL_INT32(4, pc_vfs_size("/ro"));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_rename_argument_guards</b> &mdash; <i>Rename argument guards</i></summary>
-
-    * **Objective**: Rename argument guards
-    * **Assertions**:
-      * <code>Assert true (pc_vfs_write_file("/r1", "data", 4))</code>
-      * <code>Assert false (pc_vfs_rename(nullptr, "/r2"))</code>
-      * <code>Assert false (pc_vfs_rename("/r1", nullptr))</code>
-      * <code>Assert false (pc_vfs_rename("/r1", longname))</code>
-      * <code>Assert true (pc_vfs_exists("/r1"))</code>
-      * <code>Assert false (pc_vfs_exists("/r2"))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_rename_overwrites_destination</b> &mdash; <i>Rename overwrites destination</i></summary>
-
-    * **Objective**: Rename overwrites destination
-    * **Assertions**:
-      * <code>Assert true (pc_vfs_write_file("/src", "NEW", 3))</code>
-      * <code>Assert true (pc_vfs_write_file("/dst", "oldcontent", 10))</code>
-      * <code>Assert true (pc_vfs_rename("/src", "/dst"))</code>
-      * <code>Assert false (pc_vfs_exists("/src"))</code>
-      * <code>Assert true (pc_vfs_exists("/dst"))</code>
-      * <code>TEST_ASSERT_EQUAL_INT32(3, pc_vfs_size("/dst")); // the source's contents won</code>
-      * <code>TEST_ASSERT_EQUAL_INT32(3, n);</code>
-      * <code>Assert equal string ("NEW", buf)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_read_file_handle_exhaustion</b> &mdash; <i>Read file handle exhaustion</i></summary>
-
-    * **Objective**: Read file handle exhaustion
-    * **Assertions**:
-      * <code>Assert true (pc_vfs_write_file("/rf", "0123456789", 10))</code>
-      * <code>Assert true (handles[i] &gt;= 0)</code>
-      * <code>TEST_ASSERT_EQUAL_INT32(-1, pc_vfs_read_file("/rf", buf, sizeof(buf)));</code>
-      * <code>TEST_ASSERT_EQUAL_INT32(10, pc_vfs_read_file("/rf", buf, sizeof(buf))); // works again</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_write_file_larger_than_capacity</b> &mdash; <i>Write file larger than capacity</i></summary>
-
-    * **Objective**: Write file larger than capacity
-    * **Assertions**:
-      * <code>Assert false (pc_vfs_write_file("/cap", big, sizeof(big)))</code>
-      * <code>TEST_ASSERT_EQUAL_INT32((long)PC_VFS_RAM_FILE_SIZE, pc_vfs_size("/cap"));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_zero_progress_backend_terminates</b> &mdash; <i>Zero progress backend terminates</i></summary>
-
-    * **Objective**: Zero progress backend terminates
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_INT32(0, pc_vfs_read_file("/x", buf, sizeof(buf))); // gave up at 0 bytes</code>
-      * <code>Assert false (pc_vfs_write_file("/x", "abcd", 4))</code>
-      * <code>Assert true (pc_vfs_write_file("/x", "abcd", 4))</code>
-  </details>
-
-</details>
-
-<details>
 <summary><b>test_vl53l0x (3 tests)</b></summary>
 
   <details style="margin-left: 20px;">
@@ -60363,36 +60471,32 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
 <summary><b>test_webdav_handler (43 tests)</b></summary>
 
   <details style="margin-left: 20px;">
-    <summary><b>test_fs_path_join_separator_matrix</b> &mdash; <i>root_slash=false (empty root -> rlen==0), sub_slash=false -> a '/' separator is inserted.</i></summary>
+    <summary><b>test_pc_fs_join_seam</b> &mdash; <i>sub starts with '/': the duplicate is consumed, the root's separator is the one kept.</i></summary>
 
-    * **Objective**: root_slash=false (empty root -> rlen==0), sub_slash=false -> a '/' separator is inserted.
+    * **Objective**: sub starts with '/': the duplicate is consumed, the root's separator is the one kept.
     * **Assertions**:
-      * <code>Assert true (fs_path_join("", "a", out, sizeof(out)))</code>
-      * <code>Assert equal string ("/a", out)</code>
-      * <code>Assert true (fs_path_join("/a/", "/b", out, sizeof(out)))</code>
+      * <code>Assert true (pc_fs_join("/a/", "/b", "", out, sizeof(out)))</code>
       * <code>Assert equal string ("/a/b", out)</code>
-      * <code>Assert true (fs_path_join("/a/", "b", out, sizeof(out)))</code>
+      * <code>Assert true (pc_fs_join("/a/", "b", "", out, sizeof(out)))</code>
       * <code>Assert equal string ("/a/b", out)</code>
-      * <code>Assert true (fs_path_join("/a", "/b", out, sizeof(out)))</code>
-      * <code>Assert equal string ("/a/b", out)</code>
-      * <code>Assert true (fs_path_join("/a", "b", out, sizeof(out)))</code>
-      * <code>Assert equal string ("/a/b", out)</code>
-      * <code>Assert false (fs_path_join("abc", "def", out, 4))</code>
+      * <code>Assert true (pc_fs_join("/", "/b", "", out, sizeof(out)))</code>
+      * <code>Assert equal string ("/b", out)</code>
+      * <code>Assert false (pc_fs_join("/abc/", "def", "", out, 4))</code>
   </details>
 
   <details style="margin-left: 20px;">
-    <summary><b>test_fs_path_resolve_traversal_and_root_edge</b> &mdash; <i>A ".." anywhere in sub is refused before touching fs_path_join.</i></summary>
+    <summary><b>test_pc_fs_resolve_traversal_and_root_edge</b> &mdash; <i>A ".." anywhere in sub is refused before touching pc_fs_join.</i></summary>
 
-    * **Objective**: A ".." anywhere in sub is refused before touching fs_path_join.
+    * **Objective**: A ".." anywhere in sub is refused before touching pc_fs_join.
     * **Assertions**:
-      * <code>Assert equal int (-1, fs_path_resolve("/root", "/a/../b", out, sizeof(out)))</code>
-      * <code>Assert equal int (0, fs_path_resolve("", "/", out, sizeof(out)))</code>
+      * <code>Assert equal int (-1, pc_fs_resolve("/root/", "/a/../b", "", out, sizeof(out)))</code>
+      * <code>Assert equal int (0, pc_fs_resolve("/", "/", "", out, sizeof(out)))</code>
       * <code>Assert equal string ("/", out)</code>
-      * <code>Assert equal int (0, fs_path_resolve("/a", "/", out, sizeof(out)))</code>
+      * <code>Assert equal int (0, pc_fs_resolve("/a/", "/", "", out, sizeof(out)))</code>
       * <code>Assert equal string ("/a", out)</code>
-      * <code>Assert equal int (0, fs_path_resolve("/a", "/b", out, sizeof(out)))</code>
+      * <code>Assert equal int (0, pc_fs_resolve("/a/", "/b", "", out, sizeof(out)))</code>
       * <code>Assert equal string ("/a/b", out)</code>
-      * <code>Assert equal int (-2, fs_path_resolve("abc", "def", out, 4))</code>
+      * <code>Assert equal int (-2, pc_fs_resolve("/abc/", "def", "", out, 4))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -61631,9 +61735,9 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
   </details>
 
   <details style="margin-left: 20px;">
-    <summary><b>test_ws_permessage_deflate_scratch_exhausted_closes</b> &mdash; <i>Consume the whole arena so every scratch_alloc() in ws_finish_frame returns null.</i></summary>
+    <summary><b>test_ws_permessage_deflate_scratch_exhausted_closes</b> &mdash; <i>Consume the whole arena so every pc_plaintext_alloc() in ws_finish_frame returns null.</i></summary>
 
-    * **Objective**: Consume the whole arena so every scratch_alloc() in ws_finish_frame returns null.
+    * **Objective**: Consume the whole arena so every pc_plaintext_alloc() in ws_finish_frame returns null.
     * **Assertions**:
       * <code>Assert not null (ws)</code>
       * <code>Assert not null (hog)</code>

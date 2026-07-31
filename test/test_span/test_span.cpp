@@ -15,8 +15,8 @@
 // The field names are the bytes.h write-cursor convention on purpose, so pc_bw_* drives a pc_span
 // with no second byte-append API; that pairing is exercised here too.
 
+#include "server/mmgr/span.h"
 #include "shared_primitives/bytes.h"
-#include "shared_primitives/span.h"
 #include <string.h>
 #include <unity.h>
 

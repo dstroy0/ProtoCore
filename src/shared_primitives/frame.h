@@ -27,6 +27,7 @@
  *   - `out` is always NUL-terminated on both paths, so a caller may always read it as a string.
  *   - A NULL `PC_FK_STR` argument renders as empty, never as a crash or "(null)".
  *
+ *
  * **Arguments** are passed variadically in spec order, one per field that declares one (PC_FK_LIT
  * and PC_FK_END take none). They are read at their default-promoted types, so a `uint8_t` passed
  * to PC_FK_U32 arrives as `unsigned` and a `float` passed to PC_FK_G arrives as `double`, which is

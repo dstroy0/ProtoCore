@@ -7,12 +7,15 @@
  */
 
 #include "services/system/logbuf/logbuf.h"
-#include "shared_primitives/strbuf.h" // pc_sb frame builder
+#include "shared_primitives/frame.h" // the one frame engine
 
 #if PC_ENABLE_LOGBUF
 
 #include <stdio.h>
 #include <string.h>
+
+// A log line is its severity letter, a space, then the message.
+static const pc_field LOG_LINE[] = {PC_CH, {PC_FK_LIT, 0, 1, " "}, PC_STR, PC_END};
 
 namespace
 {
@@ -65,14 +68,8 @@ void pc_log(uint8_t level, const char *msg)
         slot = s_log.head;
         s_log.head = (uint16_t)((s_log.head + 1) % PC_LOG_LINES);
     }
-    pc_sb sb67 = {s_log.lines[slot], PC_LOG_LINE_LEN, 0, true};
-    pc_sb_ch(&sb67, (char)(level_letter(level)));
-    pc_sb_put(&sb67, " ");
-    pc_sb_put(&sb67, msg ? msg : "");
-    if (pc_sb_finish(&sb67) == 0)
-    {
-        sb67.p[0] = '\0';
-    }
+    // A NULL msg renders empty and an over-long line empties the slot, both from the frame contract.
+    pc_frame_build(s_log.lines[slot], PC_LOG_LINE_LEN, LOG_LINE, level_letter(level), msg);
     s_log.level[slot] = level;
 
     if (s_log.trap && level >= s_log.trap_threshold)

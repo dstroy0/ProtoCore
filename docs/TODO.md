@@ -626,7 +626,7 @@ Open follow-ups discovered during the above:
       and the ~2 KB `ssh_pkt_recv` stack buffer, header formatting, the upcoming
       deflate window). These are mutually exclusive in time, so one shared arena
       cuts peak DRAM. **Model - region-reset-per-dispatch:** one compile-time-sized
-      BSS arena (`PC_SCRATCH_ARENA_SIZE`); `scratch_alloc(n, align)`
+      BSS arena (`PC_PLAINTEXT_ARENA_SIZE`); `pc_plaintext_alloc(n, align)`
       bump-allocates; the arena is reset to empty at the top of every event
       dispatch in `server_tick()`, before the protocol handler runs.
       **Race-safety (verified):** all codec/protocol logic runs only in the single
@@ -636,19 +636,19 @@ Open follow-ups discovered during the above:
       owner-task assert (`xTaskGetCurrentTaskHandle`) that fails loud if any foreign
       context ever borrows. **Exhaustion-safety:** borrows live only within one
       dispatch and are auto-reclaimed at the reset, so leaks (creeping exhaustion)
-      are impossible; an over-budget `scratch_alloc` returns nullptr and every
+      are impossible; an over-budget `pc_plaintext_alloc` returns nullptr and every
       caller has a defined fail-closed path (WS close 1011, 503, or skip the
       optimization) - never UB, never block. Sizing = worst-case concurrent borrows
       in any single dispatch. This generalizes the existing single-loop-confined
       `crypto_work` pattern (only one SSH KEX runs at a time).
-      _Status (done):_ arena core + LIFO mark/release + RAII `ScratchScope` landed
-      (`test_scratch`; exhaustion + no-accumulate verified); the single-owner debug
+      _Status (done):_ arena core + LIFO mark/release + RAII `PlaintextScope` landed
+      (`test_plaintext`; exhaustion + no-accumulate verified); the single-owner debug
       assert (`assert_single_owner` / `xTaskGetCurrentTaskHandle`, per worker) guards
-      against a foreign-task borrow; `scratch_reset()` wired into `server_tick()`.
+      against a foreign-task borrow; `pc_plaintext_reset()` wired into `server_tick()`.
       Tenants migrated: `ssh_pkt_recv` (its ~2 KB stack buffer removed), `ssh_conn`,
       the OIDC verifier's ~2.6 KB decode buffers, and - the planned final tenant - the
       **permessage-deflate window** (both the outbound `deflate_raw` and inbound
-      `inflate_raw` scratch in `websocket.cpp` are `scratch_alloc`'d, fail-closed on
+      `inflate_raw` scratch in `websocket.cpp` are `pc_plaintext_alloc`'d, fail-closed on
       exhaustion). Host tests green and esp32dev links.
 
 </details>
@@ -780,10 +780,10 @@ shipped work:
 - [x] **`pc_oidc_verify_with_key()` decode buffers moved off the stack.** _(done)_
       The verifier's `hdr[512]` + `sig[PC_OIDC_RSA_BYTES]` + `pl[PC_OIDC_MAX_LEN]`
       + `iss[256]` (~2.6 KB) are now borrowed from the per-dispatch scratch arena under a
-      `ScratchScope` (fail-closed if the arena is exhausted), not stacked. This is
+      `PlaintextScope` (fail-closed if the arena is exhausted), not stacked. This is
       single-worker-race-safe (the arena has one accessor) where a `static` buffer would
       race concurrent workers. HW-soaked on COM3: a real RS256 verify returns OK with
-      `scratch_high_water == 2624` (exactly the four buffers, now in BSS) and the verify
+      `pc_plaintext_high_water == 2624` (exactly the four buffers, now in BSS) and the verify
       compiles + runs under ARDUINO (mbedTLS RSA). `native_oidc` links
       `session/scratch.cpp` + `worker.cpp`; 13/13 OIDC tests still pass.
       _Follow-up:_ the HW soak showed the verify still consumes ~7 KB of **stack** during
@@ -1011,7 +1011,7 @@ shipped work:
 - [x] **Recv scratch off the stack.** _(done)_ `ssh_pkt_recv`'s per-packet
       plaintext buffer (`SSH_PKT_BUF_SIZE + SSH_HMAC_SHA256_LEN`, ~2 KB) moved from
       the stack into the shared per-dispatch scratch arena
-      (`server/mmgr/scratch.*`), borrowed under an RAII `ScratchScope`
+      (`server/mmgr/scratch.*`), borrowed under an RAII `PlaintextScope`
       so it is reclaimed on every exit path and reused (not accumulated) across
       packets in one call. See the shared scratch-pool item under Round 2.
 

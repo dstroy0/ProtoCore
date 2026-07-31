@@ -20,7 +20,8 @@
 
 #include "base64.h"
 
-#include "protocore_config.h" // PC_BASE64_SWAR (scalar vs SWAR constant-time decode; default SWAR)
+#include "protocore_config.h"       // PC_BASE64_SWAR (scalar vs SWAR constant-time decode; default SWAR)
+#include "shared_primitives/swar.h" // the lane math; the classification below is base64's own
 #include <stddef.h>
 #include <string.h> // strnlen
 
@@ -112,41 +113,29 @@ static inline uint32_t ct_b64_val_plus1(uint32_t c, int urlsafe)
 #if PC_BASE64_SWAR
 // ---------------------------------------------------------------------------
 // SWAR variant: classify 4 characters per 32-bit word instead of one at a time (opt-in, PC_BASE64_SWAR).
-// Every base64 character is < 0x80, so a byte lane never sets its own high bit; the guard-bit subtraction
-// (a | 0x80.. then subtract) keeps borrows from crossing lanes, so the range masks stay data-independent -
+// The lane math itself is shared_primitives/swar.h; what is base64's own is the classification below.
+// Every base64 character is < 0x80, so a byte lane never sets its own high bit, which is what lets the
+// guard-bit subtraction keep borrows inside their lane and the range masks stay data-independent -
 // same constant-time property as the scalar path, four lanes at once. Whether this actually wins is a HW
 // measurement, not an assumption (decode is once-per-request); see docs/FEATURE_PERFORMANCE.md.
 // ---------------------------------------------------------------------------
-#define B64_ONES 0x01010101u
-#define B64_HIGH 0x80808080u
 
-static inline uint32_t swar_ge(uint32_t a, uint32_t v) // per lane 0x80 if a >= v, else 0
-{
-    return ((a | B64_HIGH) - v * B64_ONES) & B64_HIGH;
-}
-static inline uint32_t swar_le(uint32_t a, uint32_t v) // per lane 0x80 if a <= v, else 0
-{
-    return ((v * B64_ONES | B64_HIGH) - a) & B64_HIGH;
-}
-static inline uint32_t swar_spread(uint32_t m) // 0x80/lane -> 0xFF/lane, no cross-lane carry
-{
-    return m + (m - (m >> 7));
-}
-static inline uint32_t swar_sub7(uint32_t a, uint32_t lo) // per lane (a - lo) in the low 7 bits (guarded)
-{
-    return ((a | B64_HIGH) - lo * B64_ONES) & 0x7F7F7F7Fu;
-}
+// A base64 quad is four characters by definition of the encoding, so this path wants exactly four
+// lanes - it is the one caller of swar.h that cannot follow a retyped word width.
+static_assert(PC_SWAR_BYTES == 4, "base64 SWAR decodes one four-character quad per word");
 
 // Decode 4 packed characters (c0 in the low byte) to 4 packed 6-bit values; *ok gets 0xFF in each valid lane.
 static inline uint32_t swar_quad(uint32_t a, uint32_t *ok)
 {
-    uint32_t mAZ = swar_spread(swar_ge(a, 'A') & swar_le(a, 'Z'));
-    uint32_t maz = swar_spread(swar_ge(a, 'a') & swar_le(a, 'z'));
-    uint32_t m09 = swar_spread(swar_ge(a, '0') & swar_le(a, '9'));
-    uint32_t mpl = swar_spread(swar_ge(a, '+') & swar_le(a, '+'));
-    uint32_t msl = swar_spread(swar_ge(a, '/') & swar_le(a, '/'));
-    uint32_t val = (mAZ & (swar_sub7(a, 'A') + 0u * B64_ONES)) | (maz & (swar_sub7(a, 'a') + 26u * B64_ONES)) |
-                   (m09 & (swar_sub7(a, '0') + 52u * B64_ONES)) | (mpl & (62u * B64_ONES)) | (msl & (63u * B64_ONES));
+    uint32_t mAZ = pc_swar_spread(pc_swar_ge(a, 'A') & pc_swar_le(a, 'Z'));
+    uint32_t maz = pc_swar_spread(pc_swar_ge(a, 'a') & pc_swar_le(a, 'z'));
+    uint32_t m09 = pc_swar_spread(pc_swar_ge(a, '0') & pc_swar_le(a, '9'));
+    uint32_t mpl = pc_swar_spread(pc_swar_ge(a, '+') & pc_swar_le(a, '+'));
+    uint32_t msl = pc_swar_spread(pc_swar_ge(a, '/') & pc_swar_le(a, '/'));
+    uint32_t val = (mAZ & (pc_swar_sub7(a, 'A') + 0u * PC_SWAR_ONES)) |
+                   (maz & (pc_swar_sub7(a, 'a') + 26u * PC_SWAR_ONES)) |
+                   (m09 & (pc_swar_sub7(a, '0') + 52u * PC_SWAR_ONES)) | (mpl & (62u * PC_SWAR_ONES)) |
+                   (msl & (63u * PC_SWAR_ONES));
     *ok = mAZ | maz | m09 | mpl | msl;
     return val;
 }

@@ -18,7 +18,7 @@
 #include "session.h"
 #include "../transport/listener.h"
 #include "proto_handler.h"
-#include "server/mmgr/scratch.h"
+#include "server/mmgr/plaintext.h"
 
 // This layer is protocol-agnostic: it owns the dispatch mechanism only (register / look up /
 // route / drain) and names no protocol. Each protocol's handler lives in its own module and is
@@ -66,7 +66,7 @@ static inline void dispatch_event(const TcpEvt &evt)
     // runs with the whole arena available, and any scratch it borrows is
     // reclaimed before the next event - the backstop that stops a forgotten
     // release from accumulating across events.
-    scratch_reset();
+    pc_plaintext_reset();
 
     // Route to the slot's protocol handler. ConnProto::PROTO_NONE and any unregistered
     // protocol have no handler, so the event is dropped.

@@ -124,12 +124,12 @@ _CONSTEXPR_MSG = (
 
 
 # Ban #19: a function-local array. Stack memory is the one allocation this library does not
-# account for: every other byte is a fixed BSS pool sized at config time, so peak DRAM is a
+# account for: every other byte is a fixed BSS pool sized at config time, so peak RAM is a
 # number you can compute before flashing - but a local array is invisible to that accounting,
 # and worst-case stack depth becomes whatever the deepest call chain happens to allocate.
 # The work buffers already exist and are reentrant by construction, so there is no cost to
-# using them: scratch_alloc()/ScratchScope borrows from the caller's OWN per-worker arena
-# (PC_SCRATCH_SLOTS == PC_WORKER_COUNT), and crypto leaf math takes fixed offsets in
+# using them: pc_plaintext_alloc()/PlaintextScope borrows from the caller's OWN per-worker arena
+# (one slot per worker plus the ghost, PC_REG_POOL_SLOTS), and crypto leaf math takes fixed offsets in
 # crypto_work via the region map. Exempt: `static` locals (already BSS - ban 16 and
 # check_owned_context.py own those), and a justified `// PC_ALLOW_STACK_ARRAY: <reason>`.
 _ALLOW_STACK_ARRAY = "PC_ALLOW_STACK_ARRAY"
@@ -163,7 +163,7 @@ _STACK_ARRAY = re.compile(
     r"(\w+)\s*(?:\[[^\]]*\])+\s*[;={]")
 _STACK_ARRAY_MSG = (
     "function-local array; stack is outside the deterministic footprint. Borrow it: "
-    "ScratchScope + scratch_alloc() for handler/IO buffers (fail closed on null), or a "
+    "PlaintextScope + pc_plaintext_alloc() for handler/IO buffers (fail closed on null), or a "
     "crypto_work region for crypto leaf math (justify a true exception with "
     "// PC_ALLOW_STACK_ARRAY: <reason>)"
 )

@@ -12,9 +12,12 @@
  */
 
 #include "protocore.h"
-#include "shared_primitives/mime.h"   // PC_MIME_TEXT_PLAIN
-#include "shared_primitives/strbuf.h" // pc_sb frame builder
+#include "shared_primitives/frame.h" // the one frame engine
+#include "shared_primitives/mime.h"  // PC_MIME_TEXT_PLAIN
 #include <stdio.h>
+
+// Retry-After carries one number and nothing else.
+static const pc_field RETRY_AFTER[] = {PC_U32, PC_END};
 
 // ---------------------------------------------------------------------------
 // Middleware chain + built-in rate limiter
@@ -83,12 +86,8 @@ bool PC::rate_limit_check(uint8_t slot_id)
     // elapsed < _rl_window_ms always holds here, so the ">" arm always taken.
     uint32_t remain_ms = (_rl_window_ms > elapsed) ? (_rl_window_ms - elapsed) : 0; // GCOVR_EXCL_BR_LINE
     char secs[12];
-    pc_sb sb_secs = {secs, sizeof(secs), 0, true};
-    pc_sb_u32(&sb_secs, (uint32_t)((unsigned long)((remain_ms + 999) / 1000)));
-    if (pc_sb_finish(&sb_secs) == 0)
-    {
-        secs[0] = '\0';
-    }
+    // Fails closed to an empty string on its own, so there is no failure arm to write here.
+    pc_frame_build(secs, sizeof(secs), RETRY_AFTER, (uint32_t)((remain_ms + 999) / 1000));
     add_response_header(slot_id, "Retry-After", secs);
     send(slot_id, 429, PC_MIME_TEXT_PLAIN, "Too Many Requests");
     return true;

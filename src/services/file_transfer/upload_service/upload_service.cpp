@@ -7,7 +7,7 @@
  */
 
 #include "upload_service.h"
-#include "shared_primitives/strbuf.h" // pc_sb frame builder
+#include "shared_primitives/frame.h" // the one frame engine
 
 #if PC_ENABLE_UPLOAD
 
@@ -16,6 +16,8 @@
 #include "shared_primitives/mime.h"
 #include <stdio.h>
 #include <string.h>
+
+static const pc_field UPLOAD_OK[] = {{PC_FK_LIT, 0, 3, "OK "}, PC_U32, {PC_FK_LIT, 0, 6, " bytes"}, PC_END};
 
 // All upload-service state, owned by one instance (internal linkage): the server handle, the
 // route path, the destination filesystem + path, and the per-upload file/flags/counter (one
@@ -107,14 +109,7 @@ static void upload_handle(uint8_t slot_id, HttpReq *req)
         return;
     }
     char msg[48];
-    pc_sb sb_msg = {msg, sizeof(msg), 0, true};
-    pc_sb_put(&sb_msg, "OK ");
-    pc_sb_u32(&sb_msg, (uint32_t)((unsigned)s_upl.written));
-    pc_sb_put(&sb_msg, " bytes");
-    if (pc_sb_finish(&sb_msg) == 0)
-    {
-        msg[0] = '\0';
-    }
+    pc_frame_build(msg, sizeof(msg), UPLOAD_OK, (uint32_t)s_upl.written);
     s_upl.server->send(slot_id, 200, PC_MIME_TEXT_PLAIN, msg);
 }
 

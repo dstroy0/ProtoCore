@@ -18,7 +18,7 @@
 
 #include "crypto/asymmetric/rsa.h"
 #include "network_drivers/presentation/codec/base64/base64.h" // shared pc_base64url_decode
-#include "server/mmgr/scratch.h" // per-dispatch arena (keeps the decode buffers off the worker stack)
+#include "server/mmgr/plaintext.h" // per-dispatch arena (keeps the decode buffers off the worker stack)
 
 #include <stdio.h>
 #include <string.h>
@@ -410,14 +410,14 @@ pc_oidc_result pc_oidc_verify_with_key(const char *token, size_t token_len, cons
 
     // Borrow the large decode buffers from the per-dispatch scratch arena rather
     // than the worker stack (was ~2.6 KB of stack frame: hdr + sig + pl + iss).
-    // ScratchScope reclaims them on every return path. The four are live together,
-    // so PC_SCRATCH_WORK_OIDC is their sum and the arena is sized to hold it.
-    static_assert(PC_SCRATCH_WORK_OIDC <= PC_SCRATCH_ARENA_SIZE, "OIDC scratch exceeds the arena");
-    ScratchScope scratch;
-    uint8_t *hdr = (uint8_t *)scratch_alloc(PC_OIDC_HDR_LEN, 1);
-    uint8_t *sig = (uint8_t *)scratch_alloc(PC_OIDC_RSA_BYTES, 1);
-    uint8_t *pl = (uint8_t *)scratch_alloc(PC_OIDC_MAX_LEN, 1);
-    char *iss = (char *)scratch_alloc(PC_OIDC_ISS_LEN, 1);
+    // PlaintextScope reclaims them on every return path. The four are live together,
+    // so PC_PLAINTEXT_WORK_OIDC is their sum and the arena is sized to hold it.
+    static_assert(PC_PLAINTEXT_WORK_OIDC <= PC_PLAINTEXT_ARENA_SIZE, "OIDC scratch exceeds the arena");
+    PlaintextScope scratch;
+    uint8_t *hdr = (uint8_t *)pc_plaintext_alloc(PC_OIDC_HDR_LEN, 1);
+    uint8_t *sig = (uint8_t *)pc_plaintext_alloc(PC_OIDC_RSA_BYTES, 1);
+    uint8_t *pl = (uint8_t *)pc_plaintext_alloc(PC_OIDC_MAX_LEN, 1);
+    char *iss = (char *)pc_plaintext_alloc(PC_OIDC_ISS_LEN, 1);
     if (!hdr || !sig || !pl || !iss)
     {
         return pc_oidc_result::PC_OIDC_ERR_FORMAT; // scratch exhausted: fail closed

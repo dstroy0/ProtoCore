@@ -17,7 +17,7 @@
  *     form that had already been missed on two of the SSH key-exchange error paths.
  *
  *   - **Disjoint region.** The two pools occupy different addresses, so pc_secure_owns() and
- *     pc_scratch_owns() are mutually exclusive by construction. A secure borrow can never be
+ *     pc_plaintext_owns() are mutually exclusive by construction. A secure borrow can never be
  *     accepted where a plaintext one is expected, or the reverse, with no tagging and no metadata.
  *
  * **What belongs here.** Anything whose bytes are key material: shared secrets, private scalars,
@@ -36,9 +36,20 @@
 #define PROTOCORE_SECURE_H
 
 #include "protocore_config.h"
-#include "shared_primitives/span.h"
+#include "server/mmgr/span.h"
 #include <stddef.h>
 #include <stdint.h>
+
+/**
+ * @brief Slots in the secure pool.
+ *
+ * Sized off the ghost rather than the worker count so the invariant is the definition: the pool
+ * must reach the highest slot any caller can resolve to, and that is the ghost.
+ *
+ * The plaintext pool states its own count (::PC_REG_POOL_SLOTS). They are equal today and neither
+ * is derived from the other - one pool growing a slot is not a reason for the other to.
+ */
+#define PC_SEC_POOL_SLOTS (PC_GHOST_WORKER_SLOT + 1)
 
 /**
  * @brief Securely zero @p len bytes at @p ptr with a volatile store the compiler cannot elide.
@@ -131,7 +142,7 @@ size_t pc_secure_capacity(void);
  * @brief True if @p p points inside the secure pool.
  *
  * One unsigned subtract and compare: the slot count and slot size are compile-time, so the pool is
- * one region of known extent. Mutually exclusive with pc_scratch_owns() because the regions are
+ * one region of known extent. Mutually exclusive with pc_plaintext_owns() because the regions are
  * disjoint - which is the whole access control, with no per-allocation bookkeeping.
  */
 bool pc_secure_owns(const void *p);

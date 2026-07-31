@@ -147,7 +147,7 @@ latency is unchanged.
 
 - Every knob above changes fixed-size BSS or scheduling, never introduces a heap
   allocation or an unbounded loop.
-- `PC_WORKER_COUNT > 1` adds `PC_SCRATCH_ARENA_SIZE` of BSS per extra worker
+- `PC_WORKER_COUNT > 1` adds `PC_PLAINTEXT_ARENA_SIZE` of BSS per extra worker
   and one event queue per worker; all static.
 - The internal time base stays 1000 Hz regardless of `PC_WORKER_POLL_TICKS`
   (see `services/clock.h`), so timeouts keep their tested 1 ms granularity.

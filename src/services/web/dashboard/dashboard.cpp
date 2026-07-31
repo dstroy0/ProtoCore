@@ -12,13 +12,15 @@
  */
 
 #include "services/web/dashboard/dashboard.h"
-#include "shared_primitives/strbuf.h" // pc_sb frame builder
 
 #if PC_ENABLE_DASHBOARD
 
 #include "shared_primitives/frame.h"
 #include "shared_primitives/numparse.h"
 #include <string.h>
+
+// A message key as it appears in the JSON: quoted, so it cannot match a widget key containing it.
+static const pc_field QUOTED_KEY[] = {{PC_FK_LIT, 0, 1, "\""}, PC_STR, {PC_FK_LIT, 0, 1, "\""}, PC_END};
 
 // All dashboard state, owned by one instance (internal linkage): the widget table, the
 // per-widget value array, and the inbound-control callback, grouped so it is one named owner,
@@ -183,14 +185,8 @@ void pc_dashboard_on_control(pc_control_cb cb)
 static const char *control_value_ptr(const char *s, const char *key)
 {
     char pat[8];
-    pc_sb sb_pat = {pat, sizeof(pat), 0, true};
-    pc_sb_put(&sb_pat, "\"");
-    pc_sb_put(&sb_pat, key);
-    pc_sb_put(&sb_pat, "\"");
-    if (pc_sb_finish(&sb_pat) == 0)
-    {
-        pat[0] = '\0';
-    }
+    // A key too long for the buffer leaves pat empty, and strstr then finds nothing - fail closed.
+    pc_frame_build(pat, sizeof(pat), QUOTED_KEY, key);
     const char *p = strstr(s, pat);
     if (!p)
     {

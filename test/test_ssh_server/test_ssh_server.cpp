@@ -13,7 +13,7 @@
 #include "network_drivers/presentation/ssh/transport/ssh_dh.h"
 #include "network_drivers/presentation/ssh/transport/ssh_packet.h"
 #include "network_drivers/presentation/ssh/transport/ssh_transport.h"
-#include "server/mmgr/scratch.h" // arena-exhaustion (fail-closed) packet paths
+#include "server/mmgr/plaintext.h" // arena-exhaustion (fail-closed) packet paths
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -1155,12 +1155,12 @@ void test_ssh_pkt_aesgcm_frame_errors()
     // Complete frame but no scratch to decrypt into -> discard + disconnect.
     pkt_loopback_keys(SSH_CIPHER_AES256GCM, SSH_MAC_HMAC_SHA256, false);
     wr_u32(rx, 16);
-    scratch_reset();
-    while (scratch_alloc(64, 1))
+    pc_plaintext_reset();
+    while (pc_plaintext_alloc(64, 1))
     {
     }
     TEST_ASSERT_EQUAL_INT(-1, ssh_pkt_recv(0, rx, 4 + 16 + PC_AESGCM_TAG_LEN, pkt_rec_handler));
-    scratch_reset();
+    pc_plaintext_reset();
 
     // A tag-valid packet arriving at the sequence-number ceiling is refused.
     static uint8_t wire[SSH_WIRE_CAP];

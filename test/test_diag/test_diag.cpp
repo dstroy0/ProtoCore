@@ -67,11 +67,15 @@ void test_diag_serves_build_info_json()
     TEST_ASSERT_NOT_NULL(strstr(resp, "\"config\""));
 }
 
-// The build-info string is well-formed enough to balance its braces (a crude guard
-// against a malformed macro concatenation).
+// The served document balances its braces. The frame spec is a flat table, so an unbalanced result
+// means a literal in the spec is wrong - which is exactly what this catches and nothing else does.
 void test_diag_json_braces_balanced()
 {
-    const char *j = PC_DIAG_JSON;
+    server.on("/diag2", HttpMethod::HTTP_GET, diag_handler);
+    push_str(0, "GET /diag2 HTTP/1.1\r\nHost: x\r\n\r\n");
+    http_parse(0);
+    server.handle();
+    const char *j = tcp_captured();
     int depth = 0, min_depth = 0;
     for (const char *p = j; *p; p++)
     {

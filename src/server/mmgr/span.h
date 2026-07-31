@@ -3,46 +3,16 @@
 
 /**
  * @file span.h
- * @brief A byte region whose run length is bound in both directions.
+ * @brief A byte region that carries its own bound, and the accessors that move bytes through it.
  *
- * Every buffer in this library has a declared, compile-time run length - SSH_PKT_BUF_SIZE,
- * PC_RSA_KEY_BYTES, and so on. The problem rule 19 exposes is not that the size is unknown; it is
- * that once an array becomes a borrowed region, the size gets *restated* at each use and the
- * restatements can disagree:
+ * `cap` bounds every write. `pos` keeps counting past `cap` on overflow, so an undersized region
+ * reports the capacity it should have had instead of only failing.
  *
- *     uint8_t *buf = (uint8_t *)scratch_alloc(SSH_PKT_BUF_SIZE, 16);
- *     handler(buf, &n, SSH_PKT_BUF_SIZE);   // nothing forces these two constants to match
+ * Accessors take the span first. A pointer, a length, and an offset passed separately are this struct
+ * with its invariant dropped; passing the region keeps the bound attached to the bytes.
  *
- * and `sizeof(buf)` silently becomes `sizeof(uint8_t *)` - 4 bytes on a 32-bit target - with no
- * diagnostic, because -Wsizeof-pointer-memaccess only fires for the memcpy / strcpy family.
- *
- * A span is stated once, from the constant that already names the size, and then carried. Nothing
- * here re-derives a length the code already knows: there is no deduction and no `sizeof` on a
- * borrow, only the one constant travelling with its storage.
- *
- * **Both directions, one object.** A fixed-capacity region in this library is never one-way. The
- * preempting queue is the reference: one depth constant sizes the lane, items go in at either end,
- * and pc_pq_high_water_lane() reports the peak actually reached so the constant can be right-sized.
- * A span carries the same pair:
- *
- *   - forward   `cap`  - reserves the storage and bounds every write
- *   - backward  `pos`  - what the payload actually needed, which **keeps counting past `cap`** on
- *                        overflow, so an undersized run-length constant reports the size it should
- *                        have been instead of merely failing
- *
- * That retires the `size_t *out_len` out-parameter that used to ride beside the buffer: capacity in
- * and produced length out are one object, and neither can be paired with the wrong buffer.
- *
- * **One byte-cursor API, not two.** This type is the storage-binding half - where the region came
- * from and how big it is - and shared_primitives/bytes.h is the verbs, pc_bw_put() and
- * pc_bw_put_be(). Length and status are this file's own pc_span_len() / pc_span_ok(); bytes.h no
- * longer restates them. There is no second byte-append API.
- *
- * **Fail-closed by construction.** A failed allocation yields a null pointer with zero capacity,
- * never a null pointer with a live capacity. A caller that forgets the check writes nothing into a
- * zero-capacity region instead of dereferencing null, so an omitted check drops a message rather
- * than crashing. Callers should still test pc_span_ok() and take their defined fail-closed path
- * (drop the optional work, close the connection, answer 503).
+ * A failed allocation yields a null pointer with zero capacity, never a null pointer with a live
+ * capacity, so a caller that skips pc_span_ok() writes nothing instead of dereferencing null.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -58,7 +28,6 @@
  * @brief A writable byte region: the storage, the capacity that belongs to it, and what has been
  *        produced into it.
  *
- * Field names match the bytes.h write-cursor convention on purpose - see the file comment.
  */
 struct pc_span
 {
@@ -71,8 +40,8 @@ struct pc_span
 /**
  * @brief A read-only byte region.
  *
- * Bind with pc_cspan_from() and check with pc_cspan_ok(); pc_br_take_be() in bytes.h reads through
- * it. A read is bounded by the region itself, which is why nothing here takes a separate length.
+ * Bind with pc_cspan_from() and check with pc_cspan_ok(). A read is bounded by the region itself,
+ * which is why nothing here takes a separate length.
  */
 struct pc_cspan
 {
