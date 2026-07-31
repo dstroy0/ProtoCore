@@ -3,7 +3,7 @@
     "example": "L4-Transport/AcceptThrottle",
     "flags": "-DPC_ENABLE_ACCEPT_THROTTLE=1",
     "board": "esp32dev",
-    "flash_bytes": 756141,
+    "flash_bytes": 756145,
     "ram_bytes": 81852
   },
   "ADS": {
@@ -31,7 +31,7 @@
     "example": "L6-Presentation/AuthLockout",
     "flags": "-DPC_ENABLE_AUTH_LOCKOUT=1",
     "board": "esp32dev",
-    "flash_bytes": 757293,
+    "flash_bytes": 757297,
     "ram_bytes": 82420
   },
   "AUTH_LOCKOUT+FORWARDED_TRUST": {
@@ -119,17 +119,17 @@
     "ram_bytes": 81884
   },
   "DIAG": {
-    "example": "L7-Application/Diagnostics",
+    "example": "Foundation/Configuration",
     "flags": "-DPC_ENABLE_DIAG=1",
     "board": "esp32dev",
-    "flash_bytes": 756969,
-    "ram_bytes": 81844
+    "flash_bytes": 758533,
+    "ram_bytes": 77604
   },
   "DIFFSERV": {
     "example": "L4-Transport/DiffServ",
     "flags": "-DPC_ENABLE_DIFFSERV=1",
     "board": "esp32dev",
-    "flash_bytes": 756605,
+    "flash_bytes": 756613,
     "ram_bytes": 81844
   },
   "DMA+PREEMPT_QUEUE+DMA_SIMULATE": {
@@ -353,7 +353,7 @@
     "example": "L4-Transport/KeepAlive",
     "flags": "-DPC_ENABLE_KEEPALIVE=1",
     "board": "esp32dev",
-    "flash_bytes": 756537,
+    "flash_bytes": 756541,
     "ram_bytes": 81844
   },
   "LD2410": {
@@ -563,7 +563,7 @@
     "example": "L4-Transport/PerIpThrottle",
     "flags": "-DPC_ENABLE_PER_IP_THROTTLE=1",
     "board": "esp32dev",
-    "flash_bytes": 756701,
+    "flash_bytes": 756705,
     "ram_bytes": 82292
   },
   "PN532+GATEWAY": {
@@ -717,7 +717,7 @@
     "example": "L5-Session/SSHSftp",
     "flags": "-DPC_ENABLE_SSH=1 -DPC_ENABLE_FILE_SERVING=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_SSH_SCP=1",
     "board": "esp32dev",
-    "flash_bytes": 889921,
+    "flash_bytes": 890001,
     "ram_bytes": 121544
   },
   "SSH+SSH_CLIENT+SSH_CLIENT_MAX_CHANNELS+CLIENT_RX_BUF": {
@@ -815,7 +815,7 @@
     "example": "L4-Transport/TlsResumption",
     "flags": "-DPC_ENABLE_TLS=1 -DPC_ENABLE_TLS_RESUMPTION=1 -DMAX_CONNS=4 -DPC_TLS_ARENA_SIZE=32768",
     "board": "esp32dev",
-    "flash_bytes": 861805,
+    "flash_bytes": 861809,
     "ram_bytes": 105864
   },
   "TOTP": {
@@ -1025,7 +1025,7 @@
     "example": "L6-Presentation/Multipart",
     "flags": "",
     "board": "esp32dev",
-    "flash_bytes": 757517,
+    "flash_bytes": 757525,
     "ram_bytes": 81844
   },
   "core/NetEgress": {
