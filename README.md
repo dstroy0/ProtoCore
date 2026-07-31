@@ -811,80 +811,81 @@ Measured on `esp32dev` (Arduino core). The **default server** baseline (HTTP + W
 
 | Layer | Feature | Flash (best-worst) | RAM (best-worst) |
 | --- | --- | ---: | ---: |
-| Core | `IPV6` | 3.2 KB | 15.3 KB |
-| L4 | `IP_ALLOWLIST` | 2.0 KB | 15.3 KB |
-| L4 | `PER_IP_THROTTLE` | 0.9 KB | 15.7 KB |
-| L4 | `DIFFSERV` | 0.8 KB | 15.3 KB |
-| L4 | `KEEPALIVE` | 0.8 KB | 15.3 KB |
-| L4 | `ACCEPT_THROTTLE` | < 0.5 KB | 15.3 KB |
-| L5 | `SSH` | 66.6-77.7 KB | 21.8-43.5 KB |
-| L5 | `TELNET` | 2.9 KB | 15.8 KB |
+| Core | `IPV6` | 6.0 KB | 15.3 KB |
+| L4 | `IP_ALLOWLIST` | 4.8 KB | 15.3 KB |
+| L4 | `PER_IP_THROTTLE` | 3.8 KB | 15.7 KB |
+| L4 | `DIFFSERV` | 3.7 KB | 15.3 KB |
+| L4 | `KEEPALIVE` | 3.6 KB | 15.3 KB |
+| L4 | `ACCEPT_THROTTLE` | 3.2 KB | 15.3 KB |
+| L5 | `SSH` | 66.6-82.0 KB | 21.8-44.9 KB |
+| L5 | `TELNET` | 5.7 KB | 15.8 KB |
 | L6 | `TLS` | 100.6 KB | 54.5 KB |
-| L6 | `WS_DEFLATE` | 4.1-7.9 KB | 8.0-23.3 KB |
-| L6 | `WEB_TERMINAL` | 0.0-5.2 KB | 0.0-15.3 KB |
-| L6 | `MSGPACK` | 4.3 KB | 15.3 KB |
-| L6 | `CBOR` | 3.0 KB | 15.3 KB |
-| L6 | `JWT` | 2.7 KB | 18.5 KB |
-| L6 | `AUTH_LOCKOUT` | 1.7 KB | 15.8 KB |
-| L7 | `POWER_MGMT` | 126.0 KB | 19.0 KB |
-| L7 | `FILE_SERVING` | 0.0-88.5 KB | 0.0-16.1 KB |
-| L7 | `HTTP_DELIVERY` | 88.5 KB | 16.1 KB |
-| L7 | `EXC_DECODER` | 87.1 KB | 16.9 KB |
-| L7 | `HOTSWAP` | 84.3 KB | 16.2 KB |
+| L6 | `WEB_TERMINAL` | 0.0-8.1 KB | 0.0-15.4 KB |
+| L6 | `WS_DEFLATE` | 4.1-8.1 KB | 8.0-23.3 KB |
+| L6 | `MSGPACK` | 7.2 KB | 15.3 KB |
+| L6 | `JWT` | 6.3 KB | 17.7 KB |
+| L6 | `CBOR` | 5.9 KB | 15.3 KB |
+| L6 | `AUTH_LOCKOUT` | 4.3 KB | 15.8 KB |
+| L7 | `POWER_MGMT` | 129.0 KB | 19.0 KB |
+| L7 | `FILE_SERVING` | 0.0-91.3 KB | 0.0-16.2 KB |
+| L7 | `HTTP_DELIVERY` | 91.3 KB | 16.2 KB |
+| L7 | `EXC_DECODER` | 89.7 KB | 16.9 KB |
+| L7 | `HOTSWAP` | 87.2 KB | 16.2 KB |
+| L7 | `ETAG` | 0.0-78.1 KB | 0.0-16.5 KB |
 | L7 | `WS_CLIENT` | 76.6 KB | 53.1 KB |
-| L7 | `ETAG` | 0.0-75.1 KB | 0.0-16.5 KB |
 | L7 | `WEBDAV` | 26.2-66.6 KB | 38.2-38.7 KB |
-| L7 | `VFS` | 43.2 KB | 19.7 KB |
-| L7 | `RANGE` | 0.6-42.2 KB | 0.0-15.3 KB |
-| L7 | `UPLOAD` | 42.0 KB | 34.9 KB |
-| L7 | `IFACE_BRIDGE` | 28.1 KB | 16.1 KB |
-| L7 | `NTP` | 26.0 KB | 17.7 KB |
-| L7 | `MDNS` | 25.6 KB | 17.1 KB |
-| L7 | `TIME_SOURCE` | 21.5 KB | 16.8 KB |
-| L7 | `EDGE_CACHE` | 21.3 KB | 51.9 KB |
-| L7 | `DASHBOARD` | 21.2 KB | 15.6 KB |
-| L7 | `NTRIP_CASTER` | 18.2 KB | 18.1 KB |
-| L7 | `SMB` | 13.7 KB | 1.6 KB |
-| L7 | `OAUTH2` | 13.3 KB | 37.5 KB |
-| L7 | `OPCUA_CLIENT` | 6.8-13.2 KB | 10.0-27.9 KB |
-| L7 | `OIDC` | 13.0 KB | 32.9 KB |
-| L7 | `WEBHOOK` | 11.0 KB | 34.6 KB |
-| L7 | `RELAY` | 10.3 KB | 49.1 KB |
-| L7 | `SNMP` | 9.7 KB | 27.4 KB |
-| L7 | `TELEMETRY` | 9.4 KB | 15.6 KB |
-| L7 | `OPCUA` | 6.8-8.9 KB | 10.0-25.3 KB |
-| L7 | `PROVISIONING` | 8.7 KB | 16.9 KB |
-| L7 | `COAP` | 7.9 KB | 18.9 KB |
-| L7 | `DNS_RESOLVER` | 6.6 KB | 16.5 KB |
-| L7 | `OTA` | 6.0 KB | 35.1 KB |
-| L7 | `CONFIG_IO` | 5.5 KB | 15.3 KB |
-| L7 | `CONFIG_STORE` | 5.5 KB | 15.3 KB |
-| L7 | `GRAPHQL` | 5.4 KB | 19.6 KB |
-| L7 | `GPIO_MAP` | 5.0 KB | 15.3 KB |
-| L7 | `SYSLOG` | 4.5 KB | 17.1 KB |
-| L7 | `METRICS` | 4.4 KB | 15.4 KB |
-| L7 | `MODBUS_MASTER` | 3.2 KB | 15.5 KB |
-| L7 | `PACKML` | 3.0 KB | 15.3 KB |
-| L7 | `AUDIT_LOG` | 3.0 KB | 18.2 KB |
-| L7 | `MODBUS` | 2.7 KB | 15.5 KB |
-| L7 | `SIMATIC` | 2.7 KB | 16.7 KB |
-| L7 | `CONTROL` | 2.6 KB | 23.1 KB |
-| L7 | `STATS` | 2.5 KB | 15.4 KB |
-| L7 | `SPA_ROUTER` | 2.3 KB | 15.3 KB |
-| L7 | `CSRF` | 2.1 KB | 17.4 KB |
-| L7 | `LOGBUF` | 1.9 KB | 18.3 KB |
-| L7 | `TOTP` | 1.7 KB | 15.3 KB |
-| L7 | `OTA_ROLLBACK` | 1.6 KB | 15.3 KB |
-| L7 | `PARTITION_MONITOR` | 1.3 KB | 15.3 KB |
-| L7 | `DIAG` | 1.2 KB | 15.3 KB |
-| L7 | `GUARDRAILS` | 0.9 KB | 15.3 KB |
-| L7 | `DEVICE_ID` | 0.8 KB | 15.3 KB |
-| L7 | `RADIO_POWER` | 0.6 KB | 15.3 KB |
-| ? | `ETHERNET` | 39.0 KB | 15.3 KB |
-| ? | `BUS_CAPTURE` | 18.7 KB | < 0.5 KB |
-| ? | `FORWARD` | 18.7 KB | < 0.5 KB |
-| ? | `RTC` | 13.8 KB | < 0.5 KB |
-| ? | `PROMISC` | 12.9 KB | < 0.5 KB |
+| L7 | `VFS` | 45.8 KB | 19.7 KB |
+| L7 | `RANGE` | 0.6-45.0 KB | 0.0-15.3 KB |
+| L7 | `UPLOAD` | 44.9 KB | 34.9 KB |
+| L7 | `IFACE_BRIDGE` | 30.8 KB | 16.1 KB |
+| L7 | `NTP` | 28.6 KB | 17.8 KB |
+| L7 | `MDNS` | 28.2 KB | 17.1 KB |
+| L7 | `EDGE_CACHE` | 24.5 KB | 51.9 KB |
+| L7 | `DASHBOARD` | 24.2 KB | 15.6 KB |
+| L7 | `TIME_SOURCE` | 24.2 KB | 16.8 KB |
+| L7 | `NTRIP_CASTER` | 21.3 KB | 18.1 KB |
+| L7 | `OAUTH2` | 16.3 KB | 37.6 KB |
+| L7 | `OPCUA_CLIENT` | 6.8-15.9 KB | 10.0-27.9 KB |
+| L7 | `OIDC` | 15.9 KB | 32.9 KB |
+| L7 | `SMB` | 14.8 KB | 1.8 KB |
+| L7 | `WEBHOOK` | 14.0 KB | 34.6 KB |
+| L7 | `RELAY` | 12.9 KB | 49.1 KB |
+| L7 | `SNMP` | 12.2 KB | 27.4 KB |
+| L7 | `TELEMETRY` | 12.1 KB | 15.6 KB |
+| L7 | `OPCUA` | 6.8-11.6 KB | 10.0-25.3 KB |
+| L7 | `PROVISIONING` | 11.5 KB | 16.9 KB |
+| L7 | `COAP` | 10.6 KB | 18.9 KB |
+| L7 | `GRAPHQL` | 9.7 KB | 19.6 KB |
+| L7 | `DNS_RESOLVER` | 9.3 KB | 16.5 KB |
+| L7 | `OTA` | 8.8 KB | 35.1 KB |
+| L7 | `CONFIG_IO` | 8.3 KB | 15.3 KB |
+| L7 | `CONFIG_STORE` | 8.3 KB | 15.3 KB |
+| L7 | `GPIO_MAP` | 7.7 KB | 15.3 KB |
+| L7 | `METRICS` | 7.4 KB | 15.4 KB |
+| L7 | `SYSLOG` | 7.3 KB | 17.1 KB |
+| L7 | `AUDIT_LOG` | 6.1 KB | 18.2 KB |
+| L7 | `MODBUS_MASTER` | 5.9 KB | 15.5 KB |
+| L7 | `CSRF` | 5.8 KB | 16.6 KB |
+| L7 | `PACKML` | 5.8 KB | 15.3 KB |
+| L7 | `CONTROL` | 5.5 KB | 23.2 KB |
+| L7 | `STATS` | 5.5 KB | 15.4 KB |
+| L7 | `MODBUS` | 5.5 KB | 15.6 KB |
+| L7 | `SIMATIC` | 5.4 KB | 16.7 KB |
+| L7 | `SPA_ROUTER` | 5.2 KB | 15.3 KB |
+| L7 | `LOGBUF` | 4.9 KB | 18.3 KB |
+| L7 | `TOTP` | 4.6 KB | 15.3 KB |
+| L7 | `OTA_ROLLBACK` | 4.4 KB | 15.3 KB |
+| L7 | `PARTITION_MONITOR` | 4.1 KB | 15.3 KB |
+| L7 | `GUARDRAILS` | 4.1 KB | 15.3 KB |
+| L7 | `DIAG` | 4.0 KB | 15.3 KB |
+| L7 | `DEVICE_ID` | 3.6 KB | 15.3 KB |
+| L7 | `RADIO_POWER` | 3.5 KB | 15.3 KB |
+| L7 | `ADS` | 0.6 KB | < 0.5 KB |
+| ? | `ETHERNET` | 41.8 KB | 15.3 KB |
+| ? | `BUS_CAPTURE` | 18.9 KB | < 0.5 KB |
+| ? | `FORWARD` | 18.9 KB | < 0.5 KB |
+| ? | `RTC` | 14.0 KB | < 0.5 KB |
+| ? | `PROMISC` | 13.1 KB | < 0.5 KB |
 | - | `WEBSOCKET` | 0.0-3.7 KB | 0.0-1.5 KB |
 | - | `MODBUS_RTU` | 1.8 KB | < 0.5 KB |
 | - | `SSE` | 0.0-0.6 KB | < 0.5 KB |
