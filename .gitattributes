@@ -1,3 +1,13 @@
+# Line endings are the repo's decision, not each machine's.
+#
+# Without this, Windows' default core.autocrlf=true checks out CRLF while the repo stores LF,
+# so anything that writes LF - rsync from WSL, a generator run under Linux, most editors -
+# makes the entire tree look modified. Pinning it here fixes it for every clone rather than
+# per developer.
+#
+# No .bat/.cmd in this tree; add an `eol=crlf` carve-out if that ever changes.
+* text=auto eol=lf
+
 docs/configurator.html text eol=lf
 ci_tooling/generate/gen_configurator.py text eol=lf
 # Shell scripts must keep LF or the shebang breaks on Linux/WSL/macOS.
