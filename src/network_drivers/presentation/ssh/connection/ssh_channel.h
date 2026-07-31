@@ -24,6 +24,7 @@
 #ifndef PROTOCORE_SSH_CHANNEL_H
 #define PROTOCORE_SSH_CHANNEL_H
 
+#include "network_drivers/presentation/ssh/connection/ssh_flow_control.h"
 #include "protocore_config.h"
 #include <stddef.h>
 #include <stdint.h>
@@ -41,14 +42,12 @@ enum class SshChanType : uint8_t
 /** @brief Per-connection channel state. */
 struct SshChannel
 {
-    bool open;             ///< True once the channel is confirmed open both ways.
-    bool pending;          ///< True for a server-initiated channel we opened, awaiting the client's confirmation.
-    SshChanType type;      ///< session, direct-tcpip, or forwarded-tcpip.
-    uint32_t local_id;     ///< Our channel id (== slot index).
-    uint32_t peer_id;      ///< Client's channel id.
-    uint32_t local_window; ///< Bytes we may still receive before WINDOW_ADJUST.
-    uint32_t peer_window;  ///< Bytes we may still send to the client.
-    uint32_t peer_max_pkt; ///< Client's maximum packet size.
+    bool open;         ///< True once the channel is confirmed open both ways.
+    bool pending;      ///< True for a server-initiated channel we opened, awaiting the client's confirmation.
+    SshChanType type;  ///< session, direct-tcpip, or forwarded-tcpip.
+    uint32_t local_id; ///< Our channel id (== slot index).
+    uint32_t peer_id;  ///< Client's channel id.
+    SshFlow flow;      ///< RFC 4254 sec 5.2 window pair (owner: ssh_flow_control.*).
 };
 
 /** @brief Channel pool: PC_SSH_MAX_CHANNELS channels per SSH connection (BSS).

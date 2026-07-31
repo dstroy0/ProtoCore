@@ -29,6 +29,41 @@
 // ---------------------------------------------------------------------------
 
 #if PC_ENABLE_FILE_SERVING
+
+// ---------------------------------------------------------------------------
+// File-send state - owned here
+// ---------------------------------------------------------------------------
+//
+// A file larger than the TCP send window cannot go out in one dispatch: tcp_write returns ERR_MEM
+// once the window fills and the remainder would be dropped. serve_file_internal sends the headers,
+// opens the file and hands it to this per-slot state; file_send_pump pages out at most
+// pc_conn_sndbuf() bytes per worker loop and resumes as the window drains. One transfer per slot.
+// Nothing outside this file can name the state: the poll asks pc_file_holds_slot().
+
+// Per-slot file-send continuation: the open file and how much of it is left.
+struct FileSend
+{
+    fs::File file;    ///< open source file (held across loops).
+    size_t off;       ///< absolute file offset of the next byte to send.
+    size_t remaining; ///< body bytes still to send.
+    int status;       ///< response status (200 / 206) for note_response.
+    int total;        ///< total body length, for the access log.
+    bool keep;        ///< keep-alive vs close at completion.
+    bool active;      ///< a transfer is in progress on this slot.
+};
+
+/** @brief The file-send state this TU owns, one entry per connection slot. */
+struct FileCtx
+{
+    FileSend send[MAX_CONNS];
+};
+static FileCtx s_file;
+
+bool pc_file_holds_slot(uint8_t slot)
+{
+    return s_file.send[slot].active;
+}
+
 // HTTP-date helpers (shared by file serving's Last-Modified / If-Modified-Since and
 // WebDAV's getlastmodified / creationdate). WEBDAV requires FILE_SERVING, so this is
 // the single home for both. Format a time_t as an RFC 1123 GMT date; leaves @p out
@@ -359,7 +394,7 @@ void PC::serve_file_internal(uint8_t slot_id, bool head, fs::FS &file_sys, const
     // window now and resumes on later loops as the window drains, so a file larger
     // than TCP_SND_BUF is never truncated. The pump owns the file and calls
     // pc_resp_end() at completion - do not close f or end the response here.
-    FileSend &s = s_send.file[slot_id];
+    FileSend &s = s_file.send[slot_id];
     s.file = f; // shared handle on ARDUINO; the local f going out of scope keeps it open
     s.off = body_off;
     s.remaining = body_len;
@@ -376,10 +411,10 @@ void PC::serve_file_internal(uint8_t slot_id, bool head, fs::FS &file_sys, const
 // truncates, never blocks the worker.
 void PC::file_send_pump(uint8_t slot_id)
 {
-    FileSend &s = s_send.file[slot_id];
+    FileSend &s = s_file.send[slot_id];
     // GCOVR_EXCL_START  unreachable: both callers already established the state - serve_file_internal
     // sets s.active immediately before its call, and the poll loop in protocore.cpp only pumps a slot
-    // whose s_send.file[i].active is set. Kept so the pump is safe to call unconditionally.
+    // whose s_file.send[i].active is set. Kept so the pump is safe to call unconditionally.
     if (!s.active)
     {
         return;

@@ -13,22 +13,7 @@
 #include "shared_primitives/bytes.h"
 #include <string.h>
 
-void pc_cbor_init(CborWriter *w, uint8_t *buf, size_t cap)
-{
-    pc_bw_init(w, buf, cap);
-}
-
-size_t pc_cbor_len(const CborWriter *w)
-{
-    return pc_bw_len(w);
-}
-
-bool pc_cbor_ok(const CborWriter *w)
-{
-    return pc_bw_ok(w);
-}
-
-static void put(CborWriter *w, uint8_t b)
+static void put(pc_span *w, uint8_t b)
 {
     pc_bw_put(w, b);
 }
@@ -36,7 +21,7 @@ static void put(CborWriter *w, uint8_t b)
 // Write a CBOR head: the major type (top 3 bits) plus the argument, choosing the
 // shortest of the 1/2/3/5/9-byte forms (RFC 8949 section 3). The argument after
 // the lead byte is big-endian, the same network order as MessagePack.
-static void head(CborWriter *w, uint8_t major, uint64_t val)
+static void head(pc_span *w, uint8_t major, uint64_t val)
 {
     uint8_t m = (uint8_t)(major << 5);
     if (val < 24)
@@ -65,12 +50,12 @@ static void head(CborWriter *w, uint8_t major, uint64_t val)
     }
 }
 
-void pc_cbor_uint(CborWriter *w, uint64_t v)
+void pc_cbor_uint(pc_span *w, uint64_t v)
 {
     head(w, 0, v);
 }
 
-void pc_cbor_int(CborWriter *w, int64_t v)
+void pc_cbor_int(pc_span *w, int64_t v)
 {
     if (v >= 0)
     {
@@ -82,7 +67,7 @@ void pc_cbor_int(CborWriter *w, int64_t v)
     }
 }
 
-void pc_cbor_bytes(CborWriter *w, const uint8_t *data, size_t len)
+void pc_cbor_bytes(pc_span *w, const uint8_t *data, size_t len)
 {
     head(w, 2, (uint64_t)len);
     for (size_t i = 0; i < len; i++)
@@ -91,7 +76,7 @@ void pc_cbor_bytes(CborWriter *w, const uint8_t *data, size_t len)
     }
 }
 
-void pc_cbor_text_n(CborWriter *w, const char *s, size_t len)
+void pc_cbor_str_n(pc_span *w, const char *s, size_t len)
 {
     head(w, 3, (uint64_t)len);
     for (size_t i = 0; i < len; i++)
@@ -100,22 +85,22 @@ void pc_cbor_text_n(CborWriter *w, const char *s, size_t len)
     }
 }
 
-void pc_cbor_text(CborWriter *w, const char *s)
+void pc_cbor_str(pc_span *w, const char *s)
 {
-    pc_cbor_text_n(w, s, s ? strnlen(s, w->cap + 1) : 0);
+    pc_cbor_str_n(w, s, s ? strnlen(s, w->cap + 1) : 0);
 }
 
-void pc_cbor_bool(CborWriter *w, bool b)
+void pc_cbor_bool(pc_span *w, bool b)
 {
     put(w, b ? 0xf5 : 0xf4);
 }
 
-void pc_cbor_null(CborWriter *w)
+void pc_cbor_null(pc_span *w)
 {
     put(w, 0xf6);
 }
 
-void pc_cbor_float(CborWriter *w, float f)
+void pc_cbor_float(pc_span *w, float f)
 {
     uint32_t bits;
     memcpy(&bits, &f, sizeof(bits));
@@ -123,33 +108,29 @@ void pc_cbor_float(CborWriter *w, float f)
     pc_bw_put_be(w, bits, 4);
 }
 
-void pc_cbor_array(CborWriter *w, size_t count)
+void pc_cbor_array(pc_span *w, size_t count)
 {
     head(w, 4, (uint64_t)count);
 }
 
-void pc_cbor_map(CborWriter *w, size_t count)
+void pc_cbor_map(pc_span *w, size_t count)
 {
     head(w, 5, (uint64_t)count);
+}
+
+void pc_cbor_label(pc_span *w, const char *name, int64_t num)
+{
+    (void)name; // CBOR carries the integer label form (RFC 8428 sec 6)
+    pc_cbor_int(w, num);
 }
 
 // ---------------------------------------------------------------------------
 // Decoder
 // ---------------------------------------------------------------------------
 
-void pc_cbor_reader_init(CborReader *r, const uint8_t *buf, size_t len)
-{
-    pc_br_init(r, buf, len);
-}
-
-bool pc_cbor_reader_ok(const CborReader *r)
-{
-    return pc_br_ok(r);
-}
-
 // Read a CBOR head at r->pos: major type + argument, advancing pos. Sets err and
 // returns false on out-of-bounds or a reserved/indefinite additional-info value.
-static bool read_head(CborReader *r, uint8_t *major, uint64_t *val)
+static bool read_head(pc_cspan *r, uint8_t *major, uint64_t *val)
 {
     if (r->err || r->pos >= r->len)
     {
@@ -188,49 +169,49 @@ static bool read_head(CborReader *r, uint8_t *major, uint64_t *val)
     return pc_br_take_be(r, need, val);
 }
 
-CborType pc_cbor_peek(CborReader *r)
+pc_codec_type pc_cbor_peek(pc_cspan *r)
 {
     if (r->err || r->pos >= r->len)
     {
-        return CborType::CBOR_TYPE_INVALID;
+        return pc_codec_type::PC_CODEC_INVALID;
     }
     uint8_t b = r->buf[r->pos];
     switch (b >> 5)
     {
     case 0:
-        return CborType::CBOR_TYPE_UINT;
+        return pc_codec_type::PC_CODEC_UINT;
     case 1:
-        return CborType::CBOR_TYPE_INT;
+        return pc_codec_type::PC_CODEC_INT;
     case 2:
-        return CborType::CBOR_TYPE_BYTES;
+        return pc_codec_type::PC_CODEC_BYTES;
     case 3:
-        return CborType::CBOR_TYPE_TEXT;
+        return pc_codec_type::PC_CODEC_STR;
     case 4:
-        return CborType::CBOR_TYPE_ARRAY;
+        return pc_codec_type::PC_CODEC_ARRAY;
     case 5:
-        return CborType::CBOR_TYPE_MAP;
+        return pc_codec_type::PC_CODEC_MAP;
     case 7: {
         uint8_t info = (uint8_t)(b & 0x1f);
         if (info == 20 || info == 21)
         {
-            return CborType::CBOR_TYPE_BOOL;
+            return pc_codec_type::PC_CODEC_BOOL;
         }
         if (info == 22)
         {
-            return CborType::CBOR_TYPE_NULL;
+            return pc_codec_type::PC_CODEC_NULL;
         }
         if (info == 26 || info == 27)
         {
-            return CborType::CBOR_TYPE_FLOAT;
+            return pc_codec_type::PC_CODEC_FLOAT;
         }
-        return CborType::CBOR_TYPE_INVALID;
+        return pc_codec_type::PC_CODEC_INVALID;
     }
     default:
-        return CborType::CBOR_TYPE_INVALID; // major 6 (tags) unsupported
+        return pc_codec_type::PC_CODEC_INVALID; // major 6 (tags) unsupported
     }
 }
 
-bool pc_cbor_read_uint(CborReader *r, uint64_t *out)
+bool pc_cbor_read_uint(pc_cspan *r, uint64_t *out)
 {
     uint8_t m;
     uint64_t v;
@@ -247,7 +228,7 @@ bool pc_cbor_read_uint(CborReader *r, uint64_t *out)
     return true;
 }
 
-bool pc_cbor_read_int(CborReader *r, int64_t *out)
+bool pc_cbor_read_int(pc_cspan *r, int64_t *out)
 {
     uint8_t m;
     uint64_t v;
@@ -271,7 +252,7 @@ bool pc_cbor_read_int(CborReader *r, int64_t *out)
     return true;
 }
 
-bool pc_cbor_read_bool(CborReader *r, bool *out)
+bool pc_cbor_read_bool(pc_cspan *r, bool *out)
 {
     if (r->err || r->pos >= r->len)
     {
@@ -296,7 +277,7 @@ bool pc_cbor_read_bool(CborReader *r, bool *out)
     return true;
 }
 
-bool pc_cbor_read_null(CborReader *r)
+bool pc_cbor_read_null(pc_cspan *r)
 {
     if (r->err || r->pos >= r->len || r->buf[r->pos] != 0xf6)
     {
@@ -307,7 +288,7 @@ bool pc_cbor_read_null(CborReader *r)
     return true;
 }
 
-bool pc_cbor_read_float(CborReader *r, float *out)
+bool pc_cbor_read_float(pc_cspan *r, float *out)
 {
     if (r->err || r->pos >= r->len)
     {
@@ -343,7 +324,7 @@ bool pc_cbor_read_float(CborReader *r, float *out)
 }
 
 // Shared body for text (major 3) and byte (major 2) strings.
-static bool read_str(CborReader *r, uint8_t want_major, const uint8_t **out, size_t *len)
+static bool read_str(pc_cspan *r, uint8_t want_major, const uint8_t **out, size_t *len)
 {
     uint8_t m;
     uint64_t v;
@@ -362,17 +343,17 @@ static bool read_str(CborReader *r, uint8_t want_major, const uint8_t **out, siz
     return true;
 }
 
-bool pc_cbor_read_text(CborReader *r, const char **out, size_t *len)
+bool pc_cbor_read_str(pc_cspan *r, const char **out, size_t *len)
 {
     return read_str(r, 3, (const uint8_t **)out, len);
 }
 
-bool pc_cbor_read_bytes(CborReader *r, const uint8_t **out, size_t *len)
+bool pc_cbor_read_bytes(pc_cspan *r, const uint8_t **out, size_t *len)
 {
     return read_str(r, 2, out, len);
 }
 
-bool pc_cbor_read_array(CborReader *r, size_t *count)
+bool pc_cbor_read_array(pc_cspan *r, size_t *count)
 {
     uint8_t m;
     uint64_t v;
@@ -389,7 +370,7 @@ bool pc_cbor_read_array(CborReader *r, size_t *count)
     return true;
 }
 
-bool pc_cbor_read_map(CborReader *r, size_t *count)
+bool pc_cbor_read_map(pc_cspan *r, size_t *count)
 {
     uint8_t m;
     uint64_t v;

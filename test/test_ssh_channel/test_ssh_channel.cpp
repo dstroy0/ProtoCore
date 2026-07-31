@@ -213,7 +213,7 @@ void test_open_session_confirms()
     uint32_t id = open_session(42, 1000);
     TEST_ASSERT_TRUE(ssh_chan[0][id].open);
     TEST_ASSERT_EQUAL_UINT32(42, ssh_chan[0][id].peer_id);
-    TEST_ASSERT_EQUAL_UINT32(1000, ssh_chan[0][id].peer_window);
+    TEST_ASSERT_EQUAL_UINT32(1000, ssh_chan[0][id].flow.peer_window);
 }
 
 void test_open_unknown_type_fails()
@@ -396,13 +396,13 @@ void test_inbound_data_window_replenish()
     TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_data(0, pkt, n, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL(SSH_MSG_CHANNEL_WINDOW_ADJUST, out[0]);
     TEST_ASSERT_EQUAL_UINT32(5, rd_u32(out + 1)); // peer channel
-    TEST_ASSERT_EQUAL_UINT32(SSH_CHAN_WINDOW, ssh_chan[0][id].local_window);
+    TEST_ASSERT_EQUAL_UINT32(SSH_CHAN_WINDOW, ssh_chan[0][id].flow.local_window);
 }
 
 void test_inbound_data_exceeding_window_rejected()
 {
     uint32_t id = open_session(5, 1000);
-    ssh_chan[0][id].local_window = 4; // shrink artificially
+    ssh_chan[0][id].flow.local_window = 4; // shrink artificially
     uint8_t pkt[32];
     size_t n = make_data(pkt, id, "toolong"); // 7 bytes > 4
     uint8_t out[16];
@@ -420,7 +420,7 @@ void test_outbound_data_frames_and_decrements_window()
     TEST_ASSERT_EQUAL_UINT32(5, rd_u32(out + 1)); // peer channel
     TEST_ASSERT_EQUAL_UINT32(3, rd_u32(out + 5)); // data length
     TEST_ASSERT_EQUAL_MEMORY("abc", out + 9, 3);
-    TEST_ASSERT_EQUAL_UINT32(997, ssh_chan[0][id].peer_window);
+    TEST_ASSERT_EQUAL_UINT32(997, ssh_chan[0][id].flow.peer_window);
 }
 
 void test_outbound_data_exceeding_peer_window_rejected()
@@ -439,7 +439,7 @@ void test_window_adjust_grows_peer_window()
     wr_u32(pkt + 1, id);
     wr_u32(pkt + 5, 500);
     TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_window_adjust(0, pkt, sizeof(pkt)));
-    TEST_ASSERT_EQUAL_UINT32(600, ssh_chan[0][id].peer_window);
+    TEST_ASSERT_EQUAL_UINT32(600, ssh_chan[0][id].flow.peer_window);
 }
 
 void test_build_close_emits_eof_and_close()
@@ -925,8 +925,8 @@ void test_chan_forward_and_channel_guards()
     rq[n++] = 1;
     TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_handle_request(0, rq, n, out, &ol, 3)); // want_reply cap<5 (439)
 
-    ssh_chan[0][ch].peer_window = 1000;
-    ssh_chan[0][ch].peer_max_pkt = 1000;
+    ssh_chan[0][ch].flow.peer_window = 1000;
+    ssh_chan[0][ch].flow.peer_max_pkt = 1000;
     TEST_ASSERT_EQUAL_INT(
         -1, pc_ssh_channel_build_data(0, ch, (const uint8_t *)"hello", 5, out, &ol, 5)); // cap<9+len (515)
     TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_build_close(0, 99, out, &ol, sizeof(out))); // null chan (553)
@@ -1184,12 +1184,12 @@ void test_chan_data_without_sinks_and_empty_payload()
     size_t n = make_data(pkt, id, "abc");
     TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_data(0, pkt, n, out, &ol, sizeof(out)));
     TEST_ASSERT_EQUAL_INT(0, data_cb_count);
-    TEST_ASSERT_EQUAL_UINT32(SSH_CHAN_WINDOW - 3u, ssh_chan[0][id].local_window);
+    TEST_ASSERT_EQUAL_UINT32(SSH_CHAN_WINDOW - 3u, ssh_chan[0][id].flow.local_window);
 
     // A zero-length data string is accepted and delivers nothing.
     n = make_data(pkt, id, "");
     TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_data(0, pkt, n, out, &ol, sizeof(out)));
-    TEST_ASSERT_EQUAL_UINT32(SSH_CHAN_WINDOW - 3u, ssh_chan[0][id].local_window);
+    TEST_ASSERT_EQUAL_UINT32(SSH_CHAN_WINDOW - 3u, ssh_chan[0][id].flow.local_window);
 
     // direct-tcpip channel with no forward-data callback.
     pc_ssh_channel_set_forward_open_cb(fwd_open_cb);
@@ -1202,12 +1202,12 @@ void test_chan_data_without_sinks_and_empty_payload()
     TEST_ASSERT_EQUAL_INT(0, fwd_data_count);
 
     // The window falls below half but the caller's buffer cannot hold a WINDOW_ADJUST.
-    ssh_chan[0][id].local_window = 100;
+    ssh_chan[0][id].flow.local_window = 100;
     n = make_data(pkt, id, "0123456789");
     ol = 99;
     TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_data(0, pkt, n, out, &ol, 5));
     TEST_ASSERT_EQUAL(0u, ol);
-    TEST_ASSERT_EQUAL_UINT32(90u, ssh_chan[0][id].local_window); // not replenished
+    TEST_ASSERT_EQUAL_UINT32(90u, ssh_chan[0][id].flow.local_window); // not replenished
 }
 
 // build_data rejects an out-of-range slot and a write larger than the peer's maximum packet size
@@ -1221,19 +1221,19 @@ void test_chan_outbound_limits_and_window_saturation()
     TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_build_data(MAX_SSH_CONNS, 0, data, sizeof(data), out, &ol, sizeof(out)));
 
     uint32_t id = open_session(44, 32768);
-    ssh_chan[0][id].peer_window = 1000;
-    ssh_chan[0][id].peer_max_pkt = 2; // window is ample, the per-packet cap is not
+    ssh_chan[0][id].flow.peer_window = 1000;
+    ssh_chan[0][id].flow.peer_max_pkt = 2; // window is ample, the per-packet cap is not
     TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_build_data(0, id, data, sizeof(data), out, &ol, sizeof(out)));
 
     TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_build_close(0, id, out, &ol, 9)); // one byte short of EOF+CLOSE
 
-    ssh_chan[0][id].peer_window = 0xFFFFFFF0u;
+    ssh_chan[0][id].flow.peer_window = 0xFFFFFFF0u;
     uint8_t wa[9];
     wa[0] = SSH_MSG_CHANNEL_WINDOW_ADJUST;
     wr_u32(wa + 1, id);
     wr_u32(wa + 5, 0x40u); // would wrap past 2^32
     TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_window_adjust(0, wa, sizeof(wa)));
-    TEST_ASSERT_EQUAL_UINT32(0xFFFFFFFFu, ssh_chan[0][id].peer_window);
+    TEST_ASSERT_EQUAL_UINT32(0xFFFFFFFFu, ssh_chan[0][id].flow.peer_window);
 }
 
 #if PC_ENABLE_SSH_SFTP || PC_ENABLE_SSH_SCP

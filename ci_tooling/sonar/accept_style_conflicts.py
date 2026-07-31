@@ -21,7 +21,7 @@ import sys
 import urllib.parse
 import urllib.request
 
-PROJECT = "dstroy0_ProtoCore"
+PROJECT = "ProtoCore"
 BASE = "https://sonarcloud.io"
 
 # Style rules that contradict a deliberate design choice -> transition "accept" (won't fix).

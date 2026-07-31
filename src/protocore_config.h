@@ -1014,6 +1014,23 @@
 #define WS_FRAME_SIZE 512
 #endif
 
+/**
+ * @brief Largest outbound payload permessage-deflate will compress, in bytes.
+ *
+ * The compressor borrows `len + len/8 + 16` from the scratch arena, so an unbounded outbound length
+ * would leave the arena with no worst case - `ws_send_frame()` takes a `uint16_t`, and neither
+ * WS_FRAME_SIZE (which bounds the *inbound* reassembled message) nor PC_WS_FRAG_SIZE (off by
+ * default, and a runtime setter besides) constrains it. This is that bound, and it is what makes
+ * PC_SCRATCH_WORK_WS_SEND a compile-time constant.
+ *
+ * A larger message is still sent, uncompressed, as the per-message RSV1 flag makes legal - the same
+ * outcome as before this was declared, except chosen rather than reached by an allocation failure.
+ * Raising it costs arena: the term grows by roughly 1.125x the increase.
+ */
+#ifndef PC_WS_DEFLATE_MAX
+#define PC_WS_DEFLATE_MAX WS_FRAME_SIZE
+#endif
+
 // ---------------------------------------------------------------------------
 // Server-Sent Events sizing constants
 // ---------------------------------------------------------------------------
@@ -2022,7 +2039,7 @@
  * Default off; implies PC_ENABLE_CBOR (the SenML-CBOR form uses the CBOR writer). A
  * zero-heap SenML-JSON + SenML-CBOR encoder over the shipped JSON / CBOR codecs: the caller
  * fills a `SenmlRecord` array (base name/time, name, unit, one value, time) and
- * `pc_senml_json_build` / `pc_senml_cbor_build` emit the whole pack. Numbers are emitted as
+ * `pc_senml_json_build` / `pc_senml_build` (any pc_codec) emit the whole pack. Numbers are emitted as
  * integers when integral (so timestamps keep precision), else floats. The standard
  * measurement format for CoAP / LwM2M / HTTP telemetry. Pure codec, host-tested.
  */

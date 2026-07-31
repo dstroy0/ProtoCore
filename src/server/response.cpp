@@ -3,19 +3,18 @@
 
 /**
  * @file response.cpp
- * @brief Response building for PC: template rendering, chunked/streaming responses,
- *        response headers + cookies, MIME typing, and the stats / Prometheus-metrics endpoints.
+ * @brief Response building: template rendering, chunked/streaming responses, response headers and
+ *        cookies, MIME typing.
  *
- * Split out of protocore.cpp (single-purpose server files). The two-pass {{name}} template walk,
- * the cross-loop chunked-send pump (paged like the file pump so a body is unbounded in constant
- * memory), the per-response header/cookie buffer API, mime_type(), and the built-in stats/metrics
- * handlers (rendered through the template engine from generated web assets). The chunked pump
- * shares the per-slot SendCtx owned by protocore.cpp. Behavior is identical to the pre-split code.
+ * The {{name}} template is walked twice - once to size the body, once to stream it - so a rendered
+ * response costs no buffer regardless of its length. A chunked body that outruns the TCP send
+ * window is paged across worker loops by the pump, whose per-slot state this file owns and no
+ * other file can name.
  */
 
 #include "network_drivers/transport/tcp.h" // conn_pool, pc_conn_send, TcpConn/ConnState
 #include "protocore.h"
-#include "server/protocore_internal.h" // status_text, req_is_head, SendCtx s_send
+#include "server/protocore_internal.h" // status_text, req_is_head
 #include "shared_primitives/hex.h"     // pc_hex_u32 (chunk size-line writer)
 #include "shared_primitives/mime.h"    // PC_MIME_*, mime tables
 #include "shared_primitives/strbuf.h"  // pc_sb frame builder (replaces snprintf)
@@ -38,6 +37,39 @@ static void num_field(char *dst, size_t cap, uint32_t v)
     }
 }
 #endif
+
+// ---------------------------------------------------------------------------
+// Chunked-send state - owned here
+// ---------------------------------------------------------------------------
+//
+// A chunked body larger than the TCP send window cannot go out in one dispatch, so send_chunked()
+// records what remains and chunk_send_pump() pages it out across worker loops. The state is one
+// entry per slot and nothing outside this file can name it: the poll asks pc_resp_holds_slot()
+// instead of reading it.
+
+// Per-slot chunked-send continuation: what is left to emit and how to frame it.
+struct ChunkSend
+{
+    ChunkSource source; ///< body generator (active==false means none).
+    void *ctx;          ///< caller state passed to source (must outlive the send).
+    int status;         ///< response status, for note_response.
+    int total;          ///< body bytes emitted so far (excludes framing).
+    bool keep;          ///< keep-alive vs close at completion.
+    bool active;        ///< a chunked response is in progress on this slot.
+    bool raw;           ///< HTTP/1.0 client: stream the body unframed, close-delimited (no chunk wrapping).
+};
+
+/** @brief The chunked-send state this TU owns, one entry per connection slot. */
+struct RespCtx
+{
+    ChunkSend chunk[MAX_CONNS];
+};
+static RespCtx s_resp;
+
+bool pc_resp_holds_slot(uint8_t slot)
+{
+    return s_resp.chunk[slot].active;
+}
 
 // ---------------------------------------------------------------------------
 // Template rendering
@@ -224,7 +256,7 @@ void PC::send_chunked(uint8_t slot_id, int code, const char *content_type, Chunk
         return;
     }
 
-    ChunkSend &s = s_send.chunk[slot_id];
+    ChunkSend &s = s_resp.chunk[slot_id];
     s.source = source;
     s.ctx = ctx;
     s.status = code;
@@ -239,10 +271,10 @@ void PC::send_chunked(uint8_t slot_id, int code, const char *content_type, Chunk
 // the send window each worker loop, resuming on later loops as the window drains.
 void PC::chunk_send_pump(uint8_t slot_id)
 {
-    ChunkSend &s = s_send.chunk[slot_id];
+    ChunkSend &s = s_resp.chunk[slot_id];
     // GCOVR_EXCL_START  unreachable: both callers already established the state - send_chunked() sets
     // s.active immediately before its call, and the poll loop in protocore.cpp only pumps a slot whose
-    // s_send.chunk[i].active is set. Kept so the pump is safe to call unconditionally.
+    // s_resp.chunk[i].active is set. Kept so the pump is safe to call unconditionally.
     if (!s.active)
     {
         return;

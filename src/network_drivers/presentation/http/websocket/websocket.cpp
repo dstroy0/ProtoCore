@@ -177,8 +177,13 @@ bool ws_send_frame(WsConn *ws, WsOpcode opcode, const uint8_t *payload, uint16_t
     // (close/ping/pong) are never compressed (RFC 7692 sec 5.1). Scratch + output
     // are borrowed from the per-dispatch arena and released when this scope exits;
     // pc_conn_send copies (TCP_WRITE_FLAG_COPY) so the buffer can go immediately.
+    // PC_WS_DEFLATE_MAX bounds what the compressor accepts, so the borrow below has a compile-time
+    // worst case and cannot fail. A longer message is sent uncompressed, which the per-message RSV1
+    // flag makes legal.
+    static_assert(PC_SCRATCH_WORK_WS_SEND <= PC_SCRATCH_ARENA_SIZE, "WS deflate scratch exceeds the arena");
     ScratchScope scope;
-    if (ws->pmd && len > 0 && (opcode == WsOpcode::WS_OP_TEXT || opcode == WsOpcode::WS_OP_BINARY))
+    if (ws->pmd && len > 0 && len <= PC_WS_DEFLATE_MAX &&
+        (opcode == WsOpcode::WS_OP_TEXT || opcode == WsOpcode::WS_OP_BINARY))
     {
         size_t cap = (size_t)len + len / 8 + 16; // static-Huffman worst-case headroom
         void *scr = scratch_alloc(DEFLATE_SCRATCH_SIZE, 16);
@@ -304,6 +309,9 @@ static void ws_finish_frame(WsConn *ws, TcpConn *conn)
         // scratch is borrowed per-dispatch and released when this scope exits.
         if (ws->msg_compressed)
         {
+            // The parser closes 1009 before msg_len passes WS_FRAME_SIZE, so all three borrows are
+            // bounded and cannot fail.
+            static_assert(PC_SCRATCH_WORK_WS_RECV <= PC_SCRATCH_ARENA_SIZE, "WS inflate scratch exceeds the arena");
             ScratchScope scope;
             size_t comp_len = ws->msg_len;
             uint8_t *in = (uint8_t *)scratch_alloc(comp_len + 4, 1);

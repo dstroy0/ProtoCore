@@ -50,50 +50,19 @@ bool regex_match(const char *pattern, const char *path);
 // Outbound-transfer continuations (owned by protocore.cpp, shared with the split handlers)
 // ---------------------------------------------------------------------------
 
-#if PC_ENABLE_FILE_SERVING
-// Cross-loop file-send continuation. A file response larger than the TCP send
-// buffer cannot be blasted out in one dispatch (tcp_write returns ERR_MEM once the
-// window fills and the rest would be dropped). Instead serve_file_internal sends
-// the headers, opens the file, and hands it to this per-slot state; file_send_pump
-// pages out at most pc_conn_sndbuf() bytes per worker loop and resumes on the next
-// loop (woken promptly by the sent callback) as the window drains - no truncation,
-// no blocking the worker. One transfer per slot at a time.
-struct FileSend
-{
-    fs::File file;    ///< open source file (held across loops).
-    size_t off;       ///< absolute file offset of the next byte to send.
-    size_t remaining; ///< body bytes still to send.
-    int status;       ///< response status (200 / 206) for note_response.
-    int total;        ///< total body length, for the access log.
-    bool keep;        ///< keep-alive vs close at completion.
-    bool active;      ///< a transfer is in progress on this slot.
-};
-#endif
+// A transfer in flight owns its slot: the poll skips the rest of the pipeline until the body is
+// out. Each kind of transfer is owned by the TU that runs it - the chunked-send state by
+// server/response.cpp, the file-send state by server/file_serving.cpp - so neither struct is
+// declared here and neither is reachable from anywhere but its owner. The poll asks each owner
+// whether it holds the slot rather than reading its state.
 
-// Per-slot chunked-send continuation. Mirrors FileSend but pulls body pieces from
-// a ChunkSource generator and adds the HTTP chunk framing; paged across loops.
-struct ChunkSend
-{
-    ChunkSource source; ///< body generator (active==false means none).
-    void *ctx;          ///< caller state passed to source (must outlive the send).
-    int status;         ///< response status, for note_response.
-    int total;          ///< body bytes emitted so far (excludes framing).
-    bool keep;          ///< keep-alive vs close at completion.
-    bool active;        ///< a chunked response is in progress on this slot.
-    bool raw;           ///< HTTP/1.0 client: stream the body unframed, close-delimited (no chunk wrapping).
-};
+/** @brief True while a chunked response is paging out on @p slot (owner: server/response.cpp). */
+bool pc_resp_holds_slot(uint8_t slot);
 
-// All per-slot outbound-transfer continuations, owned by one instance: the cross-loop file-send
-// state (when file serving is enabled) and the chunked-send state. Grouped so it is one named
-// owner. Defined once in protocore.cpp; the file_serving / chunked handler TUs reference it.
-struct SendCtx
-{
 #if PC_ENABLE_FILE_SERVING
-    FileSend file[MAX_CONNS];
+/** @brief True while a file response is paging out on @p slot (owner: server/file_serving.cpp). */
+bool pc_file_holds_slot(uint8_t slot);
 #endif
-    ChunkSend chunk[MAX_CONNS];
-};
-extern SendCtx s_send;
 
 // ---------------------------------------------------------------------------
 // WebSocket / SSE upgrade entry points (defined in server/websocket_sse.cpp, called

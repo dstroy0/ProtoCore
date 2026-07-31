@@ -3,7 +3,7 @@
 
 /**
  * @file senml.cpp
- * @brief SenML-JSON + SenML-CBOR pack builders (pure, host-tested).
+ * @brief SenML pack builders: JSON, plus any binary codec via pc_codec (pure, host-tested).
  */
 
 #include "services/iot/senml/senml.h"
@@ -12,6 +12,7 @@
 #if PC_ENABLE_SENML
 
 #include "network_drivers/presentation/codec/cbor/cbor.h"
+#include "network_drivers/presentation/codec/codec.h"
 #include "network_drivers/presentation/codec/json/json.h"
 #include <stdio.h> // snprintf for the JSON number formatting
 
@@ -117,16 +118,16 @@ size_t pc_senml_json_build(char *buf, size_t cap, const SenmlRecord *records, si
     return w.ok() ? w.length() : 0;
 }
 
-// Emit a SenML number into a CBOR value: an integer when integral, else a float.
-static void pc_cbor_num(CborWriter *w, double d)
+// Emit a SenML number: an integer when integral (keeps timestamp precision), else a float.
+static void codec_num(const pc_codec *c, pc_span *w, double d)
 {
     if (is_integral(d))
     {
-        pc_cbor_int(w, (int64_t)d);
+        c->put_int(w, (int64_t)d);
     }
     else
     {
-        pc_cbor_float(w, (float)d);
+        c->put_float(w, (float)d);
     }
 }
 
@@ -161,38 +162,37 @@ static size_t record_fields(const SenmlRecord &r)
     return n;
 }
 
-size_t pc_senml_cbor_build(uint8_t *buf, size_t cap, const SenmlRecord *records, size_t count)
+size_t pc_senml_build(const pc_codec *c, uint8_t *buf, size_t cap, const SenmlRecord *records, size_t count)
 {
-    if (!buf || (count && !records))
+    if (!c || !buf || (count && !records))
     {
         return 0;
     }
-    CborWriter w;
-    pc_cbor_init(&w, buf, cap);
-    pc_cbor_array(&w, count);
+    pc_span w{pc_span_from(buf, cap)};
+    c->put_array(&w, count);
     for (size_t i = 0; i < count; i++)
     {
         const SenmlRecord &r = records[i];
-        pc_cbor_map(&w, record_fields(r));
+        c->put_map(&w, record_fields(r));
         if (r.base_name)
         {
-            pc_cbor_int(&w, SENML_LBL_BN);
-            pc_cbor_text(&w, r.base_name);
+            c->put_label(&w, "bn", SENML_LBL_BN);
+            c->put_str(&w, r.base_name);
         }
         if (r.has_base_time)
         {
-            pc_cbor_int(&w, SENML_LBL_BT);
-            pc_cbor_num(&w, r.base_time);
+            c->put_label(&w, "bt", SENML_LBL_BT);
+            codec_num(c, &w, r.base_time);
         }
         if (r.name)
         {
-            pc_cbor_int(&w, SENML_LBL_N);
-            pc_cbor_text(&w, r.name);
+            c->put_label(&w, "n", SENML_LBL_N);
+            c->put_str(&w, r.name);
         }
         if (r.unit)
         {
-            pc_cbor_int(&w, SENML_LBL_U);
-            pc_cbor_text(&w, r.unit);
+            c->put_label(&w, "u", SENML_LBL_U);
+            c->put_str(&w, r.unit);
         }
         // Exhaustive over SenmlValueKind, as in the JSON builder above: the compiler's default
         // edge for the uint8_t-backed enum is unreachable, and record_fields() above is written
@@ -200,30 +200,30 @@ size_t pc_senml_cbor_build(uint8_t *buf, size_t cap, const SenmlRecord *records,
         switch (r.value_kind) // GCOVR_EXCL_LINE  exhaustive enum switch; the default edge is dead
         {
         case SenmlValueKind::SENML_V_FLOAT:
-            pc_cbor_int(&w, SENML_LBL_V);
-            pc_cbor_num(&w, r.value);
+            c->put_label(&w, "v", SENML_LBL_V);
+            codec_num(c, &w, r.value);
             break;
         case SenmlValueKind::SENML_V_STRING:
             if (r.value_str)
             {
-                pc_cbor_int(&w, SENML_LBL_VS);
-                pc_cbor_text(&w, r.value_str);
+                c->put_label(&w, "vs", SENML_LBL_VS);
+                c->put_str(&w, r.value_str);
             }
             break;
         case SenmlValueKind::SENML_V_BOOL:
-            pc_cbor_int(&w, SENML_LBL_VB);
-            pc_cbor_bool(&w, r.value_bool);
+            c->put_label(&w, "vb", SENML_LBL_VB);
+            c->put_bool(&w, r.value_bool);
             break;
         case SenmlValueKind::SENML_V_NONE:
             break;
         }
         if (r.has_time)
         {
-            pc_cbor_int(&w, SENML_LBL_T);
-            pc_cbor_num(&w, r.time);
+            c->put_label(&w, "t", SENML_LBL_T);
+            codec_num(c, &w, r.time);
         }
     }
-    return pc_cbor_ok(&w) ? pc_cbor_len(&w) : 0;
+    return pc_span_ok(w) ? pc_span_len(w) : 0;
 }
 
 // --- resolution (RFC 8428 §4.6) ---

@@ -12,18 +12,18 @@ MessagePack is widely supported across languages, so pick it over CBOR when your
 consuming stack already speaks it - the API and the zero-heap pattern are
 identical.
 
-**Encoding with `MsgpackWriter`.** Initialize over a stack buffer, declare the map
+**Encoding with `pc_span`.** Initialize over a stack buffer, declare the map
 size, emit pairs, check `pc_msgpack_ok()`, write `pc_msgpack_len()` bytes:
 
 ```cpp
 uint8_t buf[64];
-MsgpackWriter w;
-pc_msgpack_init(&w, buf, sizeof(buf));
+pc_span w;
+w = pc_span_from( buf, sizeof(buf));
 pc_msgpack_map(&w, 3);
 pc_msgpack_str(&w, "heap"); pc_msgpack_uint(&w, ESP.getFreeHeap());
 pc_msgpack_str(&w, "uptime"); pc_msgpack_uint(&w, millis() / 1000);
 pc_msgpack_str(&w, "rssi"); pc_msgpack_int(&w, pc_net_rssi());
-ctx.len = pc_msgpack_ok(&w) ? pc_msgpack_len(&w) : 0;   // page these bytes out below
+ctx.len = pc_span_ok(w) ? pc_span_len(w) : 0;   // page these bytes out below
 ```
 
 As with CBOR, the payload is binary so it is delivered through the binary-safe
@@ -31,22 +31,22 @@ As with CBOR, the payload is binary so it is delivered through the binary-safe
 (slice by slice, returning 0 to finish) rather than the C-string `send()`. The
 generator's `ctx` must outlive the call, so it is `static`.
 
-**Decoding with `MsgpackReader`.** The cursor decoder is the mirror image: bind a
+**Decoding with `pc_cspan`.** The cursor decoder is the mirror image: bind a
 reader to the bytes, read the map header, then each key/value, and check
-`pc_msgpack_reader_ok()` once at the end (it is sticky, so a single check covers the
+`pc_cspan_ok()` once at the end (it is sticky, so a single check covers the
 whole parse). Strings point straight into the source buffer, no copy:
 
 ```cpp
-MsgpackReader r;
-pc_msgpack_reader_init(&r, req->body, req->body_len);
+pc_cspan r;
+r = pc_cspan_from( req->body, req->body_len);
 size_t count;
 if (!pc_msgpack_read_map(&r, &count)) { /* not a map */ }
-for (size_t i = 0; i < count && pc_msgpack_reader_ok(&r); i++) {
+for (size_t i = 0; i < count && pc_cspan_ok(r); i++) {
     const char *key; size_t klen; int64_t val;
     if (!pc_msgpack_read_str(&r, &key, &klen) || !pc_msgpack_read_int(&r, &val)) break;
     // use key[0..klen) and val
 }
-if (!pc_msgpack_reader_ok(&r)) { /* malformed / truncated */ }
+if (!pc_cspan_ok(r)) { /* malformed / truncated */ }
 ```
 
 Every read is bounds-checked, so malformed or truncated input fails closed rather
@@ -110,8 +110,8 @@ static size_t pc_msgpack_source(uint8_t *out, size_t cap, void *vctx)
 // Decodes a posted MessagePack map of {string: integer} and echoes "key=value".
 static void on_decode(uint8_t id, HttpReq *req)
 {
-    MsgpackReader r;
-    pc_msgpack_reader_init(&r, req->body, req->body_len); // cursor over the request body
+    pc_cspan r;
+    r = pc_cspan_from( req->body, req->body_len); // cursor over the request body
     size_t count;
     if (!pc_msgpack_read_map(&r, &count)) // header must be a map
     {
@@ -120,7 +120,7 @@ static void on_decode(uint8_t id, HttpReq *req)
     }
     char out[160];
     size_t o = 0;
-    for (size_t i = 0; i < count && pc_msgpack_reader_ok(&r); i++)
+    for (size_t i = 0; i < count && pc_cspan_ok(r); i++)
     {
         const char *key;
         size_t klen;
@@ -129,7 +129,7 @@ static void on_decode(uint8_t id, HttpReq *req)
             break;
         o += snprintf(out + o, sizeof(out) - o, "%.*s=%lld\n", (int)klen, key, (long long)val);
     }
-    if (!pc_msgpack_reader_ok(&r)) // one sticky check covers the whole parse
+    if (!pc_cspan_ok(r)) // one sticky check covers the whole parse
     {
         server.send(id, 400, "text/plain", "malformed MessagePack");
         return;
@@ -153,8 +153,8 @@ void setup()
 
     server.on("/telemetry.msgpack", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
         static MpCtx ctx; // static: must outlive send_chunked
-        MsgpackWriter w;
-        pc_msgpack_init(&w, ctx.buf, sizeof(ctx.buf));
+        pc_span w;
+        w = pc_span_from( ctx.buf, sizeof(ctx.buf));
         pc_msgpack_map(&w, 3);
         pc_msgpack_str(&w, "heap");
         pc_msgpack_uint(&w, ESP.getFreeHeap());
@@ -162,7 +162,7 @@ void setup()
         pc_msgpack_uint(&w, millis() / 1000);
         pc_msgpack_str(&w, "rssi");
         pc_msgpack_int(&w, pc_net_rssi());
-        ctx.len = pc_msgpack_ok(&w) ? pc_msgpack_len(&w) : 0;
+        ctx.len = pc_span_ok(w) ? pc_span_len(w) : 0;
         ctx.off = 0;
         server.send_chunked(id, 200, "application/msgpack", pc_msgpack_source, &ctx);
     });

@@ -9,19 +9,19 @@ matters for high-rate telemetry or constrained uplinks. This serves a small
 `{heap, uptime, rssi}` map as `application/cbor` using the zero-heap CBOR writer,
 streamed through the binary-safe chunked writer.
 
-**Encoding with `CborWriter`.** You initialize the writer over a stack buffer,
+**Encoding with `pc_span`.** You initialize the writer over a stack buffer,
 declare the map size, then emit key/value pairs; `pc_cbor_ok()` reports overflow and
 `pc_cbor_len()` gives the encoded length:
 
 ```cpp
 uint8_t buf[64];
-CborWriter w;
-pc_cbor_init(&w, buf, sizeof(buf));
+pc_span w;
+w = pc_span_from( buf, sizeof(buf));
 pc_cbor_map(&w, 3);                    // a 3-entry map
-pc_cbor_text(&w, "heap"); pc_cbor_uint(&w, ESP.getFreeHeap());
-pc_cbor_text(&w, "uptime"); pc_cbor_uint(&w, millis() / 1000);
-pc_cbor_text(&w, "rssi"); pc_cbor_int(&w, pc_net_rssi());   // signed
-ctx.len = pc_cbor_ok(&w) ? pc_cbor_len(&w) : 0;           // page these bytes out below
+pc_cbor_str(&w, "heap"); pc_cbor_uint(&w, ESP.getFreeHeap());
+pc_cbor_str(&w, "uptime"); pc_cbor_uint(&w, millis() / 1000);
+pc_cbor_str(&w, "rssi"); pc_cbor_int(&w, pc_net_rssi());   // signed
+ctx.len = pc_span_ok(w) ? pc_span_len(w) : 0;           // page these bytes out below
 ```
 
 **Why `send_chunked()`.** The response is binary, so it is sent with the
@@ -113,16 +113,16 @@ void setup()
 
     server.on("/telemetry.cbor", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
         static CborCtx ctx; // static: must outlive send_chunked
-        CborWriter w;
-        pc_cbor_init(&w, ctx.buf, sizeof(ctx.buf));
+        pc_span w;
+        w = pc_span_from( ctx.buf, sizeof(ctx.buf));
         pc_cbor_map(&w, 3);
-        pc_cbor_text(&w, "heap");
+        pc_cbor_str(&w, "heap");
         pc_cbor_uint(&w, ESP.getFreeHeap());
-        pc_cbor_text(&w, "uptime");
+        pc_cbor_str(&w, "uptime");
         pc_cbor_uint(&w, millis() / 1000);
-        pc_cbor_text(&w, "rssi");
+        pc_cbor_str(&w, "rssi");
         pc_cbor_int(&w, pc_net_rssi());
-        ctx.len = pc_cbor_ok(&w) ? pc_cbor_len(&w) : 0;
+        ctx.len = pc_span_ok(w) ? pc_span_len(w) : 0;
         ctx.off = 0;
         server.send_chunked(id, 200, "application/cbor", pc_cbor_source, &ctx);
     });

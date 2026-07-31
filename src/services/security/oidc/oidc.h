@@ -42,6 +42,21 @@
 /** @brief RSA-2048 modulus size in bytes (the supported key size). */
 #define PC_OIDC_RSA_BYTES 256
 
+/** @brief Decode cap for the JOSE header segment; it carries only `alg`/`typ`/`kid`. */
+#define PC_OIDC_HDR_LEN 512
+
+/** @brief Decode cap for the `iss` claim, compared against the expected issuer URL. */
+#define PC_OIDC_ISS_LEN 256
+
+/**
+ * @brief Scratch this module borrows at once (header + signature + payload + issuer).
+ *
+ * All four buffers are live together across the verify, so the term is their sum. Stated here,
+ * next to the constants it is built from, because a worst case assembled anywhere else would have
+ * to restate them. server/mmgr/scratch_budget.h collects this with every other borrower's term.
+ */
+#define PC_SCRATCH_WORK_OIDC (PC_OIDC_HDR_LEN + PC_OIDC_RSA_BYTES + PC_OIDC_MAX_LEN + PC_OIDC_ISS_LEN)
+
 /** @brief Verification result codes (0 = success, negatives = failure reasons). */
 enum class pc_oidc_result : int32_t
 {

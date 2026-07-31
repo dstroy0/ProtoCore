@@ -13,7 +13,7 @@
 
 #include "FS.h"
 #include "protocore.h"
-#include "server/protocore_internal.h" // s_send: the cross-loop file-send continuation state
+#include "server/protocore_internal.h" // pc_file_holds_slot: does the file pump hold this slot
 #include <stdio.h>
 #include <string.h>
 #include <unity.h>
@@ -458,11 +458,11 @@ void test_file_send_pump_connection_lost_midtransfer()
     mock_sndbuf() = 0; // no window: the headers queue, then the body transfer parks
     feed_and_handle(0, "GET /big.bin HTTP/1.1\r\nHost: x\r\n\r\n");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "200 OK"));
-    TEST_ASSERT_TRUE(s_send.file[0].active); // parked, waiting for the window to reopen
+    TEST_ASSERT_TRUE(pc_file_holds_slot(0)); // parked, waiting for the window to reopen
 
     conn_pool[0].pcb = nullptr; // peer went away mid-transfer
     server.handle();
-    TEST_ASSERT_FALSE(s_send.file[0].active);         // continuation dropped
+    TEST_ASSERT_FALSE(pc_file_holds_slot(0));         // continuation dropped
     TEST_ASSERT_NULL(strstr(tcp_captured(), "ZZZZ")); // no body bytes were ever written
 
     mock_sndbuf() = MOCK_SNDBUF_DEFAULT; // restore the window for the remaining tests

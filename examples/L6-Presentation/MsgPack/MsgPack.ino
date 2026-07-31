@@ -61,11 +61,11 @@ static size_t pc_msgpack_source(uint8_t *out, size_t cap, void *vctx)
 
 // Decodes a posted MessagePack map of {string: integer} and echoes each parsed
 // field as "key=value" text. Shows the cursor decoder: read the map header, then
-// each key (str) and value (int), checking pc_msgpack_reader_ok() at the end.
+// each key (str) and value (int), checking pc_cspan_ok() at the end.
 static void on_decode(uint8_t id, HttpReq *req)
 {
-    MsgpackReader r;
-    pc_msgpack_reader_init(&r, req->body, req->body_len);
+    pc_cspan r;
+    r = pc_cspan_from(req->body, req->body_len);
     size_t count;
     if (!pc_msgpack_read_map(&r, &count))
     {
@@ -74,7 +74,7 @@ static void on_decode(uint8_t id, HttpReq *req)
     }
     char out[160];
     size_t o = 0;
-    for (size_t i = 0; i < count && pc_msgpack_reader_ok(&r); i++)
+    for (size_t i = 0; i < count && pc_cspan_ok(r); i++)
     {
         const char *key;
         size_t klen;
@@ -85,7 +85,7 @@ static void on_decode(uint8_t id, HttpReq *req)
         }
         o += snprintf(out + o, sizeof(out) - o, "%.*s=%lld\n", (int)klen, key, (long long)val);
     }
-    if (!pc_msgpack_reader_ok(&r))
+    if (!pc_cspan_ok(r))
     {
         server.send(id, 400, "text/plain", "malformed MessagePack");
         return;
@@ -109,8 +109,8 @@ void setup()
 
     server.on("/telemetry.msgpack", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
         static MpCtx ctx; // static: must outlive send_chunked
-        MsgpackWriter w;
-        pc_msgpack_init(&w, ctx.buf, sizeof(ctx.buf));
+        pc_span w;
+        w = pc_span_from(ctx.buf, sizeof(ctx.buf));
         pc_msgpack_map(&w, 3);
         pc_msgpack_str(&w, "heap");
         pc_msgpack_uint(&w, ESP.getFreeHeap());
@@ -118,7 +118,7 @@ void setup()
         pc_msgpack_uint(&w, millis() / 1000);
         pc_msgpack_str(&w, "rssi");
         pc_msgpack_int(&w, pc_net_rssi());
-        ctx.len = pc_msgpack_ok(&w) ? pc_msgpack_len(&w) : 0;
+        ctx.len = pc_span_ok(w) ? pc_span_len(w) : 0;
         ctx.off = 0;
         server.send_chunked(id, 200, "application/msgpack", pc_msgpack_source, &ctx);
     });

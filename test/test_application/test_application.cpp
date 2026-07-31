@@ -12,7 +12,7 @@
 #include "network_drivers/session/proto_handler.h" // proto_register/proto_get: the slot-poll dispatch table
 #include "network_drivers/transport/listener.h"    // listener_stop_all() for begin() test cleanup
 #include "protocore.h"
-#include "server/protocore_internal.h" // ws/sse upgrade entry points + s_send (cross-loop send continuations)
+#include "server/protocore_internal.h" // ws/sse upgrade entry points, pc_resp_holds_slot
 #include <unity.h>
 
 // All source layers compiled via native_app env - no stubs needed.
@@ -2143,7 +2143,7 @@ void test_send_chunked_without_source()
     const char *out = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(out, "Transfer-Encoding: chunked\r\n"));
     TEST_ASSERT_NULL(strstr(out, "0\r\n\r\n"));
-    TEST_ASSERT_FALSE(s_send.chunk[0].active);
+    TEST_ASSERT_FALSE(pc_resp_holds_slot(0));
     tcp_capture_disable();
 }
 
@@ -2171,7 +2171,7 @@ void test_chunked_pump_small_window_and_connection_lost()
     g_server->send_chunked(0, 200, "text/plain", chunk_src_fill, nullptr);
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "Transfer-Encoding: chunked\r\n"));
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "28\r\nqqqq")); // 0x28 == 40 bytes framed
-    TEST_ASSERT_FALSE(s_send.chunk[0].active);                  // source drained, response finished
+    TEST_ASSERT_FALSE(pc_resp_holds_slot(0));                   // source drained, response finished
 
     // No window at all: the body parks in the pump, still active.
     g_chunk_calls = 0;
@@ -2179,11 +2179,11 @@ void test_chunked_pump_small_window_and_connection_lost()
     live_slot(0);
     tcp_capture_reset();
     g_server->send_chunked(0, 200, "text/plain", chunk_src_fill, nullptr);
-    TEST_ASSERT_TRUE(s_send.chunk[0].active);
+    TEST_ASSERT_TRUE(pc_resp_holds_slot(0));
 
     conn_pool[0].pcb = nullptr; // peer went away before the window reopened
     g_server->handle();
-    TEST_ASSERT_FALSE(s_send.chunk[0].active); // continuation dropped
+    TEST_ASSERT_FALSE(pc_resp_holds_slot(0)); // continuation dropped
     TEST_ASSERT_NULL(strstr(tcp_captured(), "qqqq"));
 
     mock_sndbuf() = MOCK_SNDBUF_DEFAULT;

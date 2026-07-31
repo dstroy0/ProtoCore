@@ -29,6 +29,7 @@
 #ifndef PROTOCORE_SENML_H
 #define PROTOCORE_SENML_H
 
+#include "network_drivers/presentation/codec/codec.h" // pc_codec - the encoding is a parameter
 #include "protocore_config.h"
 
 #if PC_ENABLE_SENML
@@ -65,7 +66,16 @@ struct SenmlRecord
 size_t pc_senml_json_build(char *buf, size_t cap, const SenmlRecord *records, size_t count);
 
 /** @brief Build a SenML-CBOR pack (a CBOR array of integer-keyed maps). Returns bytes, or 0. */
-size_t pc_senml_cbor_build(uint8_t *buf, size_t cap, const SenmlRecord *records, size_t count);
+/**
+ * @brief Build a SenML pack in whichever binary encoding @p c is.
+ *
+ * The RFC 8428 integer labels and the record structure are the same whatever carries them, so the
+ * encoding is a parameter rather than a second copy of this function: pass pc_codec_cbor() for
+ * SenML-CBOR, pc_codec_msgpack() for the MessagePack pack.
+ *
+ * @return bytes written, or 0 if the arguments are bad or the buffer was too small.
+ */
+size_t pc_senml_build(const pc_codec *c, uint8_t *buf, size_t cap, const SenmlRecord *records, size_t count);
 
 // --- resolution (RFC 8428 §4.6): apply the base fields to produce standalone records ---
 

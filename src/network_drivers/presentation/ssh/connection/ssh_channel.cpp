@@ -182,37 +182,16 @@ static int chan_alloc(uint8_t i)
 // CHANNEL_OPEN → CONFIRMATION / FAILURE
 // ---------------------------------------------------------------------------
 
-// CHANNEL_OPEN_FAILURE: byte || recipient(sender) || reason || desc || lang.
-// reason: 1 admin-prohibited, 2 connect-failed, 3 unknown-type, 4 resource-shortage.
+// Both message bodies are built by the signaling owner (ssh_flow_control); the mux only supplies the
+// channel it resolved and the ids the wire carries.
 static int build_open_failure(uint8_t *out, size_t cap, uint32_t sender, uint32_t reason, size_t *out_len)
 {
-    if (cap < 17)
-    {
-        return -1;
-    }
-    out[0] = SSH_MSG_CHANNEL_OPEN_FAILURE;
-    wr_u32(out + 1, sender);
-    wr_u32(out + 5, reason);
-    wr_u32(out + 9, 0);  // empty description
-    wr_u32(out + 13, 0); // empty language
-    *out_len = 17;
-    return 0;
+    return pc_ssh_sig_build_open_failure(out, cap, sender, reason, out_len);
 }
 
-// CHANNEL_OPEN_CONFIRMATION: byte || recipient(peer) || sender(local) || window || max.
 static int build_open_confirm(const SshChannel *c, uint8_t *out, size_t cap, size_t *out_len)
 {
-    if (cap < 17)
-    {
-        return -1;
-    }
-    out[0] = SSH_MSG_CHANNEL_OPEN_CONFIRM;
-    wr_u32(out + 1, c->peer_id);
-    wr_u32(out + 5, c->local_id);
-    wr_u32(out + 9, c->local_window);
-    wr_u32(out + 13, SSH_CHAN_MAX_PACKET);
-    *out_len = 17;
-    return 0;
+    return pc_ssh_sig_build_open_confirm(&c->flow, c->peer_id, c->local_id, out, cap, out_len);
 }
 
 // ---------------------------------------------------------------------------
@@ -375,9 +354,7 @@ int pc_ssh_channel_open_forwarded(uint8_t i, const char *conn_addr, uint16_t con
     c->type = SshChanType::SSH_CHAN_FORWARDED_TCPIP;
     c->local_id = (uint32_t)slot;
     c->peer_id = 0;
-    c->local_window = SSH_CHAN_WINDOW;
-    c->peer_window = 0;
-    c->peer_max_pkt = 0;
+    pc_ssh_flow_init(&c->flow, SSH_CHAN_WINDOW, 0, 0);
 
     *out_len = off;
     return slot;
@@ -396,8 +373,8 @@ int pc_ssh_channel_handle_open_confirm(uint8_t i, const uint8_t *payload, size_t
         return -1;
     }
     c->peer_id = rd_u32(payload + 5);
-    c->peer_window = rd_u32(payload + 9);
-    c->peer_max_pkt = rd_u32(payload + 13);
+    pc_ssh_flow_peer_add(&c->flow, rd_u32(payload + 9));
+    c->flow.peer_max_pkt = rd_u32(payload + 13);
     c->pending = false;
     c->open = true;
     if (s_chcb.forward_confirm_cb)
@@ -487,9 +464,7 @@ int pc_ssh_channel_handle_open(uint8_t i, const uint8_t *payload, size_t len, ui
     c->type = is_dtcpip ? SshChanType::SSH_CHAN_DIRECT_TCPIP : SshChanType::SSH_CHAN_SESSION;
     c->local_id = (uint32_t)slot;
     c->peer_id = sender;
-    c->local_window = SSH_CHAN_WINDOW;
-    c->peer_window = init_window;
-    c->peer_max_pkt = max_pkt;
+    pc_ssh_flow_init(&c->flow, SSH_CHAN_WINDOW, init_window, max_pkt);
 
     if (is_dtcpip)
     {
@@ -645,11 +620,10 @@ int pc_ssh_channel_handle_data(uint8_t i, const uint8_t *payload, size_t len, ui
     {
         return -1;
     }
-    if (dlen > c->local_window)
+    if (!pc_ssh_flow_recv_take(&c->flow, dlen))
     {
         return -1; // peer overran the advertised window (RFC 4254 §5.2)
     }
-    c->local_window -= dlen;
 
     if (dlen > 0)
     {
@@ -688,17 +662,14 @@ int pc_ssh_channel_handle_data(uint8_t i, const uint8_t *payload, size_t len, ui
     }
 
     // Replenish the window once it drops below half.
-    if (c->local_window < SSH_CHAN_WINDOW / 2)
+    uint32_t add = 0;
+    if (cap >= 9 && pc_ssh_flow_replenish_due(&c->flow, &add))
     {
-        uint32_t add = SSH_CHAN_WINDOW - c->local_window;
-        if (cap >= 9)
-        {
-            out[0] = SSH_MSG_CHANNEL_WINDOW_ADJUST;
-            wr_u32(out + 1, c->peer_id);
-            wr_u32(out + 5, add);
-            *out_len = 9;
-            c->local_window += add;
-        }
+        out[0] = SSH_MSG_CHANNEL_WINDOW_ADJUST;
+        wr_u32(out + 1, c->peer_id);
+        wr_u32(out + 5, add);
+        *out_len = 9;
+        pc_ssh_flow_local_credit(&c->flow, add); // the caller emits *out_len unconditionally
     }
     return 0;
 }
@@ -715,22 +686,7 @@ int pc_ssh_channel_build_data(uint8_t i, uint32_t channel, const uint8_t *data, 
     {
         return -1;
     }
-    if (len > c->peer_window || len > c->peer_max_pkt)
-    {
-        return -1; // would exceed the client's window / packet size
-    }
-    if (cap < 1 + 4 + 4 + len)
-    {
-        return -1;
-    }
-
-    out[0] = SSH_MSG_CHANNEL_DATA;
-    wr_u32(out + 1, c->peer_id);
-    wr_u32(out + 5, (uint32_t)len);
-    memcpy(out + 9, data, len);
-    *out_len = 9 + len;
-    c->peer_window -= (uint32_t)len;
-    return 0;
+    return pc_ssh_sig_build_data(&c->flow, c->peer_id, data, len, out, cap, out_len);
 }
 
 // ---------------------------------------------------------------------------
@@ -748,10 +704,7 @@ int pc_ssh_channel_handle_window_adjust(uint8_t i, const uint8_t *payload, size_
     {
         return -1;
     }
-    uint32_t add = rd_u32(payload + 5);
-    // Saturate rather than overflow the 32-bit window.
-    uint32_t w = c->peer_window;
-    c->peer_window = (w + add < w) ? 0xFFFFFFFFu : (w + add);
+    pc_ssh_flow_peer_add(&c->flow, rd_u32(payload + 5));
     return 0;
 }
 
@@ -763,17 +716,11 @@ int pc_ssh_channel_handle_window_adjust(uint8_t i, const uint8_t *payload, size_
 // handler and the app/teardown path).
 static int build_close_chan(SshChannel *c, uint8_t *out, size_t *out_len, size_t cap)
 {
-    if (!c || cap < 10)
+    if (!c || pc_ssh_sig_build_close(c->peer_id, out, cap, out_len) < 0)
     {
         return -1;
     }
-    uint32_t peer = c->peer_id;
-    out[0] = SSH_MSG_CHANNEL_EOF;
-    wr_u32(out + 1, peer);
-    out[5] = SSH_MSG_CHANNEL_CLOSE;
-    wr_u32(out + 6, peer);
-    *out_len = 10;
-    c->open = false;
+    c->open = false; // freeing the slot is the mux's half; the message body is the signaling owner's
     return 0;
 }
 

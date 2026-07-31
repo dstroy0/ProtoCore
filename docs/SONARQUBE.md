@@ -18,8 +18,10 @@ observe. The C/C++ analyzer needs a **compilation database**
    is a no-op until this secret exists.
 3. **Check the keys.** Confirm `sonar.projectKey` and `sonar.organization` in
    [`sonar-project.properties`](../sonar-project.properties) match your SonarCloud
-   project (SonarCloud -> _Information_). The defaults follow SonarCloud's
-   GitHub-import convention (`<owner>_<repo>` and `<owner>`).
+   project (SonarCloud -> _Information_). This project publishes under the bare name
+   `ProtoCore`, not SonarCloud's GitHub-import convention (`<owner>_<repo>`); the
+   organization does follow it (`<owner>`). The README quality-gate badge builds its
+   URL from the project key, so if you change one, change the other.
 
 ## How the compilation database is built
 

@@ -13,35 +13,20 @@
 #include "shared_primitives/bytes.h"
 #include <string.h>
 
-void pc_msgpack_init(MsgpackWriter *w, uint8_t *buf, size_t cap)
-{
-    pc_bw_init(w, buf, cap);
-}
-
-size_t pc_msgpack_len(const MsgpackWriter *w)
-{
-    return pc_bw_len(w);
-}
-
-bool pc_msgpack_ok(const MsgpackWriter *w)
-{
-    return pc_bw_ok(w);
-}
-
-// Thin local names over the shared byte cursor (bytes.h) so the call sites
+// Thin local names over the shared byte verbs (bytes.h) so the call sites
 // below read the same as before; the cursor invariants live in one place.
-static void put(MsgpackWriter *w, uint8_t b)
+static void put(pc_span *w, uint8_t b)
 {
     pc_bw_put(w, b);
 }
 
 // Write the low @p nbytes of @p val, big-endian (MessagePack is network order).
-static void put_be(MsgpackWriter *w, uint64_t val, int nbytes)
+static void put_be(pc_span *w, uint64_t val, int32_t nbytes)
 {
     pc_bw_put_be(w, val, nbytes);
 }
 
-void pc_msgpack_uint(MsgpackWriter *w, uint64_t v)
+void pc_msgpack_uint(pc_span *w, uint64_t v)
 {
     if (v <= 0x7f)
     {
@@ -69,7 +54,7 @@ void pc_msgpack_uint(MsgpackWriter *w, uint64_t v)
     }
 }
 
-void pc_msgpack_int(MsgpackWriter *w, int64_t v)
+void pc_msgpack_int(pc_span *w, int64_t v)
 {
     if (v >= 0)
     {
@@ -102,7 +87,7 @@ void pc_msgpack_int(MsgpackWriter *w, int64_t v)
     }
 }
 
-void pc_msgpack_str_n(MsgpackWriter *w, const char *s, size_t len)
+void pc_msgpack_str_n(pc_span *w, const char *s, size_t len)
 {
     if (len <= 31)
     {
@@ -129,12 +114,12 @@ void pc_msgpack_str_n(MsgpackWriter *w, const char *s, size_t len)
     }
 }
 
-void pc_msgpack_str(MsgpackWriter *w, const char *s)
+void pc_msgpack_str(pc_span *w, const char *s)
 {
     pc_msgpack_str_n(w, s, s ? strnlen(s, w->cap + 1) : 0);
 }
 
-void pc_msgpack_bytes(MsgpackWriter *w, const uint8_t *data, size_t len)
+void pc_msgpack_bytes(pc_span *w, const uint8_t *data, size_t len)
 {
     if (len <= 0xff)
     {
@@ -157,17 +142,17 @@ void pc_msgpack_bytes(MsgpackWriter *w, const uint8_t *data, size_t len)
     }
 }
 
-void pc_msgpack_bool(MsgpackWriter *w, bool b)
+void pc_msgpack_bool(pc_span *w, bool b)
 {
     put(w, b ? 0xc3 : 0xc2);
 }
 
-void pc_msgpack_nil(MsgpackWriter *w)
+void pc_msgpack_null(pc_span *w)
 {
     put(w, 0xc0);
 }
 
-void pc_msgpack_float(MsgpackWriter *w, float f)
+void pc_msgpack_float(pc_span *w, float f)
 {
     uint32_t bits;
     memcpy(&bits, &f, sizeof(bits));
@@ -175,7 +160,7 @@ void pc_msgpack_float(MsgpackWriter *w, float f)
     put_be(w, bits, 4);
 }
 
-void pc_msgpack_array(MsgpackWriter *w, size_t count)
+void pc_msgpack_array(pc_span *w, size_t count)
 {
     if (count <= 15)
     {
@@ -193,7 +178,7 @@ void pc_msgpack_array(MsgpackWriter *w, size_t count)
     }
 }
 
-void pc_msgpack_map(MsgpackWriter *w, size_t count)
+void pc_msgpack_map(pc_span *w, size_t count)
 {
     if (count <= 15)
     {
@@ -211,96 +196,92 @@ void pc_msgpack_map(MsgpackWriter *w, size_t count)
     }
 }
 
+void pc_msgpack_label(pc_span *w, const char *name, int64_t num)
+{
+    (void)name; // the binary packs carry the integer label form, as CBOR does
+    pc_msgpack_int(w, num);
+}
+
 // ---------------------------------------------------------------------------
 // Decoder
 // ---------------------------------------------------------------------------
 
-void pc_msgpack_reader_init(MsgpackReader *r, const uint8_t *buf, size_t len)
-{
-    pc_br_init(r, buf, len);
-}
-
-bool pc_msgpack_reader_ok(const MsgpackReader *r)
-{
-    return pc_br_ok(r);
-}
-
 // Read @p nbytes big-endian immediately after the format byte at r->pos, advancing
 // past the format byte and the argument (shared byte cursor, bytes.h).
-static bool take_be(MsgpackReader *r, size_t nbytes, uint64_t *out)
+static bool take_be(pc_cspan *r, size_t nbytes, uint64_t *out)
 {
     return pc_br_take_be(r, nbytes, out);
 }
 
-MsgpackType pc_msgpack_peek(MsgpackReader *r)
+pc_codec_type pc_msgpack_peek(pc_cspan *r)
 {
     if (r->err || r->pos >= r->len)
     {
-        return MsgpackType::MSGPACK_TYPE_INVALID;
+        return pc_codec_type::PC_CODEC_INVALID;
     }
     uint8_t b = r->buf[r->pos];
     if (b <= 0x7f)
     {
-        return MsgpackType::MSGPACK_TYPE_UINT; // positive fixint
+        return pc_codec_type::PC_CODEC_UINT; // positive fixint
     }
     if (b >= 0xe0)
     {
-        return MsgpackType::MSGPACK_TYPE_INT; // negative fixint
+        return pc_codec_type::PC_CODEC_INT; // negative fixint
     }
     // b is now in [0x80, 0xdf]; each fix* range's lower bound is already
     // established by the preceding checks, so test only the ascending upper bound.
     if (b <= 0x8f)
     {
-        return MsgpackType::MSGPACK_TYPE_MAP; // fixmap   (0x80-0x8f)
+        return pc_codec_type::PC_CODEC_MAP; // fixmap   (0x80-0x8f)
     }
     if (b <= 0x9f)
     {
-        return MsgpackType::MSGPACK_TYPE_ARRAY; // fixarray (0x90-0x9f)
+        return pc_codec_type::PC_CODEC_ARRAY; // fixarray (0x90-0x9f)
     }
     if (b <= 0xbf)
     {
-        return MsgpackType::MSGPACK_TYPE_STR; // fixstr   (0xa0-0xbf)
+        return pc_codec_type::PC_CODEC_STR; // fixstr   (0xa0-0xbf)
     }
     switch (b)
     {
     case 0xc0:
-        return MsgpackType::MSGPACK_TYPE_NIL;
+        return pc_codec_type::PC_CODEC_NULL;
     case 0xc2:
     case 0xc3:
-        return MsgpackType::MSGPACK_TYPE_BOOL;
+        return pc_codec_type::PC_CODEC_BOOL;
     case 0xc4:
     case 0xc5:
     case 0xc6:
-        return MsgpackType::MSGPACK_TYPE_BIN;
+        return pc_codec_type::PC_CODEC_BYTES;
     case 0xca:
     case 0xcb:
-        return MsgpackType::MSGPACK_TYPE_FLOAT;
+        return pc_codec_type::PC_CODEC_FLOAT;
     case 0xcc:
     case 0xcd:
     case 0xce:
     case 0xcf:
-        return MsgpackType::MSGPACK_TYPE_UINT;
+        return pc_codec_type::PC_CODEC_UINT;
     case 0xd0:
     case 0xd1:
     case 0xd2:
     case 0xd3:
-        return MsgpackType::MSGPACK_TYPE_INT;
+        return pc_codec_type::PC_CODEC_INT;
     case 0xd9:
     case 0xda:
     case 0xdb:
-        return MsgpackType::MSGPACK_TYPE_STR;
+        return pc_codec_type::PC_CODEC_STR;
     case 0xdc:
     case 0xdd:
-        return MsgpackType::MSGPACK_TYPE_ARRAY;
+        return pc_codec_type::PC_CODEC_ARRAY;
     case 0xde:
     case 0xdf:
-        return MsgpackType::MSGPACK_TYPE_MAP;
+        return pc_codec_type::PC_CODEC_MAP;
     default:
-        return MsgpackType::MSGPACK_TYPE_INVALID; // 0xc1, ext (0xc7-0xc9, 0xd4-0xd8)
+        return pc_codec_type::PC_CODEC_INVALID; // 0xc1, ext (0xc7-0xc9, 0xd4-0xd8)
     }
 }
 
-bool pc_msgpack_read_uint(MsgpackReader *r, uint64_t *out)
+bool pc_msgpack_read_uint(pc_cspan *r, uint64_t *out)
 {
     if (r->err || r->pos >= r->len)
     {
@@ -349,7 +330,7 @@ bool pc_msgpack_read_uint(MsgpackReader *r, uint64_t *out)
     return true;
 }
 
-bool pc_msgpack_read_int(MsgpackReader *r, int64_t *out)
+bool pc_msgpack_read_int(pc_cspan *r, int64_t *out)
 {
     if (r->err || r->pos >= r->len)
     {
@@ -434,7 +415,7 @@ bool pc_msgpack_read_int(MsgpackReader *r, int64_t *out)
     }
 }
 
-bool pc_msgpack_read_bool(MsgpackReader *r, bool *out)
+bool pc_msgpack_read_bool(pc_cspan *r, bool *out)
 {
     if (r->err || r->pos >= r->len)
     {
@@ -459,7 +440,7 @@ bool pc_msgpack_read_bool(MsgpackReader *r, bool *out)
     return true;
 }
 
-bool pc_msgpack_read_nil(MsgpackReader *r)
+bool pc_msgpack_read_null(pc_cspan *r)
 {
     if (r->err || r->pos >= r->len || r->buf[r->pos] != 0xc0)
     {
@@ -470,7 +451,7 @@ bool pc_msgpack_read_nil(MsgpackReader *r)
     return true;
 }
 
-bool pc_msgpack_read_float(MsgpackReader *r, float *out)
+bool pc_msgpack_read_float(pc_cspan *r, float *out)
 {
     if (r->err || r->pos >= r->len)
     {
@@ -505,7 +486,7 @@ bool pc_msgpack_read_float(MsgpackReader *r, float *out)
 }
 
 // Shared body for the str family (fixstr / str8/16/32) and bin family (bin8/16/32).
-static bool read_blob(MsgpackReader *r, bool want_str, const uint8_t **out, size_t *len)
+static bool read_blob(pc_cspan *r, bool want_str, const uint8_t **out, size_t *len)
 {
     if (r->err || r->pos >= r->len)
     {
@@ -564,18 +545,18 @@ static bool read_blob(MsgpackReader *r, bool want_str, const uint8_t **out, size
     return true;
 }
 
-bool pc_msgpack_read_str(MsgpackReader *r, const char **out, size_t *len)
+bool pc_msgpack_read_str(pc_cspan *r, const char **out, size_t *len)
 {
     return read_blob(r, true, (const uint8_t **)out, len);
 }
 
-bool pc_msgpack_read_bytes(MsgpackReader *r, const uint8_t **out, size_t *len)
+bool pc_msgpack_read_bytes(pc_cspan *r, const uint8_t **out, size_t *len)
 {
     return read_blob(r, false, out, len);
 }
 
 // Shared body for the array family (fixarray / array16/32) and map family.
-static bool read_count(MsgpackReader *r, bool want_map, size_t *count)
+static bool read_count(pc_cspan *r, bool want_map, size_t *count)
 {
     if (r->err || r->pos >= r->len)
     {
@@ -617,12 +598,12 @@ static bool read_count(MsgpackReader *r, bool want_map, size_t *count)
     return true;
 }
 
-bool pc_msgpack_read_array(MsgpackReader *r, size_t *count)
+bool pc_msgpack_read_array(pc_cspan *r, size_t *count)
 {
     return read_count(r, false, count);
 }
 
-bool pc_msgpack_read_map(MsgpackReader *r, size_t *count)
+bool pc_msgpack_read_map(pc_cspan *r, size_t *count)
 {
     return read_count(r, true, count);
 }

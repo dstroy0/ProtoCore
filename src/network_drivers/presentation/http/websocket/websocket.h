@@ -63,6 +63,30 @@
 #include "network_drivers/transport/tcp.h"
 #include "protocore_config.h"
 
+#if PC_ENABLE_WS_DEFLATE
+#include "network_drivers/presentation/codec/deflate/deflate.h"
+#include "network_drivers/presentation/codec/inflate/inflate.h"
+
+/**
+ * @brief Scratch borrowed while compressing one outbound message.
+ *
+ * The deflate state and the output buffer are live together. PC_WS_DEFLATE_MAX bounds the payload
+ * the compressor will accept, which is what turns `len + len/8 + 16` into a constant.
+ */
+#define PC_SCRATCH_WORK_WS_SEND (DEFLATE_SCRATCH_SIZE + PC_WS_DEFLATE_MAX + (PC_WS_DEFLATE_MAX / 8) + 16)
+
+/**
+ * @brief Scratch borrowed while decompressing one reassembled inbound message.
+ *
+ * Input (message + the RFC 7692 00 00 ff ff marker), output, and the inflate tables are live
+ * together. The parser closes 1009 before a message exceeds WS_FRAME_SIZE, which bounds the input.
+ */
+#define PC_SCRATCH_WORK_WS_RECV (WS_FRAME_SIZE + 4 + WS_FRAME_SIZE + INFLATE_SCRATCH_SIZE)
+#else
+#define PC_SCRATCH_WORK_WS_SEND 0
+#define PC_SCRATCH_WORK_WS_RECV 0
+#endif
+
 // ---------------------------------------------------------------------------
 // WebSocket opcodes (RFC 6455 §5.2)
 // ---------------------------------------------------------------------------

@@ -188,7 +188,7 @@ static void rbridge_pump_to_client(SshRFwdBridge *br)
     for (int burst = 0; burst < 4; burst++)
     {
         size_t avail = pc_conn_available(br->conn_slot);
-        uint32_t win = c->peer_window;
+        uint32_t win = pc_ssh_flow_peer_window(&c->flow);
         if (avail == 0 || win == 0 || !c->open)
         {
             break;
@@ -198,9 +198,9 @@ static void rbridge_pump_to_client(SshRFwdBridge *br)
         {
             budget = win;
         }
-        if (c->peer_max_pkt && budget > c->peer_max_pkt)
+        if (c->flow.peer_max_pkt && budget > c->flow.peer_max_pkt)
         {
-            budget = c->peer_max_pkt;
+            budget = c->flow.peer_max_pkt;
         }
         if (budget > sizeof(buf))
         {
@@ -499,7 +499,7 @@ void pc_ssh_forward_pump(uint8_t ssh_slot)
         for (int burst = 0; burst < kFwdBurst; burst++)
         {
             size_t avail = pc_client_available(f->cid);
-            uint32_t win = c->peer_window;
+            uint32_t win = pc_ssh_flow_peer_window(&c->flow);
             if (avail == 0 || win == 0)
             {
                 break;
@@ -509,9 +509,9 @@ void pc_ssh_forward_pump(uint8_t ssh_slot)
             {
                 budget = win;
             }
-            if (c->peer_max_pkt && budget > c->peer_max_pkt)
+            if (c->flow.peer_max_pkt && budget > c->flow.peer_max_pkt)
             {
-                budget = c->peer_max_pkt;
+                budget = c->flow.peer_max_pkt;
             }
             if (budget > sizeof(buf))
             {

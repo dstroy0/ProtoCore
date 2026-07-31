@@ -606,8 +606,8 @@ void test_conn_send_close_open_channel()
     ssh_chan[j][0].open = true;
     ssh_chan[j][0].local_id = 0;
     ssh_chan[j][0].peer_id = 1;
-    ssh_chan[j][0].peer_window = 100000;
-    ssh_chan[j][0].peer_max_pkt = 100000;
+    ssh_chan[j][0].flow.peer_window = 100000;
+    ssh_chan[j][0].flow.peer_max_pkt = 100000;
 
     const uint8_t data[5] = {'h', 'e', 'l', 'l', 'o'};
     tcp_capture_reset();
@@ -636,10 +636,10 @@ void test_send_channel_reject_paths()
     TEST_ASSERT_EQUAL_INT(-1, pc_ssh_conn_close_channel(j, 0)); // channel 0 is not open -> build_close fails
 
     ssh_chan[j][0].open = true;
-    ssh_chan[j][0].peer_window = 2;
-    ssh_chan[j][0].peer_max_pkt = 100000;
+    ssh_chan[j][0].flow.peer_window = 2;
+    ssh_chan[j][0].flow.peer_max_pkt = 100000;
     const uint8_t data[5] = {1, 2, 3, 4, 5};
-    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_conn_send(j, 0, data, sizeof(data))); // 5 > peer_window 2
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_conn_send(j, 0, data, sizeof(data))); // 5 > peer window 2
 
     // The sole channel slot is occupied -> no room for a server-initiated forward.
     TEST_ASSERT_EQUAL_INT(-1, pc_ssh_conn_open_forwarded(j, "h", 22, "o", 1));
@@ -707,8 +707,8 @@ void test_conn_outbound_arena_exhausted()
     ssh_chan[j][0].open = true;
     ssh_chan[j][0].local_id = 0;
     ssh_chan[j][0].peer_id = 1;
-    ssh_chan[j][0].peer_window = 100000;
-    ssh_chan[j][0].peer_max_pkt = 100000;
+    ssh_chan[j][0].flow.peer_window = 100000;
+    ssh_chan[j][0].flow.peer_max_pkt = 100000;
     const uint8_t data[3] = {1, 2, 3};
 
     drain_arena();
@@ -727,8 +727,8 @@ void test_conn_outbound_pkt_send_fails()
     ssh_chan[j][0].open = true;
     ssh_chan[j][0].local_id = 0;
     ssh_chan[j][0].peer_id = 1;
-    ssh_chan[j][0].peer_window = 100000;
-    ssh_chan[j][0].peer_max_pkt = 100000;
+    ssh_chan[j][0].flow.peer_window = 100000;
+    ssh_chan[j][0].flow.peer_max_pkt = 100000;
     ssh_pkt[j].seq_no_send = SSH_SEQ_CLOSE_THRESHOLD;
     const uint8_t data[3] = {1, 2, 3};
 
@@ -780,8 +780,8 @@ void test_conn_outbound_arena_fits_payload_not_wire()
     ssh_chan[j][0].open = true;
     ssh_chan[j][0].local_id = 0;
     ssh_chan[j][0].peer_id = 1;
-    ssh_chan[j][0].peer_window = 100000;
-    ssh_chan[j][0].peer_max_pkt = 100000;
+    ssh_chan[j][0].flow.peer_window = 100000;
+    ssh_chan[j][0].flow.peer_max_pkt = 100000;
 
     scratch_reset();
     while (scratch_capacity() - scratch_used() >= SSH_WIRE_CAP)

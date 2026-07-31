@@ -97,11 +97,9 @@
 #include <stdio.h>
 #include <string.h>
 
-// The outbound-transfer continuation types (FileSend/ChunkSend/SendCtx) live in
-// server/protocore_internal.h so the split file_serving / chunked handler TUs share the same
-// per-slot state. This is the single owning definition of that state (external linkage, but the
-// sole definition - the one named owner).
-SendCtx s_send;
+// Outbound-transfer state is not held here. Each kind of transfer belongs to the TU that runs it:
+// the chunked-send state to server/response.cpp, the file-send state to server/file_serving.cpp.
+// The poll below asks each owner whether it holds a slot instead of reading its state.
 
 /**
  * @brief Convert an HTTP status code to its standard reason phrase.
@@ -1287,14 +1285,14 @@ void PC::http_poll_slot(uint8_t i)
 #if PC_ENABLE_FILE_SERVING
     // A file response in flight owns the slot: page out the next window and
     // skip the rest of the pipeline until the whole body has been sent.
-    if (s_send.file[i].active)
+    if (pc_file_holds_slot(i))
     {
         file_send_pump(i);
         return;
     }
 #endif
     // Likewise a chunked response in flight: pull + frame the next window.
-    if (s_send.chunk[i].active)
+    if (pc_resp_holds_slot(i))
     {
         chunk_send_pump(i);
         return;

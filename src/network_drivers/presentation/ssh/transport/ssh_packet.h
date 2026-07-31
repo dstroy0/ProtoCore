@@ -190,6 +190,18 @@ extern SshPacketState ssh_pkt[MAX_SSH_CONNS];
 #define SSH_MAX_MAC 64 // largest MAC tag (hmac-sha2-512); chacha's Poly1305 tag is 16
 #define SSH_WIRE_CAP ((size_t)(4 + 1 + SSH_MAX_EFFECTIVE_PAYLOAD + SSH_MAX_PAD + SSH_MAX_MAC))
 
+// Scratch the transport layer (RFC 4253) borrows to frame one packet, and nothing more - the wire
+// buffer and the payload being framed belong to whoever called in, because this layer is the framer,
+// not the wire. The receive side is the peak: a plaintext scratch (largest across the cipher modes)
+// is live while the payload is decompressed into a second buffer. The send side borrows only the
+// compressor's output bound. RFC 4251 sec 1 stacks auth and connection on top of this, so the arena
+// sums the layers; it does not fold them into each other.
+#if PC_ENABLE_SSH_ZLIB
+#define PC_SCRATCH_WORK_SSH_TRANSPORT ((size_t)(SSH_PKT_BUF_SIZE + 64 + SSH_PKT_BUF_SIZE))
+#else
+#define PC_SCRATCH_WORK_SSH_TRANSPORT ((size_t)(SSH_PKT_BUF_SIZE + 64))
+#endif
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------

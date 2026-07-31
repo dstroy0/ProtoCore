@@ -411,6 +411,7 @@
         "+<network_drivers/presentation/ssh/transport/ssh_transport.cpp>",
         "+<network_drivers/presentation/ssh/auth/ssh_auth.cpp>",
         "+<network_drivers/presentation/ssh/connection/ssh_channel.cpp>",
+        "+<network_drivers/presentation/ssh/connection/ssh_flow_control.cpp>",
         "+<network_drivers/presentation/ssh/connection/ssh_server.cpp>",
         "+<server/mmgr/scratch.cpp>",
         "+<server/mmgr/arena.cpp>",
@@ -453,6 +454,7 @@
         "+<network_drivers/presentation/ssh/transport/ssh_transport.cpp>",
         "+<network_drivers/presentation/ssh/auth/ssh_auth.cpp>",
         "+<network_drivers/presentation/ssh/connection/ssh_channel.cpp>",
+        "+<network_drivers/presentation/ssh/connection/ssh_flow_control.cpp>",
         "+<network_drivers/presentation/ssh/connection/ssh_server.cpp>",
         "+<server/mmgr/scratch.cpp>",
         "+<server/mmgr/arena.cpp>",
@@ -489,6 +491,7 @@
         "+<network_drivers/presentation/ssh/transport/ssh_transport.cpp>",
         "+<network_drivers/presentation/ssh/auth/ssh_auth.cpp>",
         "+<network_drivers/presentation/ssh/connection/ssh_channel.cpp>",
+        "+<network_drivers/presentation/ssh/connection/ssh_flow_control.cpp>",
         "+<network_drivers/presentation/ssh/connection/ssh_server.cpp>",
         "+<crypto/hash/sha3.cpp>",
         "+<crypto/pqc/mlkem.cpp>",
@@ -528,6 +531,7 @@
         "+<network_drivers/presentation/ssh/transport/ssh_transport.cpp>",
         "+<network_drivers/presentation/ssh/auth/ssh_auth.cpp>",
         "+<network_drivers/presentation/ssh/connection/ssh_channel.cpp>",
+        "+<network_drivers/presentation/ssh/connection/ssh_flow_control.cpp>",
         "+<network_drivers/presentation/ssh/connection/ssh_server.cpp>",
         "+<server/mmgr/scratch.cpp>",
         "+<server/mmgr/arena.cpp>",
@@ -579,6 +583,7 @@
         "+<network_drivers/presentation/ssh/transport/ssh_transport.cpp>",
         "+<network_drivers/presentation/ssh/auth/ssh_auth.cpp>",
         "+<network_drivers/presentation/ssh/connection/ssh_channel.cpp>",
+        "+<network_drivers/presentation/ssh/connection/ssh_flow_control.cpp>",
         "+<network_drivers/presentation/ssh/connection/ssh_server.cpp>",
         "+<network_drivers/presentation/ssh/connection/ssh_conn.cpp>",
         "+<server/mmgr/secure.cpp>",
@@ -1117,7 +1122,8 @@
       "src": [
         "+<services/iot/senml/senml.cpp>",
         "+<network_drivers/presentation/codec/json/json.cpp>",
-        "+<network_drivers/presentation/codec/cbor/cbor.cpp>"
+        "+<network_drivers/presentation/codec/cbor/cbor.cpp>",
+        "+<network_drivers/presentation/codec/codec.cpp>"
       ],
       "tests": ["test_senml"]
     },
@@ -1498,7 +1504,8 @@
         "+<server/mmgr/secure.cpp>",
         "+<server/mmgr/scratch.cpp>",
         "+<network_drivers/session/worker.cpp>",
-        "+<board_drivers/hal/portable/portable_platform.cpp>"
+        "+<board_drivers/hal/portable/portable_platform.cpp>",
+        "+<network_drivers/presentation/codec/codec.cpp>"
       ],
       "tests": ["test_pentest"]
     },
@@ -1911,6 +1918,7 @@
         "+<network_drivers/presentation/ssh/transport/ssh_transport.cpp>",
         "+<network_drivers/presentation/ssh/auth/ssh_auth.cpp>",
         "+<network_drivers/presentation/ssh/connection/ssh_channel.cpp>",
+        "+<network_drivers/presentation/ssh/connection/ssh_flow_control.cpp>",
         "+<network_drivers/presentation/ssh/connection/ssh_server.cpp>",
         "+<network_drivers/presentation/codec/inflate/inflate.cpp>",
         "+<server/mmgr/scratch.cpp>",
@@ -2041,13 +2049,19 @@
     "native_cbor": {
       "desc": "CBOR (RFC 8949) encoder (network_drivers/presentation/codec/cbor): a pure byte-output\ncodec, host-tested against the RFC 8949 Appendix A vectors.",
       "flags": ["-DPC_ENABLE_CBOR=1"],
-      "src": ["+<network_drivers/presentation/codec/cbor/cbor.cpp>"],
+      "src": [
+        "+<network_drivers/presentation/codec/cbor/cbor.cpp>",
+        "+<network_drivers/presentation/codec/codec.cpp>"
+      ],
       "tests": ["test_cbor"]
     },
     "native_msgpack": {
       "desc": "MessagePack encoder (network_drivers/presentation/codec/msgpack): a pure byte-output\ncodec, host-tested against the spec encodings.",
       "flags": ["-DPC_ENABLE_MSGPACK=1"],
-      "src": ["+<network_drivers/presentation/codec/msgpack/msgpack.cpp>"],
+      "src": [
+        "+<network_drivers/presentation/codec/msgpack/msgpack.cpp>",
+        "+<network_drivers/presentation/codec/codec.cpp>"
+      ],
       "tests": ["test_msgpack"]
     },
     "native_gpio_map": {
@@ -2653,7 +2667,8 @@
         "+<server/mmgr/scratch.cpp>",
         "+<network_drivers/session/worker.cpp>",
         "+<board_drivers/hal/portable/portable_platform.cpp>",
-        "+<shared_primitives/frame.cpp>"
+        "+<shared_primitives/frame.cpp>",
+        "+<network_drivers/presentation/codec/codec.cpp>"
       ],
       "tests": ["test_dispatch"]
     },

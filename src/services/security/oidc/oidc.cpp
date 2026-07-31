@@ -410,23 +410,21 @@ pc_oidc_result pc_oidc_verify_with_key(const char *token, size_t token_len, cons
 
     // Borrow the large decode buffers from the per-dispatch scratch arena rather
     // than the worker stack (was ~2.6 KB of stack frame: hdr + sig + pl + iss).
-    // ScratchScope reclaims them on every return path; fail closed if the arena is
-    // exhausted. Sizes: header 512, signature PC_OIDC_RSA_BYTES, payload
-    // PC_OIDC_MAX_LEN, issuer 256.
-    const size_t hdr_cap = 512;
-    const size_t iss_cap = 256;
+    // ScratchScope reclaims them on every return path. The four are live together,
+    // so PC_SCRATCH_WORK_OIDC is their sum and the arena is sized to hold it.
+    static_assert(PC_SCRATCH_WORK_OIDC <= PC_SCRATCH_ARENA_SIZE, "OIDC scratch exceeds the arena");
     ScratchScope scratch;
-    uint8_t *hdr = (uint8_t *)scratch_alloc(hdr_cap, 1);
+    uint8_t *hdr = (uint8_t *)scratch_alloc(PC_OIDC_HDR_LEN, 1);
     uint8_t *sig = (uint8_t *)scratch_alloc(PC_OIDC_RSA_BYTES, 1);
     uint8_t *pl = (uint8_t *)scratch_alloc(PC_OIDC_MAX_LEN, 1);
-    char *iss = (char *)scratch_alloc(iss_cap, 1);
+    char *iss = (char *)scratch_alloc(PC_OIDC_ISS_LEN, 1);
     if (!hdr || !sig || !pl || !iss)
     {
         return pc_oidc_result::PC_OIDC_ERR_FORMAT; // scratch exhausted: fail closed
     }
 
     // Header: require alg == RS256 (rejects alg:none / HS256 confusion).
-    size_t hn = pc_base64url_decode(seg[0], seglen[0], hdr, hdr_cap - 1);
+    size_t hn = pc_base64url_decode(seg[0], seglen[0], hdr, PC_OIDC_HDR_LEN - 1);
     if (hn == 0)
     {
         return pc_oidc_result::PC_OIDC_ERR_FORMAT;
@@ -464,7 +462,7 @@ pc_oidc_result pc_oidc_verify_with_key(const char *token, size_t token_len, cons
 
     if (expected_iss && *expected_iss)
     {
-        if (!get_str(ps, pe, "iss", iss, iss_cap) || strcmp(iss, expected_iss) != 0)
+        if (!get_str(ps, pe, "iss", iss, PC_OIDC_ISS_LEN) || strcmp(iss, expected_iss) != 0)
         {
             return pc_oidc_result::PC_OIDC_ERR_ISS;
         }

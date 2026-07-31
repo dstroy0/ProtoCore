@@ -2212,7 +2212,7 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
     * **Assertions**:
       * <code>Assert not null (strstr(out, "Transfer-Encoding: chunked\\r\\n"))</code>
       * <code>Assert null (strstr(out, "0\\r\\n\\r\\n"))</code>
-      * <code>Assert false (s_send.chunk[0].active)</code>
+      * <code>Assert false (pc_resp_holds_slot(0))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -2222,9 +2222,9 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
     * **Assertions**:
       * <code>Assert not null (strstr(tcp_captured(), "Transfer-Encoding: chunked\\r\\n"))</code>
       * <code>Assert not null (strstr(tcp_captured(), "28\\r\\nqqqq"))</code>
-      * <code>Assert false (s_send.chunk[0].active)</code>
-      * <code>Assert true (s_send.chunk[0].active)</code>
-      * <code>Assert false (s_send.chunk[0].active)</code>
+      * <code>Assert false (pc_resp_holds_slot(0))</code>
+      * <code>Assert true (pc_resp_holds_slot(0))</code>
+      * <code>Assert false (pc_resp_holds_slot(0))</code>
       * <code>Assert null (strstr(tcp_captured(), "qqqq"))</code>
   </details>
 
@@ -4409,7 +4409,7 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
       * <code>Assert true (pc_cbor_read_array(&r, &c))</code>
       * <code>TEST_ASSERT_EQUAL_size_t(3, c);</code>
       * <code>Assert false (pc_cbor_read_array(&r, &c))</code>
-      * <code>Assert false (pc_cbor_read_text(&r, &s, &sl))</code>
+      * <code>Assert false (pc_cbor_read_str(&r, &s, &sl))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -4418,7 +4418,7 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
     * **Objective**: Cbor head reserved and trunc
     * **Assertions**:
       * <code>Assert false (pc_cbor_read_uint(&r, &v))</code>
-      * <code>Assert false (pc_cbor_reader_ok(&r))</code>
+      * <code>Assert false (pc_cspan_ok(r))</code>
       * <code>Assert false (pc_cbor_read_float(&r, &fv))</code>
       * <code>Assert false (pc_cbor_read_float(&r, &fv))</code>
   </details>
@@ -4433,7 +4433,7 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
       * <code>Assert false (pc_cbor_read_bool(&r, &bv))</code>
       * <code>Assert false (pc_cbor_read_null(&r))</code>
       * <code>Assert false (pc_cbor_read_float(&r, &fv))</code>
-      * <code>Assert false (pc_cbor_read_text(&r, &s, &n))</code>
+      * <code>Assert false (pc_cbor_read_str(&r, &s, &n))</code>
       * <code>Assert false (pc_cbor_read_bytes(&r, &bp, &n))</code>
       * <code>Assert false (pc_cbor_read_array(&r, &c))</code>
       * <code>Assert false (pc_cbor_read_map(&r, &c))</code>
@@ -4444,7 +4444,7 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
 
     * **Objective**: Uint
     * **Assertions**:
-      * <code>Assert true (pc_cbor_ok(&w))</code>
+      * <code>Assert true (pc_span_ok(w))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -4452,16 +4452,16 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
 
     * **Objective**: Peek each type
     * **Assertions**:
-      * <code>Assert equal int (CborType::CBOR_TYPE_INT, pc_cbor_peek(&r))</code>
-      * <code>Assert equal int (CborType::CBOR_TYPE_BYTES, pc_cbor_peek(&r))</code>
-      * <code>Assert equal int (CborType::CBOR_TYPE_TEXT, pc_cbor_peek(&r))</code>
-      * <code>Assert equal int (CborType::CBOR_TYPE_ARRAY, pc_cbor_peek(&r))</code>
-      * <code>Assert equal int (CborType::CBOR_TYPE_MAP, pc_cbor_peek(&r))</code>
-      * <code>Assert equal int (CborType::CBOR_TYPE_BOOL, pc_cbor_peek(&r))</code>
-      * <code>Assert equal int (CborType::CBOR_TYPE_NULL, pc_cbor_peek(&r))</code>
-      * <code>Assert equal int (CborType::CBOR_TYPE_FLOAT, pc_cbor_peek(&r))</code>
-      * <code>Assert equal int (CborType::CBOR_TYPE_INVALID, pc_cbor_peek(&r))</code>
-      * <code>Assert equal int (CborType::CBOR_TYPE_INVALID, pc_cbor_peek(&r))</code>
+      * <code>Assert equal int (pc_codec_type::PC_CODEC_INT, pc_cbor_peek(&r))</code>
+      * <code>Assert equal int (pc_codec_type::PC_CODEC_BYTES, pc_cbor_peek(&r))</code>
+      * <code>Assert equal int (pc_codec_type::PC_CODEC_STR, pc_cbor_peek(&r))</code>
+      * <code>Assert equal int (pc_codec_type::PC_CODEC_ARRAY, pc_cbor_peek(&r))</code>
+      * <code>Assert equal int (pc_codec_type::PC_CODEC_MAP, pc_cbor_peek(&r))</code>
+      * <code>Assert equal int (pc_codec_type::PC_CODEC_BOOL, pc_cbor_peek(&r))</code>
+      * <code>Assert equal int (pc_codec_type::PC_CODEC_NULL, pc_cbor_peek(&r))</code>
+      * <code>Assert equal int (pc_codec_type::PC_CODEC_FLOAT, pc_cbor_peek(&r))</code>
+      * <code>Assert equal int (pc_codec_type::PC_CODEC_INVALID, pc_cbor_peek(&r))</code>
+      * <code>Assert equal int (pc_codec_type::PC_CODEC_INVALID, pc_cbor_peek(&r))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -4469,8 +4469,8 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
 
     * **Objective**: Uint 8byte
     * **Assertions**:
-      * <code>Assert true (pc_cbor_ok(&w))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(9, pc_cbor_len(&w));</code>
+      * <code>Assert true (pc_span_ok(w))</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(9, pc_span_len(w));</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0x1b, b[0]);</code>
       * <code>Assert true (pc_cbor_read_uint(&r, &v))</code>
       * <code>TEST_ASSERT_EQUAL_UINT64(0x123456789ULL, v);</code>
@@ -4491,7 +4491,7 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
     * **Objective**: Read map type mismatch
     * **Assertions**:
       * <code>Assert false (pc_cbor_read_map(&r, &n))</code>
-      * <code>Assert false (pc_cbor_reader_ok(&r))</code>
+      * <code>Assert false (pc_cspan_ok(r))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -4535,8 +4535,8 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
 
     * **Objective**: Overflow fails closed
     * **Assertions**:
-      * <code>Assert false (pc_cbor_ok(&w))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(5, pc_cbor_len(&w));</code>
+      * <code>Assert false (pc_span_ok(w))</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(5, pc_span_len(w));</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -4544,7 +4544,7 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
 
     * **Objective**: Cbor text null ptr
     * **Assertions**:
-      * <code>Assert true (pc_cbor_ok(&w))</code>
+      * <code>Assert true (pc_span_ok(w))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -4553,17 +4553,17 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
     * **Objective**: r is now sticky-erred; every further call must fail closed immediately.
     * **Assertions**:
       * <code>Assert false (pc_cbor_read_uint(&r, &uv))</code>
-      * <code>Assert false (pc_cbor_reader_ok(&r))</code>
+      * <code>Assert false (pc_cspan_ok(r))</code>
       * <code>Assert false (pc_cbor_read_uint(&r, &uv))</code>
       * <code>Assert false (pc_cbor_read_int(&r, &iv))</code>
       * <code>Assert false (pc_cbor_read_bool(&r, &bv))</code>
       * <code>Assert false (pc_cbor_read_null(&r))</code>
       * <code>Assert false (pc_cbor_read_float(&r, &fv))</code>
-      * <code>Assert false (pc_cbor_read_text(&r, &s, &sl))</code>
+      * <code>Assert false (pc_cbor_read_str(&r, &s, &sl))</code>
       * <code>Assert false (pc_cbor_read_bytes(&r, &bp, &sl))</code>
       * <code>Assert false (pc_cbor_read_array(&r, &c))</code>
       * <code>Assert false (pc_cbor_read_map(&r, &c))</code>
-      * <code>Assert equal int (CborType::CBOR_TYPE_INVALID, pc_cbor_peek(&r))</code>
+      * <code>Assert equal int (pc_codec_type::PC_CODEC_INVALID, pc_cbor_peek(&r))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -4571,9 +4571,9 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
 
     * **Objective**: Peek edge cases
     * **Assertions**:
-      * <code>Assert equal int (CborType::CBOR_TYPE_INVALID, pc_cbor_peek(&r))</code>
-      * <code>Assert equal int (CborType::CBOR_TYPE_BOOL, pc_cbor_peek(&r))</code>
-      * <code>Assert equal int (CborType::CBOR_TYPE_FLOAT, pc_cbor_peek(&r))</code>
+      * <code>Assert equal int (pc_codec_type::PC_CODEC_INVALID, pc_cbor_peek(&r))</code>
+      * <code>Assert equal int (pc_codec_type::PC_CODEC_BOOL, pc_cbor_peek(&r))</code>
+      * <code>Assert equal int (pc_codec_type::PC_CODEC_FLOAT, pc_cbor_peek(&r))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -4581,10 +4581,10 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
 
     * **Objective**: Cbor read str length overrun
     * **Assertions**:
-      * <code>Assert false (pc_cbor_read_text(&r, &s, &sl))</code>
-      * <code>Assert false (pc_cbor_reader_ok(&r))</code>
+      * <code>Assert false (pc_cbor_read_str(&r, &s, &sl))</code>
+      * <code>Assert false (pc_cspan_ok(r))</code>
       * <code>Assert false (pc_cbor_read_bytes(&r, &bp, &sl))</code>
-      * <code>Assert false (pc_cbor_reader_ok(&r))</code>
+      * <code>Assert false (pc_cspan_ok(r))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -4592,10 +4592,10 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
 
     * **Objective**: Decode uint
     * **Assertions**:
-      * <code>Assert equal int (CborType::CBOR_TYPE_UINT, pc_cbor_peek(&r))</code>
+      * <code>Assert equal int (pc_codec_type::PC_CODEC_UINT, pc_cbor_peek(&r))</code>
       * <code>Assert true (pc_cbor_read_uint(&r, &v))</code>
       * <code>TEST_ASSERT_EQUAL_UINT64(1000, v);</code>
-      * <code>Assert true (pc_cbor_reader_ok(&r))</code>
+      * <code>Assert true (pc_cspan_ok(r))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -4623,21 +4623,21 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
     * **Assertions**:
       * <code>Assert true (pc_cbor_read_map(&r, &n))</code>
       * <code>TEST_ASSERT_EQUAL_size_t(3, n);</code>
-      * <code>Assert true (pc_cbor_read_text(&r, &k, &kl))</code>
+      * <code>Assert true (pc_cbor_read_str(&r, &k, &kl))</code>
       * <code>Assert equal memory ("heap", k, 4)</code>
       * <code>Assert true (pc_cbor_read_uint(&r, &u))</code>
       * <code>TEST_ASSERT_EQUAL_UINT64(42000, u);</code>
-      * <code>Assert true (pc_cbor_read_text(&r, &k, &kl))</code>
+      * <code>Assert true (pc_cbor_read_str(&r, &k, &kl))</code>
       * <code>Assert equal memory ("name", k, 4)</code>
-      * <code>Assert true (pc_cbor_read_text(&r, &s, &sl))</code>
+      * <code>Assert true (pc_cbor_read_str(&r, &s, &sl))</code>
       * <code>TEST_ASSERT_EQUAL_size_t(3, sl);</code>
       * <code>Assert equal memory ("esp", s, 3)</code>
-      * <code>Assert true (pc_cbor_read_text(&r, &k, &kl))</code>
+      * <code>Assert true (pc_cbor_read_str(&r, &k, &kl))</code>
       * <code>Assert equal memory ("on", k, 2)</code>
       * <code>Assert true (pc_cbor_read_bool(&r, &b))</code>
       * <code>Assert true (b)</code>
-      * <code>Assert true (pc_cbor_reader_ok(&r))</code>
-      * <code>Assert equal int (CborType::CBOR_TYPE_INVALID, pc_cbor_peek(&r))</code>
+      * <code>Assert true (pc_cspan_ok(r))</code>
+      * <code>Assert equal int (pc_codec_type::PC_CODEC_INVALID, pc_cbor_peek(&r))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -4646,7 +4646,7 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
     * **Objective**: Decode truncated
     * **Assertions**:
       * <code>Assert false (pc_cbor_read_uint(&r, &v))</code>
-      * <code>Assert false (pc_cbor_reader_ok(&r))</code>
+      * <code>Assert false (pc_cspan_ok(r))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -4655,7 +4655,7 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
     * **Objective**: Decode type mismatch
     * **Assertions**:
       * <code>Assert false (pc_cbor_read_uint(&r, &v))</code>
-      * <code>Assert false (pc_cbor_reader_ok(&r))</code>
+      * <code>Assert false (pc_cspan_ok(r))</code>
   </details>
 
 </details>
@@ -12360,8 +12360,8 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
     * **Objective**: File send pump connection lost midtransfer
     * **Assertions**:
       * <code>Assert not null (strstr(tcp_captured(), "200 OK"))</code>
-      * <code>Assert true (s_send.file[0].active)</code>
-      * <code>Assert false (s_send.file[0].active)</code>
+      * <code>Assert true (pc_file_holds_slot(0))</code>
+      * <code>Assert false (pc_file_holds_slot(0))</code>
       * <code>Assert null (strstr(tcp_captured(), "ZZZZ"))</code>
   </details>
 
@@ -28779,16 +28779,16 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
 
     * **Objective**: decode it back: exercises read_blob's 32-bit (f32) length branch
     * **Assertions**:
-      * <code>Assert true (pc_msgpack_ok(&w))</code>
+      * <code>Assert true (pc_span_ok(w))</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(0xdb, out[0]);</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(5 + 0x10000, pc_msgpack_len(&w));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(5 + 0x10000, pc_span_len(w));</code>
       * <code>Assert true (pc_msgpack_read_str(&r, &sp, &n))</code>
       * <code>TEST_ASSERT_EQUAL_size_t(0x10000, n);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(0xc6, out[0]);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(0xdd, hdr[0]);</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(5, pc_msgpack_len(&w));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(5, pc_span_len(w));</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(0xdf, hdr[0]);</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(5, pc_msgpack_len(&w));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(5, pc_span_len(w));</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -28915,7 +28915,7 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
     * **Objective**: str16 header claims 300 bytes, body absent
     * **Assertions**:
       * <code>Assert false (pc_msgpack_read_str(&r, &s, &n))</code>
-      * <code>Assert false (pc_msgpack_reader_ok(&r))</code>
+      * <code>Assert false (pc_cspan_ok(r))</code>
       * <code>Assert false (pc_msgpack_read_bytes(&r, &bp, &n))</code>
       * <code>Assert false (pc_msgpack_read_array(&r, &cnt))</code>
       * <code>Assert false (pc_msgpack_read_uint(&r, &uv))</code>
@@ -28968,8 +28968,8 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
 
     * **Objective**: Overflow fails closed
     * **Assertions**:
-      * <code>Assert false (pc_msgpack_ok(&w))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(5, pc_msgpack_len(&w));</code>
+      * <code>Assert false (pc_span_ok(w))</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(5, pc_span_len(w));</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -28977,7 +28977,7 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
 
     * **Objective**: positive fixint, uint8, uint16, uint32, uint64
     * **Assertions**:
-      * <code>Assert equal (MsgpackType::MSGPACK_TYPE_UINT, pc_msgpack_peek(&r))</code>
+      * <code>Assert equal (pc_codec_type::PC_CODEC_UINT, pc_msgpack_peek(&r))</code>
       * <code>Assert true (pc_msgpack_read_uint(&r, &v))</code>
       * <code>TEST_ASSERT_EQUAL_UINT64(0, v);</code>
       * <code>Assert true (pc_msgpack_read_uint(&r, &v))</code>
@@ -28990,8 +28990,8 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
       * <code>TEST_ASSERT_EQUAL_UINT64(65536, v);</code>
       * <code>Assert true (pc_msgpack_read_uint(&r, &v))</code>
       * <code>TEST_ASSERT_EQUAL_UINT64(0x100000000ULL, v);</code>
-      * <code>Assert true (pc_msgpack_reader_ok(&r))</code>
-      * <code>Assert equal (MsgpackType::MSGPACK_TYPE_INVALID, pc_msgpack_peek(&r))</code>
+      * <code>Assert true (pc_cspan_ok(r))</code>
+      * <code>Assert equal (pc_codec_type::PC_CODEC_INVALID, pc_msgpack_peek(&r))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -28999,7 +28999,7 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
 
     * **Objective**: negative fixint (-1, -32), int8 (-128), int16 (-32768), int32 (-2147483648)
     * **Assertions**:
-      * <code>Assert equal (MsgpackType::MSGPACK_TYPE_INT, pc_msgpack_peek(&r))</code>
+      * <code>Assert equal (pc_codec_type::PC_CODEC_INT, pc_msgpack_peek(&r))</code>
       * <code>Assert true (pc_msgpack_read_int(&r, &v))</code>
       * <code>TEST_ASSERT_EQUAL_INT64(-1, v);</code>
       * <code>Assert true (pc_msgpack_read_int(&r, &v))</code>
@@ -29010,7 +29010,7 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
       * <code>TEST_ASSERT_EQUAL_INT64(-32768, v);</code>
       * <code>Assert true (pc_msgpack_read_int(&r, &v))</code>
       * <code>TEST_ASSERT_EQUAL_INT64(-2147483648LL, v);</code>
-      * <code>Assert true (pc_msgpack_reader_ok(&r))</code>
+      * <code>Assert true (pc_cspan_ok(r))</code>
       * <code>Assert true (pc_msgpack_read_int(&r, &v))</code>
       * <code>TEST_ASSERT_EQUAL_INT64(128, v);</code>
   </details>
@@ -29020,11 +29020,11 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
 
     * **Objective**: Decode str and bytes
     * **Assertions**:
-      * <code>Assert equal (MsgpackType::MSGPACK_TYPE_STR, pc_msgpack_peek(&r))</code>
+      * <code>Assert equal (pc_codec_type::PC_CODEC_STR, pc_msgpack_peek(&r))</code>
       * <code>Assert true (pc_msgpack_read_str(&r, &s, &n))</code>
       * <code>TEST_ASSERT_EQUAL_size_t(3, n);</code>
       * <code>Assert equal char array ("abc", s, 3)</code>
-      * <code>Assert equal (MsgpackType::MSGPACK_TYPE_BIN, pc_msgpack_peek(&r))</code>
+      * <code>Assert equal (pc_codec_type::PC_CODEC_BYTES, pc_msgpack_peek(&r))</code>
       * <code>Assert true (pc_msgpack_read_bytes(&r, &bin, &n))</code>
       * <code>TEST_ASSERT_EQUAL_size_t(2, n);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(0xde, bin[0]);</code>
@@ -29036,14 +29036,14 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
 
     * **Objective**: float64 (0xcb) narrows to float
     * **Assertions**:
-      * <code>Assert equal (MsgpackType::MSGPACK_TYPE_NIL, pc_msgpack_peek(&r))</code>
-      * <code>Assert true (pc_msgpack_read_nil(&r))</code>
-      * <code>Assert equal (MsgpackType::MSGPACK_TYPE_BOOL, pc_msgpack_peek(&r))</code>
+      * <code>Assert equal (pc_codec_type::PC_CODEC_NULL, pc_msgpack_peek(&r))</code>
+      * <code>Assert true (pc_msgpack_read_null(&r))</code>
+      * <code>Assert equal (pc_codec_type::PC_CODEC_BOOL, pc_msgpack_peek(&r))</code>
       * <code>Assert true (pc_msgpack_read_bool(&r, &bv))</code>
       * <code>Assert false (bv)</code>
       * <code>Assert true (pc_msgpack_read_bool(&r, &bv))</code>
       * <code>Assert true (bv)</code>
-      * <code>Assert equal (MsgpackType::MSGPACK_TYPE_FLOAT, pc_msgpack_peek(&r))</code>
+      * <code>Assert equal (pc_codec_type::PC_CODEC_FLOAT, pc_msgpack_peek(&r))</code>
       * <code>Assert true (pc_msgpack_read_float(&r, &fv))</code>
       * <code>Assert equal float (1.0f, fv)</code>
       * <code>Assert true (pc_msgpack_read_float(&r, &fv))</code>
@@ -29055,12 +29055,12 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
 
     * **Objective**: Decode array and map
     * **Assertions**:
-      * <code>Assert equal (MsgpackType::MSGPACK_TYPE_ARRAY, pc_msgpack_peek(&r))</code>
+      * <code>Assert equal (pc_codec_type::PC_CODEC_ARRAY, pc_msgpack_peek(&r))</code>
       * <code>Assert true (pc_msgpack_read_array(&r, &count))</code>
       * <code>TEST_ASSERT_EQUAL_size_t(3, count);</code>
       * <code>Assert true (pc_msgpack_read_uint(&r, &v))</code>
       * <code>TEST_ASSERT_EQUAL_UINT64(i + 1, v);</code>
-      * <code>Assert equal (MsgpackType::MSGPACK_TYPE_MAP, pc_msgpack_peek(&r))</code>
+      * <code>Assert equal (pc_codec_type::PC_CODEC_MAP, pc_msgpack_peek(&r))</code>
       * <code>Assert true (pc_msgpack_read_map(&r, &count))</code>
       * <code>TEST_ASSERT_EQUAL_size_t(1, count);</code>
       * <code>Assert true (pc_msgpack_read_str(&r, &s, &n))</code>
@@ -29074,7 +29074,7 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
 
     * **Objective**: Encode a small document, then decode it back and check each field.
     * **Assertions**:
-      * <code>Assert true (pc_msgpack_ok(&w))</code>
+      * <code>Assert true (pc_span_ok(w))</code>
       * <code>Assert true (pc_msgpack_read_map(&r, &count))</code>
       * <code>TEST_ASSERT_EQUAL_size_t(3, count);</code>
       * <code>Assert true (pc_msgpack_read_str(&r, &k, &kn))</code>
@@ -29089,7 +29089,7 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
       * <code>Assert equal char array ("ok", k, 2)</code>
       * <code>Assert true (pc_msgpack_read_bool(&r, &bv))</code>
       * <code>Assert true (bv)</code>
-      * <code>Assert true (pc_msgpack_reader_ok(&r))</code>
+      * <code>Assert true (pc_cspan_ok(r))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -29098,15 +29098,15 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
     * **Objective**: truncated uint16 (header says read 2 more bytes, only 1 present)
     * **Assertions**:
       * <code>Assert false (pc_msgpack_read_uint(&r, &v))</code>
-      * <code>Assert false (pc_msgpack_reader_ok(&r))</code>
+      * <code>Assert false (pc_cspan_ok(r))</code>
       * <code>Assert false (pc_msgpack_read_str(&r, &s, &n))</code>
-      * <code>Assert false (pc_msgpack_reader_ok(&r))</code>
+      * <code>Assert false (pc_cspan_ok(r))</code>
       * <code>Assert false (pc_msgpack_read_uint(&r, &v))</code>
-      * <code>Assert false (pc_msgpack_reader_ok(&r))</code>
-      * <code>Assert equal (MsgpackType::MSGPACK_TYPE_INVALID, pc_msgpack_peek(&r))</code>
+      * <code>Assert false (pc_cspan_ok(r))</code>
+      * <code>Assert equal (pc_codec_type::PC_CODEC_INVALID, pc_msgpack_peek(&r))</code>
       * <code>Assert false (pc_msgpack_read_int(&r, (int64_t *)&v))</code>
-      * <code>Assert equal (MsgpackType::MSGPACK_TYPE_INVALID, pc_msgpack_peek(&r))</code>
-      * <code>Assert false (pc_msgpack_read_nil(&r))</code>
+      * <code>Assert equal (pc_codec_type::PC_CODEC_INVALID, pc_msgpack_peek(&r))</code>
+      * <code>Assert false (pc_msgpack_read_null(&r))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -29114,8 +29114,8 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
 
     * **Objective**: Read nil wrong byte
     * **Assertions**:
-      * <code>Assert false (pc_msgpack_read_nil(&r))</code>
-      * <code>Assert false (pc_msgpack_reader_ok(&r))</code>
+      * <code>Assert false (pc_msgpack_read_null(&r))</code>
+      * <code>Assert false (pc_cspan_ok(r))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -29124,12 +29124,12 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
     * **Objective**: Reads after sticky error
     * **Assertions**:
       * <code>Assert false (pc_msgpack_read_uint(&r, &uv))</code>
-      * <code>Assert false (pc_msgpack_reader_ok(&r))</code>
-      * <code>Assert equal (MsgpackType::MSGPACK_TYPE_INVALID, pc_msgpack_peek(&r))</code>
+      * <code>Assert false (pc_cspan_ok(r))</code>
+      * <code>Assert equal (pc_codec_type::PC_CODEC_INVALID, pc_msgpack_peek(&r))</code>
       * <code>Assert false (pc_msgpack_read_uint(&r, &uv))</code>
       * <code>Assert false (pc_msgpack_read_int(&r, &iv))</code>
       * <code>Assert false (pc_msgpack_read_bool(&r, &bv))</code>
-      * <code>Assert false (pc_msgpack_read_nil(&r))</code>
+      * <code>Assert false (pc_msgpack_read_null(&r))</code>
       * <code>Assert false (pc_msgpack_read_float(&r, &fv))</code>
       * <code>Assert false (pc_msgpack_read_str(&r, &sp, &n))</code>
       * <code>Assert false (pc_msgpack_read_bytes(&r, &bp, &n))</code>
@@ -44628,7 +44628,7 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
       * <code>TEST_ASSERT_EQUAL_size_t(1, fields); // only n - the absent vs is not counted</code>
       * <code>Assert true (pc_cbor_read_int(&rd, &key))</code>
       * <code>TEST_ASSERT_EQUAL_INT64(0, key); // n</code>
-      * <code>Assert true (pc_cbor_read_text(&rd, &s, &sl))</code>
+      * <code>Assert true (pc_cbor_read_str(&rd, &s, &sl))</code>
       * <code>Assert equal memory ("s", s, sl)</code>
   </details>
 
@@ -44677,10 +44677,10 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
       * <code>TEST_ASSERT_EQUAL_INT64(5, iv);</code>
       * <code>Assert true (pc_cbor_read_int(&rd, &key))</code>
       * <code>TEST_ASSERT_EQUAL_INT64(0, key); // n</code>
-      * <code>Assert true (pc_cbor_read_text(&rd, &s, &sl))</code>
+      * <code>Assert true (pc_cbor_read_str(&rd, &s, &sl))</code>
       * <code>Assert true (pc_cbor_read_int(&rd, &key))</code>
       * <code>TEST_ASSERT_EQUAL_INT64(3, key); // vs</code>
-      * <code>Assert true (pc_cbor_read_text(&rd, &s, &sl))</code>
+      * <code>Assert true (pc_cbor_read_str(&rd, &s, &sl))</code>
       * <code>Assert equal memory ("hi", s, sl)</code>
       * <code>Assert true (pc_cbor_read_int(&rd, &key))</code>
       * <code>TEST_ASSERT_EQUAL_INT64(6, key); // t</code>
@@ -44691,7 +44691,7 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
       * <code>Assert true (pc_cbor_read_map(&rd2, &fields))</code>
       * <code>TEST_ASSERT_EQUAL_size_t(2, fields); // n, vb</code>
       * <code>Assert true (pc_cbor_read_int(&rd2, &key))</code>
-      * <code>Assert true (pc_cbor_read_text(&rd2, &s, &sl))</code>
+      * <code>Assert true (pc_cbor_read_str(&rd2, &s, &sl))</code>
       * <code>Assert true (pc_cbor_read_int(&rd2, &key))</code>
       * <code>TEST_ASSERT_EQUAL_INT64(4, key); // vb</code>
       * <code>Assert true (pc_cbor_read_bool(&rd2, &bv))</code>
@@ -44705,8 +44705,8 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
     * **Assertions**:
       * <code>TEST_ASSERT_EQUAL_size_t(0, pc_senml_json_build(nullptr, sizeof(jb), &r, 1));</code>
       * <code>TEST_ASSERT_EQUAL_size_t(0, pc_senml_json_build(jb, sizeof(jb), nullptr, 1)); // count && !records</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_senml_cbor_build(nullptr, sizeof(cb), &r, 1));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_senml_cbor_build(cb, sizeof(cb), nullptr, 1));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_senml_build(pc_codec_cbor(), nullptr, sizeof(cb), &r, 1));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_senml_build(pc_codec_cbor(), cb, sizeof(cb), nullptr, 1));</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -44741,17 +44741,17 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
       * <code>TEST_ASSERT_EQUAL_size_t(3, fields);</code>
       * <code>Assert true (pc_cbor_read_int(&rd, &key))</code>
       * <code>TEST_ASSERT_EQUAL_INT64(0, key); // n</code>
-      * <code>Assert true (pc_cbor_read_text(&rd, &s, &slen))</code>
+      * <code>Assert true (pc_cbor_read_str(&rd, &s, &slen))</code>
       * <code>Assert equal memory ("temp", s, slen)</code>
       * <code>Assert true (pc_cbor_read_int(&rd, &key))</code>
       * <code>TEST_ASSERT_EQUAL_INT64(1, key); // u</code>
-      * <code>Assert true (pc_cbor_read_text(&rd, &s, &slen))</code>
+      * <code>Assert true (pc_cbor_read_str(&rd, &s, &slen))</code>
       * <code>Assert equal memory ("Cel", s, slen)</code>
       * <code>Assert true (pc_cbor_read_int(&rd, &key))</code>
       * <code>TEST_ASSERT_EQUAL_INT64(2, key); // v</code>
       * <code>Assert true (pc_cbor_read_int(&rd, &v))</code>
       * <code>TEST_ASSERT_EQUAL_INT64(42, v);</code>
-      * <code>Assert true (pc_cbor_reader_ok(&rd))</code>
+      * <code>Assert true (pc_cspan_ok(rd))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -44772,7 +44772,7 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
     * **Objective**: Overflow fails closed
     * **Assertions**:
       * <code>TEST_ASSERT_EQUAL_size_t(0, pc_senml_json_build(small, sizeof(small), &r, 1));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_senml_cbor_build(csmall, sizeof(csmall), &r, 1));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_senml_build(pc_codec_cbor(), csmall, sizeof(csmall), &r, 1));</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -51320,15 +51320,15 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
     * **Assertions**:
       * <code>Assert equal int (0, pc_ssh_channel_handle_data(0, pkt, n, out, &ol, sizeof(out)))</code>
       * <code>Assert equal int (0, data_cb_count)</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(SSH_CHAN_WINDOW - 3u, ssh_chan[0][id].local_window);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(SSH_CHAN_WINDOW - 3u, ssh_chan[0][id].flow.local_window);</code>
       * <code>Assert equal int (0, pc_ssh_channel_handle_data(0, pkt, n, out, &ol, sizeof(out)))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(SSH_CHAN_WINDOW - 3u, ssh_chan[0][id].local_window);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(SSH_CHAN_WINDOW - 3u, ssh_chan[0][id].flow.local_window);</code>
       * <code>Assert equal int (0, pc_ssh_channel_handle_open(0, pkt, n, out, &ol, sizeof(out)))</code>
       * <code>Assert equal int (0, pc_ssh_channel_handle_data(0, pkt, n, out, &ol, sizeof(out)))</code>
       * <code>Assert equal int (0, fwd_data_count)</code>
       * <code>Assert equal int (0, pc_ssh_channel_handle_data(0, pkt, n, out, &ol, 5))</code>
       * <code>Assert equal (0u, ol)</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(90u, ssh_chan[0][id].local_window); // not replenished</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(90u, ssh_chan[0][id].flow.local_window); // not replenished</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -51340,7 +51340,7 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
       * <code>Assert equal int (-1, pc_ssh_channel_build_data(0, id, data, sizeof(data), out, &ol, sizeof(out)))</code>
       * <code>Assert equal int (-1, pc_ssh_channel_build_close(0, id, out, &ol, 9))</code>
       * <code>Assert equal int (0, pc_ssh_channel_handle_window_adjust(0, wa, sizeof(wa)))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(0xFFFFFFFFu, ssh_chan[0][id].peer_window);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(0xFFFFFFFFu, ssh_chan[0][id].flow.peer_window);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -51350,7 +51350,7 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
     * **Assertions**:
       * <code>Assert true (ssh_chan[0][id].open)</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(42, ssh_chan[0][id].peer_id);</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(1000, ssh_chan[0][id].peer_window);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(1000, ssh_chan[0][id].flow.peer_window);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -51461,7 +51461,7 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
       * <code>Assert equal int (0, pc_ssh_channel_handle_data(0, pkt, n, out, &olen, sizeof(out)))</code>
       * <code>Assert equal (SSH_MSG_CHANNEL_WINDOW_ADJUST, out[0])</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(5, rd_u32(out + 1)); // peer channel</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(SSH_CHAN_WINDOW, ssh_chan[0][id].local_window);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(SSH_CHAN_WINDOW, ssh_chan[0][id].flow.local_window);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -51482,7 +51482,7 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
       * <code>TEST_ASSERT_EQUAL_UINT32(5, rd_u32(out + 1)); // peer channel</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(3, rd_u32(out + 5)); // data length</code>
       * <code>Assert equal memory ("abc", out + 9, 3)</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(997, ssh_chan[0][id].peer_window);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(997, ssh_chan[0][id].flow.peer_window);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -51499,7 +51499,7 @@ A thorough directory of all **5243 test cases** across **293 suites**. Expand a 
     * **Objective**: Window adjust grows peer window
     * **Assertions**:
       * <code>Assert equal int (0, pc_ssh_channel_handle_window_adjust(0, pkt, sizeof(pkt)))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(600, ssh_chan[0][id].peer_window);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(600, ssh_chan[0][id].flow.peer_window);</code>
   </details>
 
   <details style="margin-left: 20px;">
