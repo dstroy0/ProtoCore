@@ -2147,16 +2147,10 @@ const size_t PC_THEME_BLOB_COUNT = sizeof(PC_THEME_BLOBS) / sizeof(PC_THEME_BLOB
 const char *pc_theme_css(const char *name)
 {
     if (!name)
-    {
         return nullptr;
-    }
     for (size_t i = 0; i < PC_THEME_BLOB_COUNT; i++)
-    {
         if (strcmp(PC_THEME_BLOBS[i].name, name) == 0)
-        {
             return PC_THEME_BLOBS[i].css;
-        }
-    }
     return nullptr;
 }
 
