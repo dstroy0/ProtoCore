@@ -9,7 +9,7 @@
 # Project identity
 #---------------------------------------------------------------------------
 PROJECT_NAME           = "ProtoCore"
-PROJECT_BRIEF          = "Zero-allocation, bounded-execution async HTTP server for ESP32"
+PROJECT_BRIEF          = "Deterministic, zero-heap network stack for embedded targets"
 PROJECT_NUMBER         = "v0.0.1"
 PROJECT_LOGO           =
 
@@ -35,8 +35,8 @@ CREATE_SUBDIRS         = NO
 GENERATE_HTML          = YES
 GENERATE_LATEX         = NO
 # XML is consumed by Breathe to render the API reference into the Sphinx site (docs/sphinx).
-GENERATE_XML           = YES
-XML_OUTPUT             = ../sphinx/xml
+GENERATE_XML           = NO  # was feeding docs/sphinx/xml for Breathe; that site is gone
+XML_OUTPUT             = ../sphinx/xml  # unused while GENERATE_XML=NO
 XML_PROGRAMLISTING     = NO
 GENERATE_MAN           = NO
 
@@ -78,7 +78,7 @@ HTML_OUTPUT            = .
 HTML_FILE_EXTENSION    = .html
 HTML_HEADER            =
 HTML_FOOTER            = docs/footer.html
-HTML_EXTRA_STYLESHEET  = docs/custom.css
+HTML_EXTRA_STYLESHEET  = docs/protocore.css
 HTML_EXTRA_FILES       = docs/squirty.svg docs/configurator.html
 
 # Built-in dark mode (Doxygen >= 1.9.5)

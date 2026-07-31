@@ -1,0 +1,1257 @@
+/*
+ * ProtoCore - Instrument Panel
+ * Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ *
+ * The subject is a deterministic, zero-heap, OSI-layered network stack. The reader is an
+ * engineer deciding whether it fits a RAM budget and matches a spec. So this reads as an
+ * instrument panel rather than terminal nostalgia: a cool slate case, neutral prose, and
+ * color that MEANS something instead of one green doing every job at once.
+ *
+ *   cyan   interactive - links and controls. Squirty's own color, so mascot and UI agree.
+ *   green  a state, not a mood: ok / pass / enabled.
+ *   amber  a cost or a caution: warnings, budgets, deltas.
+ *   rose   an error or a removal.
+ *
+ * Mono is kept where mono earns its place - code, flags, identifiers, numeric tables - and
+ * dropped for prose, which was setting ~110 characters per line in a monospace face.
+ *
+ * Squirty's own block is carried over unchanged at the end of this file.
+ */
+
+/* ====================================================================== */
+/* Tokens                                                                 */
+/* ====================================================================== */
+html {
+    --pc-panel: #0b0f14; /* the case */
+    --pc-panel-2: #121924; /* raised: code wells, table headers */
+    --pc-panel-3: #0d131b; /* recessed: nav, footer */
+    --pc-rule: #1e2836; /* hairlines */
+    --pc-rule-2: #2b3846; /* emphasized hairlines */
+    --pc-text: #c8d3de; /* body prose */
+    --pc-bright: #eaf1f8; /* headings, emphasis */
+    --pc-dim: #808f9e; /* captions, metadata, inactive */
+    --pc-cyan: #00e5ff; /* interactive */
+    --pc-cyan-dim: #00a3b8;
+    --pc-signal: #3ecf7a; /* state: ok / pass / enabled */
+    --pc-amber: #e8b04b; /* cost / caution */
+    --pc-rose: #f2557a; /* error / removed */
+    --pc-violet: #b78af0; /* types, keywords */
+
+    --pc-mono: "Fira Code", "Cascadia Code", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --pc-sans:
+        ui-sans-serif, system-ui, -apple-system, "Segoe UI", Inter, Roboto, "Helvetica Neue", Arial, sans-serif;
+
+    /* Sizing targets a normal display first - 1440/1920 and phones - with an ultrawide
+       simply getting a centred column rather than stretched lines. Both are min() against a
+       percentage so nothing overflows a narrow viewport. */
+    --pc-prose: min(80ch, 100%);
+    --pc-track: min(860px, 96%); /* sized to the text; data breaks out below */
+    --pc-bleed: min(1340px, calc(100vw - 340px)); /* left rule -> right edge of the content area */
+    --pc-radius: 6px;
+
+    /* Doxygen's own variables, mapped onto the palette. */
+    --primary-color: var(--pc-cyan);
+    --primary-dark-color: var(--pc-cyan-dim);
+    --primary-light-color: #7df3ff;
+    --secondary-color: var(--pc-signal);
+    --secondary-dark-color: #2a9d5c;
+    --secondary-light-color: #6fe39f;
+    --page-background-color: var(--pc-panel);
+    --page-foreground-color: var(--pc-text);
+    --page-secondary-foreground-color: var(--pc-dim);
+    --separator-color: var(--pc-rule);
+    --border-color: var(--pc-rule);
+    --header-background: var(--pc-panel);
+    --header-foreground: var(--pc-text);
+    --nav-background: var(--pc-panel-3);
+    --nav-foreground: var(--pc-text);
+    --nav-accent: var(--pc-cyan);
+    --code-background: var(--pc-panel-2);
+    --code-foreground: #dde6f0;
+    --memdef-background: #0e141d;
+    --memdef-title-background: var(--pc-panel-2);
+
+    /* These were all one green: a warning was indistinguishable from a note. */
+    --warning-color: var(--pc-amber);
+    --note-color: var(--pc-cyan);
+    --attention-color: var(--pc-rose);
+    --deprecated-color: var(--pc-dim);
+    --bug-color: var(--pc-rose);
+    --todo-color: var(--pc-signal);
+}
+
+/* Border-box everywhere. #titlearea was 100% wide PLUS 36px of padding, which pushed the
+   page 36px past the viewport and gave every screen a horizontal scrollbar. */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+/* ====================================================================== */
+/* Type                                                                   */
+/* ====================================================================== */
+body,
+html {
+    background: var(--pc-panel);
+    color: var(--pc-text);
+    font-family: var(--pc-sans);
+    font-size: 15px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+}
+
+/* Data stays mono. Prose does not. */
+code,
+kbd,
+samp,
+pre,
+tt,
+.fragment,
+div.line,
+.lineno,
+.memname,
+.memproto,
+.paramname,
+.paramtype,
+span.mlabel,
+table.memberdecls td,
+table.doxtable th,
+table.doxtable td,
+table.markdownTable th,
+table.markdownTable td,
+#nav-tree,
+#nav-tree a,
+.navpath li,
+.navpath a,
+#projectname,
+#MSearchField,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+div.header .title,
+.memtitle,
+summary {
+    font-family: var(--pc-mono);
+}
+
+h1,
+h2,
+h3,
+h4,
+div.header .title,
+.memtitle {
+    color: var(--pc-bright);
+    font-weight: 600;
+    letter-spacing: -0.012em;
+    line-height: 1.25;
+}
+div.header .title,
+h1 {
+    font-size: 1.55rem;
+    margin: 0 0 0.6em;
+}
+h2 {
+    font-size: 1.2rem;
+    margin: 2.2em 0 0.7em;
+    padding-bottom: 0.35em;
+    border-bottom: 1px solid var(--pc-rule);
+}
+h3 {
+    font-size: 1.02rem;
+    margin: 1.8em 0 0.5em;
+    color: #d7e2ee;
+}
+
+/* An eyebrow encodes the layer a section belongs to - structure, not ornament. */
+.pc-eyebrow {
+    display: block;
+    font-family: var(--pc-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--pc-dim);
+    margin-bottom: 0.35em;
+}
+
+a {
+    color: var(--pc-cyan);
+    text-decoration: none;
+    border-bottom: 1px solid color-mix(in srgb, var(--pc-cyan) 28%, transparent);
+    transition:
+        color 0.12s ease,
+        border-color 0.12s ease;
+}
+a:hover {
+    color: #7df3ff;
+    border-bottom-color: var(--pc-cyan);
+}
+a:focus-visible,
+summary:focus-visible,
+button:focus-visible {
+    outline: 2px solid var(--pc-cyan);
+    outline-offset: 2px;
+    border-radius: 2px;
+}
+
+/* ====================================================================== */
+/* Shell: header, nav, content track                                      */
+/* ====================================================================== */
+#titlearea {
+    background: var(--pc-panel);
+    border-bottom: 1px solid var(--pc-rule);
+    padding: 10px 18px;
+}
+#projectname {
+    color: var(--pc-bright);
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+#projectnumber {
+    color: var(--pc-dim);
+    font-size: 0.75rem;
+    font-weight: 400;
+}
+#projectbrief {
+    color: var(--pc-dim);
+    font-family: var(--pc-sans);
+    font-size: 0.82rem;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Sidebar                                                                  */
+/* ---------------------------------------------------------------------- */
+#side-nav {
+    background: var(--pc-panel-3);
+    border-right: 1px solid var(--pc-rule);
+}
+#nav-tree {
+    background: transparent;
+    padding: 8px 0 24px;
+    font-size: 12.5px;
+}
+#nav-tree-contents > ul {
+    margin: 0;
+    padding: 0;
+}
+
+/* The row is the box that gets clamped: Doxygen sizes the anchor from JS, so a clamp on
+   the anchor alone did nothing and labels sheared mid-word. */
+/* Doxygen's row is `a` (icon) followed by `span.label` (the text). Making the row a flex
+   container and letting the ANCHOR grow pushed every label to the right edge - the clamp
+   has to sit on .label, and the row stays a normal block. */
+#nav-tree .item {
+    padding: 1px 10px 1px 0;
+    line-height: 1.9;
+    border-left: 2px solid transparent;
+    white-space: nowrap;
+    overflow: hidden;
+}
+#nav-tree .item > a {
+    border-bottom: none;
+    padding: 0;
+}
+#nav-tree .label {
+    display: inline-block;
+    max-width: calc(100% - 26px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: bottom;
+}
+
+/* Indent guides: depth you can see, rather than depth you have to count. */
+#nav-tree ul ul {
+    margin: 0;
+    padding-left: 13px;
+    border-left: 1px solid var(--pc-rule);
+}
+
+/* Top-level entries carry more weight than their children - that is the category. */
+#nav-tree-contents > ul > li > .item > a {
+    color: #dbe5f0;
+    font-weight: 600;
+}
+#nav-tree ul ul .item > a {
+    color: #9fadbb;
+    font-weight: 400;
+}
+
+#nav-tree .item:hover {
+    background: color-mix(in srgb, var(--pc-cyan) 7%, transparent);
+}
+#nav-tree .item:hover > a {
+    color: var(--pc-cyan);
+}
+#nav-tree .item.selected,
+#nav-tree .selected {
+    background: color-mix(in srgb, var(--pc-cyan) 13%, transparent);
+    border-left-color: var(--pc-cyan);
+}
+#nav-tree .selected > a,
+#nav-tree .selected a {
+    color: var(--pc-bright);
+    font-weight: 600;
+}
+
+/* Disclosure arrows: quiet until you are on the row. */
+#nav-tree .arrow {
+    color: var(--pc-dim);
+    opacity: 0.65;
+    flex: none;
+    width: 12px;
+    text-align: center;
+    transition: opacity 0.12s ease;
+}
+#nav-tree .item:hover .arrow {
+    opacity: 1;
+    color: var(--pc-cyan);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Title relocated into the navbar by footer.html                           */
+/* ---------------------------------------------------------------------- */
+.navbar-project-title {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 0 16px 0 4px;
+    margin-right: 8px;
+    line-height: 30px;
+    font-family: var(--pc-mono);
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--pc-bright);
+    border-right: 1px solid var(--pc-rule-2);
+    vertical-align: middle;
+}
+.navbar-project-title .navbar-version {
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: var(--pc-dim);
+}
+.navbar-libname-link {
+    color: inherit;
+    border-bottom: none;
+    pointer-events: auto;
+}
+.navbar-libname-link:hover {
+    color: var(--pc-cyan);
+}
+/* Doxygen's own title block is empty once the JS has moved it out. */
+#titlearea:empty,
+#projectrow:empty {
+    display: none;
+}
+
+/* Content track: prose keeps a readable measure, data keeps the width. */
+#doc-content {
+    background: var(--pc-panel);
+}
+/* Left-aligned, not centred: wide data has to start on the same rule as the prose, and it
+   cannot do that if the text column floats in the middle of the content area. */
+div.contents,
+div.header {
+    max-width: var(--pc-track);
+    margin-inline: 0 auto;
+    padding-inline: clamp(16px, 3vw, 48px);
+    box-sizing: border-box;
+}
+div.contents p,
+div.contents li,
+div.textblock > p,
+div.textblock > ul,
+div.textblock > ol,
+dl.note,
+dl.warning,
+dl.attention,
+dl.bug,
+dl.todo {
+    max-width: var(--pc-prose);
+}
+/* Data breaks OUT of the text column and centres on the content area. A child given only a
+   larger width would overflow right, hence the margin/transform pair. */
+div.contents > table,
+div.contents .fragment,
+div.contents > .memitem,
+div.contents > details,
+div.contents .pc-examples,
+div.contents > .textblock > table,
+div.contents > .textblock > .fragment,
+div.contents > .textblock > details,
+div.contents > .textblock > .pc-examples {
+    width: var(--pc-bleed);
+    max-width: none;
+    margin-left: 0; /* same left rule as the prose; the extra width goes right */
+}
+div.contents img {
+    max-width: 100%;
+    height: auto;
+}
+
+/* ====================================================================== */
+/* Code                                                                   */
+/* ====================================================================== */
+div.fragment,
+pre.fragment {
+    background: var(--pc-panel-2);
+    border: 1px solid var(--pc-rule);
+    border-left: 2px solid var(--pc-cyan-dim);
+    border-radius: var(--pc-radius);
+    padding: 12px 14px;
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.55;
+}
+div.line {
+    color: #dde6f0;
+}
+.lineno {
+    color: #4a5666;
+}
+span.keyword,
+span.keywordtype,
+span.keywordflow {
+    color: var(--pc-violet);
+}
+span.comment {
+    color: #6b7a8a;
+    font-style: italic;
+}
+span.stringliteral {
+    color: var(--pc-signal);
+}
+span.preprocessor {
+    color: var(--pc-amber);
+}
+code,
+tt {
+    background: color-mix(in srgb, var(--pc-panel-2) 80%, transparent);
+    border: 1px solid var(--pc-rule);
+    border-radius: 4px;
+    padding: 0.08em 0.36em;
+    font-size: 0.9em;
+    color: #dbe5f0;
+}
+
+/* ====================================================================== */
+/* Tables                                                                 */
+/* ====================================================================== */
+table.doxtable,
+table.markdownTable {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 1.2em 0;
+    font-size: 13px;
+}
+table.doxtable th,
+table.markdownTable th {
+    background: var(--pc-panel-2);
+    color: var(--pc-bright);
+    text-align: left;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-size: 11.5px;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--pc-rule-2);
+}
+table.doxtable td,
+table.markdownTable td {
+    padding: 7px 10px;
+    border-bottom: 1px solid var(--pc-rule);
+    color: var(--pc-text);
+}
+table.doxtable tr:hover td,
+table.markdownTable tr:hover td {
+    background: color-mix(in srgb, var(--pc-cyan) 5%, transparent);
+}
+
+/* ====================================================================== */
+/* Admonitions - each one now looks like what it is                       */
+/* ====================================================================== */
+dl.note,
+dl.warning,
+dl.attention,
+dl.bug,
+dl.todo,
+dl.deprecated {
+    border-left: 3px solid var(--pc-rule-2);
+    background: color-mix(in srgb, var(--pc-panel-2) 60%, transparent);
+    border-radius: 0 var(--pc-radius) var(--pc-radius) 0;
+    padding: 10px 14px;
+    margin: 1.2em 0;
+}
+dl.note {
+    border-left-color: var(--pc-cyan);
+}
+dl.warning {
+    border-left-color: var(--pc-amber);
+}
+dl.attention,
+dl.bug {
+    border-left-color: var(--pc-rose);
+}
+dl.todo {
+    border-left-color: var(--pc-signal);
+}
+dl.deprecated {
+    border-left-color: var(--pc-dim);
+}
+dl.note dt,
+dl.warning dt,
+dl.attention dt,
+dl.bug dt,
+dl.todo dt {
+    font-family: var(--pc-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+dl.note dt {
+    color: var(--pc-cyan);
+}
+dl.warning dt {
+    color: var(--pc-amber);
+}
+dl.attention dt,
+dl.bug dt {
+    color: var(--pc-rose);
+}
+dl.todo dt {
+    color: var(--pc-signal);
+}
+
+/* ====================================================================== */
+/* Member documentation                                                   */
+/* ====================================================================== */
+.memitem {
+    background: var(--memdef-background);
+    border: 1px solid var(--pc-rule);
+    border-radius: var(--pc-radius);
+    margin: 1.2em 0;
+    overflow: hidden;
+}
+.memproto {
+    background: var(--memdef-title-background);
+    border-bottom: 1px solid var(--pc-rule);
+    padding: 9px 12px;
+}
+.memname {
+    color: var(--pc-bright);
+}
+.memdoc {
+    padding: 12px;
+}
+.paramname {
+    color: var(--pc-amber);
+    font-style: normal;
+}
+span.mlabel {
+    background: color-mix(in srgb, var(--pc-cyan) 14%, transparent);
+    border: 1px solid var(--pc-cyan-dim);
+    color: var(--pc-cyan);
+    border-radius: 3px;
+    padding: 1px 6px;
+    font-size: 10.5px;
+}
+
+/* ====================================================================== */
+/* Collapsible sections                                                   */
+/* ====================================================================== */
+details {
+    background: var(--pc-panel-3);
+    border: 1px solid var(--pc-rule);
+    border-radius: var(--pc-radius);
+    margin: 1.2em 0;
+    overflow: hidden;
+}
+details > summary {
+    cursor: pointer;
+    padding: 9px 12px;
+    background: var(--pc-panel-2);
+    color: var(--pc-bright);
+    font-size: 0.9rem;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    user-select: none;
+}
+details > summary::-webkit-details-marker {
+    display: none;
+}
+/* A disclosure caret that points where it is going. */
+details > summary::before {
+    content: "";
+    width: 0;
+    height: 0;
+    border-left: 5px solid var(--pc-cyan);
+    border-top: 4px solid transparent;
+    border-bottom: 4px solid transparent;
+    transition: transform 0.15s ease;
+    flex: none;
+}
+details[open] > summary::before {
+    transform: rotate(90deg);
+}
+details > summary:hover {
+    background: color-mix(in srgb, var(--pc-cyan) 8%, var(--pc-panel-2));
+}
+details > *:not(summary) {
+    padding-inline: 12px;
+}
+details > summary + * {
+    padding-top: 10px;
+}
+
+/*
+ * The reveal. This used to wrap every text node in one <span> per character and drive
+ * them from requestAnimationFrame - 259 elements for 506 characters, and a 3000-char cap
+ * that meant 6 of 9 sections on the front page got no animation at all. Now it is one
+ * GPU-composited mask sweep on the container: no DOM churn, no cap, same idea.
+ */
+@keyframes pc-reveal {
+    from {
+        -webkit-mask-position: 0 0;
+        mask-position: 0 0;
+    }
+    to {
+        -webkit-mask-position: -200% 0;
+        mask-position: -200% 0;
+    }
+}
+details[open] > .pc-reveal {
+    -webkit-mask-image: linear-gradient(90deg, #000 25%, rgba(0, 0, 0, 0.35) 50%, #000 75%);
+    mask-image: linear-gradient(90deg, #000 25%, rgba(0, 0, 0, 0.35) 50%, #000 75%);
+    -webkit-mask-size: 200% 100%;
+    mask-size: 200% 100%;
+    animation: pc-reveal 0.5s ease-out 1;
+    will-change: mask-position;
+}
+
+/* ====================================================================== */
+/* Examples index: a real tree, grouped by OSI layer                      */
+/* ====================================================================== */
+.pc-examples {
+    margin: 1.4em 0;
+}
+.pc-examples > details {
+    margin: 0 0 -1px;
+    border-radius: 0;
+}
+.pc-examples > details:first-of-type {
+    border-radius: var(--pc-radius) var(--pc-radius) 0 0;
+}
+.pc-examples > details:last-of-type {
+    border-radius: 0 0 var(--pc-radius) var(--pc-radius);
+}
+/* Doxygen strips <span> inside <summary>, so the badge is plain text with separators.
+   The summary still reads as a label because of the mono face and the caret. */
+.pc-examples > details > summary {
+    font-size: 0.86rem;
+    letter-spacing: 0.02em;
+    color: #dbe5f0;
+}
+.pc-examples .pc-desc {
+    color: var(--pc-dim);
+    font-size: 0.85rem;
+    margin: 0 0 0.7em;
+    max-width: var(--pc-prose);
+}
+.pc-examples ul {
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 2px 10px;
+    margin: 0;
+    padding: 0 0 12px;
+}
+.pc-examples ul li {
+    margin: 0;
+    max-width: none;
+}
+.pc-examples ul a {
+    display: block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    border-bottom: none;
+    font-family: var(--pc-mono);
+    font-size: 12.5px;
+    color: var(--pc-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.pc-examples ul a:hover {
+    background: color-mix(in srgb, var(--pc-cyan) 12%, transparent);
+    color: var(--pc-cyan);
+}
+
+/* ====================================================================== */
+/* Search, tabs, footer                                                   */
+/* ====================================================================== */
+#MSearchBox {
+    background: var(--pc-panel-2);
+    border: 1px solid var(--pc-rule-2);
+    border-radius: var(--pc-radius);
+}
+#MSearchField {
+    background: transparent;
+    color: var(--pc-text);
+    font-size: 12.5px;
+}
+.tablist a {
+    color: var(--pc-dim);
+    border-bottom: none;
+}
+.tablist li.current a {
+    color: var(--pc-cyan);
+}
+.navpath {
+    background: var(--pc-panel-3);
+    border-top: 1px solid var(--pc-rule);
+}
+.navpath li,
+.navpath a {
+    color: var(--pc-dim);
+    font-size: 11.5px;
+}
+address.footer,
+.footer {
+    color: var(--pc-dim);
+    font-size: 11.5px;
+}
+
+/* Scrollbars: part of the case, not a default. */
+::-webkit-scrollbar {
+    width: 11px;
+    height: 11px;
+}
+::-webkit-scrollbar-track {
+    background: var(--pc-panel-3);
+}
+::-webkit-scrollbar-thumb {
+    background: var(--pc-rule-2);
+    border-radius: 6px;
+    border: 2px solid var(--pc-panel-3);
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #3c4d5f;
+}
+
+/* ====================================================================== */
+/* Quality floor                                                          */
+/* ====================================================================== */
+/* Phones and small tablets. Doxygen collapses its own sidebar below its breakpoint; this
+   makes what is left actually readable rather than merely present. */
+@media (max-width: 850px) {
+    body,
+    html {
+        font-size: 15px;
+        line-height: 1.6;
+    }
+    div.contents,
+    div.header {
+        padding-inline: 14px;
+        max-width: 100%;
+    }
+    h1,
+    div.header .title {
+        font-size: 1.3rem;
+    }
+    h2 {
+        font-size: 1.08rem;
+        margin-top: 1.6em;
+    }
+    /* The treeview sidebar is 260px of a 426px screen, leaving 160px of content - Doxygen
+       sizes it from resizable.js and never releases it. Inline styles are why this needs
+       !important; the hamburger menu is the navigation at this width. */
+    #side-nav {
+        display: none !important;
+    }
+    #doc-content {
+        margin-left: 0 !important;
+        width: 100% !important;
+        height: auto !important;
+        overflow: visible !important;
+    }
+
+    /* No sidebar to subtract at this width, and no room to break out of the column. */
+    div.contents > table,
+    div.contents .fragment,
+    div.contents > .memitem,
+    div.contents > details,
+    div.contents .pc-examples,
+    div.contents > .textblock > table,
+    div.contents > .textblock > .fragment,
+    div.contents > .textblock > details,
+    div.contents > .textblock > .pc-examples {
+        width: 100%;
+        margin-left: 0;
+    }
+
+    /* Wide tables and long code lines are what force a narrow page to scroll sideways.
+       Let them scroll inside their own box instead of dragging the page with them. */
+    div.contents table,
+    div.fragment,
+    pre.fragment {
+        display: block;
+        max-width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    .pc-examples ul {
+        grid-template-columns: 1fr 1fr;
+    }
+    details > summary {
+        padding: 10px;
+    }
+}
+
+@media (max-width: 520px) {
+    .pc-examples ul {
+        grid-template-columns: 1fr;
+    }
+    div.contents,
+    div.header {
+        padding-inline: 10px;
+    }
+    body,
+    html {
+        font-size: 14.5px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+    }
+    details[open] > .pc-reveal {
+        -webkit-mask-image: none;
+        mask-image: none;
+    }
+}
+
+/* ======================================================================
+ * Squirty - carried over unchanged.
+ *
+ * His artwork, animation and controls are byte-for-byte the original. The only thing
+ * that moved is his behaviour, in footer.html: he used to drift across body text and
+ * sit on top of it while you were reading.
+ * ====================================================================== */
+
+/* ---- Cute Pixel Squid Animation ------------------------------------ */
+#squid-container {
+    position: fixed;
+    width: 37px;
+    height: 37px;
+    z-index: 10000;
+    cursor: pointer;
+    pointer-events: auto;
+    will-change: left, top, transform;
+    transition: none !important;
+}
+
+#squid-container * {
+    transition: none !important;
+}
+
+.squid-svg {
+    width: 100%;
+    height: 100%;
+    filter: drop-shadow(0 0 3px rgba(0, 229, 255, 0.7));
+}
+
+/* Pixel Tentacle wiggling keyframes with discrete step timing */
+@keyframes pixel-wiggle-left {
+    0%,
+    100% {
+        transform: translate(0, 0);
+    }
+    50% {
+        transform: translate(-1px, 0);
+    }
+}
+@keyframes pixel-wiggle-right {
+    0%,
+    100% {
+        transform: translate(0, 0);
+    }
+    50% {
+        transform: translate(1px, 0);
+    }
+}
+
+.pixel-tentacle-1 {
+    animation: pixel-wiggle-left 0.8s steps(2) infinite;
+    transform-origin: 5px 12px;
+}
+.pixel-tentacle-2 {
+    animation: pixel-wiggle-left 0.6s steps(2) infinite;
+    transform-origin: 7px 12px;
+}
+.pixel-tentacle-3 {
+    animation: pixel-wiggle-right 0.6s steps(2) infinite;
+    transform-origin: 8px 12px;
+}
+.pixel-tentacle-4 {
+    animation: pixel-wiggle-right 0.8s steps(2) infinite;
+    transform-origin: 10px 12px;
+}
+
+/* Mantle fins / wings: an undulating wave ripple (rotate + skew through a
+   sine-ish cycle), not a mechanical back-and-forth tilt. Each fin's hinge is
+   set inline on the group in 64-grid coordinates. */
+@keyframes squid-fin-flap-l {
+    0% {
+        transform: rotate(9deg) skewY(0deg);
+    }
+    25% {
+        transform: rotate(3deg) skewY(7deg);
+    }
+    50% {
+        transform: rotate(-7deg) skewY(0deg);
+    }
+    75% {
+        transform: rotate(1deg) skewY(-7deg);
+    }
+    100% {
+        transform: rotate(9deg) skewY(0deg);
+    }
+}
+@keyframes squid-fin-flap-r {
+    0% {
+        transform: rotate(-9deg) skewY(0deg);
+    }
+    25% {
+        transform: rotate(-3deg) skewY(-7deg);
+    }
+    50% {
+        transform: rotate(7deg) skewY(0deg);
+    }
+    75% {
+        transform: rotate(-1deg) skewY(7deg);
+    }
+    100% {
+        transform: rotate(-9deg) skewY(0deg);
+    }
+}
+.squid-fin-left {
+    animation: squid-fin-flap-l 1.15s ease-in-out infinite;
+}
+.squid-fin-right {
+    animation: squid-fin-flap-r 1.15s ease-in-out infinite 0.3s;
+}
+
+/* Cloak: while approaching (hunting) or fleeing, Squirty fades to a refracting
+   outline (a light-bending shimmer), then pops back out on the strike. The
+   transition is re-enabled only for opacity/filter (transform stays instant). */
+.squid-svg {
+    transition:
+        opacity 0.16s ease-out,
+        filter 0.16s ease-out !important;
+}
+.squid-svg.squid-cloaked {
+    opacity: 0.16;
+    filter: drop-shadow(0 0 0.6px #00e5ff) drop-shadow(0 0 0.6px #00e5ff)
+        drop-shadow(0 0 2px rgba(125, 249, 255, 0.8));
+}
+#squid-container.cloaking {
+    backdrop-filter: blur(2px) saturate(1.4) hue-rotate(-8deg);
+    -webkit-backdrop-filter: blur(2px) saturate(1.4) hue-rotate(-8deg);
+    border-radius: 46% 46% 40% 40%;
+}
+@keyframes squid-pop {
+    0% {
+        transform: scale(0.7);
+    }
+    60% {
+        transform: scale(1.18);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+.squid-svg.squid-pop-active {
+    animation: squid-pop 0.32s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+/* Hunting: tentacles wiggle faster/agitated as Squirty stalks the cursor. */
+.squid-svg.squid-hunting .pixel-tentacle-1,
+.squid-svg.squid-hunting .pixel-tentacle-2,
+.squid-svg.squid-hunting .pixel-tentacle-3,
+.squid-svg.squid-hunting .pixel-tentacle-4 {
+    animation-duration: 0.25s;
+}
+
+/* Attacking: tentacles shoot out to grab the cursor. */
+@keyframes squid-tentacle-strike {
+    0% {
+        transform: scaleY(1);
+    }
+    100% {
+        transform: scaleY(2.6);
+    }
+}
+.squid-svg.squid-attacking .pixel-tentacle-1,
+.squid-svg.squid-attacking .pixel-tentacle-2,
+.squid-svg.squid-attacking .pixel-tentacle-3,
+.squid-svg.squid-attacking .pixel-tentacle-4 {
+    transform-origin: 8px 12px;
+    animation: squid-tentacle-strike 0.18s ease-out forwards;
+}
+
+/* Chewing: tentacles stay extended and chomp rapidly on the cursor. */
+@keyframes squid-tentacle-chew {
+    0%,
+    100% {
+        transform: scaleY(2.3);
+    }
+    50% {
+        transform: scaleY(1.7);
+    }
+}
+.squid-svg.squid-chewing .pixel-tentacle-1,
+.squid-svg.squid-chewing .pixel-tentacle-2,
+.squid-svg.squid-chewing .pixel-tentacle-3,
+.squid-svg.squid-chewing .pixel-tentacle-4 {
+    transform-origin: 8px 12px;
+    animation: squid-tentacle-chew 0.14s steps(2) infinite;
+}
+
+/* Pulse swim scale */
+@keyframes squid-pulse {
+    0%,
+    100% {
+        transform: scale(1);
+    }
+    30% {
+        transform: scale(0.85, 1.15);
+    }
+    70% {
+        transform: scale(1.1, 0.9);
+    }
+}
+.squid-pulse-active {
+    animation: squid-pulse 0.7s ease-out;
+}
+
+.squid-ink {
+    position: fixed;
+    width: 24px;
+    height: 24px;
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.9;
+    filter: drop-shadow(0 0 3px rgba(0, 255, 0, 0.7));
+    transform-origin: center center;
+    transition:
+        transform 0.9s cubic-bezier(0.1, 0.8, 0.3, 1),
+        opacity 0.9s ease-out;
+}
+
+/* ---- Squirty: long hunting tentacles, chromatophores, house & timeout ---- */
+
+/* Full-viewport overlay the strike tentacles are drawn into. Click-through,
+   sits just under the squid (z 10000) and above page content. */
+#squid-tentacles {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: 9998;
+    overflow: visible;
+}
+#squid-tentacles path {
+    fill: none;
+    stroke-linecap: round;
+    filter: drop-shadow(0 0 4px rgba(0, 229, 255, 0.85));
+}
+
+/* Chromatophore color-pulsing while hunting/striking: quick "weird" steps
+   through cyan -> magenta -> amber -> green, like a hunting squid flashing. */
+@keyframes squid-chromatophore {
+    0% {
+        filter: drop-shadow(0 0 3px rgba(0, 229, 255, 0.7)) hue-rotate(0deg)
+            saturate(1.2) brightness(1);
+    }
+    25% {
+        filter: drop-shadow(0 0 6px rgba(255, 64, 129, 0.8)) hue-rotate(170deg)
+            saturate(1.9) brightness(1.3);
+    }
+    50% {
+        filter: drop-shadow(0 0 5px rgba(255, 160, 0, 0.8)) hue-rotate(300deg)
+            saturate(1.6) brightness(1.1);
+    }
+    75% {
+        filter: drop-shadow(0 0 6px rgba(64, 255, 64, 0.85)) hue-rotate(90deg)
+            saturate(1.8) brightness(1.25);
+    }
+    100% {
+        filter: drop-shadow(0 0 3px rgba(0, 229, 255, 0.7)) hue-rotate(0deg)
+            saturate(1.2) brightness(1);
+    }
+}
+.squid-svg.squid-chromatophore {
+    animation: squid-chromatophore 0.6s steps(4, end) infinite;
+}
+
+/* Squirty's house, parked in the top-right banner area. */
+#squirty-house {
+    position: fixed;
+    top: 46px;
+    right: 10px;
+    width: 60px;
+    height: 60px;
+    /* Above the CRT screen overlay (body::after, z 9998) so the house is not
+       washed out / hidden by the scanlines + corner vignette; still below the
+       squid (z 10000). */
+    z-index: 9999;
+    pointer-events: none;
+    image-rendering: pixelated;
+    opacity: 0.96;
+    filter: drop-shadow(0 0 4px rgba(255, 126, 182, 0.35));
+}
+
+/* Chimney bubbles: idle (hidden) until Squirty is sent to his house, then they
+   rise out of the sponge and fade in a staggered loop. */
+#squirty-house .sq-bubble {
+    opacity: 0;
+    transform-box: fill-box;
+    transform-origin: center;
+}
+#squirty-house.timeout .sq-bubble {
+    animation: sq-bubble-rise 1.8s linear infinite;
+}
+#squirty-house.timeout .sq-bubble.sq-b2 {
+    animation-delay: 0.6s;
+}
+#squirty-house.timeout .sq-bubble.sq-b3 {
+    animation-delay: 1.1s;
+}
+@keyframes sq-bubble-rise {
+    0% {
+        opacity: 0;
+        transform: translateY(0) scale(0.6);
+    }
+    25% {
+        opacity: 0.9;
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(-7px) scale(1);
+    }
+}
+
+/* "Squirty timeout" toggle in the navbar. */
+.navbar-squirty-timeout {
+    float: right !important;
+    display: inline-block !important;
+    margin: 4px 6px !important;
+    padding: 6px 12px !important;
+    line-height: 22px !important; /* shared row height so the navbar add-ons align */
+    vertical-align: middle !important;
+    font-weight: 700 !important;
+    font-size: 0.85rem !important;
+    color: #00e5ff !important;
+    background: rgba(0, 30, 40, 0.5) !important;
+    border: 1px solid #00838f !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    pointer-events: auto !important;
+    user-select: none !important;
+    text-shadow: 0 0 5px rgba(0, 229, 255, 0.5) !important;
+}
+.navbar-squirty-timeout:hover {
+    background: rgba(0, 60, 80, 0.7) !important;
+}
+.navbar-squirty-timeout.active {
+    color: #ff4081 !important;
+    border-color: #ff4081 !important;
+    text-shadow: 0 0 6px rgba(255, 64, 129, 0.6) !important;
+}
+
+/* Tucked into the house during timeout: stop the idle fin/tentacle motion. */
+#squid-container.squid-tucked {
+    z-index: 9996;
+}
+#squid-container.squid-tucked .squid-svg * {
+    animation: none !important;
+}
+
+/* Mascot Clicks Counter in Navbar Banner */
+.navbar-squirty-counter {
+    float: right !important;
+    display: inline-block !important;
+    padding: 6px 16px !important;
+    line-height: 22px !important; /* shared row height so the navbar add-ons align */
+    font-weight: 700 !important;
+    color: #40ff40 !important;
+    text-shadow: 0 0 5px rgba(64, 255, 64, 0.6) !important;
+    font-size: 0.95rem !important;
+    pointer-events: none !important;
+    border-left: 2px solid #008000 !important; /* visual left divider */
+    margin-left: 8px !important;
+    vertical-align: middle !important;
+}
+
+.navbar-squirty-counter .navbar-squirty-label {
+    color: #008000 !important;
+    text-shadow: none !important;
+    margin-right: 4px !important;
+}
+
+
+/* ---------------------------------------------------------------------- */
+/* Navbar add-ons: one centre line                                          */
+/* ---------------------------------------------------------------------- */
+/* Doxygen floats these into the menu row, each with its own height and margins, so they
+   landed on four different centres (46 / 43 / 38 / 32 against a row centre of 45.5). One
+   box for all three, contents centred inside it. */
+.navbar-squirty-timeout,
+.navbar-squirty-counter,
+#MSearchBox {
+    box-sizing: border-box;
+    height: 28px;
+    margin-top: 10px !important;
+    margin-bottom: 10px !important;
+    display: inline-flex !important;
+    align-items: center;
+    float: right !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    line-height: normal !important;
+    vertical-align: middle !important;
+}
+.navbar-squirty-timeout,
+.navbar-squirty-counter {
+    gap: 6px;
+    padding-inline: 12px !important;
+}
+#MSearchBox {
+    padding-inline: 8px !important;
+}
+/* Doxygen sizes the field from its own sheet; let it fill the box it now sits in. */
+#MSearchField {
+    height: 26px;
+    line-height: 26px;
+    margin: 0;
+    padding: 0 4px;
+}
+#MSearchSelect,
+#MSearchCloseImg {
+    vertical-align: middle;
+}

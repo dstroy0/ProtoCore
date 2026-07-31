@@ -94,6 +94,13 @@ jobs:
       - name: Regenerate example index from examples/
         run: python ci_tooling/generate/gen_examples.py
 
+      # The sidebar's sections and their order come from docs/nav/*.md, whose @subpage lists
+      # are what stop Doxygen parking all 197 pages at the nav root. Generated so a section
+      # cannot quietly lose a page, and so the order stays the intended reading order rather
+      # than whatever order Doxygen happened to read the files in.
+      - name: Regenerate documentation nav groups
+        run: python ci_tooling/generate/gen_nav_groups.py
+
       # Refresh test/README.md's generated sections (the env matrix scraped from test_matrix.json and
       # the per-test directory scraped from the test_*.cpp files) so they never drift from the suite.
       - name: Regenerate test/README.md from the suite

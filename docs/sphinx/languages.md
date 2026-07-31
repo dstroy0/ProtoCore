@@ -1,3 +1,0 @@
-```{include} ../learn/languages.md
-
-```

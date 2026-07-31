@@ -60,3 +60,6 @@ examples/*/*/build/
 
 # The LTO variant build dir for the rig bench sketches (the plain build/ is covered above).
 pentesting/rig_firmware/*/*/build-lto/
+
+# Downloaded by the Docs workflow at build time (pinned doxygen-awesome-css v2.3.3), not source.
+docs/doxygen-awesome.css

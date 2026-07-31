@@ -16,282 +16,32 @@ $generatedby&#160;<a href="https://www.doxygen.org/index.html"><img class="foote
 <!--END !GENERATE_TREEVIEW-->
 <script>
 (function() {
-    // Helper function to wrap text nodes in spans recursively
-    function wrapTextNodes(element) {
-        if (element.nodeType === Node.TEXT_NODE) {
-            const text = element.nodeValue;
-            if (text.trim() === '') return; // Skip whitespace nodes
-            
-            const fragment = document.createDocumentFragment();
-            for (let i = 0; i < text.length; i++) {
-                const char = text[i];
-                if (char === '\n' || char === '\r') {
-                    fragment.appendChild(document.createTextNode(char));
-                } else {
-                    const span = document.createElement('span');
-                    span.className = 'm-char';
-                    span.textContent = char;
-                    span.style.opacity = '0';
-                    span.style.transition = 'color 0.15s ease, text-shadow 0.15s ease';
-                    fragment.appendChild(span);
-                }
-            }
-            element.parentNode.replaceChild(fragment, element);
-        } else if (element.nodeType === Node.ELEMENT_NODE) {
-            // Do not wrap text inside <summary>, <script>, or <style>
-            if (element.tagName === 'SUMMARY' || element.tagName === 'SCRIPT' || element.tagName === 'STYLE') {
-                return;
-            }
-            const children = Array.from(element.childNodes);
-            children.forEach(wrapTextNodes);
-        }
-    }
-
-    // Create separate terminal dots for each details block
-    document.querySelectorAll('details > summary').forEach(summary => {
-        if (summary.querySelector('.tty-controls')) return;
-        
-        const controls = document.createElement('span');
-        controls.className = 'tty-controls';
-        
-        for (let i = 0; i < 3; i++) {
-            const dot = document.createElement('span');
-            dot.className = 'tty-dot';
-            controls.appendChild(dot);
-        }
-        
-        summary.appendChild(controls);
-    });
-
-    // Monitor details expansion
+    /*
+     * Section reveal.
+     *
+     * The previous implementation split every text node into one <span class="m-char"> per
+     * character and animated them from requestAnimationFrame. Measured on this page: a
+     * 506-character section created 259 elements and cost ~700 ms to open, while a
+     * 3000-character cap meant 6 of the 9 sections animated not at all. Slow where it ran,
+     * missing where it did not.
+     *
+     * Same idea, one element per section: wrap the body once at load and let CSS sweep a
+     * mask across it (.pc-reveal in protocore.css). The wrap is a single DOM operation
+     * regardless of section size, the animation is GPU-composited, there is no size cap,
+     * and prefers-reduced-motion is respected because the animation is in the stylesheet.
+     */
     document.querySelectorAll('details').forEach(details => {
-        const summary = details.querySelector('summary');
-        let originalHtml = null;
-        let animationFrameId = null;
-        
-        details.addEventListener('toggle', () => {
-            if (!details.open) {
-                if (details.dataset.matrixRunning === 'true') {
-                    // Stop animation and restore original HTML immediately
-                    if (animationFrameId) {
-                        cancelAnimationFrame(animationFrameId);
-                        animationFrameId = null;
-                    }
-                    details.dataset.matrixRunning = 'false';
-                    if (originalHtml !== null) {
-                        details.innerHTML = originalHtml;
-                    }
-                }
-                return;
-            }
-            
-            // Check if already processed
-            if (details.dataset.matrixProcessed === 'true') {
-                return;
-            }
-            
-            // Count animatable characters (excluding code blocks, etc.)
-            let animatableCount = 0;
-            const contentNodes = Array.from(details.childNodes).filter(node => node !== summary);
-            contentNodes.forEach(node => {
-                animatableCount += countAnimatableChars(node);
-            });
-            
-            if (animatableCount === 0 || animatableCount > 3000) {
-                details.dataset.matrixProcessed = 'true';
-                return;
-            }
-            
-            // Save original HTML
-            originalHtml = details.innerHTML;
-            details.dataset.matrixRunning = 'true';
-            
-            // Wrap text nodes
-            contentNodes.forEach(wrapTextNodes);
-            
-            // Start waterfall animation
-            animateMatrix(details);
-        });
-
-        function countAnimatableChars(element) {
-            if (element.nodeType === Node.TEXT_NODE) {
-                return element.nodeValue.trim().length;
-            }
-            if (element.nodeType === Node.ELEMENT_NODE) {
-                const tag = element.tagName;
-                if (tag === 'SUMMARY' || tag === 'SCRIPT' || tag === 'STYLE' || tag === 'PRE' || tag === 'CODE') {
-                    return 0;
-                }
-                let count = 0;
-                element.childNodes.forEach(child => {
-                    count += countAnimatableChars(child);
-                });
-                return count;
-            }
-            return 0;
+        if (details.querySelector(':scope > .pc-reveal')) return;
+        const summary = details.querySelector(':scope > summary');
+        const body = document.createElement('div');
+        body.className = 'pc-reveal';
+        let node = details.firstChild;
+        while (node) {
+            const next = node.nextSibling;
+            if (node !== summary) body.appendChild(node);
+            node = next;
         }
-
-        function wrapTextNodes(element) {
-            if (element.nodeType === Node.TEXT_NODE) {
-                const text = element.nodeValue;
-                if (text.trim() === '') return;
-                
-                const fragment = document.createDocumentFragment();
-                for (let i = 0; i < text.length; i++) {
-                    const char = text[i];
-                    if (char === '\n' || char === '\r') {
-                        fragment.appendChild(document.createTextNode(char));
-                    } else {
-                        const span = document.createElement('span');
-                        span.className = 'm-char';
-                        span.textContent = char;
-                        span.style.opacity = '0';
-                        span.style.transition = 'color 0.15s ease, text-shadow 0.15s ease';
-                        fragment.appendChild(span);
-                    }
-                }
-                element.parentNode.replaceChild(fragment, element);
-            } else if (element.nodeType === Node.ELEMENT_NODE) {
-                const tag = element.tagName;
-                if (tag === 'SUMMARY' || tag === 'SCRIPT' || tag === 'STYLE' || tag === 'PRE' || tag === 'CODE') {
-                    return;
-                }
-                const children = Array.from(element.childNodes);
-                children.forEach(wrapTextNodes);
-            }
-        }
-
-        function animateMatrix(details) {
-            const chars = Array.from(details.querySelectorAll('.m-char'));
-            if (chars.length === 0) {
-                finish();
-                return;
-            }
-            
-            // Glyphs the falling head scrambles through before locking to the
-            // real character (half-width katakana + digits + symbols).
-            const GLYPHS = 'ｦｱｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾅﾆﾇﾈﾊﾋﾎﾏﾐﾑﾒﾓﾔﾕﾗﾘﾜ0123456789:.=*+-<>¦|';
-            const randGlyph = () => GLYPHS[(Math.random() * GLYPHS.length) | 0];
-
-            const columnsMap = {};
-            chars.forEach(span => {
-                const rect = span.getBoundingClientRect();
-                const colKey = Math.round(rect.left / 8) * 8;
-                if (!columnsMap[colKey]) {
-                    columnsMap[colKey] = [];
-                }
-                span.dataset.real = span.textContent; // remember the true char
-                columnsMap[colKey].push({ el: span, top: rect.top });
-            });
-
-            const columns = Object.keys(columnsMap)
-                .sort((a, b) => Number(a) - Number(b))
-                .map(key => {
-                    const list = columnsMap[key];
-                    list.sort((a, b) => a.top - b.top);
-                    return {
-                        chars: list.map(item => item.el),
-                        currentIndex: -10,
-                        started: false,
-                        completed: false,
-                        speed: 3.5 + Math.random() * 3.5 // faster fall (was 1.2–2.7)
-                    };
-                });
-                
-            if (columns.length === 0) {
-                finish();
-                return;
-            }
-            
-            function loop() {
-                if (details.dataset.matrixRunning !== 'true') return;
-                
-                let allCompleted = true;
-                
-                for (let i = 0; i < columns.length; i++) {
-                    const col = columns[i];
-                    if (col.completed) continue;
-                    
-                    allCompleted = false;
-                    
-                    if (!col.started) {
-                        let shouldStart = Math.random() < 0.08;
-                        if (!shouldStart) {
-                            const leftNeighbor = columns[i - 1];
-                            const rightNeighbor = columns[i + 1];
-                            if (leftNeighbor && leftNeighbor.started && (leftNeighbor.currentIndex / leftNeighbor.chars.length) >= 0.2) {
-                                shouldStart = true;
-                            }
-                            if (rightNeighbor && rightNeighbor.started && (rightNeighbor.currentIndex / rightNeighbor.chars.length) >= 0.2) {
-                                shouldStart = true;
-                            }
-                        }
-                        if (shouldStart) col.started = true;
-                    }
-
-                    if (col.started) {
-                        col.currentIndex += col.speed;
-                        const len = col.chars.length;
-
-                        if (col.currentIndex >= len + 16) {
-                            col.completed = true;
-                            continue;
-                        }
-
-                        for (let c = 0; c < len; c++) {
-                            const el = col.chars[c];
-                            const dist = col.currentIndex - c;
-
-                            if (dist < 0) {
-                                // not reached yet
-                                el.style.opacity = '0';
-                            } else if (dist <= 1.5) {
-                                // bright white scrambling head
-                                el.textContent = randGlyph();
-                                el.style.opacity = '1';
-                                el.style.color = '#fff';
-                                el.style.textShadow = '0 0 8px #40ff40, 0 0 16px #40ff40';
-                            } else if (dist <= 6) {
-                                // vivid green scrambling trail
-                                el.textContent = randGlyph();
-                                el.style.opacity = '1';
-                                el.style.color = '#40ff40';
-                                el.style.textShadow = '0 0 6px #40ff40';
-                            } else if (dist <= 12) {
-                                // fading: occasional last glyph flicker, then the real char
-                                el.textContent = Math.random() < 0.4 ? randGlyph() : el.dataset.real;
-                                el.style.opacity = '0.85';
-                                el.style.color = '#2bb35a';
-                                el.style.textShadow = '0 0 4px rgba(43, 179, 90, 0.5)';
-                            } else {
-                                // settled: lock to the real character in the calm theme green
-                                el.textContent = el.dataset.real;
-                                el.style.opacity = '1';
-                                el.style.color = '#2bb35a';
-                                el.style.textShadow = '0 0 2px rgba(43, 179, 90, 0.4)';
-                            }
-                        }
-                    }
-                }
-                
-                if (allCompleted) {
-                    finish();
-                } else {
-                    animationFrameId = requestAnimationFrame(loop);
-                }
-            }
-            
-            function finish() {
-                animationFrameId = null;
-                details.dataset.matrixRunning = 'false';
-                details.dataset.matrixProcessed = 'true';
-                if (originalHtml !== null) {
-                    details.innerHTML = originalHtml;
-                }
-            }
-            
-            animationFrameId = requestAnimationFrame(loop);
-        }
+        details.appendChild(body);
     });
 
     // Shared mascot clicks counter state and UI updater
