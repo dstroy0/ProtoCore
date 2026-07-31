@@ -13,8 +13,8 @@
  * filesystem or heap. Edit web_assets/input/ and re-run web_assets/wizard/build_assets.py.
  */
 
-#ifndef PROTOCORE_WEB_ASSETS_H
-#define PROTOCORE_WEB_ASSETS_H
+#ifndef PROTOCORE_WEB_H
+#define PROTOCORE_WEB_H
 
 // ---- html ----
 /** @brief Real-time SVG telemetry dashboard page (PC_ENABLE_DASHBOARD). */
@@ -41,4 +41,4 @@ extern const char PC_STATS_JSON[];
 /** @brief All available Prometheus metrics; comment a value line out with a leading # to drop it. */
 extern const char PC_METRICS_PROM[];
 
-#endif // PROTOCORE_WEB_ASSETS_H
+#endif // PROTOCORE_WEB_H

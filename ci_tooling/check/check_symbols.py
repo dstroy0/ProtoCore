@@ -190,7 +190,13 @@ def check():
             # m.start(1) returns -1 and text[:-1] counts nearly the whole file - both
             # ubx enums reported as line 272. The name group is always present.
             ln = text[:m.start(2)].count("\n") + 1
-            if not is_class:
+            # A plain enum is occasionally the right call - an opcode enum whose VALUE is the
+            # wire byte would need a cast at every use as an enum class. Allow it only with the
+            # reason stated at the site, the same contract check_src_banned uses.
+            # Look in RAW, not text: the marker is a comment and text has been decommented. blank_comments
+            # blanks characters in place, so offsets line up between the two.
+            justified = "PC_ALLOW_UNSCOPED_ENUM:" in raw[max(0, m.start(2) - 400):m.start(2)]
+            if not is_class and not justified:
                 add("enum-unscoped", rel, ln, f"enum {name} is not an `enum class`")
             if not re.fullmatch(r"pc_[a-z0-9_]+", name):
                 add("enum-name", rel, ln, f"enum type {name} is not pc_snake_case")

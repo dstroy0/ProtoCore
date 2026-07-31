@@ -356,7 +356,9 @@ ASSET_BASENAME = "web"
 
 
 def render_header(assets):
-    guard = "PROTOCORE_WEB_ASSETS_H"
+    # Named for the OUTPUT file (web.h), not the input directory (web_assets/). The naming law
+    # derives the guard from the filename, so PROTOCORE_WEB_ASSETS_H fails it.
+    guard = "PROTOCORE_WEB_H"
     lines = [
         BANNER,
         "",

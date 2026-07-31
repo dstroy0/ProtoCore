@@ -46,6 +46,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
+// PC_ALLOW_UNSCOPED_ENUM: the value IS the opcode byte written to the wire and compared as an
+// integer, so an enum class would put a static_cast at every use to satisfy the lint without
+// making anything safer.
 /** @brief Field kinds. The value is an opcode, so this is deliberately a plain byte enum. */
 enum pc_fk : uint8_t
 {
