@@ -517,13 +517,18 @@ void PC::serve_static_request(uint8_t slot_id, HttpReq *req, const Route *r)
     size_t slen = strnlen(sub, MAX_PATH_LEN);
     bool dir = (slen == 0) || (sub[slen - 1] == '/');
 
+    // A path that does not fit is refused, not truncated: a clipped path names a different file,
+    // and serving one the caller never asked for is worse than a 404.
     char fs_path[256];
-    int wn = dir ? snprintf(fs_path, sizeof(fs_path), "%s%s%sindex.html", root, sep, sub)
-                 : snprintf(fs_path, sizeof(fs_path), "%s%s%s", root, sep, sub);
-    // wn <= 0 is unreachable: snprintf only returns negative on an encoding error, and the shortest
-    // result here is non-empty (the directory form appends "index.html", the file form has a
-    // non-empty sub). The truncation half is exercised.
-    if (wn <= 0 || wn >= (int)sizeof(fs_path)) // GCOVR_EXCL_BR_LINE  wn <= 0 unreachable (see above)
+    pc_sb sb_path = {fs_path, sizeof(fs_path), 0, true};
+    pc_sb_put(&sb_path, root);
+    pc_sb_put(&sb_path, sep);
+    pc_sb_put(&sb_path, sub);
+    if (dir)
+    {
+        pc_sb_lit(&sb_path, "index.html");
+    }
+    if (pc_sb_finish(&sb_path) == 0)
     {
         send(slot_id, 404, PC_MIME_TEXT_PLAIN, "Not Found");
         return;

@@ -152,10 +152,16 @@ static void build_kex_list(char *out, size_t cap)
     // is gated independently so a footprint-bound build can offer ML-KEM only (kexlist[192] holds
     // the full both-hybrid list with margin, so the appends never truncate).
 #if PC_ENABLE_PQC_KEX
-    n += (size_t)snprintf(out + n, cap - n, "%s,", KEX_MLKEM768);
+    pc_sb sb_mlkem = {out + n, cap - n, 0, true};
+    pc_sb_put(&sb_mlkem, KEX_MLKEM768);
+    pc_sb_lit(&sb_mlkem, ",");
+    n += pc_sb_finish(&sb_mlkem);
 #endif
 #if PC_ENABLE_SSH_SNTRUP761
-    n += (size_t)snprintf(out + n, cap - n, "%s,", KEX_SNTRUP761);
+    pc_sb sb_sntrup = {out + n, cap - n, 0, true};
+    pc_sb_put(&sb_sntrup, KEX_SNTRUP761);
+    pc_sb_lit(&sb_sntrup, ",");
+    n += pc_sb_finish(&sb_sntrup);
 #endif
     if (s_sshtr.prefer_rsa)
     {

@@ -10,26 +10,7 @@
 
 #if PC_ENABLE_HAAS_MDC
 
-#include <stdio.h> // snprintf (query formatting; framing + parsing are hand-rolled)
-
-// Clamp a snprintf result: 0 on truncation / error, else the written length.
-static size_t finish(char *buf, size_t cap, int n)
-{
-    // The n < 0 half is unreachable: both callers format a fixed literal + a single %u into a
-    // caller-supplied buffer, and snprintf only goes negative on an encoding error those formats
-    // cannot raise.
-    if (n < 0 || (size_t)n >= cap) // GCOVR_EXCL_BR_LINE  n < 0 half unreachable, see above
-    {
-        // The false half is unreachable: both callers (pc_haas_mdc_build_q, pc_haas_mdc_build_var)
-        // already return early when cap == 0, so finish() only ever runs with cap > 0.
-        if (cap) // GCOVR_EXCL_BR_LINE  cap == 0 half unreachable, see above
-        {
-            buf[0] = '\0';
-        }
-        return 0;
-    }
-    return (size_t)n;
-}
+#include "shared_primitives/strbuf.h" // pc_sb frame builder
 
 // Trim leading and trailing spaces from [s, s+len); updates s and len in place.
 static void trim(const char **s, size_t *len)
@@ -101,7 +82,11 @@ size_t pc_haas_mdc_build_q(char *buf, size_t cap, uint16_t qnum)
     {
         return 0;
     }
-    return finish(buf, cap, snprintf(buf, cap, "?Q%u\r", (unsigned)qnum));
+    pc_sb sb_q = {buf, cap, 0, true};
+    pc_sb_lit(&sb_q, "?Q");
+    pc_sb_u32(&sb_q, qnum);
+    pc_sb_ch(&sb_q, '\r');
+    return pc_sb_finish(&sb_q);
 }
 
 size_t pc_haas_mdc_build_var(char *buf, size_t cap, uint32_t var)
@@ -110,7 +95,11 @@ size_t pc_haas_mdc_build_var(char *buf, size_t cap, uint32_t var)
     {
         return 0;
     }
-    return finish(buf, cap, snprintf(buf, cap, "?Q600 %u\r", (unsigned)var));
+    pc_sb sb_var = {buf, cap, 0, true};
+    pc_sb_lit(&sb_var, "?Q600 ");
+    pc_sb_u32(&sb_var, var);
+    pc_sb_ch(&sb_var, '\r');
+    return pc_sb_finish(&sb_var);
 }
 
 bool pc_haas_mdc_parse(const char *buf, size_t len, HaasMdcResp *out)

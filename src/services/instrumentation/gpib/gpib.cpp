@@ -11,23 +11,7 @@
 
 #if PC_ENABLE_GPIB
 
-#include <stdio.h> // snprintf (command formatting; escaping + parsing are hand-rolled)
 #include <string.h>
-
-// Clamp a snprintf result: 0 on truncation / error, else the written length.
-static size_t finish(char *buf, size_t cap, int n)
-{
-    if (n < 0 || (size_t)n >= cap) // GCOVR_EXCL_LINE  n<0 needs an snprintf encoding failure; every call site
-                                   // passes a literal format with valid args, so only the truncation arm runs
-    {
-        if (cap) // GCOVR_EXCL_LINE  every caller (command/addr/read/spoll/eos) rejects cap==0 before calling finish
-        {
-            buf[0] = '\0';
-        }
-        return 0;
-    }
-    return (size_t)n;
-}
 
 size_t pc_gpib_command(char *buf, size_t cap, const char *cmd)
 {
@@ -35,7 +19,11 @@ size_t pc_gpib_command(char *buf, size_t cap, const char *cmd)
     {
         return 0;
     }
-    return finish(buf, cap, snprintf(buf, cap, "++%s\n", cmd));
+    pc_sb sb_cmd = {buf, cap, 0, true};
+    pc_sb_lit(&sb_cmd, "++");
+    pc_sb_put(&sb_cmd, cmd);
+    pc_sb_lit(&sb_cmd, "\n");
+    return pc_sb_finish(&sb_cmd);
 }
 
 size_t pc_gpib_addr(char *buf, size_t cap, uint8_t pad, int sad)
@@ -44,9 +32,16 @@ size_t pc_gpib_addr(char *buf, size_t cap, uint8_t pad, int sad)
     {
         return 0;
     }
-    int n = (sad >= 0) ? snprintf(buf, cap, "++addr %u %d\n", (unsigned)pad, sad)
-                       : snprintf(buf, cap, "++addr %u\n", (unsigned)pad);
-    return finish(buf, cap, n);
+    pc_sb sb_addr = {buf, cap, 0, true};
+    pc_sb_lit(&sb_addr, "++addr ");
+    pc_sb_u32(&sb_addr, pad);
+    if (sad >= 0)
+    {
+        pc_sb_ch(&sb_addr, ' ');
+        pc_sb_i64(&sb_addr, sad);
+    }
+    pc_sb_lit(&sb_addr, "\n");
+    return pc_sb_finish(&sb_addr);
 }
 
 size_t pc_gpib_read(char *buf, size_t cap, GpibRead mode, uint8_t ch)
@@ -55,32 +50,23 @@ size_t pc_gpib_read(char *buf, size_t cap, GpibRead mode, uint8_t ch)
     {
         return 0;
     }
-    int n = 0;
+    pc_sb sb_read = {buf, cap, 0, true};
     switch (mode)
     {
-    case GpibRead::UNTIL_EOI: {
-        pc_sb sb_buf = {buf, cap, 0, true};
-        pc_sb_put(&sb_buf, "++read eoi\n");
-        n = (int)pc_sb_finish(&sb_buf);
-    }
-    break;
-    case GpibRead::UNTIL_CHAR: {
-        pc_sb sb_buf2 = {buf, cap, 0, true};
-        pc_sb_put(&sb_buf2, "++read ");
-        pc_sb_u32(&sb_buf2, (uint32_t)((unsigned)ch));
-        pc_sb_put(&sb_buf2, "\n");
-        n = (int)pc_sb_finish(&sb_buf2);
-    }
-    break;
+    case GpibRead::UNTIL_EOI:
+        pc_sb_lit(&sb_read, "++read eoi\n");
+        break;
+    case GpibRead::UNTIL_CHAR:
+        pc_sb_lit(&sb_read, "++read ");
+        pc_sb_u32(&sb_read, ch);
+        pc_sb_lit(&sb_read, "\n");
+        break;
     case GpibRead::UNTIL_TIMEOUT:
-    default: {
-        pc_sb sb_buf3 = {buf, cap, 0, true};
-        pc_sb_put(&sb_buf3, "++read\n");
-        n = (int)pc_sb_finish(&sb_buf3);
+    default:
+        pc_sb_lit(&sb_read, "++read\n");
+        break;
     }
-    break;
-    }
-    return finish(buf, cap, n);
+    return pc_sb_finish(&sb_read);
 }
 
 size_t pc_gpib_spoll(char *buf, size_t cap, int pad, int sad)
@@ -89,32 +75,20 @@ size_t pc_gpib_spoll(char *buf, size_t cap, int pad, int sad)
     {
         return 0;
     }
-    int n;
-    if (pad < 0)
+    pc_sb sb_spoll = {buf, cap, 0, true};
+    pc_sb_lit(&sb_spoll, "++spoll");
+    if (pad >= 0)
     {
-        pc_sb sb_buf4 = {buf, cap, 0, true};
-        pc_sb_put(&sb_buf4, "++spoll\n");
-        n = (int)pc_sb_finish(&sb_buf4);
+        pc_sb_ch(&sb_spoll, ' ');
+        pc_sb_i64(&sb_spoll, pad);
+        if (sad >= 0)
+        {
+            pc_sb_ch(&sb_spoll, ' ');
+            pc_sb_i64(&sb_spoll, sad);
+        }
     }
-    else if (sad < 0)
-    {
-        pc_sb sb_buf5 = {buf, cap, 0, true};
-        pc_sb_put(&sb_buf5, "++spoll ");
-        pc_sb_i64(&sb_buf5, (int64_t)(pad));
-        pc_sb_put(&sb_buf5, "\n");
-        n = (int)pc_sb_finish(&sb_buf5);
-    }
-    else
-    {
-        pc_sb sb_buf6 = {buf, cap, 0, true};
-        pc_sb_put(&sb_buf6, "++spoll ");
-        pc_sb_i64(&sb_buf6, (int64_t)(pad));
-        pc_sb_put(&sb_buf6, " ");
-        pc_sb_i64(&sb_buf6, (int64_t)(sad));
-        pc_sb_put(&sb_buf6, "\n");
-        n = (int)pc_sb_finish(&sb_buf6);
-    }
-    return finish(buf, cap, n);
+    pc_sb_lit(&sb_spoll, "\n");
+    return pc_sb_finish(&sb_spoll);
 }
 
 size_t pc_gpib_eos(char *buf, size_t cap, GpibEos eos)
@@ -123,7 +97,11 @@ size_t pc_gpib_eos(char *buf, size_t cap, GpibEos eos)
     {
         return 0;
     }
-    return finish(buf, cap, snprintf(buf, cap, "++eos %d\n", (int)eos));
+    pc_sb sb_eos = {buf, cap, 0, true};
+    pc_sb_lit(&sb_eos, "++eos ");
+    pc_sb_i64(&sb_eos, (int64_t)eos); // the wire field IS the enumerator's decimal value
+    pc_sb_lit(&sb_eos, "\n");
+    return pc_sb_finish(&sb_eos);
 }
 
 size_t pc_gpib_build_data(uint8_t *buf, size_t cap, const uint8_t *src, size_t len)
