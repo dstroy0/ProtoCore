@@ -963,15 +963,19 @@ BSS, no heap, behind a build flag.
 > it with a GPS stratum-1 source + upstream-NTP fallback). NTS below hardens the time the
 > device _consumes_; a future NTS server mode could extend the server the same way.
 
-### Documentation: Sphinx over Doxygen (do last)
+### Documentation: Sphinx over Doxygen (built, then removed)
 
-> The final roadmap item - tackle only after everything else on the TODO and the
-> roadmap above is checked off.
+> **Removed 2026-07-31.** Both items below were built and shipped, and both are now gone.
+> The Sphinx site was never published: the Doxygen workflow owns GitHub Pages and the
+> `Docs (Sphinx)` job only ever verified that the build still ran. Its six pages duplicated
+> real `docs/` pages under lowercase names, which also put seven shadow entries in the
+> Doxygen navigation tree. `docs/sphinx/` and `.github/workflows/docs-sphinx.yml` were
+> deleted and `GENERATE_XML` turned off, since it existed only to feed Breathe.
+>
+> The goal it was chasing - a polished docs site - was met instead by rebuilding the Doxygen
+> theme directly (`docs/protocore.css`), which is the site that actually deploys.
 
-The docs today are Doxygen + a custom CSS theme. The goal is to add **Sphinx** on top and
-then apply **"squirty"** styling over it for a polished, modern docs site.
-
-- [x] **Sphinx + Breathe bridge** (L) _(shipped)_ - the Sphinx project lives in `docs/sphinx`: `docs/Doxyfile`
+- [x] ~~**Sphinx + Breathe bridge** (L)~~ _(shipped, then REMOVED 2026-07-31)_ - the Sphinx project lived in `docs/sphinx`: `docs/Doxyfile`
       now emits XML (`GENERATE_XML=YES` -> `docs/sphinx/xml`), **Breathe** renders it into the API reference
       (the `PC` public surface), and **MyST** pulls the hand-written Markdown guides
       (`ARCHITECTURE.md`, the `docs/learn` primers) into the same site via `include` stubs (one source of
@@ -980,7 +984,7 @@ then apply **"squirty"** styling over it for a polished, modern docs site.
       (`.github/workflows/docs-sphinx.yml`, build + artifact). The full per-symbol `doxygenindex` is not
       inlined (the Sphinx C++ domain does not parse every macro-heavy declaration); that complete reference
       stays in the Doxygen HTML.
-- [x] **Apply "squirty" over the Sphinx theme** (M) _(shipped)_ - "squirty" is the project brand: the
+- [x] ~~**Apply "squirty" over the Sphinx theme** (M)~~ _(shipped, then REMOVED 2026-07-31 with the site)_ - "squirty" is the project brand: the
       **Squirty the Injection Squid** mascot (`docs/squirty.svg`) plus the **Retro TTY Green Screen** palette
       (phosphor `#2bb35a` on a near-black `#080c08` CRT, from `docs/custom.css`). Layered over **Furo** via
       `docs/sphinx/conf.py` (light/dark brand css-variables) + `docs/sphinx/_static/squirty.css` (the mascot
