@@ -223,17 +223,30 @@ static void test_read_narrows_to_a_given_length(void)
 
 static void test_bytes_read_cursor_drives_a_cspan(void)
 {
-    const uint8_t frame[5] = {0x1A, 0xDE, 0xAD, 0xBE, 0xEF}; // tag + 4-byte big-endian argument
-    pc_cspan r = pc_cspan_from(frame, 5);
+    const uint8_t frame[4] = {0xDE, 0xAD, 0xBE, 0xEF}; // a plain 4-byte big-endian value
+    pc_cspan r = pc_cspan_from(frame, 4);
     uint64_t v = 0;
     TEST_ASSERT_TRUE(pc_br_take_be(&r, 4, &v));
     TEST_ASSERT_EQUAL_HEX64(0xDEADBEEFull, v);
-    TEST_ASSERT_TRUE(pc_br_ok(&r));
-    TEST_ASSERT_EQUAL_UINT32(5, r.pos);
+    TEST_ASSERT_TRUE(pc_cspan_ok(r));
+    TEST_ASSERT_EQUAL_UINT32(4, r.pos); // reads at the cursor: no tag byte is skipped
 
     uint64_t again = 0;
     TEST_ASSERT_FALSE(pc_br_take_be(&r, 4, &again)); // past the end
-    TEST_ASSERT_FALSE(pc_br_ok(&r));                 // sticky error
+    TEST_ASSERT_FALSE(pc_cspan_ok(r));               // sticky error
+}
+
+// A length prefix of 0xFFFFFFFF must be rejected, not wrapped into a small number. On a 32-bit
+// size_t (esp32, c2000) the old `*off + n > len` form summed to 7 and passed. A 64-bit host cannot
+// reproduce that, so this asserts the contract rather than the arithmetic.
+static void test_a_wire_length_cannot_overflow_the_bound(void)
+{
+    const uint8_t frame[12] = {0, 0, 0, 0, 0xFF, 0xFF, 0xFF, 0xFF, 0, 0, 0, 0};
+    size_t off = 4; // sitting on the length prefix
+    const uint8_t *out = nullptr;
+    uint32_t slen = 0;
+    TEST_ASSERT_FALSE(pc_rd_str(frame, sizeof(frame), &off, &out, &slen));
+    TEST_ASSERT_EQUAL_UINT32(4, off); // a failed read leaves the offset on its own field
 }
 
 int main(int, char **)
@@ -256,5 +269,6 @@ int main(int, char **)
     RUN_TEST(test_produced_view_of_an_overflowed_span_is_empty);
     RUN_TEST(test_read_narrows_to_a_given_length);
     RUN_TEST(test_bytes_read_cursor_drives_a_cspan);
+    RUN_TEST(test_a_wire_length_cannot_overflow_the_bound);
     return UNITY_END();
 }

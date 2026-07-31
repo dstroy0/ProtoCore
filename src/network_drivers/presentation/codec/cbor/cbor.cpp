@@ -165,7 +165,8 @@ static bool read_head(pc_cspan *r, uint8_t *major, uint64_t *val)
         r->err = true; // 28-31: reserved / indefinite-length, unsupported
         return false;
     }
-    // The argument is the `need` big-endian bytes after this head byte.
+    // The argument is the `need` big-endian bytes after this head byte, so step over the head first.
+    r->pos += 1;
     return pc_br_take_be(r, need, val);
 }
 
@@ -299,6 +300,7 @@ bool pc_cbor_read_float(pc_cspan *r, float *out)
     if (b == 0xfa) // single
     {
         uint64_t v;
+        r->pos += 1; // step over the head byte; the argument follows it
         if (!pc_br_take_be(r, 4, &v))
         {
             return false;
@@ -310,6 +312,7 @@ bool pc_cbor_read_float(pc_cspan *r, float *out)
     if (b == 0xfb) // double -> narrow to float
     {
         uint64_t bits;
+        r->pos += 1; // step over the head byte; the argument follows it
         if (!pc_br_take_be(r, 8, &bits))
         {
             return false;

@@ -33,11 +33,10 @@
  * That retires the `size_t *out_len` out-parameter that used to ride beside the buffer: capacity in
  * and produced length out are one object, and neither can be paired with the wrong buffer.
  *
- * **One byte-cursor API, not two.** The field names here are exactly the write-cursor convention
- * that shared_primitives/bytes.h already operates on (`{uint8_t *buf; size_t cap; size_t pos; bool
- * overflow;}`), so pc_bw_put() / pc_bw_put_be() / pc_bw_len() / pc_bw_ok() apply to a pc_span
- * unchanged. This type is the storage-binding half - where the region came from and how big it is;
- * bytes.h is the writing half. There is no second byte-append API.
+ * **One byte-cursor API, not two.** This type is the storage-binding half - where the region came
+ * from and how big it is - and shared_primitives/bytes.h is the verbs, pc_bw_put() and
+ * pc_bw_put_be(). Length and status are this file's own pc_span_len() / pc_span_ok(); bytes.h no
+ * longer restates them. There is no second byte-append API.
  *
  * **Fail-closed by construction.** A failed allocation yields a null pointer with zero capacity,
  * never a null pointer with a live capacity. A caller that forgets the check writes nothing into a
@@ -72,8 +71,8 @@ struct pc_span
 /**
  * @brief A read-only byte region.
  *
- * Field names match the bytes.h read-cursor convention (`{const uint8_t *buf; size_t len; size_t
- * pos; bool err;}`), so pc_br_init() / pc_br_take_be() apply unchanged.
+ * Bind with pc_cspan_from() and check with pc_cspan_ok(); pc_br_take_be() in bytes.h reads through
+ * it. A read is bounded by the region itself, which is why nothing here takes a separate length.
  */
 struct pc_cspan
 {
