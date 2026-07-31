@@ -732,7 +732,7 @@ every layer. The current HTTP/1.1 core already tracks the modern HTTP specs
       CRC-8/SMBUS, CRC-8/MAXIM-DOW, CRC-8/NRSC-5, CRC-16/ARC, CRC-16/MODBUS, CRC-16/IBM-3740,
       CRC-16/XMODEM, CRC-16/KERMIT, CRC-16/X-25, CRC-16/DNP, CRC-24/OPENPGP, CRC-32/ISO-HDLC and
       CRC-32/BZIP2. Two independent lines of evidence, both asserted in `test_crc` (10 cases, in
-      `native_primitives`): every preset reproduces its **published cataloge check value** (the
+      `native_primitives`): every preset reproduces its **published catalog check value** (the
       CRC of `"123456789"`), and the engine is **diffed against the in-tree hand-rolled loops** across
       every length 0..64, so a preset meant to retire one of them is proven byte-identical to the
       interop-tested code it replaces rather than merely plausible.

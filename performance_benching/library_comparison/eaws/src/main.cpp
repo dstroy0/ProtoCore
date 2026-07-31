@@ -25,7 +25,9 @@ void setup()
     WiFi.begin(WIFI_SSID, WIFI_PASS);
     uint32_t t0 = millis();
     while (WiFi.status() != WL_CONNECTED && millis() - t0 < 30000)
+    {
         delay(200);
+    }
     WiFi.setSleep(false);
     Serial.print("IP=");
     Serial.println(WiFi.localIP());
@@ -38,7 +40,9 @@ void setup()
             r->beginChunkedResponse("text/plain", [](uint8_t *buf, size_t maxLen, size_t index) -> size_t {
                 size_t remaining = 65536u - index;
                 if (remaining == 0)
+                {
                     return 0;
+                }
                 size_t n = remaining < maxLen ? remaining : maxLen;
                 memset(buf, 'A', n);
                 return n;

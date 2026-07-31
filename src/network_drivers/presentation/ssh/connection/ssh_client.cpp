@@ -11,8 +11,8 @@
  */
 
 #include "network_drivers/presentation/ssh/connection/ssh_client.h"
-#include "shared_primitives/strbuf.h" // pc_sb frame builder
 #include "server/mmgr/secure.h"
+#include "shared_primitives/strbuf.h" // pc_sb frame builder
 
 #if PC_ENABLE_SSH_CLIENT
 

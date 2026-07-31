@@ -29,7 +29,9 @@ static void nts_ke_sink(bool critical, uint16_t type, const uint8_t *body, size_
     (void)body;
     (void)body_len;
     if (arg)
+    {
         (*(volatile uint32_t *)arg)++;
+    }
 }
 
 static void nts_bench_task(void *)

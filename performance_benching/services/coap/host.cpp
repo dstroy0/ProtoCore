@@ -25,7 +25,9 @@ template <typename F> static double bench_ns(uint64_t iters, F fn)
 {
     auto t0 = clk::now();
     for (uint64_t i = 0; i < iters; i++)
+    {
         fn();
+    }
     auto t1 = clk::now();
     double ns = std::chrono::duration<double, std::nano>(t1 - t0).count();
     return ns / (double)iters;
@@ -42,7 +44,9 @@ static void h_info(const CoapRequest *, CoapResponse *resp)
     static const char body[] = "{\"uptime_ms\":123456,\"free_heap\":204800}";
     size_t n = sizeof(body) - 1;
     if (n > resp->payload_cap)
+    {
         n = resp->payload_cap;
+    }
     memcpy(resp->payload, body, n);
     resp->payload_len = n;
     resp->content_format = CoapContentFormat::COAP_CF_JSON;

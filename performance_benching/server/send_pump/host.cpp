@@ -22,7 +22,9 @@ template <typename F> static double bench_ns(uint64_t iters, F fn)
 {
     auto t0 = clk::now();
     for (uint64_t i = 0; i < iters; i++)
+    {
         fn();
+    }
     auto t1 = clk::now();
     return std::chrono::duration<double, std::nano>(t1 - t0).count() / (double)iters;
 }
@@ -54,18 +56,24 @@ static size_t frame_handrolled(uint8_t *framed, uint8_t *body, size_t n)
     int t = 0;
     unsigned v = (unsigned)n;
     if (v == 0)
+    {
         tmp[t++] = '0';
+    }
     else
+    {
         while (v)
         {
             tmp[t++] = "0123456789abcdef"[v & 0xF];
             v >>= 4;
         }
+    }
     // Reverse the digits directly ahead of the body, then CRLF, matching the size line layout.
     uint8_t *start = body - (t + 2);
     int len = 0;
     while (t)
+    {
         start[len++] = (uint8_t)tmp[--t];
+    }
     start[len++] = '\r';
     start[len++] = '\n';
     body[n] = '\r';
@@ -99,12 +107,16 @@ int main()
     const size_t NCHUNKS = (BODY + CHUNK - 1) / CHUNK;
     ns = bench_ns(50000, [&] {
         for (size_t c = 0; c < NCHUNKS; c++)
+        {
             sink += frame_snprintf(framed, body, CHUNK);
+        }
     });
     row("pump 64KiB snprintf", ns, (double)BODY);
     ns = bench_ns(50000, [&] {
         for (size_t c = 0; c < NCHUNKS; c++)
+        {
             sink += frame_handrolled(framed, body, CHUNK);
+        }
     });
     row("pump 64KiB hand-rolled", ns, (double)BODY);
 

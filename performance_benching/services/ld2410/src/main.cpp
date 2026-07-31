@@ -62,8 +62,12 @@ static bool feed_frame(Ld2410Stream *s, const uint8_t *f, size_t n, Ld2410Report
 {
     bool got = false;
     for (size_t i = 0; i < n; i++)
+    {
         if (pc_ld2410_stream_push(s, f[i], out))
+        {
             got = true;
+        }
+    }
     return got;
 }
 

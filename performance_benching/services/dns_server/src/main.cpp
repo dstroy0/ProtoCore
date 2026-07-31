@@ -32,7 +32,9 @@ static size_t make_query(uint8_t *buf, uint16_t id, const char *name, uint16_t q
     buf[n++] = 0x00;
     buf[n++] = 0x01; // QDCOUNT = 1
     for (int i = 0; i < 6; i++)
+    {
         buf[n++] = 0x00; // AN/NS/AR = 0
+    }
     const char *p = name;
     while (*p)
     {
@@ -43,7 +45,9 @@ static size_t make_query(uint8_t *buf, uint16_t id, const char *name, uint16_t q
         n += label;
         p += label;
         if (*p == '.')
+        {
             p++;
+        }
     }
     buf[n++] = 0x00; // end of QNAME
     buf[n++] = (uint8_t)(qtype >> 8);

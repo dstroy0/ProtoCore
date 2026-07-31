@@ -71,7 +71,7 @@ To isolate our application code from physical hardware and the operating system'
 
 <!-- BEGIN GENERATED test-environments (edit test/test_matrix.json, run test/gen_test_readme.py) -->
 
-The native test matrix has **275 environments**, one per feature, generated from [test_matrix.json](test_matrix.json) into [platformio.ini](../platformio.ini) by [gen_test_envs.py](gen_test_envs.py). Each compiles a strict per-feature slice of `src/` with its own flags and runs that feature's suite in isolation, so "this feature builds and tests on its own" stays guaranteed.
+The native test matrix has **278 environments**, one per feature, generated from [test_matrix.json](test_matrix.json) into [platformio.ini](../platformio.ini) by [gen_test_envs.py](gen_test_envs.py). Each compiles a strict per-feature slice of `src/` with its own flags and runs that feature's suite in isolation, so "this feature builds and tests on its own" stays guaranteed.
 
 | Environment | Feature flag(s) | Test suite(s) | Purpose |
 | :--- | :--- | :--- | :--- |
@@ -142,7 +142,7 @@ The native test matrix has **275 environments**, one per feature, generated from
 | `native_enocean` | `PC_ENABLE_ENOCEAN=1`, `PC_ENOCEAN_MAX_DATA=16` | `test_enocean` | EnOcean ESP3 serial codec (services/radio/enocean), v5 radio plugin: the CRC-8 (poly 0x07) against known answers, a build -> parse round trip, malformed framing (bad sync / header CRC / data CRC), inc... |
 | `native_esp` | `PC_ENABLE_IKEV2=1` | `test_esp` | ESP (RFC 4303) packet transform with AES-256-GCM (RFC 4106) - the IPsec datapath crypto core (services/system/esp): encapsulate a payload into SPI\|Seq\|IV\|AES-GCM(payload\|pad\|padlen\|nexthdr)\|ICV... |
 | `native_espnow` | `PC_ENABLE_ESPNOW=1` | `test_espnow` | ESP-NOW peer messaging (services/radio/espnow) - the envelope codec + peer registry are host-tested here; the esp_now radio binding is ESP32-only. |
-| `native_euromap77` | `PC_ENABLE_OPCUA=1`, `PC_ENABLE_EUROMAP77=1` | `test_euromap77` | EUROMAP 77 (OPC 40077) IMM_MES_Interface model (services/machine_tool/euromap77) - OPC UA for injection moulding machines. |
+| `native_euromap77` | `PC_ENABLE_OPCUA=1`, `PC_ENABLE_EUROMAP77=1` | `test_euromap77` | EUROMAP 77 (OPC 40077) IMM_MES_Interface model (services/machine_tool/euromap77) - OPC UA for injection molding machines. |
 | `native_exc_decoder` | `PC_ENABLE_EXC_DECODER=1` | `test_exc_decoder` | ESP32 panic / exception decoder (services/system/exc_decoder): parse a captured Guru Meditation dump (cause, register PC + EXCVADDR, backtrace PC:SP frames) into a structured ExcInfo and serialize it ... |
 | `native_failsafe` | `PC_ENABLE_FAILSAFE=1` | `test_failsafe` | Software watchdog / deadlock detection + safe-state (services/system/failsafe): the wrap-safe overdue predicate, the lifeline registry, fire-once-per-episode breach callback, and JSON. |
 | `native_fanuc_j519` | `PC_ENABLE_FANUC_J519=1` | `test_fanuc_j519` | FANUC Stream Motion / option J519 UDP codec (services/machine_tool/fanuc_j519): the robot counterpart to FOCAS. |
@@ -152,6 +152,7 @@ The native test matrix has **275 environments**, one per feature, generated from
 | `native_focas` | `PC_ENABLE_FOCAS=1` | `test_focas` | FANUC FOCAS Ethernet codec (services/machine_tool/focas): the big-endian frame envelope (magic/version/type/length) + open/close handshake, the generic command request (6-octet function selector + fiv... |
 | `native_forward` | `PC_ENABLE_FORWARD=1`, `PC_FWD_MAX_IFACES=4`, `PC_FWD_MAX_RULES=4`, `PC_FWD_MAX_ACL=4`, `PC_FWD_MAX_ROUTES=4`, `PC_FWD_INSPECT=1` | `test_forward` | Interface forwarding plane (services/net/forward), v5 bridge / router: default-deny, an ALLOW rule forwards, a DENY wins, multi-destination fan-out, no reflection to the source, the per-rule rate cap ... |
 | `native_forwarded_trust` | `PC_ENABLE_AUTH=1`, `PC_ENABLE_AUTH_LOCKOUT=1`, `PC_ENABLE_FORWARDED_TRUST=1` | `test_forwarded_trust` | Trusted-reverse-proxy forwarded-client resolver (services/security/forwarded_trust): a Forwarded / X-Forwarded-For client address is honored only when the real TCP peer is a configured trusted-upstrea... |
+| `native_frame` | default | `test_frame` | The declarative frame builder (shared_primitives/frame.h + frame.cpp): the single engine that turns a static pc_field spec into wire bytes, so the ~160 formatting sites in this library carry a table r... |
 | `native_ftp` | `PC_ENABLE_FTP=1` | `test_ftp` | FTP client wire codec (services/file_transfer/ftp, RFC 959 + RFC 2428): the control-command builders (generic verb + PORT + EPRT), the single/multi-line 3-digit reply parser, and the PASV / EPSV data-... |
 | `native_gateway` | `PC_ENABLE_GATEWAY=1`, `PC_GW_MAX_PORTS=4` | `test_gateway` | Radio / wireless gateway bridge (services/net/gateway), v5 southbound-to-northbound: an uplink envelopes a received frame (src address / port / rssi / seq) and publishes it, fail-closed on no sink / u... |
 | `native_gnss_survey` | `PC_ENABLE_NTRIP_CASTER=1`, `PC_ENABLE_NMEA0183=1`, `UNITY_INCLUDE_DOUBLE` | `test_gnss_survey` | GNSS survey-in core (services/timing_position/gnss/gnss_survey): the exact WGS84 geodetic<->ECEF transform (matched against pyproj EPSG:4979->EPSG:4978), the shifted-origin position averager with a 3-... |
@@ -280,6 +281,7 @@ The native test matrix has **275 environments**, one per feature, generated from
 | `native_scpi` | `PC_ENABLE_SCPI=1`, `UNITY_INCLUDE_DOUBLE` | `test_scpi` | SCPI / IEEE 488.2 instrument-control codec (services/instrumentation/scpi): the command builder (:-hierarchy header + params + terminator), the response parsers (numeric NR1/NR2/NR3, boolean, quoted s... |
 | `native_scratch` | default | `test_scratch` | Shared per-dispatch scratch arena (session/scratch): bump-allocate + reset semantics, alignment, and fail-closed exhaustion. |
 | `native_sdi12` | `PC_ENABLE_SDI12=1` | `test_sdi12` | SDI-12 sensor-bus codec (services/peripherals/sdi12): the command builders, the measurement response parser (atttn), the data-value splitter, and the SDI-12 CRC (compute/encode/verify). |
+| `native_secure_pool` | default | `test_secure_pool` | The secure pool accessor (server/mmgr/secure): the SAME pool mechanism as the plaintext side (server/mmgr/arena) instantiated a second time at a disjoint address, so only what differs is covered here ... |
 | `native_sen0192` | `PC_ENABLE_SEN0192=1` | `test_sen0192` | SEN0192 microwave motion sensor presence state machine (services/peripherals/sen0192): presence asserts on an active sample and holds for the configured window after the last active sample, clears aft... |
 | `native_senml` | `PC_ENABLE_SENML=1` | `test_senml` | SenML (RFC 8428) pack builder (services/iot/senml): the SenML-JSON encoder (over the JSON writer) + the SenML-CBOR encoder (over the CBOR writer, integer labels), integral numbers emitted as integers. |
 | `native_sep2` | `PC_ENABLE_SEP2=1` | `test_sep2` | IEEE 2030.5 (SEP 2.0) resource codec (services/energy/sep2): the DeviceCapability, EndDevice, and DERControl XML documents (urn:ieee:std:2030.5:ns), XML-escaped. |
@@ -297,6 +299,7 @@ The native test matrix has **275 environments**, one per feature, generated from
 | `native_sockpool` | `PC_ENABLE_SOCKPOOL=1` | `test_sockpool` | Dynamic socket recycling (services/net/sockpool): a fixed LRU connection-slot pool - acquire (free slot, else recycle the least-recently-used and report the evicted id), touch, release, find, and in-u... |
 | `native_southbound` | `PC_ENABLE_SOUTHBOUND=1` | `test_southbound` | Southbound protocol-driver framework (services/net/southbound): the bounded driver registry (register / find / clear / count) and the name-dispatched read/write/read_block/write_block facade, includin... |
 | `native_spa_router` | `PC_ENABLE_SPA_ROUTER=1` | `test_spa_router` | Single-page-app micro-routing (services/web/spa_router): the serve-file / serve-shell / passthrough decision from a request path (extension test + API prefix). |
+| `native_span` | default | `test_span` | The bounded byte region (shared_primitives/span.h): a pointer and the capacity that belongs to it, bound together. |
 | `native_sparkplug` | `PC_ENABLE_SPARKPLUG=1` | `test_sparkplug` | Sparkplug B codec (services/iot/sparkplug): the topic builder + the Metric / Payload protobuf serializers (over the protobuf codec). |
 | `native_sqlite` | `PC_ENABLE_SQLITE=1` | `test_sqlite` | SQLite3 on-disk file-format reader (services/storage/sqlite): the 100-byte database header, the b-tree page header, the record varint, and record serial types, parsed by hand. |
 | `native_ssh` | `PC_SSH_MAX_CHANNELS=3`, `PC_ENABLE_SSH=1`, `PC_ENABLE_FILE_SERVING=1`, `PC_ENABLE_SSH_SFTP=1`, `PC_ENABLE_SSH_SCP=1` | `test_ssh_crypto`, `test_ssh_transport`, `test_ssh_auth`, `test_ssh_channel`, `test_ssh_server` | SSH crypto layer (native software paths only, no mbedtls dependency); channels multiplexed (PC_SSH_MAX_CHANNELS=3) to exercise routing; SFTP/SCP subsystem routing on (FILE_SERVING satisfies the guard) |
@@ -565,7 +568,7 @@ We test session and socket race conditions by interleaved function calling:
 
 <!-- BEGIN GENERATED test-directory (run test/gen_test_readme.py) -->
 
-A thorough directory of all **5220 test cases** across **292 suites**. Expand a suite to see its test cases, and a test case to see its objective and assertions.
+A thorough directory of all **5244 test cases** across **293 suites**. Expand a suite to see its test cases, and a test case to see its objective and assertions.
 
 <details>
 <summary><b>test_accept_gate (19 tests)</b></summary>
@@ -1344,12 +1347,16 @@ A thorough directory of all **5220 test cases** across **292 suites**. Expand a 
 <summary><b>test_application (100 tests)</b></summary>
 
   <details style="margin-left: 20px;">
-    <summary><b>test_response_trailer_truncation_clamps</b> &mdash; <i>(a) The status line alone overflows the header buffer -> hlen >= cap -> clamp.</i></summary>
+    <summary><b>test_response_headers_that_do_not_fit_are_refused</b> &mdash; <i>(a) The status line alone overflows the header buffer.</i></summary>
 
-    * **Objective**: (a) The status line alone overflows the header buffer -> hlen >= cap -> clamp.
+    * **Objective**: (a) The status line alone overflows the header buffer.
     * **Assertions**:
-      * <code>Assert not null (strstr(tcp_captured(), "HTTP/1.1 200"))</code>
-      * <code>Assert not null (strstr(tcp_captured(), "HTTP/1.1 200"))</code>
+      * <code>Assert not null (strstr(tcp_captured(), "HTTP/1.1 500"))</code>
+      * <code>Assert not null (strstr(tcp_captured(), "Connection: close"))</code>
+      * <code>Assert not null (strstr(tcp_captured(), "\\r\\n\\r\\n"))</code>
+      * <code>Assert null (strstr(tcp_captured(), "aaaa"))</code>
+      * <code>Assert not null (strstr(tcp_captured(), "HTTP/1.1 500"))</code>
+      * <code>Assert not null (strstr(tcp_captured(), "\\r\\n\\r\\n"))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -12399,12 +12406,12 @@ A thorough directory of all **5220 test cases** across **292 suites**. Expand a 
   </details>
 
   <details style="margin-left: 20px;">
-    <summary><b>test_serve_static_prefix_truncated_to_exact_route</b> &mdash; <i>Serve static prefix truncated to exact route</i></summary>
+    <summary><b>test_serve_static_overlong_prefix_registers_nothing</b> &mdash; <i>the truncated form the old code would have registered must NOT resolve</i></summary>
 
-    * **Objective**: Serve static prefix truncated to exact route
+    * **Objective**: the truncated form the old code would have registered must NOT resolve
     * **Assertions**:
-      * <code>Assert not null (strstr(tcp_captured(), "200 OK"))</code>
-      * <code>Assert not null (strstr(tcp_captured(), "&lt;i&gt;root&lt;/i&gt;"))</code>
+      * <code>Assert null (strstr(tcp_captured(), "&lt;i&gt;root&lt;/i&gt;"))</code>
+      * <code>Assert not null (strstr(tcp_captured(), "404"))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -13550,6 +13557,159 @@ A thorough directory of all **5220 test cases** across **292 suites**. Expand a 
 </details>
 
 <details>
+<summary><b>test_frame (16 tests)</b></summary>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_frame_matches_printf</b> &mdash; <i>Frame matches printf</i></summary>
+
+    * **Objective**: Frame matches printf
+    * **Assertions**:
+      * <code>Assert equal string (want, out)</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(strlen(want), n);</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_frame_every_kind</b> &mdash; <i>Frame every kind</i></summary>
+
+    * **Objective**: Frame every kind
+    * **Assertions**:
+      * <code>Assert equal string ("0000beef|007|-5|12|3.14159|2.50|x|\\"a\\\\\\"b\\"|a&lt;b|0010", out)</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_frame_widths</b> &mdash; <i>width 0 means "no padding", not "zero digits"</i></summary>
+
+    * **Objective**: width 0 means "no padding", not "zero digits"
+    * **Assertions**:
+      * <code>Assert equal string ("ab,00ab,00042,100", out)</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_frame_null_string_is_empty</b> &mdash; <i>Frame null string is empty</i></summary>
+
+    * **Objective**: Frame null string is empty
+    * **Assertions**:
+      * <code>Assert equal string ("[]", out)</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_frame_literal_only</b> &mdash; <i>Frame literal only</i></summary>
+
+    * **Objective**: Frame literal only
+    * **Assertions**:
+      * <code>TEST_ASSERT_EQUAL_size_t(12, pc_frame_build(out, sizeof(out), L));</code>
+      * <code>Assert equal string ("no args here", out)</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_frame_empty_spec</b> &mdash; <i>an empty frame writes nothing and reports 0, and must still leave a valid C string</i></summary>
+
+    * **Objective**: an empty frame writes nothing and reports 0, and must still leave a valid C string
+    * **Assertions**:
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_frame_build(out, sizeof(out), E));</code>
+      * <code>Assert equal string ("", out)</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_frame_overflow_fails_closed</b> &mdash; <i>Frame overflow fails closed</i></summary>
+
+    * **Objective**: Frame overflow fails closed
+    * **Assertions**:
+      * <code>TEST_ASSERT_EQUAL_size_t(0,</code>
+      * <code>Assert equal string ("", tiny)</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_frame_exact_fit_boundary</b> &mdash; <i>Frame exact fit boundary</i></summary>
+
+    * **Objective**: Frame exact fit boundary
+    * **Assertions**:
+      * <code>TEST_ASSERT_EQUAL_size_t(4, pc_frame_build(five, sizeof(five), F)); // 4 bytes + NUL fits exactly</code>
+      * <code>Assert equal string ("abcd", five)</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_frame_build(four, sizeof(four), F)); // one byte short</code>
+      * <code>Assert equal string ("", four)</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_frame_guards</b> &mdash; <i>Frame guards</i></summary>
+
+    * **Objective**: Frame guards
+    * **Assertions**:
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_frame_build(nullptr, 8, RESP, (uint32_t)1, "", "", (uint32_t)0));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_frame_build(out, 0, RESP, (uint32_t)1, "", "", (uint32_t)0));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_frame_build(out, sizeof(out), nullptr));</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_frame_zero_cap_writes_nothing</b> &mdash; <i>Frame zero cap writes nothing</i></summary>
+
+    * **Objective**: Frame zero cap writes nothing
+    * **Assertions**:
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_frame_build(sentinel, 0, RESP, (uint32_t)200, "OK", "t", (uint32_t)0));</code>
+      * <code>Assert equal char (0x7F, sentinel[0])</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_frame_build(sentinel, 0, L));</code>
+      * <code>Assert equal char (0x7F, sentinel[0])</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_frame_append_accumulates</b> &mdash; <i>Frame append accumulates</i></summary>
+
+    * **Objective**: Frame append accumulates
+    * **Assertions**:
+      * <code>TEST_ASSERT_EQUAL_size_t(8, pc_frame_append(acc, sizeof(acc), HDR, "X-A", "1"));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(16, pc_frame_append(acc, sizeof(acc), HDR, "X-B", "2"));</code>
+      * <code>Assert equal string ("X-A: 1\\r\\nX-B: 2\\r\\n", acc)</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_frame_append_rewinds_whole_frame</b> &mdash; <i>A frame that does not fit must leave the accumulated buffer exactly as it was - a</i></summary>
+
+    * **Objective**: A frame that does not fit must leave the accumulated buffer exactly as it was - a
+    * **Assertions**:
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_frame_append(small, sizeof(small), HDR, "X-VeryLong", "2"));</code>
+      * <code>Assert equal string ("X-A: 1\\r\\n", small)</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_frame_append_to_full_buffer</b> &mdash; <i>Frame append to full buffer</i></summary>
+
+    * **Objective**: Frame append to full buffer
+    * **Assertions**:
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_frame_append(full, sizeof(full), HDR, "X", "1"));</code>
+      * <code>Assert equal string ("aaaaaaa", full)</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_frame_float_matches_printf</b> &mdash; <i>PC_FIX is byte-identical to printf only within the 64-bit range it documents.</i></summary>
+
+    * **Objective**: PC_FIX is byte-identical to printf only within the 64-bit range it documents.
+    * **Assertions**:
+      * <code>Assert equal string (want, out)</code>
+      * <code>Assert equal string (want, out)</code>
+      * <code>Assert equal string (want, out)</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_frame_fixed_huge_falls_back</b> &mdash; <i>Frame fixed huge falls back</i></summary>
+
+    * **Objective**: Frame fixed huge falls back
+    * **Assertions**:
+      * <code>Assert equal string ("1e+20", out)</code>
+      * <code>Assert equal string ("1e+300", out)</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_frame_unknown_opcode_refuses</b> &mdash; <i>A spec built against a newer engine must not silently emit a frame missing a field.</i></summary>
+
+    * **Objective**: A spec built against a newer engine must not silently emit a frame missing a field.
+    * **Assertions**:
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_frame_build(out, sizeof(out), BAD));</code>
+      * <code>Assert equal string ("", out)</code>
+  </details>
+
+</details>
+
+<details>
 <summary><b>test_ftp (22 tests)</b></summary>
 
   <details style="margin-left: 20px;">
@@ -13947,7 +14107,7 @@ A thorough directory of all **5220 test cases** across **292 suites**. Expand a 
       * <code>Assert true (pc_gateway_topic(&m, buf, sizeof(buf)) &gt; 0)</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(0, pc_gateway_topic(nullptr, buf, sizeof(buf))); // null msg</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(0, pc_gateway_topic(&m, buf, 0));                // zero buflen</code>
-      * <code>TEST_ASSERT_EQUAL_UINT16(0, pc_gateway_topic(&m, buf, cap));          // prefix, both '/'s, both digits</code>
+      * <code>TEST_ASSERT_EQUAL_UINT16(0, pc_gateway_topic(&m, buf, cap)); // prefix, both '/'s, both digits</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -21521,9 +21681,9 @@ A thorough directory of all **5220 test cases** across **292 suites**. Expand a 
   </details>
 
   <details style="margin-left: 20px;">
-    <summary><b>test_auth_msg_roundtrip</b> &mdash; <i>Build the inner chain IDi(next=AUTH) \| AUTH(next=NONE).</i></summary>
+    <summary><b>test_auth_msg_roundtrip</b> &mdash; <i>Build the inner chain IDi(next=AUTH) \| AUTH(next=PC_NONE).</i></summary>
 
-    * **Objective**: Build the inner chain IDi(next=AUTH) \| AUTH(next=NONE).
+    * **Objective**: Build the inner chain IDi(next=AUTH) \| AUTH(next=PC_NONE).
     * **Assertions**:
       * <code>Assert true (idn &gt; 0 && an &gt; 0)</code>
       * <code>Assert true (n &gt; 0)</code>
@@ -35248,7 +35408,7 @@ A thorough directory of all **5220 test cases** across **292 suites**. Expand a 
       * <code>Assert equal string ("Unsuspend", pc_packml_command_name(PackMlCommand::UNSUSPEND))</code>
       * <code>Assert equal string ("Abort", pc_packml_command_name(PackMlCommand::ABORT))</code>
       * <code>Assert equal string ("Clear", pc_packml_command_name(PackMlCommand::CLEAR))</code>
-      * <code>Assert equal string ("None", pc_packml_command_name(PackMlCommand::NONE))</code>
+      * <code>Assert equal string ("None", pc_packml_command_name(PackMlCommand::PC_NONE))</code>
       * <code>Assert equal string ("None", pc_packml_command_name((PackMlCommand)200))</code>
   </details>
 
@@ -35999,7 +36159,7 @@ A thorough directory of all **5220 test cases** across **292 suites**. Expand a 
       * <code>Assert true (len &lt;= dcap)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(0xAA, (uint8_t)doc[i]);</code>
       * <code>Assert true (m &lt;= WebDavMethod::DAV_M_UNSUPPORTED)</code>
-      * <code>Assert true (d == 0 || d == 1 || d == DAV_DEPTH_INFINITY || d == -7)</code>
+      * <code>Assert true (d == 0 || d == 1 || d == PC_DAV_DEPTH_INFINITY || d == -7)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -36517,7 +36677,7 @@ A thorough directory of all **5220 test cases** across **292 suites**. Expand a 
       * <code>Assert true (len &lt;= dcap)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(0xAA, (uint8_t)doc[i]);</code>
       * <code>Assert true (m &lt;= WebDavMethod::DAV_M_UNSUPPORTED)</code>
-      * <code>Assert true (d == 0 || d == 1 || d == DAV_DEPTH_INFINITY || d == -7)</code>
+      * <code>Assert true (d == 0 || d == 1 || d == PC_DAV_DEPTH_INFINITY || d == -7)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -38000,7 +38160,86 @@ A thorough directory of all **5220 test cases** across **292 suites**. Expand a 
 </details>
 
 <details>
-<summary><b>test_primitives (6 tests)</b></summary>
+<summary><b>test_primitives (14 tests)</b></summary>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_sb_u32</b> &mdash; <i>Sb u32</i></summary>
+
+    * **Objective**: Sb u32
+    * **Assertions**:
+      * <code>TEST_ASSERT_EQUAL_size_t(14, pc_sb_finish(&b));</code>
+      * <code>Assert equal string ("0,7,4294967295", buf)</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_sb_u32_boundaries</b> &mdash; <i>For each digit count, a buffer holding exactly the digits + NUL must succeed, and one</i></summary>
+
+    * **Objective**: For each digit count, a buffer holding exactly the digits + NUL must succeed, and one
+    * **Assertions**:
+      * <code>Assert true message (fit.ok, "exact fit must succeed")</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(widths[i], pc_sb_finish(&fit));</code>
+      * <code>Assert false message (tooSmall.ok, "one byte short must fail closed")</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, tooSmall.len);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_sb_finish(&tooSmall));</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_sb_overflow_latches</b> &mdash; <i>Once ok latches false every later append is a no-op, so callers test one flag at the end</i></summary>
+
+    * **Objective**: Once ok latches false every later append is a no-op, so callers test one flag at the end
+    * **Assertions**:
+      * <code>Assert true (b.ok)</code>
+      * <code>Assert false (b.ok)</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(after, b.len);</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_sb_finish(&b));</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_sb_widths_and_bases</b> &mdash; <i>a value wider than its min_digits is never truncated to the width</i></summary>
+
+    * **Objective**: a value wider than its min_digits is never truncated to the width
+    * **Assertions**:
+      * <code>TEST_ASSERT_EQUAL_size_t(20, pc_sb_finish(&b));</code>
+      * <code>Assert equal string ("deadbeef|0005|abc|07", buf)</code>
+      * <code>Assert equal string ("12345", buf)</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_sb_64bit</b> &mdash; <i>INT64_MIN: taking the magnitude by negating the signed value would overflow, so this is</i></summary>
+
+    * **Objective**: INT64_MIN: taking the magnitude by negating the signed value would overflow, so this is
+    * **Assertions**:
+      * <code>TEST_ASSERT_EQUAL_size_t(20, pc_sb_finish(&b));</code>
+      * <code>Assert equal string ("18446744073709551615", buf)</code>
+      * <code>Assert equal string ("-4096,-9223372036854775808", buf)</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_sb_g_matches_libc</b> &mdash; <i>Sb g matches libc</i></summary>
+
+    * **Objective**: Sb g matches libc
+    * **Assertions**:
+      * <code>Assert equal string (theirs, mine)</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_sb_fixed_matches_libc</b> &mdash; <i>Sb fixed matches libc</i></summary>
+
+    * **Objective**: Sb fixed matches libc
+    * **Assertions**:
+      * <code>Assert equal string (theirs, mine)</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_sb_json_escapes</b> &mdash; <i>an escape that would straddle the end must fail closed, not write one half of the pair</i></summary>
+
+    * **Objective**: an escape that would straddle the end must fail closed, not write one half of the pair
+    * **Assertions**:
+      * <code>TEST_ASSERT_EQUAL_size_t(9, pc_sb_finish(&b));</code>
+      * <code>Assert equal string ("\\"a\\\\\\"b\\\\\\\\c\\"", buf)</code>
+      * <code>Assert false (t.ok)</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_sb_finish(&t));</code>
+  </details>
 
   <details style="margin-left: 20px;">
     <summary><b>test_strtol</b> &mdash; <i>Strtol</i></summary>
@@ -39460,8 +39699,6 @@ A thorough directory of all **5220 test cases** across **292 suites**. Expand a 
       * <code>TEST_ASSERT_EQUAL_UINT8(TlsHs::TLS_HS_SERVER_HELLO, sh[0]);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(QuicLongPacket::QUIC_LP_HANDSHAKE, hstype);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(TlsHs::TLS_HS_ENCRYPTED_EXTENSIONS, hsflight[0]);</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8_ARRAY(qc.tls.hs_server.key, hs_server_keys.key, 16);</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8_ARRAY(qc.tls.ap_server.key, ap_server_keys.key, 16);</code>
       * <code>Assert true (pc_quic_conn_recv(&qc, idg, idl + hdl))</code>
       * <code>Assert true (pc_quic_conn_established(&qc))</code>
       * <code>Assert true (g_hs_done)</code>
@@ -40063,6 +40300,7 @@ A thorough directory of all **5220 test cases** across **292 suites**. Expand a 
 
     * **Objective**: Aes128 block fips197
     * **Assertions**:
+      * <code>Assert not null (aes)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8_ARRAY(exp, out, 16);</code>
   </details>
 
@@ -40073,22 +40311,18 @@ A thorough directory of all **5220 test cases** across **292 suites**. Expand a 
     * **Assertions**:
       * <code>TEST_ASSERT_EQUAL_UINT8_ARRAY(exp_ct, sealed, 60);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8_ARRAY(exp_tag, sealed + 60, 16);</code>
-      * <code>Assert true (pc_aes128gcm_open(key, iv, aad, 20, sealed, sizeof sealed, opened))</code>
+      * <code>Assert true (pc_aes128gcm_open(gcm_key(key), iv, aad, 20, sealed, 60, sealed + 60, opened))</code>
       * <code>TEST_ASSERT_EQUAL_UINT8_ARRAY(pt, opened, 60);</code>
-      * <code>Assert false (pc_aes128gcm_open(key, iv, aad, 20, sealed, sizeof sealed, opened))</code>
+      * <code>Assert false (pc_aes128gcm_open(gcm_key(key), iv, aad, 20, sealed, 60, sealed + 60, opened))</code>
   </details>
 
   <details style="margin-left: 20px;">
-    <summary><b>test_initial_secrets_appendix_a1</b> &mdash; <i>Initial secrets appendix a1</i></summary>
+    <summary><b>test_initial_secrets_appendix_a1</b> &mdash; <i>The derived keys are contexts now, not bytes, so check them through what they produce: a context</i></summary>
 
-    * **Objective**: Initial secrets appendix a1
+    * **Objective**: The derived keys are contexts now, not bytes, so check them through what they produce: a context
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_UINT8_ARRAY(ck, s.client.key, 16);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8_ARRAY(civ, s.client.iv, 12);</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8_ARRAY(chp, s.client.hp, 16);</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8_ARRAY(sk, s.server.key, 16);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8_ARRAY(siv, s.server.iv, 12);</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8_ARRAY(shp, s.server.hp, 16);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -40132,11 +40366,11 @@ A thorough directory of all **5220 test cases** across **292 suites**. Expand a 
   </details>
 
   <details style="margin-left: 20px;">
-    <summary><b>test_gcm_open_rejects_short</b> &mdash; <i>Gcm open rejects short</i></summary>
+    <summary><b>test_gcm_open_rejects_short</b> &mdash; <i>The detached-tag api takes the ciphertext length and the tag separately, so it has no combined</i></summary>
 
-    * **Objective**: Gcm open rejects short
+    * **Objective**: The detached-tag api takes the ciphertext length and the tag separately, so it has no combined
     * **Assertions**:
-      * <code>Assert false (pc_aes128gcm_open(key, nonce, nullptr, 0, ct, sizeof ct, out))</code>
+      * <code>TEST_ASSERT_EQUAL_UINT64((uint64_t)(size_t)-1, (uint64_t)pc_quic_packet_unprotect(</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -43161,7 +43395,7 @@ A thorough directory of all **5220 test cases** across **292 suites**. Expand a 
     * **Objective**: Starts in init and is usable
     * **Assertions**:
       * <code>TEST_ASSERT_EQUAL_UINT8((uint8_t)SclState::INIT, (uint8_t)pc_scl_state(&g));</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8((uint8_t)SclFault::NONE, (uint8_t)pc_scl_fault(&g));</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8((uint8_t)SclFault::PC_NONE, (uint8_t)pc_scl_fault(&g));</code>
       * <code>Assert true (pc_scl_ok(&g))</code>
   </details>
 
@@ -43282,7 +43516,7 @@ A thorough directory of all **5220 test cases** across **292 suites**. Expand a 
     * **Assertions**:
       * <code>Assert false (pc_scl_on_frame(&g, true, 77, 1002))</code>
       * <code>TEST_ASSERT_EQUAL_UINT8((uint8_t)SclState::INIT, (uint8_t)pc_scl_state(&g));</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8((uint8_t)SclFault::NONE, (uint8_t)pc_scl_fault(&g));</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8((uint8_t)SclFault::PC_NONE, (uint8_t)pc_scl_fault(&g));</code>
       * <code>Assert true (pc_scl_ok(&g))</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(acc, g.accepted); // session tallies survive, so a flapping link shows</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(rej, g.rejected);</code>
@@ -43321,7 +43555,7 @@ A thorough directory of all **5220 test cases** across **292 suites**. Expand a 
       * <code>Assert false (pc_scl_on_frame(nullptr, true, 0, 0))</code>
       * <code>Assert false (pc_scl_poll(nullptr, 0))</code>
       * <code>Assert false (pc_scl_ok(nullptr))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8((uint8_t)SclFault::NONE, (uint8_t)pc_scl_fault(nullptr));</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8((uint8_t)SclFault::PC_NONE, (uint8_t)pc_scl_fault(nullptr));</code>
       * <code>TEST_ASSERT_EQUAL_UINT8((uint8_t)SclState::FAILSAFE, (uint8_t)pc_scl_state(nullptr));</code>
   </details>
 
@@ -43948,14 +44182,14 @@ A thorough directory of all **5220 test cases** across **292 suites**. Expand a 
   </details>
 
   <details style="margin-left: 20px;">
-    <summary><b>test_sequential_allocs_are_distinct_and_ordered</b> &mdash; <i>Sequential allocs are distinct and ordered</i></summary>
+    <summary><b>test_sequential_allocs_are_distinct_and_non_overlapping</b> &mdash; <i>Distinct and non-overlapping is the guarantee; the DIRECTION is not. The pool's scratch end</i></summary>
 
-    * **Objective**: Sequential allocs are distinct and ordered
+    * **Objective**: Distinct and non-overlapping is the guarantee; the DIRECTION is not. The pool's scratch end
     * **Assertions**:
       * <code>Assert not null (a)</code>
       * <code>Assert not null (b)</code>
-      * <code>Assert true (b &gt;= a + 8)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(16, scratch_used());</code>
+      * <code>Assert true (hi &gt;= lo + 8)</code>
+      * <code>Assert true (scratch_used() &gt;= 16)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -44026,12 +44260,12 @@ A thorough directory of all **5220 test cases** across **292 suites**. Expand a 
   </details>
 
   <details style="margin-left: 20px;">
-    <summary><b>test_mark_release_reclaims</b> &mdash; <i>Mark release reclaims</i></summary>
+    <summary><b>test_mark_release_reclaims</b> &mdash; <i>The guarantee: release restores usage to exactly where the mark was taken.</i></summary>
 
-    * **Objective**: Mark release reclaims
+    * **Objective**: The guarantee: release restores usage to exactly where the mark was taken.
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(300, scratch_used());</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(100, scratch_used());</code>
+      * <code>Assert true (scratch_used() &gt;= after_first + 200)</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(after_first, scratch_used());</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -44047,9 +44281,8 @@ A thorough directory of all **5220 test cases** across **292 suites**. Expand a 
 
     * **Objective**: Scratch scope releases on scope exit
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(100, scratch_used());</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(600, scratch_used());</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(100, scratch_used());</code>
+      * <code>Assert true (scratch_used() &gt;= outside + 500)</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(outside, scratch_used());</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -44057,8 +44290,8 @@ A thorough directory of all **5220 test cases** across **292 suites**. Expand a 
 
     * **Objective**: Nested scopes reclaim lifo
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(200, scratch_used());</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(100, scratch_used());</code>
+      * <code>Assert true (scratch_used() &gt; after_outer)</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(after_outer, scratch_used());</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -46207,7 +46440,7 @@ A thorough directory of all **5220 test cases** across **292 suites**. Expand a 
       * <code>Assert equal memory (kat_ccm256_pt, pt, 50)</code>
       * <code>Assert equal memory (kat_gcm256_ct, ct, 50)</code>
       * <code>Assert equal memory (kat_gcm256_tag, tag, 16)</code>
-      * <code>TEST_ASSERT_TRUE(pc_aesgcm_open_tag(kat_gcm256_key, kat_gcm256_nonce, kat_gcm256_aad, 32, kat_gcm256_ct, 50,</code>
+      * <code>Assert true (pc_aesgcm_open(gcm_key(kat_gcm256_key)</code>
       * <code>Assert equal memory (kat_gcm256_pt, pt, 50)</code>
       * <code>TEST_ASSERT_FALSE(</code>
   </details>
@@ -47074,6 +47307,7 @@ A thorough directory of all **5220 test cases** across **292 suites**. Expand a 
 
     * **Objective**: Streaming equals oneshot
     * **Assertions**:
+      * <code>Assert not null (c)</code>
       * <code>Assert equal memory (one, strm, 16)</code>
   </details>
 
@@ -50523,11 +50757,11 @@ A thorough directory of all **5220 test cases** across **292 suites**. Expand a 
     * **Objective**: The caller advances the invocation counter per packet (RFC 5647), stateless API.
     * **Assertions**:
       * <code>Assert true (memcmp(p0, p1, 32) != 0)</code>
-      * <code>Assert true (pc_aesgcm_open_tag(key, dec_iv, aad, 4, p0, 16, p0 + 16, r0))</code>
+      * <code>Assert true (pc_aesgcm_open(gcm_key(key), dec_iv, aad, 4, p0, 16, p0 + 16, r0))</code>
       * <code>TEST_ASSERT_EQUAL_UINT8_ARRAY(msg, r0, 16);</code>
-      * <code>Assert true (pc_aesgcm_open_tag(key, dec_iv, aad, 4, p1, 16, p1 + 16, r1))</code>
+      * <code>Assert true (pc_aesgcm_open(gcm_key(key), dec_iv, aad, 4, p1, 16, p1 + 16, r1))</code>
       * <code>TEST_ASSERT_EQUAL_UINT8_ARRAY(msg, r1, 16);</code>
-      * <code>Assert false (pc_aesgcm_open_tag(key, iv, aad, 4, p1, 16, p1 + 16, rx))</code>
+      * <code>Assert false (pc_aesgcm_open(gcm_key(key), iv, aad, 4, p1, 16, p1 + 16, rx))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -50543,7 +50777,7 @@ A thorough directory of all **5220 test cases** across **292 suites**. Expand a 
 
     * **Objective**: Aesgcm gctr counter byte carry
     * **Assertions**:
-      * <code>Assert true (pc_aesgcm_open_tag(key, iv, NULL, 0, out, n, out + n, rt))</code>
+      * <code>Assert true (pc_aesgcm_open(gcm_key(key), iv, NULL, 0, out, n, out + n, rt))</code>
       * <code>TEST_ASSERT_EQUAL_UINT8_ARRAY(pt, rt, n);</code>
   </details>
 
@@ -50875,7 +51109,7 @@ A thorough directory of all **5220 test cases** across **292 suites**. Expand a 
 
     * **Objective**: Aesgcm gctr counter byte carry
     * **Assertions**:
-      * <code>Assert true (pc_aesgcm_open_tag(key, iv, aad, sizeof(aad), ct, sizeof(pt), ct + sizeof(pt), rt))</code>
+      * <code>Assert true (pc_aesgcm_open(gcm_key(key), iv, aad, sizeof(aad), ct, sizeof(pt), ct + sizeof(pt), rt))</code>
       * <code>TEST_ASSERT_EQUAL_UINT8_ARRAY(pt, rt, sizeof(pt));</code>
   </details>
 
@@ -59682,7 +59916,7 @@ A thorough directory of all **5220 test cases** across **292 suites**. Expand a 
     * **Assertions**:
       * <code>Assert equal int (0, pc_webdav_depth("0", 1))</code>
       * <code>Assert equal int (1, pc_webdav_depth("1", 0))</code>
-      * <code>Assert equal int (DAV_DEPTH_INFINITY, pc_webdav_depth("infinity", 0))</code>
+      * <code>Assert equal int (PC_DAV_DEPTH_INFINITY, pc_webdav_depth("infinity", 0))</code>
       * <code>Assert equal int (1, pc_webdav_depth(nullptr, 1))</code>
       * <code>Assert equal int (7, pc_webdav_depth("bogus", 7))</code>
   </details>

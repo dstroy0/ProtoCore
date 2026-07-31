@@ -36,7 +36,9 @@ static void atc_bench_task(void *)
     // Prime once so we know the serialized length to report bulk throughput against.
     size_t snap_len = pc_atc_snapshot_json(&io, buf, sizeof(buf));
     if (snap_len == 0)
+    {
         snap_len = 1; // guard against div-by-zero in DBENCH_BULK if the table/buffer ever mismatch
+    }
 
     for (;;)
     {

@@ -54,7 +54,9 @@ static bool stage_send(uint8_t, const uint8_t *d, uint16_t len, void *)
 static pc_fwd_verdict inspect_ethertype(uint8_t, const uint8_t *d, uint16_t n, void *)
 {
     if (n >= 14 && d[12] == 0x86 && d[13] == 0xDD)
+    {
         return pc_fwd_verdict::PC_FWD_INSPECT_DROP;
+    }
     return pc_fwd_verdict::PC_FWD_INSPECT_PASS;
 }
 #endif
@@ -81,14 +83,18 @@ static const uint8_t msk_ff[2] = {0xFF, 0xFF};
 static void add_ifaces(uint8_t n_if, pc_if_send_fn send)
 {
     for (uint8_t id = 1; id <= n_if; id++)
+    {
         pc_forward_add_if(id, pc_if_kind::PC_IF_ETH, send, nullptr);
+    }
 }
 
 static void forward_bench_task(void *)
 {
     memcpy(frame1500, frame64, 14); // L2 header, then a deterministic payload
     for (size_t i = 14; i < sizeof(frame1500); i++)
+    {
         frame1500[i] = (uint8_t)(i * 31u);
+    }
 
     volatile uint32_t sink = 0;
 

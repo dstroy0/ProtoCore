@@ -25,10 +25,10 @@
 #include "network_drivers/presentation/ssh/transport/ssh_keymat.h"
 #include "network_drivers/presentation/ssh/transport/ssh_packet.h"
 #include "server/mmgr/scratch.h"
+#include "server/mmgr/secure.h"
 #include <stdint.h>
 #include <string.h>
 #include <unity.h>
-#include "server/mmgr/secure.h"
 
 // External test fixture arrays (defined in ssh_rsa.cpp native path).
 extern uint8_t _test_rsa_n[256];

@@ -162,8 +162,8 @@ static size_t build_long(uint8_t *out, size_t cap, uint8_t type, const uint8_t *
     return pc_quic_packet_protect(out, cap, pn_off, pn_len, pn, frame_len, *keys, true);
 }
 
-static size_t build_short(uint8_t *out, size_t cap, const uint8_t *dcid, uint8_t dcl, uint64_t pn,
-                          QuicPacketKeys *keys, const uint8_t *frames, size_t frame_len)
+static size_t build_short(uint8_t *out, size_t cap, const uint8_t *dcid, uint8_t dcl, uint64_t pn, QuicPacketKeys *keys,
+                          const uint8_t *frames, size_t frame_len)
 {
     uint8_t pn_len = pc_quic_pn_length(pn, -1);
     out[0] = (uint8_t)(0x40 | (pn_len - 1));

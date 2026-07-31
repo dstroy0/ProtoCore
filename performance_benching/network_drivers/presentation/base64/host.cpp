@@ -20,7 +20,9 @@ template <typename F> static double bench_ns(uint64_t iters, F fn)
 {
     auto t0 = clk::now();
     for (uint64_t i = 0; i < iters; i++)
+    {
         fn();
+    }
     auto t1 = clk::now();
     return std::chrono::duration<double, std::nano>(t1 - t0).count() / (double)iters;
 }
@@ -39,7 +41,9 @@ int main()
     const size_t N = 1024;
     uint8_t src[N];
     for (size_t i = 0; i < N; i++)
+    {
         src[i] = (uint8_t)(i * 31 + 7);
+    }
     char enc[((N + 2) / 3) * 4 + 1];
     uint8_t dec[N];
     volatile size_t sink = 0;

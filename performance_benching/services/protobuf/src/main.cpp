@@ -42,7 +42,9 @@ static size_t pb_decode_all(const uint8_t *buf, size_t len)
     size_t count = 0;
     PbField f;
     while (pc_pb_read_field(buf, len, &pos, &f))
+    {
         count++;
+    }
     return count;
 }
 

@@ -405,8 +405,8 @@ static void complete_handshake_from_flight(DtlsConn *conn, pc_sha256_ctx tr, uin
         TEST_ASSERT_TRUE(crl > 0);
         uint8_t inner[512];
         DtlsCiphertext info;
-        TEST_ASSERT_TRUE(pc_dtls_ciphertext_unprotect(srv_read, exp_seq, flight + off, crl, inner, sizeof(inner),
-                                                      &info, client_cid, client_cid_len));
+        TEST_ASSERT_TRUE(pc_dtls_ciphertext_unprotect(srv_read, exp_seq, flight + off, crl, inner, sizeof(inner), &info,
+                                                      client_cid, client_cid_len));
         exp_seq = info.seq + 1;
         off += crl;
         TEST_ASSERT_EQUAL_UINT8(PC_DTLS_CT_HANDSHAKE, info.content_type);
@@ -1089,8 +1089,8 @@ static int feed_client_finished(DtlsConn *conn, ClientSession *st, uint64_t seq,
 
 // Wrap an arbitrary TLS handshake message as an epoch-2 client record and feed it to the server.
 // Returns -2 when the test itself could not build the record (never a server verdict).
-static int feed_epoch2_msg(DtlsConn *conn, ClientSession *st, uint64_t seq, uint16_t msg_seq,
-                           const uint8_t *tls_msg, size_t tls_len, uint8_t *out, size_t out_cap)
+static int feed_epoch2_msg(DtlsConn *conn, ClientSession *st, uint64_t seq, uint16_t msg_seq, const uint8_t *tls_msg,
+                           size_t tls_len, uint8_t *out, size_t out_cap)
 {
     uint8_t frag[128];
     size_t fl = pc_dtls_hs_frag_build(tls_msg[0], msg_seq, (uint32_t)(tls_len - 4), 0, tls_msg + 4,

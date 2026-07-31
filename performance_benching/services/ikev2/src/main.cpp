@@ -43,13 +43,17 @@ static size_t ike_sa_parse_tree(const uint8_t *body, size_t body_len)
 {
     IkeProposalRef prop;
     if (!pc_ike_sa_first_proposal(body, body_len, &prop))
+    {
         return 0;
+    }
     IkeTransformIter it;
     IkeTransformRef t;
     pc_ike_transform_iter_init(&it, &prop);
     size_t acc = prop.num_transforms;
     while (pc_ike_transform_next(&it, &t))
+    {
         acc += (size_t)t.id + (size_t)(t.key_length + 1);
+    }
     return acc;
 }
 
@@ -58,13 +62,17 @@ static size_t ike_chain_walk(const uint8_t *msg, size_t len)
 {
     IkeHeader h;
     if (!pc_ike_hdr_parse(msg, len, &h))
+    {
         return 0;
+    }
     IkePayloadIter it;
     pc_ike_payload_iter_init(&it, h.next_payload, msg + PC_IKE_HDR_LEN, len - PC_IKE_HDR_LEN);
     IkePayload pl;
     size_t acc = 0;
     while (pc_ike_payload_next(&it, &pl))
+    {
         acc += pl.body_len + (size_t)pl.type;
+    }
     return acc;
 }
 
@@ -74,7 +82,9 @@ static void ikev2_bench_task(void *)
     IkeHeader hdr;
     memset(&hdr, 0, sizeof(hdr));
     for (int i = 0; i < PC_IKE_SPI_LEN; i++)
+    {
         hdr.init_spi[i] = (uint8_t)((i + 1) * 0x11);
+    }
     hdr.next_payload = IkePayloadType::IKE_PL_NONE;
     hdr.version = PC_IKE_VERSION;
     hdr.exchange = IkeExchange::IKE_SA_INIT;

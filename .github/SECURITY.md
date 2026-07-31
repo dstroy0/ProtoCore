@@ -9,8 +9,8 @@ on the latest release before reporting.
 Only the latest released version is supported; earlier versions receive no fixes. This table is kept
 current automatically by the release bump (`.bumpversion.cfg`).
 
-| Version   | Supported          |
-| --------- | ------------------ |
+| Version | Supported          |
+| ------- | ------------------ |
 | 0.0.1   | :white_check_mark: |
 | < 0.0.1 | :x:                |
 

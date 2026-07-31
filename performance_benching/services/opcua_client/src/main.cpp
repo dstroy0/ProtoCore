@@ -89,7 +89,9 @@ static void opcua_client_bench_task(void *)
         size_t bn = pc_opcua_client_browse(&c, 0, 85, bq, sizeof(bq));
         OpcUaBrowseRequest br;
         if (bn > 0 && pc_opcua_parse_browse(bq, bn, &br))
+        {
             browse_resp_len = pc_opcua_build_browse_response(&br, srv_browse, 4, 0, browse_resp, sizeof(browse_resp));
+        }
     }
 
     for (;;)

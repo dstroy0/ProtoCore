@@ -154,7 +154,9 @@ static uint32_t g_wall_clock_anchor_micros = 0;
 static void wall_clock_maybe_anchor()
 {
     if (!pc_ntp_synced())
+    {
         return;
+    }
     uint32_t epoch = (uint32_t)pc_ntp_epoch();
     if (epoch != g_wall_clock_anchor_epoch)
     {
@@ -168,7 +170,9 @@ static uint64_t wall_clock_us_now()
 {
     wall_clock_maybe_anchor();
     if (g_wall_clock_anchor_epoch == 0)
+    {
         return 0;
+    }
     uint32_t delta_us = pc_micros() - g_wall_clock_anchor_micros; // wrap-safe unsigned delta
     return (uint64_t)g_wall_clock_anchor_epoch * 1000000ULL + delta_us;
 }
@@ -178,7 +182,9 @@ static bool ensure_analysis_link()
     if (g_analysis_cid >= 0)
     {
         if (pc_client_connected(g_analysis_cid) && !pc_client_is_closed(g_analysis_cid))
+        {
             return true;
+        }
         pc_client_close(g_analysis_cid);
         g_analysis_cid = -1;
     }
@@ -270,7 +276,9 @@ static bool scope_link()
     if (g_scope_cid >= 0)
     {
         if (pc_client_connected(g_scope_cid) && !pc_client_is_closed(g_scope_cid))
+        {
             return true;
+        }
         pc_client_close(g_scope_cid);
         g_scope_cid = -1;
     }
@@ -283,7 +291,9 @@ static bool scpi_send(const char *header, const char *const *args, size_t argc)
     char line[128];
     size_t n = pc_scpi_build(line, sizeof(line), header, args, argc);
     if (!n)
+    {
         return false;
+    }
     return pc_client_send(g_scope_cid, line, n);
 }
 
@@ -302,7 +312,9 @@ static size_t scpi_read_line(char *buf, size_t cap, uint32_t timeout_ms)
         size_t n = pc_client_read(g_scope_cid, (uint8_t *)buf + total, cap - 1 - total);
         total += n;
         if (n && buf[total - 1] == '\n')
+        {
             break;
+        }
     }
     buf[total] = '\0';
     return total;
@@ -323,7 +335,9 @@ static bool scpi_read_block(uint8_t *buf, size_t cap, const uint8_t **data, size
         total += pc_client_read(g_scope_cid, buf + total, cap - total);
         size_t consumed = 0;
         if (pc_scpi_parse_block(buf, total, data, data_len, &consumed))
+        {
             return true;
+        }
     }
     return false;
 }
@@ -331,7 +345,9 @@ static bool scpi_read_block(uint8_t *buf, size_t cap, const uint8_t **data, size
 static bool scpi_query_number(const char *header, double *out)
 {
     if (!scpi_send(header, nullptr, 0))
+    {
         return false;
+    }
     char line[64];
     size_t n = scpi_read_line(line, sizeof(line), 2000);
     return n && pc_scpi_parse_number(line, n, out);
@@ -345,12 +361,16 @@ static bool scpi_wait_opc(uint32_t timeout_ms)
     while (pc_millis() - start < timeout_ms)
     {
         if (!scpi_send(opc, nullptr, 0))
+        {
             return false;
+        }
         char line[16];
         size_t n = scpi_read_line(line, sizeof(line), 500);
         bool v = false;
         if (n && pc_scpi_parse_bool(line, n, &v) && v)
+        {
             return true;
+        }
         pcdelay(20);
     }
     return false;
@@ -361,7 +381,9 @@ static uint8_t g_wave_buf[16384]; // one pulled record (payload cap; grow if you
 static void pull_one_record()
 {
     if (!scope_link())
+    {
         return;
+    }
 
     const char *args[] = {SCPI_CHANNEL};
     scpi_send(SCPI_WAVE_SOURCE, args, 1);
@@ -371,7 +393,9 @@ static void pull_one_record()
 #if WITH_TRIGGER
     scpi_send(SCPI_ARM_SINGLE, nullptr, 0);
     if (!scpi_wait_opc(5000))
+    {
         return; // acquisition never completed within budget - try again next loop
+    }
 #endif
 
     double x_inc = 0, y_inc = 1, y_or = 0;
@@ -383,7 +407,9 @@ static void pull_one_record()
     const uint8_t *data = nullptr;
     size_t data_len = 0;
     if (!scpi_read_block(g_wave_buf, sizeof(g_wave_buf), &data, &data_len, 8000))
+    {
         return;
+    }
 
     // The scope already did its own pre/post-trigger acquisition; report the whole record as
     // post-trigger (pretrigger_samples=0 here is "the split already happened upstream", not
@@ -515,14 +541,18 @@ static void on_dma_frame(const void *item, void *)
     uint16_t samples[PC_DMA_BUF_SIZE / 2];
     uint16_t n = m->len / 2;
     for (uint16_t i = 0; i < n; i++)
+    {
         samples[i] = (uint16_t)(m->bytes[2 * i] | (m->bytes[2 * i + 1] << 8)); // little-endian 12-bit-in-16 codes
+    }
     pc_tc_feed(samples, n);
 }
 
 static void on_dma_complete(const pc_dma_event *ev, void *)
 {
     if (ev->dir != pc_dma_dir::PC_DMA_RX)
+    {
         return;
+    }
     pq_item item;
     memset(&item, 0, sizeof(item));
     uint16_t n = (ev->len < sizeof(item.msg.bytes)) ? ev->len : sizeof(item.msg.bytes);
@@ -608,7 +638,9 @@ static void audio_poll_task(void *)
         next_us += period_us;
         int32_t remaining = (int32_t)(next_us - micros());
         if (remaining > 0)
+        {
             delayMicroseconds((uint32_t)remaining); // pacing only - this is not a DMA-grade deterministic clock
+        }
     }
 }
 #endif // DAQ_ADC_INTERNAL_POLLED
@@ -633,7 +665,9 @@ static bool ad9238_bringup()
         {
             uint8_t rx = SPI.transfer(out[i]);
             if (in)
+            {
                 in[i] = rx;
+            }
         }
         digitalWrite(AD9238_CS_PIN, HIGH);
         SPI.endTransaction();

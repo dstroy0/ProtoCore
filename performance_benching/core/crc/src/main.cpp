@@ -18,7 +18,9 @@ static void crc_bench_task(void *)
 {
     static uint8_t buf[1024];
     for (size_t i = 0; i < sizeof(buf); i++)
+    {
         buf[i] = (uint8_t)(i * 31 + 7);
+    }
     for (;;)
     {
         Serial.printf("DB ==== crc device microbench start (CCOUNT @ %u MHz) ====\n", (unsigned)getCpuFrequencyMhz());

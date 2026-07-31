@@ -20,7 +20,9 @@ template <typename F> static double bench_ns(uint64_t iters, F fn)
 {
     auto t0 = clk::now();
     for (uint64_t i = 0; i < iters; i++)
+    {
         fn();
+    }
     auto t1 = clk::now();
     return std::chrono::duration<double, std::nano>(t1 - t0).count() / (double)iters;
 }
@@ -42,8 +44,10 @@ int main()
         pc_mtc_streams s;
         pc_mtc_streams_begin(&s, buf, sizeof(buf), 1500, 20, "cnc1");
         for (int i = 0; i < 20; i++)
+        {
             pc_mtc_streams_add(&s, pc_mtc_category::PC_MTC_SAMPLE, "Position", "xpos", (uint64_t)i,
                                "2026-07-09T00:00:00Z", "12.5");
+        }
         sink += pc_mtc_streams_end(&s);
     });
     row("mtconnect", "streams doc (20 obs)", ns, (double)sink / 200000.0);

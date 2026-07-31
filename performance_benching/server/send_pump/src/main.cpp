@@ -57,11 +57,15 @@ static void send_pump_bench_task(void *)
         DBENCH_OP("frame pc_hex_u32 (1440B)", 200000, { sink += frame_hex_u32(body, CHUNK); });
         DBENCH_BULK("pump 64KiB snprintf", 2000, BODY, {
             for (size_t c = 0; c < NCHUNKS; c++)
+            {
                 sink += frame_snprintf(body, CHUNK);
+            }
         });
         DBENCH_BULK("pump 64KiB pc_hex_u32", 2000, BODY, {
             for (size_t c = 0; c < NCHUNKS; c++)
+            {
                 sink += frame_hex_u32(body, CHUNK);
+            }
         });
         (void)sink;
         Serial.println("DB ==== DONE ====");

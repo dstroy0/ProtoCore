@@ -40,7 +40,9 @@ static void failsafe_bench_task(void *)
     // Fill the registry (PC_FAILSAFE_MAX_LIFELINES lifelines), mirroring test_failsafe.cpp's
     // test_registry_full: each starts fed at t=1000 with a 500 ms deadline.
     for (int i = 0; i < PC_FAILSAFE_MAX_LIFELINES; i++)
+    {
         pc_failsafe_register_at("lifeline", 500, 1000);
+    }
 
     // Size the JSON buffer once up front (8 armed entries; digit widths are stable across the
     // repeating loop below, so this length stays accurate for every DBENCH_BULK pass).

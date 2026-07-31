@@ -30,7 +30,9 @@ static void espnow_bench_task(void *)
     // Max-size envelope (radio MTU minus header) for the bulk/throughput numbers.
     static uint8_t payload_max[PC_ESPNOW_MAX_PAYLOAD];
     for (size_t i = 0; i < sizeof(payload_max); i++)
+    {
         payload_max[i] = (uint8_t)i;
+    }
     static uint8_t frame_max[PC_ESPNOW_HDR + PC_ESPNOW_MAX_PAYLOAD];
     size_t n_max = pc_espnow_encode(7, payload_max, sizeof(payload_max), frame_max, sizeof(frame_max));
 

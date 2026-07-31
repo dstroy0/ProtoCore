@@ -34,8 +34,7 @@ static int g_sock = -1;
 
 // --- CycloneSSL socket callbacks (datagram backed) ---------------------------------------------
 
-static error_t socket_send_cb(TlsSocketHandle handle, const void *data, size_t length,
-                              size_t *written, uint_t flags)
+static error_t socket_send_cb(TlsSocketHandle handle, const void *data, size_t length, size_t *written, uint_t flags)
 {
     int fd = (int)(intptr_t)handle;
     (void)flags;
@@ -49,8 +48,7 @@ static error_t socket_send_cb(TlsSocketHandle handle, const void *data, size_t l
     return NO_ERROR;
 }
 
-static error_t socket_recv_cb(TlsSocketHandle handle, void *data, size_t size, size_t *received,
-                              uint_t flags)
+static error_t socket_recv_cb(TlsSocketHandle handle, void *data, size_t size, size_t *received, uint_t flags)
 {
     int fd = (int)(intptr_t)handle;
     (void)flags;
@@ -60,7 +58,9 @@ static error_t socket_recv_cb(TlsSocketHandle handle, void *data, size_t size, s
         *received = 0;
         // SO_RCVTIMEO fired: report a timeout so the DTLS layer can retransmit its flight.
         if (errno == EAGAIN || errno == EWOULDBLOCK)
+        {
             return ERROR_TIMEOUT;
+        }
         return ERROR_READ_FAILED;
     }
     *received = (size_t)n;
@@ -69,8 +69,7 @@ static error_t socket_recv_cb(TlsSocketHandle handle, void *data, size_t size, s
 
 // Accept any server certificate: this is an interop test, not a trust decision. The DTLS
 // CertificateVerify signature is still checked by CycloneSSL, so the peer is still authenticated.
-static error_t cert_verify_cb(TlsContext *context, const X509CertInfo *certInfo, uint_t pathLen,
-                              void *param)
+static error_t cert_verify_cb(TlsContext *context, const X509CertInfo *certInfo, uint_t pathLen, void *param)
 {
     (void)context;
     (void)certInfo;
@@ -82,13 +81,11 @@ static error_t cert_verify_cb(TlsContext *context, const X509CertInfo *certInfo,
 
 // Accept any raw public key (RFC 7250). Registering this also switches on the ServerCertType ext.
 // This callback fires only when the peer actually sent a RawPublicKey (SubjectPublicKeyInfo).
-static error_t rpk_verify_cb(TlsContext *context, const uint8_t *rawPublicKey,
-                             size_t rawPublicKeyLen)
+static error_t rpk_verify_cb(TlsContext *context, const uint8_t *rawPublicKey, size_t rawPublicKeyLen)
 {
     (void)context;
     (void)rawPublicKey;
-    fprintf(stderr, "[client] server presented a RawPublicKey (RFC 7250), %zu bytes SPKI\n",
-            rawPublicKeyLen);
+    fprintf(stderr, "[client] server presented a RawPublicKey (RFC 7250), %zu bytes SPKI\n", rawPublicKeyLen);
     return NO_ERROR;
 }
 
@@ -102,8 +99,7 @@ static void seed_prng(HmacDrbgContext *drbg)
         _exit(2);
     }
     fclose(f);
-    if (hmacDrbgInit(drbg, SHA256_HASH_ALGO) != NO_ERROR ||
-        hmacDrbgSeed(drbg, seed, sizeof seed) != NO_ERROR)
+    if (hmacDrbgInit(drbg, SHA256_HASH_ALGO) != NO_ERROR || hmacDrbgSeed(drbg, seed, sizeof seed) != NO_ERROR)
     {
         fprintf(stderr, "PRNG seed failed\n");
         _exit(2);
@@ -160,29 +156,53 @@ int main(int argc, char **argv)
 
     error_t e;
     e = tlsSetSocketCallbacks(tls, socket_send_cb, socket_recv_cb, (TlsSocketHandle)(intptr_t)g_sock);
-    if (e) { fprintf(stderr, "tlsSetSocketCallbacks: %d\n", e); return 2; }
+    if (e)
+    {
+        fprintf(stderr, "tlsSetSocketCallbacks: %d\n", e);
+        return 2;
+    }
 
     e = tlsSetTransportProtocol(tls, TLS_TRANSPORT_PROTOCOL_DATAGRAM);
-    if (e) { fprintf(stderr, "tlsSetTransportProtocol: %d\n", e); return 2; }
+    if (e)
+    {
+        fprintf(stderr, "tlsSetTransportProtocol: %d\n", e);
+        return 2;
+    }
 
     // Pin DTLS 1.3 (TLS 1.3 codepoint; DATAGRAM transport makes it DTLS on the wire).
     e = tlsSetVersion(tls, TLS_VERSION_1_3, TLS_VERSION_1_3);
-    if (e) { fprintf(stderr, "tlsSetVersion: %d\n", e); return 2; }
+    if (e)
+    {
+        fprintf(stderr, "tlsSetVersion: %d\n", e);
+        return 2;
+    }
 
     e = tlsSetPrng(tls, HMAC_DRBG_PRNG_ALGO, &drbg);
-    if (e) { fprintf(stderr, "tlsSetPrng: %d\n", e); return 2; }
+    if (e)
+    {
+        fprintf(stderr, "tlsSetPrng: %d\n", e);
+        return 2;
+    }
 
     // Overall handshake/read deadline so a dead peer does not hang forever.
     tlsSetTimeout(tls, 20000);
 
     // Disable chain verification (accept the throwaway self-signed Ed25519 cert).
     e = tlsSetCertificateVerifyCallback(tls, cert_verify_cb, NULL);
-    if (e) { fprintf(stderr, "tlsSetCertificateVerifyCallback: %d\n", e); return 2; }
+    if (e)
+    {
+        fprintf(stderr, "tlsSetCertificateVerifyCallback: %d\n", e);
+        return 2;
+    }
 
     if (want_rpk)
     {
         e = tlsSetRpkVerifyCallback(tls, rpk_verify_cb);
-        if (e) { fprintf(stderr, "tlsSetRpkVerifyCallback: %d\n", e); return 2; }
+        if (e)
+        {
+            fprintf(stderr, "tlsSetRpkVerifyCallback: %d\n", e);
+            return 2;
+        }
         fprintf(stderr, "[client] requesting RawPublicKey server certificate (RFC 7250)\n");
     }
 
@@ -196,8 +216,7 @@ int main(int argc, char **argv)
     fprintf(stderr, "[client] DTLS 1.3 handshake OK\n");
 #if (TLS_RAW_PUBLIC_KEY_SUPPORT == ENABLED)
     fprintf(stderr, "[client] negotiated peer cert format = %s\n",
-            tls->peerCertFormat == TLS_CERT_FORMAT_RAW_PUBLIC_KEY ? "RawPublicKey (RFC 7250)"
-                                                                  : "X.509");
+            tls->peerCertFormat == TLS_CERT_FORMAT_RAW_PUBLIC_KEY ? "RawPublicKey (RFC 7250)" : "X.509");
 #endif
 
     // --- application-data round trip ---

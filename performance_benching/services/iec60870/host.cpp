@@ -23,7 +23,9 @@ template <typename F> static double bench_ns(uint64_t iters, F fn)
 {
     auto t0 = clk::now();
     for (uint64_t i = 0; i < iters; i++)
+    {
         fn();
+    }
     auto t1 = clk::now();
     double ns = std::chrono::duration<double, std::nano>(t1 - t0).count();
     return ns / (double)iters;
@@ -73,7 +75,9 @@ int main()
             Iec104Apci a;
             size_t used = 0;
             if (pc_iec104_parse(frame, frame_len, &a, &used))
+            {
                 sink += a.asdu_len;
+            }
         });
         row("iec60870", "parse (104 APCI)", ns, (double)frame_len);
         (void)sink;
@@ -86,7 +90,9 @@ int main()
             IecAsduHeader h;
             size_t used = 0;
             if (pc_iec_asdu_parse_header(asdu, al, &h, &used))
+            {
                 sink += used;
+            }
         });
         row("iec60870", "asdu_parse_header", ns, (double)al);
         (void)sink;

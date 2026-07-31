@@ -40,7 +40,9 @@ template <typename F> static double bench_ns(uint64_t iters, F fn)
 {
     auto t0 = clk::now();
     for (uint64_t i = 0; i < iters; i++)
+    {
         fn();
+    }
     auto t1 = clk::now();
     double ns = std::chrono::duration<double, std::nano>(t1 - t0).count();
     return ns / (double)iters;
@@ -56,7 +58,9 @@ int main()
 {
     pc_modbus_server_init();
     for (int i = 0; i < 16; i++)
+    {
         pc_modbus_set_holding_reg((uint16_t)i, (uint16_t)(0x1000 + i));
+    }
 
     // Read Holding Registers (FC 0x03), 8 regs from addr 0: MBAP(txn,proto,len,unit) + PDU(fc,addr,qty).
     const uint8_t rd8[] = {0x00, 0x01, 0x00, 0x00, 0x00, 0x06, 0x01, 0x03, 0x00, 0x00, 0x00, 0x08};

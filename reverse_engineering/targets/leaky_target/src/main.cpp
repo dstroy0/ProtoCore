@@ -81,7 +81,9 @@ void loop()
 #if TARGET_HARDENED
     uint32_t desync_us = esp_random() % DESYNC_WINDOW_US;
     if (desync_us)
+    {
         delayMicroseconds(desync_us); // the hiding countermeasure: move the leak, not remove it
+    }
 #endif
     // The leaky operation itself: a single SubBytes Hamming-distance step. `volatile` and the
     // (void) below only stop the compiler from optimizing the "dead" result away - on real

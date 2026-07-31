@@ -30,7 +30,9 @@ static void dnp3_bench_task(void *)
     static const uint8_t user_small[] = {0xC0, 0x01, 0x3C, 0x02, 0x06};
 
     for (size_t i = 0; i < sizeof(s_user_large); i++)
+    {
         s_user_large[i] = (uint8_t)(i + 1);
+    }
 
     s_frame_small_len =
         pc_dnp3_build_frame(s_frame_small, sizeof(s_frame_small), 0x44, 0x1234, 0x0A0B, user_small, sizeof(user_small));

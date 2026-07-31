@@ -62,7 +62,7 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
   did not. Subtract the required work before crediting the wrapper.
 - **Next target, found by that split:** one 16-byte AES-ECB block costs **7,842 cycles** (~490
   cycles/byte, against ~78 for the 1 KiB GCM beside it). A single hardware AES operation pays per-call
-  setup a bulk operation amortises. Header protection runs on every packet, so this is now the
+  setup a bulk operation amortizes. Header protection runs on every packet, so this is now the
   dominant per-packet cost on small QUIC/DTLS records - and software AES may beat the accelerator for
   one block. OPEN.
 - **Lesson:** a benchmark is a correctness test for performance claims, and we had none for this - the
@@ -99,7 +99,7 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 - **Symptom:** adding the first direct unit test of `shared_primitives/strbuf.h` failed to compile:
   `'uint32_t' was not declared in this scope`, pointing at a signature that had been there all along.
 - **Root cause:** `strbuf.h` declared `pc_sb_u32(pc_sb *, uint32_t)` but included only `<stddef.h>`
-  and `<string.h>`. Every existing includer happened to pull in `<stdint.h>` first, so the header
+  and `<string.h>`. Every file that included it happened to pull in `<stdint.h>` first, so the header
   was never compiled on its own and the missing include never showed.
 - **Fix:** include `<stdint.h>` in the header that uses it.
 - **Lesson:** "it compiles everywhere it is used" is not the same as "it compiles". A header is only

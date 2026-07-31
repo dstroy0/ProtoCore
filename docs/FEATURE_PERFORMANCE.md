@@ -643,7 +643,7 @@ ed25519_sign 84.6 vs 85.6 ms, `fe_mul` 1377 vs 1386 cyc), which cross-validates 
 
     **The number that split reveals is the real remaining target: one 16-byte AES-ECB block costs 7,842
     cycles, about 490 cycles per byte, against ~78 cycles/byte for the 1 KiB GCM beside it.** A single
-    hardware AES operation carries per-call setup that a bulk operation amortises and a one-block
+    hardware AES operation carries per-call setup that a bulk operation amortizes and a one-block
     operation cannot. Header protection runs on every packet, so on small QUIC/DTLS records this is now
     the dominant per-packet cost. Worth measuring a software AES-128 block against it - for one block the
     accelerator may be the wrong tool.

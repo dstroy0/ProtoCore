@@ -21,7 +21,9 @@ static void wearlevel_bench_task(void *)
         Serial.printf("DB ==== wearlevel device microbench start (CCOUNT @ %u MHz) ====\n",
                       (unsigned)getCpuFrequencyMhz());
         for (int i = 0; i < SLOTS; i++)
+        {
             counts[i] = (uint32_t)(i * 3 + 1);
+        }
         volatile uint32_t sink = 0;
         DBENCH_OP("pc_wearlevel_pick (16 slots)", 200000, sink += pc_wearlevel_pick(counts, SLOTS));
         DBENCH_OP("pc_wearlevel_mark", 200000, {

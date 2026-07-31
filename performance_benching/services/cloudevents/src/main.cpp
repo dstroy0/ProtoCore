@@ -22,7 +22,9 @@ static void feed_request(uint8_t slot, const char *raw)
 {
     http_parser_reset(&http_pool[slot]);
     for (const char *p = raw; *p; p++)
+    {
         http_parser_feed(&http_pool[slot], (uint8_t)*p);
+    }
 }
 
 static void cloudevents_bench_task(void *)

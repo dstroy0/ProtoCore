@@ -40,7 +40,9 @@ static uint8_t mock_read(uint8_t reg, void *ctx)
 {
     MockChip *c = (MockChip *)ctx;
     if (reg == 0x00) // RegFifo: read at the pointer, then advance
+    {
         return c->fifo[c->fifo_ptr++ & 0xFF];
+    }
     return c->reg[reg & 0x7F];
 }
 static void mock_write(uint8_t reg, uint8_t val, void *ctx)
@@ -68,9 +70,13 @@ static uint8_t recv_read(uint8_t reg, void *ctx)
 {
     MockChip *c = (MockChip *)ctx;
     if (reg == 0x00) // RegFifo
+    {
         return c->fifo[c->fifo_ptr++ & 0xFF];
+    }
     if (reg == 0x12) // RegIrqFlags: RxDone set, PayloadCrcError clear
+    {
         return 0x40;
+    }
     return c->reg[reg & 0x7F];
 }
 static void recv_write(uint8_t reg, uint8_t val, void *ctx)
@@ -82,7 +88,9 @@ static void recv_write(uint8_t reg, uint8_t val, void *ctx)
         return;
     }
     if (reg == 0x12) // swallow the IRQ-flag clear so the frame stays permanently ready
+    {
         return;
+    }
     if (reg == 0x00) // RegFifo
     {
         c->fifo[c->fifo_ptr++ & 0xFF] = val;

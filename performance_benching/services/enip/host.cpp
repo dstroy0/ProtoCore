@@ -24,7 +24,9 @@ template <typename F> static double bench_ns(uint64_t iters, F fn)
 {
     auto t0 = clk::now();
     for (uint64_t i = 0; i < iters; i++)
+    {
         fn();
+    }
     auto t1 = clk::now();
     double ns = std::chrono::duration<double, std::nano>(t1 - t0).count();
     return ns / (double)iters;
@@ -74,7 +76,9 @@ int main()
             const uint8_t *data = nullptr;
             size_t dlen = 0;
             if (pc_eip_parse(frame, frame_len, &out, &data, &dlen))
+            {
                 sink += dlen + out.command;
+            }
         });
         row("enip", "pc_eip_parse (encap)", ns, (double)frame_len);
         (void)sink;

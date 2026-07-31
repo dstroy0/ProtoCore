@@ -24,7 +24,9 @@ static void telemetry_bench_task(void *)
         volatile float sink = 0;
         pc_window_init(&win, wbuf, 32);
         for (int i = 0; i < 32; i++)
+        {
             pc_window_push(&win, (float)(i % 7) + 0.5f);
+        }
         DBENCH_OP("pc_window_push", 200000, pc_window_push(&win, (float)(sink)));
         DBENCH_OP("pc_window_mean", 200000, sink += pc_window_mean(&win));
         DBENCH_OP("pc_window_variance", 200000, sink += pc_window_variance(&win));

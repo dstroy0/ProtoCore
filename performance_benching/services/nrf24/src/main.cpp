@@ -38,12 +38,16 @@ void bench_spi(const uint8_t *tx, uint8_t *rx, uint8_t len, void *)
     {
         uint8_t reg = (uint8_t)(c & 0x1F);
         for (uint8_t i = 1; i < len; i++)
+        {
             rx[i] = (reg == 0x05) ? kChannel : 0x00; // RF_CH (0x05) reads back the configured channel
+        }
     }
     else if (c == 0x61) // R_RX_PAYLOAD
     {
         for (uint8_t i = 1; i < len; i++)
+        {
             rx[i] = (uint8_t)(0x20 + (i - 1)); // canned payload (test/test_nrf24 data)
+        }
     }
     // W_REGISTER / W_TX_PAYLOAD / FLUSH_TX / FLUSH_RX / NOP: STATUS-only (already in rx[0]); the
     // real bus is never touched, only the caller's framing/parsing cycles are measured.

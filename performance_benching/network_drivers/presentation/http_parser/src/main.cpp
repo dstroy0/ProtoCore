@@ -25,7 +25,9 @@ static void http_parser_bench_task(void *)
         DBENCH_BULK("http_parser feed GET (6 hdrs)", 50000, n, {
             http_parser_reset(&req);
             for (size_t i = 0; i < n; i++)
+            {
                 http_parser_feed(&req, (uint8_t)GET_REQ[i]);
+            }
             sink += (int)req.parse_state;
         });
         (void)sink;

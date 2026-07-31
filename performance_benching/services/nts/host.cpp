@@ -23,7 +23,9 @@ template <typename F> static double bench_ns(uint64_t iters, F fn)
 {
     auto t0 = clk::now();
     for (uint64_t i = 0; i < iters; i++)
+    {
         fn();
+    }
     auto t1 = clk::now();
     double ns = std::chrono::duration<double, std::nano>(t1 - t0).count();
     return ns / (double)iters;
@@ -52,7 +54,9 @@ int main()
     const uint8_t aead[2] = {0x00, (uint8_t)Nts::NTS_AEAD_AES_SIV_CMAC_256};
     uint8_t cookie[32];
     for (int i = 0; i < 32; i++)
+    {
         cookie[i] = (uint8_t)(i * 7 + 3);
+    }
     rl += pc_nts_ke_record(true, Nts::NTS_KE_NEXT_PROTOCOL, next_proto, 2, resp + rl, sizeof(resp) - rl);
     rl += pc_nts_ke_record(true, Nts::NTS_KE_AEAD_ALGORITHM, aead, 2, resp + rl, sizeof(resp) - rl);
     rl += pc_nts_ke_record(false, Nts::NTS_KE_COOKIE, cookie, sizeof(cookie), resp + rl, sizeof(resp) - rl);
@@ -60,7 +64,9 @@ int main()
 
     uint8_t nonce[16];
     for (int i = 0; i < 16; i++)
+    {
         nonce[i] = (uint8_t)(i * 11 + 1);
+    }
 
     printf("| Feature      | Operation                  |     ns/op |    MB/s |\n");
     printf("|--------------|----------------------------|-----------|---------|\n");
@@ -80,7 +86,9 @@ int main()
         double ns = bench_ns(2000000, [&] {
             size_t n = 0;
             if (pc_nts_ke_parse(resp, rl, ke_count_cb, &n))
+            {
                 sink += n;
+            }
         });
         row("nts", "ke_parse (server response)", ns, (double)rl);
         (void)sink;

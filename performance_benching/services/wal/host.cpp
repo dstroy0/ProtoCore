@@ -31,7 +31,9 @@ template <typename F> static double bench_ns(uint64_t iters, F fn)
 {
     auto t0 = clk::now();
     for (uint64_t i = 0; i < iters; i++)
+    {
         fn();
+    }
     auto t1 = clk::now();
     return std::chrono::duration<double, std::nano>(t1 - t0).count() / (double)iters;
 }
@@ -40,9 +42,13 @@ static void row(const char *feature, const char *op, double ns_per_op, double by
 {
     double mbps = bytes_per_op > 0 ? (bytes_per_op / (ns_per_op * 1e-9)) / 1e6 : 0.0;
     if (bytes_per_op > 0)
+    {
         printf("| %-10s | %-26s | %10.1f | %8.1f |\n", feature, op, ns_per_op, mbps);
+    }
     else
+    {
         printf("| %-10s | %-26s | %10.1f | %8s |\n", feature, op, ns_per_op, "-");
+    }
 }
 
 // A RAM-backed WalDev over a caller buffer (no I/O; measures pure CPU cost).
@@ -55,7 +61,9 @@ static size_t ram_read(void *ctx, uint64_t off, uint8_t *b, size_t n)
 {
     RamDisk *d = (RamDisk *)ctx;
     if (off + n > d->size)
+    {
         return 0;
+    }
     memcpy(b, d->buf + off, n);
     return n;
 }
@@ -63,7 +71,9 @@ static size_t ram_write(void *ctx, uint64_t off, const uint8_t *b, size_t n)
 {
     RamDisk *d = (RamDisk *)ctx;
     if (off + n > d->size)
+    {
         return 0;
+    }
     memcpy(d->buf + off, b, n);
     return n;
 }
@@ -82,7 +92,9 @@ static bool mem_read(void *ctx, uint32_t pgno, uint8_t *page, uint32_t page_size
     RamDisk *m = (RamDisk *)ctx;
     uint64_t off = (uint64_t)(pgno - 1) * page_size;
     if (pgno < 1 || off + page_size > m->size)
+    {
         return false;
+    }
     memcpy(page, m->buf + off, page_size);
     return true;
 }
@@ -97,7 +109,9 @@ int main()
         const size_t N = 1024;
         uint8_t src[N];
         for (size_t i = 0; i < N; i++)
+        {
             src[i] = (uint8_t)(i * 31 + 7);
+        }
         volatile uint32_t sink = 0;
         double ns = bench_ns(500000, [&] { sink += pc_wal_crc32(src, N); });
         row("wal", "crc32 (1 KiB)", ns, (double)N);
@@ -144,9 +158,13 @@ int main()
         uint8_t val[64];
         memset(val, 0x5A, sizeof(val));
         for (int k = 0; k < 100; k++)
+        {
             snprintf(keys[k], sizeof(keys[k]), "k%05d", k);
+        }
         for (int k = 0; k < 100; k++)
+        {
             pc_dbm_put(&db, keys[k], (uint16_t)strlen(keys[k]), val, sizeof(val));
+        }
         int idx = 0;
         double nput = bench_ns(500000, [&] {
             pc_dbm_put(&db, keys[idx], (uint16_t)strlen(keys[idx]), val, sizeof(val));
@@ -214,8 +232,12 @@ int main()
             const uint8_t *v;
             uint32_t vl;
             while (pc_sqlite_table_cursor_next(&c, &rid, &row))
+            {
                 while (pc_sqlite_record_next(&row, &st, &v, &vl))
+                {
                     s += st;
+                }
+            }
         });
         row("sqlite", "table scan (40 rows)", ns, 0);
         printf("| %-10s | %-26s | %10.1f | %8s |\n", "sqlite", "  -> per row (+cols)", ns / (double)DB_MP_ROWS, "-");
@@ -236,7 +258,9 @@ int main()
             RespReply r;
             size_t c;
             if (pc_resp_parse(bulk, sizeof(bulk) - 1, &r, &c))
+            {
                 sink += r.str_len;
+            }
         });
         row("resp", "parse bulk reply", np, 0);
         (void)sink;

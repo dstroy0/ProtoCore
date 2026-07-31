@@ -14,7 +14,9 @@ static void vfs_bench_task(void *)
 {
     static uint8_t data[256];
     for (int i = 0; i < 256; i++)
+    {
         data[i] = (uint8_t)(i * 13 + 7);
+    }
 
     for (;;)
     {

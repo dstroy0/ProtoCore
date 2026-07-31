@@ -18,7 +18,9 @@ static void wifi_sniffer_bench_task(void *)
     memset(frame, 0, sizeof(frame));
     frame[0] = 0x80; // mgmt, beacon
     for (int i = 4; i < 22; i++)
+    {
         frame[i] = (uint8_t)(i * 7 + 1);
+    }
 
     for (;;)
     {

@@ -664,27 +664,35 @@ src/
 │   │   ├── derived_sizing.h
 │   │   └── pc_platform.h
 │   ├── hal/
-│   │   └── esp/
-│   │       ├── C2_AND_S.md
-│   │       ├── C3_CRYPTO_REG_SYMBOLS.md
-│   │       ├── C6_CRYPTO_REG_SYMBOLS.md
-│   │       ├── CLASSIC_CRYPTO_REG_SYMBOLS.md
-│   │       ├── DMA_GDMA.md
-│   │       ├── E_CRYPTO_REG_SYMBOLS.md
-│   │       ├── esp_crypto_hal.cpp
-│   │       ├── esp_crypto_hal.h
-│   │       ├── H2_CRYPTO_REG_SYMBOLS.md
-│   │       ├── P4_CRYPTO_REG_SYMBOLS.md
-│   │       ├── P4_MIPI_DSI_CSI.md
-│   │       ├── P4_MIPI_HELPERS.md
-│   │       ├── S2.md
-│   │       └── S3_CRYPTO_REG_SYMBOLS.md
+│   │   ├── esp/
+│   │   │   ├── C2_AND_S.md
+│   │   │   ├── C3_CRYPTO_REG_SYMBOLS.md
+│   │   │   ├── C6_CRYPTO_REG_SYMBOLS.md
+│   │   │   ├── CLASSIC_CRYPTO_REG_SYMBOLS.md
+│   │   │   ├── DMA_GDMA.md
+│   │   │   ├── E_CRYPTO_REG_SYMBOLS.md
+│   │   │   ├── esp_aes128gcm.cpp
+│   │   │   ├── esp_aesgcm.cpp
+│   │   │   ├── esp_bignum.cpp
+│   │   │   ├── esp_crypto_hal.cpp
+│   │   │   ├── esp_crypto_hal.h
+│   │   │   ├── esp_platform.cpp
+│   │   │   ├── H2_CRYPTO_REG_SYMBOLS.md
+│   │   │   ├── P4_CRYPTO_REG_SYMBOLS.md
+│   │   │   ├── P4_MIPI_DSI_CSI.md
+│   │   │   ├── P4_MIPI_HELPERS.md
+│   │   │   ├── S2.md
+│   │   │   └── S3_CRYPTO_REG_SYMBOLS.md
+│   │   └── portable/
+│   │       ├── portable_aes128gcm.cpp
+│   │       ├── portable_aesgcm.cpp
+│   │       ├── portable_bignum.cpp
+│   │       └── portable_platform.cpp
 │   └── physical/
 │       └── esp/
 │           └── physical_esp.cpp
 ├── crypto/
 │   ├── aead/
-│   │   ├── aes128gcm.cpp
 │   │   ├── aes128gcm.h
 │   │   ├── aesccm.cpp
 │   │   ├── aesccm.h
@@ -746,12 +754,13 @@ src/
 │   │   ├── sntrup761.cpp
 │   │   └── sntrup761.h
 │   ├── crypto_opt.h
-│   ├── crypto_scratch.cpp
 │   └── crypto_scratch.h
 ├── network_drivers/
 │   ├── application/
 │   │   ├── binary_asset_blobs.cpp
 │   │   ├── binary_asset_blobs.h
+│   │   ├── web.cpp
+│   │   ├── web.h
 │   │   ├── web_assets.cpp
 │   │   └── web_assets.h
 │   ├── datalink/  (datalink.h, datalink.cpp)
@@ -853,12 +862,8 @@ src/
 │   │   ├── presentation.cpp
 │   │   └── presentation.h
 │   ├── session/
-│   │   ├── arena.cpp
-│   │   ├── arena.h
 │   │   ├── proto_builtins.cpp
 │   │   ├── proto_handler.h
-│   │   ├── scratch.cpp
-│   │   ├── scratch.h
 │   │   ├── session.cpp
 │   │   ├── session.h
 │   │   ├── worker.cpp
@@ -876,6 +881,13 @@ src/
 │       ├── udp.cpp
 │       └── udp.h
 ├── server/
+│   ├── mmgr/
+│   │   ├── arena.cpp
+│   │   ├── arena.h
+│   │   ├── scratch.cpp
+│   │   ├── scratch.h
+│   │   ├── secure.cpp
+│   │   └── secure.h
 │   ├── auth.cpp
 │   ├── file_serving.cpp
 │   ├── fs_path.h
@@ -1213,6 +1225,8 @@ src/
 │   ├── crc.h
 │   ├── endian.h
 │   ├── fmtbuf.h
+│   ├── frame.cpp
+│   ├── frame.h
 │   ├── hex.h
 │   ├── http_date.h
 │   ├── log.cpp
@@ -1221,6 +1235,8 @@ src/
 │   ├── numparse.h
 │   ├── pcap.h
 │   ├── ring.h
+│   ├── span.h
+│   ├── speed_opt.h
 │   ├── strbuf.h
 │   ├── time_compat.h
 │   └── utf8.h
@@ -1814,6 +1830,7 @@ guards at compile time.
 | `PC_CONFIG_VAL_MAX` | `64` | Max value bytes per entry in the host (test) config backend. |
 | `PC_DASHBOARD_JSON_BUF` | `1024` | Stack buffer for the dashboard layout / values JSON (bytes). |
 | `PC_DASHBOARD_MAX_WIDGETS` | `16` | Maximum widgets in the dashboard table (BSS value array). |
+| `PC_DEBUG_CHECKS` | `0` | Compile the library's internal debug checks (default 0 = off). |
 | `PC_DEFER_QUEUE_DEPTH` | `8` | Depth of each worker's deferred-callback queue. |
 | `PC_DELIVERY_MANIFEST_BUF` | `512` | Buffer the precache manifest JSON is built into. |
 | `PC_DELIVERY_PRECACHE_MAX` | `16` | Most asset paths a service-worker precache manifest may list. |
@@ -1942,7 +1959,7 @@ guards at compile time.
 | `PC_SEN0192_HOLD_MS` | `2000` | Presence is held this many ms after the last active (motion) sample before it clears. |
 | `PC_SEN0192_PIN` | `4` | GPIO the SEN0192 OUT line is wired to. |
 | `PC_SFTP_MAX_HANDLES` | `4` | Max concurrent open SFTP handles (files + dirs) per SSH connection. |
-| `PC_SFTP_MAX_READ` | `1024` | Largest SSH_FXP_DATA payload returned for one READ (a short read - the client re-requests). |
+| `PC_SFTP_MAX_READ` | `1024` | Largest PC_SSH_FXP_DATA payload returned for one READ (a short read - the client re-requests). |
 | `PC_SFTP_PATH_MAX` | `256` | Largest absolute path the SFTP/SCP server resolves (mount root + request path). |
 | `PC_SFTP_PKT_BUF` | `2048` | SFTP packet-assembly buffer per SFTP channel (bytes); bounds one non-streamed request/response. |
 | `PC_SHT3X_I2C_ADDR` | `0x44` | I2C address of the SHT3x (0x44 with ADDR low; 0x45 with ADDR high). |
@@ -2003,6 +2020,14 @@ guards at compile time.
 | `PC_WORKER_STACK_PQC_MIN` | `16384` |  |
 | `PC_WORKER_STACK_RSA_MIN` | `8192` | Minimum worker-task stack (bytes) required once an RSA-2048 verifier is compiled in (OIDC / SSH). |
 | `PC_WORKER_TASK_PRIORITY` | `5` | FreeRTOS priority for each server worker task (ESP32). |
+| `PC_WORK_AES256CTR` | `384` |  |
+| `PC_WORK_AESCCM` | `448` |  |
+| `PC_WORK_BIGNUM_HW` | `1024` | Worst-case bytes each module borrows from the secure pool in a single call. |
+| `PC_WORK_BIGNUM_SW` | `1408` |  |
+| `PC_WORK_CHACHA20` | `192` |  |
+| `PC_WORK_CHACHAPOLY` | `64` |  |
+| `PC_WORK_MD` | `96` |  |
+| `PC_WORK_POLY1305` | `80` |  |
 | `PC_WS_CLIENT_BUF_SIZE` | `1024` | WebSocket client send/receive buffer size in bytes (bounds one frame). |
 | `PC_WS_CLIENT_CT_BUF_SIZE` | `4096` | Ciphertext receive-ring size for wss:// (draining ring; must exceed one TCP_MSS). |
 | `PC_WS_FRAG_SIZE` | `0` | WebSocket outbound fragmentation size (RFC 6455 sec 5.4), in payload bytes. |

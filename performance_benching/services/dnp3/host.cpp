@@ -23,7 +23,9 @@ template <typename F> static double bench_ns(uint64_t iters, F fn)
 {
     auto t0 = clk::now();
     for (uint64_t i = 0; i < iters; i++)
+    {
         fn();
+    }
     auto t1 = clk::now();
     double ns = std::chrono::duration<double, std::nano>(t1 - t0).count();
     return ns / (double)iters;
@@ -40,7 +42,9 @@ int main()
     // 32 octets of application data -> a header block + two CRC'd data blocks (16 + 16).
     uint8_t user[32];
     for (int i = 0; i < 32; i++)
+    {
         user[i] = (uint8_t)(i * 5 + 1);
+    }
     uint8_t block[DNP3_BLOCK_LEN];
     memcpy(block, user, DNP3_BLOCK_LEN);
 
@@ -74,7 +78,9 @@ int main()
             uint8_t out[256];
             size_t ul = 0;
             if (pc_dnp3_parse_frame(frame, frame_len, &f, out, sizeof(out), &ul))
+            {
                 sink += ul;
+            }
         });
         row("dnp3", "parse_frame (validate CRCs)", ns, (double)frame_len);
         (void)sink;

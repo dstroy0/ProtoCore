@@ -29,7 +29,9 @@ static void spa_router_bench_task(void *)
             pc_ui_stream s;
             pc_ui_stream_begin(&s, frags, 3, nullptr);
             while (!pc_ui_stream_done(&s))
+            {
                 sink += pc_ui_stream_next(&s, out, sizeof(out));
+            }
         });
         (void)sink;
         Serial.println("DB ==== DONE ====");

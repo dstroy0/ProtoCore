@@ -30,7 +30,9 @@ static void grpcweb_bench_task(void *)
     static uint8_t bigbody[256];
     static uint8_t bigframe[512];
     for (size_t i = 0; i < sizeof(bigbody); i++)
+    {
         bigbody[i] = (uint8_t)(i * 31u + 7u);
+    }
 
     // Pre-build one message frame and one trailers frame to feed the parser / status extractor.
     const size_t msg_frame_len = pc_grpcweb_frame_message(framebuf, sizeof(framebuf), msg, sizeof(msg), false);

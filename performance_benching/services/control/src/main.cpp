@@ -43,7 +43,9 @@ static void control_bench_task(void *)
     // Batched multi-axis update (a motion master driving 4 axes off one control tick).
     Pid axes[4];
     for (uint8_t i = 0; i < 4; i++)
+    {
         pid_init(&axes[i], 1.0f + (float)i, 0.0f, 0.0f);
+    }
     static const float sp4[4] = {5.0f, 2.0f, -3.0f, 1.0f};
     static const float meas4[4] = {0.0f, 0.0f, 0.0f, 0.0f};
     static float out4[4] = {0.0f, 0.0f, 0.0f, 0.0f};

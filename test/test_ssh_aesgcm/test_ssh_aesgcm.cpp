@@ -60,7 +60,7 @@ void test_aesgcm_nist_tc16_seal()
 {
     uint8_t out[60 + 16];
     pc_aesgcm_seal(gcm_key(TC16_KEY), TC16_IV, TC16_AAD, sizeof(TC16_AAD), TC16_PT, sizeof(TC16_PT), out,
-                       out + sizeof(TC16_CT));
+                   out + sizeof(TC16_CT));
     TEST_ASSERT_EQUAL_UINT8_ARRAY(TC16_CT, out, sizeof(TC16_CT));
     TEST_ASSERT_EQUAL_UINT8_ARRAY(TC16_TAG, out + sizeof(TC16_CT), 16);
 }

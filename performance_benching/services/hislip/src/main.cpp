@@ -31,7 +31,9 @@ static void hislip_bench_task(void *)
     // A 512-byte SCPI-ish payload for the throughput (MB/s) build path.
     static uint8_t big_payload[512];
     for (size_t i = 0; i < sizeof(big_payload); i++)
+    {
         big_payload[i] = (uint8_t)('0' + (i % 10));
+    }
 
     static uint8_t out[16 + sizeof(big_payload)];
 

@@ -56,7 +56,9 @@ static void rng(uint8_t *out, size_t n)
 {
     static int fd = -1;
     if (fd < 0)
+    {
         fd = open("/dev/urandom", O_RDONLY);
+    }
     if (read(fd, out, n) != (ssize_t)n)
     { /* best effort */
     }

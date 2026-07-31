@@ -23,7 +23,9 @@ static void dmx_bench_task(void *)
     // A full 512-channel DMX512 universe (dimmer data, start code 0x00).
     static uint8_t channels[DMX_MAX_CHANNELS];
     for (uint16_t i = 0; i < DMX_MAX_CHANNELS; i++)
+    {
         channels[i] = (uint8_t)i;
+    }
     static uint8_t dmx_frame[1 + DMX_MAX_CHANNELS];
 
     // Build a GET DEVICE_INFO RDM packet (no parameter data) - see test_rdm_get_roundtrip().

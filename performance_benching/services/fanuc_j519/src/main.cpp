@@ -36,7 +36,9 @@ static void fanuc_j519_bench_task(void *)
     cmd.write_io_mask = 0x0708;
     cmd.write_io_value = 0x090A;
     for (int i = 0; i < PC_J519_AXES; i++)
+    {
         cmd.joint_data[i] = (float)i;
+    }
     cmd.joint_data[0] = 1.0f;
     cmd.joint_data[1] = -2.5f;
 

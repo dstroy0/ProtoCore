@@ -39,7 +39,9 @@ static void auth_lockout_bench_task(void *)
         // code path - the state an active brute-force source occupies for the rest of its window.
         auth_lockout_reset();
         for (int i = 0; i < PC_AUTH_LOCKOUT_THRESHOLD; i++)
+        {
             auth_lockout_fail(&attacker, 0);
+        }
 
         Serial.printf("DB ==== auth_lockout device microbench start (CCOUNT @ %u MHz) ====\n",
                       (unsigned)getCpuFrequencyMhz());

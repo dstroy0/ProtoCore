@@ -63,7 +63,9 @@ static void mbus_bench_task(void *)
                 size_t p = 0;
                 MbusRecord r;
                 while (pc_mbus_record_next(record_body, sizeof(record_body), &p, &r))
+                {
                     sink += r.data_len;
+                }
             } while (0));
 
         (void)sink;

@@ -27,7 +27,9 @@ template <typename F> static double bench_ns(uint64_t iters, F fn)
 {
     auto t0 = clk::now();
     for (uint64_t i = 0; i < iters; i++)
+    {
         fn();
+    }
     auto t1 = clk::now();
     double ns = std::chrono::duration<double, std::nano>(t1 - t0).count();
     return ns / (double)iters;
@@ -37,9 +39,13 @@ static void row(const char *feature, const char *op, double ns_per_op, double by
 {
     double mbps = bytes_per_op > 0 ? (bytes_per_op / (ns_per_op * 1e-9)) / 1e6 : 0.0;
     if (bytes_per_op > 0)
+    {
         printf("| %-12s | %-24s | %10.1f | %9.1f |\n", feature, op, ns_per_op, mbps);
+    }
     else
+    {
         printf("| %-12s | %-24s | %10.1f | %9s |\n", feature, op, ns_per_op, "-");
+    }
 }
 
 // A realistic browser GET (request line + 6 headers, no body).
@@ -65,7 +71,9 @@ static ParseState parse_all(HttpReq *req, const char *s, size_t n)
 {
     http_parser_reset(req);
     for (size_t i = 0; i < n; i++)
+    {
         http_parser_feed(req, (uint8_t)s[i]);
+    }
     return req->parse_state;
 }
 

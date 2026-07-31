@@ -20,7 +20,9 @@ static void modbus_bench_task(void *)
 {
     pc_modbus_server_init();
     for (int i = 0; i < 16; i++)
+    {
         pc_modbus_set_holding_reg((uint16_t)i, (uint16_t)(0x1000 + i));
+    }
 
     // Read Holding Registers (FC 0x03), 8 regs from addr 0: MBAP(txn,proto,len,unit) + PDU(fc,addr,qty).
     static const uint8_t rd8[] = {0x00, 0x01, 0x00, 0x00, 0x00, 0x06, 0x01, 0x03, 0x00, 0x00, 0x00, 0x08};

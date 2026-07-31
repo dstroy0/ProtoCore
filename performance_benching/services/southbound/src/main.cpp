@@ -14,21 +14,27 @@ static int32_t g_points[64];
 static int drv_read(void *, uint32_t point, int32_t *out)
 {
     if (point >= 64)
+    {
         return -1;
+    }
     *out = g_points[point];
     return 0;
 }
 static int drv_write(void *, uint32_t point, int32_t value)
 {
     if (point >= 64)
+    {
         return -1;
+    }
     g_points[point] = value;
     return 0;
 }
 static int drv_read_block(void *, uint32_t first, int32_t *out, size_t n)
 {
     for (size_t i = 0; i < n && first + i < 64; i++)
+    {
         out[i] = g_points[first + i];
+    }
     return (int)n;
 }
 

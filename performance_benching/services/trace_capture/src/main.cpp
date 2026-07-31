@@ -21,7 +21,9 @@ static void trace_capture_bench_task(void *)
 {
     static uint16_t batch[64];
     for (int i = 0; i < 64; i++)
+    {
         batch[i] = (uint16_t)(i * 37 + 5);
+    }
 
     for (;;)
     {

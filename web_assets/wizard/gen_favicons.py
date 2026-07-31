@@ -89,7 +89,10 @@ def catalog():
     return [(f"{m}-{p}", m, p) for m in MOTIFS for p in PAIRS]
 
 
-GALLERY = os.path.normpath(os.path.join(SCRIPT_DIR, "..", "..", "..", "docs", "FAVICONS.md"))
+# Two levels up, not three: this script sits at web_assets/wizard/, which is two deep. It used to live
+# at src/web/wizard/ (three deep) and the extra ".." survived the move, resolving the gallery to a path
+# OUTSIDE the checkout - which only ever surfaced as a FileNotFoundError in CI.
+GALLERY = os.path.normpath(os.path.join(SCRIPT_DIR, "..", "..", "docs", "FAVICONS.md"))
 
 
 def cmd_gallery():

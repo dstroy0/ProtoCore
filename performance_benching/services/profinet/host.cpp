@@ -24,7 +24,9 @@ template <typename F> static double bench_ns(uint64_t iters, F fn)
 {
     auto t0 = clk::now();
     for (uint64_t i = 0; i < iters; i++)
+    {
         fn();
+    }
     auto t1 = clk::now();
     double ns = std::chrono::duration<double, std::nano>(t1 - t0).count();
     return ns / (double)iters;
@@ -73,7 +75,9 @@ int main()
         double ns = bench_ns(10000000, [&] {
             PnDcpHeader out;
             if (pc_pn_dcp_parse_header(hdr, hlen, &out))
+            {
                 sink += out.data_length + out.xid;
+            }
         });
         row("profinet", "dcp_parse_header", ns, (double)hlen);
         (void)sink;
@@ -86,7 +90,9 @@ int main()
         double ns = bench_ns(10000000, [&] {
             size_t acc = 0;
             if (pc_pn_dcp_walk(blocks, blen, walk_cb, &acc))
+            {
                 sink += acc;
+            }
         });
         row("profinet", "dcp_walk (blocks)", ns, (double)blen);
         (void)sink;

@@ -31,7 +31,9 @@ static void bus_capture_bench_task(void *)
     std8.rtr = false;
     std8.dlc = 8;
     for (int i = 0; i < 8; i++)
+    {
         std8.data[i] = (uint8_t)(0x10 + i);
+    }
 
     // Extended (29-bit) J1939-style id, 2 data bytes (test_extended_id_sets_eff).
     static CanFrame ext2;

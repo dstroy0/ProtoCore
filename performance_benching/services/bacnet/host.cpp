@@ -22,7 +22,9 @@ template <typename F> static double bench_ns(uint64_t iters, F fn)
 {
     auto t0 = clk::now();
     for (uint64_t i = 0; i < iters; i++)
+    {
         fn();
+    }
     auto t1 = clk::now();
     double ns = std::chrono::duration<double, std::nano>(t1 - t0).count();
     return ns / (double)iters;
@@ -40,7 +42,9 @@ int main()
     // Original-Unicast envelope - a realistic received BACnet/IP datagram.
     uint8_t apdu[8];
     for (int i = 0; i < 8; i++)
+    {
         apdu[i] = (uint8_t)(i * 9 + 2);
+    }
     const uint8_t dadr[2] = {0x01, 0x02};
 
     uint8_t npdu[64];
@@ -61,7 +65,9 @@ int main()
             const uint8_t *np = nullptr;
             size_t nl = 0;
             if (pc_bvlc_parse(frame, frame_len, &fn, &np, &nl))
+            {
                 sink += nl;
+            }
         });
         row("bacnet", "pc_bvlc_parse", ns, (double)frame_len);
         (void)sink;
@@ -73,7 +79,9 @@ int main()
         double ns = bench_ns(10000000, [&] {
             NpduInfo info;
             if (pc_npdu_parse(npdu, npdu_len, &info))
+            {
                 sink += info.apdu_len;
+            }
         });
         row("bacnet", "pc_npdu_parse", ns, (double)npdu_len);
         (void)sink;

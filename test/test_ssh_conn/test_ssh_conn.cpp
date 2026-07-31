@@ -14,8 +14,8 @@
 #include "network_drivers/presentation/ssh/crypto/ssh_rsa.h"
 #include "network_drivers/presentation/ssh/transport/ssh_packet.h"
 #include "network_drivers/presentation/ssh/transport/ssh_transport.h"
-#include "server/mmgr/scratch.h"
 #include "network_drivers/transport/tcp.h"
+#include "server/mmgr/scratch.h"
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>

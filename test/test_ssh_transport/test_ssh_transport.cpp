@@ -1522,13 +1522,13 @@ void test_dh_derive_keys_gcm_installs()
     // (there is no raw GCM key in the keymat - install builds the context and wipes the key). Identical
     // output proves the installed context is correct, not merely that two copies of a key matched.
     pc_aesgcm_seal(gcm_key(key_c), iv_c, aad, sizeof(aad), pt, sizeof(pt), seal_ref, seal_ref + sizeof(pt));
-    pc_aesgcm_seal(reinterpret_cast<pc_aesgcm_key *>(ssh_keys[0].gcm_ctx_c2s), ssh_keys[0].aes_iv_c2s, aad,
-                   sizeof(aad), pt, sizeof(pt), seal_km, seal_km + sizeof(pt));
+    pc_aesgcm_seal(reinterpret_cast<pc_aesgcm_key *>(ssh_keys[0].gcm_ctx_c2s), ssh_keys[0].aes_iv_c2s, aad, sizeof(aad),
+                   pt, sizeof(pt), seal_km, seal_km + sizeof(pt));
     TEST_ASSERT_EQUAL_MEMORY(seal_ref, seal_km, sizeof(seal_ref)); // C->S key + IV byte-correct
 
     pc_aesgcm_seal(gcm_key(key_s), iv_s, aad, sizeof(aad), pt, sizeof(pt), seal_ref, seal_ref + sizeof(pt));
-    pc_aesgcm_seal(reinterpret_cast<pc_aesgcm_key *>(ssh_keys[0].gcm_ctx_s2c), ssh_keys[0].aes_iv_s2c, aad,
-                   sizeof(aad), pt, sizeof(pt), seal_km, seal_km + sizeof(pt));
+    pc_aesgcm_seal(reinterpret_cast<pc_aesgcm_key *>(ssh_keys[0].gcm_ctx_s2c), ssh_keys[0].aes_iv_s2c, aad, sizeof(aad),
+                   pt, sizeof(pt), seal_km, seal_km + sizeof(pt));
     TEST_ASSERT_EQUAL_MEMORY(seal_ref, seal_km, sizeof(seal_ref)); // S->C key + IV byte-correct
 
     ssh_keymat_wipe(0);

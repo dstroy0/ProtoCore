@@ -28,15 +28,23 @@ static size_t build_ipfix_message(uint8_t *buf, size_t cap)
 {
     FlowWriter w;
     if (!flow_ipfix_begin(&w, buf, cap, 0x11223344, 1, 0x2A))
+    {
         return 0;
+    }
     static const FlowField fields[] = {{8, 4}, {12, 4}}; // sourceIPv4Address, destinationIPv4Address
     if (!flow_export_template(&w, 256, fields, 2))
+    {
         return 0;
+    }
     if (!flow_export_data_begin(&w, 256))
+    {
         return 0;
+    }
     static const uint8_t rec[] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
     if (!flow_export_data_record(&w, rec, sizeof(rec)))
+    {
         return 0;
+    }
     return flow_export_finish(&w); // 44 octets
 }
 
@@ -44,15 +52,23 @@ static size_t build_v9_message(uint8_t *buf, size_t cap)
 {
     FlowWriter w;
     if (!flow_v9_begin(&w, buf, cap, 1000, 0x5F000000, 7, 1))
+    {
         return 0;
+    }
     static const FlowField fields[] = {{1, 4}, {10, 2}}; // a 6-octet record layout
     if (!flow_export_template(&w, 256, fields, 2))
+    {
         return 0;
+    }
     if (!flow_export_data_begin(&w, 256))
+    {
         return 0;
+    }
     static const uint8_t rec[] = {0x00, 0x00, 0x00, 0x64, 0x00, 0x07}; // 6 octets (not 4-aligned)
     if (!flow_export_data_record(&w, rec, sizeof(rec)))
+    {
         return 0;
+    }
     return flow_export_finish(&w); // 48 octets (incl. 2 pad octets)
 }
 

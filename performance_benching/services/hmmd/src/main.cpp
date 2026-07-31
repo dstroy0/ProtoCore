@@ -55,8 +55,12 @@ static int hmmd_reassemble(const uint8_t *frame, HmmdReport *out)
     pc_hmmd_stream_reset(&s);
     int n = 0;
     for (int i = 0; i < PC_HMMD_FRAME_MAX; i++)
+    {
         if (pc_hmmd_stream_push(&s, frame[i], out))
+        {
             n++;
+        }
+    }
     return n;
 }
 

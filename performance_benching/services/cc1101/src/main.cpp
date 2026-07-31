@@ -29,14 +29,22 @@ void bench_spi(const uint8_t *tx, uint8_t *rx, uint8_t len, void *)
     uint8_t hdr = tx[0];
     uint8_t addr = (uint8_t)(hdr & 0x3F);
     bool read = (hdr & 0x80) != 0;
-    rx[0] = 0x00;                  // chip status byte: state=IDLE, fifo-bytes-available=0
-    if (addr == 0x31 && read)      // VERSION status register
-        rx[1] = 0x14;              // typical CC1101 VERSION (test/test_cc1101 data)
+    rx[0] = 0x00;             // chip status byte: state=IDLE, fifo-bytes-available=0
+    if (addr == 0x31 && read) // VERSION status register
+    {
+        rx[1] = 0x14; // typical CC1101 VERSION (test/test_cc1101 data)
+    }
     else if (addr == 0x3B && read) // RXBYTES status register
-        rx[1] = 6;                 // bytes waiting (test/test_cc1101 data)
+    {
+        rx[1] = 6; // bytes waiting (test/test_cc1101 data)
+    }
     else if (addr == 0x3F && read) // FIFO read (length byte, or burst payload+status)
+    {
         for (uint8_t i = 1; i < len; i++)
+        {
             rx[i] = g_rxfifo[i - 1];
+        }
+    }
     // Config-register writes, command strobes, and the TX FIFO burst write all fall through as
     // no-ops: the real bus is never touched, only the caller's framing/parsing cycles are measured.
 }

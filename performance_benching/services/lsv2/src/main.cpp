@@ -34,7 +34,9 @@ static void lsv2_bench_task(void *)
     // header write + memcpy throughput the framer is dominated by for real transfers.
     static uint8_t big_payload[256];
     for (size_t i = 0; i < sizeof(big_payload); i++)
+    {
         big_payload[i] = (uint8_t)i;
+    }
 
     for (;;)
     {

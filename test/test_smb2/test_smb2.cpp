@@ -1285,7 +1285,7 @@ void test_smb3_cipher_kat()
     TEST_ASSERT_EQUAL_MEMORY(kat_gcm256_ct, ct, 50);
     TEST_ASSERT_EQUAL_MEMORY(kat_gcm256_tag, tag, 16);
     TEST_ASSERT_TRUE(pc_aesgcm_open(gcm_key(kat_gcm256_key), kat_gcm256_nonce, kat_gcm256_aad, 32, kat_gcm256_ct, 50,
-                                        kat_gcm256_tag, pt));
+                                    kat_gcm256_tag, pt));
     TEST_ASSERT_EQUAL_MEMORY(kat_gcm256_pt, pt, 50);
 
     // A flipped tag byte fails closed (CCM open recomputes the MAC over the plaintext).

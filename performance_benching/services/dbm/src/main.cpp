@@ -34,7 +34,9 @@ static size_t ram_read(void *ctx, uint64_t off, uint8_t *buf, size_t len)
 {
     RamDisk *d = (RamDisk *)ctx;
     if (off + len > d->size)
+    {
         return 0;
+    }
     memcpy(buf, d->buf + off, len);
     return len;
 }
@@ -42,7 +44,9 @@ static size_t ram_write(void *ctx, uint64_t off, const uint8_t *buf, size_t len)
 {
     RamDisk *d = (RamDisk *)ctx;
     if (off + len > d->size)
+    {
         return 0;
+    }
     memcpy(d->buf + off, buf, len);
     return len;
 }

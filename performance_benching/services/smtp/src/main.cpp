@@ -27,11 +27,15 @@ static int scr_recv(void *ctx, uint8_t *buf, size_t cap)
 {
     Script *s = (Script *)ctx;
     if (s->idx >= s->count)
+    {
         return -1;
+    }
     const char *r = s->replies[s->idx++];
     size_t n = strlen(r);
     if (n > cap)
+    {
         n = cap;
+    }
     memcpy(buf, r, n);
     return (int)n;
 }

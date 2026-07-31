@@ -39,7 +39,9 @@ static J1939TpResult j1939_tp_reassemble(void)
     pc_j1939_tp_feed(&g_tp_rx, &g_tp_cm);
     J1939TpResult r = J1939TpResult::J1939_TP_IGNORED;
     for (uint8_t s = 0; s < g_tp_packets; s++)
+    {
         r = pc_j1939_tp_feed(&g_tp_rx, &g_tp_dt[s]);
+    }
     return r;
 }
 
@@ -60,7 +62,9 @@ static void j1939_bench_task(void *)
     // Build the TP reassembly fixtures once: a 16-octet BAM message split into 3 TP.DT packets.
     static uint8_t tp_msg[16];
     for (int i = 0; i < 16; i++)
+    {
         tp_msg[i] = (uint8_t)(0xA0 + i);
+    }
     const uint32_t tp_pgn = 0x00FECA; // DM1-style broadcast PGN
     pc_j1939_build_bam_cm(&g_tp_cm, sa, tp_pgn, 16);
     g_tp_packets = pc_j1939_tp_num_packets(16); // 3

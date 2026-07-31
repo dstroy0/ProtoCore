@@ -18,7 +18,9 @@ static void rawl2_bench_task(void *)
     static const uint8_t SRC[6] = {0xDE, 0xAD, 0xBE, 0xEF, 0x00, 0x01};
     static uint8_t payload[64];
     for (int i = 0; i < (int)sizeof(payload); i++)
+    {
         payload[i] = (uint8_t)(i * 7 + 1);
+    }
     static uint8_t frame[128], vframe[128];
     size_t flen = pc_eth_build(DST, SRC, 0x88B8, payload, sizeof(payload), frame, sizeof(frame));
     pc_eth_build_vlan(DST, SRC, 5, false, 100, 0x0800, payload, sizeof(payload), vframe, sizeof(vframe));

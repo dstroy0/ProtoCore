@@ -29,7 +29,9 @@ static void nmea2000_bench_task(void *)
     // A 20-octet Fast Packet message spanning 3 frames (from test_fastpacket_roundtrip).
     static uint8_t fp_msg[20];
     for (int i = 0; i < 20; i++)
+    {
         fp_msg[i] = (uint8_t)(0x40 + i);
+    }
     const uint32_t fp_pgn = 0x01F801; // e.g. position rapid update, a Fast Packet PGN
     const uint8_t fp_sa = 0x15;
     const uint8_t fp_seq = 3;
@@ -38,7 +40,9 @@ static void nmea2000_bench_task(void *)
     const uint8_t fp_frames = pc_n2k_fastpacket_num_frames(sizeof(fp_msg)); // 3
     static CanFrame fp_built[3];
     for (uint8_t i = 0; i < fp_frames; i++)
+    {
         pc_n2k_fastpacket_build_frame(&fp_built[i], fp_seq, i, 6, fp_pgn, fp_sa, 0xFF, fp_msg, sizeof(fp_msg));
+    }
 
     for (;;)
     {
@@ -60,7 +64,9 @@ static void nmea2000_bench_task(void *)
             "pc_n2k_fastpacket_feed x3 (reassy)", 20000, do {
                 pc_n2k_fastpacket_reset(&rx);
                 for (uint8_t _f = 0; _f < fp_frames; _f++)
+                {
                     sink += (uint32_t)pc_n2k_fastpacket_feed(&rx, &fp_built[_f]);
+                }
             } while (0));
 
         (void)sink;

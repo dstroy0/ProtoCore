@@ -12,7 +12,9 @@ static void base64_bench_task(void *)
 {
     static uint8_t src[1024];
     for (size_t i = 0; i < sizeof(src); i++)
+    {
         src[i] = (uint8_t)(i * 31 + 7);
+    }
     static char enc[((1024 + 2) / 3) * 4 + 1];
     static uint8_t dec[1024];
     for (;;)

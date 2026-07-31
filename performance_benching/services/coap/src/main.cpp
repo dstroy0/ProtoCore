@@ -66,7 +66,9 @@ static void h_big(const CoapRequest *req, CoapResponse *resp)
     resp->content_format = CoapContentFormat::COAP_CF_TEXT;
     resp->payload_len = BIG_LEN;
     for (size_t i = 0; i < BIG_LEN; i++)
+    {
         resp->payload[i] = (uint8_t)('A' + (int)(i % 26));
+    }
 }
 
 static void coap_bench_task(void *)
@@ -106,7 +108,9 @@ static void coap_bench_task(void *)
         static const uint8_t hdr[] = {0x40, 0x02, 0x36, 0x00, 0xB4, 0x74, 0x65, 0x6D, 0x70, 0xD1, 0x03, 0x0A, 0xFF};
         memcpy(post_block1, hdr, sizeof(hdr));
         for (int i = 0; i < 64; i++)
+        {
             post_block1[sizeof(hdr) + i] = (uint8_t)i;
+        }
     }
 
     static uint8_t resp[300];

@@ -15,9 +15,9 @@
 #include "network_drivers/presentation/ssh/crypto/ssh_rsa.h"   // ssh_rsa_encode_pubkey/sign, ssh_host_pubkey, SSH_RSA_*
 #include "network_drivers/presentation/ssh/transport/ssh_dh.h" // ssh_rng_fill(), ssh_dh[], ssh_dh_generate/derive_keys
 #include "network_drivers/presentation/ssh/transport/ssh_packet.h" // SSH_MSG_KEXINIT, ssh_pkt[]
-#include "services/system/clock.h"                                 // pc_millis() (re-key timer)
-#include "shared_primitives/strbuf.h"                              // pc_sb frame builder
 #include "server/mmgr/secure.h"
+#include "services/system/clock.h"    // pc_millis() (re-key timer)
+#include "shared_primitives/strbuf.h" // pc_sb frame builder
 #if PC_ENABLE_PQC_KEX
 #include "crypto/pqc/mlkem.h" // pc_mlkem768_encaps (PQ/T hybrid KEX responder)
 #endif

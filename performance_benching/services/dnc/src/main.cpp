@@ -66,8 +66,12 @@ static int dnc_bench_decode_full(DncCode code, const uint8_t *buf, size_t len)
     pc_dnc_decode_init(&g_dec, code);
     int lines = 0;
     for (size_t i = 0; i < len; i++)
+    {
         if (pc_dnc_decode_feed(&g_dec, buf[i]) == DncEvent::DNC_EV_LINE)
+        {
             lines++;
+        }
+    }
     return lines;
 }
 

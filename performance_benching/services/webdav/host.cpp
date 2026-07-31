@@ -24,7 +24,9 @@ template <typename F> static double bench_ns(uint64_t iters, F fn)
 {
     auto t0 = clk::now();
     for (uint64_t i = 0; i < iters; i++)
+    {
         fn();
+    }
     auto t1 = clk::now();
     double ns = std::chrono::duration<double, std::nano>(t1 - t0).count();
     return ns / (double)iters;
@@ -63,14 +65,18 @@ int main()
             size_t len = pc_webdav_ms_begin(buf, sizeof(buf), 0);
             len = pc_webdav_ms_entry(buf, sizeof(buf), len, "/dav/", true, 0, mtime, "");
             for (int k = 0; k < 8; k++)
+            {
                 len = pc_webdav_ms_entry(buf, sizeof(buf), len, "/dav/sensor-log.csv", false, 12800, mtime, "text/csv");
+            }
             len = pc_webdav_ms_end(buf, sizeof(buf), len);
             sink += len;
         });
         size_t len = pc_webdav_ms_begin(buf, sizeof(buf), 0);
         len = pc_webdav_ms_entry(buf, sizeof(buf), len, "/dav/", true, 0, mtime, "");
         for (int k = 0; k < 8; k++)
+        {
             len = pc_webdav_ms_entry(buf, sizeof(buf), len, "/dav/sensor-log.csv", false, 12800, mtime, "text/csv");
+        }
         len = pc_webdav_ms_end(buf, sizeof(buf), len);
         row("webdav", "PROPFIND depth-1 (8)", ns, (double)len);
         (void)sink;

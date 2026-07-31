@@ -17,10 +17,10 @@
 #include "network_drivers/presentation/ssh/transport/ssh_comp.h"
 #endif
 #include "network_drivers/session/proto_handler.h"
-#include "server/mmgr/scratch.h"
 #include "network_drivers/transport/tcp.h"
-#include "services/system/clock.h" // pc_millis() for the server-initiated re-key timer
+#include "server/mmgr/scratch.h"
 #include "server/mmgr/secure.h"
+#include "services/system/clock.h" // pc_millis() for the server-initiated re-key timer
 #include <string.h>
 
 // All SSH connection-layer state, owned by one instance (internal linkage): the SSH-slot ->

@@ -23,7 +23,9 @@ template <typename F> static double bench_ns(uint64_t iters, F fn)
 {
     auto t0 = clk::now();
     for (uint64_t i = 0; i < iters; i++)
+    {
         fn();
+    }
     auto t1 = clk::now();
     double ns = std::chrono::duration<double, std::nano>(t1 - t0).count();
     return ns / (double)iters;
@@ -75,7 +77,9 @@ int main()
         double ns = bench_ns(10000000, [&] {
             MmsPdu p;
             if (pc_mms_parse(req, req_len, &p))
+            {
                 sink += p.invoke_id + p.service_len;
+            }
         });
         row("mms", "parse (confirmed PDU)", ns, (double)req_len);
         (void)sink;

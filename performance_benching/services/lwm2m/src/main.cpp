@@ -46,7 +46,9 @@ static size_t lwm2m_decode_all(const uint8_t *buf, size_t len)
     size_t pos = 0, count = 0;
     Lwm2mTlv tlv;
     while (pc_lwm2m_tlv_read(buf, len, &pos, &tlv))
+    {
         count++;
+    }
     return count;
 }
 

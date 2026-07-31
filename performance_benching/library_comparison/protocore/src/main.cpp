@@ -34,7 +34,9 @@ static size_t chunk64k(uint8_t *buf, size_t cap, void *)
 {
     uint32_t remaining = 65536u - g_sent64;
     if (remaining == 0)
+    {
         return 0;
+    }
     size_t n = remaining < cap ? remaining : cap;
     memset(buf, 'A', n);
     g_sent64 += (uint32_t)n;
@@ -54,7 +56,9 @@ void setup()
     init_wifi_physical(WIFI_SSID, WIFI_PASS);
     uint32_t t0 = millis();
     while (!wifi_ready() && millis() - t0 < 30000)
+    {
         delay(200);
+    }
     WiFi.setSleep(false); // WiFi modem-sleep adds latency - off on both benchmark sketches
     Serial.print("IP=");
     Serial.println(WiFi.localIP());

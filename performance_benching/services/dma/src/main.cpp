@@ -54,7 +54,9 @@ static void dma_bench_task(void *)
     // completion + ping-pong flip per feed, no partial-flush remainder).
     static uint8_t payload[PC_DMA_BUF_SIZE];
     for (size_t i = 0; i < sizeof(payload); i++)
+    {
         payload[i] = (uint8_t)(0x40 + i);
+    }
     static uint8_t capbuf[PC_DMA_BUF_SIZE * 3];
 
     for (;;)

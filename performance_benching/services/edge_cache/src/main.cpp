@@ -46,8 +46,12 @@ static const char *vary_lookup(void *ctx, const char *name)
         {"accept-language", "en-US"},
     };
     for (const auto &h : req_hdrs)
+    {
         if (strcasecmp(h.name, name) == 0)
+        {
             return h.value;
+        }
+    }
     return nullptr;
 }
 
