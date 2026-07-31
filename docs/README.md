@@ -1313,7 +1313,7 @@ Feature Tables workflow from `docs/footprints.json`.
 | `MQTT` | `L7-Application/MqttClient` | 736,633 | 65,340 |
 | `NTP_SERVER+TIME_SOURCE+NMEA0183+NTP` | `L7-Application/NtpServer` | 748,837 | 46,708 |
 | `ADS` | `L7-Application/AdsClient` | 753,485 | 44,204 |
-| `ACCEPT_THROTTLE` | `L4-Transport/AcceptThrottle` | 756,141 | 81,852 |
+| `ACCEPT_THROTTLE` | `L4-Transport/AcceptThrottle` | 756,145 | 81,852 |
 | `core/Basic` | `Foundation/Basic` | 756,153 | 81,844 |
 | `core/CORS` | `L7-Application/CORS` | 756,357 | 81,844 |
 | `core/DigestAuth` | `L6-Presentation/DigestAuth` | 756,377 | 81,844 |
@@ -1321,25 +1321,24 @@ Feature Tables workflow from `docs/footprints.json`.
 | `core/MediaStreaming` | `L7-Application/MediaStreaming` | 756,449 | 81,844 |
 | `RADIO_POWER+RADIO_WIFI_PS` | `L7-Application/RadioPower` | 756,457 | 81,844 |
 | `core/RegexRoutes` | `L7-Application/RegexRoutes` | 756,497 | 81,844 |
-| `KEEPALIVE` | `L4-Transport/KeepAlive` | 756,537 | 81,844 |
+| `KEEPALIVE` | `L4-Transport/KeepAlive` | 756,541 | 81,844 |
 | `DEVICE_ID` | `L7-Application/DeviceUuid` | 756,581 | 81,884 |
-| `DIFFSERV` | `L4-Transport/DiffServ` | 756,605 | 81,844 |
 | `core/PathParams` | `L7-Application/PathParams` | 756,609 | 81,844 |
-| `PER_IP_THROTTLE` | `L4-Transport/PerIpThrottle` | 756,701 | 82,292 |
+| `DIFFSERV` | `L4-Transport/DiffServ` | 756,613 | 81,844 |
+| `PER_IP_THROTTLE` | `L4-Transport/PerIpThrottle` | 756,705 | 82,292 |
 | `core/WebSocket` | `L6-Presentation/WebSocket` | 756,761 | 81,844 |
 | `core/ResponseHeaders` | `L7-Application/ResponseHeaders` | 756,797 | 81,844 |
 | `core/Middleware` | `L7-Application/Middleware` | 756,817 | 81,844 |
-| `DIAG` | `L7-Application/Diagnostics` | 756,969 | 81,844 |
 | `GUARDRAILS` | `L7-Application/Guardrails` | 757,037 | 81,852 |
 | `core/FormParams` | `L6-Presentation/FormParams` | 757,049 | 81,844 |
 | `core/NetEgress` | `L7-Application/NetEgress` | 757,049 | 81,844 |
 | `core/ChunkedResponse` | `L7-Application/ChunkedResponse` | 757,073 | 81,852 |
 | `PARTITION_MONITOR` | `L7-Application/PartitionMonitor` | 757,089 | 81,844 |
 | `core/ServerSentEvents` | `L6-Presentation/ServerSentEvents` | 757,205 | 81,852 |
-| `AUTH_LOCKOUT` | `L6-Presentation/AuthLockout` | 757,293 | 82,420 |
+| `AUTH_LOCKOUT` | `L6-Presentation/AuthLockout` | 757,297 | 82,420 |
 | `OTA_ROLLBACK` | `L7-Application/OtaRollback` | 757,381 | 81,844 |
 | `TOTP` | `L7-Application/Totp` | 757,517 | 81,876 |
-| `core/Multipart` | `L6-Presentation/Multipart` | 757,517 | 81,844 |
+| `core/Multipart` | `L6-Presentation/Multipart` | 757,525 | 81,844 |
 | `IP_ALLOWLIST` | `L4-Transport/IpAllowlist` | 757,729 | 81,844 |
 | `LOGBUF` | `L7-Application/LogBuffer` | 757,861 | 84,964 |
 | `core/InterfaceFilter` | `L7-Application/InterfaceFilter` | 757,997 | 81,844 |
@@ -1349,6 +1348,7 @@ Feature Tables workflow from `docs/footprints.json`.
 | `MODBUS` | `L7-Application/ModbusTcp` | 758,461 | 82,124 |
 | `STATS` | `L7-Application/Stats` | 758,489 | 81,940 |
 | `CONTROL` | `L7-Application/PidTuning` | 758,509 | 89,916 |
+| `DIAG` | `Foundation/Configuration` | 758,533 | 77,604 |
 | `TELNET` | `L5-Session/Telnet` | 758,681 | 82,372 |
 | `PACKML` | `L7-Application/PackML` | 758,757 | 81,884 |
 | `CSRF` | `L7-Application/Csrf` | 758,813 | 83,220 |
@@ -1421,10 +1421,10 @@ Feature Tables workflow from `docs/footprints.json`.
 | `TLS+TLS_RESUMPTION` | `L4-Transport/TlsResumption` | 856,693 | 122,180 |
 | `TLS+MTLS` | `L4-Transport/mTLS` | 856,829 | 122,356 |
 | `TLS+TLS_ARENA_SIZE` | `L6-Presentation/SecureWebSocket` | 861,061 | 105,712 |
-| `TLS+TLS_RESUMPTION+TLS_ARENA_SIZE` | `L4-Transport/TlsResumption` | 861,805 | 105,864 |
+| `TLS+TLS_RESUMPTION+TLS_ARENA_SIZE` | `L4-Transport/TlsResumption` | 861,809 | 105,864 |
 | `TLS+MTLS+TLS_ARENA_SIZE` | `L4-Transport/mTLS` | 861,917 | 106,040 |
 | `POWER_MGMT` | `L7-Application/PowerGovernor` | 884,941 | 85,696 |
-| `SSH+FILE_SERVING+SSH_SFTP+SSH_SCP` | `L5-Session/SSHSftp` | 889,921 | 121,544 |
+| `SSH+FILE_SERVING+SSH_SFTP+SSH_SCP` | `L5-Session/SSHSftp` | 890,001 | 121,544 |
 
 <!-- prettier-ignore-end -->
 
@@ -2056,7 +2056,7 @@ guards at compile time.
 | `SSH_REKEY_PACKET_THRESHOLD` | `0x40000000u` | Re-key when either packet sequence number reaches this value. |
 | `SSH_REKEY_TIME_MS` | `3600000u` | Elapsed-time re-key trigger in milliseconds (RFC 4253 §9: "after each hour"). |
 | `TELNET_BUF_SIZE` | `256` | Stack buffer for one Telnet I/O chunk. |
-| `TERM_TX_BUF_SIZE` | `256` | Stack scratch for pc_web_terminal_printf()/println() formatting. |
+| `TERM_TX_BUF_SIZE` | `256` | Stack scratch for pc_web_terminal_frame()/println() line building. |
 | `WS_FRAME_SIZE` | `512` | Maximum WebSocket frame payload in bytes. |
 | `WS_HDR_BUF_SIZE` | `256` | Stack buffer for the HTTP 101 Switching Protocols response sent during the WebSocket handshake. |
 

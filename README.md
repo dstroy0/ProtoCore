@@ -812,6 +812,7 @@ Measured on `esp32dev` (Arduino core). The **default server** baseline (HTTP + W
 | Layer | Feature | Flash (best-worst) | RAM (best-worst) |
 | --- | --- | ---: | ---: |
 | Core | `IPV6` | 6.0 KB | 15.3 KB |
+| Core | `DIAG` | 5.6 KB | 11.1 KB |
 | L4 | `IP_ALLOWLIST` | 4.8 KB | 15.3 KB |
 | L4 | `PER_IP_THROTTLE` | 3.8 KB | 15.7 KB |
 | L4 | `DIFFSERV` | 3.7 KB | 15.3 KB |
@@ -877,7 +878,6 @@ Measured on `esp32dev` (Arduino core). The **default server** baseline (HTTP + W
 | L7 | `OTA_ROLLBACK` | 4.4 KB | 15.3 KB |
 | L7 | `PARTITION_MONITOR` | 4.1 KB | 15.3 KB |
 | L7 | `GUARDRAILS` | 4.1 KB | 15.3 KB |
-| L7 | `DIAG` | 4.0 KB | 15.3 KB |
 | L7 | `DEVICE_ID` | 3.6 KB | 15.3 KB |
 | L7 | `RADIO_POWER` | 3.5 KB | 15.3 KB |
 | L7 | `ADS` | 0.6 KB | < 0.5 KB |
