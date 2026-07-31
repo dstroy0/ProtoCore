@@ -52,7 +52,7 @@
     "example": "L6-Presentation/Cbor",
     "flags": "-DPC_ENABLE_CBOR=1",
     "board": "esp32dev",
-    "flash_bytes": 758937,
+    "flash_bytes": 758857,
     "ram_bytes": 81916
   },
   "COAP": {
@@ -94,7 +94,7 @@
     "example": "L7-Application/PidTuning",
     "flags": "-DPC_ENABLE_CONTROL=1",
     "board": "esp32dev",
-    "flash_bytes": 758577,
+    "flash_bytes": 758553,
     "ram_bytes": 89916
   },
   "CSRF": {
@@ -122,7 +122,7 @@
     "example": "L7-Application/Diagnostics",
     "flags": "-DPC_ENABLE_DIAG=1",
     "board": "esp32dev",
-    "flash_bytes": 757037,
+    "flash_bytes": 757033,
     "ram_bytes": 81844
   },
   "DIFFSERV": {
@@ -178,7 +178,7 @@
     "example": "L7-Application/EdgeCache",
     "flags": "-DPC_ENABLE_EDGE_CACHE=1 -DPC_ENABLE_HTTP_CACHE=1 -DPC_ENABLE_HTTP_CLIENT=1",
     "board": "esp32dev",
-    "flash_bytes": 777953,
+    "flash_bytes": 777933,
     "ram_bytes": 119324
   },
   "EDGE_CACHE+HTTP_CACHE+HTTP_CLIENT+EDGE_MESH": {
@@ -192,7 +192,7 @@
     "example": "L7-Application/MeshCache",
     "flags": "-DPC_ENABLE_EDGE_CACHE=1 -DPC_ENABLE_HTTP_CACHE=1 -DPC_ENABLE_HTTP_CLIENT=1 -DPC_ENABLE_EDGE_MESH=1 -DPC_EDGE_CACHE_SLOTS=2 -DPC_EDGE_FETCH_SLOTS=1 -DPC_MESH_MAX_PEERS=1",
     "board": "esp32dev",
-    "flash_bytes": 782585,
+    "flash_bytes": 782565,
     "ram_bytes": 115380
   },
   "ENOCEAN+GATEWAY": {
@@ -304,7 +304,7 @@
     "example": "L7-Application/HttpDelivery",
     "flags": "-DPC_ENABLE_HTTP_DELIVERY=1 -DPC_ENABLE_FILE_SERVING=1 -DPC_ENABLE_RANGE=1",
     "board": "esp32dev",
-    "flash_bytes": 846337,
+    "flash_bytes": 846333,
     "ram_bytes": 82752
   },
   "IFACE_BRIDGE": {
@@ -430,7 +430,7 @@
     "example": "L6-Presentation/MsgPack",
     "flags": "-DPC_ENABLE_MSGPACK=1",
     "board": "esp32dev",
-    "flash_bytes": 760273,
+    "flash_bytes": 760125,
     "ram_bytes": 81916
   },
   "NMEA0183+UBX": {
@@ -528,7 +528,7 @@
     "example": "L7-Application/OTA",
     "flags": "-DPC_ENABLE_OTA=1 -DMAX_CONNS=4",
     "board": "esp32dev",
-    "flash_bytes": 761917,
+    "flash_bytes": 761945,
     "ram_bytes": 102172
   },
   "OTA_ROLLBACK": {
@@ -710,35 +710,35 @@
     "example": "L5-Session/SSHHostKey",
     "flags": "-DPC_ENABLE_SSH=1",
     "board": "esp32dev",
-    "flash_bytes": 836905,
-    "ram_bytes": 112168
+    "flash_bytes": 837281,
+    "ram_bytes": 112200
   },
   "SSH+FILE_SERVING+SSH_SFTP+SSH_SCP": {
     "example": "L5-Session/SSHSftp",
     "flags": "-DPC_ENABLE_SSH=1 -DPC_ENABLE_FILE_SERVING=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_SSH_SCP=1",
     "board": "esp32dev",
-    "flash_bytes": 890057,
+    "flash_bytes": 890397,
     "ram_bytes": 121544
   },
   "SSH+SSH_CLIENT+SSH_CLIENT_MAX_CHANNELS+CLIENT_RX_BUF": {
     "example": "L5-Session/SSHReverseTunnel",
     "flags": "-DPC_ENABLE_SSH=1 -DPC_ENABLE_SSH_CLIENT=1 -DPC_SSH_CLIENT_MAX_CHANNELS=2 -DPC_CLIENT_RX_BUF=2048 -DMAX_CONNS=4",
     "board": "esp32dev",
-    "flash_bytes": 852489,
-    "ram_bytes": 116640
+    "flash_bytes": 852841,
+    "ram_bytes": 116672
   },
   "STATS": {
     "example": "L7-Application/Stats",
     "flags": "-DPC_ENABLE_STATS=1",
     "board": "esp32dev",
-    "flash_bytes": 758541,
+    "flash_bytes": 758545,
     "ram_bytes": 81940
   },
   "STATS+METRICS": {
     "example": "L7-Application/PrometheusMetrics",
     "flags": "-DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1",
     "board": "esp32dev",
-    "flash_bytes": 760501,
+    "flash_bytes": 760505,
     "ram_bytes": 81980
   },
   "STATSD": {
@@ -794,14 +794,14 @@
     "example": "L4-Transport/mTLS",
     "flags": "-DPC_ENABLE_TLS=1 -DPC_ENABLE_MTLS=1 -DMAX_CONNS=4 -DPC_TLS_ARENA_SIZE=32768",
     "board": "esp32dev",
-    "flash_bytes": 861961,
+    "flash_bytes": 861985,
     "ram_bytes": 106040
   },
   "TLS+TLS_ARENA_SIZE": {
     "example": "L6-Presentation/SecureWebSocket",
     "flags": "-DPC_ENABLE_TLS=1 -DMAX_CONNS=4 -DPC_TLS_ARENA_SIZE=32768",
     "board": "esp32dev",
-    "flash_bytes": 861109,
+    "flash_bytes": 861137,
     "ram_bytes": 105712
   },
   "TLS+TLS_RESUMPTION": {
@@ -815,7 +815,7 @@
     "example": "L4-Transport/TlsResumption",
     "flags": "-DPC_ENABLE_TLS=1 -DPC_ENABLE_TLS_RESUMPTION=1 -DMAX_CONNS=4 -DPC_TLS_ARENA_SIZE=32768",
     "board": "esp32dev",
-    "flash_bytes": 861865,
+    "flash_bytes": 861889,
     "ram_bytes": 105864
   },
   "TOTP": {
@@ -836,7 +836,7 @@
     "example": "L7-Application/FileUpload",
     "flags": "-DPC_ENABLE_UPLOAD=1 -DMAX_CONNS=4",
     "board": "esp32dev",
-    "flash_bytes": 798849,
+    "flash_bytes": 798873,
     "ram_bytes": 101988
   },
   "VFS": {
@@ -864,7 +864,7 @@
     "example": "L7-Application/WebDav",
     "flags": "-DPC_ENABLE_WEBDAV=1 -DMAX_CONNS=3 -DMAX_WS_CONNS=1 -DMAX_SSE_CONNS=1 -DMAX_ROUTES=8 -DPC_WEBDAV_MAX_ENTRIES=8 -DPC_WEBDAV_BUF_SIZE=1024",
     "board": "esp32dev",
-    "flash_bytes": 828613,
+    "flash_bytes": 828641,
     "ram_bytes": 92364
   },
   "WEB_TERMINAL": {
@@ -906,7 +906,7 @@
     "example": "L6-Presentation/WebSocketCompression",
     "flags": "-DPC_ENABLE_WS_DEFLATE=1",
     "board": "esp32dev",
-    "flash_bytes": 761193,
+    "flash_bytes": 761197,
     "ram_bytes": 90044
   },
   "ZIGBEE+GATEWAY": {
@@ -955,7 +955,7 @@
     "example": "L7-Application/ChunkedResponse",
     "flags": "",
     "board": "esp32dev",
-    "flash_bytes": 757145,
+    "flash_bytes": 757125,
     "ram_bytes": 81852
   },
   "core/DigestAuth": {
