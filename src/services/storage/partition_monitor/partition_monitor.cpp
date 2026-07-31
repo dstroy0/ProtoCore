@@ -14,8 +14,7 @@
 
 #if PC_ENABLE_PARTITION_MONITOR
 
-#include "shared_primitives/fmtbuf.h"
-#include <stdio.h>
+#include "shared_primitives/frame.h"
 #include <string.h>
 
 // esp_partition type/subtype constants (mirrors esp_partition_type_t/subtype_t so
@@ -65,7 +64,29 @@ const char *pc_partition_kind(uint8_t type, uint8_t subtype)
     }
 }
 
-int pc_partition_json(const pc_partition_info *parts, uint8_t count, char *out, size_t cap)
+static const pc_field PART_OPEN[] = {{PC_FK_LIT, 0, 15, "{\"partitions\":["}, PC_END};
+static const pc_field PART_ENTRY[] = {
+    PC_STR,                              // "," from the second entry on
+    {PC_FK_LIT, 0, 9, "{\"label\":"},    //
+    PC_JSON,                             // label
+    {PC_FK_LIT, 0, 8, ",\"kind\":"},     //
+    PC_JSON,                             // kind name
+    {PC_FK_LIT, 0, 8, ",\"type\":"},     //
+    PC_U32,                              //
+    {PC_FK_LIT, 0, 11, ",\"subtype\":"}, //
+    PC_U32,                              //
+    {PC_FK_LIT, 0, 8, ",\"addr\":"},     //
+    PC_U32,                              //
+    {PC_FK_LIT, 0, 8, ",\"size\":"},     //
+    PC_U32,                              //
+    {PC_FK_LIT, 0, 11, ",\"running\":"}, //
+    PC_STR,                              // "true" / "false" - a JSON keyword, not a string
+    {PC_FK_LIT, 0, 1, "}"},              //
+    PC_END,
+};
+static const pc_field PART_CLOSE[] = {{PC_FK_LIT, 0, 2, "]}"}, PC_END};
+
+int32_t pc_partition_json(const pc_partition_info *parts, uint8_t count, char *out, uint32_t cap)
 {
     if (!out || cap == 0)
     {
@@ -76,29 +97,21 @@ int pc_partition_json(const pc_partition_info *parts, uint8_t count, char *out, 
     {
         return 0;
     }
-    size_t pos = 0;
-    if (pc_fmt_append(out, cap, &pos, "{\"partitions\":[") != 0)
+    if (pc_frame_append(out, cap, PART_OPEN) == 0)
     {
         return 0;
     }
     for (uint8_t i = 0; i < count; i++)
     {
         const pc_partition_info *p = &parts[i];
-        if (pc_fmt_append(out, cap, &pos,
-                          "%s{\"label\":\"%s\",\"kind\":\"%s\",\"type\":%u,\"subtype\":%u,\"addr\":%u,\"size\":%u,"
-                          "\"running\":%s}",
-                          i ? "," : "", p->label, pc_partition_kind(p->type, p->subtype), (unsigned)p->type,
-                          (unsigned)p->subtype, (unsigned)p->address, (unsigned)p->size,
-                          p->running ? "true" : "false") != 0)
+        if (pc_frame_append(out, cap, PART_ENTRY, i ? "," : "", p->label, pc_partition_kind(p->type, p->subtype),
+                            (uint32_t)p->type, (uint32_t)p->subtype, (uint32_t)p->address, (uint32_t)p->size,
+                            p->running ? "true" : "false") == 0)
         {
             return 0;
         }
     }
-    if (pc_fmt_append(out, cap, &pos, "]}") != 0)
-    {
-        return 0;
-    }
-    return (int)pos;
+    return (int32_t)pc_frame_append(out, cap, PART_CLOSE);
 }
 
 #ifdef ARDUINO

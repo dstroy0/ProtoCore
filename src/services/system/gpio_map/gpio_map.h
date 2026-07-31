@@ -56,7 +56,7 @@ const char *pc_gpio_dir_name(pc_gpio_dir dir);
  * @brief Serialize a pin array as JSON `{"pins":[...]}` into @p out.
  * @return characters written, or 0 if @p cap is too small (fail-closed).
  */
-int pc_gpio_json(const pc_gpio_pin *pins, uint8_t count, char *out, size_t cap);
+int32_t pc_gpio_json(const pc_gpio_pin *pins, uint8_t count, char *out, uint32_t cap);
 
 /**
  * @brief Parse a control body of the form `pin=<n>&level=<0|1>` (form-encoded).

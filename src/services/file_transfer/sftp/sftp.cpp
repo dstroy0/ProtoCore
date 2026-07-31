@@ -339,7 +339,6 @@ size_t pc_sftp_format_longname(bool is_dir, uint32_t perms, uint64_t size, uint3
     }
     mode[10] = '\0';
 
-    char date[16];
     time_t t = (time_t)mtime;
     struct tm tmv;
     memset(&tmv, 0, sizeof(tmv));
@@ -348,19 +347,24 @@ size_t pc_sftp_format_longname(bool is_dir, uint32_t perms, uint64_t size, uint3
     // conversion yields tm_mon in [0,11] by definition; tmv is zeroed above, so even a failed conversion
     // leaves month 0. The range test is purely a bounds guard on the kMonths[] index below.
     int mon = (tmv.tm_mon >= 0 && tmv.tm_mon < 12) ? tmv.tm_mon : 0; // GCOVR_EXCL_LINE  tm_mon is always 0..11
-    snprintf(date, sizeof(date), "%s %2d %5d", kMonths[mon], tmv.tm_mday, tmv.tm_year + 1900);
 
     // Clipping appenders here, not the fail-closed ones. `longname` is the
     // draft-ietf-secsh-filexfer display field ("an expanded format for the file name, similar to
     // what is returned by ls -l"), so a short rendering is correct where a refused one would leave
     // a directory listing with an empty column. The wire framing is the separate length-prefixed
-    // string written by pc_sftp_wr_string, and that is never clipped.
+    // string written by pc_sftp_wr_string, and that is never clipped. The date is appended in
+    // place rather than staged: the two column widths are what `ls -l` alignment means, and
+    // pc_sb_u64_clip states them directly.
     pc_sb sb_out = {out, cap, 0, true};
     pc_sb_put_clip(&sb_out, mode);
     pc_sb_put_clip(&sb_out, " 1 0 0 ");
-    pc_sb_u64_clip(&sb_out, (uint64_t)size);
+    pc_sb_u64_clip(&sb_out, (uint64_t)size, 0);
     pc_sb_put_clip(&sb_out, " ");
-    pc_sb_put_clip(&sb_out, date);
+    pc_sb_put_clip(&sb_out, kMonths[mon]);
+    pc_sb_put_clip(&sb_out, " ");
+    pc_sb_u64_clip(&sb_out, (uint64_t)tmv.tm_mday, 2);
+    pc_sb_put_clip(&sb_out, " ");
+    pc_sb_u64_clip(&sb_out, (uint64_t)(tmv.tm_year + 1900), 5);
     pc_sb_put_clip(&sb_out, " ");
     pc_sb_put_clip(&sb_out, name);
     return pc_sb_finish(&sb_out);

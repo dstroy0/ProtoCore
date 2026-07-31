@@ -5,7 +5,6 @@
 // core). Pure logic - no server - so it runs on the host.
 
 #include "services/web/dashboard/dashboard.h"
-#include "shared_primitives/fmtbuf.h"
 #include <stdio.h>
 #include <string.h>
 #include <unity.h>
@@ -281,16 +280,6 @@ void test_dispatch_control_no_callback_registered()
     TEST_ASSERT_FALSE(pc_dashboard_dispatch_control("{\"k\":\"x\",\"v\":1}"));
 }
 
-// pc_fmt_append() fails closed immediately when *pos is already at (or past) cap,
-// before attempting to format anything.
-void test_fmtbuf_append_pos_already_at_cap()
-{
-    char buf[4] = {0};
-    size_t pos = 4;
-    TEST_ASSERT_EQUAL_INT(-1, pc_fmt_append(buf, sizeof(buf), &pos, "x"));
-    TEST_ASSERT_EQUAL_UINT(4, pos);
-}
-
 int main()
 {
     UNITY_BEGIN();
@@ -315,6 +304,5 @@ int main()
     RUN_TEST(test_parse_control_non_string_key_value);
     RUN_TEST(test_parse_control_unterminated_key_runs_to_eof);
     RUN_TEST(test_dispatch_control_no_callback_registered);
-    RUN_TEST(test_fmtbuf_append_pos_already_at_cap);
     return UNITY_END();
 }

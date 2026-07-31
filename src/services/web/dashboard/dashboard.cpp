@@ -16,9 +16,8 @@
 
 #if PC_ENABLE_DASHBOARD
 
-#include "shared_primitives/fmtbuf.h"
+#include "shared_primitives/frame.h"
 #include "shared_primitives/numparse.h"
-#include <stdio.h>
 #include <string.h>
 
 // All dashboard state, owned by one instance (internal linkage): the widget table, the
@@ -83,7 +82,40 @@ bool pc_dashboard_set(const char *key, float value)
     return false;
 }
 
-int pc_dashboard_layout_json(char *out, size_t cap)
+// The layout is an array of widget objects; the values document is one flat object of key/number
+// pairs. Both open, repeat one frame per widget, and close, with the separating comma carried as
+// the repeated frame's first field.
+static const pc_field DASH_ARRAY_OPEN[] = {{PC_FK_LIT, 0, 1, "["}, PC_END};
+static const pc_field DASH_ARRAY_CLOSE[] = {{PC_FK_LIT, 0, 1, "]"}, PC_END};
+static const pc_field DASH_WIDGET[] = {
+    PC_STR,                           // "," from the second widget on
+    {PC_FK_LIT, 0, 8, "{\"type\":"},  //
+    PC_JSON,                          // type name
+    {PC_FK_LIT, 0, 9, ",\"label\":"}, //
+    PC_JSON,                          //
+    {PC_FK_LIT, 0, 7, ",\"key\":"},   //
+    PC_JSON,                          //
+    {PC_FK_LIT, 0, 7, ",\"min\":"},   //
+    {PC_FK_G, 0, 0, nullptr},         // width 0 == 6 significant digits, the %g default
+    {PC_FK_LIT, 0, 7, ",\"max\":"},   //
+    {PC_FK_G, 0, 0, nullptr},         //
+    {PC_FK_LIT, 0, 8, ",\"unit\":"},  //
+    PC_JSON,                          //
+    {PC_FK_LIT, 0, 1, "}"},           //
+    PC_END,
+};
+
+static const pc_field DASH_OBJECT_OPEN[] = {{PC_FK_LIT, 0, 1, "{"}, PC_END};
+static const pc_field DASH_OBJECT_CLOSE[] = {{PC_FK_LIT, 0, 1, "}"}, PC_END};
+static const pc_field DASH_VALUE[] = {
+    PC_STR,                   // "," from the second pair on
+    PC_JSON,                  // key
+    {PC_FK_LIT, 0, 1, ":"},   //
+    {PC_FK_G, 0, 0, nullptr}, // the reading
+    PC_END,
+};
+
+int32_t pc_dashboard_layout_json(char *out, uint32_t cap)
 {
     if (!out || cap == 0)
     {
@@ -94,30 +126,23 @@ int pc_dashboard_layout_json(char *out, size_t cap)
     {
         return 0;
     }
-    size_t pos = 0;
-    if (pc_fmt_append(out, cap, &pos, "[") != 0)
+    if (pc_frame_append(out, cap, DASH_ARRAY_OPEN) == 0)
     {
         return 0;
     }
     for (uint8_t i = 0; i < s_dash.count; i++)
     {
         const pc_widget *w = &s_dash.widgets[i];
-        if (pc_fmt_append(out, cap, &pos,
-                          "%s{\"type\":\"%s\",\"label\":\"%s\",\"key\":\"%s\",\"min\":%g,\"max\":%g,\"unit\":\"%s\"}",
-                          i ? "," : "", widget_type_name(w->type), w->label ? w->label : "", w->key ? w->key : "",
-                          (double)w->min, (double)w->max, w->unit ? w->unit : "") != 0)
+        if (pc_frame_append(out, cap, DASH_WIDGET, i ? "," : "", widget_type_name(w->type), w->label ? w->label : "",
+                            w->key ? w->key : "", (double)w->min, (double)w->max, w->unit ? w->unit : "") == 0)
         {
             return 0;
         }
     }
-    if (pc_fmt_append(out, cap, &pos, "]") != 0)
-    {
-        return 0;
-    }
-    return (int)pos;
+    return (int32_t)pc_frame_append(out, cap, DASH_ARRAY_CLOSE);
 }
 
-int pc_dashboard_values_json(char *out, size_t cap)
+int32_t pc_dashboard_values_json(char *out, uint32_t cap)
 {
     if (!out || cap == 0)
     {
@@ -128,24 +153,19 @@ int pc_dashboard_values_json(char *out, size_t cap)
     {
         return 0;
     }
-    size_t pos = 0;
-    if (pc_fmt_append(out, cap, &pos, "{") != 0)
+    if (pc_frame_append(out, cap, DASH_OBJECT_OPEN) == 0)
     {
         return 0;
     }
     for (uint8_t i = 0; i < s_dash.count; i++)
     {
-        if (pc_fmt_append(out, cap, &pos, "%s\"%s\":%g", i ? "," : "",
-                          s_dash.widgets[i].key ? s_dash.widgets[i].key : "", (double)s_dash.values[i]) != 0)
+        if (pc_frame_append(out, cap, DASH_VALUE, i ? "," : "", s_dash.widgets[i].key ? s_dash.widgets[i].key : "",
+                            (double)s_dash.values[i]) == 0)
         {
             return 0;
         }
     }
-    if (pc_fmt_append(out, cap, &pos, "}") != 0)
-    {
-        return 0;
-    }
-    return (int)pos;
+    return (int32_t)pc_frame_append(out, cap, DASH_OBJECT_CLOSE);
 }
 
 // ---------------------------------------------------------------------------

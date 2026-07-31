@@ -75,13 +75,13 @@ bool pc_dashboard_set(const char *key, float value);
  * @brief Serialize the widget layout as a JSON array into @p out.
  * @return number of characters written, or 0 if @p cap is too small.
  */
-int pc_dashboard_layout_json(char *out, size_t cap);
+int32_t pc_dashboard_layout_json(char *out, uint32_t cap);
 
 /**
  * @brief Serialize the current values as a JSON object {key:value,...} into @p out.
  * @return number of characters written, or 0 if @p cap is too small.
  */
-int pc_dashboard_values_json(char *out, size_t cap);
+int32_t pc_dashboard_values_json(char *out, uint32_t cap);
 
 /** @brief Register the callback invoked when a control widget sends a value. */
 void pc_dashboard_on_control(pc_control_cb cb);

@@ -5,7 +5,9 @@ This is the mechanical guardrail behind that checklist: the pre-commit hook runs
 ``src/`` sources and refuses the commit if any banned construct appears, so a violation can never
 land. It scans for the machine-detectable hard bans - unbounded ``strlen``, ``<stdlib.h>`` and its
 heap / parse functions, the ``auto`` keyword, blocking ``delay()``, the non-reentrant ``gmtime`` /
-``localtime`` / ``ctime`` / ``asctime`` family, em-dashes, and mid-file ``#include`` (ban #17: any
+``localtime`` / ``ctime`` / ``asctime`` family, em-dashes, runtime dispatch that is not resolvable
+from the binary (ban #22: ``virtual``, class hierarchies, RTTI, ``std::function``), and mid-file
+``#include`` (ban #17: any
 ``#include`` after code - every include must be hoisted to the top of the file; the sole exemption is a
 justified ``// PC_ALLOW_LATE_INCLUDE:`` on an ordered include that derives from earlier macros).
 
@@ -37,6 +39,22 @@ import baseline as bl  # noqa: E402  (path set above)
 SRC = pathlib.Path("src")
 EXTS = {".c", ".cc", ".cpp", ".h", ".hpp", ".ino"}
 
+# Ban #22: runtime dispatch that is not resolvable from the binary. A virtual call reads a vtable
+# pointer out of the object and jumps through it, so the target is not known until the object
+# exists: the worst-case path cannot be established from the image, the call cannot be inlined or
+# devirtualized, and a corrupted object turns every later call into an arbitrary jump. That is the
+# same nondeterminism this library refuses everywhere else - fixed pools, compile-time sizing, a
+# bounded worst case. RTTI is unbounded on top of it, and std::function type-erases through an
+# allocation. Dispatch here is a function pointer in an owned context (ProtoHandler) or a spec/table
+# walk (pc_field), both of which the linker can see whole.
+_VIRTUAL_MSG = (
+    "virtual dispatch; the call target is not known from the binary, so the worst case is not "
+    "either. Use a function pointer in an owned context, or a spec/table walk"
+)
+_INHERIT_MSG = "class hierarchy; compose an owned context instead of inheriting (see ban #22)"
+_RTTI_MSG = "RTTI (dynamic_cast/typeid); the type is known at the call site - state it (see ban #22)"
+_STDFUNCTION_MSG = "std::function type-erases through an allocation; use a plain function pointer (see ban #22)"
+
 # (compiled pattern, ban number, message). Patterns run on comment/string-stripped code. Every
 # use-instead pattern (pcdelay, pc_millis, strnlen, gmtime_r) survives because the banned token is
 # not on a word boundary there ("pc_millis" has no boundary before "millis", etc.).
@@ -53,6 +71,10 @@ BANS = [
     (re.compile(r"\bdelay\s*\("), 4, "delay(); use pcdelay(ms) from services/system/clock.h"),
     (re.compile(r"\b(?:gmtime|localtime|ctime|asctime)\s*\("), 8, "non-reentrant time; use the _r form"),
     (re.compile("—"), 7, "em-dash; use a comma / parentheses / a linking word"),
+    (re.compile(r"\bvirtual\b"), 22, _VIRTUAL_MSG),
+    (re.compile(r"\b(?:class|struct)\s+\w+\s*:\s*(?:public|protected|private|virtual)\b"), 22, _INHERIT_MSG),
+    (re.compile(r"\b(?:dynamic_cast|typeid)\b"), 22, _RTTI_MSG),
+    (re.compile(r"\bstd::function\b"), 22, _STDFUNCTION_MSG),
     # Ban 18 is applied in scan_file, not here: it only fires at file/namespace scope.
     # A `static constexpr` MEMBER of a namespacing struct (LoraReg::REG_FIFO, the
     # pc_radio_ps pattern SYMBOLS.md endorses) is a scoped data table, not a value other
@@ -112,7 +134,7 @@ _CONSTEXPR_MSG = (
 # check_owned_context.py own those), and a justified `// PC_ALLOW_STACK_ARRAY: <reason>`.
 _ALLOW_STACK_ARRAY = "PC_ALLOW_STACK_ARRAY"
 
-# Ban #20: snprintf (and its vsnprintf/pc_fmt_append wrappers). A format string is parsed at
+# Ban #20: snprintf and vsnprintf. A format string is parsed at
 # RUNTIME, every call, to rediscover what the code already knew at compile time - roughly 3x
 # the cost of appending the pieces directly, plus it drags in the libc float formatter. Build
 # the frame instead: pc_sb (shared_primitives/strbuf.h) bump-appends into a caller-owned
@@ -121,7 +143,7 @@ _ALLOW_STACK_ARRAY = "PC_ALLOW_STACK_ARRAY"
 # which is why this ban is swept BEFORE #19: it makes each buffer's size explicit at the
 # pc_sb init, so turning the array into a borrowed pointer can no longer silently change a
 # sizeof() into 4.
-_SNPRINTF = re.compile(r"\b(?:v?snprintf|pc_fmt_append)\s*\(")
+_SNPRINTF = re.compile(r"\bv?snprintf\s*\(")
 _ALLOW_SNPRINTF = "PC_ALLOW_SNPRINTF"
 _SNPRINTF_MSG = (
     "snprintf/format-string formatting; build the frame with pc_sb (shared_primitives/"
@@ -185,9 +207,7 @@ def scan_file(path):
                 and not re.search(r"\bstatic\b", line)
                 and _ALLOW_STACK_ARRAY not in raw_lines[line_no - 1]):
             hits.append((str(path), line_no, 19, _STACK_ARRAY_MSG))
-        # Ban 20: the declaration of the wrapper itself is not a use of it.
-        if (_SNPRINTF.search(line) and _ALLOW_SNPRINTF not in raw_lines[line_no - 1]
-                and "pc_fmt_append(char *out" not in raw_lines[line_no - 1]):
+        if _SNPRINTF.search(line) and _ALLOW_SNPRINTF not in raw_lines[line_no - 1]:
             hits.append((str(path), line_no, 20, _SNPRINTF_MSG))
         # Allman braces: `struct LoraReg` and its `{` are on separate lines, so the
         # aggregate is remembered as pending and claims the next brace that opens.

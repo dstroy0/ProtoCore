@@ -1,9 +1,7 @@
 {
   "version": "0.2",
   "language": "en",
-  "ignoreRegExpList": [
-    "/\\b[0-9a-f]{7,40}\\b/g"
-  ],
+  "ignoreRegExpList": ["/\\b[0-9a-f]{7,40}\\b/g"],
   "words": [
     "aabbccddeeff",
     "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq",
@@ -239,6 +237,7 @@
     "devboard",
     "devboards",
     "devicenet",
+    "devirtualized",
     "devkitc",
     "DGPS",
     "DGRAM",
@@ -1163,6 +1162,7 @@
     "rtail",
     "RTCM",
     "RTPS",
+    "RTTI",
     "rused",
     "RX_BUF_SIZE",
     "RXBYTES",

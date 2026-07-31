@@ -100,12 +100,16 @@ inline void pc_sb_put_clip(pc_sb *b, const char *s)
 }
 
 /**
- * @brief Append @p v as decimal if it fits whole, else append nothing - without latching @c ok.
+ * @brief Append @p v as decimal, right-aligned in at least @p columns with leading spaces, if the
+ *        whole field fits - else append nothing, without latching @c ok.
  *
  * The display-text counterpart to pc_sb_u64. A half-written number reads as a different number, so
- * this one is all-or-nothing where pc_sb_put_clip is byte-wise.
+ * this one is all-or-nothing where pc_sb_put_clip is byte-wise. @p columns is what aligns a
+ * fixed-width column (an `ls -l` date is `%2d` day and `%5d` year); 0 asks for the natural width.
+ * Space padding, not the zero padding pc_sb_uint does: a column pads to align, a field pads to a
+ * fixed digit count, and the two are not interchangeable on the wire.
  */
-inline void pc_sb_u64_clip(pc_sb *b, uint64_t v)
+inline void pc_sb_u64_clip(pc_sb *b, uint64_t v, uint8_t columns)
 {
     if (!b->ok)
     {
@@ -118,16 +122,21 @@ inline void pc_sb_u64_clip(pc_sb *b, uint64_t v)
         probe /= 10;
         digits++;
     }
-    if (b->len + digits >= b->cap)
+    size_t width = (digits < columns) ? columns : digits;
+    if (b->len + width >= b->cap)
     {
         return;
     }
-    for (size_t i = digits; i-- > 0;)
+    for (size_t i = width - digits; i-- > 0;)
+    {
+        b->p[b->len + i] = ' ';
+    }
+    for (size_t i = width; i-- > width - digits;)
     {
         b->p[b->len + i] = (char)('0' + (unsigned)(v % 10));
         v /= 10;
     }
-    b->len += digits;
+    b->len += width;
 }
 
 /** @brief Append @p s XML-escaped (&amp; &lt; &gt; &quot;); a NULL @p s appends nothing. */

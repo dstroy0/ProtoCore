@@ -49,7 +49,7 @@ const char *pc_partition_kind(uint8_t type, uint8_t subtype);
  * @brief Serialize a partition array as JSON `{"partitions":[...]}` into @p out.
  * @return characters written, or 0 if @p cap is too small.
  */
-int pc_partition_json(const pc_partition_info *parts, uint8_t count, char *out, size_t cap);
+int32_t pc_partition_json(const pc_partition_info *parts, uint8_t count, char *out, uint32_t cap);
 
 /**
  * @brief Walk the flash partition table into @p out (ESP32; 0 on host builds).

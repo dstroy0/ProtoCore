@@ -15,10 +15,9 @@
 
 #if PC_ENABLE_GPIO_MAP
 
-#include <stdio.h>
 #include <string.h>
 
-#include "shared_primitives/fmtbuf.h"
+#include "shared_primitives/frame.h"
 
 #if defined(ARDUINO)
 #include <Arduino.h>
@@ -40,7 +39,25 @@ const char *pc_gpio_dir_name(pc_gpio_dir dir)
     }
 }
 
-int pc_gpio_json(const pc_gpio_pin *pins, uint8_t count, char *out, size_t cap)
+// The document is three frames: the object that opens the array, one object per pin, and the
+// close. The separating comma is the pin frame's first field so a pin is one append either way.
+static const pc_field GPIO_OPEN[] = {{PC_FK_LIT, 0, 9, "{\"pins\":["}, PC_END};
+static const pc_field GPIO_PIN[] = {
+    PC_STR,                           // "," from the second pin on
+    {PC_FK_LIT, 0, 7, "{\"pin\":"},   //
+    PC_U32,                           // pin number
+    {PC_FK_LIT, 0, 9, ",\"label\":"}, //
+    PC_JSON,                          // label, quoted and escaped
+    {PC_FK_LIT, 0, 7, ",\"dir\":"},   //
+    PC_JSON,                          // direction name
+    {PC_FK_LIT, 0, 9, ",\"level\":"}, //
+    PC_U32,                           // 0 or 1
+    {PC_FK_LIT, 0, 1, "}"},           //
+    PC_END,
+};
+static const pc_field GPIO_CLOSE[] = {{PC_FK_LIT, 0, 2, "]}"}, PC_END};
+
+int32_t pc_gpio_json(const pc_gpio_pin *pins, uint8_t count, char *out, uint32_t cap)
 {
     if (!out || cap == 0)
     {
@@ -51,26 +68,20 @@ int pc_gpio_json(const pc_gpio_pin *pins, uint8_t count, char *out, size_t cap)
     {
         return 0;
     }
-    size_t pos = 0;
-    if (pc_fmt_append(out, cap, &pos, "{\"pins\":[") != 0)
+    if (pc_frame_append(out, cap, GPIO_OPEN) == 0)
     {
         return 0;
     }
     for (uint8_t i = 0; i < count; i++)
     {
         const pc_gpio_pin *p = &pins[i];
-        if (pc_fmt_append(out, cap, &pos, "%s{\"pin\":%u,\"label\":\"%s\",\"dir\":\"%s\",\"level\":%u}", i ? "," : "",
-                          (unsigned)p->pin, p->label ? p->label : "", pc_gpio_dir_name(p->dir),
-                          p->level ? 1u : 0u) != 0)
+        if (pc_frame_append(out, cap, GPIO_PIN, i ? "," : "", (uint32_t)p->pin, p->label ? p->label : "",
+                            pc_gpio_dir_name(p->dir), p->level ? 1u : 0u) == 0)
         {
             return 0;
         }
     }
-    if (pc_fmt_append(out, cap, &pos, "]}") != 0)
-    {
-        return 0;
-    }
-    return (int)pos;
+    return (int32_t)pc_frame_append(out, cap, GPIO_CLOSE);
 }
 
 // Read the decimal integer that follows "name=" in a form-encoded body. Returns

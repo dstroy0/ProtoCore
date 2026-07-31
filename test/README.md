@@ -568,7 +568,7 @@ We test session and socket race conditions by interleaved function calling:
 
 <!-- BEGIN GENERATED test-directory (run test/gen_test_readme.py) -->
 
-A thorough directory of all **5244 test cases** across **293 suites**. Expand a suite to see its test cases, and a test case to see its objective and assertions.
+A thorough directory of all **5243 test cases** across **293 suites**. Expand a suite to see its test cases, and a test case to see its objective and assertions.
 
 <details>
 <summary><b>test_accept_gate (19 tests)</b></summary>
@@ -7606,7 +7606,7 @@ A thorough directory of all **5244 test cases** across **293 suites**. Expand a 
 </details>
 
 <details>
-<summary><b>test_dashboard (22 tests)</b></summary>
+<summary><b>test_dashboard (21 tests)</b></summary>
 
   <details style="margin-left: 20px;">
     <summary><b>test_layout_bar_sparkline_types</b> &mdash; <i>Layout bar sparkline types</i></summary>
@@ -7674,8 +7674,6 @@ A thorough directory of all **5244 test cases** across **293 suites**. Expand a 
       * <code>Assert false (pc_dashboard_parse_control("{\\"k\\":5,\\"v\\":1}", key, sizeof(key), &v))</code>
       * <code>Assert false (pc_dashboard_parse_control("{\\"v\\":1,\\"k\\":\\"unterminated", key, sizeof(key), &v))</code>
       * <code>Assert false (pc_dashboard_dispatch_control("{\\"k\\":\\"x\\",\\"v\\":1}"))</code>
-      * <code>Assert equal int (-1, pc_fmt_append(buf, sizeof(buf), &pos, "x"))</code>
-      * <code>Assert equal uint (4, pos)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -7832,8 +7830,6 @@ A thorough directory of all **5244 test cases** across **293 suites**. Expand a 
     * **Assertions**:
       * <code>Assert false (pc_dashboard_parse_control("{\\"v\\":1,\\"k\\":\\"unterminated", key, sizeof(key), &v))</code>
       * <code>Assert false (pc_dashboard_dispatch_control("{\\"k\\":\\"x\\",\\"v\\":1}"))</code>
-      * <code>Assert equal int (-1, pc_fmt_append(buf, sizeof(buf), &pos, "x"))</code>
-      * <code>Assert equal uint (4, pos)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -7842,15 +7838,6 @@ A thorough directory of all **5244 test cases** across **293 suites**. Expand a 
     * **Objective**: Dispatch control no callback registered
     * **Assertions**:
       * <code>Assert false (pc_dashboard_dispatch_control("{\\"k\\":\\"x\\",\\"v\\":1}"))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_fmtbuf_append_pos_already_at_cap</b> &mdash; <i>Fmtbuf append pos already at cap</i></summary>
-
-    * **Objective**: Fmtbuf append pos already at cap
-    * **Assertions**:
-      * <code>Assert equal int (-1, pc_fmt_append(buf, sizeof(buf), &pos, "x"))</code>
-      * <code>Assert equal uint (4, pos)</code>
   </details>
 
 </details>
