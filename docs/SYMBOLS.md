@@ -46,7 +46,7 @@ mental models halfway.
 | Enum type                 | `enum class`, `pc_snake_case`     | `enum class pc_ip_family : uint8_t`     |
 | Enum member               | keeps its descriptive prefix      | `pc_ip_family::PC_IP_V4`                |
 | Include guard             | `PROTOCORE_<FILE>_H`, max 31      | `PROTOCORE_SHA256_H`                    |
-| File and directory        | `snake_case`                      | `src/crypto/hmac_sha256.cpp`            |
+| File and directory        | `snake_case`                      | `src/crypto/mac/hmac_sha256.cpp`        |
 | Test env / suite          | `native_<topic>` / `test_<topic>` | `native_ip`, `test_ip`                  |
 
 No `namespace`. No `using namespace`. Everything below is the reasoning; the table is the rule.
@@ -178,7 +178,7 @@ members are neither macro-prone nor digit-leading.
 ## 4. Include guards, files, and test targets
 
 **Include guards are `PROTOCORE_<FILE>_H`**, built from the file's own name:
-`src/crypto/sha256.h` guards with `PROTOCORE_SHA256_H`.
+`src/crypto/hash/sha256.h` guards with `PROTOCORE_SHA256_H`.
 
 Guards take the full library name rather than the `PC_` prefix, because a guard is the one macro that
 has to be unique across _someone else's_ build. Every header a user compiles shares a single macro

@@ -68,6 +68,10 @@ def main() -> int:
     #   historical - BUGS.md and AUDIT.md record what happened. An entry citing a
     #                function since removed, or a test env since merged away, is accurate
     #                history; "fixing" it would falsify the record.
+    #   illustrative - SYMBOLS.md documents the naming rules, so its examples are chosen to
+    #                  SHOW a shape, not to name a real symbol. PC_HTTP_PARSER_H is introduced
+    #                  as "a plausible name for ANOTHER library's guard"; making it resolve
+    #                  would defeat the point it is making.
     #
     # Dead LINKS are still checked everywhere: a broken link is broken regardless of tense.
     NOT_PRESENT_TENSE = {
@@ -76,6 +80,7 @@ def main() -> int:
         "docs/AUDIT.md",        # historical
         "docs/CHANGELOG.md",    # historical, generated
         "docs/DELIVERED.md",    # historical
+        "docs/SYMBOLS.md",      # illustrative
     }
 
     known_envs = set(re.findall(r"^\[env:(native[A-Za-z0-9_]*)\]",

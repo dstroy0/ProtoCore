@@ -1139,7 +1139,7 @@ Neither is visible to a correctness gate; both were measured.
    inline the appender chain, and once the chain is calls, nothing folds: `strnlen("HTTP/1.1 ")`
    stays a runtime scan instead of the constant 9, and each append stays a `memcpy` call instead of
    inline word stores. Three changes, all "use what is already known at compile time":
-   `PC_SB_INLINE` (always_inline on the small appenders), `PC_SB_LIT` / `pc_sb_put_n` (length by
+   `inline` on the small appenders, `pc_sb_lit()` / `pc_sb_put_n()` (length by
    `sizeof`, not by scanning), and a `len` field in `pc_field` so a spec - which is built at compile
    time - carries its literal lengths instead of the engine rediscovering them every call. Plus
    `PC_OPTIMIZE_O2` on the engine.

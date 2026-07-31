@@ -458,7 +458,7 @@ def cmd_gallery():
         "",
         f"**{len(P) + len(HAND_THEMES)} themes.** Opt a served page into one with a build directive -"
         " `<!--#theme dracula-->` or `<!--#theme generated/dracula-->` before `</head>` (see"
-        " [web_assets/README.md](../src/web/README.md)). Need an exact color that is not here? Generate your"
+        " [web_assets/README.md](../web_assets/README.md)). Need an exact color that is not here? Generate your"
         " own from one anchor color:",
         "",
         "```sh",
