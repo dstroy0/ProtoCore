@@ -272,7 +272,12 @@ def _key(v):
     already had one was waved straight through. The declared name is stable across edits
     above it and unique within a file.
     """
-    path, line_no, ban_no, message = v
+    raw_path, line_no, ban_no, message = v
+    # The baseline is a committed file read on every platform, so the key must not carry the host's
+    # path separator. rglob() yields WindowsPath on Windows, which made every recorded site read as
+    # new there: the gate reported the entire ratcheted set as a regression and was unusable
+    # locally, while CI on Linux passed.
+    path = _norm(raw_path)
     if ban_no in (18, 19):
         # falls through to the name-based key; ban 19 wraps this with an occurrence ordinal
         try:

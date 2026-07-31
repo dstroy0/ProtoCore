@@ -8,6 +8,28 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ---
 
+## The banned-construct gate was a no-op on Windows: its baseline keys carried the host's path separator
+
+- **Status:** FIXED (2026-07-31). `check_src_banned.py --all` on Windows now reports
+  `971 known ratcheted site(s) remain, 16 fixed`, matching Linux.
+- **Symptom:** running the gate locally on Windows reported **every** recorded site as a brand-new
+  violation - 987 of them - so the output read as "the sweep has regressed catastrophically" rather
+  than "the tool cannot find its baseline." CI on Linux passed the whole time.
+- **Root cause:** `_key()` built its baseline key from `str(path)`, and `--all` collects through
+  `pathlib.Path.rglob`, which yields a `WindowsPath`. So the scanner produced
+  `src\services\web\httpcache\httpcache.cpp|19|rev#1` while the committed baseline holds
+  `src/services/web/httpcache/httpcache.cpp|19|rev#1`. Nothing matched, so nothing was ever
+  recognized as known. The module already had a `_norm()` helper for exactly this, but only
+  `collect()` used it.
+- **Why nothing caught it:** the baseline is a _committed_ file compared against a _host-generated_
+  key, and only one of the two platforms that reads it runs in CI. A ratchet that silently stops
+  recognizing its own floor fails in the safe direction (it over-reports), which is why it survived -
+  it never let a violation through, it just stopped being usable where the code is written.
+- **Fix:** `_key()` normalizes the path before building the key. The gate is the same on both
+  platforms now, which is the point of committing the baseline at all.
+
+---
+
 ## AES-256-GCM ran 7.6x slow: we replaced the vendor's AEAD, then rebuilt its context per packet
 
 - **Status:** FIXED (2026-07-31). Sealing 1 KiB on an S3: 616,567 -> **81,130** cyc. The raw vendor call
