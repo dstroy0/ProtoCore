@@ -71,7 +71,7 @@ To isolate our application code from physical hardware and the operating system'
 
 <!-- BEGIN GENERATED test-environments (edit test/test_matrix.json, run test/gen_test_readme.py) -->
 
-The native test matrix has **280 environments**, one per feature, generated from [test_matrix.json](test_matrix.json) into [platformio.ini](../platformio.ini) by [gen_test_envs.py](gen_test_envs.py). Each compiles a strict per-feature slice of `src/` with its own flags and runs that feature's suite in isolation, so "this feature builds and tests on its own" stays guaranteed.
+The native test matrix has **281 environments**, one per feature, generated from [test_matrix.json](test_matrix.json) into [platformio.ini](../platformio.ini) by [gen_test_envs.py](gen_test_envs.py). Each compiles a strict per-feature slice of `src/` with its own flags and runs that feature's suite in isolation, so "this feature builds and tests on its own" stays guaranteed.
 
 | Environment | Feature flag(s) | Test suite(s) | Purpose |
 | :--- | :--- | :--- | :--- |
@@ -290,6 +290,7 @@ The native test matrix has **280 environments**, one per feature, generated from
 | `native_sercos` | `PC_ENABLE_SERCOS=1` | `test_sercos` | SERCOS III motion-bus codec (services/fieldbus/sercos): the MDT/AT telegram (type + phase + cycle + data) build + parse and the 16-bit IDN encode/decode (S/P + set + block). |
 | `native_sht3x` | `PC_ENABLE_SHT3X=1` | `test_sht3x` | Sensirion SHT3x temperature/humidity codec (services/peripherals/sht3x): the CRC-8 against the datasheet check value (0xBEEF -> 0x92), the raw-tick -> milli-unit temperature/humidity conversions at th... |
 | `native_sigfox` | `PC_ENABLE_SIGFOX=1` | `test_sigfox` | Sigfox modem AT-command codec (services/radio/sigfox), v5 radio plugin: the AT$SF uplink command (uppercase hex encoding of the payload), its bounds (12-byte cap, output cap), and the OK / ERROR / PEN... |
+| `native_signaling` | default | `test_signaling` | Application-layer signaling (server/signaling): the state bucket. |
 | `native_simatic` | `PC_ENABLE_SIMATIC=1` | `test_simatic` | Siemens SIMATIC serial (services/fieldbus/simatic): 3964R block framing (DLE-double + XOR BCC) + the 3964R link state machine (STX/DLE handshake, NAK/QVZ retry, ZVZ timeout, priority arbitration) + RK... |
 | `native_sleep_sched` | `PC_ENABLE_SLEEP_SCHED=1` | `test_sleep_sched` | Dynamic sleep-cycle scheduler (services/system/sleep_sched): the wrap-safe idle->sleep-window decision core with a doubling ramp clamped to a ceiling. |
 | `native_smb` | `PC_ENABLE_SMB=1` | `test_smb2`, `test_smb_crypto`, `test_ntlm`, `test_ntlmssp`, `test_spnego`, `test_smb_client` | SMB2 client (services/file_transfer/smb, MS-SMB2 / MS-NLMP): the SMB2 wire codec (transport frame, sync header, NEGOTIATE, SESSION_SETUP, TREE_CONNECT/CREATE/CLOSE/READ/WRITE); the NTLM digests MD4 (R... |
@@ -570,7 +571,7 @@ We test session and socket race conditions by interleaved function calling:
 
 <!-- BEGIN GENERATED test-directory (run test/gen_test_readme.py) -->
 
-A thorough directory of all **5252 test cases** across **294 suites**. Expand a suite to see its test cases, and a test case to see its objective and assertions.
+A thorough directory of all **5260 test cases** across **295 suites**. Expand a suite to see its test cases, and a test case to see its objective and assertions.
 
 <details>
 <summary><b>test_accept_gate (19 tests)</b></summary>
@@ -45604,6 +45605,101 @@ A thorough directory of all **5252 test cases** across **294 suites**. Expand a 
     * **Objective**: If a buffer holds both (e.g. an echoed "OK" token then an ERROR), ERROR is reported.
     * **Assertions**:
       * <code>Assert equal int (pc_sigfox_result::SIGFOX_ERROR, pc_sigfox_parse_response(both, (uint16_t)strlen(both)))</code>
+  </details>
+
+</details>
+
+<details>
+<summary><b>test_signaling (8 tests)</b></summary>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_put_response_counts_by_class</b> &mdash; <i>Put response counts by class</i></summary>
+
+    * **Objective**: Put response counts by class
+    * **Assertions**:
+      * <code>TEST_ASSERT_EQUAL_UINT32(4, after.requests_total - before.requests_total);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(2, after.responses_2xx - before.responses_2xx);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(1, after.responses_4xx - before.responses_4xx);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(1, after.responses_5xx - before.responses_5xx);</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_put_response_1xx_3xx_total_only</b> &mdash; <i>Put response 1xx 3xx total only</i></summary>
+
+    * **Objective**: Put response 1xx 3xx total only
+    * **Assertions**:
+      * <code>TEST_ASSERT_EQUAL_UINT32(3, after.requests_total - before.requests_total);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(0, after.responses_2xx - before.responses_2xx);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(0, after.responses_4xx - before.responses_4xx);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(0, after.responses_5xx - before.responses_5xx);</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_put_tick_stores_verbatim</b> &mdash; <i>Put tick stores verbatim</i></summary>
+
+    * **Objective**: Put tick stores verbatim
+    * **Assertions**:
+      * <code>TEST_ASSERT_EQUAL_UINT32(1234u, s.uptime_ms);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(0x0Bu, s.conns_active);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(0x05u, s.listeners_up);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(9999u, s.uptime_ms);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(0u, s.conns_active);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(0u, s.listeners_up);</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_masks_carry_identity_not_just_count</b> &mdash; <i>Masks carry identity not just count</i></summary>
+
+    * **Objective**: Masks carry identity not just count
+    * **Assertions**:
+      * <code>Assert equal int (4, __builtin_popcount(s.conns_active))</code>
+      * <code>Assert equal int (2, __builtin_popcount(s.listeners_up))</code>
+      * <code>Assert true ((s.conns_active & (1u &lt;&lt; 0)) != 0u)</code>
+      * <code>Assert true ((s.conns_active & (1u &lt;&lt; 1)) != 0u)</code>
+      * <code>Assert false ((s.conns_active & (1u &lt;&lt; 2)) != 0u)</code>
+      * <code>Assert true ((s.conns_active & (1u &lt;&lt; 4)) != 0u)</code>
+      * <code>Assert true ((s.conns_active & (1u &lt;&lt; 7)) != 0u)</code>
+      * <code>Assert true ((s.listeners_up & (1u &lt;&lt; 0)) != 0u)</code>
+      * <code>Assert false ((s.listeners_up & (1u &lt;&lt; 1)) != 0u)</code>
+      * <code>Assert true ((s.listeners_up & (1u &lt;&lt; 2)) != 0u)</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_know_is_a_copy_not_a_window</b> &mdash; <i>Know is a copy not a window</i></summary>
+
+    * **Objective**: Know is a copy not a window
+    * **Assertions**:
+      * <code>TEST_ASSERT_EQUAL_UINT32(7u, taken.uptime_ms);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(1u, taken.conns_active);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(1u, taken.listeners_up);</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_know_null_is_safe</b> &mdash; <i>Know null is safe</i></summary>
+
+    * **Objective**: Know null is safe
+    * **Assertions**:
+      * <code>Assert true (true)</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_kill_forwards_the_slot</b> &mdash; <i>Kill forwards the slot</i></summary>
+
+    * **Objective**: Kill forwards the slot
+    * **Assertions**:
+      * <code>Assert equal int (1, g_close_calls)</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8(3, g_close_slot);</code>
+      * <code>Assert equal int (2, g_close_calls)</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8(0, g_close_slot);</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_kill_does_not_filter</b> &mdash; <i>Kill does not filter</i></summary>
+
+    * **Objective**: Kill does not filter
+    * **Assertions**:
+      * <code>Assert equal int (1, g_close_calls)</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8(200, g_close_slot);</code>
   </details>
 
 </details>

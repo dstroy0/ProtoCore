@@ -2116,6 +2116,11 @@
       "src": ["+<services/system/sleep_sched/sleep_sched.cpp>"],
       "tests": ["test_sleep_sched"]
     },
+    "native_signaling": {
+      "desc": "Application-layer signaling (server/signaling): the state bucket. Deposits go in from the loop\n(response class tallies, and the uptime + conn/listener bitmasks a tick already has in hand), a\nread hands back a copy rather than a window, and kill forwards a slot to the transport unchanged.\nThe module holds no logic by design, so the tests assert exactly that. pc_conn_close is stubbed:\nthe forward is what is under test, not lwIP.",
+      "src": ["+<server/signaling/signaling.cpp>"],
+      "tests": ["test_signaling"]
+    },
     "native_wearlevel": {
       "desc": "Flash wear-leveling slot selector (server/filesystem/wearlevel): least-worn pick (ties -> lowest\nindex), saturating mark, and the wear-imbalance spread metric. Pure host tests - a 4000-write\npick+mark loop must level every slot exactly.",
       "flags": ["-DPC_ENABLE_WEARLEVEL=1"],
