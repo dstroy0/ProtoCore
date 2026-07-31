@@ -5376,10 +5376,12 @@
 "native_partition"
 ],
 "src/shared_primitives/frame.cpp": [
-"native_frame"
+"native_frame",
+"native_log"
 ],
 "src/shared_primitives/frame.h": [
-"native_frame"
+"native_frame",
+"native_log"
 ],
 "src/shared_primitives/hex.h": [
 "native_app",
@@ -5523,7 +5525,8 @@
 "native_ws_deflate"
 ],
 "src/shared_primitives/speed_opt.h": [
-"native_frame"
+"native_frame",
+"native_log"
 ],
 "src/shared_primitives/strbuf.h": [
 "native_app",

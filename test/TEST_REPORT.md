@@ -1,8 +1,8 @@
 # Test Report
 
-**Generated:** 2026-07-31 10:51:12
+**Generated:** 2026-07-31 11:38:16
 **Command:** `pio test` over 276 auto-discovered native envs (excludes native_pentest, native_codeql)
-**Result:** ✅ 5767 passed - 316s
+**Result:** ✅ 5767 passed - 320s
 
 ---
 
@@ -294,7 +294,7 @@
 | `test_logbuf`            | `native_logbuf`          |     6 |   ✅   |  00:00:00.825 |
 | `test_power_mgmt`        | `native_power_mgmt`      |    24 |   ✅   |  00:00:00.805 |
 | `test_hotswap`           | `native_hotswap`         |    31 |   ✅   |  00:00:00.827 |
-| `test_log`               | `native_log`             |    16 |   ✅   |  00:00:00.816 |
+| `test_log`               | `native_log`             |    16 |   ✅   |  00:00:00.675 |
 | `test_config_io`         | `native_config_io`       |    10 |   ✅   |  00:00:00.818 |
 | `test_workers`           | `native_workers`         |    10 |   ✅   |  00:00:00.963 |
 | `test_clock`             | `native_clock`           |     7 |   ✅   |  00:00:00.776 |
@@ -319,7 +319,7 @@
 | `test_ssh_chachapoly`    | `native_ssh_chachapoly`  |     5 |   ✅   |  00:00:01.009 |
 | `test_ssh_aesgcm`        | `native_ssh_aesgcm`      |     5 |   ✅   |  00:00:00.993 |
 | `test_ssh_ecdsa`         | `native_ssh_ecdsa`       |    17 |   ✅   |  00:00:10.821 |
-| `test_frame`             | `native_frame`           |    16 |   ✅   |  00:00:00.783 |
+| `test_frame`             | `native_frame`           |    16 |   ✅   |  00:00:05.420 |
 | `test_span`              | `native_span`            |    17 |   ✅   |  00:00:00.762 |
 | `test_secure_pool`       | `native_secure_pool`     |    12 |   ✅   |  00:00:00.923 |
 
@@ -9674,8 +9674,8 @@ _Unit tests for the abstract logging layer (shared_primitives/log.h). Built at_
 |   5 | `test_emitted_line_also_reaches_the_logbuf_ring`      |   ✅   | Emitted line also reaches the logbuf ring                                                     |
 |   6 | `test_levels_match_the_logbuf_letters`                |   ✅   | The PC_LOG_LEVEL_* preprocessor values and pc_log_level's constexprs are two spellings of one |
 |   7 | `test_no_sink_is_not_a_crash`                         |   ✅   | No sink is not a crash                                                                        |
-|   8 | `test_long_line_is_truncated_not_overflowed`          |   ✅   | Long line is truncated not overflowed                                                         |
-|   9 | `test_null_format_is_ignored`                         |   ✅   | Null format is ignored                                                                        |
+|   8 | `test_line_that_does_not_fit_is_refused`              |   ✅   | Line that does not fit is refused                                                             |
+|   9 | `test_null_spec_is_ignored`                           |   ✅   | Null spec is ignored                                                                          |
 |  10 | `test_empty_message_is_still_a_line`                  |   ✅   | Empty message is still a line                                                                 |
 |  11 | `test_ring_atomic_wrapper_round_trips`                |   ✅   | Ring atomic wrapper round trips                                                               |
 |  12 | `test_ring_read_byte_and_available`                   |   ✅   | Ring read byte and available                                                                  |
