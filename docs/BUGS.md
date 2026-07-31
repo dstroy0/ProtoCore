@@ -8,6 +8,37 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ---
 
+## Every ESP32 example failed to link: `web_assets.cpp` was tracked twice under two names
+
+- **Status:** FIXED (2026-07-31). Both changed sketches now build on the real core: Telnet 919,127 B
+  (70%), WebTerminal 921,847 B (70%), `esp32:esp32:esp32s3` core 3.3.10.
+- **Symptom:** every one of the 152 example sketches failed at link with
+  `multiple definition of 'PC_DASHBOARD_PAGE'`, and the same for `PC_PROV_FORM`,
+  `PC_PROV_SAVED_HTML`, `PC_TERMINAL_PAGE`, `PC_SERVICE_WORKER`, `PC_STATS_JSON`, `PC_METRICS_PROM`.
+- **Root cause:** `src/network_drivers/application/web.cpp` was a byte-identical copy of
+  `web_assets.cpp`, and `web.h` was `web_assets.h` with only its include guard renamed - its file
+  banner still read `@file web_assets.h`. Both were tracked. Arduino compiles every `.cpp` under a
+  library's `src/`, so both copies were compiled and both defined the same symbols. They are
+  `const`, which is internal linkage in C++ and would have been harmless, but `web_assets.h`
+  declares them `extern`, which makes them external and therefore a collision.
+- **Why nothing caught it:** the native envs compile an **explicit source list** per env, so a file
+  nobody lists is a file nobody builds - 5,780 host tests passed with the duplicate present. Only a
+  whole-tree build reaches it. `check_examples.py` reads sketch source for API misuse and never
+  links. Worse, the file had already been _touched_ by a green commit: "fix the web.h guard" made
+  the duplicate's include guard unique, which is what a linter asks for and the exact opposite of
+  what the file needed.
+- **Fix:** deleted `web.cpp` and `web.h`. `web_assets.*` is the generated pair
+  (`web_assets/wizard/build_assets.py` emits it) and all six consumers already included
+  `web_assets.h`; nothing included `web.h`, not even `web.cpp`.
+- **Gate:** `ci_tooling/check/check_duplicate_symbols.py`, wired into CI. It reports a file-scope
+  variable defined in two `.cpp` files, but only when the definition actually carries external
+  linkage - non-`const`, or `const` with an `extern` declaration in a header. That distinction is
+  load-bearing: without it the check flags the four codecs that each define their own
+  `const DIST_BASE[]` / `LEN_BASE[]`, which never collide because a file-scope `const` is internal
+  linkage in C++. Proven by restoring the duplicate and watching all 7 symbols report.
+
+---
+
 ## The banned-construct gate was a no-op on Windows: its baseline keys carried the host's path separator
 
 - **Status:** FIXED (2026-07-31). `check_src_banned.py --all` on Windows now reports

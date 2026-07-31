@@ -74,6 +74,13 @@ jobs:
         # non-reentrant gmtime family call, or an em-dash). Comments / string literals are exempt.
         run: python3 ci_tooling/check/check_src_banned.py --all
 
+      - name: No symbol is defined by two src/ files
+        # The native envs compile an explicit source list, so a duplicated .cpp is invisible to
+        # them. Arduino compiles every .cpp under src/, so a stray copy breaks all 152 sketches at
+        # link time with the host suite still green - which is how a byte-identical second copy of
+        # web_assets.cpp shipped.
+        run: python3 ci_tooling/check/check_duplicate_symbols.py
+
       - name: Crypto KAT vectors up to date (generated .inc matches vendored JSON)
         # test/test_crypto_kat/kat_data.inc is generated from the vendored external vectors in
         # test/vectors/*.json. Regenerate and fail if the committed table drifted from its source.
