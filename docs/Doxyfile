@@ -1,0 +1,121 @@
+# Doxyfile for ProtoCore
+# Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Generate HTML docs:  doxygen docs/Doxyfile
+# Output:              docs/html/index.html
+
+#---------------------------------------------------------------------------
+# Project identity
+#---------------------------------------------------------------------------
+PROJECT_NAME           = "ProtoCore"
+PROJECT_BRIEF          = "Zero-allocation, bounded-execution async HTTP server for ESP32"
+PROJECT_NUMBER         = "v0.0.1"
+PROJECT_LOGO           =
+
+#---------------------------------------------------------------------------
+# Input / output
+#---------------------------------------------------------------------------
+# examples/ READMEs ARE rendered as pages so each example walkthrough lives on the Pages
+# site itself (the docs/EXAMPLES.md index links to these rendered pages, not out to the
+# repo). Only the READMEs are pulled in - the example .ino/.cpp/.h sources are excluded
+# below (their source is reproduced inside each README) so the file list stays the API
+# reference. Each README documents its own directory (Doxygen's dir-doc behavior), so the
+# example pages nest under the Files directory tree by path - the nav tree root is not
+# flooded (which is why examples/ was formerly excluded). docs/EXAMPLES.md links to them.
+INPUT                  = src docs examples
+FILE_PATTERNS          = *.h *.cpp *.ino *.md
+RECURSIVE              = YES
+EXCLUDE                =
+EXCLUDE_PATTERNS       = */test/* */docs/html/* */ci_tooling/generate/* */docs/Doxyfile */docs/cliff.toml */docs/custom.css */examples/*.ino */examples/*.cpp */examples/*.h */examples/esp-idf/*
+USE_MDFILE_AS_MAINPAGE = docs/README.md
+
+OUTPUT_DIRECTORY       = docs/html
+CREATE_SUBDIRS         = NO
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO
+# XML is consumed by Breathe to render the API reference into the Sphinx site (docs/sphinx).
+GENERATE_XML           = YES
+XML_OUTPUT             = ../sphinx/xml
+XML_PROGRAMLISTING     = NO
+GENERATE_MAN           = NO
+
+#---------------------------------------------------------------------------
+# Extraction settings
+#---------------------------------------------------------------------------
+EXTRACT_ALL            = YES
+EXTRACT_PRIVATE        = NO
+EXTRACT_STATIC         = NO
+EXTRACT_LOCAL_CLASSES  = YES
+HIDE_UNDOC_MEMBERS     = NO
+HIDE_UNDOC_CLASSES     = NO
+SHOW_GROUPED_MEMB_INC  = YES
+SHOW_USED_FILES        = YES
+SORT_MEMBER_DOCS       = NO
+SORT_BRIEF_DOCS        = NO
+
+#---------------------------------------------------------------------------
+# Preprocessing
+#---------------------------------------------------------------------------
+ENABLE_PREPROCESSING   = YES
+MACRO_EXPANSION        = YES
+EXPAND_ONLY_PREDEF     = YES
+PREDEFINED             = ARDUINO DOXYGEN
+
+#---------------------------------------------------------------------------
+# Source browsing
+#---------------------------------------------------------------------------
+SOURCE_BROWSER         = YES
+INLINE_SOURCES         = NO
+STRIP_CODE_COMMENTS    = NO
+REFERENCED_BY_RELATION = YES
+REFERENCES_RELATION    = YES
+
+#---------------------------------------------------------------------------
+# HTML appearance - dark ocean theme
+#---------------------------------------------------------------------------
+HTML_OUTPUT            = .
+HTML_FILE_EXTENSION    = .html
+HTML_HEADER            =
+HTML_FOOTER            = docs/footer.html
+HTML_EXTRA_STYLESHEET  = docs/custom.css
+HTML_EXTRA_FILES       = docs/squirty.svg docs/configurator.html
+
+# Built-in dark mode (Doxygen >= 1.9.5)
+HTML_COLORSTYLE        = DARK
+# Hue 210 = cool blue-teal spectrum; sat 80 = muted; gamma 90 = slightly bright
+HTML_COLORSTYLE_HUE    = 210
+HTML_COLORSTYLE_SAT    = 80
+HTML_COLORSTYLE_GAMMA  = 90
+
+HTML_DYNAMIC_MENUS     = YES
+HTML_DYNAMIC_SECTIONS  = YES
+HTML_INDEX_NUM_ENTRIES = 100
+
+# Navigation tree sidebar
+GENERATE_TREEVIEW      = YES
+TREEVIEW_WIDTH         = 260
+FULL_SIDEBAR           = YES
+
+# Search
+SEARCHENGINE           = YES
+SERVER_BASED_SEARCH    = NO
+
+#---------------------------------------------------------------------------
+# Graphs - disabled to avoid Graphviz dependency
+# Set HAVE_DOT = YES and uncomment below if Graphviz is installed
+#---------------------------------------------------------------------------
+HAVE_DOT               = NO
+# CALL_GRAPH           = YES
+# CALLER_GRAPH         = YES
+# CLASS_GRAPH          = YES
+# INCLUDE_GRAPH        = YES
+
+#---------------------------------------------------------------------------
+# Warnings
+#---------------------------------------------------------------------------
+WARNINGS               = YES
+WARN_IF_UNDOCUMENTED   = YES
+WARN_IF_DOC_ERROR      = YES
+WARN_NO_PARAMDOC       = YES
+WARN_AS_ERROR          = NO

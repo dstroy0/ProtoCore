@@ -1,0 +1,27 @@
+{
+  "name": "deterministic-esp-async-webserver-tooling",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Dev/CI tooling manifest for ProtoCore. This is NOT a publishable npm package and the library has no runtime npm dependencies (it is C++/PlatformIO and pulls lwIP/mbedTLS from the framework). The manifest exists so GitHub's dependency graph and Dependabot can track and update the Node-based formatting and spelling tools the repo runs in CI.",
+  "license": "AGPL-3.0-or-later",
+  "homepage": "https://dstroy0.github.io/ProtoCore/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dstroy0/ProtoCore.git"
+  },
+  "bugs": {
+    "url": "https://github.com/dstroy0/ProtoCore/issues"
+  },
+  "scripts": {
+    "format": "prettier --write \"**/*.md\"",
+    "format:check": "prettier --check \"**/*.md\"",
+    "spell": "cspell --config cspell.json \"**/*.md\""
+  },
+  "devDependencies": {
+    "cspell": "^10.0.1",
+    "prettier": "^3.9.6"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

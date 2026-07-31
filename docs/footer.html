@@ -1,0 +1,959 @@
+<!-- HTML footer for doxygen 1.17.0-->
+<!-- start footer part -->
+<!--BEGIN GENERATE_TREEVIEW-->
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    $navpath
+    <li class="footer">$generatedby <a href="https://www.doxygen.org/index.html"><img class="footer" src="$relpath^doxygen.svg" width="104" height="31" alt="doxygen"/></a> $doxygenversion </li>
+  </ul>
+</div>
+<!--END GENERATE_TREEVIEW-->
+<!--BEGIN !GENERATE_TREEVIEW-->
+<hr class="footer"/><address class="footer"><small>
+$generatedby&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="$relpath^doxygen.svg" width="104" height="31" alt="doxygen"/></a> $doxygenversion
+</small></address>
+</div><!-- doc-content -->
+<!--END !GENERATE_TREEVIEW-->
+<script>
+(function() {
+    // Helper function to wrap text nodes in spans recursively
+    function wrapTextNodes(element) {
+        if (element.nodeType === Node.TEXT_NODE) {
+            const text = element.nodeValue;
+            if (text.trim() === '') return; // Skip whitespace nodes
+            
+            const fragment = document.createDocumentFragment();
+            for (let i = 0; i < text.length; i++) {
+                const char = text[i];
+                if (char === '\n' || char === '\r') {
+                    fragment.appendChild(document.createTextNode(char));
+                } else {
+                    const span = document.createElement('span');
+                    span.className = 'm-char';
+                    span.textContent = char;
+                    span.style.opacity = '0';
+                    span.style.transition = 'color 0.15s ease, text-shadow 0.15s ease';
+                    fragment.appendChild(span);
+                }
+            }
+            element.parentNode.replaceChild(fragment, element);
+        } else if (element.nodeType === Node.ELEMENT_NODE) {
+            // Do not wrap text inside <summary>, <script>, or <style>
+            if (element.tagName === 'SUMMARY' || element.tagName === 'SCRIPT' || element.tagName === 'STYLE') {
+                return;
+            }
+            const children = Array.from(element.childNodes);
+            children.forEach(wrapTextNodes);
+        }
+    }
+
+    // Create separate terminal dots for each details block
+    document.querySelectorAll('details > summary').forEach(summary => {
+        if (summary.querySelector('.tty-controls')) return;
+        
+        const controls = document.createElement('span');
+        controls.className = 'tty-controls';
+        
+        for (let i = 0; i < 3; i++) {
+            const dot = document.createElement('span');
+            dot.className = 'tty-dot';
+            controls.appendChild(dot);
+        }
+        
+        summary.appendChild(controls);
+    });
+
+    // Monitor details expansion
+    document.querySelectorAll('details').forEach(details => {
+        const summary = details.querySelector('summary');
+        let originalHtml = null;
+        let animationFrameId = null;
+        
+        details.addEventListener('toggle', () => {
+            if (!details.open) {
+                if (details.dataset.matrixRunning === 'true') {
+                    // Stop animation and restore original HTML immediately
+                    if (animationFrameId) {
+                        cancelAnimationFrame(animationFrameId);
+                        animationFrameId = null;
+                    }
+                    details.dataset.matrixRunning = 'false';
+                    if (originalHtml !== null) {
+                        details.innerHTML = originalHtml;
+                    }
+                }
+                return;
+            }
+            
+            // Check if already processed
+            if (details.dataset.matrixProcessed === 'true') {
+                return;
+            }
+            
+            // Count animatable characters (excluding code blocks, etc.)
+            let animatableCount = 0;
+            const contentNodes = Array.from(details.childNodes).filter(node => node !== summary);
+            contentNodes.forEach(node => {
+                animatableCount += countAnimatableChars(node);
+            });
+            
+            if (animatableCount === 0 || animatableCount > 3000) {
+                details.dataset.matrixProcessed = 'true';
+                return;
+            }
+            
+            // Save original HTML
+            originalHtml = details.innerHTML;
+            details.dataset.matrixRunning = 'true';
+            
+            // Wrap text nodes
+            contentNodes.forEach(wrapTextNodes);
+            
+            // Start waterfall animation
+            animateMatrix(details);
+        });
+
+        function countAnimatableChars(element) {
+            if (element.nodeType === Node.TEXT_NODE) {
+                return element.nodeValue.trim().length;
+            }
+            if (element.nodeType === Node.ELEMENT_NODE) {
+                const tag = element.tagName;
+                if (tag === 'SUMMARY' || tag === 'SCRIPT' || tag === 'STYLE' || tag === 'PRE' || tag === 'CODE') {
+                    return 0;
+                }
+                let count = 0;
+                element.childNodes.forEach(child => {
+                    count += countAnimatableChars(child);
+                });
+                return count;
+            }
+            return 0;
+        }
+
+        function wrapTextNodes(element) {
+            if (element.nodeType === Node.TEXT_NODE) {
+                const text = element.nodeValue;
+                if (text.trim() === '') return;
+                
+                const fragment = document.createDocumentFragment();
+                for (let i = 0; i < text.length; i++) {
+                    const char = text[i];
+                    if (char === '\n' || char === '\r') {
+                        fragment.appendChild(document.createTextNode(char));
+                    } else {
+                        const span = document.createElement('span');
+                        span.className = 'm-char';
+                        span.textContent = char;
+                        span.style.opacity = '0';
+                        span.style.transition = 'color 0.15s ease, text-shadow 0.15s ease';
+                        fragment.appendChild(span);
+                    }
+                }
+                element.parentNode.replaceChild(fragment, element);
+            } else if (element.nodeType === Node.ELEMENT_NODE) {
+                const tag = element.tagName;
+                if (tag === 'SUMMARY' || tag === 'SCRIPT' || tag === 'STYLE' || tag === 'PRE' || tag === 'CODE') {
+                    return;
+                }
+                const children = Array.from(element.childNodes);
+                children.forEach(wrapTextNodes);
+            }
+        }
+
+        function animateMatrix(details) {
+            const chars = Array.from(details.querySelectorAll('.m-char'));
+            if (chars.length === 0) {
+                finish();
+                return;
+            }
+            
+            // Glyphs the falling head scrambles through before locking to the
+            // real character (half-width katakana + digits + symbols).
+            const GLYPHS = 'ｦｱｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾅﾆﾇﾈﾊﾋﾎﾏﾐﾑﾒﾓﾔﾕﾗﾘﾜ0123456789:.=*+-<>¦|';
+            const randGlyph = () => GLYPHS[(Math.random() * GLYPHS.length) | 0];
+
+            const columnsMap = {};
+            chars.forEach(span => {
+                const rect = span.getBoundingClientRect();
+                const colKey = Math.round(rect.left / 8) * 8;
+                if (!columnsMap[colKey]) {
+                    columnsMap[colKey] = [];
+                }
+                span.dataset.real = span.textContent; // remember the true char
+                columnsMap[colKey].push({ el: span, top: rect.top });
+            });
+
+            const columns = Object.keys(columnsMap)
+                .sort((a, b) => Number(a) - Number(b))
+                .map(key => {
+                    const list = columnsMap[key];
+                    list.sort((a, b) => a.top - b.top);
+                    return {
+                        chars: list.map(item => item.el),
+                        currentIndex: -10,
+                        started: false,
+                        completed: false,
+                        speed: 3.5 + Math.random() * 3.5 // faster fall (was 1.2–2.7)
+                    };
+                });
+                
+            if (columns.length === 0) {
+                finish();
+                return;
+            }
+            
+            function loop() {
+                if (details.dataset.matrixRunning !== 'true') return;
+                
+                let allCompleted = true;
+                
+                for (let i = 0; i < columns.length; i++) {
+                    const col = columns[i];
+                    if (col.completed) continue;
+                    
+                    allCompleted = false;
+                    
+                    if (!col.started) {
+                        let shouldStart = Math.random() < 0.08;
+                        if (!shouldStart) {
+                            const leftNeighbor = columns[i - 1];
+                            const rightNeighbor = columns[i + 1];
+                            if (leftNeighbor && leftNeighbor.started && (leftNeighbor.currentIndex / leftNeighbor.chars.length) >= 0.2) {
+                                shouldStart = true;
+                            }
+                            if (rightNeighbor && rightNeighbor.started && (rightNeighbor.currentIndex / rightNeighbor.chars.length) >= 0.2) {
+                                shouldStart = true;
+                            }
+                        }
+                        if (shouldStart) col.started = true;
+                    }
+
+                    if (col.started) {
+                        col.currentIndex += col.speed;
+                        const len = col.chars.length;
+
+                        if (col.currentIndex >= len + 16) {
+                            col.completed = true;
+                            continue;
+                        }
+
+                        for (let c = 0; c < len; c++) {
+                            const el = col.chars[c];
+                            const dist = col.currentIndex - c;
+
+                            if (dist < 0) {
+                                // not reached yet
+                                el.style.opacity = '0';
+                            } else if (dist <= 1.5) {
+                                // bright white scrambling head
+                                el.textContent = randGlyph();
+                                el.style.opacity = '1';
+                                el.style.color = '#fff';
+                                el.style.textShadow = '0 0 8px #40ff40, 0 0 16px #40ff40';
+                            } else if (dist <= 6) {
+                                // vivid green scrambling trail
+                                el.textContent = randGlyph();
+                                el.style.opacity = '1';
+                                el.style.color = '#40ff40';
+                                el.style.textShadow = '0 0 6px #40ff40';
+                            } else if (dist <= 12) {
+                                // fading: occasional last glyph flicker, then the real char
+                                el.textContent = Math.random() < 0.4 ? randGlyph() : el.dataset.real;
+                                el.style.opacity = '0.85';
+                                el.style.color = '#2bb35a';
+                                el.style.textShadow = '0 0 4px rgba(43, 179, 90, 0.5)';
+                            } else {
+                                // settled: lock to the real character in the calm theme green
+                                el.textContent = el.dataset.real;
+                                el.style.opacity = '1';
+                                el.style.color = '#2bb35a';
+                                el.style.textShadow = '0 0 2px rgba(43, 179, 90, 0.4)';
+                            }
+                        }
+                    }
+                }
+                
+                if (allCompleted) {
+                    finish();
+                } else {
+                    animationFrameId = requestAnimationFrame(loop);
+                }
+            }
+            
+            function finish() {
+                animationFrameId = null;
+                details.dataset.matrixRunning = 'false';
+                details.dataset.matrixProcessed = 'true';
+                if (originalHtml !== null) {
+                    details.innerHTML = originalHtml;
+                }
+            }
+            
+            animationFrameId = requestAnimationFrame(loop);
+        }
+    });
+
+    // Shared mascot clicks counter state and UI updater
+    let clickCount = parseInt(localStorage.getItem('squirty_clicks') || '0', 10);
+    const updateCounterUI = () => {
+        const counterEl = document.getElementById('squirty-clicks-count');
+        if (counterEl) {
+            counterEl.textContent = clickCount;
+        }
+    };
+
+    // Cute swimming pixel squid inside the viewport / entire page
+    function initSquid() {
+        if (document.getElementById('squid-container')) {
+            return;
+        }
+        // Create squid element
+        const squid = document.createElement('div');
+        squid.id = 'squid-container';
+        squid.style.setProperty('transition', 'none', 'important');
+
+        // ---- Squirty art + expression system (procedural 64-grid; matches the design preview) ----
+        const _CY='#00e5ff',_SH='#00b8d4',_HI='#7df9ff',_WT='#ffffff',_BK='#000000',_BL='#ff4081',_MO='#00838f';
+        const _r=(x,y,w,h,f,ex)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${f}"${ex||''}/>`;
+        const _disc=(dx,dy,rad,f,ex)=>{let s='';for(let y=Math.round(dy-rad);y<=Math.round(dy+rad);y++){const dd=rad*rad-(y-dy)*(y-dy);if(dd<0)continue;const w=Math.sqrt(dd);s+=_r(Math.round(dx-w),y,Math.round(2*w)+1,1,f,ex);}return s;};
+        const _ell=(ex,ey,rx,ry,f)=>{let s='';for(let y=Math.round(ey-ry);y<=Math.round(ey+ry);y++){const tt=(y-ey)/ry,dd=1-tt*tt;if(dd<0)continue;const w=rx*Math.sqrt(dd);s+=_r(Math.round(ex-w),y,Math.round(2*w)+1,1,f);}return s;};
+        const _FX=32,_EYECY=30,_EDX=10,_EWR=6.5,_EPR=3.9,_MY=40,_MD=4,_MH=6;
+        function squidSVG(){
+          const cx=32,apexY=2,domeEndY=26,sideEndY=42,baseY=49,halfMax=21,baseHalf=16;
+          const hw=(y)=>{ if(y<apexY||y>=baseY)return -1; if(y<=domeEndY){const tt=(y-apexY)/(domeEndY-apexY);return halfMax*Math.pow(tt,1.1);} if(y<=sideEndY)return halfMax; const tt=(y-sideEndY)/(baseY-sideEndY); return halfMax+(baseHalf-halfMax)*tt; };
+          const span=(yT,yB,lf,rf,f,ex)=>{let s='';for(let y=yT;y<=yB;y++){const xl=Math.round(lf(y)),xr=Math.round(rf(y));if(xr>=xl)s+=_r(xl,y,xr-xl+1,1,f,ex);}return s;};
+          const body=span(apexY,baseY-1,y=>cx-hw(y),y=>cx+hw(y),_CY);
+          let shade='';for(let y=apexY+6;y<baseY;y++){const w=hw(y);if(w>5)shade+=_r(Math.round(cx+w)-3,y,3,1,_SH);}
+          let hi='';for(let y=apexY+2;y<apexY+10;y++){const w=hw(y);if(w>3)hi+=_r(Math.round(cx-w)+1,y,Math.max(2,Math.round(w*0.45)),1,_HI);}
+          const blush=_r(cx-19,37,5,3,_BL,' opacity="0.8"')+_r(cx+15,37,5,3,_BL,' opacity="0.8"');
+          const fY0=6,fY1=22,fMax=10; const finOut=(y)=>fMax*Math.sin(Math.PI*(y-fY0)/(fY1-fY0));
+          const finL=`<g class="squid-fin-left" style="transform-origin:${Math.round(cx-hw(13))}px 13px">`+span(fY0,fY1,y=>cx-hw(y)-finOut(y),y=>cx-hw(y),_CY)+span(fY0,fY1,y=>cx-hw(y)-finOut(y),y=>cx-hw(y)-finOut(y)+1.5,_SH)+`</g>`;
+          const finR=`<g class="squid-fin-right" style="transform-origin:${Math.round(cx+hw(13))}px 13px">`+span(fY0,fY1,y=>cx+hw(y),y=>cx+hw(y)+finOut(y),_CY)+span(fY0,fY1,y=>cx+hw(y)+finOut(y)-1.5,y=>cx+hw(y)+finOut(y),_SH)+`</g>`;
+          const legX=[cx-12,cx-4,cx+4,cx+12];let tents='';legX.forEach((lx,i)=>{tents+=`<g class="pixel-tentacle-${i+1}" style="transform-origin:${lx}px ${baseY}px">`+span(baseY-3,baseY+13,y=>{const tt=(y-(baseY-3))/16;return lx-3*(1-tt);},y=>{const tt=(y-(baseY-3))/16;return lx+3*(1-tt);},(i%2?_SH:_CY))+`</g>`;});
+          return `<svg class="squid-svg" viewBox="0 0 64 64" width="100%" height="100%" style="shape-rendering:crispEdges">${finL}${finR}${tents}${body}${shade}${hi}${blush}<g id="face"></g></svg>`;
+        }
+        function faceSVG(p){ let s='';
+          if(p.brow>0.06){ const drop=Math.round(4*p.brow),topY=Math.round(_EYECY-_EWR-2); for(const side of [-1,1]){ const ex=_FX+side*_EDX; for(let i=0;i<7;i++){ const x=ex+(side<0?(-4+i):(4-i)); const y=topY+Math.round(drop*(i/6)); s+=_r(x,y,1,2,_BK);} } }
+          for(const side of [-1,1]){ const ex=_FX+side*_EDX,o=Math.max(0.12,Math.min(1.3,p.eyeOpen)); s+=_disc(ex,_EYECY,_EWR*o,_WT); if(o>0.32){ s+=_disc(ex+(p.lookx||0)*2.2,_EYECY+1+(p.looky||0)*2.2,_EPR*Math.min(1,o),_BK)+_disc(ex-1,_EYECY-2,1.4,_WT);} }
+          if(p.mouthOpen>0.28){ s+=_ell(_FX,_MY+1,2.6+2.6*p.mouthOpen,2+2.6*p.mouthOpen,_MO); } else { for(let i=-_MH;i<=_MH;i++){ const yy=Math.round(_MY+p.mouthCurve*_MD*(1-(i/_MH)*(i/_MH))); s+=_r(_FX+i,yy,1,2,_MO);} }
+          return s;
+        }
+        let expr={brow:0,eyeOpen:1,mouthCurve:0.9,mouthOpen:0,lookx:0,looky:0};
+        let blinkUntil=0,nextBlink=Date.now()+2000,gx=0,gy=0,scaredUntil=0;
+        let wariness=parseFloat(localStorage.getItem('squirty_wariness')||'0')||0;
+        function learnWary(d){ wariness=Math.max(0,Math.min(1,wariness+d)); try{localStorage.setItem('squirty_wariness',wariness.toFixed(3));}catch(e){} }
+        function moodName(){ if(isScared||mode==='fleeing')return 'scared'; if(mode==='hunting'||mode==='striking')return 'angry'; if(mode==='latched')return 'chomp'; return 'happy'; }
+        function targetExpr(now){ const m=moodName(); let tg;
+          if(m==='angry') tg={brow:1,eyeOpen:0.68,mouthCurve:-0.35,mouthOpen:0.12};
+          else if(m==='scared') tg={brow:0,eyeOpen:1.22,mouthCurve:0,mouthOpen:0.5};
+          else if(m==='chomp') tg={brow:0,eyeOpen:0.85,mouthCurve:0.5,mouthOpen:0.6+0.4*Math.sin(now/70)};
+          else tg={brow:0,eyeOpen:1,mouthCurve:0.88+0.12*Math.sin(now/600),mouthOpen:0};
+          if(m!=='angry'){ if(now>nextBlink){ blinkUntil=now+120; nextBlink=now+1800+Math.random()*2600; } if(now<blinkUntil) tg.eyeOpen=0.12; }
+          return tg;
+        }
+        function cloak(on){ const s=squid.querySelector('.squid-svg'); if(s)s.classList.toggle('squid-cloaked',on); squid.classList.toggle('cloaking',on); }
+        function popOut(){ const s=squid.querySelector('.squid-svg'); if(!s)return; cloak(false); s.classList.remove('squid-pop-active'); void s.offsetWidth; s.classList.add('squid-pop-active'); }
+
+        squid.innerHTML = squidSVG();
+        
+        document.body.appendChild(squid);
+        
+        // Long hunting tentacles, drawn in a click-through overlay between the
+        // body and the cursor during a strike (the short body tentacles stay).
+        const SQNS = 'http://www.w3.org/2000/svg';
+        let tentLayer = document.getElementById('squid-tentacles');
+        if (tentLayer) tentLayer.remove();
+        tentLayer = document.createElementNS(SQNS, 'svg');
+        tentLayer.id = 'squid-tentacles';
+        const tentPaths = [];
+        for (let i = 0; i < 2; i++) {
+            const p = document.createElementNS(SQNS, 'path');
+            tentLayer.appendChild(p);
+            tentPaths.push(p);
+        }
+        document.body.appendChild(tentLayer);
+
+        // Dynamic viewport limit solver with fallback safe defaults
+        const getLimits = () => {
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+            return {
+                maxX: w > 100 ? w - 41 : 800,
+                maxY: h > 100 ? h - 41 : 600
+            };
+        };
+        
+        let startLim = getLimits();
+        let posX = Math.random() * startLim.maxX;
+        let posY = Math.random() * startLim.maxY;
+        let velX = 0;
+        let velY = 0;
+        let rotation = 0;
+        
+        // Mouse coordinate tracking
+        let mouseX = -9999;
+        let mouseY = -9999;
+        let lastMoveT = 0, lastMX = 0, lastMY = 0;
+        if (window.__squidMouseMove) {
+            window.removeEventListener('mousemove', window.__squidMouseMove);
+        }
+        window.__squidMouseMove = (e) => {
+            const now = performance.now();
+            if (lastMoveT) {
+                const dt = Math.max(8, now - lastMoveT);
+                // approximate cursor speed in px per animation frame
+                const sp = Math.hypot(e.clientX - lastMX, e.clientY - lastMY) / dt * 16;
+                cvx = (e.clientX - lastMX) / dt * 16; cvy = (e.clientY - lastMY) / dt * 16;
+                // While Squirty is latched on, shaking the cursor fast drains his grip.
+                if (mode === 'latched' && sp > 8) {
+                    grip -= (sp - 8) * 1.8;
+                }
+            }
+            lastMoveT = now; lastMX = e.clientX; lastMY = e.clientY;
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        };
+        window.addEventListener('mousemove', window.__squidMouseMove);
+
+        // --- Hunt / attack / latch state machine ---
+        let mode = 'idle';            // 'idle' | 'hunting' | 'attacking' | 'latched'
+        let huntEndTime = 0;
+        let nextHuntTime = Date.now() + 9000 + Math.random() * 9000;
+        let grip = 0;
+        const GRIP_MAX = 100;
+        const GRAB_RANGE = 52;        // distance (px) from cursor that triggers the grab
+        const HUNT_SPEED = 4.25;   // slowed ~15% so the hunt/latch is less twitchy
+        let cvx = 0, cvy = 0, strikeStart = 0, strikeDur = 560, fleeUntil = 0;
+        let striking = false;         // tentacle strike in progress
+        let reach = 0;                // 0..1 how far the hunting tentacles have shot out
+        const STRIKE_RANGE = 190;     // ~5x body length the hunting tentacles can lash
+
+        const setSquidState = (cls) => {
+            const svgEl = squid.querySelector('.squid-svg');
+            if (!svgEl) return;
+            svgEl.classList.remove('squid-hunting', 'squid-attacking', 'squid-chewing');
+            if (cls) svgEl.classList.add(cls);
+        };
+
+        const startStrike = () => {
+            if (mode !== 'hunting') return;
+            mode = 'striking';   // tentacles spring out, then reel him in (see updatePhysics)
+            reach = 0;
+            striking = true;
+            strikeStart = Date.now(); strikeDur = 500 + Math.random() * 150; // latch within 0.5-0.65s
+            popOut();            // de-cloak with a pop
+            setSquidState('squid-attacking');
+            const svgEl = squid.querySelector('.squid-svg');
+            if (svgEl) { svgEl.classList.remove('squid-pulse-active'); void svgEl.offsetWidth; svgEl.classList.add('squid-pulse-active'); }
+        };
+
+        const startFlee = () => {
+            isScared = true; cloak(true);
+            const hide = 1100 + wariness * 2400; scaredUntil = Date.now() + hide;
+            nextHuntTime = Date.now() + hide + 4000;
+            const a = Math.atan2((posY + 18) - mouseY, (posX + 18) - mouseX);
+            const burst = 10 + wariness * 7; velX = Math.cos(a) * burst; velY = Math.sin(a) * burst;
+        };
+        const detach = () => {
+            mode = 'idle';
+            setSquidState(null);
+            cloak(false);
+            grip = 0;
+            nextHuntTime = Date.now() + 12000 + Math.random() * 10000;
+            // fling away from the cursor like he got shaken loose
+            const fa = Math.atan2(posY + 18 - mouseY, posX + 18 - mouseX);
+            velX = Math.cos(fa) * 11;
+            velY = Math.sin(fa) * 11;
+        };
+
+        // The cursor only reports position while it's over the page. When it
+        // leaves the viewport/window (e.g. onto another monitor) mousemove stops
+        // firing and the last coordinates go stale: mark it gone so Squirty
+        // doesn't chase an off-screen position, and break off any active hunt.
+        const onCursorGone = () => {
+            mouseX = -9999; mouseY = -9999;
+            if (mode !== 'idle') {
+                mode = 'idle';
+                setSquidState(null);
+                grip = 0;
+                nextHuntTime = Date.now() + 9000 + Math.random() * 9000;
+            }
+        };
+        if (window.__squidCursorGone) {
+            document.removeEventListener('mouseleave', window.__squidCursorGone);
+            window.removeEventListener('blur', window.__squidCursorGone);
+        }
+        window.__squidCursorGone = onCursorGone;
+        document.addEventListener('mouseleave', onCursorGone);
+        window.addEventListener('blur', onCursorGone);
+        document.addEventListener('visibilitychange', () => { if (document.hidden) onCursorGone(); });
+        
+        // Initial placement
+        squid.style.left = '0px';
+        squid.style.top = '0px';
+        squid.style.transform = `translate(${posX}px, ${posY}px) rotate(0deg)`;
+        
+        let nextPulseTime = Date.now() + 1000 + Math.random() * 2000;
+        let isScared = false;
+        
+        function updatePhysics() {
+            const limits = getLimits();
+            const now = Date.now();
+
+            // Squirty timeout: ignore the cursor and swim home to his house.
+            if (window.__squirtyTimeout) {
+                if (mode !== 'idle') { mode = 'idle'; setSquidState(null); striking = false; grip = 0; }
+                let hx = limits.maxX - 6, hy = 6;
+                const house = document.getElementById('squirty-house');
+                if (house) { const r = house.getBoundingClientRect(); hx = r.left + r.width / 2 - 18; hy = r.top + r.height / 2 - 12; }
+                posX += (hx - posX) * 0.08;
+                posY += (hy - posY) * 0.08;
+                velX = 0; velY = 0;
+                const home = Math.hypot(hx - posX, hy - posY) < 6;
+                squid.classList.toggle('squid-tucked', home);
+                squid.style.transform = `translate(${posX}px, ${posY}px) scale(${home ? 0.5 : 1})`;
+                reach = 0;
+                tentPaths.forEach(p => p.setAttribute('d', ''));
+                requestAnimationFrame(updatePhysics);
+                return;
+            }
+            squid.classList.remove('squid-tucked');
+
+            // He is smart: if the cursor bears down on him fast, he bolts and hides.
+            if (mode !== 'latched' && !isScared && mouseX > -9000) {
+                const hcx = posX + 18, hcy = posY + 18, hdx = hcx - mouseX, hdy = hcy - mouseY;
+                const hdist = Math.hypot(hdx, hdy) || 1;
+                if (hdist < (70 + wariness * 120) && (cvx * hdx + cvy * hdy) > 0 && Math.hypot(cvx, cvy) > 6) {
+                    learnWary(0.04); if (mode !== 'idle') setSquidState(null); startFlee();
+                }
+            }
+            if (isScared && now > scaredUntil) { isScared = false; cloak(false); }
+
+            // Every now and then, go hunt the cursor.
+            if (mode === 'idle' && !isScared && mouseX > -9000 && now > nextHuntTime) {
+                mode = 'hunting';
+                huntEndTime = now + 7000;
+                setSquidState('squid-hunting');
+                cloak(true);   // cloak while approaching
+            }
+
+            if (mode === 'latched') {
+                // Chewing on the cursor: pin the mouth to it.
+                posX = mouseX - 18;
+                posY = mouseY - 9;
+                velX = 0; velY = 0;
+                grip = Math.min(GRIP_MAX, grip + 0.6); // recovers while the cursor is still
+                if (grip <= 0) detach();
+            } else if (mode === 'striking') {
+                // Tentacles have shot out; spring them taut and reel him in fast.
+                reach += (1 - reach) * 0.24;
+                if (reach > 0.5) {
+                    posX += ((mouseX - 18) - posX) * 0.29; // reel-in (slowed ~15%)
+                    posY += ((mouseY - 9) - posY) * 0.29;
+                }
+                velX = 0; velY = 0;
+                const cx = posX + 18, cy = posY + 18;
+                if (Math.hypot(mouseX - cx, mouseY - cy) < GRAB_RANGE || now - strikeStart >= strikeDur) {
+                    mode = 'latched'; grip = GRIP_MAX; setSquidState('squid-chewing'); striking = false;
+                } else if (now > huntEndTime + 1500) {
+                    mode = 'idle'; setSquidState(null); striking = false;
+                    nextHuntTime = now + 10000 + Math.random() * 9000;
+                }
+            } else {
+                if (mode === 'hunting') {
+                    const cx = posX + 18, cy = posY + 18;
+                    const dx = mouseX - cx, dy = mouseY - cy;
+                    const d = Math.hypot(dx, dy) || 1;
+                    if (d < STRIKE_RANGE) {
+                        startStrike();
+                    } else {
+                        velX += (dx / d) * 0.64;
+                        velY += (dy / d) * 0.64;
+                        const sp = Math.hypot(velX, velY);
+                        if (sp > HUNT_SPEED) { velX = velX / sp * HUNT_SPEED; velY = velY / sp * HUNT_SPEED; }
+                        if (now > huntEndTime) { // gave up the chase
+                            mode = 'idle'; setSquidState(null);
+                            nextHuntTime = now + 10000 + Math.random() * 9000;
+                        }
+                    }
+                } else if (now > nextPulseTime && !isScared) {
+                    pulseSwim();
+                }
+
+                // Integrate motion + drag
+                posX += velX; posY += velY;
+                velX *= 0.94; velY *= 0.94;
+
+                // Wall bounce
+                if (posX < 0) { posX = 0; velX = Math.abs(velX) * 0.5; }
+                if (posX > limits.maxX) { posX = limits.maxX; velX = -Math.abs(velX) * 0.5; }
+                if (posY < 0) { posY = 0; velY = Math.abs(velY) * 0.5; }
+                if (posY > limits.maxY) { posY = limits.maxY; velY = -Math.abs(velY) * 0.5; }
+            }
+
+            // Orient the whole body to the swim direction like a real squid -
+            // jetting mantle-first, but leading with the tentacles while hunting -
+            // instead of staying upright. The SVG is drawn mantle-up / tentacles
+            // -down, so "forward up" is -90deg.
+            const speed = Math.hypot(velX, velY);
+            const hunting = (mode === 'hunting' || mode === 'striking' || mode === 'latched');
+            let heading = rotation;
+            if (hunting && mouseX > -9000) {
+                const tx = mouseX - (posX + 18), ty = mouseY - (posY + 18);
+                heading = Math.atan2(-tx, ty) * 180 / Math.PI; // tentacles lead toward prey
+            } else if (speed > 0.6) {
+                heading = Math.atan2(velX, -velY) * 180 / Math.PI; // mantle-first jet
+            }
+            // Turn smoothly along the shortest arc; chewing adds a head-shake.
+            const dRot = ((heading - rotation + 540) % 360) - 180;
+            rotation += dRot * 0.18;
+            const shake = (mode === 'latched') ? Math.sin(now / 55) * 7 : 0;
+
+            squid.style.transform = `translate(${posX}px, ${posY}px) rotate(${rotation + shake}deg)`;
+
+            // Chromatophore color-pulsing while stalking / striking.
+            const svgChro = squid.querySelector('.squid-svg');
+            if (svgChro) svgChro.classList.toggle('squid-chromatophore', mode === 'hunting' || mode === 'striking');
+
+            // Long hunting tentacles: spring from the body to the cursor and stay
+            // taut while reeling in; retract (decay) otherwise.
+            if (mode !== 'striking') reach *= 0.6;
+            if (reach > 0.03 && mouseX > -9000) {
+                const ax = posX + 18, ay = posY + 26; // tentacle root (underside / front)
+                const tx = ax + (mouseX - ax) * reach;
+                const ty = ay + (mouseY - ay) * reach;
+                let nx = -(ty - ay), ny = (tx - ax);
+                const nlen = Math.hypot(nx, ny) || 1; nx /= nlen; ny /= nlen;
+                const whip = Math.sin(now / 38) * 12 * (1 - reach); // whippy out, taut in
+                for (let i = 0; i < 2; i++) {
+                    const off = (i === 0 ? 5 : -5);
+                    const c1x = ax + (tx - ax) * 0.40 + nx * (whip + off);
+                    const c1y = ay + (ty - ay) * 0.40 + ny * (whip + off);
+                    const c2x = ax + (tx - ax) * 0.78 + nx * (-whip * 0.6 + off * 0.5);
+                    const c2y = ay + (ty - ay) * 0.78 + ny * (-whip * 0.6 + off * 0.5);
+                    const p = tentPaths[i];
+                    p.setAttribute('d', `M ${ax.toFixed(1)} ${ay.toFixed(1)} C ${c1x.toFixed(1)} ${c1y.toFixed(1)}, ${c2x.toFixed(1)} ${c2y.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`);
+                    p.setAttribute('stroke', i === 0 ? '#00e5ff' : '#7df9ff');
+                    p.setAttribute('stroke-width', (1 + reach * 3).toFixed(1));
+                    p.setAttribute('opacity', Math.min(1, reach * 1.6).toFixed(2));
+                }
+            } else {
+                tentPaths.forEach(p => p.setAttribute('d', ''));
+            }
+
+            // Tentacle bundle reaches toward the cursor while hunting/latched.
+            const bundle = squid.querySelector('#squid-tentacle-bundle');
+            if (bundle) {
+                if (mode !== 'idle') {
+                    const cx = posX + 18, cy = posY + 18;
+                    // Cursor angle in the body's own (rotated) frame; tentacles hang
+                    // at local +90deg, so the extra curl is small once the body has
+                    // already turned to point them at the cursor.
+                    const scr = Math.atan2(mouseY - cy, mouseX - cx) * 180 / Math.PI;
+                    const localAng = ((scr - rotation - 90 + 540) % 360) - 180;
+                    const rot = Math.max(-30, Math.min(30, localAng));
+                    bundle.style.transformOrigin = '8px 11px';
+                    bundle.style.transform = `rotate(${rot}deg)`;
+                } else {
+                    bundle.style.transform = '';
+                }
+            }
+            
+            // Fluid expression: mood comes from state; gaze follows the cursor.
+            if (mouseX > -9000) {
+                const gdx = mouseX - (posX + 18), gdy = mouseY - (posY + 18);
+                const ga = rotation * Math.PI / 180, gca = Math.cos(ga), gsa = Math.sin(ga);
+                const gldx = gdx * gca + gdy * gsa, gldy = -gdx * gsa + gdy * gca;
+                gx += (Math.max(-1, Math.min(1, gldx / 36)) - gx) * 0.2;
+                gy += (Math.max(-1, Math.min(1, gldy / 36)) - gy) * 0.2;
+            } else { gx += (0 - gx) * 0.1; gy += (0 - gy) * 0.1; }
+            const _tgt = targetExpr(now);
+            const _k = (mode === 'striking' || isScared) ? 0.3 : 0.16;
+            for (const _key in _tgt) { expr[_key] += (_tgt[_key] - expr[_key]) * _k; }
+            expr.lookx += (gx - expr.lookx) * 0.3; expr.looky += (gy - expr.looky) * 0.3;
+            const faceEl = squid.querySelector('#face');
+            if (faceEl) faceEl.innerHTML = faceSVG(expr);
+            
+            requestAnimationFrame(updatePhysics);
+        }
+        
+        function pulseSwim(forcePower = null) {
+            const limits = getLimits();
+            
+            // Swim in larger steps since the viewport is spacious
+            const maxStepX = 300;
+            const maxStepY = 250;
+            const rx = (Math.random() * 2 - 1) * maxStepX;
+            const ry = (Math.random() * 2 - 1) * maxStepY;
+            
+            let tx = posX + rx;
+            let ty = posY + ry;
+            
+            // Clamp targets to bounds
+            if (tx < 0) tx = 0;
+            if (tx > limits.maxX) tx = limits.maxX;
+            if (ty < 0) ty = 0;
+            if (ty > limits.maxY) ty = limits.maxY;
+            
+            const dx = tx - posX;
+            const dy = ty - posY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            
+            let angle = 0;
+            if (dist > 10) {
+                angle = Math.atan2(dy, dx);
+                const power = forcePower !== null ? forcePower : (2.5 + Math.random() * 3.5);
+                
+                velX = Math.cos(angle) * power;
+                velY = Math.sin(angle) * power;
+                
+                const svgEl = squid.querySelector('.squid-svg');
+                if (svgEl) {
+                    svgEl.classList.remove('squid-pulse-active');
+                    void svgEl.offsetWidth; // Trigger reflow
+                    svgEl.classList.add('squid-pulse-active');
+                }
+            }
+            
+            nextPulseTime = Date.now() + 2000 + Math.random() * 2500;
+            return angle;
+        }
+        
+        // Scared run-away click handler
+        squid.addEventListener('click', (e) => {
+            e.stopPropagation();
+            
+            // Increment mascot click counter
+            clickCount++;
+            localStorage.setItem('squirty_clicks', clickCount);
+            updateCounterUI();
+
+            // A click also breaks off any hunt/latch.
+            mode = 'idle';
+            setSquidState(null);
+            grip = 0;
+            nextHuntTime = Date.now() + 12000 + Math.random() * 10000;
+
+            // Dart away fast (returns the angle the squid escapes in)
+            isScared = true; scaredUntil = Date.now() + 1600; cloak(true); learnWary(0.06);
+            const angle = pulseSwim(14); // Escape speed
+            
+            // Spawn ink
+            const ink = document.createElement('div');
+            ink.className = 'squid-ink';
+            ink.style.left = `${posX + 16}px`;
+            ink.style.top = `${posY + 16}px`;
+            
+            // 180 degrees opposite to acceleration is angle + Math.PI.
+            // SVG defaults to pointing UP (-90 or 270 deg), so we rotate by angle + 270 degrees.
+            const angleDegrees = angle * (180 / Math.PI);
+            const rotDegrees = angleDegrees + 270;
+            
+            ink.innerHTML = `
+            <svg viewBox="0 0 16 16" width="100%" height="100%" style="shape-rendering: crispEdges;">
+              <!-- Bubbly Green Fart / Gas Puff -->
+              <!-- Top Highlight -->
+              <rect x="6" y="2" width="4" height="1" fill="#40ff40"/>
+              <rect x="4" y="3" width="8" height="1" fill="#40ff40"/>
+              <rect x="3" y="4" width="2" height="1" fill="#40ff40"/>
+              <rect x="11" y="4" width="2" height="1" fill="#40ff40"/>
+              
+              <!-- Mid-body puff -->
+              <rect x="5" y="4" width="6" height="1" fill="#00c000"/>
+              <rect x="2" y="5" width="12" height="4" fill="#00c000"/>
+              <rect x="3" y="9" width="10" height="2" fill="#00c000"/>
+              
+              <!-- Base Shadow -->
+              <rect x="4" y="11" width="8" height="1" fill="#008000"/>
+              <rect x="6" y="12" width="4" height="1" fill="#008000"/>
+              
+              <!-- Trailing side particles/puffs -->
+              <rect x="1" y="7" width="1" height="2" fill="#008000" opacity="0.8"/>
+              <rect x="14" y="7" width="1" height="2" fill="#008000" opacity="0.8"/>
+              <rect x="7" y="14" width="2" height="1" fill="#008000" opacity="0.6"/>
+            </svg>
+            `;
+            
+            ink.style.transform = `translate(-50%, -50%) rotate(${rotDegrees}deg) scale(0.1)`;
+            document.body.appendChild(ink);
+            
+            setTimeout(() => {
+                // Grow 180 degrees from acceleration (local -Y direction of rotated frame)
+                ink.style.transform = `translate(-50%, -50%) rotate(${rotDegrees}deg) translateY(-24px) scale(3.5)`;
+                ink.style.opacity = '0';
+            }, 20);
+            
+            setTimeout(() => {
+                ink.remove();
+            }, 1000);
+            
+            setTimeout(() => {
+                isScared = false;
+            }, 1000);
+        });
+        
+        // Start updates
+        requestAnimationFrame(updatePhysics);
+    }
+
+    // Relocate library name & version to top navigation bar
+    const relocateTitle = () => {
+        const projNameEl = document.getElementById('projectname');
+        const projNumEl = document.getElementById('projectnumber');
+        const mainMenu = document.getElementById('main-menu');
+        
+        if (projNameEl && mainMenu && !mainMenu.querySelector('.navbar-project-title')) {
+            const libName = projNameEl.childNodes[0].textContent.trim();
+            const version = projNumEl ? projNumEl.textContent.trim() : '';
+            
+            const titleLi = document.createElement('li');
+            titleLi.className = 'navbar-project-title';
+            
+            const libSpan = document.createElement('span');
+            libSpan.className = 'navbar-libname';
+            // Split the name into two glowing links to the repo ("Deterministic"
+            // + "ESPAsyncWebServer"), kept tight against each other.
+            const prefix = 'Deterministic';
+            const mkLink = (txt) => {
+                const a = document.createElement('a');
+                a.className = 'navbar-libname-link';
+                a.href = 'https://github.com/dstroy0/ProtoCore';
+                a.target = '_blank';
+                a.rel = 'noopener noreferrer';
+                a.textContent = txt;
+                return a;
+            };
+            if (libName.startsWith(prefix)) {
+                libSpan.appendChild(mkLink(prefix));
+                libSpan.appendChild(mkLink(libName.slice(prefix.length)));
+            } else {
+                libSpan.appendChild(mkLink(libName));
+            }
+            titleLi.appendChild(libSpan);
+            
+            if (version) {
+                const verSpan = document.createElement('span');
+                verSpan.className = 'navbar-version';
+                verSpan.textContent = ' ' + version;
+                titleLi.appendChild(verSpan);
+            }
+            
+            mainMenu.insertBefore(titleLi, mainMenu.firstChild);
+            
+            const projRow = document.getElementById('projectrow');
+            if (projRow) {
+                projRow.style.display = 'none';
+            }
+        }
+    };
+
+    // Initialize smart clicks counter on the navigation bar
+    const initCounter = () => {
+        const mainMenu = document.getElementById('main-menu');
+        if (mainMenu && !mainMenu.querySelector('.navbar-squirty-counter')) {
+            const counterLi = document.createElement('li');
+            counterLi.className = 'navbar-squirty-counter';
+            
+            const labelSpan = document.createElement('span');
+            labelSpan.className = 'navbar-squirty-label';
+            labelSpan.textContent = 'Squirty Clicks: ';
+            
+            const countSpan = document.createElement('span');
+            countSpan.id = 'squirty-clicks-count';
+            countSpan.textContent = clickCount;
+            
+            counterLi.appendChild(labelSpan);
+            counterLi.appendChild(countSpan);
+            
+            mainMenu.appendChild(counterLi);
+        }
+    };
+
+    // Squirty's house (top-right banner) + the "Squirty timeout" navbar toggle.
+    function initSquirtyHouse() {
+        if (!document.getElementById('squirty-house')) {
+            const house = document.createElement('div');
+            house.id = 'squirty-house';
+            house.title = "Squirty's house";
+            house.innerHTML = `
+                <svg viewBox="0 0 16 16" width="100%" height="100%" style="shape-rendering: crispEdges; overflow: visible;">
+                  <!-- sponge chimney (tube sponge), bubbles puff out the top in timeout -->
+                  <rect x="10" y="3" width="2" height="5" fill="#ff6e40"/>
+                  <rect x="11" y="3" width="1" height="5" fill="#e64a19"/> <!-- shaded edge -->
+                  <rect x="10" y="3" width="2" height="1" fill="#ff8a65"/> <!-- top rim -->
+                  <rect x="10" y="3" width="1" height="1" fill="#7a2f12"/> <!-- osculum (hole) -->
+                  <!-- live rock pile -->
+                  <rect x="6" y="7" width="4" height="1" fill="#6d4c41"/>
+                  <rect x="4" y="8" width="8" height="1" fill="#6d4c41"/>
+                  <rect x="3" y="9" width="10" height="1" fill="#5d4037"/>
+                  <rect x="2" y="10" width="12" height="1" fill="#6d4c41"/>
+                  <rect x="2" y="11" width="12" height="1" fill="#5d4037"/>
+                  <rect x="1" y="12" width="14" height="1" fill="#5d4037"/>
+                  <rect x="1" y="13" width="14" height="1" fill="#6d4c41"/>
+                  <rect x="0" y="14" width="16" height="1" fill="#5d4037"/>
+                  <rect x="0" y="15" width="16" height="1" fill="#4e342e"/>
+                  <!-- cave entrance (Squirty tucks in here during timeout) -->
+                  <rect x="6" y="11" width="3" height="3" fill="#160d10"/>
+                  <rect x="6" y="11" width="3" height="1" fill="#0b070a"/>
+                  <!-- coralline algae: pink / purple spots + a dab of green -->
+                  <rect x="6" y="8" width="1" height="1" fill="#ff7eb6"/>
+                  <rect x="11" y="9" width="1" height="1" fill="#ff7eb6"/>
+                  <rect x="4" y="9" width="1" height="1" fill="#7b4a8a"/>
+                  <rect x="12" y="10" width="1" height="1" fill="#7b4a8a"/>
+                  <rect x="3" y="10" width="1" height="1" fill="#4caf50"/>
+                  <rect x="2" y="14" width="1" height="1" fill="#ff7eb6"/>
+                  <rect x="13" y="14" width="1" height="1" fill="#7b4a8a"/>
+                  <!-- chimney bubbles (animate only while in timeout) -->
+                  <circle class="sq-bubble sq-b1" cx="10.5" cy="2.5" r="0.8" fill="#b3e5fc"/>
+                  <circle class="sq-bubble sq-b2" cx="10.5" cy="2.5" r="0.6" fill="#e1f5fe"/>
+                  <circle class="sq-bubble sq-b3" cx="10.5" cy="2.5" r="0.5" fill="#b3e5fc"/>
+                </svg>`;
+            document.body.appendChild(house);
+        }
+        const mainMenu = document.getElementById('main-menu');
+        if (mainMenu && !mainMenu.querySelector('.navbar-squirty-timeout')) {
+            const li = document.createElement('li');
+            li.className = 'navbar-squirty-timeout';
+            li.textContent = '\u{1F3E0} Squirty timeout';
+            li.title = 'Send Squirty to his house (click again to let him out)';
+            li.addEventListener('click', () => {
+                window.__squirtyTimeout = !window.__squirtyTimeout;
+                li.classList.toggle('active', !!window.__squirtyTimeout);
+                const h = document.getElementById('squirty-house');
+                if (h) h.classList.toggle('timeout', !!window.__squirtyTimeout); // chimney bubbles
+                try { localStorage.setItem('squirty_timeout', window.__squirtyTimeout ? '1' : '0'); } catch (e) {}
+            });
+            mainMenu.appendChild(li);
+        }
+
+        // Timeout is sticky: if the user sent Squirty to his house, he stays there
+        // across page loads until they let him out.
+        let persisted = false;
+        try { persisted = localStorage.getItem('squirty_timeout') === '1'; } catch (e) {}
+        if (persisted) {
+            window.__squirtyTimeout = true;
+            const h = document.getElementById('squirty-house');
+            if (h) h.classList.add('timeout');
+            const tl = document.querySelector('.navbar-squirty-timeout');
+            if (tl) tl.classList.add('active');
+        }
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(relocateTitle, 50);
+            setTimeout(initCounter, 75);
+            setTimeout(initSquirtyHouse, 90);
+            setTimeout(initSquid, 100);
+        });
+    } else {
+        setTimeout(relocateTitle, 50);
+        setTimeout(initCounter, 75);
+        setTimeout(initSquirtyHouse, 90);
+        setTimeout(initSquid, 100);
+    }
+})();
+</script>
+</body>
+</html>

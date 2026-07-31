@@ -1,0 +1,126 @@
+#!/usr/bin/env bash
+# Auto-fix files so the CI Code-Formatting / Markdown-Formatting / Spellcheck jobs never
+# fail on something a tool can fix:
+#   1. clang-format -i on the STAGED C/C++/.ino files  (CI: clang-format-22 --style=file
+#      --dry-run --Werror)
+#   1b. a read-only drift WARNING for tracked C/C++/.ino files that are not part of this commit
+#      (CI lints the whole tree, so pre-existing drift fails CI on an unrelated commit)
+#   2. black on staged .py  (line-length from pyproject.toml)
+#   3. prettier --write on staged .md/.json/.yml/.yaml (+ web .html)
+#   4. auto-add any unknown cspell words from the staged docs (README.md + docs/**/*.md) to
+#      cspell.json  (CI: cspell config cspell.json over README.md + docs/**/*.md)
+#   5. regenerate the test-matrix-derived files (platformio.ini + test/README.md) when
+#      test/test_matrix.json is staged  (CI: python3 test/gen_test_envs.py --check)
+# then re-stages whatever it changed.
+#
+# EVERY auto-fix step is scoped to what you are actually committing. The hook never edits or
+# stages a file you did not touch: a commit stays reviewable, and an unrelated drifted file can
+# never ride along inside it. Repo-wide drift is surfaced as a warning (step 1b) so you still
+# learn CI will fail - fix it in its own commit, which is where that change belongs.
+# Set PC_HOOK_NO_DRIFT_SCAN=1 to skip the whole-tree drift scan.
+#
+# Install once per clone:   git config core.hooksPath tools/git-hooks
+# Uses the locally installed tools (clang-format, and prettier/cspell via npx); if a tool is
+# missing that step is skipped rather than blocking the commit.
+set -uo pipefail
+cd "$(git rev-parse --show-toplevel)" 2>/dev/null || exit 0
+
+# Staged (added/copied/modified) paths matching the given pathspecs, excluding build_opt.h.
+staged() { git diff --cached --name-only --diff-filter=ACM -- "$@" 2>/dev/null | grep -v '/build_opt\.h$'; }
+
+# 1) clang-format the STAGED C/C++/.ino files, then re-stage them.
+mapfile -t CF < <(staged '*.cpp' '*.h' '*.hpp' '*.cc' '*.ino')
+if [ "${#CF[@]}" -gt 0 ] && command -v clang-format >/dev/null 2>&1; then
+    printf '%s\n' "${CF[@]}" | xargs -d '\n' -P4 -n40 clang-format -i --style=file
+    git add -- "${CF[@]}"
+fi
+
+# 1b) Read-only drift check over the tracked C/C++/.ino files NOT in this commit. CI lints the
+# whole tree, so a file that drifted in an earlier commit fails CI on an unrelated one. Warn
+# instead of reformatting it: silently absorbing an unrelated file into this commit is what makes
+# a diff unreviewable. Nothing here writes or stages - fix the listed files in their own commit.
+if [ "${PC_HOOK_NO_DRIFT_SCAN:-0}" != "1" ] && command -v clang-format >/dev/null 2>&1; then
+    # Candidates = tracked sources minus the staged set (those were just formatted above).
+    # Note: `list | grep -Fxv -f staged` exits 1 when it filters everything out, so it is kept
+    # out of an `&&/||` chain - `|| cat` there would re-emit the whole list.
+    ALL_SRC=$(git ls-files '*.cpp' '*.h' '*.hpp' '*.cc' '*.ino' | grep -v '/build_opt\.h$')
+    if [ "${#CF[@]}" -gt 0 ]; then
+        CANDIDATES=$(printf '%s\n' "$ALL_SRC" | grep -Fxv -f <(printf '%s\n' "${CF[@]}") || true)
+    else
+        CANDIDATES=$ALL_SRC
+    fi
+    DRIFT=$(printf '%s\n' "$CANDIDATES" | grep -v '^$' |
+        xargs -d '\n' -r -P4 -n40 clang-format --style=file --dry-run -Werror 2>&1 |
+        sed -n 's/^\(.*\):[0-9]\+:[0-9]\+: error:.*/\1/p' | sort -u)
+    if [ -n "$DRIFT" ]; then
+        COUNT=$(printf '%s\n' "$DRIFT" | grep -c .)
+        echo "pre-commit: WARNING - $COUNT tracked file(s) outside this commit are not clang-format clean;"
+        echo "            CI (clang-format --dry-run -Werror, whole tree) will fail until they are fixed:"
+        printf '%s\n' "$DRIFT" | head -10 | sed 's/^/              /'
+        [ "$COUNT" -gt 10 ] && echo "              ... and $((COUNT - 10)) more"
+        echo "            Fix separately:  clang-format -i --style=file <files>"
+    fi
+fi
+
+# 2) black (the default Python formatter; line-length from pyproject.toml)
+mapfile -t PY < <(staged '*.py')
+if [ "${#PY[@]}" -gt 0 ] && python -m black --version >/dev/null 2>&1; then
+    python -m black -q "${PY[@]}" 2>/dev/null && git add -- "${PY[@]}"
+fi
+
+# 3) prettier markdown / json / yaml (the CRLF-safe end-of-line so Windows checkouts do not false-flag)
+mapfile -t PF < <(staged '*.md' '*.json' '*.yml' '*.yaml')
+if [ "${#PF[@]}" -gt 0 ]; then
+    npx --no-install prettier --write --end-of-line auto "${PF[@]}" >/dev/null 2>&1 && git add -- "${PF[@]}"
+fi
+
+# 3b) prettier the user-editable web-asset HTML under web (kept readable; build_assets.py minifies
+# it into the served string). Scoped to web so generated docs/*.html (configurator) is left alone.
+mapfile -t HF < <(git diff --cached --name-only --diff-filter=ACM -- 'web' 2>/dev/null | grep -E '\.html$')
+if [ "${#HF[@]}" -gt 0 ]; then
+    npx --no-install prettier --write --end-of-line auto "${HF[@]}" >/dev/null 2>&1 && git add -- "${HF[@]}"
+fi
+
+# 4) cspell: add unknown words from the scanned files (README.md + docs/**/*.md) to cspell.json
+mapfile -t MD < <(staged 'README.md' 'docs' | grep -E '^(README\.md|docs/.*\.md)$')
+if [ "${#MD[@]}" -gt 0 ] && [ -f cspell.json ]; then
+    WORDS=$(npx --no-install cspell --no-progress --no-summary --words-only --unique --config cspell.json \
+        "${MD[@]}" 2>/dev/null | tr -d '\r' | sort -u)
+    if [ -n "$WORDS" ]; then
+        # shellcheck disable=SC2086
+        if python tools/git-hooks/add_cspell_words.py $WORDS; then
+            npx --no-install prettier --write --end-of-line auto cspell.json >/dev/null 2>&1
+            git add -- cspell.json
+        fi
+    fi
+fi
+
+# 5) test matrix -> regenerate the derived files. platformio.ini + test/README.md are
+# generated from test/test_matrix.json (the single source of truth for the native test
+# envs); CI hard-fails if platformio.ini drifts (python3 test/gen_test_envs.py --check).
+# Regenerate + re-stage both so a matrix edit never leaves the derived files behind.
+if staged 'test/test_matrix.json' | grep -q .; then
+    PYBIN=$(command -v python 2>/dev/null || command -v python3 2>/dev/null)
+    if [ -n "$PYBIN" ]; then
+        "$PYBIN" test/gen_test_envs.py >/dev/null 2>&1 && git add -- platformio.ini
+        "$PYBIN" test/gen_test_readme.py >/dev/null 2>&1 && git add -- test/README.md
+    fi
+fi
+
+# 6) HARD GATE - banned constructs in src/ (docs/SRCBANNED.md). Unlike every step above, this does
+# not fix or warn: it FAILS the commit. A staged src/ source using strlen, <stdlib.h> / heap / parse
+# functions, the auto keyword, delay(), a non-reentrant gmtime family call, or an em-dash cannot be
+# committed. The scanner self-filters to src/ (examples/ + test/ are exempt) and ignores mentions in
+# comments / string literals, so only real code trips it. Set PC_HOOK_NO_BANNED_SCAN=1 to bypass.
+if [ "${PC_HOOK_NO_BANNED_SCAN:-0}" != "1" ]; then
+    mapfile -t SB < <(staged '*.c' '*.cc' '*.cpp' '*.h' '*.hpp' '*.ino')
+    if [ "${#SB[@]}" -gt 0 ]; then
+        PYBIN=$(command -v python 2>/dev/null || command -v python3 2>/dev/null)
+        if [ -n "$PYBIN" ] && ! "$PYBIN" ci_tooling/check/check_src_banned.py "${SB[@]}"; then
+            echo "pre-commit: BLOCKED - fix the banned construct(s) above before committing (docs/SRCBANNED.md)."
+            exit 1
+        fi
+    fi
+fi
+
+exit 0

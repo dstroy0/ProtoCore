@@ -1,0 +1,145 @@
+name: Feature Tables
+
+on:
+  push:
+    branches: [main]
+
+# Do not cancel in progress - let the commit complete cleanly.
+concurrency:
+  group: feature-tables-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  feature-tables:
+    name: Regenerate feature tables
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Authenticate with the automatic-actions deploy key so the bot commit
+          # pushes over SSH past the protected-main ruleset (same as the changelog).
+          ssh-key: ${{ secrets.ACTIONS_DEPLOY_KEY }}
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.x"
+
+      # Regenerate README.md / docs/README.md from docs/FEATURES.md so the tables
+      # never drift - no contributor has to remember to run the generator.
+      - name: Regenerate tables from FEATURES.md
+        run: python ci_tooling/generate/gen_feature_tables.py
+
+      # Regenerate the source-derived reference sections of docs/README.md (feature-flag
+      # defaults, tunable constants, the full source tree, per-feature build footprint) from
+      # protocore_config.h / src / docs/footprints.json so they never drift from the code.
+      - name: Regenerate README source-derived sections
+        run: python ci_tooling/generate/gen_readme_sections.py
+
+      # Regenerate the interactive build configurator from protocore_config.h so it
+      # always reflects the current feature flags, tuning knobs, and dependencies.
+      - name: Regenerate configurator from protocore_config.h
+        run: python ci_tooling/generate/gen_configurator.py
+
+      # Regenerate the build-flag dependency graph from the #error/#if guards in
+      # protocore_config.h so the README diagram tracks the guards the compiler enforces.
+      - name: Regenerate build-flag dependency graph
+        run: python ci_tooling/generate/gen_flag_deps.py
+
+      # Regenerate the core API-flow graph from the public API + protocol registry so the
+      # README diagram tracks the actual surface and layer wiring.
+      - name: Regenerate core API-flow graph
+        run: python ci_tooling/generate/gen_api_flow.py
+
+      # Render each diagram .mmd (written by the two generators above) to a light + dark PNG. The
+      # READMEs / docs embed the PNGs via <picture> instead of a live mermaid fence, so the diagrams
+      # show in the GitHub web UI, the GitHub mobile app, AND Doxygen (the app + Doxygen do not render
+      # mermaid). mermaid-cli pulls its own Chromium; the render script passes --no-sandbox for CI.
+      - name: Render diagram PNGs
+        run: |
+          npm install -g @mermaid-js/mermaid-cli@11
+          sudo apt-get update && sudo apt-get install -y graphviz  # dot renders the flag-deps forest
+          bash ci_tooling/assets/render_diagrams.sh
+
+      # Regenerate the per-feature footprint budget table in the README from the isolated
+      # measurements in docs/feature_ranges.json (produced periodically by the RPi build matrix,
+      # ci_tooling/generate/feature_budget.py collect) - a no-op if that file is absent.
+      - name: Regenerate footprint budget table
+        run: |
+          if [ -f docs/feature_ranges.json ]; then
+            python ci_tooling/generate/feature_budget.py readme docs/feature_ranges.json docs/footprints.json README.md
+          fi
+
+      # Regenerate the theme library + gallery, the toggleable theme blobs (Layer 7), and the favicon
+      # library + gallery from their generators, so the committed CSS / C blobs / SVGs never drift from
+      # the palette + motif sources. (Theme PNG previews are rendered separately by
+      # ci_tooling/assets/render_theme_previews.cjs; the favicon tarballs by ci_tooling/assets/pack_favicons.sh.)
+      - name: Regenerate theme + favicon libraries
+        run: |
+          python web_assets/wizard/gen_themes.py
+          python web_assets/wizard/gen_themes.py gallery
+          python web_assets/wizard/gen_theme_blobs.py
+          python web_assets/wizard/gen_favicons.py
+          python web_assets/wizard/gen_favicons.py gallery
+
+      # Regenerate each example's Arduino build_opt.h from its README build_flags so the
+      # examples keep building unmodified in the Arduino IDE.
+      - name: Regenerate example build_opt.h files
+        run: python ci_tooling/generate/gen_build_opt.py
+
+      # Regenerate the example index in docs/EXAMPLES.md from the examples/ tree so the
+      # per-group lists + total count never drift (the Foundation group had silently lost
+      # 16 entries before this was generated).
+      - name: Regenerate example index from examples/
+        run: python ci_tooling/generate/gen_examples.py
+
+      # Refresh test/README.md's generated sections (the env matrix scraped from test_matrix.json and
+      # the per-test directory scraped from the test_*.cpp files) so they never drift from the suite.
+      - name: Regenerate test/README.md from the suite
+        run: python test/gen_test_readme.py
+
+      - name: Format with Prettier
+        run: npx prettier@3.9.6 --write README.md docs/README.md docs/EXAMPLES.md docs/THEMES.md docs/FAVICONS.md
+
+      - name: Configure SSH commit signing
+        env:
+          CI_SIGNING_KEY: ${{ secrets.CI_SIGNING_KEY }}
+        run: |
+          # SSH-sign the bot commit (Verified) when the signing key is available;
+          # skip signing if the secret is unset so CI never breaks.
+          if [ -n "$CI_SIGNING_KEY" ]; then
+            mkdir -p ~/.ssh
+            printf '%s\n' "$CI_SIGNING_KEY" > ~/.ssh/ci_signing_key
+            chmod 600 ~/.ssh/ci_signing_key
+            git config gpg.format ssh
+            git config user.signingkey ~/.ssh/ci_signing_key
+            git config commit.gpgsign true
+          fi
+
+      # Rebase-and-retry push: the per-ref concurrency group only serializes this
+      # workflow against itself; it cannot stop the other auto-committing workflows
+      # (changelog, test-report, esp32-build) from advancing main during this multi-minute
+      # regeneration. git-auto-commit-action has no rebase/retry, so a concurrent push made
+      # this fail with "failed to push some refs". Commit, then rebase onto latest main and
+      # retry the push. (The non-doc bots touch different files, so the rebase applies clean.)
+      - name: Commit regenerated tables
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add README.md docs/README.md docs/ARCHITECTURE.md docs/configurator.html docs/EXAMPLES.md docs/THEMES.md docs/FAVICONS.md \
+            test/README.md docs/diagrams web_assets/themes/generated web_assets/favicons \
+            src/network_drivers/application/binary_asset_blobs.cpp src/network_drivers/application/binary_asset_blobs.h \
+            examples/*/*/build_opt.h
+          if git diff --cached --quiet; then
+            echo "no regenerated files changed"
+            exit 0
+          fi
+          git commit -m "docs: regenerate feature tables + configurator + build_opt.h + example index [skip ci]"
+          for attempt in 1 2 3 4 5; do
+            if git push origin HEAD:main; then exit 0; fi
+            echo "push rejected (attempt $attempt/5), rebasing onto origin/main"
+            git pull --rebase origin main
+          done
+          echo "feature-tables push still failing after 5 rebase+retry attempts"
+          exit 1

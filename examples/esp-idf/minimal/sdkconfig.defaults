@@ -1,0 +1,16 @@
+# Settings required to build ProtoCore (via arduino-esp32) with ESP-IDF.
+#
+# The Arduino component requires a 1000 Hz FreeRTOS tick, and autostart wires setup()/loop() so the
+# sketch shape matches an .ino. The app (Arduino core + this library) is large, so use the large
+# single-app partition and give the main task room for the WiFi stack + the server.
+
+# arduino-esp32 requirements
+CONFIG_FREERTOS_HZ=1000
+CONFIG_AUTOSTART_ARDUINO=y
+
+# Room for the Arduino core + library in one app partition on 4 MB flash
+CONFIG_PARTITION_TABLE_SINGLE_APP_LARGE=y
+CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
+
+# WiFi + server headroom on the Arduino loop task
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192

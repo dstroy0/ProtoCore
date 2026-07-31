@@ -1,0 +1,6 @@
+# clang-format cannot parse .ino: it infers Objective-C and this config declares only
+# Language: Cpp, so every sketch errors out. It also sorts includes, which pushes a
+# src/-relative include above protocore.h - and Arduino resolves the library by scanning
+# the sketch includes IN ORDER, so that reordering makes 131 of 152 sketches uncompilable.
+examples/**/*.ino
+pentesting/**/*.ino

@@ -1,0 +1,5 @@
+# Black is the default Python formatter for this repo. line-length matches the C++ ColumnLimit
+# (.clang-format) so both languages wrap at the same width. The pre-commit hook
+# (tools/git-hooks/pre-commit) runs black on staged .py automatically.
+[tool.black]
+line-length = 120

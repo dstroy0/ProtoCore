@@ -1,0 +1,44 @@
+/* crt-green: the green-phosphor CRT palette used by the WebSocket terminal, as a
+   reusable theme. Opt a page in by putting a <!--#theme crt-green--> directive in
+   it; the generator minifies this file and injects it as a <style> before </head>.
+   (Reference only - the built-in assets ship with their own inline styles.) */
+:root {
+  --g: #2bb35a;
+  --g2: #00c000;
+  --bg: #080c08;
+}
+html,
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--g);
+  font:
+    14px/1.45 "Consolas",
+    "DejaVu Sans Mono",
+    monospace;
+  text-shadow: 0 0 4px rgba(43, 179, 90, 0.55);
+}
+h1,
+h2,
+h3 {
+  color: var(--g2);
+  font-weight: 600;
+}
+a {
+  color: var(--g2);
+}
+input,
+button,
+select,
+textarea {
+  background: #0a0f0a;
+  color: var(--g);
+  border: 1px solid #14401f;
+  font: inherit;
+  padding: 8px;
+  outline: none;
+}
+button {
+  color: var(--g2);
+  cursor: pointer;
+}

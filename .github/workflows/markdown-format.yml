@@ -1,0 +1,110 @@
+name: Markdown Formatting Check
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  prettier:
+    name: Prettier Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Run Prettier check
+        run: npx prettier@3.9.6 --check "**/*.md"
+
+      # On a pull request, flag stale tables so the author regenerates them. On a
+      # push to main the Feature Tables workflow regenerates and commits them
+      # automatically, so this check would only ever red the build there.
+      - name: Feature/codec tables in sync with FEATURES.md
+        if: github.event_name == 'pull_request'
+        run: python3 ci_tooling/generate/gen_feature_tables.py --check
+
+      # Doc staleness guard. Documentation rots faster than code when the tree moves
+      # quickly, and it rots SILENTLY - nothing fails, the doc just starts lying. This
+      # fails when the prose cites a symbol, path, link, or test env the tree no longer
+      # has. See the module docstring for what is deliberately NOT checked (Doxygen
+      # @ref, C++ lambdas, URLs) and why.
+      - name: Docs cite things that exist
+        run: python3 ci_tooling/check/check_docs.py
+
+      # Example code drift guard, covering BOTH sketches and README fenced blocks.
+      # The annotated-source blocks are hand-rolled on purpose (the annotation is the
+      # teaching content), so they cannot be generated - which is exactly why they
+      # drifted: 446 vendor calls and 144 bare enum members accumulated in them while
+      # every sketch stayed clean. SRCBANNED rule 6 already claimed to cover
+      # examples/; check_src_banned.py only ever read src/.
+      - name: Example code uses the library API
+        run: python3 ci_tooling/check/check_examples.py
+
+      # docs/SYMBOLS.md is the naming law; this enforces its mechanical half. The
+      # prefix sweep is still open (roadmap "Now"), so it gates against a recorded
+      # baseline: NEW violations fail, the 1313 known ones ratchet down. Unprefixed
+      # macros are the bulk of them, and names like MAX_CONNS / BODY_BUF_SIZE are
+      # exactly what collides with a professional's existing codebase.
+      - name: Naming law (docs/SYMBOLS.md)
+        run: python3 ci_tooling/check/check_symbols.py --check
+
+      # Interop matrix counts are derived from the tree, not hand-maintained. Hand
+      # maintenance failed: the table claimed 34 peers / ~39 benches while the tree had
+      # 39 / 207, i.e. it understated coverage roughly fivefold, which sends you to build
+      # a bench that already exists.
+      - name: Interop matrix counts in sync
+        if: github.event_name == 'pull_request'
+        run: python3 ci_tooling/generate/gen_interop_matrix.py --check
+
+      # The per-module hardware table is derived from the headers. Hand-maintained it
+      # covered 32 of 77 hardware-touching modules and invented pinouts the library does
+      # not impose - every driver takes its wiring through the API, and six are pure
+      # codecs with no bring-up call at all.
+      - name: Hardware module table in sync
+        if: github.event_name == 'pull_request'
+        run: python3 ci_tooling/generate/gen_hardware_ref.py --check
+
+      # The README quick start is copied from examples/Foundation/Basic/Basic.ino, which
+      # CI compiles, and the status table is computed from test/coverage.xml plus
+      # test/TEST_REPORT.md. Both replaced hand-written claims that had gone wrong in
+      # opposite directions: no code sample at all, and coverage described as "lacking"
+      # while the committed report measured 99.0% line / 96.1% branch.
+      - name: README intro blocks in sync
+        if: github.event_name == 'pull_request'
+        run: python3 ci_tooling/generate/gen_readme_intro.py --check
+
+      # These five implement --check but nothing ran it, so docs/ARCHITECTURE.md,
+      # docs/EXAMPLES.md, the README flag-deps block, the docs/README.md reference
+      # sections, and the changelog decoration could all drift silently. A gate that
+      # exists and is not wired is the same as no gate.
+      - name: API flow diagrams in sync
+        if: github.event_name == 'pull_request'
+        run: python3 ci_tooling/generate/gen_api_flow.py --check
+
+      - name: Example index in sync
+        if: github.event_name == 'pull_request'
+        run: python3 ci_tooling/generate/gen_examples.py --check
+
+      - name: Build-flag dependency graph in sync
+        if: github.event_name == 'pull_request'
+        run: python3 ci_tooling/generate/gen_flag_deps.py --check
+
+      - name: Docs reference sections in sync
+        if: github.event_name == 'pull_request'
+        run: python3 ci_tooling/generate/gen_readme_sections.py --check
+
+      - name: Changelog decoration in sync
+        if: github.event_name == 'pull_request'
+        run: python3 ci_tooling/generate/decorate_changelog.py --check
+
+      # Not markdown, but the same staleness class and this is the only workflow that
+      # runs on a pull request: Feature Tables regenerates these on push to main, so
+      # without these two steps a PR could not tell you it had made them stale.
+      - name: Configurator in sync with protocore_config.h
+        if: github.event_name == 'pull_request'
+        run: python3 ci_tooling/generate/gen_configurator.py --check
+
+      - name: Example build_opt.h files in sync
+        if: github.event_name == 'pull_request'
+        run: python3 ci_tooling/generate/gen_build_opt.py --check

@@ -1,0 +1,65 @@
+{
+  "name": "ProtoCore",
+  "version": "0.0.1",
+  "description": "Zero-heap, asynchronous multi-protocol network server for ESP32 with a fully deterministic memory footprint. HTTP/1.1 and HTTP/2 (HTTP/3 over QUIC in progress) plus WebSocket (RFC 6455), Server-Sent Events, Basic/Digest auth, file serving, multipart, JSON, templating, and a middleware pipeline; optional HTTPS/TLS, SSH, Telnet, and SNMP (v1/v2c/v3). All buffers statically sized at compile time; feature flags strip unused subsystems.",
+  "keywords": [
+    "esp32",
+    "http",
+    "http2",
+    "quic",
+    "web server",
+    "websocket",
+    "sse",
+    "ssh",
+    "telnet",
+    "tls",
+    "https",
+    "snmp",
+    "async",
+    "deterministic",
+    "rfc7230",
+    "lwip"
+  ],
+  "homepage": "https://dstroy0.github.io/ProtoCore/",
+  "authors": [
+    {
+      "name": "Douglas Quigg",
+      "email": "dquigg123@gmail.com",
+      "url": "https://github.com/dstroy0",
+      "maintainer": true
+    }
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dstroy0/ProtoCore.git"
+  },
+  "license": "AGPL-3.0-or-later",
+  "frameworks": ["arduino"],
+  "platforms": ["espressif32"],
+  "headers": ["protocore.h"],
+  "export": {
+    "exclude": [
+      ".github",
+      ".gitignore",
+      "test",
+      "platformio.ini",
+      ".bumpversion.cfg",
+      "cspell.json",
+      ".clang-format",
+      ".prettierignore",
+      ".editorconfig",
+      "package.json",
+      "docs/html",
+      "docs/utilities",
+      "docs/Doxyfile",
+      "docs/cliff.toml",
+      "docs/header.html",
+      "docs/footer.html",
+      "docs/custom.css",
+      "docs/custom_doxygen.css"
+    ]
+  },
+  "build": {
+    "srcDir": "src"
+  }
+}

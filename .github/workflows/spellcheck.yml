@@ -1,0 +1,27 @@
+name: Spellcheck
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: spellcheck-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  spellcheck:
+    name: Spellcheck Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+
+      - name: Run Spellcheck
+        uses: streetsidesoftware/cspell-action@v8
+        with:
+          config: cspell.json
+          files: |
+            README.md
+            docs/**/*.md

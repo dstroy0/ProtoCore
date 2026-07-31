@@ -1,0 +1,57 @@
+# Real-protocol interop harness (test/servers/interop.py) Python dependencies.
+# Install with:  pip install -r test/servers/requirements.txt
+#
+# Some peers also need a native binary on PATH (not pip-installable):
+#   snmp         -> net-snmp tools (snmpget, snmpwalk)   apt install snmp / choco install net-snmp
+#                   (optional: the snmp peer falls back to the pysnmp package below)
+#   mqtt-broker  -> mosquitto                            apt install mosquitto / choco install mosquitto
+#   sparkplug    -> mosquitto + paho (device-as-client)  the sparkplug peer starts mosquitto (found in PATH or
+#                   /usr/sbin), subscribes spBv1.0/#, triggers the device's NBIRTH publish, and decodes the
+#                   Tahu Payload protobuf with a stdlib decoder (no Sparkplug pip package needed). paho-mqtt < 2.
+#   redis        -> redis-server (device-as-client)      apt install redis-server; run --bind 0.0.0.0 --protected-mode no
+#                   (the redis peer itself is stdlib - raw RESP over a socket - and needs no pip package)
+#   syslog       -> none (device-as-client)              the syslog peer is stdlib - a raw UDP collector +
+#                   RFC 5424 parser - and needs no pip package (rsyslog is the production reference receiver)
+#   nats         -> nats-server (device-as-client)       apt install nats-server; run nats-server -a 0.0.0.0 -p 4222
+#                   (the nats peer itself is stdlib - raw NATS text protocol over a socket - no pip package)
+#   stomp        -> none (device-as-client)              the stomp peer is stdlib - a spec STOMP 1.2 broker in a
+#                   background thread - and needs no pip package (coilmq / RabbitMQ-STOMP are production references)
+#   xmpp         -> none (device-as-client)              the xmpp peer is stdlib - a spec RFC 6120 c2s server
+#                   (stream + SASL PLAIN + resource bind) in a background thread - no pip package (prosody /
+#                   ejabberd are the production references)
+#   amqp         -> none (device-as-client)              the amqp peer is stdlib - a spec AMQP 0-9-1 broker
+#                   (Connection/Channel handshake + SASL PLAIN + Basic.Publish capture) in a background thread -
+#                   no pip package (RabbitMQ is the production reference)
+#   wamp         -> none (device-as-client)              the wamp peer is stdlib - a spec WAMP-over-WebSocket
+#                   router (RFC 6455 handshake selecting wamp.2.json + broker/dealer) in a background thread -
+#                   no pip package (crossbar / autobahn are the production references)
+#   sep2         -> none (device-as-server)              the sep2 peer is stdlib - a spec IEEE 2030.5 consumer
+#                   (xml.etree) that walks the device's DeviceCapability -> EndDevice -> DERControl resources -
+#                   no pip package (the official sep.xsd / certified 2030.5 clients are the references)
+#   openadr      -> none (device-as-server)              the openadr peer is stdlib - a spec OpenADR 3.0 consumer
+#                   (json) that validates the device's event + report objects - no pip package (the OpenADR 3.0
+#                   OpenAPI / openleadr are the references)
+#   statsd       -> none (device-as-client)              the statsd peer is stdlib - a raw UDP collector + StatsD
+#                   line parser - and needs no pip package (Graphite/StatsD, Telegraf, Datadog are production peers)
+#   ssh          -> openssh-client + sshpass (device-as-server)   the ssh peer drives the reference OpenSSH
+#                   client (authoritative SSH-2 stack; interops with every cipher/MAC the device offers) and
+#                   needs no pip package.  apt install openssh-client sshpass / brew install openssh sshpass
+#
+# http uses only the Python standard library (no entry here).
+
+websockets>=12.0      # ws peer (RFC 6455 client)
+pymodbus>=3.5         # modbus-client / modbus-server (unit kwarg auto-detected across 3.x)
+aiocoap>=0.4.7        # coap peer (RFC 7252 client)
+paho-mqtt>=1.6        # mqtt-broker monitor/publisher
+asyncua>=1.0          # opcua-client / opcua-server
+pysnmp>=7.0           # snmp peer fallback when net-snmp tools are not on PATH
+amqtt>=0.11           # mqtt-broker fallback when mosquitto is not on PATH
+pyftpdlib>=1.5        # ftp peer (RFC 959 reference server; device-as-client STOR round trip)
+aiosmtpd>=1.4         # smtp peer (RFC 5321 reference server; device-as-client alert-email round trip)
+ntplib>=0.4          # ntp peer (RFC 5905 client; queries the device's NTP server on UDP/123)
+dnspython>=2.4       # dns peer (RFC 1035 client; queries the device's authoritative DNS server on UDP/53)
+PyJWT>=2.8           # jwt peer (mints HS256 tokens to validate the device's bearer-auth verifier)
+httpx[http2]>=0.27   # http2 peer (real HTTP/2 client via the h2 library; drives ALPN h2 at the device's HTTPS listener)
+aioquic>=1.0         # http3 peer (real QUIC/HTTP-3 client; ALPN h3 handshake + requests at the device's UDP:443)
+graphql-core>=3.2    # graphql peer (reference GraphQL impl; parses/validates the query + derives the expected field shape)
+pysunspec2>=1.1      # sunspec peer (reference SunSpec Alliance client; scans + reads the device's Common model over Modbus TCP)

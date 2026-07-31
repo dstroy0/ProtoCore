@@ -1,0 +1,145 @@
+name: Release Library CI
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+        with:
+          path: "library-source"
+          # Full history + tags so the release summary can diff against the previous tag.
+          fetch-depth: 0
+
+      - name: Package Arduino Library
+        run: |
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          REPO_NAME=$(basename ${{ github.repository }})
+
+          # 1. Create clean staging folder named after the library
+          mkdir "$REPO_NAME"
+
+          # 2. Copy source files, ignoring Git metadata
+          rsync -rr --exclude='.git*' --exclude='library-source' library-source/ "$REPO_NAME/"
+
+          # 3. Create the ZIP archive
+          zip -r "${REPO_NAME}-${TAG_NAME}.zip" "$REPO_NAME"
+
+          # 4. Create the TARBALL (.tar.gz) archive
+          tar -czf "${REPO_NAME}-${TAG_NAME}.tar.gz" "$REPO_NAME"
+
+      # Build a human-readable summary of this release from the conventional-commit
+      # subjects since the previous tag. Only the consumer-facing types (breaking
+      # changes, features, fixes, performance) go in the summary - the exhaustive list
+      # is the "Full Changelog" compare link that generate_release_notes appends below.
+      - name: Generate release summary
+        working-directory: library-source
+        run: |
+          set -euo pipefail
+          TAG_NAME="${GITHUB_REF#refs/tags/}"
+          PREV_TAG="$(git describe --tags --abbrev=0 "${TAG_NAME}^" 2>/dev/null || true)"
+          if [ -n "$PREV_TAG" ]; then RANGE="${PREV_TAG}..${TAG_NAME}"; else RANGE="$TAG_NAME"; fi
+          echo "Summarizing ${RANGE}"
+
+          tmp="$(mktemp -d)"
+          : > "$tmp/breaking"; : > "$tmp/feat"; : > "$tmp/fix"; : > "$tmp/perf"
+          git log --no-merges --pretty=format:'%s' "$RANGE" > "$tmp/subjects" || true
+
+          while IFS= read -r s; do
+            case "$s" in
+              "Bump version:"*) continue ;;
+              *"[skip ci]"*) continue ;;
+            esac
+            # A conventional-commit breaking marker: type(scope)!: ... or type!: ...
+            if printf '%s' "$s" | grep -qE '^[a-z]+(\([^)]+\))?!:'; then
+              printf '%s\n' "- $(printf '%s' "$s" | sed -E 's/^[a-z]+(\([^)]+\))?!:[[:space:]]*//')" >> "$tmp/breaking"
+              continue
+            fi
+            t="$(printf '%s' "$s" | sed -E 's/^([a-z]+)(\([^)]+\))?:.*/\1/')"
+            m="$(printf '%s' "$s" | sed -E 's/^[a-z]+(\([^)]+\))?:[[:space:]]*//')"
+            case "$t" in
+              feat) printf '%s\n' "- $m" >> "$tmp/feat" ;;
+              fix)  printf '%s\n' "- $m" >> "$tmp/fix" ;;
+              perf) printf '%s\n' "- $m" >> "$tmp/perf" ;;
+            esac
+          done < "$tmp/subjects"
+
+          body="$GITHUB_WORKSPACE/RELEASE_BODY.md"
+          : > "$body"
+          if [ -s "$tmp/breaking" ]; then { echo "### Breaking changes"; echo; cat "$tmp/breaking"; echo; } >> "$body"; fi
+          if [ -s "$tmp/feat" ];     then { echo "### Features";         echo; cat "$tmp/feat";     echo; } >> "$body"; fi
+          if [ -s "$tmp/fix" ];      then { echo "### Fixes";            echo; cat "$tmp/fix";      echo; } >> "$body"; fi
+          if [ -s "$tmp/perf" ];     then { echo "### Performance";      echo; cat "$tmp/perf";     echo; } >> "$body"; fi
+          if [ ! -s "$body" ]; then echo "Maintenance release (see the full changelog below)." > "$body"; fi
+
+          echo "----- RELEASE_BODY.md -----"
+          cat "$body"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          # The summary is pre-pended to the auto-generated notes (the Full Changelog link).
+          body_path: RELEASE_BODY.md
+          generate_release_notes: true
+          files: |
+            *.zip
+            *.tar.gz
+
+  # Publish the new version to the PlatformIO registry on every version-bump tag.
+  # Requires a repo secret PLATFORMIO_AUTH_TOKEN (a PlatformIO account token); the job
+  # skips itself cleanly when the secret is not configured so a release never goes red
+  # just because the token is missing.
+  publish-platformio:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+
+      - name: Check for PlatformIO token
+        id: token
+        run: |
+          if [ -n "${{ secrets.PLATFORMIO_AUTH_TOKEN }}" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "PLATFORMIO_AUTH_TOKEN secret not set - skipping registry publish."
+          fi
+
+      - name: Set up Python
+        if: steps.token.outputs.present == 'true'
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.x"
+
+      - name: Install PlatformIO
+        if: steps.token.outputs.present == 'true'
+        run: pip install --upgrade platformio
+
+      - name: Publish to PlatformIO Registry
+        if: steps.token.outputs.present == 'true'
+        env:
+          PLATFORMIO_AUTH_TOKEN: ${{ secrets.PLATFORMIO_AUTH_TOKEN }}
+        # library.json (version = the tag) drives the published package; --no-interactive skips the
+        # confirmation prompt, and the export filter in library.json controls what ships. Re-running
+        # the release for an already-published version (a workflow re-run, or a moved tag) is a no-op,
+        # not a failure - only a genuine publish error fails the job.
+        run: |
+          set -o pipefail
+          if out="$(pio pkg publish . --no-interactive --no-notify 2>&1)"; then
+            printf '%s\n' "$out"
+          else
+            printf '%s\n' "$out"
+            if printf '%s' "$out" | grep -qi 'already published'; then
+              echo "This version is already in the registry - nothing to publish."
+              exit 0
+            fi
+            exit 1
+          fi

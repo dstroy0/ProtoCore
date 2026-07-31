@@ -1,0 +1,288 @@
+name: Test & Analyze
+
+# Runs the native Unity suite and gets both outputs from one instrumented pass: test/TEST_REPORT.md
+# (the human report) and test/coverage.xml (for the SonarCloud scan).
+#
+# Affected-only by default: most commits touch one feature's .cpp/.h + its test_x/ dir, so this maps the
+# diff - sources AND headers, via the compiler include graph in test/dep_graph.json - to just the envs
+# that changed (test/select_envs.py) and runs only those, then folds the results back into the committed
+# whole:
+#   * test/TEST_REPORT.md  - the touched (suite, env) rows/sections are replaced (merge_report.py),
+#                            every other suite kept verbatim, header totals recomputed;
+#   * test/coverage.xml    - the changed sources' fresh coverage overlays the committed baseline
+#                            (merge_coverage.py --baseline), so the report stays whole-project and
+#                            SonarCloud still sees full coverage.
+#
+# The whole matrix runs (and both artifacts are regenerated from scratch) when ANY of these hold:
+#   * a change maps to FULL - a shared header the graph attributes to >=90% of envs, a config/tooling
+#     file, or a new file not yet in the graph (select_envs.py's safe default);
+#   * the commit message contains [ci full] (or [full ci]);
+#   * the PR carries the 'full-ci' label;
+#   * the workflow_dispatch 'full' input is true.
+# A docs-only diff maps to NONE and skips the suite entirely.
+#
+# ccache (auto-detected by run_tests.sh) caches the repeated library + Unity compiles across envs and,
+# via the ~/.ccache cache, across runs, so even a full run stays warm.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Weekly from-scratch regeneration (Sunday 04:17 UTC). The affected-only path overlays the
+    # committed baseline, so any file it never re-measures in full keeps whatever that baseline
+    # last said. The per-file rules make that rare, but "rare" still accumulates over hundreds of
+    # pushes - and a stale coverage.xml is invisible (it looks like a normal report; it just
+    # describes code that has moved on). This is the backstop that bounds the drift at one week.
+    - cron: "17 4 * * 0"
+  workflow_dispatch:
+    inputs:
+      full:
+        description: "Run the whole matrix + regenerate coverage from scratch (ignore affected-env selection)"
+        type: boolean
+        default: false
+
+concurrency:
+  group: test-analyze-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-analyze:
+    name: Run affected suite (report + coverage) and scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      # With no SONAR_TOKEN the scan steps are skipped (the report + coverage still run); a quick green
+      # job until the secret is configured. SonarCloud C/C++ needs this CI scan (auto-analysis can't).
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # full history: the diff base, the report commit, SonarCloud new-code attribution
+          # Authenticate with the automatic-actions deploy key so the report commit pushes over SSH
+          # (past the protected-main ruleset), which a GITHUB_TOKEN push cannot.
+          ssh-key: ${{ secrets.ACTIONS_DEPLOY_KEY }}
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.x"
+
+      # Restore the PlatformIO toolchain + the ccache store before building. ccache keys on the
+      # preprocessed source + flags, so identical compiles hit across envs and (thanks to this cache)
+      # across runs. The key busts on platformio.ini changes; restore-keys keeps a warm cache.
+      - name: Cache PlatformIO + ccache
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.platformio
+            ~/.ccache
+          key: test-analyze-${{ hashFiles('platformio.ini') }}
+          restore-keys: test-analyze-
+
+      - name: Install PlatformIO + gcovr + ccache
+        # gcovr is pinned: an unpinned drift to 8.6+ changed --filter anchoring and silently emptied
+        # every coverage report (0% on Sonar). ccache provides the /usr/lib/ccache masquerade dir that
+        # run_tests.sh auto-detects.
+        run: |
+          pip install --upgrade platformio 'gcovr==8.6'
+          sudo apt-get update && sudo apt-get install -y ccache
+
+      - name: Check platformio.ini is in sync with the test matrix
+        run: python3 test/gen_test_envs.py --check
+
+      # Map the diff to the envs it affects (or FULL / NONE). Writes changed_src.txt (the changed
+      # sources, the coverage replace-set) and exposes mode + the env list.
+      - name: Select affected envs
+        id: sel
+        env:
+          EVENT: ${{ github.event_name }}
+          DISPATCH_FULL: ${{ github.event.inputs.full }}
+          PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+          BEFORE: ${{ github.event.before }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          set -e
+          if [ "$EVENT" = "pull_request" ]; then BASE="$PR_BASE"; HEAD="$PR_HEAD"; else BASE="$BEFORE"; HEAD="$HEAD_SHA"; fi
+
+          FORCE=0
+          [ "$DISPATCH_FULL" = "true" ] && FORCE=1
+          [ "$EVENT" = "schedule" ] && FORCE=1 # weekly from-scratch rebuild (see the cron trigger)
+          printf '%s' "$PR_LABELS" | grep -q '"full-ci"' && FORCE=1 || true
+          if git rev-parse --verify -q "$HEAD^{commit}" >/dev/null; then
+            git log -1 --format=%B "$HEAD" | grep -qiE '\[(ci )?full( ci)?\]' && FORCE=1 || true
+          fi
+
+          : > changed_src.txt
+          if [ "$FORCE" = "1" ]; then
+            SEL="FULL"
+          elif [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ] \
+               || ! git rev-parse --verify -q "$BASE^{commit}" >/dev/null; then
+            SEL="FULL" # first push on a branch / unknown base -> be safe
+          else
+            git diff --name-only "$BASE" "$HEAD" > changed_all.txt
+            SEL="$(python3 test/select_envs.py --base "$BASE" --head "$HEAD" < changed_all.txt)"
+            # Headers belong here too: inline/constexpr code in a .h carries branches and shows up
+            # in the coverage report under its own path (src/services/system/control/control.h has 36).
+            # Excluding them meant an edited header's baseline entries - now pointing at shifted
+            # line numbers - could only ever be unioned, never corrected.
+            grep -E '^src/.*\.(cpp|cc|c|h|hpp)$' changed_all.txt > changed_src.txt || true
+          fi
+
+          if [ "$SEL" = "FULL" ]; then MODE=full; ENVS="";
+          elif [ "$SEL" = "NONE" ]; then MODE=none; ENVS="";
+          else MODE=affected; ENVS="$SEL"; fi
+          echo "Selection: mode=$MODE envs=[$ENVS]"
+          echo "mode=$MODE" >> "$GITHUB_OUTPUT"
+          echo "envs=$ENVS" >> "$GITHUB_OUTPUT"
+
+      # The SonarCloud C/C++ analysis needs a compile database (native platform, all envs merged). Skip
+      # it when nothing testable changed. On an affected run, only the changed envs' compile commands
+      # are regenerated and overlaid onto the committed baseline test/compile_commands.json (the rest
+      # kept), exactly like the coverage/report baselines; a full run rebuilds the whole database.
+      - name: Generate merged compile_commands.json
+        if: ${{ env.SONAR_TOKEN != '' && steps.sel.outputs.mode != 'none' }}
+        run: |
+          if [ "${{ steps.sel.outputs.mode }}" = "affected" ]; then
+            bash ci_tooling/sonar/gen_compiledb.sh ${{ steps.sel.outputs.envs }}
+          else
+            bash ci_tooling/sonar/gen_compiledb.sh
+          fi
+
+      # Failing TESTS must not fail this job - the report exists to document them. A failure to
+      # PRODUCE coverage (exit 3) is different: committing then would freeze the affected files at
+      # whatever the baseline last said, invisibly. So tolerate every code but 3.
+      # FULL: regenerate test/TEST_REPORT.md + test/coverage.xml from the whole matrix.
+      # The exit code is captured rather than discarded: the report + coverage commit below must still
+      # run on a red matrix, but the job has to fail afterwards. See "Gate on test results".
+      - name: Run the whole suite (report + coverage)
+        id: run_full
+        if: ${{ steps.sel.outputs.mode == 'full' }}
+        run: |
+          rc=0
+          bash test/run_tests.sh --coverage || rc=$?
+          echo "rc=$rc" >> "$GITHUB_OUTPUT"
+          # rc 3 is specifically "coverage could not be produced" (a per-env gcovr failure), as
+          # opposed to failing tests, which the gate step below reports without losing the report.
+          # Committing on 3 would freeze the affected files at the stale baseline, invisibly.
+          [ "$rc" = "3" ] && { echo "::error::coverage generation failed - not committing"; exit 1; }
+          exit 0
+
+      # AFFECTED: run only the touched envs, then overlay onto the committed report + coverage baseline.
+      - name: Run the affected suite and merge
+        id: run_affected
+        if: ${{ steps.sel.outputs.mode == 'affected' }}
+        run: |
+          rc=0
+          bash test/run_tests.sh --coverage \
+            --report-out partial_report.md \
+            --cov-baseline test/coverage.xml --cov-changed changed_src.txt \
+            ${{ steps.sel.outputs.envs }} || rc=$?
+          # See the note on the full run: rc 3 means coverage could not be produced, so stop before
+          # anything gets committed rather than silently freezing those files at the stale baseline.
+          [ "$rc" = "3" ] && { echo "::error::coverage generation failed - not committing"; exit 1; }
+          python3 test/merge_report.py test/TEST_REPORT.md partial_report.md test/TEST_REPORT.md
+          rm -f partial_report.md changed_all.txt changed_src.txt
+          echo "rc=$rc" >> "$GITHUB_OUTPUT"
+
+      - name: Format TEST_REPORT.md with Prettier
+        if: ${{ steps.sel.outputs.mode != 'none' }}
+        run: npx prettier@3.9.6 --write test/TEST_REPORT.md
+
+      # Scan the freshly-merged coverage.xml BEFORE the commit step: the commit does a rebase, and a
+      # concurrent-run conflict on the regenerated coverage.xml would otherwise leave git conflict
+      # markers in the file Sonar parses (the parse then fails). Scanning first keeps Sonar on a clean file.
+      - name: SonarQube Scan
+        if: ${{ env.SONAR_TOKEN != '' && steps.sel.outputs.mode != 'none' }}
+        uses: SonarSource/sonarqube-scan-action@v8
+        env:
+          SONAR_HOST_URL: https://sonarcloud.io
+
+      # Keep test/dep_graph.json (the compiler include graph select_envs.py maps changes through)
+      # current: a full run regenerates it whole; an affected run recomputes just the envs that ran
+      # (--merge), so a later #include change is already reflected next time. Deterministic output, so
+      # it only shows a diff (and gets committed) when the include structure actually changed.
+      # Non-fatal: the graph is an optimization (select_envs falls back to FULL for anything not in
+      # it), and the real outputs are the report + coverage - a graph hiccup must not fail the job or
+      # block their commit. An unchanged graph is a no-op (deterministic output).
+      - name: Refresh dependency graph
+        if: ${{ github.event_name == 'push' && steps.sel.outputs.mode != 'none' }}
+        continue-on-error: true
+        run: |
+          if [ "${{ steps.sel.outputs.mode }}" = "full" ]; then
+            python3 ci_tooling/generate/gen_dep_graph.py --out test/dep_graph.json
+          else
+            python3 ci_tooling/generate/gen_dep_graph.py --merge --out test/dep_graph.json --envs ${{ steps.sel.outputs.envs }}
+          fi
+
+      - name: Commit updated report + coverage
+        if: ${{ github.event_name == 'push' && steps.sel.outputs.mode != 'none' }}
+        env:
+          CI_SIGNING_KEY: ${{ secrets.CI_SIGNING_KEY }}
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # Discard a report whose ONLY change is per-run timing (Generated timestamp, total seconds,
+          # the Duration column): normalize the committed vs freshly generated report and, if they
+          # match, restore the committed one so the timing noise is never committed.
+          if git cat-file -e HEAD:test/TEST_REPORT.md 2>/dev/null; then
+            git show HEAD:test/TEST_REPORT.md > /tmp/old_report.md
+            python3 test/report_stable.py /tmp/old_report.md > /tmp/old.norm
+            python3 test/report_stable.py test/TEST_REPORT.md > /tmp/new.norm
+            if diff -q /tmp/old.norm /tmp/new.norm >/dev/null 2>&1; then
+              git checkout -- test/TEST_REPORT.md
+            fi
+          fi
+          # SSH-sign the bot commit (Verified) when the signing key is available; commit unsigned if
+          # the secret is unset so CI never breaks.
+          if [ -n "$CI_SIGNING_KEY" ]; then
+            mkdir -p ~/.ssh
+            printf '%s\n' "$CI_SIGNING_KEY" > ~/.ssh/ci_signing_key
+            chmod 600 ~/.ssh/ci_signing_key
+            git config gpg.format ssh
+            git config user.signingkey ~/.ssh/ci_signing_key
+            git config commit.gpgsign true
+          fi
+          git add test/TEST_REPORT.md test/coverage.xml test/dep_graph.json test/compile_commands.json
+          if ! git diff --cached --quiet; then
+            git commit -m "ci: update test report + coverage [skip ci]"
+            # Rebase-and-retry: other auto-committing workflows advance main during this multi-minute run.
+            # The report + coverage are regenerated each run, so on a concurrent-update conflict keep OUR
+            # fresh version (-X theirs prefers the commits being replayed during a rebase) and abort cleanly
+            # on any other failure so no conflict markers ever linger in the working tree.
+            for i in 1 2 3 4 5; do
+              if git pull --rebase -X theirs origin main && git push; then exit 0; fi
+              git rebase --abort 2>/dev/null || true
+              echo "push rejected (attempt $i/5), retrying"
+              sleep 5
+            done
+            echo "Failed to push after 5 attempts."
+            exit 1
+          else
+            echo "Report + coverage unchanged."
+          fi
+
+      # Fail the job when the matrix was red. Deliberately the LAST step: the commit above must still
+      # publish the report + coverage for a failing run, which is what the old `|| true` bought - at the
+      # cost of the job never failing at all. Capture-then-raise keeps the artifact AND restores the gate.
+      #
+      # The report grep is a second, independent check: it catches a failure that the runner's exit code
+      # misses - notably merge_report.py overlaying an empty partial, which silently rewrites the
+      # committed report verbatim and exits 0.
+      - name: Gate on test results
+        if: ${{ always() && steps.sel.outputs.mode != 'none' }}
+        run: |
+          rc="${{ steps.run_full.outputs.rc || steps.run_affected.outputs.rc || '0' }}"
+          if [ "$rc" != "0" ]; then
+            echo "::error::test suite exited $rc - see TEST_REPORT.md"
+            exit 1
+          fi
+          if grep -q '❌' test/TEST_REPORT.md; then
+            echo "::error::TEST_REPORT.md reports failures"
+            grep -n '❌' test/TEST_REPORT.md | head -20
+            exit 1
+          fi
+          echo "All suites green."

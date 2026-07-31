@@ -1,0 +1,18 @@
+# Doxygen-input documentation uses @ref cross-references whose targets contain
+# underscores (e.g. `@ref PC::send_template`). Prettier parses those
+# underscores as Markdown emphasis and rewrites them to `*`, which silently
+# breaks the Doxygen links. These files are therefore excluded from Prettier;
+# GitHub-facing Markdown (README.md, docs/CHANGELOG.md, …) is still formatted.
+docs/README.md
+docs/RFC.md
+docs/SECURITY.md
+docs/SSH.md
+docs/TODO.md
+test/README.md
+
+# Generated data: the compiler dependency graph is written by ci_tooling/generate/gen_dep_graph.py (compact
+# json.dump) and regenerated verbatim by CI; Prettier would reformat it and cause churn.
+test/dep_graph.json
+# Likewise the SonarQube compile-commands baseline (ci_tooling/sonar/merge_compiledb.py json.dump,
+# @ROOT@-tokenized); affected runs overlay it verbatim, so keep Prettier off it.
+test/compile_commands.json

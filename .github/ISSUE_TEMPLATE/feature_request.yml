@@ -1,0 +1,44 @@
+name: Feature request
+description: Propose a new capability or improvement
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Features in this library are deterministic and opt-in (a `PC_ENABLE_*`
+        flag, fixed buffers, no runtime allocation). Keep that in mind below.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What are you trying to do that the library does not support today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: The API or behavior you have in mind.
+    validations:
+      required: true
+  - type: input
+    id: spec
+    attributes:
+      label: Relevant RFC / specification
+      description: If this implements a protocol, cite the RFC and section.
+      placeholder: "e.g. RFC 7252 section 5.10"
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Confirmation
+      options:
+        - label: This fits the zero-heap, deterministic, opt-in model of the library.
+          required: true

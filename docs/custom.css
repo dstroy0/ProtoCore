@@ -1,0 +1,1257 @@
+/*
+ * ProtoCore - TTY Retro Green Screen Theme
+ * Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ *
+ * A retro, monospace TTY phosphor-green styling for Doxygen: a calm
+ * green-on-near-black palette with soft CRT bloom, scanlines and vignette.
+ */
+
+/* ---- Doxygen CSS variable overrides - Retro TTY Green Screen -------- */
+html {
+    --primary-color: #2bb35a;
+    --primary-dark-color: #008000;
+    --primary-light-color: #40ff40;
+    --secondary-color: #2bb35a;
+    --secondary-dark-color: #008000;
+    --secondary-light-color: #40ff40;
+
+    --page-background-color: #080c08;
+    --page-foreground-color: #2bb35a;
+    --page-secondary-foreground-color: #008000;
+
+    --separator-color: #008000;
+    --border-color: #008000;
+
+    --header-background: #080c08;
+    --header-foreground: #2bb35a;
+    --header-gradient: linear-gradient(180deg, #080c08 0%, #001100 100%);
+
+    --nav-background: #080c08;
+    --nav-foreground: #2bb35a;
+    --nav-accent: #2bb35a;
+
+    --code-background: #001100;
+    --code-foreground: #2bb35a;
+
+    --memdef-background: #080c08;
+    --memdef-title-background: #001100;
+
+    --warning-color: #2bb35a;
+    --note-color: #2bb35a;
+    --attention-color: #2bb35a;
+    --deprecated-color: #008000;
+    --bug-color: #2bb35a;
+    --todo-color: #2bb35a;
+}
+
+/* ---- Force Monospace (TTY style) everywhere ---- */
+* {
+    font-family:
+        "Fira Code", "Cascadia Code", "Courier New", Courier, "Lucida Console",
+        Monaco, monospace !important;
+}
+
+body,
+html {
+    background-color: #080c08 !important;
+    color: #2bb35a !important;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+/* ---- Page header / title bar --------------------------------------- */
+#titlearea {
+    background: #080c08 !important;
+    border-bottom: 2px solid #008000 !important;
+    padding: 16px 16px !important;
+}
+
+div.header {
+    background: #080c08 !important;
+    border-bottom: 1px solid #008000 !important;
+    padding: 8px 32px !important;
+    margin-bottom: 12px !important;
+    position: relative !important;
+}
+
+div.header .title {
+    font-size: 1.5rem !important;
+    color: #2bb35a !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-weight: 700 !important;
+}
+
+#projectname {
+    font-size: 1.25rem !important;
+    font-weight: 700;
+    color: #2bb35a !important;
+    text-shadow: 0 0 10px rgba(0, 192, 0, 0.8) !important;
+    line-height: 1.3 !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+}
+
+#projectbrief {
+    font-size: 0.85rem !important;
+    color: #008000 !important;
+    margin-top: 6px !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+}
+
+/* ---- Navigation tree / sidebar ------------------------------------ */
+#nav-tree,
+#side-nav {
+    background-color: #080c08 !important;
+    border-right: 2px solid #008000 !important;
+}
+
+.ui-resizable-e {
+    background-color: #008000 !important;
+}
+
+#nav-tree a {
+    color: #2bb35a !important;
+}
+
+/* Hover / current page: brighter phosphor text + glow, NOT a full-width highlight
+   bar spanning the sidebar. The background bar (was #001100) read as a stripe across
+   the whole nav column, so it is dropped in favor of a subtle text-only indicator. */
+#nav-tree a:hover,
+#nav-tree .selected a {
+    color: #40ff40 !important;
+    text-shadow: 0 0 8px rgba(0, 192, 0, 0.8) !important;
+    background-color: transparent !important;
+}
+
+#nav-tree .selected {
+    background: transparent !important;
+}
+
+#nav-tree .selected a {
+    font-weight: 700 !important;
+}
+
+#nav-tree .label {
+    background-color: transparent !important;
+}
+
+#nav-sync {
+    color: #2bb35a !important;
+    z-index: 10 !important;
+    cursor: pointer !important;
+}
+
+div.nav-sync-icon {
+    background-color: #001100 !important;
+    border: 1px solid #008000 !important;
+    opacity: 0.7 !important;
+    cursor: pointer !important;
+    transition:
+        opacity 0.2s ease,
+        background-color 0.2s ease,
+        border-color 0.2s ease !important;
+}
+
+div.nav-sync-icon:hover {
+    background-color: #002200 !important;
+    opacity: 1 !important;
+    border-color: #2bb35a !important;
+}
+
+span.sync-icon-left {
+    border-left: 2px solid #2bb35a !important;
+    border-top: 2px solid #2bb35a !important;
+    transition: border-color 0.2s ease !important;
+}
+
+span.sync-icon-right {
+    border-right: 2px solid #2bb35a !important;
+    border-bottom: 2px solid #2bb35a !important;
+    transition: border-color 0.2s ease !important;
+}
+
+div.nav-sync-icon:hover span.sync-icon-left {
+    border-left: 2px solid #40ff40 !important;
+    border-top: 2px solid #40ff40 !important;
+}
+
+div.nav-sync-icon:hover span.sync-icon-right {
+    border-right: 2px solid #40ff40 !important;
+    border-bottom: 2px solid #40ff40 !important;
+}
+
+div.nav-sync-icon.active:after {
+    border-top: 2px solid #40ff40 !important;
+    background-color: #001100 !important;
+}
+
+div.nav-sync-icon.active:hover:after {
+    border-top: 2px solid #40ff40 !important;
+}
+
+/* ---- Main content area -------------------------------------------- */
+#doc-content,
+div#doc-content {
+    background-color: #080c08 !important;
+}
+
+div.contents {
+    padding: 24px 32px;
+    max-width: 1100px;
+}
+
+/* ---- Search bar ---------------------------------------------------- */
+#MSearchBox {
+    background-color: #001100 !important;
+    border: 2px solid #008000 !important;
+    border-radius: 4px !important;
+    width: calc(100% - 32px) !important;
+    margin: 12px 16px !important;
+    float: none !important;
+    box-sizing: border-box !important;
+    display: flex !important;
+    align-items: center !important;
+    height: 34px !important;
+}
+
+#MSearchBox .left,
+#MSearchBox .right {
+    display: flex !important;
+    align-items: center !important;
+    background: none !important;
+}
+
+#MSearchBox .left {
+    flex-grow: 1 !important;
+}
+
+#MSearchField {
+    background-color: transparent !important;
+    color: #2bb35a !important;
+    border: none !important;
+    outline: none !important;
+    width: 100% !important;
+    font-size: 0.9rem !important;
+    padding-left: 8px !important;
+}
+
+#MSearchBox:hover,
+#MSearchBox:focus-within {
+    border-color: #2bb35a !important;
+    box-shadow: 0 0 8px rgba(0, 192, 0, 0.4) !important;
+}
+
+/* ---- Section headings --------------------------------------------- */
+h1,
+h2,
+h3,
+h4 {
+    color: #2bb35a !important;
+    text-shadow: 0 0 8px rgba(0, 192, 0, 0.7) !important;
+    font-weight: 700;
+    border-bottom: 2px solid #008000 !important;
+    padding-bottom: 6px;
+    margin-top: 32px;
+}
+
+h1.glow {
+    color: #2bb35a !important;
+    text-shadow: 0 0 15px rgba(0, 192, 0, 0.9) !important;
+}
+
+/* ---- Anchor links -------------------------------------------------- */
+a,
+a:visited {
+    color: #2bb35a !important;
+    text-decoration: underline !important;
+    text-shadow: 0 0 4px rgba(0, 192, 0, 0.3) !important;
+}
+
+a:hover {
+    color: #40ff40 !important;
+    text-decoration: underline !important;
+    text-shadow: 0 0 10px rgba(64, 255, 64, 0.8) !important;
+}
+
+/* ---- Member definition boxes --------------------------------------- */
+div.memitem {
+    background-color: #080c08 !important;
+    border: 2px solid #008000 !important;
+    border-radius: 4px;
+    margin-bottom: 16px;
+    overflow: hidden;
+}
+
+div.memproto {
+    background: #001100 !important;
+    border-bottom: 1px solid #008000 !important;
+    padding: 10px 16px;
+}
+
+div.memdoc {
+    padding: 12px 16px;
+    background-color: #080c08 !important;
+    color: #2bb35a !important;
+}
+
+table.memname {
+    color: #2bb35a !important;
+    font-size: 0.95rem;
+}
+
+/* ---- Code blocks (VSCode Dark+ Theme) ----------------------------- */
+div.fragment,
+pre.fragment {
+    background-color: #1e1e1e !important;
+    border: 1px solid #3c3c3c !important;
+    border-left: 4px solid #569cd6 !important; /* VSCode Blue accent border */
+    border-radius: 4px;
+    padding: 14px 18px;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    overflow-x: auto;
+    color: #d4d4d4 !important; /* VSCode code foreground */
+    text-shadow: none !important; /* Disable glowing inside code */
+}
+
+/* VSCode syntax highlighting tokens */
+span.keyword {
+    color: #569cd6 !important; /* VSCode Blue */
+    font-weight: 400 !important;
+}
+
+span.keywordtype {
+    color: #569cd6 !important; /* VSCode Blue (types like void, int, char) */
+    font-weight: 400 !important;
+    text-decoration: none !important;
+}
+
+span.keywordflow {
+    color: #c586c0 !important; /* VSCode Control flow purple */
+    font-weight: 400 !important;
+}
+
+span.preprocessor {
+    color: #c586c0 !important; /* VSCode Preprocessor purple */
+}
+
+span.stringliteral {
+    color: #ce9178 !important; /* VSCode String orange */
+    opacity: 1 !important;
+}
+
+span.charliteral {
+    color: #ce9178 !important; /* VSCode Char orange */
+}
+
+span.comment {
+    color: #6a9955 !important; /* VSCode Comment green */
+    font-style: italic !important;
+}
+
+span.vhdldigit,
+span.vhdllogic {
+    color: #b5cea8 !important; /* VSCode Number light-green */
+}
+
+/* Semantic code links in Doxygen */
+.code,
+.code hl_enumvalue,
+.code hl_typedef,
+.code hl_struct,
+.code hl_define,
+a.code,
+a.code:visited {
+    color: #9cdcfe !important; /* Default identifier light-blue */
+    text-shadow: none !important;
+    text-decoration: none !important;
+}
+
+a.code:hover {
+    color: #4fc1ff !important; /* Bright blue hover */
+    text-decoration: underline !important;
+}
+
+/* Doxygen HL classes */
+.hl_keyword {
+    color: #569cd6 !important;
+}
+.hl_keywordflow {
+    color: #c586c0 !important;
+}
+.hl_keywordtype {
+    color: #569cd6 !important;
+}
+.hl_preprocessor {
+    color: #c586c0 !important;
+}
+.hl_stringliteral {
+    color: #ce9178 !important;
+}
+.hl_charliteral {
+    color: #ce9178 !important;
+}
+.hl_comment {
+    color: #6a9955 !important;
+    font-style: italic !important;
+}
+
+/* Line numbers in code blocks */
+span.lineno,
+a.lineno {
+    color: #858585 !important; /* VSCode line number grey */
+    background-color: transparent !important;
+    border-right: none !important;
+    margin-right: 12px !important;
+    opacity: 0.8 !important;
+    user-select: none !important;
+}
+
+/* ---- Parameter tables ---------------------------------------------- */
+table.params td,
+table.params th,
+table.exception td,
+table.exception th,
+table.retval td,
+table.retval th {
+    background-color: #080c08 !important;
+    border: 1px solid #008000 !important;
+    padding: 6px 12px;
+    font-size: 0.9rem;
+    color: #2bb35a !important;
+}
+
+table.params th {
+    background-color: #001100 !important;
+    color: #2bb35a !important;
+    font-weight: 700;
+}
+
+td.paramname {
+    color: #2bb35a !important;
+    font-weight: 700;
+}
+td.paramtype {
+    color: #008000 !important;
+}
+
+/* ---- README / overview feature tables (grouped by OSI layer) ------- */
+table.feature-table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+    background-color: #080c08 !important;
+    border: 2px solid #008000 !important;
+    border-radius: 4px;
+    margin: 14px 0;
+}
+table.feature-table th {
+    background-color: #001100 !important;
+    color: #2bb35a !important;
+    font-weight: 700;
+    text-align: left;
+    padding: 8px 12px;
+    border-bottom: 1px solid #008000 !important;
+}
+table.feature-table td {
+    text-align: left;
+    padding: 6px 10px;
+    border: 1px solid #0a3311 !important;
+    color: #2bb35a !important;
+    word-break: break-word;
+}
+table.feature-table td:empty {
+    border: none !important;
+    background: transparent !important;
+}
+table.feature-table tr:hover td {
+    background-color: #0c1a0c !important;
+}
+table.feature-table a {
+    color: #2bb35a !important;
+    text-decoration: none;
+}
+table.feature-table a:hover {
+    color: #7cfc00 !important;
+    text-decoration: underline;
+}
+
+/* ---- Note / warning boxes ------------------------------------------ */
+dl.note,
+dl.warning,
+dl.attention,
+dl.pre,
+dl.post,
+dl.invariant,
+dl.deprecated,
+dl.todo,
+dl.bug,
+dl.remark {
+    border-radius: 4px;
+    padding: 10px 14px;
+    margin: 12px 0;
+    background-color: #001100 !important;
+    border: 1px solid #008000 !important;
+    border-left: 5px solid #2bb35a !important;
+}
+
+dt.note:before {
+    content: ">> NOTE: ";
+    color: #2bb35a;
+    font-weight: 700;
+}
+dt.warning:before {
+    content: ">> WARNING: ";
+    color: #2bb35a;
+    font-weight: 700;
+}
+dt.attention:before {
+    content: ">> ATTENTION: ";
+    color: #2bb35a;
+    font-weight: 700;
+}
+dt.todo:before {
+    content: ">> TODO: ";
+    color: #2bb35a;
+    font-weight: 700;
+}
+dt.deprecated:before {
+    content: ">> DEPRECATED: ";
+    color: #008000;
+    font-weight: 700;
+}
+
+/* ---- Class / struct overview boxes --------------------------------- */
+div.summary {
+    background-color: #001100 !important;
+    border: 2px solid #008000 !important;
+    border-radius: 4px;
+    padding: 8px 14px;
+}
+
+div.ingrouptitle {
+    color: #2bb35a !important;
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+/* ---- Section dividers --------------------------------------------- */
+hr {
+    border: none !important;
+    border-top: 2px solid #008000 !important;
+    margin: 20px 0;
+}
+
+/* ---- File / directory listing ------------------------------------- */
+table.directory {
+    background-color: #080c08 !important;
+    border: 2px solid #008000 !important;
+    border-radius: 4px;
+    width: 100%;
+}
+
+table.directory td,
+table.directory th {
+    padding: 6px 12px;
+    border-bottom: 1px solid #008000 !important;
+    color: #2bb35a !important;
+}
+
+table.directory th {
+    background-color: #001100 !important;
+    color: #2bb35a !important;
+    font-weight: 700;
+}
+
+/* ---- Tab bar ------------------------------------------------------- */
+div.tabs,
+div.tabs2,
+div.tabs3 {
+    background: #080c08 !important;
+    border-bottom: 2px solid #008000 !important;
+}
+
+ul.tablist li a,
+ul.tablist li.current a {
+    color: #2bb35a !important;
+    padding: 8px 16px;
+    display: inline-block;
+}
+
+ul.tablist li.current a {
+    color: #2bb35a !important;
+    border-bottom: 3px solid #2bb35a !important;
+    font-weight: 700;
+    background-color: #001100 !important;
+}
+
+ul.tablist li a:hover {
+    color: #2bb35a !important;
+    text-decoration: none !important;
+    background-color: #001100 !important;
+}
+
+/* ---- Member group headings ---------------------------------------- */
+div.groupheader {
+    color: #2bb35a !important;
+    font-size: 1rem;
+    font-weight: 700;
+    margin: 20px 0 8px 0;
+    border-bottom: 2px solid #008000 !important;
+    padding-bottom: 4px;
+}
+
+/* ---- Scrollbar ----------------------------------------------------- */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: #080c08;
+}
+::-webkit-scrollbar-thumb {
+    background: #008000;
+    border-radius: 0px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #2bb35a;
+}
+
+/* ---- Inline code --------------------------------------------------- */
+code,
+tt,
+.tt {
+    background-color: #001100 !important;
+    color: #2bb35a !important;
+    border-radius: 0px;
+    border: 1px solid #008000 !important;
+    padding: 1px 5px;
+    font-size: 0.9em;
+}
+
+/* ---- Responsive adjustments --------------------------------------- */
+@media (max-width: 768px) {
+    div.contents {
+        padding: 16px;
+    }
+    #projectname {
+        font-size: 1.3rem;
+    }
+
+    /* Keep the Squirty counter visible and well-placed when the navbar
+       collapses into the mobile menu (float/right layout breaks there). */
+    .navbar-squirty-counter {
+        float: none !important;
+        display: block !important;
+        width: 100% !important;
+        margin-left: 0 !important;
+        padding: 6px 16px !important;
+        text-align: center !important;
+        border-left: none !important;
+        border-top: 2px solid #008000 !important; /* divider above instead of left */
+        box-sizing: border-box !important;
+    }
+}
+
+/* ---- Terminal Window & Matrix Details Theme ----------------------- */
+details {
+    background-color: #080c08 !important;
+    border: 2px solid #008000 !important;
+    border-left: 4px solid #2bb35a !important; /* Thick bright TTY green border */
+    border-radius: 0px; /* Sharp terminals */
+    padding: 12px 16px;
+    margin: 20px 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.8);
+    transition:
+        border-color 0.3s ease,
+        box-shadow 0.3s ease;
+}
+
+details[open] {
+    border-color: #2bb35a !important;
+    box-shadow: 0 0 15px rgba(0, 192, 0, 0.3) !important;
+}
+
+details > summary {
+    outline: none;
+    cursor: pointer;
+    font-weight: 700;
+    color: #2bb35a !important;
+    text-shadow: 0 0 5px rgba(0, 192, 0, 0.6) !important;
+    user-select: none;
+    padding: 4px 0;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    list-style: none; /* Hide default arrow */
+}
+
+details > summary::-webkit-details-marker {
+    display: none; /* Hide default arrow on Safari */
+}
+
+details > summary::before {
+    display: none !important; /* Hide prompt when collapsed/vertical */
+}
+
+details[open] > summary::before {
+    content: "dstroy0@esp32:~$ " !important;
+    color: #2bb35a !important;
+    font-weight: 700;
+    margin-right: 8px;
+    display: inline-block !important; /* Show prompt when expanded/horizontal */
+}
+
+/* Terminal window controls (TTY stylized monochrome separate hoverable dots) */
+.tty-controls {
+    margin-left: auto;
+    display: flex;
+    gap: 6px;
+    margin-right: 20px;
+    align-items: center;
+}
+
+.tty-dot {
+    width: 8px;
+    height: 8px;
+    background-color: #008000 !important; /* Base TTY green */
+    border-radius: 50%;
+    opacity: 0.6;
+    transition:
+        transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+        background-color 0.2s ease,
+        opacity 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+details:hover .tty-dot {
+    opacity: 1;
+    background-color: #2bb35a !important;
+}
+
+.tty-dot:hover {
+    transform: scale(1.3) !important;
+    background-color: #2bb35a !important;
+    box-shadow: 0 0 8px #2bb35a !important;
+    cursor: pointer;
+}
+
+/* Expansion grows clip path vertically */
+details[open] > *:not(summary) {
+    animation: terminal-expand 0.45s cubic-bezier(0.1, 0.9, 0.2, 1) forwards;
+    transform-origin: top;
+}
+
+@keyframes terminal-expand {
+    0% {
+        clip-path: inset(0 0 100% 0);
+        margin-top: 0;
+    }
+    100% {
+        clip-path: inset(0 0 0 0);
+        margin-top: 14px;
+    }
+}
+
+/* ---- Navbar Title Layout (Relocated Title area) -------------------- */
+.navbar-project-title {
+    display: inline-block !important;
+    padding: 6px 16px !important;
+    line-height: 22px !important; /* shared row height so the navbar add-ons align */
+    font-weight: 700 !important;
+    color: #2bb35a !important;
+    text-shadow: 0 0 5px rgba(0, 192, 0, 0.5) !important;
+    font-size: 1.1rem !important;
+    pointer-events: none !important; /* Non-clickable */
+    border-right: 2px solid #008000 !important; /* Visual separator line */
+    margin-right: 8px !important;
+    vertical-align: middle !important;
+}
+
+.navbar-project-title .navbar-version {
+    font-size: 0.8rem !important;
+    color: #008000 !important;
+    margin-left: 8px !important;
+    text-shadow: none !important;
+}
+
+/* "Deterministic" prefix is a repo link that glows in/out on hover.
+   The title bar sets pointer-events:none, so re-enable it on the link. */
+.navbar-libname-link {
+    color: inherit !important;
+    text-decoration: none !important;
+    display: inline !important; /* menu makes <a> block; keep it inline so the name stays on one line */
+    padding: 0 !important; /* menu links add padding that would gap the two halves apart */
+    margin: 0 !important;
+    pointer-events: auto !important;
+    cursor: pointer !important;
+    text-shadow: 0 0 0 rgba(64, 255, 64, 0) !important; /* glow off */
+    transition:
+        color 0.4s ease,
+        text-shadow 0.4s ease !important;
+}
+
+/* Override the global a:hover so a hovered link doesn't light itself up.
+   By default both halves stay dark on hover; only "Deterministic" is then
+   lit by the higher-specificity :first-child rule below. */
+.navbar-libname:hover .navbar-libname-link {
+    color: inherit !important;
+    text-decoration: none !important;
+    text-shadow: 0 0 1px rgba(0, 220, 90, 0.35) !important;
+}
+
+/* Hovering either part of the name lights up "Deterministic" (the first
+   link); the "ESPAsyncWebServer" half stays dark but is still a repo link. */
+.navbar-libname:hover .navbar-libname-link:first-child,
+.navbar-libname-link:first-child:focus-visible {
+    color: #40ff40 !important;
+    text-decoration: none !important; /* glow only, no underline */
+    text-shadow:
+        0 0 6px rgba(64, 255, 64, 0.9),
+        0 0 14px rgba(64, 255, 64, 0.6) !important; /* glow on */
+}
+
+/* Keep the project name on one line, splitting the prefix into a link
+   introduced a wrap opportunity that the single long word didn't have. */
+.navbar-libname {
+    white-space: nowrap !important;
+}
+/* Don't show the menu-item hover background behind the title. */
+.navbar-project-title:hover {
+    background: transparent !important;
+}
+
+/* ---- Cute Pixel Squid Animation ------------------------------------ */
+#squid-container {
+    position: fixed;
+    width: 37px;
+    height: 37px;
+    z-index: 10000;
+    cursor: pointer;
+    pointer-events: auto;
+    will-change: left, top, transform;
+    transition: none !important;
+}
+
+#squid-container * {
+    transition: none !important;
+}
+
+.squid-svg {
+    width: 100%;
+    height: 100%;
+    filter: drop-shadow(0 0 3px rgba(0, 229, 255, 0.7));
+}
+
+/* Pixel Tentacle wiggling keyframes with discrete step timing */
+@keyframes pixel-wiggle-left {
+    0%,
+    100% {
+        transform: translate(0, 0);
+    }
+    50% {
+        transform: translate(-1px, 0);
+    }
+}
+@keyframes pixel-wiggle-right {
+    0%,
+    100% {
+        transform: translate(0, 0);
+    }
+    50% {
+        transform: translate(1px, 0);
+    }
+}
+
+.pixel-tentacle-1 {
+    animation: pixel-wiggle-left 0.8s steps(2) infinite;
+    transform-origin: 5px 12px;
+}
+.pixel-tentacle-2 {
+    animation: pixel-wiggle-left 0.6s steps(2) infinite;
+    transform-origin: 7px 12px;
+}
+.pixel-tentacle-3 {
+    animation: pixel-wiggle-right 0.6s steps(2) infinite;
+    transform-origin: 8px 12px;
+}
+.pixel-tentacle-4 {
+    animation: pixel-wiggle-right 0.8s steps(2) infinite;
+    transform-origin: 10px 12px;
+}
+
+/* Mantle fins / wings: an undulating wave ripple (rotate + skew through a
+   sine-ish cycle), not a mechanical back-and-forth tilt. Each fin's hinge is
+   set inline on the group in 64-grid coordinates. */
+@keyframes squid-fin-flap-l {
+    0% {
+        transform: rotate(9deg) skewY(0deg);
+    }
+    25% {
+        transform: rotate(3deg) skewY(7deg);
+    }
+    50% {
+        transform: rotate(-7deg) skewY(0deg);
+    }
+    75% {
+        transform: rotate(1deg) skewY(-7deg);
+    }
+    100% {
+        transform: rotate(9deg) skewY(0deg);
+    }
+}
+@keyframes squid-fin-flap-r {
+    0% {
+        transform: rotate(-9deg) skewY(0deg);
+    }
+    25% {
+        transform: rotate(-3deg) skewY(-7deg);
+    }
+    50% {
+        transform: rotate(7deg) skewY(0deg);
+    }
+    75% {
+        transform: rotate(-1deg) skewY(7deg);
+    }
+    100% {
+        transform: rotate(-9deg) skewY(0deg);
+    }
+}
+.squid-fin-left {
+    animation: squid-fin-flap-l 1.15s ease-in-out infinite;
+}
+.squid-fin-right {
+    animation: squid-fin-flap-r 1.15s ease-in-out infinite 0.3s;
+}
+
+/* Cloak: while approaching (hunting) or fleeing, Squirty fades to a refracting
+   outline (a light-bending shimmer), then pops back out on the strike. The
+   transition is re-enabled only for opacity/filter (transform stays instant). */
+.squid-svg {
+    transition:
+        opacity 0.16s ease-out,
+        filter 0.16s ease-out !important;
+}
+.squid-svg.squid-cloaked {
+    opacity: 0.16;
+    filter: drop-shadow(0 0 0.6px #00e5ff) drop-shadow(0 0 0.6px #00e5ff)
+        drop-shadow(0 0 2px rgba(125, 249, 255, 0.8));
+}
+#squid-container.cloaking {
+    backdrop-filter: blur(2px) saturate(1.4) hue-rotate(-8deg);
+    -webkit-backdrop-filter: blur(2px) saturate(1.4) hue-rotate(-8deg);
+    border-radius: 46% 46% 40% 40%;
+}
+@keyframes squid-pop {
+    0% {
+        transform: scale(0.7);
+    }
+    60% {
+        transform: scale(1.18);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+.squid-svg.squid-pop-active {
+    animation: squid-pop 0.32s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+/* Hunting: tentacles wiggle faster/agitated as Squirty stalks the cursor. */
+.squid-svg.squid-hunting .pixel-tentacle-1,
+.squid-svg.squid-hunting .pixel-tentacle-2,
+.squid-svg.squid-hunting .pixel-tentacle-3,
+.squid-svg.squid-hunting .pixel-tentacle-4 {
+    animation-duration: 0.25s;
+}
+
+/* Attacking: tentacles shoot out to grab the cursor. */
+@keyframes squid-tentacle-strike {
+    0% {
+        transform: scaleY(1);
+    }
+    100% {
+        transform: scaleY(2.6);
+    }
+}
+.squid-svg.squid-attacking .pixel-tentacle-1,
+.squid-svg.squid-attacking .pixel-tentacle-2,
+.squid-svg.squid-attacking .pixel-tentacle-3,
+.squid-svg.squid-attacking .pixel-tentacle-4 {
+    transform-origin: 8px 12px;
+    animation: squid-tentacle-strike 0.18s ease-out forwards;
+}
+
+/* Chewing: tentacles stay extended and chomp rapidly on the cursor. */
+@keyframes squid-tentacle-chew {
+    0%,
+    100% {
+        transform: scaleY(2.3);
+    }
+    50% {
+        transform: scaleY(1.7);
+    }
+}
+.squid-svg.squid-chewing .pixel-tentacle-1,
+.squid-svg.squid-chewing .pixel-tentacle-2,
+.squid-svg.squid-chewing .pixel-tentacle-3,
+.squid-svg.squid-chewing .pixel-tentacle-4 {
+    transform-origin: 8px 12px;
+    animation: squid-tentacle-chew 0.14s steps(2) infinite;
+}
+
+/* Pulse swim scale */
+@keyframes squid-pulse {
+    0%,
+    100% {
+        transform: scale(1);
+    }
+    30% {
+        transform: scale(0.85, 1.15);
+    }
+    70% {
+        transform: scale(1.1, 0.9);
+    }
+}
+.squid-pulse-active {
+    animation: squid-pulse 0.7s ease-out;
+}
+
+.squid-ink {
+    position: fixed;
+    width: 24px;
+    height: 24px;
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.9;
+    filter: drop-shadow(0 0 3px rgba(0, 255, 0, 0.7));
+    transform-origin: center center;
+    transition:
+        transform 0.9s cubic-bezier(0.1, 0.8, 0.3, 1),
+        opacity 0.9s ease-out;
+}
+
+/* ---- Squirty: long hunting tentacles, chromatophores, house & timeout ---- */
+
+/* Full-viewport overlay the strike tentacles are drawn into. Click-through,
+   sits just under the squid (z 10000) and above page content. */
+#squid-tentacles {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: 9998;
+    overflow: visible;
+}
+#squid-tentacles path {
+    fill: none;
+    stroke-linecap: round;
+    filter: drop-shadow(0 0 4px rgba(0, 229, 255, 0.85));
+}
+
+/* Chromatophore color-pulsing while hunting/striking: quick "weird" steps
+   through cyan -> magenta -> amber -> green, like a hunting squid flashing. */
+@keyframes squid-chromatophore {
+    0% {
+        filter: drop-shadow(0 0 3px rgba(0, 229, 255, 0.7)) hue-rotate(0deg)
+            saturate(1.2) brightness(1);
+    }
+    25% {
+        filter: drop-shadow(0 0 6px rgba(255, 64, 129, 0.8)) hue-rotate(170deg)
+            saturate(1.9) brightness(1.3);
+    }
+    50% {
+        filter: drop-shadow(0 0 5px rgba(255, 160, 0, 0.8)) hue-rotate(300deg)
+            saturate(1.6) brightness(1.1);
+    }
+    75% {
+        filter: drop-shadow(0 0 6px rgba(64, 255, 64, 0.85)) hue-rotate(90deg)
+            saturate(1.8) brightness(1.25);
+    }
+    100% {
+        filter: drop-shadow(0 0 3px rgba(0, 229, 255, 0.7)) hue-rotate(0deg)
+            saturate(1.2) brightness(1);
+    }
+}
+.squid-svg.squid-chromatophore {
+    animation: squid-chromatophore 0.6s steps(4, end) infinite;
+}
+
+/* Squirty's house, parked in the top-right banner area. */
+#squirty-house {
+    position: fixed;
+    top: 46px;
+    right: 10px;
+    width: 60px;
+    height: 60px;
+    /* Above the CRT screen overlay (body::after, z 9998) so the house is not
+       washed out / hidden by the scanlines + corner vignette; still below the
+       squid (z 10000). */
+    z-index: 9999;
+    pointer-events: none;
+    image-rendering: pixelated;
+    opacity: 0.96;
+    filter: drop-shadow(0 0 4px rgba(255, 126, 182, 0.35));
+}
+
+/* Chimney bubbles: idle (hidden) until Squirty is sent to his house, then they
+   rise out of the sponge and fade in a staggered loop. */
+#squirty-house .sq-bubble {
+    opacity: 0;
+    transform-box: fill-box;
+    transform-origin: center;
+}
+#squirty-house.timeout .sq-bubble {
+    animation: sq-bubble-rise 1.8s linear infinite;
+}
+#squirty-house.timeout .sq-bubble.sq-b2 {
+    animation-delay: 0.6s;
+}
+#squirty-house.timeout .sq-bubble.sq-b3 {
+    animation-delay: 1.1s;
+}
+@keyframes sq-bubble-rise {
+    0% {
+        opacity: 0;
+        transform: translateY(0) scale(0.6);
+    }
+    25% {
+        opacity: 0.9;
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(-7px) scale(1);
+    }
+}
+
+/* "Squirty timeout" toggle in the navbar. */
+.navbar-squirty-timeout {
+    float: right !important;
+    display: inline-block !important;
+    margin: 4px 6px !important;
+    padding: 6px 12px !important;
+    line-height: 22px !important; /* shared row height so the navbar add-ons align */
+    vertical-align: middle !important;
+    font-weight: 700 !important;
+    font-size: 0.85rem !important;
+    color: #00e5ff !important;
+    background: rgba(0, 30, 40, 0.5) !important;
+    border: 1px solid #00838f !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    pointer-events: auto !important;
+    user-select: none !important;
+    text-shadow: 0 0 5px rgba(0, 229, 255, 0.5) !important;
+}
+.navbar-squirty-timeout:hover {
+    background: rgba(0, 60, 80, 0.7) !important;
+}
+.navbar-squirty-timeout.active {
+    color: #ff4081 !important;
+    border-color: #ff4081 !important;
+    text-shadow: 0 0 6px rgba(255, 64, 129, 0.6) !important;
+}
+
+/* Tucked into the house during timeout: stop the idle fin/tentacle motion. */
+#squid-container.squid-tucked {
+    z-index: 9996;
+}
+#squid-container.squid-tucked .squid-svg * {
+    animation: none !important;
+}
+
+/* Mascot Clicks Counter in Navbar Banner */
+.navbar-squirty-counter {
+    float: right !important;
+    display: inline-block !important;
+    padding: 6px 16px !important;
+    line-height: 22px !important; /* shared row height so the navbar add-ons align */
+    font-weight: 700 !important;
+    color: #40ff40 !important;
+    text-shadow: 0 0 5px rgba(64, 255, 64, 0.6) !important;
+    font-size: 0.95rem !important;
+    pointer-events: none !important;
+    border-left: 2px solid #008000 !important; /* visual left divider */
+    margin-left: 8px !important;
+    vertical-align: middle !important;
+}
+
+.navbar-squirty-counter .navbar-squirty-label {
+    color: #008000 !important;
+    text-shadow: none !important;
+    margin-right: 4px !important;
+}
+
+/* ---- CRT phosphor texture ----------------------------------------- */
+/* Calms the green-on-near-black palette into an "old monitor" feel: a
+   faint glow on text plus a screen overlay (scanlines + corner vignette
+   + green wash). The lifted near-black background (#080c08) set in the
+   variables and rules above is part of this same calm direction. */
+
+/* Soft phosphor bloom on all text: the gentle glow of a real CRT. */
+body,
+body * {
+    text-shadow: 0 0 1px rgba(0, 220, 90, 0.35);
+}
+/* Stronger, intentional glow on headings and banner elements. */
+#projectname,
+.navbar-squirty-counter,
+h1,
+h2,
+h3,
+details > summary,
+details[open] > summary::before {
+    text-shadow: 0 0 6px rgba(0, 200, 0, 0.45) !important;
+}
+
+/* Screen overlay: scanlines + corner vignette + faint glass tint.
+   Sits above content but below the squid (z 10000) and is click-through. */
+body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9998;
+    background:
+        /* scanlines */
+        repeating-linear-gradient(
+            rgba(0, 0, 0, 0) 0px,
+            rgba(0, 0, 0, 0) 2px,
+            rgba(0, 0, 0, 0.16) 3px,
+            rgba(0, 0, 0, 0.16) 3px
+        ),
+        /* vignette: darker toward the corners like curved glass */
+        radial-gradient(
+                ellipse at center,
+                rgba(0, 0, 0, 0) 70%,
+                rgba(0, 0, 0, 0.22) 100%
+            ),
+        /* faint green phosphor wash */
+        radial-gradient(
+                ellipse at center,
+                rgba(0, 40, 0, 0.1) 0%,
+                rgba(0, 20, 0, 0.1) 100%
+            );
+    background-size:
+        100% 3px,
+        100% 100%,
+        100% 100%; /* scanline pitch */
+}
+
+/* Respect reduced-motion / contrast preferences: drop the texture for
+   users who ask for it (accessibility). */
+@media (prefers-reduced-motion: reduce), (prefers-contrast: more) {
+    body::after {
+        display: none;
+    }
+    body,
+    body * {
+        text-shadow: none;
+    }
+}

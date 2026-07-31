@@ -1,0 +1,68 @@
+name: Bug report
+description: Report a defect in the library
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a bug. Please reproduce on the latest release first.
+        For security vulnerabilities, do NOT use this form. See the security policy.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: A clear description of the bug and its impact.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps, request bytes, or a sketch that triggers it.
+      placeholder: |
+        1. Build with these flags ...
+        2. Send this request ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Library version
+      placeholder: "e.g. 3.8.4"
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Board and framework
+      placeholder: "e.g. esp32dev, Arduino-ESP32 3.x, PlatformIO 6.x"
+    validations:
+      required: true
+  - type: textarea
+    id: flags
+    attributes:
+      label: Build flags / configuration
+      description: The PC_ENABLE_* flags and any overrides you set.
+      render: text
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / serial output
+      description: Relevant serial output, a backtrace, or a packet capture.
+      render: text
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Confirmation
+      options:
+        - label: I reproduced this on the latest release.
+          required: true
+        - label: This is not a security vulnerability (those are reported privately).
+          required: true

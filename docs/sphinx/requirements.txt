@@ -1,0 +1,6 @@
+# Docs site: Sphinx over Doxygen (Breathe bridge) with the Furo theme + MyST for the Markdown guides.
+sphinx>=7.2
+breathe>=4.35
+furo>=2024.1.29
+myst-parser>=2.0
+linkify-it-py>=2.0

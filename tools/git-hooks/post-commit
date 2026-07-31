@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# After each commit, integrate any open, mergeable Dependabot PRs into the current branch so local
+# work stays on top of the dependency bumps ("pull the Dependabot PR before you keep committing").
+# Best-effort and strictly non-blocking - all the logic + guards live in merge_dependabot.sh.
+#
+# Post-commit (not pre-commit) on purpose: a pre-commit runs with the staged index dirty, and git
+# merge refuses to overwrite it, so an in-place merge would either never run or need stash/index
+# gymnastics that break on `git commit --amend`. Post-commit runs on a clean tree and reaches the
+# same end state: the branch ends with your commit plus the merged dependency bumps.
+#
+# Install once per clone:   git config core.hooksPath tools/git-hooks
+set -uo pipefail
+cd "$(git rev-parse --show-toplevel)" 2>/dev/null || exit 0
+[ -f tools/git-hooks/merge_dependabot.sh ] || exit 0
+bash tools/git-hooks/merge_dependabot.sh || true
+exit 0

@@ -1,0 +1,131 @@
+// Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+/**
+ * @file vl53l0x.cpp
+ * @brief VL53L0X time-of-flight ranging codec + ESP32 binding (see vl53l0x.h).
+ */
+
+#include "services/peripherals/vl53l0x/vl53l0x.h"
+#include "protocore_config.h"
+
+#if PC_ENABLE_VL53L0X
+
+#if defined(ARDUINO)
+#include "services/peripherals/i2c.h"
+#include <Arduino.h>
+#include <Wire.h>
+#endif
+uint16_t pc_vl53l0x_range_mm(uint8_t hi, uint8_t lo)
+{
+    return (uint16_t)((hi << 8) | lo);
+}
+
+bool pc_vl53l0x_data_ready(uint8_t interrupt_status)
+{
+    return (interrupt_status & 0x07) != 0;
+}
+
+uint8_t pc_vl53l0x_range_status(uint8_t range_status_reg)
+{
+    return (uint8_t)((range_status_reg >> 3) & 0x0F);
+}
+
+bool pc_vl53l0x_range_valid(uint8_t range_status_reg)
+{
+    return pc_vl53l0x_range_status(range_status_reg) == VL53L0X_RANGE_VALID;
+}
+
+#if defined(ARDUINO)
+
+namespace
+{
+// All VL53L0X I2C-binding state, owned by one instance (internal linkage): the device address,
+// so it is one named owner, unreachable from any other translation unit.
+struct Vl53l0xCtx
+{
+    uint8_t addr = 0x29;
+};
+Vl53l0xCtx s_vl;
+
+bool w8(uint8_t reg, uint8_t val)
+{
+    Wire.beginTransmission(s_vl.addr);
+    Wire.write(reg);
+    Wire.write(val);
+    return Wire.endTransmission() == 0;
+}
+
+bool r8(uint8_t reg, uint8_t *val)
+{
+    Wire.beginTransmission(s_vl.addr);
+    Wire.write(reg);
+    if (Wire.endTransmission(false) != 0)
+    {
+        return false;
+    }
+    if (Wire.requestFrom((int)s_vl.addr, 1) != 1)
+    {
+        return false;
+    }
+    *val = (uint8_t)Wire.read();
+    return true;
+}
+
+bool rn(uint8_t reg, uint8_t *buf, uint8_t n)
+{
+    Wire.beginTransmission(s_vl.addr);
+    Wire.write(reg);
+    if (Wire.endTransmission(false) != 0)
+    {
+        return false;
+    }
+    if (Wire.requestFrom((int)s_vl.addr, (int)n) != n)
+    {
+        return false;
+    }
+    for (uint8_t i = 0; i < n; i++)
+    {
+        buf[i] = (uint8_t)Wire.read();
+    }
+    return true;
+}
+} // namespace
+
+bool pc_vl53l0x_begin(uint8_t addr)
+{
+    pc_i2c_begin();
+    s_vl.addr = addr;
+    uint8_t id = 0;
+    if (!r8(VL53L0X_REG_IDENTIFICATION_MODEL_ID, &id) || id != VL53L0X_MODEL_ID)
+    {
+        return false;
+    }
+    return w8(VL53L0X_REG_SYSRANGE_START, 0x02); // continuous back-to-back ranging
+}
+
+bool pc_vl53l0x_read_mm(uint16_t *mm)
+{
+    if (!mm)
+    {
+        return false;
+    }
+    uint8_t irq = 0;
+    if (!r8(VL53L0X_REG_RESULT_INTERRUPT_STATUS, &irq) || !pc_vl53l0x_data_ready(irq))
+    {
+        return false;
+    }
+    uint8_t buf[12];
+    if (!rn(VL53L0X_REG_RESULT_RANGE_STATUS, buf, 12))
+    {
+        return false;
+    }
+    bool valid = pc_vl53l0x_range_valid(buf[0]);
+    *mm = pc_vl53l0x_range_mm(buf[10], buf[11]); // distance at RESULT_RANGE_STATUS + 10/11
+    w8(VL53L0X_REG_SYSTEM_INTERRUPT_CLEAR, 0x01);
+    return valid;
+}
+
+#endif // ARDUINO
+
+#endif // PC_ENABLE_VL53L0X

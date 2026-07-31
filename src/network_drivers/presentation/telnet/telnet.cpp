@@ -1,0 +1,347 @@
+// Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+/**
+ * @file telnet.cpp
+ * @brief Minimal RFC 854 Telnet server implementation.
+ */
+
+#include "network_drivers/presentation/telnet/telnet.h"
+
+#if PC_ENABLE_TELNET
+
+#include "network_drivers/session/proto_handler.h"
+#include "network_drivers/transport/tcp.h"
+#include <stdarg.h>
+#include <stdio.h>
+#include <string.h>
+
+// Telnet protocol bytes (RFC 854 / 858 / 857): wire values compared/emitted, so integer constants
+// in a namespacing struct.
+struct TelnetByte
+{
+    static constexpr uint8_t T_SE = 240;
+    static constexpr uint8_t T_SB = 250;
+    static constexpr uint8_t T_WILL = 251;
+    static constexpr uint8_t T_WONT = 252;
+    static constexpr uint8_t T_DO = 253;
+    static constexpr uint8_t T_DONT = 254;
+    static constexpr uint8_t T_IAC = 255;
+    static constexpr uint8_t OPT_ECHO = 1;
+    static constexpr uint8_t OPT_SGA = 3;
+};
+
+// IAC parser state per connection (a mutually-exclusive state, not a wire value).
+enum class TelnetState : uint8_t
+{
+    TN_NORMAL,
+    TN_IAC,
+    TN_OPT,
+    TN_SB
+};
+
+struct TelnetConn
+{
+    uint8_t slot;
+    bool used;
+    TelnetState st; // IAC parser state
+    uint8_t cmd;    // pending WILL/WONT/DO/DONT
+    uint16_t len;   // bytes in line[]
+    char line[TELNET_BUF_SIZE];
+};
+
+// All telnet presentation state, owned by one instance (internal linkage): the per-slot
+// connection table and the command callback. One named owner, unreachable cross-TU.
+struct TelnetCtx
+{
+    TelnetConn tn[MAX_TELNET_CONNS];
+    TelnetCommandCb cmd_cb = nullptr;
+};
+static TelnetCtx s_telnet;
+
+static TelnetConn *find_conn(uint8_t slot)
+{
+    for (int i = 0; i < MAX_TELNET_CONNS; i++)
+    {
+        if (s_telnet.tn[i].used && s_telnet.tn[i].slot == slot)
+        {
+            return &s_telnet.tn[i];
+        }
+    }
+    return nullptr;
+}
+
+static void raw_send(uint8_t slot, const void *data, size_t n)
+{
+    if (!pc_conn_active(slot) || // GCOVR_EXCL_BR_LINE  n==0 is unreachable: every call site below passes a
+                                 // fixed nonzero literal length. (Marker must sit on this line: gcov attributes
+                                 // the whole multi-line condition's branches to the "if" line, not the operand's
+                                 // own line - a marker on the next line silently fails to exclude anything.)
+        n == 0)
+    {
+        return;
+    }
+    pc_conn_send(slot, data, (u16_t)n);
+    pc_conn_flush(slot);
+}
+
+// Send Telnet *data* (echo + application output): a literal IAC byte (0xFF) MUST be
+// doubled so the client does not read it as a command introducer (RFC 854). Sends
+// runs of non-IAC bytes directly and emits "\xff\xff" for each IAC. Protocol commands
+// (IAC WILL/DO/...) use raw_send directly - they send IAC intentionally.
+static void send_escaped(uint8_t slot, const void *data, size_t n)
+{
+    if (!pc_conn_active(slot) || n == 0)
+    {
+        return;
+    }
+    const uint8_t *b = (const uint8_t *)data;
+    size_t start = 0;
+    for (size_t i = 0; i < n; i++)
+    {
+        if (b[i] == 0xFF)
+        {
+            if (i > start)
+            {
+                pc_conn_send(slot, b + start, (u16_t)(i - start));
+            }
+            pc_conn_send(slot, "\xff\xff", 2); // doubled IAC
+            start = i + 1;
+        }
+    }
+    if (n > start)
+    {
+        pc_conn_send(slot, b + start, (u16_t)(n - start));
+    }
+    pc_conn_flush(slot);
+}
+
+// ---------------------------------------------------------------------------
+// Connection lifecycle (called from the session layer)
+// ---------------------------------------------------------------------------
+
+void pc_telnet_accept(uint8_t slot)
+{
+    TelnetConn *t = nullptr;
+    for (int i = 0; i < MAX_TELNET_CONNS; i++)
+    {
+        if (!s_telnet.tn[i].used)
+        {
+            t = &s_telnet.tn[i];
+            break;
+        }
+    }
+    if (!t)
+    {
+        // No Telnet capacity: drop the connection (transport owns the teardown).
+        pc_conn_close(slot);
+        return;
+    }
+    memset(t, 0, sizeof(*t));
+    t->used = true;
+    t->slot = slot;
+    t->st = TelnetState::TN_NORMAL;
+
+    // Server-side echo + character-at-a-time (suppress go-ahead).
+    static const uint8_t neg[] = {TelnetByte::T_IAC, TelnetByte::T_WILL, TelnetByte::OPT_ECHO,
+                                  TelnetByte::T_IAC, TelnetByte::T_WILL, TelnetByte::OPT_SGA};
+    raw_send(slot, neg, sizeof(neg));
+    raw_send(slot, "PC Telnet ready\r\n> ", 22);
+}
+
+void pc_telnet_close(uint8_t slot)
+{
+    TelnetConn *t = find_conn(slot);
+    if (t)
+    {
+        t->used = false;
+    }
+}
+
+// Process one decoded data byte (not part of an IAC sequence).
+static void handle_data(uint8_t slot, TelnetConn *t, uint8_t b)
+{
+    if (b == '\r')
+    {
+        return; // wait for the LF of CRLF
+    }
+    if (b == '\n')
+    {
+        t->line[t->len] = '\0';
+        raw_send(slot, "\r\n", 2);
+        if (s_telnet.cmd_cb)
+        {
+            s_telnet.cmd_cb(t->line, (uint8_t)(t - s_telnet.tn));
+        }
+        t->len = 0;
+        raw_send(slot, "> ", 2);
+        return;
+    }
+    if (b == 0x08 || b == 0x7F) // backspace / delete
+    {
+        if (t->len > 0)
+        {
+            t->len--;
+            raw_send(slot, "\b \b", 3);
+        }
+        return;
+    }
+    if (b < 0x20) // ignore other control characters
+    {
+        return;
+    }
+    if (t->len < sizeof(t->line) - 1)
+    {
+        t->line[t->len++] = (char)b;
+        send_escaped(slot, &b, 1); // echo (doubles a literal IAC per RFC 854)
+    }
+}
+
+void pc_telnet_rx(uint8_t slot)
+{
+    TelnetConn *t = find_conn(slot);
+    if (!t)
+    {
+        return;
+    }
+
+    uint8_t b;
+    while (pc_conn_read_byte(slot, &b))
+    {
+        switch (t->st) // GCOVR_EXCL_BR_LINE  t->st is a TelnetState enum class and every enumerator
+                       // (TN_NORMAL/TN_IAC/TN_OPT/TN_SB) has a case below; the compiler's defensive "no case matched"
+                       // branch can't be reached from any host input
+        {
+        case TelnetState::TN_NORMAL:
+            if (b == TelnetByte::T_IAC)
+            {
+                t->st = TelnetState::TN_IAC;
+            }
+            else
+            {
+                handle_data(slot, t, b);
+            }
+            break;
+        case TelnetState::TN_IAC:
+            if (b == TelnetByte::T_SB)
+            {
+                t->st = TelnetState::TN_SB;
+            }
+            else if (b == TelnetByte::T_WILL || b == TelnetByte::T_WONT || b == TelnetByte::T_DO ||
+                     b == TelnetByte::T_DONT)
+            {
+                t->cmd = b;
+                t->st = TelnetState::TN_OPT;
+            }
+            else if (b == TelnetByte::T_IAC)
+            {
+                handle_data(slot, t, 0xFF); // escaped literal 0xFF
+                t->st = TelnetState::TN_NORMAL;
+            }
+            else
+            {
+                t->st = TelnetState::TN_NORMAL; // other 2-byte command (GA, NOP, ...) - consume
+            }
+            break;
+        case TelnetState::TN_OPT: {
+            // Refuse what we don't actively support; stay quiet on options we
+            // already offered (ECHO/SGA) to avoid negotiation loops.
+            uint8_t reply = 0;
+            if (t->cmd == TelnetByte::T_DO && b != TelnetByte::OPT_ECHO && b != TelnetByte::OPT_SGA)
+            {
+                reply = TelnetByte::T_WONT;
+            }
+            else if (t->cmd == TelnetByte::T_WILL)
+            {
+                reply = TelnetByte::T_DONT;
+            }
+            if (reply)
+            {
+                uint8_t resp[3] = {TelnetByte::T_IAC, reply, b};
+                raw_send(slot, resp, 3);
+            }
+            t->st = TelnetState::TN_NORMAL;
+            break;
+        }
+        case TelnetState::TN_SB:
+            if (b == TelnetByte::T_SE)
+            {
+                t->st = TelnetState::TN_NORMAL; // end of subnegotiation (contents ignored)
+            }
+            break;
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Application API
+// ---------------------------------------------------------------------------
+
+void pc_telnet_on_command(TelnetCommandCb cb)
+{
+    s_telnet.cmd_cb = cb;
+}
+
+static void broadcast(const char *s, size_t n)
+{
+    for (int i = 0; i < MAX_TELNET_CONNS; i++)
+    {
+        if (s_telnet.tn[i].used)
+        {
+            send_escaped(s_telnet.tn[i].slot, s, n); // app output: escape IAC (RFC 854)
+        }
+    }
+}
+
+void pc_telnet_print(const char *s)
+{
+    if (s)
+    {
+        broadcast(s, strnlen(s, TELNET_BUF_SIZE)); // line-oriented console, same cap as pc_telnet_printf
+    }
+}
+
+void pc_telnet_println(const char *s)
+{
+    if (s)
+    {
+        broadcast(s, strnlen(s, TELNET_BUF_SIZE));
+    }
+    broadcast("\r\n", 2);
+}
+
+void pc_telnet_printf(const char *fmt, ...)
+{
+    char buf[TELNET_BUF_SIZE];
+    va_list ap;
+    va_start(ap, fmt);
+    int n = vsnprintf(buf, sizeof(buf), fmt, ap);
+    va_end(ap);
+    if (n > 0)
+    {
+        broadcast(buf, (size_t)(n < (int)sizeof(buf) ? n : (int)sizeof(buf) - 1));
+    }
+}
+
+uint8_t pc_telnet_client_count()
+{
+    uint8_t c = 0;
+    for (int i = 0; i < MAX_TELNET_CONNS; i++)
+    {
+        if (s_telnet.tn[i].used)
+        {
+            c++;
+        }
+    }
+    return c;
+}
+
+// The Telnet ProtoHandler (Layer 5 dispatch seam) - installed by proto_register_builtins() via this
+// accessor, so this module carries no dependency on the session layer.
+static const ProtoHandler s_telnet_handler = {pc_telnet_accept, pc_telnet_rx, pc_telnet_close, nullptr};
+const ProtoHandler *pc_telnet_proto_handler(void)
+{
+    return &s_telnet_handler;
+}
+
+#endif // PC_ENABLE_TELNET

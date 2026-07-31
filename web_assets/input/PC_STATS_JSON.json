@@ -1,0 +1,10 @@
+<!--#brief Runtime stats JSON (rendered via send_template); add/rename fields to taste.-->
+{
+  "uptime_ms": {{uptime_ms}},
+  "requests": {{requests}},
+  "http_2xx": {{http_2xx}},
+  "http_4xx": {{http_4xx}},
+  "http_5xx": {{http_5xx}},
+  "active_conns": {{active_conns}},
+  "free_heap": {{free_heap}}
+}

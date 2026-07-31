@@ -1,0 +1,54 @@
+name: Docs
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  docs:
+    name: Doxygen + GitHub Pages
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v6
+
+      - name: Install Doxygen
+        run: sudo apt-get update -qq && sudo apt-get install -y doxygen
+
+      # Download doxygen-awesome-css dark theme stylesheet.
+      # Pinned to v2.3.3; update the tag and SHA to upgrade.
+      - name: Download doxygen-awesome-css
+        run: |
+          mkdir -p docs
+          wget -q \
+            "https://github.com/jothepro/doxygen-awesome-css/raw/v2.3.3/doxygen-awesome.css" \
+            -O docs/doxygen-awesome.css
+
+      - name: Generate docs
+        run: |
+          doxygen docs/Doxyfile
+          touch docs/html/.nojekyll
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: docs/html/
+
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v5

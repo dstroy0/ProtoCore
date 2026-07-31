@@ -1,0 +1,77 @@
+/* cute: pastel pink, rounded, friendly rounded font, heart bullets.
+   Opt a page in with <!--#theme cute-->. */
+:root {
+  --bg: #fff0f6;
+  --ink: #6d4452;
+  --pink: #ff6fae;
+  --pink2: #ffa6cf;
+  --card: #ffffff;
+}
+html,
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font:
+    16px/1.6 "Comic Sans MS",
+    "Segoe UI Rounded",
+    "Quicksand",
+    system-ui,
+    sans-serif;
+}
+h1,
+h2,
+h3 {
+  color: var(--pink);
+  font-weight: 800;
+  text-shadow: 1px 1px 0 #ffd6e8;
+}
+h1::before,
+h2::before {
+  content: "\1F338 "; /* cherry blossom */
+}
+a {
+  color: var(--pink);
+}
+ul {
+  list-style: none;
+  padding-left: 1.2em;
+}
+li::before {
+  content: "\1F49E "; /* sparkling heart */
+}
+input,
+select,
+textarea {
+  background: var(--card);
+  color: var(--ink);
+  border: 2px dashed var(--pink2);
+  border-radius: 14px;
+  padding: 9px 14px;
+  font: inherit;
+  outline: none;
+}
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--pink);
+  border-style: solid;
+}
+button {
+  background: var(--pink);
+  color: #fff;
+  border: 0;
+  border-radius: 14px;
+  padding: 10px 20px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 0 #d64f8e;
+}
+button:hover {
+  background: var(--pink2);
+}
+button:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #d64f8e;
+}

@@ -1,0 +1,72 @@
+/* bubbly: soft pastel, big rounded corners, pill buttons, gentle shadows.
+   Opt a page in with <!--#theme bubbly-->. */
+:root {
+  --bg1: #e0f7fa;
+  --bg2: #fce4ec;
+  --card: #ffffff;
+  --ink: #37474f;
+  --accent: #26c6da;
+  --accent2: #ec407a;
+}
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  color: var(--ink);
+  font:
+    16px/1.6 "Segoe UI",
+    "Helvetica Neue",
+    system-ui,
+    sans-serif;
+  background: linear-gradient(135deg, var(--bg1), var(--bg2));
+}
+h1,
+h2,
+h3 {
+  color: var(--accent2);
+  font-weight: 800;
+}
+a {
+  color: var(--accent);
+}
+input,
+select,
+textarea {
+  background: var(--card);
+  color: var(--ink);
+  border: 2px solid #b2ebf2;
+  border-radius: 999px;
+  padding: 10px 16px;
+  font: inherit;
+  outline: none;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px rgba(38, 198, 218, 0.25);
+}
+button {
+  background: var(--accent);
+  color: #fff;
+  border: 0;
+  border-radius: 999px;
+  padding: 10px 22px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 6px 14px rgba(38, 198, 218, 0.4);
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s;
+}
+button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(38, 198, 218, 0.5);
+}
+button:active {
+  transform: translateY(1px);
+}

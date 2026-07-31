@@ -1,0 +1,1 @@
+-DPC_ENABLE_GPIB=1

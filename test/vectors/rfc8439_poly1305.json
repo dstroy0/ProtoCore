@@ -1,0 +1,25 @@
+{
+  "source": "RFC 8439 sec 2.5.2",
+  "commit": "",
+  "file": "rfc8439",
+  "vectors": [
+    {
+      "tcId": 1,
+      "comment": "RFC 8439 2.5.2 tag",
+      "result": "valid",
+      "flags": [],
+      "key": "85d6be7857556d337f4452fe42d506a80103808afb0db2fd4abff6af4149f51b",
+      "msg": "43727970746f6772617068696320466f72756d2052657365617263682047726f7570",
+      "tag": "a8061dc1305136c6c22b8baf0c0127a9"
+    },
+    {
+      "tcId": 2,
+      "comment": "supplementary vector (not from RFC 8439): same key as tcId 1, message re-chunked to exactly two 16-byte blocks so the accumulated length is a multiple of 16 and the implementation's partial-final-block path is skipped. Tag computed independently with a straightforward mod-(2^130-5) bignum reference implementation of the RFC 8439 sec 2.5 algorithm (clamp r, accumulate blocks, add s mod 2^128), cross-checked against tcId 1 to confirm the reference reproduces the published tag before use here.",
+      "result": "valid",
+      "flags": [],
+      "key": "85d6be7857556d337f4452fe42d506a80103808afb0db2fd4abff6af4149f51b",
+      "msg": "43727970746f6772617068696320466f72756d20526573656172636820477270",
+      "tag": "6d22d667900b8665c8253cf0ef00ad79"
+    }
+  ]
+}

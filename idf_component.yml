@@ -1,0 +1,42 @@
+# ESP Component Registry manifest for ProtoCore.
+#
+# Lets an ESP-IDF project consume the library with `idf.py add-dependency`, and declares the
+# arduino-esp32 dependency the ESP Component Manager pulls automatically when the library is
+# built as a component. Ignored by PlatformIO (library.json) and Arduino (library.properties).
+#
+# Keep `version` in sync with library.json / library.properties (bump2version updates all three).
+version: "0.0.1"
+description: >-
+  Zero-heap, deterministic asynchronous multi-protocol network server for ESP32: HTTP/1.1,
+  HTTP/2 and HTTP/3, WebSocket (RFC 6455), Server-Sent Events, Basic/Digest auth, static file
+  serving, TLS/HTTPS, SSH, Telnet, SNMP, and 150+ optional services. All buffers are statically
+  sized at compile time; feature flags strip unused subsystems.
+url: "https://github.com/dstroy0/ProtoCore"
+repository: "https://github.com/dstroy0/ProtoCore.git"
+documentation: "https://dstroy0.github.io/ProtoCore/"
+issues: "https://github.com/dstroy0/ProtoCore/issues"
+license: "AGPL-3.0-or-later"
+tags:
+  - http
+  - http2
+  - http3
+  - websocket
+  - sse
+  - tls
+  - ssh
+  - snmp
+  - webserver
+  - esp32
+  - deterministic
+dependencies:
+  # arduino-esp32 3.3.x targets ESP-IDF 5.3-5.5; the library is built with Arduino as a component.
+  idf: ">=5.3,<5.6"
+  espressif/arduino-esp32: "^3.3.10"
+files:
+  # Keep the registry package lean: ship src/ + the build metadata, not the host test suite,
+  # the generated HTML docs, or local build caches.
+  exclude:
+    - "test/**/*"
+    - "docs/html/**/*"
+    - ".pio/**/*"
+    - ".git/**/*"

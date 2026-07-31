@@ -1,0 +1,7 @@
+# Generated host keys - never commit private key material (see README).
+host_key.h
+host_key_der.h
+*.pem
+*.der
+*.pub
+keys/

@@ -1,0 +1,10 @@
+docs/configurator.html text eol=lf
+ci_tooling/generate/gen_configurator.py text eol=lf
+# Shell scripts must keep LF or the shebang breaks on Linux/WSL/macOS.
+*.sh text eol=lf
+
+# The git hooks are executed directly by git and are extensionless, so the *.sh rule above does
+# not reach them. Checked out with CRLF they die on Linux/WSL with
+#   /usr/bin/env: 'bash\r': No such file or directory
+# which silently disables every auto-format step for anyone on a non-Windows clone.
+tools/git-hooks/** text eol=lf

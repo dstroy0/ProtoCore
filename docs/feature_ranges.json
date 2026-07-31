@@ -1,0 +1,952 @@
+{
+  "ACCEPT_THROTTLE": {
+    "default": {
+      "flash": 68,
+      "ram": 8
+    },
+    "minimal": {
+      "flash": 72,
+      "ram": 8
+    }
+  },
+  "AMQP": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "AUDIT_LOG": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "AUTH": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "AUTH_LOCKOUT": {
+    "default": {
+      "flash": 1012,
+      "ram": 576
+    },
+    "minimal": {
+      "flash": 1076,
+      "ram": 576
+    }
+  },
+  "BACNET": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "C37118": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "CIP": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "CLOUDEVENTS": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "COAP": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "COAP_BLOCK": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "COAP_OBSERVE": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "CONFIG_IO": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "CONFIG_STORE": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "COTP": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "CSRF": {
+    "default": {
+      "flash": 1584,
+      "ram": 40
+    },
+    "minimal": {
+      "flash": 1636,
+      "ram": 40
+    }
+  },
+  "DASHBOARD": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 616,
+      "ram": 200
+    }
+  },
+  "DEVICE_ID": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "DF1": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "DIAG": {
+    "default": {
+      "flash": 460,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 20,
+      "ram": 0
+    }
+  },
+  "DNP3": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "DNS_SERVER": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "ENIP": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "ETAG": {
+    "default": {
+      "flash": 34920,
+      "ram": 1272
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "ETHERNET": {
+    "default": {
+      "flash": 524,
+      "ram": 16
+    },
+    "minimal": {
+      "flash": 524,
+      "ram": 16
+    }
+  },
+  "FILE_SERVING": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 4272,
+      "ram": 304
+    }
+  },
+  "FINS": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "FLOW_EXPORT": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "FORWARD": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "GPIO_MAP": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "GRAPHQL": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "GRPC_WEB": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "GUARDRAILS": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "HOSTLINK": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "HTTP_CLIENT": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "IPV6": {
+    "default": {
+      "flash": 24,
+      "ram": 0
+    }
+  },
+  "IP_ALLOWLIST": {
+    "default": {
+      "flash": 456,
+      "ram": 152
+    },
+    "minimal": {
+      "flash": 452,
+      "ram": 152
+    }
+  },
+  "JWT": {
+    "default": {
+      "flash": 8,
+      "ram": 576
+    },
+    "minimal": {
+      "flash": 8,
+      "ram": 576
+    }
+  },
+  "KEEPALIVE": {
+    "default": {
+      "flash": 424,
+      "ram": 8
+    },
+    "minimal": {
+      "flash": 616,
+      "ram": 8
+    }
+  },
+  "LOGBUF": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "LWM2M": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "MDNS": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "MELSEC": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "METRICS": {
+    "default": {
+      "flash": 128,
+      "ram": 16
+    },
+    "minimal": {
+      "flash": 124,
+      "ram": 16
+    }
+  },
+  "MODBUS_MASTER": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "MODBUS_RTU": {
+    "default": {
+      "flash": 1796,
+      "ram": 272
+    },
+    "minimal": {
+      "flash": 1804,
+      "ram": 272
+    }
+  },
+  "MQTT": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "MQTT_SN": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "MSGPACK": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "MULTIPART": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "NATS": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "NTP": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "NTP_SERVER": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "OAUTH2": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "OBSERVABILITY": {
+    "default": {
+      "flash": 412,
+      "ram": 32
+    },
+    "minimal": {
+      "flash": 400,
+      "ram": 32
+    }
+  },
+  "OIDC": {
+    "default": {
+      "flash": -4,
+      "ram": 4928
+    },
+    "minimal": {
+      "flash": -4,
+      "ram": 4928
+    }
+  },
+  "OPCUA": {
+    "default": {
+      "flash": 6948,
+      "ram": 10272
+    },
+    "minimal": {
+      "flash": 7060,
+      "ram": 10272
+    }
+  },
+  "OPCUA_CLIENT": {
+    "default": {
+      "flash": 6948,
+      "ram": 10272
+    },
+    "minimal": {
+      "flash": 7060,
+      "ram": 10272
+    }
+  },
+  "OTA": {
+    "default": {
+      "flash": 172,
+      "ram": 35872
+    },
+    "minimal": {
+      "flash": 160,
+      "ram": 35872
+    }
+  },
+  "OTA_ROLLBACK": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "PARTITION_MONITOR": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "PER_IP_THROTTLE": {
+    "default": {
+      "flash": 572,
+      "ram": 448
+    },
+    "minimal": {
+      "flash": 592,
+      "ram": 448
+    }
+  },
+  "PROVISIONING": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "PROXY_PROTOCOL": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "RANGE": {
+    "default": {
+      "flash": 648,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 5032,
+      "ram": 304
+    }
+  },
+  "REDIS": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "RTC": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "S7COMM": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "SENML": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "SMTP": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "SNMP": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "SNMP_TRAP": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "SNMP_V3": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "SPARKPLUG": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "SSE": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 616,
+      "ram": 200
+    }
+  },
+  "SSH": {
+    "default": {
+      "flash": 68224,
+      "ram": 22316
+    },
+    "minimal": {
+      "flash": 68296,
+      "ram": 22316
+    }
+  },
+  "STATS": {
+    "default": {
+      "flash": 84,
+      "ram": 16
+    },
+    "minimal": {
+      "flash": 104,
+      "ram": 16
+    }
+  },
+  "STATSD": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "STOMP": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "SUNSPEC": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "SYSLOG": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "TELEMETRY": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "TELNET": {
+    "default": {
+      "flash": 1316,
+      "ram": 528
+    },
+    "minimal": {
+      "flash": 1352,
+      "ram": 528
+    }
+  },
+  "TIME_SOURCE": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "TOTP": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "UDP_TELEMETRY": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "UPLOAD": {
+    "default": {
+      "flash": 172,
+      "ram": 35872
+    },
+    "minimal": {
+      "flash": 160,
+      "ram": 35872
+    }
+  },
+  "VFS": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "WAMP": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "WEBDAV": {
+    "default": {
+      "flash": 26840,
+      "ram": 39336
+    },
+    "minimal": {
+      "flash": 31204,
+      "ram": 39640
+    }
+  },
+  "WEBHOOK": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "WEBSOCKET": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 3824,
+      "ram": 1552
+    }
+  },
+  "WEB_TERMINAL": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 3824,
+      "ram": 1552
+    }
+  },
+  "WS_CLIENT": {
+    "default": {
+      "flash": 0,
+      "ram": 0
+    },
+    "minimal": {
+      "flash": 0,
+      "ram": 0
+    }
+  },
+  "WS_DEFLATE": {
+    "default": {
+      "flash": 4180,
+      "ram": 8192
+    },
+    "minimal": {
+      "flash": 8060,
+      "ram": 9744
+    }
+  },
+  "_baseline": {
+    "default": [752845, 66200],
+    "minimal": [744141, 64144]
+  }
+}

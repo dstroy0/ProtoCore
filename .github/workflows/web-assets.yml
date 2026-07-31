@@ -1,0 +1,29 @@
+name: Web Assets
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: web-assets-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Generated web assets in sync
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.x"
+
+      # Fails if src/network_drivers/application/web.{h,cpp} are stale
+      # relative to the source documents under web_assets/input/.
+      - name: Verify generated assets match web_assets/input
+        run: python web_assets/wizard/build_assets.py check

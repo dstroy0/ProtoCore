@@ -1,0 +1,72 @@
+/* rainbow: dark backdrop with rainbow-gradient headings, borders, and buttons.
+   Opt a page in with <!--#theme rainbow-->. */
+:root {
+  --bg: #15151f;
+  --ink: #f5f5fa;
+  --rainbow: linear-gradient(
+    90deg,
+    #ff004d,
+    #ff7a00,
+    #ffd400,
+    #00c853,
+    #00b0ff,
+    #7c4dff,
+    #ff00c8
+  );
+}
+html,
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font:
+    16px/1.6 "Segoe UI",
+    system-ui,
+    sans-serif;
+}
+h1,
+h2,
+h3 {
+  font-weight: 800;
+  background: var(--rainbow);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+a {
+  color: #00b0ff;
+}
+hr {
+  border: 0;
+  height: 3px;
+  background: var(--rainbow);
+}
+input,
+select,
+textarea {
+  background: #1f1f2b;
+  color: var(--ink);
+  border: 2px solid transparent;
+  border-radius: 8px;
+  padding: 9px 13px;
+  font: inherit;
+  outline: none;
+  background-image: linear-gradient(#1f1f2b, #1f1f2b), var(--rainbow);
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+}
+button {
+  color: #fff;
+  border: 0;
+  border-radius: 8px;
+  padding: 10px 22px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  background: var(--rainbow);
+  background-size: 200% 100%;
+  transition: background-position 0.4s;
+}
+button:hover {
+  background-position: 100% 0;
+}

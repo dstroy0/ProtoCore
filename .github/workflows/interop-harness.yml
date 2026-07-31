@@ -1,0 +1,44 @@
+name: Interop Harness
+
+# Fast sanity check that the real-protocol interop harness (test/servers) stays
+# importable and its CLI builds every peer subcommand. It does NOT run the peers
+# against a device (that needs hardware / containers); it only guards against
+# syntax or import rot in the harness itself, so the tooling never silently breaks.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "test/servers/**"
+      - ".github/workflows/interop-harness.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "test/servers/**"
+      - ".github/workflows/interop-harness.yml"
+
+concurrency:
+  group: interop-harness-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  harness:
+    name: Compile + list interop peers
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.x"
+
+      # Byte-compile every module (catches syntax errors) - no third-party deps
+      # needed: the peers import their heavy deps lazily inside run().
+      - name: Byte-compile the harness
+        run: python -m compileall -q test/servers
+
+      # The CLI imports every peer module to build its subcommands, so --list
+      # proves the whole peer registry loads and the dispatcher wires up.
+      - name: List peers (exercises the dispatcher)
+        run: python test/servers/interop.py --list

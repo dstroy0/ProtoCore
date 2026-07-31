@@ -1,0 +1,69 @@
+%%{init: {'themeVariables':{'fontFamily':'ui-sans-serif,system-ui,Segoe UI,Roboto,sans-serif','fontSize':'13px','lineColor':'#94a3b8'},'flowchart':{'curve':'basis','nodeSpacing':42,'rankSpacing':50,'padding':10,'useMaxWidth':true}}}%%
+flowchart TB
+  %% Auto-generated from the public API, proto_builtins.cpp, and presentation/ on disk.
+  subgraph SETUP["First, set up your server (once, at boot)"]
+    direction LR
+    reg["1 Register routes<br/>on() / on_regex()<br/>+7 more"]
+    cfg["2 Set options<br/>tls_cert() / tls_require_client_cert()<br/>+7 more"]
+    run["3 Start it<br/>begin() / begin_tls()<br/>+4 more"]
+  end
+
+  cin(["A client sends a request<br/>browser / app / curl"])
+  listen["Accept a connection<br/>listener_accept_cb"]
+  ring[("Hold the bytes<br/>conn_pool + rx ring")]
+  udprx["Receive a datagram<br/>pc_udp"]
+  seam{{"Which protocol?<br/>ProtoHandler seam<br/>"}}
+  tls["Decrypt + choose version<br/>pc_tls + ALPN"]
+  parser["Read HTTP/1.1<br/>http_parser"]
+  h2["Decode HTTP/2<br/>h2_conn"]
+  h3["Decode HTTP/3<br/>quic_conn + h3_conn"]
+  mae{{"Find the matching route<br/>match_and_execute"}}
+  mw["Run your middleware"]
+  routes[("Route table")]
+  handler>"YOUR HANDLER runs"]
+  resp["Build the response<br/>serve_file() / stats()<br/>+7 more"]
+  sink{{"Frame the reply per protocol<br/>resp_sink seam<br/>HTTP/1.1 / h2 / h3"}}
+  consend["Write bytes back<br/>pc_conn_send"]
+  udptx["Send a datagram<br/>pc_udp"]
+  cout(["The client gets the response"])
+
+  run -.->|starts| listen
+  cin ==>|TCP| listen
+  listen --> ring
+  ring --> seam
+  cin ==>|UDP / QUIC| udprx
+  udprx --> seam
+  seam --> tls
+  tls -->|HTTP/1.1| parser
+  tls -->|ALPN h2| h2
+  seam -->|HTTP/3| h3
+  parser --> mae
+  h2 --> mae
+  h3 --> mae
+  mae --> mw
+  mw --> routes
+  routes --> handler
+  handler --> resp
+  resp --> sink
+  sink -->|TCP: 1.1, h2| consend
+  sink -->|QUIC: h3| udptx
+  consend ==> cout
+  udptx ==> cout
+
+  class cin,cout ext;
+  class reg,cfg,run,routes setup;
+  class listen,ring,udprx,udptx,consend l4;
+  class seam,sink seam;
+  class tls,parser,h2,h3 l6;
+  class mae,mw l7;
+  class handler,resp you;
+  classDef ext fill:#64748b33,stroke:#475569,stroke-width:1.5px;
+  classDef setup fill:#94a3b81f,stroke:#94a3b8;
+  classDef l4 fill:#f9731626,stroke:#f97316,stroke-width:1.5px;
+  classDef seam fill:#10b981,stroke:#047857,color:#ffffff;
+  classDef l6 fill:#3b82f626,stroke:#3b82f6,stroke-width:1.5px;
+  classDef l7 fill:#6366f126,stroke:#6366f1,stroke-width:1.5px;
+  classDef you fill:#f59e0b,stroke:#b45309,color:#3b2508;
+  style SETUP fill:#8888880f,stroke:#94a3b8,stroke-width:1px;
+  linkStyle default stroke-width:2.5px;
+  linkStyle 17,18,19,20,21 stroke:#10b981,stroke-width:3px;

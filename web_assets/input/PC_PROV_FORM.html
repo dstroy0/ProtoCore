@@ -1,0 +1,19 @@
+<!--#brief Captive-portal form for WiFi credential entry (provisioning service).-->
+<!--#minify-->
+<!doctype html>
+<html>
+    <head>
+        <meta name="viewport" content="width=device-width" />
+        <title>WiFi setup</title>
+    </head>
+    <body>
+        <h2>WiFi setup</h2>
+        <form method="POST" action="/save">
+            SSID:<br />
+            <input name="ssid" maxlength="32" /><br />
+            Password:<br />
+            <input name="psk" type="password" maxlength="63" /><br /><br />
+            <input type="submit" value="Save" />
+        </form>
+    </body>
+</html>

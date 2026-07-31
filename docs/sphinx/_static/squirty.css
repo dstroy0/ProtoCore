@@ -1,0 +1,77 @@
+/* Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+   SPDX-License-Identifier: AGPL-3.0-or-later
+
+   "squirty" styling over Furo: the project's Retro TTY Green Screen brand (phosphor green #2bb35a on a
+   near-black #080c08 CRT) with the Squirty mascot. The core palette is set via Furo's css variables in
+   conf.py; this file adds the finer terminal personality (phosphor glow, a faint scanline wash, monospace
+   headings) and keeps it readable in both light and dark. */
+
+:root {
+  --squirty-green: #2bb35a;
+  --squirty-green-bright: #40ff40;
+  --squirty-green-dim: #008000;
+  --squirty-bg: #080c08;
+}
+
+/* Monospace, terminal-flavored headings and the site title. */
+.sidebar-brand-text,
+h1,
+h2,
+h3,
+h4 {
+  font-family: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+  letter-spacing: 0.02em;
+}
+
+/* The Squirty mascot in the sidebar: crisp pixels, a little phosphor glow. */
+.sidebar-logo {
+  image-rendering: pixelated;
+  filter: drop-shadow(0 0 6px rgba(64, 255, 64, 0.35));
+  max-width: 8rem;
+}
+
+/* Dark theme: full green-screen CRT treatment. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) body {
+    text-shadow: 0 0 1px rgba(43, 179, 90, 0.25);
+  }
+  :root:not([data-theme="light"]) h1,
+  :root:not([data-theme="light"]) h2 {
+    color: var(--squirty-green-bright);
+    text-shadow: 0 0 8px rgba(64, 255, 64, 0.35);
+  }
+  /* A faint horizontal scanline wash over the page content. */
+  :root:not([data-theme="light"]) .content {
+    background-image: repeating-linear-gradient(
+      0deg,
+      rgba(0, 0, 0, 0) 0px,
+      rgba(0, 0, 0, 0) 2px,
+      rgba(0, 20, 0, 0.35) 3px
+    );
+  }
+}
+
+:root[data-theme="dark"] h1,
+:root[data-theme="dark"] h2 {
+  color: var(--squirty-green-bright);
+  text-shadow: 0 0 8px rgba(64, 255, 64, 0.35);
+}
+
+/* Inline code + literal blocks: bright phosphor on the CRT background. */
+code.literal,
+.highlight pre {
+  border-radius: 4px;
+}
+
+/* Links keep the phosphor accent; hover brightens like a lit pixel. */
+a:hover {
+  text-decoration-color: var(--squirty-green-bright);
+}
+
+/* Breathe API signatures: give the function/class prototypes a terminal-prompt feel. */
+dl.cpp .sig,
+dl.c .sig {
+  font-family: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+  border-left: 3px solid var(--squirty-green-dim);
+  padding-left: 0.6rem;
+}

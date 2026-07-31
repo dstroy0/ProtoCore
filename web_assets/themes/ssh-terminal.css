@@ -1,0 +1,56 @@
+/* ssh-terminal: classic xterm/PuTTY look - black background, soft grey text, a
+   cool-blue accent, no glow. Opt a page in with <!--#theme ssh-terminal-->. */
+:root {
+  --bg: #000000;
+  --fg: #c5c8c6;
+  --accent: #81a2be;
+  --muted: #5f6b75;
+}
+html,
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font:
+    14px/1.5 "Consolas",
+    "DejaVu Sans Mono",
+    "Courier New",
+    monospace;
+}
+h1,
+h2,
+h3 {
+  color: #fff;
+  font-weight: 600;
+  border-bottom: 1px solid #1c1c1c;
+  padding-bottom: 4px;
+}
+a {
+  color: var(--accent);
+}
+p {
+  color: var(--muted);
+}
+input,
+button,
+select,
+textarea {
+  background: #0c0c0c;
+  color: var(--fg);
+  border: 1px solid #2a2a2a;
+  font: inherit;
+  padding: 8px;
+  outline: none;
+}
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--accent);
+}
+button {
+  color: var(--accent);
+  cursor: pointer;
+}
+button:hover {
+  background: #141414;
+}

@@ -1,0 +1,101 @@
+// Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+// SPDX-License-Identifier: AGPL-3.0-or-later
+//
+// Exercises the runtime build-flag reporter (server.diag() / PC_ENABLE_DIAG):
+// the gated diag() method + the compile-time PC_DIAG_JSON build-info string are
+// only compiled when the flag is on, so this env (native_diag) is what keeps that
+// code building + running in CI rather than bit-rotting.
+
+#include "protocore.h"
+#include <string.h>
+#include <unity.h>
+
+static PC server;
+
+static void push_str(uint8_t slot, const char *s)
+{
+    TcpConn *c = &conn_pool[slot];
+    for (size_t i = 0; s[i]; i++)
+    {
+        c->rx_buffer[c->rx_head] = (uint8_t)s[i];
+        c->rx_head = (c->rx_head + 1) % RX_BUF_SIZE;
+    }
+}
+
+static void diag_handler(uint8_t slot, HttpReq *req)
+{
+    (void)req;
+    server.diag(slot);
+}
+
+void setUp()
+{
+    server = PC();
+    for (int i = 0; i < MAX_CONNS; i++)
+    {
+        conn_pool[i] = {};
+        conn_pool[i].id = (uint8_t)i;
+        conn_pool[i].state = ConnState::CONN_ACTIVE;
+        conn_pool[i].proto = ConnProto::PROTO_HTTP;
+        conn_pool[i].pcb = &_mock_pcb;
+        http_reset(i);
+    }
+    ws_init();
+    pc_sse_init();
+    tcp_capture_reset();
+}
+
+void tearDown()
+{
+    tcp_capture_disable();
+}
+
+// GET on a route that calls server.diag() returns 200 application/json carrying the
+// compile-time build-info document (lib name + features + config objects).
+void test_diag_serves_build_info_json()
+{
+    server.on("/diag", HttpMethod::HTTP_GET, diag_handler);
+    push_str(0, "GET /diag HTTP/1.1\r\nHost: x\r\n\r\n");
+    http_parse(0);
+    server.handle();
+
+    const char *resp = tcp_captured();
+    TEST_ASSERT_NOT_NULL(strstr(resp, "200 OK"));
+    TEST_ASSERT_NOT_NULL(strstr(resp, "application/json"));
+    TEST_ASSERT_NOT_NULL(strstr(resp, "\"lib\":\"ProtoCore\""));
+    TEST_ASSERT_NOT_NULL(strstr(resp, "\"features\""));
+    TEST_ASSERT_NOT_NULL(strstr(resp, "\"config\""));
+}
+
+// The build-info string is well-formed enough to balance its braces (a crude guard
+// against a malformed macro concatenation).
+void test_diag_json_braces_balanced()
+{
+    const char *j = PC_DIAG_JSON;
+    int depth = 0, min_depth = 0;
+    for (const char *p = j; *p; p++)
+    {
+        if (*p == '{')
+        {
+            depth++;
+        }
+        else if (*p == '}')
+        {
+            depth--;
+        }
+        if (depth < min_depth)
+        {
+            min_depth = depth;
+        }
+    }
+    TEST_ASSERT_EQUAL_INT(0, depth);     // every { closed
+    TEST_ASSERT_EQUAL_INT(0, min_depth); // never closed before opened
+}
+
+int main()
+{
+    UNITY_BEGIN();
+    RUN_TEST(test_diag_serves_build_info_json);
+    RUN_TEST(test_diag_json_braces_balanced);
+    return UNITY_END();
+}

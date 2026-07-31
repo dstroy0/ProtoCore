@@ -1,0 +1,24 @@
+# EditorConfig (https://editorconfig.org)
+# Repo-wide editor defaults. Must live at the repo root so editors find it.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+# C/C++/Arduino: matches .clang-format (4-space indent, 120 columns).
+[*.{c,cpp,h,hpp,ino}]
+indent_size = 4
+max_line_length = 120
+
+# Data/markup files use 2-space indent by convention.
+[*.{yml,yaml,json}]
+indent_size = 2
+
+# Markdown: trailing whitespace can be significant (hard line breaks).
+[*.md]
+trim_trailing_whitespace = false

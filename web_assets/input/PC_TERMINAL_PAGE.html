@@ -1,0 +1,160 @@
+<!--#brief Self-contained WebSocket terminal page (green-phosphor CRT theme; auto ws/wss).-->
+<!--#minify-->
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <title>PC Terminal</title>
+        <style>
+            :root {
+                --g: #2bb35a;
+                --g2: #00c000;
+                --bg: #080c08;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            html,
+            body {
+                margin: 0;
+                height: 100%;
+                background: var(--bg);
+                color: var(--g);
+                font:
+                    14px/1.45 "Consolas",
+                    "DejaVu Sans Mono",
+                    monospace;
+            }
+            #wrap {
+                display: flex;
+                flex-direction: column;
+                height: 100%;
+                position: relative;
+            }
+            #out {
+                flex: 1;
+                overflow: auto;
+                padding: 10px;
+                white-space: pre-wrap;
+                word-break: break-word;
+                text-shadow: 0 0 4px rgba(43, 179, 90, 0.55);
+            }
+            #bar {
+                display: flex;
+                border-top: 1px solid #14401f;
+                background: #0a0f0a;
+            }
+            #ps {
+                padding: 8px 4px 8px 10px;
+                color: var(--g2);
+            }
+            #in {
+                flex: 1;
+                background: transparent;
+                border: 0;
+                color: var(--g);
+                font: inherit;
+                padding: 8px;
+                outline: none;
+            }
+            #st {
+                padding: 4px 10px;
+                font-size: 11px;
+                color: #1c6e38;
+                border-top: 1px solid #14401f;
+            }
+            #crt {
+                position: absolute;
+                inset: 0;
+                pointer-events: none;
+                z-index: 9;
+                background: repeating-linear-gradient(
+                    rgba(0, 0, 0, 0) 0 2px,
+                    rgba(0, 0, 0, 0.18) 3px
+                );
+                box-shadow: inset 0 0 120px rgba(0, 0, 0, 0.6);
+            }
+            .e {
+                color: #d2553a;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="wrap">
+            <div id="out"></div>
+            <div id="bar">
+                <span id="ps">&gt;</span
+                ><input id="in" autocomplete="off" autofocus />
+            </div>
+            <div id="st">connecting…</div>
+            <div id="crt"></div>
+        </div>
+        <script>
+            var out = document.getElementById("out"),
+                inp = document.getElementById("in"),
+                st = document.getElementById("st");
+            var hist = [],
+                hi = 0,
+                ws,
+                url =
+                    (location.protocol == "https:" ? "wss" : "ws") +
+                    "://" +
+                    location.host +
+                    location.pathname.replace(/\/$/, "") +
+                    "/ws";
+            function add(t, c) {
+                var b =
+                    out.scrollHeight - out.clientHeight - out.scrollTop < 40;
+                var s = document.createElement("span");
+                if (c) s.className = c;
+                s.textContent = t;
+                out.appendChild(s);
+                if (b) out.scrollTop = out.scrollHeight;
+            }
+            function conn() {
+                ws = new WebSocket(url);
+                ws.onopen = function () {
+                    st.textContent = "connected";
+                };
+                ws.onmessage = function (e) {
+                    add(e.data);
+                };
+                ws.onclose = function () {
+                    st.textContent = "disconnected — retrying…";
+                    setTimeout(conn, 1000);
+                };
+                ws.onerror = function () {
+                    try {
+                        ws.close();
+                    } catch (_) {}
+                };
+            }
+            inp.addEventListener("keydown", function (e) {
+                if (e.key == "Enter") {
+                    var v = inp.value;
+                    if (v) {
+                        if (ws && ws.readyState == 1) {
+                            ws.send(v);
+                            add("> " + v + "\n");
+                        } else add("> " + v + " (offline)\n", "e");
+                        hist.push(v);
+                        hi = hist.length;
+                    }
+                    inp.value = "";
+                } else if (e.key == "ArrowUp") {
+                    if (hi > 0) {
+                        hi--;
+                        inp.value = hist[hi] || "";
+                    }
+                } else if (e.key == "ArrowDown") {
+                    if (hi < hist.length) {
+                        hi++;
+                        inp.value = hist[hi] || "";
+                    }
+                }
+            });
+            conn();
+        </script>
+    </body>
+</html>

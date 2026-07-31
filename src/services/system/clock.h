@@ -1,0 +1,268 @@
+// Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+/**
+ * @file clock.h
+ * @brief Pluggable monotonic clock for all library timing.
+ *
+ * The library's internal timing runs at **1000 Hz** - one tick is one millisecond,
+ * the cadence the test suite asserts and every timeout / poll is expressed in.
+ * `pc_millis()` is that single time source; by default it is the platform
+ * `millis()`.
+ *
+ * To drive the library from your own clock (a hardware timer, an external RTC, a
+ * simulation clock), call:
+ *
+ *     pc_set_clock(my_clock_fn, my_ticks_per_second);
+ *
+ * Your clock reports a free-running tick count at `ticks_per_second`. The library
+ * **divides it down to its internal 1000 Hz**, so timeouts and polling keep the
+ * exact 1 ms granularity the tests verify regardless of how fast your clock runs.
+ * Pass a rate >= 1000, ideally a multiple of 1000 for exact division (e.g. a
+ * 1 MHz timer -> ticks_per_second = 1000000, divided by 1000). Pass `nullptr` to
+ * revert to the platform default. One source covers everything - swap it once and
+ * every subsystem follows.
+ *
+ * The worker poll cadence is fixed at 1000 Hz (the tested default); a build can
+ * trade latency for idle power with PC_WORKER_POLL_TICKS - see protocore_config.h.
+ *
+ * Header-only (the override state lives in inline-function-local statics, a single
+ * instance across the whole program), so there is nothing extra to compile or link.
+ *
+ * @author  Douglas Quigg (dstroy0)
+ * @date    2026
+ */
+
+#ifndef PROTOCORE_CLOCK_H
+#define PROTOCORE_CLOCK_H
+
+#include <Arduino.h> // platform millis()
+#include <stdint.h>
+
+/** @brief User clock: returns a free-running monotonic tick count. */
+typedef uint32_t (*pc_clock_fn)(void);
+
+// Override state. Inline functions with local statics resolve to a single shared
+// instance across all translation units (ODR), so a set from anywhere is seen
+// everywhere - no .cpp, no globals to define.
+inline pc_clock_fn &_pc_clock_fn_ref()
+{
+    static pc_clock_fn fn = nullptr;
+    return fn;
+}
+inline uint32_t &_pc_clock_div_ref()
+{
+    static uint32_t div = 1;
+    return div;
+}
+
+/**
+ * @brief Install a custom clock running at @p ticks_per_second; the library divides
+ *        it down to its internal 1000 Hz. Pass (nullptr, 0) to revert to the
+ *        platform default.
+ */
+inline void pc_set_clock(pc_clock_fn fn, uint32_t ticks_per_second)
+{
+    _pc_clock_fn_ref() = fn;
+    _pc_clock_div_ref() = (ticks_per_second >= 1000) ? (ticks_per_second / 1000) : 1;
+}
+
+/** @brief The library's monotonic time at 1000 Hz (milliseconds). */
+inline uint32_t pc_millis(void)
+{
+    pc_clock_fn fn = _pc_clock_fn_ref();
+    if (fn)
+    {
+        return fn() / _pc_clock_div_ref();
+    }
+    return millis();
+}
+
+/**
+ * @brief Block for at least @p ms milliseconds - the library's single delay primitive.
+ *
+ * `src/` never calls the platform `delay()` directly; every wait goes through this so timing stays
+ * centralized and portable. On device it yields to the RTOS one tick at a time until @p ms has elapsed on
+ * the monotonic clock (so it sleeps the task and feeds the watchdog, never starving the scheduler); on host
+ * it spins on the same clock. Measured against ::pc_millis, so a custom clock governs it too.
+ */
+inline void pcdelay(uint32_t ms)
+{
+#ifdef ARDUINO
+    if (ms == 0)
+    {
+        vTaskDelay(0); // a bare cooperative yield
+        return;
+    }
+    uint32_t start = pc_millis();
+    while (pc_millis() - start < ms)
+    {
+        vTaskDelay(1); // one RTOS tick: sleeps the task (the core can idle) and feeds the watchdog
+    }
+#else
+    uint32_t start = pc_millis();
+    while (pc_millis() - start < ms)
+    {
+        // host: spin on the monotonic clock (device-only code paths call this; host tests do not sleep here)
+    }
+#endif
+}
+
+// ---------------------------------------------------------------------------
+// Microsecond time base (v5 clock-awareness): ISR timestamps + sub-ms latency
+// ---------------------------------------------------------------------------
+//
+// A second, higher-resolution source for real-time work: timestamping a hardware
+// event in an ISR and budgeting how long a piece of work takes. Pluggable like the
+// millisecond clock; the default is the platform micros() on device, or
+// pc_millis() * 1000 on host (override for sub-ms precision in tests).
+
+inline pc_clock_fn &_pc_micros_fn_ref()
+{
+    static pc_clock_fn fn = nullptr;
+    return fn;
+}
+inline uint32_t &_pc_micros_div_ref()
+{
+    static uint32_t div = 1;
+    return div;
+}
+
+/**
+ * @brief Install a custom microsecond clock running at @p ticks_per_second; the
+ *        library divides it down to 1 MHz. Pass (nullptr, 0) for the platform
+ *        default.
+ */
+inline void pc_set_micros_clock(pc_clock_fn fn, uint32_t ticks_per_second)
+{
+    _pc_micros_fn_ref() = fn;
+    _pc_micros_div_ref() = (ticks_per_second >= 1000000u) ? (ticks_per_second / 1000000u) : 1u;
+}
+
+/**
+ * @brief Monotonic microseconds - the high-resolution time base for ISR
+ *        timestamps and sub-millisecond latency. Safe to call from an ISR. Wraps
+ *        roughly every 71 minutes, so use it only for short deltas (unsigned
+ *        subtraction is wrap-safe).
+ */
+inline uint32_t pc_micros(void)
+{
+    pc_clock_fn fn = _pc_micros_fn_ref();
+    if (fn)
+    {
+        return fn() / _pc_micros_div_ref();
+    }
+#ifdef ARDUINO
+    return micros();
+#else
+    return pc_millis() * 1000u; // host fallback (no platform micros); override for precision
+#endif
+}
+
+// ---------------------------------------------------------------------------
+// Latency budgeting: measure an operation against a microsecond budget
+// ---------------------------------------------------------------------------
+
+/**
+ * @brief Rolling latency statistics in microseconds: sample count, min / max /
+ *        mean, and how many samples blew a budget. Fixed size, no heap; a
+ *        subsystem (the preempting queue, a DMA path, a forwarding rule) keeps one
+ *        and reports it for real-time visibility.
+ */
+struct pc_latency_stat
+{
+    uint32_t count;
+    uint32_t over_budget; ///< samples whose latency exceeded the budget
+    uint32_t min_us;
+    uint32_t max_us;
+    uint64_t sum_us;
+};
+
+/** @brief Zero a stat (min seeded high so the first sample sets it). */
+inline void pc_lat_reset(pc_latency_stat *s)
+{
+    s->count = 0;
+    s->over_budget = 0;
+    s->min_us = 0xFFFFFFFFu;
+    s->max_us = 0;
+    s->sum_us = 0;
+}
+
+/** @brief Start of a measured span: capture the current microsecond time. */
+inline uint32_t pc_lat_begin(void)
+{
+    return pc_micros();
+}
+
+/**
+ * @brief End of a span started at @p start_us: record its latency, counting it as
+ *        over-budget when @p budget_us is non-zero and exceeded. Wrap-safe.
+ */
+inline void pc_lat_end(pc_latency_stat *s, uint32_t start_us, uint32_t budget_us)
+{
+    uint32_t lat = pc_micros() - start_us; // wrap-safe unsigned delta
+    s->count++;
+    s->sum_us += lat;
+    if (lat < s->min_us)
+    {
+        s->min_us = lat;
+    }
+    if (lat > s->max_us)
+    {
+        s->max_us = lat;
+    }
+    if (budget_us && lat > budget_us)
+    {
+        s->over_budget++;
+    }
+}
+
+/** @brief Mean latency (us) over the recorded samples, 0 if none. */
+inline uint32_t pc_lat_avg_us(const pc_latency_stat *s)
+{
+    return s->count ? (uint32_t)(s->sum_us / s->count) : 0u;
+}
+
+// ---------------------------------------------------------------------------
+// CPU cycle counter (v5 clock-awareness): sub-microsecond jitter measurement
+// ---------------------------------------------------------------------------
+//
+// pc_micros() wraps the platform micros(), which on ESP32 is itself derived from
+// a 1 MHz-divided cycle counter - roughly 1 us of quantization noise. That is too
+// coarse to characterize a single SPI-DMA transaction: at a 20 MHz SPI clock one
+// byte is 400 ns, and a fast external DAQ/scope can complete several DMA transfers
+// within one microsecond tick. pc_cycles() reads the CPU cycle counter directly
+// (CCOUNT on Xtensa ESP32 / ESP32-S3) for nanosecond-grade deltas - trigger-to-first-
+// -sample latency, inter-transfer jitter - the same primitive services/system/dma and the
+// pentesting rig's cryptobench already use ad hoc via ESP.getCycleCount(); this
+// gives every subsystem one named, documented entry point instead. Like pc_micros,
+// it wraps (roughly every 18 s at 240 MHz) - use it only for short deltas via
+// wrap-safe unsigned subtraction.
+
+/**
+ * @brief Free-running CPU cycle count. ISR-safe. On ARDUINO/ESP32 this is the
+ *        hardware cycle counter (CCOUNT); on host it falls back to pc_micros()
+ *        scaled by @p host_fallback_mhz (a coarse stand-in - override with a real
+ *        cycle source in a host test that needs nanosecond precision).
+ */
+inline uint32_t pc_cycles(void)
+{
+#ifdef ARDUINO
+    return ESP.getCycleCount();
+#else
+    const uint32_t host_fallback_mhz = 240; // arbitrary stand-in; deltas only, never absolute
+    return pc_micros() * host_fallback_mhz;
+#endif
+}
+
+/**
+ * @brief Convert a cycle-count delta to nanoseconds at @p cpu_mhz (the running CPU
+ *        frequency, e.g. getCpuFrequencyMhz() on ESP32). @p delta_cycles must come
+ *        from a wrap-safe unsigned subtraction of two pc_cycles() reads.
+ */
+inline uint32_t pc_cycles_to_ns(uint32_t delta_cycles, uint32_t cpu_mhz)
+{
+    return cpu_mhz ? (uint32_t)(((uint64_t)delta_cycles * 1000u) / cpu_mhz) : 0u;
+}
+
+#endif // PROTOCORE_CLOCK_H

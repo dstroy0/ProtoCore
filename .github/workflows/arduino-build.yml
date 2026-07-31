@@ -1,0 +1,137 @@
+name: Arduino Build
+
+# Compiles every example against the Arduino-ESP32 3.x core - the core an Arduino IDE
+# user actually installs - using arduino-cli (the same builder as the IDE) and each
+# example's shipped build_opt.h. The PlatformIO "ESP32 Build" pins the 2.x core, so this
+# is the only guard against 3.x / ESP-IDF 5 API breaks (mbedTLS v3, the ESP-NOW recv
+# callback, the timerBegin/timerAlarm change, ...). No build_flags are passed: each
+# example builds unmodified, exactly as it would when opened in the IDE.
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - "src/**"
+      - "examples/**"
+      - ".github/workflows/arduino-build.yml"
+  pull_request:
+    branches: [main, master]
+    paths:
+      - "src/**"
+      - "examples/**"
+  workflow_dispatch:
+
+concurrency:
+  group: arduino-build-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # The current Arduino-ESP32 3.x release; bump as the Arduino IDE's board package moves.
+  ESP32_CORE: "esp32:esp32@3.3.10"
+  ESP32_URL: "https://espressif.github.io/arduino-esp32/package_esp32_index.json"
+
+jobs:
+  discover:
+    name: Discover examples
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # full history so the diff base (github.event.before) is present
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.x"
+      # Same single source of truth as the PlatformIO build - the example READMEs - and the same
+      # affected-example selection: rebuild only the examples the diff touches, FULL on shared/core
+      # src, this workflow, the matrix generator, dispatch, first push, or [ci full] / full-ci label.
+      - id: set
+        env:
+          EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+          PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          set -e
+          FULL=0
+          case "$EVENT" in workflow_dispatch | schedule) FULL=1 ;; esac
+          printf '%s' "$PR_LABELS" | grep -q '"full-ci"' && FULL=1 || true
+          if [ "$EVENT" = "pull_request" ]; then BASE="$PR_BASE"; HEAD="$PR_HEAD"; else BASE="$BEFORE"; HEAD="$HEAD_SHA"; fi
+          if git rev-parse --verify -q "$HEAD^{commit}" >/dev/null; then
+            git log -1 --format=%B "$HEAD" | grep -qiE '\[(ci )?full( ci)?\]' && FULL=1 || true
+          fi
+          if [ "$FULL" = "0" ] && { [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ] \
+               || ! git rev-parse --verify -q "$BASE^{commit}" >/dev/null; }; then
+            FULL=1 # first push on a branch / unknown base -> be safe
+          fi
+          if [ "$FULL" = "1" ]; then
+            M="$(python ci_tooling/generate/example_footprints.py matrix </dev/null)"
+          else
+            M="$(git diff --name-only "$BASE" "$HEAD" | python ci_tooling/generate/example_footprints.py matrix --base "$BASE" --head "$HEAD")"
+          fi
+          N="$(printf '%s' "$M" | python -c 'import sys,json;print(len(json.load(sys.stdin)))')"
+          echo "full=$FULL selected=$N example(s)"
+          echo "matrix=$M" >> "$GITHUB_OUTPUT"
+
+      # Warm the core cache once here so the fan-out jobs restore instead of each
+      # re-downloading the xtensa toolchain.
+      - uses: arduino/setup-arduino-cli@v2
+      # Only this job writes the core cache, and it never wraps the toolchain, so the cached
+      # tree is always a pristine core. The -v2 salt escapes an earlier cache that had been
+      # poisoned with a half-wrapped toolchain (a shim whose .real was missing).
+      - name: Cache Arduino core
+        uses: actions/cache@v6
+        with:
+          path: ~/.arduino15
+          key: arduino-v2-${{ env.ESP32_CORE }}
+      - name: Install esp32 core
+        run: |
+          arduino-cli config init --overwrite
+          arduino-cli config set board_manager.additional_urls "$ESP32_URL"
+          arduino-cli core update-index
+          arduino-cli core install "$ESP32_CORE"
+
+  build:
+    name: ${{ matrix.example.name }}
+    needs: discover
+    # Skip cleanly when the diff touched no example (empty matrix would otherwise error).
+    if: ${{ needs.discover.outputs.matrix != '[]' }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        example: ${{ fromJson(needs.discover.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: arduino/setup-arduino-cli@v2
+      # Restore-only: the build job wraps the toolchain in place for ccache, so it must never
+      # save ~/.arduino15 back (a wrapped/half-wrapped tree in the cache is what broke every
+      # compile). Only the discover job writes this cache, and only a pristine core.
+      - name: Restore Arduino core
+        uses: actions/cache/restore@v6
+        with:
+          path: ~/.arduino15
+          key: arduino-v2-${{ env.ESP32_CORE }}
+      - name: Install esp32 core (cache miss only)
+        run: |
+          arduino-cli config init --overwrite
+          arduino-cli config set board_manager.additional_urls "$ESP32_URL"
+          arduino-cli core list | grep -q "esp32:esp32" || {
+            arduino-cli core update-index
+            arduino-cli core install "$ESP32_CORE"
+          }
+      # No ccache here (unlike the PlatformIO ESP32 build). arduino-esp32 3.x ships the newer
+      # xtensa-esp-elf toolchain, whose endianness/ISA is loaded at runtime from a dynamic config
+      # found relative to the compiler binary. The ccache masquerade replaces that binary with a
+      # shim, which breaks the dynconfig lookup: the driver falls back to the stock big-endian
+      # xtensa default and the link fails with "libstdc++.a compiled for a big endian system and
+      # target is little endian". (The PlatformIO build uses the older, statically-little-endian
+      # xtensa-esp32-elf toolchain, so wrapping is safe there.) Each example does a full compile.
+      - name: Compile ${{ matrix.example.name }} (Arduino IDE, esp32 3.x)
+        # No --build-property / build_flags: the example's build_opt.h supplies the feature
+        # flags, so this is byte-for-byte how the Arduino IDE builds it.
+        run: |
+          arduino-cli compile --fqbn esp32:esp32:esp32 --library . "examples/${{ matrix.example.name }}"

@@ -1,0 +1,7 @@
+name: "ProtoCore CodeQL config"
+
+# Analyze only our own source. PlatformIO downloads third-party dependencies
+# (e.g. the Unity test framework) into .pio/libdeps; those are not our code, so
+# their findings are noise (they recurred as cpp/irregular-enum-init alerts).
+paths-ignore:
+  - "**/.pio/**"

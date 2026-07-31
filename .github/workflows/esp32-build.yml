@@ -1,0 +1,209 @@
+name: ESP32 Build
+
+# Compiles every example for the real ESP32 / Arduino target (the native suite is
+# host-only, so this is the only thing that catches ARDUINO-only breaks: mbedTLS,
+# FreeRTOS, WiFi, lwIP). Each build's flash + RAM size report is harvested into
+# docs/footprints.json (keyed by feature, overwrite-if-exists) and the per-feature
+# table docs/FOOTPRINTS.md is regenerated from it. The example list + flags are
+# discovered from the example READMEs - no hand-maintained matrix.
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - "src/**"
+      - "examples/**"
+      - "platformio.ini"
+      - "ci_tooling/generate/example_footprints.py"
+      - ".github/workflows/esp32-build.yml"
+  pull_request:
+    branches: [main, master]
+    paths:
+      - "src/**"
+      - "examples/**"
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * 1" # weekly Monday 06:00 UTC, to refresh footprints
+
+concurrency:
+  group: esp32-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  discover:
+    name: Discover examples
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # full history so the diff base (github.event.before) is present
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.x"
+      # Rebuild only the examples the diff touches: an example whose own dir changed, or that
+      # includes a changed src/services/<sub>/ feature. Shared/core src, platformio.ini, this
+      # workflow, or the matrix generator -> FULL; dispatch / schedule / first push / [ci full]
+      # / a full-ci PR label -> FULL. See ci_tooling/generate/example_footprints.py.
+      - id: set
+        env:
+          EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+          PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          set -e
+          FULL=0
+          case "$EVENT" in workflow_dispatch | schedule) FULL=1 ;; esac
+          printf '%s' "$PR_LABELS" | grep -q '"full-ci"' && FULL=1 || true
+          if [ "$EVENT" = "pull_request" ]; then BASE="$PR_BASE"; HEAD="$PR_HEAD"; else BASE="$BEFORE"; HEAD="$HEAD_SHA"; fi
+          if git rev-parse --verify -q "$HEAD^{commit}" >/dev/null; then
+            git log -1 --format=%B "$HEAD" | grep -qiE '\[(ci )?full( ci)?\]' && FULL=1 || true
+          fi
+          if [ "$FULL" = "0" ] && { [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ] \
+               || ! git rev-parse --verify -q "$BASE^{commit}" >/dev/null; }; then
+            FULL=1 # first push on a branch / unknown base -> be safe
+          fi
+          if [ "$FULL" = "1" ]; then
+            M="$(python ci_tooling/generate/example_footprints.py matrix </dev/null)"
+          else
+            M="$(git diff --name-only "$BASE" "$HEAD" | python ci_tooling/generate/example_footprints.py matrix --base "$BASE" --head "$HEAD")"
+          fi
+          N="$(printf '%s' "$M" | python -c 'import sys,json;print(len(json.load(sys.stdin)))')"
+          echo "full=$FULL selected=$N example(s)"
+          echo "matrix=$M" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: ${{ matrix.example.name }}
+    needs: discover
+    # Skip cleanly when the diff touched no example (empty matrix would otherwise error).
+    if: ${{ needs.discover.outputs.matrix != '[]' }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        example: ${{ fromJson(needs.discover.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.x"
+      - name: Cache PlatformIO + ccache
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.platformio
+            ~/.cache/pip
+            ~/.ccache
+          # v2 key adds ~/.ccache; restore-keys falls back to a prior warm ~/.platformio (with the
+          # toolchain) so the very first v2 run can still wrap + build.
+          key: pio-esp32-v2-${{ hashFiles('platformio.ini') }}
+          restore-keys: |
+            pio-esp32-v2-
+            pio-esp32-
+      - name: Install PlatformIO + ccache
+        run: |
+          pip install --upgrade platformio
+          sudo apt-get update && sudo apt-get install -y ccache
+      # Each example recompiles the whole Arduino core (the bulk of the build) identically. Wrap the
+      # xtensa toolchain so those compiles hit ccache - across examples (each matrix job restores the
+      # same ~/.ccache) and across runs. No-op on a cold ~/.platformio (the next run wraps it).
+      - name: Enable ccache for the xtensa toolchain
+        run: bash ci_tooling/build/ccache_wrap.sh ~/.platformio/packages xtensa-esp32-elf-gcc xtensa-esp32-elf-g++
+      - name: Compile and capture footprint
+        env:
+          EX_NAME: ${{ matrix.example.name }}
+          EX_INO: ${{ matrix.example.ino }}
+          EX_FLAGS: ${{ matrix.example.flags }}
+          EX_FEATURE: ${{ matrix.example.feature }}
+          # pio ci copies the project to a fresh temp dir each build, so absolute paths change and would
+          # bust every ccache hash. Normalize them so the cached core objects hit regardless of temp dir.
+          CCACHE_BASEDIR: /
+          CCACHE_NOHASHDIR: "1"
+          CCACHE_SLOPPINESS: time_macros,include_file_mtime,include_file_ctime,locale,random_seed,pch_defines
+        run: |
+          set -o pipefail
+          ccache -z >/dev/null 2>&1 || true
+          pio ci --board=esp32dev \
+            --project-option="framework=arduino" \
+            --project-option="platform=espressif32@^6.0.0" \
+            --lib="." \
+            --project-option="build_flags=$EX_FLAGS" \
+            "$EX_INO" 2>&1 | tee build.log
+          ccache -s 2>/dev/null | grep -iE "Cacheable|Hits:" || true
+          mkdir -p frag
+          python ci_tooling/generate/example_footprints.py fragment build.log frag/footprint.json
+      - name: Upload footprint fragment
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: fp-${{ strategy.job-index }}
+          path: frag/footprint.json
+          if-no-files-found: ignore
+
+  footprints:
+    name: Aggregate footprints
+    needs: [discover, build]
+    # Aggregate even if some builds failed (capture what compiled); commit only off
+    # a pull request (the bot push needs the deploy key + write contents). Skip when the
+    # affected selection built nothing (empty matrix) - there is no fragment to merge.
+    if: ${{ always() && github.event_name != 'pull_request' && needs.discover.outputs.matrix != '[]' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ssh-key: ${{ secrets.ACTIONS_DEPLOY_KEY }}
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.x"
+      - name: Download footprint fragments
+        uses: actions/download-artifact@v8
+        with:
+          path: frags
+          pattern: fp-*
+      - name: Merge footprints + regenerate the table
+        run: |
+          python ci_tooling/generate/example_footprints.py merge frags docs/footprints.json
+          python ci_tooling/generate/example_footprints.py table docs/footprints.json docs/FOOTPRINTS.md
+      - name: Format with Prettier
+        run: npx prettier@3.9.6 --write docs/footprints.json docs/FOOTPRINTS.md
+      - name: Configure SSH commit signing
+        env:
+          CI_SIGNING_KEY: ${{ secrets.CI_SIGNING_KEY }}
+        run: |
+          if [ -n "$CI_SIGNING_KEY" ]; then
+            mkdir -p ~/.ssh
+            printf '%s\n' "$CI_SIGNING_KEY" > ~/.ssh/ci_signing_key
+            chmod 600 ~/.ssh/ci_signing_key
+            git config gpg.format ssh
+            git config user.signingkey ~/.ssh/ci_signing_key
+            git config commit.gpgsign true
+          fi
+      # Rebase-and-retry push: the per-ref concurrency group above stops two ESP32
+      # Build runs from overlapping, but it cannot stop OTHER workflows (changelog,
+      # test-report) or a plain push from advancing main during this multi-minute
+      # build. git-auto-commit-action has no rebase/retry, so a concurrent push made
+      # this step fail with "failed to push some refs". Commit, then rebase onto the
+      # latest main and retry the push instead of failing.
+      - name: Commit footprints + table
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/footprints.json docs/FOOTPRINTS.md
+          if git diff --cached --quiet; then
+            echo "no footprint changes to commit"
+            exit 0
+          fi
+          git commit -m "docs: update ESP32 build footprints [skip ci]"
+          for attempt in 1 2 3 4 5; do
+            if git push origin HEAD:main; then exit 0; fi
+            echo "push rejected (attempt $attempt/5), rebasing onto origin/main"
+            git pull --rebase origin main
+          done
+          echo "footprint push still failing after 5 rebase+retry attempts"
+          exit 1

@@ -1,0 +1,17 @@
+{
+  "source": "RFC 8439 sec 2.4.2",
+  "commit": "",
+  "file": "rfc8439",
+  "vectors": [
+    {
+      "tcId": 1,
+      "comment": "RFC 8439 2.4.2 keystream",
+      "result": "valid",
+      "flags": [],
+      "key": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+      "nonce": "000000000000004a00000000",
+      "counter": 1,
+      "keystream": "224f51f3401bd9e12fde276fb8631ded8c131f823d2c06e27e4fcaec9ef3cf788a3b0aa372600a92b57974cded2b9334794cba40c63e34cdea212c4cf07d41b7"
+    }
+  ]
+}

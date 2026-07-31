@@ -1,0 +1,6 @@
+{
+  // Markdown formatting is owned by Prettier (see .prettierrc / the commit-time hook), so the
+  // markdownlint rule set is intentionally disabled - it only duplicates or fights Prettier and
+  // flags deliberate inline HTML (e.g. the <details> blocks in docs/TODO.md).
+  "default": false
+}

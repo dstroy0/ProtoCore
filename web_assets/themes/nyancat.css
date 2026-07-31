@@ -1,0 +1,90 @@
+/* nyancat: deep-space starfield, pop-tart pink, and the six-stripe rainbow trail.
+   Opt a page in with <!--#theme nyancat-->. */
+:root {
+  --space: #0a0a2e;
+  --ink: #ffffff;
+  --tart: #fc99cc; /* pop-tart body */
+  --tart2: #ff6ab3;
+  --trail: repeating-linear-gradient(
+    0deg,
+    #ff0000 0 6px,
+    #ff9900 6px 12px,
+    #ffff00 12px 18px,
+    #33ff00 18px 24px,
+    #0099ff 24px 30px,
+    #6633ff 30px 36px
+  );
+}
+html,
+body {
+  margin: 0;
+  color: var(--ink);
+  font:
+    16px/1.6 "Comic Sans MS",
+    "Segoe UI",
+    system-ui,
+    sans-serif;
+  background-color: var(--space);
+  /* a sprinkle of stars */
+  background-image:
+    radial-gradient(1px 1px at 20% 30%, #fff, transparent),
+    radial-gradient(1px 1px at 70% 60%, #fff, transparent),
+    radial-gradient(1px 1px at 40% 80%, #cfe, transparent),
+    radial-gradient(2px 2px at 85% 25%, #fff, transparent);
+  background-repeat: repeat;
+  background-size: 200px 200px;
+}
+h1,
+h2,
+h3 {
+  color: var(--tart);
+  font-weight: 800;
+  text-shadow: 0 0 6px rgba(252, 153, 204, 0.6);
+}
+a {
+  color: #ffe04d;
+}
+hr {
+  border: 0;
+  height: 18px;
+  border-radius: 3px;
+  background: var(--trail);
+  background-size: 100% 36px;
+}
+input,
+select,
+textarea {
+  background: #14143f;
+  color: var(--ink);
+  border: 2px solid var(--tart);
+  border-radius: 10px;
+  padding: 9px 13px;
+  font: inherit;
+  outline: none;
+}
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: #ffe04d;
+}
+button {
+  color: #3a1030;
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 22px;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  background: var(--tart);
+  box-shadow: 0 4px 0 var(--tart2);
+}
+button:hover {
+  background: var(--trail);
+  background-size: 100% 36px;
+  color: #fff;
+  text-shadow: 0 0 4px #000;
+}
+button:active {
+  transform: translateY(3px);
+  box-shadow: none;
+}

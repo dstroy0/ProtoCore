@@ -1,0 +1,87 @@
+/* keroppi: Sanrio's bright-green frog from the blue Donut Pond - green body, white
+   belly, pink cheek spots, red-and-white accents, V-shaped smile.
+   Opt a page in with <!--#theme keroppi-->. */
+:root {
+  --pond: #d6f1ff; /* the bluest pond */
+  --frog: #6cc24a;
+  --frog2: #3f9e3a;
+  --cheek: #ff9ec3; /* pink cheek spots */
+  --red: #e8453c; /* red-and-white outfit */
+  --ink: #244a22;
+  --white: #ffffff;
+}
+html,
+body {
+  margin: 0;
+  background: var(--pond);
+  color: var(--ink);
+  font:
+    16px/1.6 "Segoe UI Rounded",
+    "Comic Sans MS",
+    "Quicksand",
+    system-ui,
+    sans-serif;
+}
+h1,
+h2,
+h3 {
+  color: var(--frog2);
+  font-weight: 800;
+}
+h1::before {
+  content: "\1F438 "; /* frog face */
+}
+h1::after {
+  content: " \2228"; /* keroppi's V-shaped smile */
+  color: var(--red);
+}
+a {
+  color: var(--red);
+}
+/* white belly card with pink cheek-spot accents */
+.card,
+fieldset,
+form {
+  background: var(--white);
+  border: 3px solid var(--frog);
+  border-radius: 22px;
+  padding: 1.25rem;
+  box-shadow:
+    -28px 18px 0 -12px var(--cheek),
+    28px 18px 0 -12px var(--cheek);
+}
+input,
+select,
+textarea {
+  background: var(--white);
+  color: var(--ink);
+  border: 2px solid var(--frog);
+  border-radius: 14px;
+  padding: 9px 14px;
+  font: inherit;
+  outline: none;
+}
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--red);
+  box-shadow: 0 0 0 4px rgba(108, 194, 74, 0.25);
+}
+button {
+  background: var(--frog);
+  color: var(--white);
+  border: 2px solid var(--white);
+  border-radius: 14px;
+  padding: 10px 20px;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 4px 0 var(--frog2);
+}
+button:hover {
+  background: var(--red);
+}
+button:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--frog2);
+}

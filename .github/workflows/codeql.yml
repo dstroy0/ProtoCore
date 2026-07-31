@@ -1,0 +1,71 @@
+name: CodeQL
+
+# Static analysis of the C/C++ sources with CodeQL. Uses the "advanced" setup
+# (not GitHub default setup) because the database must be built by tracing a real
+# compile - here a host/native PlatformIO build of the security-critical cores
+# (HTTP parser, WebSocket, multipart, base64/JSON, SSH crypto, SNMP, the codecs).
+#
+# The analyze step publishes a code-scanning check named "CodeQL" - require that
+# context in the branch-protection rule / ruleset for main. (If GitHub "default"
+# code scanning is enabled for C/C++, disable it under
+# Settings -> Code security -> Code scanning so this advanced workflow can run.)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "27 6 * * 1" # weekly, Mondays 06:27 UTC
+
+permissions:
+  contents: read
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze (cpp)
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write # upload SARIF / publish the CodeQL check
+      actions: read
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.x"
+
+      - name: Install PlatformIO
+        run: pip install --upgrade platformio
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: cpp
+          queries: security-and-quality
+          config-file: ./.github/codeql/codeql-config.yml
+
+      # Host/native build of the security-critical cores; CodeQL traces the
+      # compiler. --without-testing skips running the unit tests (the test-report
+      # workflow already does that) - we only need the compilation. native_codeql
+      # is the full app with every feature flag ON, so the integration paths
+      # (CSRF / lockout / allowlist gates, permessage-deflate) and the new service
+      # modules are traced too, not just the per-feature cores.
+      - name: Build (native, traced by CodeQL)
+        run: |
+          pio test --without-testing \
+            -e native_codeql -e native_ssh -e native_snmp_v3 -e native_inflate \
+            -e native_deflate -e native_coap -e native_webdav -e native_modbus \
+            -e native_mqtt -e native_ws_client -e native_http_client -e native_jwt
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:cpp"
