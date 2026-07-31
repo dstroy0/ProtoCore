@@ -17,6 +17,7 @@
 #include "network_drivers/presentation/ssh/transport/ssh_packet.h" // SSH_MSG_KEXINIT, ssh_pkt[]
 #include "server/mmgr/secure.h"
 #include "services/system/clock.h"    // pc_millis() (re-key timer)
+#include "shared_primitives/bytes.h"  // pc_rd_str() - a name-list is an RFC 4251 sec 5 string
 #include "shared_primitives/strbuf.h" // pc_sb frame builder
 #if PC_ENABLE_PQC_KEX
 #include "crypto/pqc/mlkem.h" // pc_mlkem768_encaps (PQ/T hybrid KEX responder)
@@ -534,26 +535,8 @@ int ssh_kexinit_build(uint8_t i, uint8_t *payload, size_t *len, size_t cap)
     return 0;
 }
 
-// Read a name-list field at offset *off; set *list/*nlen to point into payload.
-// Returns true on success and advances *off past the field.
-static bool read_namelist(const uint8_t *p, size_t len, size_t *off, const uint8_t **list, uint32_t *nlen)
-{
-    if (*off + 4 > len)
-    {
-        return false;
-    }
-    uint32_t n = ((uint32_t)p[*off] << 24) | ((uint32_t)p[*off + 1] << 16) | ((uint32_t)p[*off + 2] << 8) |
-                 (uint32_t)p[*off + 3];
-    *off += 4;
-    if (*off + n > len)
-    {
-        return false;
-    }
-    *list = p + *off;
-    *nlen = n;
-    *off += n;
-    return true;
-}
+// A KEXINIT name-list is an RFC 4251 sec 5 string holding comma-separated names, so reading one is
+// pc_rd_str(); what makes it a name-list is what negotiate_alg()/namelist_contains() do with it.
 
 // Negotiate the key-exchange method from the client's kex_algorithms name-list, in our preference order
 // (PQC hybrid first when enabled; RSA group first when prefer_rsa). false = no mutual method.
@@ -636,7 +619,7 @@ int ssh_kexinit_parse(uint8_t i, const uint8_t *payload, size_t len)
     uint32_t nlen;
 
     // kex_algorithms: negotiate the KEX method by the CLIENT's preference (RFC 4253 §7.1).
-    if (!read_namelist(payload, len, &off, &list, &nlen))
+    if (!pc_rd_str(payload, len, &off, &list, &nlen))
     {
         return -1;
     }
@@ -647,7 +630,7 @@ int ssh_kexinit_parse(uint8_t i, const uint8_t *payload, size_t len)
         return -1; // no mutual KEX
     }
     // server_host_key_algorithms: negotiate, restricted to keys we actually hold.
-    if (!read_namelist(payload, len, &off, &list, &nlen))
+    if (!pc_rd_str(payload, len, &off, &list, &nlen))
     {
         return -1;
     }
@@ -661,7 +644,7 @@ int ssh_kexinit_parse(uint8_t i, const uint8_t *payload, size_t len)
         {"chacha20-poly1305@openssh.com", SSH_CIPHER_CHACHA20POLY1305, true},
         {ALG_CIPHER_GCM, SSH_CIPHER_AES256GCM, true},
         {ALG_CIPHER, SSH_CIPHER_AES256CTR, true}};
-    if (!read_namelist(payload, len, &off, &list, &nlen))
+    if (!pc_rd_str(payload, len, &off, &list, &nlen))
     {
         return -1;
     }
@@ -671,7 +654,7 @@ int ssh_kexinit_parse(uint8_t i, const uint8_t *payload, size_t len)
     {
         return -1;
     }
-    if (!read_namelist(payload, len, &off, &list, &nlen))
+    if (!pc_rd_str(payload, len, &off, &list, &nlen))
     {
         return -1;
     }
@@ -690,7 +673,7 @@ int ssh_kexinit_parse(uint8_t i, const uint8_t *payload, size_t len)
     bool need_mac = (s->cipher_alg == SSH_CIPHER_AES256CTR);
     decltype(SSH_MAC_HMAC_SHA256) m_c2s = SSH_MAC_HMAC_SHA256;
     decltype(SSH_MAC_HMAC_SHA256) m_s2c = SSH_MAC_HMAC_SHA256;
-    if (!read_namelist(payload, len, &off, &list, &nlen))
+    if (!pc_rd_str(payload, len, &off, &list, &nlen))
     {
         return -1;
     }
@@ -698,7 +681,7 @@ int ssh_kexinit_parse(uint8_t i, const uint8_t *payload, size_t len)
     {
         return -1;
     }
-    if (!read_namelist(payload, len, &off, &list, &nlen))
+    if (!pc_rd_str(payload, len, &off, &list, &nlen))
     {
         return -1;
     }
@@ -715,12 +698,12 @@ int ssh_kexinit_parse(uint8_t i, const uint8_t *payload, size_t len)
                                               {"zlib", SshCompAlg::SSH_COMP_ZLIB, true},
                                               {"none", SshCompAlg::SSH_COMP_NONE, true}};
         SshCompAlg comp;
-        if (!read_namelist(payload, len, &off, &list, &nlen) || !negotiate_alg(list, nlen, compc, 3, &comp))
+        if (!pc_rd_str(payload, len, &off, &list, &nlen) || !negotiate_alg(list, nlen, compc, 3, &comp))
         {
             return -1;
         }
         ssh_comp_set_c2s(i, comp);
-        if (!read_namelist(payload, len, &off, &list, &nlen) || !negotiate_alg(list, nlen, compc, 3, &comp))
+        if (!pc_rd_str(payload, len, &off, &list, &nlen) || !negotiate_alg(list, nlen, compc, 3, &comp))
         {
             return -1;
         }
@@ -728,11 +711,11 @@ int ssh_kexinit_parse(uint8_t i, const uint8_t *payload, size_t len)
     }
 #else
     // Both directions must offer "none" (no compression built in).
-    if (!read_namelist(payload, len, &off, &list, &nlen) || !namelist_contains(list, nlen, ALG_COMP))
+    if (!pc_rd_str(payload, len, &off, &list, &nlen) || !namelist_contains(list, nlen, ALG_COMP))
     {
         return -1;
     }
-    if (!read_namelist(payload, len, &off, &list, &nlen) || !namelist_contains(list, nlen, ALG_COMP))
+    if (!pc_rd_str(payload, len, &off, &list, &nlen) || !namelist_contains(list, nlen, ALG_COMP))
     {
         return -1;
     }

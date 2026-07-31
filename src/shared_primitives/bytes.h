@@ -89,10 +89,16 @@ inline bool pc_br_take_be(pc_cspan *r, size_t nbytes, uint64_t *out)
 // many bytes. SSH calls it a "string" (RFC 4251 sec 5) and had it written four separate times.
 // These bounds-check and advance an offset the caller owns, for parsers that walk a raw payload.
 
+// Every bound here is written as a subtraction against the space that remains, never as a sum
+// compared to the length. A sum overflows: size_t is 32 bits on esp32 and c2000, the length prefix
+// on the wire is a full u32, and `*off + n > len` with n = 0xFFFFFFFF wraps to a small number that
+// passes the check. The peer picks n, so the sum form hands out a length larger than the buffer.
+// Subtracting cannot wrap once *off <= len is established, which each check does first.
+
 /** @brief Read a big-endian u32 at @p *off, advancing it by 4. False if it would run past @p len. */
 inline bool pc_rd_u32(const uint8_t *p, size_t len, size_t *off, uint32_t *out)
 {
-    if (*off + 4 > len)
+    if (*off > len || len - *off < 4)
     {
         return false;
     }
@@ -115,7 +121,7 @@ inline bool pc_rd_str(const uint8_t *p, size_t len, size_t *off, const uint8_t *
     {
         return false;
     }
-    if (*off + n > len)
+    if (n > len - *off) // pc_rd_u32 succeeding established *off <= len, so this cannot wrap
     {
         *off = start;
         return false;

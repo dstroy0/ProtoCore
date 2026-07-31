@@ -15,6 +15,8 @@
 #include "network_drivers/presentation/ssh/transport/ssh_transport.h" // ssh_sess[], SshPhase
 #include "server/mmgr/scratch.h"                                      // pc_scratch_span() for the verify buffers
 #include "server/mmgr/secure.h"
+#include "shared_primitives/bytes.h"  // pc_rd_str() - the RFC 4251 sec 5 string reader
+#include "shared_primitives/endian.h" // pc_wr32be() - the one source of truth for wire integers
 #include <string.h>
 
 // ---------------------------------------------------------------------------
@@ -54,56 +56,27 @@ void pc_ssh_auth_set_pubkey_cb(SshPubkeyCb cb)
 // Wire helpers
 // ---------------------------------------------------------------------------
 
-// Read an SSH string into a fixed buffer, null-terminating it. Advances *off.
+// Copy an SSH string into a fixed buffer and null-terminate it. Advances *off.
 // Returns false on truncation or if the string does not fit (buffer too small).
+//
+// Reading the field by reference is pc_rd_str()'s job; this only adds the copy and the terminator,
+// which is what separates it from the by-reference reads below.
 static bool read_string(const uint8_t *p, size_t len, size_t *off, char *out, size_t outcap)
 {
-    if (*off + 4 > len)
-    {
-        return false;
-    }
-    uint32_t n = ((uint32_t)p[*off] << 24) | ((uint32_t)p[*off + 1] << 16) | ((uint32_t)p[*off + 2] << 8) |
-                 (uint32_t)p[*off + 3];
-    *off += 4;
-    if (*off + n > len)
+    size_t start{*off};
+    const uint8_t *s{nullptr};
+    uint32_t n{0};
+    if (!pc_rd_str(p, len, off, &s, &n))
     {
         return false;
     }
     if (n >= outcap)
     {
+        *off = start; // same contract as pc_rd_str: a failed read leaves the offset on its own field
         return false; // does not fit our fixed buffer
     }
-    memcpy(out, p + *off, n);
+    memcpy(out, s, n);
     out[n] = '\0';
-    *off += n;
-    return true;
-}
-
-static void put_u32(uint8_t *p, uint32_t v)
-{
-    p[0] = (uint8_t)(v >> 24);
-    p[1] = (uint8_t)(v >> 16);
-    p[2] = (uint8_t)(v >> 8);
-    p[3] = (uint8_t)v;
-}
-
-// Read an SSH string by reference (no copy): *out points into p. Advances *off.
-static bool read_string_ref(const uint8_t *p, size_t len, size_t *off, const uint8_t **out, uint32_t *slen)
-{
-    if (*off + 4 > len)
-    {
-        return false;
-    }
-    uint32_t n = ((uint32_t)p[*off] << 24) | ((uint32_t)p[*off + 1] << 16) | ((uint32_t)p[*off + 2] << 8) |
-                 (uint32_t)p[*off + 3];
-    *off += 4;
-    if (*off + n > len)
-    {
-        return false;
-    }
-    *out = p + *off;
-    *slen = n;
-    *off += n;
     return true;
 }
 
@@ -131,7 +104,7 @@ static bool parse_ssh_rsa_blob(const uint8_t *blob, uint32_t blen, uint8_t n_be[
     size_t off = 0;
     const uint8_t *type;
     uint32_t type_len;
-    if (!read_string_ref(blob, blen, &off, &type, &type_len))
+    if (!pc_rd_str(blob, blen, &off, &type, &type_len))
     {
         return false;
     }
@@ -142,7 +115,7 @@ static bool parse_ssh_rsa_blob(const uint8_t *blob, uint32_t blen, uint8_t n_be[
 
     const uint8_t *e_mp;
     uint32_t e_len;
-    if (!read_string_ref(blob, blen, &off, &e_mp, &e_len))
+    if (!pc_rd_str(blob, blen, &off, &e_mp, &e_len))
     {
         return false;
     }
@@ -153,7 +126,7 @@ static bool parse_ssh_rsa_blob(const uint8_t *blob, uint32_t blen, uint8_t n_be[
 
     const uint8_t *n_mp;
     uint32_t n_len;
-    if (!read_string_ref(blob, blen, &off, &n_mp, &n_len))
+    if (!pc_rd_str(blob, blen, &off, &n_mp, &n_len))
     {
         return false;
     }
@@ -173,7 +146,7 @@ static bool parse_pc_ed25519_blob(const uint8_t *blob, uint32_t blen, uint8_t pu
     uint32_t type_len;
     // The caller only reaches here after matching the 15-byte string("ssh-ed25519") prefix on the blob,
     // so the type field is already proven present and correct.
-    if (!read_string_ref(blob, blen, &off, &type, &type_len)) // GCOVR_EXCL_LINE  prefix match implies blen >= 15
+    if (!pc_rd_str(blob, blen, &off, &type, &type_len)) // GCOVR_EXCL_LINE  prefix match implies blen >= 15
     {
         return false; // GCOVR_EXCL_LINE
     }
@@ -183,7 +156,7 @@ static bool parse_pc_ed25519_blob(const uint8_t *blob, uint32_t blen, uint8_t pu
     }
     const uint8_t *pk;
     uint32_t pk_len;
-    if (!read_string_ref(blob, blen, &off, &pk, &pk_len))
+    if (!pc_rd_str(blob, blen, &off, &pk, &pk_len))
     {
         return false;
     }
@@ -203,7 +176,7 @@ static bool parse_pc_ecdsa_blob(const uint8_t *blob, uint32_t blen, uint8_t pub[
     const uint8_t *type;
     uint32_t type_len;
     // As above: the caller matched the 23-byte string("ecdsa-sha2-nistp256") prefix before calling in.
-    if (!read_string_ref(blob, blen, &off, &type, &type_len)) // GCOVR_EXCL_LINE  prefix match implies blen >= 23
+    if (!pc_rd_str(blob, blen, &off, &type, &type_len)) // GCOVR_EXCL_LINE  prefix match implies blen >= 23
     {
         return false; // GCOVR_EXCL_LINE
     }
@@ -213,7 +186,7 @@ static bool parse_pc_ecdsa_blob(const uint8_t *blob, uint32_t blen, uint8_t pub[
     }
     const uint8_t *curve;
     uint32_t curve_len;
-    if (!read_string_ref(blob, blen, &off, &curve, &curve_len))
+    if (!pc_rd_str(blob, blen, &off, &curve, &curve_len))
     {
         return false;
     }
@@ -223,7 +196,7 @@ static bool parse_pc_ecdsa_blob(const uint8_t *blob, uint32_t blen, uint8_t pub[
     }
     const uint8_t *q;
     uint32_t q_len;
-    if (!read_string_ref(blob, blen, &off, &q, &q_len))
+    if (!pc_rd_str(blob, blen, &off, &q, &q_len))
     {
         return false;
     }
@@ -243,7 +216,7 @@ static bool parse_ecdsa_sig(const uint8_t *sig, uint32_t slen, uint8_t out[PC_EC
     const uint8_t *s;
     uint32_t r_len;
     uint32_t s_len;
-    if (!read_string_ref(sig, slen, &off, &r, &r_len) || !read_string_ref(sig, slen, &off, &s, &s_len))
+    if (!pc_rd_str(sig, slen, &off, &r, &r_len) || !pc_rd_str(sig, slen, &off, &s, &s_len))
     {
         return false;
     }
@@ -281,7 +254,7 @@ int pc_ssh_auth_handle_service_request(const uint8_t *payload, size_t len, uint8
         return -1;
     }
     out[0] = SSH_MSG_SERVICE_ACCEPT;
-    put_u32(out + 1, nl);
+    pc_wr32be(out + 1, nl);
     memcpy(out + 5, name, nl);
     *out_len = 5 + nl;
     return 0;
@@ -339,7 +312,7 @@ int pc_ssh_auth_parse_request(const uint8_t *payload, size_t len, SshAuthReq *re
         {
             return -1;
         }
-        if (!read_string_ref(payload, len, &off, &req->pk_blob, &req->pk_blob_len))
+        if (!pc_rd_str(payload, len, &off, &req->pk_blob, &req->pk_blob_len))
         {
             return -1;
         }
@@ -352,7 +325,7 @@ int pc_ssh_auth_parse_request(const uint8_t *payload, size_t len, SshAuthReq *re
         {
             const uint8_t *sigblob;
             uint32_t sigblob_len;
-            if (!read_string_ref(payload, len, &off, &sigblob, &sigblob_len))
+            if (!pc_rd_str(payload, len, &off, &sigblob, &sigblob_len))
             {
                 return -1;
             }
@@ -360,11 +333,11 @@ int pc_ssh_auth_parse_request(const uint8_t *payload, size_t len, SshAuthReq *re
             size_t so = 0;
             const uint8_t *salgo;
             uint32_t salgo_len;
-            if (!read_string_ref(sigblob, sigblob_len, &so, &salgo, &salgo_len))
+            if (!pc_rd_str(sigblob, sigblob_len, &so, &salgo, &salgo_len))
             {
                 return -1;
             }
-            if (!read_string_ref(sigblob, sigblob_len, &so, &req->signature, &req->signature_len))
+            if (!pc_rd_str(sigblob, sigblob_len, &so, &req->signature, &req->signature_len))
             {
                 return -1;
             }
@@ -404,7 +377,7 @@ int pc_ssh_auth_build_failure(uint8_t *out, size_t *out_len, size_t cap, bool pa
         return -1;
     }
     out[0] = SSH_MSG_USERAUTH_FAILURE;
-    put_u32(out + 1, ml);
+    pc_wr32be(out + 1, ml);
     memcpy(out + 5, methods, ml);
     out[5 + ml] = partial ? 1 : 0;
     *out_len = 5 + ml + 1;
@@ -433,11 +406,11 @@ static int build_pk_ok(const SshAuthReq *req, uint8_t *out, size_t *out_len, siz
     }
     size_t o = 0;
     out[o++] = SSH_MSG_USERAUTH_PK_OK;
-    put_u32(out + o, al);
+    pc_wr32be(out + o, al);
     o += 4;
     memcpy(out + o, req->pk_algo, al);
     o += al;
-    put_u32(out + o, req->pk_blob_len);
+    pc_wr32be(out + o, req->pk_blob_len);
     o += 4;
     memcpy(out + o, req->pk_blob, req->pk_blob_len);
     o += req->pk_blob_len;
@@ -459,15 +432,15 @@ static int build_info_request(uint8_t *out, size_t *out_len, size_t cap)
     }
     size_t o = 0;
     out[o++] = SSH_MSG_USERAUTH_INFO_REQUEST;
-    put_u32(out + o, 0); // name = ""
+    pc_wr32be(out + o, 0); // name = ""
     o += 4;
-    put_u32(out + o, 0); // instruction = ""
+    pc_wr32be(out + o, 0); // instruction = ""
     o += 4;
-    put_u32(out + o, 0); // language tag = "" (deprecated)
+    pc_wr32be(out + o, 0); // language tag = "" (deprecated)
     o += 4;
-    put_u32(out + o, 1); // num-prompts = 1
+    pc_wr32be(out + o, 1); // num-prompts = 1
     o += 4;
-    put_u32(out + o, pl);
+    pc_wr32be(out + o, pl);
     o += 4;
     memcpy(out + o, prompt, pl);
     o += pl;
@@ -545,7 +518,7 @@ static int pc_ssh_auth_handle_pubkey(uint8_t i, const SshAuthReq *req, uint8_t *
         return pc_ssh_auth_build_failure(out, out_len, cap, false);
     }
     size_t sd = 0;
-    put_u32(signed_data.buf + sd, (uint32_t)sid_len);
+    pc_wr32be(signed_data.buf + sd, (uint32_t)sid_len);
     sd += 4;
     memcpy(signed_data.buf + sd, ssh_sess[i].session_id, sid_len);
     sd += sid_len;
