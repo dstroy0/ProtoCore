@@ -38,13 +38,14 @@ void pc_log_frame(uint8_t level, const pc_field *spec, ...)
         return;
     }
 
-    // One line's worth of stack, matching what the ring can store. A message longer than that is
-    // clipped rather than refused: the ring would clip it anyway, and losing the event entirely is
-    // worse than reading a short one. This is display text, so it takes the clipping build.
+    // One line's worth of stack, matching what the ring can store. A spec whose worst case exceeds
+    // it is a spec that was written wrong, not a runtime condition to absorb: every log frame
+    // states its literals' lengths and bounds its string fields, so whether a message fits is
+    // settled when the frame is declared. Nothing here decides it from the data.
     char line[PC_LOG_LINE_LEN];
     va_list ap;
     va_start(ap, spec);
-    (void)pc_frame_vbuild_clip(line, sizeof(line), spec, ap);
+    (void)pc_frame_vbuild(line, sizeof(line), spec, ap);
     va_end(ap);
 
 #if PC_ENABLE_LOGBUF

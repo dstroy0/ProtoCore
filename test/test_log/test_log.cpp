@@ -143,14 +143,16 @@ void test_no_sink_is_not_a_crash()
 
 // --- formatting edges -----------------------------------------------------
 
-void test_long_line_is_truncated_not_overflowed()
+// A frame that does not fit is refused, here as everywhere: the line comes out empty rather than
+// half-written. Logging takes the same contract as the wire frames - there is only one.
+void test_line_that_does_not_fit_is_refused()
 {
     char big[PC_LOG_LINE_LEN * 3];
     memset(big, 'x', sizeof(big) - 1);
     big[sizeof(big) - 1] = '\0';
     PC_LOGE(F_STR, big);
     TEST_ASSERT_EQUAL_INT(1, s_sink_calls);
-    TEST_ASSERT_TRUE(strlen(s_last_line) < PC_LOG_LINE_LEN);
+    TEST_ASSERT_EQUAL_STRING("", s_last_line);
 }
 
 void test_null_spec_is_ignored()
@@ -302,7 +304,7 @@ int main(int, char **)
     RUN_TEST(test_emitted_line_also_reaches_the_logbuf_ring);
     RUN_TEST(test_levels_match_the_logbuf_letters);
     RUN_TEST(test_no_sink_is_not_a_crash);
-    RUN_TEST(test_long_line_is_truncated_not_overflowed);
+    RUN_TEST(test_line_that_does_not_fit_is_refused);
     RUN_TEST(test_null_spec_is_ignored);
     RUN_TEST(test_empty_message_is_still_a_line);
     RUN_TEST(test_ring_atomic_wrapper_round_trips);

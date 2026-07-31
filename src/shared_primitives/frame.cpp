@@ -22,10 +22,7 @@
 // stops the appenders inlining.
 PC_OPTIMIZE_O2
 
-// The one walk. @p clip selects the contract, not a second engine: a wire frame is whole or it is
-// nothing, while display text is better short than absent. Only the text fields differ - a number
-// is all-or-nothing in both modes, because half a number reads as a different number.
-static size_t frame_walk(char *out, size_t cap, const pc_field *spec, va_list ap, bool clip)
+size_t pc_frame_vbuild(char *out, size_t cap, const pc_field *spec, va_list ap)
 {
     if (!out || cap == 0 || !spec)
     {
@@ -41,26 +38,12 @@ static size_t frame_walk(char *out, size_t cap, const pc_field *spec, va_list ap
             pc_sb_put(&b, f->lit);
 #else
             // the spec carries the length; scanning for the NUL would rediscover it every call
-            if (clip)
-            {
-                pc_sb_put_clip(&b, f->lit);
-            }
-            else
-            {
-                pc_sb_put_n(&b, f->lit, f->len);
-            }
+            pc_sb_put_n(&b, f->lit, f->len);
 #endif
             break;
         case PC_FK_STR: {
             const char *s = va_arg(ap, const char *);
-            if (clip)
-            {
-                pc_sb_put_clip(&b, s ? s : "");
-            }
-            else
-            {
-                pc_sb_put(&b, s ? s : "");
-            }
+            pc_sb_put(&b, s ? s : "");
             break;
         }
         case PC_FK_U32:
@@ -112,16 +95,6 @@ static size_t frame_walk(char *out, size_t cap, const pc_field *spec, va_list ap
         out[0] = '\0';
     }
     return n;
-}
-
-size_t pc_frame_vbuild(char *out, size_t cap, const pc_field *spec, va_list ap)
-{
-    return frame_walk(out, cap, spec, ap, false);
-}
-
-size_t pc_frame_vbuild_clip(char *out, size_t cap, const pc_field *spec, va_list ap)
-{
-    return frame_walk(out, cap, spec, ap, true);
 }
 
 size_t pc_frame_build(char *out, size_t cap, const pc_field *spec, ...)
