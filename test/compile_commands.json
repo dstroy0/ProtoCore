@@ -1,99 +1,99 @@
 [
   {
-    "command": "/usr/bin/g++ -o .pio/build/native/src/board_drivers/hal/portable/portable_platform.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENFORCE_HOST_HEADER=0 -Itest/mocks -Itest/support -Isrc src/board_drivers/hal/portable/portable_platform.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_app/src/board_drivers/hal/portable/portable_platform.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -Itest/mocks -Itest/support -Isrc src/board_drivers/hal/portable/portable_platform.cpp",
     "directory": "@ROOT@",
     "file": "src/board_drivers/hal/portable/portable_platform.cpp",
-    "output": ".pio/build/native/src/board_drivers/hal/portable/portable_platform.o"
+    "output": ".pio/build/native_app/src/board_drivers/hal/portable/portable_platform.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native/src/crypto/hash/sha1.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENFORCE_HOST_HEADER=0 -Itest/mocks -Itest/support -Isrc src/crypto/hash/sha1.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_app/src/crypto/hash/sha1.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -Itest/mocks -Itest/support -Isrc src/crypto/hash/sha1.cpp",
     "directory": "@ROOT@",
     "file": "src/crypto/hash/sha1.cpp",
-    "output": ".pio/build/native/src/crypto/hash/sha1.o"
+    "output": ".pio/build/native_app/src/crypto/hash/sha1.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native/src/network_drivers/network/ip.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENFORCE_HOST_HEADER=0 -Itest/mocks -Itest/support -Isrc src/network_drivers/network/ip.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_app/src/network_drivers/network/ip.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/network/ip.cpp",
     "directory": "@ROOT@",
     "file": "src/network_drivers/network/ip.cpp",
-    "output": ".pio/build/native/src/network_drivers/network/ip.o"
+    "output": ".pio/build/native_app/src/network_drivers/network/ip.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native/src/network_drivers/presentation/codec/base64/base64.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENFORCE_HOST_HEADER=0 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/codec/base64/base64.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_app/src/network_drivers/presentation/codec/base64/base64.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/codec/base64/base64.cpp",
     "directory": "@ROOT@",
     "file": "src/network_drivers/presentation/codec/base64/base64.cpp",
-    "output": ".pio/build/native/src/network_drivers/presentation/codec/base64/base64.o"
+    "output": ".pio/build/native_app/src/network_drivers/presentation/codec/base64/base64.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native/src/network_drivers/presentation/codec/multipart/multipart.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENFORCE_HOST_HEADER=0 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/codec/multipart/multipart.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_app/src/network_drivers/presentation/codec/multipart/multipart.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/codec/multipart/multipart.cpp",
     "directory": "@ROOT@",
     "file": "src/network_drivers/presentation/codec/multipart/multipart.cpp",
-    "output": ".pio/build/native/src/network_drivers/presentation/codec/multipart/multipart.o"
+    "output": ".pio/build/native_app/src/network_drivers/presentation/codec/multipart/multipart.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native/src/network_drivers/presentation/http/http_parser/http_parser.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENFORCE_HOST_HEADER=0 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/http/http_parser/http_parser.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_app/src/network_drivers/presentation/http/http_parser/http_parser.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/http/http_parser/http_parser.cpp",
     "directory": "@ROOT@",
     "file": "src/network_drivers/presentation/http/http_parser/http_parser.cpp",
-    "output": ".pio/build/native/src/network_drivers/presentation/http/http_parser/http_parser.o"
+    "output": ".pio/build/native_app/src/network_drivers/presentation/http/http_parser/http_parser.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native/src/network_drivers/presentation/http/sse/sse.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENFORCE_HOST_HEADER=0 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/http/sse/sse.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_app/src/network_drivers/presentation/http/sse/sse.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/http/sse/sse.cpp",
     "directory": "@ROOT@",
     "file": "src/network_drivers/presentation/http/sse/sse.cpp",
-    "output": ".pio/build/native/src/network_drivers/presentation/http/sse/sse.o"
+    "output": ".pio/build/native_app/src/network_drivers/presentation/http/sse/sse.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native/src/network_drivers/presentation/http/websocket/websocket.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENFORCE_HOST_HEADER=0 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/http/websocket/websocket.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_app/src/network_drivers/presentation/http/websocket/websocket.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/http/websocket/websocket.cpp",
     "directory": "@ROOT@",
     "file": "src/network_drivers/presentation/http/websocket/websocket.cpp",
-    "output": ".pio/build/native/src/network_drivers/presentation/http/websocket/websocket.o"
+    "output": ".pio/build/native_app/src/network_drivers/presentation/http/websocket/websocket.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native/src/network_drivers/presentation/presentation.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENFORCE_HOST_HEADER=0 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/presentation.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_app/src/network_drivers/presentation/presentation.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/presentation.cpp",
     "directory": "@ROOT@",
     "file": "src/network_drivers/presentation/presentation.cpp",
-    "output": ".pio/build/native/src/network_drivers/presentation/presentation.o"
+    "output": ".pio/build/native_app/src/network_drivers/presentation/presentation.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native/src/network_drivers/session/proto_builtins.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENFORCE_HOST_HEADER=0 -Itest/mocks -Itest/support -Isrc src/network_drivers/session/proto_builtins.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_app/src/network_drivers/session/proto_builtins.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/session/proto_builtins.cpp",
     "directory": "@ROOT@",
     "file": "src/network_drivers/session/proto_builtins.cpp",
-    "output": ".pio/build/native/src/network_drivers/session/proto_builtins.o"
+    "output": ".pio/build/native_app/src/network_drivers/session/proto_builtins.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native/src/network_drivers/session/session.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENFORCE_HOST_HEADER=0 -Itest/mocks -Itest/support -Isrc src/network_drivers/session/session.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_app/src/network_drivers/session/session.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/session/session.cpp",
     "directory": "@ROOT@",
     "file": "src/network_drivers/session/session.cpp",
-    "output": ".pio/build/native/src/network_drivers/session/session.o"
+    "output": ".pio/build/native_app/src/network_drivers/session/session.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native/src/network_drivers/session/worker.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENFORCE_HOST_HEADER=0 -Itest/mocks -Itest/support -Isrc src/network_drivers/session/worker.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_app/src/network_drivers/session/worker.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/session/worker.cpp",
     "directory": "@ROOT@",
     "file": "src/network_drivers/session/worker.cpp",
-    "output": ".pio/build/native/src/network_drivers/session/worker.o"
+    "output": ".pio/build/native_app/src/network_drivers/session/worker.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native/src/network_drivers/transport/listener.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENFORCE_HOST_HEADER=0 -Itest/mocks -Itest/support -Isrc src/network_drivers/transport/listener.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_app/src/network_drivers/transport/listener.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/transport/listener.cpp",
     "directory": "@ROOT@",
     "file": "src/network_drivers/transport/listener.cpp",
-    "output": ".pio/build/native/src/network_drivers/transport/listener.o"
+    "output": ".pio/build/native_app/src/network_drivers/transport/listener.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native/src/network_drivers/transport/tcp.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENFORCE_HOST_HEADER=0 -Itest/mocks -Itest/support -Isrc src/network_drivers/transport/tcp.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_app/src/network_drivers/transport/tcp.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/transport/tcp.cpp",
     "directory": "@ROOT@",
     "file": "src/network_drivers/transport/tcp.cpp",
-    "output": ".pio/build/native/src/network_drivers/transport/tcp.o"
+    "output": ".pio/build/native_app/src/network_drivers/transport/tcp.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native/src/server/mmgr/arena.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENFORCE_HOST_HEADER=0 -Itest/mocks -Itest/support -Isrc src/server/mmgr/arena.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_app/src/server/mmgr/arena.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -Itest/mocks -Itest/support -Isrc src/server/mmgr/arena.cpp",
     "directory": "@ROOT@",
     "file": "src/server/mmgr/arena.cpp",
-    "output": ".pio/build/native/src/server/mmgr/arena.o"
+    "output": ".pio/build/native_app/src/server/mmgr/arena.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native/src/server/mmgr/scratch.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENFORCE_HOST_HEADER=0 -Itest/mocks -Itest/support -Isrc src/server/mmgr/scratch.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_app/src/server/mmgr/scratch.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -Itest/mocks -Itest/support -Isrc src/server/mmgr/scratch.cpp",
     "directory": "@ROOT@",
     "file": "src/server/mmgr/scratch.cpp",
-    "output": ".pio/build/native/src/server/mmgr/scratch.o"
+    "output": ".pio/build/native_app/src/server/mmgr/scratch.o"
   },
   {
     "command": "/usr/bin/g++ -o .pio/build/native_ad9238/src/services/peripherals/ad9238/ad9238.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_AD9238=1 -Itest/mocks -Itest/support -Isrc src/services/peripherals/ad9238/ad9238.cpp",
@@ -306,52 +306,52 @@
     "output": ".pio/build/native_coap/src/services/iot/coap/coap.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_coaps/src/board_drivers/hal/portable/portable_aes128gcm.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_DTLS=1 -DPC_ENABLE_COAP=1 -Itest/mocks -Itest/support -Isrc src/board_drivers/hal/portable/portable_aes128gcm.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_h3_server/src/board_drivers/hal/portable/portable_aes128gcm.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_HTTP3=1 -Itest/mocks -Itest/support -Isrc src/board_drivers/hal/portable/portable_aes128gcm.cpp",
     "directory": "@ROOT@",
     "file": "src/board_drivers/hal/portable/portable_aes128gcm.cpp",
-    "output": ".pio/build/native_coaps/src/board_drivers/hal/portable/portable_aes128gcm.o"
+    "output": ".pio/build/native_h3_server/src/board_drivers/hal/portable/portable_aes128gcm.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_coaps/src/crypto/asymmetric/curve25519.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_DTLS=1 -DPC_ENABLE_COAP=1 -Itest/mocks -Itest/support -Isrc src/crypto/asymmetric/curve25519.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_h3_server/src/crypto/asymmetric/curve25519.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_HTTP3=1 -Itest/mocks -Itest/support -Isrc src/crypto/asymmetric/curve25519.cpp",
     "directory": "@ROOT@",
     "file": "src/crypto/asymmetric/curve25519.cpp",
-    "output": ".pio/build/native_coaps/src/crypto/asymmetric/curve25519.o"
+    "output": ".pio/build/native_h3_server/src/crypto/asymmetric/curve25519.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_coaps/src/crypto/asymmetric/ed25519.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_DTLS=1 -DPC_ENABLE_COAP=1 -Itest/mocks -Itest/support -Isrc src/crypto/asymmetric/ed25519.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_h3_server/src/crypto/asymmetric/ed25519.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_HTTP3=1 -Itest/mocks -Itest/support -Isrc src/crypto/asymmetric/ed25519.cpp",
     "directory": "@ROOT@",
     "file": "src/crypto/asymmetric/ed25519.cpp",
-    "output": ".pio/build/native_coaps/src/crypto/asymmetric/ed25519.o"
+    "output": ".pio/build/native_h3_server/src/crypto/asymmetric/ed25519.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_coaps/src/crypto/hash/sha512.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_DTLS=1 -DPC_ENABLE_COAP=1 -Itest/mocks -Itest/support -Isrc src/crypto/hash/sha512.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_h3_server/src/crypto/hash/sha512.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_HTTP3=1 -Itest/mocks -Itest/support -Isrc src/crypto/hash/sha512.cpp",
     "directory": "@ROOT@",
     "file": "src/crypto/hash/sha512.cpp",
-    "output": ".pio/build/native_coaps/src/crypto/hash/sha512.o"
+    "output": ".pio/build/native_h3_server/src/crypto/hash/sha512.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_coaps/src/crypto/kdf/hkdf.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_DTLS=1 -DPC_ENABLE_COAP=1 -Itest/mocks -Itest/support -Isrc src/crypto/kdf/hkdf.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_h3_server/src/crypto/kdf/hkdf.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_HTTP3=1 -Itest/mocks -Itest/support -Isrc src/crypto/kdf/hkdf.cpp",
     "directory": "@ROOT@",
     "file": "src/crypto/kdf/hkdf.cpp",
-    "output": ".pio/build/native_coaps/src/crypto/kdf/hkdf.o"
+    "output": ".pio/build/native_h3_server/src/crypto/kdf/hkdf.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_coaps/src/crypto/kdf/tls13_kdf.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_DTLS=1 -DPC_ENABLE_COAP=1 -Itest/mocks -Itest/support -Isrc src/crypto/kdf/tls13_kdf.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_h3_server/src/crypto/kdf/tls13_kdf.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_HTTP3=1 -Itest/mocks -Itest/support -Isrc src/crypto/kdf/tls13_kdf.cpp",
     "directory": "@ROOT@",
     "file": "src/crypto/kdf/tls13_kdf.cpp",
-    "output": ".pio/build/native_coaps/src/crypto/kdf/tls13_kdf.o"
+    "output": ".pio/build/native_h3_server/src/crypto/kdf/tls13_kdf.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_coaps/src/crypto/mac/hmac_sha256.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_DTLS=1 -DPC_ENABLE_COAP=1 -Itest/mocks -Itest/support -Isrc src/crypto/mac/hmac_sha256.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_h3_server/src/crypto/mac/hmac_sha256.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_HTTP3=1 -Itest/mocks -Itest/support -Isrc src/crypto/mac/hmac_sha256.cpp",
     "directory": "@ROOT@",
     "file": "src/crypto/mac/hmac_sha256.cpp",
-    "output": ".pio/build/native_coaps/src/crypto/mac/hmac_sha256.o"
+    "output": ".pio/build/native_h3_server/src/crypto/mac/hmac_sha256.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_coaps/src/network_drivers/presentation/http/http3/tls13_msg.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_DTLS=1 -DPC_ENABLE_COAP=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/http/http3/tls13_msg.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_h3_server/src/network_drivers/presentation/http/http3/tls13_msg.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_HTTP3=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/http/http3/tls13_msg.cpp",
     "directory": "@ROOT@",
     "file": "src/network_drivers/presentation/http/http3/tls13_msg.cpp",
-    "output": ".pio/build/native_coaps/src/network_drivers/presentation/http/http3/tls13_msg.o"
+    "output": ".pio/build/native_h3_server/src/network_drivers/presentation/http/http3/tls13_msg.o"
   },
   {
     "command": "/usr/bin/g++ -o .pio/build/native_coaps/src/network_drivers/presentation/security/dtls/dtls_conn.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_DTLS=1 -DPC_ENABLE_COAP=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/security/dtls/dtls_conn.cpp",
@@ -372,10 +372,10 @@
     "output": ".pio/build/native_coaps/src/network_drivers/presentation/security/dtls/dtls_record.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_coaps/src/server/mmgr/secure.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_DTLS=1 -DPC_ENABLE_COAP=1 -Itest/mocks -Itest/support -Isrc src/server/mmgr/secure.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_h3_server/src/server/mmgr/secure.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_HTTP3=1 -Itest/mocks -Itest/support -Isrc src/server/mmgr/secure.cpp",
     "directory": "@ROOT@",
     "file": "src/server/mmgr/secure.cpp",
-    "output": ".pio/build/native_coaps/src/server/mmgr/secure.o"
+    "output": ".pio/build/native_h3_server/src/server/mmgr/secure.o"
   },
   {
     "command": "/usr/bin/g++ -o .pio/build/native_coaps/src/services/iot/coap/coaps.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_DTLS=1 -DPC_ENABLE_COAP=1 -Itest/mocks -Itest/support -Isrc src/services/iot/coap/coaps.cpp",
@@ -414,22 +414,22 @@
     "output": ".pio/build/native_cotp/src/services/fieldbus/cotp/cotp.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_crypto_kat/src/crypto/cipher/chacha20.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_HTTP3=1 -Itest/mocks -Itest/support -Isrc src/crypto/cipher/chacha20.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_ssh/src/crypto/cipher/chacha20.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_SSH_MAX_CHANNELS=3 -DPC_ENABLE_SSH=1 -DPC_ENABLE_FILE_SERVING=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_SSH_SCP=1 -Itest/mocks -Itest/support -Isrc src/crypto/cipher/chacha20.cpp",
     "directory": "@ROOT@",
     "file": "src/crypto/cipher/chacha20.cpp",
-    "output": ".pio/build/native_crypto_kat/src/crypto/cipher/chacha20.o"
+    "output": ".pio/build/native_ssh/src/crypto/cipher/chacha20.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_crypto_kat/src/crypto/mac/hmac_sha512.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_HTTP3=1 -Itest/mocks -Itest/support -Isrc src/crypto/mac/hmac_sha512.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_ssh/src/crypto/mac/hmac_sha512.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_SSH_MAX_CHANNELS=3 -DPC_ENABLE_SSH=1 -DPC_ENABLE_FILE_SERVING=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_SSH_SCP=1 -Itest/mocks -Itest/support -Isrc src/crypto/mac/hmac_sha512.cpp",
     "directory": "@ROOT@",
     "file": "src/crypto/mac/hmac_sha512.cpp",
-    "output": ".pio/build/native_crypto_kat/src/crypto/mac/hmac_sha512.o"
+    "output": ".pio/build/native_ssh/src/crypto/mac/hmac_sha512.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_crypto_kat/src/crypto/mac/poly1305.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_HTTP3=1 -Itest/mocks -Itest/support -Isrc src/crypto/mac/poly1305.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_ssh/src/crypto/mac/poly1305.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_SSH_MAX_CHANNELS=3 -DPC_ENABLE_SSH=1 -DPC_ENABLE_FILE_SERVING=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_SSH_SCP=1 -Itest/mocks -Itest/support -Isrc src/crypto/mac/poly1305.cpp",
     "directory": "@ROOT@",
     "file": "src/crypto/mac/poly1305.cpp",
-    "output": ".pio/build/native_crypto_kat/src/crypto/mac/poly1305.o"
+    "output": ".pio/build/native_ssh/src/crypto/mac/poly1305.o"
   },
   {
     "command": "/usr/bin/g++ -o .pio/build/native_csrf/src/services/security/csrf/csrf.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_CSRF=1 -Itest/mocks -Itest/support -Isrc src/services/security/csrf/csrf.cpp",
@@ -474,10 +474,10 @@
     "output": ".pio/build/native_deflate/src/network_drivers/presentation/codec/deflate/deflate.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_deflate/src/network_drivers/presentation/codec/inflate/inflate.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_WS_DEFLATE=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/codec/inflate/inflate.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_ssh_comp/src/network_drivers/presentation/codec/inflate/inflate.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_SSH=1 -DPC_ENABLE_SSH_ZLIB=1 -DPC_ENABLE_WS_DEFLATE=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/codec/inflate/inflate.cpp",
     "directory": "@ROOT@",
     "file": "src/network_drivers/presentation/codec/inflate/inflate.cpp",
-    "output": ".pio/build/native_deflate/src/network_drivers/presentation/codec/inflate/inflate.o"
+    "output": ".pio/build/native_ssh_comp/src/network_drivers/presentation/codec/inflate/inflate.o"
   },
   {
     "command": "/usr/bin/g++ -o .pio/build/native_device_id/src/services/system/device_id/device_id.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_DEVICE_ID=1 -Itest/mocks -Itest/support -Isrc src/services/system/device_id/device_id.cpp",
@@ -612,16 +612,16 @@
     "output": ".pio/build/native_enocean/src/services/radio/enocean/enocean.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_esp/src/board_drivers/hal/portable/portable_aesgcm.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_IKEV2=1 -Itest/mocks -Itest/support -Isrc src/board_drivers/hal/portable/portable_aesgcm.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_ssh/src/board_drivers/hal/portable/portable_aesgcm.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_SSH_MAX_CHANNELS=3 -DPC_ENABLE_SSH=1 -DPC_ENABLE_FILE_SERVING=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_SSH_SCP=1 -Itest/mocks -Itest/support -Isrc src/board_drivers/hal/portable/portable_aesgcm.cpp",
     "directory": "@ROOT@",
     "file": "src/board_drivers/hal/portable/portable_aesgcm.cpp",
-    "output": ".pio/build/native_esp/src/board_drivers/hal/portable/portable_aesgcm.o"
+    "output": ".pio/build/native_ssh/src/board_drivers/hal/portable/portable_aesgcm.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_esp/src/crypto/aead/aesgcm.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_IKEV2=1 -Itest/mocks -Itest/support -Isrc src/crypto/aead/aesgcm.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_ssh/src/crypto/aead/aesgcm.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_SSH_MAX_CHANNELS=3 -DPC_ENABLE_SSH=1 -DPC_ENABLE_FILE_SERVING=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_SSH_SCP=1 -Itest/mocks -Itest/support -Isrc src/crypto/aead/aesgcm.cpp",
     "directory": "@ROOT@",
     "file": "src/crypto/aead/aesgcm.cpp",
-    "output": ".pio/build/native_esp/src/crypto/aead/aesgcm.o"
+    "output": ".pio/build/native_ssh/src/crypto/aead/aesgcm.o"
   },
   {
     "command": "/usr/bin/g++ -o .pio/build/native_esp/src/services/system/esp/esp.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_IKEV2=1 -Itest/mocks -Itest/support -Isrc src/services/system/esp/esp.cpp",
@@ -768,10 +768,10 @@
     "output": ".pio/build/native_guardrails/src/services/security/guardrails/guardrails.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_h2conn/src/network_drivers/presentation/codec/hpack_prim/hpack_prim.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_HTTP2=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/codec/hpack_prim/hpack_prim.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_h3_server/src/network_drivers/presentation/codec/hpack_prim/hpack_prim.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_HTTP3=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/codec/hpack_prim/hpack_prim.cpp",
     "directory": "@ROOT@",
     "file": "src/network_drivers/presentation/codec/hpack_prim/hpack_prim.cpp",
-    "output": ".pio/build/native_h2conn/src/network_drivers/presentation/codec/hpack_prim/hpack_prim.o"
+    "output": ".pio/build/native_h3_server/src/network_drivers/presentation/codec/hpack_prim/hpack_prim.o"
   },
   {
     "command": "/usr/bin/g++ -o .pio/build/native_h2conn/src/network_drivers/presentation/http/http2/h2_conn.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_HTTP2=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/http/http2/h2_conn.cpp",
@@ -792,64 +792,64 @@
     "output": ".pio/build/native_h2conn/src/network_drivers/presentation/http/http2/hpack.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_h3_conn/src/network_drivers/presentation/http/http3/h3_conn.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_HTTP3=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/http/http3/h3_conn.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_h3_server/src/network_drivers/presentation/http/http3/h3_conn.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_HTTP3=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/http/http3/h3_conn.cpp",
     "directory": "@ROOT@",
     "file": "src/network_drivers/presentation/http/http3/h3_conn.cpp",
-    "output": ".pio/build/native_h3_conn/src/network_drivers/presentation/http/http3/h3_conn.o"
+    "output": ".pio/build/native_h3_server/src/network_drivers/presentation/http/http3/h3_conn.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_h3_conn/src/network_drivers/presentation/http/http3/h3_frame.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_HTTP3=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/http/http3/h3_frame.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_h3_server/src/network_drivers/presentation/http/http3/h3_frame.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_HTTP3=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/http/http3/h3_frame.cpp",
     "directory": "@ROOT@",
     "file": "src/network_drivers/presentation/http/http3/h3_frame.cpp",
-    "output": ".pio/build/native_h3_conn/src/network_drivers/presentation/http/http3/h3_frame.o"
+    "output": ".pio/build/native_h3_server/src/network_drivers/presentation/http/http3/h3_frame.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_h3_conn/src/network_drivers/presentation/http/http3/qpack.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_HTTP3=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/http/http3/qpack.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_h3_server/src/network_drivers/presentation/http/http3/qpack.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_HTTP3=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/http/http3/qpack.cpp",
     "directory": "@ROOT@",
     "file": "src/network_drivers/presentation/http/http3/qpack.cpp",
-    "output": ".pio/build/native_h3_conn/src/network_drivers/presentation/http/http3/qpack.o"
+    "output": ".pio/build/native_h3_server/src/network_drivers/presentation/http/http3/qpack.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_h3_conn/src/network_drivers/presentation/http/http3/quic_conn.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_HTTP3=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/http/http3/quic_conn.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_h3_server/src/network_drivers/presentation/http/http3/quic_conn.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_HTTP3=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/http/http3/quic_conn.cpp",
     "directory": "@ROOT@",
     "file": "src/network_drivers/presentation/http/http3/quic_conn.cpp",
-    "output": ".pio/build/native_h3_conn/src/network_drivers/presentation/http/http3/quic_conn.o"
+    "output": ".pio/build/native_h3_server/src/network_drivers/presentation/http/http3/quic_conn.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_h3_conn/src/network_drivers/presentation/http/http3/quic_crypto.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_HTTP3=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/http/http3/quic_crypto.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_h3_server/src/network_drivers/presentation/http/http3/quic_crypto.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_HTTP3=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/http/http3/quic_crypto.cpp",
     "directory": "@ROOT@",
     "file": "src/network_drivers/presentation/http/http3/quic_crypto.cpp",
-    "output": ".pio/build/native_h3_conn/src/network_drivers/presentation/http/http3/quic_crypto.o"
+    "output": ".pio/build/native_h3_server/src/network_drivers/presentation/http/http3/quic_crypto.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_h3_conn/src/network_drivers/presentation/http/http3/quic_frame.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_HTTP3=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/http/http3/quic_frame.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_h3_server/src/network_drivers/presentation/http/http3/quic_frame.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_HTTP3=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/http/http3/quic_frame.cpp",
     "directory": "@ROOT@",
     "file": "src/network_drivers/presentation/http/http3/quic_frame.cpp",
-    "output": ".pio/build/native_h3_conn/src/network_drivers/presentation/http/http3/quic_frame.o"
+    "output": ".pio/build/native_h3_server/src/network_drivers/presentation/http/http3/quic_frame.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_h3_conn/src/network_drivers/presentation/http/http3/quic_packet.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_HTTP3=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/http/http3/quic_packet.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_h3_server/src/network_drivers/presentation/http/http3/quic_packet.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_HTTP3=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/http/http3/quic_packet.cpp",
     "directory": "@ROOT@",
     "file": "src/network_drivers/presentation/http/http3/quic_packet.cpp",
-    "output": ".pio/build/native_h3_conn/src/network_drivers/presentation/http/http3/quic_packet.o"
+    "output": ".pio/build/native_h3_server/src/network_drivers/presentation/http/http3/quic_packet.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_h3_conn/src/network_drivers/presentation/http/http3/quic_tls.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_HTTP3=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/http/http3/quic_tls.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_h3_server/src/network_drivers/presentation/http/http3/quic_tls.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_HTTP3=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/http/http3/quic_tls.cpp",
     "directory": "@ROOT@",
     "file": "src/network_drivers/presentation/http/http3/quic_tls.cpp",
-    "output": ".pio/build/native_h3_conn/src/network_drivers/presentation/http/http3/quic_tls.o"
+    "output": ".pio/build/native_h3_server/src/network_drivers/presentation/http/http3/quic_tls.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_h3_conn/src/network_drivers/presentation/http/http3/quic_tp.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_HTTP3=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/http/http3/quic_tp.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_h3_server/src/network_drivers/presentation/http/http3/quic_tp.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_HTTP3=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/http/http3/quic_tp.cpp",
     "directory": "@ROOT@",
     "file": "src/network_drivers/presentation/http/http3/quic_tp.cpp",
-    "output": ".pio/build/native_h3_conn/src/network_drivers/presentation/http/http3/quic_tp.o"
+    "output": ".pio/build/native_h3_server/src/network_drivers/presentation/http/http3/quic_tp.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_h3_conn/src/network_drivers/presentation/http/http3/quic_varint.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_HTTP3=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/http/http3/quic_varint.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_h3_server/src/network_drivers/presentation/http/http3/quic_varint.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_HTTP3=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/http/http3/quic_varint.cpp",
     "directory": "@ROOT@",
     "file": "src/network_drivers/presentation/http/http3/quic_varint.cpp",
-    "output": ".pio/build/native_h3_conn/src/network_drivers/presentation/http/http3/quic_varint.o"
+    "output": ".pio/build/native_h3_server/src/network_drivers/presentation/http/http3/quic_varint.o"
   },
   {
     "command": "/usr/bin/g++ -o .pio/build/native_h3_server/src/network_drivers/presentation/http/http3/quic_server.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_HTTP3=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/http/http3/quic_server.cpp",
@@ -930,34 +930,34 @@
     "output": ".pio/build/native_iface_bridge/src/services/net/iface_bridge/iface_bridge.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_ikev2/src/board_drivers/hal/portable/portable_bignum.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_IKEV2=1 -Itest/mocks -Itest/support -Isrc src/board_drivers/hal/portable/portable_bignum.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_ssh/src/board_drivers/hal/portable/portable_bignum.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_SSH_MAX_CHANNELS=3 -DPC_ENABLE_SSH=1 -DPC_ENABLE_FILE_SERVING=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_SSH_SCP=1 -Itest/mocks -Itest/support -Isrc src/board_drivers/hal/portable/portable_bignum.cpp",
     "directory": "@ROOT@",
     "file": "src/board_drivers/hal/portable/portable_bignum.cpp",
-    "output": ".pio/build/native_ikev2/src/board_drivers/hal/portable/portable_bignum.o"
+    "output": ".pio/build/native_ssh/src/board_drivers/hal/portable/portable_bignum.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_ikev2/src/crypto/asymmetric/bignum.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_IKEV2=1 -Itest/mocks -Itest/support -Isrc src/crypto/asymmetric/bignum.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_ssh/src/crypto/asymmetric/bignum.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_SSH_MAX_CHANNELS=3 -DPC_ENABLE_SSH=1 -DPC_ENABLE_FILE_SERVING=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_SSH_SCP=1 -Itest/mocks -Itest/support -Isrc src/crypto/asymmetric/bignum.cpp",
     "directory": "@ROOT@",
     "file": "src/crypto/asymmetric/bignum.cpp",
-    "output": ".pio/build/native_ikev2/src/crypto/asymmetric/bignum.o"
+    "output": ".pio/build/native_ssh/src/crypto/asymmetric/bignum.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_ikev2/src/crypto/asymmetric/ecdsa.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_IKEV2=1 -Itest/mocks -Itest/support -Isrc src/crypto/asymmetric/ecdsa.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_ssh/src/crypto/asymmetric/ecdsa.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_SSH_MAX_CHANNELS=3 -DPC_ENABLE_SSH=1 -DPC_ENABLE_FILE_SERVING=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_SSH_SCP=1 -Itest/mocks -Itest/support -Isrc src/crypto/asymmetric/ecdsa.cpp",
     "directory": "@ROOT@",
     "file": "src/crypto/asymmetric/ecdsa.cpp",
-    "output": ".pio/build/native_ikev2/src/crypto/asymmetric/ecdsa.o"
+    "output": ".pio/build/native_ssh/src/crypto/asymmetric/ecdsa.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_ikev2/src/crypto/asymmetric/rsa.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_IKEV2=1 -Itest/mocks -Itest/support -Isrc src/crypto/asymmetric/rsa.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_ssh/src/crypto/asymmetric/rsa.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_SSH_MAX_CHANNELS=3 -DPC_ENABLE_SSH=1 -DPC_ENABLE_FILE_SERVING=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_SSH_SCP=1 -Itest/mocks -Itest/support -Isrc src/crypto/asymmetric/rsa.cpp",
     "directory": "@ROOT@",
     "file": "src/crypto/asymmetric/rsa.cpp",
-    "output": ".pio/build/native_ikev2/src/crypto/asymmetric/rsa.o"
+    "output": ".pio/build/native_ssh/src/crypto/asymmetric/rsa.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_ikev2/src/network_drivers/presentation/ssh/crypto/ssh_rsa.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_IKEV2=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/ssh/crypto/ssh_rsa.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_ssh/src/network_drivers/presentation/ssh/crypto/ssh_rsa.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_SSH_MAX_CHANNELS=3 -DPC_ENABLE_SSH=1 -DPC_ENABLE_FILE_SERVING=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_SSH_SCP=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/ssh/crypto/ssh_rsa.cpp",
     "directory": "@ROOT@",
     "file": "src/network_drivers/presentation/ssh/crypto/ssh_rsa.cpp",
-    "output": ".pio/build/native_ikev2/src/network_drivers/presentation/ssh/crypto/ssh_rsa.o"
+    "output": ".pio/build/native_ssh/src/network_drivers/presentation/ssh/crypto/ssh_rsa.o"
   },
   {
     "command": "/usr/bin/g++ -o .pio/build/native_ikev2/src/services/security/ikev2/ikev2.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_IKEV2=1 -Itest/mocks -Itest/support -Isrc src/services/security/ikev2/ikev2.cpp",
@@ -1302,10 +1302,10 @@
     "output": ".pio/build/native_pentest/src/services/file_transfer/smb/spnego.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_pentest/src/services/file_transfer/webdav/webdav.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_MODBUS=1 -DPC_ENABLE_MODBUS_MASTER=1 -DPC_ENABLE_TOTP=1 -DPC_ENABLE_MULTIPART=1 -DPC_ENABLE_CBOR=1 -DPC_ENABLE_MSGPACK=1 -DPC_ENABLE_COAP=1 -DPC_ENABLE_COAP_BLOCK=1 -DPC_COAP_BLOCK_SZX_MAX=2 -DPC_COAP_BLOCK1_MAX=128 -DPC_ENABLE_SNMP=1 -DPC_ENABLE_SQLITE=1 -DPC_ENABLE_REDIS=1 -DPC_ENABLE_OPCUA=1 -DPC_ENABLE_GRAPHQL=1 -DPC_ENABLE_DNS_SERVER=1 -DPC_ENABLE_DNP3=1 -DPC_ENABLE_STOMP=1 -DPC_ENABLE_SMB=1 -DPC_ENABLE_DNC=1 -DPC_ENABLE_FTP=1 -DPC_ENABLE_FINS=1 -DPC_ENABLE_MELSEC=1 -DPC_ENABLE_CIP=1 -DPC_ENABLE_ENIP=1 -DPC_ENABLE_DF1=1 -DPC_ENABLE_BACNET=1 -DPC_ENABLE_COTP=1 -DPC_ENABLE_C37118=1 -DPC_ENABLE_JWT=1 -DPC_ENABLE_DIRECTNET=1 -DPC_ENABLE_CCLINK=1 -DPC_ENABLE_AMQP=1 -DPC_ENABLE_MMS=1 -DPC_ENABLE_DDS=1 -DPC_ENABLE_WEBDAV=1 -DPC_ENABLE_HTTP2=1 -DPC_ENABLE_HTTP3=1 -Itest/mocks -Itest/support -Isrc src/services/file_transfer/webdav/webdav.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_webdav_handler/src/services/file_transfer/webdav/webdav.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_WEBDAV=1 -DPC_ENABLE_FILE_SERVING=1 -DPC_ENABLE_WEB_TERMINAL=1 -Itest/mocks -Itest/support -Isrc src/services/file_transfer/webdav/webdav.cpp",
     "directory": "@ROOT@",
     "file": "src/services/file_transfer/webdav/webdav.cpp",
-    "output": ".pio/build/native_pentest/src/services/file_transfer/webdav/webdav.o"
+    "output": ".pio/build/native_webdav_handler/src/services/file_transfer/webdav/webdav.o"
   },
   {
     "command": "/usr/bin/g++ -o .pio/build/native_pentest/src/services/iot/redis_resp/redis_resp.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_MODBUS=1 -DPC_ENABLE_MODBUS_MASTER=1 -DPC_ENABLE_TOTP=1 -DPC_ENABLE_MULTIPART=1 -DPC_ENABLE_CBOR=1 -DPC_ENABLE_MSGPACK=1 -DPC_ENABLE_COAP=1 -DPC_ENABLE_COAP_BLOCK=1 -DPC_COAP_BLOCK_SZX_MAX=2 -DPC_COAP_BLOCK1_MAX=128 -DPC_ENABLE_SNMP=1 -DPC_ENABLE_SQLITE=1 -DPC_ENABLE_REDIS=1 -DPC_ENABLE_OPCUA=1 -DPC_ENABLE_GRAPHQL=1 -DPC_ENABLE_DNS_SERVER=1 -DPC_ENABLE_DNP3=1 -DPC_ENABLE_STOMP=1 -DPC_ENABLE_SMB=1 -DPC_ENABLE_DNC=1 -DPC_ENABLE_FTP=1 -DPC_ENABLE_FINS=1 -DPC_ENABLE_MELSEC=1 -DPC_ENABLE_CIP=1 -DPC_ENABLE_ENIP=1 -DPC_ENABLE_DF1=1 -DPC_ENABLE_BACNET=1 -DPC_ENABLE_COTP=1 -DPC_ENABLE_C37118=1 -DPC_ENABLE_JWT=1 -DPC_ENABLE_DIRECTNET=1 -DPC_ENABLE_CCLINK=1 -DPC_ENABLE_AMQP=1 -DPC_ENABLE_MMS=1 -DPC_ENABLE_DDS=1 -DPC_ENABLE_WEBDAV=1 -DPC_ENABLE_HTTP2=1 -DPC_ENABLE_HTTP3=1 -Itest/mocks -Itest/support -Isrc src/services/iot/redis_resp/redis_resp.cpp",
@@ -1362,22 +1362,22 @@
     "output": ".pio/build/native_powerlink/src/services/fieldbus/powerlink/powerlink.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_pqc/src/crypto/hash/sha3.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_PQC_KEX=1 -Itest/mocks -Itest/support -Isrc src/crypto/hash/sha3.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_ssh_pqc/src/crypto/hash/sha3.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_SSH_MAX_CHANNELS=3 -DPC_ENABLE_PQC_KEX=1 -Itest/mocks -Itest/support -Isrc src/crypto/hash/sha3.cpp",
     "directory": "@ROOT@",
     "file": "src/crypto/hash/sha3.cpp",
-    "output": ".pio/build/native_pqc/src/crypto/hash/sha3.o"
+    "output": ".pio/build/native_ssh_pqc/src/crypto/hash/sha3.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_pqc/src/crypto/pqc/mlkem.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_PQC_KEX=1 -Itest/mocks -Itest/support -Isrc src/crypto/pqc/mlkem.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_ssh_pqc/src/crypto/pqc/mlkem.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_SSH_MAX_CHANNELS=3 -DPC_ENABLE_PQC_KEX=1 -Itest/mocks -Itest/support -Isrc src/crypto/pqc/mlkem.cpp",
     "directory": "@ROOT@",
     "file": "src/crypto/pqc/mlkem.cpp",
-    "output": ".pio/build/native_pqc/src/crypto/pqc/mlkem.o"
+    "output": ".pio/build/native_ssh_pqc/src/crypto/pqc/mlkem.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_pqc/src/crypto/pqc/sntrup761.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_PQC_KEX=1 -Itest/mocks -Itest/support -Isrc src/crypto/pqc/sntrup761.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_ssh_pqc/src/crypto/pqc/sntrup761.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_SSH_MAX_CHANNELS=3 -DPC_ENABLE_PQC_KEX=1 -Itest/mocks -Itest/support -Isrc src/crypto/pqc/sntrup761.cpp",
     "directory": "@ROOT@",
     "file": "src/crypto/pqc/sntrup761.cpp",
-    "output": ".pio/build/native_pqc/src/crypto/pqc/sntrup761.o"
+    "output": ".pio/build/native_ssh_pqc/src/crypto/pqc/sntrup761.o"
   },
   {
     "command": "/usr/bin/g++ -o .pio/build/native_preempt_queue/src/services/system/preempt_queue/preempt_queue.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_PREEMPT_QUEUE=1 -DPC_PQ_DEPTH=4 -DPC_PQ_ITEM_SIZE=4 -Itest/mocks -Itest/support -Isrc src/services/system/preempt_queue/preempt_queue.cpp",

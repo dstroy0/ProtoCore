@@ -5546,6 +5546,7 @@
 "native_guardrails",
 "native_h2conn",
 "native_h3_server",
+"native_haas_mdc",
 "native_hotswap",
 "native_http_client",
 "native_http_delivery",
