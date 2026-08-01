@@ -9,6 +9,22 @@
 [![Docs](https://img.shields.io/badge/docs-dstroy0.github.io-22d3ee)](https://dstroy0.github.io/ProtoCore/)
 [![Features](https://img.shields.io/badge/features-browse-6366f1)](https://dstroy0.github.io/ProtoCore/features.html)
 
+[![ESP32 Build](https://github.com/dstroy0/ProtoCore/actions/workflows/esp32-build.yml/badge.svg)](https://github.com/dstroy0/ProtoCore/actions/workflows/esp32-build.yml)
+[![Arduino Build](https://github.com/dstroy0/ProtoCore/actions/workflows/arduino-build.yml/badge.svg)](https://github.com/dstroy0/ProtoCore/actions/workflows/arduino-build.yml)
+[![Test & Analyze](https://github.com/dstroy0/ProtoCore/actions/workflows/test-report.yml/badge.svg)](https://github.com/dstroy0/ProtoCore/actions/workflows/test-report.yml)
+[![Interop Harness](https://github.com/dstroy0/ProtoCore/actions/workflows/interop-harness.yml/badge.svg)](https://github.com/dstroy0/ProtoCore/actions/workflows/interop-harness.yml)
+[![CodeQL](https://github.com/dstroy0/ProtoCore/actions/workflows/codeql.yml/badge.svg)](https://github.com/dstroy0/ProtoCore/actions/workflows/codeql.yml)
+[![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=ProtoCore&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=ProtoCore)
+[![Pentest](https://github.com/dstroy0/ProtoCore/actions/workflows/pentest.yml/badge.svg)](https://github.com/dstroy0/ProtoCore/actions/workflows/pentest.yml)
+[![Code Formatting](https://github.com/dstroy0/ProtoCore/actions/workflows/clang-format.yml/badge.svg)](https://github.com/dstroy0/ProtoCore/actions/workflows/clang-format.yml)
+[![Markdown Formatting](https://github.com/dstroy0/ProtoCore/actions/workflows/markdown-format.yml/badge.svg)](https://github.com/dstroy0/ProtoCore/actions/workflows/markdown-format.yml)
+[![Spellcheck](https://github.com/dstroy0/ProtoCore/actions/workflows/spellcheck.yml/badge.svg)](https://github.com/dstroy0/ProtoCore/actions/workflows/spellcheck.yml)
+[![Docs](https://github.com/dstroy0/ProtoCore/actions/workflows/docs.yml/badge.svg)](https://github.com/dstroy0/ProtoCore/actions/workflows/docs.yml)
+[![Feature Tables](https://github.com/dstroy0/ProtoCore/actions/workflows/feature-tables.yml/badge.svg)](https://github.com/dstroy0/ProtoCore/actions/workflows/feature-tables.yml)
+[![Web Assets](https://github.com/dstroy0/ProtoCore/actions/workflows/web-assets.yml/badge.svg)](https://github.com/dstroy0/ProtoCore/actions/workflows/web-assets.yml)
+[![Changelog](https://github.com/dstroy0/ProtoCore/actions/workflows/changelog.yml/badge.svg)](https://github.com/dstroy0/ProtoCore/actions/workflows/changelog.yml)
+[![Release Arduino Library](https://github.com/dstroy0/ProtoCore/actions/workflows/release.yml/badge.svg)](https://github.com/dstroy0/ProtoCore/actions/workflows/release.yml)
+
 A multi-protocol network server for microcontrollers with a fully deterministic memory footprint, RFC 7230 compliant request parsing, and an OSI-layered architecture. It serves HTTP/1.1/2/and 3 over QUIC, HTTPS/TLS/DTLS, SSH (full OpenSSH interop), Telnet, SNMP, and post quantum crypto.
 
 **Supported today:** ESP32, all 13 variants. The core is vendor-neutral C with no vendor idioms; Arm and TI C2000 are in progress, tracked in [docs/ROADMAP.md](docs/ROADMAP.md).
@@ -290,23 +306,7 @@ Per-feature examples are under [`examples/`](examples/).
 
 ### Continuous integration
 
-Every workflow that runs on `main`. Each badge is live and links to its own runs.
-
-[![ESP32 Build](https://github.com/dstroy0/ProtoCore/actions/workflows/esp32-build.yml/badge.svg)](https://github.com/dstroy0/ProtoCore/actions/workflows/esp32-build.yml)
-[![Arduino Build](https://github.com/dstroy0/ProtoCore/actions/workflows/arduino-build.yml/badge.svg)](https://github.com/dstroy0/ProtoCore/actions/workflows/arduino-build.yml)
-[![Test & Analyze](https://github.com/dstroy0/ProtoCore/actions/workflows/test-report.yml/badge.svg)](https://github.com/dstroy0/ProtoCore/actions/workflows/test-report.yml)
-[![Interop Harness](https://github.com/dstroy0/ProtoCore/actions/workflows/interop-harness.yml/badge.svg)](https://github.com/dstroy0/ProtoCore/actions/workflows/interop-harness.yml)
-[![CodeQL](https://github.com/dstroy0/ProtoCore/actions/workflows/codeql.yml/badge.svg)](https://github.com/dstroy0/ProtoCore/actions/workflows/codeql.yml)
-[![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=ProtoCore&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=ProtoCore)
-[![Pentest](https://github.com/dstroy0/ProtoCore/actions/workflows/pentest.yml/badge.svg)](https://github.com/dstroy0/ProtoCore/actions/workflows/pentest.yml)
-[![Code Formatting](https://github.com/dstroy0/ProtoCore/actions/workflows/clang-format.yml/badge.svg)](https://github.com/dstroy0/ProtoCore/actions/workflows/clang-format.yml)
-[![Markdown Formatting](https://github.com/dstroy0/ProtoCore/actions/workflows/markdown-format.yml/badge.svg)](https://github.com/dstroy0/ProtoCore/actions/workflows/markdown-format.yml)
-[![Spellcheck](https://github.com/dstroy0/ProtoCore/actions/workflows/spellcheck.yml/badge.svg)](https://github.com/dstroy0/ProtoCore/actions/workflows/spellcheck.yml)
-[![Docs](https://github.com/dstroy0/ProtoCore/actions/workflows/docs.yml/badge.svg)](https://github.com/dstroy0/ProtoCore/actions/workflows/docs.yml)
-[![Feature Tables](https://github.com/dstroy0/ProtoCore/actions/workflows/feature-tables.yml/badge.svg)](https://github.com/dstroy0/ProtoCore/actions/workflows/feature-tables.yml)
-[![Web Assets](https://github.com/dstroy0/ProtoCore/actions/workflows/web-assets.yml/badge.svg)](https://github.com/dstroy0/ProtoCore/actions/workflows/web-assets.yml)
-[![Changelog](https://github.com/dstroy0/ProtoCore/actions/workflows/changelog.yml/badge.svg)](https://github.com/dstroy0/ProtoCore/actions/workflows/changelog.yml)
-[![Release Arduino Library](https://github.com/dstroy0/ProtoCore/actions/workflows/release.yml/badge.svg)](https://github.com/dstroy0/ProtoCore/actions/workflows/release.yml)
+Fifteen workflows run on every push to `main` - builds for ESP32 and Arduino, the host test suite, the interop harness against real peers, CodeQL and SonarCloud, a pentest pass, three formatting/lint gates, and the four that regenerate what you are reading. Their live status is in the badges at the top of this file; each one links to its own runs, and all of them are in [`.github/workflows/`](.github/workflows/).
 
 ## Licensing & Commercial Use
 
