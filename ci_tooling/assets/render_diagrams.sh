@@ -17,7 +17,14 @@ set -euo pipefail
 DIR="$(cd "$(dirname "$0")/../../docs/diagrams" && pwd)"
 PPTR="$(mktemp)"
 printf '{"args":["--no-sandbox","--disable-gpu"]}' >"$PPTR"
-trap 'rm -f "$PPTR"' EXIT
+
+# maxTextSize / maxEdges cannot be raised from an %%{init}%% directive - mermaid treats them as
+# secured options and silently renders "Maximum text size in diagram exceeded" instead. They have to
+# come from a config file, so every diagram here gets one.
+MMCFG="$(mktemp)"
+printf '{"maxTextSize":500000,"maxEdges":2000}' >"$MMCFG"
+
+trap 'rm -f "$PPTR" "$MMCFG"' EXIT
 shopt -s nullglob
 
 # Skip re-rendering an unchanged diagram: rasterization is not byte-deterministic, so re-rendering an
@@ -26,26 +33,50 @@ shopt -s nullglob
 # PNG(s) exist" means the committed PNGs are already current.
 for mmd in "$DIR"/*.mmd; do
     name="$(basename "$mmd" .mmd)"
-    light="$DIR/$name.light.png"
     dark="$DIR/$name.dark.png"
-    if [ -f "$light" ] && [ -f "$dark" ] && git diff --quiet HEAD -- "$mmd" 2>/dev/null; then
+    svg="$DIR/$name.svg"
+    # The guard tests the files this actually produces. It used to test a light PNG that is no
+    # longer emitted, which made "unchanged" impossible and re-rendered every run - the phantom
+    # churn this skip exists to prevent.
+    if [ -f "$svg" ] && [ -f "$dark" ] && git diff --quiet HEAD -- "$mmd" 2>/dev/null; then
         echo "unchanged $name (skip render)"
         continue
     fi
     width=1100
-    mmdc -p "$PPTR" -i "$mmd" -o "$light" -t default -b white -w "$width" --scale 2
-    mmdc -p "$PPTR" -i "$mmd" -o "$dark" -t dark -b "#0d1117" -w "$width" --scale 2
-    echo "rendered $name (light + dark)"
+
+    # ONE theme, dark, with the background baked in rather than transparent. A transparent dark
+    # diagram is unreadable the moment it lands on a light page, and a light/dark <picture> pair
+    # means maintaining two of everything to serve a theme nobody wants. A self-contained dark card
+    # reads the same on GitHub light, GitHub dark, the mobile app, and Doxygen.
+    #
+    # SVG is what the docs and README embed: the labels are native <text> (htmlLabels:false in the
+    # source), so GitHub's sanitizer leaves them alone - the foreignObject problem that forced
+    # rasters here originally. Vector keeps the type selectable and sharp at any zoom, and cannot be
+    # clipped by a font mismatch between measuring and drawing. The PNG stays for anywhere a raster
+    # is still required.
+    mmdc -c "$MMCFG" -p "$PPTR" -i "$mmd" -o "$dark" -t dark -b "#0d1117" -w "$width" --scale 2
+    mmdc -c "$MMCFG" -p "$PPTR" -i "$mmd" -o "$DIR/$name.svg" -t dark -b "#0d1117" -w "$width"
+
+    # Mermaid writes a click's tooltip as a title ATTRIBUTE, which SVG ignores - the tooltip only
+    # appears if it is a <title> CHILD. This adds them, so hovering a node in the finished picture
+    # actually says something.
+    python3 "$(dirname "$0")/svg_tooltips.py" "$DIR/$name.svg" >/dev/null
+
+    rm -f "$DIR/$name.light.png" "$DIR/$name.light.svg" "$DIR/$name.dark.svg"
+    echo "rendered $name (dark; svg + png)"
 done
 
-# Graphviz: each *.light.dot / *.dark.dot already carries its own theme colors, so it maps 1:1 to a PNG.
-for src in "$DIR"/*.light.dot "$DIR"/*.dark.dot; do
-    stem="$(basename "$src" .dot)" # e.g. flag_deps.light
-    png="$DIR/$stem.png"
-    if [ -f "$png" ] && git diff --quiet HEAD -- "$src" 2>/dev/null; then
+# Graphviz: to SVG, not PNG. dot turns a node's URL= and tooltip= into a real <a xlink:href> and a
+# <title> child, so the dependency graph is navigable and hover says what a flag needs - natively,
+# with none of the post-processing mermaid's tooltips require. The forest layout is why this one
+# stays Graphviz: it guarantees the crossing-free, left-aligned single-parent tree dagre cannot.
+for src in "$DIR"/*.dot; do
+    stem="$(basename "$src" .dot)"
+    svg="$DIR/$stem.svg"
+    if [ -f "$svg" ] && git diff --quiet HEAD -- "$src" 2>/dev/null; then
         echo "unchanged $stem (skip render)"
         continue
     fi
-    dot -Tpng -Gdpi=140 "$src" -o "$png"
+    dot -Tsvg "$src" -o "$svg"
     echo "rendered $stem"
 done

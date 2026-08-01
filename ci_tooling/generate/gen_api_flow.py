@@ -39,11 +39,15 @@ TOOL = dr.tool_id(__file__)
 REGION = dr.Region(README, "API FLOW", TOOL)
 # The detailed variant lives in the architecture / API doc (every method, protocol, and L6 module).
 REGION_DETAIL = dr.Region(ARCH, "API FLOW DETAIL", TOOL)
-# The diagrams embed as pre-rendered PNGs (not a live ```mermaid block) so they show in the GitHub web
-# UI, the GitHub mobile app, AND Doxygen - the app + Doxygen do not render mermaid fences, and GitHub
-# strips the foreignObject an SVG needs for the multi-line labels. ci_tooling/assets/render_diagrams.sh turns each
-# .mmd here into a light + dark PNG; a <picture> serves the theme-matching one (the light PNG is a
-# self-contained white card, so it stays readable even where <picture> falls back to it).
+# The diagrams embed as pre-rendered files (not a live ```mermaid block) so they show in the GitHub
+# web UI, the GitHub mobile app, AND Doxygen - none of which render a mermaid fence.
+#
+# They are SVG. The old note here said an SVG could not be used because GitHub strips the
+# foreignObject multi-line labels need - true only while htmlLabels is on. With htmlLabels:false the
+# labels are native <text>/<tspan>, which survives sanitizing, so the vector ships: selectable type,
+# sharp at any zoom, and immune to the measure-in-one-font / draw-in-another clipping that truncated
+# a node's label in the rasters. ci_tooling/assets/render_diagrams.sh emits light + dark of each
+# (PNG as well, for anywhere a raster is still wanted); a <picture> serves the theme-matching one.
 DIAGRAMS = os.path.join(ROOT, "docs", "diagrams")
 
 # name -> API group. First matching rule wins; a startswith() prefix or an exact-name set.
@@ -57,6 +61,21 @@ RULES = [
 # A method declaration: `identifier( ...args... ) [const];` - args may span lines but hold no ;{}.
 DECL = re.compile(r"\b([a-z]\w*)\s*\([^;{}]*\)\s*(?:const\s*)?;", re.S)
 NOT_METHODS = {"if", "for", "while", "switch", "return", "sizeof", "operator"}
+# Declared in the same header but not the user's API: the dispatch plumbing, the auth internals, and
+# the *_internal / pump / trampoline seams the server calls on itself. They share prefixes with real
+# entry points, so the bucket rules alone would pull them into the picture.
+INTERNAL = {
+    "serve_file_internal", "serve_static_request", "serve_dav_request", "try_serve_dav",
+    "dispatch_matched_route", "match_and_execute", "route_admits", "fill_route_base",
+    "path_matches", "regex_match", "run_middleware", "authorize_request",
+    "send_unauth", "check_basic_auth", "check_digest_auth", "make_digest_nonce",
+    "verify_digest_nonce", "regen_digest_secret", "rate_limit_check", "keepalive_eval",
+    "chunk_send_pump", "file_send_pump", "http_poll_slot", "http_rfc1123", "status_text",
+    "note_response", "append_resp_trailer", "req_is_head", "mime_type",
+    "dav_send_status", "dav_stream_put_begin", "dav_stream_put_data", "dav_put_abort_tramp",
+    "handle_ws_route", "ws_do_upgrade", "ws_dispatch_message", "ws_dispatch_close",
+    "ws_send_version_required", "pc_sse_do_upgrade", "pc_csrf_gate",
+}
 
 
 def strip_comments(text):
@@ -78,18 +97,22 @@ def class_body(text, name):
 
 
 def public_methods():
-    """Parse the public method names of `class PC`, in bucket order."""
-    body = class_body(strip_comments(open(API_H, encoding="utf-8").read()), "PC")
-    # Split the body into (access, chunk) regions; a class body defaults to private.
-    parts = re.split(r"\b(public|private|protected)\s*:", body)
-    regions = [("private", parts[0])] + [(parts[k], parts[k + 1]) for k in range(1, len(parts) - 1, 2)]
+    """Parse the library's entry points from protocore.h, in bucket order.
+
+    There is no class to read the public section of any more - the API is free functions, so the
+    whole header is the surface. `public:` used to be the filter that kept the diagram to what a
+    user calls; with it gone, the filter is the bucket RULES below plus INTERNAL, because the header
+    also declares plumbing that shares a prefix with the entry points (serve_file_internal shares
+    "serve_", send_unauth shares "send"). A diagram of the public API must not teach a function
+    nobody outside the library should call.
+    """
+    text = strip_comments(open(API_H, encoding="utf-8").read())
     names = []
-    for access, chunk in regions:
-        if access != "public":
+    for mm in DECL.finditer(text):
+        name = mm.group(1)
+        if name in NOT_METHODS or name in INTERNAL or name in names:
             continue
-        for mm in DECL.finditer(chunk):
-            if mm.group(1) not in NOT_METHODS and mm.group(1) not in names:
-                names.append(mm.group(1))
+        names.append(name)
     buckets = {g: [] for g in GROUPS}
     for n in names:
         for group, keys in RULES:
@@ -155,10 +178,26 @@ def mermaid(detailed=False):
     # its light / dark Mermaid theme automatically, and the classDefs below use translucent fills with no
     # fixed text color so a node reads on either background (the page tints through the glassy fill).
     init = (
-        "%%{init: {'themeVariables':{"
-        "'fontFamily':'ui-sans-serif,system-ui,Segoe UI,Roboto,sans-serif','fontSize':'13px',"
+        # Root-level as well as under 'flowchart': the flowchart-scoped setting does not reach nodes
+        # inside a subgraph, so the three SETUP boxes were still emitting foreignObject while every
+        # other node had switched to <text>. Both, or GitHub renders that panel empty.
+        "%%{init: {'htmlLabels':false,'themeVariables':{"
+        # ONE font, and a generic one. A stack whose earlier entries the renderer does not have
+        # (ui-sans-serif / system-ui / Segoe UI / Roboto are absent from a headless Chromium) makes
+        # mermaid measure the label in the fallback and then draw it in whatever the rasterizer
+        # picks - the box comes out narrower than its own text. All-caps labels overflow first,
+        # which is how "YOUR HANDLER runs" rendered as "YOUR HANDLER ru". Measuring and drawing in
+        # the same font is the whole fix, and it also makes the PNGs identical across the three
+        # machines that can render them.
+        "'fontFamily':'sans-serif','fontSize':'13px',"
         "'lineColor':'#94a3b8'},"  # a soft slate-gray edge color, gentle on both light and dark (not harsh black)
-        "'flowchart':{'curve':'basis','nodeSpacing':42,'rankSpacing':50,'padding':10,'useMaxWidth':true}}}%%"
+        # htmlLabels:false is what lets these ship as SVG. With it on, mermaid wraps every label in a
+        # <foreignObject> holding real HTML - which GitHub's sanitizer strips, so the boxes arrive
+        # empty. Off, a label is native SVG <text>/<tspan>, which survives sanitizing, stays
+        # selectable, scales without rasterizing, and cannot be clipped by a font the renderer
+        # measured with but did not draw with (the bug that ate "YOUR HANDLER runs").
+        "'flowchart':{'curve':'basis','nodeSpacing':42,'rankSpacing':50,'padding':10,"
+        "'useMaxWidth':true,'htmlLabels':false}}}%%"
     )
     out = [init, "flowchart TB"]
     out.append("  %% Auto-generated from the public API, proto_builtins.cpp, and presentation/ on disk.")
@@ -189,7 +228,10 @@ def mermaid(detailed=False):
     out.append('  mae{{"Find the matching route<br/>match_and_execute"}}')
     out.append('  mw["Run your middleware"]')
     out.append('  routes[("Route table")]')
-    out.append('  handler>"YOUR HANDLER runs"]')
+    # A plain rect, not mermaid's asymmetric `>"..."]`: that shape's notch is cut out of the label's
+    # own width, so the most important node in the picture rendered as "YOUR HANDLER ru". The amber
+    # fill already says this is the part you write; it does not need a second signal that truncates.
+    out.append('  handler["YOUR HANDLER runs"]')
     out.append(f'  resp["{label("Build the response", api["Respond"], cap)}"]')
     out.append('  sink{{"Frame the reply per protocol<br/>resp_sink seam<br/>HTTP/1.1 / h2 / h3"}}')
     out.append('  consend["Write bytes back<br/>pc_conn_send"]')
@@ -273,23 +315,20 @@ def write_mmd(name, mmd):
 
 
 def picture(name, alt, rel, width=None, zoom=False):
-    """A <picture> that serves the dark PNG in dark mode and the light PNG otherwise (@ rel path prefix).
+    """A <picture> serving the dark SVG in dark mode and the light one otherwise (@ rel path prefix).
 
-    This is a tall top-to-bottom waterfall, so at full column width it dominates the page on GitHub.
-    Pass `width` to cap the rendered size (GitHub honours `width` on <img>) and `zoom=True` to wrap it
-    in a link to the full-size PNG - the same click-to-enlarge treatment the flag-deps graph uses - so
-    the diagram reads as a compact figure but is still legible at full resolution on click."""
-    img = f'  <img alt="{alt}" src="{rel}/{name}.light.png"' + (f' width="{width}"' if width else "") + ">"
-    block = (
-        "<picture>\n"
-        f'  <source media="(prefers-color-scheme: dark)" srcset="{rel}/{name}.dark.png">\n'
-        f"{img}\n"
-        "</picture>"
-    )
+    SVG, not PNG. The labels are native <text> (htmlLabels:false in the source), so GitHub's
+    sanitizer keeps them - the foreignObject problem that forced rasters here originally. Vector also
+    means the type stays selectable and crisp at any zoom, and it cannot be clipped by the renderer
+    measuring a label in one font and drawing it in another, which is what truncated "YOUR HANDLER
+    runs" to "YOUR HANDLER ru" in the PNGs.
+
+    This is a tall top-to-bottom waterfall, so at full column width it dominates the page. Pass
+    `width` to cap the rendered size (GitHub honours `width` on <img>) and `zoom=True` to link to the
+    standalone file, where it scales to the viewport instead of a fixed raster."""
+    block = f'<img alt="{alt}" src="{rel}/{name}.svg"' + (f' width="{width}"' if width else "") + ">"
     if zoom:
-        return (
-            f'<a href="{rel}/{name}.light.png" title="Open the request-lifecycle diagram full size">\n' f"{block}\n</a>"
-        )
+        return f'<a href="{rel}/{name}.svg" title="Open the request-lifecycle diagram full size">\n  {block}\n</a>'
     return block
 
 
@@ -298,8 +337,8 @@ def build_block():
     return "\n".join(
         [
             "> Generated from the public API, `proto_builtins.cpp`, and `presentation/` by"
-            " `ci_tooling/generate/gen_api_flow.py` - do not edit by hand. The picture is a pre-rendered PNG"
-            " (so it shows in the GitHub app and Doxygen too); its mermaid source is"
+            " `ci_tooling/generate/gen_api_flow.py` - do not edit by hand. The picture is an SVG"
+            " (native text labels, so it stays sharp at any zoom and the type is selectable); its mermaid source is"
             " [`docs/diagrams/api_flow.mmd`](docs/diagrams/api_flow.mmd).",
             "",
             "**How to read it:** follow the arrows. A **request comes in** at the top from a client, travels"

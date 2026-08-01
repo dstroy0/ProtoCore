@@ -71,7 +71,13 @@ def render_quick_start():
 
     # A missing marker or a renamed symbol would otherwise emit a block that
     # looks plausible and teaches nothing. Fail loudly instead.
-    for needed in ("#include", "PC server", "server.on(", "server.begin(", "server.handle()"):
+    #
+    # These are the four things the quick start has to SHOW - include the header, register a route,
+    # start the server, pump it - named by the free functions that do them. They were spelled as
+    # `PC server` / `server.on(` / `server.begin(` / `server.handle()` and so pinned this generator
+    # to a class that no longer exists: the guard meant to catch a stale README became the reason it
+    # could not be refreshed.
+    for needed in ("#include", "on_http(", "begin_http(", "handle()"):
         if needed not in src:
             raise SystemExit(f"gen_readme_intro: {SKETCH} no longer contains {needed!r}; "
                              "refusing to emit a misleading quick start")

@@ -1,0 +1,86 @@
+%%{init: {'htmlLabels':false,'themeVariables':{'fontFamily':'monospace','fontSize':'12px','lineColor':'#3b4a5c'},'flowchart':{'curve':'basis','nodeSpacing':14,'rankSpacing':70,'padding':8,'useMaxWidth':true,'htmlLabels':false}}}%%
+flowchart LR
+  %% Auto-generated from docs/FEATURES.md by ci_tooling/generate/gen_features_tree.py.
+  n_root["ProtoCore                 <br/>254 features              "]
+  n_Foundation["Foundation                <br/>17 features               "]
+  n_root --> n_Foundation
+  n_Physical___Data_Link__L1_L2_["Physical & Data Link (L1-…<br/>31 features               "]
+  n_root --> n_Physical___Data_Link__L1_L2_
+  n_Network__L3_["Network (L3)              <br/>6 features                "]
+  n_root --> n_Network__L3_
+  n_Transport__L4_["Transport (L4)            <br/>9 features                "]
+  n_root --> n_Transport__L4_
+  n_Session__L5_["Session (L5)              <br/>5 features                "]
+  n_root --> n_Session__L5_
+  n_Presentation__L6_["Presentation (L6)         <br/>18 features               "]
+  n_root --> n_Presentation__L6_
+  n_Application__L7_["Application (L7)          <br/>168 features              "]
+  n_root --> n_Application__L7_
+  n_Application__L7____Other["Application (L7) - Other  <br/>37                        "]
+  n_Application__L7_ --> n_Application__L7____Other
+  n_Auth__Identity___Security["Auth, Identity & Security <br/>5                         "]
+  n_Application__L7_ --> n_Auth__Identity___Security
+  n_Clients___Gateways["Clients & Gateways        <br/>9                         "]
+  n_Application__L7_ --> n_Clients___Gateways
+  n_Firmware___System["Firmware & System         <br/>3                         "]
+  n_Application__L7_ --> n_Firmware___System
+  n_Industrial___Fieldbus["Industrial & Fieldbus     <br/>31                        "]
+  n_Application__L7_ --> n_Industrial___Fieldbus
+  n_IoT__Messaging___APIs["IoT, Messaging & APIs     <br/>16                        "]
+  n_Application__L7_ --> n_IoT__Messaging___APIs
+  n_Machine_Tools___OT["Machine Tools & OT        <br/>5                         "]
+  n_Application__L7_ --> n_Machine_Tools___OT
+  n_Observability___Telemetry["Observability & Telemetry <br/>14                        "]
+  n_Application__L7_ --> n_Observability___Telemetry
+  n_SCADA__Energy___Monitoring["SCADA, Energy & Monitoring<br/>10                        "]
+  n_Application__L7_ --> n_SCADA__Energy___Monitoring
+  n_Storage___Database["Storage & Database        <br/>5                         "]
+  n_Application__L7_ --> n_Storage___Database
+  n_Time___Discovery["Time & Discovery          <br/>7                         "]
+  n_Application__L7_ --> n_Time___Discovery
+  n_Transportation___ITS["Transportation & ITS      <br/>10                        "]
+  n_Application__L7_ --> n_Transportation___ITS
+  n_Web___HTTP["Web & HTTP                <br/>16                        "]
+  n_Application__L7_ --> n_Web___HTTP
+
+  click n_Foundation "features.html#foundation" "Foundation"
+  click n_Physical___Data_Link__L1_L2_ "features.html#physical--data-link-l1-l2" "Physical & Data Link (L1-L2)"
+  click n_Network__L3_ "features.html#network-l3" "Network (L3)"
+  click n_Transport__L4_ "features.html#transport-l4" "Transport (L4)"
+  click n_Session__L5_ "features.html#session-l5" "Session (L5)"
+  click n_Presentation__L6_ "features.html#presentation-l6" "Presentation (L6)"
+  click n_Application__L7____Other "features.html#application-l7---other" "Application (L7) - Other - 37 features"
+  click n_Auth__Identity___Security "features.html#auth-identity--security" "Auth, Identity & Security - 5 features"
+  click n_Clients___Gateways "features.html#clients--gateways" "Clients & Gateways - 9 features"
+  click n_Firmware___System "features.html#firmware--system" "Firmware & System - 3 features"
+  click n_Industrial___Fieldbus "features.html#industrial--fieldbus" "Industrial & Fieldbus - 31 features"
+  click n_IoT__Messaging___APIs "features.html#iot-messaging--apis" "IoT, Messaging & APIs - 16 features"
+  click n_Machine_Tools___OT "features.html#machine-tools--ot" "Machine Tools & OT - 5 features"
+  click n_Observability___Telemetry "features.html#observability--telemetry" "Observability & Telemetry - 14 features"
+  click n_SCADA__Energy___Monitoring "features.html#scada-energy--monitoring" "SCADA, Energy & Monitoring - 10 features"
+  click n_Storage___Database "features.html#storage--database" "Storage & Database - 5 features"
+  click n_Time___Discovery "features.html#time--discovery" "Time & Discovery - 7 features"
+  click n_Transportation___ITS "features.html#transportation--its" "Transportation & ITS - 10 features"
+  click n_Web___HTTP "features.html#web--http" "Web & HTTP - 16 features"
+
+  style n_root fill:#121924,stroke:#22d3ee,color:#eaf1f8
+  style n_Foundation fill:#8b93a722,stroke:#8b93a7,color:#eaf1f8
+  style n_Physical___Data_Link__L1_L2_ fill:#f9731622,stroke:#f97316,color:#eaf1f8
+  style n_Network__L3_ fill:#eab30822,stroke:#eab308,color:#eaf1f8
+  style n_Transport__L4_ fill:#f59e0b22,stroke:#f59e0b,color:#eaf1f8
+  style n_Session__L5_ fill:#10b98122,stroke:#10b981,color:#eaf1f8
+  style n_Presentation__L6_ fill:#3b82f622,stroke:#3b82f6,color:#eaf1f8
+  style n_Application__L7_ fill:#6366f122,stroke:#6366f1,color:#eaf1f8
+  style n_Application__L7____Other fill:#121924,stroke:#2b3846,color:#c2ced9
+  style n_Auth__Identity___Security fill:#121924,stroke:#2b3846,color:#c2ced9
+  style n_Clients___Gateways fill:#121924,stroke:#2b3846,color:#c2ced9
+  style n_Firmware___System fill:#121924,stroke:#2b3846,color:#c2ced9
+  style n_Industrial___Fieldbus fill:#121924,stroke:#2b3846,color:#c2ced9
+  style n_IoT__Messaging___APIs fill:#121924,stroke:#2b3846,color:#c2ced9
+  style n_Machine_Tools___OT fill:#121924,stroke:#2b3846,color:#c2ced9
+  style n_Observability___Telemetry fill:#121924,stroke:#2b3846,color:#c2ced9
+  style n_SCADA__Energy___Monitoring fill:#121924,stroke:#2b3846,color:#c2ced9
+  style n_Storage___Database fill:#121924,stroke:#2b3846,color:#c2ced9
+  style n_Time___Discovery fill:#121924,stroke:#2b3846,color:#c2ced9
+  style n_Transportation___ITS fill:#121924,stroke:#2b3846,color:#c2ced9
+  style n_Web___HTTP fill:#121924,stroke:#2b3846,color:#c2ced9

@@ -120,32 +120,44 @@ def build_block(link_prefix):
     for name, desc in entries:
         by_layer[layer_of(name)].append((name, desc))
 
-    # dr.apply adds the markers and the Prettier range-ignore, keeping this generator the
-    # single authority on the tables' markup: the CI Prettier pass (and the pre-commit
-    # hook) skips the block instead of re-indenting the width-attributed cells, so
-    # --check matches byte-for-byte with no format tug-of-war.
-    parts = []
+    # A SUMMARY, not the inventory. The full per-feature tables lived here and ran to 526 lines of
+    # HTML with every description inlined into a title= attribute - more than half the README, for a
+    # list nobody scrolls. The complete set is one click away on the docs site (searchable, and
+    # grouped the same way), and docs/FEATURES.md remains the source both are generated from.
+    total = len(entries)
+    # link_prefix is the path TO FEATURES.md ("docs/FEATURES.md" from the repo root, "FEATURES.md"
+    # from inside docs/), so the directory the diagrams sit in has to come off it rather than being
+    # assumed - the two targets are at different depths.
+    docs_dir = link_prefix[: -len("FEATURES.md")]
+    rows = []
     for layer in LAYER_ORDER:
-        rows = sorted(by_layer[layer], key=lambda e: e[0].lower())
-        if not rows:
+        names = sorted(by_layer[layer], key=lambda e: e[0].lower())
+        if not names:
             continue
-        if layer != APPLICATION_LAYER:
-            parts += [render_table(layer, rows, link_prefix), ""]
-            continue
-        # Subdivide the large Application (L7) layer into functional categories; anything uncategorized
-        # falls into a trailing "Other" table (a nudge to slot it into CATEGORY_MEMBERS). rows is already
-        # alphabetized, so each category table stays alphabetized.
-        by_cat = {c: [] for c in CATEGORY_ORDER}
-        other = []
-        for name, desc in rows:
-            c = category_of(name)
-            (by_cat[c] if c else other).append((name, desc))
-        for c in CATEGORY_ORDER:
-            if by_cat[c]:
-                parts += [render_table(c, by_cat[c], link_prefix), ""]
-        if other:
-            parts += [render_table(APPLICATION_LAYER + " - Other", other, link_prefix), ""]
-    return "\n".join(parts)
+        sample = ", ".join(n for n, _ in names[:4])
+        rows.append(f"| **{layer}** | {len(names)} | {sample}{', …' if len(names) > 4 else ''} |")
+
+    return "\n".join(
+        [
+            f"**{total} features**, every one a compile-time `PC_ENABLE_*` flag that is off unless you ask"
+            " for it. Core HTTP/1.1 parsing, routing, middleware, JSON, templating and chunked responses are"
+            " always on and are not flags.",
+            "",
+            '<a href="https://dstroy0.github.io/ProtoCore/features.html" title="Browse every feature">',
+            '  <img alt="Feature map: the OSI stack and the feature groups on each layer"'
+            f' src="{docs_dir}diagrams/features_map.svg" width="100%">',
+            "</a>",
+            "",
+            "| Layer | Features | For example |",
+            "| --- | --- | --- |",
+            *rows,
+            "",
+            "**[Browse all of them →](https://dstroy0.github.io/ProtoCore/features.html)** - filterable, grouped"
+            f" by layer, one line each. Full descriptions live in [FEATURES.md]({link_prefix});"
+            " both are generated from it, so they cannot drift.",
+        ]
+    )
+
 
 
 def check_flag_coverage():

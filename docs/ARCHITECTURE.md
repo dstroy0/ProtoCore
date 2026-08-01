@@ -223,10 +223,7 @@ every public API method, every registered protocol, and every Layer-6 module on 
 
 > Generated from the public API, `proto_builtins.cpp`, and `presentation/` by `ci_tooling/generate/gen_api_flow.py` - do not edit by hand. This is the fully expanded twin of the simplified request-lifecycle chart in the [README](../README.md): the same top-to-bottom waterfall, but every public method, every registered protocol, and every Layer-6 module on disk is listed (nothing is capped). Color is the OSI layer; the green path is the response. Mermaid source: [`diagrams/api_flow_detail.mmd`](diagrams/api_flow_detail.mmd).
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="diagrams/api_flow_detail.dark.png">
-  <img alt="Full request lifecycle with every method, protocol, and module" src="diagrams/api_flow_detail.light.png">
-</picture>
+<img alt="Full request lifecycle with every method, protocol, and module" src="diagrams/api_flow_detail.svg">
 
 <!-- prettier-ignore-end -->
 
