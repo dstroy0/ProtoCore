@@ -15,6 +15,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`3316610`](https://github.com/dstroy0/ProtoCore/commit/3316610af8f086b8ce7a2190ea74f0c55b47d790))
 - update test report + coverage [skip ci] ([`b611a4f`](https://github.com/dstroy0/ProtoCore/commit/b611a4f39c498d21f4ec36ff2284b8d9c2ca11db))
 - update CHANGELOG.md [skip ci] ([`8112685`](https://github.com/dstroy0/ProtoCore/commit/81126853eb347164c0712372c63ab1c8c3e075f4))
 - update test report + coverage [skip ci] ([`5e287f6`](https://github.com/dstroy0/ProtoCore/commit/5e287f63b628c8d0a26c22d2c84bb410aa7b983f))
@@ -58,6 +59,9 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- publish features.html and the diagrams, and cut the README down ([`5dca79b`](https://github.com/dstroy0/ProtoCore/commit/5dca79bbf3c8d2fa038096836bf35965274a7aa5))
+- update ESP32 build footprints [skip ci] ([`f2dcdce`](https://github.com/dstroy0/ProtoCore/commit/f2dcdce98fcfad7be3714b3638f4e957f82bdd3b))
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`181b870`](https://github.com/dstroy0/ProtoCore/commit/181b8709c1c90b98d206536a9894c2b5f15aa5eb))
 - make every badge a link ([`31fb989`](https://github.com/dstroy0/ProtoCore/commit/31fb989410d349c781791b42064dc799e6ec1f62))
 - interactive SVG diagrams, and a README that is not half feature table ([`a452865`](https://github.com/dstroy0/ProtoCore/commit/a4528657ee22a61959d1a62056aa37bb354d292b))
 - update ESP32 build footprints [skip ci] ([`3f08774`](https://github.com/dstroy0/ProtoCore/commit/3f087746400255b493ec6e3aa557c95ea05ea91d))
