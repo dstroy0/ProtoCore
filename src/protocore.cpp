@@ -1523,7 +1523,7 @@ void diag(uint8_t slot_id)
 
 // True when the request on this slot used the HEAD method, whose response must
 // carry the same headers as GET but no message body (RFC 7231 §4.3.2). External
-// linkage (declared in server/protocore_internal.h): the split handler TUs call it.
+// linkage (declared in protocore.h): the split handler TUs call it.
 bool req_is_head(uint8_t slot_id)
 {
     return strcmp(http_pool[slot_id].method, "HEAD") == 0;

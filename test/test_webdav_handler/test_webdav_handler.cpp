@@ -10,7 +10,6 @@
 
 #include "protocore.h"
 #include "server/filesystem/filesystem.h" // pc_fs_join()/pc_fs_resolve(): a pure header shared with SFTP/SCP,
-#include "server/protocore_internal.h"    // status_text(): the WebDAV codes are only compiled in this env
                                           // neither of which is linked into this env, so tested directly below
 #include <stdio.h>
 #include <string.h>

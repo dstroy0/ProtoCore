@@ -9,7 +9,7 @@
  * one pattern - literals, '.', quantifiers, character classes, and escapes - with a step budget
  * (RE_MAX_STEPS) so a pathological pattern fails closed instead of backtracking unboundedly,
  * preserving determinism. No heap, no groups, no alternation. The route dispatcher calls
- * regex_match() (declared in server/protocore_internal.h). Behavior is identical to the pre-split code.
+ * regex_match() (declared in protocore.h). Behavior is identical to the pre-split code.
  */
 
 #include "protocore.h" // RE_MAX_STEPS (ServerConfig), fixed-width types
@@ -224,7 +224,7 @@ static bool re_match(ReCtx *c, const char *pat, const char *text)
 }
 
 // Whole-path regex match (implicitly anchored at both ends). External linkage
-// (declared in server/protocore_internal.h): the route dispatcher calls it.
+// (declared in protocore.h): the route dispatcher calls it.
 bool regex_match(const char *pattern, const char *path)
 {
     ReCtx c;

@@ -9,7 +9,7 @@
  * over SHA-1+base64, optional permessage-deflate), the SSE 200 upgrade, and the send/broadcast
  * public API for both. The frame codecs live in the presentation layer (websocket/, sse/); this
  * is the PC glue. The upgrade entry points are called by the route dispatcher in
- * protocore.cpp (declared in server/protocore_internal.h). Behavior is identical to the pre-split code.
+ * protocore.cpp (declared in protocore.h). Behavior is identical to the pre-split code.
  */
 
 #include "network_drivers/transport/tcp.h" // conn_pool, pc_conn_*, TcpConn/ConnState

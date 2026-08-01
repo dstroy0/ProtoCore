@@ -12,8 +12,7 @@
 //   - Empty file → 200 with Content-Length: 0
 
 #include "FS.h"
-#include "protocore.h"
-#include "server/protocore_internal.h" // pc_file_holds_slot: does the file pump hold this slot
+#include "protocore.h" // pc_file_holds_slot: does the file pump hold this slot
 #include <stdio.h>
 #include <string.h>
 #include <unity.h>

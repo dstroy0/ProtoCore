@@ -11,8 +11,7 @@
 
 #include "network_drivers/session/proto_handler.h" // proto_register/proto_get: the slot-poll dispatch table
 #include "network_drivers/transport/listener.h"    // listener_stop_all() for begin() test cleanup
-#include "protocore.h"
-#include "server/protocore_internal.h" // ws/sse upgrade entry points, pc_resp_holds_slot
+#include "protocore.h"                             // ws/sse upgrade entry points, pc_resp_holds_slot
 #include <unity.h>
 
 // All source layers compiled via native_app env - no stubs needed.

@@ -589,7 +589,7 @@ bool rate_limit_check(uint8_t slot_id);
  * @param req_path    Null-terminated path from the parsed request.
  * @return True if the route matches the request path.
  */
-static bool path_matches(const char *route, bool is_wildcard, const char *req_path);
+bool path_matches(const char *route, bool is_wildcard, const char *req_path);
 
 /// @brief Record a response for stats + the access-log hook. Reads method/path from http_pool[slot_id].
 void note_response(uint8_t slot_id, int code, int body_len);
@@ -641,7 +641,7 @@ void chunk_send_pump(uint8_t slot_id);
 
 #if PC_ENABLE_AUTH
 /// @brief Validate the request's HTTP Basic credentials against route @p r. @return true if authorized.
-static bool check_basic_auth(uint8_t slot_id, HttpReq *req, const Route *r);
+bool check_basic_auth(uint8_t slot_id, HttpReq *req, const Route *r);
 /// @brief Validate an `Authorization: Digest` (RFC 7616, SHA-256, qop=auth) request against route @p r.
 /// @param stale  set true when the credentials verify but the nonce has expired (RFC 7616 3.3): the
 ///               caller reissues a fresh challenge with `stale=true` so the client retries without a
@@ -650,8 +650,10 @@ bool check_digest_auth(uint8_t slot_id, HttpReq *req, const Route *r, bool *stal
 /// @brief Send 401 Unauthorized with a Basic or Digest `WWW-Authenticate` challenge per route @p r.
 /// @param stale  emit `stale=true` in the Digest challenge (expired-nonce transparent retry).
 void send_unauth(uint8_t slot_id, const Route *r, bool stale = false);
-/// @brief Per-server Digest keying secret (random at begin()); keys the stateless timestamped nonce.
-uint8_t digest_secret[16];
+// The Digest keying secret is NOT here. It lives in server/auth.cpp's AuthCtx, which is the only
+// file that reads it: a definition in this header gives every translation unit that includes it a
+// separate copy of the secret (and a multiple-definition link error), which is the opposite of one
+// owner. See the comment on AuthCtx.
 /// @brief (Re)seed the Digest keying secret from the CSPRNG.
 void regen_digest_secret();
 /// @brief Mint a fresh stateless nonce (issue time + keyed MAC) into @p out (needs cap >= 48).
@@ -684,11 +686,8 @@ void dav_send_status(uint8_t slot_id, int code, const char *extra_headers);
 bool dav_stream_put_begin(HttpReq *req);
 /// @brief Stream-data hook: write one body chunk to @p req's slot's DAV PUT file.
 void dav_stream_put_data(HttpReq *req, const uint8_t *data, size_t len);
-/// @brief C-callable trampolines (the parser hook takes plain function pointers).
-static bool dav_put_begin_tramp(HttpReq *req);
-static void dav_put_data_tramp(HttpReq *req, const uint8_t *data, size_t len);
 /// @brief Stream-abort hook: close the half-written PUT file if the transfer is torn down early.
-static void dav_put_abort_tramp(HttpReq *req);
+void dav_put_abort_tramp(HttpReq *req);
 #endif
 #endif
 
@@ -1400,7 +1399,7 @@ void clear_response_headers(uint8_t slot_id);
  * @param path  File path or name (e.g. "/css/site.css").
  * @return Static content-type string (never null).
  */
-static const char *mime_type(const char *path);
+const char *mime_type(const char *path);
 
 #if PC_ENABLE_DIAG
 /**
