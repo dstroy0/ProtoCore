@@ -264,6 +264,12 @@
     "output": ".pio/build/native_cbor/src/network_drivers/presentation/codec/cbor/cbor.o"
   },
   {
+    "command": "/usr/bin/g++ -o .pio/build/native_cbor/src/network_drivers/presentation/codec/codec.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_CBOR=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/codec/codec.cpp",
+    "directory": "@ROOT@",
+    "file": "src/network_drivers/presentation/codec/codec.cpp",
+    "output": ".pio/build/native_cbor/src/network_drivers/presentation/codec/codec.o"
+  },
+  {
     "command": "/usr/bin/g++ -o .pio/build/native_cc1101/src/services/radio/cc1101/cc1101.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_CC1101=1 -Itest/mocks -Itest/support -Isrc src/services/radio/cc1101/cc1101.cpp",
     "directory": "@ROOT@",
     "file": "src/services/radio/cc1101/cc1101.cpp",
@@ -1654,6 +1660,12 @@
     "directory": "@ROOT@",
     "file": "src/network_drivers/presentation/ssh/connection/ssh_channel.cpp",
     "output": ".pio/build/native_ssh/src/network_drivers/presentation/ssh/connection/ssh_channel.o"
+  },
+  {
+    "command": "/usr/bin/g++ -o .pio/build/native_ssh/src/network_drivers/presentation/ssh/connection/ssh_flow_control.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_SSH_MAX_CHANNELS=3 -DPC_ENABLE_SSH=1 -DPC_ENABLE_FILE_SERVING=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_SSH_SCP=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/ssh/connection/ssh_flow_control.cpp",
+    "directory": "@ROOT@",
+    "file": "src/network_drivers/presentation/ssh/connection/ssh_flow_control.cpp",
+    "output": ".pio/build/native_ssh/src/network_drivers/presentation/ssh/connection/ssh_flow_control.o"
   },
   {
     "command": "/usr/bin/g++ -o .pio/build/native_ssh/src/network_drivers/presentation/ssh/connection/ssh_server.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_SSH_MAX_CHANNELS=3 -DPC_ENABLE_SSH=1 -DPC_ENABLE_FILE_SERVING=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_SSH_SCP=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/ssh/connection/ssh_server.cpp",

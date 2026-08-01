@@ -69,7 +69,7 @@ from each example's `pio ci` size report and aggregated into
 | `MODBUS+MODBUS_MASTER`                                                                                    | L7-Application/ModbusScan            | 741.2 KB (57.9%) | 80.2 KB (25.1%)  |
 | `MPR121`                                                                                                  | Drivers/Mpr121                       | 281.0 KB (21.9%) | 21.3 KB (6.7%)   |
 | `MQTT`                                                                                                    | L7-Application/MqttClient            | 719.4 KB (56.2%) | 63.8 KB (19.9%)  |
-| `MSGPACK`                                                                                                 | L6-Presentation/MsgPack              | 742.5 KB (58.0%) | 80.0 KB (25.0%)  |
+| `MSGPACK`                                                                                                 | L6-Presentation/MsgPack              | 742.3 KB (58.0%) | 80.0 KB (25.0%)  |
 | `NMEA0183+UBX`                                                                                            | Drivers/UbloxGnss                    | 267.3 KB (20.9%) | 21.9 KB (6.8%)   |
 | `NRF24+GATEWAY`                                                                                           | Drivers/Nrf24Gateway                 | 269.6 KB (21.1%) | 21.2 KB (6.6%)   |
 | `NTP`                                                                                                     | L7-Application/SNTP                  | 763.9 KB (59.7%) | 82.4 KB (25.8%)  |
@@ -109,9 +109,9 @@ from each example's `pio ci` size report and aggregated into
 | `SNMP`                                                                                                    | L7-Application/SNMP                  | 747.5 KB (58.4%) | 92.1 KB (28.8%)  |
 | `SNMP+SNMP_TRAP`                                                                                          | L7-Application/SnmpTrap              | 711.5 KB (55.6%) | 43.9 KB (13.7%)  |
 | `SPA_ROUTER`                                                                                              | L7-Application/SpaFallback           | 740.4 KB (57.8%) | 79.9 KB (25.0%)  |
-| `SSH`                                                                                                     | L5-Session/SSHHostKey                | 817.3 KB (63.9%) | 109.5 KB (34.2%) |
-| `SSH+FILE_SERVING+SSH_SFTP+SSH_SCP`                                                                       | L5-Session/SSHSftp                   | 869.2 KB (67.9%) | 118.7 KB (37.1%) |
-| `SSH+SSH_CLIENT+SSH_CLIENT_MAX_CHANNELS+CLIENT_RX_BUF`                                                    | L5-Session/SSHReverseTunnel          | 832.5 KB (65.0%) | 113.9 KB (35.6%) |
+| `SSH`                                                                                                     | L5-Session/SSHHostKey                | 817.7 KB (63.9%) | 109.6 KB (34.2%) |
+| `SSH+FILE_SERVING+SSH_SFTP+SSH_SCP`                                                                       | L5-Session/SSHSftp                   | 869.5 KB (67.9%) | 118.7 KB (37.1%) |
+| `SSH+SSH_CLIENT+SSH_CLIENT_MAX_CHANNELS+CLIENT_RX_BUF`                                                    | L5-Session/SSHReverseTunnel          | 832.9 KB (65.1%) | 113.9 KB (35.6%) |
 | `STATS`                                                                                                   | L7-Application/Stats                 | 740.8 KB (57.9%) | 80.0 KB (25.0%)  |
 | `STATS+METRICS`                                                                                           | L7-Application/PrometheusMetrics     | 742.7 KB (58.0%) | 80.1 KB (25.0%)  |
 | `STATSD`                                                                                                  | L7-Application/StatsdMetrics         | 711.5 KB (55.6%) | 44.1 KB (13.8%)  |
@@ -122,7 +122,7 @@ from each example's `pio ci` size report and aggregated into
 | `TLS`                                                                                                     | L6-Presentation/SecureWebSocket      | 835.8 KB (65.3%) | 119.2 KB (37.2%) |
 | `TLS+MTLS`                                                                                                | L4-Transport/mTLS                    | 836.7 KB (65.4%) | 119.5 KB (37.3%) |
 | `TLS+MTLS+TLS_ARENA_SIZE`                                                                                 | L4-Transport/mTLS                    | 841.8 KB (65.8%) | 103.6 KB (32.4%) |
-| `TLS+TLS_ARENA_SIZE`                                                                                      | L6-Presentation/SecureWebSocket      | 840.9 KB (65.7%) | 103.2 KB (32.3%) |
+| `TLS+TLS_ARENA_SIZE`                                                                                      | L6-Presentation/SecureWebSocket      | 841.0 KB (65.7%) | 103.2 KB (32.3%) |
 | `TLS+TLS_RESUMPTION`                                                                                      | L4-Transport/TlsResumption           | 836.6 KB (65.4%) | 119.3 KB (37.3%) |
 | `TLS+TLS_RESUMPTION+TLS_ARENA_SIZE`                                                                       | L4-Transport/TlsResumption           | 841.7 KB (65.8%) | 103.4 KB (32.3%) |
 | `TOTP`                                                                                                    | L7-Application/Totp                  | 739.8 KB (57.8%) | 80.0 KB (25.0%)  |
