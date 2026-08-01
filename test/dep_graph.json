@@ -127,6 +127,7 @@
 "native_mdns_adaptive",
 "native_melsec",
 "native_mms",
+"native_mnt",
 "native_modbus",
 "native_modbus_master",
 "native_mpr121",
@@ -158,7 +159,9 @@
 "native_partition",
 "native_pca9685",
 "native_pentest",
+"native_plaintext",
 "native_pn532",
+"native_pool_workers",
 "native_power_mgmt",
 "native_powerlink",
 "native_pqc",
@@ -197,7 +200,6 @@
 "native_sb_modbus",
 "native_scp",
 "native_scpi",
-"native_plaintext",
 "native_sdi12",
 "native_secure_pool",
 "native_sen0192",
@@ -206,6 +208,7 @@
 "native_sercos",
 "native_sht3x",
 "native_sigfox",
+"native_signaling",
 "native_simatic",
 "native_sleep_sched",
 "native_smb",
@@ -235,6 +238,7 @@
 "native_statsd",
 "native_stomp",
 "native_sunspec",
+"native_swar",
 "native_syslog",
 "native_telemetry",
 "native_telnet",
@@ -251,7 +255,6 @@
 "native_umati",
 "native_upload",
 "native_utmc",
-"native_vfs",
 "native_vl53l0x",
 "native_vxi11",
 "native_wal",
@@ -398,6 +401,7 @@
 "native_mdns_adaptive",
 "native_melsec",
 "native_mms",
+"native_mnt",
 "native_modbus",
 "native_modbus_master",
 "native_mpr121",
@@ -429,7 +433,9 @@
 "native_partition",
 "native_pca9685",
 "native_pentest",
+"native_plaintext",
 "native_pn532",
+"native_pool_workers",
 "native_power_mgmt",
 "native_powerlink",
 "native_pqc",
@@ -468,7 +474,6 @@
 "native_sb_modbus",
 "native_scp",
 "native_scpi",
-"native_plaintext",
 "native_sdi12",
 "native_secure_pool",
 "native_sen0192",
@@ -477,6 +482,7 @@
 "native_sercos",
 "native_sht3x",
 "native_sigfox",
+"native_signaling",
 "native_simatic",
 "native_sleep_sched",
 "native_smb",
@@ -506,6 +512,7 @@
 "native_statsd",
 "native_stomp",
 "native_sunspec",
+"native_swar",
 "native_syslog",
 "native_telemetry",
 "native_telnet",
@@ -522,7 +529,6 @@
 "native_umati",
 "native_upload",
 "native_utmc",
-"native_vfs",
 "native_vl53l0x",
 "native_vxi11",
 "native_wal",
@@ -669,6 +675,7 @@
 "native_mdns_adaptive",
 "native_melsec",
 "native_mms",
+"native_mnt",
 "native_modbus",
 "native_modbus_master",
 "native_mpr121",
@@ -700,7 +707,9 @@
 "native_partition",
 "native_pca9685",
 "native_pentest",
+"native_plaintext",
 "native_pn532",
+"native_pool_workers",
 "native_power_mgmt",
 "native_powerlink",
 "native_pqc",
@@ -739,7 +748,6 @@
 "native_sb_modbus",
 "native_scp",
 "native_scpi",
-"native_plaintext",
 "native_sdi12",
 "native_secure_pool",
 "native_sen0192",
@@ -748,6 +756,7 @@
 "native_sercos",
 "native_sht3x",
 "native_sigfox",
+"native_signaling",
 "native_simatic",
 "native_sleep_sched",
 "native_smb",
@@ -777,6 +786,7 @@
 "native_statsd",
 "native_stomp",
 "native_sunspec",
+"native_swar",
 "native_syslog",
 "native_telemetry",
 "native_telnet",
@@ -793,7 +803,6 @@
 "native_umati",
 "native_upload",
 "native_utmc",
-"native_vfs",
 "native_vl53l0x",
 "native_vxi11",
 "native_wal",
@@ -940,6 +949,7 @@
 "native_mdns_adaptive",
 "native_melsec",
 "native_mms",
+"native_mnt",
 "native_modbus",
 "native_modbus_master",
 "native_mpr121",
@@ -971,7 +981,9 @@
 "native_partition",
 "native_pca9685",
 "native_pentest",
+"native_plaintext",
 "native_pn532",
+"native_pool_workers",
 "native_power_mgmt",
 "native_powerlink",
 "native_pqc",
@@ -1010,7 +1022,6 @@
 "native_sb_modbus",
 "native_scp",
 "native_scpi",
-"native_plaintext",
 "native_sdi12",
 "native_secure_pool",
 "native_sen0192",
@@ -1019,6 +1030,7 @@
 "native_sercos",
 "native_sht3x",
 "native_sigfox",
+"native_signaling",
 "native_simatic",
 "native_sleep_sched",
 "native_smb",
@@ -1048,6 +1060,7 @@
 "native_statsd",
 "native_stomp",
 "native_sunspec",
+"native_swar",
 "native_syslog",
 "native_telemetry",
 "native_telnet",
@@ -1064,7 +1077,6 @@
 "native_umati",
 "native_upload",
 "native_utmc",
-"native_vfs",
 "native_vl53l0x",
 "native_vxi11",
 "native_wal",
@@ -1082,6 +1094,18 @@
 "native_xmpp",
 "native_zigbee",
 "native_zwave"
+],
+"src/board_drivers/hal/esp/esp_aes128gcm.cpp": [
+"native_swar"
+],
+"src/board_drivers/hal/esp/esp_aesgcm.cpp": [
+"native_swar"
+],
+"src/board_drivers/hal/esp/esp_bignum.cpp": [
+"native_swar"
+],
+"src/board_drivers/hal/esp/esp_crypto_hal.cpp": [
+"native_swar"
 ],
 "src/board_drivers/hal/esp/esp_crypto_hal.h": [
 "native_coaps",
@@ -1104,7 +1128,17 @@
 "native_ssh_hardened",
 "native_ssh_kbdint",
 "native_ssh_pqc",
+"native_swar",
 "native_tls13_msg"
+],
+"src/board_drivers/hal/esp/esp_mnt_fs.cpp": [
+"native_swar"
+],
+"src/board_drivers/hal/esp/esp_mnt_fs.h": [
+"native_swar"
+],
+"src/board_drivers/hal/esp/esp_platform.cpp": [
+"native_swar"
 ],
 "src/board_drivers/hal/portable/portable_aes128gcm.cpp": [
 "native_coaps",
@@ -1121,7 +1155,8 @@
 "native_quic_server",
 "native_quic_tls",
 "native_quic_tls_pqc",
-"native_smb"
+"native_smb",
+"native_swar"
 ],
 "src/board_drivers/hal/portable/portable_aesgcm.cpp": [
 "native_esp",
@@ -1135,7 +1170,8 @@
 "native_ssh_conn",
 "native_ssh_hardened",
 "native_ssh_kbdint",
-"native_ssh_pqc"
+"native_ssh_pqc",
+"native_swar"
 ],
 "src/board_drivers/hal/portable/portable_bignum.cpp": [
 "native_ikev2",
@@ -1145,7 +1181,8 @@
 "native_ssh_conn",
 "native_ssh_hardened",
 "native_ssh_kbdint",
-"native_ssh_pqc"
+"native_ssh_pqc",
+"native_swar"
 ],
 "src/board_drivers/hal/portable/portable_platform.cpp": [
 "native",
@@ -1169,13 +1206,14 @@
 "native_keepalive",
 "native_oidc",
 "native_pentest",
+"native_plaintext",
+"native_pool_workers",
 "native_quic_conn",
 "native_quic_crypto",
 "native_quic_server",
 "native_quic_tls",
 "native_quic_tls_pqc",
 "native_range",
-"native_plaintext",
 "native_secure_pool",
 "native_smb",
 "native_snmp_v3",
@@ -1188,10 +1226,14 @@
 "native_ssh_hardened",
 "native_ssh_kbdint",
 "native_ssh_pqc",
+"native_swar",
 "native_tls13_kdf",
 "native_upload",
 "native_webdav_handler",
 "native_ws_deflate"
+],
+"src/board_drivers/physical/esp/physical_esp.cpp": [
+"native_swar"
 ],
 "src/crypto/aead/aes128gcm.h": [
 "native_coaps",
@@ -1208,15 +1250,18 @@
 "native_quic_server",
 "native_quic_tls",
 "native_quic_tls_pqc",
-"native_smb"
+"native_smb",
+"native_swar"
 ],
 "src/crypto/aead/aesccm.cpp": [
 "native_pentest",
-"native_smb"
+"native_smb",
+"native_swar"
 ],
 "src/crypto/aead/aesccm.h": [
 "native_pentest",
-"native_smb"
+"native_smb",
+"native_swar"
 ],
 "src/crypto/aead/aesgcm.cpp": [
 "native_esp",
@@ -1230,7 +1275,8 @@
 "native_ssh_conn",
 "native_ssh_hardened",
 "native_ssh_kbdint",
-"native_ssh_pqc"
+"native_ssh_pqc",
+"native_swar"
 ],
 "src/crypto/aead/aesgcm.h": [
 "native_esp",
@@ -1245,7 +1291,8 @@
 "native_ssh_conn",
 "native_ssh_hardened",
 "native_ssh_kbdint",
-"native_ssh_pqc"
+"native_ssh_pqc",
+"native_swar"
 ],
 "src/crypto/aead/chachapoly.cpp": [
 "native_ssh",
@@ -1254,7 +1301,8 @@
 "native_ssh_conn",
 "native_ssh_hardened",
 "native_ssh_kbdint",
-"native_ssh_pqc"
+"native_ssh_pqc",
+"native_swar"
 ],
 "src/crypto/aead/chachapoly.h": [
 "native_ikev2",
@@ -1265,7 +1313,8 @@
 "native_ssh_conn",
 "native_ssh_hardened",
 "native_ssh_kbdint",
-"native_ssh_pqc"
+"native_ssh_pqc",
+"native_swar"
 ],
 "src/crypto/asymmetric/bignum.cpp": [
 "native_ikev2",
@@ -1275,7 +1324,8 @@
 "native_ssh_conn",
 "native_ssh_hardened",
 "native_ssh_kbdint",
-"native_ssh_pqc"
+"native_ssh_pqc",
+"native_swar"
 ],
 "src/crypto/asymmetric/bignum.h": [
 "native_ikev2",
@@ -1285,7 +1335,8 @@
 "native_ssh_conn",
 "native_ssh_hardened",
 "native_ssh_kbdint",
-"native_ssh_pqc"
+"native_ssh_pqc",
+"native_swar"
 ],
 "src/crypto/asymmetric/curve25519.cpp": [
 "native_coaps",
@@ -1308,6 +1359,7 @@
 "native_ssh_hardened",
 "native_ssh_kbdint",
 "native_ssh_pqc",
+"native_swar",
 "native_tls13_msg"
 ],
 "src/crypto/asymmetric/curve25519.h": [
@@ -1331,6 +1383,7 @@
 "native_ssh_hardened",
 "native_ssh_kbdint",
 "native_ssh_pqc",
+"native_swar",
 "native_tls13_msg"
 ],
 "src/crypto/asymmetric/ecdsa.cpp": [
@@ -1341,7 +1394,8 @@
 "native_ssh_ecdsa",
 "native_ssh_hardened",
 "native_ssh_kbdint",
-"native_ssh_pqc"
+"native_ssh_pqc",
+"native_swar"
 ],
 "src/crypto/asymmetric/ecdsa.h": [
 "native_ikev2",
@@ -1351,7 +1405,8 @@
 "native_ssh_ecdsa",
 "native_ssh_hardened",
 "native_ssh_kbdint",
-"native_ssh_pqc"
+"native_ssh_pqc",
+"native_swar"
 ],
 "src/crypto/asymmetric/ed25519.cpp": [
 "native_coaps",
@@ -1373,6 +1428,7 @@
 "native_ssh_hardened",
 "native_ssh_kbdint",
 "native_ssh_pqc",
+"native_swar",
 "native_tls13_msg"
 ],
 "src/crypto/asymmetric/ed25519.h": [
@@ -1395,6 +1451,7 @@
 "native_ssh_hardened",
 "native_ssh_kbdint",
 "native_ssh_pqc",
+"native_swar",
 "native_tls13_msg"
 ],
 "src/crypto/asymmetric/fe25519.h": [
@@ -1418,6 +1475,7 @@
 "native_ssh_hardened",
 "native_ssh_kbdint",
 "native_ssh_pqc",
+"native_swar",
 "native_tls13_msg"
 ],
 "src/crypto/asymmetric/rsa.cpp": [
@@ -1428,7 +1486,8 @@
 "native_ssh_conn",
 "native_ssh_hardened",
 "native_ssh_kbdint",
-"native_ssh_pqc"
+"native_ssh_pqc",
+"native_swar"
 ],
 "src/crypto/asymmetric/rsa.h": [
 "native_ikev2",
@@ -1438,7 +1497,8 @@
 "native_ssh_conn",
 "native_ssh_hardened",
 "native_ssh_kbdint",
-"native_ssh_pqc"
+"native_ssh_pqc",
+"native_swar"
 ],
 "src/crypto/cipher/aes256ctr.cpp": [
 "native_ssh",
@@ -1446,7 +1506,8 @@
 "native_ssh_conn",
 "native_ssh_hardened",
 "native_ssh_kbdint",
-"native_ssh_pqc"
+"native_ssh_pqc",
+"native_swar"
 ],
 "src/crypto/cipher/aes256ctr.h": [
 "native_ikev2",
@@ -1456,7 +1517,8 @@
 "native_ssh_conn",
 "native_ssh_hardened",
 "native_ssh_kbdint",
-"native_ssh_pqc"
+"native_ssh_pqc",
+"native_swar"
 ],
 "src/crypto/cipher/aes_block.h": [
 "native_coaps",
@@ -1483,7 +1545,8 @@
 "native_ssh_conn",
 "native_ssh_hardened",
 "native_ssh_kbdint",
-"native_ssh_pqc"
+"native_ssh_pqc",
+"native_swar"
 ],
 "src/crypto/cipher/aes_sbox.h": [
 "native_coaps",
@@ -1511,7 +1574,8 @@
 "native_ssh_conn",
 "native_ssh_hardened",
 "native_ssh_kbdint",
-"native_ssh_pqc"
+"native_ssh_pqc",
+"native_swar"
 ],
 "src/crypto/cipher/chacha20.cpp": [
 "native_crypto_kat",
@@ -1521,7 +1585,8 @@
 "native_ssh_conn",
 "native_ssh_hardened",
 "native_ssh_kbdint",
-"native_ssh_pqc"
+"native_ssh_pqc",
+"native_swar"
 ],
 "src/crypto/cipher/chacha20.h": [
 "native_crypto_kat",
@@ -1531,7 +1596,8 @@
 "native_ssh_conn",
 "native_ssh_hardened",
 "native_ssh_kbdint",
-"native_ssh_pqc"
+"native_ssh_pqc",
+"native_swar"
 ],
 "src/crypto/crypto_opt.h": [
 "native",
@@ -1580,6 +1646,7 @@
 "native_ssh_hardened",
 "native_ssh_kbdint",
 "native_ssh_pqc",
+"native_swar",
 "native_tls13_kdf",
 "native_tls13_msg",
 "native_totp",
@@ -1619,15 +1686,18 @@
 "native_ssh_hardened",
 "native_ssh_kbdint",
 "native_ssh_pqc",
+"native_swar",
 "native_tls13_msg"
 ],
 "src/crypto/hash/md.cpp": [
 "native_pentest",
-"native_smb"
+"native_smb",
+"native_swar"
 ],
 "src/crypto/hash/md.h": [
 "native_pentest",
-"native_smb"
+"native_smb",
+"native_swar"
 ],
 "src/crypto/hash/sha1.cpp": [
 "native",
@@ -1641,6 +1711,7 @@
 "native_pentest",
 "native_range",
 "native_ssh_conn",
+"native_swar",
 "native_totp",
 "native_upload",
 "native_webdav_handler",
@@ -1659,6 +1730,7 @@
 "native_pentest",
 "native_range",
 "native_ssh_conn",
+"native_swar",
 "native_totp",
 "native_upload",
 "native_webdav_handler",
@@ -1702,6 +1774,7 @@
 "native_ssh_hardened",
 "native_ssh_kbdint",
 "native_ssh_pqc",
+"native_swar",
 "native_tls13_kdf",
 "native_upload",
 "native_webdav_handler"
@@ -1743,6 +1816,7 @@
 "native_ssh_hardened",
 "native_ssh_kbdint",
 "native_ssh_pqc",
+"native_swar",
 "native_tls13_kdf",
 "native_upload",
 "native_webdav_handler"
@@ -1750,12 +1824,14 @@
 "src/crypto/hash/sha3.cpp": [
 "native_pqc",
 "native_quic_tls_pqc",
-"native_ssh_pqc"
+"native_ssh_pqc",
+"native_swar"
 ],
 "src/crypto/hash/sha3.h": [
 "native_pqc",
 "native_quic_tls_pqc",
-"native_ssh_pqc"
+"native_ssh_pqc",
+"native_swar"
 ],
 "src/crypto/hash/sha512.cpp": [
 "native_coaps",
@@ -1782,6 +1858,7 @@
 "native_ssh_hardened",
 "native_ssh_kbdint",
 "native_ssh_pqc",
+"native_swar",
 "native_tls13_msg"
 ],
 "src/crypto/hash/sha512.h": [
@@ -1809,6 +1886,7 @@
 "native_ssh_hardened",
 "native_ssh_kbdint",
 "native_ssh_pqc",
+"native_swar",
 "native_tls13_msg"
 ],
 "src/crypto/kdf/hkdf.cpp": [
@@ -1825,6 +1903,7 @@
 "native_quic_server",
 "native_quic_tls",
 "native_quic_tls_pqc",
+"native_swar",
 "native_tls13_kdf"
 ],
 "src/crypto/kdf/hkdf.h": [
@@ -1841,15 +1920,18 @@
 "native_quic_server",
 "native_quic_tls",
 "native_quic_tls_pqc",
+"native_swar",
 "native_tls13_kdf"
 ],
 "src/crypto/kdf/kdf.cpp": [
 "native_pentest",
-"native_smb"
+"native_smb",
+"native_swar"
 ],
 "src/crypto/kdf/kdf.h": [
 "native_pentest",
-"native_smb"
+"native_smb",
+"native_swar"
 ],
 "src/crypto/kdf/tls13_kdf.cpp": [
 "native_coaps",
@@ -1863,6 +1945,7 @@
 "native_quic_server",
 "native_quic_tls",
 "native_quic_tls_pqc",
+"native_swar",
 "native_tls13_kdf"
 ],
 "src/crypto/kdf/tls13_kdf.h": [
@@ -1877,15 +1960,18 @@
 "native_quic_server",
 "native_quic_tls",
 "native_quic_tls_pqc",
+"native_swar",
 "native_tls13_kdf"
 ],
 "src/crypto/mac/aes_cmac.cpp": [
 "native_pentest",
-"native_smb"
+"native_smb",
+"native_swar"
 ],
 "src/crypto/mac/aes_cmac.h": [
 "native_pentest",
-"native_smb"
+"native_smb",
+"native_swar"
 ],
 "src/crypto/mac/ghash.h": [
 "native_coaps",
@@ -1912,7 +1998,8 @@
 "native_ssh_conn",
 "native_ssh_hardened",
 "native_ssh_kbdint",
-"native_ssh_pqc"
+"native_ssh_pqc",
+"native_swar"
 ],
 "src/crypto/mac/hmac_sha256.cpp": [
 "native_coaps",
@@ -1942,6 +2029,7 @@
 "native_ssh_hardened",
 "native_ssh_kbdint",
 "native_ssh_pqc",
+"native_swar",
 "native_tls13_kdf"
 ],
 "src/crypto/mac/hmac_sha256.h": [
@@ -1972,6 +2060,7 @@
 "native_ssh_hardened",
 "native_ssh_kbdint",
 "native_ssh_pqc",
+"native_swar",
 "native_tls13_kdf"
 ],
 "src/crypto/mac/hmac_sha512.cpp": [
@@ -1981,7 +2070,8 @@
 "native_ssh_conn",
 "native_ssh_hardened",
 "native_ssh_kbdint",
-"native_ssh_pqc"
+"native_ssh_pqc",
+"native_swar"
 ],
 "src/crypto/mac/hmac_sha512.h": [
 "native_crypto_kat",
@@ -1990,7 +2080,8 @@
 "native_ssh_conn",
 "native_ssh_hardened",
 "native_ssh_kbdint",
-"native_ssh_pqc"
+"native_ssh_pqc",
+"native_swar"
 ],
 "src/crypto/mac/poly1305.cpp": [
 "native_crypto_kat",
@@ -2000,7 +2091,8 @@
 "native_ssh_conn",
 "native_ssh_hardened",
 "native_ssh_kbdint",
-"native_ssh_pqc"
+"native_ssh_pqc",
+"native_swar"
 ],
 "src/crypto/mac/poly1305.h": [
 "native_crypto_kat",
@@ -2010,37 +2102,56 @@
 "native_ssh_conn",
 "native_ssh_hardened",
 "native_ssh_kbdint",
-"native_ssh_pqc"
+"native_ssh_pqc",
+"native_swar"
 ],
 "src/crypto/pqc/mlkem.cpp": [
 "native_pqc",
 "native_quic_tls_pqc",
-"native_ssh_pqc"
+"native_ssh_pqc",
+"native_swar"
 ],
 "src/crypto/pqc/mlkem.h": [
 "native_pqc",
 "native_quic_tls_pqc",
-"native_ssh_pqc"
+"native_ssh_pqc",
+"native_swar"
 ],
 "src/crypto/pqc/sntrup761.cpp": [
 "native_pqc",
-"native_ssh_pqc"
+"native_ssh_pqc",
+"native_swar"
 ],
 "src/crypto/pqc/sntrup761.h": [
 "native_pqc",
-"native_ssh_pqc"
+"native_ssh_pqc",
+"native_swar"
+],
+"src/network_drivers/application/binary_asset_blobs.cpp": [
+"native_swar"
+],
+"src/network_drivers/application/binary_asset_blobs.h": [
+"native_swar"
 ],
 "src/network_drivers/application/web_assets.cpp": [
 "native_app",
 "native_diag",
 "native_h3_server",
+"native_swar",
 "native_webdav_handler"
 ],
 "src/network_drivers/application/web_assets.h": [
 "native_app",
 "native_diag",
 "native_h3_server",
+"native_swar",
 "native_webdav_handler"
+],
+"src/network_drivers/datalink/datalink.cpp": [
+"native_swar"
+],
+"src/network_drivers/datalink/datalink.h": [
+"native_swar"
 ],
 "src/network_drivers/network/ip.cpp": [
 "native",
@@ -2062,6 +2173,7 @@
 "native_pentest",
 "native_range",
 "native_ssh_conn",
+"native_swar",
 "native_telnet",
 "native_upload",
 "native_webdav_handler",
@@ -2091,7 +2203,9 @@
 "native_promisc",
 "native_radio_power",
 "native_range",
+"native_signaling",
 "native_ssh_conn",
+"native_swar",
 "native_telnet",
 "native_upload",
 "native_webdav_handler",
@@ -2099,13 +2213,21 @@
 "native_workers",
 "native_ws_deflate"
 ],
+"src/network_drivers/network/network.cpp": [
+"native_swar"
+],
+"src/network_drivers/network/network.h": [
+"native_swar"
+],
 "src/network_drivers/physical/physical.cpp": [
-"native_net_egress"
+"native_net_egress",
+"native_swar"
 ],
 "src/network_drivers/physical/physical.h": [
 "native_net_egress",
 "native_promisc",
-"native_radio_power"
+"native_radio_power",
+"native_swar"
 ],
 "src/network_drivers/presentation/codec/base64/base64.cpp": [
 "native",
@@ -2121,6 +2243,7 @@
 "native_range",
 "native_smtp",
 "native_ssh_conn",
+"native_swar",
 "native_upload",
 "native_webdav_handler",
 "native_ws_client",
@@ -2140,6 +2263,7 @@
 "native_range",
 "native_smtp",
 "native_ssh_conn",
+"native_swar",
 "native_upload",
 "native_webdav_handler",
 "native_ws_client",
@@ -2148,31 +2272,44 @@
 "src/network_drivers/presentation/codec/cbor/cbor.cpp": [
 "native_cbor",
 "native_pentest",
-"native_senml"
+"native_senml",
+"native_swar"
 ],
 "src/network_drivers/presentation/codec/cbor/cbor.h": [
 "native_cbor",
 "native_pentest",
-"native_senml"
+"native_senml",
+"native_swar"
 ],
 "src/network_drivers/presentation/codec/codec.cpp": [
 "native_cbor",
 "native_msgpack",
 "native_pentest",
-"native_senml"
+"native_senml",
+"native_swar"
 ],
 "src/network_drivers/presentation/codec/codec.h": [
+"native_app",
 "native_cbor",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
 "native_msgpack",
 "native_pentest",
-"native_senml"
+"native_range",
+"native_senml",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/network_drivers/presentation/codec/deflate/deflate.cpp": [
 "native_deflate",
+"native_swar",
 "native_ws_deflate"
 ],
 "src/network_drivers/presentation/codec/deflate/deflate.h": [
 "native_deflate",
+"native_swar",
 "native_ws_deflate"
 ],
 "src/network_drivers/presentation/codec/hpack_prim/hpack_prim.cpp": [
@@ -2183,7 +2320,8 @@
 "native_hpack",
 "native_pentest",
 "native_qpack",
-"native_quic_server"
+"native_quic_server",
+"native_swar"
 ],
 "src/network_drivers/presentation/codec/hpack_prim/hpack_prim.h": [
 "native_h2conn",
@@ -2193,13 +2331,15 @@
 "native_hpack",
 "native_pentest",
 "native_qpack",
-"native_quic_server"
+"native_quic_server",
+"native_swar"
 ],
 "src/network_drivers/presentation/codec/inflate/inflate.cpp": [
 "native_deflate",
 "native_inflate",
 "native_ssh_comp",
 "native_ssh_zlib",
+"native_swar",
 "native_ws_deflate"
 ],
 "src/network_drivers/presentation/codec/inflate/inflate.h": [
@@ -2207,6 +2347,7 @@
 "native_inflate",
 "native_ssh_comp",
 "native_ssh_zlib",
+"native_swar",
 "native_ws_deflate"
 ],
 "src/network_drivers/presentation/codec/json/json.cpp": [
@@ -2218,6 +2359,7 @@
 "native_oauth2",
 "native_pentest",
 "native_senml",
+"native_swar",
 "native_wamp",
 "native_webdav_handler"
 ],
@@ -2232,17 +2374,20 @@
 "native_pentest",
 "native_range",
 "native_senml",
+"native_swar",
 "native_upload",
 "native_wamp",
 "native_webdav_handler"
 ],
 "src/network_drivers/presentation/codec/msgpack/msgpack.cpp": [
 "native_msgpack",
-"native_pentest"
+"native_pentest",
+"native_swar"
 ],
 "src/network_drivers/presentation/codec/msgpack/msgpack.h": [
 "native_msgpack",
-"native_pentest"
+"native_pentest",
+"native_swar"
 ],
 "src/network_drivers/presentation/codec/multipart/multipart.cpp": [
 "native",
@@ -2254,6 +2399,7 @@
 "native_pentest",
 "native_range",
 "native_ssh_conn",
+"native_swar",
 "native_upload",
 "native_webdav_handler",
 "native_ws_deflate"
@@ -2268,59 +2414,76 @@
 "native_pentest",
 "native_range",
 "native_ssh_conn",
+"native_swar",
 "native_upload",
 "native_webdav_handler",
 "native_ws_deflate"
 ],
 "src/network_drivers/presentation/http/http2/h2_conn.cpp": [
-"native_h2conn"
+"native_h2conn",
+"native_swar"
 ],
 "src/network_drivers/presentation/http/http2/h2_conn.h": [
-"native_h2conn"
+"native_h2conn",
+"native_swar"
 ],
 "src/network_drivers/presentation/http/http2/h2_frame.cpp": [
 "native_h2conn",
-"native_h2frame"
+"native_h2frame",
+"native_swar"
 ],
 "src/network_drivers/presentation/http/http2/h2_frame.h": [
 "native_h2conn",
-"native_h2frame"
+"native_h2frame",
+"native_swar"
+],
+"src/network_drivers/presentation/http/http2/h2_server.cpp": [
+"native_swar"
+],
+"src/network_drivers/presentation/http/http2/h2_server.h": [
+"native_swar"
 ],
 "src/network_drivers/presentation/http/http2/hpack.cpp": [
 "native_h2conn",
 "native_hpack",
-"native_pentest"
+"native_pentest",
+"native_swar"
 ],
 "src/network_drivers/presentation/http/http2/hpack.h": [
 "native_h2conn",
 "native_hpack",
-"native_pentest"
+"native_pentest",
+"native_swar"
 ],
 "src/network_drivers/presentation/http/http3/h3_conn.cpp": [
 "native_h3_conn",
 "native_h3_e2e",
 "native_h3_server",
-"native_quic_server"
+"native_quic_server",
+"native_swar"
 ],
 "src/network_drivers/presentation/http/http3/h3_conn.h": [
 "native_h3_conn",
 "native_h3_e2e",
 "native_h3_server",
-"native_quic_server"
+"native_quic_server",
+"native_swar"
 ],
 "src/network_drivers/presentation/http/http3/h3_frame.cpp": [
 "native_h3_conn",
 "native_h3_e2e",
 "native_h3_server",
 "native_h3frame",
-"native_quic_server"
+"native_quic_server",
+"native_swar"
 ],
 "src/network_drivers/presentation/http/http3/h3_frame.h": [
 "native_h3_conn",
 "native_h3_e2e",
 "native_h3_server",
 "native_h3frame",
-"native_quic_server"
+"native_quic_server",
+"native_swar"
 ],
 "src/network_drivers/presentation/http/http3/qpack.cpp": [
 "native_h3_conn",
@@ -2328,7 +2491,8 @@
 "native_h3_server",
 "native_pentest",
 "native_qpack",
-"native_quic_server"
+"native_quic_server",
+"native_swar"
 ],
 "src/network_drivers/presentation/http/http3/qpack.h": [
 "native_h3_conn",
@@ -2336,21 +2500,24 @@
 "native_h3_server",
 "native_pentest",
 "native_qpack",
-"native_quic_server"
+"native_quic_server",
+"native_swar"
 ],
 "src/network_drivers/presentation/http/http3/quic_conn.cpp": [
 "native_h3_conn",
 "native_h3_e2e",
 "native_h3_server",
 "native_quic_conn",
-"native_quic_server"
+"native_quic_server",
+"native_swar"
 ],
 "src/network_drivers/presentation/http/http3/quic_conn.h": [
 "native_h3_conn",
 "native_h3_e2e",
 "native_h3_server",
 "native_quic_conn",
-"native_quic_server"
+"native_quic_server",
+"native_swar"
 ],
 "src/network_drivers/presentation/http/http3/quic_crypto.cpp": [
 "native_h3_conn",
@@ -2360,7 +2527,8 @@
 "native_quic_crypto",
 "native_quic_server",
 "native_quic_tls",
-"native_quic_tls_pqc"
+"native_quic_tls_pqc",
+"native_swar"
 ],
 "src/network_drivers/presentation/http/http3/quic_crypto.h": [
 "native_h3_conn",
@@ -2370,7 +2538,8 @@
 "native_quic_crypto",
 "native_quic_server",
 "native_quic_tls",
-"native_quic_tls_pqc"
+"native_quic_tls_pqc",
+"native_swar"
 ],
 "src/network_drivers/presentation/http/http3/quic_frame.cpp": [
 "native_h3_conn",
@@ -2378,7 +2547,8 @@
 "native_h3_server",
 "native_quic_conn",
 "native_quic_frame",
-"native_quic_server"
+"native_quic_server",
+"native_swar"
 ],
 "src/network_drivers/presentation/http/http3/quic_frame.h": [
 "native_h3_conn",
@@ -2386,7 +2556,8 @@
 "native_h3_server",
 "native_quic_conn",
 "native_quic_frame",
-"native_quic_server"
+"native_quic_server",
+"native_swar"
 ],
 "src/network_drivers/presentation/http/http3/quic_packet.cpp": [
 "native_h3_conn",
@@ -2397,7 +2568,8 @@
 "native_quic_packet",
 "native_quic_server",
 "native_quic_tls",
-"native_quic_tls_pqc"
+"native_quic_tls_pqc",
+"native_swar"
 ],
 "src/network_drivers/presentation/http/http3/quic_packet.h": [
 "native_h3_conn",
@@ -2409,15 +2581,18 @@
 "native_quic_server",
 "native_quic_tls",
 "native_quic_tls_pqc",
-"native_quic_tp"
+"native_quic_tp",
+"native_swar"
 ],
 "src/network_drivers/presentation/http/http3/quic_server.cpp": [
 "native_h3_server",
-"native_quic_server"
+"native_quic_server",
+"native_swar"
 ],
 "src/network_drivers/presentation/http/http3/quic_server.h": [
 "native_h3_server",
-"native_quic_server"
+"native_quic_server",
+"native_swar"
 ],
 "src/network_drivers/presentation/http/http3/quic_tls.cpp": [
 "native_h3_conn",
@@ -2426,7 +2601,8 @@
 "native_quic_conn",
 "native_quic_server",
 "native_quic_tls",
-"native_quic_tls_pqc"
+"native_quic_tls_pqc",
+"native_swar"
 ],
 "src/network_drivers/presentation/http/http3/quic_tls.h": [
 "native_h3_conn",
@@ -2435,7 +2611,8 @@
 "native_quic_conn",
 "native_quic_server",
 "native_quic_tls",
-"native_quic_tls_pqc"
+"native_quic_tls_pqc",
+"native_swar"
 ],
 "src/network_drivers/presentation/http/http3/quic_tp.cpp": [
 "native_h3_conn",
@@ -2445,7 +2622,8 @@
 "native_quic_server",
 "native_quic_tls",
 "native_quic_tls_pqc",
-"native_quic_tp"
+"native_quic_tp",
+"native_swar"
 ],
 "src/network_drivers/presentation/http/http3/quic_tp.h": [
 "native_h3_conn",
@@ -2455,7 +2633,8 @@
 "native_quic_server",
 "native_quic_tls",
 "native_quic_tls_pqc",
-"native_quic_tp"
+"native_quic_tp",
+"native_swar"
 ],
 "src/network_drivers/presentation/http/http3/quic_varint.cpp": [
 "native_h3_conn",
@@ -2468,7 +2647,8 @@
 "native_quic_tls",
 "native_quic_tls_pqc",
 "native_quic_tp",
-"native_quic_varint"
+"native_quic_varint",
+"native_swar"
 ],
 "src/network_drivers/presentation/http/http3/quic_varint.h": [
 "native_h3_conn",
@@ -2481,7 +2661,8 @@
 "native_quic_tls",
 "native_quic_tls_pqc",
 "native_quic_tp",
-"native_quic_varint"
+"native_quic_varint",
+"native_swar"
 ],
 "src/network_drivers/presentation/http/http3/tls13_msg.cpp": [
 "native_coaps",
@@ -2495,6 +2676,7 @@
 "native_quic_server",
 "native_quic_tls",
 "native_quic_tls_pqc",
+"native_swar",
 "native_tls13_msg"
 ],
 "src/network_drivers/presentation/http/http3/tls13_msg.h": [
@@ -2509,6 +2691,7 @@
 "native_quic_server",
 "native_quic_tls",
 "native_quic_tls_pqc",
+"native_swar",
 "native_tls13_msg"
 ],
 "src/network_drivers/presentation/http/http_parser/http_parser.cpp": [
@@ -2524,6 +2707,7 @@
 "native_pentest",
 "native_range",
 "native_ssh_conn",
+"native_swar",
 "native_upload",
 "native_webdav_handler",
 "native_ws_deflate"
@@ -2541,6 +2725,7 @@
 "native_pentest",
 "native_range",
 "native_ssh_conn",
+"native_swar",
 "native_upload",
 "native_webdav_handler",
 "native_ws_deflate"
@@ -2554,6 +2739,7 @@
 "native_keepalive",
 "native_range",
 "native_ssh_conn",
+"native_swar",
 "native_upload",
 "native_webdav_handler",
 "native_ws_deflate"
@@ -2567,6 +2753,7 @@
 "native_keepalive",
 "native_range",
 "native_ssh_conn",
+"native_swar",
 "native_upload",
 "native_webdav_handler",
 "native_ws_deflate"
@@ -2580,6 +2767,7 @@
 "native_keepalive",
 "native_range",
 "native_ssh_conn",
+"native_swar",
 "native_upload",
 "native_webdav_handler",
 "native_ws_deflate"
@@ -2593,6 +2781,7 @@
 "native_keepalive",
 "native_range",
 "native_ssh_conn",
+"native_swar",
 "native_upload",
 "native_webdav_handler",
 "native_ws_deflate"
@@ -2606,6 +2795,7 @@
 "native_keepalive",
 "native_range",
 "native_ssh_conn",
+"native_swar",
 "native_upload",
 "native_webdav_handler",
 "native_ws_deflate"
@@ -2620,6 +2810,7 @@
 "native_pentest",
 "native_range",
 "native_ssh_conn",
+"native_swar",
 "native_upload",
 "native_webdav_handler",
 "native_ws_deflate"
@@ -2627,36 +2818,42 @@
 "src/network_drivers/presentation/security/dtls/dtls_conn.cpp": [
 "native_coaps",
 "native_coaps_server",
-"native_dtls_conn"
+"native_dtls_conn",
+"native_swar"
 ],
 "src/network_drivers/presentation/security/dtls/dtls_conn.h": [
 "native_coaps",
 "native_coaps_server",
-"native_dtls_conn"
+"native_dtls_conn",
+"native_swar"
 ],
 "src/network_drivers/presentation/security/dtls/dtls_handshake.cpp": [
 "native_coaps",
 "native_coaps_server",
 "native_dtls_conn",
-"native_dtls_hs"
+"native_dtls_hs",
+"native_swar"
 ],
 "src/network_drivers/presentation/security/dtls/dtls_handshake.h": [
 "native_coaps",
 "native_coaps_server",
 "native_dtls_conn",
-"native_dtls_hs"
+"native_dtls_hs",
+"native_swar"
 ],
 "src/network_drivers/presentation/security/dtls/dtls_record.cpp": [
 "native_coaps",
 "native_coaps_server",
 "native_dtls",
-"native_dtls_conn"
+"native_dtls_conn",
+"native_swar"
 ],
 "src/network_drivers/presentation/security/dtls/dtls_record.h": [
 "native_coaps",
 "native_coaps_server",
 "native_dtls",
-"native_dtls_conn"
+"native_dtls_conn",
+"native_swar"
 ],
 "src/network_drivers/presentation/ssh/auth/ssh_auth.cpp": [
 "native_ssh",
@@ -2664,7 +2861,8 @@
 "native_ssh_conn",
 "native_ssh_hardened",
 "native_ssh_kbdint",
-"native_ssh_pqc"
+"native_ssh_pqc",
+"native_swar"
 ],
 "src/network_drivers/presentation/ssh/auth/ssh_auth.h": [
 "native_ssh",
@@ -2672,7 +2870,8 @@
 "native_ssh_conn",
 "native_ssh_hardened",
 "native_ssh_kbdint",
-"native_ssh_pqc"
+"native_ssh_pqc",
+"native_swar"
 ],
 "src/network_drivers/presentation/ssh/connection/ssh_channel.cpp": [
 "native_ssh",
@@ -2680,7 +2879,8 @@
 "native_ssh_conn",
 "native_ssh_hardened",
 "native_ssh_kbdint",
-"native_ssh_pqc"
+"native_ssh_pqc",
+"native_swar"
 ],
 "src/network_drivers/presentation/ssh/connection/ssh_channel.h": [
 "native_ssh",
@@ -2688,13 +2888,22 @@
 "native_ssh_conn",
 "native_ssh_hardened",
 "native_ssh_kbdint",
-"native_ssh_pqc"
+"native_ssh_pqc",
+"native_swar"
+],
+"src/network_drivers/presentation/ssh/connection/ssh_client.cpp": [
+"native_swar"
+],
+"src/network_drivers/presentation/ssh/connection/ssh_client.h": [
+"native_swar"
 ],
 "src/network_drivers/presentation/ssh/connection/ssh_conn.cpp": [
-"native_ssh_conn"
+"native_ssh_conn",
+"native_swar"
 ],
 "src/network_drivers/presentation/ssh/connection/ssh_conn.h": [
-"native_ssh_conn"
+"native_ssh_conn",
+"native_swar"
 ],
 "src/network_drivers/presentation/ssh/connection/ssh_flow_control.cpp": [
 "native_ssh",
@@ -2702,7 +2911,8 @@
 "native_ssh_conn",
 "native_ssh_hardened",
 "native_ssh_kbdint",
-"native_ssh_pqc"
+"native_ssh_pqc",
+"native_swar"
 ],
 "src/network_drivers/presentation/ssh/connection/ssh_flow_control.h": [
 "native_ssh",
@@ -2710,10 +2920,15 @@
 "native_ssh_conn",
 "native_ssh_hardened",
 "native_ssh_kbdint",
-"native_ssh_pqc"
+"native_ssh_pqc",
+"native_swar"
+],
+"src/network_drivers/presentation/ssh/connection/ssh_forward.cpp": [
+"native_swar"
 ],
 "src/network_drivers/presentation/ssh/connection/ssh_forward.h": [
-"native_ssh_conn"
+"native_ssh_conn",
+"native_swar"
 ],
 "src/network_drivers/presentation/ssh/connection/ssh_server.cpp": [
 "native_ssh",
@@ -2721,7 +2936,8 @@
 "native_ssh_conn",
 "native_ssh_hardened",
 "native_ssh_kbdint",
-"native_ssh_pqc"
+"native_ssh_pqc",
+"native_swar"
 ],
 "src/network_drivers/presentation/ssh/connection/ssh_server.h": [
 "native_ssh",
@@ -2729,7 +2945,8 @@
 "native_ssh_conn",
 "native_ssh_hardened",
 "native_ssh_kbdint",
-"native_ssh_pqc"
+"native_ssh_pqc",
+"native_swar"
 ],
 "src/network_drivers/presentation/ssh/crypto/ssh_kexhash.h": [
 "native_ssh",
@@ -2737,7 +2954,8 @@
 "native_ssh_conn",
 "native_ssh_hardened",
 "native_ssh_kbdint",
-"native_ssh_pqc"
+"native_ssh_pqc",
+"native_swar"
 ],
 "src/network_drivers/presentation/ssh/crypto/ssh_rsa.cpp": [
 "native_ikev2",
@@ -2747,7 +2965,8 @@
 "native_ssh_conn",
 "native_ssh_hardened",
 "native_ssh_kbdint",
-"native_ssh_pqc"
+"native_ssh_pqc",
+"native_swar"
 ],
 "src/network_drivers/presentation/ssh/crypto/ssh_rsa.h": [
 "native_ikev2",
@@ -2757,13 +2976,16 @@
 "native_ssh_conn",
 "native_ssh_hardened",
 "native_ssh_kbdint",
-"native_ssh_pqc"
+"native_ssh_pqc",
+"native_swar"
 ],
 "src/network_drivers/presentation/ssh/transport/ssh_comp.cpp": [
-"native_ssh_comp"
+"native_ssh_comp",
+"native_swar"
 ],
 "src/network_drivers/presentation/ssh/transport/ssh_comp.h": [
-"native_ssh_comp"
+"native_ssh_comp",
+"native_swar"
 ],
 "src/network_drivers/presentation/ssh/transport/ssh_dh.cpp": [
 "native_ssh",
@@ -2771,7 +2993,8 @@
 "native_ssh_conn",
 "native_ssh_hardened",
 "native_ssh_kbdint",
-"native_ssh_pqc"
+"native_ssh_pqc",
+"native_swar"
 ],
 "src/network_drivers/presentation/ssh/transport/ssh_dh.h": [
 "native_ssh",
@@ -2779,15 +3002,18 @@
 "native_ssh_conn",
 "native_ssh_hardened",
 "native_ssh_kbdint",
-"native_ssh_pqc"
+"native_ssh_pqc",
+"native_swar"
 ],
 "src/network_drivers/presentation/ssh/transport/ssh_inflate.cpp": [
 "native_ssh_comp",
-"native_ssh_inflate"
+"native_ssh_inflate",
+"native_swar"
 ],
 "src/network_drivers/presentation/ssh/transport/ssh_inflate.h": [
 "native_ssh_comp",
-"native_ssh_inflate"
+"native_ssh_inflate",
+"native_swar"
 ],
 "src/network_drivers/presentation/ssh/transport/ssh_keymat.cpp": [
 "native_ssh",
@@ -2795,7 +3021,8 @@
 "native_ssh_conn",
 "native_ssh_hardened",
 "native_ssh_kbdint",
-"native_ssh_pqc"
+"native_ssh_pqc",
+"native_swar"
 ],
 "src/network_drivers/presentation/ssh/transport/ssh_keymat.h": [
 "native_ikev2",
@@ -2805,7 +3032,8 @@
 "native_ssh_conn",
 "native_ssh_hardened",
 "native_ssh_kbdint",
-"native_ssh_pqc"
+"native_ssh_pqc",
+"native_swar"
 ],
 "src/network_drivers/presentation/ssh/transport/ssh_packet.cpp": [
 "native_ssh",
@@ -2813,7 +3041,8 @@
 "native_ssh_conn",
 "native_ssh_hardened",
 "native_ssh_kbdint",
-"native_ssh_pqc"
+"native_ssh_pqc",
+"native_swar"
 ],
 "src/network_drivers/presentation/ssh/transport/ssh_packet.h": [
 "native_ssh",
@@ -2821,7 +3050,8 @@
 "native_ssh_conn",
 "native_ssh_hardened",
 "native_ssh_kbdint",
-"native_ssh_pqc"
+"native_ssh_pqc",
+"native_swar"
 ],
 "src/network_drivers/presentation/ssh/transport/ssh_transport.cpp": [
 "native_ssh",
@@ -2829,7 +3059,8 @@
 "native_ssh_conn",
 "native_ssh_hardened",
 "native_ssh_kbdint",
-"native_ssh_pqc"
+"native_ssh_pqc",
+"native_swar"
 ],
 "src/network_drivers/presentation/ssh/transport/ssh_transport.h": [
 "native_ssh",
@@ -2837,20 +3068,25 @@
 "native_ssh_conn",
 "native_ssh_hardened",
 "native_ssh_kbdint",
-"native_ssh_pqc"
+"native_ssh_pqc",
+"native_swar"
 ],
 "src/network_drivers/presentation/ssh/transport/ssh_zlib.cpp": [
 "native_ssh_comp",
-"native_ssh_zlib"
+"native_ssh_zlib",
+"native_swar"
 ],
 "src/network_drivers/presentation/ssh/transport/ssh_zlib.h": [
 "native_ssh_comp",
-"native_ssh_zlib"
+"native_ssh_zlib",
+"native_swar"
 ],
 "src/network_drivers/presentation/telnet/telnet.cpp": [
+"native_swar",
 "native_telnet"
 ],
 "src/network_drivers/presentation/telnet/telnet.h": [
+"native_swar",
 "native_telnet"
 ],
 "src/network_drivers/session/proto_builtins.cpp": [
@@ -2862,6 +3098,7 @@
 "native_keepalive",
 "native_range",
 "native_ssh_conn",
+"native_swar",
 "native_upload",
 "native_webdav_handler",
 "native_ws_deflate"
@@ -2875,6 +3112,7 @@
 "native_keepalive",
 "native_range",
 "native_ssh_conn",
+"native_swar",
 "native_telnet",
 "native_upload",
 "native_webdav_handler",
@@ -2889,6 +3127,7 @@
 "native_keepalive",
 "native_range",
 "native_ssh_conn",
+"native_swar",
 "native_upload",
 "native_webdav_handler",
 "native_ws_deflate"
@@ -2902,6 +3141,7 @@
 "native_keepalive",
 "native_range",
 "native_ssh_conn",
+"native_swar",
 "native_upload",
 "native_webdav_handler",
 "native_ws_deflate"
@@ -2928,13 +3168,14 @@
 "native_keepalive",
 "native_oidc",
 "native_pentest",
+"native_plaintext",
+"native_pool_workers",
 "native_quic_conn",
 "native_quic_crypto",
 "native_quic_server",
 "native_quic_tls",
 "native_quic_tls_pqc",
 "native_range",
-"native_plaintext",
 "native_secure_pool",
 "native_smb",
 "native_snmp_v3",
@@ -2947,6 +3188,7 @@
 "native_ssh_hardened",
 "native_ssh_kbdint",
 "native_ssh_pqc",
+"native_swar",
 "native_tls13_kdf",
 "native_upload",
 "native_webdav_handler",
@@ -2975,13 +3217,14 @@
 "native_keepalive",
 "native_oidc",
 "native_pentest",
+"native_plaintext",
+"native_pool_workers",
 "native_quic_conn",
 "native_quic_crypto",
 "native_quic_server",
 "native_quic_tls",
 "native_quic_tls_pqc",
 "native_range",
-"native_plaintext",
 "native_secure_pool",
 "native_smb",
 "native_snmp_v3",
@@ -2994,11 +3237,15 @@
 "native_ssh_hardened",
 "native_ssh_kbdint",
 "native_ssh_pqc",
+"native_swar",
 "native_tls13_kdf",
 "native_upload",
 "native_webdav_handler",
 "native_workers",
 "native_ws_deflate"
+],
+"src/network_drivers/tls/tls.cpp": [
+"native_swar"
 ],
 "src/network_drivers/tls/tls.h": [
 "native",
@@ -3011,6 +3258,7 @@
 "native_observability",
 "native_range",
 "native_ssh_conn",
+"native_swar",
 "native_telnet",
 "native_upload",
 "native_webdav_handler",
@@ -3018,13 +3266,16 @@
 "native_ws_deflate"
 ],
 "src/network_drivers/transport/client.cpp": [
-"native_client"
+"native_client",
+"native_swar"
 ],
 "src/network_drivers/transport/client.h": [
-"native_client"
+"native_client",
+"native_swar"
 ],
 "src/network_drivers/transport/diffserv.cpp": [
-"native_diffserv"
+"native_diffserv",
+"native_swar"
 ],
 "src/network_drivers/transport/diffserv.h": [
 "native",
@@ -3037,6 +3288,7 @@
 "native_observability",
 "native_range",
 "native_ssh_conn",
+"native_swar",
 "native_telnet",
 "native_upload",
 "native_webdav_handler",
@@ -3054,6 +3306,7 @@
 "native_observability",
 "native_range",
 "native_ssh_conn",
+"native_swar",
 "native_telnet",
 "native_upload",
 "native_webdav_handler",
@@ -3071,6 +3324,7 @@
 "native_observability",
 "native_range",
 "native_ssh_conn",
+"native_swar",
 "native_telnet",
 "native_upload",
 "native_webdav_handler",
@@ -3088,6 +3342,7 @@
 "native_observability",
 "native_range",
 "native_ssh_conn",
+"native_swar",
 "native_telnet",
 "native_upload",
 "native_webdav_handler",
@@ -3105,7 +3360,9 @@
 "native_observability",
 "native_pentest",
 "native_range",
+"native_signaling",
 "native_ssh_conn",
+"native_swar",
 "native_telnet",
 "native_upload",
 "native_webdav_handler",
@@ -3121,6 +3378,7 @@
 "native_snmp",
 "native_snmp_v3",
 "native_statsd",
+"native_swar",
 "native_syslog",
 "native_udp_transport"
 ],
@@ -3133,6 +3391,7 @@
 "native_snmp",
 "native_snmp_v3",
 "native_statsd",
+"native_swar",
 "native_syslog",
 "native_udp_transport"
 ],
@@ -3142,6 +3401,7 @@
 "native_h3_server",
 "native_keepalive",
 "native_range",
+"native_swar",
 "native_upload",
 "native_webdav_handler"
 ],
@@ -3151,6 +3411,7 @@
 "native_h3_server",
 "native_keepalive",
 "native_range",
+"native_swar",
 "native_upload",
 "native_webdav_handler"
 ],
@@ -3282,6 +3543,7 @@
 "native_mdns_adaptive",
 "native_melsec",
 "native_mms",
+"native_mnt",
 "native_modbus",
 "native_modbus_master",
 "native_mpr121",
@@ -3313,7 +3575,9 @@
 "native_partition",
 "native_pca9685",
 "native_pentest",
+"native_plaintext",
 "native_pn532",
+"native_pool_workers",
 "native_power_mgmt",
 "native_powerlink",
 "native_pqc",
@@ -3352,7 +3616,6 @@
 "native_sb_modbus",
 "native_scp",
 "native_scpi",
-"native_plaintext",
 "native_sdi12",
 "native_secure_pool",
 "native_sen0192",
@@ -3361,6 +3624,7 @@
 "native_sercos",
 "native_sht3x",
 "native_sigfox",
+"native_signaling",
 "native_simatic",
 "native_sleep_sched",
 "native_smb",
@@ -3390,6 +3654,7 @@
 "native_statsd",
 "native_stomp",
 "native_sunspec",
+"native_swar",
 "native_syslog",
 "native_telemetry",
 "native_telnet",
@@ -3406,7 +3671,6 @@
 "native_umati",
 "native_upload",
 "native_utmc",
-"native_vfs",
 "native_vl53l0x",
 "native_vxi11",
 "native_wal",
@@ -3431,6 +3695,7 @@
 "native_h3_server",
 "native_keepalive",
 "native_range",
+"native_swar",
 "native_upload",
 "native_webdav_handler"
 ],
@@ -3440,7 +3705,61 @@
 "native_h3_server",
 "native_keepalive",
 "native_range",
+"native_swar",
 "native_upload",
+"native_webdav_handler"
+],
+"src/server/filesystem/filesystem.cpp": [
+"native_mnt",
+"native_scp",
+"native_ssh_sftp",
+"native_swar"
+],
+"src/server/filesystem/filesystem.h": [
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_mnt",
+"native_range",
+"native_scp",
+"native_ssh_sftp",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
+],
+"src/server/filesystem/mnt.cpp": [
+"native_mnt",
+"native_scp",
+"native_ssh_sftp",
+"native_swar"
+],
+"src/server/filesystem/mnt.h": [
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_mnt",
+"native_range",
+"native_scp",
+"native_ssh_sftp",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
+],
+"src/server/filesystem/wearlevel.cpp": [
+"native_swar",
+"native_wearlevel"
+],
+"src/server/filesystem/wearlevel.h": [
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_wearlevel",
 "native_webdav_handler"
 ],
 "src/server/http_range.cpp": [
@@ -3450,6 +3769,7 @@
 "native_h3_server",
 "native_keepalive",
 "native_range",
+"native_swar",
 "native_upload",
 "native_webdav_handler"
 ],
@@ -3460,6 +3780,7 @@
 "native_h3_server",
 "native_keepalive",
 "native_range",
+"native_swar",
 "native_upload",
 "native_webdav_handler"
 ],
@@ -3469,6 +3790,7 @@
 "native_h3_server",
 "native_keepalive",
 "native_range",
+"native_swar",
 "native_upload",
 "native_webdav_handler"
 ],
@@ -3495,13 +3817,14 @@
 "native_keepalive",
 "native_oidc",
 "native_pentest",
+"native_plaintext",
+"native_pool_workers",
 "native_quic_conn",
 "native_quic_crypto",
 "native_quic_server",
 "native_quic_tls",
 "native_quic_tls_pqc",
 "native_range",
-"native_plaintext",
 "native_secure_pool",
 "native_smb",
 "native_snmp_v3",
@@ -3514,6 +3837,7 @@
 "native_ssh_hardened",
 "native_ssh_kbdint",
 "native_ssh_pqc",
+"native_swar",
 "native_tls13_kdf",
 "native_upload",
 "native_webdav_handler",
@@ -3542,13 +3866,14 @@
 "native_keepalive",
 "native_oidc",
 "native_pentest",
+"native_plaintext",
+"native_pool_workers",
 "native_quic_conn",
 "native_quic_crypto",
 "native_quic_server",
 "native_quic_tls",
 "native_quic_tls_pqc",
 "native_range",
-"native_plaintext",
 "native_secure_pool",
 "native_smb",
 "native_snmp_v3",
@@ -3561,6 +3886,7 @@
 "native_ssh_hardened",
 "native_ssh_kbdint",
 "native_ssh_pqc",
+"native_swar",
 "native_tls13_kdf",
 "native_upload",
 "native_webdav_handler",
@@ -3588,13 +3914,14 @@
 "native_keepalive",
 "native_oidc",
 "native_pentest",
+"native_plaintext",
+"native_pool_workers",
 "native_quic_conn",
 "native_quic_crypto",
 "native_quic_server",
 "native_quic_tls",
 "native_quic_tls_pqc",
 "native_range",
-"native_plaintext",
 "native_secure_pool",
 "native_smb",
 "native_snmp_v3",
@@ -3607,6 +3934,7 @@
 "native_ssh_hardened",
 "native_ssh_kbdint",
 "native_ssh_pqc",
+"native_swar",
 "native_tls13_kdf",
 "native_upload",
 "native_webdav_handler",
@@ -3634,13 +3962,14 @@
 "native_keepalive",
 "native_oidc",
 "native_pentest",
+"native_plaintext",
+"native_pool_workers",
 "native_quic_conn",
 "native_quic_crypto",
 "native_quic_server",
 "native_quic_tls",
 "native_quic_tls_pqc",
 "native_range",
-"native_plaintext",
 "native_secure_pool",
 "native_smb",
 "native_snmp_v3",
@@ -3653,6 +3982,7 @@
 "native_ssh_hardened",
 "native_ssh_kbdint",
 "native_ssh_pqc",
+"native_swar",
 "native_tls13_kdf",
 "native_upload",
 "native_webdav_handler",
@@ -3675,6 +4005,7 @@
 "native_jwt",
 "native_oidc",
 "native_pentest",
+"native_pool_workers",
 "native_quic_conn",
 "native_quic_crypto",
 "native_quic_server",
@@ -3692,13 +4023,16 @@
 "native_ssh_hardened",
 "native_ssh_kbdint",
 "native_ssh_pqc",
+"native_swar",
 "native_tls13_kdf"
 ],
 "src/server/mmgr/secure.h": [
+"native_app",
 "native_coaps",
 "native_coaps_server",
 "native_crypto_kat",
 "native_csrf",
+"native_diag",
 "native_dtls",
 "native_dtls_conn",
 "native_dtls_hs",
@@ -3709,13 +4043,16 @@
 "native_ikev2",
 "native_ipsec_db",
 "native_jwt",
+"native_keepalive",
 "native_oidc",
 "native_pentest",
+"native_pool_workers",
 "native_quic_conn",
 "native_quic_crypto",
 "native_quic_server",
 "native_quic_tls",
 "native_quic_tls_pqc",
+"native_range",
 "native_secure_pool",
 "native_smb",
 "native_snmp_v3",
@@ -3728,16 +4065,64 @@
 "native_ssh_hardened",
 "native_ssh_kbdint",
 "native_ssh_pqc",
-"native_tls13_kdf"
-],
-"src/server/protocore_internal.h": [
-"native_app",
-"native_diag",
-"native_h3_server",
-"native_keepalive",
-"native_range",
+"native_swar",
+"native_tls13_kdf",
 "native_upload",
 "native_webdav_handler"
+],
+"src/server/mmgr/span.h": [
+"native",
+"native_accept_gate",
+"native_app",
+"native_cbor",
+"native_coaps",
+"native_coaps_server",
+"native_crypto_kat",
+"native_csrf",
+"native_diag",
+"native_dtls",
+"native_dtls_conn",
+"native_dtls_hs",
+"native_dtls_tls13",
+"native_esp",
+"native_h3_conn",
+"native_h3_e2e",
+"native_h3_server",
+"native_ikev2",
+"native_ipsec_db",
+"native_jwt",
+"native_keepalive",
+"native_msgpack",
+"native_oidc",
+"native_pentest",
+"native_plaintext",
+"native_pool_workers",
+"native_quic_conn",
+"native_quic_crypto",
+"native_quic_server",
+"native_quic_tls",
+"native_quic_tls_pqc",
+"native_range",
+"native_secure_pool",
+"native_senml",
+"native_smb",
+"native_snmp_v3",
+"native_ssh",
+"native_ssh_aesgcm",
+"native_ssh_chachapoly",
+"native_ssh_comp",
+"native_ssh_conn",
+"native_ssh_ecdsa",
+"native_ssh_ed25519",
+"native_ssh_hardened",
+"native_ssh_kbdint",
+"native_ssh_pqc",
+"native_swar",
+"native_tls13_kdf",
+"native_tls13_msg",
+"native_upload",
+"native_webdav_handler",
+"native_ws_deflate"
 ],
 "src/server/regex.cpp": [
 "native_app",
@@ -3745,6 +4130,7 @@
 "native_h3_server",
 "native_keepalive",
 "native_range",
+"native_swar",
 "native_upload",
 "native_webdav_handler"
 ],
@@ -3754,6 +4140,61 @@
 "native_h3_server",
 "native_keepalive",
 "native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
+],
+"src/server/signaling/route.cpp": [
+"native_swar"
+],
+"src/server/signaling/route.h": [
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
+],
+"src/server/signaling/signaling.cpp": [
+"native_signaling",
+"native_swar"
+],
+"src/server/signaling/signaling.h": [
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_signaling",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
+],
+"src/server/ssh_scp.cpp": [
+"native_swar"
+],
+"src/server/ssh_scp.h": [
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
+],
+"src/server/ssh_sftp.cpp": [
+"native_swar"
+],
+"src/server/ssh_sftp.h": [
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
 "native_upload",
 "native_webdav_handler"
 ],
@@ -3763,6 +4204,7 @@
 "native_h3_server",
 "native_keepalive",
 "native_range",
+"native_swar",
 "native_upload",
 "native_webdav_handler"
 ],
@@ -3772,238 +4214,527 @@
 "native_h3_server",
 "native_keepalive",
 "native_range",
+"native_swar",
 "native_upload",
 "native_webdav_handler"
 ],
 "src/services/energy/c37118/c37118.cpp": [
 "native_c37118",
-"native_pentest"
+"native_pentest",
+"native_swar"
 ],
 "src/services/energy/c37118/c37118.h": [
+"native_app",
 "native_c37118",
-"native_pentest"
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_pentest",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/energy/dnp3/dnp3.cpp": [
 "native_dnp3",
-"native_pentest"
+"native_pentest",
+"native_swar"
 ],
 "src/services/energy/dnp3/dnp3.h": [
+"native_app",
+"native_diag",
 "native_dnp3",
-"native_pentest"
+"native_h3_server",
+"native_keepalive",
+"native_pentest",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/energy/goose/goose.cpp": [
-"native_goose"
+"native_goose",
+"native_swar"
 ],
 "src/services/energy/goose/goose.h": [
-"native_goose"
+"native_app",
+"native_diag",
+"native_goose",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/energy/iccp/iccp.cpp": [
-"native_iccp"
+"native_iccp",
+"native_swar"
 ],
 "src/services/energy/iccp/iccp.h": [
-"native_iccp"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_iccp",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/energy/iec60870/iec60870.cpp": [
-"native_iec60870"
+"native_iec60870",
+"native_swar"
 ],
 "src/services/energy/iec60870/iec60870.h": [
-"native_iec60870"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_iec60870",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/energy/mms/mms.cpp": [
 "native_mms",
-"native_pentest"
+"native_pentest",
+"native_swar"
 ],
 "src/services/energy/mms/mms.h": [
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
 "native_mms",
-"native_pentest"
+"native_pentest",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/energy/openadr/openadr.cpp": [
-"native_openadr"
+"native_openadr",
+"native_swar"
 ],
 "src/services/energy/openadr/openadr.h": [
-"native_openadr"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_openadr",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/energy/sep2/sep2.cpp": [
-"native_sep2"
+"native_sep2",
+"native_swar"
 ],
 "src/services/energy/sep2/sep2.h": [
-"native_sep2"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_sep2",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/energy/sunspec/sunspec.cpp": [
-"native_sunspec"
+"native_sunspec",
+"native_swar"
 ],
 "src/services/energy/sunspec/sunspec.h": [
-"native_sunspec"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_sunspec",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/fieldbus/ads/ads.cpp": [
-"native_ads"
+"native_ads",
+"native_swar"
 ],
 "src/services/fieldbus/ads/ads.h": [
-"native_ads"
+"native_ads",
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/fieldbus/bacnet/bacnet.cpp": [
 "native_bacnet",
-"native_pentest"
+"native_pentest",
+"native_swar"
 ],
 "src/services/fieldbus/bacnet/bacnet.h": [
+"native_app",
 "native_bacnet",
-"native_pentest"
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_pentest",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/fieldbus/canopen/canopen.cpp": [
 "native_canopen",
-"native_cia402"
+"native_cia402",
+"native_swar"
 ],
 "src/services/fieldbus/canopen/canopen.h": [
+"native_app",
 "native_canopen",
-"native_cia402"
+"native_cia402",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/fieldbus/cclink/cclink.cpp": [
 "native_cclink",
-"native_pentest"
+"native_pentest",
+"native_swar"
 ],
 "src/services/fieldbus/cclink/cclink.h": [
+"native_app",
 "native_cclink",
-"native_pentest"
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_pentest",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/fieldbus/cia402/cia402.cpp": [
-"native_cia402"
+"native_cia402",
+"native_swar"
 ],
 "src/services/fieldbus/cia402/cia402.h": [
-"native_cia402"
+"native_app",
+"native_cia402",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/fieldbus/cip/cip.cpp": [
 "native_cip",
-"native_pentest"
+"native_pentest",
+"native_swar"
 ],
 "src/services/fieldbus/cip/cip.h": [
+"native_app",
 "native_cip",
-"native_pentest"
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_pentest",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/fieldbus/cotp/cotp.cpp": [
 "native_cotp",
-"native_pentest"
+"native_pentest",
+"native_swar"
 ],
 "src/services/fieldbus/cotp/cotp.h": [
+"native_app",
 "native_cotp",
-"native_pentest"
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_pentest",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/fieldbus/devicenet/devicenet.cpp": [
-"native_devicenet"
+"native_devicenet",
+"native_swar"
 ],
 "src/services/fieldbus/devicenet/devicenet.h": [
-"native_devicenet"
+"native_app",
+"native_devicenet",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/fieldbus/df1/df1.cpp": [
 "native_df1",
-"native_pentest"
+"native_pentest",
+"native_swar"
 ],
 "src/services/fieldbus/df1/df1.h": [
+"native_app",
 "native_df1",
-"native_pentest"
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_pentest",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/fieldbus/directnet/directnet.cpp": [
 "native_directnet",
-"native_pentest"
+"native_pentest",
+"native_swar"
 ],
 "src/services/fieldbus/directnet/directnet.h": [
+"native_app",
+"native_diag",
 "native_directnet",
-"native_pentest"
+"native_h3_server",
+"native_keepalive",
+"native_pentest",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/fieldbus/enip/enip.cpp": [
 "native_enip",
-"native_pentest"
+"native_pentest",
+"native_swar"
 ],
 "src/services/fieldbus/enip/enip.h": [
+"native_app",
+"native_diag",
 "native_enip",
-"native_pentest"
+"native_h3_server",
+"native_keepalive",
+"native_pentest",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/fieldbus/fins/fins.cpp": [
 "native_fins",
-"native_pentest"
+"native_pentest",
+"native_swar"
 ],
 "src/services/fieldbus/fins/fins.h": [
+"native_app",
+"native_diag",
 "native_fins",
-"native_pentest"
+"native_h3_server",
+"native_keepalive",
+"native_pentest",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/fieldbus/hart/hart.cpp": [
-"native_hart"
+"native_hart",
+"native_swar"
 ],
 "src/services/fieldbus/hart/hart.h": [
-"native_hart"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_hart",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/fieldbus/hostlink/hostlink.cpp": [
-"native_hostlink"
+"native_hostlink",
+"native_swar"
 ],
 "src/services/fieldbus/hostlink/hostlink.h": [
-"native_hostlink"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_hostlink",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/fieldbus/interbus/interbus.cpp": [
-"native_interbus"
+"native_interbus",
+"native_swar"
 ],
 "src/services/fieldbus/interbus/interbus.h": [
-"native_interbus"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_interbus",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/fieldbus/iolink/iolink.cpp": [
-"native_iolink"
+"native_iolink",
+"native_swar"
 ],
 "src/services/fieldbus/iolink/iolink.h": [
-"native_iolink"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_iolink",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/fieldbus/j1939/j1939.cpp": [
 "native_j1939",
-"native_nmea2000"
+"native_nmea2000",
+"native_swar"
 ],
 "src/services/fieldbus/j1939/j1939.h": [
+"native_app",
+"native_diag",
+"native_h3_server",
 "native_j1939",
-"native_nmea2000"
+"native_keepalive",
+"native_nmea2000",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/fieldbus/lonworks/lonworks.cpp": [
-"native_lonworks"
+"native_lonworks",
+"native_swar"
 ],
 "src/services/fieldbus/lonworks/lonworks.h": [
-"native_lonworks"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_lonworks",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/fieldbus/mbplus/mbplus.cpp": [
-"native_mbplus"
+"native_mbplus",
+"native_swar"
 ],
 "src/services/fieldbus/mbplus/mbplus.h": [
-"native_mbplus"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_mbplus",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/fieldbus/mbus/mbus.cpp": [
-"native_mbus"
+"native_mbus",
+"native_swar"
 ],
 "src/services/fieldbus/mbus/mbus.h": [
-"native_mbus"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_mbus",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/fieldbus/melsec/melsec.cpp": [
 "native_melsec",
-"native_pentest"
+"native_pentest",
+"native_swar"
 ],
 "src/services/fieldbus/melsec/melsec.h": [
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
 "native_melsec",
-"native_pentest"
+"native_pentest",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/fieldbus/modbus/modbus.cpp": [
 "native_modbus",
 "native_modbus_master",
 "native_pentest",
-"native_sb_modbus"
+"native_sb_modbus",
+"native_swar"
 ],
 "src/services/fieldbus/modbus/modbus.h": [
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
 "native_modbus",
 "native_modbus_master",
 "native_pentest",
-"native_sb_modbus"
+"native_range",
+"native_sb_modbus",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/fieldbus/modbus/modbus_master.cpp": [
 "native_modbus_master",
 "native_pentest",
-"native_sb_modbus"
+"native_sb_modbus",
+"native_swar"
 ],
 "src/services/fieldbus/modbus/modbus_master.h": [
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
 "native_modbus_master",
 "native_pentest",
-"native_sb_modbus"
+"native_range",
+"native_sb_modbus",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/fieldbus/opcua/opcua.cpp": [
 "native_euromap77",
@@ -4011,142 +4742,338 @@
 "native_opcua_client",
 "native_pentest",
 "native_robotics",
+"native_swar",
 "native_umati"
 ],
 "src/services/fieldbus/opcua/opcua.h": [
+"native_app",
+"native_diag",
 "native_euromap77",
+"native_h3_server",
+"native_keepalive",
 "native_opcua",
 "native_opcua_client",
 "native_pentest",
+"native_range",
 "native_robotics",
-"native_umati"
+"native_swar",
+"native_umati",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/fieldbus/opcua_client/opcua_client.cpp": [
-"native_opcua_client"
+"native_opcua_client",
+"native_swar"
 ],
 "src/services/fieldbus/opcua_client/opcua_client.h": [
-"native_opcua_client"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_opcua_client",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/fieldbus/powerlink/powerlink.cpp": [
-"native_powerlink"
+"native_powerlink",
+"native_swar"
 ],
 "src/services/fieldbus/powerlink/powerlink.h": [
-"native_powerlink"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_powerlink",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/fieldbus/profibus/profibus.cpp": [
-"native_profibus"
+"native_profibus",
+"native_swar"
 ],
 "src/services/fieldbus/profibus/profibus.h": [
-"native_profibus"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_profibus",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/fieldbus/profinet/profinet.cpp": [
-"native_profinet"
+"native_profinet",
+"native_swar"
 ],
 "src/services/fieldbus/profinet/profinet.h": [
-"native_profinet"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_profinet",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/fieldbus/rawl2/rawl2.cpp": [
-"native_rawl2"
+"native_rawl2",
+"native_swar"
 ],
 "src/services/fieldbus/rawl2/rawl2.h": [
-"native_rawl2"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_rawl2",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/fieldbus/s7comm/s7comm.cpp": [
-"native_s7comm"
+"native_s7comm",
+"native_swar"
 ],
 "src/services/fieldbus/s7comm/s7comm.h": [
-"native_s7comm"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_s7comm",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/fieldbus/sercos/sercos.cpp": [
-"native_sercos"
+"native_sercos",
+"native_swar"
 ],
 "src/services/fieldbus/sercos/sercos.h": [
-"native_sercos"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_sercos",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/fieldbus/simatic/simatic.cpp": [
-"native_simatic"
+"native_simatic",
+"native_swar"
 ],
 "src/services/fieldbus/simatic/simatic.h": [
-"native_simatic"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_simatic",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/fieldbus/snp/snp.cpp": [
-"native_snp"
+"native_snp",
+"native_swar"
 ],
 "src/services/fieldbus/snp/snp.h": [
-"native_snp"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_snp",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/file_transfer/ftp/ftp.cpp": [
 "native_ftp",
-"native_pentest"
+"native_pentest",
+"native_swar"
 ],
 "src/services/file_transfer/ftp/ftp.h": [
+"native_app",
+"native_diag",
 "native_ftp",
-"native_pentest"
+"native_h3_server",
+"native_keepalive",
+"native_pentest",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
+],
+"src/services/file_transfer/ftp/ftp_session.cpp": [
+"native_swar"
+],
+"src/services/file_transfer/ftp/ftp_session.h": [
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/file_transfer/http_delivery/http_delivery.cpp": [
-"native_http_delivery"
+"native_http_delivery",
+"native_swar"
 ],
 "src/services/file_transfer/http_delivery/http_delivery.h": [
-"native_http_delivery"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_http_delivery",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
+],
+"src/services/file_transfer/http_delivery/http_delivery_routes.cpp": [
+"native_swar"
 ],
 "src/services/file_transfer/scp/scp.cpp": [
-"native_scp"
+"native_scp",
+"native_swar"
 ],
 "src/services/file_transfer/scp/scp.h": [
-"native_scp"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_scp",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/file_transfer/sftp/sftp.cpp": [
-"native_ssh_sftp"
+"native_ssh_sftp",
+"native_swar"
 ],
 "src/services/file_transfer/sftp/sftp.h": [
-"native_ssh_sftp"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_ssh_sftp",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/file_transfer/smb/ntlm.cpp": [
 "native_pentest",
-"native_smb"
+"native_smb",
+"native_swar"
 ],
 "src/services/file_transfer/smb/ntlm.h": [
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
 "native_pentest",
-"native_smb"
+"native_range",
+"native_smb",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/file_transfer/smb/ntlmssp.cpp": [
 "native_pentest",
-"native_smb"
+"native_smb",
+"native_swar"
 ],
 "src/services/file_transfer/smb/ntlmssp.h": [
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
 "native_pentest",
-"native_smb"
+"native_range",
+"native_smb",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/file_transfer/smb/smb2.cpp": [
 "native_pentest",
-"native_smb"
+"native_smb",
+"native_swar"
 ],
 "src/services/file_transfer/smb/smb2.h": [
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
 "native_pentest",
-"native_smb"
+"native_range",
+"native_smb",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/file_transfer/smb/smb_client.cpp": [
-"native_smb"
+"native_smb",
+"native_swar"
 ],
 "src/services/file_transfer/smb/smb_client.h": [
-"native_smb"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_smb",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/file_transfer/smb/spnego.cpp": [
 "native_pentest",
-"native_smb"
+"native_smb",
+"native_swar"
 ],
 "src/services/file_transfer/smb/spnego.h": [
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
 "native_pentest",
-"native_smb"
+"native_range",
+"native_smb",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/file_transfer/upload_service/upload_service.cpp": [
+"native_swar",
 "native_upload"
 ],
 "src/services/file_transfer/upload_service/upload_service.h": [
-"native_upload"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/file_transfer/webdav/webdav.cpp": [
 "native_pentest",
+"native_swar",
 "native_webdav",
 "native_webdav_handler"
 ],
@@ -4157,800 +5084,1913 @@
 "native_keepalive",
 "native_pentest",
 "native_range",
+"native_swar",
 "native_upload",
 "native_webdav",
 "native_webdav_handler"
 ],
 "src/services/instrumentation/gpib/gpib.cpp": [
-"native_gpib"
+"native_gpib",
+"native_swar"
 ],
 "src/services/instrumentation/gpib/gpib.h": [
-"native_gpib"
+"native_app",
+"native_diag",
+"native_gpib",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/instrumentation/hislip/hislip.cpp": [
-"native_hislip"
+"native_hislip",
+"native_swar"
 ],
 "src/services/instrumentation/hislip/hislip.h": [
-"native_hislip"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_hislip",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/instrumentation/scpi/scpi.cpp": [
-"native_scpi"
+"native_scpi",
+"native_swar"
 ],
 "src/services/instrumentation/scpi/scpi.h": [
-"native_scpi"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_scpi",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/instrumentation/vxi11/vxi11.cpp": [
+"native_swar",
 "native_vxi11"
 ],
 "src/services/instrumentation/vxi11/vxi11.h": [
-"native_vxi11"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_vxi11",
+"native_webdav_handler"
 ],
 "src/services/iot/amqp/amqp.cpp": [
 "native_amqp",
-"native_pentest"
+"native_pentest",
+"native_swar"
 ],
 "src/services/iot/amqp/amqp.h": [
 "native_amqp",
-"native_pentest"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_pentest",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/iot/cloudevents/cloudevents.cpp": [
-"native_cloudevents"
+"native_cloudevents",
+"native_swar"
 ],
 "src/services/iot/cloudevents/cloudevents.h": [
-"native_cloudevents"
+"native_app",
+"native_cloudevents",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/iot/coap/coap.cpp": [
 "native_coap",
 "native_coap_observe",
 "native_coaps",
 "native_coaps_server",
-"native_pentest"
+"native_pentest",
+"native_swar"
 ],
 "src/services/iot/coap/coap.h": [
+"native_app",
 "native_coap",
 "native_coap_observe",
 "native_coaps",
 "native_coaps_server",
-"native_pentest"
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_pentest",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/iot/coap/coaps.cpp": [
 "native_coaps",
-"native_coaps_server"
+"native_coaps_server",
+"native_swar"
 ],
 "src/services/iot/coap/coaps.h": [
+"native_app",
 "native_coaps",
-"native_coaps_server"
+"native_coaps_server",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/iot/coap/coaps_server.cpp": [
-"native_coaps_server"
+"native_coaps_server",
+"native_swar"
 ],
 "src/services/iot/coap/coaps_server.h": [
-"native_coaps_server"
+"native_app",
+"native_coaps_server",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/iot/dds/dds.cpp": [
 "native_dds",
-"native_pentest"
+"native_pentest",
+"native_swar"
 ],
 "src/services/iot/dds/dds.h": [
+"native_app",
 "native_dds",
-"native_pentest"
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_pentest",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/iot/graphql/graphql.cpp": [
 "native_graphql",
-"native_pentest"
+"native_pentest",
+"native_swar"
 ],
 "src/services/iot/graphql/graphql.h": [
+"native_app",
+"native_diag",
 "native_graphql",
-"native_pentest"
+"native_h3_server",
+"native_keepalive",
+"native_pentest",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/iot/grpcweb/grpcweb.cpp": [
-"native_grpcweb"
+"native_grpcweb",
+"native_swar"
 ],
 "src/services/iot/grpcweb/grpcweb.h": [
-"native_grpcweb"
+"native_app",
+"native_diag",
+"native_grpcweb",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/iot/lwm2m/lwm2m_tlv.cpp": [
-"native_lwm2m_tlv"
+"native_lwm2m_tlv",
+"native_swar"
 ],
 "src/services/iot/lwm2m/lwm2m_tlv.h": [
-"native_lwm2m_tlv"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_lwm2m_tlv",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/iot/mqtt/mqtt.cpp": [
-"native_mqtt"
+"native_mqtt",
+"native_swar"
 ],
 "src/services/iot/mqtt/mqtt.h": [
-"native_mqtt"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_mqtt",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/iot/mqtt/mqtt_sn.cpp": [
-"native_mqtt_sn"
+"native_mqtt_sn",
+"native_swar"
 ],
 "src/services/iot/mqtt/mqtt_sn.h": [
-"native_mqtt_sn"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_mqtt_sn",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/iot/nats/nats.cpp": [
-"native_nats"
+"native_nats",
+"native_swar"
 ],
 "src/services/iot/nats/nats.h": [
-"native_nats"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_nats",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/iot/protobuf/protobuf.cpp": [
 "native_protobuf",
-"native_sparkplug"
+"native_sparkplug",
+"native_swar"
 ],
 "src/services/iot/protobuf/protobuf.h": [
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
 "native_protobuf",
-"native_sparkplug"
+"native_range",
+"native_sparkplug",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/iot/redis_resp/redis_resp.cpp": [
 "native_pentest",
-"native_redis"
+"native_redis",
+"native_swar"
 ],
 "src/services/iot/redis_resp/redis_resp.h": [
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
 "native_pentest",
-"native_redis"
+"native_range",
+"native_redis",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/iot/senml/senml.cpp": [
-"native_senml"
+"native_senml",
+"native_swar"
 ],
 "src/services/iot/senml/senml.h": [
-"native_senml"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_senml",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/iot/sparkplug/sparkplug.cpp": [
-"native_sparkplug"
+"native_sparkplug",
+"native_swar"
 ],
 "src/services/iot/sparkplug/sparkplug.h": [
-"native_sparkplug"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_sparkplug",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/iot/statsd/statsd.cpp": [
-"native_statsd"
+"native_statsd",
+"native_swar"
 ],
 "src/services/iot/statsd/statsd.h": [
-"native_statsd"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_statsd",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/iot/stomp/stomp.cpp": [
 "native_pentest",
-"native_stomp"
+"native_stomp",
+"native_swar"
 ],
 "src/services/iot/stomp/stomp.h": [
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
 "native_pentest",
-"native_stomp"
+"native_range",
+"native_stomp",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/iot/telemetry/telemetry.cpp": [
+"native_swar",
 "native_telemetry"
 ],
 "src/services/iot/telemetry/telemetry.h": [
-"native_telemetry"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_telemetry",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/iot/udp_telemetry/udp_telemetry.cpp": [
+"native_swar",
 "native_udp_telemetry"
 ],
 "src/services/iot/udp_telemetry/udp_telemetry.h": [
-"native_udp_telemetry"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_udp_telemetry",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/iot/wamp/wamp.cpp": [
+"native_swar",
 "native_wamp"
 ],
 "src/services/iot/wamp/wamp.h": [
-"native_wamp"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_wamp",
+"native_webdav_handler"
 ],
 "src/services/iot/xmpp/xmpp.cpp": [
+"native_swar",
 "native_xmpp"
 ],
 "src/services/iot/xmpp/xmpp.h": [
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler",
 "native_xmpp"
 ],
 "src/services/machine_tool/atc/atc.cpp": [
-"native_atc"
+"native_atc",
+"native_swar"
 ],
 "src/services/machine_tool/atc/atc.h": [
-"native_atc"
+"native_app",
+"native_atc",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/machine_tool/dnc/dnc.cpp": [
 "native_dnc",
-"native_pentest"
+"native_pentest",
+"native_swar"
 ],
 "src/services/machine_tool/dnc/dnc.h": [
+"native_app",
+"native_diag",
 "native_dnc",
-"native_pentest"
+"native_h3_server",
+"native_keepalive",
+"native_pentest",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/machine_tool/dnc/dnc_stream.cpp": [
-"native_dnc"
+"native_dnc",
+"native_swar"
 ],
 "src/services/machine_tool/dnc/dnc_stream.h": [
-"native_dnc"
+"native_app",
+"native_diag",
+"native_dnc",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/machine_tool/euromap77/euromap77.cpp": [
-"native_euromap77"
+"native_euromap77",
+"native_swar"
 ],
 "src/services/machine_tool/euromap77/euromap77.h": [
-"native_euromap77"
+"native_app",
+"native_diag",
+"native_euromap77",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/machine_tool/fanuc_j519/fanuc_j519.cpp": [
-"native_fanuc_j519"
+"native_fanuc_j519",
+"native_swar"
 ],
 "src/services/machine_tool/fanuc_j519/fanuc_j519.h": [
-"native_fanuc_j519"
+"native_app",
+"native_diag",
+"native_fanuc_j519",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/machine_tool/focas/focas.cpp": [
-"native_focas"
+"native_focas",
+"native_swar"
 ],
 "src/services/machine_tool/focas/focas.h": [
-"native_focas"
+"native_app",
+"native_diag",
+"native_focas",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/machine_tool/haas_mdc/haas_mdc.cpp": [
-"native_haas_mdc"
+"native_haas_mdc",
+"native_swar"
 ],
 "src/services/machine_tool/haas_mdc/haas_mdc.h": [
-"native_haas_mdc"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_haas_mdc",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/machine_tool/lsv2/lsv2.cpp": [
-"native_lsv2"
+"native_lsv2",
+"native_swar"
 ],
 "src/services/machine_tool/lsv2/lsv2.h": [
-"native_lsv2"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_lsv2",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/machine_tool/mtconnect/mtconnect.cpp": [
-"native_mtconnect"
+"native_mtconnect",
+"native_swar"
 ],
 "src/services/machine_tool/mtconnect/mtconnect.h": [
-"native_mtconnect"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_mtconnect",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/machine_tool/packml/packml.cpp": [
-"native_packml"
+"native_packml",
+"native_swar"
 ],
 "src/services/machine_tool/packml/packml.h": [
-"native_packml"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_packml",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/machine_tool/robotics/robotics.cpp": [
-"native_robotics"
+"native_robotics",
+"native_swar"
 ],
 "src/services/machine_tool/robotics/robotics.h": [
-"native_robotics"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_robotics",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/machine_tool/safety_scl/safety_scl.cpp": [
-"native_safety_scl"
+"native_safety_scl",
+"native_swar"
 ],
 "src/services/machine_tool/safety_scl/safety_scl.h": [
-"native_safety_scl"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_safety_scl",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/machine_tool/umati/umati.cpp": [
+"native_swar",
 "native_umati"
 ],
 "src/services/machine_tool/umati/umati.h": [
-"native_umati"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_umati",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/net/dns_resolver/dns_resolver.cpp": [
-"native_dns_resolver"
+"native_dns_resolver",
+"native_swar"
 ],
 "src/services/net/dns_resolver/dns_resolver.h": [
-"native_dns_resolver"
+"native_app",
+"native_diag",
+"native_dns_resolver",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/net/dns_server/dns_server.cpp": [
 "native_dns_server",
-"native_pentest"
+"native_pentest",
+"native_swar"
 ],
 "src/services/net/dns_server/dns_server.h": [
+"native_app",
+"native_diag",
 "native_dns_server",
-"native_pentest"
+"native_h3_server",
+"native_keepalive",
+"native_pentest",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/net/flow_export/flow_export.cpp": [
-"native_flow_export"
+"native_flow_export",
+"native_swar"
 ],
 "src/services/net/flow_export/flow_export.h": [
-"native_flow_export"
+"native_app",
+"native_diag",
+"native_flow_export",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/net/forward/forward.cpp": [
-"native_forward"
+"native_forward",
+"native_swar"
 ],
 "src/services/net/forward/forward.h": [
-"native_forward"
+"native_app",
+"native_diag",
+"native_forward",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/net/gateway/gateway.cpp": [
-"native_gateway"
+"native_gateway",
+"native_swar"
 ],
 "src/services/net/gateway/gateway.h": [
-"native_gateway"
+"native_app",
+"native_diag",
+"native_gateway",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/net/happy_eyeballs/happy_eyeballs.cpp": [
-"native_happy_eyeballs"
+"native_happy_eyeballs",
+"native_swar"
 ],
 "src/services/net/happy_eyeballs/happy_eyeballs.h": [
-"native_happy_eyeballs"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_happy_eyeballs",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/net/http_client/http_client.cpp": [
 "native_edge_cache",
 "native_edge_cache_sd",
 "native_edge_mesh",
-"native_http_client"
+"native_http_client",
+"native_swar"
 ],
 "src/services/net/http_client/http_client.h": [
+"native_app",
+"native_diag",
 "native_edge_cache",
 "native_edge_cache_sd",
 "native_edge_mesh",
-"native_http_client"
+"native_h3_server",
+"native_http_client",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/net/iface_bridge/iface_bridge.cpp": [
-"native_iface_bridge"
+"native_iface_bridge",
+"native_swar"
 ],
 "src/services/net/iface_bridge/iface_bridge.h": [
-"native_iface_bridge"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_iface_bridge",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
+],
+"src/services/net/iface_bridge/iface_bridge_hw.cpp": [
+"native_swar"
+],
+"src/services/net/iface_bridge/iface_bridge_hw.h": [
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/net/mdns_adaptive/mdns_adaptive.cpp": [
-"native_mdns_adaptive"
+"native_mdns_adaptive",
+"native_swar"
 ],
 "src/services/net/mdns_adaptive/mdns_adaptive.h": [
-"native_mdns_adaptive"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_mdns_adaptive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
+],
+"src/services/net/mdns_service/mdns_service.cpp": [
+"native_swar"
+],
+"src/services/net/mdns_service/mdns_service.h": [
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/net/netadapt/netadapt.cpp": [
-"native_netadapt"
+"native_netadapt",
+"native_swar"
 ],
 "src/services/net/netadapt/netadapt.h": [
-"native_netadapt"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_netadapt",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/net/proxy_protocol/proxy_protocol.cpp": [
-"native_proxy_protocol"
+"native_proxy_protocol",
+"native_swar"
 ],
 "src/services/net/proxy_protocol/proxy_protocol.h": [
-"native_proxy_protocol"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_proxy_protocol",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/net/relay/relay.cpp": [
-"native_relay"
+"native_relay",
+"native_swar"
 ],
 "src/services/net/relay/relay.h": [
-"native_relay"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_relay",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
+],
+"src/services/net/relay/relay_listener.cpp": [
+"native_swar"
+],
+"src/services/net/relay/relay_listener.h": [
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/net/smtp/smtp.cpp": [
-"native_smtp"
+"native_smtp",
+"native_swar"
 ],
 "src/services/net/smtp/smtp.h": [
-"native_smtp"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_smtp",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/net/snmp/snmp_agent.cpp": [
 "native_pentest",
 "native_snmp",
-"native_snmp_v3"
+"native_snmp_v3",
+"native_swar"
 ],
 "src/services/net/snmp/snmp_agent.h": [
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
 "native_pentest",
+"native_range",
 "native_snmp",
-"native_snmp_v3"
+"native_snmp_v3",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/net/snmp/snmp_ber.cpp": [
 "native_pentest",
 "native_snmp",
 "native_snmp_trap",
-"native_snmp_v3"
+"native_snmp_v3",
+"native_swar"
 ],
 "src/services/net/snmp/snmp_ber.h": [
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
 "native_pentest",
+"native_range",
 "native_snmp",
 "native_snmp_trap",
-"native_snmp_v3"
+"native_snmp_v3",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/net/snmp/snmp_crypto.cpp": [
-"native_snmp_v3"
+"native_snmp_v3",
+"native_swar"
 ],
 "src/services/net/snmp/snmp_crypto.h": [
-"native_snmp_v3"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_snmp_v3",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/net/snmp/snmp_notify.cpp": [
 "native_snmp_trap",
-"native_snmp_v3"
+"native_snmp_v3",
+"native_swar"
 ],
 "src/services/net/snmp/snmp_notify.h": [
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
 "native_snmp_trap",
-"native_snmp_v3"
+"native_snmp_v3",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/net/snmp/snmp_v3.cpp": [
-"native_snmp_v3"
+"native_snmp_v3",
+"native_swar"
 ],
 "src/services/net/snmp/snmp_v3.h": [
-"native_snmp_v3"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_snmp_v3",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/net/sockpool/sockpool.cpp": [
-"native_sockpool"
+"native_sockpool",
+"native_swar"
 ],
 "src/services/net/sockpool/sockpool.h": [
-"native_sockpool"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_sockpool",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/net/southbound/sb_modbus.cpp": [
-"native_sb_modbus"
+"native_sb_modbus",
+"native_swar"
 ],
 "src/services/net/southbound/sb_modbus.h": [
-"native_sb_modbus"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_sb_modbus",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/net/southbound/southbound.cpp": [
 "native_sb_modbus",
-"native_southbound"
+"native_southbound",
+"native_swar"
 ],
 "src/services/net/southbound/southbound.h": [
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
 "native_sb_modbus",
-"native_southbound"
+"native_southbound",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/net/syslog/syslog.cpp": [
+"native_swar",
 "native_syslog"
 ],
 "src/services/net/syslog/syslog.h": [
-"native_syslog"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_syslog",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/net/webhook/webhook.cpp": [
+"native_swar",
 "native_webhook"
 ],
 "src/services/net/webhook/webhook.h": [
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler",
 "native_webhook"
 ],
 "src/services/net/ws_client/ws_client.cpp": [
+"native_swar",
 "native_ws_client"
 ],
 "src/services/net/ws_client/ws_client.h": [
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler",
 "native_ws_client"
 ],
 "src/services/peripherals/ad9238/ad9238.cpp": [
-"native_ad9238"
+"native_ad9238",
+"native_swar"
 ],
 "src/services/peripherals/ad9238/ad9238.h": [
-"native_ad9238"
+"native_ad9238",
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/peripherals/ads1115/ads1115.cpp": [
-"native_ads1115"
+"native_ads1115",
+"native_swar"
 ],
 "src/services/peripherals/ads1115/ads1115.h": [
-"native_ads1115"
+"native_ads1115",
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/peripherals/dmx/dmx.cpp": [
-"native_dmx"
+"native_dmx",
+"native_swar"
 ],
 "src/services/peripherals/dmx/dmx.h": [
-"native_dmx"
+"native_app",
+"native_diag",
+"native_dmx",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/peripherals/dshot/dshot.cpp": [
-"native_dshot"
+"native_dshot",
+"native_swar"
 ],
 "src/services/peripherals/dshot/dshot.h": [
-"native_dshot"
+"native_app",
+"native_diag",
+"native_dshot",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/peripherals/fdc2214/fdc2214.cpp": [
-"native_fdc2214"
+"native_fdc2214",
+"native_swar"
 ],
 "src/services/peripherals/fdc2214/fdc2214.h": [
-"native_fdc2214"
+"native_app",
+"native_diag",
+"native_fdc2214",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/peripherals/hmmd/hmmd.cpp": [
-"native_hmmd"
+"native_hmmd",
+"native_swar"
 ],
 "src/services/peripherals/hmmd/hmmd.h": [
-"native_hmmd"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_hmmd",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
+],
+"src/services/peripherals/i2c.h": [
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/peripherals/ina219/ina219.cpp": [
-"native_ina219"
+"native_ina219",
+"native_swar"
 ],
 "src/services/peripherals/ina219/ina219.h": [
-"native_ina219"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_ina219",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/peripherals/ld2410/ld2410.cpp": [
-"native_ld2410"
+"native_ld2410",
+"native_swar"
 ],
 "src/services/peripherals/ld2410/ld2410.h": [
-"native_ld2410"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_ld2410",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/peripherals/ldc1614/ldc1614.cpp": [
-"native_ldc1614"
+"native_ldc1614",
+"native_swar"
 ],
 "src/services/peripherals/ldc1614/ldc1614.h": [
-"native_ldc1614"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_ldc1614",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/peripherals/mpr121/mpr121.cpp": [
-"native_mpr121"
+"native_mpr121",
+"native_swar"
 ],
 "src/services/peripherals/mpr121/mpr121.h": [
-"native_mpr121"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_mpr121",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/peripherals/pca9685/pca9685.cpp": [
-"native_pca9685"
+"native_pca9685",
+"native_swar"
 ],
 "src/services/peripherals/pca9685/pca9685.h": [
-"native_pca9685"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_pca9685",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/peripherals/pn532/pn532.cpp": [
-"native_pn532"
+"native_pn532",
+"native_swar"
 ],
 "src/services/peripherals/pn532/pn532.h": [
-"native_pn532"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_pn532",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/peripherals/rcwl0516/rcwl0516.cpp": [
-"native_rcwl0516"
+"native_rcwl0516",
+"native_swar"
 ],
 "src/services/peripherals/rcwl0516/rcwl0516.h": [
-"native_rcwl0516"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_rcwl0516",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/peripherals/rtc/rtc.cpp": [
-"native_rtc"
+"native_rtc",
+"native_swar"
 ],
 "src/services/peripherals/rtc/rtc.h": [
-"native_rtc"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_rtc",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/peripherals/sdi12/sdi12.cpp": [
-"native_sdi12"
+"native_sdi12",
+"native_swar"
 ],
 "src/services/peripherals/sdi12/sdi12.h": [
-"native_sdi12"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_sdi12",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/peripherals/sen0192/sen0192.cpp": [
-"native_sen0192"
+"native_sen0192",
+"native_swar"
 ],
 "src/services/peripherals/sen0192/sen0192.h": [
-"native_sen0192"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_sen0192",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/peripherals/sht3x/sht3x.cpp": [
-"native_sht3x"
+"native_sht3x",
+"native_swar"
 ],
 "src/services/peripherals/sht3x/sht3x.h": [
-"native_sht3x"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_sht3x",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/peripherals/vl53l0x/vl53l0x.cpp": [
+"native_swar",
 "native_vl53l0x"
 ],
 "src/services/peripherals/vl53l0x/vl53l0x.h": [
-"native_vl53l0x"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_vl53l0x",
+"native_webdav_handler"
 ],
 "src/services/radio/ble_gatt/ble_gatt.cpp": [
-"native_ble_gatt"
+"native_ble_gatt",
+"native_swar"
 ],
 "src/services/radio/ble_gatt/ble_gatt.h": [
-"native_ble_gatt"
+"native_app",
+"native_ble_gatt",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/radio/cc1101/cc1101.cpp": [
-"native_cc1101"
+"native_cc1101",
+"native_swar"
 ],
 "src/services/radio/cc1101/cc1101.h": [
-"native_cc1101"
+"native_app",
+"native_cc1101",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/radio/enocean/enocean.cpp": [
-"native_enocean"
+"native_enocean",
+"native_swar"
 ],
 "src/services/radio/enocean/enocean.h": [
-"native_enocean"
+"native_app",
+"native_diag",
+"native_enocean",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/radio/espnow/espnow.cpp": [
-"native_espnow"
+"native_espnow",
+"native_swar"
 ],
 "src/services/radio/espnow/espnow.h": [
-"native_espnow"
+"native_app",
+"native_diag",
+"native_espnow",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/radio/lora/lora.cpp": [
-"native_lora"
+"native_lora",
+"native_swar"
 ],
 "src/services/radio/lora/lora.h": [
-"native_lora"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_lora",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/radio/nrf24/nrf24.cpp": [
-"native_nrf24"
+"native_nrf24",
+"native_swar"
 ],
 "src/services/radio/nrf24/nrf24.h": [
-"native_nrf24"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_nrf24",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/radio/promisc/promisc.cpp": [
-"native_promisc"
+"native_promisc",
+"native_swar"
 ],
 "src/services/radio/promisc/promisc.h": [
-"native_promisc"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_promisc",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/radio/radio_sniff/radio_sniff.cpp": [
-"native_radio_sniff"
+"native_radio_sniff",
+"native_swar"
 ],
 "src/services/radio/radio_sniff/radio_sniff.h": [
-"native_radio_sniff"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_radio_sniff",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/radio/sigfox/sigfox.cpp": [
-"native_sigfox"
+"native_sigfox",
+"native_swar"
 ],
 "src/services/radio/sigfox/sigfox.h": [
-"native_sigfox"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_sigfox",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/radio/thread/thread.cpp": [
+"native_swar",
 "native_thread"
 ],
 "src/services/radio/thread/thread.h": [
-"native_thread"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_thread",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/radio/wifi_sniffer/wifi_sniffer.cpp": [
+"native_swar",
 "native_wifi_sniffer"
 ],
 "src/services/radio/wifi_sniffer/wifi_sniffer.h": [
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler",
 "native_wifi_sniffer"
 ],
 "src/services/radio/wisun/wisun.cpp": [
+"native_swar",
 "native_wisun"
 ],
 "src/services/radio/wisun/wisun.h": [
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler",
 "native_wisun"
 ],
 "src/services/radio/zigbee/zigbee.cpp": [
+"native_swar",
 "native_zigbee"
 ],
 "src/services/radio/zigbee/zigbee.h": [
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler",
 "native_zigbee"
 ],
 "src/services/radio/zwave/zwave.cpp": [
+"native_swar",
 "native_zwave"
 ],
 "src/services/radio/zwave/zwave.h": [
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler",
 "native_zwave"
 ],
 "src/services/security/audit_log/audit_log.cpp": [
-"native_audit_log"
+"native_audit_log",
+"native_swar"
 ],
 "src/services/security/audit_log/audit_log.h": [
-"native_audit_log"
+"native_app",
+"native_audit_log",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/security/auth_lockout/auth_lockout.cpp": [
-"native_auth_lockout"
+"native_auth_lockout",
+"native_swar"
 ],
 "src/services/security/auth_lockout/auth_lockout.h": [
-"native_auth_lockout"
+"native_app",
+"native_auth_lockout",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/security/csrf/csrf.cpp": [
-"native_csrf"
+"native_csrf",
+"native_swar"
 ],
 "src/services/security/csrf/csrf.h": [
-"native_csrf"
+"native_app",
+"native_csrf",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/security/forwarded_trust/forwarded_trust.cpp": [
-"native_forwarded_trust"
+"native_forwarded_trust",
+"native_swar"
 ],
 "src/services/security/forwarded_trust/forwarded_trust.h": [
-"native_forwarded_trust"
+"native_app",
+"native_diag",
+"native_forwarded_trust",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/security/guardrails/guardrails.cpp": [
-"native_guardrails"
+"native_guardrails",
+"native_swar"
 ],
 "src/services/security/guardrails/guardrails.h": [
-"native_guardrails"
+"native_app",
+"native_diag",
+"native_guardrails",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/security/ikev2/ikev2.cpp": [
-"native_ikev2"
+"native_ikev2",
+"native_swar"
 ],
 "src/services/security/ikev2/ikev2.h": [
+"native_app",
+"native_diag",
+"native_h3_server",
 "native_ikev2",
-"native_ipsec_db"
+"native_ipsec_db",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/security/ikev2/ikev2_natt.cpp": [
-"native_ikev2"
+"native_ikev2",
+"native_swar"
 ],
 "src/services/security/ikev2/ikev2_natt.h": [
-"native_ikev2"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_ikev2",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/security/jwt/jwt.cpp": [
 "native_jwt",
-"native_pentest"
+"native_pentest",
+"native_swar"
 ],
 "src/services/security/jwt/jwt.h": [
+"native_app",
+"native_diag",
+"native_h3_server",
 "native_jwt",
-"native_pentest"
+"native_keepalive",
+"native_pentest",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/security/oauth2/oauth2.cpp": [
-"native_oauth2"
+"native_oauth2",
+"native_swar"
 ],
 "src/services/security/oauth2/oauth2.h": [
-"native_oauth2"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_oauth2",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/security/oidc/oidc.cpp": [
-"native_oidc"
+"native_oidc",
+"native_swar"
 ],
 "src/services/security/oidc/oidc.h": [
-"native_oidc"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_oidc",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/security/tls_policy/tls_policy.cpp": [
+"native_swar",
 "native_tls_policy"
 ],
 "src/services/security/tls_policy/tls_policy.h": [
-"native_tls_policy"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_tls_policy",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/security/totp/totp.cpp": [
 "native_pentest",
+"native_swar",
 "native_totp"
 ],
 "src/services/security/totp/totp.h": [
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
 "native_pentest",
-"native_totp"
+"native_range",
+"native_swar",
+"native_totp",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/storage/config_io/config_io.cpp": [
-"native_config_io"
+"native_config_io",
+"native_swar"
 ],
 "src/services/storage/config_io/config_io.h": [
-"native_config_io"
+"native_app",
+"native_config_io",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/storage/config_store/config_store.cpp": [
 "native_config_io",
-"native_config_store"
+"native_config_store",
+"native_swar"
 ],
 "src/services/storage/config_store/config_store.h": [
+"native_app",
 "native_config_io",
-"native_config_store"
+"native_config_store",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/storage/dbm/dbm.cpp": [
 "native_dbm",
 "native_docstore",
-"native_edge_cache_sd"
+"native_edge_cache_sd",
+"native_swar"
 ],
 "src/services/storage/dbm/dbm.h": [
+"native_app",
 "native_dbm",
+"native_diag",
 "native_docstore",
-"native_edge_cache_sd"
+"native_edge_cache_sd",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/storage/docstore/docstore.cpp": [
-"native_docstore"
+"native_docstore",
+"native_swar"
 ],
 "src/services/storage/docstore/docstore.h": [
-"native_docstore"
+"native_app",
+"native_diag",
+"native_docstore",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/storage/hotswap/hotswap.cpp": [
-"native_hotswap"
+"native_hotswap",
+"native_swar"
 ],
 "src/services/storage/hotswap/hotswap.h": [
-"native_hotswap"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_hotswap",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/storage/partition_monitor/partition_monitor.cpp": [
-"native_partition"
+"native_partition",
+"native_swar"
 ],
 "src/services/storage/partition_monitor/partition_monitor.h": [
-"native_partition"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_partition",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
+],
+"src/services/storage/partition_monitor/partition_monitor_routes.cpp": [
+"native_swar"
 ],
 "src/services/storage/psram_pool/psram_pool.cpp": [
-"native_psram_pool"
+"native_psram_pool",
+"native_swar"
 ],
 "src/services/storage/psram_pool/psram_pool.h": [
-"native_psram_pool"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_psram_pool",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/storage/sqlite/sqlite_format.cpp": [
 "native_pentest",
-"native_sqlite"
+"native_sqlite",
+"native_swar"
 ],
 "src/services/storage/sqlite/sqlite_format.h": [
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
 "native_pentest",
-"native_sqlite"
-],
-"src/services/storage/vfs/vfs.cpp": [
-"native_vfs"
-],
-"src/services/storage/vfs/vfs.h": [
-"native_vfs"
+"native_range",
+"native_sqlite",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/storage/wal/wal.cpp": [
 "native_dbm",
 "native_docstore",
 "native_edge_cache_sd",
+"native_swar",
 "native_wal"
 ],
 "src/services/storage/wal/wal.h": [
+"native_app",
 "native_dbm",
+"native_diag",
 "native_docstore",
 "native_edge_cache_sd",
-"native_wal"
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_wal",
+"native_webdav_handler"
+],
+"src/services/storage/wal/wal_fs.h": [
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/storage/wal/wal_store.cpp": [
 "native_dbm",
 "native_docstore",
 "native_edge_cache_sd",
+"native_swar",
 "native_wal"
 ],
 "src/services/storage/wal/wal_store.h": [
+"native_app",
 "native_dbm",
+"native_diag",
 "native_docstore",
 "native_edge_cache_sd",
-"native_wal"
-],
-"src/services/storage/wearlevel/wearlevel.cpp": [
-"native_wearlevel"
-],
-"src/services/storage/wearlevel/wearlevel.h": [
-"native_wearlevel"
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_wal",
+"native_webdav_handler"
 ],
 "src/services/system/bus_capture/bus_capture.cpp": [
-"native_bus_capture"
+"native_bus_capture",
+"native_swar"
 ],
 "src/services/system/bus_capture/bus_capture.h": [
-"native_bus_capture"
+"native_app",
+"native_bus_capture",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/system/clock.h": [
 "native",
@@ -4988,6 +7028,7 @@
 "native_ssh_hardened",
 "native_ssh_kbdint",
 "native_ssh_pqc",
+"native_swar",
 "native_telnet",
 "native_trace_capture",
 "native_upload",
@@ -4997,296 +7038,733 @@
 "native_ws_deflate"
 ],
 "src/services/system/control/control.cpp": [
-"native_control"
+"native_control",
+"native_swar"
 ],
 "src/services/system/control/control.h": [
-"native_control"
+"native_app",
+"native_control",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/system/device_id/device_id.cpp": [
-"native_device_id"
+"native_device_id",
+"native_swar"
 ],
 "src/services/system/device_id/device_id.h": [
-"native_device_id"
+"native_app",
+"native_device_id",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/system/dma/dma.cpp": [
-"native_dma"
+"native_dma",
+"native_swar"
 ],
 "src/services/system/dma/dma.h": [
-"native_dma"
+"native_app",
+"native_diag",
+"native_dma",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/system/esp/esp.cpp": [
 "native_esp",
-"native_ipsec_db"
+"native_ipsec_db",
+"native_swar"
 ],
 "src/services/system/esp/esp.h": [
+"native_app",
+"native_diag",
 "native_esp",
-"native_ipsec_db"
+"native_h3_server",
+"native_ipsec_db",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/system/esp/ipsec_db.cpp": [
-"native_ipsec_db"
+"native_ipsec_db",
+"native_swar"
 ],
 "src/services/system/esp/ipsec_db.h": [
-"native_ipsec_db"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_ipsec_db",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
+],
+"src/services/system/exc_decoder/exc_coredump.cpp": [
+"native_swar"
 ],
 "src/services/system/exc_decoder/exc_decoder.cpp": [
-"native_exc_decoder"
+"native_exc_decoder",
+"native_swar"
 ],
 "src/services/system/exc_decoder/exc_decoder.h": [
-"native_exc_decoder"
+"native_app",
+"native_diag",
+"native_exc_decoder",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/system/failsafe/failsafe.cpp": [
-"native_failsafe"
+"native_failsafe",
+"native_swar"
 ],
 "src/services/system/failsafe/failsafe.h": [
-"native_failsafe"
+"native_app",
+"native_diag",
+"native_failsafe",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/system/gpio_map/gpio_map.cpp": [
-"native_gpio_map"
+"native_gpio_map",
+"native_swar"
 ],
 "src/services/system/gpio_map/gpio_map.h": [
-"native_gpio_map"
+"native_app",
+"native_diag",
+"native_gpio_map",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
+],
+"src/services/system/gpio_map/gpio_map_routes.cpp": [
+"native_swar"
 ],
 "src/services/system/hw_health/hw_health.cpp": [
-"native_hw_health"
+"native_hw_health",
+"native_swar"
 ],
 "src/services/system/hw_health/hw_health.h": [
-"native_hw_health"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_hw_health",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/system/link_manager/link_manager.cpp": [
-"native_link_manager"
+"native_link_manager",
+"native_swar"
 ],
 "src/services/system/link_manager/link_manager.h": [
-"native_link_manager"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_link_manager",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/system/logbuf/logbuf.cpp": [
 "native_log",
-"native_logbuf"
+"native_logbuf",
+"native_swar"
 ],
 "src/services/system/logbuf/logbuf.h": [
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
 "native_log",
-"native_logbuf"
+"native_logbuf",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/system/ota_rollback/ota_rollback.cpp": [
-"native_ota_rollback"
+"native_ota_rollback",
+"native_swar"
 ],
 "src/services/system/ota_rollback/ota_rollback.h": [
-"native_ota_rollback"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_ota_rollback",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
+],
+"src/services/system/ota_service/ota_service.cpp": [
+"native_swar"
+],
+"src/services/system/ota_service/ota_service.h": [
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/system/power_mgmt/power_mgmt.cpp": [
-"native_power_mgmt"
+"native_power_mgmt",
+"native_swar"
 ],
 "src/services/system/power_mgmt/power_mgmt.h": [
-"native_power_mgmt"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_power_mgmt",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/system/preempt_queue/preempt_queue.cpp": [
-"native_preempt_queue"
+"native_preempt_queue",
+"native_swar"
 ],
 "src/services/system/preempt_queue/preempt_queue.h": [
-"native_preempt_queue"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_preempt_queue",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/system/provisioning_service/provisioning_service.cpp": [
-"native_prov"
+"native_prov",
+"native_swar"
 ],
 "src/services/system/provisioning_service/provisioning_service.h": [
-"native_prov"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_prov",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/system/radio_power/radio_power.cpp": [
-"native_radio_power"
+"native_radio_power",
+"native_swar"
 ],
 "src/services/system/radio_power/radio_power.h": [
-"native_radio_power"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_radio_power",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/system/roaming/roaming.cpp": [
-"native_roaming"
+"native_roaming",
+"native_swar"
 ],
 "src/services/system/roaming/roaming.h": [
-"native_roaming"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_roaming",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/system/sleep_sched/sleep_sched.cpp": [
-"native_sleep_sched"
+"native_sleep_sched",
+"native_swar"
 ],
 "src/services/system/sleep_sched/sleep_sched.h": [
-"native_sleep_sched"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_sleep_sched",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/system/trace_capture/trace_capture.cpp": [
+"native_swar",
 "native_trace_capture"
 ],
 "src/services/system/trace_capture/trace_capture.h": [
-"native_trace_capture"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_trace_capture",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/timing_position/gnss/gnss_survey.cpp": [
-"native_gnss_survey"
+"native_gnss_survey",
+"native_swar"
 ],
 "src/services/timing_position/gnss/gnss_survey.h": [
-"native_gnss_survey"
+"native_app",
+"native_diag",
+"native_gnss_survey",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/timing_position/gnss/ntrip_caster.cpp": [
-"native_ntrip_caster"
+"native_ntrip_caster",
+"native_swar"
 ],
 "src/services/timing_position/gnss/ntrip_caster.h": [
-"native_ntrip_caster"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_ntrip_caster",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
+],
+"src/services/timing_position/gnss/ntrip_caster_listener.cpp": [
+"native_swar"
+],
+"src/services/timing_position/gnss/ntrip_caster_listener.h": [
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/timing_position/gnss/rtcm3.cpp": [
-"native_rtcm3"
+"native_rtcm3",
+"native_swar"
 ],
 "src/services/timing_position/gnss/rtcm3.h": [
-"native_rtcm3"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_rtcm3",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/timing_position/nmea0183/nmea0183.cpp": [
 "native_gnss_survey",
-"native_nmea0183"
+"native_nmea0183",
+"native_swar"
 ],
 "src/services/timing_position/nmea0183/nmea0183.h": [
+"native_app",
+"native_diag",
 "native_gnss_survey",
-"native_nmea0183"
+"native_h3_server",
+"native_keepalive",
+"native_nmea0183",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/timing_position/nmea2000/nmea2000.cpp": [
-"native_nmea2000"
+"native_nmea2000",
+"native_swar"
 ],
 "src/services/timing_position/nmea2000/nmea2000.h": [
-"native_nmea2000"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_nmea2000",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/timing_position/ntp_server/ntp_server.cpp": [
-"native_ntp_server"
+"native_ntp_server",
+"native_swar"
 ],
 "src/services/timing_position/ntp_server/ntp_server.h": [
-"native_ntp_server"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_ntp_server",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/timing_position/ntp_service/ntp_service.cpp": [
 "native_app",
 "native_diag",
-"native_h3_server"
+"native_h3_server",
+"native_swar"
 ],
 "src/services/timing_position/ntp_service/ntp_service.h": [
 "native_app",
 "native_diag",
-"native_h3_server"
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/timing_position/nts/nts.cpp": [
-"native_nts"
+"native_nts",
+"native_swar"
 ],
 "src/services/timing_position/nts/nts.h": [
-"native_nts"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_nts",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/timing_position/ptp/ptp.cpp": [
-"native_ptp"
+"native_ptp",
+"native_swar"
 ],
 "src/services/timing_position/ptp/ptp.h": [
-"native_ptp"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_ptp",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/timing_position/time_source/time_source.cpp": [
+"native_swar",
 "native_time_source"
 ],
 "src/services/timing_position/time_source/time_source.h": [
-"native_time_source"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_time_source",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/timing_position/ubx/ubx.cpp": [
+"native_swar",
 "native_ubx"
 ],
 "src/services/timing_position/ubx/ubx.h": [
-"native_ubx"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_ubx",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/transportation/j2735/j2735.cpp": [
-"native_j2735"
+"native_j2735",
+"native_swar"
 ],
 "src/services/transportation/j2735/j2735.h": [
-"native_j2735"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_j2735",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/transportation/nema_ts2/nema_ts2.cpp": [
-"native_nema_ts2"
+"native_nema_ts2",
+"native_swar"
 ],
 "src/services/transportation/nema_ts2/nema_ts2.h": [
-"native_nema_ts2"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_nema_ts2",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/transportation/ntcip/ntcip.cpp": [
-"native_ntcip"
+"native_ntcip",
+"native_swar"
 ],
 "src/services/transportation/ntcip/ntcip.h": [
-"native_ntcip"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_ntcip",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/transportation/ocit/ocit.cpp": [
-"native_ocit"
+"native_ocit",
+"native_swar"
 ],
 "src/services/transportation/ocit/ocit.h": [
-"native_ocit"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_ocit",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/transportation/utmc/utmc.cpp": [
+"native_swar",
 "native_utmc"
 ],
 "src/services/transportation/utmc/utmc.h": [
-"native_utmc"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_utmc",
+"native_webdav_handler"
 ],
 "src/services/transportation/wave/wave.cpp": [
+"native_swar",
 "native_wave"
 ],
 "src/services/transportation/wave/wave.h": [
-"native_wave"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_wave",
+"native_webdav_handler"
 ],
 "src/services/web/dashboard/dashboard.cpp": [
-"native_dashboard"
+"native_dashboard",
+"native_swar"
 ],
 "src/services/web/dashboard/dashboard.h": [
-"native_dashboard"
+"native_app",
+"native_dashboard",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
+],
+"src/services/web/dashboard/dashboard_routes.cpp": [
+"native_swar"
 ],
 "src/services/web/edge_cache/edge_cache.cpp": [
 "native_edge_cache",
 "native_edge_cache_sd",
-"native_edge_mesh"
+"native_edge_mesh",
+"native_swar"
 ],
 "src/services/web/edge_cache/edge_cache.h": [
+"native_app",
+"native_diag",
 "native_edge_cache",
 "native_edge_cache_sd",
-"native_edge_mesh"
+"native_edge_mesh",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
+],
+"src/services/web/edge_cache/edge_cache_proxy.cpp": [
+"native_swar"
+],
+"src/services/web/edge_cache/edge_cache_proxy.h": [
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/web/edge_cache/edge_cache_sd.cpp": [
 "native_edge_cache_sd",
-"native_edge_mesh"
+"native_edge_mesh",
+"native_swar"
 ],
 "src/services/web/edge_cache/edge_cache_sd.h": [
+"native_app",
+"native_diag",
 "native_edge_cache_sd",
-"native_edge_mesh"
+"native_edge_mesh",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/web/edge_cache/edge_fetch.cpp": [
-"native_edge_cache"
+"native_edge_cache",
+"native_swar"
 ],
 "src/services/web/edge_cache/edge_fetch.h": [
+"native_app",
+"native_diag",
 "native_edge_cache",
-"native_edge_mesh"
+"native_edge_mesh",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/web/edge_cache/edge_mesh.cpp": [
-"native_edge_mesh"
+"native_edge_mesh",
+"native_swar"
 ],
 "src/services/web/edge_cache/edge_mesh.h": [
-"native_edge_mesh"
+"native_app",
+"native_diag",
+"native_edge_mesh",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/web/httpcache/httpcache.cpp": [
 "native_edge_cache",
 "native_edge_cache_sd",
 "native_edge_mesh",
-"native_httpcache"
+"native_httpcache",
+"native_swar"
 ],
 "src/services/web/httpcache/httpcache.h": [
+"native_app",
+"native_diag",
 "native_edge_cache",
 "native_edge_cache_sd",
 "native_edge_mesh",
-"native_httpcache"
+"native_h3_server",
+"native_httpcache",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/web/spa_router/spa_router.cpp": [
-"native_spa_router"
+"native_spa_router",
+"native_swar"
 ],
 "src/services/web/spa_router/spa_router.h": [
-"native_spa_router"
+"native_app",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
+"native_range",
+"native_spa_router",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/services/web/web_terminal/web_terminal.cpp": [
 "native_app",
 "native_diag",
 "native_h3_server",
+"native_swar",
 "native_webdav_handler"
 ],
 "src/services/web/web_terminal/web_terminal.h": [
 "native_app",
 "native_diag",
 "native_h3_server",
+"native_keepalive",
+"native_range",
+"native_swar",
+"native_upload",
 "native_webdav_handler"
 ],
 "src/shared_primitives/bitio.h": [
@@ -5299,7 +7777,14 @@
 "native_cbor",
 "native_msgpack",
 "native_pentest",
-"native_senml"
+"native_senml",
+"native_ssh",
+"native_ssh_comp",
+"native_ssh_conn",
+"native_ssh_hardened",
+"native_ssh_kbdint",
+"native_ssh_pqc",
+"native_swar"
 ],
 "src/shared_primitives/can.h": [
 "native_bus_capture",
@@ -5324,6 +7809,7 @@
 "native_sb_modbus",
 "native_sdi12",
 "native_sht3x",
+"native_swar",
 "native_thread",
 "native_zigbee"
 ],
@@ -5391,6 +7877,7 @@
 "native_ssh_hardened",
 "native_ssh_kbdint",
 "native_ssh_pqc",
+"native_swar",
 "native_tls13_kdf",
 "native_tls13_msg",
 "native_totp",
@@ -5403,26 +7890,47 @@
 ],
 "src/shared_primitives/frame.cpp": [
 "native_app",
+"native_config_io",
 "native_dashboard",
 "native_diag",
 "native_frame",
 "native_gpio_map",
 "native_h3_server",
+"native_keepalive",
 "native_log",
+"native_logbuf",
+"native_mnt",
 "native_partition",
+"native_range",
+"native_scp",
+"native_scpi",
+"native_ssh_sftp",
+"native_swar",
 "native_telnet",
+"native_upload",
 "native_webdav_handler"
 ],
 "src/shared_primitives/frame.h": [
 "native_app",
+"native_config_io",
+"native_csrf",
 "native_dashboard",
 "native_diag",
 "native_frame",
 "native_gpio_map",
 "native_h3_server",
+"native_keepalive",
 "native_log",
+"native_logbuf",
+"native_mnt",
 "native_partition",
+"native_range",
+"native_scp",
+"native_scpi",
+"native_ssh_sftp",
+"native_swar",
 "native_telnet",
+"native_upload",
 "native_webdav_handler"
 ],
 "src/shared_primitives/hex.h": [
@@ -5437,6 +7945,7 @@
 "native_pentest",
 "native_prov",
 "native_range",
+"native_swar",
 "native_upload",
 "native_webdav",
 "native_webdav_handler"
@@ -5448,13 +7957,16 @@
 "native_edge_cache_sd",
 "native_edge_mesh",
 "native_h3_server",
+"native_swar",
 "native_time_source"
 ],
 "src/shared_primitives/log.cpp": [
-"native_log"
+"native_log",
+"native_swar"
 ],
 "src/shared_primitives/log.h": [
-"native_log"
+"native_log",
+"native_swar"
 ],
 "src/shared_primitives/mime.h": [
 "native_app",
@@ -5467,6 +7979,7 @@
 "native_keepalive",
 "native_prov",
 "native_range",
+"native_swar",
 "native_upload",
 "native_webdav_handler",
 "native_webhook"
@@ -5489,13 +8002,22 @@
 "native_pentest",
 "native_sdi12",
 "native_senml",
+"native_swar",
 "native_wamp",
 "native_webdav_handler"
 ],
 "src/shared_primitives/pcap.h": [
+"native_app",
 "native_bus_capture",
+"native_diag",
+"native_h3_server",
+"native_keepalive",
 "native_promisc",
-"native_radio_sniff"
+"native_radio_sniff",
+"native_range",
+"native_swar",
+"native_upload",
+"native_webdav_handler"
 ],
 "src/shared_primitives/ring.h": [
 "native",
@@ -5510,75 +8032,35 @@
 "native_pentest",
 "native_quic_server",
 "native_range",
+"native_signaling",
 "native_ssh_conn",
+"native_swar",
 "native_telnet",
 "native_upload",
 "native_webdav_handler",
 "native_workers",
 "native_ws_deflate"
 ],
-"src/shared_primitives/span.h": [
-"native",
-"native_accept_gate",
-"native_app",
-"native_cbor",
-"native_coaps",
-"native_coaps_server",
-"native_crypto_kat",
-"native_csrf",
-"native_diag",
-"native_dtls",
-"native_dtls_conn",
-"native_dtls_hs",
-"native_dtls_tls13",
-"native_esp",
-"native_h3_conn",
-"native_h3_e2e",
-"native_h3_server",
-"native_ikev2",
-"native_ipsec_db",
-"native_jwt",
-"native_keepalive",
-"native_msgpack",
-"native_oidc",
-"native_pentest",
-"native_quic_conn",
-"native_quic_crypto",
-"native_quic_server",
-"native_quic_tls",
-"native_quic_tls_pqc",
-"native_range",
-"native_plaintext",
-"native_secure_pool",
-"native_senml",
-"native_smb",
-"native_snmp_v3",
-"native_ssh",
-"native_ssh_aesgcm",
-"native_ssh_chachapoly",
-"native_ssh_comp",
-"native_ssh_conn",
-"native_ssh_ecdsa",
-"native_ssh_ed25519",
-"native_ssh_hardened",
-"native_ssh_kbdint",
-"native_ssh_pqc",
-"native_tls13_kdf",
-"native_tls13_msg",
-"native_upload",
-"native_webdav_handler",
-"native_ws_deflate"
-],
 "src/shared_primitives/speed_opt.h": [
 "native_app",
+"native_config_io",
 "native_dashboard",
 "native_diag",
 "native_frame",
 "native_gpio_map",
 "native_h3_server",
+"native_keepalive",
 "native_log",
+"native_logbuf",
+"native_mnt",
 "native_partition",
+"native_range",
+"native_scp",
+"native_scpi",
+"native_ssh_sftp",
+"native_swar",
 "native_telnet",
+"native_upload",
 "native_webdav_handler"
 ],
 "src/shared_primitives/strbuf.h": [
@@ -5612,6 +8094,7 @@
 "native_keepalive",
 "native_log",
 "native_logbuf",
+"native_mnt",
 "native_ntrip_caster",
 "native_oauth2",
 "native_oidc",
@@ -5633,6 +8116,7 @@
 "native_ssh_kbdint",
 "native_ssh_pqc",
 "native_ssh_sftp",
+"native_swar",
 "native_telnet",
 "native_udp_telemetry",
 "native_upload",
@@ -5642,6 +8126,74 @@
 "native_webhook",
 "native_wisun",
 "native_ws_client"
+],
+"src/shared_primitives/swar.h": [
+"native",
+"native_accept_gate",
+"native_app",
+"native_atc",
+"native_audit_log",
+"native_base64_scalar",
+"native_ble_gatt",
+"native_cloudevents",
+"native_config_io",
+"native_csrf",
+"native_dashboard",
+"native_diag",
+"native_docstore",
+"native_edge_cache",
+"native_edge_cache_sd",
+"native_edge_mesh",
+"native_exc_decoder",
+"native_frame",
+"native_gpib",
+"native_gpio_map",
+"native_graphql",
+"native_guardrails",
+"native_h2conn",
+"native_h3_server",
+"native_haas_mdc",
+"native_hotswap",
+"native_http_client",
+"native_http_delivery",
+"native_hw_health",
+"native_jwt",
+"native_keepalive",
+"native_log",
+"native_logbuf",
+"native_mnt",
+"native_ntrip_caster",
+"native_oauth2",
+"native_oidc",
+"native_openadr",
+"native_partition",
+"native_pentest",
+"native_power_mgmt",
+"native_proxy_protocol",
+"native_range",
+"native_scp",
+"native_scpi",
+"native_senml",
+"native_sep2",
+"native_smtp",
+"native_ssh",
+"native_ssh_comp",
+"native_ssh_conn",
+"native_ssh_hardened",
+"native_ssh_kbdint",
+"native_ssh_pqc",
+"native_ssh_sftp",
+"native_swar",
+"native_telnet",
+"native_udp_telemetry",
+"native_upload",
+"native_utmc",
+"native_wamp",
+"native_webdav_handler",
+"native_webhook",
+"native_wisun",
+"native_ws_client",
+"native_ws_deflate"
 ],
 "src/shared_primitives/time_compat.h": [
 "native_app",
@@ -5653,6 +8205,7 @@
 "native_keepalive",
 "native_range",
 "native_ssh_sftp",
+"native_swar",
 "native_time_source",
 "native_upload",
 "native_webdav_handler"
@@ -5667,6 +8220,7 @@
 "native_mqtt",
 "native_range",
 "native_ssh_conn",
+"native_swar",
 "native_upload",
 "native_webdav_handler",
 "native_ws_deflate"
@@ -5703,6 +8257,7 @@
 "native_prov",
 "native_range",
 "native_sht3x",
+"native_signaling",
 "native_smb",
 "native_smtp",
 "native_ssh",
@@ -5711,6 +8266,7 @@
 "native_ssh_hardened",
 "native_ssh_kbdint",
 "native_ssh_pqc",
+"native_swar",
 "native_telnet",
 "native_trace_capture",
 "native_upload",
@@ -5720,13 +8276,7 @@
 "native_ws_deflate"
 ],
 "test/mocks/FS.h": [
-"native_app",
-"native_diag",
-"native_h3_server",
-"native_keepalive",
-"native_range",
-"native_upload",
-"native_webdav_handler"
+"native_upload"
 ],
 "test/mocks/freertos/FreeRTOS.h": [
 "native",
@@ -5739,7 +8289,9 @@
 "native_observability",
 "native_pentest",
 "native_range",
+"native_signaling",
 "native_ssh_conn",
+"native_swar",
 "native_telnet",
 "native_upload",
 "native_webdav_handler",
@@ -5757,7 +8309,9 @@
 "native_observability",
 "native_pentest",
 "native_range",
+"native_signaling",
 "native_ssh_conn",
+"native_swar",
 "native_telnet",
 "native_upload",
 "native_webdav_handler",
@@ -5775,6 +8329,7 @@
 "native_observability",
 "native_range",
 "native_ssh_conn",
+"native_swar",
 "native_telnet",
 "native_upload",
 "native_webdav_handler",
@@ -5792,7 +8347,9 @@
 "native_observability",
 "native_pentest",
 "native_range",
+"native_signaling",
 "native_ssh_conn",
+"native_swar",
 "native_telnet",
 "native_upload",
 "native_webdav_handler",

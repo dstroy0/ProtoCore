@@ -90,10 +90,10 @@
     "output": ".pio/build/native/src/server/mmgr/arena.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native/src/server/mmgr/scratch.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENFORCE_HOST_HEADER=0 -Itest/mocks -Itest/support -Isrc src/server/mmgr/scratch.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native/src/server/mmgr/plaintext.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENFORCE_HOST_HEADER=0 -Itest/mocks -Itest/support -Isrc src/server/mmgr/plaintext.cpp",
     "directory": "@ROOT@",
-    "file": "src/server/mmgr/scratch.cpp",
-    "output": ".pio/build/native/src/server/mmgr/scratch.o"
+    "file": "src/server/mmgr/plaintext.cpp",
+    "output": ".pio/build/native/src/server/mmgr/plaintext.o"
   },
   {
     "command": "/usr/bin/g++ -o .pio/build/native_ad9238/src/services/peripherals/ad9238/ad9238.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_AD9238=1 -Itest/mocks -Itest/support -Isrc src/services/peripherals/ad9238/ad9238.cpp",
@@ -1104,6 +1104,18 @@
     "output": ".pio/build/native_mms/src/services/energy/mms/mms.o"
   },
   {
+    "command": "/usr/bin/g++ -o .pio/build/native_mnt/src/server/filesystem/filesystem.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_MNT=1 -Itest/mocks -Itest/support -Isrc src/server/filesystem/filesystem.cpp",
+    "directory": "@ROOT@",
+    "file": "src/server/filesystem/filesystem.cpp",
+    "output": ".pio/build/native_mnt/src/server/filesystem/filesystem.o"
+  },
+  {
+    "command": "/usr/bin/g++ -o .pio/build/native_mnt/src/server/filesystem/mnt.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_MNT=1 -Itest/mocks -Itest/support -Isrc src/server/filesystem/mnt.cpp",
+    "directory": "@ROOT@",
+    "file": "src/server/filesystem/mnt.cpp",
+    "output": ".pio/build/native_mnt/src/server/filesystem/mnt.o"
+  },
+  {
     "command": "/usr/bin/g++ -o .pio/build/native_modbus/src/services/fieldbus/modbus/modbus.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_MODBUS=1 -DPC_ENABLE_MODBUS_RTU=1 -Itest/mocks -Itest/support -Isrc src/services/fieldbus/modbus/modbus.cpp",
     "directory": "@ROOT@",
     "file": "src/services/fieldbus/modbus/modbus.cpp",
@@ -1518,7 +1530,7 @@
     "output": ".pio/build/native_sb_modbus/src/services/net/southbound/southbound.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_scp/src/services/file_transfer/scp/scp.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_SSH=1 -DPC_ENABLE_FILE_SERVING=1 -DPC_ENABLE_SSH_SCP=1 -Itest/mocks -Itest/support -Isrc src/services/file_transfer/scp/scp.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_scp/src/services/file_transfer/scp/scp.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_SSH=1 -DPC_ENABLE_SSH_SCP=1 -DPC_ENABLE_MNT=1 -Itest/mocks -Itest/support -Isrc src/services/file_transfer/scp/scp.cpp",
     "directory": "@ROOT@",
     "file": "src/services/file_transfer/scp/scp.cpp",
     "output": ".pio/build/native_scp/src/services/file_transfer/scp/scp.o"
@@ -1570,6 +1582,12 @@
     "directory": "@ROOT@",
     "file": "src/services/radio/sigfox/sigfox.cpp",
     "output": ".pio/build/native_sigfox/src/services/radio/sigfox/sigfox.o"
+  },
+  {
+    "command": "/usr/bin/g++ -o .pio/build/native_signaling/src/server/signaling/signaling.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -Itest/mocks -Itest/support -Isrc src/server/signaling/signaling.cpp",
+    "directory": "@ROOT@",
+    "file": "src/server/signaling/signaling.cpp",
+    "output": ".pio/build/native_signaling/src/server/signaling/signaling.o"
   },
   {
     "command": "/usr/bin/g++ -o .pio/build/native_simatic/src/services/fieldbus/simatic/simatic.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_SIMATIC=1 -Itest/mocks -Itest/support -Isrc src/services/fieldbus/simatic/simatic.cpp",
@@ -1638,61 +1656,61 @@
     "output": ".pio/build/native_sparkplug/src/services/iot/sparkplug/sparkplug.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_ssh/src/crypto/aead/chachapoly.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_SSH_MAX_CHANNELS=3 -DPC_ENABLE_SSH=1 -DPC_ENABLE_FILE_SERVING=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_SSH_SCP=1 -Itest/mocks -Itest/support -Isrc src/crypto/aead/chachapoly.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_ssh/src/crypto/aead/chachapoly.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_SSH_MAX_CHANNELS=3 -DPC_ENABLE_SSH=1 -DPC_ENABLE_MNT=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_SSH_SCP=1 -Itest/mocks -Itest/support -Isrc src/crypto/aead/chachapoly.cpp",
     "directory": "@ROOT@",
     "file": "src/crypto/aead/chachapoly.cpp",
     "output": ".pio/build/native_ssh/src/crypto/aead/chachapoly.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_ssh/src/crypto/cipher/aes256ctr.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_SSH_MAX_CHANNELS=3 -DPC_ENABLE_SSH=1 -DPC_ENABLE_FILE_SERVING=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_SSH_SCP=1 -Itest/mocks -Itest/support -Isrc src/crypto/cipher/aes256ctr.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_ssh/src/crypto/cipher/aes256ctr.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_SSH_MAX_CHANNELS=3 -DPC_ENABLE_SSH=1 -DPC_ENABLE_MNT=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_SSH_SCP=1 -Itest/mocks -Itest/support -Isrc src/crypto/cipher/aes256ctr.cpp",
     "directory": "@ROOT@",
     "file": "src/crypto/cipher/aes256ctr.cpp",
     "output": ".pio/build/native_ssh/src/crypto/cipher/aes256ctr.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_ssh/src/network_drivers/presentation/ssh/auth/ssh_auth.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_SSH_MAX_CHANNELS=3 -DPC_ENABLE_SSH=1 -DPC_ENABLE_FILE_SERVING=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_SSH_SCP=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/ssh/auth/ssh_auth.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_ssh/src/network_drivers/presentation/ssh/auth/ssh_auth.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_SSH_MAX_CHANNELS=3 -DPC_ENABLE_SSH=1 -DPC_ENABLE_MNT=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_SSH_SCP=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/ssh/auth/ssh_auth.cpp",
     "directory": "@ROOT@",
     "file": "src/network_drivers/presentation/ssh/auth/ssh_auth.cpp",
     "output": ".pio/build/native_ssh/src/network_drivers/presentation/ssh/auth/ssh_auth.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_ssh/src/network_drivers/presentation/ssh/connection/ssh_channel.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_SSH_MAX_CHANNELS=3 -DPC_ENABLE_SSH=1 -DPC_ENABLE_FILE_SERVING=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_SSH_SCP=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/ssh/connection/ssh_channel.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_ssh/src/network_drivers/presentation/ssh/connection/ssh_channel.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_SSH_MAX_CHANNELS=3 -DPC_ENABLE_SSH=1 -DPC_ENABLE_MNT=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_SSH_SCP=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/ssh/connection/ssh_channel.cpp",
     "directory": "@ROOT@",
     "file": "src/network_drivers/presentation/ssh/connection/ssh_channel.cpp",
     "output": ".pio/build/native_ssh/src/network_drivers/presentation/ssh/connection/ssh_channel.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_ssh/src/network_drivers/presentation/ssh/connection/ssh_flow_control.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_SSH_MAX_CHANNELS=3 -DPC_ENABLE_SSH=1 -DPC_ENABLE_FILE_SERVING=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_SSH_SCP=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/ssh/connection/ssh_flow_control.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_ssh/src/network_drivers/presentation/ssh/connection/ssh_flow_control.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_SSH_MAX_CHANNELS=3 -DPC_ENABLE_SSH=1 -DPC_ENABLE_MNT=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_SSH_SCP=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/ssh/connection/ssh_flow_control.cpp",
     "directory": "@ROOT@",
     "file": "src/network_drivers/presentation/ssh/connection/ssh_flow_control.cpp",
     "output": ".pio/build/native_ssh/src/network_drivers/presentation/ssh/connection/ssh_flow_control.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_ssh/src/network_drivers/presentation/ssh/connection/ssh_server.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_SSH_MAX_CHANNELS=3 -DPC_ENABLE_SSH=1 -DPC_ENABLE_FILE_SERVING=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_SSH_SCP=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/ssh/connection/ssh_server.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_ssh/src/network_drivers/presentation/ssh/connection/ssh_server.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_SSH_MAX_CHANNELS=3 -DPC_ENABLE_SSH=1 -DPC_ENABLE_MNT=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_SSH_SCP=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/ssh/connection/ssh_server.cpp",
     "directory": "@ROOT@",
     "file": "src/network_drivers/presentation/ssh/connection/ssh_server.cpp",
     "output": ".pio/build/native_ssh/src/network_drivers/presentation/ssh/connection/ssh_server.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_ssh/src/network_drivers/presentation/ssh/transport/ssh_dh.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_SSH_MAX_CHANNELS=3 -DPC_ENABLE_SSH=1 -DPC_ENABLE_FILE_SERVING=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_SSH_SCP=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/ssh/transport/ssh_dh.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_ssh/src/network_drivers/presentation/ssh/transport/ssh_dh.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_SSH_MAX_CHANNELS=3 -DPC_ENABLE_SSH=1 -DPC_ENABLE_MNT=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_SSH_SCP=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/ssh/transport/ssh_dh.cpp",
     "directory": "@ROOT@",
     "file": "src/network_drivers/presentation/ssh/transport/ssh_dh.cpp",
     "output": ".pio/build/native_ssh/src/network_drivers/presentation/ssh/transport/ssh_dh.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_ssh/src/network_drivers/presentation/ssh/transport/ssh_keymat.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_SSH_MAX_CHANNELS=3 -DPC_ENABLE_SSH=1 -DPC_ENABLE_FILE_SERVING=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_SSH_SCP=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/ssh/transport/ssh_keymat.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_ssh/src/network_drivers/presentation/ssh/transport/ssh_keymat.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_SSH_MAX_CHANNELS=3 -DPC_ENABLE_SSH=1 -DPC_ENABLE_MNT=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_SSH_SCP=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/ssh/transport/ssh_keymat.cpp",
     "directory": "@ROOT@",
     "file": "src/network_drivers/presentation/ssh/transport/ssh_keymat.cpp",
     "output": ".pio/build/native_ssh/src/network_drivers/presentation/ssh/transport/ssh_keymat.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_ssh/src/network_drivers/presentation/ssh/transport/ssh_packet.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_SSH_MAX_CHANNELS=3 -DPC_ENABLE_SSH=1 -DPC_ENABLE_FILE_SERVING=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_SSH_SCP=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/ssh/transport/ssh_packet.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_ssh/src/network_drivers/presentation/ssh/transport/ssh_packet.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_SSH_MAX_CHANNELS=3 -DPC_ENABLE_SSH=1 -DPC_ENABLE_MNT=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_SSH_SCP=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/ssh/transport/ssh_packet.cpp",
     "directory": "@ROOT@",
     "file": "src/network_drivers/presentation/ssh/transport/ssh_packet.cpp",
     "output": ".pio/build/native_ssh/src/network_drivers/presentation/ssh/transport/ssh_packet.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_ssh/src/network_drivers/presentation/ssh/transport/ssh_transport.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_SSH_MAX_CHANNELS=3 -DPC_ENABLE_SSH=1 -DPC_ENABLE_FILE_SERVING=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_SSH_SCP=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/ssh/transport/ssh_transport.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_ssh/src/network_drivers/presentation/ssh/transport/ssh_transport.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_SSH_MAX_CHANNELS=3 -DPC_ENABLE_SSH=1 -DPC_ENABLE_MNT=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_SSH_SCP=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/ssh/transport/ssh_transport.cpp",
     "directory": "@ROOT@",
     "file": "src/network_drivers/presentation/ssh/transport/ssh_transport.cpp",
     "output": ".pio/build/native_ssh/src/network_drivers/presentation/ssh/transport/ssh_transport.o"
@@ -1722,7 +1740,7 @@
     "output": ".pio/build/native_ssh_conn/src/network_drivers/presentation/ssh/connection/ssh_conn.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_ssh_sftp/src/services/file_transfer/sftp/sftp.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_SSH=1 -DPC_ENABLE_FILE_SERVING=1 -DPC_ENABLE_SSH_SFTP=1 -Itest/mocks -Itest/support -Isrc src/services/file_transfer/sftp/sftp.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_ssh_sftp/src/services/file_transfer/sftp/sftp.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_SSH=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_MNT=1 -Itest/mocks -Itest/support -Isrc src/services/file_transfer/sftp/sftp.cpp",
     "directory": "@ROOT@",
     "file": "src/services/file_transfer/sftp/sftp.cpp",
     "output": ".pio/build/native_ssh_sftp/src/services/file_transfer/sftp/sftp.o"
@@ -1740,153 +1758,321 @@
     "output": ".pio/build/native_sunspec/src/services/energy/sunspec/sunspec.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_syslog/src/services/net/syslog/syslog.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_SYSLOG=1 -Itest/mocks -Itest/support -Isrc src/services/net/syslog/syslog.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/board_drivers/hal/esp/esp_aes128gcm.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -Itest/mocks -Itest/support -Isrc src/board_drivers/hal/esp/esp_aes128gcm.cpp",
     "directory": "@ROOT@",
-    "file": "src/services/net/syslog/syslog.cpp",
-    "output": ".pio/build/native_syslog/src/services/net/syslog/syslog.o"
+    "file": "src/board_drivers/hal/esp/esp_aes128gcm.cpp",
+    "output": ".pio/build/native_swar/src/board_drivers/hal/esp/esp_aes128gcm.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_telemetry/src/services/iot/telemetry/telemetry.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_TELEMETRY=1 -Itest/mocks -Itest/support -Isrc src/services/iot/telemetry/telemetry.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/board_drivers/hal/esp/esp_aesgcm.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -Itest/mocks -Itest/support -Isrc src/board_drivers/hal/esp/esp_aesgcm.cpp",
     "directory": "@ROOT@",
-    "file": "src/services/iot/telemetry/telemetry.cpp",
-    "output": ".pio/build/native_telemetry/src/services/iot/telemetry/telemetry.o"
+    "file": "src/board_drivers/hal/esp/esp_aesgcm.cpp",
+    "output": ".pio/build/native_swar/src/board_drivers/hal/esp/esp_aesgcm.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_telnet/src/network_drivers/presentation/telnet/telnet.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_TELNET=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/telnet/telnet.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/board_drivers/hal/esp/esp_bignum.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -Itest/mocks -Itest/support -Isrc src/board_drivers/hal/esp/esp_bignum.cpp",
+    "directory": "@ROOT@",
+    "file": "src/board_drivers/hal/esp/esp_bignum.cpp",
+    "output": ".pio/build/native_swar/src/board_drivers/hal/esp/esp_bignum.o"
+  },
+  {
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/board_drivers/hal/esp/esp_crypto_hal.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -Itest/mocks -Itest/support -Isrc src/board_drivers/hal/esp/esp_crypto_hal.cpp",
+    "directory": "@ROOT@",
+    "file": "src/board_drivers/hal/esp/esp_crypto_hal.cpp",
+    "output": ".pio/build/native_swar/src/board_drivers/hal/esp/esp_crypto_hal.o"
+  },
+  {
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/board_drivers/hal/esp/esp_mnt_fs.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -Itest/mocks -Itest/support -Isrc src/board_drivers/hal/esp/esp_mnt_fs.cpp",
+    "directory": "@ROOT@",
+    "file": "src/board_drivers/hal/esp/esp_mnt_fs.cpp",
+    "output": ".pio/build/native_swar/src/board_drivers/hal/esp/esp_mnt_fs.o"
+  },
+  {
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/board_drivers/hal/esp/esp_platform.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -Itest/mocks -Itest/support -Isrc src/board_drivers/hal/esp/esp_platform.cpp",
+    "directory": "@ROOT@",
+    "file": "src/board_drivers/hal/esp/esp_platform.cpp",
+    "output": ".pio/build/native_swar/src/board_drivers/hal/esp/esp_platform.o"
+  },
+  {
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/board_drivers/physical/esp/physical_esp.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -Itest/mocks -Itest/support -Isrc src/board_drivers/physical/esp/physical_esp.cpp",
+    "directory": "@ROOT@",
+    "file": "src/board_drivers/physical/esp/physical_esp.cpp",
+    "output": ".pio/build/native_swar/src/board_drivers/physical/esp/physical_esp.o"
+  },
+  {
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/network_drivers/application/binary_asset_blobs.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -Itest/mocks -Itest/support -Isrc src/network_drivers/application/binary_asset_blobs.cpp",
+    "directory": "@ROOT@",
+    "file": "src/network_drivers/application/binary_asset_blobs.cpp",
+    "output": ".pio/build/native_swar/src/network_drivers/application/binary_asset_blobs.o"
+  },
+  {
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/network_drivers/datalink/datalink.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -Itest/mocks -Itest/support -Isrc src/network_drivers/datalink/datalink.cpp",
+    "directory": "@ROOT@",
+    "file": "src/network_drivers/datalink/datalink.cpp",
+    "output": ".pio/build/native_swar/src/network_drivers/datalink/datalink.o"
+  },
+  {
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/network_drivers/network/network.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -Itest/mocks -Itest/support -Isrc src/network_drivers/network/network.cpp",
+    "directory": "@ROOT@",
+    "file": "src/network_drivers/network/network.cpp",
+    "output": ".pio/build/native_swar/src/network_drivers/network/network.o"
+  },
+  {
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/network_drivers/presentation/http/http2/h2_server.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/http/http2/h2_server.cpp",
+    "directory": "@ROOT@",
+    "file": "src/network_drivers/presentation/http/http2/h2_server.cpp",
+    "output": ".pio/build/native_swar/src/network_drivers/presentation/http/http2/h2_server.o"
+  },
+  {
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/network_drivers/presentation/ssh/connection/ssh_client.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/ssh/connection/ssh_client.cpp",
+    "directory": "@ROOT@",
+    "file": "src/network_drivers/presentation/ssh/connection/ssh_client.cpp",
+    "output": ".pio/build/native_swar/src/network_drivers/presentation/ssh/connection/ssh_client.o"
+  },
+  {
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/network_drivers/presentation/ssh/connection/ssh_forward.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/ssh/connection/ssh_forward.cpp",
+    "directory": "@ROOT@",
+    "file": "src/network_drivers/presentation/ssh/connection/ssh_forward.cpp",
+    "output": ".pio/build/native_swar/src/network_drivers/presentation/ssh/connection/ssh_forward.o"
+  },
+  {
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/network_drivers/presentation/telnet/telnet.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/telnet/telnet.cpp",
     "directory": "@ROOT@",
     "file": "src/network_drivers/presentation/telnet/telnet.cpp",
-    "output": ".pio/build/native_telnet/src/network_drivers/presentation/telnet/telnet.o"
+    "output": ".pio/build/native_swar/src/network_drivers/presentation/telnet/telnet.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_thread/src/services/radio/thread/thread.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_THREAD=1 -DPC_THREAD_MAX_DATA=64 -Itest/mocks -Itest/support -Isrc src/services/radio/thread/thread.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/network_drivers/tls/tls.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -Itest/mocks -Itest/support -Isrc src/network_drivers/tls/tls.cpp",
     "directory": "@ROOT@",
-    "file": "src/services/radio/thread/thread.cpp",
-    "output": ".pio/build/native_thread/src/services/radio/thread/thread.o"
+    "file": "src/network_drivers/tls/tls.cpp",
+    "output": ".pio/build/native_swar/src/network_drivers/tls/tls.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_time_source/src/services/timing_position/time_source/time_source.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_TIME_SOURCE=1 -Itest/mocks -Itest/support -Isrc src/services/timing_position/time_source/time_source.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/server/filesystem/wearlevel.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -Itest/mocks -Itest/support -Isrc src/server/filesystem/wearlevel.cpp",
     "directory": "@ROOT@",
-    "file": "src/services/timing_position/time_source/time_source.cpp",
-    "output": ".pio/build/native_time_source/src/services/timing_position/time_source/time_source.o"
+    "file": "src/server/filesystem/wearlevel.cpp",
+    "output": ".pio/build/native_swar/src/server/filesystem/wearlevel.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_tls_policy/src/services/security/tls_policy/tls_policy.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_TLS_POLICY=1 -Itest/mocks -Itest/support -Isrc src/services/security/tls_policy/tls_policy.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/server/signaling/route.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -Itest/mocks -Itest/support -Isrc src/server/signaling/route.cpp",
     "directory": "@ROOT@",
-    "file": "src/services/security/tls_policy/tls_policy.cpp",
-    "output": ".pio/build/native_tls_policy/src/services/security/tls_policy/tls_policy.o"
+    "file": "src/server/signaling/route.cpp",
+    "output": ".pio/build/native_swar/src/server/signaling/route.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_trace_capture/src/services/system/trace_capture/trace_capture.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_TRACE_CAPTURE=1 -DPC_TC_MAX_WINDOW_SAMPLES=32 -Itest/mocks -Itest/support -Isrc src/services/system/trace_capture/trace_capture.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/server/ssh_scp.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -Itest/mocks -Itest/support -Isrc src/server/ssh_scp.cpp",
     "directory": "@ROOT@",
-    "file": "src/services/system/trace_capture/trace_capture.cpp",
-    "output": ".pio/build/native_trace_capture/src/services/system/trace_capture/trace_capture.o"
+    "file": "src/server/ssh_scp.cpp",
+    "output": ".pio/build/native_swar/src/server/ssh_scp.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_ubx/src/services/timing_position/ubx/ubx.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_UBX=1 -Itest/mocks -Itest/support -Isrc src/services/timing_position/ubx/ubx.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/server/ssh_sftp.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -Itest/mocks -Itest/support -Isrc src/server/ssh_sftp.cpp",
     "directory": "@ROOT@",
-    "file": "src/services/timing_position/ubx/ubx.cpp",
-    "output": ".pio/build/native_ubx/src/services/timing_position/ubx/ubx.o"
+    "file": "src/server/ssh_sftp.cpp",
+    "output": ".pio/build/native_swar/src/server/ssh_sftp.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_udp_telemetry/src/services/iot/udp_telemetry/udp_telemetry.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_UDP_TELEMETRY=1 -Itest/mocks -Itest/support -Isrc src/services/iot/udp_telemetry/udp_telemetry.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/services/file_transfer/ftp/ftp_session.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -Itest/mocks -Itest/support -Isrc src/services/file_transfer/ftp/ftp_session.cpp",
     "directory": "@ROOT@",
-    "file": "src/services/iot/udp_telemetry/udp_telemetry.cpp",
-    "output": ".pio/build/native_udp_telemetry/src/services/iot/udp_telemetry/udp_telemetry.o"
+    "file": "src/services/file_transfer/ftp/ftp_session.cpp",
+    "output": ".pio/build/native_swar/src/services/file_transfer/ftp/ftp_session.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_umati/src/services/machine_tool/umati/umati.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_OPCUA=1 -DPC_ENABLE_UMATI=1 -Itest/mocks -Itest/support -Isrc src/services/machine_tool/umati/umati.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/services/file_transfer/http_delivery/http_delivery_routes.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -Itest/mocks -Itest/support -Isrc src/services/file_transfer/http_delivery/http_delivery_routes.cpp",
     "directory": "@ROOT@",
-    "file": "src/services/machine_tool/umati/umati.cpp",
-    "output": ".pio/build/native_umati/src/services/machine_tool/umati/umati.o"
+    "file": "src/services/file_transfer/http_delivery/http_delivery_routes.cpp",
+    "output": ".pio/build/native_swar/src/services/file_transfer/http_delivery/http_delivery_routes.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_upload/src/services/file_transfer/upload_service/upload_service.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_UPLOAD=1 -DBODY_BUF_SIZE=64 -Itest/mocks -Itest/support -Isrc src/services/file_transfer/upload_service/upload_service.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/services/file_transfer/upload_service/upload_service.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -Itest/mocks -Itest/support -Isrc src/services/file_transfer/upload_service/upload_service.cpp",
     "directory": "@ROOT@",
     "file": "src/services/file_transfer/upload_service/upload_service.cpp",
-    "output": ".pio/build/native_upload/src/services/file_transfer/upload_service/upload_service.o"
+    "output": ".pio/build/native_swar/src/services/file_transfer/upload_service/upload_service.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_utmc/src/services/transportation/utmc/utmc.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_UTMC=1 -Itest/mocks -Itest/support -Isrc src/services/transportation/utmc/utmc.cpp",
-    "directory": "@ROOT@",
-    "file": "src/services/transportation/utmc/utmc.cpp",
-    "output": ".pio/build/native_utmc/src/services/transportation/utmc/utmc.o"
-  },
-  {
-    "command": "/usr/bin/g++ -o .pio/build/native_vfs/src/services/storage/vfs/vfs.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_VFS=1 -Itest/mocks -Itest/support -Isrc src/services/storage/vfs/vfs.cpp",
-    "directory": "@ROOT@",
-    "file": "src/services/storage/vfs/vfs.cpp",
-    "output": ".pio/build/native_vfs/src/services/storage/vfs/vfs.o"
-  },
-  {
-    "command": "/usr/bin/g++ -o .pio/build/native_vl53l0x/src/services/peripherals/vl53l0x/vl53l0x.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_VL53L0X=1 -Itest/mocks -Itest/support -Isrc src/services/peripherals/vl53l0x/vl53l0x.cpp",
-    "directory": "@ROOT@",
-    "file": "src/services/peripherals/vl53l0x/vl53l0x.cpp",
-    "output": ".pio/build/native_vl53l0x/src/services/peripherals/vl53l0x/vl53l0x.o"
-  },
-  {
-    "command": "/usr/bin/g++ -o .pio/build/native_vxi11/src/services/instrumentation/vxi11/vxi11.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_VXI11=1 -Itest/mocks -Itest/support -Isrc src/services/instrumentation/vxi11/vxi11.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/services/instrumentation/vxi11/vxi11.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -Itest/mocks -Itest/support -Isrc src/services/instrumentation/vxi11/vxi11.cpp",
     "directory": "@ROOT@",
     "file": "src/services/instrumentation/vxi11/vxi11.cpp",
-    "output": ".pio/build/native_vxi11/src/services/instrumentation/vxi11/vxi11.o"
+    "output": ".pio/build/native_swar/src/services/instrumentation/vxi11/vxi11.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_wamp/src/services/iot/wamp/wamp.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_WAMP=1 -Itest/mocks -Itest/support -Isrc src/services/iot/wamp/wamp.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/services/iot/telemetry/telemetry.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -Itest/mocks -Itest/support -Isrc src/services/iot/telemetry/telemetry.cpp",
+    "directory": "@ROOT@",
+    "file": "src/services/iot/telemetry/telemetry.cpp",
+    "output": ".pio/build/native_swar/src/services/iot/telemetry/telemetry.o"
+  },
+  {
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/services/iot/udp_telemetry/udp_telemetry.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -Itest/mocks -Itest/support -Isrc src/services/iot/udp_telemetry/udp_telemetry.cpp",
+    "directory": "@ROOT@",
+    "file": "src/services/iot/udp_telemetry/udp_telemetry.cpp",
+    "output": ".pio/build/native_swar/src/services/iot/udp_telemetry/udp_telemetry.o"
+  },
+  {
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/services/iot/wamp/wamp.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -Itest/mocks -Itest/support -Isrc src/services/iot/wamp/wamp.cpp",
     "directory": "@ROOT@",
     "file": "src/services/iot/wamp/wamp.cpp",
-    "output": ".pio/build/native_wamp/src/services/iot/wamp/wamp.o"
+    "output": ".pio/build/native_swar/src/services/iot/wamp/wamp.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_wave/src/services/transportation/wave/wave.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_WAVE=1 -Itest/mocks -Itest/support -Isrc src/services/transportation/wave/wave.cpp",
-    "directory": "@ROOT@",
-    "file": "src/services/transportation/wave/wave.cpp",
-    "output": ".pio/build/native_wave/src/services/transportation/wave/wave.o"
-  },
-  {
-    "command": "/usr/bin/g++ -o .pio/build/native_wearlevel/src/services/storage/wearlevel/wearlevel.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_WEARLEVEL=1 -Itest/mocks -Itest/support -Isrc src/services/storage/wearlevel/wearlevel.cpp",
-    "directory": "@ROOT@",
-    "file": "src/services/storage/wearlevel/wearlevel.cpp",
-    "output": ".pio/build/native_wearlevel/src/services/storage/wearlevel/wearlevel.o"
-  },
-  {
-    "command": "/usr/bin/g++ -o .pio/build/native_webhook/src/services/net/webhook/webhook.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_WEBHOOK=1 -Itest/mocks -Itest/support -Isrc src/services/net/webhook/webhook.cpp",
-    "directory": "@ROOT@",
-    "file": "src/services/net/webhook/webhook.cpp",
-    "output": ".pio/build/native_webhook/src/services/net/webhook/webhook.o"
-  },
-  {
-    "command": "/usr/bin/g++ -o .pio/build/native_wifi_sniffer/src/services/radio/wifi_sniffer/wifi_sniffer.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_WIFI_SNIFFER=1 -Itest/mocks -Itest/support -Isrc src/services/radio/wifi_sniffer/wifi_sniffer.cpp",
-    "directory": "@ROOT@",
-    "file": "src/services/radio/wifi_sniffer/wifi_sniffer.cpp",
-    "output": ".pio/build/native_wifi_sniffer/src/services/radio/wifi_sniffer/wifi_sniffer.o"
-  },
-  {
-    "command": "/usr/bin/g++ -o .pio/build/native_wisun/src/services/radio/wisun/wisun.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_WISUN=1 -Itest/mocks -Itest/support -Isrc src/services/radio/wisun/wisun.cpp",
-    "directory": "@ROOT@",
-    "file": "src/services/radio/wisun/wisun.cpp",
-    "output": ".pio/build/native_wisun/src/services/radio/wisun/wisun.o"
-  },
-  {
-    "command": "/usr/bin/g++ -o .pio/build/native_ws_client/src/services/net/ws_client/ws_client.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_WS_CLIENT=1 -Itest/mocks -Itest/support -Isrc src/services/net/ws_client/ws_client.cpp",
-    "directory": "@ROOT@",
-    "file": "src/services/net/ws_client/ws_client.cpp",
-    "output": ".pio/build/native_ws_client/src/services/net/ws_client/ws_client.o"
-  },
-  {
-    "command": "/usr/bin/g++ -o .pio/build/native_xmpp/src/services/iot/xmpp/xmpp.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_XMPP=1 -Itest/mocks -Itest/support -Isrc src/services/iot/xmpp/xmpp.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/services/iot/xmpp/xmpp.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -Itest/mocks -Itest/support -Isrc src/services/iot/xmpp/xmpp.cpp",
     "directory": "@ROOT@",
     "file": "src/services/iot/xmpp/xmpp.cpp",
-    "output": ".pio/build/native_xmpp/src/services/iot/xmpp/xmpp.o"
+    "output": ".pio/build/native_swar/src/services/iot/xmpp/xmpp.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_zigbee/src/services/radio/zigbee/zigbee.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_ZIGBEE=1 -DPC_ZIGBEE_MAX_DATA=32 -Itest/mocks -Itest/support -Isrc src/services/radio/zigbee/zigbee.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/services/machine_tool/umati/umati.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -Itest/mocks -Itest/support -Isrc src/services/machine_tool/umati/umati.cpp",
+    "directory": "@ROOT@",
+    "file": "src/services/machine_tool/umati/umati.cpp",
+    "output": ".pio/build/native_swar/src/services/machine_tool/umati/umati.o"
+  },
+  {
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/services/net/iface_bridge/iface_bridge_hw.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -Itest/mocks -Itest/support -Isrc src/services/net/iface_bridge/iface_bridge_hw.cpp",
+    "directory": "@ROOT@",
+    "file": "src/services/net/iface_bridge/iface_bridge_hw.cpp",
+    "output": ".pio/build/native_swar/src/services/net/iface_bridge/iface_bridge_hw.o"
+  },
+  {
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/services/net/mdns_service/mdns_service.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -Itest/mocks -Itest/support -Isrc src/services/net/mdns_service/mdns_service.cpp",
+    "directory": "@ROOT@",
+    "file": "src/services/net/mdns_service/mdns_service.cpp",
+    "output": ".pio/build/native_swar/src/services/net/mdns_service/mdns_service.o"
+  },
+  {
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/services/net/relay/relay_listener.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -Itest/mocks -Itest/support -Isrc src/services/net/relay/relay_listener.cpp",
+    "directory": "@ROOT@",
+    "file": "src/services/net/relay/relay_listener.cpp",
+    "output": ".pio/build/native_swar/src/services/net/relay/relay_listener.o"
+  },
+  {
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/services/net/syslog/syslog.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -Itest/mocks -Itest/support -Isrc src/services/net/syslog/syslog.cpp",
+    "directory": "@ROOT@",
+    "file": "src/services/net/syslog/syslog.cpp",
+    "output": ".pio/build/native_swar/src/services/net/syslog/syslog.o"
+  },
+  {
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/services/net/webhook/webhook.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -Itest/mocks -Itest/support -Isrc src/services/net/webhook/webhook.cpp",
+    "directory": "@ROOT@",
+    "file": "src/services/net/webhook/webhook.cpp",
+    "output": ".pio/build/native_swar/src/services/net/webhook/webhook.o"
+  },
+  {
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/services/net/ws_client/ws_client.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -Itest/mocks -Itest/support -Isrc src/services/net/ws_client/ws_client.cpp",
+    "directory": "@ROOT@",
+    "file": "src/services/net/ws_client/ws_client.cpp",
+    "output": ".pio/build/native_swar/src/services/net/ws_client/ws_client.o"
+  },
+  {
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/services/peripherals/vl53l0x/vl53l0x.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -Itest/mocks -Itest/support -Isrc src/services/peripherals/vl53l0x/vl53l0x.cpp",
+    "directory": "@ROOT@",
+    "file": "src/services/peripherals/vl53l0x/vl53l0x.cpp",
+    "output": ".pio/build/native_swar/src/services/peripherals/vl53l0x/vl53l0x.o"
+  },
+  {
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/services/radio/thread/thread.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -Itest/mocks -Itest/support -Isrc src/services/radio/thread/thread.cpp",
+    "directory": "@ROOT@",
+    "file": "src/services/radio/thread/thread.cpp",
+    "output": ".pio/build/native_swar/src/services/radio/thread/thread.o"
+  },
+  {
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/services/radio/wifi_sniffer/wifi_sniffer.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -Itest/mocks -Itest/support -Isrc src/services/radio/wifi_sniffer/wifi_sniffer.cpp",
+    "directory": "@ROOT@",
+    "file": "src/services/radio/wifi_sniffer/wifi_sniffer.cpp",
+    "output": ".pio/build/native_swar/src/services/radio/wifi_sniffer/wifi_sniffer.o"
+  },
+  {
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/services/radio/wisun/wisun.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -Itest/mocks -Itest/support -Isrc src/services/radio/wisun/wisun.cpp",
+    "directory": "@ROOT@",
+    "file": "src/services/radio/wisun/wisun.cpp",
+    "output": ".pio/build/native_swar/src/services/radio/wisun/wisun.o"
+  },
+  {
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/services/radio/zigbee/zigbee.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -Itest/mocks -Itest/support -Isrc src/services/radio/zigbee/zigbee.cpp",
     "directory": "@ROOT@",
     "file": "src/services/radio/zigbee/zigbee.cpp",
-    "output": ".pio/build/native_zigbee/src/services/radio/zigbee/zigbee.o"
+    "output": ".pio/build/native_swar/src/services/radio/zigbee/zigbee.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_zwave/src/services/radio/zwave/zwave.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPC_ENABLE_ZWAVE=1 -DPC_ZWAVE_MAX_DATA=16 -Itest/mocks -Itest/support -Isrc src/services/radio/zwave/zwave.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/services/radio/zwave/zwave.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -Itest/mocks -Itest/support -Isrc src/services/radio/zwave/zwave.cpp",
     "directory": "@ROOT@",
     "file": "src/services/radio/zwave/zwave.cpp",
-    "output": ".pio/build/native_zwave/src/services/radio/zwave/zwave.o"
+    "output": ".pio/build/native_swar/src/services/radio/zwave/zwave.o"
+  },
+  {
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/services/security/tls_policy/tls_policy.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -Itest/mocks -Itest/support -Isrc src/services/security/tls_policy/tls_policy.cpp",
+    "directory": "@ROOT@",
+    "file": "src/services/security/tls_policy/tls_policy.cpp",
+    "output": ".pio/build/native_swar/src/services/security/tls_policy/tls_policy.o"
+  },
+  {
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/services/storage/partition_monitor/partition_monitor_routes.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -Itest/mocks -Itest/support -Isrc src/services/storage/partition_monitor/partition_monitor_routes.cpp",
+    "directory": "@ROOT@",
+    "file": "src/services/storage/partition_monitor/partition_monitor_routes.cpp",
+    "output": ".pio/build/native_swar/src/services/storage/partition_monitor/partition_monitor_routes.o"
+  },
+  {
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/services/system/exc_decoder/exc_coredump.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -Itest/mocks -Itest/support -Isrc src/services/system/exc_decoder/exc_coredump.cpp",
+    "directory": "@ROOT@",
+    "file": "src/services/system/exc_decoder/exc_coredump.cpp",
+    "output": ".pio/build/native_swar/src/services/system/exc_decoder/exc_coredump.o"
+  },
+  {
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/services/system/gpio_map/gpio_map_routes.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -Itest/mocks -Itest/support -Isrc src/services/system/gpio_map/gpio_map_routes.cpp",
+    "directory": "@ROOT@",
+    "file": "src/services/system/gpio_map/gpio_map_routes.cpp",
+    "output": ".pio/build/native_swar/src/services/system/gpio_map/gpio_map_routes.o"
+  },
+  {
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/services/system/ota_service/ota_service.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -Itest/mocks -Itest/support -Isrc src/services/system/ota_service/ota_service.cpp",
+    "directory": "@ROOT@",
+    "file": "src/services/system/ota_service/ota_service.cpp",
+    "output": ".pio/build/native_swar/src/services/system/ota_service/ota_service.o"
+  },
+  {
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/services/system/trace_capture/trace_capture.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -Itest/mocks -Itest/support -Isrc src/services/system/trace_capture/trace_capture.cpp",
+    "directory": "@ROOT@",
+    "file": "src/services/system/trace_capture/trace_capture.cpp",
+    "output": ".pio/build/native_swar/src/services/system/trace_capture/trace_capture.o"
+  },
+  {
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/services/timing_position/gnss/ntrip_caster_listener.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -Itest/mocks -Itest/support -Isrc src/services/timing_position/gnss/ntrip_caster_listener.cpp",
+    "directory": "@ROOT@",
+    "file": "src/services/timing_position/gnss/ntrip_caster_listener.cpp",
+    "output": ".pio/build/native_swar/src/services/timing_position/gnss/ntrip_caster_listener.o"
+  },
+  {
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/services/timing_position/time_source/time_source.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -Itest/mocks -Itest/support -Isrc src/services/timing_position/time_source/time_source.cpp",
+    "directory": "@ROOT@",
+    "file": "src/services/timing_position/time_source/time_source.cpp",
+    "output": ".pio/build/native_swar/src/services/timing_position/time_source/time_source.o"
+  },
+  {
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/services/timing_position/ubx/ubx.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -Itest/mocks -Itest/support -Isrc src/services/timing_position/ubx/ubx.cpp",
+    "directory": "@ROOT@",
+    "file": "src/services/timing_position/ubx/ubx.cpp",
+    "output": ".pio/build/native_swar/src/services/timing_position/ubx/ubx.o"
+  },
+  {
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/services/transportation/utmc/utmc.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -Itest/mocks -Itest/support -Isrc src/services/transportation/utmc/utmc.cpp",
+    "directory": "@ROOT@",
+    "file": "src/services/transportation/utmc/utmc.cpp",
+    "output": ".pio/build/native_swar/src/services/transportation/utmc/utmc.o"
+  },
+  {
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/services/transportation/wave/wave.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -Itest/mocks -Itest/support -Isrc src/services/transportation/wave/wave.cpp",
+    "directory": "@ROOT@",
+    "file": "src/services/transportation/wave/wave.cpp",
+    "output": ".pio/build/native_swar/src/services/transportation/wave/wave.o"
+  },
+  {
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/services/web/dashboard/dashboard_routes.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -Itest/mocks -Itest/support -Isrc src/services/web/dashboard/dashboard_routes.cpp",
+    "directory": "@ROOT@",
+    "file": "src/services/web/dashboard/dashboard_routes.cpp",
+    "output": ".pio/build/native_swar/src/services/web/dashboard/dashboard_routes.o"
+  },
+  {
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/services/web/edge_cache/edge_cache_proxy.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -Itest/mocks -Itest/support -Isrc src/services/web/edge_cache/edge_cache_proxy.cpp",
+    "directory": "@ROOT@",
+    "file": "src/services/web/edge_cache/edge_cache_proxy.cpp",
+    "output": ".pio/build/native_swar/src/services/web/edge_cache/edge_cache_proxy.o"
   }
 ]
