@@ -46,11 +46,6 @@ static const pc_field FILESYSTEM_JOIN[] = {PC_STR, PC_STR, PC_STR, PC_END};
 // The mount root, copied in so its trailing '/' is owned rather than assumed (see pc_fs_begin).
 static const pc_field FILESYSTEM_ROOT[] = {PC_STR, PC_END};
 
-// A descent: this level's directory, the separator, the child's own name. The separator is a field
-// rather than a string the caller supplies, because whether one is needed is a property of the
-// frame, not a decision each walk should re-derive.
-static const pc_field FILESYSTEM_DESCEND[] = {PC_STR, {PC_FK_LIT, 0, 1, "/"}, PC_STR, PC_END};
-
 /**
  * @brief Roots that can be bound at once (see pc_fs_begin).
  *

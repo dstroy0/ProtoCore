@@ -14,9 +14,37 @@
 
 #include "server/filesystem/mnt.h"
 
-#if PC_ENABLE_MNT
-
 #include <string.h>
+
+// --- the HAL: which store is mounted -------------------------------------------------------------
+// Ungated, because mnt.h declares it ungated: this is the seam every caller reads through, and the
+// filesystem accessor calls pc_mnt_active() on every operation whether or not the RAM disk is built.
+// Gating it with PC_ENABLE_MNT left the accessor with an unresolved symbol in the default build - a
+// library that compiled cleanly file by file and then would not link.
+//
+// The cost of keeping it is one pointer. The RAM disk below is what has a footprint, and it is what
+// the flag gates.
+namespace
+{
+struct MntCtx
+{
+    const pc_mnt_backend *backend = nullptr;
+};
+static MntCtx s_hal;
+} // namespace
+
+void pc_mnt_mount(const pc_mnt_backend *backend)
+{
+    s_hal.backend = backend;
+}
+
+const pc_mnt_backend *pc_mnt_active(void)
+{
+    return s_hal.backend;
+}
+
+// --- the RAM disk: the part with a footprint ------------------------------------------------------
+#if PC_ENABLE_MNT
 
 namespace
 {
@@ -36,21 +64,18 @@ struct RamHandle
     pc_mnt_mode mode;
 };
 
-// The mount registry plus all RAM-backend state, owned by one instance (internal linkage): the
-// mounted backend vtable, the file pool, and the handle table, grouped so it is one named owner,
-// unreachable from any other translation unit. (The RAM ops are fixed-signature vtable entries, so
-// they reach this single owner directly.)
-struct MntCtx
+// All RAM-disk state, owned by one instance (internal linkage): the file pool and the handle table,
+// grouped so it is one named owner, unreachable from any other translation unit. (The RAM ops are
+// fixed-signature vtable entries, so they reach this single owner directly.)
+struct RamCtx
 {
-    const pc_mnt_backend *backend = nullptr;
     // Which pool entries hold a file, one bit each. Occupancy is a single bit, so the whole pool's
-    // answer fits in a register: a free entry is one bit scan instead of a walk, and a subtree is a
-    // mask that remove/rename/copy apply in one operation rather than a descent.
+    // answer fits in a register: a free entry is one bit scan instead of a walk.
     uint32_t used;
     RamFile rf[PC_MNT_RAM_FILES];
     RamHandle rh[PC_MNT_MAX_OPEN];
 };
-static MntCtx s_mnt;
+static RamCtx s_mnt;
 
 static_assert(PC_MNT_RAM_FILES > 0 && PC_MNT_RAM_FILES <= 32,
               "the RAM pool's occupancy is one 32-bit word, one bit per file");
@@ -404,16 +429,6 @@ bool ram_readdir(int h, pc_mnt_stat *out, char *name, size_t name_cap)
 const pc_mnt_backend s_ram_backend = {ram_open,   ram_read,   ram_write, ram_close, ram_seek, ram_size,    ram_exists,
                                       ram_remove, ram_rename, ram_mkdir, ram_rmdir, ram_stat, ram_opendir, ram_readdir};
 } // namespace
-
-void pc_mnt_mount(const pc_mnt_backend *backend)
-{
-    s_mnt.backend = backend;
-}
-
-const pc_mnt_backend *pc_mnt_active(void)
-{
-    return s_mnt.backend;
-}
 
 const pc_mnt_backend *pc_mnt_ram(void)
 {
