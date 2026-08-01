@@ -4,7 +4,10 @@
 
 # ProtoCore (@dstroy0)
 
-![Version](https://img.shields.io/badge/version-v0.0.3-blue)
+[![Version](https://img.shields.io/badge/version-v0.0.3-blue)](docs/CHANGELOG.md)
+[![License](https://img.shields.io/badge/license-AGPL--3.0--or--later-4c1)](LICENSE)
+[![Docs](https://img.shields.io/badge/docs-dstroy0.github.io-22d3ee)](https://dstroy0.github.io/ProtoCore/)
+[![Features](https://img.shields.io/badge/features-browse-6366f1)](https://dstroy0.github.io/ProtoCore/features.html)
 
 A multi-protocol network server for microcontrollers with a fully deterministic memory footprint, RFC 7230 compliant request parsing, and an OSI-layered architecture. It serves HTTP/1.1/2/and 3 over QUIC, HTTPS/TLS/DTLS, SSH (full OpenSSH interop), Telnet, SNMP, and post quantum crypto.
 
