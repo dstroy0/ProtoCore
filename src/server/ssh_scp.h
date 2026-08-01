@@ -3,13 +3,19 @@
 
 /**
  * @file ssh_scp.h
- * @brief SCP server - the fs::FS binding (PC_ENABLE_SSH_SCP).
+ * @brief SCP server - the rcp SINK state machine over an SSH exec channel (PC_ENABLE_SSH_SCP).
  *
- * Binds the pure SCP/RCP codec (services/file_transfer/scp) to an SSH `exec "scp …"` channel + an Arduino fs::FS mount
- * so a client can drop a file onto the device: `scp localfile admin@device:/path`. v1 serves the SINK direction (client
- * -> device, `scp -t`); the SOURCE direction (`scp -f`, device -> client) is a follow-up - use SFTP `get` to download.
- * Streamed writes, fixed buffers, no heap beyond the fs layer's file handle. Call pc_ssh_scp_begin() once after
- * pc_ssh_conn_setup().
+ * Drives the SCP/RCP codec (services/file_transfer/scp) over an SSH `exec "scp …"` channel so a
+ * client can drop a file onto the device: `scp localfile admin@device:/path`. v1 serves the SINK
+ * direction (client -> device, `scp -t`); the SOURCE direction (`scp -f`, device -> client) is a
+ * follow-up - use SFTP `get` to download.
+ *
+ * Storage is reached through the filesystem accessor (server/filesystem/filesystem.h), so this file
+ * names no vendor type and holds no mount, no root, and no path buffer. Mount the backend and set
+ * the root once with pc_mnt_mount() + pc_fs_begin(); every server over that storage then answers
+ * from the same root by construction rather than by each being told the same string.
+ *
+ * Streamed writes, fixed buffers, no heap. Call pc_ssh_scp_begin() once after pc_ssh_conn_setup().
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -22,13 +28,12 @@
 
 #if PC_ENABLE_SSH_SCP
 
-#include <FS.h>
-
 /**
- * @brief Serve SCP uploads from @p fs under @p root. Installs the channel exec-"scp" + data callbacks. Call
- *        once, after pc_ssh_conn_setup(). Coexists with pc_ssh_sftp_begin (they share the SSH channel layer).
+ * @brief Serve SCP uploads onto the mounted filesystem. Installs the channel exec-"scp" + data
+ *        callbacks. Call once, after pc_ssh_conn_setup() and pc_fs_begin(). Coexists with
+ *        pc_ssh_sftp_begin (they share the SSH channel layer).
  */
-void pc_ssh_scp_begin(fs::FS &fs, const char *root);
+void pc_ssh_scp_begin(void);
 
 #endif // PC_ENABLE_SSH_SCP
 

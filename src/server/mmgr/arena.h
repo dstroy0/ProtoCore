@@ -15,7 +15,7 @@
  *   individually, in arbitrary order (e.g. per-connection state). Grows up into the
  *   middle only as far as the scratch end allows; a freed top block shrinks it back.
  * - **Scratch** (top): a bump allocator reclaimed in bulk. Transient per-dispatch
- *   buffers. `scratch_reset()` empties it in O(1); `mark`/`release` give nested savepoints.
+ *   buffers. `pc_arena_scratch_reset()` empties it in O(1); `mark`/`release` give nested savepoints.
  *
  * Whichever side needs more room grows into the shared middle - that is the win over two
  * fixed pools. Both ends fail closed (return NULL) rather than crossing the boundary.
@@ -177,7 +177,7 @@ inline void pc_arena_scratch_reset(pc_arena *a)
  *
  * The accessors answer this more cheaply still: their slot count and slot size are compile-time, so
  * the whole pool is one region of known extent and the test is a single unsigned subtract against a
- * constant bound - see pc_scratch_owns() / pc_secure_owns(). This general version is two compares,
+ * constant bound - see pc_plaintext_owns() / pc_secure_owns(). This general version is two compares,
  * for an arena whose base and size are only known at run time.
  */
 inline bool pc_arena_owns(const pc_arena *a, const void *p)

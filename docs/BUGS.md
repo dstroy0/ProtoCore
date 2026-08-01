@@ -8,6 +8,26 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ---
 
+## A mount root without a trailing slash silently concatenates: `/gcode` + `/part.nc` -> `/gcodepart.nc`
+
+- **Status:** FIXED (2026-07-31, host-validated). Pre-existing; found while moving the path join
+  into `server/filesystem`.
+- **Symptom:** an SFTP or SCP server started with a root that does not end in `/` writes every file
+  to a path with the separator missing. `pc_ssh_sftp_begin(LittleFS, "/gcode")` plus a client
+  request for `/part.nc` resolves to `/gcodepart.nc` - a sibling of the intended directory, not a
+  file inside it. No error is reported at any layer; the transfer succeeds to the wrong path.
+- **Root cause:** the join treats the mount root's trailing `/` as a known property and emits
+  `root || sub` with no separator of its own, which is correct and is why there is no runtime test
+  for it. Nothing established the property, though: the root arrived as a caller-supplied
+  `const char *` stored as-is by `pc_ssh_sftp_begin` / `pc_ssh_scp_begin`, whose only normalization
+  was `(root && root[0]) ? root : "/"`. `examples/L5-Session/SSHSftp/README.md:68` documents the
+  broken form, so the recommended call was the failing one. The shipped example uses `"/"`, which
+  happens to end in a slash, which is why HW validation never caught it.
+- **Fix:** the accessor owns the root, so it is the one place that can make the shape true rather
+  than assume it. `pc_fs_begin()` stores a normalized copy with the separator appended if absent;
+  the join's assumption then holds by construction and still costs no runtime test. A root that
+  does not fit is refused outright rather than truncated into a different directory.
+
 ## Every ESP32 example failed to link: `web_assets.cpp` was tracked twice under two names
 
 - **Status:** FIXED (2026-07-31). Both changed sketches now build on the real core: Telnet 919,127 B

@@ -26,8 +26,8 @@
 #ifndef PROTOCORE_BYTES_H
 #define PROTOCORE_BYTES_H
 
+#include "server/mmgr/span.h"         // pc_span / pc_cspan - the region these verbs act on
 #include "shared_primitives/endian.h" // pc_rd32be - the fixed-width serializers live there
-#include "shared_primitives/span.h"   // pc_span / pc_cspan - the region these verbs act on
 #include <stddef.h>
 #include <stdint.h>
 
@@ -59,16 +59,19 @@ inline void pc_bw_put_be(pc_span *w, uint64_t val, int32_t nbytes)
 // --- take out of a pc_cspan ---
 
 /**
- * @brief Read @p nbytes big-endian immediately after the tag byte at @p pos,
- *        advancing past the tag and the argument (pos += 1 + nbytes).
+ * @brief Read @p nbytes big-endian at the cursor, advancing past them.
  *
- * Both CBOR heads and MessagePack format bytes are a 1-byte tag followed by a big-endian argument,
- * so this consumes the tag + argument in one step. Sets the sticky err and returns false if the read
- * would run past the buffer.
+ * Sets the sticky err and returns false if the read would run past the end.
+ *
+ * This reads at the cursor and nowhere else. It used to skip a byte first, because CBOR's head byte
+ * and MessagePack's format byte were folded into it - a codec's framing baked into the shared layer.
+ * The cost was not just the coupling: a plain big-endian read could no longer be spelled with it, and
+ * that is what produced a second reader (pc_rd_u32) beside this one. Consuming a tag is the codec's
+ * step, and it is one line at each of the four call sites that need it.
  */
 inline bool pc_br_take_be(pc_cspan *r, size_t nbytes, uint64_t *out)
 {
-    if (r->pos + 1 + nbytes > r->len)
+    if (r->pos > r->len || r->len - r->pos < nbytes)
     {
         r->err = true;
         return false;
@@ -76,10 +79,10 @@ inline bool pc_br_take_be(pc_cspan *r, size_t nbytes, uint64_t *out)
     uint64_t v{0};
     for (size_t i = 0; i < nbytes; i++)
     {
-        v = (v << 8) | r->buf[r->pos + 1 + i];
+        v = (v << 8) | r->buf[r->pos + i];
     }
     *out = v;
-    r->pos += 1 + nbytes;
+    r->pos += nbytes;
     return true;
 }
 
@@ -89,10 +92,16 @@ inline bool pc_br_take_be(pc_cspan *r, size_t nbytes, uint64_t *out)
 // many bytes. SSH calls it a "string" (RFC 4251 sec 5) and had it written four separate times.
 // These bounds-check and advance an offset the caller owns, for parsers that walk a raw payload.
 
+// Every bound here is written as a subtraction against the space that remains, never as a sum
+// compared to the length. A sum overflows: size_t is 32 bits on esp32 and c2000, the length prefix
+// on the wire is a full u32, and `*off + n > len` with n = 0xFFFFFFFF wraps to a small number that
+// passes the check. The peer picks n, so the sum form hands out a length larger than the buffer.
+// Subtracting cannot wrap once *off <= len is established, which each check does first.
+
 /** @brief Read a big-endian u32 at @p *off, advancing it by 4. False if it would run past @p len. */
 inline bool pc_rd_u32(const uint8_t *p, size_t len, size_t *off, uint32_t *out)
 {
-    if (*off + 4 > len)
+    if (*off > len || len - *off < 4)
     {
         return false;
     }
@@ -115,7 +124,7 @@ inline bool pc_rd_str(const uint8_t *p, size_t len, size_t *off, const uint8_t *
     {
         return false;
     }
-    if (*off + n > len)
+    if (n > len - *off) // pc_rd_u32 succeeding established *off <= len, so this cannot wrap
     {
         *off = start;
         return false;

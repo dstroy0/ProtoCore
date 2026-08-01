@@ -7,12 +7,15 @@
  */
 
 #include "services/instrumentation/scpi/scpi.h"
-#include "shared_primitives/strbuf.h" // pc_sb frame builder
+#include "shared_primitives/frame.h" // the one frame engine
 
 #if PC_ENABLE_SCPI
 
 #include <stdio.h> // snprintf (number formatting only; parsing is hand-rolled - no stdlib)
 #include <string.h>
+
+// A response value is one number. 10 significant digits is the SCPI NR2/NR3 rendering.
+static const pc_field SCPI_REAL[] = {{PC_FK_G, 10, 0, nullptr}, PC_END};
 
 // ── small helpers ──────────────────────────────────────────────────────────────────────────────
 
@@ -133,22 +136,8 @@ size_t pc_scpi_fmt_real(char *buf, size_t cap, double v)
         return 0;
     }
     // %g renders NR2 (fixed) or NR3 (scientific) and trims trailing zeros - exactly the SCPI forms.
-    pc_sb sb_buf = {buf, cap, 0, true};
-    pc_sb_g(&sb_buf, (double)(v), 10);
-    int n = (int)pc_sb_finish(&sb_buf);
-    // n<0 is unreachable: "%.10g" on a real double never hits a libc encoding error (no I/O, no wide
-    // conversion); the compound condition's branch data lands on this "if" line, not the continuation
-    // below, so the exclusion marker must sit here, not on the "cap)" line, to actually take effect.
-    if (n < 0 || // GCOVR_EXCL_BR_LINE
-        (size_t)n >= cap)
-    {
-        if (cap) // GCOVR_EXCL_BR_LINE  cap==0 already returned above (see the guard at function entry)
-        {
-            buf[0] = '\0';
-        }
-        return 0;
-    }
-    return (size_t)n;
+    // The frame's own contract is this function's contract: bytes written, or 0 with buf emptied.
+    return pc_frame_build(buf, cap, SCPI_REAL, v);
 }
 
 // ── response parsers ───────────────────────────────────────────────────────────────────────────

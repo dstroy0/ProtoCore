@@ -206,10 +206,15 @@ void pc_msgpack_label(pc_span *w, const char *name, int64_t num)
 // Decoder
 // ---------------------------------------------------------------------------
 
-// Read @p nbytes big-endian immediately after the format byte at r->pos, advancing
-// past the format byte and the argument (shared byte cursor, bytes.h).
+// Consume the format byte at the cursor plus the @p nbytes big-endian argument that follows it.
+//
+// The format byte is MessagePack's framing, so stepping over it is this codec's step. It used to
+// live inside pc_br_take_be(), which made the shared cursor unable to express a plain big-endian
+// read; this function is where that knowledge belongs. A cursor already at the end advances to
+// len + 1 and pc_br_take_be() rejects it, so the step needs no guard of its own.
 static bool take_be(pc_cspan *r, size_t nbytes, uint64_t *out)
 {
+    r->pos += 1;
     return pc_br_take_be(r, nbytes, out);
 }
 

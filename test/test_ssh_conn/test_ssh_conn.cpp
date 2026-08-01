@@ -15,7 +15,7 @@
 #include "network_drivers/presentation/ssh/transport/ssh_packet.h"
 #include "network_drivers/presentation/ssh/transport/ssh_transport.h"
 #include "network_drivers/transport/tcp.h"
-#include "server/mmgr/scratch.h"
+#include "server/mmgr/plaintext.h"
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -692,8 +692,8 @@ void test_rx_overlong_banner_closes()
 
 static void drain_arena()
 {
-    scratch_reset();
-    while (scratch_alloc(256, 1))
+    pc_plaintext_reset();
+    while (pc_plaintext_alloc(256, 1))
     {
     }
 }
@@ -715,7 +715,7 @@ void test_conn_outbound_arena_exhausted()
     TEST_ASSERT_EQUAL_INT(-1, pc_ssh_conn_send(j, 0, data, sizeof(data)));     // payload/wire alloc fails
     TEST_ASSERT_EQUAL_INT(-1, pc_ssh_conn_close_channel(j, 0));                // wire alloc fails
     TEST_ASSERT_EQUAL_INT(-1, pc_ssh_conn_open_forwarded(j, "h", 22, "o", 1)); // payload/wire alloc fails
-    scratch_reset();
+    pc_plaintext_reset();
 }
 
 // Every outbound SSH function fails closed when the packet layer refuses to send (the send
@@ -757,7 +757,7 @@ void test_poll_rekey_emit_fails()
     ssh_pkt[j].seq_no_send = SSH_REKEY_PACKET_THRESHOLD; // rekey due; ssh_emit's arena borrow then fails
     drain_arena();
     pc_ssh_conn_poll(0);
-    scratch_reset();
+    pc_plaintext_reset();
     TEST_PASS();
 }
 
@@ -783,18 +783,18 @@ void test_conn_outbound_arena_fits_payload_not_wire()
     ssh_chan[j][0].flow.peer_window = 100000;
     ssh_chan[j][0].flow.peer_max_pkt = 100000;
 
-    scratch_reset();
-    while (scratch_capacity() - scratch_used() >= SSH_WIRE_CAP)
+    pc_plaintext_reset();
+    while (pc_plaintext_capacity() - pc_plaintext_used() >= SSH_WIRE_CAP)
     {
-        TEST_ASSERT_NOT_NULL(scratch_alloc(16, 1));
+        TEST_ASSERT_NOT_NULL(pc_plaintext_alloc(16, 1));
     }
-    TEST_ASSERT_TRUE(scratch_capacity() - scratch_used() >= SSH_PKT_BUF_SIZE);
+    TEST_ASSERT_TRUE(pc_plaintext_capacity() - pc_plaintext_used() >= SSH_PKT_BUF_SIZE);
 
     const uint8_t data[3] = {1, 2, 3};
     TEST_ASSERT_EQUAL_INT(-1, pc_ssh_conn_send(j, 0, data, sizeof(data)));
     ssh_chan[j][0].open = false; // free the sole channel slot for a server-initiated open
     TEST_ASSERT_EQUAL_INT(-1, pc_ssh_conn_open_forwarded(j, "10.0.0.1", 80, "1.2.3.4", 90));
-    scratch_reset();
+    pc_plaintext_reset();
 }
 
 // The receive path drains the ring without asking whether the socket is still sendable, so the

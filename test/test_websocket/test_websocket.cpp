@@ -20,7 +20,7 @@
 #include "lwip/tcp.h"                                           // mock write-capture (tcp_capture_reset / tcp_captured)
 #include "network_drivers/presentation/codec/deflate/deflate.h" // DEFLATE_SCRATCH_SIZE for the starved-send path
 #include "network_drivers/presentation/codec/inflate/inflate.h"
-#include "server/mmgr/scratch.h" // arena-exhaustion drive for the fail-closed path
+#include "server/mmgr/plaintext.h" // arena-exhaustion drive for the fail-closed path
 #endif
 
 // ---------------------------------------------------------------------------
@@ -1178,8 +1178,8 @@ void test_ws_permessage_deflate_scratch_exhausted_closes()
     TEST_ASSERT_NOT_NULL(ws);
     ws->pmd = true;
 
-    // Consume the whole arena so every scratch_alloc() in ws_finish_frame returns null.
-    void *hog = scratch_alloc(scratch_capacity(), 1);
+    // Consume the whole arena so every pc_plaintext_alloc() in ws_finish_frame returns null.
+    void *hog = pc_plaintext_alloc(pc_plaintext_capacity(), 1);
     TEST_ASSERT_NOT_NULL(hog);
 
     uint8_t frame[32];
@@ -1189,11 +1189,11 @@ void test_ws_permessage_deflate_scratch_exhausted_closes()
     ws_parse(ws);
     TEST_ASSERT_EQUAL(WsParseState::WS_ERROR, ws->parse_state); // arena exhausted -> fail closed
 
-    scratch_reset(); // hand the arena back for the remaining tests
+    pc_plaintext_reset(); // hand the arena back for the remaining tests
 }
 
 // Feed one compressed (RSV1) frame with the arena pre-drained to leave exactly
-// `leave` free bytes, so a chosen scratch_alloc() in ws_finish_frame is the one
+// `leave` free bytes, so a chosen pc_plaintext_alloc() in ws_finish_frame is the one
 // that fails. Exercises the middle/last legs of the `if (!in || !out || !tbl)`
 // short-circuit (out==null with in!=null; tbl==null with in,out!=null).
 static void feed_compressed_with_arena_leaving(size_t leave)
@@ -1205,8 +1205,8 @@ static void feed_compressed_with_arena_leaving(size_t leave)
     TEST_ASSERT_NOT_NULL(ws);
     ws->pmd = true;
 
-    scratch_reset();
-    void *hog = scratch_alloc(scratch_capacity() - leave, 1);
+    pc_plaintext_reset();
+    void *hog = pc_plaintext_alloc(pc_plaintext_capacity() - leave, 1);
     TEST_ASSERT_NOT_NULL(hog);
 
     uint8_t frame[32];
@@ -1215,7 +1215,7 @@ static void feed_compressed_with_arena_leaving(size_t leave)
     push_bytes(0, frame, n);
     ws_parse(ws);
     TEST_ASSERT_EQUAL(WsParseState::WS_ERROR, ws->parse_state);
-    scratch_reset();
+    pc_plaintext_reset();
 }
 
 // The inbound arena-exhaustion guard `if (!in || !out || !tbl)` must fail closed
@@ -1268,8 +1268,8 @@ void test_ws_outbound_binary_and_scratch_starved()
     tcp_capture_disable();
 
     // scr (DEFLATE_SCRATCH_SIZE) cannot be borrowed -> compression skipped, sent raw.
-    scratch_reset();
-    void *hog = scratch_alloc(scratch_capacity(), 1);
+    pc_plaintext_reset();
+    void *hog = pc_plaintext_alloc(pc_plaintext_capacity(), 1);
     TEST_ASSERT_NOT_NULL(hog);
     tcp_capture_reset();
     TEST_ASSERT_TRUE(ws_send_frame(ws, WsOpcode::WS_OP_BINARY, bin, sizeof(bin)));
@@ -1278,15 +1278,15 @@ void test_ws_outbound_binary_and_scratch_starved()
     tcp_capture_disable();
 
     // scr ok but cbuf (cap bytes) cannot be borrowed -> same fall-through.
-    scratch_reset();
-    hog = scratch_alloc(scratch_capacity() - (DEFLATE_SCRATCH_SIZE + 8), 1);
+    pc_plaintext_reset();
+    hog = pc_plaintext_alloc(pc_plaintext_capacity() - (DEFLATE_SCRATCH_SIZE + 8), 1);
     TEST_ASSERT_NOT_NULL(hog);
     tcp_capture_reset();
     TEST_ASSERT_TRUE(ws_send_frame(ws, WsOpcode::WS_OP_BINARY, bin, sizeof(bin)));
     s = (const uint8_t *)tcp_captured();
     TEST_ASSERT_EQUAL_UINT8(0x80 | (uint8_t)WsOpcode::WS_OP_BINARY, s[0]); // no RSV1: cbuf borrow failed
     tcp_capture_disable();
-    scratch_reset();
+    pc_plaintext_reset();
 }
 
 // Outbound send-side guard `pmd && len>0 && (TEXT||BINARY)`: pmd true with len==0

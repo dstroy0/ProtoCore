@@ -113,7 +113,7 @@ void listener_stop(uint8_t idx);
  * @brief Stop all active listeners.
  *
  * Convenience wrapper that calls listener_stop() for every slot in
- * listener_pool[].  Called by PC::stop().
+ * listener_pool[].  Called by stop().
  */
 void listener_stop_all();
 

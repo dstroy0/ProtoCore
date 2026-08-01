@@ -12,7 +12,7 @@
 
 #include "network_drivers/presentation/ssh/connection/ssh_client.h"
 #include "server/mmgr/secure.h"
-#include "shared_primitives/strbuf.h" // pc_sb frame builder
+#include "shared_primitives/frame.h" // the one frame engine
 
 #if PC_ENABLE_SSH_CLIENT
 
@@ -36,7 +36,7 @@
 #include "crypto/pqc/sntrup761.h" // sntrup761x25519-sha512 hybrid (client: KeyGen + Decaps)
 #endif
 #if PC_ENABLE_PQC_KEX || PC_ENABLE_SSH_SNTRUP761
-#include "server/mmgr/scratch.h" // scratch_alloc for the large hybrid C_INIT
+#include "server/mmgr/plaintext.h" // pc_plaintext_alloc for the large hybrid C_INIT
 #endif
 
 #if defined(ARDUINO)
@@ -587,14 +587,14 @@ static bool build_kex_public(void)
         // sntrup761 keypair (sk kept for Decaps; pk is embedded in sk) + an X25519 ephemeral. C_INIT
         // (pk || Q_C) is assembled at send time from sk; Q_C lives in qc[0..31]. pk is only needed
         // transiently here (sk embeds a copy), so it borrows the scratch arena.
-        size_t mark = scratch_mark();
-        uint8_t *pk = (uint8_t *)scratch_alloc(PC_SNTRUP761_PK_BYTES, 1);
+        size_t mark = pc_plaintext_mark();
+        uint8_t *pk = (uint8_t *)pc_plaintext_alloc(PC_SNTRUP761_PK_BYTES, 1);
         if (!pk)
         {
             return false;
         }
         pc_sntrup761_keypair(pk, s_cli.hyb.sntrup_sk);
-        scratch_release(mark); // pk persists inside sntrup_sk at PC_SNTRUP761_SK_PK_OFFSET
+        pc_plaintext_release(mark); // pk persists inside sntrup_sk at PC_SNTRUP761_SK_PK_OFFSET
         ssh_rng_fill(s_cli.kex_priv, 32);
         pc_x25519_base(s_cli.qc, s_cli.kex_priv);
         s_cli.qc_len = 32;
@@ -669,8 +669,8 @@ static bool handle_server_kexinit(const uint8_t *p, size_t len)
         const uint8_t *ek = s_cli.hyb.mlkem_dk + 1152; // ek follows the 1152-byte dk_pke in dk
         const size_t clen = MLKEM768_EK_BYTES + 32;
         const size_t plen = 1 + 4 + clen;
-        size_t mark = scratch_mark();
-        uint8_t *out = (uint8_t *)scratch_alloc(plen, 1);
+        size_t mark = pc_plaintext_mark();
+        uint8_t *out = (uint8_t *)pc_plaintext_alloc(plen, 1);
         if (!out)
         {
             return false;
@@ -681,7 +681,7 @@ static bool handle_server_kexinit(const uint8_t *p, size_t len)
         w_bytes(&w, ek, MLKEM768_EK_BYTES);
         w_bytes(&w, s_cli.qc, 32);
         bool ok = w.ok && cli_send(out, w.off);
-        scratch_release(mark);
+        pc_plaintext_release(mark);
         return ok;
     }
 #endif
@@ -694,8 +694,8 @@ static bool handle_server_kexinit(const uint8_t *p, size_t len)
         const uint8_t *pk = s_cli.hyb.sntrup_sk + PC_SNTRUP761_SK_PK_OFFSET;
         const size_t clen = PC_SNTRUP761_PK_BYTES + 32;
         const size_t plen = 1 + 4 + clen;
-        size_t mark = scratch_mark();
-        uint8_t *out = (uint8_t *)scratch_alloc(plen, 1);
+        size_t mark = pc_plaintext_mark();
+        uint8_t *out = (uint8_t *)pc_plaintext_alloc(plen, 1);
         if (!out)
         {
             return false;
@@ -706,7 +706,7 @@ static bool handle_server_kexinit(const uint8_t *p, size_t len)
         w_bytes(&w, pk, PC_SNTRUP761_PK_BYTES);
         w_bytes(&w, s_cli.qc, 32);
         bool ok = w.ok && cli_send(out, w.off);
-        scratch_release(mark);
+        pc_plaintext_release(mark);
         return ok;
     }
 #endif
@@ -1551,7 +1551,7 @@ bool pc_ssh_tunnel_begin(const pc_ssh_tunnel_cfg *cfg)
     // Own a dedicated scratch arena, distinct from the server's worker(s): packet decryption borrows
     // from the shared scratch, and that arena is single-accessor-per-task. begin() and poll() run in
     // the same task, so claiming the slot here makes every later decrypt use the client's own arena.
-    pc_worker_set_self(PC_SSH_CLIENT_SCRATCH_SLOT);
+    pc_worker_set_self(PC_GHOST_WORKER_SLOT);
 
     uint16_t port = cfg->port ? cfg->port : 22;
     s_cli.cid = pc_client_open(cfg->host, port, 8000);
@@ -1567,11 +1567,8 @@ bool pc_ssh_tunnel_begin(const pc_ssh_tunnel_cfg *cfg)
 
     // Send our identification string, then our KEXINIT.
     char banner[64];
-    pc_sb sb_banner = {banner, sizeof(banner), 0, true};
-    pc_sb_put(&sb_banner, CLIENT_BANNER);
-    pc_sb_put(&sb_banner, "\r\n");
-    int n = (int)pc_sb_finish(&sb_banner);
-    if (n <= 0 || !pc_client_send(s_cli.cid, (const uint8_t *)banner, (size_t)n))
+    size_t n = pc_frame_build(banner, sizeof(banner), CLI_BANNER, CLIENT_BANNER);
+    if (n == 0 || !pc_client_send(s_cli.cid, (const uint8_t *)banner, n))
     {
         cli_fail("banner send failed");
         return false;

@@ -27,7 +27,7 @@
  * @brief Drive the session layer for one Arduino loop iteration.
  *
  * Call this function from your `loop()` (or indirectly via
- * PC::handle()).  It performs three actions in order:
+ * handle()).  It performs three actions in order:
  *
  * 1. **Timeout sweep** - calls DeterministicAsyncTCP::check_timeouts()
  *    to force-close connections that have been idle for > CONN_TIMEOUT_MS.

@@ -1,9 +1,9 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Host tests for services/wearlevel: the flash wear-leveling slot selector.
+// Host tests for server/filesystem/wearlevel: the flash wear-leveling slot selector.
 
-#include "services/storage/wearlevel/wearlevel.h"
+#include "server/filesystem/wearlevel.h"
 #include <unity.h>
 
 void setUp(void)

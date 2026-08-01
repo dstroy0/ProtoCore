@@ -112,7 +112,7 @@ size_t pc_frame_append(char *out, size_t cap, const pc_field *spec, ...)
     {
         return 0;
     }
-    size_t used = strnlen(out, cap);
+    size_t used = pc_swar_scan_nul(out, cap);
     if (used >= cap)
     {
         return 0;

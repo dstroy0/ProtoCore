@@ -96,7 +96,7 @@ bool pc_workers_running(void);
 // instead of calling the send API directly (which would race the worker that owns
 // the slot), wrap it in a small function and hand it to the owning worker. The
 // worker drains and runs deferred callbacks each service iteration.
-// (PC::defer(slot, fn, arg) is the app-facing wrapper that resolves the
+// (defer(slot, fn, arg) is the app-facing wrapper that resolves the
 // slot's owner; this layer stays free of the transport/conn_pool dependency.)
 //
 // @p arg must remain valid until the callback runs (point it at static/global

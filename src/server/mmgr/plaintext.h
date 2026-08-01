@@ -2,25 +2,24 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file scratch.h
- * @brief Shared per-dispatch scratch arena (Layer 5, session-scoped memory).
+ * @file plaintext.h
+ * @brief Plaintext pool accessor - transient borrows whose bytes are not secret.
  *
  * Fixed BSS arenas that codec / protocol handlers borrow transient working
  * memory from, instead of each feature carrying its own dedicated scratch
  * buffer. Many such buffers are mutually exclusive in time - a connection is
  * doing HTTP *or* WebSocket *or* SSH at any instant, and a worker runs one
  * event to completion before the next - so overlapping them in one arena cuts
- * peak DRAM without weakening the zero-heap / deterministic guarantee (fixed
+ * peak RAM without weakening the zero-heap / deterministic guarantee (fixed
  * size, no runtime growth).
  *
- * There is one arena per slot (PC_SCRATCH_SLOTS): one per worker, plus one the
- * SSH client task owns when PC_ENABLE_SSH_CLIENT is set. scratch_alloc()
- * resolves the caller's slot with pc_worker_self(), so a borrow never crosses
- * workers.
+ * There is one arena per slot (::PC_REG_POOL_SLOTS): one per server worker, plus
+ * the ghost, which is the library's own. pc_plaintext_alloc() resolves the
+ * caller's slot with pc_worker_self(), so a borrow never crosses workers.
  *
- * **Model - region reset per dispatch.** scratch_alloc() bump-allocates from the
- * caller's arena; scratch_reset() empties that one arena in O(1).
- * dispatch_event() calls scratch_reset() before handing an event to its
+ * **Model - region reset per dispatch.** pc_plaintext_alloc() bump-allocates from the
+ * caller's arena; pc_plaintext_reset() empties that one arena in O(1).
+ * dispatch_event() calls pc_plaintext_reset() before handing an event to its
  * protocol handler, so a borrow is valid only until the handler returns. There
  * is no per-allocation free - the whole arena is reclaimed at once.
  *
@@ -29,18 +28,18 @@
  * through its queue, so a context that is not a worker never borrows: the lwIP
  * callbacks run in tcpip_thread and only fill the rx ring + enqueue events, and
  * an ISR posts a fixed-size item to a preempt-queue lane whose task does the
- * work. In debug builds an owner-task assertion (xTaskGetCurrentTaskHandle)
- * records the first task to touch each arena and fails loud if a second one
- * does, turning a future mistake into an immediate visible failure instead of a
+ * work. In debug builds an owner assertion (pc_platform_context_id()) records
+ * the first context to touch each arena and fails loud if a second one does,
+ * turning a future mistake into an immediate visible failure instead of a
  * silent cross-core race.
  *
  * **Exhaustion-safety.** Borrows live only within one dispatch and are
  * auto-reclaimed by the reset, so a forgotten free cannot accumulate (no
- * creeping exhaustion). An over-budget scratch_alloc() returns nullptr; every
+ * creeping exhaustion). An over-budget pc_plaintext_alloc() returns nullptr; every
  * caller must take a defined fail-closed path (drop the optional optimization,
  * close the connection, answer 503) and must never dereference a null borrow.
  *
- * **No implicit zeroing.** scratch_alloc() returns uninitialized memory and the
+ * **No implicit zeroing.** pc_plaintext_alloc() returns uninitialized memory and the
  * reset does not wipe. This pool is for plaintext: anything whose bytes are key
  * material belongs in the secure pool (server/mmgr/secure.h), which is the same
  * mechanism with one added control - reclaiming wipes, before the bytes become
@@ -50,17 +49,28 @@
  * @date    2026
  */
 
-#ifndef PROTOCORE_SCRATCH_H
-#define PROTOCORE_SCRATCH_H
+#ifndef PROTOCORE_PLAINTEXT_H
+#define PROTOCORE_PLAINTEXT_H
 
 #include "protocore_config.h"
-#include "shared_primitives/span.h"
+#include "server/mmgr/span.h"
 #include <stddef.h>
 
 /**
- * @brief Borrow @p n bytes of scratch, aligned to @p align.
+ * @brief Slots in the plaintext pool.
  *
- * The returned pointer is valid only until the next scratch_reset() (i.e. only
+ * Sized off the ghost rather than the worker count so the invariant is the definition: the pool
+ * must reach the highest slot any caller can resolve to, and that is the ghost.
+ *
+ * The secure pool states its own count (::PC_SEC_POOL_SLOTS). They are equal today and neither is
+ * derived from the other - one pool growing a slot is not a reason for the other to.
+ */
+#define PC_REG_POOL_SLOTS (PC_GHOST_WORKER_SLOT + 1)
+
+/**
+ * @brief Borrow @p n bytes of plaintext, aligned to @p align.
+ *
+ * The returned pointer is valid only until the next pc_plaintext_reset() (i.e. only
  * within the current session dispatch). Returns nullptr if the request does not
  * fit the remaining arena - callers MUST handle null and fail closed.
  *
@@ -70,12 +80,12 @@
  *              platform default).
  * @return pointer to @p n writable bytes, or nullptr if it does not fit.
  */
-void *scratch_alloc(size_t n, size_t align);
+void *pc_plaintext_alloc(size_t n, size_t align);
 
 /**
  * @brief Borrow @p n bytes as a span whose capacity is bound to the allocation.
  *
- * The preferred form. scratch_alloc() hands back a bare pointer, which leaves the caller to carry
+ * The preferred form. pc_plaintext_alloc() hands back a bare pointer, which leaves the caller to carry
  * the length separately and keep the two in agreement by hand at every call - the same severed
  * binding that makes `sizeof()` on a converted array read 4 bytes instead of the extent. Here one
  * argument sets both fields, so the run length is stated once and cannot drift.
@@ -88,42 +98,42 @@ void *scratch_alloc(size_t n, size_t align);
  * @param align required alignment in bytes, a power of two (0 selects the platform default).
  * @return a span over @p n writable bytes, or an empty span if it does not fit.
  */
-pc_span pc_scratch_span(size_t n, size_t align);
+pc_span pc_plaintext_span(size_t n, size_t align);
 
 /**
  * @brief Reclaim the whole arena (empties it).
  *
  * Called by server_tick() before each event dispatch. Invalidates every pointer
- * previously returned by scratch_alloc().
+ * previously returned by pc_plaintext_alloc().
  */
-void scratch_reset(void);
+void pc_plaintext_reset(void);
 
 /**
- * @brief Capture the current arena offset (a savepoint for scratch_release()).
- * @return an opaque mark to pass to scratch_release().
+ * @brief Capture the current arena offset (a savepoint for pc_plaintext_release()).
+ * @return an opaque mark to pass to pc_plaintext_release().
  */
-size_t scratch_mark(void);
+size_t pc_plaintext_mark(void);
 
 /**
  * @brief Reclaim everything allocated since @p mark (LIFO).
  *
- * Restores the arena to a previous scratch_mark(), freeing every scratch_alloc()
+ * Restores the arena to a previous pc_plaintext_mark(), freeing every pc_plaintext_alloc()
  * made in between. Marks must be released in reverse order (nested scopes). Use
- * ScratchScope for return-safe scoping.
+ * PlaintextScope for return-safe scoping.
  *
- * @param mark a value previously returned by scratch_mark() (must be <= the
+ * @param mark a value previously returned by pc_plaintext_mark() (must be <= the
  *             current offset).
  */
-void scratch_release(size_t mark);
+void pc_plaintext_release(size_t mark);
 
 /** @brief Bytes currently handed out (0 immediately after a reset). */
-size_t scratch_used(void);
+size_t pc_plaintext_used(void);
 
-/** @brief Largest scratch_used() value seen since boot (for sizing the arena). */
-size_t scratch_high_water(void);
+/** @brief Largest pc_plaintext_used() value seen since boot (for sizing the arena). */
+size_t pc_plaintext_high_water(void);
 
-/** @brief Total arena capacity in bytes (PC_SCRATCH_ARENA_SIZE). */
-size_t scratch_capacity(void);
+/** @brief Total arena capacity in bytes (PC_PLAINTEXT_ARENA_SIZE). */
+size_t pc_plaintext_capacity(void);
 
 /**
  * @brief True if @p p points inside the plaintext pool.
@@ -138,7 +148,7 @@ size_t scratch_capacity(void);
  * answers its own question, so a secure-pool pointer can never be accepted where a plaintext one
  * is required, or the reverse.
  */
-bool pc_scratch_owns(const void *p);
+bool pc_plaintext_owns(const void *p);
 
 /**
  * @brief Which plaintext slot owns @p p, or -1 if @p p is not in the plaintext pool.
@@ -147,12 +157,12 @@ bool pc_scratch_owns(const void *p);
  * assert that a borrow being handed back belongs to the calling worker: crossing slots is the one
  * way the lock-free single-accessor invariant can be violated, and this makes it checkable.
  */
-int pc_scratch_slot_of(const void *p);
+int pc_plaintext_slot_of(const void *p);
 
 /**
- * @brief A scratch borrow whose acquire and release are one call each.
+ * @brief A plaintext borrow whose acquire and release are one call each.
  *
- * ScratchScope + pc_scratch_span costs three crossings of this module's boundary: mark, alloc, then
+ * PlaintextScope + pc_plaintext_span costs three crossings of this module's boundary: mark, alloc, then
  * release. Mark and alloc always happen together, so one of those is structure rather than work.
  * This does both in the constructor and the release in the destructor - two calls, and the slot is
  * resolved once instead of twice.
@@ -164,13 +174,13 @@ int pc_scratch_slot_of(const void *p);
  * Fails closed like every other borrow: an exhausted arena leaves span() empty, so a caller that
  * omits the check writes nothing rather than dereferencing null.
  */
-class ScratchBorrow
+class PlaintextBorrow
 {
   public:
-    ScratchBorrow(size_t n, size_t align);
-    ~ScratchBorrow();
-    ScratchBorrow(const ScratchBorrow &) = delete;
-    ScratchBorrow &operator=(const ScratchBorrow &) = delete;
+    PlaintextBorrow(size_t n, size_t align);
+    ~PlaintextBorrow();
+    PlaintextBorrow(const PlaintextBorrow &) = delete;
+    PlaintextBorrow &operator=(const PlaintextBorrow &) = delete;
 
     /** @brief The borrowed region; empty if the arena could not satisfy it. */
     const pc_span &span() const
@@ -184,29 +194,29 @@ class ScratchBorrow
 };
 
 /**
- * @brief RAII scope guard for transient scratch borrows.
+ * @brief RAII scope guard for transient plaintext borrows.
  *
  * Marks the arena on construction and restores it on destruction, so every
- * scratch_alloc() made within the scope is reclaimed on *every* exit path
- * (return, break, fall-through) - the safe way to borrow transient scratch in a
+ * pc_plaintext_alloc() made within the scope is reclaimed on *every* exit path
+ * (return, break, fall-through) - the safe way to borrow transient plaintext in a
  * function with multiple returns. Scopes must nest (LIFO); the per-dispatch
- * scratch_reset() is the backstop if one is ever skipped.
+ * pc_plaintext_reset() is the backstop if one is ever skipped.
  */
-class ScratchScope
+class PlaintextScope
 {
   public:
-    ScratchScope() : m_mark(scratch_mark())
+    PlaintextScope() : m_mark(pc_plaintext_mark())
     {
     }
-    ~ScratchScope()
+    ~PlaintextScope()
     {
-        scratch_release(m_mark);
+        pc_plaintext_release(m_mark);
     }
-    ScratchScope(const ScratchScope &) = delete;
-    ScratchScope &operator=(const ScratchScope &) = delete;
+    PlaintextScope(const PlaintextScope &) = delete;
+    PlaintextScope &operator=(const PlaintextScope &) = delete;
 
   private:
     size_t m_mark;
 };
 
-#endif // PROTOCORE_SCRATCH_H
+#endif // PROTOCORE_PLAINTEXT_H

@@ -177,7 +177,7 @@
         "+<board_drivers/hal/portable/portable_aes128gcm.cpp>",
         "+<server/mmgr/arena.cpp>",
         "+<server/mmgr/secure.cpp>",
-        "+<server/mmgr/scratch.cpp>",
+        "+<server/mmgr/plaintext.cpp>",
         "+<network_drivers/session/worker.cpp>",
         "+<board_drivers/hal/portable/portable_platform.cpp>"
       ],
@@ -271,7 +271,7 @@
       "tests": ["test_iolink"]
     },
     "native": {
-      "desc": "Layers 4-6: transport + session + presentation + standalone parser (no app layer)\nThese suites predate the RFC 7230 \u00c2\u00a75.4 Host rule and feed bare HTTP/1.1\nrequest lines to exercise parser mechanics; Host enforcement is verified\nseparately in env:native_compliance.",
+      "desc": "Layers 4-6: transport + session + presentation + standalone parser (no app layer)\nThese suites predate the RFC 7230 Â§5.4 Host rule and feed bare HTTP/1.1\nrequest lines to exercise parser mechanics; Host enforcement is verified\nseparately in env:native_compliance.",
       "flags": ["-DPC_ENFORCE_HOST_HEADER=0"],
       "src": [
         "+<network_drivers/network/ip.cpp>",
@@ -281,7 +281,7 @@
         "+<network_drivers/presentation/presentation.cpp>",
         "+<network_drivers/session/session.cpp>",
         "+<network_drivers/session/proto_builtins.cpp>",
-        "+<server/mmgr/scratch.cpp>",
+        "+<server/mmgr/plaintext.cpp>",
         "+<server/mmgr/arena.cpp>",
         "+<network_drivers/session/worker.cpp>",
         "+<crypto/hash/sha1.cpp>",
@@ -350,7 +350,7 @@
         "+<network_drivers/presentation/presentation.cpp>",
         "+<network_drivers/session/session.cpp>",
         "+<network_drivers/session/proto_builtins.cpp>",
-        "+<server/mmgr/scratch.cpp>",
+        "+<server/mmgr/plaintext.cpp>",
         "+<server/mmgr/arena.cpp>",
         "+<network_drivers/session/worker.cpp>",
         "+<crypto/hash/sha1.cpp>",
@@ -379,11 +379,11 @@
       "tests": ["test_provisioning"]
     },
     "native_ssh": {
-      "desc": "SSH crypto layer (native software paths only, no mbedtls dependency); channels multiplexed (PC_SSH_MAX_CHANNELS=3) to exercise routing; SFTP/SCP subsystem routing on (FILE_SERVING satisfies the guard)",
+      "desc": "SSH crypto layer (native software paths only, no mbedtls dependency); channels multiplexed (PC_SSH_MAX_CHANNELS=3) to exercise routing; SFTP/SCP subsystem routing on (MNT satisfies the guard - the file-transfer servers reach storage through the mount, not through FILE_SERVING)",
       "flags": [
         "-DPC_SSH_MAX_CHANNELS=3",
         "-DPC_ENABLE_SSH=1",
-        "-DPC_ENABLE_FILE_SERVING=1",
+        "-DPC_ENABLE_MNT=1",
         "-DPC_ENABLE_SSH_SFTP=1",
         "-DPC_ENABLE_SSH_SCP=1"
       ],
@@ -413,7 +413,7 @@
         "+<network_drivers/presentation/ssh/connection/ssh_channel.cpp>",
         "+<network_drivers/presentation/ssh/connection/ssh_flow_control.cpp>",
         "+<network_drivers/presentation/ssh/connection/ssh_server.cpp>",
-        "+<server/mmgr/scratch.cpp>",
+        "+<server/mmgr/plaintext.cpp>",
         "+<server/mmgr/arena.cpp>",
         "+<network_drivers/session/worker.cpp>",
         "+<server/mmgr/secure.cpp>",
@@ -456,7 +456,7 @@
         "+<network_drivers/presentation/ssh/connection/ssh_channel.cpp>",
         "+<network_drivers/presentation/ssh/connection/ssh_flow_control.cpp>",
         "+<network_drivers/presentation/ssh/connection/ssh_server.cpp>",
-        "+<server/mmgr/scratch.cpp>",
+        "+<server/mmgr/plaintext.cpp>",
         "+<server/mmgr/arena.cpp>",
         "+<network_drivers/session/worker.cpp>",
         "+<server/mmgr/secure.cpp>",
@@ -496,7 +496,7 @@
         "+<crypto/hash/sha3.cpp>",
         "+<crypto/pqc/mlkem.cpp>",
         "+<crypto/pqc/sntrup761.cpp>",
-        "+<server/mmgr/scratch.cpp>",
+        "+<server/mmgr/plaintext.cpp>",
         "+<server/mmgr/arena.cpp>",
         "+<network_drivers/session/worker.cpp>",
         "+<server/mmgr/secure.cpp>",
@@ -533,7 +533,7 @@
         "+<network_drivers/presentation/ssh/connection/ssh_channel.cpp>",
         "+<network_drivers/presentation/ssh/connection/ssh_flow_control.cpp>",
         "+<network_drivers/presentation/ssh/connection/ssh_server.cpp>",
-        "+<server/mmgr/scratch.cpp>",
+        "+<server/mmgr/plaintext.cpp>",
         "+<server/mmgr/arena.cpp>",
         "+<network_drivers/session/worker.cpp>",
         "+<server/mmgr/secure.cpp>",
@@ -552,7 +552,7 @@
         "+<network_drivers/presentation/presentation.cpp>",
         "+<network_drivers/session/session.cpp>",
         "+<network_drivers/session/proto_builtins.cpp>",
-        "+<server/mmgr/scratch.cpp>",
+        "+<server/mmgr/plaintext.cpp>",
         "+<server/mmgr/arena.cpp>",
         "+<network_drivers/session/worker.cpp>",
         "+<crypto/hash/sha1.cpp>",
@@ -592,23 +592,33 @@
       "tests": ["test_ssh_conn"]
     },
     "native_ssh_sftp": {
-      "desc": "SFTP protocol v3 wire codec (services/file_transfer/sftp): the SSH_FXP_* request reader + response builders\n(VERSION / STATUS / HANDLE / DATA / ATTRS / NAME), the ATTRS blob encode/decode round-trip (size / perms /\nmtime + the flag word, skipping unknown/extended fields), packet length-framing (need-more vs\nmalformed/too-big), and the ls -l longname formatter. Pure host tests (no fs / no SSH). FILE_SERVING is set\nonly to satisfy the SFTP dependency guard; no file code is linked.",
+      "desc": "SFTP protocol v3 wire codec (services/file_transfer/sftp): the SSH_FXP_* request reader + response builders\n(VERSION / STATUS / HANDLE / DATA / ATTRS / NAME), the ATTRS blob encode/decode round-trip (size / perms /\nmtime + the flag word, skipping unknown/extended fields), packet length-framing (need-more vs\nmalformed/too-big), and the ls -l longname formatter. Pure host tests (no fs / no SSH).",
       "flags": [
         "-DPC_ENABLE_SSH=1",
-        "-DPC_ENABLE_FILE_SERVING=1",
-        "-DPC_ENABLE_SSH_SFTP=1"
+        "-DPC_ENABLE_SSH_SFTP=1",
+        "-DPC_ENABLE_MNT=1"
       ],
-      "src": ["+<services/file_transfer/sftp/sftp.cpp>"],
+      "src": [
+        "+<services/file_transfer/sftp/sftp.cpp>",
+        "+<shared_primitives/frame.cpp>",
+        "+<server/filesystem/filesystem.cpp>",
+        "+<server/filesystem/mnt.cpp>"
+      ],
       "tests": ["test_ssh_sftp"]
     },
     "native_scp": {
-      "desc": "SCP (RCP) protocol wire codec (services/file_transfer/scp): parse an `scp -t/-f <path>` exec command into its\nsink/source role + target, parse + build the `C<mode> <size> <name>` control line (octal mode, decimal\nsize, name; malformed lines rejected), and the ack byte constants. Pure host tests. FILE_SERVING satisfies\nthe SCP dependency guard.",
+      "desc": "SCP (RCP) protocol wire codec (services/file_transfer/scp): parse an `scp -t/-f <path>` exec command into its\nsink/source role + target, parse + build the `C<mode> <size> <name>` control line (octal mode, decimal\nsize, name; malformed lines rejected), and the ack byte constants. Pure host tests.",
       "flags": [
         "-DPC_ENABLE_SSH=1",
-        "-DPC_ENABLE_FILE_SERVING=1",
-        "-DPC_ENABLE_SSH_SCP=1"
+        "-DPC_ENABLE_SSH_SCP=1",
+        "-DPC_ENABLE_MNT=1"
       ],
-      "src": ["+<services/file_transfer/scp/scp.cpp>"],
+      "src": [
+        "+<services/file_transfer/scp/scp.cpp>",
+        "+<server/filesystem/filesystem.cpp>",
+        "+<server/filesystem/mnt.cpp>",
+        "+<shared_primitives/frame.cpp>"
+      ],
       "tests": ["test_scp"]
     },
     "native_app": {
@@ -630,7 +640,7 @@
         "+<network_drivers/presentation/presentation.cpp>",
         "+<network_drivers/session/session.cpp>",
         "+<network_drivers/session/proto_builtins.cpp>",
-        "+<server/mmgr/scratch.cpp>",
+        "+<server/mmgr/plaintext.cpp>",
         "+<server/mmgr/arena.cpp>",
         "+<network_drivers/session/worker.cpp>",
         "+<crypto/hash/sha1.cpp>",
@@ -693,7 +703,7 @@
         "+<network_drivers/presentation/presentation.cpp>",
         "+<network_drivers/session/session.cpp>",
         "+<network_drivers/session/proto_builtins.cpp>",
-        "+<server/mmgr/scratch.cpp>",
+        "+<server/mmgr/plaintext.cpp>",
         "+<server/mmgr/arena.cpp>",
         "+<network_drivers/session/worker.cpp>",
         "+<crypto/hash/sha1.cpp>",
@@ -755,7 +765,7 @@
         "+<crypto/mac/hmac_sha256.cpp>",
         "+<server/mmgr/arena.cpp>",
         "+<server/mmgr/secure.cpp>",
-        "+<server/mmgr/scratch.cpp>",
+        "+<server/mmgr/plaintext.cpp>",
         "+<network_drivers/session/worker.cpp>",
         "+<board_drivers/hal/portable/portable_platform.cpp>"
       ],
@@ -1020,7 +1030,10 @@
     "native_scpi": {
       "desc": "SCPI / IEEE 488.2 instrument-control codec (services/instrumentation/scpi): the command builder\n(:-hierarchy header + params + terminator), the response parsers (numeric NR1/NR2/NR3,\nboolean, quoted string, definite/indefinite arbitrary block), the STB/ESR/ESE/SRE +\nerror-queue status model, and the SCPI short/long-form header matcher. Pure host tests.",
       "flags": ["-DPC_ENABLE_SCPI=1", "-DUNITY_INCLUDE_DOUBLE"],
-      "src": ["+<services/instrumentation/scpi/scpi.cpp>"],
+      "src": [
+        "+<services/instrumentation/scpi/scpi.cpp>",
+        "+<shared_primitives/frame.cpp>"
+      ],
       "tests": ["test_scpi"]
     },
     "native_hislip": {
@@ -1079,7 +1092,7 @@
         "+<crypto/hash/sha512.cpp>",
         "+<server/mmgr/arena.cpp>",
         "+<server/mmgr/secure.cpp>",
-        "+<server/mmgr/scratch.cpp>",
+        "+<server/mmgr/plaintext.cpp>",
         "+<network_drivers/session/worker.cpp>",
         "+<board_drivers/hal/portable/portable_platform.cpp>"
       ],
@@ -1093,7 +1106,7 @@
         "+<crypto/aead/aesgcm.cpp>",
         "+<board_drivers/hal/portable/portable_aesgcm.cpp>",
         "+<server/mmgr/arena.cpp>",
-        "+<server/mmgr/scratch.cpp>",
+        "+<server/mmgr/plaintext.cpp>",
         "+<server/mmgr/secure.cpp>",
         "+<network_drivers/session/worker.cpp>",
         "+<board_drivers/hal/portable/portable_platform.cpp>"
@@ -1109,7 +1122,7 @@
         "+<crypto/aead/aesgcm.cpp>",
         "+<board_drivers/hal/portable/portable_aesgcm.cpp>",
         "+<server/mmgr/arena.cpp>",
-        "+<server/mmgr/scratch.cpp>",
+        "+<server/mmgr/plaintext.cpp>",
         "+<server/mmgr/secure.cpp>",
         "+<network_drivers/session/worker.cpp>",
         "+<board_drivers/hal/portable/portable_platform.cpp>"
@@ -1325,19 +1338,13 @@
         "+<board_drivers/hal/portable/portable_bignum.cpp>",
         "+<crypto/hash/sha256.cpp>",
         "+<crypto/hash/sha512.cpp>",
-        "+<server/mmgr/scratch.cpp>",
+        "+<server/mmgr/plaintext.cpp>",
         "+<server/mmgr/arena.cpp>",
         "+<network_drivers/session/worker.cpp>",
         "+<server/mmgr/secure.cpp>",
         "+<board_drivers/hal/portable/portable_platform.cpp>"
       ],
       "tests": ["test_oidc"]
-    },
-    "native_vfs": {
-      "desc": "Unified VFS wrapper (services/storage/vfs) - host-tested through its built-in RAM\nbackend (the Arduino FS backend is ESP32-only and HW-verified). Pure, no heap.",
-      "flags": ["-DPC_ENABLE_VFS=1"],
-      "src": ["+<services/storage/vfs/vfs.cpp>"],
-      "tests": ["test_vfs"]
     },
     "native_graphql": {
       "desc": "GraphQL query subset (services/iot/graphql) - pure parser + executor, host-tested\nwith a demo resolver. No heap; bounds are compile-time.",
@@ -1502,7 +1509,7 @@
         "+<services/file_transfer/webdav/webdav.cpp>",
         "+<server/mmgr/arena.cpp>",
         "+<server/mmgr/secure.cpp>",
-        "+<server/mmgr/scratch.cpp>",
+        "+<server/mmgr/plaintext.cpp>",
         "+<network_drivers/session/worker.cpp>",
         "+<board_drivers/hal/portable/portable_platform.cpp>",
         "+<network_drivers/presentation/codec/codec.cpp>"
@@ -1524,7 +1531,7 @@
         "+<network_drivers/presentation/presentation.cpp>",
         "+<network_drivers/session/session.cpp>",
         "+<network_drivers/session/proto_builtins.cpp>",
-        "+<server/mmgr/scratch.cpp>",
+        "+<server/mmgr/plaintext.cpp>",
         "+<server/mmgr/arena.cpp>",
         "+<network_drivers/session/worker.cpp>",
         "+<crypto/hash/sha1.cpp>",
@@ -1542,7 +1549,8 @@
         "+<server/regex.cpp>",
         "+<server/middleware.cpp>",
         "+<server/webdav.cpp>",
-        "+<board_drivers/hal/portable/portable_platform.cpp>"
+        "+<board_drivers/hal/portable/portable_platform.cpp>",
+        "+<shared_primitives/frame.cpp>"
       ],
       "tests": ["test_keepalive"]
     },
@@ -1557,7 +1565,7 @@
         "+<network_drivers/presentation/presentation.cpp>",
         "+<network_drivers/session/session.cpp>",
         "+<network_drivers/session/proto_builtins.cpp>",
-        "+<server/mmgr/scratch.cpp>",
+        "+<server/mmgr/plaintext.cpp>",
         "+<server/mmgr/arena.cpp>",
         "+<network_drivers/session/worker.cpp>",
         "+<crypto/hash/sha1.cpp>",
@@ -1575,7 +1583,8 @@
         "+<server/regex.cpp>",
         "+<server/middleware.cpp>",
         "+<server/webdav.cpp>",
-        "+<board_drivers/hal/portable/portable_platform.cpp>"
+        "+<board_drivers/hal/portable/portable_platform.cpp>",
+        "+<shared_primitives/frame.cpp>"
       ],
       "tests": ["test_range"]
     },
@@ -1609,7 +1618,7 @@
         "+<crypto/hash/sha512.cpp>",
         "+<server/mmgr/arena.cpp>",
         "+<server/mmgr/secure.cpp>",
-        "+<server/mmgr/scratch.cpp>",
+        "+<server/mmgr/plaintext.cpp>",
         "+<network_drivers/session/worker.cpp>",
         "+<board_drivers/hal/portable/portable_platform.cpp>"
       ],
@@ -1766,7 +1775,7 @@
         "+<crypto/mac/hmac_sha256.cpp>",
         "+<server/mmgr/arena.cpp>",
         "+<server/mmgr/secure.cpp>",
-        "+<server/mmgr/scratch.cpp>",
+        "+<server/mmgr/plaintext.cpp>",
         "+<network_drivers/session/worker.cpp>",
         "+<board_drivers/hal/portable/portable_platform.cpp>"
       ],
@@ -1787,7 +1796,7 @@
         "+<network_drivers/presentation/presentation.cpp>",
         "+<network_drivers/session/session.cpp>",
         "+<network_drivers/session/proto_builtins.cpp>",
-        "+<server/mmgr/scratch.cpp>",
+        "+<server/mmgr/plaintext.cpp>",
         "+<server/mmgr/arena.cpp>",
         "+<network_drivers/session/worker.cpp>",
         "+<crypto/hash/sha1.cpp>",
@@ -1806,7 +1815,8 @@
         "+<server/middleware.cpp>",
         "+<server/webdav.cpp>",
         "+<services/file_transfer/upload_service/upload_service.cpp>",
-        "+<board_drivers/hal/portable/portable_platform.cpp>"
+        "+<board_drivers/hal/portable/portable_platform.cpp>",
+        "+<shared_primitives/frame.cpp>"
       ],
       "tests": ["test_upload"]
     },
@@ -1838,15 +1848,15 @@
       ],
       "tests": ["test_ws_client"]
     },
-    "native_scratch": {
-      "desc": "Shared per-dispatch scratch arena (session/scratch): bump-allocate + reset\nsemantics, alignment, and fail-closed exhaustion. Pure host tests - no\nlwIP/sockets - so it builds from scratch.cpp alone.",
+    "native_plaintext": {
+      "desc": "The plaintext pool accessor (server/mmgr/plaintext): bump-allocate + reset semantics,\nalignment, and fail-closed exhaustion. Pure host tests - no lwIP/sockets - so it builds from\nthe accessor and the pool mechanism alone.",
       "src": [
-        "+<server/mmgr/scratch.cpp>",
+        "+<server/mmgr/plaintext.cpp>",
         "+<server/mmgr/arena.cpp>",
         "+<network_drivers/session/worker.cpp>",
         "+<board_drivers/hal/portable/portable_platform.cpp>"
       ],
-      "tests": ["test_scratch"]
+      "tests": ["test_plaintext"]
     },
     "native_snmp_trap": {
       "flags": ["-DPC_ENABLE_SNMP=1", "-DPC_ENABLE_SNMP_TRAP=1"],
@@ -1921,7 +1931,7 @@
         "+<network_drivers/presentation/ssh/connection/ssh_flow_control.cpp>",
         "+<network_drivers/presentation/ssh/connection/ssh_server.cpp>",
         "+<network_drivers/presentation/codec/inflate/inflate.cpp>",
-        "+<server/mmgr/scratch.cpp>",
+        "+<server/mmgr/plaintext.cpp>",
         "+<server/mmgr/arena.cpp>",
         "+<network_drivers/session/worker.cpp>",
         "+<server/mmgr/secure.cpp>",
@@ -1940,7 +1950,7 @@
         "+<network_drivers/presentation/presentation.cpp>",
         "+<network_drivers/session/session.cpp>",
         "+<network_drivers/session/proto_builtins.cpp>",
-        "+<server/mmgr/scratch.cpp>",
+        "+<server/mmgr/plaintext.cpp>",
         "+<server/mmgr/arena.cpp>",
         "+<network_drivers/session/worker.cpp>",
         "+<crypto/hash/sha1.cpp>",
@@ -2006,7 +2016,7 @@
         "+<crypto/hash/sha256.cpp>",
         "+<server/mmgr/arena.cpp>",
         "+<server/mmgr/secure.cpp>",
-        "+<server/mmgr/scratch.cpp>",
+        "+<server/mmgr/plaintext.cpp>",
         "+<network_drivers/session/worker.cpp>",
         "+<board_drivers/hal/portable/portable_platform.cpp>"
       ],
@@ -2106,10 +2116,15 @@
       "src": ["+<services/system/sleep_sched/sleep_sched.cpp>"],
       "tests": ["test_sleep_sched"]
     },
+    "native_signaling": {
+      "desc": "Application-layer signaling (server/signaling): the state bucket. Deposits go in from the loop\n(response class tallies, and the uptime + conn/listener bitmasks a tick already has in hand), a\nread hands back a copy rather than a window, and kill forwards a slot to the transport unchanged.\nThe module holds no logic by design, so the tests assert exactly that. pc_conn_close is stubbed:\nthe forward is what is under test, not lwIP.",
+      "src": ["+<server/signaling/signaling.cpp>"],
+      "tests": ["test_signaling"]
+    },
     "native_wearlevel": {
-      "desc": "Flash wear-leveling slot selector (services/storage/wearlevel): least-worn pick (ties -> lowest\nindex), saturating mark, and the wear-imbalance spread metric. Pure host tests - a 4000-write\npick+mark loop must level every slot exactly.",
+      "desc": "Flash wear-leveling slot selector (server/filesystem/wearlevel): least-worn pick (ties -> lowest\nindex), saturating mark, and the wear-imbalance spread metric. Pure host tests - a 4000-write\npick+mark loop must level every slot exactly.",
       "flags": ["-DPC_ENABLE_WEARLEVEL=1"],
-      "src": ["+<services/storage/wearlevel/wearlevel.cpp>"],
+      "src": ["+<server/filesystem/wearlevel.cpp>"],
       "tests": ["test_wearlevel"]
     },
     "native_netadapt": {
@@ -2439,7 +2454,10 @@
     "native_logbuf": {
       "desc": "Rotating log ring + severity trap (services/system/logbuf): pure, fully host-tested.",
       "flags": ["-DPC_ENABLE_LOGBUF=1"],
-      "src": ["+<services/system/logbuf/logbuf.cpp>"],
+      "src": [
+        "+<services/system/logbuf/logbuf.cpp>",
+        "+<shared_primitives/frame.cpp>"
+      ],
       "tests": ["test_logbuf"]
     },
     "native_power_mgmt": {
@@ -2469,7 +2487,8 @@
       "flags": ["-DPC_ENABLE_CONFIG_STORE=1", "-DPC_ENABLE_CONFIG_IO=1"],
       "src": [
         "+<services/storage/config_store/config_store.cpp>",
-        "+<services/storage/config_io/config_io.cpp>"
+        "+<services/storage/config_io/config_io.cpp>",
+        "+<shared_primitives/frame.cpp>"
       ],
       "tests": ["test_config_io"]
     },
@@ -2562,7 +2581,7 @@
         "-DPC_ENABLE_RADIO_POWER=1",
         "-DPC_ENABLE_AUDIT_LOG=1",
         "-DPC_ENABLE_OIDC=1",
-        "-DPC_ENABLE_VFS=1",
+        "-DPC_ENABLE_MNT=1",
         "-DPC_ENABLE_GRAPHQL=1",
         "-DPC_ENABLE_ESPNOW=1",
         "-DPC_ENABLE_OAUTH2=1",
@@ -2574,7 +2593,7 @@
         "${env:native_app.build_src_filter}",
         "+<services/security/audit_log/audit_log.cpp>",
         "+<services/security/oidc/oidc.cpp>",
-        "+<services/storage/vfs/vfs.cpp>",
+        "+<server/filesystem/mnt.cpp>",
         "+<services/iot/graphql/graphql.cpp>",
         "+<services/radio/espnow/espnow.cpp>",
         "+<services/security/oauth2/oauth2.cpp>",
@@ -2607,7 +2626,7 @@
         "+<services/security/guardrails/guardrails.cpp>",
         "+<services/system/failsafe/failsafe.cpp>",
         "+<services/system/sleep_sched/sleep_sched.cpp>",
-        "+<services/storage/wearlevel/wearlevel.cpp>",
+        "+<server/filesystem/wearlevel.cpp>",
         "+<services/net/netadapt/netadapt.cpp>",
         "+<services/peripherals/dshot/dshot.cpp>",
         "+<services/fieldbus/hart/hart.cpp>",
@@ -2664,7 +2683,7 @@
         "+<services/system/radio_power/radio_power.cpp>",
         "+<server/mmgr/arena.cpp>",
         "+<server/mmgr/secure.cpp>",
-        "+<server/mmgr/scratch.cpp>",
+        "+<server/mmgr/plaintext.cpp>",
         "+<network_drivers/session/worker.cpp>",
         "+<board_drivers/hal/portable/portable_platform.cpp>",
         "+<shared_primitives/frame.cpp>",
@@ -2728,7 +2747,7 @@
         "+<crypto/mac/hmac_sha256.cpp>",
         "+<server/mmgr/arena.cpp>",
         "+<server/mmgr/secure.cpp>",
-        "+<server/mmgr/scratch.cpp>",
+        "+<server/mmgr/plaintext.cpp>",
         "+<network_drivers/session/worker.cpp>",
         "+<board_drivers/hal/portable/portable_platform.cpp>"
       ],
@@ -2746,7 +2765,7 @@
         "+<crypto/mac/hmac_sha256.cpp>",
         "+<server/mmgr/arena.cpp>",
         "+<server/mmgr/secure.cpp>",
-        "+<server/mmgr/scratch.cpp>",
+        "+<server/mmgr/plaintext.cpp>",
         "+<network_drivers/session/worker.cpp>",
         "+<board_drivers/hal/portable/portable_platform.cpp>"
       ],
@@ -2761,7 +2780,7 @@
         "+<crypto/mac/hmac_sha256.cpp>",
         "+<server/mmgr/arena.cpp>",
         "+<server/mmgr/secure.cpp>",
-        "+<server/mmgr/scratch.cpp>",
+        "+<server/mmgr/plaintext.cpp>",
         "+<network_drivers/session/worker.cpp>",
         "+<board_drivers/hal/portable/portable_platform.cpp>"
       ],
@@ -2796,7 +2815,7 @@
         "+<crypto/asymmetric/ed25519.cpp>",
         "+<server/mmgr/arena.cpp>",
         "+<server/mmgr/secure.cpp>",
-        "+<server/mmgr/scratch.cpp>",
+        "+<server/mmgr/plaintext.cpp>",
         "+<network_drivers/session/worker.cpp>",
         "+<board_drivers/hal/portable/portable_platform.cpp>"
       ],
@@ -2823,7 +2842,7 @@
         "+<crypto/asymmetric/ed25519.cpp>",
         "+<server/mmgr/arena.cpp>",
         "+<server/mmgr/secure.cpp>",
-        "+<server/mmgr/scratch.cpp>",
+        "+<server/mmgr/plaintext.cpp>",
         "+<network_drivers/session/worker.cpp>",
         "+<board_drivers/hal/portable/portable_platform.cpp>"
       ],
@@ -2851,7 +2870,7 @@
         "+<crypto/asymmetric/ed25519.cpp>",
         "+<server/mmgr/arena.cpp>",
         "+<server/mmgr/secure.cpp>",
-        "+<server/mmgr/scratch.cpp>",
+        "+<server/mmgr/plaintext.cpp>",
         "+<network_drivers/session/worker.cpp>",
         "+<board_drivers/hal/portable/portable_platform.cpp>"
       ],
@@ -2867,7 +2886,7 @@
         "+<crypto/mac/hmac_sha256.cpp>",
         "+<server/mmgr/arena.cpp>",
         "+<server/mmgr/secure.cpp>",
-        "+<server/mmgr/scratch.cpp>",
+        "+<server/mmgr/plaintext.cpp>",
         "+<network_drivers/session/worker.cpp>",
         "+<board_drivers/hal/portable/portable_platform.cpp>"
       ],
@@ -2913,7 +2932,7 @@
         "+<crypto/asymmetric/ed25519.cpp>",
         "+<server/mmgr/arena.cpp>",
         "+<server/mmgr/secure.cpp>",
-        "+<server/mmgr/scratch.cpp>",
+        "+<server/mmgr/plaintext.cpp>",
         "+<network_drivers/session/worker.cpp>",
         "+<board_drivers/hal/portable/portable_platform.cpp>"
       ],
@@ -2945,7 +2964,7 @@
         "+<crypto/pqc/mlkem.cpp>",
         "+<server/mmgr/arena.cpp>",
         "+<server/mmgr/secure.cpp>",
-        "+<server/mmgr/scratch.cpp>",
+        "+<server/mmgr/plaintext.cpp>",
         "+<network_drivers/session/worker.cpp>",
         "+<board_drivers/hal/portable/portable_platform.cpp>"
       ],
@@ -2973,7 +2992,7 @@
         "+<crypto/asymmetric/ed25519.cpp>",
         "+<server/mmgr/arena.cpp>",
         "+<server/mmgr/secure.cpp>",
-        "+<server/mmgr/scratch.cpp>",
+        "+<server/mmgr/plaintext.cpp>",
         "+<network_drivers/session/worker.cpp>",
         "+<board_drivers/hal/portable/portable_platform.cpp>"
       ],
@@ -3005,7 +3024,7 @@
         "+<crypto/asymmetric/ed25519.cpp>",
         "+<server/mmgr/arena.cpp>",
         "+<server/mmgr/secure.cpp>",
-        "+<server/mmgr/scratch.cpp>",
+        "+<server/mmgr/plaintext.cpp>",
         "+<network_drivers/session/worker.cpp>",
         "+<board_drivers/hal/portable/portable_platform.cpp>"
       ],
@@ -3037,7 +3056,7 @@
         "+<crypto/asymmetric/ed25519.cpp>",
         "+<server/mmgr/arena.cpp>",
         "+<server/mmgr/secure.cpp>",
-        "+<server/mmgr/scratch.cpp>",
+        "+<server/mmgr/plaintext.cpp>",
         "+<network_drivers/session/worker.cpp>",
         "+<board_drivers/hal/portable/portable_platform.cpp>"
       ],
@@ -3070,7 +3089,7 @@
         "+<crypto/asymmetric/ed25519.cpp>",
         "+<server/mmgr/arena.cpp>",
         "+<server/mmgr/secure.cpp>",
-        "+<server/mmgr/scratch.cpp>",
+        "+<server/mmgr/plaintext.cpp>",
         "+<network_drivers/session/worker.cpp>",
         "+<board_drivers/hal/portable/portable_platform.cpp>"
       ],
@@ -3105,7 +3124,7 @@
         "+<crypto/asymmetric/ed25519.cpp>",
         "+<server/mmgr/arena.cpp>",
         "+<server/mmgr/secure.cpp>",
-        "+<server/mmgr/scratch.cpp>",
+        "+<server/mmgr/plaintext.cpp>",
         "+<network_drivers/session/worker.cpp>",
         "+<board_drivers/hal/portable/portable_platform.cpp>"
       ],
@@ -3120,7 +3139,7 @@
         "+<crypto/aead/chachapoly.cpp>",
         "+<server/mmgr/arena.cpp>",
         "+<server/mmgr/secure.cpp>",
-        "+<server/mmgr/scratch.cpp>",
+        "+<server/mmgr/plaintext.cpp>",
         "+<network_drivers/session/worker.cpp>",
         "+<board_drivers/hal/portable/portable_platform.cpp>"
       ],
@@ -3133,7 +3152,7 @@
         "+<crypto/aead/aesgcm.cpp>",
         "+<board_drivers/hal/portable/portable_aesgcm.cpp>",
         "+<server/mmgr/arena.cpp>",
-        "+<server/mmgr/scratch.cpp>",
+        "+<server/mmgr/plaintext.cpp>",
         "+<server/mmgr/secure.cpp>",
         "+<network_drivers/session/worker.cpp>",
         "+<board_drivers/hal/portable/portable_platform.cpp>"
@@ -3149,7 +3168,7 @@
         "+<crypto/hash/sha256.cpp>",
         "+<server/mmgr/arena.cpp>",
         "+<server/mmgr/secure.cpp>",
-        "+<server/mmgr/scratch.cpp>",
+        "+<server/mmgr/plaintext.cpp>",
         "+<network_drivers/session/worker.cpp>",
         "+<board_drivers/hal/portable/portable_platform.cpp>"
       ],
@@ -3162,7 +3181,7 @@
       "tests": ["test_frame"]
     },
     "native_span": {
-      "desc": "The bounded byte region (shared_primitives/span.h): a pointer and the capacity that belongs to\nit, bound together. Rule 19 converts stack arrays - whose length the compiler ties to the object -\ninto borrowed regions, and the naive rewrite to a bare pointer plus a separate cap argument is\nwhere a 4-byte sizeof() or a mismatched capacity slips through with no diagnostic. Covers the\nextent recovered from the array type, the normalization that makes {nullptr, n} unconstructible\nso an omitted check writes nothing instead of dereferencing null, and the sub-span clamping that\nkeeps a truncated frame from producing a pointer past the allocation.",
+      "desc": "The bounded byte region (server/mmgr/span.h): a pointer and the capacity that belongs to\nit, bound together. Rule 19 converts stack arrays - whose length the compiler ties to the object -\ninto borrowed regions, and the naive rewrite to a bare pointer plus a separate cap argument is\nwhere a 4-byte sizeof() or a mismatched capacity slips through with no diagnostic. Covers the\nextent recovered from the array type, the normalization that makes {nullptr, n} unconstructible\nso an omitted check writes nothing instead of dereferencing null, and the sub-span clamping that\nkeeps a truncated frame from producing a pointer past the allocation.",
       "flags": [],
       "src": ["-<*>"],
       "tests": ["test_span"]
@@ -3173,12 +3192,41 @@
       "src": [
         "-<*>",
         "+<server/mmgr/arena.cpp>",
-        "+<server/mmgr/scratch.cpp>",
+        "+<server/mmgr/plaintext.cpp>",
         "+<server/mmgr/secure.cpp>",
         "+<network_drivers/session/worker.cpp>",
         "+<board_drivers/hal/portable/portable_platform.cpp>"
       ],
       "tests": ["test_secure_pool"]
+    },
+    "native_pool_workers": {
+      "desc": "Both pool accessors at PC_WORKER_COUNT=2. Slot resolution is unobservable in a single-worker\nbuild - pc_worker_self() is an inline compile-time 0 there, so a test cannot present any other\nidentity and every borrow lands on slot 0 whatever the accessor does. Only here does the id\nbecome a real per-task read, so this is the only env in which a worker borrowing from its OWN\nslot, and a caller that is not a server worker landing on the ghost instead of colliding with\nworker 0, are distinguishable from each other.",
+      "flags": ["-DPC_WORKER_COUNT=2"],
+      "src": [
+        "-<*>",
+        "+<server/mmgr/arena.cpp>",
+        "+<server/mmgr/plaintext.cpp>",
+        "+<server/mmgr/secure.cpp>",
+        "+<network_drivers/session/worker.cpp>",
+        "+<board_drivers/hal/portable/portable_platform.cpp>"
+      ],
+      "tests": ["test_plaintext", "test_secure_pool"]
+    },
+    "native_mnt": {
+      "desc": "Mounted storage (server/filesystem/mnt) - the backend vtable and its built-in RAM backend,\nhost-tested through that backend (the Arduino FS backend is board-layer and HW-verified).\nFiles, directories, stat, and the readdir cursor. Pure, no heap.",
+      "flags": ["-DPC_ENABLE_MNT=1"],
+      "src": [
+        "+<server/filesystem/mnt.cpp>",
+        "+<server/filesystem/filesystem.cpp>",
+        "+<shared_primitives/frame.cpp>"
+      ],
+      "tests": ["test_mnt"]
+    },
+    "native_swar": {
+      "desc": "Lane math (shared_primitives/swar.h): one 32-bit word as four byte lanes. has-zero across\nevery lane, the guard-bit range compares the base64 decoder classifies with, and the bounded\nNUL scan diffed against strnlen at every length, NUL position, and alignment.",
+      "flags": [],
+      "src": [],
+      "tests": ["test_swar"]
     }
   }
 }

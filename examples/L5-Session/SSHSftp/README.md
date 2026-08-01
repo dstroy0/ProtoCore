@@ -6,9 +6,15 @@ file onto the device. It is the standards-track "southbound" path for pushing
 files - e.g. NC / G-code programs - onto the device securely, alongside a shell
 on the same port.
 
-It is the SSH server example ([SSH](../SSH/)) plus **two calls**: mount a
-filesystem and `pc_ssh_sftp_begin(fs, root)` (+ `pc_ssh_scp_begin(fs, root)`).
-The SFTP subsystem and the SCP exec attach to the existing SSH channel layer.
+It is the SSH server example ([SSH](../SSH/)) plus **four calls**: mount a
+filesystem behind the mount backend (`pc_mnt_mount(pc_mnt_fs(&LittleFS))`), set
+the root once (`pc_fs_begin("/")`), then start the two servers
+(`pc_ssh_sftp_begin()` and `pc_ssh_scp_begin()`). The SFTP subsystem and the SCP
+exec attach to the existing SSH channel layer.
+
+The root is set once for the device rather than once per protocol, because where
+the volume begins is a property of what is mounted - two servers over the same
+storage cannot disagree about it.
 
 ## What you get
 
@@ -64,9 +70,10 @@ scp -P 22 part.nc admin@<board-ip>:/gcode/part.nc   # upload via scp
 - **Bigger transfers.** SFTP `READ` returns a short `DATA` bounded by one SSH
   packet (`SSH_PKT_BUF_SIZE`); raise `SSH_PKT_BUF_SIZE` **and** `PC_SFTP_MAX_READ`
   for higher throughput (`SSH_CHAN_MAX_PACKET` derives from `SSH_PKT_BUF_SIZE`).
-- **Restrict the mount.** Pass a subdirectory as `root` (e.g.
-  `pc_ssh_sftp_begin(LittleFS, "/gcode")`) so a client cannot see the whole
-  volume; the `..` guard keeps requests inside it.
+- **Restrict the mount.** Set a subdirectory as the root (e.g.
+  `pc_fs_begin("/gcode")`) so a client cannot see the whole volume; the `..`
+  guard keeps requests inside it. A trailing slash is not required - the
+  accessor appends one, so `"/gcode"` and `"/gcode/"` mean the same thing.
 - **Machine-tool push.** Combine with `services/dnc` to drip a pushed `.nc`
   program to an attached controller over RS-232 / a socket.
 
@@ -79,7 +86,7 @@ build:
 pio ci examples/L5-Session/SSHSftp \
   --board esp32dev \
   --lib "." \
-  --project-option="build_flags=-DPC_ENABLE_SSH=1 -DPC_ENABLE_FILE_SERVING=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_SSH_SCP=1"
+  --project-option="build_flags=-DPC_ENABLE_SSH=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_SSH_SCP=1 -DPC_ENABLE_MNT=1"
 ```
 
 (The Arduino IDE reads the flags from `build_opt.h` beside the sketch automatically.)

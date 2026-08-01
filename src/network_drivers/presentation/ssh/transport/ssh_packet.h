@@ -197,9 +197,9 @@ extern SshPacketState ssh_pkt[MAX_SSH_CONNS];
 // compressor's output bound. RFC 4251 sec 1 stacks auth and connection on top of this, so the arena
 // sums the layers; it does not fold them into each other.
 #if PC_ENABLE_SSH_ZLIB
-#define PC_SCRATCH_WORK_SSH_TRANSPORT ((size_t)(SSH_PKT_BUF_SIZE + 64 + SSH_PKT_BUF_SIZE))
+#define PC_PLAINTEXT_WORK_SSH_TRANSPORT ((size_t)(SSH_PKT_BUF_SIZE + 64 + SSH_PKT_BUF_SIZE))
 #else
-#define PC_SCRATCH_WORK_SSH_TRANSPORT ((size_t)(SSH_PKT_BUF_SIZE + 64))
+#define PC_PLAINTEXT_WORK_SSH_TRANSPORT ((size_t)(SSH_PKT_BUF_SIZE + 64))
 #endif
 
 // ---------------------------------------------------------------------------

@@ -22,17 +22,17 @@ namespace
 // Per-slot pool instances, owned by one instance with internal linkage.
 struct SecurePoolCtx
 {
-    pc_arena pool[PC_SCRATCH_SLOTS];
+    pc_arena pool[PC_SEC_POOL_SLOTS];
 };
 SecurePoolCtx s_secure;
 
 // Backing storage in its OWN linker symbol, named only from bind() below and therefore only from the
 // allocation path. A firmware that never borrows secure storage has the allocator garbage-collected and
-// this storage with it. pc_secure_reset() must NOT bind, for the same reason scratch_reset() must
+// this storage with it. pc_secure_reset() must NOT bind, for the same reason pc_plaintext_reset() must
 // not: --gc-sections is per-symbol and one always-live reference would anchor the whole block.
 struct SecurePoolStorageCtx
 {
-    alignas(32) uint8_t mem[PC_SCRATCH_SLOTS][PC_SECURE_ARENA_SIZE];
+    alignas(32) uint8_t mem[PC_SEC_POOL_SLOTS][PC_SECURE_ARENA_SIZE];
 };
 SecurePoolStorageCtx s_secure_storage;
 
@@ -48,10 +48,12 @@ inline uintptr_t secure_offset(const void *p)
     return (uintptr_t)p - (uintptr_t)s_secure_storage.mem;
 }
 
+// The clamp guarantees a legal index, and only that: a caller that is not a server worker lands on
+// the ghost instead of worker 0. Two such callers still share the ghost, which the tripwire catches.
 inline int cur_worker()
 {
     int w = pc_worker_self();
-    return (w >= 0 && w < PC_SCRATCH_SLOTS) ? w : 0;
+    return (w >= 0 && w < PC_SEC_POOL_SLOTS) ? w : PC_GHOST_WORKER_SLOT;
 }
 
 // Debug tripwire: one execution context per slot, as on the plaintext side.
@@ -61,7 +63,7 @@ inline void assert_single_owner(int w)
     // ~52 cycles per call on the S3, three per mark+alloc+release. Off by default and turned on
     // deliberately; see PC_DEBUG_CHECKS. The identity comes from board_drivers/ - the core does not
     // name an RTOS.
-    static uintptr_t s_owner[PC_SCRATCH_SLOTS] = {0};
+    static uintptr_t s_owner[PC_SEC_POOL_SLOTS] = {0};
     const uintptr_t cur = pc_platform_context_id();
     if (s_owner[w] == 0)
     {
@@ -178,7 +180,7 @@ size_t pc_secure_used(void)
 size_t pc_secure_high_water(void)
 {
     size_t peak = 0;
-    for (int w = 0; w < PC_SCRATCH_SLOTS; w++)
+    for (int w = 0; w < PC_SEC_POOL_SLOTS; w++)
     {
         const pc_arena *a = peek(w);
         if (a != nullptr && a->scratch_hw > peak)

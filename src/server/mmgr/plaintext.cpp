@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file scratch.cpp
+ * @file plaintext.cpp
  * @brief Plaintext pool accessor - implementation.
  *
  * This file is an access layer, not a second allocator. The pool mechanism is ::pc_arena
@@ -11,11 +11,11 @@
  * instantiated again behind its own accessor - identical resource, identical mechanics, different
  * access and control.
  *
- * Each instance has exactly one accessor (its worker), so the lock-free guarantees in scratch.h hold
+ * Each instance has exactly one accessor (its worker), so the lock-free guarantees in plaintext.h hold
  * per slot. With PC_WORKER_COUNT == 1 this is byte-for-byte the original single arena.
  */
 
-#include "scratch.h"
+#include "plaintext.h"
 #include "board_drivers/board_profiles/pc_platform.h" // pc_platform_context_id()
 #include "network_drivers/session/worker.h"
 #include "server/mmgr/arena.h"
@@ -28,25 +28,25 @@ namespace
 // internal linkage.
 struct PlainPoolCtx
 {
-    pc_arena pool[PC_SCRATCH_SLOTS];
+    pc_arena pool[PC_REG_POOL_SLOTS];
 };
-PlainPoolCtx s_plain;
+static PlainPoolCtx s_plain;
 
 // The backing storage, in its OWN owned instance so it is a distinct linker symbol.
 //
 // Nothing outside bind() below names this symbol, and bind() is reachable only from the allocation
 // path. A firmware that never allocates plaintext scratch (a plain TLS/HTTP server - no SSH /
 // WebSocket / OIDC) therefore has the allocator garbage-collected and, with it, this storage,
-// reclaiming PC_SCRATCH_SLOTS * PC_SCRATCH_ARENA_SIZE bytes of DRAM. That is why scratch_reset() -
+// reclaiming PC_REG_POOL_SLOTS * PC_PLAINTEXT_ARENA_SIZE bytes of DRAM. That is why pc_plaintext_reset() -
 // which runs every dispatch and so is always live - must NOT bind: --gc-sections is per-symbol, and
 // one always-live reference would anchor the multi-KB storage into builds that never touch it.
 struct PlainPoolStorageCtx
 {
     // The pool aligns allocation offsets, so the base must itself satisfy the strictest alignment a
     // caller can request. As a struct member it would only inherit 8-byte alignment; force 32.
-    alignas(32) uint8_t mem[PC_SCRATCH_SLOTS][PC_SCRATCH_ARENA_SIZE];
+    alignas(32) uint8_t mem[PC_REG_POOL_SLOTS][PC_PLAINTEXT_ARENA_SIZE];
 };
-PlainPoolStorageCtx s_plain_storage;
+static PlainPoolStorageCtx s_plain_storage;
 
 // Byte offset of @p p within the whole plaintext block. The slot count is compile time, so the block
 // is ONE region of known extent and the test needs no loop and no per-slot compare: a single
@@ -61,12 +61,13 @@ inline uintptr_t plain_offset(const void *p)
     return (uintptr_t)p - (uintptr_t)s_plain_storage.mem;
 }
 
-// Resolve the calling worker, clamped into range so a stray id can never index out of bounds (an
-// unbound caller is worker 0, the only worker by default).
+// Resolve the calling worker. The clamp guarantees a legal index, and only that: a caller that is
+// not a server worker lands on the ghost instead of worker 0. Two such callers still share the
+// ghost, which is what the tripwire below is for.
 inline int cur_worker()
 {
     int w = pc_worker_self();
-    return (w >= 0 && w < PC_SCRATCH_SLOTS) ? w : 0;
+    return (w >= 0 && w < PC_REG_POOL_SLOTS) ? w : PC_GHOST_WORKER_SLOT;
 }
 
 // Debug tripwire: each pool instance must only ever be touched from one execution context (its
@@ -79,7 +80,7 @@ inline void assert_single_owner(int w)
     // ~52 cycles per call on the S3, three per mark+alloc+release. Off by default and turned on
     // deliberately; see PC_DEBUG_CHECKS. The identity comes from board_drivers/ - the core does not
     // name an RTOS.
-    static uintptr_t s_owner[PC_SCRATCH_SLOTS] = {0};
+    static uintptr_t s_owner[PC_REG_POOL_SLOTS] = {0};
     const uintptr_t cur = pc_platform_context_id();
     if (s_owner[w] == 0)
     {
@@ -101,7 +102,7 @@ inline pc_arena *bind(int w)
     pc_arena *a = &s_plain.pool[w];
     if (a->base == nullptr)
     {
-        pc_arena_init(a, s_plain_storage.mem[w], PC_SCRATCH_ARENA_SIZE);
+        pc_arena_init(a, s_plain_storage.mem[w], PC_PLAINTEXT_ARENA_SIZE);
     }
     return a;
 }
@@ -115,7 +116,7 @@ inline pc_arena *peek(int w)
 }
 } // namespace
 
-ScratchBorrow::ScratchBorrow(size_t n, size_t align)
+PlaintextBorrow::PlaintextBorrow(size_t n, size_t align)
 {
     // One boundary crossing for mark + alloc, and bind() resolved once for both.
     int w = cur_worker();
@@ -125,33 +126,33 @@ ScratchBorrow::ScratchBorrow(size_t n, size_t align)
     m_span = pc_span_from((uint8_t *)pc_arena_scratch_alloc_aligned(a, n, align), n);
 }
 
-ScratchBorrow::~ScratchBorrow()
+PlaintextBorrow::~PlaintextBorrow()
 {
     int w = cur_worker();
     assert_single_owner(w);
     pc_arena_scratch_release(bind(w), m_mark);
 }
 
-void *scratch_alloc(size_t n, size_t align)
+void *pc_plaintext_alloc(size_t n, size_t align)
 {
     int w = cur_worker();
     assert_single_owner(w);
     // The false half is a caller-contract violation (align documented as a power of two) and aborts
     // the process, so it cannot be exercised from an in-process host test without killing the whole
     // test binary mid-run.
-    assert((align & (align - 1)) == 0 && "scratch alignment must be a power of two"); // GCOVR_EXCL_BR_LINE
+    assert((align & (align - 1)) == 0 && "plaintext alignment must be a power of two"); // GCOVR_EXCL_BR_LINE
     return pc_arena_scratch_alloc_aligned(bind(w), n, align);
 }
 
-pc_span pc_scratch_span(size_t n, size_t align)
+pc_span pc_plaintext_span(size_t n, size_t align)
 {
     // One argument sets both fields, so the capacity can never disagree with the allocation. On
     // exhaustion pc_span_from() normalizes to {nullptr, 0} rather than a null with a live capacity,
     // which is what makes an omitted pc_span_ok() check drop bytes instead of dereference null.
-    return pc_span_from((uint8_t *)scratch_alloc(n, align), n);
+    return pc_span_from((uint8_t *)pc_plaintext_alloc(n, align), n);
 }
 
-void scratch_reset(void)
+void pc_plaintext_reset(void)
 {
     int w = cur_worker();
     assert_single_owner(w);
@@ -162,32 +163,32 @@ void scratch_reset(void)
     }
 }
 
-size_t scratch_mark(void)
+size_t pc_plaintext_mark(void)
 {
     int w = cur_worker();
     assert_single_owner(w);
     return pc_arena_scratch_mark(bind(w));
 }
 
-void scratch_release(size_t mark)
+void pc_plaintext_release(size_t mark)
 {
     int w = cur_worker();
     assert_single_owner(w);
     pc_arena_scratch_release(bind(w), mark);
 }
 
-size_t scratch_used(void)
+size_t pc_plaintext_used(void)
 {
     const pc_arena *a = peek(cur_worker());
     return (a != nullptr) ? pc_arena_scratch_used(a) : 0;
 }
 
-size_t scratch_high_water(void)
+size_t pc_plaintext_high_water(void)
 {
-    // Peak any single slot reached - the value to size PC_SCRATCH_ARENA_SIZE by. This is the
+    // Peak any single slot reached - the value to size PC_PLAINTEXT_ARENA_SIZE by. This is the
     // backward direction of the run-length constant: the pool reports what was actually needed.
     size_t peak = 0;
-    for (int w = 0; w < PC_SCRATCH_SLOTS; w++)
+    for (int w = 0; w < PC_REG_POOL_SLOTS; w++)
     {
         const pc_arena *a = peek(w);
         if (a != nullptr && a->scratch_hw > peak)
@@ -198,17 +199,17 @@ size_t scratch_high_water(void)
     return peak;
 }
 
-size_t scratch_capacity(void)
+size_t pc_plaintext_capacity(void)
 {
-    return PC_SCRATCH_ARENA_SIZE;
+    return PC_PLAINTEXT_ARENA_SIZE;
 }
 
-bool pc_scratch_owns(const void *p)
+bool pc_plaintext_owns(const void *p)
 {
     return plain_offset(p) < (uintptr_t)sizeof(s_plain_storage.mem);
 }
 
-int pc_scratch_slot_of(const void *p)
+int pc_plaintext_slot_of(const void *p)
 {
     const uintptr_t off = plain_offset(p);
     if (off >= (uintptr_t)sizeof(s_plain_storage.mem))
@@ -218,5 +219,5 @@ int pc_scratch_slot_of(const void *p)
     // A divide by a compile-time constant, which the compiler emits as a multiply-and-shift. Not a
     // hot path either way: this exists so a borrow handed back can be asserted to belong to the
     // calling worker.
-    return (int)(off / PC_SCRATCH_ARENA_SIZE);
+    return (int)(off / PC_PLAINTEXT_ARENA_SIZE);
 }

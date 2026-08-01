@@ -55,7 +55,7 @@
  * next to the constants it is built from, because a worst case assembled anywhere else would have
  * to restate them. server/mmgr/scratch_budget.h collects this with every other borrower's term.
  */
-#define PC_SCRATCH_WORK_OIDC (PC_OIDC_HDR_LEN + PC_OIDC_RSA_BYTES + PC_OIDC_MAX_LEN + PC_OIDC_ISS_LEN)
+#define PC_PLAINTEXT_WORK_OIDC (PC_OIDC_HDR_LEN + PC_OIDC_RSA_BYTES + PC_OIDC_MAX_LEN + PC_OIDC_ISS_LEN)
 
 /** @brief Verification result codes (0 = success, negatives = failure reasons). */
 enum class pc_oidc_result : int32_t

@@ -16,7 +16,7 @@
 #include "services/file_transfer/webdav/webdav.h" // the pure WebDAV core
 #include "network_drivers/transport/tcp.h"        // conn_pool
 #include "protocore.h"
-#include "server/protocore_internal.h"
+#include "server/signaling/route.h"
 #include "services/system/clock.h" // pc_millis() for lock timeouts
 #include "shared_primitives/mime.h"
 #include "shared_primitives/strbuf.h" // pc_sb frame builder
@@ -61,6 +61,14 @@ static_assert(PC_WEBDAV_BUF_SIZE / PC_WEBDAV_MIN_ENTRY_BYTES < PC_WEBDAV_MAX_ENT
 struct DavBufCtx
 {
     char buf[PC_WEBDAV_BUF_SIZE];
+
+    // One path and one child name per recursion level. A tree walk has to name the level it
+    // descends into and the entry it is descending to, and both have to outlive the recursive call.
+    // The depth bound is what makes that a fixed cost instead of a stack that grows with the tree -
+    // which is the whole reason the walk is bounded at all. Nothing outside this file sees either,
+    // so no caller sizes them or carries them.
+    char path[PC_DAV_MAX_DEPTH + 1][PC_FILESYSTEM_PATH_MAX];
+    char child[PC_DAV_MAX_DEPTH + 1][PC_FILESYSTEM_PATH_MAX];
 };
 static DavBufCtx s_dav;
 
@@ -100,69 +108,62 @@ static const char *dav_basename(const char *name)
     return slash ? slash + 1 : name; // GCOVR_EXCL_BR_LINE  bare-name half is core-specific (see above)
 }
 
-// Recursively delete a file or directory tree (bounded depth). Re-opens the
-// directory after each child removal so iteration is never mutated underneath us.
-static bool dav_rm_recursive(fs::FS &fsys, const char *path, int depth)
+// Recursively delete a file or directory tree (bounded depth). Re-opens the directory after each
+// child removal so iteration is never mutated underneath us.
+//
+// Takes the request path as its two pieces, because the accessor does: a joined path would be built
+// here and taken apart there. The one build is the descent, where a child's name becomes the next
+// level's directory, and it goes through the accessor's own join rather than a second one.
+static bool dav_rm_recursive(const char *dir, const char *name, int depth)
 {
-    if (depth > 8)
+    if (depth > PC_DAV_MAX_DEPTH)
     {
         return false; // refuse pathologically deep trees rather than overflow the stack
     }
-    fs::File d = fsys.open(path, "r");
-    if (!d)
+
+    pc_mnt_stat st;
+    if (!pc_fs_stat(dir, name, &st))
     {
         return false;
     }
-    if (!d.isDirectory())
+    if (!st.is_dir)
     {
-        d.close();
-        return fsys.remove(path);
+        return pc_fs_remove(dir, name);
     }
+
+    // This level's directory, named once. Built through the accessor's join so the separator rule
+    // lives in one place; the storage is ours and its size is nobody else's business.
+    char *lvl = s_dav.path[depth];
+    if (pc_fs_join("", dir, name, lvl, PC_FILESYSTEM_PATH_MAX) == 0)
+    {
+        return false;
+    }
+
     for (;;)
     {
-        fs::File c = d.openNextFile();
-        if (!c)
-        {
-            break;
-        }
-        char cp[256];
-        pc_sb sb_cp = {cp, sizeof(cp), 0, true};
-        pc_sb_put(&sb_cp, path);
-        pc_sb_put(&sb_cp, "/");
-        pc_sb_put(&sb_cp, dav_basename(c.name()));
-        int wn = (int)pc_sb_finish(&sb_cp);
-        c.close();
-        // GCOVR_EXCL_START  neither half can fire on a host build. snprintf cannot return negative
-        // for "%s/%s", and the child path cannot overflow cp[256]: `path` had to open, so it is a
-        // path the FS mock actually stores (its node paths are capped at 160 bytes), and the child's
-        // basename is what is left of that same 160-byte cap after `path` - so cp stays under 160.
-        // On a real core (LittleFS: 255-byte names under a 240-byte mount root) it is reachable,
-        // which is why the guard is here.
-        if (wn <= 0 || wn >= (int)sizeof(cp))
-        {
-            d.close();
-            return false;
-        }
-        // GCOVR_EXCL_STOP
-        if (!dav_rm_recursive(fsys, cp, depth + 1))
-        {
-            d.close();
-            return false;
-        }
-        d.close();
-        d = fsys.open(path, "r"); // reset the directory cursor after the deletion
-        // GCOVR_EXCL_START  TOCTOU re-open guard: `path` opened moments ago, so only a concurrent
-        // delete / FS fault fails it here. The host mock's open-failure hook is a single stored path
-        // that applies to every open, so it cannot fail this re-open while letting the first open
-        // above succeed - there is no way to drive this arm from a host test.
-        if (!d)
+        int d = pc_fs_opendir(lvl, "");
+        if (d < 0)
         {
             return false;
         }
-        // GCOVR_EXCL_STOP
+        // readdir writes the entry's own name, so there is no full path to take a basename off.
+        // The cap is this file's, offered explicitly, because the accessor imposes no name length.
+        pc_mnt_stat cst;
+        char *child = s_dav.child[depth];
+        bool got = pc_fs_readdir(d, &cst, child, PC_FILESYSTEM_PATH_MAX);
+        pc_fs_close(d);
+        if (!got)
+        {
+            break; // directory drained
+        }
+        if (!dav_rm_recursive(lvl, child, depth + 1))
+        {
+            return false;
+        }
+        // The cursor is re-opened from the top on the next pass rather than carried across the
+        // removal, which is what keeps iteration from being mutated underneath it.
     }
-    d.close();
-    return fsys.rmdir(path);
+    return pc_fs_rmdir(dir, name);
 }
 
 // Recursively copy a file or directory tree from @p src to @p dst (bounded depth).
@@ -384,11 +385,11 @@ static bool dav_coded_url_token(const char *coded, char *out, size_t cap)
 // GCOVR_EXCL_BR_START  the null-stream_srv arm of all three trampolines is unreachable: the only
 // thing that installs them as the parser's stream hooks is dav(), which sets s_davput.stream_srv
 // first and never clears it - so a trampoline cannot run before the instance pointer exists.
-bool PC::dav_put_begin_tramp(HttpReq *req)
+bool dav_put_begin_tramp(HttpReq *req)
 {
     return s_davput.stream_srv && s_davput.stream_srv->dav_stream_put_begin(req);
 }
-void PC::dav_put_data_tramp(HttpReq *req, const uint8_t *data, size_t len)
+void dav_put_data_tramp(HttpReq *req, const uint8_t *data, size_t len)
 {
     if (s_davput.stream_srv)
     {
@@ -396,7 +397,7 @@ void PC::dav_put_data_tramp(HttpReq *req, const uint8_t *data, size_t len)
     }
 }
 // GCOVR_EXCL_BR_STOP
-void PC::dav_put_abort_tramp(HttpReq *req)
+void dav_put_abort_tramp(HttpReq *req)
 {
     // The PUT was torn down before the handler ran: close the half-written file so
     // the handle is not leaked (a leak eventually exhausts LittleFS's open slots).
@@ -413,17 +414,17 @@ void PC::dav_put_abort_tramp(HttpReq *req)
     // GCOVR_EXCL_BR_STOP
 }
 
-bool PC::dav_stream_put_begin(HttpReq *req)
+bool dav_stream_put_begin(HttpReq *req)
 {
     if (strcmp(req->method, "PUT") != 0)
     {
         return false;
     }
     uint8_t slot = (uint8_t)(req - http_pool);
-    for (uint8_t i = 0; i < _route_count; i++)
+    for (uint8_t i = 0; i < pc_route_count(); i++)
     {
-        Route *r = &_routes[i];
-        // The !is_active half cannot fire: every entry below _route_count was filled by
+        Route *r = pc_route_at(i);
+        // The !is_active half cannot fire: every entry below route_count was filled by
         // fill_route_base, which sets is_active, and nothing ever clears it again.
         if (!r->is_active || r->type != RouteType::ROUTE_DAV) // GCOVR_EXCL_BR_LINE  see above
         {
@@ -480,7 +481,7 @@ bool PC::dav_stream_put_begin(HttpReq *req)
     return false;
 }
 
-void PC::dav_stream_put_data(HttpReq *req, const uint8_t *data, size_t len)
+void dav_stream_put_data(HttpReq *req, const uint8_t *data, size_t len)
 {
     uint8_t slot = (uint8_t)(req - http_pool);
     // GCOVR_EXCL_START  http_pool is CONN_POOL_SLOTS (MAX_CONNS + PC_INTERNAL_SLOTS) long, so an index >=
@@ -507,13 +508,13 @@ void PC::dav_stream_put_data(HttpReq *req, const uint8_t *data, size_t len)
 }
 #endif // PC_ENABLE_STREAM_BODY
 
-void PC::dav(const char *url_prefix, fs::FS &file_sys, const char *fs_root)
+void dav(const char *url_prefix, const pc_mnt_backend *file_sys, const char *fs_root)
 {
-    if (_route_count >= MAX_ROUTES)
+    Route *r = pc_route_add();
+    if (r == nullptr)
     {
         return;
     }
-    Route *r = &_routes[_route_count++];
 
     char pat[MAX_PATH_LEN];
     size_t n = strnlen(url_prefix, MAX_PATH_LEN);
@@ -549,7 +550,7 @@ void PC::dav(const char *url_prefix, fs::FS &file_sys, const char *fs_root)
 #endif
 }
 
-void PC::dav_send_status(uint8_t slot_id, int code, const char *extra_headers)
+void dav_send_status(uint8_t slot_id, int code, const char *extra_headers)
 {
     if (!pc_conn_active(slot_id))
     {
@@ -577,12 +578,12 @@ void PC::dav_send_status(uint8_t slot_id, int code, const char *extra_headers)
     pc_resp_end(slot_id, code, 0, keep);
 }
 
-bool PC::try_serve_dav(uint8_t slot_id, HttpReq *req)
+bool try_serve_dav(uint8_t slot_id, HttpReq *req)
 {
-    for (uint8_t i = 0; i < _route_count; i++)
+    for (uint8_t i = 0; i < pc_route_count(); i++)
     {
-        Route *r = &_routes[i];
-        // The !is_active half cannot fire: every entry below _route_count was filled by
+        Route *r = pc_route_at(i);
+        // The !is_active half cannot fire: every entry below route_count was filled by
         // fill_route_base, which sets is_active, and nothing ever clears it again.
         if (!r->is_active || r->type != RouteType::ROUTE_DAV) // GCOVR_EXCL_BR_LINE  see above
         {
@@ -606,7 +607,7 @@ bool PC::try_serve_dav(uint8_t slot_id, HttpReq *req)
     return false;
 }
 
-void PC::serve_dav_request(uint8_t slot_id, HttpReq *req, const Route *r)
+void serve_dav_request(uint8_t slot_id, HttpReq *req, const Route *r)
 {
     // GCOVR_EXCL_START  a RouteType::ROUTE_DAV route always carries static_fs (set in dav()); this null-guard cannot
     // fire
@@ -932,7 +933,7 @@ void PC::serve_dav_request(uint8_t slot_id, HttpReq *req, const Route *r)
             lt[0] = '\0';
         }
         add_response_header(slot_id, "Lock-Token", lt);
-        send(slot_id, 200, "application/xml; charset=utf-8", s_dav.buf);
+        send_text(slot_id, 200, "application/xml; charset=utf-8", s_dav.buf);
         return;
     }
 
@@ -971,7 +972,7 @@ void PC::serve_dav_request(uint8_t slot_id, HttpReq *req, const Route *r)
             f.close();
             static const char body[] = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n"
                                        "<D:error xmlns:D=\"DAV:\"><D:propfind-finite-depth/></D:error>\r\n";
-            send(slot_id, 403, "application/xml", body);
+            send_text(slot_id, 403, "application/xml", body);
             return;
         }
 
@@ -1051,7 +1052,7 @@ void PC::serve_dav_request(uint8_t slot_id, HttpReq *req, const Route *r)
         }
         f.close();
         len = pc_webdav_ms_end(s_dav.buf, cap, len);
-        send(slot_id, 207, "application/xml; charset=utf-8", s_dav.buf);
+        send_text(slot_id, 207, "application/xml; charset=utf-8", s_dav.buf);
         return;
     }
 
@@ -1077,7 +1078,7 @@ void PC::serve_dav_request(uint8_t slot_id, HttpReq *req, const Route *r)
             return;
         }
         // GCOVR_EXCL_STOP
-        send(slot_id, 207, "application/xml; charset=utf-8", s_dav.buf);
+        send_text(slot_id, 207, "application/xml; charset=utf-8", s_dav.buf);
         return;
     }
 

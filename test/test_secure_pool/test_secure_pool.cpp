@@ -12,7 +12,8 @@
 // The allocator mechanics themselves belong to test_arena; duplicating them here would be testing
 // the same code twice.
 
-#include "server/mmgr/scratch.h"
+#include "network_drivers/session/worker.h" // pc_worker_set_self()
+#include "server/mmgr/plaintext.h"
 #include "server/mmgr/secure.h"
 #include <string.h>
 #include <unity.h>
@@ -134,15 +135,15 @@ static void test_a_secure_pointer_is_not_a_plaintext_one(void)
     pc_span s = pc_secure_span(32, 8);
     TEST_ASSERT_TRUE(pc_span_ok(s));
     TEST_ASSERT_TRUE(pc_secure_owns(s.buf));
-    TEST_ASSERT_FALSE(pc_scratch_owns(s.buf)); // cannot be mistaken for plaintext
+    TEST_ASSERT_FALSE(pc_plaintext_owns(s.buf)); // cannot be mistaken for plaintext
 }
 
 static void test_a_plaintext_pointer_is_not_a_secure_one(void)
 {
-    ScratchScope scope;
-    pc_span s = pc_scratch_span(32, 8);
+    PlaintextScope scope;
+    pc_span s = pc_plaintext_span(32, 8);
     TEST_ASSERT_TRUE(pc_span_ok(s));
-    TEST_ASSERT_TRUE(pc_scratch_owns(s.buf));
+    TEST_ASSERT_TRUE(pc_plaintext_owns(s.buf));
     TEST_ASSERT_FALSE(pc_secure_owns(s.buf)); // cannot be mistaken for secure
 }
 
@@ -151,11 +152,11 @@ static void test_foreign_pointers_belong_to_neither_pool(void)
 {
     uint8_t on_stack[8];
     TEST_ASSERT_FALSE(pc_secure_owns(on_stack));
-    TEST_ASSERT_FALSE(pc_scratch_owns(on_stack));
+    TEST_ASSERT_FALSE(pc_plaintext_owns(on_stack));
     TEST_ASSERT_FALSE(pc_secure_owns(nullptr));
-    TEST_ASSERT_FALSE(pc_scratch_owns(nullptr));
+    TEST_ASSERT_FALSE(pc_plaintext_owns(nullptr));
     TEST_ASSERT_EQUAL_INT(-1, pc_secure_slot_of(on_stack));
-    TEST_ASSERT_EQUAL_INT(-1, pc_scratch_slot_of(nullptr));
+    TEST_ASSERT_EQUAL_INT(-1, pc_plaintext_slot_of(nullptr));
 }
 
 // An address one past the end of a borrow's pool must not read as still-inside: that is what makes
@@ -164,17 +165,39 @@ static void test_one_past_the_pool_is_not_owned(void)
 {
     pc_span s = pc_secure_span(16, 8);
     TEST_ASSERT_TRUE(pc_span_ok(s));
-    const uint8_t *end = s.buf + (PC_SECURE_ARENA_SIZE * PC_SCRATCH_SLOTS);
+    const uint8_t *end = s.buf + (PC_SECURE_ARENA_SIZE * PC_SEC_POOL_SLOTS);
     TEST_ASSERT_FALSE(pc_secure_owns(end));
     TEST_ASSERT_EQUAL_INT(-1, pc_secure_slot_of(end));
 }
 
+// The secure pool resolves the borrowing slot the same way the plaintext one does, and it is a
+// second copy of that decision, so it is asserted here too rather than assumed to match.
+//
+// Which slot the caller gets is only observable at PC_WORKER_COUNT > 1 (native_pool_workers):
+// below that pc_worker_self() is an inline compile-time 0 (worker.h) and every borrow is slot 0
+// whatever the accessor decides.
 static void test_slot_of_reports_the_borrowing_slot(void)
 {
     pc_span s = pc_secure_span(16, 8);
     TEST_ASSERT_TRUE(pc_span_ok(s));
-    const int slot = pc_secure_slot_of(s.buf);
-    TEST_ASSERT_TRUE(slot >= 0 && slot < PC_SCRATCH_SLOTS);
+    TEST_ASSERT_EQUAL_INT(0, pc_secure_slot_of(s.buf));
+
+#if PC_WORKER_COUNT > 1
+    pc_secure_reset();
+    pc_worker_set_self(1);
+    pc_span own = pc_secure_span(16, 8);
+    TEST_ASSERT_TRUE(pc_span_ok(own));
+    TEST_ASSERT_EQUAL_INT(1, pc_secure_slot_of(own.buf)); // its own slot, not worker 0's
+    pc_secure_reset();                                    // while still bound to 1: reset is per-slot
+
+    pc_worker_set_self(PC_SEC_POOL_SLOTS); // not a server worker
+    pc_span ghost = pc_secure_span(16, 8);
+    TEST_ASSERT_TRUE(pc_span_ok(ghost));
+    TEST_ASSERT_EQUAL_INT(PC_GHOST_WORKER_SLOT, pc_secure_slot_of(ghost.buf));
+    pc_secure_reset(); // empties the ghost before the identity goes back to 0
+
+    pc_worker_set_self(0); // restore identity for every later test
+#endif
 }
 
 // --- the backward direction, same as the plaintext pool ---

@@ -9,9 +9,9 @@
 // HW-verifiable.
 
 #include "protocore.h"
-#include "server/fs_path.h"            // fs_path_join()/fs_path_resolve(): a pure header shared with SFTP/SCP,
-#include "server/protocore_internal.h" // status_text(): the WebDAV codes are only compiled in this env
-                                       // neither of which is linked into this env, so tested directly below
+#include "server/filesystem/filesystem.h" // pc_fs_join()/pc_fs_resolve(): a pure header shared with SFTP/SCP,
+#include "server/protocore_internal.h"    // status_text(): the WebDAV codes are only compiled in this env
+                                          // neither of which is linked into this env, so tested directly below
 #include <stdio.h>
 #include <string.h>
 #include <unity.h>
@@ -981,72 +981,60 @@ void test_put_stream_error_latches_for_later_chunks()
     TEST_ASSERT_LESS_OR_EQUAL_size_t(sizeof(n->data), n->len);
 }
 
-// fs_path.h: fs_path_join()'s separator matrix, direct. This env does not link ssh_sftp.cpp /
-// ssh_scp.cpp (the only other callers), so the header is otherwise uncompiled here - every
-// root/sub combination that drives its branches is exercised directly against the header.
-void test_fs_path_join_separator_matrix()
+// filesystem.h: pc_fs_join()'s seam, direct. This env does not link ssh_sftp.cpp /
+// ssh_scp.cpp (the only other callers), so the header is otherwise uncompiled here.
+// A mount root ends with '/', so the only decision left is whether sub duplicates it.
+void test_pc_fs_join_seam()
 {
     char out[64];
 
-    // root_slash=false (empty root -> rlen==0), sub_slash=false -> a '/' separator is inserted.
-    TEST_ASSERT_TRUE(fs_path_join("", "a", out, sizeof(out)));
-    TEST_ASSERT_EQUAL_STRING("/a", out);
-
-    // root_slash=true (root ends in '/') and sub also starts with '/': the duplicate leading
-    // separator on sub is consumed (sub++) and no extra separator is inserted.
-    TEST_ASSERT_TRUE(fs_path_join("/a/", "/b", out, sizeof(out)));
+    // sub starts with '/': the duplicate is consumed, the root's separator is the one kept.
+    TEST_ASSERT_TRUE(pc_fs_join("/a/", "/b", "", out, sizeof(out)));
     TEST_ASSERT_EQUAL_STRING("/a/b", out);
 
-    // root_slash=true, sub does NOT start with '/': sub is left alone, still no separator
-    // inserted (root already supplies it).
-    TEST_ASSERT_TRUE(fs_path_join("/a/", "b", out, sizeof(out)));
+    // sub does NOT start with '/': sub is left alone, the root already supplies the separator.
+    TEST_ASSERT_TRUE(pc_fs_join("/a/", "b", "", out, sizeof(out)));
     TEST_ASSERT_EQUAL_STRING("/a/b", out);
 
-    // root_slash=false (non-empty root, no trailing '/'), sub_slash=true: no separator is
-    // inserted either (sub already supplies it), avoiding a doubled '/'.
-    TEST_ASSERT_TRUE(fs_path_join("/a", "/b", out, sizeof(out)));
-    TEST_ASSERT_EQUAL_STRING("/a/b", out);
+    // The mount root itself is a valid root: no doubled slash at the seam.
+    TEST_ASSERT_TRUE(pc_fs_join("/", "/b", "", out, sizeof(out)));
+    TEST_ASSERT_EQUAL_STRING("/b", out);
 
-    // root_slash=false via a non-empty root, sub_slash=false: a separator is inserted, as in
-    // the first case, but this time covering root_slash's rlen>0-yet-not-'/' branch.
-    TEST_ASSERT_TRUE(fs_path_join("/a", "b", out, sizeof(out)));
-    TEST_ASSERT_EQUAL_STRING("/a/b", out);
-
-    // The joined path does not fit the output buffer -> false (the overflow guard).
-    TEST_ASSERT_FALSE(fs_path_join("abc", "def", out, 4));
+    // The joined path does not fit the output buffer -> 0 (the overflow guard).
+    TEST_ASSERT_FALSE(pc_fs_join("/abc/", "def", "", out, 4));
 }
 
-// fs_path.h: fs_path_resolve()'s traversal reject, the fs_path_join()-failure passthrough, and
-// the trailing-slash strip's one-character-path edge (must not strip a lone "/").
-void test_fs_path_resolve_traversal_and_root_edge()
+// filesystem.h: pc_fs_resolve()'s traversal reject, the pc_fs_join()-failure
+// passthrough, and the trailing-slash strip's one-character-path edge (must not strip a lone "/").
+void test_pc_fs_resolve_traversal_and_root_edge()
 {
     char out[64];
 
-    // A ".." anywhere in sub is refused before touching fs_path_join.
-    TEST_ASSERT_EQUAL_INT(-1, fs_path_resolve("/root", "/a/../b", out, sizeof(out)));
+    // A ".." anywhere in sub is refused before touching pc_fs_join.
+    TEST_ASSERT_EQUAL_INT(-1, pc_fs_resolve("/root/", "/a/../b", "", out, sizeof(out)));
 
-    // Joined result is exactly "/" (empty root, sub "/"): length 1, so the trailing-slash
+    // Joined result is exactly "/" (the mount root, sub "/"): length 1, so the trailing-slash
     // strip must not fire (fpl>1 is false).
-    TEST_ASSERT_EQUAL_INT(0, fs_path_resolve("", "/", out, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, pc_fs_resolve("/", "/", "", out, sizeof(out)));
     TEST_ASSERT_EQUAL_STRING("/", out);
 
     // Joined result ends in '/' with length>1: the trailing slash IS stripped.
-    TEST_ASSERT_EQUAL_INT(0, fs_path_resolve("/a", "/", out, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, pc_fs_resolve("/a/", "/", "", out, sizeof(out)));
     TEST_ASSERT_EQUAL_STRING("/a", out);
 
     // Joined result does not end in '/': left untouched.
-    TEST_ASSERT_EQUAL_INT(0, fs_path_resolve("/a", "/b", out, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, pc_fs_resolve("/a/", "/b", "", out, sizeof(out)));
     TEST_ASSERT_EQUAL_STRING("/a/b", out);
 
-    // A fs_path_join() overflow surfaces as -2.
-    TEST_ASSERT_EQUAL_INT(-2, fs_path_resolve("abc", "def", out, 4));
+    // A pc_fs_join() overflow surfaces as -2.
+    TEST_ASSERT_EQUAL_INT(-2, pc_fs_resolve("/abc/", "def", "", out, 4));
 }
 
 int main()
 {
     UNITY_BEGIN();
-    RUN_TEST(test_fs_path_join_separator_matrix);
-    RUN_TEST(test_fs_path_resolve_traversal_and_root_edge);
+    RUN_TEST(test_pc_fs_join_seam);
+    RUN_TEST(test_pc_fs_resolve_traversal_and_root_edge);
     RUN_TEST(test_webdav_status_text_table);
     RUN_TEST(test_webdav_join_root_slash_with_empty_subpath);
     RUN_TEST(test_put_stream_error_latches_for_later_chunks);

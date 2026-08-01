@@ -11,7 +11,7 @@
  * library's own future cache tier - is cached correctly), a tolerant parser to read the
  * directives on a request or an upstream response, and the RFC 9111 sec 4.2.1 freshness-lifetime
  * calculation. Pure text - build the value with ::cache_control_build and hand it to
- * PC::set_cache_control(); no heap, no stdlib, host-testable.
+ * set_cache_control(); no heap, no stdlib, host-testable.
  *
  * Directives: RFC 9111 (max-age, s-maxage, no-cache, no-store, no-transform, must-revalidate,
  * proxy-revalidate, must-understand, private, public) plus the widely-used extensions
@@ -72,7 +72,7 @@ void cache_control_init(pc_cache_control *cc);
  * @brief Build the canonical `Cache-Control` value (no `Cache-Control:` prefix, no CRLF).
  *
  * Emits every set directive as a comma-separated list in a stable order. Pass the result to
- * PC::set_cache_control().
+ * set_cache_control().
  *
  * @return bytes written (excluding NUL), or 0 on overflow or an empty directive set.
  */

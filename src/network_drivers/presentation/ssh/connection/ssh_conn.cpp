@@ -18,7 +18,7 @@
 #endif
 #include "network_drivers/session/proto_handler.h"
 #include "network_drivers/transport/tcp.h"
-#include "server/mmgr/scratch.h"
+#include "server/mmgr/plaintext.h"
 #include "server/mmgr/secure.h"
 #include "services/system/clock.h" // pc_millis() for the server-initiated re-key timer
 #include <string.h>
@@ -70,8 +70,8 @@ static void ssh_emit(uint8_t i, const uint8_t *payload, size_t len)
 
     // Borrow the wire buffer from the shared scratch arena (released on return).
     const size_t wire_cap = SSH_WIRE_CAP;
-    ScratchScope scope;
-    uint8_t *wire = (uint8_t *)scratch_alloc(wire_cap, 16);
+    PlaintextScope scope;
+    uint8_t *wire = (uint8_t *)pc_plaintext_alloc(wire_cap, 16);
     if (!wire)
     {
         return; // arena exhausted: drop the outbound message (fail closed)
@@ -131,9 +131,9 @@ int pc_ssh_conn_send(uint8_t ssh_slot, uint32_t channel, const uint8_t *data, si
     // Borrow the payload + wire buffers from the shared scratch arena (released on
     // return); an exhausted arena fails closed.
     const size_t wire_cap = SSH_WIRE_CAP;
-    ScratchScope scope;
-    uint8_t *payload = (uint8_t *)scratch_alloc(SSH_PKT_BUF_SIZE, 16);
-    uint8_t *wire = (uint8_t *)scratch_alloc(wire_cap, 16);
+    PlaintextScope scope;
+    uint8_t *payload = (uint8_t *)pc_plaintext_alloc(SSH_PKT_BUF_SIZE, 16);
+    uint8_t *wire = (uint8_t *)pc_plaintext_alloc(wire_cap, 16);
     if (!payload || !wire)
     {
         return -1;
@@ -179,8 +179,8 @@ int pc_ssh_conn_close_channel(uint8_t ssh_slot, uint32_t channel)
     // so frame and send the two halves as two binary packets (RFC 4253 6). Borrow
     // the wire buffer from the shared scratch arena (released on return).
     const size_t wire_cap = SSH_WIRE_CAP;
-    ScratchScope scope;
-    uint8_t *wire = (uint8_t *)scratch_alloc(wire_cap, 16);
+    PlaintextScope scope;
+    uint8_t *wire = (uint8_t *)pc_plaintext_alloc(wire_cap, 16);
     if (!wire)
     {
         return -1;
@@ -214,9 +214,9 @@ int pc_ssh_conn_open_forwarded(uint8_t ssh_slot, const char *conn_addr, uint16_t
     // Borrow the payload + wire buffers from the shared scratch arena (released on
     // return); an exhausted arena fails closed.
     const size_t wire_cap = SSH_WIRE_CAP;
-    ScratchScope scope;
-    uint8_t *payload = (uint8_t *)scratch_alloc(SSH_PKT_BUF_SIZE, 16);
-    uint8_t *wire = (uint8_t *)scratch_alloc(wire_cap, 16);
+    PlaintextScope scope;
+    uint8_t *payload = (uint8_t *)pc_plaintext_alloc(SSH_PKT_BUF_SIZE, 16);
+    uint8_t *wire = (uint8_t *)pc_plaintext_alloc(wire_cap, 16);
     if (!payload || !wire)
     {
         return -1;

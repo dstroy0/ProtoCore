@@ -3,7 +3,7 @@
 
 /**
  * @file file_serving.cpp
- * @brief Filesystem-backed static file serving for PC (GET/HEAD of an fs::FS path).
+ * @brief Filesystem-backed static file serving for PC (GET/HEAD through a mount backend).
  *
  * Split out of protocore.cpp (single-purpose server files). Covers the conditional-GET validators
  * (ETag / Last-Modified / If-None-Match / If-Modified-Since), byte-range requests (RFC 7233),
@@ -15,8 +15,9 @@
 
 #include "network_drivers/transport/tcp.h" // conn_pool, pc_conn_*, TcpConn/ConnState
 #include "protocore.h"
-#include "server/http_range.h" // http_parse_byte_range (shared with the edge cache)
-#include "server/protocore_internal.h"
+#include "server/filesystem/filesystem.h" // pc_fs_* - the accessor owns the root, the join, and the .. guard
+#include "server/http_range.h"            // http_parse_byte_range (shared with the edge cache)
+#include "server/signaling/route.h"
 #include "shared_primitives/mime.h"        // mime_type, PC_MIME_*
 #include "shared_primitives/strbuf.h"      // pc_sb frame builder
 #include "shared_primitives/time_compat.h" // pc_gmtime_r (portable reentrant UTC)
@@ -43,7 +44,7 @@
 // Per-slot file-send continuation: the open file and how much of it is left.
 struct FileSend
 {
-    fs::File file;    ///< open source file (held across loops).
+    int fh;           ///< accessor handle for the open source file, held across loops.
     size_t off;       ///< absolute file offset of the next byte to send.
     size_t remaining; ///< body bytes still to send.
     int status;       ///< response status (200 / 206) for note_response.
@@ -197,24 +198,33 @@ static bool inm_matches(const char *inm, const char *etag)
     return false;
 }
 
-void PC::serve_file_internal(uint8_t slot_id, bool head, fs::FS &file_sys, const char *fs_path,
-                             const char *content_type, const char *content_encoding)
+void serve_file_internal(uint8_t slot_id, bool head, const pc_mnt_backend *file_sys, const char *fs_path,
+                         const char *content_type, const char *content_encoding)
 {
-    fs::File f = file_sys.open(fs_path, "r");
-    if (!f)
+    int fh = pc_fs_open(fs_path, "", pc_mnt_mode::PC_MNT_READ);
+    if (fh < 0)
     {
-        send(slot_id, 404, PC_MIME_TEXT_PLAIN, "Not Found");
+        send_text(slot_id, 404, PC_MIME_TEXT_PLAIN, "Not Found");
         return;
     }
 
     if (!pc_conn_active(slot_id))
     {
-        f.close();
+        pc_fs_close(fh);
         http_reset(slot_id);
         return;
     }
 
-    size_t file_size = f.size();
+    // Size and mtime come from one stat, not two calls on the handle: they are two fields of the same
+    // directory record, and asking separately is two lookups of what one read already had.
+    pc_mnt_stat st;
+    if (!pc_fs_stat(fs_path, "", &st))
+    {
+        pc_fs_close(fh);
+        send_text(slot_id, 404, PC_MIME_TEXT_PLAIN, "Not Found");
+        return;
+    }
+    size_t file_size = static_cast<size_t>(st.size);
 
     bool keep;
     const char *cl = pc_resp_conn_hdr(slot_id, &keep);
@@ -239,7 +249,7 @@ void PC::serve_file_internal(uint8_t slot_id, bool head, fs::FS &file_sys, const
     // Last-Modified date validator. A conditional request answers 304 when either
     // the client's If-None-Match matches the ETag, or - per RFC 9110, only when no
     // If-None-Match is present - its If-Modified-Since is not older than the file.
-    time_t mtime = f.getLastWrite();
+    time_t mtime = static_cast<time_t>(st.mtime);
     char etag[40];
     pc_sb sb_etag = {etag, sizeof(etag), 0, true};
     pc_sb_put(&sb_etag, "\"");
@@ -273,15 +283,15 @@ void PC::serve_file_internal(uint8_t slot_id, bool head, fs::FS &file_sys, const
                             : http_not_modified_since(mtime, http_get_header(&http_pool[slot_id], "If-Modified-Since"));
     if (not_modified)
     {
-        f.close();
+        pc_fs_close(fh);
         char h304[RESP_HDR_BUF_SIZE];
         pc_sb sb_h304 = {h304, sizeof(h304), 0, true};
         pc_sb_put(&sb_h304, "HTTP/1.1 304 Not Modified\r\nETag: ");
         pc_sb_put(&sb_h304, etag);
         pc_sb_put(&sb_h304, "\r\n");
         pc_sb_put(&sb_h304, lastmod_line);
-        pc_sb_put(&sb_h304, _cache_control_buf);
-        pc_sb_put(&sb_h304, _cors_enabled ? _cors_header_buf : "");
+        pc_sb_put(&sb_h304, pc_resp_cache_control());
+        pc_sb_put(&sb_h304, pc_resp_cors_enabled() ? pc_resp_cors_header() : "");
         pc_sb_put(&sb_h304, cl);
         pc_sb_put(&sb_h304, "\r\n");
         int n304 = (int)pc_sb_finish(&sb_h304);
@@ -319,13 +329,13 @@ void PC::serve_file_internal(uint8_t slot_id, bool head, fs::FS &file_sys, const
     if (rr < 0)
     {
         // Unsatisfiable range -> 416 with Content-Range: bytes */<size>.
-        f.close();
+        pc_fs_close(fh);
         char h416[RESP_HDR_BUF_SIZE];
         pc_sb sb_h416 = {h416, sizeof(h416), 0, true};
         pc_sb_put(&sb_h416, "HTTP/1.1 416 Range Not Satisfiable\r\nContent-Range: bytes */");
         pc_sb_u32(&sb_h416, (uint32_t)((unsigned)file_size));
         pc_sb_put(&sb_h416, "\r\nContent-Length: 0\r\n");
-        pc_sb_put(&sb_h416, _cors_enabled ? _cors_header_buf : "");
+        pc_sb_put(&sb_h416, pc_resp_cors_enabled() ? pc_resp_cors_header() : "");
         pc_sb_put(&sb_h416, cl);
         pc_sb_put(&sb_h416, "\r\n");
         int n416 = (int)pc_sb_finish(&sb_h416);
@@ -349,7 +359,7 @@ void PC::serve_file_internal(uint8_t slot_id, bool head, fs::FS &file_sys, const
         {
             range_line[0] = '\0';
         }
-        f.seek((uint32_t)r_start);
+        pc_fs_seek(fh, (uint64_t)r_start);
         body_off = r_start;
     }
 #endif
@@ -370,8 +380,8 @@ void PC::serve_file_internal(uint8_t slot_id, bool head, fs::FS &file_sys, const
     pc_sb_put(&sb_header, enc_line);
     pc_sb_put(&sb_header, etag_line);
     pc_sb_put(&sb_header, lastmod_line);
-    pc_sb_put(&sb_header, _cache_control_buf);
-    pc_sb_put(&sb_header, _cors_enabled ? _cors_header_buf : "");
+    pc_sb_put(&sb_header, pc_resp_cache_control());
+    pc_sb_put(&sb_header, pc_resp_cors_enabled() ? pc_resp_cors_header() : "");
     pc_sb_put(&sb_header, cl);
     pc_sb_put(&sb_header, "\r\n");
     int hlen = (int)pc_sb_finish(&sb_header);
@@ -385,7 +395,7 @@ void PC::serve_file_internal(uint8_t slot_id, bool head, fs::FS &file_sys, const
     // HEAD or empty body: headers only, finish now.
     if (head || body_len == 0)
     {
-        f.close();
+        pc_fs_close(fh);
         pc_resp_end(slot_id, status, 0, keep);
         return;
     }
@@ -395,7 +405,7 @@ void PC::serve_file_internal(uint8_t slot_id, bool head, fs::FS &file_sys, const
     // than TCP_SND_BUF is never truncated. The pump owns the file and calls
     // pc_resp_end() at completion - do not close f or end the response here.
     FileSend &s = s_file.send[slot_id];
-    s.file = f; // shared handle on ARDUINO; the local f going out of scope keeps it open
+    s.fh = fh;
     s.off = body_off;
     s.remaining = body_len;
     s.status = status;
@@ -409,7 +419,7 @@ void PC::serve_file_internal(uint8_t slot_id, bool head, fs::FS &file_sys, const
 // bytes now and return; the next loop resumes (woken by the sent callback) until the
 // whole body has been queued, then finish the response. Bounded per loop, never
 // truncates, never blocks the worker.
-void PC::file_send_pump(uint8_t slot_id)
+void file_send_pump(uint8_t slot_id)
 {
     FileSend &s = s_file.send[slot_id];
     // GCOVR_EXCL_START  unreachable: both callers already established the state - serve_file_internal
@@ -424,7 +434,7 @@ void PC::file_send_pump(uint8_t slot_id)
     if (!pc_conn_active(slot_id))
     {
         // Connection went away mid-transfer: drop the source and the continuation.
-        s.file.close();
+        pc_fs_close(s.fh);
         s.active = false;
         return;
     }
@@ -447,41 +457,43 @@ void PC::file_send_pump(uint8_t slot_id)
         {
             want = avail;
         }
-        size_t n = s.file.read(chunk, want);
-        if (n == 0)
+        // The backend reports a fault as -1 and end-of-data as 0; both stop the transfer, and the
+        // comparison is <= so a fault can never be added to the offset as a negative count.
+        int n = pc_fs_read(s.fh, chunk, want);
+        if (n <= 0)
         {
             s.remaining = 0; // read error / short file: stop (response will be short)
             break;
         }
         if (!pc_conn_send(slot_id, chunk, (u16_t)n))
         {
-            s.file.seek((uint32_t)s.off); // un-read the bytes that did not go out; retry next loop
+            pc_fs_seek(s.fh, s.off); // un-read the bytes that did not go out; retry next loop
             pc_conn_flush(slot_id);
             return;
         }
-        s.off += n;
-        s.remaining -= n;
+        s.off += static_cast<size_t>(n);
+        s.remaining -= static_cast<size_t>(n);
     }
 
     // Whole body queued: finish the response (flush, keep-alive/close, log, reset).
-    s.file.close();
+    pc_fs_close(s.fh);
     s.active = false;
     pc_conn_flush(slot_id);
     pc_resp_end(slot_id, s.status, s.total, s.keep);
 }
 
-void PC::serve_file(uint8_t slot_id, fs::FS &file_sys, const char *fs_path, const char *content_type)
+void serve_file(uint8_t slot_id, const pc_mnt_backend *file_sys, const char *fs_path, const char *content_type)
 {
     serve_file_internal(slot_id, req_is_head(slot_id), file_sys, fs_path, content_type, nullptr);
 }
 
-void PC::serve_static(const char *url_prefix, fs::FS &file_sys, const char *fs_root)
+void serve_static(const char *url_prefix, const pc_mnt_backend *file_sys, const char *fs_root)
 {
-    if (_route_count >= MAX_ROUTES)
+    Route *r = pc_route_add();
+    if (r == nullptr)
     {
         return;
     }
-
     // Store the pattern as a wildcard so path_matches() does a prefix match.
     //
     // The pattern is built BEFORE a route slot is taken, because a prefix that does not fit must
@@ -502,21 +514,20 @@ void PC::serve_static(const char *url_prefix, fs::FS &file_sys, const char *fs_r
         return; // prefix + wildcard does not fit: register nothing
     }
 
-    Route *r = &_routes[_route_count++];
     fill_route_base(r, pat);
     r->type = RouteType::ROUTE_STATIC;
     r->method = HttpMethod::HTTP_GET;
-    r->static_fs = &file_sys;
+    r->static_fs = file_sys; // null is legal: the accessor uses whatever is mounted
     r->static_root = fs_root;
 }
 
-void PC::serve_static_request(uint8_t slot_id, HttpReq *req, const Route *r)
+void serve_static_request(uint8_t slot_id, HttpReq *req, const Route *r)
 {
     // GCOVR_EXCL_START  a RouteType::ROUTE_STATIC route always carries static_fs: serve_static() takes
     // the filesystem by reference and stores its address, so this null-guard cannot fire.
     if (!r->static_fs)
     {
-        send(slot_id, 404, PC_MIME_TEXT_PLAIN, "Not Found");
+        send_text(slot_id, 404, PC_MIME_TEXT_PLAIN, "Not Found");
         return;
     }
     // GCOVR_EXCL_STOP
@@ -534,7 +545,7 @@ void PC::serve_static_request(uint8_t slot_id, HttpReq *req, const Route *r)
     // Reject path traversal before touching the filesystem.
     if (strstr(sub, ".."))
     {
-        send(slot_id, 404, PC_MIME_TEXT_PLAIN, "Not Found");
+        send_text(slot_id, 404, PC_MIME_TEXT_PLAIN, "Not Found");
         return;
     }
 
@@ -565,7 +576,7 @@ void PC::serve_static_request(uint8_t slot_id, HttpReq *req, const Route *r)
     }
     if (pc_sb_finish(&sb_path) == 0)
     {
-        send(slot_id, 404, PC_MIME_TEXT_PLAIN, "Not Found");
+        send_text(slot_id, 404, PC_MIME_TEXT_PLAIN, "Not Found");
         return;
     }
 
@@ -586,13 +597,13 @@ void PC::serve_static_request(uint8_t slot_id, HttpReq *req, const Route *r)
         // a 256-byte buffer, so gn is at most 258 and always under gz's 260. Both are kept because
         // the two buffer sizes are independent constants. The exclusion is per-line, so it also
         // drops the exists() halves - those ARE exercised both ways (see the gzip tests).
-        if (gn > 0 && gn < (int)sizeof(gz) && r->static_fs->exists(gz)) // GCOVR_EXCL_BR_LINE  see above
+        if (gn > 0 && gn < (int)sizeof(gz) && pc_fs_exists(gz, "")) // GCOVR_EXCL_BR_LINE  see above
         {
-            serve_file_internal(slot_id, head, *r->static_fs, gz, ctype, "gzip");
+            serve_file_internal(slot_id, head, r->static_fs, gz, ctype, "gzip");
             return;
         }
     }
 
-    serve_file_internal(slot_id, head, *r->static_fs, fs_path, ctype, nullptr);
+    serve_file_internal(slot_id, head, r->static_fs, fs_path, ctype, nullptr);
 }
 #endif // PC_ENABLE_FILE_SERVING

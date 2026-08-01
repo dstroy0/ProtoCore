@@ -24,7 +24,7 @@
 #include "network_drivers/presentation/ssh/transport/ssh_dh.h"
 #include "network_drivers/presentation/ssh/transport/ssh_keymat.h"
 #include "network_drivers/presentation/ssh/transport/ssh_packet.h"
-#include "server/mmgr/scratch.h"
+#include "server/mmgr/plaintext.h"
 #include "server/mmgr/secure.h"
 #include <stdint.h>
 #include <string.h>
@@ -1578,20 +1578,20 @@ static void test_pkt_scratch_exhausted(void)
 
     chacha_recv_setup(km);
     size_t wlen = forge_chacha(km, 0, 8, 4, wire); // a valid packet (pad 4)
-    scratch_reset();
-    while (scratch_alloc(8, 1))
+    pc_plaintext_reset();
+    while (pc_plaintext_alloc(8, 1))
         ; // drain the arena so the recv decrypt-buffer alloc fails
     TEST_ASSERT_EQUAL_INT(-1, ssh_pkt_recv(0, wire, wlen, pkt_handler));
-    scratch_reset();
+    pc_plaintext_reset();
 
     uint8_t key[32], iv[16];
     etm_recv_setup(km, key, iv);
     wlen = forge_etm(km, key, iv, 0, 16, 4, wire); // valid MAC + padding
-    scratch_reset();
-    while (scratch_alloc(8, 1))
+    pc_plaintext_reset();
+    while (pc_plaintext_alloc(8, 1))
         ;
     TEST_ASSERT_EQUAL_INT(-1, ssh_pkt_recv(0, wire, wlen, pkt_handler));
-    scratch_reset();
+    pc_plaintext_reset();
     ssh_keymat_wipe(0);
 }
 
@@ -1657,11 +1657,11 @@ static void test_pkt_eam_forged_rejects(void)
     ssh_pkt[0].enc_in = true;
     wlen = forge_eam(km, 0, 12, 4, wire);
     setup_encrypted_keys();
-    scratch_reset();
-    while (scratch_alloc(8, 1))
+    pc_plaintext_reset();
+    while (pc_plaintext_alloc(8, 1))
         ;
     TEST_ASSERT_EQUAL_INT(-1, ssh_pkt_recv(0, wire, wlen, pkt_handler));
-    scratch_reset();
+    pc_plaintext_reset();
     ssh_keymat_wipe(0);
 }
 

@@ -73,7 +73,7 @@
  * The deflate state and the output buffer are live together. PC_WS_DEFLATE_MAX bounds the payload
  * the compressor will accept, which is what turns `len + len/8 + 16` into a constant.
  */
-#define PC_SCRATCH_WORK_WS_SEND (DEFLATE_SCRATCH_SIZE + PC_WS_DEFLATE_MAX + (PC_WS_DEFLATE_MAX / 8) + 16)
+#define PC_PLAINTEXT_WORK_WS_SEND (DEFLATE_SCRATCH_SIZE + PC_WS_DEFLATE_MAX + (PC_WS_DEFLATE_MAX / 8) + 16)
 
 /**
  * @brief Scratch borrowed while decompressing one reassembled inbound message.
@@ -81,10 +81,10 @@
  * Input (message + the RFC 7692 00 00 ff ff marker), output, and the inflate tables are live
  * together. The parser closes 1009 before a message exceeds WS_FRAME_SIZE, which bounds the input.
  */
-#define PC_SCRATCH_WORK_WS_RECV (WS_FRAME_SIZE + 4 + WS_FRAME_SIZE + INFLATE_SCRATCH_SIZE)
+#define PC_PLAINTEXT_WORK_WS_RECV (WS_FRAME_SIZE + 4 + WS_FRAME_SIZE + INFLATE_SCRATCH_SIZE)
 #else
-#define PC_SCRATCH_WORK_WS_SEND 0
-#define PC_SCRATCH_WORK_WS_RECV 0
+#define PC_PLAINTEXT_WORK_WS_SEND 0
+#define PC_PLAINTEXT_WORK_WS_RECV 0
 #endif
 
 // ---------------------------------------------------------------------------
@@ -187,7 +187,7 @@ extern WsConn ws_pool[MAX_WS_CONNS];
 /**
  * @brief Initialize all WebSocket pool slots to inactive.
  *
- * Called once from PC::begin().
+ * Called once from begin().
  */
 void ws_init();
 

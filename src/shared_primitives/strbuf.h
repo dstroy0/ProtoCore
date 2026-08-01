@@ -21,6 +21,7 @@
 #ifndef PROTOCORE_STRBUF_H
 #define PROTOCORE_STRBUF_H
 
+#include "shared_primitives/swar.h" // pc_swar_scan_nul - four bytes per test, bounded by a known width
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
@@ -63,7 +64,7 @@ inline void pc_sb_put(pc_sb *b, const char *s)
     {
         return;
     }
-    pc_sb_put_n(b, s, strnlen(s, b->cap));
+    pc_sb_put_n(b, s, pc_swar_scan_nul(s, b->cap));
 }
 
 /**
@@ -94,7 +95,7 @@ inline void pc_sb_put_clip(pc_sb *b, const char *s)
         return;
     }
     size_t room = b->cap - b->len - 1;
-    size_t sl = strnlen(s, room);
+    size_t sl = pc_swar_scan_nul(s, room);
     memcpy(b->p + b->len, s, sl);
     b->len += sl;
 }

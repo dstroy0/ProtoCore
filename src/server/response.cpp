@@ -14,10 +14,9 @@
 
 #include "network_drivers/transport/tcp.h" // conn_pool, pc_conn_send, TcpConn/ConnState
 #include "protocore.h"
-#include "server/protocore_internal.h" // status_text, req_is_head
-#include "shared_primitives/hex.h"     // pc_hex_u32 (chunk size-line writer)
-#include "shared_primitives/mime.h"    // PC_MIME_*, mime tables
-#include "shared_primitives/strbuf.h"  // pc_sb frame builder (replaces snprintf)
+#include "shared_primitives/hex.h"    // pc_hex_u32 (chunk size-line writer)
+#include "shared_primitives/mime.h"   // PC_MIME_*, mime tables
+#include "shared_primitives/strbuf.h" // pc_sb frame builder (replaces snprintf)
 #include <stdio.h>
 #include <string.h>
 #if PC_ENABLE_METRICS || PC_ENABLE_STATS
@@ -59,12 +58,40 @@ struct ChunkSend
     bool raw;           ///< HTTP/1.0 client: stream the body unframed, close-delimited (no chunk wrapping).
 };
 
-/** @brief The chunked-send state this TU owns, one entry per connection slot. */
+/** @brief The response state this TU owns: what is in flight, and what every response carries. */
 struct RespCtx
 {
     ChunkSend chunk[MAX_CONNS];
+
+    // The header blocks every response emits. They live with the code that emits them rather than on
+    // the server object they used to hang off, which is why the readers below are functions: a
+    // caller needs the bytes, not the storage.
+    bool cors_enabled;
+    char cors_header_buf[CORS_HDR_BUF_SIZE];
+    char cache_control_buf[CACHE_CONTROL_BUF_SIZE];
+    char extra_hdr[CONN_POOL_SLOTS][EXTRA_HDR_BUF_SIZE];
 };
 static RespCtx s_resp;
+
+bool pc_resp_cors_enabled(void)
+{
+    return s_resp.cors_enabled;
+}
+
+const char *pc_resp_cors_header(void)
+{
+    return s_resp.cors_header_buf;
+}
+
+const char *pc_resp_cache_control(void)
+{
+    return s_resp.cache_control_buf;
+}
+
+char *pc_resp_extra_hdr(uint8_t slot)
+{
+    return s_resp.extra_hdr[slot];
+}
 
 bool pc_resp_holds_slot(uint8_t slot)
 {
@@ -84,36 +111,39 @@ bool pc_resp_holds_slot(uint8_t slot)
 // Consume one "{{name}}" placeholder at @p p (advancing it), sizing into @p total and, when
 // @p emit, streaming the resolved value. An unterminated or over-long (> 32 char) name is emitted
 // as a literal "{{" and the scan resumes just past it.
-static void tmpl_take_placeholder(uint8_t slot, const char *&p, TemplateVar resolver, bool emit, size_t &total)
+static void tmpl_take_placeholder(uint8_t slot, const char **p, TemplateVar resolver, bool emit, size_t *total)
 {
-    const char *end = strstr(p + 2, "}}");
-    size_t nlen = end ? (size_t)(end - (p + 2)) : 0;
+    const char *at = *p;
+    const char *end = strstr(at + 2, "}}");
+    size_t nlen = end ? (size_t)(end - (at + 2)) : 0;
     if (!end || nlen > 32)
     {
         // Unterminated or over-long placeholder: emit "{{" literally.
-        total += 2;
+        *total += 2;
         if (emit)
         {
             pc_conn_send(slot, "{{", 2);
         }
-        p += 2;
+        *p = at + 2;
         return;
     }
     char name[33];
-    memcpy(name, p + 2, nlen);
+    memcpy(name, at + 2, nlen);
     name[nlen] = '\0';
     const char *val = resolver ? resolver(name) : nullptr;
     if (!val)
     {
         val = "";
     }
-    size_t vlen = strnlen(val, 0xFFFF);
-    total += vlen;
+    // Bounded by what the send can carry, which is the width of its length parameter. Spelling that
+    // as a literal stated the same bound twice, in two places that could disagree.
+    size_t vlen = strnlen(val, UINT16_MAX);
+    *total += vlen;
     if (emit && vlen)
     {
         pc_conn_send(slot, val, (u16_t)vlen);
     }
-    p = end + 2;
+    *p = end + 2;
 }
 
 // Two-pass: pass 1 sizes the body (emit=false), pass 2 streams it (emit=true).
@@ -125,7 +155,7 @@ static size_t tmpl_walk(uint8_t slot, const char *tmpl, TemplateVar resolver, bo
     {
         if (p[0] == '{' && p[1] == '{')
         {
-            tmpl_take_placeholder(slot, p, resolver, emit, total);
+            tmpl_take_placeholder(slot, &p, resolver, emit, &total);
             continue;
         }
 
@@ -149,7 +179,7 @@ static size_t tmpl_walk(uint8_t slot, const char *tmpl, TemplateVar resolver, bo
     return total;
 }
 
-void PC::send_template(uint8_t slot_id, int code, const char *content_type, const char *tmpl, TemplateVar resolver)
+void send_template(uint8_t slot_id, int code, const char *content_type, const char *tmpl, TemplateVar resolver)
 {
     if (slot_id >= MAX_CONNS)
     {
@@ -205,7 +235,7 @@ void PC::send_template(uint8_t slot_id, int code, const char *content_type, cons
 // ChunkSource). One chunked response per slot at a time.
 // ---------------------------------------------------------------------------
 
-void PC::send_chunked(uint8_t slot_id, int code, const char *content_type, ChunkSource source, void *ctx)
+void send_chunked(uint8_t slot_id, int code, const char *content_type, ChunkSource source, void *ctx)
 {
     if (slot_id >= MAX_CONNS)
     {
@@ -269,7 +299,7 @@ void PC::send_chunked(uint8_t slot_id, int code, const char *content_type, Chunk
 
 // Page a pending chunked response: pull pieces from the source and frame them into
 // the send window each worker loop, resuming on later loops as the window drains.
-void PC::chunk_send_pump(uint8_t slot_id)
+void chunk_send_pump(uint8_t slot_id)
 {
     ChunkSend &s = s_resp.chunk[slot_id];
     // GCOVR_EXCL_START  unreachable: both callers already established the state - send_chunked() sets
@@ -365,14 +395,14 @@ void PC::chunk_send_pump(uint8_t slot_id)
 // reaches the wire.
 // ---------------------------------------------------------------------------
 
-void PC::add_response_header(uint8_t slot_id, const char *name, const char *value)
+void add_response_header(uint8_t slot_id, const char *name, const char *value)
 {
     if (slot_id >= MAX_CONNS || name == nullptr || value == nullptr)
     {
         return;
     }
 
-    char *buf = _extra_hdr[slot_id];
+    char *buf = s_resp.extra_hdr[slot_id];
     size_t used = strnlen(buf, EXTRA_HDR_BUF_SIZE);
     size_t room = EXTRA_HDR_BUF_SIZE - used;
     pc_sb hb3 = {buf + used, room, 0, true};
@@ -388,14 +418,14 @@ void PC::add_response_header(uint8_t slot_id, const char *name, const char *valu
     }
 }
 
-void PC::set_cookie(uint8_t slot_id, const char *name, const char *value, const char *attrs)
+void set_cookie(uint8_t slot_id, const char *name, const char *value, const char *attrs)
 {
     if (slot_id >= MAX_CONNS || name == nullptr || value == nullptr)
     {
         return;
     }
 
-    char *buf = _extra_hdr[slot_id];
+    char *buf = s_resp.extra_hdr[slot_id];
     size_t used = strnlen(buf, EXTRA_HDR_BUF_SIZE);
     size_t room = EXTRA_HDR_BUF_SIZE - used;
     pc_sb cb = {buf + used, room, 0, true};
@@ -415,20 +445,20 @@ void PC::set_cookie(uint8_t slot_id, const char *name, const char *value, const 
     }
 }
 
-void PC::clear_response_headers(uint8_t slot_id)
+void clear_response_headers(uint8_t slot_id)
 {
     if (slot_id >= MAX_CONNS)
     {
         return;
     }
-    _extra_hdr[slot_id][0] = '\0';
+    s_resp.extra_hdr[slot_id][0] = '\0';
 }
 
 // ---------------------------------------------------------------------------
 // MIME type lookup by extension
 // ---------------------------------------------------------------------------
 
-const char *PC::mime_type(const char *path)
+const char *mime_type(const char *path)
 {
     if (!path)
     {
@@ -551,7 +581,7 @@ static const char *stats_var(const char *name)
     return nullptr; // GCOVR_EXCL_LINE  unreachable: every PC_STATS_JSON name resolves above
 }
 
-void PC::stats(uint8_t slot_id)
+void stats(uint8_t slot_id)
 {
     int active = pc_conn_active_count();
 
@@ -562,12 +592,17 @@ void PC::stats(uint8_t slot_id)
     uint32_t heap = 0;
 #endif
 
+    // One read of the bucket, not four reads of four owners: a report that gathered field by field
+    // could straddle two server states while it was still formatting the first.
+    pc_signal_snapshot sig;
+    pc_signal_know(&sig);
+
     // millis() is a 32-bit tick counter, so the uptime field wraps with it exactly as before.
     num_field(s_stats.uptime, sizeof(s_stats.uptime), (uint32_t)up);
-    num_field(s_stats.requests, sizeof(s_stats.requests), (uint32_t)_stat_requests);
-    num_field(s_stats.n2xx, sizeof(s_stats.n2xx), (uint32_t)_stat_2xx);
-    num_field(s_stats.n4xx, sizeof(s_stats.n4xx), (uint32_t)_stat_4xx);
-    num_field(s_stats.n5xx, sizeof(s_stats.n5xx), (uint32_t)_stat_5xx);
+    num_field(s_stats.requests, sizeof(s_stats.requests), sig.requests_total);
+    num_field(s_stats.n2xx, sizeof(s_stats.n2xx), sig.responses_2xx);
+    num_field(s_stats.n4xx, sizeof(s_stats.n4xx), sig.responses_4xx);
+    num_field(s_stats.n5xx, sizeof(s_stats.n5xx), sig.responses_5xx);
     num_field(s_stats.active, sizeof(s_stats.active), (uint32_t)(active < 0 ? 0 : active));
     num_field(s_stats.heap, sizeof(s_stats.heap), heap);
 
@@ -651,7 +686,7 @@ static const char *metrics_var(const char *name)
     return nullptr; // GCOVR_EXCL_LINE - see above
 }
 
-void PC::metrics(uint8_t slot_id)
+void metrics(uint8_t slot_id)
 {
     int active = pc_conn_active_count();
 
@@ -668,11 +703,14 @@ void PC::metrics(uint8_t slot_id)
     uint32_t max_alloc = 0;
 #endif
 
+    pc_signal_snapshot sig;
+    pc_signal_know(&sig);
+
     num_field(s_metrics.uptime, sizeof(s_metrics.uptime), (uint32_t)(up / 1000UL));
-    num_field(s_metrics.requests, sizeof(s_metrics.requests), (uint32_t)_stat_requests);
-    num_field(s_metrics.n2xx, sizeof(s_metrics.n2xx), (uint32_t)_stat_2xx);
-    num_field(s_metrics.n4xx, sizeof(s_metrics.n4xx), (uint32_t)_stat_4xx);
-    num_field(s_metrics.n5xx, sizeof(s_metrics.n5xx), (uint32_t)_stat_5xx);
+    num_field(s_metrics.requests, sizeof(s_metrics.requests), sig.requests_total);
+    num_field(s_metrics.n2xx, sizeof(s_metrics.n2xx), sig.responses_2xx);
+    num_field(s_metrics.n4xx, sizeof(s_metrics.n4xx), sig.responses_4xx);
+    num_field(s_metrics.n5xx, sizeof(s_metrics.n5xx), sig.responses_5xx);
     num_field(s_metrics.active, sizeof(s_metrics.active), (uint32_t)(active < 0 ? 0 : active));
     num_field(s_metrics.max, sizeof(s_metrics.max), (uint32_t)MAX_CONNS);
     num_field(s_metrics.heap, sizeof(s_metrics.heap), heap);

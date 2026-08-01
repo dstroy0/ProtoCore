@@ -16,10 +16,9 @@
 #include "network_drivers/presentation/codec/base64/base64.h" // pc_base64_decode (Basic)
 #include "network_drivers/transport/tcp.h"                    // conn_pool, pc_conn_send, TcpConn/ConnState
 #include "protocore.h"
-#include "server/protocore_internal.h" // req_is_head, resp helpers
-#include "services/system/clock.h"     // pc_millis() for the stateless nonce
-#include "shared_primitives/hex.h"     // pc_hex_encode/decode
-#include "shared_primitives/strbuf.h"  // pc_sb frame builder
+#include "services/system/clock.h"    // pc_millis() for the stateless nonce
+#include "shared_primitives/hex.h"    // pc_hex_encode/decode
+#include "shared_primitives/strbuf.h" // pc_sb frame builder
 #include <stdio.h>
 #include <string.h>
 #if PC_ENABLE_AUTH
@@ -90,7 +89,16 @@ static bool digest_field(const char *hdr, const char *key, char *out, size_t out
     return false;
 }
 
-void PC::regen_digest_secret()
+// The Digest keying secret, owned here (internal linkage). It keys the stateless nonce MAC and is
+// never read outside this file, so it belongs to auth rather than to the server object it used to
+// hang off: a secret reachable from every translation unit is a secret with no owner.
+struct AuthCtx
+{
+    uint8_t digest_secret[16];
+};
+static AuthCtx s_auth;
+
+void regen_digest_secret()
 {
     // Seed a 128-bit keying secret from the hardware CSPRNG (esp_random() on
     // ESP32; a non-crypto mock on native test builds), folded through SHA-256 with
@@ -111,7 +119,7 @@ void PC::regen_digest_secret()
     memcpy(seed + 20, &t, 4);
     uint8_t d[PC_SHA256_DIGEST_LEN];
     pc_sha256(seed, sizeof(seed), d);
-    memcpy(_digest_secret, d, sizeof(_digest_secret)); // first 128 bits
+    memcpy(s_auth.digest_secret, d, sizeof(s_auth.digest_secret)); // first 128 bits
 }
 
 // Stateless Digest nonce (RFC 7616 3.3): "<issue_ms_hex>.<mac_hex>" where the MAC
@@ -130,13 +138,13 @@ static uint32_t digest_nonce_mac(const uint8_t *secret, uint32_t issue, char *ma
     return issue;
 }
 
-void PC::make_digest_nonce(char *out, size_t cap)
+void make_digest_nonce(char *out, size_t cap)
 {
     uint32_t issue = pc_millis();
     char issue_hex[9];
     pc_hex_encode((const uint8_t *)&issue, 4, issue_hex); // 4 bytes -> 8 hex chars
     char mac_hex[33];
-    digest_nonce_mac(_digest_secret, issue, mac_hex);
+    digest_nonce_mac(s_auth.digest_secret, issue, mac_hex);
     pc_sb sb_out = {out, cap, 0, true};
     pc_sb_put(&sb_out, issue_hex);
     pc_sb_put(&sb_out, ".");
@@ -147,7 +155,7 @@ void PC::make_digest_nonce(char *out, size_t cap)
     }
 }
 
-bool PC::verify_digest_nonce(const char *nonce, bool *expired)
+bool verify_digest_nonce(const char *nonce, bool *expired)
 {
     *expired = false;
     // Expected shape: 8 hex (issue) + '.' + 32 hex (MAC).
@@ -161,7 +169,7 @@ bool PC::verify_digest_nonce(const char *nonce, bool *expired)
         return false;
     }
     char mac_hex[33];
-    digest_nonce_mac(_digest_secret, issue, mac_hex);
+    digest_nonce_mac(s_auth.digest_secret, issue, mac_hex);
     // Constant-time compare of the 32 MAC hex chars: a forged nonce never reveals
     // how many leading characters matched.
     const char *got = nonce + 9;
@@ -179,7 +187,7 @@ bool PC::verify_digest_nonce(const char *nonce, bool *expired)
     return true;
 }
 
-void PC::send_unauth(uint8_t slot_id, const Route *r, bool stale)
+void send_unauth(uint8_t slot_id, const Route *r, bool stale)
 {
     if (!pc_conn_active(slot_id))
     {
@@ -232,7 +240,7 @@ void PC::send_unauth(uint8_t slot_id, const Route *r, bool stale)
     pc_sb_put(&sb_header, "Content-Type: text/plain\r\nContent-Length: ");
     pc_sb_i64(&sb_header, (int64_t)((int)(sizeof(body) - 1)));
     pc_sb_put(&sb_header, "\r\n");
-    pc_sb_put(&sb_header, _cors_enabled ? _cors_header_buf : "");
+    pc_sb_put(&sb_header, pc_resp_cors_enabled() ? pc_resp_cors_header() : "");
     pc_sb_put(&sb_header, cl);
     pc_sb_put(&sb_header, "\r\n");
     int hlen = (int)pc_sb_finish(&sb_header);
@@ -267,7 +275,7 @@ static bool ct_equal(const void *a, const void *b, size_t len)
     return diff == 0;
 }
 
-bool PC::check_basic_auth(uint8_t /*slot_id*/, HttpReq *req, const Route *r)
+bool check_basic_auth(uint8_t /*slot_id*/, HttpReq *req, const Route *r)
 {
     const char *auth_hdr = http_get_header(req, "Authorization");
     if (!auth_hdr || strncmp(auth_hdr, "Basic ", 6) != 0)
@@ -306,7 +314,7 @@ bool PC::check_basic_auth(uint8_t /*slot_id*/, HttpReq *req, const Route *r)
 // Validate an Authorization: Digest header (RFC 7616, SHA-256, qop=auth).
 // HA1 = SHA256(user:realm:pass), HA2 = SHA256(method:uri),
 // response = SHA256(HA1:nonce:nc:cnonce:qop:HA2).
-bool PC::check_digest_auth(uint8_t /*slot_id*/, HttpReq *req, const Route *r, bool *stale)
+bool check_digest_auth(uint8_t /*slot_id*/, HttpReq *req, const Route *r, bool *stale)
 {
     // Use the full-length Authorization capture (the scratch header value is
     // capped at MAX_VAL_LEN, far shorter than a Digest header).

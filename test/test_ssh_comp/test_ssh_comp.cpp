@@ -19,7 +19,7 @@
 #include "network_drivers/presentation/ssh/transport/ssh_dh.h" // DH keygen + RFC 4253 §7.2 key derivation
 #include "network_drivers/presentation/ssh/transport/ssh_packet.h"
 #include "network_drivers/presentation/ssh/transport/ssh_transport.h" // KEXINIT s2c compression negotiation
-#include "server/mmgr/scratch.h"
+#include "server/mmgr/plaintext.h"
 #include <string.h>
 #include <unity.h>
 
@@ -193,14 +193,14 @@ void test_packet_compress_scratch_exhausted()
     ssh_comp_set_s2c(0, SshCompAlg::SSH_COMP_ZLIB);
     ssh_comp_on_newkeys(0);
     TEST_ASSERT_TRUE(ssh_comp_s2c_active(0));
-    scratch_reset();
-    while (scratch_alloc(8, 1))
+    pc_plaintext_reset();
+    while (pc_plaintext_alloc(8, 1))
         ; // drain the arena
     uint8_t payload[8] = {SSH_MSG_IGNORE, 1, 2, 3, 4, 5, 6, 7};
     uint8_t wire[SSH_WIRE_CAP];
     size_t wlen = 0;
     TEST_ASSERT_EQUAL_INT(-1, ssh_pkt_send(0, payload, sizeof(payload), wire, &wlen, sizeof(wire)));
-    scratch_reset();
+    pc_plaintext_reset();
 }
 
 // Every entry point rejects an out-of-range slot (the i >= MAX_SSH_CONNS guard branch), and a valid
@@ -383,7 +383,7 @@ void test_packet_compress_rejects_oversized_payload()
     ssh_comp_set_s2c(0, SshCompAlg::SSH_COMP_ZLIB);
     ssh_comp_on_newkeys(0);
     TEST_ASSERT_TRUE(ssh_comp_s2c_active(0));
-    scratch_reset();
+    pc_plaintext_reset();
 
     static uint8_t payload[PC_SSH_ZLIB_MAX_IN + 1];
     memset(payload, 'z', sizeof(payload));
