@@ -52,3 +52,10 @@ Route *pc_route_at(uint8_t i)
     }
     return &s_route.entry[i];
 }
+
+void pc_route_reset(void)
+{
+    // The count is the table: pc_route_add zeroes an entry on hand-out, so nothing below the count
+    // can carry a previous tenant's fields and there is nothing to wipe here.
+    s_route.count = 0;
+}

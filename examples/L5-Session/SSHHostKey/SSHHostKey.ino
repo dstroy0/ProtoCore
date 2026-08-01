@@ -68,7 +68,6 @@ static const uint8_t HOST_KEY_SEED[] = {0x96, 0x77, 0x0d, 0xf4, 0x8f, 0x2c, 0x40
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 static bool ssh_password_auth(const char *user, const char *pass)
 {
@@ -133,8 +132,8 @@ void setup()
     pc_ssh_auth_set_password_cb(ssh_password_auth);
     pc_ssh_channel_set_data_cb(ssh_on_data);
 
-    server.listen(22, ConnProto::PROTO_SSH);
-    int32_t result = server.begin();
+    listen(22, ConnProto::PROTO_SSH);
+    int32_t result = begin();
     if (result < 0)
     {
         Serial.printf("begin() failed (error %d)\n", result);
@@ -146,5 +145,5 @@ void setup()
 
 void loop()
 {
-    server.handle();
+    handle();
 }

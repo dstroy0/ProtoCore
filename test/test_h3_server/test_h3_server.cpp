@@ -41,13 +41,12 @@ static const uint8_t CLIENT_SCID[4] = {0xc1, 0xc2, 0xc3, 0xc4};
 
 // The route handler under test: it answers on the reserved HTTP/3 dispatch slot exactly as it would
 // for HTTP/1.1 or HTTP/2 - send() routes the response to the right transport.
-static PC server;
 static bool g_handler_ran = false;
 static void h_hello(uint8_t slot, HttpReq *req)
 {
     g_handler_ran = true;
     TEST_ASSERT_EQUAL_STRING("/hello", req->path);
-    server.send(slot, 200, "text/plain", "bridged h3");
+    send_text(slot, 200, "text/plain", "bridged h3");
 }
 
 // Captured server -> client datagrams from the current poll.
@@ -323,9 +322,9 @@ void test_h3_request_served_by_route()
     fill();
 
     // Bring up an HTTP/3-only PC with one route.
-    server.on("/hello", HttpMethod::HTTP_GET, h_hello);
-    TEST_ASSERT_TRUE(server.pc_h3_cert(CERT, sizeof(CERT), SERVER_SEED, 443));
-    TEST_ASSERT_EQUAL_INT32(pc_result::PC_OK, server.begin());
+    on_http("/hello", HttpMethod::HTTP_GET, h_hello);
+    TEST_ASSERT_TRUE(pc_h3_cert(CERT, sizeof(CERT), SERVER_SEED, 443));
+    TEST_ASSERT_EQUAL_INT32(pc_result::PC_OK, begin());
     pc_quic_server_set_out_sink_cb(out_sink, nullptr);
 
     QuicInitialSecrets init;
@@ -351,7 +350,7 @@ void test_h3_request_served_by_route()
                            sizeof(CLIENT_SCID), 0, &init.client, frames, fl);
     g_out_n = 0;
     TEST_ASSERT_TRUE(pc_quic_server_ingest(dg, dl, "192.0.2.10", 40000));
-    server.service_once(); // -> pc_quic_server_poll(): opens the connection, emits the flight
+    service_once(); // -> pc_quic_server_poll(): opens the connection, emits the flight
     TEST_ASSERT_GREATER_THAN(0, g_out_n);
 
     // Learn the server's chosen SCID (for the 1-RTT short header) from the flight's long header.
@@ -410,7 +409,7 @@ void test_h3_request_served_by_route()
                             CLIENT_SCID, sizeof(CLIENT_SCID), 0, &hs_c, hfr, hfl);
     g_out_n = 0;
     TEST_ASSERT_TRUE(pc_quic_server_ingest(idg, idl + hdl, "192.0.2.10", 40000));
-    server.service_once();
+    service_once();
 
     // Client HTTP/3 GET on request stream 0 (1-RTT); DCID is the server's SCID.
     uint8_t block[128];
@@ -427,7 +426,7 @@ void test_h3_request_served_by_route()
 
     g_out_n = 0;
     TEST_ASSERT_TRUE(pc_quic_server_ingest(s1, s1l, "192.0.2.10", 40000));
-    server.service_once(); // -> pc_quic_server_poll -> dispatch_h3_request -> h_hello -> send -> respond
+    service_once(); // -> pc_quic_server_poll -> dispatch_h3_request -> h_hello -> send -> respond
 
     TEST_ASSERT_TRUE(g_handler_ran);                               // the registered route actually ran
     TEST_ASSERT_TRUE(response_ok(&ap_s));                          // its 200 + body came back on the request stream
@@ -440,20 +439,18 @@ void test_h3_request_served_by_route()
 // HTTP/3 is rejected; a plain TCP server (a listener, no HTTP/3) is accepted and its service_once() gate
 // runs with pc_h3_running still false. Must run BEFORE the h3 test, which sets pc_h3_running true for
 // the rest of the process. Separate instances so the global h3 server the other tests use is untouched.
-static PC s_begin_nolisten;
-static PC s_begin_listen;
 void test_h3_begin_edges()
 {
     // No listeners, no HTTP/3 -> rejected (listener_count==0 && !_h3_enabled true side).
-    TEST_ASSERT_EQUAL_INT32((int32_t)pc_result::PC_ERR_NO_LISTENERS, s_begin_nolisten.begin());
+    TEST_ASSERT_EQUAL_INT32((int32_t)pc_result::PC_ERR_NO_LISTENERS, begin());
 
     // A TCP listener, no HTTP/3 -> accepted (listener_count!=0) and the h3 bind is skipped (_h3_enabled false).
-    TEST_ASSERT_EQUAL_INT32((int32_t)pc_result::PC_OK, s_begin_listen.begin(8080));
+    TEST_ASSERT_EQUAL_INT32((int32_t)pc_result::PC_OK, begin(8080));
 
     // Pump the gate with h3 not running (pc_h3_running still false here) and on a non-zero worker id ->
     // the otherwise-untaken sides of `worker_id == 0 && s_inst.pc_h3_running` in service_once().
-    s_begin_listen.service_once(0);
-    s_begin_listen.service_once(1);
+    service_once(0);
+    service_once(1);
 }
 
 // A route whose handler answers with a no-body response, exercising send_empty()'s HTTP/3 sink path.
@@ -461,7 +458,7 @@ static bool g_empty_ran = false;
 static void h_empty(uint8_t slot, HttpReq *)
 {
     g_empty_ran = true;
-    server.send_empty(slot, 204); // -> conn->pc_resp_sink -> pc_quic_server_respond (send_empty sink branch)
+    send_empty(slot, 204); // -> conn->pc_resp_sink -> pc_quic_server_respond (send_empty sink branch)
 }
 
 // Directly drive PC::dispatch_h3_request / pc_h3_cert / send_empty over the edge inputs that the
@@ -472,25 +469,25 @@ static void h_empty(uint8_t slot, HttpReq *)
 void test_h3_dispatch_edges()
 {
     fill();
-    server.on("/hello", HttpMethod::HTTP_GET, h_hello);
-    server.on("/empty", HttpMethod::HTTP_GET, h_empty);
+    on_http("/hello", HttpMethod::HTTP_GET, h_hello);
+    on_http("/empty", HttpMethod::HTTP_GET, h_empty);
 
     const uint32_t CID = 0xDEADBEEF; // no such QUIC slot -> respond() returns false, no transport needed
 
     // pc_h3_cert argument validation: each bad arg returns false (covers the || guard + return false).
-    TEST_ASSERT_FALSE(server.pc_h3_cert(nullptr, sizeof(CERT), SERVER_SEED, 443));
-    TEST_ASSERT_FALSE(server.pc_h3_cert(CERT, 0, SERVER_SEED, 443));
-    TEST_ASSERT_FALSE(server.pc_h3_cert(CERT, sizeof(CERT), nullptr, 443));
+    TEST_ASSERT_FALSE(pc_h3_cert(nullptr, sizeof(CERT), SERVER_SEED, 443));
+    TEST_ASSERT_FALSE(pc_h3_cert(CERT, 0, SERVER_SEED, 443));
+    TEST_ASSERT_FALSE(pc_h3_cert(CERT, sizeof(CERT), nullptr, 443));
 
     // Oversized method (> PC_METHOD_BUF_SIZE) -> truncated; unknown method -> 501 via sink.
     char long_method[32];
     memset(long_method, 'A', sizeof(long_method) - 1);
     long_method[sizeof(long_method) - 1] = 0;
-    server.dispatch_h3_request(CID, 0, long_method, "/hello", "h3.test", nullptr, 0);
+    dispatch_h3_request(CID, 0, long_method, "/hello", "h3.test", nullptr, 0);
 
     // Path carrying a short query string: '?' split + query copied (short, no truncation).
     g_handler_ran = false;
-    server.dispatch_h3_request(CID, 0, "GET", "/hello?a=1&b=2", "h3.test", nullptr, 0);
+    dispatch_h3_request(CID, 0, "GET", "/hello?a=1&b=2", "h3.test", nullptr, 0);
     TEST_ASSERT_TRUE(g_handler_ran); // route still matched on the query-stripped path
 
     // Oversized query (> MAX_QUERY_LEN) -> query truncated.
@@ -499,42 +496,42 @@ void test_h3_dispatch_edges()
     memcpy(long_query + 1, "hello?", 6);
     memset(long_query + 7, 'q', sizeof(long_query) - 8);
     long_query[sizeof(long_query) - 1] = 0;
-    server.dispatch_h3_request(CID, 0, "GET", long_query, "h3.test", nullptr, 0);
+    dispatch_h3_request(CID, 0, "GET", long_query, "h3.test", nullptr, 0);
 
     // Oversized path (> MAX_PATH_LEN, no query) -> path truncated; no route matches -> 404 via sink.
     char long_path[256];
     long_path[0] = '/';
     memset(long_path + 1, 'p', sizeof(long_path) - 2);
     long_path[sizeof(long_path) - 1] = 0;
-    server.dispatch_h3_request(CID, 0, "GET", long_path, "h3.test", nullptr, 0);
+    dispatch_h3_request(CID, 0, "GET", long_path, "h3.test", nullptr, 0);
 
     // Oversized :authority (> MAX_VAL_LEN) -> Host header value truncated.
     char long_auth[128];
     memset(long_auth, 'h', sizeof(long_auth) - 1);
     long_auth[sizeof(long_auth) - 1] = 0;
-    server.dispatch_h3_request(CID, 0, "GET", "/hello", long_auth, nullptr, 0);
+    dispatch_h3_request(CID, 0, "GET", "/hello", long_auth, nullptr, 0);
 
     // Absent and empty :authority -> the authority guard's short-circuit branches.
-    server.dispatch_h3_request(CID, 0, "GET", "/hello", nullptr, nullptr, 0);
-    server.dispatch_h3_request(CID, 0, "GET", "/hello", "", nullptr, 0);
+    dispatch_h3_request(CID, 0, "GET", "/hello", nullptr, nullptr, 0);
+    dispatch_h3_request(CID, 0, "GET", "/hello", "", nullptr, 0);
 
     // Request body present (non-empty) -> body copied into the slot's HttpReq.
     static const uint8_t BODY[16] = {'h', 'e', 'l', 'l', 'o', '-', 'b', 'o', 'd', 'y', '!', '!', '!', '!', '!', '!'};
-    server.dispatch_h3_request(CID, 0, "GET", "/hello", "h3.test", BODY, sizeof(BODY));
+    dispatch_h3_request(CID, 0, "GET", "/hello", "h3.test", BODY, sizeof(BODY));
     // Non-null body pointer but zero length -> the body_len half of the guard is false.
-    server.dispatch_h3_request(CID, 0, "GET", "/hello", "h3.test", BODY, 0);
+    dispatch_h3_request(CID, 0, "GET", "/hello", "h3.test", BODY, 0);
 
     // A handler that calls send_empty() -> exercises send_empty()'s pc_resp_sink branch.
     g_empty_ran = false;
-    server.dispatch_h3_request(CID, 0, "GET", "/empty", "h3.test", nullptr, 0);
+    dispatch_h3_request(CID, 0, "GET", "/empty", "h3.test", nullptr, 0);
     TEST_ASSERT_TRUE(g_empty_ran);
 
     // send() / send_empty() on a slot with NO HTTP/3 sink -> the non-sink (TCP-transport) branch of the
     // pc_resp_sink guard. The slot has no pcb, so both fall straight through to http_reset().
     conn_pool[0].pc_resp_sink = nullptr;
     conn_pool[0].pcb = nullptr;
-    server.send(0, 200, "text/plain", "x"); // send(): pc_resp_sink == nullptr
-    server.send_empty(0, 204);              // send_empty(): pc_resp_sink == nullptr
+    send_text(0, 200, "text/plain", "x"); // send(): pc_resp_sink == nullptr
+    send_empty(0, 204);                   // send_empty(): pc_resp_sink == nullptr
 }
 
 int main(int, char **)

@@ -10,7 +10,7 @@
  * is DNAT / reverse port forwarding - e.g. expose a machine on a locked-down segment through the
  * device that bridges the two networks.
  *
- * Wiring is two calls: `server.listen(FRONT_PORT, ConnProto::PROTO_RELAY)` opens the front port, and
+ * Wiring is two calls: `listen(FRONT_PORT, ConnProto::PROTO_RELAY)` opens the front port, and
  * `pc_relay_publish()` binds it to the origin. The server's own poll loop pumps the bytes.
  *
  * Edit the lines marked "CHANGE ME" below, flash, and open Serial @ 115200. Then, from another
@@ -38,7 +38,6 @@ static const uint16_t FRONT_PORT = 8080;         // connect here on the ESP32
 static const char *ORIGIN_HOST = "192.168.1.60"; // the internal host the board relays to
 static const uint16_t ORIGIN_PORT = 80;          // ...and its port
 
-PC server;
 
 void setup()
 {
@@ -56,13 +55,13 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // Open the front port for the relay, then bind it to the origin.
-    int32_t li = server.listen(FRONT_PORT, ConnProto::PROTO_RELAY);
+    int32_t li = listen(FRONT_PORT, ConnProto::PROTO_RELAY);
     if (li < 0 || !pc_relay_publish((uint8_t)li, ORIGIN_HOST, ORIGIN_PORT))
     {
         Serial.println("relay publish failed - check the front port and origin");
         return;
     }
-    server.begin();
+    begin();
     Serial.printf("relaying %u.%u.%u.%u:%u  ->  %s:%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF), FRONT_PORT, ORIGIN_HOST, ORIGIN_PORT);
     Serial.printf("connect to this board on port %u and you reach the origin\n", FRONT_PORT);
@@ -70,5 +69,5 @@ void setup()
 
 void loop()
 {
-    server.handle(); // the server poll loop pumps the relay both ways
+    handle(); // the server poll loop pumps the relay both ways
 }

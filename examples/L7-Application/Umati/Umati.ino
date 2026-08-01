@@ -12,7 +12,7 @@
  * MachineTool and reads live values by their standard BrowseNames - the same shape across vendors.
  *
  *   pc_umati_install(&mt)                    -> registers the OPC UA Browse + Read resolvers
- *   server.listen(4840, PROTO_OPCUA)      -> the OPC UA / umati endpoint
+ *   listen(4840, PROTO_OPCUA)      -> the OPC UA / umati endpoint
  *
  * Builds on example OpcUa (the OPC UA Binary server); umati is the machine-tool model on top. The
  * HTTP server on :80 runs alongside on the same event loop.
@@ -33,7 +33,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 // The MachineTool the umati server exposes. Own it statically and refresh its live fields each loop
 // from your real machine I/O; the resolvers read straight out of it (no copy).
@@ -71,16 +70,16 @@ void setup()
     mt.message_severity = 0;
 
     pc_umati_install(&mt); // bind + register the OPC UA Browse/Read resolvers
-    server.on("/", HttpMethod::HTTP_GET,
-              [](uint8_t id, HttpReq *) { server.send(id, 200, "text/plain", "umati MachineTool on :4840"); });
-    server.listen(4840, ConnProto::PROTO_OPCUA); // OPC UA / umati endpoint - before begin()
-    server.begin(80);
+    on_http("/", HttpMethod::HTTP_GET,
+              [](uint8_t id, HttpReq *) { send_text(id, 200, "text/plain", "umati MachineTool on :4840"); });
+    listen(4840, ConnProto::PROTO_OPCUA); // OPC UA / umati endpoint - before begin()
+    begin_http(80);
     Serial.println("umati (OPC UA for Machine Tools): opc.tcp://<ip>:4840  - browse MachineTool, read live values");
 }
 
 void loop()
 {
-    server.handle();
+    handle();
 
     // Simulate a running machine: refresh the live monitoring values a couple of times a second.
     static uint32_t last = 0;

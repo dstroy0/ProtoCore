@@ -60,8 +60,6 @@ static void push_bytes(uint8_t slot, const char *data)
     }
 }
 
-static PC *g_server;
-
 void setUp()
 {
     set_millis(0);
@@ -82,13 +80,11 @@ void setUp()
 #if PC_ENABLE_SSE
     pc_sse_init(); // isolate pc_sse_pool[] between tests
 #endif
-    g_server = new PC();
+    pc_server_reset();
 }
 
 void tearDown()
 {
-    delete g_server;
-    g_server = nullptr;
 }
 
 // ====================================================================
@@ -97,9 +93,9 @@ void tearDown()
 
 void test_fn_on_registers_and_dispatches()
 {
-    g_server->on("/ping", HttpMethod::HTTP_GET, record_handler);
+    on_http("/ping", HttpMethod::HTTP_GET, record_handler);
     arm_slot(0, "GET /ping HTTP/1.1\r\n\r\n");
-    g_server->handle();
+    handle();
     TEST_ASSERT_TRUE(handler_called);
 }
 
@@ -113,9 +109,9 @@ void test_fn_on_path_copied_null_terminated()
         path[i] = 'a';
     }
     path[MAX_PATH_LEN - 1] = '\0';
-    g_server->on(path, HttpMethod::HTTP_GET, record_handler);
+    on_http(path, HttpMethod::HTTP_GET, record_handler);
     arm_slot(0, "GET /a HTTP/1.1\r\n\r\n"); // won't match long path - just must not crash
-    g_server->handle();
+    handle();
     TEST_PASS();
 }
 
@@ -124,10 +120,10 @@ void test_fn_on_table_full_extra_routes_dropped()
     // Fill the table; on() beyond MAX_ROUTES must silently drop
     for (int i = 0; i < MAX_ROUTES + 5; i++)
     {
-        g_server->on("/x", HttpMethod::HTTP_GET, record_handler);
+        on_http("/x", HttpMethod::HTTP_GET, record_handler);
     }
     arm_slot(0, "GET /x HTTP/1.1\r\n\r\n");
-    g_server->handle();
+    handle();
     TEST_ASSERT_TRUE(handler_called);
 }
 
@@ -135,16 +131,16 @@ void test_fn_on_same_path_different_methods_are_distinct()
 {
     static bool get_called = false;
     static bool post_called = false;
-    g_server->on("/r", HttpMethod::HTTP_GET, [](uint8_t, HttpReq *) { get_called = true; });
-    g_server->on("/r", HttpMethod::HTTP_POST, [](uint8_t, HttpReq *) { post_called = true; });
+    on_http("/r", HttpMethod::HTTP_GET, [](uint8_t, HttpReq *) { get_called = true; });
+    on_http("/r", HttpMethod::HTTP_POST, [](uint8_t, HttpReq *) { post_called = true; });
 
     arm_slot(0, "GET /r HTTP/1.1\r\n\r\n");
-    g_server->handle();
+    handle();
     TEST_ASSERT_TRUE(get_called);
     TEST_ASSERT_FALSE(post_called);
 
     arm_slot(0, "POST /r HTTP/1.1\r\nContent-Length: 0\r\n\r\n");
-    g_server->handle();
+    handle();
     TEST_ASSERT_TRUE(post_called);
 }
 
@@ -154,19 +150,19 @@ void test_fn_on_same_path_different_methods_are_distinct()
 
 void test_fn_on_not_found_called_when_no_match()
 {
-    g_server->on_not_found(record_handler);
+    on_not_found(record_handler);
     arm_slot(0, "GET /nowhere HTTP/1.1\r\n\r\n");
-    g_server->handle();
+    handle();
     TEST_ASSERT_TRUE(handler_called);
 }
 
 void test_fn_on_not_found_not_called_when_match_exists()
 {
     static bool nf = false;
-    g_server->on("/here", HttpMethod::HTTP_GET, record_handler);
-    g_server->on_not_found([](uint8_t, HttpReq *) { nf = true; });
+    on_http("/here", HttpMethod::HTTP_GET, record_handler);
+    on_not_found([](uint8_t, HttpReq *) { nf = true; });
     arm_slot(0, "GET /here HTTP/1.1\r\n\r\n");
-    g_server->handle();
+    handle();
     TEST_ASSERT_TRUE(handler_called);
     TEST_ASSERT_FALSE(nf);
 }
@@ -177,19 +173,19 @@ void test_fn_on_not_found_not_called_when_match_exists()
 
 void test_fn_set_cors_options_preflight_clears_slot()
 {
-    g_server->set_cors("*");
+    set_cors("*");
     arm_slot(0, "OPTIONS /x HTTP/1.1\r\n\r\n");
-    g_server->handle();
+    handle();
     TEST_ASSERT_NOT_EQUAL(ParseState::PARSE_COMPLETE, http_pool[0].parse_state);
 }
 
 void test_fn_set_cors_empty_string_disables()
 {
-    g_server->set_cors("*");
-    g_server->set_cors(""); // disable
-    g_server->on("/x", HttpMethod::HTTP_OPTIONS, record_handler);
+    set_cors("*");
+    set_cors(""); // disable
+    on_http("/x", HttpMethod::HTTP_OPTIONS, record_handler);
     arm_slot(0, "OPTIONS /x HTTP/1.1\r\n\r\n");
-    g_server->handle();
+    handle();
     TEST_ASSERT_TRUE(handler_called); // routed normally, not intercepted as preflight
 }
 
@@ -199,45 +195,45 @@ void test_fn_set_cors_empty_string_disables()
 
 void test_wrong_method_does_not_match()
 {
-    g_server->on("/r", HttpMethod::HTTP_POST, record_handler);
+    on_http("/r", HttpMethod::HTTP_POST, record_handler);
     arm_slot(0, "GET /r HTTP/1.1\r\n\r\n");
-    g_server->handle();
+    handle();
     TEST_ASSERT_FALSE(handler_called);
 }
 
 void test_wrong_path_does_not_match()
 {
-    g_server->on("/right", HttpMethod::HTTP_GET, record_handler);
+    on_http("/right", HttpMethod::HTTP_GET, record_handler);
     arm_slot(0, "GET /wrong HTTP/1.1\r\n\r\n");
-    g_server->handle();
+    handle();
     TEST_ASSERT_FALSE(handler_called);
 }
 
 void test_all_http_methods_dispatched()
 {
     static int counts[7] = {};
-    g_server->on("/get", HttpMethod::HTTP_GET, [](uint8_t, HttpReq *) { counts[0]++; });
-    g_server->on("/post", HttpMethod::HTTP_POST, [](uint8_t, HttpReq *) { counts[1]++; });
-    g_server->on("/put", HttpMethod::HTTP_PUT, [](uint8_t, HttpReq *) { counts[2]++; });
-    g_server->on("/delete", HttpMethod::HTTP_DELETE, [](uint8_t, HttpReq *) { counts[3]++; });
-    g_server->on("/patch", HttpMethod::HTTP_PATCH, [](uint8_t, HttpReq *) { counts[4]++; });
-    g_server->on("/head", HttpMethod::HTTP_HEAD, [](uint8_t, HttpReq *) { counts[5]++; });
-    g_server->on("/options", HttpMethod::HTTP_OPTIONS, [](uint8_t, HttpReq *) { counts[6]++; });
+    on_http("/get", HttpMethod::HTTP_GET, [](uint8_t, HttpReq *) { counts[0]++; });
+    on_http("/post", HttpMethod::HTTP_POST, [](uint8_t, HttpReq *) { counts[1]++; });
+    on_http("/put", HttpMethod::HTTP_PUT, [](uint8_t, HttpReq *) { counts[2]++; });
+    on_http("/delete", HttpMethod::HTTP_DELETE, [](uint8_t, HttpReq *) { counts[3]++; });
+    on_http("/patch", HttpMethod::HTTP_PATCH, [](uint8_t, HttpReq *) { counts[4]++; });
+    on_http("/head", HttpMethod::HTTP_HEAD, [](uint8_t, HttpReq *) { counts[5]++; });
+    on_http("/options", HttpMethod::HTTP_OPTIONS, [](uint8_t, HttpReq *) { counts[6]++; });
 
     arm_slot(0, "GET /get HTTP/1.1\r\n\r\n");
-    g_server->handle();
+    handle();
     arm_slot(0, "POST /post HTTP/1.1\r\nContent-Length: 0\r\n\r\n");
-    g_server->handle();
+    handle();
     arm_slot(0, "PUT /put HTTP/1.1\r\nContent-Length: 0\r\n\r\n");
-    g_server->handle();
+    handle();
     arm_slot(0, "DELETE /delete HTTP/1.1\r\n\r\n");
-    g_server->handle();
+    handle();
     arm_slot(0, "PATCH /patch HTTP/1.1\r\nContent-Length: 0\r\n\r\n");
-    g_server->handle();
+    handle();
     arm_slot(0, "HEAD /head HTTP/1.1\r\n\r\n");
-    g_server->handle();
+    handle();
     arm_slot(0, "OPTIONS /options HTTP/1.1\r\n\r\n");
-    g_server->handle();
+    handle();
 
     for (int i = 0; i < 7; i++)
     {
@@ -247,52 +243,52 @@ void test_all_http_methods_dispatched()
 
 void test_root_path_matches_exactly()
 {
-    g_server->on("/", HttpMethod::HTTP_GET, record_handler);
+    on_http("/", HttpMethod::HTTP_GET, record_handler);
     arm_slot(0, "GET / HTTP/1.1\r\n\r\n");
-    g_server->handle();
+    handle();
     TEST_ASSERT_TRUE(handler_called);
 }
 
 void test_root_path_does_not_match_subpath()
 {
-    g_server->on("/", HttpMethod::HTTP_GET, record_handler);
+    on_http("/", HttpMethod::HTTP_GET, record_handler);
     arm_slot(0, "GET /other HTTP/1.1\r\n\r\n");
-    g_server->handle();
+    handle();
     TEST_ASSERT_FALSE(handler_called);
 }
 
 void test_wildcard_matches_any_suffix()
 {
-    g_server->on("/api/*", HttpMethod::HTTP_GET, record_handler);
+    on_http("/api/*", HttpMethod::HTTP_GET, record_handler);
     arm_slot(0, "GET /api/users/42 HTTP/1.1\r\n\r\n");
-    g_server->handle();
+    handle();
     TEST_ASSERT_TRUE(handler_called);
 }
 
 void test_wildcard_does_not_match_unrelated_prefix()
 {
-    g_server->on("/api/*", HttpMethod::HTTP_GET, record_handler);
+    on_http("/api/*", HttpMethod::HTTP_GET, record_handler);
     arm_slot(0, "GET /other/path HTTP/1.1\r\n\r\n");
-    g_server->handle();
+    handle();
     TEST_ASSERT_FALSE(handler_called);
 }
 
 void test_exact_route_wins_when_registered_first()
 {
     static bool exact_called = false;
-    g_server->on("/api/status", HttpMethod::HTTP_GET, [](uint8_t, HttpReq *) { exact_called = true; });
-    g_server->on("/api/*", HttpMethod::HTTP_GET, record_handler);
+    on_http("/api/status", HttpMethod::HTTP_GET, [](uint8_t, HttpReq *) { exact_called = true; });
+    on_http("/api/*", HttpMethod::HTTP_GET, record_handler);
     arm_slot(0, "GET /api/status HTTP/1.1\r\n\r\n");
-    g_server->handle();
+    handle();
     TEST_ASSERT_TRUE(exact_called);
     TEST_ASSERT_FALSE(handler_called);
 }
 
 void test_slot_not_stuck_in_complete_after_handle()
 {
-    g_server->on("/free", HttpMethod::HTTP_GET, record_handler);
+    on_http("/free", HttpMethod::HTTP_GET, record_handler);
     arm_slot(0, "GET /free HTTP/1.1\r\n\r\n");
-    g_server->handle();
+    handle();
     TEST_ASSERT_NOT_EQUAL(ParseState::PARSE_COMPLETE, http_pool[0].parse_state);
 }
 
@@ -302,7 +298,7 @@ void test_parse_error_slot_auto_reset()
     http_reset(0);
     http_parse(0);
     TEST_ASSERT_EQUAL(ParseState::PARSE_ERROR, http_pool[0].parse_state);
-    g_server->handle();
+    handle();
     TEST_ASSERT_NOT_EQUAL(ParseState::PARSE_ERROR, http_pool[0].parse_state);
 }
 
@@ -310,10 +306,10 @@ void test_parse_error_slot_auto_reset()
 void test_handler_reads_body()
 {
     static char body_seen[32] = {};
-    g_server->on("/body", HttpMethod::HTTP_POST,
-                 [](uint8_t, HttpReq *req) { strncpy(body_seen, (const char *)req->body, sizeof(body_seen) - 1); });
+    on_http("/body", HttpMethod::HTTP_POST,
+            [](uint8_t, HttpReq *req) { strncpy(body_seen, (const char *)req->body, sizeof(body_seen) - 1); });
     arm_slot(0, "POST /body HTTP/1.1\r\nContent-Length: 5\r\n\r\nhello");
-    g_server->handle();
+    handle();
     TEST_ASSERT_EQUAL_STRING("hello", body_seen);
 }
 
@@ -323,7 +319,7 @@ void test_handler_reads_body()
 void test_handler_reads_query_param()
 {
     static char q_seen[48] = {};
-    g_server->on("/q", HttpMethod::HTTP_GET, [](uint8_t, HttpReq *req) {
+    on_http("/q", HttpMethod::HTTP_GET, [](uint8_t, HttpReq *req) {
         const char *v = http_get_query(req, "id");
         if (v)
         {
@@ -331,7 +327,7 @@ void test_handler_reads_query_param()
         }
     });
     arm_slot(0, "GET /q?id=42 HTTP/1.1\r\n\r\n");
-    g_server->handle();
+    handle();
     TEST_ASSERT_EQUAL_STRING("42", q_seen);
 }
 
@@ -340,7 +336,7 @@ void test_handler_reads_query_param()
 void test_handler_reads_header()
 {
     static char h_seen[48] = {};
-    g_server->on("/h", HttpMethod::HTTP_GET, [](uint8_t, HttpReq *req) {
+    on_http("/h", HttpMethod::HTTP_GET, [](uint8_t, HttpReq *req) {
         const char *v = http_get_header(req, "X-Token");
         if (v)
         {
@@ -348,7 +344,7 @@ void test_handler_reads_header()
         }
     });
     arm_slot(0, "GET /h HTTP/1.1\r\nX-Token: secret\r\n\r\n");
-    g_server->handle();
+    handle();
     TEST_ASSERT_EQUAL_STRING("secret", h_seen);
 }
 
@@ -358,10 +354,10 @@ void test_wildcard_before_exact_wildcard_wins()
 {
     static bool wildcard_called = false;
     static bool exact_called = false;
-    g_server->on("/api/*", HttpMethod::HTTP_GET, [](uint8_t, HttpReq *) { wildcard_called = true; });
-    g_server->on("/api/status", HttpMethod::HTTP_GET, [](uint8_t, HttpReq *) { exact_called = true; });
+    on_http("/api/*", HttpMethod::HTTP_GET, [](uint8_t, HttpReq *) { wildcard_called = true; });
+    on_http("/api/status", HttpMethod::HTTP_GET, [](uint8_t, HttpReq *) { exact_called = true; });
     arm_slot(0, "GET /api/status HTTP/1.1\r\n\r\n");
-    g_server->handle();
+    handle();
     TEST_ASSERT_TRUE(wildcard_called);
     TEST_ASSERT_FALSE(exact_called);
 }
@@ -379,12 +375,12 @@ void stress_last_route_dispatched_in_full_table()
     {
         char path[16];
         snprintf(path, sizeof(path), "/r%d", i);
-        g_server->on(path, HttpMethod::HTTP_GET, [](uint8_t, HttpReq *) {});
+        on_http(path, HttpMethod::HTTP_GET, [](uint8_t, HttpReq *) {});
     }
-    g_server->on("/last", HttpMethod::HTTP_GET, [](uint8_t, HttpReq *) { last_count++; });
+    on_http("/last", HttpMethod::HTTP_GET, [](uint8_t, HttpReq *) { last_count++; });
 
     arm_slot(0, "GET /last HTTP/1.1\r\n\r\n");
-    g_server->handle();
+    handle();
     TEST_ASSERT_EQUAL(1, last_count);
 }
 
@@ -393,12 +389,12 @@ void stress_last_route_dispatched_in_full_table()
 void stress_sequential_requests_no_state_leak()
 {
     static int seq_count = 0;
-    g_server->on("/seq", HttpMethod::HTTP_GET, [](uint8_t, HttpReq *) { seq_count++; });
+    on_http("/seq", HttpMethod::HTTP_GET, [](uint8_t, HttpReq *) { seq_count++; });
 
     for (int i = 0; i < 50; i++)
     {
         arm_slot(0, "GET /seq HTTP/1.1\r\n\r\n");
-        g_server->handle();
+        handle();
     }
     TEST_ASSERT_EQUAL(50, seq_count);
 }
@@ -407,17 +403,17 @@ void stress_sequential_requests_no_state_leak()
 void stress_all_slots_dispatched_simultaneously()
 {
     static int counts[4] = {};
-    g_server->on("/s0", HttpMethod::HTTP_GET, [](uint8_t, HttpReq *) { counts[0]++; });
-    g_server->on("/s1", HttpMethod::HTTP_GET, [](uint8_t, HttpReq *) { counts[1]++; });
-    g_server->on("/s2", HttpMethod::HTTP_GET, [](uint8_t, HttpReq *) { counts[2]++; });
-    g_server->on("/s3", HttpMethod::HTTP_GET, [](uint8_t, HttpReq *) { counts[3]++; });
+    on_http("/s0", HttpMethod::HTTP_GET, [](uint8_t, HttpReq *) { counts[0]++; });
+    on_http("/s1", HttpMethod::HTTP_GET, [](uint8_t, HttpReq *) { counts[1]++; });
+    on_http("/s2", HttpMethod::HTTP_GET, [](uint8_t, HttpReq *) { counts[2]++; });
+    on_http("/s3", HttpMethod::HTTP_GET, [](uint8_t, HttpReq *) { counts[3]++; });
 
     arm_slot(0, "GET /s0 HTTP/1.1\r\n\r\n");
     arm_slot(1, "GET /s1 HTTP/1.1\r\n\r\n");
     arm_slot(2, "GET /s2 HTTP/1.1\r\n\r\n");
     arm_slot(3, "GET /s3 HTTP/1.1\r\n\r\n");
 
-    g_server->handle();
+    handle();
 
     for (int i = 0; i < 4; i++)
     {
@@ -429,7 +425,7 @@ void stress_all_slots_dispatched_simultaneously()
 void stress_wildcard_matches_many_paths()
 {
     static int wc_count = 0;
-    g_server->on("/api/*", HttpMethod::HTTP_GET, [](uint8_t, HttpReq *) { wc_count++; });
+    on_http("/api/*", HttpMethod::HTTP_GET, [](uint8_t, HttpReq *) { wc_count++; });
 
     const char *paths[] = {
         "GET /api/users HTTP/1.1\r\n\r\n",
@@ -446,7 +442,7 @@ void stress_wildcard_matches_many_paths()
     for (int i = 0; i < 10; i++)
     {
         arm_slot(0, paths[i]);
-        g_server->handle();
+        handle();
     }
     TEST_ASSERT_EQUAL(10, wc_count);
 }
@@ -454,11 +450,11 @@ void stress_wildcard_matches_many_paths()
 // 20 sequential handle() calls with NO complete parse slots - must be idle no-ops.
 void stress_handle_with_no_complete_slots_is_nop()
 {
-    g_server->on("/x", HttpMethod::HTTP_GET, record_handler);
+    on_http("/x", HttpMethod::HTTP_GET, record_handler);
     // All slots in ParseState::PARSE_METHOD (setUp resets them) - nothing to dispatch
     for (int i = 0; i < 20; i++)
     {
-        g_server->handle();
+        handle();
     }
     TEST_ASSERT_FALSE(handler_called);
 }
@@ -473,13 +469,13 @@ void stress_handle_with_no_complete_slots_is_nop()
 void race_slot_complete_between_handle_calls()
 {
     static bool dispatched = false;
-    g_server->on("/late", HttpMethod::HTTP_GET, [](uint8_t, HttpReq *) { dispatched = true; });
+    on_http("/late", HttpMethod::HTTP_GET, [](uint8_t, HttpReq *) { dispatched = true; });
 
-    g_server->handle(); // no complete slots yet
+    handle(); // no complete slots yet
     TEST_ASSERT_FALSE(dispatched);
 
     arm_slot(0, "GET /late HTTP/1.1\r\n\r\n"); // becomes complete NOW
-    g_server->handle();
+    handle();
     TEST_ASSERT_TRUE(dispatched);
 }
 
@@ -488,7 +484,7 @@ void race_slot_complete_between_handle_calls()
 // send() must detect pcb==nullptr/ConnState::CONN_FREE and call http_reset() cleanly.
 void race_conn_freed_after_parse_complete()
 {
-    g_server->on("/r", HttpMethod::HTTP_GET, record_handler);
+    on_http("/r", HttpMethod::HTTP_GET, record_handler);
 
     arm_slot(0, "GET /r HTTP/1.1\r\n\r\n");
     TEST_ASSERT_EQUAL(ParseState::PARSE_COMPLETE, http_pool[0].parse_state);
@@ -497,7 +493,7 @@ void race_conn_freed_after_parse_complete()
     conn_pool[0].state = ConnState::CONN_FREE;
     conn_pool[0].pcb = nullptr;
 
-    g_server->handle(); // must not crash; slot must be cleaned up
+    handle(); // must not crash; slot must be cleaned up
     TEST_ASSERT_NOT_EQUAL(ParseState::PARSE_COMPLETE, http_pool[0].parse_state);
 }
 
@@ -506,11 +502,11 @@ void race_conn_freed_after_parse_complete()
 void race_double_handle_no_double_dispatch()
 {
     static int dispatch_count = 0;
-    g_server->on("/dd", HttpMethod::HTTP_GET, [](uint8_t, HttpReq *) { dispatch_count++; });
+    on_http("/dd", HttpMethod::HTTP_GET, [](uint8_t, HttpReq *) { dispatch_count++; });
 
     arm_slot(0, "GET /dd HTTP/1.1\r\n\r\n");
-    g_server->handle(); // dispatches once, resets slot
-    g_server->handle(); // slot is ParseState::PARSE_METHOD - must dispatch 0 times
+    handle(); // dispatches once, resets slot
+    handle(); // slot is ParseState::PARSE_METHOD - must dispatch 0 times
 
     TEST_ASSERT_EQUAL(1, dispatch_count);
 }
@@ -520,7 +516,7 @@ void race_double_handle_no_double_dispatch()
 void race_error_and_valid_slot_in_same_handle()
 {
     static bool valid_dispatched = false;
-    g_server->on("/ok", HttpMethod::HTTP_GET, [](uint8_t, HttpReq *) { valid_dispatched = true; });
+    on_http("/ok", HttpMethod::HTTP_GET, [](uint8_t, HttpReq *) { valid_dispatched = true; });
 
     // Slot 0: inject a parse error
     push_bytes(0, "TOOLONGMETHODNAME /path HTTP/1.1\r\n\r\n");
@@ -531,7 +527,7 @@ void race_error_and_valid_slot_in_same_handle()
     // Slot 1: valid request
     arm_slot(1, "GET /ok HTTP/1.1\r\n\r\n");
 
-    g_server->handle();
+    handle();
 
     TEST_ASSERT_NOT_EQUAL(ParseState::PARSE_ERROR, http_pool[0].parse_state); // 400 sent, reset
     TEST_ASSERT_TRUE(valid_dispatched);                                       // slot 1 dispatched
@@ -542,13 +538,13 @@ void race_error_and_valid_slot_in_same_handle()
 void race_callback_manually_resets_slot()
 {
     static bool manual_reset_called = false;
-    g_server->on("/mr", HttpMethod::HTTP_GET, [](uint8_t slot_id, HttpReq *) {
+    on_http("/mr", HttpMethod::HTTP_GET, [](uint8_t slot_id, HttpReq *) {
         manual_reset_called = true;
         http_reset(slot_id); // reset without sending a response
     });
 
     arm_slot(0, "GET /mr HTTP/1.1\r\n\r\n");
-    g_server->handle(); // must not double-reset or crash
+    handle(); // must not double-reset or crash
 
     TEST_ASSERT_TRUE(manual_reset_called);
     TEST_ASSERT_EQUAL(ParseState::PARSE_METHOD, http_pool[0].parse_state);
@@ -578,7 +574,7 @@ void test_uri_too_long_auto_resets_slot()
     http_parse(0);
     TEST_ASSERT_EQUAL(ParseState::PARSE_URI_TOO_LONG, http_pool[0].parse_state);
 
-    g_server->handle(); // must send 414 and reset the slot
+    handle(); // must send 414 and reset the slot
     TEST_ASSERT_NOT_EQUAL(ParseState::PARSE_URI_TOO_LONG, http_pool[0].parse_state);
 }
 
@@ -590,10 +586,9 @@ void test_transfer_encoding_chunked_is_501()
 {
     // A request advertising Transfer-Encoding must be rejected with 501
     arm_slot(0, "POST /data HTTP/1.1\r\nTransfer-Encoding: chunked\r\n\r\n");
-    g_server->on("/data", HttpMethod::HTTP_POST, [](uint8_t, HttpReq *) {
-        TEST_FAIL_MESSAGE("handler must not be called for Transfer-Encoding request");
-    });
-    g_server->handle(); // must send 501, not dispatch the route
+    on_http("/data", HttpMethod::HTTP_POST,
+            [](uint8_t, HttpReq *) { TEST_FAIL_MESSAGE("handler must not be called for Transfer-Encoding request"); });
+    handle(); // must send 501, not dispatch the route
     TEST_ASSERT_NOT_EQUAL(ParseState::PARSE_COMPLETE, http_pool[0].parse_state);
 }
 
@@ -601,7 +596,7 @@ void test_transfer_encoding_identity_is_501()
 {
     // Even "identity" is rejected - we advertise no TE support at all
     arm_slot(0, "GET / HTTP/1.1\r\nTransfer-Encoding: identity\r\n\r\n");
-    g_server->handle();
+    handle();
     TEST_ASSERT_NOT_EQUAL(ParseState::PARSE_COMPLETE, http_pool[0].parse_state);
 }
 
@@ -615,7 +610,7 @@ void test_redirect_emits_location_and_status()
     conn_pool[0].proto = ConnProto::PROTO_HTTP; // dispatch requires an explicit protocol
     conn_pool[0].pcb = &_mock_pcb;
     tcp_capture_reset();
-    g_server->redirect(0, 301, "/index.html");
+    redirect(0, 301, "/index.html");
     const char *out = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(out, "HTTP/1.1 301 Moved Permanently"));
     TEST_ASSERT_NOT_NULL(strstr(out, "Location: /index.html\r\n"));
@@ -630,7 +625,7 @@ void test_redirect_invalid_code_defaults_to_302()
     conn_pool[0].proto = ConnProto::PROTO_HTTP; // dispatch requires an explicit protocol
     conn_pool[0].pcb = &_mock_pcb;
     tcp_capture_reset();
-    g_server->redirect(0, 200, "/elsewhere"); // 200 is not a redirect code
+    redirect(0, 200, "/elsewhere"); // 200 is not a redirect code
     const char *out = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(out, "HTTP/1.1 302 Found"));
     tcp_capture_disable();
@@ -662,11 +657,11 @@ void test_serve_static_file_and_mime()
     fs::mock_fs_reset();
     static const char css[] = "body{color:red}";
     fs::mock_fs_add("/www/style.css", css);
-    g_server->serve_static("/", g_static_fs, "/www");
+    serve_static("/", g_static_fs, "/www");
     arm_slot(0, "GET /style.css HTTP/1.1\r\nHost: x\r\n\r\n");
     conn_pool[0].pcb = &_mock_pcb;
     tcp_capture_reset();
-    g_server->handle();
+    handle();
     const char *out = tcp_captured();
     tcp_capture_disable();
     TEST_ASSERT_NOT_NULL(strstr(out, "HTTP/1.1 200 OK"));
@@ -679,24 +674,24 @@ void test_serve_static_cache_control()
     fs::mock_fs_reset();
     static const char css[] = "body{color:red}";
     fs::mock_fs_add("/www/style.css", css);
-    g_server->serve_static("/", g_static_fs, "/www");
+    serve_static("/", g_static_fs, "/www");
 
-    g_server->set_cache_control("max-age=3600");
+    set_cache_control("max-age=3600");
     arm_slot(0, "GET /style.css HTTP/1.1\r\nHost: x\r\n\r\n");
     conn_pool[0].pcb = &_mock_pcb;
     tcp_capture_reset();
-    g_server->handle();
+    handle();
     const char *out = tcp_captured();
     tcp_capture_disable();
     TEST_ASSERT_NOT_NULL(strstr(out, "HTTP/1.1 200 OK"));
     TEST_ASSERT_NOT_NULL(strstr(out, "Cache-Control: max-age=3600"));
 
     // Clearing it removes the header (and restores the default for later tests).
-    g_server->set_cache_control("");
+    set_cache_control("");
     arm_slot(0, "GET /style.css HTTP/1.1\r\nHost: x\r\n\r\n");
     conn_pool[0].pcb = &_mock_pcb;
     tcp_capture_reset();
-    g_server->handle();
+    handle();
     out = tcp_captured();
     tcp_capture_disable();
     TEST_ASSERT_NULL(strstr(out, "Cache-Control:"));
@@ -707,11 +702,11 @@ void test_serve_static_index_fallback()
     fs::mock_fs_reset();
     static const char html[] = "<h1>home</h1>";
     fs::mock_fs_add("/www/index.html", html);
-    g_server->serve_static("/", g_static_fs, "/www");
+    serve_static("/", g_static_fs, "/www");
     arm_slot(0, "GET / HTTP/1.1\r\nHost: x\r\n\r\n");
     conn_pool[0].pcb = &_mock_pcb;
     tcp_capture_reset();
-    g_server->handle();
+    handle();
     const char *out = tcp_captured();
     tcp_capture_disable();
     TEST_ASSERT_NOT_NULL(strstr(out, "HTTP/1.1 200 OK"));
@@ -725,11 +720,11 @@ void test_serve_static_gzip_when_accepted()
     static const char gzbody[] = "\x1f\x8b"
                                  "FAKEGZIP"; // split avoids \x8bF hex-escape merge
     fs::mock_fs_add("/www/app.js.gz", (const uint8_t *)gzbody, sizeof(gzbody) - 1);
-    g_server->serve_static("/", g_static_fs, "/www");
+    serve_static("/", g_static_fs, "/www");
     arm_slot(0, "GET /app.js HTTP/1.1\r\nHost: x\r\nAccept-Encoding: gzip, deflate\r\n\r\n");
     conn_pool[0].pcb = &_mock_pcb;
     tcp_capture_reset();
-    g_server->handle();
+    handle();
     const char *out = tcp_captured();
     tcp_capture_disable();
     TEST_ASSERT_NOT_NULL(strstr(out, "HTTP/1.1 200 OK"));
@@ -744,18 +739,18 @@ void test_serve_static_wildcard_and_route_full()
     fs::mock_fs_reset();
     static const char js[] = "x=1;";
     fs::mock_fs_add("/www/app.js", js);
-    g_server->serve_static("/assets*", g_static_fs, "/www");
+    serve_static("/assets*", g_static_fs, "/www");
     arm_slot(0, "GET /assets/app.js HTTP/1.1\r\nHost: x\r\n\r\n");
     conn_pool[0].pcb = &_mock_pcb;
     tcp_capture_reset();
-    g_server->handle();
+    handle();
     const char *out = tcp_captured();
     tcp_capture_disable();
     TEST_ASSERT_NOT_NULL(strstr(out, "HTTP/1.1 200 OK")); // wildcard route served the file
 
     for (int i = 0; i < MAX_ROUTES + 3; i++) // fill + overflow the route table
     {
-        g_server->serve_static("/s", g_static_fs, "/www");
+        serve_static("/s", g_static_fs, "/www");
     }
 }
 
@@ -766,24 +761,24 @@ static void hdr_guard_handler(uint8_t id, HttpReq *)
     static char big[512];
     memset(big, 'a', sizeof(big) - 1);
     big[sizeof(big) - 1] = '\0';
-    g_server->set_cookie(id, "toobig", big, nullptr); // overflow -> dropped
-    g_server->add_response_header(id, "X-Ok", "1");   // fits
-    g_server->send(id, 200, "text/plain", "ok");
+    set_cookie(id, "toobig", big, nullptr); // overflow -> dropped
+    add_response_header(id, "X-Ok", "1");   // fits
+    send_text(id, 200, "text/plain", "ok");
 }
 
 void test_response_header_cookie_guards()
 {
-    g_server->add_response_header(MAX_CONNS, "X", "y"); // out-of-range slot
-    g_server->add_response_header(0, nullptr, "y");     // null name
-    g_server->set_cookie(MAX_CONNS, "s", "1", nullptr); // out-of-range slot
-    g_server->set_cookie(0, nullptr, "1", nullptr);     // null name
-    g_server->clear_response_headers(MAX_CONNS);        // out-of-range slot
+    add_response_header(MAX_CONNS, "X", "y"); // out-of-range slot
+    add_response_header(0, nullptr, "y");     // null name
+    set_cookie(MAX_CONNS, "s", "1", nullptr); // out-of-range slot
+    set_cookie(0, nullptr, "1", nullptr);     // null name
+    clear_response_headers(MAX_CONNS);        // out-of-range slot
 
-    g_server->on("/hdrtest", HttpMethod::HTTP_GET, hdr_guard_handler);
+    on_http("/hdrtest", HttpMethod::HTTP_GET, hdr_guard_handler);
     arm_slot(0, "GET /hdrtest HTTP/1.1\r\nHost: x\r\n\r\n");
     conn_pool[0].pcb = &_mock_pcb;
     tcp_capture_reset();
-    g_server->handle();
+    handle();
     const char *out = tcp_captured();
     tcp_capture_disable();
     TEST_ASSERT_NOT_NULL(strstr(out, "X-Ok: 1")); // the small header was emitted
@@ -796,11 +791,11 @@ void test_serve_static_no_gzip_when_not_accepted()
     static const char js[] = "console.log(1)";
     fs::mock_fs_add("/www/app.js", js);
     fs::mock_fs_add("/www/app.js.gz", "GZIPPED");
-    g_server->serve_static("/", g_static_fs, "/www");
+    serve_static("/", g_static_fs, "/www");
     arm_slot(0, "GET /app.js HTTP/1.1\r\nHost: x\r\n\r\n"); // no Accept-Encoding
     conn_pool[0].pcb = &_mock_pcb;
     tcp_capture_reset();
-    g_server->handle();
+    handle();
     const char *out = tcp_captured();
     tcp_capture_disable();
     TEST_ASSERT_NULL(strstr(out, "Content-Encoding: gzip"));
@@ -811,11 +806,11 @@ void test_serve_static_traversal_not_leaked()
 {
     fs::mock_fs_reset();
     fs::mock_fs_add("/secret", "topsecret");
-    g_server->serve_static("/", g_static_fs, "/www");
+    serve_static("/", g_static_fs, "/www");
     arm_slot(0, "GET /../secret HTTP/1.1\r\nHost: x\r\n\r\n");
     conn_pool[0].pcb = &_mock_pcb;
     tcp_capture_reset();
-    g_server->handle();
+    handle();
     const char *out = tcp_captured();
     tcp_capture_disable();
     TEST_ASSERT_NULL(strstr(out, "topsecret")); // traversal must not leak the file
@@ -825,11 +820,11 @@ void test_serve_static_missing_is_404()
 {
     fs::mock_fs_reset();
     fs::mock_fs_add("/www/exists.txt", "hi");
-    g_server->serve_static("/", g_static_fs, "/www");
+    serve_static("/", g_static_fs, "/www");
     arm_slot(0, "GET /nope.txt HTTP/1.1\r\nHost: x\r\n\r\n");
     conn_pool[0].pcb = &_mock_pcb;
     tcp_capture_reset();
-    g_server->handle();
+    handle();
     const char *out = tcp_captured();
     tcp_capture_disable();
     TEST_ASSERT_NOT_NULL(strstr(out, "404"));
@@ -840,13 +835,13 @@ void test_serve_static_etag_conditional_get()
 {
     fs::mock_fs_reset();
     fs::mock_fs_add("/www/page.html", "<html>hi</html>", (time_t)1000);
-    g_server->serve_static("/", g_static_fs, "/www");
+    serve_static("/", g_static_fs, "/www");
 
     // First GET: 200 with an ETag header.
     arm_slot(0, "GET /page.html HTTP/1.1\r\nHost: x\r\n\r\n");
     conn_pool[0].pcb = &_mock_pcb;
     tcp_capture_reset();
-    g_server->handle();
+    handle();
     const char *out1 = tcp_captured();
     tcp_capture_disable();
     TEST_ASSERT_NOT_NULL(strstr(out1, "HTTP/1.1 200 OK"));
@@ -868,7 +863,7 @@ void test_serve_static_etag_conditional_get()
     arm_slot(0, req);
     conn_pool[0].pcb = &_mock_pcb;
     tcp_capture_reset();
-    g_server->handle();
+    handle();
     const char *out2 = tcp_captured();
     tcp_capture_disable();
     TEST_ASSERT_NOT_NULL(strstr(out2, "304 Not Modified"));
@@ -882,13 +877,13 @@ void test_serve_static_inm_star_list_weak()
 {
     fs::mock_fs_reset();
     fs::mock_fs_add("/www/page.html", "<html>hi</html>", (time_t)1000);
-    g_server->serve_static("/", g_static_fs, "/www");
+    serve_static("/", g_static_fs, "/www");
 
     // First GET to capture the strong ETag (with quotes).
     arm_slot(0, "GET /page.html HTTP/1.1\r\nHost: x\r\n\r\n");
     conn_pool[0].pcb = &_mock_pcb;
     tcp_capture_reset();
-    g_server->handle();
+    handle();
     const char *out1 = tcp_captured();
     tcp_capture_disable();
     const char *etp = strstr(out1, "ETag: ");
@@ -908,7 +903,7 @@ void test_serve_static_inm_star_list_weak()
     arm_slot(0, "GET /page.html HTTP/1.1\r\nHost: x\r\nIf-None-Match: *\r\n\r\n");
     conn_pool[0].pcb = &_mock_pcb;
     tcp_capture_reset();
-    g_server->handle();
+    handle();
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "304 Not Modified"));
     tcp_capture_disable();
 
@@ -917,7 +912,7 @@ void test_serve_static_inm_star_list_weak()
     arm_slot(0, req);
     conn_pool[0].pcb = &_mock_pcb;
     tcp_capture_reset();
-    g_server->handle();
+    handle();
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "304 Not Modified"));
     tcp_capture_disable();
 
@@ -926,7 +921,7 @@ void test_serve_static_inm_star_list_weak()
     arm_slot(0, req);
     conn_pool[0].pcb = &_mock_pcb;
     tcp_capture_reset();
-    g_server->handle();
+    handle();
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "304 Not Modified"));
     tcp_capture_disable();
 
@@ -934,7 +929,7 @@ void test_serve_static_inm_star_list_weak()
     arm_slot(0, "GET /page.html HTTP/1.1\r\nHost: x\r\nIf-None-Match: \"a\", \"b\"\r\n\r\n");
     conn_pool[0].pcb = &_mock_pcb;
     tcp_capture_reset();
-    g_server->handle();
+    handle();
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "HTTP/1.1 200 OK"));
     tcp_capture_disable();
 
@@ -943,7 +938,7 @@ void test_serve_static_inm_star_list_weak()
     arm_slot(0, "GET /page.html HTTP/1.1\r\nHost: x\r\nIf-None-Match: \"nope\", \r\n\r\n");
     conn_pool[0].pcb = &_mock_pcb;
     tcp_capture_reset();
-    g_server->handle();
+    handle();
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "HTTP/1.1 200 OK"));
     tcp_capture_disable();
 }
@@ -954,7 +949,7 @@ void test_serve_static_last_modified_conditional_get()
 {
     fs::mock_fs_reset();
     fs::mock_fs_add("/www/page.html", "<html>hi</html>", (time_t)1000); // 1970-01-01 00:16:40 GMT
-    g_server->serve_static("/", g_static_fs, "/www");
+    serve_static("/", g_static_fs, "/www");
     const char *LM = "Thu, 01 Jan 1970 00:16:40 GMT";
     char req[200];
     const char *o;
@@ -963,7 +958,7 @@ void test_serve_static_last_modified_conditional_get()
     arm_slot(0, "GET /page.html HTTP/1.1\r\nHost: x\r\n\r\n");
     conn_pool[0].pcb = &_mock_pcb;
     tcp_capture_reset();
-    g_server->handle();
+    handle();
     o = tcp_captured();
     tcp_capture_disable();
     TEST_ASSERT_NOT_NULL(strstr(o, "HTTP/1.1 200 OK"));
@@ -974,7 +969,7 @@ void test_serve_static_last_modified_conditional_get()
     arm_slot(0, req);
     conn_pool[0].pcb = &_mock_pcb;
     tcp_capture_reset();
-    g_server->handle();
+    handle();
     o = tcp_captured();
     tcp_capture_disable();
     TEST_ASSERT_NOT_NULL(strstr(o, "304 Not Modified"));
@@ -984,7 +979,7 @@ void test_serve_static_last_modified_conditional_get()
     arm_slot(0, "GET /page.html HTTP/1.1\r\nHost: x\r\nIf-Modified-Since: Thu, 01 Jan 1970 00:16:39 GMT\r\n\r\n");
     conn_pool[0].pcb = &_mock_pcb;
     tcp_capture_reset();
-    g_server->handle();
+    handle();
     o = tcp_captured();
     tcp_capture_disable();
     TEST_ASSERT_NOT_NULL(strstr(o, "HTTP/1.1 200 OK"));
@@ -994,7 +989,7 @@ void test_serve_static_last_modified_conditional_get()
     arm_slot(0, "GET /page.html HTTP/1.1\r\nHost: x\r\nIf-Modified-Since: Fri, 02 Jan 1970 00:00:00 GMT\r\n\r\n");
     conn_pool[0].pcb = &_mock_pcb;
     tcp_capture_reset();
-    g_server->handle();
+    handle();
     o = tcp_captured();
     tcp_capture_disable();
     TEST_ASSERT_NOT_NULL(strstr(o, "304 Not Modified"));
@@ -1005,7 +1000,7 @@ void test_serve_static_last_modified_conditional_get()
     arm_slot(0, req);
     conn_pool[0].pcb = &_mock_pcb;
     tcp_capture_reset();
-    g_server->handle();
+    handle();
     o = tcp_captured();
     tcp_capture_disable();
     TEST_ASSERT_NOT_NULL(strstr(o, "HTTP/1.1 200 OK"));
@@ -1021,7 +1016,7 @@ void test_serve_static_ims_field_comparisons()
 {
     fs::mock_fs_reset();
     fs::mock_fs_add("/www/page.html", "<html>hi</html>", (time_t)1000);
-    g_server->serve_static("/", g_static_fs, "/www");
+    serve_static("/", g_static_fs, "/www");
     const char *ims[] = {
         "Fri, 01 Jan 1971 00:16:40 GMT", // year differs (file older) -> 304
         "Sun, 01 Feb 1970 00:16:40 GMT", // month differs -> 304
@@ -1035,7 +1030,7 @@ void test_serve_static_ims_field_comparisons()
         arm_slot(0, req);
         conn_pool[0].pcb = &_mock_pcb;
         tcp_capture_reset();
-        g_server->handle();
+        handle();
         const char *o = tcp_captured();
         tcp_capture_disable();
         TEST_ASSERT_NOT_NULL(strstr(o, "304 Not Modified"));
@@ -1045,7 +1040,7 @@ void test_serve_static_ims_field_comparisons()
     arm_slot(0, "GET /page.html HTTP/1.1\r\nHost: x\r\nIf-Modified-Since: Wed, 01 Jan 1969 00:16:40 GMT\r\n\r\n");
     conn_pool[0].pcb = &_mock_pcb;
     tcp_capture_reset();
-    g_server->handle();
+    handle();
     const char *o = tcp_captured();
     tcp_capture_disable();
     TEST_ASSERT_NOT_NULL(strstr(o, "HTTP/1.1 200 OK")); // file is newer than 1969 -> full body
@@ -1059,13 +1054,13 @@ void test_serve_static_unrepresentable_mtime()
 {
     fs::mock_fs_reset();
     fs::mock_fs_add("/www/page.html", "<html>hi</html>", (time_t)1 << 60); // year far past what tm_year holds
-    g_server->serve_static("/", g_static_fs, "/www");
+    serve_static("/", g_static_fs, "/www");
 
     // (a) plain GET: 200 with no Last-Modified line (http_rfc1123 bailed).
     arm_slot(0, "GET /page.html HTTP/1.1\r\nHost: x\r\n\r\n");
     conn_pool[0].pcb = &_mock_pcb;
     tcp_capture_reset();
-    g_server->handle();
+    handle();
     const char *o = tcp_captured();
     tcp_capture_disable();
     TEST_ASSERT_NOT_NULL(strstr(o, "HTTP/1.1 200 OK"));
@@ -1075,7 +1070,7 @@ void test_serve_static_unrepresentable_mtime()
     arm_slot(0, "GET /page.html HTTP/1.1\r\nHost: x\r\nIf-Modified-Since: Thu, 01 Jan 2099 00:00:00 GMT\r\n\r\n");
     conn_pool[0].pcb = &_mock_pcb;
     tcp_capture_reset();
-    g_server->handle();
+    handle();
     o = tcp_captured();
     tcp_capture_disable();
     TEST_ASSERT_NOT_NULL(strstr(o, "HTTP/1.1 200 OK"));
@@ -1089,7 +1084,7 @@ void test_serve_static_if_modified_since_malformed()
 {
     fs::mock_fs_reset();
     fs::mock_fs_add("/www/page.html", "<html>hi</html>", (time_t)1000); // Jan 1970
-    g_server->serve_static("/", g_static_fs, "/www");
+    serve_static("/", g_static_fs, "/www");
     const char *bad[] = {
         "not a date",                    // sscanf field count != 6
         "Thu, 01",                       // truncated
@@ -1103,7 +1098,7 @@ void test_serve_static_if_modified_since_malformed()
         arm_slot(0, req);
         conn_pool[0].pcb = &_mock_pcb;
         tcp_capture_reset();
-        g_server->handle();
+        handle();
         const char *o = tcp_captured();
         tcp_capture_disable();
         TEST_ASSERT_NOT_NULL(strstr(o, "HTTP/1.1 200 OK")); // not 304
@@ -1134,27 +1129,26 @@ static void capture_log(const char *m, const char *p, int s, int b)
 void test_request_log_hook_fires()
 {
     g_log_calls = 0;
-    g_server->on_request_log(capture_log);
-    g_server->on("/hi", HttpMethod::HTTP_GET,
-                 [](uint8_t id, HttpReq *) { g_server->send(id, 200, "text/plain", "hello"); });
+    on_request_log(capture_log);
+    on_http("/hi", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) { send_text(id, 200, "text/plain", "hello"); });
     arm_slot(0, "GET /hi HTTP/1.1\r\nHost: x\r\n\r\n");
     conn_pool[0].pcb = &_mock_pcb;
-    g_server->handle();
+    handle();
     TEST_ASSERT_EQUAL_INT(1, g_log_calls);
     TEST_ASSERT_EQUAL_STRING("GET", g_log_method);
     TEST_ASSERT_EQUAL_STRING("/hi", g_log_path);
     TEST_ASSERT_EQUAL_INT(200, g_log_status);
     TEST_ASSERT_EQUAL_INT(5, g_log_bytes); // "hello"
-    g_server->on_request_log(nullptr);
+    on_request_log(nullptr);
 }
 
 void test_stats_endpoint_emits_json()
 {
-    g_server->on("/stats", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) { g_server->stats(id); });
+    on_http("/stats", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) { stats(id); });
     arm_slot(0, "GET /stats HTTP/1.1\r\nHost: x\r\n\r\n");
     conn_pool[0].pcb = &_mock_pcb;
     tcp_capture_reset();
-    g_server->handle();
+    handle();
     const char *out = tcp_captured();
     tcp_capture_disable();
     TEST_ASSERT_NOT_NULL(strstr(out, "application/json"));
@@ -1176,7 +1170,7 @@ void test_metrics_emits_prometheus()
     conn_pool[0].pcb = &_mock_pcb;
     http_reset(0);
     tcp_capture_reset();
-    g_server->metrics(0);
+    metrics(0);
     const char *out = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(out, "text/plain; version=0.0.4"));
     TEST_ASSERT_NOT_NULL(strstr(out, "# TYPE pc_http_requests_total counter"));
@@ -1232,7 +1226,7 @@ void test_metrics_emits_prometheus()
 // reaches the client. (A dangling path pointer made broadcasts silently miss.)
 void test_sse_broadcast_after_upgrade_matches_path()
 {
-    g_server->on_sse("/events", nullptr);
+    on_sse("/events", nullptr);
 
     conn_pool[0] = {};
     conn_pool[0].id = 0;
@@ -1244,8 +1238,8 @@ void test_sse_broadcast_after_upgrade_matches_path()
     http_parse(0);
 
     tcp_capture_reset();
-    g_server->handle(); // dispatch -> pc_sse_do_upgrade (200 text/event-stream)
-    g_server->pc_sse_broadcast("/events", "hello", "msg");
+    handle(); // dispatch -> pc_sse_do_upgrade (200 text/event-stream)
+    pc_sse_broadcast("/events", "hello", "msg");
     const char *out = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(out, "text/event-stream")); // upgrade happened
     TEST_ASSERT_NOT_NULL(strstr(out, "data: hello"));       // broadcast matched the stored path
@@ -1270,36 +1264,36 @@ void test_ws_send_api()
 
     // Guards: out-of-range id and an id that is in range but inactive.
     tcp_capture_reset();
-    g_server->ws_send_text(MAX_WS_CONNS, "x");                       // id >= MAX
-    g_server->ws_send_text(1, "x");                                  // in range, inactive
-    g_server->ws_send_binary(MAX_WS_CONNS, (const uint8_t *)"x", 1); // id >= MAX
+    ws_send_text(MAX_WS_CONNS, "x");                       // id >= MAX
+    ws_send_text(1, "x");                                  // in range, inactive
+    ws_send_binary(MAX_WS_CONNS, (const uint8_t *)"x", 1); // id >= MAX
     TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len());
 
     // Text frame -> FIN|TEXT opcode.
     tcp_capture_reset();
-    g_server->ws_send_text(0, "hello");
+    ws_send_text(0, "hello");
     TEST_ASSERT_TRUE(tcp_captured_len() >= 2);
     TEST_ASSERT_EQUAL_HEX8(0x81, (uint8_t)tcp_captured()[0]);
 
     // Binary frame -> FIN|BINARY opcode.
     tcp_capture_reset();
     const uint8_t payload[3] = {1, 2, 3};
-    g_server->ws_send_binary(0, payload, sizeof(payload));
+    ws_send_binary(0, payload, sizeof(payload));
     TEST_ASSERT_TRUE(tcp_captured_len() >= 2);
     TEST_ASSERT_EQUAL_HEX8(0x82, (uint8_t)tcp_captured()[0]);
 
     // A terminal parse state suppresses further sends.
     ws->parse_state = WsParseState::WS_CLOSED;
     tcp_capture_reset();
-    g_server->ws_send_text(0, "nope");
-    g_server->ws_send_binary(0, payload, sizeof(payload));
+    ws_send_text(0, "nope");
+    ws_send_binary(0, payload, sizeof(payload));
     TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len());
     ws->parse_state = WsParseState::WS_HEADER1; // reopen for disconnect
 
     // Disconnect: Close frame (opcode 0x88); the out-of-range id is a no-op.
     tcp_capture_reset();
-    g_server->ws_disconnect(MAX_WS_CONNS);
-    g_server->ws_disconnect(0);
+    ws_disconnect(MAX_WS_CONNS);
+    ws_disconnect(0);
     TEST_ASSERT_TRUE(tcp_captured_len() >= 2);
     TEST_ASSERT_EQUAL_HEX8(0x88, (uint8_t)tcp_captured()[0]);
     tcp_capture_disable();
@@ -1323,13 +1317,13 @@ void test_sse_send_api()
 
     // Guards send nothing.
     tcp_capture_reset();
-    g_server->pc_sse_send(MAX_SSE_CONNS, "x"); // id >= MAX
-    g_server->pc_sse_send(1, "x");             // in range, inactive
+    pc_sse_send(MAX_SSE_CONNS, "x"); // id >= MAX
+    pc_sse_send(1, "x");             // in range, inactive
     TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len());
 
     // A live send emits the event, id, and data fields (RFC-style SSE block).
     tcp_capture_reset();
-    g_server->pc_sse_send(0, "hi", "msg", "42");
+    pc_sse_send(0, "hi", "msg", "42");
     const char *out = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(out, "event: msg"));
     TEST_ASSERT_NOT_NULL(strstr(out, "id: 42"));
@@ -1337,7 +1331,7 @@ void test_sse_send_api()
 
     // Broadcast to a non-matching path skips the connection (no output).
     tcp_capture_reset();
-    g_server->pc_sse_broadcast("/other", "skip");
+    pc_sse_broadcast("/other", "skip");
     TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len());
     tcp_capture_disable();
 }
@@ -1388,7 +1382,7 @@ void test_status_text_reason_phrases()
         conn_pool[0].pcb = &_mock_pcb;
         http_reset(0);
         tcp_capture_reset();
-        g_server->send(0, cases[i].code, "text/plain", "x");
+        send_text(0, cases[i].code, "text/plain", "x");
         char want[48];
         snprintf(want, sizeof(want), "HTTP/1.1 %d %s", cases[i].code, cases[i].reason);
         TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), want));
@@ -1408,7 +1402,7 @@ void test_send_binary_body_with_nul()
     http_reset(0);
     const uint8_t body[] = {0x00, 0x00, 0x00, 0x00, 0x05, 'h', 'e', 0x00, 'l', 'o'}; // NUL-laden, 10 octets
     tcp_capture_reset();
-    g_server->send(0, 200, "application/grpc-web+proto", body, sizeof(body));
+    send_text(0, 200, "application/grpc-web+proto", body, sizeof(body));
     const char *out = tcp_captured();
     size_t out_len = tcp_captured_len();
     tcp_capture_disable();
@@ -1434,15 +1428,15 @@ void test_send_binary_body_with_nul()
 // request it with an unregistered method.
 void test_allow_header_lists_methods()
 {
-    g_server->on("/m", HttpMethod::HTTP_PATCH, record_handler);
-    g_server->on("/m", HttpMethod::HTTP_OPTIONS, record_handler);
-    g_server->on("/m", HttpMethod::HTTP_HEAD, record_handler);
-    g_server->on("/m", HttpMethod::HTTP_PUT, record_handler);
-    g_server->on("/m", HttpMethod::HTTP_METHOD_UNKNOWN, record_handler); // -> method_name() default ""
+    on_http("/m", HttpMethod::HTTP_PATCH, record_handler);
+    on_http("/m", HttpMethod::HTTP_OPTIONS, record_handler);
+    on_http("/m", HttpMethod::HTTP_HEAD, record_handler);
+    on_http("/m", HttpMethod::HTTP_PUT, record_handler);
+    on_http("/m", HttpMethod::HTTP_METHOD_UNKNOWN, record_handler); // -> method_name() default ""
     arm_slot(0, "DELETE /m HTTP/1.1\r\n\r\n");
     conn_pool[0].pcb = &_mock_pcb; // arm_slot leaves pcb null; the 405 must emit
     tcp_capture_reset();
-    g_server->handle();
+    handle();
     const char *out = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(out, "405"));
     TEST_ASSERT_NOT_NULL(strstr(out, "PATCH"));
@@ -1458,21 +1452,20 @@ void test_allow_header_lists_methods()
 // shared state (released with listener_stop_all()).
 void test_listen_and_begin()
 {
-    PC srv;
 
     // begin() before any listen() -> no-listeners error, no side effects.
-    TEST_ASSERT_EQUAL_INT32(pc_result::PC_ERR_NO_LISTENERS, srv.begin());
+    TEST_ASSERT_EQUAL_INT32(pc_result::PC_ERR_NO_LISTENERS, begin());
 
     // Fill the listener table, then the next listen() is rejected. listen() returns each
     // listener's id (its index), so the i-th call returns i.
     for (int i = 0; i < MAX_LISTENERS; i++)
     {
-        TEST_ASSERT_EQUAL_INT32(i, srv.listen((uint16_t)(9100 + i)));
+        TEST_ASSERT_EQUAL_INT32(i, listen((uint16_t)(9100 + i)));
     }
-    TEST_ASSERT_EQUAL_INT32(pc_result::PC_ERR_LISTENER_FULL, srv.listen(9999));
+    TEST_ASSERT_EQUAL_INT32(pc_result::PC_ERR_LISTENER_FULL, listen(9999));
 
     // begin() now brings the registered listeners up.
-    TEST_ASSERT_EQUAL_INT32(pc_result::PC_OK, srv.begin());
+    TEST_ASSERT_EQUAL_INT32(pc_result::PC_OK, begin());
     listener_stop_all(); // release the global listener slots for later tests
 }
 
@@ -1481,34 +1474,31 @@ void test_listen_and_begin()
 // error without binding.
 void test_begin_port_convenience()
 {
-    PC srv;
-    TEST_ASSERT_EQUAL_INT32(pc_result::PC_OK, srv.begin((uint16_t)8080));
+    TEST_ASSERT_EQUAL_INT32(pc_result::PC_OK, begin_http((uint16_t)8080));
     listener_stop_all();
 
-    PC full;
     for (int i = 0; i < MAX_LISTENERS; i++)
     {
-        full.listen((uint16_t)(9300 + i));
+        listen((uint16_t)(9300 + i));
     }
-    TEST_ASSERT_EQUAL_INT32(pc_result::PC_ERR_LISTENER_FULL, full.begin((uint16_t)9999));
+    TEST_ASSERT_EQUAL_INT32(pc_result::PC_ERR_LISTENER_FULL, begin_http((uint16_t)9999));
 }
 
 // restart() = stop() + begin(): it forwards the no-listeners error before any listen(), and
 // otherwise cycles the listeners back up. stop() must be an idempotent teardown.
 void test_restart_and_stop()
 {
-    PC srv;
     // Before any listener, restart() forwards the no-listeners error (no stop()/begin()).
-    TEST_ASSERT_EQUAL_INT32(pc_result::PC_ERR_NO_LISTENERS, srv.restart());
+    TEST_ASSERT_EQUAL_INT32(pc_result::PC_ERR_NO_LISTENERS, restart());
 
     // Bring a listener up, then restart() tears down and re-binds it. The first listen() returns id 0.
-    TEST_ASSERT_EQUAL_INT32(0, srv.listen((uint16_t)9500));
-    TEST_ASSERT_EQUAL_INT32(pc_result::PC_OK, srv.begin());
-    TEST_ASSERT_EQUAL_INT32(pc_result::PC_OK, srv.restart());
+    TEST_ASSERT_EQUAL_INT32(0, listen((uint16_t)9500));
+    TEST_ASSERT_EQUAL_INT32(pc_result::PC_OK, begin());
+    TEST_ASSERT_EQUAL_INT32(pc_result::PC_OK, restart());
 
     // stop() tears everything down; a second stop() with nothing active is a safe no-op.
-    srv.stop();
-    srv.stop();
+    stop();
+    stop();
     listener_stop_all();
 }
 
@@ -1516,28 +1506,27 @@ void test_restart_and_stop()
 // The plain on() path is covered elsewhere; this hits the iface / regex / auth / ws / sse variants.
 void test_route_registration_variants_table_full()
 {
-    PC srv;
     for (int i = 0; i < MAX_ROUTES; i++)
     {
-        srv.on("/x", HttpMethod::HTTP_GET, record_handler);
+        on_http("/x", HttpMethod::HTTP_GET, record_handler);
     }
 
-    srv.on("/i", HttpMethod::HTTP_GET, record_handler, pc_iface::PC_IFACE_STA); // on(..., iface)
-    srv.on_regex("/re.*", HttpMethod::HTTP_GET, record_handler);
+    on_http("/i", HttpMethod::HTTP_GET, record_handler, pc_iface::PC_IFACE_STA); // on(..., iface)
+    on_regex("/re.*", HttpMethod::HTTP_GET, record_handler);
 #if PC_ENABLE_AUTH
-    srv.on("/a", HttpMethod::HTTP_GET, record_handler, "realm", "u", "p", false);
+    on_http("/a", HttpMethod::HTTP_GET, record_handler, "realm", "u", "p", false);
 #endif
 #if PC_ENABLE_WEBSOCKET
-    srv.on_ws("/ws", nullptr, nullptr, nullptr);
+    on_ws("/ws", nullptr, nullptr, nullptr);
 #endif
 #if PC_ENABLE_SSE
-    srv.on_sse("/sse", nullptr);
+    on_sse("/sse", nullptr);
 #endif
 
     // The dropped iface route does not dispatch: a request to it falls through (handler untouched).
     arm_slot(0, "GET /i HTTP/1.1\r\n\r\n");
     handler_called = false;
-    srv.handle();
+    handle();
     TEST_ASSERT_FALSE(handler_called);
 }
 
@@ -1545,15 +1534,15 @@ void test_route_registration_variants_table_full()
 // (freed slot / null pcb -> http_reset + return). Neither guard was exercised.
 void test_send_family_slot_and_conn_gone_guards()
 {
-    g_server->redirect(MAX_CONNS, 302, "/x"); // slot out of range -> no-op
-    g_server->send_template(MAX_CONNS, 200, "text/html", "hi", nullptr);
-    g_server->send_chunked(MAX_CONNS, 200, "text/plain", nullptr, nullptr);
+    redirect(MAX_CONNS, 302, "/x"); // slot out of range -> no-op
+    send_template(MAX_CONNS, 200, "text/html", "hi", nullptr);
+    send_chunked(MAX_CONNS, 200, "text/plain", nullptr, nullptr);
 
     conn_pool[0].state = ConnState::CONN_FREE; // connection gone
     conn_pool[0].pcb = nullptr;
-    g_server->redirect(0, 302, "/x");
-    g_server->send_template(0, 200, "text/html", "hi", nullptr);
-    g_server->send_chunked(0, 200, "text/plain", nullptr, nullptr);
+    redirect(0, 302, "/x");
+    send_template(0, 200, "text/html", "hi", nullptr);
+    send_chunked(0, 200, "text/plain", nullptr, nullptr);
     TEST_PASS(); // guards hit, nothing sent, no crash
 }
 
@@ -1566,7 +1555,7 @@ void test_redirect_response_and_code_normalization()
     conn_pool[0].pcb = &_mock_pcb;
     http_reset(0);
     tcp_capture_reset();
-    g_server->redirect(0, 307, "/new");
+    redirect(0, 307, "/new");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "307 Temporary Redirect"));
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "Location: /new"));
 
@@ -1575,22 +1564,22 @@ void test_redirect_response_and_code_normalization()
     conn_pool[0].pcb = &_mock_pcb;
     http_reset(0);
     tcp_capture_reset();
-    g_server->redirect(0, 200, "/z");
+    redirect(0, 200, "/z");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "302 Found"));
     tcp_capture_disable();
 }
 
 void test_request_error_paths_te_method_ws()
 {
-    g_server->on("/only-get", HttpMethod::HTTP_GET, record_handler);
+    on_http("/only-get", HttpMethod::HTTP_GET, record_handler);
 #if PC_ENABLE_WEBSOCKET
-    g_server->on_ws("/ws", nullptr, nullptr, nullptr);
+    on_ws("/ws", nullptr, nullptr, nullptr);
 #endif
     // Wrong method to a GET-only route -> 405 with an Allow header.
     arm_slot(0, "POST /only-get HTTP/1.1\r\nHost: x\r\n\r\n");
     conn_pool[0].pcb = &_mock_pcb;
     tcp_capture_reset();
-    g_server->handle();
+    handle();
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "405"));
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "Allow:"));
 
@@ -1599,7 +1588,7 @@ void test_request_error_paths_te_method_ws()
     arm_slot(0, "GET /ws HTTP/1.1\r\nHost: x\r\n\r\n");
     conn_pool[0].pcb = &_mock_pcb;
     tcp_capture_reset();
-    g_server->handle();
+    handle();
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "400"));
 
     // A WS upgrade with an unsupported version -> 426 Upgrade Required.
@@ -1607,7 +1596,7 @@ void test_request_error_paths_te_method_ws()
                 "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 12\r\n\r\n");
     conn_pool[0].pcb = &_mock_pcb;
     tcp_capture_reset();
-    g_server->handle();
+    handle();
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "426"));
 #endif
     tcp_capture_disable();
@@ -1623,14 +1612,14 @@ void test_request_error_paths_te_method_ws()
 void test_ws_sse_upgrade_failure_paths()
 {
 #if PC_ENABLE_WEBSOCKET
-    g_server->on_ws("/ws", nullptr, nullptr, nullptr);
+    on_ws("/ws", nullptr, nullptr, nullptr);
 
     // (a) A Sec-WebSocket-Key that does not base64-decode to 16 bytes -> ws_accept_key rejects -> 400.
     arm_slot(0, "GET /ws HTTP/1.1\r\nHost: x\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n"
                 "Sec-WebSocket-Key: dGVzdA==\r\nSec-WebSocket-Version: 13\r\n\r\n"); // "test" -> 4 bytes, not 16
     conn_pool[0].pcb = &_mock_pcb;
     tcp_capture_reset();
-    g_server->handle();
+    handle();
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "400"));
 
     // (b) Upgrade with Version: 13 but no Sec-WebSocket-Key -> 400.
@@ -1638,7 +1627,7 @@ void test_ws_sse_upgrade_failure_paths()
                 "Sec-WebSocket-Version: 13\r\n\r\n");
     conn_pool[0].pcb = &_mock_pcb;
     tcp_capture_reset();
-    g_server->handle();
+    handle();
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "400"));
 
     // (c) A valid upgrade with the WS pool exhausted -> ws_alloc fails, connection aborted
@@ -1649,7 +1638,7 @@ void test_ws_sse_upgrade_failure_paths()
                 "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n\r\n");
     conn_pool[0].pcb = &_mock_pcb;
     tcp_capture_reset();
-    g_server->handle();
+    handle();
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "101")); // optimistic handshake sent before the pool check
     ws_init();                                           // release the pool for later tests
     tcp_capture_disable();
@@ -1661,13 +1650,13 @@ void test_ws_sse_upgrade_failure_paths()
 // the optimistic 200 event-stream header.
 void test_sse_upgrade_pool_exhausted()
 {
-    g_server->on_sse("/events", nullptr);
+    on_sse("/events", nullptr);
     pc_sse_alloc(1, "/a");
     pc_sse_alloc(2, "/b"); // fill the 2-slot pc_sse_pool (MAX_SSE_CONNS)
     arm_slot(0, "GET /events HTTP/1.1\r\nHost: x\r\n\r\n");
     conn_pool[0].pcb = &_mock_pcb;
     tcp_capture_reset();
-    g_server->handle();
+    handle();
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "text/event-stream")); // header sent before the pool check
     pc_sse_init();                                                     // release the pool for later tests
     tcp_capture_disable();
@@ -1693,7 +1682,7 @@ void test_response_headers_that_do_not_fit_are_refused()
     arm_slot(0, "GET /x HTTP/1.1\r\nHost: x\r\n\r\n");
     conn_pool[0].pcb = &_mock_pcb;
     tcp_capture_reset();
-    g_server->send(0, 200, bigct, "ok"); // public entry, no route needed
+    send_text(0, 200, bigct, "ok"); // public entry, no route needed
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "HTTP/1.1 500"));
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "Connection: close"));
     // whatever goes out is a complete header block: it ends with the blank line
@@ -1710,9 +1699,9 @@ void test_response_headers_that_do_not_fit_are_refused()
     hv[240] = '\0';
     arm_slot(0, "GET /y HTTP/1.1\r\nHost: x\r\n\r\n");
     conn_pool[0].pcb = &_mock_pcb;
-    g_server->add_response_header(0, "X-Big", hv); // fill the extra-header block (~249 bytes)
+    add_response_header(0, "X-Big", hv); // fill the extra-header block (~249 bytes)
     tcp_capture_reset();
-    g_server->send(0, 200, midct, "ok");
+    send_text(0, 200, midct, "ok");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "HTTP/1.1 500"));
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "\r\n\r\n"));
     tcp_capture_disable();
@@ -1753,11 +1742,11 @@ static void capture_params_handler(uint8_t, HttpReq *req)
 void test_stats_counters_ignore_sub_200_status()
 {
     live_slot(0);
-    g_server->send(0, 100, "text/plain", "x"); // below every class bucket
+    send_text(0, 100, "text/plain", "x"); // below every class bucket
 
     live_slot(1);
     tcp_capture_reset();
-    g_server->stats(1); // renders the counters as they stand before its own response
+    stats(1); // renders the counters as they stand before its own response
     const char *out = tcp_captured();
     tcp_capture_disable();
     TEST_ASSERT_NOT_NULL(strstr(out, "\"requests\":1")); // counted as a request
@@ -1770,16 +1759,16 @@ void test_stats_counters_ignore_sub_200_status()
 // response once set_cors() is on, and set_cors(nullptr) turns it back off.
 void test_response_trailer_cors_block_and_null_disable()
 {
-    g_server->set_cors("https://a.example");
+    set_cors("https://a.example");
     live_slot(0);
     tcp_capture_reset();
-    g_server->send(0, 200, "text/plain", "ok");
+    send_text(0, 200, "text/plain", "ok");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "Access-Control-Allow-Origin: https://a.example\r\n"));
 
-    g_server->set_cors(nullptr); // null origin disables CORS (same as "")
+    set_cors(nullptr); // null origin disables CORS (same as "")
     live_slot(0);
     tcp_capture_reset();
-    g_server->send(0, 200, "text/plain", "ok");
+    send_text(0, 200, "text/plain", "ok");
     TEST_ASSERT_NULL(strstr(tcp_captured(), "Access-Control-Allow-Origin"));
     tcp_capture_disable();
 }
@@ -1791,14 +1780,14 @@ void test_cache_control_null_clears_header()
     fs::mock_fs_reset();
     static const char body[] = "x";
     fs::mock_fs_add("/www/c.txt", body);
-    g_server->serve_static("/", g_static_fs, "/www");
+    serve_static("/", g_static_fs, "/www");
 
-    g_server->set_cache_control("max-age=60");
-    g_server->set_cache_control(nullptr); // cleared, not "Cache-Control: (null)"
+    set_cache_control("max-age=60");
+    set_cache_control(nullptr); // cleared, not "Cache-Control: (null)"
     arm_slot(0, "GET /c.txt HTTP/1.1\r\nHost: x\r\n\r\n");
     conn_pool[0].pcb = &_mock_pcb;
     tcp_capture_reset();
-    g_server->handle();
+    handle();
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "200 OK"));
     TEST_ASSERT_NULL(strstr(tcp_captured(), "Cache-Control"));
     tcp_capture_disable();
@@ -1809,11 +1798,11 @@ void test_cache_control_null_clears_header()
 // path ending in '*', so on("") matches nothing (not everything).
 void test_empty_route_pattern_matches_nothing()
 {
-    g_server->on("", HttpMethod::HTTP_GET, record_handler);
+    on_http("", HttpMethod::HTTP_GET, record_handler);
     arm_slot(0, "GET / HTTP/1.1\r\nHost: x\r\n\r\n");
     conn_pool[0].pcb = &_mock_pcb;
     tcp_capture_reset();
-    g_server->handle();
+    handle();
     TEST_ASSERT_FALSE(handler_called);
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "404"));
     tcp_capture_disable();
@@ -1824,16 +1813,15 @@ void test_empty_route_pattern_matches_nothing()
 // QUERY_VAL_LEN-1. All three are capacity caps, never overflows.
 void test_path_param_capture_limits()
 {
-    g_server->on("/q/:a/:b/:c/:d/:e", HttpMethod::HTTP_GET, capture_params_handler);
+    on_http("/q/:a/:b/:c/:d/:e", HttpMethod::HTTP_GET, capture_params_handler);
     arm_slot(0, "GET /q/1/2/3/4/5 HTTP/1.1\r\nHost: x\r\n\r\n");
     conn_pool[0].pcb = &_mock_pcb;
-    g_server->handle();
+    handle();
     TEST_ASSERT_TRUE(handler_called);
     TEST_ASSERT_EQUAL_UINT8(MAX_PATH_PARAMS, g_seen_param_count); // 5th capture dropped
     TEST_ASSERT_EQUAL_STRING("4", g_seen_params[3].val);          // last stored capture
 
     // An over-long :name and an over-long value are both truncated, not overflowed.
-    PC srv2;
     handler_called = false;
     srv2.on("/k/:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", HttpMethod::HTTP_GET, capture_params_handler);
     char req[160];
@@ -1855,10 +1843,10 @@ void test_path_param_capture_limits()
 // still matches, so a `:name` after it is captured.
 void test_path_param_segment_mismatches()
 {
-    g_server->on("/p1/:a", HttpMethod::HTTP_GET, record_handler);       // path runs out early
-    g_server->on("/p2/:a", HttpMethod::HTTP_GET, record_handler);       // route runs out early
-    g_server->on("/p3/:a", HttpMethod::HTTP_GET, record_handler);       // literal differs, same length
-    g_server->on("//:a", HttpMethod::HTTP_GET, capture_params_handler); // empty first segment
+    on_http("/p1/:a", HttpMethod::HTTP_GET, record_handler);       // path runs out early
+    on_http("/p2/:a", HttpMethod::HTTP_GET, record_handler);       // route runs out early
+    on_http("/p3/:a", HttpMethod::HTTP_GET, record_handler);       // literal differs, same length
+    on_http("//:a", HttpMethod::HTTP_GET, capture_params_handler); // empty first segment
 
     const char *misses[] = {
         "GET /p1 HTTP/1.1\r\nHost: x\r\n\r\n",     // route wants another segment
@@ -1871,7 +1859,7 @@ void test_path_param_segment_mismatches()
         arm_slot(0, misses[i]);
         conn_pool[0].pcb = &_mock_pcb;
         tcp_capture_reset();
-        g_server->handle();
+        handle();
         TEST_ASSERT_FALSE_MESSAGE(handler_called, misses[i]);
         TEST_ASSERT_NOT_NULL_MESSAGE(strstr(tcp_captured(), "404"), misses[i]);
     }
@@ -1880,7 +1868,7 @@ void test_path_param_segment_mismatches()
     handler_called = false;
     arm_slot(0, "GET //v HTTP/1.1\r\nHost: x\r\n\r\n");
     conn_pool[0].pcb = &_mock_pcb;
-    g_server->handle();
+    handle();
     TEST_ASSERT_TRUE(handler_called);
     TEST_ASSERT_EQUAL_STRING("v", g_seen_params[0].val);
     tcp_capture_disable();
@@ -1891,15 +1879,15 @@ void test_path_param_segment_mismatches()
 // dispatched twice.
 void test_worker_owner_filter_skips_foreign_slot()
 {
-    g_server->on("/own", HttpMethod::HTTP_GET, record_handler);
+    on_http("/own", HttpMethod::HTTP_GET, record_handler);
     arm_slot(1, "GET /own HTTP/1.1\r\nHost: x\r\n\r\n");
     conn_pool[1].owner = 1; // owned by another worker
-    g_server->handle();
+    handle();
     TEST_ASSERT_FALSE(handler_called);
     TEST_ASSERT_EQUAL(ParseState::PARSE_COMPLETE, http_pool[1].parse_state); // still queued
 
     conn_pool[1].owner = 0; // hand it back; now it dispatches
-    g_server->handle();
+    handle();
     TEST_ASSERT_TRUE(handler_called);
 }
 
@@ -1908,20 +1896,20 @@ void test_worker_owner_filter_skips_foreign_slot()
 // on_poll is skipped. Either way the slot's completed request is never dispatched.
 void test_slot_poll_requires_registered_handler_with_poll()
 {
-    g_server->on("/pp", HttpMethod::HTTP_GET, record_handler);
+    on_http("/pp", HttpMethod::HTTP_GET, record_handler);
     arm_slot(0, "GET /pp HTTP/1.1\r\nHost: x\r\n\r\n");
     conn_pool[0].proto = ConnProto::PROTO_TELNET; // no handler registered in this build
-    g_server->handle();
+    handle();
     TEST_ASSERT_FALSE(handler_called);
 
     static const ProtoHandler no_poll = {nullptr, nullptr, nullptr, nullptr};
     proto_register(ConnProto::PROTO_TELNET, &no_poll); // registered, but nothing to poll
-    g_server->handle();
+    handle();
     TEST_ASSERT_FALSE(handler_called);
 
     proto_register(ConnProto::PROTO_TELNET, nullptr); // restore: telnet is unregistered here
     conn_pool[0].proto = ConnProto::PROTO_HTTP;
-    g_server->handle();
+    handle();
     TEST_ASSERT_TRUE(handler_called); // same slot, now polled
 }
 
@@ -1929,12 +1917,12 @@ void test_slot_poll_requires_registered_handler_with_poll()
 // dispatch loop answers 413 without invoking any route.
 void test_entity_too_large_auto_413()
 {
-    g_server->on("/big", HttpMethod::HTTP_POST, record_handler);
+    on_http("/big", HttpMethod::HTTP_POST, record_handler);
     arm_slot(0, "POST /big HTTP/1.1\r\nHost: x\r\nContent-Length: 100000\r\n\r\n");
     conn_pool[0].pcb = &_mock_pcb;
     TEST_ASSERT_EQUAL(ParseState::PARSE_ENTITY_TOO_LARGE, http_pool[0].parse_state);
     tcp_capture_reset();
-    g_server->handle();
+    handle();
     TEST_ASSERT_FALSE(handler_called);
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "413 Payload Too Large"));
     tcp_capture_disable();
@@ -1944,12 +1932,12 @@ void test_entity_too_large_auto_413()
 // contribute one token, not two.
 void test_allow_header_dedupes_repeated_method()
 {
-    g_server->on("/dup", HttpMethod::HTTP_POST, record_handler);
-    g_server->on("/dup", HttpMethod::HTTP_POST, record_handler);
+    on_http("/dup", HttpMethod::HTTP_POST, record_handler);
+    on_http("/dup", HttpMethod::HTTP_POST, record_handler);
     arm_slot(0, "GET /dup HTTP/1.1\r\nHost: x\r\n\r\n");
     conn_pool[0].pcb = &_mock_pcb;
     tcp_capture_reset();
-    g_server->handle();
+    handle();
     const char *out = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(out, "Allow: POST\r\n"));
     TEST_ASSERT_NULL(strstr(out, "POST, POST"));
@@ -1961,13 +1949,13 @@ void test_allow_header_dedupes_repeated_method()
 // CONN_ACTIVE or lost its pcb.
 void test_error_close_head_and_dead_connection()
 {
-    g_server->on("/po", HttpMethod::HTTP_POST, record_handler);
+    on_http("/po", HttpMethod::HTTP_POST, record_handler);
 
     // HEAD on a POST-only route -> 405 headers, no body.
     arm_slot(0, "HEAD /po HTTP/1.1\r\nHost: x\r\n\r\n");
     conn_pool[0].pcb = &_mock_pcb;
     tcp_capture_reset();
-    g_server->handle();
+    handle();
     const char *out = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(out, "405 Method Not Allowed"));
     TEST_ASSERT_NULL(strstr(out, "\r\n\r\nMethod Not Allowed")); // headers only
@@ -1977,13 +1965,13 @@ void test_error_close_head_and_dead_connection()
     conn_pool[0].pcb = &_mock_pcb;
     conn_pool[0].state = ConnState::CONN_CLOSING;
     tcp_capture_reset();
-    g_server->handle();
+    handle();
     TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len());
 
     // Slot ACTIVE but the pcb is gone -> nothing written.
     arm_slot(0, "GET /po HTTP/1.1\r\nHost: x\r\n\r\n"); // arm_slot leaves pcb null
     tcp_capture_reset();
-    g_server->handle();
+    handle();
     TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len());
     tcp_capture_disable();
 }
@@ -1994,7 +1982,7 @@ void test_error_close_head_and_dead_connection()
 // decoded - modelled here by populating the request slot directly.
 void test_transfer_encoding_on_semantic_ingress_is_501()
 {
-    g_server->on("/te", HttpMethod::HTTP_POST, record_handler);
+    on_http("/te", HttpMethod::HTTP_POST, record_handler);
     live_slot(0);
     HttpReq *r = &http_pool[0];
     snprintf(r->method, sizeof(r->method), "POST");
@@ -2007,7 +1995,7 @@ void test_transfer_encoding_on_semantic_ingress_is_501()
     r->parse_state = ParseState::PARSE_COMPLETE;
 
     tcp_capture_reset();
-    g_server->handle();
+    handle();
     TEST_ASSERT_FALSE(handler_called);
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "501 Not Implemented"));
     tcp_capture_disable();
@@ -2020,11 +2008,11 @@ void test_static_mount_rejects_non_get_methods()
     fs::mock_fs_reset();
     static const char body[] = "hi";
     fs::mock_fs_add("/www/a.txt", body);
-    g_server->serve_static("/", g_static_fs, "/www");
+    serve_static("/", g_static_fs, "/www");
     arm_slot(0, "POST /a.txt HTTP/1.1\r\nHost: x\r\nContent-Length: 0\r\n\r\n");
     conn_pool[0].pcb = &_mock_pcb;
     tcp_capture_reset();
-    g_server->handle();
+    handle();
     const char *out = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(out, "405"));
     TEST_ASSERT_NOT_NULL(strstr(out, "Allow: GET, HEAD\r\n"));
@@ -2039,12 +2027,12 @@ void test_send_null_payload_and_slot_bounds()
 {
     live_slot(0);
     tcp_capture_reset();
-    g_server->send(CONN_POOL_SLOTS, 200, "text/plain", "x"); // out of range
-    g_server->send_empty(CONN_POOL_SLOTS, 204);              // out of range
+    send_text(CONN_POOL_SLOTS, 200, "text/plain", "x"); // out of range
+    send_empty(CONN_POOL_SLOTS, 204);                   // out of range
     TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len());
 
     tcp_capture_reset();
-    g_server->send(0, 200, "text/plain", (const char *)nullptr);
+    send_text(0, 200, "text/plain", (const char *)nullptr);
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "Content-Length: 0\r\n"));
     tcp_capture_disable();
 }
@@ -2058,14 +2046,14 @@ void test_send_body_framing_paths()
     live_slot(0);
     snprintf(http_pool[0].method, sizeof(http_pool[0].method), "HEAD");
     tcp_capture_reset();
-    g_server->send(0, 200, "text/plain", "abcdef");
+    send_text(0, 200, "text/plain", "abcdef");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "Content-Length: 6\r\n"));
     TEST_ASSERT_NULL(strstr(tcp_captured(), "abcdef"));
 
     // Empty body: headers only, Content-Length: 0.
     live_slot(0);
     tcp_capture_reset();
-    g_server->send(0, 200, "text/plain", "");
+    send_text(0, 200, "text/plain", "");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "Content-Length: 0\r\n"));
 
     // A body larger than the header scratch cannot be coalesced -> separate write.
@@ -2074,7 +2062,7 @@ void test_send_body_framing_paths()
     big[sizeof(big) - 1] = '\0';
     live_slot(0);
     tcp_capture_reset();
-    g_server->send(0, 200, "text/plain", big);
+    send_text(0, 200, "text/plain", big);
     const char *out = tcp_captured();
     char want[40];
     snprintf(want, sizeof(want), "Content-Length: %u\r\n", (unsigned)(sizeof(big) - 1));
@@ -2090,17 +2078,17 @@ void test_send_empty_and_redirect_dead_connection_guards()
     live_slot(0);
     conn_pool[0].state = ConnState::CONN_CLOSING; // not ACTIVE, pcb still attached
     tcp_capture_reset();
-    g_server->send_empty(0, 204);
-    g_server->redirect(0, 302, "/x");
-    g_server->send(0, 200, "text/plain", "x");
+    send_empty(0, 204);
+    redirect(0, 302, "/x");
+    send_text(0, 200, "text/plain", "x");
     TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len());
 
     live_slot(0);
     conn_pool[0].pcb = nullptr; // ACTIVE, but the pcb is gone
     tcp_capture_reset();
-    g_server->send_empty(0, 204);
-    g_server->redirect(0, 302, "/x");
-    g_server->send(0, 200, "text/plain", "x");
+    send_empty(0, 204);
+    redirect(0, 302, "/x");
+    send_text(0, 200, "text/plain", "x");
     TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len());
     TEST_ASSERT_EQUAL(ParseState::PARSE_METHOD, http_pool[0].parse_state); // parser reset
     tcp_capture_disable();
@@ -2121,13 +2109,13 @@ void test_send_template_placeholder_edges()
 {
     live_slot(0);
     tcp_capture_reset();
-    g_server->send_template(0, 200, "text/plain", "a{{0123456789012345678901234567890123}}b", tmpl_resolver);
+    send_template(0, 200, "text/plain", "a{{0123456789012345678901234567890123}}b", tmpl_resolver);
     const char *out = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(out, "a{{0123456789012345678901234567890123}}b")); // emitted verbatim
 
     live_slot(0);
     tcp_capture_reset();
-    g_server->send_template(0, 204, "text/plain", "", tmpl_resolver);
+    send_template(0, 204, "text/plain", "", tmpl_resolver);
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "Content-Length: 0\r\n"));
     tcp_capture_disable();
 }
@@ -2138,7 +2126,7 @@ void test_send_chunked_without_source()
 {
     live_slot(0);
     tcp_capture_reset();
-    g_server->send_chunked(0, 200, "text/plain", nullptr, nullptr);
+    send_chunked(0, 200, "text/plain", nullptr, nullptr);
     const char *out = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(out, "Transfer-Encoding: chunked\r\n"));
     TEST_ASSERT_NULL(strstr(out, "0\r\n\r\n"));
@@ -2167,7 +2155,7 @@ void test_chunked_pump_small_window_and_connection_lost()
     mock_sndbuf() = 64; // smaller than CHUNK_BUF_SIZE: cap comes from the window
     live_slot(0);
     tcp_capture_reset();
-    g_server->send_chunked(0, 200, "text/plain", chunk_src_fill, nullptr);
+    send_chunked(0, 200, "text/plain", chunk_src_fill, nullptr);
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "Transfer-Encoding: chunked\r\n"));
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "28\r\nqqqq")); // 0x28 == 40 bytes framed
     TEST_ASSERT_FALSE(pc_resp_holds_slot(0));                   // source drained, response finished
@@ -2177,11 +2165,11 @@ void test_chunked_pump_small_window_and_connection_lost()
     mock_sndbuf() = 0;
     live_slot(0);
     tcp_capture_reset();
-    g_server->send_chunked(0, 200, "text/plain", chunk_src_fill, nullptr);
+    send_chunked(0, 200, "text/plain", chunk_src_fill, nullptr);
     TEST_ASSERT_TRUE(pc_resp_holds_slot(0));
 
     conn_pool[0].pcb = nullptr; // peer went away before the window reopened
-    g_server->handle();
+    handle();
     TEST_ASSERT_FALSE(pc_resp_holds_slot(0)); // continuation dropped
     TEST_ASSERT_NULL(strstr(tcp_captured(), "qqqq"));
 
@@ -2195,20 +2183,20 @@ void test_chunked_pump_small_window_and_connection_lost()
 void test_response_header_null_value_empty_attrs_and_overflow()
 {
     live_slot(0);
-    g_server->clear_response_headers(0);
-    g_server->add_response_header(0, "X-Keep", "1");
-    g_server->add_response_header(0, "X-Null", nullptr); // null value -> ignored
-    g_server->set_cookie(0, "c-null", nullptr, nullptr); // null value -> ignored
-    g_server->set_cookie(0, "sid", "abc", "");           // empty attrs -> no "; " suffix
+    clear_response_headers(0);
+    add_response_header(0, "X-Keep", "1");
+    add_response_header(0, "X-Null", nullptr); // null value -> ignored
+    set_cookie(0, "c-null", nullptr, nullptr); // null value -> ignored
+    set_cookie(0, "sid", "abc", "");           // empty attrs -> no "; " suffix
 
     char filler[EXTRA_HDR_BUF_SIZE];
     memset(filler, 'f', sizeof(filler) - 1);
     filler[sizeof(filler) - 1] = '\0';
-    g_server->add_response_header(0, "X-Too-Big", filler); // would overflow -> dropped whole
-    g_server->set_cookie(0, "big", filler, nullptr);       // would overflow -> dropped whole
+    add_response_header(0, "X-Too-Big", filler); // would overflow -> dropped whole
+    set_cookie(0, "big", filler, nullptr);       // would overflow -> dropped whole
 
     tcp_capture_reset();
-    g_server->send(0, 200, "text/plain", "ok");
+    send_text(0, 200, "text/plain", "ok");
     const char *out = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(out, "X-Keep: 1\r\n"));
     TEST_ASSERT_NOT_NULL(strstr(out, "Set-Cookie: sid=abc\r\n")); // no attribute suffix
@@ -2265,7 +2253,7 @@ static void ws_upgrade_slot0(const char *path)
              path);
     arm_slot(0, req);
     conn_pool[0].pcb = &_mock_pcb;
-    g_server->handle();
+    handle();
 }
 
 // A WS route registered without an on-connect handler still upgrades: the 101 goes
@@ -2273,7 +2261,7 @@ static void ws_upgrade_slot0(const char *path)
 void test_ws_upgrade_without_connect_handler()
 {
     ws_init();
-    g_server->on_ws("/wsn", nullptr, nullptr, nullptr);
+    on_ws("/wsn", nullptr, nullptr, nullptr);
     tcp_capture_reset();
     ws_upgrade_slot0("/wsn");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "101 Switching Protocols"));
@@ -2288,19 +2276,19 @@ void test_ws_upgrade_without_connect_handler()
 void test_ws_dispatch_without_message_or_close_handler()
 {
     ws_init();
-    g_server->on("/plain", HttpMethod::HTTP_GET, record_handler); // a non-WS route to scan past
-    g_server->on_ws("/wsq", nullptr, nullptr, nullptr);
+    on_http("/plain", HttpMethod::HTTP_GET, record_handler); // a non-WS route to scan past
+    on_ws("/wsq", nullptr, nullptr, nullptr);
     ws_upgrade_slot0("/wsq");
     WsConn *ws = ws_find(0);
     TEST_ASSERT_NOT_NULL(ws);
 
     push_ws_text_frame(0, "hi");
-    g_server->handle(); // ws_dispatch_message finds no handler; frame consumed
+    handle(); // ws_dispatch_message finds no handler; frame consumed
     TEST_ASSERT_NOT_NULL(ws_find(0));
     TEST_ASSERT_NOT_EQUAL(WsParseState::WS_FRAME_READY, ws->parse_state);
 
     ws->parse_state = WsParseState::WS_ERROR; // protocol error seen by the parser
-    g_server->handle();                       // ws_dispatch_close finds no handler; slot freed
+    handle();                                 // ws_dispatch_close finds no handler; slot freed
     TEST_ASSERT_NULL(ws_find(0));
     ws_init();
 }
@@ -2310,7 +2298,7 @@ void test_ws_dispatch_without_message_or_close_handler()
 // handshake with a missing or non-13 version is 426.
 void test_ws_upgrade_handshake_gate()
 {
-    g_server->on_ws("/wsg", nullptr, nullptr, nullptr);
+    on_ws("/wsg", nullptr, nullptr, nullptr);
     const char *bad[] = {
         "POST /wsg HTTP/1.1\r\nHost: x\r\nContent-Length: 0\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\n",
         "GET /wsg HTTP/1.1\r\nHost: x\r\nConnection: Upgrade\r\n\r\n",                          // no Upgrade header
@@ -2322,7 +2310,7 @@ void test_ws_upgrade_handshake_gate()
         arm_slot(0, bad[i]);
         conn_pool[0].pcb = &_mock_pcb;
         tcp_capture_reset();
-        g_server->handle();
+        handle();
         TEST_ASSERT_NOT_NULL_MESSAGE(strstr(tcp_captured(), "400"), bad[i]);
     }
 
@@ -2331,7 +2319,7 @@ void test_ws_upgrade_handshake_gate()
                 "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n\r\n");
     conn_pool[0].pcb = &_mock_pcb;
     tcp_capture_reset();
-    g_server->handle();
+    handle();
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "426 Upgrade Required"));
     tcp_capture_disable();
 }
@@ -2384,11 +2372,11 @@ void test_sse_upgrade_fires_connect_handler()
     pc_sse_init();
     g_sse_connect_calls = 0;
     g_sse_connected_id = 0xFF;
-    g_server->on_sse("/evh", sse_on_connect);
+    on_sse("/evh", sse_on_connect);
     arm_slot(0, "GET /evh HTTP/1.1\r\nHost: x\r\n\r\n");
     conn_pool[0].pcb = &_mock_pcb;
     tcp_capture_reset();
-    g_server->handle();
+    handle();
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "text/event-stream"));
     TEST_ASSERT_EQUAL_INT(1, g_sse_connect_calls);
     TEST_ASSERT_NOT_NULL(pc_sse_find(0));
@@ -2408,8 +2396,8 @@ void test_sse_send_on_dead_slot_writes_nothing()
     conn_pool[0].pcb = nullptr; // connection gone, pool entry still live
 
     tcp_capture_reset();
-    g_server->pc_sse_send(sse->pc_sse_id, "x");
-    g_server->pc_sse_broadcast("/events", "x");
+    pc_sse_send(sse->pc_sse_id, "x");
+    pc_sse_broadcast("/events", "x");
     TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len());
     tcp_capture_disable();
     pc_sse_init();
@@ -2429,24 +2417,24 @@ void test_ws_send_api_inactive_error_state_and_dead_slot()
 
     // In range but not allocated.
     tcp_capture_reset();
-    g_server->ws_send_binary(1, (const uint8_t *)"x", 1);
-    g_server->ws_disconnect(1);
+    ws_send_binary(1, (const uint8_t *)"x", 1);
+    ws_disconnect(1);
     TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len());
 
     // WS_ERROR is terminal for sends, exactly like WS_CLOSED.
     ws->parse_state = WsParseState::WS_ERROR;
     tcp_capture_reset();
-    g_server->ws_send_text(ws->ws_id, "nope");
-    g_server->ws_send_binary(ws->ws_id, (const uint8_t *)"x", 1);
+    ws_send_text(ws->ws_id, "nope");
+    ws_send_binary(ws->ws_id, (const uint8_t *)"x", 1);
     TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len());
 
     // Live pool entry, dead TCP slot: the frame write fails, so nothing is flushed.
     ws->parse_state = WsParseState::WS_HEADER1;
     conn_pool[0].pcb = nullptr;
     tcp_capture_reset();
-    g_server->ws_send_text(ws->ws_id, "nope");
-    g_server->ws_send_binary(ws->ws_id, (const uint8_t *)"x", 1);
-    g_server->ws_disconnect(ws->ws_id); // close frame cannot go out either
+    ws_send_text(ws->ws_id, "nope");
+    ws_send_binary(ws->ws_id, (const uint8_t *)"x", 1);
+    ws_disconnect(ws->ws_id); // close frame cannot go out either
     TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len());
     tcp_capture_disable();
     ws_init();

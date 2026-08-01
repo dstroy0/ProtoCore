@@ -35,4 +35,13 @@ uint8_t pc_route_count(void);
 /** @brief Entry @p i, or nullptr if @p i is past the end. */
 Route *pc_route_at(uint8_t i);
 
+/**
+ * @brief Empty the table.
+ *
+ * Firmware never calls this - routes are registered at setup and live for the run, which is why
+ * there is no per-entry release. A test registers a fresh set per case, and without this each case
+ * would inherit every route the previous ones left behind and match against them.
+ */
+void pc_route_reset(void);
+
 #endif // PROTOCORE_ROUTE_H

@@ -25,13 +25,12 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 // GET / - the response inherits the server-wide default DSCP (EF) set in setup().
 void handle_root(uint8_t slot, HttpReq *req)
 {
     (void)req;
-    server.send(slot, 200, "text/plain", "marked EF (DSCP 46)\n");
+    send_text(slot, 200, "text/plain", "marked EF (DSCP 46)\n");
 }
 
 // GET /tag - re-tag THIS connection to CS6 (48) before responding, overriding the default. This is the
@@ -40,7 +39,7 @@ void handle_tag(uint8_t slot, HttpReq *req)
 {
     (void)req;
     pc_conn_set_dscp(slot, PC_DSCP_CS6);
-    server.send(slot, 200, "text/plain", "re-tagged CS6 (DSCP 48)\n");
+    send_text(slot, 200, "text/plain", "re-tagged CS6 (DSCP 48)\n");
 }
 
 void setup()
@@ -63,13 +62,13 @@ void setup()
     pc_set_default_dscp(PC_DSCP_EF);
     pc_udp_set_dscp(PC_DSCP_EF);
 
-    server.on("/", HttpMethod::HTTP_GET, handle_root);
-    server.on("/tag", HttpMethod::HTTP_GET, handle_tag);
-    server.begin(80);
+    on_http("/", HttpMethod::HTTP_GET, handle_root);
+    on_http("/tag", HttpMethod::HTTP_GET, handle_tag);
+    begin_http(80);
     Serial.println("DiffServ server on :80 (default EF; /tag -> CS6)");
 }
 
 void loop()
 {
-    server.handle();
+    handle();
 }

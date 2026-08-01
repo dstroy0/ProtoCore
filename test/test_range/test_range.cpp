@@ -11,7 +11,6 @@
 #include <string.h>
 #include <unity.h>
 
-static PC server;
 static const char FILE_DATA[] = "0123456789ABCDEFGHIJ"; // 20 bytes
 
 static void push_str(uint8_t slot, const char *s)
@@ -28,7 +27,7 @@ static void serve_data(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
     fs::FS fs;
-    server.serve_file(slot_id, fs, "/data.bin", "application/octet-stream");
+    serve_file(slot_id, fs, "/data.bin", "application/octet-stream");
 }
 
 // Nulls the slot's pcb before serving, simulating a peer that vanished between accept
@@ -38,13 +37,13 @@ static void serve_data_conn_gone(uint8_t slot_id, HttpReq *req)
     (void)req;
     conn_pool[slot_id].pcb = nullptr;
     fs::FS fs;
-    server.serve_file(slot_id, fs, "/data.bin", "application/octet-stream");
+    serve_file(slot_id, fs, "/data.bin", "application/octet-stream");
 }
 
 void setUp()
 {
-    server = PC();
-    server.on("/data", HttpMethod::HTTP_GET, serve_data);
+    pc_server_reset();
+    on_http("/data", HttpMethod::HTTP_GET, serve_data);
     for (int i = 0; i < MAX_CONNS; i++)
     {
         conn_pool[i] = {};
@@ -97,7 +96,7 @@ static void request(const char *range_hdr)
     }
     push_str(0, req);
     http_parse(0);
-    server.handle();
+    handle();
 }
 
 // ---------------------------------------------------------------------------
@@ -222,7 +221,7 @@ void test_head_with_range_no_body()
 {
     push_str(0, "HEAD /data HTTP/1.1\r\nRange: bytes=0-3\r\n\r\n");
     http_parse(0);
-    server.handle();
+    handle();
     const char *r = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(r, "206 Partial Content"));
     TEST_ASSERT_NOT_NULL(strstr(r, "Content-Range: bytes 0-3/20"));
@@ -247,7 +246,7 @@ void test_file_send_backpressure_resumes_across_polls()
     TEST_ASSERT_EQUAL_UINT(0, body_len());                 // body deferred: nothing after the header terminator
 
     mock_sndbuf() = 8; // window reopens, but narrower than the remaining 20 bytes
-    server.handle();   // worker poll resumes and pages the body in 8-byte-capped reads
+    handle();          // worker poll resumes and pages the body in 8-byte-capped reads
     TEST_ASSERT_EQUAL_UINT(20, body_len());
     TEST_ASSERT_EQUAL_MEMORY(FILE_DATA, body_ptr(), 20); // full body, no truncation
 }
@@ -266,7 +265,7 @@ void test_file_send_write_fails_then_retries()
     TEST_ASSERT_EQUAL_UINT(0, body_len());                 // body write failed: nothing after the header
 
     mock_send_fail_after() = -1; // send buffer recovers
-    server.handle();             // worker poll retries the in-flight file response
+    handle();                    // worker poll retries the in-flight file response
     TEST_ASSERT_EQUAL_UINT(20, body_len());
     TEST_ASSERT_EQUAL_MEMORY(FILE_DATA, body_ptr(), 20); // exactly the file, no dup/loss
 }
@@ -321,10 +320,10 @@ void test_range_suffix_on_empty_file()
 // nothing (no partial/garbage response to a gone peer).
 void test_serve_file_connection_gone()
 {
-    server.on("/gone", HttpMethod::HTTP_GET, serve_data_conn_gone);
+    on_http("/gone", HttpMethod::HTTP_GET, serve_data_conn_gone);
     push_str(0, "GET /gone HTTP/1.1\r\n\r\n");
     http_parse(0);
-    server.handle();
+    handle();
     TEST_ASSERT_EQUAL_UINT(0, tcp_captured_len()); // nothing queued
     TEST_ASSERT_NULL(strstr(tcp_captured(), "200 OK"));
 }
@@ -333,15 +332,15 @@ void test_serve_file_connection_gone()
 // alongside the required "Content-Range: bytes * /<size>" (RFC 7233 4.4).
 void test_unsatisfiable_range_416_carries_cors()
 {
-    server.set_cors("*");
+    set_cors("*");
     push_str(0, "GET /data HTTP/1.1\r\nHost: x\r\nRange: bytes=100-200\r\n\r\n");
     http_parse(0);
-    server.handle();
+    handle();
     const char *out = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(out, "416 Range Not Satisfiable"));
     TEST_ASSERT_NOT_NULL(strstr(out, "Content-Range: bytes */20\r\n"));
     TEST_ASSERT_NOT_NULL(strstr(out, "Access-Control-Allow-Origin: *\r\n"));
-    server.set_cors("");
+    set_cors("");
 }
 
 int main()

@@ -8,8 +8,6 @@
 #include <string.h>
 #include <unity.h>
 
-static PC server;
-
 static void push_str(uint8_t slot, const char *s)
 {
     TcpConn *c = &conn_pool[slot];
@@ -41,32 +39,32 @@ static const char *resolver(const char *name)
 static void h_basic(uint8_t slot, HttpReq *req)
 {
     (void)req;
-    server.send_template(slot, 200, "text/html", "Hello {{name}}!", resolver);
+    send_template(slot, 200, "text/html", "Hello {{name}}!", resolver);
 }
 static void h_multi(uint8_t slot, HttpReq *req)
 {
     (void)req;
-    server.send_template(slot, 200, "text/plain", "{{x}}+{{y}}", resolver);
+    send_template(slot, 200, "text/plain", "{{x}}+{{y}}", resolver);
 }
 static void h_unknown(uint8_t slot, HttpReq *req)
 {
     (void)req;
-    server.send_template(slot, 200, "text/plain", "a{{zzz}}b", resolver);
+    send_template(slot, 200, "text/plain", "a{{zzz}}b", resolver);
 }
 static void h_unterm(uint8_t slot, HttpReq *req)
 {
     (void)req;
-    server.send_template(slot, 200, "text/plain", "a {{ b", resolver);
+    send_template(slot, 200, "text/plain", "a {{ b", resolver);
 }
 static void h_null(uint8_t slot, HttpReq *req)
 {
     (void)req;
-    server.send_template(slot, 200, "text/plain", "x{{name}}y", nullptr);
+    send_template(slot, 200, "text/plain", "x{{name}}y", nullptr);
 }
 
 void setUp()
 {
-    server = PC();
+    pc_server_reset();
     for (int i = 0; i < MAX_CONNS; i++)
     {
         conn_pool[i] = {};
@@ -90,7 +88,7 @@ static void feed_and_handle(uint8_t slot, const char *req_str)
 {
     push_str(slot, req_str);
     http_parse(slot);
-    server.handle();
+    handle();
 }
 
 // ====================================================================
@@ -99,7 +97,7 @@ static void feed_and_handle(uint8_t slot, const char *req_str)
 
 void test_basic_substitution()
 {
-    server.on("/t", HttpMethod::HTTP_GET, h_basic);
+    on_http("/t", HttpMethod::HTTP_GET, h_basic);
     feed_and_handle(0, "GET /t HTTP/1.1\r\n\r\n");
     const char *r = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(r, "Hello World!"));
@@ -108,7 +106,7 @@ void test_basic_substitution()
 
 void test_multiple_placeholders()
 {
-    server.on("/t", HttpMethod::HTTP_GET, h_multi);
+    on_http("/t", HttpMethod::HTTP_GET, h_multi);
     feed_and_handle(0, "GET /t HTTP/1.1\r\n\r\n");
     const char *r = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(r, "1+2"));
@@ -117,7 +115,7 @@ void test_multiple_placeholders()
 
 void test_unknown_placeholder_is_empty()
 {
-    server.on("/t", HttpMethod::HTTP_GET, h_unknown);
+    on_http("/t", HttpMethod::HTTP_GET, h_unknown);
     feed_and_handle(0, "GET /t HTTP/1.1\r\n\r\n");
     const char *r = tcp_captured();
     // body is "ab"; ensure the placeholder text is gone
@@ -128,7 +126,7 @@ void test_unknown_placeholder_is_empty()
 
 void test_unterminated_placeholder_is_literal()
 {
-    server.on("/t", HttpMethod::HTTP_GET, h_unterm);
+    on_http("/t", HttpMethod::HTTP_GET, h_unterm);
     feed_and_handle(0, "GET /t HTTP/1.1\r\n\r\n");
     const char *r = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(r, "a {{ b"));
@@ -137,7 +135,7 @@ void test_unterminated_placeholder_is_literal()
 
 void test_null_resolver_empties_all()
 {
-    server.on("/t", HttpMethod::HTTP_GET, h_null);
+    on_http("/t", HttpMethod::HTTP_GET, h_null);
     feed_and_handle(0, "GET /t HTTP/1.1\r\n\r\n");
     const char *r = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(r, "\r\n\r\nxy"));
@@ -146,7 +144,7 @@ void test_null_resolver_empties_all()
 
 void test_head_suppresses_body_keeps_length()
 {
-    server.on("/t", HttpMethod::HTTP_GET, h_basic);
+    on_http("/t", HttpMethod::HTTP_GET, h_basic);
     feed_and_handle(0, "HEAD /t HTTP/1.1\r\n\r\n");
     const char *r = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(r, "Content-Length: 12"));

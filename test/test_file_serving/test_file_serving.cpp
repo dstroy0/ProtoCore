@@ -17,7 +17,6 @@
 #include <string.h>
 #include <unity.h>
 
-static PC server;
 static fs::FS g_fs; // mock FS handle for the serve_static mounts (state lives in the registry)
 static bool handler_called = false;
 
@@ -37,7 +36,7 @@ static void handle_html(uint8_t slot_id, HttpReq *req)
     (void)req;
     handler_called = true;
     fs::FS fs;
-    server.serve_file(slot_id, fs, "/index.html", "text/html");
+    serve_file(slot_id, fs, "/index.html", "text/html");
 }
 
 static void handle_js(uint8_t slot_id, HttpReq *req)
@@ -45,7 +44,7 @@ static void handle_js(uint8_t slot_id, HttpReq *req)
     (void)req;
     handler_called = true;
     fs::FS fs;
-    server.serve_file(slot_id, fs, "/app.js", "application/javascript");
+    serve_file(slot_id, fs, "/app.js", "application/javascript");
 }
 
 static void handle_missing(uint8_t slot_id, HttpReq *req)
@@ -53,12 +52,12 @@ static void handle_missing(uint8_t slot_id, HttpReq *req)
     (void)req;
     handler_called = true;
     fs::FS fs;
-    server.serve_file(slot_id, fs, "/missing.txt", "text/plain");
+    serve_file(slot_id, fs, "/missing.txt", "text/plain");
 }
 
 void setUp()
 {
-    server = PC();
+    pc_server_reset();
     handler_called = false;
 
     for (int i = 0; i < MAX_CONNS; i++)
@@ -90,7 +89,7 @@ static void feed_and_handle(uint8_t slot, const char *req_str)
 {
     push_str(slot, req_str);
     http_parse(slot);
-    server.handle();
+    handle();
 }
 
 // ====================================================================
@@ -99,7 +98,7 @@ static void feed_and_handle(uint8_t slot, const char *req_str)
 
 void test_missing_file_returns_404()
 {
-    server.on("/page", HttpMethod::HTTP_GET, handle_missing);
+    on_http("/page", HttpMethod::HTTP_GET, handle_missing);
     fs::mock_fs_clear(); // no file set
     feed_and_handle(0, "GET /page HTTP/1.1\r\n\r\n");
     TEST_ASSERT_TRUE(handler_called);
@@ -108,7 +107,7 @@ void test_missing_file_returns_404()
 
 void test_existing_file_returns_200()
 {
-    server.on("/page", HttpMethod::HTTP_GET, handle_html);
+    on_http("/page", HttpMethod::HTTP_GET, handle_html);
     fs::mock_fs_set("<html><body>Hello</body></html>");
     feed_and_handle(0, "GET /page HTTP/1.1\r\n\r\n");
     TEST_ASSERT_TRUE(handler_called);
@@ -117,7 +116,7 @@ void test_existing_file_returns_200()
 
 void test_response_includes_content_type_html()
 {
-    server.on("/page", HttpMethod::HTTP_GET, handle_html);
+    on_http("/page", HttpMethod::HTTP_GET, handle_html);
     fs::mock_fs_set("<html></html>");
     feed_and_handle(0, "GET /page HTTP/1.1\r\n\r\n");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "Content-Type: text/html"));
@@ -125,7 +124,7 @@ void test_response_includes_content_type_html()
 
 void test_response_includes_content_type_js()
 {
-    server.on("/app", HttpMethod::HTTP_GET, handle_js);
+    on_http("/app", HttpMethod::HTTP_GET, handle_js);
     fs::mock_fs_set("console.log('hello');");
     feed_and_handle(0, "GET /app HTTP/1.1\r\n\r\n");
     TEST_ASSERT_TRUE(handler_called);
@@ -134,7 +133,7 @@ void test_response_includes_content_type_js()
 
 void test_content_length_matches_file_size()
 {
-    server.on("/page", HttpMethod::HTTP_GET, handle_html);
+    on_http("/page", HttpMethod::HTTP_GET, handle_html);
     const char *body = "Hello, World!";
     fs::mock_fs_set(body);
     size_t expected_len = strlen(body);
@@ -148,7 +147,7 @@ void test_content_length_matches_file_size()
 
 void test_file_body_is_sent()
 {
-    server.on("/page", HttpMethod::HTTP_GET, handle_html);
+    on_http("/page", HttpMethod::HTTP_GET, handle_html);
     const char *body = "<h1>Test Page</h1>";
     fs::mock_fs_set(body);
     feed_and_handle(0, "GET /page HTTP/1.1\r\n\r\n");
@@ -157,10 +156,10 @@ void test_file_body_is_sent()
 
 void test_empty_file_returns_200_with_zero_length()
 {
-    server.on("/empty", HttpMethod::HTTP_GET, [](uint8_t slot_id, HttpReq *req) {
+    on_http("/empty", HttpMethod::HTTP_GET, [](uint8_t slot_id, HttpReq *req) {
         (void)req;
         fs::FS fs;
-        server.serve_file(slot_id, fs, "/empty.txt", "text/plain");
+        serve_file(slot_id, fs, "/empty.txt", "text/plain");
     });
     uint8_t zero_data[] = {};
     fs::mock_fs_set(zero_data, 0);
@@ -183,10 +182,10 @@ void test_large_file_body_fully_sent()
         big[i] = (uint8_t)('A' + (i % 26)); // printable, no NUL, position-dependent
     }
 
-    server.on("/big", HttpMethod::HTTP_GET, [](uint8_t slot_id, HttpReq *req) {
+    on_http("/big", HttpMethod::HTTP_GET, [](uint8_t slot_id, HttpReq *req) {
         (void)req;
         fs::FS fs;
-        server.serve_file(slot_id, fs, "/big.bin", "application/octet-stream");
+        serve_file(slot_id, fs, "/big.bin", "application/octet-stream");
     });
     fs::mock_fs_set(big, N);
 
@@ -213,12 +212,12 @@ void test_large_file_body_fully_sent()
 void test_serve_file_does_not_affect_other_routes()
 {
     static bool other_called = false;
-    server.on("/other", HttpMethod::HTTP_GET, [](uint8_t slot_id, HttpReq *req) {
+    on_http("/other", HttpMethod::HTTP_GET, [](uint8_t slot_id, HttpReq *req) {
         (void)req;
         other_called = true;
-        server.send(slot_id, 200, "text/plain", "other");
+        send_text(slot_id, 200, "text/plain", "other");
     });
-    server.on("/file", HttpMethod::HTTP_GET, handle_html);
+    on_http("/file", HttpMethod::HTTP_GET, handle_html);
 
     fs::mock_fs_set("<html/>");
     feed_and_handle(0, "GET /other HTTP/1.1\r\n\r\n");
@@ -248,7 +247,7 @@ void test_multiple_content_types()
         cur_ctype = cases[i].ctype;
         cur_path = cases[i].path;
 
-        server = PC();
+        pc_server_reset();
         conn_pool[0] = {};
         conn_pool[0].id = 0;
         conn_pool[0].state = ConnState::CONN_ACTIVE;
@@ -257,10 +256,10 @@ void test_multiple_content_types()
         http_reset(0);
         tcp_capture_reset();
 
-        server.on(cur_path, HttpMethod::HTTP_GET, [](uint8_t slot_id, HttpReq *req) {
+        on_http(cur_path, HttpMethod::HTTP_GET, [](uint8_t slot_id, HttpReq *req) {
             (void)req;
             fs::FS fs;
-            server.serve_file(slot_id, fs, cur_path, cur_ctype);
+            serve_file(slot_id, fs, cur_path, cur_ctype);
         });
 
         fs::mock_fs_set(cases[i].body);
@@ -300,19 +299,19 @@ void test_serve_static_root_join_variants()
     fs::mock_fs_add("/b.txt", "BBB");
     fs::mock_fs_add("/www/c.txt", "CCC");
 
-    server.serve_static("/ts", g_fs, "/www/"); // root ends in '/'
+    serve_static("/ts", g_fs, "/www/"); // root ends in '/'
     feed_and_handle(0, "GET /ts/a.txt HTTP/1.1\r\nHost: x\r\n\r\n");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "200 OK"));
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "AAA"));
 
     rearm(0);
-    server.serve_static("/nr", g_fs, nullptr); // null root
+    serve_static("/nr", g_fs, nullptr); // null root
     feed_and_handle(0, "GET /nr/b.txt HTTP/1.1\r\nHost: x\r\n\r\n");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "200 OK"));
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "BBB"));
 
     rearm(0);
-    server.serve_static("/ns", g_fs, "/www"); // root without '/', sub-path supplies it
+    serve_static("/ns", g_fs, "/www"); // root without '/', sub-path supplies it
     feed_and_handle(0, "GET /ns/c.txt HTTP/1.1\r\nHost: x\r\n\r\n");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "200 OK"));
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "CCC"));
@@ -326,7 +325,7 @@ void test_serve_static_empty_prefix_mount()
 {
     fs::mock_fs_reset();
     fs::mock_fs_add("/www/any.txt", "anything");
-    server.serve_static("", g_fs, "/www");
+    serve_static("", g_fs, "/www");
     feed_and_handle(0, "GET /any.txt HTTP/1.1\r\nHost: x\r\n\r\n");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "200 OK"));
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "anything"));
@@ -340,7 +339,7 @@ void test_serve_static_directory_and_overlong_path()
 {
     fs::mock_fs_reset();
     fs::mock_fs_add("/www/docs/index.html", "<i>docs</i>");
-    server.serve_static("/", g_fs, "/www");
+    serve_static("/", g_fs, "/www");
     feed_and_handle(0, "GET /docs/ HTTP/1.1\r\nHost: x\r\n\r\n");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "200 OK"));
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "<i>docs</i>"));
@@ -350,7 +349,7 @@ void test_serve_static_directory_and_overlong_path()
     memset(longroot, 'r', sizeof(longroot) - 1);
     longroot[0] = '/';
     longroot[sizeof(longroot) - 1] = '\0'; // 254-char root: root + "/x" == 256, the join fails
-    server.serve_static("/lp", g_fs, longroot);
+    serve_static("/lp", g_fs, longroot);
     feed_and_handle(0, "GET /lp/x HTTP/1.1\r\nHost: x\r\n\r\n");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "404"));
     fs::mock_fs_reset();
@@ -364,7 +363,7 @@ void test_serve_static_gzip_negotiation_misses()
     fs::mock_fs_add("/www/app.js", "console.log(2)");
     fs::mock_fs_add("/www/app.js.gz", "GZ");
     fs::mock_fs_add("/www/plain.txt", "plain body");
-    server.serve_static("/", g_fs, "/www");
+    serve_static("/", g_fs, "/www");
 
     feed_and_handle(0, "GET /app.js HTTP/1.1\r\nHost: x\r\nAccept-Encoding: deflate, br\r\n\r\n");
     TEST_ASSERT_NULL(strstr(tcp_captured(), "Content-Encoding: gzip"));
@@ -383,8 +382,8 @@ void test_serve_static_head_and_cors_headers()
 {
     fs::mock_fs_reset();
     fs::mock_fs_add("/www/page.html", "<html>body</html>"); // 17 bytes
-    server.set_cors("*");
-    server.serve_static("/", g_fs, "/www");
+    set_cors("*");
+    serve_static("/", g_fs, "/www");
 
     feed_and_handle(0, "HEAD /page.html HTTP/1.1\r\nHost: x\r\n\r\n");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "200 OK"));
@@ -400,7 +399,7 @@ void test_serve_static_head_and_cors_headers()
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "Access-Control-Allow-Origin: *"));
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "<html>body</html>"));
 
-    server.set_cors(""); // restore the default for later tests
+    set_cors(""); // restore the default for later tests
     fs::mock_fs_reset();
 }
 
@@ -412,7 +411,7 @@ void test_serve_static_inm_non_matching_forms()
 {
     fs::mock_fs_reset();
     fs::mock_fs_add("/www/p.html", "123456789012345", (time_t)1000); // 15 bytes, mtime 1000
-    server.serve_static("/", g_fs, "/www");
+    serve_static("/", g_fs, "/www");
 
     // Pin the tag these cases are compared against: "<size hex>-<mtime hex>".
     feed_and_handle(0, "GET /p.html HTTP/1.1\r\nHost: x\r\n\r\n");
@@ -452,7 +451,7 @@ void test_file_send_pump_connection_lost_midtransfer()
     static uint8_t big[N];
     memset(big, 'Z', N);
     fs::mock_fs_add("/www/big.bin", big, N);
-    server.serve_static("/", g_fs, "/www");
+    serve_static("/", g_fs, "/www");
 
     mock_sndbuf() = 0; // no window: the headers queue, then the body transfer parks
     feed_and_handle(0, "GET /big.bin HTTP/1.1\r\nHost: x\r\n\r\n");
@@ -460,7 +459,7 @@ void test_file_send_pump_connection_lost_midtransfer()
     TEST_ASSERT_TRUE(pc_file_holds_slot(0)); // parked, waiting for the window to reopen
 
     conn_pool[0].pcb = nullptr; // peer went away mid-transfer
-    server.handle();
+    handle();
     TEST_ASSERT_FALSE(pc_file_holds_slot(0));         // continuation dropped
     TEST_ASSERT_NULL(strstr(tcp_captured(), "ZZZZ")); // no body bytes were ever written
 
@@ -476,7 +475,7 @@ void stress_serve_file_50_requests()
 {
     const char *body = "stress body";
     fs::mock_fs_set(body);
-    server.on("/f", HttpMethod::HTTP_GET, handle_html);
+    on_http("/f", HttpMethod::HTTP_GET, handle_html);
 
     for (int i = 0; i < 50; i++)
     {
@@ -492,7 +491,7 @@ void stress_serve_file_50_requests()
 
         push_str(slot, "GET /f HTTP/1.1\r\n\r\n");
         http_parse(slot);
-        server.handle();
+        handle();
 
         TEST_ASSERT_TRUE_MESSAGE(handler_called, "handler not called");
         TEST_ASSERT_NOT_NULL_MESSAGE(strstr(tcp_captured(), "200 OK"), "not 200");
@@ -502,10 +501,10 @@ void stress_serve_file_50_requests()
 
 void stress_alternate_missing_and_found()
 {
-    server.on("/f", HttpMethod::HTTP_GET, [](uint8_t slot_id, HttpReq *req) {
+    on_http("/f", HttpMethod::HTTP_GET, [](uint8_t slot_id, HttpReq *req) {
         (void)req;
         fs::FS fs;
-        server.serve_file(slot_id, fs, "/f.txt", "text/plain");
+        serve_file(slot_id, fs, "/f.txt", "text/plain");
     });
 
     for (int i = 0; i < 40; i++)
@@ -530,7 +529,7 @@ void stress_alternate_missing_and_found()
 
         push_str(slot, "GET /f HTTP/1.1\r\n\r\n");
         http_parse(slot);
-        server.handle();
+        handle();
 
         if (i % 2 == 0)
         {
@@ -566,12 +565,12 @@ void test_inm_leading_ows_still_matches()
 {
     fs::mock_fs_reset();
     fs::mock_fs_add("/www/p.html", "123456789012345", (time_t)1000); // 15 bytes, mtime 1000 -> "f-3e8"
-    server.serve_static("/", g_fs, "/www");
+    serve_static("/", g_fs, "/www");
 
     push_str(0, "GET /p.html HTTP/1.1\r\nHost: x\r\n\r\n");
     http_parse(0);
     inject_header(0, "If-None-Match", " \t\"f-3e8\""); // SP + HTAB ahead of the tag
-    server.handle();
+    handle();
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "304 Not Modified"));
     fs::mock_fs_reset();
 }
@@ -583,7 +582,7 @@ void test_inm_list_separators_reach_later_tag()
 {
     fs::mock_fs_reset();
     fs::mock_fs_add("/www/p.html", "123456789012345", (time_t)1000);
-    server.serve_static("/", g_fs, "/www");
+    serve_static("/", g_fs, "/www");
     feed_and_handle(0, "GET /p.html HTTP/1.1\r\nHost: x\r\nIf-None-Match: , \"a\" , \"f-3e8\"\r\n\r\n");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "304 Not Modified"));
     fs::mock_fs_reset();
@@ -595,8 +594,8 @@ void test_conditional_304_carries_cors_block()
 {
     fs::mock_fs_reset();
     fs::mock_fs_add("/www/p.html", "123456789012345", (time_t)1000);
-    server.set_cors("*");
-    server.serve_static("/", g_fs, "/www");
+    set_cors("*");
+    serve_static("/", g_fs, "/www");
 
     feed_and_handle(0, "GET /p.html HTTP/1.1\r\nHost: x\r\nIf-None-Match: \"f-3e8\"\r\n\r\n");
     const char *out = tcp_captured();
@@ -605,7 +604,7 @@ void test_conditional_304_carries_cors_block()
     TEST_ASSERT_NOT_NULL(strstr(out, "ETag: \"f-3e8\""));
     TEST_ASSERT_NULL(strstr(out, "123456789012345")); // no body on a 304
 
-    server.set_cors(""); // restore for later tests
+    set_cors(""); // restore for later tests
     fs::mock_fs_reset();
 }
 
@@ -625,7 +624,7 @@ void test_serve_static_overlong_prefix_registers_nothing()
     prefix[0] = '/';
     memset(prefix + 1, 'p', sizeof(prefix) - 2);
     prefix[sizeof(prefix) - 1] = '\0';
-    server.serve_static(prefix, g_fs, "/www");
+    serve_static(prefix, g_fs, "/www");
 
     // the truncated form the old code would have registered must NOT resolve
     char req[MAX_PATH_LEN + 64];
@@ -646,7 +645,7 @@ void test_serve_static_param_mount_shorter_than_pattern()
 {
     fs::mock_fs_reset();
     fs::mock_fs_add("/www/index.html", "<i>idx</i>");
-    server.serve_static("/a/:b", g_fs, "/www");                 // pattern "/a/:b*" - 5 chars before the '*'
+    serve_static("/a/:b", g_fs, "/www");                        // pattern "/a/:b*" - 5 chars before the '*'
     feed_and_handle(0, "GET /a/x HTTP/1.1\r\nHost: x\r\n\r\n"); // 4 chars: shorter than the prefix
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "200 OK"));
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "<i>idx</i>"));
@@ -659,7 +658,7 @@ void test_serve_static_trailing_slash_root_bare_prefix()
 {
     fs::mock_fs_reset();
     fs::mock_fs_add("/root/index.html", "<i>bare</i>");
-    server.serve_static("/s", g_fs, "/root/");
+    serve_static("/s", g_fs, "/root/");
     feed_and_handle(0, "GET /s HTTP/1.1\r\nHost: x\r\n\r\n"); // sub-path is empty
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "200 OK"));
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "<i>bare</i>"));
@@ -675,7 +674,7 @@ void test_serve_static_joined_path_overflow_is_404()
     memset(longroot, 'r', sizeof(longroot) - 1);
     longroot[0] = '/';
     longroot[sizeof(longroot) - 1] = '\0'; // 200-char root
-    server.serve_static("/", g_fs, longroot);
+    serve_static("/", g_fs, longroot);
 
     char req[128];
     char sub[60];

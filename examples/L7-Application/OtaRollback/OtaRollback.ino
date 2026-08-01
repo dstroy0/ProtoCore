@@ -28,7 +28,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 static bool self_test()
 {
@@ -47,12 +46,12 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    server.on("/ota-state", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
+    on_http("/ota-state", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
         char b[48];
         snprintf(b, sizeof(b), "{\"img_state\":%u}", pc_ota_img_state());
-        server.send(id, 200, "application/json", b);
+        send_text(id, 200, "application/json", b);
     });
-    server.begin(80);
+    begin_http(80);
 }
 
 void loop()
@@ -69,5 +68,5 @@ void loop()
             done = true;
         }
     }
-    server.handle();
+    handle();
 }

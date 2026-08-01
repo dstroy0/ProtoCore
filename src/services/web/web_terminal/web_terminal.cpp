@@ -27,7 +27,6 @@
 // callbacks, so they reach this single owner directly.)
 struct WebTerminalCtx
 {
-    PC *srv = nullptr;
     TermCommandCb cb = nullptr;
     char ws_path[MAX_PATH_LEN] = {0};
     bool is_client[MAX_WS_CONNS] = {}; // which ws slots are terminal browsers
@@ -39,12 +38,9 @@ static WebTerminalCtx s_term;
 static void term_page_handler(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    // This route only exists once pc_web_terminal_begin() has installed it, and that call stores a
-    // non-null server first, so the null arm is unreachable from any registered route.
-    if (s_term.srv) // GCOVR_EXCL_LINE
-    {
-        s_term.srv->send(slot_id, 200, PC_MIME_TEXT_HTML, PC_TERMINAL_PAGE);
-    }
+    // This route only exists once pc_web_terminal_begin() has installed it, so there is nothing to
+    // test: the handler running IS the proof the service started.
+    send_text(slot_id, 200, PC_MIME_TEXT_HTML, PC_TERMINAL_PAGE);
 }
 
 static void term_ws_connect(uint8_t ws_id)
@@ -56,11 +52,8 @@ static void term_ws_connect(uint8_t ws_id)
     {
         s_term.is_client[ws_id] = true;
     }
-    // As in term_page_handler: this handler is only reachable once begin() has stored the server.
-    if (s_term.srv) // GCOVR_EXCL_LINE
-    {
-        s_term.srv->ws_send_text(ws_id, "ProtoCore terminal ready\n");
-    }
+    // As in term_page_handler: this handler is only reachable once begin() registered the route.
+    ws_send_text(ws_id, "ProtoCore terminal ready\n");
 }
 
 static void term_ws_message(uint8_t ws_id)
@@ -83,9 +76,8 @@ static void term_ws_close(uint8_t ws_id)
 
 // ---- public API -----------------------------------------------------------
 
-void pc_web_terminal_begin(PC &server, const char *path)
+void pc_web_terminal_begin(const char *path)
 {
-    s_term.srv = &server;
     for (uint8_t i = 0; i < MAX_WS_CONNS; i++)
     {
         s_term.is_client[i] = false;
@@ -103,8 +95,8 @@ void pc_web_terminal_begin(PC &server, const char *path)
         s_term.ws_path[0] = '\0';
     }
 
-    server.on(path, HttpMethod::HTTP_GET, term_page_handler);
-    server.on_ws(s_term.ws_path, term_ws_connect, term_ws_message, term_ws_close);
+    on_http(path, HttpMethod::HTTP_GET, term_page_handler);
+    on_ws(s_term.ws_path, term_ws_connect, term_ws_message, term_ws_close);
 }
 
 void pc_web_terminal_on_command(TermCommandCb cb)
@@ -114,7 +106,7 @@ void pc_web_terminal_on_command(TermCommandCb cb)
 
 void pc_web_terminal_print(const char *s)
 {
-    if (!s_term.srv || !s)
+    if (!s)
     {
         return;
     }
@@ -122,7 +114,7 @@ void pc_web_terminal_print(const char *s)
     {
         if (s_term.is_client[i] && ws_active(i))
         {
-            s_term.srv->ws_send_text(i, s);
+            ws_send_text(i, s);
         }
     }
 }

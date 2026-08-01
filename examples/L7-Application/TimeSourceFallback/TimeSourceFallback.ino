@@ -29,7 +29,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 // Priority 0: NTP - valid only once SNTP has synced (else 0 -> fall through).
 static uint32_t src_ntp()
@@ -64,17 +63,17 @@ void setup()
     pc_time_source_add("ntp", 0, src_ntp); // preferred
     pc_time_source_add("rtc", 1, src_rtc); // fallback
 
-    server.on("/time", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
+    on_http("/time", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
         char body[96];
         uint32_t epoch = pc_time_now();
         const char *src = pc_time_source_active();
         snprintf(body, sizeof(body), "{\"epoch\":%u,\"source\":\"%s\"}", (unsigned)epoch, src ? src : "none");
-        server.send(id, 200, "application/json", body);
+        send_text(id, 200, "application/json", body);
     });
-    server.begin(80);
+    begin_http(80);
 }
 
 void loop()
 {
-    server.handle();
+    handle();
 }

@@ -20,7 +20,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 // GET /users/:id
 void handle_user(uint8_t slot_id, HttpReq *req)
@@ -28,7 +27,7 @@ void handle_user(uint8_t slot_id, HttpReq *req)
     const char *id = http_get_param(req, "id");
     char body[96];
     snprintf(body, sizeof(body), "{\"user_id\":\"%s\"}", id ? id : "?");
-    server.send(slot_id, 200, "application/json", body);
+    send_text(slot_id, 200, "application/json", body);
 }
 
 // GET /users/:id/posts/:slug  - two captured segments.
@@ -38,7 +37,7 @@ void handle_user_post(uint8_t slot_id, HttpReq *req)
     const char *slug = http_get_param(req, "slug");
     char body[160];
     snprintf(body, sizeof(body), "{\"user_id\":\"%s\",\"slug\":\"%s\"}", id ? id : "?", slug ? slug : "?");
-    server.send(slot_id, 200, "application/json", body);
+    send_text(slot_id, 200, "application/json", body);
 }
 
 void setup()
@@ -57,10 +56,10 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // Register the more specific route first; routes match in registration order.
-    server.on("/users/:id/posts/:slug", HttpMethod::HTTP_GET, handle_user_post);
-    server.on("/users/:id", HttpMethod::HTTP_GET, handle_user);
+    on_http("/users/:id/posts/:slug", HttpMethod::HTTP_GET, handle_user_post);
+    on_http("/users/:id", HttpMethod::HTTP_GET, handle_user);
 
-    int32_t result = server.begin(80);
+    int32_t result = begin_http(80);
     if (result < 0)
     {
         Serial.printf("begin() failed (error %d)\n", result);
@@ -71,5 +70,5 @@ void setup()
 
 void loop()
 {
-    server.handle();
+    handle();
 }

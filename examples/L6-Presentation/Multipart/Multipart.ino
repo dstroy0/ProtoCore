@@ -19,7 +19,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 static const char FORM[] = "<!doctype html><meta charset=utf-8><title>upload</title>"
                            "<form method=POST action=/upload enctype=multipart/form-data>"
@@ -31,13 +30,13 @@ void handle_upload(uint8_t id, HttpReq *req)
     Multipart mp;
     if (!pc_multipart_parse(req, &mp))
     {
-        server.send(id, 400, "text/plain", "expected multipart/form-data (and within BODY_BUF_SIZE)");
+        send_text(id, 400, "text/plain", "expected multipart/form-data (and within BODY_BUF_SIZE)");
         return;
     }
     const char *name = pc_multipart_get_field(&mp, "name");
     char out[160];
     snprintf(out, sizeof(out), "parsed %d part(s); field 'name' = %s", mp.part_count, name ? name : "(absent)");
-    server.send(id, 200, "text/plain", out);
+    send_text(id, 200, "text/plain", out);
 }
 
 void setup()
@@ -54,12 +53,12 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    server.on("/", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) { server.send(id, 200, "text/html", FORM); });
-    server.on("/upload", HttpMethod::HTTP_POST, handle_upload);
-    server.begin(80);
+    on_http("/", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) { send_text(id, 200, "text/html", FORM); });
+    on_http("/upload", HttpMethod::HTTP_POST, handle_upload);
+    begin_http(80);
 }
 
 void loop()
 {
-    server.handle();
+    handle();
 }

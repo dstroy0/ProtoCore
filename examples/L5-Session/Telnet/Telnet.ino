@@ -5,7 +5,7 @@
  * @file Telnet.ino
  * @brief Line-oriented Telnet console (RFC 854) on port 23 (PC_ENABLE_TELNET).
  *
- * Opens a Telnet listener via server.listen(23, ConnProto::PROTO_TELNET). The server
+ * Opens a Telnet listener via listen(23, ConnProto::PROTO_TELNET). The server
  * negotiates echo + character mode, edits the line for you (backspace works),
  * and delivers each completed line to the command callback; respond with
  * pc_telnet_print/println/printf.
@@ -31,7 +31,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 // Each reply's shape is a table, declared once. The library builds it by walking the table, so
 // nothing parses a format string at runtime and no line can come out half-written.
@@ -76,14 +75,14 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    server.listen(23, ConnProto::PROTO_TELNET); // open the Telnet port
+    listen(23, ConnProto::PROTO_TELNET); // open the Telnet port
     pc_telnet_on_command(on_command);
 
-    server.begin(80); // also start HTTP (begin() activates all listeners)
+    begin_http(80); // also start HTTP (begin() activates all listeners)
     Serial.println("Telnet on port 23 (try: telnet <ip>)");
 }
 
 void loop()
 {
-    server.handle();
+    handle();
 }

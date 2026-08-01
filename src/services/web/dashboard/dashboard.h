@@ -30,8 +30,6 @@
 
 #if PC_ENABLE_DASHBOARD
 
-class PC;
-
 /** @brief Widget rendering / interaction style. */
 enum class pc_widget_type : uint8_t
 {
@@ -107,7 +105,7 @@ bool pc_dashboard_dispatch_control(const char *msg);
  *
  * Calls pc_dashboard_configure(@p widgets, @p count). Default path "/dashboard".
  */
-void pc_dashboard_begin(PC &server, const char *path, const pc_widget *widgets, uint8_t count);
+void pc_dashboard_begin(const char *path, const pc_widget *widgets, uint8_t count);
 
 /** @brief Broadcast the current values to all SSE subscribers (after pc_dashboard_set()). */
 void pc_dashboard_publish();

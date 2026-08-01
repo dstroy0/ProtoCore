@@ -147,6 +147,42 @@ inline int pc_fs_resolve(const char *root, const char *dir, const char *name, ch
     return 0;
 }
 
+// --- status ---------------------------------------------------------------------------------
+//
+// Every operation here fails closed: 0, false, or -1. That is the right answer, but on its own it
+// throws away WHY, and the two reasons a caller cares about are not the same thing - "the path you
+// asked for is wrong" and "there is no storage behind this filesystem" want different handling.
+//
+// A null store is a legitimate, intentional configuration, not an error. pc_fs_begin() binds a root
+// and pc_fs_path() resolves against it with nothing mounted, so an application can hold a filesystem
+// and do local-only path work before (or without) ever attaching a store. What it must not do is
+// look identical to a fault.
+//
+// So the reason is a sticky mask, the same way pc_cspan carries a sticky ok: bits accumulate as
+// operations fail and a caller tests once, at whatever granularity suits it, instead of branching on
+// every call. Mask it for the bit you care about.
+//
+//     pc_fs_clear_status();
+//     pc_fs_write_file(root, "/a", "", buf, n);
+//     pc_fs_write_file(root, "/b", "", buf, n);
+//     if (pc_fs_status() & PC_FS_STORAGE_EXHAUSTED) { ... }   // no store, or it would not take more
+
+#define PC_FS_OK 0u
+#define PC_FS_STORAGE_EXHAUSTED (1u << 0) ///< nothing mounted, or the store could not take the write.
+#define PC_FS_BAD_ROOT (1u << 1)          ///< the root handle was never bound (see pc_fs_begin).
+#define PC_FS_TRAVERSAL (1u << 2)         ///< the request path contained `..` and was refused.
+#define PC_FS_TOO_LONG (1u << 3)          ///< the resolved path did not fit.
+
+/** @brief The accumulated reasons operations have failed since the last clear. */
+uint32_t pc_fs_status(void);
+
+/** @brief Clear the mask. Call before a sequence whose outcome you intend to test as a whole. */
+void pc_fs_clear_status(void);
+
+/** @brief True while no store is mounted - the local-only configuration, stated rather than inferred
+ *         from a call that returned false. */
+bool pc_fs_storage_present(void);
+
 /**
  * @brief Bind a root and get the handle a service works through (e.g. "mnt/scp", "mnt/sftp").
  *

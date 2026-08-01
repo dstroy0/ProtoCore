@@ -28,14 +28,13 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server; // one global; all state lives in BSS, no heap
 
 // Every handler takes the connection's slot_id and the parsed request, and
-// replies through server.send(). Pass slot_id back so the reply reaches the
+// replies through send_text(). Pass slot_id back so the reply reaches the
 // connection that asked.
 void handle_root(uint8_t slot_id, HttpReq *req)
 {
-    server.send(slot_id, 200, "text/plain", "Welcome to ProtoCore!");
+    send_text(slot_id, 200, "text/plain", "Welcome to ProtoCore!");
 }
 
 void setup()
@@ -52,11 +51,11 @@ void setup()
     Serial.printf("IP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    server.on("/", HttpMethod::HTTP_GET, handle_root);
+    on_http("/", HttpMethod::HTTP_GET, handle_root);
 
     // begin() returns 1 on success and a negative value on failure (listener
     // pool full or lwIP error). -1 is truthy, so test for "< 0", not "!result".
-    int32_t result = server.begin(80);
+    int32_t result = begin_http(80);
     if (result < 0)
     {
         Serial.printf("begin() failed (error %d)\n", result);
@@ -73,5 +72,5 @@ void loop()
     //   3. Route dispatch for completed requests
     //   4. Auto-sends 400 / 413 / 414 / 501 for parser error states
     // No request is processed off this call, so loop() must never block.
-    server.handle();
+    handle();
 }

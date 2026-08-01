@@ -41,7 +41,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 #if MEDIA_SUPPORTED
 
@@ -153,7 +152,7 @@ void handle_video(uint8_t slot, HttpReq *)
 {
     if (!g_cam)
     {
-        server.send(slot, 503, "text/plain", "camera not ready");
+        send_text(slot, 503, "text/plain", "camera not ready");
         return;
     }
     // If the previous stream was cut mid-frame (a browser navigated away), the pump stopped before the
@@ -163,7 +162,7 @@ void handle_video(uint8_t slot, HttpReq *)
         esp_camera_fb_return(g_vid.fb);
     }
     memset(&g_vid, 0, sizeof(g_vid));
-    server.send_chunked(slot, 200, "multipart/x-mixed-replace; boundary=detframe", video_source, &g_vid);
+    send_chunked(slot, 200, "multipart/x-mixed-replace; boundary=detframe", video_source, &g_vid);
 }
 
 // ---- photo: one JPEG ----
@@ -196,7 +195,7 @@ void handle_photo(uint8_t slot, HttpReq *)
 {
     if (!g_cam)
     {
-        server.send(slot, 503, "text/plain", "camera not ready");
+        send_text(slot, 503, "text/plain", "camera not ready");
         return;
     }
     if (g_photo.fb)
@@ -207,10 +206,10 @@ void handle_photo(uint8_t slot, HttpReq *)
     g_photo.off = 0;
     if (!g_photo.fb)
     {
-        server.send(slot, 500, "text/plain", "capture failed");
+        send_text(slot, 500, "text/plain", "capture failed");
         return;
     }
-    server.send_chunked(slot, 200, "image/jpeg", photo_source, &g_photo);
+    send_chunked(slot, 200, "image/jpeg", photo_source, &g_photo);
 }
 
 // ---- audio: WAV (44-byte RIFF header, little-endian) ----
@@ -262,13 +261,13 @@ void handle_audio(uint8_t slot, HttpReq *)
 {
     if (!g_mic)
     {
-        server.send(slot, 503, "text/plain", "mic not ready");
+        send_text(slot, 503, "text/plain", "mic not ready");
         return;
     }
     wav_header(g_aud.hdr, 0xFFFFFF00u); // a large data size: a never-ending streaming WAV
     g_aud.hdr_sent = false;
     g_aud.hoff = 0;
-    server.send_chunked(slot, 200, "audio/wav", audio_source, &g_aud);
+    send_chunked(slot, 200, "audio/wav", audio_source, &g_aud);
 }
 
 // a fixed 2 s WAV recording
@@ -296,7 +295,7 @@ void handle_clip(uint8_t slot, HttpReq *)
 {
     if (!g_mic || !g_clip)
     {
-        server.send(slot, 503, "text/plain", "mic not ready");
+        send_text(slot, 503, "text/plain", "mic not ready");
         return;
     }
     wav_header(g_clip, CLIP_DATA);
@@ -313,7 +312,7 @@ void handle_clip(uint8_t slot, HttpReq *)
     }
     g_cc.total = 44 + got;
     g_cc.off = 0;
-    server.send_chunked(slot, 200, "audio/wav", clip_source, &g_cc);
+    send_chunked(slot, 200, "audio/wav", clip_source, &g_cc);
 }
 
 static void media_begin()
@@ -323,10 +322,10 @@ static void media_begin()
     g_clip = (uint8_t *)heap_caps_malloc(44 + CLIP_DATA, MALLOC_CAP_SPIRAM);
     g_mic = I2S.begin(I2S_MODE_PDM_RX, AUDIO_RATE, I2S_DATA_BIT_WIDTH_16BIT, I2S_SLOT_MODE_MONO) && g_clip;
     Serial.printf("camera %s, mic %s\n", g_cam ? "OK" : "FAILED", g_mic ? "OK" : "FAILED");
-    server.on("/video", HttpMethod::HTTP_GET, handle_video);
-    server.on("/photo.jpg", HttpMethod::HTTP_GET, handle_photo);
-    server.on("/audio.wav", HttpMethod::HTTP_GET, handle_audio);
-    server.on("/clip.wav", HttpMethod::HTTP_GET, handle_clip);
+    on_http("/video", HttpMethod::HTTP_GET, handle_video);
+    on_http("/photo.jpg", HttpMethod::HTTP_GET, handle_photo);
+    on_http("/audio.wav", HttpMethod::HTTP_GET, handle_audio);
+    on_http("/clip.wav", HttpMethod::HTTP_GET, handle_clip);
 }
 
 #endif // MEDIA_SUPPORTED
@@ -334,13 +333,13 @@ static void media_begin()
 void handle_root(uint8_t slot, HttpReq *)
 {
 #if MEDIA_SUPPORTED
-    server.send(slot, 200, "text/html",
+    send_text(slot, 200, "text/html",
                 "<html><body style=\"font-family:sans-serif\"><h3>XIAO ESP32-S3 Sense</h3>"
                 "<img src=\"/video\" style=\"max-width:100%\"><br>"
                 "<audio controls src=\"/audio.wav\"></audio><br>"
                 "<a href=\"/photo.jpg\">photo</a> &middot; <a href=\"/clip.wav\">2s clip</a></body></html>");
 #else
-    server.send(slot, 200, "text/plain",
+    send_text(slot, 200, "text/plain",
                 "This example streams camera + mic and needs a XIAO ESP32-S3 Sense "
                 "(ESP32-S3 + arduino-esp32 3.x). Build it for that board to see /video and /audio.wav.");
 #endif
@@ -369,14 +368,14 @@ void setup()
     uint32_t ip = pc_net_egress_ip();
     Serial.printf("\nOpen http://%u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
-    server.on("/", HttpMethod::HTTP_GET, handle_root);
+    on_http("/", HttpMethod::HTTP_GET, handle_root);
 #if MEDIA_SUPPORTED
     media_begin();
 #endif
-    server.begin(80);
+    begin_http(80);
 }
 
 void loop()
 {
-    server.handle();
+    handle();
 }

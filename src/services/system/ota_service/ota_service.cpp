@@ -24,7 +24,6 @@
 // this single-task device). Grouped so it is one named owner, unreachable cross-TU.
 struct OtaCtx
 {
-    PC *server = nullptr;
     const char *path = nullptr;
     char user[MAX_AUTH_LEN] = {0};
     char pass[MAX_AUTH_LEN] = {0};
@@ -111,12 +110,12 @@ static void ota_handle(uint8_t slot_id, HttpReq *req)
 {
     if (!req->body_streaming)
     {
-        s_ota.server->send(slot_id, 400, PC_MIME_TEXT_PLAIN, "POST a raw firmware image");
+        send_text(slot_id, 400, PC_MIME_TEXT_PLAIN, "POST a raw firmware image");
         return;
     }
     if (!s_ota.authed)
     {
-        s_ota.server->send(slot_id, 401, PC_MIME_TEXT_PLAIN, "Unauthorized");
+        send_text(slot_id, 401, PC_MIME_TEXT_PLAIN, "Unauthorized");
         return;
     }
     bool ok = s_ota.active && !s_ota.error && Update.end(true);
@@ -126,17 +125,16 @@ static void ota_handle(uint8_t slot_id, HttpReq *req)
         {
             Update.abort();
         }
-        s_ota.server->send(slot_id, 400, PC_MIME_TEXT_PLAIN, "Update failed");
+        send_text(slot_id, 400, PC_MIME_TEXT_PLAIN, "Update failed");
         return;
     }
-    s_ota.server->send(slot_id, 200, PC_MIME_TEXT_PLAIN, "OK - rebooting");
+    send_text(slot_id, 200, PC_MIME_TEXT_PLAIN, "OK - rebooting");
     pcdelay(150); // let the response flush before the reboot
     ESP.restart();
 }
 
-void pc_ota_begin(PC &server, const char *path, const char *user, const char *pass)
+void pc_ota_begin(const char *path, const char *user, const char *pass)
 {
-    s_ota.server = &server;
     s_ota.path = path;
     strncpy(s_ota.user, user ? user : "", sizeof(s_ota.user) - 1);
     s_ota.user[sizeof(s_ota.user) - 1] = '\0';
@@ -144,14 +142,13 @@ void pc_ota_begin(PC &server, const char *path, const char *user, const char *pa
     s_ota.pass[sizeof(s_ota.pass) - 1] = '\0';
 
     http_parser_set_stream_hooks(ota_stream_begin, ota_stream_data);
-    server.on(path, HttpMethod::HTTP_POST, ota_handle);
+    on_http(path, HttpMethod::HTTP_POST, ota_handle);
 }
 
 #else
 
-void pc_ota_begin(PC &server, const char *path, const char *user, const char *pass)
+void pc_ota_begin(const char *path, const char *user, const char *pass)
 {
-    (void)server;
     (void)path;
     (void)user;
     (void)pass;

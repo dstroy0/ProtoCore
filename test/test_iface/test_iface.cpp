@@ -10,7 +10,6 @@
 #include <string.h>
 #include <unity.h>
 
-static PC server;
 static bool g_called;
 
 static void push_str(uint8_t slot, const char *s)
@@ -28,7 +27,7 @@ static void h_ok(uint8_t slot, HttpReq *req)
 {
     (void)req;
     g_called = true;
-    server.send(slot, 200, "text/plain", "ok");
+    send_text(slot, 200, "text/plain", "ok");
 }
 
 static bool g_ap_hit;
@@ -37,18 +36,18 @@ static void h_ap(uint8_t slot, HttpReq *req)
 {
     (void)req;
     g_ap_hit = true;
-    server.send(slot, 200, "text/plain", "ap");
+    send_text(slot, 200, "text/plain", "ap");
 }
 static void h_sta(uint8_t slot, HttpReq *req)
 {
     (void)req;
     g_sta_hit = true;
-    server.send(slot, 200, "text/plain", "sta");
+    send_text(slot, 200, "text/plain", "sta");
 }
 
 void setUp()
 {
-    server = PC();
+    pc_server_reset();
     for (int i = 0; i < MAX_CONNS; i++)
     {
         conn_pool[i] = {};
@@ -83,7 +82,7 @@ static const char *do_req(pc_iface iface, const char *req_str)
     tcp_capture_reset();
     push_str(0, req_str);
     http_parse(0);
-    server.handle();
+    handle();
     return tcp_captured();
 }
 
@@ -93,7 +92,7 @@ static const char *do_req(pc_iface iface, const char *req_str)
 
 void test_ap_only_matches_on_ap()
 {
-    server.on("/cfg", HttpMethod::HTTP_GET, h_ok, pc_iface::PC_IFACE_AP);
+    on_http("/cfg", HttpMethod::HTTP_GET, h_ok, pc_iface::PC_IFACE_AP);
     const char *r = do_req(pc_iface::PC_IFACE_AP, "GET /cfg HTTP/1.1\r\n\r\n");
     TEST_ASSERT_TRUE(g_called);
     TEST_ASSERT_NOT_NULL(strstr(r, "200 OK"));
@@ -101,7 +100,7 @@ void test_ap_only_matches_on_ap()
 
 void test_ap_only_hidden_on_sta()
 {
-    server.on("/cfg", HttpMethod::HTTP_GET, h_ok, pc_iface::PC_IFACE_AP);
+    on_http("/cfg", HttpMethod::HTTP_GET, h_ok, pc_iface::PC_IFACE_AP);
     const char *r = do_req(pc_iface::PC_IFACE_STA, "GET /cfg HTTP/1.1\r\n\r\n");
     TEST_ASSERT_FALSE(g_called); // route invisible on STA
     TEST_ASSERT_NOT_NULL(strstr(r, "404 Not Found"));
@@ -109,7 +108,7 @@ void test_ap_only_hidden_on_sta()
 
 void test_sta_only_matches_on_sta()
 {
-    server.on("/api", HttpMethod::HTTP_GET, h_ok, pc_iface::PC_IFACE_STA);
+    on_http("/api", HttpMethod::HTTP_GET, h_ok, pc_iface::PC_IFACE_STA);
     const char *r = do_req(pc_iface::PC_IFACE_STA, "GET /api HTTP/1.1\r\n\r\n");
     TEST_ASSERT_TRUE(g_called);
     TEST_ASSERT_NOT_NULL(strstr(r, "200 OK"));
@@ -117,7 +116,7 @@ void test_sta_only_matches_on_sta()
 
 void test_sta_only_hidden_on_ap()
 {
-    server.on("/api", HttpMethod::HTTP_GET, h_ok, pc_iface::PC_IFACE_STA);
+    on_http("/api", HttpMethod::HTTP_GET, h_ok, pc_iface::PC_IFACE_STA);
     const char *r = do_req(pc_iface::PC_IFACE_AP, "GET /api HTTP/1.1\r\n\r\n");
     TEST_ASSERT_FALSE(g_called);
     TEST_ASSERT_NOT_NULL(strstr(r, "404 Not Found"));
@@ -125,7 +124,7 @@ void test_sta_only_hidden_on_ap()
 
 void test_unfiltered_route_matches_any_interface()
 {
-    server.on("/x", HttpMethod::HTTP_GET, h_ok); // pc_iface::PC_IFACE_ANY
+    on_http("/x", HttpMethod::HTTP_GET, h_ok); // pc_iface::PC_IFACE_ANY
     const char *r1 = do_req(pc_iface::PC_IFACE_AP, "GET /x HTTP/1.1\r\n\r\n");
     TEST_ASSERT_TRUE(g_called);
     TEST_ASSERT_NOT_NULL(strstr(r1, "200 OK"));
@@ -140,8 +139,8 @@ void test_same_path_two_interfaces_picks_correct()
 {
     // Same path bound to different interfaces; the request's interface decides.
     g_ap_hit = g_sta_hit = false;
-    server.on("/p", HttpMethod::HTTP_GET, h_ap, pc_iface::PC_IFACE_AP);
-    server.on("/p", HttpMethod::HTTP_GET, h_sta, pc_iface::PC_IFACE_STA);
+    on_http("/p", HttpMethod::HTTP_GET, h_ap, pc_iface::PC_IFACE_AP);
+    on_http("/p", HttpMethod::HTTP_GET, h_sta, pc_iface::PC_IFACE_STA);
 
     const char *r = do_req(pc_iface::PC_IFACE_STA, "GET /p HTTP/1.1\r\n\r\n");
     TEST_ASSERT_TRUE(g_sta_hit);
@@ -151,9 +150,9 @@ void test_same_path_two_interfaces_picks_correct()
 
 void test_set_ap_ip_updates_global()
 {
-    server.set_ap_ip(0x0104A8C0u); // 192.168.4.1 in network byte order
+    set_ap_ip(0x0104A8C0u); // 192.168.4.1 in network byte order
     TEST_ASSERT_EQUAL_UINT32(0x0104A8C0u, pc_ap_ip);
-    server.set_ap_ip(0);
+    set_ap_ip(0);
     TEST_ASSERT_EQUAL_UINT32(0u, pc_ap_ip);
 }
 

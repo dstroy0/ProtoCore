@@ -9,8 +9,6 @@
 #include <string.h>
 #include <unity.h>
 
-static PC server;
-
 // Cross-test observation state (middlewares are plain function pointers, so they
 // communicate through file-static globals + the global server, just like the
 // application handlers do). setUp() resets all of it.
@@ -57,7 +55,7 @@ static const char *do_req(uint8_t slot, const char *req_str)
     arm_slot(slot);
     push_str(slot, req_str);
     http_parse(slot);
-    server.handle();
+    handle();
     return tcp_captured();
 }
 
@@ -67,7 +65,7 @@ static void h_ok(uint8_t slot, HttpReq *req)
 {
     (void)req;
     g_handler_called = true;
-    server.send(slot, 200, "text/plain", "OK");
+    send_text(slot, 200, "text/plain", "OK");
 }
 
 // ---- Middlewares -----------------------------------------------------------
@@ -83,14 +81,14 @@ static MwResult mw_pass(uint8_t slot, HttpReq *req)
 static MwResult mw_inject_header(uint8_t slot, HttpReq *req)
 {
     (void)req;
-    server.add_response_header(slot, "X-MW", "1");
+    add_response_header(slot, "X-MW", "1");
     return MwResult::MW_NEXT;
 }
 
 static MwResult mw_block(uint8_t slot, HttpReq *req)
 {
     (void)req;
-    server.send(slot, 403, "text/plain", "Forbidden");
+    send_text(slot, 403, "text/plain", "Forbidden");
     return MwResult::MW_HALT; // short-circuit: handler must not run
 }
 
@@ -111,7 +109,7 @@ static MwResult mw_order_b(uint8_t slot, HttpReq *req)
 
 void setUp()
 {
-    server = PC();
+    pc_server_reset();
     for (int i = 0; i < MAX_CONNS; i++)
     {
         conn_pool[i] = {};
@@ -143,8 +141,8 @@ void tearDown()
 
 void test_middleware_runs_then_handler()
 {
-    server.use(mw_pass);
-    server.on("/t", HttpMethod::HTTP_GET, h_ok);
+    use(mw_pass);
+    on_http("/t", HttpMethod::HTTP_GET, h_ok);
     const char *r = do_req(0, "GET /t HTTP/1.1\r\n\r\n");
     TEST_ASSERT_EQUAL_INT(1, g_log_count); // middleware saw the request
     TEST_ASSERT_TRUE(g_handler_called);    // and fell through to the handler
@@ -154,7 +152,7 @@ void test_middleware_runs_then_handler()
 void test_middleware_runs_for_unmatched_route()
 {
     // No route registered -> 404, but the middleware still observes the request.
-    server.use(mw_pass);
+    use(mw_pass);
     const char *r = do_req(0, "GET /missing HTTP/1.1\r\n\r\n");
     TEST_ASSERT_EQUAL_INT(1, g_log_count);
     TEST_ASSERT_FALSE(g_handler_called);
@@ -163,8 +161,8 @@ void test_middleware_runs_for_unmatched_route()
 
 void test_middleware_can_inject_response_header()
 {
-    server.use(mw_inject_header);
-    server.on("/t", HttpMethod::HTTP_GET, h_ok);
+    use(mw_inject_header);
+    on_http("/t", HttpMethod::HTTP_GET, h_ok);
     const char *r = do_req(0, "GET /t HTTP/1.1\r\n\r\n");
     TEST_ASSERT_NOT_NULL(strstr(r, "X-MW: 1\r\n"));
     TEST_ASSERT_NOT_NULL(strstr(r, "200 OK"));
@@ -172,8 +170,8 @@ void test_middleware_can_inject_response_header()
 
 void test_middleware_halt_short_circuits_handler()
 {
-    server.use(mw_block);
-    server.on("/t", HttpMethod::HTTP_GET, h_ok);
+    use(mw_block);
+    on_http("/t", HttpMethod::HTTP_GET, h_ok);
     const char *r = do_req(0, "GET /t HTTP/1.1\r\n\r\n");
     TEST_ASSERT_NOT_NULL(strstr(r, "403 Forbidden"));
     TEST_ASSERT_FALSE(g_handler_called); // handler never reached
@@ -181,9 +179,9 @@ void test_middleware_halt_short_circuits_handler()
 
 void test_middleware_runs_in_registration_order()
 {
-    server.use(mw_order_a);
-    server.use(mw_order_b);
-    server.on("/t", HttpMethod::HTTP_GET, h_ok);
+    use(mw_order_a);
+    use(mw_order_b);
+    on_http("/t", HttpMethod::HTTP_GET, h_ok);
     do_req(0, "GET /t HTTP/1.1\r\n\r\n");
     TEST_ASSERT_EQUAL_STRING("AB", g_order);
 }
@@ -193,9 +191,9 @@ void test_use_respects_capacity_cap()
     // Register more than MAX_MIDDLEWARE; extras are dropped, none crash.
     for (int i = 0; i < MAX_MIDDLEWARE + 3; i++)
     {
-        server.use(mw_pass);
+        use(mw_pass);
     }
-    server.on("/t", HttpMethod::HTTP_GET, h_ok);
+    on_http("/t", HttpMethod::HTTP_GET, h_ok);
     do_req(0, "GET /t HTTP/1.1\r\n\r\n");
     TEST_ASSERT_EQUAL_INT(MAX_MIDDLEWARE, g_log_count); // capped, not 7
     TEST_ASSERT_TRUE(g_handler_called);
@@ -203,8 +201,8 @@ void test_use_respects_capacity_cap()
 
 void test_rate_limit_allows_then_rejects()
 {
-    server.enable_rate_limit(2, 1000);
-    server.on("/t", HttpMethod::HTTP_GET, h_ok);
+    enable_rate_limit(2, 1000);
+    on_http("/t", HttpMethod::HTTP_GET, h_ok);
 
     const char *r1 = do_req(0, "GET /t HTTP/1.1\r\n\r\n");
     TEST_ASSERT_NOT_NULL(strstr(r1, "200 OK"));
@@ -219,8 +217,8 @@ void test_rate_limit_allows_then_rejects()
 
 void test_rate_limit_window_resets()
 {
-    server.enable_rate_limit(2, 1000);
-    server.on("/t", HttpMethod::HTTP_GET, h_ok);
+    enable_rate_limit(2, 1000);
+    on_http("/t", HttpMethod::HTTP_GET, h_ok);
 
     do_req(0, "GET /t HTTP/1.1\r\n\r\n"); // 1
     do_req(0, "GET /t HTTP/1.1\r\n\r\n"); // 2
@@ -235,7 +233,7 @@ void test_rate_limit_window_resets()
 
 void test_rate_limit_disabled_by_default()
 {
-    server.on("/t", HttpMethod::HTTP_GET, h_ok);
+    on_http("/t", HttpMethod::HTTP_GET, h_ok);
     for (int i = 0; i < 5; i++)
     {
         const char *r = do_req(0, "GET /t HTTP/1.1\r\n\r\n");
@@ -247,9 +245,9 @@ void test_rate_limit_disabled_by_default()
 // OR, which test_use_respects_capacity_cap already covers).
 void test_use_rejects_null_middleware()
 {
-    server.use(nullptr);
-    server.use(mw_pass);
-    server.on("/t", HttpMethod::HTTP_GET, h_ok);
+    use(nullptr);
+    use(mw_pass);
+    on_http("/t", HttpMethod::HTTP_GET, h_ok);
     do_req(0, "GET /t HTTP/1.1\r\n\r\n");
     TEST_ASSERT_EQUAL_INT(1, g_log_count); // only mw_pass ran; the null entry was dropped
     TEST_ASSERT_TRUE(g_handler_called);
@@ -259,8 +257,8 @@ void test_use_rejects_null_middleware()
 // the guard, distinct from the max_requests == 0 (never-enabled) half every other test hits.
 void test_rate_limit_zero_window_disables()
 {
-    server.enable_rate_limit(1, 0);
-    server.on("/t", HttpMethod::HTTP_GET, h_ok);
+    enable_rate_limit(1, 0);
+    on_http("/t", HttpMethod::HTTP_GET, h_ok);
     for (int i = 0; i < 5; i++)
     {
         const char *r = do_req(0, "GET /t HTTP/1.1\r\n\r\n");

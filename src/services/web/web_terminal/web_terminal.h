@@ -21,13 +21,13 @@
  *     pc_web_terminal_frame(SAID, line);
  *   }
  *   void setup() {
- *     // ... wifi + server.on(...) ...
+ *     // ... wifi + on_http(...) ...
  *     pc_web_terminal_begin(server, "/terminal");
  *     pc_web_terminal_on_command(on_cmd);
- *     server.begin(80);
+ *     begin(80);
  *   }
  *   void loop() {
- *     server.handle();
+ *     handle();
  *     pc_web_terminal_frame(UPTIME, (uint32_t)millis()); // device -> browsers
  *   }
  * @endcode
@@ -54,12 +54,12 @@ typedef void (*TermCommandCb)(const char *line, uint8_t client_id);
  * @brief Register the terminal page + WebSocket endpoint on @p server.
  *
  * Serves the HTML page at @p path (GET) and accepts the terminal WebSocket at
- * `<path>/ws`. Call before server.begin().
+ * `<path>/ws`. Call before begin().
  *
  * @param server The web server to attach to (must outlive the terminal).
  * @param path   URL path for the page (default "/terminal").
  */
-void pc_web_terminal_begin(PC &server, const char *path = "/terminal");
+void pc_web_terminal_begin(const char *path = "/terminal");
 
 /** @brief Install the command callback (browser -> device). Pass nullptr to clear. */
 void pc_web_terminal_on_command(TermCommandCb cb);
@@ -84,7 +84,7 @@ uint8_t pc_web_terminal_client_count();
 #else // PC_ENABLE_WEB_TERMINAL == 0  -> no-op stubs
 
 typedef void (*TermCommandCb)(const char *line, uint8_t client_id);
-static inline void pc_web_terminal_begin(PC &, const char * = "/terminal")
+static inline void pc_web_terminal_begin(const char * = "/terminal")
 {
 }
 static inline void pc_web_terminal_on_command(TermCommandCb)

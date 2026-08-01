@@ -25,24 +25,23 @@ static const char *PASSWORD = "YOUR_PASSWORD";
 static const char *AP_SSID = "PC-Setup";
 static const char *AP_PASS = "configme123";
 
-PC server;
 
 void handle_setup(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    server.send(slot_id, 200, "text/html", "<h1>Setup</h1><p>softAP only</p>");
+    send_text(slot_id, 200, "text/html", "<h1>Setup</h1><p>softAP only</p>");
 }
 
 void handle_api(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    server.send(slot_id, 200, "application/json", "{\"data\":42,\"iface\":\"sta\"}");
+    send_text(slot_id, 200, "application/json", "{\"data\":42,\"iface\":\"sta\"}");
 }
 
 void handle_root(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    server.send(slot_id, 200, "text/plain", "available on both interfaces");
+    send_text(slot_id, 200, "text/plain", "available on both interfaces");
 }
 
 void setup()
@@ -66,13 +65,13 @@ void setup()
                   (unsigned)((ap_ip >> 16) & 0xFF), (unsigned)((ap_ip >> 24) & 0xFF));
 
     // Required for STA/AP classification.
-    server.set_ap_ip(ap_ip);
+    set_ap_ip(ap_ip);
 
-    server.on("/setup", HttpMethod::HTTP_GET, handle_setup, pc_iface::PC_IFACE_AP);   // softAP only
-    server.on("/api/data", HttpMethod::HTTP_GET, handle_api, pc_iface::PC_IFACE_STA); // station only
-    server.on("/", HttpMethod::HTTP_GET, handle_root);                                // any interface
+    on_http("/setup", HttpMethod::HTTP_GET, handle_setup, pc_iface::PC_IFACE_AP);   // softAP only
+    on_http("/api/data", HttpMethod::HTTP_GET, handle_api, pc_iface::PC_IFACE_STA); // station only
+    on_http("/", HttpMethod::HTTP_GET, handle_root);                                // any interface
 
-    int32_t result = server.begin(80);
+    int32_t result = begin_http(80);
     if (result < 0)
     {
         Serial.printf("begin() failed (error %d)\n", result);
@@ -83,5 +82,5 @@ void setup()
 
 void loop()
 {
-    server.handle();
+    handle();
 }

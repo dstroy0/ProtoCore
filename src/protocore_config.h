@@ -876,6 +876,19 @@
 #endif
 
 /** @brief Maximum number of `:name` path parameters captured per route match. */
+/**
+ * @brief Bytes one request holds for its `:name` path captures, keys and values together.
+ *
+ * A capture cannot point into the request path the way a query pair points into the query string
+ * (see HttpReq::path_param_bytes), so its bytes are copied once into this pool and the table points
+ * at them. One bound covers every capture in the request instead of a separate cap per key and per
+ * value, so a long value is not truncated just because it shares a request with three short ones -
+ * a capture that does not fit is dropped whole.
+ */
+#ifndef PC_PATH_PARAM_BYTES
+#define PC_PATH_PARAM_BYTES 128
+#endif
+
 #ifndef MAX_PATH_PARAMS
 #define MAX_PATH_PARAMS 4
 #endif
@@ -1202,36 +1215,21 @@
 // compile time instead of producing a cryptic linker error. Enable a child
 // only together with its parent(s).
 //
-// Hard dependencies (child requires parent):
+// Hard dependencies (child needs parent) are DECLARED, not described here. Each one is a symbol:
 //
-//   FILE_SERVING
-//     |-- WEBDAV
-//     `-- RANGE
-//   TLS
-//     |-- MTLS
-//     |-- TLS_RESUMPTION
-//     |-- HTTP_CLIENT_TLS   (also requires HTTP_CLIENT)
-//     |-- MQTT_TLS          (also requires MQTT)
-//     `-- WS_CLIENT_TLS     (also requires WS_CLIENT)
-//   WEBSOCKET
-//     |-- WS_DEFLATE
-//     `-- WEB_TERMINAL
-//   SSE
-//     `-- DASHBOARD
-//   STATS
-//     `-- METRICS
-//   AUTH
-//     `-- AUTH_LOCKOUT
-//   SNMP
-//     |-- SnmpVersion::SNMP_V3
-//     `-- SNMP_TRAP
-//   COAP
-//     |-- COAP_OBSERVE
-//     `-- COAP_BLOCK
-//   OPCUA
-//     `-- OPCUA_CLIENT
-//   CONFIG_STORE
-//     `-- CONFIG_IO
+//   #define PC_ENABLE_WEBDAV_NEEDS_FILE_SERVING PC_ENABLE_FILE_SERVING
+//   #if PC_ENABLE_WEBDAV && !PC_ENABLE_WEBDAV_NEEDS_FILE_SERVING
+//   #error "ProtoCore: PC_ENABLE_WEBDAV needs PC_ENABLE_FILE_SERVING"
+//   #endif
+//
+// so the whole graph is `grep -oE '_NEEDS_[A-Z_0-9]+' protocore_config.h` and both sides come out
+// of the name. The guard tests the symbol rather than restating the condition, so what is enforced
+// and what is declared are the same text.
+//
+// This list used to be drawn here by hand, and it drifted: it named 18 relationships while the
+// guards enforced 33 - CIA402, EDGE_CACHE, FORWARDED_TRUST, SSH_SFTP, SSH_SCP, SNMP_V3 and ten
+// others were enforced but undocumented. A dependency stated in three places is a dependency two
+// of whose statements are unverified.
 //
 // Optional integrations (these build fine on their own; the named feature is
 // simply inert or reduced until you also enable the other flag):
@@ -1251,7 +1249,7 @@
 
 /** @brief WebSocket support (RFC 6455 framing + SHA-1/base64 handshake). */
 #ifndef PC_ENABLE_WEBSOCKET
-#define PC_ENABLE_WEBSOCKET 1
+#define PC_ENABLE_WEBSOCKET 0
 #endif
 
 /**
@@ -1289,12 +1287,12 @@
 
 /** @brief Server-Sent Events push support. */
 #ifndef PC_ENABLE_SSE
-#define PC_ENABLE_SSE 1
+#define PC_ENABLE_SSE 0
 #endif
 
 /** @brief multipart/form-data body parser. */
 #ifndef PC_ENABLE_MULTIPART
-#define PC_ENABLE_MULTIPART 1
+#define PC_ENABLE_MULTIPART 0
 #endif
 
 /**
@@ -1325,7 +1323,7 @@
 
 /** @brief Static file serving via Arduino FS (LittleFS, SPIFFS, SD). */
 #ifndef PC_ENABLE_FILE_SERVING
-#define PC_ENABLE_FILE_SERVING 1
+#define PC_ENABLE_FILE_SERVING 0
 #endif
 
 /**
@@ -1392,7 +1390,7 @@
 
 /** @brief HTTP Basic Authentication per-route. */
 #ifndef PC_ENABLE_AUTH
-#define PC_ENABLE_AUTH 1
+#define PC_ENABLE_AUTH 0
 #endif
 
 /** @brief Telnet server support (RFC 854 / IAC option negotiation). */
@@ -3947,8 +3945,9 @@
 #define PC_FTP_TIMEOUT_MS 8000
 #endif
 
-#if PC_ENABLE_FTP_SESSION && !PC_ENABLE_FTP
-#error "ProtoCore: PC_ENABLE_FTP_SESSION requires PC_ENABLE_FTP (it drives that codec)"
+#define PC_ENABLE_FTP_SESSION_NEEDS_FTP PC_ENABLE_FTP
+#if PC_ENABLE_FTP_SESSION && !PC_ENABLE_FTP_SESSION_NEEDS_FTP
+#error "ProtoCore: PC_ENABLE_FTP_SESSION needs PC_ENABLE_FTP"
 #endif
 
 #if PC_ENABLE_FTP_SESSION && (PC_FTP_REPLY_BUF < 128)
@@ -3988,11 +3987,13 @@
 #ifndef PC_ENABLE_EDGE_CACHE
 #define PC_ENABLE_EDGE_CACHE 0
 #endif
-#if PC_ENABLE_EDGE_CACHE && !PC_ENABLE_HTTP_CACHE
-#error "PC_ENABLE_EDGE_CACHE requires PC_ENABLE_HTTP_CACHE"
+#define PC_ENABLE_EDGE_CACHE_NEEDS_HTTP_CACHE PC_ENABLE_HTTP_CACHE
+#if PC_ENABLE_EDGE_CACHE && !PC_ENABLE_EDGE_CACHE_NEEDS_HTTP_CACHE
+#error "ProtoCore: PC_ENABLE_EDGE_CACHE needs PC_ENABLE_HTTP_CACHE"
 #endif
-#if PC_ENABLE_EDGE_CACHE && !PC_ENABLE_HTTP_CLIENT
-#error "PC_ENABLE_EDGE_CACHE requires PC_ENABLE_HTTP_CLIENT (it fetches the upstream origin)"
+#define PC_ENABLE_EDGE_CACHE_NEEDS_HTTP_CLIENT PC_ENABLE_HTTP_CLIENT
+#if PC_ENABLE_EDGE_CACHE && !PC_ENABLE_EDGE_CACHE_NEEDS_HTTP_CLIENT
+#error "ProtoCore: PC_ENABLE_EDGE_CACHE needs PC_ENABLE_HTTP_CLIENT"
 #endif
 // Opt-in TLS upstream origins: when set, a mapped `https://` origin is fetched over the shared client-TLS
 // session (pc_tls_csess) instead of being rejected. One outbound TLS origin fetch at a time (the session is
@@ -4001,11 +4002,13 @@
 #ifndef PC_ENABLE_EDGE_ORIGIN_TLS
 #define PC_ENABLE_EDGE_ORIGIN_TLS 0
 #endif
-#if PC_ENABLE_EDGE_ORIGIN_TLS && !PC_ENABLE_EDGE_CACHE
-#error "PC_ENABLE_EDGE_ORIGIN_TLS requires PC_ENABLE_EDGE_CACHE"
+#define PC_ENABLE_EDGE_ORIGIN_TLS_NEEDS_EDGE_CACHE PC_ENABLE_EDGE_CACHE
+#if PC_ENABLE_EDGE_ORIGIN_TLS && !PC_ENABLE_EDGE_ORIGIN_TLS_NEEDS_EDGE_CACHE
+#error "ProtoCore: PC_ENABLE_EDGE_ORIGIN_TLS needs PC_ENABLE_EDGE_CACHE"
 #endif
-#if PC_ENABLE_EDGE_ORIGIN_TLS && !PC_ENABLE_TLS
-#error "PC_ENABLE_EDGE_ORIGIN_TLS requires PC_ENABLE_TLS (the client-TLS engine)"
+#define PC_ENABLE_EDGE_ORIGIN_TLS_NEEDS_TLS PC_ENABLE_TLS
+#if PC_ENABLE_EDGE_ORIGIN_TLS && !PC_ENABLE_EDGE_ORIGIN_TLS_NEEDS_TLS
+#error "ProtoCore: PC_ENABLE_EDGE_ORIGIN_TLS needs PC_ENABLE_TLS"
 #endif
 /* Derived sizing for the edge cache. Macros, not constexpr: PC_EDGE_FETCH_BUF's default is
  * computed from PC_EDGE_MESH_RESP_MAX below and the requirement is enforced with an #error,
@@ -4104,8 +4107,9 @@
 #ifndef PC_ENABLE_EDGE_MESH
 #define PC_ENABLE_EDGE_MESH 0
 #endif
-#if PC_ENABLE_EDGE_MESH && !PC_ENABLE_EDGE_CACHE
-#error "PC_ENABLE_EDGE_MESH requires PC_ENABLE_EDGE_CACHE"
+#define PC_ENABLE_EDGE_MESH_NEEDS_EDGE_CACHE PC_ENABLE_EDGE_CACHE
+#if PC_ENABLE_EDGE_MESH && !PC_ENABLE_EDGE_MESH_NEEDS_EDGE_CACHE
+#error "ProtoCore: PC_ENABLE_EDGE_MESH needs PC_ENABLE_EDGE_CACHE"
 #endif
 // PC_MESH_MAX_PEERS and PC_MESH_MAX_CONNS come from board_drivers/board_profiles/ (classic floor, raised
 // per chip/PSRAM).
@@ -5211,8 +5215,9 @@
 #define PC_ENABLE_SMTP_TLS 0
 #endif
 
-#if PC_ENABLE_SMTP_TLS && !PC_ENABLE_SMTP
-#error "ProtoCore: PC_ENABLE_SMTP_TLS requires PC_ENABLE_SMTP"
+#define PC_ENABLE_SMTP_TLS_NEEDS_SMTP PC_ENABLE_SMTP
+#if PC_ENABLE_SMTP_TLS && !PC_ENABLE_SMTP_TLS_NEEDS_SMTP
+#error "ProtoCore: PC_ENABLE_SMTP_TLS needs PC_ENABLE_SMTP"
 #endif
 
 /** @brief Max length of one SMTP command / address line (bytes, incl. CRLF). */
@@ -5513,7 +5518,7 @@
  * PC_KEEPALIVE_MAX_REQUESTS requests before a deliberate close.
  */
 #ifndef PC_ENABLE_KEEPALIVE
-#define PC_ENABLE_KEEPALIVE 1
+#define PC_ENABLE_KEEPALIVE 0
 #endif
 
 /**
@@ -6741,36 +6746,44 @@ enum class pc_iface : uint8_t
 // which is the HAL and points them at whatever is mounted. None of them needs the mount SERVICE:
 // they need the seam, and the seam fails closed when nothing is behind it. Requiring PC_ENABLE_MNT
 // would drag the RAM backend's pool into every build that moves a file, to satisfy a type.
-#if PC_ENABLE_MTLS && !PC_ENABLE_TLS
-#error "ProtoCore: PC_ENABLE_MTLS requires PC_ENABLE_TLS"
+#define PC_ENABLE_MTLS_NEEDS_TLS PC_ENABLE_TLS
+#if PC_ENABLE_MTLS && !PC_ENABLE_MTLS_NEEDS_TLS
+#error "ProtoCore: PC_ENABLE_MTLS needs PC_ENABLE_TLS"
 #endif
 
-#if PC_ENABLE_TLS_RESUMPTION && !PC_ENABLE_TLS
-#error "ProtoCore: PC_ENABLE_TLS_RESUMPTION requires PC_ENABLE_TLS"
+#define PC_ENABLE_TLS_RESUMPTION_NEEDS_TLS PC_ENABLE_TLS
+#if PC_ENABLE_TLS_RESUMPTION && !PC_ENABLE_TLS_RESUMPTION_NEEDS_TLS
+#error "ProtoCore: PC_ENABLE_TLS_RESUMPTION needs PC_ENABLE_TLS"
 #endif
 
-#if PC_ENABLE_METRICS && !PC_ENABLE_STATS
-#error "ProtoCore: PC_ENABLE_METRICS requires PC_ENABLE_STATS"
+#define PC_ENABLE_METRICS_NEEDS_STATS PC_ENABLE_STATS
+#if PC_ENABLE_METRICS && !PC_ENABLE_METRICS_NEEDS_STATS
+#error "ProtoCore: PC_ENABLE_METRICS needs PC_ENABLE_STATS"
 #endif
 
-#if PC_ENABLE_HTTP_CLIENT_TLS && !PC_ENABLE_TLS
-#error "ProtoCore: PC_ENABLE_HTTP_CLIENT_TLS requires PC_ENABLE_TLS"
+#define PC_ENABLE_HTTP_CLIENT_TLS_NEEDS_TLS PC_ENABLE_TLS
+#if PC_ENABLE_HTTP_CLIENT_TLS && !PC_ENABLE_HTTP_CLIENT_TLS_NEEDS_TLS
+#error "ProtoCore: PC_ENABLE_HTTP_CLIENT_TLS needs PC_ENABLE_TLS"
 #endif
 
-#if PC_ENABLE_MQTT_TLS && !PC_ENABLE_TLS
-#error "ProtoCore: PC_ENABLE_MQTT_TLS requires PC_ENABLE_TLS"
+#define PC_ENABLE_MQTT_TLS_NEEDS_TLS PC_ENABLE_TLS
+#if PC_ENABLE_MQTT_TLS && !PC_ENABLE_MQTT_TLS_NEEDS_TLS
+#error "ProtoCore: PC_ENABLE_MQTT_TLS needs PC_ENABLE_TLS"
 #endif
 
-#if PC_ENABLE_WS_CLIENT_TLS && !PC_ENABLE_TLS
-#error "ProtoCore: PC_ENABLE_WS_CLIENT_TLS requires PC_ENABLE_TLS"
+#define PC_ENABLE_WS_CLIENT_TLS_NEEDS_TLS PC_ENABLE_TLS
+#if PC_ENABLE_WS_CLIENT_TLS && !PC_ENABLE_WS_CLIENT_TLS_NEEDS_TLS
+#error "ProtoCore: PC_ENABLE_WS_CLIENT_TLS needs PC_ENABLE_TLS"
 #endif
 
-#if PC_ENABLE_SNMP_TRAP && !PC_ENABLE_SNMP
-#error "ProtoCore: PC_ENABLE_SNMP_TRAP requires PC_ENABLE_SNMP"
+#define PC_ENABLE_SNMP_TRAP_NEEDS_SNMP PC_ENABLE_SNMP
+#if PC_ENABLE_SNMP_TRAP && !PC_ENABLE_SNMP_TRAP_NEEDS_SNMP
+#error "ProtoCore: PC_ENABLE_SNMP_TRAP needs PC_ENABLE_SNMP"
 #endif
 
-#if PC_ENABLE_COAP_OBSERVE && !PC_ENABLE_COAP
-#error "ProtoCore: PC_ENABLE_COAP_OBSERVE requires PC_ENABLE_COAP"
+#define PC_ENABLE_COAP_OBSERVE_NEEDS_COAP PC_ENABLE_COAP
+#if PC_ENABLE_COAP_OBSERVE && !PC_ENABLE_COAP_OBSERVE_NEEDS_COAP
+#error "ProtoCore: PC_ENABLE_COAP_OBSERVE needs PC_ENABLE_COAP"
 #endif
 
 #if PC_ENABLE_TLS_RPK && !(PC_ENABLE_DTLS || PC_ENABLE_HTTP3)
@@ -6795,20 +6808,24 @@ enum class pc_iface : uint8_t
 // --- feature dependency guards (centralized; see the BUILD-FLAG DEPENDENCY TREE
 //     near the top of this file). A child feature requires its parent(s). ---
 
-#if PC_ENABLE_WS_DEFLATE && !PC_ENABLE_WEBSOCKET
-#error "ProtoCore: PC_ENABLE_WS_DEFLATE requires PC_ENABLE_WEBSOCKET"
+#define PC_ENABLE_WS_DEFLATE_NEEDS_WEBSOCKET PC_ENABLE_WEBSOCKET
+#if PC_ENABLE_WS_DEFLATE && !PC_ENABLE_WS_DEFLATE_NEEDS_WEBSOCKET
+#error "ProtoCore: PC_ENABLE_WS_DEFLATE needs PC_ENABLE_WEBSOCKET"
 #endif
 
-#if PC_ENABLE_CIA402 && !PC_ENABLE_CANOPEN
-#error "ProtoCore: PC_ENABLE_CIA402 requires PC_ENABLE_CANOPEN"
+#define PC_ENABLE_CIA402_NEEDS_CANOPEN PC_ENABLE_CANOPEN
+#if PC_ENABLE_CIA402 && !PC_ENABLE_CIA402_NEEDS_CANOPEN
+#error "ProtoCore: PC_ENABLE_CIA402 needs PC_ENABLE_CANOPEN"
 #endif
 
-#if PC_ENABLE_SSH_ZLIB && !PC_ENABLE_SSH
-#error "ProtoCore: PC_ENABLE_SSH_ZLIB requires PC_ENABLE_SSH"
+#define PC_ENABLE_SSH_ZLIB_NEEDS_SSH PC_ENABLE_SSH
+#if PC_ENABLE_SSH_ZLIB && !PC_ENABLE_SSH_ZLIB_NEEDS_SSH
+#error "ProtoCore: PC_ENABLE_SSH_ZLIB needs PC_ENABLE_SSH"
 #endif
 
-#if PC_ENABLE_SSH_KEYBOARD_INTERACTIVE && !PC_ENABLE_SSH
-#error "ProtoCore: PC_ENABLE_SSH_KEYBOARD_INTERACTIVE requires PC_ENABLE_SSH"
+#define PC_ENABLE_SSH_KEYBOARD_INTERACTIVE_NEEDS_SSH PC_ENABLE_SSH
+#if PC_ENABLE_SSH_KEYBOARD_INTERACTIVE && !PC_ENABLE_SSH_KEYBOARD_INTERACTIVE_NEEDS_SSH
+#error "ProtoCore: PC_ENABLE_SSH_KEYBOARD_INTERACTIVE needs PC_ENABLE_SSH"
 #endif
 #if PC_ENABLE_SSH_KEYBOARD_INTERACTIVE && !PC_SSH_ALLOW_PASSWORD
 #error                                                                                                                 \
@@ -6818,11 +6835,13 @@ enum class pc_iface : uint8_t
 // SFTP and SCP need the channel layer to carry them and the mount to store into (PC_ENABLE_MNT is
 // required above). They do NOT need FILE_SERVING: that dependency was the fs::FS seam, and the seam
 // now lives with the vendor code in board_drivers/, behind the mount backend.
-#if PC_ENABLE_SSH_SFTP && !PC_ENABLE_SSH
-#error "ProtoCore: PC_ENABLE_SSH_SFTP requires PC_ENABLE_SSH"
+#define PC_ENABLE_SSH_SFTP_NEEDS_SSH PC_ENABLE_SSH
+#if PC_ENABLE_SSH_SFTP && !PC_ENABLE_SSH_SFTP_NEEDS_SSH
+#error "ProtoCore: PC_ENABLE_SSH_SFTP needs PC_ENABLE_SSH"
 #endif
-#if PC_ENABLE_SSH_SCP && !PC_ENABLE_SSH
-#error "ProtoCore: PC_ENABLE_SSH_SCP requires PC_ENABLE_SSH"
+#define PC_ENABLE_SSH_SCP_NEEDS_SSH PC_ENABLE_SSH
+#if PC_ENABLE_SSH_SCP && !PC_ENABLE_SSH_SCP_NEEDS_SSH
+#error "ProtoCore: PC_ENABLE_SSH_SCP needs PC_ENABLE_SSH"
 #endif
 
 #if PC_ENABLE_SSH_ZLIB
@@ -6850,48 +6869,59 @@ enum class pc_iface : uint8_t
 #endif
 #endif
 
-#if PC_ENABLE_WEB_TERMINAL && !PC_ENABLE_WEBSOCKET
-#error "ProtoCore: PC_ENABLE_WEB_TERMINAL requires PC_ENABLE_WEBSOCKET"
+#define PC_ENABLE_WEB_TERMINAL_NEEDS_WEBSOCKET PC_ENABLE_WEBSOCKET
+#if PC_ENABLE_WEB_TERMINAL && !PC_ENABLE_WEB_TERMINAL_NEEDS_WEBSOCKET
+#error "ProtoCore: PC_ENABLE_WEB_TERMINAL needs PC_ENABLE_WEBSOCKET"
 #endif
 
-#if PC_ENABLE_DASHBOARD && !PC_ENABLE_SSE
-#error "ProtoCore: PC_ENABLE_DASHBOARD requires PC_ENABLE_SSE"
+#define PC_ENABLE_DASHBOARD_NEEDS_SSE PC_ENABLE_SSE
+#if PC_ENABLE_DASHBOARD && !PC_ENABLE_DASHBOARD_NEEDS_SSE
+#error "ProtoCore: PC_ENABLE_DASHBOARD needs PC_ENABLE_SSE"
 #endif
 
-#if PC_ENABLE_SNMP_V3 && !PC_ENABLE_SNMP
-#error "ProtoCore: PC_ENABLE_SNMP_V3 requires PC_ENABLE_SNMP"
+#define PC_ENABLE_SNMP_V3_NEEDS_SNMP PC_ENABLE_SNMP
+#if PC_ENABLE_SNMP_V3 && !PC_ENABLE_SNMP_V3_NEEDS_SNMP
+#error "ProtoCore: PC_ENABLE_SNMP_V3 needs PC_ENABLE_SNMP"
 #endif
 
-#if PC_ENABLE_OPCUA_CLIENT && !PC_ENABLE_OPCUA
-#error "ProtoCore: PC_ENABLE_OPCUA_CLIENT requires PC_ENABLE_OPCUA (the shared OPC UA codec)"
+#define PC_ENABLE_OPCUA_CLIENT_NEEDS_OPCUA PC_ENABLE_OPCUA
+#if PC_ENABLE_OPCUA_CLIENT && !PC_ENABLE_OPCUA_CLIENT_NEEDS_OPCUA
+#error "ProtoCore: PC_ENABLE_OPCUA_CLIENT needs PC_ENABLE_OPCUA"
 #endif
 
-#if PC_ENABLE_UMATI && !PC_ENABLE_OPCUA
-#error "ProtoCore: PC_ENABLE_UMATI requires PC_ENABLE_OPCUA (it builds on the OPC UA server)"
+#define PC_ENABLE_UMATI_NEEDS_OPCUA PC_ENABLE_OPCUA
+#if PC_ENABLE_UMATI && !PC_ENABLE_UMATI_NEEDS_OPCUA
+#error "ProtoCore: PC_ENABLE_UMATI needs PC_ENABLE_OPCUA"
 #endif
 
-#if PC_ENABLE_ROBOTICS && !PC_ENABLE_OPCUA
-#error "ProtoCore: PC_ENABLE_ROBOTICS requires PC_ENABLE_OPCUA (it builds on the OPC UA server)"
+#define PC_ENABLE_ROBOTICS_NEEDS_OPCUA PC_ENABLE_OPCUA
+#if PC_ENABLE_ROBOTICS && !PC_ENABLE_ROBOTICS_NEEDS_OPCUA
+#error "ProtoCore: PC_ENABLE_ROBOTICS needs PC_ENABLE_OPCUA"
 #endif
 
-#if PC_ENABLE_EUROMAP77 && !PC_ENABLE_OPCUA
-#error "ProtoCore: PC_ENABLE_EUROMAP77 requires PC_ENABLE_OPCUA (it builds on the OPC UA server)"
+#define PC_ENABLE_EUROMAP77_NEEDS_OPCUA PC_ENABLE_OPCUA
+#if PC_ENABLE_EUROMAP77 && !PC_ENABLE_EUROMAP77_NEEDS_OPCUA
+#error "ProtoCore: PC_ENABLE_EUROMAP77 needs PC_ENABLE_OPCUA"
 #endif
 
-#if PC_ENABLE_CONFIG_IO && !PC_ENABLE_CONFIG_STORE
-#error "ProtoCore: PC_ENABLE_CONFIG_IO requires PC_ENABLE_CONFIG_STORE"
+#define PC_ENABLE_CONFIG_IO_NEEDS_CONFIG_STORE PC_ENABLE_CONFIG_STORE
+#if PC_ENABLE_CONFIG_IO && !PC_ENABLE_CONFIG_IO_NEEDS_CONFIG_STORE
+#error "ProtoCore: PC_ENABLE_CONFIG_IO needs PC_ENABLE_CONFIG_STORE"
 #endif
 
-#if PC_ENABLE_HTTP_CLIENT_TLS && !PC_ENABLE_HTTP_CLIENT
-#error "ProtoCore: PC_ENABLE_HTTP_CLIENT_TLS requires PC_ENABLE_HTTP_CLIENT"
+#define PC_ENABLE_HTTP_CLIENT_TLS_NEEDS_HTTP_CLIENT PC_ENABLE_HTTP_CLIENT
+#if PC_ENABLE_HTTP_CLIENT_TLS && !PC_ENABLE_HTTP_CLIENT_TLS_NEEDS_HTTP_CLIENT
+#error "ProtoCore: PC_ENABLE_HTTP_CLIENT_TLS needs PC_ENABLE_HTTP_CLIENT"
 #endif
 
-#if PC_ENABLE_MQTT_TLS && !PC_ENABLE_MQTT
-#error "ProtoCore: PC_ENABLE_MQTT_TLS requires PC_ENABLE_MQTT"
+#define PC_ENABLE_MQTT_TLS_NEEDS_MQTT PC_ENABLE_MQTT
+#if PC_ENABLE_MQTT_TLS && !PC_ENABLE_MQTT_TLS_NEEDS_MQTT
+#error "ProtoCore: PC_ENABLE_MQTT_TLS needs PC_ENABLE_MQTT"
 #endif
 
-#if PC_ENABLE_WS_CLIENT_TLS && !PC_ENABLE_WS_CLIENT
-#error "ProtoCore: PC_ENABLE_WS_CLIENT_TLS requires PC_ENABLE_WS_CLIENT"
+#define PC_ENABLE_WS_CLIENT_TLS_NEEDS_WS_CLIENT PC_ENABLE_WS_CLIENT
+#if PC_ENABLE_WS_CLIENT_TLS && !PC_ENABLE_WS_CLIENT_TLS_NEEDS_WS_CLIENT
+#error "ProtoCore: PC_ENABLE_WS_CLIENT_TLS needs PC_ENABLE_WS_CLIENT"
 #endif
 
 #if PC_ENABLE_WEBSOCKET && WS_FRAME_SIZE < 2

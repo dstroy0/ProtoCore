@@ -10,7 +10,6 @@
 #include <string.h>
 #include <unity.h>
 
-static PC server;
 static char g_cmd[64];
 static uint8_t g_cmd_client;
 
@@ -67,7 +66,7 @@ static bool g_skip_begin = false;
 
 void setUp()
 {
-    server = PC();
+    pc_server_reset();
     for (int i = 0; i < MAX_CONNS; i++)
     {
         conn_pool[i] = {};
@@ -103,7 +102,7 @@ static uint8_t do_handshake(uint8_t slot)
                    "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n"
                    "Sec-WebSocket-Version: 13\r\n\r\n");
     http_parse(slot);
-    server.handle();
+    handle();
     WsConn *ws = ws_find(slot);
     return ws ? ws->ws_id : 0xFF;
 }
@@ -116,7 +115,7 @@ void test_serves_terminal_page()
 {
     push_str(0, "GET /terminal HTTP/1.1\r\nHost: x\r\n\r\n");
     http_parse(0);
-    server.handle();
+    handle();
     const char *r = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(r, "200 OK"));
     TEST_ASSERT_NOT_NULL(strstr(r, "text/html"));
@@ -142,7 +141,7 @@ void test_ws_upgrade_requires_connection_token()
                 "Upgrade: websocket\r\n" // no Connection: Upgrade
                 "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n\r\n");
     http_parse(0);
-    server.handle();
+    handle();
     TEST_ASSERT_NULL(ws_find(0));
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "400"));
 }
@@ -155,7 +154,7 @@ void test_ws_upgrade_rejects_bad_key_length()
                 "Upgrade: websocket\r\nConnection: Upgrade\r\n"
                 "Sec-WebSocket-Key: c2hvcnQ=\r\nSec-WebSocket-Version: 13\r\n\r\n"); // "short" -> 5 bytes
     http_parse(0);
-    server.handle();
+    handle();
     TEST_ASSERT_NULL(ws_find(0));
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "400"));
 }
@@ -166,7 +165,7 @@ void test_command_delivered_to_callback()
     uint8_t frame[32];
     size_t n = build_frame(frame, WsOpcode::WS_OP_TEXT, (const uint8_t *)"reboot", 6);
     push_bytes(0, frame, n);
-    server.handle();
+    handle();
     TEST_ASSERT_EQUAL_STRING("reboot", g_cmd);
     TEST_ASSERT_EQUAL_UINT(wid, g_cmd_client);
 }
@@ -204,7 +203,7 @@ void test_close_clears_client()
     TEST_ASSERT_EQUAL_UINT(1, pc_web_terminal_client_count());
     WsConn *ws = ws_find(0);
     ws->parse_state = WsParseState::WS_CLOSED; // simulate client close
-    server.handle();                           // handle() fires the ws_close route callback
+    handle();                                  // handle() fires the ws_close route callback
     TEST_ASSERT_EQUAL_UINT(0, pc_web_terminal_client_count());
 }
 
@@ -215,7 +214,7 @@ static const char *get_path(uint8_t slot, const char *path)
     snprintf(req, sizeof(req), "GET %s HTTP/1.1\r\nHost: x\r\n\r\n", path);
     push_str(slot, req);
     http_parse(slot);
-    server.handle();
+    handle();
     return tcp_captured();
 }
 
@@ -260,12 +259,12 @@ void test_print_null_is_ignored()
 // A null or empty path falls back to the default "/terminal" mount point.
 void test_begin_defaults_path_when_missing()
 {
-    server = PC();
+    pc_server_reset();
     pc_web_terminal_begin(server, nullptr);
     tcp_capture_reset();
     TEST_ASSERT_NOT_NULL(strstr(get_path(0, "/terminal"), "PC Terminal"));
 
-    server = PC();
+    pc_server_reset();
     pc_web_terminal_begin(server, "");
     tcp_capture_reset();
     TEST_ASSERT_NOT_NULL(strstr(get_path(1, "/terminal"), "PC Terminal"));
@@ -279,7 +278,7 @@ void test_message_without_callback()
     uint8_t frame[32];
     size_t n = build_frame(frame, WsOpcode::WS_OP_TEXT, (const uint8_t *)"ignored", 7);
     push_bytes(0, frame, n);
-    server.handle();
+    handle();
     TEST_ASSERT_EQUAL_STRING("", g_cmd); // nothing was delivered
 }
 

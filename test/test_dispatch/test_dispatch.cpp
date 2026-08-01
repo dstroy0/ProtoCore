@@ -13,7 +13,6 @@
 #include "services/security/csrf/csrf.h" // supply a valid token so an unsafe method reaches method dispatch
 #endif
 
-static PC server;
 static bool handler_called = false;
 
 static void push_str(uint8_t slot, const char *s)
@@ -30,12 +29,12 @@ static void handle_ok(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
     handler_called = true;
-    server.send(slot_id, 200, "text/plain", "OK");
+    send_text(slot_id, 200, "text/plain", "OK");
 }
 
 void setUp()
 {
-    server = PC();
+    pc_server_reset();
     handler_called = false;
     for (int i = 0; i < MAX_CONNS; i++)
     {
@@ -68,7 +67,7 @@ static void feed_and_handle(uint8_t slot, const char *req_str)
 {
     push_str(slot, req_str);
     http_parse(slot);
-    server.handle();
+    handle();
 }
 
 // Feed an unsafe-method (POST/DELETE/...) request. Under PC_ENABLE_CSRF such a method is gated before
@@ -91,7 +90,7 @@ static void feed_unsafe(uint8_t slot, const char *method, const char *path)
 
 void test_method_mismatch_returns_405()
 {
-    server.on("/res", HttpMethod::HTTP_POST, handle_ok);
+    on_http("/res", HttpMethod::HTTP_POST, handle_ok);
     feed_and_handle(0, "GET /res HTTP/1.1\r\n\r\n");
     TEST_ASSERT_FALSE(handler_called);
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "405 Method Not Allowed"));
@@ -99,15 +98,15 @@ void test_method_mismatch_returns_405()
 
 void test_405_includes_allow_header()
 {
-    server.on("/res", HttpMethod::HTTP_POST, handle_ok);
+    on_http("/res", HttpMethod::HTTP_POST, handle_ok);
     feed_unsafe(0, "DELETE", "/res");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "Allow: POST"));
 }
 
 void test_405_allow_lists_all_methods_for_path()
 {
-    server.on("/res", HttpMethod::HTTP_POST, handle_ok);
-    server.on("/res", HttpMethod::HTTP_DELETE, handle_ok);
+    on_http("/res", HttpMethod::HTTP_POST, handle_ok);
+    on_http("/res", HttpMethod::HTTP_DELETE, handle_ok);
     feed_and_handle(0, "GET /res HTTP/1.1\r\n\r\n");
     const char *resp = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(resp, "405"));
@@ -117,7 +116,7 @@ void test_405_allow_lists_all_methods_for_path()
 
 void test_unknown_path_still_404_not_405()
 {
-    server.on("/res", HttpMethod::HTTP_POST, handle_ok);
+    on_http("/res", HttpMethod::HTTP_POST, handle_ok);
     feed_and_handle(0, "GET /nope HTTP/1.1\r\n\r\n");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "404"));
 }
@@ -126,7 +125,7 @@ void test_unknown_path_still_404_not_405()
 
 void test_unknown_method_returns_501()
 {
-    server.on("/res", HttpMethod::HTTP_GET, handle_ok);
+    on_http("/res", HttpMethod::HTTP_GET, handle_ok);
     feed_and_handle(0, "FOO /res HTTP/1.1\r\n\r\n");
     TEST_ASSERT_FALSE(handler_called);
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "501 Not Implemented"));
@@ -135,7 +134,7 @@ void test_unknown_method_returns_501()
 void test_unknown_method_not_treated_as_get()
 {
     // A bogus method must NOT run the GET handler (security: no method spoofing).
-    server.on("/res", HttpMethod::HTTP_GET, handle_ok);
+    on_http("/res", HttpMethod::HTTP_GET, handle_ok);
     feed_and_handle(0, "XGET /res HTTP/1.1\r\n\r\n");
     TEST_ASSERT_FALSE(handler_called);
 }
@@ -144,7 +143,7 @@ void test_unknown_method_not_treated_as_get()
 
 void test_head_runs_get_handler_without_body()
 {
-    server.on("/res", HttpMethod::HTTP_GET, handle_ok);
+    on_http("/res", HttpMethod::HTTP_GET, handle_ok);
     feed_and_handle(0, "HEAD /res HTTP/1.1\r\n\r\n");
     TEST_ASSERT_TRUE(handler_called); // GET handler serves HEAD
     const char *resp = tcp_captured();
@@ -159,7 +158,7 @@ void test_head_runs_get_handler_without_body()
 
 void test_get_route_advertises_head_in_allow()
 {
-    server.on("/res", HttpMethod::HTTP_GET, handle_ok);
+    on_http("/res", HttpMethod::HTTP_GET, handle_ok);
     feed_unsafe(0, "POST", "/res");
     const char *resp = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(resp, "405"));
@@ -169,7 +168,7 @@ void test_get_route_advertises_head_in_allow()
 
 void test_head_on_post_only_route_405()
 {
-    server.on("/res", HttpMethod::HTTP_POST, handle_ok);
+    on_http("/res", HttpMethod::HTTP_POST, handle_ok);
     feed_and_handle(0, "HEAD /res HTTP/1.1\r\n\r\n");
     TEST_ASSERT_FALSE(handler_called);
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "405"));
@@ -209,7 +208,7 @@ void test_http_parse_skips_ws_upgraded_slot()
 
 void test_correct_method_still_dispatches()
 {
-    server.on("/res", HttpMethod::HTTP_GET, handle_ok);
+    on_http("/res", HttpMethod::HTTP_GET, handle_ok);
     feed_and_handle(0, "GET /res HTTP/1.1\r\n\r\n");
     TEST_ASSERT_TRUE(handler_called);
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "200 OK"));
@@ -224,7 +223,7 @@ void test_correct_method_still_dispatches()
 // RX path arms it once, only when 0), so a drip-fed partial request still trips this.
 void test_slowloris_incomplete_request_reaped_past_deadline()
 {
-    server.on("/res", HttpMethod::HTTP_GET, handle_ok);
+    on_http("/res", HttpMethod::HTTP_GET, handle_ok);
     conn_pool[0].req_start_ms = 1;                   // armed as the first byte would have, at t=1
     push_str(0, "GET /res HTTP/1.1\r\nHost: x\r\n"); // headers unterminated -> parse never completes
     http_parse(0);
@@ -234,7 +233,7 @@ void test_slowloris_incomplete_request_reaped_past_deadline()
     // The slow-loris keeps its idle timer fresh (a trickle byte refreshes last_activity_ms every few seconds),
     // so the CONN_TIMEOUT_MS idle sweep never fires - only this request-completion deadline catches it.
     conn_pool[0].last_activity_ms = 1 + PC_REQUEST_TIMEOUT_MS;
-    server.handle();
+    handle();
 
     const char *r = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(r, "408 Request Timeout"));   // reaped with a 408
@@ -245,14 +244,14 @@ void test_slowloris_incomplete_request_reaped_past_deadline()
 
 void test_incomplete_request_survives_before_deadline()
 {
-    server.on("/res", HttpMethod::HTTP_GET, handle_ok);
+    on_http("/res", HttpMethod::HTTP_GET, handle_ok);
     conn_pool[0].req_start_ms = 1;
     push_str(0, "GET /res HTTP/1.1\r\nHost: x\r\n");
     http_parse(0);
 
     set_millis(PC_REQUEST_TIMEOUT_MS);                     // armed at t=1 -> elapsed = deadline-1 < deadline
     conn_pool[0].last_activity_ms = PC_REQUEST_TIMEOUT_MS; // fresh idle timer (trickle), so idle sweep is out
-    server.handle();
+    handle();
 
     TEST_ASSERT_NULL(strstr(tcp_captured(), "408"));                          // not yet reaped
     TEST_ASSERT_EQUAL(ConnState::CONN_ACTIVE, (ConnState)conn_pool[0].state); // still active
@@ -263,7 +262,7 @@ void test_completed_slow_request_not_reaped()
 {
     // A request that arrives slowly but COMPLETES is dispatched normally and never 408'd, even when a later
     // poll runs past the deadline: completion disarms req_start_ms, so a kept-alive idle slot is not reaped.
-    server.on("/res", HttpMethod::HTTP_GET, handle_ok);
+    on_http("/res", HttpMethod::HTTP_GET, handle_ok);
     conn_pool[0].req_start_ms = 1;
     feed_and_handle(0, "GET /res HTTP/1.1\r\n\r\n");
     TEST_ASSERT_TRUE(handler_called);
@@ -271,7 +270,7 @@ void test_completed_slow_request_not_reaped()
 
     tcp_capture_reset();
     set_millis(1 + PC_REQUEST_TIMEOUT_MS + 1);
-    server.handle();
+    handle();
     TEST_ASSERT_NULL(strstr(tcp_captured(), "408")); // an idle keep-alive slot is not a slow request
 }
 
@@ -280,14 +279,14 @@ void test_streaming_body_upload_not_reaped_past_deadline()
     // The deadline is header-scoped (nginx client_header_timeout): a legitimate slow body sits in PARSE_BODY
     // for its whole duration and must NOT be reaped, however long it takes. Model a slot mid-upload, well past
     // the header deadline, still receiving (idle timer kept fresh by arriving body bytes).
-    server.on("/res", HttpMethod::HTTP_POST, handle_ok);
+    on_http("/res", HttpMethod::HTTP_POST, handle_ok);
     conn_pool[0].req_start_ms = 1;                     // armed on the first byte, not yet disarmed (still in body)
     http_pool[0].parse_state = ParseState::PARSE_BODY; // headers done, streaming the body
     http_pool[0].content_length = 100000;              // a large upload, not yet complete
     http_pool[0].body_bytes_read = 10;
     set_millis(1 + PC_REQUEST_TIMEOUT_MS + 5000);                     // well past the header deadline
     conn_pool[0].last_activity_ms = 1 + PC_REQUEST_TIMEOUT_MS + 5000; // body bytes keep the idle timer fresh
-    server.handle();
+    handle();
 
     TEST_ASSERT_NULL(strstr(tcp_captured(), "408"));                          // header-scoped: body is not reaped
     TEST_ASSERT_EQUAL(ConnState::CONN_ACTIVE, (ConnState)conn_pool[0].state); // upload continues

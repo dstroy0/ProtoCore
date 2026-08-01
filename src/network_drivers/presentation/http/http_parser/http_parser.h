@@ -93,10 +93,21 @@ struct Header
 };
 
 /** @brief A single parsed query-string parameter. */
+/**
+ * @brief One parsed `key=value` pair: where it is, not another copy of it.
+ *
+ * The bytes are already in the request - a query pair points into HttpReq::query, a path capture's
+ * value into HttpReq::path - so holding fixed char arrays here stored the same bytes a second time
+ * and imposed a length cap that silently truncated anything longer (a 60-character value came back
+ * cut to 47, with nothing to say so). Two pointers cost 8 bytes against 72, and what they point at
+ * is bounded by the buffer it lives in rather than by a second knob.
+ *
+ * Both are NUL-terminated: the split writes the terminator over the separator it consumed, in place.
+ */
 struct QueryParam
 {
-    char key[QUERY_KEY_LEN]; ///< Parameter name, null-terminated.
-    char val[QUERY_VAL_LEN]; ///< Parameter value (empty string if absent).
+    const char *key; ///< Parameter name.
+    const char *val; ///< Parameter value ("" when the pair had no `=`).
 };
 
 /**
@@ -120,11 +131,21 @@ struct HttpReq
 
     char query[MAX_QUERY_LEN];                 ///< Raw query string (after `?`).
     size_t query_idx;                          ///< Write cursor into query[].
-    QueryParam query_params[MAX_QUERY_PARAMS]; ///< Parsed key=value pairs.
+    QueryParam query_params[MAX_QUERY_PARAMS]; ///< Parsed key=value pairs (see split_query).
     uint8_t query_count;                       ///< Valid entries in query_params[].
+    bool query_split;                          ///< query[] has been tokenized in place.
 
     QueryParam path_params[MAX_PATH_PARAMS]; ///< `:name` captures from the matched route.
     uint8_t path_param_count;                ///< Valid entries in path_params[].
+
+    // Where those captures' bytes live. A path capture cannot point into path[] the way a query
+    // pair points into query[]: its key is a slice of the route pattern and its value a slice of the
+    // request path, and neither ends at a separator this may overwrite - path[] is read after
+    // dispatch by static serving and the access log. So the bytes are copied ONCE, packed as
+    // key\0val\0, and the table points into the pack. One bound for all of them, instead of a
+    // per-key and per-value cap that silently truncated each cell.
+    char path_param_bytes[PC_PATH_PARAM_BYTES];
+    uint16_t path_param_used;
 
 #if PC_CAPTURE_AUTH_HEADER
     char authorization[PC_AUTH_HDR_CAP]; ///< Full Authorization header value (Digest/JWT exceed MAX_VAL_LEN).
@@ -258,7 +279,7 @@ bool http_forwarded_client(const HttpReq *req, char *ip_out, size_t ip_cap, bool
  * @return Pointer to the null-terminated value (empty string if `key=` with
  *         no value), or `nullptr` if the key is absent.
  */
-const char *http_get_query(const HttpReq *req, const char *key);
+const char *http_get_query(HttpReq *req, const char *key);
 
 /**
  * @brief Look up an `application/x-www-form-urlencoded` body field by name.

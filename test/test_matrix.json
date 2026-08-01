@@ -270,8 +270,8 @@
       "src": ["+<services/fieldbus/iolink/iolink.cpp>"],
       "tests": ["test_iolink"]
     },
-    "native": {
-      "desc": "Layers 4-6: transport + session + presentation + standalone parser (no app layer)\nThese suites predate the RFC 7230 Â§5.4 Host rule and feed bare HTTP/1.1\nrequest lines to exercise parser mechanics; Host enforcement is verified\nseparately in env:native_compliance.",
+    "native_stack_l46": {
+      "desc": "Layers 4-6 stack: transport + session + presentation + the standalone parser, no app layer. Base env for the suites that build on it; it runs no suite of its own.\nThese suites predate the RFC 7230 \u00c2\u00a75.4 Host rule and feed bare HTTP/1.1\nrequest lines to exercise parser mechanics; Host enforcement is verified\nseparately in env:native_compliance.",
       "flags": ["-DPC_ENFORCE_HOST_HEADER=0"],
       "src": [
         "+<network_drivers/network/ip.cpp>",
@@ -291,15 +291,42 @@
         "+<network_drivers/presentation/codec/multipart/multipart.cpp>",
         "+<board_drivers/hal/portable/portable_platform.cpp>"
       ],
-      "tests": [
-        "test_transport",
-        "test_presentation",
-        "test_session",
-        "test_http_parser",
-        "test_websocket",
-        "test_sse",
-        "test_base64"
-      ]
+      "tests": []
+    },
+    "native_transport": {
+      "desc": "test_transport against the native_stack_l46 stack.",
+      "base": "env:native_stack_l46",
+      "tests": ["test_transport"]
+    },
+    "native_presentation": {
+      "desc": "test_presentation against the native_stack_l46 stack.",
+      "base": "env:native_stack_l46",
+      "tests": ["test_presentation"]
+    },
+    "native_session": {
+      "desc": "test_session against the native_stack_l46 stack.",
+      "base": "env:native_stack_l46",
+      "tests": ["test_session"]
+    },
+    "native_http_parser": {
+      "desc": "test_http_parser against the native_stack_l46 stack.",
+      "base": "env:native_stack_l46",
+      "tests": ["test_http_parser"]
+    },
+    "native_websocket": {
+      "desc": "test_websocket against the native_stack_l46 stack.",
+      "base": "env:native_stack_l46",
+      "tests": ["test_websocket"]
+    },
+    "native_sse": {
+      "desc": "test_sse against the native_stack_l46 stack.",
+      "base": "env:native_stack_l46",
+      "tests": ["test_sse"]
+    },
+    "native_base64": {
+      "desc": "test_base64 against the native_stack_l46 stack.",
+      "base": "env:native_stack_l46",
+      "tests": ["test_base64"]
     },
     "native_observability": {
       "desc": "Transport observability (PC_ENABLE_OBSERVABILITY): the pc_conn_on_event\nhook, by-reason counters, the live CONN_CLOSING gauge, and that the real lwIP\ncallbacks (recv FIN / error / timeout / local close / backpressure) drive the\nright counter. Pure L4 core - host-tested.",
@@ -621,8 +648,8 @@
       ],
       "tests": ["test_scp"]
     },
-    "native_app": {
-      "desc": "Full stack including Layer 7 application",
+    "native_stack_http": {
+      "desc": "Full HTTP/1.1 server stack through Layer 7. Base env for the suites that build on it; it runs no suite of its own.",
       "flags": [
         "-DBODY_BUF_SIZE=512",
         "-DPC_ENFORCE_HOST_HEADER=0",
@@ -665,26 +692,97 @@
         "+<board_drivers/hal/portable/portable_platform.cpp>",
         "+<shared_primitives/frame.cpp>"
       ],
-      "tests": [
-        "test_auth",
-        "test_file_serving",
-        "test_multipart",
-        "test_dispatch",
-        "test_application",
-        "test_response_headers",
-        "test_form_params",
-        "test_path_params",
-        "test_digest_auth",
-        "test_digest_vectors",
-        "test_template",
-        "test_middleware",
-        "test_chunked",
-        "test_json",
-        "test_iface",
-        "test_regex",
-        "test_web_terminal",
-        "test_defer"
-      ]
+      "tests": []
+    },
+    "native_auth": {
+      "desc": "test_auth against the native_stack_http stack.",
+      "base": "env:native_stack_http",
+      "tests": ["test_auth"]
+    },
+    "native_file_serving": {
+      "desc": "test_file_serving against the native_stack_http stack.",
+      "base": "env:native_stack_http",
+      "tests": ["test_file_serving"]
+    },
+    "native_multipart": {
+      "desc": "test_multipart against the native_stack_http stack.",
+      "base": "env:native_stack_http",
+      "tests": ["test_multipart"]
+    },
+    "native_dispatch": {
+      "desc": "test_dispatch against the native_stack_http stack.",
+      "base": "env:native_stack_http",
+      "tests": ["test_dispatch"]
+    },
+    "native_application": {
+      "desc": "test_application against the native_stack_http stack.",
+      "base": "env:native_stack_http",
+      "tests": ["test_application"]
+    },
+    "native_response_headers": {
+      "desc": "test_response_headers against the native_stack_http stack.",
+      "base": "env:native_stack_http",
+      "tests": ["test_response_headers"]
+    },
+    "native_form_params": {
+      "desc": "test_form_params against the native_stack_http stack.",
+      "base": "env:native_stack_http",
+      "tests": ["test_form_params"]
+    },
+    "native_path_params": {
+      "desc": "test_path_params against the native_stack_http stack.",
+      "base": "env:native_stack_http",
+      "tests": ["test_path_params"]
+    },
+    "native_digest_auth": {
+      "desc": "test_digest_auth against the native_stack_http stack.",
+      "base": "env:native_stack_http",
+      "tests": ["test_digest_auth"]
+    },
+    "native_digest_vectors": {
+      "desc": "test_digest_vectors against the native_stack_http stack.",
+      "base": "env:native_stack_http",
+      "tests": ["test_digest_vectors"]
+    },
+    "native_template": {
+      "desc": "test_template against the native_stack_http stack.",
+      "base": "env:native_stack_http",
+      "tests": ["test_template"]
+    },
+    "native_middleware": {
+      "desc": "test_middleware against the native_stack_http stack.",
+      "base": "env:native_stack_http",
+      "tests": ["test_middleware"]
+    },
+    "native_chunked": {
+      "desc": "test_chunked against the native_stack_http stack.",
+      "base": "env:native_stack_http",
+      "tests": ["test_chunked"]
+    },
+    "native_json": {
+      "desc": "test_json against the native_stack_http stack.",
+      "base": "env:native_stack_http",
+      "tests": ["test_json"]
+    },
+    "native_iface": {
+      "desc": "test_iface against the native_stack_http stack.",
+      "base": "env:native_stack_http",
+      "tests": ["test_iface"]
+    },
+    "native_regex": {
+      "desc": "test_regex against the native_stack_http stack.",
+      "base": "env:native_stack_http",
+      "tests": ["test_regex"]
+    },
+    "native_web_terminal": {
+      "desc": "test_web_terminal against the native_stack_http stack.",
+      "base": "env:native_stack_http",
+      "tests": ["test_web_terminal"]
+    },
+    "native_defer": {
+      "desc": "test_defer against the native_stack_http stack.",
+      "base": "env:native_stack_http",
+      "tests": ["test_defer"]
     },
     "native_webdav_handler": {
       "desc": "WebDAV request handler over a directory-capable FS mock (recursive COPY/MOVE/DELETE)",

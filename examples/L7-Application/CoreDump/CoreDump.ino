@@ -47,7 +47,6 @@ static const uint16_t FTP_PORT = 0; // 0 = the default 21
 static const char *FTP_USER = "pc";
 static const char *FTP_PASS = "pc";
 
-PC server;
 static char g_last_json[512] = "{}"; // the recovered crash, rendered once at boot
 static bool g_saved = false;
 static bool g_uploaded = false;
@@ -72,14 +71,14 @@ static size_t coredump_source(void *ctx, size_t offset, uint8_t *buf, size_t cap
 static void exception_handler(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    server.send(slot_id, 200, PC_MIME_JSON, g_last_json);
+    send_text(slot_id, 200, PC_MIME_JSON, g_last_json);
 }
 
 // Deliberately crash so the cycle can be observed end to end.
 static void crash_handler(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    server.send(slot_id, 200, PC_MIME_TEXT_PLAIN, "crashing now - reconnect after the reboot\n");
+    send_text(slot_id, 200, PC_MIME_TEXT_PLAIN, "crashing now - reconnect after the reboot\n");
     delay(200); // let the response flush before the panic
     volatile int *p = (int *)0;
     *p = 42;
@@ -146,13 +145,13 @@ void setup()
         Serial.println("no offload succeeded - leaving the dump in flash for the next attempt");
     }
 
-    server.on("/exception", HttpMethod::HTTP_GET, exception_handler);
-    server.on("/crash", HttpMethod::HTTP_GET, crash_handler);
+    on_http("/exception", HttpMethod::HTTP_GET, exception_handler);
+    on_http("/crash", HttpMethod::HTTP_GET, crash_handler);
     if (sd)
     {
-        server.serve_static("/files/", SD_MMC, "/"); // download the saved dump
+        serve_static("/files/", SD_MMC, "/"); // download the saved dump
     }
-    server.begin(80);
+    begin_http(80);
 
     uint32_t ip = pc_net_egress_ip();
     Serial.printf("http://%u.%u.%u.%u/exception  (sd=%s ftp=%s)\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
@@ -162,5 +161,5 @@ void setup()
 
 void loop()
 {
-    server.handle();
+    handle();
 }

@@ -30,7 +30,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 void setup()
 {
@@ -51,12 +50,12 @@ void setup()
     listener_ip_allow_add_cidr("10.0.0.5");       // one trusted host (bare address -> /32)
     listener_ip_allow_add_cidr("2001:db8::/32");  // an IPv6 prefix
 
-    server.on("/", HttpMethod::HTTP_GET,
-              [](uint8_t id, HttpReq *) { server.send(id, 200, "text/plain", "hello from an allowed address"); });
-    server.begin(80);
+    on_http("/", HttpMethod::HTTP_GET,
+              [](uint8_t id, HttpReq *) { send_text(id, 200, "text/plain", "hello from an allowed address"); });
+    begin_http(80);
 }
 
 void loop()
 {
-    server.handle();
+    handle();
 }

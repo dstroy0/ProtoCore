@@ -26,7 +26,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 static void on_breach(uint8_t breaches, const pc_health *h)
 {
@@ -49,14 +48,14 @@ void setup()
 
     pc_guardrails_begin(on_breach);
 
-    server.on("/health", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
+    on_http("/health", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
         pc_health h;
         pc_guardrails_sample(&h);
         char buf[128];
         pc_health_json(&h, buf, sizeof(buf));
-        server.send(id, 200, "application/json", buf);
+        send_text(id, 200, "application/json", buf);
     });
-    server.begin(80);
+    begin_http(80);
 }
 
 void loop()

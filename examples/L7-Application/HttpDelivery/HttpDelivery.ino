@@ -30,13 +30,12 @@ static const char *WIFI_PASS = "your-password";
 static const char *const SHELL[] = {"/", "/index.html", "/app.css"};
 static const char *SHELL_VERSION = "1.0.0";
 
-PC server;
 
 static void root_handler(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
     // Registers the worker, then shows what it cached.
-    server.send(slot_id, 200, PC_MIME_TEXT_HTML,
+    send_text(slot_id, 200, PC_MIME_TEXT_HTML,
                 "<!doctype html><meta charset=utf-8><title>PC delivery</title>"
                 "<h1>PC delivery</h1><p id=s>registering...</p>"
                 "<script>navigator.serviceWorker.register('/sw.js').then(function(){"
@@ -59,21 +58,21 @@ void setup()
     }
     else
     {
-        server.serve_static("/files/", SD_MMC, "/"); // Range/206 comes free with PC_ENABLE_RANGE
+        serve_static("/files/", SD_MMC, "/"); // Range/206 comes free with PC_ENABLE_RANGE
     }
 
     // Every served file carries the SWR policy: fresh for 60 s, then usable-while-revalidating for
     // another 300 s. Built by the RFC 5861 core so header and decision cannot drift apart.
-    server.set_cache_control_swr(60, 300);
+    set_cache_control_swr(60, 300);
 
-    server.on("/", HttpMethod::HTTP_GET, root_handler);
+    on_http("/", HttpMethod::HTTP_GET, root_handler);
     // Serves /sw.js + /precache.json.
     if (!pc_delivery_serve_sw(server, SHELL, sizeof(SHELL) / sizeof(SHELL[0]), SHELL_VERSION))
     {
         Serial.println("service-worker routes failed to register");
     }
 
-    server.begin(80);
+    begin_http(80);
 
     uint32_t ip = pc_net_egress_ip();
     Serial.printf("http://%u.%u.%u.%u/  (sw /sw.js, manifest /precache.json, files /files/...)\n",
@@ -83,5 +82,5 @@ void setup()
 
 void loop()
 {
-    server.handle();
+    handle();
 }

@@ -19,8 +19,6 @@
 #include <string.h>
 #include <unity.h>
 
-static PC server;
-
 static void push_str(uint8_t slot, const char *s)
 {
     TcpConn *c = &conn_pool[slot];
@@ -37,58 +35,58 @@ static void push_str(uint8_t slot, const char *s)
 static void h_one_header(uint8_t slot, HttpReq *req)
 {
     (void)req;
-    server.add_response_header(slot, "X-Custom", "hello");
-    server.send(slot, 200, "text/plain", "ok");
+    add_response_header(slot, "X-Custom", "hello");
+    send_text(slot, 200, "text/plain", "ok");
 }
 
 static void h_two_headers(uint8_t slot, HttpReq *req)
 {
     (void)req;
-    server.add_response_header(slot, "X-One", "1");
-    server.add_response_header(slot, "X-Two", "2");
-    server.send(slot, 200, "text/plain", "ok");
+    add_response_header(slot, "X-One", "1");
+    add_response_header(slot, "X-Two", "2");
+    send_text(slot, 200, "text/plain", "ok");
 }
 
 static void h_cookie(uint8_t slot, HttpReq *req)
 {
     (void)req;
-    server.set_cookie(slot, "session", "abc123");
-    server.send(slot, 200, "text/plain", "ok");
+    set_cookie(slot, "session", "abc123");
+    send_text(slot, 200, "text/plain", "ok");
 }
 
 static void h_cookie_attrs(uint8_t slot, HttpReq *req)
 {
     (void)req;
-    server.set_cookie(slot, "session", "abc123", "Path=/; HttpOnly; Max-Age=3600");
-    server.send(slot, 200, "text/plain", "ok");
+    set_cookie(slot, "session", "abc123", "Path=/; HttpOnly; Max-Age=3600");
+    send_text(slot, 200, "text/plain", "ok");
 }
 
 static void h_header_empty(uint8_t slot, HttpReq *req)
 {
     (void)req;
-    server.add_response_header(slot, "X-Empty", "yes");
-    server.send_empty(slot, 204);
+    add_response_header(slot, "X-Empty", "yes");
+    send_empty(slot, 204);
 }
 
 static void h_header_redirect(uint8_t slot, HttpReq *req)
 {
     (void)req;
-    server.add_response_header(slot, "X-Redir", "yes");
-    server.redirect(slot, 302, "/elsewhere");
+    add_response_header(slot, "X-Redir", "yes");
+    redirect(slot, 302, "/elsewhere");
 }
 
 static void h_plain(uint8_t slot, HttpReq *req)
 {
     (void)req;
-    server.send(slot, 200, "text/plain", "ok"); // no custom headers
+    send_text(slot, 200, "text/plain", "ok"); // no custom headers
 }
 
 static void h_clear(uint8_t slot, HttpReq *req)
 {
     (void)req;
-    server.add_response_header(slot, "X-Gone", "1");
-    server.clear_response_headers(slot);
-    server.send(slot, 200, "text/plain", "ok");
+    add_response_header(slot, "X-Gone", "1");
+    clear_response_headers(slot);
+    send_text(slot, 200, "text/plain", "ok");
 }
 
 static void h_oversized(uint8_t slot, HttpReq *req)
@@ -97,14 +95,14 @@ static void h_oversized(uint8_t slot, HttpReq *req)
     static char big[EXTRA_HDR_BUF_SIZE + 64];
     memset(big, 'A', sizeof(big) - 1);
     big[sizeof(big) - 1] = '\0';
-    server.add_response_header(slot, "X-Big", big); // must be dropped whole
-    server.add_response_header(slot, "X-Small", "ok");
-    server.send(slot, 200, "text/plain", "ok");
+    add_response_header(slot, "X-Big", big); // must be dropped whole
+    add_response_header(slot, "X-Small", "ok");
+    send_text(slot, 200, "text/plain", "ok");
 }
 
 void setUp()
 {
-    server = PC();
+    pc_server_reset();
     for (int i = 0; i < MAX_CONNS; i++)
     {
         conn_pool[i] = {};
@@ -130,7 +128,7 @@ static void feed_and_handle(uint8_t slot, const char *req_str)
 {
     push_str(slot, req_str);
     http_parse(slot);
-    server.handle();
+    handle();
 }
 
 // ====================================================================
@@ -139,7 +137,7 @@ static void feed_and_handle(uint8_t slot, const char *req_str)
 
 void test_single_custom_header_present()
 {
-    server.on("/h", HttpMethod::HTTP_GET, h_one_header);
+    on_http("/h", HttpMethod::HTTP_GET, h_one_header);
     feed_and_handle(0, "GET /h HTTP/1.1\r\n\r\n");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "X-Custom: hello\r\n"));
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "200 OK"));
@@ -147,7 +145,7 @@ void test_single_custom_header_present()
 
 void test_multiple_custom_headers_present()
 {
-    server.on("/h", HttpMethod::HTTP_GET, h_two_headers);
+    on_http("/h", HttpMethod::HTTP_GET, h_two_headers);
     feed_and_handle(0, "GET /h HTTP/1.1\r\n\r\n");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "X-One: 1\r\n"));
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "X-Two: 2\r\n"));
@@ -155,21 +153,21 @@ void test_multiple_custom_headers_present()
 
 void test_set_cookie_basic()
 {
-    server.on("/h", HttpMethod::HTTP_GET, h_cookie);
+    on_http("/h", HttpMethod::HTTP_GET, h_cookie);
     feed_and_handle(0, "GET /h HTTP/1.1\r\n\r\n");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "Set-Cookie: session=abc123\r\n"));
 }
 
 void test_set_cookie_with_attrs()
 {
-    server.on("/h", HttpMethod::HTTP_GET, h_cookie_attrs);
+    on_http("/h", HttpMethod::HTTP_GET, h_cookie_attrs);
     feed_and_handle(0, "GET /h HTTP/1.1\r\n\r\n");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "Set-Cookie: session=abc123; Path=/; HttpOnly; Max-Age=3600\r\n"));
 }
 
 void test_custom_header_on_send_empty()
 {
-    server.on("/h", HttpMethod::HTTP_GET, h_header_empty);
+    on_http("/h", HttpMethod::HTTP_GET, h_header_empty);
     feed_and_handle(0, "GET /h HTTP/1.1\r\n\r\n");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "204"));
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "X-Empty: yes\r\n"));
@@ -177,7 +175,7 @@ void test_custom_header_on_send_empty()
 
 void test_custom_header_on_redirect()
 {
-    server.on("/h", HttpMethod::HTTP_GET, h_header_redirect);
+    on_http("/h", HttpMethod::HTTP_GET, h_header_redirect);
     feed_and_handle(0, "GET /h HTTP/1.1\r\n\r\n");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "Location: /elsewhere\r\n"));
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "X-Redir: yes\r\n"));
@@ -185,8 +183,8 @@ void test_custom_header_on_redirect()
 
 void test_headers_do_not_leak_across_requests()
 {
-    server.on("/h", HttpMethod::HTTP_GET, h_one_header);
-    server.on("/p", HttpMethod::HTTP_GET, h_plain);
+    on_http("/h", HttpMethod::HTTP_GET, h_one_header);
+    on_http("/p", HttpMethod::HTTP_GET, h_plain);
 
     // First request queues X-Custom on slot 0.
     feed_and_handle(0, "GET /h HTTP/1.1\r\n\r\n");
@@ -208,7 +206,7 @@ void test_headers_do_not_leak_across_requests()
 
 void test_clear_response_headers()
 {
-    server.on("/h", HttpMethod::HTTP_GET, h_clear);
+    on_http("/h", HttpMethod::HTTP_GET, h_clear);
     feed_and_handle(0, "GET /h HTTP/1.1\r\n\r\n");
     TEST_ASSERT_NULL(strstr(tcp_captured(), "X-Gone"));
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "200 OK"));
@@ -216,7 +214,7 @@ void test_clear_response_headers()
 
 void test_oversized_header_dropped_whole()
 {
-    server.on("/h", HttpMethod::HTTP_GET, h_oversized);
+    on_http("/h", HttpMethod::HTTP_GET, h_oversized);
     feed_and_handle(0, "GET /h HTTP/1.1\r\n\r\n");
     // The oversized header name must not appear...
     TEST_ASSERT_NULL(strstr(tcp_captured(), "X-Big"));
@@ -229,7 +227,7 @@ void test_oversized_header_dropped_whole()
 void test_date_header_emitted_when_time_set()
 {
     pc_ntp_set_test_epoch(784111777); // Sun, 06 Nov 1994 08:49:37 GMT
-    server.on("/h", HttpMethod::HTTP_GET, h_plain);
+    on_http("/h", HttpMethod::HTTP_GET, h_plain);
     feed_and_handle(0, "GET /h HTTP/1.1\r\n\r\n");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "Date: Sun, 06 Nov 1994 08:49:37 GMT\r\n"));
 }
@@ -239,7 +237,7 @@ void test_date_header_emitted_when_time_set()
 void test_date_header_omitted_when_clockless()
 {
     pc_ntp_set_test_epoch(0);
-    server.on("/h", HttpMethod::HTTP_GET, h_plain);
+    on_http("/h", HttpMethod::HTTP_GET, h_plain);
     feed_and_handle(0, "GET /h HTTP/1.1\r\n\r\n");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "200 OK"));
     TEST_ASSERT_NULL(strstr(tcp_captured(), "Date:"));

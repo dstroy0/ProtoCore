@@ -24,7 +24,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 static void on_trap(uint8_t level, const char *line)
 {
@@ -47,12 +46,12 @@ void setup()
     pc_log_set_trap(pc_log_level::PC_LOG_WARN, on_trap); // trap on WARN and ERROR
     pc_log(pc_log_level::PC_LOG_INFO, "boot complete");
 
-    server.on("/logs", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
+    on_http("/logs", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
         char buf[PC_LOG_LINES * PC_LOG_LINE_LEN];
         pc_log_dump(buf, sizeof(buf));
-        server.send(id, 200, "text/plain", buf);
+        send_text(id, 200, "text/plain", buf);
     });
-    server.begin(80);
+    begin_http(80);
 }
 
 void loop()
@@ -66,5 +65,5 @@ void loop()
         snprintf(msg, sizeof(msg), "heap=%u uptime=%lus", (unsigned)heap, millis() / 1000);
         pc_log(heap < 20000 ? pc_log_level::PC_LOG_WARN : pc_log_level::PC_LOG_INFO, msg);
     }
-    server.handle();
+    handle();
 }

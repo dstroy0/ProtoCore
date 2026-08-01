@@ -37,7 +37,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 void setup()
 {
@@ -58,20 +57,20 @@ void setup()
     // proxy's address / subnet; the RFC 5737 documentation range below is a placeholder.
     pc_forwarded_trust_add_cidr("192.0.2.0/24");
 
-    server.on("/", HttpMethod::HTTP_GET,
-              [](uint8_t id, HttpReq *) { server.send(id, 200, "text/plain", "public page"); });
+    on_http("/", HttpMethod::HTTP_GET,
+              [](uint8_t id, HttpReq *) { send_text(id, 200, "text/plain", "public page"); });
 
     // Protected route. Behind a trusted proxy the lockout counts failures per ORIGINAL client, so one
     // abuser does not lock out everyone sharing the proxy's address.
-    server.on(
+    on_http(
         "/secret", HttpMethod::HTTP_GET,
-        [](uint8_t id, HttpReq *) { server.send(id, 200, "text/plain", "authenticated!"); }, "Restricted", "admin",
+        [](uint8_t id, HttpReq *) { send_text(id, 200, "text/plain", "authenticated!"); }, "Restricted", "admin",
         "s3cret");
 
-    server.begin(80);
+    begin_http(80);
 }
 
 void loop()
 {
-    server.handle();
+    handle();
 }

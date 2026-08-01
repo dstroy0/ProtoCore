@@ -27,7 +27,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 // One CBOR map {"heap","uptime","rssi"}, encoded once into a ctx buffer and then
 // paged out by the chunk source. (The body is tiny, but the same pattern serves an
@@ -68,7 +67,7 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    server.on("/telemetry.cbor", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
+    on_http("/telemetry.cbor", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
         static CborCtx ctx; // static: must outlive send_chunked
         pc_span w;
         w = pc_span_from(ctx.buf, sizeof(ctx.buf));
@@ -81,12 +80,12 @@ void setup()
         pc_cbor_int(&w, pc_net_rssi());
         ctx.len = pc_span_ok(w) ? pc_span_len(w) : 0;
         ctx.off = 0;
-        server.send_chunked(id, 200, "application/cbor", pc_cbor_source, &ctx);
+        send_chunked(id, 200, "application/cbor", pc_cbor_source, &ctx);
     });
-    server.begin(80);
+    begin_http(80);
 }
 
 void loop()
 {
-    server.handle();
+    handle();
 }

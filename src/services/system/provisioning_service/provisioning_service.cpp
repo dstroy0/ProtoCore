@@ -96,7 +96,6 @@ bool pc_prov_form_field(const char *body, const char *key, char *out, size_t cap
 // unreachable cross-TU.
 struct ProvCtx
 {
-    PC *server = nullptr;
     uint8_t ap_ip[4] = {192, 168, 4, 1};
 };
 static ProvCtx s_prov;
@@ -202,7 +201,7 @@ void pc_provisioning_clear()
 static void prov_form_handler(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    s_prov.server->send(slot_id, 200, PC_MIME_TEXT_HTML, PC_PROV_FORM);
+    send_text(slot_id, 200, PC_MIME_TEXT_HTML, PC_PROV_FORM);
 }
 
 static void prov_save_handler(uint8_t slot_id, HttpReq *req)
@@ -214,7 +213,7 @@ static void prov_save_handler(uint8_t slot_id, HttpReq *req)
     pc_prov_form_field((const char *)req->body, PC_PROV_KEY_PSK, psk, sizeof(psk));
     if (!have_ssid)
     {
-        s_prov.server->send(slot_id, 400, PC_MIME_TEXT_PLAIN, "SSID required");
+        send_text(slot_id, 400, PC_MIME_TEXT_PLAIN, "SSID required");
         return;
     }
     Preferences prefs;
@@ -222,14 +221,13 @@ static void prov_save_handler(uint8_t slot_id, HttpReq *req)
     prefs.putString(PC_PROV_KEY_SSID, ssid);
     prefs.putString(PC_PROV_KEY_PSK, psk);
     prefs.end();
-    s_prov.server->send(slot_id, 200, PC_MIME_TEXT_HTML, PC_PROV_SAVED_HTML);
+    send_text(slot_id, 200, PC_MIME_TEXT_HTML, PC_PROV_SAVED_HTML);
     pcdelay(500);
     ESP.restart();
 }
 
-void pc_provisioning_begin(PC &server, const char *ap_ssid)
+void pc_provisioning_begin(const char *ap_ssid)
 {
-    s_prov.server = &server;
     init_wifi_ap_physical(ap_ssid, nullptr); // AP mode is implied by which bring-up you call
     uint32_t ip = pc_net_ap_ip();            // network byte order
     s_prov.ap_ip[0] = (uint8_t)(ip & 0xFF);
@@ -240,8 +238,8 @@ void pc_provisioning_begin(PC &server, const char *ap_ssid)
     // Catch-all DNS on UDP/53 via the transport-layer UDP service (callback-driven).
     pc_udp_listen(53, prov_dns_recv, nullptr);
 
-    server.on("/save", HttpMethod::HTTP_POST, prov_save_handler);
-    server.on("/*", HttpMethod::HTTP_GET, prov_form_handler); // any other path -> the form
+    on_http("/save", HttpMethod::HTTP_POST, prov_save_handler);
+    on_http("/*", HttpMethod::HTTP_GET, prov_form_handler); // any other path -> the form
 }
 
 #else // disabled / non-Arduino: stubs (form-field parser above stays available)
@@ -258,11 +256,9 @@ bool pc_provisioning_load(char *ssid, size_t ssid_cap, char *psk, size_t psk_cap
     }
     return false;
 }
-// server can't be a const ref: the Arduino build's pc_provisioning_begin() registers routes via
-// server.on(); this host stub just ignores it (hence the const-ref suggestion here is a false positive).
-void pc_provisioning_begin(PC &server, const char *ap_ssid) // NOSONAR
+// The host stub: the Arduino build registers routes via on_http(); there is nothing to do here.
+void pc_provisioning_begin(const char *ap_ssid)
 {
-    (void)server;
     (void)ap_ssid;
 }
 void pc_provisioning_clear()

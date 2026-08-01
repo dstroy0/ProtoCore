@@ -37,7 +37,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 // Create a known 1 KiB file (repeating 0..255 pattern) so range math is easy to verify.
 static void make_demo_file()
@@ -85,10 +84,10 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // serve_file() honors Range automatically when PC_ENABLE_RANGE is set.
-    server.on("/data.bin", HttpMethod::HTTP_GET,
-              [](uint8_t id, HttpReq *) { server.serve_file(id, LittleFS, "/data.bin", "application/octet-stream"); });
+    on_http("/data.bin", HttpMethod::HTTP_GET,
+              [](uint8_t id, HttpReq *) { serve_file(id, LittleFS, "/data.bin", "application/octet-stream"); });
 
-    int32_t result = server.begin(80);
+    int32_t result = begin_http(80);
     if (result < 0)
     {
         Serial.printf("begin() failed (error %d)\n", result);
@@ -101,5 +100,5 @@ void setup()
 
 void loop()
 {
-    server.handle();
+    handle();
 }

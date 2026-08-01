@@ -25,7 +25,6 @@ static const pc_field UPLOAD_OK[] = {{PC_FK_LIT, 0, 3, "OK "}, PC_U32, {PC_FK_LI
 // unreachable.
 struct UploadCtx
 {
-    PC *server = nullptr;
     const char *path = nullptr;
     fs::FS *fs = nullptr;
     const char *dest = nullptr;
@@ -44,7 +43,7 @@ static bool upload_stream_begin(HttpReq *req)
         return false;
     }
     // The `!s_upl.path` half is unreachable: s_upl.path is only ever set by pc_upload_begin(),
-    // which immediately hands that same pointer to server.on() -> fill_route_base(), whose
+    // which immediately hands that same pointer to on_http() -> fill_route_base(), whose
     // strncpy() would fault on a null path before any request could reach this hook. So by the
     // time this hook is installed, s_upl.path is always a live C string.
     if (!s_upl.path || strcmp(req->path, s_upl.path) != 0) // GCOVR_EXCL_BR_LINE  null path unreachable (see above)
@@ -96,7 +95,7 @@ static void upload_handle(uint8_t slot_id, HttpReq *req)
 {
     if (!req->body_streaming)
     {
-        s_upl.server->send(slot_id, 400, PC_MIME_TEXT_PLAIN, "POST a file body");
+        send_text(slot_id, 400, PC_MIME_TEXT_PLAIN, "POST a file body");
         return;
     }
     if (s_upl.active)
@@ -105,12 +104,12 @@ static void upload_handle(uint8_t slot_id, HttpReq *req)
     }
     if (!s_upl.active || s_upl.error)
     {
-        s_upl.server->send(slot_id, 500, PC_MIME_TEXT_PLAIN, "upload failed");
+        send_text(slot_id, 500, PC_MIME_TEXT_PLAIN, "upload failed");
         return;
     }
     char msg[48];
     pc_frame_build(msg, sizeof(msg), UPLOAD_OK, (uint32_t)s_upl.written);
-    s_upl.server->send(slot_id, 200, PC_MIME_TEXT_PLAIN, msg);
+    send_text(slot_id, 200, PC_MIME_TEXT_PLAIN, msg);
 }
 
 size_t pc_upload_last_size()
@@ -118,15 +117,14 @@ size_t pc_upload_last_size()
     return s_upl.written;
 }
 
-void pc_upload_begin(PC &server, const char *path, fs::FS &fs, const char *dest_path)
+void pc_upload_begin(const char *path, fs::FS &fs, const char *dest_path)
 {
-    s_upl.server = &server;
     s_upl.path = path;
     s_upl.fs = &fs;
     s_upl.dest = dest_path;
 
     http_parser_set_stream_hooks(upload_stream_begin, upload_stream_data);
-    server.on(path, HttpMethod::HTTP_POST, upload_handle);
+    on_http(path, HttpMethod::HTTP_POST, upload_handle);
 }
 
 #endif // PC_ENABLE_UPLOAD

@@ -31,7 +31,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 static const uint32_t ACTING_DWELL_MS = 800; // how long a transient state "takes" in this simulation
 
@@ -53,7 +52,7 @@ static void handle_status(uint8_t slot, HttpReq *req)
     {
         n = 0;
     }
-    server.send(slot, 200, "application/json", (const uint8_t *)body, (size_t)n);
+    send_text(slot, 200, "application/json", (const uint8_t *)body, (size_t)n);
 }
 
 // Apply a command and answer with the resulting state name.
@@ -63,7 +62,7 @@ static void apply(uint8_t slot, PackMlCommand cmd)
     char body[96];
     int n = snprintf(body, sizeof(body), "{\"accepted\":%s,\"state\":\"%s\"}", ok ? "true" : "false",
                      pc_packml_state_name(pc_packml_svc_state()));
-    server.send(slot, ok ? 200 : 409, "application/json", (const uint8_t *)body, (size_t)(n < 0 ? 0 : n));
+    send_text(slot, ok ? 200 : 409, "application/json", (const uint8_t *)body, (size_t)(n < 0 ? 0 : n));
 }
 
 static void h_reset(uint8_t s, HttpReq *r)
@@ -120,7 +119,7 @@ static void h_complete(uint8_t s, HttpReq *r)
     char body[96];
     int n = snprintf(body, sizeof(body), "{\"accepted\":%s,\"state\":\"%s\"}", ok ? "true" : "false",
                      pc_packml_state_name(pc_packml_svc_state()));
-    server.send(s, ok ? 200 : 409, "application/json", (const uint8_t *)body, (size_t)(n < 0 ? 0 : n));
+    send_text(s, ok ? 200 : 409, "application/json", (const uint8_t *)body, (size_t)(n < 0 ? 0 : n));
 }
 
 void setup()
@@ -139,23 +138,23 @@ void setup()
     pc_packml_svc_init(PackMlMode::PRODUCING);
     pc_packml_svc_set_speed(120.0f); // 120 units/min commanded
 
-    server.on("/packml", HttpMethod::HTTP_GET, handle_status);
-    server.on("/packml/reset", HttpMethod::HTTP_GET, h_reset);
-    server.on("/packml/start", HttpMethod::HTTP_GET, h_start);
-    server.on("/packml/stop", HttpMethod::HTTP_GET, h_stop);
-    server.on("/packml/hold", HttpMethod::HTTP_GET, h_hold);
-    server.on("/packml/unhold", HttpMethod::HTTP_GET, h_unhold);
-    server.on("/packml/suspend", HttpMethod::HTTP_GET, h_suspend);
-    server.on("/packml/unsuspend", HttpMethod::HTTP_GET, h_unsuspend);
-    server.on("/packml/abort", HttpMethod::HTTP_GET, h_abort);
-    server.on("/packml/clear", HttpMethod::HTTP_GET, h_clear);
-    server.on("/packml/complete", HttpMethod::HTTP_GET, h_complete);
-    server.begin(80);
+    on_http("/packml", HttpMethod::HTTP_GET, handle_status);
+    on_http("/packml/reset", HttpMethod::HTTP_GET, h_reset);
+    on_http("/packml/start", HttpMethod::HTTP_GET, h_start);
+    on_http("/packml/stop", HttpMethod::HTTP_GET, h_stop);
+    on_http("/packml/hold", HttpMethod::HTTP_GET, h_hold);
+    on_http("/packml/unhold", HttpMethod::HTTP_GET, h_unhold);
+    on_http("/packml/suspend", HttpMethod::HTTP_GET, h_suspend);
+    on_http("/packml/unsuspend", HttpMethod::HTTP_GET, h_unsuspend);
+    on_http("/packml/abort", HttpMethod::HTTP_GET, h_abort);
+    on_http("/packml/clear", HttpMethod::HTTP_GET, h_clear);
+    on_http("/packml/complete", HttpMethod::HTTP_GET, h_complete);
+    begin_http(80);
 }
 
 void loop()
 {
-    server.handle();
+    handle();
 
     // Simulate the machine finishing each transient action: an acting state auto-advances after a dwell.
     static uint32_t acting_since = 0;

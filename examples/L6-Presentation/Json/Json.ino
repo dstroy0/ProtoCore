@@ -20,7 +20,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 // GET /api/info - build a JSON object with JsonWriter (no heap).
 void handle_info(uint8_t slot_id, HttpReq *req)
@@ -42,11 +41,11 @@ void handle_info(uint8_t slot_id, HttpReq *req)
 
     if (w.ok())
     {
-        server.send(slot_id, 200, "application/json", w.c_str());
+        send_text(slot_id, 200, "application/json", w.c_str());
     }
     else
     {
-        server.send(slot_id, 500, "text/plain", "json buffer overflow");
+        send_text(slot_id, 500, "text/plain", "json buffer overflow");
     }
 }
 
@@ -67,7 +66,7 @@ void handle_echo(uint8_t slot_id, HttpReq *req)
     w.kv_int("age", age);
     w.kv_bool("admin", admin);
     w.end_object();
-    server.send(slot_id, 200, "application/json", w.c_str());
+    send_text(slot_id, 200, "application/json", w.c_str());
 }
 
 void setup()
@@ -85,10 +84,10 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    server.on("/api/info", HttpMethod::HTTP_GET, handle_info);
-    server.on("/api/echo", HttpMethod::HTTP_POST, handle_echo);
+    on_http("/api/info", HttpMethod::HTTP_GET, handle_info);
+    on_http("/api/echo", HttpMethod::HTTP_POST, handle_echo);
 
-    int32_t result = server.begin(80);
+    int32_t result = begin_http(80);
     if (result < 0)
     {
         Serial.printf("begin() failed (error %d)\n", result);
@@ -99,5 +98,5 @@ void setup()
 
 void loop()
 {
-    server.handle();
+    handle();
 }

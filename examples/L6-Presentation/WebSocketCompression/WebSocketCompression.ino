@@ -35,7 +35,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 static const char PAGE[] = "<!doctype html><meta charset=utf-8><title>WS deflate echo</title>"
                            "<input id=i autofocus><pre id=o></pre><script>"
@@ -45,7 +44,7 @@ static const char PAGE[] = "<!doctype html><meta charset=utf-8><title>WS deflate
 
 void ws_connect(uint8_t ws_id)
 {
-    server.ws_send_text(ws_id, "connected to /ws (permessage-deflate) - type something");
+    ws_send_text(ws_id, "connected to /ws (permessage-deflate) - type something");
 }
 
 void ws_message(uint8_t ws_id)
@@ -53,7 +52,7 @@ void ws_message(uint8_t ws_id)
     // buf is already decompressed plaintext, even when the frame arrived compressed.
     char out[WS_FRAME_SIZE + 8];
     snprintf(out, sizeof(out), "echo: %s", (const char *)ws_pool[ws_id].buf);
-    server.ws_send_text(ws_id, out);
+    ws_send_text(ws_id, out);
 }
 
 void ws_close(uint8_t ws_id)
@@ -75,12 +74,12 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    server.on("/", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) { server.send(id, 200, "text/html", PAGE); });
-    server.on_ws("/ws", ws_connect, ws_message, ws_close);
-    server.begin(80);
+    on_http("/", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) { send_text(id, 200, "text/html", PAGE); });
+    on_ws("/ws", ws_connect, ws_message, ws_close);
+    begin_http(80);
 }
 
 void loop()
 {
-    server.handle();
+    handle();
 }

@@ -81,6 +81,22 @@ inline pc_swar_word pc_swar_has_zero(pc_swar_word w)
 }
 
 /**
+ * @brief Per lane: 0x80 where the lane equals @p c, else 0.
+ *
+ * XOR zeroes exactly the lanes that match, so the zero test finds them. That is what lets ONE load
+ * answer for as many delimiters as a caller cares about: OR the masks together and the first set
+ * lane is the first occurrence of any of them. A scan per delimiter would re-load the same word once
+ * per byte it is looking for, and then have to reconcile which hit came first.
+ *
+ *     pc_swar_word w = pc_swar_load(p);
+ *     pc_swar_word m = pc_swar_eq(w, '&') | pc_swar_eq(w, '=');   // one load, both delimiters
+ */
+inline pc_swar_word pc_swar_eq(pc_swar_word w, uint8_t c)
+{
+    return pc_swar_has_zero(w ^ (PC_SWAR_ONES * (pc_swar_word)c));
+}
+
+/**
  * @brief Which lane of a ::pc_swar_has_zero mask is the first zero byte, in address order.
  *
  * The answer is one of 0..PC_SWAR_BYTES-1 and the mask already holds it - the set guard bit IS the

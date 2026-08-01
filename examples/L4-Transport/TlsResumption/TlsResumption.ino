@@ -54,7 +54,6 @@ AwEHoUQDQgAEHGSfVhJFHrMMzWyOZu/wrFPpz1RfblpT3pMVSSjJx7boWMWgbZvO
 -----END EC PRIVATE KEY-----
 )PEM";
 
-PC server;
 
 void setup()
 {
@@ -71,11 +70,11 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    server.on("/", HttpMethod::HTTP_GET,
-              [](uint8_t id, HttpReq *) { server.send(id, 200, "text/plain", "hello over resumable TLS\n"); });
+    on_http("/", HttpMethod::HTTP_GET,
+              [](uint8_t id, HttpReq *) { send_text(id, 200, "text/plain", "hello over resumable TLS\n"); });
 
     int32_t r =
-        server.begin_tls(443, (const uint8_t *)CERT_PEM, sizeof(CERT_PEM), (const uint8_t *)KEY_PEM, sizeof(KEY_PEM));
+        begin_tls(443, (const uint8_t *)CERT_PEM, sizeof(CERT_PEM), (const uint8_t *)KEY_PEM, sizeof(KEY_PEM));
     if (r < 0)
     {
         Serial.printf("begin_tls() failed (%d)\n", (int)r);
@@ -86,5 +85,5 @@ void setup()
 
 void loop()
 {
-    server.handle();
+    handle();
 }

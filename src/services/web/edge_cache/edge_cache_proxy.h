@@ -26,13 +26,11 @@
 #include <stddef.h>
 #include <stdint.h>
 
-class PC;
-
 /**
  * @brief Enable the edge cache on @p server: register the cache middleware + the async-fetch poll hook,
  *        bind the origin transport to pc_client, and clear the L1 store. Call once.
  */
-void pc_edge_cache_enable(PC &server);
+void pc_edge_cache_enable(void);
 
 /**
  * @brief Map a request path prefix to an upstream origin (e.g. "/cdn/" -> "http://origin.local").
@@ -84,7 +82,7 @@ bool pc_edge_cache_add_peer(const char *host, uint16_t port);
 /**
  * @brief Serve sibling queries: register the PROTO_MESH handler so this node answers a peer's content-addressed
  *        request from its LOCAL cache (one hop - never re-queries this node's own origin or peers). Open the
- *        port first with `server.listen(port, ConnProto::PROTO_MESH)`. Call once.
+ *        port first with `listen(port, ConnProto::PROTO_MESH)`. Call once.
  */
 void pc_edge_cache_mesh_serve(void);
 #endif

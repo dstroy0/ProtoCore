@@ -53,12 +53,11 @@ AwEHoUQDQgAEHGSfVhJFHrMMzWyOZu/wrFPpz1RfblpT3pMVSSjJx7boWMWgbZvO
 -----END EC PRIVATE KEY-----
 )PEM";
 
-PC server;
 
 void handle_root(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    server.send(slot_id, 200, "text/plain", "hello over TLS (deterministic, static-pool mbedTLS)\n");
+    send_text(slot_id, 200, "text/plain", "hello over TLS (deterministic, static-pool mbedTLS)\n");
 }
 
 void handle_status(uint8_t slot_id, HttpReq *req)
@@ -66,7 +65,7 @@ void handle_status(uint8_t slot_id, HttpReq *req)
     (void)req;
     char body[96];
     snprintf(body, sizeof(body), "{\"tls\":true,\"uptime_ms\":%lu,\"free_heap\":%u}", millis(), ESP.getFreeHeap());
-    server.send(slot_id, 200, "application/json", body);
+    send_text(slot_id, 200, "application/json", body);
 }
 
 void setup()
@@ -84,12 +83,12 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    server.on("/", HttpMethod::HTTP_GET, handle_root);
-    server.on("/status", HttpMethod::HTTP_GET, handle_status);
+    on_http("/", HttpMethod::HTTP_GET, handle_root);
+    on_http("/status", HttpMethod::HTTP_GET, handle_status);
 
     // Load cert/key into the static-pool TLS engine and listen on 443.
     int32_t result =
-        server.begin_tls(443, (const uint8_t *)CERT_PEM, sizeof(CERT_PEM), (const uint8_t *)KEY_PEM, sizeof(KEY_PEM));
+        begin_tls(443, (const uint8_t *)CERT_PEM, sizeof(CERT_PEM), (const uint8_t *)KEY_PEM, sizeof(KEY_PEM));
     if (result < 0)
     {
         Serial.printf("begin_tls() failed (error %d) - check the cert/key and arena size\n", result);
@@ -100,5 +99,5 @@ void setup()
 
 void loop()
 {
-    server.handle();
+    handle();
 }

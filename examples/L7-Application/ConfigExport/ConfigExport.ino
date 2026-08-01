@@ -26,7 +26,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 // The persisted fields to back up / restore.
 static const pc_cfg_field SCHEMA[] = {
@@ -54,21 +53,21 @@ void setup()
     pc_config_set_u32("http_port", 80);
     pc_config_set_str("location", "lab");
 
-    server.on("/config", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
+    on_http("/config", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
         char buf[512];
         pc_config_export("app", SCHEMA, SCHEMA_N, buf, sizeof(buf));
-        server.send(id, 200, "text/plain", buf);
+        send_text(id, 200, "text/plain", buf);
     });
-    server.on("/config", HttpMethod::HTTP_POST, [](uint8_t id, HttpReq *req) {
+    on_http("/config", HttpMethod::HTTP_POST, [](uint8_t id, HttpReq *req) {
         int n = pc_config_import("app", SCHEMA, SCHEMA_N, (const char *)req->body, req->body_len);
         char msg[48];
         snprintf(msg, sizeof(msg), "imported %d field(s)\n", n);
-        server.send(id, 200, "text/plain", msg);
+        send_text(id, 200, "text/plain", msg);
     });
-    server.begin(80);
+    begin_http(80);
 }
 
 void loop()
 {
-    server.handle();
+    handle();
 }

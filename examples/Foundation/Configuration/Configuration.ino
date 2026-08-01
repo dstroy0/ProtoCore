@@ -64,7 +64,7 @@
  * Constraint: MAX_WS_CONNS + MAX_SSE_CONNS <= MAX_CONNS
  *
  * ============================================================
- * RUNTIME CONFIGURATION  (passed to server.begin())
+ * RUNTIME CONFIGURATION  (passed to begin())
  * ============================================================
  *   WebServerConfig::conn_timeout_ms: ms of inactivity before force-close.
  *     Flash (no RAM cost):  const WebServerConfig cfg PROGMEM = {10000};
@@ -114,7 +114,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 // GET /config
 // Returns every active sizing constant as JSON so you can verify your build
@@ -143,7 +142,7 @@ void handle_config(uint8_t slot_id, HttpReq *req)
              (unsigned)MAX_QUERY_PARAMS, (unsigned)QUERY_KEY_LEN, (unsigned)QUERY_VAL_LEN, (unsigned)BODY_BUF_SIZE,
              (unsigned)MAX_ROUTES);
 
-    server.send(slot_id, 200, "application/json", body);
+    send_text(slot_id, 200, "application/json", body);
 }
 
 // POST /echo
@@ -151,7 +150,7 @@ void handle_config(uint8_t slot_id, HttpReq *req)
 // 128 bytes trigger an automatic 413 before this handler is called.
 void handle_echo(uint8_t slot_id, HttpReq *req)
 {
-    server.send(slot_id, 200, "text/plain", (const char *)req->body);
+    send_text(slot_id, 200, "text/plain", (const char *)req->body);
 }
 
 // GET /search
@@ -170,7 +169,7 @@ void handle_search(uint8_t slot_id, HttpReq *req)
         strncat(body, "=", sizeof(body) - strlen(body) - 1);
         strncat(body, req->query_params[i].val, sizeof(body) - strlen(body) - 1);
     }
-    server.send(slot_id, 200, "text/plain", body);
+    send_text(slot_id, 200, "text/plain", body);
 }
 
 void setup()
@@ -197,16 +196,16 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    server.on("/config", HttpMethod::HTTP_GET, handle_config);
-    server.on("/echo", HttpMethod::HTTP_POST, handle_echo);
-    server.on("/search", HttpMethod::HTTP_GET, handle_search);
+    on_http("/config", HttpMethod::HTTP_GET, handle_config);
+    on_http("/echo", HttpMethod::HTTP_POST, handle_echo);
+    on_http("/search", HttpMethod::HTTP_GET, handle_search);
 
     // Diagnostic route (PC_ENABLE_DIAG=1): remove or protect in production.
-    server.on("/diag", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) { server.diag(id); });
+    on_http("/diag", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) { diag(id); });
 
     // Pass a runtime config to override the idle timeout without a rebuild.
     WebServerConfig cfg = {.conn_timeout_ms = CONN_TIMEOUT_MS};
-    int32_t result = server.begin(80, &cfg);
+    int32_t result = begin_http(80, &cfg);
     if (result < 0)
     {
         Serial.printf("begin() failed (error %d)\n", result);
@@ -217,5 +216,5 @@ void setup()
 
 void loop()
 {
-    server.handle();
+    handle();
 }

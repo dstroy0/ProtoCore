@@ -27,7 +27,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 // The pins to expose. Caller-owned and must outlive the server. Mark a pin
 // pc_gpio_dir::PC_GPIO_OUT to make it drivable from the panel.
@@ -76,13 +75,13 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // GET /gpio (JSON) + POST /gpio (drive an output); pinMode is applied here.
-    pc_gpio_map_begin(server, "/gpio", gpio_pins, gpio_count);
+    pc_gpio_map_begin("/gpio", gpio_pins, gpio_count);
 
-    server.on("/", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) { server.send(id, 200, "text/html", DIAG_PAGE); });
-    server.begin(80);
+    on_http("/", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) { send_text(id, 200, "text/html", DIAG_PAGE); });
+    begin_http(80);
 }
 
 void loop()
 {
-    server.handle();
+    handle();
 }

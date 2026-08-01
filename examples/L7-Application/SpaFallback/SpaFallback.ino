@@ -32,7 +32,6 @@
 static const char *WIFI_SSID = "your-ssid";
 static const char *WIFI_PASS = "your-password";
 
-PC server;
 
 // Device state the UI reflects. A real build would read these from the machine.
 struct HmiState
@@ -92,7 +91,7 @@ static void send_fallback(uint8_t slot_id)
         }
     }
     page[total] = '\0';
-    server.send(slot_id, 200, PC_MIME_TEXT_HTML, page);
+    send_text(slot_id, 200, PC_MIME_TEXT_HTML, page);
 }
 
 // Would this client actually run the SPA? There is no reliable header for it, so this is the app's
@@ -122,7 +121,7 @@ static void ui_handler(uint8_t slot_id, HttpReq *req)
     case pc_spa_action::PC_SPA_SERVE_SHELL:
         // A real build hands this to serve_static(index.html); inline here so the example needs no
         // filesystem to demonstrate the decision.
-        server.send(slot_id, 200, PC_MIME_TEXT_HTML,
+        send_text(slot_id, 200, PC_MIME_TEXT_HTML,
                     "<!doctype html><html><body><div id=app></div>"
                     "<script src=/app.js></script></body></html>");
         break;
@@ -130,11 +129,11 @@ static void ui_handler(uint8_t slot_id, HttpReq *req)
         send_fallback(slot_id);
         break;
     case pc_spa_action::PC_SPA_SERVE_FILE:
-        server.send(slot_id, 404, PC_MIME_TEXT_PLAIN, "no such asset\n");
+        send_text(slot_id, 404, PC_MIME_TEXT_PLAIN, "no such asset\n");
         break;
     case pc_spa_action::PC_SPA_PASSTHROUGH:
     default:
-        server.send(slot_id, 500, PC_MIME_TEXT_PLAIN, "routed here by mistake\n");
+        send_text(slot_id, 500, PC_MIME_TEXT_PLAIN, "routed here by mistake\n");
         break;
     }
 }
@@ -145,28 +144,28 @@ static void state_handler(uint8_t slot_id, HttpReq *req)
     char json[128];
     snprintf(json, sizeof(json), "{\"alarm\":%s,\"degraded\":%s,\"shell\":%s}", g_hmi.alarm ? "true" : "false",
              g_hmi.degraded ? "true" : "false", g_hmi.shell_present ? "true" : "false");
-    server.send(slot_id, 200, PC_MIME_JSON, json);
+    send_text(slot_id, 200, PC_MIME_JSON, json);
 }
 
 static void stop_handler(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
     g_hmi.alarm = !g_hmi.alarm; // stand-in for a real actuation
-    server.send(slot_id, 200, PC_MIME_TEXT_PLAIN, g_hmi.alarm ? "alarm set\n" : "alarm cleared\n");
+    send_text(slot_id, 200, PC_MIME_TEXT_PLAIN, g_hmi.alarm ? "alarm set\n" : "alarm cleared\n");
 }
 
 static void degrade_handler(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
     g_hmi.degraded = !g_hmi.degraded;
-    server.send(slot_id, 200, PC_MIME_TEXT_PLAIN, g_hmi.degraded ? "degraded\n" : "normal\n");
+    send_text(slot_id, 200, PC_MIME_TEXT_PLAIN, g_hmi.degraded ? "degraded\n" : "normal\n");
 }
 
 static void shell_handler(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
     g_hmi.shell_present = !g_hmi.shell_present;
-    server.send(slot_id, 200, PC_MIME_TEXT_PLAIN, g_hmi.shell_present ? "shell present\n" : "shell missing\n");
+    send_text(slot_id, 200, PC_MIME_TEXT_PLAIN, g_hmi.shell_present ? "shell present\n" : "shell missing\n");
 }
 
 void setup()
@@ -180,13 +179,13 @@ void setup()
         delay(250);
     }
 
-    server.on("/", HttpMethod::HTTP_GET, ui_handler);
-    server.on("/dashboard", HttpMethod::HTTP_GET, ui_handler);
-    server.on("/api/state", HttpMethod::HTTP_GET, state_handler);
-    server.on("/api/stop", HttpMethod::HTTP_GET, stop_handler);
-    server.on("/degrade", HttpMethod::HTTP_GET, degrade_handler);
-    server.on("/shell", HttpMethod::HTTP_GET, shell_handler);
-    server.begin(80);
+    on_http("/", HttpMethod::HTTP_GET, ui_handler);
+    on_http("/dashboard", HttpMethod::HTTP_GET, ui_handler);
+    on_http("/api/state", HttpMethod::HTTP_GET, state_handler);
+    on_http("/api/stop", HttpMethod::HTTP_GET, stop_handler);
+    on_http("/degrade", HttpMethod::HTTP_GET, degrade_handler);
+    on_http("/shell", HttpMethod::HTTP_GET, shell_handler);
+    begin_http(80);
 
     uint32_t ip = pc_net_egress_ip();
     Serial.printf("http://%u.%u.%u.%u/\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
@@ -195,5 +194,5 @@ void setup()
 
 void loop()
 {
-    server.handle();
+    handle();
 }

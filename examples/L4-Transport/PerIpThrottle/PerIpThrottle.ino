@@ -32,7 +32,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 void setup()
 {
@@ -48,12 +47,12 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    server.on("/", HttpMethod::HTTP_GET,
-              [](uint8_t id, HttpReq *) { server.send(id, 200, "text/plain", "per-IP throttled"); });
-    server.begin(80); // per-IP throttle is active automatically when the flag is built in
+    on_http("/", HttpMethod::HTTP_GET,
+              [](uint8_t id, HttpReq *) { send_text(id, 200, "text/plain", "per-IP throttled"); });
+    begin_http(80); // per-IP throttle is active automatically when the flag is built in
 }
 
 void loop()
 {
-    server.handle();
+    handle();
 }

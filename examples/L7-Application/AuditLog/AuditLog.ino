@@ -34,7 +34,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 // Durable forwarding: runs once per record at append time. Point it wherever you
 // keep authoritative logs.
@@ -66,40 +65,40 @@ void setup()
     pc_audit_set_sink(audit_sink);
     pc_audit_append(pc_audit_cat::PC_AUDIT_SYSTEM, "boot");
 
-    server.on("/login", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *req) {
+    on_http("/login", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *req) {
         const char *user = http_get_query(req, "user");
         const char *pass = http_get_query(req, "pass");
         char msg[PC_AUDIT_MSG_LEN];
         bool ok = pass && strcmp(pass, "secret") == 0;
         snprintf(msg, sizeof(msg), "login %s", user ? user : "?");
         pc_audit_append(ok ? pc_audit_cat::PC_AUDIT_AUTH : pc_audit_cat::PC_AUDIT_AUTH_FAIL, msg);
-        server.send(id, ok ? 200 : 401, "application/json", ok ? "{\"ok\":true}" : "{\"ok\":false}");
+        send_text(id, ok ? 200 : 401, "application/json", ok ? "{\"ok\":true}" : "{\"ok\":false}");
     });
 
-    server.on("/config", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *req) {
+    on_http("/config", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *req) {
         const char *port = http_get_query(req, "http_port");
         char msg[PC_AUDIT_MSG_LEN];
         snprintf(msg, sizeof(msg), "set http_port=%s", port ? port : "?");
         pc_audit_append(pc_audit_cat::PC_AUDIT_CONFIG, msg);
-        server.send(id, 200, "application/json", "{\"ok\":true}");
+        send_text(id, 200, "application/json", "{\"ok\":true}");
     });
 
-    server.on("/audit", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
+    on_http("/audit", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
         char doc[2048];
         if (pc_audit_dump_json(doc, sizeof(doc)) > 0)
         {
-            server.send(id, 200, "application/json", doc);
+            send_text(id, 200, "application/json", doc);
         }
         else
         {
-            server.send(id, 500, "application/json", "{\"error\":\"buffer\"}");
+            send_text(id, 500, "application/json", "{\"error\":\"buffer\"}");
         }
     });
 
-    server.begin(80);
+    begin_http(80);
 }
 
 void loop()
 {
-    server.handle();
+    handle();
 }

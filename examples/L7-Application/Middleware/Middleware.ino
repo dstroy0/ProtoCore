@@ -27,7 +27,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 static unsigned long request_count = 0;
 
@@ -44,7 +43,7 @@ static MwResult mw_log(uint8_t slot_id, HttpReq *req)
 static MwResult mw_brand(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    server.add_response_header(slot_id, "X-Powered-By", "ProtoCore");
+    add_response_header(slot_id, "X-Powered-By", "ProtoCore");
     return MwResult::MW_NEXT;
 }
 
@@ -53,7 +52,7 @@ static MwResult mw_block_admin(uint8_t slot_id, HttpReq *req)
 {
     if (strcmp(req->path, "/admin") == 0)
     {
-        server.send(slot_id, 403, "text/plain", "blocked by middleware");
+        send_text(slot_id, 403, "text/plain", "blocked by middleware");
         return MwResult::MW_HALT; // handler is never reached
     }
     return MwResult::MW_NEXT;
@@ -62,20 +61,20 @@ static MwResult mw_block_admin(uint8_t slot_id, HttpReq *req)
 void handle_root(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    server.send(slot_id, 200, "text/plain", "hello from the handler");
+    send_text(slot_id, 200, "text/plain", "hello from the handler");
 }
 
 void handle_ping(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    server.send(slot_id, 200, "text/plain", "pong");
+    send_text(slot_id, 200, "text/plain", "pong");
 }
 
 // Registered, but the gate middleware blocks it before we get here.
 void handle_admin(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    server.send(slot_id, 200, "text/plain", "you should never see this");
+    send_text(slot_id, 200, "text/plain", "you should never see this");
 }
 
 void setup()
@@ -93,16 +92,16 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    server.use(mw_log);
-    server.use(mw_brand);
-    server.use(mw_block_admin);
-    server.enable_rate_limit(5, 10000); // 5 requests / 10 s window
+    use(mw_log);
+    use(mw_brand);
+    use(mw_block_admin);
+    enable_rate_limit(5, 10000); // 5 requests / 10 s window
 
-    server.on("/", HttpMethod::HTTP_GET, handle_root);
-    server.on("/ping", HttpMethod::HTTP_GET, handle_ping);
-    server.on("/admin", HttpMethod::HTTP_GET, handle_admin);
+    on_http("/", HttpMethod::HTTP_GET, handle_root);
+    on_http("/ping", HttpMethod::HTTP_GET, handle_ping);
+    on_http("/admin", HttpMethod::HTTP_GET, handle_admin);
 
-    int32_t result = server.begin(80);
+    int32_t result = begin_http(80);
     if (result < 0)
     {
         Serial.printf("begin() failed (error %d)\n", result);
@@ -113,5 +112,5 @@ void setup()
 
 void loop()
 {
-    server.handle();
+    handle();
 }

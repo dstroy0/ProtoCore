@@ -29,7 +29,12 @@
 // handlers are fixed-signature callbacks, so they reach this single owner directly.)
 struct DashRoutesCtx
 {
-    PC *srv = nullptr;
+    // Whether pc_dashboard_begin() has run. The route handlers cannot run before it - they exist
+    // only because it registered them - but pc_dashboard_publish() is called by the application on
+    // its own schedule, so it can arrive first. This used to be inferred from a stored server
+    // pointer being non-null; with the routes registered through free functions there is no pointer
+    // to infer it from, and "has this service started" was always the real question.
+    bool started = false;
     char stream_path[MAX_PATH_LEN] = {0};
 #if PC_ENABLE_WEBSOCKET
     char ws_path[MAX_PATH_LEN] = {0};
@@ -40,10 +45,8 @@ static DashRoutesCtx s_dashr;
 static void dash_page_handler(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    if (s_dashr.srv)
-    {
-        s_dashr.srv->send(slot_id, 200, PC_MIME_TEXT_HTML, PC_DASHBOARD_PAGE);
-    }
+    // No instance test: a handler only runs because begin() registered its route.
+    send_text(slot_id, 200, PC_MIME_TEXT_HTML, PC_DASHBOARD_PAGE);
 }
 
 static void dash_layout_handler(uint8_t slot_id, HttpReq *req)
@@ -51,18 +54,15 @@ static void dash_layout_handler(uint8_t slot_id, HttpReq *req)
     (void)req;
     char buf[PC_DASHBOARD_JSON_BUF];
     pc_dashboard_layout_json(buf, sizeof(buf));
-    if (s_dashr.srv)
-    {
-        s_dashr.srv->send(slot_id, 200, PC_MIME_JSON, buf);
-    }
+    send_text(slot_id, 200, PC_MIME_JSON, buf);
 }
 
 static void dash_sse_connect(uint8_t pc_sse_id)
 {
     char buf[PC_DASHBOARD_JSON_BUF];
-    if (s_dashr.srv && pc_dashboard_values_json(buf, sizeof(buf)) > 0)
+    if (pc_dashboard_values_json(buf, sizeof(buf)) > 0)
     {
-        s_dashr.srv->pc_sse_send(pc_sse_id, buf); // seed the new client with the latest values
+        pc_sse_send(pc_sse_id, buf); // seed the new client with the latest values
     }
 }
 
@@ -85,9 +85,8 @@ static void dash_ws_close(uint8_t ws_id)
 }
 #endif
 
-void pc_dashboard_begin(PC &server, const char *path, const pc_widget *widgets, uint8_t count)
+void pc_dashboard_begin(const char *path, const pc_widget *widgets, uint8_t count)
 {
-    s_dashr.srv = &server;
     pc_dashboard_configure(widgets, count);
 
     if (!path || !path[0])
@@ -111,9 +110,9 @@ void pc_dashboard_begin(PC &server, const char *path, const pc_widget *widgets, 
         s_dashr.stream_path[0] = '\0';
     }
 
-    server.on(path, HttpMethod::HTTP_GET, dash_page_handler);
-    server.on(layout_path, HttpMethod::HTTP_GET, dash_layout_handler);
-    server.on_sse(s_dashr.stream_path, dash_sse_connect);
+    on_http(path, HttpMethod::HTTP_GET, dash_page_handler);
+    on_http(layout_path, HttpMethod::HTTP_GET, dash_layout_handler);
+    on_sse(s_dashr.stream_path, dash_sse_connect);
 #if PC_ENABLE_WEBSOCKET
     pc_sb sb_ws_path = {s_dashr.ws_path, sizeof(s_dashr.ws_path), 0, true};
     pc_sb_put(&sb_ws_path, path);
@@ -122,20 +121,21 @@ void pc_dashboard_begin(PC &server, const char *path, const pc_widget *widgets, 
     {
         s_dashr.ws_path[0] = '\0';
     }
-    server.on_ws(s_dashr.ws_path, dash_ws_connect, dash_ws_message, dash_ws_close);
+    on_ws(s_dashr.ws_path, dash_ws_connect, dash_ws_message, dash_ws_close);
 #endif
+    s_dashr.started = true; // last: publish() is only meaningful once the stream route exists
 }
 
 void pc_dashboard_publish()
 {
-    if (!s_dashr.srv)
+    if (!s_dashr.started)
     {
-        return;
+        return; // nothing is subscribed until begin() has registered the stream routes
     }
     char buf[PC_DASHBOARD_JSON_BUF];
     if (pc_dashboard_values_json(buf, sizeof(buf)) > 0)
     {
-        s_dashr.srv->pc_sse_broadcast(s_dashr.stream_path, buf);
+        pc_sse_broadcast(s_dashr.stream_path, buf);
     }
 }
 

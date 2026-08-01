@@ -1554,6 +1554,24 @@ bool regex_match(const char *pattern, const char *path);
 /** @brief True while a chunked response is paging out on @p slot (owner: server/response.cpp). */
 bool pc_resp_holds_slot(uint8_t slot);
 
+/** @brief Drop this file's per-run configuration and any in-flight chunked send. See
+ *         pc_server_reset(), which is what callers use. */
+void pc_resp_reset(void);
+
+/**
+ * @brief Return the server to its start-of-run state: routes, dispatch hooks, registered listeners,
+ *        and response configuration.
+ *
+ * Firmware has no use for this - a device configures itself once and runs - but a test case
+ * registers its own routes and handlers, and without a way back to the start each case would
+ * inherit every route the previous ones left behind. This is what `server = PC()` meant when there
+ * was an instance to reassign.
+ *
+ * It does NOT touch the connection pool or the parser pool: those belong to transport and the
+ * presentation layer, which reset per connection.
+ */
+void pc_server_reset(void);
+
 // The header blocks every response carries, owned by server/response.cpp.
 
 /** @brief True after a non-empty set_cors(). */

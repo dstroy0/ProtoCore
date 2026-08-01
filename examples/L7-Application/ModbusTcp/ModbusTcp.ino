@@ -32,7 +32,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 // Notified whenever a client writes a coil or holding register.
 static void on_write(uint8_t fc, uint16_t start, uint16_t count)
@@ -60,14 +59,14 @@ void setup()
     pc_modbus_set_input_reg(0, 0);        // application-published (read-only to client)
     pc_modbus_on_write(on_write);
 
-    server.listen(502, ConnProto::PROTO_MODBUS);
-    server.begin();
+    listen(502, ConnProto::PROTO_MODBUS);
+    begin();
     Serial.println("Modbus TCP slave on :502");
 }
 
 void loop()
 {
-    server.handle();
+    handle();
 
     // Publish a live value into an input register the client can poll.
     static uint32_t last = 0;

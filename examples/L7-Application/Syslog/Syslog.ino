@@ -34,7 +34,6 @@ static const char *PASSWORD = "YOUR_PASSWORD";
 static const char *SYSLOG_SERVER = "192.168.1.10"; // your syslog collector
 static const uint16_t SYSLOG_PORT = 514;           // 514 = IANA syslog; use 5140 for an unprivileged listener
 
-PC server;
 
 // Per-request access log -> syslog.
 static void access_log(const char *method, const char *path, int status, int len)
@@ -65,10 +64,10 @@ void setup()
     pc_syslog_init(SYSLOG_SERVER, SYSLOG_PORT, "esp32-pc", "pc", SyslogFacility::SYSLOG_FAC_LOCAL0);
     pc_syslog_log(SyslogSeverity::SYSLOG_NOTICE, "device booted");
 
-    server.on("/", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) { server.send(id, 200, "text/plain", "ok"); });
-    server.on_request_log(access_log); // every response is logged to syslog
+    on_http("/", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) { send_text(id, 200, "text/plain", "ok"); });
+    on_request_log(access_log); // every response is logged to syslog
 
-    int32_t result = server.begin(80);
+    int32_t result = begin_http(80);
     if (result < 0)
     {
         Serial.printf("begin() failed (error %d)\n", result);
@@ -81,7 +80,7 @@ void setup()
 
 void loop()
 {
-    server.handle();
+    handle();
 
     static uint32_t last = 0;
     if (millis() - last >= 1000)

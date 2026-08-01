@@ -29,7 +29,6 @@
 static const char *WIFI_SSID = "your-ssid";
 static const char *WIFI_PASS = "your-password";
 
-PC server;
 static PowerCfg g_cfg;
 static PowerPlan g_plan;
 static int16_t g_temp = 0;
@@ -49,17 +48,17 @@ static void power_handler(uint8_t slot_id, HttpReq *req)
     char json[128];
     if (pc_power_json(&g_plan, g_temp, json, sizeof(json)) == 0)
     {
-        server.send(slot_id, 500, PC_MIME_JSON, "{}");
+        send_text(slot_id, 500, PC_MIME_JSON, "{}");
         return;
     }
-    server.send(slot_id, 200, PC_MIME_JSON, json);
+    send_text(slot_id, 200, PC_MIME_JSON, json);
 }
 
 static void busy_handler(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
     g_busy_until = pc_millis() + 5000; // report "busy" for 5 s
-    server.send(slot_id, 200, PC_MIME_TEXT_PLAIN, "busy for 5s - poll /power to watch the clock\n");
+    send_text(slot_id, 200, PC_MIME_TEXT_PLAIN, "busy for 5s - poll /power to watch the clock\n");
 }
 
 void setup()
@@ -89,9 +88,9 @@ void setup()
         delay(250);
     }
 
-    server.on("/power", HttpMethod::HTTP_GET, power_handler);
-    server.on("/busy", HttpMethod::HTTP_GET, busy_handler);
-    server.begin(80);
+    on_http("/power", HttpMethod::HTTP_GET, power_handler);
+    on_http("/busy", HttpMethod::HTTP_GET, busy_handler);
+    begin_http(80);
 
     uint32_t ip = pc_net_egress_ip();
     Serial.printf("http://%u.%u.%u.%u/power\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
@@ -100,7 +99,7 @@ void setup()
 
 void loop()
 {
-    server.handle();
+    handle();
 
     static uint32_t next = 0;
     uint32_t now = pc_millis();

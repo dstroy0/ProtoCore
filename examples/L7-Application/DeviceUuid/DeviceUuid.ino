@@ -21,7 +21,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 static char g_uuid[PC_UUID_STR_LEN];
 
 void setup()
@@ -41,15 +40,15 @@ void setup()
     pc_device_uuid(g_uuid); // stable per-chip UUID
     Serial.printf("device UUID: %s\n", g_uuid);
 
-    server.on("/id", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
+    on_http("/id", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
         char body[64];
         snprintf(body, sizeof(body), "{\"uuid\":\"%s\"}", g_uuid);
-        server.send(id, 200, "application/json", body);
+        send_text(id, 200, "application/json", body);
     });
-    server.begin(80);
+    begin_http(80);
 }
 
 void loop()
 {
-    server.handle();
+    handle();
 }

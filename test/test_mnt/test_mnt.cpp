@@ -500,9 +500,64 @@ void test_unbound_root_fails_closed()
     TEST_ASSERT_TRUE(pc_fs_exists(s_root, "/u", "")); // untouched by the refused calls
 }
 
+// A filesystem with no store is a configuration, not a fault. Binding a root and resolving a path
+// still work; the operations that need storage fail closed AND say why, so an application can tell
+// "there is nowhere to put this" from "that path was wrong" without guessing.
+void test_null_store_is_intentional_and_says_so()
+{
+    pc_mnt_mount(nullptr);
+    pc_fs_clear_status();
+
+    // The local-only half still works: a root binds and a path resolves with nothing mounted.
+    int r = pc_fs_begin("/local");
+    TEST_ASSERT_TRUE(r >= 0);
+    TEST_ASSERT_FALSE(pc_fs_storage_present());
+    TEST_ASSERT_EQUAL_UINT32(PC_FS_OK, pc_fs_status()); // binding a root touches no store
+
+    // The half that needs storage fails closed, and the reason is readable.
+    TEST_ASSERT_FALSE(pc_fs_write_file(r, "/a", "", "x", 1));
+    TEST_ASSERT_TRUE((pc_fs_status() & PC_FS_STORAGE_EXHAUSTED) != 0);
+    TEST_ASSERT_FALSE(pc_fs_exists(r, "/a", ""));
+    TEST_ASSERT_EQUAL_INT32(-1, pc_fs_size(r, "/a", ""));
+
+    // Attaching a store clears the condition; the mask is sticky until cleared, which is what lets a
+    // caller test a whole sequence at once rather than branching per call.
+    pc_mnt_mount(pc_mnt_ram());
+    pc_mnt_ram_format();
+    TEST_ASSERT_TRUE(pc_fs_storage_present());
+    TEST_ASSERT_TRUE((pc_fs_status() & PC_FS_STORAGE_EXHAUSTED) != 0); // still set: nothing cleared it
+    pc_fs_clear_status();
+    TEST_ASSERT_EQUAL_UINT32(PC_FS_OK, pc_fs_status());
+    TEST_ASSERT_TRUE(pc_fs_write_file(r, "/a", "", "x", 1));
+    TEST_ASSERT_EQUAL_UINT32(PC_FS_OK, pc_fs_status());
+}
+
+// The other reasons are distinct bits, so a caller masks for the one it cares about.
+void test_status_separates_the_reasons()
+{
+    pc_fs_clear_status();
+    TEST_ASSERT_FALSE(pc_fs_exists(-1, "/a", "")); // never-bound root
+    TEST_ASSERT_TRUE((pc_fs_status() & PC_FS_BAD_ROOT) != 0);
+    TEST_ASSERT_EQUAL_UINT32(0u, pc_fs_status() & PC_FS_TRAVERSAL);
+
+    pc_fs_clear_status();
+    TEST_ASSERT_FALSE(pc_fs_write_file(s_root, "/../escape", "", "x", 1));
+    TEST_ASSERT_TRUE((pc_fs_status() & PC_FS_TRAVERSAL) != 0);
+    TEST_ASSERT_EQUAL_UINT32(0u, pc_fs_status() & PC_FS_BAD_ROOT);
+
+    // A write that the store cannot take in full is the same "nowhere to put this" bit as no store.
+    pc_fs_clear_status();
+    static uint8_t big[PC_MNT_RAM_FILE_SIZE + 16];
+    memset(big, 'z', sizeof(big));
+    TEST_ASSERT_FALSE(pc_fs_write_file(s_root, "/toobig", "", big, sizeof(big)));
+    TEST_ASSERT_TRUE((pc_fs_status() & PC_FS_STORAGE_EXHAUSTED) != 0);
+}
+
 int main()
 {
     UNITY_BEGIN();
+    RUN_TEST(test_null_store_is_intentional_and_says_so);
+    RUN_TEST(test_status_separates_the_reasons);
     RUN_TEST(test_root_without_trailing_slash);
     RUN_TEST(test_leaf_joins_onto_a_directory);
     RUN_TEST(test_remove_takes_the_whole_subtree);

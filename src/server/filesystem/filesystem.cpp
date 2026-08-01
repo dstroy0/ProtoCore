@@ -58,8 +58,24 @@ struct FilesystemCtx
     // a partial one (see PC_FS_BLOCK). Alignment is this file's problem: nothing above it knows what
     // the mounted store erases in.
     uint8_t block[PC_FS_BLOCK];
+
+    uint32_t status; ///< sticky reasons operations have failed (see the status block in filesystem.h).
 };
 static FilesystemCtx s_fs;
+
+// The mounted store, or nullptr - and the nullptr is RECORDED rather than left as a bare false at
+// the call site. A filesystem with no store behind it is a legitimate configuration, so it must be
+// distinguishable from a request that was simply wrong; every operation goes through here so that
+// distinction is made in one place instead of seventeen.
+const pc_mnt_backend *store(void)
+{
+    const pc_mnt_backend *b = pc_mnt_active();
+    if (b == nullptr)
+    {
+        s_fs.status |= PC_FS_STORAGE_EXHAUSTED;
+    }
+    return b;
+}
 
 // Descend @p path (length @p len) into @p child in place: append the separator and the name.
 // @return the new length, or 0 if it would not fit - which stops the walk rather than truncating a
@@ -105,15 +121,37 @@ const char *resolve_into(int slot, int root, const char *dir, const char *name)
 {
     if (root < 0 || root >= (int)s_fs.count || dir == nullptr || name == nullptr)
     {
+        s_fs.status |= PC_FS_BAD_ROOT;
         return nullptr;
     }
-    if (pc_fs_resolve(s_fs.root[root].path, dir, name, s_fs.path[slot], PC_FILESYSTEM_PATH_MAX) != 0)
+    // pc_fs_resolve already separates the two ways a path can be rejected; the mask keeps them
+    // separate for the caller instead of flattening both into the same nullptr.
+    int rc = pc_fs_resolve(s_fs.root[root].path, dir, name, s_fs.path[slot], PC_FILESYSTEM_PATH_MAX);
+    if (rc != 0)
     {
+        s_fs.status |= (rc == -1) ? PC_FS_TRAVERSAL : PC_FS_TOO_LONG;
         return nullptr;
     }
     return s_fs.path[slot];
 }
 } // namespace
+
+uint32_t pc_fs_status(void)
+{
+    return s_fs.status;
+}
+
+void pc_fs_clear_status(void)
+{
+    s_fs.status = PC_FS_OK;
+}
+
+bool pc_fs_storage_present(void)
+{
+    // Asked of the mount directly, not of the mask: the mask says what has failed, this says what is
+    // true now. A hotswap can attach a store between the two.
+    return pc_mnt_active() != nullptr;
+}
 
 int pc_fs_begin(const char *name)
 {
@@ -164,7 +202,7 @@ const char *pc_fs_path(int root, const char *dir, const char *name)
 
 int pc_fs_open(int root, const char *dir, const char *name, pc_mnt_mode mode)
 {
-    const pc_mnt_backend *b = pc_mnt_active();
+    const pc_mnt_backend *b = store();
     const char *p = resolve_into(0, root, dir, name);
     if (b == nullptr || p == nullptr)
     {
@@ -175,19 +213,19 @@ int pc_fs_open(int root, const char *dir, const char *name, pc_mnt_mode mode)
 
 int pc_fs_read(int handle, void *buf, size_t n)
 {
-    const pc_mnt_backend *b = pc_mnt_active();
+    const pc_mnt_backend *b = store();
     return (b == nullptr) ? -1 : b->read(handle, buf, n);
 }
 
 int pc_fs_write(int handle, const void *buf, size_t n)
 {
-    const pc_mnt_backend *b = pc_mnt_active();
+    const pc_mnt_backend *b = store();
     return (b == nullptr) ? -1 : b->write(handle, buf, n);
 }
 
 void pc_fs_close(int handle)
 {
-    const pc_mnt_backend *b = pc_mnt_active();
+    const pc_mnt_backend *b = store();
     if (b != nullptr)
     {
         b->close(handle);
@@ -196,13 +234,13 @@ void pc_fs_close(int handle)
 
 bool pc_fs_seek(int handle, uint64_t off)
 {
-    const pc_mnt_backend *b = pc_mnt_active();
+    const pc_mnt_backend *b = store();
     return (b == nullptr) ? false : b->seek(handle, off);
 }
 
 long pc_fs_size(int root, const char *dir, const char *name)
 {
-    const pc_mnt_backend *b = pc_mnt_active();
+    const pc_mnt_backend *b = store();
     const char *p = resolve_into(0, root, dir, name);
     if (b == nullptr || p == nullptr)
     {
@@ -213,7 +251,7 @@ long pc_fs_size(int root, const char *dir, const char *name)
 
 bool pc_fs_exists(int root, const char *dir, const char *name)
 {
-    const pc_mnt_backend *b = pc_mnt_active();
+    const pc_mnt_backend *b = store();
     const char *p = resolve_into(0, root, dir, name);
     if (b == nullptr || p == nullptr)
     {
@@ -224,7 +262,7 @@ bool pc_fs_exists(int root, const char *dir, const char *name)
 
 bool pc_fs_stat(int root, const char *dir, const char *name, pc_mnt_stat *out)
 {
-    const pc_mnt_backend *b = pc_mnt_active();
+    const pc_mnt_backend *b = store();
     const char *p = resolve_into(0, root, dir, name);
     if (b == nullptr || p == nullptr)
     {
@@ -235,7 +273,7 @@ bool pc_fs_stat(int root, const char *dir, const char *name, pc_mnt_stat *out)
 
 bool pc_fs_remove(int root, const char *dir, const char *name)
 {
-    const pc_mnt_backend *b = pc_mnt_active();
+    const pc_mnt_backend *b = store();
     const char *p = resolve_into(0, root, dir, name);
     if (b == nullptr || p == nullptr)
     {
@@ -323,7 +361,7 @@ bool pc_fs_remove(int root, const char *dir, const char *name)
 
 bool pc_fs_rename(int root, const char *from_dir, const char *from_name, const char *to_dir, const char *to_name)
 {
-    const pc_mnt_backend *b = pc_mnt_active();
+    const pc_mnt_backend *b = store();
     const char *fp = resolve_into(0, root, from_dir, from_name);
     const char *tp = resolve_into(1, root, to_dir, to_name); // the one op needing both paths live at once
     if (b == nullptr || fp == nullptr || tp == nullptr)
@@ -369,7 +407,7 @@ static bool copy_one(const pc_mnt_backend *b, const char *src, const char *dst)
 
 bool pc_fs_copy(int root, const char *from_dir, const char *from_name, const char *to_dir, const char *to_name)
 {
-    const pc_mnt_backend *b = pc_mnt_active();
+    const pc_mnt_backend *b = store();
     const char *sp = resolve_into(0, root, from_dir, from_name);
     const char *dp = resolve_into(1, root, to_dir, to_name); // both paths live at once, as in rename
     if (b == nullptr || sp == nullptr || dp == nullptr)
@@ -484,7 +522,7 @@ bool pc_fs_copy(int root, const char *from_dir, const char *from_name, const cha
 
 bool pc_fs_mkdir(int root, const char *dir, const char *name)
 {
-    const pc_mnt_backend *b = pc_mnt_active();
+    const pc_mnt_backend *b = store();
     const char *p = resolve_into(0, root, dir, name);
     if (b == nullptr || p == nullptr)
     {
@@ -495,7 +533,7 @@ bool pc_fs_mkdir(int root, const char *dir, const char *name)
 
 bool pc_fs_rmdir(int root, const char *dir, const char *name)
 {
-    const pc_mnt_backend *b = pc_mnt_active();
+    const pc_mnt_backend *b = store();
     const char *p = resolve_into(0, root, dir, name);
     if (b == nullptr || p == nullptr)
     {
@@ -506,7 +544,7 @@ bool pc_fs_rmdir(int root, const char *dir, const char *name)
 
 int pc_fs_opendir(int root, const char *dir, const char *name)
 {
-    const pc_mnt_backend *b = pc_mnt_active();
+    const pc_mnt_backend *b = store();
     const char *p = resolve_into(0, root, dir, name);
     if (b == nullptr || p == nullptr)
     {
@@ -517,13 +555,13 @@ int pc_fs_opendir(int root, const char *dir, const char *name)
 
 bool pc_fs_readdir(int handle, pc_mnt_stat *out, char *name, size_t name_cap)
 {
-    const pc_mnt_backend *b = pc_mnt_active();
+    const pc_mnt_backend *b = store();
     return (b == nullptr) ? false : b->readdir(handle, out, name, name_cap);
 }
 
 long pc_fs_read_file(int root, const char *dir, const char *name, void *buf, size_t cap)
 {
-    const pc_mnt_backend *b = pc_mnt_active();
+    const pc_mnt_backend *b = store();
     const char *p = resolve_into(0, root, dir, name); // resolved once; the loop below works on the handle
     if (b == nullptr || p == nullptr)
     {
@@ -556,7 +594,7 @@ long pc_fs_read_file(int root, const char *dir, const char *name, void *buf, siz
 
 bool pc_fs_write_file(int root, const char *dir, const char *name, const void *buf, size_t n)
 {
-    const pc_mnt_backend *b = pc_mnt_active();
+    const pc_mnt_backend *b = store();
     const char *p = resolve_into(0, root, dir, name);
     if (b == nullptr || p == nullptr)
     {
@@ -579,5 +617,13 @@ bool pc_fs_write_file(int root, const char *dir, const char *name, const void *b
         total += static_cast<size_t>(w);
     }
     b->close(h);
-    return total == n;
+    if (total != n)
+    {
+        // The store took some of it and stopped. That is the other half of "exhausted": the same bit
+        // a caller tests for "there is nowhere to put this", whether the cause is no store at all or
+        // a store with no room left.
+        s_fs.status |= PC_FS_STORAGE_EXHAUSTED;
+        return false;
+    }
+    return true;
 }

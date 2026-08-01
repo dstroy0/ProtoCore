@@ -48,7 +48,6 @@ static const char *PASSWORD = "YOUR_PASSWORD";
 #define LED_BUILTIN 2
 #endif
 
-PC server;
 
 // Private enterprise subtree: 1.3.6.1.4.1.49374
 static const uint32_t OID_FREE_HEAP[] = {1, 3, 6, 1, 4, 1, 49374, 10, 0}; // Gauge32, read-only
@@ -109,7 +108,7 @@ void setup()
     pc_snmp_agent_begin_udp(161);
     Serial.println("SNMP agent listening on UDP/161 (try: snmpwalk -v2c -c public <ip> system)");
 
-    int32_t result = server.begin(80);
+    int32_t result = begin_http(80);
     if (result < 0)
     {
         Serial.printf("begin() failed (error %d)\n", result);
@@ -118,5 +117,5 @@ void setup()
 
 void loop()
 {
-    server.handle(); // SNMP is serviced by lwIP callbacks; this drives the TCP server.
+    handle(); // SNMP is serviced by lwIP callbacks; this drives the TCP server.
 }

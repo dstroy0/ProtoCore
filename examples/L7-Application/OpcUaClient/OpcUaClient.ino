@@ -34,7 +34,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 // --- server side: a tiny address space (ns=1;i=1,2 read-only, i=3 writable) ---
 static uint32_t setpoint = 100;
@@ -252,15 +251,15 @@ void setup()
     pc_opcua_set_read_handler(srv_read);
     pc_opcua_set_write_handler(srv_write);
     pc_opcua_set_browse_handler(srv_browse);
-    server.on("/", HttpMethod::HTTP_GET,
-              [](uint8_t id, HttpReq *) { server.send(id, 200, "text/plain", "OPC UA client demo"); });
-    server.listen(4840, ConnProto::PROTO_OPCUA); // server endpoint, before begin()
-    server.begin(80);
+    on_http("/", HttpMethod::HTTP_GET,
+              [](uint8_t id, HttpReq *) { send_text(id, 200, "text/plain", "OPC UA client demo"); });
+    listen(4840, ConnProto::PROTO_OPCUA); // server endpoint, before begin()
+    begin_http(80);
 }
 
 void loop()
 {
-    server.handle();
+    handle();
 
     // Run the client exchange once, a few seconds after boot (server is up by then).
     static bool done = false;

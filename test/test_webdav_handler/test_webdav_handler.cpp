@@ -15,7 +15,6 @@
 #include <string.h>
 #include <unity.h>
 
-static PC server;
 static fs::FS davfs;
 
 static void push_str(uint8_t slot, const char *s)
@@ -33,7 +32,7 @@ static void feed_and_handle(uint8_t slot, const char *req)
 {
     push_str(slot, req);
     http_parse(slot);
-    server.handle();
+    handle();
 }
 
 // Re-arm slot 0 for a fresh request on the (close-after-each-DAV-response) flow.
@@ -93,7 +92,7 @@ static void populate_src()
 
 void setUp()
 {
-    server = PC();
+    pc_server_reset();
     for (int i = 0; i < MAX_CONNS; i++)
     {
         conn_pool[i] = {};
@@ -107,7 +106,7 @@ void setUp()
     pc_sse_init();
     tcp_capture_reset();
     fs::mock_fs_tree_enable(); // directory-capable, empty tree
-    server.dav("/dav", davfs, "/dav");
+    dav("/dav", davfs, "/dav");
 }
 
 void tearDown()
@@ -281,7 +280,7 @@ static void feed_put(uint8_t slot, const char *path, const uint8_t *body, size_t
         http_parse(slot);
         off += chunk;
     }
-    server.handle();
+    handle();
 }
 
 // A new file streams straight to disk and answers 201 Created, byte-exact.
@@ -387,7 +386,7 @@ static void feed_put_if(uint8_t slot, const char *path, const char *if_hdr, cons
         http_parse(slot);
         off += chunk;
     }
-    server.handle();
+    handle();
 }
 
 // Pull the "opaquelocktoken:...-pc" out of a LOCK response's Lock-Token header.
@@ -614,7 +613,7 @@ void test_webdav_copy_dest_path_too_long_414()
     memset(longroot, 'r', sizeof(longroot) - 1);
     longroot[0] = '/';
     longroot[sizeof(longroot) - 1] = '\0';
-    server.dav("/d2", davfs, longroot);
+    dav("/d2", davfs, longroot);
 
     char req[128];
     // dest sub-path "/destination_file_name.txt" (26 chars) + the 240-char root overflows 256.
@@ -655,7 +654,7 @@ void test_webdav_source_path_too_long_414()
     memset(longroot, 'r', sizeof(longroot) - 1);
     longroot[0] = '/';
     longroot[sizeof(longroot) - 1] = '\0'; // 254-char fs root: root + "/x" == 256, the join fails
-    server.dav("/d3", davfs, longroot);
+    dav("/d3", davfs, longroot);
     feed_and_handle(0, "GET /d3/x HTTP/1.1\r\nHost: x\r\n\r\n");
     TEST_ASSERT_TRUE(pc_resp_status(414));
 }
@@ -666,7 +665,7 @@ void test_webdav_source_path_too_long_414()
 void test_webdav_dav_wildcard_and_route_full()
 {
     // (a) A wildcard-terminated prefix is stored as-is; a request under it still routes.
-    server.dav("/w*", davfs, "/w");
+    dav("/w*", davfs, "/w");
     tree_put("/w/f.txt", "hi");
     feed_and_handle(0, "GET /w/f.txt HTTP/1.1\r\nHost: x\r\n\r\n");
     TEST_ASSERT_TRUE(pc_resp_status(200));
@@ -677,9 +676,9 @@ void test_webdav_dav_wildcard_and_route_full()
     {
         char p[16];
         snprintf(p, sizeof p, "/r%d", i);
-        server.dav(p, davfs, "/r");
+        dav(p, davfs, "/r");
     }
-    server.dav("/dropped", davfs, "/d"); // table full -> dropped
+    dav("/dropped", davfs, "/d"); // table full -> dropped
     feed_and_handle(0, "GET /dropped/x HTTP/1.1\r\nHost: x\r\n\r\n");
     TEST_ASSERT_TRUE(pc_resp_status(404)); // never registered
 }
@@ -691,7 +690,7 @@ void test_webdav_dav_wildcard_and_route_full()
 void test_webdav_join_root_variants()
 {
     // (a) root ending in '/': "/tsroot/" + "/f.txt" must not become "/tsroot//f.txt".
-    server.dav("/ts", davfs, "/tsroot/");
+    dav("/ts", davfs, "/tsroot/");
     tree_put("/tsroot/f.txt", "hi");
     feed_and_handle(0, "GET /ts/f.txt HTTP/1.1\r\nHost: x\r\n\r\n");
     TEST_ASSERT_TRUE(pc_resp_status(200));
@@ -699,7 +698,7 @@ void test_webdav_join_root_variants()
 
     // (b) empty root: the request sub-path is the whole fs path.
     rearm();
-    server.dav("/er", davfs, "");
+    dav("/er", davfs, "");
     tree_put("/f2.txt", "yo");
     feed_and_handle(0, "GET /er/f2.txt HTTP/1.1\r\nHost: x\r\n\r\n");
     TEST_ASSERT_TRUE(pc_resp_status(200));
@@ -714,7 +713,7 @@ void test_webdav_join_root_variants()
 
     // (d) a null fs_root behaves exactly like an empty one.
     rearm();
-    server.dav("/nr", davfs, nullptr);
+    dav("/nr", davfs, nullptr);
     tree_put("/n.txt", "nn");
     feed_and_handle(0, "GET /nr/n.txt HTTP/1.1\r\nHost: x\r\n\r\n");
     TEST_ASSERT_TRUE(pc_resp_status(200));
@@ -725,7 +724,7 @@ void test_webdav_join_root_variants()
 // every path; the mount prefix length is then zero, so the whole request path is the sub-path.
 void test_webdav_dav_empty_prefix_mount()
 {
-    server.dav("", davfs, "/ep");
+    dav("", davfs, "/ep");
     tree_put("/ep/x.txt", "ee");
     feed_and_handle(0, "GET /x.txt HTTP/1.1\r\nHost: x\r\n\r\n");
     TEST_ASSERT_TRUE(pc_resp_status(200));
@@ -806,7 +805,7 @@ void test_webdav_copy_header_edges()
 // prefix): the trailing-slash strip must not touch a one-character path.
 void test_webdav_copy_dest_joins_to_root()
 {
-    server.dav("/z", davfs, "");
+    dav("/z", davfs, "");
     tree_put("/src.txt", "s");
     feed_and_handle(0, "COPY /z/src.txt HTTP/1.1\r\nHost: x\r\nDestination: /z\r\n\r\n");
     TEST_ASSERT_TRUE(pc_resp_status(201));
@@ -842,12 +841,12 @@ void test_webdav_propfind_file_and_trailing_slash()
 static void h_plain(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    server.send(slot_id, 200, "text/plain", "plain");
+    send_text(slot_id, 200, "text/plain", "plain");
 }
 
 void test_webdav_route_scan_skips_non_dav_routes()
 {
-    server.on("/plain", HttpMethod::HTTP_GET, h_plain);
+    on_http("/plain", HttpMethod::HTTP_GET, h_plain);
     feed_and_handle(0, "GET /plain HTTP/1.1\r\nHost: x\r\n\r\n");
     TEST_ASSERT_TRUE(pc_resp_status(200));
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "plain"));
@@ -888,7 +887,7 @@ void test_webdav_status_on_dead_connection()
     push_str(0, "UNLOCK /dav/x HTTP/1.1\r\nHost: x\r\n\r\n");
     http_parse(0);
     conn_pool[0].pcb = nullptr; // connection torn down before the handler runs
-    server.handle();
+    handle();
     TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len()); // nothing written to a dead slot
 }
 
@@ -948,7 +947,7 @@ void test_webdav_status_text_table()
 // with its trailing slash stripped - i.e. the collection itself, which GET refuses with 405.
 void test_webdav_join_root_slash_with_empty_subpath()
 {
-    server.dav("/ts", davfs, "/tsroot/");
+    dav("/ts", davfs, "/tsroot/");
     tree_mkdir("/tsroot");
     tree_put("/tsroot/f.txt", "hi");
 

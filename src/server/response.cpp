@@ -149,6 +149,14 @@ bool pc_resp_holds_slot(uint8_t slot)
     return s_resp.chunk[slot].active;
 }
 
+void pc_resp_reset(void)
+{
+    // Everything this file owns is per-run configuration or an in-flight transfer, and a test case
+    // starts with neither. One store: the whole context is trivially copyable and its zero state is
+    // its initial state (no chunk active, CORS off, no cached header text).
+    s_resp = RespCtx{};
+}
+
 // ---------------------------------------------------------------------------
 // Template rendering
 //

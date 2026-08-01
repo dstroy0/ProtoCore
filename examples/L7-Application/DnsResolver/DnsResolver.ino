@@ -26,7 +26,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 void setup()
 {
@@ -40,29 +39,29 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    server.on("/resolve", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *req) {
+    on_http("/resolve", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *req) {
         const char *host = http_get_query(req, "host");
         if (!host)
         {
-            server.send(id, 400, "application/json", "{\"error\":\"missing host\"}");
+            send_text(id, 400, "application/json", "{\"error\":\"missing host\"}");
             return;
         }
         uint32_t ip = 0;
         bool ok = pc_dns_resolver_resolve(host, &ip);
         if (!ok)
         {
-            server.send(id, 502, "application/json", "{\"error\":\"resolve failed\"}");
+            send_text(id, 502, "application/json", "{\"error\":\"resolve failed\"}");
             return;
         }
         char b[80];
         snprintf(b, sizeof(b), "{\"ip\":\"%u.%u.%u.%u\",\"verified\":%s}", (ip >> 24) & 0xFF, (ip >> 16) & 0xFF,
                  (ip >> 8) & 0xFF, ip & 0xFF, pc_dns_resolver_verify(ip) ? "true" : "false");
-        server.send(id, 200, "application/json", b);
+        send_text(id, 200, "application/json", b);
     });
-    server.begin(80);
+    begin_http(80);
 }
 
 void loop()
 {
-    server.handle();
+    handle();
 }

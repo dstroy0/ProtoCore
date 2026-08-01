@@ -32,7 +32,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 static bool resolver(const char *path, const pc_gql_args *args, pc_gql_value *out)
 {
@@ -89,18 +88,18 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    server.on("/graphql", HttpMethod::HTTP_POST, [](uint8_t id, HttpReq *req) {
+    on_http("/graphql", HttpMethod::HTTP_POST, [](uint8_t id, HttpReq *req) {
         char body[512];
         pc_gql_result rc = pc_graphql_execute((const char *)req->body, req->body_len, resolver, body, sizeof(body));
         // The engine writes {"data":...} on success or {"errors":...} on a parse
         // error; 200 with the GraphQL error envelope is the conventional reply.
-        server.send(id, rc == pc_gql_result::PC_GQL_OK ? 200 : 400, "application/json", body);
+        send_text(id, rc == pc_gql_result::PC_GQL_OK ? 200 : 400, "application/json", body);
     });
 
-    server.begin(80);
+    begin_http(80);
 }
 
 void loop()
 {
-    server.handle();
+    handle();
 }

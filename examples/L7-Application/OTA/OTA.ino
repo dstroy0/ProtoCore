@@ -25,12 +25,11 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 void handle_root(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    server.send(slot_id, 200, "text/plain", "OTA demo - POST a firmware image to /update");
+    send_text(slot_id, 200, "text/plain", "OTA demo - POST a firmware image to /update");
 }
 
 void setup()
@@ -46,20 +45,20 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    server.on("/", HttpMethod::HTTP_GET, handle_root);
-    if (server.begin(80) < 0)
+    on_http("/", HttpMethod::HTTP_GET, handle_root);
+    if (begin_http(80) < 0)
     {
         Serial.println("begin() failed");
         return;
     }
 
     // Authenticated streaming OTA at POST /update.
-    pc_ota_begin(server, "/update", "admin", "s3cret");
+    pc_ota_begin("/update", "admin", "s3cret");
 
     Serial.println("Server up; OTA at POST /update");
 }
 
 void loop()
 {
-    server.handle();
+    handle();
 }

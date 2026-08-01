@@ -20,7 +20,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 static const char *iface_name(pc_iface i)
 {
@@ -53,18 +52,18 @@ void setup()
 
     Serial.printf("egress interface: %s\n", iface_name(pc_net_egress()));
 
-    server.on("/net", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
+    on_http("/net", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
         uint32_t ip = pc_net_egress_ip(); // network byte order
         char body[96];
         snprintf(body, sizeof(body), "{\"egress\":\"%s\",\"ip\":\"%u.%u.%u.%u\"}", iface_name(pc_net_egress()),
                  (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF), (unsigned)((ip >> 16) & 0xFF),
                  (unsigned)((ip >> 24) & 0xFF));
-        server.send(id, 200, "application/json", body);
+        send_text(id, 200, "application/json", body);
     });
-    server.begin(80);
+    begin_http(80);
 }
 
 void loop()
 {
-    server.handle();
+    handle();
 }

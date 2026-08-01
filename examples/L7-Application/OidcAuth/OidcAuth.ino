@@ -42,7 +42,6 @@ static const char *JWKS = "{\"keys\":[{\"kty\":\"RSA\",\"kid\":\"your-kid\",\"al
 static const char *ISSUER = "https://issuer.example";
 static const char *AUDIENCE = "your-client-id";
 
-PC server;
 
 void setup()
 {
@@ -56,14 +55,14 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    server.on("/whoami", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *req) {
+    on_http("/whoami", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *req) {
         // req->authorization holds the FULL Authorization header (ID tokens exceed
         // the normal header value cap). Step past the "Bearer " scheme.
         const char *hdr = req->authorization;
         if (!hdr || strncasecmp(hdr, "Bearer ", 7) != 0)
         {
-            server.add_response_header(id, "WWW-Authenticate", "Bearer");
-            server.send(id, 401, "application/json", "{\"error\":\"missing token\"}");
+            add_response_header(id, "WWW-Authenticate", "Bearer");
+            send_text(id, 401, "application/json", "{\"error\":\"missing token\"}");
             return;
         }
         const char *token = hdr + 7;
@@ -75,19 +74,19 @@ void setup()
         {
             char b[40];
             snprintf(b, sizeof(b), "{\"error\":%d}", (int)rc);
-            server.add_response_header(id, "WWW-Authenticate", "Bearer");
-            server.send(id, 401, "application/json", b);
+            add_response_header(id, "WWW-Authenticate", "Bearer");
+            send_text(id, 401, "application/json", b);
             return;
         }
         char b[192];
         snprintf(b, sizeof(b), "{\"sub\":\"%s\",\"email\":\"%s\"}", claims.sub, claims.email);
-        server.send(id, 200, "application/json", b);
+        send_text(id, 200, "application/json", b);
     });
 
-    server.begin(80);
+    begin_http(80);
 }
 
 void loop()
 {
-    server.handle();
+    handle();
 }

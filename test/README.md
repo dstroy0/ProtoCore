@@ -71,22 +71,23 @@ To isolate our application code from physical hardware and the operating system'
 
 <!-- BEGIN GENERATED test-environments (edit test/test_matrix.json, run test/gen_test_readme.py) -->
 
-The native test matrix has **281 environments**, one per feature, generated from [test_matrix.json](test_matrix.json) into [platformio.ini](../platformio.ini) by [gen_test_envs.py](gen_test_envs.py). Each compiles a strict per-feature slice of `src/` with its own flags and runs that feature's suite in isolation, so "this feature builds and tests on its own" stays guaranteed.
+The native test matrix has **306 environments**, one per feature, generated from [test_matrix.json](test_matrix.json) into [platformio.ini](../platformio.ini) by [gen_test_envs.py](gen_test_envs.py). Each compiles a strict per-feature slice of `src/` with its own flags and runs that feature's suite in isolation, so "this feature builds and tests on its own" stays guaranteed.
 
 | Environment | Feature flag(s) | Test suite(s) | Purpose |
 | :--- | :--- | :--- | :--- |
-| `native` | `PC_ENFORCE_HOST_HEADER=0` | `test_transport`, `test_presentation`, `test_session`, `test_http_parser`, `test_websocket`, `test_sse`, `test_base64` | Layers 4-6: transport + session + presentation + standalone parser (no app layer) These suites predate the RFC 7230 Â§5.4 Host rule and feed bare HTTP/1.1 request lines to exercise parser mechanics; H... |
 | `native_accept_gate` | `PC_ENFORCE_HOST_HEADER=0`, `PC_ENABLE_ACCEPT_THROTTLE=1`, `PC_ENABLE_PER_IP_THROTTLE=1`, `PC_ENABLE_IP_ALLOWLIST=1`, `PC_ACCEPT_THROTTLE_MAX=3`, `PC_ACCEPT_THROTTLE_WINDOW_MS=1000`, `PC_PER_IP_THROTTLE_MAX=2`, `PC_PER_IP_THROTTLE_WINDOW_MS=1000`, `PC_PER_IP_THROTTLE_SLOTS=4`, `PC_IP_ALLOWLIST_SLOTS=4` | `test_accept_gate` | Accept-time connection gates with their flags ON (PC_ENABLE_ACCEPT_THROTTLE / PER_IP_THROTTLE / IP_ALLOWLIST): the global fixed-window throttle, the per-source-IP bucket table (independent budgets, wi... |
 | `native_ad9238` | `PC_ENABLE_AD9238=1` | `test_ad9238` | AD9238 SPI configuration-port codec (services/peripherals/ad9238): the 16-bit instruction word (R/W + byte-count + 13-bit address) for single-byte register writes/reads, the device-update transfer tra... |
 | `native_ads` | `PC_ENABLE_ADS=1` | `test_ads` | Beckhoff ADS / AMS codec (services/fieldbus/ads): the AMS/TCP + AMS-header request builders (little-endian, target-before-source addressing, cmd id + state flags + cbData + invoke id) for Read/Write/R... |
 | `native_ads1115` | `PC_ENABLE_ADS1115=1` | `test_ads1115` | ADS1115 16-bit ADC codec (services/peripherals/ads1115): building the 16-bit config word for a single-shot single-ended reading (channel MUX, gain, data rate, start/mode/comparator bits, with out-of-r... |
 | `native_amqp` | `PC_ENABLE_AMQP=1` | `test_amqp` | AMQP 0-9-1 frame codec (services/iot/amqp): the protocol header, the frame + method builders, the heartbeat, and the frame/method parsers (type/channel/size/payload/0xCE). |
-| `native_app` | `BODY_BUF_SIZE=512`, `PC_ENFORCE_HOST_HEADER=0`, `PC_ENABLE_STATS=1`, `PC_ENABLE_METRICS=1`, `PC_ENABLE_ETAG=1`, `PC_ENABLE_WEB_TERMINAL=1`, `PC_HTTP_EMIT_DATE=1` | `test_auth`, `test_file_serving`, `test_multipart`, `test_dispatch`, `test_application`, `test_response_headers`, `test_form_params`, `test_path_params`, `test_digest_auth`, `test_digest_vectors`, `test_template`, `test_middleware`, `test_chunked`, `test_json`, `test_iface`, `test_regex`, `test_web_terminal`, `test_defer` | Full stack including Layer 7 application |
+| `native_application` | default | `test_application` | test_application against the native_stack_http stack. |
 | `native_arena` | default | `test_arena` | Unified double-ended server arena (network_drivers/session/pc_arena): first-fit persistent end (bottom, individual free + coalesce + boundary shrink) + bump scratch end (top, mark/release/reset) shari... |
 | `native_atc` | `PC_ENABLE_ATC=1` | `test_atc` | ATC field-I/O interop snapshot (services/machine_tool/atc): serialize this device's field-I/O map as {"inputs":[...],"outputs":[...]} JSON for an ATC engine over HTTP, plus the output setter and value... |
 | `native_audit_log` | `PC_ENABLE_AUDIT_LOG=1` | `test_audit_log` | Tamper-evident hash-chained audit log (services/security/audit_log). |
+| `native_auth` | default | `test_auth` | test_auth against the native_stack_http stack. |
 | `native_auth_lockout` | `PC_ENABLE_AUTH=1`, `PC_ENABLE_AUTH_LOCKOUT=1` | `test_auth_lockout` | Per-IP brute-force auth lockout (services/security/auth_lockout): exponential-backoff lockout state machine. |
 | `native_bacnet` | `PC_ENABLE_BACNET=1` | `test_bacnet` | BACnet/IP BVLC + NPDU codec (services/fieldbus/bacnet): the BVLC envelope (type 0x81, function, length) + the NPDU header (version + NPCI control + optional DNET/DADR + hop count) builders and parsers... |
+| `native_base64` | default | `test_base64` | test_base64 against the native_stack_l46 stack. |
 | `native_base64_scalar` | `PC_BASE64_SWAR=0` | `test_base64` | base64 scalar constant-time decode fallback (PC_BASE64_SWAR=0): classify one character at a time instead of the default SWAR four-per-word path. |
 | `native_ble_gatt` | `PC_ENABLE_BLE_GATT=1` | `test_ble_gatt` | Bluetooth ATT codec + GATT bridge (services/radio/ble_gatt): build/parse the common ATT PDUs (read/write/notify/error, LE handles) and serialize a GATT characteristic table as JSON for the web stack. |
 | `native_bus_capture` | `PC_ENABLE_BUS_CAPTURE=1` | `test_bus_capture` | CAN listen-only capture framing (services/system/bus_capture): can_to_socketcan() building the 16-byte Linux SocketCAN frame (big-endian can_id, EFF/RTR flags, length, data) and the DLT_CAN_SOCKETCAN ... |
@@ -95,6 +96,7 @@ The native test matrix has **281 environments**, one per feature, generated from
 | `native_cbor` | `PC_ENABLE_CBOR=1` | `test_cbor` | CBOR (RFC 8949) encoder (network_drivers/presentation/codec/cbor): a pure byte-output codec, host-tested against the RFC 8949 Appendix A vectors. |
 | `native_cc1101` | `PC_ENABLE_CC1101=1` | `test_cc1101` | CC1101 sub-GHz radio driver (services/radio/cc1101): the TI SPI header protocol (config registers, command strobes, status registers, TX/RX FIFO) - init/detect, variable-length send, TX-done, set-rx, ... |
 | `native_cclink` | `PC_ENABLE_CCLINK=1` | `test_cclink` | CC-Link cyclic fieldbus frame codec (services/fieldbus/cclink): the frame ([station][command][bit data][word data][sum]) build + parse and the bit/word process-image accessors. |
+| `native_chunked` | default | `test_chunked` | test_chunked against the native_stack_http stack. |
 | `native_cia402` | `PC_ENABLE_CIA402=1`, `PC_ENABLE_CANOPEN=1` | `test_cia402` | CiA 402 / IEC 61800-7-201 drive profile (services/fieldbus/cia402): the Statusword power-state decode (mask/value table), the Controlword commands + enable sequence, Statusword flags, the CANopen SDO ... |
 | `native_cip` | `PC_ENABLE_CIP=1` | `test_cip` | CIP message codec (services/fieldbus/cip): the EPATH logical-segment builder, the request builders (Get_Attribute_Single), and the response parser (service / status / data). |
 | `native_client` | default | `test_client` | Outbound TCP client transport (network_drivers/transport/client.cpp), the pooled layer-4 peer of tcp.cpp used by http_client / mqtt / ws_client / relay / smtp / ssh port-forward (PC_NEED_DET_CLIENT). |
@@ -116,13 +118,17 @@ The native test matrix has **281 environments**, one per feature, generated from
 | `native_dashboard` | `PC_ENABLE_DASHBOARD=1` | `test_dashboard` | Dashboard widget-table JSON serializers (services/web/dashboard core). |
 | `native_dbm` | `PC_ENABLE_WAL=1`, `PC_ENABLE_DBM=1` | `test_dbm` | Log-structured hash key-value store on the WAL (services/storage/dbm): put/get/delete with an in-RAM open-addressed index and value data appended to the write-ahead log, plus index rebuild by replayin... |
 | `native_dds` | `PC_ENABLE_DDS=1` | `test_dds` | DDS / RTPS framing codec (services/iot/dds): the 20-octet RTPS header (magic/version/vendor/ guidPrefix) and the submessage TLV (id/flags/octetsToNextHeader, endianness flag), build + parse. |
+| `native_defer` | default | `test_defer` | test_defer against the native_stack_http stack. |
 | `native_deflate` | `PC_ENABLE_WS_DEFLATE=1` | `test_deflate` | RFC 1951 DEFLATE core (the WebSocket permessage-deflate compressor). |
 | `native_device_id` | `PC_ENABLE_DEVICE_ID=1` | `test_device_id` | MAC-derived device UUID (services/system/device_id): RFC 4122 v5 from a MAC via SHA-1. |
 | `native_devicenet` | `PC_ENABLE_DEVICENET=1` | `test_devicenet` | DeviceNet link-adaptation codec (services/fieldbus/devicenet): the 4-group 11-bit CAN id, explicit-message header octet, single-frame explicit messages, and the fragmentation reassembler (CIP over CAN... |
 | `native_df1` | `PC_ENABLE_DF1=1` | `test_df1` | Allen-Bradley DF1 full-duplex frame codec (services/fieldbus/df1): BCC + CRC-16/ARC, the frame builder with DLE byte-stuffing, and the validating, un-stuffing parser. |
 | `native_diag` | `PC_ENABLE_DIAG=1` | `test_diag` | Runtime build-flag reporter (server.diag() / PC_ENABLE_DIAG). |
 | `native_diffserv` | `PC_ENABLE_DIFFSERV=1` | `test_diffserv` | DiffServ QoS marking (PC_ENABLE_DIFFSERV): the DSCP->TOS encode (DSCP << 2, ECN 0), the server-wide and UDP DSCP defaults (set/get, 6-bit mask), the per-connection setter (pc_conn_set_dscp writes pcb-... |
+| `native_digest_auth` | default | `test_digest_auth` | test_digest_auth against the native_stack_http stack. |
+| `native_digest_vectors` | default | `test_digest_vectors` | test_digest_vectors against the native_stack_http stack. |
 | `native_directnet` | `PC_ENABLE_DIRECTNET=1` | `test_directnet` | AutomationDirect DirectNET serial frame codec (services/fieldbus/directnet): the header (SOH + ASCII-hex slave/type/addr/blocks + ETB + LRC) and data (STX + data + ETX + LRC) frames build/parse. |
+| `native_dispatch` | default | `test_dispatch` | test_dispatch against the native_stack_http stack. |
 | `native_dma` | `PC_ENABLE_DMA=1`, `PC_DMA_BUF_SIZE=8`, `PC_DMA_CHANNELS=2` | `test_dma` | DMA peripheral ingest / egress simulator (services/system/dma), v5 hardware ingest: an ingress feed surfaces as RX completion events, a full buffer ping-pongs and re-arms, egress DMA is captured, TX i... |
 | `native_dmx` | `PC_ENABLE_DMX=1` | `test_dmx` | DMX512 + RDM lighting codec (services/peripherals/dmx): the DMX512 slot packet (build/get) and the RDM (ANSI E1.20) packet build/parse with 48-bit UIDs and the 16-bit additive checksum. |
 | `native_dnc` | `PC_ENABLE_DNC=1` | `test_dnc`, `test_dnc_stream` | CNC DNC drip-feed (services/machine_tool/dnc): the EIA RS-244 <-> ISO/ASCII tape-code translation (odd-parity EIA table), ISO even parity, G-code block framing with '%' rewind-stop and leader runout, ... |
@@ -147,9 +153,11 @@ The native test matrix has **281 environments**, one per feature, generated from
 | `native_failsafe` | `PC_ENABLE_FAILSAFE=1` | `test_failsafe` | Software watchdog / deadlock detection + safe-state (services/system/failsafe): the wrap-safe overdue predicate, the lifeline registry, fire-once-per-episode breach callback, and JSON. |
 | `native_fanuc_j519` | `PC_ENABLE_FANUC_J519=1` | `test_fanuc_j519` | FANUC Stream Motion / option J519 UDP codec (services/machine_tool/fanuc_j519): the robot counterpart to FOCAS. |
 | `native_fdc2214` | `PC_ENABLE_FDC2214=1` | `test_fdc2214` | FDC2114/2214 capacitance-to-digital field sensor (services/peripherals/fdc2214): the 28-bit data combine + error flags, the frequency scale (data/2^28 * fref), and the single-channel config-sequence b... |
+| `native_file_serving` | default | `test_file_serving` | test_file_serving against the native_stack_http stack. |
 | `native_fins` | `PC_ENABLE_FINS=1` | `test_fins` | Omron FINS frame codec (services/fieldbus/fins): the command builder + Memory Area Read convenience + the command / response parsers (10-octet header, MRC/SRC, MRES/SRES end code). |
 | `native_flow_export` | `PC_ENABLE_FLOW_EXPORT=1` | `test_flow_export` | Flow-record export codec (services/net/flow_export): NetFlow v5 fixed header/record builders + the NetFlow v9 / IPFIX template-then-data cursor (length/count patching, v9 4-octet padding). |
 | `native_focas` | `PC_ENABLE_FOCAS=1` | `test_focas` | FANUC FOCAS Ethernet codec (services/machine_tool/focas): the big-endian frame envelope (magic/version/type/length) + open/close handshake, the generic command request (6-octet function selector + fiv... |
+| `native_form_params` | default | `test_form_params` | test_form_params against the native_stack_http stack. |
 | `native_forward` | `PC_ENABLE_FORWARD=1`, `PC_FWD_MAX_IFACES=4`, `PC_FWD_MAX_RULES=4`, `PC_FWD_MAX_ACL=4`, `PC_FWD_MAX_ROUTES=4`, `PC_FWD_INSPECT=1` | `test_forward` | Interface forwarding plane (services/net/forward), v5 bridge / router: default-deny, an ALLOW rule forwards, a DENY wins, multi-destination fan-out, no reflection to the source, the per-rule rate cap ... |
 | `native_forwarded_trust` | `PC_ENABLE_AUTH=1`, `PC_ENABLE_AUTH_LOCKOUT=1`, `PC_ENABLE_FORWARDED_TRUST=1` | `test_forwarded_trust` | Trusted-reverse-proxy forwarded-client resolver (services/security/forwarded_trust): a Forwarded / X-Forwarded-For client address is honored only when the real TCP peer is a configured trusted-upstrea... |
 | `native_frame` | default | `test_frame` | The declarative frame builder (shared_primitives/frame.h + frame.cpp): the single engine that turns a static pc_field spec into wire bytes, so the ~160 formatting sites in this library carry a table r... |
@@ -178,10 +186,12 @@ The native test matrix has **281 environments**, one per feature, generated from
 | `native_hpack` | `PC_ENABLE_HTTP2=1` | `test_hpack` | HPACK header compression for HTTP/2 (RFC 7541): prefix-integer coding (App C.1), the Huffman string code (App B / C.4.1), the first-request decode with dynamic-table insertion (C.3.1), dynamic-table i... |
 | `native_http_client` | `PC_ENABLE_HTTP_CLIENT=1` | `test_http_client` | Outbound HTTP client: URL parser + request builder + response parser. |
 | `native_http_delivery` | `PC_ENABLE_HTTP_DELIVERY=1` | `test_http_delivery` | HTTP delivery optimizations (services/file_transfer/http_delivery): the RFC 5861 stale-while-revalidate freshness decision + its Cache-Control builder, and the versioned service-worker precache manife... |
+| `native_http_parser` | default | `test_http_parser` | test_http_parser against the native_stack_l46 stack. |
 | `native_httpcache` | `PC_ENABLE_HTTP_CACHE=1` | `test_httpcache` | HTTP Cache-Control helpers (services/web/httpcache, RFC 9111 + 8246 + 5861): the structured directive builder + first-class origin presets (immutable asset / shared / no-store / revalidatable), the to... |
 | `native_hw_health` | `PC_ENABLE_HW_HEALTH=1` | `test_hw_health` | Hardware-health diagnostics (services/system/hw_health): power-rail voltage-drop logger (worst droop + sag/brownout counts), SPI-bus CRC audit with hysteretic clock backoff, GPIO short-circuit test (d... |
 | `native_iccp` | `PC_ENABLE_ICCP=1` | `test_iccp` | ICCP / TASE.2 (IEC 60870-6) Data_Value codec (services/energy/iccp): the StateQ (state + quality) and RealQ (scaled INTEGER + quality) indication-point BER structures with optional timestamp. |
 | `native_iec60870` | `PC_ENABLE_IEC60870=1` | `test_iec60870` | IEC 60870-5-101/-104 codec (services/energy/iec60870): the -104 APCI (I/S/U), the ASDU header + 3-octet IOA, and the -101 FT1.2 fixed/variable link frames (sum checksum). |
+| `native_iface` | default | `test_iface` | test_iface against the native_stack_http stack. |
 | `native_iface_bridge` | `PC_ENABLE_IFACE_BRIDGE=1` | `test_iface_bridge` | Interface bridge pure core (services/net/iface_bridge): the user-defined address:port -> bus rule table (register / find / dedup / capacity, keyed by port+proto with the full pc_ip bind address preser... |
 | `native_ikev2` | `PC_ENABLE_IKEV2=1` | `test_ikev2`, `test_ikev2_natt` | IKEv2 (RFC 7296) message + payload codec (services/security/ikev2): the 28-octet IKE header, the generic payload chain walker, the SA -> proposal -> transform tree (incl. |
 | `native_ina219` | `PC_ENABLE_INA219=1` | `test_ina219` | INA219 current/power codec (services/peripherals/ina219): decoding the bus-voltage register (bits [15:3], LSB 4 mV, status bits ignored) and the shunt-voltage register (signed, LSB 10 uV), computing t... |
@@ -192,6 +202,7 @@ The native test matrix has **281 environments**, one per feature, generated from
 | `native_ipsec_db` | `PC_ENABLE_IKEV2=1` | `test_ipsec_db` | IPsec Security Policy Database + Security Association Database (RFC 4301, services/system/esp/ipsec_db): ordered first-match-wins SPD policy lookup over source/destination/protocol/port selector range... |
 | `native_j1939` | `PC_ENABLE_J1939=1` | `test_j1939` | SAE J1939 codec (services/fieldbus/j1939): 29-bit id encode/decode (PDU1 + PDU2), single-frame messages, Request PGN, Address Claimed + NAME, and the Transport Protocol (BAM + TP.DT) reassembler, over... |
 | `native_j2735` | `PC_ENABLE_J2735=1` | `test_j2735` | SAE J2735 V2X codec (services/transportation/j2735): the ASN.1 UPER bit primitive layer (constrained INTEGER / BOOLEAN / bit fields) and the BSMcore block encode/decode. |
+| `native_json` | default | `test_json` | test_json against the native_stack_http stack. |
 | `native_jwt` | `PC_ENABLE_JWT=1` | `test_jwt` | JWT (HS256) bearer-auth verification. |
 | `native_keepalive` | `PC_ENFORCE_HOST_HEADER=0`, `PC_ENABLE_KEEPALIVE=1`, `PC_KEEPALIVE_MAX_REQUESTS=3` | `test_keepalive` | HTTP/1.1 keep-alive (persistent connections): full server built with PC_ENABLE_KEEPALIVE=1; a small per-connection request cap makes the fairness-bound test fast. |
 | `native_ld2410` | `PC_ENABLE_LD2410=1` | `test_ld2410` | LD2410 mmWave radar codec (services/peripherals/ld2410): decoding a basic and an engineering-mode report frame, rejecting malformed frames, the byte-by-byte stream reassembler (resync past noise, spli... |
@@ -207,6 +218,7 @@ The native test matrix has **281 environments**, one per feature, generated from
 | `native_mbus` | `PC_ENABLE_MBUS=1` | `test_mbus` | Wired M-Bus codec (services/fieldbus/mbus): the ACK / short / long frame builders + parser (start/stop, doubled length, 8-bit sum checksum) and the EN 13757-3 variable-data record walker (DIF/VIF, DIF... |
 | `native_mdns_adaptive` | `PC_ENABLE_MDNS_ADAPTIVE=1` | `test_mdns_adaptive` | Adaptive mDNS beacon scheduling (services/net/mdns_adaptive): RF-contention backoff/recovery of the announce interval, the TTL/2 continuous-refresher cadence, the announce-due check, and the auto-slee... |
 | `native_melsec` | `PC_ENABLE_MELSEC=1` | `test_melsec` | Mitsubishi MELSEC MC binary 3E codec (services/fieldbus/melsec): the batch-read request builder (little-endian, subheader 0x5000, command 0x0401, device code + 24-bit head device) + the 0xD000 respons... |
+| `native_middleware` | default | `test_middleware` | test_middleware against the native_stack_http stack. |
 | `native_mms` | `PC_ENABLE_MMS=1` | `test_mms` | IEC 61850 MMS PDU codec (services/energy/mms): the BER confirmed-request/response Read PDUs (invokeID + read service + named ObjectName), build + parse. |
 | `native_mnt` | `PC_ENABLE_MNT=1` | `test_mnt` | Mounted storage (server/filesystem/mnt) - the backend vtable and its built-in RAM backend, host-tested through that backend (the Arduino FS backend is board-layer and HW-verified). |
 | `native_modbus` | `PC_ENABLE_MODBUS=1`, `PC_ENABLE_MODBUS_RTU=1` | `test_modbus` | Modbus TCP slave core + RTU framing (Modbus Application Protocol): the data model + MBAP/PDU codec + the RTU ADU codec (CRC16 + [addr][PDU][CRC]). |
@@ -216,6 +228,7 @@ The native test matrix has **281 environments**, one per feature, generated from
 | `native_mqtt_sn` | `PC_ENABLE_MQTT_SN=1` | `test_mqtt_sn` | MQTT-SN v1.2 wire codec (services/iot/mqtt/mqtt_sn): the zero-heap message builders (CONNECT/REGISTER/PUBLISH/SUBSCRIBE/PINGREQ/DISCONNECT/SEARCHGW) + the Length+MsgType header parser (1- and 3-octet ... |
 | `native_msgpack` | `PC_ENABLE_MSGPACK=1` | `test_msgpack` | MessagePack encoder (network_drivers/presentation/codec/msgpack): a pure byte-output codec, host-tested against the spec encodings. |
 | `native_mtconnect` | `PC_ENABLE_MTCONNECT=1` | `test_mtconnect` | MTConnect agent response codec (services/machine_tool/mtconnect, ANSI/MTC1.4): the incremental MTConnectStreams builder (header + Samples/Events/Condition), the MTConnectDevices probe (device model), ... |
+| `native_multipart` | default | `test_multipart` | test_multipart against the native_stack_http stack. |
 | `native_nats` | `PC_ENABLE_NATS=1` | `test_nats` | NATS client protocol codec (services/iot/nats): the CONNECT / PUB / SUB / UNSUB / PING / PONG builders + the inbound MSG / INFO / PING / +OK / -ERR parser (subject/sid/reply/payload). |
 | `native_nema_ts2` | `PC_ENABLE_NEMA_TS2=1` | `test_nema_ts2` | NEMA TS 2 SDLC frame codec (services/transportation/nema_ts2): the traffic-cabinet bus frame ([address][control][frame-type][data][CRC-16/X-25]) build + validate. |
 | `native_net_egress` | default | `test_net_egress` | Egress-interface reporting (network_drivers/physical). |
@@ -238,6 +251,7 @@ The native test matrix has **281 environments**, one per feature, generated from
 | `native_ota_rollback` | `PC_ENABLE_OTA_ROLLBACK=1` | `test_ota_rollback` | OTA rollback decision (services/system/ota_rollback): pure decision matrix host-tested; the esp_ota commit/rollback are ESP32-only. |
 | `native_packml` | `PC_ENABLE_PACKML=1` | `test_packml` | PackML / OMAC packaging-machine state model (services/machine_tool/packml), ISA-TR88.00.02: the pure 17-state transition engine (command / state-complete / execute-complete + command validity) and the... |
 | `native_partition` | `PC_ENABLE_PARTITION_MONITOR=1` | `test_partition_monitor` | Flash partition-map monitor (services/storage/partition_monitor core): the kind classifier + JSON serializer host-test here; the esp_partition walk is ESP32-only. |
+| `native_path_params` | default | `test_path_params` | test_path_params against the native_stack_http stack. |
 | `native_pca9685` | `PC_ENABLE_PCA9685=1` | `test_pca9685` | PCA9685 PWM/servo codec (services/peripherals/pca9685): the PRESCALE computation from a PWM frequency (with clamping), the per-channel register address, the servo pulse-width -> 12-bit count conversio... |
 | `native_pentest` | `PC_ENABLE_MODBUS=1`, `PC_ENABLE_MODBUS_MASTER=1`, `PC_ENABLE_TOTP=1`, `PC_ENABLE_MULTIPART=1`, `PC_ENABLE_CBOR=1`, `PC_ENABLE_MSGPACK=1`, `PC_ENABLE_COAP=1`, `PC_ENABLE_COAP_BLOCK=1`, `PC_COAP_BLOCK_SZX_MAX=2`, `PC_COAP_BLOCK1_MAX=128`, `PC_ENABLE_SNMP=1`, `PC_ENABLE_SQLITE=1`, `PC_ENABLE_REDIS=1`, `PC_ENABLE_OPCUA=1`, `PC_ENABLE_GRAPHQL=1`, `PC_ENABLE_DNS_SERVER=1`, `PC_ENABLE_DNP3=1`, `PC_ENABLE_STOMP=1`, `PC_ENABLE_SMB=1`, `PC_ENABLE_DNC=1`, `PC_ENABLE_FTP=1`, `PC_ENABLE_FINS=1`, `PC_ENABLE_MELSEC=1`, `PC_ENABLE_CIP=1`, `PC_ENABLE_ENIP=1`, `PC_ENABLE_DF1=1`, `PC_ENABLE_BACNET=1`, `PC_ENABLE_COTP=1`, `PC_ENABLE_C37118=1`, `PC_ENABLE_JWT=1`, `PC_ENABLE_DIRECTNET=1`, `PC_ENABLE_CCLINK=1`, `PC_ENABLE_AMQP=1`, `PC_ENABLE_MMS=1`, `PC_ENABLE_DDS=1`, `PC_ENABLE_WEBDAV=1`, `PC_ENABLE_HTTP2=1`, `PC_ENABLE_HTTP3=1` | `test_pentest` | Adversarial / pentest harness - run SEPARATELY (`pio test -e native_pentest`), NOT part of run_tests.sh. |
 | `native_plaintext` | default | `test_plaintext` | The plaintext pool accessor (server/mmgr/plaintext): bump-allocate + reset semantics, alignment, and fail-closed exhaustion. |
@@ -247,6 +261,7 @@ The native test matrix has **281 environments**, one per feature, generated from
 | `native_powerlink` | `PC_ENABLE_POWERLINK=1` | `test_powerlink` | Ethernet POWERLINK basic frame codec (services/fieldbus/powerlink): the EPL cyclic frames ([messageType][dest][source][payload]) - SoC/PReq/PRes/SoA - build + parse, over raw L2 (0x88AB). |
 | `native_pqc` | `PC_ENABLE_PQC_KEX=1` | `test_pqc_sha3`, `test_pqc_mlkem`, `test_pqc_sntrup761` | Post-quantum hybrid KEX primitives (network_drivers/presentation/pqc): the Keccak/SHA-3/SHAKE sponge (FIPS 202) and ML-KEM-768 Encaps (FIPS 203) - the responder half of the mlkem768x25519-sha256 (SSH)... |
 | `native_preempt_queue` | `PC_ENABLE_PREEMPT_QUEUE=1`, `PC_PQ_DEPTH=4`, `PC_PQ_ITEM_SIZE=4` | `test_preempt_queue` | Preempting work queue (services/system/preempt_queue), v5 real-time ingest: the host fixed-ring core - FIFO order, urgent-to-front, fail-closed when full, high-water, and drain/handler dispatch. |
+| `native_presentation` | default | `test_presentation` | test_presentation against the native_stack_l46 stack. |
 | `native_primitives` | default | `test_primitives`, `test_crc` | Shared no-stdlib primitives (shared_primitives): the base-10 pc_strtol/strtoul/strtof number parsers (numparse.h), the strict RFC 3629 UTF-8 validator (utf8.h), and the parameterized Rocksoft/Williams... |
 | `native_profibus` | `PC_ENABLE_PROFIBUS=1` | `test_profibus` | PROFIBUS-DP FDL telegram codec (services/fieldbus/profibus): the SD1 (no-data) + SD2 (variable data, LE/LEr + arithmetic-sum FCS) telegrams build + validate. |
 | `native_profinet` | `PC_ENABLE_PROFINET=1` | `test_profinet` | PROFINET DCP frame codec (services/fieldbus/profinet): the 10-octet DCP header + option/suboption blocks (even-padding) build + parse/walk, for Identify/Set over raw L2 (ethertype 0x8892). |
@@ -272,7 +287,9 @@ The native test matrix has **281 environments**, one per feature, generated from
 | `native_rawl2` | `PC_ENABLE_RAWL2=1` | `test_rawl2` | Raw L2 Ethernet frame codec (services/fieldbus/rawl2): Ethernet II + 802.1Q VLAN build/parse and the 802.3 FCS (CRC-32). |
 | `native_rcwl0516` | `PC_ENABLE_RCWL0516=1` | `test_rcwl0516` | RCWL-0516 Doppler presence sensor + the shared one-GPIO presence facade (services/peripherals/rcwl0516): the debounce that swallows comparator chatter, the hold that bridges the module's ~2s retrigger... |
 | `native_redis` | `PC_ENABLE_REDIS=1` | `test_redis_resp` | Redis RESP2/RESP3 codec (services/iot/redis_resp): the zero-heap command encoder + the cursor reply parser (RESP2 simple/error/integer/bulk/array/nil plus RESP3 null/boolean/double/big number/bulk err... |
+| `native_regex` | default | `test_regex` | test_regex against the native_stack_http stack. |
 | `native_relay` | `PC_ENABLE_RELAY=1` | `test_relay` | TCP relay / DNAT byte pump (services/net/relay): the bidirectional relay engine that publishes an internal host:port through the server. |
+| `native_response_headers` | default | `test_response_headers` | test_response_headers against the native_stack_http stack. |
 | `native_roaming` | `PC_ENABLE_ROAMING=1` | `test_roaming` | Wi-Fi roaming decision layer (services/system/roaming): the pure policy that fuses the current RSSI, a candidate neighbour list, and an optional 802.11v BTM hint into a roam/stay decision (target BSSI... |
 | `native_robotics` | `PC_ENABLE_OPCUA=1`, `PC_ENABLE_ROBOTICS=1` | `test_robotics` | OPC UA for Robotics (OPC 40010-1) MotionDeviceSystem model (services/machine_tool/robotics) - the Browse hierarchy + the Read resolver over a bound RoboticsMotionDeviceSystem, including the parametric... |
 | `native_rtc` | `PC_ENABLE_RTC=1` | `test_rtc` | DS1307/DS3231 RTC conversions (services/peripherals/rtc): BCD time registers <-> Unix epoch in 24- and 12-hour encodings, leap years, clock-halt/century bit masks, range validation, and a round-trip o... |
@@ -288,6 +305,7 @@ The native test matrix has **281 environments**, one per feature, generated from
 | `native_senml` | `PC_ENABLE_SENML=1` | `test_senml` | SenML (RFC 8428) pack builder (services/iot/senml): the SenML-JSON encoder (over the JSON writer) + the SenML-CBOR encoder (over the CBOR writer, integer labels), integral numbers emitted as integers. |
 | `native_sep2` | `PC_ENABLE_SEP2=1` | `test_sep2` | IEEE 2030.5 (SEP 2.0) resource codec (services/energy/sep2): the DeviceCapability, EndDevice, and DERControl XML documents (urn:ieee:std:2030.5:ns), XML-escaped. |
 | `native_sercos` | `PC_ENABLE_SERCOS=1` | `test_sercos` | SERCOS III motion-bus codec (services/fieldbus/sercos): the MDT/AT telegram (type + phase + cycle + data) build + parse and the 16-bit IDN encode/decode (S/P + set + block). |
+| `native_session` | default | `test_session` | test_session against the native_stack_l46 stack. |
 | `native_sht3x` | `PC_ENABLE_SHT3X=1` | `test_sht3x` | Sensirion SHT3x temperature/humidity codec (services/peripherals/sht3x): the CRC-8 against the datasheet check value (0xBEEF -> 0x92), the raw-tick -> milli-unit temperature/humidity conversions at th... |
 | `native_sigfox` | `PC_ENABLE_SIGFOX=1` | `test_sigfox` | Sigfox modem AT-command codec (services/radio/sigfox), v5 radio plugin: the AT$SF uplink command (uppercase hex encoding of the payload), its bounds (12-byte cap, output cap), and the OK / ERROR / PEN... |
 | `native_signaling` | default | `test_signaling` | Application-layer signaling (server/signaling): the state bucket. |
@@ -305,6 +323,7 @@ The native test matrix has **281 environments**, one per feature, generated from
 | `native_span` | default | `test_span` | The bounded byte region (server/mmgr/span.h): a pointer and the capacity that belongs to it, bound together. |
 | `native_sparkplug` | `PC_ENABLE_SPARKPLUG=1` | `test_sparkplug` | Sparkplug B codec (services/iot/sparkplug): the topic builder + the Metric / Payload protobuf serializers (over the protobuf codec). |
 | `native_sqlite` | `PC_ENABLE_SQLITE=1` | `test_sqlite` | SQLite3 on-disk file-format reader (services/storage/sqlite): the 100-byte database header, the b-tree page header, the record varint, and record serial types, parsed by hand. |
+| `native_sse` | default | `test_sse` | test_sse against the native_stack_l46 stack. |
 | `native_ssh` | `PC_SSH_MAX_CHANNELS=3`, `PC_ENABLE_SSH=1`, `PC_ENABLE_MNT=1`, `PC_ENABLE_SSH_SFTP=1`, `PC_ENABLE_SSH_SCP=1` | `test_ssh_crypto`, `test_ssh_transport`, `test_ssh_auth`, `test_ssh_channel`, `test_ssh_server` | SSH crypto layer (native software paths only, no mbedtls dependency); channels multiplexed (PC_SSH_MAX_CHANNELS=3) to exercise routing; SFTP/SCP subsystem routing on (MNT satisfies the guard - the fil... |
 | `native_ssh_aesgcm` | default | `test_ssh_aesgcm` | AES-256-GCM AEAD for aes256-gcm@openssh.com (RFC 5647) host-tested here: seal/open vs the NIST/McGrew AES-256-GCM Test Case 16 vector, tamper rejection, and the invocation-counter advance. |
 | `native_ssh_chachapoly` | default | `test_ssh_chachapoly` | chacha20-poly1305@openssh.com AEAD (network_drivers/presentation/ssh): ChaCha20 vs RFC 8439 sec 2.3.2 block vector, Poly1305 vs RFC 8439 sec 2.5.2, and the OpenSSH construction (length decode, encrypt... |
@@ -318,6 +337,8 @@ The native test matrix has **281 environments**, one per feature, generated from
 | `native_ssh_pqc` | `PC_SSH_MAX_CHANNELS=3`, `PC_ENABLE_PQC_KEX=1` | `test_ssh_pqc` | mlkem768x25519-sha256 SSH hybrid KEX (draft-ietf-sshm-mlkem-hybrid-kex) end to end: the full SSH transport built with PC_ENABLE_PQC_KEX=1 plus the ML-KEM-768 / SHA-3 core. |
 | `native_ssh_sftp` | `PC_ENABLE_SSH=1`, `PC_ENABLE_SSH_SFTP=1`, `PC_ENABLE_MNT=1` | `test_ssh_sftp` | SFTP protocol v3 wire codec (services/file_transfer/sftp): the SSH_FXP_* request reader + response builders (VERSION / STATUS / HANDLE / DATA / ATTRS / NAME), the ATTRS blob encode/decode round-trip (... |
 | `native_ssh_zlib` | `PC_ENABLE_SSH=1`, `PC_ENABLE_SSH_ZLIB=1`, `PC_ENABLE_WS_DEFLATE=1` | `test_ssh_zlib` | SSH server-to-client streaming compressor (zlib@openssh.com / zlib): a context-takeover DEFLATE stream (persistent sliding window across packets, sync-flush per packet, zlib wrapper). |
+| `native_stack_http` | `BODY_BUF_SIZE=512`, `PC_ENFORCE_HOST_HEADER=0`, `PC_ENABLE_STATS=1`, `PC_ENABLE_METRICS=1`, `PC_ENABLE_ETAG=1`, `PC_ENABLE_WEB_TERMINAL=1`, `PC_HTTP_EMIT_DATE=1` | - | Full HTTP/1.1 server stack through Layer 7. |
+| `native_stack_l46` | `PC_ENFORCE_HOST_HEADER=0` | - | Layers 4-6 stack: transport + session + presentation + the standalone parser, no app layer. |
 | `native_statsd` | `PC_ENABLE_STATSD=1` | `test_statsd` | StatsD metrics client (services/iot/statsd): the pure line formatter (name:value\|type, sample rate, DogStatsD tags) plus the count/gauge/timing/set emit helpers, whose sent bytes are captured through... |
 | `native_stomp` | `PC_ENABLE_STOMP=1` | `test_stomp` | STOMP 1.2 frame codec (services/iot/stomp): the zero-heap frame builder (command + escaped headers + NUL body) + the non-mutating parser (command/header slices/body, honoring content-length) + escape/... |
 | `native_sunspec` | `PC_ENABLE_SUNSPEC=1` | `test_sunspec` | SunSpec Modbus model codec (services/energy/sunspec): the map writer (marker / model headers / points / end model) + the model-chain walker + typed point readers (u16 / i16 / u32 / i32 / string). |
@@ -325,6 +346,7 @@ The native test matrix has **281 environments**, one per feature, generated from
 | `native_syslog` | `PC_ENABLE_SYSLOG=1` | `test_syslog` | Syslog client (RFC 5424) line formatter. |
 | `native_telemetry` | `PC_ENABLE_TELEMETRY=1` | `test_telemetry` | Telemetry math (services/iot/telemetry): moving-window stats, rate-of-change, and totalizer. |
 | `native_telnet` | `PC_ENABLE_TELNET=1` | `test_telnet` | Telnet server (RFC 854 IAC negotiation + line editing) wired through the real transport ring buffer; output checked via the tcp_write capture mock. |
+| `native_template` | default | `test_template` | test_template against the native_stack_http stack. |
 | `native_thread` | `PC_ENABLE_THREAD=1`, `PC_THREAD_MAX_DATA=64` | `test_thread` | Thread spinel / HDLC-lite codec (services/radio/thread), v5 radio plugin: the FCS (CRC-16/X-25) against its catalog check value (0x906E), an encode -> decode round trip, the byte-stuffing of reserved ... |
 | `native_time_source` | `PC_ENABLE_TIME_SOURCE=1` | `test_time_source` | Multi-source time fallback matrix (services/timing_position/time_source): priority-ordered query of user time sources with first-valid-wins fallback. |
 | `native_tls13_kdf` | `PC_ENABLE_HTTP3=1` | `test_tls13_kdf` | TLS 1.3 key schedule for the QUIC handshake (crypto/tls13_kdf, RFC 8446 sec 7.1 / 4.4.4): Early/Handshake/Master secret Extract chain, client/server handshake + application traffic secrets, the server... |
@@ -332,6 +354,7 @@ The native test matrix has **281 environments**, one per feature, generated from
 | `native_tls_policy` | `PC_ENABLE_TLS_POLICY=1` | `test_tls_policy` | TLS version negotiation + pinned cipher policy (services/security/tls_policy): the server-style version pick (highest supported not above the client's), the version name, cipher selection by server pr... |
 | `native_totp` | `PC_ENABLE_TOTP=1` | `test_totp` | TOTP two-factor (services/security/totp): HMAC-SHA1 HOTP/TOTP + base32, host-tested against the RFC 6238 vectors (builds on the software SHA-1). |
 | `native_trace_capture` | `PC_ENABLE_TRACE_CAPTURE=1`, `PC_TC_MAX_WINDOW_SAMPLES=32` | `test_trace_capture` | Pre/post-trigger sample-window assembler (services/system/trace_capture), v5 high-rate acquisition: a continuously-running pre-trigger ring, trigger() freezing it as the window's pre-trigger half, fee... |
+| `native_transport` | default | `test_transport` | test_transport against the native_stack_l46 stack. |
 | `native_tsan` | `g`, `O1`, `fsanitize=thread`, `pthread` | `test_concurrency` | Same harness under ThreadSanitizer: proves ZERO data races on the slot fields (the pc_atomic acquire/release happens-before lets the plain rx_buffer[] writes be read on the other core safely). |
 | `native_ubx` | `PC_ENABLE_UBX=1` | `test_ubx` | UBX (u-blox binary GNSS protocol) codec (services/timing_position/ubx): B5 62 framing, 8-bit Fletcher checksum, build/poll/parse, and the streaming NMEA+UBX demultiplexer. |
 | `native_udp_telemetry` | `PC_ENABLE_UDP_TELEMETRY=1` | `test_udp_telemetry` | UDP telemetry line builder (services/iot/udp_telemetry): InfluxDB line-protocol formatting, host-tested. |
@@ -345,9 +368,11 @@ The native test matrix has **281 environments**, one per feature, generated from
 | `native_wamp` | `PC_ENABLE_WAMP=1` | `test_wamp` | WAMP messaging codec (services/iot/wamp): the JSON-array message builders (HELLO / SUBSCRIBE / PUBLISH / CALL / REGISTER / YIELD / GOODBYE over JsonWriter) + the positional array parser (type / ids / ... |
 | `native_wave` | `PC_ENABLE_WAVE=1` | `test_wave` | IEEE 1609 WAVE codec (services/transportation/wave): the 1609.3 WSMP header (version + P-encoded PSID + length) build + parse, the PSID p-encoding, and the 1609.2 secured-message envelope header. |
 | `native_wearlevel` | `PC_ENABLE_WEARLEVEL=1` | `test_wearlevel` | Flash wear-leveling slot selector (server/filesystem/wearlevel): least-worn pick (ties -> lowest index), saturating mark, and the wear-imbalance spread metric. |
+| `native_web_terminal` | default | `test_web_terminal` | test_web_terminal against the native_stack_http stack. |
 | `native_webdav` | `PC_ENABLE_WEBDAV=1` | `test_webdav` | WebDAV server core (RFC 4918): method classification, header parsing, XML escaping, and the 207 Multi-Status builder. |
 | `native_webdav_handler` | `BODY_BUF_SIZE=512`, `PC_ENFORCE_HOST_HEADER=0`, `PC_ENABLE_WEBDAV=1`, `PC_ENABLE_FILE_SERVING=1`, `PC_ENABLE_WEB_TERMINAL=1` | `test_webdav_handler` | WebDAV request handler over a directory-capable FS mock (recursive COPY/MOVE/DELETE) |
 | `native_webhook` | `PC_ENABLE_WEBHOOK=1` | `test_webhook` | Webhook / IFTTT builders (services/net/webhook): IFTTT URL + value1/2/3 JSON payload, host-tested. |
+| `native_websocket` | default | `test_websocket` | test_websocket against the native_stack_l46 stack. |
 | `native_wifi_sniffer` | `PC_ENABLE_WIFI_SNIFFER=1` | `test_wifi_sniffer` | 802.11 sniffer / traffic analyzer (services/radio/wifi_sniffer): decode an 802.11 MAC header (frame-control type/subtype + flags, ToDS/FromDS-dependent addresses), tally frames by type, the RSSI-hyste... |
 | `native_wisun` | `PC_ENABLE_WISUN=1` | `test_wisun` | Wi-SUN FAN border-router connector (services/radio/wisun): the CoAP client request builder (RFC 7252 header + Uri-Path options with extended-length + payload) and the FAN node registry (register / fin... |
 | `native_workers` | `PC_WORKER_COUNT=2` | `test_workers` | Core-partitioning invariant at N=2 (PC_WORKER_COUNT=2): each worker reaps only its owned slots (check_timeouts ownership). |
@@ -571,7 +596,7 @@ We test session and socket race conditions by interleaved function calling:
 
 <!-- BEGIN GENERATED test-directory (run test/gen_test_readme.py) -->
 
-A thorough directory of all **5260 test cases** across **295 suites**. Expand a suite to see its test cases, and a test case to see its objective and assertions.
+A thorough directory of all **5268 test cases** across **295 suites**. Expand a suite to see its test cases, and a test case to see its objective and assertions.
 
 <details>
 <summary><b>test_accept_gate (19 tests)</b></summary>
@@ -1367,10 +1392,10 @@ A thorough directory of all **5260 test cases** across **295 suites**. Expand a 
 
     * **Objective**: Before any listener, restart() forwards the no-listeners error (no stop()/begin()).
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_INT32(pc_result::PC_ERR_NO_LISTENERS, srv.restart());</code>
-      * <code>TEST_ASSERT_EQUAL_INT32(0, srv.listen((uint16_t)9500));</code>
-      * <code>TEST_ASSERT_EQUAL_INT32(pc_result::PC_OK, srv.begin());</code>
-      * <code>TEST_ASSERT_EQUAL_INT32(pc_result::PC_OK, srv.restart());</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(pc_result::PC_ERR_NO_LISTENERS, restart());</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(0, listen((uint16_t)9500));</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(pc_result::PC_OK, begin());</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(pc_result::PC_OK, restart());</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -1969,10 +1994,10 @@ A thorough directory of all **5260 test cases** across **295 suites**. Expand a 
 
     * **Objective**: begin() before any listen() -> no-listeners error, no side effects.
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_INT32(pc_result::PC_ERR_NO_LISTENERS, srv.begin());</code>
-      * <code>TEST_ASSERT_EQUAL_INT32(i, srv.listen((uint16_t)(9100 + i)));</code>
-      * <code>TEST_ASSERT_EQUAL_INT32(pc_result::PC_ERR_LISTENER_FULL, srv.listen(9999));</code>
-      * <code>TEST_ASSERT_EQUAL_INT32(pc_result::PC_OK, srv.begin());</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(pc_result::PC_ERR_NO_LISTENERS, begin());</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(i, listen((uint16_t)(9100 + i)));</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(pc_result::PC_ERR_LISTENER_FULL, listen(9999));</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(pc_result::PC_OK, begin());</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -1980,8 +2005,8 @@ A thorough directory of all **5260 test cases** across **295 suites**. Expand a 
 
     * **Objective**: Begin port convenience
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_INT32(pc_result::PC_OK, srv.begin((uint16_t)8080));</code>
-      * <code>TEST_ASSERT_EQUAL_INT32(pc_result::PC_ERR_LISTENER_FULL, full.begin((uint16_t)9999));</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(pc_result::PC_OK, begin_http((uint16_t)8080));</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(pc_result::PC_ERR_LISTENER_FULL, begin_http((uint16_t)9999));</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -8329,9 +8354,9 @@ A thorough directory of all **5260 test cases** across **295 suites**. Expand a 
 
     * **Objective**: Server defer routes by owner
     * **Assertions**:
-      * <code>Assert true (srv.defer(1, inc, &g_ran))</code>
+      * <code>Assert true (defer(1, inc, &g_ran))</code>
       * <code>Assert equal int (1, g_ran)</code>
-      * <code>Assert false (srv.defer(MAX_CONNS, inc, &g_ran))</code>
+      * <code>Assert false (defer(MAX_CONNS, inc, &g_ran))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -16546,8 +16571,8 @@ A thorough directory of all **5260 test cases** across **295 suites**. Expand a 
 
     * **Objective**: No listeners, no HTTP/3 -> rejected (listener_count==0 && !_h3_enabled true side).
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_INT32((int32_t)pc_result::PC_ERR_NO_LISTENERS, s_begin_nolisten.begin());</code>
-      * <code>TEST_ASSERT_EQUAL_INT32((int32_t)pc_result::PC_OK, s_begin_listen.begin(8080));</code>
+      * <code>TEST_ASSERT_EQUAL_INT32((int32_t)pc_result::PC_ERR_NO_LISTENERS, begin());</code>
+      * <code>TEST_ASSERT_EQUAL_INT32((int32_t)pc_result::PC_OK, begin(8080));</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -16555,8 +16580,8 @@ A thorough directory of all **5260 test cases** across **295 suites**. Expand a 
 
     * **Objective**: Bring up an HTTP/3-only PC with one route.
     * **Assertions**:
-      * <code>Assert true (server.pc_h3_cert(CERT, sizeof(CERT), SERVER_SEED, 443))</code>
-      * <code>TEST_ASSERT_EQUAL_INT32(pc_result::PC_OK, server.begin());</code>
+      * <code>Assert true (pc_h3_cert(CERT, sizeof(CERT), SERVER_SEED, 443))</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(pc_result::PC_OK, begin());</code>
       * <code>Assert true (pc_quic_server_ingest(dg, dl, "192.0.2.10", 40000))</code>
       * <code>Assert greater than (0, g_out_n)</code>
       * <code>Assert true (pc_quic_parse_long_header(g_out[0], g_out_len[0], &sh_hdr))</code>
@@ -16573,9 +16598,9 @@ A thorough directory of all **5260 test cases** across **295 suites**. Expand a 
 
     * **Objective**: pc_h3_cert argument validation: each bad arg returns false (covers the \|\| guard + return false).
     * **Assertions**:
-      * <code>Assert false (server.pc_h3_cert(nullptr, sizeof(CERT), SERVER_SEED, 443))</code>
-      * <code>Assert false (server.pc_h3_cert(CERT, 0, SERVER_SEED, 443))</code>
-      * <code>Assert false (server.pc_h3_cert(CERT, sizeof(CERT), nullptr, 443))</code>
+      * <code>Assert false (pc_h3_cert(nullptr, sizeof(CERT), SERVER_SEED, 443))</code>
+      * <code>Assert false (pc_h3_cert(CERT, 0, SERVER_SEED, 443))</code>
+      * <code>Assert false (pc_h3_cert(CERT, sizeof(CERT), nullptr, 443))</code>
       * <code>Assert true (g_handler_ran)</code>
       * <code>Assert true (g_empty_ran)</code>
   </details>
@@ -27498,18 +27523,53 @@ A thorough directory of all **5260 test cases** across **295 suites**. Expand a 
 </details>
 
 <details>
-<summary><b>test_mnt (22 tests)</b></summary>
+<summary><b>test_mnt (30 tests)</b></summary>
 
   <details style="margin-left: 20px;">
-    <summary><b>test_root_without_trailing_slash</b> &mdash; <i>The file landed inside the root, not glued onto its name.</i></summary>
+    <summary><b>test_null_store_is_intentional_and_says_so</b> &mdash; <i>The local-only half still works: a root binds and a path resolves with nothing mounted.</i></summary>
 
-    * **Objective**: The file landed inside the root, not glued onto its name.
+    * **Objective**: The local-only half still works: a root binds and a path resolves with nothing mounted.
     * **Assertions**:
-      * <code>Assert true (pc_fs_write_file("/p.nc", "", "G0", 2))</code>
-      * <code>TEST_ASSERT_EQUAL_INT32(2, pc_fs_size("/p.nc", ""));</code>
-      * <code>Assert true (pc_fs_exists("/gcode/p.nc", ""))</code>
-      * <code>Assert false (pc_fs_exists("/gcodep.nc", ""))</code>
-      * <code>Assert true (pc_fs_exists("/p.nc", ""))</code>
+      * <code>Assert true (r &gt;= 0)</code>
+      * <code>Assert false (pc_fs_storage_present())</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(PC_FS_OK, pc_fs_status()); // binding a root touches no store</code>
+      * <code>Assert false (pc_fs_write_file(r, "/a", "", "x", 1))</code>
+      * <code>Assert true ((pc_fs_status() & PC_FS_STORAGE_EXHAUSTED) != 0)</code>
+      * <code>Assert false (pc_fs_exists(r, "/a", ""))</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(-1, pc_fs_size(r, "/a", ""));</code>
+      * <code>Assert true (pc_fs_storage_present())</code>
+      * <code>Assert true ((pc_fs_status() & PC_FS_STORAGE_EXHAUSTED) != 0)</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(PC_FS_OK, pc_fs_status());</code>
+      * <code>Assert true (pc_fs_write_file(r, "/a", "", "x", 1))</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(PC_FS_OK, pc_fs_status());</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_status_separates_the_reasons</b> &mdash; <i>A write that the store cannot take in full is the same "nowhere to put this" bit as no store.</i></summary>
+
+    * **Objective**: A write that the store cannot take in full is the same "nowhere to put this" bit as no store.
+    * **Assertions**:
+      * <code>Assert false (pc_fs_exists(-1, "/a", ""))</code>
+      * <code>Assert true ((pc_fs_status() & PC_FS_BAD_ROOT) != 0)</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(0u, pc_fs_status() & PC_FS_TRAVERSAL);</code>
+      * <code>Assert false (pc_fs_write_file(s_root, "/../escape", "", "x", 1))</code>
+      * <code>Assert true ((pc_fs_status() & PC_FS_TRAVERSAL) != 0)</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(0u, pc_fs_status() & PC_FS_BAD_ROOT);</code>
+      * <code>Assert false (pc_fs_write_file(s_root, "/toobig", "", big, sizeof(big)))</code>
+      * <code>Assert true ((pc_fs_status() & PC_FS_STORAGE_EXHAUSTED) != 0)</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_root_without_trailing_slash</b> &mdash; <i>Each root is its own handle, so the test names all three at once rather than re-pointing one</i></summary>
+
+    * **Objective**: Each root is its own handle, so the test names all three at once rather than re-pointing one
+    * **Assertions**:
+      * <code>Assert true (gcode &gt;= 0 && bare &gt;= 0 && gcode_slash &gt;= 0)</code>
+      * <code>Assert true (pc_fs_write_file(gcode, "/p.nc", "", "G0", 2))</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(2, pc_fs_size(gcode, "/p.nc", ""));</code>
+      * <code>Assert true (pc_fs_exists(bare, "/gcode/p.nc", ""))</code>
+      * <code>Assert false (pc_fs_exists(bare, "/gcodep.nc", ""))</code>
+      * <code>Assert true (pc_fs_exists(gcode_slash, "/p.nc", ""))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -27517,12 +27577,88 @@ A thorough directory of all **5260 test cases** across **295 suites**. Expand a 
 
     * **Objective**: Traversal is refused in the leaf as well as the dir.
     * **Assertions**:
-      * <code>Assert true (pc_fs_mkdir("/d", ""))</code>
-      * <code>Assert true (pc_fs_write_file("/d/", "f.txt", "xy", 2))</code>
-      * <code>Assert true (pc_fs_exists("/d/f.txt", ""))</code>
-      * <code>TEST_ASSERT_EQUAL_INT32(2, pc_fs_size("/d/", "f.txt"));</code>
-      * <code>Assert false (pc_fs_write_file("/d/", "../esc", "x", 1))</code>
-      * <code>Assert false (pc_fs_write_file("/../d/", "f.txt", "x", 1))</code>
+      * <code>Assert true (pc_fs_mkdir(s_root, "/d", ""))</code>
+      * <code>Assert true (pc_fs_write_file(s_root, "/d/", "f.txt", "xy", 2))</code>
+      * <code>Assert true (pc_fs_exists(s_root, "/d/f.txt", ""))</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(2, pc_fs_size(s_root, "/d/", "f.txt"));</code>
+      * <code>Assert false (pc_fs_write_file(s_root, "/d/", "../esc", "x", 1))</code>
+      * <code>Assert false (pc_fs_write_file(s_root, "/../d/", "f.txt", "x", 1))</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_remove_takes_the_whole_subtree</b> &mdash; <i>rmdir keeps its POSIX meaning - it refuses a directory that still has members - so a caller</i></summary>
+
+    * **Objective**: rmdir keeps its POSIX meaning - it refuses a directory that still has members - so a caller
+    * **Assertions**:
+      * <code>Assert true (pc_fs_mkdir(s_root, "/tree", ""))</code>
+      * <code>Assert true (pc_fs_write_file(s_root, "/tree/", "a", "1", 1))</code>
+      * <code>Assert true (pc_fs_write_file(s_root, "/tree/", "b", "22", 2))</code>
+      * <code>Assert false (pc_fs_rmdir(s_root, "/tree", ""))</code>
+      * <code>Assert true (pc_fs_remove(s_root, "/tree", ""))</code>
+      * <code>Assert false (pc_fs_exists(s_root, "/tree", ""))</code>
+      * <code>Assert false (pc_fs_exists(s_root, "/tree/a", ""))</code>
+      * <code>Assert false (pc_fs_exists(s_root, "/tree/b", ""))</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_remove_file_and_missing_unchanged</b> &mdash; <i>Remove file and missing unchanged</i></summary>
+
+    * **Objective**: Remove file and missing unchanged
+    * **Assertions**:
+      * <code>Assert true (pc_fs_write_file(s_root, "/one.txt", "", "x", 1))</code>
+      * <code>Assert true (pc_fs_remove(s_root, "/one.txt", ""))</code>
+      * <code>Assert false (pc_fs_exists(s_root, "/one.txt", ""))</code>
+      * <code>Assert false (pc_fs_remove(s_root, "/one.txt", ""))</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_copy_file</b> &mdash; <i>Copy file</i></summary>
+
+    * **Objective**: Copy file
+    * **Assertions**:
+      * <code>Assert true (pc_fs_write_file(s_root, "/c1", "", "payload", 7))</code>
+      * <code>Assert true (pc_fs_copy(s_root, "/c1", "", "/c2", ""))</code>
+      * <code>Assert true (pc_fs_exists(s_root, "/c1", ""))</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(7, pc_fs_size(s_root, "/c2", ""));</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(7, n);</code>
+      * <code>Assert equal string ("payload", buf)</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_copy_takes_the_whole_subtree</b> &mdash; <i>Copy takes the whole subtree</i></summary>
+
+    * **Objective**: Copy takes the whole subtree
+    * **Assertions**:
+      * <code>Assert true (pc_fs_mkdir(s_root, "/s", ""))</code>
+      * <code>Assert true (pc_fs_write_file(s_root, "/s/", "f", "xyz", 3))</code>
+      * <code>Assert true (pc_fs_copy(s_root, "/s", "", "/t", ""))</code>
+      * <code>Assert true (pc_fs_exists(s_root, "/t", ""))</code>
+      * <code>Assert true (pc_fs_exists(s_root, "/t/f", ""))</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(3, n);</code>
+      * <code>Assert equal string ("xyz", buf)</code>
+      * <code>Assert true (pc_fs_exists(s_root, "/s/f", ""))</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_tree_ops_refuse_traversal</b> &mdash; <i>Tree ops refuse traversal</i></summary>
+
+    * **Objective**: Tree ops refuse traversal
+    * **Assertions**:
+      * <code>Assert false (pc_fs_remove(s_root, "/../escape", ""))</code>
+      * <code>Assert false (pc_fs_copy(s_root, "/../escape", "", "/x", ""))</code>
+      * <code>Assert false (pc_fs_copy(s_root, "/x", "", "/../escape", ""))</code>
+  </details>
+
+  <details style="margin-left: 20px;">
+    <summary><b>test_unbound_root_fails_closed</b> &mdash; <i>Unbound root fails closed</i></summary>
+
+    * **Objective**: Unbound root fails closed
+    * **Assertions**:
+      * <code>Assert true (pc_fs_write_file(s_root, "/u", "", "x", 1))</code>
+      * <code>Assert false (pc_fs_exists(-1, "/u", ""))</code>
+      * <code>Assert false (pc_fs_remove(-1, "/u", ""))</code>
+      * <code>Assert false (pc_fs_copy(-1, "/u", "", "/v", ""))</code>
+      * <code>Assert true (pc_fs_exists(s_root, "/u", ""))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -27530,9 +27666,9 @@ A thorough directory of all **5260 test cases** across **295 suites**. Expand a 
 
     * **Objective**: Write then read file
     * **Assertions**:
-      * <code>Assert true (pc_fs_write_file("/a.txt", "", msg, strlen(msg)))</code>
-      * <code>Assert true (pc_fs_exists("/a.txt", ""))</code>
-      * <code>TEST_ASSERT_EQUAL_INT32((long)strlen(msg), pc_fs_size("/a.txt", ""));</code>
+      * <code>Assert true (pc_fs_write_file(s_root, "/a.txt", "", msg, strlen(msg)))</code>
+      * <code>Assert true (pc_fs_exists(s_root, "/a.txt", ""))</code>
+      * <code>TEST_ASSERT_EQUAL_INT32((long)strlen(msg), pc_fs_size(s_root, "/a.txt", ""));</code>
       * <code>TEST_ASSERT_EQUAL_INT32((long)strlen(msg), n);</code>
       * <code>Assert equal string (msg, buf)</code>
   </details>
@@ -27545,7 +27681,7 @@ A thorough directory of all **5260 test cases** across **295 suites**. Expand a 
       * <code>Assert true (h &gt;= 0)</code>
       * <code>Assert equal int (3, pc_fs_write(h, "abc", 3))</code>
       * <code>Assert equal int (3, pc_fs_write(h, "def", 3))</code>
-      * <code>TEST_ASSERT_EQUAL_INT32(6, pc_fs_size("/s.bin", ""));</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(6, pc_fs_size(s_root, "/s.bin", ""));</code>
       * <code>Assert true (h &gt;= 0)</code>
       * <code>Assert equal int (4, pc_fs_read(h, buf, 4))</code>
       * <code>Assert equal string ("abcd", buf)</code>
@@ -27558,7 +27694,7 @@ A thorough directory of all **5260 test cases** across **295 suites**. Expand a 
 
     * **Objective**: Write mode truncates
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_INT32(5, pc_fs_size("/t.txt", ""));</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(5, pc_fs_size(s_root, "/t.txt", ""));</code>
       * <code>Assert equal string ("short", buf)</code>
   </details>
 
@@ -27568,7 +27704,7 @@ A thorough directory of all **5260 test cases** across **295 suites**. Expand a 
     * **Objective**: Append extends
     * **Assertions**:
       * <code>Assert true (h &gt;= 0)</code>
-      * <code>TEST_ASSERT_EQUAL_INT32(12, pc_fs_size("/log", ""));</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(12, pc_fs_size(s_root, "/log", ""));</code>
       * <code>Assert equal string ("line1\\nline2\\n", buf)</code>
   </details>
 
@@ -27577,13 +27713,13 @@ A thorough directory of all **5260 test cases** across **295 suites**. Expand a 
 
     * **Objective**: Remove and rename
     * **Assertions**:
-      * <code>Assert true (pc_fs_rename("/old", "", "/new", ""))</code>
-      * <code>Assert false (pc_fs_exists("/old", ""))</code>
-      * <code>Assert true (pc_fs_exists("/new", ""))</code>
+      * <code>Assert true (pc_fs_rename(s_root, "/old", "", "/new", ""))</code>
+      * <code>Assert false (pc_fs_exists(s_root, "/old", ""))</code>
+      * <code>Assert true (pc_fs_exists(s_root, "/new", ""))</code>
       * <code>Assert equal string ("data", buf)</code>
-      * <code>Assert true (pc_fs_remove("/new", ""))</code>
-      * <code>Assert false (pc_fs_exists("/new", ""))</code>
-      * <code>TEST_ASSERT_EQUAL_INT32(-1, pc_fs_size("/new", ""));</code>
+      * <code>Assert true (pc_fs_remove(s_root, "/new", ""))</code>
+      * <code>Assert false (pc_fs_exists(s_root, "/new", ""))</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(-1, pc_fs_size(s_root, "/new", ""));</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -27591,12 +27727,12 @@ A thorough directory of all **5260 test cases** across **295 suites**. Expand a 
 
     * **Objective**: Missing file fails closed
     * **Assertions**:
-      * <code>Assert false (pc_fs_exists("/nope", ""))</code>
-      * <code>TEST_ASSERT_EQUAL_INT32(-1, pc_fs_size("/nope", ""));</code>
-      * <code>Assert true (pc_fs_open("/nope", "", pc_mnt_mode::PC_MNT_READ) &lt; 0)</code>
-      * <code>TEST_ASSERT_EQUAL_INT32(-1, pc_fs_read_file("/nope", "", buf, sizeof(buf)));</code>
-      * <code>Assert false (pc_fs_remove("/nope", ""))</code>
-      * <code>Assert false (pc_fs_rename("/nope", "", "/x", ""))</code>
+      * <code>Assert false (pc_fs_exists(s_root, "/nope", ""))</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(-1, pc_fs_size(s_root, "/nope", ""));</code>
+      * <code>Assert true (pc_fs_open(s_root, "/nope", "", pc_mnt_mode::PC_MNT_READ) &lt; 0)</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(-1, pc_fs_read_file(s_root, "/nope", "", buf, sizeof(buf)));</code>
+      * <code>Assert false (pc_fs_remove(s_root, "/nope", ""))</code>
+      * <code>Assert false (pc_fs_rename(s_root, "/nope", "", "/x", ""))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -27604,7 +27740,7 @@ A thorough directory of all **5260 test cases** across **295 suites**. Expand a 
 
     * **Objective**: Read buffer too small fails closed
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_INT32(-1, pc_fs_read_file("/big", "", tiny, sizeof(tiny)));</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(-1, pc_fs_read_file(s_root, "/big", "", tiny, sizeof(tiny)));</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -27613,7 +27749,7 @@ A thorough directory of all **5260 test cases** across **295 suites**. Expand a 
     * **Objective**: Never exceeds the fixed per-file capacity (fail-closed, no overflow).
     * **Assertions**:
       * <code>Assert true (h &gt;= 0)</code>
-      * <code>TEST_ASSERT_EQUAL_INT32((long)PC_MNT_RAM_FILE_SIZE, pc_fs_size("/full", ""));</code>
+      * <code>TEST_ASSERT_EQUAL_INT32((long)PC_MNT_RAM_FILE_SIZE, pc_fs_size(s_root, "/full", ""));</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(PC_MNT_RAM_FILE_SIZE, (uint32_t)written);</code>
   </details>
 
@@ -27622,8 +27758,8 @@ A thorough directory of all **5260 test cases** across **295 suites**. Expand a 
 
     * **Objective**: One more distinct file must fail (pool full), not corrupt anything.
     * **Assertions**:
-      * <code>Assert true (pc_fs_write_file(name, "", "x", 1))</code>
-      * <code>Assert false (pc_fs_write_file("/overflow", "", "x", 1))</code>
+      * <code>Assert true (pc_fs_write_file(s_root, name, "", "x", 1))</code>
+      * <code>Assert false (pc_fs_write_file(s_root, "/overflow", "", "x", 1))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -27632,8 +27768,8 @@ A thorough directory of all **5260 test cases** across **295 suites**. Expand a 
     * **Objective**: Handle pool exhaustion
     * **Assertions**:
       * <code>Assert true (handles[i] &gt;= 0)</code>
-      * <code>Assert true (pc_fs_open("/h", "", pc_mnt_mode::PC_MNT_READ) &lt; 0)</code>
-      * <code>Assert true (pc_fs_open("/h", "", pc_mnt_mode::PC_MNT_READ) &gt;= 0)</code>
+      * <code>Assert true (pc_fs_open(s_root, "/h", "", pc_mnt_mode::PC_MNT_READ) &lt; 0)</code>
+      * <code>Assert true (pc_fs_open(s_root, "/h", "", pc_mnt_mode::PC_MNT_READ) &gt;= 0)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -27641,10 +27777,10 @@ A thorough directory of all **5260 test cases** across **295 suites**. Expand a 
 
     * **Objective**: Unmounted fails closed
     * **Assertions**:
-      * <code>Assert true (pc_fs_open("/a", "", pc_mnt_mode::PC_MNT_READ) &lt; 0)</code>
-      * <code>Assert false (pc_fs_exists("/a", ""))</code>
-      * <code>TEST_ASSERT_EQUAL_INT32(-1, pc_fs_size("/a", ""));</code>
-      * <code>Assert false (pc_fs_write_file("/a", "", "x", 1))</code>
+      * <code>Assert true (pc_fs_open(s_root, "/a", "", pc_mnt_mode::PC_MNT_READ) &lt; 0)</code>
+      * <code>Assert false (pc_fs_exists(s_root, "/a", ""))</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(-1, pc_fs_size(s_root, "/a", ""));</code>
+      * <code>Assert false (pc_fs_write_file(s_root, "/a", "", "x", 1))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -27652,11 +27788,11 @@ A thorough directory of all **5260 test cases** across **295 suites**. Expand a 
 
     * **Objective**: Null path and an over-long name both fail closed on open.
     * **Assertions**:
-      * <code>Assert equal int (-1, pc_fs_open(nullptr, "", pc_mnt_mode::PC_MNT_WRITE))</code>
-      * <code>Assert equal int (-1, pc_fs_open(longname, "", pc_mnt_mode::PC_MNT_WRITE))</code>
+      * <code>Assert equal int (-1, pc_fs_open(s_root, nullptr, "", pc_mnt_mode::PC_MNT_WRITE))</code>
+      * <code>Assert equal int (-1, pc_fs_open(s_root, longname, "", pc_mnt_mode::PC_MNT_WRITE))</code>
       * <code>Assert equal int (-1, pc_fs_read(999, b, sizeof(b)))</code>
       * <code>Assert equal int (-1, pc_fs_write(999, b, sizeof(b)))</code>
-      * <code>Assert true (pc_fs_read_file("/nope", "", b, sizeof(b)) &lt; 0)</code>
+      * <code>Assert true (pc_fs_read_file(s_root, "/nope", "", b, sizeof(b)) &lt; 0)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -27666,10 +27802,10 @@ A thorough directory of all **5260 test cases** across **295 suites**. Expand a 
     * **Assertions**:
       * <code>Assert equal int (-1, pc_fs_read(0, b, sizeof(b)))</code>
       * <code>Assert equal int (-1, pc_fs_write(0, b, sizeof(b)))</code>
-      * <code>Assert false (pc_fs_remove("/a", ""))</code>
-      * <code>Assert false (pc_fs_rename("/a", "", "/b", ""))</code>
-      * <code>Assert true (pc_fs_read_file("/a", "", b, sizeof(b)) &lt; 0)</code>
-      * <code>Assert true (pc_fs_write_file("/a", "", "x", 1))</code>
+      * <code>Assert false (pc_fs_remove(s_root, "/a", ""))</code>
+      * <code>Assert false (pc_fs_rename(s_root, "/a", "", "/b", ""))</code>
+      * <code>Assert true (pc_fs_read_file(s_root, "/a", "", b, sizeof(b)) &lt; 0)</code>
+      * <code>Assert true (pc_fs_write_file(s_root, "/a", "", "x", 1))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -27679,11 +27815,11 @@ A thorough directory of all **5260 test cases** across **295 suites**. Expand a 
     * **Assertions**:
       * <code>Assert equal int (-1, pc_fs_read(-1, b, sizeof(b)))</code>
       * <code>Assert equal int (-1, pc_fs_write(-1, b, sizeof(b)))</code>
-      * <code>Assert true (pc_fs_write_file("/hv", "", "data", 4))</code>
+      * <code>Assert true (pc_fs_write_file(s_root, "/hv", "", "data", 4))</code>
       * <code>Assert true (h &gt;= 0)</code>
       * <code>Assert equal int (-1, pc_fs_read(h, b, sizeof(b)))</code>
       * <code>Assert equal int (-1, pc_fs_write(h, b, sizeof(b)))</code>
-      * <code>Assert true (pc_fs_open("/hv", "", pc_mnt_mode::PC_MNT_READ) &gt;= 0)</code>
+      * <code>Assert true (pc_fs_open(s_root, "/hv", "", pc_mnt_mode::PC_MNT_READ) &gt;= 0)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -27691,10 +27827,10 @@ A thorough directory of all **5260 test cases** across **295 suites**. Expand a 
 
     * **Objective**: Write to read handle rejected
     * **Assertions**:
-      * <code>Assert true (pc_fs_write_file("/ro", "", "data", 4))</code>
+      * <code>Assert true (pc_fs_write_file(s_root, "/ro", "", "data", 4))</code>
       * <code>Assert true (h &gt;= 0)</code>
       * <code>Assert equal int (-1, pc_fs_write(h, "xx", 2))</code>
-      * <code>TEST_ASSERT_EQUAL_INT32(4, pc_fs_size("/ro", ""));</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(4, pc_fs_size(s_root, "/ro", ""));</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -27702,12 +27838,12 @@ A thorough directory of all **5260 test cases** across **295 suites**. Expand a 
 
     * **Objective**: Rename argument guards
     * **Assertions**:
-      * <code>Assert true (pc_fs_write_file("/r1", "", "data", 4))</code>
-      * <code>Assert false (pc_fs_rename(nullptr, "", "/r2", ""))</code>
-      * <code>Assert false (pc_fs_rename("/r1", "", nullptr, ""))</code>
-      * <code>Assert false (pc_fs_rename("/r1", "", longname, ""))</code>
-      * <code>Assert true (pc_fs_exists("/r1", ""))</code>
-      * <code>Assert false (pc_fs_exists("/r2", ""))</code>
+      * <code>Assert true (pc_fs_write_file(s_root, "/r1", "", "data", 4))</code>
+      * <code>Assert false (pc_fs_rename(s_root, nullptr, "", "/r2", ""))</code>
+      * <code>Assert false (pc_fs_rename(s_root, "/r1", "", nullptr, ""))</code>
+      * <code>Assert false (pc_fs_rename(s_root, "/r1", "", longname, ""))</code>
+      * <code>Assert true (pc_fs_exists(s_root, "/r1", ""))</code>
+      * <code>Assert false (pc_fs_exists(s_root, "/r2", ""))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -27715,12 +27851,12 @@ A thorough directory of all **5260 test cases** across **295 suites**. Expand a 
 
     * **Objective**: Rename overwrites destination
     * **Assertions**:
-      * <code>Assert true (pc_fs_write_file("/src", "", "NEW", 3))</code>
-      * <code>Assert true (pc_fs_write_file("/dst", "", "oldcontent", 10))</code>
-      * <code>Assert true (pc_fs_rename("/src", "", "/dst", ""))</code>
-      * <code>Assert false (pc_fs_exists("/src", ""))</code>
-      * <code>Assert true (pc_fs_exists("/dst", ""))</code>
-      * <code>TEST_ASSERT_EQUAL_INT32(3, pc_fs_size("/dst", "")); // the source's contents won</code>
+      * <code>Assert true (pc_fs_write_file(s_root, "/src", "", "NEW", 3))</code>
+      * <code>Assert true (pc_fs_write_file(s_root, "/dst", "", "oldcontent", 10))</code>
+      * <code>Assert true (pc_fs_rename(s_root, "/src", "", "/dst", ""))</code>
+      * <code>Assert false (pc_fs_exists(s_root, "/src", ""))</code>
+      * <code>Assert true (pc_fs_exists(s_root, "/dst", ""))</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(3, pc_fs_size(s_root, "/dst", "")); // the source's contents won</code>
       * <code>TEST_ASSERT_EQUAL_INT32(3, n);</code>
       * <code>Assert equal string ("NEW", buf)</code>
   </details>
@@ -27730,10 +27866,10 @@ A thorough directory of all **5260 test cases** across **295 suites**. Expand a 
 
     * **Objective**: Read file handle exhaustion
     * **Assertions**:
-      * <code>Assert true (pc_fs_write_file("/rf", "", "0123456789", 10))</code>
+      * <code>Assert true (pc_fs_write_file(s_root, "/rf", "", "0123456789", 10))</code>
       * <code>Assert true (handles[i] &gt;= 0)</code>
-      * <code>TEST_ASSERT_EQUAL_INT32(-1, pc_fs_read_file("/rf", "", buf, sizeof(buf)));</code>
-      * <code>TEST_ASSERT_EQUAL_INT32(10, pc_fs_read_file("/rf", "", buf, sizeof(buf))); // works again</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(-1, pc_fs_read_file(s_root, "/rf", "", buf, sizeof(buf)));</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(10, pc_fs_read_file(s_root, "/rf", "", buf, sizeof(buf))); // works again</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -27741,8 +27877,8 @@ A thorough directory of all **5260 test cases** across **295 suites**. Expand a 
 
     * **Objective**: Write file larger than capacity
     * **Assertions**:
-      * <code>Assert false (pc_fs_write_file("/cap", "", big, sizeof(big)))</code>
-      * <code>TEST_ASSERT_EQUAL_INT32((long)PC_MNT_RAM_FILE_SIZE, pc_fs_size("/cap", ""));</code>
+      * <code>Assert false (pc_fs_write_file(s_root, "/cap", "", big, sizeof(big)))</code>
+      * <code>TEST_ASSERT_EQUAL_INT32((long)PC_MNT_RAM_FILE_SIZE, pc_fs_size(s_root, "/cap", ""));</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -27750,9 +27886,9 @@ A thorough directory of all **5260 test cases** across **295 suites**. Expand a 
 
     * **Objective**: Zero progress backend terminates
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_INT32(0, pc_fs_read_file("/x", "", buf, sizeof(buf))); // gave up at 0 bytes</code>
-      * <code>Assert false (pc_fs_write_file("/x", "", "abcd", 4))</code>
-      * <code>Assert true (pc_fs_write_file("/x", "", "abcd", 4))</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(0, pc_fs_read_file(s_root, "/x", "", buf, sizeof(buf))); // gave up at 0 bytes</code>
+      * <code>Assert false (pc_fs_write_file(s_root, "/x", "", "abcd", 4))</code>
+      * <code>Assert true (pc_fs_write_file(s_root, "/x", "", "abcd", 4))</code>
   </details>
 
 </details>

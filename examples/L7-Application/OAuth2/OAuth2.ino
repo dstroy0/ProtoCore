@@ -37,7 +37,6 @@ static const char *CLIENT_ID = "your-client-id";
 static const char *CLIENT_SECRET = "your-client-secret"; // or nullptr + PKCE code_verifier
 static const char *REDIRECT_URI = "http://device.local/callback";
 
-PC server;
 
 void setup()
 {
@@ -51,11 +50,11 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    server.on("/callback", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *req) {
+    on_http("/callback", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *req) {
         const char *code = http_get_query(req, "code");
         if (!code)
         {
-            server.send(id, 400, "application/json", "{\"error\":\"missing code\"}");
+            send_text(id, 400, "application/json", "{\"error\":\"missing code\"}");
             return;
         }
         pc_o_auth2_tokens t;
@@ -64,19 +63,19 @@ void setup()
         {
             char b[48];
             snprintf(b, sizeof(b), "{\"error\":\"exchange failed\",\"status\":%d}", st);
-            server.send(id, 502, "application/json", b);
+            send_text(id, 502, "application/json", b);
             return;
         }
         // t.access_token / t.id_token / t.refresh_token are now populated.
         char b[96];
         snprintf(b, sizeof(b), "{\"token_type\":\"%s\",\"expires_in\":%ld}", t.token_type, t.expires_in);
-        server.send(id, 200, "application/json", b);
+        send_text(id, 200, "application/json", b);
     });
 
-    server.begin(80);
+    begin_http(80);
 }
 
 void loop()
 {
-    server.handle();
+    handle();
 }

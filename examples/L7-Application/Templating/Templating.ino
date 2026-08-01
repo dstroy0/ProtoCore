@@ -21,7 +21,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 static unsigned long hit_count = 0;
 
@@ -64,7 +63,7 @@ void handle_root(uint8_t slot_id, HttpReq *req)
                                "<p>hits: {{hits}}</p>"
                                "<p>free heap: {{heap}} bytes</p>"
                                "</body></html>";
-    server.send_template(slot_id, 200, "text/html", page, resolver);
+    send_template(slot_id, 200, "text/html", page, resolver);
 }
 
 void setup()
@@ -82,9 +81,9 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    server.on("/", HttpMethod::HTTP_GET, handle_root);
+    on_http("/", HttpMethod::HTTP_GET, handle_root);
 
-    int32_t result = server.begin(80);
+    int32_t result = begin_http(80);
     if (result < 0)
     {
         Serial.printf("begin() failed (error %d)\n", result);
@@ -95,5 +94,5 @@ void setup()
 
 void loop()
 {
-    server.handle();
+    handle();
 }

@@ -25,8 +25,6 @@
 #include <FS.h>
 #include <stddef.h>
 
-class PC;
-
 /**
  * @brief Register a streaming-upload endpoint.
  *
@@ -39,7 +37,7 @@ class PC;
  * @param fs        target filesystem (LittleFS / SPIFFS / SD).
  * @param dest_path destination file path (e.g. "/uploads/data.bin").
  */
-void pc_upload_begin(PC &server, const char *path, fs::FS &fs, const char *dest_path);
+void pc_upload_begin(const char *path, fs::FS &fs, const char *dest_path);
 
 /** @brief Bytes written by the most recent upload (for handlers / tests). */
 size_t pc_upload_last_size();

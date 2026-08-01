@@ -23,7 +23,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 void setup()
 {
@@ -45,13 +44,13 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // Map the URL tree "/" onto the "/www" directory in LittleFS.
-    server.serve_static("/", LittleFS, "/www");
+    serve_static("/", LittleFS, "/www");
     // Cache assets for an hour; browsers still revalidate cheaply via the ETag.
-    server.set_cache_control("max-age=3600");
-    server.begin(80);
+    set_cache_control("max-age=3600");
+    begin_http(80);
 }
 
 void loop()
 {
-    server.handle();
+    handle();
 }

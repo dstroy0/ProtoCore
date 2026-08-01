@@ -28,24 +28,23 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 // GET /headers - attach a custom header and a cookie, then respond.
 void handle_headers(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    server.add_response_header(slot_id, "X-Api-Version", "1.2.5");
-    server.set_cookie(slot_id, "session", "abc123", "Path=/; HttpOnly; Max-Age=3600");
-    server.send(slot_id, 200, "text/plain", "custom header + cookie attached");
+    add_response_header(slot_id, "X-Api-Version", "1.2.5");
+    set_cookie(slot_id, "session", "abc123", "Path=/; HttpOnly; Max-Age=3600");
+    send_text(slot_id, 200, "text/plain", "custom header + cookie attached");
 }
 
 // GET /cleared - queue a header, then change our mind before sending.
 void handle_cleared(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    server.add_response_header(slot_id, "X-Scratch", "should-not-appear");
-    server.clear_response_headers(slot_id);
-    server.send(slot_id, 200, "text/plain", "headers were cleared before send");
+    add_response_header(slot_id, "X-Scratch", "should-not-appear");
+    clear_response_headers(slot_id);
+    send_text(slot_id, 200, "text/plain", "headers were cleared before send");
 }
 
 void setup()
@@ -66,10 +65,10 @@ void setup()
     // Keep the radio responsive (the Arduino default modem sleep delays the
     // first packet after an idle gap).
 
-    server.on("/headers", HttpMethod::HTTP_GET, handle_headers);
-    server.on("/cleared", HttpMethod::HTTP_GET, handle_cleared);
+    on_http("/headers", HttpMethod::HTTP_GET, handle_headers);
+    on_http("/cleared", HttpMethod::HTTP_GET, handle_cleared);
 
-    int32_t result = server.begin(80);
+    int32_t result = begin_http(80);
     if (result < 0)
     {
         Serial.printf("begin() failed (error %d)\n", result);
@@ -80,5 +79,5 @@ void setup()
 
 void loop()
 {
-    server.handle();
+    handle();
 }

@@ -20,8 +20,6 @@
 
 #include "protocore_config.h"
 
-class PC;
-
 /**
  * @brief Register an authenticated streaming OTA endpoint.
  *
@@ -38,6 +36,6 @@ class PC;
  * curl -u admin:s3cret --data-binary @firmware.bin http://<ip>/update
  * @endcode
  */
-void pc_ota_begin(PC &server, const char *path, const char *user, const char *pass);
+void pc_ota_begin(const char *path, const char *user, const char *pass);
 
 #endif // PROTOCORE_OTA_SERVICE_H

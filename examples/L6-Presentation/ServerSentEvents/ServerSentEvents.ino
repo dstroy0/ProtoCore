@@ -17,7 +17,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 static const char PAGE[] = "<!doctype html><meta charset=utf-8><title>SSE</title><pre id=o></pre><script>"
                            "var s=new EventSource('/events');"
@@ -25,7 +24,7 @@ static const char PAGE[] = "<!doctype html><meta charset=utf-8><title>SSE</title
 
 void pc_sse_connect(uint8_t pc_sse_id)
 {
-    server.pc_sse_send(pc_sse_id, "subscribed", "tick");
+    pc_sse_send(pc_sse_id, "subscribed", "tick");
 }
 
 void setup()
@@ -42,14 +41,14 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    server.on("/", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) { server.send(id, 200, "text/html", PAGE); });
-    server.on_sse("/events", pc_sse_connect);
-    server.begin(80);
+    on_http("/", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) { send_text(id, 200, "text/html", PAGE); });
+    on_sse("/events", pc_sse_connect);
+    begin_http(80);
 }
 
 void loop()
 {
-    server.handle();
+    handle();
 
     static unsigned long last = 0;
     static unsigned long n = 0;
@@ -58,6 +57,6 @@ void loop()
         last = millis();
         char buf[24];
         snprintf(buf, sizeof(buf), "%lu", n++);
-        server.pc_sse_broadcast("/events", buf, "tick");
+        pc_sse_broadcast("/events", buf, "tick");
     }
 }

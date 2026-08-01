@@ -21,7 +21,6 @@
 // Helpers
 // ---------------------------------------------------------------------------
 
-static PC server;
 static bool handler_called = false;
 static uint8_t handler_slot = 0xFF;
 
@@ -41,12 +40,12 @@ static void handle_ok(uint8_t slot_id, HttpReq *req)
     (void)req;
     handler_called = true;
     handler_slot = slot_id;
-    server.send(slot_id, 200, "text/plain", "OK");
+    send_text(slot_id, 200, "text/plain", "OK");
 }
 
 void setUp()
 {
-    server = PC();
+    pc_server_reset();
     handler_called = false;
     handler_slot = 0xFF;
 
@@ -77,7 +76,7 @@ static void feed_and_handle(uint8_t slot, const char *req_str)
 {
     push_str(slot, req_str);
     http_parse(slot);
-    server.handle();
+    handle();
 }
 
 // ====================================================================
@@ -86,14 +85,14 @@ static void feed_and_handle(uint8_t slot, const char *req_str)
 
 void test_unprotected_route_fires_handler()
 {
-    server.on("/open", HttpMethod::HTTP_GET, handle_ok);
+    on_http("/open", HttpMethod::HTTP_GET, handle_ok);
     feed_and_handle(0, "GET /open HTTP/1.1\r\n\r\n");
     TEST_ASSERT_TRUE(handler_called);
 }
 
 void test_protected_route_no_header_returns_401()
 {
-    server.on("/admin", HttpMethod::HTTP_GET, handle_ok, "Admin", "user", "pass");
+    on_http("/admin", HttpMethod::HTTP_GET, handle_ok, "Admin", "user", "pass");
     feed_and_handle(0, "GET /admin HTTP/1.1\r\n\r\n");
     TEST_ASSERT_FALSE(handler_called);
     TEST_ASSERT_TRUE(strstr(tcp_captured(), "401 Unauthorized") != nullptr);
@@ -101,7 +100,7 @@ void test_protected_route_no_header_returns_401()
 
 void test_protected_route_wrong_password_returns_401()
 {
-    server.on("/admin", HttpMethod::HTTP_GET, handle_ok, "Admin", "user", "pass");
+    on_http("/admin", HttpMethod::HTTP_GET, handle_ok, "Admin", "user", "pass");
     // base64("user:wrong") = "dXNlcjp3cm9uZw=="
     feed_and_handle(0, "GET /admin HTTP/1.1\r\n"
                        "Authorization: Basic dXNlcjp3cm9uZw==\r\n\r\n");
@@ -111,7 +110,7 @@ void test_protected_route_wrong_password_returns_401()
 
 void test_protected_route_wrong_username_returns_401()
 {
-    server.on("/admin", HttpMethod::HTTP_GET, handle_ok, "Admin", "user", "pass");
+    on_http("/admin", HttpMethod::HTTP_GET, handle_ok, "Admin", "user", "pass");
     // base64("admin:pass") = "YWRtaW46cGFzcw=="
     feed_and_handle(0, "GET /admin HTTP/1.1\r\n"
                        "Authorization: Basic YWRtaW46cGFzcw==\r\n\r\n");
@@ -121,7 +120,7 @@ void test_protected_route_wrong_username_returns_401()
 
 void test_protected_route_valid_credentials_fires_handler()
 {
-    server.on("/admin", HttpMethod::HTTP_GET, handle_ok, "Admin", "user", "pass");
+    on_http("/admin", HttpMethod::HTTP_GET, handle_ok, "Admin", "user", "pass");
     // base64("user:pass") = "dXNlcjpwYXNz"
     feed_and_handle(0, "GET /admin HTTP/1.1\r\n"
                        "Authorization: Basic dXNlcjpwYXNz\r\n\r\n");
@@ -131,14 +130,14 @@ void test_protected_route_valid_credentials_fires_handler()
 
 void test_401_includes_www_authenticate_header()
 {
-    server.on("/secret", HttpMethod::HTTP_GET, handle_ok, "MyRealm", "u", "p");
+    on_http("/secret", HttpMethod::HTTP_GET, handle_ok, "MyRealm", "u", "p");
     feed_and_handle(0, "GET /secret HTTP/1.1\r\n\r\n");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "WWW-Authenticate: Basic realm=\"MyRealm\""));
 }
 
 void test_non_basic_scheme_returns_401()
 {
-    server.on("/admin", HttpMethod::HTTP_GET, handle_ok, "Admin", "user", "pass");
+    on_http("/admin", HttpMethod::HTTP_GET, handle_ok, "Admin", "user", "pass");
     feed_and_handle(0, "GET /admin HTTP/1.1\r\n"
                        "Authorization: Bearer some_token\r\n\r\n");
     TEST_ASSERT_FALSE(handler_called);
@@ -147,7 +146,7 @@ void test_non_basic_scheme_returns_401()
 
 void test_credentials_without_colon_returns_401()
 {
-    server.on("/admin", HttpMethod::HTTP_GET, handle_ok, "Admin", "user", "pass");
+    on_http("/admin", HttpMethod::HTTP_GET, handle_ok, "Admin", "user", "pass");
     // base64("nocolon") = "bm9jb2xvbg=="
     feed_and_handle(0, "GET /admin HTTP/1.1\r\n"
                        "Authorization: Basic bm9jb2xvbg==\r\n\r\n");
@@ -157,8 +156,8 @@ void test_credentials_without_colon_returns_401()
 
 void test_protected_and_unprotected_routes_coexist()
 {
-    server.on("/public", HttpMethod::HTTP_GET, handle_ok);
-    server.on("/private", HttpMethod::HTTP_GET, handle_ok, "Priv", "u", "p");
+    on_http("/public", HttpMethod::HTTP_GET, handle_ok);
+    on_http("/private", HttpMethod::HTTP_GET, handle_ok, "Priv", "u", "p");
 
     // Hit public route -- handler fires
     feed_and_handle(0, "GET /public HTTP/1.1\r\n\r\n");
@@ -178,7 +177,7 @@ void test_protected_and_unprotected_routes_coexist()
 
 void test_auth_route_returns_404_for_wrong_path()
 {
-    server.on("/admin", HttpMethod::HTTP_GET, handle_ok, "Admin", "user", "pass");
+    on_http("/admin", HttpMethod::HTTP_GET, handle_ok, "Admin", "user", "pass");
     feed_and_handle(0, "GET /other HTTP/1.1\r\n\r\n");
     TEST_ASSERT_FALSE(handler_called);
     TEST_ASSERT_TRUE(strstr(tcp_captured(), "404") != nullptr);
@@ -189,7 +188,7 @@ void test_auth_checked_per_method()
     // Route only handles POST; a GET to that path is 405 Method Not Allowed
     // (RFC 7231 §6.5.5) - auth is never evaluated for the wrong method, so the
     // response must not be 401.
-    server.on("/upload", HttpMethod::HTTP_POST, handle_ok, "Upload", "u", "p");
+    on_http("/upload", HttpMethod::HTTP_POST, handle_ok, "Upload", "u", "p");
     feed_and_handle(0, "GET /upload HTTP/1.1\r\n\r\n");
     TEST_ASSERT_FALSE(handler_called);
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "405"));
@@ -203,7 +202,7 @@ void test_auth_checked_per_method()
 
 void stress_auth_50_valid_requests()
 {
-    server.on("/s", HttpMethod::HTTP_GET, handle_ok, "R", "u", "p");
+    on_http("/s", HttpMethod::HTTP_GET, handle_ok, "R", "u", "p");
     // base64("u:p") = "dTpw"
     const char *req = "GET /s HTTP/1.1\r\n"
                       "Authorization: Basic dTpw\r\n\r\n";
@@ -221,14 +220,14 @@ void stress_auth_50_valid_requests()
         handler_called = false;
         push_str(slot, req);
         http_parse(slot);
-        server.handle();
+        handle();
         TEST_ASSERT_TRUE_MESSAGE(handler_called, "handler not called with valid creds");
     }
 }
 
 void stress_auth_50_invalid_requests()
 {
-    server.on("/s", HttpMethod::HTTP_GET, handle_ok, "R", "u", "p");
+    on_http("/s", HttpMethod::HTTP_GET, handle_ok, "R", "u", "p");
     const char *req = "GET /s HTTP/1.1\r\n"
                       "Authorization: Basic d3Jvbmc6Y3JlZHM=\r\n\r\n"; // "wrong:creds"
 
@@ -245,7 +244,7 @@ void stress_auth_50_invalid_requests()
         handler_called = false;
         push_str(slot, req);
         http_parse(slot);
-        server.handle();
+        handle();
         TEST_ASSERT_FALSE_MESSAGE(handler_called, "handler called with bad creds");
     }
 }
@@ -270,7 +269,7 @@ static void rearm(uint8_t slot)
 // for the password independently.
 void test_basic_auth_same_length_wrong_credentials()
 {
-    server.on("/admin", HttpMethod::HTTP_GET, handle_ok, "Admin", "user", "pass");
+    on_http("/admin", HttpMethod::HTTP_GET, handle_ok, "Admin", "user", "pass");
 
     // base64("xser:pass") - username same length, different bytes.
     feed_and_handle(0, "GET /admin HTTP/1.1\r\n"
@@ -290,7 +289,7 @@ void test_basic_auth_same_length_wrong_credentials()
 // decode is compared), so the request is unauthorized.
 void test_basic_auth_invalid_base64_rejected()
 {
-    server.on("/admin", HttpMethod::HTTP_GET, handle_ok, "Admin", "user", "pass");
+    on_http("/admin", HttpMethod::HTTP_GET, handle_ok, "Admin", "user", "pass");
     feed_and_handle(0, "GET /admin HTTP/1.1\r\n"
                        "Authorization: Basic ****\r\n\r\n"); // not base64 alphabet
     TEST_ASSERT_FALSE(handler_called);
@@ -301,8 +300,8 @@ void test_basic_auth_invalid_base64_rejected()
 // gets the challenge headers with no body.
 void test_unauth_challenge_cors_and_head()
 {
-    server.set_cors("*");
-    server.on("/admin", HttpMethod::HTTP_GET, handle_ok, "Admin", "user", "pass");
+    set_cors("*");
+    on_http("/admin", HttpMethod::HTTP_GET, handle_ok, "Admin", "user", "pass");
 
     feed_and_handle(0, "GET /admin HTTP/1.1\r\n\r\n");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "401"));
@@ -321,12 +320,12 @@ void test_unauth_challenge_cors_and_head()
 // writes nothing and resets the parser instead.
 void test_unauth_challenge_on_dead_connection()
 {
-    server.on("/admin", HttpMethod::HTTP_GET, handle_ok, "Admin", "user", "pass");
+    on_http("/admin", HttpMethod::HTTP_GET, handle_ok, "Admin", "user", "pass");
     push_str(0, "GET /admin HTTP/1.1\r\n\r\n");
     http_parse(0);
     conn_pool[0].pcb = nullptr; // peer vanished between parse and dispatch
     tcp_capture_reset();
-    server.handle();
+    handle();
     TEST_ASSERT_FALSE(handler_called);
     TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len());
     TEST_ASSERT_EQUAL(ParseState::PARSE_METHOD, http_pool[0].parse_state);
@@ -406,7 +405,7 @@ static void digest_challenge(char *nonce, size_t n)
 // so none of them authenticates.
 void test_digest_field_parser_boundaries()
 {
-    server.on("/d", HttpMethod::HTTP_GET, handle_ok, kDRealm, kDUser, kDPass, true);
+    on_http("/d", HttpMethod::HTTP_GET, handle_ok, kDRealm, kDUser, kDPass, true);
     char nonce[48];
     digest_challenge(nonce, sizeof(nonce));
 
@@ -444,7 +443,7 @@ void test_digest_field_parser_boundaries()
 // than overflowed (a 40-char qop cannot equal "auth", so the request is refused).
 void test_digest_token_values_and_truncation()
 {
-    server.on("/d", HttpMethod::HTTP_GET, handle_ok, kDRealm, kDUser, kDPass, true);
+    on_http("/d", HttpMethod::HTTP_GET, handle_ok, kDRealm, kDUser, kDPass, true);
     char nonce[48];
     digest_challenge(nonce, sizeof(nonce));
 
@@ -479,7 +478,7 @@ void test_digest_token_values_and_truncation()
 // all refused.
 void test_digest_nonce_shape_and_mac()
 {
-    server.on("/d", HttpMethod::HTTP_GET, handle_ok, kDRealm, kDUser, kDPass, true);
+    on_http("/d", HttpMethod::HTTP_GET, handle_ok, kDRealm, kDUser, kDPass, true);
 
     static const char *bad_nonces[] = {
         "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", // 41 chars, no '.' at index 8
@@ -505,7 +504,7 @@ void test_digest_nonce_shape_and_mac()
 // of them aborts the check before any hashing.
 void test_digest_missing_field_rejected()
 {
-    server.on("/d", HttpMethod::HTTP_GET, handle_ok, kDRealm, kDUser, kDPass, true);
+    on_http("/d", HttpMethod::HTTP_GET, handle_ok, kDRealm, kDUser, kDPass, true);
     char nonce[48];
     digest_challenge(nonce, sizeof(nonce));
 
@@ -541,7 +540,7 @@ void test_digest_missing_field_rejected()
 // does (and is refused when it presents the path alone).
 void test_digest_uri_includes_query_string()
 {
-    server.on("/d", HttpMethod::HTTP_GET, handle_ok, kDRealm, kDUser, kDPass, true);
+    on_http("/d", HttpMethod::HTTP_GET, handle_ok, kDRealm, kDUser, kDPass, true);
     char nonce[48];
     rearm(0);
     feed_and_handle(0, "GET /d?a=1 HTTP/1.1\r\nHost: x\r\n\r\n");

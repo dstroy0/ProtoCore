@@ -41,7 +41,6 @@ static const float OUT_MIN = 0.0f;
 static const float OUT_MAX = 50.0f;
 static const uint32_t PERIOD_MS = 20; // 50 Hz control rate
 
-PC server;
 static Pid pid;
 
 // Recorded run (BSS): the first LOG_N control steps after boot / GET /reset.
@@ -103,7 +102,7 @@ static LogCtx s_log_ctx; // must outlive the chunked response
 void handle_log(uint8_t slot, HttpReq *)
 {
     s_log_ctx.i = 0;
-    server.send_chunked(slot, 200, "text/csv", log_source, &s_log_ctx);
+    send_chunked(slot, 200, "text/csv", log_source, &s_log_ctx);
 }
 
 void handle_reset(uint8_t slot, HttpReq *)
@@ -111,7 +110,7 @@ void handle_reset(uint8_t slot, HttpReq *)
     g_count = 0;
     pid_reset(&pid);
     sim_y = 0.0f;
-    server.send(slot, 200, "text/plain", "recording restarted\n");
+    send_text(slot, 200, "text/plain", "recording restarted\n");
 }
 
 void handle_root(uint8_t slot, HttpReq *)
@@ -127,7 +126,7 @@ void handle_root(uint8_t slot, HttpReq *)
              "then edit KP/KI/KD, re-flash, and GET /reset to record a fresh run.\n",
              KP, KI, KD, 1000UL / PERIOD_MS, g_count ? g_sp[g_count - 1] : 0.0f, g_count ? g_meas[g_count - 1] : 0.0f,
              g_count ? g_out[g_count - 1] : 0.0f, g_count, LOG_N);
-    server.send(slot, 200, "text/plain", page);
+    send_text(slot, 200, "text/plain", page);
 }
 
 void setup()
@@ -146,16 +145,16 @@ void setup()
     pid_set_output_limits(&pid, OUT_MIN, OUT_MAX);
     pid_set_rate(&pid, PERIOD_MS * 0.001f); // fixed rate -> pid_update_fixed() skips the /dt divide
 
-    server.on("/", HttpMethod::HTTP_GET, handle_root);
-    server.on("/log.csv", HttpMethod::HTTP_GET, handle_log);
-    server.on("/reset", HttpMethod::HTTP_GET, handle_reset);
-    server.begin(80);
+    on_http("/", HttpMethod::HTTP_GET, handle_root);
+    on_http("/log.csv", HttpMethod::HTTP_GET, handle_log);
+    on_http("/reset", HttpMethod::HTTP_GET, handle_reset);
+    begin_http(80);
     Serial.println("GET /log.csv to capture the run for tools/pid_tune.py");
 }
 
 void loop()
 {
-    server.handle();
+    handle();
 
     static uint32_t last = 0;
     uint32_t now = millis();

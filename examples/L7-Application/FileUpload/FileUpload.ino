@@ -38,7 +38,6 @@ static const char *PASSWORD = "YOUR_PASSWORD";
 
 static const char *DEST = "/uploaded.bin";
 
-PC server;
 
 void setup()
 {
@@ -61,13 +60,13 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // POST /upload -> stream the body into DEST on LittleFS.
-    pc_upload_begin(server, "/upload", LittleFS, DEST);
+    pc_upload_begin("/upload", LittleFS, DEST);
 
     // GET /file -> serve the stored file back.
-    server.on("/file", HttpMethod::HTTP_GET,
-              [](uint8_t id, HttpReq *) { server.serve_file(id, LittleFS, DEST, "application/octet-stream"); });
+    on_http("/file", HttpMethod::HTTP_GET,
+              [](uint8_t id, HttpReq *) { serve_file(id, LittleFS, DEST, "application/octet-stream"); });
 
-    int32_t result = server.begin(80);
+    int32_t result = begin_http(80);
     if (result < 0)
     {
         Serial.printf("begin() failed (error %d)\n", result);
@@ -80,5 +79,5 @@ void setup()
 
 void loop()
 {
-    server.handle();
+    handle();
 }

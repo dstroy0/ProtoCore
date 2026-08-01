@@ -26,13 +26,12 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 // GET /secret - only reached after successful Digest authentication.
 void handle_secret(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    server.send(slot_id, 200, "text/plain", "authenticated: top secret payload");
+    send_text(slot_id, 200, "text/plain", "authenticated: top secret payload");
 }
 
 void setup()
@@ -51,9 +50,9 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // on(path, method, handler, realm, user, pass, digest=true)
-    server.on("/secret", HttpMethod::HTTP_GET, handle_secret, "demo", "admin", "s3cret", true);
+    on_http("/secret", HttpMethod::HTTP_GET, handle_secret, "demo", "admin", "s3cret", true);
 
-    int32_t result = server.begin(80);
+    int32_t result = begin_http(80);
     if (result < 0)
     {
         Serial.printf("begin() failed (error %d)\n", result);
@@ -64,5 +63,5 @@ void setup()
 
 void loop()
 {
-    server.handle();
+    handle();
 }

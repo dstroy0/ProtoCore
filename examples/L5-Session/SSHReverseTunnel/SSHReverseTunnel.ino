@@ -49,12 +49,11 @@ static const uint8_t AUTH_SEED[32] = {0};
 // The handshake aborts if the relay presents any other key (no trust-on-first-use).
 static const uint8_t HOST_PIN[32] = {0};
 
-PC server;
 
 static void root(uint8_t slot, HttpReq *req)
 {
     (void)req;
-    server.send(slot, 200, PC_MIME_TEXT_PLAIN, "hello from the device behind NAT, over the reverse SSH tunnel\n");
+    send_text(slot, 200, PC_MIME_TEXT_PLAIN, "hello from the device behind NAT, over the reverse SSH tunnel\n");
 }
 
 // Dedicated task: enough stack for the KEX, and the same task owns begin()+poll().
@@ -103,8 +102,8 @@ void setup()
     }
     Serial.println();
 
-    server.on("/", HttpMethod::HTTP_GET, root);
-    server.begin(80);
+    on_http("/", HttpMethod::HTTP_GET, root);
+    begin_http(80);
 
     // 20 KB stack covers the ML-KEM hybrid handshake; pin to core 0 (off the loop).
     xTaskCreatePinnedToCore(tunnel_task, "pc_ssh_tun", 20480, nullptr, 5, nullptr, 0);
@@ -112,7 +111,7 @@ void setup()
 
 void loop()
 {
-    server.handle();
+    handle();
     if (pc_ssh_tunnel_up())
     {
         static bool announced = false;

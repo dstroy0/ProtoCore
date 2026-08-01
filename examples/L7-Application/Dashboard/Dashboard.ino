@@ -33,7 +33,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 static const int LED_PIN = 2; // onboard LED on many ESP32 dev boards
 
@@ -79,13 +78,13 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     pc_dashboard_on_control(on_control);
-    pc_dashboard_begin(server, "/dashboard", WIDGETS, sizeof(WIDGETS) / sizeof(WIDGETS[0]));
-    server.begin(80);
+    pc_dashboard_begin("/dashboard", WIDGETS, sizeof(WIDGETS) / sizeof(WIDGETS[0]));
+    begin_http(80);
 }
 
 void loop()
 {
-    server.handle();
+    handle();
 
     // Push a telemetry frame once a second.
     static uint32_t last_ms = 0;

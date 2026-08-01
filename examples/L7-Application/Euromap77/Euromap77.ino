@@ -12,7 +12,7 @@
  * values by their standard BrowseNames - the same shape across machine vendors.
  *
  *   pc_em77_install(&imm)                 -> registers the OPC UA Browse + Read resolvers
- *   server.listen(4840, PROTO_OPCUA)       -> the OPC UA / EUROMAP endpoint
+ *   listen(4840, PROTO_OPCUA)       -> the OPC UA / EUROMAP endpoint
  *
  * Builds on example OpcUa (the OPC UA Binary server); EUROMAP 77 is the injection-molding model on top -
  * the plastics-industry twin of example Umati (machine tools) and Robotics. The HTTP server on :80 runs
@@ -34,7 +34,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 // The IMM the EUROMAP 77 server exposes. Own it statically and refresh its live fields each loop from
 // your real machine I/O; the resolvers read straight out of it (no copy).
@@ -77,16 +76,16 @@ void setup()
     imm.active_job_values.job_status = EmJobStatus::EM_JOB_IN_PRODUCTION;
 
     pc_em77_install(&imm); // bind + register the OPC UA Browse/Read resolvers
-    server.on("/", HttpMethod::HTTP_GET,
-              [](uint8_t id, HttpReq *) { server.send(id, 200, "text/plain", "EUROMAP 77 IMM on :4840"); });
-    server.listen(4840, ConnProto::PROTO_OPCUA); // OPC UA / EUROMAP endpoint - before begin()
-    server.begin(80);
+    on_http("/", HttpMethod::HTTP_GET,
+              [](uint8_t id, HttpReq *) { send_text(id, 200, "text/plain", "EUROMAP 77 IMM on :4840"); });
+    listen(4840, ConnProto::PROTO_OPCUA); // OPC UA / EUROMAP endpoint - before begin()
+    begin_http(80);
     Serial.println("EUROMAP 77 (OPC UA for IMM): opc.tcp://<ip>:4840  - browse IMM_MES_Interface, read live counters");
 }
 
 void loop()
 {
-    server.handle();
+    handle();
 
     // Simulate a running IMM: a new cycle every ~2 s, ~4 good parts per cycle (4-cavity mould), the
     // occasional reject. The 64-bit counters climb; LastCycleTime jitters around ExpectedCycleTime.

@@ -25,7 +25,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 // Simple authentication token for AJAX API queries.
 static const char *ADMIN_TOKEN = "admin123";
@@ -285,7 +284,7 @@ bool verify_admin_privileges(const HttpReq *req)
 /** @brief GET /: serve the embedded single-page dashboard. */
 void handle_serve_dashboard(uint8_t slot_id, HttpReq *req)
 {
-    server.send(slot_id, 200, "text/html", ADMIN_HTML);
+    send_text(slot_id, 200, "text/html", ADMIN_HTML);
 }
 
 /** @brief GET /api/sysinfo: serialize hardware telemetry to JSON (auth required). */
@@ -293,7 +292,7 @@ void handle_get_sysinfo(uint8_t slot_id, HttpReq *req)
 {
     if (!verify_admin_privileges(req))
     {
-        server.send(slot_id, 401, "application/json", "{\"error\":\"Unauthorized\"}");
+        send_text(slot_id, 401, "application/json", "{\"error\":\"Unauthorized\"}");
         return;
     }
 
@@ -323,7 +322,7 @@ void handle_get_sysinfo(uint8_t slot_id, HttpReq *req)
              get_reset_reason_string(esp_reset_reason()), ESP.getChipRevision(), ESP.getCpuFreqMHz(), pc_net_rssi(),
              ssid, pc_net_channel(), ip_str);
 
-    server.send(slot_id, 200, "application/json", response_buf);
+    send_text(slot_id, 200, "application/json", response_buf);
 }
 
 /** @brief POST /api/restart: acknowledge, then arm the reboot timer (auth required). */
@@ -331,12 +330,12 @@ void handle_post_restart(uint8_t slot_id, HttpReq *req)
 {
     if (!verify_admin_privileges(req))
     {
-        server.send(slot_id, 401, "application/json", "{\"error\":\"Unauthorized\"}");
+        send_text(slot_id, 401, "application/json", "{\"error\":\"Unauthorized\"}");
         return;
     }
 
     // Acknowledge first so the response reaches the client before we reboot.
-    server.send(slot_id, 200, "application/json", "{\"status\":\"rebooting\"}");
+    send_text(slot_id, 200, "application/json", "{\"status\":\"rebooting\"}");
 
     pending_reboot = true;
     reboot_trigger_ms = millis();
@@ -359,13 +358,13 @@ void setup()
     Serial.printf("Access the dashboard via: http://%u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    server.set_cors("*");
+    set_cors("*");
 
-    server.on("/", HttpMethod::HTTP_GET, handle_serve_dashboard);
-    server.on("/api/sysinfo", HttpMethod::HTTP_GET, handle_get_sysinfo);
-    server.on("/api/restart", HttpMethod::HTTP_POST, handle_post_restart);
+    on_http("/", HttpMethod::HTTP_GET, handle_serve_dashboard);
+    on_http("/api/sysinfo", HttpMethod::HTTP_GET, handle_get_sysinfo);
+    on_http("/api/restart", HttpMethod::HTTP_POST, handle_post_restart);
 
-    int32_t result = server.begin(80);
+    int32_t result = begin_http(80);
     if (result < 0)
     {
         Serial.printf("begin() failed (error %d)\n", result);
@@ -376,7 +375,7 @@ void setup()
 
 void loop()
 {
-    server.handle();
+    handle();
 
     // Perform the scheduled reboot once the ack has had time to flush.
     if (pending_reboot && (millis() - reboot_trigger_ms >= 1000))

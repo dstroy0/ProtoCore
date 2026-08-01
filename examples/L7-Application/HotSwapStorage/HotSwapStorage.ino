@@ -35,7 +35,6 @@ static const char *WIFI_SSID = "your-ssid";
 static const char *WIFI_PASS = "your-password";
 static const char *LOG_PATH = "/hotswap.log";
 
-PC server;
 static uint32_t g_writes = 0;
 
 // --- the three things the app owns: how to mount, unmount, and detect ------
@@ -70,10 +69,10 @@ static void storage_handler(uint8_t slot_id, HttpReq *req)
     char json[96];
     if (pc_hotswap_json(json, sizeof(json)) == 0)
     {
-        server.send(slot_id, 500, PC_MIME_JSON, "{}");
+        send_text(slot_id, 500, PC_MIME_JSON, "{}");
         return;
     }
-    server.send(slot_id, 200, PC_MIME_JSON, json);
+    send_text(slot_id, 200, PC_MIME_JSON, json);
 }
 
 static void write_handler(uint8_t slot_id, HttpReq *req)
@@ -82,7 +81,7 @@ static void write_handler(uint8_t slot_id, HttpReq *req)
     // The gate. Without it this write would go into a stale mount and be silently lost.
     if (!pc_hotswap_ready())
     {
-        server.send(slot_id, 503, PC_MIME_TEXT_PLAIN, "storage not ready\n");
+        send_text(slot_id, 503, PC_MIME_TEXT_PLAIN, "storage not ready\n");
         return;
     }
 
@@ -98,7 +97,7 @@ static void write_handler(uint8_t slot_id, HttpReq *req)
 
     // Report it either way: successes are what keep a healthy volume from drifting toward a fault.
     pc_hotswap_io(ok);
-    server.send(slot_id, ok ? 200 : 500, PC_MIME_TEXT_PLAIN, ok ? "ok\n" : "write failed\n");
+    send_text(slot_id, ok ? 200 : 500, PC_MIME_TEXT_PLAIN, ok ? "ok\n" : "write failed\n");
 }
 
 // Pull the rug out from under the app without touching the hardware. Every write after this really
@@ -107,7 +106,7 @@ static void yank_handler(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
     SD_MMC.end();
-    server.send(slot_id, 200, PC_MIME_TEXT_PLAIN, "unmounted - now hit /write a few times\n");
+    send_text(slot_id, 200, PC_MIME_TEXT_PLAIN, "unmounted - now hit /write a few times\n");
 }
 
 void setup()
@@ -126,10 +125,10 @@ void setup()
         delay(250);
     }
 
-    server.on("/storage", HttpMethod::HTTP_GET, storage_handler);
-    server.on("/write", HttpMethod::HTTP_GET, write_handler);
-    server.on("/yank", HttpMethod::HTTP_GET, yank_handler);
-    server.begin(80);
+    on_http("/storage", HttpMethod::HTTP_GET, storage_handler);
+    on_http("/write", HttpMethod::HTTP_GET, write_handler);
+    on_http("/yank", HttpMethod::HTTP_GET, yank_handler);
+    begin_http(80);
 
     uint32_t ip = pc_net_egress_ip();
     Serial.printf("http://%u.%u.%u.%u/storage\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
@@ -138,6 +137,6 @@ void setup()
 
 void loop()
 {
-    server.handle();
+    handle();
     pc_hotswap_poll(); // rate-limited internally, so this is cheap to call every pass
 }

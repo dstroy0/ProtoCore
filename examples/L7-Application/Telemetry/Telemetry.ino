@@ -25,7 +25,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 static float g_window_buf[16]; // caller-owned window storage (no heap)
 static pc_window g_window;
@@ -51,22 +50,22 @@ void setup()
     pc_rate_init(&g_rate);
     pc_totalizer_init(&g_total);
 
-    server.on("/telemetry", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
+    on_http("/telemetry", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
         char body[192];
         snprintf(body, sizeof(body),
                  "{\"samples\":%u,\"mean\":%.3f,\"stddev\":%.3f,\"min\":%.3f,\"max\":%.3f,"
                  "\"rate_per_s\":%.3f,\"total\":%.3f}",
                  (unsigned)pc_window_count(&g_window), pc_window_mean(&g_window), pc_window_stddev(&g_window),
                  pc_window_min(&g_window), pc_window_max(&g_window), g_last_rate, pc_totalizer_total(&g_total));
-        server.send(id, 200, "application/json", body);
+        send_text(id, 200, "application/json", body);
     });
 
-    server.begin(80);
+    begin_http(80);
 }
 
 void loop()
 {
-    server.handle();
+    handle();
 
     // Sample once a second and fold it into the telemetry helpers.
     static uint32_t last_ms = 0;

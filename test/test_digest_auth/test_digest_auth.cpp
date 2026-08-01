@@ -21,7 +21,6 @@ static uint32_t fake_clock()
     return g_fake_ms;
 }
 
-static PC server;
 static bool g_called;
 
 static const char *kUser = "admin";
@@ -43,7 +42,7 @@ static void h_secure(uint8_t slot, HttpReq *req)
 {
     (void)req;
     g_called = true;
-    server.send(slot, 200, "text/plain", "secret");
+    send_text(slot, 200, "text/plain", "secret");
 }
 
 static void sha256_hex(const char *s, char out[65])
@@ -97,7 +96,7 @@ static void compute_response(const char *user, const char *realm, const char *pa
 
 void setUp()
 {
-    server = PC();
+    pc_server_reset();
     g_called = false;
     for (int i = 0; i < MAX_CONNS; i++)
     {
@@ -134,7 +133,7 @@ static void feed_and_handle(uint8_t slot, const char *req_str)
 {
     push_str(slot, req_str);
     http_parse(slot);
-    server.handle();
+    handle();
 }
 
 // ====================================================================
@@ -143,7 +142,7 @@ static void feed_and_handle(uint8_t slot, const char *req_str)
 
 void test_challenge_is_digest_sha256()
 {
-    server.on("/secure", HttpMethod::HTTP_GET, h_secure, kRealm, kUser, kPass, true);
+    on_http("/secure", HttpMethod::HTTP_GET, h_secure, kRealm, kUser, kPass, true);
     feed_and_handle(0, "GET /secure HTTP/1.1\r\nHost: x\r\n\r\n");
     const char *resp = tcp_captured();
     TEST_ASSERT_FALSE(g_called);
@@ -156,7 +155,7 @@ void test_challenge_is_digest_sha256()
 
 void test_valid_digest_authenticates()
 {
-    server.on("/secure", HttpMethod::HTTP_GET, h_secure, kRealm, kUser, kPass, true);
+    on_http("/secure", HttpMethod::HTTP_GET, h_secure, kRealm, kUser, kPass, true);
 
     feed_and_handle(0, "GET /secure HTTP/1.1\r\nHost: x\r\n\r\n");
     char nonce[48];
@@ -181,7 +180,7 @@ void test_valid_digest_authenticates()
 
 void test_wrong_password_rejected()
 {
-    server.on("/secure", HttpMethod::HTTP_GET, h_secure, kRealm, kUser, kPass, true);
+    on_http("/secure", HttpMethod::HTTP_GET, h_secure, kRealm, kUser, kPass, true);
 
     feed_and_handle(0, "GET /secure HTTP/1.1\r\nHost: x\r\n\r\n");
     char nonce[48];
@@ -205,7 +204,7 @@ void test_wrong_password_rejected()
 
 void test_bad_nonce_rejected()
 {
-    server.on("/secure", HttpMethod::HTTP_GET, h_secure, kRealm, kUser, kPass, true);
+    on_http("/secure", HttpMethod::HTTP_GET, h_secure, kRealm, kUser, kPass, true);
 
     feed_and_handle(0, "GET /secure HTTP/1.1\r\nHost: x\r\n\r\n");
     // Compute a response against a forged nonce the server never issued.
@@ -228,7 +227,7 @@ void test_bad_nonce_rejected()
 
 void test_wrong_username_rejected()
 {
-    server.on("/secure", HttpMethod::HTTP_GET, h_secure, kRealm, kUser, kPass, true);
+    on_http("/secure", HttpMethod::HTTP_GET, h_secure, kRealm, kUser, kPass, true);
     feed_and_handle(0, "GET /secure HTTP/1.1\r\nHost: x\r\n\r\n");
     char nonce[48];
     TEST_ASSERT_TRUE(extract_nonce(tcp_captured(), nonce, sizeof(nonce)));
@@ -250,7 +249,7 @@ void test_wrong_username_rejected()
 
 void test_wrong_qop_rejected()
 {
-    server.on("/secure", HttpMethod::HTTP_GET, h_secure, kRealm, kUser, kPass, true);
+    on_http("/secure", HttpMethod::HTTP_GET, h_secure, kRealm, kUser, kPass, true);
     feed_and_handle(0, "GET /secure HTTP/1.1\r\nHost: x\r\n\r\n");
     char nonce[48];
     TEST_ASSERT_TRUE(extract_nonce(tcp_captured(), nonce, sizeof(nonce)));
@@ -273,7 +272,7 @@ void test_wrong_qop_rejected()
 
 void test_missing_response_field_rejected()
 {
-    server.on("/secure", HttpMethod::HTTP_GET, h_secure, kRealm, kUser, kPass, true);
+    on_http("/secure", HttpMethod::HTTP_GET, h_secure, kRealm, kUser, kPass, true);
     feed_and_handle(0, "GET /secure HTTP/1.1\r\nHost: x\r\n\r\n");
     char nonce[48];
     TEST_ASSERT_TRUE(extract_nonce(tcp_captured(), nonce, sizeof(nonce)));
@@ -293,7 +292,7 @@ void test_missing_response_field_rejected()
 
 void test_basic_scheme_on_digest_route_rejected()
 {
-    server.on("/secure", HttpMethod::HTTP_GET, h_secure, kRealm, kUser, kPass, true);
+    on_http("/secure", HttpMethod::HTTP_GET, h_secure, kRealm, kUser, kPass, true);
     // A Basic Authorization header on a Digest-protected route must not authenticate.
     char authreq[256];
     snprintf(authreq, sizeof(authreq),
@@ -307,7 +306,7 @@ void test_basic_scheme_on_digest_route_rejected()
 // computed for /other must not authenticate a request to /secure (replay defense).
 void test_uri_mismatch_rejected()
 {
-    server.on("/secure", HttpMethod::HTTP_GET, h_secure, kRealm, kUser, kPass, true);
+    on_http("/secure", HttpMethod::HTTP_GET, h_secure, kRealm, kUser, kPass, true);
     feed_and_handle(0, "GET /secure HTTP/1.1\r\nHost: x\r\n\r\n");
     char nonce[48];
     TEST_ASSERT_TRUE(extract_nonce(tcp_captured(), nonce, sizeof(nonce)));
@@ -331,7 +330,7 @@ void test_uri_mismatch_rejected()
 // hex/'.' characters with the separating dot at index 8.
 void test_nonce_is_stateless_timestamped()
 {
-    server.on("/secure", HttpMethod::HTTP_GET, h_secure, kRealm, kUser, kPass, true);
+    on_http("/secure", HttpMethod::HTTP_GET, h_secure, kRealm, kUser, kPass, true);
     feed_and_handle(0, "GET /secure HTTP/1.1\r\nHost: x\r\n\r\n");
     char nonce[48];
     TEST_ASSERT_TRUE(extract_nonce(tcp_captured(), nonce, sizeof(nonce)));
@@ -356,8 +355,8 @@ void test_stale_nonce_triggers_transparent_retry()
 {
     pc_set_clock(fake_clock, 1000); // 1000 ticks/sec -> 1 tick == 1 ms
     g_fake_ms = 0;
-    server = PC(); // re-seed the keying secret under the injected clock
-    server.on("/secure", HttpMethod::HTTP_GET, h_secure, kRealm, kUser, kPass, true);
+    pc_server_reset(); // re-seed the keying secret under the injected clock
+    on_http("/secure", HttpMethod::HTTP_GET, h_secure, kRealm, kUser, kPass, true);
 
     // Mint a nonce at t=0.
     feed_and_handle(0, "GET /secure HTTP/1.1\r\nHost: x\r\n\r\n");

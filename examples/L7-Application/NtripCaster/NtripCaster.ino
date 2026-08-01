@@ -94,7 +94,6 @@ static bool read_nmea_line(char *line, size_t cap, size_t *len)
 // ============================ BASE: survey-in + NTRIP caster ============================
 #include "services/timing_position/gnss/ntrip_caster_listener.h"
 
-PC server;
 static GnssSurvey s_survey;
 static bool s_surveyed = false;
 static GnssEcef s_base_ecef;
@@ -129,12 +128,12 @@ void setup()
     mount.generator = "PC";
     mount.nmea_required = false;
 
-    int32_t li = server.listen(CASTER_PORT, ConnProto::PROTO_NTRIP_CASTER);
+    int32_t li = listen(CASTER_PORT, ConnProto::PROTO_NTRIP_CASTER);
     if (li < 0 || !pc_ntrip_caster_add_mount((uint8_t)li, &mount, nullptr /*open access*/))
     {
         Serial.println("caster add_mount failed");
     }
-    server.begin();
+    begin();
     Serial.printf("NTRIP caster: %u.%u.%u.%u:%u  mount /%s   (surveying in...)\n", (unsigned)(ip & 0xFF),
                   (unsigned)((ip >> 8) & 0xFF), (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF),
                   CASTER_PORT, MOUNTPOINT);
@@ -142,7 +141,7 @@ void setup()
 
 void loop()
 {
-    server.handle(); // pumps rover connections + the caster
+    handle(); // pumps rover connections + the caster
 
     char line[100];
     static size_t len = 0;

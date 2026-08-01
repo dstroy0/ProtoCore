@@ -33,7 +33,6 @@
 static const char *WIFI_SSID = "your-ssid";
 static const char *WIFI_PASS = "your-password";
 
-PC server;
 
 static void mdns_handler(uint8_t slot_id, HttpReq *req)
 {
@@ -42,7 +41,7 @@ static void mdns_handler(uint8_t slot_id, HttpReq *req)
     snprintf(json, sizeof(json), "{\"interval_ms\":%lu,\"contention\":%u,\"announces\":%lu,\"channel\":%u}",
              (unsigned long)pc_mdns_adaptive_interval_ms(), (unsigned)pc_mdns_adaptive_contention(),
              (unsigned long)pc_mdns_adaptive_announces(), (unsigned)pc_net_channel());
-    server.send(slot_id, 200, PC_MIME_JSON, json);
+    send_text(slot_id, 200, PC_MIME_JSON, json);
 }
 
 void setup()
@@ -56,8 +55,8 @@ void setup()
         delay(250);
     }
 
-    server.on("/mdns", HttpMethod::HTTP_GET, mdns_handler);
-    server.begin(80);
+    on_http("/mdns", HttpMethod::HTTP_GET, mdns_handler);
+    begin_http(80);
 
     // Bring up the responder and seed the TXT record the refresher re-applies.
     if (pc_mdns_begin("adaptive", 80))
@@ -93,7 +92,7 @@ void setup()
 
 void loop()
 {
-    server.handle();
+    handle();
     pc_mdns_adaptive_tick(); // samples, adapts, re-announces when due - rate-limited internally
 
     static uint32_t next = 0;

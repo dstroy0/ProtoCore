@@ -51,7 +51,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 // --- Authentication callbacks ----------------------------------------------
 
@@ -119,8 +118,8 @@ void setup()
     pc_ssh_channel_set_data_cb(ssh_on_data);
 
     // Listen for SSH on port 22 (and, optionally, HTTP on 80 alongside it).
-    server.listen(22, ConnProto::PROTO_SSH);
-    int32_t result = server.begin();
+    listen(22, ConnProto::PROTO_SSH);
+    int32_t result = begin();
     if (result < 0)
     {
         Serial.printf("begin() failed (error %d)\n", result);
@@ -147,5 +146,5 @@ void loop()
 {
     // Drives accept/rx for every listener, including the ConnProto::PROTO_SSH handshake,
     // user-auth, and channel data pumping.
-    server.handle();
+    handle();
 }

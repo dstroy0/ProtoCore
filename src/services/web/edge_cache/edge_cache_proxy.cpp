@@ -115,7 +115,6 @@ struct MeshConn
 // The single owned file-static: all of this subsystem's mutable state.
 struct EdgeCacheProxyCtx
 {
-    PC *server;
     bool registered;
     EdgeCacheStore store;
     EdgeRouteMap maps[PC_EDGE_MAP_MAX];
@@ -364,10 +363,10 @@ void serve_hit(uint8_t slot, EdgeEntry *e, uint32_t now, const char *xcache)
             {
                 cr[0] = '\0';
             }
-            s_ctx.server->add_response_header(slot, "Content-Range", cr);
+            add_response_header(slot, "Content-Range", cr);
             c->active = false;
             c->entry = nullptr;
-            s_ctx.server->send(slot, 416, PC_MIME_TEXT_PLAIN, "Range Not Satisfiable");
+            send_text(slot, 416, PC_MIME_TEXT_PLAIN, "Range Not Satisfiable");
             return;
         }
         if (rr > 0) // satisfiable -> 206 with just the requested window [rs, re]
@@ -387,24 +386,24 @@ void serve_hit(uint8_t slot, EdgeEntry *e, uint32_t now, const char *xcache)
             {
                 cr[0] = '\0';
             }
-            s_ctx.server->add_response_header(slot, "Content-Range", cr);
+            add_response_header(slot, "Content-Range", cr);
         }
     }
-    s_ctx.server->add_response_header(slot, "Accept-Ranges", "bytes"); // advertise range support
+    add_response_header(slot, "Accept-Ranges", "bytes"); // advertise range support
 #endif
 
-    s_ctx.server->add_response_header(slot, "X-Cache", xcache);
+    add_response_header(slot, "X-Cache", xcache);
     if (e->etag[0])
     {
-        s_ctx.server->add_response_header(slot, "ETag", e->etag);
+        add_response_header(slot, "ETag", e->etag);
     }
     if (e->last_modified[0])
     {
-        s_ctx.server->add_response_header(slot, "Last-Modified", e->last_modified);
+        add_response_header(slot, "Last-Modified", e->last_modified);
     }
     if (e->content_encoding[0])
     {
-        s_ctx.server->add_response_header(slot, "Content-Encoding", e->content_encoding);
+        add_response_header(slot, "Content-Encoding", e->content_encoding);
     }
     long age = edge_current_age(e->initial_age, e->insert_ms, now);
     if (age < 0)
@@ -418,9 +417,9 @@ void serve_hit(uint8_t slot, EdgeEntry *e, uint32_t now, const char *xcache)
     {
         agebuf[0] = '\0';
     }
-    s_ctx.server->add_response_header(slot, "Age", agebuf);
+    add_response_header(slot, "Age", agebuf);
     const char *ct = e->content_type[0] ? e->content_type : "application/octet-stream";
-    s_ctx.server->send_chunked(slot, status, ct, edge_chunk_source, c);
+    send_chunked(slot, status, ct, edge_chunk_source, c);
 }
 
 // Serve a non-cacheable / non-200 origin response through a transient unindexed store slot, so the
@@ -430,7 +429,7 @@ void serve_passthrough(uint8_t slot, EdgeFetch *f)
     EdgeEntry *e = edge_store_alloc(&s_ctx.store, "", ""); // key "" -> never matched by a lookup
     if (!e)
     {
-        s_ctx.server->send(slot, 502, PC_MIME_TEXT_PLAIN, "Bad Gateway");
+        send_text(slot, 502, PC_MIME_TEXT_PLAIN, "Bad Gateway");
         return;
     }
     s_ctx.store.stats.stores--; // a transient is not a cache store
@@ -454,13 +453,13 @@ void serve_passthrough(uint8_t slot, EdgeFetch *f)
     c->entry = e;
     c->off = 0;
     c->end = e->body_len;
-    s_ctx.server->add_response_header(slot, "X-Cache", "MISS");
+    add_response_header(slot, "X-Cache", "MISS");
     if (e->content_encoding[0])
     {
-        s_ctx.server->add_response_header(slot, "Content-Encoding", e->content_encoding);
+        add_response_header(slot, "Content-Encoding", e->content_encoding);
     }
     const char *ct = e->content_type[0] ? e->content_type : "application/octet-stream";
-    s_ctx.server->send_chunked(slot, e->status ? e->status : 200, ct, edge_chunk_source, c);
+    send_chunked(slot, e->status ? e->status : 200, ct, edge_chunk_source, c);
 }
 
 // Store a cacheable 200 response into a fresh entry and serve it.
@@ -816,7 +815,9 @@ EdgeEntry *try_promote_l2(const char *canon, uint32_t now)
 // fall through (fail open).
 MwResult edge_cache_mw(uint8_t slot, HttpReq *req)
 {
-    if (!s_ctx.registered || !s_ctx.server || slot >= MAX_CONNS)
+    // `registered` is the whole test now: it was always the real question, and the stored server
+    // pointer it was AND-ed with was set by the same call that set it.
+    if (!s_ctx.registered || slot >= MAX_CONNS)
     {
         return MwResult::MW_NEXT;
     }
@@ -918,7 +919,7 @@ bool edge_cache_poll(uint8_t slot)
         {
             return true;
         }
-        s_ctx.server->send(slot, 502, PC_MIME_TEXT_PLAIN, "Bad Gateway"); // no sibling + origin start failed
+        send_text(slot, 502, PC_MIME_TEXT_PLAIN, "Bad Gateway"); // no sibling + origin start failed
         fs->used = false;
         s_ctx.pending[slot].active = false;
         return true;
@@ -950,7 +951,7 @@ bool edge_cache_poll(uint8_t slot)
     }
     else // FAILED miss / OVERSIZE
     {
-        s_ctx.server->send(slot, 502, PC_MIME_TEXT_PLAIN, "Bad Gateway");
+        send_text(slot, 502, PC_MIME_TEXT_PLAIN, "Bad Gateway");
     }
     edge_fetch_end(&fs->f, tport);
     fs->used = false;
@@ -1193,9 +1194,8 @@ const ProtoHandler s_mesh_handler = {mesh_on_accept, mesh_on_data, mesh_on_close
 
 // --- public API ----------------------------------------------------------------------------------
 
-void pc_edge_cache_enable(PC &server)
+void pc_edge_cache_enable(void)
 {
-    s_ctx.server = &server;
     edge_store_init(&s_ctx.store);
     for (int i = 0; i < PC_EDGE_FETCH_SLOTS; i++)
     {
@@ -1239,7 +1239,7 @@ void pc_edge_cache_enable(PC &server)
 #endif
     if (!s_ctx.registered)
     {
-        server.use(edge_cache_mw);
+        use(edge_cache_mw);
         pc_http_set_edge_poll(edge_cache_poll);
         s_ctx.registered = true;
     }

@@ -13,7 +13,6 @@
 #include <string.h>
 #include <unity.h>
 
-static PC server;
 static fs::FS g_fs;
 
 static void push_bytes(uint8_t slot, const char *data, size_t n)
@@ -28,7 +27,7 @@ static void push_bytes(uint8_t slot, const char *data, size_t n)
 
 void setUp()
 {
-    server = PC();
+    pc_server_reset();
     for (int i = 0; i < MAX_CONNS; i++)
     {
         conn_pool[i] = {};
@@ -67,7 +66,7 @@ void test_upload_streams_body_to_file()
     push_bytes(0, req, (size_t)hn);
     push_bytes(0, body, blen);
     http_parse(0);
-    server.handle();
+    handle();
 
     TEST_ASSERT_EQUAL_UINT(blen, fs::mock_fs_written());
     TEST_ASSERT_EQUAL_MEMORY(body, fs::mock_fs_wdata(), blen);
@@ -88,7 +87,7 @@ void test_small_body_single_chunk()
     int hn = snprintf(req, sizeof(req), "POST /upload HTTP/1.1\r\nContent-Length: 4\r\n\r\n%s", body);
     push_bytes(0, req, (size_t)hn);
     http_parse(0);
-    server.handle();
+    handle();
     TEST_ASSERT_EQUAL_UINT(4, fs::mock_fs_written());
     TEST_ASSERT_EQUAL_MEMORY("tiny", fs::mock_fs_wdata(), 4);
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "200 OK"));
@@ -101,7 +100,7 @@ void test_empty_body_not_streamed()
     int hn = snprintf(req, sizeof(req), "POST /upload HTTP/1.1\r\nContent-Length: 0\r\n\r\n");
     push_bytes(0, req, (size_t)hn);
     http_parse(0);
-    server.handle();
+    handle();
     // No body -> not streamed -> handler replies 400, nothing written.
     TEST_ASSERT_EQUAL_UINT(0, fs::mock_fs_written());
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "400"));
@@ -116,7 +115,7 @@ void test_non_post_body_rejected_by_begin()
     int hn = snprintf(req, sizeof(req), "PUT /upload HTTP/1.1\r\nContent-Length: 4\r\n\r\ndata");
     push_bytes(0, req, (size_t)hn);
     http_parse(0);
-    server.handle();
+    handle();
     TEST_ASSERT_EQUAL_UINT(0, fs::mock_fs_written()); // begin rejected the non-POST -> no file write
 }
 
@@ -128,7 +127,7 @@ void test_wrong_path_rejected_by_begin()
     int hn = snprintf(req, sizeof(req), "POST /nope HTTP/1.1\r\nContent-Length: 4\r\n\r\ndata");
     push_bytes(0, req, (size_t)hn);
     http_parse(0);
-    server.handle();
+    handle();
     TEST_ASSERT_EQUAL_UINT(0, fs::mock_fs_written());
 }
 
@@ -142,7 +141,7 @@ void test_open_failure_replies_500()
     int hn = snprintf(req, sizeof(req), "POST /upload HTTP/1.1\r\nContent-Length: 5\r\n\r\nhello");
     push_bytes(0, req, (size_t)hn);
     http_parse(0);
-    server.handle();
+    handle();
     TEST_ASSERT_EQUAL_UINT(0, fs::mock_fs_written()); // open failed -> nothing written
     const char *out = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(out, "500"));
@@ -157,7 +156,7 @@ void test_null_dest_replies_500()
     int hn = snprintf(req, sizeof(req), "POST /upload HTTP/1.1\r\nContent-Length: 5\r\n\r\nhello");
     push_bytes(0, req, (size_t)hn);
     http_parse(0);
-    server.handle();
+    handle();
     TEST_ASSERT_EQUAL_UINT(0, fs::mock_fs_written());
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "500"));
 }
@@ -179,7 +178,7 @@ void test_write_failure_replies_500()
     push_bytes(0, req, (size_t)hn);
     push_bytes(0, body, sizeof(body));
     http_parse(0);
-    server.handle();
+    handle();
 
     TEST_ASSERT_EQUAL_UINT(0, pc_upload_last_size()); // no full chunk landed before the short write
     const char *out = tcp_captured();

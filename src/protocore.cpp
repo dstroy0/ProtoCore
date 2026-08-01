@@ -285,6 +285,16 @@ struct ServerCtx
 };
 static ServerCtx s_inst;
 
+void pc_server_reset(void)
+{
+    // The server's state is spread across the files that own it, which is the point - but "start
+    // over" is one concern, so it is one call rather than a checklist each test has to keep in
+    // agreement. This is what `server = PC()` used to mean when there was an instance to reassign.
+    s_inst = ServerCtx{};
+    pc_route_reset();
+    pc_resp_reset();
+}
+
 void on_request_log(RequestLogCb cb)
 {
     s_inst.log_cb = cb;
@@ -1030,19 +1040,28 @@ static void capture_path_param(HttpReq *req, const char *key, size_t klen, const
     {
         return;
     }
+    // Both pieces are packed into the request's own byte pool as key\0val\0, and the table points at
+    // them. A capture that would not fit is dropped whole rather than stored truncated: half a
+    // parameter names a different resource than the one the client asked for.
+    size_t need = klen + vlen + 2;
+    if (req->path_param_used + need > sizeof(req->path_param_bytes))
+    {
+        return;
+    }
+    char *at = req->path_param_bytes + req->path_param_used;
     QueryParam *qp = &req->path_params[req->path_param_count++];
-    if (klen > QUERY_KEY_LEN - 1)
-    {
-        klen = QUERY_KEY_LEN - 1;
-    }
-    memcpy(qp->key, key, klen);
-    qp->key[klen] = '\0';
-    if (vlen > QUERY_VAL_LEN - 1)
-    {
-        vlen = QUERY_VAL_LEN - 1;
-    }
-    memcpy(qp->val, val, vlen);
-    qp->val[vlen] = '\0';
+
+    qp->key = at;
+    memcpy(at, key, klen);
+    at += klen;
+    *at++ = '\0';
+
+    qp->val = at;
+    memcpy(at, val, vlen);
+    at += vlen;
+    *at++ = '\0';
+
+    req->path_param_used += (uint16_t)need;
 }
 
 static bool match_path_params(const char *route, const char *path, HttpReq *req)

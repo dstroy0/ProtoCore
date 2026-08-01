@@ -9,8 +9,6 @@
 #include <string.h>
 #include <unity.h>
 
-static PC server;
-
 static int g_log_status;
 static int g_log_len;
 static void log_cb(const char *method, const char *path, int status, int body_len)
@@ -155,53 +153,53 @@ static size_t src_overreport(uint8_t *buf, size_t cap, void *ctx)
 static void h_hello(uint8_t s, HttpReq *r)
 {
     (void)r;
-    server.send_chunked(s, 200, "text/plain", src_hello);
+    send_chunked(s, 200, "text/plain", src_hello);
 }
 static void h_multi(uint8_t s, HttpReq *r)
 {
     (void)r;
-    server.send_chunked(s, 200, "text/plain", src_multi);
+    send_chunked(s, 200, "text/plain", src_multi);
 }
 static void h_printf(uint8_t s, HttpReq *r)
 {
     (void)r;
-    server.send_chunked(s, 200, "text/plain", src_printf);
+    send_chunked(s, 200, "text/plain", src_printf);
 }
 static void h_ok(uint8_t s, HttpReq *r)
 {
     (void)r;
-    server.send_chunked(s, 200, "text/plain", src_ok);
+    send_chunked(s, 200, "text/plain", src_ok);
 }
 static void h_empty(uint8_t s, HttpReq *r)
 {
     (void)r;
-    server.send_chunked(s, 200, "text/plain", src_empty);
+    send_chunked(s, 200, "text/plain", src_empty);
 }
 static void h_two5(uint8_t s, HttpReq *r)
 {
     (void)r;
-    server.send_chunked(s, 200, "text/plain", src_two5);
+    send_chunked(s, 200, "text/plain", src_two5);
 }
 static void h_big(uint8_t s, HttpReq *r)
 {
     (void)r;
-    server.send_chunked(s, 200, "application/octet-stream", src_big);
+    send_chunked(s, 200, "application/octet-stream", src_big);
 }
 static void h_overreport(uint8_t s, HttpReq *r)
 {
     (void)r;
-    server.send_chunked(s, 200, "application/octet-stream", src_overreport);
+    send_chunked(s, 200, "application/octet-stream", src_overreport);
 }
 static void h_with_hdr(uint8_t s, HttpReq *r)
 {
     (void)r;
-    server.add_response_header(s, "X-Stream", "1");
-    server.send_chunked(s, 200, "text/plain", src_hello);
+    add_response_header(s, "X-Stream", "1");
+    send_chunked(s, 200, "text/plain", src_hello);
 }
 
 void setUp()
 {
-    server = PC();
+    pc_server_reset();
     for (int i = 0; i < MAX_CONNS; i++)
     {
         conn_pool[i] = {};
@@ -229,7 +227,7 @@ static void feed_and_handle(uint8_t slot, const char *req_str)
 {
     push_str(slot, req_str);
     http_parse(slot);
-    server.handle();
+    handle();
 }
 
 // ====================================================================
@@ -238,7 +236,7 @@ static void feed_and_handle(uint8_t slot, const char *req_str)
 
 void test_headers_announce_chunked_no_content_length()
 {
-    server.on("/c", HttpMethod::HTTP_GET, h_hello);
+    on_http("/c", HttpMethod::HTTP_GET, h_hello);
     feed_and_handle(0, "GET /c HTTP/1.1\r\n\r\n");
     const char *r = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(r, "200 OK"));
@@ -248,7 +246,7 @@ void test_headers_announce_chunked_no_content_length()
 
 void test_single_chunk_framing()
 {
-    server.on("/c", HttpMethod::HTTP_GET, h_hello);
+    on_http("/c", HttpMethod::HTTP_GET, h_hello);
     feed_and_handle(0, "GET /c HTTP/1.1\r\n\r\n");
     const char *r = tcp_captured();
     // "hello" = 5 bytes -> "5\r\nhello\r\n" then the terminating "0\r\n\r\n".
@@ -257,7 +255,7 @@ void test_single_chunk_framing()
 
 void test_multiple_chunks_in_order()
 {
-    server.on("/c", HttpMethod::HTTP_GET, h_multi);
+    on_http("/c", HttpMethod::HTTP_GET, h_multi);
     feed_and_handle(0, "GET /c HTTP/1.1\r\n\r\n");
     const char *r = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(r, "2\r\nab\r\n4\r\ncdef\r\n0\r\n\r\n"));
@@ -265,7 +263,7 @@ void test_multiple_chunks_in_order()
 
 void test_printf_chunk()
 {
-    server.on("/c", HttpMethod::HTTP_GET, h_printf);
+    on_http("/c", HttpMethod::HTTP_GET, h_printf);
     feed_and_handle(0, "GET /c HTTP/1.1\r\n\r\n");
     const char *r = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(r, "4\r\nx=42\r\n0\r\n\r\n"));
@@ -273,7 +271,7 @@ void test_printf_chunk()
 
 void test_single_piece_then_terminator()
 {
-    server.on("/c", HttpMethod::HTTP_GET, h_ok);
+    on_http("/c", HttpMethod::HTTP_GET, h_ok);
     feed_and_handle(0, "GET /c HTTP/1.1\r\n\r\n");
     const char *r = tcp_captured();
     // One piece "ok" then the terminator; nothing extra.
@@ -282,7 +280,7 @@ void test_single_piece_then_terminator()
 
 void test_empty_body_is_just_terminator()
 {
-    server.on("/c", HttpMethod::HTTP_GET, h_empty);
+    on_http("/c", HttpMethod::HTTP_GET, h_empty);
     feed_and_handle(0, "GET /c HTTP/1.1\r\n\r\n");
     const char *r = tcp_captured();
     const char *body = strstr(r, "\r\n\r\n"); // end of headers
@@ -293,8 +291,8 @@ void test_empty_body_is_just_terminator()
 
 void test_large_chunked_body_not_truncated()
 {
-    server.on_request_log(log_cb);
-    server.on("/c", HttpMethod::HTTP_GET, h_big);
+    on_request_log(log_cb);
+    on_http("/c", HttpMethod::HTTP_GET, h_big);
     feed_and_handle(0, "GET /c HTTP/1.1\r\n\r\n");
     const char *r = tcp_captured();
     // The whole 16000-byte body must page out (paced across the window) and finish
@@ -306,7 +304,7 @@ void test_large_chunked_body_not_truncated()
 
 void test_head_sends_headers_only()
 {
-    server.on("/c", HttpMethod::HTTP_GET, h_hello);
+    on_http("/c", HttpMethod::HTTP_GET, h_hello);
     feed_and_handle(0, "HEAD /c HTTP/1.1\r\n\r\n");
     const char *r = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(r, "Transfer-Encoding: chunked\r\n"));
@@ -316,7 +314,7 @@ void test_head_sends_headers_only()
 
 void test_custom_header_injected_into_chunked()
 {
-    server.on("/c", HttpMethod::HTTP_GET, h_with_hdr);
+    on_http("/c", HttpMethod::HTTP_GET, h_with_hdr);
     feed_and_handle(0, "GET /c HTTP/1.1\r\n\r\n");
     const char *r = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(r, "X-Stream: 1\r\n"));
@@ -325,8 +323,8 @@ void test_custom_header_injected_into_chunked()
 
 void test_log_hook_reports_total_body_length()
 {
-    server.on_request_log(log_cb);
-    server.on("/c", HttpMethod::HTTP_GET, h_two5);
+    on_request_log(log_cb);
+    on_http("/c", HttpMethod::HTTP_GET, h_two5);
     feed_and_handle(0, "GET /c HTTP/1.1\r\n\r\n");
     TEST_ASSERT_EQUAL_INT(200, g_log_status);
     TEST_ASSERT_EQUAL_INT(10, g_log_len); // "hello" + "world", framing excluded
@@ -337,7 +335,7 @@ void test_log_hook_reports_total_body_length()
 // Connection: close, and the raw bytes with no chunk framing or terminator.
 void test_http10_falls_back_to_close_delimited()
 {
-    server.on("/c", HttpMethod::HTTP_GET, h_multi);
+    on_http("/c", HttpMethod::HTTP_GET, h_multi);
     feed_and_handle(0, "GET /c HTTP/1.0\r\n\r\n");
     const char *r = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(r, "200 OK"));
@@ -352,8 +350,8 @@ void test_http10_falls_back_to_close_delimited()
 // The large-body pager must also page a close-delimited HTTP/1.0 stream in full.
 void test_http10_large_body_not_truncated()
 {
-    server.on_request_log(log_cb);
-    server.on("/c", HttpMethod::HTTP_GET, h_big);
+    on_request_log(log_cb);
+    on_http("/c", HttpMethod::HTTP_GET, h_big);
     feed_and_handle(0, "GET /c HTTP/1.0\r\n\r\n");
     TEST_ASSERT_NULL(strstr(tcp_captured(), "Transfer-Encoding"));
     TEST_ASSERT_EQUAL_INT(200, g_log_status);
@@ -368,7 +366,7 @@ void test_http10_large_body_not_truncated()
 // response depends on under real flow control.
 void test_chunked_backpressure_resumes_across_polls()
 {
-    server.on("/c", HttpMethod::HTTP_GET, h_two5);
+    on_http("/c", HttpMethod::HTTP_GET, h_two5);
     mock_sndbuf() = 8; // below the 12-byte chunk framing reserve: no room for a useful chunk
     feed_and_handle(0, "GET /c HTTP/1.1\r\n\r\n");
     const char *r = tcp_captured();
@@ -377,7 +375,7 @@ void test_chunked_backpressure_resumes_across_polls()
     TEST_ASSERT_NULL(strstr(r, "0\r\n\r\n"));                          // no terminating chunk yet
 
     mock_sndbuf() = MOCK_SNDBUF_DEFAULT; // window reopens
-    server.handle();                     // worker poll resumes the in-flight chunked response
+    handle();                            // worker poll resumes the in-flight chunked response
     r = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(r, "5\r\nhello\r\n5\r\nworld\r\n0\r\n\r\n")); // full body + terminator
 }
@@ -387,8 +385,8 @@ void test_chunked_backpressure_resumes_across_polls()
 // CHUNK_BUF_SIZE bytes are framed and the logged body length is the clamped value.
 void test_chunked_source_overreport_clamped()
 {
-    server.on_request_log(log_cb);
-    server.on("/c", HttpMethod::HTTP_GET, h_overreport);
+    on_request_log(log_cb);
+    on_http("/c", HttpMethod::HTTP_GET, h_overreport);
     feed_and_handle(0, "GET /c HTTP/1.1\r\n\r\n"); // default window: cap == CHUNK_BUF_SIZE
     const char *r = tcp_captured();
     // CHUNK_BUF_SIZE bytes framed, then the terminator - the over-report is dropped.

@@ -34,7 +34,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 // Throwaway self-signed-style ECDSA P-256 server cert + key. DEMO ONLY.
 static const char SERVER_CERT_PEM[] = R"PEM(-----BEGIN CERTIFICATE-----
@@ -60,14 +59,14 @@ AwEHoUQDQgAE6m/uUJWdglTbrgXsowrP/qBWigkxWwO/shzfV5bvZJ7RFUKJ2+wX
 
 void ws_connect(uint8_t ws_id)
 {
-    server.ws_send_text(ws_id, "secure channel up - type something");
+    ws_send_text(ws_id, "secure channel up - type something");
 }
 
 void ws_message(uint8_t ws_id)
 {
     char out[WS_FRAME_SIZE + 8];
     snprintf(out, sizeof(out), "echo: %s", (const char *)ws_pool[ws_id].buf);
-    server.ws_send_text(ws_id, out);
+    ws_send_text(ws_id, out);
 }
 
 void ws_close(uint8_t ws_id)
@@ -77,7 +76,7 @@ void ws_close(uint8_t ws_id)
 
 void pc_sse_connect(uint8_t pc_sse_id)
 {
-    server.pc_sse_send(pc_sse_id, "subscribed", "tick");
+    pc_sse_send(pc_sse_id, "subscribed", "tick");
 }
 
 void setup()
@@ -95,10 +94,10 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    server.on_ws("/ws", ws_connect, ws_message, ws_close);
-    server.on_sse("/events", pc_sse_connect);
+    on_ws("/ws", ws_connect, ws_message, ws_close);
+    on_sse("/events", pc_sse_connect);
 
-    int32_t result = server.begin_tls(443, (const uint8_t *)SERVER_CERT_PEM, sizeof(SERVER_CERT_PEM),
+    int32_t result = begin_tls(443, (const uint8_t *)SERVER_CERT_PEM, sizeof(SERVER_CERT_PEM),
                                       (const uint8_t *)SERVER_KEY_PEM, sizeof(SERVER_KEY_PEM));
     if (result < 0)
     {
@@ -112,7 +111,7 @@ void setup()
 
 void loop()
 {
-    server.handle();
+    handle();
 
     // Push an SSE counter once a second (encrypted over TLS to subscribers).
     static uint32_t last = 0;
@@ -122,6 +121,6 @@ void loop()
         last = millis();
         char buf[24];
         snprintf(buf, sizeof(buf), "%lu", (unsigned long)n++);
-        server.pc_sse_broadcast("/events", buf, "tick");
+        pc_sse_broadcast("/events", buf, "tick");
     }
 }

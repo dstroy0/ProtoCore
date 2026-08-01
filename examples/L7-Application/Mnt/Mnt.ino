@@ -40,7 +40,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 void setup()
 {
@@ -58,54 +57,54 @@ void setup()
     pc_mnt_mount(pc_mnt_fs(&LittleFS));
     pc_fs_begin("/"); // every name below is resolved against this root
 
-    server.on("/save", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *req) {
+    on_http("/save", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *req) {
         const char *name = http_get_query(req, "name");
         const char *data = http_get_query(req, "data");
         if (!name || !*name || !data)
         {
-            server.send(id, 400, "application/json", "{\"error\":\"name+data\"}");
+            send_text(id, 400, "application/json", "{\"error\":\"name+data\"}");
             return;
         }
         bool ok = pc_fs_write_file(name, "", data, strlen(data));
-        server.send(id, ok ? 200 : 500, "application/json", ok ? "{\"ok\":true}" : "{\"ok\":false}");
+        send_text(id, ok ? 200 : 500, "application/json", ok ? "{\"ok\":true}" : "{\"ok\":false}");
     });
 
-    server.on("/load", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *req) {
+    on_http("/load", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *req) {
         const char *name = http_get_query(req, "name");
         if (!name || !*name)
         {
-            server.send(id, 400, "text/plain", "name?");
+            send_text(id, 400, "text/plain", "name?");
             return;
         }
         char buf[512];
         long n = pc_fs_read_file(name, "", buf, sizeof(buf) - 1);
         if (n < 0)
         {
-            server.send(id, 404, "text/plain", "not found");
+            send_text(id, 404, "text/plain", "not found");
             return;
         }
         buf[n] = '\0';
-        server.send(id, 200, "text/plain", buf);
+        send_text(id, 200, "text/plain", buf);
     });
 
-    server.on("/size", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *req) {
+    on_http("/size", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *req) {
         const char *name = http_get_query(req, "name");
         long n = (name && *name) ? pc_fs_size(name, "") : -1;
         char b[24];
         snprintf(b, sizeof(b), "%ld", n);
-        server.send(id, 200, "text/plain", b);
+        send_text(id, 200, "text/plain", b);
     });
 
-    server.on("/rm", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *req) {
+    on_http("/rm", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *req) {
         const char *name = http_get_query(req, "name");
         bool ok = (name && *name) && pc_fs_remove(name, "");
-        server.send(id, ok ? 200 : 404, "application/json", ok ? "{\"ok\":true}" : "{\"ok\":false}");
+        send_text(id, ok ? 200 : 404, "application/json", ok ? "{\"ok\":true}" : "{\"ok\":false}");
     });
 
-    server.begin(80);
+    begin_http(80);
 }
 
 void loop()
 {
-    server.handle();
+    handle();
 }

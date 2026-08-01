@@ -31,7 +31,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 // A tiny byte queue to cross-wire the two stations without re-entrancy (a tx sink enqueues; loop() drains
 // into the peer's rx).
@@ -123,7 +122,7 @@ static void handle_status(uint8_t slot, HttpReq *req)
     int nn =
         snprintf(body, sizeof(body), "{\"rounds\":%lu,\"lastFetchTelegram\":\"%s\",\"lastReactionTelegram\":\"%s\"}",
                  (unsigned long)g_round, g_last_fetch, g_last_reaction);
-    server.send(slot, 200, "application/json", (const uint8_t *)body, (size_t)(nn < 0 ? 0 : nn));
+    send_text(slot, 200, "application/json", (const uint8_t *)body, (size_t)(nn < 0 ? 0 : nn));
 }
 
 void setup()
@@ -143,13 +142,13 @@ void setup()
     pc_3964r_init(&sta_a, /*high_priority=*/true, /*with_bcc=*/true, a_tx, a_on_rx, nullptr);
     pc_3964r_init(&sta_b, /*high_priority=*/false, /*with_bcc=*/true, b_tx, b_on_rx, nullptr);
 
-    server.on("/simatic", HttpMethod::HTTP_GET, handle_status);
-    server.begin(80);
+    on_http("/simatic", HttpMethod::HTTP_GET, handle_status);
+    begin_http(80);
 }
 
 void loop()
 {
-    server.handle();
+    handle();
     uint32_t now = pc_millis();
 
     // Pump the cross-wire: bytes A sent -> B's receiver, bytes B sent -> A's receiver.

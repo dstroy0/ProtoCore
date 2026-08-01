@@ -26,7 +26,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 // Source: emit `n` numbered lines, one line per chunk, resuming from ctx->i.
 struct LinesCtx
@@ -75,7 +74,7 @@ void handle_stream(uint8_t slot_id, HttpReq *req)
     static LinesCtx ctx; // static: must outlive send_chunked (body may span loops)
     ctx.i = 0;
     ctx.n = 50;
-    server.send_chunked(slot_id, 200, "text/plain", lines_source, &ctx);
+    send_chunked(slot_id, 200, "text/plain", lines_source, &ctx);
 }
 
 void handle_count(uint8_t slot_id, HttpReq *req)
@@ -83,7 +82,7 @@ void handle_count(uint8_t slot_id, HttpReq *req)
     (void)req;
     static CountCtx ctx;
     ctx.step = 0;
-    server.send_chunked(slot_id, 200, "text/plain", count_source, &ctx);
+    send_chunked(slot_id, 200, "text/plain", count_source, &ctx);
 }
 
 void setup()
@@ -101,10 +100,10 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    server.on("/stream", HttpMethod::HTTP_GET, handle_stream);
-    server.on("/count", HttpMethod::HTTP_GET, handle_count);
+    on_http("/stream", HttpMethod::HTTP_GET, handle_stream);
+    on_http("/count", HttpMethod::HTTP_GET, handle_count);
 
-    int32_t result = server.begin(80);
+    int32_t result = begin_http(80);
     if (result < 0)
     {
         Serial.printf("begin() failed (error %d)\n", result);
@@ -115,5 +114,5 @@ void setup()
 
 void loop()
 {
-    server.handle();
+    handle();
 }

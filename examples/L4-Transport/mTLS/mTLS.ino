@@ -37,7 +37,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 // --- DEMO server identity (ECDSA P-256), presented to the client. ----------
 static const char SERVER_CERT_PEM[] = R"PEM(-----BEGIN CERTIFICATE-----
@@ -111,33 +110,33 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // Identify the verified client to the handler.
-    server.on("/whoami", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
+    on_http("/whoami", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
         char subject[PC_MTLS_SUBJECT_MAX];
-        if (server.tls_client_subject(id, subject, sizeof(subject)) > 0)
+        if (tls_client_subject(id, subject, sizeof(subject)) > 0)
         {
-            server.send(id, 200, "text/plain", subject);
+            send_text(id, 200, "text/plain", subject);
         }
         else
         {
-            server.send(id, 200, "text/plain", "(no client certificate)");
+            send_text(id, 200, "text/plain", "(no client certificate)");
         }
     });
 
     // Load the server identity, then require a CA-signed client certificate.
-    if (!server.tls_cert((const uint8_t *)SERVER_CERT_PEM, sizeof(SERVER_CERT_PEM), (const uint8_t *)SERVER_KEY_PEM,
+    if (!tls_cert((const uint8_t *)SERVER_CERT_PEM, sizeof(SERVER_CERT_PEM), (const uint8_t *)SERVER_KEY_PEM,
                          sizeof(SERVER_KEY_PEM)))
     {
         Serial.println("TLS cert/key load failed");
         return;
     }
-    if (!server.tls_require_client_cert((const uint8_t *)CA_CERT_PEM, sizeof(CA_CERT_PEM)))
+    if (!tls_require_client_cert((const uint8_t *)CA_CERT_PEM, sizeof(CA_CERT_PEM)))
     {
         Serial.println("client CA load failed");
         return;
     }
-    server.listen_tls(443);
+    listen_tls(443);
 
-    int32_t result = server.begin();
+    int32_t result = begin();
     if (result < 0)
     {
         Serial.printf("begin() failed (error %d)\n", result);
@@ -150,5 +149,5 @@ void setup()
 
 void loop()
 {
-    server.handle();
+    handle();
 }

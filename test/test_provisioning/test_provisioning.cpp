@@ -132,7 +132,6 @@ class PC
 
 void test_provisioning_begin_stub()
 {
-    PC server;
     pc_provisioning_begin(server, "TestAP"); // must not crash, must not touch server
 }
 

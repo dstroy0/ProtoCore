@@ -24,7 +24,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 void setup()
 {
@@ -43,15 +42,15 @@ void setup()
     pc_radio_power_apply();
     Serial.printf("radio modem-sleep: %s\n", pc_radio_ps_name(pc_radio_ps_get()));
 
-    server.on("/radio", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
+    on_http("/radio", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
         char b[48];
         snprintf(b, sizeof(b), "{\"modem_sleep\":\"%s\"}", pc_radio_ps_name(pc_radio_ps_get()));
-        server.send(id, 200, "application/json", b);
+        send_text(id, 200, "application/json", b);
     });
-    server.begin(80);
+    begin_http(80);
 }
 
 void loop()
 {
-    server.handle();
+    handle();
 }

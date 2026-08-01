@@ -20,7 +20,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 void setup()
 {
@@ -36,13 +35,13 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    server.set_cors("*"); // allow any origin (tighten to your web app's origin in production)
-    server.on("/api", HttpMethod::HTTP_GET,
-              [](uint8_t id, HttpReq *) { server.send(id, 200, "application/json", "{\"ok\":true}"); });
-    server.begin(80);
+    set_cors("*"); // allow any origin (tighten to your web app's origin in production)
+    on_http("/api", HttpMethod::HTTP_GET,
+              [](uint8_t id, HttpReq *) { send_text(id, 200, "application/json", "{\"ok\":true}"); });
+    begin_http(80);
 }
 
 void loop()
 {
-    server.handle();
+    handle();
 }

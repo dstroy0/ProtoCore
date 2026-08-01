@@ -32,7 +32,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 // One MessagePack map {"heap","uptime","rssi"}, encoded into a ctx buffer and
 // paged out by the chunk source (the same pattern scales to an arbitrarily large
@@ -69,7 +68,7 @@ static void on_decode(uint8_t id, HttpReq *req)
     size_t count;
     if (!pc_msgpack_read_map(&r, &count))
     {
-        server.send(id, 400, "text/plain", "expected a MessagePack map");
+        send_text(id, 400, "text/plain", "expected a MessagePack map");
         return;
     }
     char out[160];
@@ -87,10 +86,10 @@ static void on_decode(uint8_t id, HttpReq *req)
     }
     if (!pc_cspan_ok(r))
     {
-        server.send(id, 400, "text/plain", "malformed MessagePack");
+        send_text(id, 400, "text/plain", "malformed MessagePack");
         return;
     }
-    server.send(id, 200, "text/plain", out);
+    send_text(id, 200, "text/plain", out);
 }
 
 void setup()
@@ -107,7 +106,7 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    server.on("/telemetry.msgpack", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
+    on_http("/telemetry.msgpack", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
         static MpCtx ctx; // static: must outlive send_chunked
         pc_span w;
         w = pc_span_from(ctx.buf, sizeof(ctx.buf));
@@ -120,13 +119,13 @@ void setup()
         pc_msgpack_int(&w, pc_net_rssi());
         ctx.len = pc_span_ok(w) ? pc_span_len(w) : 0;
         ctx.off = 0;
-        server.send_chunked(id, 200, "application/msgpack", pc_msgpack_source, &ctx);
+        send_chunked(id, 200, "application/msgpack", pc_msgpack_source, &ctx);
     });
-    server.on("/decode", HttpMethod::HTTP_POST, on_decode);
-    server.begin(80);
+    on_http("/decode", HttpMethod::HTTP_POST, on_decode);
+    begin_http(80);
 }
 
 void loop()
 {
-    server.handle();
+    handle();
 }

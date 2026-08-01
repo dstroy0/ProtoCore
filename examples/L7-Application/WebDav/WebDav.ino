@@ -37,7 +37,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 void setup()
 {
@@ -68,12 +67,12 @@ void setup()
         f.close();
     }
 
-    server.dav("/dav", LittleFS, "/dav");
-    server.begin(80);
+    dav("/dav", LittleFS, "/dav");
+    begin_http(80);
     Serial.println("WebDAV share at http://<ip>/dav");
 }
 
 void loop()
 {
-    server.handle();
+    handle();
 }

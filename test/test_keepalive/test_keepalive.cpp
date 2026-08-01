@@ -11,7 +11,6 @@
 #include <string.h>
 #include <unity.h>
 
-static PC server;
 static int handler_calls = 0;
 
 static void push_str(uint8_t slot, const char *s)
@@ -28,13 +27,13 @@ static void handle_ok(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
     handler_calls++;
-    server.send(slot_id, 200, "text/plain", "OK");
+    send_text(slot_id, 200, "text/plain", "OK");
 }
 
 void setUp()
 {
-    server = PC();
-    server.on("/res", HttpMethod::HTTP_GET, handle_ok);
+    pc_server_reset();
+    on_http("/res", HttpMethod::HTTP_GET, handle_ok);
     handler_calls = 0;
     for (int i = 0; i < MAX_CONNS; i++)
     {
@@ -59,7 +58,7 @@ static void feed_and_handle(uint8_t slot, const char *req_str)
 {
     push_str(slot, req_str);
     http_parse(slot);
-    server.handle();
+    handle();
 }
 
 // ---------------------------------------------------------------------------
@@ -133,7 +132,7 @@ void test_pipelined_requests()
     http_parse(0);
     for (int i = 0; i < 4; i++)
     {
-        server.handle();
+        handle();
     }
     TEST_ASSERT_EQUAL(2, handler_calls);
     TEST_ASSERT_EQUAL(ConnState::CONN_ACTIVE, (ConnState)conn_pool[0].state);

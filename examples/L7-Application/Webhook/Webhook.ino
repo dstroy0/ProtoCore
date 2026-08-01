@@ -27,7 +27,6 @@ static const char *PASSWORD = "YOUR_PASSWORD";
 // A plain webhook endpoint (Slack/Discord/your API). For IFTTT use the helper below.
 static const char *WEBHOOK_URL = "http://192.168.1.10:8080/hook";
 
-PC server;
 
 void setup()
 {
@@ -41,7 +40,7 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    server.begin(80);
+    begin_http(80);
 }
 
 void loop()

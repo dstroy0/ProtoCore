@@ -25,8 +25,6 @@
 #include "protocore_config.h"
 #include <stddef.h>
 
-class PC;
-
 /**
  * @brief Extract and URL-decode a field from an x-www-form-urlencoded body.
  *
@@ -57,9 +55,9 @@ bool pc_provisioning_load(char *ssid, size_t ssid_cap, char *psk, size_t psk_cap
  *
  * Registers `GET /*` (the credentials form) and `POST /save` (persist + reboot)
  * on @p server. The catch-all DNS responder runs from a transport-layer UDP callback,
- * so no per-loop servicing is required. Call after server.begin().
+ * so no per-loop servicing is required. Call after begin().
  */
-void pc_provisioning_begin(PC &server, const char *ap_ssid);
+void pc_provisioning_begin(const char *ap_ssid);
 
 /** @brief Erase stored credentials (forces re-provisioning on next boot). */
 void pc_provisioning_clear();

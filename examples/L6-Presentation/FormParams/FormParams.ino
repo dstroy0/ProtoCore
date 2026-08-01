@@ -22,7 +22,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 // POST /form - echo the urlencoded "name" and "email" fields back as JSON.
 void handle_form(uint8_t slot_id, HttpReq *req)
@@ -34,7 +33,7 @@ void handle_form(uint8_t slot_id, HttpReq *req)
 
     if (!have_name && !have_email)
     {
-        server.send(slot_id, 400, "text/plain", "expected urlencoded body with name= / email=");
+        send_text(slot_id, 400, "text/plain", "expected urlencoded body with name= / email=");
         return;
     }
 
@@ -52,7 +51,7 @@ void handle_form(uint8_t slot_id, HttpReq *req)
         snprintf(body, sizeof(body), "{\"name\":\"%s\",\"email\":\"%s\"}", have_name ? name : "",
                  have_email ? email : "");
     }
-    server.send(slot_id, 200, "application/json", body);
+    send_text(slot_id, 200, "application/json", body);
 }
 
 void setup()
@@ -70,9 +69,9 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    server.on("/form", HttpMethod::HTTP_POST, handle_form);
+    on_http("/form", HttpMethod::HTTP_POST, handle_form);
 
-    int32_t result = server.begin(80);
+    int32_t result = begin_http(80);
     if (result < 0)
     {
         Serial.printf("begin() failed (error %d)\n", result);
@@ -83,5 +82,5 @@ void setup()
 
 void loop()
 {
-    server.handle();
+    handle();
 }

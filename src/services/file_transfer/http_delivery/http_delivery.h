@@ -72,7 +72,6 @@ size_t pc_delivery_cache_control(uint32_t max_age_s, uint32_t swr_s, char *out, 
 size_t pc_delivery_sw_manifest(const char *const *paths, size_t n, const char *version, char *out, size_t cap);
 
 #if defined(ARDUINO)
-class PC;
 
 /**
  * @brief Serve the service worker and its precache manifest.
@@ -91,7 +90,7 @@ class PC;
  * @param version cache version tag, e.g. a firmware version string.
  * @return true if both routes were registered.
  */
-bool pc_delivery_serve_sw(PC &srv, const char *const *paths, size_t n, const char *version);
+bool pc_delivery_serve_sw(const char *const *paths, size_t n, const char *version);
 #endif // ARDUINO
 
 #endif // PC_ENABLE_HTTP_DELIVERY

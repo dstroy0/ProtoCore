@@ -5,7 +5,7 @@
  * @file Diagnostics.ino
  * @brief Compile-time configuration endpoint (PC_ENABLE_DIAG).
  *
- * server.diag(slot_id) serves PC_DIAG_JSON - a compile-time snapshot of the
+ * diag(slot_id) serves PC_DIAG_JSON - a compile-time snapshot of the
  * enabled features and buffer sizes. Handy while developing; it exposes the
  * build configuration, so keep it OFF (or behind auth) in production.
  *
@@ -26,7 +26,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 void setup()
 {
@@ -42,11 +41,11 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    server.on("/diag", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) { server.diag(id); });
-    server.begin(80);
+    on_http("/diag", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) { diag(id); });
+    begin_http(80);
 }
 
 void loop()
 {
-    server.handle();
+    handle();
 }

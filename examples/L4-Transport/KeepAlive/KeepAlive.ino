@@ -38,7 +38,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 static const char PAGE[] = "<!doctype html><html><body><h1>Keep-Alive demo</h1>"
                            "<p>This page and its requests are served over one persistent connection.</p>"
@@ -59,16 +58,16 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    server.on("/", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) { server.send(id, 200, "text/html", PAGE); });
+    on_http("/", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) { send_text(id, 200, "text/html", PAGE); });
 
     // A tiny endpoint a client can poll repeatedly over the same socket.
-    server.on("/time", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
+    on_http("/time", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
         char buf[32];
         snprintf(buf, sizeof(buf), "uptime_ms=%lu", (unsigned long)millis());
-        server.send(id, 200, "text/plain", buf);
+        send_text(id, 200, "text/plain", buf);
     });
 
-    int32_t result = server.begin(80);
+    int32_t result = begin_http(80);
     if (result < 0)
     {
         Serial.printf("begin() failed (error %d)\n", result);
@@ -81,5 +80,5 @@ void setup()
 
 void loop()
 {
-    server.handle();
+    handle();
 }

@@ -27,7 +27,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 void setup()
 {
@@ -43,11 +42,11 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    pc_partition_monitor_begin(server, "/partitions");
-    server.begin(80);
+    pc_partition_monitor_begin("/partitions");
+    begin_http(80);
 }
 
 void loop()
 {
-    server.handle();
+    handle();
 }

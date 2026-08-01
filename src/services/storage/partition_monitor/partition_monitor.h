@@ -25,8 +25,6 @@
 
 #if PC_ENABLE_PARTITION_MONITOR
 
-class PC;
-
 /** @brief One flash partition entry. */
 struct pc_partition_info
 {
@@ -62,7 +60,7 @@ uint8_t pc_partition_collect(pc_partition_info *out, uint8_t max);
 // ---------------------------------------------------------------------------
 
 /** @brief Serve the partition map as JSON at @p path (GET). Default "/partitions". */
-void pc_partition_monitor_begin(PC &server, const char *path);
+void pc_partition_monitor_begin(const char *path);
 
 #endif // PC_ENABLE_PARTITION_MONITOR
 #endif // PROTOCORE_PARTITION_MONITOR_H

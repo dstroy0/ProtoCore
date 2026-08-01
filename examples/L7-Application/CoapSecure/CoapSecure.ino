@@ -79,7 +79,6 @@ static const uint8_t COAPS_ED25519_SEED[32] = {
     0x3f, 0x40, 0x41, 0x31, 0x43, 0x53, 0x58, 0x58, 0x49, 0xaf, 0x03, 0x2b, 0x33, 0xef, 0x6d, 0x6a,
 };
 
-PC server;
 static int g_led_state = 0;
 
 // The DTLS server's per-handshake randomness (X25519 ephemeral + ServerHello random): the hardware CSPRNG.
@@ -174,7 +173,7 @@ void setup()
         Serial.println("pc_coaps_server_begin() failed (UDP bind)");
     }
 
-    int32_t result = server.begin(80);
+    int32_t result = begin_http(80);
     if (result < 0)
     {
         Serial.printf("begin() failed (error %d)\n", result);
@@ -184,5 +183,5 @@ void setup()
 void loop()
 {
     pc_coaps_server_poll(); // drive DTLS handshakes, the retransmission timer, and idle-connection reaping
-    server.handle();        // the TCP server (CoAPs itself runs off lwIP UDP callbacks + this poll)
+    handle();        // the TCP server (CoAPs itself runs off lwIP UDP callbacks + this poll)
 }

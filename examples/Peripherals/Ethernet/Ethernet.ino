@@ -18,14 +18,13 @@
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
 
-PC server;
 
 static unsigned long request_count = 0;
 
 void handle_root(uint8_t slot_id, HttpReq *)
 {
     request_count++;
-    server.send(slot_id, 200, "text/plain", "Served over wired Ethernet.");
+    send_text(slot_id, 200, "text/plain", "Served over wired Ethernet.");
 }
 
 void handle_status(uint8_t slot_id, HttpReq *)
@@ -34,7 +33,7 @@ void handle_status(uint8_t slot_id, HttpReq *)
     char body[128];
     snprintf(body, sizeof(body), "{\"link\":\"ethernet\",\"count\":%lu,\"uptime_ms\":%lu,\"free_heap\":%u}",
              request_count, millis(), ESP.getFreeHeap());
-    server.send(slot_id, 200, "application/json", body);
+    send_text(slot_id, 200, "application/json", body);
 }
 
 void setup()
@@ -65,10 +64,10 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    server.on("/", HttpMethod::HTTP_GET, handle_root);
-    server.on("/api/status", HttpMethod::HTTP_GET, handle_status);
+    on_http("/", HttpMethod::HTTP_GET, handle_root);
+    on_http("/api/status", HttpMethod::HTTP_GET, handle_status);
 
-    int32_t result = server.begin(80);
+    int32_t result = begin_http(80);
     if (result < 0)
     {
         Serial.printf("begin() failed (error %d)\n", result);
@@ -79,5 +78,5 @@ void setup()
 
 void loop()
 {
-    server.handle();
+    handle();
 }

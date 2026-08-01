@@ -27,7 +27,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 // Security token required for write/delete actions.
 static const char *EXPECTED_TOKEN = "Bearer secret_admin_token";
@@ -178,7 +177,7 @@ void handle_get_sensors(uint8_t slot_id, HttpReq *req)
     }
     snprintf(response_buf + len, sizeof(response_buf) - len, "]");
 
-    server.send(slot_id, 200, "application/json", response_buf);
+    send_text(slot_id, 200, "application/json", response_buf);
 }
 
 /**
@@ -189,14 +188,14 @@ void handle_get_sensor_by_id(uint8_t slot_id, HttpReq *req)
 {
     if (strlen(req->path) <= 13)
     {
-        server.send(slot_id, 400, "text/plain", "Missing sensor ID");
+        send_text(slot_id, 400, "text/plain", "Missing sensor ID");
         return;
     }
 
     int id = atoi(req->path + 13);
     if (id < 0 || id >= MAX_SENSORS || !sensor_db[id].in_use)
     {
-        server.send(slot_id, 404, "application/json", "{\"error\":\"Sensor not found\"}");
+        send_text(slot_id, 404, "application/json", "{\"error\":\"Sensor not found\"}");
         return;
     }
 
@@ -204,7 +203,7 @@ void handle_get_sensor_by_id(uint8_t slot_id, HttpReq *req)
     snprintf(response_buf, sizeof(response_buf), "{\"id\":%d,\"name\":\"%s\",\"temp\":%.1f,\"active\":%s}",
              sensor_db[id].id, sensor_db[id].name, sensor_db[id].temperature, sensor_db[id].active ? "true" : "false");
 
-    server.send(slot_id, 200, "application/json", response_buf);
+    send_text(slot_id, 200, "application/json", response_buf);
 }
 
 /**
@@ -215,14 +214,14 @@ void handle_create_sensor(uint8_t slot_id, HttpReq *req)
 {
     if (!is_authorized(req))
     {
-        server.send(slot_id, 401, "text/plain", "401 Unauthorized: Invalid token");
+        send_text(slot_id, 401, "text/plain", "401 Unauthorized: Invalid token");
         return;
     }
 
     const char *content_type = http_get_header(req, "Content-Type");
     if (!content_type || strstr(content_type, "application/json") == nullptr)
     {
-        server.send(slot_id, 400, "text/plain", "400 Bad Request: Content-Type must be application/json");
+        send_text(slot_id, 400, "text/plain", "400 Bad Request: Content-Type must be application/json");
         return;
     }
 
@@ -238,7 +237,7 @@ void handle_create_sensor(uint8_t slot_id, HttpReq *req)
 
     if (empty_slot == -1)
     {
-        server.send(slot_id, 409, "application/json", "{\"error\":\"Database table full\"}");
+        send_text(slot_id, 409, "application/json", "{\"error\":\"Database table full\"}");
         return;
     }
 
@@ -250,7 +249,7 @@ void handle_create_sensor(uint8_t slot_id, HttpReq *req)
     if (!json_get_string(body, "name", name, sizeof(name)) || !json_get_float(body, "temp", temp) ||
         !json_get_bool(body, "active", active))
     {
-        server.send(slot_id, 400, "application/json", "{\"error\":\"Invalid JSON format or missing keys\"}");
+        send_text(slot_id, 400, "application/json", "{\"error\":\"Invalid JSON format or missing keys\"}");
         return;
     }
 
@@ -264,7 +263,7 @@ void handle_create_sensor(uint8_t slot_id, HttpReq *req)
     snprintf(response_buf, sizeof(response_buf), "{\"id\":%d,\"name\":\"%s\",\"status\":\"created\"}", empty_slot,
              sensor_db[empty_slot].name);
 
-    server.send(slot_id, 201, "application/json", response_buf);
+    send_text(slot_id, 201, "application/json", response_buf);
 }
 
 /**
@@ -275,20 +274,20 @@ void handle_patch_sensor(uint8_t slot_id, HttpReq *req)
 {
     if (!is_authorized(req))
     {
-        server.send(slot_id, 401, "text/plain", "401 Unauthorized: Invalid token");
+        send_text(slot_id, 401, "text/plain", "401 Unauthorized: Invalid token");
         return;
     }
 
     if (strlen(req->path) <= 13)
     {
-        server.send(slot_id, 400, "text/plain", "Missing sensor ID");
+        send_text(slot_id, 400, "text/plain", "Missing sensor ID");
         return;
     }
 
     int id = atoi(req->path + 13);
     if (id < 0 || id >= MAX_SENSORS || !sensor_db[id].in_use)
     {
-        server.send(slot_id, 404, "application/json", "{\"error\":\"Sensor not found\"}");
+        send_text(slot_id, 404, "application/json", "{\"error\":\"Sensor not found\"}");
         return;
     }
 
@@ -309,7 +308,7 @@ void handle_patch_sensor(uint8_t slot_id, HttpReq *req)
     snprintf(response_buf, sizeof(response_buf), "{\"id\":%d,\"name\":\"%s\",\"temp\":%.1f,\"active\":%s}",
              sensor_db[id].id, sensor_db[id].name, sensor_db[id].temperature, sensor_db[id].active ? "true" : "false");
 
-    server.send(slot_id, 200, "application/json", response_buf);
+    send_text(slot_id, 200, "application/json", response_buf);
 }
 
 /**
@@ -320,25 +319,25 @@ void handle_delete_sensor(uint8_t slot_id, HttpReq *req)
 {
     if (!is_authorized(req))
     {
-        server.send(slot_id, 401, "text/plain", "401 Unauthorized: Invalid token");
+        send_text(slot_id, 401, "text/plain", "401 Unauthorized: Invalid token");
         return;
     }
 
     if (strlen(req->path) <= 13)
     {
-        server.send(slot_id, 400, "text/plain", "Missing sensor ID");
+        send_text(slot_id, 400, "text/plain", "Missing sensor ID");
         return;
     }
 
     int id = atoi(req->path + 13);
     if (id < 0 || id >= MAX_SENSORS || !sensor_db[id].in_use)
     {
-        server.send(slot_id, 404, "application/json", "{\"error\":\"Sensor not found\"}");
+        send_text(slot_id, 404, "application/json", "{\"error\":\"Sensor not found\"}");
         return;
     }
 
     sensor_db[id].in_use = false;
-    server.send_empty(slot_id, 204); // 204 No Content carries no body
+    send_empty(slot_id, 204); // 204 No Content carries no body
 }
 
 void setup()
@@ -358,15 +357,15 @@ void setup()
     Serial.printf("Local IP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    server.set_cors("*");
+    set_cors("*");
 
-    server.on("/api/sensors", HttpMethod::HTTP_GET, handle_get_sensors);
-    server.on("/api/sensors/*", HttpMethod::HTTP_GET, handle_get_sensor_by_id);
-    server.on("/api/sensors", HttpMethod::HTTP_POST, handle_create_sensor);
-    server.on("/api/sensors/*", HttpMethod::HTTP_PATCH, handle_patch_sensor);
-    server.on("/api/sensors/*", HttpMethod::HTTP_DELETE, handle_delete_sensor);
+    on_http("/api/sensors", HttpMethod::HTTP_GET, handle_get_sensors);
+    on_http("/api/sensors/*", HttpMethod::HTTP_GET, handle_get_sensor_by_id);
+    on_http("/api/sensors", HttpMethod::HTTP_POST, handle_create_sensor);
+    on_http("/api/sensors/*", HttpMethod::HTTP_PATCH, handle_patch_sensor);
+    on_http("/api/sensors/*", HttpMethod::HTTP_DELETE, handle_delete_sensor);
 
-    int32_t result = server.begin(80);
+    int32_t result = begin_http(80);
     if (result < 0)
     {
         Serial.printf("begin() failed (error %d)\n", result);
@@ -378,5 +377,5 @@ void setup()
 
 void loop()
 {
-    server.handle();
+    handle();
 }

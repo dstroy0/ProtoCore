@@ -12,7 +12,7 @@
  * zero origin contact. A serving node answers only from its LOCAL cache (one hop - it never re-queries its
  * own origin or peers, so the fleet cannot loop). Pull only: no push, no invalidation.
  *
- * This is the edge-cache example (79) plus three calls: server.listen(MESH_PORT, PROTO_MESH) opens the
+ * This is the edge-cache example (79) plus three calls: listen(MESH_PORT, PROTO_MESH) opens the
  * sibling port, pc_edge_cache_mesh_serve() answers peers from the local cache, and pc_edge_cache_add_peer()
  * lists a sibling to query on a miss. Flash the SAME sketch to both boards, giving each the OTHER's IP as
  * PEER_IP. Warm node A (request GET /cdn/<path> from A), then request the same URL from node B: B reports
@@ -47,7 +47,6 @@ static const char *ORIGIN = "http://192.168.1.60:8000";
 static const char *PEER_IP = "192.168.1.51";
 static const uint16_t MESH_PORT = 7645;
 
-PC server;
 
 // GET /cache/stats - the cache counters as JSON (mesh_hits/mesh_misses show the sibling sharing at work).
 static void handle_stats(uint8_t slot, HttpReq *req)
@@ -61,7 +60,7 @@ static void handle_stats(uint8_t slot, HttpReq *req)
              "\"evictions\":%u,\"purges\":%u}",
              (unsigned)st.hits, (unsigned)st.misses, (unsigned)st.mesh_hits, (unsigned)st.mesh_misses,
              (unsigned)st.revalidations_304, (unsigned)st.stores, (unsigned)st.evictions, (unsigned)st.purges);
-    server.send(slot, 200, "application/json", body);
+    send_text(slot, 200, "application/json", body);
 }
 
 // POST /cache/purge - invalidate everything cached under the mapped prefix (local only).
@@ -71,7 +70,7 @@ static void handle_purge(uint8_t slot, HttpReq *req)
     uint32_t n = pc_edge_cache_purge_prefix("/cdn/");
     char body[48];
     snprintf(body, sizeof(body), "{\"purged\":%u}", (unsigned)n);
-    server.send(slot, 200, "application/json", body);
+    send_text(slot, 200, "application/json", body);
 }
 
 void setup()
@@ -94,7 +93,7 @@ void setup()
     pc_edge_cache_enable(server);
 
     // Mesh: open the sibling port, answer peers from the local cache, and list the other node as a peer.
-    int32_t li = server.listen(MESH_PORT, ConnProto::PROTO_MESH);
+    int32_t li = listen(MESH_PORT, ConnProto::PROTO_MESH);
     if (li < 0)
     {
         Serial.println("mesh: could not open the sibling listener");
@@ -102,9 +101,9 @@ void setup()
     pc_edge_cache_mesh_serve();
     pc_edge_cache_add_peer(PEER_IP, MESH_PORT);
 
-    server.on("/cache/stats", HttpMethod::HTTP_GET, handle_stats);
-    server.on("/cache/purge", HttpMethod::HTTP_POST, handle_purge);
-    server.begin(80); // serve HTTP on port 80
+    on_http("/cache/stats", HttpMethod::HTTP_GET, handle_stats);
+    on_http("/cache/purge", HttpMethod::HTTP_POST, handle_purge);
+    begin_http(80); // serve HTTP on port 80
 
     Serial.printf("mesh edge cache in front of %s (peer %s:%u)\n", ORIGIN, PEER_IP, MESH_PORT);
     Serial.printf("GET http://%u.%u.%u.%u/cdn/<path> - a cold miss pulls from the peer (X-Cache: MESH) before the "
@@ -116,5 +115,5 @@ void setup()
 
 void loop()
 {
-    server.handle(); // the poll loop drives the sibling query, the origin fetch, and the cached send
+    handle(); // the poll loop drives the sibling query, the origin fetch, and the cached send
 }

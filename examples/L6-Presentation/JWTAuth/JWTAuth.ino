@@ -36,7 +36,6 @@ static const char *PASSWORD = "YOUR_PASSWORD";
 // DEMO shared secret - the issuer signs tokens with this; keep it secret in production.
 static const char *JWT_SECRET = "s3cr3t-key";
 
-PC server;
 
 static void protected_handler(uint8_t id, HttpReq *req)
 {
@@ -44,8 +43,8 @@ static void protected_handler(uint8_t id, HttpReq *req)
     // MAX_VAL_LEN; the parser captures it whole when PC_ENABLE_JWT is set).
     if (!pc_jwt_bearer_valid(req->authorization, (const uint8_t *)JWT_SECRET, strlen(JWT_SECRET)))
     {
-        server.add_response_header(id, "WWW-Authenticate", "Bearer");
-        server.send(id, 401, "text/plain", "invalid or missing token");
+        add_response_header(id, "WWW-Authenticate", "Bearer");
+        send_text(id, 401, "text/plain", "invalid or missing token");
         return;
     }
 
@@ -59,7 +58,7 @@ static void protected_handler(uint8_t id, HttpReq *req)
     char role[16];
     if (!pc_jwt_claim_str(tok, strlen(tok), "role", role, sizeof(role)) || strcmp(role, "admin") != 0)
     {
-        server.send(id, 403, "text/plain", "forbidden: admin role required");
+        send_text(id, 403, "text/plain", "forbidden: admin role required");
         return;
     }
     // For OAuth2 space-separated scopes, gate on the "scope" claim instead:
@@ -67,7 +66,7 @@ static void protected_handler(uint8_t id, HttpReq *req)
     //   if (pc_jwt_claim_str(tok, strlen(tok), "scope", scope, sizeof(scope)) &&
     //       pc_jwt_scope_allows(scope, "telemetry:write")) { ... }
 
-    server.send(id, 200, "text/plain", "welcome admin - your token is valid");
+    send_text(id, 200, "text/plain", "welcome admin - your token is valid");
 }
 
 void setup()
@@ -85,10 +84,10 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    server.on("/protected", HttpMethod::HTTP_GET, protected_handler);
-    server.on("/", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) { server.send(id, 200, "text/plain", "public"); });
+    on_http("/protected", HttpMethod::HTTP_GET, protected_handler);
+    on_http("/", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) { send_text(id, 200, "text/plain", "public"); });
 
-    int32_t result = server.begin(80);
+    int32_t result = begin_http(80);
     if (result < 0)
     {
         Serial.printf("begin() failed (error %d)\n", result);
@@ -101,5 +100,5 @@ void setup()
 
 void loop()
 {
-    server.handle();
+    handle();
 }

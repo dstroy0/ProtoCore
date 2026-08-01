@@ -27,7 +27,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 void handle_time(uint8_t slot_id, HttpReq *req)
 {
@@ -35,10 +34,10 @@ void handle_time(uint8_t slot_id, HttpReq *req)
     char date[40];
     if (pc_ntp_http_date(date, sizeof(date)) == 0)
     {
-        server.send(slot_id, 503, "text/plain", "Time not synced yet");
+        send_text(slot_id, 503, "text/plain", "Time not synced yet");
         return;
     }
-    server.send(slot_id, 200, "text/plain", date);
+    send_text(slot_id, 200, "text/plain", date);
 }
 
 void setup()
@@ -55,13 +54,13 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    server.on("/time", HttpMethod::HTTP_GET, handle_time);
-    server.begin(80);
+    on_http("/time", HttpMethod::HTTP_GET, handle_time);
+    begin_http(80);
 
     pc_ntp_begin("UTC0"); // POSIX TZ string; set your zone for local time
 }
 
 void loop()
 {
-    server.handle();
+    handle();
 }

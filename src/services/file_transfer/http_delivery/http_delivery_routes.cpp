@@ -22,7 +22,6 @@
 // fixed-signature callbacks, so they reach this single owner directly.
 struct DeliveryRoutesCtx
 {
-    PC *srv = nullptr;
     const char *const *paths = nullptr;
     size_t n = 0;
     const char *version = nullptr;
@@ -32,44 +31,37 @@ static DeliveryRoutesCtx s_delr;
 static void sw_script_handler(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    if (s_delr.srv)
-    {
-        s_delr.srv->send(slot_id, 200, PC_MIME_JAVASCRIPT, PC_SERVICE_WORKER);
-    }
+    // No instance test: a handler only runs because this service registered the route.
+    send_text(slot_id, 200, PC_MIME_JAVASCRIPT, PC_SERVICE_WORKER);
 }
 
 static void sw_manifest_handler(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    if (!s_delr.srv)
-    {
-        return;
-    }
     char buf[PC_DELIVERY_MANIFEST_BUF];
     // Rebuilt per request rather than cached: it is small, and the version/list can be changed at
     // runtime without a stale copy surviving.
     if (pc_delivery_sw_manifest(s_delr.paths, s_delr.n, s_delr.version, buf, sizeof(buf)) == 0)
     {
-        s_delr.srv->send(slot_id, 500, PC_MIME_JSON, "{\"error\":\"manifest too large\"}");
+        send_text(slot_id, 500, PC_MIME_JSON, "{\"error\":\"manifest too large\"}");
         return;
     }
-    s_delr.srv->send(slot_id, 200, PC_MIME_JSON, buf);
+    send_text(slot_id, 200, PC_MIME_JSON, buf);
 }
 
-bool pc_delivery_serve_sw(PC &srv, const char *const *paths, size_t n, const char *version)
+bool pc_delivery_serve_sw(const char *const *paths, size_t n, const char *version)
 {
     if (!paths || n == 0 || n > PC_DELIVERY_PRECACHE_MAX || !version)
     {
         return false;
     }
-    s_delr.srv = &srv;
     s_delr.paths = paths;
     s_delr.n = n;
     s_delr.version = version;
     // The worker's scope is the path it is served from, so it must sit at the root to control the
     // whole origin - "/sw.js", not "/assets/sw.js".
-    srv.on("/sw.js", HttpMethod::HTTP_GET, sw_script_handler);
-    srv.on("/precache.json", HttpMethod::HTTP_GET, sw_manifest_handler);
+    on_http("/sw.js", HttpMethod::HTTP_GET, sw_script_handler);
+    on_http("/precache.json", HttpMethod::HTTP_GET, sw_manifest_handler);
     return true;
 }
 

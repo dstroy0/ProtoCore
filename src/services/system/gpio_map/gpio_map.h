@@ -25,8 +25,6 @@
 
 #if PC_ENABLE_GPIO_MAP
 
-class PC;
-
 /** @brief Configured direction of a mapped pin (how the panel renders / drives it). */
 enum class pc_gpio_dir : uint8_t
 {
@@ -85,7 +83,7 @@ void pc_gpio_write(uint8_t pin, uint8_t level);
  *        output (body `pin=<n>&level=<0|1>`, only pins marked pc_gpio_dir::PC_GPIO_OUT).
  *        The pin table is caller-owned and must outlive the server.
  */
-void pc_gpio_map_begin(PC &server, const char *path, pc_gpio_pin *pins, uint8_t count);
+void pc_gpio_map_begin(const char *path, pc_gpio_pin *pins, uint8_t count);
 
 #endif // PC_ENABLE_GPIO_MAP
 #endif // PROTOCORE_GPIO_MAP_H

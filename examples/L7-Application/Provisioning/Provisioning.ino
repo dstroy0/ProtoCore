@@ -20,12 +20,11 @@
 #include "network_drivers/physical/physical.h"
 #include "services/system/provisioning_service/provisioning_service.h"
 
-PC server;
 
 void handle_root(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    server.send(slot_id, 200, "text/plain", "Provisioned - hello from station mode!");
+    send_text(slot_id, 200, "text/plain", "Provisioned - hello from station mode!");
 }
 
 void setup()
@@ -48,20 +47,20 @@ void setup()
         Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                       (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-        server.on("/", HttpMethod::HTTP_GET, handle_root);
-        server.begin(80);
+        on_http("/", HttpMethod::HTTP_GET, handle_root);
+        begin_http(80);
         Serial.println("Station mode; serving on port 80");
     }
     else
     {
         // No credentials: bring up the captive portal.
-        server.begin(80);
-        pc_provisioning_begin(server, "PC-Setup");
+        begin_http(80);
+        pc_provisioning_begin("PC-Setup");
         Serial.println("Provisioning: join WiFi 'PC-Setup' and open any page");
     }
 }
 
 void loop()
 {
-    server.handle();
+    handle();
 }

@@ -32,7 +32,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 // Each line's shape is a table, declared once. The library builds it by walking the table, so
 // nothing parses a format string at runtime and no line can come out half-written.
@@ -86,10 +85,10 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
     Serial.println("Open http://<ip>/terminal in a browser");
 
-    pc_web_terminal_begin(server, "/terminal");
+    pc_web_terminal_begin("/terminal");
     pc_web_terminal_on_command(on_command);
 
-    int32_t result = server.begin(80);
+    int32_t result = begin_http(80);
     if (result < 0)
     {
         Serial.printf("begin() failed (error %d)\n", result);
@@ -100,7 +99,7 @@ void setup()
 
 void loop()
 {
-    server.handle();
+    handle();
 
     // Device -> browsers: heartbeat every 3 s (only sent when someone's watching).
     static unsigned long last = 0;

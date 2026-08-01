@@ -43,7 +43,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 static bool ssh_password_auth(const char *user, const char *pass)
 {
@@ -79,8 +78,8 @@ void setup()
     }
     pc_ssh_auth_set_password_cb(ssh_password_auth);
 
-    server.listen(22, ConnProto::PROTO_SSH);
-    if (server.begin() < 0)
+    listen(22, ConnProto::PROTO_SSH);
+    if (begin() < 0)
     {
         Serial.println("begin() failed");
         return;
@@ -103,5 +102,5 @@ void setup()
 
 void loop()
 {
-    server.handle();
+    handle();
 }

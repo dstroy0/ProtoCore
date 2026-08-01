@@ -43,7 +43,6 @@ static const char *PASSWORD = "YOUR_PASSWORD";
 #define LED_BUILTIN 2
 #endif
 
-PC server;
 static int g_led_state = 0;
 
 // GET /info -> a small JSON document with uptime and free heap.
@@ -119,7 +118,7 @@ void setup()
     pc_coap_server_begin(5683);
     Serial.println("CoAP server listening on UDP/5683 (try: coap-client -m get coap://<ip>/info)");
 
-    int32_t result = server.begin(80);
+    int32_t result = begin_http(80);
     if (result < 0)
     {
         Serial.printf("begin() failed (error %d)\n", result);
@@ -128,5 +127,5 @@ void setup()
 
 void loop()
 {
-    server.handle(); // CoAP is serviced by lwIP callbacks; this drives the TCP server.
+    handle(); // CoAP is serviced by lwIP callbacks; this drives the TCP server.
 }

@@ -5,7 +5,7 @@
  * @file Stats.ino
  * @brief Runtime statistics endpoint (PC_ENABLE_STATS).
  *
- * server.stats(slot_id) writes a JSON snapshot - uptime, request/error counts,
+ * stats(slot_id) writes a JSON snapshot - uptime, request/error counts,
  * connection-pool usage, free heap - straight to the response. Wire it to a
  * route to expose live diagnostics.
  *
@@ -26,7 +26,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 void setup()
 {
@@ -42,11 +41,11 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    server.on("/stats", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) { server.stats(id); });
-    server.begin(80);
+    on_http("/stats", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) { stats(id); });
+    begin_http(80);
 }
 
 void loop()
 {
-    server.handle();
+    handle();
 }

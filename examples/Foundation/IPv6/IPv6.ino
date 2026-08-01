@@ -17,7 +17,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 static const char *scope_name(pc_ip_scope s)
 {
@@ -53,7 +52,7 @@ void handle_root(uint8_t slot_id, HttpReq *)
     {
         snprintf(buf, sizeof(buf), "Served over IPv4 (no global IPv6 address yet).");
     }
-    server.send(slot_id, 200, "text/plain", buf);
+    send_text(slot_id, 200, "text/plain", buf);
 }
 
 void setup()
@@ -90,9 +89,9 @@ void setup()
         Serial.println("\nNo global IPv6 yet (the network may not advertise a prefix); link-local still works.");
     }
 
-    server.on("/", HttpMethod::HTTP_GET, handle_root);
+    on_http("/", HttpMethod::HTTP_GET, handle_root);
 
-    int32_t result = server.begin(80);
+    int32_t result = begin_http(80);
     if (result < 0)
     {
         Serial.printf("begin() failed (error %d)\n", result);
@@ -103,5 +102,5 @@ void setup()
 
 void loop()
 {
-    server.handle();
+    handle();
 }

@@ -13,7 +13,7 @@
  * same shape across robot vendors.
  *
  *   pc_robotics_install(&mds)             -> registers the OPC UA Browse + Read resolvers
- *   server.listen(4840, PROTO_OPCUA)       -> the OPC UA / robotics endpoint
+ *   listen(4840, PROTO_OPCUA)       -> the OPC UA / robotics endpoint
  *
  * Builds on example OpcUa (the OPC UA Binary server); robotics is the MotionDevice model on top - the
  * twin of example Umati (machine tools). The HTTP server on :80 runs alongside on the same event loop.
@@ -34,7 +34,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 // The MotionDeviceSystem the robotics server exposes. Own it statically and refresh its live fields each
 // loop from your real robot I/O; the resolvers read straight out of it (no copy).
@@ -80,17 +79,17 @@ void setup()
     mds.safety.protective_stop = false;
 
     pc_robotics_install(&mds); // bind + register the OPC UA Browse/Read resolvers
-    server.on("/", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
-        server.send(id, 200, "text/plain", "OPC UA for Robotics MotionDeviceSystem on :4840");
+    on_http("/", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
+        send_text(id, 200, "text/plain", "OPC UA for Robotics MotionDeviceSystem on :4840");
     });
-    server.listen(4840, ConnProto::PROTO_OPCUA); // OPC UA / robotics endpoint - before begin()
-    server.begin(80);
+    listen(4840, ConnProto::PROTO_OPCUA); // OPC UA / robotics endpoint - before begin()
+    begin_http(80);
     Serial.println("OPC UA for Robotics: opc.tcp://<ip>:4840  - browse MotionDeviceSystem, read live axis values");
 }
 
 void loop()
 {
-    server.handle();
+    handle();
 
     // Simulate a moving robot: refresh the live axis values a couple of times a second.
     static uint32_t last = 0;

@@ -29,7 +29,6 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
 
 static unsigned long total_routed_requests = 0;
 static unsigned long total_rate_limited = 0;
@@ -116,7 +115,7 @@ void handle_diagnostics(uint8_t slot_id, HttpReq *req)
     if (!acquire_rate_limit_token())
     {
         total_rate_limited++;
-        server.send(slot_id, 429, "application/json", "{\"error\":\"Too Many Requests. Rate limit exceeded.\"}");
+        send_text(slot_id, 429, "application/json", "{\"error\":\"Too Many Requests. Rate limit exceeded.\"}");
         return;
     }
 
@@ -136,7 +135,7 @@ void handle_diagnostics(uint8_t slot_id, HttpReq *req)
              bucket_tokens);
 
     unsigned long duration_us = micros() - start_us;
-    server.send(slot_id, 200, "application/json", response_buf);
+    send_text(slot_id, 200, "application/json", response_buf);
     Serial.printf("[Profile] GET %s handled in %lu us\n", req->path, duration_us);
 }
 
@@ -152,7 +151,7 @@ void handle_compute(uint8_t slot_id, HttpReq *req)
     if (!acquire_rate_limit_token())
     {
         total_rate_limited++;
-        server.send(slot_id, 429, "application/json", "{\"error\":\"Too Many Requests\"}");
+        send_text(slot_id, 429, "application/json", "{\"error\":\"Too Many Requests\"}");
         return;
     }
 
@@ -164,7 +163,7 @@ void handle_compute(uint8_t slot_id, HttpReq *req)
 
     char response_buf[64];
     snprintf(response_buf, sizeof(response_buf), "{\"result\":%u}", val);
-    server.send(slot_id, 200, "application/json", response_buf);
+    send_text(slot_id, 200, "application/json", response_buf);
 
     unsigned long duration_us = micros() - start_us;
     Serial.printf("[Profile] GET %s (heavy compute) handled in %lu us\n", req->path, duration_us);
@@ -187,13 +186,13 @@ void handle_expert_not_found(uint8_t slot_id, HttpReq *req)
     {
         snprintf(error_buf, sizeof(error_buf), "{\"error\":\"not_found\",\"requested_path\":\"%s\",\"uptime\":%lu}",
                  req->path, millis());
-        server.send(slot_id, 404, "application/json", error_buf);
+        send_text(slot_id, 404, "application/json", error_buf);
     }
     else
     {
         snprintf(error_buf, sizeof(error_buf), "--- Error 404 ---\nPath: %s\nUptime: %lu ms\nESP32 node", req->path,
                  millis());
-        server.send(slot_id, 404, "text/plain", error_buf);
+        send_text(slot_id, 404, "text/plain", error_buf);
     }
 
     unsigned long duration_us = micros() - start_us;
@@ -219,11 +218,11 @@ void setup()
 
     last_refill_time_ms = millis();
 
-    server.on("/api/diagnostics", HttpMethod::HTTP_GET, handle_diagnostics);
-    server.on("/api/compute", HttpMethod::HTTP_GET, handle_compute);
-    server.on_not_found(handle_expert_not_found);
+    on_http("/api/diagnostics", HttpMethod::HTTP_GET, handle_diagnostics);
+    on_http("/api/compute", HttpMethod::HTTP_GET, handle_compute);
+    on_not_found(handle_expert_not_found);
 
-    int32_t result = server.begin(80);
+    int32_t result = begin_http(80);
     if (result < 0)
     {
         Serial.printf("begin() failed (error %d)\n", result);
@@ -234,7 +233,7 @@ void setup()
 
 void loop()
 {
-    server.handle();
+    handle();
 
     // Display active pool diagnostics every 5 seconds.
     static unsigned long last_snapshot = 0;

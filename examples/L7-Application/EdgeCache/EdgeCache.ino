@@ -45,7 +45,6 @@ static const char *PASSWORD = "YOUR_PASSWORD";
 // --- CHANGE ME: the upstream origin the board caches in front of (plaintext http:// only in v1) ---
 static const char *ORIGIN = "http://192.168.1.60:8000";
 
-PC server;
 
 #if PC_ENABLE_DBM
 // L2 persistence: a dbm store on a WAL file on the SD card. The file stays open for the store's lifetime.
@@ -97,7 +96,7 @@ static void handle_stats(uint8_t slot, HttpReq *req)
              (unsigned)st.hits, (unsigned)st.misses, (unsigned)st.revalidations_304, (unsigned)st.replaces_200,
              (unsigned)st.stores, (unsigned)st.evictions, (unsigned)st.purges, (unsigned)st.l2_spills,
              (unsigned)st.l2_promotes);
-    server.send(slot, 200, "application/json", body);
+    send_text(slot, 200, "application/json", body);
 }
 
 // POST /cache/purge - invalidate everything cached under the mapped prefix.
@@ -107,7 +106,7 @@ static void handle_purge(uint8_t slot, HttpReq *req)
     uint32_t n = pc_edge_cache_purge_prefix("/cdn/");
     char body[48];
     snprintf(body, sizeof(body), "{\"purged\":%u}", (unsigned)n);
-    server.send(slot, 200, "application/json", body);
+    send_text(slot, 200, "application/json", body);
 }
 
 void setup()
@@ -131,9 +130,9 @@ void setup()
 #if PC_ENABLE_DBM
     Serial.println(setup_l2() ? "L2 SD tier: mounted (cache survives reboot)" : "L2 SD tier: unavailable (no SD?)");
 #endif
-    server.on("/cache/stats", HttpMethod::HTTP_GET, handle_stats);
-    server.on("/cache/purge", HttpMethod::HTTP_POST, handle_purge);
-    server.begin(80); // serve HTTP on port 80 (begin() with no port opens no listener)
+    on_http("/cache/stats", HttpMethod::HTTP_GET, handle_stats);
+    on_http("/cache/purge", HttpMethod::HTTP_POST, handle_purge);
+    begin_http(80); // serve HTTP on port 80 (begin() with no port opens no listener)
 
     Serial.printf("edge cache in front of %s\n", ORIGIN);
     Serial.printf("GET http://%u.%u.%u.%u/cdn/<path> - X-Cache: MISS then HIT\n", (unsigned)(ip & 0xFF),
@@ -143,7 +142,7 @@ void setup()
 
 void loop()
 {
-    server.handle(); // the server poll loop drives the async origin fetch + the cached send
+    handle(); // the server poll loop drives the async origin fetch + the cached send
 #if PC_ENABLE_DBM
     // Make L2 spills durable on a cadence (batched appends are checkpointed in bulk, per the WAL design).
     static uint32_t last_sync = 0;

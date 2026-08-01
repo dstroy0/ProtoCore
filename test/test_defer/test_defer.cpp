@@ -4,7 +4,7 @@
 // Phase 3a: the thread-safe app->worker deferred-callback path. On host there is
 // no worker task, so a deferred callback runs inline immediately (same observable
 // effect as a worker draining it). These tests cover the host inline path, the
-// server.defer() owner routing, and the fail-closed cases.
+// defer() owner routing, and the fail-closed cases.
 
 #include "network_drivers/session/worker.h"
 #include "network_drivers/transport/tcp.h"
@@ -36,11 +36,10 @@ void test_defer_runs_inline_on_host()
 
 void test_server_defer_routes_by_owner()
 {
-    PC srv;
     conn_pool[1].owner = 0;
-    TEST_ASSERT_TRUE(srv.defer(1, inc, &g_ran));
+    TEST_ASSERT_TRUE(defer(1, inc, &g_ran));
     TEST_ASSERT_EQUAL_INT(1, g_ran);
-    TEST_ASSERT_FALSE(srv.defer(MAX_CONNS, inc, &g_ran)); // out-of-range slot fails closed
+    TEST_ASSERT_FALSE(defer(MAX_CONNS, inc, &g_ran)); // out-of-range slot fails closed
 }
 
 void test_defer_null_fn_fails()
