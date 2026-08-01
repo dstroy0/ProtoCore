@@ -79,7 +79,11 @@ HTML_FILE_EXTENSION    = .html
 HTML_HEADER            =
 HTML_FOOTER            = docs/footer.html
 HTML_EXTRA_STYLESHEET  = docs/protocore.css
-HTML_EXTRA_FILES       = docs/squirty.svg docs/configurator.html
+# features.html has to reach the published site the same way configurator.html already does -
+# without it the "Browse all of them" button is a 404 on dstroy0.github.io. Only files are
+# accepted here (doxygen errors on a directory), so docs/diagrams/ is copied by the Docs workflow
+# instead of being listed file by file, which would need a Doxyfile edit per new diagram.
+HTML_EXTRA_FILES       = docs/squirty.svg docs/configurator.html docs/features.html
 
 # Built-in dark mode (Doxygen >= 1.9.5)
 HTML_COLORSTYLE        = DARK

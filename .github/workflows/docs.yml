@@ -42,6 +42,11 @@ jobs:
       - name: Generate docs
         run: |
           doxygen docs/Doxyfile
+          # docs/README.md embeds diagrams/features_map.svg with a relative src, so the whole
+          # directory has to sit beside the generated HTML. It cannot go in HTML_EXTRA_FILES:
+          # doxygen rejects a directory there, and listing each file would need a Doxyfile edit
+          # every time a diagram is added.
+          cp -r docs/diagrams docs/html/diagrams
           touch docs/html/.nojekyll
 
       - name: Upload Pages artifact
