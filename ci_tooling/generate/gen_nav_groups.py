@@ -75,5 +75,5 @@ for slug, title, blurb, pages in GROUPS:
     body = [f"# {title}", "", blurb, ""]
     body += [f"- @subpage {pid} \"{label}\"" for pid, label in pages]
     body.append("")
-    (NAV / f"{slug}.md").write_text("\n".join(body), encoding="utf-8")
+    (NAV / f"{slug}.md").write_text("\n".join(body), encoding="utf-8", newline="\n")
 print(f"docs/nav: {len(GROUPS)} hub pages claiming {sum(len(g[3]) for g in GROUPS)} pages")

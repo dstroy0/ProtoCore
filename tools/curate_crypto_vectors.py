@@ -105,7 +105,7 @@ def curate_wycheproof(checkout, filename, group_filter, field_map):
 def write(name, doc):
     os.makedirs(OUT_DIR, exist_ok=True)
     p = os.path.join(OUT_DIR, name)
-    with open(p, "w") as f:
+    with open(p, "w", encoding="utf-8", newline="\n") as f:
         json.dump(doc, f, indent=1, sort_keys=False)
         f.write("\n")
     print("wrote %s (%d vectors)" % (os.path.relpath(p, os.path.join(HERE, "..")), len(doc["vectors"])))

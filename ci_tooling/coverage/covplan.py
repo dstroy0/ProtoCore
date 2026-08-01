@@ -88,7 +88,7 @@ def main() -> int:
     units = build_units(a.cov)
 
     if a.json:
-        with open(a.json, "w", encoding="utf-8") as fh:
+        with open(a.json, "w", encoding="utf-8", newline="\n") as fh:
             json.dump(units, fh, indent=1)
 
     total = sum(u["missing"] for u in units)

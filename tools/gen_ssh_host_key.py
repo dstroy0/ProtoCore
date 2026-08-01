@@ -85,7 +85,7 @@ def write_header(path, symbol, blob, what):
         lines.append("    " + ", ".join("0x%02x" % b for b in blob[i : i + 16]) + ",")
     lines.append("};")
     lines.append("static const unsigned int %s_LEN = %d;" % (symbol, len(blob)))
-    with open(path, "w") as f:
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
         f.write("\n".join(lines) + "\n")
 
 

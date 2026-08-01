@@ -62,7 +62,7 @@ def cmd_collect(default_log, minimal_log, out_json):
         if feat in mdata and mbase:
             entry["minimal"] = {"flash": mdata[feat][0] - mbase[0], "ram": mdata[feat][1] - mbase[1]}
         ranges[feat] = entry
-    with open(out_json, "w", encoding="utf-8") as f:
+    with open(out_json, "w", encoding="utf-8", newline="\n") as f:
         json.dump(ranges, f, indent=2, sort_keys=True)
         f.write("\n")
     print(f"collected {len(ranges) - 1} features -> {out_json}")

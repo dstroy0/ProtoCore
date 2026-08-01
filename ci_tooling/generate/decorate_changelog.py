@@ -77,6 +77,6 @@ if __name__ == "__main__":
         print(f"{changelog_path}: decoration up to date")
         sys.exit(0)
 
-    with open(changelog_path, "w", encoding="utf-8") as f:
+    with open(changelog_path, "w", encoding="utf-8", newline="\n") as f:
         f.write(updated)
     print(f"Successfully decorated {changelog_path}")

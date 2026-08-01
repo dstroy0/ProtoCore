@@ -173,7 +173,7 @@ def main() -> int:
         return 0
 
     changed = os.path.join(ROOT, ".cov_changed.txt")
-    with open(changed, "w", encoding="utf-8") as fh:
+    with open(changed, "w", encoding="utf-8", newline="\n") as fh:
         fh.write("\n".join(srcs))
     subprocess.run(
         [gcovr_python(), "ci_tooling/coverage/merge_coverage.py", "test/coverage.xml",

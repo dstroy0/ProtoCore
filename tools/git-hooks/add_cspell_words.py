@@ -29,7 +29,7 @@ def main() -> int:
     if was_sorted:
         words.sort(key=str.lower)
     cfg["words"] = words
-    with open(CFG, "w", encoding="utf-8") as f:
+    with open(CFG, "w", encoding="utf-8", newline="\n") as f:
         json.dump(cfg, f, indent=2, ensure_ascii=False)
         f.write("\n")
     print("cspell: added %d word(s): %s" % (len(added), ", ".join(added)))

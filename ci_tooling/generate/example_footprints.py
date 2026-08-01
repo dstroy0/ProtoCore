@@ -159,7 +159,7 @@ def cmd_fragment(logpath, outpath):
         "flash_bytes": used("Flash"),
         "ram_bytes": used("RAM"),
     }
-    json.dump(frag, open(outpath, "w", encoding="utf-8"), indent=2)
+    json.dump(frag, open(outpath, "w", encoding="utf-8", newline="\n"), indent=2)
     print(frag)
 
 
@@ -181,7 +181,7 @@ def cmd_merge(frag_dir, out_path):
             continue
         data[feat] = {k: e[k] for k in ("example", "flags", "board", "flash_bytes", "ram_bytes") if k in e}
         n += 1
-    with open(out_path, "w", encoding="utf-8") as f:
+    with open(out_path, "w", encoding="utf-8", newline="\n") as f:
         json.dump(dict(sorted(data.items())), f, indent=2)
         f.write("\n")
     print(f"merged {n} fragments -> {out_path}: {len(data)} feature entries")
@@ -211,7 +211,7 @@ def cmd_table(in_path, out_path):
             f"| `{feat}` | {e.get('example', '')} | "
             f"{fmt(e.get('flash_bytes', 0), FLASH_CAP)} | {fmt(e.get('ram_bytes', 0), RAM_CAP)} |"
         )
-    open(out_path, "w", encoding="utf-8").write("\n".join(lines) + "\n")
+    open(out_path, "w", encoding="utf-8", newline="\n").write("\n".join(lines) + "\n")
     print(f"wrote {out_path}: {len(data)} rows")
 
 

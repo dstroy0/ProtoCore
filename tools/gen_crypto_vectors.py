@@ -92,7 +92,7 @@ def main():
         lines.append("};")
         lines.append("")
     lines.append("// clang-format on")
-    with open(OUT, "w") as f:
+    with open(OUT, "w", encoding="utf-8", newline="\n") as f:
         f.write("\n".join(lines) + "\n")
     total = 0
     for fname, arr, struct, _ in SPECS:

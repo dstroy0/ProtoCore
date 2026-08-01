@@ -104,7 +104,7 @@ def main():
             updated.add(key)
 
     merged = [seen[k] for k in order]
-    with open(out_path, "w", encoding="utf-8") as f:
+    with open(out_path, "w", encoding="utf-8", newline="\n") as f:
         json.dump(merged, f, indent=2)
     kept = len(baseline_files - updated)
     print(

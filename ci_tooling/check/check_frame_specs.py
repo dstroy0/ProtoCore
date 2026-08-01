@@ -100,7 +100,7 @@ def main(argv):
             if fix and edits:
                 for start, end, rep in reversed(edits):
                     text = text[:start] + rep + text[end:]
-                path.write_text(text, encoding="utf-8")
+                path.write_text(text, encoding="utf-8", newline="\n")
                 fixed += len(edits)
 
     if bad and not fix:
