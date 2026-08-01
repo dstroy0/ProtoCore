@@ -379,11 +379,11 @@
       "tests": ["test_provisioning"]
     },
     "native_ssh": {
-      "desc": "SSH crypto layer (native software paths only, no mbedtls dependency); channels multiplexed (PC_SSH_MAX_CHANNELS=3) to exercise routing; SFTP/SCP subsystem routing on (FILE_SERVING satisfies the guard)",
+      "desc": "SSH crypto layer (native software paths only, no mbedtls dependency); channels multiplexed (PC_SSH_MAX_CHANNELS=3) to exercise routing; SFTP/SCP subsystem routing on (MNT satisfies the guard - the file-transfer servers reach storage through the mount, not through FILE_SERVING)",
       "flags": [
         "-DPC_SSH_MAX_CHANNELS=3",
         "-DPC_ENABLE_SSH=1",
-        "-DPC_ENABLE_FILE_SERVING=1",
+        "-DPC_ENABLE_MNT=1",
         "-DPC_ENABLE_SSH_SFTP=1",
         "-DPC_ENABLE_SSH_SCP=1"
       ],
