@@ -71,7 +71,11 @@ struct pc_mnt_stat
 /**
  * @brief A storage backend. Each open call returns a small handle (>= 0) or -1.
  *
- * Implement this to add a backend; the built-in RAM backend is returned by pc_mnt_ram().
+ * Implement this to add a store; the built-in RAM disk is returned by pc_mnt_ram().
+ *
+ * Every call here is one node. mnt is blind - it does not know what a path means, so it cannot know
+ * what a subtree is, and nothing here takes one. A whole-tree operation is composed from these by
+ * the accessor (server/filesystem/filesystem.h), which is the seam that does know.
  */
 struct pc_mnt_backend
 {

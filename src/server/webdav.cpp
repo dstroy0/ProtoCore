@@ -60,15 +60,20 @@ static_assert(PC_WEBDAV_BUF_SIZE / PC_WEBDAV_MIN_ENTRY_BYTES < PC_WEBDAV_MAX_ENT
 // buffer (BSS). One named owner, unreachable from any other translation unit.
 struct DavBufCtx
 {
+    // The accessor root every operation here resolves against, bound in dav(). It is the whole
+    // mount: a DAV route carries its own subtree as a request-path piece (Route::static_root), the
+    // same arrangement file serving uses, so the subtree is part of the request and one root serves
+    // every mount registered. -1 until bound, which fails every operation closed.
+    int root = -1;
+
     char buf[PC_WEBDAV_BUF_SIZE];
 
-    // One path and one child name per recursion level. A tree walk has to name the level it
-    // descends into and the entry it is descending to, and both have to outlive the recursive call.
-    // The depth bound is what makes that a fixed cost instead of a stack that grows with the tree -
-    // which is the whole reason the walk is bounded at all. Nothing outside this file sees either,
-    // so no caller sizes them or carries them.
-    char path[PC_DAV_MAX_DEPTH + 1][PC_FILESYSTEM_PATH_MAX];
-    char child[PC_DAV_MAX_DEPTH + 1][PC_FILESYSTEM_PATH_MAX];
+    // One directory entry's own name, for the Depth-1 PROPFIND listing. That listing is the only
+    // thing here that walks anything, and it walks exactly one level - which is what a Depth-1
+    // PROPFIND is. Deleting and copying a tree are the accessor's operations (pc_fs_remove,
+    // pc_fs_copy); this file used to carry a level stack, a depth bound and a copy chunk buffer to
+    // do them itself, and every other protocol over the same storage would have needed its own.
+    char child[PC_FILESYSTEM_PATH_MAX];
 };
 static DavBufCtx s_dav;
 
@@ -98,181 +103,9 @@ static bool dav_join(const char *root, const char *sub, char *out, size_t cap)
     return wn > 0 && wn < (int)cap; // GCOVR_EXCL_BR_LINE  wn <= 0 unreachable (see above)
 }
 
-// The basename of an FS entry name (cores differ: name() may be a full path or a
-// bare name).
-static const char *dav_basename(const char *name)
-{
-    const char *slash = strrchr(name, '/');
-    // The bare-name half is an ESP32-core shape: the host FS mock's File::name() always returns the
-    // node's full path, so strrchr never comes back null here.
-    return slash ? slash + 1 : name; // GCOVR_EXCL_BR_LINE  bare-name half is core-specific (see above)
-}
-
-// Recursively delete a file or directory tree (bounded depth). Re-opens the directory after each
-// child removal so iteration is never mutated underneath us.
-//
-// Takes the request path as its two pieces, because the accessor does: a joined path would be built
-// here and taken apart there. The one build is the descent, where a child's name becomes the next
-// level's directory, and it goes through the accessor's own join rather than a second one.
-static bool dav_rm_recursive(const char *dir, const char *name, int depth)
-{
-    if (depth > PC_DAV_MAX_DEPTH)
-    {
-        return false; // refuse pathologically deep trees rather than overflow the stack
-    }
-
-    pc_mnt_stat st;
-    if (!pc_fs_stat(dir, name, &st))
-    {
-        return false;
-    }
-    if (!st.is_dir)
-    {
-        return pc_fs_remove(dir, name);
-    }
-
-    // This level's directory, named once. Built through the accessor's join so the separator rule
-    // lives in one place; the storage is ours and its size is nobody else's business.
-    char *lvl = s_dav.path[depth];
-    if (pc_fs_join("", dir, name, lvl, PC_FILESYSTEM_PATH_MAX) == 0)
-    {
-        return false;
-    }
-
-    for (;;)
-    {
-        int d = pc_fs_opendir(lvl, "");
-        if (d < 0)
-        {
-            return false;
-        }
-        // readdir writes the entry's own name, so there is no full path to take a basename off.
-        // The cap is this file's, offered explicitly, because the accessor imposes no name length.
-        pc_mnt_stat cst;
-        char *child = s_dav.child[depth];
-        bool got = pc_fs_readdir(d, &cst, child, PC_FILESYSTEM_PATH_MAX);
-        pc_fs_close(d);
-        if (!got)
-        {
-            break; // directory drained
-        }
-        if (!dav_rm_recursive(lvl, child, depth + 1))
-        {
-            return false;
-        }
-        // The cursor is re-opened from the top on the next pass rather than carried across the
-        // removal, which is what keeps iteration from being mutated underneath it.
-    }
-    return pc_fs_rmdir(dir, name);
-}
-
-// Recursively copy a file or directory tree from @p src to @p dst (bounded depth).
-// Unlike dav_rm_recursive we cannot re-open + take the first child each step (the
-// source is not consumed, so that would loop forever); instead we re-open and skip
-// to child #idx, which is safe even if a core invalidates an open dir handle across
-// the writes the copy makes to the destination tree.
-static bool dav_copy_recursive(fs::FS &fsys, const char *src, const char *dst, int depth)
-{
-    if (depth > 8)
-    {
-        return false; // refuse pathologically deep trees rather than overflow the stack
-    }
-
-    fs::File s = fsys.open(src, "r");
-    if (!s)
-    {
-        return false;
-    }
-    if (!s.isDirectory())
-    {
-        fs::File d = fsys.open(dst, "w");
-        if (!d)
-        {
-            s.close();
-            return false;
-        }
-        uint8_t cbuf[FILE_CHUNK_SIZE];
-        size_t cn;
-        while ((cn = s.read(cbuf, sizeof(cbuf))) > 0)
-        {
-            d.write(cbuf, cn);
-        }
-        s.close();
-        d.close();
-        return true;
-    }
-    s.close();
-
-    if (!fsys.mkdir(dst)) // create the destination collection (caller cleared any existing dst)
-    {
-        return false;
-    }
-
-    for (int idx = 0;; idx++)
-    {
-        fs::File d = fsys.open(src, "r");
-        // GCOVR_EXCL_START  TOCTOU re-open guard, same shape as dav_rm_recursive's: `src` opened at
-        // the top of this call, so only a concurrent delete / FS fault fails it here, and the host
-        // mock's open-failure hook is one stored path applied to every open - it cannot fail this
-        // re-open while letting the first one succeed.
-        if (!d)
-        {
-            return false;
-        }
-        // GCOVR_EXCL_STOP
-        fs::File c;
-        for (int i = 0; i <= idx; i++)
-        {
-            c = d.openNextFile();
-            if (!c)
-            {
-                break;
-            }
-        }
-        if (!c)
-        {
-            d.close();
-            break; // no child at this index - done
-        }
-        char base[128];
-        pc_sb sb_base = {base, sizeof(base), 0, true};
-        pc_sb_put(&sb_base, dav_basename(c.name()));
-        if (pc_sb_finish(&sb_base) == 0)
-        {
-            base[0] = '\0';
-        }
-        c.close();
-        d.close();
-
-        char sp[256];
-        char dp[256];
-        pc_sb sb_sp = {sp, sizeof(sp), 0, true};
-        pc_sb_put(&sb_sp, src);
-        pc_sb_put(&sb_sp, "/");
-        pc_sb_put(&sb_sp, base);
-        int wn1 = (int)pc_sb_finish(&sb_sp);
-        pc_sb sb_dp = {dp, sizeof(dp), 0, true};
-        pc_sb_put(&sb_dp, dst);
-        pc_sb_put(&sb_dp, "/");
-        pc_sb_put(&sb_dp, base);
-        int wn2 = (int)pc_sb_finish(&sb_dp);
-        // GCOVR_EXCL_START  none of the four halves can fire on a host build. snprintf cannot return
-        // negative for "%s/%s"; and neither child path can reach 256 bytes, because `src` had to open
-        // (so it is within the FS mock's 160-byte node-path cap, and `base` is what remains of that
-        // cap) while `dst` is the mount root plus a Destination header value, which the parser caps
-        // at MAX_VAL_LEN. Reachable on a real core, where names and roots are far longer.
-        if (wn1 <= 0 || wn1 >= (int)sizeof(sp) || wn2 <= 0 || wn2 >= (int)sizeof(dp))
-        {
-            return false;
-        }
-        // GCOVR_EXCL_STOP
-        if (!dav_copy_recursive(fsys, sp, dp, depth + 1))
-        {
-            return false;
-        }
-    }
-    return true;
-}
+// dav_basename() is gone: it existed because a vendor File::name() might be a full path or a bare
+// one, so every listing had to guess which. pc_fs_readdir writes the entry's own name, so there is
+// no path to take a basename off and nothing left to guess.
 
 // Map a WebDAV request path to its on-disk path under the mount @p r. Strips the
 // mount prefix, rejects traversal, joins onto the FS root, and drops a trailing
@@ -317,7 +150,7 @@ static int dav_resolve_path(const Route *r, const char *reqpath, char *out, size
 // bounded by BODY_BUF_SIZE. Indexed by the request's slot (req - http_pool).
 struct DavPut
 {
-    fs::File file;  ///< destination file for this slot's PUT.
+    int fh;         ///< accessor handle for this slot's destination file; only valid while active.
     bool active;    ///< file opened for the current PUT.
     bool error;     ///< a write (or the open) failed.
     bool existed;   ///< target existed before this PUT (204 vs 201).
@@ -325,12 +158,15 @@ struct DavPut
     size_t written; ///< bytes written so far.
 };
 
-// WebDAV streaming-PUT state, owned by one instance (internal linkage): the serving instance
-// and the per-slot destination-file state (each slot streams to its own file, so concurrent
-// PUTs never clobber one another). One named owner, unreachable from any other TU.
+// WebDAV streaming-PUT state, owned by one instance (internal linkage): the per-slot
+// destination-file state (each slot streams to its own file, so concurrent PUTs never clobber one
+// another). One named owner, unreachable from any other TU.
+//
+// This is the one place in the file that holds a file handle across calls, and it has to: a
+// streaming PUT is opened by one callback, written by another, and closed by the handler. Every
+// other method reaches storage through a single accessor call.
 struct DavPutCtx
 {
-    PC *stream_srv = nullptr;
     DavPut put[MAX_CONNS];
 };
 static DavPutCtx s_davput;
@@ -382,21 +218,8 @@ static bool dav_coded_url_token(const char *coded, char *out, size_t cap)
     return true;
 }
 
-// GCOVR_EXCL_BR_START  the null-stream_srv arm of all three trampolines is unreachable: the only
-// thing that installs them as the parser's stream hooks is dav(), which sets s_davput.stream_srv
-// first and never clears it - so a trampoline cannot run before the instance pointer exists.
-bool dav_put_begin_tramp(HttpReq *req)
-{
-    return s_davput.stream_srv && s_davput.stream_srv->dav_stream_put_begin(req);
-}
-void dav_put_data_tramp(HttpReq *req, const uint8_t *data, size_t len)
-{
-    if (s_davput.stream_srv)
-    {
-        s_davput.stream_srv->dav_stream_put_data(req, data, len);
-    }
-}
-// GCOVR_EXCL_BR_STOP
+// The trampolines are gone: they existed to reach a running instance through a stored pointer, and
+// there is no instance. http_parser_set_stream_hooks takes these directly.
 void dav_put_abort_tramp(HttpReq *req)
 {
     // The PUT was torn down before the handler ran: close the half-written file so
@@ -408,7 +231,7 @@ void dav_put_abort_tramp(HttpReq *req)
     // long, so the bound still has to be tested here.
     if (slot < MAX_CONNS && s_davput.put[slot].active)
     {
-        s_davput.put[slot].file.close();
+        pc_fs_close(s_davput.put[slot].fh);
         s_davput.put[slot].active = false;
     }
     // GCOVR_EXCL_BR_STOP
@@ -442,13 +265,6 @@ bool dav_stream_put_begin(HttpReq *req)
             continue;
         }
         // GCOVR_EXCL_STOP
-        // GCOVR_EXCL_START  a RouteType::ROUTE_DAV route always carries static_fs (set in dav()); this null-guard
-        // cannot fire
-        if (!r->static_fs)
-        {
-            return false;
-        }
-        // GCOVR_EXCL_STOP
         char fs_path[256];
         if (dav_resolve_path(r, req->path, fs_path, sizeof(fs_path)) != 0)
         {
@@ -466,9 +282,9 @@ bool dav_stream_put_begin(HttpReq *req)
             d->locked = true;
             return true;
         }
-        d->existed = r->static_fs->exists(fs_path);
-        d->file = r->static_fs->open(fs_path, "w");
-        if (d->file)
+        d->existed = pc_fs_exists(s_dav.root, fs_path, "");
+        d->fh = pc_fs_open(s_dav.root, fs_path, "", pc_mnt_mode::PC_MNT_WRITE);
+        if (d->fh >= 0)
         {
             d->active = true;
         }
@@ -496,7 +312,7 @@ void dav_stream_put_data(HttpReq *req, const uint8_t *data, size_t len)
     DavPut *d = &s_davput.put[slot];
     if (d->active && !d->error)
     {
-        if (d->file.write(data, len) != len)
+        if (pc_fs_write(d->fh, data, len) != (int)len)
         {
             d->error = true;
         }
@@ -540,13 +356,16 @@ void dav(const char *url_prefix, const pc_mnt_backend *file_sys, const char *fs_
     fill_route_base(r, pat);
     r->type = RouteType::ROUTE_DAV;
     r->method = HttpMethod::HTTP_GET; // unused: WebDAV dispatch keys off the raw method token
-    r->static_fs = &file_sys;
+    r->static_fs = file_sys;          // null is legal: the accessor uses whatever is mounted
     r->static_root = fs_root;
+
+    // Bind the root every operation in this file resolves against. Re-binding a name already bound
+    // hands back the same handle, so a second mount costs nothing and both see the same storage.
+    s_dav.root = pc_fs_begin("/");
 
 #if PC_ENABLE_STREAM_BODY
     // Stream PUT bodies straight to the file (one global sink; see PC_ENABLE_STREAM_BODY).
-    s_davput.stream_srv = this;
-    http_parser_set_stream_hooks(dav_put_begin_tramp, dav_put_data_tramp, dav_put_abort_tramp);
+    http_parser_set_stream_hooks(dav_stream_put_begin, dav_stream_put_data, dav_put_abort_tramp);
 #endif
 }
 
@@ -609,16 +428,6 @@ bool try_serve_dav(uint8_t slot_id, HttpReq *req)
 
 void serve_dav_request(uint8_t slot_id, HttpReq *req, const Route *r)
 {
-    // GCOVR_EXCL_START  a RouteType::ROUTE_DAV route always carries static_fs (set in dav()); this null-guard cannot
-    // fire
-    if (!r->static_fs)
-    {
-        dav_send_status(slot_id, 404, "");
-        return;
-    }
-    // GCOVR_EXCL_STOP
-    fs::FS &fsys = *r->static_fs;
-
     char fs_path[256];
     int rc = dav_resolve_path(r, req->path, fs_path, sizeof(fs_path));
     if (rc != 0)
@@ -653,20 +462,21 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const Route *r)
 
     case WebDavMethod::DAV_M_GET:
     case WebDavMethod::DAV_M_HEAD: {
-        fs::File f = fsys.open(fs_path, "r");
-        if (!f)
+        // One stat answers both questions - does it exist, and is it a collection. Opening it to ask
+        // would be a second lookup of what the directory record already held, and a handle this
+        // method never reads through.
+        pc_mnt_stat gst;
+        if (!pc_fs_stat(s_dav.root, fs_path, "", &gst))
         {
             dav_send_status(slot_id, 404, "");
             return;
         }
-        bool isdir = f.isDirectory();
-        f.close();
-        if (isdir)
+        if (gst.is_dir)
         {
             dav_send_status(slot_id, 405, ""); // GET on a collection is not a download
             return;
         }
-        serve_file_internal(slot_id, pc_webdav_method(req->method) == WebDavMethod::DAV_M_HEAD, fsys, fs_path,
+        serve_file_internal(slot_id, pc_webdav_method(req->method) == WebDavMethod::DAV_M_HEAD, r->static_fs, fs_path,
                             mime_type(fs_path), nullptr);
         return;
     }
@@ -685,7 +495,7 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const Route *r)
             }
             if (d->active)
             {
-                d->file.close();
+                pc_fs_close(d->fh);
                 d->active = false; // closed here: the abort hook must not double-close
             }
             else
@@ -708,25 +518,22 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const Route *r)
             dav_send_status(slot_id, 423, ""); // Locked: no / wrong lock token in the If header
             return;
         }
-        bool existed = fsys.exists(fs_path);
-        fs::File f = fsys.open(fs_path, "w");
-        if (!f)
+        // One call creates, writes, and closes. The open/write/close dance this used to spell out was
+        // the same sequence the accessor already performs, written a second time so this method could
+        // hold a handle it never read through.
+        //
+        // Only an empty CL:0 PUT reaches this buffered path, so body_len is normally 0: a bodied PUT
+        // to a DAV route always streams (dav() registers the sink, and the #error at the top of this
+        // file is what makes that hold - no other service can have taken the single global hook), and
+        // stream_begin's only decline reasons for a matched DAV route are the ones that also fail the
+        // top-level resolve above. The body is written anyway so a caller that somehow does arrive
+        // buffered stores it instead of having it silently dropped.
+        bool existed = pc_fs_exists(s_dav.root, fs_path, "");
+        if (!pc_fs_write_file(s_dav.root, fs_path, "", req->body, req->body_len))
         {
             dav_send_status(slot_id, 409, ""); // parent missing / not writable
             return;
         }
-        // GCOVR_EXCL_START  only an empty CL:0 PUT reaches this buffered path, so body_len is always
-        // 0 and the write never runs: a bodied PUT to a DAV route always streams (dav() registers the
-        // sink, and the #error at the top of this file is what makes that hold - no other service can
-        // have taken the single global hook), and stream_begin's only decline reasons for a matched
-        // DAV route are the ones that also fail the top-level resolve above. Kept as a fail-safe so a
-        // caller that somehow does arrive buffered writes its body instead of silently dropping it.
-        if (req->body_len)
-        {
-            f.write(req->body, req->body_len);
-        }
-        // GCOVR_EXCL_STOP
-        f.close();
         dav_send_status(slot_id, existed ? 204 : 201, "");
         return;
     }
@@ -737,12 +544,14 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const Route *r)
             dav_send_status(slot_id, 423, "");
             return;
         }
-        if (!fsys.exists(fs_path))
+        if (!pc_fs_exists(s_dav.root, fs_path, ""))
         {
             dav_send_status(slot_id, 404, "");
             return;
         }
-        dav_send_status(slot_id, dav_rm_recursive(fsys, fs_path, 0) ? 204 : 403, "");
+        // A collection and its members go in one call: the accessor owns the walk, so DELETE reads
+        // the same whether the target is a file or a tree.
+        dav_send_status(slot_id, pc_fs_remove(s_dav.root, fs_path, "") ? 204 : 403, "");
         return;
     }
 
@@ -752,12 +561,12 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const Route *r)
             dav_send_status(slot_id, 423, "");
             return;
         }
-        if (fsys.exists(fs_path))
+        if (pc_fs_exists(s_dav.root, fs_path, ""))
         {
             dav_send_status(slot_id, 405, ""); // already exists
             return;
         }
-        dav_send_status(slot_id, fsys.mkdir(fs_path) ? 201 : 409, "");
+        dav_send_status(slot_id, pc_fs_mkdir(s_dav.root, fs_path, "") ? 201 : 409, "");
         return;
 
     case WebDavMethod::DAV_M_COPY:
@@ -803,52 +612,50 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const Route *r)
 
         const char *ow = http_get_header(req, "Overwrite");
         bool overwrite = !(ow && (ow[0] == 'F' || ow[0] == 'f'));
-        bool dest_exists = fsys.exists(dest_fs);
+        bool dest_exists = pc_fs_exists(s_dav.root, dest_fs, "");
         if (dest_exists && !overwrite)
         {
             dav_send_status(slot_id, 412, "");
             return;
         }
 
-        if (pc_webdav_method(req->method) == WebDavMethod::DAV_M_MOVE)
+        if (is_move)
         {
             if (dest_exists)
             {
-                dav_rm_recursive(fsys, dest_fs, 0); // replace
+                pc_fs_remove(s_dav.root, dest_fs, ""); // replace
             }
-            bool ok = fsys.rename(fs_path, dest_fs);
-            dav_send_status(slot_id, ok ? (dest_exists ? 204 : 201) : 409, "");
+            bool moved = pc_fs_rename(s_dav.root, fs_path, "", dest_fs, "");
+            dav_send_status(slot_id, moved ? (dest_exists ? 204 : 201) : 409, "");
             return;
         }
 
-        // COPY: a file or a whole collection (RFC 4918 9.8). Depth applies to a
-        // collection source: "0" copies just the collection itself, "infinity"
-        // (the default, also when absent) copies the entire tree.
-        fs::File src = fsys.open(fs_path, "r");
-        if (!src)
+        // COPY: a file or a whole collection (RFC 4918 9.8). Depth applies to a collection source:
+        // "0" copies just the collection itself, "infinity" (the default, also when absent) copies
+        // the entire tree. One stat says whether the source exists and which of those it is.
+        pc_mnt_stat sst;
+        if (!pc_fs_stat(s_dav.root, fs_path, "", &sst))
         {
             dav_send_status(slot_id, 404, "");
             return;
         }
-        bool src_is_dir = src.isDirectory();
-        src.close();
 
         const char *depth_h = http_get_header(req, "Depth");
         bool shallow = depth_h && depth_h[0] == '0'; // Depth: 0
 
         if (dest_exists)
         {
-            dav_rm_recursive(fsys, dest_fs, 0); // overwrite: clear the target first
+            pc_fs_remove(s_dav.root, dest_fs, ""); // overwrite: clear the target first
         }
 
         bool ok;
-        if (src_is_dir && shallow)
+        if (sst.is_dir && shallow)
         {
-            ok = fsys.mkdir(dest_fs); // collection, Depth:0 - just the collection, no members
+            ok = pc_fs_mkdir(s_dav.root, dest_fs, ""); // collection, Depth:0 - no members
         }
         else
         {
-            ok = dav_copy_recursive(fsys, fs_path, dest_fs, 0);
+            ok = pc_fs_copy(s_dav.root, fs_path, "", dest_fs, "");
         }
         dav_send_status(slot_id, ok ? (dest_exists ? 204 : 201) : 409, "");
         return;
@@ -951,15 +758,18 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const Route *r)
     }
 
     case WebDavMethod::DAV_M_PROPFIND: {
-        fs::File f = fsys.open(fs_path, "r");
-        if (!f)
+        // Every property this method reports about the target - collection or not, size, mtime - is a
+        // field of one directory record. One stat reads it; the open/size/getLastWrite sequence this
+        // replaced asked storage three times for what one lookup already had.
+        pc_mnt_stat fst;
+        if (!pc_fs_stat(s_dav.root, fs_path, "", &fst))
         {
             dav_send_status(slot_id, 404, "");
             return;
         }
-        bool isdir = f.isDirectory();
-        uint32_t fsize = (uint32_t)f.size();
-        time_t mtime = f.getLastWrite();
+        bool isdir = fst.is_dir;
+        uint32_t fsize = (uint32_t)fst.size;
+        time_t mtime = (time_t)fst.mtime;
 
         int depth = pc_webdav_depth(http_get_header(req, "Depth"), 1);
 
@@ -969,7 +779,6 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const Route *r)
         // complete. Clients wanting a listing use Depth: 0 or 1.
         if (depth == PC_DAV_DEPTH_INFINITY)
         {
-            f.close();
             static const char body[] = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n"
                                        "<D:error xmlns:D=\"DAV:\"><D:propfind-finite-depth/></D:error>\r\n";
             send_text(slot_id, 403, "application/xml", body);
@@ -999,7 +808,8 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const Route *r)
         }
         // GCOVR_EXCL_BR_STOP
 
-        size_t cap = sizeof(s_dav.buf), len = 0;
+        size_t cap = sizeof(s_dav.buf);
+        size_t len = 0;
         len = pc_webdav_ms_begin(s_dav.buf, cap, len);
         char mt[40];
         http_rfc1123(mtime, mt, sizeof(mt));
@@ -1007,11 +817,20 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const Route *r)
 
         if (isdir && depth >= 1)
         {
+            int d = pc_fs_opendir(s_dav.root, fs_path, "");
+            if (d < 0)
+            {
+                dav_send_status(slot_id, 404, "");
+                return;
+            }
             int count = 0;
             for (;;)
             {
-                fs::File c = f.openNextFile();
-                if (!c)
+                // One readdir hands back the entry's facts and its own name together, so a listing
+                // costs one call per child instead of a handle plus four questions - and the name is
+                // already the leaf, which is what retired dav_basename().
+                pc_mnt_stat cst;
+                if (!pc_fs_readdir(d, &cst, s_dav.child, sizeof(s_dav.child)))
                 {
                     break;
                 }
@@ -1021,36 +840,31 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const Route *r)
                 // whatever those two knobs are set to.
                 if (count >= PC_WEBDAV_MAX_ENTRIES)
                 {
-                    c.close();
                     break;
                 }
                 // GCOVR_EXCL_STOP
-                const char *base = dav_basename(c.name());
-                bool cdir = c.isDirectory();
-                uint32_t csize = (uint32_t)c.size();
-                time_t cmt = c.getLastWrite();
                 char chref[MAX_PATH_LEN + 80];
                 pc_sb sb_chref = {chref, sizeof(chref), 0, true};
                 pc_sb_put(&sb_chref, self_href);
-                pc_sb_put(&sb_chref, base);
-                pc_sb_put(&sb_chref, cdir ? "/" : "");
+                pc_sb_put(&sb_chref, s_dav.child);
+                pc_sb_put(&sb_chref, cst.is_dir ? "/" : "");
                 if (pc_sb_finish(&sb_chref) == 0)
                 {
                     chref[0] = '\0';
                 }
                 char cmtbuf[40];
-                http_rfc1123(cmt, cmtbuf, sizeof(cmtbuf));
-                c.close();
+                http_rfc1123((time_t)cst.mtime, cmtbuf, sizeof(cmtbuf));
                 size_t before = len;
-                len = pc_webdav_ms_entry(s_dav.buf, cap, len, chref, cdir, csize, cmtbuf, cdir ? "" : mime_type(base));
+                len = pc_webdav_ms_entry(s_dav.buf, cap, len, chref, cst.is_dir, (uint32_t)cst.size, cmtbuf,
+                                         cst.is_dir ? "" : mime_type(s_dav.child));
                 if (len == before)
                 {
                     break; // buffer full - stop listing
                 }
                 count++;
             }
+            pc_fs_close(d);
         }
-        f.close();
         len = pc_webdav_ms_end(s_dav.buf, cap, len);
         send_text(slot_id, 207, "application/xml; charset=utf-8", s_dav.buf);
         return;
@@ -1060,7 +874,7 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const Route *r)
         // Read-only properties (no dead-property store): answer 207 with each
         // requested property refused 403, rather than 405 - keeps Explorer/Finder,
         // which PROPPATCH a timestamp right after a PUT, from erroring.
-        if (!fsys.exists(fs_path))
+        if (!pc_fs_exists(s_dav.root, fs_path, ""))
         {
             dav_send_status(slot_id, 404, "");
             return;

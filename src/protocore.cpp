@@ -194,32 +194,6 @@ const char *status_text(int code)
  *
  * @param m Null-terminated method string, e.g. "POST".
  * @return Matching HttpMethod enum value, or HttpVersion::HTTP_UNKNOWN.
-// The server's own state, owned here (internal linkage). It previously carried two pointers to the
-// running instance so a trampoline could dispatch back into it; there is no instance to point at,
-// because the slot pools were always global singletons and there was only ever one server. The
-// trampolines call the functions directly now, and what remains is state nothing outside this file
-// reads: who answers a request that matched nothing, where the access log goes, which ports were
-// registered, and the HTTP/3 credentials held until begin() binds them.
-struct ServerCtx
-{
-    Handler not_found_handler; ///< Called when no route matches; may be null.
-    RequestLogCb log_cb;       ///< Per-request access-log hook; may be null.
-
-    uint16_t listen_ports[MAX_LISTENERS];   ///< Ports registered via listen() / begin_http().
-    ConnProto listen_protos[MAX_LISTENERS]; ///< Protocol for each registered listener.
-    bool listen_tls[MAX_LISTENERS];         ///< True for TLS listeners (listen_tls()).
-    uint8_t listener_count;                  ///< Registered listeners.
-
-#if PC_ENABLE_HTTP3
-    bool pc_h3_running;
-    const uint8_t *h3_cert;
-    size_t h3_cert_len;
-    uint8_t h3_seed[32];
-    uint16_t h3_port;
-    bool h3_enabled;
-#endif
-};
-static ServerCtx s_inst;
  */
 static HttpMethod parse_method(const char *m)
 {
@@ -279,6 +253,37 @@ static const char *method_name(HttpMethod m)
         return "";
     }
 }
+
+// The server's own state, owned here (internal linkage). It previously carried two pointers to the
+// running instance so a trampoline could dispatch back into it; there is no instance to point at,
+// because the slot pools were always global singletons and there was only ever one server. The
+// trampolines call the functions directly now, and what remains is state nothing outside this file
+// reads: who answers a request that matched nothing, where the access log goes, which ports were
+// registered, and the HTTP/3 credentials held until begin() binds them.
+//
+// The three listener arrays are registration intent, not a second copy of listener_pool[]. A port is
+// named by listen() before pool_init() has run, so it cannot be bound where it will live yet; begin()
+// is what turns each entry into a listener_pool[] binding, and from then on transport owns it.
+struct ServerCtx
+{
+    Handler not_found_handler; ///< Called when no route matches; may be null.
+    RequestLogCb log_cb;       ///< Per-request access-log hook; may be null.
+
+    uint16_t listen_ports[MAX_LISTENERS];   ///< Ports registered via listen() / begin_http().
+    ConnProto listen_protos[MAX_LISTENERS]; ///< Protocol for each registered listener.
+    bool listen_tls[MAX_LISTENERS];         ///< True for TLS listeners (listen_tls()).
+    uint8_t listener_count;                 ///< Registered listeners.
+
+#if PC_ENABLE_HTTP3
+    bool pc_h3_running;
+    const uint8_t *h3_cert;
+    size_t h3_cert_len;
+    uint8_t h3_seed[32];
+    uint16_t h3_port;
+    bool h3_enabled;
+#endif
+};
+static ServerCtx s_inst;
 
 void on_request_log(RequestLogCb cb)
 {
@@ -495,7 +500,7 @@ int32_t listen(uint16_t port, ConnProto proto)
     }
     s_inst.listen_ports[s_inst.listener_count] = port;
     s_inst.listen_protos[s_inst.listener_count] = proto;
-    listen_tls[s_inst.listener_count] = false;
+    s_inst.listen_tls[s_inst.listener_count] = false;
     s_inst.listener_count++;
     // Return the listener id (its index), not pc_result::PC_OK: begin() binds listener_pool[i] from
     // s_inst.listen_ports[i] and the accept path stamps that same index onto the slot, so this id is what
@@ -967,55 +972,7 @@ void on_not_found(Handler callback)
     s_inst.not_found_handler = callback;
 }
 
-/*
- * Enable CORS and pre-build the Access-Control response header block.
- *
- * The header string is constructed once here rather than at response time to
- * avoid repeated snprintf calls on the hot path.  It is stored in
- * `pc_resp_cors_header()[]` and injected verbatim into every response when
- * `pc_resp_cors_enabled()` is true.
- *
- * Passing an empty or null origin disables CORS without clearing the buffer -
- * only the `pc_resp_cors_enabled()` flag matters at dispatch time.
- *
- * @param origin Value for the Access-Control-Allow-Origin header, e.g. "*".
- */
-void set_cors(const char *origin)
-{
-    if (!origin || origin[0] == '\0')
-    {
-        pc_resp_cors_enabled() = false;
-        pc_resp_cors_header()[0] = '\0';
-        return;
-    }
-    pc_sb sb__cors_header_buf = {pc_resp_cors_header(), CORS_HDR_BUF_SIZE, 0, true};
-    pc_sb_put(&sb__cors_header_buf, "Access-Control-Allow-Origin: ");
-    pc_sb_put(&sb__cors_header_buf, origin);
-    pc_sb_put(&sb__cors_header_buf, "\r\nAccess-Control-Allow-Methods: GET, POST, PUT, DELETE, PATCH, HEAD, "
-                                    "OPTIONS\r\nAccess-Control-Allow-Headers: Content-Type\r\n");
-    if (pc_sb_finish(&sb__cors_header_buf) == 0)
-    {
-        pc_resp_cors_header()[0] = '\0';
-    }
-    pc_resp_cors_enabled() = true;
-}
-
-void set_cache_control(const char *value)
-{
-    if (!value || value[0] == '\0')
-    {
-        pc_resp_cache_control()[0] = '\0';
-        return;
-    }
-    pc_sb sb__cache_control_buf = {pc_resp_cache_control(), CACHE_CONTROL_BUF_SIZE, 0, true};
-    pc_sb_put(&sb__cache_control_buf, "Cache-Control: ");
-    pc_sb_put(&sb__cache_control_buf, value);
-    pc_sb_put(&sb__cache_control_buf, "\r\n");
-    if (pc_sb_finish(&sb__cache_control_buf) == 0)
-    {
-        pc_resp_cache_control()[0] = '\0';
-    }
-}
+// set_cors() / set_cache_control() live in server/response.cpp, with the buffers they fill.
 
 #if PC_ENABLE_HTTP_DELIVERY
 bool set_cache_control_swr(uint32_t max_age_s, uint32_t swr_s)
@@ -2022,8 +1979,9 @@ void match_and_execute(uint8_t slot_id)
  */
 void send_text(uint8_t slot_id, int code, const char *content_type, const char *payload)
 {
-    // Null-terminated convenience wrapper over the explicit-length send.
-    send_text(slot_id, code, content_type, (const uint8_t *)payload, payload ? strnlen(payload, 0xFFFF) : 0);
+    // Null-terminated convenience wrapper over the explicit-length send: the only difference between
+    // the two is who scans for the length, so text is bin plus one scan rather than a second sender.
+    send_bin(slot_id, code, content_type, (const uint8_t *)payload, payload ? strnlen(payload, 0xFFFF) : 0);
 }
 
 void send_bin(uint8_t slot_id, int code, const char *content_type, const uint8_t *body, size_t body_len)

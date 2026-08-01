@@ -57,8 +57,26 @@ struct FileSend
 struct FileCtx
 {
     FileSend send[MAX_CONNS];
+    int root = -1; ///< the accessor root everything here resolves against (see file_root).
 };
 static FileCtx s_file;
+
+// The root file serving resolves against: the whole mount. A static route carries its own subtree as
+// a request-path piece (Route::static_root), so the subtree is part of the request rather than part
+// of the root - which is what lets one bound root serve every static mount the application
+// registers, instead of spending a root table entry per serve_static() call.
+//
+// Bound on first use because file serving has no begin(): a route can be registered before or after
+// the mount is set up, and serve_file() is reachable without any serve_static() at all. Re-binding a
+// name already bound hands back the same handle, so this settles after the first call.
+static int file_root(void)
+{
+    if (s_file.root < 0)
+    {
+        s_file.root = pc_fs_begin("/");
+    }
+    return s_file.root;
+}
 
 bool pc_file_holds_slot(uint8_t slot)
 {
@@ -201,7 +219,7 @@ static bool inm_matches(const char *inm, const char *etag)
 void serve_file_internal(uint8_t slot_id, bool head, const pc_mnt_backend *file_sys, const char *fs_path,
                          const char *content_type, const char *content_encoding)
 {
-    int fh = pc_fs_open(fs_path, "", pc_mnt_mode::PC_MNT_READ);
+    int fh = pc_fs_open(file_root(), fs_path, "", pc_mnt_mode::PC_MNT_READ);
     if (fh < 0)
     {
         send_text(slot_id, 404, PC_MIME_TEXT_PLAIN, "Not Found");
@@ -218,7 +236,7 @@ void serve_file_internal(uint8_t slot_id, bool head, const pc_mnt_backend *file_
     // Size and mtime come from one stat, not two calls on the handle: they are two fields of the same
     // directory record, and asking separately is two lookups of what one read already had.
     pc_mnt_stat st;
-    if (!pc_fs_stat(fs_path, "", &st))
+    if (!pc_fs_stat(file_root(), fs_path, "", &st))
     {
         pc_fs_close(fh);
         send_text(slot_id, 404, PC_MIME_TEXT_PLAIN, "Not Found");
@@ -597,7 +615,7 @@ void serve_static_request(uint8_t slot_id, HttpReq *req, const Route *r)
         // a 256-byte buffer, so gn is at most 258 and always under gz's 260. Both are kept because
         // the two buffer sizes are independent constants. The exclusion is per-line, so it also
         // drops the exists() halves - those ARE exercised both ways (see the gzip tests).
-        if (gn > 0 && gn < (int)sizeof(gz) && pc_fs_exists(gz, "")) // GCOVR_EXCL_BR_LINE  see above
+        if (gn > 0 && gn < (int)sizeof(gz) && pc_fs_exists(file_root(), gz, "")) // GCOVR_EXCL_BR_LINE  see above
         {
             serve_file_internal(slot_id, head, r->static_fs, gz, ctype, "gzip");
             return;

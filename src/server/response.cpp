@@ -93,6 +93,57 @@ char *pc_resp_extra_hdr(uint8_t slot)
     return s_resp.extra_hdr[slot];
 }
 
+/*
+ * Enable CORS and pre-build the Access-Control response header block.
+ *
+ * The header string is constructed once here rather than at response time, so the hot path emits
+ * bytes it already has. It is injected verbatim into every response while cors_enabled is set.
+ *
+ * These two setters live beside the buffers they fill. They were in protocore.cpp, reaching across
+ * for storage this file owns - which is why the readers above had to hand out a writable pointer to
+ * a buffer whose capacity only this file knows. A reader hands back bytes; a writer is the owner.
+ *
+ * Passing an empty or null origin disables CORS: only the flag matters at dispatch time.
+ *
+ * @param origin Value for the Access-Control-Allow-Origin header, e.g. "*".
+ */
+void set_cors(const char *origin)
+{
+    if (!origin || origin[0] == '\0')
+    {
+        s_resp.cors_enabled = false;
+        s_resp.cors_header_buf[0] = '\0';
+        return;
+    }
+    pc_sb sb = {s_resp.cors_header_buf, sizeof(s_resp.cors_header_buf), 0, true};
+    pc_sb_put(&sb, "Access-Control-Allow-Origin: ");
+    pc_sb_put(&sb, origin);
+    pc_sb_put(&sb, "\r\nAccess-Control-Allow-Methods: GET, POST, PUT, DELETE, PATCH, HEAD, "
+                   "OPTIONS\r\nAccess-Control-Allow-Headers: Content-Type\r\n");
+    if (pc_sb_finish(&sb) == 0)
+    {
+        s_resp.cors_header_buf[0] = '\0';
+    }
+    s_resp.cors_enabled = true;
+}
+
+void set_cache_control(const char *value)
+{
+    if (!value || value[0] == '\0')
+    {
+        s_resp.cache_control_buf[0] = '\0';
+        return;
+    }
+    pc_sb sb = {s_resp.cache_control_buf, sizeof(s_resp.cache_control_buf), 0, true};
+    pc_sb_put(&sb, "Cache-Control: ");
+    pc_sb_put(&sb, value);
+    pc_sb_put(&sb, "\r\n");
+    if (pc_sb_finish(&sb) == 0)
+    {
+        s_resp.cache_control_buf[0] = '\0';
+    }
+}
+
 bool pc_resp_holds_slot(uint8_t slot)
 {
     return s_resp.chunk[slot].active;

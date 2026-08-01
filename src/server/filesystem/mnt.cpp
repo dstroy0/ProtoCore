@@ -22,7 +22,6 @@ namespace
 {
 struct RamFile
 {
-    bool used;
     bool is_dir;
     char name[PC_MNT_NAME_MAX];
     size_t len;
@@ -44,16 +43,29 @@ struct RamHandle
 struct MntCtx
 {
     const pc_mnt_backend *backend = nullptr;
+    // Which pool entries hold a file, one bit each. Occupancy is a single bit, so the whole pool's
+    // answer fits in a register: a free entry is one bit scan instead of a walk, and a subtree is a
+    // mask that remove/rename/copy apply in one operation rather than a descent.
+    uint32_t used;
     RamFile rf[PC_MNT_RAM_FILES];
     RamHandle rh[PC_MNT_MAX_OPEN];
 };
 static MntCtx s_mnt;
 
+static_assert(PC_MNT_RAM_FILES > 0 && PC_MNT_RAM_FILES <= 32,
+              "the RAM pool's occupancy is one 32-bit word, one bit per file");
+#define PC_MNT_RAM_BITS ((uint32_t)(((uint64_t)1 << PC_MNT_RAM_FILES) - 1u))
+
+bool ram_used(int i)
+{
+    return (s_mnt.used & (1u << i)) != 0;
+}
+
 int ram_find(const char *name)
 {
     for (int i = 0; i < PC_MNT_RAM_FILES; i++)
     {
-        if (s_mnt.rf[i].used && strncmp(s_mnt.rf[i].name, name, PC_MNT_NAME_MAX) == 0)
+        if (ram_used(i) && strncmp(s_mnt.rf[i].name, name, PC_MNT_NAME_MAX) == 0)
         {
             return i;
         }
@@ -67,19 +79,18 @@ int ram_create(const char *name, bool is_dir)
     {
         return -1;
     }
-    for (int i = 0; i < PC_MNT_RAM_FILES; i++)
+    uint32_t free_bits = ~s_mnt.used & PC_MNT_RAM_BITS;
+    if (free_bits == 0)
     {
-        if (!s_mnt.rf[i].used)
-        {
-            s_mnt.rf[i].used = true;
-            s_mnt.rf[i].is_dir = is_dir;
-            strncpy(s_mnt.rf[i].name, name, PC_MNT_NAME_MAX - 1);
-            s_mnt.rf[i].name[PC_MNT_NAME_MAX - 1] = '\0';
-            s_mnt.rf[i].len = 0;
-            return i;
-        }
+        return -1;
     }
-    return -1;
+    int i = (int)__builtin_ctz(free_bits);
+    s_mnt.used |= (1u << i);
+    s_mnt.rf[i].is_dir = is_dir;
+    strncpy(s_mnt.rf[i].name, name, PC_MNT_NAME_MAX - 1);
+    s_mnt.rf[i].name[PC_MNT_NAME_MAX - 1] = '\0';
+    s_mnt.rf[i].len = 0;
+    return i;
 }
 
 int ram_alloc_handle(void)
@@ -240,6 +251,9 @@ bool ram_exists(const char *path)
     return ram_find(path) >= 0;
 }
 
+// Delete one file. mnt is blind: it does not know what a subtree is, because it does not know what a
+// path means. Removing a directory and its members is the accessor's operation (pc_fs_remove), built
+// out of these per-node calls.
 bool ram_remove(const char *path)
 {
     int f = ram_find(path);
@@ -247,7 +261,7 @@ bool ram_remove(const char *path)
     {
         return false;
     }
-    s_mnt.rf[f].used = false;
+    s_mnt.used &= ~(1u << f);
     return true;
 }
 
@@ -265,7 +279,7 @@ bool ram_rename(const char *from, const char *to)
     int dst = ram_find(to);
     if (dst >= 0)
     {
-        s_mnt.rf[dst].used = false; // overwrite an existing destination
+        s_mnt.used &= ~(1u << dst); // overwrite an existing destination
     }
     strncpy(s_mnt.rf[f].name, to, PC_MNT_NAME_MAX - 1);
     s_mnt.rf[f].name[PC_MNT_NAME_MAX - 1] = '\0';
@@ -291,12 +305,12 @@ bool ram_rmdir(const char *path)
     for (int i = 0; i < PC_MNT_RAM_FILES; i++)
     {
         const char *rest = nullptr;
-        if (i != d && s_mnt.rf[i].used && ram_child_of(s_mnt.rf[i].name, s_mnt.rf[d].name, &rest))
+        if (i != d && ram_used(i) && ram_child_of(s_mnt.rf[i].name, s_mnt.rf[d].name, &rest))
         {
             return false; // not empty
         }
     }
-    s_mnt.rf[d].used = false;
+    s_mnt.used &= ~(1u << d);
     return true;
 }
 
@@ -368,7 +382,7 @@ bool ram_readdir(int h, pc_mnt_stat *out, char *name, size_t name_cap)
     for (size_t i = s_mnt.rh[h].pos; i < PC_MNT_RAM_FILES; i++)
     {
         const char *rest = nullptr;
-        if (!s_mnt.rf[i].used || !ram_child_of(s_mnt.rf[i].name, prefix, &rest))
+        if (!ram_used((int)i) || !ram_child_of(s_mnt.rf[i].name, prefix, &rest))
         {
             continue;
         }
@@ -408,10 +422,7 @@ const pc_mnt_backend *pc_mnt_ram(void)
 
 void pc_mnt_ram_format(void)
 {
-    for (int i = 0; i < PC_MNT_RAM_FILES; i++)
-    {
-        s_mnt.rf[i].used = false;
-    }
+    s_mnt.used = 0; // the whole pool, one store rather than a loop
     for (int h = 0; h < PC_MNT_MAX_OPEN; h++)
     {
         s_mnt.rh[h].open = false;

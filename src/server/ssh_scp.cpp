@@ -57,6 +57,10 @@ struct ScpConn
 struct SshScpCtx
 {
     bool registered = false;
+    // The root this server works through, bound once in begin(). A handle, not a path: this file
+    // cannot name where storage begins. -1 until bound, which fails every operation closed rather
+    // than resolving against root 0 - somebody else's storage.
+    int root = -1;
     ScpConn conns[MAX_SSH_CONNS];
     char leaf[PC_FILESYSTEM_PATH_MAX]; ///< one control line's filename, live only until the open
 };
@@ -191,7 +195,7 @@ void pc_scp_on_data(uint8_t slot, uint32_t channel, const uint8_t *data, size_t 
             }
             // A directory target takes the control line's filename; a file target is the whole
             // destination on its own. Either way the accessor gets the pieces and frames once.
-            c->fh = pc_fs_open(c->dest, c->dest_is_dir ? s_scp.leaf : "", pc_mnt_mode::PC_MNT_WRITE);
+            c->fh = pc_fs_open(s_scp.root, c->dest, c->dest_is_dir ? s_scp.leaf : "", pc_mnt_mode::PC_MNT_WRITE);
             if (c->fh < 0)
             {
                 err_ack(c, SCP_ERR_CREATE, sizeof(SCP_ERR_CREATE) - 1);
@@ -243,6 +247,10 @@ void pc_scp_on_data(uint8_t slot, uint32_t channel, const uint8_t *data, size_t 
 
 void pc_ssh_scp_begin(void)
 {
+    // Bind the root this server answers from. Naming a different one than SFTP is how the two end up
+    // over different storage; naming the same one shares it and costs one entry.
+    s_scp.root = pc_fs_begin("mnt/scp");
+
     for (int i = 0; i < MAX_SSH_CONNS; i++)
     {
         s_scp.conns[i].active = false;

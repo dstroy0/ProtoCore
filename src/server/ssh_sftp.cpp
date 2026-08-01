@@ -72,6 +72,11 @@ struct SftpSession
 struct SshSftpCtx
 {
     bool registered = false;
+    // The root this server works through, bound once in begin(). It is a handle, not a path: this
+    // file cannot name where storage begins, and holding the handle is what lets SCP land on a card
+    // while SFTP serves a RAM pool. -1 until bound, which fails every operation closed rather than
+    // resolving against root 0 - somebody else's storage.
+    int root = -1;
     SftpSession sess[MAX_SSH_CONNS];
     uint8_t out[SSH_PKT_BUF_SIZE];  ///< response-build scratch (sends are synchronous, one at a time)
     uint8_t rbuf[PC_SFTP_MAX_READ]; ///< READ scratch
@@ -346,13 +351,13 @@ void handle_packet(SftpSession *s, const uint8_t *buf, size_t total)
             send_status(s, id, PC_SSH_FX_FAILURE, "too many open handles");
             return;
         }
-        int fh = pc_fs_open(req, "", mode);
+        int fh = pc_fs_open(s_sftp.root, req, "", mode);
         if (fh < 0)
         {
             // A backend refuses to open a directory as a file, so the distinction the client sees is
             // recovered from the record rather than from a second open.
             pc_mnt_stat st;
-            bool is_dir = pc_fs_stat(req, "", &st) && st.is_dir;
+            bool is_dir = pc_fs_stat(s_sftp.root, req, "", &st) && st.is_dir;
             // NO_SUCH_FILE only for a plain read that found nothing - that is the one case a client
             // acts on differently. A directory, or any failed write, is FAILURE.
             send_status(s, id, (is_dir || writing) ? PC_SSH_FX_FAILURE : PC_SSH_FX_NO_SUCH_FILE,
@@ -421,7 +426,7 @@ void handle_packet(SftpSession *s, const uint8_t *buf, size_t total)
             send_status(s, id, PC_SSH_FX_FAILURE, "too many open handles");
             return;
         }
-        int fh = pc_fs_opendir(req, "");
+        int fh = pc_fs_opendir(s_sftp.root, req, "");
         if (fh < 0)
         {
             send_status(s, id, PC_SSH_FX_NO_SUCH_FILE, "not a directory");
@@ -461,7 +466,7 @@ void handle_packet(SftpSession *s, const uint8_t *buf, size_t total)
             return;
         }
         pc_mnt_stat st;
-        if (!pc_fs_stat(req, "", &st))
+        if (!pc_fs_stat(s_sftp.root, req, "", &st))
         {
             send_status(s, id, PC_SSH_FX_NO_SUCH_FILE, "");
             return;
@@ -477,7 +482,7 @@ void handle_packet(SftpSession *s, const uint8_t *buf, size_t total)
         pc_sftp_rd_string(&r, &h, &hl);
         int hi = handle_index(s, h, hl);
         pc_mnt_stat st;
-        if (hi < 0 || !pc_fs_stat(s->handles[hi].req, "", &st))
+        if (hi < 0 || !pc_fs_stat(s_sftp.root, s->handles[hi].req, "", &st))
         {
             send_status(s, id, PC_SSH_FX_FAILURE, "bad handle");
             return;
@@ -497,7 +502,7 @@ void handle_packet(SftpSession *s, const uint8_t *buf, size_t total)
             send_status(s, id, PC_SSH_FX_PERMISSION_DENIED, "bad path");
             return;
         }
-        send_status(s, id, pc_fs_remove(req, "") ? PC_SSH_FX_OK : PC_SSH_FX_FAILURE, "");
+        send_status(s, id, pc_fs_remove(s_sftp.root, req, "") ? PC_SSH_FX_OK : PC_SSH_FX_FAILURE, "");
         return;
     }
     case PC_SSH_FXP_MKDIR: {
@@ -510,7 +515,7 @@ void handle_packet(SftpSession *s, const uint8_t *buf, size_t total)
             send_status(s, id, PC_SSH_FX_PERMISSION_DENIED, "bad path");
             return;
         }
-        send_status(s, id, pc_fs_mkdir(req, "") ? PC_SSH_FX_OK : PC_SSH_FX_FAILURE, "");
+        send_status(s, id, pc_fs_mkdir(s_sftp.root, req, "") ? PC_SSH_FX_OK : PC_SSH_FX_FAILURE, "");
         return;
     }
     case PC_SSH_FXP_RMDIR: {
@@ -523,7 +528,7 @@ void handle_packet(SftpSession *s, const uint8_t *buf, size_t total)
             send_status(s, id, PC_SSH_FX_PERMISSION_DENIED, "bad path");
             return;
         }
-        send_status(s, id, pc_fs_rmdir(req, "") ? PC_SSH_FX_OK : PC_SSH_FX_FAILURE, "");
+        send_status(s, id, pc_fs_rmdir(s_sftp.root, req, "") ? PC_SSH_FX_OK : PC_SSH_FX_FAILURE, "");
         return;
     }
     case PC_SSH_FXP_RENAME: {
@@ -540,7 +545,7 @@ void handle_packet(SftpSession *s, const uint8_t *buf, size_t total)
             send_status(s, id, PC_SSH_FX_PERMISSION_DENIED, "bad path");
             return;
         }
-        send_status(s, id, pc_fs_rename(from, "", to, "") ? PC_SSH_FX_OK : PC_SSH_FX_FAILURE, "");
+        send_status(s, id, pc_fs_rename(s_sftp.root, from, "", to, "") ? PC_SSH_FX_OK : PC_SSH_FX_FAILURE, "");
         return;
     }
     case PC_SSH_FXP_REALPATH: {
@@ -743,6 +748,11 @@ void pc_sftp_on_data(uint8_t slot, uint32_t channel, const uint8_t *data, size_t
 // --- public API -----------------------------------------------------------------------------------
 void pc_ssh_sftp_begin(void)
 {
+    // Bind the root this server answers from. The name is what the accessor maps; two servers naming
+    // the same one share it and cost one entry, and naming different ones is how they end up over
+    // different storage without either being able to tell.
+    s_sftp.root = pc_fs_begin("mnt/sftp");
+
     for (int i = 0; i < MAX_SSH_CONNS; i++)
     {
         s_sftp.sess[i].active = false;

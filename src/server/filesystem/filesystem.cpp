@@ -34,8 +34,50 @@ struct FilesystemCtx
     FsRoot root[PC_FS_MAX_ROOTS];
     uint8_t count;
     char path[2][PC_FILESYSTEM_PATH_MAX];
+
+    // The tree walks' level stack (pc_fs_remove / pc_fs_copy). This IS the stack: both walks are
+    // loops over an index into these arrays, not call recursion, so a deep tree costs one array
+    // entry per level instead of a live call frame per level - the one allocation the fixed-footprint
+    // accounting cannot see. The depth a request can force is the array's extent.
+    //
+    // A level is a source path and a destination path: remove uses the first, copy uses both. One
+    // entry beyond PC_FS_MAX_DEPTH, so the deepest legal level still has a slot above it to name a
+    // candidate child in before the walk decides whether that child becomes a level.
+    //
+    // idx is where each level resumes. Remove does not need it - it re-opens and takes the first
+    // survivor every pass, which is what keeps a cursor from being invalidated by its own removals -
+    // but copy does not consume what it reads, so it re-opens and skips to where it left off.
+    char walk[PC_FS_MAX_DEPTH + 2][PC_FILESYSTEM_PATH_MAX];
+    char dwalk[PC_FS_MAX_DEPTH + 2][PC_FILESYSTEM_PATH_MAX];
+    uint16_t idx[PC_FS_MAX_DEPTH + 2];
+
+    // One child name, not one per level: an entry is read, used to build the next level's path, and
+    // dead. Nothing needs a previous level's child name once that level's path exists.
+    char child[PC_FILESYSTEM_PATH_MAX];
+
+    // One storage block. The copy transfers whole blocks so the store never has to read-modify-write
+    // a partial one (see PC_FS_BLOCK). Alignment is this file's problem: nothing above it knows what
+    // the mounted store erases in.
+    uint8_t block[PC_FS_BLOCK];
 };
 static FilesystemCtx s_fs;
+
+// Join a level's directory path onto a child name, separator included.
+//
+// The separator is a field of the spec, not a string the caller picks: pc_fs_join deliberately butts
+// its pieces together, because a mount root and a directory destination both already end with '/'.
+// A descent has neither, so joining a level onto a child through that spec would resolve "/a/sub" +
+// "child" to "/a/subchild".
+bool walk_join(const char *dir, const char *child, char *out, size_t cap)
+{
+    // The root is the one path that IS the separator. Every other resolved path has had its trailing
+    // '/' dropped (see pc_fs_resolve), so the descent spec always has exactly one to add.
+    if (dir[0] == '/' && dir[1] == '\0')
+    {
+        return pc_frame_build(out, cap, FILESYSTEM_JOIN, dir, child, "") != 0;
+    }
+    return pc_frame_build(out, cap, FILESYSTEM_DESCEND, dir, child) != 0;
+}
 
 // Resolve a request against @p root into buffer @p slot. Returns nullptr on a bad root, traversal,
 // or overflow, which is what makes every operation below a single null test instead of an
@@ -180,7 +222,76 @@ bool pc_fs_remove(int root, const char *dir, const char *name)
     {
         return false;
     }
-    return b->remove(p);
+
+    // One stat decides which of the two this is. A plain file is the one call it always was; a
+    // directory takes the walk below, which is what makes "delete this" mean the same thing to every
+    // caller instead of each protocol carrying its own tree logic.
+    pc_mnt_stat st;
+    if (!b->stat(p, &st))
+    {
+        return false;
+    }
+    if (!st.is_dir)
+    {
+        return b->remove(p);
+    }
+
+    // The walk. Level 0 is the resolved path; descending is lvl++, finishing a level is lvl--, and
+    // the depth a request can force is the array's extent. Each pass re-opens the current level and
+    // takes its first surviving entry, so the cursor is never carried across a removal that would
+    // invalidate it - whatever the previous pass removed is already gone when the next open happens.
+    if (pc_frame_build(s_fs.walk[0], PC_FILESYSTEM_PATH_MAX, FILESYSTEM_ROOT, p) == 0)
+    {
+        return false;
+    }
+
+    int lvl = 0;
+    for (;;)
+    {
+        int d = b->opendir(s_fs.walk[lvl]);
+        if (d < 0)
+        {
+            return false;
+        }
+        pc_mnt_stat cst;
+        bool got = b->readdir(d, &cst, s_fs.child, sizeof(s_fs.child));
+        b->close(d);
+
+        if (!got) // drained: remove this level and step back out
+        {
+            if (!b->rmdir(s_fs.walk[lvl]))
+            {
+                return false;
+            }
+            if (lvl == 0)
+            {
+                return true;
+            }
+            lvl--;
+            continue;
+        }
+
+        // The child's path, built one level up. That slot always exists: the arrays carry one entry
+        // beyond PC_FS_MAX_DEPTH so the deepest legal level can still name a child before the test
+        // below decides whether that child becomes a level.
+        if (!walk_join(s_fs.walk[lvl], s_fs.child, s_fs.walk[lvl + 1], PC_FILESYSTEM_PATH_MAX))
+        {
+            return false;
+        }
+        if (!cst.is_dir)
+        {
+            if (!b->remove(s_fs.walk[lvl + 1]))
+            {
+                return false;
+            }
+            continue; // same level, re-opened next pass
+        }
+        if (lvl + 1 > PC_FS_MAX_DEPTH)
+        {
+            return false; // refuse a pathologically deep tree rather than run off the level stack
+        }
+        lvl++;
+    }
 }
 
 bool pc_fs_rename(int root, const char *from_dir, const char *from_name, const char *to_dir, const char *to_name)
@@ -193,6 +304,133 @@ bool pc_fs_rename(int root, const char *from_dir, const char *from_name, const c
         return false;
     }
     return b->rename(fp, tp);
+}
+
+// Copy one file's bytes through the chunk buffer. The only place in this file that holds two handles
+// at once, and the only reader of s_fs.block.
+static bool copy_one(const pc_mnt_backend *b, const char *src, const char *dst)
+{
+    int in = b->open(src, static_cast<int>(pc_mnt_mode::PC_MNT_READ));
+    if (in < 0)
+    {
+        return false;
+    }
+    int out = b->open(dst, static_cast<int>(pc_mnt_mode::PC_MNT_WRITE));
+    if (out < 0)
+    {
+        b->close(in);
+        return false;
+    }
+    bool ok = true;
+    for (;;)
+    {
+        int n = b->read(in, s_fs.block, sizeof(s_fs.block));
+        if (n <= 0)
+        {
+            break;
+        }
+        if (b->write(out, s_fs.block, static_cast<size_t>(n)) != n)
+        {
+            ok = false; // out of space / write fault: reported, not left as a short copy
+            break;
+        }
+    }
+    b->close(in);
+    b->close(out);
+    return ok;
+}
+
+bool pc_fs_copy(int root, const char *from_dir, const char *from_name, const char *to_dir, const char *to_name)
+{
+    const pc_mnt_backend *b = pc_mnt_active();
+    const char *sp = resolve_into(0, root, from_dir, from_name);
+    const char *dp = resolve_into(1, root, to_dir, to_name); // both paths live at once, as in rename
+    if (b == nullptr || sp == nullptr || dp == nullptr)
+    {
+        return false;
+    }
+
+    pc_mnt_stat st;
+    if (!b->stat(sp, &st))
+    {
+        return false;
+    }
+    if (!st.is_dir)
+    {
+        return copy_one(b, sp, dp);
+    }
+
+    if (pc_frame_build(s_fs.walk[0], PC_FILESYSTEM_PATH_MAX, FILESYSTEM_ROOT, sp) == 0 ||
+        pc_frame_build(s_fs.dwalk[0], PC_FILESYSTEM_PATH_MAX, FILESYSTEM_ROOT, dp) == 0)
+    {
+        return false;
+    }
+    if (!b->mkdir(s_fs.dwalk[0]))
+    {
+        return false;
+    }
+    s_fs.idx[0] = 0;
+
+    // The same loop as pc_fs_remove with one difference: a copy does not consume what it reads, so
+    // re-opening and taking the first entry would repeat that entry forever. Each level records the
+    // child it left off at and skips forward to it, which stays correct even when a store invalidates
+    // an open cursor across the writes the copy makes into the destination.
+    int lvl = 0;
+    for (;;)
+    {
+        int d = b->opendir(s_fs.walk[lvl]);
+        if (d < 0)
+        {
+            return false;
+        }
+        pc_mnt_stat cst;
+        bool got = false;
+        for (uint16_t i = 0; i <= s_fs.idx[lvl]; i++)
+        {
+            got = b->readdir(d, &cst, s_fs.child, sizeof(s_fs.child));
+            if (!got)
+            {
+                break;
+            }
+        }
+        b->close(d);
+
+        if (!got) // exhausted: step back out and advance the parent past this level
+        {
+            if (lvl == 0)
+            {
+                return true;
+            }
+            lvl--;
+            s_fs.idx[lvl]++;
+            continue;
+        }
+
+        if (!walk_join(s_fs.walk[lvl], s_fs.child, s_fs.walk[lvl + 1], PC_FILESYSTEM_PATH_MAX) ||
+            !walk_join(s_fs.dwalk[lvl], s_fs.child, s_fs.dwalk[lvl + 1], PC_FILESYSTEM_PATH_MAX))
+        {
+            return false;
+        }
+        if (!cst.is_dir)
+        {
+            if (!copy_one(b, s_fs.walk[lvl + 1], s_fs.dwalk[lvl + 1]))
+            {
+                return false;
+            }
+            s_fs.idx[lvl]++;
+            continue;
+        }
+        if (lvl + 1 > PC_FS_MAX_DEPTH)
+        {
+            return false;
+        }
+        if (!b->mkdir(s_fs.dwalk[lvl + 1]))
+        {
+            return false;
+        }
+        lvl++;
+        s_fs.idx[lvl] = 0;
+    }
 }
 
 bool pc_fs_mkdir(int root, const char *dir, const char *name)

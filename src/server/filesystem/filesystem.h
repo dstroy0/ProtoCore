@@ -46,6 +46,11 @@ static const pc_field FILESYSTEM_JOIN[] = {PC_STR, PC_STR, PC_STR, PC_END};
 // The mount root, copied in so its trailing '/' is owned rather than assumed (see pc_fs_begin).
 static const pc_field FILESYSTEM_ROOT[] = {PC_STR, PC_END};
 
+// A descent: this level's directory, the separator, the child's own name. The separator is a field
+// rather than a string the caller supplies, because whether one is needed is a property of the
+// frame, not a decision each walk should re-derive.
+static const pc_field FILESYSTEM_DESCEND[] = {PC_STR, {PC_FK_LIT, 0, 1, "/"}, PC_STR, PC_END};
+
 /**
  * @brief Roots that can be bound at once (see pc_fs_begin).
  *
@@ -60,6 +65,35 @@ static const pc_field FILESYSTEM_ROOT[] = {PC_STR, PC_END};
 /** @brief Longest root name (e.g. "mnt/sftp"), including the terminator. */
 #ifndef PC_FS_ROOT_NAME_MAX
 #define PC_FS_ROOT_NAME_MAX 24
+#endif
+
+/**
+ * @brief How deep pc_fs_remove() / pc_fs_copy() descend before refusing a tree.
+ *
+ * The bound is what turns a tree walk into a fixed cost: one level of path storage per level, all of
+ * it in this file's context, and no call recursion - the walks are loops over that array, so the
+ * depth a request can force is the array's extent rather than however many stack frames it takes to
+ * exhaust RAM.
+ */
+#ifndef PC_FS_MAX_DEPTH
+#define PC_FS_MAX_DEPTH 8
+#endif
+
+/**
+ * @brief The storage block this file aligns its transfers to.
+ *
+ * Block alignment is ours, not the caller's and not the store's. Flash and SD both erase and program
+ * in blocks: a transfer that is not a whole block makes the store read the block, merge, and write
+ * it back, so an unaligned copy costs a read-modify-write per block and burns an erase cycle to move
+ * bytes that were already there. 512 is the SD sector and the common flash program page, so one
+ * block is one operation on both.
+ *
+ * This is why pc_fs_copy() moves a block at a time rather than "some convenient buffer size", and
+ * why the number lives here instead of at each call site - a caller cannot know what the mounted
+ * store erases in, and should not have to.
+ */
+#ifndef PC_FS_BLOCK
+#define PC_FS_BLOCK 512
 #endif
 
 /** @brief Join a mount @p root, a request @p dir, and a leaf @p name into @p out.
@@ -169,10 +203,26 @@ long pc_fs_size(int root, const char *dir, const char *name);
 bool pc_fs_exists(int root, const char *dir, const char *name);
 /** @brief Fill @p out with the facts about @p dir + @p name. @return false if absent. */
 bool pc_fs_stat(int root, const char *dir, const char *name, pc_mnt_stat *out);
-/** @brief Delete the file at @p dir + @p name. @return true on success. */
+/**
+ * @brief Delete @p dir + @p name: a file, or a directory and everything under it.
+ *
+ * The subtree is this file's operation, not the mount's and not a protocol server's. mnt is blind -
+ * it does not know what a path means, so it cannot know what a subtree is - and a protocol server
+ * that assembled one out of opendir/readdir/remove would need a level stack, a depth bound, a path
+ * buffer per level, and a rule for not invalidating the cursor it is standing on. WebDAV, SFTP and
+ * SCP would each need their own. There is one here.
+ *
+ * @return true when the whole tree is gone; false if any part of it could not be removed.
+ */
 bool pc_fs_remove(int root, const char *dir, const char *name);
 /** @brief Rename @p from_dir + @p from_name to @p to_dir + @p to_name. @return true on success. */
 bool pc_fs_rename(int root, const char *from_dir, const char *from_name, const char *to_dir, const char *to_name);
+/**
+ * @brief Copy @p from_dir + @p from_name onto @p to_dir + @p to_name: a file, or a whole tree.
+ *
+ * The destination is replaced if it exists. @return true when the whole tree arrived.
+ */
+bool pc_fs_copy(int root, const char *from_dir, const char *from_name, const char *to_dir, const char *to_name);
 /** @brief Create a directory at @p dir + @p name. @return true on success. */
 bool pc_fs_mkdir(int root, const char *dir, const char *name);
 /** @brief Remove the empty directory at @p dir + @p name. @return true on success. */
