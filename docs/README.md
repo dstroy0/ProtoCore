@@ -398,12 +398,16 @@ src/
 │   │   ├── secure.cpp
 │   │   ├── secure.h
 │   │   └── span.h
+│   ├── signaling/
+│   │   ├── route.cpp
+│   │   ├── route.h
+│   │   ├── signaling.cpp
+│   │   └── signaling.h
 │   ├── auth.cpp
 │   ├── file_serving.cpp
 │   ├── http_range.cpp
 │   ├── http_range.h
 │   ├── middleware.cpp
-│   ├── protocore_internal.h
 │   ├── regex.cpp
 │   ├── response.cpp
 │   ├── ssh_scp.cpp
@@ -743,6 +747,7 @@ src/
 │   ├── ring.h
 │   ├── speed_opt.h
 │   ├── strbuf.h
+│   ├── swar.h
 │   ├── time_compat.h
 │   └── utf8.h
 ├── protocore.cpp
@@ -835,11 +840,11 @@ Feature Tables workflow from `docs/footprints.json`.
 | `core/WebSocket` | `L6-Presentation/WebSocket` | 756,825 | 81,844 |
 | `core/ResponseHeaders` | `L7-Application/ResponseHeaders` | 756,849 | 81,844 |
 | `core/Middleware` | `L7-Application/Middleware` | 756,885 | 81,844 |
-| `DIAG` | `L7-Application/Diagnostics` | 757,037 | 81,844 |
+| `DIAG` | `L7-Application/Diagnostics` | 757,033 | 81,844 |
 | `core/NetEgress` | `L7-Application/NetEgress` | 757,097 | 81,844 |
 | `GUARDRAILS` | `L7-Application/Guardrails` | 757,105 | 81,852 |
 | `core/FormParams` | `L6-Presentation/FormParams` | 757,105 | 81,844 |
-| `core/ChunkedResponse` | `L7-Application/ChunkedResponse` | 757,145 | 81,852 |
+| `core/ChunkedResponse` | `L7-Application/ChunkedResponse` | 757,125 | 81,852 |
 | `core/ServerSentEvents` | `L6-Presentation/ServerSentEvents` | 757,261 | 81,852 |
 | `AUTH_LOCKOUT` | `L6-Presentation/AuthLockout` | 757,345 | 82,420 |
 | `OTA_ROLLBACK` | `L7-Application/OtaRollback` | 757,437 | 81,844 |
@@ -852,24 +857,24 @@ Feature Tables workflow from `docs/footprints.json`.
 | `core/Templating` | `L7-Application/Templating` | 758,337 | 81,876 |
 | `SIMATIC` | `L7-Application/SimaticSerial` | 758,481 | 83,316 |
 | `MODBUS` | `L7-Application/ModbusTcp` | 758,533 | 82,124 |
-| `STATS` | `L7-Application/Stats` | 758,541 | 81,940 |
-| `CONTROL` | `L7-Application/PidTuning` | 758,577 | 89,916 |
+| `STATS` | `L7-Application/Stats` | 758,545 | 81,940 |
+| `CONTROL` | `L7-Application/PidTuning` | 758,553 | 89,916 |
 | `PACKML` | `L7-Application/PackML` | 758,809 | 81,884 |
+| `CBOR` | `L6-Presentation/Cbor` | 758,857 | 81,916 |
 | `CSRF` | `L7-Application/Csrf` | 758,889 | 83,220 |
-| `CBOR` | `L6-Presentation/Cbor` | 758,937 | 81,916 |
 | `MODBUS+MODBUS_MASTER` | `L7-Application/ModbusScan` | 758,977 | 82,116 |
 | `IPV6` | `Foundation/IPv6` | 759,029 | 81,844 |
 | `AUDIT_LOG` | `L7-Application/AuditLog` | 759,149 | 84,828 |
 | `core/Expert` | `Foundation/Expert` | 759,217 | 81,860 |
 | `JWT` | `L6-Presentation/JWTAuth` | 759,365 | 84,308 |
-| `MSGPACK` | `L6-Presentation/MsgPack` | 760,273 | 81,916 |
+| `MSGPACK` | `L6-Presentation/MsgPack` | 760,125 | 81,916 |
 | `SYSLOG` | `L7-Application/Syslog` | 760,365 | 83,748 |
 | `AUTH_LOCKOUT+FORWARDED_TRUST` | `L6-Presentation/ForwardedTrust` | 760,465 | 82,460 |
 | `core/Json` | `L6-Presentation/Json` | 760,489 | 81,844 |
-| `STATS+METRICS` | `L7-Application/PrometheusMetrics` | 760,501 | 81,980 |
-| `WS_DEFLATE` | `L6-Presentation/WebSocketCompression` | 761,193 | 90,044 |
+| `STATS+METRICS` | `L7-Application/PrometheusMetrics` | 760,505 | 81,980 |
+| `WS_DEFLATE` | `L6-Presentation/WebSocketCompression` | 761,197 | 90,044 |
 | `CONFIG_STORE+CONFIG_IO` | `L7-Application/ConfigExport` | 761,461 | 81,904 |
-| `OTA` | `L7-Application/OTA` | 761,917 | 102,172 |
+| `OTA` | `L7-Application/OTA` | 761,945 | 102,172 |
 | `DNS_RESOLVER` | `L7-Application/DnsResolver` | 762,401 | 83,124 |
 | `PARTITION_MONITOR` | `L7-Application/PartitionMonitor` | 762,481 | 81,844 |
 | `GRAPHQL` | `L7-Application/GraphQL` | 762,793 | 86,252 |
@@ -897,11 +902,11 @@ Feature Tables workflow from `docs/footprints.json`.
 | `BUS_CAPTURE+FORWARD+ETHERNET` | `Peripherals/CanCapture` | 772,165 | 45,568 |
 | `NTRIP_CASTER` | `L7-Application/NtripCaster` | 774,721 | 84,760 |
 | `NTP+TIME_SOURCE` | `L7-Application/TimeSourceFallback` | 777,677 | 83,452 |
-| `EDGE_CACHE+HTTP_CACHE+HTTP_CLIENT` | `L7-Application/EdgeCache` | 777,953 | 119,324 |
+| `EDGE_CACHE+HTTP_CACHE+HTTP_CLIENT` | `L7-Application/EdgeCache` | 777,933 | 119,324 |
 | `EDGE_CACHE+HTTP_CACHE+HTTP_CLIENT+EDGE_MESH` | `L7-Application/MeshCache` | 778,433 | 124,240 |
 | `MDNS` | `L7-Application/mDNS` | 781,793 | 83,752 |
 | `NTP` | `L7-Application/SNTP` | 782,189 | 84,392 |
-| `EDGE_CACHE+HTTP_CACHE+HTTP_CLIENT+EDGE_MESH+EDGE_CACHE_SLOTS+EDGE_FETCH_SLOTS+MESH_MAX_PEERS` | `L7-Application/MeshCache` | 782,585 | 115,380 |
+| `EDGE_CACHE+HTTP_CACHE+HTTP_CLIENT+EDGE_MESH+EDGE_CACHE_SLOTS+EDGE_FETCH_SLOTS+MESH_MAX_PEERS` | `L7-Application/MeshCache` | 782,565 | 115,380 |
 | `DASHBOARD` | `L7-Application/Dashboard` | 782,989 | 82,212 |
 | `MDNS+PROMISC+WIFI_SNIFFER+MDNS_ADAPTIVE` | `L7-Application/MdnsAdaptive` | 783,853 | 83,832 |
 | `IFACE_BRIDGE` | `L7-Application/InterfaceBridge` | 784,405 | 82,684 |
@@ -909,28 +914,28 @@ Feature Tables workflow from `docs/footprints.json`.
 | `ETHERNET` | `Peripherals/Ethernet` | 795,681 | 81,888 |
 | `ETHERNET+ETH_W5500+ETH_W5500_CS+ETH_W5500_RST+ETH_W5500_INT+ETH_W5500_SCK+ETH_W5500_MISO+ETH_W5500_MOSI` | `Peripherals/EthernetW5500` | 795,713 | 81,888 |
 | `core/FileServing` | `L7-Application/FileServing` | 797,713 | 81,876 |
-| `UPLOAD` | `L7-Application/FileUpload` | 798,849 | 101,988 |
+| `UPLOAD` | `L7-Application/FileUpload` | 798,873 | 101,988 |
 | `RANGE` | `L7-Application/Range` | 798,985 | 81,876 |
 | `VFS` | `L7-Application/Vfs` | 799,825 | 86,364 |
 | `WEBDAV` | `L7-Application/WebDav` | 821,069 | 105,352 |
-| `WEBDAV+WEBDAV_MAX_ENTRIES+WEBDAV_BUF_SIZE` | `L7-Application/WebDav` | 828,613 | 92,364 |
+| `WEBDAV+WEBDAV_MAX_ENTRIES+WEBDAV_BUF_SIZE` | `L7-Application/WebDav` | 828,641 | 92,364 |
 | `WS_CLIENT+TLS+WS_CLIENT_TLS` | `L7-Application/WebSocketClient` | 831,333 | 120,548 |
 | `WS_CLIENT+TLS+WS_CLIENT_TLS+WS_CLIENT_BUF_SIZE` | `L7-Application/WebSocketClient` | 831,745 | 123,620 |
 | `WS_CLIENT+TLS+WS_CLIENT_TLS+WS_CLIENT_BUF_SIZE+TLS_ARENA_SIZE` | `L7-Application/WebSocketClient` | 832,797 | 107,272 |
 | `ETAG` | `L7-Application/ETag` | 832,909 | 83,140 |
-| `SSH` | `L5-Session/SSHHostKey` | 836,905 | 112,168 |
+| `SSH` | `L5-Session/SSHHostKey` | 837,281 | 112,200 |
 | `HOTSWAP` | `L7-Application/HotSwapStorage` | 842,185 | 82,768 |
 | `EXC_DECODER+FTP+FTP_SESSION` | `L7-Application/CoreDump` | 844,789 | 83,476 |
-| `HTTP_DELIVERY+FILE_SERVING+RANGE` | `L7-Application/HttpDelivery` | 846,337 | 82,752 |
-| `SSH+SSH_CLIENT+SSH_CLIENT_MAX_CHANNELS+CLIENT_RX_BUF` | `L5-Session/SSHReverseTunnel` | 852,489 | 116,640 |
+| `HTTP_DELIVERY+FILE_SERVING+RANGE` | `L7-Application/HttpDelivery` | 846,333 | 82,752 |
+| `SSH+SSH_CLIENT+SSH_CLIENT_MAX_CHANNELS+CLIENT_RX_BUF` | `L5-Session/SSHReverseTunnel` | 852,841 | 116,672 |
 | `TLS` | `L6-Presentation/SecureWebSocket` | 855,873 | 122,020 |
 | `TLS+TLS_RESUMPTION` | `L4-Transport/TlsResumption` | 856,693 | 122,180 |
 | `TLS+MTLS` | `L4-Transport/mTLS` | 856,829 | 122,356 |
-| `TLS+TLS_ARENA_SIZE` | `L6-Presentation/SecureWebSocket` | 861,109 | 105,712 |
-| `TLS+TLS_RESUMPTION+TLS_ARENA_SIZE` | `L4-Transport/TlsResumption` | 861,865 | 105,864 |
-| `TLS+MTLS+TLS_ARENA_SIZE` | `L4-Transport/mTLS` | 861,961 | 106,040 |
+| `TLS+TLS_ARENA_SIZE` | `L6-Presentation/SecureWebSocket` | 861,137 | 105,712 |
+| `TLS+TLS_RESUMPTION+TLS_ARENA_SIZE` | `L4-Transport/TlsResumption` | 861,889 | 105,864 |
+| `TLS+MTLS+TLS_ARENA_SIZE` | `L4-Transport/mTLS` | 861,985 | 106,040 |
 | `POWER_MGMT` | `L7-Application/PowerGovernor` | 885,025 | 85,696 |
-| `SSH+FILE_SERVING+SSH_SFTP+SSH_SCP` | `L5-Session/SSHSftp` | 890,057 | 121,544 |
+| `SSH+FILE_SERVING+SSH_SFTP+SSH_SCP` | `L5-Session/SSHSftp` | 890,397 | 121,544 |
 
 <!-- prettier-ignore-end -->
 
@@ -1009,7 +1014,7 @@ The complete set of `PC_ENABLE_*` flags and their defaults, scraped from
 | `PC_ENABLE_AMQP` | `0` | AMQP 0-9-1 frame codec (`services/amqp`). |
 | `PC_ENABLE_ATC` | `0` | Opt-in ATC (Advanced Traffic Controller) field-I/O interop snapshot. |
 | `PC_ENABLE_AUDIT_LOG` | `0` | Tamper-evident audit log. |
-| `PC_ENABLE_AUTH` | `1` | HTTP Basic Authentication per-route. |
+| `PC_ENABLE_AUTH` | `0` | HTTP Basic Authentication per-route. |
 | `PC_ENABLE_AUTH_LOCKOUT` | `0` | Opt-in per-IP brute-force lockout for HTTP auth (requires PC_ENABLE_AUTH). |
 | `PC_ENABLE_BACNET` | `0` | BACnet/IP BVLC + NPDU codec (`services/bacnet`). |
 | `PC_ENABLE_BLE_GATT` | `0` | Opt-in Bluetooth ATT protocol codec + GATT characteristic bridge. |
@@ -1061,7 +1066,7 @@ The complete set of `PC_ENABLE_*` flags and their defaults, scraped from
 | `PC_ENABLE_FAILSAFE` | `0` | Opt-in software watchdog: deadlock detection + fail-safe safe-state. |
 | `PC_ENABLE_FANUC_J519` | `0` | FANUC Stream Motion (option J519) UDP codec (`services/fanuc_j519`). |
 | `PC_ENABLE_FDC2214` | `0` | Opt-in FDC2114/2214 capacitance-to-digital field sensor. |
-| `PC_ENABLE_FILE_SERVING` | `1` | Static file serving via Arduino FS (LittleFS, SPIFFS, SD). |
+| `PC_ENABLE_FILE_SERVING` | `0` | Static file serving via Arduino FS (LittleFS, SPIFFS, SD). |
 | `PC_ENABLE_FINS` | `0` | Omron FINS frame codec (`services/fins`). |
 | `PC_ENABLE_FLOW_EXPORT` | `0` | Flow-record export codec (`services/flow_export`). |
 | `PC_ENABLE_FOCAS` | `0` | FANUC FOCAS Ethernet protocol codec (`services/focas`). |
@@ -1102,7 +1107,7 @@ The complete set of `PC_ENABLE_*` flags and their defaults, scraped from
 | `PC_ENABLE_J1939` | `0` | SAE J1939 message codec (`services/j1939`). |
 | `PC_ENABLE_J2735` | `0` | Opt-in SAE J2735 V2X codec. |
 | `PC_ENABLE_JWT` | `0` | JWT bearer-token authentication (HS256). |
-| `PC_ENABLE_KEEPALIVE` | `1` | HTTP/1.1 persistent connections (keep-alive). |
+| `PC_ENABLE_KEEPALIVE` | `0` | HTTP/1.1 persistent connections (keep-alive). |
 | `PC_ENABLE_LD2410` | `0` | HLK-LD2410 24 GHz mmWave presence / motion radar (UART). |
 | `PC_ENABLE_LDC1614` | `0` | Opt-in LDC1614 inductance-to-digital field sensor. |
 | `PC_ENABLE_LINK_MANAGER` | `0` | Opt-in multi-interface egress selection / failover policy. |
@@ -1129,7 +1134,7 @@ The complete set of `PC_ENABLE_*` flags and their defaults, scraped from
 | `PC_ENABLE_MSGPACK` | `0` | Zero-heap MessagePack encoder and decoder for compact binary payloads. |
 | `PC_ENABLE_MTCONNECT` | `0` | Opt-in MTConnect agent response codec. |
 | `PC_ENABLE_MTLS` | `0` | Mutual TLS - require and verify a client certificate (mTLS). |
-| `PC_ENABLE_MULTIPART` | `1` | multipart/form-data body parser. |
+| `PC_ENABLE_MULTIPART` | `0` | multipart/form-data body parser. |
 | `PC_ENABLE_NATS` | `0` | NATS client protocol codec (`services/nats`). |
 | `PC_ENABLE_NEMA_TS2` | `0` | Opt-in NEMA TS 2 traffic-cabinet SDLC frame codec. |
 | `PC_ENABLE_NETADAPT` | `0` | Opt-in network adaptation decisions. |
@@ -1201,7 +1206,7 @@ The complete set of `PC_ENABLE_*` flags and their defaults, scraped from
 | `PC_ENABLE_SPARKPLUG` | `0` | Sparkplug B payload + topic codec (`services/sparkplug`). |
 | `PC_ENABLE_SPA_ROUTER` | `0` | Opt-in single-page-app micro-routing decision. |
 | `PC_ENABLE_SQLITE` | `0` | Opt-in SQLite3 on-disk file-format reader. |
-| `PC_ENABLE_SSE` | `1` | Server-Sent Events push support. |
+| `PC_ENABLE_SSE` | `0` | Server-Sent Events push support. |
 | `PC_ENABLE_SSH` | `0` | SSH server support (RFC 4253/4252/4254). |
 | `PC_ENABLE_SSH_CLIENT` | `0` | Outbound SSH client + reverse tunnel (RFC 4254 §7.1 tcpip-forward, the `ssh -R` seam). |
 | `PC_ENABLE_SSH_KEYBOARD_INTERACTIVE` | `0` | SSH keyboard-interactive authentication (RFC 4256), default off. |
@@ -1238,7 +1243,7 @@ The complete set of `PC_ENABLE_*` flags and their defaults, scraped from
 | `PC_ENABLE_WEARLEVEL` | `0` | Opt-in flash wear-leveling slot selector. |
 | `PC_ENABLE_WEBDAV` | `0` | WebDAV server (RFC 4918, class 1 + advisory locks) over the file system. |
 | `PC_ENABLE_WEBHOOK` | `0` | Opt-in outbound webhooks / IFTTT. |
-| `PC_ENABLE_WEBSOCKET` | `1` | WebSocket support (RFC 6455 framing + SHA-1/base64 handshake). |
+| `PC_ENABLE_WEBSOCKET` | `0` | WebSocket support (RFC 6455 framing + SHA-1/base64 handshake). |
 | `PC_ENABLE_WEB_TERMINAL` | `0` | Browser "web serial" terminal over WebSocket (src/services/web/web_terminal). |
 | `PC_ENABLE_WIFI_SNIFFER` | `0` | Opt-in 802.11 sniffer / traffic analyzer. |
 | `PC_ENABLE_WISUN` | `0` | Opt-in Wi-SUN FAN border-router connector. |
@@ -1293,7 +1298,7 @@ guards at compile time.
 | `MAX_MIDDLEWARE` | `4` | Maximum globally-registered middleware functions. |
 | `MAX_MULTIPART_PARTS` | `4` | Maximum simultaneously parsed multipart parts per request. |
 | `MAX_PATH_LEN` | `64` | Maximum URL path length (including leading `/`). |
-| `MAX_PATH_PARAMS` | `4` | Maximum number of `:name` path parameters captured per route match. |
+| `MAX_PATH_PARAMS` | `4` |  |
 | `MAX_QUERY_LEN` | `128` | Maximum raw query-string length (everything after `?`). |
 | `MAX_QUERY_PARAMS` | `8` | Maximum number of parsed query-string parameters. |
 | `MAX_ROUTES` | `16` | Maximum simultaneously registered routes. |
@@ -1334,6 +1339,7 @@ guards at compile time.
 | `PC_CONFIG_VAL_MAX` | `64` | Max value bytes per entry in the host (test) config backend. |
 | `PC_DASHBOARD_JSON_BUF` | `1024` | Stack buffer for the dashboard layout / values JSON (bytes). |
 | `PC_DASHBOARD_MAX_WIDGETS` | `16` | Maximum widgets in the dashboard table (BSS value array). |
+| `PC_DAV_MAX_DEPTH` | `8` | Deepest tree a WebDAV DELETE / COPY walks before refusing (see PC_ENABLE_WEBDAV). |
 | `PC_DEBUG_CHECKS` | `0` | Compile the library's internal debug checks (default 0 = off). |
 | `PC_DEFER_QUEUE_DEPTH` | `8` | Depth of each worker's deferred-callback queue. |
 | `PC_DELIVERY_MANIFEST_BUF` | `512` | Buffer the precache manifest JSON is built into. |
@@ -1386,7 +1392,7 @@ guards at compile time.
 | `PC_HOTSWAP_PROBE_MS` | `2000` | Minimum gap between remount attempts while a volume is absent or faulted (ms). |
 | `PC_HPACK_MAX_ENTRIES` | `128` | Max HPACK dynamic-table entries (>= PC_HPACK_TABLE_BYTES / 32, the min entry size). |
 | `PC_HPACK_TABLE_BYTES` | `4096` | Per-connection HPACK dynamic-table size in bytes (our decoder; advertised to the peer as SETTINGS_HEADER_TABLE_SIZE). |
-| `PC_HTTP3_PORT` | `443` | UDP port the HTTP/3 (QUIC) server binds by default (used by PC::pc_h3_cert). |
+| `PC_HTTP3_PORT` | `443` | UDP port the HTTP/3 (QUIC) server binds by default (used by pc_h3_cert). |
 | `PC_HTTP_CLIENT_BUF_SIZE` | `2048` | Receive buffer (and max response size) for the outbound HTTP client, bytes. |
 | `PC_HTTP_CLIENT_CT_BUF_SIZE` | `4096` | Ciphertext receive-ring size for the https:// client, bytes. |
 | `PC_HTTP_CLIENT_TIMEOUT_MS` | `8000` | Outbound HTTP client connect/response timeout in milliseconds. |
@@ -1429,6 +1435,7 @@ guards at compile time.
 | `PC_OTA_CONFIRM_WINDOW_MS` | `30000` | Confirm window (ms): a pending image not confirmed within this rolls back. |
 | `PC_PARTITION_JSON_BUF` | `1024` | Stack buffer for the partition-map JSON (bytes). |
 | `PC_PARTITION_MAX` | `16` | Maximum partitions the monitor reports (BSS table). |
+| `PC_PATH_PARAM_BYTES` | `128` | Bytes one request holds for its `:name` path captures, keys and values together. |
 | `PC_PCA9685_FREQ` | `50` | Default PWM output frequency in Hz (50 Hz suits hobby servos). |
 | `PC_PCA9685_I2C_ADDR` | `0x40` | I2C address of the PCA9685 (0x40 default; the six address pins select 0x40..0x7F). |
 | `PC_PER_IP_THROTTLE_MAX` | `10` | Max accepted connections per window from one source IP (see PC_ENABLE_PER_IP_THROTTLE). |
