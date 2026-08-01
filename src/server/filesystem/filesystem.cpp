@@ -12,36 +12,41 @@
  */
 
 #include "server/filesystem/filesystem.h"
-
-#if PC_ENABLE_MNT
+#include <string.h> // strncmp (root-name match)
 
 namespace
 {
 // Root plus the resolved-path storage, owned by one instance (internal linkage). The root is here
 // rather than in each protocol server because it is a property of what is mounted: two servers over
 // the same storage cannot disagree about where it begins.
+// One bound root. The prefix is a copy, not the caller's pointer: the join emits `root || dir` with
+// no separator of its own because a root ending in '/' is a known property, and owning the bytes is
+// what makes it known rather than assumed. A caller-supplied "/gcode" resolved `/part.nc` to
+// `/gcodepart.nc` when that was left to the caller.
+struct FsRoot
+{
+    char name[PC_FS_ROOT_NAME_MAX];    ///< what a service asked for, e.g. "mnt/scp".
+    char path[PC_FILESYSTEM_PATH_MAX]; ///< the prefix it resolves to; always ends '/'.
+};
+
 struct FilesystemCtx
 {
-    // A copy, not the caller's pointer: the join emits `root || dir` with no separator of its own
-    // because a root ending in '/' is a known property, and owning the bytes is what makes it known
-    // rather than assumed. A caller-supplied "/gcode" resolved `/part.nc` to `/gcodepart.nc`.
-    // "/" until pc_fs_begin() says otherwise, so a resolve before setup joins onto a valid root
-    // rather than an empty string. Stated on the member, not at the instance, so the declaration
-    // does not have to name every other field to say this one thing.
-    char root[PC_FILESYSTEM_PATH_MAX] = "/";
+    FsRoot root[PC_FS_MAX_ROOTS];
+    uint8_t count;
     char path[2][PC_FILESYSTEM_PATH_MAX];
 };
 static FilesystemCtx s_fs;
 
-// Resolve a request into buffer @p slot. Returns nullptr on traversal or overflow, which is what
-// makes every operation below a single null test instead of an error-code ladder.
-const char *resolve_into(int slot, const char *dir, const char *name)
+// Resolve a request against @p root into buffer @p slot. Returns nullptr on a bad root, traversal,
+// or overflow, which is what makes every operation below a single null test instead of an
+// error-code ladder.
+const char *resolve_into(int slot, int root, const char *dir, const char *name)
 {
-    if (dir == nullptr || name == nullptr)
+    if (root < 0 || root >= (int)s_fs.count || dir == nullptr || name == nullptr)
     {
         return nullptr;
     }
-    if (pc_fs_resolve(s_fs.root, dir, name, s_fs.path[slot], PC_FILESYSTEM_PATH_MAX) != 0)
+    if (pc_fs_resolve(s_fs.root[root].path, dir, name, s_fs.path[slot], PC_FILESYSTEM_PATH_MAX) != 0)
     {
         return nullptr;
     }
@@ -49,32 +54,57 @@ const char *resolve_into(int slot, const char *dir, const char *name)
 }
 } // namespace
 
-void pc_fs_begin(const char *root)
+int pc_fs_begin(const char *name)
 {
-    // One byte of the capacity is held back for the separator below, so appending it cannot overrun.
-    size_t n = (root == nullptr) ? 0 : pc_frame_build(s_fs.root, PC_FILESYSTEM_PATH_MAX - 1, FILESYSTEM_ROOT, root);
-    if (n == 0) // empty, or a root that does not fit - refused, not truncated into another directory
+    const char *want = (name == nullptr || name[0] == '\0') ? "/" : name;
+
+    // Binding a name already bound hands back the same root. Two services naming the same storage
+    // is an arrangement the application is entitled to make, and it must not cost a second root or
+    // give them two views of one thing.
+    for (uint8_t i = 0; i < s_fs.count; i++)
     {
-        s_fs.root[0] = '/';
-        s_fs.root[1] = '\0';
-        return;
+        if (strncmp(s_fs.root[i].name, want, PC_FS_ROOT_NAME_MAX) == 0)
+        {
+            return (int)i;
+        }
     }
-    if (s_fs.root[n - 1] != '/') // the engine returned the length, so the last byte is an index
+    if (s_fs.count >= PC_FS_MAX_ROOTS)
     {
-        s_fs.root[n] = '/';      // the separator the join relies on, added once here rather than
-        s_fs.root[n + 1] = '\0'; // tested on every resolve
+        return -1; // refused, not silently aliased onto someone else's root
     }
+
+    FsRoot *r = &s_fs.root[s_fs.count];
+
+    // One byte of the capacity is held back for the separator below, so appending cannot overrun.
+    size_t n = pc_frame_build(r->path, PC_FILESYSTEM_PATH_MAX - 1, FILESYSTEM_ROOT, want);
+    if (n == 0) // a root that does not fit - refused, not truncated into another directory
+    {
+        return -1;
+    }
+    if (r->path[n - 1] != '/') // the engine returned the length, so the last byte is an index
+    {
+        r->path[n] = '/';      // the separator the join relies on, added once here rather than
+        r->path[n + 1] = '\0'; // tested on every resolve
+    }
+    if (pc_frame_build(r->name, PC_FS_ROOT_NAME_MAX, FILESYSTEM_ROOT, want) == 0)
+    {
+        return -1; // a name too long to record is a name that could not be matched again
+    }
+
+    int id = (int)s_fs.count;
+    s_fs.count++;
+    return id;
 }
 
-const char *pc_fs_path(const char *dir, const char *name)
+const char *pc_fs_path(int root, const char *dir, const char *name)
 {
-    return resolve_into(0, dir, name);
+    return resolve_into(0, root, dir, name);
 }
 
-int pc_fs_open(const char *dir, const char *name, pc_mnt_mode mode)
+int pc_fs_open(int root, const char *dir, const char *name, pc_mnt_mode mode)
 {
     const pc_mnt_backend *b = pc_mnt_active();
-    const char *p = resolve_into(0, dir, name);
+    const char *p = resolve_into(0, root, dir, name);
     if (b == nullptr || p == nullptr)
     {
         return -1;
@@ -109,10 +139,10 @@ bool pc_fs_seek(int handle, uint64_t off)
     return (b == nullptr) ? false : b->seek(handle, off);
 }
 
-long pc_fs_size(const char *dir, const char *name)
+long pc_fs_size(int root, const char *dir, const char *name)
 {
     const pc_mnt_backend *b = pc_mnt_active();
-    const char *p = resolve_into(0, dir, name);
+    const char *p = resolve_into(0, root, dir, name);
     if (b == nullptr || p == nullptr)
     {
         return -1;
@@ -120,10 +150,10 @@ long pc_fs_size(const char *dir, const char *name)
     return b->size(p);
 }
 
-bool pc_fs_exists(const char *dir, const char *name)
+bool pc_fs_exists(int root, const char *dir, const char *name)
 {
     const pc_mnt_backend *b = pc_mnt_active();
-    const char *p = resolve_into(0, dir, name);
+    const char *p = resolve_into(0, root, dir, name);
     if (b == nullptr || p == nullptr)
     {
         return false;
@@ -131,10 +161,10 @@ bool pc_fs_exists(const char *dir, const char *name)
     return b->exists(p);
 }
 
-bool pc_fs_stat(const char *dir, const char *name, pc_mnt_stat *out)
+bool pc_fs_stat(int root, const char *dir, const char *name, pc_mnt_stat *out)
 {
     const pc_mnt_backend *b = pc_mnt_active();
-    const char *p = resolve_into(0, dir, name);
+    const char *p = resolve_into(0, root, dir, name);
     if (b == nullptr || p == nullptr)
     {
         return false;
@@ -142,10 +172,10 @@ bool pc_fs_stat(const char *dir, const char *name, pc_mnt_stat *out)
     return b->stat(p, out);
 }
 
-bool pc_fs_remove(const char *dir, const char *name)
+bool pc_fs_remove(int root, const char *dir, const char *name)
 {
     const pc_mnt_backend *b = pc_mnt_active();
-    const char *p = resolve_into(0, dir, name);
+    const char *p = resolve_into(0, root, dir, name);
     if (b == nullptr || p == nullptr)
     {
         return false;
@@ -153,11 +183,11 @@ bool pc_fs_remove(const char *dir, const char *name)
     return b->remove(p);
 }
 
-bool pc_fs_rename(const char *from_dir, const char *from_name, const char *to_dir, const char *to_name)
+bool pc_fs_rename(int root, const char *from_dir, const char *from_name, const char *to_dir, const char *to_name)
 {
     const pc_mnt_backend *b = pc_mnt_active();
-    const char *fp = resolve_into(0, from_dir, from_name);
-    const char *tp = resolve_into(1, to_dir, to_name); // the one op needing both paths live at once
+    const char *fp = resolve_into(0, root, from_dir, from_name);
+    const char *tp = resolve_into(1, root, to_dir, to_name); // the one op needing both paths live at once
     if (b == nullptr || fp == nullptr || tp == nullptr)
     {
         return false;
@@ -165,10 +195,10 @@ bool pc_fs_rename(const char *from_dir, const char *from_name, const char *to_di
     return b->rename(fp, tp);
 }
 
-bool pc_fs_mkdir(const char *dir, const char *name)
+bool pc_fs_mkdir(int root, const char *dir, const char *name)
 {
     const pc_mnt_backend *b = pc_mnt_active();
-    const char *p = resolve_into(0, dir, name);
+    const char *p = resolve_into(0, root, dir, name);
     if (b == nullptr || p == nullptr)
     {
         return false;
@@ -176,10 +206,10 @@ bool pc_fs_mkdir(const char *dir, const char *name)
     return b->mkdir(p);
 }
 
-bool pc_fs_rmdir(const char *dir, const char *name)
+bool pc_fs_rmdir(int root, const char *dir, const char *name)
 {
     const pc_mnt_backend *b = pc_mnt_active();
-    const char *p = resolve_into(0, dir, name);
+    const char *p = resolve_into(0, root, dir, name);
     if (b == nullptr || p == nullptr)
     {
         return false;
@@ -187,10 +217,10 @@ bool pc_fs_rmdir(const char *dir, const char *name)
     return b->rmdir(p);
 }
 
-int pc_fs_opendir(const char *dir, const char *name)
+int pc_fs_opendir(int root, const char *dir, const char *name)
 {
     const pc_mnt_backend *b = pc_mnt_active();
-    const char *p = resolve_into(0, dir, name);
+    const char *p = resolve_into(0, root, dir, name);
     if (b == nullptr || p == nullptr)
     {
         return -1;
@@ -204,10 +234,10 @@ bool pc_fs_readdir(int handle, pc_mnt_stat *out, char *name, size_t name_cap)
     return (b == nullptr) ? false : b->readdir(handle, out, name, name_cap);
 }
 
-long pc_fs_read_file(const char *dir, const char *name, void *buf, size_t cap)
+long pc_fs_read_file(int root, const char *dir, const char *name, void *buf, size_t cap)
 {
     const pc_mnt_backend *b = pc_mnt_active();
-    const char *p = resolve_into(0, dir, name); // resolved once; the loop below works on the handle
+    const char *p = resolve_into(0, root, dir, name); // resolved once; the loop below works on the handle
     if (b == nullptr || p == nullptr)
     {
         return -1;
@@ -237,10 +267,10 @@ long pc_fs_read_file(const char *dir, const char *name, void *buf, size_t cap)
     return static_cast<long>(total);
 }
 
-bool pc_fs_write_file(const char *dir, const char *name, const void *buf, size_t n)
+bool pc_fs_write_file(int root, const char *dir, const char *name, const void *buf, size_t n)
 {
     const pc_mnt_backend *b = pc_mnt_active();
-    const char *p = resolve_into(0, dir, name);
+    const char *p = resolve_into(0, root, dir, name);
     if (b == nullptr || p == nullptr)
     {
         return false;
@@ -264,5 +294,3 @@ bool pc_fs_write_file(const char *dir, const char *name, const void *buf, size_t
     b->close(h);
     return total == n;
 }
-
-#endif // PC_ENABLE_MNT

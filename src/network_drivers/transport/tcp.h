@@ -116,7 +116,7 @@ struct TcpConn
 /**
  * @brief softAP IPv4 address (network byte order) for STA/AP interface tagging.
  *
- * Zero when no softAP is configured. Set via PC::set_ap_ip(); the
+ * Zero when no softAP is configured. Set via set_ap_ip(); the
  * accept callback tags each connection pc_iface::PC_IFACE_AP when its local IP equals
  * this, else pc_iface::PC_IFACE_STA. Used by per-route interface filters.
  */

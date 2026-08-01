@@ -13,7 +13,7 @@ consuming stack already speaks it - the API and the zero-heap pattern are
 identical.
 
 **Encoding with `pc_span`.** Initialize over a stack buffer, declare the map
-size, emit pairs, check `pc_msgpack_ok()`, write `pc_msgpack_len()` bytes:
+size, emit pairs, check `pc_span_ok()`, write `pc_span_len()` bytes:
 
 ```cpp
 uint8_t buf[64];

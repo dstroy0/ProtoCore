@@ -14,7 +14,6 @@
 
 #include "network_drivers/transport/tcp.h" // conn_pool, pc_conn_*, TcpConn/ConnState
 #include "protocore.h"
-#include "server/protocore_internal.h"
 #include "shared_primitives/strbuf.h" // pc_sb frame builder
 #if PC_ENABLE_WEBSOCKET
 #include "crypto/hash/sha1.h"                                      // pc_sha1, PC_SHA1_DIGEST_LEN
@@ -236,7 +235,7 @@ bool pc_sse_do_upgrade(uint8_t slot_id, HttpReq *req, SseConnectHandler on_conne
 // ---------------------------------------------------------------------------
 
 #if PC_ENABLE_WEBSOCKET
-void PC::ws_send_text(uint8_t ws_id, const char *text)
+void ws_send_text(uint8_t ws_id, const char *text)
 {
     if (ws_id >= MAX_WS_CONNS || !ws_pool[ws_id].active)
     {
@@ -261,7 +260,7 @@ void PC::ws_send_text(uint8_t ws_id, const char *text)
     }
 }
 
-void PC::ws_send_binary(uint8_t ws_id, const uint8_t *data, uint16_t len)
+void ws_send_binary(uint8_t ws_id, const uint8_t *data, uint16_t len)
 {
     if (ws_id >= MAX_WS_CONNS || !ws_pool[ws_id].active)
     {
@@ -284,7 +283,7 @@ void PC::ws_send_binary(uint8_t ws_id, const uint8_t *data, uint16_t len)
     }
 }
 
-void PC::ws_disconnect(uint8_t ws_id)
+void ws_disconnect(uint8_t ws_id)
 {
     if (ws_id >= MAX_WS_CONNS || !ws_pool[ws_id].active)
     {
@@ -305,7 +304,7 @@ void PC::ws_disconnect(uint8_t ws_id)
 // ---------------------------------------------------------------------------
 
 #if PC_ENABLE_SSE
-void PC::pc_sse_send(uint8_t pc_sse_id, const char *data, const char *event, const char *id)
+void pc_sse_send(uint8_t pc_sse_id, const char *data, const char *event, const char *id)
 {
     if (pc_sse_id >= MAX_SSE_CONNS || !pc_sse_pool[pc_sse_id].active)
     {
@@ -324,7 +323,7 @@ void PC::pc_sse_send(uint8_t pc_sse_id, const char *data, const char *event, con
     }
 }
 
-void PC::pc_sse_broadcast(const char *path, const char *data, const char *event, const char *id)
+void pc_sse_broadcast(const char *path, const char *data, const char *event, const char *id)
 {
     for (int i = 0; i < MAX_SSE_CONNS; i++)
     {

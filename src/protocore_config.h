@@ -938,7 +938,7 @@
  *
  * The middleware chain is a fixed array of function pointers run in
  * registration order before a request reaches its route handler (see
- * PC::use()). Costs MAX_MIDDLEWARE pointers of BSS; an empty chain
+ * use()). Costs MAX_MIDDLEWARE pointers of BSS; an empty chain
  * adds no per-request work.
  */
 #ifndef MAX_MIDDLEWARE
@@ -1357,6 +1357,18 @@
 /** @brief Maximum children listed in a WebDAV Depth-1 PROPFIND (bounds the response). */
 #ifndef PC_WEBDAV_MAX_ENTRIES
 #define PC_WEBDAV_MAX_ENTRIES 32
+#endif
+
+/**
+ * @brief Deepest tree a WebDAV DELETE / COPY walks before refusing (see PC_ENABLE_WEBDAV).
+ *
+ * The recursive walkers carry one path and one child name per level, so this is what turns their
+ * working storage into a fixed number instead of one that grows with the tree being walked. It was
+ * a bare 8 in the walk's own test, which bounded the recursion but sized nothing, because the paths
+ * were stack arrays the footprint could not see.
+ */
+#ifndef PC_DAV_MAX_DEPTH
+#define PC_DAV_MAX_DEPTH 8
 #endif
 
 /** @brief Maximum properties echoed in a WebDAV PROPPATCH 207 response (bounds the response). */
@@ -2360,11 +2372,11 @@
  * @brief Mutual TLS - require and verify a client certificate (mTLS).
  *
  * Default off. When set (requires PC_ENABLE_TLS), the server can be given a
- * trust-anchor CA via PC::tls_require_client_cert(): the TLS handshake
+ * trust-anchor CA via tls_require_client_cert(): the TLS handshake
  * then demands a client certificate chaining to that CA
  * (MBEDTLS_SSL_VERIFY_REQUIRED) and aborts the connection if the client presents
  * none or an untrusted one. The verified peer's subject DN is available to
- * handlers via PC::tls_client_subject(). Strong transport-level client
+ * handlers via tls_client_subject(). Strong transport-level client
  * authentication with no passwords.
  */
 #ifndef PC_ENABLE_MTLS
@@ -3953,7 +3965,7 @@
  * services/web/httpcache is the origin-side of edge caching (RFC 9111 + RFC 8246 + RFC 5861): a
  * structured `Cache-Control` builder (`cache_control_build` + first-class presets like
  * `cache_immutable_asset` / `cache_shared`) so app routes emit correct, edge-cacheable responses
- * (hand the value to PC::set_cache_control()), a tolerant directive parser
+ * (hand the value to set_cache_control()), a tolerant directive parser
  * (`cache_control_parse`), and the RFC 9111 freshness-lifetime calculation. Pure text, host-tested.
  * Groundwork for the CDN roadmap; the caching tier itself is a separate piece. Default off.
  */
@@ -5423,7 +5435,7 @@
  * @brief Prometheus `/metrics` endpoint (text exposition format 0.0.4).
  *
  * Default off (requires PC_ENABLE_STATS for the underlying counters). When
- * set, PC::metrics() emits the runtime stats as Prometheus metrics
+ * set, metrics() emits the runtime stats as Prometheus metrics
  * (`pc_uptime_seconds`, `pc_http_requests_total`,
  * `pc_http_responses_total{class=...}`, `pc_active_connections`,
  * `pc_free_heap_bytes`, ...) so a Prometheus server can scrape the device.
@@ -5646,7 +5658,7 @@
 #endif
 #define CONN_POOL_SLOTS (MAX_CONNS + PC_INTERNAL_SLOTS)
 
-/** @brief UDP port the HTTP/3 (QUIC) server binds by default (used by PC::pc_h3_cert). */
+/** @brief UDP port the HTTP/3 (QUIC) server binds by default (used by pc_h3_cert). */
 #ifndef PC_HTTP3_PORT
 #define PC_HTTP3_PORT 443
 #endif
@@ -6420,7 +6432,7 @@
  * @brief Runtime-tunable server parameters.
  *
  * Can be declared as `const PROGMEM` (flash) or as a mutable variable (RAM).
- * Pass a pointer to PC::begin() or DeterministicAsyncTCP::init().
+ * Pass a pointer to begin() or DeterministicAsyncTCP::init().
  */
 struct WebServerConfig
 {
@@ -6462,8 +6474,8 @@ enum class ConnProto : uint8_t
  * @brief Network interface a connection arrived on (for per-route filtering).
  *
  * Stamped onto each TcpConn at accept time by comparing the connection's local
- * IP to the softAP IP (see PC::set_ap_ip()). Used to gate routes to
- * the station or softAP interface only (PC::on(..., pc_iface)).
+ * IP to the softAP IP (see set_ap_ip()). Used to gate routes to
+ * the station or softAP interface only (on(..., pc_iface)).
  */
 enum class pc_iface : uint8_t
 {
@@ -6725,16 +6737,10 @@ enum class pc_iface : uint8_t
 #error "ProtoCore: PC_ENABLE_RANGE requires PC_ENABLE_FILE_SERVING or PC_ENABLE_EDGE_CACHE"
 #endif
 
-// The file-transfer servers reach storage only through the filesystem accessor, which dispatches to
-// whatever is mounted. Without a mount there is nothing for a transfer to land on.
-#if PC_ENABLE_SSH_SFTP && !PC_ENABLE_MNT
-#error "ProtoCore: PC_ENABLE_SSH_SFTP requires PC_ENABLE_MNT"
-#endif
-
-#if PC_ENABLE_SSH_SCP && !PC_ENABLE_MNT
-#error "ProtoCore: PC_ENABLE_SSH_SCP requires PC_ENABLE_MNT"
-#endif
-
+// The file-transfer servers and file serving all reach storage through the filesystem accessor,
+// which is the HAL and points them at whatever is mounted. None of them needs the mount SERVICE:
+// they need the seam, and the seam fails closed when nothing is behind it. Requiring PC_ENABLE_MNT
+// would drag the RAM backend's pool into every build that moves a file, to satisfy a type.
 #if PC_ENABLE_MTLS && !PC_ENABLE_TLS
 #error "ProtoCore: PC_ENABLE_MTLS requires PC_ENABLE_TLS"
 #endif

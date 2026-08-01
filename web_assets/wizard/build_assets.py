@@ -352,13 +352,13 @@ def load_assets():
 # extension only selects lint/transforms - it does NOT name an output file, so a
 # document type can never collide with a module of the same name (e.g. the JSON
 # codec at presentation/json/json.h).
-ASSET_BASENAME = "web"
+ASSET_BASENAME = "web_assets"
 
 
 def render_header(assets):
-    # Named for the OUTPUT file (web.h), not the input directory (web_assets/). The naming law
-    # derives the guard from the filename, so PROTOCORE_WEB_ASSETS_H fails it.
-    guard = "PROTOCORE_WEB_H"
+    # The guard is derived from the output filename, as the naming law requires:
+    # web_assets.h -> PROTOCORE_WEB_ASSETS_H, 22 characters, inside the 31-char limit.
+    guard = "PROTOCORE_WEB_ASSETS_H"
     lines = [
         BANNER,
         "",

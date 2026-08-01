@@ -7,7 +7,7 @@
  *
  * Every application protocol (HTTP, Telnet, SSH, and optional services such as
  * MQTT or Modbus) registers one ProtoHandler. The session layer (server_tick)
- * routes each connection event - and the main loop (PC::handle())
+ * routes each connection event - and the main loop (handle())
  * polls each active slot - through this table by ConnProto, so a new protocol
  * plugs in by registering a handler instead of editing the dispatchers.
  *

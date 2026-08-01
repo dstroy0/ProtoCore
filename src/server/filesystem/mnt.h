@@ -40,8 +40,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#if PC_ENABLE_MNT
-
 /** @brief Open modes. */
 enum class pc_mnt_mode : uint8_t
 {
@@ -94,17 +92,29 @@ struct pc_mnt_backend
     bool (*readdir)(int handle, pc_mnt_stat *out, char *name, size_t name_cap);
 };
 
+// Everything above and the two calls below are the HAL: the shape of a store, and which one is
+// mounted. All declarations plus one pointer, so a feature that reads through the seam pays nothing
+// and never has to enable a service just to name a type. The seam fails closed when nothing is
+// mounted, which is the honest answer rather than an error.
 /** @brief Mount the active backend (call once at setup; nullptr unmounts). */
 void pc_mnt_mount(const pc_mnt_backend *backend);
 
 /**
  * @brief The mounted backend, or nullptr if nothing is mounted.
  *
- * The filesystem accessor dispatches through this. It is exposed rather than kept private because
- * the alternative - a forwarding entry point here for every operation - would be a second copy of
- * the vtable written by hand, and the two would drift the first time one gained a call.
+ * A hotswap: storage can come and go under a running server, so this answers the live question
+ * rather than reporting whether a pointer was ever set. Every seam entry point fails closed, so a
+ * cold mount degrades instead of faulting.
+ *
+ * Naming a store is not this file's job. mnt offers storage to connect; the mapping from a name to
+ * a root belongs to the seam that resolves paths, which is the only thing that knows what a root
+ * means.
  */
 const pc_mnt_backend *pc_mnt_active(void);
+
+// The RAM backend is the only part with a footprint (PC_MNT_RAM_FILES x PC_MNT_RAM_FILE_SIZE of
+// BSS), so it is the only part the flag gates.
+#if PC_ENABLE_MNT
 
 /** @brief The built-in deterministic RAM backend (fixed BSS pool, no heap). */
 const pc_mnt_backend *pc_mnt_ram(void);

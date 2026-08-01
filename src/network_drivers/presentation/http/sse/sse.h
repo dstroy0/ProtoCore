@@ -62,7 +62,7 @@ extern SseConn pc_sse_pool[MAX_SSE_CONNS];
 /**
  * @brief Initialize all SSE pool slots to inactive.
  *
- * Called once from PC::begin().
+ * Called once from begin().
  */
 void pc_sse_init();
 

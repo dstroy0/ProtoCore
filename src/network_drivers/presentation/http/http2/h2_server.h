@@ -9,7 +9,7 @@
  * this module instead of the HTTP/1.1 parser. It runs one pc_h2_conn per connection slot, maps each
  * decoded request's pseudo-headers (:method / :path / :authority) and headers into the slot's
  * HttpReq, and marks it ParseState::PARSE_COMPLETE so the existing route dispatcher serves it. Responses from
- * the handlers route back here (PC::send branches on the slot's h2 flag) and are
+ * the handlers route back here (send branches on the slot's h2 flag) and are
  * serialized as HEADERS + DATA frames, leaving the connection open for the next stream.
  *
  * The per-slot engines are large (a whole frame is buffered), so their pool lives in PSRAM where

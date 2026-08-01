@@ -187,7 +187,7 @@ extern WsConn ws_pool[MAX_WS_CONNS];
 /**
  * @brief Initialize all WebSocket pool slots to inactive.
  *
- * Called once from PC::begin().
+ * Called once from begin().
  */
 void ws_init();
 

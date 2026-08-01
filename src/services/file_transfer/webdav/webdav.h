@@ -9,7 +9,7 @@
  * Mirrors the CoAP/SNMP split: this header declares the pure, host-testable core
  * (no sockets, no filesystem - unit-tested in env:native_webdav). The
  * filesystem-backed request handling (PROPFIND directory walk, PUT/MKCOL/DELETE/
- * COPY/MOVE, GET via the file-serving path) lives in PC::serve_dav_*
+ * COPY/MOVE, GET via the file-serving path) lives in serve_dav_*
  * and runs only on a build with a real Arduino FS.
  *
  * Scope: class 1 (PROPFIND Depth 0/1, PROPPATCH, PUT, DELETE, MKCOL, COPY, MOVE)

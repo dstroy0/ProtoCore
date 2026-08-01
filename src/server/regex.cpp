@@ -12,8 +12,7 @@
  * regex_match() (declared in server/protocore_internal.h). Behavior is identical to the pre-split code.
  */
 
-#include "protocore.h"                 // RE_MAX_STEPS (ServerConfig), fixed-width types
-#include "server/protocore_internal.h" // regex_match declaration
+#include "protocore.h" // RE_MAX_STEPS (ServerConfig), fixed-width types
 #include <string.h>
 
 // ---------------------------------------------------------------------------
@@ -72,16 +71,17 @@ static bool re_class_member(char lo, char hi, char ch)
 }
 
 // Read one class atom at *q (a backslash-escape consumes 2 bytes, else 1), advancing q past it.
-static char re_read_atom(const char *&q, const char *end)
+static char re_read_atom(const char **q, const char *end)
 {
-    if (*q == '\\' && (q + 1) < end)
+    const char *p = *q;
+    if (*p == '\\' && (p + 1) < end)
     {
-        char c = q[1];
-        q += 2;
+        char c = p[1];
+        *q = p + 2;
         return c;
     }
-    char c = *q;
-    q++;
+    char c = *p;
+    *q = p + 1;
     return c;
 }
 
@@ -121,7 +121,7 @@ static bool re_match_class(const char *p, size_t len, char ch)
     bool m = false;
     while (q < end)
     {
-        char lo = re_read_atom(q, end);
+        char lo = re_read_atom(&q, end);
         // The q[1] != ']' arm below can never be false, so this line is branch-excluded. re_atom_len
         // ends the class at the FIRST unescaped ']', so if q[1] is a ']' it IS the terminator - then
         // q + 1 == end and the preceding (q + 1) < end has already short-circuited. Confirmed by
@@ -129,7 +129,7 @@ static bool re_match_class(const char *p, size_t len, char ch)
         if (q < end && *q == '-' && (q + 1) < end && q[1] != ']') // GCOVR_EXCL_LINE  see note above
         {
             q++; // consume '-'
-            char hi = re_read_atom(q, end);
+            char hi = re_read_atom(&q, end);
             m = re_class_member(lo, hi, ch) || m;
         }
         else if (ch == lo)
@@ -167,7 +167,8 @@ static bool re_match(ReCtx *c, const char *pat, const char *text);
 // Greedy "(atom)* rest" against text.
 static bool re_star(ReCtx *c, const char *atom, size_t al, const char *rest, const char *text)
 {
-    if (++c->steps > c->max_steps)
+    c->steps++;
+    if (c->steps > c->max_steps)
     {
         return false;
     }
@@ -180,7 +181,8 @@ static bool re_star(ReCtx *c, const char *atom, size_t al, const char *rest, con
 
 static bool re_match(ReCtx *c, const char *pat, const char *text)
 {
-    if (++c->steps > c->max_steps)
+    c->steps++;
+    if (c->steps > c->max_steps)
     {
         return false;
     }
