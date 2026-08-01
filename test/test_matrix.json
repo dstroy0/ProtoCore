@@ -829,10 +829,10 @@
       "tests": ["test_webdav_handler"]
     },
     "native_diag": {
-      "desc": "Runtime build-flag reporter (server.diag() / PC_ENABLE_DIAG). The gated\ndiag() method + the compile-time PC_DIAG_JSON build-info string are enabled by\nno other env, so this one keeps them compiled + exercised in CI. Reuses the full\napp src via the native_app base.",
-      "base": "env:native_app",
+      "desc": "Runtime build-flag reporter (server.diag() / PC_ENABLE_DIAG). The gated\ndiag() method + the compile-time PC_DIAG_JSON build-info string are enabled by\nno other env, so this one keeps them compiled + exercised in CI. Reuses the full\napp src via the native_stack_http base.",
+      "base": "env:native_stack_http",
       "flags": ["-DPC_ENABLE_DIAG=1"],
-      "src": ["${env:native_app.build_src_filter}"],
+      "src": ["${env:native_stack_http.build_src_filter}"],
       "tests": ["test_diag"]
     },
     "native_snmp": {
@@ -2603,7 +2603,7 @@
     },
     "native_codeql": {
       "desc": "CodeQL coverage env: the full app compiled with every new feature flag ON so\nCodeQL traces the integration paths (CSRF / lockout / allowlist gates,\npermessage-deflate) AND the new service modules, which the per-feature envs scan\nonly in isolation. Built (--without-testing) by the CodeQL workflow; one test\nin the filter is enough to pull in the whole src set.",
-      "base": "env:native_app",
+      "base": "env:native_stack_http",
       "flags": [
         "-DPC_ENABLE_CSRF=1",
         "-DPC_ENABLE_AUTH_LOCKOUT=1",
@@ -2688,7 +2688,7 @@
       ],
       "src": [
         "+<network_drivers/network/ip.cpp>",
-        "${env:native_app.build_src_filter}",
+        "${env:native_stack_http.build_src_filter}",
         "+<services/security/audit_log/audit_log.cpp>",
         "+<services/security/oidc/oidc.cpp>",
         "+<server/filesystem/mnt.cpp>",
@@ -3194,11 +3194,11 @@
       "tests": ["test_quic_server"]
     },
     "native_h3_server": {
-      "desc": "HTTP/3 dispatch bridge end-to-end through PC (the full Layer-7 app built with\nPC_ENABLE_HTTP3=1): a QUIC client completes the handshake and sends an HTTP/3 GET, quic_server\nroutes it to the reserved dispatch slot, match_and_execute runs the registered route, and the\nhandler's send() is routed back onto the request stream via pc_quic_server_respond. Verifies the whole\nwire: a real route handler answers an HTTP/3 request. Reuses the native_app full-app base.",
-      "base": "env:native_app",
+      "desc": "HTTP/3 dispatch bridge end-to-end through PC (the full Layer-7 app built with\nPC_ENABLE_HTTP3=1): a QUIC client completes the handshake and sends an HTTP/3 GET, quic_server\nroutes it to the reserved dispatch slot, match_and_execute runs the registered route, and the\nhandler's send() is routed back onto the request stream via pc_quic_server_respond. Verifies the whole\nwire: a real route handler answers an HTTP/3 request. Reuses the native_stack_http full-app base.",
+      "base": "env:native_stack_http",
       "flags": ["-DPC_ENABLE_HTTP3=1"],
       "src": [
-        "${env:native_app.build_src_filter}",
+        "${env:native_stack_http.build_src_filter}",
         "+<network_drivers/presentation/http/http3/quic_server.cpp>",
         "+<network_drivers/presentation/http/http3/quic_conn.cpp>",
         "+<network_drivers/presentation/http/http3/quic_tls.cpp>",

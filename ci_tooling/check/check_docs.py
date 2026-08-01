@@ -81,6 +81,10 @@ def main() -> int:
         "docs/CHANGELOG.md",    # historical, generated
         "docs/DELIVERED.md",    # historical
         "docs/SYMBOLS.md",      # illustrative
+        # historical: a sweep record's whole job is to say what a refactor renamed or deleted,
+        # so it names the OLD symbol on purpose - "PC_ENABLE_VFS -> PC_ENABLE_MNT", "PC_POOL_SLOTS
+        # used to be", "the rule that removed PC_LIT". Resolving those would erase the record.
+        "SWEEP_NOTES.md",
     }
 
     known_envs = set(re.findall(r"^\[env:(native[A-Za-z0-9_]*)\]",

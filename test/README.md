@@ -385,7 +385,7 @@ The native test matrix has **306 environments**, one per feature, generated from
 <!-- END GENERATED test-environments -->
 
 > [!NOTE]
-> The `native` and `native_app` environments build with `PC_ENFORCE_HOST_HEADER=0` because their legacy test suites focus strictly on lower-level parser mechanics. The stricter RFC 7230 §5.4 host header validation is tested independently in `native_compliance`.
+> The `native_stack_l46` and `native_stack_http` environments build with `PC_ENFORCE_HOST_HEADER=0` because their legacy test suites focus strictly on lower-level parser mechanics. The stricter RFC 7230 §5.4 host header validation is tested independently in `native_compliance`.
 
 > [!IMPORTANT]
 > **Compilation Isolation & Feature Flags**:
@@ -434,7 +434,7 @@ All tests are written using the **Unity** testing framework.
 To run all test suites across all environments:
 
 ```bash
-pio test -e native -e native_app -e native_ssh -e native_ssh_hardened -e native_ssh_conn -e native_compliance
+pio test -e native_stack_l46 -e native_stack_http -e native_ssh -e native_ssh_hardened -e native_ssh_conn -e native_compliance
 ```
 
 To run a single specific environment (which is much faster):

@@ -474,7 +474,7 @@ that reached into `s_send.file[0].active` / `s_send.chunk[0].active` now call th
 assertion they made was exactly "does the owner hold this slot", which is what confirms the
 accessor is the right surface and not a hole punched for the tests.
 
-Verified: `native_app` + `native_upload` + `native_range`, **395/395**.
+Verified: `native_stack_http` + `native_upload` + `native_range`, **395/395**.
 
 **Size: 919,127 -> 918,935 bytes (-192). DRAM unchanged at 136,176.** That is noise. The state moved
 between TUs, it did not shrink, and nothing became unreachable. Recorded so the number is not later

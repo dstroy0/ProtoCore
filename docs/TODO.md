@@ -1301,7 +1301,7 @@ Operator / sysadmin:
       of-4 input now return 0. Tested by `test_base64_decode_rejects_misplaced_padding`.
 
 - [x] **`test/test_application/` is orphaned** _(done)_ - wired into the
-      `native_app` env's `test_filter` (`platformio.ini`) and de-bit-rotted (it
+      `native_application` env's `test_filter` (`platformio.ini`) and de-bit-rotted (it
       called the removed `DeterministicAsyncTCP::init(80)`; now [`pool_init()`](@ref DeterministicAsyncTCP::pool_init)).
       All 35 cases pass.
 
