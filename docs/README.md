@@ -255,6 +255,16 @@ src/
 │   │   └── sntrup761.h
 │   ├── crypto_opt.h
 │   └── crypto_scratch.h
+├── mmgr/
+│   ├── arena.cpp
+│   ├── arena.h
+│   ├── frame.cpp
+│   ├── frame.h
+│   ├── membuild.h
+│   ├── plaintext.cpp
+│   ├── plaintext.h
+│   ├── secure.cpp
+│   └── secure.h
 ├── network_drivers/
 │   ├── application/
 │   │   ├── binary_asset_blobs.cpp
@@ -266,7 +276,9 @@ src/
 │   │   ├── ip.cpp
 │   │   ├── ip.h
 │   │   ├── network.cpp
-│   │   └── network.h
+│   │   ├── network.h
+│   │   ├── route.cpp
+│   │   └── route.h
 │   ├── physical/  (physical.h, physical.cpp)
 │   ├── presentation/
 │   │   ├── codec/
@@ -378,7 +390,7 @@ src/
 │       ├── diffserv.h
 │       ├── listener.cpp
 │       ├── listener.h
-│       ├── tcp.cpp
+│       ├── tcp.c
 │       ├── tcp.h
 │       ├── udp.cpp
 │       └── udp.h
@@ -390,19 +402,7 @@ src/
 │   │   ├── mnt.h
 │   │   ├── wearlevel.cpp
 │   │   └── wearlevel.h
-│   ├── mmgr/
-│   │   ├── arena.cpp
-│   │   ├── arena.h
-│   │   ├── plaintext.cpp
-│   │   ├── plaintext.h
-│   │   ├── secure.cpp
-│   │   ├── secure.h
-│   │   └── span.h
-│   ├── signaling/
-│   │   ├── route.cpp
-│   │   ├── route.h
-│   │   ├── signaling.cpp
-│   │   └── signaling.h
+│   ├── signaling/  (signaling.h, signaling.cpp)
 │   ├── auth.cpp
 │   ├── file_serving.cpp
 │   ├── http_range.cpp
@@ -735,8 +735,6 @@ src/
 │   ├── can.h
 │   ├── crc.h
 │   ├── endian.h
-│   ├── frame.cpp
-│   ├── frame.h
 │   ├── hex.h
 │   ├── http_date.h
 │   ├── log.cpp
@@ -744,13 +742,16 @@ src/
 │   ├── mime.h
 │   ├── numparse.h
 │   ├── pcap.h
+│   ├── rawmemcpy.h
 │   ├── ring.h
+│   ├── runops.h
+│   ├── span.h
 │   ├── speed_opt.h
-│   ├── strbuf.h
 │   ├── swar.h
 │   ├── time_compat.h
+│   ├── types.h
 │   └── utf8.h
-├── protocore.cpp
+├── protocore.c
 ├── protocore.h
 └── protocore_config.h
 ```
@@ -1041,7 +1042,7 @@ The complete set of `PC_ENABLE_*` flags and their defaults, scraped from
 | `PC_ENABLE_DEVICENET` | `0` | DeviceNet link-adaptation codec (`services/devicenet`). |
 | `PC_ENABLE_DEVICE_ID` | `0` | Stable device UUID derived from the chip MAC (RFC 4122 v5). |
 | `PC_ENABLE_DF1` | `0` | Allen-Bradley DF1 full-duplex frame codec (`services/df1`). |
-| `PC_ENABLE_DIAG` | `0` | Expose a diagnostic JSON endpoint via server.diag(). |
+| `PC_ENABLE_DIAG` | `0` | Expose a diagnostic JSON endpoint via diag(). |
 | `PC_ENABLE_DIFFSERV` | `0` | Enable DiffServ QoS marking (RFC 2474) on outbound traffic. |
 | `PC_ENABLE_DIRECTNET` | `0` | Opt-in AutomationDirect / Koyo DirectNET serial frame codec. |
 | `PC_ENABLE_DMA` | `0` | Enable the DMA peripheral ingest / egress primitive (default off). |
@@ -1322,7 +1323,7 @@ guards at compile time.
 | `PC_BRIDGE_TXN_MAX` | `256` | Max write / read payload (bytes) per TRANSACTION frame (services/net/iface_bridge). |
 | `PC_BRIDGE_UART_TXN_MS` | `50` | UART TRANSACTION read window (ms): how long a write-then-read waits for the read_len reply. |
 | `PC_CLIENT_RX_BUF` | `8192` | Per-connection wire receive ring size (bytes). |
-| `PC_CLOSING_TIMEOUT_MS` | `2000` | Upper bound (ms) a slot may dwell in ConnState::CONN_CLOSING after a graceful close before the idle sweep force-aborts it. |
+| `PC_CLOSING_TIMEOUT_MS` | `2000` | Upper bound (ms) a slot may dwell in CONN_CLOSING after a graceful close before the idle sweep force-aborts it. |
 | `PC_COAP_BLOCK1_MAX` | `1024` | Reassembly buffer for a block-wise (Block1) request upload, in bytes. |
 | `PC_COAP_BLOCK_SZX_MAX` | `6` | Largest block-size exponent (SZX) the server will use: block size = 2^(SZX+4) bytes, SZX 0..6 (16..1024). |
 | `PC_COAP_DEDUP_ENTRIES` | `4` | CoAP message de-duplication cache size (RFC 7252 sec 4.5). |
@@ -1453,7 +1454,6 @@ guards at compile time.
 | `PC_PQ_INTERNAL_PRIORITY` | `8` | Base FreeRTOS priority for the internal preempting lanes (DMA / forwarding / device access). |
 | `PC_PQ_ITEM_SIZE` | `32` | Bytes per preempting-queue item (the posted item must fit). |
 | `PC_PQ_STACK` | `4096` | Stack (bytes) for each preempting-queue processing task (ESP32). |
-| `PC_PROTO_MAX` | `11` | Size of the protocol-handler dispatch table; must exceed the largest ConnProto id. |
 | `PC_RADIO_MAX_TX_DBM` | `0` | Max TX power cap in dBm (2..20); 0 = leave the platform default. |
 | `PC_RADIO_WIFI_PS` | `0` | WiFi modem-sleep mode: 0 = none (max perf), 1 = min modem, 2 = max modem. |
 | `PC_RELAY_BUF` | `2048` | Per-direction relay buffer size (bytes) for services/net/relay. |
@@ -1544,6 +1544,8 @@ guards at compile time.
 | `PC_WS_FRAG_SIZE` | `0` | WebSocket outbound fragmentation size (RFC 6455 sec 5.4), in payload bytes. |
 | `PC_ZIGBEE_MAX_DATA` | `128` | Max ASH payload bytes (an EZSP frame; the ASH data field caps near 128). |
 | `PC_ZWAVE_MAX_DATA` | `64` | Reject a Z-Wave frame whose declared length exceeds this data cap (sanity). |
+| `PROTO_INDEX_BITS` | `32` | Bits in every offset, length and capacity the library declares (pc_idx). |
+| `PROTO_MAX_HANDLERS` | `11` | Size of the protocol-handler dispatch table; must exceed the largest ConnProto id. |
 | `QUERY_KEY_LEN` | `24` | Maximum query-parameter key length. |
 | `QUERY_VAL_LEN` | `48` | Maximum query-parameter value length. |
 | `RESP_HDR_BUF_SIZE` | `768` | Stack buffer for HTTP response header lines in send() / send_empty() / send_unauth() / serve_file(). |
