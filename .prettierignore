@@ -16,3 +16,7 @@ test/dep_graph.json
 # Likewise the SonarQube compile-commands baseline (ci_tooling/sonar/merge_compiledb.py json.dump,
 # @ROOT@-tokenized); affected runs overlay it verbatim, so keep Prettier off it.
 test/compile_commands.json
+
+# Scratch working notes for the in-flight law sweep. Deleted when the sweep lands, so formatting it
+# is churn on a file that is not part of the published docs.
+SWEEP_NOTES.md

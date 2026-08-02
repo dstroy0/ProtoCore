@@ -53,7 +53,7 @@
  *
  * The Montgomery SOS multiplication needs a 129-word (516-byte) temporary and the
  * expmod three pc_bignum temporaries (768 bytes). bn_expmod_group14() borrows all of
- * them as ONE working set from the secure pool (server/mmgr/secure.h), so the layout
+ * them as ONE working set from the secure pool (mmgr/secure.h), so the layout
  * is the struct's own field order rather than byte offsets kept in step by hand here.
  *
  * These temporaries hold DH private-exponent and shared-secret fragments. They are
@@ -69,8 +69,8 @@
 #ifndef PROTOCORE_BIGNUM_H
 #define PROTOCORE_BIGNUM_H
 
+#include "mmgr/secure.h"
 #include "protocore_config.h"
-#include "server/mmgr/secure.h"
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>

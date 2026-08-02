@@ -7,8 +7,8 @@
  */
 
 #include "json.h"
+#include "mmgr/membuild.h" // pc_sb frame builder
 #include "shared_primitives/numparse.h"
-#include "shared_primitives/strbuf.h" // pc_sb frame builder
 #include <stdio.h>
 #include <string.h>
 

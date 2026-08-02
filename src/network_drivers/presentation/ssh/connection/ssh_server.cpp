@@ -7,12 +7,12 @@
  */
 
 #include "network_drivers/presentation/ssh/connection/ssh_server.h"
+#include "mmgr/plaintext.h"
 #include "network_drivers/presentation/ssh/auth/ssh_auth.h"
 #include "network_drivers/presentation/ssh/connection/ssh_channel.h"
 #include "network_drivers/presentation/ssh/transport/ssh_dh.h"
 #include "network_drivers/presentation/ssh/transport/ssh_packet.h"
 #include "network_drivers/presentation/ssh/transport/ssh_transport.h"
-#include "server/mmgr/plaintext.h"
 #if PC_ENABLE_SSH_ZLIB
 #include "network_drivers/presentation/ssh/transport/ssh_comp.h"
 #endif

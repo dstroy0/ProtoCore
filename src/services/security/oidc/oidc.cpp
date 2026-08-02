@@ -12,13 +12,13 @@
  */
 
 #include "services/security/oidc/oidc.h"
-#include "shared_primitives/strbuf.h" // pc_sb frame builder
+#include "mmgr/membuild.h" // pc_sb frame builder
 
 #if PC_ENABLE_OIDC
 
 #include "crypto/asymmetric/rsa.h"
+#include "mmgr/plaintext.h" // per-dispatch arena (keeps the decode buffers off the worker stack)
 #include "network_drivers/presentation/codec/base64/base64.h" // shared pc_base64url_decode
-#include "server/mmgr/plaintext.h" // per-dispatch arena (keeps the decode buffers off the worker stack)
 
 #include <stdio.h>
 #include <string.h>

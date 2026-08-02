@@ -12,9 +12,9 @@
  * protocore.cpp (declared in protocore.h). Behavior is identical to the pre-split code.
  */
 
+#include "mmgr/membuild.h"                 // pc_sb frame builder
 #include "network_drivers/transport/tcp.h" // conn_pool, pc_conn_*, TcpConn/ConnState
 #include "protocore.h"
-#include "shared_primitives/strbuf.h" // pc_sb frame builder
 #if PC_ENABLE_WEBSOCKET
 #include "crypto/hash/sha1.h"                                      // pc_sha1, PC_SHA1_DIGEST_LEN
 #include "network_drivers/presentation/codec/base64/base64.h"      // pc_base64_decode/encode

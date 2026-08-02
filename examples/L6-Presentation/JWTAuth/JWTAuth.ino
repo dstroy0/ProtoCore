@@ -43,7 +43,7 @@ static void protected_handler(uint8_t id, HttpReq *req)
     // MAX_VAL_LEN; the parser captures it whole when PC_ENABLE_JWT is set).
     if (!pc_jwt_bearer_valid(req->authorization, (const uint8_t *)JWT_SECRET, strlen(JWT_SECRET)))
     {
-        add_response_header(id, "WWW-Authenticate", "Bearer");
+        proto_add_response_header(id, "WWW-Authenticate", "Bearer");
         send_text(id, 401, "text/plain", "invalid or missing token");
         return;
     }

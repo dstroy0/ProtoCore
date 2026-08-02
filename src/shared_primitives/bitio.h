@@ -5,14 +5,14 @@
  * @file bitio.h
  * @brief LSB-first bit writer over a caller-owned byte buffer - one source of truth.
  *
- * The DEFLATE encoder (network_drivers/presentation/codec/deflate) and the SSH zlib@openssh.com stream compressor
- * (ssh/transport/ssh_zlib) each carried a byte-for-byte copy of the same bit writer: pack bits LSB-first into a
- * @c uint32_t accumulator, spill whole bytes to the output, and latch @c overflow when the buffer is full. It
- * lives here once.
+ * Packs bits LSB-first into a @c uint32_t accumulator, spills whole bytes to the output, and latches
+ * @c overflow when the buffer is full. The DEFLATE encoder
+ * (network_drivers/presentation/codec/deflate) and the SSH zlib@openssh.com stream compressor
+ * (ssh/transport/ssh_zlib) both write their bitstreams through it.
  *
- * NOTE: distinct from bytes.h's @c pc_bw_* helpers, which are a BYTE-oriented (big-endian) codec cursor. This
- * is a BIT writer (@c pc_bitw_*), for the DEFLATE bitstream. Header-only, pure (only @c <stdint.h> /
- * @c <stddef.h>), zero link cost when unused.
+ * Distinct from bytes.h's @c pc_bw_* helpers, which are a BYTE-oriented (big-endian) codec cursor.
+ * This is a BIT writer (@c pc_bitw_*), for the DEFLATE bitstream. Header-only, pure (only
+ * @c <stdint.h> / @c <stddef.h>), zero link cost when unused.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026

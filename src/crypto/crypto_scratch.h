@@ -6,7 +6,7 @@
  * @brief Constant-time comparison for secret-dependent checks.
  *
  * Was also the home of the shared `crypto_work` scratch buffer and the secure wipe. Both have moved:
- * crypto operations now borrow their working sets from the secure pool (server/mmgr/secure.h), which
+ * crypto operations now borrow their working sets from the secure pool (mmgr/secure.h), which
  * wipes on release, so no fixed buffer and no hand-assigned offsets remain. pc_secure_wipe() lives
  * there too - zeroing storage is a memory-manager operation. What is left here is pc_ct_eq, which is
  * genuinely a crypto concern. The file name now overstates its contents; renaming it is a follow-up.
@@ -19,7 +19,7 @@
 #define PROTOCORE_CRYPTO_SCRATCH_H
 
 #include "protocore_config.h"
-#include "server/mmgr/span.h"
+#include "shared_primitives/span.h"
 #include <stddef.h>
 #include <stdint.h>
 

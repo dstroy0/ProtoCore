@@ -27,8 +27,8 @@
 #ifndef PROTOCORE_LOG_H
 #define PROTOCORE_LOG_H
 
+#include "mmgr/frame.h"
 #include "protocore_config.h"
-#include "shared_primitives/frame.h"
 #include <stdint.h>
 
 /** @brief Receives an emitted line, already formatted. @p level is a PC_LOG_LEVEL_* value. */

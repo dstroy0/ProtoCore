@@ -7,7 +7,7 @@
  */
 
 #include "services/radio/ble_gatt/ble_gatt.h"
-#include "shared_primitives/strbuf.h" // pc_sb frame builder
+#include "mmgr/membuild.h" // pc_sb frame builder
 
 #if PC_ENABLE_BLE_GATT
 

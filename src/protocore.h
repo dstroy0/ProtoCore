@@ -40,21 +40,59 @@
 #ifndef PROTOCORE_H
 #define PROTOCORE_H
 
-#include "network_drivers/presentation/codec/json/json.h"
-#include "network_drivers/presentation/presentation.h"
+// Ordered by layer, so a header only needs what is above it. A gate is the feature's own
+// PC_ENABLE_, never a parent's: PC_ENABLE_<A>_NEEDS_<B> already makes a child unsettable alone.
+#include "shared_primitives/log.h"
+#include "shared_primitives/mime.h"
+
+#include "crypto/cipher/aes256ctr.h"
+#include "crypto/mac/hmac_sha256.h"
+
+#include "network_drivers/physical/physical.h"
+
+#include "network_drivers/transport/client.h"
+#include "network_drivers/transport/diffserv.h"
+#include "network_drivers/transport/listener.h"
+#include "network_drivers/transport/udp.h"
+
 #include "network_drivers/session/session.h"
 #include "network_drivers/session/worker.h"
+
+#include "network_drivers/presentation/codec/json/json.h"
+#include "network_drivers/presentation/presentation.h"
+#if PC_ENABLE_CBOR
+#include "network_drivers/presentation/codec/cbor/cbor.h"
+#endif
+#if PC_ENABLE_MSGPACK
+#include "network_drivers/presentation/codec/msgpack/msgpack.h"
+#endif
+#if PC_ENABLE_MULTIPART
+#include "network_drivers/presentation/codec/multipart/multipart.h"
+#endif
 #if PC_ENABLE_WEBSOCKET
 #include "network_drivers/presentation/http/websocket/websocket.h"
 #endif
 #if PC_ENABLE_SSE
 #include "network_drivers/presentation/http/sse/sse.h"
 #endif
-#if PC_ENABLE_MULTIPART
-#include "network_drivers/presentation/codec/multipart/multipart.h"
+#if PC_ENABLE_TELNET
+#include "network_drivers/presentation/telnet/telnet.h"
 #endif
-#include <Arduino.h>
-#include <time.h> // time_t for the RFC 1123 date helper
+#if PC_ENABLE_SSH
+#include "network_drivers/presentation/ssh/auth/ssh_auth.h"
+#include "network_drivers/presentation/ssh/connection/ssh_channel.h"
+#include "network_drivers/presentation/ssh/connection/ssh_client.h"
+#include "network_drivers/presentation/ssh/connection/ssh_conn.h"
+#include "network_drivers/presentation/ssh/connection/ssh_forward.h"
+#include "network_drivers/presentation/ssh/crypto/ssh_rsa.h"
+#include "network_drivers/presentation/ssh/transport/ssh_transport.h"
+#endif
+
+// This header declares bool, size_t, uint8_t and int64_t in its own signatures, so it names their
+// headers itself rather than inheriting them from whichever include above happens to pull them in.
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 // ---------------------------------------------------------------------------
 // Every service API, surfaced here
@@ -63,14 +101,14 @@
 // protocore.h is the one header an application includes, so every service the library offers is
 // reachable from it. A feature the build did not enable costs nothing: each service header carries
 // its own PC_ENABLE_ guard, so a disabled one contributes no declarations and no code.
+#include "mmgr/arena.h"
+#include "mmgr/plaintext.h"
+#include "mmgr/secure.h"
+#include "network_drivers/network/route.h"
 #include "server/filesystem/filesystem.h"
 #include "server/filesystem/mnt.h"
 #include "server/filesystem/wearlevel.h"
 #include "server/http_range.h"
-#include "server/mmgr/arena.h"
-#include "server/mmgr/plaintext.h"
-#include "server/mmgr/secure.h"
-#include "server/mmgr/span.h"
 #include "server/signaling/signaling.h"
 #include "server/ssh_scp.h"
 #include "server/ssh_sftp.h"
@@ -299,6 +337,7 @@
 #include "services/web/httpcache/httpcache.h"
 #include "services/web/spa_router/spa_router.h"
 #include "services/web/web_terminal/web_terminal.h"
+#include "shared_primitives/span.h"
 
 /**
  * @brief A storage backend (server/filesystem/mnt.h), named here only as a pointer.
@@ -308,7 +347,7 @@
  * vendor filesystem, a RAM pool, an application's own - is unknowable from here, which is the whole
  * reason the seam is our type instead of a vendor one.
  */
-struct pc_mnt_backend;
+typedef struct pc_mnt_backend pc_mnt_backend;
 
 // ---------------------------------------------------------------------------
 // HTTP method enumeration
@@ -321,7 +360,7 @@ struct pc_mnt_backend;
  * specific method.  PATCH, HEAD, and OPTIONS were added in v1.0 alongside
  * CORS preflight support.
  */
-enum class HttpMethod : uint8_t
+typedef enum
 {
     HTTP_GET,           ///< Safe, idempotent read
     HTTP_POST,          ///< Non-idempotent create / action
@@ -331,7 +370,7 @@ enum class HttpMethod : uint8_t
     HTTP_HEAD,          ///< Same as GET but no response body
     HTTP_OPTIONS,       ///< Capability query / CORS preflight
     HTTP_METHOD_UNKNOWN ///< Unrecognized method token → 501 Not Implemented
-};
+} HttpMethod;
 
 // ---------------------------------------------------------------------------
 // Handler and route types
@@ -356,7 +395,7 @@ typedef void (*Handler)(uint8_t slot_id, HttpReq *request);
 /**
  * @brief Resolver for `{{name}}` template placeholders used by send_template().
  *
- * Called with a placeholder name; returns the replacement string, or nullptr
+ * Called with a placeholder name; returns the replacement string, or NULL
  * to substitute an empty string. The pointer must stay valid for the duration
  * of the send_template() call, and the resolver must be deterministic (it is
  * invoked twice: once to size the body, once to emit it).
@@ -376,17 +415,17 @@ typedef void (*RequestLogCb)(const char *method, const char *path, int status, i
 /**
  * @brief Outcome of a middleware function (see @ref Middleware).
  *
- * Returning MwResult::MW_NEXT passes the request to the next middleware in the chain and,
+ * Returning MW_NEXT passes the request to the next middleware in the chain and,
  * once the chain is exhausted, on to the matching route handler. Returning
- * MwResult::MW_HALT stops the chain: the route handler is NOT invoked, so a middleware
+ * MW_HALT stops the chain: the route handler is NOT invoked, so a middleware
  * that halts must have already written a response (the dispatcher treats the
  * request as fully handled).
  */
-enum class MwResult : uint8_t
+typedef enum
 {
     MW_NEXT = 0, ///< Continue to the next middleware / the route handler.
     MW_HALT = 1  ///< Stop dispatch; the middleware already sent a response.
-};
+} MwResult;
 
 /**
  * @brief Composable pre-dispatch middleware (see use()).
@@ -394,14 +433,14 @@ enum class MwResult : uint8_t
  * Each registered middleware runs - in registration order - on every request
  * before route matching, receiving the same `(slot_id, request)` pair a handler
  * does. A middleware may inspect the request, queue response headers
- * (add_response_header()), short-circuit by sending a response and
- * returning MwResult::MW_HALT, or fall through with MwResult::MW_NEXT. Middlewares reference the
+ * (proto_add_response_header()), short-circuit by sending a response and
+ * returning MW_HALT, or fall through with MW_NEXT. Middlewares reference the
  * application's server instance the same way handlers do (the global object), so
  * they can call send_text() / send_empty() to short-circuit.
  *
  * @param slot_id  Connection slot index (0 … MAX_CONNS-1).
  * @param request  Parsed request; valid only during the call (do not cache).
- * @return MwResult::MW_NEXT to continue, MwResult::MW_HALT to stop (response already sent).
+ * @return MW_NEXT to continue, MW_HALT to stop (response already sent).
  */
 typedef MwResult (*Middleware)(uint8_t slot_id, HttpReq *request);
 
@@ -447,7 +486,7 @@ typedef void (*SseConnectHandler)(uint8_t pc_sse_id);
 // ---------------------------------------------------------------------------
 
 /** @brief Discriminates between HTTP, WebSocket, and SSE route entries. */
-enum class RouteType : uint8_t
+typedef enum
 {
     ROUTE_HTTP, ///< Standard HTTP request/response.
 #if PC_ENABLE_WEBSOCKET
@@ -462,7 +501,7 @@ enum class RouteType : uint8_t
 #if PC_ENABLE_WEBDAV
     ROUTE_DAV, ///< WebDAV subtree mount (dav()).
 #endif
-};
+} RouteType;
 
 // ---------------------------------------------------------------------------
 // begin() / listen() / restart() result codes
@@ -471,16 +510,16 @@ enum class RouteType : uint8_t
 /**
  * @brief Result codes for listen(), begin(), and restart().
  *
- * Success is a positive value (pc_result::PC_OK). Failures are distinct negative codes
+ * Success is a positive value (PC_OK). Failures are distinct negative codes
  * so a caller can tell why startup failed.
  */
-enum class pc_result : int32_t
+typedef enum
 {
     PC_OK = 1,                 ///< Success.
-    PC_ERR_NO_LISTENERS = -1,  ///< begin() called before any listen() / begin(port).
+    PC_ERR_NO_LISTENERS = -1,  ///< proto_begin() called before any listen() / begin(port).
     PC_ERR_LISTENER_FULL = -2, ///< listen(): listener pool (MAX_LISTENERS) is full.
     PC_ERR_LISTEN_FAILED = -3  ///< A listener failed to open (bind/listen/lwIP error).
-};
+} pc_result;
 
 /**
  * @brief Internal route entry stored in the routing table.
@@ -488,12 +527,12 @@ enum class pc_result : int32_t
  * Populated by on(), on_ws(), or on_sse().
  * Application code does not interact with this struct directly.
  */
-struct Route
+typedef struct Route
 {
     char path[MAX_PATH_LEN]; ///< Null-terminated path pattern.
     RouteType type;          ///< HTTP, WS, or SSE.
-    HttpMethod method;       ///< HTTP method (RouteType::ROUTE_HTTP only).
-    Handler callback;        ///< HTTP handler (RouteType::ROUTE_HTTP only).
+    HttpMethod method;       ///< HTTP method (ROUTE_HTTP only).
+    Handler callback;        ///< HTTP handler (ROUTE_HTTP only).
 
 #if PC_ENABLE_WEBSOCKET
     WsConnectHandler ws_connect; ///< Fired on upgrade success.
@@ -506,7 +545,7 @@ struct Route
 #endif
 
 #if PC_ENABLE_FILE_SERVING
-    const pc_mnt_backend *static_fs; ///< Backend for this mount; nullptr uses whatever is mounted.
+    const pc_mnt_backend *static_fs; ///< Backend for this mount; NULL uses whatever is mounted.
     const char *static_root;         ///< Subtree this mount serves, as a request-path piece.
 #endif
 
@@ -522,8 +561,8 @@ struct Route
     bool is_wildcard;      ///< `true` when path ends with `*`.
     bool is_param;         ///< `true` when the path contains a `:name` segment.
     bool is_regex;         ///< `true` when the path is a regex (see on_regex()).
-    pc_iface iface_filter; ///< Interface gate; pc_iface::PC_IFACE_ANY (0) = match any interface.
-};
+    pc_iface iface_filter; ///< Interface gate; PC_IFACE_ANY (0) = match any interface.
+} Route;
 
 // ---------------------------------------------------------------------------
 // Chunked (streaming) response writer
@@ -561,12 +600,12 @@ typedef size_t (*ChunkSource)(uint8_t *buf, size_t cap, void *ctx);
 //
 // Usage:
 //   void handle_api(uint8_t slot_id, HttpReq *req) { send_text(slot_id, 200, "application/json", "{}"); }
-//   void setup()  { init_wifi_physical("SSID", "PW"); on("/api", HttpMethod::HTTP_GET, handle_api); begin(80); }
+//   void setup()  { init_wifi_physical("SSID", "PW"); on("/api", HTTP_GET, handle_api); begin(80); }
 //   void loop()   { handle(); }
 
 /**
  * @brief Run the global middleware chain for a request.
- * @return true if a middleware returned MwResult::MW_HALT (a response was sent and
+ * @return true if a middleware returned MW_HALT (a response was sent and
  *         dispatch must stop); false to continue to route matching.
  */
 bool run_middleware(uint8_t slot_id, HttpReq *req);
@@ -616,7 +655,7 @@ bool keepalive_eval(uint8_t slot_id);
  * @param pre_flushed the caller already emitted the final bytes with pc_conn_send_flush()
  *        (write+tcp_output coalesced into one marshal), so skip the redundant flush here.
  */
-void pc_resp_end(uint8_t slot_id, int code, int body_len, bool keep, bool pre_flushed = false);
+void pc_resp_end(uint8_t slot_id, int code, int body_len, bool keep, bool pre_flushed);
 
 /**
  * @brief Resolve the Connection response header and report keep-alive intent.
@@ -633,7 +672,7 @@ const char *pc_resp_conn_hdr(uint8_t slot_id, bool *keep_out);
  *        already holding the status line and per-response headers. @p hlen is
  *        the current length; returns the new total length.
  */
-int append_resp_trailer(char *buf, size_t cap, int hlen, uint8_t slot_id, const char *cl);
+int proto_append_resp_trailer(char *buf, size_t cap, int hlen, uint8_t slot_id, const char *cl);
 
 /// @brief Resume a pending chunked response: pull + frame chunks until the send window is full, finish when
 /// drained.
@@ -649,7 +688,7 @@ bool check_basic_auth(uint8_t slot_id, HttpReq *req, const Route *r);
 bool check_digest_auth(uint8_t slot_id, HttpReq *req, const Route *r, bool *stale);
 /// @brief Send 401 Unauthorized with a Basic or Digest `WWW-Authenticate` challenge per route @p r.
 /// @param stale  emit `stale=true` in the Digest challenge (expired-nonce transparent retry).
-void send_unauth(uint8_t slot_id, const Route *r, bool stale = false);
+void send_unauth(uint8_t slot_id, const Route *r, bool stale);
 // The Digest keying secret is NOT here. It lives in server/auth.cpp's AuthCtx, which is the only
 // file that reads it: a definition in this header gives every translation unit that includes it a
 // separate copy of the secret (and a multiple-definition link error), which is the opposite of one
@@ -664,7 +703,7 @@ bool verify_digest_nonce(const char *nonce, bool *expired);
 #endif
 
 #if PC_ENABLE_FILE_SERVING
-/// @brief Dispatch a RouteType::ROUTE_STATIC match: resolve the FS path and serve it (MIME/index/gzip).
+/// @brief Dispatch a ROUTE_STATIC match: resolve the FS path and serve it (MIME/index/gzip).
 void serve_static_request(uint8_t slot_id, HttpReq *req, const Route *r);
 /// @brief Open @p fs_path on @p file_sys and stream it as 200 with the given type and optional
 ///        Content-Encoding. A null @p file_sys means whatever is mounted.
@@ -675,7 +714,7 @@ void file_send_pump(uint8_t slot_id);
 #endif
 
 #if PC_ENABLE_WEBDAV
-/// @brief If @p req matches a RouteType::ROUTE_DAV mount, handle it as WebDAV and return true.
+/// @brief If @p req matches a ROUTE_DAV mount, handle it as WebDAV and return true.
 bool try_serve_dav(uint8_t slot_id, HttpReq *req);
 /// @brief Dispatch a WebDAV request against the mount @p r (resolves the FS path, then the method).
 void serve_dav_request(uint8_t slot_id, HttpReq *req, const Route *r);
@@ -720,14 +759,14 @@ bool pc_csrf_gate(uint8_t slot_id, HttpReq *req, HttpMethod method);
 #endif
 
 #if PC_ENABLE_WEBSOCKET
-/// @brief Complete (or reject) a RouteType::ROUTE_WS handshake per RFC 6455 §4.2.1. Always responds.
+/// @brief Complete (or reject) a ROUTE_WS handshake per RFC 6455 §4.2.1. Always responds.
 void handle_ws_route(uint8_t slot_id, HttpReq *req, HttpMethod method, const Route *r);
 #endif
 
 #if PC_ENABLE_AUTH
 /// @brief Enforce route @p r's auth (lockout gate + Digest/Basic credential check, with lockout
 ///        accounting). @return true if authorized; on failure the 401/429 is already sent.
-bool authorize_request(uint8_t slot_id, HttpReq *req, const Route *r);
+bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const Route *r);
 #endif
 
 #if PC_ENABLE_WEBSOCKET
@@ -764,10 +803,10 @@ void ws_dispatch_close(const WsConn *ws);
  * @param port  TCP port to open.
  * @param proto Application protocol; defaults to ConnProto::PROTO_HTTP.
  * @return the listener id (a non-negative index) on success - pass it to
- *         pc_relay_publish() / pc_ssh_forward_begin(); pc_result::PC_ERR_LISTENER_FULL if the pool is
+ *         pc_relay_publish() / pc_ssh_forward_begin(); PC_ERR_LISTENER_FULL if the pool is
  * full.
  */
-int32_t listen(uint16_t port, ConnProto proto = ConnProto::PROTO_HTTP);
+int32_t listen(uint16_t port, ConnProto proto);
 
 /**
  * @brief Initialize all connection slots and open all registered listeners.
@@ -777,11 +816,11 @@ int32_t listen(uint16_t port, ConnProto proto = ConnProto::PROTO_HTTP);
  * Requires at least one prior listen() call.  For the common single-port
  * case use begin(port, cfg) instead.
  *
- * @param cfg  Optional runtime configuration.  Pass nullptr for defaults.
- * @return pc_result::PC_OK on success; pc_result::PC_ERR_NO_LISTENERS if no ports were
- *         registered; pc_result::PC_ERR_LISTEN_FAILED if a listener could not open.
+ * @param cfg  Optional runtime configuration.  Pass NULL for defaults.
+ * @return PC_OK on success; PC_ERR_NO_LISTENERS if no ports were
+ *         registered; PC_ERR_LISTEN_FAILED if a listener could not open.
  */
-int32_t begin(const WebServerConfig *cfg = nullptr);
+int32_t proto_begin(const WebServerConfig *cfg);
 
 /**
  * @brief Convenience overload: register @p port as HTTP and start listening.
@@ -790,10 +829,10 @@ int32_t begin(const WebServerConfig *cfg = nullptr);
  * compatibility with single-port sketches.
  *
  * @param port TCP port to listen on (typically 80).
- * @param cfg  Optional runtime configuration.  Pass nullptr for defaults.
- * @return pc_result::PC_OK on success; a negative pc_result on failure.
+ * @param cfg  Optional runtime configuration.  Pass NULL for defaults.
+ * @return PC_OK on success; a negative pc_result on failure.
  */
-int32_t begin_http(uint16_t port, const WebServerConfig *cfg = nullptr);
+int32_t begin_http(uint16_t port, const WebServerConfig *cfg);
 
 #if PC_ENABLE_TLS
 /**
@@ -811,7 +850,7 @@ bool tls_cert(const uint8_t *cert, size_t cert_len, const uint8_t *key, size_t k
  * @brief Register a TLS (HTTPS) HTTP listener on @p port (typically 443).
  *
  * Like listen() but connections accepted here run a TLS handshake first.
- * Call tls_cert() first, then begin(). @return pc_result::PC_OK or an error code.
+ * Call tls_cert() first, then begin(). @return PC_OK or an error code.
  */
 int32_t listen_tls(uint16_t port);
 
@@ -826,11 +865,11 @@ int32_t listen_tls(uint16_t port);
  * @param key      Server private key.
  * @param key_len  Length incl. trailing NUL for PEM.
  * @param cfg      Optional runtime config.
- * @return pc_result::PC_OK on success; a negative code, or pc_result::PC_ERR_LISTEN_FAILED
+ * @return PC_OK on success; a negative code, or PC_ERR_LISTEN_FAILED
  * if the TLS engine could not initialize.
  */
 int32_t begin_tls(uint16_t port, const uint8_t *cert, size_t cert_len, const uint8_t *key, size_t key_len,
-                  const WebServerConfig *cfg = nullptr);
+                  const WebServerConfig *cfg);
 
 #if PC_ENABLE_MTLS
 /**
@@ -873,8 +912,7 @@ int tls_client_subject(uint8_t slot_id, char *out, size_t out_len);
  *
  * Profile: TLS_AES_128_GCM_SHA256 + X25519 + Ed25519 (a client offering none of these is refused).
  */
-bool pc_h3_cert(const uint8_t *cert_der, size_t cert_len, const uint8_t ed25519_seed[32],
-                uint16_t port = PC_HTTP3_PORT);
+bool pc_h3_cert(const uint8_t *cert_der, size_t cert_len, const uint8_t ed25519_seed[32], uint16_t port);
 
 /**
  * @brief Internal: run a completed HTTP/3 request through the shared route dispatcher on the
@@ -904,10 +942,10 @@ void stop();
  * Calling restart() before any listen() / begin(port) has no effect and
  * returns -1.
  *
- * @param cfg Optional new runtime configuration.  Pass nullptr to reuse
+ * @param cfg Optional new runtime configuration.  Pass NULL to reuse
  *            the compile-time default (CONN_TIMEOUT_MS).
  */
-int32_t restart(const WebServerConfig *cfg = nullptr);
+int32_t restart(const WebServerConfig *cfg);
 
 /**
  * @brief Register a route handler.
@@ -955,8 +993,8 @@ void on_http_iface(const char *path, HttpMethod method, Handler callback, pc_ifa
  * Matching is bounded by RE_MAX_STEPS and fails closed past that budget.
  *
  * @code
- *   server.on_regex("/sensor/[0-9]+", HttpMethod::HTTP_GET, handle_sensor);
- *   server.on_regex("/img/.+\\.png", HttpMethod::HTTP_GET, handle_png);
+ *   server.on_regex("/sensor/[0-9]+", HTTP_GET, handle_sensor);
+ *   server.on_regex("/img/.+\\.png", HTTP_GET, handle_png);
  * @endcode
  *
  * @param pattern  Regex the full path must match (stored, <= MAX_PATH_LEN-1).
@@ -995,7 +1033,7 @@ void set_ap_ip(uint32_t ap_ip);
  * @param digest   When true, use Digest authentication instead of Basic.
  */
 void on_http_auth(const char *path, HttpMethod method, Handler callback, const char *realm, const char *user,
-                  const char *pass, bool digest = false);
+                  const char *pass, bool digest);
 #endif // PC_ENABLE_AUTH
 
 #if PC_ENABLE_FILE_SERVING
@@ -1008,7 +1046,7 @@ void on_http_auth(const char *path, HttpMethod method, Handler callback, const c
  * be opened.
  *
  * @param slot_id      Connection slot index.
- * @param file_sys     Backend to read from; nullptr uses whatever is mounted (the board's).
+ * @param file_sys     Backend to read from; NULL uses whatever is mounted (the board's).
  * @param fs_path      Request path to the file, resolved against the mount root.
  * @param content_type MIME type string, e.g. "text/html".
  */
@@ -1028,12 +1066,12 @@ void serve_file(uint8_t slot_id, const pc_mnt_backend *file_sys, const char *fs_
  * Only GET and HEAD are served; other methods get 405.
  *
  * @code
- * server.serve_static("/", nullptr, "/www");          // the board's own storage
+ * server.serve_static("/", NULL, "/www");          // the board's own storage
  * server.serve_static("/ram/", pc_mnt_ram(), "/");    // or any backend that satisfies our vtable
  * @endcode
  *
  * @param url_prefix  URL prefix to mount (with or without a trailing `*`).
- * @param file_sys    Backend to serve from; nullptr uses whatever is mounted (the board's).
+ * @param file_sys    Backend to serve from; NULL uses whatever is mounted (the board's).
  * @param fs_root     Subtree on that backend (persistent string).
  */
 void serve_static(const char *url_prefix, const pc_mnt_backend *file_sys, const char *fs_root);
@@ -1058,11 +1096,11 @@ void serve_static(const char *url_prefix, const pc_mnt_backend *file_sys, const 
  * exposing a writable share.
  *
  * @code
- * server.dav("/dav", nullptr, "/dav");   // dav://<ip>/dav -> /dav on the board's own storage
+ * server.dav("/dav", NULL, "/dav");   // dav://<ip>/dav -> /dav on the board's own storage
  * @endcode
  *
  * @param url_prefix URL prefix to mount (with or without a trailing `*`).
- * @param file_sys   Backend to serve from; nullptr uses whatever is mounted (the board's).
+ * @param file_sys   Backend to serve from; NULL uses whatever is mounted (the board's).
  * @param fs_root    Subtree on that backend (persistent string).
  */
 void dav(const char *url_prefix, const pc_mnt_backend *file_sys, const char *fs_root);
@@ -1082,7 +1120,7 @@ void on_not_found(Handler callback);
  * @brief Install a per-request access-log callback (one hook, no buffering).
  *
  * @p cb is invoked once per response with the method, path, status code, and
- * response body length. Pass nullptr to remove. See @ref RequestLogCb.
+ * response body length. Pass NULL to remove. See @ref RequestLogCb.
  */
 void on_request_log(RequestLogCb cb);
 
@@ -1098,12 +1136,12 @@ void on_request_log(RequestLogCb cb);
  * @code
  *   static MwResult log_mw(uint8_t slot, HttpReq *req) {
  *       Serial.printf("%s %s\n", req->method, req->path);
- *       return MwResult::MW_NEXT;                  // fall through to the handler
+ *       return MW_NEXT;                  // fall through to the handler
  *   }
  *   server.use(log_mw);
  * @endcode
  *
- * @param mw Middleware function pointer (must not be nullptr).
+ * @param mw Middleware function pointer (must not be NULL).
  */
 void use(Middleware mw);
 
@@ -1131,7 +1169,7 @@ void enable_rate_limit(uint16_t max_requests, uint32_t window_ms);
  * Body: uptime_ms, total requests, 2xx/4xx/5xx counts, active connection-pool
  * slots, and (on ESP32) free heap. Wire it to a route:
  * @code
- *   server.on("/stats", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) { server.stats(id); });
+ *   server.on("/stats", HTTP_GET, [](uint8_t id, HttpReq *) { server.stats(id); });
  * @endcode
  *
  * @param slot_id Connection slot to respond on.
@@ -1147,7 +1185,7 @@ void stats(uint8_t slot_id);
  * gauges/counters (Content-Type `text/plain; version=0.0.4`) so a Prometheus
  * server can scrape the device.
  * @code
- *   server.on("/metrics", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) { server.metrics(id); });
+ *   server.on("/metrics", HTTP_GET, [](uint8_t id, HttpReq *) { server.metrics(id); });
  * @endcode
  *
  * @param slot_id Connection slot to respond on.
@@ -1173,7 +1211,7 @@ void set_cors(const char *origin);
  * Applies to serve_file() / serve_static() responses (beside the ETag), so
  * browsers can cache assets and revalidate cheaply with `If-None-Match`.
  * Examples: `"no-cache"` (cache but always revalidate), `"max-age=3600"`,
- * `"public, max-age=31536000, immutable"`. Pass `""` / `nullptr` to disable.
+ * `"public, max-age=31536000, immutable"`. Pass `""` / `NULL` to disable.
  *
  * @param value `Cache-Control` directive, or empty/null to emit no header.
  */
@@ -1228,7 +1266,7 @@ void handle();
  * every slot. Public so the worker task can invoke it; application code should
  * call handle() rather than this directly.
  */
-void service_once(int worker_id = 0);
+void service_once(int worker_id);
 
 /**
  * @brief The instance-bound HTTP poll pump for one slot (the HTTP ProtoHandler's on_poll).
@@ -1304,8 +1342,7 @@ void send_empty(uint8_t slot_id, int code);
 /**
  * @brief Send an HTTP redirect (Location header, empty body) and close.
  *
- * Convenience for the common `/`→`/index.html` or canonical-host case,
- * previously hand-rolled via send_empty() plus a manual Location header.
+ * Convenience for the common `/`→`/index.html` or canonical-host case.
  *
  * @param slot_id  Connection slot index.
  * @param code     Redirect status: 301, 302, 303, 307, or 308. Any other
@@ -1318,7 +1355,7 @@ void redirect(uint8_t slot_id, int code, const char *location);
  * @brief Send a response body with `{{name}}` placeholders substituted.
  *
  * Streams @p tmpl to the client, replacing each `{{name}}` token with the
- * string returned by @p resolver (nullptr → empty). The body is never
+ * string returned by @p resolver (NULL → empty). The body is never
  * buffered whole: it is walked twice - once to compute Content-Length, once
  * to write - so memory use is constant regardless of body size. A `{{` with
  * no matching `}}` (or a name longer than 32 chars) is emitted literally.
@@ -1327,7 +1364,7 @@ void redirect(uint8_t slot_id, int code, const char *location);
  * @param code         HTTP status code.
  * @param content_type Response Content-Type.
  * @param tmpl         Null-terminated template text.
- * @param resolver     Placeholder resolver (see TemplateVar), or nullptr.
+ * @param resolver     Placeholder resolver (see TemplateVar), or NULL.
  */
 void send_template(uint8_t slot_id, int code, const char *content_type, const char *tmpl, TemplateVar resolver);
 
@@ -1346,11 +1383,11 @@ void send_template(uint8_t slot_id, int code, const char *content_type, const ch
  * @param slot_id      Connection slot index.
  * @param code         HTTP status code.
  * @param content_type Response Content-Type.
- * @param source       Generator that produces the body (must not be nullptr).
+ * @param source       Generator that produces the body (must not be NULL).
  * @param ctx          Opaque state handed to @p source; see @ref ChunkSource
  *                     for the lifetime requirement (must outlive the response).
  */
-void send_chunked(uint8_t slot_id, int code, const char *content_type, ChunkSource source, void *ctx = nullptr);
+void send_chunked(uint8_t slot_id, int code, const char *content_type, ChunkSource source, void *ctx);
 
 /**
  * @brief Queue a custom response header for the next send on this slot.
@@ -1365,21 +1402,21 @@ void send_chunked(uint8_t slot_id, int code, const char *content_type, ChunkSour
  * @param name    Header field name (no `:` or CRLF).
  * @param value   Header field value (no CRLF).
  */
-void add_response_header(uint8_t slot_id, const char *name, const char *value);
+void proto_add_response_header(uint8_t slot_id, const char *name, const char *value);
 
 /**
  * @brief Queue a `Set-Cookie` response header for the next send on this slot.
  *
  * Emits `Set-Cookie: name=value\r\n`, or `Set-Cookie: name=value; attrs\r\n`
  * when @p attrs is non-null (e.g. `"Path=/; HttpOnly; Max-Age=3600"`).
- * Shares the per-slot buffer with add_response_header().
+ * Shares the per-slot buffer with proto_add_response_header().
  *
  * @param slot_id Connection slot index.
  * @param name    Cookie name.
  * @param value   Cookie value.
- * @param attrs   Optional `;`-separated attribute string, or nullptr.
+ * @param attrs   Optional `;`-separated attribute string, or NULL.
  */
-void set_cookie(uint8_t slot_id, const char *name, const char *value, const char *attrs = nullptr);
+void set_cookie(uint8_t slot_id, const char *name, const char *value, const char *attrs);
 
 /**
  * @brief Discard any headers/cookies queued for this slot.
@@ -1430,9 +1467,9 @@ void diag(uint8_t slot_id);
  * Ping frames are answered with Pong automatically; no handler needed.
  *
  * @param path        URL path the client connects to, e.g. `"/ws"`.
- * @param on_connect  Fired once when the handshake completes.  May be nullptr.
- * @param on_message  Fired for each text or binary frame.  Must not be nullptr.
- * @param on_close    Fired when the connection closes.  May be nullptr.
+ * @param on_connect  Fired once when the handshake completes.  May be NULL.
+ * @param on_message  Fired for each text or binary frame.  Must not be NULL.
+ * @param on_close    Fired when the connection closes.  May be NULL.
  */
 void on_ws(const char *path, WsConnectHandler on_connect, WsMessageHandler on_message, WsCloseHandler on_close);
 
@@ -1477,7 +1514,7 @@ void ws_disconnect(uint8_t ws_id);
  * handler can push an initial event with pc_sse_send().
  *
  * @param path        URL path, e.g. `"/events"`.
- * @param on_connect  Fired when a client subscribes.  May be nullptr.
+ * @param on_connect  Fired when a client subscribes.  May be NULL.
  */
 void on_sse(const char *path, SseConnectHandler on_connect);
 
@@ -1485,15 +1522,15 @@ void on_sse(const char *path, SseConnectHandler on_connect);
  * @brief Push an event to one SSE client.
  *
  * Formats and sends `event: ...\ndata: ...\nid: ...\n\n` to the client
- * on @p pc_sse_id.  Any field may be nullptr to omit it from the output.
- * The data field is required; passing nullptr sends nothing.
+ * on @p pc_sse_id.  Any field may be NULL to omit it from the output.
+ * The data field is required; passing NULL sends nothing.
  *
  * @param pc_sse_id  Index into pc_sse_pool[].
  * @param data    Event data string (required).
  * @param event   Optional event name (sets the `event:` field).
  * @param id      Optional event ID (sets the `id:` field).
  */
-void pc_sse_send(uint8_t pc_sse_id, const char *data, const char *event = nullptr, const char *id = nullptr);
+void pc_sse_send(uint8_t pc_sse_id, const char *data, const char *event, const char *id);
 
 /**
  * @brief Push an event to all connected SSE clients on a given path.
@@ -1506,16 +1543,12 @@ void pc_sse_send(uint8_t pc_sse_id, const char *data, const char *event = nullpt
  * @param event  Optional event name.
  * @param id     Optional event ID.
  */
-void pc_sse_broadcast(const char *path, const char *data, const char *event = nullptr, const char *id = nullptr);
+void pc_sse_broadcast(const char *path, const char *data, const char *event, const char *id);
 #endif // PC_ENABLE_SSE
 
 // ---------------------------------------------------------------------------
 // Cross-file server API
 // ---------------------------------------------------------------------------
-//
-// These were split into a second "internal" header, which bought nothing: it declared the same
-// functions, needed the same include, and its only real effect was pulling this header into
-// src/server/ and dragging the vendor surface down with it. One header declares the library.
 //
 // Each function is defined by the file that owns the state behind it. Where state is involved the
 // declaration is a reader, never the storage, so the owner stays the only writer.
@@ -1539,7 +1572,7 @@ extern const size_t PC_RESP_HDR_OVERFLOW_LEN;
 void fill_route_base(Route *r, const char *path);
 
 /** @brief Format @p t as an RFC 1123 GMT date into @p out (cap bytes); @p out is emptied for t <= 0. */
-void http_rfc1123(time_t t, char *out, size_t cap);
+void http_rfc1123(int64_t epoch, char *out, size_t cap);
 
 /** @brief True if the request in slot @p slot_id used the HEAD method (send headers, no body). */
 bool req_is_head(uint8_t slot_id);

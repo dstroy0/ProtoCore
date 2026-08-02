@@ -20,12 +20,12 @@
 #include "crypto/mac/ghash.h"
 #include "crypto/mac/hmac_sha256.h"
 #include "crypto/mac/hmac_sha512.h"
+#include "mmgr/plaintext.h"
+#include "mmgr/secure.h"
 #include "network_drivers/presentation/ssh/crypto/ssh_rsa.h"
 #include "network_drivers/presentation/ssh/transport/ssh_dh.h"
 #include "network_drivers/presentation/ssh/transport/ssh_keymat.h"
 #include "network_drivers/presentation/ssh/transport/ssh_packet.h"
-#include "server/mmgr/plaintext.h"
-#include "server/mmgr/secure.h"
 #include <stdint.h>
 #include <string.h>
 #include <unity.h>

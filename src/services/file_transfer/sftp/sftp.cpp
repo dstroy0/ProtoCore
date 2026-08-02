@@ -7,7 +7,7 @@
  */
 
 #include "services/file_transfer/sftp/sftp.h"
-#include "shared_primitives/strbuf.h" // pc_sb frame builder
+#include "mmgr/membuild.h" // pc_sb frame builder
 
 #include "shared_primitives/time_compat.h" // pc_gmtime_r (portable reentrant UTC)
 

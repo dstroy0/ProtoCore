@@ -12,8 +12,8 @@
 #include "crypto/asymmetric/rsa.h"
 #include "crypto/hash/sha256.h"
 #include "crypto/hash/sha512.h"
+#include "mmgr/secure.h"
 #include "network_drivers/presentation/ssh/transport/ssh_keymat.h"
-#include "server/mmgr/secure.h"
 #include <string.h>
 
 // Public host key (BSS - no secret material).

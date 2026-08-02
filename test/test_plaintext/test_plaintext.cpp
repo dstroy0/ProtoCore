@@ -1,12 +1,12 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the plaintext pool accessor (server/mmgr/plaintext): bump
+// Unit tests for the plaintext pool accessor (mmgr/plaintext): bump
 // allocation, alignment, the reset contract, and fail-closed exhaustion. Pure
 // host tests - no sockets, no FreeRTOS (the owner-task tripwire is ESP32-only).
 
+#include "mmgr/plaintext.h"
 #include "network_drivers/session/worker.h"
-#include "server/mmgr/plaintext.h"
 #include <stdint.h>
 #include <unity.h>
 

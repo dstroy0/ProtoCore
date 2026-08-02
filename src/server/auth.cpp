@@ -13,12 +13,12 @@
  */
 
 #include "crypto/hash/sha256.h"                               // pc_sha256, PC_SHA256_DIGEST_LEN (Digest)
+#include "mmgr/membuild.h"                                    // pc_sb frame builder
 #include "network_drivers/presentation/codec/base64/base64.h" // pc_base64_decode (Basic)
 #include "network_drivers/transport/tcp.h"                    // conn_pool, pc_conn_send, TcpConn/ConnState
 #include "protocore.h"
-#include "services/system/clock.h"    // pc_millis() for the stateless nonce
-#include "shared_primitives/hex.h"    // pc_hex_encode/decode
-#include "shared_primitives/strbuf.h" // pc_sb frame builder
+#include "services/system/clock.h" // pc_millis() for the stateless nonce
+#include "shared_primitives/hex.h" // pc_hex_encode/decode
 #include <stdio.h>
 #include <string.h>
 #if PC_ENABLE_AUTH
@@ -245,8 +245,8 @@ void send_unauth(uint8_t slot_id, const Route *r, bool stale)
     pc_sb_put(&sb_header, "\r\n");
     int hlen = (int)pc_sb_finish(&sb_header);
 
-    // Fold the flush into the final write (one marshal instead of two); 401 challenges are frequent
-    // when a protected route is hammered.
+    // The flush rides the final write, so the challenge leaves in one marshal whether or not a body
+    // follows the header.
     if (!req_is_head(slot_id))
     {
         pc_conn_send(slot_id, header, (u16_t)hlen);

@@ -1321,6 +1321,7 @@
     "StatsD",
     "statsd",
     "Statusword",
+    "stdatomic",
     "stddef",
     "stddev",
     "stdint",

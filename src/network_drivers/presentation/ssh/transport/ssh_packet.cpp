@@ -16,8 +16,8 @@
 #include "network_drivers/presentation/ssh/transport/ssh_comp.h"
 #include "network_drivers/presentation/ssh/transport/ssh_zlib.h" // ssh_deflate_bound
 #endif
-#include "server/mmgr/plaintext.h"
-#include "server/mmgr/secure.h"
+#include "mmgr/plaintext.h"
+#include "mmgr/secure.h"
 #include <string.h>
 
 #ifdef ARDUINO

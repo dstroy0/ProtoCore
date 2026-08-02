@@ -7,7 +7,8 @@
  */
 
 #include "services/web/web_terminal/web_terminal.h"
-#include "shared_primitives/strbuf.h" // pc_sb frame builder
+#include "mmgr/membuild.h" // pc_sb frame builder
+#include "protocore.h"     // MAX_PATH_LEN, MAX_WS_CONNS, HttpReq, send_text
 
 #if PC_ENABLE_WEB_TERMINAL
 
@@ -15,7 +16,7 @@
 
 #include "network_drivers/application/web_assets.h" // PC_TERMINAL_PAGE
 #include "shared_primitives/mime.h"
-#include <stdarg.h>
+#include <stdbool.h>
 #include <string.h>
 
 // ---------------------------------------------------------------------------
@@ -25,12 +26,15 @@
 // command callback, the WebSocket path, and which ws slots are terminal browsers. Grouped so
 // it is one named owner, unreachable cross-TU. (The route/ws handlers are fixed-signature
 // callbacks, so they reach this single owner directly.)
-struct WebTerminalCtx
+typedef struct
 {
-    TermCommandCb cb = nullptr;
-    char ws_path[MAX_PATH_LEN] = {0};
-    bool is_client[MAX_WS_CONNS] = {}; // which ws slots are terminal browsers
-};
+    TermCommandCb cb;
+    char ws_path[MAX_PATH_LEN];
+    bool is_client[MAX_WS_CONNS]; // which ws slots are terminal browsers
+} WebTerminalCtx;
+
+// Static storage duration zero-initializes every field: cb is null, ws_path is empty, and no slot
+// is marked a terminal client until a WebSocket connects.
 static WebTerminalCtx s_term;
 
 // ---- internal route handlers ----------------------------------------------
@@ -129,18 +133,6 @@ void pc_web_terminal_println(const char *s)
     {
         buf[0] = '\0';
     }
-    pc_web_terminal_print(buf);
-}
-
-void pc_web_terminal_frame(const pc_field *spec, ...)
-{
-    char buf[TERM_TX_BUF_SIZE];
-    va_list ap;
-    va_start(ap, spec);
-    // A frame that does not fit leaves buf a valid empty string, so the print is a no-op rather
-    // than a partial line.
-    (void)pc_frame_vbuild(buf, sizeof(buf), spec, ap);
-    va_end(ap);
     pc_web_terminal_print(buf);
 }
 

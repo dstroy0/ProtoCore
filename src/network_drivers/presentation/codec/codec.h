@@ -30,7 +30,7 @@
 #define PROTOCORE_CODEC_H
 
 #include "protocore_config.h" // PC_NEED_CBOR / PC_ENABLE_MSGPACK gate the instances below
-#include "server/mmgr/span.h"
+#include "shared_primitives/span.h"
 #include <stddef.h>
 #include <stdint.h>
 

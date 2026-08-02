@@ -7,7 +7,7 @@
  */
 
 #include "services/system/logbuf/logbuf.h"
-#include "shared_primitives/frame.h" // the one frame engine
+#include "mmgr/frame.h" // the one frame engine
 
 #if PC_ENABLE_LOGBUF
 

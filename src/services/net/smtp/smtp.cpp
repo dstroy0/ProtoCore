@@ -10,9 +10,9 @@
  */
 
 #include "services/net/smtp/smtp.h"
+#include "mmgr/membuild.h" // pc_sb frame builder
 #include "protocore_config.h"
-#include "services/system/clock.h"    // pcdelay
-#include "shared_primitives/strbuf.h" // pc_sb frame builder
+#include "services/system/clock.h" // pcdelay
 
 #if PC_ENABLE_SMTP
 

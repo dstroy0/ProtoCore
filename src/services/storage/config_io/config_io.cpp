@@ -10,7 +10,7 @@
  */
 
 #include "services/storage/config_io/config_io.h"
-#include "shared_primitives/frame.h" // the one frame engine
+#include "mmgr/frame.h" // the one frame engine
 
 #if PC_ENABLE_CONFIG_IO
 

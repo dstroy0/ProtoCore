@@ -31,9 +31,9 @@
 #ifndef PROTOCORE_FILESYSTEM_H
 #define PROTOCORE_FILESYSTEM_H
 
+#include "mmgr/frame.h" // the one frame engine
 #include "protocore_config.h"
 #include "server/filesystem/mnt.h"
-#include "shared_primitives/frame.h" // the one frame engine
 #include <stddef.h>
 #include <stdint.h>
 

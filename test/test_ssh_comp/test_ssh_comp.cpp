@@ -10,6 +10,7 @@
 
 #include "crypto/cipher/aes256ctr.h" // native software AES-256-CTR path
 #include "crypto/hash/sha256.h"      // independent KDF verification
+#include "mmgr/plaintext.h"
 #include "network_drivers/presentation/codec/inflate/inflate.h"
 #include "network_drivers/presentation/ssh/auth/ssh_auth.h"          // password verifier for the dispatch path
 #include "network_drivers/presentation/ssh/connection/ssh_channel.h" // full-switch dispatch coverage
@@ -19,7 +20,6 @@
 #include "network_drivers/presentation/ssh/transport/ssh_dh.h" // DH keygen + RFC 4253 §7.2 key derivation
 #include "network_drivers/presentation/ssh/transport/ssh_packet.h"
 #include "network_drivers/presentation/ssh/transport/ssh_transport.h" // KEXINIT s2c compression negotiation
-#include "server/mmgr/plaintext.h"
 #include <string.h>
 #include <unity.h>
 

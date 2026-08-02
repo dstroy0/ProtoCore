@@ -1,5 +1,43 @@
 # Law sweep - working notes
 
+## Standing directive: src/ moves to C. Hard C++ ban.
+
+`src/` is being converted to C. C++ is banned there.
+
+**Any file this sweep touches gets converted as part of touching it.** Fix what you touch, one
+file at a time. A file is not "touched" and left in C++.
+
+That folds into the existing rule below: a file is not left until it is clean, and clean now
+includes being C.
+
+### The conversion idiom
+
+| C++                                     | C                                    | note                                                                            |
+| --------------------------------------- | ------------------------------------ | ------------------------------------------------------------------------------- |
+| `enum class E : uint8_t { A, B };`      | `typedef enum { A, B } E;`           | members already carry a descriptive prefix, so de-scoping collides with nothing |
+| `E::A`                                  | `A`                                  | textual; the `E::` comes off                                                    |
+| `void f(const char *p = "x");`          | `void f(const char *p);`             | every call site states the argument                                             |
+| `void f(const char *)` **(definition)** | `void f(const char *p) { (void)p; }` | an unnamed parameter is legal C++ and illegal in a C99 definition               |
+| `uint8_t f();`                          | `uint8_t f(void);`                   | `()` in C is _unspecified_ arguments, not none                                  |
+| `nullptr`                               | `NULL`                               | including in doc comments                                                       |
+| `= {}`                                  | `= {0}`                              |                                                                                 |
+| `#include "protocore.h"` for one type   | `struct Route;`                      | opaque pointer; the aggregate header includes you, never the reverse            |
+| `T &x`                                  | `T *x`                               |                                                                                 |
+
+Check both states of a feature-gated header: `PC_ENABLE_X=1` compiles the real branch and `=0`
+compiles the stubs, and an artifact in the branch you did not build is invisible.
+
+    gcc -fsyntax-only -x c -std=c99 -Wall -Wextra -pedantic -Isrc -DPC_ENABLE_X=1 <header>
+    gcc -fsyntax-only -x c -std=c99 -Wall -Wextra -pedantic -Isrc -DPC_ENABLE_X=0 <header>
+
+**ASK - two written rules contradict the C ban and have to be re-decided, not quietly broken:**
+
+- `SYMBOLS.md` section 3 mandates `enum class` for every enum. C has no scoped enum. 177 declarations.
+- `SRCBANNED.md` #10 mandates `static_cast` / `reinterpret_cast` and bans the C-style cast. C has
+  only the C-style cast.
+
+---
+
 Untracked. One file at a time, in tree order. Each file is read against
 [docs/SRC_LAW.md](docs/SRC_LAW.md), [docs/SRCBANNED.md](docs/SRCBANNED.md),
 [docs/SYMBOLS.md](docs/SYMBOLS.md) and [.github/CONTRIBUTING.md](.github/CONTRIBUTING.md),
@@ -898,3 +936,10 @@ at the byte it finds and must never see one.
   binding files - blocked on how a codec emits bytes without linking the SSH stack (see below).
 - Nothing in the library calls `pc_fs_*` yet: SFTP/SCP still open files through their own `fs::FS`
   pointer. The accessor is built and tested but not yet adopted by its callers.
+- Bare `inline` on header functions in `shared_primitives/`, found during the comment sweep. In C11
+  `inline` without `static` is a definition with external linkage that needs a separate non-inline
+  definition somewhere; without one, any TU that declines to inline the call gets an undefined
+  reference. Every other header here uses `static inline` or `PC_INLINE`. Sites: `bitio.h`
+  (`pc_bitw_put`, `pc_bitw_align`), `bytes.h` (`pc_bw_put`, `pc_bw_put_be`, `pc_br_take_be`,
+  `pc_rd_u32`, `pc_rd_str`). Compiles today because C++ gives `inline` different linkage rules; it
+  breaks when the file is built as C.

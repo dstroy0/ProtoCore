@@ -10,7 +10,7 @@
  */
 
 #include "services/security/guardrails/guardrails.h"
-#include "shared_primitives/strbuf.h" // pc_sb frame builder
+#include "mmgr/membuild.h" // pc_sb frame builder
 
 #if PC_ENABLE_GUARDRAILS
 

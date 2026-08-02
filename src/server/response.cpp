@@ -12,11 +12,11 @@
  * other file can name.
  */
 
+#include "mmgr/membuild.h"                 // pc_sb frame builder (replaces snprintf)
 #include "network_drivers/transport/tcp.h" // conn_pool, pc_conn_send, TcpConn/ConnState
 #include "protocore.h"
-#include "shared_primitives/hex.h"    // pc_hex_u32 (chunk size-line writer)
-#include "shared_primitives/mime.h"   // PC_MIME_*, mime tables
-#include "shared_primitives/strbuf.h" // pc_sb frame builder (replaces snprintf)
+#include "shared_primitives/hex.h"  // pc_hex_u32 (chunk size-line writer)
+#include "shared_primitives/mime.h" // PC_MIME_*, mime tables
 #include <stdio.h>
 #include <string.h>
 #if PC_ENABLE_METRICS || PC_ENABLE_STATS
@@ -268,7 +268,7 @@ void send_template(uint8_t slot_id, int code, const char *content_type, const ch
     pc_sb_u32(&hb, (uint32_t)body_len);
     pc_sb_lit(&hb, "\r\n");
     int hlen = (int)pc_sb_finish(&hb);
-    hlen = append_resp_trailer(header, RESP_HDR_BUF_SIZE, hlen, slot_id, cl);
+    hlen = proto_append_resp_trailer(header, RESP_HDR_BUF_SIZE, hlen, slot_id, cl);
 
     bool head = req_is_head(slot_id);
 
@@ -279,7 +279,7 @@ void send_template(uint8_t slot_id, int code, const char *content_type, const ch
         tmpl_walk(slot_id, tmpl, resolver, true);
     }
 
-    pc_resp_end(slot_id, code, (int)body_len, keep);
+    pc_resp_end(slot_id, code, (int)body_len, keep, /*pre_flushed=*/false);
 }
 
 // ---------------------------------------------------------------------------
@@ -334,14 +334,14 @@ void send_chunked(uint8_t slot_id, int code, const char *content_type, ChunkSour
     pc_sb_put(&hb2, content_type);
     pc_sb_put(&hb2, raw ? "\r\n" : "\r\nTransfer-Encoding: chunked\r\n");
     int hlen = (int)pc_sb_finish(&hb2);
-    hlen = append_resp_trailer(header, RESP_HDR_BUF_SIZE, hlen, slot_id, cl);
+    hlen = proto_append_resp_trailer(header, RESP_HDR_BUF_SIZE, hlen, slot_id, cl);
 
     pc_conn_send(slot_id, header, (u16_t)hlen);
 
     // HEAD carries the headers but no body or terminator.
     if (req_is_head(slot_id) || !source)
     {
-        pc_resp_end(slot_id, code, 0, keep);
+        pc_resp_end(slot_id, code, 0, keep, /*pre_flushed=*/false);
         return;
     }
 
@@ -412,7 +412,8 @@ void chunk_send_pump(uint8_t slot_id)
             }
             pc_conn_flush(slot_id);
             s.active = false;
-            pc_resp_end(slot_id, s.status, s.total, s.keep); // raw: keep==false -> connection close ends the body
+            pc_resp_end(slot_id, s.status, s.total, s.keep,
+                        /*pre_flushed=*/false); // raw: keep==false -> connection close ends the body
             return;
         }
         if (n > cap)
@@ -454,7 +455,7 @@ void chunk_send_pump(uint8_t slot_id)
 // reaches the wire.
 // ---------------------------------------------------------------------------
 
-void add_response_header(uint8_t slot_id, const char *name, const char *value)
+void proto_add_response_header(uint8_t slot_id, const char *name, const char *value)
 {
     if (slot_id >= MAX_CONNS || name == nullptr || value == nullptr)
     {
@@ -470,7 +471,7 @@ void add_response_header(uint8_t slot_id, const char *name, const char *value)
     pc_sb_put(&hb3, value);
     pc_sb_put(&hb3, "\r\n");
     // A latched builder may have written the pieces that did fit, so rewinding to `used` is what
-    // drops the header whole - the same contract snprintf's truncation test enforced.
+    // drops the header whole rather than leaving a truncated one.
     if (pc_sb_finish(&hb3) == 0)
     {
         buf[used] = '\0';
@@ -656,7 +657,7 @@ void stats(uint8_t slot_id)
     pc_signal_snapshot sig;
     pc_signal_know(&sig);
 
-    // millis() is a 32-bit tick counter, so the uptime field wraps with it exactly as before.
+    // millis() is a 32-bit tick counter, so the uptime field wraps with it.
     num_field(s_stats.uptime, sizeof(s_stats.uptime), (uint32_t)up);
     num_field(s_stats.requests, sizeof(s_stats.requests), sig.requests_total);
     num_field(s_stats.n2xx, sizeof(s_stats.n2xx), sig.responses_2xx);

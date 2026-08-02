@@ -14,9 +14,8 @@
  * reader does not have to resolve a second macro to find out. A macro rather than the pragma itself
  * because core carries no toolchain language.
  *
- * O2 is the only level here because O2 is what has been measured (docs/FEATURE_PERFORMANCE.md 2b).
- * O3 is untested on this path - not rejected. A file that needs another level adds the macro for it
- * here rather than redefining this one.
+ * O2 is the only level defined here (see docs/FEATURE_PERFORMANCE.md 2b). A file that needs another
+ * level adds the macro for it here rather than redefining this one.
  *
  * Apply only where there are no secrets or the code is constant-time by structure. An optimizer can
  * turn a branchless mask-select into a data-dependent branch; `crypto/crypto_opt.h` is the crypto

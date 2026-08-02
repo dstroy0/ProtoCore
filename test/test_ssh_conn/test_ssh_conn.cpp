@@ -7,6 +7,7 @@
 
 #include "crypto/asymmetric/bignum.h" // bn_expmod_group14 direct coverage (Montgomery guard sliver)
 #include "lwip/tcp.h"
+#include "mmgr/plaintext.h"
 #include "network_drivers/presentation/ssh/auth/ssh_auth.h" // password cb for the direct-dispatch handshake
 #include "network_drivers/presentation/ssh/connection/ssh_channel.h"
 #include "network_drivers/presentation/ssh/connection/ssh_conn.h"
@@ -15,7 +16,6 @@
 #include "network_drivers/presentation/ssh/transport/ssh_packet.h"
 #include "network_drivers/presentation/ssh/transport/ssh_transport.h"
 #include "network_drivers/transport/tcp.h"
-#include "server/mmgr/plaintext.h"
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>

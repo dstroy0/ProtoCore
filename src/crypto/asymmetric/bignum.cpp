@@ -27,7 +27,7 @@
 
 #include "crypto/asymmetric/bignum.h"
 #include "crypto/crypto_opt.h"
-#include "server/mmgr/secure.h"
+#include "mmgr/secure.h"
 #include <string.h>
 PC_CRYPTO_HOT
 

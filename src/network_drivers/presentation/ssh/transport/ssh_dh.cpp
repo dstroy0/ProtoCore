@@ -8,8 +8,8 @@
 
 #include "network_drivers/presentation/ssh/transport/ssh_dh.h"
 #include "crypto/mac/hmac_sha256.h"
+#include "mmgr/secure.h"
 #include "network_drivers/presentation/ssh/crypto/ssh_kexhash.h"
-#include "server/mmgr/secure.h"
 #include <Arduino.h> // for esp_random() / esp_fill_random() (real or mock)
 #include <string.h>
 

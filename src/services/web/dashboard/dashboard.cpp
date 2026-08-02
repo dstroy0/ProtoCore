@@ -15,7 +15,7 @@
 
 #if PC_ENABLE_DASHBOARD
 
-#include "shared_primitives/frame.h"
+#include "mmgr/frame.h"
 #include "shared_primitives/numparse.h"
 #include <string.h>
 

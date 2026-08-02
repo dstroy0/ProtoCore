@@ -25,8 +25,8 @@
 #include "lwip/tcp.h"
 #include "services/net/dns_resolver/dns_resolver.h" // shared host->IP resolve (one DNS owner)
 #include "services/system/clock.h"                  // pc_millis()
-#include "shared_primitives/ring.h"                 // shared pc_atomic + SPSC ring drain (same primitive as the server)
-#include <Arduino.h>                                // millis()
+#include "shared_primitives/ring.h" // PROTO_ATOMIC_LOAD/STORE + SPSC ring drain (same primitive as the server)
+#include <Arduino.h>                // millis()
 #include <string.h>
 
 struct ClientConn
@@ -36,8 +36,8 @@ struct ClientConn
     volatile bool connected;
     volatile bool closed; // peer FIN or error
     uint8_t rx[PC_CLIENT_RX_BUF];
-    pc_atomic<size_t> head; // producer (lwIP recv cb); acquire/release SPSC, same as the server ring
-    pc_atomic<size_t> tail; // consumer (caller)
+    _Atomic size_t head; // producer (stack recv cb); acquire/release SPSC, same as the server ring
+    _Atomic size_t tail; // consumer (caller)
 };
 
 // Outbound client connection pool, owned by one instance (internal linkage): the per-slot
@@ -68,19 +68,19 @@ static err_t cc_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err)
         return ERR_OK;
     }
     // Wire bytes -> ring via the shared producer primitive (same as the server): if
-    // the whole segment will not fit, refuse it (lwIP retains + redelivers); else
-    // bulk-memcpy each pbuf span and publish head once.
+    // the whole segment will not fit, refuse it (the stack retains + redelivers); else
+    // move each span and publish head once.
     (void)tpcb;
-    if (p->tot_len > pc_ring_free(c->head, c->tail, PC_CLIENT_RX_BUF))
+    if (p->tot_len > pc_ring_free(&c->head, &c->tail, PC_CLIENT_RX_BUF))
     {
         return ERR_MEM;
     }
-    size_t h = c->head; // sole producer of head; advance a local and publish once
-    for (struct pbuf *q = p; q; q = q->next)
+    size_t h = PROTO_ATOMIC_LOAD(&c->head); // sole producer of head; advance a local and publish once
+    for (struct pbuf *q = p; q != NULL; q = q->next)
     {
         h = pc_ring_write_span(c->rx, PC_CLIENT_RX_BUF, h, (const uint8_t *)q->payload, q->len);
     }
-    c->head = h; // single release store publishes the whole segment
+    PROTO_ATOMIC_STORE(&c->head, h); // one release store publishes the whole segment
     // Do NOT tcp_recved() here. The window is reopened by pc_client_read() as the
     // caller drains (ack-on-consume), so it tracks ring occupancy and the peer can
     // never overflow the ring - same model as the server transport. ACKing on copy
@@ -239,8 +239,8 @@ int pc_client_open(const char *host, uint16_t port, uint32_t timeout_ms)
     c->pcb = nullptr;
     c->connected = false;
     c->closed = false;
-    c->head = 0;
-    c->tail = 0;
+    PROTO_ATOMIC_STORE(&c->head, 0);
+    PROTO_ATOMIC_STORE(&c->tail, 0);
     c->in_use = true;
 
     // Resolve through the shared DNS owner (its own PC_DNS_TIMEOUT_MS budget),
@@ -313,7 +313,7 @@ size_t pc_client_available(int cid)
         return 0;
     }
     ClientConn *c = &s_client.cc[cid];
-    return pc_ring_available(c->head, c->tail, PC_CLIENT_RX_BUF);
+    return pc_ring_available(&c->head, &c->tail, PC_CLIENT_RX_BUF);
 }
 
 size_t pc_client_read(int cid, uint8_t *buf, size_t cap)
@@ -323,7 +323,7 @@ size_t pc_client_read(int cid, uint8_t *buf, size_t cap)
         return 0;
     }
     ClientConn *c = &s_client.cc[cid];
-    size_t n = pc_ring_read(c->rx, PC_CLIENT_RX_BUF, c->head, c->tail, buf, cap);
+    size_t n = pc_ring_read(c->rx, PC_CLIENT_RX_BUF, &c->head, &c->tail, buf, cap);
     if (n > 0 && c->pcb)
     {
         // Ack-on-consume: reopen the receive window by exactly what we just drained.

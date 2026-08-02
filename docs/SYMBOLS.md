@@ -7,32 +7,37 @@ does not cover.
 If you only read one section, read [The contract](#the-contract).
 
 **Audience.** Anyone reading or extending the library, including people who have never worked on
-embedded code. Where a rule depends on a C or C++ detail, that detail is explained rather than
+embedded code. Where a rule depends on a C detail, that detail is explained rather than
 assumed. If a term is new, [docs/learn](learn/) has the primers.
 
 ---
 
 ## The shape of the library, in one paragraph
 
-**ProtoCore presents a C API. The implementation is C++.**
+**ProtoCore is C. The API and the implementation are both C11.**
 
-That sentence decides almost every rule below, so it is worth being precise about what each half
-means and why they differ.
+That sentence decides almost every rule below.
 
-The **API** is C-shaped: flat names, one global namespace, no overloading, no templates in the
-signatures a caller depends on. This is not nostalgia. The target list is xtensa, riscv, arm, and
-**c2000**, and control-law code on those parts is written and reviewed as C. An API that requires a
-C++ compiler to call is an API that cannot be used where the library most needs to be usable.
+Flat names, one global namespace, no overloading, no templates, no scoped enums. This is not
+nostalgia. The target list is xtensa, riscv, arm, and **c2000**, and control-law code on those parts
+is written and reviewed as C. A library that requires a C++ compiler is a library that cannot be used
+where it is most needed.
 
-The **implementation** is C++, and that is deliberately not a contradiction. What a control engineer
-needs to guarantee is the behavior of the emitted binary at the points where timing and memory
-matter, not the source language that produced it. ProtoCore guarantees those points directly, by
-verifying the generated instructions (see [section 6](#6-guarantees-are-proven-at-the-binary)). Once
-behavior is established at the binary, the source language above it is an implementation detail.
+**C11**, which every compiler in that target list ships. Three of its features are load-bearing here:
 
-So: **one flat naming law, applied everywhere.** There is no second, namespaced convention for
-internals, because a reader moving between a header and its implementation should not have to change
-mental models halfway.
+| C11                                | what it buys                                                                                                |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `_Static_assert`                   | a sizing or layout invariant fails at compile time, naming itself when it trips                             |
+| `<stdatomic.h>`, `_Atomic`         | the acquire/release ordering the SPSC rings and slot-state writes are built on (`shared_primitives/ring.h`) |
+| anonymous struct and union members | a nested field is reached by its own name                                                                   |
+
+The language is the guarantee rather than a detail above one. Every construct whose cost is decided
+at runtime, or whose call target is not in the image, is absent because the language does not offer
+it, not because a rule forbids it. What remains is checked at the binary anyway (see
+[section 6](#6-guarantees-are-proven-at-the-binary)).
+
+So: **one flat naming law, applied everywhere.** A reader moving between a header and its
+implementation does not change mental models halfway.
 
 ---
 
@@ -40,33 +45,67 @@ mental models halfway.
 
 | Thing                     | Form                              | Example                                 |
 | ------------------------- | --------------------------------- | --------------------------------------- |
-| Function                  | `pc_snake_case`, flat             | `pc_sha256_init`                        |
+| Server API function       | `proto_snake_case`, flat          | `proto_begin_ws`, `proto_on_tcp`        |
+| Primitive function        | `pc_snake_case`, flat             | `pc_sha256_init`                        |
 | Type                      | `pc_snake_case`, flat             | `pc_sha256_ctx`                         |
 | Macro / compile-time flag | `PC_UPPER_SNAKE`, flat            | `PC_ENABLE_SSH`, `PC_SHA256_DIGEST_LEN` |
-| Enum type                 | `enum class`, `pc_snake_case`     | `enum class pc_ip_family : uint8_t`     |
-| Enum member               | keeps its descriptive prefix      | `pc_ip_family::PC_IP_V4`                |
+| Sizing / capacity bound   | `PROTO_MAX_*`, flat               | `PROTO_MAX_CONNS`, `PROTO_MAX_HANDLERS` |
+| Enum type                 | `typedef enum`, `pc_snake_case`   | `typedef enum { … } pc_ip_family;`      |
+| Enum member               | keeps its descriptive prefix      | `PC_IP_V4`                              |
 | Include guard             | `PROTOCORE_<FILE>_H`, max 31      | `PROTOCORE_SHA256_H`                    |
-| File and directory        | `snake_case`                      | `src/crypto/mac/hmac_sha256.cpp`        |
+| File and directory        | `snake_case`                      | `src/crypto/mac/hmac_sha256.h`          |
 | Test env / suite          | `native_<topic>` / `test_<topic>` | `native_ip`, `test_ip`                  |
 
 No `namespace`. No `using namespace`. Everything below is the reasoning; the table is the rule.
 
+**Hard ban: a bare `MAX_` name.** `MAX_CONNS`, `MAX_ROUTES`, `MAX_HEADERS` and their kind are among the
+most collided identifiers in embedded C. They are exactly the names a vendor SDK, an RTOS port, or a
+third-party header reaches for, and the preprocessor has no scope to protect ours from theirs
+(section 2). Every capacity bound carries `PROTO_MAX_`, with no exception, so the collision cannot
+happen in either direction.
+
+**Where the two function prefixes disagree, `proto_` wins.** `pc_` is short enough to be plausible in
+somebody else's library, so it buys less uniqueness than it looks like it does. New names take
+`proto_`; `pc_` remains correct on the primitives that already carry it and is not worth churn for
+its own sake, but it is not the default for anything new.
+
+**One exemption: `src/board_drivers/`.** That is where vendor SDKs are spoken to, and their headers
+are already full of names this law does not govern - unprefixed macros, their own casing, whatever
+the toolchain ships. A driver has to name those to do its job. So a vendor symbol appears verbatim
+inside `board_drivers/` and nowhere else, and everything `board_drivers/` _exports_ still obeys the
+table above. The exemption is for what a driver must consume, never for what it publishes. That
+boundary is the point of the directory: contamination is contained by being confined.
+
 ---
 
-## 1. One prefix, no namespaces
+## 1. Prefixes, no namespaces
 
-**The rule: every symbol the library exports is prefixed `pc_` or `PC_`, at global scope.**
+**The rule: every symbol the library exports is prefixed, at global scope. Two function prefixes,
+split by what the symbol is for:**
+
+- **`proto_`** - the server API. What an application calls to stand a protocol up and answer on it:
+  `proto_begin_ws`, `proto_begin_dav`, `proto_on_tcp`, `proto_send_text`. This is `protocore.h`'s
+  surface, the set a user reads to learn the library.
+- **`pc_`** - the primitives underneath it. Crypto, codecs, buffers, the frame engine, storage:
+  `pc_sha256_init`, `pc_frame_build`, `pc_route_add`. Callable, documented, and not what someone
+  reaches for to serve a request.
+
+Types stay `pc_`, macros stay `PC_`, whichever half they belong to.
+
+The split is for the reader, not the linker. Both prefixes are globally unique already, so `proto_`
+buys one thing: a name tells you which layer you are looking at before you look anything up, and the
+API a user learns is a list they can enumerate rather than a set they have to recognize.
 
 C has no namespaces. A C caller disambiguates by name alone, so every exported name must be globally
 unique on its own. The prefix is what buys that uniqueness, and it has to be on every symbol, because
 a prefix with holes in it is not a guarantee.
 
-This is why ProtoCore does **not** wrap its C++ internals in `namespace protocore` even though it
-could. Two conventions in one library means every reader has to know which half of the codebase they
-are in before they can predict a name, and every symbol that crosses the boundary needs a translation.
-One flat law is duller and better.
+C offers nothing to wrap internals in, so the prefix is the whole mechanism rather than a convention
+layered over one. `proto_` and `pc_` are not two conventions in that sense - they are one flat law
+with a layer marker, and a name is still predictable from the rule alone without knowing which file
+it lives in.
 
-```cpp
+```c
 typedef struct pc_sha256_ctx { /* ... */ } pc_sha256_ctx;
 
 void pc_sha256_init(pc_sha256_ctx *ctx);
@@ -90,15 +129,16 @@ is not a choice here, it is the only option.
 That has a consequence worth internalizing, because it produces genuinely confusing errors: a macro
 will rewrite a token that is already scoped.
 
-```cpp
-#define OUTPUT 1              // e.g. from Arduino.h
+```c
+#define OUTPUT 1                                  // e.g. from a vendor header
 
-enum class pc_tcp_op { OUTPUT };  // error: expands to `enum class pc_tcp_op { 1 };`
+typedef enum { OUTPUT } pc_tcp_op;                // error: expands to `{ 1 }`
 ```
 
-The member is scoped and it does not help, because substitution happens before the compiler sees the
-scope. This is exactly why enum members keep descriptive prefixes (section 3), and why `PC_` on every
-macro matters: it keeps our macros out of everyone else's token space and theirs out of ours.
+Substitution happens before the compiler sees a declaration at all, so there is nothing a member can
+be declared inside that would protect it. This is exactly why enum members keep descriptive prefixes
+(section 3), and why `PC_` on every macro matters: it keeps our macros out of everyone else's token
+space and theirs out of ours.
 
 **Keep macro names under 31 characters.** C89 guarantees only the first 31 characters of a macro name
 are significant, and ProtoCore targets toolchains where that limit is real, c2000 included. Two macros
@@ -142,16 +182,27 @@ is a name nobody will ever fix.
 
 ---
 
-## 3. Enums are scoped; members keep their prefixes
+## 3. Enums are flat; the prefix is what scopes them
 
-**The rule: every enum is an `enum class`. Members keep a descriptive prefix. Dropping a prefix is a
-per-enum decision, never a blanket rewrite.**
+**The rule: every enum is a `typedef enum`. Members carry a descriptive prefix, always.**
 
-`enum class` is required because a plain enum leaks its members into the surrounding scope and
-converts to `int` implicitly, silencing exactly the type check that makes the enum worth having.
+```c
+typedef enum
+{
+    PC_IP_V4,
+    PC_IP_V6,
+} pc_ip_family;
 
-Keeping member prefixes is the part people argue with, since `pc_ip_family::PC_IP_V4` looks redundant
-beside `pc_ip_family::V4`. Three reasons it stays:
+pc_ip_family fam = PC_IP_V4;
+```
+
+C has no scoped enum. Every member lands in one global namespace the moment it is declared, so the
+prefix is not decoration - **it is the only thing keeping two enums from colliding.** A member that drops its prefix is a link-time or compile-time collision
+waiting for the second enum that wants the same word, and the words enums want are the common ones:
+auditing this library found `FAILED` wanted by four enums, `IDLE` by three, and `STOP`, `START`,
+`DONE`, `PENDING`, `MISS`, `HIT` by two each.
+
+The prefix is mandatory rather than a per-enum decision. Three further reasons:
 
 1. **Names are for human recognition.** A member is read far more often at a use site, in a log, a
    packet dump, or a debugger than in its declaration. `PC_IP_V4` is self-describing when it appears
@@ -169,9 +220,8 @@ beside `pc_ip_family::V4`. Three reasons it stays:
     | `SMB2_DIALECT_0311` | `0311`    | no     |
     | `DEVICENET_GROUP_1` | `1`       | no     |
 
-A rule that cannot be applied uniformly is not a rule. The prefix stays by default; any individual
-enum that genuinely reads better without one is changed deliberately, after checking that its bare
-members are neither macro-prone nor digit-leading.
+A rule that cannot be applied uniformly is not a rule. The prefix stays, on every member of every
+enum, with no per-enum exception - there is no scope to fall back on if one is wrong.
 
 ---
 
@@ -255,13 +305,16 @@ everything `native_pc_ip` would.
 
 Recording the roads not taken, because "why not the obvious thing" is usually the more useful half.
 
-- **`namespace protocore` around the C++ internals.** Rejected: it splits the library into two naming
+- **`namespace protocore` around the internals.** Rejected: it splits the library into two naming
   conventions with a translation layer between them, and buys scoping the flat prefix already
-  provides. It would also put a C++-only construct in the path of a C-shaped API.
-- **De-prefix all enum members.** Rejected for the three reasons in section 3.
-- **Rewrite the implementation in C.** Rejected as unnecessary. The control-law objection to C++ is
-  about the behavior of the emitted code, and that is established directly at the binary (section 6)
-  rather than inferred from the source language.
+  provides. Moot now that the implementation is C, which has no namespace to reach for.
+- **De-prefix all enum members.** Rejected for the reasons in section 3, and in C the prefix is
+  load-bearing rather than stylistic.
+- **A C++ implementation under a C API.** This is what the library did until the C conversion, on the
+  argument that only the emitted binary matters (section 6) so the source language above it is a
+  detail. Reversed: the argument holds for what the compiler emits, but not for what a reviewer can
+  establish by reading. A control engineer reviewing `src/` should not have to know which of two
+  languages a line is in to know what it costs.
 - **`#pragma once`.** Rejected: not standard, and the target list is deliberately wide.
 
 ---
@@ -271,8 +324,8 @@ Recording the roads not taken, because "why not the obvious thing" is usually th
 The naming law is the visible half of a larger rule: **where ProtoCore promises a behavior, the
 promise is checked against the emitted instructions, not argued from the source.**
 
-This is what makes a C++ implementation acceptable under a C API for control-law use. The claims that
-get this treatment are the ones a caller actually depends on:
+C makes the source readable as cost, but reading is still not proof. The claims that get this
+treatment are the ones a caller actually depends on:
 
 - **Constant-time** comparisons and crypto: no branch and no memory access depends on a secret.
 - **No heap after `begin()`**: no allocator call reachable in the relevant `.text`.

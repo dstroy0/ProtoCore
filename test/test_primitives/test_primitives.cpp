@@ -6,8 +6,8 @@
 // strtol-family endptr contract) and the strict RFC 3629 UTF-8 validator
 // (utf8.h). Pure host tests.
 
+#include "mmgr/membuild.h"
 #include "shared_primitives/numparse.h"
-#include "shared_primitives/strbuf.h"
 #include "shared_primitives/utf8.h"
 #include <stdio.h> // snprintf: the libc reference these tests check pc_sb_g/pc_sb_fixed against
 #include <unity.h>

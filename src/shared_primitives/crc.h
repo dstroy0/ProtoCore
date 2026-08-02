@@ -5,13 +5,10 @@
  * @file crc.h
  * @brief Parameterized CRC engine - one source of truth for every cyclic redundancy check.
  *
- * Sixteen codecs in this tree each hand-rolled their own CRC loop under a different local name,
- * differing only in a polynomial and a couple of flags - the same duplication `endian.h` was written
- * to end for byte packing. This is that one implementation, and thirteen of them now call it
- * (C37.118, DF1, DNP3, EnOcean, INTERBUS, Modbus, Modbus Plus, NEMA TS2, raw L2, SDI-12, SHT3x,
- * Thread, Zigbee). The three that do not are excluded on purpose, not overlooked: the WAL is
- * table-driven for bulk log throughput, RTCM3's CRC-24Q seed has no preset here yet, and DShot's
- * "CRC" is a 4-bit XOR fold rather than a CRC at all. See the ROADMAP migration entry.
+ * One implementation for every CRC in the tree: C37.118, DF1, DNP3, EnOcean, INTERBUS, Modbus,
+ * Modbus Plus, NEMA TS2, raw L2, SDI-12, SHT3x, Thread and Zigbee all checksum through it. Three
+ * checks stay outside it: the WAL is table-driven for bulk log throughput, RTCM3's CRC-24Q has no
+ * preset here, and DShot's "CRC" is a 4-bit XOR fold rather than a CRC at all.
  *
  * It is the standard Rocksoft / Williams model, so any published CRC is expressible as six numbers
  * and needs no new code:
@@ -23,11 +20,9 @@
  *   - @ref pc_crc_params::refout  reflect the final register
  *   - @ref pc_crc_params::xorout  final XOR
  *
- * Every preset below carries its cataloge **check value** - the CRC of the nine ASCII octets
+ * Every preset below carries its catalogue **check value** - the CRC of the nine ASCII octets
  * `"123456789"` - and `test_crc` asserts each one: a wrong polynomial or a flipped reflect flag
- * cannot reproduce a published check value by accident. `test_crc` then diffs the engine against the
- * hand-rolled loops themselves, across every length from 0 to 64, so a preset meant to replace one
- * of them is proven byte-identical to the interop-tested code it retires - not merely plausible.
+ * cannot reproduce a published check value by accident.
  *
  * Bitwise, not table-driven: a 256-entry table per polynomial would cost more flash than the frames
  * are worth on this class of device, and every caller here checksums tens to hundreds of octets, not
@@ -160,7 +155,7 @@ inline uint32_t pc_crc(const pc_crc_params *p, const uint8_t *data, size_t len)
     return pc_crc_final(p, pc_crc_update(p, pc_crc_begin(p), data, len));
 }
 
-// --- Cataloge presets -------------------------------------------------------------------------
+// --- Catalogue presets ------------------------------------------------------------------------
 // Each carries its published check value: the CRC of the ASCII octets "123456789". test_crc asserts
 // every one of them, so an incorrect parameter here fails the suite rather than corrupting a codec.
 //

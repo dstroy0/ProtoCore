@@ -12,8 +12,8 @@
  */
 
 #include "server/filesystem/filesystem.h"
-#include "shared_primitives/swar.h" // the bounded word-at-a-time length scan
-#include <string.h>                 // strncmp (root-name match), memcpy
+#include "shared_primitives/runops.h" // the bounded word-at-a-time length scan
+#include <string.h>                   // strncmp (root-name match), memcpy
 
 namespace
 {
@@ -82,7 +82,7 @@ const pc_mnt_backend *store(void)
 // name into a different file's.
 size_t walk_push(char *path, size_t len, const char *child)
 {
-    size_t n = pc_swar_scan_nul(child, PC_FILESYSTEM_PATH_MAX);
+    size_t n = proto_scan_nul(child, PC_FILESYSTEM_PATH_MAX);
     // The root already IS the separator, so it is the one path that does not get another.
     bool need_sep = !(len == 1 && path[0] == '/');
     if (len + (need_sep ? 1 : 0) + n + 1 > PC_FILESYSTEM_PATH_MAX)
@@ -354,7 +354,7 @@ bool pc_fs_remove(int root, const char *dir, const char *name)
         {
             return false; // refuse a pathologically deep tree rather than walk forever
         }
-        len = pc_swar_scan_nul(s_fs.walk, PC_FILESYSTEM_PATH_MAX);
+        len = proto_scan_nul(s_fs.walk, PC_FILESYSTEM_PATH_MAX);
         lvl++;
     }
 }
@@ -513,7 +513,7 @@ bool pc_fs_copy(int root, const char *from_dir, const char *from_name, const cha
         {
             return false;
         }
-        slen = pc_swar_scan_nul(s_fs.walk, PC_FILESYSTEM_PATH_MAX);
+        slen = proto_scan_nul(s_fs.walk, PC_FILESYSTEM_PATH_MAX);
         dlen = ndlen;
         lvl++;
         s_fs.idx[lvl] = 0;

@@ -10,7 +10,7 @@
  */
 
 #include "services/iot/udp_telemetry/udp_telemetry.h"
-#include "shared_primitives/strbuf.h" // pc_sb frame builder
+#include "mmgr/membuild.h" // pc_sb frame builder
 
 #if PC_ENABLE_UDP_TELEMETRY
 

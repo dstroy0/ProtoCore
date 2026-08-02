@@ -12,7 +12,7 @@
 
 #include "crypto/aead/aes128gcm.h"
 #include "crypto/kdf/tls13_kdf.h"
-#include "server/mmgr/secure.h" // the secure pool: header-protection key schedule
+#include "mmgr/secure.h" // the secure pool: header-protection key schedule
 #include <string.h>
 
 namespace

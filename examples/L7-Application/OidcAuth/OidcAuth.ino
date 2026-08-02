@@ -61,7 +61,7 @@ void setup()
         const char *hdr = req->authorization;
         if (!hdr || strncasecmp(hdr, "Bearer ", 7) != 0)
         {
-            add_response_header(id, "WWW-Authenticate", "Bearer");
+            proto_add_response_header(id, "WWW-Authenticate", "Bearer");
             send_text(id, 401, "application/json", "{\"error\":\"missing token\"}");
             return;
         }
@@ -74,7 +74,7 @@ void setup()
         {
             char b[40];
             snprintf(b, sizeof(b), "{\"error\":%d}", (int)rc);
-            add_response_header(id, "WWW-Authenticate", "Bearer");
+            proto_add_response_header(id, "WWW-Authenticate", "Bearer");
             send_text(id, 401, "application/json", b);
             return;
         }

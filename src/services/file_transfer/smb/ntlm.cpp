@@ -11,7 +11,7 @@
 #if PC_ENABLE_SMB
 
 #include "crypto/hash/md.h"
-#include "server/mmgr/secure.h" // SecureScope: lifetime of the borrowed digest state
+#include "mmgr/secure.h" // SecureScope: lifetime of the borrowed digest state
 #include <string.h>
 
 void pc_ntlm_nt_hash(const char *password, uint8_t nt_hash[16])

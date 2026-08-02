@@ -25,8 +25,8 @@
 #ifndef PROTOCORE_TELNET_H
 #define PROTOCORE_TELNET_H
 
+#include "mmgr/frame.h"
 #include "protocore_config.h"
-#include "shared_primitives/frame.h"
 #include <stddef.h>
 #include <stdint.h>
 

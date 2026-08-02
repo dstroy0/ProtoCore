@@ -30,8 +30,43 @@
 #ifndef PROTOCORE_ARENA_H
 #define PROTOCORE_ARENA_H
 
+#include "protocore_config.h" // PC_WORKER_COUNT - how many slots the pools are cut into
 #include <stddef.h>
 #include <stdint.h>
+
+// ---------------------------------------------------------------------------
+// Slot identity - which arena is mine
+// ---------------------------------------------------------------------------
+//
+// The pools are cut one slot per worker so a borrow never crosses workers, which means the
+// allocator has to be able to answer "which slot is the caller" before it can hand anything back.
+// That answer lives here, with the thing it indexes, rather than in the scheduler: mmgr arbitrates
+// the memory, so it owns the identity the arbitration keys on. Starting and waking those workers is
+// a separate concern and stays in the session layer.
+
+/** @brief Number of server worker tasks (PC_WORKER_COUNT). */
+int pc_worker_count(void);
+
+/**
+ * @brief Worker id [0, count) of the calling task; 0 by default / single-worker.
+ *
+ * With PC_WORKER_COUNT == 1 (the default) there is exactly one worker, so the answer is 0 by
+ * construction and this is an inline constant - no lookup, no call. That matters because every pool
+ * borrow asks: the multi-worker path reads a `thread_local`, which on FreeRTOS resolves through the
+ * task's TLS block rather than a register, and it was being paid on operations that are otherwise a
+ * single struct-field read.
+ */
+#if PC_WORKER_COUNT == 1
+inline int pc_worker_self(void)
+{
+    return 0;
+}
+#else
+int pc_worker_self(void);
+#endif
+
+/** @brief Bind the calling task/thread to worker id @p id (worker entry / tests). */
+void pc_worker_set_self(int id);
 
 /** @brief Baseline alignment (bytes) applied to every allocation and to headers. */
 #define PC_ARENA_ALIGN 8u

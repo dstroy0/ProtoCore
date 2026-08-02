@@ -7,7 +7,7 @@
  */
 
 #include "network_drivers/presentation/http/http2/h2_conn.h"
-#include "shared_primitives/strbuf.h" // pc_sb frame builder
+#include "mmgr/membuild.h" // pc_sb frame builder
 
 #if PC_ENABLE_HTTP2
 

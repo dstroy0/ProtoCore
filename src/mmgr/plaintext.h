@@ -41,7 +41,7 @@
  *
  * **No implicit zeroing.** pc_plaintext_alloc() returns uninitialized memory and the
  * reset does not wipe. This pool is for plaintext: anything whose bytes are key
- * material belongs in the secure pool (server/mmgr/secure.h), which is the same
+ * material belongs in the secure pool (mmgr/secure.h), which is the same
  * mechanism with one added control - reclaiming wipes, before the bytes become
  * available again.
  *
@@ -53,7 +53,7 @@
 #define PROTOCORE_PLAINTEXT_H
 
 #include "protocore_config.h"
-#include "server/mmgr/span.h"
+#include "shared_primitives/span.h"
 #include <stddef.h>
 
 /**

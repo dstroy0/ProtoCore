@@ -14,7 +14,7 @@
 #include "crypto/crypto_scratch.h" // pc_secure_wipe (the canonical secure wipe)
 #include "crypto/hash/sha256.h"
 #include "crypto/hash/sha512.h"
-#include "server/mmgr/secure.h"
+#include "mmgr/secure.h"
 #include <string.h>
 #ifdef ARDUINO
 #include <mbedtls/md.h>

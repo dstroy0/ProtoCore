@@ -184,7 +184,9 @@ void test_printf_broadcast()
     do_handshake(0);
     tcp_capture_reset();
     static const pc_field COUNT[] = {{PC_FK_LIT, 0, 6, "count="}, PC_U32, PC_END};
-    pc_web_terminal_frame(COUNT, (uint32_t)7);
+    char out[32];
+    pc_frame_build(out, sizeof(out), COUNT, (uint32_t)7);
+    pc_web_terminal_print(out);
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "count=7"));
 }
 
@@ -227,7 +229,9 @@ void test_api_inert_before_begin()
     pc_web_terminal_print("early");
     pc_web_terminal_println("early");
     static const pc_field EARLY[] = {{PC_FK_LIT, 0, 6, "early "}, PC_U32, PC_END};
-    pc_web_terminal_frame(EARLY, (uint32_t)1);
+    char out[32];
+    pc_frame_build(out, sizeof(out), EARLY, (uint32_t)1);
+    pc_web_terminal_print(out);
     TEST_ASSERT_EQUAL_size_t(0, strlen(tcp_captured()));
 }
 

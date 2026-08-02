@@ -8,7 +8,7 @@
 
 #include "crypto/cipher/chacha20.h"
 #include "crypto/crypto_opt.h"
-#include "server/mmgr/secure.h" // the secure pool: nested-cipher working state, wiped on release
+#include "mmgr/secure.h" // the secure pool: nested-cipher working state, wiped on release
 
 // ChaCha20 is a hot, pure-integer (add/xor/rotate) keystream generator. The ESP32-S3 has no usable
 // vector path (its PIE unit has only a *saturating* 32-bit add, `ee.vadds.s32`; ChaCha needs modular

@@ -5,10 +5,9 @@
  * @file mime.h
  * @brief Shared HTTP Content-Type ("MIME") string constants (one source of truth).
  *
- * The same media types were typed as string literals in the core server, the
- * route services, and the examples (text/plain alone appeared ~27 times). These
- * are the single home for the vocabulary: reference the pointer, never re-type the
- * string, so a value can never silently diverge across call sites.
+ * The single home for the media-type vocabulary the core server, the route services and the
+ * examples all name: reference the pointer, never re-type the string, so a value cannot silently
+ * diverge across call sites.
  *
  * Header-only like hex.h / numparse.h - no .cpp to wire into every test
  * env's src filter. Each is a `const char *const` to a string literal: the literal

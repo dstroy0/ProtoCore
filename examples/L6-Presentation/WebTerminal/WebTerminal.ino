@@ -54,19 +54,24 @@ void on_command(const char *line, uint8_t client_id)
     if (strcmp(line, "help") == 0)
     {
         pc_web_terminal_println("commands: help, heap, uptime, <echo>");
+        return;
     }
-    else if (strcmp(line, "heap") == 0)
+
+    // Build the line from its spec, then hand the text to the terminal.
+    char out[96];
+    if (strcmp(line, "heap") == 0)
     {
-        pc_web_terminal_frame(REPLY_HEAP, (uint32_t)ESP.getFreeHeap());
+        pc_frame_build(out, sizeof(out), REPLY_HEAP, (uint32_t)ESP.getFreeHeap());
     }
     else if (strcmp(line, "uptime") == 0)
     {
-        pc_web_terminal_frame(REPLY_UPTIME, (uint32_t)millis());
+        pc_frame_build(out, sizeof(out), REPLY_UPTIME, (uint32_t)millis());
     }
     else
     {
-        pc_web_terminal_frame(REPLY_ECHO, line);
+        pc_frame_build(out, sizeof(out), REPLY_ECHO, line);
     }
+    pc_web_terminal_print(out);
 }
 
 void setup()
@@ -108,7 +113,9 @@ void loop()
         last = millis();
         if (pc_web_terminal_client_count() > 0)
         {
-            pc_web_terminal_frame(HEARTBEAT, (uint32_t)millis(), (uint32_t)ESP.getFreeHeap());
+            char out[96];
+            pc_frame_build(out, sizeof(out), HEARTBEAT, (uint32_t)millis(), (uint32_t)ESP.getFreeHeap());
+            pc_web_terminal_print(out);
         }
     }
 }

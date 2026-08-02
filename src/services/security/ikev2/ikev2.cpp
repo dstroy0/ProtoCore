@@ -16,7 +16,7 @@
 #include "crypto/asymmetric/rsa.h"        // RSA-2048 certificate AUTH verify
 #include "crypto/hash/sha256.h"           // anti-DoS COOKIE hash (RFC 7296 §2.6)
 #include "crypto/mac/hmac_sha256.h"       // PRF = HMAC-SHA2-256
-#include "server/mmgr/secure.h"           // SecureBorrow: the per-call GCM context
+#include "mmgr/secure.h"                  // SecureBorrow: the per-call GCM context
 #include <string.h>                       // memcpy / memset (framing is hand-rolled)
 
 // ── big-endian scalar helpers ─────────────────────────────────────────────────────────────────

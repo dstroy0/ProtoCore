@@ -11,7 +11,7 @@
 #if PC_ENABLE_IKEV2
 
 #include "crypto/aead/aesgcm.h"
-#include "server/mmgr/secure.h" // SecureBorrow: the per-call GCM context
+#include "mmgr/secure.h" // SecureBorrow: the per-call GCM context
 #include <string.h>
 
 namespace

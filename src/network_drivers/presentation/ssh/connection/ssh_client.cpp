@@ -11,8 +11,8 @@
  */
 
 #include "network_drivers/presentation/ssh/connection/ssh_client.h"
-#include "server/mmgr/secure.h"
-#include "shared_primitives/frame.h" // the one frame engine
+#include "mmgr/frame.h" // the one frame engine
+#include "mmgr/secure.h"
 
 #if PC_ENABLE_SSH_CLIENT
 
@@ -36,11 +36,11 @@
 #include "crypto/pqc/sntrup761.h" // sntrup761x25519-sha512 hybrid (client: KeyGen + Decaps)
 #endif
 #if PC_ENABLE_PQC_KEX || PC_ENABLE_SSH_SNTRUP761
-#include "server/mmgr/plaintext.h" // pc_plaintext_alloc for the large hybrid C_INIT
+#include "mmgr/plaintext.h" // pc_plaintext_alloc for the large hybrid C_INIT
 #endif
 
 #if defined(ARDUINO)
-#include "network_drivers/session/worker.h"   // pc_worker_set_self (own scratch slot)
+#include "mmgr/arena.h"                       // pc_worker_set_self (own scratch slot)
 #include "network_drivers/transport/client.h" // pc_client_*
 #include "services/system/clock.h"            // pc_millis, pcdelay
 #endif

@@ -7,7 +7,7 @@
  */
 
 #include "services/web/edge_cache/edge_cache_proxy.h"
-#include "shared_primitives/strbuf.h" // pc_sb frame builder
+#include "mmgr/membuild.h" // pc_sb frame builder
 
 #if PC_ENABLE_EDGE_CACHE
 
@@ -363,7 +363,7 @@ void serve_hit(uint8_t slot, EdgeEntry *e, uint32_t now, const char *xcache)
             {
                 cr[0] = '\0';
             }
-            add_response_header(slot, "Content-Range", cr);
+            proto_add_response_header(slot, "Content-Range", cr);
             c->active = false;
             c->entry = nullptr;
             send_text(slot, 416, PC_MIME_TEXT_PLAIN, "Range Not Satisfiable");
@@ -386,24 +386,24 @@ void serve_hit(uint8_t slot, EdgeEntry *e, uint32_t now, const char *xcache)
             {
                 cr[0] = '\0';
             }
-            add_response_header(slot, "Content-Range", cr);
+            proto_add_response_header(slot, "Content-Range", cr);
         }
     }
-    add_response_header(slot, "Accept-Ranges", "bytes"); // advertise range support
+    proto_add_response_header(slot, "Accept-Ranges", "bytes"); // advertise range support
 #endif
 
-    add_response_header(slot, "X-Cache", xcache);
+    proto_add_response_header(slot, "X-Cache", xcache);
     if (e->etag[0])
     {
-        add_response_header(slot, "ETag", e->etag);
+        proto_add_response_header(slot, "ETag", e->etag);
     }
     if (e->last_modified[0])
     {
-        add_response_header(slot, "Last-Modified", e->last_modified);
+        proto_add_response_header(slot, "Last-Modified", e->last_modified);
     }
     if (e->content_encoding[0])
     {
-        add_response_header(slot, "Content-Encoding", e->content_encoding);
+        proto_add_response_header(slot, "Content-Encoding", e->content_encoding);
     }
     long age = edge_current_age(e->initial_age, e->insert_ms, now);
     if (age < 0)
@@ -417,7 +417,7 @@ void serve_hit(uint8_t slot, EdgeEntry *e, uint32_t now, const char *xcache)
     {
         agebuf[0] = '\0';
     }
-    add_response_header(slot, "Age", agebuf);
+    proto_add_response_header(slot, "Age", agebuf);
     const char *ct = e->content_type[0] ? e->content_type : "application/octet-stream";
     send_chunked(slot, status, ct, edge_chunk_source, c);
 }
@@ -453,10 +453,10 @@ void serve_passthrough(uint8_t slot, EdgeFetch *f)
     c->entry = e;
     c->off = 0;
     c->end = e->body_len;
-    add_response_header(slot, "X-Cache", "MISS");
+    proto_add_response_header(slot, "X-Cache", "MISS");
     if (e->content_encoding[0])
     {
-        add_response_header(slot, "Content-Encoding", e->content_encoding);
+        proto_add_response_header(slot, "Content-Encoding", e->content_encoding);
     }
     const char *ct = e->content_type[0] ? e->content_type : "application/octet-stream";
     send_chunked(slot, e->status ? e->status : 200, ct, edge_chunk_source, c);

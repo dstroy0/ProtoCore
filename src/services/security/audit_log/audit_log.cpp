@@ -13,8 +13,8 @@
  */
 
 #include "services/security/audit_log/audit_log.h"
+#include "mmgr/membuild.h" // pc_sb frame builder
 #include "shared_primitives/hex.h"
-#include "shared_primitives/strbuf.h" // pc_sb frame builder
 
 #if PC_ENABLE_AUDIT_LOG
 

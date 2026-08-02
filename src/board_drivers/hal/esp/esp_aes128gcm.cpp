@@ -19,8 +19,8 @@
 #include "board_drivers/board_profiles/pc_platform.h"
 #include "crypto/aead/aes128gcm.h"
 #include "crypto/crypto_opt.h"
+#include "mmgr/secure.h"
 #include "protocore_config.h" // PC_ENABLE_* gate the whole file; pc_platform.h does not pull this in
-#include "server/mmgr/secure.h"
 #include <string.h>
 
 #if (PC_ENABLE_HTTP3 || PC_ENABLE_DTLS || PC_ENABLE_SMB)

@@ -193,7 +193,7 @@ static void h_overreport(uint8_t s, HttpReq *r)
 static void h_with_hdr(uint8_t s, HttpReq *r)
 {
     (void)r;
-    add_response_header(s, "X-Stream", "1");
+    proto_add_response_header(s, "X-Stream", "1");
     send_chunked(s, 200, "text/plain", src_hello);
 }
 

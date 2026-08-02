@@ -37,6 +37,19 @@
 #define PC_HW_DS 1
 #endif
 
+// --- Vector unit ---
+// The LX7's PIE (Processor Instruction Extensions): 128-bit vector registers with their own
+// load/store path and byte-lane compares, which is a real unit rather than the wider GPR the classic
+// die offers. Declared here because which silicon is present is this file's subject; what any of it
+// is worth belongs to whatever consumes the flag and to a cycle counter, not to this header. A PIE
+// load wants its pointer 16-byte aligned, so a consumer states that at its own boundary.
+#ifndef PC_HW_SIMD
+#define PC_HW_SIMD 1
+#endif
+#ifndef PC_HW_SIMD_BYTES
+#define PC_HW_SIMD_BYTES 16
+#endif
+
 // --- Sizing (bumped over the classic floor to use the S3's ~400 KB usable DRAM) ---
 // These are internal-SRAM-budget values (no PSRAM assumed); a PSRAM-size profile, included first,
 // scales the RAM-backed buffers further and moves the big TLS / HTTP-2 pools off-chip.

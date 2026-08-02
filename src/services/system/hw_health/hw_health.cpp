@@ -7,7 +7,7 @@
  */
 
 #include "services/system/hw_health/hw_health.h"
-#include "shared_primitives/strbuf.h" // pc_sb frame builder
+#include "mmgr/membuild.h" // pc_sb frame builder
 
 #if PC_ENABLE_HW_HEALTH
 

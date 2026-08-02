@@ -6,8 +6,8 @@
  * @brief Shared single-range `Range: bytes=...` parser (RFC 7233), used by static file serving and the
  *        edge cache (PC_ENABLE_RANGE).
  *
- * Promoted out of file_serving.cpp so both the filesystem file server and the CDN edge cache share one
- * owner for the range math. Pure and size/string-driven - no PC or fs:: dependency.
+ * One owner for the range math, shared by the filesystem file server and the CDN edge cache. Pure
+ * and size/string-driven - no PC or fs:: dependency.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026

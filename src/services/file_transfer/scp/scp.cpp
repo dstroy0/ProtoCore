@@ -7,7 +7,7 @@
  */
 
 #include "services/file_transfer/scp/scp.h"
-#include "shared_primitives/strbuf.h" // pc_sb frame builder
+#include "mmgr/membuild.h" // pc_sb frame builder
 
 #if PC_ENABLE_SSH_SCP
 

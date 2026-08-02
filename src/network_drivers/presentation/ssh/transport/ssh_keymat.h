@@ -99,9 +99,9 @@
 #include "crypto/aead/chachapoly.h"
 #include "crypto/asymmetric/bignum.h"
 #include "crypto/cipher/aes256ctr.h"
+#include "mmgr/secure.h" // pc_secure_wipe (the canonical secure wipe)
+#include "mmgr/secure.h"
 #include "protocore_config.h"
-#include "server/mmgr/secure.h" // pc_secure_wipe (the canonical secure wipe)
-#include "server/mmgr/secure.h"
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>

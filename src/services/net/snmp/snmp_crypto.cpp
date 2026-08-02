@@ -7,7 +7,7 @@
  */
 
 #include "services/net/snmp/snmp_crypto.h"
-#include "server/mmgr/secure.h"
+#include "mmgr/secure.h"
 
 #if PC_ENABLE_SNMP_V3
 

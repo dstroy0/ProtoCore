@@ -4,7 +4,7 @@
 // Unit tests for the unified double-ended arena (network_drivers/session/pc_arena):
 // first-fit persistent end (bottom) + bump scratch end (top) sharing a floating middle.
 
-#include "server/mmgr/arena.h"
+#include "mmgr/arena.h"
 #include <stdint.h>
 #include <string.h>
 #include <unity.h>

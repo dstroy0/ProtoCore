@@ -7,7 +7,7 @@
  */
 
 #include "services/file_transfer/http_delivery/http_delivery.h"
-#include "shared_primitives/strbuf.h" // pc_sb frame builder
+#include "mmgr/membuild.h" // pc_sb frame builder
 
 #if PC_ENABLE_HTTP_DELIVERY
 

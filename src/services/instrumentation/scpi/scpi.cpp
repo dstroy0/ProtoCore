@@ -7,7 +7,7 @@
  */
 
 #include "services/instrumentation/scpi/scpi.h"
-#include "shared_primitives/frame.h" // the one frame engine
+#include "mmgr/frame.h" // the one frame engine
 
 #if PC_ENABLE_SCPI
 

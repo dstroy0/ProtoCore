@@ -761,18 +761,18 @@ static void hdr_guard_handler(uint8_t id, HttpReq *)
     static char big[512];
     memset(big, 'a', sizeof(big) - 1);
     big[sizeof(big) - 1] = '\0';
-    set_cookie(id, "toobig", big, nullptr); // overflow -> dropped
-    add_response_header(id, "X-Ok", "1");   // fits
+    set_cookie(id, "toobig", big, nullptr);     // overflow -> dropped
+    proto_add_response_header(id, "X-Ok", "1"); // fits
     send_text(id, 200, "text/plain", "ok");
 }
 
 void test_response_header_cookie_guards()
 {
-    add_response_header(MAX_CONNS, "X", "y"); // out-of-range slot
-    add_response_header(0, nullptr, "y");     // null name
-    set_cookie(MAX_CONNS, "s", "1", nullptr); // out-of-range slot
-    set_cookie(0, nullptr, "1", nullptr);     // null name
-    clear_response_headers(MAX_CONNS);        // out-of-range slot
+    proto_add_response_header(MAX_CONNS, "X", "y"); // out-of-range slot
+    proto_add_response_header(0, nullptr, "y");     // null name
+    set_cookie(MAX_CONNS, "s", "1", nullptr);       // out-of-range slot
+    set_cookie(0, nullptr, "1", nullptr);           // null name
+    clear_response_headers(MAX_CONNS);              // out-of-range slot
 
     on_http("/hdrtest", HttpMethod::HTTP_GET, hdr_guard_handler);
     arm_slot(0, "GET /hdrtest HTTP/1.1\r\nHost: x\r\n\r\n");
@@ -1663,7 +1663,7 @@ void test_sse_upgrade_pool_exhausted()
 }
 #endif
 
-// append_resp_trailer clamps the returned length in-bounds so a response whose status
+// proto_append_resp_trailer clamps the returned length in-bounds so a response whose status
 // line and/or custom-header trailer would overflow the header buffer is emitted truncated
 // rather than making the writer read past the buffer (a stack over-read). Driven with an
 // over-long content_type (an unbounded caller string).
@@ -1699,7 +1699,7 @@ void test_response_headers_that_do_not_fit_are_refused()
     hv[240] = '\0';
     arm_slot(0, "GET /y HTTP/1.1\r\nHost: x\r\n\r\n");
     conn_pool[0].pcb = &_mock_pcb;
-    add_response_header(0, "X-Big", hv); // fill the extra-header block (~249 bytes)
+    proto_add_response_header(0, "X-Big", hv); // fill the extra-header block (~249 bytes)
     tcp_capture_reset();
     send_text(0, 200, midct, "ok");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "HTTP/1.1 500"));
@@ -2184,16 +2184,16 @@ void test_response_header_null_value_empty_attrs_and_overflow()
 {
     live_slot(0);
     clear_response_headers(0);
-    add_response_header(0, "X-Keep", "1");
-    add_response_header(0, "X-Null", nullptr); // null value -> ignored
-    set_cookie(0, "c-null", nullptr, nullptr); // null value -> ignored
-    set_cookie(0, "sid", "abc", "");           // empty attrs -> no "; " suffix
+    proto_add_response_header(0, "X-Keep", "1");
+    proto_add_response_header(0, "X-Null", nullptr); // null value -> ignored
+    set_cookie(0, "c-null", nullptr, nullptr);       // null value -> ignored
+    set_cookie(0, "sid", "abc", "");                 // empty attrs -> no "; " suffix
 
     char filler[EXTRA_HDR_BUF_SIZE];
     memset(filler, 'f', sizeof(filler) - 1);
     filler[sizeof(filler) - 1] = '\0';
-    add_response_header(0, "X-Too-Big", filler); // would overflow -> dropped whole
-    set_cookie(0, "big", filler, nullptr);       // would overflow -> dropped whole
+    proto_add_response_header(0, "X-Too-Big", filler); // would overflow -> dropped whole
+    set_cookie(0, "big", filler, nullptr);             // would overflow -> dropped whole
 
     tcp_capture_reset();
     send_text(0, 200, "text/plain", "ok");

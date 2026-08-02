@@ -14,10 +14,8 @@
  * keep counting `pos` past `cap` on overflow so the caller can size the buffer, sticky fault flags,
  * and network (big-endian) byte order.
  *
- * These take pc_span / pc_cspan directly rather than being templated on a per-codec cursor struct.
- * CBOR and MessagePack each declared their own writer and reader, all four field-identical to the
- * spans, and the templates existed only to bind them by field name. One concrete pair replaces four
- * near-duplicate structs and removes the deduction along with them.
+ * These take pc_span / pc_cspan directly rather than being templated on a per-codec cursor struct,
+ * so one concrete pair serves every codec and the field names are fixed rather than deduced.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -26,8 +24,8 @@
 #ifndef PROTOCORE_BYTES_H
 #define PROTOCORE_BYTES_H
 
-#include "server/mmgr/span.h"         // pc_span / pc_cspan - the region these verbs act on
 #include "shared_primitives/endian.h" // pc_rd32be - the fixed-width serializers live there
+#include "shared_primitives/span.h"   // pc_span / pc_cspan - the region these verbs act on
 #include <stddef.h>
 #include <stdint.h>
 
@@ -63,11 +61,9 @@ inline void pc_bw_put_be(pc_span *w, uint64_t val, int32_t nbytes)
  *
  * Sets the sticky err and returns false if the read would run past the end.
  *
- * This reads at the cursor and nowhere else. It used to skip a byte first, because CBOR's head byte
- * and MessagePack's format byte were folded into it - a codec's framing baked into the shared layer.
- * The cost was not just the coupling: a plain big-endian read could no longer be spelled with it, and
- * that is what produced a second reader (pc_rd_u32) beside this one. Consuming a tag is the codec's
- * step, and it is one line at each of the four call sites that need it.
+ * Reads at the cursor and nowhere else: no framing byte is consumed here. A codec that leads with a
+ * tag - CBOR's head byte, MessagePack's format byte - advances past it itself, which keeps this a
+ * plain big-endian read any caller can spell.
  */
 inline bool pc_br_take_be(pc_cspan *r, size_t nbytes, uint64_t *out)
 {
@@ -89,8 +85,8 @@ inline bool pc_br_take_be(pc_cspan *r, size_t nbytes, uint64_t *out)
 // --- offset-passing reads over a caller-owned buffer (no region object needed) ---
 //
 // A length-prefixed field is the same shape in every protocol: a big-endian u32 count, then that
-// many bytes. SSH calls it a "string" (RFC 4251 sec 5) and had it written four separate times.
-// These bounds-check and advance an offset the caller owns, for parsers that walk a raw payload.
+// many bytes. SSH calls it a "string" (RFC 4251 sec 5). These bounds-check and advance an offset the
+// caller owns, for parsers that walk a raw payload.
 
 // Every bound here is written as a subtraction against the space that remains, never as a sum
 // compared to the length. A sum overflows: size_t is 32 bits on esp32 and c2000, the length prefix

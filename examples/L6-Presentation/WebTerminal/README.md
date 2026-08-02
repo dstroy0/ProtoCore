@@ -25,10 +25,12 @@ terminals:
 
 ```cpp
 void on_command(const char *line, uint8_t client_id) {
+    char out[96];
     if (strcmp(line, "heap") == 0)
-        pc_web_terminal_frame(REPLY_HEAP, (uint32_t)ESP.getFreeHeap());
+        pc_frame_build(out, sizeof(out), REPLY_HEAP, (uint32_t)ESP.getFreeHeap());
     else
-        pc_web_terminal_frame(REPLY_ECHO, line);
+        pc_frame_build(out, sizeof(out), REPLY_ECHO, line);
+    pc_web_terminal_print(out);
 }
 ```
 
@@ -36,8 +38,11 @@ void on_command(const char *line, uint8_t client_id) {
 `pc_web_terminal_client_count()` so you only format when someone is watching:
 
 ```cpp
-if (pc_web_terminal_client_count() > 0)
-    pc_web_terminal_frame(HEARTBEAT, (uint32_t)millis(), (uint32_t)ESP.getFreeHeap());
+if (pc_web_terminal_client_count() > 0) {
+    char out[96];
+    pc_frame_build(out, sizeof(out), HEARTBEAT, (uint32_t)millis(), (uint32_t)ESP.getFreeHeap());
+    pc_web_terminal_print(out);
+}
 ```
 
 A plaintext alternative is [Telnet](../../L5-Session/Telnet); the raw
@@ -71,20 +76,24 @@ verbatim with added explanatory comments:
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
-PC server;
-
 // Browser -> device: handle a typed command line (broadcast replies to all pages).
 void on_command(const char *line, uint8_t client_id)
 {
     (void)client_id;
     if (strcmp(line, "help") == 0)
+    {
         pc_web_terminal_println("commands: help, heap, uptime, <echo>");
-    else if (strcmp(line, "heap") == 0)
-        pc_web_terminal_frame(REPLY_HEAP, (uint32_t)ESP.getFreeHeap());
+        return;
+    }
+
+    char out[96];
+    if (strcmp(line, "heap") == 0)
+        pc_frame_build(out, sizeof(out), REPLY_HEAP, (uint32_t)ESP.getFreeHeap());
     else if (strcmp(line, "uptime") == 0)
-        pc_web_terminal_frame(REPLY_UPTIME, (uint32_t)millis());
+        pc_frame_build(out, sizeof(out), REPLY_UPTIME, (uint32_t)millis());
     else
-        pc_web_terminal_frame(REPLY_ECHO, line);
+        pc_frame_build(out, sizeof(out), REPLY_ECHO, line);
+    pc_web_terminal_print(out);
 }
 
 void setup()
@@ -104,10 +113,10 @@ void setup()
     Serial.println("Open http://<ip>/terminal in a browser");
 
 
-    pc_web_terminal_begin(server, "/terminal"); // serves the page + the WebSocket
+    pc_web_terminal_begin("/terminal"); // serves the page + the WebSocket
     pc_web_terminal_on_command(on_command);
 
-    int32_t result = server.begin(80);
+    int32_t result = begin_http(80);
     if (result < 0)
     {
         Serial.printf("begin() failed (error %d)\n", result);
@@ -118,7 +127,7 @@ void setup()
 
 void loop()
 {
-    server.handle();
+    handle();
 
     // Device -> browsers: heartbeat every 3 s (only sent when someone's watching).
     static unsigned long last = 0;
@@ -126,7 +135,11 @@ void loop()
     {
         last = millis();
         if (pc_web_terminal_client_count() > 0)
-            pc_web_terminal_frame(HEARTBEAT, (uint32_t)millis(), (uint32_t)ESP.getFreeHeap());
+        {
+            char out[96];
+            pc_frame_build(out, sizeof(out), HEARTBEAT, (uint32_t)millis(), (uint32_t)ESP.getFreeHeap());
+            pc_web_terminal_print(out);
+        }
     }
 }
 ```

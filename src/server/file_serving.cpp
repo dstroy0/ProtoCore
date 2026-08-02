@@ -13,13 +13,13 @@
  * Behavior is identical to the pre-split code - a pure move.
  */
 
+#include "mmgr/membuild.h" // pc_sb frame builder
+#include "network_drivers/network/route.h"
 #include "network_drivers/transport/tcp.h" // conn_pool, pc_conn_*, TcpConn/ConnState
 #include "protocore.h"
-#include "server/filesystem/filesystem.h" // pc_fs_* - the accessor owns the root, the join, and the .. guard
-#include "server/http_range.h"            // http_parse_byte_range (shared with the edge cache)
-#include "server/signaling/route.h"
+#include "server/filesystem/filesystem.h"  // pc_fs_* - the accessor owns the root, the join, and the .. guard
+#include "server/http_range.h"             // http_parse_byte_range (shared with the edge cache)
 #include "shared_primitives/mime.h"        // mime_type, PC_MIME_*
-#include "shared_primitives/strbuf.h"      // pc_sb frame builder
 #include "shared_primitives/time_compat.h" // pc_gmtime_r (portable reentrant UTC)
 #include <stdio.h>                         // snprintf, sscanf
 #include <string.h>                        // strncasecmp, strchr, strstr, strncmp, strnlen
@@ -87,13 +87,16 @@ bool pc_file_holds_slot(uint8_t slot)
 // WebDAV's getlastmodified / creationdate). WEBDAV requires FILE_SERVING, so this is
 // the single home for both. Format a time_t as an RFC 1123 GMT date; leaves @p out
 // empty when the timestamp is zero/unavailable.
-void http_rfc1123(time_t t, char *out, size_t cap)
+void http_rfc1123(int64_t epoch, char *out, size_t cap)
 {
     out[0] = '\0';
-    if (t <= 0)
+    if (epoch <= 0)
     {
         return;
     }
+    // The API states its own width; time_t is whatever the toolchain picked (32 or 64 bit) and
+    // only the conversion seam is allowed to name it.
+    time_t t = (time_t)epoch;
     struct tm tmv;
     if (!pc_gmtime_r(&t, &tmv)) // reentrant: never the shared static buffer (worker-safe)
     {
@@ -313,7 +316,7 @@ void serve_file_internal(uint8_t slot_id, bool head, const pc_mnt_backend *file_
         pc_sb_put(&sb_h304, cl);
         pc_sb_put(&sb_h304, "\r\n");
         int n304 = (int)pc_sb_finish(&sb_h304);
-        pc_conn_send_flush(slot_id, h304, (u16_t)n304); // 304s are frequent (cache revalidation): one marshal
+        pc_conn_send_flush(slot_id, h304, (u16_t)n304); // header-only reply: write and flush in one marshal
         pc_resp_end(slot_id, 304, 0, keep, /*pre_flushed=*/true);
         return;
     }
@@ -414,7 +417,7 @@ void serve_file_internal(uint8_t slot_id, bool head, const pc_mnt_backend *file_
     if (head || body_len == 0)
     {
         pc_fs_close(fh);
-        pc_resp_end(slot_id, status, 0, keep);
+        pc_resp_end(slot_id, status, 0, keep, /*pre_flushed=*/false);
         return;
     }
 
@@ -497,7 +500,7 @@ void file_send_pump(uint8_t slot_id)
     pc_fs_close(s.fh);
     s.active = false;
     pc_conn_flush(slot_id);
-    pc_resp_end(slot_id, s.status, s.total, s.keep);
+    pc_resp_end(slot_id, s.status, s.total, s.keep, /*pre_flushed=*/false);
 }
 
 void serve_file(uint8_t slot_id, const pc_mnt_backend *file_sys, const char *fs_path, const char *content_type)
@@ -611,10 +614,10 @@ void serve_static_request(uint8_t slot_id, HttpReq *req, const Route *r)
         pc_sb_put(&sb_gz, fs_path);
         pc_sb_put(&sb_gz, ".gz");
         int gn = (int)pc_sb_finish(&sb_gz);
-        // Neither length half can fail: snprintf cannot return negative for "%s.gz", and fs_path is
-        // a 256-byte buffer, so gn is at most 258 and always under gz's 260. Both are kept because
-        // the two buffer sizes are independent constants. The exclusion is per-line, so it also
-        // drops the exists() halves - those ARE exercised both ways (see the gzip tests).
+        // Neither length half can fail: fs_path is a 256-byte buffer, so gn is at most 258 and
+        // always under gz's 260. Both are kept because the two buffer sizes are independent
+        // constants. The exclusion is per-line, so it also drops the exists() halves - those ARE
+        // exercised both ways (see the gzip tests).
         if (gn > 0 && gn < (int)sizeof(gz) && pc_fs_exists(file_root(), gz, "")) // GCOVR_EXCL_BR_LINE  see above
         {
             serve_file_internal(slot_id, head, r->static_fs, gz, ctype, "gzip");

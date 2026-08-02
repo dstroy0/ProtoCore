@@ -53,7 +53,7 @@
  *
  * All four buffers are live together across the verify, so the term is their sum. Stated here,
  * next to the constants it is built from, because a worst case assembled anywhere else would have
- * to restate them. server/mmgr/scratch_budget.h collects this with every other borrower's term.
+ * to restate them. mmgr/scratch_budget.h collects this with every other borrower's term.
  */
 #define PC_PLAINTEXT_WORK_OIDC (PC_OIDC_HDR_LEN + PC_OIDC_RSA_BYTES + PC_OIDC_MAX_LEN + PC_OIDC_ISS_LEN)
 

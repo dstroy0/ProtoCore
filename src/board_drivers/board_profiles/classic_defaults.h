@@ -43,6 +43,57 @@
 #define PC_HW_DS 0 // Digital Signature peripheral
 #endif
 
+// --- Vector unit ---
+// A register file wider than a GPR that the byte-lane primitives could be issued on. The classic
+// die's LX6 has none, and neither does a host build, so the floor is off and shared_primitives/swar.h
+// keeps doing its lane math in a general-purpose register. A profile raising this is asserting a
+// real unit out of its own die's TRM, never inferring one from the core name.
+#ifndef PC_HW_SIMD
+#define PC_HW_SIMD 0
+#endif
+#ifndef PC_HW_SIMD_BYTES
+#define PC_HW_SIMD_BYTES 0 // vector width in bytes; 0 when PC_HW_SIMD is 0
+#endif
+
+// --- Byte order ---
+// Which end of a register the lowest-addressed byte lands on. One bit of information, named once
+// here, so every direction in the library is written in terms of it: a lane count starts from the
+// matching end, a funnel shift goes the matching way, a mask anchors at the matching side.
+//
+// Defaulted from the toolchain because the compiler must already agree with us about byte order - a
+// build whose loads disagree is broken whatever we declare. A -D override exercises the other arm.
+#ifndef PC_HW_BIG_ENDIAN
+#if defined(__BYTE_ORDER__) && defined(__ORDER_BIG_ENDIAN__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+#define PC_HW_BIG_ENDIAN 1
+#else
+#define PC_HW_BIG_ENDIAN 0
+#endif
+#endif
+
+// --- Register width ---
+// Bits in this die's general-purpose register: the widest rung anything word-at-a-time may step in
+// ONE instruction. Every part in the target list is 32-bit (xtensa LX6/LX7, riscv32, cortex-M,
+// c2000), so that is the floor, and a 64-bit part raises it in its own profile.
+//
+// Declared rather than inferred from the toolchain, because the host toolchain is 64-bit and a host
+// build would then take a shape that ships nowhere: 8-byte lane math, an 8-byte move ladder and
+// 64-bit index arithmetic, none of which the target executes.
+//
+// Anything wider is not synthesized into one operation, it is done as n+1 of them: the move ladder
+// in shared_primitives/rawmemcpy.h enters at this width and steps down, and a lane carrier above it
+// is refused in protocore_config.h rather than compiled into half-registers the caller cannot see.
+#ifndef PC_HW_WORD_BITS
+#define PC_HW_WORD_BITS 32
+#endif
+
+// --- Unaligned load ---
+// Whether this die's load instruction accepts an address that is not a multiple of the access
+// width. Xtensa does not, and the compiler then synthesizes each unaligned word from byte loads plus
+// shifts and ors, which is why shared_primitives/ aligns first and steps whole words after.
+#ifndef PC_HW_UNALIGNED_LOAD
+#define PC_HW_UNALIGNED_LOAD 0
+#endif
+
 // --- Edge cache (RAM-backed L1: each slot holds one cached object, ~2.6 KB) ---
 #ifndef PC_EDGE_CACHE_SLOTS
 #define PC_EDGE_CACHE_SLOTS 4 // L1 RAM entries

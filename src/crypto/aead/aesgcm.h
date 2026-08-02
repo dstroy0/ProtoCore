@@ -29,8 +29,8 @@
 #ifndef PROTOCORE_AESGCM_H
 #define PROTOCORE_AESGCM_H
 
-#include "protocore_config.h" // PC_WORK_AESGCM sizes a context
-#include "server/mmgr/span.h" // pc_cspan: what the seal produced (empty == it did not)
+#include "protocore_config.h"       // PC_WORK_AESGCM sizes a context
+#include "shared_primitives/span.h" // pc_cspan: what the seal produced (empty == it did not)
 #include <stddef.h>
 #include <stdint.h>
 

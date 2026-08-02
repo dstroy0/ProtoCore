@@ -89,6 +89,11 @@ AlwaysBreakAfterDefinitionReturnType: None
 AlwaysBreakBeforeMultilineStrings: false
 AttributeMacros:
   - __capability
+  # C11: the declaration attributes from shared_primitives/rawmemcpy.h. Listed so they are
+  # formatted as attributes on the declaration they qualify rather than as a type or a call -
+  # PROTO_RAW trails a typedef's declarator, PROTO_ALIGN(n) precedes a definition's name.
+  - PROTO_RAW
+  - PROTO_ALIGN
 BinPackArguments: true
 BinPackLongBracedList: true
 BinPackParameters: BinPack

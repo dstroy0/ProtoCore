@@ -187,12 +187,12 @@ pc_iface pc_net_classify_ip(uint32_t egress_ip, uint32_t sta_ip, uint32_t ap_ip)
  * ------------------------------------------------------------------------------------------ */
 
 /** @brief Radio power-save mode, in the library's own vocabulary. */
-enum class pc_phy_ps : uint8_t
+typedef enum
 {
     PC_PHY_PS_NONE = 0,      ///< Radio always on: lowest latency, highest average draw.
     PC_PHY_PS_MIN_MODEM = 1, ///< Wake on every DTIM beacon.
     PC_PHY_PS_MAX_MODEM = 2, ///< Wake on a longer listen interval: lowest draw, highest latency.
-};
+} pc_phy_ps;
 
 /**
  * @brief One received frame, delivered in neutral terms.

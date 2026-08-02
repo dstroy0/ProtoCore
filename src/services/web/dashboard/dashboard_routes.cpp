@@ -9,8 +9,8 @@
  * unit-tested without pulling in the server. Requires PC_ENABLE_SSE.
  */
 
+#include "mmgr/membuild.h" // pc_sb frame builder
 #include "services/web/dashboard/dashboard.h"
-#include "shared_primitives/strbuf.h" // pc_sb frame builder
 
 #if PC_ENABLE_DASHBOARD
 

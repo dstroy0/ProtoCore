@@ -29,7 +29,10 @@ tags:
   - esp32
   - deterministic
 dependencies:
-  # arduino-esp32 3.3.x targets ESP-IDF 5.3-5.5; the library is built with Arduino as a component.
+  # arduino-esp32 3.3.x targets ESP-IDF 5.3-5.5. Declared unconditionally because the manifest
+  # can only condition a dependency on idf_version / target, not on a build flag: a consumer
+  # building plain ESP-IDF (idf.py -DPC_WITH_ARDUINO=OFF) still has it fetched, but CMakeLists.txt
+  # leaves it out of REQUIRES so nothing links against it.
   idf: ">=5.3,<5.6"
   espressif/arduino-esp32: "^3.3.10"
 files:

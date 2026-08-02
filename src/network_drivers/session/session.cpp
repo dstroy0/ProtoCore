@@ -17,8 +17,8 @@
 
 #include "session.h"
 #include "../transport/listener.h"
+#include "mmgr/plaintext.h"
 #include "proto_handler.h"
-#include "server/mmgr/plaintext.h"
 
 // This layer is protocol-agnostic: it owns the dispatch mechanism only (register / look up /
 // route / drain) and names no protocol. Each protocol's handler lives in its own module and is
@@ -31,13 +31,13 @@
 // ProtoHandler pointers. One named owner, unreachable from any other translation unit.
 struct SessionCtx
 {
-    const ProtoHandler *proto_handlers[PC_PROTO_MAX];
+    const ProtoHandler *proto_handlers[PROTO_MAX_HANDLERS];
 };
 static SessionCtx s_session;
 
 void proto_register(ConnProto proto, const ProtoHandler *h)
 {
-    if ((unsigned)proto < PC_PROTO_MAX)
+    if ((unsigned)proto < PROTO_MAX_HANDLERS)
     {
         s_session.proto_handlers[(unsigned)proto] = h;
     }
@@ -55,7 +55,7 @@ const ProtoHandler *proto_get(ConnProto proto)
     }
     // No implicit fallback: a slot must carry an explicit, registered protocol.
     // ConnProto::PROTO_NONE and any unregistered protocol resolve to nullptr (event dropped).
-    return ((unsigned)proto < PC_PROTO_MAX) ? s_session.proto_handlers[(unsigned)proto] : nullptr;
+    return ((unsigned)proto < PROTO_MAX_HANDLERS) ? s_session.proto_handlers[(unsigned)proto] : nullptr;
 }
 
 // Dispatch one drained event to its slot's protocol handler. Shared by the
@@ -104,12 +104,12 @@ void server_tick(int worker_id)
 {
     /*
      * Check timeouts BEFORE draining events.  This ensures that a slot
-     * freed by a timeout is already in ConnState::CONN_FREE state if a coincident
-     * EvtType::EVT_DISCONNECT or EvtType::EVT_ERROR is dequeued in the same tick - the
+     * freed by a timeout is already in the CONN_FREE state if a coincident
+     * EVT_DISCONNECT or EVT_ERROR is dequeued in the same tick - the
      * http_reset() call for that event is then a clean no-op. Each worker
      * sweeps only the slots it owns.
      */
-    DeterministicAsyncTCP::check_timeouts(worker_id);
+    proto_tcp_check_timeouts(worker_id);
 
 #if PC_WORKER_COUNT > 1
     // Drain only this worker's queue: it is the sole consumer of its slots.

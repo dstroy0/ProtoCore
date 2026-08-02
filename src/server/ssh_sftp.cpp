@@ -24,7 +24,7 @@
 #include "server/filesystem/filesystem.h"
 #include "services/file_transfer/sftp/sftp.h"
 #include "shared_primitives/endian.h" // the u32 <-> big-endian bytes serializers
-#include "shared_primitives/swar.h"   // the bounded word-at-a-time length scan
+#include "shared_primitives/runops.h" // the bounded word-at-a-time length scan
 #include <string.h>
 
 namespace
@@ -256,7 +256,7 @@ void do_readdir(SftpSession *s, uint32_t id, SftpHandle *H)
             H->readdir_done = true;
             break;
         }
-        size_t el = build_entry(&st, s_sftp.nm, pc_swar_scan_nul(s_sftp.nm, sizeof(s_sftp.nm)));
+        size_t el = build_entry(&st, s_sftp.nm, proto_scan_nul(s_sftp.nm, sizeof(s_sftp.nm)));
         if (el == 0)
         {
             continue; // entry could not be serialized (pathological name) - skip it
@@ -294,7 +294,7 @@ void do_readdir(SftpSession *s, uint32_t id, SftpHandle *H)
 // handle-to-path map. The accessor resolves it again; it is the client's bytes, not a resolved path.
 void keep_req(SftpHandle *H, const char *req)
 {
-    size_t n = pc_swar_scan_nul(req, sizeof(H->req));
+    size_t n = proto_scan_nul(req, sizeof(H->req));
     if (n >= sizeof(H->req))
     {
         n = sizeof(H->req) - 1;

@@ -17,7 +17,7 @@
 
 #include <string.h>
 
-#include "shared_primitives/frame.h"
+#include "mmgr/frame.h"
 
 #if defined(ARDUINO)
 #include <Arduino.h>

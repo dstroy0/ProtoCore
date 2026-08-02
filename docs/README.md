@@ -1568,7 +1568,7 @@ guards at compile time.
 | `SSH_REKEY_PACKET_THRESHOLD` | `0x40000000u` | Re-key when either packet sequence number reaches this value. |
 | `SSH_REKEY_TIME_MS` | `3600000u` | Elapsed-time re-key trigger in milliseconds (RFC 4253 §9: "after each hour"). |
 | `TELNET_BUF_SIZE` | `256` | Stack buffer for one Telnet I/O chunk. |
-| `TERM_TX_BUF_SIZE` | `256` | Stack scratch for pc_web_terminal_frame()/println() line building. |
+| `TERM_TX_BUF_SIZE` | `256` | Stack scratch for pc_web_terminal_println() line building. |
 | `WS_FRAME_SIZE` | `512` | Maximum WebSocket frame payload in bytes. |
 | `WS_HDR_BUF_SIZE` | `256` | Stack buffer for the HTTP 101 Switching Protocols response sent during the WebSocket handshake. |
 

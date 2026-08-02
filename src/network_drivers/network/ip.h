@@ -25,19 +25,20 @@
 #ifndef PROTOCORE_IP_H
 #define PROTOCORE_IP_H
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
 /** @brief Address family tag. */
-enum class pc_ip_family : uint8_t
+typedef enum
 {
     PC_IP_NONE = 0, ///< empty / unparsed
     PC_IP_V4 = 4,   ///< IPv4 (bytes[0..3])
     PC_IP_V6 = 6,   ///< IPv6 (bytes[0..15])
-};
+} pc_ip_family;
 
 /** @brief Address scope, in rough order of reachability (used for allow/deny policy + logging). */
-enum class pc_ip_scope : uint8_t
+typedef enum
 {
     PC_IP_SCOPE_UNSPECIFIED = 0, ///< 0.0.0.0 / ::
     PC_IP_SCOPE_LOOPBACK,        ///< 127.0.0.0/8 / ::1
@@ -45,21 +46,21 @@ enum class pc_ip_scope : uint8_t
     PC_IP_SCOPE_PRIVATE,         ///< RFC1918 (10/8, 172.16/12, 192.168/16) / ULA fc00::/7
     PC_IP_SCOPE_MULTICAST,       ///< 224.0.0.0/4 / ff00::/8
     PC_IP_SCOPE_GLOBAL,          ///< globally routable unicast
-};
+} pc_ip_scope;
 
 /** @brief A v4 or v6 address in network (big-endian) byte order. */
-struct pc_ip
+typedef struct
 {
     pc_ip_family family; ///< address family tag
     uint8_t bytes[16];   ///< network order; v4 uses the first 4
-};
+} pc_ip;
 
 /** @brief Longest text an ::pc_ip_format can produce, including the NUL (RFC 5952 v4-mapped). */
 #define PC_IP_STR_MAX 46
 
 /**
  * @brief Parse an IPv4 or IPv6 textual address (RFC 4291 §2.2) into @p out.
- * @return true on success (@p out->family set to pc_ip_family::PC_IP_V4/V6), false if @p s is malformed.
+ * @return true on success (@p out->family set to PC_IP_V4/V6), false if @p s is malformed.
  */
 bool pc_ip_parse(const char *s, pc_ip *out);
 
@@ -95,7 +96,7 @@ pc_ip pc_ip_from_v6_bytes(const uint8_t bytes[16]);
  */
 uint32_t pc_ip_to_v4_be(const pc_ip *ip);
 
-/** @brief True if @p ip is empty (pc_ip_family::PC_IP_NONE) or the all-zero unspecified address (0.0.0.0 / ::). */
+/** @brief True if @p ip is empty (PC_IP_NONE) or the all-zero unspecified address (0.0.0.0 / ::). */
 bool pc_ip_is_unspecified(const pc_ip *ip);
 
 /**

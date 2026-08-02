@@ -10,7 +10,7 @@
 
 #if PC_ENABLE_HAAS_MDC
 
-#include "shared_primitives/strbuf.h" // pc_sb frame builder
+#include "mmgr/membuild.h" // pc_sb frame builder
 
 // Trim leading and trailing spaces from [s, s+len); updates s and len in place.
 static void trim(const char **s, size_t *len)

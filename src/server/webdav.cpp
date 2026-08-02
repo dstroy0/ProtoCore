@@ -14,12 +14,12 @@
  */
 
 #include "services/file_transfer/webdav/webdav.h" // the pure WebDAV core
-#include "network_drivers/transport/tcp.h"        // conn_pool
+#include "mmgr/membuild.h"                        // pc_sb frame builder
+#include "network_drivers/network/route.h"
+#include "network_drivers/transport/tcp.h" // conn_pool
 #include "protocore.h"
-#include "server/signaling/route.h"
 #include "services/system/clock.h" // pc_millis() for lock timeouts
 #include "shared_primitives/mime.h"
-#include "shared_primitives/strbuf.h" // pc_sb frame builder
 #include <string.h>
 
 #if PC_ENABLE_WEBDAV
@@ -394,7 +394,7 @@ void dav_send_status(uint8_t slot_id, int code, const char *extra_headers)
     int hlen = (int)pc_sb_finish(&sb_header);
     // GCOVR_EXCL_BR_STOP
     pc_conn_send(slot_id, header, (u16_t)hlen);
-    pc_resp_end(slot_id, code, 0, keep);
+    pc_resp_end(slot_id, code, 0, keep, /*pre_flushed=*/false);
 }
 
 bool try_serve_dav(uint8_t slot_id, HttpReq *req)
@@ -453,10 +453,10 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const Route *r)
     switch (pc_webdav_method(req->method))
     {
     case WebDavMethod::DAV_M_OPTIONS:
-        add_response_header(slot_id, "DAV", "1, 2");
-        add_response_header(slot_id, "Allow",
-                            "OPTIONS, GET, HEAD, PUT, DELETE, PROPFIND, PROPPATCH, MKCOL, COPY, MOVE, LOCK, UNLOCK");
-        add_response_header(slot_id, "MS-Author-Via", "DAV");
+        proto_add_response_header(slot_id, "DAV", "1, 2");
+        proto_add_response_header(
+            slot_id, "Allow", "OPTIONS, GET, HEAD, PUT, DELETE, PROPFIND, PROPPATCH, MKCOL, COPY, MOVE, LOCK, UNLOCK");
+        proto_add_response_header(slot_id, "MS-Author-Via", "DAV");
         send_empty(slot_id, 200);
         return;
 
@@ -739,7 +739,7 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const Route *r)
         {
             lt[0] = '\0';
         }
-        add_response_header(slot_id, "Lock-Token", lt);
+        proto_add_response_header(slot_id, "Lock-Token", lt);
         send_text(slot_id, 200, "application/xml; charset=utf-8", s_dav.buf);
         return;
     }

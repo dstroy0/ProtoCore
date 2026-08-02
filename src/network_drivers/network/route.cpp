@@ -6,7 +6,7 @@
  * @brief The route table and its one owner. See route.h.
  */
 
-#include "server/signaling/route.h"
+#include "network_drivers/network/route.h"
 #include <string.h>
 
 namespace

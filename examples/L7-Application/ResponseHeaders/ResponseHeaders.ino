@@ -6,7 +6,7 @@
  * @brief Custom response headers and cookies.
  *
  * Demonstrates queuing extra headers onto a response from inside a handler:
- *   - add_response_header()   - arbitrary `Name: value` lines
+ *   - proto_add_response_header()   - arbitrary `Name: value` lines
  *   - set_cookie()            - `Set-Cookie` with optional attributes
  *   - clear_response_headers() - discard anything queued so far
  *
@@ -33,7 +33,7 @@ static const char *PASSWORD = "YOUR_PASSWORD";
 void handle_headers(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    add_response_header(slot_id, "X-Api-Version", "1.2.5");
+    proto_add_response_header(slot_id, "X-Api-Version", "1.2.5");
     set_cookie(slot_id, "session", "abc123", "Path=/; HttpOnly; Max-Age=3600");
     send_text(slot_id, 200, "text/plain", "custom header + cookie attached");
 }
@@ -42,7 +42,7 @@ void handle_headers(uint8_t slot_id, HttpReq *req)
 void handle_cleared(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    add_response_header(slot_id, "X-Scratch", "should-not-appear");
+    proto_add_response_header(slot_id, "X-Scratch", "should-not-appear");
     clear_response_headers(slot_id);
     send_text(slot_id, 200, "text/plain", "headers were cleared before send");
 }

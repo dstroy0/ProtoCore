@@ -43,7 +43,7 @@ static MwResult mw_log(uint8_t slot_id, HttpReq *req)
 static MwResult mw_brand(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    add_response_header(slot_id, "X-Powered-By", "ProtoCore");
+    proto_add_response_header(slot_id, "X-Powered-By", "ProtoCore");
     return MwResult::MW_NEXT;
 }
 

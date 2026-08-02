@@ -5,15 +5,14 @@
  * @file middleware.cpp
  * @brief Middleware chain + built-in fixed-window rate limiter for PC.
  *
- * Split out of protocore.cpp (single-purpose server files). use() registers a middleware;
- * run_middleware() runs the chain in order (first MW_HALT stops dispatch); enable_rate_limit()
- * / rate_limit_check() implement a rollover-safe fixed-window counter that answers 429 +
- * Retry-After past the budget. All four are PC methods over member state - a pure move.
+ * use() registers a middleware; run_middleware() runs the chain in order (first MW_HALT stops
+ * dispatch); enable_rate_limit() / rate_limit_check() implement a rollover-safe fixed-window
+ * counter that answers 429 + Retry-After past the budget.
  */
 
+#include "mmgr/frame.h" // the one frame engine
 #include "protocore.h"
-#include "shared_primitives/frame.h" // the one frame engine
-#include "shared_primitives/mime.h"  // PC_MIME_TEXT_PLAIN
+#include "shared_primitives/mime.h" // PC_MIME_TEXT_PLAIN
 #include <stdio.h>
 
 // Retry-After carries one number and nothing else.
@@ -105,7 +104,7 @@ bool rate_limit_check(uint8_t slot_id)
     char secs[12];
     // Fails closed to an empty string on its own, so there is no failure arm to write here.
     pc_frame_build(secs, sizeof(secs), RETRY_AFTER, (uint32_t)((remain_ms + 999) / 1000));
-    add_response_header(slot_id, "Retry-After", secs);
+    proto_add_response_header(slot_id, "Retry-After", secs);
     send_text(slot_id, 429, PC_MIME_TEXT_PLAIN, "Too Many Requests");
     return true;
 }

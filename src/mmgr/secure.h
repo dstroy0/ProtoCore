@@ -36,7 +36,7 @@
 #define PROTOCORE_SECURE_H
 
 #include "protocore_config.h"
-#include "server/mmgr/span.h"
+#include "shared_primitives/span.h"
 #include <stddef.h>
 #include <stdint.h>
 

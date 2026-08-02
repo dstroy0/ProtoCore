@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the declarative frame builder (shared_primitives/frame.h).
+// Unit tests for the declarative frame builder (mmgr/frame.h).
 //
 // This engine is the single place the library turns values into wire bytes, so the ~160 call
 // sites that declare a frame spec carry no formatting logic of their own. That is only a good
@@ -9,7 +9,7 @@
 // every width, the fail-closed contract at the exact byte boundary, the append rewind, and a
 // differential check against the libc printf whose output these frames replace byte for byte.
 
-#include "shared_primitives/frame.h"
+#include "mmgr/frame.h"
 #include <stdio.h> // snprintf: the libc reference the frames are diffed against
 #include <string.h>
 #include <unity.h>

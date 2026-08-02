@@ -81,7 +81,7 @@ static MwResult mw_pass(uint8_t slot, HttpReq *req)
 static MwResult mw_inject_header(uint8_t slot, HttpReq *req)
 {
     (void)req;
-    add_response_header(slot, "X-MW", "1");
+    proto_add_response_header(slot, "X-MW", "1");
     return MwResult::MW_NEXT;
 }
 

@@ -2,38 +2,36 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file strbuf.h
- * @brief Bounded no-heap string builder that fails closed on overflow (one shared copy).
+ * @file membuild.h
+ * @brief Bounded no-heap builder that writes into memory the caller already owns.
  *
- * The same little `Buf` appender was open-coded inside the anonymous namespace of ~5
- * codecs (utmc, sep2, openadr, atc, exc_decoder). It bump-appends into a caller-owned
- * `char[]` and latches @c ok to false the first time something would not fit, so every
- * later append is a no-op and callers test one flag at the end. These header-only inline
- * helpers are the single home for it, mirroring hex.h / numparse.h - no `<stdlib.h>`,
- * no heap, and zero link cost when unused. The verbatim pieces (struct + raw append + XML
- * escape + decimal + JSON-string + terminate) live here; the JSON emitters (hw_health,
- * http_delivery, ble_gatt, ...) shared them byte-for-byte, so they are no longer per-codec.
+ * Under mmgr because building into a buffer is a memory operation: the builder never allocates,
+ * it is handed a region and fills it. It bump-appends into a caller-owned `char[]` and latches
+ * @c ok to false the first time something would not fit, so every later append is a no-op and the
+ * caller tests one flag at the end rather than a return value per call. Header-only inline, so
+ * there is zero link cost when unused.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
  */
 
-#ifndef PROTOCORE_STRBUF_H
-#define PROTOCORE_STRBUF_H
+#ifndef PROTOCORE_MEMBUILD_H
+#define PROTOCORE_MEMBUILD_H
 
-#include "shared_primitives/swar.h" // pc_swar_scan_nul - four bytes per test, bounded by a known width
+#include "shared_primitives/rawmemcpy.h" // proto_raw_u64 - the IEEE-754 field reads below
+#include "shared_primitives/runops.h"   // proto_scan_nul - a word per test, bounded by a known width
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <string.h>
 
 /** @brief Bump-append target; @c ok latches false once an append would overflow @c cap. */
-struct pc_sb
+typedef struct
 {
     char *p;
     size_t cap;
     size_t len;
     bool ok;
-};
+} pc_sb;
 
 /**
  * @brief Append @p sl bytes of @p s - the primitive the others build on.
@@ -42,7 +40,7 @@ struct pc_sb
  * compiler already knows; scanning for a NUL to rediscover it is the same waste as re-parsing a
  * format string. Appending a literal goes through pc_sb_lit, which deduces the length.
  */
-inline void pc_sb_put_n(pc_sb *b, const char *s, size_t sl)
+static inline void pc_sb_put_n(pc_sb *b, const char *s, size_t sl)
 {
     if (!b->ok)
     {
@@ -53,31 +51,36 @@ inline void pc_sb_put_n(pc_sb *b, const char *s, size_t sl)
         b->ok = false;
         return;
     }
-    memcpy(b->p + b->len, s, sl);
+    char *d = b->p + b->len;
+    for (size_t i = 0; i < sl; i++)
+    {
+        d[i] = s[i];
+    }
     b->len += sl;
 }
 
 /** @brief Append NUL-terminated @p s; leaves the buffer untouched and clears @c ok if it would not fit. */
-inline void pc_sb_put(pc_sb *b, const char *s)
+static inline void pc_sb_put(pc_sb *b, const char *s)
 {
     if (!b->ok)
     {
         return;
     }
-    pc_sb_put_n(b, s, pc_swar_scan_nul(s, b->cap));
+    pc_sb_put_n(b, s, proto_scan_nul(s, b->cap));
 }
 
 /**
- * @brief Append a string literal. The array parameter deduces @c N, so the length is a constant.
+ * @brief Append a string literal, taking the length from the array type.
  *
- * `pc_sb_put(b, "HTTP/1.1 ")` scans nine bytes at runtime to learn what the type already states.
- * Binding to `const char (&)[N]` takes the length from the type instead, and a pointer will not
- * bind here, so a runtime string cannot reach this overload by mistake.
+ * `pc_sb_put(b, "HTTP/1.1 ")` scans nine bytes at runtime to learn what the type already states;
+ * `sizeof(s) - 1` is a constant the compiler folds. A macro because only the array type carries
+ * the extent - passing a literal to a function decays it to a pointer and loses the length.
+ *
+ * @warning @p s must be a string literal or a `char[]`. A `const char *` compiles here and yields
+ *          the pointer size, so it silently appends 3 or 7 bytes. Use pc_sb_put for a runtime
+ *          string.
  */
-template <size_t N> inline void pc_sb_lit(pc_sb *b, const char (&s)[N])
-{
-    pc_sb_put_n(b, s, N - 1);
-}
+#define pc_sb_lit(b, s) pc_sb_put_n((b), (s), sizeof(s) - 1)
 
 /**
  * @brief Append as much of @p s as fits and stop, WITHOUT latching @c ok.
@@ -88,15 +91,19 @@ template <size_t N> inline void pc_sb_lit(pc_sb *b, const char (&s)[N])
  * latching pc_sb_put exists to prevent. The two are deliberately different functions so the choice
  * is visible at the call site rather than being a flag someone sets once and forgets.
  */
-inline void pc_sb_put_clip(pc_sb *b, const char *s)
+static inline void pc_sb_put_clip(pc_sb *b, const char *s)
 {
     if (!b->ok || !s || b->len + 1 >= b->cap)
     {
         return;
     }
     size_t room = b->cap - b->len - 1;
-    size_t sl = pc_swar_scan_nul(s, room);
-    memcpy(b->p + b->len, s, sl);
+    size_t sl = proto_scan_nul(s, room);
+    char *d = b->p + b->len;
+    for (size_t i = 0; i < sl; i++)
+    {
+        d[i] = s[i];
+    }
     b->len += sl;
 }
 
@@ -110,7 +117,7 @@ inline void pc_sb_put_clip(pc_sb *b, const char *s)
  * Space padding, not the zero padding pc_sb_uint does: a column pads to align, a field pads to a
  * fixed digit count, and the two are not interchangeable on the wire.
  */
-inline void pc_sb_u64_clip(pc_sb *b, uint64_t v, uint8_t columns)
+static inline void pc_sb_u64_clip(pc_sb *b, uint64_t v, uint8_t columns)
 {
     if (!b->ok)
     {
@@ -141,7 +148,7 @@ inline void pc_sb_u64_clip(pc_sb *b, uint64_t v, uint8_t columns)
 }
 
 /** @brief Append @p s XML-escaped (&amp; &lt; &gt; &quot;); a NULL @p s appends nothing. */
-inline void pc_sb_xml(pc_sb *b, const char *s)
+static inline void pc_sb_xml(pc_sb *b, const char *s)
 {
     if (!b->ok || !s)
     {
@@ -149,7 +156,7 @@ inline void pc_sb_xml(pc_sb *b, const char *s)
     }
     for (; *s; s++)
     {
-        const char *rep = nullptr;
+        const char *rep = NULL;
         switch (*s)
         {
         case '&':
@@ -178,13 +185,14 @@ inline void pc_sb_xml(pc_sb *b, const char *s)
                 b->ok = false;
                 return;
             }
-            b->p[b->len++] = *s;
+            b->p[b->len] = *s;
+            b->len++;
         }
     }
 }
 
 /** @brief Append a single character. */
-inline void pc_sb_ch(pc_sb *b, char c)
+static inline void pc_sb_ch(pc_sb *b, char c)
 {
     if (!b->ok)
     {
@@ -205,7 +213,7 @@ inline void pc_sb_ch(pc_sb *b, char c)
  * once, then fill it back-to-front in place. Same shape as pc_sb_u32 so neither needs a
  * scratch array. @p min_digits is what carries a printf width like %08lx or %02d.
  */
-inline void pc_sb_uint(pc_sb *b, uint64_t v, unsigned base, unsigned min_digits)
+static inline void pc_sb_uint(pc_sb *b, uint64_t v, unsigned base, unsigned min_digits)
 {
     if (!b->ok)
     {
@@ -289,31 +297,31 @@ inline void pc_sb_uint(pc_sb *b, uint64_t v, unsigned base, unsigned min_digits)
 }
 
 /** @brief Append @p v as decimal, zero-padded to at least @p min_digits (printf "%0Nu"). */
-inline void pc_sb_u32w(pc_sb *b, uint32_t v, unsigned min_digits)
+static inline void pc_sb_u32w(pc_sb *b, uint32_t v, unsigned min_digits)
 {
     pc_sb_uint(b, v, 10, min_digits);
 }
 
 /** @brief Append @p v as lowercase hex, zero-padded to at least @p min_digits (printf "%0Nx"). */
-inline void pc_sb_hex(pc_sb *b, uint64_t v, unsigned min_digits)
+static inline void pc_sb_hex(pc_sb *b, uint64_t v, unsigned min_digits)
 {
     pc_sb_uint(b, v, 16, min_digits);
 }
 
 /** @brief Append @p v as decimal (no leading zeros; "0" for zero). */
-inline void pc_sb_u32(pc_sb *b, uint32_t v)
+static inline void pc_sb_u32(pc_sb *b, uint32_t v)
 {
     pc_sb_uint(b, v, 10, 1);
 }
 
 /** @brief Append @p v as decimal (64-bit). */
-inline void pc_sb_u64(pc_sb *b, uint64_t v)
+static inline void pc_sb_u64(pc_sb *b, uint64_t v)
 {
     pc_sb_uint(b, v, 10, 1);
 }
 
 /** @brief Append @p v as signed decimal (64-bit), with a leading '-' when negative. */
-inline void pc_sb_i64(pc_sb *b, int64_t v)
+static inline void pc_sb_i64(pc_sb *b, int64_t v)
 {
     // Negating INT64_MIN overflows, so the magnitude is taken through unsigned arithmetic
     // rather than by negating the signed value.
@@ -330,23 +338,20 @@ inline void pc_sb_i64(pc_sb *b, int64_t v)
 static const double PC_POW10_BIN[9] = {1e1, 1e2, 1e4, 1e8, 1e16, 1e32, 1e64, 1e128, 1e256};
 
 /** @brief True if @p v carries the IEEE-754 sign bit, including for -0.0 (a mask, not a divide). */
-inline bool pc_signbit(double v)
+static inline bool pc_signbit(double v)
 {
-    uint64_t bits;
-    memcpy(&bits, &v, sizeof(bits));
-    return (bits >> 63) != 0;
+    return (proto_raw_u64(&v) >> 63) != 0;
 }
 
 /** @brief True if @p v is an infinity: all exponent bits set, zero significand. */
-inline bool pc_isinf(double v)
+static inline bool pc_isinf(double v)
 {
-    uint64_t bits;
-    memcpy(&bits, &v, sizeof(bits));
+    const uint64_t bits = proto_raw_u64(&v);
     return ((bits >> 52) & 0x7FFu) == 0x7FFu && (bits & 0xFFFFFFFFFFFFFull) == 0;
 }
 
 /** @brief 10^p for p >= 0, by binary composition. */
-inline double pc_pow10i(int p)
+static inline double pc_pow10i(int p)
 {
     double r = 1.0;
     for (int k = 0; p != 0 && k < 9; k++, p >>= 1)
@@ -368,17 +373,14 @@ inline double pc_pow10i(int p)
  * stepped one decade per iteration - about 320 of them for a denormal - to recover a number the
  * representation was already carrying.
  */
-inline int pc_dec_exp(double v)
+static inline int pc_dec_exp(double v)
 {
-    uint64_t bits;
-    memcpy(&bits, &v, sizeof(bits));
-    int be = (int)((bits >> 52) & 0x7FFu);
+    int be = (int)((proto_raw_u64(&v) >> 52) & 0x7FFu);
     int e;
     if (be == 0) // subnormal: no implicit leading 1, so scale into the normal range first
     {
         double s = v * 1e300;
-        memcpy(&bits, &s, sizeof(bits));
-        be = (int)((bits >> 52) & 0x7FFu);
+        be = (int)((proto_raw_u64(&s) >> 52) & 0x7FFu);
         e = (int)(((int64_t)(be - 1023) * 78913) >> 18) - 300;
     }
     else
@@ -404,7 +406,7 @@ inline int pc_dec_exp(double v)
  * Peels digits by division so no scratch array is needed. @p point_after == 0 or == @p digits
  * emits no point.
  */
-inline void pc_sb_digits(pc_sb *b, uint64_t mant, unsigned digits, unsigned point_after)
+static inline void pc_sb_digits(pc_sb *b, uint64_t mant, unsigned digits, unsigned point_after)
 {
     uint64_t div = 1;
     for (unsigned i = 1; i < digits; i++)
@@ -435,7 +437,7 @@ inline void pc_sb_digits(pc_sb *b, uint64_t mant, unsigned digits, unsigned poin
  * ties, denormals, +/-0, inf and NaN. Above that the scaling is done in double, which runs out of
  * precision around 16 significant digits, so sig >= 15 can differ from libc in the last digit.
  */
-inline void pc_sb_g(pc_sb *b, double v, unsigned sig)
+static inline void pc_sb_g(pc_sb *b, double v, unsigned sig)
 {
     if (!b->ok)
     {
@@ -563,7 +565,7 @@ inline void pc_sb_g(pc_sb *b, double v, unsigned sig)
  * A larger magnitude falls back to the significant-digit form (see pc_sb_g) rather than being
  * rendered wrong: its exact %f expansion needs big-integer arithmetic.
  */
-inline void pc_sb_fixed(pc_sb *b, double v, unsigned decimals)
+static inline void pc_sb_fixed(pc_sb *b, double v, unsigned decimals)
 {
     if (!b->ok)
     {
@@ -618,7 +620,7 @@ inline void pc_sb_fixed(pc_sb *b, double v, unsigned decimals)
 
 /** @brief Append @p s as a JSON string literal: double-quoted, with `"` and `\` backslash-escaped. A NULL
  * @p s emits `""`. (Control chars are passed through, matching the emitters this replaced.) */
-inline void pc_sb_json(pc_sb *b, const char *s)
+static inline void pc_sb_json(pc_sb *b, const char *s)
 {
     pc_sb_put(b, "\"");
     for (const char *p = s ? s : ""; *p; p++)
@@ -646,7 +648,7 @@ inline void pc_sb_json(pc_sb *b, const char *s)
 }
 
 /** @brief NUL-terminate and return the built length, or 0 if the build overflowed. */
-inline size_t pc_sb_finish(pc_sb *b)
+static inline size_t pc_sb_finish(pc_sb *b)
 {
     // cap == 0 owns no bytes at all, so even the terminator is out of bounds. Every appender
     // refuses to write into a zero-capacity buffer without latching `ok`, which left this the one
@@ -659,4 +661,4 @@ inline size_t pc_sb_finish(pc_sb *b)
     return b->len;
 }
 
-#endif // PROTOCORE_STRBUF_H
+#endif // PROTOCORE_MEMBUILD_H

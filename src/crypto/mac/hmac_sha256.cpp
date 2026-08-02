@@ -21,7 +21,7 @@
 
 #include "crypto/mac/hmac_sha256.h"
 #include "crypto/crypto_opt.h"
-#include "server/mmgr/secure.h" // the secure pool: HMAC working state, wiped on release
+#include "mmgr/secure.h" // the secure pool: HMAC working state, wiped on release
 #include <string.h>
 // HMAC-SHA256 is HW-SHA-dominated; the only -O lever is its SW key-block glue. On the P4 that rides the per-die
 // -O3 default (whose win is -O3's loop-unroll parameter budget). The S3's ~4% O3 edge is the same parameter

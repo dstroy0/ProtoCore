@@ -16,10 +16,10 @@
 #if PC_ENABLE_SSH_ZLIB
 #include "network_drivers/presentation/ssh/transport/ssh_comp.h"
 #endif
+#include "mmgr/plaintext.h"
+#include "mmgr/secure.h"
 #include "network_drivers/session/proto_handler.h"
 #include "network_drivers/transport/tcp.h"
-#include "server/mmgr/plaintext.h"
-#include "server/mmgr/secure.h"
 #include "services/system/clock.h" // pc_millis() for the server-initiated re-key timer
 #include <string.h>
 

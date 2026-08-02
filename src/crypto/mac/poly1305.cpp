@@ -13,7 +13,7 @@
 
 #include "crypto/mac/poly1305.h"
 #include "crypto/crypto_opt.h"
-#include "server/mmgr/secure.h" // the secure pool: nested-MAC working state, wiped on release
+#include "mmgr/secure.h" // the secure pool: nested-MAC working state, wiped on release
 #include <string.h>
 
 // Poly1305 is a hot, pure-integer MAC (the other half of chacha20-poly1305). Like ChaCha it has no vector

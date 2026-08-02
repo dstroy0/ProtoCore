@@ -2,18 +2,18 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file protocore.cpp
+ * @file protocore.c
  * @brief Layer 7 (Application) - HTTP routing and request handler implementation.
  *
  * **Dispatch pipeline (called from handle())**
  * ```
  * handle()
- *   └─ server_tick()                 ← drain FreeRTOS event queue
+ *   └─ server_tick()                 ← drain the session event queue
  *   └─ for each slot:
- *        ParseState::PARSE_COMPLETE          → match_and_execute()
- *        ParseState::PARSE_ERROR             → send_text(400)
- *        ParseState::PARSE_ENTITY_TOO_LARGE  → send_text(413)
- *        ParseState::PARSE_URI_TOO_LONG      → send_text(414)
+ *        PARSE_COMPLETE          → match_and_execute()
+ *        PARSE_ERROR             → send_text(400)
+ *        PARSE_ENTITY_TOO_LARGE  → send_text(413)
+ *        PARSE_URI_TOO_LONG      → send_text(414)
  * ```
  *
  * **Route table**
@@ -22,31 +22,31 @@
  * priority because the loop checks them in insertion order and returns on
  * the first match.
  *
- * **PCB lifecycle / teardown ownership**
- * All TCP I/O and teardown go through the transport-layer connection API
+ * **Connection teardown ownership**
+ * All TCP I/O and teardown go through the transport connection API
  * (pc_conn_send / pc_conn_flush / pc_conn_begin_close / pc_conn_close /
- * pc_conn_abort_slot), so this layer never calls lwIP or touches the raw
- * `tcp_pcb` directly. The transport owns the teardown order for every close:
- * it detaches the pcb from its lwIP callbacks and sets the slot `ConnState::CONN_FREE`
- * (pcb nulled) BEFORE the FIN/RST, on the captured pcb pointer. This means any
- * lwIP error callback that fires mid-teardown sees the slot as already free and
- * takes no action - preventing a double-free. L7 passes only the slot index:
- * pc_conn_close(slot) for a graceful local close, pc_conn_abort_slot(slot)
- * for a hard RST, pc_conn_begin_close(slot) for the drain-then-close dwell.
+ * pc_conn_abort_slot). This layer addresses a connection by slot index and owns
+ * no part of its lifecycle: transport releases the slot before it emits the
+ * FIN/RST, so a stack event that fires mid-teardown finds the slot already free
+ * and does nothing. L7 chooses only the kind of close: pc_conn_close(slot) for a
+ * graceful local close, pc_conn_abort_slot(slot) for a hard reset, and
+ * pc_conn_begin_close(slot) for the drain-then-close dwell.
  */
 
 #include "protocore.h"
+#include "mmgr/frame.h"                                // the diag document is a frame spec, not a concatenation
+#include "mmgr/membuild.h"                             // pc_sb frame builder
+#include "mmgr/plaintext.h"                            // the diag document is borrowed, not a stack array
 #include "network_drivers/presentation/presentation.h" // http_proto_set_poll (install the instance-bound HTTP poll)
 #include "network_drivers/session/proto_handler.h"
 #include "network_drivers/session/worker.h"
 #include "network_drivers/tls/tls.h"
 #include "network_drivers/transport/listener.h"
-#include "server/mmgr/plaintext.h" // the diag document is borrowed, not a stack array
-#include "server/signaling/route.h"
-#include "shared_primitives/frame.h" // the diag document is a frame spec, not a concatenation
+#include "network_drivers/network/route.h"
 #include "shared_primitives/hex.h"
 #include "shared_primitives/mime.h"
-#include "shared_primitives/strbuf.h" // pc_sb frame builder
+#include "shared_primitives/rawmemcpy.h" // proto_raw_read: every move here is into our own buffer
+#include "shared_primitives/runops.h"   // every string scan, compare, copy and search on this layer
 #if PC_ENABLE_HTTP2
 #include "network_drivers/presentation/http/http2/h2_server.h"
 #endif
@@ -95,9 +95,9 @@
 #include "services/timing_position/ntp_service/ntp_service.h" // pc_ntp_http_date() - direct NTP (or the host test seam)
 #endif
 #endif
-#include <stdarg.h>
-#include <stdio.h>
-#include <string.h>
+// No <string.h> and no <stdio.h>: every scan, compare, copy and search on this layer goes through
+// shared_primitives/runops.h, and nothing here formats. strnlen and the strcasecmp pair are POSIX
+// rather than ISO C, so they are absent under -std=c11 on a conforming libc.
 
 // Outbound-transfer state is not held here. Each kind of transfer belongs to the TU that runs it:
 // the chunked-send state to server/response.cpp, the file-send state to server/file_serving.cpp.
@@ -106,16 +106,12 @@
 /**
  * @brief Convert an HTTP status code to its standard reason phrase.
  *
- * Covers the 18 codes that arise in typical REST micro-server usage.
+ * Covers 24 codes, plus 4 more (207, 412, 423, 502) with WebDAV built in.
  * Unknown codes produce "Unknown" so callers never receive a null pointer.
  *
  * @param code HTTP status integer.
  * @return Pointer to a string-literal reason phrase; never null.
  */
-// Response bytes go out via the transport-layer connection I/O API
-// (pc_conn_send / pc_conn_flush / pc_conn_close, see tcp.h) so this
-// application layer never calls lwIP directly.
-
 const char *status_text(int code)
 {
     switch (code)
@@ -188,44 +184,48 @@ const char *status_text(int code)
 /**
  * @brief Map a method string (from the parsed request line) to an HttpMethod enum.
  *
- * Returns HttpVersion::HTTP_UNKNOWN for any method the server does not implement, so the
+ * Returns HTTP_METHOD_UNKNOWN for any method the server does not implement, so the
  * dispatcher can answer 501 Not Implemented (RFC 7231 §6.5.2) instead of
  * silently treating it as GET.
  *
  * @param m Null-terminated method string, e.g. "POST".
- * @return Matching HttpMethod enum value, or HttpVersion::HTTP_UNKNOWN.
+ * @return Matching HttpMethod enum value, or HTTP_METHOD_UNKNOWN.
  */
 static HttpMethod parse_method(const char *m)
 {
-    if (strcmp(m, "GET") == 0)
+    // Each compare is bounded by the token it is comparing against, not by the buffer @p m came
+    // from: one more byte than the literal is already enough to decide, because a longer method
+    // scans to the bound without finding its terminator and fails on length before any byte is
+    // compared. That keeps this function honest about a caller it does not otherwise constrain.
+    if (proto_eq_str(m, "GET", sizeof("GET")))
     {
-        return HttpMethod::HTTP_GET;
+        return HTTP_GET;
     }
-    if (strcmp(m, "POST") == 0)
+    if (proto_eq_str(m, "POST", sizeof("POST")))
     {
-        return HttpMethod::HTTP_POST;
+        return HTTP_POST;
     }
-    if (strcmp(m, "PUT") == 0)
+    if (proto_eq_str(m, "PUT", sizeof("PUT")))
     {
-        return HttpMethod::HTTP_PUT;
+        return HTTP_PUT;
     }
-    if (strcmp(m, "DELETE") == 0)
+    if (proto_eq_str(m, "DELETE", sizeof("DELETE")))
     {
-        return HttpMethod::HTTP_DELETE;
+        return HTTP_DELETE;
     }
-    if (strcmp(m, "PATCH") == 0)
+    if (proto_eq_str(m, "PATCH", sizeof("PATCH")))
     {
-        return HttpMethod::HTTP_PATCH;
+        return HTTP_PATCH;
     }
-    if (strcmp(m, "HEAD") == 0)
+    if (proto_eq_str(m, "HEAD", sizeof("HEAD")))
     {
-        return HttpMethod::HTTP_HEAD;
+        return HTTP_HEAD;
     }
-    if (strcmp(m, "OPTIONS") == 0)
+    if (proto_eq_str(m, "OPTIONS", sizeof("OPTIONS")))
     {
-        return HttpMethod::HTTP_OPTIONS;
+        return HTTP_OPTIONS;
     }
-    return HttpMethod::HTTP_METHOD_UNKNOWN;
+    return HTTP_METHOD_UNKNOWN;
 }
 
 /**
@@ -235,36 +235,33 @@ static const char *method_name(HttpMethod m)
 {
     switch (m)
     {
-    case HttpMethod::HTTP_GET:
+    case HTTP_GET:
         return "GET";
-    case HttpMethod::HTTP_POST:
+    case HTTP_POST:
         return "POST";
-    case HttpMethod::HTTP_PUT:
+    case HTTP_PUT:
         return "PUT";
-    case HttpMethod::HTTP_DELETE:
+    case HTTP_DELETE:
         return "DELETE";
-    case HttpMethod::HTTP_PATCH:
+    case HTTP_PATCH:
         return "PATCH";
-    case HttpMethod::HTTP_HEAD:
+    case HTTP_HEAD:
         return "HEAD";
-    case HttpMethod::HTTP_OPTIONS:
+    case HTTP_OPTIONS:
         return "OPTIONS";
     default:
         return "";
     }
 }
 
-// The server's own state, owned here (internal linkage). It previously carried two pointers to the
-// running instance so a trampoline could dispatch back into it; there is no instance to point at,
-// because the slot pools were always global singletons and there was only ever one server. The
-// trampolines call the functions directly now, and what remains is state nothing outside this file
-// reads: who answers a request that matched nothing, where the access log goes, which ports were
-// registered, and the HTTP/3 credentials held until begin() binds them.
+// The server's own state, owned here (internal linkage): who answers a request that matched nothing,
+// where the access log goes, which ports were registered, and the HTTP/3 credentials held until
+// begin() binds them. Nothing outside this file reads any of it.
 //
 // The three listener arrays are registration intent, not a second copy of listener_pool[]. A port is
 // named by listen() before pool_init() has run, so it cannot be bound where it will live yet; begin()
 // is what turns each entry into a listener_pool[] binding, and from then on transport owns it.
-struct ServerCtx
+typedef struct
 {
     Handler not_found_handler; ///< Called when no route matches; may be null.
     RequestLogCb log_cb;       ///< Per-request access-log hook; may be null.
@@ -282,15 +279,19 @@ struct ServerCtx
     uint16_t h3_port;
     bool h3_enabled;
 #endif
-};
+} ServerCtx;
+
+// Static storage duration zero-initializes every field: no handlers bound, no listeners registered.
 static ServerCtx s_inst;
 
 void pc_server_reset(void)
 {
     // The server's state is spread across the files that own it, which is the point - but "start
-    // over" is one concern, so it is one call rather than a checklist each test has to keep in
-    // agreement. This is what `server = PC()` used to mean when there was an instance to reassign.
-    s_inst = ServerCtx{};
+    // over" is one concern, so it is one call rather than a checklist each caller has to keep in
+    // agreement. The blank template lives in rodata, so the reset is a plain copy and never
+    // materializes a sizeof(ServerCtx) temporary on the caller's stack.
+    static const ServerCtx blank = {0};
+    s_inst = blank;
     pc_route_reset();
     pc_resp_reset();
 }
@@ -322,11 +323,11 @@ void note_response(uint8_t slot_id, int code, int body_len)
 // keep-alive evaluation and the WebSocket Upgrade-token check.
 static bool conn_has_token(const char *hdr, const char *token)
 {
-    if (!hdr)
+    if (hdr == NULL)
     {
         return false;
     }
-    size_t tlen = strnlen(token, 32);
+    size_t tlen = proto_scan_nul(token, 32);
     const char *p = hdr;
     while (*p)
     {
@@ -344,7 +345,10 @@ static bool conn_has_token(const char *hdr, const char *token)
         {
             len--;
         }
-        if (len == tlen && strncasecmp(start, token, tlen) == 0)
+        // The element is a slice of the header value, not its own string, so it has no terminator to
+        // measure against: the trimmed length is the bound, and the length test above it is what
+        // stops a longer token matching on its prefix.
+        if (len == tlen && proto_diff_ci(start, token, tlen) == tlen)
         {
             return true;
         }
@@ -362,14 +366,14 @@ bool keepalive_eval(uint8_t slot_id)
 {
     HttpReq *req = &http_pool[slot_id];
     // Only a cleanly-parsed request has a known message boundary; errors close.
-    if (req->parse_state != ParseState::PARSE_COMPLETE)
+    if (req->parse_state != PARSE_COMPLETE)
     {
         return false;
     }
 
     const char *c = http_get_header(req, "Connection");
     bool keep;
-    if (req->version == HttpVersion::HTTP_11)
+    if (req->version == HTTP_11)
     {
         keep = !conn_has_token(c, "close"); // 1.1 default: persistent
     }
@@ -383,7 +387,8 @@ bool keepalive_eval(uint8_t slot_id)
     }
 
     // Fairness bound: serve at most PC_KEEPALIVE_MAX_REQUESTS, then close.
-    if (++http_req_count[slot_id] >= PC_KEEPALIVE_MAX_REQUESTS)
+    http_req_count[slot_id]++;
+    if (http_req_count[slot_id] >= PC_KEEPALIVE_MAX_REQUESTS)
     {
         return false;
     }
@@ -391,16 +396,17 @@ bool keepalive_eval(uint8_t slot_id)
 }
 #endif // PC_ENABLE_KEEPALIVE
 
-// Finish a response: flush, then either begin the graceful ConnState::CONN_CLOSING dwell
+// Finish a response: flush, then either begin the graceful CONN_CLOSING dwell
 // (close path) or leave the slot active for reuse (keep-alive). The HTTP parser
-// is reset either way, returning a kept-alive slot to ParseState::PARSE_METHOD ready for the
-// next request. The slot stays ConnState::CONN_ACTIVE through the write for BOTH paths
-// (callbacks live - the model keep-alive has always used); the close path then
-// dwells in ConnState::CONN_CLOSING from here, so the slot is reclaimed only once the peer
-// ACKs the response (or the CLOSING timeout fires), not before it is delivered.
-// Every response path now addresses the connection by slot alone - the transport
-// resolves the pcb internally, the same way the RX read path does (no pcb is
-// threaded through the app layer, so the send target can never disagree).
+// is reset either way, returning a kept-alive slot to PARSE_METHOD ready for the
+// next request. The slot stays CONN_ACTIVE through the write on BOTH paths so its
+// callbacks stay live; the close path then dwells in CONN_CLOSING from here, so the
+// slot is reclaimed only once the peer ACKs the response (or the CLOSING timeout fires), not
+// before it is delivered.
+//
+// The connection is addressed by slot alone and the transport resolves the pcb internally, the
+// same way the RX read path does: no pcb is threaded through the app layer, so the send target
+// cannot disagree with the slot.
 void pc_resp_end(uint8_t slot_id, int code, int body_len, bool keep, bool pre_flushed)
 {
     if (!pre_flushed)
@@ -409,7 +415,7 @@ void pc_resp_end(uint8_t slot_id, int code, int body_len, bool keep, bool pre_fl
     }
     if (!keep)
     {
-        pc_conn_begin_close(slot_id); // ACTIVE -> ConnState::CONN_CLOSING; finalizes on ACK
+        pc_conn_begin_close(slot_id); // ACTIVE -> CONN_CLOSING; finalizes on ACK
     }
     note_response(slot_id, code, body_len);
     http_reset(slot_id);
@@ -446,15 +452,15 @@ const char PC_RESP_HDR_OVERFLOW[] = "HTTP/1.1 500 Internal Server Error\r\n"
 // known when it was written.
 const size_t PC_RESP_HDR_OVERFLOW_LEN = sizeof(PC_RESP_HDR_OVERFLOW) - 1;
 
-int append_resp_trailer(char *buf, size_t cap, int hlen, uint8_t slot_id, const char *cl)
+int proto_append_resp_trailer(char *buf, size_t cap, int hlen, uint8_t slot_id, const char *cl)
 {
     // hlen is the caller's status-line length from pc_sb_finish, which reports 0 for a status line
     // that did not fit. Appending the trailer at offset 0 in that case would emit a response with
     // no status line at all, so 0 propagates as failure and the caller sends a canned reply.
     //
-    // The old code clamped an over-long header to cap-1 and sent it. That is worse than sending
-    // nothing: a header block cut mid-field has no terminating CRLF, so the peer reads the body as
-    // continued headers and the connection desynchronizes. A response either fits or is refused.
+    // A response either fits or is refused; it is never clamped to cap and sent. A header block cut
+    // mid-field has no terminating CRLF, so the peer reads the body as continued headers and the
+    // connection desynchronizes - worse than sending nothing.
     if (hlen <= 0)
     {
         return 0;
@@ -506,13 +512,13 @@ int32_t listen(uint16_t port, ConnProto proto)
 {
     if (s_inst.listener_count >= MAX_LISTENERS)
     {
-        return (int32_t)pc_result::PC_ERR_LISTENER_FULL;
+        return (int32_t)PC_ERR_LISTENER_FULL;
     }
     s_inst.listen_ports[s_inst.listener_count] = port;
     s_inst.listen_protos[s_inst.listener_count] = proto;
     s_inst.listen_tls[s_inst.listener_count] = false;
     s_inst.listener_count++;
-    // Return the listener id (its index), not pc_result::PC_OK: begin() binds listener_pool[i] from
+    // Return the listener id (its index), not PC_OK: begin() binds listener_pool[i] from
     // s_inst.listen_ports[i] and the accept path stamps that same index onto the slot, so this id is what
     // pc_relay_publish() / pc_ssh_forward_begin() must match against. (Errors are negative.)
     return (int32_t)(s_inst.listener_count - 1);
@@ -528,16 +534,13 @@ static void pc_pump_trampoline(int worker_id)
 #endif
 
 #if PC_ENABLE_HTTP3
-// The pc_quic_server request seam has no PC type; this trampoline forwards a completed
-// HTTP/3 request into the instance's shared route dispatcher (app == the PC *).
+// Adapts the pc_quic_server request seam, which carries an opaque app pointer, to the route
+// dispatcher. The route table is a global owner, so nothing is carried in @p app and it is ignored.
 static void pc_h3_request_trampoline(void *app, uint32_t conn_id, uint64_t stream_id, const char *method,
                                      const char *path, const char *authority, const uint8_t *body, size_t body_len)
 {
-    if (app) // GCOVR_EXCL_BR_LINE  app is always the non-null `this` passed to pc_quic_server_begin(); this static
-             // trampoline has no other caller, so app==null is unreachable
-    {
-        ((PC *)app)->dispatch_h3_request(conn_id, stream_id, method, path, authority, body, body_len);
-    }
+    (void)app;
+    dispatch_h3_request(conn_id, stream_id, method, path, authority, body, body_len);
 }
 
 // Randomness for the QUIC ephemeral X25519 key, the ServerHello random, and our connection IDs: the
@@ -551,7 +554,7 @@ static void pc_h3_rng(uint8_t *out, size_t len)
     {
         uint32_t r = esp_random();
         size_t n = (len - i) < 4 ? (len - i) : 4;
-        memcpy(out + i, &r, n);
+        proto_raw_read(out + i, &r, n);
         i += n;
     }
 #else
@@ -565,25 +568,26 @@ static void pc_h3_rng(uint8_t *out, size_t len)
 }
 #endif // PC_ENABLE_HTTP3
 
-// HTTP's poll is instance-bound (it dispatches into this server's routes), so it cannot be a plain
-// global on_poll like the singleton protocols. begin() records the serving instance here and installs
-// this forwarder as the HTTP ProtoHandler's on_poll, so the worker loop pumps HTTP through the one
-// uniform seam. The library serves from a single PC (the slot pools are global singletons),
-// which is exactly what this one instance pointer models.
+// Installed by begin() as the HTTP ProtoHandler's on_poll, so the worker loop pumps HTTP through
+// the same uniform seam as every other protocol. The ProtoHandler seam takes a plain slot, which is
+// all http_poll_slot() needs: the route table and the slot pools are single global owners, so there
+// is no per-server context to thread through.
 static void pc_http_on_poll(uint8_t slot)
 {
     http_poll_slot(slot);
 }
 
-int32_t begin(const WebServerConfig *cfg)
+int32_t proto_begin(const WebServerConfig *cfg)
 {
     if (s_inst.listener_count == 0
 #if PC_ENABLE_HTTP3
         && !s_inst.h3_enabled // an HTTP/3-only server binds UDP, not a TCP listener
 #endif
     )
-        return (int32_t)pc_result::PC_ERR_NO_LISTENERS;
-    DeterministicAsyncTCP::pool_init(cfg);
+    {
+        return (int32_t)PC_ERR_NO_LISTENERS;
+    }
+    proto_tcp_pool_init(cfg);
 #if PC_ENABLE_AUTH
     regen_digest_secret(); // fresh server keying secret per begin()
 #endif
@@ -596,7 +600,7 @@ int32_t begin(const WebServerConfig *cfg)
         for (int i = 0; i < 8; i++)
         {
             uint32_t r = esp_random();
-            memcpy(sec + i * 4, &r, 4);
+            proto_raw_read(sec + i * 4, &r, 4);
         }
 #else
         for (int i = 0; i < 32; i++)
@@ -625,22 +629,22 @@ int32_t begin(const WebServerConfig *cfg)
         // has no host path; it is covered on hardware.
         if (listener_add(i, s_inst.listen_ports[i], s_inst.listen_protos[i], s_inst.listen_tls[i]) < 0)
         {
-            return (int32_t)pc_result::PC_ERR_LISTEN_FAILED;
+            return (int32_t)PC_ERR_LISTEN_FAILED;
         }
         // GCOVR_EXCL_STOP
     }
 #if PC_ENABLE_HTTP3
     // Bind the HTTP/3 QUIC server (UDP on device; on host it is fed via pc_quic_server_ingest). Requests
-    // dispatch through this instance's routes via the trampoline; pc_quic_server_poll() runs in service_once.
+    // dispatch through the route table via the trampoline; pc_quic_server_poll() runs in service_once.
     if (s_inst.h3_enabled)
     {
-        QuicServerConfig h3cfg;
-        memset(&h3cfg, 0, sizeof(h3cfg));
+        QuicServerConfig h3cfg = {0};
         h3cfg.cert_der = s_inst.h3_cert;
         h3cfg.cert_len = s_inst.h3_cert_len;
-        memcpy(h3cfg.ed25519_seed, s_inst.h3_seed, sizeof(h3cfg.ed25519_seed));
+        proto_raw_read(h3cfg.ed25519_seed, s_inst.h3_seed, sizeof(h3cfg.ed25519_seed));
         h3cfg.rng = pc_h3_rng;
-        s_inst.pc_h3_running = pc_quic_server_begin(s_inst.h3_port, &h3cfg, pc_h3_request_trampoline, this);
+        // No app pointer: the trampoline dispatches through the global route table.
+        s_inst.pc_h3_running = pc_quic_server_begin(s_inst.h3_port, &h3cfg, pc_h3_request_trampoline, NULL);
     }
 #endif
 #ifdef ARDUINO
@@ -648,17 +652,17 @@ int32_t begin(const WebServerConfig *cfg)
     // pipeline off the user's loop(). On host the pipeline runs inline via handle().
     pc_workers_start(pc_pump_trampoline);
 #endif
-    return (int32_t)pc_result::PC_OK;
+    return (int32_t)PC_OK;
 }
 
 int32_t begin_http(uint16_t port, const WebServerConfig *cfg)
 {
-    int32_t rc = listen(port);
+    int32_t rc = listen(port, PROTO_HTTP);
     if (rc < 0)
     {
         return rc;
     }
-    return begin(cfg);
+    return proto_begin(cfg);
 }
 
 #if PC_ENABLE_HTTP3
@@ -670,7 +674,7 @@ bool pc_h3_cert(const uint8_t *cert_der, size_t cert_len, const uint8_t ed25519_
     }
     s_inst.h3_cert = cert_der;
     s_inst.h3_cert_len = cert_len;
-    memcpy(s_inst.h3_seed, ed25519_seed, sizeof(s_inst.h3_seed));
+    proto_raw_read(s_inst.h3_seed, ed25519_seed, sizeof(s_inst.h3_seed));
     s_inst.h3_port = port;
     s_inst.h3_enabled = true;
     return true;
@@ -693,59 +697,63 @@ void dispatch_h3_request(uint32_t conn_id, uint64_t stream_id, const char *metho
     http_reset(slot);
 
     // Map the semantic request fields into the shared HttpReq (as pc_h2_server does per stream).
-    size_t mn = strnlen(method, sizeof(r->method));
+    size_t mn = proto_scan_nul(method, sizeof(r->method));
     if (mn >= sizeof(r->method))
     {
         mn = sizeof(r->method) - 1;
     }
-    memcpy(r->method, method, mn);
+    proto_raw_read(r->method, method, mn);
     r->method[mn] = 0;
 
-    const char *q = strchr(path, '?');
-    size_t plen = q ? (size_t)(q - path) : strnlen(path, sizeof(r->path));
+    // Bounded by everything the request could occupy here, path and query together, rather than by
+    // the path field alone: a '?' past the path cap still names a query this slot has room for, and
+    // capping the search at the path would drop it while keeping the truncated path.
+    const char *q = proto_find(path, sizeof(r->path) + sizeof(r->query), "?", sizeof("?"));
+    size_t plen = (q != NULL) ? (size_t)(q - path) : proto_scan_nul(path, sizeof(r->path));
     if (plen >= sizeof(r->path))
     {
         plen = sizeof(r->path) - 1;
     }
-    memcpy(r->path, path, plen);
+    proto_raw_read(r->path, path, plen);
     r->path[plen] = 0;
-    r->path_idx = strnlen(r->path, sizeof(r->path));
-    if (q)
+    r->path_idx = proto_scan_nul(r->path, sizeof(r->path));
+    if (q != NULL)
     {
-        size_t ql = strnlen(q + 1, sizeof(r->query));
+        size_t ql = proto_scan_nul(q + 1, sizeof(r->query));
         if (ql >= sizeof(r->query))
         {
             ql = sizeof(r->query) - 1;
         }
-        memcpy(r->query, q + 1, ql);
+        proto_raw_read(r->query, q + 1, ql);
         r->query[ql] = 0;
-        r->query_idx = strnlen(r->query, sizeof(r->query));
+        r->query_idx = proto_scan_nul(r->query, sizeof(r->query));
     }
 
     // :authority maps to Host, the way the h2 bridge does.
     if (authority && authority[0] && r->header_count < MAX_HEADERS)
     {
-        Header *h = &r->headers[r->header_count++];
-        memcpy(h->key, "host", 5);
-        size_t vl = strnlen(authority, sizeof(h->val));
+        Header *h = &r->headers[r->header_count];
+        r->header_count++;
+        proto_raw_read(h->key, "host", 5);
+        size_t vl = proto_scan_nul(authority, sizeof(h->val));
         if (vl >= sizeof(h->val))
         {
             vl = sizeof(h->val) - 1;
         }
-        memcpy(h->val, authority, vl);
+        proto_raw_read(h->val, authority, vl);
         h->val[vl] = 0;
     }
 
     if (body && body_len)
     {
         size_t n = body_len > BODY_BUF_SIZE ? BODY_BUF_SIZE : body_len;
-        memcpy(r->body, body, n);
+        proto_raw_read(r->body, body, n);
         r->body_len = n;
         r->body[r->body_len] = 0;
         r->body_bytes_read = body_len;
         r->content_length = body_len;
     }
-    r->parse_state = ParseState::PARSE_COMPLETE;
+    r->parse_state = PARSE_COMPLETE;
 
     // Mark the reserved slot as HTTP/3 and install the response sink so send_text() / send_empty() route the
     // response back onto this stream (no TCP pcb here - the sink owns the QUIC framing).
@@ -754,16 +762,16 @@ void dispatch_h3_request(uint32_t conn_id, uint64_t stream_id, const char *metho
     c->pc_h3_conn_id = conn_id;
     c->pc_h3_stream = stream_id;
     c->pc_resp_sink = pc_h3_resp_sink;
-    c->iface = pc_iface::PC_IFACE_STA;
-    pc_conn_set_state(slot, ConnState::CONN_ACTIVE); // reserved slot: no bitmask bit (slot >= MAX_CONNS)
-    c->pcb = nullptr;
+    c->iface = PC_IFACE_STA;
+    pc_conn_set_state(slot, CONN_ACTIVE); // reserved slot: no bitmask bit (slot >= MAX_CONNS)
+    c->pcb = NULL;
 
     match_and_execute(slot); // -> handler -> send_text() -> pc_resp_sink -> pc_quic_server_respond()
 
     // Release the dispatch slot for the next request (a no-response handler simply leaves the stream open).
     c->h3 = 0;
-    c->pc_resp_sink = nullptr;
-    pc_conn_set_state(slot, ConnState::CONN_FREE); // reserved slot: no bitmask bit (slot >= MAX_CONNS)
+    c->pc_resp_sink = NULL;
+    pc_conn_set_state(slot, CONN_FREE); // reserved slot: no bitmask bit (slot >= MAX_CONNS)
     http_reset(slot);
 }
 #endif // PC_ENABLE_HTTP3
@@ -778,13 +786,13 @@ int32_t listen_tls(uint16_t port)
 {
     if (s_inst.listener_count >= MAX_LISTENERS)
     {
-        return (int32_t)pc_result::PC_ERR_LISTENER_FULL;
+        return (int32_t)PC_ERR_LISTENER_FULL;
     }
     s_inst.listen_ports[s_inst.listener_count] = port;
-    s_inst.listen_protos[s_inst.listener_count] = ConnProto::PROTO_HTTP;
+    s_inst.listen_protos[s_inst.listener_count] = PROTO_HTTP;
     s_inst.listen_tls[s_inst.listener_count] = true;
     s_inst.listener_count++;
-    return (int32_t)pc_result::PC_OK;
+    return (int32_t)PC_OK;
 }
 
 int32_t begin_tls(uint16_t port, const uint8_t *cert, size_t cert_len, const uint8_t *key, size_t key_len,
@@ -792,14 +800,14 @@ int32_t begin_tls(uint16_t port, const uint8_t *cert, size_t cert_len, const uin
 {
     if (!tls_cert(cert, cert_len, key, key_len))
     {
-        return (int32_t)pc_result::PC_ERR_LISTEN_FAILED;
+        return (int32_t)PC_ERR_LISTEN_FAILED;
     }
     int32_t rc = listen_tls(port);
     if (rc < 0)
     {
         return rc;
     }
-    return begin(cfg);
+    return proto_begin(cfg);
 }
 
 #if PC_ENABLE_MTLS
@@ -819,20 +827,20 @@ int32_t restart(const WebServerConfig *cfg)
 {
     if (s_inst.listener_count == 0)
     {
-        return (int32_t)pc_result::PC_ERR_NO_LISTENERS;
+        return (int32_t)PC_ERR_NO_LISTENERS;
     }
     stop();
-    return begin(cfg);
+    return proto_begin(cfg);
 }
 
-void stop()
+void stop(void)
 {
 #ifdef ARDUINO
     // Stop the worker task(s) before tearing down the slots they service.
     pc_workers_stop();
 #endif
     listener_stop_all();
-    DeterministicAsyncTCP::stop();
+    proto_tcp_stop();
     for (uint8_t i = 0; i < MAX_CONNS; i++)
     {
         http_reset(i);
@@ -846,41 +854,40 @@ void stop()
 }
 
 /**
- * @brief Register a route in the route table.
+ * @brief Fill the fields every route kind shares, whatever its type.
  *
- * Paths are stored null-terminated and truncated to MAX_PATH_LEN.  The
- * trailing character of the stored path is inspected to detect wildcard
- * routes: any path ending in `*` is treated as a prefix match.
+ * The path is stored null-terminated and truncated to MAX_PATH_LEN. Its shape decides two match
+ * modes on the spot, so the dispatcher never re-inspects the string: a trailing `*` is a prefix
+ * match, and a `/:` anywhere marks a path-parameter route. Regex and the interface filter are set
+ * to their inactive defaults for the caller to override.
  *
- * Registrations beyond MAX_ROUTES are silently ignored - callers should
- * verify return values if overflow is a concern.
- *
- * @param path     URL path to match, e.g. "/api/*".
- * @param method   HTTP method that triggers this route.
- * @param callback Handler invoked with (slot_id, request).
+ * @param r    Route to initialize.
+ * @param path URL path to match, e.g. a trailing-star prefix or a `:name` segment.
  */
 void fill_route_base(Route *r, const char *path)
 {
-    strncpy(r->path, path, MAX_PATH_LEN - 1);
-    r->path[MAX_PATH_LEN - 1] = '\0';
+    // The copy terminates the destination itself and hands back what it wrote, so the length the
+    // two shape tests need comes out of the move rather than from a second walk over those bytes.
+    size_t len = proto_copy(r->path, path, MAX_PATH_LEN);
     r->is_active = true;
-    size_t len = strnlen(r->path, MAX_PATH_LEN);
     r->is_wildcard = (len > 0 && r->path[len - 1] == '*');
-    r->is_param = (strstr(r->path, "/:") != nullptr);
+    // Whether, not where: the sieve sweeps the whole field for a fixed cost rather than stopping at
+    // the first `/`, which a route path is full of.
+    r->is_param = proto_has(r->path, MAX_PATH_LEN, "/:", sizeof("/:"));
     r->is_regex = false;
-    r->iface_filter = pc_iface::PC_IFACE_ANY;
+    r->iface_filter = PC_IFACE_ANY;
 }
 
 void on_http(const char *path, HttpMethod method, Handler callback)
 {
     Route *r = pc_route_add();
-    if (r == nullptr)
+    if (r == NULL)
     {
         return;
     }
 
     fill_route_base(r, path);
-    r->type = RouteType::ROUTE_HTTP;
+    r->type = ROUTE_HTTP;
     r->method = method;
     r->callback = callback;
 }
@@ -888,13 +895,13 @@ void on_http(const char *path, HttpMethod method, Handler callback)
 void on_http_iface(const char *path, HttpMethod method, Handler callback, pc_iface iface)
 {
     Route *r = pc_route_add();
-    if (r == nullptr)
+    if (r == NULL)
     {
         return;
     }
 
     fill_route_base(r, path);
-    r->type = RouteType::ROUTE_HTTP;
+    r->type = ROUTE_HTTP;
     r->method = method;
     r->callback = callback;
     r->iface_filter = iface;
@@ -908,13 +915,13 @@ void set_ap_ip(uint32_t ap_ip)
 void on_regex(const char *pattern, HttpMethod method, Handler callback)
 {
     Route *r = pc_route_add();
-    if (r == nullptr)
+    if (r == NULL)
     {
         return;
     }
 
     fill_route_base(r, pattern);
-    r->type = RouteType::ROUTE_HTTP;
+    r->type = ROUTE_HTTP;
     r->method = method;
     r->callback = callback;
     r->is_regex = true;
@@ -925,23 +932,23 @@ void on_http_auth(const char *path, HttpMethod method, Handler callback, const c
                   const char *pass, bool digest)
 {
     Route *r = pc_route_add();
-    if (r == nullptr)
+    if (r == NULL)
     {
         return;
     }
 
     fill_route_base(r, path);
-    r->type = RouteType::ROUTE_HTTP;
+    r->type = ROUTE_HTTP;
     r->method = method;
     r->callback = callback;
     r->auth_required = true;
     r->auth_digest = digest;
-    strncpy(r->auth_realm, realm, MAX_AUTH_LEN - 1);
-    r->auth_realm[MAX_AUTH_LEN - 1] = '\0';
-    strncpy(r->auth_user, user, MAX_AUTH_LEN - 1);
-    r->auth_user[MAX_AUTH_LEN - 1] = '\0';
-    strncpy(r->auth_pass, pass, MAX_AUTH_LEN - 1);
-    r->auth_pass[MAX_AUTH_LEN - 1] = '\0';
+    // The lengths are discarded: a credential is only ever compared whole, so nothing downstream
+    // asks how long it was, and the route slot was zeroed on hand-out so a short copy leaves no
+    // previous tenant's bytes behind the terminator.
+    (void)proto_copy(r->auth_realm, realm, MAX_AUTH_LEN);
+    (void)proto_copy(r->auth_user, user, MAX_AUTH_LEN);
+    (void)proto_copy(r->auth_pass, pass, MAX_AUTH_LEN);
 }
 #endif // PC_ENABLE_AUTH
 
@@ -949,13 +956,13 @@ void on_http_auth(const char *path, HttpMethod method, Handler callback, const c
 void on_ws(const char *path, WsConnectHandler on_connect, WsMessageHandler on_message, WsCloseHandler on_close)
 {
     Route *r = pc_route_add();
-    if (r == nullptr)
+    if (r == NULL)
     {
         return;
     }
 
     fill_route_base(r, path);
-    r->type = RouteType::ROUTE_WS;
+    r->type = ROUTE_WS;
     r->ws_connect = on_connect;
     r->ws_message = on_message;
     r->ws_close = on_close;
@@ -966,13 +973,13 @@ void on_ws(const char *path, WsConnectHandler on_connect, WsMessageHandler on_me
 void on_sse(const char *path, SseConnectHandler on_connect)
 {
     Route *r = pc_route_add();
-    if (r == nullptr)
+    if (r == NULL)
     {
         return;
     }
 
     fill_route_base(r, path);
-    r->type = RouteType::ROUTE_SSE;
+    r->type = ROUTE_SSE;
     r->pc_sse_connect = on_connect;
 }
 #endif // PC_ENABLE_SSE
@@ -1002,8 +1009,8 @@ bool set_cache_control_swr(uint32_t max_age_s, uint32_t swr_s)
 /**
  * @brief Test whether a route path matches an incoming request path.
  *
- * Exact routes use strcmp (full-string equality).  Wildcard routes use
- * strncmp against the prefix up to (but not including) the trailing `*`.
+ * An exact route has to match the whole path.  A wildcard route matches when
+ * the path agrees with everything up to (but not including) the trailing `*`.
  *
  * @param route       Registered route path, potentially ending in `*`.
  * @param is_wildcard True when the route was registered with a trailing `*`.
@@ -1014,26 +1021,17 @@ bool path_matches(const char *route, bool is_wildcard, const char *req_path)
 {
     if (!is_wildcard)
     {
-        return strcmp(route, req_path) == 0;
+        return proto_eq_str(route, req_path, MAX_PATH_LEN);
     }
 
-    // Prefix match: compare everything up to (but not including) the '*'
-    size_t prefix_len = strnlen(route, MAX_PATH_LEN) - 1;
-    return strncmp(route, req_path, prefix_len) == 0;
+    // Prefix match: compare everything up to (but not including) the '*'. A first difference AT the
+    // bound is the whole prefix agreeing, which is what the scan returns when it never parts.
+    size_t prefix_len = proto_scan_nul(route, MAX_PATH_LEN) - 1;
+    return proto_diff(route, req_path, prefix_len) == prefix_len;
 }
 
-/**
- * @brief Segment-by-segment match for routes containing `:name` parameters.
- *
- * Walks @p route and @p path one `/`-delimited segment at a time. Literal
- * segments must match exactly; a `:name` segment captures the corresponding
- * path segment into @p req->path_params. Both must contain the same number of
- * segments. No wildcard support (`:name` and trailing `*` are not combined).
- *
- * @return True on a full match (params captured); false otherwise.
- */
-// Record one `:name` path parameter (key from the route segment, value from the path segment), each
-// truncated to its buffer. No-op once the param table is full. Extracted to keep the matcher loop flat.
+// Record one `:name` path parameter (key from the route segment, value from the path segment).
+// No-op once the param table is full.
 static void capture_path_param(HttpReq *req, const char *key, size_t klen, const char *val, size_t vlen)
 {
     if (req->path_param_count >= MAX_PATH_PARAMS)
@@ -1049,21 +1047,33 @@ static void capture_path_param(HttpReq *req, const char *key, size_t klen, const
         return;
     }
     char *at = req->path_param_bytes + req->path_param_used;
-    QueryParam *qp = &req->path_params[req->path_param_count++];
+    QueryParam *qp = &req->path_params[req->path_param_count];
+    req->path_param_count++;
 
     qp->key = at;
-    memcpy(at, key, klen);
+    proto_raw_read(at, key, klen);
     at += klen;
-    *at++ = '\0';
+    *at = '\0';
+    at++;
 
     qp->val = at;
-    memcpy(at, val, vlen);
+    proto_raw_read(at, val, vlen);
     at += vlen;
-    *at++ = '\0';
+    *at = '\0';
 
     req->path_param_used += (uint16_t)need;
 }
 
+/**
+ * @brief Segment-by-segment match for routes containing `:name` parameters.
+ *
+ * Walks @p route and @p path one `/`-delimited segment at a time. Literal
+ * segments must match exactly; a `:name` segment captures the corresponding
+ * path segment into @p req->path_params. Both must contain the same number of
+ * segments. No wildcard support (`:name` and trailing `*` are not combined).
+ *
+ * @return True on a full match (params captured); false otherwise.
+ */
 static bool match_path_params(const char *route, const char *path, HttpReq *req)
 {
     req->path_param_count = 0;
@@ -1095,7 +1105,7 @@ static bool match_path_params(const char *route, const char *path, HttpReq *req)
             }
             capture_path_param(req, rseg + 1, rlen - 1, pseg, plen);
         }
-        else if (rlen != plen || strncmp(rseg, pseg, rlen) != 0)
+        else if (rlen != plen || proto_diff(rseg, pseg, rlen) != rlen)
         {
             return false; // literal segment mismatch
         }
@@ -1105,24 +1115,12 @@ static bool match_path_params(const char *route, const char *path, HttpReq *req)
     return (*r == '\0' && *p == '\0');
 }
 
-/**
- * @brief Main application tick - tick the session layer then dispatch completed requests.
- *
- * Call this repeatedly from loop().  Each call:
- *   1. Calls server_tick() which runs timeout sweeps + drains the event queue.
- *   2. Walks all slots; any in ParseState::PARSE_COMPLETE is dispatched via match_and_execute().
- *   3. Any slot left in ParseState::PARSE_COMPLETE after dispatch (i.e., callback did not
- *      send a response) is reset so it doesn't block the slot.
- *   4. Any slot in ParseState::PARSE_ERROR receives an automatic 400 response.
- *   5. Any slot in ParseState::PARSE_ENTITY_TOO_LARGE receives an automatic 413 response.
- *   6. Any slot in ParseState::PARSE_URI_TOO_LONG receives an automatic 414 response.
- */
 #if PC_ENABLE_WEBSOCKET
 void ws_dispatch_message(const WsConn *ws)
 {
     for (uint8_t r = 0; r < pc_route_count(); r++)
     {
-        if (pc_route_at(r)->type == RouteType::ROUTE_WS && pc_route_at(r)->ws_message)
+        if (pc_route_at(r)->type == ROUTE_WS && pc_route_at(r)->ws_message)
         {
             pc_route_at(r)->ws_message(ws->ws_id);
             break;
@@ -1134,7 +1132,7 @@ void ws_dispatch_close(const WsConn *ws)
 {
     for (uint8_t r = 0; r < pc_route_count(); r++)
     {
-        if (pc_route_at(r)->type == RouteType::ROUTE_WS && pc_route_at(r)->ws_close)
+        if (pc_route_at(r)->type == ROUTE_WS && pc_route_at(r)->ws_close)
         {
             pc_route_at(r)->ws_close(ws->ws_id);
             break;
@@ -1143,31 +1141,40 @@ void ws_dispatch_close(const WsConn *ws)
 }
 #endif // PC_ENABLE_WEBSOCKET
 
-void handle()
+/**
+ * @brief Main application tick - tick the session layer then dispatch completed requests.
+ *
+ * Call this repeatedly from loop(). Each call runs one service_once() pass: a server_tick()
+ * (timeout sweeps + event-queue drain), then a poll of every slot this worker owns, which is
+ * where a completed request is dispatched and a parse failure is answered.
+ *
+ * On ESP32 the worker task drives that pass on its own core, so this returns immediately and
+ * loop() is free.
+ */
+void handle(void)
 {
 #ifdef ARDUINO
-    // The worker task drives the pipeline on its own core; loop() is freed.
     if (pc_workers_running())
     {
         return;
     }
 #endif
-    service_once();
+    service_once(0); // the inline path is worker 0: the pools are all its own
 }
 
 void service_once(int worker_id)
 {
-    // Wire HTTP's instance-bound poll to the server currently being serviced, so the dispatch loop
-    // pumps HTTP through the uniform ProtoHandler::on_poll seam (see http_poll_slot). Done here (not
-    // just begin()) so test paths that drive service_once() directly also install it, and so it always
-    // targets the running instance. Two pointer stores; negligible at poll cadence.
+    // Install HTTP's poll so the dispatch loop below pumps it through the uniform
+    // ProtoHandler.on_poll seam (see http_poll_slot). Done here rather than only in begin() so a
+    // caller that drives service_once() directly still gets it. One pointer store; negligible at
+    // poll cadence.
     http_proto_set_poll(pc_http_on_poll);
 
     server_tick(worker_id);
 
 #if PC_ENABLE_HTTP3
     // Drive the QUIC/HTTP-3 server: ingest queued datagrams, run the engines (which dispatch requests
-    // through this instance's routes), flush replies. One worker owns it, so requests stay single-threaded.
+    // through the route table), flush replies. One worker owns it, so requests stay single-threaded.
     if (worker_id == 0 && s_inst.pc_h3_running)
     {
         pc_quic_server_poll(pc_millis());
@@ -1187,10 +1194,10 @@ void service_once(int worker_id)
         // Transport owns the window math; we just nudge it once per slot per loop.
         pc_conn_ack_consumed(i);
 
-        // Every protocol - HTTP included - is pumped through the one uniform ProtoHandler::on_poll
-        // seam (no per-protocol branch here). HTTP's poll is instance-bound (it dispatches into this
-        // server's routes), installed at begin() via http_proto_set_poll() -> http_poll_slot(); the
-        // singleton pollers (SSH etc.) gate on ConnState::CONN_ACTIVE inside their own on_poll.
+        // Every protocol - HTTP included - is pumped through the one uniform ProtoHandler.on_poll
+        // seam, so there is no per-protocol branch here. HTTP reaches it via http_proto_set_poll()
+        // -> http_poll_slot(); the singleton pollers (SSH etc.) gate on CONN_ACTIVE
+        // inside their own on_poll.
         const ProtoHandler *ph = proto_get(conn_pool[i].proto);
         if (ph && ph->on_poll)
         {
@@ -1202,20 +1209,20 @@ void service_once(int worker_id)
     pc_worker_run_deferred(worker_id);
 }
 
-// HTTP's instance-bound poll pump. Installed as the HTTP ProtoHandler's on_poll at begin() (via
-// http_proto_set_poll) so the worker dispatch loop pumps HTTP through the same uniform seam as every
-// other protocol - no HTTP special case in the loop. Runs the file/chunk send pumps, the WebSocket +
-// SSE drains, the keep-alive re-parse, and dispatches a completed request into this server's routes.
 #if PC_ENABLE_EDGE_CACHE
 // Edge-cache async-fetch pump seam (see pc_http_set_edge_poll / services/web/edge_cache/edge_cache_proxy):
 // a cache miss suspends the client request and drives the non-blocking origin fetch from this slot's poll.
-static bool (*s_edge_poll)(uint8_t slot) = nullptr;
+static bool (*s_edge_poll)(uint8_t slot) = NULL;
 void pc_http_set_edge_poll(bool (*fn)(uint8_t slot))
 {
     s_edge_poll = fn;
 }
 #endif
 
+// HTTP's poll pump, installed as the HTTP ProtoHandler's on_poll so the worker dispatch loop pumps
+// HTTP through the same uniform seam as every other protocol, with no HTTP special case in the
+// loop. Runs the file/chunk send pumps, the WebSocket and SSE drains, the keep-alive re-parse, and
+// dispatches a completed request into the route table.
 void http_poll_slot(uint8_t i)
 {
 #if PC_ENABLE_EDGE_CACHE
@@ -1260,22 +1267,22 @@ void http_poll_slot(uint8_t i)
                 for (int k = 0; k < n; k++)
                 {
                     ws_feed_byte(ws, tbuf[k]);
-                    if (ws->parse_state == WsParseState::WS_FRAME_READY)
+                    if (ws->parse_state == WS_FRAME_READY)
                     {
                         ws_dispatch_message(ws);
                         ws_reset_frame(ws);
                     }
-                    else if (ws->parse_state == WsParseState::WS_CLOSED || ws->parse_state == WsParseState::WS_ERROR)
+                    else if (ws->parse_state == WS_CLOSED || ws->parse_state == WS_ERROR)
                     {
                         break;
                     }
                 }
-                if (ws->parse_state == WsParseState::WS_CLOSED || ws->parse_state == WsParseState::WS_ERROR)
+                if (ws->parse_state == WS_CLOSED || ws->parse_state == WS_ERROR)
                 {
                     break;
                 }
             }
-            if (ws->parse_state == WsParseState::WS_CLOSED || ws->parse_state == WsParseState::WS_ERROR || n < 0)
+            if (ws->parse_state == WS_CLOSED || ws->parse_state == WS_ERROR || n < 0)
             {
                 ws_dispatch_close(ws);
                 ws_free(i);
@@ -1288,17 +1295,17 @@ void http_poll_slot(uint8_t i)
 
         ws_parse(ws);
 
-        if (ws->parse_state == WsParseState::WS_FRAME_READY)
+        if (ws->parse_state == WS_FRAME_READY)
         {
             ws_dispatch_message(ws);
             ws_reset_frame(ws);
         }
-        else if (ws->parse_state == WsParseState::WS_CLOSED || ws->parse_state == WsParseState::WS_ERROR)
+        else if (ws->parse_state == WS_CLOSED || ws->parse_state == WS_ERROR)
         {
             ws_dispatch_close(ws);
             ws_free(i);
             // RFC 6455 5.5.1: close the underlying TCP connection after the close
-            // handshake. begin_close moves the slot out of ConnState::CONN_ACTIVE so the
+            // handshake. begin_close moves the slot out of CONN_ACTIVE so the
             // post-close bytes are NOT re-parsed as a new HTTP request (the
             // close-frame the WS layer queued still flushes during the dwell).
             pc_conn_begin_close(i);
@@ -1318,15 +1325,17 @@ void http_poll_slot(uint8_t i)
 
 #if PC_ENABLE_KEEPALIVE
     // Keep-alive: a slot recycled after a response may already hold the next
-    // (pipelined) request in its ring buffer with no new EvtType::EVT_DATA to trigger a
+    // (pipelined) request in its ring buffer with no new EVT_DATA to trigger a
     // parse. Drain it here each tick so it gets dispatched. TLS slots are
     // skipped - their ring holds ciphertext, decrypted in the session layer.
-    if (conn_pool[i].state == ConnState::CONN_ACTIVE && http_pool[i].parse_state != ParseState::PARSE_COMPLETE
+    if (conn_pool[i].state == CONN_ACTIVE && http_pool[i].parse_state != PARSE_COMPLETE
 #if PC_ENABLE_TLS
         && !conn_pool[i].tls
 #endif
     )
+    {
         http_parse(i);
+    }
 #endif
 
 #if PC_REQUEST_TIMEOUT_MS > 0
@@ -1334,13 +1343,12 @@ void http_poll_slot(uint8_t i)
     // connection that sent its first byte but has not completed its request headers within
     // PC_REQUEST_TIMEOUT_MS is answered 408 and closed, freeing the slot. Unlike the idle timeout, req_start_ms
     // is NOT reset by a trickle byte (it is armed once, on the first RX byte), so a drip-fed partial header
-    // cannot hold a slot open indefinitely - the connection-slot DoS the user reproduced. The deadline is
+    // cannot hold a slot open indefinitely, which is the connection-slot exhaustion this bounds. The deadline is
     // scoped to the header phase (parse_state < PARSE_BODY, since every header state precedes PARSE_BODY in the
     // enum) so it never reaps a legitimate slow body: a large streaming upload sits in PARSE_BODY for its whole
     // duration and is governed by the streaming handler + idle timer, not this deadline. WebSocket / SSE were
     // already returned above.
-    if (conn_pool[i].state == ConnState::CONN_ACTIVE && conn_pool[i].req_start_ms != 0 &&
-        http_pool[i].parse_state < ParseState::PARSE_BODY &&
+    if (conn_pool[i].state == CONN_ACTIVE && conn_pool[i].req_start_ms != 0 && http_pool[i].parse_state < PARSE_BODY &&
         (pc_millis() - conn_pool[i].req_start_ms) >= PC_REQUEST_TIMEOUT_MS)
     {
         conn_pool[i].req_start_ms = 0;
@@ -1350,24 +1358,24 @@ void http_poll_slot(uint8_t i)
 #endif
 
     // HTTP slot
-    if (http_pool[i].parse_state == ParseState::PARSE_COMPLETE)
+    if (http_pool[i].parse_state == PARSE_COMPLETE)
     {
         conn_pool[i].req_start_ms = 0; // request complete: disarm; the next keep-alive request re-arms on its 1st byte
         match_and_execute(i);
-        if (http_pool[i].parse_state == ParseState::PARSE_COMPLETE)
+        if (http_pool[i].parse_state == PARSE_COMPLETE)
         {
             http_reset(i);
         }
     }
-    else if (http_pool[i].parse_state == ParseState::PARSE_ERROR)
+    else if (http_pool[i].parse_state == PARSE_ERROR)
     {
         send_text(i, 400, PC_MIME_TEXT_PLAIN, "Bad Request");
     }
-    else if (http_pool[i].parse_state == ParseState::PARSE_ENTITY_TOO_LARGE)
+    else if (http_pool[i].parse_state == PARSE_ENTITY_TOO_LARGE)
     {
         send_text(i, 413, PC_MIME_TEXT_PLAIN, "Payload Too Large");
     }
-    else if (http_pool[i].parse_state == ParseState::PARSE_URI_TOO_LONG)
+    else if (http_pool[i].parse_state == PARSE_URI_TOO_LONG)
     {
         send_text(i, 414, PC_MIME_TEXT_PLAIN, "URI Too Long");
     }
@@ -1392,8 +1400,7 @@ bool defer(uint8_t slot, pc_deferred_fn fn, void *arg)
 
 // The build-info document. Every value is a compile-time constant, so nothing is discovered at
 // runtime: each flag selects one of two literals and each sizing constant renders as a decimal.
-// It is a frame like every other frame here, so the conversions come from the one engine that is
-// tested rather than from a private set of preprocessor pastes.
+// A frame spec like every other here, so the conversions come from the shared engine.
 static const pc_field DIAG_DOC[] = {
     {PC_FK_LIT, 0, 31, "{\"lib\":\"ProtoCore\",\"features\":{"},
     {PC_FK_LIT, 0, 12, "\"websocket\":"},
@@ -1505,9 +1512,11 @@ static_assert(PC_PLAINTEXT_WORK_DIAG <= PC_PLAINTEXT_ARENA_SIZE, "diag document 
 
 void diag(uint8_t slot_id)
 {
-    PlaintextScope scope;
+    // Mark before the borrow and release on every exit: the document is transient, and the
+    // per-dispatch reset is only the backstop.
+    const size_t mark = pc_plaintext_mark();
     char *doc = (char *)pc_plaintext_alloc(PC_PLAINTEXT_WORK_DIAG, 1);
-    if (doc == nullptr ||
+    if (doc == NULL ||
         pc_frame_build(
             doc, PC_PLAINTEXT_WORK_DIAG, DIAG_DOC, PC_ENABLE_WEBSOCKET ? "true" : "false",
             PC_ENABLE_SSE ? "true" : "false", PC_ENABLE_MULTIPART ? "true" : "false",
@@ -1529,10 +1538,12 @@ void diag(uint8_t slot_id)
             (uint32_t)MAX_QUERY_LEN, (uint32_t)MAX_QUERY_PARAMS, (uint32_t)CONN_TIMEOUT_MS, (uint32_t)RESP_HDR_BUF_SIZE,
             (uint32_t)WS_HDR_BUF_SIZE, (uint32_t)CORS_HDR_BUF_SIZE, (uint32_t)EVT_QUEUE_DEPTH) == 0)
     {
+        pc_plaintext_release(mark);
         send_text(slot_id, 503, PC_MIME_TEXT_PLAIN, ""); // fail closed: no partial document reaches the wire
         return;
     }
-    send_text(slot_id, 200, PC_MIME_JSON, doc);
+    send_text(slot_id, 200, PC_MIME_JSON, doc); // reads doc, so it runs before the release
+    pc_plaintext_release(mark);
 }
 #endif
 
@@ -1545,17 +1556,19 @@ void diag(uint8_t slot_id)
 // linkage (declared in protocore.h): the split handler TUs call it.
 bool req_is_head(uint8_t slot_id)
 {
-    return strcmp(http_pool[slot_id].method, "HEAD") == 0;
+    return proto_eq_str(http_pool[slot_id].method, "HEAD", sizeof("HEAD"));
 }
 
 // Append a method token to a comma-separated Allow list, de-duplicating.
 static void allow_append(char *buf, size_t cap, const char *m)
 {
-    if (!m[0] || strstr(buf, m))
+    // method_name() hands back one of the seven method literals, so the longest of them is the
+    // bound on @p m - the Allow buffer's capacity is the bound on `buf` and says nothing about it.
+    if (!m[0] || proto_has(buf, cap, m, sizeof("OPTIONS")))
     {
         return;
     }
-    size_t len = strnlen(buf, cap);
+    size_t len = proto_scan_nul(buf, cap);
     if (len == 0)
     {
         pc_sb sb_buf = {buf, cap, 0, true};
@@ -1580,18 +1593,18 @@ static void allow_append(char *buf, size_t cap, const char *m)
 // Send a terminal text/plain error response that closes the connection: the
 // status reason (e.g. "405 Method Not Allowed"), one optional pre-formatted extra
 // header (CRLF-terminated, e.g. "Allow: GET\r\n"), then Content-Type/Length and
-// "Connection: close". Begins the ConnState::CONN_CLOSING dwell so the bytes drain before
+// "Connection: close". Begins the CONN_CLOSING dwell so the bytes drain before
 // teardown; HEAD omits the body. One owner for the error-and-close path.
 static void send_error_close(uint8_t slot_id, const char *status, const char *extra_hdr, const char *body)
 {
     TcpConn *conn = &conn_pool[slot_id];
-    if (conn->state != ConnState::CONN_ACTIVE || conn->pcb == nullptr)
+    if (conn->state != CONN_ACTIVE || conn->pcb == NULL)
     {
         http_reset(slot_id);
         return;
     }
 
-    int blen = (int)strnlen(body, 0xFFFF);
+    int blen = (int)proto_scan_nul(body, 0xFFFF);
     char header[RESP_HDR_BUF_SIZE];
     // GCOVR_EXCL_BR_START  the null arm of the extra_hdr ternary is unreachable: both callers
     // (send_method_not_allowed, send_too_many_requests) build a non-null header string. Kept so the
@@ -1609,9 +1622,8 @@ static void send_error_close(uint8_t slot_id, const char *status, const char *ex
     int hlen = (int)pc_sb_finish(&sb_header);
     // GCOVR_EXCL_BR_STOP
 
-    // The last write carries the flush (pc_conn_send_flush = write+tcp_output in one marshal), so
-    // an error-and-close costs one round-trip fewer - and 4xx/5xx closes are the hot path under a
-    // flood (rate-limit / auth-lockout 429s).
+    // The last write carries the flush: pc_conn_send_flush is write+tcp_output in one marshal, so
+    // the response leaves in a single trip whether or not a body follows the header.
     // GCOVR_EXCL_BR_START  the blen == 0 half is unreachable: both callers pass a fixed non-empty
     // reason body ("Method Not Allowed" / "Too Many Requests"). The HEAD half is exercised.
     if (blen > 0 && !req_is_head(slot_id))
@@ -1624,7 +1636,7 @@ static void send_error_close(uint8_t slot_id, const char *status, const char *ex
         pc_conn_send_flush(slot_id, header, (u16_t)hlen);
     }
     // GCOVR_EXCL_BR_STOP
-    pc_conn_begin_close(slot_id); // dwell in ConnState::CONN_CLOSING until the response drains
+    pc_conn_begin_close(slot_id); // dwell in CONN_CLOSING until the response drains
     http_reset(slot_id);
 }
 
@@ -1650,7 +1662,7 @@ static void send_method_not_allowed(uint8_t slot_id, const char *allow)
 static pc_ip lockout_client_ip(uint8_t slot_id)
 {
     pc_ip ip;
-    ip.family = pc_ip_family::PC_IP_NONE;
+    ip.family = PC_IP_NONE;
     pc_conn_remote_addr(slot_id, &ip);
     return ip;
 }
@@ -1691,7 +1703,7 @@ bool route_admits(const Route *r, uint8_t slot_id, HttpReq *req)
     }
     // Per-route interface gate: a route bound to STA/AP is invisible on the
     // other interface (falls through to other routes / 404).
-    if (r->iface_filter != pc_iface::PC_IFACE_ANY && r->iface_filter != pc_conn_iface(slot_id))
+    if (r->iface_filter != PC_IFACE_ANY && r->iface_filter != pc_conn_iface(slot_id))
     {
         return false;
     }
@@ -1703,7 +1715,7 @@ bool pc_csrf_gate(uint8_t slot_id, HttpReq *req, HttpMethod method)
 {
     // Built-in token endpoint: GET /csrf issues a signed token (also set as the
     // csrf cookie) for clients to echo in X-CSRF-Token on state-changing requests.
-    if (method == HttpMethod::HTTP_GET && strcmp(req->path, "/csrf") == 0)
+    if (method == HTTP_GET && proto_eq_str(req->path, "/csrf", sizeof("/csrf")))
     {
         char tok[CSRF_TOKEN_BUF];
         if (pc_csrf_issue(tok, sizeof(tok)) > 0)
@@ -1729,8 +1741,7 @@ bool pc_csrf_gate(uint8_t slot_id, HttpReq *req, HttpMethod method)
 
     // Enforce CSRF on every state-changing method: require a valid signed
     // X-CSRF-Token header (GET / HEAD / OPTIONS are exempt - not state-changing).
-    if (method == HttpMethod::HTTP_POST || method == HttpMethod::HTTP_PUT || method == HttpMethod::HTTP_PATCH ||
-        method == HttpMethod::HTTP_DELETE)
+    if (method == HTTP_POST || method == HTTP_PUT || method == HTTP_PATCH || method == HTTP_DELETE)
     {
         const char *tok = http_get_header(req, "X-CSRF-Token");
         if (!tok || !pc_csrf_verify(tok))
@@ -1749,8 +1760,8 @@ void handle_ws_route(uint8_t slot_id, HttpReq *req, HttpMethod method, const Rou
     const char *upgrade_hdr = http_get_header(req, "Upgrade");
     // RFC 6455 4.2.1: a valid handshake needs Upgrade: websocket AND a Connection
     // header that includes the "Upgrade" token.
-    bool is_ws_upgrade = (method == HttpMethod::HTTP_GET) && upgrade_hdr &&
-                         (strcasecmp(upgrade_hdr, "websocket") == 0) &&
+    bool is_ws_upgrade = (method == HTTP_GET) && (upgrade_hdr != NULL) &&
+                         proto_eq_str_ci(upgrade_hdr, "websocket", sizeof("websocket")) &&
                          conn_has_token(http_get_header(req, "Connection"), "upgrade");
     if (!is_ws_upgrade)
     {
@@ -1759,7 +1770,7 @@ void handle_ws_route(uint8_t slot_id, HttpReq *req, HttpMethod method, const Rou
     }
     // RFC 6455 §4.2.1: only version 13 is supported; otherwise 426.
     const char *ws_ver = http_get_header(req, "Sec-WebSocket-Version");
-    if (!ws_ver || strcmp(ws_ver, "13") != 0)
+    if (ws_ver == NULL || !proto_eq_str(ws_ver, "13", sizeof("13")))
     {
         ws_send_version_required(slot_id);
         return;
@@ -1774,7 +1785,7 @@ void handle_ws_route(uint8_t slot_id, HttpReq *req, HttpMethod method, const Rou
 #endif // PC_ENABLE_WEBSOCKET
 
 #if PC_ENABLE_AUTH
-bool authorize_request(uint8_t slot_id, HttpReq *req, const Route *r)
+bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const Route *r)
 {
 #if PC_ENABLE_AUTH_LOCKOUT
     pc_ip cip = lockout_client_ip(slot_id);
@@ -1784,13 +1795,13 @@ bool authorize_request(uint8_t slot_id, HttpReq *req, const Route *r)
     // spoofed header can neither evade a lockout nor frame another address.
     {
         char fbuf[PC_IP_STR_MAX];
-        const char *fwd = http_forwarded_client(req, fbuf, sizeof(fbuf), nullptr) ? fbuf : nullptr;
+        const char *fwd = http_forwarded_client(req, fbuf, sizeof(fbuf), NULL) ? fbuf : NULL;
         pc_ip eff;
         pc_forwarded_effective_ip(&cip, fwd, &eff);
         cip = eff;
     }
 #endif
-    uint32_t now = (uint32_t)millis();
+    uint32_t now = (uint32_t)pc_millis();
     uint32_t remain = auth_lockout_remaining_ms(&cip, now);
     if (remain > 0)
     {
@@ -1826,7 +1837,7 @@ bool dispatch_matched_route(uint8_t slot_id, HttpReq *req, HttpMethod method, Ro
                             char *allow_buf, size_t allow_cap)
 {
 #if PC_ENABLE_WEBSOCKET
-    if (r->type == RouteType::ROUTE_WS)
+    if (r->type == ROUTE_WS)
     {
         handle_ws_route(slot_id, req, method, r);
         return true;
@@ -1834,7 +1845,7 @@ bool dispatch_matched_route(uint8_t slot_id, HttpReq *req, HttpMethod method, Ro
 #endif // PC_ENABLE_WEBSOCKET
 
 #if PC_ENABLE_SSE
-    if (r->type == RouteType::ROUTE_SSE)
+    if (r->type == ROUTE_SSE)
     {
         if (!pc_sse_do_upgrade(slot_id, req, r->pc_sse_connect))
         {
@@ -1845,10 +1856,10 @@ bool dispatch_matched_route(uint8_t slot_id, HttpReq *req, HttpMethod method, Ro
 #endif // PC_ENABLE_SSE
 
 #if PC_ENABLE_FILE_SERVING
-    if (r->type == RouteType::ROUTE_STATIC)
+    if (r->type == ROUTE_STATIC)
     {
         // Static mounts answer GET (and HEAD via GET); other methods → 405.
-        if (method != HttpMethod::HTTP_GET && method != HttpMethod::HTTP_HEAD)
+        if (method != HTTP_GET && method != HTTP_HEAD)
         {
             *path_matched = true;
             allow_append(allow_buf, allow_cap, "GET");
@@ -1860,23 +1871,23 @@ bool dispatch_matched_route(uint8_t slot_id, HttpReq *req, HttpMethod method, Ro
     }
 #endif // PC_ENABLE_FILE_SERVING
 
-    // RouteType::ROUTE_HTTP - a HEAD request is served by the GET handler with the
+    // ROUTE_HTTP - a HEAD request is served by the GET handler with the
     // response body suppressed (RFC 7231 §4.3.2).
-    bool method_ok = (r->method == method) || (method == HttpMethod::HTTP_HEAD && r->method == HttpMethod::HTTP_GET);
+    bool method_ok = (r->method == method) || (method == HTTP_HEAD && r->method == HTTP_GET);
     if (!method_ok)
     {
         // Path matches but method differs - record it for a 405 + Allow.
         *path_matched = true;
         allow_append(allow_buf, allow_cap, method_name(r->method));
         // A GET route also answers HEAD, so advertise it in Allow.
-        if (r->method == HttpMethod::HTTP_GET)
+        if (r->method == HTTP_GET)
         {
             allow_append(allow_buf, allow_cap, "HEAD");
         }
         return false;
     }
 #if PC_ENABLE_AUTH
-    if (r->auth_required && !authorize_request(slot_id, req, r))
+    if (r->auth_required && !proto_authorize_request(slot_id, req, r))
     {
         return true; // 401/429 already sent
     }
@@ -1917,7 +1928,7 @@ void match_and_execute(uint8_t slot_id)
 #endif
 
     // CORS preflight
-    if (method == HttpMethod::HTTP_OPTIONS && pc_resp_cors_enabled())
+    if (method == HTTP_OPTIONS && pc_resp_cors_enabled())
     {
         send_empty(slot_id, 204);
         return;
@@ -1931,14 +1942,14 @@ void match_and_execute(uint8_t slot_id)
 #endif
 
     // RFC 7230 §3.3.1: reject Transfer-Encoding
-    if (http_get_header(req, "Transfer-Encoding") != nullptr)
+    if (http_get_header(req, "Transfer-Encoding") != NULL)
     {
         send_text(slot_id, 501, PC_MIME_TEXT_PLAIN, "Not Implemented");
         return;
     }
 
     // RFC 7231 §6.5.2: a method the server does not implement → 501.
-    if (method == HttpMethod::HTTP_METHOD_UNKNOWN)
+    if (method == HTTP_METHOD_UNKNOWN)
     {
         send_text(slot_id, 501, PC_MIME_TEXT_PLAIN, "Not Implemented");
         return;
@@ -1980,27 +1991,23 @@ void match_and_execute(uint8_t slot_id)
     }
 }
 
-/*
- * Build and transmit an HTTP response with a body.
- *
- * Uses a 512-byte stack buffer for headers.  CORS headers are appended when
- * `pc_resp_cors_enabled()`.  The slot is freed (state → ConnState::CONN_FREE, pcb → nullptr)
- * *before* the tcp_write + tcp_close sequence to ensure any error callback
- * that lwIP fires during the write sees the slot as already released.
- *
- * If the slot's connection is not active (e.g., already timed-out or the
- * PCB is null) the slot is reset and the function returns without writing.
+/**
+ * @brief Send an HTTP response whose body is a null-terminated string.
  *
  * @param slot_id      Connection slot index.
  * @param code         HTTP status code, e.g. 200.
  * @param content_type MIME type string, e.g. "application/json".
- * @param payload      Null-terminated body string to send.
+ * @param payload      Null-terminated body string to send; null sends an empty body.
  */
 void send_text(uint8_t slot_id, int code, const char *content_type, const char *payload)
 {
     // Null-terminated convenience wrapper over the explicit-length send: the only difference between
     // the two is who scans for the length, so text is bin plus one scan rather than a second sender.
-    send_bin(slot_id, code, content_type, (const uint8_t *)payload, payload ? strnlen(payload, 0xFFFF) : 0);
+    // 0xFFFF is how far the scan is willing to look, not a claim the caller's string is that long:
+    // a body is a handler's string of unstated capacity, and the bound is what keeps a missing
+    // terminator from becoming an unbounded walk.
+    send_bin(slot_id, code, content_type, (const uint8_t *)payload,
+             (payload != NULL) ? proto_scan_nul(payload, 0xFFFF) : 0);
 }
 
 void send_bin(uint8_t slot_id, int code, const char *content_type, const uint8_t *body, size_t body_len)
@@ -2022,7 +2029,7 @@ void send_bin(uint8_t slot_id, int code, const char *content_type, const uint8_t
         return;
     }
 #endif
-    if (conn->state != ConnState::CONN_ACTIVE || conn->pcb == nullptr)
+    if (conn->state != CONN_ACTIVE || conn->pcb == NULL)
     {
         http_reset(slot_id);
         return;
@@ -2045,7 +2052,7 @@ void send_bin(uint8_t slot_id, int code, const char *content_type, const uint8_t
     pc_sb_i64(&sb_header2, (int64_t)(payload_len));
     pc_sb_put(&sb_header2, "\r\n");
     int hlen = (int)pc_sb_finish(&sb_header2);
-    hlen = append_resp_trailer(header, sizeof(header), hlen, slot_id, cl);
+    hlen = proto_append_resp_trailer(header, sizeof(header), hlen, slot_id, cl);
     if (hlen == 0)
     {
         // The headers do not fit RESP_HDR_BUF_SIZE (an over-long content type, or a custom-header
@@ -2053,23 +2060,23 @@ void send_bin(uint8_t slot_id, int code, const char *content_type, const uint8_t
         // terminating CRLF and desync the connection, so a fixed reply that always fits goes out
         // instead and the connection closes.
         pc_conn_send_flush(slot_id, PC_RESP_HDR_OVERFLOW, (u16_t)PC_RESP_HDR_OVERFLOW_LEN);
-        pc_resp_end(slot_id, 500, 0, false);
+        pc_resp_end(slot_id, 500, 0, false, /*pre_flushed=*/false);
         return;
     }
 
-    // The slot stays ConnState::CONN_ACTIVE through the write for both paths; pc_resp_end then
-    // begins the ConnState::CONN_CLOSING dwell on the close path (finalized once ACKed).
+    // The slot stays CONN_ACTIVE through the write for both paths; pc_resp_end then
+    // begins the CONN_CLOSING dwell on the close path (finalized once ACKed).
 
     bool head = req_is_head(slot_id);
 
     // HEAD responses carry the headers (incl. Content-Length) but no body. For a
     // body that fits the header scratch, coalesce headers+body into a single send
-    // so the response costs one tcpip_thread round-trip instead of two. The final
-    // write also carries the flush (pc_conn_send_flush), so pc_resp_end skips it -
-    // a keep-alive small response is now one marshal (write+output) instead of two.
+    // so the response costs one tcpip_thread round-trip rather than two. The final
+    // write carries the flush (pc_conn_send_flush) and pc_resp_end skips it, so a
+    // small keep-alive response is one marshal (write+output).
     if (!head && payload_len > 0 && (size_t)hlen + (size_t)payload_len <= sizeof(header))
     {
-        memcpy(header + hlen, payload, (size_t)payload_len);
+        proto_raw_read(header + hlen, payload, (size_t)payload_len);
         pc_conn_send_flush(slot_id, header, (u16_t)(hlen + payload_len));
     }
     else if (!head && payload_len > 0)
@@ -2085,12 +2092,12 @@ void send_bin(uint8_t slot_id, int code, const char *content_type, const uint8_t
     pc_resp_end(slot_id, code, payload_len, keep, /*pre_flushed=*/true);
 }
 
-/*
- * Build and transmit an HTTP response with no body.
+/**
+ * @brief Send a status-line-and-headers response with `Content-Length: 0`.
  *
- * Used for CORS preflight (204) and any response where only status headers
- * are needed.  Behaves identically to send_text() regarding slot lifecycle and
- * PCB ownership transfer - the slot is freed before the lwIP write call.
+ * Used for CORS preflight (204) and any response where only status headers are needed. Takes the
+ * same slot lifecycle as send_bin(): a self-framing protocol's sink wins if one is installed, an
+ * inactive slot is reset without writing, and pc_resp_end() owns the close-or-recycle decision.
  *
  * @param slot_id Connection slot index.
  * @param code    HTTP status code, e.g. 204.
@@ -2109,7 +2116,7 @@ void send_empty(uint8_t slot_id, int code)
         return;
     }
 #endif
-    if (conn->state != ConnState::CONN_ACTIVE || conn->pcb == nullptr)
+    if (conn->state != CONN_ACTIVE || conn->pcb == NULL)
     {
         http_reset(slot_id);
         return;
@@ -2126,7 +2133,7 @@ void send_empty(uint8_t slot_id, int code)
     pc_sb_put(&sb_header3, status_text(code));
     pc_sb_put(&sb_header3, "\r\nContent-Length: 0\r\n");
     int hlen = (int)pc_sb_finish(&sb_header3);
-    hlen = append_resp_trailer(header, sizeof(header), hlen, slot_id, cl);
+    hlen = proto_append_resp_trailer(header, sizeof(header), hlen, slot_id, cl);
 
     pc_conn_send_flush(slot_id, header, (u16_t)hlen);
 
@@ -2140,7 +2147,7 @@ void redirect(uint8_t slot_id, int code, const char *location)
         return;
     }
     TcpConn *conn = &conn_pool[slot_id];
-    if (conn->state != ConnState::CONN_ACTIVE || conn->pcb == nullptr)
+    if (conn->state != CONN_ACTIVE || conn->pcb == NULL)
     {
         http_reset(slot_id);
         return;
@@ -2173,7 +2180,7 @@ void redirect(uint8_t slot_id, int code, const char *location)
     pc_sb_put(&sb_header4, location);
     pc_sb_put(&sb_header4, "\r\nContent-Length: 0\r\n");
     int hlen = (int)pc_sb_finish(&sb_header4);
-    hlen = append_resp_trailer(header, sizeof(header), hlen, slot_id, cl);
+    hlen = proto_append_resp_trailer(header, sizeof(header), hlen, slot_id, cl);
 
     pc_conn_send_flush(slot_id, header, (u16_t)hlen);
 

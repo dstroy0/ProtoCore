@@ -5,11 +5,10 @@
  * @file regex.cpp
  * @brief Bounded regex route matcher for PC (used by on_regex() routes).
  *
- * Split out of protocore.cpp (single-purpose server files). A small recursive backtracker over
- * one pattern - literals, '.', quantifiers, character classes, and escapes - with a step budget
- * (RE_MAX_STEPS) so a pathological pattern fails closed instead of backtracking unboundedly,
- * preserving determinism. No heap, no groups, no alternation. The route dispatcher calls
- * regex_match() (declared in protocore.h). Behavior is identical to the pre-split code.
+ * A small recursive backtracker over one pattern - literals, '.', quantifiers, character classes,
+ * and escapes - with a step budget (RE_MAX_STEPS) so a pathological pattern fails closed instead of
+ * backtracking unboundedly, preserving determinism. No heap, no groups, no alternation. The route
+ * dispatcher calls regex_match() (declared in protocore.h).
  */
 
 #include "protocore.h" // RE_MAX_STEPS (ServerConfig), fixed-width types

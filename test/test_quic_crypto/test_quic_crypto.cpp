@@ -15,9 +15,9 @@
 #include "crypto/crypto_scratch.h" // crypto_work (opaque pc_aes128 storage)
 #include "crypto/kdf/hkdf.h"
 #include "crypto/mac/hmac_sha256.h"
+#include "mmgr/secure.h"
 #include "network_drivers/presentation/http/http3/quic_crypto.h"
 #include "network_drivers/presentation/http/http3/quic_packet.h" // QUIC_MAX_CID_LEN (retry-tag guard bound)
-#include "server/mmgr/secure.h"
 #include <string.h>
 #include <unity.h>
 

@@ -8,8 +8,8 @@
  */
 
 #include "services/net/http_client/http_client.h"
-#include "services/system/clock.h"    // pcdelay
-#include "shared_primitives/strbuf.h" // pc_sb frame builder
+#include "mmgr/membuild.h"         // pc_sb frame builder
+#include "services/system/clock.h" // pcdelay
 
 #if PC_ENABLE_HTTP_CLIENT
 

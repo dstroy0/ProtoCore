@@ -42,16 +42,18 @@
 #ifndef PROTOCORE_FRAME_H
 #define PROTOCORE_FRAME_H
 
-#include "shared_primitives/strbuf.h"
+#include "mmgr/membuild.h"
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdint.h>
 
-// PC_ALLOW_UNSCOPED_ENUM: the value IS the opcode byte written to the wire and compared as an
-// integer, so an enum class would put a static_cast at every use to satisfy the lint without
-// making anything safer.
-/** @brief Field kinds. The value is an opcode, so this is deliberately a plain byte enum. */
-enum pc_fk : uint8_t
+/**
+ * @brief Field kinds. The value is an opcode, so the enum is the name for a byte, not a type gate.
+ *
+ * The width is carried by pc_field::kind (a uint8_t), not by the enum: C has no fixed underlying
+ * type, and the storage is what the wire sees.
+ */
+typedef enum
 {
     PC_FK_END = 0, ///< terminator; takes no argument
     PC_FK_LIT,     ///< literal text from `lit`; takes no argument
@@ -67,7 +69,7 @@ enum pc_fk : uint8_t
     PC_FK_CH,      ///< char
     PC_FK_JSON,    ///< const char *, emitted as a quoted JSON string literal
     PC_FK_XML,     ///< const char *, XML-escaped
-};
+} pc_fk;
 
 /**
  * @brief One field of a frame. Frames are `static const pc_field[]`, so they live in rodata.
@@ -77,13 +79,13 @@ enum pc_fk : uint8_t
  * engine re-scan each literal for its NUL at runtime is the same waste as re-parsing a format
  * string: measured at +54% on a response frame and +184% on a literal-only one.
  */
-struct pc_field
+typedef struct
 {
     uint8_t kind;    ///< a pc_fk
     uint8_t width;   ///< min digits (DEC/HEX/OCT), significant digits (G), decimals (FIX)
     uint16_t len;    ///< PC_FK_LIT: byte length of @c lit; gated by check_frame_specs.py
     const char *lit; ///< PC_FK_LIT only
-};
+} pc_field;
 
 // Spec constructors. These read as the frame they describe:
 //   static const pc_field RESP[] = {{PC_FK_LIT, 0, 9, "HTTP/1.1 "}, PC_U32, {PC_FK_LIT, 0, 1, " "}, PC_STR, PC_END};
@@ -95,20 +97,20 @@ struct pc_field
 //   static const pc_field RESP[] = {
 //       {PC_FK_LIT, 0, 9, "HTTP/1.1 "},   // 9 == the literal's length
 //       PC_U32,
-//       {PC_FK_HEX, 8, 0, nullptr},       // 8 == zero-pad width
+//       {PC_FK_HEX, 8, 0, NULL},       // 8 == zero-pad width
 //       PC_END,
 //   };
 //
 // Hand-counting is not trusted: ci_tooling/check/check_frame_specs.py fails the build when any
 // PC_FK_LIT field's len disagrees with its literal, and --fix rewrites it.
-#define PC_STR {PC_FK_STR, 0, 0, nullptr}
-#define PC_U32 {PC_FK_U32, 0, 0, nullptr}
-#define PC_U64 {PC_FK_U64, 0, 0, nullptr}
-#define PC_I64 {PC_FK_I64, 0, 0, nullptr}
-#define PC_CH {PC_FK_CH, 0, 0, nullptr}
-#define PC_JSON {PC_FK_JSON, 0, 0, nullptr}
-#define PC_XML {PC_FK_XML, 0, 0, nullptr}
-#define PC_END {PC_FK_END, 0, 0, nullptr}
+#define PC_STR {PC_FK_STR, 0, 0, NULL}
+#define PC_U32 {PC_FK_U32, 0, 0, NULL}
+#define PC_U64 {PC_FK_U64, 0, 0, NULL}
+#define PC_I64 {PC_FK_I64, 0, 0, NULL}
+#define PC_CH {PC_FK_CH, 0, 0, NULL}
+#define PC_JSON {PC_FK_JSON, 0, 0, NULL}
+#define PC_XML {PC_FK_XML, 0, 0, NULL}
+#define PC_END {PC_FK_END, 0, 0, NULL}
 
 /**
  * @brief Build @p spec into @p out (capacity @p cap), taking one variadic argument per valued field.

@@ -26,21 +26,112 @@
  *   // RAM (can be changed at runtime):
  *   WebServerConfig my_cfg = { .conn_timeout_ms = 10000 };
  *
- *   server.begin(80, &my_cfg);
+ *   begin_http(80, &my_cfg);
  * @endcode
- * Pass `nullptr` (or omit the argument) to use the built-in default
- * (`CONN_TIMEOUT_MS`, 5000 ms idle timeout).
+ * Pass `NULL` to use the built-in default (`CONN_TIMEOUT_MS`, 5000 ms idle
+ * timeout).
  */
 
 #ifndef PROTOCORE_CONFIG_H
 #define PROTOCORE_CONFIG_H
 
-#include <stdint.h>
-
 // Per-variant default sizing (chip / PSRAM / flash profiles). Included before the sizing
 // defaults below so a board profile can raise them for a larger target; your -D / build_opt.h
 // overrides still win (every profile default is #ifndef-guarded).
 #include "board_drivers/board_profiles/board_profile.h"
+
+// ---------------------------------------------------------------------------
+// Platform widths
+// ---------------------------------------------------------------------------
+// The three numbers every primitive type and every lane mask is derived from
+// (shared_primitives/types.h, shared_primitives/swar.h). They are `#define`s rather than typedefs
+// so they participate in preprocessor arithmetic, can be tested by `#if`, and can be overridden
+// from build_opt.h or -D like every other knob. Each is checked below, so a bad value stops the
+// build here, naming itself, instead of at the first expression that assumed it.
+
+/**
+ * @brief The target's natural register width, in bits.
+ *
+ * What a value is carried in while it is being worked on. Arithmetic narrower than the register is
+ * not cheaper on any part in the target list - it costs the mask or sign-extend that keeps the
+ * unused half correct - so the library states the register once and narrows only at a boundary.
+ */
+// The die states its register width in board_drivers/board_profiles/ (PC_HW_WORD_BITS, floored at
+// 32 for every part in the target list); this only names it. It is NOT read off the toolchain: the
+// host toolchain is 64-bit, so inferring would give the host build 8-byte lane math, an 8-byte move
+// ladder and 64-bit index arithmetic - a shape no target executes, measured on a machine that does
+// not ship. A -D override still wins, which is how a 64-bit port or a width experiment is done.
+#ifndef PROTO_WORD_BITS
+#define PROTO_WORD_BITS PC_HW_WORD_BITS
+#endif
+
+/**
+ * @brief Bits in every offset, length and capacity the library declares (pc_idx).
+ *
+ * Replaces `size_t`, whose width is inherited from the target's pointer and therefore differs
+ * between a device build and the host test that proves it - the same source emitting different
+ * index arithmetic in the two places it has to agree. 32 addresses far more than any pool reserved
+ * here; a target whose every buffer is under 64 KB may set 16.
+ */
+#ifndef PROTO_INDEX_BITS
+#define PROTO_INDEX_BITS 32
+#endif
+
+/**
+ * @brief Bits in the lane carrier the byte-parallel scans and compares work in.
+ *
+ * Defaults to the register width, which is what makes the lane algebra worth doing: one word test
+ * answers for PROTO_SWAR_BITS/8 bytes at once. Set it lower only to model a narrower machine - a
+ * carrier WIDER than the register is synthesized from halves and is measurably slower than the
+ * width it decomposes into. 8 is legal and degenerates to one lane per word, which is the honest
+ * setting for a part with no wider register.
+ */
+#ifndef PROTO_SWAR_BITS
+#define PROTO_SWAR_BITS PROTO_WORD_BITS
+#endif
+
+#if PROTO_WORD_BITS != 16 && PROTO_WORD_BITS != 32 && PROTO_WORD_BITS != 64
+#error "PROTO_WORD_BITS must be 16, 32 or 64"
+#endif
+#if PROTO_INDEX_BITS != 16 && PROTO_INDEX_BITS != 32
+#error "PROTO_INDEX_BITS must be 16 or 32"
+#endif
+#if PROTO_SWAR_BITS != 8 && PROTO_SWAR_BITS != 16 && PROTO_SWAR_BITS != 32 && PROTO_SWAR_BITS != 64
+#error "PROTO_SWAR_BITS must be 8, 16, 32 or 64"
+#endif
+#if PROTO_INDEX_BITS > PROTO_WORD_BITS
+#error "PROTO_INDEX_BITS exceeds PROTO_WORD_BITS: an index must fit the register it is carried in"
+#endif
+#if PROTO_SWAR_BITS > PROTO_WORD_BITS
+#error "PROTO_SWAR_BITS exceeds PROTO_WORD_BITS: a lane carrier wider than the register is synthesized \
+from halves and is slower than the width it decomposes into"
+#endif
+
+/**
+ * @brief Linkage for a leaf primitive whose body is cheaper than the call that reaches it.
+ *
+ * The framework's size-optimized level declines to inline `static inline`, and a lane primitive that
+ * does not inline cannot fold: the extent and the needle a call site states as literals are passed
+ * at runtime instead of folding away. This is stated here because this header is every file's first
+ * include, so the linkage is settled before any body that uses it is parsed. A per-file pragma
+ * cannot reach a header-only library at all, since `#pragma GCC optimize` binds only to functions
+ * parsed after it and the bodies arrive with the include.
+ *
+ * Leaves only. On a composite, forcing the inline trades one call for a copy of the whole body at
+ * every site, which is a size decision the compiler is better placed to make.
+ */
+#ifndef PC_INLINE
+#if defined(__GNUC__)
+#define PC_INLINE static inline __attribute__((always_inline))
+#else
+#define PC_INLINE static inline
+#endif
+#endif
+
+// The widths are settled above, so the types built from them come next. This header is the single
+// entry point: a file includes it and has both the knobs and the primitive types, which is why
+// types.h refuses to be included on its own.
+#include "shared_primitives/types.h"
 
 // ---------------------------------------------------------------------------
 // Compile-time capacity constants (affect static array sizes)
@@ -118,8 +209,9 @@
 /**
  * @brief Compile-time default for connection idle timeout in milliseconds.
  *
- * The actual runtime value is stored in `WebServerConfig::conn_timeout_ms`
- * and loaded into `DeterministicAsyncTCP::conn_timeout_ms` by init().
+ * The actual runtime value is stored in `WebServerConfig::conn_timeout_ms`,
+ * loaded by `proto_tcp_pool_init()` and read back with
+ * `proto_tcp_conn_timeout_ms()`.
  */
 #ifndef CONN_TIMEOUT_MS
 #define CONN_TIMEOUT_MS 5000
@@ -143,10 +235,10 @@
 #endif
 
 /**
- * @brief Upper bound (ms) a slot may dwell in ConnState::CONN_CLOSING after a graceful close
+ * @brief Upper bound (ms) a slot may dwell in CONN_CLOSING after a graceful close
  *        before the idle sweep force-aborts it.
  *
- * On a graceful (local) close the slot stays in ConnState::CONN_CLOSING - keeping its PCB and
+ * On a graceful (local) close the slot stays in CONN_CLOSING - keeping its PCB and
  * callbacks - until the peer ACKs the response (then it frees itself in the sent
  * callback). If the peer never ACKs (dead/black-holed), this bound lets the
  * timeout sweep reclaim the slot so the fixed pool cannot leak.
@@ -754,7 +846,7 @@
 // server runs over Ethernet instead of (or alongside) Wi-Fi. init_eth_physical() is a thin
 // wrapper over the Arduino ETH library; the PHY pins / type / clock come from the standard
 // ETH_PHY_* build flags for your board (see example Ethernet). The egress reporting
-// (pc_net_egress -> pc_iface::PC_IFACE_ETH) and the per-route interface classifier already handle a
+// (pc_net_egress -> PC_IFACE_ETH) and the per-route interface classifier already handle a
 // wired route, so once the link has an IP the server accepts on it with no other change.
 // Default off (zero cost / the ETH library is not linked). ESP32-only.
 
@@ -1156,7 +1248,7 @@
  * @brief Per-connection buffer for app-supplied custom response headers and
  *        cookies.
  *
- * Filled by add_response_header() / set_cookie() and injected into send() /
+ * Filled by proto_add_response_header() / set_cookie() and injected into send() /
  * send_empty() / redirect() the same way the CORS block is. RESP_HDR_BUF_SIZE
  * must be large enough to hold the status line plus the CORS block plus this
  * block (see the assert below).
@@ -1449,7 +1541,7 @@
 /**
  * @brief Modbus TCP slave/server (Modbus Application Protocol v1.1b3) on TCP/502.
  *
- * Default off. When set, listen(502, ConnProto::PROTO_MODBUS) serves a fixed data model
+ * Default off. When set, listen(502, PROTO_MODBUS) serves a fixed data model
  * (coils, discrete inputs, holding + input registers, all in BSS) over Modbus
  * TCP: Read/Write Coils (FC 1/5/15), Read Discrete Inputs (FC 2), Read/Write
  * Holding Registers (FC 3/6/16), and Read Input Registers (FC 4). The codec
@@ -4095,7 +4187,7 @@
  * @brief Opt-in mesh (sibling-cache) distribution for the edge cache (PC_ENABLE_EDGE_MESH).
  *
  * Lets a fleet of edge nodes share one warm cache: on a full local miss, a node queries its configured
- * sibling peers (over a plaintext ConnProto::PROTO_MESH TCP link) before hitting the origin, and pulls a
+ * sibling peers (over a plaintext PROTO_MESH TCP link) before hitting the origin, and pulls a
  * fresh copy from whichever peer has it - so the origin is fetched once per fleet, not once per node. Pull
  * (read-through) only: no push, no invalidation protocol, no consistency window - a stale sibling copy
  * self-expires by its own TTL and the requester re-checks freshness on arrival. The transfer carries the
@@ -4968,8 +5060,8 @@
  * None), the Session (CreateSession + ActivateSession), GetEndpoints, the Read, Write
  * and Browse services (registered resolvers map a NodeId to a value / accept a written
  * value / list child references), plus CloseSession + CloseSecureChannel and a
- * ServiceFault for unsupported services, served on TCP via ConnProto::PROTO_OPCUA
- * (`listen(4840, ConnProto::PROTO_OPCUA)`). The MSG framing is spec-faithful (incl.
+ * ServiceFault for unsupported services, served on TCP via PROTO_OPCUA
+ * (`listen(4840, PROTO_OPCUA)`). The MSG framing is spec-faithful (incl.
  * SecureChannelId), so standard clients interoperate (verified with python asyncua:
  * connect + browse + read + write/read-back). All pure and host-tested. No heap, no stdlib.
  */
@@ -5428,7 +5520,7 @@
  * When set, the transport (L4) fires an application callback on every connection
  * state transition - pc_conn_on_event(slot, old_state, new_state, reason) - and
  * maintains lock-free counters (accepts, closes by reason, idle timeouts, RX
- * backpressure events, dropped deferred events, and a live ConnState::CONN_CLOSING gauge)
+ * backpressure events, dropped deferred events, and a live CONN_CLOSING gauge)
  * readable via pc_conn_counters_get(). This is the only state-transition trace the
  * L4/L5 core exposes; pair it with PC_ENABLE_STATS for request-level metrics.
  */
@@ -5461,7 +5553,7 @@
 #endif
 
 /**
- * @brief Stack scratch for pc_web_terminal_frame()/println() line building.
+ * @brief Stack scratch for pc_web_terminal_println() line building.
  *
  * One formatted terminal line must fit in this many bytes (longer is truncated).
  * Allocated on the stack only during the call - no persistent RAM cost.
@@ -5486,7 +5578,7 @@
 #endif
 
 /**
- * @brief Expose a diagnostic JSON endpoint via server.diag().
+ * @brief Expose a diagnostic JSON endpoint via diag().
  *
  * Disabled by default - enabling it exposes compile-time configuration
  * (buffer sizes, feature flags) which could aid an attacker.  Only
@@ -5494,9 +5586,13 @@
  *
  * When enabled, serve it from any route handler:
  * @code
- *   server.on("/diag", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
- *       server.diag(id);
- *   });
+ *   static void handle_diag(uint8_t id, HttpReq *req)
+ *   {
+ *       (void)req;
+ *       diag(id);
+ *   }
+ *
+ *   on_http("/diag", HTTP_GET, handle_diag);
  * @endcode
  */
 #ifndef PC_ENABLE_DIAG
@@ -6186,11 +6282,11 @@
  * @brief Size in bytes of the shared per-dispatch scratch arena.
  *
  * Codec / protocol handlers borrow transient working memory from this single BSS
- * arena (see server/mmgr/plaintext.h) instead of each feature owning a
+ * arena (see mmgr/plaintext.h) instead of each feature owning a
  * dedicated buffer. The session layer empties it before every event dispatch, so
  * it only needs to hold the *peak concurrent* scratch of any one dispatch, not
  * the sum across features. Tune from the pc_plaintext_high_water() reading on a real
- * workload; an over-budget borrow fails closed (pc_plaintext_alloc returns nullptr).
+ * workload; an over-budget borrow fails closed (pc_plaintext_alloc returns NULL).
  */
 #ifndef PC_PLAINTEXT_ARENA_SIZE
 #define PC_PLAINTEXT_ARENA_SIZE 8192
@@ -6312,7 +6408,7 @@
 #endif
 
 /**
- * @brief Size in bytes of the per-slot SECURE pool (see server/mmgr/secure.h), DERIVED.
+ * @brief Size in bytes of the per-slot SECURE pool (see mmgr/secure.h), DERIVED.
  *
  * Not a chosen number. Every borrow from this pool is a working set some module declares - see the
  * PC_WORK_* constants, each proved against its struct's sizeof by a static_assert in the module that
@@ -6437,13 +6533,14 @@
  * @brief Runtime-tunable server parameters.
  *
  * Can be declared as `const PROGMEM` (flash) or as a mutable variable (RAM).
- * Pass a pointer to begin() or DeterministicAsyncTCP::init().
+ * Pass a pointer to proto_begin() / begin_http() / begin_tls(), which hand it
+ * to proto_tcp_pool_init().
  */
-struct WebServerConfig
+typedef struct WebServerConfig
 {
     /** Milliseconds of inactivity before a connection is force-closed. */
-    uint32_t conn_timeout_ms;
-};
+    proto_u32 conn_timeout_ms;
+} WebServerConfig;
 
 // ---------------------------------------------------------------------------
 // Protocol identifier
@@ -6460,7 +6557,7 @@ struct WebServerConfig
  * part of the listener API.  Feature flags gate the implementation, not the
  * identifier.
  */
-enum class ConnProto : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     PROTO_NONE = 0,         ///< Unassigned slot.
     PROTO_HTTP = 1,         ///< HTTP/1.1 with optional WS and SSE upgrades.
@@ -6473,7 +6570,7 @@ enum class ConnProto : uint8_t
     PROTO_BRIDGE = 8,       ///< address:port -> hardware bus (PC_ENABLE_IFACE_BRIDGE): UART/SPI/I2C device server.
     PROTO_NTRIP_CASTER = 9, ///< NTRIP caster (PC_ENABLE_NTRIP_CASTER): serves RTCM3 corrections to rovers.
     PROTO_MESH = 10, ///< Edge-cache sibling link (PC_ENABLE_EDGE_MESH): answers a peer's content-addressed query.
-};
+} ConnProto;
 
 /**
  * @brief Network interface a connection arrived on (for per-route filtering).
@@ -6482,13 +6579,19 @@ enum class ConnProto : uint8_t
  * IP to the softAP IP (see set_ap_ip()). Used to gate routes to
  * the station or softAP interface only (on(..., pc_iface)).
  */
-enum class pc_iface : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     PC_IFACE_ANY = 0, ///< Unknown / no filter (matches any interface).
     PC_IFACE_STA = 1, ///< Station interface (joined to an AP / your LAN).
     PC_IFACE_AP = 2,  ///< softAP interface (clients joined to the device).
     PC_IFACE_ETH = 3, ///< Ethernet interface (wired PHY).
-};
+} pc_iface;
+
+// Both of these are struct members (TcpConn::proto, TcpConn::iface, Listener::proto, and a route's
+// interface gate), so their width is per-slot BSS rather than a detail of the type. Pinned here
+// because the pool sizes in this file are what the footprint is computed from.
+static_assert(sizeof(ConnProto) == 1, "ConnProto must stay one byte: it is a per-slot struct member");
+static_assert(sizeof(pc_iface) == 1, "pc_iface must stay one byte: it is a per-slot struct member");
 
 // ---------------------------------------------------------------------------
 // Compile-time sanity checks
@@ -6970,11 +7073,11 @@ enum class pc_iface : uint8_t
 
 // -- Core: protocol dispatch + shared outbound transport (always built) --
 /** @brief Size of the protocol-handler dispatch table; must exceed the largest ConnProto id. */
-#ifndef PC_PROTO_MAX
-#define PC_PROTO_MAX 11
+#ifndef PROTO_MAX_HANDLERS
+#define PROTO_MAX_HANDLERS 11
 #endif
 // proto_register / proto_get index this table by ConnProto id, so it must be wide enough for every id.
-static_assert((unsigned)ConnProto::PROTO_MESH < PC_PROTO_MAX, "PC_PROTO_MAX must exceed the largest ConnProto id");
+static_assert((unsigned)PROTO_MESH < PROTO_MAX_HANDLERS, "PROTO_MAX_HANDLERS must exceed the largest ConnProto id");
 /** @brief Reverse-SSH tunnel: max concurrent forwarded-tcpip channels bridged at once. A relay that
  * forwards to a web UI opens one channel per inbound TCP connection, so this bounds concurrency. */
 #if PC_ENABLE_SSH_CLIENT

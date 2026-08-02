@@ -12,9 +12,9 @@
 // The allocator mechanics themselves belong to test_arena; duplicating them here would be testing
 // the same code twice.
 
-#include "network_drivers/session/worker.h" // pc_worker_set_self()
-#include "server/mmgr/plaintext.h"
-#include "server/mmgr/secure.h"
+#include "mmgr/arena.h" // pc_worker_set_self()
+#include "mmgr/plaintext.h"
+#include "mmgr/secure.h"
 #include <string.h>
 #include <unity.h>
 

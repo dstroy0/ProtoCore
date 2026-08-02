@@ -29,10 +29,10 @@ accident - each states the no-heap guarantee for its own reason:
       directly within the BSS/Data segments, ensuring memory layouts are unalterable
       at runtime.
 
-3. Static Thread Stack Sizing and Verification (Rule 18.8 / Rule A18-1-1)
-    - Rule: All task stacks and local hardware buffers must be bounded using
-      compile-time constants via 'std::array' or fixed arrays. Variable-Length
-      Arrays (VLAs) are completely prohibited.
+3. Static Thread Stack Sizing and Verification (Rule 18.8)
+    - Rule: All task stacks and local hardware buffers must be bounded by a
+      compile-time constant. Variable-Length Arrays (VLAs) are completely
+      prohibited.
     - Rationale: Prevents unexpected runtime modifications of the CPU stack pointer,
       enforcing a mathematically provable maximum stack depth layout before deployment.
 
@@ -73,19 +73,26 @@ accident - each states the no-heap guarantee for its own reason:
 
 ## Type conversion and explicit memory
 
-9. Strict Type Alignment via Uniform Braced Initialization (Rule A8-5-2)
-    - Rule: All fundamental variable types must be initialized using uniform
-      braced syntax (e.g., 'uint32_t scalar{100U};'). Naked variable declarations
-      without an initial explicit value are banned.
-    - Rationale: Completely blocks implicit type-narrowing transformations at the
-      compiler level, ensuring data widths match the underlying CPU registers.
+9. Explicit Initialization at the Declaration (Rule 9.1)
+    - Rule: Every object is given its value where it is declared. A scalar takes a
+      literal of its own type ('proto_u32 scalar = 100U;'), an aggregate takes
+      '= {0}'. A declaration that names storage without setting it is banned, and
+      a later 'return false' guard does not count as setting it.
+    - Rationale: An object read before it is set has no value the standard defines,
+      so the instruction the compiler emits for that read is whatever was in the
+      register or the stack slot. Setting it at the declaration removes the window
+      entirely rather than relying on every path afterwards to close it.
 
-10. Prohibition of C-Style Cast Blocks (Rule A5-2-1)
-    - Rule: Traditional C-style type brackets (e.g., '(uint32_t)variable') are
-      completely banned. Developers must exclusively use explicit 'static_cast'
-      or 'reinterpret_cast'.
-    - Rationale: Restricts hidden or accidental conversions between pointers and
-      integers, ensuring all address calculations are exposed clearly to static analysis.
+10. Casts Appear Only at a Boundary (Rules 11.3, 11.4)
+    - Rule: A cast is written where a value crosses out of the library's own type
+      system: a byte read off the wire, a width narrowed on the way into a field, a
+      vendor API that demands its own type. A cast written to make a type error
+      compile is banned, and so is a cast that discards 'const' or converts between
+      pointers to different object types.
+    - Rationale: C performs the conversion either way; the cast only decides whether
+      it is written down. Confining casts to the boundaries makes the set of places
+      a width or a sign can change a short list a reviewer can read, instead of one
+      that has to be searched for.
 
 11. Banned Implicit Pointer-to-Boolean Evaluation
     - Rule: Evaluating a raw pointer or address symbol directly as a conditional
@@ -94,10 +101,10 @@ accident - each states the no-heap guarantee for its own reason:
     - Rationale: Eliminates type ambiguity during conditional branches, simplifying
       the binary instructions generated for execution testing.
 
-12. Explicit Unused Return Serialization (Rule A0-1-2)
+12. Explicit Unused Return Serialization (Rule 17.7)
     - Rule: It is prohibited to call a non-void function without handling its
-      return symbol. If a status value is intentionally skipped, it must be explicitly
-      wrapped via 'static_cast<void>(function());'.
+      return symbol. If a status value is intentionally skipped, the call is
+      explicitly discarded with '(void)function();'.
     - Rationale: Guarantees that the omission of error checking is a conscious,
       documented engineering decision rather than a developer oversight.
 

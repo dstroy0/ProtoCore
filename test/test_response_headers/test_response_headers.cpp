@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // Unit tests for custom response headers and cookies:
-//   add_response_header(), set_cookie(), clear_response_headers().
+//   proto_add_response_header(), set_cookie(), clear_response_headers().
 //
 // Tests verify that:
 //   - A queued header appears in a send() response
@@ -35,15 +35,15 @@ static void push_str(uint8_t slot, const char *s)
 static void h_one_header(uint8_t slot, HttpReq *req)
 {
     (void)req;
-    add_response_header(slot, "X-Custom", "hello");
+    proto_add_response_header(slot, "X-Custom", "hello");
     send_text(slot, 200, "text/plain", "ok");
 }
 
 static void h_two_headers(uint8_t slot, HttpReq *req)
 {
     (void)req;
-    add_response_header(slot, "X-One", "1");
-    add_response_header(slot, "X-Two", "2");
+    proto_add_response_header(slot, "X-One", "1");
+    proto_add_response_header(slot, "X-Two", "2");
     send_text(slot, 200, "text/plain", "ok");
 }
 
@@ -64,14 +64,14 @@ static void h_cookie_attrs(uint8_t slot, HttpReq *req)
 static void h_header_empty(uint8_t slot, HttpReq *req)
 {
     (void)req;
-    add_response_header(slot, "X-Empty", "yes");
+    proto_add_response_header(slot, "X-Empty", "yes");
     send_empty(slot, 204);
 }
 
 static void h_header_redirect(uint8_t slot, HttpReq *req)
 {
     (void)req;
-    add_response_header(slot, "X-Redir", "yes");
+    proto_add_response_header(slot, "X-Redir", "yes");
     redirect(slot, 302, "/elsewhere");
 }
 
@@ -84,7 +84,7 @@ static void h_plain(uint8_t slot, HttpReq *req)
 static void h_clear(uint8_t slot, HttpReq *req)
 {
     (void)req;
-    add_response_header(slot, "X-Gone", "1");
+    proto_add_response_header(slot, "X-Gone", "1");
     clear_response_headers(slot);
     send_text(slot, 200, "text/plain", "ok");
 }
@@ -95,8 +95,8 @@ static void h_oversized(uint8_t slot, HttpReq *req)
     static char big[EXTRA_HDR_BUF_SIZE + 64];
     memset(big, 'A', sizeof(big) - 1);
     big[sizeof(big) - 1] = '\0';
-    add_response_header(slot, "X-Big", big); // must be dropped whole
-    add_response_header(slot, "X-Small", "ok");
+    proto_add_response_header(slot, "X-Big", big); // must be dropped whole
+    proto_add_response_header(slot, "X-Small", "ok");
     send_text(slot, 200, "text/plain", "ok");
 }
 

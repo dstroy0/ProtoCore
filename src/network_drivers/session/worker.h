@@ -26,29 +26,9 @@
 
 #include "protocore_config.h"
 
-/** @brief Number of server worker tasks (PC_WORKER_COUNT). */
-int pc_worker_count(void);
-
-/**
- * @brief Worker id [0, count) of the calling task; 0 by default / single-worker.
- *
- * With PC_WORKER_COUNT == 1 (the default) there is exactly one worker, so the answer is 0 by
- * construction and this is an inline constant - no lookup, no call. That matters because every pool
- * borrow asks: the multi-worker path reads a `thread_local`, which on FreeRTOS resolves through the
- * task's TLS block rather than a register, and it was being paid on operations that are otherwise a
- * single struct-field read.
- */
-#if PC_WORKER_COUNT == 1
-inline int pc_worker_self(void)
-{
-    return 0;
-}
-#else
-int pc_worker_self(void);
-#endif
-
-/** @brief Bind the calling task/thread to worker id @p id (worker entry / tests). */
-void pc_worker_set_self(int id);
+// Worker identity (pc_worker_count / pc_worker_self / pc_worker_set_self) is declared in
+// mmgr/arena.h, with the pools it indexes. This header is scheduling: starting, waking, stopping
+// and deferring onto those workers.
 
 // ---------------------------------------------------------------------------
 // Worker tasks (ESP32)

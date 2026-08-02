@@ -7,9 +7,9 @@
 // extraction, aud-as-array, and every rejection (alg, signature, iss, aud, exp,
 // missing key, malformed).
 
-#include "crypto/asymmetric/bignum.h"                        // bn_* direct coverage
+#include "crypto/asymmetric/bignum.h" // bn_* direct coverage
+#include "mmgr/plaintext.h"
 #include "network_drivers/presentation/ssh/crypto/ssh_rsa.h" // in-test RS256 signing
-#include "server/mmgr/plaintext.h"
 #include "services/security/oidc/oidc.h"
 #include <stdint.h>
 #include <stdio.h>

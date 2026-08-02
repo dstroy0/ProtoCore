@@ -18,7 +18,7 @@
 #include "board_drivers/board_profiles/pc_platform.h" // PC_HAS_HW_BIGNUM
 #include "crypto/asymmetric/bignum.h"
 #include "crypto/crypto_opt.h"
-#include "server/mmgr/secure.h"
+#include "mmgr/secure.h"
 #include <string.h>
 
 #if !PC_HAS_HW_BIGNUM

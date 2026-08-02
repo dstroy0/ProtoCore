@@ -18,30 +18,7 @@
 #include "freertos/queue.h"
 #include "freertos/task.h"
 #endif
-namespace
-{
-// Per-task worker id, for a genuine multi-worker build. Default 0: the user loop(), the lwIP
-// thread, and unit tests all read worker 0. With PC_WORKER_COUNT == 1 pc_worker_self() answers 0
-// inline (see worker.h) and this TLS slot is never read on the hot path.
-thread_local int t_worker_id = 0;
-} // namespace
-
-int pc_worker_count(void)
-{
-    return PC_WORKER_COUNT;
-}
-
-#if PC_WORKER_COUNT != 1
-int pc_worker_self(void)
-{
-    return t_worker_id;
-}
-#endif
-
-void pc_worker_set_self(int id)
-{
-    t_worker_id = id;
-}
+// Worker identity lives in mmgr/arena.cpp, with the pools it indexes.
 
 // ---------------------------------------------------------------------------
 // Worker tasks

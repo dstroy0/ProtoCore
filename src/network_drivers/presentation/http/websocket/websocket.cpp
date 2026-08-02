@@ -21,9 +21,9 @@
 #include <string.h>
 
 #if PC_ENABLE_WS_DEFLATE
+#include "mmgr/plaintext.h"
 #include "network_drivers/presentation/codec/deflate/deflate.h"
 #include "network_drivers/presentation/codec/inflate/inflate.h"
-#include "server/mmgr/plaintext.h"
 #endif
 
 WsConn ws_pool[MAX_WS_CONNS];

@@ -11,7 +11,7 @@
 #include "crypto/crypto_opt.h"
 #include "crypto/crypto_scratch.h" // pc_ct_eq
 #include "crypto/mac/poly1305.h"
-#include "server/mmgr/secure.h" // the secure pool: AEAD working state, wiped on release
+#include "mmgr/secure.h" // the secure pool: AEAD working state, wiped on release
 #include <string.h>
 PC_CRYPTO_HOT
 

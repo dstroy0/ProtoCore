@@ -14,7 +14,7 @@
 
 #if PC_ENABLE_PARTITION_MONITOR
 
-#include "shared_primitives/frame.h"
+#include "mmgr/frame.h"
 #include <string.h>
 
 // esp_partition type/subtype constants (mirrors esp_partition_type_t/subtype_t so

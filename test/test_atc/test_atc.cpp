@@ -3,8 +3,8 @@
 //
 // Host tests for services/atc: the ATC field-I/O interop snapshot.
 
+#include "mmgr/membuild.h"
 #include "services/machine_tool/atc/atc.h"
-#include "shared_primitives/strbuf.h"
 #include <string.h>
 #include <unity.h>
 

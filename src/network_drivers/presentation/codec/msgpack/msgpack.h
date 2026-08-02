@@ -30,7 +30,7 @@
 
 #include "network_drivers/presentation/codec/codec.h" // pc_codec_type - one item vocabulary
 #include "protocore_config.h"
-#include "server/mmgr/span.h" // pc_span / pc_cspan - the region, bound with pc_span_from()
+#include "shared_primitives/span.h" // pc_span / pc_cspan - the region, bound with pc_span_from()
 #include <stddef.h>
 #include <stdint.h>
 

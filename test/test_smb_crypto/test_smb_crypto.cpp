@@ -12,7 +12,7 @@
 #include "crypto/kdf/kdf.h"
 #include "crypto/mac/aes_cmac.h"
 #include "crypto/mac/hmac_sha256.h"
-#include "server/mmgr/secure.h"
+#include "mmgr/secure.h"
 #include "services/file_transfer/smb/smb2.h" // pc_smb3_derive_signing_key
 #include <string.h>
 #include <unity.h>

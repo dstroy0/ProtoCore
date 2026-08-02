@@ -16,7 +16,7 @@
 
 #include "crypto/cipher/aes256ctr.h"
 #include "crypto/crypto_opt.h"
-#include "server/mmgr/secure.h"
+#include "mmgr/secure.h"
 #include <string.h>
 #ifdef ARDUINO
 #include <mbedtls/aes.h>

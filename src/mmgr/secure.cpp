@@ -12,8 +12,7 @@
 
 #include "secure.h"
 #include "board_drivers/board_profiles/pc_platform.h" // pc_platform_context_id()
-#include "network_drivers/session/worker.h"
-#include "server/mmgr/arena.h"
+#include "mmgr/arena.h"
 #include <assert.h>
 #include <stdint.h>
 
