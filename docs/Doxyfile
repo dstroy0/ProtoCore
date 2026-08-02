@@ -10,7 +10,7 @@
 #---------------------------------------------------------------------------
 PROJECT_NAME           = "ProtoCore"
 PROJECT_BRIEF          = "Deterministic, zero-heap network stack for embedded targets"
-PROJECT_NUMBER         = "v0.0.3"
+PROJECT_NUMBER         = "v0.0.4"
 PROJECT_LOGO           =
 
 #---------------------------------------------------------------------------

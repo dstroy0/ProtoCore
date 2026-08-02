@@ -1,6 +1,6 @@
 {
   "name": "ProtoCore",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Zero-heap, asynchronous multi-protocol network server for ESP32 with a fully deterministic memory footprint. HTTP/1.1 and HTTP/2 (HTTP/3 over QUIC in progress) plus WebSocket (RFC 6455), Server-Sent Events, Basic/Digest auth, file serving, multipart, JSON, templating, and a middleware pipeline; optional HTTPS/TLS, SSH, Telnet, and SNMP (v1/v2c/v3). All buffers statically sized at compile time; feature flags strip unused subsystems.",
   "keywords": [
     "esp32",
