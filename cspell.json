@@ -375,6 +375,7 @@
     "FILE_CHUNK_SIZE",
     "filetime",
     "filexfer",
+    "finishable",
     "FIPS",
     "firewalled",
     "firewatch",

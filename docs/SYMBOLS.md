@@ -289,6 +289,14 @@ behavior across duplicated or symlinked headers is not guaranteed.
 case-sensitivity trap, where a repository developed on case-insensitive Windows breaks on
 case-sensitive Linux over a capitalization-only difference.
 
+**Under `src/`, `.c` and `.h` are the only extensions.** The language is part of the name here: a
+`.cpp` in `src/` is a file this law does not govern, because half of what the law decides - that a
+symbol is flat, that an enum member carries its prefix, that there is no scope to qualify with -
+stops being a rule and becomes a preference the moment the file can declare a namespace. The
+extension is also the one part a checker can decide without parsing, so it is the cheapest place to
+catch a file that was moved into `src/` from somewhere less constrained. `examples/` keeps `.ino`
+and `performance_benching/` keeps `.cpp`; neither is governed by this document.
+
 Markdown is the documented exception: docs use `UPPER_SNAKE` (`README.md`, `FEATURES.md`,
 `SRCBANNED.md`, and this file), including the per-die register references under
 `board_drivers/hal/esp/` such as `P4_MIPI_HELPERS.md`. The case-sensitivity argument is about
@@ -347,7 +355,8 @@ python ci_tooling/check/check_owned_context.py     # single-owner state rule
 ```
 
 `check_symbols.py` decides only what is decidable: prefix and casing, macro scope and length,
-include-guard form, file naming, and the absence of `namespace` / `using namespace`. Judgment calls
+include-guard form, file naming and extension, and the absence of `namespace` / `using namespace`.
+Judgment calls
 (is this name descriptive, should this particular enum de-prefix) are review, and this document is
 what the review argues from.
 

@@ -90,7 +90,7 @@ solves it with a lock:
 
 ## Required (the positive side)
 
-- **Pure, host-tested codecs.** A new protocol codec is `src/services/<name>/<name>.{h,cpp}` behind a
+- **Pure, host-tested codecs.** A new protocol codec is `src/services/<name>/<name>.{h,c}` behind a
   `PC_ENABLE_<NAME>` flag (default 0), no sockets/crypto in the codec, with a `native_<name>` Unity
   suite added to `test/test_matrix.json` (regen with `test/gen_test_envs.py`).
 - **Implement protocols faithfully** in spec field order; verify against the live standard **and** a

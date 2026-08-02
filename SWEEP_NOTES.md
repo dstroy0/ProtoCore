@@ -1,5 +1,98 @@
 # Law sweep - working notes
 
+## How to read this file
+
+**Nothing here is marked done by me.** Entries record what was found and what is believed, not what
+was finished, because this session produced several confident "done" claims that were wrong and each
+one stopped the search early. The cheapest of those cost 44 files of silent corruption. If an item
+looks finished, re-measure it rather than trusting the note.
+
+The measurement that matters is a compile with the file's own feature flag ON. Compiling with flags
+off preprocesses the body away and reports a success that means nothing - that is how 148 broken
+files read as clean for most of a day.
+
+---
+
+## Tooling: rule zero is ON HOLD (2026-08-02)
+
+The C11 rule is written into the four law documents and **is not enforced by anything**. That gap is
+deliberate and needs to stay visible:
+
+- `docs/SRCBANNED.md`, `docs/SRC_LAW.md`, `docs/SYMBOLS.md`, `.github/CONTRIBUTING.md` all state it.
+- `SYMBOLS.md` sec 7 now claims `check_symbols.py` checks file extensions. **It does not.** Written
+  as an IOU against the parked tooling, not as a description of today.
+- `check_src_banned.py` has no ban 23 and still scans `.cpp`/`.hpp` under `src/` as if they belong.
+
+Parked, working, and measured, at `scratchpad/rule_zero_onhold/`:
+
+- `check_src_banned.py` - `EXTS` reduced to `{.c,.h}`, C++ extensions reported on the filename alone,
+  ban 23 covering `using X =`, `namespace`, `nullptr`, `static_assert`, the `_cast`s, `template<`,
+  `enum class`, `X::Y`, and reference params / default arguments anchored inside a parameter list.
+- Removes ban 18's carve-out for `static constexpr` members of a namespacing struct. That exemption
+  protected 616 scoped data tables; ban 23 deletes the construct, so there is no scope to be a
+  member of.
+
+**With it enabled the gate reports 807 violations across 52 `.cpp` files.** That is the honest size
+of the remaining C++ in `src/`, and it is the number to watch. Ban 23 is deliberately not baselined,
+so enabling the tooling turns the gate red until that reaches zero - the open decision is whether to
+baseline it for the transition or hold the tooling until the count is gone.
+
+Two things the exercise turned up that are true regardless of whether rule zero ever lands:
+
+- `shared_primitives/types.h:140,150` use `static_assert`, not `_Static_assert`. GCC accepts it in
+  C11 via `<assert.h>`, so `-fsyntax-only` never complained. shared_primitives was called clean
+  before this was found.
+- The ban-19 ledger appearing to collapse (929 -> 154 -> 1 "remaining") was an artifact of editing
+  the checker mid-session, not a real loss of coverage. It reads 929 again with the tooling reverted.
+  Recorded because the collapse looked exactly like a silent regression and cost time to disprove.
+
+---
+
+## What the C++ damage actually is (2026-08-02)
+
+A closed set of shapes, each mechanical once recognized. Listed with the C spelling because the
+error the compiler prints usually names the symptom, not the shape:
+
+| shape | C spelling | how it presents |
+| --- | --- | --- |
+| `using X = T` | `typedef T X;` | a struct whose member has the alias fails with it, then every access reports "has no member" |
+| in-class initializer | initialize at the object's definition | struct fails to parse, same "has no member" cascade |
+| reference param `X &x` | `X *x`, `.` becomes `->` | `expected ';' or ')' before '&'` |
+| default argument | spell it at each call site, or `NULL` means the default and the callee resolves it | `expected ';' or ')' before '='` |
+| `X::Y` | prefixed name | `expected ')' before ':'`, or "has no member named X" inside a braced initializer |
+| `static_assert` | `_Static_assert` | nothing from GCC - it is legal C11 via `<assert.h>` |
+| `struct X;` then bare `X *` | `struct X *` | `unknown type name 'X'; use 'struct' keyword` |
+| C++ brace assign `a[0] = {..}` | compound literal `(T){..}` | `expected expression before '{'` |
+| `sizeof(T::member)` | `sizeof(obj.member)` | C has no qualified member-sizeof |
+
+**One bad declaration produces dozens of errors that point away from it.** Measured: `sqlite_format.c`
+83 errors from a single `using` alias; `snmp_v3.c` 91 from one struct's in-class initializers;
+`thread.c` 107 from three qualifier groups. So the error *count* is a bad proxy for the work, and the
+first error in a file is worth more than the other eighty.
+
+Corollary that cost real time: I twice diagnosed a shape from the error text without opening the
+file, and was wrong both times - `'SpinelPropInfo' has no member named 'SpinelProp'` is a `::` in a
+braced initializer, not a damaged struct, and the 869 "unclassified" errors in the reconciliation map
+were cascade noise, not a seventh unknown shape. **Read the file and diff it against v0.0.1.**
+
+### Reconciliation map
+
+Every failing file has a `v0.0.1` counterpart - nothing failing is new since the tag, so the tag is a
+complete reference. Build the map with a compile-per-file at its own flag; do not trust an old count.
+
+### The truncated-constant corruption - RE-VERIFY, do not assume clean
+
+A `constexpr` sweep rewrote `struct X { static constexpr T NAME = V; }` members to `#define` but kept
+only the **final character** of each name: `H2_DATA` -> `A`, `SB_OK` -> `K`. 425 constants over 44
+headers. `southbound.h` defined `D` twice with different values, so referencing code was silently
+taking the wrong constant rather than failing.
+
+Recovered from v0.0.1 by value-match, then declaration order, then by hand. **This is exactly the
+class of thing to re-check rather than believe** - it was invisible for a day because the verification
+compiled with flags off, and the same sweep may have damaged shapes nobody has looked for yet.
+
+---
+
 ## Standing directive: src/ moves to C. Hard C++ ban.
 
 `src/` is being converted to C. C++ is banned there.
@@ -43,7 +136,13 @@ Untracked. One file at a time, in tree order. Each file is read against
 [docs/SYMBOLS.md](docs/SYMBOLS.md) and [.github/CONTRIBUTING.md](.github/CONTRIBUTING.md),
 and is not left until it is clean.
 
-Status: `DONE` fixed and verified - `OPEN` found, not fixed - `ASK` needs a decision.
+Status: `OPEN` found, not fixed - `ASK` needs a decision - `CLAIMED` believed fixed by whoever wrote
+the entry, **not** confirmed since.
+
+`DONE` is retired as a status. Every `DONE` below was rewritten to `CLAIMED` on 2026-08-02, because
+a status that means "stop looking here" is only as good as the measurement behind it, and the
+measurements behind these were `-fsyntax-only` with feature flags off - which cannot fail. Promote a
+`CLAIMED` back to fixed only with a compile at its own flag, and say what you ran.
 
 **Nothing is deferred.** A find stays OPEN until it is fixed and verified, whatever file it was
 found in and whichever file is being worked. Finding something while passing through does not
@@ -88,7 +187,7 @@ there is concrete.
 
 ## src/protocore_config.h
 
-### DONE (commit 88e22b35d)
+### CLAIMED (commit 88e22b35d) - unverified since
 
 - **7 `#undef` sites** (SRC_LAW rule 13). Six were a dependent feature rewriting the user's
   `PC_ENABLE_<X>` to 1, so `-DPC_ENABLE_CBOR=0` with SenML on silently came back as 1. Each is now
@@ -196,10 +295,10 @@ Known constants: `WS_FRAME_SIZE` 512, `DEFLATE_SCRATCH_SIZE` 4096, `INFLATE_SCRA
 `SSH_MAX_EFFECTIVE_PAYLOAD` = `SSH_PKT_BUF_SIZE` or, with SSH zlib on,
 `2 + SSH_PKT_BUF_SIZE + (SSH_PKT_BUF_SIZE >> 3) + 32`.
 
-DONE: `oidc.cpp`'s two magic numbers are now `PC_OIDC_HDR_LEN` / `PC_OIDC_ISS_LEN` in `oidc.h`,
+CLAIMED: `oidc.cpp`'s two magic numbers are now `PC_OIDC_HDR_LEN` / `PC_OIDC_ISS_LEN` in `oidc.h`,
 alongside `PC_PLAINTEXT_WORK_OIDC` and a `static_assert` at the borrow site.
 
-### DONE - the websocket send path had no worst case
+### CLAIMED - the websocket send path had no worst case
 
 Resolved by capping the deflate borrow: new `PC_WS_DEFLATE_MAX` (defaults to `WS_FRAME_SIZE`) in
 `protocore_config.h`, checked in `ws_send_frame()` before the borrow, with
@@ -310,7 +409,7 @@ own sizing (`PC_WORK_*`), not part of this derivation:
 | `ssh_conn.cpp`   | connection | `PC_PLAINTEXT_WORK_SSH_CONNECTION` (done)                           |
 | `ssh_client.cpp` | connection | same layer as ssh_conn; its kex borrows are a separate phase - OPEN |
 
-### `ssh_flow_control.{h,cpp}` - DONE (new owner)
+### `ssh_flow_control.{h,cpp}` - CLAIMED (new owner)
 
 RFC 4254 sec 5.2 flow control had no owner. The window pair and its rules were spread across four
 files, and one of them was a second implementation:
@@ -503,7 +602,7 @@ the shape the group needs.
 - File header describes the split that produced the file ("Split out of protocore.cpp… Behavior is
   identical to the pre-split code") rather than the code.
 
-### `SendCtx` - two resources under one nominal owner - DONE (not committed)
+### `SendCtx` - two resources under one nominal owner - CLAIMED (not committed)
 
 Split as below. `chunk[]` is now private to `response.cpp` behind `pc_resp_holds_slot()`, `file[]`
 private to `file_serving.cpp` behind `pc_file_holds_slot()`, `SendCtx` / `extern s_send` are gone
@@ -631,7 +730,7 @@ writers, so no layer can enforce the invariant it is responsible for. That is th
 `ssh_client.cpp` bug sits in: it kept a private copy of the state, discarded `maximum packet size`,
 and nothing could catch it.
 
-**DONE - signaling moved into `ssh_flow_control`.** `pc_ssh_sig_build_open_failure`,
+**CLAIMED - signaling moved into `ssh_flow_control`.** `pc_ssh_sig_build_open_failure`,
 `_build_open_confirm`, `_build_data`, `_build_window_adjust`, `_build_close`. They take the flow plus
 the ids the wire carries, never a channel struct, so there is no circular include and resolving a
 recipient number stays in the mux. `_build_data` performs the window check and the debit as one step,
@@ -787,7 +886,7 @@ already exist is the whole job.
 - **Nothing in this section is verified by a build.** `ssh_transport.cpp` is mid-migration and is the
   user's call to sign off.
 
-## The pool: ghost worker slot + the plaintext rename - DONE
+## The pool: ghost worker slot + the plaintext rename - CLAIMED
 
 ### The vacuous test (found by a green run that should have been red)
 
@@ -944,7 +1043,7 @@ at the byte it finds and must never see one.
   `pc_rd_u32`, `pc_rd_str`). Compiles today because C++ gives `inline` different linkage rules; it
   breaks when the file is built as C.
 
-## `src/server/` C11 conversion - sources DONE, headers OPEN
+## `src/server/` C11 conversion - sources CLAIMED, headers OPEN
 
 All 14 `.cpp` under `src/server/` are now `.c`: `auth`, `file_serving`, `http_range`, `middleware`,
 `regex`, `response`, `ssh_scp`, `ssh_sftp`, `webdav`, `websocket_sse`, plus `filesystem/filesystem`,

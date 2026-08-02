@@ -12,7 +12,7 @@ specification. The notes below keep contributions aligned with that.
   contribution is licensed under the same terms.
 - Every new source file starts with the standard header:
 
-    ```cpp
+    ```c
     // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
     // SPDX-License-Identifier: AGPL-3.0-or-later
     ```
@@ -29,7 +29,11 @@ specification. The notes below keep contributions aligned with that.
 ## Build and test
 
 The architecture is deliberately split so the logic compiles and runs on your
-host machine, separate from the `#ifdef ARDUINO` hardware wrappers.
+host machine, separate from the hardware wrappers. The split is two macros that
+are exact complements: `PROTOCORE_HOT` is the target build, `PROTOCORE_HOST` is
+the test build. Neither is spelled `ARDUINO` - naming one vendor's toolchain put
+every non-Espressif target on the host path. Which vendor a target build speaks
+to is `board_drivers/`' job, and no vendor header appears in the core.
 
 - **Native tests** (fast, no hardware): every feature has a `native_*` test
   environment. Run one with:
@@ -137,6 +141,24 @@ The examples index [docs/EXAMPLES.md](../docs/EXAMPLES.md) is generated from
 these READMEs, so the per-example README is where the real documentation lives.
 
 ## Code style
+
+- **`src/` is C11. No C++. Hard stop.** `.c` and `.h` are the only extensions there, and a file
+  compiles as C11 or it does not ship. Not "C-style C++", not "C plus a couple of conveniences."
+  `examples/` are Arduino sketches and `test/` has no style rules at all - this is about `src/`.
+
+    The reason is the target list. It includes c2000, where control-law code is written and reviewed
+    as C, so a library that needs a C++ compiler cannot be used where it is most needed. It is also
+    the rule that costs most to get wrong late, because C++ fails softly: `struct X;` lets you write
+    `X *` in C++ and not in C, `using X = T` compiles until a struct member needs it, and a default
+    argument is invisible at the call site. Each is one line, and each takes every use of itself down
+    with it, so the error count points anywhere except the cause.
+
+    The C spelling of each: `using X = T` is a `typedef`; a default argument is spelled at the call
+    site (or `NULL` means the default and the callee resolves it); a reference parameter is a
+    pointer; `X::Y` is a prefixed name ([SYMBOLS.md](../docs/SYMBOLS.md) sec 3); an in-class
+    initializer moves to the object's definition; `static_assert` is `_Static_assert`; `nullptr` is
+    `NULL`; `bool` is `proto_bool`. A forward-declared `struct X;` is fine and stays opaque, but in C
+    it declares only the tag, so uses spell `struct X *`.
 
 - **Formatting is enforced.** C/C++/`.ino` follow
   [.clang-format](../.clang-format) (4-space indent, 120 columns). Markdown is

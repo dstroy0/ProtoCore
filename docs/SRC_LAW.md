@@ -11,6 +11,30 @@ accident - each states the no-heap guarantee for its own reason:
   enforced by `ci_tooling/check/check_src_banned.py`.
 - [SYMBOLS.md](SYMBOLS.md) - the **naming** law, enforced by `ci_tooling/check/check_symbols.py`.
 
+## 0. The language is C11
+
+Everything below assumes it, so it comes first: **`src/` is C11, and C++ is banned there.** `.c` and
+`.h` are the only extensions; `examples/` are Arduino sketches and `test/` is unconstrained.
+
+The target list is the reason. It includes c2000, where control-law code is written and reviewed as
+C, so a library that requires a C++ compiler cannot be used where it is needed most. A reviewer
+reading `src/` should not have to know which of two languages a line is in to know what it costs.
+
+It is also what makes the rest of this document decidable rather than advisory. Every rule below is
+an argument about what the emitted instructions do, and each one is only finishable once the
+language is fixed: rule 3's provable stack depth assumes no constructor runs where you did not write
+a call; rule 9's "initialized at its declaration" means a value, not a constructor that may or may
+not be elided; rule 10's short list of casts assumes no implicit conversion operator exists to
+lengthen it; rule 12's `(void)f()` assumes `f` has one return path and not an exception edge. C++
+does not make these unknowable, it makes them require a second body of rules to pin down - which is
+exactly what the AUTOSAR C++14 guidelines in the bibliography are, and why they are cited as history
+rather than as governing here.
+
+The practical cost of relaxing it is that C++ fails softly in C code: `struct X;` lets a use spell
+`X *` in C++ and not in C, `using X = T` compiles until a struct member needs the alias, and a
+default argument is invisible at the call site. Each is one line, each takes every use of itself
+down with it, and the resulting error count points anywhere except the cause.
+
 ## Real-time OS and object allocation
 
 1. Zero Runtime Heap Allocation (Directive 4.12 / Rule A18-5-2)
@@ -97,7 +121,7 @@ accident - each states the no-heap guarantee for its own reason:
 11. Banned Implicit Pointer-to-Boolean Evaluation
     - Rule: Evaluating a raw pointer or address symbol directly as a conditional
       boolean flag (e.g., 'if (dev_ptr)') is banned. Comparisons must be fully
-      written out against 'nullptr' or 'NULL'.
+      written out against 'NULL'.
     - Rationale: Eliminates type ambiguity during conditional branches, simplifying
       the binary instructions generated for execution testing.
 
@@ -161,8 +185,13 @@ from the following governing safety-critical publications:
     - Foundational Standards: MISRA C:2004, MISRA C:2012 (with Amendments 1-4), and
       MISRA C:2023 / MISRA C:2025.
 
-2. AUTOSAR C++14 Guidelines:
+2. AUTOSAR C++14 Guidelines: **historical, not governing.**
     - "Guidelines for the use of the C++14 language in critical and safety-related systems"
     - Published by the AUTOSAR (AUTomotive Open System ARchitecture) Development Partnership.
     - Core Specification Referencing Release: Adaptive Platform Specifications (R17-03 through R19-11).
+    - Cited because several rules above were first written against it, while the implementation
+      was C++ under a C API, and their numbers are kept so the provenance stays traceable.
+      MISRA C governs `src/` now (see section 0). Where the two disagree, MISRA C wins, and an
+      AUTOSAR rule that only has meaning in C++ (A18-5-2's `new`/`delete`, A8-4-13's return-type
+      deduction) is satisfied here by the language rather than by review.
       \================================================================================
