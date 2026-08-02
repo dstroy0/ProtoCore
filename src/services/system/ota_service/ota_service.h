@@ -20,6 +20,8 @@
 
 #include "protocore_config.h"
 
+#if PC_ENABLE_OTA
+
 /**
  * @brief Register an authenticated streaming OTA endpoint.
  *
@@ -37,5 +39,7 @@
  * @endcode
  */
 void pc_ota_begin(const char *path, const char *user, const char *pass);
+
+#endif // PC_ENABLE_OTA
 
 #endif // PROTOCORE_OTA_SERVICE_H

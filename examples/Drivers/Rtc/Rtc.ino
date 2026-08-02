@@ -63,7 +63,7 @@ void setup()
     // The RTC is the primary source; upstream NTP is only for setting it.
     pc_time_source_add("rtc", 1, pc_rtc_time_source);
     pc_time_source_add("ntp", 2, pc_ntp_source);
-    pc_ntp_begin();
+    pc_ntp_begin(NULL, NULL, NULL);
 }
 
 void loop()

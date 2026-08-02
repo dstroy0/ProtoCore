@@ -35,12 +35,12 @@
 #if (PC_ENABLE_HTTP3 || PC_ENABLE_DTLS)
 
 /** @brief TLS handshake message types (RFC 8446 sec 4). */
-#define O 1
-#define O 2
-#define S 8
-#define E 11
-#define Y 15
-#define D 20
+#define TLS_HS_CLIENT_HELLO 1
+#define TLS_HS_SERVER_HELLO 2
+#define TLS_HS_ENCRYPTED_EXTENSIONS 8
+#define TLS_HS_CERTIFICATE 11
+#define TLS_HS_CERTIFICATE_VERIFY 15
+#define TLS_HS_FINISHED 20
 
 #define TLS_CIPHER_AES_128_GCM_SHA256 0x1301 ///< the one cipher suite we support
 #define TLS_GROUP_X25519 0x001d              ///< the classical key-exchange group we support

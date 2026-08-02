@@ -25,9 +25,9 @@
 #if PC_ENABLE_CCLINK
 
 // CC-Link command bytes: wire values compared/emitted, so integer constants in a namespacing struct.
-#define H 0x01 ///< cyclic refresh (master <-> station process image).
-#define L 0x02 ///< poll a station.
-#define T 0x0F ///< line test.
+#define CCLINK_CMD_REFRESH 0x01 ///< cyclic refresh (master <-> station process image).
+#define CCLINK_CMD_POLL 0x02    ///< poll a station.
+#define CCLINK_CMD_TEST 0x0F    ///< line test.
 
 /** @brief Arithmetic-sum checksum: low byte of the sum of @p len bytes. */
 uint8_t pc_cclink_sum(const uint8_t *bytes, size_t len);

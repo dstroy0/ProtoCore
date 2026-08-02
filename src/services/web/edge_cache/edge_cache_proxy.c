@@ -1115,13 +1115,13 @@ static void mesh_serve_pump(MeshConn *mc)
     }
     while (mc->out_off < mc->out_len)
     {
-        u16_t room = pc_conn_sndbuf(slot);
+        proto_u16 room = pc_conn_sndbuf(slot);
         if (room == 0)
         {
             return; // backpressure; retry next poll
         }
         uint16_t remaining = (uint16_t)(mc->out_len - mc->out_off);
-        u16_t n = remaining < room ? remaining : room;
+        proto_u16 n = remaining < room ? remaining : room;
         if (!pc_conn_send(slot, mc->outbuf + mc->out_off, n))
         {
             return; // retry next poll

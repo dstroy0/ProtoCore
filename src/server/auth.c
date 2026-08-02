@@ -247,12 +247,12 @@ void send_unauth(uint8_t slot_id, const Route *r, proto_bool stale)
     // follows the header.
     if (!req_is_head(slot_id))
     {
-        pc_conn_send(slot_id, header, (u16_t)hlen);
-        pc_conn_send_flush(slot_id, body, (u16_t)(sizeof(body) - 1));
+        pc_conn_send(slot_id, header, (proto_u16)hlen);
+        pc_conn_send_flush(slot_id, body, (proto_u16)(sizeof(body) - 1));
     }
     else
     {
-        pc_conn_send_flush(slot_id, header, (u16_t)hlen);
+        pc_conn_send_flush(slot_id, header, (proto_u16)hlen);
     }
 
     pc_resp_end(slot_id, 401, (int)(sizeof(body) - 1), keep, /*pre_flushed=*/PROTO_TRUE);

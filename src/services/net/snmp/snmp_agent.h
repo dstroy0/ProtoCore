@@ -92,7 +92,7 @@ typedef proto_bool (*SnmpSetFn)(const SnmpValue *in);
  * Clears the MIB table. Call before registering objects. Pass nullptr to keep
  * the default community.
  */
-void pc_snmp_agent_init(const char *ro_community = "public");
+void pc_snmp_agent_init(const char *ro_community);
 
 /** @brief Set the read-write community used to authorize Set requests (default: none -> Sets refused). */
 void pc_snmp_agent_set_rw_community(const char *rw_community);
@@ -106,12 +106,12 @@ void pc_snmp_agent_set_rw_community(const char *rw_community);
  * sysServices bitmask (commonly 72 = application + internet layers).
  */
 void pc_snmp_agent_set_system(const char *descr, const char *contact, const char *name, const char *location,
-                              long services = 72);
+                              long services);
 
 /** @brief Register a static OCTET STRING object. @return false if the table is full. */
-proto_bool pc_snmp_agent_add_string(const uint32_t *oid, size_t oid_len, const char *value, SnmpSetFn setter = NULL);
+proto_bool pc_snmp_agent_add_string(const uint32_t *oid, size_t oid_len, const char *value, SnmpSetFn setter);
 /** @brief Register a static INTEGER object. @return false if the table is full. */
-proto_bool pc_snmp_agent_add_integer(const uint32_t *oid, size_t oid_len, long value, SnmpSetFn setter = NULL);
+proto_bool pc_snmp_agent_add_integer(const uint32_t *oid, size_t oid_len, long value, SnmpSetFn setter);
 /** @brief Register a dynamic object served by @p getter (@p type names the value's BER tag). */
 proto_bool pc_snmp_agent_add_dynamic(const uint32_t *oid, size_t oid_len, uint8_t type, SnmpGetFn getter);
 
@@ -162,7 +162,7 @@ size_t pc_snmp_dispatch_pdu(const uint8_t *pdu, size_t pdu_len, proto_bool allow
  * Callback-driven (no per-loop servicing). Call after WiFi is up. On non-Arduino
  * builds this is a no-op so the core remains host-testable.
  */
-void pc_snmp_agent_begin_udp(uint16_t port = 161);
+void pc_snmp_agent_begin_udp(uint16_t port);
 
 #endif // PC_ENABLE_SNMP
 

@@ -227,7 +227,7 @@ typedef struct
             }
             if (n && pc_conn_active(slot))
             {
-                pc_conn_send(slot, buf, (u16_t)n);
+                pc_conn_send(slot, buf, (proto_u16)n);
             }
         }
     }

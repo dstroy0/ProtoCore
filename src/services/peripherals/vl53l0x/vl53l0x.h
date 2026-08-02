@@ -23,6 +23,8 @@
 
 #include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
 
+#if PC_ENABLE_VL53L0X
+
 #define VL53L0X_REG_SYSRANGE_START 0x00
 #define VL53L0X_REG_SYSTEM_INTERRUPT_CLEAR 0x0B
 #define VL53L0X_REG_RESULT_INTERRUPT_STATUS 0x13
@@ -54,5 +56,7 @@ proto_bool pc_vl53l0x_begin(uint8_t addr);
  * @return true on a fresh, valid reading; false if not ready / invalid / I2C error.
  */
 proto_bool pc_vl53l0x_read_mm(uint16_t *mm);
+
+#endif // PC_ENABLE_VL53L0X
 
 #endif // PROTOCORE_VL53L0X_H

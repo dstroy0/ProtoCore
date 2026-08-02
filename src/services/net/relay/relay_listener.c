@@ -101,12 +101,12 @@ typedef struct
         // Send as much as the inbound TCP send window currently allows (partial), not all-or-nothing: a
         // whole PC_RELAY_BUF chunk rarely fits tcp_sndbuf in one shot, and a failed all-or-nothing send
         // forwards zero bytes and stalls the transfer. room==0 is real backpressure - the pump retries.
-        u16_t room = pc_conn_sndbuf(br->conn_slot);
+        proto_u16 room = pc_conn_sndbuf(br->conn_slot);
         if (room == 0)
         {
             return 0;
         }
-        u16_t n = (len < (size_t)room) ? (u16_t)len : room;
+        proto_u16 n = (len < (size_t)room) ? (proto_u16)len : room;
         return pc_conn_send(br->conn_slot, buf, n) ? (int)n : 0;
     }
     // Origin (b) = the outbound pc_client; it reports EOF through the recv seam.

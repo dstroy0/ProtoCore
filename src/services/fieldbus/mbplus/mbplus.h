@@ -25,10 +25,10 @@
 #if PC_ENABLE_MBPLUS
 
 // Modbus Plus HDLC wire constants: integer values compared/emitted, in a namespacing struct.
-#define G 0x7E ///< HDLC frame delimiter.
-#define N 64   ///< stations 1..64 on a Modbus Plus segment.
-#define A 0x00 ///< data frame control.
-#define N 0x01 ///< token pass control.
+#define MBPLUS_FLAG 0x7E       ///< HDLC frame delimiter.
+#define MBPLUS_MAX_STATION 64  ///< stations 1..64 on a Modbus Plus segment.
+#define MBPLUS_CTRL_DATA 0x00  ///< data frame control.
+#define MBPLUS_CTRL_TOKEN 0x01 ///< token pass control.
 
 /** @brief CRC-16/X-25 (the Modbus Plus HDLC FCS) over @p len bytes. */
 uint16_t pc_mbplus_crc(const uint8_t *bytes, size_t len);

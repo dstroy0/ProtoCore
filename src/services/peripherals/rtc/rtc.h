@@ -23,6 +23,8 @@
 
 #include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
 
+#if PC_ENABLE_RTC
+
 /** @brief Number of time registers read from the RTC (seconds..year). */
 #define RTC_REG_COUNT 7
 
@@ -59,5 +61,7 @@ proto_bool pc_rtc_set_epoch(uint32_t epoch);
  * pc_time_source_add(). @return the RTC time, or 0 when unavailable.
  */
 uint32_t pc_rtc_time_source();
+
+#endif // PC_ENABLE_RTC
 
 #endif // PROTOCORE_RTC_H

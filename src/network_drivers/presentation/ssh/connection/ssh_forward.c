@@ -263,7 +263,7 @@ static void on_forward_data(uint8_t ssh_slot, uint32_t channel, const uint8_t *d
     SshRFwdBridge *br = rbridge_by_channel(ssh_slot, channel);
     if (br && br->confirmed)
     {
-        pc_conn_send(br->conn_slot, data, (u16_t)len);
+        pc_conn_send(br->conn_slot, data, (proto_u16)len);
         pc_conn_flush(br->conn_slot);
     }
 }

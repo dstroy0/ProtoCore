@@ -26,6 +26,8 @@
 
 #include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
 
+#if PC_ENABLE_DNS_SERVER
+
 /**
  * @brief Resolve a queried name to an IPv4 address.
  * @param name the queried name, lower/upper case as sent (match case-insensitively).
@@ -69,5 +71,7 @@ void pc_dns_server_clear();
  * @return true if the UDP listener bound; false on a host build or if the port is taken.
  */
 proto_bool pc_dns_server_begin();
+
+#endif // PC_ENABLE_DNS_SERVER
 
 #endif // PROTOCORE_DNS_SERVER_H

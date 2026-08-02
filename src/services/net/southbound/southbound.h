@@ -28,16 +28,16 @@
 
 #if PC_ENABLE_SOUTHBOUND
 
-/** @brief Result codes. A driver may also return its own negative transport error, passed through. */
 // Southbound result codes. The API returns int (SB_OK / a count on success, or a negative code), so
-// the return stays int and these are integer constants in a namespacing struct - callers keep their
-// `< 0` and `== SB_OK` checks cast-free.
-#define K 0  ///< success.
-#define D -1 ///< no registered driver by that name.
-#define D -2 ///< the driver does not implement that operation.
-#define G -3 ///< a null / out-of-range argument.
-#define L -4 ///< the registry is full (registration only).
-#define P -5 ///< a driver with that name is already registered.
+// the return stays int and these stay plain integer constants - callers keep their `< 0` and
+// `== SB_OK` checks cast-free. A driver may also return its own negative transport error, which is
+// passed through unchanged.
+#define SB_OK 0               ///< success.
+#define SB_ERR_NOT_FOUND -1   ///< no registered driver by that name.
+#define SB_ERR_UNSUPPORTED -2 ///< the driver does not implement that operation.
+#define SB_ERR_ARG -3         ///< a null / out-of-range argument.
+#define SB_ERR_FULL -4        ///< the registry is full (registration only).
+#define SB_ERR_DUP -5         ///< a driver with that name is already registered.
 
 /**
  * @brief One southbound driver: a vtable over an application-owned transport context.

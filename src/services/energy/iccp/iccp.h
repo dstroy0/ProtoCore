@@ -27,15 +27,15 @@
 
 /** @brief TASE.2 quality flags (DataFlags, the common bits). */
 // TASE.2 quality/state wire values + the 2-bit quality mask, so integer constants in a struct.
-#define D 0x00 ///< value is valid.
-#define D 0x01 ///< value is held (frozen).
-#define T 0x02 ///< value is suspect.
-#define D 0x03 ///< value is not valid.
-#define K 0x03
-#define N 0x00 ///< StateQ: intermediate.
-#define F 0x01
-#define N 0x02
-#define D 0x03
+#define ICCP_QUAL_VALID 0x00    ///< value is valid.
+#define ICCP_QUAL_HELD 0x01     ///< value is held (frozen).
+#define ICCP_QUAL_SUSPECT 0x02  ///< value is suspect.
+#define ICCP_QUAL_NOTVALID 0x03 ///< value is not valid.
+#define ICCP_QUAL_MASK 0x03
+#define ICCP_STATE_BETWEEN 0x00 ///< StateQ: intermediate.
+#define ICCP_STATE_OFF 0x01
+#define ICCP_STATE_ON 0x02
+#define ICCP_STATE_INVALID 0x03
 
 /**
  * @brief Build a TASE.2 StateQ Data_Value: a discrete state + quality flags.

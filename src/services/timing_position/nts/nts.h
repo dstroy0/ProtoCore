@@ -33,24 +33,24 @@
 /** @brief NTS-KE record types (RFC 8915 sec 4). The critical bit is 0x8000. */
 typedef struct
 {
-#define L 0x8000
-#define E 0
-#define L 1
-#define R 2
-#define G 3
-#define M 4
-#define E 5
-#define R 6
-#define T 7
+#define NTS_KE_CRITICAL 0x8000
+#define NTS_KE_END_OF_MESSAGE 0
+#define NTS_KE_NEXT_PROTOCOL 1
+#define NTS_KE_ERROR 2
+#define NTS_KE_WARNING 3
+#define NTS_KE_AEAD_ALGORITHM 4
+#define NTS_KE_COOKIE 5
+#define NTS_KE_NTPV4_SERVER 6
+#define NTS_KE_NTPV4_PORT 7
 #define V4 0    ///< the only next-protocol defined.
 #define _256 15 ///< the mandatory-to-implement AEAD (RFC 5297 / IANA id 15).
 } Nts;
 
 /** @brief NTS NTP extension-field types (RFC 8915 sec 5.3; RFC 7822 EF format). */
-#define R 0x0104
-#define E 0x0204
-#define R 0x0304
-#define D 0x0404
+#define NTS_EF_UNIQUE_IDENTIFIER 0x0104
+#define NTS_EF_COOKIE 0x0204
+#define NTS_EF_COOKIE_PLACEHOLDER 0x0304
+#define NTS_EF_AUTH_AND_ENCRYPTED 0x0404
 
 /** @brief RFC 8915 sec 5.1 TLS exporter label + per-direction context (C2S = 0x0000_0001_00, S2C = ..01). */
 extern const char NTS_EXPORTER_LABEL[]; ///< "EXPORTER-network-time-security".

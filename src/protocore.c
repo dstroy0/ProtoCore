@@ -1626,12 +1626,12 @@ static void send_error_close(uint8_t slot_id, const char *status, const char *ex
     // reason body ("Method Not Allowed" / "Too Many Requests"). The HEAD half is exercised.
     if (blen > 0 && !req_is_head(slot_id))
     {
-        pc_conn_send(slot_id, header, (u16_t)hlen);
-        pc_conn_send_flush(slot_id, body, (u16_t)blen);
+        pc_conn_send(slot_id, header, (proto_u16)hlen);
+        pc_conn_send_flush(slot_id, body, (proto_u16)blen);
     }
     else
     {
-        pc_conn_send_flush(slot_id, header, (u16_t)hlen);
+        pc_conn_send_flush(slot_id, header, (proto_u16)hlen);
     }
     // GCOVR_EXCL_BR_STOP
     pc_conn_begin_close(slot_id); // dwell in CONN_CLOSING until the response drains
@@ -2057,7 +2057,7 @@ void send_bin(uint8_t slot_id, int code, const char *content_type, const uint8_t
         // block that filled the buffer). Truncating them would emit a header block with no
         // terminating CRLF and desync the connection, so a fixed reply that always fits goes out
         // instead and the connection closes.
-        pc_conn_send_flush(slot_id, PC_RESP_HDR_OVERFLOW, (u16_t)PC_RESP_HDR_OVERFLOW_LEN);
+        pc_conn_send_flush(slot_id, PC_RESP_HDR_OVERFLOW, (proto_u16)PC_RESP_HDR_OVERFLOW_LEN);
         pc_resp_end(slot_id, 500, 0, PROTO_FALSE, /*pre_flushed=*/PROTO_FALSE);
         return;
     }
@@ -2075,16 +2075,16 @@ void send_bin(uint8_t slot_id, int code, const char *content_type, const uint8_t
     if (!head && payload_len > 0 && (size_t)hlen + (size_t)payload_len <= sizeof(header))
     {
         proto_raw_read(header + hlen, payload, (size_t)payload_len);
-        pc_conn_send_flush(slot_id, header, (u16_t)(hlen + payload_len));
+        pc_conn_send_flush(slot_id, header, (proto_u16)(hlen + payload_len));
     }
     else if (!head && payload_len > 0)
     {
-        pc_conn_send(slot_id, header, (u16_t)hlen);
-        pc_conn_send_flush(slot_id, payload, (u16_t)payload_len);
+        pc_conn_send(slot_id, header, (proto_u16)hlen);
+        pc_conn_send_flush(slot_id, payload, (proto_u16)payload_len);
     }
     else
     {
-        pc_conn_send_flush(slot_id, header, (u16_t)hlen);
+        pc_conn_send_flush(slot_id, header, (proto_u16)hlen);
     }
 
     pc_resp_end(slot_id, code, payload_len, keep, /*pre_flushed=*/PROTO_TRUE);
@@ -2133,7 +2133,7 @@ void send_empty(uint8_t slot_id, int code)
     int hlen = (int)pc_sb_finish(&sb_header3);
     hlen = proto_append_resp_trailer(header, sizeof(header), hlen, slot_id, cl);
 
-    pc_conn_send_flush(slot_id, header, (u16_t)hlen);
+    pc_conn_send_flush(slot_id, header, (proto_u16)hlen);
 
     pc_resp_end(slot_id, code, 0, keep, /*pre_flushed=*/PROTO_TRUE);
 }
@@ -2180,7 +2180,7 @@ void redirect(uint8_t slot_id, int code, const char *location)
     int hlen = (int)pc_sb_finish(&sb_header4);
     hlen = proto_append_resp_trailer(header, sizeof(header), hlen, slot_id, cl);
 
-    pc_conn_send_flush(slot_id, header, (u16_t)hlen);
+    pc_conn_send_flush(slot_id, header, (proto_u16)hlen);
 
     pc_resp_end(slot_id, code, 0, keep, /*pre_flushed=*/PROTO_TRUE);
 }

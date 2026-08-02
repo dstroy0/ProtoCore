@@ -106,7 +106,7 @@ void setup()
 
     // --- Management: SNMP v1/v2c agent on UDP:161 ---
     pc_snmp_agent_init("public");
-    pc_snmp_agent_set_system("ProtoCore industrial gateway", "admin@example.com", "esp32-pc-gw", "plant floor");
+    pc_snmp_agent_set_system("ProtoCore industrial gateway", "admin@example.com", "esp32-pc-gw", "plant floor", 72);
     pc_snmp_agent_add_dynamic(OID_FREE_HEAP, 9, (uint8_t)SnmpTag::SNMP_GAUGE32, get_free_heap);
     pc_snmp_agent_begin_udp(161);
 

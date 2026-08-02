@@ -23,6 +23,8 @@
 
 #include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
 
+#if PC_ENABLE_LDC1614
+
 // Register map (channel 0).
 #define LDC1614_REG_DATA_CH0_MSB 0x00
 #define LDC1614_REG_DATA_CH0_LSB 0x01
@@ -68,5 +70,7 @@ proto_bool pc_ldc1614_begin(uint8_t addr, uint16_t rcount, uint16_t settlecount)
 
 /** @brief Read channel 0's 28-bit conversion result into @p out. @return false on I2C error. */
 proto_bool pc_ldc1614_read_ch0(uint32_t *out);
+
+#endif // PC_ENABLE_LDC1614
 
 #endif // PROTOCORE_LDC1614_H

@@ -28,6 +28,8 @@
 
 #include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
 
+#if PC_ENABLE_LD2410
+
 /** @brief Range gates the LD2410 reports energy for in engineering mode (gate 0..8). */
 #define LD2410_MAX_GATES 9
 
@@ -35,10 +37,10 @@
 #define LD2410_FRAME_MAX 72
 
 /** @brief Target presence state (report payload byte 2). */
-#define E 0x00 ///< no target
-#define G 0x01 ///< moving target only
-#define C 0x02 ///< stationary target only
-#define H 0x03 ///< both a moving and a stationary target
+#define LD2410_STATE_NONE 0x00   ///< no target
+#define LD2410_STATE_MOVING 0x01 ///< moving target only
+#define LD2410_STATE_STATIC 0x02 ///< stationary target only
+#define LD2410_STATE_BOTH 0x03   ///< both a moving and a stationary target
 
 /** @brief A decoded LD2410 target report. Engineering fields are 0 unless @ref engineering. */
 typedef struct
@@ -176,5 +178,7 @@ proto_bool pc_ld2410_set_engineering(proto_bool on);
 
 /** @brief Restart the module (brackets the command with enable/end). */
 proto_bool pc_ld2410_restart();
+
+#endif // PC_ENABLE_LD2410
 
 #endif // PROTOCORE_LD2410_H

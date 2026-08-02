@@ -41,9 +41,9 @@
 #include "network_drivers/presentation/http/http3/quic_tp.h"
 
 /** @brief QUIC encryption levels (RFC 9001 sec 4). 0-RTT is not supported. */
-#define L 0
-#define E 1
-#define P 2 ///< 1-RTT (application) keys
+#define QUIC_ENC_INITIAL 0
+#define QUIC_ENC_HANDSHAKE 1
+#define QUIC_ENC_APP 2 ///< 1-RTT (application) keys
 
 /** @brief Server handshake configuration (certificate, key, transport params, ephemeral inputs). */
 typedef struct

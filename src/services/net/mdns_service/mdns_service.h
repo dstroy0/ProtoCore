@@ -20,6 +20,8 @@
 
 #include "protocore_config.h"
 
+#if PC_ENABLE_MDNS
+
 /**
  * @brief Start mDNS responder and advertise an HTTP service.
  *
@@ -53,5 +55,7 @@ proto_bool pc_mdns_txt(const char *key, const char *value);
  * @return true on success; false if mDNS is disabled or not running.
  */
 proto_bool pc_mdns_add_service(const char *service_type, const char *proto, uint16_t port);
+
+#endif // PC_ENABLE_MDNS
 
 #endif // PROTOCORE_MDNS_SERVICE_H

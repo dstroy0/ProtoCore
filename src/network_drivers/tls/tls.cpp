@@ -318,7 +318,7 @@ static int server_bio_send(void *ctx, const unsigned char *buf, size_t len)
         to = 0xFFFF;
     }
 
-    if (pc_conn_raw_send(e->pcb, buf, (u16_t)to))
+    if (pc_conn_raw_send(e->pcb, buf, (proto_u16)to))
     {
         return (int)to;
     }

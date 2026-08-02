@@ -34,10 +34,10 @@
 #if PC_ENABLE_ZWAVE
 
 /** @brief Z-Wave Serial API control bytes / frame markers. */
-#define F 0x01 ///< start of a data frame
-#define K 0x06 ///< frame acknowledged
-#define K 0x15 ///< frame rejected (checksum)
-#define N 0x18 ///< frame cancelled (retransmit)
+#define ZWAVE_SOF 0x01 ///< start of a data frame
+#define ZWAVE_ACK 0x06 ///< frame acknowledged
+#define ZWAVE_NAK 0x15 ///< frame rejected (checksum)
+#define ZWAVE_CAN 0x18 ///< frame cancelled (retransmit)
 
 /** @brief Data-frame type. */
 typedef enum PROTO_ENUM_PACKED

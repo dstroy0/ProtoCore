@@ -27,10 +27,10 @@
 #if PC_ENABLE_WISUN
 
 /** @brief CoAP message type + method codes (RFC 7252) used by the connector. */
-#define N 0 ///< Confirmable.
-#define N 1 ///< Non-confirmable.
-#define T 1 ///< method code 0.01.
-#define T 3 ///< method code 0.03.
+#define WISUN_COAP_CON 0 ///< Confirmable.
+#define WISUN_COAP_NON 1 ///< Non-confirmable.
+#define WISUN_COAP_GET 1 ///< method code 0.01.
+#define WISUN_COAP_PUT 3 ///< method code 0.03.
 
 /**
  * @brief Build a CoAP client request: header + Uri-Path options (one per `/` segment) + optional payload.

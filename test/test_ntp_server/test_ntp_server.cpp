@@ -140,7 +140,7 @@ void test_begin_is_host_stub()
     // On a host build (no ARDUINO/lwIP) pc_ntp_server_begin() cannot bind UDP/123, so it must
     // always report false regardless of the stratum/refid it is asked to advertise.
     TEST_ASSERT_FALSE(pc_ntp_server_begin(1, NTP_REFID_GPS));
-    TEST_ASSERT_FALSE(pc_ntp_server_begin(3));
+    TEST_ASSERT_FALSE(pc_ntp_server_begin(3, NTP_REFID_LOCL));
 }
 
 int main()

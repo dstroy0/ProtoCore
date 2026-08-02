@@ -59,13 +59,14 @@ typedef enum PROTO_ENUM_PACKED
     COAP_DELETE = 4,
 } CoapMethod;
 
-// Allowed-methods bitmask for pc_coap_server_add_resource() (bit per method). A mask is OR'd together,
-// so these are integer constants in a namespacing struct, not an enum class (which would force a cast
-// at every |). The bit position is the CoapMethod ordinal.
-#define T 1u << (unsigned)COAP_GET    ///< 0x02
-#define T 1u << (unsigned)COAP_POST   ///< 0x04
-#define T 1u << (unsigned)COAP_PUT    ///< 0x08
-#define E 1u << (unsigned)COAP_DELETE ///< 0x10
+// Allowed-methods bitmask for pc_coap_server_add_resource() (bit per method). A mask is OR'd
+// together, so these stay plain integer constants rather than an enum, which would force a cast at
+// every |. The bit position is the CoapMethod ordinal. Parenthesized because a shift binds looser
+// than most operators a caller may combine it with.
+#define COAP_ALLOW_GET (1u << (unsigned)COAP_GET)       ///< 0x02
+#define COAP_ALLOW_POST (1u << (unsigned)COAP_POST)     ///< 0x04
+#define COAP_ALLOW_PUT (1u << (unsigned)COAP_PUT)       ///< 0x08
+#define COAP_ALLOW_DELETE (1u << (unsigned)COAP_DELETE) ///< 0x10
 
 /** @brief Build a CoAP response Code byte from its class and detail (e.g. COAP_CODE(2,5) = 2.05). */
 #define COAP_CODE(c, dd) ((uint8_t)(((c) << 5) | ((dd) & 0x1F)))

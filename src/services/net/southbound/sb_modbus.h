@@ -14,7 +14,7 @@
  * A holding-register driver (FC 0x03) is read/write: read / read_block use FC 0x03/0x04, write /
  * write_block use Write Single (FC 0x06) / Write Multiple (FC 0x10). An input-register driver (FC 0x04)
  * is read-only - a Modbus input register cannot be written - so its write / write_block stay unbound
- * (the framework reports Sb::SB_ERR_UNSUPPORTED).
+ * (the framework reports SB_ERR_UNSUPPORTED).
  *
  * The app owns the transport: it supplies a @ref pc_sb_modbus_txn seam that sends a request ADU and
  * receives the reply (over pc_client for Modbus TCP, or a serial gateway). Pure otherwise - no heap,
@@ -68,7 +68,7 @@ typedef struct
  * @param io    opaque context passed to @p txn on each request (may be null).
  * @param fc    MODBUS_FC_READ_HOLDING_REGS or ::MODBUS_FC_READ_INPUT_REGS.
  * @param unit  Modbus unit / slave id.
- * @return Sb::SB_OK, or Sb::SB_ERR_ARG on a null ctx/txn or an fc that is not a read function code.
+ * @return SB_OK, or SB_ERR_ARG on a null ctx/txn or an fc that is not a read function code.
  */
 int pc_sb_modbus_init(pc_sb_modbus_ctx *ctx, pc_sb_modbus_txn txn, void *io, ModbusFunction fc, uint8_t unit);
 
@@ -80,7 +80,7 @@ int pc_sb_modbus_init(pc_sb_modbus_ctx *ctx, pc_sb_modbus_txn txn, void *io, Mod
  * @param drv_out  the driver vtable to fill (borrowed by the registry; must outlive it, as must @p ctx).
  * @param name     the driver's unique registry name (borrowed).
  * @param ctx      an initialized context (see pc_sb_modbus_init).
- * @return Sb::SB_OK, or Sb::SB_ERR_ARG on a null / uninitialized argument.
+ * @return SB_OK, or SB_ERR_ARG on a null / uninitialized argument.
  */
 int pc_sb_modbus_driver(SouthboundDriver *drv_out, const char *name, pc_sb_modbus_ctx *ctx);
 

@@ -33,11 +33,11 @@
 #if PC_ENABLE_ZIGBEE
 
 /** @brief ASH markers / reset control bytes. */
-#define G 0x7E ///< frame delimiter
-#define E 0x7D ///< byte-stuffing escape
-#define T 0xC0 ///< reset control byte
-#define K 0xC1 ///< reset acknowledge
-#define R 0xC2 ///< error
+#define ASH_FLAG 0x7E   ///< frame delimiter
+#define ASH_ESCAPE 0x7D ///< byte-stuffing escape
+#define ASH_RST 0xC0    ///< reset control byte
+#define ASH_RSTACK 0xC1 ///< reset acknowledge
+#define ASH_ERROR 0xC2  ///< error
 
 /** @brief CRC-16/CCITT (polynomial 0x1021, MSB-first, init 0xFFFF) over @p buf. */
 uint16_t pc_ash_crc16(const uint8_t *buf, uint16_t len);

@@ -55,23 +55,23 @@ typedef enum PROTO_ENUM_PACKED
 // unreachable cross-TU. Single-threaded (the lwIP callback or a test, never reentrant).
 typedef struct
 {
-    uint8_t engine_id[SNMP_V3_ENGINEID_MAX] = {0x80, 0x00, 0xC0, 0xDE, 0x05, 0x01, 0x02, 0x03, 0x04};
-    size_t engine_id_len = 9;
-    uint32_t boots = 1;
+    uint8_t engine_id[SNMP_V3_ENGINEID_MAX];
+    size_t engine_id_len;
+    uint32_t boots;
 
-    char user[SNMP_V3_USER_MAX] = "";
+    char user[SNMP_V3_USER_MAX];
     uint8_t auth_key[SNMP_USM_KEY_LEN];
     uint8_t priv_key[SNMP_USM_KEY_LEN];
-    proto_bool auth_set = PROTO_FALSE;
-    proto_bool priv_set = PROTO_FALSE;
-    uint32_t salt_ctr = 0;
+    proto_bool auth_set;
+    proto_bool priv_set;
+    uint32_t salt_ctr;
 
     // USM stats counters (reported in discovery / error Reports)
-    uint32_t stat_unknown_engine = 0;
-    uint32_t stat_unknown_user = 0;
-    uint32_t stat_wrong_digest = 0;
-    uint32_t stat_not_in_time = 0;
-    uint32_t stat_decrypt = 0;
+    uint32_t stat_unknown_engine;
+    uint32_t stat_unknown_user;
+    uint32_t stat_wrong_digest;
+    uint32_t stat_not_in_time;
+    uint32_t stat_decrypt;
 
     // Working buffers; lifetimes staggered so they never alias within a single request.
     uint8_t v3_a[SNMP_MSG_BUF_SIZE]; // auth-verify copy / decrypted scopedPDU
@@ -80,7 +80,14 @@ typedef struct
     uint8_t v3_d[SNMP_MSG_BUF_SIZE]; // privacy ciphertext
     uint8_t v3_sec[256];             // msgSecurityParameters scratch
 } SnmpV3Ctx;
-static SnmpV3Ctx s_v3;
+
+// Only the three fields with a non-zero start are named; static storage zeroes the rest, which is
+// what every counter, key and working buffer wants anyway.
+static SnmpV3Ctx s_v3 = {
+    .engine_id = {0x80, 0x00, 0xC0, 0xDE, 0x05, 0x01, 0x02, 0x03, 0x04},
+    .engine_id_len = 9,
+    .boots = 1,
+};
 
 // v3_sec is a fixed 256 bytes but what build_message() packs into it scales with two overridable
 // macros, so pin the worst case at compile time instead of assuming it. The msgSecurityParameters
@@ -89,10 +96,10 @@ static SnmpV3Ctx s_v3;
 // SNMP_V3_USER_MAX (userName) + 2 + SNMP_V3_AUTH_PARAM_LEN (authParams) + 2 +
 // SNMP_V3_PRIV_PARAM_LEN (privParams). Raising either max past this turns the "cannot overflow"
 // guard below into a live path, so make that a build error rather than a silent behavior change.
-static_assert(4 + 3 + SNMP_V3_ENGINEID_MAX + 7 + 7 + 3 + SNMP_V3_USER_MAX + 2 + SNMP_V3_AUTH_PARAM_LEN + 2 +
-                      SNMP_V3_PRIV_PARAM_LEN <=
-                  sizeof(SnmpV3Ctx::v3_sec),
-              "v3_sec is too small for SNMP_V3_ENGINEID_MAX + SNMP_V3_USER_MAX: raise v3_sec or lower the maxima");
+_Static_assert(4 + 3 + SNMP_V3_ENGINEID_MAX + 7 + 7 + 3 + SNMP_V3_USER_MAX + 2 + SNMP_V3_AUTH_PARAM_LEN + 2 +
+                       SNMP_V3_PRIV_PARAM_LEN <=
+                   sizeof(s_v3.v3_sec),
+               "v3_sec is too small for SNMP_V3_ENGINEID_MAX + SNMP_V3_USER_MAX: raise v3_sec or lower the maxima");
 
 // ---------------------------------------------------------------------------
 // Configuration

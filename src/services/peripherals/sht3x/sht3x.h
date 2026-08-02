@@ -28,6 +28,8 @@
 
 #include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
 
+#if PC_ENABLE_SHT3X
+
 // Single-shot measurement commands (16-bit, sent most-significant byte first).
 #define SHT3X_CMD_SINGLE_HIGH 0x2400 ///< high repeatability, no clock stretching
 #define SHT3X_CMD_SINGLE_MED 0x240B  ///< medium repeatability
@@ -63,5 +65,7 @@ proto_bool pc_sht3x_begin(uint8_t addr);
  * return the temperature (milli-C) and humidity (milli-%RH). @return false on I2C or CRC error.
  */
 proto_bool pc_sht3x_read(int32_t *temp_mc, int32_t *rh_mpct);
+
+#endif // PC_ENABLE_SHT3X
 
 #endif // PROTOCORE_SHT3X_H

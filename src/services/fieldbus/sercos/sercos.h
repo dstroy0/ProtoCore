@@ -27,9 +27,9 @@
 #if PC_ENABLE_SERCOS
 
 // SERCOS telegram types + header length: wire values, so integer constants in a struct.
-#define T 0x00 ///< Master Data Telegram (master -> drives).
-#define T 0x01 ///< Acknowledge Telegram (drive -> master).
-#define N 4
+#define SERCOS_TEL_MDT 0x00 ///< Master Data Telegram (master -> drives).
+#define SERCOS_TEL_AT 0x01  ///< Acknowledge Telegram (drive -> master).
+#define SERCOS_HDR_LEN 4
 
 /**
  * @brief Encode a SERCOS IDN (16-bit) from its parts.

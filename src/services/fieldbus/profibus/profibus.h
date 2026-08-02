@@ -27,15 +27,15 @@
 #if PC_ENABLE_PROFIBUS
 
 // PROFIBUS telegram delimiters + Frame Control values: wire bytes, so integer constants in a struct.
-#define D1 0x10 ///< start delimiter: no data.
-#define D2 0x68 ///< start delimiter: variable data.
-#define D3 0xA2 ///< start delimiter: fixed 8 data.
-#define D4 0xDC ///< token telegram.
-#define D 0x16  ///< end delimiter.
+#define D1 0x10    ///< start delimiter: no data.
+#define D2 0x68    ///< start delimiter: variable data.
+#define D3 0xA2    ///< start delimiter: fixed 8 data.
+#define D4 0xDC    ///< token telegram.
+#define PB_ED 0x16 ///< end delimiter.
 // Frame Control (FC) common values.
-#define S 0x49 ///< request FDL status (with FCB/FCV).
-#define W 0x6C ///< Send and Request Data, low priority.
-#define H 0x7C ///< Send and Request Data, high priority.
+#define PB_FC_REQUEST_FDL_STATUS 0x49 ///< request FDL status (with FCB/FCV).
+#define PB_FC_SRD_LOW 0x6C            ///< Send and Request Data, low priority.
+#define PB_FC_SRD_HIGH 0x7C           ///< Send and Request Data, high priority.
 
 /** @brief PROFIBUS FCS: arithmetic sum (mod 256) of @p len bytes (DA + SA + FC + data). */
 uint8_t pc_pb_fcs(const uint8_t *bytes, size_t len);

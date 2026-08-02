@@ -27,16 +27,16 @@
 #if PC_ENABLE_DIRECTNET
 
 /** @brief DirectNET control bytes: wire values compared/emitted, so integer constants in a struct. */
-#define Q 0x05
-#define K 0x06
-#define K 0x15
-#define H 0x01
-#define X 0x02
-#define X 0x03
-#define B 0x17
-#define T 0x04
-#define D 0x30 ///< request type: read ('0').
-#define E 0x38 ///< request type: write ('8').
+#define DNET_ENQ 0x05
+#define DNET_ACK 0x06
+#define DNET_NAK 0x15
+#define DNET_SOH 0x01
+#define DNET_STX 0x02
+#define DNET_ETX 0x03
+#define DNET_ETB 0x17
+#define DNET_EOT 0x04
+#define DNET_READ 0x30  ///< request type: read ('0').
+#define DNET_WRITE 0x38 ///< request type: write ('8').
 
 /** @brief Longitudinal XOR checksum (the DirectNET LRC) over @p len bytes. */
 uint8_t pc_dnet_lrc(const uint8_t *bytes, size_t len);

@@ -34,82 +34,82 @@
 #if PC_ENABLE_THREAD
 
 /** @brief HDLC-lite markers. */
-#define G 0x7E ///< frame delimiter
-#define E 0x7D ///< byte-stuffing escape
+#define HDLC_FLAG 0x7E   ///< frame delimiter
+#define HDLC_ESCAPE 0x7D ///< byte-stuffing escape
 
 /** @brief Common spinel commands (the property accessors a gateway uses). */
-#define P 0
-#define T 1
-#define T 2
-#define T 3
-#define T 4
-#define E 5
-#define S 6 ///< an async property update from the NCP
-#define D 7 ///< a list property gained an entry
-#define D 8 ///< a list property lost an entry
+#define SPINEL_CMD_NOOP 0
+#define SPINEL_CMD_RESET 1
+#define SPINEL_CMD_PROP_VALUE_GET 2
+#define SPINEL_CMD_PROP_VALUE_SET 3
+#define SPINEL_CMD_PROP_VALUE_INSERT 4
+#define SPINEL_CMD_PROP_VALUE_REMOVE 5
+#define SPINEL_CMD_PROP_VALUE_IS 6       ///< an async property update from the NCP
+#define SPINEL_CMD_PROP_VALUE_INSERTED 7 ///< a list property gained an entry
+#define SPINEL_CMD_PROP_VALUE_REMOVED 8  ///< a list property lost an entry
 
 /**
  * @brief The spinel property ids a Thread/802.15.4 gateway reads or writes (subset of the
  *        spinel property registry, grouped CORE / PHY / MAC / NET / IPv6 / STREAM).
  */
 // Core (SPINEL_PROP_CORE__BEGIN = 0)
-#define S 0 ///< 'i'  last operation status
-#define N 1 ///< 'ii' major, minor
-#define N 2 ///< 'U'  NCP version string
-#define E 3 ///< 'i'  3 = Thread
-#define D 4 ///< 'i'
-#define S 5 ///< 'A(i)' capability list
-#define T 6 ///< 'C'
-#define R 8 ///< 'E'  factory EUI64
-#define K 9 ///< 'b'
+#define SPINEL_PROP_LAST_STATUS 0      ///< 'i'  last operation status
+#define SPINEL_PROP_PROTOCOL_VERSION 1 ///< 'ii' major, minor
+#define SPINEL_PROP_NCP_VERSION 2      ///< 'U'  NCP version string
+#define SPINEL_PROP_INTERFACE_TYPE 3   ///< 'i'  3 = Thread
+#define SPINEL_PROP_VENDOR_ID 4        ///< 'i'
+#define SPINEL_PROP_CAPS 5             ///< 'A(i)' capability list
+#define SPINEL_PROP_INTERFACE_COUNT 6  ///< 'C'
+#define SPINEL_PROP_HWADDR 8           ///< 'E'  factory EUI64
+#define SPINEL_PROP_LOCK 9             ///< 'b'
 // PHY (SPINEL_PROP_PHY__BEGIN = 0x20)
-#define D 0x20 ///< 'b'
-#define N 0x21 ///< 'C'  802.15.4 channel
-#define D 0x22 ///< 'A(C)'
-#define Q 0x23 ///< 'L'  kHz
-#define R 0x25 ///< 'c'  dBm
-#define I 0x26 ///< 'c'  dBm
+#define SPINEL_PROP_PHY_ENABLED 0x20        ///< 'b'
+#define SPINEL_PROP_PHY_CHAN 0x21           ///< 'C'  802.15.4 channel
+#define SPINEL_PROP_PHY_CHAN_SUPPORTED 0x22 ///< 'A(C)'
+#define SPINEL_PROP_PHY_FREQ 0x23           ///< 'L'  kHz
+#define SPINEL_PROP_PHY_TX_POWER 0x25       ///< 'c'  dBm
+#define SPINEL_PROP_PHY_RSSI 0x26           ///< 'c'  dBm
 // MAC (SPINEL_PROP_MAC__BEGIN = 0x30)
-#define E 0x30 ///< 'C'
-#define K 0x31 ///< 'A(C)'
-#define D 0x32 ///< 'S'  ms/channel
-#define R 0x34 ///< 'E'  extended (long) address
-#define R 0x35 ///< 'S'  short address
-#define D 0x36 ///< 'S'  PAN id
+#define SPINEL_PROP_MAC_SCAN_STATE 0x30  ///< 'C'
+#define SPINEL_PROP_MAC_SCAN_MASK 0x31   ///< 'A(C)'
+#define SPINEL_PROP_MAC_SCAN_PERIOD 0x32 ///< 'S'  ms/channel
+#define SPINEL_PROP_MAC_15_4_LADDR 0x34  ///< 'E'  extended (long) address
+#define SPINEL_PROP_MAC_15_4_SADDR 0x35  ///< 'S'  short address
+#define SPINEL_PROP_MAC_15_4_PANID 0x36  ///< 'S'  PAN id
 // NET (SPINEL_PROP_NET__BEGIN = 0x40)
-#define D 0x40 ///< 'b'
-#define P 0x41 ///< 'b'
-#define P 0x42 ///< 'b'
-#define E 0x43 ///< 'C'  0 detached,1 child,2 router,3 leader
-#define E 0x44 ///< 'U'
-#define D 0x45 ///< 'D'  8-byte extended PAN id
-#define Y 0x46 ///< 'D'  16-byte network key
+#define SPINEL_PROP_NET_SAVED 0x40        ///< 'b'
+#define SPINEL_PROP_NET_IF_UP 0x41        ///< 'b'
+#define SPINEL_PROP_NET_STACK_UP 0x42     ///< 'b'
+#define SPINEL_PROP_NET_ROLE 0x43         ///< 'C'  0 detached,1 child,2 router,3 leader
+#define SPINEL_PROP_NET_NETWORK_NAME 0x44 ///< 'U'
+#define SPINEL_PROP_NET_XPANID 0x45       ///< 'D'  8-byte extended PAN id
+#define SPINEL_PROP_NET_NETWORK_KEY 0x46  ///< 'D'  16-byte network key
 // IPv6 (SPINEL_PROP_IPV6__BEGIN = 0x60)
-#define R 0x60 ///< '6'  link-local
-#define R 0x61 ///< '6'  mesh-local
+#define SPINEL_PROP_IPV6_LL_ADDR 0x60 ///< '6'  link-local
+#define SPINEL_PROP_IPV6_ML_ADDR 0x61 ///< '6'  mesh-local
 // Stream (SPINEL_PROP_STREAM__BEGIN = 0x70)
-#define G 0x70 ///< 'U'  debug text
-#define W 0x71 ///< 'dD' raw 802.15.4 frame + metadata
-#define T 0x72 ///< 'dD' IPv6 datagram + metadata
+#define SPINEL_PROP_STREAM_DEBUG 0x70 ///< 'U'  debug text
+#define SPINEL_PROP_STREAM_RAW 0x71   ///< 'dD' raw 802.15.4 frame + metadata
+#define SPINEL_PROP_STREAM_NET 0x72   ///< 'dD' IPv6 datagram + metadata
 
 /** @brief spinel `LAST_STATUS` codes (a subset - the ones a gateway acts on). */
-#define K 0
-#define E 1
-#define D 2
-#define T 3
-#define E 4
-#define D 5
-#define E 6
-#define R 7
-#define R 8
-#define R 9
-#define S 10
-#define M 11
-#define Y 12
-#define D 13
-#define D 14
-#define Y 15
-#define N 112 ///< 0x70..0x77 are reset causes
+#define SPINEL_STATUS_OK 0
+#define SPINEL_STATUS_FAILURE 1
+#define SPINEL_STATUS_UNIMPLEMENTED 2
+#define SPINEL_STATUS_INVALID_ARGUMENT 3
+#define SPINEL_STATUS_INVALID_STATE 4
+#define SPINEL_STATUS_INVALID_COMMAND 5
+#define SPINEL_STATUS_INVALID_INTERFACE 6
+#define SPINEL_STATUS_INTERNAL_ERROR 7
+#define SPINEL_STATUS_SECURITY_ERROR 8
+#define SPINEL_STATUS_PARSE_ERROR 9
+#define SPINEL_STATUS_IN_PROGRESS 10
+#define SPINEL_STATUS_NOMEM 11
+#define SPINEL_STATUS_BUSY 12
+#define SPINEL_STATUS_PROP_NOT_FOUND 13
+#define SPINEL_STATUS_DROPPED 14
+#define SPINEL_STATUS_EMPTY 15
+#define SPINEL_STATUS_RESET_POWER_ON 112 ///< 0x70..0x77 are reset causes
 
 // --- Header byte (bit7 = flag, bits6-4 = interface id, bits3-0 = transaction id) --------
 

@@ -45,24 +45,27 @@ typedef struct
 
 // All persistent SNMP-agent config, owned by one instance (internal linkage): the MIB table
 // and its count plus the read-only / read-write community strings, grouped so it is one named
-// owner, unreachable from any other translation unit. The MIB lookups take it by const
-// reference so processing an attacker's PDU provably cannot mutate the MIB.
+// owner, unreachable from any other translation unit. The MIB lookups take a pointer to const
+// so processing an attacker's PDU provably cannot mutate the MIB.
 typedef struct
 {
     SnmpMibEntry mib[SNMP_MAX_MIB_ENTRIES];
-    size_t mib_count = 0;
-    char ro[SNMP_COMMUNITY_MAX] = PC_SNMP_DEFAULT_RO_COMMUNITY;
-    char rw[SNMP_COMMUNITY_MAX] = "";
-    proto_bool rw_set = PROTO_FALSE;
+    size_t mib_count;
+    char ro[SNMP_COMMUNITY_MAX];
+    char rw[SNMP_COMMUNITY_MAX];
+    proto_bool rw_set;
 } SnmpAgentCtx;
-static SnmpAgentCtx s_agent;
+
+// The read-only community is the one field that does not start at zero; static storage zeroes the
+// MIB, its count, the read-write community and rw_set.
+static SnmpAgentCtx s_agent = {.ro = PC_SNMP_DEFAULT_RO_COMMUNITY};
 
 // community_eq()'s stored[0] != '\0' guard can only be a no-op if the read-only community is
 // never empty. It is seeded from PC_SNMP_DEFAULT_RO_COMMUNITY (an overridable macro) and
 // pc_snmp_agent_init() falls back to that same macro for a null/empty argument, so pin the
 // macro non-empty here rather than let an override silently make an empty community matchable.
-static_assert(sizeof(PC_SNMP_DEFAULT_RO_COMMUNITY) > 1,
-              "PC_SNMP_DEFAULT_RO_COMMUNITY must be a non-empty string literal");
+_Static_assert(sizeof(PC_SNMP_DEFAULT_RO_COMMUNITY) > 1,
+               "PC_SNMP_DEFAULT_RO_COMMUNITY must be a non-empty string literal");
 
 // sysObjectID value (private enterprise placeholder: 1.3.6.1.4.1.49374).
 static const uint32_t g_sys_object_id[] = {1, 3, 6, 1, 4, 1, 49374};
@@ -96,29 +99,29 @@ static int oid_cmp(const uint32_t *a, size_t an, const uint32_t *b, size_t bn)
     return 0;
 }
 
-static const SnmpMibEntry *mib_find_exact(const SnmpAgentCtx &c, const uint32_t *oid, size_t n)
+static const SnmpMibEntry *mib_find_exact(const SnmpAgentCtx *c, const uint32_t *oid, size_t n)
 {
-    for (size_t i = 0; i < c.mib_count; i++)
+    for (size_t i = 0; i < c->mib_count; i++)
     {
-        if (oid_cmp(c.mib[i].oid, c.mib[i].oid_len, oid, n) == 0)
+        if (oid_cmp(c->mib[i].oid, c->mib[i].oid_len, oid, n) == 0)
         {
-            return &c.mib[i];
+            return &c->mib[i];
         }
     }
     return NULL;
 }
 
 // Smallest registered OID that is strictly greater than (oid,n), or nullptr.
-static const SnmpMibEntry *mib_find_next(const SnmpAgentCtx &c, const uint32_t *oid, size_t n)
+static const SnmpMibEntry *mib_find_next(const SnmpAgentCtx *c, const uint32_t *oid, size_t n)
 {
     const SnmpMibEntry *best = NULL;
-    for (size_t i = 0; i < c.mib_count; i++)
+    for (size_t i = 0; i < c->mib_count; i++)
     {
-        if (oid_cmp(c.mib[i].oid, c.mib[i].oid_len, oid, n) > 0)
+        if (oid_cmp(c->mib[i].oid, c->mib[i].oid_len, oid, n) > 0)
         {
-            if (!best || oid_cmp(c.mib[i].oid, c.mib[i].oid_len, best->oid, best->oid_len) < 0)
+            if (!best || oid_cmp(c->mib[i].oid, c->mib[i].oid_len, best->oid, best->oid_len) < 0)
             {
-                best = &c.mib[i];
+                best = &c->mib[i];
             }
         }
     }
@@ -141,12 +144,12 @@ static proto_bool fetch_value(const SnmpMibEntry *en, SnmpValue *out)
 // entry is a full instance OID, so its object-type prefix is its OID minus the
 // final (instance) arc; the request names a known object iff that prefix is a
 // prefix of the request.
-static proto_bool mib_object_exists(const SnmpAgentCtx &c, const uint32_t *oid, size_t n)
+static proto_bool mib_object_exists(const SnmpAgentCtx *c, const uint32_t *oid, size_t n)
 {
-    for (size_t i = 0; i < c.mib_count; i++)
+    for (size_t i = 0; i < c->mib_count; i++)
     {
-        size_t objn = c.mib[i].oid_len - 1; // drop the trailing instance arc
-        if (objn <= n && oid_cmp(c.mib[i].oid, objn, oid, objn) == 0)
+        size_t objn = c->mib[i].oid_len - 1; // drop the trailing instance arc
+        if (objn <= n && oid_cmp(c->mib[i].oid, objn, oid, objn) == 0)
         {
             return PROTO_TRUE;
         }
@@ -158,13 +161,13 @@ static proto_bool mib_object_exists(const SnmpAgentCtx &c, const uint32_t *oid, 
 // Registration
 // ---------------------------------------------------------------------------
 
-static SnmpMibEntry *mib_alloc(SnmpAgentCtx &c, const uint32_t *oid, size_t n)
+static SnmpMibEntry *mib_alloc(SnmpAgentCtx *c, const uint32_t *oid, size_t n)
 {
-    if (c.mib_count >= SNMP_MAX_MIB_ENTRIES || n < 2 || n > SNMP_MAX_OID_LEN)
+    if (c->mib_count >= SNMP_MAX_MIB_ENTRIES || n < 2 || n > SNMP_MAX_OID_LEN)
     {
         return NULL;
     }
-    SnmpMibEntry *e = &c.mib[c.mib_count++];
+    SnmpMibEntry *e = &c->mib[c->mib_count++];
     memset(e, 0, sizeof(*e));
     for (size_t i = 0; i < n; i++)
     {
@@ -199,7 +202,7 @@ void pc_snmp_agent_set_rw_community(const char *rw_community)
 
 proto_bool pc_snmp_agent_add_string(const uint32_t *oid, size_t oid_len, const char *value, SnmpSetFn setter)
 {
-    SnmpMibEntry *e = mib_alloc(s_agent, oid, oid_len);
+    SnmpMibEntry *e = mib_alloc(&s_agent, oid, oid_len);
     if (!e)
     {
         return PROTO_FALSE;
@@ -213,7 +216,7 @@ proto_bool pc_snmp_agent_add_string(const uint32_t *oid, size_t oid_len, const c
 
 proto_bool pc_snmp_agent_add_integer(const uint32_t *oid, size_t oid_len, long value, SnmpSetFn setter)
 {
-    SnmpMibEntry *e = mib_alloc(s_agent, oid, oid_len);
+    SnmpMibEntry *e = mib_alloc(&s_agent, oid, oid_len);
     if (!e)
     {
         return PROTO_FALSE;
@@ -226,7 +229,7 @@ proto_bool pc_snmp_agent_add_integer(const uint32_t *oid, size_t oid_len, long v
 
 proto_bool pc_snmp_agent_add_dynamic(const uint32_t *oid, size_t oid_len, uint8_t type, SnmpGetFn getter)
 {
-    SnmpMibEntry *e = mib_alloc(s_agent, oid, oid_len);
+    SnmpMibEntry *e = mib_alloc(&s_agent, oid, oid_len);
     if (!e)
     {
         return PROTO_FALSE;
@@ -254,9 +257,9 @@ void pc_snmp_agent_set_system(const char *descr, const char *contact, const char
     static const uint32_t o_loc[] = {1, 3, 6, 1, 2, 1, 1, 6, 0};
     static const uint32_t o_svc[] = {1, 3, 6, 1, 2, 1, 1, 7, 0};
 
-    pc_snmp_agent_add_string(o_descr, 9, descr);
+    pc_snmp_agent_add_string(o_descr, 9, descr, NULL);
 
-    SnmpMibEntry *e = mib_alloc(s_agent, o_oid, 9);
+    SnmpMibEntry *e = mib_alloc(&s_agent, o_oid, 9);
     if (e)
     {
         e->val.type = (uint8_t)SNMP_TAG_BER_OID;
@@ -265,10 +268,10 @@ void pc_snmp_agent_set_system(const char *descr, const char *contact, const char
     }
 
     pc_snmp_agent_add_dynamic(o_uptime, 9, (uint8_t)SNMP_TAG_SNMP_TIMETICKS, sys_uptime_get);
-    pc_snmp_agent_add_string(o_contact, 9, contact);
-    pc_snmp_agent_add_string(o_name, 9, name);
-    pc_snmp_agent_add_string(o_loc, 9, location);
-    pc_snmp_agent_add_integer(o_svc, 9, services);
+    pc_snmp_agent_add_string(o_contact, 9, contact, NULL);
+    pc_snmp_agent_add_string(o_name, 9, name, NULL);
+    pc_snmp_agent_add_string(o_loc, 9, location, NULL);
+    pc_snmp_agent_add_integer(o_svc, 9, services, NULL);
 }
 
 // ---------------------------------------------------------------------------
@@ -399,7 +402,7 @@ static void pc_snmp_apply_set_all(size_t nvb, proto_bool v2c, long *err_status, 
 {
     for (size_t i = 0; i < nvb; i++)
     {
-        const SnmpMibEntry *en = mib_find_exact(s_agent, s_req.in[i].oid, s_req.in[i].oid_len);
+        const SnmpMibEntry *en = mib_find_exact(&s_agent, s_req.in[i].oid, s_req.in[i].oid_len);
         int e = 0;
         if (!en)
         {
@@ -526,8 +529,8 @@ size_t pc_snmp_dispatch_pdu(const uint8_t *pdu, size_t pdu_len, proto_bool allow
         for (size_t i = 0; i < nvb; i++)
         {
             const SnmpMibEntry *en = (pdu_tag == (uint8_t)SNMP_TAG_SNMP_PDU_GET)
-                                         ? mib_find_exact(s_agent, s_req.in[i].oid, s_req.in[i].oid_len)
-                                         : mib_find_next(s_agent, s_req.in[i].oid, s_req.in[i].oid_len);
+                                         ? mib_find_exact(&s_agent, s_req.in[i].oid, s_req.in[i].oid_len)
+                                         : mib_find_next(&s_agent, s_req.in[i].oid, s_req.in[i].oid_len);
             SnmpValue val;
             proto_bool ok = en && fetch_value(en, &val);
             if (!ok)
@@ -552,7 +555,7 @@ size_t pc_snmp_dispatch_pdu(const uint8_t *pdu, size_t pdu_len, proto_bool allow
                 // GetNext past the end of the MIB is always endOfMibView.
                 if (pdu_tag == (uint8_t)SNMP_TAG_SNMP_PDU_GET)
                 {
-                    proto_bool inst = en || mib_object_exists(s_agent, s_req.in[i].oid, s_req.in[i].oid_len);
+                    proto_bool inst = en || mib_object_exists(&s_agent, s_req.in[i].oid, s_req.in[i].oid_len);
                     val.type = inst ? (uint8_t)SNMP_TAG_SNMP_NO_SUCH_INSTANCE : (uint8_t)SNMP_TAG_SNMP_NO_SUCH_OBJECT;
                 }
                 else
@@ -595,7 +598,7 @@ size_t pc_snmp_dispatch_pdu(const uint8_t *pdu, size_t pdu_len, proto_bool allow
             {
                 break; // GCOVR_EXCL_LINE
             }
-            const SnmpMibEntry *en = mib_find_next(s_agent, s_req.in[i].oid, s_req.in[i].oid_len);
+            const SnmpMibEntry *en = mib_find_next(&s_agent, s_req.in[i].oid, s_req.in[i].oid_len);
             if (en)
             {
                 s_req.out[nout].oid = en->oid;
@@ -634,7 +637,7 @@ size_t pc_snmp_dispatch_pdu(const uint8_t *pdu, size_t pdu_len, proto_bool allow
                     nout++;
                     continue;
                 }
-                const SnmpMibEntry *en = mib_find_next(s_agent, cur_oid[r], cur_len[r]);
+                const SnmpMibEntry *en = mib_find_next(&s_agent, cur_oid[r], cur_len[r]);
                 if (en)
                 {
                     s_req.out[nout].oid = en->oid;

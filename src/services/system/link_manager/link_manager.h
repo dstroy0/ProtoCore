@@ -25,10 +25,10 @@
 
 /** @brief Interface kind (informational; selection is by priority). Stored in a uint8_t field and
  *  compared, so integer constants in a namespacing struct - cast-free. */
-#define H 0 ///< wired Ethernet PHY.
-#define A 1 ///< WiFi station.
-#define P 2 ///< WiFi softAP.
-#define R 3
+#define LINK_KIND_ETH 0      ///< wired Ethernet PHY.
+#define LINK_KIND_WIFI_STA 1 ///< WiFi station.
+#define LINK_KIND_WIFI_AP 2  ///< WiFi softAP.
+#define LINK_KIND_OTHER 3
 
 /** @brief One managed interface. */
 typedef struct

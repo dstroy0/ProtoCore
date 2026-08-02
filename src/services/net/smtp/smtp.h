@@ -27,6 +27,8 @@
 
 #include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
 
+#if PC_ENABLE_SMTP
+
 /** @brief Result of an SMTP send. 0 is success; every failure is a distinct negative code. */
 typedef enum PROTO_ENUM_PACKED
 {
@@ -110,5 +112,7 @@ SmtpResult smtp_run(const SmtpConfig *cfg, const SmtpMessage *msg, SmtpSendFn se
  *         lwIP, so this returns SMTP_ERR_CONNECT; use smtp_run() directly in tests.
  */
 SmtpResult smtp_send(const SmtpConfig *cfg, const SmtpMessage *msg);
+
+#endif // PC_ENABLE_SMTP
 
 #endif // PROTOCORE_SMTP_H

@@ -23,10 +23,10 @@
 #if PC_ENABLE_WIFI_SNIFFER
 
 /** @brief 802.11 frame type (Frame Control bits 2-3). */
-#define T 0 ///< management (beacon, probe, auth, assoc, ...).
-#define L 1 ///< control (RTS/CTS/ACK, ...).
-#define A 2 ///< data.
-#define T 3 ///< extension.
+#define WIFI_TYPE_MGMT 0 ///< management (beacon, probe, auth, assoc, ...).
+#define WIFI_TYPE_CTRL 1 ///< control (RTS/CTS/ACK, ...).
+#define WIFI_TYPE_DATA 2 ///< data.
+#define WIFI_TYPE_EXT 3  ///< extension.
 
 /** @brief A decoded 802.11 MAC header. Addresses not present for the frame's length are left zeroed. */
 typedef struct

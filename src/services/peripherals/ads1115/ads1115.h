@@ -28,17 +28,19 @@
 
 #include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
 
+#if PC_ENABLE_ADS1115
+
 #define ADS1115_REG_CONVERSION 0x00 ///< conversion result register
 #define ADS1115_REG_CONFIG 0x01     ///< configuration register
 
 /** @brief Programmable-gain settings (PGA register codes; full-scale +/- range). Config field values
  *  shifted into the config word, so integer constants in a namespacing struct - cast-free. */
-#define S 0   ///< +/- 6.144 V
-#define _1 1  ///< +/- 4.096 V
-#define _2 2  ///< +/- 2.048 V (default)
-#define _4 3  ///< +/- 1.024 V
-#define _8 4  ///< +/- 0.512 V
-#define _16 5 ///< +/- 0.256 V
+#define ADS1115_GAIN_TWOTHIRDS 0 ///< +/- 6.144 V
+#define _1 1                     ///< +/- 4.096 V
+#define _2 2                     ///< +/- 2.048 V (default)
+#define _4 3                     ///< +/- 1.024 V
+#define _8 4                     ///< +/- 0.512 V
+#define _16 5                    ///< +/- 0.256 V
 
 /** @brief Data-rate settings (DR register codes; samples per second). */
 #define _8 0   ///< 8 SPS
@@ -70,5 +72,7 @@ proto_bool pc_ads1115_read_raw(uint8_t channel, uint8_t gain, int16_t *raw);
 
 /** @brief Single-shot read of @p channel at @p gain, converted to microvolts in @p microvolts. */
 proto_bool pc_ads1115_read_uv(uint8_t channel, uint8_t gain, int32_t *microvolts);
+
+#endif // PC_ENABLE_ADS1115
 
 #endif // PROTOCORE_ADS1115_H

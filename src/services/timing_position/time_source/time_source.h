@@ -27,6 +27,8 @@
 
 #include "protocore_config.h"
 
+#if PC_ENABLE_TIME_SOURCE
+
 /**
  * @brief A time source: returns the current Unix epoch seconds for this source,
  *        or 0 if it currently has no valid time.
@@ -67,5 +69,7 @@ void pc_time_source_reset(void);
  * NTP: register RTC / GPS / NTP via pc_time_source_add() and the header follows the priority.
  */
 size_t pc_time_http_date(char *out, size_t out_cap);
+
+#endif // PC_ENABLE_TIME_SOURCE
 
 #endif // PROTOCORE_TIME_SOURCE_H

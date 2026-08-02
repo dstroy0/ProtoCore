@@ -367,7 +367,7 @@ void dav_send_status(uint8_t slot_id, int code, const char *extra_headers)
     pc_sb_put(&sb_header, "\r\n");
     int hlen = (int)pc_sb_finish(&sb_header);
     // GCOVR_EXCL_BR_STOP
-    pc_conn_send(slot_id, header, (u16_t)hlen);
+    pc_conn_send(slot_id, header, (proto_u16)hlen);
     pc_resp_end(slot_id, code, 0, keep, /*pre_flushed=*/PROTO_FALSE);
 }
 

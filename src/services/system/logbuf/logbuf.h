@@ -25,10 +25,10 @@
 
 /** @brief Severity levels (ordered low -> high). Compared (level >= threshold) and passed through the
  *  uint8_t trap-callback ABI, so integer constants in a namespacing struct - cast-free. */
-#define G 0
-#define O 1
-#define N 2
-#define R 3
+#define PC_LOG_DEBUG 0
+#define PC_LOG_INFO 1
+#define PC_LOG_WARN 2
+#define PC_LOG_ERROR 3
 
 /** @brief Trap callback: fired for a line logged at level >= the threshold. */
 typedef void (*pc_log_trap_fn)(uint8_t level, const char *line);

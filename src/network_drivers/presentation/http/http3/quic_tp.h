@@ -29,22 +29,22 @@
 #include "network_drivers/presentation/http/http3/quic_packet.h" // QUIC_MAX_CID_LEN
 
 /** @brief Transport parameter identifiers (RFC 9000 sec 18.2 / Table 7). */
-#define D 0x00 ///< server: DCID of the client's first Initial
-#define T 0x01 ///< varint, milliseconds (0 = disabled)
-#define N 0x02 ///< 16 bytes (server only)
-#define E 0x03 ///< varint, default 65527, min 1200
-#define A 0x04 ///< varint, connection flow-control window
-#define L 0x05 ///< varint
-#define E 0x06 ///< varint
-#define I 0x07 ///< varint
-#define I 0x08 ///< varint
-#define I 0x09 ///< varint
-#define T 0x0a ///< varint, default 3, max 20
-#define Y 0x0b ///< varint, default 25, < 2^14
-#define N 0x0c ///< zero-length flag
-#define T 0x0e ///< varint, default 2, min 2
-#define D 0x0f ///< SCID of this endpoint's first Initial
-#define D 0x10 ///< server: SCID of a Retry it sent
+#define QUIC_TP_ORIGINAL_DCID 0x00              ///< server: DCID of the client's first Initial
+#define QUIC_TP_MAX_IDLE_TIMEOUT 0x01           ///< varint, milliseconds (0 = disabled)
+#define QUIC_TP_STATELESS_RESET_TOKEN 0x02      ///< 16 bytes (server only)
+#define QUIC_TP_MAX_UDP_PAYLOAD_SIZE 0x03       ///< varint, default 65527, min 1200
+#define QUIC_TP_INITIAL_MAX_DATA 0x04           ///< varint, connection flow-control window
+#define QUIC_TP_INITIAL_MAX_SD_BIDI_LOCAL 0x05  ///< varint
+#define QUIC_TP_INITIAL_MAX_SD_BIDI_REMOTE 0x06 ///< varint
+#define QUIC_TP_INITIAL_MAX_SD_UNI 0x07         ///< varint
+#define QUIC_TP_INITIAL_MAX_STREAMS_BIDI 0x08   ///< varint
+#define QUIC_TP_INITIAL_MAX_STREAMS_UNI 0x09    ///< varint
+#define QUIC_TP_ACK_DELAY_EXPONENT 0x0a         ///< varint, default 3, max 20
+#define QUIC_TP_MAX_ACK_DELAY 0x0b              ///< varint, default 25, < 2^14
+#define QUIC_TP_DISABLE_ACTIVE_MIGRATION 0x0c   ///< zero-length flag
+#define QUIC_TP_ACTIVE_CID_LIMIT 0x0e           ///< varint, default 2, min 2
+#define QUIC_TP_INITIAL_SCID 0x0f               ///< SCID of this endpoint's first Initial
+#define QUIC_TP_RETRY_SCID 0x10                 ///< server: SCID of a Retry it sent
 
 /** @brief The transport parameters we encode / decode, with RFC 9000 sec 18.2 defaults applied. */
 typedef struct

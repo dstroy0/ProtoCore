@@ -37,10 +37,10 @@ typedef struct
 
 /** @brief Guardrail breach flags: a bitmask OR'd together, so integer constants in a namespacing
  *  struct (cast-free at every | / &). */
-#define E 0
-#define P 1 ///< free heap below PC_GUARDRAIL_HEAP_MIN.
-#define G 2 ///< largest block below PC_GUARDRAIL_FRAG_MIN_BLOCK.
-#define K 4 ///< task stack remaining below PC_GUARDRAIL_STACK_MIN.
+#define PC_BREACH_NONE 0
+#define PC_BREACH_HEAP 1  ///< free heap below PC_GUARDRAIL_HEAP_MIN.
+#define PC_BREACH_FRAG 2  ///< largest block below PC_GUARDRAIL_FRAG_MIN_BLOCK.
+#define PC_BREACH_STACK 4 ///< task stack remaining below PC_GUARDRAIL_STACK_MIN.
 
 // ---------------------------------------------------------------------------
 // Host-testable core

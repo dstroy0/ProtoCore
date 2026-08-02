@@ -77,7 +77,7 @@ static void raw_send(uint8_t slot, const void *data, size_t n)
     {
         return;
     }
-    pc_conn_send(slot, data, (u16_t)n);
+    pc_conn_send(slot, data, (proto_u16)n);
     pc_conn_flush(slot);
 }
 
@@ -99,7 +99,7 @@ static void send_escaped(uint8_t slot, const void *data, size_t n)
         {
             if (i > start)
             {
-                pc_conn_send(slot, b + start, (u16_t)(i - start));
+                pc_conn_send(slot, b + start, (proto_u16)(i - start));
             }
             pc_conn_send(slot, "\xff\xff", 2); // doubled IAC
             start = i + 1;
@@ -107,7 +107,7 @@ static void send_escaped(uint8_t slot, const void *data, size_t n)
     }
     if (n > start)
     {
-        pc_conn_send(slot, b + start, (u16_t)(n - start));
+        pc_conn_send(slot, b + start, (proto_u16)(n - start));
     }
     pc_conn_flush(slot);
 }

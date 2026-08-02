@@ -319,7 +319,7 @@ void serve_file_internal(uint8_t slot_id, proto_bool head, const pc_mnt_backend 
         pc_sb_put(&sb_h304, cl);
         pc_sb_put(&sb_h304, "\r\n");
         int n304 = (int)pc_sb_finish(&sb_h304);
-        pc_conn_send_flush(slot_id, h304, (u16_t)n304); // header-only reply: write and flush in one marshal
+        pc_conn_send_flush(slot_id, h304, (proto_u16)n304); // header-only reply: write and flush in one marshal
         pc_resp_end(slot_id, 304, 0, keep, /*pre_flushed=*/PROTO_TRUE);
         return;
     }
@@ -363,7 +363,7 @@ void serve_file_internal(uint8_t slot_id, proto_bool head, const pc_mnt_backend 
         pc_sb_put(&sb_h416, cl);
         pc_sb_put(&sb_h416, "\r\n");
         int n416 = (int)pc_sb_finish(&sb_h416);
-        pc_conn_send_flush(slot_id, h416, (u16_t)n416);
+        pc_conn_send_flush(slot_id, h416, (proto_u16)n416);
         pc_resp_end(slot_id, 416, 0, keep, /*pre_flushed=*/PROTO_TRUE);
         return;
     }
@@ -414,7 +414,7 @@ void serve_file_internal(uint8_t slot_id, proto_bool head, const pc_mnt_backend 
         header[0] = '\0';
     }
 
-    pc_conn_send(slot_id, header, (u16_t)hlen);
+    pc_conn_send(slot_id, header, (proto_u16)hlen);
 
     // HEAD or empty body: headers only, finish now.
     if (head || body_len == 0)
@@ -470,7 +470,7 @@ void file_send_pump(uint8_t slot_id)
     uint8_t chunk[FILE_CHUNK_SIZE];
     while (s.remaining > 0)
     {
-        u16_t avail = pc_conn_sndbuf(slot_id);
+        proto_u16 avail = pc_conn_sndbuf(slot_id);
         if (avail == 0)
         {
             pc_conn_flush(slot_id); // push what is queued; resume on a later loop
@@ -489,7 +489,7 @@ void file_send_pump(uint8_t slot_id)
             s.remaining = 0; // read error / short file: stop (response will be short)
             break;
         }
-        if (!pc_conn_send(slot_id, chunk, (u16_t)n))
+        if (!pc_conn_send(slot_id, chunk, (proto_u16)n))
         {
             pc_fs_seek(s.fh, s.off); // un-read the bytes that did not go out; retry next loop
             pc_conn_flush(slot_id);

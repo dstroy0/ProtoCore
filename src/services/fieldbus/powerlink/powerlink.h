@@ -28,13 +28,13 @@
 
 /** @brief EPL message types (EPSG DS 301). */
 // POWERLINK message types + node ids: wire bytes, so integer constants in a namespacing struct.
-#define C 0x01 ///< Start of Cycle (MN -> all, multicast).
-#define Q 0x03 ///< Poll Request (MN -> CN, unicast).
-#define S 0x04 ///< Poll Response (CN -> all, multicast, carries process data).
-#define A 0x05 ///< Start of Async (MN -> all).
-#define D 0x06 ///< Async Send.
-#define T 0xFF ///< broadcast node id (SoC/SoA destination).
-#define N 0xF0 ///< the Managing Node id (240).
+#define EPL_MSG_SOC 0x01        ///< Start of Cycle (MN -> all, multicast).
+#define EPL_MSG_PREQ 0x03       ///< Poll Request (MN -> CN, unicast).
+#define EPL_MSG_PRES 0x04       ///< Poll Response (CN -> all, multicast, carries process data).
+#define EPL_MSG_SOA 0x05        ///< Start of Async (MN -> all).
+#define EPL_MSG_ASND 0x06       ///< Async Send.
+#define EPL_NODE_BROADCAST 0xFF ///< broadcast node id (SoC/SoA destination).
+#define EPL_NODE_MN 0xF0        ///< the Managing Node id (240).
 
 /**
  * @brief Build an EPL basic frame: [messageType][dest][source][payload...].

@@ -200,7 +200,7 @@ static void tmpl_take_placeholder(uint8_t slot, const char **p, TemplateVar reso
     *total += vlen;
     if (emit && vlen)
     {
-        pc_conn_send(slot, val, (u16_t)vlen);
+        pc_conn_send(slot, val, (proto_u16)vlen);
     }
     *p = end + 2;
 }
@@ -231,7 +231,7 @@ static size_t tmpl_walk(uint8_t slot, const char *tmpl, TemplateVar resolver, pr
         // always >= 1. (The vlen test in tmpl_take_placeholder, which CAN be 0, is exercised.)
         if (emit && rlen)
         {
-            pc_conn_send(slot, run, (u16_t)rlen);
+            pc_conn_send(slot, run, (proto_u16)rlen);
         }
         // GCOVR_EXCL_BR_STOP
     }
@@ -272,7 +272,7 @@ void send_template(uint8_t slot_id, int code, const char *content_type, const ch
 
     proto_bool head = req_is_head(slot_id);
 
-    pc_conn_send(slot_id, header, (u16_t)hlen);
+    pc_conn_send(slot_id, header, (proto_u16)hlen);
     // Pass 2: stream the rendered body (HEAD carries headers only).
     if (!head && body_len > 0)
     {
@@ -336,7 +336,7 @@ void send_chunked(uint8_t slot_id, int code, const char *content_type, ChunkSour
     int hlen = (int)pc_sb_finish(&hb2);
     hlen = proto_append_resp_trailer(header, RESP_HDR_BUF_SIZE, hlen, slot_id, cl);
 
-    pc_conn_send(slot_id, header, (u16_t)hlen);
+    pc_conn_send(slot_id, header, (proto_u16)hlen);
 
     // HEAD carries the headers but no body or terminator.
     if (req_is_head(slot_id) || !source)
@@ -385,12 +385,12 @@ void chunk_send_pump(uint8_t slot_id)
     // of the body for the "<hex>\r\n" size line and 2 after for the trailing CRLF, so the source writes
     // the body in place and the whole "<hex>\r\n<body>\r\n" is one pc_conn_send with no extra copy.
     // FRAME reserves send-window room for that framing; the raw (HTTP/1.0) path sends the body verbatim.
-    static const u16_t CHUNK_HDR_RESERVE = 8; // "<hex>\r\n" is <= 6 bytes for a chunk <= 0xFFFF
-    const u16_t FRAME = s.raw ? 0 : 12;
+    static const proto_u16 CHUNK_HDR_RESERVE = 8; // "<hex>\r\n" is <= 6 bytes for a chunk <= 0xFFFF
+    const proto_u16 FRAME = s.raw ? 0 : 12;
     uint8_t framed[CHUNK_HDR_RESERVE + CHUNK_BUF_SIZE + 2];
     for (;;)
     {
-        u16_t avail = pc_conn_sndbuf(slot_id);
+        proto_u16 avail = pc_conn_sndbuf(slot_id);
         if (avail <= FRAME)
         {
             pc_conn_flush(slot_id); // no room for a useful chunk; resume next loop
@@ -423,7 +423,7 @@ void chunk_send_pump(uint8_t slot_id)
 
         if (s.raw)
         {
-            pc_conn_send(slot_id, body, (u16_t)n); // close-delimited: no chunk framing
+            pc_conn_send(slot_id, body, (proto_u16)n); // close-delimited: no chunk framing
         }
         else
         {
@@ -440,7 +440,7 @@ void chunk_send_pump(uint8_t slot_id)
             start[nd + 1] = '\n';
             body[n] = '\r';
             body[n + 1] = '\n';
-            pc_conn_send(slot_id, start, (u16_t)(sn + n + 2));
+            pc_conn_send(slot_id, start, (proto_u16)(sn + n + 2));
         }
         s.total += (int)n;
     }

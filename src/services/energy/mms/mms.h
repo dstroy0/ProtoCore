@@ -28,12 +28,12 @@
 
 /** @brief MMS PDU tags (context-specific) + the service tags used here. */
 // MMS PDU / service / BER tags: wire bytes, so integer constants in a namespacing struct.
-#define T 0xA0
-#define E 0xA1
-#define R 0xA2
-#define D 0xA4 ///< confirmedServiceRequest/Response [4] read.
-#define E 0xA5 ///< [5] write.
-#define D 0x02 ///< Unsigned32 invokeID (INTEGER tag).
+#define MMS_PDU_CONFIRMED_REQUEST 0xA0
+#define MMS_PDU_CONFIRMED_RESPONSE 0xA1
+#define MMS_PDU_CONFIRMED_ERROR 0xA2
+#define MMS_SERVICE_READ 0xA4  ///< confirmedServiceRequest/Response [4] read.
+#define MMS_SERVICE_WRITE 0xA5 ///< [5] write.
+#define MMS_TAG_INVOKE_ID 0x02 ///< Unsigned32 invokeID (INTEGER tag).
 
 /**
  * @brief Build an MMS confirmed-request Read PDU for one named variable.

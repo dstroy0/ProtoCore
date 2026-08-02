@@ -27,18 +27,18 @@
 
 // OCIT message types: wire bytes compared/emitted, so integer constants in a namespacing struct.
 // (OcitMsg is the parsed-message struct below; these codes live in OcitMsgType.)
-#define T 0x01 ///< read an object value.
-#define T 0x02 ///< write an object value.
-#define T 0x03 ///< an unsolicited value report.
-#define R 0x0F ///< error response.
+#define OCIT_MSG_GET 0x01    ///< read an object value.
+#define OCIT_MSG_SET 0x02    ///< write an object value.
+#define OCIT_MSG_REPORT 0x03 ///< an unsolicited value report.
+#define OCIT_MSG_ERROR 0x0F  ///< error response.
 
 /** @brief OCIT value data types. */
 // OCIT value data types: wire bytes, so integer constants in a namespacing struct.
-#define L 0x01   ///< 1 byte (0/1).
-#define E 0x02   ///< 1 byte.
-#define T16 0x03 ///< 2 bytes, big-endian.
-#define T32 0x04 ///< 4 bytes, big-endian.
-#define S 0x05   ///< raw octet string (length is the remaining message).
+#define OCIT_TYPE_BOOL 0x01   ///< 1 byte (0/1).
+#define OCIT_TYPE_BYTE 0x02   ///< 1 byte.
+#define T16 0x03              ///< 2 bytes, big-endian.
+#define T32 0x04              ///< 4 bytes, big-endian.
+#define OCIT_TYPE_OCTETS 0x05 ///< raw octet string (length is the remaining message).
 
 /**
  * @brief Build an OCIT message: [msg-type][object-type:2][instance:2][data-type][value...].

@@ -25,11 +25,11 @@
 
 /** @brief SNP control bytes (subset). */
 // SNP control bytes: wire values compared/emitted, so integer constants in a namespacing struct.
-#define Q 0x05 ///< enquiry / attach.
-#define K 0x06 ///< acknowledge.
-#define K 0x15 ///< negative acknowledge.
-#define H 0x01 ///< start of header (a request/response frame).
-#define T 0x04 ///< end of transmission.
+#define SNP_ENQ 0x05 ///< enquiry / attach.
+#define SNP_ACK 0x06 ///< acknowledge.
+#define SNP_NAK 0x15 ///< negative acknowledge.
+#define SNP_SOH 0x01 ///< start of header (a request/response frame).
+#define SNP_EOT 0x04 ///< end of transmission.
 
 /** @brief Arithmetic-sum BCC: the low 8 bits of the sum of @p len bytes. */
 uint8_t pc_snp_bcc(const uint8_t *bytes, size_t len);

@@ -57,7 +57,7 @@ void setup()
     on_http("/time", HttpMethod::HTTP_GET, handle_time);
     begin_http(80);
 
-    pc_ntp_begin("UTC0"); // POSIX TZ string; set your zone for local time
+    pc_ntp_begin("UTC0", NULL, NULL); // POSIX TZ string; set your zone for local time
 }
 
 void loop()

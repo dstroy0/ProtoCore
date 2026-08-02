@@ -24,6 +24,8 @@
 
 #include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
 
+#if PC_ENABLE_FDC2214
+
 // Register map (channel 0; CH1..3 follow at +2 / +1 offsets).
 #define FDC2214_REG_DATA_CH0_MSB 0x00
 #define FDC2214_REG_DATA_CH0_LSB 0x01
@@ -70,5 +72,7 @@ proto_bool pc_fdc2214_begin(uint8_t addr, uint16_t rcount, uint16_t settlecount)
 
 /** @brief Read channel 0's 28-bit conversion result into @p out. @return false on I2C error. */
 proto_bool pc_fdc2214_read_ch0(uint32_t *out);
+
+#endif // PC_ENABLE_FDC2214
 
 #endif // PROTOCORE_FDC2214_H

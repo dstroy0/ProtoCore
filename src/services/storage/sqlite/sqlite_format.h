@@ -67,10 +67,10 @@ proto_bool pc_sqlite_parse_db_header(const uint8_t *buf, size_t len, SqliteDbHea
 /** @brief B-tree page types (the first byte of a b-tree page header). */
 // SQLite b-tree page types (the page-header first byte): wire/format values compared, so integer
 // constants in a namespacing struct.
-#define X 2
-#define E 5
-#define X 10
-#define E 13
+#define SQLITE_BTREE_INTERIOR_INDEX 2
+#define SQLITE_BTREE_INTERIOR_TABLE 5
+#define SQLITE_BTREE_LEAF_INDEX 10
+#define SQLITE_BTREE_LEAF_TABLE 13
 
 /** @brief Parsed b-tree page header (8 bytes for a leaf, 12 for an interior page). */
 typedef struct

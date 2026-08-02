@@ -1262,7 +1262,7 @@ static void raw_send(uint8_t slot, const void *data, size_t n)
     {
         return;
     }
-    pc_conn_send(slot, data, (u16_t)n);
+    pc_conn_send(slot, data, (proto_u16)n);
     pc_conn_flush(slot);
 }
 static void close_conn(uint8_t slot)

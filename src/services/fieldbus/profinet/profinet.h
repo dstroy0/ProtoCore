@@ -25,23 +25,23 @@
 
 #if PC_ENABLE_PROFINET
 
-#define O 0xFEFC
-#define T 0xFEFD
-#define Q 0xFEFE
-#define S 0xFEFF
-#define T 0x03
-#define T 0x04
-#define Y 0x05
-#define T 0x00
-#define S 0x01
-#define P 0x01
-#define M 0x02 ///< IP address / subnet / gateway.
-#define E 0x02
-#define N 0x02
-#define D 0x03
-#define L 0xFF
-#define L 0xFF
-#define N 10
+#define PN_FRAMEID_DCP_HELLO 0xFEFC
+#define PN_FRAMEID_DCP_GETSET 0xFEFD
+#define PN_FRAMEID_DCP_IDENT_REQ 0xFEFE
+#define PN_FRAMEID_DCP_IDENT_RES 0xFEFF
+#define PN_DCP_SERVICE_GET 0x03
+#define PN_DCP_SERVICE_SET 0x04
+#define PN_DCP_SERVICE_IDENTIFY 0x05
+#define PN_DCP_TYPE_REQUEST 0x00
+#define PN_DCP_TYPE_RESPONSE_SUCCESS 0x01
+#define PN_DCP_OPT_IP 0x01
+#define PN_DCP_SUB_IP_PARAM 0x02 ///< IP address / subnet / gateway.
+#define PN_DCP_OPT_DEVICE 0x02
+#define PN_DCP_SUB_DEV_NAME_OF_STATION 0x02
+#define PN_DCP_SUB_DEV_ID 0x03
+#define PN_DCP_OPT_ALL 0xFF
+#define PN_DCP_SUB_ALL 0xFF
+#define PN_DCP_HDR_LEN 10
 
 /**
  * @brief Build a DCP frame header into @p out (>= 10 bytes). @return 10, or 0 if it will not fit.

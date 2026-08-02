@@ -25,12 +25,12 @@
 
 /** @brief OTA image states (mirror esp_ota_img_states_t so the core is host-pure). These arrive from
  *  ESP-IDF as a uint8_t and are compared, so integer constants in a namespacing struct - cast-free. */
-#define W 0
-#define Y 1
-#define D 2
-#define D 3
-#define D 4
-#define D 0xFF
+#define PC_OTA_IMG_NEW 0
+#define PC_OTA_IMG_PENDING_VERIFY 1
+#define PC_OTA_IMG_VALID 2
+#define PC_OTA_IMG_INVALID 3
+#define PC_OTA_IMG_ABORTED 4
+#define PC_OTA_IMG_UNDEFINED 0xFF
 
 /** @brief What the rollback tick should do. */
 typedef enum PROTO_ENUM_PACKED

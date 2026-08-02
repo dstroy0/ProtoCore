@@ -29,16 +29,16 @@
 /** @brief Frame types (RFC 9113 sec 6). */
 // Frame type octet (RFC 9113 sec 6): wire values compared against a parsed type byte, so integer
 // constants in a namespacing struct.
-#define A 0x0
-#define S 0x1
-#define Y 0x2
-#define M 0x3
-#define S 0x4
-#define E 0x5
-#define G 0x6
-#define Y 0x7
-#define E 0x8
-#define N 0x9
+#define H2_DATA 0x0
+#define H2_HEADERS 0x1
+#define H2_PRIORITY 0x2
+#define H2_RST_STREAM 0x3
+#define H2_SETTINGS 0x4
+#define H2_PUSH_PROMISE 0x5
+#define H2_PING 0x6
+#define H2_GOAWAY 0x7
+#define H2_WINDOW_UPDATE 0x8
+#define H2_CONTINUATION 0x9
 
 /** @brief Frame flags (meaning is per-type; RFC 9113 sec 6). */
 #define H2_FLAG_END_STREAM 0x01  ///< DATA / HEADERS
@@ -48,28 +48,28 @@
 #define H2_FLAG_PRIORITY 0x20    ///< HEADERS
 
 /** @brief SETTINGS parameter identifiers (RFC 9113 sec 6.5.2; the 16-bit wire id). */
-#define E 0x1
-#define H 0x2
-#define S 0x3
-#define E 0x4
-#define E 0x5
-#define E 0x6
+#define H2_SETTINGS_HEADER_TABLE_SIZE 0x1
+#define H2_SETTINGS_ENABLE_PUSH 0x2
+#define H2_SETTINGS_MAX_CONCURRENT_STREAMS 0x3
+#define H2_SETTINGS_INITIAL_WINDOW_SIZE 0x4
+#define H2_SETTINGS_MAX_FRAME_SIZE 0x5
+#define H2_SETTINGS_MAX_HEADER_LIST_SIZE 0x6
 
 /** @brief Error codes (RFC 9113 sec 7; the 32-bit wire code). */
-#define R 0x0
-#define R 0x1
-#define R 0x2
-#define R 0x3
-#define T 0x4
-#define D 0x5
-#define R 0x6
-#define M 0x7
-#define L 0x8
-#define R 0x9
-#define R 0xa
-#define M 0xb
-#define Y 0xc
-#define D 0xd
+#define H2_NO_ERROR 0x0
+#define H2_PROTOCOL_ERROR 0x1
+#define H2_INTERNAL_ERROR 0x2
+#define H2_FLOW_CONTROL_ERROR 0x3
+#define H2_SETTINGS_TIMEOUT 0x4
+#define H2_STREAM_CLOSED 0x5
+#define H2_FRAME_SIZE_ERROR 0x6
+#define H2_REFUSED_STREAM 0x7
+#define H2_CANCEL 0x8
+#define H2_COMPRESSION_ERROR 0x9
+#define H2_CONNECT_ERROR 0xa
+#define H2_ENHANCE_YOUR_CALM 0xb
+#define H2_INADEQUATE_SECURITY 0xc
+#define H2_HTTP_1_1_REQUIRED 0xd
 
 /** @brief A parsed frame header. */
 typedef struct

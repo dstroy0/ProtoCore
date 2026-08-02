@@ -27,6 +27,8 @@
 
 #include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
 
+#if PC_ENABLE_PCA9685
+
 #define PCA9685_CHANNELS 16     ///< PWM output channels
 #define PCA9685_COUNT_MAX 4095  ///< a PWM count is 12-bit (0..4095)
 #define PCA9685_FULL_ON 0x1000  ///< pass as `on` for a channel fully on (bit 12 flag)
@@ -70,5 +72,7 @@ proto_bool pc_pca9685_set_pwm(uint8_t channel, uint16_t on, uint16_t off);
 
 /** @brief Drive a servo on @p channel to a @p microseconds pulse (uses the configured frequency). */
 proto_bool pc_pca9685_set_servo_us(uint8_t channel, uint32_t microseconds);
+
+#endif // PC_ENABLE_PCA9685
 
 #endif // PROTOCORE_PCA9685_H

@@ -29,21 +29,21 @@
 #if PC_ENABLE_DSHOT
 
 /** @brief The standard DShot special commands (value field 0..47; throttle starts at 48). */
-#define P 0  ///< disarm / zero throttle.
-#define N1 1 ///< beep (1..5 = rising tones).
+#define DSHOT_CMD_MOTOR_STOP 0 ///< disarm / zero throttle.
+#define N1 1                   ///< beep (1..5 = rising tones).
 #define N5 5
-#define O 6  ///< request ESC info (telemetry bit must be set).
-#define _1 7 ///< set spin direction normal (send 6x).
-#define _2 8 ///< set spin direction reversed (send 6x).
-#define F 9  ///< disable bidirectional 3D mode (send 6x).
-#define N 10 ///< enable bidirectional 3D mode (send 6x).
-#define T 11
-#define S 12 ///< persist settings (send 6x).
+#define DSHOT_CMD_ESC_INFO 6    ///< request ESC info (telemetry bit must be set).
+#define _1 7                    ///< set spin direction normal (send 6x).
+#define _2 8                    ///< set spin direction reversed (send 6x).
+#define DSHOT_CMD_3D_MODE_OFF 9 ///< disable bidirectional 3D mode (send 6x).
+#define DSHOT_CMD_3D_MODE_ON 10 ///< enable bidirectional 3D mode (send 6x).
+#define DSHOT_CMD_SETTINGS_REQUEST 11
+#define DSHOT_CMD_SAVE_SETTINGS 12 ///< persist settings (send 6x).
 // The throttle / value domain is the 11-bit value field (0..2047), so these need a 16-bit type -
 // uint8_t would silently truncate 2047 to 255.
-#define N 48   ///< first real throttle step.
-#define X 2047 ///< last throttle step (2000 steps of resolution).
-#define X 2047 ///< widest value the 11-bit field holds.
+#define DSHOT_THROTTLE_MIN 48   ///< first real throttle step.
+#define DSHOT_THROTTLE_MAX 2047 ///< last throttle step (2000 steps of resolution).
+#define DSHOT_VALUE_MAX 2047    ///< widest value the 11-bit field holds.
 
 /**
  * @brief Build a 16-bit DShot frame.

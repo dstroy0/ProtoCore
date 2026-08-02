@@ -38,7 +38,7 @@
  * pc_snmp_v3_set_user() (the localized keys depend on the engine ID). For a unique
  * per-device ID, derive @p id from the chip MAC.
  */
-void pc_snmp_v3_init(const uint8_t *engine_id = NULL, size_t engine_id_len = 0);
+void pc_snmp_v3_init(const uint8_t *engine_id, size_t engine_id_len);
 
 /**
  * @brief Configure the (single) USM user and derive its localized keys.

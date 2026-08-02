@@ -156,7 +156,7 @@ void setup()
     // GPS is the primary (stratum 1); the public NTP pool is the fallback.
     pc_time_source_add("gps", 1, gps_time_source);
     pc_time_source_add("ntp", 2, pc_ntp_upstream_source);
-    pc_ntp_begin(); // start the upstream SNTP client for the fallback
+    pc_ntp_begin(NULL, NULL, NULL); // start the upstream SNTP client for the fallback
 
     if (pc_ntp_server_begin(1, NTP_REFID_GPS))
     {

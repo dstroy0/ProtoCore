@@ -24,6 +24,8 @@
 
 #include "protocore_config.h"
 
+#if PC_ENABLE_PROVISIONING
+
 /**
  * @brief Extract and URL-decode a field from an x-www-form-urlencoded body.
  *
@@ -60,5 +62,7 @@ void pc_provisioning_begin(const char *ap_ssid);
 
 /** @brief Erase stored credentials (forces re-provisioning on next boot). */
 void pc_provisioning_clear();
+
+#endif // PC_ENABLE_PROVISIONING
 
 #endif // PROTOCORE_PROVISIONING_H

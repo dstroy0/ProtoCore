@@ -29,18 +29,18 @@ int pc_southbound_register(const SouthboundDriver *drv)
 {
     if (!drv || !drv->name)
     {
-        return Sb::SB_ERR_ARG;
+        return SB_ERR_ARG;
     }
     if (pc_southbound_find(drv->name))
     {
-        return Sb::SB_ERR_DUP;
+        return SB_ERR_DUP;
     }
     if (s_sb.count >= PC_SOUTHBOUND_MAX_DRIVERS)
     {
-        return Sb::SB_ERR_FULL;
+        return SB_ERR_FULL;
     }
     s_sb.drivers[s_sb.count++] = drv;
-    return Sb::SB_OK;
+    return SB_OK;
 }
 
 void pc_southbound_clear(void)
@@ -85,16 +85,16 @@ int pc_southbound_read(const char *name, uint32_t point, int32_t *value_out)
 {
     if (!value_out)
     {
-        return Sb::SB_ERR_ARG;
+        return SB_ERR_ARG;
     }
     const SouthboundDriver *d = pc_southbound_find(name);
     if (!d)
     {
-        return Sb::SB_ERR_NOT_FOUND;
+        return SB_ERR_NOT_FOUND;
     }
     if (!d->read)
     {
-        return Sb::SB_ERR_UNSUPPORTED;
+        return SB_ERR_UNSUPPORTED;
     }
     return d->read(d->ctx, point, value_out);
 }
@@ -104,11 +104,11 @@ int pc_southbound_write(const char *name, uint32_t point, int32_t value)
     const SouthboundDriver *d = pc_southbound_find(name);
     if (!d)
     {
-        return Sb::SB_ERR_NOT_FOUND;
+        return SB_ERR_NOT_FOUND;
     }
     if (!d->write)
     {
-        return Sb::SB_ERR_UNSUPPORTED;
+        return SB_ERR_UNSUPPORTED;
     }
     return d->write(d->ctx, point, value);
 }
@@ -117,16 +117,16 @@ int pc_southbound_read_block(const char *name, uint32_t first, int32_t *out, siz
 {
     if (!out || n == 0)
     {
-        return Sb::SB_ERR_ARG;
+        return SB_ERR_ARG;
     }
     const SouthboundDriver *d = pc_southbound_find(name);
     if (!d)
     {
-        return Sb::SB_ERR_NOT_FOUND;
+        return SB_ERR_NOT_FOUND;
     }
     if (!d->read_block)
     {
-        return Sb::SB_ERR_UNSUPPORTED;
+        return SB_ERR_UNSUPPORTED;
     }
     return d->read_block(d->ctx, first, out, n);
 }
@@ -135,16 +135,16 @@ int pc_southbound_write_block(const char *name, uint32_t first, const int32_t *i
 {
     if (!in || n == 0)
     {
-        return Sb::SB_ERR_ARG;
+        return SB_ERR_ARG;
     }
     const SouthboundDriver *d = pc_southbound_find(name);
     if (!d)
     {
-        return Sb::SB_ERR_NOT_FOUND;
+        return SB_ERR_NOT_FOUND;
     }
     if (!d->write_block)
     {
-        return Sb::SB_ERR_UNSUPPORTED;
+        return SB_ERR_UNSUPPORTED;
     }
     return d->write_block(d->ctx, first, in, n);
 }

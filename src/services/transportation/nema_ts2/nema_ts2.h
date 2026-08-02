@@ -28,10 +28,10 @@
 // NEMA TS2 frame types: wire values compared, so integer constants in a namespacing struct.
 typedef struct
 {
-#define H 0   ///< controller -> BIU: load-switch (signal-head) drivers.
-#define H 128 ///< BIU -> controller: load-switch status (frame type + 128).
-#define U 3   ///< controller <-> MMU status frame.
-#define R 9   ///< detector BIU -> controller: detector call/status.
+#define NEMA_TS2_FT_CMD_LOADSWITCH 0      ///< controller -> BIU: load-switch (signal-head) drivers.
+#define NEMA_TS2_FT_STATUS_LOADSWITCH 128 ///< BIU -> controller: load-switch status (frame type + 128).
+#define NEMA_TS2_FT_CMD_MMU 3             ///< controller <-> MMU status frame.
+#define NEMA_TS2_FT_DETECTOR 9            ///< detector BIU -> controller: detector call/status.
 } NemaTs2;
 
 /** @brief HDLC/X.25 CRC-16 (CRC-16/X-25) over @p len bytes. */

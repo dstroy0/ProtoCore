@@ -109,7 +109,7 @@ static void reply_and_close(CasterRover *r, const char *resp, size_t len)
 {
     if (len && pc_conn_active(r->conn_slot))
     {
-        pc_conn_send(r->conn_slot, resp, (u16_t)len);
+        pc_conn_send(r->conn_slot, resp, (proto_u16)len);
     }
     r->active = PROTO_FALSE;
     pc_conn_close(r->conn_slot);
@@ -171,7 +171,7 @@ static void dispatch(CasterRover *r, const NtripRequest *req)
         return;
     }
     size_t n = pc_ntrip_build_stream_response(buf, sizeof(buf), req->version);
-    if (n == 0 || !pc_conn_active(r->conn_slot) || !pc_conn_send(r->conn_slot, buf, (u16_t)n))
+    if (n == 0 || !pc_conn_active(r->conn_slot) || !pc_conn_send(r->conn_slot, buf, (proto_u16)n))
     {
         r->active = PROTO_FALSE;
         pc_conn_close(r->conn_slot);
@@ -315,7 +315,7 @@ int pc_ntrip_caster_broadcast(const char *mountpoint, const uint8_t *data, size_
         {
             continue;
         }
-        if (pc_conn_send(r->conn_slot, data, (u16_t)len))
+        if (pc_conn_send(r->conn_slot, data, (proto_u16)len))
         {
             sent++;
         }

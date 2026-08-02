@@ -27,9 +27,9 @@
 #if PC_ENABLE_LONWORKS
 
 // LonTalk NV message codes + selector limit: wire values, so integer constants in a struct.
-#define E 0x80   ///< network-variable update message code (base).
-#define L 0x81   ///< network-variable poll (request).
-#define X 0x3FFF ///< the NV selector is 14 bits.
+#define LON_MSG_NV_UPDATE 0x80     ///< network-variable update message code (base).
+#define LON_MSG_NV_POLL 0x81       ///< network-variable poll (request).
+#define LON_NV_SELECTOR_MAX 0x3FFF ///< the NV selector is 14 bits.
 
 /**
  * @brief Build a LonTalk NV-update application PDU: [msg-code][selector:2][value...].

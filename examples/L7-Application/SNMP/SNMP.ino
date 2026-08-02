@@ -91,7 +91,7 @@ void setup()
     // Build the MIB: standard system group + private objects.
     pc_snmp_agent_init("public");              // read-only community
     pc_snmp_agent_set_rw_community("private"); // read-write community (authorizes Set)
-    pc_snmp_agent_set_system("ProtoCore SNMP agent", "admin@example.com", "esp32-pc", "lab bench");
+    pc_snmp_agent_set_system("ProtoCore SNMP agent", "admin@example.com", "esp32-pc", "lab bench", 72);
     pc_snmp_agent_add_dynamic(OID_FREE_HEAP, 9, (uint8_t)SnmpTag::SNMP_GAUGE32, get_free_heap);
     pc_snmp_agent_add_integer(OID_LED, 9, 0, set_led); // writable
 

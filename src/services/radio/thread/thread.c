@@ -29,7 +29,7 @@ static proto_bool put_stuffed(uint8_t *out, uint16_t *p, uint16_t cap, uint8_t b
         {
             return PROTO_FALSE;
         }
-        out[(*p)++] = ThreadHdlc::HDLC_ESCAPE;
+        out[(*p)++] = HDLC_ESCAPE;
         out[(*p)++] = (uint8_t)(b ^ 0x20);
     }
     else
@@ -658,39 +658,39 @@ uint16_t pc_spinel_writer_len(const SpinelWriter *w)
 // --- Property registry ------------------------------------------------------------------
 
 static const SpinelPropInfo k_props[] = {
-    {SpinelProp::SPINEL_PROP_LAST_STATUS, "LAST_STATUS", 'i'},
-    {SpinelProp::SPINEL_PROP_PROTOCOL_VERSION, "PROTOCOL_VERSION", 'i'},
-    {SpinelProp::SPINEL_PROP_NCP_VERSION, "NCP_VERSION", 'U'},
-    {SpinelProp::SPINEL_PROP_INTERFACE_TYPE, "INTERFACE_TYPE", 'i'},
-    {SpinelProp::SPINEL_PROP_VENDOR_ID, "VENDOR_ID", 'i'},
-    {SpinelProp::SPINEL_PROP_CAPS, "CAPS", 'i'},
-    {SpinelProp::SPINEL_PROP_INTERFACE_COUNT, "INTERFACE_COUNT", 'C'},
-    {SpinelProp::SPINEL_PROP_HWADDR, "HWADDR", 'E'},
-    {SpinelProp::SPINEL_PROP_LOCK, "LOCK", 'b'},
-    {SpinelProp::SPINEL_PROP_PHY_ENABLED, "PHY_ENABLED", 'b'},
-    {SpinelProp::SPINEL_PROP_PHY_CHAN, "PHY_CHAN", 'C'},
-    {SpinelProp::SPINEL_PROP_PHY_CHAN_SUPPORTED, "PHY_CHAN_SUPPORTED", 'C'},
-    {SpinelProp::SPINEL_PROP_PHY_FREQ, "PHY_FREQ", 'L'},
-    {SpinelProp::SPINEL_PROP_PHY_TX_POWER, "PHY_TX_POWER", 'c'},
-    {SpinelProp::SPINEL_PROP_PHY_RSSI, "PHY_RSSI", 'c'},
-    {SpinelProp::SPINEL_PROP_MAC_SCAN_STATE, "MAC_SCAN_STATE", 'C'},
-    {SpinelProp::SPINEL_PROP_MAC_SCAN_MASK, "MAC_SCAN_MASK", 'C'},
-    {SpinelProp::SPINEL_PROP_MAC_SCAN_PERIOD, "MAC_SCAN_PERIOD", 'S'},
-    {SpinelProp::SPINEL_PROP_MAC_15_4_LADDR, "MAC_15_4_LADDR", 'E'},
-    {SpinelProp::SPINEL_PROP_MAC_15_4_SADDR, "MAC_15_4_SADDR", 'S'},
-    {SpinelProp::SPINEL_PROP_MAC_15_4_PANID, "MAC_15_4_PANID", 'S'},
-    {SpinelProp::SPINEL_PROP_NET_SAVED, "NET_SAVED", 'b'},
-    {SpinelProp::SPINEL_PROP_NET_IF_UP, "NET_IF_UP", 'b'},
-    {SpinelProp::SPINEL_PROP_NET_STACK_UP, "NET_STACK_UP", 'b'},
-    {SpinelProp::SPINEL_PROP_NET_ROLE, "NET_ROLE", 'C'},
-    {SpinelProp::SPINEL_PROP_NET_NETWORK_NAME, "NET_NETWORK_NAME", 'U'},
-    {SpinelProp::SPINEL_PROP_NET_XPANID, "NET_XPANID", 'D'},
-    {SpinelProp::SPINEL_PROP_NET_NETWORK_KEY, "NET_NETWORK_KEY", 'D'},
-    {SpinelProp::SPINEL_PROP_IPV6_LL_ADDR, "IPV6_LL_ADDR", '6'},
-    {SpinelProp::SPINEL_PROP_IPV6_ML_ADDR, "IPV6_ML_ADDR", '6'},
-    {SpinelProp::SPINEL_PROP_STREAM_DEBUG, "STREAM_DEBUG", 'U'},
-    {SpinelProp::SPINEL_PROP_STREAM_RAW, "STREAM_RAW", 'd'},
-    {SpinelProp::SPINEL_PROP_STREAM_NET, "STREAM_NET", 'd'},
+    {SPINEL_PROP_LAST_STATUS, "LAST_STATUS", 'i'},
+    {SPINEL_PROP_PROTOCOL_VERSION, "PROTOCOL_VERSION", 'i'},
+    {SPINEL_PROP_NCP_VERSION, "NCP_VERSION", 'U'},
+    {SPINEL_PROP_INTERFACE_TYPE, "INTERFACE_TYPE", 'i'},
+    {SPINEL_PROP_VENDOR_ID, "VENDOR_ID", 'i'},
+    {SPINEL_PROP_CAPS, "CAPS", 'i'},
+    {SPINEL_PROP_INTERFACE_COUNT, "INTERFACE_COUNT", 'C'},
+    {SPINEL_PROP_HWADDR, "HWADDR", 'E'},
+    {SPINEL_PROP_LOCK, "LOCK", 'b'},
+    {SPINEL_PROP_PHY_ENABLED, "PHY_ENABLED", 'b'},
+    {SPINEL_PROP_PHY_CHAN, "PHY_CHAN", 'C'},
+    {SPINEL_PROP_PHY_CHAN_SUPPORTED, "PHY_CHAN_SUPPORTED", 'C'},
+    {SPINEL_PROP_PHY_FREQ, "PHY_FREQ", 'L'},
+    {SPINEL_PROP_PHY_TX_POWER, "PHY_TX_POWER", 'c'},
+    {SPINEL_PROP_PHY_RSSI, "PHY_RSSI", 'c'},
+    {SPINEL_PROP_MAC_SCAN_STATE, "MAC_SCAN_STATE", 'C'},
+    {SPINEL_PROP_MAC_SCAN_MASK, "MAC_SCAN_MASK", 'C'},
+    {SPINEL_PROP_MAC_SCAN_PERIOD, "MAC_SCAN_PERIOD", 'S'},
+    {SPINEL_PROP_MAC_15_4_LADDR, "MAC_15_4_LADDR", 'E'},
+    {SPINEL_PROP_MAC_15_4_SADDR, "MAC_15_4_SADDR", 'S'},
+    {SPINEL_PROP_MAC_15_4_PANID, "MAC_15_4_PANID", 'S'},
+    {SPINEL_PROP_NET_SAVED, "NET_SAVED", 'b'},
+    {SPINEL_PROP_NET_IF_UP, "NET_IF_UP", 'b'},
+    {SPINEL_PROP_NET_STACK_UP, "NET_STACK_UP", 'b'},
+    {SPINEL_PROP_NET_ROLE, "NET_ROLE", 'C'},
+    {SPINEL_PROP_NET_NETWORK_NAME, "NET_NETWORK_NAME", 'U'},
+    {SPINEL_PROP_NET_XPANID, "NET_XPANID", 'D'},
+    {SPINEL_PROP_NET_NETWORK_KEY, "NET_NETWORK_KEY", 'D'},
+    {SPINEL_PROP_IPV6_LL_ADDR, "IPV6_LL_ADDR", '6'},
+    {SPINEL_PROP_IPV6_ML_ADDR, "IPV6_ML_ADDR", '6'},
+    {SPINEL_PROP_STREAM_DEBUG, "STREAM_DEBUG", 'U'},
+    {SPINEL_PROP_STREAM_RAW, "STREAM_RAW", 'd'},
+    {SPINEL_PROP_STREAM_NET, "STREAM_NET", 'd'},
 };
 
 typedef struct
@@ -699,22 +699,22 @@ typedef struct
     const char *name;
 } StatusName;
 static const StatusName k_status[] = {
-    {SpinelStatus::SPINEL_STATUS_OK, "OK"},
-    {SpinelStatus::SPINEL_STATUS_FAILURE, "FAILURE"},
-    {SpinelStatus::SPINEL_STATUS_UNIMPLEMENTED, "UNIMPLEMENTED"},
-    {SpinelStatus::SPINEL_STATUS_INVALID_ARGUMENT, "INVALID_ARGUMENT"},
-    {SpinelStatus::SPINEL_STATUS_INVALID_STATE, "INVALID_STATE"},
-    {SpinelStatus::SPINEL_STATUS_INVALID_COMMAND, "INVALID_COMMAND"},
-    {SpinelStatus::SPINEL_STATUS_INVALID_INTERFACE, "INVALID_INTERFACE"},
-    {SpinelStatus::SPINEL_STATUS_INTERNAL_ERROR, "INTERNAL_ERROR"},
-    {SpinelStatus::SPINEL_STATUS_SECURITY_ERROR, "SECURITY_ERROR"},
-    {SpinelStatus::SPINEL_STATUS_PARSE_ERROR, "PARSE_ERROR"},
-    {SpinelStatus::SPINEL_STATUS_IN_PROGRESS, "IN_PROGRESS"},
-    {SpinelStatus::SPINEL_STATUS_NOMEM, "NOMEM"},
-    {SpinelStatus::SPINEL_STATUS_BUSY, "BUSY"},
-    {SpinelStatus::SPINEL_STATUS_PROP_NOT_FOUND, "PROP_NOT_FOUND"},
-    {SpinelStatus::SPINEL_STATUS_DROPPED, "DROPPED"},
-    {SpinelStatus::SPINEL_STATUS_EMPTY, "EMPTY"},
+    {SPINEL_STATUS_OK, "OK"},
+    {SPINEL_STATUS_FAILURE, "FAILURE"},
+    {SPINEL_STATUS_UNIMPLEMENTED, "UNIMPLEMENTED"},
+    {SPINEL_STATUS_INVALID_ARGUMENT, "INVALID_ARGUMENT"},
+    {SPINEL_STATUS_INVALID_STATE, "INVALID_STATE"},
+    {SPINEL_STATUS_INVALID_COMMAND, "INVALID_COMMAND"},
+    {SPINEL_STATUS_INVALID_INTERFACE, "INVALID_INTERFACE"},
+    {SPINEL_STATUS_INTERNAL_ERROR, "INTERNAL_ERROR"},
+    {SPINEL_STATUS_SECURITY_ERROR, "SECURITY_ERROR"},
+    {SPINEL_STATUS_PARSE_ERROR, "PARSE_ERROR"},
+    {SPINEL_STATUS_IN_PROGRESS, "IN_PROGRESS"},
+    {SPINEL_STATUS_NOMEM, "NOMEM"},
+    {SPINEL_STATUS_BUSY, "BUSY"},
+    {SPINEL_STATUS_PROP_NOT_FOUND, "PROP_NOT_FOUND"},
+    {SPINEL_STATUS_DROPPED, "DROPPED"},
+    {SPINEL_STATUS_EMPTY, "EMPTY"},
 };
 
 const SpinelPropInfo *pc_spinel_prop_lookup(uint32_t id)
@@ -744,8 +744,7 @@ const char *pc_spinel_status_name(uint32_t status)
             return k_status[i].name;
         }
     }
-    if (status >= SpinelStatus::SPINEL_STATUS_RESET_POWER_ON &&
-        status <= SpinelStatus::SPINEL_STATUS_RESET_POWER_ON + 7)
+    if (status >= SPINEL_STATUS_RESET_POWER_ON && status <= SPINEL_STATUS_RESET_POWER_ON + 7)
     {
         return "RESET";
     }
@@ -784,7 +783,7 @@ uint16_t pc_spinel_frame_encode(const uint8_t *payload, uint16_t len, uint8_t *o
     {
         return 0;
     }
-    out[p++] = ThreadHdlc::HDLC_FLAG;
+    out[p++] = HDLC_FLAG;
     return p;
 }
 
@@ -795,7 +794,7 @@ int pc_spinel_frame_decode(const uint8_t *raw, uint16_t len, uint8_t *payload, u
         return 0;
     }
     uint16_t flag = 0;
-    while (flag < len && raw[flag] != ThreadHdlc::HDLC_FLAG)
+    while (flag < len && raw[flag] != HDLC_FLAG)
     {
         flag++;
     }
@@ -810,7 +809,7 @@ int pc_spinel_frame_decode(const uint8_t *raw, uint16_t len, uint8_t *payload, u
     for (uint16_t i = 0; i < flag; i++)
     {
         uint8_t b = raw[i];
-        if (b == ThreadHdlc::HDLC_ESCAPE)
+        if (b == HDLC_ESCAPE)
         {
             if (++i >= flag)
             {

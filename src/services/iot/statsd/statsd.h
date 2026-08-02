@@ -27,6 +27,8 @@
 
 #include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
 
+#if PC_ENABLE_STATSD
+
 /** @brief StatsD metric type codes (the token after the `|`). */
 typedef enum PROTO_ENUM_PACKED
 {
@@ -76,5 +78,7 @@ void pc_statsd_timing(const char *name, uint32_t ms);
 
 /** @brief Add a unique @p member to a set (counts distinct values server-side). */
 void pc_statsd_set(const char *name, const char *member);
+
+#endif // PC_ENABLE_STATSD
 
 #endif // PROTOCORE_STATSD_H

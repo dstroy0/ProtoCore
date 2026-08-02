@@ -81,7 +81,7 @@ static void ssh_emit(uint8_t i, const uint8_t *payload, size_t len)
     {
         return;
     }
-    pc_conn_send(conn->id, wire, (u16_t)wlen);
+    pc_conn_send(conn->id, wire, (proto_u16)wlen);
     pc_conn_flush(conn->id);
 }
 
@@ -148,7 +148,7 @@ int pc_ssh_conn_send(uint8_t ssh_slot, uint32_t channel, const uint8_t *data, si
     {
         return -1;
     }
-    pc_conn_send(conn->id, wire, (u16_t)wlen);
+    pc_conn_send(conn->id, wire, (proto_u16)wlen);
     pc_conn_flush(conn->id);
     return (int)len;
 }
@@ -192,7 +192,7 @@ int pc_ssh_conn_close_channel(uint8_t ssh_slot, uint32_t channel)
         {
             return -1;
         }
-        pc_conn_send(conn->id, wire, (u16_t)wlen);
+        pc_conn_send(conn->id, wire, (proto_u16)wlen);
     }
     pc_conn_flush(conn->id);
     return 0;
@@ -233,7 +233,7 @@ int pc_ssh_conn_open_forwarded(uint8_t ssh_slot, const char *conn_addr, uint16_t
     {
         return -1;
     }
-    pc_conn_send(conn->id, wire, (u16_t)wlen);
+    pc_conn_send(conn->id, wire, (proto_u16)wlen);
     pc_conn_flush(conn->id);
     return ch;
 }
@@ -325,7 +325,7 @@ void pc_ssh_conn_accept(uint8_t conn_slot)
     // buffer, so only the liveness half of this guard is exercisable.
     if (ssh_transport_server_banner(banner, &blen, sizeof(banner)) == 0 && pc_conn_active(conn->id))
     {
-        pc_conn_send(conn->id, banner, (u16_t)blen);
+        pc_conn_send(conn->id, banner, (proto_u16)blen);
         pc_conn_flush(conn->id);
     }
     // GCOVR_EXCL_STOP

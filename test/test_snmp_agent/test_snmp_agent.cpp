@@ -55,7 +55,7 @@ void setUp()
     pc_snmp_agent_set_rw_community("private");
     pc_snmp_agent_set_system(SYSDESCR_VAL, "admin", "esp32", "lab", 72);
     pc_snmp_agent_add_integer(OID_RW, 9, 42, rw_setter);
-    pc_snmp_agent_add_integer(OID_RO, 9, 7); // read-only (no setter)
+    pc_snmp_agent_add_integer(OID_RO, 9, 7, nullptr); // read-only (no setter)
     pc_snmp_agent_add_dynamic(OID_CTR, 9, (uint8_t)SnmpTag::SNMP_COUNTER32, ctr_getter);
     g_set_called = false;
     g_set_value = 0;
@@ -835,7 +835,7 @@ void test_empty_rw_community_clears_write()
 void test_add_string_null_value()
 {
     static const uint32_t OID_NULLSTR[] = {1, 3, 6, 1, 4, 1, 49374, 6, 0};
-    TEST_ASSERT_TRUE(pc_snmp_agent_add_string(OID_NULLSTR, 9, nullptr));
+    TEST_ASSERT_TRUE(pc_snmp_agent_add_string(OID_NULLSTR, 9, nullptr, nullptr));
     uint8_t req[256], resp[256];
     size_t rl = build_req(req, sizeof(req), (int)SnmpVersion::SNMP_V2C, "public", (uint8_t)SnmpTag::SNMP_PDU_GET, 62, 0,
                           0, OID_NULLSTR, 9, nullptr);
@@ -856,18 +856,18 @@ void test_registration_table_limits()
     {
         toolong[i] = (uint32_t)(i + 1);
     }
-    TEST_ASSERT_FALSE(pc_snmp_agent_add_integer(toolong, SNMP_MAX_OID_LEN + 1, 1));
+    TEST_ASSERT_FALSE(pc_snmp_agent_add_integer(toolong, SNMP_MAX_OID_LEN + 1, 1, nullptr));
 
     pc_snmp_agent_init("public"); // empty table
     uint32_t oid[] = {1, 3, 6, 1, 4, 1, 49374, 50, 0};
     for (size_t i = 0; i < SNMP_MAX_MIB_ENTRIES; i++)
     {
         oid[7] = (uint32_t)(50 + i);
-        TEST_ASSERT_TRUE(pc_snmp_agent_add_integer(oid, 9, (long)i));
+        TEST_ASSERT_TRUE(pc_snmp_agent_add_integer(oid, 9, (long)i, nullptr));
     }
     oid[7] = 200;
-    TEST_ASSERT_FALSE(pc_snmp_agent_add_integer(oid, 9, 1)); // table full
-    TEST_ASSERT_FALSE(pc_snmp_agent_add_string(oid, 9, "x"));
+    TEST_ASSERT_FALSE(pc_snmp_agent_add_integer(oid, 9, 1, nullptr)); // table full
+    TEST_ASSERT_FALSE(pc_snmp_agent_add_string(oid, 9, "x", nullptr));
     TEST_ASSERT_FALSE(pc_snmp_agent_add_dynamic(oid, 9, (uint8_t)SnmpTag::SNMP_COUNTER32, ctr_getter));
     // set_system on a full table registers nothing (its sysObjectID mib_alloc returns null).
     pc_snmp_agent_set_system(SYSDESCR_VAL, "admin", "esp32", "lab", 72);
@@ -885,8 +885,8 @@ void test_registration_table_limits()
 // still wins the GetNext.
 void test_getnext_picks_smallest_out_of_order()
 {
-    static const uint32_t OID_EARLY[] = {1, 3, 6, 1, 2, 1, 1, 0, 0}; // sorts before sysDescr (.1.0)
-    TEST_ASSERT_TRUE(pc_snmp_agent_add_integer(OID_EARLY, 9, 1234)); // registered last
+    static const uint32_t OID_EARLY[] = {1, 3, 6, 1, 2, 1, 1, 0, 0};          // sorts before sysDescr (.1.0)
+    TEST_ASSERT_TRUE(pc_snmp_agent_add_integer(OID_EARLY, 9, 1234, nullptr)); // registered last
     uint8_t req[256], resp[256];
     size_t rl = build_req(req, sizeof(req), (int)SnmpVersion::SNMP_V2C, "public", (uint8_t)SnmpTag::SNMP_PDU_GETNEXT,
                           64, 0, 0, OID_SYSPREFIX, 7, nullptr);

@@ -29,20 +29,20 @@
 
 /** @brief HART frame delimiter frame-type bits (low 3 bits) + long-address bit (bit 7). Wire values,
  *  the LONG_ADDR bit is OR'd in, so integer constants in a namespacing struct (cast-free). */
-#define K 0x01 ///< burst (field device, unsolicited).
-#define X 0x02 ///< master -> field device (request).
-#define K 0x06 ///< field device -> master (response).
-#define R 0x80 ///< OR into the delimiter for 5-byte unique-ID addressing.
+#define HART_DELIM_BACK 0x01      ///< burst (field device, unsolicited).
+#define HART_DELIM_STX 0x02       ///< master -> field device (request).
+#define HART_DELIM_ACK 0x06       ///< field device -> master (response).
+#define HART_DELIM_LONG_ADDR 0x80 ///< OR into the delimiter for 5-byte unique-ID addressing.
 
 /** @brief HART-IP message types + common message ids (wire constants). */
-#define T 0
-#define E 1
-#define H 2
-#define T 0
-#define E 1
-#define E 2
-#define U 3 ///< a HART token-passing PDU (a HART frame) is the payload.
-#define N 8
+#define HARTIP_MSG_REQUEST 0
+#define HARTIP_MSG_RESPONSE 1
+#define HARTIP_MSG_PUBLISH 2
+#define HARTIP_ID_SESSION_INIT 0
+#define HARTIP_ID_SESSION_CLOSE 1
+#define HARTIP_ID_KEEPALIVE 2
+#define HARTIP_ID_TOKEN_PDU 3 ///< a HART token-passing PDU (a HART frame) is the payload.
+#define HARTIP_HEADER_LEN 8
 
 /** @brief Longitudinal XOR checksum of @p len bytes (the HART frame check byte). */
 uint8_t pc_hart_checksum(const uint8_t *bytes, size_t len);

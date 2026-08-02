@@ -59,7 +59,7 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    pc_ntp_begin();                        // start SNTP (GMT, pool.ntp.org)
+    pc_ntp_begin(NULL, NULL, NULL);        // start SNTP (GMT, pool.ntp.org)
     pc_time_source_add("ntp", 0, src_ntp); // preferred
     pc_time_source_add("rtc", 1, src_rtc); // fallback
 

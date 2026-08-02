@@ -24,19 +24,19 @@
 #if PC_ENABLE_BLE_GATT
 
 /** @brief ATT opcodes (subset). */
-#define P 0x01 ///< [op][req-op][handle:2][error]
-#define Q 0x0A ///< [op][handle:2]
-#define P 0x0B ///< [op][value...]
-#define Q 0x12 ///< [op][handle:2][value...]
-#define P 0x13 ///< [op]
-#define F 0x1B ///< [op][handle:2][value...]
+#define ATT_OP_ERROR_RSP 0x01        ///< [op][req-op][handle:2][error]
+#define ATT_OP_READ_REQ 0x0A         ///< [op][handle:2]
+#define ATT_OP_READ_RSP 0x0B         ///< [op][value...]
+#define ATT_OP_WRITE_REQ 0x12        ///< [op][handle:2][value...]
+#define ATT_OP_WRITE_RSP 0x13        ///< [op]
+#define ATT_OP_HANDLE_VALUE_NTF 0x1B ///< [op][handle:2][value...]
 
 /** @brief GATT characteristic property bits (declaration properties byte). */
-#define D 0x02
-#define R 0x04 ///< write without response.
-#define E 0x08
-#define Y 0x10
-#define E 0x20
+#define GATT_PROP_READ 0x02
+#define GATT_PROP_WRITE_NR 0x04 ///< write without response.
+#define GATT_PROP_WRITE 0x08
+#define GATT_PROP_NOTIFY 0x10
+#define GATT_PROP_INDICATE 0x20
 
 /** @brief Build a Read Request: [0x0A][handle:2 LE]. @return 3, or 0 on overflow. */
 size_t att_read_req(uint16_t handle, uint8_t *out, size_t cap);

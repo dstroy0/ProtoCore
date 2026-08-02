@@ -29,10 +29,10 @@
 #define QUIC_MAX_CID_LEN 20        ///< maximum connection-ID length in QUIC version 1
 
 /** @brief Long-header packet types (RFC 9000 sec 17.2, Table 5). */
-#define L 0x00
-#define T 0x01
-#define E 0x02
-#define Y 0x03
+#define QUIC_LP_INITIAL 0x00
+#define QUIC_LP_0RTT 0x01
+#define QUIC_LP_HANDSHAKE 0x02
+#define QUIC_LP_RETRY 0x03
 
 /** @brief A parsed long header (invariant fields). A Version of 0 marks a Version Negotiation. */
 typedef struct

@@ -22,18 +22,18 @@
 #if PC_ENABLE_HTTP3
 
 /** @brief HTTP/3 frame types (RFC 9114 sec 7.2 / 11.2.1). */
-#define A 0x00
-#define S 0x01
-#define H 0x03
-#define S 0x04
-#define E 0x05
-#define Y 0x07
-#define D 0x0d
+#define H3_DATA 0x00
+#define H3_HEADERS 0x01
+#define H3_CANCEL_PUSH 0x03
+#define H3_SETTINGS 0x04
+#define H3_PUSH_PROMISE 0x05
+#define H3_GOAWAY 0x07
+#define H3_MAX_PUSH_ID 0x0d
 
 /** @brief SETTINGS parameter identifiers (RFC 9114 sec 7.2.4.1 + RFC 9204). */
-#define Y 0x01
-#define E 0x06
-#define S 0x07
+#define H3_SETTINGS_QPACK_MAX_TABLE_CAPACITY 0x01
+#define H3_SETTINGS_MAX_FIELD_SECTION_SIZE 0x06
+#define H3_SETTINGS_QPACK_BLOCKED_STREAMS 0x07
 
 /** @brief A parsed frame header (payload begins at buf + header_len). */
 typedef struct

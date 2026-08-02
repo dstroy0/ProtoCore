@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_ntp_service.cpp
+ * @file ntp_service.cpp
  * @brief SNTP wall-clock time sync implementation (PC_ENABLE_NTP).
  */
 
@@ -18,8 +18,9 @@ static const time_t PC_NTP_PLAUSIBLE_EPOCH = 1609459200;
 
 proto_bool pc_ntp_begin(const char *tz, const char *server1, const char *server2)
 {
-    // configTzTime applies the POSIX TZ and starts the SNTP client (async).
-    configTzTime(tz ? tz : "UTC0", server1, server2);
+    // configTzTime applies the POSIX TZ and starts the SNTP client (async). NULL means the
+    // documented default, so a caller with no opinion does not restate the string.
+    configTzTime(tz ? tz : "UTC0", server1 ? server1 : PC_NTP_SERVER1, server2 ? server2 : PC_NTP_SERVER2);
     return PROTO_TRUE;
 }
 

@@ -72,52 +72,52 @@ typedef enum PROTO_ENUM_PACKED
 #define PC_SMB2_HEADER_SIZE 64
 
 /** @brief NEGOTIATE / SESSION_SETUP SecurityMode flags (MS-SMB2 §2.2.3). */
-#define D 0x0001
-#define D 0x0002
+#define SMB2_NEGOTIATE_SIGNING_ENABLED 0x0001
+#define SMB2_NEGOTIATE_SIGNING_REQUIRED 0x0002
 
 /** @brief SMB2 header Flags field (MS-SMB2 §2.2.1.2). */
-#define R 0x00000001 ///< set on a response (server -> client)
-#define D 0x00000008 ///< the message carries an HMAC signature
+#define SMB2_FLAGS_SERVER_TO_REDIR 0x00000001 ///< set on a response (server -> client)
+#define SMB2_FLAGS_SIGNED 0x00000008          ///< the message carries an HMAC signature
 
 /** @brief SESSION_SETUP response SessionFlags (MS-SMB2 §2.2.6). */
-#define T 0x0001
-#define L 0x0002
-#define A 0x0004
+#define SMB2_SESSION_FLAG_IS_GUEST 0x0001
+#define SMB2_SESSION_FLAG_IS_NULL 0x0002
+#define SMB2_SESSION_FLAG_ENCRYPT_DATA 0x0004
 
 /** @brief NT status values seen in the SMB2 header during the SESSION_SETUP exchange. */
-#define S 0x00000000
-#define D 0xC0000016 ///< server wants the next round
-#define E 0xC0000011 ///< a READ at/past end of file
+#define SMB2_STATUS_SUCCESS 0x00000000
+#define SMB2_STATUS_MORE_PROCESSING_REQUIRED 0xC0000016 ///< server wants the next round
+#define SMB2_STATUS_END_OF_FILE 0xC0000011              ///< a READ at/past end of file
 
 /** @brief TREE_CONNECT response ShareType (MS-SMB2 §2.2.10). */
-#define K 0x01
-#define E 0x02
-#define T 0x03
+#define SMB2_SHARE_TYPE_DISK 0x01
+#define SMB2_SHARE_TYPE_PIPE 0x02
+#define SMB2_SHARE_TYPE_PRINT 0x03
 
 /** @brief CREATE DesiredAccess masks (MS-DTYP ACCESS_MASK; the common file rights). */
-#define A 0x00000001
-#define A 0x00000002
-#define A 0x00000004
-#define S 0x00000080
-#define D 0x00120089 ///< RC|SYNC|READ_ATTR|READ_EA|READ_DATA
-#define E 0x00120116 ///< RC|SYNC|WRITE_ATTR|WRITE_EA|APPEND|WRITE
+#define SMB2_FILE_READ_DATA 0x00000001
+#define SMB2_FILE_WRITE_DATA 0x00000002
+#define SMB2_FILE_APPEND_DATA 0x00000004
+#define SMB2_FILE_READ_ATTRIBUTES 0x00000080
+#define SMB2_FILE_GENERIC_READ 0x00120089  ///< RC|SYNC|READ_ATTR|READ_EA|READ_DATA
+#define SMB2_FILE_GENERIC_WRITE 0x00120116 ///< RC|SYNC|WRITE_ATTR|WRITE_EA|APPEND|WRITE
 
 /** @brief CREATE ShareAccess (MS-SMB2 §2.2.13). */
-#define D 0x01
-#define E 0x02
-#define E 0x04
+#define SMB2_FILE_SHARE_READ 0x01
+#define SMB2_FILE_SHARE_WRITE 0x02
+#define SMB2_FILE_SHARE_DELETE 0x04
 
 /** @brief CREATE CreateDisposition (MS-SMB2 §2.2.13). */
-#define E 0
-#define N 1 ///< open an existing file, fail if absent
-#define E 2 ///< create, fail if it exists
-#define F 3 ///< open, create if absent
-#define E 4 ///< open + truncate, fail if absent
-#define F 5
+#define SMB2_FILE_SUPERSEDE 0
+#define SMB2_FILE_OPEN 1      ///< open an existing file, fail if absent
+#define SMB2_FILE_CREATE 2    ///< create, fail if it exists
+#define SMB2_FILE_OPEN_IF 3   ///< open, create if absent
+#define SMB2_FILE_OVERWRITE 4 ///< open + truncate, fail if absent
+#define SMB2_FILE_OVERWRITE_IF 5
 
 /** @brief CREATE CreateOptions (MS-SMB2 §2.2.13; the two we set). */
-#define E 0x00000001
-#define E 0x00000040
+#define SMB2_FILE_DIRECTORY_FILE 0x00000001
+#define SMB2_FILE_NON_DIRECTORY_FILE 0x00000040
 
 /** @brief Parsed SMB2 sync header. */
 typedef struct
@@ -132,32 +132,32 @@ typedef struct
 } Smb2Header;
 
 /** @brief SMB 3.1.1 negotiate-context types (MS-SMB2 §2.2.3.1). */
-#define S 0x0001
-#define S 0x0002
-#define S 0x0003
-#define D 0x0005
-#define S 0x0006
-#define S 0x0007
-#define S 0x0008
+#define SMB2_PREAUTH_INTEGRITY_CAPABILITIES 0x0001
+#define SMB2_ENCRYPTION_CAPABILITIES 0x0002
+#define SMB2_COMPRESSION_CAPABILITIES 0x0003
+#define SMB2_NETNAME_NEGOTIATE_CONTEXT_ID 0x0005
+#define SMB2_TRANSPORT_CAPABILITIES 0x0006
+#define SMB2_RDMA_TRANSFORM_CAPABILITIES 0x0007
+#define SMB2_SIGNING_CAPABILITIES 0x0008
 
 /** @brief Preauth-integrity hash algorithm IDs (MS-SMB2 §2.2.3.1.1). */
 #define A512 0x0001
 
 /** @brief Signing algorithm IDs (MS-SMB2 §2.2.3.1.7). */
 #define A256 0x0000
-#define C 0x0001
-#define C 0x0002
+#define SMB2_SIGNING_AES_CMAC 0x0001
+#define SMB2_SIGNING_AES_GMAC 0x0002
 
 /** @brief NEGOTIATE request/response Capabilities flags (MS-SMB2 §2.2.3 / §2.2.4). A client that supports
  *  transport encryption MUST advertise SMB2_GLOBAL_CAP_ENCRYPTION here, or a server (e.g. Samba with
  *  `smb encrypt = required`) will not negotiate a cipher and will reject the unencrypted session (§3.2.4.2.2). */
-#define N 0x00000040
+#define SMB2_GLOBAL_CAP_ENCRYPTION 0x00000040
 
 /** @brief Encryption cipher IDs (MS-SMB2 §2.2.3.1.2). */
-#define M 0x0001
-#define M 0x0002
-#define M 0x0003
-#define M 0x0004
+#define SMB2_ENCRYPTION_AES128_CCM 0x0001
+#define SMB2_ENCRYPTION_AES128_GCM 0x0002
+#define SMB2_ENCRYPTION_AES256_CCM 0x0003
+#define SMB2_ENCRYPTION_AES256_GCM 0x0004
 
 /** @brief AES key length in bytes for an SMB2 cipher id: 16 for the -128 ciphers, 32 for the -256 ciphers,
  *         0 if @p cipher is not a recognized cipher id. */
@@ -371,7 +371,7 @@ size_t pc_smb2_build_tree_connect(uint8_t *buf, size_t cap, uint64_t message_id,
                                   const uint8_t *path_utf16, size_t path_len);
 
 /** @brief TREE_CONNECT response ShareFlags of interest (MS-SMB2 §2.2.10). */
-#define A 0x00008000 ///< the share mandates SMB3 encryption
+#define SMB2_SHAREFLAG_ENCRYPT_DATA 0x00008000 ///< the share mandates SMB3 encryption
 
 /** @brief Parsed TREE_CONNECT response (MS-SMB2 §2.2.10). The TreeId is in the response header. */
 typedef struct

@@ -97,7 +97,7 @@ void ws_send_version_required(uint8_t slot_id)
                                "Content-Length: 0\r\n"
                                "Connection: close\r\n\r\n";
 
-    pc_conn_send(slot_id, resp, (u16_t)(sizeof(resp) - 1));
+    pc_conn_send(slot_id, resp, (proto_u16)(sizeof(resp) - 1));
     pc_conn_flush(slot_id);
     pc_conn_begin_close(slot_id); // dwell in CONN_CLOSING until the response drains
 
@@ -158,7 +158,7 @@ proto_bool ws_do_upgrade(uint8_t slot_id, HttpReq *req, WsConnectHandler on_conn
     hlen = (int)pc_sb_finish(&sb_hdr2);
 #endif
 
-    pc_conn_send(slot_id, hdr, (u16_t)hlen);
+    pc_conn_send(slot_id, hdr, (proto_u16)hlen);
     pc_conn_flush(slot_id);
 
     // Reset HTTP parser but keep the TCP slot -- WS owns it now
@@ -204,7 +204,7 @@ proto_bool pc_sse_do_upgrade(uint8_t slot_id, HttpReq *req, SseConnectHandler on
                                   "Cache-Control: no-cache\r\n"
                                   "Connection: keep-alive\r\n\r\n";
 
-    pc_conn_send(slot_id, SSE_HDR, (u16_t)(sizeof(SSE_HDR) - 1));
+    pc_conn_send(slot_id, SSE_HDR, (proto_u16)(sizeof(SSE_HDR) - 1));
     pc_conn_flush(slot_id);
 
     // Copy the path BEFORE resetting the parser: http_reset() zeroes the whole

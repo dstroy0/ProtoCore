@@ -27,6 +27,8 @@
 
 #include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
 
+#if PC_ENABLE_INA219
+
 #define INA219_REG_CONFIG 0x00      ///< configuration
 #define INA219_REG_SHUNT 0x01       ///< shunt voltage
 #define INA219_REG_BUS 0x02         ///< bus voltage
@@ -72,5 +74,7 @@ proto_bool pc_ina219_read_current_ua(int32_t *microamps);
 
 /** @brief Read the power into @p microwatts (needs the calibration set by pc_ina219_begin). */
 proto_bool pc_ina219_read_power_uw(int32_t *microwatts);
+
+#endif // PC_ENABLE_INA219
 
 #endif // PROTOCORE_INA219_H

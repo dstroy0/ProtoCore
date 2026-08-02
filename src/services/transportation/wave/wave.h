@@ -26,14 +26,14 @@
 #if PC_ENABLE_WAVE
 
 // WSMP / 1609.2 versions + content types + PSIDs: wire values, so integer constants in a struct.
-#define N 0x03 ///< WSMP version (in the low nibble of byte 0).
-#define N 0x03 ///< 1609.2 protocolVersion.
-#define D 0x00 ///< content type: unsecuredData.
-#define D 0x01 ///< content type: signedData.
+#define WSMP_VERSION 0x03         ///< WSMP version (in the low nibble of byte 0).
+#define WAVE_16092_VERSION 0x03   ///< 1609.2 protocolVersion.
+#define WAVE_16092_UNSECURED 0x00 ///< content type: unsecuredData.
+#define WAVE_16092_SIGNED 0x01    ///< content type: signedData.
 // Common PSIDs (Provider Service Identifiers).
-#define M 0x20   ///< vehicle safety (BSM), PSID 0x20.
-#define T 0x8002 ///< signal phase and timing.
-#define P 0x8003 ///< map data.
+#define WAVE_PSID_BSM 0x20    ///< vehicle safety (BSM), PSID 0x20.
+#define WAVE_PSID_SPAT 0x8002 ///< signal phase and timing.
+#define WAVE_PSID_MAP 0x8003  ///< map data.
 
 /**
  * @brief Encode a PSID as a P-encoded (variable-length) integer.
