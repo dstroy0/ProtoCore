@@ -47,9 +47,6 @@
 
 #if PC_ENABLE_FOCAS
 
-#include <stddef.h>
-#include <stdint.h>
-
 #define FOCAS_TCP_PORT 8193    ///< FOCAS Ethernet listening port
 #define FOCAS_FRAME_HDR_LEN 10 ///< magic(4) + version(2) + type(2) + length(2)
 #define FOCAS_PROTO_VERSION 1  ///< envelope version field
@@ -62,72 +59,66 @@
 #define FOCAS_SYSINFO_LEN 18   ///< ODBSYS: addinfo+maxaxis+cnctype+mttype+series+version+axes
 
 /// Frame types (envelope octets 6-7). Cast to/from the wire only at the byte boundary.
-enum class FocasFrameType : uint16_t
+typedef enum PROTO_ENUM_PACKED
 {
-    invalid = 0x0000,
-    open_req = 0x0101,
-    open_resp = 0x0102,
-    close_req = 0x0201,
-    close_resp = 0x0202,
-    command_req = 0x2101, ///< FTYPE_VAR_REQU
-    command_resp = 0x2102 ///< FTYPE_VAR_RESP
-};
+    FOCAS_FRAME_TYPE_INVALID = 0x0000,
+    FOCAS_FRAME_TYPE_OPEN_REQ = 0x0101,
+    FOCAS_FRAME_TYPE_OPEN_RESP = 0x0102,
+    FOCAS_FRAME_TYPE_CLOSE_REQ = 0x0201,
+    FOCAS_FRAME_TYPE_CLOSE_RESP = 0x0202,
+    FOCAS_FRAME_TYPE_COMMAND_REQ = 0x2101, ///< FTYPE_VAR_REQU
+    FOCAS_FRAME_TYPE_COMMAND_RESP = 0x2102 ///< FTYPE_VAR_RESP
+} FocasFrameType;
 
 /// A FOCAS function selector: three big-endian u16 (c1, c2, c3).
-struct FocasCmd
+typedef struct
 {
     uint16_t c1;
     uint16_t c2;
     uint16_t c3;
-};
+} FocasCmd;
 
 /// The documented FOCAS function selectors (verbatim from the pyfanuc protocol notes). Grouped as
 /// constants (not an enum) because a selector is a struct, not a single scalar.
-struct FocasCommand
-{
-    static constexpr FocasCmd read_cnc_param = {1, 1, 0x0e};  ///< cnc_rdparam
-    static constexpr FocasCmd read_macro = {1, 1, 0x15};      ///< cnc_rdmacro
-    static constexpr FocasCmd set_macro = {1, 1, 0x16};       ///< cnc_wrmacro
-    static constexpr FocasCmd sys_info = {1, 1, 0x18};        ///< cnc_sysinfo (ODBSYS)
-    static constexpr FocasCmd read_alarm = {1, 1, 0x1a};      ///< cnc_alarm (u32 status word)
-    static constexpr FocasCmd read_prg_num = {1, 1, 0x1c};    ///< cnc_rdprgnum (main/running)
-    static constexpr FocasCmd read_seq_num = {1, 1, 0x1d};    ///< cnc_rdseqnum
-    static constexpr FocasCmd read_alarm_info = {1, 1, 0x23}; ///< cnc_rdalminfo
-    static constexpr FocasCmd read_feedrate = {1, 1, 0x24};   ///< cnc_actf (actual feed)
-    static constexpr FocasCmd read_spindle = {1, 1, 0x25};    ///< cnc_acts (actual spindle speed)
-    static constexpr FocasCmd read_position = {1, 1, 0x26};   ///< cnc_rdposition / axis read
-    static constexpr FocasCmd read_diag = {1, 1, 0x30};       ///< cnc_diagnoss
-    static constexpr FocasCmd read_spindle2 = {1, 1, 0x40};   ///< cnc_acts2 (speed + load)
-    static constexpr FocasCmd read_datetime = {1, 1, 0x45};   ///< cnc_rdtimer (v1=0 date, 1 time)
-    static constexpr FocasCmd read_servo_load = {1, 1, 0x56}; ///< servo load, MAX_AXIS
-    static constexpr FocasCmd read_axis_names = {1, 1, 0x89}; ///< controlled-axis names
-    static constexpr FocasCmd read_spindle_names = {1, 1, 0x8a};
-    static constexpr FocasCmd read_cnc_param3 = {1, 1, 0x8d}; ///< cnc_rdparam3
-    static constexpr FocasCmd read_macro_dbl = {1, 1, 0xa7};  ///< cnc_rdmacror (double)
-    static constexpr FocasCmd read_pmc = {2, 1, 0x8001};      ///< pmc_rdpmcrng
-};
+#define m {1, 1, 0x0e}  ///< cnc_rdparam
+#define o {1, 1, 0x15}  ///< cnc_rdmacro
+#define o {1, 1, 0x16}  ///< cnc_wrmacro
+#define o {1, 1, 0x18}  ///< cnc_sysinfo (ODBSYS)
+#define m {1, 1, 0x1a}  ///< cnc_alarm (u32 status word)
+#define m {1, 1, 0x1c}  ///< cnc_rdprgnum (main/running)
+#define m {1, 1, 0x1d}  ///< cnc_rdseqnum
+#define o {1, 1, 0x23}  ///< cnc_rdalminfo
+#define e {1, 1, 0x24}  ///< cnc_actf (actual feed)
+#define e {1, 1, 0x25}  ///< cnc_acts (actual spindle speed)
+#define n {1, 1, 0x26}  ///< cnc_rdposition / axis read
+#define g {1, 1, 0x30}  ///< cnc_diagnoss
+#define e2 {1, 1, 0x40} ///< cnc_acts2 (speed + load)
+#define e {1, 1, 0x45}  ///< cnc_rdtimer (v1=0 date, 1 time)
+#define d {1, 1, 0x56}  ///< servo load, MAX_AXIS
+#define s {1, 1, 0x89}  ///< controlled-axis names
+#define s {1, 1, 0x8a}
+#define m3 {1, 1, 0x8d}  ///< cnc_rdparam3
+#define l {1, 1, 0xa7}   ///< cnc_rdmacror (double)
+#define c {2, 1, 0x8001} ///< pmc_rdpmcrng
 
 /// Position/axis read kinds (SysInfo 0x26 `v1`); the axis argument is `v2` (0 = all axes).
-struct FocasPosKind
-{
-    static constexpr int32_t machine = 1;  ///< machine (reference) coordinate
-    static constexpr int32_t absolute = 4; ///< absolute (program) coordinate
-    static constexpr int32_t relative = 6; ///< relative coordinate
-    static constexpr int32_t distance = 7; ///< distance to go
-    static constexpr int32_t skip = 8;     ///< skip position
-};
+#define e 1 ///< machine (reference) coordinate
+#define e 4 ///< absolute (program) coordinate
+#define e 6 ///< relative coordinate
+#define e 7 ///< distance to go
+#define p 8 ///< skip position
 
 /// A parsed frame envelope; `payload`/`payload_len` point into the caller's buffer (no copy).
-struct FocasFrame
+typedef struct
 {
     FocasFrameType type;
     uint16_t version;
     const uint8_t *payload;
     uint16_t payload_len;
-};
+} FocasFrame;
 
 /// A parsed command response; `data`/`data_len` point into the caller's buffer (no copy).
-struct FocasResponse
+typedef struct
 {
     uint16_t c1; ///< echoed selector
     uint16_t c2;
@@ -135,10 +126,10 @@ struct FocasResponse
     int16_t status; ///< FOCAS return code (0 = EW_OK; negative = error)
     const uint8_t *data;
     uint16_t data_len;
-};
+} FocasResponse;
 
 /// Parsed SysInfo (ODBSYS). The char fields are NUL-terminated copies of fixed-width ASCII fields.
-struct FocasSysInfo
+typedef struct
 {
     uint16_t add_info;
     uint16_t max_axis;
@@ -147,17 +138,17 @@ struct FocasSysInfo
     char series[5];   ///< software series
     char version[5];  ///< software version
     char axes[3];     ///< controlled-axis count as ASCII
-};
+} FocasSysInfo;
 
 /// One decoded FOCAS 8-octet numeric value. The scaled value is `data / base^exp`; `valid` is
 /// false for the 0xFFFF sentinel or an unrecognized base (only 2 and 10 are decimal-scaled).
-struct FocasValue
+typedef struct
 {
     int32_t data;
     uint8_t base; ///< 2 or 10
     uint8_t exp;  ///< decimal places
-    bool valid;
-};
+    proto_bool valid;
+} FocasValue;
 
 // ---------------------------------------------------------------------------------------------
 // Request builders. Each writes a complete on-wire frame into `buf` and returns the total octet
@@ -200,23 +191,23 @@ size_t pc_focas_build_read_spindle(uint8_t *buf, size_t cap);
 // ---------------------------------------------------------------------------------------------
 
 /// Validate the 10-octet envelope (magic + version) and expose the payload (into `buf`).
-bool pc_focas_parse_frame(const uint8_t *buf, size_t len, FocasFrame *out);
+proto_bool pc_focas_parse_frame(const uint8_t *buf, size_t len, FocasFrame *out);
 
 /// Decode a command-response payload (echoed selector + status + length + data) into `out`.
-bool pc_focas_parse_response(const uint8_t *payload, size_t payload_len, FocasResponse *out);
+proto_bool pc_focas_parse_response(const uint8_t *payload, size_t payload_len, FocasResponse *out);
 
 /// Convenience: validate a whole command-response frame (type 0x2102) straight into `out`.
-bool pc_focas_parse_command_frame(const uint8_t *buf, size_t len, FocasResponse *out);
+proto_bool pc_focas_parse_command_frame(const uint8_t *buf, size_t len, FocasResponse *out);
 
 /// SysInfo response data: ODBSYS (addinfo + maxaxis + cnctype + mttype + series + version + axes).
-bool pc_focas_parse_sysinfo(const uint8_t *data, size_t data_len, FocasSysInfo *out);
+proto_bool pc_focas_parse_sysinfo(const uint8_t *data, size_t data_len, FocasSysInfo *out);
 
 /// Alarm response data: a single big-endian u32 alarm bitmask.
-bool pc_focas_parse_alarm(const uint8_t *data, size_t data_len, uint32_t *alarm_status);
+proto_bool pc_focas_parse_alarm(const uint8_t *data, size_t data_len, uint32_t *alarm_status);
 
 /// Decode one FOCAS 8-octet value at `chunk`. Returns true only for a usable value (`out->valid`
 /// is set the same way); false if fewer than 8 octets are available.
-bool pc_focas_decode8(const uint8_t *chunk, size_t len, FocasValue *out);
+proto_bool pc_focas_decode8(const uint8_t *chunk, size_t len, FocasValue *out);
 
 /// The scaled value `data / base^exp` as a float (0 for an invalid value).
 float pc_focas_value_f(const FocasValue *v);

@@ -19,35 +19,30 @@
 #define PROTOCORE_WIFI_SNIFFER_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_WIFI_SNIFFER
 
 /** @brief 802.11 frame type (Frame Control bits 2-3). */
-struct WifiType
-{
-    static constexpr uint8_t WIFI_TYPE_MGMT = 0; ///< management (beacon, probe, auth, assoc, ...).
-    static constexpr uint8_t WIFI_TYPE_CTRL = 1; ///< control (RTS/CTS/ACK, ...).
-    static constexpr uint8_t WIFI_TYPE_DATA = 2; ///< data.
-    static constexpr uint8_t WIFI_TYPE_EXT = 3;  ///< extension.
-};
+#define T 0 ///< management (beacon, probe, auth, assoc, ...).
+#define L 1 ///< control (RTS/CTS/ACK, ...).
+#define A 2 ///< data.
+#define T 3 ///< extension.
 
 /** @brief A decoded 802.11 MAC header. Addresses not present for the frame's length are left zeroed. */
-struct WifiFrame
+typedef struct
 {
-    uint8_t version;      ///< protocol version (FC bits 0-1).
-    uint8_t type;         ///< WIFI_TYPE_*.
-    uint8_t subtype;      ///< FC bits 4-7.
-    bool to_ds;           ///< to the distribution system.
-    bool from_ds;         ///< from the distribution system.
-    bool retry;           ///< retransmission.
-    bool protected_frame; ///< the Protected Frame (WEP/WPA) flag.
-    uint8_t naddr;        ///< number of addresses decoded (1..3).
-    uint8_t addr1[6];     ///< receiver / destination (role varies by DS bits).
-    uint8_t addr2[6];     ///< transmitter / source (present when naddr >= 2).
-    uint8_t addr3[6];     ///< BSSID / source / dest (present when naddr >= 3).
-};
+    uint8_t version;            ///< protocol version (FC bits 0-1).
+    uint8_t type;               ///< WIFI_TYPE_*.
+    uint8_t subtype;            ///< FC bits 4-7.
+    proto_bool to_ds;           ///< to the distribution system.
+    proto_bool from_ds;         ///< from the distribution system.
+    proto_bool retry;           ///< retransmission.
+    proto_bool protected_frame; ///< the Protected Frame (WEP/WPA) flag.
+    uint8_t naddr;              ///< number of addresses decoded (1..3).
+    uint8_t addr1[6];           ///< receiver / destination (role varies by DS bits).
+    uint8_t addr2[6];           ///< transmitter / source (present when naddr >= 2).
+    uint8_t addr3[6];           ///< BSSID / source / dest (present when naddr >= 3).
+} WifiFrame;
 
 /**
  * @brief Decode the 802.11 MAC header of a captured frame.
@@ -56,17 +51,17 @@ struct WifiFrame
  * bytes and Address3 at >= 24 bytes, with @p out->naddr reporting how many were present.
  * @return true if @p len >= 10 and @p frame is non-null; false otherwise.
  */
-bool pc_wifi_parse(const uint8_t *frame, size_t len, WifiFrame *out);
+proto_bool pc_wifi_parse(const uint8_t *frame, size_t len, WifiFrame *out);
 
 /** @brief Running per-type frame tally. */
-struct WifiStats
+typedef struct
 {
     uint32_t mgmt;
     uint32_t ctrl;
     uint32_t data;
     uint32_t other;
     uint32_t total;
-};
+} WifiStats;
 
 /** @brief Zero a tally. */
 void pc_wifi_stats_reset(WifiStats *s);
@@ -78,7 +73,7 @@ void pc_wifi_stats_add(WifiStats *s, const WifiFrame *f);
  * @brief Channel-agility roaming decision.
  * @return true if @p cand_rssi exceeds @p cur_rssi by more than @p hysteresis_db (so a switch is worth it).
  */
-bool pc_wifi_should_roam(int8_t cur_rssi, int8_t cand_rssi, uint8_t hysteresis_db);
+proto_bool pc_wifi_should_roam(int8_t cur_rssi, int8_t cand_rssi, uint8_t hysteresis_db);
 
 // --- Channel-hop scan schedule ----------------------------------------------------------
 //
@@ -87,7 +82,7 @@ bool pc_wifi_should_roam(int8_t cur_rssi, int8_t cand_rssi, uint8_t hysteresis_d
 // below.
 
 /** @brief Channel-hop schedule across [chan_first, chan_last]. */
-struct WifiScan
+typedef struct
 {
     uint8_t chan_first;   ///< first channel of the sweep (1..14)
     uint8_t chan_last;    ///< last channel of the sweep (>= chan_first)
@@ -95,13 +90,13 @@ struct WifiScan
     uint16_t dwell_ms;    ///< dwell per channel
     uint32_t last_hop_ms; ///< when the current dwell started
     uint32_t sweeps;      ///< completed wraps back to chan_first
-};
+} WifiScan;
 
 /** @brief Start a sweep at @p first, dwelling @p dwell_ms per channel. Clamps to 1..14 and first<=last. */
 void pc_wifi_scan_init(WifiScan *s, uint8_t first, uint8_t last, uint16_t dwell_ms, uint32_t now_ms);
 
 /** @brief True once the current channel's dwell has elapsed (wrap-safe against a millis rollover). */
-bool pc_wifi_scan_due(const WifiScan *s, uint32_t now_ms);
+proto_bool pc_wifi_scan_due(const WifiScan *s, uint32_t now_ms);
 
 /**
  * @brief Advance to the next channel (wrapping to chan_first and counting a sweep) and restart the dwell.
@@ -112,23 +107,23 @@ uint8_t pc_wifi_scan_next(WifiScan *s, uint32_t now_ms);
 // --- Per-channel RSSI survey ------------------------------------------------------------
 
 /** @brief What was heard on one channel during the survey. */
-struct WifiChannelSurvey
+typedef struct
 {
     uint32_t frames;       ///< frames decoded on this channel
     int8_t best_rssi;      ///< strongest RSSI seen (dBm); PC_WIFI_RSSI_NONE if nothing heard
     uint8_t best_bssid[6]; ///< transmitter of the strongest frame
-};
+} WifiChannelSurvey;
 
 /** @brief Sentinel for "no frame heard yet" in WifiChannelSurvey::best_rssi. */
 #define PC_WIFI_RSSI_NONE (-128)
 
 /** @brief Survey across the scanned channel range (index 0 == @c first). */
-struct WifiSurvey
+typedef struct
 {
     WifiChannelSurvey ch[PC_WIFI_SNIFFER_MAX_CHANNELS];
     uint8_t first; ///< channel represented by ch[0]
     uint8_t count; ///< channels tracked (<= PC_WIFI_SNIFFER_MAX_CHANNELS)
-};
+} WifiSurvey;
 
 /** @brief Clear the survey to track @p count channels starting at @p first. */
 void pc_wifi_survey_reset(WifiSurvey *s, uint8_t first, uint8_t count);
@@ -143,7 +138,7 @@ const WifiChannelSurvey *pc_wifi_survey_get(const WifiSurvey *s, uint8_t channel
  * @brief Find the strongest channel heard, ignoring @p exclude_channel (pass 0 to exclude nothing).
  * @return true if any channel had traffic; @p out_channel / @p out_rssi are then set.
  */
-bool pc_wifi_survey_best(const WifiSurvey *s, uint8_t exclude_channel, uint8_t *out_channel, int8_t *out_rssi);
+proto_bool pc_wifi_survey_best(const WifiSurvey *s, uint8_t exclude_channel, uint8_t *out_channel, int8_t *out_rssi);
 
 #if PC_ENABLE_PROMISC
 // --- Live capture binding (ESP32) -------------------------------------------------------
@@ -167,7 +162,7 @@ bool pc_wifi_survey_best(const WifiSurvey *s, uint8_t exclude_channel, uint8_t *
  * Resets the stats + survey.
  * @return true if capture started.
  */
-bool pc_wifi_sniffer_begin(uint8_t first_chan, uint8_t last_chan, uint16_t dwell_ms);
+proto_bool pc_wifi_sniffer_begin(uint8_t first_chan, uint8_t last_chan, uint16_t dwell_ms);
 
 /** @brief Hop to the next channel when the dwell has elapsed. Cheap to call every loop. */
 void pc_wifi_sniffer_tick(void);

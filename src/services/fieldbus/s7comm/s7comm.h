@@ -33,9 +33,6 @@
 
 #if PC_ENABLE_S7COMM
 
-#include <stddef.h>
-#include <stdint.h>
-
 #define S7_PROTOCOL_ID 0x32 ///< constant first octet of every S7comm PDU
 
 // ROSCTR (message type).
@@ -84,20 +81,20 @@ size_t pc_s7_build_setup(uint8_t *buf, size_t cap, uint16_t pdu_ref, uint16_t ma
                          uint16_t pdu_size);
 
 /** @brief One Read Var item (an S7-ANY pointer). */
-struct S7ReadItem
+typedef struct
 {
     uint8_t area;           ///< S7_AREA_*
     uint16_t db_number;     ///< DB number (0 for non-DB areas)
     uint32_t byte_address;  ///< starting byte address
     uint8_t transport_size; ///< S7_TS_* (element type)
     uint16_t count;         ///< number of elements
-};
+} S7ReadItem;
 
 /** @brief Build a Read Var job for @p n items. Returns the PDU length, or 0 on overflow. */
 size_t pc_s7_build_read_request(uint8_t *buf, size_t cap, uint16_t pdu_ref, const S7ReadItem *items, size_t n);
 
 /** @brief One Write Var item: an S7-ANY pointer (as for a read) plus the value bytes to write. */
-struct S7WriteItem
+typedef struct
 {
     uint8_t area;                ///< S7_AREA_*
     uint16_t db_number;          ///< DB number (0 for non-DB areas)
@@ -107,7 +104,7 @@ struct S7WriteItem
     uint8_t data_transport_size; ///< S7_DTS_* (data item; sets the bit/byte length rule)
     const uint8_t *data;         ///< value bytes to write
     uint16_t data_len;           ///< value length in BYTES
-};
+} S7WriteItem;
 
 /**
  * @brief Build a Write Var job (function 0x05) for @p n items. Mirrors the read request's parameter (the same
@@ -119,7 +116,7 @@ struct S7WriteItem
 size_t pc_s7_build_write_request(uint8_t *buf, size_t cap, uint16_t pdu_ref, const S7WriteItem *items, size_t n);
 
 /** @brief A parsed S7comm header. @ref param / @ref data point INTO the source buffer. */
-struct S7Header
+typedef struct
 {
     uint8_t rosctr;
     uint16_t pdu_ref;
@@ -130,19 +127,19 @@ struct S7Header
     size_t header_len;   ///< 10 or 12
     const uint8_t *param;
     const uint8_t *data;
-};
+} S7Header;
 
 /** @brief Parse + validate an S7comm header (protocol id, lengths). */
-bool pc_s7_parse_header(const uint8_t *buf, size_t len, S7Header *out);
+proto_bool pc_s7_parse_header(const uint8_t *buf, size_t len, S7Header *out);
 
 /** @brief One Read Var response data item. @ref data points INTO the source buffer. */
-struct S7DataItem
+typedef struct
 {
     uint8_t return_code;    ///< S7_RET_OK on success
     uint8_t transport_size; ///< S7_DTS_*
     const uint8_t *data;    ///< value bytes
     size_t data_len;        ///< value length in BYTES (the bit length is converted)
-};
+} S7DataItem;
 
 /**
  * @brief Read the next Read Var response data item from the data section.
@@ -150,7 +147,7 @@ struct S7DataItem
  * @param offset   in/out cursor, start at 0; advanced past the item (and its even-pad).
  * @return true on a complete item; false at end-of-section or on truncation.
  */
-bool pc_s7_read_next_item(const uint8_t *data, size_t data_len, size_t *offset, S7DataItem *out);
+proto_bool pc_s7_read_next_item(const uint8_t *data, size_t data_len, size_t *offset, S7DataItem *out);
 
 #endif // PC_ENABLE_S7COMM
 

@@ -29,10 +29,10 @@
 // ---------------------------------------------------------------------------
 // Protocol-handler dispatch table, owned by one instance (internal linkage): the per-protocol
 // ProtoHandler pointers. One named owner, unreachable from any other translation unit.
-struct SessionCtx
+typedef struct
 {
     const ProtoHandler *proto_handlers[PROTO_MAX_HANDLERS];
-};
+} SessionCtx;
 static SessionCtx s_session;
 
 void proto_register(ConnProto proto, const ProtoHandler *h)
@@ -55,7 +55,7 @@ const ProtoHandler *proto_get(ConnProto proto)
     }
     // No implicit fallback: a slot must carry an explicit, registered protocol.
     // ConnProto::PROTO_NONE and any unregistered protocol resolve to nullptr (event dropped).
-    return ((unsigned)proto < PROTO_MAX_HANDLERS) ? s_session.proto_handlers[(unsigned)proto] : nullptr;
+    return ((unsigned)proto < PROTO_MAX_HANDLERS) ? s_session.proto_handlers[(unsigned)proto] : NULL;
 }
 
 // Dispatch one drained event to its slot's protocol handler. Shared by the

@@ -32,21 +32,19 @@
 
 #include "protocore_config.h"
 #include "services/net/snmp/snmp_ber.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_SNMP
 
 // SNMP message versions (the on-wire INTEGER value).
-enum class SnmpVersion : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     SNMP_V1 = 0,
     SNMP_V2C = 1,
     SNMP_V3 = 3,
-};
+} SnmpVersion;
 
 // PDU error-status values (RFC 1157 / RFC 3416).
-enum class SnmpErr : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     SNMP_ERR_NO_ERROR = 0,
     SNMP_ERR_TOO_BIG = 1,
@@ -57,7 +55,7 @@ enum class SnmpErr : uint8_t
     SNMP_ERR_NO_ACCESS = 6,
     SNMP_ERR_WRONG_TYPE = 7,
     SNMP_ERR_NOT_WRITABLE = 17,
-};
+} SnmpErr;
 
 /**
  * @brief A typed SNMP value (a varbind's value, or a MIB object's value).
@@ -65,24 +63,24 @@ enum class SnmpErr : uint8_t
  * Only the field matching @ref type is meaningful. String and OID values are
  * referenced by pointer and are not copied - they must remain valid.
  */
-struct SnmpValue
+typedef struct
 {
-    uint8_t type;        ///< BER tag: SnmpTag::BER_INTEGER / SnmpTag::BER_OCTET_STRING / SnmpTag::BER_OID /
-                         ///< SnmpTag::SNMP_TIMETICKS / SnmpTag::SNMP_COUNTER32 / SnmpTag::SNMP_GAUGE32 /
-                         ///< SnmpTag::SNMP_IPADDRESS, or an exception tag.
-    long ival;           ///< value for SnmpTag::BER_INTEGER
-    uint32_t uval;       ///< value for SnmpTag::SNMP_TIMETICKS / SnmpTag::SNMP_COUNTER32 / SnmpTag::SNMP_GAUGE32 /
-                         ///< SnmpTag::SNMP_IPADDRESS
-    const char *str;     ///< bytes for SnmpTag::BER_OCTET_STRING (not owned)
+    uint8_t type;        ///< BER tag: SNMP_TAG_BER_INTEGER / SNMP_TAG_BER_OCTET_STRING / SNMP_TAG_BER_OID /
+                         ///< SNMP_TAG_SNMP_TIMETICKS / SNMP_TAG_SNMP_COUNTER32 / SNMP_TAG_SNMP_GAUGE32 /
+                         ///< SNMP_TAG_SNMP_IPADDRESS, or an exception tag.
+    long ival;           ///< value for SNMP_TAG_BER_INTEGER
+    uint32_t uval;       ///< value for SNMP_TAG_SNMP_TIMETICKS / SNMP_TAG_SNMP_COUNTER32 / SNMP_TAG_SNMP_GAUGE32 /
+                         ///< SNMP_TAG_SNMP_IPADDRESS
+    const char *str;     ///< bytes for SNMP_TAG_BER_OCTET_STRING (not owned)
     size_t str_len;      ///< length of @ref str
-    const uint32_t *oid; ///< arcs for SnmpTag::BER_OID (not owned)
+    const uint32_t *oid; ///< arcs for SNMP_TAG_BER_OID (not owned)
     size_t oid_len;      ///< number of arcs in @ref oid
-};
+} SnmpValue;
 
 /** @brief Dynamic value getter; fill @p out and return true, or return false for noSuchInstance. */
-typedef bool (*SnmpGetFn)(SnmpValue *out);
+typedef proto_bool (*SnmpGetFn)(SnmpValue *out);
 /** @brief Value setter for a writable object; return true on success, false to reject (wrongType/badValue). */
-typedef bool (*SnmpSetFn)(const SnmpValue *in);
+typedef proto_bool (*SnmpSetFn)(const SnmpValue *in);
 
 // ---------------------------------------------------------------------------
 // Agent configuration / MIB registration
@@ -111,11 +109,11 @@ void pc_snmp_agent_set_system(const char *descr, const char *contact, const char
                               long services = 72);
 
 /** @brief Register a static OCTET STRING object. @return false if the table is full. */
-bool pc_snmp_agent_add_string(const uint32_t *oid, size_t oid_len, const char *value, SnmpSetFn setter = nullptr);
+proto_bool pc_snmp_agent_add_string(const uint32_t *oid, size_t oid_len, const char *value, SnmpSetFn setter = NULL);
 /** @brief Register a static INTEGER object. @return false if the table is full. */
-bool pc_snmp_agent_add_integer(const uint32_t *oid, size_t oid_len, long value, SnmpSetFn setter = nullptr);
+proto_bool pc_snmp_agent_add_integer(const uint32_t *oid, size_t oid_len, long value, SnmpSetFn setter = NULL);
 /** @brief Register a dynamic object served by @p getter (@p type names the value's BER tag). */
-bool pc_snmp_agent_add_dynamic(const uint32_t *oid, size_t oid_len, uint8_t type, SnmpGetFn getter);
+proto_bool pc_snmp_agent_add_dynamic(const uint32_t *oid, size_t oid_len, uint8_t type, SnmpGetFn getter);
 
 // ---------------------------------------------------------------------------
 // Core processing (host-testable; no sockets, no heap)
@@ -151,7 +149,7 @@ size_t pc_snmp_agent_process(const uint8_t *req, size_t req_len, uint8_t *resp, 
  * @param out_cap     capacity of @p out.
  * @return number of response-PDU bytes written, or 0 on a malformed/unsupported PDU.
  */
-size_t pc_snmp_dispatch_pdu(const uint8_t *pdu, size_t pdu_len, bool allow_write, bool v2c, uint8_t *out,
+size_t pc_snmp_dispatch_pdu(const uint8_t *pdu, size_t pdu_len, proto_bool allow_write, proto_bool v2c, uint8_t *out,
                             size_t out_cap);
 
 // ---------------------------------------------------------------------------

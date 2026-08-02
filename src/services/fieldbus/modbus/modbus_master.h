@@ -22,15 +22,13 @@
 #define PROTOCORE_MODBUS_MASTER_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_MODBUS_MASTER
 
 /**
  * @brief Build a read-request ADU (FC 0x03 holding or 0x04 input registers).
  *
- * @param fc     ModbusFunction::MODBUS_FC_READ_HOLDING_REGS (0x03) or ModbusFunction::MODBUS_FC_READ_INPUT_REGS (0x04).
+ * @param fc     MODBUS_FC_READ_HOLDING_REGS (0x03) or MODBUS_FC_READ_INPUT_REGS (0x04).
  * @param txid   transaction id echoed by the slave (caller's correlation token).
  * @param unit   unit / slave id.
  * @param start  first register address.
@@ -59,7 +57,7 @@ int pc_modbus_parse_response(const uint8_t *adu, size_t len, uint16_t *regs_out,
 /**
  * @brief Build a read-bits request ADU (FC 0x01 coils or 0x02 discrete inputs).
  *
- * @param fc     ModbusFunction::MODBUS_FC_READ_COILS (0x01) or ::MODBUS_FC_READ_DISCRETE_INPUTS (0x02).
+ * @param fc     MODBUS_FC_READ_COILS (0x01) or ::MODBUS_FC_READ_DISCRETE_INPUTS (0x02).
  * @param txid   transaction id echoed by the slave.
  * @param unit   unit / slave id.
  * @param start  first bit address.
@@ -93,7 +91,8 @@ int pc_modbus_parse_read_bits_response(const uint8_t *adu, size_t len, uint16_t 
  * @param cap  destination capacity (>= 12).
  * @return bytes written (12), or 0 on a null / too-small buffer.
  */
-size_t pc_modbus_build_write_single_coil(uint16_t txid, uint8_t unit, uint16_t addr, bool on, uint8_t *out, size_t cap);
+size_t pc_modbus_build_write_single_coil(uint16_t txid, uint8_t unit, uint16_t addr, proto_bool on, uint8_t *out,
+                                         size_t cap);
 
 /**
  * @brief Build a Write Multiple Coils request ADU (FC 0x0F).

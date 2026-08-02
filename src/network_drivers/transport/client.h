@@ -25,8 +25,6 @@
  */
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 /**
  * @brief Resolve @p host (dotted-quad fast path, else DNS) and connect to
@@ -37,13 +35,13 @@
 int pc_client_open(const char *host, uint16_t port, uint32_t timeout_ms);
 
 /** @brief True once the TCP handshake has completed for @p cid. */
-bool pc_client_connected(int cid);
+proto_bool pc_client_connected(int cid);
 
 /** @brief True once the peer closed (FIN) or the connection errored. */
-bool pc_client_is_closed(int cid);
+proto_bool pc_client_is_closed(int cid);
 
 /** @brief Queue @p len wire bytes for transmission (marshaled tcp_write + output). */
-bool pc_client_send(int cid, const void *data, size_t len);
+proto_bool pc_client_send(int cid, const void *data, size_t len);
 
 /** @brief Wire bytes currently buffered and ready to read. */
 size_t pc_client_available(int cid);

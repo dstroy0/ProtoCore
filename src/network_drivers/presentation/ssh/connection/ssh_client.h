@@ -41,13 +41,11 @@
 #define PROTOCORE_SSH_CLIENT_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_SSH_CLIENT
 
 /** @brief How to reach the relay, who to log in as, and what to tunnel back. */
-struct pc_ssh_tunnel_cfg
+typedef struct
 {
     const char *host;         ///< relay hostname or dotted-quad.
     uint16_t port;            ///< relay SSH port (0 => 22).
@@ -57,16 +55,16 @@ struct pc_ssh_tunnel_cfg
     const char *bind_addr;    ///< address the relay binds the forward on ("" / null => "" = all, "localhost", ...).
     uint16_t bind_port;       ///< remote port the relay listens on (tcpip-forward); connections there tunnel back.
     uint16_t local_port;      ///< local TCP port a tunnelled connection is bridged to (e.g. 80).
-};
+} pc_ssh_tunnel_cfg;
 
 /** @brief Lifecycle phase of the tunnel, for observability. */
-enum class pc_ssh_tunnel_state : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     PC_TUN_IDLE = 0,   ///< not started.
     PC_TUN_CONNECTING, ///< TCP + SSH handshake + auth in progress.
     PC_TUN_UP,         ///< authenticated and the remote forward is established.
     PC_TUN_FAILED      ///< the last attempt failed (host-key mismatch, auth, or transport).
-};
+} pc_ssh_tunnel_state;
 
 /**
  * @brief Start (or restart) the tunnel: connect to the relay, handshake, authenticate, and request
@@ -80,7 +78,7 @@ enum class pc_ssh_tunnel_state : uint8_t
  * with a >= 20480-byte stack (see the example). begin() claims a private scratch arena for the calling
  * task, so poll() must run in that same task or the packet-decrypt tripwire fires.
  */
-bool pc_ssh_tunnel_begin(const pc_ssh_tunnel_cfg *cfg);
+proto_bool pc_ssh_tunnel_begin(const pc_ssh_tunnel_cfg *cfg);
 
 /**
  * @brief Pump the tunnel: advance the handshake, service the relay's keepalives, accept
@@ -96,7 +94,7 @@ void pc_ssh_tunnel_end(void);
 pc_ssh_tunnel_state pc_ssh_tunnel_state_get(void);
 
 /** @brief True once authenticated and the remote forward is live. */
-bool pc_ssh_tunnel_up(void);
+proto_bool pc_ssh_tunnel_up(void);
 
 /**
  * @brief Derive the ssh-ed25519 public key (32 bytes) from a private @p seed.

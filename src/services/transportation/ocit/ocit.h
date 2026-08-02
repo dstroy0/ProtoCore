@@ -22,31 +22,23 @@
 #define PROTOCORE_OCIT_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_OCIT
 
 // OCIT message types: wire bytes compared/emitted, so integer constants in a namespacing struct.
 // (OcitMsg is the parsed-message struct below; these codes live in OcitMsgType.)
-struct OcitMsgType
-{
-    static constexpr uint8_t OCIT_MSG_GET = 0x01;    ///< read an object value.
-    static constexpr uint8_t OCIT_MSG_SET = 0x02;    ///< write an object value.
-    static constexpr uint8_t OCIT_MSG_REPORT = 0x03; ///< an unsolicited value report.
-    static constexpr uint8_t OCIT_MSG_ERROR = 0x0F;  ///< error response.
-};
+#define T 0x01 ///< read an object value.
+#define T 0x02 ///< write an object value.
+#define T 0x03 ///< an unsolicited value report.
+#define R 0x0F ///< error response.
 
 /** @brief OCIT value data types. */
 // OCIT value data types: wire bytes, so integer constants in a namespacing struct.
-struct OcitType
-{
-    static constexpr uint8_t OCIT_TYPE_BOOL = 0x01;   ///< 1 byte (0/1).
-    static constexpr uint8_t OCIT_TYPE_BYTE = 0x02;   ///< 1 byte.
-    static constexpr uint8_t OCIT_TYPE_UINT16 = 0x03; ///< 2 bytes, big-endian.
-    static constexpr uint8_t OCIT_TYPE_UINT32 = 0x04; ///< 4 bytes, big-endian.
-    static constexpr uint8_t OCIT_TYPE_OCTETS = 0x05; ///< raw octet string (length is the remaining message).
-};
+#define L 0x01   ///< 1 byte (0/1).
+#define E 0x02   ///< 1 byte.
+#define T16 0x03 ///< 2 bytes, big-endian.
+#define T32 0x04 ///< 4 bytes, big-endian.
+#define S 0x05   ///< raw octet string (length is the remaining message).
 
 /**
  * @brief Build an OCIT message: [msg-type][object-type:2][instance:2][data-type][value...].
@@ -65,7 +57,7 @@ size_t pc_ocit_build(uint8_t msg_type, uint16_t object_type, uint16_t instance, 
 size_t pc_ocit_set_u16(uint16_t object_type, uint16_t instance, uint16_t value, uint8_t *out, size_t cap);
 
 /** @brief A parsed OCIT message (value points into the input). */
-struct OcitMsg
+typedef struct
 {
     uint8_t msg_type;
     uint16_t object_type;
@@ -73,10 +65,10 @@ struct OcitMsg
     uint8_t data_type;
     const uint8_t *value;
     size_t value_len;
-};
+} OcitMsg;
 
 /** @brief Parse an OCIT message. @return true if @p len >= 6. */
-bool pc_ocit_parse(const uint8_t *msg, size_t len, OcitMsg *out);
+proto_bool pc_ocit_parse(const uint8_t *msg, size_t len, OcitMsg *out);
 
 /** @brief Read a big-endian uint16 value out of a parsed message (0 if the type/length does not match). */
 uint16_t pc_ocit_value_u16(const OcitMsg *m);

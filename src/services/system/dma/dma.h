@@ -51,23 +51,20 @@
 
 #if PC_ENABLE_DMA
 
-#include <stddef.h>
-#include <stdint.h>
-
 /** @brief Peripheral a channel is bound to (informational; selects the real backend). */
-enum class pc_dma_periph : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     PC_DMA_UART = 0,
     PC_DMA_I2C = 1,
     PC_DMA_SPI = 2,
-};
+} pc_dma_periph;
 
 /** @brief Transfer direction carried on a completion event. */
-enum class pc_dma_dir : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     PC_DMA_RX = 0, ///< ingress: peripheral -> buffer
     PC_DMA_TX = 1, ///< egress:  buffer -> peripheral
-};
+} pc_dma_dir;
 
 /**
  * @brief A DMA-complete event handed to the channel callback.
@@ -79,7 +76,7 @@ enum class pc_dma_dir : uint8_t
  * reuse under load, so post the bytes, not this pointer. For TX, @ref data is nullptr and
  * @ref len is the number of bytes drained.
  */
-struct pc_dma_event
+typedef struct
 {
     const uint8_t *data;  ///< RX: received bytes (into a ping-pong buffer); TX: nullptr
     uint32_t t_ms;        ///< pc_millis() at completion (0 on host builds)
@@ -93,7 +90,7 @@ struct pc_dma_event
     pc_dma_periph periph; ///< pc_dma_periph
     pc_dma_dir dir;       ///< pc_dma_dir
     uint8_t _pad;
-};
+} pc_dma_event;
 
 /**
  * @brief Called once per completed transfer (RX and TX). ISR context on real silicon,
@@ -104,20 +101,20 @@ struct pc_dma_event
 typedef void (*pc_dma_cb)(const pc_dma_event *ev, void *ctx);
 
 /** @brief Channel configuration passed to pc_dma_open(). */
-struct pc_dma_config
+typedef struct
 {
     uint8_t channel;       ///< channel id [0, PC_DMA_CHANNELS).
     pc_dma_periph periph;  ///< pc_dma_periph the channel drives.
-    bool loopback;         ///< simulator: this channel's TX egress feeds its own RX ingress.
+    proto_bool loopback;   ///< simulator: this channel's TX egress feeds its own RX ingress.
     pc_dma_cb on_complete; ///< completion callback (required).
     void *ctx;             ///< opaque, forwarded to @ref on_complete.
-};
+} pc_dma_config;
 
 /**
  * @brief Configure a channel and arm its RX transfer.
  * @return true if opened; false on a bad channel id / null callback / already open.
  */
-bool pc_dma_open(const pc_dma_config *cfg);
+proto_bool pc_dma_open(const pc_dma_config *cfg);
 
 /**
  * @brief Submit bytes for egress DMA on channel @p ch (copies up to PC_DMA_BUF_SIZE).
@@ -126,7 +123,7 @@ bool pc_dma_open(const pc_dma_config *cfg);
  * TX-complete event), if the channel is closed, or on a null / oversize buffer.
  * @return true if the transfer was accepted.
  */
-bool pc_dma_tx_submit(uint8_t ch, const uint8_t *buf, uint16_t len);
+proto_bool pc_dma_tx_submit(uint8_t ch, const uint8_t *buf, uint16_t len);
 
 /** @brief Close a channel and drop any in-flight transfer / staged simulator bytes. */
 void pc_dma_close(uint8_t ch);
@@ -146,7 +143,7 @@ void pc_dma_poll(void);
  * @return true if staged; false if the ingress staging is full (fail-closed) or the
  *         channel is closed.
  */
-bool pc_dma_sim_feed(uint8_t ch, const uint8_t *bytes, uint16_t len);
+proto_bool pc_dma_sim_feed(uint8_t ch, const uint8_t *bytes, uint16_t len);
 
 /**
  * @brief Simulator: read back up to @p max bytes that channel @p ch transmitted via

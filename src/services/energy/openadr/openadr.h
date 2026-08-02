@@ -23,19 +23,17 @@
 #define PROTOCORE_OPENADR_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_OPENADR
 
 /** @brief One OpenADR interval payload point (a single value over a time interval). */
-struct OpenAdrInterval
+typedef struct
 {
     uint32_t start;    ///< interval start (epoch seconds).
     uint32_t duration; ///< interval duration (seconds).
     const char *type;  ///< payload type, e.g. "SIMPLE", "PRICE", "LOAD_CONTROL".
     double value;      ///< the payload value (a level, price, or setpoint).
-};
+} OpenAdrInterval;
 
 /**
  * @brief Build an OpenADR 3.0 event JSON object.

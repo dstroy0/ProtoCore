@@ -26,7 +26,6 @@
 #if PC_ENABLE_FORWARDED_TRUST
 
 #include "network_drivers/network/ip.h"
-#include <stdint.h>
 
 /** @brief Empty the trusted-upstream table (trust no forwarded header). */
 void pc_forwarded_trust_reset(void);
@@ -36,17 +35,17 @@ void pc_forwarded_trust_reset(void);
  * @return true if added; false on a null / malformed-family @p network, an out-of-range @p prefix_len,
  *         or a full table (PC_TRUSTED_PROXY_MAX).
  */
-bool pc_forwarded_trust_add(const pc_ip *network, uint8_t prefix_len);
+proto_bool pc_forwarded_trust_add(const pc_ip *network, uint8_t prefix_len);
 
 /**
  * @brief Add a trusted-upstream network from a CIDR string ("10.0.0.0/8" / "2001:db8::/32"; a bare
  *        address is taken as a host route).
  * @return true if parsed and added; false otherwise.
  */
-bool pc_forwarded_trust_add_cidr(const char *cidr);
+proto_bool pc_forwarded_trust_add_cidr(const char *cidr);
 
 /** @brief True if @p peer falls inside any trusted-upstream CIDR (always false when the table is empty). */
-bool pc_forwarded_trust_contains(const pc_ip *peer);
+proto_bool pc_forwarded_trust_contains(const pc_ip *peer);
 
 /**
  * @brief Resolve the effective client address behind a possibly-trusted proxy.
@@ -59,7 +58,7 @@ bool pc_forwarded_trust_contains(const pc_ip *peer);
  * @param out         receives the effective client address.
  * @return true if the forwarded client was honored; false if the real TCP peer was kept.
  */
-bool pc_forwarded_effective_ip(const pc_ip *peer, const char *fwd_ip_str, pc_ip *out);
+proto_bool pc_forwarded_effective_ip(const pc_ip *peer, const char *fwd_ip_str, pc_ip *out);
 
 #endif // PC_ENABLE_FORWARDED_TRUST
 #endif // PROTOCORE_FORWARDED_TRUST_H

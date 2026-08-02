@@ -25,7 +25,7 @@
 #ifndef PROTOCORE_CAN_H
 #define PROTOCORE_CAN_H
 
-#include <stdint.h>
+#include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
 
 #define PC_CAN_MAX_DLC 8               ///< classic CAN carries at most 8 data octets.
 #define PC_CAN_STD_ID_MASK 0x7FFu      ///< 11-bit standard identifier.
@@ -40,13 +40,13 @@
  * @var CanFrame::dlc       data length, 0..8.
  * @var CanFrame::data      payload octets; only the first @ref CanFrame::dlc are valid.
  */
-struct CanFrame
+typedef struct
 {
     uint32_t id;
-    bool extended;
-    bool rtr;
+    proto_bool extended;
+    proto_bool rtr;
     uint8_t dlc;
     uint8_t data[PC_CAN_MAX_DLC];
-};
+} CanFrame;
 
 #endif // PROTOCORE_CAN_H

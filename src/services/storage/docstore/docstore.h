@@ -24,14 +24,12 @@
 #if PC_ENABLE_DOCSTORE
 
 #include "services/storage/dbm/dbm.h"
-#include <stddef.h>
-#include <stdint.h>
 
 /** @brief A document store bound to a mounted ::pc_dbm. */
-struct pc_doc_store
+typedef struct
 {
     pc_dbm *db;
-};
+} pc_doc_store;
 
 /** @brief Bind @p ds to an open @p db. */
 void pc_docstore_open(pc_doc_store *ds, pc_dbm *db);
@@ -40,7 +38,7 @@ void pc_docstore_open(pc_doc_store *ds, pc_dbm *db);
  * @brief Insert or replace the document @p id with JSON body @p json. Not synced (batched).
  * @return false on the same bounds/full conditions as ::pc_dbm_put.
  */
-bool pc_docstore_put(pc_doc_store *ds, const char *id, uint16_t id_len, const uint8_t *json, uint32_t json_len);
+proto_bool pc_docstore_put(pc_doc_store *ds, const char *id, uint16_t id_len, const uint8_t *json, uint32_t json_len);
 
 /**
  * @brief Fetch document @p id's JSON body into @p buf (up to @p cap).
@@ -49,22 +47,23 @@ bool pc_docstore_put(pc_doc_store *ds, const char *id, uint16_t id_len, const ui
 long pc_docstore_get(pc_doc_store *ds, const char *id, uint16_t id_len, uint8_t *buf, size_t cap);
 
 /** @brief Delete document @p id. @return true if it existed. */
-bool pc_docstore_del(pc_doc_store *ds, const char *id, uint16_t id_len);
+proto_bool pc_docstore_del(pc_doc_store *ds, const char *id, uint16_t id_len);
 
 /** @brief @return true if document @p id exists. */
-bool pc_docstore_contains(const pc_doc_store *ds, const char *id, uint16_t id_len);
+proto_bool pc_docstore_contains(const pc_doc_store *ds, const char *id, uint16_t id_len);
 
 /** @brief @return the number of documents. */
 uint32_t pc_docstore_count(const pc_doc_store *ds);
 
 /** @brief Make all writes durable (checkpoints the WAL). @return false on I/O failure. */
-bool pc_docstore_sync(pc_doc_store *ds);
+proto_bool pc_docstore_sync(pc_doc_store *ds);
 
 /**
  * @brief Per-match callback for the find calls: the matching document's id and JSON body (the body points
  * into a temporary buffer valid only for this call). Return false to stop the scan early.
  */
-using pc_doc_match_cb = bool (*)(const char *id, uint16_t id_len, const uint8_t *json, uint32_t json_len, void *ctx);
+using pc_doc_match_cb = proto_bool (*)(const char *id, uint16_t id_len, const uint8_t *json, uint32_t json_len,
+                                       void *ctx);
 
 /**
  * @brief Find documents whose top-level string field @p field equals @p value. @return the match count.
@@ -76,7 +75,7 @@ uint32_t pc_docstore_find_str(pc_doc_store *ds, const char *field, const char *v
 uint32_t pc_docstore_find_int(pc_doc_store *ds, const char *field, long value, pc_doc_match_cb cb, void *ctx);
 
 /** @brief Find documents whose top-level boolean field @p field equals @p value. @return the match count. */
-uint32_t pc_docstore_find_bool(pc_doc_store *ds, const char *field, bool value, pc_doc_match_cb cb, void *ctx);
+uint32_t pc_docstore_find_bool(pc_doc_store *ds, const char *field, proto_bool value, pc_doc_match_cb cb, void *ctx);
 
 #endif // PC_ENABLE_DOCSTORE
 #endif // PROTOCORE_DOCSTORE_H

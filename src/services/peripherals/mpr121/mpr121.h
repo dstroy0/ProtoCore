@@ -26,8 +26,7 @@
 #ifndef PROTOCORE_MPR121_H
 #define PROTOCORE_MPR121_H
 
-#include <stddef.h>
-#include <stdint.h>
+#include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
 
 /** @brief Sense electrodes on the MPR121 (ELE0..ELE11). */
 #define MPR121_ELECTRODES 12
@@ -43,13 +42,13 @@
 uint16_t pc_mpr121_touched(uint8_t status_lo, uint8_t status_hi);
 
 /** @brief True if electrode @p e (0..11) is touched in a mask from ::pc_mpr121_touched. */
-bool pc_mpr121_is_touched(uint16_t mask, uint8_t e);
+proto_bool pc_mpr121_is_touched(uint16_t mask, uint8_t e);
 
 /** @brief True if the proximity electrode (status bit 12) is active. */
-bool pc_mpr121_proximity(uint8_t status_hi);
+proto_bool pc_mpr121_proximity(uint8_t status_hi);
 
 /** @brief True if the over-current flag (status bit 15) is set (wiring fault / short). */
-bool pc_mpr121_overcurrent(uint8_t status_hi);
+proto_bool pc_mpr121_overcurrent(uint8_t status_hi);
 
 /** @brief Combine a little-endian LSB/MSB register pair into a 10-bit value (filtered/baseline). */
 uint16_t pc_mpr121_word10(uint8_t lsb, uint8_t msb);
@@ -68,7 +67,7 @@ size_t pc_mpr121_build_init(uint8_t *buf, size_t cap, uint8_t n_electrodes, uint
 // --- ESP32 binding (I2C via Wire; no-ops on a host build) ------------------------------------
 
 /** @brief Reset + configure the MPR121 at @p addr over I2C. @return true if it acknowledged. */
-bool pc_mpr121_begin(uint8_t addr);
+proto_bool pc_mpr121_begin(uint8_t addr);
 
 /** @brief Read the current 12-electrode touch bitmask (0 if the device is absent). */
 uint16_t pc_mpr121_read_touched();

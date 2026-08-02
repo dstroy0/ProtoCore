@@ -15,12 +15,11 @@
 #include "network_drivers/tls/tls.h"
 #include "services/system/clock.h" // pcdelay
 
-#if PC_ENABLE_TLS && defined(ARDUINO)
+#if PC_ENABLE_TLS && PROTOCORE_HOT
 
 #include "lwip/tcp.h"
 #include "network_drivers/transport/tcp.h"
-#include <Arduino.h>    // millis() for the blocking client loop
-#include <esp_system.h> // esp_fill_random (HW CSPRNG)
+#include <Arduino.h> // millis() for the blocking client loop
 #include <string.h>
 
 #include <mbedtls/error.h>
@@ -65,7 +64,7 @@
 // default) if you do OTA / NVS / file-serving concurrently with live TLS. See
 // docs/KNOWN_LIMITATIONS.md (TLS -> "Flash-cache / OTA caveat").
 // ---------------------------------------------------------------------------
-#if PC_TLS_ARENA_IN_PSRAM && defined(ARDUINO)
+#if PC_TLS_ARENA_IN_PSRAM && PROTOCORE_HOT
 #include <esp_attr.h> // pulls in sdkconfig.h -> CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY
 #if !defined(CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY)
 #error                                                                                                                 \
@@ -86,21 +85,21 @@
 #if defined(PC_TLS_HS_BENCH)
 #include <esp_timer.h> // esp_timer_get_time() - microsecond wall clock for the handshake span probe
 #endif
-struct TlsPoolCtx
+typedef struct
 {
     uint8_t arena[PC_TLS_ARENA_SIZE];
-    bool inited = false;
+    proto_bool inited = PROTO_FALSE;
     size_t used = 0;
     size_t peak = 0;
-};
+} TlsPoolCtx;
 PC_TLS_ARENA_ATTR static TlsPoolCtx s_pool;
 
 #define TLS_ALIGN 8u
-struct PoolBlk
+typedef struct
 {
     size_t size;  // payload bytes
     uint8_t used; // 0 = free, 1 = in use
-};
+} PoolBlk;
 static const size_t POOL_HDR = (sizeof(PoolBlk) + (TLS_ALIGN - 1)) & ~(size_t)(TLS_ALIGN - 1);
 
 static void pool_init()
@@ -110,7 +109,7 @@ static void pool_init()
     b->used = 0;
     s_pool.used = 0;
     s_pool.peak = 0;
-    s_pool.inited = true;
+    s_pool.inited = PROTO_TRUE;
 }
 
 static void pool_coalesce()
@@ -142,7 +141,7 @@ static void *pool_calloc(size_t n, size_t size)
     }
     if (n != 0 && size > (size_t)-1 / n)
     {
-        return nullptr; // overflow
+        return NULL; // overflow
     }
     size_t want = n * size;
     want = (want + (TLS_ALIGN - 1)) & ~(size_t)(TLS_ALIGN - 1);
@@ -178,7 +177,7 @@ static void *pool_calloc(size_t n, size_t size)
         }
         p += POOL_HDR + b->size;
     }
-    return nullptr; // arena exhausted
+    return NULL; // arena exhausted
 }
 
 static void pool_free(void *ptr)
@@ -205,16 +204,16 @@ static void pool_free(void *ptr)
 // via that always-live reference, keeping ~600 bytes linked even in a client-only firmware
 // that never runs pc_tls_configure(). Kept apart, --gc-sections drops s_srv when server
 // setup is unused.
-struct TlsServerReadyCtx
+typedef struct
 {
-    bool ready = false;
-};
+    proto_bool ready = PROTO_FALSE;
+} TlsServerReadyCtx;
 static TlsServerReadyCtx s_srv_ready;
 
 // TLS server config, owned by one instance (internal linkage): the mbedTLS config/cert/key,
 // the optional mTLS client-cert trust anchor, and the resumption ticket key. Referenced only
 // by the server-setup path, so a client-only build garbage-collects it. One named owner.
-struct TlsServerCtx
+typedef struct
 {
     mbedtls_ssl_config conf;
     mbedtls_x509_crt cert;
@@ -225,28 +224,28 @@ struct TlsServerCtx
 #if PC_ENABLE_TLS_RESUMPTION
     mbedtls_ssl_ticket_context ticket_ctx; // server-held key for sealing session tickets
 #endif
-};
+} TlsServerCtx;
 static TlsServerCtx s_srv;
 
-struct TlsConn
+typedef struct
 {
     mbedtls_ssl_context ssl;
     struct tcp_pcb *pcb; // captured at begin: the senders null conn->pcb mid-write
     uint8_t slot;
-    bool active;
-    bool established;
+    proto_bool active;
+    proto_bool established;
 #ifdef PC_TLS_HS_BENCH
     long long hs_cpu_us;   // accumulated device CPU time INSIDE mbedtls_ssl_handshake across pumps
     long long hs_wall0_us; // esp_timer at the first handshake pump (wall clock incl. network waits)
-    bool hs_started;       // timing began for this handshake
+    proto_bool hs_started; // timing began for this handshake
 #endif
-};
+} TlsConn;
 // TLS connection pool, owned by one instance (internal linkage): the per-slot mbedTLS session
 // contexts. One named owner, unreachable from any other translation unit.
-struct TlsConnsCtx
+typedef struct
 {
     TlsConn conns[MAX_TLS_CONNS];
-};
+} TlsConnsCtx;
 static TlsConnsCtx s_conns;
 
 #ifdef PC_TLS_HS_BENCH
@@ -264,7 +263,7 @@ static TlsConn *find(uint8_t slot)
             return &s_conns.conns[i];
         }
     }
-    return nullptr;
+    return NULL;
 }
 
 // ---------------------------------------------------------------------------
@@ -273,7 +272,7 @@ static TlsConn *find(uint8_t slot)
 static int tls_rng(void *ctx, unsigned char *out, size_t len)
 {
     (void)ctx;
-    esp_fill_random(out, len); // ESP32 hardware CSPRNG
+    pc_platform_rand_fill(out, len); // ESP32 hardware CSPRNG
     return 0;
 }
 
@@ -412,15 +411,15 @@ static void tls_apply_curve_pref(mbedtls_ssl_config *conf)
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
-bool pc_tls_global_init(const uint8_t *cert, size_t cert_len, const uint8_t *key, size_t key_len)
+proto_bool pc_tls_global_init(const uint8_t *cert, size_t cert_len, const uint8_t *key, size_t key_len)
 {
     if (s_srv_ready.ready)
     {
-        return true;
+        return PROTO_TRUE;
     }
     if (!cert || !key)
     {
-        return false;
+        return PROTO_FALSE;
     }
 
     // Route ALL mbedTLS allocations through our static arena before any mbedTLS
@@ -434,28 +433,28 @@ bool pc_tls_global_init(const uint8_t *cert, size_t cert_len, const uint8_t *key
 
     if (mbedtls_x509_crt_parse(&s_srv.cert, cert, cert_len) != 0)
     {
-        return false;
+        return PROTO_FALSE;
     }
 
 #if MBEDTLS_VERSION_MAJOR >= 3
-    if (mbedtls_pk_parse_key(&s_srv.key, key, key_len, nullptr, 0, tls_rng, nullptr) != 0)
+    if (mbedtls_pk_parse_key(&s_srv.key, key, key_len, NULL, 0, tls_rng, NULL) != 0)
     {
-        return false;
+        return PROTO_FALSE;
     }
 #else
-    if (mbedtls_pk_parse_key(&s_srv.key, key, key_len, nullptr, 0) != 0)
+    if (mbedtls_pk_parse_key(&s_srv.key, key, key_len, NULL, 0) != 0)
     {
-        return false;
+        return PROTO_FALSE;
     }
 #endif
 
     if (mbedtls_ssl_config_defaults(&s_srv.conf, MBEDTLS_SSL_IS_SERVER, MBEDTLS_SSL_TRANSPORT_STREAM,
                                     MBEDTLS_SSL_PRESET_DEFAULT) != 0)
     {
-        return false;
+        return PROTO_FALSE;
     }
 
-    mbedtls_ssl_conf_rng(&s_srv.conf, tls_rng, nullptr);
+    mbedtls_ssl_conf_rng(&s_srv.conf, tls_rng, NULL);
     tls_apply_max_frag_len(&s_srv.conf); // RFC 6066 record cap (PC_TLS_MAX_FRAG_LEN)
     tls_apply_curve_pref(&s_srv.conf);   // prefer cheap curves (no ECC HW on the S3) - see helper
 #if MBEDTLS_VERSION_MAJOR >= 3
@@ -466,16 +465,16 @@ bool pc_tls_global_init(const uint8_t *cert, size_t cert_len, const uint8_t *key
 
     if (mbedtls_ssl_conf_own_cert(&s_srv.conf, &s_srv.cert, &s_srv.key) != 0)
     {
-        return false;
+        return PROTO_FALSE;
     }
 
 #if PC_ENABLE_HTTP2
     // Offer HTTP/2 over TLS via ALPN (RFC 7301), falling back to HTTP/1.1. The list must outlive
     // the config, so it is static; pc_tls_alpn() reports the negotiated choice post-handshake.
-    static const char *s_alpn[] = {"h2", "http/1.1", nullptr}; // mbedTLS keeps this pointer
+    static const char *s_alpn[] = {"h2", "http/1.1", NULL}; // mbedTLS keeps this pointer
     if (mbedtls_ssl_conf_alpn_protocols(&s_srv.conf, s_alpn) != 0)
     {
-        return false;
+        return PROTO_FALSE;
     }
 #endif
 
@@ -485,10 +484,10 @@ bool pc_tls_global_init(const uint8_t *cert, size_t cert_len, const uint8_t *key
     // no per-session cache grows in the arena. The ticket key rotates on the
     // configured lifetime. mbedtls_ssl_ticket_write/parse are the default codec.
     mbedtls_ssl_ticket_init(&s_srv.ticket_ctx);
-    if (mbedtls_ssl_ticket_setup(&s_srv.ticket_ctx, tls_rng, nullptr, MBEDTLS_CIPHER_AES_256_GCM,
+    if (mbedtls_ssl_ticket_setup(&s_srv.ticket_ctx, tls_rng, NULL, MBEDTLS_CIPHER_AES_256_GCM,
                                  PC_TLS_TICKET_LIFETIME_S) != 0)
     {
-        return false;
+        return PROTO_FALSE;
     }
     mbedtls_ssl_conf_session_tickets_cb(&s_srv.conf, mbedtls_ssl_ticket_write, mbedtls_ssl_ticket_parse,
                                         &s_srv.ticket_ctx);
@@ -496,14 +495,14 @@ bool pc_tls_global_init(const uint8_t *cert, size_t cert_len, const uint8_t *key
 
     for (uint8_t i = 0; i < MAX_TLS_CONNS; i++)
     {
-        s_conns.conns[i].active = false;
+        s_conns.conns[i].active = PROTO_FALSE;
     }
 
-    s_srv_ready.ready = true;
-    return true;
+    s_srv_ready.ready = PROTO_TRUE;
+    return PROTO_TRUE;
 }
 
-bool pc_tls_ready()
+proto_bool pc_tls_ready()
 {
     return s_srv_ready.ready;
 }
@@ -511,16 +510,16 @@ bool pc_tls_ready()
 const char *pc_tls_alpn(uint8_t slot)
 {
     TlsConn *c = find(slot);
-    return c ? mbedtls_ssl_get_alpn_protocol(&c->ssl) : nullptr;
+    return c ? mbedtls_ssl_get_alpn_protocol(&c->ssl) : NULL;
 }
 
-bool pc_tls_conn_begin(uint8_t slot)
+proto_bool pc_tls_conn_begin(uint8_t slot)
 {
     if (!s_srv_ready.ready)
     {
-        return false;
+        return PROTO_FALSE;
     }
-    TlsConn *e = nullptr;
+    TlsConn *e = NULL;
     for (uint8_t i = 0; i < MAX_TLS_CONNS; i++)
     {
         if (!s_conns.conns[i].active)
@@ -531,22 +530,22 @@ bool pc_tls_conn_begin(uint8_t slot)
     }
     if (!e)
     {
-        return false; // TLS connection pool full
+        return PROTO_FALSE; // TLS connection pool full
     }
 
     e->slot = slot;
     e->pcb = conn_pool[slot].pcb;
-    e->active = true;
-    e->established = false;
+    e->active = PROTO_TRUE;
+    e->established = PROTO_FALSE;
     mbedtls_ssl_init(&e->ssl);
     if (mbedtls_ssl_setup(&e->ssl, &s_srv.conf) != 0)
     {
         mbedtls_ssl_free(&e->ssl);
-        e->active = false;
-        return false;
+        e->active = PROTO_FALSE;
+        return PROTO_FALSE;
     }
-    mbedtls_ssl_set_bio(&e->ssl, e, server_bio_send, server_bio_recv, nullptr);
-    return true;
+    mbedtls_ssl_set_bio(&e->ssl, e, server_bio_send, server_bio_recv, NULL);
+    return PROTO_TRUE;
 }
 
 int pc_tls_handshake(uint8_t slot)
@@ -559,7 +558,7 @@ int pc_tls_handshake(uint8_t slot)
 #ifdef PC_TLS_HS_BENCH
     if (!e->hs_started)
     {
-        e->hs_started = true;
+        e->hs_started = PROTO_TRUE;
         e->hs_cpu_us = 0;
         e->hs_wall0_us = esp_timer_get_time();
         pc_tls_hs_bench.n_pumps = 0;
@@ -577,12 +576,12 @@ int pc_tls_handshake(uint8_t slot)
 #endif
     if (ret == 0)
     {
-        e->established = true;
+        e->established = PROTO_TRUE;
 #ifdef PC_TLS_HS_BENCH
         pc_tls_hs_bench.last_cpu_us = e->hs_cpu_us;
         pc_tls_hs_bench.last_wall_us = esp_timer_get_time() - e->hs_wall0_us;
         pc_tls_hs_bench.count++;
-        e->hs_started = false;
+        e->hs_started = PROTO_FALSE;
 #endif
         return 1;
     }
@@ -593,7 +592,7 @@ int pc_tls_handshake(uint8_t slot)
     return -1;
 }
 
-bool pc_tls_established(uint8_t slot)
+proto_bool pc_tls_established(uint8_t slot)
 {
     TlsConn *e = find(slot);
     return e && e->established;
@@ -659,9 +658,9 @@ void pc_tls_conn_end(uint8_t slot)
     }
     mbedtls_ssl_close_notify(&e->ssl);
     mbedtls_ssl_free(&e->ssl);
-    e->active = false;
-    e->established = false;
-    e->pcb = nullptr;
+    e->active = PROTO_FALSE;
+    e->established = PROTO_FALSE;
+    e->pcb = NULL;
 }
 
 void pc_tls_conn_free(uint8_t slot)
@@ -672,9 +671,9 @@ void pc_tls_conn_free(uint8_t slot)
         return;
     }
     mbedtls_ssl_free(&e->ssl); // abrupt teardown: no close_notify (peer is gone)
-    e->active = false;
-    e->established = false;
-    e->pcb = nullptr;
+    e->active = PROTO_FALSE;
+    e->established = PROTO_FALSE;
+    e->pcb = NULL;
 }
 
 size_t pc_tls_arena_peak()
@@ -683,22 +682,22 @@ size_t pc_tls_arena_peak()
 }
 
 #if PC_ENABLE_MTLS
-bool pc_tls_set_client_ca(const uint8_t *ca, size_t ca_len)
+proto_bool pc_tls_set_client_ca(const uint8_t *ca, size_t ca_len)
 {
     if (!s_srv_ready.ready || !ca)
     {
-        return false;
+        return PROTO_FALSE;
     }
     mbedtls_x509_crt_init(&s_srv.ca);
     if (mbedtls_x509_crt_parse(&s_srv.ca, ca, ca_len) != 0)
     {
-        return false;
+        return PROTO_FALSE;
     }
     // Trust anchor for the client chain + demand a (valid) client cert: an absent
     // or untrusted client certificate now fails the handshake.
-    mbedtls_ssl_conf_ca_chain(&s_srv.conf, &s_srv.ca, nullptr);
+    mbedtls_ssl_conf_ca_chain(&s_srv.conf, &s_srv.ca, NULL);
     mbedtls_ssl_conf_authmode(&s_srv.conf, MBEDTLS_SSL_VERIFY_REQUIRED);
-    return true;
+    return PROTO_TRUE;
 }
 
 int pc_tls_peer_subject(uint8_t slot, char *out, size_t out_len)
@@ -733,13 +732,13 @@ int pc_tls_peer_subject(uint8_t slot, char *out, size_t out_len)
 // Client-side server-authentication config, owned by one instance (internal linkage): the CA
 // trust anchor (+set flag) and the SHA-256 cert pin (+set flag). Shared by the one-shot HTTP
 // client and the persistent session. One named owner, unreachable from any other TU.
-struct TlsClientAuthCtx
+typedef struct
 {
     mbedtls_x509_crt ca;
-    bool ca_set = false;
+    proto_bool ca_set = PROTO_FALSE;
     uint8_t pin[32];
-    bool pin_set = false;
-};
+    proto_bool pin_set = PROTO_FALSE;
+} TlsClientAuthCtx;
 static TlsClientAuthCtx s_cli;
 
 // Route mbedTLS allocations through the static arena (the client may run before
@@ -760,7 +759,7 @@ void pc_tls_client_set_ca(const uint8_t *ca, size_t ca_len)
     {
         mbedtls_x509_crt_free(&s_cli.ca);
     }
-    s_cli.ca_set = false;
+    s_cli.ca_set = PROTO_FALSE;
     if (!ca || ca_len == 0)
     {
         return;
@@ -777,11 +776,11 @@ void pc_tls_client_set_pin(const uint8_t sha256[32])
 {
     if (!sha256)
     {
-        s_cli.pin_set = false;
+        s_cli.pin_set = PROTO_FALSE;
         return;
     }
     memcpy(s_cli.pin, sha256, 32);
-    s_cli.pin_set = true;
+    s_cli.pin_set = PROTO_TRUE;
 }
 
 void pc_tls_client_clear_verify()
@@ -790,12 +789,12 @@ void pc_tls_client_clear_verify()
     {
         mbedtls_x509_crt_free(&s_cli.ca);
     }
-    s_cli.ca_set = false;
-    s_cli.pin_set = false;
+    s_cli.ca_set = PROTO_FALSE;
+    s_cli.pin_set = PROTO_FALSE;
 }
 
 // Constant-time 32-byte compare (no early-out on the first differing byte).
-static bool ct_eq32(const uint8_t *a, const uint8_t *b)
+static proto_bool ct_eq32(const uint8_t *a, const uint8_t *b)
 {
     uint8_t d = 0;
     for (int i = 0; i < 32; i++)
@@ -814,12 +813,12 @@ static int client_conf_apply(mbedtls_ssl_config *conf)
     {
         return -1;
     }
-    mbedtls_ssl_conf_rng(conf, tls_rng, nullptr);
+    mbedtls_ssl_conf_rng(conf, tls_rng, NULL);
     tls_apply_max_frag_len(conf); // RFC 6066 record cap (PC_TLS_MAX_FRAG_LEN)
     tls_apply_curve_pref(conf);   // offer cheap curves first (no ECC HW on the S3) - see helper
     if (s_cli.ca_set)
     {
-        mbedtls_ssl_conf_ca_chain(conf, &s_cli.ca, nullptr);
+        mbedtls_ssl_conf_ca_chain(conf, &s_cli.ca, NULL);
         mbedtls_ssl_conf_authmode(conf, MBEDTLS_SSL_VERIFY_REQUIRED);
     }
     else
@@ -841,16 +840,16 @@ static int client_conf_apply(mbedtls_ssl_config *conf)
 
 // Post-handshake certificate pin check: true if no pin is set, or the peer's
 // certificate DER hashes to the installed pin (constant-time compared).
-static bool client_pin_ok(mbedtls_ssl_context *ssl)
+static proto_bool client_pin_ok(mbedtls_ssl_context *ssl)
 {
     if (!s_cli.pin_set)
     {
-        return true;
+        return PROTO_TRUE;
     }
     const mbedtls_x509_crt *peer = mbedtls_ssl_get_peer_cert(ssl);
     if (!peer)
     {
-        return false;
+        return PROTO_FALSE;
     }
     uint8_t hash[32];
 #if MBEDTLS_VERSION_MAJOR >= 3
@@ -905,7 +904,7 @@ int pc_tls_client_run(const char *host, const uint8_t *req, size_t reqlen, uint8
         {
             mbedtls_ssl_set_hostname(&ssl, host); // SNI (ignored if unsupported)
         }
-        mbedtls_ssl_set_bio(&ssl, nullptr, send_fn, recv_fn, nullptr);
+        mbedtls_ssl_set_bio(&ssl, NULL, send_fn, recv_fn, NULL);
 
         // Handshake (BIO callbacks yield WANT_READ/WANT_WRITE while data is pending).
         while ((ret = mbedtls_ssl_handshake(&ssl)) != 0)
@@ -1005,16 +1004,16 @@ int pc_tls_client_run(const char *host, const uint8_t *req, size_t reqlen, uint8
 // Persistent client session (csess) state, owned by one instance (internal linkage): the
 // long-lived outbound TLS ssl/config + active flag, and (with resumption) the saved session
 // holding the server's ticket. One named owner, unreachable from any other translation unit.
-struct TlsCsessCtx
+typedef struct
 {
     mbedtls_ssl_context ssl;
     mbedtls_ssl_config conf;
-    bool active = false;
+    proto_bool active = PROTO_FALSE;
 #if PC_ENABLE_TLS_RESUMPTION
     mbedtls_ssl_session saved;
-    bool saved_valid = false;
+    proto_bool saved_valid = PROTO_FALSE;
 #endif
-};
+} TlsCsessCtx;
 static TlsCsessCtx s_csess;
 
 #if PC_ENABLE_TLS_RESUMPTION
@@ -1028,7 +1027,7 @@ void pc_tls_client_session_forget_session()
     {
         mbedtls_ssl_session_free(&s_csess.saved);
     }
-    s_csess.saved_valid = false;
+    s_csess.saved_valid = PROTO_FALSE;
 }
 #else
 void pc_tls_client_session_forget_session()
@@ -1036,11 +1035,11 @@ void pc_tls_client_session_forget_session()
 }
 #endif
 
-bool pc_tls_client_session_begin(const char *host, pc_tls_bio_send_fn send_fn, pc_tls_bio_recv_fn recv_fn)
+proto_bool pc_tls_client_session_begin(const char *host, pc_tls_bio_send_fn send_fn, pc_tls_bio_recv_fn recv_fn)
 {
     if (!send_fn || !recv_fn)
     {
-        return false;
+        return PROTO_FALSE;
     }
     if (s_csess.active)
     {
@@ -1053,7 +1052,7 @@ bool pc_tls_client_session_begin(const char *host, pc_tls_bio_send_fn send_fn, p
     {
         mbedtls_ssl_free(&s_csess.ssl);
         mbedtls_ssl_config_free(&s_csess.conf);
-        return false;
+        return PROTO_FALSE;
     }
     if (host)
     {
@@ -1067,12 +1066,12 @@ bool pc_tls_client_session_begin(const char *host, pc_tls_bio_send_fn send_fn, p
         mbedtls_ssl_set_session(&s_csess.ssl, &s_csess.saved);
     }
 #endif
-    mbedtls_ssl_set_bio(&s_csess.ssl, nullptr, send_fn, recv_fn, nullptr);
-    s_csess.active = true;
-    return true;
+    mbedtls_ssl_set_bio(&s_csess.ssl, NULL, send_fn, recv_fn, NULL);
+    s_csess.active = PROTO_TRUE;
+    return PROTO_TRUE;
 }
 
-bool pc_tls_client_session_active()
+proto_bool pc_tls_client_session_active()
 {
     return s_csess.active;
 }
@@ -1163,9 +1162,9 @@ void pc_tls_client_session_end()
     mbedtls_ssl_close_notify(&s_csess.ssl);
     mbedtls_ssl_free(&s_csess.ssl);
     mbedtls_ssl_config_free(&s_csess.conf);
-    s_csess.active = false;
+    s_csess.active = PROTO_FALSE;
 }
 
 #endif // PC_ENABLE_CLIENT_TLS
 
-#endif // PC_ENABLE_TLS && ARDUINO
+#endif // PC_ENABLE_TLS && PROTOCORE_HOT

@@ -176,7 +176,7 @@ void test_fn_set_cors_options_preflight_clears_slot()
     set_cors("*");
     arm_slot(0, "OPTIONS /x HTTP/1.1\r\n\r\n");
     handle();
-    TEST_ASSERT_NOT_EQUAL(ParseState::PARSE_COMPLETE, http_pool[0].parse_state);
+    TEST_ASSERT_NOT_EQUAL(PARSE_COMPLETE, http_pool[0].parse_state);
 }
 
 void test_fn_set_cors_empty_string_disables()
@@ -289,7 +289,7 @@ void test_slot_not_stuck_in_complete_after_handle()
     on_http("/free", HttpMethod::HTTP_GET, record_handler);
     arm_slot(0, "GET /free HTTP/1.1\r\n\r\n");
     handle();
-    TEST_ASSERT_NOT_EQUAL(ParseState::PARSE_COMPLETE, http_pool[0].parse_state);
+    TEST_ASSERT_NOT_EQUAL(PARSE_COMPLETE, http_pool[0].parse_state);
 }
 
 void test_parse_error_slot_auto_reset()
@@ -297,9 +297,9 @@ void test_parse_error_slot_auto_reset()
     push_bytes(0, "TOOLONGMETHODNAME /path HTTP/1.1\r\n\r\n");
     http_reset(0);
     http_parse(0);
-    TEST_ASSERT_EQUAL(ParseState::PARSE_ERROR, http_pool[0].parse_state);
+    TEST_ASSERT_EQUAL(PARSE_ERROR, http_pool[0].parse_state);
     handle();
-    TEST_ASSERT_NOT_EQUAL(ParseState::PARSE_ERROR, http_pool[0].parse_state);
+    TEST_ASSERT_NOT_EQUAL(PARSE_ERROR, http_pool[0].parse_state);
 }
 
 // Handler reads req->body from a POST request
@@ -451,7 +451,7 @@ void stress_wildcard_matches_many_paths()
 void stress_handle_with_no_complete_slots_is_nop()
 {
     on_http("/x", HttpMethod::HTTP_GET, record_handler);
-    // All slots in ParseState::PARSE_METHOD (setUp resets them) - nothing to dispatch
+    // All slots in PARSE_METHOD (setUp resets them) - nothing to dispatch
     for (int i = 0; i < 20; i++)
     {
         handle();
@@ -463,7 +463,7 @@ void stress_handle_with_no_complete_slots_is_nop()
 // RACE CONDITION SIMULATIONS
 // ====================================================================
 
-// Slot transitions to ParseState::PARSE_COMPLETE between tick and handle() slot scan -
+// Slot transitions to PARSE_COMPLETE between tick and handle() slot scan -
 // already covered by the normal flow; here we verify handle() dispatches
 // a slot that became complete since the last call.
 void race_slot_complete_between_handle_calls()
@@ -479,7 +479,7 @@ void race_slot_complete_between_handle_calls()
     TEST_ASSERT_TRUE(dispatched);
 }
 
-// A slot is in ParseState::PARSE_COMPLETE but its conn state is ConnState::CONN_FREE (connection
+// A slot is in PARSE_COMPLETE but its conn state is ConnState::CONN_FREE (connection
 // already dropped by a timeout between parse completion and handle()).
 // send() must detect pcb==nullptr/ConnState::CONN_FREE and call http_reset() cleanly.
 void race_conn_freed_after_parse_complete()
@@ -487,18 +487,18 @@ void race_conn_freed_after_parse_complete()
     on_http("/r", HttpMethod::HTTP_GET, record_handler);
 
     arm_slot(0, "GET /r HTTP/1.1\r\n\r\n");
-    TEST_ASSERT_EQUAL(ParseState::PARSE_COMPLETE, http_pool[0].parse_state);
+    TEST_ASSERT_EQUAL(PARSE_COMPLETE, http_pool[0].parse_state);
 
     // Simulate connection drop between parse and dispatch
     conn_pool[0].state = ConnState::CONN_FREE;
     conn_pool[0].pcb = nullptr;
 
     handle(); // must not crash; slot must be cleaned up
-    TEST_ASSERT_NOT_EQUAL(ParseState::PARSE_COMPLETE, http_pool[0].parse_state);
+    TEST_ASSERT_NOT_EQUAL(PARSE_COMPLETE, http_pool[0].parse_state);
 }
 
 // handle() is called twice without any new input - the second call must
-// see no ParseState::PARSE_COMPLETE slots and dispatch nothing.
+// see no PARSE_COMPLETE slots and dispatch nothing.
 void race_double_handle_no_double_dispatch()
 {
     static int dispatch_count = 0;
@@ -506,12 +506,12 @@ void race_double_handle_no_double_dispatch()
 
     arm_slot(0, "GET /dd HTTP/1.1\r\n\r\n");
     handle(); // dispatches once, resets slot
-    handle(); // slot is ParseState::PARSE_METHOD - must dispatch 0 times
+    handle(); // slot is PARSE_METHOD - must dispatch 0 times
 
     TEST_ASSERT_EQUAL(1, dispatch_count);
 }
 
-// A ParseState::PARSE_ERROR slot is followed immediately by a valid slot; handle() must
+// A PARSE_ERROR slot is followed immediately by a valid slot; handle() must
 // process the error slot (send 400) and also dispatch the valid slot.
 void race_error_and_valid_slot_in_same_handle()
 {
@@ -522,15 +522,15 @@ void race_error_and_valid_slot_in_same_handle()
     push_bytes(0, "TOOLONGMETHODNAME /path HTTP/1.1\r\n\r\n");
     http_reset(0);
     http_parse(0);
-    TEST_ASSERT_EQUAL(ParseState::PARSE_ERROR, http_pool[0].parse_state);
+    TEST_ASSERT_EQUAL(PARSE_ERROR, http_pool[0].parse_state);
 
     // Slot 1: valid request
     arm_slot(1, "GET /ok HTTP/1.1\r\n\r\n");
 
     handle();
 
-    TEST_ASSERT_NOT_EQUAL(ParseState::PARSE_ERROR, http_pool[0].parse_state); // 400 sent, reset
-    TEST_ASSERT_TRUE(valid_dispatched);                                       // slot 1 dispatched
+    TEST_ASSERT_NOT_EQUAL(PARSE_ERROR, http_pool[0].parse_state); // 400 sent, reset
+    TEST_ASSERT_TRUE(valid_dispatched);                           // slot 1 dispatched
 }
 
 // A callback that calls http_reset() directly (instead of via send()) must
@@ -547,7 +547,7 @@ void race_callback_manually_resets_slot()
     handle(); // must not double-reset or crash
 
     TEST_ASSERT_TRUE(manual_reset_called);
-    TEST_ASSERT_EQUAL(ParseState::PARSE_METHOD, http_pool[0].parse_state);
+    TEST_ASSERT_EQUAL(PARSE_METHOD, http_pool[0].parse_state);
 }
 
 // ====================================================================
@@ -572,10 +572,10 @@ void test_uri_too_long_auto_resets_slot()
     push_bytes(0, req);
     http_reset(0);
     http_parse(0);
-    TEST_ASSERT_EQUAL(ParseState::PARSE_URI_TOO_LONG, http_pool[0].parse_state);
+    TEST_ASSERT_EQUAL(PARSE_URI_TOO_LONG, http_pool[0].parse_state);
 
     handle(); // must send 414 and reset the slot
-    TEST_ASSERT_NOT_EQUAL(ParseState::PARSE_URI_TOO_LONG, http_pool[0].parse_state);
+    TEST_ASSERT_NOT_EQUAL(PARSE_URI_TOO_LONG, http_pool[0].parse_state);
 }
 
 // ====================================================================
@@ -589,7 +589,7 @@ void test_transfer_encoding_chunked_is_501()
     on_http("/data", HttpMethod::HTTP_POST,
             [](uint8_t, HttpReq *) { TEST_FAIL_MESSAGE("handler must not be called for Transfer-Encoding request"); });
     handle(); // must send 501, not dispatch the route
-    TEST_ASSERT_NOT_EQUAL(ParseState::PARSE_COMPLETE, http_pool[0].parse_state);
+    TEST_ASSERT_NOT_EQUAL(PARSE_COMPLETE, http_pool[0].parse_state);
 }
 
 void test_transfer_encoding_identity_is_501()
@@ -597,7 +597,7 @@ void test_transfer_encoding_identity_is_501()
     // Even "identity" is rejected - we advertise no TE support at all
     arm_slot(0, "GET / HTTP/1.1\r\nTransfer-Encoding: identity\r\n\r\n");
     handle();
-    TEST_ASSERT_NOT_EQUAL(ParseState::PARSE_COMPLETE, http_pool[0].parse_state);
+    TEST_ASSERT_NOT_EQUAL(PARSE_COMPLETE, http_pool[0].parse_state);
 }
 
 // ====================================================================
@@ -1722,7 +1722,7 @@ static void live_slot(uint8_t slot)
     conn_pool[slot].proto = ConnProto::PROTO_HTTP;
     conn_pool[slot].pcb = &_mock_pcb;
     http_reset(slot);
-    http_pool[slot].version = HttpVersion::HTTP_11; // an HTTP/1.1 peer (chunked is 1.1-only)
+    http_pool[slot].version = HTTP_11; // an HTTP/1.1 peer (chunked is 1.1-only)
 }
 
 // The dispatch loop resets a slot whose handler sent nothing, so a `:name` capture has
@@ -1884,7 +1884,7 @@ void test_worker_owner_filter_skips_foreign_slot()
     conn_pool[1].owner = 1; // owned by another worker
     handle();
     TEST_ASSERT_FALSE(handler_called);
-    TEST_ASSERT_EQUAL(ParseState::PARSE_COMPLETE, http_pool[1].parse_state); // still queued
+    TEST_ASSERT_EQUAL(PARSE_COMPLETE, http_pool[1].parse_state); // still queued
 
     conn_pool[1].owner = 0; // hand it back; now it dispatches
     handle();
@@ -1920,7 +1920,7 @@ void test_entity_too_large_auto_413()
     on_http("/big", HttpMethod::HTTP_POST, record_handler);
     arm_slot(0, "POST /big HTTP/1.1\r\nHost: x\r\nContent-Length: 100000\r\n\r\n");
     conn_pool[0].pcb = &_mock_pcb;
-    TEST_ASSERT_EQUAL(ParseState::PARSE_ENTITY_TOO_LARGE, http_pool[0].parse_state);
+    TEST_ASSERT_EQUAL(PARSE_ENTITY_TOO_LARGE, http_pool[0].parse_state);
     tcp_capture_reset();
     handle();
     TEST_ASSERT_FALSE(handler_called);
@@ -1988,11 +1988,11 @@ void test_transfer_encoding_on_semantic_ingress_is_501()
     snprintf(r->method, sizeof(r->method), "POST");
     snprintf(r->path, sizeof(r->path), "/te");
     r->path_idx = strlen(r->path);
-    r->version = HttpVersion::HTTP_11;
+    r->version = HTTP_11;
     snprintf(r->headers[0].key, sizeof(r->headers[0].key), "transfer-encoding");
     snprintf(r->headers[0].val, sizeof(r->headers[0].val), "chunked");
     r->header_count = 1;
-    r->parse_state = ParseState::PARSE_COMPLETE;
+    r->parse_state = PARSE_COMPLETE;
 
     tcp_capture_reset();
     handle();
@@ -2090,7 +2090,7 @@ void test_send_empty_and_redirect_dead_connection_guards()
     redirect(0, 302, "/x");
     send_text(0, 200, "text/plain", "x");
     TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len());
-    TEST_ASSERT_EQUAL(ParseState::PARSE_METHOD, http_pool[0].parse_state); // parser reset
+    TEST_ASSERT_EQUAL(PARSE_METHOD, http_pool[0].parse_state); // parser reset
     tcp_capture_disable();
 }
 
@@ -2337,7 +2337,7 @@ void test_upgrade_entry_points_on_dead_slot()
     tcp_capture_reset();
     ws_send_version_required(0);
     TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len());
-    TEST_ASSERT_EQUAL(ParseState::PARSE_METHOD, http_pool[0].parse_state);
+    TEST_ASSERT_EQUAL(PARSE_METHOD, http_pool[0].parse_state);
 
     arm_slot(0, "GET /w HTTP/1.1\r\nHost: x\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n"
                 "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n\r\n");

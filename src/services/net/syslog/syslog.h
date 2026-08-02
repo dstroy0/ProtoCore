@@ -24,13 +24,11 @@
 #define PROTOCORE_SYSLOG_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_SYSLOG
 
 /** @brief RFC 5424 §6.2.1 severity levels (numerically lower = more severe). */
-enum class SyslogSeverity : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     SYSLOG_EMERG = 0,   ///< system is unusable
     SYSLOG_ALERT = 1,   ///< action must be taken immediately
@@ -40,17 +38,17 @@ enum class SyslogSeverity : uint8_t
     SYSLOG_NOTICE = 5,  ///< normal but significant
     SYSLOG_INFO = 6,    ///< informational
     SYSLOG_DEBUG = 7,   ///< debug-level messages
-};
+} SyslogSeverity;
 
 /** @brief Common RFC 5424 §6.2.1 facilities (the default is LOCAL0). */
-enum class SyslogFacility : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     SYSLOG_FAC_USER = 1,    ///< user-level messages
     SYSLOG_FAC_DAEMON = 3,  ///< system daemons
     SYSLOG_FAC_LOCAL0 = 16, ///< local use 0 (default)
     SYSLOG_FAC_LOCAL1 = 17,
     SYSLOG_FAC_LOCAL7 = 23,
-};
+} SyslogFacility;
 
 /**
  * @brief Configure the syslog client (call after WiFi is up).
@@ -62,7 +60,7 @@ enum class SyslogFacility : uint8_t
  * @param facility  syslog facility (default LOCAL0).
  */
 void pc_syslog_init(const char *server_ip, uint16_t port, const char *hostname, const char *appname,
-                    SyslogFacility facility = SyslogFacility::SYSLOG_FAC_LOCAL0);
+                    SyslogFacility facility = SYSLOG_FAC_LOCAL0);
 
 /**
  * @brief Format one RFC 5424 line into @p out (host-testable; no sockets/heap).
@@ -78,7 +76,7 @@ size_t pc_syslog_format(char *out, size_t cap, SyslogFacility facility, SyslogSe
  * @return true if the datagram was queued; false if not yet configured, the line
  *         overflowed PC_SYSLOG_MSG_MAX, or the send failed (host build).
  */
-bool pc_syslog_log(SyslogSeverity severity, const char *msg);
+proto_bool pc_syslog_log(SyslogSeverity severity, const char *msg);
 
 #endif // PC_ENABLE_SYSLOG
 

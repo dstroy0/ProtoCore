@@ -22,19 +22,17 @@
 #define PROTOCORE_SLEEP_SCHED_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_SLEEP_SCHED
 
 /** @brief Scheduler configuration (all times in ms). */
-struct pc_sleep_cfg
+typedef struct
 {
     uint32_t idle_ms; ///< stay fully awake until idle at least this long.
     uint32_t min_ms;  ///< first sleep window once idle (also the floor).
     uint32_t max_ms;  ///< longest single sleep window (the ceiling as the idle streak grows).
     uint32_t ramp_ms; ///< every additional `ramp_ms` of idle doubles the window (0 => jump to max_ms).
-};
+} pc_sleep_cfg;
 
 /**
  * @brief Milliseconds to sleep given the idle duration, or 0 to stay awake.

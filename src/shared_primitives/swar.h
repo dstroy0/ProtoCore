@@ -37,9 +37,6 @@
 
 #include "protocore_config.h"            // PROTO_SWAR_BITS: the platform's lane-carrier width
 #include "shared_primitives/rawmemcpy.h" // proto_raw_load: the one owner of an unaligned wider load
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
 
 /**
  * @brief The lane carrier, selected by the platform width knob.

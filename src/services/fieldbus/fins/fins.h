@@ -32,9 +32,6 @@
 
 #if PC_ENABLE_FINS
 
-#include <stddef.h>
-#include <stdint.h>
-
 #define FINS_HEADER_SIZE 10
 
 #define FINS_ICF_COMMAND 0x80     ///< command, response required, gateway
@@ -50,14 +47,14 @@
 #define FINS_SRC_STOP 0x02
 
 /** @brief The operating mode requested by a RUN (0401) command. */
-enum class FinsRunMode : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
-    MONITOR = 0x02, ///< MONITOR mode (program runs, online edits allowed)
-    RUN = 0x04,     ///< RUN mode (program runs, no online edits)
-};
+    FINS_RUN_MODE_MONITOR = 0x02, ///< FINS_RUN_MODE_MONITOR mode (program runs, online edits allowed)
+    FINS_RUN_MODE_RUN = 0x04,     ///< FINS_RUN_MODE_RUN mode (program runs, no online edits)
+} FinsRunMode;
 
 /** @brief The 10-octet FINS routing header. */
-struct FinsHeader
+typedef struct
 {
     uint8_t icf;
     uint8_t rsv;
@@ -69,7 +66,7 @@ struct FinsHeader
     uint8_t sa1;
     uint8_t sa2; ///< source network / node / unit
     uint8_t sid; ///< service id
-};
+} FinsHeader;
 
 /** @brief Build a command frame: header + MRC + SRC + params. Returns total octets, or 0. */
 size_t pc_fins_build_command(uint8_t *buf, size_t cap, const FinsHeader *h, uint8_t mrc, uint8_t src,
@@ -104,20 +101,20 @@ size_t pc_fins_build_run(uint8_t *buf, size_t cap, const FinsHeader *h, FinsRunM
 size_t pc_fins_build_stop(uint8_t *buf, size_t cap, const FinsHeader *h);
 
 /** @brief A parsed command (request side). @ref params points INTO the source buffer. */
-struct FinsCommand
+typedef struct
 {
     FinsHeader header;
     uint8_t mrc;
     uint8_t src;
     const uint8_t *params;
     size_t params_len;
-};
+} FinsCommand;
 
 /** @brief Parse a command frame (header + MRC + SRC + params). */
-bool pc_fins_parse_command(const uint8_t *buf, size_t len, FinsCommand *out);
+proto_bool pc_fins_parse_command(const uint8_t *buf, size_t len, FinsCommand *out);
 
 /** @brief A parsed response. @ref data points INTO the source buffer. */
-struct FinsResponse
+typedef struct
 {
     FinsHeader header;
     uint8_t mrc;
@@ -126,10 +123,10 @@ struct FinsResponse
     uint8_t sres; ///< end code (0/0 = normal completion)
     const uint8_t *data;
     size_t data_len;
-};
+} FinsResponse;
 
 /** @brief Parse a response frame (header + MRC + SRC + MRES + SRES + data). */
-bool pc_fins_parse_response(const uint8_t *buf, size_t len, FinsResponse *out);
+proto_bool pc_fins_parse_response(const uint8_t *buf, size_t len, FinsResponse *out);
 
 #endif // PC_ENABLE_FINS
 

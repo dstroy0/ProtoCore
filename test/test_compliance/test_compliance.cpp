@@ -46,33 +46,33 @@ void tearDown()
 void test_http11_missing_host_rejected()
 {
     feed_request(0, "GET / HTTP/1.1\r\n\r\n");
-    TEST_ASSERT_EQUAL(ParseState::PARSE_ERROR, http_pool[0].parse_state);
+    TEST_ASSERT_EQUAL(PARSE_ERROR, http_pool[0].parse_state);
 }
 
 void test_http11_with_host_ok()
 {
     feed_request(0, "GET / HTTP/1.1\r\nHost: example.com\r\n\r\n");
-    TEST_ASSERT_EQUAL(ParseState::PARSE_COMPLETE, http_pool[0].parse_state);
+    TEST_ASSERT_EQUAL(PARSE_COMPLETE, http_pool[0].parse_state);
 }
 
 void test_http10_missing_host_ok()
 {
     // Host is not required for HTTP/1.0.
     feed_request(0, "GET / HTTP/1.0\r\n\r\n");
-    TEST_ASSERT_EQUAL(ParseState::PARSE_COMPLETE, http_pool[0].parse_state);
+    TEST_ASSERT_EQUAL(PARSE_COMPLETE, http_pool[0].parse_state);
 }
 
 void test_duplicate_host_rejected()
 {
     feed_request(0, "GET / HTTP/1.1\r\nHost: a.com\r\nHost: b.com\r\n\r\n");
-    TEST_ASSERT_EQUAL(ParseState::PARSE_ERROR, http_pool[0].parse_state);
+    TEST_ASSERT_EQUAL(PARSE_ERROR, http_pool[0].parse_state);
 }
 
 void test_duplicate_host_rejected_http10()
 {
     // More than one Host is invalid regardless of version.
     feed_request(0, "GET / HTTP/1.0\r\nHost: a.com\r\nHost: b.com\r\n\r\n");
-    TEST_ASSERT_EQUAL(ParseState::PARSE_ERROR, http_pool[0].parse_state);
+    TEST_ASSERT_EQUAL(PARSE_ERROR, http_pool[0].parse_state);
 }
 
 void test_host_beyond_max_headers_still_counted()
@@ -88,7 +88,7 @@ void test_host_beyond_max_headers_still_counted()
     }
     snprintf(req + n, sizeof(req) - (size_t)n, "Host: example.com\r\n\r\n");
     feed_request(0, req);
-    TEST_ASSERT_EQUAL(ParseState::PARSE_COMPLETE, http_pool[0].parse_state);
+    TEST_ASSERT_EQUAL(PARSE_COMPLETE, http_pool[0].parse_state);
 }
 
 void test_duplicate_host_with_one_beyond_cap_rejected()
@@ -103,7 +103,7 @@ void test_duplicate_host_with_one_beyond_cap_rejected()
     }
     snprintf(req + n, sizeof(req) - (size_t)n, "Host: b.com\r\n\r\n");
     feed_request(0, req);
-    TEST_ASSERT_EQUAL(ParseState::PARSE_ERROR, http_pool[0].parse_state);
+    TEST_ASSERT_EQUAL(PARSE_ERROR, http_pool[0].parse_state);
 }
 
 // ---- Content-Length (RFC 7230 §3.3.2) -------------------------------------
@@ -111,33 +111,33 @@ void test_duplicate_host_with_one_beyond_cap_rejected()
 void test_content_length_non_digit_rejected()
 {
     feed_request(0, "POST / HTTP/1.1\r\nHost: x\r\nContent-Length: 12abc\r\n\r\n");
-    TEST_ASSERT_EQUAL(ParseState::PARSE_ERROR, http_pool[0].parse_state);
+    TEST_ASSERT_EQUAL(PARSE_ERROR, http_pool[0].parse_state);
 }
 
 void test_content_length_empty_rejected()
 {
     feed_request(0, "POST / HTTP/1.1\r\nHost: x\r\nContent-Length: \r\n\r\n");
-    TEST_ASSERT_EQUAL(ParseState::PARSE_ERROR, http_pool[0].parse_state);
+    TEST_ASSERT_EQUAL(PARSE_ERROR, http_pool[0].parse_state);
 }
 
 void test_content_length_conflicting_duplicate_rejected()
 {
     feed_request(0, "POST / HTTP/1.1\r\nHost: x\r\nContent-Length: 3\r\nContent-Length: 5\r\n\r\nabc");
-    TEST_ASSERT_EQUAL(ParseState::PARSE_ERROR, http_pool[0].parse_state);
+    TEST_ASSERT_EQUAL(PARSE_ERROR, http_pool[0].parse_state);
 }
 
 void test_content_length_matching_duplicate_ok()
 {
     // Two identical Content-Length values are not a conflict.
     feed_request(0, "POST / HTTP/1.1\r\nHost: x\r\nContent-Length: 3\r\nContent-Length: 3\r\n\r\nabc");
-    TEST_ASSERT_EQUAL(ParseState::PARSE_COMPLETE, http_pool[0].parse_state);
+    TEST_ASSERT_EQUAL(PARSE_COMPLETE, http_pool[0].parse_state);
     TEST_ASSERT_EQUAL(3, (int)http_pool[0].content_length);
 }
 
 void test_content_length_valid_body()
 {
     feed_request(0, "POST / HTTP/1.1\r\nHost: x\r\nContent-Length: 5\r\n\r\nhello");
-    TEST_ASSERT_EQUAL(ParseState::PARSE_COMPLETE, http_pool[0].parse_state);
+    TEST_ASSERT_EQUAL(PARSE_COMPLETE, http_pool[0].parse_state);
     TEST_ASSERT_EQUAL(5, (int)http_pool[0].body_len);
     TEST_ASSERT_EQUAL_MEMORY("hello", http_pool[0].body, 5);
 }
@@ -150,21 +150,21 @@ void test_content_length_valid_body()
 void test_transfer_encoding_chunked_rejected()
 {
     feed_request(0, "POST / HTTP/1.1\r\nHost: x\r\nTransfer-Encoding: chunked\r\n\r\n5\r\nhello\r\n0\r\n\r\n");
-    TEST_ASSERT_EQUAL(ParseState::PARSE_ERROR, http_pool[0].parse_state);
+    TEST_ASSERT_EQUAL(PARSE_ERROR, http_pool[0].parse_state);
 }
 
 void test_transfer_encoding_with_content_length_rejected()
 {
     // CL + TE present: the classic CL.TE smuggling desync - must be rejected.
     feed_request(0, "POST / HTTP/1.1\r\nHost: x\r\nContent-Length: 6\r\nTransfer-Encoding: chunked\r\n\r\n0\r\n\r\n");
-    TEST_ASSERT_EQUAL(ParseState::PARSE_ERROR, http_pool[0].parse_state);
+    TEST_ASSERT_EQUAL(PARSE_ERROR, http_pool[0].parse_state);
 }
 
 void test_transfer_encoding_case_insensitive_rejected()
 {
     // Header-name match must be case-insensitive (RFC 7230 §3.2).
     feed_request(0, "POST / HTTP/1.1\r\nHost: x\r\ntRaNsFeR-eNcOdInG: chunked\r\n\r\n0\r\n\r\n");
-    TEST_ASSERT_EQUAL(ParseState::PARSE_ERROR, http_pool[0].parse_state);
+    TEST_ASSERT_EQUAL(PARSE_ERROR, http_pool[0].parse_state);
 }
 
 int main()

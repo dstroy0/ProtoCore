@@ -254,7 +254,7 @@ src/
 │   │   ├── sntrup761.cpp
 │   │   └── sntrup761.h
 │   ├── crypto_opt.h
-│   └── crypto_scratch.h
+│   └── ct_eq.h
 ├── mmgr/
 │   ├── arena.cpp
 │   ├── arena.h

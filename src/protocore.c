@@ -34,19 +34,19 @@
  */
 
 #include "protocore.h"
-#include "mmgr/frame.h"                                // the diag document is a frame spec, not a concatenation
-#include "mmgr/membuild.h"                             // pc_sb frame builder
-#include "mmgr/plaintext.h"                            // the diag document is borrowed, not a stack array
+#include "mmgr/frame.h"     // the diag document is a frame spec, not a concatenation
+#include "mmgr/membuild.h"  // pc_sb frame builder
+#include "mmgr/plaintext.h" // the diag document is borrowed, not a stack array
+#include "network_drivers/network/route.h"
 #include "network_drivers/presentation/presentation.h" // http_proto_set_poll (install the instance-bound HTTP poll)
 #include "network_drivers/session/proto_handler.h"
 #include "network_drivers/session/worker.h"
 #include "network_drivers/tls/tls.h"
 #include "network_drivers/transport/listener.h"
-#include "network_drivers/network/route.h"
 #include "shared_primitives/hex.h"
 #include "shared_primitives/mime.h"
 #include "shared_primitives/rawmemcpy.h" // proto_raw_read: every move here is into our own buffer
-#include "shared_primitives/runops.h"   // every string scan, compare, copy and search on this layer
+#include "shared_primitives/runops.h"    // every string scan, compare, copy and search on this layer
 #if PC_ENABLE_HTTP2
 #include "network_drivers/presentation/http/http2/h2_server.h"
 #endif
@@ -71,14 +71,12 @@
 #if PC_ENABLE_FORWARDED_TRUST
 #include "services/security/forwarded_trust/forwarded_trust.h"
 #endif
-#ifdef ARDUINO
-#include <esp_system.h> // esp_random() for the Digest nonce CSPRNG
+#if PROTOCORE_HOT
 #endif
 #endif
 #if PC_ENABLE_CSRF
 #include "services/security/csrf/csrf.h"
-#ifdef ARDUINO
-#include <esp_system.h> // esp_random() for the CSRF HMAC secret
+#if PROTOCORE_HOT
 #endif
 #endif
 #if PC_ENABLE_WEBDAV
@@ -268,16 +266,16 @@ typedef struct
 
     uint16_t listen_ports[MAX_LISTENERS];   ///< Ports registered via listen() / begin_http().
     ConnProto listen_protos[MAX_LISTENERS]; ///< Protocol for each registered listener.
-    bool listen_tls[MAX_LISTENERS];         ///< True for TLS listeners (listen_tls()).
+    proto_bool listen_tls[MAX_LISTENERS];   ///< True for TLS listeners (listen_tls()).
     uint8_t listener_count;                 ///< Registered listeners.
 
 #if PC_ENABLE_HTTP3
-    bool pc_h3_running;
+    proto_bool pc_h3_running;
     const uint8_t *h3_cert;
     size_t h3_cert_len;
     uint8_t h3_seed[32];
     uint16_t h3_port;
-    bool h3_enabled;
+    proto_bool h3_enabled;
 #endif
 } ServerCtx;
 
@@ -321,11 +319,11 @@ void note_response(uint8_t slot_id, int code, int body_len)
 // Case-insensitive search for @p token as a comma/space-delimited element of a
 // Connection header value (e.g. "keep-alive" in "Keep-Alive, Upgrade"). Shared by
 // keep-alive evaluation and the WebSocket Upgrade-token check.
-static bool conn_has_token(const char *hdr, const char *token)
+static proto_bool conn_has_token(const char *hdr, const char *token)
 {
     if (hdr == NULL)
     {
-        return false;
+        return PROTO_FALSE;
     }
     size_t tlen = proto_scan_nul(token, 32);
     const char *p = hdr;
@@ -350,29 +348,29 @@ static bool conn_has_token(const char *hdr, const char *token)
         // stops a longer token matching on its prefix.
         if (len == tlen && proto_diff_ci(start, token, tlen) == tlen)
         {
-            return true;
+            return PROTO_TRUE;
         }
         if (*p == ',')
         {
             p++;
         }
     }
-    return false;
+    return PROTO_FALSE;
 }
 #endif // PC_ENABLE_KEEPALIVE || PC_ENABLE_WEBSOCKET
 
 #if PC_ENABLE_KEEPALIVE
-bool keepalive_eval(uint8_t slot_id)
+proto_bool keepalive_eval(uint8_t slot_id)
 {
     HttpReq *req = &http_pool[slot_id];
     // Only a cleanly-parsed request has a known message boundary; errors close.
     if (req->parse_state != PARSE_COMPLETE)
     {
-        return false;
+        return PROTO_FALSE;
     }
 
     const char *c = http_get_header(req, "Connection");
-    bool keep;
+    proto_bool keep;
     if (req->version == HTTP_11)
     {
         keep = !conn_has_token(c, "close"); // 1.1 default: persistent
@@ -383,16 +381,16 @@ bool keepalive_eval(uint8_t slot_id)
     }
     if (!keep)
     {
-        return false;
+        return PROTO_FALSE;
     }
 
     // Fairness bound: serve at most PC_KEEPALIVE_MAX_REQUESTS, then close.
     http_req_count[slot_id]++;
     if (http_req_count[slot_id] >= PC_KEEPALIVE_MAX_REQUESTS)
     {
-        return false;
+        return PROTO_FALSE;
     }
-    return true;
+    return PROTO_TRUE;
 }
 #endif // PC_ENABLE_KEEPALIVE
 
@@ -407,7 +405,7 @@ bool keepalive_eval(uint8_t slot_id)
 // The connection is addressed by slot alone and the transport resolves the pcb internally, the
 // same way the RX read path does: no pcb is threaded through the app layer, so the send target
 // cannot disagree with the slot.
-void pc_resp_end(uint8_t slot_id, int code, int body_len, bool keep, bool pre_flushed)
+void pc_resp_end(uint8_t slot_id, int code, int body_len, proto_bool keep, proto_bool pre_flushed)
 {
     if (!pre_flushed)
     {
@@ -423,9 +421,9 @@ void pc_resp_end(uint8_t slot_id, int code, int body_len, bool keep, bool pre_fl
 
 // Resolve the Connection response header (and report keep-alive intent) in one
 // place so every response path agrees. Keep-alive compiled out always closes.
-const char *pc_resp_conn_hdr(uint8_t slot_id, bool *keep_out)
+const char *pc_resp_conn_hdr(uint8_t slot_id, proto_bool *keep_out)
 {
-    bool keep = false;
+    proto_bool keep = PROTO_FALSE;
 #if PC_ENABLE_KEEPALIVE
     keep = keepalive_eval(slot_id);
 #else
@@ -482,7 +480,7 @@ int proto_append_resp_trailer(char *buf, size_t cap, int hlen, uint8_t slot_id, 
     if (pc_ntp_http_date(imf, sizeof(imf)) > 0)
 #endif
     {
-        pc_sb sb_date_hdr = {date_hdr, sizeof(date_hdr), 0, true};
+        pc_sb sb_date_hdr = {date_hdr, sizeof(date_hdr), 0, PROTO_TRUE};
         pc_sb_put(&sb_date_hdr, "Date: ");
         pc_sb_put(&sb_date_hdr, imf);
         pc_sb_put(&sb_date_hdr, "\r\n");
@@ -494,7 +492,7 @@ int proto_append_resp_trailer(char *buf, size_t cap, int hlen, uint8_t slot_id, 
 #else
     const char *date_hdr = "";
 #endif
-    pc_sb sb411 = {buf + hlen, cap - (size_t)hlen, 0, true};
+    pc_sb sb411 = {buf + hlen, cap - (size_t)hlen, 0, PROTO_TRUE};
     pc_sb_put(&sb411, date_hdr);
     pc_sb_put(&sb411, pc_resp_cors_enabled() ? pc_resp_cors_header() : "");
     pc_sb_put(&sb411, pc_resp_extra_hdr(slot_id));
@@ -516,7 +514,7 @@ int32_t listen(uint16_t port, ConnProto proto)
     }
     s_inst.listen_ports[s_inst.listener_count] = port;
     s_inst.listen_protos[s_inst.listener_count] = proto;
-    s_inst.listen_tls[s_inst.listener_count] = false;
+    s_inst.listen_tls[s_inst.listener_count] = PROTO_FALSE;
     s_inst.listener_count++;
     // Return the listener id (its index), not PC_OK: begin() binds listener_pool[i] from
     // s_inst.listen_ports[i] and the accept path stamps that same index onto the slot, so this id is what
@@ -524,7 +522,7 @@ int32_t listen(uint16_t port, ConnProto proto)
     return (int32_t)(s_inst.listener_count - 1);
 }
 
-#ifdef ARDUINO
+#if PROTOCORE_HOT
 // The worker task's per-tick entry (registered with pc_workers_start below); ESP32-only, so it is
 // compiled only where it is used - on host the pipeline runs inline via handle().
 static void pc_pump_trampoline(int worker_id)
@@ -548,11 +546,11 @@ static void pc_h3_request_trampoline(void *app, uint32_t conn_id, uint64_t strea
 // have no esp_random).
 static void pc_h3_rng(uint8_t *out, size_t len)
 {
-#ifdef ARDUINO
+#if PROTOCORE_HOT
     size_t i = 0;
     while (i < len)
     {
-        uint32_t r = esp_random();
+        uint32_t r = pc_platform_rand_u32();
         size_t n = (len - i) < 4 ? (len - i) : 4;
         proto_raw_read(out + i, &r, n);
         i += n;
@@ -596,10 +594,10 @@ int32_t proto_begin(const WebServerConfig *cfg)
         // Seed the CSRF HMAC secret from the hardware RNG (a fixed dev secret on
         // native/test builds, which have no esp_random).
         uint8_t sec[32];
-#ifdef ARDUINO
+#if PROTOCORE_HOT
         for (int i = 0; i < 8; i++)
         {
-            uint32_t r = esp_random();
+            uint32_t r = pc_platform_rand_u32();
             proto_raw_read(sec + i * 4, &r, 4);
         }
 #else
@@ -647,7 +645,7 @@ int32_t proto_begin(const WebServerConfig *cfg)
         s_inst.pc_h3_running = pc_quic_server_begin(s_inst.h3_port, &h3cfg, pc_h3_request_trampoline, NULL);
     }
 #endif
-#ifdef ARDUINO
+#if PROTOCORE_HOT
     // Routes/listeners are now fixed; start the worker task(s) that drive the
     // pipeline off the user's loop(). On host the pipeline runs inline via handle().
     pc_workers_start(pc_pump_trampoline);
@@ -666,24 +664,24 @@ int32_t begin_http(uint16_t port, const WebServerConfig *cfg)
 }
 
 #if PC_ENABLE_HTTP3
-bool pc_h3_cert(const uint8_t *cert_der, size_t cert_len, const uint8_t ed25519_seed[32], uint16_t port)
+proto_bool pc_h3_cert(const uint8_t *cert_der, size_t cert_len, const uint8_t ed25519_seed[32], uint16_t port)
 {
     if (!cert_der || cert_len == 0 || !ed25519_seed)
     {
-        return false;
+        return PROTO_FALSE;
     }
     s_inst.h3_cert = cert_der;
     s_inst.h3_cert_len = cert_len;
     proto_raw_read(s_inst.h3_seed, ed25519_seed, sizeof(s_inst.h3_seed));
     s_inst.h3_port = port;
-    s_inst.h3_enabled = true;
-    return true;
+    s_inst.h3_enabled = PROTO_TRUE;
+    return PROTO_TRUE;
 }
 
 // Response sink for the HTTP/3 dispatch slot: route (code, content_type, body) onto the QUIC stream
 // the request arrived on (ids stashed on the slot by dispatch_h3_request). Installed as conn->pc_resp_sink
 // so send_text()/send_empty() stay protocol-agnostic.
-static bool pc_h3_resp_sink(uint8_t slot, int code, const char *content_type, const char *body, size_t len)
+static proto_bool pc_h3_resp_sink(uint8_t slot, int code, const char *content_type, const char *body, size_t len)
 {
     TcpConn *c = &conn_pool[slot];
     return pc_quic_server_respond(c->pc_h3_conn_id, c->pc_h3_stream, code, content_type, (const uint8_t *)body, len);
@@ -777,7 +775,7 @@ void dispatch_h3_request(uint32_t conn_id, uint64_t stream_id, const char *metho
 #endif // PC_ENABLE_HTTP3
 
 #if PC_ENABLE_TLS
-bool tls_cert(const uint8_t *cert, size_t cert_len, const uint8_t *key, size_t key_len)
+proto_bool tls_cert(const uint8_t *cert, size_t cert_len, const uint8_t *key, size_t key_len)
 {
     return pc_tls_global_init(cert, cert_len, key, key_len);
 }
@@ -790,7 +788,7 @@ int32_t listen_tls(uint16_t port)
     }
     s_inst.listen_ports[s_inst.listener_count] = port;
     s_inst.listen_protos[s_inst.listener_count] = PROTO_HTTP;
-    s_inst.listen_tls[s_inst.listener_count] = true;
+    s_inst.listen_tls[s_inst.listener_count] = PROTO_TRUE;
     s_inst.listener_count++;
     return (int32_t)PC_OK;
 }
@@ -811,7 +809,7 @@ int32_t begin_tls(uint16_t port, const uint8_t *cert, size_t cert_len, const uin
 }
 
 #if PC_ENABLE_MTLS
-bool tls_require_client_cert(const uint8_t *ca, size_t ca_len)
+proto_bool tls_require_client_cert(const uint8_t *ca, size_t ca_len)
 {
     return pc_tls_set_client_ca(ca, ca_len);
 }
@@ -835,7 +833,7 @@ int32_t restart(const WebServerConfig *cfg)
 
 void stop(void)
 {
-#ifdef ARDUINO
+#if PROTOCORE_HOT
     // Stop the worker task(s) before tearing down the slots they service.
     pc_workers_stop();
 #endif
@@ -869,12 +867,12 @@ void fill_route_base(Route *r, const char *path)
     // The copy terminates the destination itself and hands back what it wrote, so the length the
     // two shape tests need comes out of the move rather than from a second walk over those bytes.
     size_t len = proto_copy(r->path, path, MAX_PATH_LEN);
-    r->is_active = true;
+    r->is_active = PROTO_TRUE;
     r->is_wildcard = (len > 0 && r->path[len - 1] == '*');
     // Whether, not where: the sieve sweeps the whole field for a fixed cost rather than stopping at
     // the first `/`, which a route path is full of.
     r->is_param = proto_has(r->path, MAX_PATH_LEN, "/:", sizeof("/:"));
-    r->is_regex = false;
+    r->is_regex = PROTO_FALSE;
     r->iface_filter = PC_IFACE_ANY;
 }
 
@@ -924,12 +922,12 @@ void on_regex(const char *pattern, HttpMethod method, Handler callback)
     r->type = ROUTE_HTTP;
     r->method = method;
     r->callback = callback;
-    r->is_regex = true;
+    r->is_regex = PROTO_TRUE;
 }
 
 #if PC_ENABLE_AUTH
 void on_http_auth(const char *path, HttpMethod method, Handler callback, const char *realm, const char *user,
-                  const char *pass, bool digest)
+                  const char *pass, proto_bool digest)
 {
     Route *r = pc_route_add();
     if (r == NULL)
@@ -941,7 +939,7 @@ void on_http_auth(const char *path, HttpMethod method, Handler callback, const c
     r->type = ROUTE_HTTP;
     r->method = method;
     r->callback = callback;
-    r->auth_required = true;
+    r->auth_required = PROTO_TRUE;
     r->auth_digest = digest;
     // The lengths are discarded: a credential is only ever compared whole, so nothing downstream
     // asks how long it was, and the route slot was zeroed on hand-out so a short copy leaves no
@@ -992,17 +990,17 @@ void on_not_found(Handler callback)
 // set_cors() / set_cache_control() live in server/response.cpp, with the buffers they fill.
 
 #if PC_ENABLE_HTTP_DELIVERY
-bool set_cache_control_swr(uint32_t max_age_s, uint32_t swr_s)
+proto_bool set_cache_control_swr(uint32_t max_age_s, uint32_t swr_s)
 {
     // Build the directive with the RFC 5861 core so the header and the pc_delivery_swr decision
     // can never drift apart.
     char directive[64];
     if (pc_delivery_cache_control(max_age_s, swr_s, directive, sizeof(directive)) == 0)
     {
-        return false;
+        return PROTO_FALSE;
     }
     set_cache_control(directive);
-    return true;
+    return PROTO_TRUE;
 }
 #endif
 
@@ -1017,7 +1015,7 @@ bool set_cache_control_swr(uint32_t max_age_s, uint32_t swr_s)
  * @param req_path    Incoming request path from the parsed HTTP request line.
  * @return True if the route matches the request path.
  */
-bool path_matches(const char *route, bool is_wildcard, const char *req_path)
+proto_bool path_matches(const char *route, proto_bool is_wildcard, const char *req_path)
 {
     if (!is_wildcard)
     {
@@ -1074,7 +1072,7 @@ static void capture_path_param(HttpReq *req, const char *key, size_t klen, const
  *
  * @return True on a full match (params captured); false otherwise.
  */
-static bool match_path_params(const char *route, const char *path, HttpReq *req)
+static proto_bool match_path_params(const char *route, const char *path, HttpReq *req)
 {
     req->path_param_count = 0;
     const char *r = route;
@@ -1101,13 +1099,13 @@ static bool match_path_params(const char *route, const char *path, HttpReq *req)
         {
             if (plen == 0)
             {
-                return false; // a `:name` segment must capture a non-empty value
+                return PROTO_FALSE; // a `:name` segment must capture a non-empty value
             }
             capture_path_param(req, rseg + 1, rlen - 1, pseg, plen);
         }
         else if (rlen != plen || proto_diff(rseg, pseg, rlen) != rlen)
         {
-            return false; // literal segment mismatch
+            return PROTO_FALSE; // literal segment mismatch
         }
     }
 
@@ -1153,7 +1151,7 @@ void ws_dispatch_close(const WsConn *ws)
  */
 void handle(void)
 {
-#ifdef ARDUINO
+#if PROTOCORE_HOT
     if (pc_workers_running())
     {
         return;
@@ -1212,8 +1210,8 @@ void service_once(int worker_id)
 #if PC_ENABLE_EDGE_CACHE
 // Edge-cache async-fetch pump seam (see pc_http_set_edge_poll / services/web/edge_cache/edge_cache_proxy):
 // a cache miss suspends the client request and drives the non-blocking origin fetch from this slot's poll.
-static bool (*s_edge_poll)(uint8_t slot) = NULL;
-void pc_http_set_edge_poll(bool (*fn)(uint8_t slot))
+static proto_bool (*s_edge_poll)(uint8_t slot) = NULL;
+void pc_http_set_edge_poll(proto_bool (*fn)(uint8_t slot))
 {
     s_edge_poll = fn;
 }
@@ -1381,11 +1379,11 @@ void http_poll_slot(uint8_t i)
     }
 }
 
-bool defer(uint8_t slot, pc_deferred_fn fn, void *arg)
+proto_bool defer(uint8_t slot, pc_deferred_fn fn, void *arg)
 {
     if (slot >= MAX_CONNS)
     {
-        return false;
+        return PROTO_FALSE;
     }
     // Route to the worker that owns the slot so the callback runs single-threaded
     // alongside that slot's own processing.
@@ -1554,7 +1552,7 @@ void diag(uint8_t slot_id)
 // True when the request on this slot used the HEAD method, whose response must
 // carry the same headers as GET but no message body (RFC 7231 §4.3.2). External
 // linkage (declared in protocore.h): the split handler TUs call it.
-bool req_is_head(uint8_t slot_id)
+proto_bool req_is_head(uint8_t slot_id)
 {
     return proto_eq_str(http_pool[slot_id].method, "HEAD", sizeof("HEAD"));
 }
@@ -1571,7 +1569,7 @@ static void allow_append(char *buf, size_t cap, const char *m)
     size_t len = proto_scan_nul(buf, cap);
     if (len == 0)
     {
-        pc_sb sb_buf = {buf, cap, 0, true};
+        pc_sb sb_buf = {buf, cap, 0, PROTO_TRUE};
         pc_sb_put(&sb_buf, m);
         if (pc_sb_finish(&sb_buf) == 0)
         {
@@ -1580,7 +1578,7 @@ static void allow_append(char *buf, size_t cap, const char *m)
     }
     else
     {
-        pc_sb sb1300 = {buf + len, cap - len, 0, true};
+        pc_sb sb1300 = {buf + len, cap - len, 0, PROTO_TRUE};
         pc_sb_put(&sb1300, ", ");
         pc_sb_put(&sb1300, m);
         if (pc_sb_finish(&sb1300) == 0)
@@ -1609,7 +1607,7 @@ static void send_error_close(uint8_t slot_id, const char *status, const char *ex
     // GCOVR_EXCL_BR_START  the null arm of the extra_hdr ternary is unreachable: both callers
     // (send_method_not_allowed, send_too_many_requests) build a non-null header string. Kept so the
     // parameter stays optional for a future caller with nothing extra to add.
-    pc_sb sb_header = {header, sizeof(header), 0, true};
+    pc_sb sb_header = {header, sizeof(header), 0, PROTO_TRUE};
     pc_sb_put(&sb_header, "HTTP/1.1 ");
     pc_sb_put(&sb_header, status);
     pc_sb_put(&sb_header, "\r\n");
@@ -1644,7 +1642,7 @@ static void send_error_close(uint8_t slot_id, const char *status, const char *ex
 static void send_method_not_allowed(uint8_t slot_id, const char *allow)
 {
     char extra[80];
-    pc_sb sb_extra = {extra, sizeof(extra), 0, true};
+    pc_sb sb_extra = {extra, sizeof(extra), 0, PROTO_TRUE};
     pc_sb_put(&sb_extra, "Allow: ");
     pc_sb_put(&sb_extra, allow);
     pc_sb_put(&sb_extra, "\r\n");
@@ -1672,7 +1670,7 @@ static pc_ip lockout_client_ip(uint8_t slot_id)
 static void send_too_many_requests(uint8_t slot_id, uint32_t retry_after_s)
 {
     char extra[40];
-    pc_sb sb_extra2 = {extra, sizeof(extra), 0, true};
+    pc_sb sb_extra2 = {extra, sizeof(extra), 0, PROTO_TRUE};
     pc_sb_put(&sb_extra2, "Retry-After: ");
     pc_sb_u32(&sb_extra2, (uint32_t)((unsigned long)retry_after_s));
     pc_sb_put(&sb_extra2, "\r\n");
@@ -1684,34 +1682,34 @@ static void send_too_many_requests(uint8_t slot_id, uint32_t retry_after_s)
 }
 #endif // PC_ENABLE_AUTH_LOCKOUT
 
-bool route_admits(const Route *r, uint8_t slot_id, HttpReq *req)
+proto_bool route_admits(const Route *r, uint8_t slot_id, HttpReq *req)
 {
     // GCOVR_EXCL_START  unreachable: every entry below route_count was filled by fill_route_base,
     // which sets is_active, and nothing ever clears it - so the dispatcher never walks an inactive
     // slot. Kept because is_active is what makes an unfilled table entry safe to skip.
     if (!r->is_active)
     {
-        return false;
+        return PROTO_FALSE;
     }
     // GCOVR_EXCL_STOP
-    bool matched = r->is_regex   ? regex_match(r->path, req->path)
-                   : r->is_param ? match_path_params(r->path, req->path, req)
-                                 : path_matches(r->path, r->is_wildcard, req->path);
+    proto_bool matched = r->is_regex   ? regex_match(r->path, req->path)
+                         : r->is_param ? match_path_params(r->path, req->path, req)
+                                       : path_matches(r->path, r->is_wildcard, req->path);
     if (!matched)
     {
-        return false;
+        return PROTO_FALSE;
     }
     // Per-route interface gate: a route bound to STA/AP is invisible on the
     // other interface (falls through to other routes / 404).
     if (r->iface_filter != PC_IFACE_ANY && r->iface_filter != pc_conn_iface(slot_id))
     {
-        return false;
+        return PROTO_FALSE;
     }
-    return true;
+    return PROTO_TRUE;
 }
 
 #if PC_ENABLE_CSRF
-bool pc_csrf_gate(uint8_t slot_id, HttpReq *req, HttpMethod method)
+proto_bool pc_csrf_gate(uint8_t slot_id, HttpReq *req, HttpMethod method)
 {
     // Built-in token endpoint: GET /csrf issues a signed token (also set as the
     // csrf cookie) for clients to echo in X-CSRF-Token on state-changing requests.
@@ -1722,7 +1720,7 @@ bool pc_csrf_gate(uint8_t slot_id, HttpReq *req, HttpMethod method)
         {
             set_cookie(slot_id, "csrf", tok, "Path=/; SameSite=Strict");
             char body[CSRF_TOKEN_BUF + 16];
-            pc_sb sb_body = {body, sizeof(body), 0, true};
+            pc_sb sb_body = {body, sizeof(body), 0, PROTO_TRUE};
             pc_sb_put(&sb_body, "{\"token\":\"");
             pc_sb_put(&sb_body, tok);
             pc_sb_put(&sb_body, "\"}");
@@ -1736,7 +1734,7 @@ bool pc_csrf_gate(uint8_t slot_id, HttpReq *req, HttpMethod method)
         {
             send_text(slot_id, 500, PC_MIME_TEXT_PLAIN, "CSRF unavailable");
         }
-        return true;
+        return PROTO_TRUE;
     }
 
     // Enforce CSRF on every state-changing method: require a valid signed
@@ -1747,10 +1745,10 @@ bool pc_csrf_gate(uint8_t slot_id, HttpReq *req, HttpMethod method)
         if (!tok || !pc_csrf_verify(tok))
         {
             send_text(slot_id, 403, PC_MIME_TEXT_PLAIN, "CSRF token missing or invalid");
-            return true;
+            return PROTO_TRUE;
         }
     }
-    return false;
+    return PROTO_FALSE;
 }
 #endif // PC_ENABLE_CSRF
 
@@ -1760,9 +1758,9 @@ void handle_ws_route(uint8_t slot_id, HttpReq *req, HttpMethod method, const Rou
     const char *upgrade_hdr = http_get_header(req, "Upgrade");
     // RFC 6455 4.2.1: a valid handshake needs Upgrade: websocket AND a Connection
     // header that includes the "Upgrade" token.
-    bool is_ws_upgrade = (method == HTTP_GET) && (upgrade_hdr != NULL) &&
-                         proto_eq_str_ci(upgrade_hdr, "websocket", sizeof("websocket")) &&
-                         conn_has_token(http_get_header(req, "Connection"), "upgrade");
+    proto_bool is_ws_upgrade = (method == HTTP_GET) && (upgrade_hdr != NULL) &&
+                               proto_eq_str_ci(upgrade_hdr, "websocket", sizeof("websocket")) &&
+                               conn_has_token(http_get_header(req, "Connection"), "upgrade");
     if (!is_ws_upgrade)
     {
         send_text(slot_id, 400, PC_MIME_TEXT_PLAIN, "WebSocket upgrade required");
@@ -1785,7 +1783,7 @@ void handle_ws_route(uint8_t slot_id, HttpReq *req, HttpMethod method, const Rou
 #endif // PC_ENABLE_WEBSOCKET
 
 #if PC_ENABLE_AUTH
-bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const Route *r)
+proto_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const Route *r)
 {
 #if PC_ENABLE_AUTH_LOCKOUT
     pc_ip cip = lockout_client_ip(slot_id);
@@ -1807,11 +1805,11 @@ bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const Route *r)
     {
         // Address is locked out: 429 + Retry-After, no credential check.
         send_too_many_requests(slot_id, (remain + 999) / 1000);
-        return false;
+        return PROTO_FALSE;
     }
 #endif
-    bool stale = false;
-    bool ok = r->auth_digest ? check_digest_auth(slot_id, req, r, &stale) : check_basic_auth(slot_id, req, r);
+    proto_bool stale = PROTO_FALSE;
+    proto_bool ok = r->auth_digest ? check_digest_auth(slot_id, req, r, &stale) : check_basic_auth(slot_id, req, r);
 #if PC_ENABLE_AUTH_LOCKOUT
     // A stale-nonce retry carries valid credentials, so it is not a failed
     // attempt: don't count it toward the lockout (nor reset the counter).
@@ -1827,20 +1825,20 @@ bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const Route *r)
     if (!ok)
     {
         send_unauth(slot_id, r, stale);
-        return false;
+        return PROTO_FALSE;
     }
-    return true;
+    return PROTO_TRUE;
 }
 #endif // PC_ENABLE_AUTH
 
-bool dispatch_matched_route(uint8_t slot_id, HttpReq *req, HttpMethod method, Route *r, bool *path_matched,
-                            char *allow_buf, size_t allow_cap)
+proto_bool dispatch_matched_route(uint8_t slot_id, HttpReq *req, HttpMethod method, Route *r, proto_bool *path_matched,
+                                  char *allow_buf, size_t allow_cap)
 {
 #if PC_ENABLE_WEBSOCKET
     if (r->type == ROUTE_WS)
     {
         handle_ws_route(slot_id, req, method, r);
-        return true;
+        return PROTO_TRUE;
     }
 #endif // PC_ENABLE_WEBSOCKET
 
@@ -1851,7 +1849,7 @@ bool dispatch_matched_route(uint8_t slot_id, HttpReq *req, HttpMethod method, Ro
         {
             send_text(slot_id, 503, PC_MIME_TEXT_PLAIN, "Service Unavailable");
         }
-        return true;
+        return PROTO_TRUE;
     }
 #endif // PC_ENABLE_SSE
 
@@ -1861,39 +1859,39 @@ bool dispatch_matched_route(uint8_t slot_id, HttpReq *req, HttpMethod method, Ro
         // Static mounts answer GET (and HEAD via GET); other methods → 405.
         if (method != HTTP_GET && method != HTTP_HEAD)
         {
-            *path_matched = true;
+            *path_matched = PROTO_TRUE;
             allow_append(allow_buf, allow_cap, "GET");
             allow_append(allow_buf, allow_cap, "HEAD");
-            return false;
+            return PROTO_FALSE;
         }
         serve_static_request(slot_id, req, r);
-        return true;
+        return PROTO_TRUE;
     }
 #endif // PC_ENABLE_FILE_SERVING
 
     // ROUTE_HTTP - a HEAD request is served by the GET handler with the
     // response body suppressed (RFC 7231 §4.3.2).
-    bool method_ok = (r->method == method) || (method == HTTP_HEAD && r->method == HTTP_GET);
+    proto_bool method_ok = (r->method == method) || (method == HTTP_HEAD && r->method == HTTP_GET);
     if (!method_ok)
     {
         // Path matches but method differs - record it for a 405 + Allow.
-        *path_matched = true;
+        *path_matched = PROTO_TRUE;
         allow_append(allow_buf, allow_cap, method_name(r->method));
         // A GET route also answers HEAD, so advertise it in Allow.
         if (r->method == HTTP_GET)
         {
             allow_append(allow_buf, allow_cap, "HEAD");
         }
-        return false;
+        return PROTO_FALSE;
     }
 #if PC_ENABLE_AUTH
     if (r->auth_required && !proto_authorize_request(slot_id, req, r))
     {
-        return true; // 401/429 already sent
+        return PROTO_TRUE; // 401/429 already sent
     }
 #endif // PC_ENABLE_AUTH
     r->callback(slot_id, req);
-    return true;
+    return PROTO_TRUE;
 }
 
 void match_and_execute(uint8_t slot_id)
@@ -1957,7 +1955,7 @@ void match_and_execute(uint8_t slot_id)
 
     // For RFC 7231 §6.5.5: if a path matches but no method does, answer 405
     // with an Allow header listing the methods registered for that path.
-    bool path_matched = false;
+    proto_bool path_matched = PROTO_FALSE;
     char allow_buf[64];
     allow_buf[0] = '\0';
 
@@ -2037,11 +2035,11 @@ void send_bin(uint8_t slot_id, int code, const char *content_type, const uint8_t
 
     int payload_len = (int)(body_len > 0xFFFF ? 0xFFFF : body_len);
 
-    bool keep;
+    proto_bool keep;
     const char *cl = pc_resp_conn_hdr(slot_id, &keep);
 
     char header[RESP_HDR_BUF_SIZE];
-    pc_sb sb_header2 = {header, sizeof(header), 0, true};
+    pc_sb sb_header2 = {header, sizeof(header), 0, PROTO_TRUE};
     pc_sb_put(&sb_header2, "HTTP/1.1 ");
     pc_sb_i64(&sb_header2, (int64_t)(code));
     pc_sb_put(&sb_header2, " ");
@@ -2060,14 +2058,14 @@ void send_bin(uint8_t slot_id, int code, const char *content_type, const uint8_t
         // terminating CRLF and desync the connection, so a fixed reply that always fits goes out
         // instead and the connection closes.
         pc_conn_send_flush(slot_id, PC_RESP_HDR_OVERFLOW, (u16_t)PC_RESP_HDR_OVERFLOW_LEN);
-        pc_resp_end(slot_id, 500, 0, false, /*pre_flushed=*/false);
+        pc_resp_end(slot_id, 500, 0, PROTO_FALSE, /*pre_flushed=*/PROTO_FALSE);
         return;
     }
 
     // The slot stays CONN_ACTIVE through the write for both paths; pc_resp_end then
     // begins the CONN_CLOSING dwell on the close path (finalized once ACKed).
 
-    bool head = req_is_head(slot_id);
+    proto_bool head = req_is_head(slot_id);
 
     // HEAD responses carry the headers (incl. Content-Length) but no body. For a
     // body that fits the header scratch, coalesce headers+body into a single send
@@ -2089,7 +2087,7 @@ void send_bin(uint8_t slot_id, int code, const char *content_type, const uint8_t
         pc_conn_send_flush(slot_id, header, (u16_t)hlen);
     }
 
-    pc_resp_end(slot_id, code, payload_len, keep, /*pre_flushed=*/true);
+    pc_resp_end(slot_id, code, payload_len, keep, /*pre_flushed=*/PROTO_TRUE);
 }
 
 /**
@@ -2122,11 +2120,11 @@ void send_empty(uint8_t slot_id, int code)
         return;
     }
 
-    bool keep;
+    proto_bool keep;
     const char *cl = pc_resp_conn_hdr(slot_id, &keep);
 
     char header[RESP_HDR_BUF_SIZE];
-    pc_sb sb_header3 = {header, sizeof(header), 0, true};
+    pc_sb sb_header3 = {header, sizeof(header), 0, PROTO_TRUE};
     pc_sb_put(&sb_header3, "HTTP/1.1 ");
     pc_sb_i64(&sb_header3, (int64_t)(code));
     pc_sb_put(&sb_header3, " ");
@@ -2137,7 +2135,7 @@ void send_empty(uint8_t slot_id, int code)
 
     pc_conn_send_flush(slot_id, header, (u16_t)hlen);
 
-    pc_resp_end(slot_id, code, 0, keep, /*pre_flushed=*/true);
+    pc_resp_end(slot_id, code, 0, keep, /*pre_flushed=*/PROTO_TRUE);
 }
 
 void redirect(uint8_t slot_id, int code, const char *location)
@@ -2167,11 +2165,11 @@ void redirect(uint8_t slot_id, int code, const char *location)
         break;
     }
 
-    bool keep;
+    proto_bool keep;
     const char *cl = pc_resp_conn_hdr(slot_id, &keep);
 
     char header[RESP_HDR_BUF_SIZE];
-    pc_sb sb_header4 = {header, sizeof(header), 0, true};
+    pc_sb sb_header4 = {header, sizeof(header), 0, PROTO_TRUE};
     pc_sb_put(&sb_header4, "HTTP/1.1 ");
     pc_sb_i64(&sb_header4, (int64_t)(code));
     pc_sb_put(&sb_header4, " ");
@@ -2184,5 +2182,5 @@ void redirect(uint8_t slot_id, int code, const char *location)
 
     pc_conn_send_flush(slot_id, header, (u16_t)hlen);
 
-    pc_resp_end(slot_id, code, 0, keep, /*pre_flushed=*/true);
+    pc_resp_end(slot_id, code, 0, keep, /*pre_flushed=*/PROTO_TRUE);
 }

@@ -29,7 +29,7 @@
 
 #include "protocore_config.h"
 
-#if PC_ENABLE_WAL && defined(ARDUINO)
+#if PC_ENABLE_WAL && PROTOCORE_HOT
 
 #include "services/storage/wal/wal_store.h"
 #include <FS.h>
@@ -55,10 +55,10 @@ inline size_t fs_write(void *ctx, uint64_t off, const uint8_t *buf, size_t len)
     }
     return f->write(buf, len);
 }
-inline bool fs_sync(void *ctx)
+inline proto_bool fs_sync(void *ctx)
 {
     ((fs::File *)ctx)->flush();
-    return true;
+    return PROTO_TRUE;
 }
 } // namespace pc_wal_fs_detail
 
@@ -66,7 +66,7 @@ inline bool fs_sync(void *ctx)
  * @brief Ensure @p path on @p fsys exists and is at least @p size bytes (created zero-filled if missing/short).
  * @return true on success. Call once before opening the file for the store.
  */
-inline bool pc_wal_fs_prealloc(fs::FS &fsys, const char *path, uint64_t size)
+inline proto_bool pc_wal_fs_prealloc(fs::FS &fsys, const char *path, uint64_t size)
 {
     if (fsys.exists(path))
     {
@@ -78,24 +78,24 @@ inline bool pc_wal_fs_prealloc(fs::FS &fsys, const char *path, uint64_t size)
         }
         if (have >= size)
         {
-            return true;
+            return PROTO_TRUE;
         }
     }
     fs::File f = fsys.open(path, "w"); // create / truncate
     if (!f)
     {
-        return false;
+        return PROTO_FALSE;
     }
     uint8_t z[256];
     memset(z, 0, sizeof(z));
     uint64_t left = size;
-    bool ok = true;
+    proto_bool ok = PROTO_TRUE;
     while (left)
     {
         size_t n = left < sizeof(z) ? (size_t)left : sizeof(z);
         if (f.write(z, n) != n)
         {
-            ok = false;
+            ok = PROTO_FALSE;
             break;
         }
         left -= n;
@@ -120,5 +120,5 @@ inline WalDev pc_wal_fs_dev(fs::File *f, uint64_t size)
     return d;
 }
 
-#endif // PC_ENABLE_WAL && ARDUINO
+#endif // PC_ENABLE_WAL && PROTOCORE_HOT
 #endif // PROTOCORE_WAL_FS_H

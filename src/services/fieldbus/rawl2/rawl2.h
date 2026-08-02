@@ -22,24 +22,19 @@
 #define PROTOCORE_RAWL2_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_RAWL2
 
 // Ethernet II framing sizes + ethertypes: wire values, so integer constants in a namespacing struct.
-struct RawL2
-{
-    static constexpr uint16_t ETH_ALEN = 6;            ///< MAC address length.
-    static constexpr uint16_t ETH_HDR_LEN = 14;        ///< dst + src + ethertype.
-    static constexpr uint16_t ETH_VLAN_HDR_LEN = 18;   ///< with the 4-octet 802.1Q tag.
-    static constexpr uint16_t ETH_TPID_8021Q = 0x8100; ///< 802.1Q tag protocol id.
-    static constexpr uint16_t ETHERTYPE_IPV4 = 0x0800;
-    static constexpr uint16_t ETHERTYPE_ARP = 0x0806;
-    static constexpr uint16_t ETHERTYPE_PROFINET = 0x8892; ///< PROFINET RT / DCP.
-    static constexpr uint16_t ETHERTYPE_GOOSE = 0x88B8;    ///< IEC 61850 GOOSE.
-    static constexpr uint16_t ETHERTYPE_POWERLINK = 0x88AB;
-};
+#define N 6      ///< MAC address length.
+#define N 14     ///< dst + src + ethertype.
+#define N 18     ///< with the 4-octet 802.1Q tag.
+#define Q 0x8100 ///< 802.1Q tag protocol id.
+#define V4 0x0800
+#define P 0x0806
+#define T 0x8892 ///< PROFINET RT / DCP.
+#define E 0x88B8 ///< IEC 61850 GOOSE.
+#define K 0x88AB
 
 /**
  * @brief Build an Ethernet II frame (no FCS).
@@ -55,24 +50,24 @@ size_t pc_eth_build(const uint8_t *dst, const uint8_t *src, uint16_t ethertype, 
  * @param vid   VLAN id (0..4095).
  * @return the frame length (18 + payload_len), or 0 on overflow.
  */
-size_t pc_eth_build_vlan(const uint8_t *dst, const uint8_t *src, uint8_t pcp, bool dei, uint16_t vid,
+size_t pc_eth_build_vlan(const uint8_t *dst, const uint8_t *src, uint8_t pcp, proto_bool dei, uint16_t vid,
                          uint16_t ethertype, const uint8_t *payload, size_t payload_len, uint8_t *out, size_t cap);
 
 /** @brief A parsed Ethernet frame (pointers into the input). */
-struct EthFrame
+typedef struct
 {
     const uint8_t *dst;
     const uint8_t *src;
-    bool vlan;
+    proto_bool vlan;
     uint8_t pcp;
     uint16_t vid;
     uint16_t ethertype;
     const uint8_t *payload;
     size_t payload_len;
-};
+} EthFrame;
 
 /** @brief Parse an Ethernet II / 802.1Q frame (FCS not expected). @return true if well-formed. */
-bool pc_eth_parse(const uint8_t *frame, size_t len, EthFrame *out);
+proto_bool pc_eth_parse(const uint8_t *frame, size_t len, EthFrame *out);
 
 /** @brief IEEE 802.3 frame check sequence (CRC-32, reflected, init 0xFFFFFFFF, xorout 0xFFFFFFFF). */
 uint32_t pc_eth_fcs(const uint8_t *bytes, size_t len);

@@ -20,25 +20,23 @@
 #define PROTOCORE_ATC_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_ATC
 
 /** @brief One ATC field-I/O point. */
-struct AtcPoint
+typedef struct
 {
-    const char *name; ///< the FIO point name (borrowed), e.g. "det.1", "phase.2.green".
-    bool is_output;   ///< true = an output (a driver the controller sets), false = an input (a sensor).
-    uint8_t value;    ///< the current 8-bit value (a bit is 0/1; a byte is 0..255).
-};
+    const char *name;     ///< the FIO point name (borrowed), e.g. "det.1", "phase.2.green".
+    proto_bool is_output; ///< true = an output (a driver the controller sets), false = an input (a sensor).
+    uint8_t value;        ///< the current 8-bit value (a bit is 0/1; a byte is 0..255).
+} AtcPoint;
 
 /** @brief The field-I/O map: a fixed table of points the ATC engine sees. */
-struct AtcFieldIo
+typedef struct
 {
     AtcPoint *points;
     size_t count;
-};
+} AtcFieldIo;
 
 /**
  * @brief Serialize the field-I/O map as `{"inputs":[{"name":..,"value":..},...],"outputs":[...]}`.
@@ -50,10 +48,10 @@ size_t pc_atc_snapshot_json(const AtcFieldIo *io, char *out, size_t cap);
  * @brief Drive an output point by name from an ATC command.
  * @return true if the named point exists and is an output (its value is set); false otherwise.
  */
-bool pc_atc_set_output(AtcFieldIo *io, const char *name, uint8_t value);
+proto_bool pc_atc_set_output(AtcFieldIo *io, const char *name, uint8_t value);
 
 /** @brief Read a point's value by name; @p found (may be null) reports whether it existed. */
-uint8_t pc_atc_get(const AtcFieldIo *io, const char *name, bool *found);
+uint8_t pc_atc_get(const AtcFieldIo *io, const char *name, proto_bool *found);
 
 #endif // PC_ENABLE_ATC
 #endif // PROTOCORE_ATC_H

@@ -27,8 +27,6 @@
 
 #if PC_ENABLE_AUTH_LOCKOUT
 
-#include <stdint.h>
-
 #include "network_drivers/network/ip.h"
 
 /**

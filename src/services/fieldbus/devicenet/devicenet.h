@@ -38,8 +38,6 @@
 #if PC_ENABLE_DEVICENET
 
 #include "shared_primitives/can.h"
-#include <stddef.h>
-#include <stdint.h>
 
 // Message-group identifier bases / field widths.
 #define DEVICENET_G1_BASE 0x000u ///< Message Group 1 (0x000-0x3FF)
@@ -67,53 +65,53 @@
 #define DEVICENET_FRAG_COUNT_MASK 0x3Fu
 
 /** @brief DeviceNet message groups. */
-enum class DeviceNetGroup : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     DEVICENET_GROUP_1 = 1,
     DEVICENET_GROUP_2 = 2,
     DEVICENET_GROUP_3 = 3,
     DEVICENET_GROUP_4 = 4,
-};
+} DeviceNetGroup;
 
 /** @brief A decoded DeviceNet identifier. */
-struct DeviceNetId
+typedef struct
 {
     DeviceNetGroup group;
     uint8_t msg_id; ///< message id within the group
     uint8_t mac_id; ///< source / node MAC id (0..63; not present for Group 4)
-};
+} DeviceNetId;
 
 /** @brief Result of feeding a frame to the fragmentation reassembler. */
-enum class DeviceNetFragResult : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     DEVICENET_FRAG_IGNORED = 0,
     DEVICENET_FRAG_STARTED,
     DEVICENET_FRAG_PROGRESS,
     DEVICENET_FRAG_COMPLETE,
     DEVICENET_FRAG_ERR,
-};
+} DeviceNetFragResult;
 
 /** @brief Fragmented-message reassembly context. */
-struct DeviceNetFragRx
+typedef struct
 {
-    bool active;
+    proto_bool active;
     uint8_t next_count;                ///< next expected modulo-64 fragment count
     uint16_t len;                      ///< octets stored so far
     uint8_t buf[PC_DEVICENET_MSG_MAX]; ///< reassembled body (excludes the fragmentation octets)
-};
+} DeviceNetFragRx;
 
 // --- identifier ---
 
 /** @brief Encode a DeviceNet 11-bit CAN id. @p mac_id is ignored for Group 4. */
-bool pc_devicenet_encode_id(uint32_t *id, DeviceNetGroup group, uint8_t msg_id, uint8_t mac_id);
+proto_bool pc_devicenet_encode_id(uint32_t *id, DeviceNetGroup group, uint8_t msg_id, uint8_t mac_id);
 
 /** @brief Decode an 11-bit CAN id into its DeviceNet group / message id / MAC id. */
-bool pc_devicenet_decode_id(uint32_t can_id, DeviceNetId *out);
+proto_bool pc_devicenet_decode_id(uint32_t can_id, DeviceNetId *out);
 
 // --- explicit-message header + fragmentation octets ---
 
 /** @brief Compose the explicit-message header octet (FRAG / XID / MAC id). */
-uint8_t pc_devicenet_msg_header(bool frag, bool xid, uint8_t mac_id);
+uint8_t pc_devicenet_msg_header(proto_bool frag, proto_bool xid, uint8_t mac_id);
 
 /** @brief Compose a fragmentation octet from a type (DEVICENET_FRAG_*) and a count. */
 uint8_t pc_devicenet_frag_octet(uint8_t type, uint8_t count);
@@ -124,8 +122,8 @@ uint8_t pc_devicenet_frag_octet(uint8_t type, uint8_t count);
  * @brief Build a single-frame explicit message: [header octet][body...] at the group/msg id.
  * @p body is typically a CIP request built with `pc_cip_*`. Fails if it does not fit in 8 octets.
  */
-bool pc_devicenet_build_explicit(CanFrame *out, DeviceNetGroup group, uint8_t msg_id, uint8_t mac_id,
-                                 const uint8_t *body, uint8_t body_len);
+proto_bool pc_devicenet_build_explicit(CanFrame *out, DeviceNetGroup group, uint8_t msg_id, uint8_t mac_id,
+                                       const uint8_t *body, uint8_t body_len);
 
 // --- fragmentation (messages longer than one frame) ---
 
@@ -138,8 +136,9 @@ bool pc_devicenet_build_explicit(CanFrame *out, DeviceNetGroup group, uint8_t ms
  * @return true on success; false on a null @p out, @p data_len > 6, a null @p data with a nonzero length, a
  *         @p frag_type outside its 2-bit field, a @p frag_count > 63, or a bad group / mac id.
  */
-bool pc_devicenet_build_fragment(CanFrame *out, DeviceNetGroup group, uint8_t msg_id, uint8_t mac_id, bool xid,
-                                 uint8_t frag_type, uint8_t frag_count, const uint8_t *data, uint8_t data_len);
+proto_bool pc_devicenet_build_fragment(CanFrame *out, DeviceNetGroup group, uint8_t msg_id, uint8_t mac_id,
+                                       proto_bool xid, uint8_t frag_type, uint8_t frag_count, const uint8_t *data,
+                                       uint8_t data_len);
 
 // --- fragmentation reassembly (messages longer than one frame) ---
 

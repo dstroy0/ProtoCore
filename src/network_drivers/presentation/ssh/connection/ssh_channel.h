@@ -26,29 +26,27 @@
 
 #include "network_drivers/presentation/ssh/connection/ssh_flow_control.h"
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 /** @brief Channel type (RFC 4254). */
-enum class SshChanType : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     SSH_CHAN_SESSION = 0,         ///< "session" - shell / exec / data
     SSH_CHAN_DIRECT_TCPIP = 1,    ///< "direct-tcpip" - client-initiated TCP forward (ssh -L)
     SSH_CHAN_FORWARDED_TCPIP = 2, ///< "forwarded-tcpip" - server-initiated TCP forward (ssh -R)
     SSH_CHAN_SFTP = 3,            ///< a "session" running the "sftp" subsystem (PC_ENABLE_SSH_SFTP)
     SSH_CHAN_SCP = 4              ///< a "session" running an `exec "scp …"` (PC_ENABLE_SSH_SCP)
-};
+} SshChanType;
 
 /** @brief Per-connection channel state. */
-struct SshChannel
+typedef struct
 {
-    bool open;         ///< True once the channel is confirmed open both ways.
-    bool pending;      ///< True for a server-initiated channel we opened, awaiting the client's confirmation.
-    SshChanType type;  ///< session, direct-tcpip, or forwarded-tcpip.
-    uint32_t local_id; ///< Our channel id (== slot index).
-    uint32_t peer_id;  ///< Client's channel id.
-    SshFlow flow;      ///< RFC 4254 sec 5.2 window pair (owner: ssh_flow_control.*).
-};
+    proto_bool open;    ///< True once the channel is confirmed open both ways.
+    proto_bool pending; ///< True for a server-initiated channel we opened, awaiting the client's confirmation.
+    SshChanType type;   ///< session, direct-tcpip, or forwarded-tcpip.
+    uint32_t local_id;  ///< Our channel id (== slot index).
+    uint32_t peer_id;   ///< Client's channel id.
+    SshFlow flow;       ///< RFC 4254 sec 5.2 window pair (owner: ssh_flow_control.*).
+} SshChannel;
 
 /** @brief Channel pool: PC_SSH_MAX_CHANNELS channels per SSH connection (BSS).
  *  Owned by this layer; src/ code routes through the functions below, never the
@@ -113,7 +111,7 @@ void pc_ssh_channel_set_rforward_cancel_cb(SshRemoteForwardCancelCb cb);
  *        CHANNEL_OPEN_FAILURE (the owner tears the bridge down). @p channel is the
  *        local id returned by pc_ssh_channel_open_forwarded().
  */
-using SshForwardConfirmCb = void (*)(uint8_t slot, uint32_t channel, bool ok);
+using SshForwardConfirmCb = void (*)(uint8_t slot, uint32_t channel, proto_bool ok);
 
 /** @brief Install the forwarded-tcpip open-confirmation callback (opt-in, ssh -R). */
 void pc_ssh_channel_set_forward_confirm_cb(SshForwardConfirmCb cb);

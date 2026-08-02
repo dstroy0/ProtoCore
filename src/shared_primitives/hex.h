@@ -19,7 +19,7 @@
 #ifndef PROTOCORE_HEX_H
 #define PROTOCORE_HEX_H
 
-#include <stdint.h>
+#include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
 
 /** @brief The 16 hex digits, lowercase - the default rendering everywhere in this library. */
 static const char *const PC_HEX_LOWER = "0123456789abcdef";
@@ -27,13 +27,13 @@ static const char *const PC_HEX_LOWER = "0123456789abcdef";
 static const char *const PC_HEX_UPPER = "0123456789ABCDEF";
 
 /** @brief Low nibble of @p nibble as a hex character, uppercase when @p upper. */
-inline char pc_hex_digit(uint8_t nibble, bool upper = false)
+PC_INLINE char pc_hex_digit(uint8_t nibble, proto_bool upper)
 {
     return (upper ? PC_HEX_UPPER : PC_HEX_LOWER)[nibble & 0x0Fu];
 }
 
 /** @brief Hex character @p c as 0..15, or -1 when @p c is not a hex digit of either case. */
-inline int8_t pc_hex_val(char c)
+PC_INLINE int8_t pc_hex_val(char c)
 {
     if (c >= '0' && c <= '9')
     {
@@ -58,7 +58,7 @@ inline int8_t pc_hex_val(char c)
  * takes. The width is counted before any digit is written so each digit lands at its final index,
  * which is why no reversal buffer is needed. @p out needs room for 8 characters.
  */
-inline uint8_t pc_hex_u32(uint32_t v, char *out)
+PC_INLINE uint8_t pc_hex_u32(uint32_t v, char *out)
 {
     uint8_t digits = 1;
     for (uint32_t probe = v; probe >= 16u; probe >>= 4)
@@ -80,7 +80,7 @@ inline uint8_t pc_hex_u32(uint32_t v, char *out)
  * @p out needs a capacity of at least 2 * @p n + 1; the caller owns that bound, since a byte run
  * has no self-describing end.
  */
-inline void pc_hex_encode(const uint8_t *in, uint32_t n, char *out, bool upper = false)
+PC_INLINE void pc_hex_encode(const uint8_t *in, uint32_t n, char *out, proto_bool upper)
 {
     const char *digits = upper ? PC_HEX_UPPER : PC_HEX_LOWER;
     for (uint32_t i = 0; i < n; i++)
@@ -97,7 +97,7 @@ inline void pc_hex_encode(const uint8_t *in, uint32_t n, char *out, bool upper =
  *         any character is not a hex digit. Nothing is written on the odd-length or capacity
  *         rejections; a bad digit stops the run where it is found.
  */
-inline int32_t pc_hex_decode(const char *in, uint32_t hexlen, uint8_t *out, uint32_t out_cap)
+PC_INLINE int32_t pc_hex_decode(const char *in, uint32_t hexlen, uint8_t *out, uint32_t out_cap)
 {
     if ((hexlen % 2) != 0 || (hexlen / 2) > out_cap)
     {

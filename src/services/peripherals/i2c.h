@@ -25,7 +25,7 @@
 
 #include "protocore_config.h"
 
-#if defined(ARDUINO)
+#if PROTOCORE_HOT
 
 #include <Wire.h>
 
@@ -35,6 +35,6 @@ inline void pc_i2c_begin()
     Wire.begin((int)PC_I2C_SDA_PIN, (int)PC_I2C_SCL_PIN);
 }
 
-#endif // ARDUINO
+#endif // PROTOCORE_HOT
 
 #endif // PROTOCORE_I2C_H

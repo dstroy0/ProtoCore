@@ -18,8 +18,6 @@
 #define PROTOCORE_NTP_SERVICE_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 #include <time.h>
 
 /**
@@ -34,8 +32,8 @@
  * @param server2  Secondary NTP server (default "time.nist.gov").
  * @return true if the client was started; false if disabled at compile time.
  */
-bool pc_ntp_begin(const char *tz = nullptr, const char *server1 = "pool.ntp.org",
-                  const char *server2 = "time.nist.gov");
+proto_bool pc_ntp_begin(const char *tz = NULL, const char *server1 = "pool.ntp.org",
+                        const char *server2 = "time.nist.gov");
 
 /**
  * @brief True once a plausible wall-clock time has been obtained from SNTP.
@@ -43,7 +41,7 @@ bool pc_ntp_begin(const char *tz = nullptr, const char *server1 = "pool.ntp.org"
  * Checks that the system clock has advanced past 2021-01-01, which only happens
  * after a successful sync (the RTC starts at the epoch on a cold boot).
  */
-bool pc_ntp_synced();
+proto_bool pc_ntp_synced();
 
 /**
  * @brief Current Unix epoch seconds, or 0 if not yet synced (or disabled).
@@ -71,7 +69,7 @@ size_t pc_ntp_http_date(char *out, size_t out_cap);
  */
 uint32_t pc_ntp_time_source(void);
 
-#if !defined(ARDUINO)
+#if !PROTOCORE_HOT
 /**
  * @brief Host-only test seam: inject a wall-clock epoch so time-dependent paths
  *        (e.g. the optional HTTP Date header) are exercisable off-device. 0 = none.

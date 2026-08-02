@@ -27,7 +27,7 @@
 #define PC_SHA512_BLOCK_LEN 128
 
 /** @brief Streaming SHA-512 context. */
-#ifdef ARDUINO
+#if PROTOCORE_HOT
 #include <mbedtls/sha512.h>
 typedef struct
 {

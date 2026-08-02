@@ -17,8 +17,7 @@
 #ifndef PROTOCORE_UTF8_H
 #define PROTOCORE_UTF8_H
 
-#include <stddef.h>
-#include <stdint.h>
+#include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
 
 /**
  * @brief True if [s, s+n) is well-formed UTF-8.
@@ -26,7 +25,7 @@
  * Rejects overlong encodings, surrogate code points (U+D800..U+DFFF), values
  * above U+10FFFF, bad continuation bytes, and truncated multi-byte sequences.
  */
-inline bool pc_utf8_valid(const uint8_t *s, size_t n)
+PC_INLINE proto_bool pc_utf8_valid(const uint8_t *s, size_t n)
 {
     size_t i = 0;
     while (i < n)
@@ -60,28 +59,28 @@ inline bool pc_utf8_valid(const uint8_t *s, size_t n)
         }
         else
         {
-            return false; // 0x80..0xBF lead, or 0xF8.. invalid
+            return PROTO_FALSE; // 0x80..0xBF lead, or 0xF8.. invalid
         }
         if (i + need >= n)
         {
-            return false; // truncated multi-byte sequence
+            return PROTO_FALSE; // truncated multi-byte sequence
         }
         for (size_t k = 1; k <= need; k++)
         {
             uint8_t cc = s[i + k];
             if ((cc & 0xC0) != 0x80)
             {
-                return false; // bad continuation byte
+                return PROTO_FALSE; // bad continuation byte
             }
             cp = (cp << 6) | (cc & 0x3F);
         }
         if (cp < lo || cp > 0x10FFFFu || (cp >= 0xD800u && cp <= 0xDFFFu))
         {
-            return false; // overlong, out-of-range, or surrogate
+            return PROTO_FALSE; // overlong, out-of-range, or surrogate
         }
         i += need + 1;
     }
-    return true;
+    return PROTO_TRUE;
 }
 
 #endif // PROTOCORE_UTF8_H

@@ -20,20 +20,15 @@
 #define PROTOCORE_LOGBUF_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_LOGBUF
 
 /** @brief Severity levels (ordered low -> high). Compared (level >= threshold) and passed through the
  *  uint8_t trap-callback ABI, so integer constants in a namespacing struct - cast-free. */
-struct pc_log_level
-{
-    static constexpr uint8_t PC_LOG_DEBUG = 0;
-    static constexpr uint8_t PC_LOG_INFO = 1;
-    static constexpr uint8_t PC_LOG_WARN = 2;
-    static constexpr uint8_t PC_LOG_ERROR = 3;
-};
+#define G 0
+#define O 1
+#define N 2
+#define R 3
 
 /** @brief Trap callback: fired for a line logged at level >= the threshold. */
 typedef void (*pc_log_trap_fn)(uint8_t level, const char *line);

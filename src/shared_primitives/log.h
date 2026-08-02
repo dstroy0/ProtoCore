@@ -29,7 +29,6 @@
 
 #include "mmgr/frame.h"
 #include "protocore_config.h"
-#include <stdint.h>
 
 /** @brief Receives an emitted line, already formatted. @p level is a PC_LOG_LEVEL_* value. */
 typedef void (*pc_log_sink_fn)(uint8_t level, const char *line);
@@ -60,7 +59,7 @@ int pc_log_discard_args(const pc_field *spec, ...);
  */
 void pc_log_frame(uint8_t level, const pc_field *spec, ...);
 
-/** @brief Install (or clear, with nullptr) the sink emitted lines are handed to. */
+/** @brief Install (or clear, with NULL) the sink emitted lines are handed to. */
 void pc_log_set_sink(pc_log_sink_fn cb);
 
 #else

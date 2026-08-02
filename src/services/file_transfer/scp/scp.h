@@ -23,26 +23,23 @@
 
 #if PC_ENABLE_SSH_SCP
 
-#include <stddef.h>
-#include <stdint.h>
-
 // rcp acknowledgement bytes (sent between records).
 #define PC_SCP_ACK_OK 0    ///< proceed
 #define PC_SCP_ACK_WARN 1  ///< warning: followed by a message + '\n'
 #define PC_SCP_ACK_ERROR 2 ///< fatal error: followed by a message + '\n'
 
 /** @brief The role of an `scp` invocation, parsed from the exec command. */
-enum class ScpMode : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
-    INVALID = 0,
-    SINK,  ///< `scp -t <path>`: the client sends a file TO the device (device receives)
-    SOURCE ///< `scp -f <path>`: the client fetches a file FROM the device (device sends)
-};
+    SCP_MODE_INVALID = 0,
+    SCP_MODE_SINK,  ///< `scp -t <path>`: the client sends a file TO the device (device receives)
+    SCP_MODE_SOURCE ///< `scp -f <path>`: the client fetches a file FROM the device (device sends)
+} ScpMode;
 
 /**
  * @brief Parse an exec command `scp [-v] [-r] [-p] [-d] -t|-f <path>` into its role + target path.
  * @param cmd not NUL-terminated (@p cmd_len bytes). @return the mode; @p path_out gets the (NUL-terminated)
- *         target, ScpMode::INVALID on a command we do not support.
+ *         target, SCP_MODE_INVALID on a command we do not support.
  */
 ScpMode pc_scp_parse_cmd(const char *cmd, size_t cmd_len, char *path_out, size_t path_cap);
 
@@ -51,8 +48,8 @@ ScpMode pc_scp_parse_cmd(const char *cmd, size_t cmd_len, char *path_out, size_t
  * @return true on a well-formed `C` line; @p mode_out is the octal permission bits, @p size_out the byte
  *         count, @p name_out the (NUL-terminated) filename. Only file records (`C`) are handled (not `D`/`E`).
  */
-bool pc_scp_parse_cline(const char *line, size_t len, uint32_t *mode_out, uint64_t *size_out, char *name_out,
-                        size_t name_cap);
+proto_bool pc_scp_parse_cline(const char *line, size_t len, uint32_t *mode_out, uint64_t *size_out, char *name_out,
+                              size_t name_cap);
 
 /**
  * @brief Build a control line `C<mode> <size> <name>\n` for a source transfer. @return the length written, or

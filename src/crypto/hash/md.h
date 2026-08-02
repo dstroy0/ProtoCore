@@ -18,12 +18,11 @@
 #ifndef PROTOCORE_MD_H
 #define PROTOCORE_MD_H
 
-#include <stddef.h>
-#include <stdint.h>
+#include "protocore_config.h" // the entry point: types.h for the widths
 
 /**
  * @brief Opaque streaming digest context (MD4 / MD5). Forward-declared only: the definition is private to
- * md.cpp, so other translation units know the symbol but never its members - they hold it via `MdCtx *`,
+ * md.cpp, so other translation units know the symbol but never its members - they hold it via `struct MdCtx *`,
  * getting their storage from pc_md_wants() below.
  */
 struct MdCtx;
@@ -39,17 +38,17 @@ struct MdCtx;
  * @return a context to pass to pc_md4_init() / pc_md5_init(), or nullptr if the pool could not
  *         satisfy it.
  */
-MdCtx *pc_md_wants(void);
+struct MdCtx *pc_md_wants(void);
 
-void pc_md5_init(MdCtx *c);
-void pc_md5_update(MdCtx *c, const uint8_t *data, size_t len);
-void pc_md5_final(MdCtx *c, uint8_t out[16]);
+void pc_md5_init(struct MdCtx *c);
+void pc_md5_update(struct MdCtx *c, const uint8_t *data, size_t len);
+void pc_md5_final(struct MdCtx *c, uint8_t out[16]);
 /** @brief One-shot MD5. */
 void md5(const uint8_t *data, size_t len, uint8_t out[16]);
 
-void pc_md4_init(MdCtx *c);
-void pc_md4_update(MdCtx *c, const uint8_t *data, size_t len);
-void pc_md4_final(MdCtx *c, uint8_t out[16]);
+void pc_md4_init(struct MdCtx *c);
+void pc_md4_update(struct MdCtx *c, const uint8_t *data, size_t len);
+void pc_md4_final(struct MdCtx *c, uint8_t out[16]);
 /** @brief One-shot MD4 (the NT-hash primitive). */
 void md4(const uint8_t *data, size_t len, uint8_t out[16]);
 

@@ -100,10 +100,7 @@
 #include "crypto/asymmetric/bignum.h"
 #include "crypto/cipher/aes256ctr.h"
 #include "mmgr/secure.h" // pc_secure_wipe (the canonical secure wipe)
-#include "mmgr/secure.h"
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 #include <string.h>
 
 // These two intentionally stay anonymous *plain* enums - not enum class, not a namespacing struct.
@@ -132,7 +129,7 @@ enum
 };
 
 /** @brief True if @p mac_mode is an encrypt-then-MAC variant (length in the clear, MAC over ciphertext). */
-static inline bool ssh_mac_is_etm(uint8_t mac_mode)
+static inline proto_bool ssh_mac_is_etm(uint8_t mac_mode)
 {
     return mac_mode == SSH_MAC_HMAC_SHA256_ETM || mac_mode == SSH_MAC_HMAC_SHA512_ETM;
 }
@@ -142,7 +139,7 @@ static inline uint8_t ssh_mac_len(uint8_t mac_mode)
     return (mac_mode == SSH_MAC_HMAC_SHA512 || mac_mode == SSH_MAC_HMAC_SHA512_ETM) ? 64 : 32;
 }
 
-// Secure wipe: the canonical pc_secure_wipe() lives in crypto/crypto_scratch.h (included above). Use it for
+// Secure wipe: the canonical pc_secure_wipe() lives in mmgr/secure.h (included above). Use it for
 // any buffer that held key material - a volatile store the compiler may not elide, unlike a dead memset.
 
 // ---------------------------------------------------------------------------
@@ -169,7 +166,7 @@ static inline uint8_t ssh_mac_len(uint8_t mac_mode)
  * aes_key/aes_ctr C→S are the client-to-server key + counter (server decrypts inbound); S→C are the
  * reverse (server encrypts outbound).
  */
-struct SshKeyMat
+typedef struct
 {
     // aes256-ctr stores the raw 32-byte key and the 16-byte IV per direction and rebuilds its key schedule
     // per packet in the shared crypto scratch, so no expanded CTR key lingers here. The IV is the running
@@ -202,8 +199,8 @@ struct SshKeyMat
     alignas(8) uint8_t gcm_ctx_c2s[PC_WORK_AESGCM]; ///< keyed GCM context C→S (server opens inbound).
     alignas(8) uint8_t gcm_ctx_s2c[PC_WORK_AESGCM]; ///< keyed GCM context S→C (server seals outbound).
 
-    bool active; ///< True once keys are installed after successful KEX.
-};
+    proto_bool active; ///< True once keys are installed after successful KEX.
+} SshKeyMat;
 
 /**
  * @brief Pool of session key material, one entry per MAX_SSH_CONNS.
@@ -234,15 +231,15 @@ extern SshKeyMat ssh_keys[MAX_SSH_CONNS];
  *         lifetime (RFC 4253 §7.2); stored in H[], NOT zeroed (it is a
  *         commitment to the handshake, and is not secret).
  */
-struct SshDhState
+typedef struct
 {
     pc_bignum y; ///< Server ephemeral private DH scalar (SENSITIVE - wiped after KEX).
     pc_bignum f; ///< Server DH public value = g^y mod p (sent to client).
     pc_bignum K; ///< Shared DH secret = e^y mod p (SENSITIVE - wiped after key derivation).
 
-    uint8_t H[32]; ///< SHA-256 exchange hash; doubles as session_id after first KEX.
-    bool kex_done; ///< True once NEWKEYS has been sent and received.
-};
+    uint8_t H[32];       ///< SHA-256 exchange hash; doubles as session_id after first KEX.
+    proto_bool kex_done; ///< True once NEWKEYS has been sent and received.
+} SshDhState;
 
 /** @brief Pool of ephemeral DH state, one entry per MAX_SSH_CONNS. */
 extern SshDhState ssh_dh[MAX_SSH_CONNS];
@@ -260,8 +257,8 @@ static inline void ssh_keymat_wipe(uint8_t i)
         // zeroing the bytes would leak it once per closed connection. Release first, then wipe.
         if (ssh_keys[i].active && ssh_keys[i].cipher_mode == SSH_CIPHER_AES256GCM)
         {
-            pc_aesgcm_key_wipe(reinterpret_cast<pc_aesgcm_key *>(ssh_keys[i].gcm_ctx_c2s));
-            pc_aesgcm_key_wipe(reinterpret_cast<pc_aesgcm_key *>(ssh_keys[i].gcm_ctx_s2c));
+            pc_aesgcm_key_wipe((pc_aesgcm_key *)(ssh_keys[i].gcm_ctx_c2s));
+            pc_aesgcm_key_wipe((pc_aesgcm_key *)(ssh_keys[i].gcm_ctx_s2c));
         }
         pc_secure_wipe(&ssh_keys[i], sizeof(SshKeyMat));
     }

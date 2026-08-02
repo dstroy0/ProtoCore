@@ -768,7 +768,7 @@ void test_ip_allowlist_rejects_non_digit_prefix()
 }
 
 // listener_enqueue() rejects an out-of-range listener id before touching listener_pool[],
-// and reports a full queue (the application not draining server_tick() fast enough)
+// and reports a full queue (the application not draining server_tick(0) fast enough)
 // instead of silently dropping the event without telling the caller.
 void test_enqueue_rejects_out_of_range_listener_id()
 {

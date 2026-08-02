@@ -31,25 +31,23 @@
 
 #include "protocore_config.h"
 #include "services/fieldbus/opcua/opcua.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_OPCUA_CLIENT
 
 // Dependency (OPCUA_CLIENT requires OPCUA) is enforced centrally in protocore_config.h.
 
 /** @brief Per-connection OPC UA client state (SecureChannel + Session + counters). */
-struct OpcUaClient
+typedef struct
 {
-    uint32_t channel_id;       ///< SecureChannelId (from the OPN response).
-    uint32_t token_id;         ///< security TokenId (from the OPN response; sent in every MSG).
-    uint16_t session_auth_ns;  ///< session AuthenticationToken NodeId namespace (from CreateSession).
-    uint32_t session_auth_id;  ///< session AuthenticationToken NodeId identifier.
-    bool session_auth_numeric; ///< whether the AuthenticationToken is numeric.
-    uint32_t seq;              ///< client SequenceNumber (incremented per message).
-    uint32_t request_id;       ///< client RequestId (incremented per message).
-    uint32_t request_handle;   ///< client RequestHandle (incremented per request).
-};
+    uint32_t channel_id;             ///< SecureChannelId (from the OPN response).
+    uint32_t token_id;               ///< security TokenId (from the OPN response; sent in every MSG).
+    uint16_t session_auth_ns;        ///< session AuthenticationToken NodeId namespace (from CreateSession).
+    uint32_t session_auth_id;        ///< session AuthenticationToken NodeId identifier.
+    proto_bool session_auth_numeric; ///< whether the AuthenticationToken is numeric.
+    uint32_t seq;                    ///< client SequenceNumber (incremented per message).
+    uint32_t request_id;             ///< client RequestId (incremented per message).
+    uint32_t request_handle;         ///< client RequestHandle (incremented per request).
+} OpcUaClient;
 
 /** @brief Zero a client's state before the first connection. */
 void pc_opcua_client_init(OpcUaClient *c);
@@ -94,46 +92,46 @@ size_t pc_opcua_client_close_channel(uint8_t *out, size_t cap);
 // ---------------------------------------------------------------------------
 
 /** @brief Negotiated buffer sizes from an `ACK`. */
-struct OpcUaAckInfo
+typedef struct
 {
     uint32_t recv_buf_size;
     uint32_t send_buf_size;
     uint32_t max_msg_size;
     uint32_t max_chunk_count;
-};
+} OpcUaAckInfo;
 
 /** @brief Parse an `ACK`. @return true if valid. */
-bool pc_opcua_client_on_ack(const uint8_t *msg, size_t len, OpcUaAckInfo *out);
+proto_bool pc_opcua_client_on_ack(const uint8_t *msg, size_t len, OpcUaAckInfo *out);
 
 /** @brief Parse an `OPN` OpenSecureChannelResponse; sets channel_id + token_id. @return true if Good. */
-bool pc_opcua_client_on_open(OpcUaClient *c, const uint8_t *msg, size_t len);
+proto_bool pc_opcua_client_on_open(OpcUaClient *c, const uint8_t *msg, size_t len);
 
 /** @brief Parse a GetEndpointsResponse. @return the advertised endpoint count, or -1 on error. */
 int32_t pc_opcua_client_on_get_endpoints(const uint8_t *msg, size_t len);
 
 /** @brief Parse a CreateSessionResponse; stores the session AuthenticationToken. @return true if Good. */
-bool pc_opcua_client_on_create_session(OpcUaClient *c, const uint8_t *msg, size_t len);
+proto_bool pc_opcua_client_on_create_session(OpcUaClient *c, const uint8_t *msg, size_t len);
 
 /** @brief Parse an ActivateSessionResponse. @return true if ServiceResult is Good. */
-bool pc_opcua_client_on_activate_session(const uint8_t *msg, size_t len);
+proto_bool pc_opcua_client_on_activate_session(const uint8_t *msg, size_t len);
 
 /**
  * @brief Parse a ReadResponse into @p vals / @p statuses (one per result, capped at @p max).
- * @note A returned OpcUaVariantType::OPCUA_VAR_STRING value points into @p msg (keep it alive while used).
+ * @note A returned OPCUA_VAR_STRING value points into @p msg (keep it alive while used).
  * @return number of results, or -1 on a malformed/non-Good response.
  */
 int32_t pc_opcua_client_on_read(const uint8_t *msg, size_t len, OpcUaVariant *vals, uint32_t *statuses, uint32_t max);
 
 /** @brief One reference parsed from a BrowseResponse (self-contained; name is copied). */
-struct OpcUaClientRef
+typedef struct
 {
     uint32_t ref_type_id;
-    bool is_forward;
+    proto_bool is_forward;
     uint16_t target_ns;
     uint32_t target_id;
     uint32_t node_class;
     char browse_name[32];
-};
+} OpcUaClientRef;
 
 /**
  * @brief Parse a BrowseResponse, flattening all results' references into @p refs (capped at @p max).

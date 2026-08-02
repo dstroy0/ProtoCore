@@ -45,9 +45,6 @@
 
 #if PC_ENABLE_IKEV2
 
-#include <stddef.h>
-#include <stdint.h>
-
 /** @brief IKEv2 UDP port (IKE_SA_INIT / IKE_AUTH before NAT is detected). */
 #define PC_IKEV2_PORT 500
 /** @brief IKEv2 UDP port after NAT traversal is negotiated (NAT-T, RFC 3948). */
@@ -69,16 +66,16 @@
 #define PC_IKE_FLAG_RESPONSE 0x20  ///< set in a response (clear in a request)
 
 /** @brief Exchange types (RFC 7296 3.1). */
-enum class IkeExchange : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     IKE_SA_INIT = 34,
     IKE_AUTH = 35,
     IKE_CREATE_CHILD_SA = 36,
     IKE_INFORMATIONAL = 37,
-};
+} IkeExchange;
 
 /** @brief Payload types / Next Payload values (RFC 7296 3.2); 0 terminates a chain. */
-enum class IkePayloadType : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     IKE_PL_NONE = 0,
     IKE_PL_SA = 33,      ///< Security Association (proposals / transforms)
@@ -98,17 +95,17 @@ enum class IkePayloadType : uint8_t
     IKE_PL_CP = 47,      ///< Configuration
     IKE_PL_EAP = 48,     ///< Extensible Authentication
     IKE_PL_SKF = 53,     ///< Encrypted and Authenticated Fragment (RFC 7383)
-};
+} IkePayloadType;
 
 /** @brief Transform types (RFC 7296 3.3.2). */
-enum class IkeTransformType : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     IKE_TRANSFORM_ENCR = 1,  ///< Encryption Algorithm
     IKE_TRANSFORM_PRF = 2,   ///< Pseudo-random Function
     IKE_TRANSFORM_INTEG = 3, ///< Integrity Algorithm
     IKE_TRANSFORM_DH = 4,    ///< Diffie-Hellman / Key Exchange Method
     IKE_TRANSFORM_ESN = 5,   ///< Extended Sequence Numbers
-};
+} IkeTransformType;
 
 /** @brief A few common Transform IDs (IANA), for convenience; any 16-bit id is accepted on the wire. */
 #define IKE_ENCR_AES_CBC 12
@@ -124,16 +121,16 @@ enum class IkeTransformType : uint8_t
 #define IKE_ATTR_KEY_LENGTH 14
 
 /** @brief Protocol IDs (RFC 7296 3.3.1 / 3.10 / 3.11). */
-enum class IkeProtocol : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     IKE_PROTO_NONE = 0, ///< notify/delete not concerning an existing SA (RFC 7296 3.10)
     IKE_PROTO_IKE = 1,
     IKE_PROTO_AH = 2,
     IKE_PROTO_ESP = 3,
-};
+} IkeProtocol;
 
 /** @brief Identification payload ID types (RFC 7296 3.5). */
-enum class IkeIdType : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     IKE_ID_RESERVED = 0, ///< IANA-reserved; the value an out-param holds before a parse succeeds
     IKE_ID_IPV4_ADDR = 1,
@@ -141,27 +138,27 @@ enum class IkeIdType : uint8_t
     IKE_ID_RFC822_ADDR = 3,
     IKE_ID_IPV6_ADDR = 5,
     IKE_ID_KEY_ID = 11,
-};
+} IkeIdType;
 
 /** @brief Authentication methods (RFC 7296 3.8 / IANA). */
-enum class IkeAuthMethod : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     IKE_AUTH_RESERVED = 0,    ///< IANA-reserved; the value an out-param holds before a parse succeeds
     IKE_AUTH_RSA_SIG = 1,     ///< RSA Digital Signature
     IKE_AUTH_PSK = 2,         ///< Shared Key Message Integrity Code (pre-shared key)
     IKE_AUTH_DSS_SIG = 3,     ///< DSS Digital Signature
     IKE_AUTH_DIGITAL_SIG = 14 ///< Generic Digital Signature (RFC 7427)
-};
+} IkeAuthMethod;
 
 /** @brief Traffic selector types (RFC 7296 3.13.1). */
-enum class IkeTsType : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     IKE_TS_IPV4_ADDR_RANGE = 7,
     IKE_TS_IPV6_ADDR_RANGE = 8,
-};
+} IkeTsType;
 
 /** @brief A decoded / to-be-encoded IKE header. */
-struct IkeHeader
+typedef struct
 {
     uint8_t init_spi[PC_IKE_SPI_LEN];
     uint8_t resp_spi[PC_IKE_SPI_LEN];
@@ -171,47 +168,47 @@ struct IkeHeader
     uint8_t flags;               ///< OR of PC_IKE_FLAG_*
     uint32_t message_id;
     uint32_t length; ///< whole-message length (built value; on parse, the value read off the wire)
-};
+} IkeHeader;
 
 /** @brief A parsed generic payload: its type (from the chain), the following type, and the body slice
  *  (the bytes after the 4-byte generic header), pointing INTO the caller's buffer. */
-struct IkePayload
+typedef struct
 {
     IkePayloadType type;         ///< this payload's type
     IkePayloadType next_payload; ///< type of the next payload (IKE_PL_NONE = last)
-    bool critical;               ///< the Critical bit
+    proto_bool critical;         ///< the Critical bit
     const uint8_t *body;
     size_t body_len;
-};
+} IkePayload;
 
 /** @brief Forward-walks the payload chain of a message. */
-struct IkePayloadIter
+typedef struct
 {
     const uint8_t *area;      ///< payload area (message + PC_IKE_HDR_LEN)
     size_t len;               ///< bytes remaining in the area
     size_t off;               ///< current offset into @ref area
     IkePayloadType next_type; ///< type of the payload at @ref off (IKE_PL_NONE = done)
-};
+} IkePayloadIter;
 
 /** @brief One transform to encode inside a proposal (@ref pc_ike_sa_build). */
-struct IkeTransform
+typedef struct
 {
     IkeTransformType type; ///< which transform slot this fills
     uint16_t id;           ///< transform id (algorithm)
     int32_t key_length;    ///< key-length attribute in bits, or < 0 for none
-};
+} IkeTransform;
 
 /** @brief A parsed transform (from @ref pc_ike_transform_next). */
-struct IkeTransformRef
+typedef struct
 {
     IkeTransformType type;
     uint16_t id;
     int32_t key_length; ///< decoded key-length attribute, or < 0 if absent
-    bool last;          ///< true if this is the last transform in the proposal
-};
+    proto_bool last;    ///< true if this is the last transform in the proposal
+} IkeTransformRef;
 
 /** @brief A parsed proposal (from @ref pc_ike_sa_first_proposal). */
-struct IkeProposalRef
+typedef struct
 {
     uint8_t proposal_num;
     IkeProtocol protocol_id; ///< which SA this proposal is for
@@ -220,19 +217,19 @@ struct IkeProposalRef
     const uint8_t *spi; ///< SPI bytes (spi_size long), or nullptr
     const uint8_t *transforms;
     size_t transforms_len;
-    bool last; ///< true if this is the only / last proposal
-};
+    proto_bool last; ///< true if this is the only / last proposal
+} IkeProposalRef;
 
 /** @brief Iterates the transforms within a proposal's transform area. */
-struct IkeTransformIter
+typedef struct
 {
     const uint8_t *area;
     size_t len;
     size_t off;
-};
+} IkeTransformIter;
 
 /** @brief One traffic selector (RFC 7296 3.13.1). */
-struct IkeTrafficSelector
+typedef struct
 {
     IkeTsType ts_type;   ///< selector address family
     uint8_t ip_protocol; ///< 0 = any
@@ -241,16 +238,16 @@ struct IkeTrafficSelector
     const uint8_t *start_addr; ///< 4 bytes (IPv4) or 16 bytes (IPv6)
     const uint8_t *end_addr;
     size_t addr_len; ///< 4 or 16
-};
+} IkeTrafficSelector;
 
 /** @brief Configuration payload CFG Type (RFC 7296 3.15.1) - the exchange role of a CP payload. */
-enum class IkeCfgType : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     IKE_CFG_REQUEST = 1, ///< a request for configuration (e.g. an internal address)
     IKE_CFG_REPLY = 2,   ///< the reply granting it
     IKE_CFG_SET = 3,     ///< an unsolicited push of configuration
     IKE_CFG_ACK = 4,     ///< acknowledgement of a SET
-};
+} IkeCfgType;
 
 // Common Configuration Attribute types (RFC 7296 3.15.1).
 #define PC_IKE_CFG_INTERNAL_IP4_ADDRESS 1
@@ -266,20 +263,20 @@ enum class IkeCfgType : uint8_t
 #define PC_IKE_CFG_INTERNAL_IP6_SUBNET 15
 
 /** @brief One Configuration Attribute (RFC 7296 3.15.1): a 15-bit type and its value. */
-struct IkeCfgAttr
+typedef struct
 {
     uint16_t type;        ///< attribute type (the reserved high bit is masked off)
     const uint8_t *value; ///< value bytes, or nullptr when @ref value_len is 0 (e.g. an empty request)
     uint16_t value_len;
-};
+} IkeCfgAttr;
 
 /** @brief Iterates the attributes within a Configuration payload's attribute area. */
-struct IkeCfgAttrIter
+typedef struct
 {
     const uint8_t *area;
     size_t len;
     size_t off;
-};
+} IkeCfgAttrIter;
 
 // ── IKE header ──────────────────────────────────────────────────────────────────────────────────
 
@@ -295,13 +292,13 @@ size_t pc_ike_hdr_build(uint8_t *buf, size_t cap, const IkeHeader *h);
  * @return true if at least 28 bytes are present; false otherwise. (The version byte is surfaced in
  *         @p out->version but not rejected, so a caller can decide how to handle a mismatch.)
  */
-bool pc_ike_hdr_parse(const uint8_t *buf, size_t len, IkeHeader *out);
+proto_bool pc_ike_hdr_parse(const uint8_t *buf, size_t len, IkeHeader *out);
 
 /**
  * @brief Patch the 4-byte Length field of an already-built header (bytes 24..27) to @p total_len.
  * @return true if @p buf holds at least a header.
  */
-bool pc_ike_set_length(uint8_t *buf, size_t buf_cap, uint32_t total_len);
+proto_bool pc_ike_set_length(uint8_t *buf, size_t buf_cap, uint32_t total_len);
 
 // ── generic payload chain ─────────────────────────────────────────────────────────────────────
 
@@ -316,15 +313,15 @@ void pc_ike_payload_iter_init(IkePayloadIter *it, IkePayloadType first_type, con
  * @return true if a well-formed payload was produced; false at end of chain or on a malformed length
  *         (payload length < 4 or running past the area).
  */
-bool pc_ike_payload_next(IkePayloadIter *it, IkePayload *out);
+proto_bool pc_ike_payload_next(IkePayloadIter *it, IkePayload *out);
 
 /**
  * @brief Build a raw payload: the 4-byte generic header (@p next_payload + optional @p critical +
  *        length) followed by @p body. Most callers use the typed builders below instead.
  * @return total bytes written (4 + body_len), or 0 on overflow.
  */
-size_t pc_ike_payload_build(uint8_t *buf, size_t cap, IkePayloadType next_payload, bool critical, const uint8_t *body,
-                            size_t body_len);
+size_t pc_ike_payload_build(uint8_t *buf, size_t cap, IkePayloadType next_payload, proto_bool critical,
+                            const uint8_t *body, size_t body_len);
 
 // ── typed payload builders (each writes a full payload incl. the generic header) ──────────────
 
@@ -414,24 +411,25 @@ size_t pc_ike_skf_build(uint8_t *buf, size_t cap, IkePayloadType next_payload, u
  * @param iv_len / @p icv_len  the negotiated transform's sizes, needed to carve the fixed IV and ICV out.
  * @return false on a truncated body or a nonsensical fragment number (0, or > Total).
  */
-bool pc_ike_skf_parse(const uint8_t *body, size_t body_len, uint16_t *frag_num, uint16_t *total, size_t iv_len,
-                      size_t icv_len, const uint8_t **iv, const uint8_t **ct, size_t *ct_len, const uint8_t **icv);
+proto_bool pc_ike_skf_parse(const uint8_t *body, size_t body_len, uint16_t *frag_num, uint16_t *total, size_t iv_len,
+                            size_t icv_len, const uint8_t **iv, const uint8_t **ct, size_t *ct_len,
+                            const uint8_t **icv);
 
 /**
  * @brief Reassembly state for one fragmented message (RFC 7383 §2.5.3). Decrypted plaintext chunks are
  *        staged, in arrival order, into a caller-provided @c pool and concatenated 1..Total on completion.
  */
-struct IkeFragReasm
+typedef struct
 {
-    uint16_t total;                ///< Total Fragments (0 until the first fragment sets it)
-    uint16_t count;                ///< distinct fragments stored so far
-    bool present[PC_IKE_FRAG_MAX]; ///< present[i] = fragment (i+1) stored
-    size_t off[PC_IKE_FRAG_MAX];   ///< pool offset of fragment (i+1)'s chunk
-    size_t len[PC_IKE_FRAG_MAX];   ///< fragment (i+1)'s chunk length
-    uint8_t *pool;                 ///< caller-provided staging buffer
+    uint16_t total;                      ///< Total Fragments (0 until the first fragment sets it)
+    uint16_t count;                      ///< distinct fragments stored so far
+    proto_bool present[PC_IKE_FRAG_MAX]; ///< present[i] = fragment (i+1) stored
+    size_t off[PC_IKE_FRAG_MAX];         ///< pool offset of fragment (i+1)'s chunk
+    size_t len[PC_IKE_FRAG_MAX];         ///< fragment (i+1)'s chunk length
+    uint8_t *pool;                       ///< caller-provided staging buffer
     size_t pool_cap;
     size_t pool_used;
-};
+} IkeFragReasm;
 
 /** @brief Begin reassembly with a caller-owned staging buffer (must outlive the reassembler). */
 void pc_ike_frag_reasm_init(IkeFragReasm *r, uint8_t *pool, size_t pool_cap);
@@ -441,10 +439,10 @@ void pc_ike_frag_reasm_init(IkeFragReasm *r, uint8_t *pool, size_t pool_cap);
  * @return false on a bad fragment number (0 / > Total / > @ref PC_IKE_FRAG_MAX), a Total that disagrees
  *         with an earlier fragment, a duplicate, or a pool overflow. A duplicate is rejected, not merged.
  */
-bool pc_ike_frag_reasm_add(IkeFragReasm *r, uint16_t frag_num, uint16_t total, const uint8_t *chunk, size_t len);
+proto_bool pc_ike_frag_reasm_add(IkeFragReasm *r, uint16_t frag_num, uint16_t total, const uint8_t *chunk, size_t len);
 
 /** @brief True once every one of Total fragments has been staged. */
-bool pc_ike_frag_reasm_complete(const IkeFragReasm *r);
+proto_bool pc_ike_frag_reasm_complete(const IkeFragReasm *r);
 
 /**
  * @brief Concatenate the staged fragments in order into @p out (the reassembled inner-payload plaintext).
@@ -483,9 +481,9 @@ size_t pc_ike_cookie_compute(uint8_t version, const uint8_t *secret, size_t secr
  * The version tag is taken from @p cookie itself, so the caller supplies the @p secret matching that
  * version. @return true iff @p cookie is exactly @ref PC_IKE_COOKIE_LEN bytes and matches.
  */
-bool pc_ike_cookie_verify(const uint8_t *cookie, size_t cookie_len, const uint8_t *secret, size_t secret_len,
-                          const uint8_t *ni, size_t ni_len, const uint8_t *ipi, size_t ipi_len,
-                          const uint8_t spii[PC_IKE_SPI_LEN]);
+proto_bool pc_ike_cookie_verify(const uint8_t *cookie, size_t cookie_len, const uint8_t *secret, size_t secret_len,
+                                const uint8_t *ni, size_t ni_len, const uint8_t *ipi, size_t ipi_len,
+                                const uint8_t spii[PC_IKE_SPI_LEN]);
 
 /** @brief Build a COOKIE Notify payload carrying @p cookie (RFC 7296 §2.6). */
 size_t pc_ike_cookie_notify_build(uint8_t *buf, size_t cap, IkePayloadType next_payload, const uint8_t *cookie,
@@ -494,40 +492,42 @@ size_t pc_ike_cookie_notify_build(uint8_t *buf, size_t cap, IkePayloadType next_
 // ── typed payload parsers (each takes a payload BODY from pc_ike_payload_next) ────────────────
 
 /** @brief Decode a KE body into DH group + key data. */
-bool pc_ike_ke_parse(const uint8_t *body, size_t body_len, uint16_t *dh_group, const uint8_t **data, size_t *data_len);
+proto_bool pc_ike_ke_parse(const uint8_t *body, size_t body_len, uint16_t *dh_group, const uint8_t **data,
+                           size_t *data_len);
 
 /** @brief Decode an Identification body into id type + data. */
-bool pc_ike_id_parse(const uint8_t *body, size_t body_len, IkeIdType *id_type, const uint8_t **data, size_t *data_len);
+proto_bool pc_ike_id_parse(const uint8_t *body, size_t body_len, IkeIdType *id_type, const uint8_t **data,
+                           size_t *data_len);
 
 /** @brief Decode an AUTH body into method + data. */
-bool pc_ike_auth_parse(const uint8_t *body, size_t body_len, IkeAuthMethod *auth_method, const uint8_t **data,
-                       size_t *data_len);
+proto_bool pc_ike_auth_parse(const uint8_t *body, size_t body_len, IkeAuthMethod *auth_method, const uint8_t **data,
+                             size_t *data_len);
 
 /** @brief Decode a Notify body into protocol, type, optional SPI, and notification data. */
-bool pc_ike_notify_parse(const uint8_t *body, size_t body_len, IkeProtocol *protocol_id, uint16_t *notify_type,
-                         const uint8_t **spi, uint8_t *spi_size, const uint8_t **data, size_t *data_len);
+proto_bool pc_ike_notify_parse(const uint8_t *body, size_t body_len, IkeProtocol *protocol_id, uint16_t *notify_type,
+                               const uint8_t **spi, uint8_t *spi_size, const uint8_t **data, size_t *data_len);
 
 /** @brief Decode a Delete body into protocol, SPI size, count, and the SPI list. */
-bool pc_ike_delete_parse(const uint8_t *body, size_t body_len, IkeProtocol *protocol_id, uint8_t *spi_size,
-                         uint16_t *num_spis, const uint8_t **spis);
+proto_bool pc_ike_delete_parse(const uint8_t *body, size_t body_len, IkeProtocol *protocol_id, uint8_t *spi_size,
+                               uint16_t *num_spis, const uint8_t **spis);
 
 /**
  * @brief Slice an SK body into IV / ciphertext / ICV given the negotiated @p iv_len and @p icv_len.
  * @return true if the body is at least @p iv_len + @p icv_len bytes.
  */
-bool pc_ike_sk_parse(const uint8_t *body, size_t body_len, size_t iv_len, size_t icv_len, const uint8_t **iv,
-                     const uint8_t **ciphertext, size_t *ct_len, const uint8_t **icv);
+proto_bool pc_ike_sk_parse(const uint8_t *body, size_t body_len, size_t iv_len, size_t icv_len, const uint8_t **iv,
+                           const uint8_t **ciphertext, size_t *ct_len, const uint8_t **icv);
 
 // ── SA / proposal / transform parsing ─────────────────────────────────────────────────────────
 
 /** @brief Read the first proposal out of an SA payload body. */
-bool pc_ike_sa_first_proposal(const uint8_t *body, size_t body_len, IkeProposalRef *out);
+proto_bool pc_ike_sa_first_proposal(const uint8_t *body, size_t body_len, IkeProposalRef *out);
 
 /** @brief Start iterating the transforms of a parsed proposal. */
 void pc_ike_transform_iter_init(IkeTransformIter *it, const IkeProposalRef *p);
 
 /** @brief Read the next transform (decoding the key-length attribute if present). */
-bool pc_ike_transform_next(IkeTransformIter *it, IkeTransformRef *out);
+proto_bool pc_ike_transform_next(IkeTransformIter *it, IkeTransformRef *out);
 
 // ── traffic selector parsing ──────────────────────────────────────────────────────────────────
 
@@ -535,7 +535,7 @@ bool pc_ike_transform_next(IkeTransformIter *it, IkeTransformRef *out);
 uint8_t pc_ike_ts_count(const uint8_t *body, size_t body_len);
 
 /** @brief Decode selector @p index (0-based) from a TS payload body. */
-bool pc_ike_ts_get(const uint8_t *body, size_t body_len, uint8_t index, IkeTrafficSelector *out);
+proto_bool pc_ike_ts_get(const uint8_t *body, size_t body_len, uint8_t index, IkeTrafficSelector *out);
 
 /**
  * @brief Decode a Configuration payload body into its CFG Type and its attribute area (RFC 7296 3.15).
@@ -543,14 +543,14 @@ bool pc_ike_ts_get(const uint8_t *body, size_t body_len, uint8_t index, IkeTraff
  *        walk them with @ref pc_ike_cp_attr_iter_init + @ref pc_ike_cp_attr_next.
  * @return false on a truncated body.
  */
-bool pc_ike_cp_parse(const uint8_t *body, size_t body_len, IkeCfgType *cfg_type, const uint8_t **attrs,
-                     size_t *attrs_len);
+proto_bool pc_ike_cp_parse(const uint8_t *body, size_t body_len, IkeCfgType *cfg_type, const uint8_t **attrs,
+                           size_t *attrs_len);
 
 /** @brief Begin iterating the attributes returned by @ref pc_ike_cp_parse. */
 void pc_ike_cp_attr_iter_init(IkeCfgAttrIter *it, const uint8_t *attrs, size_t attrs_len);
 
 /** @brief Decode the next Configuration Attribute; false at the end or on a truncated attribute. */
-bool pc_ike_cp_attr_next(IkeCfgAttrIter *it, IkeCfgAttr *out);
+proto_bool pc_ike_cp_attr_next(IkeCfgAttrIter *it, IkeCfgAttr *out);
 
 // ── tier 2: SKEYSEED / SK_* key derivation (RFC 7296 §2.13-2.14) ───────────────────────────────
 //
@@ -567,16 +567,16 @@ bool pc_ike_cp_attr_next(IkeCfgAttrIter *it, IkeCfgAttr *out);
 
 /** @brief Per-key lengths for the SK_* chain (algorithm-dependent; the caller sets them from the
  *  negotiated transforms). Each is in bytes. */
-struct IkeKeyLengths
+typedef struct
 {
     size_t sk_d; ///< SK_d length = the PRF key length (32 for HMAC-SHA2-256).
     size_t sk_a; ///< SK_ai / SK_ar length = the integrity key length (32 for HMAC-SHA2-256-128).
     size_t sk_e; ///< SK_ei / SK_er length = the encryption key (+ any AEAD salt: 32, or 36 for AES-GCM).
     size_t sk_p; ///< SK_pi / SK_pr length = the PRF key length (32).
-};
+} IkeKeyLengths;
 
 /** @brief The seven derived keys (RFC 7296 §2.14). Each key's valid length is the matching field below. */
-struct IkeKeyMaterial
+typedef struct
 {
     uint8_t sk_d[PC_IKE_SK_MAX];
     uint8_t sk_ai[PC_IKE_SK_MAX];
@@ -589,7 +589,7 @@ struct IkeKeyMaterial
     size_t sk_a_len; ///< valid bytes in sk_ai / sk_ar
     size_t sk_e_len; ///< valid bytes in sk_ei / sk_er
     size_t sk_p_len; ///< valid bytes in sk_pi / sk_pr
-};
+} IkeKeyMaterial;
 
 /**
  * @brief prf+ (RFC 7296 §2.13) with HMAC-SHA2-256 as the PRF: expand (@p key, @p seed) into @p out_len
@@ -597,8 +597,8 @@ struct IkeKeyMaterial
  *        T0 is empty.
  * @return false on a null argument or if @p out_len would need more than 255 blocks (the §2.13 cap).
  */
-bool pc_ike_prf_plus(const uint8_t *key, size_t key_len, const uint8_t *seed, size_t seed_len, uint8_t *out,
-                     size_t out_len);
+proto_bool pc_ike_prf_plus(const uint8_t *key, size_t key_len, const uint8_t *seed, size_t seed_len, uint8_t *out,
+                           size_t out_len);
 
 /**
  * @brief Derive SKEYSEED and the seven SK_* keys (RFC 7296 §2.14) for an initial IKE SA:
@@ -609,9 +609,9 @@ bool pc_ike_prf_plus(const uint8_t *key, size_t key_len, const uint8_t *seed, si
  * @param lens           per-key lengths (each 1..PC_IKE_SK_MAX; each nonce 1..PC_IKE_NONCE_MAX).
  * @return false on a null argument or an out-of-range length.
  */
-bool pc_ike_derive_keys(const uint8_t *dh_secret, size_t dh_len, const uint8_t *ni, size_t ni_len, const uint8_t *nr,
-                        size_t nr_len, const uint8_t *spi_i, const uint8_t *spi_r, const IkeKeyLengths *lens,
-                        IkeKeyMaterial *out);
+proto_bool pc_ike_derive_keys(const uint8_t *dh_secret, size_t dh_len, const uint8_t *ni, size_t ni_len,
+                              const uint8_t *nr, size_t nr_len, const uint8_t *spi_i, const uint8_t *spi_r,
+                              const IkeKeyLengths *lens, IkeKeyMaterial *out);
 
 // ── tier 2: SK-payload AEAD (AES-256-GCM-16, RFC 5282 in RFC 7296 §3.14) ────────────────────────
 //
@@ -637,18 +637,18 @@ bool pc_ike_derive_keys(const uint8_t *dh_secret, size_t dh_len, const uint8_t *
  * @param key  32-byte AES-256 key = SK_ei (initiator->responder) or SK_er (responder->initiator).
  * @return false only on a null argument.
  */
-bool pc_ike_sk_aead_seal(const uint8_t key[PC_IKE_AEAD_KEY_LEN], const uint8_t salt[PC_IKE_GCM_SALT_LEN],
-                         const uint8_t iv[PC_IKE_GCM_IV_LEN], const uint8_t *aad, size_t aad_len, const uint8_t *pt,
-                         size_t pt_len, uint8_t *out);
+proto_bool pc_ike_sk_aead_seal(const uint8_t key[PC_IKE_AEAD_KEY_LEN], const uint8_t salt[PC_IKE_GCM_SALT_LEN],
+                               const uint8_t iv[PC_IKE_GCM_IV_LEN], const uint8_t *aad, size_t aad_len,
+                               const uint8_t *pt, size_t pt_len, uint8_t *out);
 
 /**
  * @brief Open an AES-256-GCM SK payload: verify @p tag over @p aad || @p ct in constant time and, only on
  *        success, decrypt @p ct into @p out (@p out may alias @p ct). The nonce is @p salt || @p iv.
  * @return true iff the tag is valid (a forged / tampered message returns false and writes no plaintext).
  */
-bool pc_ike_sk_aead_open(const uint8_t key[PC_IKE_AEAD_KEY_LEN], const uint8_t salt[PC_IKE_GCM_SALT_LEN],
-                         const uint8_t iv[PC_IKE_GCM_IV_LEN], const uint8_t *aad, size_t aad_len, const uint8_t *ct,
-                         size_t ct_len, const uint8_t tag[PC_IKE_AEAD_ICV_LEN], uint8_t *out);
+proto_bool pc_ike_sk_aead_open(const uint8_t key[PC_IKE_AEAD_KEY_LEN], const uint8_t salt[PC_IKE_GCM_SALT_LEN],
+                               const uint8_t iv[PC_IKE_GCM_IV_LEN], const uint8_t *aad, size_t aad_len,
+                               const uint8_t *ct, size_t ct_len, const uint8_t tag[PC_IKE_AEAD_ICV_LEN], uint8_t *out);
 
 // ── tier 2: Diffie-Hellman shared secret (the KE payload's g^ir, RFC 7296 §2.7) ─────────────────
 //
@@ -701,9 +701,9 @@ size_t pc_ike_dh_compute(uint16_t group, const uint8_t *our_priv, size_t priv_le
  * @param id_body / id_body_len  the signing side's ID payload body (RestOfIDPayload).
  * @return false on a null argument; true on success (@p out filled).
  */
-bool pc_ike_auth_psk(const uint8_t *psk, size_t psk_len, const uint8_t *real_msg, size_t real_len,
-                     const uint8_t *peer_nonce, size_t nonce_len, const uint8_t *sk_p, size_t sk_p_len,
-                     const uint8_t *id_body, size_t id_body_len, uint8_t out[PC_IKE_AUTH_LEN]);
+proto_bool pc_ike_auth_psk(const uint8_t *psk, size_t psk_len, const uint8_t *real_msg, size_t real_len,
+                           const uint8_t *peer_nonce, size_t nonce_len, const uint8_t *sk_p, size_t sk_p_len,
+                           const uint8_t *id_body, size_t id_body_len, uint8_t out[PC_IKE_AUTH_LEN]);
 
 // ── tier 2: IKE_SA_INIT message assembly (RFC 7296 §1.2) ───────────────────────────────────────
 //
@@ -712,18 +712,18 @@ bool pc_ike_auth_psk(const uint8_t *psk, size_t psk_len, const uint8_t *real_msg
 // machine works in messages, not loose payloads. One proposal per SA (the common client shape).
 
 /** @brief The salient parsed contents of an IKE_SA_INIT message; slices point into the message buffer. */
-struct IkeSaInitMsg
+typedef struct
 {
     uint8_t init_spi[PC_IKE_SPI_LEN];
     uint8_t resp_spi[PC_IKE_SPI_LEN];
-    bool is_response;        ///< true if the RESPONSE flag was set
+    proto_bool is_response;  ///< true if the RESPONSE flag was set
     IkeProposalRef proposal; ///< the first proposal of SAi1 / SAr1
     uint16_t dh_group;       ///< the KE payload's D-H group
     const uint8_t *ke_data;  ///< KE key-exchange data
     size_t ke_len;           ///< KE data length
     const uint8_t *nonce;    ///< Ni / Nr data
     size_t nonce_len;        ///< nonce length
-};
+} IkeSaInitMsg;
 
 /**
  * @brief Build a complete IKE_SA_INIT message: HDR | SA(one proposal) | KE | Nonce, with the payload
@@ -737,7 +737,7 @@ struct IkeSaInitMsg
  * @return total message length written, or 0 on overflow / a bad argument.
  */
 size_t pc_ike_sa_init_build(uint8_t *buf, size_t cap, const uint8_t init_spi[PC_IKE_SPI_LEN],
-                            const uint8_t resp_spi[PC_IKE_SPI_LEN], uint32_t msg_id, bool is_response,
+                            const uint8_t resp_spi[PC_IKE_SPI_LEN], uint32_t msg_id, proto_bool is_response,
                             uint8_t proposal_num, const IkeTransform *transforms, uint8_t num_transforms,
                             uint16_t dh_group, const uint8_t *ke_data, size_t ke_len, const uint8_t *nonce,
                             size_t nonce_len);
@@ -746,7 +746,7 @@ size_t pc_ike_sa_init_build(uint8_t *buf, size_t cap, const uint8_t init_spi[PC_
  * @brief Parse an IKE_SA_INIT message into @p out (SPIs, first proposal, KE group + data, nonce).
  * @return true iff the header is IKE_SA_INIT and the SA, KE, and Nonce payloads are all present + valid.
  */
-bool pc_ike_sa_init_parse(const uint8_t *msg, size_t len, IkeSaInitMsg *out);
+proto_bool pc_ike_sa_init_parse(const uint8_t *msg, size_t len, IkeSaInitMsg *out);
 
 // ── tier 2: IKE_AUTH encrypted-message assembly (RFC 7296 §3.14, RFC 5282) ─────────────────────
 //
@@ -768,7 +768,7 @@ bool pc_ike_sa_init_parse(const uint8_t *msg, size_t len, IkeSaInitMsg *out);
  * @return total message length, or 0 on overflow / a bad argument.
  */
 size_t pc_ike_auth_msg_build(uint8_t *buf, size_t cap, const uint8_t init_spi[PC_IKE_SPI_LEN],
-                             const uint8_t resp_spi[PC_IKE_SPI_LEN], uint32_t msg_id, bool is_response,
+                             const uint8_t resp_spi[PC_IKE_SPI_LEN], uint32_t msg_id, proto_bool is_response,
                              IkePayloadType first_inner_type, const uint8_t *inner, size_t inner_len,
                              const uint8_t key[PC_IKE_AEAD_KEY_LEN], const uint8_t salt[PC_IKE_GCM_SALT_LEN],
                              const uint8_t iv[PC_IKE_GCM_IV_LEN]);
@@ -781,9 +781,9 @@ size_t pc_ike_auth_msg_build(uint8_t *buf, size_t cap, const uint8_t init_spi[PC
  * chain inside @p msg and @p first_inner_type is its first payload's type.
  * @return true iff the header is SK-framed and the tag verifies (a forged message returns false).
  */
-bool pc_ike_auth_msg_open(uint8_t *msg, size_t len, const uint8_t key[PC_IKE_AEAD_KEY_LEN],
-                          const uint8_t salt[PC_IKE_GCM_SALT_LEN], IkePayloadType *first_inner_type,
-                          const uint8_t **inner_out, size_t *inner_len_out);
+proto_bool pc_ike_auth_msg_open(uint8_t *msg, size_t len, const uint8_t key[PC_IKE_AEAD_KEY_LEN],
+                                const uint8_t salt[PC_IKE_GCM_SALT_LEN], IkePayloadType *first_inner_type,
+                                const uint8_t **inner_out, size_t *inner_len_out);
 
 // ── tier 2: IKE_AUTH ECDSA-P256 (certificate) authentication (RFC 7296 §2.15, RFC 7427) ─────────
 //
@@ -812,19 +812,21 @@ size_t pc_ike_signed_octets(uint8_t *scratch, size_t cap, const uint8_t *real, s
  * @brief Produce an ECDSA-P256 (SHA-256) AUTH signature over the signed octets. @p scratch holds the
  *        assembled octets (see pc_ike_signed_octets). @return true on success (@p sig filled).
  */
-bool pc_ike_auth_sign_ecdsa_p256(uint8_t sig[PC_IKE_ECDSA_P256_SIG_LEN], const uint8_t priv[PC_IKE_ECDSA_P256_PRIV_LEN],
-                                 uint8_t *scratch, size_t scratch_cap, const uint8_t *real, size_t real_len,
-                                 const uint8_t *nonce, size_t nonce_len, const uint8_t *sk_p, size_t sk_p_len,
-                                 const uint8_t *id_body, size_t id_body_len);
+proto_bool pc_ike_auth_sign_ecdsa_p256(uint8_t sig[PC_IKE_ECDSA_P256_SIG_LEN],
+                                       const uint8_t priv[PC_IKE_ECDSA_P256_PRIV_LEN], uint8_t *scratch,
+                                       size_t scratch_cap, const uint8_t *real, size_t real_len, const uint8_t *nonce,
+                                       size_t nonce_len, const uint8_t *sk_p, size_t sk_p_len, const uint8_t *id_body,
+                                       size_t id_body_len);
 
 /**
  * @brief Verify a peer's ECDSA-P256 (SHA-256) AUTH signature over the signed octets against its public
  *        point @p pub. @return true iff the signature is valid (a forged AUTH / wrong key returns false).
  */
-bool pc_ike_auth_verify_ecdsa_p256(const uint8_t pub[PC_IKE_ECDSA_P256_PUB_LEN],
-                                   const uint8_t sig[PC_IKE_ECDSA_P256_SIG_LEN], uint8_t *scratch, size_t scratch_cap,
-                                   const uint8_t *real, size_t real_len, const uint8_t *nonce, size_t nonce_len,
-                                   const uint8_t *sk_p, size_t sk_p_len, const uint8_t *id_body, size_t id_body_len);
+proto_bool pc_ike_auth_verify_ecdsa_p256(const uint8_t pub[PC_IKE_ECDSA_P256_PUB_LEN],
+                                         const uint8_t sig[PC_IKE_ECDSA_P256_SIG_LEN], uint8_t *scratch,
+                                         size_t scratch_cap, const uint8_t *real, size_t real_len, const uint8_t *nonce,
+                                         size_t nonce_len, const uint8_t *sk_p, size_t sk_p_len, const uint8_t *id_body,
+                                         size_t id_body_len);
 
 // ── tier 2: IKE SA context + key material from a completed IKE_SA_INIT (RFC 7296 §2.14, §2.17) ──
 //
@@ -834,24 +836,24 @@ bool pc_ike_auth_verify_ecdsa_p256(const uint8_t pub[PC_IKE_ECDSA_P256_PUB_LEN],
 // machine holds one `IkeSa` per session.
 
 /** @brief The negotiated IKE cipher suite (the transforms chosen in the IKE_SA_INIT SA payload). */
-struct IkeSuite
+typedef struct
 {
     uint16_t encr;       ///< encryption transform id (e.g. IKE_ENCR_AES_GCM_16).
     int32_t encr_keylen; ///< encryption key length in BITS (e.g. 256), or < 0 for a fixed-size cipher.
     uint16_t prf;        ///< PRF transform id (IKE_PRF_HMAC_SHA2_256).
     uint16_t integ;      ///< integrity transform id, or 0 for an AEAD cipher (no separate integrity key).
     uint16_t dh;         ///< D-H group id (IKE_DH_CURVE25519).
-};
+} IkeSuite;
 
 /** @brief One IKE SA's session state after IKE_SA_INIT: identity, negotiated suite, and derived keys. */
-struct IkeSa
+typedef struct
 {
     uint8_t init_spi[PC_IKE_SPI_LEN];
     uint8_t resp_spi[PC_IKE_SPI_LEN];
-    bool is_initiator;   ///< our role in this SA
-    IkeSuite suite;      ///< the negotiated cipher suite
-    IkeKeyMaterial keys; ///< the derived SK_d / ai / ar / ei / er / pi / pr (filled by keys_from_init)
-};
+    proto_bool is_initiator; ///< our role in this SA
+    IkeSuite suite;          ///< the negotiated cipher suite
+    IkeKeyMaterial keys;     ///< the derived SK_d / ai / ar / ei / er / pi / pr (filled by keys_from_init)
+} IkeSa;
 
 /**
  * @brief Map a negotiated @p suite to the SK_* per-key lengths (RFC 7296 §2.14 + the cipher's key size).
@@ -860,7 +862,7 @@ struct IkeSa
  * AEAD cipher), and AES-GCM-16 (encr key + a 4-byte salt) or a plain block cipher (encr key only).
  * @return false on an unsupported suite (a PRF other than HMAC-SHA2-256, or a bad key length).
  */
-bool pc_ike_suite_keylengths(const IkeSuite *suite, IkeKeyLengths *out);
+proto_bool pc_ike_suite_keylengths(const IkeSuite *suite, IkeKeyLengths *out);
 
 /**
  * @brief Derive @p sa->keys from a completed IKE_SA_INIT: compute g^ir = D-H(@p our_dh_priv, @p peer_ke)
@@ -868,8 +870,9 @@ bool pc_ike_suite_keylengths(const IkeSuite *suite, IkeKeyLengths *out);
  *        suite's key lengths. @p sa->init_spi / resp_spi / suite must already be set.
  * @return false on an unsupported suite / group or a bad length; the two peers derive identical keys.
  */
-bool pc_ike_sa_keys_from_init(IkeSa *sa, const uint8_t *our_dh_priv, size_t our_dh_priv_len, const uint8_t *peer_ke,
-                              size_t peer_ke_len, const uint8_t *ni, size_t ni_len, const uint8_t *nr, size_t nr_len);
+proto_bool pc_ike_sa_keys_from_init(IkeSa *sa, const uint8_t *our_dh_priv, size_t our_dh_priv_len,
+                                    const uint8_t *peer_ke, size_t peer_ke_len, const uint8_t *ni, size_t ni_len,
+                                    const uint8_t *nr, size_t nr_len);
 
 /**
  * @brief Derive the NEW IKE SA keys when rekeying an IKE SA (RFC 7296 §2.18):
@@ -879,9 +882,10 @@ bool pc_ike_sa_keys_from_init(IkeSa *sa, const uint8_t *our_dh_priv, size_t our_
  * @param sk_d_old  the current IKE SA's SK_d. @param dh_secret the new g^ir (X25519). @param spi_i / spi_r
  *        the new SA's SPIs. @return false on a null arg or an out-of-range length.
  */
-bool pc_ike_rekey_derive_keys(const uint8_t *sk_d_old, size_t sk_d_old_len, const uint8_t *dh_secret, size_t dh_len,
-                              const uint8_t *ni, size_t ni_len, const uint8_t *nr, size_t nr_len, const uint8_t *spi_i,
-                              const uint8_t *spi_r, const IkeKeyLengths *lens, IkeKeyMaterial *out);
+proto_bool pc_ike_rekey_derive_keys(const uint8_t *sk_d_old, size_t sk_d_old_len, const uint8_t *dh_secret,
+                                    size_t dh_len, const uint8_t *ni, size_t ni_len, const uint8_t *nr, size_t nr_len,
+                                    const uint8_t *spi_i, const uint8_t *spi_r, const IkeKeyLengths *lens,
+                                    IkeKeyMaterial *out);
 
 // ── tier 2: initiator IKE_SA_INIT handshake driver (RFC 7296 §1.2) ─────────────────────────────
 //
@@ -895,7 +899,7 @@ bool pc_ike_rekey_derive_keys(const uint8_t *sk_d_old, size_t sk_d_old_len, cons
 /** @brief Largest IKE_SA_INIT message the handshake stores as its RealMessage (for the AUTH octets). */
 #define PC_IKE_MSG_MAX 640
 
-enum class IkeState : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     IKE_ST_INIT = 0,     ///< nothing sent yet
     IKE_ST_SA_INIT_SENT, ///< IKE_SA_INIT request emitted, awaiting the response
@@ -903,10 +907,10 @@ enum class IkeState : uint8_t
     IKE_ST_AUTH_SENT,    ///< IKE_AUTH request emitted, awaiting the response
     IKE_ST_ESTABLISHED,  ///< responder's IKE_AUTH verified; the IKE SA is up
     IKE_ST_FAILED,       ///< a received message was rejected
-};
+} IkeState;
 
 /** @brief Initiator handshake context: the SA under construction plus what the next step needs. */
-struct IkeHandshake
+typedef struct
 {
     IkeSa sa;                               ///< the SA being established (keys filled after SA_INIT)
     IkeState state;                         ///< @ref IkeState
@@ -919,7 +923,7 @@ struct IkeHandshake
     uint16_t init_msg_len;
     uint8_t resp_msg[PC_IKE_MSG_MAX]; ///< the responder's IKE_SA_INIT = RealMessage2 (verifies its AUTH)
     uint16_t resp_msg_len;
-};
+} IkeHandshake;
 
 /**
  * @brief Begin the initiator handshake: fill @p hs and emit the IKE_SA_INIT request into @p out.
@@ -941,7 +945,7 @@ size_t pc_ike_initiator_start(IkeHandshake *hs, const uint8_t our_spi[PC_IKE_SPI
  * @return true on success (keys derived), false if the message is malformed, echoes the wrong initiator
  *         SPI, or the key derivation fails.
  */
-bool pc_ike_initiator_on_sa_init(IkeHandshake *hs, const uint8_t *resp, size_t resp_len);
+proto_bool pc_ike_initiator_on_sa_init(IkeHandshake *hs, const uint8_t *resp, size_t resp_len);
 
 /**
  * @brief Emit the initiator's IKE_AUTH request (PSK auth) into @p out: SK{ IDi | AUTH }.
@@ -963,8 +967,8 @@ size_t pc_ike_initiator_build_auth_psk(IkeHandshake *hs, IkeIdType idi_type, con
  *        decrypt / parse / verify failure.
  * @return true iff the responder authenticated (the IKE SA is now up).
  */
-bool pc_ike_initiator_on_auth_psk(IkeHandshake *hs, const uint8_t *resp, size_t resp_len, const uint8_t *psk,
-                                  size_t psk_len);
+proto_bool pc_ike_initiator_on_auth_psk(IkeHandshake *hs, const uint8_t *resp, size_t resp_len, const uint8_t *psk,
+                                        size_t psk_len);
 
 // ── tier 2: responder IKE_SA_INIT handshake driver (RFC 7296 §1.2) ─────────────────────────────
 //
@@ -1012,16 +1016,16 @@ size_t pc_ike_responder_on_auth_psk(IkeHandshake *hs, const uint8_t *req, size_t
  * @brief Build an SK-encrypted INFORMATIONAL message we are SENDING over @p sa (an empty inner is DPD).
  * @return the message length, or 0 on a bad argument / overflow.
  */
-size_t pc_ike_informational_build(const IkeSa *sa, bool is_response, uint32_t msg_id, IkePayloadType first_inner_type,
-                                  const uint8_t *inner, size_t inner_len, const uint8_t iv[PC_IKE_GCM_IV_LEN],
-                                  uint8_t *out, size_t out_cap);
+size_t pc_ike_informational_build(const IkeSa *sa, proto_bool is_response, uint32_t msg_id,
+                                  IkePayloadType first_inner_type, const uint8_t *inner, size_t inner_len,
+                                  const uint8_t iv[PC_IKE_GCM_IV_LEN], uint8_t *out, size_t out_cap);
 
 /**
  * @brief Verify + decrypt a received INFORMATIONAL @p msg in place (keyed by the peer's egress direction),
  *        exposing the inner payload chain. @return true iff the ICV verifies.
  */
-bool pc_ike_informational_open(const IkeSa *sa, uint8_t *msg, size_t len, IkePayloadType *first_inner_type,
-                               const uint8_t **inner_out, size_t *inner_len_out);
+proto_bool pc_ike_informational_open(const IkeSa *sa, uint8_t *msg, size_t len, IkePayloadType *first_inner_type,
+                                     const uint8_t **inner_out, size_t *inner_len_out);
 
 // ── tier 2: CREATE_CHILD_SA exchange (RFC 7296 §1.3, §2.17) ─────────────────────────────────────
 //
@@ -1030,9 +1034,9 @@ bool pc_ike_informational_open(const IkeSa *sa, uint8_t *msg, size_t len, IkePay
 // The Child SA's ESP keys come from the §2.17 key schedule below.
 
 /** @brief Build an SK-encrypted CREATE_CHILD_SA message we are SENDING (open it with pc_ike_informational_open). */
-size_t pc_ike_create_child_sa_build(const IkeSa *sa, bool is_response, uint32_t msg_id, IkePayloadType first_inner_type,
-                                    const uint8_t *inner, size_t inner_len, const uint8_t iv[PC_IKE_GCM_IV_LEN],
-                                    uint8_t *out, size_t out_cap);
+size_t pc_ike_create_child_sa_build(const IkeSa *sa, proto_bool is_response, uint32_t msg_id,
+                                    IkePayloadType first_inner_type, const uint8_t *inner, size_t inner_len,
+                                    const uint8_t iv[PC_IKE_GCM_IV_LEN], uint8_t *out, size_t out_cap);
 
 /**
  * @brief Derive Child SA keying material: KEYMAT = prf+(SK_d, [g^ir |] Ni | Nr) (RFC 7296 §2.17), written
@@ -1041,9 +1045,9 @@ size_t pc_ike_create_child_sa_build(const IkeSa *sa, bool is_response, uint32_t 
  *        key length needed.
  * @return false on a null arg, an out-of-range length, or more than 255 prf+ blocks.
  */
-bool pc_ike_child_keymat(const uint8_t *sk_d, size_t sk_d_len, const uint8_t *dh_secret, size_t dh_len,
-                         const uint8_t *ni, size_t ni_len, const uint8_t *nr, size_t nr_len, uint8_t *out,
-                         size_t out_len);
+proto_bool pc_ike_child_keymat(const uint8_t *sk_d, size_t sk_d_len, const uint8_t *dh_secret, size_t dh_len,
+                               const uint8_t *ni, size_t ni_len, const uint8_t *nr, size_t nr_len, uint8_t *out,
+                               size_t out_len);
 
 /**
  * @brief Verify a peer's RSA-2048 (PKCS#1 v1.5, SHA-256) AUTH signature over the signed octets against
@@ -1053,10 +1057,10 @@ bool pc_ike_child_keymat(const uint8_t *sk_d, size_t sk_d_len, const uint8_t *dh
  * case of authenticating a PEER whose certificate is RSA. @p scratch holds the assembled signed octets.
  * @return true iff the signature is valid.
  */
-bool pc_ike_auth_verify_rsa_sha256(const uint8_t *n_be, const uint8_t *e_be4, const uint8_t *sig, size_t sig_len,
-                                   uint8_t *scratch, size_t scratch_cap, const uint8_t *real, size_t real_len,
-                                   const uint8_t *nonce, size_t nonce_len, const uint8_t *sk_p, size_t sk_p_len,
-                                   const uint8_t *id_body, size_t id_body_len);
+proto_bool pc_ike_auth_verify_rsa_sha256(const uint8_t *n_be, const uint8_t *e_be4, const uint8_t *sig, size_t sig_len,
+                                         uint8_t *scratch, size_t scratch_cap, const uint8_t *real, size_t real_len,
+                                         const uint8_t *nonce, size_t nonce_len, const uint8_t *sk_p, size_t sk_p_len,
+                                         const uint8_t *id_body, size_t id_body_len);
 
 #endif // PC_ENABLE_IKEV2
 

@@ -23,32 +23,29 @@
 
 #if PC_ENABLE_ROAMING
 
-#include <stddef.h>
-#include <stdint.h>
-
 /** @brief A candidate access point (from an 802.11k neighbor report or a scan). */
-struct pc_roam_neighbor
+typedef struct
 {
     uint8_t bssid[6]; ///< the AP's BSSID
     uint8_t channel;  ///< operating channel
     int8_t rssi_dbm;  ///< measured signal strength (dBm; more negative is weaker)
-};
+} pc_roam_neighbor;
 
 /** @brief An 802.11v BSS-Transition-Management hint from the network. */
-struct pc_roam_btm
+typedef struct
 {
-    bool present;           ///< a BTM request was received this cycle
-    bool disassoc_imminent; ///< the AP will disassociate us shortly (we must leave)
-    bool has_preferred;     ///< @ref preferred_bssid names a specific target
+    proto_bool present;           ///< a BTM request was received this cycle
+    proto_bool disassoc_imminent; ///< the AP will disassociate us shortly (we must leave)
+    proto_bool has_preferred;     ///< @ref preferred_bssid names a specific target
     uint8_t preferred_bssid[6];
-};
+} pc_roam_btm;
 
 /** @brief Roaming policy thresholds (caller-supplied, so no global tuning knob). */
-struct pc_roam_policy
+typedef struct
 {
     int8_t roam_rssi_threshold_dbm; ///< only consider an RSSI-driven roam when the link is at/below this
     uint8_t hysteresis_db;          ///< a candidate must beat the current link by this margin to be worth it
-};
+} pc_roam_policy;
 
 /** @brief Why the decision was made. */
 enum pc_roam_reason
@@ -60,13 +57,13 @@ enum pc_roam_reason
 };
 
 /** @brief The roaming decision. */
-struct pc_roam_decision
+typedef struct
 {
-    bool roam;               ///< true to transition to @ref target_bssid
+    proto_bool roam;         ///< true to transition to @ref target_bssid
     uint8_t target_bssid[6]; ///< the AP to roam to (valid only when @ref roam)
     uint8_t target_channel;  ///< that AP's channel
     pc_roam_reason reason;   ///< why (see @ref pc_roam_reason)
-};
+} pc_roam_decision;
 
 /**
  * @brief Decide whether and where to roam (pure, stateless).
@@ -122,7 +119,7 @@ uint8_t pc_roam_parse_neighbor_report(const uint8_t *elems, size_t len, pc_roam_
  * result feeds @ref pc_roam_decide.
  * @return true iff @p frame is a well-formed BTM Request; false otherwise (@p out is cleared).
  */
-bool pc_roam_parse_btm_request(const uint8_t *frame, size_t len, pc_roam_btm *out);
+proto_bool pc_roam_parse_btm_request(const uint8_t *frame, size_t len, pc_roam_btm *out);
 
 #endif // PC_ENABLE_ROAMING
 #endif // PROTOCORE_ROAMING_H

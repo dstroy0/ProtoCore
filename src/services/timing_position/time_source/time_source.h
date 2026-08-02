@@ -26,8 +26,6 @@
 #define PROTOCORE_TIME_SOURCE_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 /**
  * @brief A time source: returns the current Unix epoch seconds for this source,
@@ -44,7 +42,7 @@ typedef uint32_t (*TimeSourceFn)(void);
  * @param fn        the source callback.
  * @return true if registered; false if @p fn is null or the table is full.
  */
-bool pc_time_source_add(const char *name, uint8_t priority, TimeSourceFn fn);
+proto_bool pc_time_source_add(const char *name, uint8_t priority, TimeSourceFn fn);
 
 /**
  * @brief Current best time.

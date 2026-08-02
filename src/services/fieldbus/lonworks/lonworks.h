@@ -23,18 +23,13 @@
 #define PROTOCORE_LONWORKS_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_LONWORKS
 
 // LonTalk NV message codes + selector limit: wire values, so integer constants in a struct.
-struct Lon
-{
-    static constexpr uint16_t LON_MSG_NV_UPDATE = 0x80;     ///< network-variable update message code (base).
-    static constexpr uint16_t LON_MSG_NV_POLL = 0x81;       ///< network-variable poll (request).
-    static constexpr uint16_t LON_NV_SELECTOR_MAX = 0x3FFF; ///< the NV selector is 14 bits.
-};
+#define E 0x80   ///< network-variable update message code (base).
+#define L 0x81   ///< network-variable poll (request).
+#define X 0x3FFF ///< the NV selector is 14 bits.
 
 /**
  * @brief Build a LonTalk NV-update application PDU: [msg-code][selector:2][value...].
@@ -48,16 +43,16 @@ size_t pc_lon_build_nv(uint8_t msg_code, uint16_t selector, const uint8_t *value
                        size_t cap);
 
 /** @brief A parsed LonTalk NV PDU (value points into the input). */
-struct LonNv
+typedef struct
 {
     uint8_t msg_code;
     uint16_t selector;
     const uint8_t *value;
     size_t value_len;
-};
+} LonNv;
 
 /** @brief Parse a LonTalk NV PDU. @return true if @p len >= 3. */
-bool pc_lon_parse_nv(const uint8_t *pdu, size_t len, LonNv *out);
+proto_bool pc_lon_parse_nv(const uint8_t *pdu, size_t len, LonNv *out);
 
 /** @brief Encode a SNVT_temp value (degrees C) as the 2-byte big-endian fixed-point (0.01 K, +273.15). */
 void pc_lon_snvt_temp_encode(double celsius, uint8_t out[2]);

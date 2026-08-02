@@ -117,6 +117,9 @@ from halves and is slower than the width it decomposes into"
  * cannot reach a header-only library at all, since `#pragma GCC optimize` binds only to functions
  * parsed after it and the bodies arrive with the include.
  *
+ * board_drivers/board_profiles/pc_platform.h states the same definition and is reached above, so
+ * this is the fallback for a translation unit that arrives without it.
+ *
  * Leaves only. On a composite, forcing the inline trades one call for a copy of the whole body at
  * every site, which is a size decision the compiler is better placed to make.
  */
@@ -5299,7 +5302,7 @@ from halves and is slower than the width it decomposes into"
 /**
  * @brief Secure SMTP: run the mail client over client-side TLS (needs PC_ENABLE_TLS).
  *
- * Covers both SmtpSecurity::SMTP_TLS (implicit, port 465) and SmtpSecurity::SMTP_STARTTLS (the
+ * Covers both SMTP_TLS (implicit, port 465) and SMTP_STARTTLS (the
  * in-band upgrade on the submission port, 587). Separate from PC_ENABLE_SMTP because the plain
  * codec needs neither the TLS stack nor the client-session singleton.
  */
@@ -5608,7 +5611,7 @@ from halves and is slower than the width it decomposes into"
  * is recycled for the next request on the same socket: HTTP/1.1 keeps the
  * connection open unless the client sends `Connection: close`; HTTP/1.0 closes
  * unless the client sends `Connection: keep-alive`. Error responses (400/413/414
- * and any non-ParseState::PARSE_COMPLETE path) always close, since the next request boundary
+ * and any non-PARSE_COMPLETE path) always close, since the next request boundary
  * is unknown. Idle keep-alive connections are still reclaimed by the existing
  * conn_timeout sweep, and each connection serves at most
  * PC_KEEPALIVE_MAX_REQUESTS requests before a deliberate close.
@@ -6729,7 +6732,7 @@ static_assert(sizeof(pc_iface) == 1, "pc_iface must stay one byte: it is a per-s
 // connection's arena overflows the link. Reject MAX_TLS_CONNS > 1 with a clear
 // message unless the arena is offloaded to PSRAM or the build was consciously sized -
 // far friendlier than the raw "region `dram0_0_seg' overflowed" linker error.
-#if defined(ARDUINO) && (MAX_TLS_CONNS > 1) && !PC_TLS_ARENA_IN_PSRAM && !PC_TLS_ACK_MULTI_CONN_DRAM
+#if PROTOCORE_HOT && (MAX_TLS_CONNS > 1) && !PC_TLS_ARENA_IN_PSRAM && !PC_TLS_ACK_MULTI_CONN_DRAM
 #error                                                                                                                 \
     "ProtoCore: MAX_TLS_CONNS > 1 - the static TLS arena will not fit the ~122 KB internal dram0_0_seg. Pick a path (docs/KNOWN_LIMITATIONS.md): set PC_TLS_ARENA_IN_PSRAM=1 on a PSRAM board, OR shrink records via a custom ESP-IDF build (CONFIG_MBEDTLS_SSL_IN/OUT_CONTENT_LEN + PC_TLS_MAX_FRAG_LEN), OR reclaim internal DRAM; then set PC_TLS_ACK_MULTI_CONN_DRAM=1 to confirm."
 #endif
@@ -6737,7 +6740,7 @@ static_assert(sizeof(pc_iface) == 1, "pc_iface must stay one byte: it is a per-s
 
 // HTTP/2's per-connection engine pool (~MAX_CONNS x 28 KB) cannot fit internal DRAM alongside
 // TLS, so it must live in PSRAM. Fail fast with guidance instead of the raw linker overflow.
-#if PC_ENABLE_HTTP2 && defined(ARDUINO) && !PC_H2_POOL_IN_PSRAM
+#if PC_ENABLE_HTTP2 && PROTOCORE_HOT && !PC_H2_POOL_IN_PSRAM
 #error                                                                                                                 \
     "ProtoCore: PC_ENABLE_HTTP2 needs PSRAM - the HTTP/2 engine pool (~MAX_CONNS x 28 KB) overflows the ~122 KB internal dram0_0_seg alongside TLS. Set PC_H2_POOL_IN_PSRAM=1 on a PSRAM board (S3 / P4 / WROVER) built with CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY=y (tools/psram/README.md)."
 #endif
@@ -6966,7 +6969,7 @@ static_assert(sizeof(pc_iface) == 1, "pc_iface must stay one byte: it is a per-s
 // (PC_SSH_ZLIB_IN_PSRAM, a PSRAM board built with the BSS-in-PSRAM core), or acknowledge the
 // internal-DRAM cost (PC_SSH_ZLIB_ACK_DRAM, fine for MAX_SSH_CONNS=1 without TLS on a roomy S3 / P4).
 // Fail fast with guidance instead of a raw linker overflow.
-#if defined(ARDUINO) && !PC_SSH_ZLIB_IN_PSRAM && !PC_SSH_ZLIB_ACK_DRAM
+#if PROTOCORE_HOT && !PC_SSH_ZLIB_IN_PSRAM && !PC_SSH_ZLIB_ACK_DRAM
 #error                                                                                                                 \
     "ProtoCore: PC_ENABLE_SSH_ZLIB - the per-connection compression pool is ~80 KB (s2c deflate ~48 KB + the c2s 32 KB inflate window). Set PC_SSH_ZLIB_IN_PSRAM=1 on a PSRAM board (S3 / P4 / WROVER, core built with CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY=y, tools/psram/README.md), OR set PC_SSH_ZLIB_ACK_DRAM=1 to accept the internal-DRAM cost (fits MAX_SSH_CONNS=1 without TLS on a roomy chip)."
 #endif

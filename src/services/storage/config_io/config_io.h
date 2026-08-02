@@ -20,24 +20,22 @@
 #define PROTOCORE_CONFIG_IO_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_CONFIG_IO
 
 /** @brief Type of a config field (selects the typed get/set used). */
-enum class pc_cfg_type : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     PC_CFG_STR = 0, ///< null-terminated string.
     PC_CFG_U32 = 1, ///< unsigned 32-bit integer (serialized as decimal).
-};
+} pc_cfg_type;
 
 /** @brief One field in an export/restore schema. */
-struct pc_cfg_field
+typedef struct
 {
     const char *key;  ///< config-store key (<= 15 chars).
     pc_cfg_type type; ///< the field's value type.
-};
+} pc_cfg_field;
 
 /**
  * @brief Export the schema's current values from namespace @p ns as `key=value`

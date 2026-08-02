@@ -20,24 +20,24 @@ void pc_ssh_flow_init(SshFlow *f, uint32_t local_window, uint32_t peer_window, u
     f->peer_max_pkt = peer_max_pkt;
 }
 
-bool pc_ssh_flow_recv_take(SshFlow *f, uint32_t n)
+proto_bool pc_ssh_flow_recv_take(SshFlow *f, uint32_t n)
 {
     if (n > f->local_window)
     {
-        return false; // peer overran the advertised window (RFC 4254 sec 5.2)
+        return PROTO_FALSE; // peer overran the advertised window (RFC 4254 sec 5.2)
     }
     f->local_window -= n;
-    return true;
+    return PROTO_TRUE;
 }
 
-bool pc_ssh_flow_replenish_due(const SshFlow *f, uint32_t *add)
+proto_bool pc_ssh_flow_replenish_due(const SshFlow *f, uint32_t *add)
 {
     if (f->local_window >= f->local_max / 2)
     {
-        return false;
+        return PROTO_FALSE;
     }
     *add = f->local_max - f->local_window;
-    return true;
+    return PROTO_TRUE;
 }
 
 void pc_ssh_flow_local_credit(SshFlow *f, uint32_t add)
@@ -45,7 +45,7 @@ void pc_ssh_flow_local_credit(SshFlow *f, uint32_t add)
     f->local_window += add;
 }
 
-bool pc_ssh_flow_send_allows(const SshFlow *f, size_t len)
+proto_bool pc_ssh_flow_send_allows(const SshFlow *f, size_t len)
 {
     return len <= f->peer_window && len <= f->peer_max_pkt;
 }

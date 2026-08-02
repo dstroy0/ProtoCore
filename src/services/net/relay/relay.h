@@ -31,16 +31,13 @@
 
 #if PC_ENABLE_RELAY
 
-#include <stddef.h>
-#include <stdint.h>
-
 /** @brief pc_relay_step() outcome. */
-enum class pc_relay_status : int32_t
+typedef enum PROTO_ENUM_PACKED
 {
     PC_RELAY_ERROR = -1,  ///< a send/recv seam reported an error; the caller should close both sides
     PC_RELAY_RUNNING = 0, ///< still relaying (keep stepping)
     PC_RELAY_DONE = 1,    ///< both directions finished (EOF + drained); the caller closes both sides
-};
+} pc_relay_status;
 
 /**
  * @brief Read up to @p cap bytes from the peer into @p buf.
@@ -60,16 +57,16 @@ using pc_relay_send_fn = int (*)(void *ctx, const uint8_t *buf, size_t len);
 using pc_relay_shutdown_fn = void (*)(void *ctx);
 
 /** @brief One end of a relay (a socket, behind seams). @p shutdown may be null. */
-struct pc_relay_end
+typedef struct
 {
     pc_relay_recv_fn recv;
     pc_relay_send_fn send;
     pc_relay_shutdown_fn shutdown;
     void *ctx;
-};
+} pc_relay_end;
 
 /** @brief A relay between two ends. Owns the per-direction carry buffers; zero heap. */
-struct pc_relay
+typedef struct
 {
     pc_relay_end a;
     pc_relay_end b;
@@ -79,15 +76,15 @@ struct pc_relay
     uint16_t a2b_off; ///< how many of those already sent
     uint16_t b2a_len;
     uint16_t b2a_off;
-    bool a_eof;         ///< the recv side of a has hit EOF
-    bool b_eof;         ///< the recv side of b has hit EOF
-    bool a2b_done;      ///< the a->b direction has finished (EOF + drained)
-    bool b2a_done;      ///< the b->a direction has finished (EOF + drained)
-    bool a_shut_sent;   ///< the shutdown seam of a has been called
-    bool b_shut_sent;   ///< the shutdown seam of b has been called
-    uint32_t bytes_a2b; ///< bytes relayed a->b (observability)
-    uint32_t bytes_b2a; ///< bytes relayed b->a (observability)
-};
+    proto_bool a_eof;       ///< the recv side of a has hit EOF
+    proto_bool b_eof;       ///< the recv side of b has hit EOF
+    proto_bool a2b_done;    ///< the a->b direction has finished (EOF + drained)
+    proto_bool b2a_done;    ///< the b->a direction has finished (EOF + drained)
+    proto_bool a_shut_sent; ///< the shutdown seam of a has been called
+    proto_bool b_shut_sent; ///< the shutdown seam of b has been called
+    uint32_t bytes_a2b;     ///< bytes relayed a->b (observability)
+    uint32_t bytes_b2a;     ///< bytes relayed b->a (observability)
+} pc_relay;
 
 /**
  * @brief Initialize a relay between @p client (the inbound connection) and @p origin (the outbound
@@ -112,7 +109,7 @@ pc_relay_status pc_relay_step(pc_relay *r);
  *
  * @param origin false for the client (inbound) side, true for the origin (outbound) side.
  */
-void pc_relay_note_eof(pc_relay *r, bool origin);
+void pc_relay_note_eof(pc_relay *r, proto_bool origin);
 
 #endif // PC_ENABLE_RELAY
 

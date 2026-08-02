@@ -33,24 +33,18 @@
 
 #if PC_ENABLE_ZWAVE
 
-#include <stddef.h>
-#include <stdint.h>
-
 /** @brief Z-Wave Serial API control bytes / frame markers. */
-struct Zwave
-{
-    static constexpr uint8_t ZWAVE_SOF = 0x01; ///< start of a data frame
-    static constexpr uint8_t ZWAVE_ACK = 0x06; ///< frame acknowledged
-    static constexpr uint8_t ZWAVE_NAK = 0x15; ///< frame rejected (checksum)
-    static constexpr uint8_t ZWAVE_CAN = 0x18; ///< frame cancelled (retransmit)
-};
+#define F 0x01 ///< start of a data frame
+#define K 0x06 ///< frame acknowledged
+#define K 0x15 ///< frame rejected (checksum)
+#define N 0x18 ///< frame cancelled (retransmit)
 
 /** @brief Data-frame type. */
-enum class pc_zwave_type : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     ZWAVE_REQ = 0x00, ///< request
     ZWAVE_RES = 0x01, ///< response
-};
+} pc_zwave_type;
 
 /**
  * @brief Assemble a data frame carrying @p type + @p cmd + @p data into @p out.
@@ -75,11 +69,11 @@ int pc_zwave_parse_frame(const uint8_t *raw, uint16_t len, uint8_t *type, uint8_
                          uint8_t *pdata_len);
 
 /** @brief True if @p b is the ACK control byte. */
-bool pc_zwave_is_ack(uint8_t b);
+proto_bool pc_zwave_is_ack(uint8_t b);
 /** @brief True if @p b is the NAK control byte. */
-bool pc_zwave_is_nak(uint8_t b);
+proto_bool pc_zwave_is_nak(uint8_t b);
 /** @brief True if @p b is the CAN control byte. */
-bool pc_zwave_is_can(uint8_t b);
+proto_bool pc_zwave_is_can(uint8_t b);
 
 /** @brief Write the single ACK byte into @p out. @return 1, or 0 if @p cap < 1. */
 uint16_t pc_zwave_build_ack(uint8_t *out, uint16_t cap);

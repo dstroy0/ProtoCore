@@ -20,28 +20,26 @@
 #define PROTOCORE_GPIO_MAP_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_GPIO_MAP
 
 /** @brief Configured direction of a mapped pin (how the panel renders / drives it). */
-enum class pc_gpio_dir : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     PC_GPIO_IN = 0,      ///< read-only input.
     PC_GPIO_IN_PULLUP,   ///< input with internal pull-up.
     PC_GPIO_IN_PULLDOWN, ///< input with internal pull-down.
     PC_GPIO_OUT,         ///< output (drivable from the panel).
-};
+} pc_gpio_dir;
 
 /** @brief One mapped GPIO pin. */
-struct pc_gpio_pin
+typedef struct
 {
     uint8_t pin;       ///< GPIO number.
     const char *label; ///< human label (null-terminated, caller-owned).
     pc_gpio_dir dir;   ///< pin direction.
     uint8_t level;     ///< live level (0 / 1); filled by pc_gpio_read.
-};
+} pc_gpio_pin;
 
 // ---------------------------------------------------------------------------
 // Host-testable core
@@ -60,10 +58,10 @@ int32_t pc_gpio_json(const pc_gpio_pin *pins, uint8_t count, char *out, uint32_t
  * @brief Parse a control body of the form `pin=<n>&level=<0|1>` (form-encoded).
  * @return true if both fields parsed into @p pin / @p level.
  */
-bool pc_gpio_parse_set(const char *body, size_t len, uint8_t *pin, uint8_t *level);
+proto_bool pc_gpio_parse_set(const char *body, size_t len, uint8_t *pin, uint8_t *level);
 
 /** @brief True if @p pin is a drivable output in the table (guards a control POST). */
-bool pc_gpio_is_output(const pc_gpio_pin *pins, uint8_t count, uint8_t pin);
+proto_bool pc_gpio_is_output(const pc_gpio_pin *pins, uint8_t count, uint8_t pin);
 
 // ---------------------------------------------------------------------------
 // ESP32 integration (no-ops on host builds)
@@ -80,7 +78,7 @@ void pc_gpio_write(uint8_t pin, uint8_t level);
 
 /**
  * @brief Serve the GPIO map at @p path: GET returns the JSON, POST drives an
- *        output (body `pin=<n>&level=<0|1>`, only pins marked pc_gpio_dir::PC_GPIO_OUT).
+ *        output (body `pin=<n>&level=<0|1>`, only pins marked PC_GPIO_OUT).
  *        The pin table is caller-owned and must outlive the server.
  */
 void pc_gpio_map_begin(const char *path, pc_gpio_pin *pins, uint8_t count);

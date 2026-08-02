@@ -5,8 +5,7 @@
 // MD4 (RFC 1320 App A.5), HMAC-MD5 (RFC 2104 / RFC 2202). MD5 + HMAC expected
 // values are also cross-checked against python hashlib; MD4 against the RFC text.
 
-#include "crypto/crypto_scratch.h" // crypto_work (opaque MdCtx storage)
-#include "crypto/hash/md.h"        // MD4/MD5/HMAC-MD5
+#include "crypto/hash/md.h" // MD4/MD5/HMAC-MD5
 #include "crypto/hash/sha256.h"
 #include "crypto/hash/sha512.h"
 #include "crypto/kdf/kdf.h"

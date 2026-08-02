@@ -29,31 +29,28 @@
 
 #if PC_ENABLE_PROXY_PROTOCOL
 
-#include <stddef.h>
-#include <stdint.h>
-
 #define PROXY_V2_SIG_LEN 12         ///< v2 signature length
 #define PROXY_V2_VER_CMD_PROXY 0x21 ///< version 2 | PROXY command
 #define PROXY_V2_VER_CMD_LOCAL 0x20 ///< version 2 | LOCAL command
 #define PROXY_V2_FAM_TCP4 0x11      ///< AF_INET | STREAM (TCP over IPv4)
 
 /** @brief The decoded proxied connection endpoints (IPv4, host byte order). */
-struct ProxyInfo
+typedef struct
 {
-    uint8_t version;   ///< 1 or 2
-    bool has_addr;     ///< true when TCP/IPv4 addresses were decoded
-    uint32_t src_addr; ///< real client IPv4 (host order)
-    uint32_t dst_addr; ///< proxied destination IPv4
+    uint8_t version;     ///< 1 or 2
+    proto_bool has_addr; ///< true when TCP/IPv4 addresses were decoded
+    uint32_t src_addr;   ///< real client IPv4 (host order)
+    uint32_t dst_addr;   ///< proxied destination IPv4
     uint16_t src_port;
     uint16_t dst_port;
-};
+} ProxyInfo;
 
 /**
  * @brief Detect + parse a PROXY header (v1 or v2) at the head of [buf, buf+len).
  * @param consumed receives the header length so the caller can skip it before the stream.
  * @return true if a complete v1/v2 header was parsed; false if absent or not fully buffered.
  */
-bool proxy_parse(const uint8_t *buf, size_t len, ProxyInfo *out, size_t *consumed);
+proto_bool proxy_parse(const uint8_t *buf, size_t len, ProxyInfo *out, size_t *consumed);
 
 /** @brief Build a v1 (text) TCP4 header. Returns bytes written (excluding NUL), or 0. */
 size_t proxy_v1_build(char *buf, size_t cap, uint32_t src_addr, uint32_t dst_addr, uint16_t src_port,

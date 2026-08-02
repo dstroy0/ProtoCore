@@ -31,16 +31,16 @@
  *
  * **State machine**
  * ```
- * WsParseState::WS_HEADER1       -- read FIN + opcode byte
- * WsParseState::WS_HEADER2       -- read MASK + 7-bit payload length
- * WsParseState::WS_LEN16_HI      -- read extended 16-bit length high byte
- * WsParseState::WS_LEN16_LO      -- read extended 16-bit length low byte
- * WsParseState::WS_LEN64         -- consume 8-byte 64-bit length (reject; too large)
- * WsParseState::WS_MASK0..3      -- read 4-byte masking key
- * WsParseState::WS_PAYLOAD       -- accumulate payload bytes (unmasked)
- * WsParseState::WS_FRAME_READY   -- complete frame waiting for dispatch
- * WsParseState::WS_CLOSED        -- connection closed; slot may be recycled
- * WsParseState::WS_ERROR         -- protocol error; close frame sent
+ * WS_HEADER1       -- read FIN + opcode byte
+ * WS_HEADER2       -- read MASK + 7-bit payload length
+ * WS_LEN16_HI      -- read extended 16-bit length high byte
+ * WS_LEN16_LO      -- read extended 16-bit length low byte
+ * WS_LEN64         -- consume 8-byte 64-bit length (reject; too large)
+ * WS_MASK0..3      -- read 4-byte masking key
+ * WS_PAYLOAD       -- accumulate payload bytes (unmasked)
+ * WS_FRAME_READY   -- complete frame waiting for dispatch
+ * WS_CLOSED        -- connection closed; slot may be recycled
+ * WS_ERROR         -- protocol error; close frame sent
  * ```
  *
  * **Limitations**
@@ -92,7 +92,7 @@
 // ---------------------------------------------------------------------------
 
 /** @brief WebSocket frame opcodes. */
-enum class WsOpcode : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     WS_OP_CONTINUATION = 0x0, ///< Continuation frame (data-message fragment; reassembled into buf).
     WS_OP_TEXT = 0x1,         ///< UTF-8 text payload.
@@ -100,10 +100,10 @@ enum class WsOpcode : uint8_t
     WS_OP_CLOSE = 0x8,        ///< Connection close.
     WS_OP_PING = 0x9,         ///< Ping (auto-ponged by the library).
     WS_OP_PONG = 0xA          ///< Pong (echoed ping; ignored by library).
-};
+} WsOpcode;
 
 /** @brief WebSocket close status codes (RFC 6455 §7.4.1). */
-enum class WsCloseCode : uint16_t
+typedef enum PROTO_ENUM_PACKED
 {
     WS_CLOSE_NORMAL = 1000,          ///< Normal closure.
     WS_CLOSE_GOING_AWAY = 1001,      ///< Endpoint going away.
@@ -111,14 +111,14 @@ enum class WsCloseCode : uint16_t
     WS_CLOSE_UNSUPPORTED = 1003,     ///< Received a data type the endpoint cannot accept (RFC 6455).
     WS_CLOSE_INVALID_PAYLOAD = 1007, ///< Text message that is not valid UTF-8 (RFC 6455 8.1).
     WS_CLOSE_TOO_BIG = 1009          ///< Payload too large for WS_FRAME_SIZE.
-};
+} WsCloseCode;
 
 // ---------------------------------------------------------------------------
 // Frame parser states
 // ---------------------------------------------------------------------------
 
 /** @brief States of the WebSocket frame parser. */
-enum class WsParseState : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     WS_HEADER1,     ///< Awaiting first header byte (FIN, RSV, opcode).
     WS_HEADER2,     ///< Awaiting second header byte (MASK, 7-bit length).
@@ -133,7 +133,7 @@ enum class WsParseState : uint8_t
     WS_FRAME_READY, ///< Complete frame ready for dispatch.
     WS_CLOSED,      ///< Connection closed; slot may be recycled.
     WS_ERROR        ///< Protocol error; close frame has been queued.
-};
+} WsParseState;
 
 // ---------------------------------------------------------------------------
 // Per-connection WebSocket state
@@ -145,16 +145,16 @@ enum class WsParseState : uint8_t
  * Allocated when an HTTP upgrade handshake succeeds.  slot_id ties this
  * entry back to conn_pool[] and the ring buffer.
  */
-struct WsConn
+typedef struct
 {
-    uint8_t ws_id;   ///< Index into ws_pool[] (set at init).
-    uint8_t slot_id; ///< Owning TCP slot in conn_pool[].
-    bool active;     ///< True when this entry is in use.
+    uint8_t ws_id;     ///< Index into ws_pool[] (set at init).
+    uint8_t slot_id;   ///< Owning TCP slot in conn_pool[].
+    proto_bool active; ///< True when this entry is in use.
 
     WsParseState parse_state; ///< Current frame parser state.
     WsOpcode opcode;          ///< Opcode of the frame being parsed.
-    bool fin;                 ///< FIN bit of the frame being parsed.
-    bool masked;              ///< True if client sent a masking key.
+    proto_bool fin;           ///< FIN bit of the frame being parsed.
+    proto_bool masked;        ///< True if client sent a masking key.
 
     uint8_t mask_key[4];            ///< Client masking key.
     uint32_t payload_len;           ///< Expected payload byte count (current frame).
@@ -166,16 +166,16 @@ struct WsConn
     // frames (first text/binary with FIN=0, then continuation frames). Control
     // frames may be interleaved and use a separate buffer so they never clobber
     // the partially-assembled data message.
-    bool fragmenting;         ///< True between a non-FIN data frame and its FIN.
+    proto_bool fragmenting;   ///< True between a non-FIN data frame and its FIN.
     WsOpcode msg_opcode;      ///< Opcode of the data message being assembled.
     uint32_t msg_len;         ///< Bytes assembled so far across all fragments.
     uint8_t ctl_buf[125 + 1]; ///< Control-frame payload (ping/pong/close), null-terminated.
 
 #if PC_ENABLE_WS_DEFLATE
-    bool pmd;            ///< permessage-deflate negotiated on this connection (RFC 7692).
-    bool msg_compressed; ///< Current data message arrived compressed (RSV1 on its first frame).
+    proto_bool pmd;            ///< permessage-deflate negotiated on this connection (RFC 7692).
+    proto_bool msg_compressed; ///< Current data message arrived compressed (RSV1 on its first frame).
 #endif
-};
+} WsConn;
 
 /** @brief Pool of WebSocket connection state, one per MAX_WS_CONNS. */
 extern WsConn ws_pool[MAX_WS_CONNS];
@@ -193,7 +193,7 @@ void ws_init();
 
 /// @brief True if @p ws_id is a valid, in-use WebSocket slot. Use this instead of reaching into
 ///        ws_pool[ws_id].active from another module.
-bool ws_active(uint8_t ws_id);
+proto_bool ws_active(uint8_t ws_id);
 
 /// @brief The NUL-terminated reassembled message payload for @p ws_id, or nullptr if the slot is
 ///        out of range / inactive. Use this instead of reaching into ws_pool[ws_id].buf.
@@ -225,7 +225,7 @@ void ws_free(uint8_t slot_id);
  * @brief Drain the ring buffer for slot_id and feed bytes to the WS parser.
  *
  * Stops when the ring buffer is empty or the parser reaches a terminal state
- * (WsParseState::WS_FRAME_READY, WsParseState::WS_CLOSED, WsParseState::WS_ERROR).
+ * (WS_FRAME_READY, WS_CLOSED, WS_ERROR).
  *
  * @param ws  WebSocket connection to drain into.
  */
@@ -237,7 +237,7 @@ void ws_parse(WsConn *ws);
  * The per-byte core shared by ws_parse() (which reads the plaintext rx ring) and
  * the TLS receive path (which decrypts ciphertext and feeds the plaintext here).
  * Callers must stop feeding once parse_state reaches a terminal state
- * (WsParseState::WS_FRAME_READY / WsParseState::WS_CLOSED / WsParseState::WS_ERROR) and dispatch/reset before
+ * (WS_FRAME_READY / WS_CLOSED / WS_ERROR) and dispatch/reset before
  * continuing.
  *
  * @param ws    WebSocket connection.
@@ -246,7 +246,7 @@ void ws_parse(WsConn *ws);
 void ws_feed_byte(WsConn *ws, uint8_t byte);
 
 /**
- * @brief Reset the frame parser back to WsParseState::WS_HEADER1, ready for the next frame.
+ * @brief Reset the frame parser back to WS_HEADER1, ready for the next frame.
  *
  * Does not change ws->active or ws->slot_id.
  *
@@ -262,12 +262,12 @@ void ws_reset_frame(WsConn *ws);
  * responsible for flushing afterwards (pc_conn_flush()).
  *
  * @param ws       WebSocket connection.
- * @param opcode   Frame opcode (WsOpcode::WS_OP_TEXT, WsOpcode::WS_OP_BINARY, WsOpcode::WS_OP_PONG, etc.).
+ * @param opcode   Frame opcode (WS_OP_TEXT, WS_OP_BINARY, WS_OP_PONG, etc.).
  * @param payload  Payload bytes (may be nullptr for zero-length frames).
  * @param len      Payload length in bytes.
  * @return true on success, false if the TCP slot is not active.
  */
-bool ws_send_frame(WsConn *ws, WsOpcode opcode, const uint8_t *payload, uint16_t len);
+proto_bool ws_send_frame(WsConn *ws, WsOpcode opcode, const uint8_t *payload, uint16_t len);
 
 /**
  * @brief Set the outbound fragmentation size (RFC 6455 sec 5.4), in payload bytes; 0 = off.
@@ -278,10 +278,10 @@ bool ws_send_frame(WsConn *ws, WsOpcode opcode, const uint8_t *payload, uint16_t
 void ws_set_frag_size(uint16_t bytes);
 
 /**
- * @brief Send a Close frame and mark the slot WsParseState::WS_CLOSED.
+ * @brief Send a Close frame and mark the slot WS_CLOSED.
  *
  * @param ws    WebSocket connection.
- * @param code  Close status code (e.g. WsCloseCode::WS_CLOSE_NORMAL).
+ * @param code  Close status code (e.g. WS_CLOSE_NORMAL).
  */
 void ws_close(WsConn *ws, WsCloseCode code);
 

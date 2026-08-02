@@ -13,9 +13,8 @@
 
 #if PC_ENABLE_SHT3X
 
-#if defined(ARDUINO)
+#if PROTOCORE_HOT
 #include "services/peripherals/i2c.h"
-#include <Arduino.h>
 #include <Wire.h>
 #endif
 uint8_t pc_sht3x_crc8(const uint8_t *data, size_t len)
@@ -38,11 +37,11 @@ int32_t pc_sht3x_rh_mpct(uint16_t raw)
     return v > 100000 ? 100000 : v;
 }
 
-bool pc_sht3x_parse(const uint8_t resp[6], int32_t *temp_mc, int32_t *rh_mpct)
+proto_bool pc_sht3x_parse(const uint8_t resp[6], int32_t *temp_mc, int32_t *rh_mpct)
 {
     if (!resp || pc_sht3x_crc8(resp, 2) != resp[2] || pc_sht3x_crc8(resp + 3, 2) != resp[5])
     {
-        return false;
+        return PROTO_FALSE;
     }
     uint16_t traw = (uint16_t)(((uint16_t)resp[0] << 8) | resp[1]);
     uint16_t hraw = (uint16_t)(((uint16_t)resp[3] << 8) | resp[4]);
@@ -54,53 +53,50 @@ bool pc_sht3x_parse(const uint8_t resp[6], int32_t *temp_mc, int32_t *rh_mpct)
     {
         *rh_mpct = pc_sht3x_rh_mpct(hraw);
     }
-    return true;
+    return PROTO_TRUE;
 }
 
 // ---------------------------------------------------------------------------
 // I2C binding
 // ---------------------------------------------------------------------------
 
-#if defined(ARDUINO)
+#if PROTOCORE_HOT
 
-namespace
-{
 // All SHT3x I2C-binding state, owned by one instance (internal linkage): the device address,
 // so it is one named owner, unreachable from any other translation unit.
-struct Sht3xCtx
+typedef struct
 {
     uint8_t addr = PC_SHT3X_I2C_ADDR;
-};
-Sht3xCtx s_sht;
+} Sht3xCtx;
+static Sht3xCtx s_sht;
 
-bool send_cmd(uint16_t cmd)
+static proto_bool send_cmd(uint16_t cmd)
 {
     Wire.beginTransmission(s_sht.addr);
     Wire.write((uint8_t)(cmd >> 8));
     Wire.write((uint8_t)(cmd & 0xFF));
     return Wire.endTransmission() == 0;
 }
-} // namespace
 
-bool pc_sht3x_begin(uint8_t addr)
+proto_bool pc_sht3x_begin(uint8_t addr)
 {
     s_sht.addr = addr ? addr : (uint8_t)PC_SHT3X_I2C_ADDR;
     pc_i2c_begin();
-    bool ok = send_cmd(SHT3X_CMD_SOFT_RESET);
+    proto_bool ok = send_cmd(SHT3X_CMD_SOFT_RESET);
     pcdelay(2); // soft reset completes in < 1.5 ms
     return ok;
 }
 
-bool pc_sht3x_read(int32_t *temp_mc, int32_t *rh_mpct)
+proto_bool pc_sht3x_read(int32_t *temp_mc, int32_t *rh_mpct)
 {
     if (!send_cmd(SHT3X_CMD_SINGLE_HIGH))
     {
-        return false;
+        return PROTO_FALSE;
     }
     pcdelay(20); // a high-repeatability measurement completes in < 15 ms
     if (Wire.requestFrom((int)s_sht.addr, 6) != 6)
     {
-        return false;
+        return PROTO_FALSE;
     }
     uint8_t r[6];
     for (int i = 0; i < 6; i++)
@@ -112,15 +108,15 @@ bool pc_sht3x_read(int32_t *temp_mc, int32_t *rh_mpct)
 
 #else // host build: no I2C. The CRC + conversion above are host-tested.
 
-bool pc_sht3x_begin(uint8_t)
+proto_bool pc_sht3x_begin(uint8_t)
 {
-    return false;
+    return PROTO_FALSE;
 }
-bool pc_sht3x_read(int32_t *, int32_t *)
+proto_bool pc_sht3x_read(int32_t *, int32_t *)
 {
-    return false;
+    return PROTO_FALSE;
 }
 
-#endif // ARDUINO
+#endif // PROTOCORE_HOT
 
 #endif // PC_ENABLE_SHT3X

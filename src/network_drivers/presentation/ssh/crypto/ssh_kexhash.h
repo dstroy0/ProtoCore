@@ -19,20 +19,19 @@
 
 #include "crypto/hash/sha256.h"
 #include "crypto/hash/sha512.h"
-#include <stddef.h>
-#include <stdint.h>
+#include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
 
 #define SSH_KEXHASH_MAX_LEN 64 ///< longest exchange-hash / session_id (SHA-512)
 
 /** @brief A key-exchange digest bound to one of the SSH KEX hashes (SHA-256 or SHA-512). */
 typedef struct
 {
-    bool is512;
+    proto_bool is512;
     pc_sha256_ctx c256;
     pc_sha512_ctx c512;
 } SshKexHash;
 
-static inline void ssh_kexhash_init(SshKexHash *h, bool is512)
+static inline void ssh_kexhash_init(SshKexHash *h, proto_bool is512)
 {
     h->is512 = is512;
     if (is512)
@@ -70,7 +69,7 @@ static inline size_t ssh_kexhash_final(SshKexHash *h, uint8_t out[SSH_KEXHASH_MA
 }
 
 /** @brief The digest length for a given hash selection (32 or 64). */
-static inline size_t ssh_kexhash_len(bool is512)
+static inline size_t ssh_kexhash_len(proto_bool is512)
 {
     return is512 ? PC_SHA512_DIGEST_LEN : PC_SHA256_DIGEST_LEN;
 }

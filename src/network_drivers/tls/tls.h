@@ -33,10 +33,8 @@
 #define PROTOCORE_TLS_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
-#if PC_ENABLE_TLS && defined(ARDUINO)
+#if PC_ENABLE_TLS && PROTOCORE_HOT
 
 /**
  * @brief Initialize the global TLS engine: static pool, RNG, server cert/key.
@@ -51,10 +49,10 @@
  * @param key_len   Length incl. the trailing NUL for PEM.
  * @return true on success; false if the pool/cert/key setup failed.
  */
-bool pc_tls_global_init(const uint8_t *cert, size_t cert_len, const uint8_t *key, size_t key_len);
+proto_bool pc_tls_global_init(const uint8_t *cert, size_t cert_len, const uint8_t *key, size_t key_len);
 
 /** @brief True once pc_tls_global_init() has succeeded. */
-bool pc_tls_ready();
+proto_bool pc_tls_ready();
 
 /**
  * @brief The ALPN protocol negotiated for @p slot ("h2" or "http/1.1"), or nullptr if the client
@@ -63,7 +61,7 @@ bool pc_tls_ready();
 const char *pc_tls_alpn(uint8_t slot);
 
 /** @brief Begin a TLS session on connection @p slot (sets up ssl_context + BIO). */
-bool pc_tls_conn_begin(uint8_t slot);
+proto_bool pc_tls_conn_begin(uint8_t slot);
 
 /**
  * @brief Advance the TLS handshake for @p slot.
@@ -76,19 +74,19 @@ int pc_tls_handshake(uint8_t slot);
 // Handshake-bench context (see tls.cpp): the last completed handshake's device-CPU time (summed over the
 // pumped mbedtls_ssl_handshake calls, so network waits between pumps are excluded) and wall time. The rig
 // firmware watches count and prints both. Compiled out unless PC_TLS_HS_BENCH is defined.
-struct TlsHsBenchCtx
+typedef struct
 {
     volatile long long last_cpu_us;
     volatile long long last_wall_us;
     volatile unsigned count;
     volatile long long pumps[8]; // per-pump device CPU (us) for pumps > 2 ms - localizes the cost to a flight
     volatile int n_pumps;
-};
+} TlsHsBenchCtx;
 extern TlsHsBenchCtx pc_tls_hs_bench;
 #endif
 
 /** @brief True once the handshake on @p slot has completed. */
-bool pc_tls_established(uint8_t slot);
+proto_bool pc_tls_established(uint8_t slot);
 
 /**
  * @brief Read decrypted application data from @p slot.
@@ -135,7 +133,7 @@ typedef int (*pc_tls_bio_recv_fn)(void *ctx, unsigned char *buf, size_t len);
  * @return true on success; false if the engine is not initialized or the CA
  *         failed to parse.
  */
-bool pc_tls_set_client_ca(const uint8_t *ca, size_t ca_len);
+proto_bool pc_tls_set_client_ca(const uint8_t *ca, size_t ca_len);
 
 /**
  * @brief Copy the established peer's certificate subject DN into @p out.
@@ -196,11 +194,11 @@ void pc_tls_client_clear_verify();
 // receive ring and write it to the socket.
 
 /** @brief Begin a client TLS session to @p host over the given BIO. @return false on setup failure. */
-bool pc_tls_client_session_begin(const char *host, pc_tls_bio_send_fn send_fn, pc_tls_bio_recv_fn recv_fn);
+proto_bool pc_tls_client_session_begin(const char *host, pc_tls_bio_send_fn send_fn, pc_tls_bio_recv_fn recv_fn);
 
 /** @brief True while a client TLS session is live (begun, not yet ended). The session is a singleton shared
  * across all client-TLS users, so a would-be caller checks this to avoid tearing down an active session. */
-bool pc_tls_client_session_active();
+proto_bool pc_tls_client_session_active();
 
 /** @brief Advance the handshake. @return 1 established (CA/pin checked), 0 pending, <0 fatal. */
 int pc_tls_client_session_handshake();
@@ -227,25 +225,25 @@ void pc_tls_client_session_forget_session();
 
 #else // stubs (TLS disabled or native build)
 
-static inline bool pc_tls_global_init(const uint8_t *, size_t, const uint8_t *, size_t)
+static inline proto_bool pc_tls_global_init(const uint8_t *, size_t, const uint8_t *, size_t)
 {
-    return false;
+    return PROTO_FALSE;
 }
-static inline bool pc_tls_ready()
+static inline proto_bool pc_tls_ready()
 {
-    return false;
+    return PROTO_FALSE;
 }
-static inline bool pc_tls_conn_begin(uint8_t)
+static inline proto_bool pc_tls_conn_begin(uint8_t)
 {
-    return false;
+    return PROTO_FALSE;
 }
 static inline int pc_tls_handshake(uint8_t)
 {
     return -1;
 }
-static inline bool pc_tls_established(uint8_t)
+static inline proto_bool pc_tls_established(uint8_t)
 {
-    return false;
+    return PROTO_FALSE;
 }
 static inline int pc_tls_read(uint8_t, uint8_t *, size_t)
 {
@@ -267,9 +265,9 @@ static inline size_t pc_tls_arena_peak()
 }
 
 #if PC_ENABLE_MTLS
-static inline bool pc_tls_set_client_ca(const uint8_t *, size_t)
+static inline proto_bool pc_tls_set_client_ca(const uint8_t *, size_t)
 {
-    return false;
+    return PROTO_FALSE;
 }
 static inline int pc_tls_peer_subject(uint8_t, char *, size_t)
 {
@@ -289,13 +287,13 @@ static inline void pc_tls_client_set_pin(const uint8_t *)
 static inline void pc_tls_client_clear_verify()
 {
 }
-static inline bool pc_tls_client_session_begin(const char *, pc_tls_bio_send_fn, pc_tls_bio_recv_fn)
+static inline proto_bool pc_tls_client_session_begin(const char *, pc_tls_bio_send_fn, pc_tls_bio_recv_fn)
 {
-    return false;
+    return PROTO_FALSE;
 }
-static inline bool pc_tls_client_session_active()
+static inline proto_bool pc_tls_client_session_active()
 {
-    return false;
+    return PROTO_FALSE;
 }
 static inline int pc_tls_client_session_handshake()
 {
@@ -325,6 +323,6 @@ static inline int pc_tls_client_run(const char *, const uint8_t *, size_t, uint8
 }
 #endif // PC_ENABLE_HTTP_CLIENT_TLS
 
-#endif // PC_ENABLE_TLS && ARDUINO
+#endif // PC_ENABLE_TLS && PROTOCORE_HOT
 
 #endif // PROTOCORE_TLS_H

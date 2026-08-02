@@ -23,8 +23,6 @@
 #if PC_ENABLE_EDGE_CACHE
 
 #include "services/web/edge_cache/edge_cache.h" // EdgeCacheStats
-#include <stddef.h>
-#include <stdint.h>
 
 /**
  * @brief Enable the edge cache on @p server: register the cache middleware + the async-fetch poll hook,
@@ -40,7 +38,7 @@ void pc_edge_cache_enable(void);
  * @return false if the map table is full, an argument overflows, or the origin URL is https (TLS off) /
  * malformed.
  */
-bool pc_edge_cache_map(const char *path_prefix, const char *origin_base_url);
+proto_bool pc_edge_cache_map(const char *path_prefix, const char *origin_base_url);
 
 #if PC_ENABLE_EDGE_ORIGIN_TLS
 /**
@@ -77,7 +75,7 @@ void pc_edge_cache_bind_sd(pc_dbm *dbm);
  * hitting the origin. @p host is a sibling's address, @p port the port it serves PROTO_MESH on. @return false
  * if the peer table is full or @p host is empty / too long. Pull-only: no push, no invalidation.
  */
-bool pc_edge_cache_add_peer(const char *host, uint16_t port);
+proto_bool pc_edge_cache_add_peer(const char *host, uint16_t port);
 
 /**
  * @brief Serve sibling queries: register the PROTO_MESH handler so this node answers a peer's content-addressed
@@ -91,7 +89,7 @@ void pc_edge_cache_mesh_serve(void);
 void pc_edge_cache_reset(void);
 
 /** @brief Invalidate a single canonical key. @return true if an entry was purged. */
-bool pc_edge_cache_purge(const char *canonical_key);
+proto_bool pc_edge_cache_purge(const char *canonical_key);
 
 /** @brief Invalidate every entry whose request path begins with @p prefix. @return the count purged. */
 uint32_t pc_edge_cache_purge_prefix(const char *path_prefix);

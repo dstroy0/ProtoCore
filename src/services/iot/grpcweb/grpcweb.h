@@ -31,9 +31,6 @@
 
 #if PC_ENABLE_GRPC_WEB
 
-#include <stddef.h>
-#include <stdint.h>
-
 #define GRPCWEB_FLAG_COMPRESSED 0x01
 #define GRPCWEB_FLAG_TRAILER 0x80
 #define GRPCWEB_PREFIX_LEN 5
@@ -42,7 +39,7 @@
 size_t pc_grpcweb_frame(uint8_t *buf, size_t cap, uint8_t flags, const uint8_t *body, size_t body_len);
 
 /** @brief Frame a (Protobuf) message; @p compressed sets the compressed flag. */
-size_t pc_grpcweb_frame_message(uint8_t *buf, size_t cap, const uint8_t *msg, size_t msg_len, bool compressed);
+size_t pc_grpcweb_frame_message(uint8_t *buf, size_t cap, const uint8_t *msg, size_t msg_len, proto_bool compressed);
 
 /**
  * @brief Build a trailers frame: `grpc-status:<status>\r\n` plus, when @p message is given,
@@ -52,31 +49,31 @@ size_t pc_grpcweb_frame_message(uint8_t *buf, size_t cap, const uint8_t *msg, si
 size_t pc_grpcweb_frame_trailer(uint8_t *buf, size_t cap, int status, const char *message);
 
 /** @brief One parsed frame; @ref body points INTO the source buffer. */
-struct GrpcWebFrame
+typedef struct
 {
     uint8_t flags;
-    bool compressed; ///< flags & 0x01
-    bool trailer;    ///< flags & 0x80
+    proto_bool compressed; ///< flags & 0x01
+    proto_bool trailer;    ///< flags & 0x80
     const uint8_t *body;
     size_t body_len;
-};
+} GrpcWebFrame;
 
 /**
  * @brief Parse one frame at the head of [buf, buf+len).
  * @param consumed receives the frame's total length so the caller can advance.
  * @return true on a complete frame; false if fewer than the prefix + body octets are buffered.
  */
-bool pc_grpcweb_parse(const uint8_t *buf, size_t len, GrpcWebFrame *out, size_t *consumed);
+proto_bool pc_grpcweb_parse(const uint8_t *buf, size_t len, GrpcWebFrame *out, size_t *consumed);
 
 /** @brief Extract `grpc-status` (an integer) from a trailers-frame body. */
-bool pc_grpcweb_trailer_status(const uint8_t *body, size_t len, int *status);
+proto_bool pc_grpcweb_trailer_status(const uint8_t *body, size_t len, int *status);
 
 /**
  * @brief Extract `grpc-message` (the human-readable status text) from a trailers-frame body. The value is
  *        the slice up to the end of its line; per the gRPC spec it is percent-encoded on the wire (any
  *        decoding is the caller's). @p msg / @p msg_len point INTO @p body. @return true iff the key exists.
  */
-bool pc_grpcweb_trailer_message(const uint8_t *body, size_t len, const char **msg, size_t *msg_len);
+proto_bool pc_grpcweb_trailer_message(const uint8_t *body, size_t len, const char **msg, size_t *msg_len);
 
 #endif // PC_ENABLE_GRPC_WEB
 

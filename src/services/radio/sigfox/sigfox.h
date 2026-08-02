@@ -24,16 +24,13 @@
 
 #if PC_ENABLE_SIGFOX
 
-#include <stddef.h>
-#include <stdint.h>
-
 /** @brief Classification of a Sigfox modem response line. */
-enum class pc_sigfox_result : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     SIGFOX_PENDING = 0, ///< nothing conclusive yet (echo / partial); keep reading
     SIGFOX_OK = 1,      ///< the modem accepted / completed the command
     SIGFOX_ERROR = 2,   ///< the modem reported an error
-};
+} pc_sigfox_result;
 
 /**
  * @brief Format an `AT$SF=<hex>\r\n` uplink command for @p payload into @p out (a NUL-
@@ -45,7 +42,7 @@ uint16_t pc_sigfox_build_uplink(const uint8_t *payload, uint8_t len, char *out, 
 
 /**
  * @brief Classify a modem reply (scans @p buf for "OK" / "ERROR").
- * @return pc_sigfox_result::SIGFOX_OK, pc_sigfox_result::SIGFOX_ERROR, or pc_sigfox_result::SIGFOX_PENDING if
+ * @return SIGFOX_OK, SIGFOX_ERROR, or SIGFOX_PENDING if
  * neither is present yet.
  */
 pc_sigfox_result pc_sigfox_parse_response(const char *buf, uint16_t len);

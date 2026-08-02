@@ -5,22 +5,23 @@
  * @file listener.h
  * @brief Layer 4 (Listener) - per-port TCP listener abstraction.
  *
- * Each active listener owns one lwIP listening PCB and one statically-
- * allocated FreeRTOS queue.  When a new client connects, `listener_accept_cb`
- * claims a slot from the shared `conn_pool`, wires the standard per-connection
- * callbacks, and posts `EvtType::EVT_CONNECT` to the owning listener's queue.
+ * Each active listener owns one listening control block and one event queue.
+ * When a new client connects, `listener_accept_cb` claims a slot from the shared
+ * `conn_pool`, wires the standard per-connection callbacks, and posts
+ * `EVT_CONNECT` to the owning listener's queue.
  *
  * The session layer drains all active listener queues each `server_tick()`,
  * routing events to the correct protocol handler via `TcpConn::proto`.
  *
  * **Single accept callback**
- * `tcp_arg(listen_pcb, (void*)(uintptr_t)idx)` embeds the listener index in
- * the PCB user-data so a single static `listener_accept_cb` handles all ports.
+ * `proto_pcb_set_arg(listen_pcb, (void*)(uintptr_t)idx)` embeds the listener index
+ * in the control block's user data so a single static `listener_accept_cb`
+ * handles all ports.
  *
  * **Circular-dependency resolution**
- * tcp.cpp needs to post events to listener queues but cannot include
+ * tcp.c needs to post events to listener queues but cannot include
  * this header (listener.h already includes tcp.h).  The symbol
- * `listener_enqueue()` is exported from listener.cpp; tcp.cpp calls it
+ * `listener_enqueue()` is exported from listener.c; tcp.c calls it
  * via a forward declaration added to tcp.h so no circular include
  * is introduced.
  *
@@ -31,9 +32,7 @@
 #ifndef PROTOCORE_LISTENER_H
 #define PROTOCORE_LISTENER_H
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/queue.h"
-#include "lwip/tcp.h"
+#include "board_drivers/board_profiles/pc_platform.h" // the target's queues and TCP, under our names
 #include "protocore_config.h"
 #include "tcp.h"
 
@@ -48,35 +47,35 @@
  * lives in BSS - no heap allocation anywhere in the listener layer.
  *
  * A single `Listener` instance consumes:
- *   sizeof(tcp_pcb*) + sizeof(StaticQueue_t) + EVT_QUEUE_DEPTH*sizeof(TcpEvt)
- *   + sizeof(QueueHandle_t) + 3 bytes overhead (port, proto, active).
+ *   sizeof(tcp_pcb*) + sizeof(pc_platform_queue_ctrl) + EVT_QUEUE_DEPTH*sizeof(TcpEvt)
+ *   + sizeof(pc_platform_queue) + 3 bytes overhead (port, proto, active).
  */
-struct Listener
+typedef struct
 {
-    uint16_t port;               ///< TCP port this listener binds.
-    ConnProto proto;             ///< Application protocol for all connections accepted here.
-    struct tcp_pcb *listen_pcb;  ///< lwIP listen PCB; nullptr when inactive.
-    StaticQueue_t _queue_struct; ///< FreeRTOS static queue descriptor.
+    uint16_t port;                        ///< TCP port this listener binds.
+    ConnProto proto;                      ///< Application protocol for all connections accepted here.
+    pc_pcb *listen_pcb;                   ///< lwIP listen PCB; NULL when inactive.
+    pc_platform_queue_ctrl _queue_struct; ///< Static queue descriptor.
     uint8_t _queue_storage[EVT_QUEUE_DEPTH * sizeof(TcpEvt)]; ///< Queue backing store.
-    QueueHandle_t queue;                                      ///< Handle returned by xQueueCreateStatic().
-    bool active; ///< True after listener_add(), false after listener_stop().
-    bool tls;    ///< True when connections accepted here begin a TLS handshake.
+    pc_platform_queue queue;                                  ///< Handle returned by pc_platform_queue_create().
+    proto_bool active; ///< True after listener_add(), false after listener_stop().
+    proto_bool tls;    ///< True when connections accepted here begin a TLS handshake.
 #if PC_ENABLE_DIFFSERV
     uint8_t dscp; ///< Per-listener DiffServ DSCP for accepted connections; PC_DSCP_UNSET = use the default.
 #endif
-};
+} Listener;
 
-/** @brief Static pool of listener contexts.  Defined in listener.cpp. */
+/** @brief Static pool of listener contexts.  Defined in listener.c. */
 extern Listener listener_pool[MAX_LISTENERS];
 
 /**
- * @brief lwIP accept callback - single handler for all listener ports (defined in listener.cpp).
+ * @brief lwIP accept callback - single handler for all listener ports (defined in listener.c).
  *
  * Non-static so the host unit tests can call it directly with a fabricated newpcb, the same
- * convention tcp.cpp uses for lowlevel_recv_cb / lowlevel_sent_cb / lowlevel_err_cb - production
+ * convention tcp.c uses for lowlevel_recv_cb / lowlevel_sent_cb / lowlevel_err_cb - production
  * code never calls this directly, it is wired in via tcp_arg()+tcp_accept() in listener_add().
  */
-err_t listener_accept_cb(void *arg, struct tcp_pcb *newpcb, err_t err);
+pc_net_err listener_accept_cb(void *arg, pc_pcb *newpcb, pc_net_err err);
 
 // ---------------------------------------------------------------------------
 // Listener management API
@@ -86,23 +85,22 @@ err_t listener_accept_cb(void *arg, struct tcp_pcb *newpcb, err_t err);
  * @brief Create a listening socket on @p port and register it at @p idx.
  *
  * If the slot at @p idx is already active it is stopped first.
- * Creates a per-listener FreeRTOS static queue and an lwIP listening PCB.
- * Wires `listener_accept_cb` as the accept handler with the listener index
- * embedded as the PCB user-data argument.
+ * Creates a per-listener event queue and a listening control block, and installs
+ * `listener_accept_cb` with the listener index as its callback argument.
  *
  * @param idx   Slot in listener_pool[] (0 … MAX_LISTENERS-1).
  * @param port  TCP port to bind and listen on.
  * @param proto Application protocol spoken on connections from this port.
  * @param tls   When true, connections accepted here start a TLS handshake.
- * @return Positive value on success; -1 on failure (pool full or lwIP error).
+ * @return Positive value on success; -1 on failure (pool full or a stack error).
  */
-int32_t listener_add(uint8_t idx, uint16_t port, ConnProto proto, bool tls = false);
+int32_t listener_add(uint8_t idx, uint16_t port, ConnProto proto, proto_bool tls);
 
 /**
  * @brief Stop listening on the port at @p idx and release its resources.
  *
  * Idempotent - safe to call on an already-stopped slot.
- * Closes the lwIP listening PCB and deletes the FreeRTOS queue.
+ * Closes the listening control block and releases the event queue.
  * Does not close any connections already accepted on this port.
  *
  * @param idx  Slot in listener_pool[].
@@ -115,21 +113,16 @@ void listener_stop(uint8_t idx);
  * Convenience wrapper that calls listener_stop() for every slot in
  * listener_pool[].  Called by stop().
  */
-void listener_stop_all();
+void listener_stop_all(void);
 
 /**
- * @brief Add / stop a listener from a running task (thread-safe variant).
+ * @brief Add / stop a listener from a running task.
  *
- * listener_add() runs the raw lwIP tcp_bind/tcp_listen inline, which is only safe at
- * setup (before tcpip_thread is servicing our sockets). These variants marshal the
- * lwIP operations onto tcpip_thread via tcpip_api_call(), so a listener may be created
- * or torn down dynamically from a worker/session task - used by the SSH remote-forward
- * owner (`ssh -R`), which opens a listener when a client requests one. TLS listeners
- * are not supported here (forwarded ports are plaintext bridges). On the native host
- * (no lwIP) these behave like the inline path for unit tests.
+ * Used by the SSH remote-forward owner (`ssh -R`), which opens a listener when a client requests
+ * one. TLS listeners are not supported here (forwarded ports are plaintext bridges).
  *
- * @return listener_add_dynamic: 1 on success, -1 on failure (bad idx, bind in use,
- *         or lwIP error). listener_stop_dynamic: void, idempotent.
+ * @return listener_add_dynamic: 1 on success, -1 on failure (bad idx, bind in use, or a stack
+ *         error). listener_stop_dynamic: void, idempotent.
  */
 int32_t listener_add_dynamic(uint8_t idx, uint16_t port, ConnProto proto);
 void listener_stop_dynamic(uint8_t idx);
@@ -137,23 +130,22 @@ void listener_stop_dynamic(uint8_t idx);
 /**
  * @brief Post @p evt to the queue owned by listener @p listener_id.
  *
- * Called from tcp.cpp callbacks (running in tcpip_thread context) to
- * deliver connection events to the session layer.  Uses xQueueSend with
- * timeout=0 - a full queue means the application is not calling server_tick()
- * fast enough; the dropped event is recoverable via connection timeout.
+ * Called from the tcp.c callbacks to deliver connection events to the session layer. Posts with a
+ * zero timeout - a full queue means the application is not calling server_tick() fast enough; the
+ * dropped event is recoverable via connection timeout.
  *
  * @param listener_id  Index into listener_pool[]; must be < MAX_LISTENERS.
  * @param evt          Event to copy into the queue.
  * @return true if queued; false if dropped (full queue / inactive listener).
  */
-bool listener_enqueue(uint8_t listener_id, const TcpEvt *evt);
+proto_bool listener_enqueue(uint8_t listener_id, const TcpEvt *evt);
 
 #if PC_WORKER_COUNT > 1
 /** @brief Create the per-worker event queues (idempotent; called from listener_add). */
 void listener_worker_queues_init(void);
 
-/** @brief The FreeRTOS event queue for worker @p worker_id (nullptr if out of range). */
-QueueHandle_t listener_worker_queue(int worker_id);
+/** @brief The event queue for worker @p worker_id (NULL if out of range). */
+pc_platform_queue listener_worker_queue(int worker_id);
 #endif
 
 /**
@@ -167,7 +159,7 @@ QueueHandle_t listener_worker_queue(int worker_id);
  * compiled so it can be unit-tested. Call listener_accept_throttle_reset() to
  * clear the window (e.g. between tests).
  */
-bool listener_accept_allowed(uint32_t now_ms);
+proto_bool listener_accept_allowed(uint32_t now_ms);
 
 /** @brief Reset the accept-throttle window counters. */
 void listener_accept_throttle_reset(void);
@@ -188,7 +180,7 @@ void listener_accept_throttle_reset(void);
  * is set; the function is always compiled so it can be unit-tested. Call
  * listener_per_ip_throttle_reset() to clear the table.
  */
-bool listener_accept_allowed_ip(const pc_ip *ip, uint32_t now_ms);
+proto_bool listener_accept_allowed_ip(const pc_ip *ip, uint32_t now_ms);
 
 /** @brief Reset the per-IP throttle bucket table. */
 void listener_per_ip_throttle_reset(void);
@@ -209,7 +201,7 @@ void listener_per_ip_throttle_reset(void);
  *         prefix length exceeds the family width, or the table
  *         (PC_IP_ALLOWLIST_SLOTS entries) is full.
  */
-bool listener_ip_allow_add(const pc_ip *network, uint8_t prefix_len);
+proto_bool listener_ip_allow_add(const pc_ip *network, uint8_t prefix_len);
 
 /**
  * @brief Add an allowlist rule from CIDR text (the ergonomic public entry point).
@@ -222,7 +214,7 @@ bool listener_ip_allow_add(const pc_ip *network, uint8_t prefix_len);
  * @return true if the rule was stored; false if @p cidr is malformed, the prefix
  *         is out of range for the family, or the table is full.
  */
-bool listener_ip_allow_add_cidr(const char *cidr);
+proto_bool listener_ip_allow_add_cidr(const char *cidr);
 
 /**
  * @brief Test a source address against the allowlist (accept-time firewall).
@@ -235,7 +227,7 @@ bool listener_ip_allow_add_cidr(const char *cidr);
  *         The accept callback consults this only when PC_ENABLE_IP_ALLOWLIST
  *         is set; the function is always compiled so it can be unit-tested.
  */
-bool listener_ip_allowed(const pc_ip *ip);
+proto_bool listener_ip_allowed(const pc_ip *ip);
 
 /** @brief Clear all allowlist rules (the allowlist becomes empty = allow all). */
 void listener_ip_allowlist_reset(void);

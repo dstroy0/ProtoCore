@@ -25,13 +25,11 @@
 #define PROTOCORE_WS_CLIENT_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_WS_CLIENT
 
 /** @brief WebSocket opcodes (RFC 6455 §5.2). */
-enum class WsClientOpcode : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     WSC_OP_CONT = 0x0,
     WSC_OP_TEXT = 0x1,
@@ -39,7 +37,7 @@ enum class WsClientOpcode : uint8_t
     WSC_OP_CLOSE = 0x8,
     WSC_OP_PING = 0x9,
     WSC_OP_PONG = 0xA,
-};
+} WsClientOpcode;
 
 // ---------------------------------------------------------------------------
 // Pure codec (host-testable; no sockets, no heap)
@@ -66,7 +64,7 @@ size_t ws_client_build_handshake(uint8_t *out, size_t cap, const char *host, con
  * @return true if it is "101 Switching Protocols" and carries
  *         Sec-WebSocket-Accept == @p expected_accept.
  */
-bool ws_client_check_response(const uint8_t *buf, size_t len, const char *expected_accept);
+proto_bool ws_client_check_response(const uint8_t *buf, size_t len, const char *expected_accept);
 
 /**
  * @brief Build a masked client frame (FIN set) for @p opcode.
@@ -83,14 +81,14 @@ size_t ws_client_build_frame(uint8_t *out, size_t cap, WsClientOpcode opcode, co
  * @return true if a complete frame is present in @p avail bytes; false if more
  *         bytes are needed.
  */
-bool ws_client_parse_frame(const uint8_t *buf, size_t avail, uint8_t *opcode, bool *fin, size_t *payload_off,
-                           size_t *payload_len, size_t *consumed);
+proto_bool ws_client_parse_frame(const uint8_t *buf, size_t avail, uint8_t *opcode, proto_bool *fin,
+                                 size_t *payload_off, size_t *payload_len, size_t *consumed);
 
 // ---------------------------------------------------------------------------
 // Transport (ESP32 only; no-ops / false on a host build)
 // ---------------------------------------------------------------------------
 
-/** @brief Callback for an inbound text/binary message (opcode is WsClientOpcode::WSC_OP_TEXT/BINARY). */
+/** @brief Callback for an inbound text/binary message (opcode is WSC_OP_TEXT/BINARY). */
 typedef void (*WsClientMessageCb)(uint8_t opcode, const uint8_t *payload, size_t len);
 
 /** @brief Register the inbound-message callback (call before ws_client_connect). */
@@ -100,23 +98,23 @@ void ws_client_on_message(WsClientMessageCb cb);
  * @brief Connect and complete the WebSocket handshake (blocking).
  * @return true on a verified 101 upgrade.
  */
-bool ws_client_connect(const char *host, uint16_t port, bool use_tls, const char *path);
+proto_bool ws_client_connect(const char *host, uint16_t port, proto_bool use_tls, const char *path);
 
 /** @brief Send a UTF-8 text message (masked). @return true if sent. */
-bool ws_client_send_text(const char *text);
+proto_bool ws_client_send_text(const char *text);
 
 /** @brief Send a binary message (masked). @return true if sent. */
-bool ws_client_send_binary(const uint8_t *data, size_t len);
+proto_bool ws_client_send_binary(const uint8_t *data, size_t len);
 
 /**
  * @brief Pump the connection: read inbound frames (dispatching text/binary to the
  *        callback), answer ping with pong, and handle close. Call once per loop().
  * @return false if the connection has dropped.
  */
-bool ws_client_loop();
+proto_bool ws_client_loop();
 
 /** @brief True while the WebSocket connection is open. */
-bool ws_client_connected();
+proto_bool ws_client_connected();
 
 /** @brief Send a Close frame and drop the connection. */
 void ws_client_close();

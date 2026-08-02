@@ -67,8 +67,8 @@ void http_conn_open(uint8_t slot_id);
  *
  * Reads all available bytes from the slot's transport ring buffer and feeds
  * each byte to `http_parser_feed()`.  Stops early if the parser reaches a
- * terminal state (ParseState::PARSE_COMPLETE, ParseState::PARSE_ERROR, ParseState::PARSE_ENTITY_TOO_LARGE,
- * ParseState::PARSE_URI_TOO_LONG).
+ * terminal state (PARSE_COMPLETE, PARSE_ERROR, PARSE_ENTITY_TOO_LARGE,
+ * PARSE_URI_TOO_LONG).
  *
  * Silently ignores out-of-range slot IDs.
  *
@@ -107,7 +107,7 @@ void http_proto_set_poll(void (*fn)(uint8_t slot));
  * so the HTTP pipeline is skipped until the fetch completes and starts the cached response. Nullable
  * (unset = no-op). Installed by pc_edge_cache_enable(); see services/web/edge_cache/edge_cache_proxy.
  */
-void pc_http_set_edge_poll(bool (*fn)(uint8_t slot));
+void pc_http_set_edge_poll(proto_bool (*fn)(uint8_t slot));
 #endif
 
 #endif

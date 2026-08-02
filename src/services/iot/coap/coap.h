@@ -38,45 +38,40 @@
 #define PROTOCORE_COAP_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_COAP
 
 // CoAP message types (RFC 7252 §3, the 2-bit T field).
-enum class CoapType : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     COAP_TYPE_CON = 0, ///< Confirmable (answered with a piggybacked ACK).
     COAP_TYPE_NON = 1, ///< Non-confirmable (answered with a NON response).
     COAP_TYPE_ACK = 2, ///< Acknowledgement.
     COAP_TYPE_RST = 3, ///< Reset (rejects a message; sent for a malformed/empty CON).
-};
+} CoapType;
 
 // CoAP request method codes (class 0; the on-wire Code byte's detail field).
-enum class CoapMethod : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     COAP_GET = 1,
     COAP_POST = 2,
     COAP_PUT = 3,
     COAP_DELETE = 4,
-};
+} CoapMethod;
 
 // Allowed-methods bitmask for pc_coap_server_add_resource() (bit per method). A mask is OR'd together,
 // so these are integer constants in a namespacing struct, not an enum class (which would force a cast
 // at every |). The bit position is the CoapMethod ordinal.
-struct CoapMethodMask
-{
-    static constexpr uint8_t COAP_ALLOW_GET = 1u << (unsigned)CoapMethod::COAP_GET;       ///< 0x02
-    static constexpr uint8_t COAP_ALLOW_POST = 1u << (unsigned)CoapMethod::COAP_POST;     ///< 0x04
-    static constexpr uint8_t COAP_ALLOW_PUT = 1u << (unsigned)CoapMethod::COAP_PUT;       ///< 0x08
-    static constexpr uint8_t COAP_ALLOW_DELETE = 1u << (unsigned)CoapMethod::COAP_DELETE; ///< 0x10
-};
+#define T 1u << (unsigned)COAP_GET    ///< 0x02
+#define T 1u << (unsigned)COAP_POST   ///< 0x04
+#define T 1u << (unsigned)COAP_PUT    ///< 0x08
+#define E 1u << (unsigned)COAP_DELETE ///< 0x10
 
 /** @brief Build a CoAP response Code byte from its class and detail (e.g. COAP_CODE(2,5) = 2.05). */
 #define COAP_CODE(c, dd) ((uint8_t)(((c) << 5) | ((dd) & 0x1F)))
 
 // Common CoAP response codes (RFC 7252 §5.9; 2.31 / 4.08 / 4.13 from RFC 7959).
-enum class CoapResponseCode : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     COAP_RSP_CREATED = COAP_CODE(2, 1),            ///< 2.01
     COAP_RSP_DELETED = COAP_CODE(2, 2),            ///< 2.02
@@ -93,10 +88,10 @@ enum class CoapResponseCode : uint8_t
     COAP_RSP_REQUEST_TOO_LARGE = COAP_CODE(4, 13), ///< 4.13 (block-wise: reassembly buffer exceeded)
     COAP_RSP_INTERNAL_ERROR = COAP_CODE(5, 0),     ///< 5.00
     COAP_RSP_NOT_IMPLEMENTED = COAP_CODE(5, 1),    ///< 5.01
-};
+} CoapResponseCode;
 
-// CoAP Content-Format identifiers (RFC 7252 §12.3). CoapContentFormat::COAP_CF_NONE means "absent".
-enum class CoapContentFormat : uint16_t
+// CoAP Content-Format identifiers (RFC 7252 §12.3). COAP_CF_NONE means "absent".
+typedef enum PROTO_ENUM_PACKED
 {
     COAP_CF_TEXT = 0,      ///< text/plain;charset=utf-8
     COAP_CF_LINK = 40,     ///< application/link-format
@@ -105,7 +100,7 @@ enum class CoapContentFormat : uint16_t
     COAP_CF_JSON = 50,     ///< application/json
     COAP_CF_CBOR = 60,     ///< application/cbor
     COAP_CF_NONE = 0xFFFF, ///< no Content-Format option present / emitted
-};
+} CoapContentFormat;
 
 /**
  * @brief A decoded CoAP request handed to a resource handler.
@@ -113,7 +108,7 @@ enum class CoapContentFormat : uint16_t
  * All pointers reference transport- or library-owned scratch valid only for the
  * duration of the handler call; copy out anything you need to keep.
  */
-struct CoapRequest
+typedef struct
 {
     CoapMethod method;                ///< COAP_GET / COAP_POST / COAP_PUT / COAP_DELETE.
     const char *path;                 ///< reconstructed Uri-Path, e.g. "/temp" (always begins with '/').
@@ -121,7 +116,7 @@ struct CoapRequest
     const uint8_t *payload;           ///< request payload bytes (may be nullptr if payload_len == 0).
     size_t payload_len;               ///< request payload length in bytes.
     CoapContentFormat content_format; ///< request Content-Format, or COAP_CF_NONE if absent.
-};
+} CoapRequest;
 
 /**
  * @brief A response a resource handler fills in.
@@ -129,16 +124,16 @@ struct CoapRequest
  * @p code defaults to 2.05 Content; set it to another CoapResponseCode as
  * appropriate. Write the response body into @p payload (capacity @p payload_cap)
  * and set @p payload_len. Set @p content_format to describe the body, or leave it
- * CoapContentFormat::COAP_CF_NONE for an empty/typeless response.
+ * COAP_CF_NONE for an empty/typeless response.
  */
-struct CoapResponse
+typedef struct
 {
-    uint8_t code; ///< response Code byte (see CoapResponseCode); defaults to CoapResponseCode::COAP_RSP_CONTENT.
+    uint8_t code;                     ///< response Code byte (see CoapResponseCode); defaults to COAP_RSP_CONTENT.
     CoapContentFormat content_format; ///< COAP_CF_* describing the body, or COAP_CF_NONE.
     uint8_t *payload;                 ///< caller-provided buffer to write the response body into.
     size_t payload_cap;               ///< capacity of @p payload in bytes.
     size_t payload_len;               ///< bytes written by the handler (0 = empty body).
-};
+} CoapResponse;
 
 /** @brief Resource handler: read @p req, fill @p resp. */
 typedef void (*CoapHandler)(const CoapRequest *req, CoapResponse *resp);
@@ -159,7 +154,7 @@ void pc_coap_server_reset();
  * @param handler  invoked for an allowed method on a matching path.
  * @return false if the table is full.
  */
-bool pc_coap_server_add_resource(const char *path, uint8_t methods, CoapHandler handler);
+proto_bool pc_coap_server_add_resource(const char *path, uint8_t methods, CoapHandler handler);
 
 // ---------------------------------------------------------------------------
 // Core processing (host-testable; no sockets, no heap)
@@ -196,7 +191,8 @@ size_t pc_coap_server_process_ex(const uint8_t *req, size_t req_len, uint8_t *re
  *        cached response so the transport can resend it without re-running the handler.
  * @return true and (on non-null out params) the cached response bytes + length; false on a miss.
  */
-bool pc_coap_dedup_lookup(const char *src_ip, uint16_t src_port, uint16_t mid, const uint8_t **out, size_t *out_len);
+proto_bool pc_coap_dedup_lookup(const char *src_ip, uint16_t src_port, uint16_t mid, const uint8_t **out,
+                                size_t *out_len);
 
 /**
  * @brief Record the response sent for a Confirmable (@p src_ip : @p src_port, @p mid) exchange so a later

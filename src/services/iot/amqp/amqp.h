@@ -30,9 +30,6 @@
 
 #if PC_ENABLE_AMQP
 
-#include <stddef.h>
-#include <stdint.h>
-
 // Frame types (octet 0).
 #define AMQP_FRAME_METHOD 1
 #define AMQP_FRAME_HEADER 2 ///< content header
@@ -67,24 +64,24 @@ size_t pc_amqp_build_content_header(uint8_t *buf, size_t cap, uint16_t channel, 
 size_t pc_amqp_build_heartbeat(uint8_t *buf, size_t cap);
 
 /** @brief A parsed frame. @ref payload points INTO the source buffer. */
-struct AmqpFrame
+typedef struct
 {
     uint8_t type;
     uint16_t channel;
     const uint8_t *payload;
     size_t payload_len;
-};
+} AmqpFrame;
 
 /**
  * @brief Parse one frame at the head of [buf, buf+len), validating the 0xCE frame-end.
  * @param consumed receives the full frame length so the caller can advance.
  * @return true on a complete, terminated frame; false if incomplete or the end octet is wrong.
  */
-bool pc_amqp_parse_frame(const uint8_t *buf, size_t len, AmqpFrame *out, size_t *consumed);
+proto_bool pc_amqp_parse_frame(const uint8_t *buf, size_t len, AmqpFrame *out, size_t *consumed);
 
 /** @brief Split a METHOD frame payload into class-id / method-id / arguments. */
-bool pc_amqp_parse_method(const uint8_t *payload, size_t payload_len, uint16_t *class_id, uint16_t *method_id,
-                          const uint8_t **args, size_t *args_len);
+proto_bool pc_amqp_parse_method(const uint8_t *payload, size_t payload_len, uint16_t *class_id, uint16_t *method_id,
+                                const uint8_t **args, size_t *args_len);
 
 #endif // PC_ENABLE_AMQP
 

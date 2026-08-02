@@ -48,8 +48,7 @@
 #ifndef PROTOCORE_ECDSA_H
 #define PROTOCORE_ECDSA_H
 
-#include <stddef.h>
-#include <stdint.h>
+#include "protocore_config.h" // the entry point: types.h for proto_bool and the widths
 
 /** @brief P-256 private key (scalar d) length. */
 #define PC_ECDSA_P256_PRIV_LEN 32
@@ -67,7 +66,7 @@
  * @param[in]  priv  32-byte big-endian private scalar d (must satisfy 1 <= d < n).
  * @return true on success, false if @p priv is 0 or >= the group order n.
  */
-bool pc_ecdsa_p256_pubkey(uint8_t pub[PC_ECDSA_P256_PUB_LEN], const uint8_t priv[PC_ECDSA_P256_PRIV_LEN]);
+proto_bool pc_ecdsa_p256_pubkey(uint8_t pub[PC_ECDSA_P256_PUB_LEN], const uint8_t priv[PC_ECDSA_P256_PRIV_LEN]);
 
 /**
  * @brief Sign @p mlen bytes of @p msg with a P-256 private key (ECDSA, SHA-256).
@@ -81,8 +80,8 @@ bool pc_ecdsa_p256_pubkey(uint8_t pub[PC_ECDSA_P256_PUB_LEN], const uint8_t priv
  * @param[in]  priv  32-byte big-endian private scalar d.
  * @return true on success, false on invalid key or internal failure.
  */
-bool pc_ecdsa_p256_sign(uint8_t sig[PC_ECDSA_P256_SIG_LEN], const uint8_t *msg, size_t mlen,
-                        const uint8_t priv[PC_ECDSA_P256_PRIV_LEN]);
+proto_bool pc_ecdsa_p256_sign(uint8_t sig[PC_ECDSA_P256_SIG_LEN], const uint8_t *msg, size_t mlen,
+                              const uint8_t priv[PC_ECDSA_P256_PRIV_LEN]);
 
 /**
  * @brief Verify a P-256 ECDSA signature (SHA-256) against an uncompressed public point.
@@ -93,8 +92,8 @@ bool pc_ecdsa_p256_sign(uint8_t sig[PC_ECDSA_P256_SIG_LEN], const uint8_t *msg, 
  * @param[in] sig   64-byte raw signature r || s (big-endian, 32 + 32).
  * @return true if the signature is valid, false otherwise.
  */
-bool pc_ecdsa_p256_verify(const uint8_t pub[PC_ECDSA_P256_PUB_LEN], const uint8_t *msg, size_t mlen,
-                          const uint8_t sig[PC_ECDSA_P256_SIG_LEN]);
+proto_bool pc_ecdsa_p256_verify(const uint8_t pub[PC_ECDSA_P256_PUB_LEN], const uint8_t *msg, size_t mlen,
+                                const uint8_t sig[PC_ECDSA_P256_SIG_LEN]);
 
 /**
  * @brief P-256 ECDH: the shared-secret X coordinate of d * Q_peer (RFC 5656 §4 / RFC 5903).
@@ -108,7 +107,7 @@ bool pc_ecdsa_p256_verify(const uint8_t pub[PC_ECDSA_P256_PUB_LEN], const uint8_
  * @param[in]  priv      32-byte big-endian private scalar d (1 <= d < n).
  * @return true on success, false on an invalid peer point / scalar or an identity result.
  */
-bool pc_ecdsa_p256_ecdh(uint8_t shared_x[PC_ECDSA_P256_COORD_LEN], const uint8_t peer_pub[PC_ECDSA_P256_PUB_LEN],
-                        const uint8_t priv[PC_ECDSA_P256_PRIV_LEN]);
+proto_bool pc_ecdsa_p256_ecdh(uint8_t shared_x[PC_ECDSA_P256_COORD_LEN], const uint8_t peer_pub[PC_ECDSA_P256_PUB_LEN],
+                              const uint8_t priv[PC_ECDSA_P256_PRIV_LEN]);
 
 #endif // PROTOCORE_ECDSA_H

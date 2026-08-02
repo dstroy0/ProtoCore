@@ -31,8 +31,6 @@
 
 #include "protocore_config.h" // PC_NEED_CBOR / PC_ENABLE_MSGPACK gate the instances below
 #include "shared_primitives/span.h"
-#include <stddef.h>
-#include <stdint.h>
 
 /**
  * @brief The next item's type, reported by pc_codec::peek without consuming it.
@@ -41,7 +39,7 @@
  * "bin"; CBOR has "null" and MessagePack "nil". They are the same item, so they get one name here
  * and the format maps its own tag onto it.
  */
-enum class pc_codec_type : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     PC_CODEC_UINT = 0,
     PC_CODEC_INT,
@@ -53,7 +51,7 @@ enum class pc_codec_type : uint8_t
     PC_CODEC_NULL,
     PC_CODEC_FLOAT,
     PC_CODEC_INVALID ///< end of buffer, a prior error, or an item this format does not carry
-};
+} pc_codec_type;
 
 /**
  * @brief A wire encoding: the ten writes, the peek, and the nine reads.
@@ -62,7 +60,7 @@ enum class pc_codec_type : uint8_t
  * `float` are keywords, so the members carry the put_ / get_ prefix that says which direction they
  * run in.
  */
-struct pc_codec
+typedef struct
 {
     // --- encode into a caller-bound pc_span ---
     void (*put_uint)(pc_span *w, uint64_t v);
@@ -70,7 +68,7 @@ struct pc_codec
     void (*put_bytes)(pc_span *w, const uint8_t *data, size_t len);
     void (*put_str)(pc_span *w, const char *s);
     void (*put_str_n)(pc_span *w, const char *s, size_t len);
-    void (*put_bool)(pc_span *w, bool b);
+    void (*put_bool)(pc_span *w, proto_bool b);
     void (*put_null)(pc_span *w);
     void (*put_float)(pc_span *w, float f);
     void (*put_array)(pc_span *w, size_t count);
@@ -88,16 +86,16 @@ struct pc_codec
 
     // --- decode from a caller-bound pc_cspan ---
     pc_codec_type (*peek)(pc_cspan *r);
-    bool (*get_uint)(pc_cspan *r, uint64_t *out);
-    bool (*get_int)(pc_cspan *r, int64_t *out);
-    bool (*get_bytes)(pc_cspan *r, const uint8_t **out, size_t *len);
-    bool (*get_str)(pc_cspan *r, const char **out, size_t *len);
-    bool (*get_array)(pc_cspan *r, size_t *count);
-    bool (*get_map)(pc_cspan *r, size_t *count);
-    bool (*get_bool)(pc_cspan *r, bool *out);
-    bool (*get_null)(pc_cspan *r);
-    bool (*get_float)(pc_cspan *r, float *out);
-};
+    proto_bool (*get_uint)(pc_cspan *r, uint64_t *out);
+    proto_bool (*get_int)(pc_cspan *r, int64_t *out);
+    proto_bool (*get_bytes)(pc_cspan *r, const uint8_t **out, size_t *len);
+    proto_bool (*get_str)(pc_cspan *r, const char **out, size_t *len);
+    proto_bool (*get_array)(pc_cspan *r, size_t *count);
+    proto_bool (*get_map)(pc_cspan *r, size_t *count);
+    proto_bool (*get_bool)(pc_cspan *r, proto_bool *out);
+    proto_bool (*get_null)(pc_cspan *r);
+    proto_bool (*get_float)(pc_cspan *r, float *out);
+} pc_codec;
 
 // --- the formats, as instances ---
 //

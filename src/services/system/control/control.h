@@ -36,9 +36,6 @@
 
 #if PC_ENABLE_CONTROL
 
-#include <stddef.h>
-#include <stdint.h>
-
 #define CONTROL_UNBOUNDED 1e30f ///< sentinel for "no clamp" (well outside any real actuator range)
 
 // PID-run log for offline tuning with tools/pid_tune.py, in two interchangeable formats:
@@ -63,7 +60,7 @@
  * @brief A single-loop PID controller. Zero its bytes or call pid_init() before first use; the
  *        runtime-state fields below the gains are owned by pid_update() / pid_reset().
  */
-struct Pid
+typedef struct
 {
     // gains
     float kp;  ///< proportional gain
@@ -80,11 +77,11 @@ struct Pid
     float dt;     ///< cached sample period, 0 until pid_set_rate()
     float inv_dt; ///< cached 1/dt
     // runtime state (owned by pid_update / pid_reset)
-    float integ;     ///< integral accumulator
-    float prev_meas; ///< previous measurement (for derivative-on-measurement)
-    float d_filt;    ///< filtered derivative
-    bool primed;     ///< false until the first update supplies prev_meas (no derivative on step 1)
-};
+    float integ;       ///< integral accumulator
+    float prev_meas;   ///< previous measurement (for derivative-on-measurement)
+    float d_filt;      ///< filtered derivative
+    proto_bool primed; ///< false until the first update supplies prev_meas (no derivative on step 1)
+} Pid;
 
 // --- inline control-law primitives (dedup of the arithmetic every loop reaches for) ---
 
@@ -168,7 +165,7 @@ static inline float pid_step_(Pid *p, float setpoint, float measurement, float d
         p->d_filt = (p->d_alpha > 0.0f) ? p->d_filt + p->d_alpha * (deriv - p->d_filt) : deriv;
     }
     p->prev_meas = measurement;
-    p->primed = true;
+    p->primed = PROTO_TRUE;
 
     // Tentative integration, hard-clamped to the accumulator bounds (a secondary safety limit).
     float integ_next = control_clamp(p->integ + p->ki * error * dt, p->integ_min, p->integ_max);
@@ -180,8 +177,8 @@ static inline float pid_step_(Pid *p, float setpoint, float measurement, float d
     // Anti-windup by conditional integration: commit the new integral unless the output is
     // saturated AND integrating further this direction would push it deeper into the rail - then
     // freeze the accumulator instead, so it never winds up past what the actuator can deliver.
-    bool worsen_high = (unclamped > p->out_max) && (error > 0.0f);
-    bool worsen_low = (unclamped < p->out_min) && (error < 0.0f);
+    proto_bool worsen_high = (unclamped > p->out_max) && (error > 0.0f);
+    proto_bool worsen_low = (unclamped < p->out_min) && (error < 0.0f);
     if (!worsen_high && !worsen_low)
     {
         p->integ = integ_next;
@@ -231,7 +228,7 @@ void pid_update_n(Pid *p, const float *setpoint, const float *measurement, float
 size_t pid_log_header(uint8_t *buf, size_t cap, const Pid *p, float dt);
 
 /// Write one 16-octet dense-binary log record. Returns PID_LOG_RECORD_LEN, or 0 if cap too small.
-size_t pid_log_record(uint8_t *buf, size_t cap, float setpoint, float measurement, float output, bool saturated);
+size_t pid_log_record(uint8_t *buf, size_t cap, float setpoint, float measurement, float output, proto_bool saturated);
 
 #endif // PC_ENABLE_CONTROL
 

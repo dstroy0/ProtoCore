@@ -14,15 +14,16 @@
  * ## Writing
  * @code
  *   char buf[128];
- *   JsonWriter w(buf, sizeof(buf));
- *   w.begin_object();
- *     w.kv_str("status", "ok");
- *     w.kv_int("count", 3);
- *     w.key("items"); w.begin_array();
- *       w.str("a"); w.str("b");
- *     w.end_array();
- *   w.end_object();
- *   if (w.ok()) server.send(slot, 200, "application/json", w.c_str());
+ *   pc_json_writer w;
+ *   pc_json_init(&w, buf, sizeof(buf));
+ *   pc_json_begin_object(&w);
+ *     pc_json_kv_str(&w, "status", "ok");
+ *     pc_json_kv_int(&w, "count", 3);
+ *     pc_json_key(&w, "items"); pc_json_begin_array(&w);
+ *       pc_json_str(&w, "a"); pc_json_str(&w, "b");
+ *     pc_json_end_array(&w);
+ *   pc_json_end_object(&w);
+ *   if (pc_json_ok(&w)) server.send(slot, 200, "application/json", pc_json_c_str(&w));
  *   // -> {"status":"ok","count":3,"items":["a","b"]}
  * @endcode
  *
@@ -39,83 +40,74 @@
 #define PROTOCORE_JSON_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 /**
- * @class JsonWriter
  * @brief Builds a JSON document into a fixed caller buffer, no heap.
  *
  * Commas, key quoting, and string escaping are emitted automatically. On buffer
  * overflow or a structural error (nesting past JSON_MAX_DEPTH), writing stops
- * and ok() returns false; c_str() still yields a NUL-terminated (truncated)
- * string so a partial result never runs off the end.
+ * and pc_json_ok() returns false; pc_json_c_str() still yields a NUL-terminated
+ * (truncated) string so a partial result never runs off the end.
  *
- * Value methods (str(), integer(), ...) emit a single value - use them for array
- * elements or immediately after key(). The kv_*() helpers emit a key and value
- * together for object members.
+ * The caller owns the struct as well as the buffer, so the whole writer is one
+ * local with no allocation behind it. Its fields are the writer's business:
+ * reach them through the calls below, never directly.
  */
-class JsonWriter
+typedef struct
 {
-  public:
-    /**
-     * @brief Construct over a caller buffer.
-     * @param buf  Destination (must be non-null, cap >= 1).
-     * @param cap  Capacity in bytes including the NUL terminator.
-     */
-    JsonWriter(char *buf, size_t cap);
+    char *buf;
+    size_t cap;
+    size_t len;
+    proto_bool ok;
+    proto_bool after_key;                  // next value follows a key(): suppress its comma
+    uint8_t depth;                         // open containers
+    proto_bool need_comma[JSON_MAX_DEPTH]; // per-level: has a prior item been emitted?
+} pc_json_writer;
 
-    void begin_object(); ///< Open `{` (as a value/element where applicable).
-    void end_object();   ///< Close `}`.
-    void begin_array();  ///< Open `[`.
-    void end_array();    ///< Close `]`.
+/**
+ * @brief Bind @p w to a caller buffer.
+ * @param buf  Destination (must be non-null, cap >= 1).
+ * @param cap  Capacity in bytes including the NUL terminator.
+ */
+void pc_json_init(pc_json_writer *w, char *buf, size_t cap);
 
-    /// @brief Emit an object member name (`"k":`); follow with one value.
-    void key(const char *k);
+void pc_json_begin_object(pc_json_writer *w); ///< Open `{` (as a value/element where applicable).
+void pc_json_end_object(pc_json_writer *w);   ///< Close `}`.
+void pc_json_begin_array(pc_json_writer *w);  ///< Open `[`.
+void pc_json_end_array(pc_json_writer *w);    ///< Close `]`.
 
-    void str(const char *v);        ///< Emit a quoted, escaped string value.
-    void integer(long v);           ///< Emit a signed integer value.
-    void uinteger(unsigned long v); ///< Emit an unsigned integer value.
-    void boolean(bool v);           ///< Emit `true`/`false`.
-    void null_value();              ///< Emit `null`.
-    void raw(const char *literal);  ///< Emit a pre-formatted literal verbatim.
+/// @brief Emit an object member name (`"k":`); follow with one value.
+void pc_json_key(pc_json_writer *w, const char *k);
 
-    void kv_str(const char *k, const char *v);       ///< `"k":"v"` (escaped).
-    void kv_int(const char *k, long v);              ///< `"k":<int>`.
-    void kv_uint(const char *k, unsigned long v);    ///< `"k":<uint>`.
-    void kv_bool(const char *k, bool v);             ///< `"k":true|false`.
-    void kv_null(const char *k);                     ///< `"k":null`.
-    void kv_raw(const char *k, const char *literal); ///< `"k":<literal>`.
+void pc_json_str(pc_json_writer *w, const char *v);       ///< Emit a quoted, escaped string value.
+void pc_json_int(pc_json_writer *w, long v);              ///< Emit a signed integer value.
+void pc_json_uint(pc_json_writer *w, unsigned long v);    ///< Emit an unsigned integer value.
+void pc_json_bool(pc_json_writer *w, proto_bool v);       ///< Emit `true`/`false`.
+void pc_json_null(pc_json_writer *w);                     ///< Emit `null`.
+void pc_json_raw(pc_json_writer *w, const char *literal); ///< Emit a pre-formatted literal verbatim.
 
-    bool ok() const ///< False after any overflow / structural error.
-    {
-        return _ok;
-    }
-    size_t length() const ///< Bytes written so far (excludes the NUL).
-    {
-        return _len;
-    }
-    const char *c_str() const ///< NUL-terminated output (truncated if !ok()).
-    {
-        return _buf;
-    }
+void pc_json_kv_str(pc_json_writer *w, const char *k, const char *v);       ///< `"k":"v"` (escaped).
+void pc_json_kv_int(pc_json_writer *w, const char *k, long v);              ///< `"k":<int>`.
+void pc_json_kv_uint(pc_json_writer *w, const char *k, unsigned long v);    ///< `"k":<uint>`.
+void pc_json_kv_bool(pc_json_writer *w, const char *k, proto_bool v);       ///< `"k":true|false`.
+void pc_json_kv_null(pc_json_writer *w, const char *k);                     ///< `"k":null`.
+void pc_json_kv_raw(pc_json_writer *w, const char *k, const char *literal); ///< `"k":<literal>`.
 
-  private:
-    void put(char c);
-    void put_raw(const char *s);
-    void put_escaped(const char *s);
-    void value_prefix(); // emit a separating comma at the current level if needed
-    void push(char open);
-    void pop(char close);
-
-    char *_buf;
-    size_t _cap;
-    size_t _len;
-    bool _ok;
-    bool _after_key;                  // next value follows a key(): suppress its comma
-    uint8_t _depth;                   // open containers
-    bool _need_comma[JSON_MAX_DEPTH]; // per-level: has a prior item been emitted?
-};
+/** @brief False after any overflow / structural error. */
+PC_INLINE proto_bool pc_json_ok(const pc_json_writer *w)
+{
+    return w->ok;
+}
+/** @brief Bytes written so far (excludes the NUL). */
+PC_INLINE size_t pc_json_length(const pc_json_writer *w)
+{
+    return w->len;
+}
+/** @brief NUL-terminated output (truncated if !pc_json_ok()). */
+PC_INLINE const char *pc_json_c_str(const pc_json_writer *w)
+{
+    return w->buf;
+}
 
 /**
  * @brief Read a top-level string member from a JSON object body.
@@ -131,18 +123,18 @@ class JsonWriter
  * @param out_cap  Capacity of @p out including the NUL.
  * @return true if a string member was found and copied; false otherwise.
  */
-bool json_get_str(const char *json, const char *key, char *out, size_t out_cap);
+proto_bool json_get_str(const char *json, const char *key, char *out, size_t out_cap);
 
 /**
  * @brief Read a top-level integer member from a JSON object body.
  * @return true if the member exists and parses as an integer; false otherwise.
  */
-bool json_get_int(const char *json, const char *key, long *out);
+proto_bool json_get_int(const char *json, const char *key, long *out);
 
 /**
  * @brief Read a top-level boolean member (`true`/`false`) from a JSON object body.
  * @return true if the member exists and is a JSON boolean; false otherwise.
  */
-bool json_get_bool(const char *json, const char *key, bool *out);
+proto_bool json_get_bool(const char *json, const char *key, proto_bool *out);
 
 #endif // PROTOCORE_JSON_H

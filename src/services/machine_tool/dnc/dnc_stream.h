@@ -25,17 +25,15 @@
 #if PC_ENABLE_DNC
 
 #include "dnc.h"
-#include <stddef.h>
-#include <stdint.h>
 
 /** @brief Result of a drip-feed. 0 is success; each failure is a distinct code. */
-enum class DncStreamResult : int32_t
+typedef enum PROTO_ENUM_PACKED
 {
     DNC_STREAM_OK = 0,
     DNC_STREAM_ERR_ARG = -1,    ///< a required argument was null
     DNC_STREAM_ERR_IO = -2,     ///< a send/recv failed, or XOFF never cleared (see PC_DNC_XOFF_MAX_POLLS)
     DNC_STREAM_ERR_ENCODE = -3, ///< a source line had no representation in the tape code, or overran a block
-};
+} DncStreamResult;
 
 /**
  * @brief Transport seam: the engine moves bytes only through these, so it runs over TCP, a UART, or

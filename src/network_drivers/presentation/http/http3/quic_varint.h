@@ -23,9 +23,6 @@
 
 #if PC_ENABLE_HTTP3
 
-#include <stddef.h>
-#include <stdint.h>
-
 /** @brief Largest value a QUIC varint can hold (2^62 - 1). */
 #define QUIC_VARINT_MAX 0x3FFFFFFFFFFFFFFFull
 
@@ -39,7 +36,7 @@ size_t pc_quic_varint_encode(uint8_t *out, size_t cap, uint64_t value);
  * @brief Decode a varint at @p in. Sets @p value and @p consumed (1/2/4/8). @return false if the
  * buffer is shorter than the length the first byte announces.
  */
-bool pc_quic_varint_decode(const uint8_t *in, size_t len, uint64_t *value, size_t *consumed);
+proto_bool pc_quic_varint_decode(const uint8_t *in, size_t len, uint64_t *value, size_t *consumed);
 
 #endif // PC_ENABLE_HTTP3
 #endif // PROTOCORE_QUIC_VARINT_H

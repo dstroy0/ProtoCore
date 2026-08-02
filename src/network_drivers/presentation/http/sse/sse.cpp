@@ -31,13 +31,13 @@ SseConn *pc_sse_alloc(uint8_t slot_id, const char *path)
             pc_sse_pool[i] = {};
             pc_sse_pool[i].pc_sse_id = (uint8_t)i;
             pc_sse_pool[i].slot_id = slot_id;
-            pc_sse_pool[i].active = true;
+            pc_sse_pool[i].active = PROTO_TRUE;
             strncpy(pc_sse_pool[i].path, path, MAX_PATH_LEN - 1);
             pc_sse_pool[i].path[MAX_PATH_LEN - 1] = '\0';
             return &pc_sse_pool[i];
         }
     }
-    return nullptr;
+    return NULL;
 }
 
 SseConn *pc_sse_find(uint8_t slot_id)
@@ -49,7 +49,7 @@ SseConn *pc_sse_find(uint8_t slot_id)
             return &pc_sse_pool[i];
         }
     }
-    return nullptr;
+    return NULL;
 }
 
 void pc_sse_free(uint8_t slot_id)
@@ -68,15 +68,15 @@ void pc_sse_free(uint8_t slot_id)
 // Append `len` bytes of `src` at *pos if the whole record still leaves room for a trailing NUL (content must
 // fit in n-1). Returns false the moment it would not fit, so a record that overflows reports 0 rather than a
 // truncated frame. memcpy of a known-length span, no format parsing.
-static inline bool sse_append(char *buf, size_t n, size_t *pos, const char *src, size_t len)
+static inline proto_bool sse_append(char *buf, size_t n, size_t *pos, const char *src, size_t len)
 {
     if (*pos + len > n - 1)
     {
-        return false;
+        return PROTO_FALSE;
     }
     memcpy(buf + *pos, src, len);
     *pos += len;
-    return true;
+    return PROTO_TRUE;
 }
 
 int pc_sse_format(char *buf, size_t n, const char *data, const char *event, const char *id)
@@ -113,20 +113,20 @@ int pc_sse_format(char *buf, size_t n, const char *data, const char *event, cons
     return (int)pos;
 }
 
-bool pc_sse_write(SseConn *sse, const char *data, const char *event, const char *id)
+proto_bool pc_sse_write(SseConn *sse, const char *data, const char *event, const char *id)
 {
     if (!pc_conn_active(sse->slot_id))
     {
-        return false;
+        return PROTO_FALSE;
     }
 
     char buf[SSE_BUF_SIZE];
     int pos = pc_sse_format(buf, sizeof(buf), data, event, id);
     if (pos <= 0)
     {
-        return false;
+        return PROTO_FALSE;
     }
 
     pc_conn_send(sse->slot_id, buf, (u16_t)pos);
-    return true;
+    return PROTO_TRUE;
 }

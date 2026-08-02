@@ -11,9 +11,8 @@
 
 #if PC_ENABLE_INA219
 
-#if defined(ARDUINO)
+#if PROTOCORE_HOT
 #include "services/peripherals/i2c.h"
-#include <Arduino.h>
 #include <Wire.h>
 #endif
 int32_t pc_ina219_bus_mv(uint16_t raw)
@@ -52,20 +51,18 @@ int32_t pc_ina219_power_uw(int16_t raw, uint32_t current_lsb_ua)
 // I2C binding
 // ---------------------------------------------------------------------------
 
-#if defined(ARDUINO)
+#if PROTOCORE_HOT
 
-namespace
-{
 // All INA219 I2C-binding state, owned by one instance (internal linkage): the device address
 // and the current LSB, grouped so it is one named owner, unreachable from any other TU.
-struct Ina219Ctx
+typedef struct
 {
     uint8_t addr = PC_INA219_I2C_ADDR;
     uint32_t lsb_ua = PC_INA219_CURRENT_LSB_UA;
-};
-Ina219Ctx s_ina;
+} Ina219Ctx;
+static Ina219Ctx s_ina;
 
-bool wr16(uint8_t reg, uint16_t v)
+static proto_bool wr16(uint8_t reg, uint16_t v)
 {
     Wire.beginTransmission(s_ina.addr);
     Wire.write(reg);
@@ -74,116 +71,115 @@ bool wr16(uint8_t reg, uint16_t v)
     return Wire.endTransmission() == 0;
 }
 
-bool rd16(uint8_t reg, uint16_t *v)
+static proto_bool rd16(uint8_t reg, uint16_t *v)
 {
     Wire.beginTransmission(s_ina.addr);
     Wire.write(reg);
-    if (Wire.endTransmission(false) != 0)
+    if (Wire.endTransmission(PROTO_FALSE) != 0)
     {
-        return false;
+        return PROTO_FALSE;
     }
     if (Wire.requestFrom((int)s_ina.addr, 2) != 2)
     {
-        return false;
+        return PROTO_FALSE;
     }
     uint8_t hi = (uint8_t)Wire.read();
     uint8_t lo = (uint8_t)Wire.read();
     *v = (uint16_t)(((uint16_t)hi << 8) | lo);
-    return true;
+    return PROTO_TRUE;
 }
-} // namespace
 
-bool pc_ina219_begin(uint8_t addr, uint32_t current_lsb_ua, uint32_t shunt_mohm)
+proto_bool pc_ina219_begin(uint8_t addr, uint32_t current_lsb_ua, uint32_t shunt_mohm)
 {
     s_ina.addr = addr ? addr : (uint8_t)PC_INA219_I2C_ADDR;
     s_ina.lsb_ua = current_lsb_ua ? current_lsb_ua : (uint32_t)PC_INA219_CURRENT_LSB_UA;
     pc_i2c_begin();
-    bool ok = true;
+    proto_bool ok = PROTO_TRUE;
     ok &= wr16(INA219_REG_CALIBRATION,
                pc_ina219_calibration(s_ina.lsb_ua, shunt_mohm ? shunt_mohm : (uint32_t)PC_INA219_SHUNT_MOHM));
     ok &= wr16(INA219_REG_CONFIG, 0x399F); // 32 V range, /8 gain (320 mV), 12-bit, continuous
     return ok;
 }
 
-bool pc_ina219_read_bus_mv(int32_t *millivolts)
+proto_bool pc_ina219_read_bus_mv(int32_t *millivolts)
 {
     uint16_t v = 0;
     if (!rd16(INA219_REG_BUS, &v))
     {
-        return false;
+        return PROTO_FALSE;
     }
     if (millivolts)
     {
         *millivolts = pc_ina219_bus_mv(v);
     }
-    return true;
+    return PROTO_TRUE;
 }
 
-bool pc_ina219_read_shunt_uv(int32_t *microvolts)
+proto_bool pc_ina219_read_shunt_uv(int32_t *microvolts)
 {
     uint16_t v = 0;
     if (!rd16(INA219_REG_SHUNT, &v))
     {
-        return false;
+        return PROTO_FALSE;
     }
     if (microvolts)
     {
         *microvolts = pc_ina219_shunt_uv((int16_t)v);
     }
-    return true;
+    return PROTO_TRUE;
 }
 
-bool pc_ina219_read_current_ua(int32_t *microamps)
+proto_bool pc_ina219_read_current_ua(int32_t *microamps)
 {
     uint16_t v = 0;
     if (!rd16(INA219_REG_CURRENT, &v))
     {
-        return false;
+        return PROTO_FALSE;
     }
     if (microamps)
     {
         *microamps = pc_ina219_current_ua((int16_t)v, s_ina.lsb_ua);
     }
-    return true;
+    return PROTO_TRUE;
 }
 
-bool pc_ina219_read_power_uw(int32_t *microwatts)
+proto_bool pc_ina219_read_power_uw(int32_t *microwatts)
 {
     uint16_t v = 0;
     if (!rd16(INA219_REG_POWER, &v))
     {
-        return false;
+        return PROTO_FALSE;
     }
     if (microwatts)
     {
         *microwatts = pc_ina219_power_uw((int16_t)v, s_ina.lsb_ua);
     }
-    return true;
+    return PROTO_TRUE;
 }
 
 #else // host build: no I2C. The decode / calibration / scaling above are host-tested.
 
-bool pc_ina219_begin(uint8_t, uint32_t, uint32_t)
+proto_bool pc_ina219_begin(uint8_t, uint32_t, uint32_t)
 {
-    return false;
+    return PROTO_FALSE;
 }
-bool pc_ina219_read_bus_mv(int32_t *)
+proto_bool pc_ina219_read_bus_mv(int32_t *)
 {
-    return false;
+    return PROTO_FALSE;
 }
-bool pc_ina219_read_shunt_uv(int32_t *)
+proto_bool pc_ina219_read_shunt_uv(int32_t *)
 {
-    return false;
+    return PROTO_FALSE;
 }
-bool pc_ina219_read_current_ua(int32_t *)
+proto_bool pc_ina219_read_current_ua(int32_t *)
 {
-    return false;
+    return PROTO_FALSE;
 }
-bool pc_ina219_read_power_uw(int32_t *)
+proto_bool pc_ina219_read_power_uw(int32_t *)
 {
-    return false;
+    return PROTO_FALSE;
 }
 
-#endif // ARDUINO
+#endif // PROTOCORE_HOT
 
 #endif // PC_ENABLE_INA219

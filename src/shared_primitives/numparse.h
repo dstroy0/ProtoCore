@@ -19,27 +19,28 @@
 #ifndef PROTOCORE_NUMPARSE_H
 #define PROTOCORE_NUMPARSE_H
 
-inline bool pc_np_ws(char c)
+#include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
+PC_INLINE proto_bool pc_np_ws(char c)
 {
     return c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\f' || c == '\v';
 }
-inline bool pc_np_digit(char c)
+PC_INLINE proto_bool pc_np_digit(char c)
 {
     return c >= '0' && c <= '9';
 }
 
 /** @brief Parse a base-10 long; sets @p end past the digits (or to @p s if none). */
-inline long pc_strtol(const char *s, const char **end)
+PC_INLINE long pc_strtol(const char *s, const char **end)
 {
     const char *p = s;
     while (pc_np_ws(*p))
     {
         p++;
     }
-    bool neg = false;
+    proto_bool neg = PROTO_FALSE;
     if (*p == '+' || *p == '-')
     {
-        neg = (*p++ == '-');
+        neg = (*p++ == '-') ? PROTO_TRUE : PROTO_FALSE;
     }
     const char *ds = p;
     unsigned long v = 0; // accumulate unsigned: signed overflow (a huge digit run) is UB
@@ -55,7 +56,7 @@ inline long pc_strtol(const char *s, const char **end)
 }
 
 /** @brief Parse a base-10 unsigned long; sets @p end past the digits (or to @p s). */
-inline unsigned long pc_strtoul(const char *s, const char **end)
+PC_INLINE unsigned long pc_strtoul(const char *s, const char **end)
 {
     const char *p = s;
     while (pc_np_ws(*p))
@@ -80,68 +81,68 @@ inline unsigned long pc_strtoul(const char *s, const char **end)
 }
 
 // Parse the fractional part after a '.', advancing p and accumulating into val.
-inline void pc_strtod_frac(const char *&p, double &val, bool &any)
+PC_INLINE void pc_strtod_frac(const char **p, double *val, proto_bool *any)
 {
-    p++; // consume '.'
+    (*p)++; // consume '.'
     double scale = 1.0;
-    while (pc_np_digit(*p))
+    while (pc_np_digit(**p))
     {
         scale *= 10.0;
-        val += (double)(*p++ - '0') / scale;
-        any = true;
+        *val += (double)(*(*p)++ - '0') / scale;
+        *any = PROTO_TRUE;
     }
 }
 
 // Apply a trailing exponent (e[+/-]NNN) to val, advancing p past it.
-inline void pc_strtod_exp(const char *&p, double &val)
+PC_INLINE void pc_strtod_exp(const char **p, double *val)
 {
-    p++; // consume 'e'/'E'
-    bool eneg = false;
-    if (*p == '+' || *p == '-')
+    (*p)++; // consume 'e'/'E'
+    proto_bool eneg = PROTO_FALSE;
+    if (**p == '+' || **p == '-')
     {
-        eneg = (*p++ == '-');
+        eneg = (*(*p)++ == '-') ? PROTO_TRUE : PROTO_FALSE;
     }
     int ex = 0;
-    while (pc_np_digit(*p))
+    while (pc_np_digit(**p))
     {
-        ex = (ex < 400) ? ex * 10 + (*p - '0') : ex; // clamp: 10^400 overflows the double to inf
-        p++;
+        ex = (ex < 400) ? ex * 10 + (**p - '0') : ex; // clamp: 10^400 overflows the double to inf
+        (*p)++;
     }
     double m = 1.0;
     for (int k = 0; k < ex; k++)
     {
         m *= 10.0;
     }
-    val = eneg ? val / m : val * m;
+    *val = eneg ? *val / m : *val * m;
 }
 
 /** @brief Parse a double (integer[.frac][e[+/-]exp]); sets @p end (or to @p s if none). */
-inline double pc_strtod(const char *s, const char **end)
+PC_INLINE double pc_strtod(const char *s, const char **end)
 {
     const char *p = s;
     while (pc_np_ws(*p))
     {
         p++;
     }
-    bool neg = false;
+    proto_bool neg = PROTO_FALSE;
     if (*p == '+' || *p == '-')
     {
-        neg = (*p++ == '-');
+        neg = (*p++ == '-') ? PROTO_TRUE : PROTO_FALSE;
     }
-    bool any = false;
+    proto_bool any = PROTO_FALSE;
     double val = 0.0;
     while (pc_np_digit(*p))
     {
         val = val * 10.0 + (*p++ - '0');
-        any = true;
+        any = PROTO_TRUE;
     }
     if (*p == '.')
     {
-        pc_strtod_frac(p, val, any);
+        pc_strtod_frac(&p, &val, &any);
     }
     if (any && (*p == 'e' || *p == 'E'))
     {
-        pc_strtod_exp(p, val);
+        pc_strtod_exp(&p, &val);
     }
     if (end)
     {
@@ -151,7 +152,7 @@ inline double pc_strtod(const char *s, const char **end)
 }
 
 /** @brief Parse a float (integer[.frac][e[+/-]exp]); sets @p end (or to @p s if none). */
-inline float pc_strtof(const char *s, const char **end)
+PC_INLINE float pc_strtof(const char *s, const char **end)
 {
     return (float)pc_strtod(s, end); // GGA lat/lon and other sub-meter values need pc_strtod's precision
 }

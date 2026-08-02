@@ -14,8 +14,8 @@
  * keep counting `pos` past `cap` on overflow so the caller can size the buffer, sticky fault flags,
  * and network (big-endian) byte order.
  *
- * These take pc_span / pc_cspan directly rather than being templated on a per-codec cursor struct,
- * so one concrete pair serves every codec and the field names are fixed rather than deduced.
+ * These take pc_span / pc_cspan directly rather than being written per codec, so one concrete pair
+ * serves every codec and the field names are fixed rather than restated.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -26,13 +26,11 @@
 
 #include "shared_primitives/endian.h" // pc_rd32be - the fixed-width serializers live there
 #include "shared_primitives/span.h"   // pc_span / pc_cspan - the region these verbs act on
-#include <stddef.h>
-#include <stdint.h>
 
 // --- append into a pc_span ---
 
 /** @brief Append one byte; on overflow set the flag but keep counting @p pos. */
-inline void pc_bw_put(pc_span *w, uint8_t b)
+PC_INLINE void pc_bw_put(pc_span *w, uint8_t b)
 {
     if (w->pos < w->cap)
     {
@@ -40,17 +38,17 @@ inline void pc_bw_put(pc_span *w, uint8_t b)
     }
     else
     {
-        w->overflow = true;
+        w->overflow = PROTO_TRUE;
     }
     w->pos++; // keep counting so pc_span_len() reports the size the payload needs
 }
 
 /** @brief Append the low @p nbytes of @p val, big-endian (network order). */
-inline void pc_bw_put_be(pc_span *w, uint64_t val, int32_t nbytes)
+PC_INLINE void pc_bw_put_be(pc_span *w, uint64_t val, int32_t nbytes)
 {
     for (int32_t s = (nbytes - 1) * 8; s >= 0; s -= 8)
     {
-        pc_bw_put(w, static_cast<uint8_t>(val >> s));
+        pc_bw_put(w, (uint8_t)(val >> s));
     }
 }
 
@@ -65,21 +63,21 @@ inline void pc_bw_put_be(pc_span *w, uint64_t val, int32_t nbytes)
  * tag - CBOR's head byte, MessagePack's format byte - advances past it itself, which keeps this a
  * plain big-endian read any caller can spell.
  */
-inline bool pc_br_take_be(pc_cspan *r, size_t nbytes, uint64_t *out)
+PC_INLINE proto_bool pc_br_take_be(pc_cspan *r, size_t nbytes, uint64_t *out)
 {
     if (r->pos > r->len || r->len - r->pos < nbytes)
     {
-        r->err = true;
-        return false;
+        r->err = PROTO_TRUE;
+        return PROTO_FALSE;
     }
-    uint64_t v{0};
+    uint64_t v = 0;
     for (size_t i = 0; i < nbytes; i++)
     {
         v = (v << 8) | r->buf[r->pos + i];
     }
     *out = v;
     r->pos += nbytes;
-    return true;
+    return PROTO_TRUE;
 }
 
 // --- offset-passing reads over a caller-owned buffer (no region object needed) ---
@@ -95,15 +93,15 @@ inline bool pc_br_take_be(pc_cspan *r, size_t nbytes, uint64_t *out)
 // Subtracting cannot wrap once *off <= len is established, which each check does first.
 
 /** @brief Read a big-endian u32 at @p *off, advancing it by 4. False if it would run past @p len. */
-inline bool pc_rd_u32(const uint8_t *p, size_t len, size_t *off, uint32_t *out)
+PC_INLINE proto_bool pc_rd_u32(const uint8_t *p, size_t len, size_t *off, uint32_t *out)
 {
     if (*off > len || len - *off < 4)
     {
-        return false;
+        return PROTO_FALSE;
     }
     *out = pc_rd32be(p + *off);
     *off += 4;
-    return true;
+    return PROTO_TRUE;
 }
 
 /**
@@ -112,23 +110,23 @@ inline bool pc_rd_u32(const uint8_t *p, size_t len, size_t *off, uint32_t *out)
  * Nothing is copied, so the result must not outlive @p p. On a length that would run past the end,
  * @p *off is left where it started so the caller can report which field failed.
  */
-inline bool pc_rd_str(const uint8_t *p, size_t len, size_t *off, const uint8_t **out, uint32_t *slen)
+PC_INLINE proto_bool pc_rd_str(const uint8_t *p, size_t len, size_t *off, const uint8_t **out, uint32_t *slen)
 {
-    size_t start{*off};
-    uint32_t n{0};
+    size_t start = *off;
+    uint32_t n = 0;
     if (!pc_rd_u32(p, len, off, &n))
     {
-        return false;
+        return PROTO_FALSE;
     }
     if (n > len - *off) // pc_rd_u32 succeeding established *off <= len, so this cannot wrap
     {
         *off = start;
-        return false;
+        return PROTO_FALSE;
     }
     *out = p + *off;
     *slen = n;
     *off += n;
-    return true;
+    return PROTO_TRUE;
 }
 
 #endif // PROTOCORE_BYTES_H

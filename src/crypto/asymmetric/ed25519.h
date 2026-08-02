@@ -20,8 +20,7 @@
 #ifndef PROTOCORE_ED25519_H
 #define PROTOCORE_ED25519_H
 
-#include <stddef.h>
-#include <stdint.h>
+#include "protocore_config.h" // the entry point: types.h for proto_bool and the widths
 
 /** @brief Ed25519 seed (private key) length. */
 #define PC_ED25519_SEED_LEN 32
@@ -44,7 +43,7 @@ void pc_ed25519_sign(uint8_t sig[PC_ED25519_SIG_LEN], const uint8_t *msg, size_t
  * @brief Verify an Ed25519 signature (RFC 8032 §5.1.7).
  * @return true if @p sig is a valid signature of @p msg under public key @p pub.
  */
-bool pc_ed25519_verify(const uint8_t pub[PC_ED25519_PUBKEY_LEN], const uint8_t *msg, size_t mlen,
-                       const uint8_t sig[PC_ED25519_SIG_LEN]);
+proto_bool pc_ed25519_verify(const uint8_t pub[PC_ED25519_PUBKEY_LEN], const uint8_t *msg, size_t mlen,
+                             const uint8_t sig[PC_ED25519_SIG_LEN]);
 
 #endif // PROTOCORE_ED25519_H

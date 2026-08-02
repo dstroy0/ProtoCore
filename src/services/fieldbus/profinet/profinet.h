@@ -22,31 +22,26 @@
 #define PROTOCORE_PROFINET_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_PROFINET
 
-struct Pn
-{
-    static constexpr uint16_t PN_FRAMEID_DCP_HELLO = 0xFEFC;
-    static constexpr uint16_t PN_FRAMEID_DCP_GETSET = 0xFEFD;
-    static constexpr uint16_t PN_FRAMEID_DCP_IDENT_REQ = 0xFEFE;
-    static constexpr uint16_t PN_FRAMEID_DCP_IDENT_RES = 0xFEFF;
-    static constexpr uint16_t PN_DCP_SERVICE_GET = 0x03;
-    static constexpr uint16_t PN_DCP_SERVICE_SET = 0x04;
-    static constexpr uint16_t PN_DCP_SERVICE_IDENTIFY = 0x05;
-    static constexpr uint16_t PN_DCP_TYPE_REQUEST = 0x00;
-    static constexpr uint16_t PN_DCP_TYPE_RESPONSE_SUCCESS = 0x01;
-    static constexpr uint16_t PN_DCP_OPT_IP = 0x01;
-    static constexpr uint16_t PN_DCP_SUB_IP_PARAM = 0x02; ///< IP address / subnet / gateway.
-    static constexpr uint16_t PN_DCP_OPT_DEVICE = 0x02;
-    static constexpr uint16_t PN_DCP_SUB_DEV_NAME_OF_STATION = 0x02;
-    static constexpr uint16_t PN_DCP_SUB_DEV_ID = 0x03;
-    static constexpr uint16_t PN_DCP_OPT_ALL = 0xFF;
-    static constexpr uint16_t PN_DCP_SUB_ALL = 0xFF;
-    static constexpr uint16_t PN_DCP_HDR_LEN = 10;
-};
+#define O 0xFEFC
+#define T 0xFEFD
+#define Q 0xFEFE
+#define S 0xFEFF
+#define T 0x03
+#define T 0x04
+#define Y 0x05
+#define T 0x00
+#define S 0x01
+#define P 0x01
+#define M 0x02 ///< IP address / subnet / gateway.
+#define E 0x02
+#define N 0x02
+#define D 0x03
+#define L 0xFF
+#define L 0xFF
+#define N 10
 
 /**
  * @brief Build a DCP frame header into @p out (>= 10 bytes). @return 10, or 0 if it will not fit.
@@ -65,17 +60,17 @@ size_t pc_pn_dcp_block(uint8_t option, uint8_t suboption, const uint8_t *value, 
                        size_t cap);
 
 /** @brief A parsed DCP frame header. */
-struct PnDcpHeader
+typedef struct
 {
     uint16_t frame_id;
     uint8_t service_id;
     uint8_t service_type;
     uint32_t xid;
     uint16_t data_length;
-};
+} PnDcpHeader;
 
 /** @brief Parse the 10-octet DCP header. @return true if @p len >= 10. */
-bool pc_pn_dcp_parse_header(const uint8_t *frame, size_t len, PnDcpHeader *out);
+proto_bool pc_pn_dcp_parse_header(const uint8_t *frame, size_t len, PnDcpHeader *out);
 
 /** @brief One DCP block surfaced by pc_pn_dcp_walk. */
 typedef void (*pc_pn_dcp_block_cb)(uint8_t option, uint8_t suboption, const uint8_t *value, size_t value_len,
@@ -85,7 +80,7 @@ typedef void (*pc_pn_dcp_block_cb)(uint8_t option, uint8_t suboption, const uint
  * @brief Walk the DCP blocks after the header (@p blocks points at header+10, @p len = dataLength).
  * @return true if every block fits; invokes @p cb per block (value excludes the even-pad filler).
  */
-bool pc_pn_dcp_walk(const uint8_t *blocks, size_t len, pc_pn_dcp_block_cb cb, void *arg);
+proto_bool pc_pn_dcp_walk(const uint8_t *blocks, size_t len, pc_pn_dcp_block_cb cb, void *arg);
 
 #endif // PC_ENABLE_PROFINET
 #endif // PROTOCORE_PROFINET_H

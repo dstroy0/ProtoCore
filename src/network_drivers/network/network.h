@@ -19,8 +19,6 @@
 #ifndef PROTOCORE_NETWORK_H
 #define PROTOCORE_NETWORK_H
 
-#include <Arduino.h>
-
 /**
  * @brief Initialize the network layer.
  *
@@ -28,6 +26,6 @@
  * later add static-route configuration, ICMP echo handling, or custom
  * network-layer diagnostics.
  */
-void init_network_layer();
+void init_network_layer(void);
 
 #endif

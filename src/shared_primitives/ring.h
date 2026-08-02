@@ -20,9 +20,6 @@
 
 #include "shared_primitives/rawmemcpy.h" // proto_raw_read: the producer span move
 #include <stdatomic.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
 
 // ---------------------------------------------------------------------------
 // Cross-thread field access
@@ -70,17 +67,17 @@ static inline size_t pc_ring_available(const _Atomic size_t *head, const _Atomic
 }
 
 /** @brief Pop one byte into @p out; false if empty. */
-static inline bool pc_ring_read_byte(const uint8_t *buf, size_t cap, const _Atomic size_t *head, _Atomic size_t *tail,
-                                     uint8_t *out)
+static inline proto_bool pc_ring_read_byte(const uint8_t *buf, size_t cap, const _Atomic size_t *head,
+                                           _Atomic size_t *tail, uint8_t *out)
 {
     size_t t = PROTO_ATOMIC_LOAD(tail); // GCOVR_EXCL_BR_LINE
     if (t == PROTO_ATOMIC_LOAD(head))   // GCOVR_EXCL_BR_LINE
     {
-        return false;
+        return PROTO_FALSE;
     }
     *out = buf[t];
     PROTO_ATOMIC_STORE(tail, (t + 1) % cap); // GCOVR_EXCL_BR_LINE
-    return true;
+    return PROTO_TRUE;
 }
 
 /** @brief Pop up to @p maxn bytes into @p dst; returns the count read. */

@@ -25,23 +25,17 @@
 
 #if PC_ENABLE_HTTP3
 
-#include <stddef.h>
-#include <stdint.h>
-
 #define QUIC_VERSION_1 0x00000001u ///< RFC 9000
 #define QUIC_MAX_CID_LEN 20        ///< maximum connection-ID length in QUIC version 1
 
 /** @brief Long-header packet types (RFC 9000 sec 17.2, Table 5). */
-struct QuicLongPacket
-{
-    static constexpr uint8_t QUIC_LP_INITIAL = 0x00;
-    static constexpr uint8_t QUIC_LP_0RTT = 0x01;
-    static constexpr uint8_t QUIC_LP_HANDSHAKE = 0x02;
-    static constexpr uint8_t QUIC_LP_RETRY = 0x03;
-};
+#define L 0x00
+#define T 0x01
+#define E 0x02
+#define Y 0x03
 
 /** @brief A parsed long header (invariant fields). A Version of 0 marks a Version Negotiation. */
-struct QuicLongHeader
+typedef struct
 {
     uint8_t first;                  ///< raw first byte
     uint8_t type;                   ///< long packet type (first & 0x30) >> 4; meaningful when version != 0
@@ -51,10 +45,10 @@ struct QuicLongHeader
     uint8_t scid_len;               ///< Source Connection ID length
     uint8_t scid[QUIC_MAX_CID_LEN]; ///< Source Connection ID
     size_t hdr_len;                 ///< bytes consumed up to the start of the type-specific payload
-};
+} QuicLongHeader;
 
 /** @brief A parsed short header (1-RTT). The DCID length is known locally, not on the wire. */
-struct QuicShortHeader
+typedef struct
 {
     uint8_t first;                  ///< raw first byte
     uint8_t spin;                   ///< latency spin bit (0x20)
@@ -63,13 +57,13 @@ struct QuicShortHeader
     uint8_t dcid_len;               ///< Destination Connection ID length (caller-supplied)
     uint8_t dcid[QUIC_MAX_CID_LEN]; ///< Destination Connection ID
     size_t hdr_len;                 ///< bytes up to the (protected) Packet Number field
-};
+} QuicShortHeader;
 
 /** @brief True if byte 0 selects the long header form (0x80 set). */
-bool pc_quic_is_long_header(uint8_t first);
+proto_bool pc_quic_is_long_header(uint8_t first);
 
 /** @brief Parse a long header. @return false if truncated or a connection ID exceeds 20 bytes. */
-bool pc_quic_parse_long_header(const uint8_t *buf, size_t len, QuicLongHeader *out);
+proto_bool pc_quic_parse_long_header(const uint8_t *buf, size_t len, QuicLongHeader *out);
 
 /**
  * @brief Build a long header's invariant fields (first byte .. Source Connection ID). The caller
@@ -81,7 +75,7 @@ size_t pc_quic_build_long_header(uint8_t *out, size_t cap, uint8_t type, uint32_
                                  uint8_t dcid_len, const uint8_t *scid, uint8_t scid_len, uint8_t pn_len);
 
 /** @brief Parse a short (1-RTT) header given the locally chosen @p dcid_len. @return false if truncated. */
-bool pc_quic_parse_short_header(const uint8_t *buf, size_t len, uint8_t dcid_len, QuicShortHeader *out);
+proto_bool pc_quic_parse_short_header(const uint8_t *buf, size_t len, uint8_t dcid_len, QuicShortHeader *out);
 
 /**
  * @brief Build a Version Negotiation packet (RFC 9000 sec 17.2.1): Version 0 and the list of

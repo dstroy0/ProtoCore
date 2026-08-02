@@ -18,9 +18,8 @@
 
 #include <string.h>
 
-#if defined(ARDUINO)
+#if PROTOCORE_HOT
 #include "services/peripherals/i2c.h"
-#include <Arduino.h>
 #include <Wire.h>
 #endif
 uint16_t pc_mpr121_touched(uint8_t status_lo, uint8_t status_hi)
@@ -28,17 +27,17 @@ uint16_t pc_mpr121_touched(uint8_t status_lo, uint8_t status_hi)
     return (uint16_t)(((uint16_t)status_lo | ((uint16_t)status_hi << 8)) & 0x0FFF);
 }
 
-bool pc_mpr121_is_touched(uint16_t mask, uint8_t e)
+proto_bool pc_mpr121_is_touched(uint16_t mask, uint8_t e)
 {
     return e < MPR121_ELECTRODES && (mask & (uint16_t)(1u << e)) != 0;
 }
 
-bool pc_mpr121_proximity(uint8_t status_hi)
+proto_bool pc_mpr121_proximity(uint8_t status_hi)
 {
     return (status_hi & 0x10) != 0; // status bit 12
 }
 
-bool pc_mpr121_overcurrent(uint8_t status_hi)
+proto_bool pc_mpr121_overcurrent(uint8_t status_hi)
 {
     return (status_hi & 0x80) != 0; // status bit 15
 }
@@ -94,19 +93,17 @@ size_t pc_mpr121_build_init(uint8_t *buf, size_t cap, uint8_t n, uint8_t touch_t
 // I2C binding
 // ---------------------------------------------------------------------------
 
-#if defined(ARDUINO)
+#if PROTOCORE_HOT
 
-namespace
-{
 // All MPR121 I2C-binding state, owned by one instance (internal linkage): the device address,
 // so it is one named owner, unreachable from any other translation unit.
-struct Mpr121Ctx
+typedef struct
 {
     uint8_t addr = PC_MPR121_I2C_ADDR;
-};
-Mpr121Ctx s_mpr;
+} Mpr121Ctx;
+static Mpr121Ctx s_mpr;
 
-bool wr(uint8_t reg, uint8_t val)
+static proto_bool wr(uint8_t reg, uint8_t val)
 {
     Wire.beginTransmission(s_mpr.addr);
     Wire.write(reg);
@@ -114,27 +111,26 @@ bool wr(uint8_t reg, uint8_t val)
     return Wire.endTransmission() == 0;
 }
 
-bool rd(uint8_t reg, uint8_t *out, uint8_t n)
+static proto_bool rd(uint8_t reg, uint8_t *out, uint8_t n)
 {
     Wire.beginTransmission(s_mpr.addr);
     Wire.write(reg);
-    if (Wire.endTransmission(false) != 0)
+    if (Wire.endTransmission(PROTO_FALSE) != 0)
     {
-        return false;
+        return PROTO_FALSE;
     }
     if (Wire.requestFrom((int)s_mpr.addr, (int)n) != (int)n)
     {
-        return false;
+        return PROTO_FALSE;
     }
     for (uint8_t i = 0; i < n; i++)
     {
         out[i] = (uint8_t)Wire.read();
     }
-    return true;
+    return PROTO_TRUE;
 }
-} // namespace
 
-bool pc_mpr121_begin(uint8_t addr)
+proto_bool pc_mpr121_begin(uint8_t addr)
 {
     s_mpr.addr = addr ? addr : (uint8_t)PC_MPR121_I2C_ADDR;
     pc_i2c_begin();
@@ -143,21 +139,21 @@ bool pc_mpr121_begin(uint8_t addr)
                                     PC_MPR121_RELEASE_THRESHOLD);
     if (n == 0)
     {
-        return false;
+        return PROTO_FALSE;
     }
     if (!wr(seq[0], seq[1])) // soft reset first; then let the chip settle
     {
-        return false;
+        return PROTO_FALSE;
     }
     pcdelay(1);
     for (size_t i = 2; i + 1 < n; i += 2)
     {
         if (!wr(seq[i], seq[i + 1]))
         {
-            return false;
+            return PROTO_FALSE;
         }
     }
-    return true;
+    return PROTO_TRUE;
 }
 
 uint16_t pc_mpr121_read_touched()
@@ -186,9 +182,9 @@ uint16_t pc_mpr121_read_filtered(uint8_t e)
 
 #else // host build: no I2C. The decode + init-sequence builder above are host-tested.
 
-bool pc_mpr121_begin(uint8_t)
+proto_bool pc_mpr121_begin(uint8_t)
 {
-    return false;
+    return PROTO_FALSE;
 }
 uint16_t pc_mpr121_read_touched()
 {
@@ -199,6 +195,6 @@ uint16_t pc_mpr121_read_filtered(uint8_t)
     return 0;
 }
 
-#endif // ARDUINO
+#endif // PROTOCORE_HOT
 
 #endif // PC_ENABLE_MPR121

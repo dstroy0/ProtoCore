@@ -31,9 +31,6 @@
 
 #if PC_ENABLE_CIP
 
-#include <stddef.h>
-#include <stdint.h>
-
 // Common service codes.
 #define CIP_SC_GET_ATTR_ALL 0x01
 #define CIP_SC_GET_ATTR_LIST 0x03
@@ -58,7 +55,7 @@
  * @return EPATH length in octets (always even / word-aligned), or 0 on overflow.
  */
 size_t pc_cip_build_epath(uint8_t *buf, size_t cap, uint16_t class_id, uint16_t instance_id, uint16_t attribute_id,
-                          bool with_attribute);
+                          proto_bool with_attribute);
 
 /** @brief Build a CIP request: service + path size (words) + EPATH + service data. */
 size_t pc_cip_build_request(uint8_t *buf, size_t cap, uint8_t service, const uint8_t *epath, size_t epath_len,
@@ -84,16 +81,16 @@ size_t pc_cip_build_set_attr_single(uint8_t *buf, size_t cap, uint16_t class_id,
                                     uint16_t attribute_id, const uint8_t *value, size_t value_len);
 
 /** @brief A parsed CIP response. @ref data points INTO the source buffer. */
-struct CipResponse
+typedef struct
 {
     uint8_t service;        ///< reply service (the 0x80 reply bit is set)
     uint8_t general_status; ///< CIP_STATUS_SUCCESS on success
     const uint8_t *data;    ///< service data (the attribute value on a read)
     size_t data_len;
-};
+} CipResponse;
 
 /** @brief Parse a CIP response (service + status + additional status + data). */
-bool pc_cip_parse_response(const uint8_t *buf, size_t len, CipResponse *out);
+proto_bool pc_cip_parse_response(const uint8_t *buf, size_t len, CipResponse *out);
 
 #endif // PC_ENABLE_CIP
 

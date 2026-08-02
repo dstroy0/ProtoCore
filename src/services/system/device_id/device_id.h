@@ -20,7 +20,6 @@
 #define PROTOCORE_DEVICE_ID_H
 
 #include "protocore_config.h"
-#include <stdint.h>
 
 #if PC_ENABLE_DEVICE_ID
 
@@ -36,7 +35,7 @@
  */
 void pc_uuid_from_mac(const uint8_t mac[6], char out[PC_UUID_STR_LEN]);
 
-#ifdef ARDUINO
+#if PROTOCORE_HOT
 /**
  * @brief Format this device's UUID from its ESP32 factory (WiFi STA) MAC.
  * @param out  buffer of at least PC_UUID_STR_LEN bytes.

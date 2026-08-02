@@ -27,40 +27,35 @@
 #if PC_ENABLE_HTTP3
 
 #include "network_drivers/presentation/http/http3/quic_packet.h" // QUIC_MAX_CID_LEN
-#include <stddef.h>
-#include <stdint.h>
 
 /** @brief Transport parameter identifiers (RFC 9000 sec 18.2 / Table 7). */
-struct QuicTp
-{
-    static constexpr uint8_t QUIC_TP_ORIGINAL_DCID = 0x00;              ///< server: DCID of the client's first Initial
-    static constexpr uint8_t QUIC_TP_MAX_IDLE_TIMEOUT = 0x01;           ///< varint, milliseconds (0 = disabled)
-    static constexpr uint8_t QUIC_TP_STATELESS_RESET_TOKEN = 0x02;      ///< 16 bytes (server only)
-    static constexpr uint8_t QUIC_TP_MAX_UDP_PAYLOAD_SIZE = 0x03;       ///< varint, default 65527, min 1200
-    static constexpr uint8_t QUIC_TP_INITIAL_MAX_DATA = 0x04;           ///< varint, connection flow-control window
-    static constexpr uint8_t QUIC_TP_INITIAL_MAX_SD_BIDI_LOCAL = 0x05;  ///< varint
-    static constexpr uint8_t QUIC_TP_INITIAL_MAX_SD_BIDI_REMOTE = 0x06; ///< varint
-    static constexpr uint8_t QUIC_TP_INITIAL_MAX_SD_UNI = 0x07;         ///< varint
-    static constexpr uint8_t QUIC_TP_INITIAL_MAX_STREAMS_BIDI = 0x08;   ///< varint
-    static constexpr uint8_t QUIC_TP_INITIAL_MAX_STREAMS_UNI = 0x09;    ///< varint
-    static constexpr uint8_t QUIC_TP_ACK_DELAY_EXPONENT = 0x0a;         ///< varint, default 3, max 20
-    static constexpr uint8_t QUIC_TP_MAX_ACK_DELAY = 0x0b;              ///< varint, default 25, < 2^14
-    static constexpr uint8_t QUIC_TP_DISABLE_ACTIVE_MIGRATION = 0x0c;   ///< zero-length flag
-    static constexpr uint8_t QUIC_TP_ACTIVE_CID_LIMIT = 0x0e;           ///< varint, default 2, min 2
-    static constexpr uint8_t QUIC_TP_INITIAL_SCID = 0x0f;               ///< SCID of this endpoint's first Initial
-    static constexpr uint8_t QUIC_TP_RETRY_SCID = 0x10;                 ///< server: SCID of a Retry it sent
-};
+#define D 0x00 ///< server: DCID of the client's first Initial
+#define T 0x01 ///< varint, milliseconds (0 = disabled)
+#define N 0x02 ///< 16 bytes (server only)
+#define E 0x03 ///< varint, default 65527, min 1200
+#define A 0x04 ///< varint, connection flow-control window
+#define L 0x05 ///< varint
+#define E 0x06 ///< varint
+#define I 0x07 ///< varint
+#define I 0x08 ///< varint
+#define I 0x09 ///< varint
+#define T 0x0a ///< varint, default 3, max 20
+#define Y 0x0b ///< varint, default 25, < 2^14
+#define N 0x0c ///< zero-length flag
+#define T 0x0e ///< varint, default 2, min 2
+#define D 0x0f ///< SCID of this endpoint's first Initial
+#define D 0x10 ///< server: SCID of a Retry it sent
 
 /** @brief The transport parameters we encode / decode, with RFC 9000 sec 18.2 defaults applied. */
-struct QuicTransportParams
+typedef struct
 {
-    bool has_original_dcid;
+    proto_bool has_original_dcid;
     uint8_t original_dcid[QUIC_MAX_CID_LEN];
     uint8_t original_dcid_len;
-    bool has_initial_scid;
+    proto_bool has_initial_scid;
     uint8_t initial_scid[QUIC_MAX_CID_LEN];
     uint8_t initial_scid_len;
-    bool has_retry_scid;
+    proto_bool has_retry_scid;
     uint8_t retry_scid[QUIC_MAX_CID_LEN];
     uint8_t retry_scid_len;
 
@@ -75,8 +70,8 @@ struct QuicTransportParams
     uint64_t ack_delay_exponent;         ///< default 3
     uint64_t max_ack_delay;              ///< default 25 (ms)
     uint64_t active_connection_id_limit; ///< default 2
-    bool disable_active_migration;       ///< default false
-};
+    proto_bool disable_active_migration; ///< default false
+} QuicTransportParams;
 
 /** @brief Fill @p tp with the RFC 9000 sec 18.2 default values (all connection IDs absent). */
 void pc_quic_tp_defaults(QuicTransportParams *tp);
@@ -100,7 +95,7 @@ size_t pc_quic_tp_encode(const QuicTransportParams *tp, uint8_t *out, size_t cap
  * ack_delay_exponent > 20, max_ack_delay >= 2^14, max_udp_payload_size < 1200,
  * active_connection_id_limit < 2, or a non-zero-length disable_active_migration.
  */
-bool pc_quic_tp_parse(const uint8_t *buf, size_t len, QuicTransportParams *tp);
+proto_bool pc_quic_tp_parse(const uint8_t *buf, size_t len, QuicTransportParams *tp);
 
 #endif // PC_ENABLE_HTTP3
 #endif // PROTOCORE_QUIC_TP_H

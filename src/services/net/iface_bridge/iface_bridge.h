@@ -33,38 +33,36 @@
 #if PC_ENABLE_IFACE_BRIDGE
 
 #include "network_drivers/network/ip.h" // pc_ip (carry the full bind address, never a flattened one)
-#include <stddef.h>
-#include <stdint.h>
 
 // PC_BRIDGE_MAX_RULES is defined in protocore_config.h (the config owner).
 
 #define PC_BRIDGE_TXN_HDR 4 ///< transaction frame header: write_len(2) + read_len(2), big-endian
 
 /// Which hardware bus a rule targets.
-enum class BridgeBus : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
-    uart = 0,
-    spi = 1,
-    i2c = 2
-};
+    BRIDGE_BUS_UART = 0,
+    BRIDGE_BUS_SPI = 1,
+    BRIDGE_BUS_I2C = 2
+} BridgeBus;
 
 /// How socket bytes map to bus activity.
-enum class BridgeMode : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
-    stream = 0,     ///< raw bidirectional passthrough (UART)
-    transaction = 1 ///< framed write-then-read (SPI / I2C; also usable for UART)
-};
+    BRIDGE_MODE_STREAM = 0,     ///< raw bidirectional passthrough (UART)
+    BRIDGE_MODE_TRANSACTION = 1 ///< framed write-then-read (SPI / I2C; also usable for UART)
+} BridgeMode;
 
 /// The transport a rule listens on (matches the value stored on the wire; kept generic to avoid a hard
 /// dependency on ConnProto here in the pure core).
-enum class BridgeProto : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
-    tcp = 0,
-    udp = 1
-};
+    BRIDGE_PROTO_TCP = 0,
+    BRIDGE_PROTO_UDP = 1
+} BridgeProto;
 
 /// One hardware endpoint a network port is bridged to.
-struct BridgeTarget
+typedef struct
 {
     BridgeBus bus;
     BridgeMode mode;
@@ -73,17 +71,17 @@ struct BridgeTarget
     uint32_t rate;     ///< UART baud, or SPI/I2C clock (Hz)
     uint8_t spi_mode;  ///< SPI mode 0..3 (SPI only)
     uint8_t bit_order; ///< 0 = MSB-first, 1 = LSB-first (SPI only)
-};
+} BridgeTarget;
 
 /// A single address:port -> bus mapping.
-struct BridgeRule
+typedef struct
 {
     pc_ip listen_ip;      ///< bind address (x.x.x.x / [v6]); family PC_IP_NONE = any interface
     uint16_t listen_port; ///< nnnn
     BridgeProto proto;    ///< TCP or UDP
     BridgeTarget target;
-    bool used;
-};
+    proto_bool used;
+} BridgeRule;
 
 // ---------------------------------------------------------------------------------------------
 // Rule table (zero heap; register before begin()). Pure - host-testable.
@@ -93,11 +91,11 @@ struct BridgeRule
 void pc_iface_bridge_clear();
 
 /// Register a rule. Returns false if the table is full or a rule already binds the same port+proto.
-bool pc_iface_bridge_add(const BridgeRule *rule);
+proto_bool pc_iface_bridge_add(const BridgeRule *rule);
 
 /// Convenience: build + add a rule in one call. @p ip may be NULL for "any interface". Returns false on
 /// a bad address, a full table, or a duplicate port+proto.
-bool pc_iface_bridge_map(const char *ip, uint16_t port, BridgeProto proto, const BridgeTarget *target);
+proto_bool pc_iface_bridge_map(const char *ip, uint16_t port, BridgeProto proto, const BridgeTarget *target);
 
 /// Find the rule bound to @p port + @p proto, or NULL. This is the listener-dispatch lookup.
 const BridgeRule *pc_iface_bridge_find(uint16_t port, BridgeProto proto);

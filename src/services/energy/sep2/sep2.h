@@ -22,8 +22,6 @@
 #define PROTOCORE_SEP2_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_SEP2
 

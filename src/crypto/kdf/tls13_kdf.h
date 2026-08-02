@@ -33,9 +33,6 @@
 // schedule (see pc_tls13_msg.h for the matching guard on the message layer).
 #if (PC_ENABLE_HTTP3 || PC_ENABLE_DTLS)
 
-#include <stddef.h>
-#include <stdint.h>
-
 /** @brief SHA-256 secret length; every TLS 1.3 secret here is 32 bytes. */
 #define TLS13_SECRET_LEN 32
 
@@ -45,10 +42,10 @@
  * RFC 9147 sec 5.9). A caller picks the variant once (@ref TLS13_KDF or @ref DTLS13_KDF) and the
  * key schedule carries it, so no per-call flag is threaded through the derivation steps.
  */
-struct Tls13Kdf
+typedef struct
 {
     const char *label_prefix;
-};
+} Tls13Kdf;
 
 /** @brief TLS 1.3 / QUIC variant ("tls13 " prefix, RFC 8446). */
 extern const Tls13Kdf TLS13_KDF;
@@ -64,7 +61,7 @@ extern const Tls13Kdf DTLS13_KDF;
  * Each step also derives that level's client and server traffic secrets, from which the record/packet
  * keys are made.
  */
-struct Tls13KeySchedule
+typedef struct
 {
     const Tls13Kdf *kdf;                         ///< variant (label prefix) bound by pc_tls13_ks_early()
     uint8_t early_secret[TLS13_SECRET_LEN];      ///< HKDF-Extract(0, PSK|0) - no-PSK: Extract(0, 0^32)
@@ -74,7 +71,7 @@ struct Tls13KeySchedule
     uint8_t server_hs_traffic[TLS13_SECRET_LEN]; ///< Derive-Secret(handshake, "s hs traffic", CH..SH)
     uint8_t client_ap_traffic[TLS13_SECRET_LEN]; ///< Derive-Secret(master, "c ap traffic", CH..SFIN)
     uint8_t server_ap_traffic[TLS13_SECRET_LEN]; ///< Derive-Secret(master, "s ap traffic", CH..SFIN)
-};
+} Tls13KeySchedule;
 
 /**
  * @brief HKDF-Expand-Label under a KDF variant (RFC 8446 sec 7.1 with the @p kdf label prefix).

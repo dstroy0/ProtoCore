@@ -27,9 +27,7 @@
 // SMB 3.x is the only consumer of AES-CCM today; gate it so non-SMB builds do not carry the code.
 #if PC_ENABLE_SMB
 
-#include <stddef.h>
-#include <stdint.h>
-#ifdef ARDUINO
+#if PROTOCORE_HOT
 #include <mbedtls/ccm.h> // hardware-backed AES-CCM on ESP32
 #endif
 
@@ -51,9 +49,9 @@
  * @param tag_out   Output: the 16-byte authentication tag.
  * @return true on success, false on a bad argument.
  */
-bool pc_aesccm_seal_tag(const uint8_t *key, size_t key_len, const uint8_t *nonce, size_t nonce_len, const uint8_t *aad,
-                        size_t aad_len, const uint8_t *pt, size_t pt_len, uint8_t *ct_out,
-                        uint8_t tag_out[PC_AESCCM_TAG_LEN]);
+proto_bool pc_aesccm_seal_tag(const uint8_t *key, size_t key_len, const uint8_t *nonce, size_t nonce_len,
+                              const uint8_t *aad, size_t aad_len, const uint8_t *pt, size_t pt_len, uint8_t *ct_out,
+                              uint8_t tag_out[PC_AESCCM_TAG_LEN]);
 
 /**
  * @brief Open: AES-CCM verify-and-decrypt with a detached tag.
@@ -63,9 +61,9 @@ bool pc_aesccm_seal_tag(const uint8_t *key, size_t key_len, const uint8_t *nonce
  * @p out receives @p ct_len plaintext bytes and may alias @p ct.
  * @return true iff the tag is valid.
  */
-bool pc_aesccm_open_tag(const uint8_t *key, size_t key_len, const uint8_t *nonce, size_t nonce_len, const uint8_t *aad,
-                        size_t aad_len, const uint8_t *ct, size_t ct_len, const uint8_t tag[PC_AESCCM_TAG_LEN],
-                        uint8_t *out);
+proto_bool pc_aesccm_open_tag(const uint8_t *key, size_t key_len, const uint8_t *nonce, size_t nonce_len,
+                              const uint8_t *aad, size_t aad_len, const uint8_t *ct, size_t ct_len,
+                              const uint8_t tag[PC_AESCCM_TAG_LEN], uint8_t *out);
 
 #endif // PC_ENABLE_SMB
 

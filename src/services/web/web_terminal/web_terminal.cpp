@@ -16,7 +16,6 @@
 
 #include "network_drivers/application/web_assets.h" // PC_TERMINAL_PAGE
 #include "shared_primitives/mime.h"
-#include <stdbool.h>
 #include <string.h>
 
 // ---------------------------------------------------------------------------
@@ -30,7 +29,7 @@ typedef struct
 {
     TermCommandCb cb;
     char ws_path[MAX_PATH_LEN];
-    bool is_client[MAX_WS_CONNS]; // which ws slots are terminal browsers
+    proto_bool is_client[MAX_WS_CONNS]; // which ws slots are terminal browsers
 } WebTerminalCtx;
 
 // Static storage duration zero-initializes every field: cb is null, ws_path is empty, and no slot
@@ -54,7 +53,7 @@ static void term_ws_connect(uint8_t ws_id)
     // cannot fail. Same reasoning for the ws_id checks in term_ws_message / term_ws_close below.
     if (ws_id < MAX_WS_CONNS) // GCOVR_EXCL_LINE
     {
-        s_term.is_client[ws_id] = true;
+        s_term.is_client[ws_id] = PROTO_TRUE;
     }
     // As in term_page_handler: this handler is only reachable once begin() registered the route.
     ws_send_text(ws_id, "ProtoCore terminal ready\n");
@@ -74,7 +73,7 @@ static void term_ws_close(uint8_t ws_id)
 {
     if (ws_id < MAX_WS_CONNS) // GCOVR_EXCL_LINE  ws_id is always a valid pool index (see term_ws_connect)
     {
-        s_term.is_client[ws_id] = false;
+        s_term.is_client[ws_id] = PROTO_FALSE;
     }
 }
 
@@ -84,14 +83,14 @@ void pc_web_terminal_begin(const char *path)
 {
     for (uint8_t i = 0; i < MAX_WS_CONNS; i++)
     {
-        s_term.is_client[i] = false;
+        s_term.is_client[i] = PROTO_FALSE;
     }
 
     if (!path || !path[0])
     {
         path = "/terminal";
     }
-    pc_sb sb_ws_path = {s_term.ws_path, sizeof(s_term.ws_path), 0, true};
+    pc_sb sb_ws_path = {s_term.ws_path, sizeof(s_term.ws_path), 0, PROTO_TRUE};
     pc_sb_put(&sb_ws_path, path);
     pc_sb_put(&sb_ws_path, "/ws");
     if (pc_sb_finish(&sb_ws_path) == 0)
@@ -126,7 +125,7 @@ void pc_web_terminal_print(const char *s)
 void pc_web_terminal_println(const char *s)
 {
     char buf[TERM_TX_BUF_SIZE];
-    pc_sb sb_buf = {buf, sizeof(buf), 0, true};
+    pc_sb sb_buf = {buf, sizeof(buf), 0, PROTO_TRUE};
     pc_sb_put(&sb_buf, s ? s : "");
     pc_sb_put(&sb_buf, "\n");
     if (pc_sb_finish(&sb_buf) == 0)

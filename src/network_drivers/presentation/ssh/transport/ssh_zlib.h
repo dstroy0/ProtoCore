@@ -29,8 +29,6 @@
 #define PROTOCORE_SSH_ZLIB_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_SSH_ZLIB
 
@@ -48,18 +46,18 @@
  * (@ref head / @ref prev) are rebuilt over the history each packet, so a slid buffer needs no chain
  * fix-up. All pointers are caller-owned; ssh_deflate_init() wires them and seeds the fixed tables.
  */
-struct SshDeflate
+typedef struct
 {
-    uint8_t *work;     ///< history+input work buffer, capacity SSH_ZLIB_WORK_SIZE.
-    uint16_t *head;    ///< hash bucket heads, SSH_ZLIB_HASH_SIZE entries.
-    uint16_t *prev;    ///< hash chain (absolute-position indexed), SSH_ZLIB_WORK_SIZE entries.
-    uint16_t *ll_code; ///< fixed literal/length Huffman codes (bit-reversed), 288 entries.
-    uint8_t *ll_len;   ///< their bit lengths, 288 entries.
-    uint16_t *d_code;  ///< fixed distance Huffman codes (bit-reversed), 30 entries.
-    uint8_t *d_len;    ///< their bit lengths, 30 entries.
-    size_t hist;       ///< bytes of history currently at the front of @ref work.
-    bool header_sent;  ///< true once the leading 2-byte zlib header has been emitted.
-};
+    uint8_t *work;          ///< history+input work buffer, capacity SSH_ZLIB_WORK_SIZE.
+    uint16_t *head;         ///< hash bucket heads, SSH_ZLIB_HASH_SIZE entries.
+    uint16_t *prev;         ///< hash chain (absolute-position indexed), SSH_ZLIB_WORK_SIZE entries.
+    uint16_t *ll_code;      ///< fixed literal/length Huffman codes (bit-reversed), 288 entries.
+    uint8_t *ll_len;        ///< their bit lengths, 288 entries.
+    uint16_t *d_code;       ///< fixed distance Huffman codes (bit-reversed), 30 entries.
+    uint8_t *d_len;         ///< their bit lengths, 30 entries.
+    size_t hist;            ///< bytes of history currently at the front of @ref work.
+    proto_bool header_sent; ///< true once the leading 2-byte zlib header has been emitted.
+} SshDeflate;
 
 /**
  * @brief Bind caller memory to a compressor and reset it to stream start.

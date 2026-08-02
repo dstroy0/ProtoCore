@@ -34,33 +34,30 @@
 
 #if PC_ENABLE_SENML
 
-#include <stddef.h>
-#include <stdint.h>
-
 /** @brief Which value field a record carries. */
-enum class SenmlValueKind : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     SENML_V_NONE,   ///< no value (e.g. a base-only record)
     SENML_V_FLOAT,  ///< numeric value (v) - emitted as int when integral, else float
     SENML_V_STRING, ///< string value (vs)
     SENML_V_BOOL    ///< boolean value (vb)
-};
+} SenmlValueKind;
 
 /** @brief One SenML record. String pointers are borrowed (not copied); nullptr fields are skipped. */
-struct SenmlRecord
+typedef struct
 {
     const char *base_name; ///< bn (optional)
-    bool has_base_time;
+    proto_bool has_base_time;
     double base_time; ///< bt (optional)
     const char *name; ///< n (optional)
     const char *unit; ///< u (optional)
     SenmlValueKind value_kind;
-    double value;          ///< v (when value_kind == SenmlValueKind::SENML_V_FLOAT)
-    const char *value_str; ///< vs (when value_kind == SenmlValueKind::SENML_V_STRING)
-    bool value_bool;       ///< vb (when value_kind == SenmlValueKind::SENML_V_BOOL)
-    bool has_time;
+    double value;          ///< v (when value_kind == SENML_V_FLOAT)
+    const char *value_str; ///< vs (when value_kind == SENML_V_STRING)
+    proto_bool value_bool; ///< vb (when value_kind == SENML_V_BOOL)
+    proto_bool has_time;
     double time; ///< t (optional)
-};
+} SenmlRecord;
 
 /** @brief Build a SenML-JSON pack. Returns bytes written (excluding NUL), or 0 on overflow. */
 size_t pc_senml_json_build(char *buf, size_t cap, const SenmlRecord *records, size_t count);
@@ -83,17 +80,17 @@ size_t pc_senml_build(const pc_codec *c, uint8_t *buf, size_t cap, const SenmlRe
 #define SENML_RESOLVED_NAME_MAX 96
 
 /** @brief A resolved SenML record: the base name / time folded in, so it stands alone. */
-struct SenmlResolved
+typedef struct
 {
     char name[SENML_RESOLVED_NAME_MAX]; ///< the base name concatenated with the record name
     const char *unit;                   ///< u (borrowed from the input; may be null)
     SenmlValueKind value_kind;
     double value;
     const char *value_str;
-    bool value_bool;
-    bool has_time;
+    proto_bool value_bool;
+    proto_bool has_time;
     double time; ///< the base time added to the record time (an absolute time)
-};
+} SenmlResolved;
 
 /**
  * @brief Resolve a SenML pack (RFC 8428 §4.6): carry the base name / base time forward across records so

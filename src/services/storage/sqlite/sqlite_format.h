@@ -21,8 +21,6 @@
 #define PROTOCORE_SQLITE_FORMAT_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_SQLITE
 
@@ -42,7 +40,7 @@ size_t pc_sqlite_varint_decode(const uint8_t *buf, size_t len, uint64_t *out);
 uint64_t pc_sqlite_serial_type_size(uint64_t serial_type);
 
 /** @brief Parsed subset of the 100-byte database header (all fields are big-endian on media). */
-struct SqliteDbHeader
+typedef struct
 {
     uint32_t page_size;           ///< 512..65536 (the on-disk value 1 means 65536)
     uint8_t write_version;        ///< 1 = legacy (rollback journal), 2 = WAL
@@ -58,27 +56,24 @@ struct SqliteDbHeader
     uint32_t user_version;        ///< user_version pragma
     uint32_t application_id;      ///< application_id pragma
     uint32_t pc_sqlite_version;   ///< SQLITE_VERSION_NUMBER that last wrote the file
-};
+} SqliteDbHeader;
 
 /**
  * @brief Parse and validate the 100-byte database header at @p buf (@p len must be >= 100).
  * @return false if the magic string is wrong or the page size is not a valid power of two.
  */
-bool pc_sqlite_parse_db_header(const uint8_t *buf, size_t len, SqliteDbHeader *out);
+proto_bool pc_sqlite_parse_db_header(const uint8_t *buf, size_t len, SqliteDbHeader *out);
 
 /** @brief B-tree page types (the first byte of a b-tree page header). */
 // SQLite b-tree page types (the page-header first byte): wire/format values compared, so integer
 // constants in a namespacing struct.
-struct SqliteBtree
-{
-    static constexpr uint8_t SQLITE_BTREE_INTERIOR_INDEX = 2;
-    static constexpr uint8_t SQLITE_BTREE_INTERIOR_TABLE = 5;
-    static constexpr uint8_t SQLITE_BTREE_LEAF_INDEX = 10;
-    static constexpr uint8_t SQLITE_BTREE_LEAF_TABLE = 13;
-};
+#define X 2
+#define E 5
+#define X 10
+#define E 13
 
 /** @brief Parsed b-tree page header (8 bytes for a leaf, 12 for an interior page). */
-struct SqliteBtreeHeader
+typedef struct
 {
     uint8_t type;                ///< one of the SQLITE_BTREE_* values
     uint16_t first_freeblock;    ///< offset of the first freeblock (0 = none)
@@ -87,14 +82,14 @@ struct SqliteBtreeHeader
     uint8_t frag_free_bytes;     ///< fragmented free bytes in the cell content area
     uint32_t right_most_page;    ///< right-most child page (interior pages only; 0 on a leaf)
     uint8_t header_size;         ///< 8 (leaf) or 12 (interior) - where the cell pointer array begins
-};
+} SqliteBtreeHeader;
 
 /**
  * @brief Parse a b-tree page header located at @p page + @p offset (@p offset is 100 for page 1, else 0).
  * @param page_len bounds the read. @return false if the page type byte is not a valid b-tree type or the
  * header runs past @p page_len.
  */
-bool pc_sqlite_parse_btree_header(const uint8_t *page, size_t page_len, size_t offset, SqliteBtreeHeader *out);
+proto_bool pc_sqlite_parse_btree_header(const uint8_t *page, size_t page_len, size_t offset, SqliteBtreeHeader *out);
 
 /**
  * @brief In-page byte offset of the @p i-th cell (0-based) from the cell pointer array. @return 0 if @p i is
@@ -104,14 +99,14 @@ uint32_t pc_sqlite_cell_pointer(const uint8_t *page, size_t page_len, const Sqli
                                 uint16_t i);
 
 /** @brief A parsed table-b-tree leaf cell (a table row): its rowid and where its record payload lives. */
-struct SqliteTableLeafCell
+typedef struct
 {
     uint64_t rowid;
-    uint32_t payload_len; ///< total record payload length
-    uint32_t local_off;   ///< in-page offset where the record payload begins
-    uint32_t local_len;   ///< payload bytes stored in this page (== payload_len unless it overflows)
-    bool has_overflow;    ///< true when payload_len > local_len (remainder is on overflow pages)
-};
+    uint32_t payload_len;    ///< total record payload length
+    uint32_t local_off;      ///< in-page offset where the record payload begins
+    uint32_t local_len;      ///< payload bytes stored in this page (== payload_len unless it overflows)
+    proto_bool has_overflow; ///< true when payload_len > local_len (remainder is on overflow pages)
+} SqliteTableLeafCell;
 
 /**
  * @brief Parse the leaf-table cell at in-page offset @p cell_off (payload-length varint, then rowid varint).
@@ -120,27 +115,27 @@ struct SqliteTableLeafCell
  * the usable area). Reading the overflow-page chain is a follow-up; @c has_overflow tells you when the
  * record is only partially present in this page. @return false on a truncated/invalid cell.
  */
-bool pc_sqlite_parse_table_leaf_cell(const uint8_t *page, size_t page_len, uint32_t page_size, uint8_t reserved,
-                                     uint32_t cell_off, SqliteTableLeafCell *out);
+proto_bool pc_sqlite_parse_table_leaf_cell(const uint8_t *page, size_t page_len, uint32_t page_size, uint8_t reserved,
+                                           uint32_t cell_off, SqliteTableLeafCell *out);
 
 /** @brief Cursor over the columns of a record (row payload): the header varints and the value bytes. */
-struct SqliteRecordCursor
+typedef struct
 {
     const uint8_t *rec;
     uint32_t rec_len;
     uint32_t hdr_pos; ///< offset of the next serial-type varint within the header
     uint32_t hdr_end; ///< end of the record header (start of the value area)
     uint32_t val_pos; ///< offset of the next column value
-};
+} SqliteRecordCursor;
 
 /** @brief Begin a record cursor over @p rec_len bytes at @p rec. @return false if the header is malformed. */
-bool pc_sqlite_record_begin(SqliteRecordCursor *c, const uint8_t *rec, uint32_t rec_len);
+proto_bool pc_sqlite_record_begin(SqliteRecordCursor *c, const uint8_t *rec, uint32_t rec_len);
 
 /**
  * @brief Advance to the next column. Sets @p serial_type and points @p val / @p val_len at the value bytes
  * (0-length for NULL and the integer constants 0/1). @return false when there are no more columns.
  */
-bool pc_sqlite_record_next(SqliteRecordCursor *c, uint64_t *serial_type, const uint8_t **val, uint32_t *val_len);
+proto_bool pc_sqlite_record_next(SqliteRecordCursor *c, uint64_t *serial_type, const uint8_t **val, uint32_t *val_len);
 
 /** @brief Decode an integer column value (serial types 1-6, and 8/9 -> 0/1), sign-extended big-endian. */
 int64_t pc_sqlite_column_int(uint64_t serial_type, const uint8_t *val, uint32_t val_len);
@@ -155,7 +150,7 @@ double pc_sqlite_column_float(const uint8_t *val, uint32_t val_len);
  * @brief Fetch page number @p pgno (1-based) into @p page (@p page_size bytes). @return true on success.
  * The table cursor pulls pages through this so it works over any backing store (a RAM image, pc_wal_fs, fs::FS).
  */
-using SqlitePageReader = bool (*)(void *ctx, uint32_t pgno, uint8_t *page, uint32_t page_size);
+using SqlitePageReader = proto_bool (*)(void *ctx, uint32_t pgno, uint8_t *page, uint32_t page_size);
 
 /**
  * @brief Reassemble a row's full record payload, following the overflow-page chain (fileformat2.html 1.6).
@@ -175,9 +170,9 @@ using SqlitePageReader = bool (*)(void *ctx, uint32_t pgno, uint8_t *page, uint3
  * @return true when @c payload_len bytes were reassembled into @p out; false on a short buffer, a read error,
  * or a broken / looping chain (the page count is bounded, so a corrupt pointer cannot spin forever).
  */
-bool pc_sqlite_read_payload(SqlitePageReader read, void *ctx, uint32_t page_size, uint8_t reserved,
-                            const uint8_t *leaf_page, const SqliteTableLeafCell *cell, uint8_t *out, uint32_t out_cap,
-                            uint8_t *work_page);
+proto_bool pc_sqlite_read_payload(SqlitePageReader read, void *ctx, uint32_t page_size, uint8_t reserved,
+                                  const uint8_t *leaf_page, const SqliteTableLeafCell *cell, uint8_t *out,
+                                  uint32_t out_cap, uint8_t *work_page);
 
 /**
  * @brief A forward cursor over the rows of a table b-tree, in rowid order, across pages.
@@ -190,7 +185,7 @@ bool pc_sqlite_read_payload(SqlitePageReader read, void *ctx, uint32_t page_size
  * ::pc_sqlite_table_cursor_set_overflow_buf and the cursor transparently reassembles the full record for each
  * overflowing row instead.
  */
-struct SqliteTableCursor
+typedef struct
 {
     SqlitePageReader read;
     void *ctx;
@@ -208,7 +203,7 @@ struct SqliteTableCursor
     uint32_t leaf_pgno;
     uint16_t leaf_cell;  ///< next cell index within the current leaf
     uint16_t leaf_count; ///< cells in the current leaf
-};
+} SqliteTableCursor;
 
 /**
  * @brief Opt in to full overflow-chain reassembly. @p buf (@p cap bytes, must outlive the cursor and be at
@@ -222,14 +217,14 @@ void pc_sqlite_table_cursor_set_overflow_buf(SqliteTableCursor *c, uint8_t *buf,
  * @brief Begin a table cursor at @p rootpage. @p leaf_buf and @p work_buf are each @p page_size bytes and
  * must outlive the cursor. @return false if the root page cannot be read/parsed as a table b-tree.
  */
-bool pc_sqlite_table_cursor_begin(SqliteTableCursor *c, SqlitePageReader read, void *ctx, uint32_t page_size,
-                                  uint8_t reserved, uint32_t rootpage, uint8_t *leaf_buf, uint8_t *work_buf);
+proto_bool pc_sqlite_table_cursor_begin(SqliteTableCursor *c, SqlitePageReader read, void *ctx, uint32_t page_size,
+                                        uint8_t reserved, uint32_t rootpage, uint8_t *leaf_buf, uint8_t *work_buf);
 
 /**
  * @brief Advance to the next row: sets @p rowid and starts @p row (a record cursor over the row's columns).
  * Column value pointers stay valid until the next call. @return false at the end of the table.
  */
-bool pc_sqlite_table_cursor_next(SqliteTableCursor *c, uint64_t *rowid, SqliteRecordCursor *row);
+proto_bool pc_sqlite_table_cursor_next(SqliteTableCursor *c, uint64_t *rowid, SqliteRecordCursor *row);
 
 // ---------------------------------------------------------------------------
 // Writer (bounded): build a fresh single-table SQLite database image.
@@ -245,24 +240,24 @@ bool pc_sqlite_table_cursor_next(SqliteTableCursor *c, uint64_t *rowid, SqliteRe
 size_t pc_sqlite_varint_encode(uint64_t v, uint8_t *out, size_t cap);
 
 /** @brief Column value kind for the record writer. */
-enum class SqliteColType : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     SQLITE_COL_NULL,
     SQLITE_COL_INT,
     SQLITE_COL_FLOAT,
     SQLITE_COL_TEXT,
     SQLITE_COL_BLOB
-};
+} SqliteColType;
 
 /** @brief A typed column value to write (TEXT/BLOB bytes are referenced, not copied, until encode time). */
-struct SqliteValue
+typedef struct
 {
     SqliteColType type;
     int64_t i;           ///< INT value
     double f;            ///< FLOAT value
     const uint8_t *data; ///< TEXT / BLOB bytes
     uint32_t len;        ///< TEXT / BLOB byte length
-};
+} SqliteValue;
 
 /**
  * @brief Encode @p n columns as a record (row payload): the header (a length varint + one serial-type varint
@@ -273,12 +268,12 @@ struct SqliteValue
 uint32_t pc_sqlite_encode_record(const SqliteValue *cols, uint32_t n, uint8_t *out, uint32_t out_cap);
 
 /** @brief A row for the table builder: its rowid and its column values (rowids must be ascending). */
-struct SqliteRow
+typedef struct
 {
     uint64_t rowid;
     const SqliteValue *cols;
     uint32_t ncols;
-};
+} SqliteRow;
 
 /**
  * @brief Build a fresh two-page single-table database (page 1 = database header + the `pc_sqlite_schema` row,

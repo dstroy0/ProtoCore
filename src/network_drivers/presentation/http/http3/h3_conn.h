@@ -30,8 +30,6 @@
 
 #include "network_drivers/presentation/http/http3/h3_frame.h"
 #include "network_drivers/presentation/http/http3/quic_conn.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #ifndef PC_H3_STREAM_BUF
 #define PC_H3_STREAM_BUF 2048 ///< per-request-stream reassembly buffer (HEADERS + DATA)
@@ -56,7 +54,7 @@ typedef void (*H3RequestFn)(void *app, H3Conn *h3, uint64_t stream_id, const cha
                             const char *authority, const uint8_t *body, size_t body_len);
 
 /** @brief HTTP/3 stream roles (a mutually-exclusive internal role, not a wire value). */
-enum class H3StreamRole : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     H3_ROLE_FREE = 0,
     H3_ROLE_REQUEST,   ///< client-initiated bidirectional request stream
@@ -64,35 +62,35 @@ enum class H3StreamRole : uint8_t
     H3_ROLE_QPACK_ENC, ///< client QPACK encoder stream (type 0x02)
     H3_ROLE_QPACK_DEC, ///< client QPACK decoder stream (type 0x03)
     H3_ROLE_OTHER_UNI, ///< an unknown unidirectional stream (drained/ignored)
-};
+} H3StreamRole;
 
 /** @brief Per-stream HTTP/3 state. */
-struct H3Stream
+typedef struct
 {
-    uint64_t id;       ///< stream id (UINT64_MAX = free)
-    H3StreamRole role; ///< stream role
-    bool type_read;    ///< a unidirectional stream's type varint has been consumed
-    bool responded;    ///< a response has been sent on this request stream
+    uint64_t id;          ///< stream id (UINT64_MAX = free)
+    H3StreamRole role;    ///< stream role
+    proto_bool type_read; ///< a unidirectional stream's type varint has been consumed
+    proto_bool responded; ///< a response has been sent on this request stream
     uint8_t buf[PC_H3_STREAM_BUF];
     size_t buf_len;
     char method[PC_H3_METHOD_LEN];
     char path[PC_H3_PATH_LEN];
     char authority[PC_H3_AUTHORITY_LEN];
-    bool have_headers; ///< a HEADERS frame has been decoded
-    size_t body_off;   ///< where the accumulated body begins within buf (after the last HEADERS)
-};
+    proto_bool have_headers; ///< a HEADERS frame has been decoded
+    size_t body_off;         ///< where the accumulated body begins within buf (after the last HEADERS)
+} H3Stream;
 
 /** @brief One HTTP/3 connection (wraps a QuicConn). */
-struct H3Conn
+typedef struct H3Conn
 {
     QuicConn *qc;
     H3RequestFn on_request;
     void *app;
     H3Settings peer_settings;
-    bool control_opened;  ///< our control + QPACK streams have been opened
-    uint64_t next_uni_id; ///< next server-initiated unidirectional stream id (3, 7, 11, ...)
+    proto_bool control_opened; ///< our control + QPACK streams have been opened
+    uint64_t next_uni_id;      ///< next server-initiated unidirectional stream id (3, 7, 11, ...)
     H3Stream streams[PC_H3_MAX_STREAMS];
-};
+} H3Conn;
 
 /**
  * @brief Initialize an HTTP/3 connection over @p qc.
@@ -108,8 +106,8 @@ void pc_h3_conn_init(H3Conn *h3, QuicConn *qc, H3RequestFn on_request, void *app
  * :status and optional content-type / content-length, then a DATA frame with @p body, and finish
  * the stream. @return false on a bad stream or serialization overflow.
  */
-bool pc_h3_conn_respond(H3Conn *h3, uint64_t stream_id, int status, const char *content_type, const uint8_t *body,
-                        size_t body_len);
+proto_bool pc_h3_conn_respond(H3Conn *h3, uint64_t stream_id, int status, const char *content_type, const uint8_t *body,
+                              size_t body_len);
 
 #endif // PC_ENABLE_HTTP3
 #endif // PROTOCORE_H3_CONN_H

@@ -36,13 +36,11 @@
 #define PROTOCORE_POWER_MGMT_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_POWER_MGMT
 
 /** @brief Governor limits. Temperatures in whole degrees C; frequencies in MHz. */
-struct PowerCfg
+typedef struct
 {
     uint16_t mhz_max;    ///< clock when there is work to do.
     uint16_t mhz_min;    ///< clock when idle, throttled, or recovering.
@@ -50,15 +48,15 @@ struct PowerCfg
     int16_t temp_hot_c;  ///< throttle at/above this die temperature.
     int16_t temp_cool_c; ///< release the throttle at/below this one (must be < temp_hot_c).
     uint32_t recover_ms; ///< how long to stay at the floor after a brownout reset.
-};
+} PowerCfg;
 
 /** @brief What the governor decided this tick. */
-struct PowerPlan
+typedef struct
 {
-    uint16_t cpu_mhz; ///< clock to apply.
-    bool throttled;   ///< the thermal limit is holding the clock down.
-    bool recovering;  ///< still inside the post-brownout settle window.
-};
+    uint16_t cpu_mhz;      ///< clock to apply.
+    proto_bool throttled;  ///< the thermal limit is holding the clock down.
+    proto_bool recovering; ///< still inside the post-brownout settle window.
+} PowerPlan;
 
 /**
  * @brief Decide the clock for this tick.
@@ -74,8 +72,8 @@ struct PowerPlan
  * @param was_throttled  the previous tick's `throttled` - this is what gives the thermal decision
  *                       its hysteresis, so pass the plan's own output back in.
  */
-PowerPlan pc_power_plan(const PowerCfg *cfg, uint8_t load_pct, int16_t temp_c, bool brownout_boot,
-                        uint32_t since_boot_ms, bool was_throttled);
+PowerPlan pc_power_plan(const PowerCfg *cfg, uint8_t load_pct, int16_t temp_c, proto_bool brownout_boot,
+                        uint32_t since_boot_ms, proto_bool was_throttled);
 
 /** @brief Defaults from the PC_POWER_* build flags. */
 void pc_power_cfg_defaults(PowerCfg *cfg);
@@ -86,17 +84,17 @@ void pc_power_cfg_defaults(PowerCfg *cfg);
  */
 size_t pc_power_json(const PowerPlan *plan, int16_t temp_c, char *out, size_t cap);
 
-#if defined(ARDUINO)
+#if PROTOCORE_HOT
 // --- device binding -----------------------------------------------------------------------
 
 /** @brief True if the last reset was a brownout (esp_reset_reason). Latched, so it stays true. */
-bool pc_power_brownout_boot(void);
+proto_bool pc_power_brownout_boot(void);
 
 /** @brief Die temperature in whole degrees C, or INT16_MIN if this part has no sensor. */
 int16_t pc_power_temp_c(void);
 
 /** @brief Apply @p plan's clock (no-op if it already matches). @return true if the clock changed. */
-bool pc_power_apply(const PowerPlan *plan);
+proto_bool pc_power_apply(const PowerPlan *plan);
 
 /** @brief Current CPU clock in MHz. */
 uint16_t pc_power_cpu_mhz(void);
@@ -108,8 +106,8 @@ uint16_t pc_power_cpu_mhz(void);
  * is free power back. Safe to call when BT was never initialized, and safe to call twice.
  * @return true if a release actually happened.
  */
-bool pc_power_gate_bt(void);
-#endif // ARDUINO
+proto_bool pc_power_gate_bt(void);
+#endif // PROTOCORE_HOT
 
 #endif // PC_ENABLE_POWER_MGMT
 #endif // PROTOCORE_POWER_MGMT_H

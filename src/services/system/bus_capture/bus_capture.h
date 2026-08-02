@@ -29,8 +29,6 @@
 
 #include "shared_primitives/can.h"  // CanFrame
 #include "shared_primitives/pcap.h" // PC_DLT_CAN_SOCKETCAN
-#include <stddef.h>
-#include <stdint.h>
 
 /** @brief A Linux SocketCAN classic frame is 16 bytes on the wire (and in a PCAP record). */
 #define PC_SOCKETCAN_FRAME_LEN 16
@@ -61,7 +59,7 @@ typedef void (*bus_capture_sink_fn)(const CanFrame *frame);
  * @return true if the driver installed and started; false on a bad bit rate, a driver error, or a
  *         host build.
  */
-bool bus_capture_begin(int tx_pin, int rx_pin, uint32_t bitrate, bus_capture_sink_fn sink);
+proto_bool bus_capture_begin(int tx_pin, int rx_pin, uint32_t bitrate, bus_capture_sink_fn sink);
 
 /** @brief Drain any received frames, calling the sink for each. Call from loop(). */
 void bus_capture_poll(void);

@@ -43,23 +43,23 @@
  * All char* fields point into the (modified) `HttpReq::body[]` buffer.
  * They are null-terminated and valid until `http_reset()` is called.
  */
-struct MultipartPart
+typedef struct
 {
     const char *name;     ///< Form field name from Content-Disposition, or nullptr.
     const char *filename; ///< Upload filename from Content-Disposition, or nullptr.
     const char *type;     ///< Content-Type of this part, or nullptr.
     const char *data;     ///< Part body (null-terminated in-place).
     size_t data_len;      ///< Part body length in bytes (not counting the null).
-};
+} MultipartPart;
 
 /**
  * @brief Container for all parsed parts of a multipart body.
  */
-struct Multipart
+typedef struct
 {
     MultipartPart parts[MAX_MULTIPART_PARTS]; ///< Parsed parts.
     int part_count;                           ///< Number of valid entries in parts[].
-};
+} Multipart;
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -71,11 +71,11 @@ struct Multipart
  * Reads the boundary from the `Content-Type` header, then scans
  * `req->body` in-place, null-terminating each part's headers and data.
  *
- * @param req  Fully-parsed HTTP request (must be in ParseState::PARSE_COMPLETE state).
+ * @param req  Fully-parsed HTTP request (must be in PARSE_COMPLETE state).
  * @param mp   Output structure; filled on success.
  * @return true if at least one part was found, false on parse error.
  */
-bool pc_multipart_parse(HttpReq *req, Multipart *mp);
+proto_bool pc_multipart_parse(HttpReq *req, Multipart *mp);
 
 /**
  * @brief Look up a field value across all parsed parts by name.

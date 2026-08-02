@@ -36,47 +36,20 @@
 #ifndef PROTOCORE_CLOCK_H
 #define PROTOCORE_CLOCK_H
 
-#include <Arduino.h> // platform millis()
-#include <stdint.h>
+#include "protocore_config.h" // the entry point: PC_INLINE, types.h, and the platform time base
 
 /** @brief User clock: returns a free-running monotonic tick count. */
 typedef uint32_t (*pc_clock_fn)(void);
 
-// Override state. Inline functions with local statics resolve to a single shared
-// instance across all translation units (ODR), so a set from anywhere is seen
-// everywhere - no .cpp, no globals to define.
-inline pc_clock_fn &_pc_clock_fn_ref()
-{
-    static pc_clock_fn fn = nullptr;
-    return fn;
-}
-inline uint32_t &_pc_clock_div_ref()
-{
-    static uint32_t div = 1;
-    return div;
-}
-
 /**
  * @brief Install a custom clock running at @p ticks_per_second; the library divides
- *        it down to its internal 1000 Hz. Pass (nullptr, 0) to revert to the
+ *        it down to its internal 1000 Hz. Pass (NULL, 0) to revert to the
  *        platform default.
  */
-inline void pc_set_clock(pc_clock_fn fn, uint32_t ticks_per_second)
-{
-    _pc_clock_fn_ref() = fn;
-    _pc_clock_div_ref() = (ticks_per_second >= 1000) ? (ticks_per_second / 1000) : 1;
-}
+void pc_set_clock(pc_clock_fn fn, uint32_t ticks_per_second);
 
 /** @brief The library's monotonic time at 1000 Hz (milliseconds). */
-inline uint32_t pc_millis(void)
-{
-    pc_clock_fn fn = _pc_clock_fn_ref();
-    if (fn)
-    {
-        return fn() / _pc_clock_div_ref();
-    }
-    return millis();
-}
+uint32_t pc_millis(void);
 
 /**
  * @brief Block for at least @p ms milliseconds - the library's single delay primitive.
@@ -86,18 +59,18 @@ inline uint32_t pc_millis(void)
  * the monotonic clock (so it sleeps the task and feeds the watchdog, never starving the scheduler); on host
  * it spins on the same clock. Measured against ::pc_millis, so a custom clock governs it too.
  */
-inline void pcdelay(uint32_t ms)
+PC_INLINE void pcdelay(uint32_t ms)
 {
-#ifdef ARDUINO
+#if PROTOCORE_HOT
     if (ms == 0)
     {
-        vTaskDelay(0); // a bare cooperative yield
+        pc_platform_task_delay(0); // a bare cooperative yield
         return;
     }
     uint32_t start = pc_millis();
     while (pc_millis() - start < ms)
     {
-        vTaskDelay(1); // one RTOS tick: sleeps the task (the core can idle) and feeds the watchdog
+        pc_platform_task_delay(1); // one tick: sleeps the task (the core can idle) and feeds the watchdog
     }
 #else
     uint32_t start = pc_millis();
@@ -117,27 +90,12 @@ inline void pcdelay(uint32_t ms)
 // millisecond clock; the default is the platform micros() on device, or
 // pc_millis() * 1000 on host (override for sub-ms precision in tests).
 
-inline pc_clock_fn &_pc_micros_fn_ref()
-{
-    static pc_clock_fn fn = nullptr;
-    return fn;
-}
-inline uint32_t &_pc_micros_div_ref()
-{
-    static uint32_t div = 1;
-    return div;
-}
-
 /**
  * @brief Install a custom microsecond clock running at @p ticks_per_second; the
  *        library divides it down to 1 MHz. Pass (nullptr, 0) for the platform
  *        default.
  */
-inline void pc_set_micros_clock(pc_clock_fn fn, uint32_t ticks_per_second)
-{
-    _pc_micros_fn_ref() = fn;
-    _pc_micros_div_ref() = (ticks_per_second >= 1000000u) ? (ticks_per_second / 1000000u) : 1u;
-}
+void pc_set_micros_clock(pc_clock_fn fn, uint32_t ticks_per_second);
 
 /**
  * @brief Monotonic microseconds - the high-resolution time base for ISR
@@ -145,19 +103,7 @@ inline void pc_set_micros_clock(pc_clock_fn fn, uint32_t ticks_per_second)
  *        roughly every 71 minutes, so use it only for short deltas (unsigned
  *        subtraction is wrap-safe).
  */
-inline uint32_t pc_micros(void)
-{
-    pc_clock_fn fn = _pc_micros_fn_ref();
-    if (fn)
-    {
-        return fn() / _pc_micros_div_ref();
-    }
-#ifdef ARDUINO
-    return micros();
-#else
-    return pc_millis() * 1000u; // host fallback (no platform micros); override for precision
-#endif
-}
+uint32_t pc_micros(void);
 
 // ---------------------------------------------------------------------------
 // Latency budgeting: measure an operation against a microsecond budget
@@ -169,17 +115,17 @@ inline uint32_t pc_micros(void)
  *        subsystem (the preempting queue, a DMA path, a forwarding rule) keeps one
  *        and reports it for real-time visibility.
  */
-struct pc_latency_stat
+typedef struct
 {
     uint32_t count;
     uint32_t over_budget; ///< samples whose latency exceeded the budget
     uint32_t min_us;
     uint32_t max_us;
     uint64_t sum_us;
-};
+} pc_latency_stat;
 
 /** @brief Zero a stat (min seeded high so the first sample sets it). */
-inline void pc_lat_reset(pc_latency_stat *s)
+PC_INLINE void pc_lat_reset(pc_latency_stat *s)
 {
     s->count = 0;
     s->over_budget = 0;
@@ -189,7 +135,7 @@ inline void pc_lat_reset(pc_latency_stat *s)
 }
 
 /** @brief Start of a measured span: capture the current microsecond time. */
-inline uint32_t pc_lat_begin(void)
+PC_INLINE uint32_t pc_lat_begin(void)
 {
     return pc_micros();
 }
@@ -198,7 +144,7 @@ inline uint32_t pc_lat_begin(void)
  * @brief End of a span started at @p start_us: record its latency, counting it as
  *        over-budget when @p budget_us is non-zero and exceeded. Wrap-safe.
  */
-inline void pc_lat_end(pc_latency_stat *s, uint32_t start_us, uint32_t budget_us)
+PC_INLINE void pc_lat_end(pc_latency_stat *s, uint32_t start_us, uint32_t budget_us)
 {
     uint32_t lat = pc_micros() - start_us; // wrap-safe unsigned delta
     s->count++;
@@ -218,7 +164,7 @@ inline void pc_lat_end(pc_latency_stat *s, uint32_t start_us, uint32_t budget_us
 }
 
 /** @brief Mean latency (us) over the recorded samples, 0 if none. */
-inline uint32_t pc_lat_avg_us(const pc_latency_stat *s)
+PC_INLINE uint32_t pc_lat_avg_us(const pc_latency_stat *s)
 {
     return s->count ? (uint32_t)(s->sum_us / s->count) : 0u;
 }
@@ -245,15 +191,7 @@ inline uint32_t pc_lat_avg_us(const pc_latency_stat *s)
  *        scaled by @p host_fallback_mhz (a coarse stand-in - override with a real
  *        cycle source in a host test that needs nanosecond precision).
  */
-inline uint32_t pc_cycles(void)
-{
-#ifdef ARDUINO
-    return ESP.getCycleCount();
-#else
-    const uint32_t host_fallback_mhz = 240; // arbitrary stand-in; deltas only, never absolute
-    return pc_micros() * host_fallback_mhz;
-#endif
-}
+uint32_t pc_cycles(void);
 
 /**
  * @brief Convert a cycle-count delta to nanoseconds at @p cpu_mhz (the running CPU

@@ -13,16 +13,13 @@
 
 #include "crypto/hash/sha1.h"
 
-#ifdef ARDUINO
+#if PROTOCORE_HOT
 #include <esp_mac.h> // esp_read_mac()
 #endif
 
-namespace
-{
 // RFC 4122 DNS namespace UUID (6ba7b810-9dad-11d1-80b4-00c04fd430c8).
-const uint8_t NS_DNS[16] = {0x6b, 0xa7, 0xb8, 0x10, 0x9d, 0xad, 0x11, 0xd1,
-                            0x80, 0xb4, 0x00, 0xc0, 0x4f, 0xd4, 0x30, 0xc8};
-} // namespace
+static const uint8_t NS_DNS[16] = {0x6b, 0xa7, 0xb8, 0x10, 0x9d, 0xad, 0x11, 0xd1,
+                                   0x80, 0xb4, 0x00, 0xc0, 0x4f, 0xd4, 0x30, 0xc8};
 
 void pc_uuid_from_mac(const uint8_t mac[6], char out[PC_UUID_STR_LEN])
 {
@@ -34,8 +31,8 @@ void pc_uuid_from_mac(const uint8_t mac[6], char out[PC_UUID_STR_LEN])
     }
     for (int i = 0; i < 6; i++)
     {
-        input[16 + i * 2] = (uint8_t)pc_hex_digit((uint8_t)(mac[i] >> 4));
-        input[16 + i * 2 + 1] = (uint8_t)pc_hex_digit((uint8_t)(mac[i] & 0x0F));
+        input[16 + i * 2] = (uint8_t)pc_hex_digit((uint8_t)(mac[i] >> 4), PROTO_FALSE);
+        input[16 + i * 2 + 1] = (uint8_t)pc_hex_digit((uint8_t)(mac[i] & 0x0F), PROTO_FALSE);
     }
 
     uint8_t h[PC_SHA1_DIGEST_LEN];
@@ -55,15 +52,15 @@ void pc_uuid_from_mac(const uint8_t mac[6], char out[PC_UUID_STR_LEN])
         }
         for (int b = 0; b < groups[g]; b++)
         {
-            out[oi++] = pc_hex_digit((uint8_t)(h[hi] >> 4));
-            out[oi++] = pc_hex_digit((uint8_t)(h[hi] & 0x0F));
+            out[oi++] = pc_hex_digit((uint8_t)(h[hi] >> 4), PROTO_FALSE);
+            out[oi++] = pc_hex_digit((uint8_t)(h[hi] & 0x0F), PROTO_FALSE);
             hi++;
         }
     }
     out[oi] = '\0';
 }
 
-#ifdef ARDUINO
+#if PROTOCORE_HOT
 void pc_device_uuid(char out[PC_UUID_STR_LEN])
 {
     uint8_t mac[6] = {0};

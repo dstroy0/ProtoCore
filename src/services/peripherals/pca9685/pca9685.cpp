@@ -14,17 +14,14 @@
 
 #if PC_ENABLE_PCA9685
 
-#if defined(ARDUINO)
+#if PROTOCORE_HOT
 #include "services/peripherals/i2c.h"
 #include <Arduino.h>
 #include <Wire.h>
 #endif
-namespace
-{
-const uint32_t PCA9685_OSC_HZ = 25000000u;
-const uint8_t PCA9685_PRESCALE_MIN = 3;
-const uint8_t PCA9685_PRESCALE_MAX = 255;
-} // namespace
+static const uint32_t PCA9685_OSC_HZ = 25000000u;
+static const uint8_t PCA9685_PRESCALE_MIN = 3;
+static const uint8_t PCA9685_PRESCALE_MAX = 255;
 
 uint8_t pc_pca9685_prescale(uint32_t freq_hz)
 {
@@ -82,34 +79,31 @@ size_t pc_pca9685_set_pwm_bytes(uint8_t *buf, size_t cap, uint8_t channel, uint1
 // I2C binding
 // ---------------------------------------------------------------------------
 
-#if defined(ARDUINO)
+#if PROTOCORE_HOT
 
-namespace
-{
 // All PCA9685 I2C-binding state, owned by one instance (internal linkage): the device address
 // and the configured PWM frequency, grouped so it is one named owner, unreachable cross-TU.
-struct Pca9685Ctx
+typedef struct
 {
     uint8_t addr = PC_PCA9685_I2C_ADDR;
     uint32_t freq = PC_PCA9685_FREQ;
-};
-Pca9685Ctx s_pca;
+} Pca9685Ctx;
+static Pca9685Ctx s_pca;
 
-bool wr(uint8_t reg, uint8_t val)
+static proto_bool wr(uint8_t reg, uint8_t val)
 {
     Wire.beginTransmission(s_pca.addr);
     Wire.write(reg);
     Wire.write(val);
     return Wire.endTransmission() == 0;
 }
-} // namespace
 
-bool pc_pca9685_begin(uint8_t addr, uint32_t freq_hz)
+proto_bool pc_pca9685_begin(uint8_t addr, uint32_t freq_hz)
 {
     s_pca.addr = addr ? addr : (uint8_t)PC_PCA9685_I2C_ADDR;
     s_pca.freq = freq_hz ? freq_hz : (uint32_t)PC_PCA9685_FREQ;
     pc_i2c_begin();
-    bool ok = true;
+    proto_bool ok = PROTO_TRUE;
     ok &= wr(PCA9685_REG_MODE1, 0x10); // SLEEP (required before changing PRESCALE)
     ok &= wr(PCA9685_REG_PRESCALE, pc_pca9685_prescale(s_pca.freq));
     ok &= wr(PCA9685_REG_MODE1, 0x20); // wake, auto-increment (AI)
@@ -119,38 +113,38 @@ bool pc_pca9685_begin(uint8_t addr, uint32_t freq_hz)
     return ok;
 }
 
-bool pc_pca9685_set_pwm(uint8_t channel, uint16_t on, uint16_t off)
+proto_bool pc_pca9685_set_pwm(uint8_t channel, uint16_t on, uint16_t off)
 {
     uint8_t b[5];
     if (pc_pca9685_set_pwm_bytes(b, sizeof(b), channel, on, off) != 5)
     {
-        return false;
+        return PROTO_FALSE;
     }
     Wire.beginTransmission(s_pca.addr);
     Wire.write(b, 5);
     return Wire.endTransmission() == 0;
 }
 
-bool pc_pca9685_set_servo_us(uint8_t channel, uint32_t microseconds)
+proto_bool pc_pca9685_set_servo_us(uint8_t channel, uint32_t microseconds)
 {
     return pc_pca9685_set_pwm(channel, 0, pc_pca9685_us_to_count(microseconds, s_pca.freq));
 }
 
 #else // host build: no I2C. The prescale / count math + encoder above are host-tested.
 
-bool pc_pca9685_begin(uint8_t, uint32_t)
+proto_bool pc_pca9685_begin(uint8_t, uint32_t)
 {
-    return false;
+    return PROTO_FALSE;
 }
-bool pc_pca9685_set_pwm(uint8_t, uint16_t, uint16_t)
+proto_bool pc_pca9685_set_pwm(uint8_t, uint16_t, uint16_t)
 {
-    return false;
+    return PROTO_FALSE;
 }
-bool pc_pca9685_set_servo_us(uint8_t, uint32_t)
+proto_bool pc_pca9685_set_servo_us(uint8_t, uint32_t)
 {
-    return false;
+    return PROTO_FALSE;
 }
 
-#endif // ARDUINO
+#endif // PROTOCORE_HOT
 
 #endif // PC_ENABLE_PCA9685

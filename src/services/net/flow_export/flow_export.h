@@ -31,16 +31,13 @@
 
 #if PC_ENABLE_FLOW_EXPORT
 
-#include <stddef.h>
-#include <stdint.h>
-
 // ---- NetFlow v5 (fixed legacy format) ----
 
 #define FLOW_V5_HEADER_SIZE 24
 #define FLOW_V5_RECORD_SIZE 48
 
 /** @brief NetFlow v5 packet header (the builder fills version=5). */
-struct FlowV5Header
+typedef struct
 {
     uint16_t count;             ///< number of records that follow
     uint32_t sys_uptime;        ///< ms since the device booted
@@ -50,10 +47,10 @@ struct FlowV5Header
     uint8_t engine_type;        ///< flow-switching engine type
     uint8_t engine_id;          ///< flow-switching engine id
     uint16_t sampling_interval; ///< sampling mode (top 2 bits) + interval
-};
+} FlowV5Header;
 
 /** @brief One NetFlow v5 flow record (pad1 / pad2 are zero-filled by the builder). */
-struct FlowV5Record
+typedef struct
 {
     uint32_t src_addr; ///< source IPv4 (host order; written big-endian)
     uint32_t dst_addr; ///< destination IPv4
@@ -73,7 +70,7 @@ struct FlowV5Record
     uint16_t dst_as;
     uint8_t src_mask; ///< source prefix length
     uint8_t dst_mask; ///< destination prefix length
-};
+} FlowV5Record;
 
 /** @brief Write the 24-octet v5 header; returns FLOW_V5_HEADER_SIZE, or 0 on overflow. */
 size_t flow_v5_write_header(uint8_t *buf, size_t cap, const FlowV5Header *h);
@@ -84,14 +81,14 @@ size_t flow_v5_write_record(uint8_t *buf, size_t cap, const FlowV5Record *r);
 // ---- NetFlow v9 / IPFIX (template-then-data) ----
 
 /** @brief A template field specifier: an Information Element id + its on-wire octet length. */
-struct FlowField
+typedef struct
 {
     uint16_t type;
     uint16_t length;
-};
+} FlowField;
 
 /** @brief Cursor for building one v9 / IPFIX message. Treat the fields as opaque. */
-struct FlowWriter
+typedef struct
 {
     uint8_t *buf;
     size_t cap;
@@ -99,30 +96,31 @@ struct FlowWriter
     size_t set_start; ///< offset of the open Set/FlowSet header, or 0 when none is open
     uint16_t records; ///< running record count (the v9 'count' field)
     uint8_t version;  ///< 9 (NetFlow v9) or 10 (IPFIX)
-    bool error;       ///< sticky overflow / misuse flag
-};
+    proto_bool error; ///< sticky overflow / misuse flag
+} FlowWriter;
 
 /** @brief Begin an IPFIX (version 10) message: writes the 16-octet header (length patched on finish). */
-bool flow_ipfix_begin(FlowWriter *w, uint8_t *buf, size_t cap, uint32_t export_time, uint32_t seq, uint32_t domain_id);
+proto_bool flow_ipfix_begin(FlowWriter *w, uint8_t *buf, size_t cap, uint32_t export_time, uint32_t seq,
+                            uint32_t domain_id);
 
 /** @brief Begin a NetFlow v9 message: writes the 20-octet header (count patched on finish). */
-bool flow_v9_begin(FlowWriter *w, uint8_t *buf, size_t cap, uint32_t sys_uptime, uint32_t unix_secs, uint32_t seq,
-                   uint32_t source_id);
+proto_bool flow_v9_begin(FlowWriter *w, uint8_t *buf, size_t cap, uint32_t sys_uptime, uint32_t unix_secs, uint32_t seq,
+                         uint32_t source_id);
 
 /**
  * @brief Emit a Template (Set ID 2 for IPFIX, FlowSet ID 0 for v9) describing @p fields.
  * @param template_id the id data records will reference (>= 256).
  */
-bool flow_export_template(FlowWriter *w, uint16_t template_id, const FlowField *fields, size_t field_count);
+proto_bool flow_export_template(FlowWriter *w, uint16_t template_id, const FlowField *fields, size_t field_count);
 
 /** @brief Open a Data Set/FlowSet for @p template_id (must match a previously emitted template). */
-bool flow_export_data_begin(FlowWriter *w, uint16_t template_id);
+proto_bool flow_export_data_begin(FlowWriter *w, uint16_t template_id);
 
 /** @brief Append one already-encoded data record (its fields must match the template, big-endian). */
-bool flow_export_data_record(FlowWriter *w, const uint8_t *record, size_t len);
+proto_bool flow_export_data_record(FlowWriter *w, const uint8_t *record, size_t len);
 
 /** @brief Close the open Data Set (patches its length; pads to a 4-octet boundary for v9). */
-bool flow_export_data_end(FlowWriter *w);
+proto_bool flow_export_data_end(FlowWriter *w);
 
 /** @brief Finish the message (auto-closes an open set); returns total bytes, or 0 on error. */
 size_t flow_export_finish(FlowWriter *w);

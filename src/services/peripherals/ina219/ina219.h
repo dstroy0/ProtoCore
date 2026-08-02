@@ -25,7 +25,7 @@
 #ifndef PROTOCORE_INA219_H
 #define PROTOCORE_INA219_H
 
-#include <stdint.h>
+#include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
 
 #define INA219_REG_CONFIG 0x00      ///< configuration
 #define INA219_REG_SHUNT 0x01       ///< shunt voltage
@@ -59,18 +59,18 @@ int32_t pc_ina219_power_uw(int16_t raw, uint32_t current_lsb_ua);
  * @brief Program the INA219 at @p addr: write the calibration for @p current_lsb_ua (uA/bit) and
  * @p shunt_mohm (milliohms), then the default 32 V / 320 mV continuous config. @return true on ack.
  */
-bool pc_ina219_begin(uint8_t addr, uint32_t current_lsb_ua, uint32_t shunt_mohm);
+proto_bool pc_ina219_begin(uint8_t addr, uint32_t current_lsb_ua, uint32_t shunt_mohm);
 
 /** @brief Read the bus voltage into @p millivolts. @return false on I2C error. */
-bool pc_ina219_read_bus_mv(int32_t *millivolts);
+proto_bool pc_ina219_read_bus_mv(int32_t *millivolts);
 
 /** @brief Read the shunt voltage into @p microvolts. @return false on I2C error. */
-bool pc_ina219_read_shunt_uv(int32_t *microvolts);
+proto_bool pc_ina219_read_shunt_uv(int32_t *microvolts);
 
 /** @brief Read the current into @p microamps (needs the calibration set by pc_ina219_begin). */
-bool pc_ina219_read_current_ua(int32_t *microamps);
+proto_bool pc_ina219_read_current_ua(int32_t *microamps);
 
 /** @brief Read the power into @p microwatts (needs the calibration set by pc_ina219_begin). */
-bool pc_ina219_read_power_uw(int32_t *microwatts);
+proto_bool pc_ina219_read_power_uw(int32_t *microwatts);
 
 #endif // PROTOCORE_INA219_H

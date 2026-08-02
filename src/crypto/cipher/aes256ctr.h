@@ -16,7 +16,7 @@
  * raw chacha20-poly1305 key), and passes both in on every call. The AES key schedule is rebuilt per call
  * in the secure pool and wiped when released, so expanded key material never lives in
  * BSS or on the stack - every crypto secret is funneled through the one hardened, wiped scratch region
- * (crypto_scratch.h). @p counter is advanced in place by ceil(@p len / 16) blocks so successive calls
+ * (mmgr/secure.h). @p counter is advanced in place by ceil(@p len / 16) blocks so successive calls
  * continue the stream.
  *
  * COUNTER FORMAT (RFC 4344 §4)

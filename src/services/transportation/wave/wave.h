@@ -22,23 +22,18 @@
 #define PROTOCORE_WAVE_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_WAVE
 
 // WSMP / 1609.2 versions + content types + PSIDs: wire values, so integer constants in a struct.
-struct Wave
-{
-    static constexpr uint16_t WSMP_VERSION = 0x03;         ///< WSMP version (in the low nibble of byte 0).
-    static constexpr uint16_t WAVE_16092_VERSION = 0x03;   ///< 1609.2 protocolVersion.
-    static constexpr uint16_t WAVE_16092_UNSECURED = 0x00; ///< content type: unsecuredData.
-    static constexpr uint16_t WAVE_16092_SIGNED = 0x01;    ///< content type: signedData.
-    // Common PSIDs (Provider Service Identifiers).
-    static constexpr uint16_t WAVE_PSID_BSM = 0x20;    ///< vehicle safety (BSM), PSID 0x20.
-    static constexpr uint16_t WAVE_PSID_SPAT = 0x8002; ///< signal phase and timing.
-    static constexpr uint16_t WAVE_PSID_MAP = 0x8003;  ///< map data.
-};
+#define N 0x03 ///< WSMP version (in the low nibble of byte 0).
+#define N 0x03 ///< 1609.2 protocolVersion.
+#define D 0x00 ///< content type: unsecuredData.
+#define D 0x01 ///< content type: signedData.
+// Common PSIDs (Provider Service Identifiers).
+#define M 0x20   ///< vehicle safety (BSM), PSID 0x20.
+#define T 0x8002 ///< signal phase and timing.
+#define P 0x8003 ///< map data.
 
 /**
  * @brief Encode a PSID as a P-encoded (variable-length) integer.
@@ -61,15 +56,15 @@ size_t pc_wave_decode_psid(const uint8_t *in, size_t len, uint32_t *psid);
 size_t pc_wsmp_build(uint32_t psid, const uint8_t *payload, size_t payload_len, uint8_t *out, size_t cap);
 
 /** @brief A parsed WSMP frame (payload points into the input). */
-struct WsmpFrame
+typedef struct
 {
     uint32_t psid;
     const uint8_t *payload;
     size_t payload_len;
-};
+} WsmpFrame;
 
 /** @brief Parse a WSMP data frame. @return true if well-formed. */
-bool pc_wsmp_parse(const uint8_t *frame, size_t len, WsmpFrame *out);
+proto_bool pc_wsmp_parse(const uint8_t *frame, size_t len, WsmpFrame *out);
 
 /**
  * @brief Build a 1609.2 secured-message envelope header + payload: [version][contentType][payload...].

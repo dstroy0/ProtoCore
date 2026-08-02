@@ -22,38 +22,38 @@
 // Pure helpers (host-testable)
 // ---------------------------------------------------------------------------
 
-#if defined(ARDUINO)
+#if PROTOCORE_HOT
 #include "network_drivers/transport/client.h" // shared outbound TCP client (L4)
 #include <Arduino.h>                          // millis()
 #endif
-#if defined(ARDUINO) && PC_ENABLE_HTTP_CLIENT_TLS
+#if PROTOCORE_HOT && PC_ENABLE_HTTP_CLIENT_TLS
 #include "network_drivers/tls/tls.h"
 #include <mbedtls/ssl.h> // MBEDTLS_ERR_SSL_WANT_READ for the BIO recv callback
 #endif
-bool http_client_parse_url(const char *url, bool *is_https, char *host, size_t host_cap, uint16_t *port, char *path,
-                           size_t path_cap)
+proto_bool http_client_parse_url(const char *url, proto_bool *is_https, char *host, size_t host_cap, uint16_t *port,
+                                 char *path, size_t path_cap)
 {
     if (!url || !is_https || !host || !port || !path)
     {
-        return false;
+        return PROTO_FALSE;
     }
 
     const char *p = url;
     if (strncmp(p, "https://", 8) == 0)
     {
-        *is_https = true;
+        *is_https = PROTO_TRUE;
         *port = 443;
         p += 8;
     }
     else if (strncmp(p, "http://", 7) == 0) // NOSONAR: HTTP client must accept http:// URLs
     {
-        *is_https = false;
+        *is_https = PROTO_FALSE;
         *port = 80;
         p += 7;
     }
     else
     {
-        return false;
+        return PROTO_FALSE;
     }
 
     // host (up to ':' or '/')
@@ -65,7 +65,7 @@ bool http_client_parse_url(const char *url, bool *is_https, char *host, size_t h
     size_t hlen = (size_t)(p - h);
     if (hlen == 0 || hlen >= host_cap)
     {
-        return false;
+        return PROTO_FALSE;
     }
     memcpy(host, h, hlen);
     host[hlen] = '\0';
@@ -76,7 +76,7 @@ bool http_client_parse_url(const char *url, bool *is_https, char *host, size_t h
         p++;
         if (*p < '0' || *p > '9')
         {
-            return false;
+            return PROTO_FALSE;
         }
         uint32_t pn = 0;
         while (*p >= '0' && *p <= '9')
@@ -84,7 +84,7 @@ bool http_client_parse_url(const char *url, bool *is_https, char *host, size_t h
             pn = pn * 10 + (uint32_t)(*p++ - '0');
             if (pn > 65535)
             {
-                return false;
+                return PROTO_FALSE;
             }
         }
         *port = (uint16_t)pn;
@@ -95,7 +95,7 @@ bool http_client_parse_url(const char *url, bool *is_https, char *host, size_t h
     {
         if (path_cap < 2)
         {
-            return false;
+            return PROTO_FALSE;
         }
         path[0] = '/';
         path[1] = '\0';
@@ -105,11 +105,11 @@ bool http_client_parse_url(const char *url, bool *is_https, char *host, size_t h
         size_t plen = strnlen(p, path_cap + 1);
         if (plen >= path_cap)
         {
-            return false;
+            return PROTO_FALSE;
         }
         memcpy(path, p, plen + 1);
     }
-    return true;
+    return PROTO_TRUE;
 }
 
 size_t http_client_build_request(const char *method, const char *host, uint16_t port, const char *path,
@@ -124,7 +124,7 @@ size_t http_client_build_request(const char *method, const char *host, uint16_t 
     char hosthdr[80];
     if (port == 80 || port == 443)
     {
-        pc_sb sb_hosthdr = {hosthdr, sizeof(hosthdr), 0, true};
+        pc_sb sb_hosthdr = {hosthdr, sizeof(hosthdr), 0, PROTO_TRUE};
         pc_sb_put(&sb_hosthdr, host);
         if (pc_sb_finish(&sb_hosthdr) == 0)
         {
@@ -133,7 +133,7 @@ size_t http_client_build_request(const char *method, const char *host, uint16_t 
     }
     else
     {
-        pc_sb sb_hosthdr2 = {hosthdr, sizeof(hosthdr), 0, true};
+        pc_sb sb_hosthdr2 = {hosthdr, sizeof(hosthdr), 0, PROTO_TRUE};
         pc_sb_put(&sb_hosthdr2, host);
         pc_sb_put(&sb_hosthdr2, ":");
         pc_sb_u32(&sb_hosthdr2, (uint32_t)((unsigned)port));
@@ -146,7 +146,7 @@ size_t http_client_build_request(const char *method, const char *host, uint16_t 
     int n;
     if (body && body_len)
     {
-        pc_sb sb_out = {out, cap, 0, true};
+        pc_sb sb_out = {out, cap, 0, PROTO_TRUE};
         pc_sb_put(&sb_out, method);
         pc_sb_put(&sb_out, " ");
         pc_sb_put(&sb_out, path);
@@ -170,7 +170,7 @@ size_t http_client_build_request(const char *method, const char *host, uint16_t 
         return (size_t)n + body_len;
     }
 
-    pc_sb sb_out2 = {out, cap, 0, true};
+    pc_sb sb_out2 = {out, cap, 0, PROTO_TRUE};
     pc_sb_put(&sb_out2, method);
     pc_sb_put(&sb_out2, " ");
     pc_sb_put(&sb_out2, path);
@@ -214,30 +214,30 @@ static const char *find_header(const uint8_t *buf, const uint8_t *end, const cha
             p++;
         }
     }
-    return nullptr;
+    return NULL;
 }
 
 int http_client_parse_response(uint8_t *buf, size_t len, size_t *body_off, size_t *body_len)
 {
     if (!buf || len < 12 || memcmp(buf, "HTTP/1.", 7) != 0)
     {
-        return (int)HttpClientError::HTTP_CLIENT_ERR_RESPONSE;
+        return (int)HTTP_CLIENT_ERR_RESPONSE;
     }
 
     // Status code: first space, then 3 digits.
     const uint8_t *sp = (const uint8_t *)memchr(buf, ' ', len);
     if (!sp || sp + 4 > buf + len)
     {
-        return (int)HttpClientError::HTTP_CLIENT_ERR_RESPONSE;
+        return (int)HTTP_CLIENT_ERR_RESPONSE;
     }
     int status = (sp[1] - '0') * 100 + (sp[2] - '0') * 10 + (sp[3] - '0');
     if (status < 100 || status > 599)
     {
-        return (int)HttpClientError::HTTP_CLIENT_ERR_RESPONSE;
+        return (int)HTTP_CLIENT_ERR_RESPONSE;
     }
 
     // Header terminator "\r\n\r\n".
-    uint8_t *hdr_end = nullptr;
+    uint8_t *hdr_end = NULL;
     for (size_t i = 0; i + 3 < len; i++)
     {
         if (buf[i] == '\r' && buf[i + 1] == '\n' && buf[i + 2] == '\r' && buf[i + 3] == '\n')
@@ -248,7 +248,7 @@ int http_client_parse_response(uint8_t *buf, size_t len, size_t *body_off, size_
     }
     if (!hdr_end)
     {
-        return (int)HttpClientError::HTTP_CLIENT_ERR_RESPONSE;
+        return (int)HTTP_CLIENT_ERR_RESPONSE;
     }
 
     size_t off = (size_t)(hdr_end + 4 - buf);
@@ -263,7 +263,7 @@ int http_client_parse_response(uint8_t *buf, size_t len, size_t *body_off, size_
         {
             // chunk size line (hex) up to CRLF
             size_t csz = 0;
-            bool any = false;
+            proto_bool any = PROTO_FALSE;
             while (in < len && buf[in] != '\r')
             {
                 uint8_t c = buf[in++];
@@ -285,7 +285,7 @@ int http_client_parse_response(uint8_t *buf, size_t len, size_t *body_off, size_
                     break; // stop at ';' (chunk ext) or junk
                 }
                 csz = csz * 16 + (size_t)d;
-                any = true;
+                any = PROTO_TRUE;
             }
             // skip to end of the size line
             while (in < len && buf[in] != '\n')
@@ -328,7 +328,7 @@ int http_client_parse_response(uint8_t *buf, size_t len, size_t *body_off, size_
     const char *cl = find_header(buf, hdr_end, "Content-Length");
     if (cl)
     {
-        long n = pc_strtol(cl, nullptr);
+        long n = pc_strtol(cl, NULL);
         if (n < 0)
         {
             n = 0;
@@ -348,7 +348,7 @@ int http_client_parse_response(uint8_t *buf, size_t len, size_t *body_off, size_
 // ---------------------------------------------------------------------------
 // Transport (ESP32 only): raw-lwIP TCP client + DNS, optional client mbedTLS.
 // ---------------------------------------------------------------------------
-#if defined(ARDUINO)
+#if PROTOCORE_HOT
 
 // Optional stage tracing: build with -DPC_HTTP_CLIENT_DEBUG to print where a
 // request stalls (DNS / connect / send / receive). Goes to the console UART.
@@ -362,11 +362,11 @@ int http_client_parse_response(uint8_t *buf, size_t len, size_t *body_off, size_
 // (one loop task). rx holds the *response to parse*: the raw wire bytes for http, or (for
 // https) the plaintext decrypted by the TLS engine; the TCP connection lives in the shared
 // client pool (pc_client). One named owner, unreachable from any other translation unit.
-struct HttpClientCtx
+typedef struct
 {
     uint8_t rx[PC_HTTP_CLIENT_BUF_SIZE];
     int cid = -1; // active outbound connection id (pc_client pool)
-};
+} HttpClientCtx;
 static HttpClientCtx s_http;
 
 #if PC_ENABLE_HTTP_CLIENT_TLS
@@ -397,22 +397,22 @@ static int http_request(const char *method, const char *url, const char *content
     if (out)
     {
         out->status = 0;
-        out->body = nullptr;
+        out->body = NULL;
         out->body_len = 0;
     }
 
-    bool is_https;
+    proto_bool is_https;
     char host[80], path[160];
     uint16_t port;
     if (!http_client_parse_url(url, &is_https, host, sizeof(host), &port, path, sizeof(path)))
     {
-        return (int)HttpClientError::HTTP_CLIENT_ERR_URL;
+        return (int)HTTP_CLIENT_ERR_URL;
     }
     CL_DBG("[hc] url host=%s port=%u https=%d path=%s\n", host, (unsigned)port, (int)is_https, path);
 #if !PC_ENABLE_HTTP_CLIENT_TLS
     if (is_https)
     {
-        return (int)HttpClientError::HTTP_CLIENT_ERR_TLS;
+        return (int)HTTP_CLIENT_ERR_TLS;
     }
 #endif
 
@@ -421,7 +421,7 @@ static int http_request(const char *method, const char *url, const char *content
     size_t reqlen = http_client_build_request(method, host, port, path, content_type, body, body_len, req, sizeof(req));
     if (reqlen == 0)
     {
-        return (int)HttpClientError::HTTP_CLIENT_ERR_URL;
+        return (int)HTTP_CLIENT_ERR_URL;
     }
 
     uint32_t deadline = millis() + PC_HTTP_CLIENT_TIMEOUT_MS;
@@ -431,8 +431,7 @@ static int http_request(const char *method, const char *url, const char *content
     CL_DBG("[hc] pc_client_open cid=%d\n", s_http.cid);
     if (s_http.cid < 0)
     {
-        return (s_http.cid == -2) ? (int)HttpClientError::HTTP_CLIENT_ERR_DNS
-                                  : (int)HttpClientError::HTTP_CLIENT_ERR_CONNECT;
+        return (s_http.cid == -2) ? (int)HTTP_CLIENT_ERR_DNS : (int)HTTP_CLIENT_ERR_CONNECT;
     }
 
     // The response to parse: raw wire bytes (http) or decrypted plaintext (https),
@@ -449,12 +448,12 @@ static int http_request(const char *method, const char *url, const char *content
         {
             pc_client_close(s_http.cid);
             s_http.cid = -1;
-            return (int)HttpClientError::HTTP_CLIENT_ERR_TLS;
+            return (int)HTTP_CLIENT_ERR_TLS;
         }
 #else
         pc_client_close(s_http.cid);
         s_http.cid = -1;
-        return (int)HttpClientError::HTTP_CLIENT_ERR_TLS;
+        return (int)HTTP_CLIENT_ERR_TLS;
 #endif
     }
     else
@@ -465,7 +464,7 @@ static int http_request(const char *method, const char *url, const char *content
         {
             pc_client_close(s_http.cid);
             s_http.cid = -1;
-            return (int)HttpClientError::HTTP_CLIENT_ERR_SEND;
+            return (int)HTTP_CLIENT_ERR_SEND;
         }
         while ((int32_t)(deadline - millis()) > 0)
         {
@@ -492,14 +491,14 @@ static int http_request(const char *method, const char *url, const char *content
 
     if (pc_resp_len == 0)
     {
-        return (int)HttpClientError::HTTP_CLIENT_ERR_TIMEOUT;
+        return (int)HTTP_CLIENT_ERR_TIMEOUT;
     }
 
     size_t body_off = 0, blen = 0;
     int status = http_client_parse_response(s_http.rx, pc_resp_len, &body_off, &blen);
     if (status < 0)
     {
-        return (int)HttpClientError::HTTP_CLIENT_ERR_RESPONSE;
+        return (int)HTTP_CLIENT_ERR_RESPONSE;
     }
     if (out)
     {
@@ -512,7 +511,7 @@ static int http_request(const char *method, const char *url, const char *content
 
 int http_get(const char *url, HttpClientResult *out)
 {
-    return http_request("GET", url, nullptr, nullptr, 0, out);
+    return http_request("GET", url, NULL, NULL, 0, out);
 }
 
 int http_post(const char *url, const char *content_type, const uint8_t *body, size_t body_len, HttpClientResult *out)
@@ -548,11 +547,11 @@ void http_client_clear_verify()
 
 int http_get(const char *, HttpClientResult *)
 {
-    return (int)HttpClientError::HTTP_CLIENT_ERR_CONNECT;
+    return (int)HTTP_CLIENT_ERR_CONNECT;
 }
 int http_post(const char *, const char *, const uint8_t *, size_t, HttpClientResult *)
 {
-    return (int)HttpClientError::HTTP_CLIENT_ERR_CONNECT;
+    return (int)HTTP_CLIENT_ERR_CONNECT;
 }
 void http_client_set_ca(const uint8_t *, size_t)
 {
@@ -564,6 +563,6 @@ void http_client_clear_verify()
 {
 }
 
-#endif // ARDUINO
+#endif // PROTOCORE_HOT
 
 #endif // PC_ENABLE_HTTP_CLIENT

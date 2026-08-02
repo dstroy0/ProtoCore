@@ -53,7 +53,7 @@ void tearDown()
 
 void test_empty_queue_does_not_crash()
 {
-    server_tick();
+    server_tick(0);
     TEST_PASS();
 }
 
@@ -61,16 +61,16 @@ void test_pool_initializes_to_parse_method()
 {
     for (int i = 0; i < MAX_CONNS; i++)
     {
-        TEST_ASSERT_EQUAL(ParseState::PARSE_METHOD, http_pool[i].parse_state);
+        TEST_ASSERT_EQUAL(PARSE_METHOD, http_pool[i].parse_state);
     }
 }
 
 void test_reset_clears_mid_parse_state()
 {
-    http_pool[0].parse_state = ParseState::PARSE_HEADER_KEY;
+    http_pool[0].parse_state = PARSE_HEADER_KEY;
     http_pool[0].header_count = 3;
     http_reset(0);
-    TEST_ASSERT_EQUAL(ParseState::PARSE_METHOD, http_pool[0].parse_state);
+    TEST_ASSERT_EQUAL(PARSE_METHOD, http_pool[0].parse_state);
     TEST_ASSERT_EQUAL(0, http_pool[0].header_count);
 }
 
@@ -78,7 +78,7 @@ void test_tick_fires_check_timeouts_stale_slot_freed()
 {
     conn_pool[0].last_activity_ms = 0;
     set_millis(CONN_TIMEOUT_MS);
-    server_tick();
+    server_tick(0);
     TEST_ASSERT_EQUAL(ConnState::CONN_FREE, (ConnState)conn_pool[0].state);
 }
 
@@ -86,12 +86,12 @@ void test_tick_does_not_free_fresh_connection()
 {
     conn_pool[0].last_activity_ms = 0;
     set_millis(CONN_TIMEOUT_MS - 1);
-    server_tick();
+    server_tick(0);
     TEST_ASSERT_EQUAL(ConnState::CONN_ACTIVE, (ConnState)conn_pool[0].state);
 }
 
 // ====================================================================
-// FUNCTION I/O TESTS - server_tick()
+// FUNCTION I/O TESTS - server_tick(0)
 // ====================================================================
 
 // tick() must call check_timeouts() BEFORE event drain, so a timed-out
@@ -100,7 +100,7 @@ void test_fn_tick_timeout_before_event_drain_ordering()
 {
     conn_pool[1].last_activity_ms = 0;
     set_millis(CONN_TIMEOUT_MS);
-    server_tick(); // timeout fires; queue empty (mock returns pdFALSE)
+    server_tick(0); // timeout fires; queue empty (mock returns pdFALSE)
     TEST_ASSERT_EQUAL(ConnState::CONN_FREE, (ConnState)conn_pool[1].state);
     // http_reset was NOT called by server_tick directly (only check_timeouts),
     // but slot state is ConnState::CONN_FREE - the connection-level layer is clean.
@@ -119,7 +119,7 @@ void test_fn_tick_only_active_slots_expire()
     conn_pool[3].last_activity_ms = CONN_TIMEOUT_MS; // diff=0 < TIMEOUT_MS
 
     set_millis(CONN_TIMEOUT_MS);
-    server_tick();
+    server_tick(0);
 
     TEST_ASSERT_EQUAL(ConnState::CONN_FREE, (ConnState)conn_pool[0].state);
     TEST_ASSERT_EQUAL(ConnState::CONN_FREE, (ConnState)conn_pool[1].state); // expired
@@ -138,7 +138,7 @@ void stress_1000_idle_ticks_stable()
     set_millis(0);
     for (int i = 0; i < 1000; i++)
     {
-        server_tick();
+        server_tick(0);
     }
     for (int i = 0; i < MAX_CONNS; i++)
     {
@@ -159,7 +159,7 @@ void stress_timeout_all_slots_10_cycles()
             conn_pool[i].last_activity_ms = 0;
         }
         set_millis((uint32_t)(CONN_TIMEOUT_MS * (cycle + 1)));
-        server_tick();
+        server_tick(0);
         for (int i = 0; i < MAX_CONNS; i++)
         {
             TEST_ASSERT_EQUAL(ConnState::CONN_FREE, (ConnState)conn_pool[i].state);
@@ -183,7 +183,7 @@ void stress_mixed_fresh_stale_slots_many_ticks()
     set_millis(CONN_TIMEOUT_MS);
     for (int tick = 0; tick < 200; tick++)
     {
-        server_tick();
+        server_tick(0);
     }
 
     TEST_ASSERT_EQUAL(ConnState::CONN_FREE, (ConnState)conn_pool[0].state);
@@ -193,51 +193,51 @@ void stress_mixed_fresh_stale_slots_many_ticks()
 }
 
 // ====================================================================
-// EVENT DISPATCH TESTS - server_tick() queue-drain path
+// EVENT DISPATCH TESTS - server_tick(0) queue-drain path
 //
 // The FreeRTOS queue mock supports staged events via queue_stage_raw().
-// These tests verify the while(xQueueReceive…) loop in server_tick()
+// These tests verify the while(xQueueReceive…) loop in server_tick(0)
 // dispatches each event type correctly.
 // ====================================================================
 
 // EvtType::EVT_CONNECT → http_reset(slot_id)
 void test_evt_connect_calls_http_reset()
 {
-    http_pool[1].parse_state = ParseState::PARSE_HEADER_KEY;
+    http_pool[1].parse_state = PARSE_HEADER_KEY;
     http_pool[1].header_count = 3;
 
     TcpEvt evt = {EvtType::EVT_CONNECT, 1, 0};
     queue_stage_raw(&evt, sizeof(evt));
-    server_tick();
+    server_tick(0);
 
-    TEST_ASSERT_EQUAL(ParseState::PARSE_METHOD, http_pool[1].parse_state);
+    TEST_ASSERT_EQUAL(PARSE_METHOD, http_pool[1].parse_state);
     TEST_ASSERT_EQUAL(0, http_pool[1].header_count);
 }
 
 // EvtType::EVT_DISCONNECT → http_reset(slot_id)
 void test_evt_disconnect_calls_http_reset()
 {
-    http_pool[0].parse_state = ParseState::PARSE_COMPLETE;
+    http_pool[0].parse_state = PARSE_COMPLETE;
     http_pool[0].header_count = 2;
 
     TcpEvt evt = {EvtType::EVT_DISCONNECT, 0, 0};
     queue_stage_raw(&evt, sizeof(evt));
-    server_tick();
+    server_tick(0);
 
-    TEST_ASSERT_EQUAL(ParseState::PARSE_METHOD, http_pool[0].parse_state);
+    TEST_ASSERT_EQUAL(PARSE_METHOD, http_pool[0].parse_state);
     TEST_ASSERT_EQUAL(0, http_pool[0].header_count);
 }
 
 // EvtType::EVT_ERROR → http_reset(slot_id)
 void test_evt_error_calls_http_reset()
 {
-    http_pool[2].parse_state = ParseState::PARSE_ERROR;
+    http_pool[2].parse_state = PARSE_ERROR;
 
     TcpEvt evt = {EvtType::EVT_ERROR, 2, 0};
     queue_stage_raw(&evt, sizeof(evt));
-    server_tick();
+    server_tick(0);
 
-    TEST_ASSERT_EQUAL(ParseState::PARSE_METHOD, http_pool[2].parse_state);
+    TEST_ASSERT_EQUAL(PARSE_METHOD, http_pool[2].parse_state);
 }
 
 // EvtType::EVT_DATA → http_parse(slot_id) - ring buffer is drained and parse completes
@@ -247,9 +247,9 @@ void test_evt_data_calls_http_parse()
 
     TcpEvt evt = {EvtType::EVT_DATA, 0, 0};
     queue_stage_raw(&evt, sizeof(evt));
-    server_tick();
+    server_tick(0);
 
-    TEST_ASSERT_EQUAL(ParseState::PARSE_COMPLETE, http_pool[0].parse_state);
+    TEST_ASSERT_EQUAL(PARSE_COMPLETE, http_pool[0].parse_state);
     TEST_ASSERT_EQUAL_STRING("GET", http_pool[0].method);
     TEST_ASSERT_EQUAL_STRING("/evt", http_pool[0].path);
 }
@@ -258,25 +258,25 @@ void test_evt_data_calls_http_parse()
 void test_multiple_events_drained_in_one_tick()
 {
     // Slot 0: dirty state → EvtType::EVT_CONNECT → reset
-    http_pool[0].parse_state = ParseState::PARSE_COMPLETE;
+    http_pool[0].parse_state = PARSE_COMPLETE;
     TcpEvt e0 = {EvtType::EVT_CONNECT, 0, 0};
     queue_stage_raw(&e0, sizeof(e0));
 
-    // Slot 1: ring buffer with a GET → EvtType::EVT_DATA → ParseState::PARSE_COMPLETE
+    // Slot 1: ring buffer with a GET → EvtType::EVT_DATA → PARSE_COMPLETE
     push_to_slot(1, "GET / HTTP/1.1\r\n\r\n");
     TcpEvt e1 = {EvtType::EVT_DATA, 1, 0};
     queue_stage_raw(&e1, sizeof(e1));
 
     // Slot 2: dirty header state → EvtType::EVT_DISCONNECT → reset
-    http_pool[2].parse_state = ParseState::PARSE_HEADER_VAL;
+    http_pool[2].parse_state = PARSE_HEADER_VAL;
     TcpEvt e2 = {EvtType::EVT_DISCONNECT, 2, 0};
     queue_stage_raw(&e2, sizeof(e2));
 
-    server_tick();
+    server_tick(0);
 
-    TEST_ASSERT_EQUAL(ParseState::PARSE_METHOD, http_pool[0].parse_state);
-    TEST_ASSERT_EQUAL(ParseState::PARSE_COMPLETE, http_pool[1].parse_state);
-    TEST_ASSERT_EQUAL(ParseState::PARSE_METHOD, http_pool[2].parse_state);
+    TEST_ASSERT_EQUAL(PARSE_METHOD, http_pool[0].parse_state);
+    TEST_ASSERT_EQUAL(PARSE_COMPLETE, http_pool[1].parse_state);
+    TEST_ASSERT_EQUAL(PARSE_METHOD, http_pool[2].parse_state);
 }
 
 // ====================================================================
@@ -301,13 +301,13 @@ void test_proto_get_out_of_range_returns_null()
 void test_dispatch_drops_unregistered_protocol_event()
 {
     conn_pool[0].proto = ConnProto::PROTO_NONE;
-    http_pool[0].parse_state = ParseState::PARSE_COMPLETE; // sentinel: must survive untouched
+    http_pool[0].parse_state = PARSE_COMPLETE; // sentinel: must survive untouched
 
     TcpEvt evt = {EvtType::EVT_CONNECT, 0, 0};
     queue_stage_raw(&evt, sizeof(evt));
-    server_tick();
+    server_tick(0);
 
-    TEST_ASSERT_EQUAL(ParseState::PARSE_COMPLETE, http_pool[0].parse_state); // handler never ran
+    TEST_ASSERT_EQUAL(PARSE_COMPLETE, http_pool[0].parse_state); // handler never ran
 }
 
 // A registered handler with null callback fields (a protocol module that doesn't implement
@@ -319,22 +319,22 @@ void test_dispatch_skips_null_callback_fields()
     proto_register(ConnProto::PROTO_TELNET, &fake_handler);
 
     conn_pool[0].proto = ConnProto::PROTO_TELNET;
-    http_pool[0].parse_state = ParseState::PARSE_COMPLETE; // sentinel across all three events
+    http_pool[0].parse_state = PARSE_COMPLETE; // sentinel across all three events
 
     TcpEvt e0 = {EvtType::EVT_CONNECT, 0, 0};
     queue_stage_raw(&e0, sizeof(e0));
-    server_tick();
-    TEST_ASSERT_EQUAL(ParseState::PARSE_COMPLETE, http_pool[0].parse_state); // on_accept null -> no-op
+    server_tick(0);
+    TEST_ASSERT_EQUAL(PARSE_COMPLETE, http_pool[0].parse_state); // on_accept null -> no-op
 
     TcpEvt e1 = {EvtType::EVT_DATA, 0, 0};
     queue_stage_raw(&e1, sizeof(e1));
-    server_tick();
-    TEST_ASSERT_EQUAL(ParseState::PARSE_COMPLETE, http_pool[0].parse_state); // on_data null -> no-op
+    server_tick(0);
+    TEST_ASSERT_EQUAL(PARSE_COMPLETE, http_pool[0].parse_state); // on_data null -> no-op
 
     TcpEvt e2 = {EvtType::EVT_DISCONNECT, 0, 0};
     queue_stage_raw(&e2, sizeof(e2));
-    server_tick();
-    TEST_ASSERT_EQUAL(ParseState::PARSE_COMPLETE, http_pool[0].parse_state); // on_close null -> no-op
+    server_tick(0);
+    TEST_ASSERT_EQUAL(PARSE_COMPLETE, http_pool[0].parse_state); // on_close null -> no-op
 
     conn_pool[0].proto = ConnProto::PROTO_HTTP; // restore for any later test relying on setUp's default
 }
@@ -344,13 +344,13 @@ void test_dispatch_skips_null_callback_fields()
 // memory) falls through the switch untouched - must be a silent no-op, not a crash.
 void test_dispatch_ignores_unknown_evt_type()
 {
-    http_pool[0].parse_state = ParseState::PARSE_COMPLETE; // sentinel: must survive untouched
+    http_pool[0].parse_state = PARSE_COMPLETE; // sentinel: must survive untouched
 
     TcpEvt evt = {(EvtType)99, 0, 0};
     queue_stage_raw(&evt, sizeof(evt));
-    server_tick();
+    server_tick(0);
 
-    TEST_ASSERT_EQUAL(ParseState::PARSE_COMPLETE, http_pool[0].parse_state); // no case matched -> no-op
+    TEST_ASSERT_EQUAL(PARSE_COMPLETE, http_pool[0].parse_state); // no case matched -> no-op
 }
 
 // A listener slot marked active with a null queue (e.g. a failed queue-create) must be
@@ -359,7 +359,7 @@ void test_tick_skips_active_listener_with_null_queue()
 {
     listener_pool[1].active = true;
     listener_pool[1].queue = nullptr;
-    server_tick(); // must not crash
+    server_tick(0); // must not crash
     listener_pool[1].active = false;
     TEST_PASS();
 }
@@ -377,11 +377,11 @@ void race_external_free_between_ticks()
 
     // First tick: slot expires inside check_timeouts
     set_millis(CONN_TIMEOUT_MS);
-    server_tick();
+    server_tick(0);
     TEST_ASSERT_EQUAL(ConnState::CONN_FREE, (ConnState)conn_pool[0].state);
 
     // Second tick: slot is already free - must not double-free or crash
-    server_tick();
+    server_tick(0);
     TEST_ASSERT_EQUAL(ConnState::CONN_FREE, (ConnState)conn_pool[0].state);
 }
 
@@ -392,7 +392,7 @@ void race_activity_update_saves_slot_from_timeout()
     conn_pool[0].last_activity_ms = 0;
     set_millis(CONN_TIMEOUT_MS - 1); // one ms before deadline
 
-    server_tick();
+    server_tick(0);
     TEST_ASSERT_EQUAL(ConnState::CONN_ACTIVE, (ConnState)conn_pool[0].state); // safe
 
     // Simulate recv callback updating activity
@@ -400,7 +400,7 @@ void race_activity_update_saves_slot_from_timeout()
 
     // Even at deadline millis, diff = (TIMEOUT-1) - (TIMEOUT-1) = 0 < TIMEOUT
     set_millis(CONN_TIMEOUT_MS);
-    server_tick();
+    server_tick(0);
     TEST_ASSERT_EQUAL(ConnState::CONN_ACTIVE, (ConnState)conn_pool[0].state); // still safe
 }
 
@@ -413,13 +413,13 @@ void race_all_expire_then_idle_tick()
         conn_pool[i].last_activity_ms = 0;
     }
     set_millis(CONN_TIMEOUT_MS);
-    server_tick(); // all freed
+    server_tick(0); // all freed
     for (int i = 0; i < MAX_CONNS; i++)
     {
         TEST_ASSERT_EQUAL(ConnState::CONN_FREE, (ConnState)conn_pool[i].state);
     }
 
-    server_tick(); // must be no-op
+    server_tick(0); // must be no-op
     for (int i = 0; i < MAX_CONNS; i++)
     {
         TEST_ASSERT_EQUAL(ConnState::CONN_FREE, (ConnState)conn_pool[i].state);
@@ -435,7 +435,7 @@ void race_millis_wraparound_no_spurious_timeout()
     conn_pool[0].last_activity_ms = 0xFFFFFFFF - 100u;
     // now = 0x00000000 + (CONN_TIMEOUT_MS - 200) wraps around to just under deadline
     set_millis((uint32_t)(CONN_TIMEOUT_MS - 200));
-    server_tick();
+    server_tick(0);
     // (now - last) = (TIMEOUT-200) - (UINT32_MAX-100) [unsigned] = TIMEOUT-200 + 101 = TIMEOUT-99 < TIMEOUT
     TEST_ASSERT_EQUAL(ConnState::CONN_ACTIVE, (ConnState)conn_pool[0].state); // must NOT expire
 }
@@ -451,7 +451,7 @@ int main()
     RUN_TEST(test_tick_fires_check_timeouts_stale_slot_freed);
     RUN_TEST(test_tick_does_not_free_fresh_connection);
 
-    // Function I/O: server_tick()
+    // Function I/O: server_tick(0)
     RUN_TEST(test_fn_tick_timeout_before_event_drain_ordering);
     RUN_TEST(test_fn_tick_only_active_slots_expire);
 

@@ -20,36 +20,31 @@
 #define PROTOCORE_LINK_MANAGER_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_LINK_MANAGER
 
 /** @brief Interface kind (informational; selection is by priority). Stored in a uint8_t field and
  *  compared, so integer constants in a namespacing struct - cast-free. */
-struct LinkKind
-{
-    static constexpr uint8_t LINK_KIND_ETH = 0;      ///< wired Ethernet PHY.
-    static constexpr uint8_t LINK_KIND_WIFI_STA = 1; ///< WiFi station.
-    static constexpr uint8_t LINK_KIND_WIFI_AP = 2;  ///< WiFi softAP.
-    static constexpr uint8_t LINK_KIND_OTHER = 3;
-};
+#define H 0 ///< wired Ethernet PHY.
+#define A 1 ///< WiFi station.
+#define P 2 ///< WiFi softAP.
+#define R 3
 
 /** @brief One managed interface. */
-struct LinkIface
+typedef struct
 {
     uint8_t kind;     ///< LINK_KIND_*.
     uint8_t priority; ///< higher wins when up (ties break to the lower index).
-    bool up;          ///< link currently up.
-};
+    proto_bool up;    ///< link currently up.
+} LinkIface;
 
 /** @brief The link-manager state over a caller-owned interface table. */
-struct LinkManager
+typedef struct
 {
     LinkIface *ifaces;
     size_t n;
     int active; ///< index of the active egress, or -1 if none is up.
-};
+} LinkManager;
 
 /** @brief Initialize over caller storage and compute the initial active egress. */
 void pc_link_init(LinkManager *m, LinkIface *ifaces, size_t n);
@@ -66,7 +61,7 @@ int pc_link_active(const LinkManager *m);
  * @param to   (may be null) the new active index.
  * @return true if the active egress changed (escalation or failover happened).
  */
-bool pc_link_set(LinkManager *m, size_t idx, bool up, int *from, int *to);
+proto_bool pc_link_set(LinkManager *m, size_t idx, proto_bool up, int *from, int *to);
 
 #endif // PC_ENABLE_LINK_MANAGER
 #endif // PROTOCORE_LINK_MANAGER_H

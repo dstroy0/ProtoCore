@@ -23,23 +23,18 @@
 #define PROTOCORE_POWERLINK_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_POWERLINK
 
 /** @brief EPL message types (EPSG DS 301). */
 // POWERLINK message types + node ids: wire bytes, so integer constants in a namespacing struct.
-struct Epl
-{
-    static constexpr uint8_t EPL_MSG_SOC = 0x01;        ///< Start of Cycle (MN -> all, multicast).
-    static constexpr uint8_t EPL_MSG_PREQ = 0x03;       ///< Poll Request (MN -> CN, unicast).
-    static constexpr uint8_t EPL_MSG_PRES = 0x04;       ///< Poll Response (CN -> all, multicast, carries process data).
-    static constexpr uint8_t EPL_MSG_SOA = 0x05;        ///< Start of Async (MN -> all).
-    static constexpr uint8_t EPL_MSG_ASND = 0x06;       ///< Async Send.
-    static constexpr uint8_t EPL_NODE_BROADCAST = 0xFF; ///< broadcast node id (SoC/SoA destination).
-    static constexpr uint8_t EPL_NODE_MN = 0xF0;        ///< the Managing Node id (240).
-};
+#define C 0x01 ///< Start of Cycle (MN -> all, multicast).
+#define Q 0x03 ///< Poll Request (MN -> CN, unicast).
+#define S 0x04 ///< Poll Response (CN -> all, multicast, carries process data).
+#define A 0x05 ///< Start of Async (MN -> all).
+#define D 0x06 ///< Async Send.
+#define T 0xFF ///< broadcast node id (SoC/SoA destination).
+#define N 0xF0 ///< the Managing Node id (240).
 
 /**
  * @brief Build an EPL basic frame: [messageType][dest][source][payload...].
@@ -66,17 +61,17 @@ size_t pc_epl_soa(uint8_t source, const uint8_t *payload, size_t payload_len, ui
 size_t pc_epl_asnd(uint8_t dest, uint8_t source, const uint8_t *payload, size_t payload_len, uint8_t *out, size_t cap);
 
 /** @brief A parsed EPL basic frame (payload points into the input). */
-struct EplFrame
+typedef struct
 {
     uint8_t msg_type;
     uint8_t dest;
     uint8_t source;
     const uint8_t *payload;
     size_t payload_len;
-};
+} EplFrame;
 
 /** @brief Parse an EPL basic frame. @return true if @p len >= 3 and the message type is known. */
-bool pc_epl_parse(const uint8_t *frame, size_t len, EplFrame *out);
+proto_bool pc_epl_parse(const uint8_t *frame, size_t len, EplFrame *out);
 
 #endif // PC_ENABLE_POWERLINK
 #endif // PROTOCORE_POWERLINK_H

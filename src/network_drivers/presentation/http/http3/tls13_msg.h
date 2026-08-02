@@ -34,19 +34,13 @@
 // cookie extension, the sec 4.4.1 message_hash) are used by the DTLS handshake but are valid TLS 1.3.
 #if (PC_ENABLE_HTTP3 || PC_ENABLE_DTLS)
 
-#include <stddef.h>
-#include <stdint.h>
-
 /** @brief TLS handshake message types (RFC 8446 sec 4). */
-struct TlsHs
-{
-    static constexpr uint8_t TLS_HS_CLIENT_HELLO = 1;
-    static constexpr uint8_t TLS_HS_SERVER_HELLO = 2;
-    static constexpr uint8_t TLS_HS_ENCRYPTED_EXTENSIONS = 8;
-    static constexpr uint8_t TLS_HS_CERTIFICATE = 11;
-    static constexpr uint8_t TLS_HS_CERTIFICATE_VERIFY = 15;
-    static constexpr uint8_t TLS_HS_FINISHED = 20;
-};
+#define O 1
+#define O 2
+#define S 8
+#define E 11
+#define Y 15
+#define D 20
 
 #define TLS_CIPHER_AES_128_GCM_SHA256 0x1301 ///< the one cipher suite we support
 #define TLS_GROUP_X25519 0x001d              ///< the classical key-exchange group we support
@@ -60,34 +54,34 @@ struct TlsHs
 #define TLS_EXT_QUIC_TRANSPORT_PARAMS 0x0039 ///< pc_quic_transport_parameters (RFC 9001 sec 8.2)
 
 /** @brief What the state machine needs out of a parsed ClientHello (pointers alias the input). */
-struct Tls13ClientHello
+typedef struct
 {
     const uint8_t *session_id; ///< legacy_session_id (echoed back in ServerHello)
     uint8_t session_id_len;
     uint8_t client_x25519[32]; ///< the client's X25519 key_share (valid iff has_key_share or has_hybrid_share)
-    bool has_key_share;
+    proto_bool has_key_share;
 #if PC_ENABLE_PQC_KEX
-    bool offers_x25519mlkem768;     ///< supported_groups contains X25519MLKEM768
-    bool has_hybrid_share;          ///< key_share carried an X25519MLKEM768 entry
-    const uint8_t *client_mlkem_ek; ///< the client's ML-KEM-768 encapsulation key (1184 B, aliases input)
+    proto_bool offers_x25519mlkem768; ///< supported_groups contains X25519MLKEM768
+    proto_bool has_hybrid_share;      ///< key_share carried an X25519MLKEM768 entry
+    const uint8_t *client_mlkem_ek;   ///< the client's ML-KEM-768 encapsulation key (1184 B, aliases input)
 #endif
-    bool offers_tls13;   ///< supported_versions contains 0x0304
-    bool offers_x25519;  ///< supported_groups contains x25519
-    bool offers_ed25519; ///< signature_algorithms contains ed25519
+    proto_bool offers_tls13;   ///< supported_versions contains 0x0304
+    proto_bool offers_x25519;  ///< supported_groups contains x25519
+    proto_bool offers_ed25519; ///< signature_algorithms contains ed25519
 #if PC_ENABLE_TLS_RPK
-    bool offers_rpk_server_cert; ///< server_certificate_type (RFC 7250) offered RawPublicKey(2)
+    proto_bool offers_rpk_server_cert; ///< server_certificate_type (RFC 7250) offered RawPublicKey(2)
 #endif
-    bool offers_h3_alpn;       ///< ALPN contains "h3"
+    proto_bool offers_h3_alpn; ///< ALPN contains "h3"
     const uint8_t *pc_quic_tp; ///< raw pc_quic_transport_parameters extension body (or NULL)
     size_t pc_quic_tp_len;
     const uint8_t *sni; ///< first server_name host_name (or NULL), not NUL-terminated
     size_t sni_len;
     const uint8_t *cookie; ///< cookie extension body echoed after a HelloRetryRequest (or NULL); DTLS §5.1
     size_t cookie_len;
-    bool has_conn_id;       ///< the connection_id extension was present (RFC 9146 / RFC 9147 §9)
+    proto_bool has_conn_id; ///< the connection_id extension was present (RFC 9146 / RFC 9147 §9)
     const uint8_t *conn_id; ///< the CID the client wants the server to use in records sent to it (may be empty)
     size_t conn_id_len;     ///< length of @c conn_id (0..255; 0 = the client wants a zero-length CID)
-};
+} Tls13ClientHello;
 
 /**
  * @brief Parse a ClientHello handshake message (@p msg includes the 4-byte handshake header).
@@ -97,7 +91,8 @@ struct Tls13ClientHello
  * @return false if it is not a well-formed ClientHello. Missing/!supported extensions are reported
  * through the offers_* flags rather than failing the parse, so the caller can send the right alert.
  */
-bool pc_tls13_parse_client_hello(const uint8_t *msg, size_t len, Tls13ClientHello *out, bool dtls = false);
+proto_bool pc_tls13_parse_client_hello(const uint8_t *msg, size_t len, Tls13ClientHello *out,
+                                       proto_bool dtls = PROTO_FALSE);
 
 /**
  * @brief Build a ServerHello (RFC 8446 sec 4.1.3) selecting TLS 1.3 / AES-128-GCM-SHA256 and a
@@ -117,8 +112,8 @@ bool pc_tls13_parse_client_hello(const uint8_t *msg, size_t len, Tls13ClientHell
  */
 size_t pc_tls13_build_server_hello(uint8_t *out, size_t cap, const uint8_t random[32], const uint8_t *session_id,
                                    uint8_t session_id_len, const uint8_t *share, size_t share_len = 32,
-                                   uint16_t group = TLS_GROUP_X25519, bool dtls = false,
-                                   const uint8_t *conn_id = nullptr, size_t conn_id_len = 0);
+                                   uint16_t group = TLS_GROUP_X25519, proto_bool dtls = PROTO_FALSE,
+                                   const uint8_t *conn_id = NULL, size_t conn_id_len = 0);
 
 /**
  * @brief Build EncryptedExtensions (RFC 8446 sec 4.3.1) carrying ALPN "h3" and the server's
@@ -129,7 +124,7 @@ size_t pc_tls13_build_server_hello(uint8_t *out, size_t cap, const uint8_t rando
  * @return bytes written, or 0.
  */
 size_t pc_tls13_build_encrypted_extensions(uint8_t *out, size_t cap, const uint8_t *pc_quic_tp, size_t pc_quic_tp_len,
-                                           bool rpk_server_cert = false);
+                                           proto_bool rpk_server_cert = PROTO_FALSE);
 
 /**
  * @brief Build a Certificate message (RFC 8446 sec 4.4.2) with an empty request context and one
@@ -181,7 +176,7 @@ size_t pc_tls13_build_finished(uint8_t *out, size_t cap, const uint8_t verify_da
  * added, and so it is directly unit-testable. @p is_server picks the "server"/"client" context word.
  * @return content length written (always 98 + 32), or 0 on overflow.
  */
-size_t pc_tls13_cert_verify_content(uint8_t *out, size_t cap, const uint8_t transcript_hash[32], bool is_server);
+size_t pc_tls13_cert_verify_content(uint8_t *out, size_t cap, const uint8_t transcript_hash[32], proto_bool is_server);
 
 // ---------------------------------------------------------------------------
 // HelloRetryRequest + cookie (RFC 8446 §4.1.4), used by the DTLS 1.3 handshake
@@ -205,7 +200,7 @@ extern const uint8_t pc_tls13_hrr_random[32];
  */
 size_t pc_tls13_build_hello_retry_request(uint8_t *out, size_t cap, const uint8_t *session_id, uint8_t session_id_len,
                                           uint16_t selected_group, const uint8_t *cookie, size_t cookie_len,
-                                          bool dtls = false);
+                                          proto_bool dtls = PROTO_FALSE);
 
 /**
  * @brief Build an EncryptedExtensions (RFC 8446 §4.3.1) for the DTLS profile, which carries no ALPN or
@@ -213,7 +208,7 @@ size_t pc_tls13_build_hello_retry_request(uint8_t *out, size_t cap, const uint8_
  * server_certificate_type = RawPublicKey extension (RFC 7250 sec 4.2); otherwise the list is empty.
  * @return bytes written, or 0 on overflow.
  */
-size_t pc_tls13_build_encrypted_extensions_empty(uint8_t *out, size_t cap, bool rpk_server_cert = false);
+size_t pc_tls13_build_encrypted_extensions_empty(uint8_t *out, size_t cap, proto_bool rpk_server_cert = PROTO_FALSE);
 
 /**
  * @brief Write the synthetic @c message_hash handshake message that replaces ClientHello1 in the

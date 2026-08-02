@@ -21,18 +21,13 @@
 #define PROTOCORE_CCLINK_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_CCLINK
 
 // CC-Link command bytes: wire values compared/emitted, so integer constants in a namespacing struct.
-struct CclinkCmd
-{
-    static constexpr uint8_t CCLINK_CMD_REFRESH = 0x01; ///< cyclic refresh (master <-> station process image).
-    static constexpr uint8_t CCLINK_CMD_POLL = 0x02;    ///< poll a station.
-    static constexpr uint8_t CCLINK_CMD_TEST = 0x0F;    ///< line test.
-};
+#define H 0x01 ///< cyclic refresh (master <-> station process image).
+#define L 0x02 ///< poll a station.
+#define T 0x0F ///< line test.
 
 /** @brief Arithmetic-sum checksum: low byte of the sum of @p len bytes. */
 uint8_t pc_cclink_sum(const uint8_t *bytes, size_t len);
@@ -51,22 +46,22 @@ size_t pc_cclink_build(uint8_t station, uint8_t command, const uint8_t *bits, si
                        size_t word_len, uint8_t *out, size_t cap);
 
 /** @brief A parsed CC-Link frame (payload points into the input; caller knows the bit/word split). */
-struct CcLinkFrame
+typedef struct
 {
     uint8_t station;
     uint8_t command;
     const uint8_t *payload; ///< the bit+word data region.
     size_t payload_len;
-};
+} CcLinkFrame;
 
 /** @brief Validate the checksum and parse a CC-Link frame. @return true if the checksum matches. */
-bool pc_cclink_parse(const uint8_t *frame, size_t len, CcLinkFrame *out);
+proto_bool pc_cclink_parse(const uint8_t *frame, size_t len, CcLinkFrame *out);
 
 /** @brief Read bit @p index (0-based) from a bit-device byte array. */
-bool pc_cclink_get_bit(const uint8_t *bits, size_t bit_len, size_t index);
+proto_bool pc_cclink_get_bit(const uint8_t *bits, size_t bit_len, size_t index);
 
 /** @brief Set/clear bit @p index in a bit-device byte array (no-op if out of range). */
-void pc_cclink_set_bit(uint8_t *bits, size_t bit_len, size_t index, bool value);
+void pc_cclink_set_bit(uint8_t *bits, size_t bit_len, size_t index, proto_bool value);
 
 /** @brief Read word @p index (0-based, little-endian) from a word-device byte array. */
 uint16_t pc_cclink_get_word(const uint8_t *words, size_t word_len, size_t index);

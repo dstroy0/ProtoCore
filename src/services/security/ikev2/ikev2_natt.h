@@ -35,8 +35,6 @@
 #if PC_ENABLE_IKEV2
 
 #include "services/security/ikev2/ikev2.h"
-#include <stddef.h>
-#include <stdint.h>
 
 /** @brief NAT_DETECTION_SOURCE_IP notify message type (RFC 7296 §3.10.1). */
 #define PC_IKE_N_NAT_DETECTION_SOURCE_IP 16388
@@ -84,8 +82,8 @@ size_t pc_ike_natd_dest_build(uint8_t *buf, size_t cap, IkePayloadType next_payl
  * A NAT-detection payload verifies (no translation on that axis) when this returns true; the two detection
  * helpers below express what a mismatch means.
  */
-bool pc_ike_natd_match(const uint8_t init_spi[PC_IKE_SPI_LEN], const uint8_t resp_spi[PC_IKE_SPI_LEN],
-                       const uint8_t *ip, size_t ip_len, uint16_t port, const uint8_t *hash);
+proto_bool pc_ike_natd_match(const uint8_t init_spi[PC_IKE_SPI_LEN], const uint8_t resp_spi[PC_IKE_SPI_LEN],
+                             const uint8_t *ip, size_t ip_len, uint16_t port, const uint8_t *hash);
 
 /**
  * @brief The peer is behind a NAT: the received NAT_DETECTION_SOURCE_IP hash does not match the address the
@@ -93,9 +91,9 @@ bool pc_ike_natd_match(const uint8_t init_spi[PC_IKE_SPI_LEN], const uint8_t res
  * @param observed_src_ip / @p observed_src_port  the packet's real source, as seen on our socket.
  * @param received_source_hash  the NAT_DETECTION_SOURCE_IP payload data from the peer.
  */
-bool pc_ike_natd_peer_behind_nat(const uint8_t init_spi[PC_IKE_SPI_LEN], const uint8_t resp_spi[PC_IKE_SPI_LEN],
-                                 const uint8_t *observed_src_ip, size_t ip_len, uint16_t observed_src_port,
-                                 const uint8_t *received_source_hash);
+proto_bool pc_ike_natd_peer_behind_nat(const uint8_t init_spi[PC_IKE_SPI_LEN], const uint8_t resp_spi[PC_IKE_SPI_LEN],
+                                       const uint8_t *observed_src_ip, size_t ip_len, uint16_t observed_src_port,
+                                       const uint8_t *received_source_hash);
 
 /**
  * @brief We are behind a NAT: the received NAT_DETECTION_DESTINATION_IP hash does not match our own local
@@ -103,14 +101,14 @@ bool pc_ike_natd_peer_behind_nat(const uint8_t init_spi[PC_IKE_SPI_LEN], const u
  * @param local_ip / @p local_port  our own address the packet arrived on.
  * @param received_dest_hash  the NAT_DETECTION_DESTINATION_IP payload data from the peer.
  */
-bool pc_ike_natd_self_behind_nat(const uint8_t init_spi[PC_IKE_SPI_LEN], const uint8_t resp_spi[PC_IKE_SPI_LEN],
-                                 const uint8_t *local_ip, size_t ip_len, uint16_t local_port,
-                                 const uint8_t *received_dest_hash);
+proto_bool pc_ike_natd_self_behind_nat(const uint8_t init_spi[PC_IKE_SPI_LEN], const uint8_t resp_spi[PC_IKE_SPI_LEN],
+                                       const uint8_t *local_ip, size_t ip_len, uint16_t local_port,
+                                       const uint8_t *received_dest_hash);
 
 // ── RFC 3948 UDP-encapsulation demux (port 4500 carries IKE, ESP, and keepalives) ────────────────
 
 /** @brief True iff @p p / @p len is a NAT-keepalive (a single 0xFF octet, RFC 3948 §4). */
-bool pc_natt_is_keepalive(const uint8_t *p, size_t len);
+proto_bool pc_natt_is_keepalive(const uint8_t *p, size_t len);
 
 /**
  * @brief True iff a UDP-4500 payload is an IKE message (it carries the 4-octet zero Non-ESP Marker).
@@ -118,7 +116,7 @@ bool pc_natt_is_keepalive(const uint8_t *p, size_t len);
  * On port 4500 an ESP packet begins with its SPI (never zero), so a leading 32-bit zero distinguishes an
  * IKE message; the caller strips @ref PC_NATT_NON_ESP_MARKER_LEN octets before parsing it as IKE.
  */
-bool pc_natt_is_ike(const uint8_t *p, size_t len);
+proto_bool pc_natt_is_ike(const uint8_t *p, size_t len);
 
 #endif // PC_ENABLE_IKEV2
 #endif // PROTOCORE_IKEV2_NATT_H

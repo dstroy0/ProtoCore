@@ -36,20 +36,17 @@
 
 #if PC_ENABLE_STOMP
 
-#include <stddef.h>
-#include <stdint.h>
-
 /** @brief One parsed header line: key/value slices point INTO the source buffer (raw, still escaped). */
-struct StompHeader
+typedef struct
 {
     const char *key;
     size_t key_len;
     const char *val;
     size_t val_len;
-};
+} StompHeader;
 
 /** @brief One parsed STOMP frame. All pointers reference the source buffer (nothing copied). */
-struct StompFrame
+typedef struct
 {
     const char *command; ///< command verb (e.g. "MESSAGE"); not NUL-terminated
     size_t command_len;
@@ -57,7 +54,7 @@ struct StompFrame
     size_t header_count; ///< number of parsed headers (capped at PC_STOMP_MAX_HEADERS)
     const char *body;    ///< frame body (may contain NULs when content-length is given)
     size_t body_len;
-};
+} StompFrame;
 
 /**
  * @brief Build a STOMP frame: `COMMAND\n` + each `key:value\n` (keys/values escaped) + `\n` + body + NUL.
@@ -82,13 +79,13 @@ size_t pc_stomp_build_frame(char *buf, size_t cap, const char *command, const ch
  * @return true on a complete frame; false if the buffer holds an incomplete or malformed
  *         frame (then @p out / @p consumed are unspecified).
  */
-bool pc_stomp_parse_frame(const char *buf, size_t len, StompFrame *out, size_t *consumed);
+proto_bool pc_stomp_parse_frame(const char *buf, size_t len, StompFrame *out, size_t *consumed);
 
 /**
  * @brief Find a header by name; returns the RAW (still escaped) value slice.
  * @return true and fills @p val / @p val_len on the first match (per spec), else false.
  */
-bool pc_stomp_header(const StompFrame *f, const char *name, const char **val, size_t *val_len);
+proto_bool pc_stomp_header(const StompFrame *f, const char *name, const char **val, size_t *val_len);
 
 /**
  * @brief Decode STOMP 1.2 header escapes (`\r` `\n` `\c` `\\`) from @p src into @p dst.

@@ -29,7 +29,7 @@
  * the verdict in as @p signature_ok. What this module owns is the *consequence* of that verdict,
  * which genuinely is profile-independent.
  *
- * **Fail-safe latches.** Once any check fails the connection enters @ref SclState::FAILSAFE and stays
+ * **Fail-safe latches.** Once any check fails the connection enters @ref SCL_STATE_FAILSAFE and stays
  * there until an explicit @ref pc_scl_reset. A safety layer must never silently reheal: recovering
  * on its own would let an intermittent fault present as a working connection, which is precisely the
  * failure a SIL rating is meant to exclude. Re-establishing is an operator/application decision.
@@ -49,24 +49,22 @@
 
 #if PC_ENABLE_SAFETY_SCL
 
-#include <stdint.h>
-
 /** @brief Where a safety connection stands. */
-enum class SclState : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
-    INIT = 0,     ///< initialized, no valid frame accepted yet.
-    RUNNING = 1,  ///< at least one frame accepted and no fault since.
-    FAILSAFE = 2, ///< a check failed; latched until pc_scl_reset().
-};
+    SCL_STATE_INIT = 0,     ///< initialized, no valid frame accepted yet.
+    SCL_STATE_RUNNING = 1,  ///< at least one frame accepted and no fault since.
+    SCL_STATE_FAILSAFE = 2, ///< a check failed; latched until pc_scl_reset().
+} SclState;
 
 /** @brief Why a connection went fail-safe. */
-enum class SclFault : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
-    PC_NONE = 0,   ///< no fault.
-    SIGNATURE = 1, ///< the caller's CRC check rejected the frame (corruption).
-    COUNTER = 2,   ///< the monitoring counter was not the expected next value.
-    TIMEOUT = 3,   ///< no valid frame arrived within the watchdog.
-};
+    SCL_FAULT_PC_NONE = 0,   ///< no fault.
+    SCL_FAULT_SIGNATURE = 1, ///< the caller's CRC check rejected the frame (corruption).
+    SCL_FAULT_COUNTER = 2,   ///< the monitoring counter was not the expected next value.
+    SCL_FAULT_TIMEOUT = 3,   ///< no valid frame arrived within the watchdog.
+} SclFault;
 
 /**
  * @brief One safety connection's receive state.
@@ -75,7 +73,7 @@ enum class SclFault : uint8_t
  * 8-bit consecutive number is common), so the expected value must wrap the same way the sender's
  * does or the two desynchronize after the first wrap. 0 means the full 32-bit range.
  */
-struct SclConn
+typedef struct
 {
     SclState state;       ///< current state.
     SclFault fault;       ///< why it went fail-safe (PC_NONE unless FAILSAFE).
@@ -85,10 +83,10 @@ struct SclConn
     uint32_t last_ok_ms;  ///< when the last frame was accepted.
     uint32_t accepted;    ///< frames accepted since init.
     uint32_t rejected;    ///< frames rejected since init.
-};
+} SclConn;
 
 /**
- * @brief Initialize a connection to @ref SclState::INIT at @p now.
+ * @brief Initialize a connection to @ref SCL_STATE_INIT at @p now.
  *
  * @param first_counter the monitoring counter value the first frame is required to carry.
  * @param counter_mod   counter wrap modulus; 0 for the full 32-bit range.
@@ -107,25 +105,25 @@ void pc_scl_init(SclConn *c, uint32_t first_counter, uint32_t counter_mod, uint3
  * value. Every way the black channel can misbehave shows up here: a lost frame or an inserted one
  * makes the counter run ahead, a duplicate makes it repeat, and a reordered pair makes it go
  * backwards - all of which are simply "not the expected value", which is what makes one comparison
- * sufficient. Any failure latches @ref SclState::FAILSAFE.
+ * sufficient. Any failure latches @ref SCL_STATE_FAILSAFE.
  *
  * Offering a frame to an already-fail-safe connection is refused without changing the recorded
  * fault: the first fault is the diagnostically interesting one.
  *
  * @return true if the frame was accepted (its safety payload may be used).
  */
-bool pc_scl_on_frame(SclConn *c, bool signature_ok, uint32_t counter, uint32_t now);
+proto_bool pc_scl_on_frame(SclConn *c, proto_bool signature_ok, uint32_t counter, uint32_t now);
 
 /**
  * @brief Check the receive watchdog at @p now. Call it every cycle, including cycles with no frame -
  *        a silent channel is exactly what this detects.
  *
- * The watchdog only runs once a connection is @ref SclState::RUNNING: a connection that has not yet
+ * The watchdog only runs once a connection is @ref SCL_STATE_RUNNING: a connection that has not yet
  * received its first frame is not yet timing out, it is still starting up.
  *
  * @return true if the connection is still usable (not fail-safe).
  */
-bool pc_scl_poll(SclConn *c, uint32_t now);
+proto_bool pc_scl_poll(SclConn *c, uint32_t now);
 
 /**
  * @brief Re-establish a fail-safe connection, arming it for @p first_counter at @p now.
@@ -136,12 +134,12 @@ bool pc_scl_poll(SclConn *c, uint32_t now);
 void pc_scl_reset(SclConn *c, uint32_t first_counter, uint32_t now);
 
 /** @brief True while the connection may be used (not fail-safe). */
-bool pc_scl_ok(const SclConn *c);
+proto_bool pc_scl_ok(const SclConn *c);
 
 /** @brief The connection's state. */
 SclState pc_scl_state(const SclConn *c);
 
-/** @brief Why the connection went fail-safe (@ref SclFault::PC_NONE unless it did). */
+/** @brief Why the connection went fail-safe (@ref SCL_FAULT_PC_NONE unless it did). */
 SclFault pc_scl_fault(const SclConn *c);
 
 /**

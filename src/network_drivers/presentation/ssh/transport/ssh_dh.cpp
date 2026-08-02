@@ -10,7 +10,7 @@
 #include "crypto/mac/hmac_sha256.h"
 #include "mmgr/secure.h"
 #include "network_drivers/presentation/ssh/crypto/ssh_kexhash.h"
-#include <Arduino.h> // for esp_random() / esp_fill_random() (real or mock)
+#include <Arduino.h> // for pc_platform_rand_u32() / pc_platform_rand_fill() (real or mock)
 #include <string.h>
 
 // ---------------------------------------------------------------------------
@@ -19,7 +19,7 @@
 
 void ssh_rng_fill(uint8_t *buf, size_t len)
 {
-    esp_fill_random(buf, len);
+    pc_platform_rand_fill(buf, len);
 }
 
 // ---------------------------------------------------------------------------
@@ -50,7 +50,7 @@ int ssh_dh_generate(uint8_t i)
     // f = g^y mod p  (g = 2 for group-14)
     bn_expmod_group14(&dh->f, &group14_g, &dh->y);
 
-    dh->kex_done = false;
+    dh->kex_done = PROTO_FALSE;
     return 0;
 }
 
@@ -77,7 +77,7 @@ static void hash_mpint_K(SshKexHash *h, const uint8_t K_be[256])
         ssh_kexhash_update(h, len_be, 4);
         return;
     }
-    bool pad = (K_be[off] & 0x80u) != 0;
+    proto_bool pad = (K_be[off] & 0x80u) != 0;
     uint32_t mlen = (uint32_t)(256 - off) + (pad ? 1u : 0u);
     uint8_t len_be[4] = {(uint8_t)(mlen >> 24), (uint8_t)(mlen >> 16), (uint8_t)(mlen >> 8), (uint8_t)mlen};
     ssh_kexhash_update(h, len_be, 4);
@@ -99,7 +99,7 @@ static void hash_string_K(SshKexHash *h, const uint8_t K_be[256], size_t klen)
     ssh_kexhash_update(h, K_be + (256 - klen), klen);
 }
 
-static inline void hash_K(SshKexHash *h, const uint8_t K_be[256], bool k_is_string, size_t k_str_len)
+static inline void hash_K(SshKexHash *h, const uint8_t K_be[256], proto_bool k_is_string, size_t k_str_len)
 {
     if (k_is_string)
     {
@@ -118,7 +118,7 @@ static inline void hash_K(SshKexHash *h, const uint8_t K_be[256], bool k_is_stri
 // @p h_len / @p sid_len are the exchange-hash / session-id lengths. When K is a hybrid string it is
 // @p k_str_len octets (the KEX hash length). @p out_len up to SSH_KDF_MAX.
 void ssh_kdf_derive(const uint8_t K_be[256], const uint8_t *H, const uint8_t *session_id, char label, uint8_t *out,
-                    size_t out_len, bool k_is_string, size_t h_len, size_t sid_len, bool is512)
+                    size_t out_len, proto_bool k_is_string, size_t h_len, size_t sid_len, proto_bool is512)
 {
     const size_t blk = ssh_kexhash_len(is512); // 32 or 64
     const size_t k_str_len = ssh_kexhash_len(is512);
@@ -159,14 +159,15 @@ void ssh_kdf_derive(const uint8_t K_be[256], const uint8_t *H, const uint8_t *se
 
 // One 32-byte derived value (the only size any negotiated cipher key/IV needs today).
 static void derive_key(const uint8_t K_be[256], const uint8_t *H, const uint8_t *session_id, char label,
-                       uint8_t out[PC_SHA256_DIGEST_LEN], bool k_is_string, size_t h_len, size_t sid_len, bool is512)
+                       uint8_t out[PC_SHA256_DIGEST_LEN], proto_bool k_is_string, size_t h_len, size_t sid_len,
+                       proto_bool is512)
 {
     ssh_kdf_derive(K_be, H, session_id, label, out, PC_SHA256_DIGEST_LEN, k_is_string, h_len, sid_len, is512);
 }
 
 void ssh_dh_derive_keys_sid(uint8_t i, const uint8_t K_be[256], const uint8_t *H, const uint8_t *session_id,
-                            uint8_t cipher_alg, uint8_t mac_alg, bool k_is_string, size_t h_len, size_t sid_len,
-                            bool is512)
+                            uint8_t cipher_alg, uint8_t mac_alg, proto_bool k_is_string, size_t h_len, size_t sid_len,
+                            proto_bool is512)
 {
     if (i >= MAX_SSH_CONNS)
     {
@@ -177,8 +178,8 @@ void ssh_dh_derive_keys_sid(uint8_t i, const uint8_t K_be[256], const uint8_t *H
     // overwritten, after which the outgoing mode is no longer knowable.
     if (km->active && km->cipher_mode == SSH_CIPHER_AES256GCM)
     {
-        pc_aesgcm_key_wipe(reinterpret_cast<pc_aesgcm_key *>(km->gcm_ctx_c2s));
-        pc_aesgcm_key_wipe(reinterpret_cast<pc_aesgcm_key *>(km->gcm_ctx_s2c));
+        pc_aesgcm_key_wipe((pc_aesgcm_key *)(km->gcm_ctx_c2s));
+        pc_aesgcm_key_wipe((pc_aesgcm_key *)(km->gcm_ctx_s2c));
     }
     km->cipher_mode = cipher_alg;
     km->mac_mode = mac_alg;
@@ -192,7 +193,7 @@ void ssh_dh_derive_keys_sid(uint8_t i, const uint8_t K_be[256], const uint8_t *H
                        is512);
         ssh_kdf_derive(K_be, H, session_id, 'D', km->chacha_key_s2c, PC_CHACHAPOLY_KEY_LEN, k_is_string, h_len, sid_len,
                        is512);
-        km->active = true;
+        km->active = PROTO_TRUE;
         return;
     }
 
@@ -219,7 +220,7 @@ void ssh_dh_derive_keys_sid(uint8_t i, const uint8_t K_be[256], const uint8_t *H
         pc_secure_wipe(key_s2c, sizeof(key_s2c));
         pc_secure_wipe(iv_c2s, sizeof(iv_c2s));
         pc_secure_wipe(iv_s2c, sizeof(iv_s2c));
-        km->active = true;
+        km->active = PROTO_TRUE;
         return;
     }
 
@@ -251,7 +252,7 @@ void ssh_dh_derive_keys_sid(uint8_t i, const uint8_t K_be[256], const uint8_t *H
     pc_secure_wipe(iv_c2s, sizeof(iv_c2s));
     pc_secure_wipe(iv_s2c, sizeof(iv_s2c));
 
-    km->active = true;
+    km->active = PROTO_TRUE;
 }
 
 void ssh_dh_derive_keys(uint8_t i, const uint8_t K_be[256], const uint8_t H[PC_SHA256_DIGEST_LEN])

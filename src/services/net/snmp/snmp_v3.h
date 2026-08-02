@@ -23,8 +23,6 @@
 #define PROTOCORE_SNMP_V3_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_SNMP_V3
 
@@ -40,7 +38,7 @@
  * pc_snmp_v3_set_user() (the localized keys depend on the engine ID). For a unique
  * per-device ID, derive @p id from the chip MAC.
  */
-void pc_snmp_v3_init(const uint8_t *engine_id = nullptr, size_t engine_id_len = 0);
+void pc_snmp_v3_init(const uint8_t *engine_id = NULL, size_t engine_id_len = 0);
 
 /**
  * @brief Configure the (single) USM user and derive its localized keys.

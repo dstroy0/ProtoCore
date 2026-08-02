@@ -19,8 +19,6 @@
 #define PROTOCORE_TOTP_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_TOTP
 
@@ -44,8 +42,8 @@ uint32_t pc_totp(const uint8_t *key, size_t keylen, uint64_t unix_time, uint32_t
  * @brief Verify @p code against the current step +/- @p window steps (clock skew).
  * @return true if @p code matches any step in the window.
  */
-bool pc_totp_verify(const uint8_t *key, size_t keylen, uint64_t unix_time, uint32_t code, uint32_t period,
-                    uint8_t digits, int window);
+proto_bool pc_totp_verify(const uint8_t *key, size_t keylen, uint64_t unix_time, uint32_t code, uint32_t period,
+                          uint8_t digits, int window);
 
 /**
  * @brief Decode a base32 (RFC 4648) secret into @p out; ignores padding/spaces/dashes.

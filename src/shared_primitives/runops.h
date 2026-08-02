@@ -27,9 +27,6 @@
 #define PROTOCORE_RUNOPS_H
 
 #include "shared_primitives/swar.h" // the access layer every operation below is built on
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
 
 /**
  * @brief Index of the first NUL in @p s within @p nul_cap bytes, or @p nul_cap if there is none.
@@ -208,7 +205,7 @@ PC_INLINE int proto_step_byte(unsigned char ca, unsigned char cb, int ci, int en
  * hold that many readable bytes. Comparing a fixed field against a literal means passing
  * `sizeof(the literal)`, not the field's capacity.
  */
-static inline bool proto_agree(const char *a, const char *b, size_t read_cap, int ci, int end_wins)
+static inline proto_bool proto_agree(const char *a, const char *b, size_t read_cap, int ci, int end_wins)
 {
     // `a` is the side whose terminator ends the comparison, and the side that gets aligned - a
     // register holds one pointer, so only one of the two can be walked to a boundary. At nearly
@@ -258,7 +255,7 @@ static inline bool proto_agree(const char *a, const char *b, size_t read_cap, in
         }
         if (d != 0)
         {
-            return false;
+            return PROTO_FALSE;
         }
         ++i;
     }
@@ -274,22 +271,22 @@ static inline bool proto_agree(const char *a, const char *b, size_t read_cap, in
  * and both sides must hold that many readable bytes. A prefix can never pass as the whole, because
  * the terminator has to arrive strictly before the first disagreement.
  */
-static inline bool proto_eq_str(const char *a, const char *b, size_t read_cap)
+static inline proto_bool proto_eq_str(const char *a, const char *b, size_t read_cap)
 {
     return proto_agree(a, b, read_cap, 0, 0);
 }
 /** @brief True if @p s begins with @p pre, both holding @p read_cap readable bytes. */
-static inline bool proto_starts(const char *s, const char *pre, size_t read_cap)
+static inline proto_bool proto_starts(const char *s, const char *pre, size_t read_cap)
 {
     return proto_agree(pre, s, read_cap, 0, 1); // the pattern's terminator is what ends the compare
 }
 /** @brief ::proto_eq_str, ignoring ASCII case. */
-static inline bool proto_eq_str_ci(const char *a, const char *b, size_t read_cap)
+static inline proto_bool proto_eq_str_ci(const char *a, const char *b, size_t read_cap)
 {
     return proto_agree(a, b, read_cap, 1, 0);
 }
 /** @brief ::proto_starts, ignoring ASCII case. */
-static inline bool proto_starts_ci(const char *s, const char *pre, size_t read_cap)
+static inline proto_bool proto_starts_ci(const char *s, const char *pre, size_t read_cap)
 {
     return proto_agree(pre, s, read_cap, 1, 1);
 }
@@ -636,12 +633,12 @@ PC_INLINE const char *proto_find_ci(const char *hay, size_t read_cap, const char
  *
  * NOT constant time, for ::proto_scan_nul's reason: it stops at the match. Never use it on a secret.
  */
-static inline bool proto_has(const char *hay, size_t read_cap, const char *needle, size_t needle_cap)
+static inline proto_bool proto_has(const char *hay, size_t read_cap, const char *needle, size_t needle_cap)
 {
     return proto_find_impl(hay, read_cap, needle, needle_cap, 0) != NULL;
 }
 /** @brief ::proto_has ignoring ASCII case. */
-static inline bool proto_has_ci(const char *hay, size_t read_cap, const char *needle, size_t needle_cap)
+static inline proto_bool proto_has_ci(const char *hay, size_t read_cap, const char *needle, size_t needle_cap)
 {
     return proto_find_impl(hay, read_cap, needle, needle_cap, 1) != NULL;
 }

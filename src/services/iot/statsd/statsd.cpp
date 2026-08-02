@@ -18,10 +18,8 @@
 #include "network_drivers/transport/udp.h"
 #include <string.h>
 
-namespace
-{
 // Unsigned -> decimal (not NUL-terminated); returns the digit count.
-size_t u64_str(char *b, uint64_t v)
+static size_t u64_str(char *b, uint64_t v)
 {
     if (v == 0)
     {
@@ -43,7 +41,7 @@ size_t u64_str(char *b, uint64_t v)
 }
 
 // Signed -> decimal (handles INT64_MIN via -(v+1)+1); returns length.
-size_t i64_str(char *b, int64_t v)
+static size_t i64_str(char *b, int64_t v)
 {
     if (v < 0)
     {
@@ -54,7 +52,7 @@ size_t i64_str(char *b, int64_t v)
 }
 
 // Signed -> "+N" / "-N" for a StatsD gauge delta.
-size_t i64_delta_str(char *b, int64_t v)
+static size_t i64_delta_str(char *b, int64_t v)
 {
     if (v >= 0)
     {
@@ -65,7 +63,7 @@ size_t i64_delta_str(char *b, int64_t v)
 }
 
 // Sample rate in (0,1) -> "0.xxx" (<= 3 decimals, trailing zeros trimmed). >= 1 -> no text.
-size_t rate_str(char *b, float r)
+static size_t rate_str(char *b, float r)
 {
     if (r >= 1.0f || r <= 0.0f)
     {
@@ -94,17 +92,16 @@ size_t rate_str(char *b, float r)
 }
 
 // Bounded append into out[*pos]; false (and leaves *pos) if it would not fit with room for NUL.
-bool app(char *out, size_t cap, size_t *pos, const char *s, size_t n)
+static proto_bool app(char *out, size_t cap, size_t *pos, const char *s, size_t n)
 {
     if (*pos + n >= cap)
     {
-        return false;
+        return PROTO_FALSE;
     }
     memcpy(out + *pos, s, n);
     *pos += n;
-    return true;
+    return PROTO_TRUE;
 }
-} // namespace
 
 size_t pc_statsd_format(char *out, size_t cap, const char *name, const char *value, StatsdType type, float rate,
                         const char *tags)
@@ -113,8 +110,7 @@ size_t pc_statsd_format(char *out, size_t cap, const char *name, const char *val
     {
         return 0;
     }
-    if (type != StatsdType::STATSD_COUNTER && type != StatsdType::STATSD_GAUGE && type != StatsdType::STATSD_TIMING &&
-        type != StatsdType::STATSD_SET)
+    if (type != STATSD_COUNTER && type != STATSD_GAUGE && type != STATSD_TIMING && type != STATSD_SET)
     {
         return 0;
     }
@@ -126,7 +122,7 @@ size_t pc_statsd_format(char *out, size_t cap, const char *name, const char *val
     {
         return 0;
     }
-    if (type == StatsdType::STATSD_TIMING)
+    if (type == STATSD_TIMING)
     {
         if (!app(out, cap, &pos, "ms", 2))
         {
@@ -158,39 +154,36 @@ size_t pc_statsd_format(char *out, size_t cap, const char *name, const char *val
 // send through pc_udp_sendto's stub + capture seam, so these are host-testable too.
 // ---------------------------------------------------------------------------
 
-namespace
-{
 // All StatsD client state, owned by one instance (internal linkage): destination host/port,
 // global tags, and the ready flag, grouped so it is one named owner, unreachable cross-TU.
-struct StatsdCtx
+typedef struct
 {
     char host[64] = {};
     uint16_t port = PC_STATSD_PORT;
     char tags[96] = {};
-    bool ready = false;
-};
-StatsdCtx s_statsd;
+    proto_bool ready = PROTO_FALSE;
+} StatsdCtx;
+static StatsdCtx s_statsd;
 
-void emit(const StatsdCtx &c, const char *name, const char *value, StatsdType type, float rate)
+static void emit(const StatsdCtx &c, const char *name, const char *value, StatsdType type, float rate)
 {
     if (!c.ready)
     {
         return;
     }
     char line[PC_STATSD_LINE_MAX];
-    size_t n = pc_statsd_format(line, sizeof(line), name, value, type, rate, c.tags[0] ? c.tags : nullptr);
+    size_t n = pc_statsd_format(line, sizeof(line), name, value, type, rate, c.tags[0] ? c.tags : NULL);
     if (n)
     {
         pc_udp_sendto(c.host, c.port, (const uint8_t *)line, n);
     }
 }
-} // namespace
 
 void pc_statsd_begin(const char *host, uint16_t port, const char *global_tags)
 {
     if (!host)
     {
-        s_statsd.ready = false;
+        s_statsd.ready = PROTO_FALSE;
         return;
     }
     strncpy(s_statsd.host, host, sizeof(s_statsd.host) - 1);
@@ -205,47 +198,47 @@ void pc_statsd_begin(const char *host, uint16_t port, const char *global_tags)
     {
         s_statsd.tags[0] = '\0';
     }
-    s_statsd.ready = true;
+    s_statsd.ready = PROTO_TRUE;
 }
 
 void pc_statsd_count(const char *name, int64_t delta)
 {
     char v[24];
     v[i64_str(v, delta)] = '\0';
-    emit(s_statsd, name, v, StatsdType::STATSD_COUNTER, 1.0f);
+    emit(s_statsd, name, v, STATSD_COUNTER, 1.0f);
 }
 
 void pc_statsd_count_sampled(const char *name, int64_t delta, float rate)
 {
     char v[24];
     v[i64_str(v, delta)] = '\0';
-    emit(s_statsd, name, v, StatsdType::STATSD_COUNTER, rate);
+    emit(s_statsd, name, v, STATSD_COUNTER, rate);
 }
 
 void pc_statsd_gauge(const char *name, int64_t value)
 {
     char v[24];
     v[i64_str(v, value)] = '\0';
-    emit(s_statsd, name, v, StatsdType::STATSD_GAUGE, 1.0f);
+    emit(s_statsd, name, v, STATSD_GAUGE, 1.0f);
 }
 
 void pc_statsd_gauge_delta(const char *name, int64_t delta)
 {
     char v[24];
     v[i64_delta_str(v, delta)] = '\0';
-    emit(s_statsd, name, v, StatsdType::STATSD_GAUGE, 1.0f);
+    emit(s_statsd, name, v, STATSD_GAUGE, 1.0f);
 }
 
 void pc_statsd_timing(const char *name, uint32_t ms)
 {
     char v[16];
     v[u64_str(v, ms)] = '\0';
-    emit(s_statsd, name, v, StatsdType::STATSD_TIMING, 1.0f);
+    emit(s_statsd, name, v, STATSD_TIMING, 1.0f);
 }
 
 void pc_statsd_set(const char *name, const char *member)
 {
-    emit(s_statsd, name, member ? member : "", StatsdType::STATSD_SET, 1.0f);
+    emit(s_statsd, name, member ? member : "", STATSD_SET, 1.0f);
 }
 
 #endif // PC_ENABLE_STATSD

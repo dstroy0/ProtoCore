@@ -5,12 +5,9 @@
  * @file datalink.h
  * @brief Layer 2 (Data Link) - Ethernet / 802.11 frame handling.
  *
- * On ESP32 the data link layer is fully managed by the Espressif lwIP port
- * (WLAN device driver + IEEE 802.11 MAC).  This header exists to complete
- * the OSI-layered architecture and provide an extension point should direct
- * MAC-level access ever be required (e.g., raw socket experiments).
- *
- * The current implementation is a no-op stub.
+ * The data link layer is managed by the vendor lwIP port (WLAN device driver + IEEE 802.11 MAC).
+ * This header completes the OSI layering and is the extension point for a target that needs direct
+ * MAC-level access. The implementation is a no-op stub.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -19,14 +16,12 @@
 #ifndef PROTOCORE_DATALINK_H
 #define PROTOCORE_DATALINK_H
 
-#include <Arduino.h>
-
 /**
  * @brief Initialize the data-link layer.
  *
- * Currently a no-op; the Espressif WiFi + lwIP stack handles all Layer 2
- * operations internally.  Call this if you later add MAC-level extensions.
+ * A no-op: the vendor WiFi and lwIP stack handle every Layer 2 operation internally. Call it if
+ * MAC-level extensions are added.
  */
-void init_datalink_layer();
+void init_datalink_layer(void);
 
 #endif

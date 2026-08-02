@@ -63,12 +63,12 @@ static constexpr char SSH_RSA_SIG_ALG_SHA512[] = "rsa-sha2-512";
 /**
  * @brief RSA-2048 public host key parameters. Allocated in BSS; contains only n and e.
  */
-struct SshRsaPubKey
+typedef struct
 {
     uint8_t n[PC_RSA_KEY_BYTES]; ///< Modulus n (256 bytes, big-endian).
     uint8_t e_bytes[4];          ///< Public exponent e (big-endian uint32).
-    bool loaded;                 ///< True after pc_ssh_rsa_load_pubkey() succeeds.
-};
+    proto_bool loaded;           ///< True after pc_ssh_rsa_load_pubkey() succeeds.
+} SshRsaPubKey;
 
 /** @brief Static host public key (BSS). Set by pc_ssh_rsa_load_pubkey(). */
 extern SshRsaPubKey ssh_host_pubkey;

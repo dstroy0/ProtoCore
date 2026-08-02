@@ -328,7 +328,7 @@ void test_unauth_challenge_on_dead_connection()
     handle();
     TEST_ASSERT_FALSE(handler_called);
     TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len());
-    TEST_ASSERT_EQUAL(ParseState::PARSE_METHOD, http_pool[0].parse_state);
+    TEST_ASSERT_EQUAL(PARSE_METHOD, http_pool[0].parse_state);
 }
 
 // ====================================================================

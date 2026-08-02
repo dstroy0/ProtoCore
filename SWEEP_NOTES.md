@@ -943,3 +943,37 @@ at the byte it finds and must never see one.
   (`pc_bitw_put`, `pc_bitw_align`), `bytes.h` (`pc_bw_put`, `pc_bw_put_be`, `pc_br_take_be`,
   `pc_rd_u32`, `pc_rd_str`). Compiles today because C++ gives `inline` different linkage rules; it
   breaks when the file is built as C.
+
+## `src/server/` C11 conversion - sources DONE, headers OPEN
+
+All 14 `.cpp` under `src/server/` are now `.c`: `auth`, `file_serving`, `http_range`, `middleware`,
+`regex`, `response`, `ssh_scp`, `ssh_sftp`, `webdav`, `websocket_sse`, plus `filesystem/filesystem`,
+`filesystem/mnt`, `filesystem/wearlevel`, `signaling/signaling`. Anonymous namespaces became
+`static` per definition, `struct X {...};` became `typedef struct {...} X;`, scoped enumerators lost
+their `E::`, and the in-class initialisers moved to designated initialisers at the definition.
+
+**Three `= -1` initialisers were load-bearing** and are now `static X s = {.root = -1}`:
+`file_serving.c`, `ssh_scp.c`, `ssh_sftp.c`, `webdav.c`. Zero-initialised, `root` would be 0, which
+is a *valid* root index - every path would resolve against another server's storage rather than
+failing closed.
+
+**Two file-scope `static const size_t` sizes had to become `#define`** because C requires an integer
+constant expression where they were used: `PC_WEBDAV_MIN_ENTRY_BYTES` (a `static_assert` operand) and
+`WS_MAX_KEY_LEN` (an array bound - as a `const` object it would have been a VLA).
+
+### OPEN - the headers, which block the build
+
+- **`filesystem/mnt.h` still declares `enum class pc_mnt_mode`.** Four converted `.c` files now name
+  `PC_MNT_READ` / `PC_MNT_WRITE` unqualified, so none of them compiles as C until this header is
+  converted. This is the next file, not a later one.
+- The rest of `src/server/`'s headers were not audited for C++ constructs: `ssh_scp.h`,
+  `ssh_sftp.h`, `http_range.h`, `filesystem/filesystem.h`, `filesystem/wearlevel.h`. Only
+  `signaling/signaling.h` was converted (`struct pc_signal_snapshot` -> `typedef struct`).
+- **`protocore.h`: `void regen_digest_secret();`** - empty parens are *unspecified* arguments in C,
+  not none. Needs `(void)`.
+- **Stale `#include <stdio.h>` in `websocket_sse.c`** - every stdio call in the file is gone; the
+  output all goes through `pc_sb`. Same defect already logged for `response.cpp` and
+  `middleware.cpp`, so it is three sites, not one.
+- The `.cpp` -> `.c` rename re-keys every path in the `check_src_banned` baseline, so 15 pre-existing
+  ban 19 stack arrays in `protocore.c` now read as new. The baseline needs re-keying in the same
+  commit as the rename or the hook blocks it.

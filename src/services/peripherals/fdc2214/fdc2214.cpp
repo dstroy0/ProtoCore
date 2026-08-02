@@ -11,9 +11,8 @@
 
 #if PC_ENABLE_FDC2214
 
-#if defined(ARDUINO)
+#if PROTOCORE_HOT
 #include "services/peripherals/i2c.h"
-#include <Arduino.h>
 #include <Wire.h>
 #endif
 uint32_t pc_fdc2214_data(uint16_t msb_reg, uint16_t lsb_reg)
@@ -57,37 +56,35 @@ size_t pc_fdc2214_build_config(uint8_t *buf, size_t cap, uint16_t rcount, uint16
     return o;
 }
 
-#if defined(ARDUINO)
+#if PROTOCORE_HOT
 
-namespace
-{
 // All FDC2214 I2C-binding state, owned by one instance (internal linkage): the device address,
 // so it is one named owner, unreachable from any other translation unit.
-struct Fdc2214Ctx
+typedef struct
 {
     uint8_t addr = 0x2A;
-};
-Fdc2214Ctx s_fdc;
+} Fdc2214Ctx;
+static Fdc2214Ctx s_fdc;
 
-bool read16(uint8_t reg, uint16_t *out)
+static proto_bool read16(uint8_t reg, uint16_t *out)
 {
     Wire.beginTransmission(s_fdc.addr);
     Wire.write(reg);
-    if (Wire.endTransmission(false) != 0)
+    if (Wire.endTransmission(PROTO_FALSE) != 0)
     {
-        return false;
+        return PROTO_FALSE;
     }
     if (Wire.requestFrom((int)s_fdc.addr, 2) != 2)
     {
-        return false;
+        return PROTO_FALSE;
     }
     uint16_t hi = Wire.read();
     uint16_t lo = Wire.read();
     *out = (uint16_t)((hi << 8) | lo);
-    return true;
+    return PROTO_TRUE;
 }
 
-bool write16(uint8_t reg, uint16_t val)
+static proto_bool write16(uint8_t reg, uint16_t val)
 {
     Wire.beginTransmission(s_fdc.addr);
     Wire.write(reg);
@@ -95,20 +92,19 @@ bool write16(uint8_t reg, uint16_t val)
     Wire.write((uint8_t)val);
     return Wire.endTransmission() == 0;
 }
-} // namespace
 
-bool pc_fdc2214_begin(uint8_t addr, uint16_t rcount, uint16_t settlecount)
+proto_bool pc_fdc2214_begin(uint8_t addr, uint16_t rcount, uint16_t settlecount)
 {
     pc_i2c_begin();
     s_fdc.addr = addr;
     uint16_t id = 0;
     if (!read16(FDC2214_REG_DEVICE_ID, &id))
     {
-        return false;
+        return PROTO_FALSE;
     }
     if (id != FDC2214_DEVICE_ID && id != 0x3054) // 0x3054 = FDC2114 (12-bit sibling)
     {
-        return false;
+        return PROTO_FALSE;
     }
     uint8_t seq[FDC2214_CONFIG_MAX];
     size_t n = pc_fdc2214_build_config(seq, sizeof(seq), rcount, settlecount);
@@ -116,28 +112,28 @@ bool pc_fdc2214_begin(uint8_t addr, uint16_t rcount, uint16_t settlecount)
     {
         if (!write16(seq[i], (uint16_t)((seq[i + 1] << 8) | seq[i + 2])))
         {
-            return false;
+            return PROTO_FALSE;
         }
     }
-    return true;
+    return PROTO_TRUE;
 }
 
-bool pc_fdc2214_read_ch0(uint32_t *out)
+proto_bool pc_fdc2214_read_ch0(uint32_t *out)
 {
     if (!out)
     {
-        return false;
+        return PROTO_FALSE;
     }
     uint16_t msb = 0;
     uint16_t lsb = 0;
     if (!read16(FDC2214_REG_DATA_CH0_MSB, &msb) || !read16(FDC2214_REG_DATA_CH0_LSB, &lsb))
     {
-        return false;
+        return PROTO_FALSE;
     }
     *out = pc_fdc2214_data(msb, lsb);
-    return true;
+    return PROTO_TRUE;
 }
 
-#endif // ARDUINO
+#endif // PROTOCORE_HOT
 
 #endif // PC_ENABLE_FDC2214

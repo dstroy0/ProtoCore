@@ -50,11 +50,8 @@
 
 #if PC_ENABLE_FORWARD
 
-#include <stddef.h>
-#include <stdint.h>
-
 /** @brief Interface kind (informational; the plane treats all interfaces the same). */
-enum class pc_if_kind : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     PC_IF_OTHER = 0,
     PC_IF_WIFI_STA,
@@ -62,14 +59,14 @@ enum class pc_if_kind : uint8_t
     PC_IF_ETH,
     PC_IF_BUS,
     PC_IF_RADIO,
-};
+} pc_if_kind;
 
 /** @brief Rule action for a `(src, dst)` interface pair or an ACL entry. */
-enum class pc_fwd_action : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     PC_FWD_DENY = 0,
     PC_FWD_ALLOW = 1,
-};
+} pc_fwd_action;
 
 /** @brief Wildcard source interface for an ACL entry (matches a frame from any source). */
 #define PC_FWD_IF_ANY 0xFF
@@ -78,10 +75,10 @@ enum class pc_fwd_action : uint8_t
  * @brief Egress: emit @p len bytes on interface @p if_id.
  * @return true if the interface accepted the bytes; false drops (counted as a send fail).
  */
-using pc_if_send_fn = bool (*)(uint8_t if_id, const uint8_t *data, uint16_t len, void *ctx);
+using pc_if_send_fn = proto_bool (*)(uint8_t if_id, const uint8_t *data, uint16_t len, void *ctx);
 
 /** @brief Forwarding counters (monotonic since the last pc_forward_reset()). */
-struct pc_forward_stats
+typedef struct
 {
     uint32_t frames_in;       ///< ingress calls
     uint32_t forwarded;       ///< destination sends that succeeded
@@ -91,7 +88,7 @@ struct pc_forward_stats
     uint32_t acl_denied;      ///< frames dropped at ingress by the access-control list
     uint32_t policy_routed;   ///< frames that matched a policy route (routed to its chosen egress)
     uint32_t inspect_dropped; ///< frames dropped by the inspection hook (PC_FWD_INSPECT)
-};
+} pc_forward_stats;
 
 /** @brief Clear all interfaces, rules, and stats (start from empty). */
 void pc_forward_reset(void);
@@ -101,19 +98,19 @@ void pc_forward_reset(void);
  * @return true; false if @p if_id is already registered, @p send is null, or the table
  *         is full (PC_FWD_MAX_IFACES).
  */
-bool pc_forward_add_if(uint8_t if_id, pc_if_kind kind, pc_if_send_fn send, void *ctx);
+proto_bool pc_forward_add_if(uint8_t if_id, pc_if_kind kind, pc_if_send_fn send, void *ctx);
 
 /**
  * @brief Add a forwarding rule. @p rate_cap_per_sec caps ALLOW rules (0 = unlimited); it
  *        is ignored for DENY rules.
  * @return true; false if the table is full (PC_FWD_MAX_RULES).
  */
-bool pc_forward_add_rule(uint8_t src_if, uint8_t dst_if, pc_fwd_action action, uint16_t rate_cap_per_sec);
+proto_bool pc_forward_add_rule(uint8_t src_if, uint8_t dst_if, pc_fwd_action action, uint16_t rate_cap_per_sec);
 
 /**
  * @brief Set the ACL default action - what happens to a frame that matches no ACL entry.
- *        Default pc_fwd_action::PC_FWD_ALLOW (an empty ACL passes everything, so the ACL is opt-in);
- *        set pc_fwd_action::PC_FWD_DENY for allowlist semantics (only explicitly permitted frames pass).
+ *        Default PC_FWD_ALLOW (an empty ACL passes everything, so the ACL is opt-in);
+ *        set PC_FWD_DENY for allowlist semantics (only explicitly permitted frames pass).
  */
 void pc_forward_acl_set_default(pc_fwd_action action);
 
@@ -128,8 +125,8 @@ void pc_forward_acl_set_default(pc_fwd_action action);
  * Denied frames are dropped at ingress before any forwarding rule runs.
  * @return false if the ACL table is full or @p patlen exceeds PC_FWD_ACL_PATLEN.
  */
-bool pc_forward_acl_add(uint8_t src_if, uint16_t offset, const uint8_t *pattern, const uint8_t *mask, uint8_t patlen,
-                        pc_fwd_action action);
+proto_bool pc_forward_acl_add(uint8_t src_if, uint16_t offset, const uint8_t *pattern, const uint8_t *mask,
+                              uint8_t patlen, pc_fwd_action action);
 
 /**
  * @brief Add a policy route: a frame matching this byte pattern is forwarded only to
@@ -145,16 +142,16 @@ bool pc_forward_acl_add(uint8_t src_if, uint16_t offset, const uint8_t *pattern,
  * @return true; false if @p patlen exceeds PC_FWD_ACL_PATLEN, a non-zero @p patlen has a null
  *         pattern/mask, or the table is full (PC_FWD_MAX_ROUTES).
  */
-bool pc_forward_route_add(uint8_t src_if, uint16_t offset, const uint8_t *pattern, const uint8_t *mask, uint8_t patlen,
-                          uint8_t egress_if, uint16_t rate_cap_per_sec);
+proto_bool pc_forward_route_add(uint8_t src_if, uint16_t offset, const uint8_t *pattern, const uint8_t *mask,
+                                uint8_t patlen, uint8_t egress_if, uint16_t rate_cap_per_sec);
 
 #if PC_FWD_INSPECT
 /** @brief The verdict an inspection hook returns for a frame. */
-enum class pc_fwd_verdict : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     PC_FWD_INSPECT_PASS = 0, ///< let the frame continue to routing / forwarding
     PC_FWD_INSPECT_DROP = 1, ///< drop the frame (counted as inspect_dropped)
-};
+} pc_fwd_verdict;
 
 /**
  * @brief Ingress inspection hook: observe / parse @p data (from @p src_if, @p len bytes) and
@@ -184,7 +181,7 @@ uint8_t pc_forward_ingress(uint8_t src_if, const uint8_t *data, uint16_t len);
 /** @brief Copy the current forwarding counters into @p out. */
 void pc_forward_get_stats(pc_forward_stats *out);
 
-#if !defined(ARDUINO)
+#if !PROTOCORE_HOT
 /** @brief Host only: set the millisecond clock the rate cap uses (tests drive the window).
  *         On device the plane reads pc_millis(). */
 void pc_forward_test_set_now(uint32_t ms);

@@ -26,35 +26,29 @@
 #ifndef PROTOCORE_ADS1115_H
 #define PROTOCORE_ADS1115_H
 
-#include <stdint.h>
+#include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
 
 #define ADS1115_REG_CONVERSION 0x00 ///< conversion result register
 #define ADS1115_REG_CONFIG 0x01     ///< configuration register
 
 /** @brief Programmable-gain settings (PGA register codes; full-scale +/- range). Config field values
  *  shifted into the config word, so integer constants in a namespacing struct - cast-free. */
-struct Ads1115Gain
-{
-    static constexpr uint8_t ADS1115_GAIN_TWOTHIRDS = 0; ///< +/- 6.144 V
-    static constexpr uint8_t ADS1115_GAIN_1 = 1;         ///< +/- 4.096 V
-    static constexpr uint8_t ADS1115_GAIN_2 = 2;         ///< +/- 2.048 V (default)
-    static constexpr uint8_t ADS1115_GAIN_4 = 3;         ///< +/- 1.024 V
-    static constexpr uint8_t ADS1115_GAIN_8 = 4;         ///< +/- 0.512 V
-    static constexpr uint8_t ADS1115_GAIN_16 = 5;        ///< +/- 0.256 V
-};
+#define S 0   ///< +/- 6.144 V
+#define _1 1  ///< +/- 4.096 V
+#define _2 2  ///< +/- 2.048 V (default)
+#define _4 3  ///< +/- 1.024 V
+#define _8 4  ///< +/- 0.512 V
+#define _16 5 ///< +/- 0.256 V
 
 /** @brief Data-rate settings (DR register codes; samples per second). */
-struct Ads1115DataRate
-{
-    static constexpr uint8_t ADS1115_DR_8 = 0;   ///< 8 SPS
-    static constexpr uint8_t ADS1115_DR_16 = 1;  ///< 16 SPS
-    static constexpr uint8_t ADS1115_DR_32 = 2;  ///< 32 SPS
-    static constexpr uint8_t ADS1115_DR_64 = 3;  ///< 64 SPS
-    static constexpr uint8_t ADS1115_DR_128 = 4; ///< 128 SPS (default)
-    static constexpr uint8_t ADS1115_DR_250 = 5; ///< 250 SPS
-    static constexpr uint8_t ADS1115_DR_475 = 6; ///< 475 SPS
-    static constexpr uint8_t ADS1115_DR_860 = 7; ///< 860 SPS
-};
+#define _8 0   ///< 8 SPS
+#define _16 1  ///< 16 SPS
+#define _32 2  ///< 32 SPS
+#define _64 3  ///< 64 SPS
+#define _128 4 ///< 128 SPS (default)
+#define _250 5 ///< 250 SPS
+#define _475 6 ///< 475 SPS
+#define _860 7 ///< 860 SPS
 
 /**
  * @brief Build the 16-bit config word for a single-shot, single-ended reading of @p channel
@@ -69,12 +63,12 @@ int32_t pc_ads1115_raw_to_uv(int16_t raw, uint8_t gain);
 // --- ESP32 binding (I2C via Wire; no-ops on a host build) ------------------------------------
 
 /** @brief Initialize the I2C bus for the ADS1115 at @p addr. @return true on ESP32. */
-bool pc_ads1115_begin(uint8_t addr);
+proto_bool pc_ads1115_begin(uint8_t addr);
 
 /** @brief Single-shot read of @p channel (0..3) at @p gain into @p raw. @return false on error. */
-bool pc_ads1115_read_raw(uint8_t channel, uint8_t gain, int16_t *raw);
+proto_bool pc_ads1115_read_raw(uint8_t channel, uint8_t gain, int16_t *raw);
 
 /** @brief Single-shot read of @p channel at @p gain, converted to microvolts in @p microvolts. */
-bool pc_ads1115_read_uv(uint8_t channel, uint8_t gain, int32_t *microvolts);
+proto_bool pc_ads1115_read_uv(uint8_t channel, uint8_t gain, int32_t *microvolts);
 
 #endif // PROTOCORE_ADS1115_H

@@ -29,8 +29,6 @@
 #define PROTOCORE_INFLATE_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_WS_DEFLATE
 
@@ -43,13 +41,13 @@
 #define INFLATE_SCRATCH_SIZE 1536
 
 /** @brief inflate_raw() return codes. */
-enum class InflateResult : int32_t
+typedef enum PROTO_ENUM_PACKED
 {
     INFLATE_OK = 0,             ///< success; *out_len holds the decompressed length
     INFLATE_ERR_MALFORMED = -1, ///< invalid / truncated DEFLATE stream
     INFLATE_ERR_OVERFLOW = -2,  ///< output would exceed dst_cap
     INFLATE_ERR_SCRATCH = -3    ///< scratch_len < INFLATE_SCRATCH_SIZE
-};
+} InflateResult;
 
 /**
  * @brief Decompress a raw DEFLATE (RFC 1951) stream.
@@ -58,7 +56,7 @@ enum class InflateResult : int32_t
  * @param dst,dst_cap         output buffer and its capacity (also the window).
  * @param out_len             set to the decompressed length on success.
  * @param scratch,scratch_len caller working memory (>= INFLATE_SCRATCH_SIZE).
- * @return InflateResult::INFLATE_OK (0) on success, else a negative ::InflateResult.
+ * @return INFLATE_OK (0) on success, else a negative ::InflateResult.
  */
 InflateResult inflate_raw(const uint8_t *src, size_t src_len, uint8_t *dst, size_t dst_cap, size_t *out_len,
                           void *scratch, size_t scratch_len);

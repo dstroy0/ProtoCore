@@ -22,17 +22,16 @@
 #ifndef PROTOCORE_SSH_FLOW_CONTROL_H
 #define PROTOCORE_SSH_FLOW_CONTROL_H
 
-#include <stddef.h>
-#include <stdint.h>
+#include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
 
 /** @brief One channel's flow-control state (RFC 4254 sec 5.2). */
-struct SshFlow
+typedef struct
 {
     uint32_t local_window; ///< Bytes the peer may still send us before we WINDOW_ADJUST.
     uint32_t local_max;    ///< The window we advertised, and replenish back up to.
     uint32_t peer_window;  ///< Bytes we may still send the peer.
     uint32_t peer_max_pkt; ///< Peer's maximum packet size; caps a single send independently of the window.
-};
+} SshFlow;
 
 /**
  * @brief Start a channel's windows: ours at @p local_window, the peer's at what it advertised.
@@ -53,7 +52,7 @@ void pc_ssh_flow_init(SshFlow *f, uint32_t local_window, uint32_t peer_window, u
  * @return false if @p n exceeds what we advertised - the peer overran the window (RFC 4254 sec 5.2)
  *         and the caller must fail the channel. The window is left untouched on failure.
  */
-bool pc_ssh_flow_recv_take(SshFlow *f, uint32_t n);
+proto_bool pc_ssh_flow_recv_take(SshFlow *f, uint32_t n);
 
 /**
  * @brief Decide whether a WINDOW_ADJUST is due, and for how much. Does not mutate.
@@ -68,13 +67,13 @@ bool pc_ssh_flow_recv_take(SshFlow *f, uint32_t n);
  *
  * @return true if a WINDOW_ADJUST is due; @p *add receives the delta to advertise.
  */
-bool pc_ssh_flow_replenish_due(const SshFlow *f, uint32_t *add);
+proto_bool pc_ssh_flow_replenish_due(const SshFlow *f, uint32_t *add);
 
 /** @brief Credit our window by @p add, once that WINDOW_ADJUST has actually been sent. */
 void pc_ssh_flow_local_credit(SshFlow *f, uint32_t add);
 
 /** @brief True if @p len bytes fit both the peer's remaining window and its maximum packet size. */
-bool pc_ssh_flow_send_allows(const SshFlow *f, size_t len);
+proto_bool pc_ssh_flow_send_allows(const SshFlow *f, size_t len);
 
 /**
  * @brief Clamp a would-be send to what the peer currently permits.

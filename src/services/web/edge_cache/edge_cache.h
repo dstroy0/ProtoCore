@@ -24,8 +24,6 @@
 
 #include "services/web/httpcache/httpcache.h" // pc_cache_control, cache_freshness_lifetime
 #include "shared_primitives/http_date.h"      // PC_HTTP_DATE_MAX (the stored-date floor)
-#include <stddef.h>
-#include <stdint.h>
 
 // --- raw response header-block field access ------------------------------------------------------
 
@@ -36,7 +34,7 @@
  * Case-insensitive name match; the first occurrence wins. Fails (returns false, @p out emptied) if the
  * header is absent or its value would not fit @p out_cap (never truncates a validator).
  */
-bool edge_header_value(const char *hdrs, size_t len, const char *name, char *out, size_t out_cap);
+proto_bool edge_header_value(const char *hdrs, size_t len, const char *name, char *out, size_t out_cap);
 
 // --- HTTP-date <-> epoch (RFC 9110 sec 5.6.7: IMF-fixdate, obsolete RFC 850, asctime) -------------
 
@@ -52,7 +50,7 @@ int64_t edge_parse_http_date(const char *s, size_t len);
  * locally (a difference of two origin-supplied times - valid with no local wall clock). @p date_epoch
  * and @p expires_epoch are -1 when the header was absent.
  */
-long edge_freshness_lifetime(const pc_cache_control *cc, bool shared, int64_t date_epoch, int64_t expires_epoch);
+long edge_freshness_lifetime(const pc_cache_control *cc, proto_bool shared, int64_t date_epoch, int64_t expires_epoch);
 
 /**
  * @brief Heuristic freshness (RFC 9111 sec 4.2.2): 10% of (Date - Last-Modified), or -1 if either
@@ -71,7 +69,7 @@ long edge_initial_age(int32_t age_hdr, int64_t date_epoch, int64_t response_time
 long edge_current_age(long initial_age, uint32_t insert_ms, uint32_t now_ms);
 
 /** @brief Fresh iff a lifetime is known (>= 0) and the current age has not reached it. */
-bool edge_is_fresh_at(long lifetime, long current_age);
+proto_bool edge_is_fresh_at(long lifetime, long current_age);
 
 // --- cache key + digest + Vary -------------------------------------------------------------------
 
@@ -82,8 +80,8 @@ bool edge_is_fresh_at(long lifetime, long current_age);
  * @return the key length (excluding NUL), or 0 if it would overflow @p out_cap (caller treats 0 as
  *         non-cacheable and fails open).
  */
-size_t edge_key_canon(const char *method, const char *host, const char *path, const char *query, bool include_query,
-                      char *out, size_t out_cap);
+size_t edge_key_canon(const char *method, const char *host, const char *path, const char *query,
+                      proto_bool include_query, char *out, size_t out_cap);
 
 /** @brief SHA-256 of the canonical key -> @p digest[32] (doubles as the L2 dbm key). */
 void edge_key_digest(const char *canon, size_t len, uint8_t digest[32]);
@@ -98,7 +96,7 @@ using EdgeHdrLookup = const char *(*)(void *ctx, const char *name);
  * Two requests select the same stored variant iff their serialized strings are equal. An empty / absent
  * Vary writes "" and returns true. Returns false if Vary is "*" (uncacheable) or it would overflow.
  */
-bool edge_vary_serialize(const char *vary_header, EdgeHdrLookup lookup, void *ctx, char *out, size_t out_cap);
+proto_bool edge_vary_serialize(const char *vary_header, EdgeHdrLookup lookup, void *ctx, char *out, size_t out_cap);
 
 // --- L1 RAM store: entries, LRU, TTL, purge ------------------------------------------------------
 
@@ -111,9 +109,9 @@ bool edge_vary_serialize(const char *vary_header, EdgeHdrLookup lookup, void *ct
 #error "PC_EDGE_LASTMOD_MAX must be >= PC_HTTP_DATE_MAX (RFC 7231 IMF-fixdate + NUL)"
 #endif
 
-struct EdgeEntry
+typedef struct
 {
-    bool used;
+    proto_bool used;
     char key[PC_EDGE_KEY_MAX];               ///< canonical key (collision-safe exact compare)
     uint8_t digest[32];                      ///< pc_sha256(key) - the L2 dbm key
     char vary_names[PC_EDGE_VARY_MAX];       ///< the response Vary header value (field-name list), "" if none
@@ -137,10 +135,10 @@ struct EdgeEntry
     } lru;
     uint16_t body_len;
     uint8_t body[PC_EDGE_BODY_MAX];
-};
+} EdgeEntry;
 
 /** @brief Cache observability counters. */
-struct EdgeCacheStats
+typedef struct
 {
     uint32_t hits;
     uint32_t misses;
@@ -154,7 +152,7 @@ struct EdgeCacheStats
     uint32_t mesh_hits;   ///< sibling pulls served (PC_ENABLE_EDGE_MESH)
     uint32_t mesh_misses; ///< peer queries that missed
     uint64_t bytes_stored;
-};
+} EdgeCacheStats;
 
 /**
  * @brief Write-back hook fired with the LRU victim just before ::edge_store_alloc recycles its slot.
@@ -166,7 +164,7 @@ struct EdgeCacheStats
 using EdgeEvictFn = void (*)(void *ctx, const EdgeEntry *victim);
 
 /** @brief The L1 store: a fixed pool of entries with an intrusive MRU..LRU list. */
-struct EdgeCacheStore
+typedef struct
 {
     EdgeEntry entries[PC_EDGE_CACHE_SLOTS];
     uint16_t lru_head; ///< MRU end (PC_EDGE_LRU_NONE when empty)
@@ -174,7 +172,7 @@ struct EdgeCacheStore
     EdgeCacheStats stats;
     EdgeEvictFn on_evict; ///< nullptr = no L2 write-back; else called with each evicted victim
     void *evict_ctx;      ///< opaque context passed to on_evict
-};
+} EdgeCacheStore;
 
 /** @brief Reset a store to empty. */
 void edge_store_init(EdgeCacheStore *s);
@@ -204,15 +202,15 @@ EdgeEntry *edge_store_lookup(EdgeCacheStore *s, const char *canon, const char *v
 EdgeEntry *edge_store_find(EdgeCacheStore *s, const char *canon, EdgeHdrLookup lookup, void *ctx, uint32_t now_ms);
 
 /** @brief Resolve and store an entry's freshness (lifetime with heuristic / default fallback + age). */
-void edge_entry_set_freshness(EdgeEntry *e, const pc_cache_control *cc, bool shared, int64_t date_epoch,
+void edge_entry_set_freshness(EdgeEntry *e, const pc_cache_control *cc, proto_bool shared, int64_t date_epoch,
                               int64_t expires_epoch, int64_t last_modified_epoch, int32_t age_hdr,
                               int64_t response_time_epoch, uint32_t now_ms);
 
 /** @brief True if the entry carries a validator (ETag or Last-Modified) usable for revalidation. */
-bool edge_entry_has_validator(const EdgeEntry *e);
+proto_bool edge_entry_has_validator(const EdgeEntry *e);
 
 /** @brief True if the entry is still fresh at @p now_ms. */
-bool edge_entry_fresh(const EdgeEntry *e, uint32_t now_ms);
+proto_bool edge_entry_fresh(const EdgeEntry *e, uint32_t now_ms);
 
 /**
  * @brief Drop entries that are both stale AND unrevalidatable (no validator) - pure dead weight.
@@ -236,8 +234,8 @@ void edge_store_free_entry(EdgeCacheStore *s, const EdgeEntry *e);
  *
  * @p vary_header may be nullptr. Authorization handling is the caller's (private requests bypass first).
  */
-bool edge_is_storeable(int status, const char *method, const pc_cache_control *cc, const char *vary_header,
-                       size_t body_len);
+proto_bool edge_is_storeable(int status, const char *method, const pc_cache_control *cc, const char *vary_header,
+                             size_t body_len);
 
 // --- conditional revalidation (RFC 9111 sec 4.3) -------------------------------------------------
 

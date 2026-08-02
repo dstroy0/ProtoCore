@@ -17,7 +17,9 @@
 #ifndef PROTOCORE_TIME_COMPAT_H
 #define PROTOCORE_TIME_COMPAT_H
 
-#include <time.h>
+#include <time.h> // struct tm and the gmtime_r / gmtime_s the seam picks between
+
+#include "protocore_config.h" // the entry point: PC_INLINE
 
 /**
  * @brief Convert @p epoch to broken-down UTC in caller storage (reentrant).
@@ -25,7 +27,7 @@
  * @param out    Destination `struct tm` (must be non-null).
  * @return @p out on success, or NULL if @p epoch cannot be represented.
  */
-inline struct tm *pc_gmtime_r(const time_t *epoch, struct tm *out)
+PC_INLINE struct tm *pc_gmtime_r(const time_t *epoch, struct tm *out)
 {
 #if defined(_WIN32)
     // MS runtime: gmtime_s(tm, time) - arguments reversed vs POSIX, returns errno_t (0 == ok).

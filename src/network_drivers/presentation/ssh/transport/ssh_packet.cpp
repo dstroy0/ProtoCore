@@ -9,6 +9,7 @@
 #include "network_drivers/presentation/ssh/transport/ssh_packet.h"
 #include "crypto/aead/aesgcm.h"
 #include "crypto/aead/chachapoly.h"
+#include "crypto/ct_eq.h" // pc_ct_eq
 #include "crypto/mac/hmac_sha256.h"
 #include "crypto/mac/hmac_sha512.h"
 #include "network_drivers/presentation/ssh/transport/ssh_keymat.h"
@@ -20,8 +21,8 @@
 #include "mmgr/secure.h"
 #include <string.h>
 
-#ifdef ARDUINO
-#include <Arduino.h> // esp_fill_random()
+#if PROTOCORE_HOT
+#include <Arduino.h> // pc_platform_rand_fill()
 #else
 #include <Arduino.h> // mock
 #endif
@@ -88,17 +89,6 @@ static void compute_mac_mode(uint8_t mac_mode, const uint8_t *mac_key, uint32_t 
     }
 }
 
-// Constant-time 32-byte comparison to prevent timing oracles on MAC verify.
-static int ct_memcmp(const uint8_t *a, const uint8_t *b, size_t n)
-{
-    uint8_t diff = 0;
-    for (size_t i = 0; i < n; i++)
-    {
-        diff |= a[i] ^ b[i];
-    }
-    return (int)diff;
-}
-
 // ---------------------------------------------------------------------------
 // Init
 // ---------------------------------------------------------------------------
@@ -111,16 +101,16 @@ void ssh_pkt_init(uint8_t i)
     }
     SshPacketState *s = &ssh_pkt[i];
     memset(s, 0, sizeof(*s)); // is_client defaults false = server role
-    s->kex_active = true;
-    s->enc_out = false;
-    s->enc_in = false;
+    s->kex_active = PROTO_TRUE;
+    s->enc_out = PROTO_FALSE;
+    s->enc_in = PROTO_FALSE;
 }
 
 void ssh_pkt_set_client(uint8_t i)
 {
     if (i < MAX_SSH_CONNS)
     {
-        ssh_pkt[i].is_client = true;
+        ssh_pkt[i].is_client = PROTO_TRUE;
     }
 }
 
@@ -130,46 +120,46 @@ void ssh_pkt_set_client(uint8_t i)
 // A client sends c2s / receives s2c; a server is the mirror. Selecting the key set through these
 // keeps one send and one receive implementation correct for both roles.
 
-static inline const uint8_t *km_send_chacha(const SshKeyMat *km, bool cli)
+static inline const uint8_t *km_send_chacha(const SshKeyMat *km, proto_bool cli)
 {
     return cli ? km->chacha_key_c2s : km->chacha_key_s2c;
 }
-static inline const uint8_t *km_recv_chacha(const SshKeyMat *km, bool cli)
+static inline const uint8_t *km_recv_chacha(const SshKeyMat *km, proto_bool cli)
 {
     return cli ? km->chacha_key_s2c : km->chacha_key_c2s;
 }
-static inline const uint8_t *km_send_aes_key(const SshKeyMat *km, bool cli)
+static inline const uint8_t *km_send_aes_key(const SshKeyMat *km, proto_bool cli)
 {
     return cli ? km->aes_key_c2s : km->aes_key_s2c;
 }
-static inline uint8_t *km_send_aes_iv(SshKeyMat *km, bool cli)
+static inline uint8_t *km_send_aes_iv(SshKeyMat *km, proto_bool cli)
 {
     return cli ? km->aes_iv_c2s : km->aes_iv_s2c;
 }
-static inline const uint8_t *km_recv_aes_key(const SshKeyMat *km, bool cli)
+static inline const uint8_t *km_recv_aes_key(const SshKeyMat *km, proto_bool cli)
 {
     return cli ? km->aes_key_s2c : km->aes_key_c2s;
 }
 // GCM keeps a keyed context per direction rather than a raw key: the schedule is built once at install
 // (ssh_dh.cpp) and reused per packet, because standing one up costs ~9,200 cycles regardless of packet
 // size and would otherwise dominate small interactive traffic.
-static inline pc_aesgcm_key *km_send_gcm(SshKeyMat *km, bool cli)
+static inline pc_aesgcm_key *km_send_gcm(SshKeyMat *km, proto_bool cli)
 {
-    return reinterpret_cast<pc_aesgcm_key *>(cli ? km->gcm_ctx_c2s : km->gcm_ctx_s2c);
+    return (pc_aesgcm_key *)(cli ? km->gcm_ctx_c2s : km->gcm_ctx_s2c);
 }
-static inline pc_aesgcm_key *km_recv_gcm(SshKeyMat *km, bool cli)
+static inline pc_aesgcm_key *km_recv_gcm(SshKeyMat *km, proto_bool cli)
 {
-    return reinterpret_cast<pc_aesgcm_key *>(cli ? km->gcm_ctx_s2c : km->gcm_ctx_c2s);
+    return (pc_aesgcm_key *)(cli ? km->gcm_ctx_s2c : km->gcm_ctx_c2s);
 }
-static inline uint8_t *km_recv_aes_iv(SshKeyMat *km, bool cli)
+static inline uint8_t *km_recv_aes_iv(SshKeyMat *km, proto_bool cli)
 {
     return cli ? km->aes_iv_s2c : km->aes_iv_c2s;
 }
-static inline const uint8_t *km_send_mac(const SshKeyMat *km, bool cli)
+static inline const uint8_t *km_send_mac(const SshKeyMat *km, proto_bool cli)
 {
     return cli ? km->mac_key_c2s : km->mac_key_s2c;
 }
-static inline const uint8_t *km_recv_mac(const SshKeyMat *km, bool cli)
+static inline const uint8_t *km_recv_mac(const SshKeyMat *km, proto_bool cli)
 {
     return cli ? km->mac_key_s2c : km->mac_key_c2s;
 }
@@ -219,9 +209,9 @@ int ssh_pkt_send(uint8_t i, const uint8_t *payload, size_t payload_len, uint8_t 
     //   aes GCM   : block 16, base = padding_length + payload   (RFC 5647 sec 7.3)
     //   aes ETM   : block 16, base = padding_length + payload
     //   aes E&M / plaintext : block 16, base = length + padding_length + payload  (compute_padding)
-    bool chacha = s->enc_out && km->cipher_mode == SSH_CIPHER_CHACHA20POLY1305;
-    bool gcm = s->enc_out && km->cipher_mode == SSH_CIPHER_AES256GCM;
-    bool etm = s->enc_out && km->cipher_mode == SSH_CIPHER_AES256CTR && ssh_mac_is_etm(km->mac_mode);
+    proto_bool chacha = s->enc_out && km->cipher_mode == SSH_CIPHER_CHACHA20POLY1305;
+    proto_bool gcm = s->enc_out && km->cipher_mode == SSH_CIPHER_AES256GCM;
+    proto_bool etm = s->enc_out && km->cipher_mode == SSH_CIPHER_AES256CTR && ssh_mac_is_etm(km->mac_mode);
     size_t pad_len;
     size_t tag_len;
     if (chacha)
@@ -268,12 +258,12 @@ int ssh_pkt_send(uint8_t i, const uint8_t *payload, size_t payload_len, uint8_t 
     }
 
     // Assemble the plaintext packet into out[].
-    write_u32_be(out, (uint32_t)pkt_len);            // packet_length
-    out[4] = (uint8_t)pad_len;                       // padding_length
-    memcpy(out + 5, payload, payload_len);           // payload
-    esp_fill_random(out + 5 + payload_len, pad_len); // random padding
+    write_u32_be(out, (uint32_t)pkt_len);                  // packet_length
+    out[4] = (uint8_t)pad_len;                             // padding_length
+    memcpy(out + 5, payload, payload_len);                 // payload
+    pc_platform_rand_fill(out + 5 + payload_len, pad_len); // random padding
 
-    const bool cli = s->is_client; // send direction: client uses c2s, server uses s2c
+    const proto_bool cli = s->is_client; // send direction: client uses c2s, server uses s2c
     if (chacha)
     {
         // Encrypt length (header key) + payload (main key) and append the Poly1305 tag.
@@ -501,7 +491,7 @@ static int ssh_recv_ctr_etm(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_msg
 
     uint8_t expected_mac[64];
     compute_mac_mode(km->mac_mode, km_recv_mac(km, s->is_client), s->seq_no_recv, s->rx_buf, 4 + pkt_len, expected_mac);
-    if (ct_memcmp(expected_mac, s->rx_buf + 4 + pkt_len, mac_tag) != 0)
+    if (!pc_ct_eq(expected_mac, s->rx_buf + 4 + pkt_len, mac_tag))
     {
         pc_secure_wipe(expected_mac, sizeof(expected_mac));
         pc_secure_wipe(s->rx_buf, s->rx_len);
@@ -607,7 +597,7 @@ static int ssh_recv_ctr_emac(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_ms
     uint8_t expected_mac[64];
     compute_mac_mode(km->mac_mode, km_recv_mac(km, s->is_client), s->seq_no_recv, scratch, enc_len, expected_mac);
 
-    if (ct_memcmp(expected_mac, rx_mac, mac_tag) != 0)
+    if (!pc_ct_eq(expected_mac, rx_mac, mac_tag))
     {
         // MAC failure: zero everything and disconnect.
         pc_secure_wipe(scratch, scratch_sz);

@@ -21,19 +21,14 @@
 #define PROTOCORE_UTMC_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_UTMC
 
 /** @brief UTMC data-quality flags. */
 // UTMC value-quality codes: wire values compared, so integer constants in a namespacing struct.
-struct Utmc
-{
-    static constexpr uint8_t UTMC_QUALITY_GOOD = 0;    ///< the value is good.
-    static constexpr uint8_t UTMC_QUALITY_SUSPECT = 1; ///< the value is suspect.
-    static constexpr uint8_t UTMC_QUALITY_ABSENT = 2;  ///< no value available.
-};
+#define D 0 ///< the value is good.
+#define T 1 ///< the value is suspect.
+#define T 2 ///< no value available.
 
 /**
  * @brief Build a UTMC request document for one object id. @return length written, or 0 on overflow.

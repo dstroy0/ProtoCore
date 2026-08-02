@@ -28,28 +28,26 @@
 #define PROTOCORE_MTCONNECT_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_MTCONNECT
 
 /** @brief The MTConnect DataItem category (which stream element wraps the value). */
-enum class pc_mtc_category : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     PC_MTC_SAMPLE,   ///< a measured value (<Samples>).
     PC_MTC_EVENT,    ///< a discrete state (<Events>).
     PC_MTC_CONDITION ///< a condition (<Condition>): value is the sub-element name (Normal/Warning/Fault).
-};
+} pc_mtc_category;
 
 /** @brief Incremental MTConnectStreams builder over a caller buffer. */
-struct pc_mtc_streams
+typedef struct
 {
     char *buf;
     size_t cap;
-    size_t len;   ///< bytes written so far (excl NUL).
-    bool ok;      ///< cleared on any overflow; the final length is 0 when not ok.
-    bool in_comp; ///< a <ComponentStream> is open.
-};
+    size_t len;         ///< bytes written so far (excl NUL).
+    proto_bool ok;      ///< cleared on any overflow; the final length is 0 when not ok.
+    proto_bool in_comp; ///< a <ComponentStream> is open.
+} pc_mtc_streams;
 
 /**
  * @brief Begin an MTConnectStreams document: XML declaration + header + open <Streams>.
@@ -148,7 +146,7 @@ size_t pc_mtc_assets_end(pc_mtc_streams *s);
 // --- sample sequence cursor: a rolling observation buffer for the `sample` from/count long-poll ---
 
 /** @brief One buffered observation (a value at a sequence number), stored in fixed fields. */
-struct pc_mtc_observation
+typedef struct
 {
     pc_mtc_category cat;
     uint64_t seq;                  ///< the monotonic sequence number assigned when it was recorded.
@@ -156,7 +154,7 @@ struct pc_mtc_observation
     char data_id[PC_MTC_STR_MAX + 1];
     char timestamp[PC_MTC_TS_MAX + 1];
     char value[PC_MTC_VAL_MAX + 1];
-};
+} pc_mtc_observation;
 
 /**
  * @brief A fixed-size ring of the most recent observations, with the agent's sequence bookkeeping.
@@ -167,14 +165,14 @@ struct pc_mtc_observation
  * sub-window as an MTConnectStreams document whose header carries firstSequence / lastSequence /
  * nextSequence (MTC1.4 §6.7). Zero heap, single-owner (the caller serializes access).
  */
-struct pc_mtc_sample_buffer
+typedef struct
 {
     pc_mtc_observation obs[PC_MTC_SAMPLE_BUFFER];
     uint32_t count;     ///< valid entries (<= PC_MTC_SAMPLE_BUFFER).
     uint32_t head;      ///< ring write index (next slot to fill).
     uint64_t next_seq;  ///< sequence the next add will assign (one past the newest).
     uint64_t first_seq; ///< sequence of the oldest retained observation.
-};
+} pc_mtc_sample_buffer;
 
 /**
  * @brief Initialize an empty sample buffer.

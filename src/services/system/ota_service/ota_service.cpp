@@ -9,51 +9,50 @@
 #include "ota_service.h"
 #include "services/system/clock.h" // pcdelay
 
-#if PC_ENABLE_OTA && defined(ARDUINO)
+#if PC_ENABLE_OTA && PROTOCORE_HOT
 
 #include "network_drivers/presentation/codec/base64/base64.h"
 #include "network_drivers/presentation/http/http_parser/http_parser.h"
 #include "protocore.h"
 #include "shared_primitives/mime.h"
-#include <Arduino.h>
 #include <Update.h>
 #include <string.h>
 
 // All OTA-service state, owned by one instance (internal linkage): the server handle, the
 // route path, the Basic-auth credentials, and the per-upload flags (one upload at a time on
 // this single-task device). Grouped so it is one named owner, unreachable cross-TU.
-struct OtaCtx
+typedef struct
 {
-    const char *path = nullptr;
+    const char *path = NULL;
     char user[MAX_AUTH_LEN] = {0};
     char pass[MAX_AUTH_LEN] = {0};
-    bool authed = false; ///< Credentials validated for the current upload.
-    bool active = false; ///< Update.begin() succeeded for the current upload.
-    bool error = false;  ///< A write failed during the current upload.
-};
+    proto_bool authed = PROTO_FALSE; ///< Credentials validated for the current upload.
+    proto_bool active = PROTO_FALSE; ///< Update.begin() succeeded for the current upload.
+    proto_bool error = PROTO_FALSE;  ///< A write failed during the current upload.
+} OtaCtx;
 static OtaCtx s_ota;
 
 /// @brief Validate the request's HTTP Basic credentials against s_ota.user/s_ota.pass.
-static bool ota_check_auth(HttpReq *req)
+static proto_bool ota_check_auth(HttpReq *req)
 {
     const char *h = http_get_header(req, "Authorization");
     if (!h || strncmp(h, "Basic ", 6) != 0)
     {
-        return false;
+        return PROTO_FALSE;
     }
 
     uint8_t decoded[MAX_AUTH_LEN * 2 + 2];
     size_t n = pc_base64_decode(h + 6, decoded, sizeof(decoded) - 1);
     if (n == 0)
     {
-        return false;
+        return PROTO_FALSE;
     }
     decoded[n] = '\0';
 
     const char *colon = (const char *)memchr(decoded, ':', n);
     if (!colon)
     {
-        return false;
+        return PROTO_FALSE;
     }
     size_t ulen = (size_t)(colon - (const char *)decoded);
     const char *pass = colon + 1;
@@ -62,34 +61,34 @@ static bool ota_check_auth(HttpReq *req)
 }
 
 /// @brief Stream-begin hook: accept POST @p s_ota.path; begin Update if authorized.
-static bool ota_stream_begin(HttpReq *req)
+static proto_bool ota_stream_begin(HttpReq *req)
 {
     if (strcmp(req->method, "POST") != 0)
     {
-        return false;
+        return PROTO_FALSE;
     }
     if (!s_ota.path || strcmp(req->path, s_ota.path) != 0)
     {
-        return false;
+        return PROTO_FALSE;
     }
 
     s_ota.authed = ota_check_auth(req);
-    s_ota.active = false;
-    s_ota.error = false;
+    s_ota.active = PROTO_FALSE;
+    s_ota.error = PROTO_FALSE;
     if (s_ota.authed)
     {
         if (Update.begin(UPDATE_SIZE_UNKNOWN))
         {
-            s_ota.active = true;
+            s_ota.active = PROTO_TRUE;
         }
         else
         {
-            s_ota.error = true;
+            s_ota.error = PROTO_TRUE;
         }
     }
     // Stream regardless so the body is consumed and the route handler can reply;
     // when unauthorized/!active the data hook simply discards.
-    return true;
+    return PROTO_TRUE;
 }
 
 /// @brief Stream-data hook: write one chunk of the image to Update.
@@ -100,12 +99,12 @@ static void ota_stream_data(HttpReq *req, const uint8_t *data, size_t len)
     {
         if (Update.write((uint8_t *)data, len) != len)
         {
-            s_ota.error = true;
+            s_ota.error = PROTO_TRUE;
         }
     }
 }
 
-/// @brief Route handler (runs at ParseState::PARSE_COMPLETE): finalize and reply, then reboot.
+/// @brief Route handler (runs at PARSE_COMPLETE): finalize and reply, then reboot.
 static void ota_handle(uint8_t slot_id, HttpReq *req)
 {
     if (!req->body_streaming)
@@ -118,7 +117,7 @@ static void ota_handle(uint8_t slot_id, HttpReq *req)
         send_text(slot_id, 401, PC_MIME_TEXT_PLAIN, "Unauthorized");
         return;
     }
-    bool ok = s_ota.active && !s_ota.error && Update.end(true);
+    proto_bool ok = s_ota.active && !s_ota.error && Update.end(PROTO_TRUE);
     if (!ok)
     {
         if (s_ota.active)
@@ -154,4 +153,4 @@ void pc_ota_begin(const char *path, const char *user, const char *pass)
     (void)pass;
 }
 
-#endif // PC_ENABLE_OTA && ARDUINO
+#endif // PC_ENABLE_OTA && PROTOCORE_HOT

@@ -24,19 +24,18 @@
 #ifndef PROTOCORE_GHASH_H
 #define PROTOCORE_GHASH_H
 
+#include "protocore_config.h" // the entry point: PC_INLINE, and types.h for the widths
 #include "shared_primitives/endian.h"
-#include <stddef.h>
-#include <stdint.h>
 
 /** @brief 4-bit GHASH table for a fixed subkey H = E(K, 0^128): M[i] = i*H as four big-endian
  *         uint32 words (M[i][0] most significant). 256 bytes. */
-struct GhashKey
+typedef struct
 {
     uint32_t M[16][4];
-};
+} GhashKey;
 
 /** @brief Build the 4-bit multiplication table from the 16-byte subkey @p h. Call once per key. */
-inline void ghash_key_init(GhashKey *t, const uint8_t h[16])
+PC_INLINE void ghash_key_init(GhashKey *t, const uint8_t h[16])
 {
     // M[8] = H; M[4]=H/x, M[2]=H/x^2, M[1]=H/x^3 (one GF right-shift each, reducing by R=0xe1<<120).
     uint32_t z0 = pc_rd32be(h);
@@ -77,7 +76,7 @@ inline void ghash_key_init(GhashKey *t, const uint8_t h[16])
 }
 
 /** @brief acc = acc * H in GF(2^128) with the GCM reduction, using the precomputed table @p t. */
-inline void ghash_mul(const GhashKey *t, uint8_t acc[16])
+PC_INLINE void ghash_mul(const GhashKey *t, uint8_t acc[16])
 {
     // Reduction contribution (into the top 16 bits of word 0) of the low nibble shifted out per step.
     static const uint16_t LAST4[16] = {0x0000, 0x1c20, 0x3840, 0x2460, 0x7080, 0x6ca0, 0x48c0, 0x54e0,
@@ -121,7 +120,7 @@ inline void ghash_mul(const GhashKey *t, uint8_t acc[16])
 
 /** @brief Fold @p len bytes of @p data into @p acc: acc = (acc XOR block) * H per 16 bytes, a final
  *         short block MSB-zero-padded. */
-inline void ghash_update(const GhashKey *t, uint8_t acc[16], const uint8_t *data, size_t len)
+PC_INLINE void ghash_update(const GhashKey *t, uint8_t acc[16], const uint8_t *data, size_t len)
 {
     size_t off = 0;
     while (off < len)

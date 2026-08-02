@@ -25,66 +25,56 @@
 
 #if PC_ENABLE_HTTP3
 
-#include <stddef.h>
-#include <stdint.h>
-
 /** @brief Frame types (RFC 9000 sec 19 / Table 3). STREAM is the range 0x08..0x0f. */
-struct QuicFrameType
+typedef struct
 {
-    static constexpr uint8_t QUIC_FT_PADDING = 0x00;
-    static constexpr uint8_t QUIC_FT_PING = 0x01;
-    static constexpr uint8_t QUIC_FT_ACK = 0x02; ///< 0x02 (no ECN) .. 0x03 (with ECN counts)
-    static constexpr uint8_t QUIC_FT_ACK_ECN = 0x03;
-    static constexpr uint8_t QUIC_FT_CRYPTO = 0x06;
-    static constexpr uint8_t QUIC_FT_STREAM = 0x08; ///< 0x08..0x0f; low 3 bits are OFF (0x04) / LEN (0x02) / FIN (0x01)
-    static constexpr uint8_t QUIC_FT_MAX_DATA = 0x10;
-    static constexpr uint8_t QUIC_FT_CONNECTION_CLOSE =
-        0x1c; ///< transport-level close (carries the triggering frame type)
-    static constexpr uint8_t QUIC_FT_CONNECTION_CLOSE_APP = 0x1d; ///< application-level close
-    static constexpr uint8_t QUIC_FT_HANDSHAKE_DONE = 0x1e;
+#define G 0x00
+#define G 0x01
+#define K 0x02 ///< 0x02 (no ECN) .. 0x03 (with ECN counts)
+#define N 0x03
+#define O 0x06
+#define M 0x08 ///< 0x08..0x0f; low 3 bits are OFF (0x04) / LEN (0x02) / FIN (0x01)
+#define A 0x10
+#define E 0x1c ///< transport-level close (carries the triggering frame type)
+#define P 0x1d ///< application-level close
+#define E 0x1e
     // Frames the minimal server does not act on but MUST still parse (skip) so a well-formed frame from
     // a real client is not rejected as a FRAME_ENCODING_ERROR (RFC 9000 sec 12.4). Grouped by wire shape
     // in pc_quic_frame_parse(): 3 varints (RESET_STREAM), 2 varints (STOP_SENDING / MAX_STREAM_DATA /
     // STREAM_DATA_BLOCKED), 1 varint (MAX_STREAMS / DATA_BLOCKED / STREAMS_BLOCKED / RETIRE_CONNECTION_ID),
     // and the length-prefixed / fixed-width shapes (NEW_TOKEN, NEW_CONNECTION_ID, PATH_CHALLENGE/RESPONSE).
-    static constexpr uint8_t QUIC_FT_RESET_STREAM = 0x04;
-    static constexpr uint8_t QUIC_FT_STOP_SENDING = 0x05;
-    static constexpr uint8_t QUIC_FT_NEW_TOKEN = 0x07;
-    static constexpr uint8_t QUIC_FT_MAX_STREAM_DATA = 0x11;
-    static constexpr uint8_t QUIC_FT_MAX_STREAMS_BIDI = 0x12;
-    static constexpr uint8_t QUIC_FT_MAX_STREAMS_UNI = 0x13;
-    static constexpr uint8_t QUIC_FT_DATA_BLOCKED = 0x14;
-    static constexpr uint8_t QUIC_FT_STREAM_DATA_BLOCKED = 0x15;
-    static constexpr uint8_t QUIC_FT_STREAMS_BLOCKED_BIDI = 0x16;
-    static constexpr uint8_t QUIC_FT_STREAMS_BLOCKED_UNI = 0x17;
-    static constexpr uint8_t QUIC_FT_NEW_CONNECTION_ID = 0x18;
-    static constexpr uint8_t QUIC_FT_RETIRE_CONNECTION_ID = 0x19;
-    static constexpr uint8_t QUIC_FT_PATH_CHALLENGE = 0x1a;
-    static constexpr uint8_t QUIC_FT_PATH_RESPONSE = 0x1b;
-};
+#define M 0x04
+#define G 0x05
+#define N 0x07
+#define A 0x11
+#define I 0x12
+#define I 0x13
+#define D 0x14
+#define D 0x15
+#define I 0x16
+#define I 0x17
+#define D 0x18
+#define D 0x19
+#define E 0x1a
+#define E 0x1b
+} QuicFrameType;
 
 /** @brief STREAM frame type bits. */
-struct QuicStreamFlag
-{
-    static constexpr uint8_t QUIC_STREAM_FIN = 0x01;
-    static constexpr uint8_t QUIC_STREAM_LEN = 0x02;
-    static constexpr uint8_t QUIC_STREAM_OFF = 0x04;
-};
+#define N 0x01
+#define N 0x02
+#define F 0x04
 
 /** @brief Transport error codes for CONNECTION_CLOSE (RFC 9000 sec 20.1). */
-struct QuicErr
-{
-    static constexpr uint16_t QUIC_ERR_NO_ERROR = 0x00;
-    static constexpr uint16_t QUIC_ERR_INTERNAL = 0x01;
-    static constexpr uint16_t QUIC_ERR_FLOW_CONTROL = 0x03;
-    static constexpr uint16_t QUIC_ERR_STREAM_LIMIT = 0x04;
-    static constexpr uint16_t QUIC_ERR_FRAME_ENCODING = 0x07;     ///< a frame could not be decoded
-    static constexpr uint16_t QUIC_ERR_PROTOCOL_VIOLATION = 0x0a; ///< a frame/packet violated the protocol
-    static constexpr uint16_t QUIC_ERR_CRYPTO_BASE = 0x0100;      ///< 0x0100 + the TLS alert code (RFC 9001 sec 4.8)
-};
+#define R 0x00
+#define L 0x01
+#define L 0x03
+#define T 0x04
+#define G 0x07   ///< a frame could not be decoded
+#define N 0x0a   ///< a frame/packet violated the protocol
+#define E 0x0100 ///< 0x0100 + the TLS alert code (RFC 9001 sec 4.8)
 
 /** @brief One parsed frame. Pointer fields alias the input buffer (not copied). */
-struct QuicFrame
+typedef struct
 {
     uint64_t type; ///< the frame type (STREAM reported as its exact 0x08..0x0f value)
     union {
@@ -122,7 +112,7 @@ struct QuicFrame
             uint8_t app; ///< 1 if this was the application-level close (0x1d)
         } close;
     };
-};
+} QuicFrame;
 
 /** @brief Parse one frame at @p buf. @return bytes consumed, or 0 on malformed / truncated input. */
 size_t pc_quic_frame_parse(const uint8_t *buf, size_t len, QuicFrame *out);
@@ -141,7 +131,7 @@ size_t pc_quic_build_ack(uint8_t *out, size_t cap, uint64_t largest, uint64_t de
 size_t pc_quic_build_crypto(uint8_t *out, size_t cap, uint64_t offset, const uint8_t *data, size_t len);
 /** @brief A STREAM frame (LEN always set; OFF set when @p offset > 0; FIN per @p fin). */
 size_t pc_quic_build_stream(uint8_t *out, size_t cap, uint64_t id, uint64_t offset, const uint8_t *data, size_t len,
-                            bool fin);
+                            proto_bool fin);
 /** @brief A MAX_DATA frame. */
 size_t pc_quic_build_max_data(uint8_t *out, size_t cap, uint64_t max);
 /** @brief A transport CONNECTION_CLOSE (0x1c) with the triggering @p frame_type and a reason phrase. */

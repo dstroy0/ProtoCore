@@ -42,15 +42,15 @@
  * Allocated when the SSE handshake (200 + headers) is sent.  slot_id ties
  * this entry back to conn_pool[] and the underlying TCP PCB.
  */
-struct SseConn
+typedef struct
 {
     uint8_t pc_sse_id; ///< Index into pc_sse_pool[] (set at init).
     uint8_t slot_id;   ///< Owning TCP slot in conn_pool[].
-    bool active;       ///< True when this entry is in use.
+    proto_bool active; ///< True when this entry is in use.
 
     /** Path this client subscribed to (for pc_sse_broadcast() matching). */
     char path[MAX_PATH_LEN];
-};
+} SseConn;
 
 /** @brief Pool of SSE connection state, one per MAX_SSE_CONNS. */
 extern SseConn pc_sse_pool[MAX_SSE_CONNS];
@@ -121,6 +121,6 @@ int pc_sse_format(char *buf, size_t n, const char *data, const char *event, cons
  * @param id     Event ID (optional).
  * @return true on success, false if the TCP slot is not active.
  */
-bool pc_sse_write(SseConn *sse, const char *data, const char *event, const char *id);
+proto_bool pc_sse_write(SseConn *sse, const char *data, const char *event, const char *id);
 
 #endif

@@ -71,8 +71,6 @@
 
 #include "mmgr/secure.h"
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 #include <string.h>
 
 // ---------------------------------------------------------------------------
@@ -88,10 +86,10 @@
  * d[0] = least significant 32 bits.
  * d[63] = most significant 32 bits.
  */
-struct pc_bignum
+typedef struct
 {
     uint32_t d[PC_BN_LIMBS]; ///< 256 bytes of magnitude, little-endian limbs.
-};
+} pc_bignum;
 
 // ---------------------------------------------------------------------------
 // Scratch buffer (defined in pc_bignum.cpp)

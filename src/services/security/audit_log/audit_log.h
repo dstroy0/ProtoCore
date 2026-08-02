@@ -33,8 +33,6 @@
 #define PROTOCORE_AUDIT_LOG_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_AUDIT_LOG
 
@@ -42,7 +40,7 @@
 #define PC_AUDIT_HASH_LEN 32
 
 /** @brief Standard audit event categories (extend with your own values). */
-enum class pc_audit_cat : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     PC_AUDIT_SYSTEM = 0,    ///< Boot, shutdown, time change, generic.
     PC_AUDIT_AUTH = 1,      ///< Authentication success (login).
@@ -50,17 +48,17 @@ enum class pc_audit_cat : uint8_t
     PC_AUDIT_ACCESS = 3,    ///< Resource access (request served / denied).
     PC_AUDIT_CONFIG = 4,    ///< Configuration change.
     PC_AUDIT_ADMIN = 5,     ///< Privileged / administrative action.
-};
+} pc_audit_cat;
 
 /** @brief One audit record. seq is monotonic and never reused across evictions. */
-struct pc_audit_entry
+typedef struct
 {
     uint32_t seq;                    ///< Monotonic sequence number (1-based).
     uint32_t ts;                     ///< Timestamp from pc_millis() at append.
     pc_audit_cat category;           ///< audit category (a ::pc_audit_cat, or a user value cast in).
     char msg[PC_AUDIT_MSG_LEN];      ///< Null-terminated message (truncated).
     uint8_t hash[PC_AUDIT_HASH_LEN]; ///< SHA-256(prev_hash || fields).
-};
+} pc_audit_entry;
 
 /** @brief Sink invoked once per record, at append time, for durable forwarding. */
 typedef void (*pc_audit_sink_fn)(const pc_audit_entry *entry);
@@ -98,7 +96,7 @@ const pc_audit_entry *pc_audit_at(uint16_t i);
  *                          hash does not match when the chain is broken.
  * @return true if every retained record verifies against its predecessor.
  */
-bool pc_audit_verify(uint32_t *first_broken_seq);
+proto_bool pc_audit_verify(uint32_t *first_broken_seq);
 
 /** @brief Human-readable name for a standard ::pc_audit_cat ("system" for unknown). */
 const char *pc_audit_cat_name(pc_audit_cat category);

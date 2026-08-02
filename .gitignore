@@ -60,3 +60,15 @@ pentesting/rig_firmware/*/*/build-lto/
 
 # Downloaded by the Docs workflow at build time (pinned doxygen-awesome-css v2.3.3), not source.
 docs/doxygen-awesome.css
+
+# ESP-IDF component manager output, written next to whichever project is built (the examples
+# under examples/esp-idf/). managed_components/ is the registry download (arduino-esp32 is
+# ~200 MB of it) and dependencies.lock is its resolved graph - both regenerate from
+# idf_component.yml, so neither is source. The build dirs themselves are covered above.
+managed_components/
+dependencies.lock
+
+# idf.py writes the resolved config next to the project; sdkconfig.defaults is the source and
+# stays tracked. sdkconfig is generated from it per target and sdkconfig.old is its backup.
+sdkconfig
+sdkconfig.old

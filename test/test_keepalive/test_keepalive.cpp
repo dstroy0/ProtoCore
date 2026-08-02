@@ -73,7 +73,7 @@ void test_http11_default_keeps_alive()
     // Slot recycled, not freed.
     TEST_ASSERT_EQUAL(ConnState::CONN_ACTIVE, (ConnState)conn_pool[0].state);
     TEST_ASSERT_NOT_NULL(conn_pool[0].pcb);
-    TEST_ASSERT_EQUAL(ParseState::PARSE_METHOD, http_pool[0].parse_state);
+    TEST_ASSERT_EQUAL(PARSE_METHOD, http_pool[0].parse_state);
 }
 
 void test_http11_explicit_close()

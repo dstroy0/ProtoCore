@@ -36,9 +36,6 @@
 
 #if PC_ENABLE_DTLS && PC_ENABLE_COAP
 
-#include <stddef.h>
-#include <stdint.h>
-
 #ifndef PC_COAPS_MAX_CONNS
 #define PC_COAPS_MAX_CONNS 2 ///< simultaneous CoAPs (DTLS) connections; each slot is one DtlsConn engine
 #endif
@@ -61,14 +58,14 @@
  * random. The certificate bytes are referenced by pointer and must outlive the server; the seeds are
  * copied in.
  */
-struct CoapsServerConfig
+typedef struct
 {
     const uint8_t *cert_der; ///< Ed25519 leaf certificate, DER (referenced by pointer, must outlive the server)
     size_t cert_len;
     uint8_t ed25519_seed[32];              ///< 32-byte Ed25519 signing seed (matches @c cert_der)
     uint8_t cookie_key[32];                ///< 32-byte HelloRetryRequest cookie secret
     void (*rng)(uint8_t *out, size_t len); ///< CSPRNG: per-handshake X25519 ephemeral + ServerHello random
-};
+} CoapsServerConfig;
 
 /**
  * @brief Start the CoAPs server: install @p cfg, bind @p port over UDP, and route datagrams into the
@@ -78,7 +75,7 @@ struct CoapsServerConfig
  * @return false if @p cfg is invalid, or (Arduino) the UDP bind fails; on host builds it always
  *         returns true and is driven through pc_coaps_server_ingest() / the output sink.
  */
-bool pc_coaps_server_begin(uint16_t port, const CoapsServerConfig *cfg);
+proto_bool pc_coaps_server_begin(uint16_t port, const CoapsServerConfig *cfg);
 
 /**
  * @brief Drive the server once: drain queued datagrams into their connections (running the handshake,
@@ -97,7 +94,7 @@ void pc_coaps_server_stop();
 // ---------------------------------------------------------------------------
 // Host / test seam (no UDP on host builds)
 // ---------------------------------------------------------------------------
-#if !defined(ARDUINO)
+#if !PROTOCORE_HOT
 /** @brief Sink invoked for every outbound datagram (host builds route sends here instead of UDP). */
 using CoapsServerOutFn = void (*)(void *ctx, const uint8_t *datagram, size_t len, const char *ip, uint16_t port);
 
@@ -108,7 +105,7 @@ void pc_coaps_server_set_out_sink_cb(CoapsServerOutFn fn, void *ctx);
  * @brief Inject a received datagram from @p ip:@p port (the host-build stand-in for the UDP handler).
  * pc_coaps_server_poll() then processes it exactly as a real datagram. @return false if the ring is full.
  */
-bool pc_coaps_server_ingest(const uint8_t *datagram, size_t len, const char *ip, uint16_t port);
+proto_bool pc_coaps_server_ingest(const uint8_t *datagram, size_t len, const char *ip, uint16_t port);
 #endif
 
 #endif // PC_ENABLE_DTLS && PC_ENABLE_COAP

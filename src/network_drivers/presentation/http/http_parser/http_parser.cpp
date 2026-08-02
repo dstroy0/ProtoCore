@@ -20,12 +20,12 @@ HttpReq http_pool[CONN_POOL_SLOTS];
 // Streaming-body hooks (OTA / file upload), owned by one instance (internal linkage): null
 // unless the application installs them. One named owner, unreachable cross-TU. (The http_pool[]
 // request table is the shared cross-TU substrate.)
-struct HttpParserCtx
+typedef struct
 {
-    HttpStreamBeginCb stream_begin = nullptr;
-    HttpStreamDataCb stream_data = nullptr;
-    HttpStreamAbortCb stream_abort = nullptr;
-};
+    HttpStreamBeginCb stream_begin = NULL;
+    HttpStreamDataCb stream_data = NULL;
+    HttpStreamAbortCb stream_abort = NULL;
+} HttpParserCtx;
 static HttpParserCtx s_hp;
 
 void http_parser_set_stream_hooks(HttpStreamBeginCb begin, HttpStreamDataCb data, HttpStreamAbortCb abort)
@@ -92,15 +92,15 @@ static const uint8_t kCharClass[256] = {
     0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04,
 };
 
-static inline bool is_tchar(uint8_t b)
+static inline proto_bool is_tchar(uint8_t b)
 {
     return (kCharClass[b] & PC_CC_TCHAR) != 0;
 }
-static inline bool is_vchar(uint8_t b)
+static inline proto_bool is_vchar(uint8_t b)
 {
     return (kCharClass[b] & PC_CC_VCHAR) != 0;
 }
-static inline bool is_field_value_char(uint8_t b)
+static inline proto_bool is_field_value_char(uint8_t b)
 {
     return (kCharClass[b] & PC_CC_FIELD_VALUE) != 0;
 }
@@ -152,7 +152,7 @@ static void split_query(HttpReq *req)
     {
         return;
     }
-    req->query_split = true;
+    req->query_split = PROTO_TRUE;
 
     char *qs = req->query;
     size_t len = req->query_idx;
@@ -193,18 +193,18 @@ void http_parser_reset(HttpReq *req)
 {
     uint8_t id = req->slot_id;
 #if PC_ENABLE_STREAM_BODY
-    // A streamed body that never reached ParseState::PARSE_COMPLETE is being torn down (peer
+    // A streamed body that never reached PARSE_COMPLETE is being torn down (peer
     // reset / timeout / error): let the sink release its resource before we wipe
-    // the state. The normal-completion reset runs while parse_state==ParseState::PARSE_COMPLETE
+    // the state. The normal-completion reset runs while parse_state==PARSE_COMPLETE
     // (the handler already finished the sink), so this fires only on abort.
-    if (req->body_streaming && req->parse_state != ParseState::PARSE_COMPLETE && s_hp.stream_abort)
+    if (req->body_streaming && req->parse_state != PARSE_COMPLETE && s_hp.stream_abort)
     {
         s_hp.stream_abort(req);
     }
 #endif
     *req = {};         // zero all fields
     req->slot_id = id; // restore slot identity
-    req->parse_state = ParseState::PARSE_METHOD;
+    req->parse_state = PARSE_METHOD;
     req->_version_hash = PC_FNV_OFFSET; // seed the FNV-1a accumulator
 }
 
@@ -217,16 +217,16 @@ void http_parser_feed(HttpReq *p, uint8_t byte)
     switch (p->parse_state)
     {
 
-    case ParseState::PARSE_METHOD:
+    case PARSE_METHOD:
         if (c == ' ')
         {
-            p->parse_state = ParseState::PARSE_PATH;
+            p->parse_state = PARSE_PATH;
             p->current_token_idx = 0;
         }
         else if (!is_tchar(byte))
         {
             // RFC 7230 §3.1.1: method = token; any non-tchar is malformed
-            p->parse_state = ParseState::PARSE_ERROR;
+            p->parse_state = PARSE_ERROR;
         }
         else if (p->current_token_idx < sizeof(p->method) - 1)
         {
@@ -234,23 +234,23 @@ void http_parser_feed(HttpReq *p, uint8_t byte)
         }
         else
         {
-            p->parse_state = ParseState::PARSE_ERROR;
+            p->parse_state = PARSE_ERROR;
         }
         break;
 
-    case ParseState::PARSE_PATH:
+    case PARSE_PATH:
         if (c == ' ')
         {
-            p->parse_state = ParseState::PARSE_VERSION;
+            p->parse_state = PARSE_VERSION;
         }
         else if (c == '?')
         {
-            p->parse_state = ParseState::PARSE_QUERY;
+            p->parse_state = PARSE_QUERY;
         }
         else if (!is_vchar(byte))
         {
             // RFC 3986 §3.3: path chars must be visible ASCII (or pct-encoded)
-            p->parse_state = ParseState::PARSE_ERROR;
+            p->parse_state = PARSE_ERROR;
         }
         else if (p->path_idx < MAX_PATH_LEN - 1)
         {
@@ -258,21 +258,21 @@ void http_parser_feed(HttpReq *p, uint8_t byte)
         }
         else
         {
-            p->parse_state = ParseState::PARSE_URI_TOO_LONG;
+            p->parse_state = PARSE_URI_TOO_LONG;
         }
         break;
 
-    case ParseState::PARSE_QUERY:
+    case PARSE_QUERY:
         if (c == ' ')
         {
             // Not split here: the query is tokenized on first access (see split_query), so anything
             // that needs it whole still gets it whole.
-            p->parse_state = ParseState::PARSE_VERSION;
+            p->parse_state = PARSE_VERSION;
         }
         else if (!is_vchar(byte))
         {
             // Control chars and NUL are not valid query-string bytes
-            p->parse_state = ParseState::PARSE_ERROR;
+            p->parse_state = PARSE_ERROR;
         }
         else if (p->query_idx < MAX_QUERY_LEN - 1)
         {
@@ -281,22 +281,22 @@ void http_parser_feed(HttpReq *p, uint8_t byte)
         // Silently truncate - query overflow is a capacity limit, not a protocol error
         break;
 
-    case ParseState::PARSE_VERSION:
+    case PARSE_VERSION:
         if (c == '\r')
         {
             if (p->_version_hash == PC_HASH_HTTP11)
             {
-                p->version = HttpVersion::HTTP_11;
+                p->version = HTTP_11;
             }
             else if (p->_version_hash == PC_HASH_HTTP10)
             {
-                p->version = HttpVersion::HTTP_10;
+                p->version = HTTP_10;
             }
             else
             {
-                p->version = HttpVersion::HTTP_UNKNOWN;
+                p->version = HTTP_UNKNOWN;
             }
-            p->parse_state = ParseState::PARSE_EXPECT_LF;
+            p->parse_state = PARSE_EXPECT_LF;
         }
         else
         {
@@ -304,30 +304,30 @@ void http_parser_feed(HttpReq *p, uint8_t byte)
         }
         break;
 
-    case ParseState::PARSE_EXPECT_LF:
+    case PARSE_EXPECT_LF:
         if (c == '\n')
         {
-            p->parse_state = ParseState::PARSE_HEADER_KEY;
+            p->parse_state = PARSE_HEADER_KEY;
             p->current_token_idx = 0;
         }
         else
         {
-            p->parse_state = ParseState::PARSE_ERROR;
+            p->parse_state = PARSE_ERROR;
         }
         break;
 
-    case ParseState::PARSE_HEADER_KEY:
+    case PARSE_HEADER_KEY:
         if (c == '\r')
         {
             if (p->current_token_idx == 0)
             {
                 // Blank line - end of headers
-                p->parse_state = ParseState::PARSE_EXPECT_BODY_LF;
+                p->parse_state = PARSE_EXPECT_BODY_LF;
             }
             else
             {
                 // CR mid-key: malformed (RFC 7230 §3.2 requires CRLF after value)
-                p->parse_state = ParseState::PARSE_ERROR;
+                p->parse_state = PARSE_ERROR;
             }
         }
         else if (c == ':')
@@ -336,7 +336,7 @@ void http_parser_feed(HttpReq *p, uint8_t byte)
             // regardless of whether this header is stored (header_count < MAX).
             size_t k = p->current_token_idx < MAX_KEY_LEN ? p->current_token_idx : MAX_KEY_LEN - 1;
             p->cur_key[k] = '\0';
-            p->parse_state = ParseState::PARSE_HEADER_VAL;
+            p->parse_state = PARSE_HEADER_VAL;
             p->current_token_idx = 0;
 #if PC_CAPTURE_AUTH_HEADER
             // The Authorization value (Digest / JWT bearer) exceeds MAX_VAL_LEN,
@@ -351,7 +351,7 @@ void http_parser_feed(HttpReq *p, uint8_t byte)
         else if (!is_tchar(byte))
         {
             // RFC 7230 §3.2: field-name = token; any non-tchar is malformed
-            p->parse_state = ParseState::PARSE_ERROR;
+            p->parse_state = PARSE_ERROR;
         }
         else
         {
@@ -375,7 +375,7 @@ void http_parser_feed(HttpReq *p, uint8_t byte)
         }
         break;
 
-    case ParseState::PARSE_HEADER_VAL:
+    case PARSE_HEADER_VAL:
         // Strip leading OWS (SP or HTAB) after the colon - RFC 9110 §5.6.3
         if ((c == ' ' || c == '\t') && p->current_token_idx == 0)
         {
@@ -392,7 +392,7 @@ void http_parser_feed(HttpReq *p, uint8_t byte)
             if (p->cur_is_auth)
             {
                 p->authorization[p->auth_idx] = '\0';
-                p->cur_is_auth = false;
+                p->cur_is_auth = PROTO_FALSE;
             }
 #endif
 
@@ -408,12 +408,12 @@ void http_parser_feed(HttpReq *p, uint8_t byte)
             {
                 // RFC 7230 §3.3.2: Content-Length = 1*DIGIT.
                 size_t cl = 0;
-                bool valid = (p->cur_val[0] != '\0');
+                proto_bool valid = (p->cur_val[0] != '\0');
                 for (const char *q = p->cur_val; *q; q++)
                 {
                     if (*q < '0' || *q > '9')
                     {
-                        valid = false;
+                        valid = PROTO_FALSE;
                         break;
                     }
                     cl = cl * 10 + (size_t)(*q - '0');
@@ -423,7 +423,7 @@ void http_parser_feed(HttpReq *p, uint8_t byte)
                 // smuggling vector) → 400.
                 if (!valid || (p->content_length_count > 0 && cl != p->content_length))
                 {
-                    p->parse_state = ParseState::PARSE_ERROR;
+                    p->parse_state = PARSE_ERROR;
                     break;
                 }
                 p->content_length = cl;
@@ -437,7 +437,7 @@ void http_parser_feed(HttpReq *p, uint8_t byte)
             // Transfer-Encoding (fail closed).
             if (strcasecmp(p->cur_key, "Transfer-Encoding") == 0)
             {
-                p->parse_state = ParseState::PARSE_ERROR;
+                p->parse_state = PARSE_ERROR;
                 break;
             }
 
@@ -446,13 +446,13 @@ void http_parser_feed(HttpReq *p, uint8_t byte)
                 p->header_count++;
             }
 
-            p->parse_state = ParseState::PARSE_EXPECT_LF;
+            p->parse_state = PARSE_EXPECT_LF;
             p->current_token_idx = 0;
         }
         else if (!is_field_value_char(byte))
         {
             // RFC 7230 §3.2: control chars and NUL are not valid in field values
-            p->parse_state = ParseState::PARSE_ERROR;
+            p->parse_state = PARSE_ERROR;
         }
         else
         {
@@ -479,29 +479,29 @@ void http_parser_feed(HttpReq *p, uint8_t byte)
         }
         break;
 
-    case ParseState::PARSE_EXPECT_BODY_LF:
+    case PARSE_EXPECT_BODY_LF:
         /*
          * Consumes the LF of the blank-line CRLF that ends the header block.
          * Decides the next state based on Content-Length:
          *   > BODY_BUF_SIZE → 413 Payload Too Large
-         *   == 0            → ParseState::PARSE_COMPLETE (no body)
-         *   else            → ParseState::PARSE_BODY
+         *   == 0            → PARSE_COMPLETE (no body)
+         *   else            → PARSE_BODY
          */
         if (c == '\n')
         {
             // RFC 7230 §5.4: a request MUST NOT carry more than one Host header
             // (always enforced); an HTTP/1.1 request MUST carry exactly one Host
             // header (enforced only when PC_ENFORCE_HOST_HEADER is set).
-            bool host_violation = (p->host_count > 1);
+            proto_bool host_violation = (p->host_count > 1);
 #if PC_ENFORCE_HOST_HEADER
-            if (p->version == HttpVersion::HTTP_11 && p->host_count == 0)
+            if (p->version == HTTP_11 && p->host_count == 0)
             {
-                host_violation = true;
+                host_violation = PROTO_TRUE;
             }
 #endif
             if (host_violation)
             {
-                p->parse_state = ParseState::PARSE_ERROR;
+                p->parse_state = PARSE_ERROR;
             }
 #if PC_ENABLE_STREAM_BODY
             // Streaming sink (OTA / upload): all headers are parsed here, so the
@@ -510,31 +510,31 @@ void http_parser_feed(HttpReq *p, uint8_t byte)
             // cap is bypassed; the matching route handler still runs at COMPLETE.
             else if (p->content_length > 0 && s_hp.stream_begin && s_hp.stream_begin(p))
             {
-                p->body_streaming = true;
-                p->parse_state = ParseState::PARSE_BODY;
+                p->body_streaming = PROTO_TRUE;
+                p->parse_state = PARSE_BODY;
             }
 #endif
             else if (p->content_length > BODY_BUF_SIZE)
             {
-                p->parse_state = ParseState::PARSE_ENTITY_TOO_LARGE;
+                p->parse_state = PARSE_ENTITY_TOO_LARGE;
             }
             else if (p->content_length == 0)
             {
                 p->body[0] = '\0';
-                p->parse_state = ParseState::PARSE_COMPLETE;
+                p->parse_state = PARSE_COMPLETE;
             }
             else
             {
-                p->parse_state = ParseState::PARSE_BODY;
+                p->parse_state = PARSE_BODY;
             }
         }
         else
         {
-            p->parse_state = ParseState::PARSE_ERROR;
+            p->parse_state = PARSE_ERROR;
         }
         break;
 
-    case ParseState::PARSE_BODY:
+    case PARSE_BODY:
         // Body is opaque data - no character validation.
 #if PC_ENABLE_STREAM_BODY
         if (p->body_streaming)
@@ -560,7 +560,7 @@ void http_parser_feed(HttpReq *p, uint8_t byte)
                 }
                 p->body_len = 0;
                 p->body[0] = '\0';
-                p->parse_state = ParseState::PARSE_COMPLETE;
+                p->parse_state = PARSE_COMPLETE;
             }
             break;
         }
@@ -573,7 +573,7 @@ void http_parser_feed(HttpReq *p, uint8_t byte)
         if (p->body_bytes_read >= p->content_length)
         {
             p->body[p->body_len] = '\0';
-            p->parse_state = ParseState::PARSE_COMPLETE;
+            p->parse_state = PARSE_COMPLETE;
         }
         break;
 
@@ -591,27 +591,27 @@ const char *http_get_header(const HttpReq *req, const char *key)
             return req->headers[i].val;
         }
     }
-    return nullptr;
+    return NULL;
 }
 
-bool http_get_cookie(const HttpReq *req, const char *name, char *out, size_t out_size)
+proto_bool http_get_cookie(const HttpReq *req, const char *name, char *out, size_t out_size)
 {
-    if (out == nullptr || out_size == 0)
+    if (out == NULL || out_size == 0)
     {
-        return false;
+        return PROTO_FALSE;
     }
     out[0] = '\0';
-    if (req == nullptr || name == nullptr || name[0] == '\0')
+    if (req == NULL || name == NULL || name[0] == '\0')
     {
-        return false;
+        return PROTO_FALSE;
     }
 
     // RFC 6265 4.2.1: the request "Cookie" header is "name1=value1; name2=value2".
     // Names are case-sensitive; a value may be DQUOTE-wrapped.
     const char *c = http_get_header(req, "Cookie");
-    if (c == nullptr)
+    if (c == NULL)
     {
-        return false;
+        return PROTO_FALSE;
     }
     size_t nlen = strnlen(name, MAX_VAL_LEN); // a matchable cookie-name span cannot exceed a header value
 
@@ -655,7 +655,7 @@ bool http_get_cookie(const HttpReq *req, const char *name, char *out, size_t out
             }
             memcpy(out, v, vlen);
             out[vlen] = '\0';
-            return true;
+            return PROTO_TRUE;
         }
         p = eq;
         while (*p != '\0' && *p != ';') // advance past this pair
@@ -663,7 +663,7 @@ bool http_get_cookie(const HttpReq *req, const char *name, char *out, size_t out
             p++;
         }
     }
-    return false;
+    return PROTO_FALSE;
 }
 
 // Extract and validate a Forwarded / X-Forwarded-For client-address token from
@@ -672,7 +672,7 @@ bool http_get_cookie(const HttpReq *req, const char *name, char *out, size_t out
 // X-Forwarded-For form). The candidate is confirmed with pc_ip_parse, so "unknown",
 // an obfuscated "_id" identifier (RFC 7239 §6.3), or any malformed token returns
 // false. Returns true and writes the RFC 5952 canonical address on success.
-static bool fwd_extract_client(const char *s, size_t n, char *out, size_t cap)
+static proto_bool fwd_extract_client(const char *s, size_t n, char *out, size_t cap)
 {
     // Trim leading/trailing OWS and a wrapping DQUOTE (RFC 7239 quotes the v6+port form).
     while (n > 0 && (*s == ' ' || *s == '\t'))
@@ -691,7 +691,7 @@ static bool fwd_extract_client(const char *s, size_t n, char *out, size_t cap)
     }
     if (n == 0)
     {
-        return false;
+        return PROTO_FALSE;
     }
 
     char tok[PC_IP_STR_MAX];
@@ -711,13 +711,13 @@ static bool fwd_extract_client(const char *s, size_t n, char *out, size_t cap)
         {
             if (tlen + 1 >= sizeof(tok))
             {
-                return false;
+                return PROTO_FALSE;
             }
             tok[tlen++] = s[i];
         }
         if (i >= n) // unterminated bracket
         {
-            return false;
+            return PROTO_FALSE;
         }
     }
     else
@@ -746,7 +746,7 @@ static bool fwd_extract_client(const char *s, size_t n, char *out, size_t cap)
         }
         if (take == 0 || take + 1 > sizeof(tok))
         {
-            return false;
+            return PROTO_FALSE;
         }
         memcpy(tok, s, take);
         tlen = take;
@@ -756,20 +756,20 @@ static bool fwd_extract_client(const char *s, size_t n, char *out, size_t cap)
     pc_ip ip;
     if (!pc_ip_parse(tok, &ip)) // rejects "unknown" / "_obf" / malformed
     {
-        return false;
+        return PROTO_FALSE;
     }
     return pc_ip_format(&ip, out, cap) > 0; // false if out is too small for the canonical text
 }
 
-bool http_forwarded_client(const HttpReq *req, char *ip_out, size_t ip_cap, bool *is_https)
+proto_bool http_forwarded_client(const HttpReq *req, char *ip_out, size_t ip_cap, proto_bool *is_https)
 {
     if (is_https)
     {
-        *is_https = false;
+        *is_https = PROTO_FALSE;
     }
     if (!ip_out || ip_cap == 0 || !req)
     {
-        return false;
+        return PROTO_FALSE;
     }
     ip_out[0] = '\0';
 
@@ -808,7 +808,7 @@ bool http_forwarded_client(const HttpReq *req, char *ip_out, size_t ip_cap, bool
             }
             if (fwd_extract_client(fv, k, ip_out, ip_cap))
             {
-                return true;
+                return PROTO_TRUE;
             }
         }
     }
@@ -819,7 +819,7 @@ bool http_forwarded_client(const HttpReq *req, char *ip_out, size_t ip_cap, bool
         const char *xfp = http_get_header(req, "X-Forwarded-Proto");
         if (xfp && strncasecmp(xfp, "https", 5) == 0)
         {
-            *is_https = true;
+            *is_https = PROTO_TRUE;
         }
     }
     const char *xff = http_get_header(req, "X-Forwarded-For");
@@ -829,10 +829,10 @@ bool http_forwarded_client(const HttpReq *req, char *ip_out, size_t ip_cap, bool
         size_t len = end ? (size_t)(end - xff) : strnlen(xff, MAX_VAL_LEN);
         if (fwd_extract_client(xff, len, ip_out, ip_cap))
         {
-            return true;
+            return PROTO_TRUE;
         }
     }
-    return false;
+    return PROTO_FALSE;
 }
 
 const char *http_get_query(HttpReq *req, const char *key)
@@ -845,26 +845,26 @@ const char *http_get_query(HttpReq *req, const char *key)
             return req->query_params[i].val;
         }
     }
-    return nullptr;
+    return NULL;
 }
 
-bool http_get_form(const HttpReq *req, const char *key, char *out, size_t out_size)
+proto_bool http_get_form(const HttpReq *req, const char *key, char *out, size_t out_size)
 {
-    if (out == nullptr || out_size == 0)
+    if (out == NULL || out_size == 0)
     {
-        return false;
+        return PROTO_FALSE;
     }
     out[0] = '\0';
-    if (req == nullptr || key == nullptr)
+    if (req == NULL || key == NULL)
     {
-        return false;
+        return PROTO_FALSE;
     }
 
     // Only urlencoded bodies (allow a trailing "; charset=..." suffix).
     const char *ct = http_get_header(req, "Content-Type");
-    if (ct == nullptr || strncasecmp(ct, "application/x-www-form-urlencoded", 33) != 0)
+    if (ct == NULL || strncasecmp(ct, "application/x-www-form-urlencoded", 33) != 0)
     {
-        return false;
+        return PROTO_FALSE;
     }
 
     const char *body = (const char *)req->body;
@@ -879,7 +879,7 @@ bool http_get_form(const HttpReq *req, const char *key, char *out, size_t out_si
         {
             i++;
         }
-        bool key_matches = (i - ks == key_len) && (strncmp(body + ks, key, key_len) == 0);
+        proto_bool key_matches = (i - ks == key_len) && (strncmp(body + ks, key, key_len) == 0);
 
         size_t vs = i;
         size_t ve = i;
@@ -912,17 +912,17 @@ bool http_get_form(const HttpReq *req, const char *key, char *out, size_t out_si
             }
             memcpy(out, body + vs, vlen);
             out[vlen] = '\0';
-            return true;
+            return PROTO_TRUE;
         }
     }
-    return false;
+    return PROTO_FALSE;
 }
 
 const char *http_get_param(const HttpReq *req, const char *key)
 {
-    if (req == nullptr || key == nullptr)
+    if (req == NULL || key == NULL)
     {
-        return nullptr;
+        return NULL;
     }
     for (uint8_t i = 0; i < req->path_param_count; i++)
     {
@@ -931,5 +931,5 @@ const char *http_get_param(const HttpReq *req, const char *key)
             return req->path_params[i].val;
         }
     }
-    return nullptr;
+    return NULL;
 }

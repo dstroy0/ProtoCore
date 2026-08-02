@@ -21,22 +21,21 @@
 #ifndef PROTOCORE_BITIO_H
 #define PROTOCORE_BITIO_H
 
-#include <stddef.h>
-#include <stdint.h>
+#include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
 
 /** @brief LSB-first bit writer over the caller's output buffer; @c overflow latches once @c cap is exceeded. */
-struct pc_bit_writer
+typedef struct
 {
     uint8_t *out;
     size_t cap;
     size_t cnt;   ///< bytes written so far
     uint32_t acc; ///< bit accumulator (LSB-first)
     int nbits;    ///< bits currently buffered (< 8 between calls)
-    bool overflow;
-};
+    proto_bool overflow;
+} pc_bit_writer;
 
 /** @brief Append the low @p n bits of @p bits, LSB-first, spilling any completed bytes to the output. */
-inline void pc_bitw_put(pc_bit_writer *w, uint32_t bits, int n)
+PC_INLINE void pc_bitw_put(pc_bit_writer *w, uint32_t bits, int n)
 {
     w->acc |= bits << w->nbits;
     w->nbits += n;
@@ -44,7 +43,7 @@ inline void pc_bitw_put(pc_bit_writer *w, uint32_t bits, int n)
     {
         if (w->cnt >= w->cap)
         {
-            w->overflow = true;
+            w->overflow = PROTO_TRUE;
             return;
         }
         w->out[w->cnt++] = (uint8_t)(w->acc & 0xFF);
@@ -54,13 +53,13 @@ inline void pc_bitw_put(pc_bit_writer *w, uint32_t bits, int n)
 }
 
 /** @brief Flush any partial byte, padding the high bits with zero (byte alignment). */
-inline void pc_bitw_align(pc_bit_writer *w)
+PC_INLINE void pc_bitw_align(pc_bit_writer *w)
 {
     if (w->nbits > 0)
     {
         if (w->cnt >= w->cap)
         {
-            w->overflow = true;
+            w->overflow = PROTO_TRUE;
             return;
         }
         w->out[w->cnt++] = (uint8_t)(w->acc & 0xFF);

@@ -29,9 +29,6 @@
 
 #if PC_ENABLE_IKEV2
 
-#include <stddef.h>
-#include <stdint.h>
-
 /** @brief ESP header size: SPI(4) + Sequence Number(4). */
 #define PC_ESP_HDR_LEN 8
 /** @brief Explicit IV length carried in the packet (AES-GCM, RFC 4106). */
@@ -66,9 +63,9 @@ size_t pc_esp_gcm_encapsulate(uint32_t spi, uint32_t seq, const uint8_t key[PC_E
  * @param packet  the ESP packet (mutated: decrypted in place). @param payload_out points into it on success.
  * @return true iff the ICV verifies (a forged / truncated packet returns false and writes no payload).
  */
-bool pc_esp_gcm_decapsulate(const uint8_t key[PC_ESP_KEY_LEN], const uint8_t salt[PC_ESP_SALT_LEN], uint8_t *packet,
-                            size_t len, uint32_t *spi_out, uint32_t *seq_out, uint8_t *next_header_out,
-                            const uint8_t **payload_out, size_t *payload_len_out);
+proto_bool pc_esp_gcm_decapsulate(const uint8_t key[PC_ESP_KEY_LEN], const uint8_t salt[PC_ESP_SALT_LEN],
+                                  uint8_t *packet, size_t len, uint32_t *spi_out, uint32_t *seq_out,
+                                  uint8_t *next_header_out, const uint8_t **payload_out, size_t *payload_len_out);
 
 // ── ESP anti-replay window (RFC 4303 §3.4.3) ───────────────────────────────────────────────────
 //
@@ -79,12 +76,12 @@ bool pc_esp_gcm_decapsulate(const uint8_t key[PC_ESP_KEY_LEN], const uint8_t sal
 #define PC_ESP_REPLAY_WINDOW 64
 
 /** @brief Anti-replay sliding-window state for one inbound SA (zero-heap). */
-struct EspReplay
+typedef struct
 {
-    uint32_t highest; ///< highest accepted sequence number so far
-    uint64_t bitmap;  ///< bit i set = (highest - i) already accepted (bit 0 = highest itself)
-    bool seen_any;    ///< false until the first packet is accepted
-};
+    uint32_t highest;    ///< highest accepted sequence number so far
+    uint64_t bitmap;     ///< bit i set = (highest - i) already accepted (bit 0 = highest itself)
+    proto_bool seen_any; ///< false until the first packet is accepted
+} EspReplay;
 
 /** @brief Reset an anti-replay window (no packets seen yet). */
 void pc_esp_replay_init(EspReplay *r);
@@ -97,7 +94,7 @@ void pc_esp_replay_init(EspReplay *r);
  * Sequence number 0 is invalid (ESP counts from 1) and is rejected.
  * @return true to accept the packet, false to drop it.
  */
-bool pc_esp_replay_check(EspReplay *r, uint32_t seq);
+proto_bool pc_esp_replay_check(EspReplay *r, uint32_t seq);
 
 #endif // PC_ENABLE_IKEV2
 #endif // PROTOCORE_ESP_H

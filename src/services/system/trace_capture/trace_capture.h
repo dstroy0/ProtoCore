@@ -44,45 +44,42 @@
 
 #if PC_ENABLE_TRACE_CAPTURE
 
-#include <stddef.h>
-#include <stdint.h>
-
 /** @brief One completed pre/post-trigger sample window, handed to the sink inline. */
-struct pc_tc_window
+typedef struct
 {
     const uint16_t *samples;     ///< pretrigger_samples + posttrigger_samples contiguous codes
     uint16_t n_samples;          ///< total samples in the window (== the configured split's sum)
     uint16_t pretrigger_samples; ///< how many of @ref samples precede the trigger instant
     uint32_t trace_id;           ///< monotonic capture sequence (wraps), one per completed window
     uint32_t assembly_cycles;    ///< pc_cycles() delta from trigger() to this callback
-};
+} pc_tc_window;
 
 /** @brief Sink for one completed window. Called inline from pc_tc_feed() / pc_tc_trigger(). */
 typedef void (*pc_tc_sink_fn)(const pc_tc_window *win, void *ctx);
 
 /** @brief Capture configuration passed to pc_tc_begin(). */
-struct pc_tc_config
+typedef struct
 {
     uint16_t pretrigger_samples;  ///< samples of history kept before the trigger instant
     uint16_t posttrigger_samples; ///< samples collected after the trigger before the window fires
     pc_tc_sink_fn sink;           ///< completed-window callback (required)
     void *ctx;                    ///< opaque, forwarded to @ref sink
-};
+} pc_tc_config;
 
 /** @brief Rolling telemetry: never inferred from state, always the ground truth counters. */
-struct pc_tc_stats
+typedef struct
 {
     uint32_t windows_completed; ///< total windows handed to the sink
     uint32_t triggers_dropped;  ///< trigger() calls rejected because a window was already filling
     uint32_t samples_dropped;   ///< feed() samples rejected because the window buffer was full
-};
+} pc_tc_stats;
 
 /**
  * @brief Configure the assembler and reset all state.
  * @return true if configured; false on a null config/sink, a zero split, or a split that
  *         exceeds PC_TC_MAX_WINDOW_SAMPLES.
  */
-bool pc_tc_begin(const pc_tc_config *cfg);
+proto_bool pc_tc_begin(const pc_tc_config *cfg);
 
 /**
  * @brief Feed @p n newly-arrived samples (oldest first). Always refreshes the pre-trigger
@@ -100,13 +97,13 @@ uint16_t pc_tc_feed(const uint16_t *samples, uint16_t n);
  *        half. ISR-safe.
  * @return true if armed; false (fail-closed, counted) if a window was already filling.
  */
-bool pc_tc_trigger(void);
+proto_bool pc_tc_trigger(void);
 
 /** @brief Rolling telemetry snapshot (see @ref pc_tc_stats). */
 void pc_tc_get_stats(pc_tc_stats *out);
 
 /** @brief True while a window is between trigger() and the post-trigger count completing. */
-bool pc_tc_capturing(void);
+proto_bool pc_tc_capturing(void);
 
 /** @brief Tear down: no further sink calls until pc_tc_begin() again. */
 void pc_tc_end(void);

@@ -22,8 +22,6 @@
 #define PROTOCORE_NTCIP_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_NTCIP
 

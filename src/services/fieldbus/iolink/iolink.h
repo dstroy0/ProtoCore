@@ -33,9 +33,6 @@
 
 #if PC_ENABLE_IOLINK
 
-#include <stddef.h>
-#include <stdint.h>
-
 #define IOL_CHECKSUM_SEED 0x52u ///< checksum seed XORed with the first octet (spec A.1.6)
 
 // M-sequence Control (MC) octet fields.
@@ -61,10 +58,10 @@
 // --- control-octet builders / decoders ---
 
 /** @brief Build the M-sequence Control octet from access / channel / address (5-bit). */
-uint8_t pc_iol_mc(bool read, uint8_t channel, uint8_t address);
+uint8_t pc_iol_mc(proto_bool read, uint8_t channel, uint8_t address);
 
 /** @brief True if the MC octet requests a read. */
-bool pc_iol_mc_is_read(uint8_t mc);
+proto_bool pc_iol_mc_is_read(uint8_t mc);
 
 /** @brief Communication channel from an MC octet (IOL_CH_*). */
 uint8_t pc_iol_mc_channel(uint8_t mc);
@@ -76,7 +73,7 @@ uint8_t pc_iol_mc_address(uint8_t mc);
 uint8_t pc_iol_ckt(uint8_t mseq_type, uint8_t checksum6);
 
 /** @brief Build a CKS octet from the Event / PD-invalid flags and a 6-bit checksum. */
-uint8_t pc_iol_cks(bool event, bool pd_invalid, uint8_t checksum6);
+uint8_t pc_iol_cks(proto_bool event, proto_bool pd_invalid, uint8_t checksum6);
 
 // --- checksum (spec A.1.6) ---
 
@@ -97,7 +94,7 @@ uint8_t pc_iol_finalize(uint8_t *msg, size_t len, size_t check_idx);
  * @brief Verify a received message: recompute the checksum (masking off the check octet's
  * checksum bits) and compare it to the 6-bit checksum carried in the check octet at @p check_idx.
  */
-bool pc_iol_verify(const uint8_t *msg, size_t len, size_t check_idx);
+proto_bool pc_iol_verify(const uint8_t *msg, size_t len, size_t check_idx);
 
 #endif // PC_ENABLE_IOLINK
 #endif // PROTOCORE_IOLINK_H

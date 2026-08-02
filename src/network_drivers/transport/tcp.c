@@ -27,15 +27,12 @@
  */
 
 #include "tcp.h"
-#include "diffserv.h" // DiffServ DSCP marking (pc_dscp_to_tos, pc_conn_set_dscp); compiles out when off
-#include "freertos/FreeRTOS.h"
-#include "freertos/queue.h"
-#include "freertos/task.h" // current-task handle - stack-context self-detection for pc_tcp_marshal
-#include "lwip/tcp.h"
-#include "services/system/clock.h"       // pc_millis() pluggable monotonic clock
+#include "board_drivers/board_profiles/pc_platform.h"
+#include "diffserv.h"              // DiffServ DSCP marking (pc_dscp_to_tos, pc_conn_set_dscp); compiles out when off
+#include "services/system/clock.h" // pc_millis() pluggable monotonic clock
 #include "shared_primitives/rawmemcpy.h" // proto_raw_read: the unaligned v6 address load
 
-#ifdef ARDUINO
+#if PROTOCORE_HOT
 #include "network_drivers/session/worker.h" // pc_worker_wake() - resume a paced send when the window drains
 #endif
 
@@ -49,8 +46,7 @@
 // arguments (incl. the pc_conn_reason names, which are only declared when the
 // feature is on) are dropped unparsed by the preprocessor.
 // ---------------------------------------------------------------------------
-#if defined(ARDUINO)
-#include "lwip/priv/tcpip_priv.h"
+#if PROTOCORE_HOT
 #include <string.h>
 #endif
 #if PC_ENABLE_OBSERVABILITY
@@ -187,9 +183,9 @@ void pc_obs_notice(uint8_t slot, ConnState st, pc_conn_reason reason)
 // issue their op directly).
 // CONN_CLOSING dwell helpers (defined below, near pc_conn_begin_close). Forward
 // declared so the in-context op dispatch can reach closing_check().
-static void closing_check(uint8_t slot, struct tcp_pcb *pcb);
+static void closing_check(uint8_t slot, pc_pcb *pcb);
 
-#if defined(ARDUINO)
+#if PROTOCORE_HOT
 
 typedef enum
 {
@@ -215,41 +211,41 @@ typedef enum
 // close_notify, found on hardware with a real TLS 1.3 client). One named owner, unreachable cross-TU.
 typedef struct
 {
-    TaskHandle_t tcpip_task;
+    pc_platform_task tcpip_task;
 } TransportCtx;
 static TransportCtx s_tp;
 
 // True when the caller may run a raw stack op directly instead of marshaling. The stack has two
 // threading models and the answer differs, so branch on which one the framework built:
-static inline bool on_tcpip_thread(void)
+static inline proto_bool on_tcpip_thread(void)
 {
 #if defined(LWIP_TCPIP_CORE_LOCKING) && LWIP_TCPIP_CORE_LOCKING
-    // Core-locking (arduino-esp32 3.x / IDF 5.x): tcpip_api_call takes the core lock and runs the op
+    // Core-locking (arduino-esp32 3.x / IDF 5.x): pc_net_call_marshal takes the core lock and runs the op
     // INLINE on the calling task - there is no dedicated tcpip thread to marshal to - so a direct lwIP
     // call is safe exactly when we already hold the core lock. Use lwIP's own holder query (the one
     // LWIP_ASSERT_CORE_LOCKED checks). A task-handle compare is meaningless here (every caller runs its
-    // own tcpip_api_call inline, so the captured "tcpip task" is just whoever ran the first op), and a
-    // false positive calls tcp_write unlocked -> the "Required to lock TCPIP core functionality!" assert
+    // own pc_net_call_marshal inline, so the captured "tcpip task" is just whoever ran the first op), and a
+    // false positive calls pc_net_write unlocked -> the "Required to lock TCPIP core functionality!" assert
     // (found running TLS on the PSRAM/IDF-5.5 core: the handshake's record flush crashed the device).
     return sys_thread_tcpip(LWIP_CORE_LOCK_QUERY_HOLDER);
 #else
-    // Mailbox (arduino-esp32 2.x / IDF 4.x): tcpip_api_call marshals to the single dedicated tcpip
+    // Mailbox (arduino-esp32 2.x / IDF 4.x): pc_net_call_marshal marshals to the single dedicated tcpip
     // thread, so a direct call is safe exactly when we run on that thread. Captured on the first
     // pc_tcp_do (boot / first send), which precedes every raw-callback teardown path.
-    return s_tp.tcpip_task != NULL && xTaskGetCurrentTaskHandle() == s_tp.tcpip_task;
+    return s_tp.tcpip_task != NULL && pc_platform_task_self() == s_tp.tcpip_task;
 #endif
 }
 
 typedef struct
 {
-    struct tcpip_api_call_data base;
+    pc_net_call base;
     pc_tcp_op op;
     uint8_t slot;
-    struct tcp_pcb *pcb;
+    pc_pcb *pcb;
     const void *data;
-    u16_t len;
-    bool flush;   ///< PC_OP_SEND: also flush after a successful write (coalesced write+flush)
-    err_t result; ///< outcome of the op (PC_OP_SEND: whether the write was queued)
+    proto_u16 len;
+    proto_bool flush;  ///< PC_OP_SEND: also flush after a successful write (coalesced write+flush)
+    pc_net_err result; ///< outcome of the op (PC_OP_SEND: whether the write was queued)
 } pc_tcp_call;
 
 // True if @p pcb is still bound to a live connection slot. A marshalled send/output captures the
@@ -260,32 +256,32 @@ typedef struct
 // the device (found by the pentest rig: oversized request line / connection saturation). Re-check
 // against the pool here - we are in stack context, where teardown also runs, so the compare is
 // race-free. The scan (not conn_pool[slot]) is correct for PC_OP_RAWSEND too, whose slot is 0.
-static bool pcb_still_bound(const struct tcp_pcb *pcb)
+static proto_bool pcb_still_bound(const pc_pcb *pcb)
 {
     if (pcb == NULL)
     {
-        return false;
+        return PROTO_FALSE;
     }
     for (uint8_t i = 0; i < CONN_POOL_SLOTS; i++)
     {
         if (conn_pool[i].pcb == pcb)
         {
-            return true;
+            return PROTO_TRUE;
         }
     }
-    return false;
+    return PROTO_FALSE;
 }
 
 // Runs in stack context (via the stack's marshaling call). Performs the requested raw op
 // in the one context where it is safe; TLS record I/O (which also reaches
 // the write path through the BIO) is done here too.
-static err_t pc_tcp_do(struct tcpip_api_call_data *c)
+static pc_net_err pc_tcp_do(pc_net_call *c)
 {
     pc_tcp_call *k = (pc_tcp_call *)c;
-    k->result = ERR_OK;
+    k->result = PC_NET_OK;
     if (s_tp.tcpip_task == NULL) // capture the stack task once; pc_tcp_do only ever runs in that thread
     {
-        s_tp.tcpip_task = xTaskGetCurrentTaskHandle();
+        s_tp.tcpip_task = pc_platform_task_self();
     }
     switch (k->op)
     {
@@ -295,36 +291,36 @@ static err_t pc_tcp_do(struct tcpip_api_call_data *c)
         // small + compile-time so -O2 unrolls the scan (see docs/ROADMAP: unroll loops to bitmask).
         if (!pcb_still_bound(k->pcb)) // stale pcb (connection torn down between capture and now)
         {
-            k->result = ERR_CLSD;
+            k->result = PC_NET_ERR_CLSD;
             break;
         }
-        k->result = tcp_write(k->pcb, k->data, k->len, TCP_WRITE_FLAG_COPY);
-        if (k->result == ERR_OK)
+        k->result = pc_net_write(k->pcb, k->data, k->len, PC_NET_WRITE_COPY);
+        if (k->result == PC_NET_OK)
         {
-            tcp_output(k->pcb);
+            pc_net_output(k->pcb);
         }
         break;
     case PC_OP_SEND:
         // Hot path: SEND carries the real slot, so a stale pcb is just k->pcb != the slot's live pcb.
         // O(1), no scan - the send/flush pair runs on every HTTP response. The `k->pcb` null test is
         // essential: a torn-down slot has pcb == null, and comparing a captured-null against a live-null
-        // (null == null) would otherwise pass the guard and tcp_write(null).
+        // (null == null) would otherwise pass the guard and pc_net_write(null).
         if (!k->pcb || k->pcb != conn_pool[k->slot].pcb)
         {
-            k->result = ERR_CLSD; // connection torn down between capture and now; skip, do not assert
+            k->result = PC_NET_ERR_CLSD; // connection torn down between capture and now; skip, do not assert
             break;
         }
 #if PC_ENABLE_TLS
         if (conn_pool[k->slot].tls)
         {
-            k->result = (pc_tls_write(k->slot, k->data, k->len) >= 0) ? ERR_OK : ERR_MEM;
+            k->result = (pc_tls_write(k->slot, k->data, k->len) >= 0) ? PC_NET_OK : PC_NET_ERR_MEM;
             break;
         }
 #endif
-        k->result = tcp_write(k->pcb, k->data, k->len, TCP_WRITE_FLAG_COPY);
-        if (k->flush && k->result == ERR_OK)
+        k->result = pc_net_write(k->pcb, k->data, k->len, PC_NET_WRITE_COPY);
+        if (k->flush && k->result == PC_NET_OK)
         {
-            tcp_output(k->pcb); // coalesced write+flush: one marshal for a terminal single-shot response
+            pc_net_output(k->pcb); // coalesced write+flush: one marshal for a terminal single-shot response
         }
         break;
     case PC_OP_OUTPUT:
@@ -332,15 +328,15 @@ static err_t pc_tcp_do(struct tcpip_api_call_data *c)
         // rather than flushing freed memory (the stack's "invalid pcb" assert -> panic). The `k->pcb`
         // null test is essential and was the missing piece here: pc_conn_flush() marshals this op with
         // conn_pool[slot].pcb, which is null for a torn-down slot, so a captured-null vs a live-null
-        // (null == null) passed the guard and called tcp_output(null) -> panic. Coredump-confirmed:
+        // (null == null) passed the guard and called pc_net_output(null) -> panic. Coredump-confirmed:
         // slot 0, k->pcb == 0, conn_pool[0].pcb == 0, state CONN_FREE.
         if (k->pcb && k->pcb == conn_pool[k->slot].pcb)
         {
-            tcp_output(k->pcb);
+            pc_net_output(k->pcb);
         }
         else
         {
-            k->result = ERR_CLSD;
+            k->result = PC_NET_ERR_CLSD;
         }
         break;
     case PC_OP_CLOSE:
@@ -350,16 +346,16 @@ static err_t pc_tcp_do(struct tcpip_api_call_data *c)
             pc_tls_conn_end(k->slot); // close_notify + free the TLS context
         }
 #endif
-        if (tcp_close(k->pcb) != ERR_OK)
+        if (pc_net_close(k->pcb) != PC_NET_OK)
         {
-            tcp_abort(k->pcb);
+            pc_net_abort(k->pcb);
         }
         break;
     case PC_OP_ABORT:
-        tcp_abort(k->pcb);
+        pc_net_abort(k->pcb);
         break;
     case PC_OP_DETACH:
-        tcp_arg(k->pcb, NULL);
+        pc_net_arg(k->pcb, NULL);
         break;
     case PC_OP_CLOSE_CHECK:
         closing_check(k->slot, k->pcb); // safe pcb access: we are in tcpip_thread
@@ -367,17 +363,17 @@ static err_t pc_tcp_do(struct tcpip_api_call_data *c)
     case PC_OP_RECVED:
         // Same O(1) liveness guard as SEND/OUTPUT: the worker captured the pcb when it acked consumed
         // RX bytes, but the connection can be torn down (a remote RST frees the pcb via the error
-        // callback) before this op runs. tcp_recved on a freed pcb walks into tcp_update_rcv_ann_wnd
-        // (assert new_rcv_ann_wnd <= 0xffff) and a window-update tcp_output ("invalid pcb") - i.e. a
+        // callback) before this op runs. pc_net_recved on a freed pcb walks into pc_net_rcv_wnd_update
+        // (assert new_rcv_ann_wnd <= 0xffff) and a window-update pc_net_output ("invalid pcb") - i.e. a
         // remotely-triggerable panic under connection churn. Skip if the slot no longer owns a live pcb
         // (the null test guards the captured-null vs live-null case, as in SEND/OUTPUT).
         if (k->pcb && k->pcb == conn_pool[k->slot].pcb)
         {
-            tcp_recved(k->pcb, k->len); // reopen the receive window by the consumed bytes
+            pc_net_recved(k->pcb, k->len); // reopen the receive window by the consumed bytes
         }
         else
         {
-            k->result = ERR_CLSD;
+            k->result = PC_NET_ERR_CLSD;
         }
         break;
 #if PC_ENABLE_DIFFSERV
@@ -391,16 +387,16 @@ static err_t pc_tcp_do(struct tcpip_api_call_data *c)
         }
         else
         {
-            k->result = ERR_CLSD;
+            k->result = PC_NET_ERR_CLSD;
         }
         break;
 #endif
     }
-    return ERR_OK;
+    return PC_NET_OK;
 }
 
-static inline err_t pc_tcp_marshal(pc_tcp_op op, uint8_t slot, struct tcp_pcb *pcb, const void *data, u16_t len,
-                                   bool flush)
+static inline pc_net_err pc_tcp_marshal(pc_tcp_op op, uint8_t slot, pc_pcb *pcb, const void *data, proto_u16 len,
+                                        proto_bool flush)
 {
     pc_tcp_call k;
     memset(&k, 0, sizeof(k));
@@ -419,11 +415,11 @@ static inline err_t pc_tcp_marshal(pc_tcp_op op, uint8_t slot, struct tcp_pcb *p
     }
     else
     {
-        tcpip_api_call(pc_tcp_do, &k.base);
+        pc_net_call_marshal(pc_tcp_do, &k.base);
     }
     return k.result;
 }
-#endif // ARDUINO
+#endif // PROTOCORE_HOT
 
 TcpConn conn_pool[CONN_POOL_SLOTS];
 
@@ -510,13 +506,13 @@ uint32_t proto_tcp_conn_timeout_ms(void)
 // they go out as plaintext or through the TLS record layer. With
 // PC_ENABLE_TLS off this is a bare write and flush.
 
-bool pc_conn_send(uint8_t slot, const void *data, u16_t len)
+proto_bool pc_conn_send(uint8_t slot, const void *data, proto_u16 len)
 {
     // The write target is always the slot's own pcb (ingress reads resolve it the
     // same way) - callers no longer thread it through, so it cannot disagree.
-#if defined(ARDUINO)
-    return pc_tcp_marshal(PC_OP_SEND, slot, conn_pool[slot].pcb, data, len, /*flush=*/false) ==
-           ERR_OK; // the write runs in stack context
+#if PROTOCORE_HOT
+    return pc_tcp_marshal(PC_OP_SEND, slot, conn_pool[slot].pcb, data, len, /*flush=*/PROTO_FALSE) ==
+           PC_NET_OK; // the write runs in stack context
 #else
 #if PC_ENABLE_TLS
     if (conn_pool[slot].tls)
@@ -524,18 +520,18 @@ bool pc_conn_send(uint8_t slot, const void *data, u16_t len)
         return pc_tls_write(slot, data, len) >= 0;
     }
 #endif
-    return tcp_write(conn_pool[slot].pcb, data, len, TCP_WRITE_FLAG_COPY) == ERR_OK;
+    return pc_net_write(conn_pool[slot].pcb, data, len, PC_NET_WRITE_COPY) == PC_NET_OK;
 #endif
 }
 
-bool pc_conn_send_flush(uint8_t slot, const void *data, u16_t len)
+proto_bool pc_conn_send_flush(uint8_t slot, const void *data, proto_u16 len)
 {
     // Terminal single-shot write: the bytes AND their flush happen in one round-trip into stack
     // context, so a small response costs one marshal instead of the send()+flush() pair (each
     // a ~23 us marshal on-device). For a TLS slot this is identical to pc_conn_send: the record
     // BIO already pushes ciphertext per record, so there is no separate flush to fold in.
-#if defined(ARDUINO)
-    return pc_tcp_marshal(PC_OP_SEND, slot, conn_pool[slot].pcb, data, len, /*flush=*/true) == ERR_OK;
+#if PROTOCORE_HOT
+    return pc_tcp_marshal(PC_OP_SEND, slot, conn_pool[slot].pcb, data, len, /*flush=*/PROTO_TRUE) == PC_NET_OK;
 #else
 #if PC_ENABLE_TLS
     if (conn_pool[slot].tls)
@@ -543,29 +539,29 @@ bool pc_conn_send_flush(uint8_t slot, const void *data, u16_t len)
         return pc_tls_write(slot, data, len) >= 0; // TLS BIO already output the record
     }
 #endif
-    if (tcp_write(conn_pool[slot].pcb, data, len, TCP_WRITE_FLAG_COPY) != ERR_OK)
+    if (pc_net_write(conn_pool[slot].pcb, data, len, PC_NET_WRITE_COPY) != PC_NET_OK)
     {
-        return false;
+        return PROTO_FALSE;
     }
-    tcp_output(conn_pool[slot].pcb);
-    return true;
+    pc_net_output(conn_pool[slot].pcb);
+    return PROTO_TRUE;
 #endif
 }
 
-u16_t pc_conn_sndbuf(uint8_t slot)
+proto_u16 pc_conn_sndbuf(uint8_t slot)
 {
-    struct tcp_pcb *pcb = conn_pool[slot].pcb;
+    pc_pcb *pcb = conn_pool[slot].pcb;
     if (pcb == NULL)
     {
         return 0;
     }
-    u16_t avail = tcp_sndbuf(pcb);
+    proto_u16 avail = pc_net_sndbuf(pcb);
 #if PC_ENABLE_TLS
     // A TLS record adds header + MAC/tag overhead; report a conservative plaintext
     // budget so a caller that fills it does not overrun the cipher's framing.
     if (conn_pool[slot].tls)
     {
-        avail = (avail > 64) ? (u16_t)(avail - 64) : 0;
+        avail = (avail > 64) ? (proto_u16)(avail - 64) : 0;
     }
 #endif
     return avail;
@@ -580,28 +576,28 @@ void pc_conn_flush(uint8_t slot)
                 // flush must NOT end the session - persistent TLS (wss / TLS SSE) reuses it
     }
 #endif
-#if defined(ARDUINO)
-    pc_tcp_marshal(PC_OP_OUTPUT, slot, conn_pool[slot].pcb, NULL, 0, /*flush=*/false);
+#if PROTOCORE_HOT
+    pc_tcp_marshal(PC_OP_OUTPUT, slot, conn_pool[slot].pcb, NULL, 0, /*flush=*/PROTO_FALSE);
 #else
-    tcp_output(conn_pool[slot].pcb);
+    pc_net_output(conn_pool[slot].pcb);
 #endif
 }
 
 #if PC_ENABLE_DIFFSERV
-bool pc_conn_set_dscp(uint8_t slot, uint8_t dscp)
+proto_bool pc_conn_set_dscp(uint8_t slot, uint8_t dscp)
 {
     if (slot >= MAX_CONNS || conn_pool[slot].pcb == NULL)
     {
-        return false;
+        return PROTO_FALSE;
     }
-#if defined(ARDUINO)
+#if PROTOCORE_HOT
     // Marshalled into stack context (PC_OP_SET_TOS) - the stack reads the DS field while building
     // each outbound segment, so setting it from a worker task must not race it.
-    return pc_tcp_marshal(PC_OP_SET_TOS, slot, conn_pool[slot].pcb, NULL, pc_dscp_to_tos(dscp), /*flush=*/false) ==
-           ERR_OK;
+    return pc_tcp_marshal(PC_OP_SET_TOS, slot, conn_pool[slot].pcb, NULL, pc_dscp_to_tos(dscp),
+                          /*flush=*/PROTO_FALSE) == PC_NET_OK;
 #else
     conn_pool[slot].pcb->tos = pc_dscp_to_tos(dscp); // host: no separate stack thread, set directly
-    return true;
+    return PROTO_TRUE;
 #endif
 }
 #endif // PC_ENABLE_DIFFSERV
@@ -627,32 +623,32 @@ void pc_conn_ack_consumed(uint8_t slot)
         return;
     }
     c->rx_acked = tail; // advance first: the marshaled window update is the slow part
-#if defined(ARDUINO)
-    pc_tcp_marshal(PC_OP_RECVED, slot, c->pcb, NULL, (u16_t)consumed, /*flush=*/false);
+#if PROTOCORE_HOT
+    pc_tcp_marshal(PC_OP_RECVED, slot, c->pcb, NULL, (proto_u16)consumed, /*flush=*/PROTO_FALSE);
 #else
-    tcp_recved(c->pcb, (u16_t)consumed);
+    pc_net_recved(c->pcb, (proto_u16)consumed);
 #endif
 }
 
-bool pc_conn_raw_send(struct tcp_pcb *pcb, const void *data, u16_t len)
+proto_bool pc_conn_raw_send(pc_pcb *pcb, const void *data, proto_u16 len)
 {
     if (pcb == NULL)
     {
-        return false;
+        return PROTO_FALSE;
     }
-#if defined(ARDUINO)
+#if PROTOCORE_HOT
     // pc_tcp_marshal owns the context choice: it runs the raw write inline when already in stack
     // context (a TLS close_notify/alert emitted from inside a raw callback) and marshals it
     // from the worker task (the handshake / read pump), so the write neither races the stack
     // nor self-deadlocks on its mailbox. The RAWSEND op also re-checks the pcb is still bound.
-    return pc_tcp_marshal(PC_OP_RAWSEND, 0, pcb, data, len, /*flush=*/false) == ERR_OK;
+    return pc_tcp_marshal(PC_OP_RAWSEND, 0, pcb, data, len, /*flush=*/PROTO_FALSE) == PC_NET_OK;
 #else
-    err_t e = tcp_write(pcb, data, len, TCP_WRITE_FLAG_COPY);
-    if (e == ERR_OK)
+    pc_net_err e = pc_net_write(pcb, data, len, PC_NET_WRITE_COPY);
+    if (e == PC_NET_OK)
     {
-        tcp_output(pcb);
+        pc_net_output(pcb);
     }
-    return e == ERR_OK;
+    return e == PC_NET_OK;
 #endif
 }
 
@@ -663,7 +659,7 @@ void pc_conn_close(uint8_t slot)
         return;
     }
     TcpConn *c = &conn_pool[slot];
-    struct tcp_pcb *pcb = c->pcb;
+    pc_pcb *pcb = c->pcb;
     if (pcb == NULL)
     {
         return;
@@ -677,8 +673,8 @@ void pc_conn_close(uint8_t slot)
     pc_conn_detach(pcb);
     pc_conn_set_state(c->id, CONN_FREE);
     c->pcb = NULL;
-#if defined(ARDUINO)
-    pc_tcp_marshal(PC_OP_CLOSE, slot, pcb, NULL, 0, /*flush=*/false); // TLS teardown + FIN in stack context
+#if PROTOCORE_HOT
+    pc_tcp_marshal(PC_OP_CLOSE, slot, pcb, NULL, 0, /*flush=*/PROTO_FALSE); // TLS teardown + FIN in stack context
 #else
 #if PC_ENABLE_TLS
     if (c->tls)
@@ -686,9 +682,9 @@ void pc_conn_close(uint8_t slot)
         pc_tls_conn_end(slot);
     }
 #endif
-    if (tcp_close(pcb) != ERR_OK)
+    if (pc_net_close(pcb) != PC_NET_OK)
     {
-        tcp_abort(pcb);
+        pc_net_abort(pcb);
     }
 #endif
 }
@@ -700,7 +696,7 @@ void pc_conn_abort_slot(uint8_t slot)
         return;
     }
     TcpConn *c = &conn_pool[slot];
-    struct tcp_pcb *pcb = c->pcb;
+    pc_pcb *pcb = c->pcb;
     if (pcb == NULL)
     {
         return;
@@ -719,24 +715,24 @@ void pc_conn_abort_slot(uint8_t slot)
     pc_conn_abort(pcb);
 }
 
-void pc_conn_detach(struct tcp_pcb *pcb)
+void pc_conn_detach(pc_pcb *pcb)
 {
     // Disassociate the slot from this pcb's stack callbacks before freeing the
     // slot, so any late callback for the pcb finds a null arg and does nothing.
-#if defined(ARDUINO)
-    pc_tcp_marshal(PC_OP_DETACH, 0, pcb, NULL, 0, /*flush=*/false);
+#if PROTOCORE_HOT
+    pc_tcp_marshal(PC_OP_DETACH, 0, pcb, NULL, 0, /*flush=*/PROTO_FALSE);
 #else
-    tcp_arg(pcb, NULL);
+    pc_net_arg(pcb, NULL);
 #endif
 }
 
-void pc_conn_abort(struct tcp_pcb *pcb)
+void pc_conn_abort(pc_pcb *pcb)
 {
     // Hard reset (RST) for a fatal condition - no graceful FIN.
-#if defined(ARDUINO)
-    pc_tcp_marshal(PC_OP_ABORT, 0, pcb, NULL, 0, /*flush=*/false);
+#if PROTOCORE_HOT
+    pc_tcp_marshal(PC_OP_ABORT, 0, pcb, NULL, 0, /*flush=*/PROTO_FALSE);
 #else
-    tcp_abort(pcb);
+    pc_net_abort(pcb);
 #endif
 }
 
@@ -747,7 +743,7 @@ void pc_conn_abort(struct tcp_pcb *pcb)
 // marshaled op), so they touch the control block directly - never marshal from here.
 
 // Finalize a CONN_CLOSING slot: tear down the connection and free the slot.
-static void closing_finalize(uint8_t slot, struct tcp_pcb *pcb)
+static void closing_finalize(uint8_t slot, pc_pcb *pcb)
 {
     TcpConn *c = &conn_pool[slot];
 #if PC_ENABLE_TLS
@@ -760,10 +756,10 @@ static void closing_finalize(uint8_t slot, struct tcp_pcb *pcb)
     c->pcb = NULL;
     if (pcb != NULL)
     {
-        tcp_arg(pcb, NULL);
-        if (tcp_close(pcb) != ERR_OK)
+        pc_net_arg(pcb, NULL);
+        if (pc_net_close(pcb) != PC_NET_OK)
         {
-            tcp_abort(pcb);
+            pc_net_abort(pcb);
         }
     }
     PC_OBS_TRANSITION(slot, CONN_CLOSING, CONN_FREE, PC_CONN_R_DRAINED);
@@ -777,7 +773,7 @@ static void closing_finalize(uint8_t slot, struct tcp_pcb *pcb)
 // state to CONN_CLOSING immediately before this call) and lowlevel_sent_cb() (which only
 // calls here after checking the slot's state is CONN_CLOSING itself, with slot->id
 // always a valid conn_pool index by construction). Both guarantee the condition is false.
-static void closing_check(uint8_t slot, struct tcp_pcb *pcb)
+static void closing_check(uint8_t slot, pc_pcb *pcb)
 {
     // GCOVR_EXCL_BR_LINE - see above
     if (slot >= MAX_CONNS || PROTO_ATOMIC_LOAD(&conn_pool[slot].state) != CONN_CLOSING)
@@ -801,15 +797,15 @@ void pc_conn_begin_close(uint8_t slot_id)
     {
         return;
     }
-    struct tcp_pcb *pcb = c->pcb;
+    pc_pcb *pcb = c->pcb;
     c->last_activity_ms = pc_millis();      // start the CONN_CLOSING dwell clock
     pc_conn_set_state(c->id, CONN_CLOSING); // release store: the stack callbacks now see CLOSING
     PC_OBS_TRANSITION(slot_id, CONN_ACTIVE, CONN_CLOSING, PC_CONN_R_CLOSE_LOCAL);
     // Finalize immediately if the response already drained, else dwell until the
     // sent callback (or the CLOSING-timeout sweep) reclaims it. The control-block read
     // must happen in stack context, so marshal the check on device.
-#if defined(ARDUINO)
-    pc_tcp_marshal(PC_OP_CLOSE_CHECK, slot_id, pcb, NULL, 0, /*flush=*/false);
+#if PROTOCORE_HOT
+    pc_tcp_marshal(PC_OP_CLOSE_CHECK, slot_id, pcb, NULL, 0, /*flush=*/PROTO_FALSE);
 #else
     closing_check(slot_id, pcb);
 #endif
@@ -857,7 +853,7 @@ void proto_tcp_stop(void)
         ConnState st = PROTO_ATOMIC_LOAD(&conn_pool[i].state); // GCOVR_EXCL_BR_LINE
         if ((st == CONN_ACTIVE || st == CONN_CLOSING) && conn_pool[i].pcb != NULL)
         {
-            struct tcp_pcb *pcb = conn_pool[i].pcb;
+            pc_pcb *pcb = conn_pool[i].pcb;
             pc_conn_set_state((uint8_t)i, CONN_FREE);
             conn_pool[i].pcb = NULL;
             pc_conn_detach(pcb); // marshaled detach + abort
@@ -884,7 +880,7 @@ uint8_t pc_conn_active_count(void)
 
 uint32_t pc_conn_remote_ip(uint8_t slot)
 {
-#ifdef ARDUINO
+#if PROTOCORE_HOT
     if (slot >= MAX_CONNS)
     {
         return 0;
@@ -892,7 +888,7 @@ uint32_t pc_conn_remote_ip(uint8_t slot)
     TcpConn *conn = &conn_pool[slot];
     if (PROTO_ATOMIC_LOAD(&conn->state) == CONN_ACTIVE && conn->pcb != NULL) // GCOVR_EXCL_BR_LINE
     {
-        return ip4_addr_get_u32(ip_2_ip4(&conn->pcb->remote_ip));
+        return pc_net_ip4_u32(pc_net_ip_as_v4(&conn->pcb->remote_ip));
     }
 #else
     (void)slot;
@@ -900,49 +896,49 @@ uint32_t pc_conn_remote_ip(uint8_t slot)
     return 0;
 }
 
-#ifdef ARDUINO
+#if PROTOCORE_HOT
 // Convert a stack address (itself a family-tagged union) into the portable pc_ip, network-order
 // bytes preserved. The one owner of that mapping, for the per-slot accessor
 // below and the accept callback (which has the connection but no slot yet).
-void pc_lwip_to_ip(const ip_addr_t *ra, pc_ip *out)
+void pc_lwip_to_ip(const pc_net_ip *ra, pc_ip *out)
 {
 #if LWIP_IPV6
-    if (IP_IS_V6(ra))
+    if (pc_net_ip_is_v6(ra))
     {
         uint8_t b[16]; // PC_ALLOW_STACK_ARRAY: 16 bytes on a cold accept path, no borrowable arena here
-        proto_raw_read(b, ip_2_ip6(ra)->addr, 16); // the stack holds the 16 bytes in network order
+        proto_raw_read(b, pc_net_ip_as_v6(ra)->addr, 16); // the stack holds the 16 bytes in network order
         *out = pc_ip_from_v6_bytes(b);
         return;
     }
 #endif
     // The v4 accessor yields network order; on a little-endian target the first octet is the low
     // byte. Peel the octets so pc_ip holds them left-to-right.
-    uint32_t be = ip4_addr_get_u32(ip_2_ip4(ra));
+    uint32_t be = pc_net_ip4_u32(pc_net_ip_as_v4(ra));
     *out = pc_ip_from_v4_octets((uint8_t)be, (uint8_t)(be >> 8), (uint8_t)(be >> 16), (uint8_t)(be >> 24));
 }
 #endif
 
-bool pc_conn_remote_addr(uint8_t slot, pc_ip *out)
+proto_bool pc_conn_remote_addr(uint8_t slot, pc_ip *out)
 {
     if (out != NULL)
     {
         out->family = PC_IP_NONE;
     }
-#ifdef ARDUINO
+#if PROTOCORE_HOT
     if (out == NULL || slot >= MAX_CONNS)
     {
-        return false;
+        return PROTO_FALSE;
     }
     TcpConn *conn = &conn_pool[slot];
     if (PROTO_ATOMIC_LOAD(&conn->state) != CONN_ACTIVE || conn->pcb == NULL) // GCOVR_EXCL_BR_LINE
     {
-        return false;
+        return PROTO_FALSE;
     }
     pc_lwip_to_ip(&conn->pcb->remote_ip, out);
-    return true;
+    return PROTO_TRUE;
 #else
     (void)slot;
-    return false;
+    return PROTO_FALSE;
 #endif
 }
 
@@ -989,7 +985,7 @@ void proto_tcp_check_timeouts(int worker_id)
             {
                 continue;
             }
-            struct tcp_pcb *cpcb = slot->pcb;
+            pc_pcb *cpcb = slot->pcb;
             pc_conn_set_state(slot->id, CONN_FREE);
             slot->pcb = NULL;
             if (cpcb != NULL)
@@ -1010,7 +1006,7 @@ void proto_tcp_check_timeouts(int worker_id)
             continue;
         }
 
-        struct tcp_pcb *pcb = slot->pcb;
+        pc_pcb *pcb = slot->pcb;
         /*
          * Clear state BEFORE aborting so that any stack callback
          * firing on the same connection during or after the abort sees CONN_FREE
@@ -1042,12 +1038,12 @@ void proto_tcp_check_timeouts(int worker_id)
  * whole segment will not fit it is refused for lossless backpressure.
  * A null segment signals graceful remote close (FIN received).
  */
-err_t lowlevel_recv_cb(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err)
+pc_net_err lowlevel_recv_cb(void *arg, pc_pcb *tpcb, pc_pbuf *p, pc_net_err err)
 {
     TcpConn *slot = (TcpConn *)arg;
     if (slot == NULL)
     {
-        return ERR_VAL;
+        return PC_NET_ERR_VAL;
     }
 
     // While dwelling in CONN_CLOSING we have already sent our final response and
@@ -1058,15 +1054,15 @@ err_t lowlevel_recv_cb(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t er
     {
         if (p != NULL)
         {
-            tcp_recved(tpcb, p->tot_len);
-            pbuf_free(p);
+            pc_net_recved(tpcb, p->tot_len);
+            pc_net_pbuf_free(p);
         }
-        return ERR_OK;
+        return PC_NET_OK;
     }
 
     if (PROTO_ATOMIC_LOAD(&slot->state) != CONN_ACTIVE) // GCOVR_EXCL_BR_LINE
     {
-        return ERR_VAL;
+        return PC_NET_ERR_VAL;
     }
 
     if (p == NULL)
@@ -1078,15 +1074,15 @@ err_t lowlevel_recv_cb(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t er
          */
         pc_conn_set_state(slot->id, CONN_FREE);
         slot->pcb = NULL;
-        tcp_arg(tpcb, NULL);
-        if (tcp_close(tpcb) != ERR_OK)
+        pc_net_arg(tpcb, NULL);
+        if (pc_net_close(tpcb) != PC_NET_OK)
         {
-            tcp_abort(tpcb);
+            pc_net_abort(tpcb);
         }
         PC_OBS_TRANSITION(slot->id, CONN_ACTIVE, CONN_FREE, PC_CONN_R_CLOSE_REMOTE);
         TcpEvt evt = {EVT_DISCONNECT, slot->id, 0};
         enqueue(slot, &evt);
-        return ERR_OK;
+        return PC_NET_OK;
     }
 
     /*
@@ -1110,7 +1106,7 @@ err_t lowlevel_recv_cb(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t er
         // e.g. an oversized request line that fills the ring and never completes). The timer is
         // refreshed below only when data is actually ACCEPTED (real progress), so a connection
         // that makes no progress times out and is reaped.
-        return ERR_MEM; // do NOT free the segment: the stack keeps it and redelivers
+        return PC_NET_ERR_MEM; // do NOT free the segment: the stack keeps it and redelivers
     }
 
     uint32_t rx_now = pc_millis();
@@ -1125,7 +1121,7 @@ err_t lowlevel_recv_cb(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t er
     // publishing rx_head once at the end (one release store for the whole segment).
     // The free-space check above guarantees it fits, so head can never overrun tail.
     size_t head = PROTO_ATOMIC_LOAD(&slot->rx_head); // sole producer of head; one acquire load
-    for (struct pbuf *q = p; q != NULL; q = q->next)
+    for (pc_pbuf *q = p; q != NULL; q = q->next)
     {
         head = pc_ring_write_span(slot->rx_buffer, RX_BUF_SIZE, head, (const uint8_t *)q->payload, q->len);
     }
@@ -1137,7 +1133,7 @@ err_t lowlevel_recv_cb(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t er
     // tracks ring occupancy and a slow consumer cannot overflow the ring. ACKing
     // on copy decouples the window from drainage and deadlocks streamed uploads
     // once RX_BUF_SIZE < TCP_WND (the refused segment past one ring-full stalls).
-    pbuf_free(p);
+    pc_net_pbuf_free(p);
 
     if (bytes_copied > 0)
     {
@@ -1145,7 +1141,7 @@ err_t lowlevel_recv_cb(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t er
         enqueue(slot, &evt);
     }
 
-    return ERR_OK;
+    return PC_NET_OK;
 }
 
 /**
@@ -1155,7 +1151,7 @@ err_t lowlevel_recv_cb(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t er
  * responses are in flight, and - for a slot dwelling in CONN_CLOSING - finalizes
  * the close once the response has fully drained (the peer ACKed everything).
  */
-err_t lowlevel_sent_cb(void *arg, struct tcp_pcb *tpcb, u16_t len)
+pc_net_err lowlevel_sent_cb(void *arg, pc_pcb *tpcb, proto_u16 len)
 {
     TcpConn *slot = (TcpConn *)arg;
     if (slot != NULL)
@@ -1165,7 +1161,7 @@ err_t lowlevel_sent_cb(void *arg, struct tcp_pcb *tpcb, u16_t len)
         {
             closing_check(slot->id, tpcb); // drained? -> tear down + free the slot
         }
-#ifdef ARDUINO
+#if PROTOCORE_HOT
         // The send window just freed: wake the owning worker so a paced response
         // (e.g. a large file) resumes now rather than on the next idle sweep.
         else
@@ -1175,7 +1171,7 @@ err_t lowlevel_sent_cb(void *arg, struct tcp_pcb *tpcb, u16_t len)
 #endif
     }
     (void)len;
-    return ERR_OK;
+    return PC_NET_OK;
 }
 
 /**
@@ -1185,7 +1181,7 @@ err_t lowlevel_sent_cb(void *arg, struct tcp_pcb *tpcb, u16_t len)
  * close or abort it.  Null out the slot's pointer and post
  * EVT_ERROR so the session layer resets the protocol state.
  */
-void lowlevel_err_cb(void *arg, err_t err)
+void lowlevel_err_cb(void *arg, pc_net_err err)
 {
     TcpConn *slot = (TcpConn *)arg;
     if (slot == NULL)

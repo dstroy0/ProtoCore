@@ -34,19 +34,16 @@
 
 #if PC_ENABLE_LORA
 
-#include <stddef.h>
-#include <stdint.h>
-
 // --- Codec: the RadioHead RH_RF95 4-byte header ---------------------------------------
 
 /** @brief RadioHead-compatible LoRa frame header (precedes the payload). */
-struct pc_lora_header
+typedef struct
 {
     uint8_t to;    ///< destination node address (0xFF = broadcast)
     uint8_t from;  ///< source node address
     uint8_t id;    ///< sequence / message id
     uint8_t flags; ///< application flags
-};
+} pc_lora_header;
 
 /**
  * @brief Split a received frame into its header and payload.
@@ -54,8 +51,8 @@ struct pc_lora_header
  * @param[out] payload_len set to the payload length.
  * @return true; false if @p raw is shorter than the 4-byte header.
  */
-bool pc_lora_frame_parse(const uint8_t *raw, uint16_t len, pc_lora_header *hdr, const uint8_t **payload,
-                         uint16_t *payload_len);
+proto_bool pc_lora_frame_parse(const uint8_t *raw, uint16_t len, pc_lora_header *hdr, const uint8_t **payload,
+                               uint16_t *payload_len);
 
 /**
  * @brief Build a frame (header + payload) into @p out.
@@ -72,15 +69,15 @@ using pc_lora_reg_read_fn = uint8_t (*)(uint8_t reg, void *ctx);
 using pc_lora_reg_write_fn = void (*)(uint8_t reg, uint8_t val, void *ctx);
 
 /** @brief The register-access bus a driver call uses (your SPI + chip-select behind it). */
-struct pc_lora_bus
+typedef struct
 {
     pc_lora_reg_read_fn read;
     pc_lora_reg_write_fn write;
     void *ctx;
-};
+} pc_lora_bus;
 
 /** @brief Radio configuration applied by pc_lora_init(). */
-struct pc_lora_config
+typedef struct
 {
     uint32_t freq_hz;    ///< carrier frequency in Hz (e.g. 868100000 / 915000000).
     uint8_t spreading;   ///< spreading factor 6..12 (SF7 default is a good start).
@@ -88,24 +85,24 @@ struct pc_lora_config
     uint8_t coding_rate; ///< coding rate 1..4 (1 = 4/5).
     uint8_t sync_word;   ///< 0x12 private / 0x34 LoRaWAN.
     uint8_t tx_power;    ///< PA_BOOST power 2..17 dBm.
-};
+} pc_lora_config;
 
 /**
  * @brief Initialize the SX127x: verify the chip, switch to LoRa mode, and apply @p cfg.
  * @return true; false if the register at RegVersion is not the SX127x id (0x12) - i.e. the
  *         bus is not talking to the chip.
  */
-bool pc_lora_init(const pc_lora_bus *bus, const pc_lora_config *cfg);
+proto_bool pc_lora_init(const pc_lora_bus *bus, const pc_lora_config *cfg);
 
 /**
  * @brief Load @p frame into the FIFO and start a transmit (the radio returns to standby on
  *        TxDone). Poll pc_lora_tx_done() for completion.
  * @return true; false if @p len exceeds PC_LORA_MAX_PAYLOAD + 4.
  */
-bool pc_lora_send(const pc_lora_bus *bus, const uint8_t *frame, uint8_t len);
+proto_bool pc_lora_send(const pc_lora_bus *bus, const uint8_t *frame, uint8_t len);
 
 /** @brief True once a transmit has finished (RegIrqFlags TxDone); clears the flag. */
-bool pc_lora_tx_done(const pc_lora_bus *bus);
+proto_bool pc_lora_tx_done(const pc_lora_bus *bus);
 
 /** @brief Put the radio in continuous-receive mode (call once, then poll pc_lora_recv()). */
 void pc_lora_set_rx(const pc_lora_bus *bus);

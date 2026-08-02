@@ -23,24 +23,19 @@
 #define PROTOCORE_PROFIBUS_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_PROFIBUS
 
 // PROFIBUS telegram delimiters + Frame Control values: wire bytes, so integer constants in a struct.
-struct Profibus
-{
-    static constexpr uint8_t PB_SD1 = 0x10; ///< start delimiter: no data.
-    static constexpr uint8_t PB_SD2 = 0x68; ///< start delimiter: variable data.
-    static constexpr uint8_t PB_SD3 = 0xA2; ///< start delimiter: fixed 8 data.
-    static constexpr uint8_t PB_SD4 = 0xDC; ///< token telegram.
-    static constexpr uint8_t PB_ED = 0x16;  ///< end delimiter.
-    // Frame Control (FC) common values.
-    static constexpr uint8_t PB_FC_REQUEST_FDL_STATUS = 0x49; ///< request FDL status (with FCB/FCV).
-    static constexpr uint8_t PB_FC_SRD_LOW = 0x6C;            ///< Send and Request Data, low priority.
-    static constexpr uint8_t PB_FC_SRD_HIGH = 0x7C;           ///< Send and Request Data, high priority.
-};
+#define D1 0x10 ///< start delimiter: no data.
+#define D2 0x68 ///< start delimiter: variable data.
+#define D3 0xA2 ///< start delimiter: fixed 8 data.
+#define D4 0xDC ///< token telegram.
+#define D 0x16  ///< end delimiter.
+// Frame Control (FC) common values.
+#define S 0x49 ///< request FDL status (with FCB/FCV).
+#define W 0x6C ///< Send and Request Data, low priority.
+#define H 0x7C ///< Send and Request Data, high priority.
 
 /** @brief PROFIBUS FCS: arithmetic sum (mod 256) of @p len bytes (DA + SA + FC + data). */
 uint8_t pc_pb_fcs(const uint8_t *bytes, size_t len);
@@ -67,7 +62,7 @@ size_t pc_pb_build_sd2(uint8_t da, uint8_t sa, uint8_t fc, const uint8_t *data, 
 size_t pc_pb_build_sd3(uint8_t da, uint8_t sa, uint8_t fc, const uint8_t *data, uint8_t *out, size_t cap);
 
 /** @brief A parsed PROFIBUS telegram (data points into the input, null for SD1). */
-struct PbTelegram
+typedef struct
 {
     uint8_t sd; ///< the start delimiter (PB_SD1 / PB_SD2 / PB_SD3).
     uint8_t da;
@@ -75,10 +70,10 @@ struct PbTelegram
     uint8_t fc;
     const uint8_t *data;
     size_t data_len;
-};
+} PbTelegram;
 
 /** @brief Validate + parse an SD1 / SD2 / SD3 telegram (FCS + ED checked). @return true if well-formed. */
-bool pc_pb_parse(const uint8_t *frame, size_t len, PbTelegram *out);
+proto_bool pc_pb_parse(const uint8_t *frame, size_t len, PbTelegram *out);
 
 #endif // PC_ENABLE_PROFIBUS
 #endif // PROTOCORE_PROFIBUS_H

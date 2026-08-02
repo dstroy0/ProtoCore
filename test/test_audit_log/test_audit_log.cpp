@@ -286,12 +286,12 @@ void test_dump_fails_closed_at_exact_length(void)
     TEST_ASSERT_EQUAL_INT(0, pc_audit_dump_json(exact, (size_t)flen));
 }
 
-// pc_hex_digit's uppercase arm (the `upper` default arg) isn't reached by any
-// other call in this env's build_src_filter (audit_log.cpp always calls it with
-// the default lowercase); exercise both arms directly.
+// pc_hex_digit's uppercase arm isn't reached by any other call in this env's
+// build_src_filter (audit_log.cpp only ever asks for lowercase); exercise both
+// arms directly.
 void test_hex_digit_upper_and_lower(void)
 {
-    TEST_ASSERT_EQUAL_CHAR('a', pc_hex_digit(10));
+    TEST_ASSERT_EQUAL_CHAR('a', pc_hex_digit(10, false));
     TEST_ASSERT_EQUAL_CHAR('A', pc_hex_digit(10, true));
     TEST_ASSERT_EQUAL_CHAR('f', pc_hex_digit(15, false));
     TEST_ASSERT_EQUAL_CHAR('F', pc_hex_digit(15, true));
@@ -319,12 +319,12 @@ void test_hex_encode_upper_and_lower(void)
 {
     const uint8_t bytes[3] = {0x0A, 0xFF, 0x01};
     char out[7];
-    pc_hex_encode(bytes, 3, out); // default: lowercase
+    pc_hex_encode(bytes, 3, out, false); // lowercase
     TEST_ASSERT_EQUAL_STRING("0aff01", out);
     pc_hex_encode(bytes, 3, out, true); // uppercase
     TEST_ASSERT_EQUAL_STRING("0AFF01", out);
     char empty_out[1];
-    pc_hex_encode(bytes, 0, empty_out); // loop body never runs
+    pc_hex_encode(bytes, 0, empty_out, false); // loop body never runs
     TEST_ASSERT_EQUAL_STRING("", empty_out);
 }
 

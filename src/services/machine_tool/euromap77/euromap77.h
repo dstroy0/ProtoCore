@@ -52,7 +52,6 @@
 #if PC_ENABLE_EUROMAP77
 
 #include "services/fieldbus/opcua/opcua.h" // OpcUaVariant / OpcUaReference / handler typedefs (shares the OPC UA codec)
-#include <stdint.h>
 
 /** @brief The EUROMAP 77 companion-spec namespace URI (OPC 40077). */
 #define EUROMAP77_NS_URI "http://www.euromap.org/euromap77/"
@@ -63,7 +62,7 @@
  * @brief Machine mode (EUROMAP 83 MachineModeEnumeration, em83 i=3011). Exposed as Int32; the numeric
  *        values are the companion-spec enumeration.
  */
-enum class EmMachineMode : int32_t
+typedef enum PROTO_ENUM_PACKED
 {
     EM_MODE_OTHER = 0,          ///< a mode outside the ones below.
     EM_MODE_AUTOMATIC = 1,      ///< automatic production.
@@ -71,13 +70,13 @@ enum class EmMachineMode : int32_t
     EM_MODE_MANUAL = 3,         ///< manual / hand operation.
     EM_MODE_SETUP = 4,          ///< set-up / preparation.
     EM_MODE_SLEEP = 5,          ///< energy-saving sleep.
-};
+} EmMachineMode;
 
 /**
  * @brief Active-job status (EUROMAP 83 JobStatusEnumeration, em83 i=3017). Exposed as Int32; the numeric
  *        values are the companion-spec enumeration.
  */
-enum class EmJobStatus : int32_t
+typedef enum PROTO_ENUM_PACKED
 {
     EM_JOB_OTHER = 0,                  ///< a status outside the ones below.
     EM_JOB_TRANSFERRED_ASSIGNED = 1,   ///< transferred / assigned to the machine.
@@ -91,10 +90,10 @@ enum class EmJobStatus : int32_t
     EM_JOB_TEAR_DOWN_ACTIVE = 9,       ///< tear-down in progress.
     EM_JOB_TEAR_DOWN_INTERRUPTED = 10, ///< tear-down interrupted.
     EM_JOB_TEAR_DOWN_FINISHED = 11,    ///< tear-down finished.
-};
+} EmJobStatus;
 
 /** @brief IMM identity (EUROMAP 77 MachineInformation, common subset; all String). */
-struct EmMachineInformation
+typedef struct
 {
     const char *manufacturer;      ///< Manufacturer.
     const char *model;             ///< Model.
@@ -104,17 +103,17 @@ struct EmMachineInformation
     const char *software_revision; ///< SoftwareRevision.
     const char *device_revision;   ///< DeviceRevision.
     const char *manufacturer_uri;  ///< ManufacturerUri.
-};
+} EmMachineInformation;
 
 /** @brief IMM live status (EUROMAP 77 MachineStatus, common subset). */
-struct EmMachineStatus
+typedef struct
 {
-    bool is_present;            ///< IsPresent.
+    proto_bool is_present;      ///< IsPresent.
     EmMachineMode machine_mode; ///< MachineMode.
-};
+} EmMachineStatus;
 
 /** @brief The active job's static parameters (EUROMAP 77 Jobs.ActiveJob, common subset). */
-struct EmActiveJob
+typedef struct
 {
     const char *job_name;        ///< JobName.
     const char *job_description; ///< JobDescription.
@@ -124,10 +123,10 @@ struct EmActiveJob
     double expected_cycle_time;  ///< ExpectedCycleTime (Duration, seconds -> Double).
     uint32_t num_cavities;       ///< NumCavities.
     uint64_t nominal_parts;      ///< NominalParts.
-};
+} EmActiveJob;
 
 /** @brief The active job's live production counters (EUROMAP 77 Jobs.ActiveJobValues; counters UInt64). */
-struct EmActiveJobValues
+typedef struct
 {
     uint64_t job_cycle_counter;      ///< JobCycleCounter.
     uint64_t machine_cycle_counter;  ///< MachineCycleCounter.
@@ -137,21 +136,21 @@ struct EmActiveJobValues
     uint64_t job_good_parts_counter; ///< JobGoodPartsCounter.
     uint64_t job_bad_parts_counter;  ///< JobBadPartsCounter.
     EmJobStatus job_status;          ///< JobStatus.
-};
+} EmActiveJobValues;
 
 /**
  * @brief The whole IMM_MES_Interface the server exposes. Own it in your sketch and refresh its fields
  *        each loop from your machine I/O; the resolvers read straight out of it (no copy). String fields
  *        may be null (served as an empty String).
  */
-struct EmImm
+typedef struct
 {
     const char *name;                    ///< IMM_MES_Interface BrowseName / DisplayName.
     EmMachineInformation info;           ///< MachineInformation.
     EmMachineStatus status;              ///< MachineStatus.
     EmActiveJob active_job;              ///< Jobs.ActiveJob.
     EmActiveJobValues active_job_values; ///< Jobs.ActiveJobValues.
-};
+} EmImm;
 
 /**
  * @brief Bind the IMM the resolvers serve. @p imm must outlive the server (own it statically). Refresh
@@ -164,7 +163,7 @@ void pc_em77_bind(const EmImm *imm);
  *        EUROMAP 77 node's Value attribute. Returns false for a node outside the model (the server
  *        answers BadNodeIdUnknown). Install with `pc_opcua_set_read_handler(pc_em77_read)`.
  */
-bool pc_em77_read(uint16_t ns, uint32_t id, uint32_t attribute, OpcUaVariant *out);
+proto_bool pc_em77_read(uint16_t ns, uint32_t id, uint32_t attribute, OpcUaVariant *out);
 
 /**
  * @brief Browse resolver for the IMM_MES_Interface model (an @ref OpcUaBrowseHandler): writes the child

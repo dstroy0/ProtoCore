@@ -27,8 +27,6 @@
 #define PROTOCORE_ESPNOW_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_ESPNOW
 
@@ -59,7 +57,7 @@ size_t pc_espnow_encode(uint8_t type, const uint8_t *payload, size_t len, uint8_
  * @param payload  set to point inside @p buf (no copy).
  * @return true on a well-formed envelope.
  */
-bool pc_espnow_decode(const uint8_t *buf, size_t len, uint8_t *type, const uint8_t **payload, size_t *plen);
+proto_bool pc_espnow_decode(const uint8_t *buf, size_t len, uint8_t *type, const uint8_t **payload, size_t *plen);
 
 // ---------------------------------------------------------------------------
 // Host-testable core: bounded peer registry
@@ -68,11 +66,11 @@ bool pc_espnow_decode(const uint8_t *buf, size_t len, uint8_t *type, const uint8
 /** @brief Forget all registered peers. */
 void pc_espnow_peers_reset(void);
 /** @brief Register @p mac (idempotent). @return false if the table is full. */
-bool pc_espnow_peer_add(const uint8_t mac[6]);
+proto_bool pc_espnow_peer_add(const uint8_t mac[6]);
 /** @brief @return true if @p mac is in the peer registry. */
-bool pc_espnow_peer_has(const uint8_t mac[6]);
+proto_bool pc_espnow_peer_has(const uint8_t mac[6]);
 /** @brief Remove @p mac from the registry. @return true if it was present. */
-bool pc_espnow_peer_remove(const uint8_t mac[6]);
+proto_bool pc_espnow_peer_remove(const uint8_t mac[6]);
 /** @brief @return the number of registered peers. */
 int pc_espnow_peer_count(void);
 
@@ -89,16 +87,16 @@ typedef void (*pc_espnow_recv_fn)(const uint8_t mac[6], uint8_t type, const uint
  * WiFi must already be started (STA or AP). Registers the broadcast peer.
  * @return true on success (ESP32 only).
  */
-bool pc_espnow_begin(uint8_t channel, pc_espnow_recv_fn cb);
+proto_bool pc_espnow_begin(uint8_t channel, pc_espnow_recv_fn cb);
 
 /** @brief Add a unicast peer to both the registry and the radio. */
-bool pc_espnow_add_peer(const uint8_t mac[6]);
+proto_bool pc_espnow_add_peer(const uint8_t mac[6]);
 
 /** @brief Encode and transmit a message to @p mac. @return true if queued to the radio. */
-bool pc_espnow_send(const uint8_t mac[6], uint8_t type, const uint8_t *payload, size_t len);
+proto_bool pc_espnow_send(const uint8_t mac[6], uint8_t type, const uint8_t *payload, size_t len);
 
 /** @brief Send to the broadcast address (all peers in range). */
-bool pc_espnow_broadcast(uint8_t type, const uint8_t *payload, size_t len);
+proto_bool pc_espnow_broadcast(uint8_t type, const uint8_t *payload, size_t len);
 
 #endif // PC_ENABLE_ESPNOW
 #endif // PROTOCORE_ESPNOW_H

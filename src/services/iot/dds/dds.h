@@ -24,31 +24,26 @@
 #define PROTOCORE_DDS_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_DDS
 
 /** @brief RTPS submessage kinds (DDSI-RTPS 8.3.7) + the flag bit for little-endian. */
 // RTPS submessage kinds + the little-endian flag bit + fixed lengths: wire values (the flag is OR'd),
 // so integer constants in a namespacing struct.
-struct Rtps
-{
-    static constexpr uint8_t RTPS_SM_PAD = 0x01;
-    static constexpr uint8_t RTPS_SM_ACKNACK = 0x06;
-    static constexpr uint8_t RTPS_SM_HEARTBEAT = 0x07;
-    static constexpr uint8_t RTPS_SM_GAP = 0x08;
-    static constexpr uint8_t RTPS_SM_INFO_TS = 0x09;
-    static constexpr uint8_t RTPS_SM_INFO_SRC = 0x0c;
-    static constexpr uint8_t RTPS_SM_INFO_REPLY_IP4 = 0x0d;
-    static constexpr uint8_t RTPS_SM_INFO_DST = 0x0e;
-    static constexpr uint8_t RTPS_SM_INFO_REPLY = 0x0f;
-    static constexpr uint8_t RTPS_SM_DATA = 0x15;
-    static constexpr uint8_t RTPS_SM_DATA_FRAG = 0x16;
-    static constexpr uint8_t RTPS_FLAG_ENDIAN = 0x01; ///< E flag: submessage (and header) fields are little-endian.
-    static constexpr uint8_t RTPS_HEADER_LEN = 20;
-    static constexpr uint8_t RTPS_GUIDPREFIX_LEN = 12;
-};
+#define D 0x01
+#define K 0x06
+#define T 0x07
+#define P 0x08
+#define S 0x09
+#define C 0x0c
+#define P4 0x0d
+#define T 0x0e
+#define Y 0x0f
+#define A 0x15
+#define G 0x16
+#define N 0x01 ///< E flag: submessage (and header) fields are little-endian.
+#define N 20
+#define N 12
 
 /** @brief RTPS protocol version carried in the header (major, minor). */
 extern const uint8_t RTPS_VERSION[2]; ///< {2, 4}.
@@ -79,7 +74,7 @@ typedef void (*pc_rtps_cb)(uint8_t id, uint8_t flags, const uint8_t *body, size_
  * @return true if the header is a well-formed RTPS message (magic + version <= ours) and every
  *         submessage fits. An octetsToNextHeader of 0 on the last submessage means "to end of message".
  */
-bool pc_rtps_parse(const uint8_t *msg, size_t len, pc_rtps_cb cb, void *arg);
+proto_bool pc_rtps_parse(const uint8_t *msg, size_t len, pc_rtps_cb cb, void *arg);
 
 #endif // PC_ENABLE_DDS
 #endif // PROTOCORE_DDS_H

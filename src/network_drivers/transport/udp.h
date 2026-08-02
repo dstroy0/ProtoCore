@@ -26,15 +26,13 @@
 #define PROTOCORE_UDP_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 /**
  * @brief Opaque sender of a received datagram.
  *
  * Wraps the lwIP source address / port / PCB. Valid only inside the
  * pc_udp_handler call; pass it to pc_udp_send() to reply. The concrete layout
- * lives in udp.cpp so no lwIP type escapes the transport layer.
+ * lives in udp.c so no lwIP type escapes the transport layer.
  */
 struct pc_udp_peer;
 
@@ -57,7 +55,7 @@ typedef void (*pc_udp_handler)(const uint8_t *data, size_t len, const struct pc_
  * @return true on success; false if no listener slot is free, the bind fails,
  *         or UDP is unavailable (host builds). ESP32 only; a host build returns false.
  */
-bool pc_udp_listen(uint16_t port, pc_udp_handler handler, void *ctx);
+proto_bool pc_udp_listen(uint16_t port, pc_udp_handler handler, void *ctx);
 
 /**
  * @brief Bind a UDP port, join an IPv4 multicast group, and route group datagrams to @p handler.
@@ -81,13 +79,13 @@ bool pc_udp_listen(uint16_t port, pc_udp_handler handler, void *ctx);
  * @return true if the port bound and the group was joined; false if the pool is full, @p group_ip
  *         is not a multicast address, IGMP is unavailable, or on a host build.
  */
-bool pc_udp_listen_multicast(const char *group_ip, uint16_t port, pc_udp_handler handler, void *ctx);
+proto_bool pc_udp_listen_multicast(const char *group_ip, uint16_t port, pc_udp_handler handler, void *ctx);
 
 /**
  * @brief Leave the multicast group joined on @p port and release its listener slot.
  * @return true if a matching multicast listener was found and torn down.
  */
-bool pc_udp_leave_multicast(uint16_t port);
+proto_bool pc_udp_leave_multicast(uint16_t port);
 
 /**
  * @brief Send a datagram back to the peer captured during the handler call.
@@ -97,7 +95,7 @@ bool pc_udp_leave_multicast(uint16_t port);
  * @param len   payload length.
  * @return true if the datagram was queued for transmission.
  */
-bool pc_udp_send(const struct pc_udp_peer *peer, const uint8_t *data, size_t len);
+proto_bool pc_udp_send(const struct pc_udp_peer *peer, const uint8_t *data, size_t len);
 
 /**
  * @brief Send a UDP datagram to an arbitrary destination (outbound client).
@@ -114,7 +112,7 @@ bool pc_udp_send(const struct pc_udp_peer *peer, const uint8_t *data, size_t len
  * @return true if the datagram was queued; false on a bad address, allocation
  *         failure, or a host build.
  */
-bool pc_udp_sendto(const char *dst_ip, uint16_t dst_port, const uint8_t *data, size_t len);
+proto_bool pc_udp_sendto(const char *dst_ip, uint16_t dst_port, const uint8_t *data, size_t len);
 
 /**
  * @brief Copy a received peer's source IPv4 address (dotted-quad) and port out.
@@ -124,7 +122,7 @@ bool pc_udp_sendto(const char *dst_ip, uint16_t dst_port, const uint8_t *data, s
  * here and sends with pc_udp_listener_sendto(). @return false on a host build or
  * a too-small buffer.
  */
-bool pc_udp_peer_addr(const struct pc_udp_peer *peer, char *ip_out, size_t ip_cap, uint16_t *port_out);
+proto_bool pc_udp_peer_addr(const struct pc_udp_peer *peer, char *ip_out, size_t ip_cap, uint16_t *port_out);
 
 /**
  * @brief Send a datagram from the listener bound on @p listen_port to an address.
@@ -134,26 +132,26 @@ bool pc_udp_peer_addr(const struct pc_udp_peer *peer, char *ip_out, size_t ip_ca
  * peer matches replies by the server endpoint (CoAP Observe notifications come
  * from :5683). @return false if no listener is bound on @p listen_port.
  */
-bool pc_udp_listener_sendto(uint16_t listen_port, const char *dst_ip, uint16_t dst_port, const uint8_t *data,
-                            size_t len);
+proto_bool pc_udp_listener_sendto(uint16_t listen_port, const char *dst_ip, uint16_t dst_port, const uint8_t *data,
+                                  size_t len);
 
-#if !defined(ARDUINO)
+#if !PROTOCORE_HOT
 // Host-only test hooks: capture the last datagram passed to pc_udp_sendto() so a
 // unit test can inspect what an outbound UDP service (SNMP trap/inform, syslog,
 // telemetry) actually built. Off by default; enable per test. Mirrors the
 // tcp_capture() seam in the lwIP mock.
-void pc_udp_capture_enable();
-void pc_udp_capture_reset();
-const uint8_t *pc_udp_captured(); ///< bytes of the last captured datagram (nullptr if none)
-size_t pc_udp_captured_len();     ///< length of the last captured datagram
+void pc_udp_capture_enable(void);
+void pc_udp_capture_reset(void);
+const uint8_t *pc_udp_captured(void); ///< bytes of the last captured datagram (NULL if none)
+size_t pc_udp_captured_len(void);     ///< length of the last captured datagram
 
 // Deliver a datagram from (src_ip, src_port) to the handler bound to listen_port, driving the
 // receive path of a UDP service (CoAP Observe, DNS, SNMP) as if a peer had sent it.
 void pc_udp_inject(uint16_t listen_port, const char *src_ip, uint16_t src_port, const uint8_t *data, size_t len);
-void pc_udp_set_listener_sendto_result(bool ok); ///< force pc_udp_listener_sendto() to fail (unreachable peer)
-void pc_udp_reset_listeners();                   ///< clear all bound listeners (per-test isolation)
+void pc_udp_set_listener_sendto_result(proto_bool ok); ///< force pc_udp_listener_sendto() to fail (unreachable peer)
+void pc_udp_reset_listeners(void);                     ///< clear all bound listeners (per-test isolation)
 
-/** @brief The multicast group joined on @p port, or nullptr if that port has no multicast listener. */
+/** @brief The multicast group joined on @p port, or NULL if that port has no multicast listener. */
 const char *pc_udp_joined_group(uint16_t port);
 #endif
 

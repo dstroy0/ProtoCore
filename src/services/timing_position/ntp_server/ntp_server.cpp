@@ -14,7 +14,7 @@
 #include "shared_primitives/endian.h"
 #include <string.h> // memset, memcpy
 
-#if defined(ARDUINO)
+#if PROTOCORE_HOT
 #include "network_drivers/transport/udp.h"
 #include "services/system/clock.h"
 #include "services/timing_position/time_source/time_source.h"
@@ -47,21 +47,19 @@ size_t pc_ntp_server_build_response(const uint8_t *req, size_t req_len, uint8_t 
     return NTP_PACKET_LEN;
 }
 
-#if defined(ARDUINO)
+#if PROTOCORE_HOT
 
-namespace
-{
 // All NTP-server binding state, owned by one instance (internal linkage): the advertised
 // stratum and reference id, grouped so it is one named owner, unreachable cross-TU.
-struct NtpServerCtx
+typedef struct
 {
     uint8_t stratum = PC_NTP_SERVER_STRATUM;
     uint32_t refid = NTP_REFID_LOCL;
-};
-NtpServerCtx s_ntp;
+} NtpServerCtx;
+static NtpServerCtx s_ntp;
 
 // UDP handler: answer each request from the current time (silent if we have none).
-void pc_ntp_server_udp_handler(const uint8_t *data, size_t len, const struct pc_udp_peer *peer, void *ctx)
+static void pc_ntp_server_udp_handler(const uint8_t *data, size_t len, const struct pc_udp_peer *peer, void *ctx)
 {
     (void)ctx;
     uint32_t unix_secs = pc_time_now();
@@ -81,22 +79,21 @@ void pc_ntp_server_udp_handler(const uint8_t *data, size_t len, const struct pc_
         pc_udp_send(peer, resp, n);
     }
 }
-} // namespace
 
-bool pc_ntp_server_begin(uint8_t stratum, uint32_t refid)
+proto_bool pc_ntp_server_begin(uint8_t stratum, uint32_t refid)
 {
     s_ntp.stratum = stratum;
     s_ntp.refid = refid;
-    return pc_udp_listen(123, pc_ntp_server_udp_handler, nullptr);
+    return pc_udp_listen(123, pc_ntp_server_udp_handler, NULL);
 }
 
 #else // host build: no lwIP. The codec above is host-tested; the binding is a stub.
 
-bool pc_ntp_server_begin(uint8_t, uint32_t)
+proto_bool pc_ntp_server_begin(uint8_t, uint32_t)
 {
-    return false;
+    return PROTO_FALSE;
 }
 
-#endif // ARDUINO
+#endif // PROTOCORE_HOT
 
 #endif // PC_ENABLE_NTP_SERVER

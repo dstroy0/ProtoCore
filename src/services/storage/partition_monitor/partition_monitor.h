@@ -20,21 +20,19 @@
 #define PROTOCORE_PARTITION_MONITOR_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_PARTITION_MONITOR
 
 /** @brief One flash partition entry. */
-struct pc_partition_info
+typedef struct
 {
-    char label[17];   ///< partition label (null-terminated).
-    uint8_t type;     ///< esp_partition type (0 = app, 1 = data).
-    uint8_t subtype;  ///< esp_partition subtype.
-    uint32_t address; ///< flash offset (bytes).
-    uint32_t size;    ///< partition size (bytes).
-    bool running;     ///< true for the currently-running app partition.
-};
+    char label[17];     ///< partition label (null-terminated).
+    uint8_t type;       ///< esp_partition type (0 = app, 1 = data).
+    uint8_t subtype;    ///< esp_partition subtype.
+    uint32_t address;   ///< flash offset (bytes).
+    uint32_t size;      ///< partition size (bytes).
+    proto_bool running; ///< true for the currently-running app partition.
+} pc_partition_info;
 
 // ---------------------------------------------------------------------------
 // Host-testable core

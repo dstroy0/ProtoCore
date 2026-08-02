@@ -26,12 +26,12 @@
 // All SSH connection-layer state, owned by one instance (internal linkage): the SSH-slot ->
 // TCP-conn-slot mapping (0xFF = free), the one-time init flag, and the per-slot deferred-close
 // flags. Grouped so it is one named owner, unreachable from any other translation unit.
-struct SshConnCtx
+typedef struct
 {
     uint8_t conn_for_ssh[MAX_SSH_CONNS];
-    bool init_done = false;
-    volatile bool close[MAX_SSH_CONNS];
-};
+    proto_bool init_done = PROTO_FALSE;
+    volatile proto_bool close[MAX_SSH_CONNS];
+} SshConnCtx;
 static SshConnCtx s_sshc;
 
 static void ensure_init()
@@ -44,7 +44,7 @@ static void ensure_init()
     {
         s_sshc.conn_for_ssh[j] = 0xFF;
     }
-    s_sshc.init_done = true;
+    s_sshc.init_done = PROTO_TRUE;
 }
 
 // ---------------------------------------------------------------------------
@@ -90,7 +90,7 @@ static void ssh_msg_handler(uint8_t i, uint8_t msg_type, const uint8_t *payload,
 {
     if (pc_ssh_server_dispatch(i, msg_type, payload, len) < 0)
     {
-        s_sshc.close[i] = true;
+        s_sshc.close[i] = PROTO_TRUE;
     }
 }
 
@@ -258,7 +258,7 @@ void pc_ssh_conn_poll(uint8_t conn_slot)
     // long-lived / high-throughput session re-keys in place instead of being dropped at the
     // sequence-number wrap. The existing KEXINIT dispatch carries it to completion.
     SshSession *s = &ssh_sess[j];
-    if (s->phase == SshPhase::SSH_PHASE_OPEN && !ssh_pkt[j].kex_active)
+    if (s->phase == SSH_PHASE_OPEN && !ssh_pkt[j].kex_active)
     {
         uint32_t elapsed = pc_millis() - s->last_kex_ms;
         if (ssh_rekey_due(ssh_pkt[j].seq_no_send, ssh_pkt[j].seq_no_recv, elapsed, SSH_REKEY_PACKET_THRESHOLD,
@@ -309,7 +309,7 @@ void pc_ssh_conn_accept(uint8_t conn_slot)
 
     s_sshc.conn_for_ssh[j] = conn_slot;
     conn->proto_slot = j;
-    s_sshc.close[j] = false;
+    s_sshc.close[j] = PROTO_FALSE;
 
     ssh_transport_init(j);
     ssh_pkt_init(j);
@@ -355,7 +355,7 @@ void pc_ssh_conn_rx(uint8_t conn_slot)
     }
 
     size_t off = 0;
-    if (ssh_sess[j].phase == SshPhase::SSH_PHASE_BANNER)
+    if (ssh_sess[j].phase == SSH_PHASE_BANNER)
     {
         size_t consumed = 0;
         int rc = ssh_transport_recv_banner(j, buf, n, &consumed);
@@ -369,7 +369,7 @@ void pc_ssh_conn_rx(uint8_t conn_slot)
             return; // need more banner bytes
         }
         off = consumed;
-        ssh_sess[j].phase = SshPhase::SSH_PHASE_KEXINIT;
+        ssh_sess[j].phase = SSH_PHASE_KEXINIT;
     }
 
     if (off < n)

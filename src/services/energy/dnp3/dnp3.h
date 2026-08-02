@@ -33,9 +33,6 @@
 
 #if PC_ENABLE_DNP3
 
-#include <stddef.h>
-#include <stdint.h>
-
 #define DNP3_START0 0x05
 #define DNP3_START1 0x64
 #define DNP3_MAX_USER_DATA 250 ///< LEN max 255 minus the 5 header octets it counts
@@ -62,13 +59,13 @@ size_t pc_dnp3_build_frame(uint8_t *buf, size_t cap, uint8_t control, uint16_t d
                            const uint8_t *user_data, size_t user_data_len);
 
 /** @brief A parsed data-link frame header (the user data is de-blocked separately). */
-struct Dnp3Frame
+typedef struct
 {
     uint8_t length;  ///< the LEN field value
     uint8_t control; ///< link-layer control octet
     uint16_t dest;
     uint16_t src;
-};
+} Dnp3Frame;
 
 /**
  * @brief Parse + CRC-validate a frame, de-blocking the user data (per-block CRCs stripped).
@@ -78,8 +75,8 @@ struct Dnp3Frame
  * @return true on a complete, all-CRC-valid frame; false on a bad start word, an invalid
  *         LEN, truncation, a header or block CRC mismatch, or an out_user overflow.
  */
-bool pc_dnp3_parse_frame(const uint8_t *buf, size_t len, Dnp3Frame *out, uint8_t *out_user, size_t out_cap,
-                         size_t *out_user_len);
+proto_bool pc_dnp3_parse_frame(const uint8_t *buf, size_t len, Dnp3Frame *out, uint8_t *out_user, size_t out_cap,
+                               size_t *out_user_len);
 
 // --- transport function (IEEE 1815 §8.2): reassemble application fragments from link user data ---
 //
@@ -94,13 +91,13 @@ bool pc_dnp3_parse_frame(const uint8_t *buf, size_t len, Dnp3Frame *out, uint8_t
 #define DNP3_TR_MAX_APP 249    ///< application octets per segment (250 user - 1 transport header)
 
 /** @brief Compose a transport header octet from the FIR / FIN flags and a 6-bit sequence. */
-uint8_t pc_dnp3_transport_header(bool fir, bool fin, uint8_t seq);
+uint8_t pc_dnp3_transport_header(proto_bool fir, proto_bool fin, uint8_t seq);
 
 /**
  * @brief Build one transport segment (transport header + @p app_len application octets) into @p out.
  * @return the segment length (1 + @p app_len), or 0 on a bad argument / overflow / @p app_len > 249.
  */
-size_t pc_dnp3_build_transport_segment(uint8_t *out, size_t cap, bool fir, bool fin, uint8_t seq,
+size_t pc_dnp3_build_transport_segment(uint8_t *out, size_t cap, proto_bool fir, proto_bool fin, uint8_t seq,
                                        const uint8_t *app_data, size_t app_len);
 
 /** @brief Result of feeding a link frame's user data to the transport reassembler. */
@@ -113,15 +110,15 @@ enum Dnp3TransportResult
 };
 
 /** @brief Transport-function reassembly state (one in-flight application fragment). */
-struct Dnp3TransportRx
+typedef struct
 {
     uint8_t *buf;       ///< caller-provided accumulation buffer
     size_t cap;         ///< its capacity
     size_t len;         ///< application octets accumulated so far
     uint8_t expect_seq; ///< the sequence the next segment must carry
-    bool active;        ///< a fragment is in progress (a FIR was seen)
-    bool done;          ///< the last segment (FIN) was accepted
-};
+    proto_bool active;  ///< a fragment is in progress (a FIR was seen)
+    proto_bool done;    ///< the last segment (FIN) was accepted
+} Dnp3TransportRx;
 
 /** @brief Begin transport reassembly with a caller-owned buffer. */
 void pc_dnp3_transport_rx_init(Dnp3TransportRx *r, uint8_t *buf, size_t cap);
@@ -176,23 +173,23 @@ int pc_dnp3_transport_feed(Dnp3TransportRx *r, const uint8_t *user, size_t user_
 #define DNP3_IIN_CONFIG_CORRUPT 0x2000u     ///< IIN2.5 configuration corrupt
 
 /** @brief A decoded application-fragment header (from pc_dnp3_parse_app_header). */
-struct Dnp3AppHeader
+typedef struct
 {
     uint8_t app_control; ///< raw Application Control octet
-    bool fir;
-    bool fin;
-    bool con;
-    bool uns;
+    proto_bool fir;
+    proto_bool fin;
+    proto_bool con;
+    proto_bool uns;
     uint8_t seq;            ///< 4-bit application sequence
     uint8_t fc;             ///< function code
-    bool is_response;       ///< true for RESPONSE / UNSOLICITED_RESPONSE (the two IIN octets are present)
+    proto_bool is_response; ///< true for RESPONSE / UNSOLICITED_RESPONSE (the two IIN octets are present)
     uint16_t iin;           ///< internal indications (IIN1 low octet, IIN2 high octet); 0 for a request
     const uint8_t *objects; ///< pointer into the fragment at the first object header (or nullptr if none)
     size_t obj_len;         ///< object octets remaining after the header
-};
+} Dnp3AppHeader;
 
 /** @brief Compose an Application Control octet from the FIR/FIN/CON/UNS flags and a 4-bit sequence. */
-uint8_t pc_dnp3_app_control(bool fir, bool fin, bool con, bool uns, uint8_t seq);
+uint8_t pc_dnp3_app_control(proto_bool fir, proto_bool fin, proto_bool con, proto_bool uns, uint8_t seq);
 
 /**
  * @brief Build an application request fragment: AC + FC + @p obj_len object octets.
@@ -212,7 +209,7 @@ size_t pc_dnp3_build_app_response(uint8_t *out, size_t cap, uint8_t app_control,
  * @brief Decode an application fragment's header (AC + FC, plus IIN for a response) into @p out.
  * @return true iff @p len covers the header (2 octets, or 4 for a response); false otherwise.
  */
-bool pc_dnp3_parse_app_header(const uint8_t *frag, size_t len, Dnp3AppHeader *out);
+proto_bool pc_dnp3_parse_app_header(const uint8_t *frag, size_t len, Dnp3AppHeader *out);
 
 // --- object header (IEEE 1815 §4.3): group + variation + qualifier + range, after the function code ---
 
@@ -232,27 +229,27 @@ bool pc_dnp3_parse_app_header(const uint8_t *frag, size_t len, Dnp3AppHeader *ou
 #define DNP3_RANGE_COUNT_4 0x09u      ///< 4-octet object count (little-endian)
 
 /** @brief A decoded object header (from pc_dnp3_parse_object_header). */
-struct Dnp3ObjectHeader
+typedef struct
 {
     uint8_t group;          ///< object group
     uint8_t variation;      ///< object variation
     uint8_t qualifier;      ///< the raw qualifier octet
     uint8_t prefix_code;    ///< index-size / prefix code (qualifier bits 6-4)
     uint8_t range_code;     ///< range specifier code (qualifier bits 3-0)
-    bool is_count;          ///< true when the range field is an object count; false for a start/stop range
+    proto_bool is_count;    ///< true when the range field is an object count; false for a start/stop range
     uint32_t start;         ///< range start index (start/stop forms; 0 otherwise)
     uint32_t stop;          ///< range stop index (start/stop forms; 0 otherwise)
     uint32_t count;         ///< object count (count forms, or stop-start+1 for a start/stop range)
     const uint8_t *objects; ///< the object data following the header, or nullptr if none
     size_t objects_len;     ///< octets remaining after the header
-};
+} Dnp3ObjectHeader;
 
 /**
  * @brief Decode an object header (group + variation + qualifier + range) at the start of @p buf.
  * @return true iff the header and its range field fit in @p len, and the qualifier is a supported form
  *         (start-stop 0x00/0x01/0x02, no-range 0x06, or count 0x07/0x08/0x09); false otherwise.
  */
-bool pc_dnp3_parse_object_header(const uint8_t *buf, size_t len, Dnp3ObjectHeader *out);
+proto_bool pc_dnp3_parse_object_header(const uint8_t *buf, size_t len, Dnp3ObjectHeader *out);
 
 /**
  * @brief Build an object header addressing a contiguous index range [@p start, @p stop]: group + variation +
@@ -293,7 +290,7 @@ size_t pc_dnp3_build_object_header_all(uint8_t *buf, size_t cap, uint8_t group, 
  *        with an object header + index prefix inside a SELECT / OPERATE request.
  * @return DNP3_CROB_LEN (11), or 0 on a null buffer, an @p op_type > 0x0F, a @p tcc > 3, or an overflow.
  */
-size_t pc_dnp3_build_crob(uint8_t *buf, size_t cap, uint8_t op_type, uint8_t tcc, bool clear, uint8_t count,
+size_t pc_dnp3_build_crob(uint8_t *buf, size_t cap, uint8_t op_type, uint8_t tcc, proto_bool clear, uint8_t count,
                           uint32_t on_time_ms, uint32_t off_time_ms);
 
 // --- Analog Output Block (group 41): the analog counterpart to the CROB - the setpoint object a SELECT /

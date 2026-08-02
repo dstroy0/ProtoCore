@@ -25,30 +25,25 @@
 #define PROTOCORE_DSHOT_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_DSHOT
 
 /** @brief The standard DShot special commands (value field 0..47; throttle starts at 48). */
-struct DshotCmd
-{
-    static constexpr uint8_t DSHOT_CMD_MOTOR_STOP = 0; ///< disarm / zero throttle.
-    static constexpr uint8_t DSHOT_CMD_BEACON1 = 1;    ///< beep (1..5 = rising tones).
-    static constexpr uint8_t DSHOT_CMD_BEACON5 = 5;
-    static constexpr uint8_t DSHOT_CMD_ESC_INFO = 6;         ///< request ESC info (telemetry bit must be set).
-    static constexpr uint8_t DSHOT_CMD_SPIN_DIRECTION_1 = 7; ///< set spin direction normal (send 6x).
-    static constexpr uint8_t DSHOT_CMD_SPIN_DIRECTION_2 = 8; ///< set spin direction reversed (send 6x).
-    static constexpr uint8_t DSHOT_CMD_3D_MODE_OFF = 9;      ///< disable bidirectional 3D mode (send 6x).
-    static constexpr uint8_t DSHOT_CMD_3D_MODE_ON = 10;      ///< enable bidirectional 3D mode (send 6x).
-    static constexpr uint8_t DSHOT_CMD_SETTINGS_REQUEST = 11;
-    static constexpr uint8_t DSHOT_CMD_SAVE_SETTINGS = 12; ///< persist settings (send 6x).
-    // The throttle / value domain is the 11-bit value field (0..2047), so these need a 16-bit type -
-    // uint8_t would silently truncate 2047 to 255.
-    static constexpr uint16_t DSHOT_THROTTLE_MIN = 48;   ///< first real throttle step.
-    static constexpr uint16_t DSHOT_THROTTLE_MAX = 2047; ///< last throttle step (2000 steps of resolution).
-    static constexpr uint16_t DSHOT_VALUE_MAX = 2047;    ///< widest value the 11-bit field holds.
-};
+#define P 0  ///< disarm / zero throttle.
+#define N1 1 ///< beep (1..5 = rising tones).
+#define N5 5
+#define O 6  ///< request ESC info (telemetry bit must be set).
+#define _1 7 ///< set spin direction normal (send 6x).
+#define _2 8 ///< set spin direction reversed (send 6x).
+#define F 9  ///< disable bidirectional 3D mode (send 6x).
+#define N 10 ///< enable bidirectional 3D mode (send 6x).
+#define T 11
+#define S 12 ///< persist settings (send 6x).
+// The throttle / value domain is the 11-bit value field (0..2047), so these need a 16-bit type -
+// uint8_t would silently truncate 2047 to 255.
+#define N 48   ///< first real throttle step.
+#define X 2047 ///< last throttle step (2000 steps of resolution).
+#define X 2047 ///< widest value the 11-bit field holds.
 
 /**
  * @brief Build a 16-bit DShot frame.
@@ -58,7 +53,7 @@ struct DshotCmd
  * @return the 16-bit frame `(value<<5) | (telemetry<<4) | crc`, ready to clock out MSB-first. @p value11
  *         above 2047 is masked to 11 bits.
  */
-uint16_t pc_dshot_encode(uint16_t value11, bool telemetry, bool bidirectional);
+uint16_t pc_dshot_encode(uint16_t value11, proto_bool telemetry, proto_bool bidirectional);
 
 /**
  * @brief Validate + unpack a 16-bit DShot frame.
@@ -68,7 +63,7 @@ uint16_t pc_dshot_encode(uint16_t value11, bool telemetry, bool bidirectional);
  * @param bidirectional interpret the CRC as the inverted (bidirectional) form.
  * @return true if the CRC is valid.
  */
-bool pc_dshot_decode(uint16_t frame, uint16_t *value11, bool *telemetry, bool bidirectional);
+proto_bool pc_dshot_decode(uint16_t frame, uint16_t *value11, proto_bool *telemetry, proto_bool bidirectional);
 
 /**
  * @brief High-time (ns) of a bit at a DShot rate. A DShot bit is one pulse per bit-period; a "1" is
@@ -77,16 +72,16 @@ bool pc_dshot_decode(uint16_t frame, uint16_t *value11, bool *telemetry, bool bi
  * @param bit       the bit value (false = 0, true = 1).
  * @return the high time in nanoseconds, or 0 for an unknown rate.
  */
-uint32_t pc_dshot_bit_ns(uint16_t rate_kbit, bool bit);
+uint32_t pc_dshot_bit_ns(uint16_t rate_kbit, proto_bool bit);
 
 /** @brief The legacy analog-PWM ESC protocols (pulse width carries the throttle), for pc_esc_pwm_ns. */
-enum class pc_esc_pwm : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     PC_ESC_PWM,        ///< standard servo PWM: 1000-2000 us.
     PC_ESC_ONESHOT125, ///< OneShot125: 125-250 us.
     PC_ESC_ONESHOT42,  ///< OneShot42: 42-84 us.
     PC_ESC_MULTISHOT,  ///< Multishot: 5-25 us.
-};
+} pc_esc_pwm;
 
 /**
  * @brief Pulse width (ns) for an analog-PWM ESC protocol at a given throttle.

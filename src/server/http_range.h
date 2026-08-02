@@ -20,8 +20,6 @@
 
 #if PC_ENABLE_RANGE
 
-#include <stddef.h>
-
 /**
  * @brief Parse a single-range `Range: bytes=...` header value against a resource of @p size bytes.
  *

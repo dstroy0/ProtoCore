@@ -35,9 +35,6 @@
 
 #if PC_ENABLE_NATS
 
-#include <stddef.h>
-#include <stdint.h>
-
 // ---- builders (return bytes written, or 0 on overflow / bad input) ----
 
 /** @brief CONNECT: `CONNECT <options_json>\r\n`. */
@@ -59,7 +56,7 @@ size_t pc_nats_build_hpub(char *buf, size_t cap, const char *subject, const char
 size_t pc_nats_build_sub(char *buf, size_t cap, const char *subject, const char *queue, const char *sid);
 
 /** @brief UNSUB: `UNSUB <sid> [max]\r\n` (@p with_max controls the optional max-messages field). */
-size_t pc_nats_build_unsub(char *buf, size_t cap, const char *sid, uint32_t max_msgs, bool with_max);
+size_t pc_nats_build_unsub(char *buf, size_t cap, const char *sid, uint32_t max_msgs, proto_bool with_max);
 
 /** @brief PING: `PING\r\n`. */
 size_t pc_nats_build_ping(char *buf, size_t cap);
@@ -68,7 +65,7 @@ size_t pc_nats_build_ping(char *buf, size_t cap);
 size_t pc_nats_build_pong(char *buf, size_t cap);
 
 /** @brief Inbound message kind. */
-enum class NatsMsgType : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     NATS_MSG,  ///< a delivered message (subject/sid/reply/payload set)
     NATS_INFO, ///< server INFO (arg = the JSON)
@@ -77,10 +74,10 @@ enum class NatsMsgType : uint8_t
     NATS_OK,      ///< +OK
     NATS_ERR,     ///< -ERR (arg = the message)
     NATS_UNKNOWN, ///< unrecognized verb
-};
+} NatsMsgType;
 
 /** @brief One parsed inbound protocol message. String/payload fields point INTO the buffer. */
-struct NatsMsg
+typedef struct
 {
     NatsMsgType type;
     const char *subject; ///< MSG only
@@ -95,14 +92,14 @@ struct NatsMsg
     size_t headers_len;
     const char *arg; ///< INFO / -ERR argument (the rest of the control line)
     size_t arg_len;
-};
+} NatsMsg;
 
 /**
  * @brief Parse one inbound message at the head of [buf, buf+len).
  * @param consumed receives the message length (control line + any payload) so the caller can advance.
  * @return true on a complete message; false if the control line or the MSG payload is not yet buffered.
  */
-bool pc_nats_parse(const char *buf, size_t len, NatsMsg *out, size_t *consumed);
+proto_bool pc_nats_parse(const char *buf, size_t len, NatsMsg *out, size_t *consumed);
 
 #endif // PC_ENABLE_NATS
 

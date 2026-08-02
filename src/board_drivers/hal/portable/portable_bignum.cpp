@@ -25,18 +25,15 @@
 
 PC_CRYPTO_HOT
 
-namespace
-{
 // Group14 Montgomery constants, owned by one instance (internal linkage): R mod p, R^2 mod p,
 // and the init flag (all filled by bn_init()). One named owner, unreachable cross-TU.
-struct Group14Ctx
+typedef struct
 {
     pc_bignum r1; // R mod p = 2^2048 - p (two's complement of p in 2048 bits)
     pc_bignum r2; // R^2 mod p = 2^4096 mod p (bn_init() via repeated doubling)
-    bool initialized = false;
-};
+    proto_bool initialized = PROTO_FALSE;
+} Group14Ctx;
 static Group14Ctx s_g14;
-} // namespace
 
 // Subtract b from a in place (a -= b).  Assumes a >= b.  Both are n limbs.
 static void bn_sub_inplace(uint32_t *a, const uint32_t *b, int n)
@@ -111,28 +108,25 @@ static void bn_init(void)
         }
     }
 
-    s_g14.initialized = true;
+    s_g14.initialized = PROTO_TRUE;
 }
 
-namespace
-{
 // bn_expmod_group14's working set, borrowed whole. Both paths hold the DH private exponent and the
 // shared secret, so the secure pool wipes them when the borrow is released - on every exit path.
 
 // Native path: the Montgomery temporaries plus bn_monpro's 129-limb accumulator.
-struct BnExpmodWork
+typedef struct
 {
     pc_bignum base_mont;
     pc_bignum result;
     pc_bignum tmp;
     uint32_t t[129];
-};
+} BnExpmodWork;
 
 // Worst-case bytes this backend borrows in one modexp. PC_SECURE_ARENA_SIZE is derived
 // from declarations like this one; the static_assert below is what proves it.
 static_assert(sizeof(BnExpmodWork) <= PC_WORK_BIGNUM_SW,
               "BnExpmodWork outgrew PC_WORK_BIGNUM_SW - raise it; PC_SECURE_ARENA_SIZE derives from it");
-} // namespace
 
 // ---------------------------------------------------------------------------
 // Montgomery SOS multiplication: out = a * b * R^-1 mod p
@@ -205,7 +199,7 @@ void bn_expmod_group14(pc_bignum *out, const pc_bignum *base, const pc_bignum *e
         memset(out, 0, sizeof(*out)); // pool exhausted: a zero result fails every downstream check
         return;
     }
-    BnExpmodWork *w = reinterpret_cast<BnExpmodWork *>(ws.buf);
+    BnExpmodWork *w = (BnExpmodWork *)(ws.buf);
     pc_bignum *base_mont = &w->base_mont;
     pc_bignum *result = &w->result;
     pc_bignum *tmp = &w->tmp;

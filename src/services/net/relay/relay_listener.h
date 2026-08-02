@@ -31,8 +31,6 @@
 
 #if PC_ENABLE_RELAY
 
-#include <stdint.h>
-
 /**
  * @brief Bind a published listener to an origin. Call after `server.listen(port, ConnProto::PROTO_RELAY)` with
  *        the returned listener id; installs the ConnProto::PROTO_RELAY handler on the first call.
@@ -42,7 +40,7 @@
  * @return true; false if the origin host is null/too long or the bind table is full
  *         (PC_RELAY_MAX_PUBLISH).
  */
-bool pc_relay_publish(uint8_t listener_id, const char *origin_host, uint16_t origin_port);
+proto_bool pc_relay_publish(uint8_t listener_id, const char *origin_host, uint16_t origin_port);
 
 /** @brief Clear all published binds and active bridges (start from empty). */
 void pc_relay_listener_reset(void);

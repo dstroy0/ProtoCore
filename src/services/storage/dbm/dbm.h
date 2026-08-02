@@ -32,11 +32,9 @@
 #if PC_ENABLE_DBM
 
 #include "services/storage/wal/wal_store.h"
-#include <stddef.h>
-#include <stdint.h>
 
 /** @brief One in-RAM index slot. `state`: 0 empty, 1 live, 2 deleted (tombstone, still probed through). */
-struct pc_dbm_slot
+typedef struct
 {
     uint8_t state;
     uint16_t key_len;
@@ -44,28 +42,28 @@ struct pc_dbm_slot
     uint64_t val_off; ///< data-region offset of the value bytes in the WAL
     uint32_t val_len;
     char key[PC_DBM_KEY_MAX];
-};
+} pc_dbm_slot;
 
 /** @brief A dbm handle bound to a mounted ::WalStore. Declare one (static for BSS); no heap. */
-struct pc_dbm
+typedef struct pc_dbm
 {
     WalStore *wal;
     uint32_t count; ///< live keys
     pc_dbm_slot slots[PC_DBM_SLOTS];
-};
+} pc_dbm;
 
 /**
  * @brief Bind @p db to a mounted @p wal and rebuild the index by replaying the log.
  * @return false if the log holds more distinct live keys than ::PC_DBM_SLOTS (index would overflow).
  */
-bool pc_dbm_open(pc_dbm *db, WalStore *wal);
+proto_bool pc_dbm_open(pc_dbm *db, WalStore *wal);
 
 /**
  * @brief Insert or overwrite @p key -> @p val. Appends a WAL record and updates the index (not synced).
  * @return false if @p key_len > ::PC_DBM_KEY_MAX, @p val_len > ::PC_DBM_VAL_MAX, the index is full
  * (a new key with no free slot), or the WAL is full.
  */
-bool pc_dbm_put(pc_dbm *db, const char *key, uint16_t key_len, const uint8_t *val, uint32_t val_len);
+proto_bool pc_dbm_put(pc_dbm *db, const char *key, uint16_t key_len, const uint8_t *val, uint32_t val_len);
 
 /**
  * @brief Fetch @p key's value into @p buf (up to @p cap).
@@ -77,20 +75,20 @@ long pc_dbm_get(pc_dbm *db, const char *key, uint16_t key_len, uint8_t *buf, siz
  * @brief Delete @p key (appends a tombstone record and drops it from the index).
  * @return true if the key existed (and the tombstone was appended); false if absent or the WAL is full.
  */
-bool pc_dbm_del(pc_dbm *db, const char *key, uint16_t key_len);
+proto_bool pc_dbm_del(pc_dbm *db, const char *key, uint16_t key_len);
 
 /** @brief @return true if @p key is live. */
-bool pc_dbm_contains(const pc_dbm *db, const char *key, uint16_t key_len);
+proto_bool pc_dbm_contains(const pc_dbm *db, const char *key, uint16_t key_len);
 
 /** @brief @return the number of live keys. */
 uint32_t pc_dbm_count(const pc_dbm *db);
 
 /** @brief Make all writes since the last sync durable (checkpoints the WAL). @return false on I/O failure. */
-bool pc_dbm_sync(pc_dbm *db);
+proto_bool pc_dbm_sync(pc_dbm *db);
 
 /** @brief Per-key callback for ::pc_dbm_iterate; return false to stop early. The key bytes are not
  * NUL-terminated. Do not put/delete during iteration (it mutates the index). */
-using pc_dbm_iter_cb = bool (*)(const char *key, uint16_t key_len, void *ctx);
+using pc_dbm_iter_cb = proto_bool (*)(const char *key, uint16_t key_len, void *ctx);
 
 /** @brief Visit every live key (unordered). @return the number of keys visited. */
 uint32_t pc_dbm_iterate(const pc_dbm *db, pc_dbm_iter_cb cb, void *ctx);
@@ -114,7 +112,7 @@ uint64_t pc_dbm_live_bytes(const pc_dbm *db);
  * caller can retry or keep using the old store.
  * @return true when every live key was copied, the destination checkpointed, and the index rebuilt.
  */
-bool pc_dbm_compact(pc_dbm *db, WalStore *dst);
+proto_bool pc_dbm_compact(pc_dbm *db, WalStore *dst);
 
 #endif // PC_ENABLE_DBM
 #endif // PROTOCORE_DBM_H

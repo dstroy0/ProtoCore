@@ -22,18 +22,16 @@
 #define PROTOCORE_SSH_COMP_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_SSH_ZLIB
 
 /** @brief Negotiated server-to-client compression algorithm. */
-enum class SshCompAlg : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     SSH_COMP_NONE = 0,        ///< no compression (also the c2s direction, always)
     SSH_COMP_ZLIB = 1,        ///< "zlib" (RFC 4253) - starts right after NEWKEYS
     SSH_COMP_ZLIB_DELAYED = 2 ///< "zlib@openssh.com" - starts after SSH_MSG_USERAUTH_SUCCESS
-};
+} SshCompAlg;
 
 /** @brief Reset compression state for slot @p i (fresh connection). Does NOT run on a re-key. */
 void ssh_comp_reset(uint8_t i);
@@ -48,7 +46,7 @@ void ssh_comp_on_newkeys(uint8_t i);
 void ssh_comp_on_auth_success(uint8_t i);
 
 /** @brief True once the s2c stream is active and outbound payloads must be compressed. */
-bool ssh_comp_s2c_active(uint8_t i);
+proto_bool ssh_comp_s2c_active(uint8_t i);
 
 /**
  * @brief Compress one outbound payload, continuing the session's zlib stream.
@@ -60,7 +58,7 @@ int ssh_comp_s2c(uint8_t i, const uint8_t *src, size_t src_len, uint8_t *dst, si
 void ssh_comp_set_c2s(uint8_t i, SshCompAlg alg);
 
 /** @brief True once the c2s stream is active and inbound payloads must be decompressed. */
-bool ssh_comp_c2s_active(uint8_t i);
+proto_bool ssh_comp_c2s_active(uint8_t i);
 
 /**
  * @brief Decompress one inbound payload, continuing the session's client-to-server zlib stream. The

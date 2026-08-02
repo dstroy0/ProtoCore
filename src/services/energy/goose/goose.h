@@ -23,13 +23,11 @@
 #define PROTOCORE_GOOSE_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_GOOSE
 
 /** @brief The GOOSE control fields (strings are borrowed, not copied). */
-struct pc_goose
+typedef struct
 {
     const char *gocb_ref;          ///< the GOOSE control-block reference.
     uint32_t time_allowed_to_live; ///< ms the subscriber should keep this valid.
@@ -38,13 +36,13 @@ struct pc_goose
     const uint8_t *t;              ///< 8-octet UtcTime (seconds-since-epoch + fraction + quality).
     uint32_t st_num;               ///< state number (bumped on a data change).
     uint32_t sq_num;               ///< sequence number (bumped on each resend).
-    bool simulation;               ///< test/simulation flag.
+    proto_bool simulation;         ///< test/simulation flag.
     uint32_t conf_rev;             ///< configuration revision.
-    bool nds_com;                  ///< needs-commissioning flag.
+    proto_bool nds_com;            ///< needs-commissioning flag.
     uint32_t num_entries;          ///< number of dataset entries in allData.
     const uint8_t *all_data;       ///< pre-encoded BER SEQUENCE-of-Data body (contents of the AB field).
     size_t all_data_len;
-};
+} pc_goose;
 
 /**
  * @brief Build the BER IECGoosePdu (the `61 ...` structure) into @p out. @return length, or 0 on overflow.
@@ -61,7 +59,7 @@ size_t pc_goose_frame(const uint8_t *dst, const uint8_t *src, uint16_t appid, co
 
 /** @brief The decoded fields of a received GOOSE frame. String / blob members point INTO the source buffer
  *  and are NOT NUL-terminated (each has an explicit length), so the caller must keep the buffer alive. */
-struct pc_goose_rx
+typedef struct
 {
     uint16_t appid;       ///< GOOSE APPID from the header
     const char *gocb_ref; ///< gocbRef, or nullptr if absent
@@ -74,20 +72,20 @@ struct pc_goose_rx
     const uint8_t *t;        ///< 8-octet UtcTime, or nullptr
     uint32_t st_num;         ///< state number
     uint32_t sq_num;         ///< sequence number
-    bool simulation;         ///< test / simulation flag
+    proto_bool simulation;   ///< test / simulation flag
     uint32_t conf_rev;       ///< configuration revision
-    bool nds_com;            ///< needs-commissioning flag
+    proto_bool nds_com;      ///< needs-commissioning flag
     uint32_t num_entries;    ///< number of dataset entries
     const uint8_t *all_data; ///< the BER-encoded allData contents (inside the 0xAB tag), or nullptr
     size_t all_data_len;
-};
+} pc_goose_rx;
 
 /**
  * @brief Parse (subscribe to) a received GOOSE Ethernet frame into @p out. String / blob members borrow the
  *        input buffer. Unknown / future PDU tags are skipped.
  * @return true iff the ethertype is 0x88B8 and the IECGoosePdu parses without truncation; false otherwise.
  */
-bool pc_goose_parse_frame(const uint8_t *buf, size_t len, pc_goose_rx *out);
+proto_bool pc_goose_parse_frame(const uint8_t *buf, size_t len, pc_goose_rx *out);
 
 #endif // PC_ENABLE_GOOSE
 #endif // PROTOCORE_GOOSE_H

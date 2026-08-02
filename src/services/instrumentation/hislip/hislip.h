@@ -35,9 +35,6 @@
 
 #if PC_ENABLE_HISLIP
 
-#include <stddef.h>
-#include <stdint.h>
-
 /** @brief The IANA-assigned HiSLIP TCP port (both channels connect here). */
 #define PC_HISLIP_PORT 4880
 
@@ -62,57 +59,57 @@
 #define PC_HISLIP_DATA_RMT_DELIVERED 0x01 ///< bit 0: message delivered following a Response Message Terminator
 
 /** @brief HiSLIP MessageType codes (IVI-6.1). Codes 0-24 are HiSLIP 1.x; 25-38 were added in 2.0. */
-enum class HislipMsg : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
-    INITIALIZE = 0,
-    INITIALIZE_RESPONSE = 1,
-    FATAL_ERROR = 2,
-    ERROR = 3,
-    ASYNC_LOCK = 4,
-    ASYNC_LOCK_RESPONSE = 5,
-    DATA = 6,
-    DATA_END = 7,
-    DEVICE_CLEAR_COMPLETE = 8,
-    DEVICE_CLEAR_ACKNOWLEDGE = 9,
-    ASYNC_REMOTE_LOCAL_CONTROL = 10,
-    ASYNC_REMOTE_LOCAL_RESPONSE = 11,
-    TRIGGER = 12,
-    INTERRUPTED = 13,
-    ASYNC_INTERRUPTED = 14,
-    ASYNC_MAX_MSG_SIZE = 15,
-    ASYNC_MAX_MSG_SIZE_RESPONSE = 16,
-    ASYNC_INITIALIZE = 17,
-    ASYNC_INITIALIZE_RESPONSE = 18,
-    ASYNC_DEVICE_CLEAR = 19,
-    ASYNC_SERVICE_REQUEST = 20,
-    ASYNC_STATUS_QUERY = 21,
-    ASYNC_STATUS_RESPONSE = 22,
-    ASYNC_DEVICE_CLEAR_ACKNOWLEDGE = 23,
-    ASYNC_LOCK_INFO = 24,
-    ASYNC_LOCK_INFO_RESPONSE = 25,
-    GET_DESCRIPTORS = 26,
-    GET_DESCRIPTORS_RESPONSE = 27,
-    START_TLS = 28,
-    ASYNC_START_TLS = 29,
-    ASYNC_START_TLS_RESPONSE = 30,
-    END_TLS = 31,
-    ASYNC_END_TLS = 32,
-    ASYNC_END_TLS_RESPONSE = 33,
-    GET_SASL_MECHANISM_LIST = 34,
-    GET_SASL_MECHANISM_LIST_RESPONSE = 35,
-    AUTHENTICATION_START = 36,
-    AUTHENTICATION_EXCHANGE = 37,
-    AUTHENTICATION_RESULT = 38,
-};
+    HISLIP_MSG_INITIALIZE = 0,
+    HISLIP_MSG_INITIALIZE_RESPONSE = 1,
+    HISLIP_MSG_FATAL_ERROR = 2,
+    HISLIP_MSG_ERROR = 3,
+    HISLIP_MSG_ASYNC_LOCK = 4,
+    HISLIP_MSG_ASYNC_LOCK_RESPONSE = 5,
+    HISLIP_MSG_DATA = 6,
+    HISLIP_MSG_DATA_END = 7,
+    HISLIP_MSG_DEVICE_CLEAR_COMPLETE = 8,
+    HISLIP_MSG_DEVICE_CLEAR_ACKNOWLEDGE = 9,
+    HISLIP_MSG_ASYNC_REMOTE_LOCAL_CONTROL = 10,
+    HISLIP_MSG_ASYNC_REMOTE_LOCAL_RESPONSE = 11,
+    HISLIP_MSG_TRIGGER = 12,
+    HISLIP_MSG_INTERRUPTED = 13,
+    HISLIP_MSG_ASYNC_INTERRUPTED = 14,
+    HISLIP_MSG_ASYNC_MAX_MSG_SIZE = 15,
+    HISLIP_MSG_ASYNC_MAX_MSG_SIZE_RESPONSE = 16,
+    HISLIP_MSG_ASYNC_INITIALIZE = 17,
+    HISLIP_MSG_ASYNC_INITIALIZE_RESPONSE = 18,
+    HISLIP_MSG_ASYNC_DEVICE_CLEAR = 19,
+    HISLIP_MSG_ASYNC_SERVICE_REQUEST = 20,
+    HISLIP_MSG_ASYNC_STATUS_QUERY = 21,
+    HISLIP_MSG_ASYNC_STATUS_RESPONSE = 22,
+    HISLIP_MSG_ASYNC_DEVICE_CLEAR_ACKNOWLEDGE = 23,
+    HISLIP_MSG_ASYNC_LOCK_INFO = 24,
+    HISLIP_MSG_ASYNC_LOCK_INFO_RESPONSE = 25,
+    HISLIP_MSG_GET_DESCRIPTORS = 26,
+    HISLIP_MSG_GET_DESCRIPTORS_RESPONSE = 27,
+    HISLIP_MSG_START_TLS = 28,
+    HISLIP_MSG_ASYNC_START_TLS = 29,
+    HISLIP_MSG_ASYNC_START_TLS_RESPONSE = 30,
+    HISLIP_MSG_END_TLS = 31,
+    HISLIP_MSG_ASYNC_END_TLS = 32,
+    HISLIP_MSG_ASYNC_END_TLS_RESPONSE = 33,
+    HISLIP_MSG_GET_SASL_MECHANISM_LIST = 34,
+    HISLIP_MSG_GET_SASL_MECHANISM_LIST_RESPONSE = 35,
+    HISLIP_MSG_AUTHENTICATION_START = 36,
+    HISLIP_MSG_AUTHENTICATION_EXCHANGE = 37,
+    HISLIP_MSG_AUTHENTICATION_RESULT = 38,
+} HislipMsg;
 
 /** @brief A decoded HiSLIP header. */
-struct HislipHeader
+typedef struct
 {
     HislipMsg type;
     uint8_t control;      ///< ControlCode (message-specific flag; 0 when undefined)
     uint32_t parameter;   ///< MessageParameter (message-specific; 0 when undefined)
     uint64_t payload_len; ///< byte length of the payload that follows the 16-byte header
-};
+} HislipHeader;
 
 /**
  * @brief Build the 16-byte header into @p buf.
@@ -126,7 +123,7 @@ size_t pc_hislip_build_header(uint8_t *buf, size_t cap, HislipMsg type, uint8_t 
  * @return true on a valid `"HS"` prologue with @p len >= 16; false otherwise.
  * @note The message type is copied through even if beyond 38 (forward-compat); the caller decides.
  */
-bool pc_hislip_parse_header(const uint8_t *buf, size_t len, HislipHeader *out);
+proto_bool pc_hislip_parse_header(const uint8_t *buf, size_t len, HislipHeader *out);
 
 // ── handshake builders ─────────────────────────────────────────────────────────────────────────
 
@@ -164,7 +161,7 @@ size_t pc_hislip_build_async_initialize_response(uint8_t *buf, size_t cap, uint8
  *        PC_HISLIP_DATA_RMT_DELIVERED on a server response after a terminator).
  * @return total bytes written (16 + payload_len), or 0 on overflow / bad input.
  */
-size_t pc_hislip_build_data(uint8_t *buf, size_t cap, bool is_end, uint8_t control, uint32_t message_id,
+size_t pc_hislip_build_data(uint8_t *buf, size_t cap, proto_bool is_end, uint8_t control, uint32_t message_id,
                             const uint8_t *payload, size_t payload_len);
 
 /** @brief The next client MessageID (increments by 2, wraps) - see @ref PC_HISLIP_MESSAGE_ID_INIT. */
@@ -173,34 +170,34 @@ uint32_t pc_hislip_next_message_id(uint32_t id);
 // ── handshake parsers ──────────────────────────────────────────────────────────────────────────
 
 /** @brief A decoded Initialize message. @ref sub_address points INTO the source buffer. */
-struct HislipInitialize
+typedef struct
 {
     uint16_t protocol_version;
     uint16_t vendor_id;
     const char *sub_address;
     size_t sub_address_len;
-};
+} HislipInitialize;
 
 /**
  * @brief Parse a full Initialize message (header + payload) from [buf, buf+len).
  * @return true on a complete, well-formed Initialize; false otherwise.
  */
-bool pc_hislip_parse_initialize(const uint8_t *buf, size_t len, HislipInitialize *out);
+proto_bool pc_hislip_parse_initialize(const uint8_t *buf, size_t len, HislipInitialize *out);
 
 /** @brief A decoded InitializeResponse message. */
-struct HislipInitializeResponse
+typedef struct
 {
     uint16_t protocol_version;
     uint16_t session_id;
-    bool overlap;              ///< ControlCode bit 0 (prefer overlapped)
-    bool encryption_mandatory; ///< ControlCode bit 1 (2.0)
-};
+    proto_bool overlap;              ///< ControlCode bit 0 (prefer overlapped)
+    proto_bool encryption_mandatory; ///< ControlCode bit 1 (2.0)
+} HislipInitializeResponse;
 
 /**
  * @brief Parse an InitializeResponse header from [buf, buf+len).
  * @return true on a well-formed InitializeResponse; false otherwise.
  */
-bool pc_hislip_parse_initialize_response(const uint8_t *buf, size_t len, HislipInitializeResponse *out);
+proto_bool pc_hislip_parse_initialize_response(const uint8_t *buf, size_t len, HislipInitializeResponse *out);
 
 #endif // PC_ENABLE_HISLIP
 

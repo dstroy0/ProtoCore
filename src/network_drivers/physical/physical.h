@@ -23,14 +23,11 @@
 #include "board_drivers/board_profiles/pc_platform.h" // PC_VENDOR_* selector (picks the L1 backend)
 #include "network_drivers/network/ip.h"
 #include "protocore_config.h" // pc_iface
-#include <stddef.h>
-#include <stdint.h>
 
-// Does the selected vendor ship a physical (L1) backend? The real bring-up (radio / Ethernet PHY / lwIP
-// netif access) lives in a per-vendor subdir - physical/esp/ today; add physical/stm/, physical/rp/, ... as
-// they land, and OR their vendor here. When 0 (host/native, or a vendor whose PHY driver is not written yet),
-// physical.cpp supplies safe no-op stubs so the target still builds and runs headless - the L1 analogue of
-// crypto/ falling back to its portable software field path.
+// Does the selected vendor ship a physical (L1) backend? The real bring-up (radio / Ethernet PHY /
+// lwIP netif access) lives in a per-vendor subdir - physical/esp/ today; add physical/stm/,
+// physical/rp/ as they land, and OR their vendor here. When 0 (host/native, or a vendor whose PHY
+// driver is not written), physical.c supplies no-op stubs so the target still builds headless.
 #if PC_VENDOR_ESP
 #define PC_PHYSICAL_HAS_BACKEND 1
 #else
@@ -47,10 +44,10 @@
  * @param password WPA2 passphrase (null-terminated).
  * @return Always returns true (the join is fire-and-forget).
  */
-bool init_wifi_physical(const char *ssid, const char *password);
+proto_bool init_wifi_physical(const char *ssid, const char *password);
 
 /** @brief True if the WiFi station link is up (associated + an IP is assigned). */
-bool wifi_ready();
+proto_bool wifi_ready(void);
 
 /**
  * @brief Bring the WiFi radio up in station mode WITHOUT associating to an AP.
@@ -61,7 +58,7 @@ bool wifi_ready();
  *
  * @return true once the radio is started (always true on host builds).
  */
-bool init_wifi_radio_physical(uint8_t channel);
+proto_bool init_wifi_radio_physical(uint8_t channel);
 
 /**
  * @brief Bring up a softAP, enabling AP+STA coexistence so a station link can run alongside it.
@@ -70,7 +67,7 @@ bool init_wifi_radio_physical(uint8_t channel);
  * @param password softAP passphrase (null-terminated; >= 8 chars for WPA2, "" for an open AP).
  * @return true if the softAP started (false on host builds).
  */
-bool init_wifi_ap_physical(const char *ssid, const char *password);
+proto_bool init_wifi_ap_physical(const char *ssid, const char *password);
 
 /**
  * @brief Bring up a wired Ethernet link (PC_ENABLE_ETHERNET).
@@ -78,15 +75,15 @@ bool init_wifi_ap_physical(const char *ssid, const char *password);
  * A thin wrapper over the Arduino ETH library (`ETH.begin()`); the RMII PHY pins / type /
  * clock come from the standard `ETH_PHY_*` build flags for your board. Returns immediately
  * (bring-up is asynchronous); poll eth_ready(). The egress reporting already classifies a
- * wired route as pc_iface::PC_IFACE_ETH, so the server accepts on the link once it has an IP.
+ * wired route as PC_IFACE_ETH, so the server accepts on the link once it has an IP.
  *
  * @return true if ETH.begin() started the driver; false if Ethernet is disabled at build
  *         time or the driver failed to start (and always false on host builds).
  */
-bool init_eth_physical(void);
+proto_bool init_eth_physical(void);
 
 /** @brief True if the Ethernet link is up and an IP is assigned. */
-bool eth_ready(void);
+proto_bool eth_ready(void);
 
 /**
  * @brief Enable IPv6 (dual-stack) on the Wi-Fi interface (PC_ENABLE_IPV6).
@@ -98,25 +95,24 @@ bool eth_ready(void);
  *
  * @return true if IPv6 was enabled; false if disabled at build time or on host builds.
  */
-bool init_ipv6_physical(void);
+proto_bool init_ipv6_physical(void);
 
 /**
  * @brief The interface's global (routable) IPv6 address, if it has one.
- * @param[out] out receives the address (family pc_ip_family::PC_IP_V6) when true is returned.
+ * @param[out] out receives the address (family PC_IP_V6) when true is returned.
  * @return true if a valid global IPv6 address is assigned; false otherwise (incl. host builds).
  */
-bool net_global_ipv6(pc_ip *out);
+proto_bool net_global_ipv6(pc_ip *out);
 
 /** @brief True once the interface has a global IPv6 address (see net_global_ipv6()). */
-bool pc_ipv6_ready(void);
+proto_bool pc_ipv6_ready(void);
 
 /**
  * @brief Which interface currently carries outbound traffic.
  *
  * Reads the live lwIP default route, so it reflects the current state after any
- * failover the stack performed - no polling, no cached state. Returns
- * pc_iface::PC_IFACE_ETH / pc_iface::PC_IFACE_STA / pc_iface::PC_IFACE_AP, or pc_iface::PC_IFACE_ANY when no route is
- * up (and on host builds).
+ * failover the stack performed - no polling, no cached state. Returns PC_IFACE_ETH /
+ * PC_IFACE_STA / PC_IFACE_AP, or PC_IFACE_ANY when no route is up (and on host builds).
  */
 pc_iface pc_net_egress(void);
 
@@ -139,7 +135,7 @@ int8_t pc_net_rssi(void);
  *
  * @return true on success; false if @p out is null or on a host build (out is left untouched).
  */
-bool pc_net_mac(uint8_t out[6]);
+proto_bool pc_net_mac(uint8_t out[6]);
 
 /**
  * @brief Copy the MAC of the current egress interface (the live default-route netif) into @p out.
@@ -150,7 +146,7 @@ bool pc_net_mac(uint8_t out[6]);
  * @return true and fills @p out when a default interface with a 6-byte hwaddr exists; false otherwise (no
  *         egress up, @p out null, or a host build), leaving @p out untouched.
  */
-bool pc_net_egress_mac(uint8_t out[6]);
+proto_bool pc_net_egress_mac(uint8_t out[6]);
 
 /**
  * @brief Copy the associated SSID (null-terminated) into @p out.
@@ -178,8 +174,7 @@ pc_iface pc_net_classify_ip(uint32_t egress_ip, uint32_t sta_ip, uint32_t ap_ip)
  * Radio control (L1 capability contract)
  *
  * Power save and monitor mode are properties of the radio, so they belong to the layer that owns
- * the radio. Services used to reach for the vendor API directly, which put vendor flavor inside
- * the core; the core's API is unaware of the vendor, and the flavoring happens at the edge, in
+ * the radio. The core's API names no vendor; the flavoring happens at the edge, in
  * board_drivers/physical/<vendor>/.
  *
  * Every entry point below returns false / does nothing when the selected vendor has no radio
@@ -197,8 +192,8 @@ typedef enum
 /**
  * @brief One received frame, delivered in neutral terms.
  *
- * Deliberately not the vendor's received-packet struct: handing that upward is what leaked the
- * vendor into the monitor service to begin with. The FCS is already stripped.
+ * Deliberately not the vendor's received-packet struct, so no vendor type reaches a service. The
+ * FCS is already stripped.
  *
  * @param frame   Frame bytes, valid only for the duration of the call.
  * @param len     Frame length in bytes, FCS excluded.
@@ -208,7 +203,7 @@ typedef enum
 typedef void (*pc_phy_frame_fn)(const uint8_t *frame, uint16_t len, int8_t rssi, uint8_t channel);
 
 /** @brief Apply a power-save mode. @return false if there is no radio backend. */
-bool pc_phy_ps_set(pc_phy_ps mode);
+proto_bool pc_phy_ps_set(pc_phy_ps mode);
 
 /** @brief Read the active power-save mode (PC_PHY_PS_NONE when unsupported). */
 pc_phy_ps pc_phy_ps_get(void);
@@ -218,10 +213,10 @@ pc_phy_ps pc_phy_ps_get(void);
  * @param dbm Maximum transmit power in whole dBm; the backend converts to its own unit.
  * @return false if there is no radio backend.
  */
-bool pc_phy_tx_power_set(int8_t dbm);
+proto_bool pc_phy_tx_power_set(int8_t dbm);
 
 /** @brief Enter monitor mode on @p channel, delivering frames to @p cb. */
-bool pc_phy_monitor_begin(uint8_t channel, pc_phy_frame_fn cb);
+proto_bool pc_phy_monitor_begin(uint8_t channel, pc_phy_frame_fn cb);
 
 /** @brief Retune monitor mode to @p channel. */
 void pc_phy_monitor_set_channel(uint8_t channel);

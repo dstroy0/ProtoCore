@@ -31,30 +31,27 @@
 
 #if PC_ENABLE_GPIB
 
-#include <stddef.h>
-#include <stdint.h>
-
 /** @brief The Prologix GPIB-Ethernet raw-socket TCP port. */
 #define PC_GPIB_PORT 1234
 /** @brief The Prologix NetFinder UDP discovery port. */
 #define PC_GPIB_DISCOVERY_PORT 3040
 
 /** @brief GPIB terminator appended to data sent to the instrument (`++eos`). */
-enum class GpibEos : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
-    CRLF = 0,    ///< CR + LF
-    CR = 1,      ///< CR
-    LF = 2,      ///< LF
-    PC_NONE = 3, ///< none (use for binary payloads)
-};
+    GPIB_EOS_CRLF = 0,    ///< GPIB_EOS_CR + GPIB_EOS_LF
+    GPIB_EOS_CR = 1,      ///< GPIB_EOS_CR
+    GPIB_EOS_LF = 2,      ///< GPIB_EOS_LF
+    GPIB_EOS_PC_NONE = 3, ///< none (use for binary payloads)
+} GpibEos;
 
 /** @brief Read-termination mode (`++read`). */
-enum class GpibRead : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     UNTIL_TIMEOUT, ///< `++read` - read until the inter-character timeout only (NOT until EOI)
     UNTIL_EOI,     ///< `++read eoi` - read until EOI or timeout
     UNTIL_CHAR,    ///< `++read <char>` - read until the given character or timeout
-};
+} GpibRead;
 
 /**
  * @brief Build a generic `++` command line: `"++"` + @p cmd + `'\n'` (e.g. `pc_gpib_command(...,
@@ -73,7 +70,7 @@ size_t pc_gpib_addr(char *buf, size_t cap, uint8_t pad, int sad);
 
 /**
  * @brief Build a `++read` command in one of its three forms.
- * @param ch the read-until character (decimal), used only when @p mode is @ref GpibRead::UNTIL_CHAR.
+ * @param ch the read-until character (decimal), used only when @p mode is @ref UNTIL_CHAR.
  * @return characters written (excluding NUL), or 0 on overflow.
  */
 size_t pc_gpib_read(char *buf, size_t cap, GpibRead mode, uint8_t ch);
@@ -97,14 +94,14 @@ size_t pc_gpib_eos(char *buf, size_t cap, GpibEos eos);
 size_t pc_gpib_build_data(uint8_t *buf, size_t cap, const uint8_t *src, size_t len);
 
 /** @brief True if @p line is a controller command (starts with an unescaped `++`), else it is data. */
-bool pc_gpib_is_command(const char *line, size_t len);
+proto_bool pc_gpib_is_command(const char *line, size_t len);
 
 /**
  * @brief Parse a decimal integer response (trims surrounding spaces / CR / LF) - the `++spoll`
  *        status byte, the `++srq` 0/1, or a `++addr` primary address.
  * @return true on a clean decimal; false otherwise.
  */
-bool pc_gpib_parse_decimal(const char *s, size_t len, uint32_t *out);
+proto_bool pc_gpib_parse_decimal(const char *s, size_t len, uint32_t *out);
 
 /**
  * @brief Parse a `++addr` query response: a primary address, optionally a space + secondary.
@@ -112,14 +109,14 @@ bool pc_gpib_parse_decimal(const char *s, size_t len, uint32_t *out);
  * @param sad receives the secondary address, or -1 if none was present.
  * @return true on a clean response; false otherwise.
  */
-bool pc_gpib_parse_addr(const char *s, size_t len, uint8_t *pad, int *sad);
+proto_bool pc_gpib_parse_addr(const char *s, size_t len, uint8_t *pad, int *sad);
 
 /**
  * @brief Parse a `++ver` response: locate the version token after `"version "`. @p ver points INTO
  *        @p s (trailing CR/LF trimmed from @p ver_len).
  * @return true if a version token was found; false otherwise.
  */
-bool pc_gpib_parse_version(const char *s, size_t len, const char **ver, size_t *ver_len);
+proto_bool pc_gpib_parse_version(const char *s, size_t len, const char **ver, size_t *ver_len);
 
 #endif // PC_ENABLE_GPIB
 

@@ -19,7 +19,7 @@
 #include "crypto/aead/aesgcm.h"
 #include "crypto/cipher/aes_block.h"
 #include "crypto/crypto_opt.h"
-#include "crypto/crypto_scratch.h" // pc_ct_eq
+#include "crypto/ct_eq.h" // pc_ct_eq
 #include "crypto/mac/ghash.h"
 #include "mmgr/secure.h"
 #include <string.h>
@@ -32,7 +32,7 @@ PC_CRYPTO_HOT
 // GcmWork: the entire AES-256-GCM working set, laid over the shared crypto scratch. No cipher state on
 // the stack; the whole struct is wiped after each operation.
 // ===========================================================================
-struct GcmWork
+typedef struct
 {
     uint32_t rk[60]; ///< AES-256 expanded round-key schedule (software).
     uint8_t h[16];   ///< GHASH subkey H = E(K, 0^128).
@@ -43,7 +43,7 @@ struct GcmWork
     uint8_t ej0[16]; ///< E(K, J0), the tag mask.
     uint8_t j0[16];  ///< pre-counter block J0 = nonce || 0^31 || 1.
     uint8_t ctr[16]; ///< running GCTR counter.
-};
+} GcmWork;
 static_assert(
     sizeof(GcmWork) <= PC_WORK_AESGCM,
     "GcmWork outgrew PC_WORK_AESGCM - raise it in protocore_config.h, which derives PC_SECURE_ARENA_SIZE from it");
@@ -51,22 +51,20 @@ static_assert(
 // ---------------------------------------------------------------------------
 // AES-256 single-block primitive (operates on the schedule inside GcmWork)
 // ---------------------------------------------------------------------------
-namespace
-{
-inline void aes256_ecb(GcmWork *w, const uint8_t in[16], uint8_t out[16])
+static inline void aes256_ecb(GcmWork *w, const uint8_t in[16], uint8_t out[16])
 {
     pc_aes_encrypt_block(w->rk, 14, in, out);
 }
-inline void aes256_load_key(GcmWork *w, const uint8_t key[32])
+static inline void aes256_load_key(GcmWork *w, const uint8_t key[32])
 {
     pc_aes_key_expand(key, 8, w->rk);
 }
-inline void aes256_free_key(GcmWork *w)
+static inline void aes256_free_key(GcmWork *w)
 {
     (void)w; // software schedule lives in-place in GcmWork; nothing external to release
 }
 
-inline void xor16(uint8_t *dst, const uint8_t *src)
+static inline void xor16(uint8_t *dst, const uint8_t *src)
 {
     // One block = four words. Both pointers must be 4-aligned: Xtensa has no native unaligned 32-bit
     // load and the trap handler costs more than the byte loop, so test them together (OR then mask)
@@ -87,7 +85,7 @@ inline void xor16(uint8_t *dst, const uint8_t *src)
     }
 }
 
-inline void put_be64(uint8_t *p, uint64_t v)
+static inline void put_be64(uint8_t *p, uint64_t v)
 {
     for (int i = 7; i >= 0; i--)
     {
@@ -97,7 +95,7 @@ inline void put_be64(uint8_t *p, uint64_t v)
 }
 
 // Increment the low 32 bits of a 16-byte counter block, big-endian, mod 2^32 (GCM inc32).
-inline void inc32(uint8_t ctr[16])
+static inline void inc32(uint8_t ctr[16])
 {
     // A single-byte carry (ctr[15] 0xff -> 0x00 into ctr[14]) is cheap to reach and exercised by
     // test_aesgcm_gctr_counter_byte_carry; the full 2^32 wrap (~64 GiB in one call) is the only branch a
@@ -113,7 +111,7 @@ inline void inc32(uint8_t ctr[16])
 }
 
 // Derive the key-dependent state: H and the GHASH table. Done once per key, not once per record.
-void gcm_key_setup(GcmWork *w)
+static void gcm_key_setup(GcmWork *w)
 {
     memset(w->ks, 0, 16);       // zero input for H (reuses the keystream slot; overwritten by gctr later)
     aes256_ecb(w, w->ks, w->h); // H = E(K, 0^128)
@@ -121,7 +119,7 @@ void gcm_key_setup(GcmWork *w)
 }
 
 // Per-record: J0 = nonce || 0^31 || 1.
-void gcm_set_nonce(GcmWork *w, const uint8_t nonce[12])
+static void gcm_set_nonce(GcmWork *w, const uint8_t nonce[12])
 {
     memcpy(w->j0, nonce, 12);
     w->j0[12] = 0;
@@ -131,7 +129,7 @@ void gcm_set_nonce(GcmWork *w, const uint8_t nonce[12])
 }
 
 // GCTR (NIST SP 800-38D sec 6.5): out = in XOR AES-CTR keystream from @p w->ctr, advanced in place.
-void gctr(GcmWork *w, const uint8_t *in, size_t len, uint8_t *out)
+static void gctr(GcmWork *w, const uint8_t *in, size_t len, uint8_t *out)
 {
     size_t off = 0;
     while (off < len)
@@ -152,8 +150,8 @@ void gctr(GcmWork *w, const uint8_t *in, size_t len, uint8_t *out)
 }
 
 // GHASH over aad || cipher, fold in the lengths, and produce the 16-byte tag (acc XOR E(K, J0)).
-void gcm_tag(GcmWork *w, const uint8_t *aad, size_t aad_len, const uint8_t *cipher, size_t cipher_len,
-             uint8_t tag_out[16])
+static void gcm_tag(GcmWork *w, const uint8_t *aad, size_t aad_len, const uint8_t *cipher, size_t cipher_len,
+                    uint8_t tag_out[16])
 {
     memset(w->acc, 0, 16);
     ghash_update(&w->ghk, w->acc, aad, aad_len);
@@ -168,7 +166,6 @@ void gcm_tag(GcmWork *w, const uint8_t *aad, size_t aad_len, const uint8_t *ciph
         tag_out[i] = w->acc[i] ^ w->ej0[i];
     }
 }
-} // namespace
 
 // ===========================================================================
 // Public API (keyed)
@@ -176,23 +173,23 @@ void gcm_tag(GcmWork *w, const uint8_t *aad, size_t aad_len, const uint8_t *ciph
 
 pc_aesgcm_key *pc_aesgcm_key_init(void *storage, const uint8_t key[PC_AESGCM_KEY_LEN])
 {
-    GcmWork *w = reinterpret_cast<GcmWork *>(storage);
+    GcmWork *w = (GcmWork *)(storage);
     aes256_load_key(w, key);
     gcm_key_setup(w);
-    return reinterpret_cast<pc_aesgcm_key *>(w);
+    return (pc_aesgcm_key *)(w);
 }
 
 void pc_aesgcm_key_wipe(pc_aesgcm_key *k)
 {
-    GcmWork *w = reinterpret_cast<GcmWork *>(k);
+    GcmWork *w = (GcmWork *)(k);
     aes256_free_key(w);
-    pc_secure_wipe(reinterpret_cast<uint8_t *>(w), sizeof(GcmWork));
+    pc_secure_wipe((uint8_t *)(w), sizeof(GcmWork));
 }
 
 pc_cspan pc_aesgcm_seal(pc_aesgcm_key *k, const uint8_t nonce[PC_AESGCM_IV_LEN], const uint8_t *aad, size_t aad_len,
                         const uint8_t *pt, size_t pt_len, uint8_t *ct_out, uint8_t tag_out[PC_AESGCM_TAG_LEN])
 {
-    GcmWork *w = reinterpret_cast<GcmWork *>(k);
+    GcmWork *w = (GcmWork *)(k);
     gcm_set_nonce(w, nonce);
     // Encrypt with the CTR starting at inc32(J0), then GHASH the resulting ciphertext.
     memcpy(w->ctr, w->j0, 16);
@@ -202,21 +199,21 @@ pc_cspan pc_aesgcm_seal(pc_aesgcm_key *k, const uint8_t nonce[PC_AESGCM_IV_LEN],
     return pc_cspan_from(ct_out, pt_len); // the tag rides in tag_out, not in this span
 }
 
-bool pc_aesgcm_open(pc_aesgcm_key *k, const uint8_t nonce[PC_AESGCM_IV_LEN], const uint8_t *aad, size_t aad_len,
-                    const uint8_t *ct, size_t ct_len, const uint8_t tag[PC_AESGCM_TAG_LEN], uint8_t *out)
+proto_bool pc_aesgcm_open(pc_aesgcm_key *k, const uint8_t nonce[PC_AESGCM_IV_LEN], const uint8_t *aad, size_t aad_len,
+                          const uint8_t *ct, size_t ct_len, const uint8_t tag[PC_AESGCM_TAG_LEN], uint8_t *out)
 {
-    GcmWork *w = reinterpret_cast<GcmWork *>(k);
+    GcmWork *w = (GcmWork *)(k);
     gcm_set_nonce(w, nonce);
     // Authenticate over the received ciphertext BEFORE producing any plaintext (tag reuses the ej0 slot).
     gcm_tag(w, aad, aad_len, ct, ct_len, w->ej0);
     if (!pc_ct_eq(w->ej0, tag, PC_AESGCM_TAG_LEN))
     {
-        return false; // tag mismatch: nothing written
+        return PROTO_FALSE; // tag mismatch: nothing written
     }
     memcpy(w->ctr, w->j0, 16);
     inc32(w->ctr);
     gctr(w, ct, ct_len, out);
-    return true;
+    return PROTO_TRUE;
 }
 
 #endif // !PC_HAS_HW_AESGCM

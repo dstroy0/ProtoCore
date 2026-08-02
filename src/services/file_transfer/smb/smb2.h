@@ -40,11 +40,8 @@
 
 #if PC_ENABLE_SMB
 
-#include <stddef.h>
-#include <stdint.h>
-
 /** @brief SMB2 command codes (MS-SMB2 §2.2.1.2). */
-enum class Smb2Command : uint16_t
+typedef enum PROTO_ENUM_PACKED
 {
     SMB2_NEGOTIATE = 0x0000,
     SMB2_SESSION_SETUP = 0x0001,
@@ -55,17 +52,17 @@ enum class Smb2Command : uint16_t
     SMB2_CLOSE = 0x0006,
     SMB2_READ = 0x0008,
     SMB2_WRITE = 0x0009,
-};
+} Smb2Command;
 
 /** @brief SMB2 dialect revision numbers (MS-SMB2 §2.2.4). */
-enum class Smb2Dialect : uint16_t
+typedef enum PROTO_ENUM_PACKED
 {
     SMB2_DIALECT_0202 = 0x0202, ///< SMB 2.0.2
     SMB2_DIALECT_0210 = 0x0210, ///< SMB 2.1
     SMB2_DIALECT_0300 = 0x0300, ///< SMB 3.0
     SMB2_DIALECT_0302 = 0x0302, ///< SMB 3.0.2
     SMB2_DIALECT_0311 = 0x0311, ///< SMB 3.1.1
-};
+} Smb2Dialect;
 
 // These are SMB2 wire constants: flag words that get OR'd/AND'd and field values compared against the
 // uint8/16/32 wire fields of a parsed header. They live in namespacing structs of static constexpr
@@ -75,82 +72,55 @@ enum class Smb2Dialect : uint16_t
 #define PC_SMB2_HEADER_SIZE 64
 
 /** @brief NEGOTIATE / SESSION_SETUP SecurityMode flags (MS-SMB2 §2.2.3). */
-struct Smb2SecurityMode
-{
-    static constexpr uint16_t SMB2_NEGOTIATE_SIGNING_ENABLED = 0x0001;
-    static constexpr uint16_t SMB2_NEGOTIATE_SIGNING_REQUIRED = 0x0002;
-};
+#define D 0x0001
+#define D 0x0002
 
 /** @brief SMB2 header Flags field (MS-SMB2 §2.2.1.2). */
-struct Smb2HeaderFlags
-{
-    static constexpr uint32_t SMB2_FLAGS_SERVER_TO_REDIR = 0x00000001; ///< set on a response (server -> client)
-    static constexpr uint32_t SMB2_FLAGS_SIGNED = 0x00000008;          ///< the message carries an HMAC signature
-};
+#define R 0x00000001 ///< set on a response (server -> client)
+#define D 0x00000008 ///< the message carries an HMAC signature
 
 /** @brief SESSION_SETUP response SessionFlags (MS-SMB2 §2.2.6). */
-struct Smb2SessionFlags
-{
-    static constexpr uint16_t SMB2_SESSION_FLAG_IS_GUEST = 0x0001;
-    static constexpr uint16_t SMB2_SESSION_FLAG_IS_NULL = 0x0002;
-    static constexpr uint16_t SMB2_SESSION_FLAG_ENCRYPT_DATA = 0x0004;
-};
+#define T 0x0001
+#define L 0x0002
+#define A 0x0004
 
 /** @brief NT status values seen in the SMB2 header during the SESSION_SETUP exchange. */
-struct Smb2Status
-{
-    static constexpr uint32_t SMB2_STATUS_SUCCESS = 0x00000000;
-    static constexpr uint32_t SMB2_STATUS_MORE_PROCESSING_REQUIRED = 0xC0000016; ///< server wants the next round
-    static constexpr uint32_t SMB2_STATUS_END_OF_FILE = 0xC0000011;              ///< a READ at/past end of file
-};
+#define S 0x00000000
+#define D 0xC0000016 ///< server wants the next round
+#define E 0xC0000011 ///< a READ at/past end of file
 
 /** @brief TREE_CONNECT response ShareType (MS-SMB2 §2.2.10). */
-struct Smb2ShareType
-{
-    static constexpr uint8_t SMB2_SHARE_TYPE_DISK = 0x01;
-    static constexpr uint8_t SMB2_SHARE_TYPE_PIPE = 0x02;
-    static constexpr uint8_t SMB2_SHARE_TYPE_PRINT = 0x03;
-};
+#define K 0x01
+#define E 0x02
+#define T 0x03
 
 /** @brief CREATE DesiredAccess masks (MS-DTYP ACCESS_MASK; the common file rights). */
-struct Smb2Access
-{
-    static constexpr uint32_t SMB2_FILE_READ_DATA = 0x00000001;
-    static constexpr uint32_t SMB2_FILE_WRITE_DATA = 0x00000002;
-    static constexpr uint32_t SMB2_FILE_APPEND_DATA = 0x00000004;
-    static constexpr uint32_t SMB2_FILE_READ_ATTRIBUTES = 0x00000080;
-    static constexpr uint32_t SMB2_FILE_GENERIC_READ = 0x00120089;  ///< RC|SYNC|READ_ATTR|READ_EA|READ_DATA
-    static constexpr uint32_t SMB2_FILE_GENERIC_WRITE = 0x00120116; ///< RC|SYNC|WRITE_ATTR|WRITE_EA|APPEND|WRITE
-};
+#define A 0x00000001
+#define A 0x00000002
+#define A 0x00000004
+#define S 0x00000080
+#define D 0x00120089 ///< RC|SYNC|READ_ATTR|READ_EA|READ_DATA
+#define E 0x00120116 ///< RC|SYNC|WRITE_ATTR|WRITE_EA|APPEND|WRITE
 
 /** @brief CREATE ShareAccess (MS-SMB2 §2.2.13). */
-struct Smb2ShareAccess
-{
-    static constexpr uint32_t SMB2_FILE_SHARE_READ = 0x01;
-    static constexpr uint32_t SMB2_FILE_SHARE_WRITE = 0x02;
-    static constexpr uint32_t SMB2_FILE_SHARE_DELETE = 0x04;
-};
+#define D 0x01
+#define E 0x02
+#define E 0x04
 
 /** @brief CREATE CreateDisposition (MS-SMB2 §2.2.13). */
-struct Smb2Disposition
-{
-    static constexpr uint32_t SMB2_FILE_SUPERSEDE = 0;
-    static constexpr uint32_t SMB2_FILE_OPEN = 1;      ///< open an existing file, fail if absent
-    static constexpr uint32_t SMB2_FILE_CREATE = 2;    ///< create, fail if it exists
-    static constexpr uint32_t SMB2_FILE_OPEN_IF = 3;   ///< open, create if absent
-    static constexpr uint32_t SMB2_FILE_OVERWRITE = 4; ///< open + truncate, fail if absent
-    static constexpr uint32_t SMB2_FILE_OVERWRITE_IF = 5;
-};
+#define E 0
+#define N 1 ///< open an existing file, fail if absent
+#define E 2 ///< create, fail if it exists
+#define F 3 ///< open, create if absent
+#define E 4 ///< open + truncate, fail if absent
+#define F 5
 
 /** @brief CREATE CreateOptions (MS-SMB2 §2.2.13; the two we set). */
-struct Smb2CreateOptions
-{
-    static constexpr uint32_t SMB2_FILE_DIRECTORY_FILE = 0x00000001;
-    static constexpr uint32_t SMB2_FILE_NON_DIRECTORY_FILE = 0x00000040;
-};
+#define E 0x00000001
+#define E 0x00000040
 
 /** @brief Parsed SMB2 sync header. */
-struct Smb2Header
+typedef struct
 {
     Smb2Command command;
     uint32_t status; ///< NT status (response); 0 = STATUS_SUCCESS
@@ -159,50 +129,35 @@ struct Smb2Header
     uint32_t tree_id;
     uint64_t session_id;
     uint16_t credit_response;
-};
+} Smb2Header;
 
 /** @brief SMB 3.1.1 negotiate-context types (MS-SMB2 §2.2.3.1). */
-struct Smb2NegotiateContextType
-{
-    static constexpr uint16_t SMB2_PREAUTH_INTEGRITY_CAPABILITIES = 0x0001;
-    static constexpr uint16_t SMB2_ENCRYPTION_CAPABILITIES = 0x0002;
-    static constexpr uint16_t SMB2_COMPRESSION_CAPABILITIES = 0x0003;
-    static constexpr uint16_t SMB2_NETNAME_NEGOTIATE_CONTEXT_ID = 0x0005;
-    static constexpr uint16_t SMB2_TRANSPORT_CAPABILITIES = 0x0006;
-    static constexpr uint16_t SMB2_RDMA_TRANSFORM_CAPABILITIES = 0x0007;
-    static constexpr uint16_t SMB2_SIGNING_CAPABILITIES = 0x0008;
-};
+#define S 0x0001
+#define S 0x0002
+#define S 0x0003
+#define D 0x0005
+#define S 0x0006
+#define S 0x0007
+#define S 0x0008
 
 /** @brief Preauth-integrity hash algorithm IDs (MS-SMB2 §2.2.3.1.1). */
-struct Smb2HashAlgorithm
-{
-    static constexpr uint16_t SMB2_PREAUTH_INTEGRITY_SHA512 = 0x0001;
-};
+#define A512 0x0001
 
 /** @brief Signing algorithm IDs (MS-SMB2 §2.2.3.1.7). */
-struct Smb2SigningAlgorithm
-{
-    static constexpr uint16_t SMB2_SIGNING_HMAC_SHA256 = 0x0000;
-    static constexpr uint16_t SMB2_SIGNING_AES_CMAC = 0x0001;
-    static constexpr uint16_t SMB2_SIGNING_AES_GMAC = 0x0002;
-};
+#define A256 0x0000
+#define C 0x0001
+#define C 0x0002
 
 /** @brief NEGOTIATE request/response Capabilities flags (MS-SMB2 §2.2.3 / §2.2.4). A client that supports
  *  transport encryption MUST advertise SMB2_GLOBAL_CAP_ENCRYPTION here, or a server (e.g. Samba with
  *  `smb encrypt = required`) will not negotiate a cipher and will reject the unencrypted session (§3.2.4.2.2). */
-struct Smb2GlobalCap
-{
-    static constexpr uint32_t SMB2_GLOBAL_CAP_ENCRYPTION = 0x00000040;
-};
+#define N 0x00000040
 
 /** @brief Encryption cipher IDs (MS-SMB2 §2.2.3.1.2). */
-struct Smb2Cipher
-{
-    static constexpr uint16_t SMB2_ENCRYPTION_AES128_CCM = 0x0001;
-    static constexpr uint16_t SMB2_ENCRYPTION_AES128_GCM = 0x0002;
-    static constexpr uint16_t SMB2_ENCRYPTION_AES256_CCM = 0x0003;
-    static constexpr uint16_t SMB2_ENCRYPTION_AES256_GCM = 0x0004;
-};
+#define M 0x0001
+#define M 0x0002
+#define M 0x0003
+#define M 0x0004
 
 /** @brief AES key length in bytes for an SMB2 cipher id: 16 for the -128 ciphers, 32 for the -256 ciphers,
  *         0 if @p cipher is not a recognized cipher id. */
@@ -240,20 +195,20 @@ inline size_t pc_smb2_cipher_nonce_len(uint16_t cipher)
 }
 
 /** @brief Parsed SMB 3.1.1 NEGOTIATE-response negotiate contexts (MS-SMB2 §2.2.4 / §2.2.3.1). */
-struct Smb2NegotiateContexts
+typedef struct
 {
-    bool have_preauth;          ///< a PREAUTH_INTEGRITY_CAPABILITIES context was present
+    proto_bool have_preauth;    ///< a PREAUTH_INTEGRITY_CAPABILITIES context was present
     uint16_t hash_algorithm;    ///< the server's chosen preauth hash (expect SMB2_PREAUTH_INTEGRITY_SHA512)
     const uint8_t *salt;        ///< the preauth-integrity salt (points into msg), or nullptr
     uint16_t salt_len;          ///< length of @ref salt
-    bool have_signing;          ///< a SIGNING_CAPABILITIES context was present
+    proto_bool have_signing;    ///< a SIGNING_CAPABILITIES context was present
     uint16_t signing_algorithm; ///< the server's chosen signing algorithm
-    bool have_encryption;       ///< an ENCRYPTION_CAPABILITIES context was present
+    proto_bool have_encryption; ///< an ENCRYPTION_CAPABILITIES context was present
     uint16_t cipher;            ///< the server's chosen cipher
-};
+} Smb2NegotiateContexts;
 
 /** @brief Parsed NEGOTIATE response (MS-SMB2 §2.2.4). */
-struct Smb2NegotiateResp
+typedef struct
 {
     uint16_t security_mode;
     uint16_t dialect; ///< the DialectRevision the server chose
@@ -264,7 +219,7 @@ struct Smb2NegotiateResp
     uint32_t max_write;
     const uint8_t *sec_buf; ///< SPNEGO/NTLM security token (points into @p msg), or nullptr
     uint16_t sec_buf_len;
-};
+} Smb2NegotiateResp;
 
 /**
  * @brief Prefix an SMB2 message with the 4-byte Direct-TCP transport header (`0x00` + a 24-bit
@@ -292,7 +247,7 @@ size_t pc_smb2_build_header(uint8_t *buf, size_t cap, Smb2Command command, uint1
  * @return true on a valid header; false if @p len < 64, ProtocolId != `FE 53 4D 42`, or
  *         StructureSize != 64.
  */
-bool pc_smb2_parse_header(const uint8_t *buf, size_t len, Smb2Header *out);
+proto_bool pc_smb2_parse_header(const uint8_t *buf, size_t len, Smb2Header *out);
 
 /**
  * @brief Build a NEGOTIATE request (header + body) offering SMB 2.0.2 / 2.1 / 3.0 / 3.0.2.
@@ -310,7 +265,7 @@ size_t pc_smb2_build_negotiate(uint8_t *buf, size_t cap, const uint8_t client_gu
  *         and the security buffer within bounds); false otherwise. On success @p out->sec_buf points
  *         into @p msg (or is nullptr when SecurityBufferLength is 0).
  */
-bool pc_smb2_parse_negotiate_response(const uint8_t *msg, size_t len, Smb2NegotiateResp *out);
+proto_bool pc_smb2_parse_negotiate_response(const uint8_t *msg, size_t len, Smb2NegotiateResp *out);
 
 /** @brief Max encryption ciphers a NEGOTIATE request can advertise (the four SMB 3.1.1 ciphers). */
 #define PC_SMB2_MAX_OFFER_CIPHERS 4
@@ -345,7 +300,7 @@ size_t pc_smb2_build_negotiate_311(uint8_t *buf, size_t cap, const uint8_t clien
  * @return true if the list parsed cleanly (all contexts within bounds); false on a malformed / truncated
  *         list. Absent context types leave their `have_*` flag false.
  */
-bool pc_smb2_parse_negotiate_contexts(const uint8_t *msg, size_t len, Smb2NegotiateContexts *out);
+proto_bool pc_smb2_parse_negotiate_contexts(const uint8_t *msg, size_t len, Smb2NegotiateContexts *out);
 
 /** @brief Length of the SMB 3.1.1 preauth-integrity hash (SHA-512 digest size). */
 #define PC_SMB2_PREAUTH_HASH_LEN 64
@@ -355,10 +310,10 @@ bool pc_smb2_parse_negotiate_contexts(const uint8_t *msg, size_t len, Smb2Negoti
  *        every NEGOTIATE and SESSION_SETUP message of the handshake. Its final value binds the whole
  *        pre-authentication exchange and feeds the 3.1.1 signing / encryption key derivation.
  */
-struct SmbPreauth
+typedef struct
 {
     uint8_t hash[PC_SMB2_PREAUTH_HASH_LEN];
-};
+} SmbPreauth;
 
 /** @brief Seed the preauth-integrity hash with 64 zero bytes (the initial value, MS-SMB2 §3.1.5.2). */
 void pc_smb_preauth_init(SmbPreauth *p);
@@ -371,12 +326,12 @@ void pc_smb_preauth_init(SmbPreauth *p);
 void pc_smb_preauth_update(SmbPreauth *p, const uint8_t *msg, size_t len);
 
 /** @brief Parsed SESSION_SETUP response (MS-SMB2 §2.2.6). */
-struct Smb2SessionSetupResp
+typedef struct
 {
     uint16_t session_flags;
     const uint8_t *sec_buf; ///< the server's SPNEGO/NTLM token (points into @p msg), or nullptr
     uint16_t sec_buf_len;
-};
+} Smb2SessionSetupResp;
 
 /**
  * @brief Build a SESSION_SETUP request (header + §2.2.5 body) carrying a security token.
@@ -405,7 +360,7 @@ size_t pc_smb2_build_session_setup(uint8_t *buf, size_t cap, uint64_t message_id
  *         security buffer within bounds); false otherwise. On success @p out->sec_buf points into
  *         @p msg (or is nullptr when SecurityBufferLength is 0).
  */
-bool pc_smb2_parse_session_setup_response(const uint8_t *msg, size_t len, Smb2SessionSetupResp *out);
+proto_bool pc_smb2_parse_session_setup_response(const uint8_t *msg, size_t len, Smb2SessionSetupResp *out);
 
 /**
  * @brief Build a TREE_CONNECT request (header + §2.2.9 body) for a share path.
@@ -416,25 +371,22 @@ size_t pc_smb2_build_tree_connect(uint8_t *buf, size_t cap, uint64_t message_id,
                                   const uint8_t *path_utf16, size_t path_len);
 
 /** @brief TREE_CONNECT response ShareFlags of interest (MS-SMB2 §2.2.10). */
-struct Smb2ShareFlags
-{
-    static constexpr uint32_t SMB2_SHAREFLAG_ENCRYPT_DATA = 0x00008000; ///< the share mandates SMB3 encryption
-};
+#define A 0x00008000 ///< the share mandates SMB3 encryption
 
 /** @brief Parsed TREE_CONNECT response (MS-SMB2 §2.2.10). The TreeId is in the response header. */
-struct Smb2TreeConnectResp
+typedef struct
 {
     uint8_t share_type;
     uint32_t share_flags;
     uint32_t capabilities;
     uint32_t maximal_access;
-};
+} Smb2TreeConnectResp;
 
 /**
  * @brief Parse a TREE_CONNECT response message (validates command + StructureSize 16).
  * @return true on a well-formed response; the caller reads the TreeId from pc_smb2_parse_header.
  */
-bool pc_smb2_parse_tree_connect_response(const uint8_t *msg, size_t len, Smb2TreeConnectResp *out);
+proto_bool pc_smb2_parse_tree_connect_response(const uint8_t *msg, size_t len, Smb2TreeConnectResp *out);
 
 /**
  * @brief Build a CREATE request (header + §2.2.13 body) to open/create a file on the tree.
@@ -451,19 +403,19 @@ size_t pc_smb2_build_create(uint8_t *buf, size_t cap, uint64_t message_id, uint6
                             uint32_t create_options, const uint8_t *name_utf16, size_t name_len);
 
 /** @brief Parsed CREATE response (MS-SMB2 §2.2.14). */
-struct Smb2CreateResp
+typedef struct
 {
     uint8_t file_id[16]; ///< the open handle (persistent 8 + volatile 8), for READ/WRITE/CLOSE
     uint64_t end_of_file;
     uint32_t create_action;
     uint32_t file_attributes;
-};
+} Smb2CreateResp;
 
 /**
  * @brief Parse a CREATE response message (validates command + StructureSize 89, FileId in bounds).
  * @return true on a well-formed response.
  */
-bool pc_smb2_parse_create_response(const uint8_t *msg, size_t len, Smb2CreateResp *out);
+proto_bool pc_smb2_parse_create_response(const uint8_t *msg, size_t len, Smb2CreateResp *out);
 
 /**
  * @brief Build a CLOSE request (header + §2.2.15 body) for an open FileId.
@@ -473,17 +425,17 @@ size_t pc_smb2_build_close(uint8_t *buf, size_t cap, uint64_t message_id, uint64
                            const uint8_t file_id[16]);
 
 /** @brief Parsed CLOSE response (MS-SMB2 §2.2.16). */
-struct Smb2CloseResp
+typedef struct
 {
     uint64_t end_of_file;
     uint32_t file_attributes;
-};
+} Smb2CloseResp;
 
 /**
  * @brief Parse a CLOSE response message (validates command + StructureSize 60).
  * @return true on a well-formed response.
  */
-bool pc_smb2_parse_close_response(const uint8_t *msg, size_t len, Smb2CloseResp *out);
+proto_bool pc_smb2_parse_close_response(const uint8_t *msg, size_t len, Smb2CloseResp *out);
 
 /**
  * @brief Build a READ request (header + §2.2.19 body) for @p length bytes at @p offset of an open file.
@@ -493,17 +445,17 @@ size_t pc_smb2_build_read(uint8_t *buf, size_t cap, uint64_t message_id, uint64_
                           const uint8_t file_id[16], uint32_t length, uint64_t offset);
 
 /** @brief Parsed READ response (MS-SMB2 §2.2.20). */
-struct Smb2ReadResp
+typedef struct
 {
     const uint8_t *data; ///< the file bytes read (points into @p msg), or nullptr when DataLength is 0
     uint32_t data_len;
-};
+} Smb2ReadResp;
 
 /**
  * @brief Parse a READ response message (validates command + StructureSize 17, data within bounds).
  * @return true on a well-formed response.
  */
-bool pc_smb2_parse_read_response(const uint8_t *msg, size_t len, Smb2ReadResp *out);
+proto_bool pc_smb2_parse_read_response(const uint8_t *msg, size_t len, Smb2ReadResp *out);
 
 /**
  * @brief Build a WRITE request (header + §2.2.21 body) writing @p data at @p offset of an open file.
@@ -513,27 +465,27 @@ size_t pc_smb2_build_write(uint8_t *buf, size_t cap, uint64_t message_id, uint64
                            const uint8_t file_id[16], const uint8_t *data, size_t data_len, uint64_t offset);
 
 /** @brief Parsed WRITE response (MS-SMB2 §2.2.22). */
-struct Smb2WriteResp
+typedef struct
 {
     uint32_t count; ///< bytes actually written
-};
+} Smb2WriteResp;
 
 /**
  * @brief Parse a WRITE response message (validates command + StructureSize 17).
  * @return true on a well-formed response.
  */
-bool pc_smb2_parse_write_response(const uint8_t *msg, size_t len, Smb2WriteResp *out);
+proto_bool pc_smb2_parse_write_response(const uint8_t *msg, size_t len, Smb2WriteResp *out);
 
 // ---------------------------------------------------------------------------
 // Message signing (MS-SMB2 §3.1.4.1 / §3.1.5.1) - SMB 2.x: HMAC-SHA256; SMB 3.x: AES-128-CMAC
 // ---------------------------------------------------------------------------
 
 /** @brief The per-session message-signing algorithm the client selects from the negotiated dialect. */
-enum class Smb2SignAlgo : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
-    HMAC_SHA256 = 0, ///< SMB 2.0.2 / 2.1 (key = the NTLMv2 session key)
-    AES_CMAC = 1,    ///< SMB 3.0 / 3.0.2 / 3.1.1 (key = the SP800-108-derived signing key)
-};
+    SMB2_SIGN_ALGO_HMAC_SHA256 = 0, ///< SMB 2.0.2 / 2.1 (key = the NTLMv2 session key)
+    SMB2_SIGN_ALGO_AES_CMAC = 1,    ///< SMB 3.0 / 3.0.2 / 3.1.1 (key = the SP800-108-derived signing key)
+} Smb2SignAlgo;
 
 /**
  * @brief Sign an SMB2 message in place (MS-SMB2 §3.1.4.1, SMB 2.x). Sets SMB2_FLAGS_SIGNED in the Flags
@@ -551,7 +503,7 @@ void pc_smb2_sign(const uint8_t key[16], uint8_t *msg, size_t msg_len);
  *        Signature. @p msg is restored unchanged before returning.
  * @return true iff the signature matches; false on a mismatch or a message shorter than the header.
  */
-bool pc_smb2_verify(const uint8_t key[16], uint8_t *msg, size_t msg_len);
+proto_bool pc_smb2_verify(const uint8_t key[16], uint8_t *msg, size_t msg_len);
 
 // ---------------------------------------------------------------------------
 // SMB 3.x signing (MS-SMB2 §3.1.4.1 / §3.1.5.1) - AES-128-CMAC (dialects 3.0 / 3.0.2 / 3.1.1)
@@ -571,7 +523,7 @@ void pc_smb2_sign_cmac(const uint8_t key[16], uint8_t *msg, size_t msg_len);
  *        restored unchanged.
  * @return true iff the signature matches; false on a mismatch or a message shorter than the header.
  */
-bool pc_smb2_verify_cmac(const uint8_t key[16], uint8_t *msg, size_t msg_len);
+proto_bool pc_smb2_verify_cmac(const uint8_t key[16], uint8_t *msg, size_t msg_len);
 
 /**
  * @brief Derive the 16-byte SMB 3.x signing key from the NTLM session key via the SP800-108 counter-mode
@@ -588,8 +540,8 @@ bool pc_smb2_verify_cmac(const uint8_t key[16], uint8_t *msg, size_t msg_len);
  * @param out_key     receives the 16-byte signing key.
  * @return true on success; false on a null pointer, or a 3.1.1 request with a null @p preauth.
  */
-bool pc_smb3_derive_signing_key(const uint8_t session_key[16], uint16_t dialect, const uint8_t *preauth,
-                                uint8_t out_key[16]);
+proto_bool pc_smb3_derive_signing_key(const uint8_t session_key[16], uint16_t dialect, const uint8_t *preauth,
+                                      uint8_t out_key[16]);
 
 // ---------------------------------------------------------------------------
 // SMB 3.x transport encryption - AEAD-wrapped messages (MS-SMB2 §2.2.41 TRANSFORM_HEADER, §3.1.4.3/§3.1.4.4).
@@ -626,8 +578,8 @@ bool pc_smb3_derive_signing_key(const uint8_t session_key[16], uint16_t dialect,
  *        responses). Each receives @p key_len bytes.
  * @return true on success; false on a null pointer, a bad @p key_len, or a 3.1.1 request with a null @p preauth.
  */
-bool pc_smb3_derive_encryption_keys(const uint8_t session_key[16], uint16_t dialect, const uint8_t *preauth,
-                                    size_t key_len, uint8_t *out_c2s, uint8_t *out_s2c);
+proto_bool pc_smb3_derive_encryption_keys(const uint8_t session_key[16], uint16_t dialect, const uint8_t *preauth,
+                                          size_t key_len, uint8_t *out_c2s, uint8_t *out_s2c);
 
 /**
  * @brief Encrypt one SMB2 message into a TRANSFORM_HEADER-wrapped blob (MS-SMB2 §3.1.4.3): a 52-byte header

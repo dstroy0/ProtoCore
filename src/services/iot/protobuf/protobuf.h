@@ -31,9 +31,6 @@
 
 #if PC_NEED_PROTOBUF
 
-#include <stddef.h>
-#include <stdint.h>
-
 // Wire types.
 #define PB_WT_VARINT 0
 #define PB_WT_I64 1
@@ -43,32 +40,32 @@
 // ---- writer ----
 
 /** @brief Streaming encoder over a caller buffer. Treat the fields as opaque. */
-struct PbWriter
+typedef struct
 {
     uint8_t *buf;
     size_t cap;
     size_t pos;
-    bool error; ///< sticky overflow flag
-};
+    proto_bool error; ///< sticky overflow flag
+} PbWriter;
 
 void pc_pb_writer_init(PbWriter *w, uint8_t *buf, size_t cap);
 
 /** @brief Write a raw varint (no tag). */
-bool pc_pb_write_varint(PbWriter *w, uint64_t v);
+proto_bool pc_pb_write_varint(PbWriter *w, uint64_t v);
 
 /** @brief Write a field tag `(field << 3) | wire_type`. */
-bool pc_pb_write_tag(PbWriter *w, uint32_t field, uint8_t wire_type);
+proto_bool pc_pb_write_tag(PbWriter *w, uint32_t field, uint8_t wire_type);
 
-bool pc_pb_uint64(PbWriter *w, uint32_t field, uint64_t v); ///< varint (uint32/uint64/enum)
-bool pc_pb_int64(PbWriter *w, uint32_t field, int64_t v);   ///< varint, two's complement (int32/int64)
-bool pc_pb_sint64(PbWriter *w, uint32_t field, int64_t v);  ///< ZigZag varint (sint32/sint64)
-bool pc_pb_bool(PbWriter *w, uint32_t field, bool v);
-bool pc_pb_fixed32(PbWriter *w, uint32_t field, uint32_t v); ///< wire type 5
-bool pc_pb_fixed64(PbWriter *w, uint32_t field, uint64_t v); ///< wire type 1
-bool pc_pb_float(PbWriter *w, uint32_t field, float v);
-bool pc_pb_double(PbWriter *w, uint32_t field, double v);
-bool pc_pb_bytes(PbWriter *w, uint32_t field, const uint8_t *data, size_t len); ///< wire type 2
-bool pc_pb_string(PbWriter *w, uint32_t field, const char *s);
+proto_bool pc_pb_uint64(PbWriter *w, uint32_t field, uint64_t v); ///< varint (uint32/uint64/enum)
+proto_bool pc_pb_int64(PbWriter *w, uint32_t field, int64_t v);   ///< varint, two's complement (int32/int64)
+proto_bool pc_pb_sint64(PbWriter *w, uint32_t field, int64_t v);  ///< ZigZag varint (sint32/sint64)
+proto_bool pc_pb_bool(PbWriter *w, uint32_t field, proto_bool v);
+proto_bool pc_pb_fixed32(PbWriter *w, uint32_t field, uint32_t v); ///< wire type 5
+proto_bool pc_pb_fixed64(PbWriter *w, uint32_t field, uint64_t v); ///< wire type 1
+proto_bool pc_pb_float(PbWriter *w, uint32_t field, float v);
+proto_bool pc_pb_double(PbWriter *w, uint32_t field, double v);
+proto_bool pc_pb_bytes(PbWriter *w, uint32_t field, const uint8_t *data, size_t len); ///< wire type 2
+proto_bool pc_pb_string(PbWriter *w, uint32_t field, const char *s);
 
 /** @brief Finish: returns the encoded byte count, or 0 if any write overflowed. */
 size_t pc_pb_writer_finish(PbWriter *w);
@@ -76,23 +73,23 @@ size_t pc_pb_writer_finish(PbWriter *w);
 // ---- reader ----
 
 /** @brief One decoded field. For LEN, @ref data / @ref len point INTO the source buffer. */
-struct PbField
+typedef struct
 {
     uint32_t field_number;
     uint8_t wire_type;
     uint64_t value;      ///< VARINT value, or the raw LE bits for I32 / I64
     const uint8_t *data; ///< LEN payload (not copied)
     size_t len;          ///< LEN length
-};
+} PbField;
 
 /** @brief Read a raw varint at [buf+*pos]; advances *pos. False on truncation / overlong (>10 bytes). */
-bool pc_pb_read_varint(const uint8_t *buf, size_t len, size_t *pos, uint64_t *out);
+proto_bool pc_pb_read_varint(const uint8_t *buf, size_t len, size_t *pos, uint64_t *out);
 
 /**
  * @brief Read one field at [buf+*pos]; advances *pos past it.
  * @return true on a complete field; false at end-of-buffer or on a malformed / group field.
  */
-bool pc_pb_read_field(const uint8_t *buf, size_t len, size_t *pos, PbField *out);
+proto_bool pc_pb_read_field(const uint8_t *buf, size_t len, size_t *pos, PbField *out);
 
 // Value decoders.
 int64_t pc_pb_zigzag64(uint64_t v);

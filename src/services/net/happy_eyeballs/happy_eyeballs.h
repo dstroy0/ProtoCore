@@ -21,8 +21,6 @@
 
 #include "network_drivers/network/ip.h"
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_HAPPY_EYEBALLS
 
@@ -51,7 +49,7 @@ void pc_he_order(pc_ip *list, size_t n);
  * @brief Connection Attempt Delay gate (RFC 8305 sec 5): may the next candidate's attempt start yet?
  * @return true when @p now_ms - @p last_start_ms >= @p attempt_delay_ms (wrap-safe).
  */
-bool pc_he_attempt_due(uint32_t last_start_ms, uint32_t now_ms, uint32_t attempt_delay_ms);
+proto_bool pc_he_attempt_due(uint32_t last_start_ms, uint32_t now_ms, uint32_t attempt_delay_ms);
 
 #endif // PC_ENABLE_HAPPY_EYEBALLS
 #endif // PROTOCORE_HAPPY_EYEBALLS_H

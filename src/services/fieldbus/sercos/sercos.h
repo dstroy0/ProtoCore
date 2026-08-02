@@ -23,18 +23,13 @@
 #define PROTOCORE_SERCOS_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_SERCOS
 
 // SERCOS telegram types + header length: wire values, so integer constants in a struct.
-struct Sercos
-{
-    static constexpr uint8_t SERCOS_TEL_MDT = 0x00; ///< Master Data Telegram (master -> drives).
-    static constexpr uint8_t SERCOS_TEL_AT = 0x01;  ///< Acknowledge Telegram (drive -> master).
-    static constexpr uint8_t SERCOS_HDR_LEN = 4;
-};
+#define T 0x00 ///< Master Data Telegram (master -> drives).
+#define T 0x01 ///< Acknowledge Telegram (drive -> master).
+#define N 4
 
 /**
  * @brief Encode a SERCOS IDN (16-bit) from its parts.
@@ -43,10 +38,10 @@ struct Sercos
  * @param data_block the data block number 0..4095.
  * @return the 16-bit IDN: bit15 = S/P, bits14..12 = set, bits11..0 = block.
  */
-uint16_t pc_sercos_idn(bool is_product, uint8_t param_set, uint16_t data_block);
+uint16_t pc_sercos_idn(proto_bool is_product, uint8_t param_set, uint16_t data_block);
 
 /** @brief Decode a SERCOS IDN into its parts (any out-pointer may be null). */
-void pc_sercos_idn_parse(uint16_t idn, bool *is_product, uint8_t *param_set, uint16_t *data_block);
+void pc_sercos_idn_parse(uint16_t idn, proto_bool *is_product, uint8_t *param_set, uint16_t *data_block);
 
 /**
  * @brief Build a SERCOS telegram: [type][phase][cycle:2 LE][data...].
@@ -60,17 +55,17 @@ size_t pc_sercos_build(uint8_t type, uint8_t phase, uint16_t cycle, const uint8_
                        size_t cap);
 
 /** @brief A parsed SERCOS telegram (data points into the input). */
-struct SercosTelegram
+typedef struct
 {
     uint8_t type;
     uint8_t phase;
     uint16_t cycle;
     const uint8_t *data;
     size_t data_len;
-};
+} SercosTelegram;
 
 /** @brief Parse a SERCOS telegram. @return true if @p len >= 4 and the type is MDT/AT. */
-bool pc_sercos_parse(const uint8_t *frame, size_t len, SercosTelegram *out);
+proto_bool pc_sercos_parse(const uint8_t *frame, size_t len, SercosTelegram *out);
 
 #endif // PC_ENABLE_SERCOS
 #endif // PROTOCORE_SERCOS_H

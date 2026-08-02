@@ -20,11 +20,11 @@
 // ---------------------------------------------------------------------------
 
 // Big-endian 16-bit helpers and a length-prefixed UTF-8 string writer.
-#if defined(ARDUINO)
+#if PROTOCORE_HOT
 #include "network_drivers/transport/client.h" // shared outbound TCP client (L4)
 #include <Arduino.h>
 #endif
-#if defined(ARDUINO) && PC_ENABLE_MQTT_TLS
+#if PROTOCORE_HOT && PC_ENABLE_MQTT_TLS
 #include "network_drivers/tls/tls.h" // persistent client TLS session (csess)
 #include <mbedtls/ssl.h>             // MBEDTLS_ERR_SSL_WANT_* for the BIO callbacks
 #endif
@@ -74,7 +74,7 @@ size_t pc_mqtt_encode_remlen(uint8_t *out, uint32_t len)
     return n;
 }
 
-bool pc_mqtt_decode_remlen(const uint8_t *buf, size_t avail, uint32_t *value, size_t *used)
+proto_bool pc_mqtt_decode_remlen(const uint8_t *buf, size_t avail, uint32_t *value, size_t *used)
 {
     uint32_t v = 0;
     uint32_t mult = 1;
@@ -83,7 +83,7 @@ bool pc_mqtt_decode_remlen(const uint8_t *buf, size_t avail, uint32_t *value, si
     {
         if (i >= avail)
         {
-            return false; // incomplete
+            return PROTO_FALSE; // incomplete
         }
         uint8_t b = buf[i];
         v += (uint32_t)(b & 0x7F) * mult;
@@ -91,11 +91,11 @@ bool pc_mqtt_decode_remlen(const uint8_t *buf, size_t avail, uint32_t *value, si
         {
             *value = v;
             *used = i + 1;
-            return true;
+            return PROTO_TRUE;
         }
         mult *= 128;
     }
-    return false; // malformed (5th continuation byte)
+    return PROTO_FALSE; // malformed (5th continuation byte)
 }
 
 // Assemble a packet: fixed header byte0 + remaining-length, then a pre-built
@@ -204,11 +204,11 @@ size_t pc_mqtt_build_connect(uint8_t *out, size_t cap, const MqttConnectOpts *op
         n += put_str(body + n, opts->pass);
     }
 
-    return compose(out, cap, (uint8_t)((uint8_t)MqttType::MQTT_CONNECT << 4), body, n);
+    return compose(out, cap, (uint8_t)((uint8_t)MQTT_CONNECT << 4), body, n);
 }
 
 size_t pc_mqtt_build_publish(uint8_t *out, size_t cap, const char *topic, const uint8_t *payload, size_t payload_len,
-                             uint8_t qos, uint16_t packet_id, bool retain, bool dup)
+                             uint8_t qos, uint16_t packet_id, proto_bool retain, proto_bool dup)
 {
     if (!out || !topic || qos > 2)
     {
@@ -252,7 +252,7 @@ size_t pc_mqtt_build_publish(uint8_t *out, size_t cap, const char *topic, const 
     {
         f |= 0x08;
     }
-    return compose(out, cap, (uint8_t)(((uint8_t)MqttType::MQTT_PUBLISH << 4) | f), body, n);
+    return compose(out, cap, (uint8_t)(((uint8_t)MQTT_PUBLISH << 4) | f), body, n);
 }
 
 size_t pc_mqtt_build_subscribe(uint8_t *out, size_t cap, uint16_t packet_id, const char *topic, uint8_t qos)
@@ -273,7 +273,7 @@ size_t pc_mqtt_build_subscribe(uint8_t *out, size_t cap, uint16_t packet_id, con
     n += 2;
     n += put_field(body + n, (const uint8_t *)topic, tlen);
     body[n++] = (uint8_t)(qos & 0x03);
-    return compose(out, cap, (uint8_t)(((uint8_t)MqttType::MQTT_SUBSCRIBE << 4) | 0x02), body,
+    return compose(out, cap, (uint8_t)(((uint8_t)MQTT_SUBSCRIBE << 4) | 0x02), body,
                    n); // SUBSCRIBE flags = 0010
 }
 
@@ -294,7 +294,7 @@ size_t pc_mqtt_build_unsubscribe(uint8_t *out, size_t cap, uint16_t packet_id, c
     put_u16(body + n, packet_id);
     n += 2;
     n += put_field(body + n, (const uint8_t *)topic, tlen);
-    return compose(out, cap, (uint8_t)(((uint8_t)MqttType::MQTT_UNSUBSCRIBE << 4) | 0x02), body,
+    return compose(out, cap, (uint8_t)(((uint8_t)MQTT_UNSUBSCRIBE << 4) | 0x02), body,
                    n); // UNSUBSCRIBE flags = 0010
 }
 
@@ -304,7 +304,7 @@ size_t pc_mqtt_build_ack(uint8_t *out, size_t cap, MqttType type, uint16_t packe
     {
         return 0;
     }
-    uint8_t f = (type == MqttType::MQTT_PUBREL) ? 0x02 : 0x00; // PUBREL requires flags 0010
+    uint8_t f = (type == MQTT_PUBREL) ? 0x02 : 0x00; // PUBREL requires flags 0010
     out[0] = (uint8_t)(((uint8_t)type << 4) | f);
     out[1] = 0x02;
     put_u16(out + 2, packet_id);
@@ -317,7 +317,7 @@ size_t pc_mqtt_build_pingreq(uint8_t *out, size_t cap)
     {
         return 0;
     }
-    out[0] = (uint8_t)((uint8_t)MqttType::MQTT_PINGREQ << 4);
+    out[0] = (uint8_t)((uint8_t)MQTT_PINGREQ << 4);
     out[1] = 0x00;
     return 2;
 }
@@ -328,52 +328,53 @@ size_t pc_mqtt_build_disconnect(uint8_t *out, size_t cap)
     {
         return 0;
     }
-    out[0] = (uint8_t)((uint8_t)MqttType::MQTT_DISCONNECT << 4);
+    out[0] = (uint8_t)((uint8_t)MQTT_DISCONNECT << 4);
     out[1] = 0x00;
     return 2;
 }
 
-bool pc_mqtt_parse_fixed_header(const uint8_t *buf, size_t avail, uint8_t *type, uint8_t *flags,
-                                uint32_t *remaining_len, size_t *header_len)
+proto_bool pc_mqtt_parse_fixed_header(const uint8_t *buf, size_t avail, uint8_t *type, uint8_t *flags,
+                                      uint32_t *remaining_len, size_t *header_len)
 {
     if (avail < 2)
     {
-        return false;
+        return PROTO_FALSE;
     }
     uint32_t rl;
     size_t used;
     if (!pc_mqtt_decode_remlen(buf + 1, avail - 1, &rl, &used))
     {
-        return false;
+        return PROTO_FALSE;
     }
     *type = (uint8_t)(buf[0] >> 4);
     *flags = (uint8_t)(buf[0] & 0x0F);
     *remaining_len = rl;
     *header_len = 1 + used;
-    return true;
+    return PROTO_TRUE;
 }
 
-bool pc_mqtt_parse_publish(const uint8_t *buf, uint32_t remaining_len, uint8_t flags, char *topic_out, size_t topic_cap,
-                           size_t *topic_len, const uint8_t **payload, size_t *payload_len, uint16_t *packet_id)
+proto_bool pc_mqtt_parse_publish(const uint8_t *buf, uint32_t remaining_len, uint8_t flags, char *topic_out,
+                                 size_t topic_cap, size_t *topic_len, const uint8_t **payload, size_t *payload_len,
+                                 uint16_t *packet_id)
 {
     if (!buf || remaining_len < 2)
     {
-        return false;
+        return PROTO_FALSE;
     }
     uint16_t tlen = get_u16(buf);
     size_t off = 2;
     if ((uint32_t)off + tlen > remaining_len)
     {
-        return false;
+        return PROTO_FALSE;
     }
     if ((size_t)tlen + 1 > topic_cap)
     {
-        return false; // topic + NUL must fit
+        return PROTO_FALSE; // topic + NUL must fit
     }
     // MQTT 1.5.3: a UTF-8 string must be well-formed and must not contain U+0000.
     if (!pc_utf8_valid(buf + off, tlen) || memchr(buf + off, 0x00, tlen))
     {
-        return false;
+        return PROTO_FALSE;
     }
     memcpy(topic_out, buf + off, tlen);
     topic_out[tlen] = '\0';
@@ -383,21 +384,21 @@ bool pc_mqtt_parse_publish(const uint8_t *buf, uint32_t remaining_len, uint8_t f
     uint8_t qos = (uint8_t)((flags >> 1) & 0x03);
     if (qos == 3)
     {
-        return false; // MQTT-3.3.1-4: a PUBLISH MUST NOT have both QoS bits set (malformed)
+        return PROTO_FALSE; // MQTT-3.3.1-4: a PUBLISH MUST NOT have both QoS bits set (malformed)
     }
     *packet_id = 0;
     if (qos > 0)
     {
         if ((uint32_t)off + 2 > remaining_len)
         {
-            return false;
+            return PROTO_FALSE;
         }
         *packet_id = get_u16(buf + off);
         off += 2;
     }
     *payload = buf + off;
     *payload_len = remaining_len - off;
-    return true;
+    return PROTO_TRUE;
 }
 
 uint16_t pc_mqtt_parse_ack(const uint8_t *buf, uint32_t remaining_len)
@@ -409,7 +410,7 @@ uint16_t pc_mqtt_parse_ack(const uint8_t *buf, uint32_t remaining_len)
     return get_u16(buf);
 }
 
-int pc_mqtt_parse_connack(const uint8_t *buf, uint32_t remaining_len, bool *session_present)
+int pc_mqtt_parse_connack(const uint8_t *buf, uint32_t remaining_len, proto_bool *session_present)
 {
     if (!buf || remaining_len < 2)
     {
@@ -422,11 +423,11 @@ int pc_mqtt_parse_connack(const uint8_t *buf, uint32_t remaining_len, bool *sess
     return buf[1];
 }
 
-bool pc_mqtt_parse_suback(const uint8_t *buf, uint32_t remaining_len, uint16_t *packet_id, uint8_t *return_code)
+proto_bool pc_mqtt_parse_suback(const uint8_t *buf, uint32_t remaining_len, uint16_t *packet_id, uint8_t *return_code)
 {
     if (!buf || remaining_len < 3)
     {
-        return false;
+        return PROTO_FALSE;
     }
     if (packet_id)
     {
@@ -436,14 +437,14 @@ bool pc_mqtt_parse_suback(const uint8_t *buf, uint32_t remaining_len, uint16_t *
     {
         *return_code = buf[2];
     }
-    return true;
+    return PROTO_TRUE;
 }
 
 // ---------------------------------------------------------------------------
 // Transport (ESP32 only): persistent raw-lwIP TCP client + QoS state machine,
 // with mqtts:// over a persistent client TLS session (pc_tls csess).
 // ---------------------------------------------------------------------------
-#if defined(ARDUINO)
+#if PROTOCORE_HOT
 
 #ifdef PC_MQTT_DEBUG
 #define MQ_DBG(...) printf(__VA_ARGS__)
@@ -452,22 +453,22 @@ bool pc_mqtt_parse_suback(const uint8_t *buf, uint32_t remaining_len, uint16_t *
 #endif
 
 // Outbound QoS 1/2 in-flight (held for DUP retransmit until acknowledged).
-struct MqttInflight
+typedef struct
 {
     uint16_t pid;
     uint8_t state; // 0 free, 1 awaiting PUBACK(qos1)/PUBREC(qos2), 2 awaiting PUBCOMP(qos2)
     uint32_t sent_ms;
     uint16_t len;
     uint8_t pkt[PC_MQTT_INFLIGHT_BUF];
-};
+} MqttInflight;
 
 // All MQTT connection state, owned by one instance (internal linkage): one broker at a time,
 // all static / no heap. Grouped so it is one named owner, unreachable from any other TU.
-struct MqttCtx
+typedef struct
 {
     MqttMessageCb cb;
-    int cid = -1;         // outbound connection id (pc_client pool)
-    volatile bool closed; // peer closed / error (set when the pump sees it)
+    int cid = -1;               // outbound connection id (pc_client pool)
+    volatile proto_bool closed; // peer closed / error (set when the pump sees it)
 
     // Inbound plaintext byte ring (consumer = process_rx). It is fed by a pump in
     // process_rx: for plain TCP from pc_client_read, for MQTTS from the TLS session
@@ -478,12 +479,12 @@ struct MqttCtx
 
     uint8_t pkt[PC_MQTT_BUF_SIZE]; // contiguous scratch a packet is copied into to parse
     uint8_t tx[PC_MQTT_BUF_SIZE];  // outgoing packet scratch
-    bool use_tls;                  // mqtts:// mode
+    proto_bool use_tls;            // mqtts:// mode
 
-    bool mqtt_up;
+    proto_bool mqtt_up;
     uint16_t keepalive_s;
     uint32_t last_tx_ms;
-    bool ping_pending;
+    proto_bool ping_pending;
     uint32_t ping_sent_ms;
     uint16_t next_pid = 1;
     int connack_code; // set by process_rx during the connect handshake
@@ -491,7 +492,7 @@ struct MqttCtx
     MqttInflight inflight[PC_MQTT_MAX_INFLIGHT];
     // Inbound QoS 2 packet ids that have been PUBREC'd and await PUBREL (0 = empty).
     uint16_t rx_qos2[PC_MQTT_RX_QOS2_SLOTS];
-};
+} MqttCtx;
 static MqttCtx s_mqtt;
 
 static uint16_t next_pid()
@@ -528,7 +529,7 @@ static inline void ring_advance(size_t n)
 // --- transport over the shared outbound client (pc_client) ---
 
 // Send raw plaintext bytes to the broker.
-static bool mq_tx_plain(const uint8_t *data, size_t len)
+static proto_bool mq_tx_plain(const uint8_t *data, size_t len)
 {
     return pc_client_send(s_mqtt.cid, data, len);
 }
@@ -552,7 +553,7 @@ static void mq_pump_plain()
         {
             if (pc_client_is_closed(s_mqtt.cid))
             {
-                s_mqtt.closed = true;
+                s_mqtt.closed = PROTO_TRUE;
             }
             break;
         }
@@ -600,7 +601,7 @@ static void mq_pump_tls()
         {
             if (n < 0)
             {
-                s_mqtt.closed = true;
+                s_mqtt.closed = PROTO_TRUE;
             }
             break;
         }
@@ -614,9 +615,9 @@ static void mq_pump_tls()
 #endif // PC_ENABLE_MQTT_TLS
 
 // Send a complete MQTT packet (plaintext or TLS-encrypted per the mode).
-static bool mq_tx(const uint8_t *data, size_t len)
+static proto_bool mq_tx(const uint8_t *data, size_t len)
 {
-    bool ok;
+    proto_bool ok;
 #if PC_ENABLE_MQTT_TLS
     if (s_mqtt.use_tls)
     {
@@ -645,7 +646,7 @@ static void mq_close()
         pc_client_close(s_mqtt.cid);
     }
     s_mqtt.cid = -1;
-    s_mqtt.mqtt_up = false;
+    s_mqtt.mqtt_up = PROTO_FALSE;
 }
 
 static int inflight_find(uint16_t pid)
@@ -671,16 +672,16 @@ static void rxqos2_add(uint16_t pid)
         }
     }
 }
-static bool rxqos2_has(uint16_t pid)
+static proto_bool rxqos2_has(uint16_t pid)
 {
     for (int i = 0; i < PC_MQTT_RX_QOS2_SLOTS; i++)
     {
         if (s_mqtt.rx_qos2[i] == pid)
         {
-            return true;
+            return PROTO_TRUE;
         }
     }
-    return false;
+    return PROTO_FALSE;
 }
 static void rxqos2_del(uint16_t pid)
 {
@@ -698,15 +699,15 @@ static void handle_packet(uint8_t type, uint8_t flags, const uint8_t *body, uint
 {
     switch ((MqttType)type) // wire byte -> typed control-packet dispatch
     {
-    case MqttType::MQTT_CONNACK:
-        s_mqtt.connack_code = pc_mqtt_parse_connack(body, rl, nullptr);
+    case MQTT_CONNACK:
+        s_mqtt.connack_code = pc_mqtt_parse_connack(body, rl, NULL);
         if (s_mqtt.connack_code == 0)
         {
-            s_mqtt.mqtt_up = true;
+            s_mqtt.mqtt_up = PROTO_TRUE;
         }
         MQ_DBG("[mqtt] CONNACK code=%d\n", s_mqtt.connack_code);
         break;
-    case MqttType::MQTT_PUBLISH: {
+    case MQTT_PUBLISH: {
         char topic[PC_MQTT_MAX_TOPIC];
         size_t tlen;
         size_t plen;
@@ -726,7 +727,7 @@ static void handle_packet(uint8_t type, uint8_t flags, const uint8_t *body, uint
             }
             if (qos == 1)
             {
-                size_t n = pc_mqtt_build_ack(s_mqtt.tx, sizeof(s_mqtt.tx), MqttType::MQTT_PUBACK, pid);
+                size_t n = pc_mqtt_build_ack(s_mqtt.tx, sizeof(s_mqtt.tx), MQTT_PUBACK, pid);
                 mq_tx(s_mqtt.tx, n);
             }
         }
@@ -740,13 +741,13 @@ static void handle_packet(uint8_t type, uint8_t flags, const uint8_t *body, uint
                 }
                 rxqos2_add(pid);
             }
-            size_t n = pc_mqtt_build_ack(s_mqtt.tx, sizeof(s_mqtt.tx), MqttType::MQTT_PUBREC, pid);
+            size_t n = pc_mqtt_build_ack(s_mqtt.tx, sizeof(s_mqtt.tx), MQTT_PUBREC, pid);
             mq_tx(s_mqtt.tx, n);
         }
         break;
     }
-    case MqttType::MQTT_PUBACK:  // our QoS 1 publish acknowledged
-    case MqttType::MQTT_PUBCOMP: // our QoS 2 publish completed
+    case MQTT_PUBACK:  // our QoS 1 publish acknowledged
+    case MQTT_PUBCOMP: // our QoS 2 publish completed
     {
         int s = inflight_find(pc_mqtt_parse_ack(body, rl));
         if (s >= 0)
@@ -755,7 +756,7 @@ static void handle_packet(uint8_t type, uint8_t flags, const uint8_t *body, uint
         }
         break;
     }
-    case MqttType::MQTT_PUBREC: // our QoS 2 publish: reply PUBREL, await PUBCOMP
+    case MQTT_PUBREC: // our QoS 2 publish: reply PUBREL, await PUBCOMP
     {
         uint16_t pid = pc_mqtt_parse_ack(body, rl);
         int s = inflight_find(pid);
@@ -764,23 +765,23 @@ static void handle_packet(uint8_t type, uint8_t flags, const uint8_t *body, uint
             s_mqtt.inflight[s].state = 2;
             s_mqtt.inflight[s].sent_ms = millis();
         }
-        size_t n = pc_mqtt_build_ack(s_mqtt.tx, sizeof(s_mqtt.tx), MqttType::MQTT_PUBREL, pid);
+        size_t n = pc_mqtt_build_ack(s_mqtt.tx, sizeof(s_mqtt.tx), MQTT_PUBREL, pid);
         mq_tx(s_mqtt.tx, n);
         break;
     }
-    case MqttType::MQTT_PUBREL: // broker releasing an inbound QoS 2 message: reply PUBCOMP
+    case MQTT_PUBREL: // broker releasing an inbound QoS 2 message: reply PUBCOMP
     {
         uint16_t pid = pc_mqtt_parse_ack(body, rl);
         rxqos2_del(pid);
-        size_t n = pc_mqtt_build_ack(s_mqtt.tx, sizeof(s_mqtt.tx), MqttType::MQTT_PUBCOMP, pid);
+        size_t n = pc_mqtt_build_ack(s_mqtt.tx, sizeof(s_mqtt.tx), MQTT_PUBCOMP, pid);
         mq_tx(s_mqtt.tx, n);
         break;
     }
-    case MqttType::MQTT_PINGRESP:
-        s_mqtt.ping_pending = false;
+    case MQTT_PINGRESP:
+        s_mqtt.ping_pending = PROTO_FALSE;
         break;
-    case MqttType::MQTT_SUBACK:
-    case MqttType::MQTT_UNSUBACK:
+    case MQTT_SUBACK:
+    case MQTT_UNSUBACK:
     default:
         break; // acknowledgements we do not need to act on
     }
@@ -840,16 +841,16 @@ void pc_mqtt_set_message_cb(MqttMessageCb cb)
     s_mqtt.cb = cb;
 }
 
-bool pc_mqtt_connect(const char *host, uint16_t port, bool use_tls, const MqttConnectOpts *opts)
+proto_bool pc_mqtt_connect(const char *host, uint16_t port, proto_bool use_tls, const MqttConnectOpts *opts)
 {
     if (!host || !opts)
     {
-        return false;
+        return PROTO_FALSE;
     }
 #if !PC_ENABLE_MQTT_TLS
     if (use_tls)
     {
-        return false; // built without MQTTS support
+        return PROTO_FALSE; // built without MQTTS support
     }
 #endif
 
@@ -857,7 +858,7 @@ bool pc_mqtt_connect(const char *host, uint16_t port, bool use_tls, const MqttCo
     memset(s_mqtt.inflight, 0, sizeof(s_mqtt.inflight));
     memset(s_mqtt.rx_qos2, 0, sizeof(s_mqtt.rx_qos2));
     s_mqtt.rx_head = s_mqtt.rx_tail = 0;
-    s_mqtt.closed = s_mqtt.mqtt_up = s_mqtt.ping_pending = false;
+    s_mqtt.closed = s_mqtt.mqtt_up = s_mqtt.ping_pending = PROTO_FALSE;
     s_mqtt.connack_code = -1;
     s_mqtt.keepalive_s = opts->keepalive_s;
     s_mqtt.use_tls = use_tls;
@@ -868,7 +869,7 @@ bool pc_mqtt_connect(const char *host, uint16_t port, bool use_tls, const MqttCo
     s_mqtt.cid = pc_client_open(host, port, 8000);
     if (s_mqtt.cid < 0)
     {
-        return false;
+        return PROTO_FALSE;
     }
 
 #if PC_ENABLE_MQTT_TLS
@@ -877,7 +878,7 @@ bool pc_mqtt_connect(const char *host, uint16_t port, bool use_tls, const MqttCo
         if (!pc_tls_client_session_begin(host, mq_tls_send, mq_tls_recv))
         {
             mq_close();
-            return false;
+            return PROTO_FALSE;
         }
         int h;
         while ((h = pc_tls_client_session_handshake()) == 0 && !s_mqtt.closed && (int32_t)(deadline - millis()) > 0)
@@ -888,7 +889,7 @@ bool pc_mqtt_connect(const char *host, uint16_t port, bool use_tls, const MqttCo
         {
             MQ_DBG("[mqtt] TLS handshake failed (%d)\n", h);
             mq_close();
-            return false;
+            return PROTO_FALSE;
         }
     }
 #endif
@@ -897,7 +898,7 @@ bool pc_mqtt_connect(const char *host, uint16_t port, bool use_tls, const MqttCo
     if (n == 0 || !mq_tx(s_mqtt.tx, n))
     {
         mq_close();
-        return false;
+        return PROTO_FALSE;
     }
 
     // Wait for CONNACK.
@@ -909,21 +910,21 @@ bool pc_mqtt_connect(const char *host, uint16_t port, bool use_tls, const MqttCo
     if (!s_mqtt.mqtt_up)
     {
         mq_close();
-        return false;
+        return PROTO_FALSE;
     }
     s_mqtt.last_tx_ms = millis();
-    return true;
+    return PROTO_TRUE;
 }
 
-bool pc_mqtt_publish(const char *topic, const uint8_t *payload, size_t len, uint8_t qos, bool retain)
+proto_bool pc_mqtt_publish(const char *topic, const uint8_t *payload, size_t len, uint8_t qos, proto_bool retain)
 {
     if (!s_mqtt.mqtt_up || qos > 2)
     {
-        return false;
+        return PROTO_FALSE;
     }
     if (qos == 0)
     {
-        size_t n = pc_mqtt_build_publish(s_mqtt.tx, sizeof(s_mqtt.tx), topic, payload, len, 0, 0, retain, false);
+        size_t n = pc_mqtt_build_publish(s_mqtt.tx, sizeof(s_mqtt.tx), topic, payload, len, 0, 0, retain, PROTO_FALSE);
         return n && mq_tx(s_mqtt.tx, n);
     }
     // QoS 1/2: take an in-flight slot, store the serialized packet for retransmit.
@@ -941,14 +942,14 @@ bool pc_mqtt_publish(const char *topic, const uint8_t *payload, size_t len, uint
     }
     if (slot < 0)
     {
-        return false; // in-flight window full
+        return PROTO_FALSE; // in-flight window full
     }
     uint16_t pid = next_pid();
     size_t n = pc_mqtt_build_publish(s_mqtt.inflight[slot].pkt, sizeof(s_mqtt.inflight[slot].pkt), topic, payload, len,
-                                     qos, pid, retain, false);
+                                     qos, pid, retain, PROTO_FALSE);
     if (n == 0)
     {
-        return false; // too large for an in-flight slot
+        return PROTO_FALSE; // too large for an in-flight slot
     }
     s_mqtt.inflight[slot].pid = pid;
     s_mqtt.inflight[slot].state = 1;
@@ -957,37 +958,37 @@ bool pc_mqtt_publish(const char *topic, const uint8_t *payload, size_t len, uint
     return mq_tx(s_mqtt.inflight[slot].pkt, n);
 }
 
-bool pc_mqtt_subscribe(const char *topic, uint8_t qos)
+proto_bool pc_mqtt_subscribe(const char *topic, uint8_t qos)
 {
     if (!s_mqtt.mqtt_up)
     {
-        return false;
+        return PROTO_FALSE;
     }
     size_t n = pc_mqtt_build_subscribe(s_mqtt.tx, sizeof(s_mqtt.tx), next_pid(), topic, qos);
     return n && mq_tx(s_mqtt.tx, n);
 }
 
-bool pc_mqtt_unsubscribe(const char *topic)
+proto_bool pc_mqtt_unsubscribe(const char *topic)
 {
     if (!s_mqtt.mqtt_up)
     {
-        return false;
+        return PROTO_FALSE;
     }
     size_t n = pc_mqtt_build_unsubscribe(s_mqtt.tx, sizeof(s_mqtt.tx), next_pid(), topic);
     return n && mq_tx(s_mqtt.tx, n);
 }
 
-bool pc_mqtt_loop()
+proto_bool pc_mqtt_loop()
 {
     if (!s_mqtt.mqtt_up)
     {
-        return false;
+        return PROTO_FALSE;
     }
     process_rx();
     if (s_mqtt.closed)
     {
         mq_close();
-        return false;
+        return PROTO_FALSE;
     }
 
     uint32_t now = millis();
@@ -999,14 +1000,14 @@ bool pc_mqtt_loop()
         if (s_mqtt.ping_pending && (now - s_mqtt.ping_sent_ms) > ka)
         {
             mq_close();
-            return false;
+            return PROTO_FALSE;
         }
         if (!s_mqtt.ping_pending && (now - s_mqtt.last_tx_ms) >= ka)
         {
             size_t n = pc_mqtt_build_pingreq(s_mqtt.tx, sizeof(s_mqtt.tx));
             if (mq_tx(s_mqtt.tx, n))
             {
-                s_mqtt.ping_pending = true;
+                s_mqtt.ping_pending = PROTO_TRUE;
                 s_mqtt.ping_sent_ms = now;
             }
         }
@@ -1030,15 +1031,15 @@ bool pc_mqtt_loop()
         }
         else // state 2: re-send PUBREL
         {
-            size_t n = pc_mqtt_build_ack(s_mqtt.tx, sizeof(s_mqtt.tx), MqttType::MQTT_PUBREL, s_mqtt.inflight[i].pid);
+            size_t n = pc_mqtt_build_ack(s_mqtt.tx, sizeof(s_mqtt.tx), MQTT_PUBREL, s_mqtt.inflight[i].pid);
             mq_tx(s_mqtt.tx, n);
         }
         s_mqtt.inflight[i].sent_ms = now;
     }
-    return true;
+    return PROTO_TRUE;
 }
 
-bool pc_mqtt_connected()
+proto_bool pc_mqtt_connected()
 {
     return s_mqtt.mqtt_up;
 }
@@ -1058,34 +1059,34 @@ void pc_mqtt_disconnect()
 void pc_mqtt_set_message_cb(MqttMessageCb)
 {
 }
-bool pc_mqtt_connect(const char *, uint16_t, bool, const MqttConnectOpts *)
+proto_bool pc_mqtt_connect(const char *, uint16_t, proto_bool, const MqttConnectOpts *)
 {
-    return false;
+    return PROTO_FALSE;
 }
-bool pc_mqtt_publish(const char *, const uint8_t *, size_t, uint8_t, bool)
+proto_bool pc_mqtt_publish(const char *, const uint8_t *, size_t, uint8_t, proto_bool)
 {
-    return false;
+    return PROTO_FALSE;
 }
-bool pc_mqtt_subscribe(const char *, uint8_t)
+proto_bool pc_mqtt_subscribe(const char *, uint8_t)
 {
-    return false;
+    return PROTO_FALSE;
 }
-bool pc_mqtt_unsubscribe(const char *)
+proto_bool pc_mqtt_unsubscribe(const char *)
 {
-    return false;
+    return PROTO_FALSE;
 }
-bool pc_mqtt_loop()
+proto_bool pc_mqtt_loop()
 {
-    return false;
+    return PROTO_FALSE;
 }
-bool pc_mqtt_connected()
+proto_bool pc_mqtt_connected()
 {
-    return false;
+    return PROTO_FALSE;
 }
 void pc_mqtt_disconnect()
 {
 }
 
-#endif // ARDUINO
+#endif // PROTOCORE_HOT
 
 #endif // PC_ENABLE_MQTT

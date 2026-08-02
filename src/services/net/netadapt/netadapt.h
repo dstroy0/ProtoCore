@@ -23,8 +23,6 @@
 #define PROTOCORE_NETADAPT_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_NETADAPT
 
@@ -50,7 +48,8 @@ uint32_t pc_netadapt_window(uint32_t free_heap, uint32_t reserve, uint32_t min_w
  * @return true once the elapsed wait exceeds @p timeout_ms, or (when @p max_attempts > 0) the attempts
  *         reach @p max_attempts - i.e. DHCP has failed for long/often enough to fall back.
  */
-bool pc_netadapt_dhcp_fallback(uint32_t elapsed_ms, uint32_t attempts, uint32_t timeout_ms, uint32_t max_attempts);
+proto_bool pc_netadapt_dhcp_fallback(uint32_t elapsed_ms, uint32_t attempts, uint32_t timeout_ms,
+                                     uint32_t max_attempts);
 
 #endif // PC_ENABLE_NETADAPT
 #endif // PROTOCORE_NETADAPT_H

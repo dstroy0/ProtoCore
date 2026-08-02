@@ -36,9 +36,6 @@
 
 #if PC_ENABLE_HAAS_MDC
 
-#include <stddef.h>
-#include <stdint.h>
-
 /** @brief Default Haas MDC TCP port (Setting 143 "Machine Data Collect"). */
 #define PC_HAAS_MDC_TCP_PORT 5051
 /** @brief Start-of-payload byte in an MDC response frame. */
@@ -73,24 +70,24 @@ enum HaasQ : uint16_t // NOSONAR(cpp:S3642): unscoped is the documented contract
 
 /** @brief A parsed response: the comma-separated payload fields, each trimmed of surrounding spaces
  *  and pointing INTO the caller's buffer (zero-copy; the buffer must outlive the struct). */
-struct HaasMdcResp
+typedef struct
 {
     const char *field[PC_HAAS_MDC_MAX_FIELDS];
     size_t field_len[PC_HAAS_MDC_MAX_FIELDS];
     uint8_t n_fields;
-};
+} HaasMdcResp;
 
 /** @brief The decoded Q500 (program + run status + parts) response. */
-struct HaasMdcStatus
+typedef struct
 {
-    bool busy;           ///< true when the control returned `STATUS, BUSY` (no program/parts available)
+    proto_bool busy;     ///< true when the control returned `STATUS, BUSY` (no program/parts available)
     const char *program; ///< selected program (`Oxxxxx` or a name); NULL when @ref busy
     size_t program_len;
     const char *status; ///< run-status token (IDLE / FEED HOLD / ALARM / ...); `BUSY` when @ref busy
     size_t status_len;
-    uint32_t parts;   ///< parts counter (valid only when @ref parts_valid)
-    bool parts_valid; ///< false when @ref busy or the parts field was absent / non-numeric
-};
+    uint32_t parts;         ///< parts counter (valid only when @ref parts_valid)
+    proto_bool parts_valid; ///< false when @ref busy or the parts field was absent / non-numeric
+} HaasMdcStatus;
 
 /**
  * @brief Build a numbered query line: `?Q<qnum>` + CR (e.g. `pc_haas_mdc_build_q(..., HAAS_Q_SERIAL)`
@@ -113,25 +110,25 @@ size_t pc_haas_mdc_build_var(char *buf, size_t cap, uint32_t var);
  * @return true if a complete `STX ... ETB` frame with at least one field was found; false otherwise
  *         (no frame yet - the caller should accumulate more bytes).
  */
-bool pc_haas_mdc_parse(const char *buf, size_t len, HaasMdcResp *out);
+proto_bool pc_haas_mdc_parse(const char *buf, size_t len, HaasMdcResp *out);
 
 /**
  * @brief Random-access a parsed field. @p p / @p l receive a pointer into the original buffer + length.
  * @return true if @p idx < n_fields.
  */
-bool pc_haas_mdc_field(const HaasMdcResp *r, size_t idx, const char **p, size_t *l);
+proto_bool pc_haas_mdc_field(const HaasMdcResp *r, size_t idx, const char **p, size_t *l);
 
 /**
  * @brief The value of a simple `LABEL, value` response - field[1] (e.g. the serial for Q100, the
  *        version for Q101, the mode token for Q104).
  * @return true if the response has at least two fields.
  */
-bool pc_haas_mdc_value(const HaasMdcResp *r, const char **p, size_t *l);
+proto_bool pc_haas_mdc_value(const HaasMdcResp *r, const char **p, size_t *l);
 
 /**
  * @brief True if the response is the control's `UNKNOWN` error (an unsupported / lowercase command).
  */
-bool pc_haas_mdc_is_error(const HaasMdcResp *r);
+proto_bool pc_haas_mdc_is_error(const HaasMdcResp *r);
 
 /**
  * @brief Decode a Q500 response into @ref HaasMdcStatus, handling both branches: `PROGRAM, Oxxxxx,
@@ -139,7 +136,7 @@ bool pc_haas_mdc_is_error(const HaasMdcResp *r);
  *        HaasMdcStatus::busy). All string members point into the parsed buffer.
  * @return true if the response is a recognizable Q500 form; false otherwise.
  */
-bool pc_haas_mdc_parse_status(const HaasMdcResp *r, HaasMdcStatus *out);
+proto_bool pc_haas_mdc_parse_status(const HaasMdcResp *r, HaasMdcStatus *out);
 
 /**
  * @brief Decode a Q600 response `MACRO, <var>, <value>`. @p var receives the variable number; @p value
@@ -147,7 +144,7 @@ bool pc_haas_mdc_parse_status(const HaasMdcResp *r, HaasMdcStatus *out);
  *        on the wire; exposed as text so the caller keeps full precision without a float parse).
  * @return true on a well-formed `MACRO, ...` response with a numeric variable field.
  */
-bool pc_haas_mdc_parse_macro(const HaasMdcResp *r, uint32_t *var, const char **value, size_t *value_len);
+proto_bool pc_haas_mdc_parse_macro(const HaasMdcResp *r, uint32_t *var, const char **value, size_t *value_len);
 
 /**
  * @brief Extract an unprompted `DPRNT(...)` line pushed by a running program: a raw ASCII text line
@@ -157,7 +154,7 @@ bool pc_haas_mdc_parse_macro(const HaasMdcResp *r, uint32_t *var, const char **v
  * @return true for a non-empty pushed line; false if @p buf contains an STX (it is a framed Q
  *         response, not DPRNT) or is empty after stripping.
  */
-bool pc_haas_mdc_dprnt_line(const char *buf, size_t len, const char **text, size_t *text_len);
+proto_bool pc_haas_mdc_dprnt_line(const char *buf, size_t len, const char **text, size_t *text_len);
 
 #endif // PC_ENABLE_HAAS_MDC
 

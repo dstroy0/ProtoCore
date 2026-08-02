@@ -26,9 +26,6 @@
 // Shared by the HTTP/3 (QUIC) key schedule and the DTLS 1.3 record layer.
 #if (PC_ENABLE_HTTP3 || PC_ENABLE_DTLS)
 
-#include <stddef.h>
-#include <stdint.h>
-
 /** @brief HKDF-SHA256 output block length (== SHA-256 digest length). */
 #define PC_HKDF_HASH_LEN 32
 

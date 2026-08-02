@@ -8,9 +8,9 @@
  * Stamps the 6-bit DSCP into the DS field (the high 6 bits of the IPv4 TOS / IPv6 Traffic-Class byte) of
  * outbound TCP connections and UDP datagrams so a QoS-aware network - and the Wi-Fi driver's 802.11e WMM
  * access-category mapping - can prioritize real-time / safety packets over best-effort. The marking is applied
- * on tcpip_thread where the pcb is created (accept / connect / udp create), so nothing is added to the send
- * hot path. This module owns the two server-wide DSCP defaults; the per-listener and per-connection overrides
- * live with their pcb (listener.cpp / tcp.cpp) but read the defaults through here.
+ * on the stack's own thread where the pcb is created (accept / connect / udp create), so nothing is added to
+ * the send hot path. This module owns the two server-wide DSCP defaults; the per-listener and per-connection
+ * overrides live with their pcb (listener.c / tcp.c) but read the defaults through here.
  *
  * Three levels of control, coarse to fine:
  *   - pc_set_default_dscp(): every outbound TCP connection (accepted + client) gets this DSCP.
@@ -28,8 +28,6 @@
 #include "protocore_config.h"
 
 #if PC_ENABLE_DIFFSERV
-
-#include <stdint.h>
 
 // Common RFC 2474 / RFC 4594 code points for convenience; any 0-63 value is accepted.
 #define PC_DSCP_CS0 0      ///< default / best effort
@@ -66,13 +64,13 @@ uint8_t pc_diffserv_udp_dscp(void);
 /**
  * @brief Tag one accepted server connection with a DSCP (per-connection override).
  *
- * Marshalled to tcpip_thread. Lets an individual flow carry any DSCP - real per-flow QoS, or arbitrary QoS
- * tagging for network testing. Also works mid-connection (lwIP reads pcb->tos per outbound segment).
+ * Lets an individual flow carry any DSCP - real per-flow QoS, or arbitrary QoS tagging for network testing.
+ * Also works mid-connection: the DS field is read per outbound segment.
  * @param slot connection-pool slot.
  * @param dscp 0-63.
  * @return false if @p slot is out of range or no longer holds a live pcb.
  */
-bool pc_conn_set_dscp(uint8_t slot, uint8_t dscp);
+proto_bool pc_conn_set_dscp(uint8_t slot, uint8_t dscp);
 
 /**
  * @brief Set the DSCP applied to every connection accepted on @p port (per-listener override).
@@ -80,7 +78,7 @@ bool pc_conn_set_dscp(uint8_t slot, uint8_t dscp);
  * @param dscp 0-63, or PC_DSCP_UNSET to clear the override (fall back to the server default).
  * @return false if no active listener binds @p port.
  */
-bool pc_listen_set_dscp(uint16_t port, uint8_t dscp);
+proto_bool pc_listen_set_dscp(uint16_t port, uint8_t dscp);
 
 #endif // PC_ENABLE_DIFFSERV
 #endif // PROTOCORE_DIFFSERV_H

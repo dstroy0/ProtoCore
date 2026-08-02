@@ -3,7 +3,8 @@
 
 /**
  * @file types.h
- * @brief The primitive types every other file is written in, and the one place <stdint.h> appears.
+ * @brief The primitive types every other file is written in, and the one place <stdint.h> and
+ *        <stddef.h> appear.
  *
  * A library that targets xtensa, riscv, arm and c2000 cannot spend a type it has not established.
  * `uint8_t` is optional in C11 - a conforming implementation omits it when it has no 8-bit type,
@@ -37,6 +38,7 @@
 #endif
 
 #include <assert.h> // C11 spells static_assert here; C++ has it built in
+#include <stddef.h> // size_t, and the one place it enters the library
 #include <stdint.h>
 
 /// @name Fixed-width integers

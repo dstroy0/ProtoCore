@@ -33,9 +33,6 @@
 
 #if PC_ENABLE_ENIP
 
-#include <stddef.h>
-#include <stdint.h>
-
 #define EIP_HEADER_SIZE 24
 
 // Encapsulation commands.
@@ -57,7 +54,7 @@
 #define EIP_CPF_LIST_IDENTITY 0x000C     ///< List Identity response item (device identity)
 
 /** @brief The 24-octet encapsulation header. */
-struct EipHeader
+typedef struct
 {
     uint16_t command;
     uint16_t length; ///< octets of command-specific data after the header
@@ -65,13 +62,13 @@ struct EipHeader
     uint32_t status;
     uint8_t sender_context[8];
     uint32_t options;
-};
+} EipHeader;
 
 /** @brief Build the encapsulation header + command data. Returns total octets, or 0. */
 size_t pc_eip_build(uint8_t *buf, size_t cap, const EipHeader *h, const uint8_t *data, size_t data_len);
 
 /** @brief Parse the encapsulation header and slice the command data. */
-bool pc_eip_parse(const uint8_t *buf, size_t len, EipHeader *out, const uint8_t **data, size_t *data_len);
+proto_bool pc_eip_parse(const uint8_t *buf, size_t len, EipHeader *out, const uint8_t **data, size_t *data_len);
 
 /** @brief Build a RegisterSession request (protocol version 1). @p sender_context may be null (zeros). */
 size_t pc_eip_build_register_session(uint8_t *buf, size_t cap, const uint8_t sender_context[8]);
@@ -91,7 +88,7 @@ size_t pc_eip_build_send_rr_data(uint8_t *buf, size_t cap, uint32_t session_hand
                                  uint16_t timeout, const uint8_t *cip, size_t pc_cip_len);
 
 /** @brief From a SendRRData command-data block, extract the Unconnected Data item (the CIP reply). */
-bool pc_eip_parse_send_rr_data(const uint8_t *data, size_t data_len, const uint8_t **cip, size_t *pc_cip_len);
+proto_bool pc_eip_parse_send_rr_data(const uint8_t *data, size_t data_len, const uint8_t **cip, size_t *pc_cip_len);
 
 /**
  * @brief Build a ListIdentity request (command 0x0063, no command-specific data) - the broadcast an
@@ -102,7 +99,7 @@ size_t pc_eip_build_list_identity(uint8_t *buf, size_t cap, const uint8_t sender
 /** @brief The device identity decoded from a ListIdentity response item. @ref product_name points INTO the
  *  source buffer and is NOT NUL-terminated. The 16-octet CIP socket address is skipped (its sin_* fields are
  *  network-order, unlike the little-endian encapsulation, so this codec does not reinterpret them). */
-struct EipIdentity
+typedef struct
 {
     uint16_t protocol_version; ///< encapsulation protocol version (1)
     uint16_t vendor_id;
@@ -115,14 +112,14 @@ struct EipIdentity
     const char *product_name; ///< ASCII product name (into the buffer, not NUL-terminated)
     uint8_t product_name_len;
     uint8_t state; ///< device state
-};
+} EipIdentity;
 
 /**
  * @brief Parse a ListIdentity response command-data block (the octets after the encapsulation header): walk
  *        the CPF items for the List Identity item (0x000C) and decode its little-endian identity fields.
  * @return true iff a well-formed List Identity item is present and its declared length covers all fields.
  */
-bool pc_eip_parse_list_identity(const uint8_t *data, size_t data_len, EipIdentity *out);
+proto_bool pc_eip_parse_list_identity(const uint8_t *data, size_t data_len, EipIdentity *out);
 
 #endif // PC_ENABLE_ENIP
 

@@ -27,20 +27,17 @@
 
 #if PC_ENABLE_UBX
 
-#include <stddef.h>
-#include <stdint.h>
-
 #define PC_UBX_SYNC1 0xB5u ///< first sync char
 #define PC_UBX_SYNC2 0x62u ///< second sync char
 
 /** @brief A parsed UBX frame. @p payload aliases the caller's / stream's buffer (@p len octets). */
-struct pc_ubx
+typedef struct
 {
     uint8_t cls;            ///< message class
     uint8_t id;             ///< message id
     uint16_t len;           ///< payload length
     const uint8_t *payload; ///< payload (len octets); references an external buffer
-};
+} pc_ubx;
 
 /**
  * @brief 8-bit Fletcher checksum over @p body (the class..payload-end span - everything the frame
@@ -63,7 +60,7 @@ size_t pc_ubx_build_poll(uint8_t *buf, size_t cap, uint8_t cls, uint8_t id);
  * declared length against @p len, and the checksum; fills @p out (payload aliases @p s). Returns
  * false on a short / malformed / bad-checksum frame.
  */
-bool pc_ubx_parse(const uint8_t *s, size_t len, pc_ubx *out);
+proto_bool pc_ubx_parse(const uint8_t *s, size_t len, pc_ubx *out);
 
 /**
  * @brief ACK helper. Returns 1 for UBX-ACK-ACK, 0 for UBX-ACK-NAK, -1 if @p m is not an ACK frame.
@@ -134,7 +131,7 @@ struct pc_ubx_nav_pvt // NOSONAR(cpp:S1820): UBX-NAV-PVT is one fixed protocol m
  * @return true iff @p m is a NAV-PVT frame (class 0x01 / id 0x07) of at least @ref PC_UBX_NAV_PVT_LEN
  *         octets; false (and @p out untouched) otherwise.
  */
-bool pc_ubx_parse_nav_pvt(const pc_ubx *m, pc_ubx_nav_pvt *out);
+proto_bool pc_ubx_parse_nav_pvt(const pc_ubx *m, pc_ubx_nav_pvt *out);
 
 // -- NAV-SAT: per-satellite signal + usage info (variable length) --
 
@@ -145,15 +142,15 @@ bool pc_ubx_parse_nav_pvt(const pc_ubx *m, pc_ubx_nav_pvt *out);
 #define PC_UBX_SAT_USED 0x08u         ///< flags bit 3: this satellite is used in the navigation solution
 
 /** @brief NAV-SAT fixed header. */
-struct pc_ubx_nav_sat_hdr
+typedef struct
 {
     uint32_t itow_ms; ///< GPS time of week (ms)
     uint8_t version;  ///< message version (1)
     uint8_t num_svs;  ///< number of satellite blocks that follow
-};
+} pc_ubx_nav_sat_hdr;
 
 /** @brief One NAV-SAT satellite block. */
-struct pc_ubx_sat
+typedef struct
 {
     uint8_t gnss_id;    ///< GNSS identifier (0 GPS, 2 Galileo, 3 BeiDou, 5 QZSS, 6 GLONASS, ...)
     uint8_t sv_id;      ///< satellite identifier within the GNSS
@@ -162,20 +159,20 @@ struct pc_ubx_sat
     int16_t azim_deg;   ///< azimuth (deg, 0..360)
     int16_t pr_res_01m; ///< pseudorange residual (0.1 m)
     uint32_t flags;     ///< bitfield: quality (@ref PC_UBX_SAT_QUALITY_MASK), used (@ref PC_UBX_SAT_USED), ...
-};
+} pc_ubx_sat;
 
 /**
  * @brief Decode a UBX-NAV-SAT frame's fixed header (per the u-blox interface description).
  * @return true iff @p m is a NAV-SAT frame (class 0x01 / id 0x35) whose declared length holds the header
  *         plus its @c num_svs blocks; false otherwise. Walk the blocks with @ref pc_ubx_nav_sat_get.
  */
-bool pc_ubx_parse_nav_sat(const pc_ubx *m, pc_ubx_nav_sat_hdr *out);
+proto_bool pc_ubx_parse_nav_sat(const pc_ubx *m, pc_ubx_nav_sat_hdr *out);
 
 /**
  * @brief Decode satellite block @p index (0-based) from a NAV-SAT frame into @p out.
  * @return true on success, false if @p index is out of range or @p m is not a valid NAV-SAT frame.
  */
-bool pc_ubx_nav_sat_get(const pc_ubx *m, uint8_t index, pc_ubx_sat *out);
+proto_bool pc_ubx_nav_sat_get(const pc_ubx *m, uint8_t index, pc_ubx_sat *out);
 
 // -- NAV-TIMEUTC: the validated UTC time solution (for a GNSS time source) --
 
@@ -186,7 +183,7 @@ bool pc_ubx_nav_sat_get(const pc_ubx *m, uint8_t index, pc_ubx_sat *out);
 #define PC_UBX_TIMEUTC_VALID_UTC 0x04u ///< valid flags bit 2: the UTC time is valid (leap seconds known)
 
 /** @brief Decoded UBX-NAV-TIMEUTC payload. */
-struct pc_ubx_nav_time_utc
+typedef struct
 {
     uint32_t itow_ms;     ///< GPS time of week (ms)
     uint32_t time_acc_ns; ///< time accuracy estimate (ns)
@@ -198,14 +195,14 @@ struct pc_ubx_nav_time_utc
     uint8_t minute;       ///< UTC minute (0..59)
     uint8_t second;       ///< UTC second (0..60)
     uint8_t valid;        ///< validity flags (@ref PC_UBX_TIMEUTC_VALID_TOW / _WKN / _UTC + utcStandard)
-    bool utc_valid;       ///< convenience: the UTC-valid bit is set (leap seconds resolved)
-};
+    proto_bool utc_valid; ///< convenience: the UTC-valid bit is set (leap seconds resolved)
+} pc_ubx_nav_time_utc;
 
 /**
  * @brief Decode a UBX-NAV-TIMEUTC frame into @p out (the receiver's UTC time, for a GNSS time source).
  * @return true iff @p m is a NAV-TIMEUTC frame (class 0x01 / id 0x21) of at least 20 octets; false otherwise.
  */
-bool pc_ubx_parse_nav_timeutc(const pc_ubx *m, pc_ubx_nav_time_utc *out);
+proto_bool pc_ubx_parse_nav_timeutc(const pc_ubx *m, pc_ubx_nav_time_utc *out);
 
 // -- CFG: configure the receiver (which messages to emit, and how fast) --
 
@@ -243,7 +240,7 @@ enum pc_ubx_feed
 };
 
 /** @brief Streaming demultiplexer state for a mixed NMEA + UBX byte stream. Zero-initialize / init. */
-struct pc_ubx_stream
+typedef struct
 {
     uint8_t state;                   ///< internal parser state
     uint8_t cls;                     ///< class of the frame in progress
@@ -255,7 +252,7 @@ struct pc_ubx_stream
     uint8_t ck_b;                    ///< running checksum B
     uint8_t rx_ck_a;                 ///< received checksum A (awaiting B to compare)
     uint8_t buf[PC_UBX_MAX_PAYLOAD]; ///< payload accumulator
-};
+} pc_ubx_stream;
 
 /** @brief Reset a demux to the idle (hunting-for-sync) state. */
 void pc_ubx_stream_init(pc_ubx_stream *st);

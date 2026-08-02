@@ -30,7 +30,6 @@
 #if PC_ENABLE_CLOUDEVENTS
 
 #include "network_drivers/presentation/http/http_parser/http_parser.h"
-#include <stddef.h>
 
 /**
  * @brief A CloudEvents v1.0 event. The three required context attributes are
@@ -40,7 +39,7 @@
  * pre-formatted JSON value, emitted verbatim) or @ref data_str (a plain string,
  * JSON-escaped) may be set; leave both null for an event with no data.
  */
-struct CloudEvent
+typedef struct
 {
     const char *id;              ///< required: unique id for this event (e.g. a counter / UUID)
     const char *source;          ///< required: the producer context URI-reference (e.g. "/devices/esp32-1")
@@ -49,7 +48,7 @@ struct CloudEvent
     const char *datacontenttype; ///< optional: media type of data (default "application/json" when data_json set)
     const char *data_json;       ///< optional: data as a pre-formatted JSON value (object/array/number/...)
     const char *data_str;        ///< optional: data as a plain string (emitted as a JSON string)
-};
+} CloudEvent;
 
 /**
  * @brief Build a structured CloudEvents JSON envelope into @p buf.
@@ -71,7 +70,7 @@ size_t pc_cloudevents_build_json(char *buf, size_t cap, const CloudEvent *ce);
  *
  * @return true if the three required attributes (id, source, type) are present.
  */
-bool pc_cloudevents_from_headers(const HttpReq *req, CloudEvent *out);
+proto_bool pc_cloudevents_from_headers(const HttpReq *req, CloudEvent *out);
 
 #endif // PC_ENABLE_CLOUDEVENTS
 

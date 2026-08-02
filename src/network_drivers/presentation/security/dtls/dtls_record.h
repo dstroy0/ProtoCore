@@ -37,9 +37,6 @@
 
 #if PC_ENABLE_DTLS
 
-#include <stddef.h>
-#include <stdint.h>
-
 /** @name Record content types (RFC 8446 §5 / RFC 9147 §4).
  *  Shared by the DTLSPlaintext `type` field and the DTLSInnerPlaintext trailing content type. */
 ///@{
@@ -65,10 +62,10 @@
 #define PC_DTLS_CID_MAX 8
 
 /** @brief Record-layer AEAD suites (phase 1: AEAD_AES_128_GCM with SHA-256). */
-enum class DtlsCipher : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
-    AES_128_GCM_SHA256 = 0
-};
+    DTLS_CIPHER_AES_128_GCM_SHA256 = 0
+} DtlsCipher;
 
 /**
  * @brief One direction's record-protection keys for one epoch (RFC 9147 §4).
@@ -76,7 +73,7 @@ enum class DtlsCipher : uint8_t
  * Derived from a TLS 1.3 traffic secret; holds the AEAD key + write IV plus the separate
  * sequence-number-encryption key. One instance per (epoch, direction).
  */
-struct DtlsRecordKeys
+typedef struct
 {
     DtlsCipher cipher;                         ///< negotiated AEAD (phase 1: AES-128-GCM)
     uint16_t epoch;                            ///< this epoch number; its low 2 bits appear in the unified header
@@ -86,7 +83,7 @@ struct DtlsRecordKeys
     uint8_t iv[12];                            ///< AEAD write IV (per-record nonce = iv XOR sequence_number)
     alignas(8) uint8_t sn_key[PC_WORK_AES128]; ///< Keyed sequence-number-protection context.
                                                ///< Built once; see quic_crypto.h for the numbers.
-};
+} DtlsRecordKeys;
 
 /**
  * @brief Derive the directional record keys from a 32-byte TLS 1.3 traffic secret.
@@ -108,14 +105,14 @@ size_t pc_dtls_plaintext_build(uint8_t content_type, uint16_t epoch, uint64_t se
                                size_t frag_len, uint8_t *out, size_t out_cap);
 
 /** @brief Parsed view of a DTLSPlaintext record (fields point into the caller's buffer). */
-struct DtlsPlaintext
+typedef struct
 {
     uint8_t content_type;
     uint16_t epoch;
     uint64_t seq;            ///< 48-bit record sequence number
     const uint8_t *fragment; ///< into the input buffer
     size_t frag_len;
-};
+} DtlsPlaintext;
 
 /**
  * @brief Parse a DTLSPlaintext record, validating legacy_version and the length field.
@@ -144,17 +141,17 @@ size_t pc_dtls_plaintext_parse(const uint8_t *rec, size_t rec_len, DtlsPlaintext
  * @return bytes written, or 0 on overflow / unsupported cipher / an over-long CID.
  */
 size_t pc_dtls_ciphertext_protect(DtlsRecordKeys &keys, uint64_t seq, uint8_t content_type, const uint8_t *plaintext,
-                                  size_t pt_len, uint8_t *out, size_t out_cap, const uint8_t *cid = nullptr,
+                                  size_t pt_len, uint8_t *out, size_t out_cap, const uint8_t *cid = NULL,
                                   size_t cid_len = 0);
 
 /** @brief Result of a successful @ref pc_dtls_ciphertext_unprotect. */
-struct DtlsCiphertext
+typedef struct
 {
     uint8_t content_type; ///< recovered inner content type (last non-zero byte of the inner plaintext)
     uint16_t epoch;       ///< epoch of @p keys (its low 2 bits matched the header)
     uint64_t seq;         ///< reconstructed full sequence number
     size_t pt_len;        ///< plaintext bytes written to @p out
-};
+} DtlsCiphertext;
 
 /**
  * @brief Unprotect one received DTLSCiphertext record (RFC 9147 §4.2).
@@ -173,21 +170,21 @@ struct DtlsCiphertext
  * @return true on success (@p out / @p info filled); false on a malformed header, an epoch-bit
  *         mismatch, an unexpected / mismatched connection id, a failed AEAD tag, or an output overflow.
  */
-bool pc_dtls_ciphertext_unprotect(DtlsRecordKeys &keys, uint64_t next_seq, const uint8_t *rec, size_t rec_len,
-                                  uint8_t *out, size_t out_cap, DtlsCiphertext *info,
-                                  const uint8_t *expected_cid = nullptr, size_t expected_cid_len = 0);
+proto_bool pc_dtls_ciphertext_unprotect(DtlsRecordKeys &keys, uint64_t next_seq, const uint8_t *rec, size_t rec_len,
+                                        uint8_t *out, size_t out_cap, DtlsCiphertext *info,
+                                        const uint8_t *expected_cid = NULL, size_t expected_cid_len = 0);
 
 // ---------------------------------------------------------------------------
 // Anti-replay sliding window (RFC 9147 §4.5.1)
 // ---------------------------------------------------------------------------
 
 /** @brief 64-record sliding replay window over the highest sequence number accepted in an epoch. */
-struct DtlsReplayWindow
+typedef struct
 {
-    uint64_t highest; ///< highest accepted sequence number (bit 0 of @ref bitmap)
-    uint64_t bitmap;  ///< bit i set => (highest - i) has been accepted
-    bool seeded;      ///< false until the first record is accepted
-};
+    uint64_t highest;  ///< highest accepted sequence number (bit 0 of @ref bitmap)
+    uint64_t bitmap;   ///< bit i set => (highest - i) has been accepted
+    proto_bool seeded; ///< false until the first record is accepted
+} DtlsReplayWindow;
 
 /** @brief Reset a replay window to empty. */
 void pc_dtls_replay_init(DtlsReplayWindow *w);
@@ -196,7 +193,7 @@ void pc_dtls_replay_init(DtlsReplayWindow *w);
  * @brief Test whether @p seq may be accepted (new and within the window).
  * @return true if @p seq is new and in-window; false if it is a replay or older than the window.
  */
-bool pc_dtls_replay_check(const DtlsReplayWindow *w, uint64_t seq);
+proto_bool pc_dtls_replay_check(const DtlsReplayWindow *w, uint64_t seq);
 
 /** @brief Record @p seq as accepted, advancing the window. Call only after a successful deprotect. */
 void pc_dtls_replay_mark(DtlsReplayWindow *w, uint64_t seq);

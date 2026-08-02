@@ -30,9 +30,6 @@
 
 #if PC_ENABLE_VXI11
 
-#include <stddef.h>
-#include <stdint.h>
-
 // ── ONC RPC / portmapper / VXI-11 program constants ─────────────────────────────────────────────
 #define PC_VXI11_CORE_PROG 0x0607AFu ///< DEVICE_CORE RPC program number
 #define PC_VXI11_CORE_VERS 1         ///< DEVICE_CORE version
@@ -46,24 +43,24 @@
 #define PC_RPC_ACCEPT_SUCCESS 0 ///< accept_stat: the procedure ran
 
 /** @brief VXI-11 DEVICE_CORE procedure numbers (procs 21 and 24 are intentionally unused). */
-enum class Vxi11Proc : uint32_t
+typedef enum PROTO_ENUM_PACKED
 {
-    CREATE_LINK = 10,
-    DEVICE_WRITE = 11,
-    DEVICE_READ = 12,
-    DEVICE_READSTB = 13,
-    DEVICE_TRIGGER = 14,
-    DEVICE_CLEAR = 15,
-    DEVICE_REMOTE = 16,
-    DEVICE_LOCAL = 17,
-    DEVICE_LOCK = 18,
-    DEVICE_UNLOCK = 19,
-    DEVICE_ENABLE_SRQ = 20,
-    DEVICE_DOCMD = 22,
-    DESTROY_LINK = 23,
-    CREATE_INTR_CHAN = 25,
-    DESTROY_INTR_CHAN = 26,
-};
+    VXI11_PROC_CREATE_LINK = 10,
+    VXI11_PROC_DEVICE_WRITE = 11,
+    VXI11_PROC_DEVICE_READ = 12,
+    VXI11_PROC_DEVICE_READSTB = 13,
+    VXI11_PROC_DEVICE_TRIGGER = 14,
+    VXI11_PROC_DEVICE_CLEAR = 15,
+    VXI11_PROC_DEVICE_REMOTE = 16,
+    VXI11_PROC_DEVICE_LOCAL = 17,
+    VXI11_PROC_DEVICE_LOCK = 18,
+    VXI11_PROC_DEVICE_UNLOCK = 19,
+    VXI11_PROC_DEVICE_ENABLE_SRQ = 20,
+    VXI11_PROC_DEVICE_DOCMD = 22,
+    VXI11_PROC_DESTROY_LINK = 23,
+    VXI11_PROC_CREATE_INTR_CHAN = 25,
+    VXI11_PROC_DESTROY_INTR_CHAN = 26,
+} Vxi11Proc;
 
 // Device_Flags bits:
 #define PC_VXI11_FLAG_WAITLOCK 0x01   ///< block up to lock_timeout on lock contention
@@ -102,7 +99,7 @@ size_t pc_rpc_record_mark(uint8_t *buf, size_t cap, uint32_t payload_len);
  * @param frag_len receives the fragment payload byte length (excludes the 4 RM bytes).
  * @return true if @p len >= 4; false otherwise.
  */
-bool pc_rpc_parse_record_mark(const uint8_t *buf, size_t len, bool *last, uint32_t *frag_len);
+proto_bool pc_rpc_parse_record_mark(const uint8_t *buf, size_t len, proto_bool *last, uint32_t *frag_len);
 
 /**
  * @brief Parse an accepted ONC-RPC reply header (the bytes AFTER the record mark): xid, REPLY,
@@ -112,7 +109,7 @@ bool pc_rpc_parse_record_mark(const uint8_t *buf, size_t len, bool *last, uint32
  * @param result_off  receives the offset (into @p rpc) where the procedure results begin.
  * @return true on a well-formed accepted reply; false if truncated, not a REPLY, or MSG_DENIED.
  */
-bool pc_rpc_parse_reply(const uint8_t *rpc, size_t len, uint32_t *xid, uint32_t *accept_stat, size_t *result_off);
+proto_bool pc_rpc_parse_reply(const uint8_t *rpc, size_t len, uint32_t *xid, uint32_t *accept_stat, size_t *result_off);
 
 // ── portmapper ──────────────────────────────────────────────────────────────────────────────────
 
@@ -126,7 +123,7 @@ size_t pc_vxi11_build_getport(uint8_t *buf, size_t cap, uint32_t xid, uint32_t p
  * @brief Parse a GETPORT reply (bytes after the record mark). @p port is 0 if not registered.
  * @return true on a well-formed successful reply; false otherwise.
  */
-bool pc_vxi11_parse_getport_resp(const uint8_t *rpc, size_t len, uint32_t *port);
+proto_bool pc_vxi11_parse_getport_resp(const uint8_t *rpc, size_t len, uint32_t *port);
 
 // ── VXI-11 DEVICE_CORE ──────────────────────────────────────────────────────────────────────────
 
@@ -135,18 +132,18 @@ bool pc_vxi11_parse_getport_resp(const uint8_t *rpc, size_t len, uint32_t *port)
  *        caller-chosen; @p lock_device requests an exclusive lock.
  * @return total bytes written (incl. record mark), or 0 on overflow / bad input.
  */
-size_t pc_vxi11_build_create_link(uint8_t *buf, size_t cap, uint32_t xid, int32_t client_id, bool lock_device,
+size_t pc_vxi11_build_create_link(uint8_t *buf, size_t cap, uint32_t xid, int32_t client_id, proto_bool lock_device,
                                   uint32_t lock_timeout, const char *device);
 
 /** @brief A decoded Create_LinkResp. */
-struct Vxi11CreateLinkResp
+typedef struct
 {
     int32_t error;          ///< Device_ErrorCode (0 = no error)
     int32_t lid;            ///< the link id, for subsequent calls
     uint32_t abort_port;    ///< the DEVICE_ASYNC abort-channel port
     uint32_t max_recv_size; ///< the largest data block the device accepts in one device_write
-};
-bool pc_vxi11_parse_create_link_resp(const uint8_t *rpc, size_t len, Vxi11CreateLinkResp *out);
+} Vxi11CreateLinkResp;
+proto_bool pc_vxi11_parse_create_link_resp(const uint8_t *rpc, size_t len, Vxi11CreateLinkResp *out);
 
 /**
  * @brief Build a device_write call: write @p data (e.g. a SCPI command) to link @p lid. Set
@@ -157,12 +154,12 @@ size_t pc_vxi11_build_device_write(uint8_t *buf, size_t cap, uint32_t xid, int32
                                    uint32_t lock_timeout, uint32_t flags, const uint8_t *data, size_t data_len);
 
 /** @brief A decoded Device_WriteResp. */
-struct Vxi11WriteResp
+typedef struct
 {
     int32_t error;
     uint32_t size; ///< number of bytes written
-};
-bool pc_vxi11_parse_write_resp(const uint8_t *rpc, size_t len, Vxi11WriteResp *out);
+} Vxi11WriteResp;
+proto_bool pc_vxi11_parse_write_resp(const uint8_t *rpc, size_t len, Vxi11WriteResp *out);
 
 /**
  * @brief Build a device_read call: read up to @p request_size bytes from link @p lid. Set
@@ -173,14 +170,14 @@ size_t pc_vxi11_build_device_read(uint8_t *buf, size_t cap, uint32_t xid, int32_
                                   uint32_t io_timeout, uint32_t lock_timeout, uint32_t flags, uint8_t term_char);
 
 /** @brief A decoded Device_ReadResp. @ref data points INTO @p rpc. */
-struct Vxi11ReadResp
+typedef struct
 {
     int32_t error;
     int32_t reason; ///< OR of PC_VXI11_REASON_* (why the read ended)
     const uint8_t *data;
     size_t data_len;
-};
-bool pc_vxi11_parse_read_resp(const uint8_t *rpc, size_t len, Vxi11ReadResp *out);
+} Vxi11ReadResp;
+proto_bool pc_vxi11_parse_read_resp(const uint8_t *rpc, size_t len, Vxi11ReadResp *out);
 
 /**
  * @brief Build a device_readstb call: read the IEEE 488.2 status byte from link @p lid.
@@ -190,12 +187,12 @@ size_t pc_vxi11_build_device_readstb(uint8_t *buf, size_t cap, uint32_t xid, int
                                      uint32_t lock_timeout, uint32_t io_timeout);
 
 /** @brief A decoded Device_ReadStbResp. */
-struct Vxi11ReadStbResp
+typedef struct
 {
     int32_t error;
     uint8_t stb; ///< the status byte
-};
-bool pc_vxi11_parse_readstb_resp(const uint8_t *rpc, size_t len, Vxi11ReadStbResp *out);
+} Vxi11ReadStbResp;
+proto_bool pc_vxi11_parse_readstb_resp(const uint8_t *rpc, size_t len, Vxi11ReadStbResp *out);
 
 /**
  * @brief Build a device_clear call: clear link @p lid's device (the protocol-level Selected Device Clear -
@@ -223,7 +220,7 @@ size_t pc_vxi11_build_destroy_link(uint8_t *buf, size_t cap, uint32_t xid, int32
  * @param error receives the Device_ErrorCode.
  * @return true on a well-formed successful reply; false otherwise.
  */
-bool pc_vxi11_parse_error_resp(const uint8_t *rpc, size_t len, int32_t *error);
+proto_bool pc_vxi11_parse_error_resp(const uint8_t *rpc, size_t len, int32_t *error);
 
 #endif // PC_ENABLE_VXI11
 

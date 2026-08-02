@@ -20,13 +20,11 @@
 #define PROTOCORE_DNS_RESOLVER_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_NEED_DNS_RESOLVER
 
 /** @brief IPv4 address category (RFC special-purpose ranges). */
-enum class pc_ip_class : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     PC_IP_UNSPECIFIED = 0, ///< 0.0.0.0
     PC_IP_LOOPBACK,        ///< 127.0.0.0/8
@@ -35,7 +33,7 @@ enum class pc_ip_class : uint8_t
     PC_IP_MULTICAST,       ///< 224.0.0.0/4
     PC_IP_BROADCAST,       ///< 255.255.255.255
     PC_IP_PUBLIC,          ///< globally-routable unicast
-};
+} pc_ip_class;
 
 // ---------------------------------------------------------------------------
 // Host-testable core
@@ -50,7 +48,7 @@ pc_ip_class pc_dns_resolver_classify(uint32_t ip);
  * Rejects unspecified / broadcast / loopback / multicast (spoof / rebinding
  * indicators); accepts private / link-local / public. Host order.
  */
-bool pc_dns_resolver_verify(uint32_t ip);
+proto_bool pc_dns_resolver_verify(uint32_t ip);
 
 // ---------------------------------------------------------------------------
 // Resolve (ESP32; returns false on host)
@@ -62,17 +60,17 @@ bool pc_dns_resolver_verify(uint32_t ip);
  * Accepts a dotted-quad directly; otherwise queries DNS with a
  * PC_DNS_TIMEOUT_MS deadline. Blocking. @return true on success.
  */
-bool pc_dns_resolver_resolve(const char *host, uint32_t *out_ip);
+proto_bool pc_dns_resolver_resolve(const char *host, uint32_t *out_ip);
 
 /**
  * @brief Resolve @p host and require the answer to pass pc_dns_resolver_verify().
  * @return true only if it resolved AND the address is a plausible answer.
  */
-bool pc_dns_resolver_resolve_verified(const char *host, uint32_t *out_ip);
+proto_bool pc_dns_resolver_resolve_verified(const char *host, uint32_t *out_ip);
 
-#if !defined(ARDUINO)
+#if !PROTOCORE_HOT
 /** @brief Host test hook: make pc_dns_resolver_resolve() return @p ip (host order) when @p ok, else fail. */
-void pc_dns_resolver_test_set_resolve(bool ok, uint32_t ip);
+void pc_dns_resolver_test_set_resolve(proto_bool ok, uint32_t ip);
 #endif
 
 #endif // PC_NEED_DNS_RESOLVER

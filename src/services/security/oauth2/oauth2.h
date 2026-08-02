@@ -30,28 +30,26 @@
 #define PROTOCORE_OAUTH2_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_OAUTH2
 
 /** @brief Tokens parsed from a token-endpoint response. Absent fields are empty / 0. */
-struct pc_o_auth2_tokens
+typedef struct
 {
     char access_token[PC_OAUTH2_TOKEN_LEN];
     char id_token[PC_OAUTH2_TOKEN_LEN]; ///< OIDC ID token (verify with services/security/oidc).
     char refresh_token[PC_OAUTH2_RT_LEN];
     char token_type[24]; ///< usually "Bearer".
     long expires_in;     ///< access-token lifetime in seconds (0 if absent).
-};
+} pc_o_auth2_tokens;
 
 /** @brief oauth2 result codes (HTTP status codes are positive on success). */
-enum class pc_o_auth2_result : int32_t
+typedef enum PROTO_ENUM_PACKED
 {
     PC_OAUTH2_ERR_BUILD = -1,     ///< request body did not fit @p cap.
     PC_OAUTH2_ERR_TRANSPORT = -2, ///< HTTP client error (no DNS / TLS / connection).
     PC_OAUTH2_ERR_RESPONSE = -3,  ///< response was not a valid token JSON (no access_token).
-};
+} pc_o_auth2_result;
 
 // ---------------------------------------------------------------------------
 // Pure core (host-testable)
@@ -79,7 +77,7 @@ int pc_oauth2_build_refresh_request(const char *refresh_token, const char *clien
  * @brief Parse a token-endpoint JSON response into @p out.
  * @return true if an access_token is present (a usable token response).
  */
-bool pc_oauth2_parse_token_response(const char *json, pc_o_auth2_tokens *out);
+proto_bool pc_oauth2_parse_token_response(const char *json, pc_o_auth2_tokens *out);
 
 #if PC_ENABLE_HTTP_CLIENT
 // ---------------------------------------------------------------------------

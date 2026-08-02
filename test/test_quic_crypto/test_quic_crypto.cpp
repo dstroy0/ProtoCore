@@ -12,7 +12,6 @@
 // Pure host crypto; no mbedtls on native, so the software AES-128/GHASH paths are what run here.
 
 #include "crypto/aead/aes128gcm.h"
-#include "crypto/crypto_scratch.h" // crypto_work (opaque pc_aes128 storage)
 #include "crypto/kdf/hkdf.h"
 #include "crypto/mac/hmac_sha256.h"
 #include "mmgr/secure.h"

@@ -33,13 +33,11 @@
 #define PROTOCORE_MODBUS_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_NEED_MODBUS
 
 /** @brief Modbus function codes (Modbus Application Protocol §6). */
-enum class ModbusFunction : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     MODBUS_FC_READ_COILS = 0x01,
     MODBUS_FC_READ_DISCRETE_INPUTS = 0x02,
@@ -51,16 +49,16 @@ enum class ModbusFunction : uint8_t
     MODBUS_FC_WRITE_MULTIPLE_REGS = 0x10,
     MODBUS_FC_MASK_WRITE_REG = 0x16,
     MODBUS_FC_READ_WRITE_MULTIPLE_REGS = 0x17,
-};
+} ModbusFunction;
 
 /** @brief Modbus exception codes (Modbus Application Protocol §7). */
-enum class ModbusException : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     MODBUS_EX_ILLEGAL_FUNCTION = 0x01,
     MODBUS_EX_ILLEGAL_DATA_ADDRESS = 0x02,
     MODBUS_EX_ILLEGAL_DATA_VALUE = 0x03,
     MODBUS_EX_SERVER_FAILURE = 0x04,
-};
+} ModbusException;
 
 /** @brief Largest Modbus TCP ADU (7-byte MBAP + 253-byte PDU). */
 #define MODBUS_ADU_MAX 260
@@ -84,14 +82,14 @@ void pc_modbus_server_init();
 /** @brief Register a callback invoked after each client write (nullable). */
 void pc_modbus_on_write(ModbusWriteCb cb);
 
-bool pc_modbus_get_coil(uint16_t addr);                        ///< Read a coil (false if out of range).
-void pc_modbus_set_coil(uint16_t addr, bool on);               ///< Set a coil (no-op if out of range).
-bool pc_modbus_get_discrete_input(uint16_t addr);              ///< Read a discrete input.
-void pc_modbus_set_discrete_input(uint16_t addr, bool on);     ///< Set a discrete input (application side).
-uint16_t pc_modbus_get_holding_reg(uint16_t addr);             ///< Read a holding register (0 if out of range).
-void pc_modbus_set_holding_reg(uint16_t addr, uint16_t value); ///< Set a holding register.
-uint16_t pc_modbus_get_input_reg(uint16_t addr);               ///< Read an input register.
-void pc_modbus_set_input_reg(uint16_t addr, uint16_t value);   ///< Set an input register (application side).
+proto_bool pc_modbus_get_coil(uint16_t addr);                    ///< Read a coil (false if out of range).
+void pc_modbus_set_coil(uint16_t addr, proto_bool on);           ///< Set a coil (no-op if out of range).
+proto_bool pc_modbus_get_discrete_input(uint16_t addr);          ///< Read a discrete input.
+void pc_modbus_set_discrete_input(uint16_t addr, proto_bool on); ///< Set a discrete input (application side).
+uint16_t pc_modbus_get_holding_reg(uint16_t addr);               ///< Read a holding register (0 if out of range).
+void pc_modbus_set_holding_reg(uint16_t addr, uint16_t value);   ///< Set a holding register.
+uint16_t pc_modbus_get_input_reg(uint16_t addr);                 ///< Read an input register.
+void pc_modbus_set_input_reg(uint16_t addr, uint16_t value);     ///< Set an input register (application side).
 
 // ---------------------------------------------------------------------------
 // Core processing (host-testable; no sockets, no heap)

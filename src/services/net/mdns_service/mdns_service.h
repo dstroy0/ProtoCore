@@ -19,7 +19,6 @@
 #define PROTOCORE_MDNS_SERVICE_H
 
 #include "protocore_config.h"
-#include <stdint.h>
 
 /**
  * @brief Start mDNS responder and advertise an HTTP service.
@@ -33,7 +32,7 @@
  * @return true if the responder started; false if disabled at compile time,
  *         not on Arduino, or the mdns component failed to start.
  */
-bool pc_mdns_begin(const char *hostname, uint16_t http_port = 80);
+proto_bool pc_mdns_begin(const char *hostname, uint16_t http_port);
 
 /**
  * @brief Add a TXT key/value record to the advertised `_http._tcp` service.
@@ -43,7 +42,7 @@ bool pc_mdns_begin(const char *hostname, uint16_t http_port = 80);
  *
  * @return true on success; false if mDNS is disabled or not running.
  */
-bool pc_mdns_txt(const char *key, const char *value);
+proto_bool pc_mdns_txt(const char *key, const char *value);
 
 /**
  * @brief Advertise an additional service, e.g. `("_https", "_tcp", 443)`.
@@ -53,6 +52,6 @@ bool pc_mdns_txt(const char *key, const char *value);
  * @param port         TCP/UDP port the service listens on.
  * @return true on success; false if mDNS is disabled or not running.
  */
-bool pc_mdns_add_service(const char *service_type, const char *proto, uint16_t port);
+proto_bool pc_mdns_add_service(const char *service_type, const char *proto, uint16_t port);
 
 #endif // PROTOCORE_MDNS_SERVICE_H

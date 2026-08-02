@@ -55,8 +55,6 @@
 #include "crypto/hash/sha256.h"
 #include "network_drivers/presentation/ssh/transport/ssh_keymat.h"
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 // ---------------------------------------------------------------------------
 // RNG
@@ -65,8 +63,8 @@
 /**
  * @brief Fill @p len bytes of @p buf with cryptographically random data.
  *
- * On Arduino: uses esp_fill_random() (hardware RNG seeded by analog noise).
- * On native:  uses esp_fill_random() from the Arduino.h mock, which is a
+ * On Arduino: uses pc_platform_rand_fill() (hardware RNG seeded by analog noise).
+ * On native:  uses pc_platform_rand_fill() from the Arduino.h mock, which is a
  *             time-seeded PRNG - NOT secure, for testing only.
  */
 void ssh_rng_fill(uint8_t *buf, size_t len);
@@ -122,9 +120,9 @@ void ssh_dh_derive_keys(uint8_t i, const uint8_t K_be[256], const uint8_t H[PC_S
  * @param k_is_string Encode K as a plain SSH string (hybrid KEX) instead of an mpint (classical).
  */
 void ssh_dh_derive_keys_sid(uint8_t i, const uint8_t K_be[256], const uint8_t *H, const uint8_t *session_id,
-                            uint8_t cipher_alg, uint8_t mac_alg, bool k_is_string = false,
+                            uint8_t cipher_alg, uint8_t mac_alg, proto_bool k_is_string = PROTO_FALSE,
                             size_t h_len = PC_SHA256_DIGEST_LEN, size_t sid_len = PC_SHA256_DIGEST_LEN,
-                            bool is512 = false);
+                            proto_bool is512 = PROTO_FALSE);
 
 /** @brief Max bytes ssh_kdf_derive() can produce (4 SHA-256 blocks). */
 #define SSH_KDF_MAX (4 * PC_SHA256_DIGEST_LEN)
@@ -140,7 +138,7 @@ void ssh_dh_derive_keys_sid(uint8_t i, const uint8_t K_be[256], const uint8_t *H
  * longer key material. @p out_len is clamped to SSH_KDF_MAX.
  */
 void ssh_kdf_derive(const uint8_t K_be[256], const uint8_t *H, const uint8_t *session_id, char label, uint8_t *out,
-                    size_t out_len, bool k_is_string = false, size_t h_len = PC_SHA256_DIGEST_LEN,
-                    size_t sid_len = PC_SHA256_DIGEST_LEN, bool is512 = false);
+                    size_t out_len, proto_bool k_is_string = PROTO_FALSE, size_t h_len = PC_SHA256_DIGEST_LEN,
+                    size_t sid_len = PC_SHA256_DIGEST_LEN, proto_bool is512 = PROTO_FALSE);
 
 #endif // PROTOCORE_SSH_DH_H

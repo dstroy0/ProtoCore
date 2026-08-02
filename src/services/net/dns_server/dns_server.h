@@ -24,8 +24,7 @@
 #ifndef PROTOCORE_DNS_SERVER_H
 #define PROTOCORE_DNS_SERVER_H
 
-#include <stddef.h>
-#include <stdint.h>
+#include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
 
 /**
  * @brief Resolve a queried name to an IPv4 address.
@@ -57,7 +56,7 @@ size_t pc_dns_server_build_response(const uint8_t *query, size_t qlen, uint32_t 
  * @brief Add an A record to the built-in table (case-insensitive name).
  * @return true if stored, false if the name is invalid or the table is full.
  */
-bool pc_dns_server_add(const char *name, uint8_t a, uint8_t b, uint8_t c, uint8_t d);
+proto_bool pc_dns_server_add(const char *name, uint8_t a, uint8_t b, uint8_t c, uint8_t d);
 
 /** @brief Look @p name up in the built-in table. @return host-order IPv4, or 0 if absent. */
 uint32_t pc_dns_server_lookup(const char *name);
@@ -69,6 +68,6 @@ void pc_dns_server_clear();
  * @brief Start answering DNS queries on UDP/53 from the built-in table.
  * @return true if the UDP listener bound; false on a host build or if the port is taken.
  */
-bool pc_dns_server_begin();
+proto_bool pc_dns_server_begin();
 
 #endif // PROTOCORE_DNS_SERVER_H

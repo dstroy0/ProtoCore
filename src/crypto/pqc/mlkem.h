@@ -38,9 +38,6 @@
 
 #if PC_ENABLE_PQC_KEX
 
-#include <stddef.h>
-#include <stdint.h>
-
 #define MLKEM768_EK_BYTES 1184 ///< encapsulation key (public key): 384*k + 32
 #define MLKEM768_DK_BYTES 2400 ///< decapsulation key (private): 768*k + 96
 #define MLKEM768_CT_BYTES 1088 ///< ciphertext: 32*(du*k + dv) = 32*(30+4)
@@ -75,8 +72,8 @@ void pc_mlkem768_keygen(const uint8_t d[MLKEM768_D_BYTES], const uint8_t z[MLKEM
  * @param[out] ss  32-octet shared secret.
  * @return true on success, false if @p ek fails the modulus check.
  */
-bool pc_mlkem768_encaps(const uint8_t ek[MLKEM768_EK_BYTES], const uint8_t m[MLKEM768_MSG_BYTES],
-                        uint8_t ct[MLKEM768_CT_BYTES], uint8_t ss[MLKEM768_SS_BYTES]);
+proto_bool pc_mlkem768_encaps(const uint8_t ek[MLKEM768_EK_BYTES], const uint8_t m[MLKEM768_MSG_BYTES],
+                              uint8_t ct[MLKEM768_CT_BYTES], uint8_t ss[MLKEM768_SS_BYTES]);
 
 /**
  * @brief ML-KEM-768 Decaps (FIPS 203, §6.3): recover the shared secret from a ciphertext.

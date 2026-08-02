@@ -39,19 +39,14 @@
 #include "crypto/kdf/tls13_kdf.h"
 #include "network_drivers/presentation/http/http3/quic_crypto.h"
 #include "network_drivers/presentation/http/http3/quic_tp.h"
-#include <stddef.h>
-#include <stdint.h>
 
 /** @brief QUIC encryption levels (RFC 9001 sec 4). 0-RTT is not supported. */
-struct QuicEnc
-{
-    static constexpr uint8_t QUIC_ENC_INITIAL = 0;
-    static constexpr uint8_t QUIC_ENC_HANDSHAKE = 1;
-    static constexpr uint8_t QUIC_ENC_APP = 2; ///< 1-RTT (application) keys
-};
+#define L 0
+#define E 1
+#define P 2 ///< 1-RTT (application) keys
 
 /** @brief Server handshake configuration (certificate, key, transport params, ephemeral inputs). */
-struct QuicTlsConfig
+typedef struct
 {
     const uint8_t *cert_der; ///< DER X.509 leaf certificate (Ed25519 public key)
     size_t cert_len;
@@ -62,32 +57,32 @@ struct QuicTlsConfig
 #if PC_ENABLE_PQC_KEX
     uint8_t mlkem_m[32]; ///< ML-KEM Encaps randomness (X25519MLKEM768 hybrid); fresh per handshake
 #endif
-};
+} QuicTlsConfig;
 
 /** @brief Handshake state (a mutually-exclusive internal state, not a wire value). */
-enum class QtlsState : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     QTLS_START = 0,     ///< awaiting ClientHello
     QTLS_WAIT_FINISHED, ///< server flight sent; awaiting client Finished
     QTLS_DONE,          ///< client Finished verified
     QTLS_FAILED,        ///< a fatal handshake error (see alert)
-};
+} QtlsState;
 
 /** @brief One server handshake's state (fixed storage, no heap). */
-struct QuicTls
+typedef struct
 {
     QuicTlsConfig cfg;
     pc_sha256_ctx transcript; ///< running Transcript-Hash over the handshake messages
     Tls13KeySchedule ks;
 
     QtlsState state;
-    uint8_t alert; ///< TLS alert code (RFC 8446 sec 6) when state == QtlsState::QTLS_FAILED
+    uint8_t alert; ///< TLS alert code (RFC 8446 sec 6) when state == QTLS_FAILED
 #if PC_ENABLE_PQC_KEX
-    bool hrr_sent; ///< a HelloRetryRequest was sent (X25519MLKEM768); the next ClientHello is the retry
+    proto_bool hrr_sent; ///< a HelloRetryRequest was sent (X25519MLKEM768); the next ClientHello is the retry
 #endif
-    bool hs_keys_ready; ///< Handshake-level keys derived (after ServerHello)
-    bool ap_keys_ready; ///< 1-RTT keys derived (after the server Finished)
-    bool complete;      ///< client Finished verified
+    proto_bool hs_keys_ready; ///< Handshake-level keys derived (after ServerHello)
+    proto_bool ap_keys_ready; ///< 1-RTT keys derived (after the server Finished)
+    proto_bool complete;      ///< client Finished verified
 
     QuicPacketKeys hs_client; ///< Handshake: opens client packets
     QuicPacketKeys hs_server; ///< Handshake: seals server packets
@@ -106,8 +101,8 @@ struct QuicTls
     size_t flight_hs_len;
 
     QuicTransportParams peer; ///< the client's parsed transport parameters
-    bool have_peer;
-};
+    proto_bool have_peer;
+} QuicTls;
 
 /** @brief Initialize a server handshake with @p cfg (copied). Resets the transcript and state. */
 void pc_quic_tls_server_init(QuicTls *qt, const QuicTlsConfig *cfg);
@@ -118,7 +113,7 @@ void pc_quic_tls_server_init(QuicTls *qt, const QuicTlsConfig *cfg);
  * Consumes as many complete handshake messages as @p data holds. At QuicEnc::QUIC_ENC_INITIAL it expects the
  * ClientHello and, on success, builds the whole server flight and derives the Handshake + 1-RTT keys.
  * At QuicEnc::QUIC_ENC_HANDSHAKE it expects the client Finished and verifies it. On a fatal error it sets the
- * state to QtlsState::QTLS_FAILED and an alert. @return the number of leading bytes of @p data consumed (a
+ * state to QTLS_FAILED and an alert. @return the number of leading bytes of @p data consumed (a
  * partial trailing message is left for the next call).
  */
 size_t pc_quic_tls_recv_crypto(QuicTls *qt, int level, const uint8_t *data, size_t len);
@@ -134,7 +129,7 @@ const uint8_t *pc_quic_tls_flight(const QuicTls *qt, int level, size_t *len);
  * @brief The packet-protection keys for @p level (QuicEnc::QUIC_ENC_HANDSHAKE / QuicEnc::QUIC_ENC_APP), @p is_server
  * picking the seal (server) or open (client) direction. @return NULL if those keys are not ready.
  */
-QuicPacketKeys *pc_quic_tls_keys(QuicTls *qt, int level, bool is_server);
+QuicPacketKeys *pc_quic_tls_keys(QuicTls *qt, int level, proto_bool is_server);
 
 /** @brief The client's parsed transport parameters (valid once the ClientHello is processed). */
 const QuicTransportParams *pc_quic_tls_peer_params(const QuicTls *qt);

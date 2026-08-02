@@ -23,28 +23,26 @@
 #define PROTOCORE_J2735_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_J2735
 
 /** @brief A UPER bit writer over a caller buffer (MSB-first within each octet). */
-struct UperWriter
+typedef struct
 {
     uint8_t *buf;
     size_t cap;
     size_t bit_pos; ///< bits written so far.
-    bool ok;        ///< cleared on overflow.
-};
+    proto_bool ok;  ///< cleared on overflow.
+} UperWriter;
 
 /** @brief A UPER bit reader over a caller buffer. */
-struct UperReader
+typedef struct
 {
     const uint8_t *buf;
     size_t nbits; ///< total bits available.
     size_t bit_pos;
-    bool ok; ///< cleared on read past the end.
-};
+    proto_bool ok; ///< cleared on read past the end.
+} UperReader;
 
 void pc_uper_writer_init(UperWriter *w, uint8_t *buf, size_t cap);
 /** @return the number of whole octets produced (rounds the bit length up), or 0 if the writer overflowed. */
@@ -53,14 +51,14 @@ size_t pc_uper_writer_finish(UperWriter *w);
 /** @brief Write @p nbits low bits of @p value, MSB-first. */
 void pc_uper_put_bits(UperWriter *w, uint32_t value, unsigned nbits);
 /** @brief Write a BOOLEAN (1 bit). */
-void pc_uper_put_bool(UperWriter *w, bool v);
+void pc_uper_put_bool(UperWriter *w, proto_bool v);
 /** @brief Write a constrained INTEGER in [lo, hi] as (value-lo) in ceil(log2(hi-lo+1)) bits. */
 void pc_uper_put_cint(UperWriter *w, int64_t value, int64_t lo, int64_t hi);
 
 void pc_uper_reader_init(UperReader *r, const uint8_t *buf, size_t nbits);
 /** @brief Read @p nbits bits, MSB-first, into the low bits of the result. */
 uint32_t pc_uper_get_bits(UperReader *r, unsigned nbits);
-bool pc_uper_get_bool(UperReader *r);
+proto_bool pc_uper_get_bool(UperReader *r);
 /** @brief Read a constrained INTEGER in [lo, hi]. */
 int64_t pc_uper_get_cint(UperReader *r, int64_t lo, int64_t hi);
 
@@ -68,7 +66,7 @@ int64_t pc_uper_get_cint(UperReader *r, int64_t lo, int64_t hi);
 unsigned pc_uper_cint_bits(int64_t lo, int64_t hi);
 
 /** @brief The J2735 BSMcoreData safety kernel (values in J2735 units; see the SAE ranges). */
-struct J2735BsmCore
+typedef struct
 {
     uint8_t msg_count; ///< MsgCount 0..127.
     uint32_t id;       ///< TemporaryID (4 octets).
@@ -78,7 +76,7 @@ struct J2735BsmCore
     int32_t elev;      ///< Elevation, -4096..61439 (decimeters).
     uint16_t speed;    ///< Speed 0..8191 (0.02 m/s; 8191 = unavailable).
     uint16_t heading;  ///< Heading 0..28800 (0.0125 deg; 28800 = unavailable).
-};
+} J2735BsmCore;
 
 /**
  * @brief UPER-encode a BSMcore block. @return octets written, or 0 on overflow.
@@ -89,10 +87,10 @@ struct J2735BsmCore
 size_t pc_j2735_bsm_core_encode(const J2735BsmCore *c, uint8_t *out, size_t cap);
 
 /** @brief UPER-decode a BSMcore block. @return true on success. */
-bool pc_j2735_bsm_core_decode(const uint8_t *in, size_t len, J2735BsmCore *c);
+proto_bool pc_j2735_bsm_core_decode(const uint8_t *in, size_t len, J2735BsmCore *c);
 
 /** @brief J2735 MovementPhaseState (the signal-group state in a SPaT MovementState). */
-enum class J2735PhaseState : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     J2735_PHASE_DARK = 0,                        ///< unavailable / dark.
     J2735_PHASE_STOP_THEN_PROCEED = 1,           ///< flashing red.
@@ -102,16 +100,16 @@ enum class J2735PhaseState : uint8_t
     J2735_PHASE_PERMISSIVE_CLEARANCE = 7,        ///< permissive yellow.
     J2735_PHASE_PROTECTED_CLEARANCE = 8,         ///< protected yellow.
     J2735_PHASE_CAUTION_CONFLICTING_TRAFFIC = 9  ///< flashing yellow.
-};
+} J2735PhaseState;
 
 /** @brief One SPaT MovementState: a signal group, its current phase, and the min/max end times. */
-struct J2735MovementState
+typedef struct
 {
     uint8_t signal_group;  ///< SignalGroupID 0..255.
     uint8_t phase;         ///< J2735PhaseState (eventState 0..9).
     uint16_t min_end_time; ///< TimeMark 0..36000 (tenths of a second in the hour; 36001 = undefined here).
     uint16_t max_end_time; ///< TimeMark 0..36000.
-};
+} J2735MovementState;
 
 /**
  * @brief UPER-encode a SPaT MovementState list into @p out.
@@ -131,25 +129,25 @@ size_t pc_j2735_spat_encode(const J2735MovementState *states, size_t count, uint
  * @param out_count   set to the number decoded.
  * @return true on success (and the encoded count fit in @p max_states).
  */
-bool pc_j2735_spat_decode(const uint8_t *in, size_t len, J2735MovementState *out_states, size_t max_states,
-                          size_t *out_count);
+proto_bool pc_j2735_spat_decode(const uint8_t *in, size_t len, J2735MovementState *out_states, size_t max_states,
+                                size_t *out_count);
 
 /** @brief One MAP lane: an id and an approach/egress flag (the minimal LaneID + directionalUse bit). */
-struct J2735Lane
+typedef struct
 {
-    uint8_t lane_id; ///< LaneID 0..255.
-    bool is_ingress; ///< true = an approach (ingress) lane, false = egress.
-    int16_t node_x;  ///< first node offset X, -2048..2047 (cm, node-XY offset).
-    int16_t node_y;  ///< first node offset Y, -2048..2047 (cm).
-};
+    uint8_t lane_id;       ///< LaneID 0..255.
+    proto_bool is_ingress; ///< true = an approach (ingress) lane, false = egress.
+    int16_t node_x;        ///< first node offset X, -2048..2047 (cm, node-XY offset).
+    int16_t node_y;        ///< first node offset Y, -2048..2047 (cm).
+} J2735Lane;
 
 /** @brief The MAP intersection-geometry core: an intersection id + a list of lanes. */
-struct J2735MapIntersection
+typedef struct
 {
     uint16_t intersection_id; ///< IntersectionID 0..65535.
     uint16_t ref_lat;         ///< reference point offset lat surrogate (0..65535 here for the codec).
     uint16_t ref_lon;         ///< reference point offset lon surrogate (0..65535 here).
-};
+} J2735MapIntersection;
 
 /**
  * @brief UPER-encode a MAP intersection: id + refLat + refLon, then a 5-bit lane count and each lane
@@ -163,8 +161,8 @@ size_t pc_j2735_map_encode(const J2735MapIntersection *isect, const J2735Lane *l
 /**
  * @brief UPER-decode a MAP intersection. @return true on success (and the lane count fit @p max_lanes).
  */
-bool pc_j2735_map_decode(const uint8_t *in, size_t len, J2735MapIntersection *isect, J2735Lane *out_lanes,
-                         size_t max_lanes, size_t *out_count);
+proto_bool pc_j2735_map_decode(const uint8_t *in, size_t len, J2735MapIntersection *isect, J2735Lane *out_lanes,
+                               size_t max_lanes, size_t *out_count);
 
 #endif // PC_ENABLE_J2735
 #endif // PROTOCORE_J2735_H

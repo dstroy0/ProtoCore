@@ -34,8 +34,6 @@
 #define PROTOCORE_OIDC_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_OIDC
 
@@ -58,7 +56,7 @@
 #define PC_PLAINTEXT_WORK_OIDC (PC_OIDC_HDR_LEN + PC_OIDC_RSA_BYTES + PC_OIDC_MAX_LEN + PC_OIDC_ISS_LEN)
 
 /** @brief Verification result codes (0 = success, negatives = failure reasons). */
-enum class pc_oidc_result : int32_t
+typedef enum PROTO_ENUM_PACKED
 {
     PC_OIDC_OK = 0,             ///< Token verified and all claims pass.
     PC_OIDC_ERR_FORMAT = -1,    ///< Not a 3-part JWT / bad base64 / oversized.
@@ -69,30 +67,30 @@ enum class pc_oidc_result : int32_t
     PC_OIDC_ERR_AUD = -6,       ///< `aud` does not contain the expected audience.
     PC_OIDC_ERR_EXPIRED = -7,   ///< `exp` is missing or in the past.
     PC_OIDC_ERR_NOT_YET = -8,   ///< `nbf` is in the future.
-};
+} pc_oidc_result;
 
 /** @brief A parsed RSA public key (from a JWKS entry). */
-struct pc_oidc_key
+typedef struct
 {
     uint8_t n[PC_OIDC_RSA_BYTES]; ///< Modulus, big-endian, right-aligned.
     uint8_t e[4];                 ///< Public exponent, big-endian (4 bytes).
-    bool loaded;                  ///< True once n/e are populated.
-};
+    proto_bool loaded;            ///< True once n/e are populated.
+} pc_oidc_key;
 
 /** @brief Claims extracted from a verified token. */
-struct pc_oidc_claims
+typedef struct
 {
     char sub[PC_OIDC_SUB_LEN];     ///< Subject identifier.
     char email[PC_OIDC_EMAIL_LEN]; ///< Email (empty if the claim is absent).
     int64_t iat;                   ///< Issued-at (0 if absent). 64-bit: epoch seconds outlive 2038.
     int64_t exp;                   ///< Expiry (epoch seconds). 64-bit.
-};
+} pc_oidc_claims;
 
 /**
  * @brief Read the `kid` from a token's JWT header.
  * @return true if a `kid` string is present (copied, null-terminated, into @p out).
  */
-bool pc_oidc_token_kid(const char *token, size_t token_len, char *kid_out, size_t kid_cap);
+proto_bool pc_oidc_token_kid(const char *token, size_t token_len, char *kid_out, size_t kid_cap);
 
 /**
  * @brief Extract an RSA JWK by @p kid from a JWKS JSON document.
@@ -102,7 +100,7 @@ bool pc_oidc_token_kid(const char *token, size_t token_len, char *kid_out, size_
  * @param key        receives n/e on success.
  * @return true if a matching RSA key was found and parsed.
  */
-bool pc_oidc_jwks_find(const char *jwks_json, const char *kid, pc_oidc_key *key);
+proto_bool pc_oidc_jwks_find(const char *jwks_json, const char *kid, pc_oidc_key *key);
 
 /**
  * @brief Verify an ID token against an already-resolved key.

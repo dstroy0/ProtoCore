@@ -37,9 +37,6 @@
 
 #if PC_ENABLE_SCPI
 
-#include <stddef.h>
-#include <stdint.h>
-
 /** @brief The default raw-socket ("SCPI-RAW") TCP port instruments listen on. */
 #define PC_SCPI_PORT 5025
 
@@ -62,7 +59,7 @@
 #define SCPI_STB_OSB 0x80 ///< bit 7: OPERation status summary
 
 /** @brief The mandatory IEEE 488.2 common commands (`pc_scpi_common` renders each). */
-enum class ScpiCommon : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     SCPI_CLS,   ///< "*CLS"  clear status
     SCPI_ESE,   ///< "*ESE"  set event status enable
@@ -77,7 +74,7 @@ enum class ScpiCommon : uint8_t
     SCPI_STB_Q, ///< "*STB?" query status byte
     SCPI_TST_Q, ///< "*TST?" self-test query
     SCPI_WAI,   ///< "*WAI"  wait to continue
-};
+} ScpiCommon;
 
 /** @brief Render an IEEE 488.2 common command mnemonic (a static string, never null). */
 const char *pc_scpi_common(ScpiCommon c);
@@ -105,13 +102,13 @@ size_t pc_scpi_fmt_real(char *buf, size_t cap, double v);
  *        (no stdlib). Recognizes the special values `9.9E37` (INFinity), `-9.9E37`, `9.91E37` (NaN).
  * @return true on a fully-consumed numeric field; false on malformed input.
  */
-bool pc_scpi_parse_number(const char *s, size_t len, double *out);
+proto_bool pc_scpi_parse_number(const char *s, size_t len, double *out);
 
 /**
  * @brief Parse a SCPI boolean response: `1`/`0` or `ON`/`OFF` (case-insensitive).
  * @return true on a recognized boolean; false otherwise.
  */
-bool pc_scpi_parse_bool(const char *s, size_t len, bool *out);
+proto_bool pc_scpi_parse_bool(const char *s, size_t len, proto_bool *out);
 
 /**
  * @brief Parse a SCPI string response: strip the surrounding single or double quotes and collapse a
@@ -128,19 +125,20 @@ size_t pc_scpi_parse_string(const char *s, size_t len, char *out, size_t cap);
  * @param consumed  receives the total bytes the block occupied (header + data [+ the indefinite NL]).
  * @return true on a complete block; false if truncated or malformed.
  */
-bool pc_scpi_parse_block(const uint8_t *buf, size_t len, const uint8_t **data, size_t *data_len, size_t *consumed);
+proto_bool pc_scpi_parse_block(const uint8_t *buf, size_t len, const uint8_t **data, size_t *data_len,
+                               size_t *consumed);
 
 // ── IEEE 488.2 / SCPI status model (instrument side) ───────────────────────────────────────────
 
 /** @brief One error/event queue entry. @ref msg points at a static or app-owned string. */
-struct ScpiError
+typedef struct
 {
     int16_t number;  ///< SCPI error number (negative = standard, positive = device-specific, 0 = no error)
     const char *msg; ///< the description text (without the surrounding quotes)
-};
+} ScpiError;
 
 /** @brief The IEEE 488.2 status registers + the SCPI error/event queue (one owned block). */
-struct ScpiStatus
+typedef struct
 {
     uint8_t esr;                        ///< Standard Event Status Register (latched events)
     uint8_t ese;                        ///< Standard Event Status Enable mask (ESR -> ESB)
@@ -149,7 +147,7 @@ struct ScpiStatus
     ScpiError queue[PC_SCPI_ERR_QUEUE]; ///< the error/event queue (FIFO ring)
     uint8_t head;                       ///< ring read index
     uint8_t count;                      ///< entries currently queued
-};
+} ScpiStatus;
 
 /** @brief Clear every register + the queue (power-on state). */
 void pc_scpi_status_init(ScpiStatus *s);
@@ -169,7 +167,7 @@ void pc_scpi_push_error(ScpiStatus *s, int16_t number, const char *msg);
  *        `0,"No error"`.
  * @return true if an error was dequeued; false if the queue was empty (out = the no-error entry).
  */
-bool pc_scpi_pop_error(ScpiStatus *s, ScpiError *out);
+proto_bool pc_scpi_pop_error(ScpiStatus *s, ScpiError *out);
 
 /** @brief Compute the Status Byte: EAV (queue), ESB (esr & ese), the app summary bits, and MSS. */
 uint8_t pc_scpi_stb(const ScpiStatus *s);
@@ -192,7 +190,7 @@ const char *pc_scpi_std_error(int16_t number);
  *
  * @return true if @p input (its header, up to the first space) matches @p pattern.
  */
-bool pc_scpi_match(const char *input, size_t input_len, const char *pattern);
+proto_bool pc_scpi_match(const char *input, size_t input_len, const char *pattern);
 
 #endif // PC_ENABLE_SCPI
 

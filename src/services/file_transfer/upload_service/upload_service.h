@@ -23,7 +23,6 @@
 #if PC_ENABLE_UPLOAD
 
 #include <FS.h>
-#include <stddef.h>
 
 /**
  * @brief Register a streaming-upload endpoint.

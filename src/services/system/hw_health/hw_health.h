@@ -25,37 +25,35 @@
 #define PROTOCORE_HW_HEALTH_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_HW_HEALTH
 
 /** @brief Rail sample verdict (the sole return of pc_hwhealth_rail_sample). */
-enum class HwRailVerdict : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     HW_RAIL_OK = 0,      ///< at or above the warn threshold.
     HW_RAIL_SAG = 1,     ///< below warn, at or above crit.
     HW_RAIL_BROWNOUT = 2 ///< below the crit threshold.
-};
+} HwRailVerdict;
 
 /** @brief GPIO short-circuit verdict (the sole return of pc_hwhealth_gpio_short). */
-enum class HwGpioVerdict : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     HW_GPIO_OK = 0,        ///< readback matches the driven level.
     HW_GPIO_SHORT_GND = 1, ///< drove high, read low: shorted to ground.
     HW_GPIO_SHORT_VCC = 2  ///< drove low, read high: shorted to Vcc.
-};
+} HwGpioVerdict;
 
 /** @brief Capacitor-leakage verdict (the sole return of pc_hwhealth_cap_leak). */
-enum class HwCapVerdict : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     HW_CAP_OK = 0,      ///< decay time within tolerance of expected.
     HW_CAP_LEAK = 1,    ///< decays too fast: leaky capacitor.
     HW_CAP_HIGH_ESR = 2 ///< decays too slow: high-ESR / open charge path.
-};
+} HwCapVerdict;
 
 /** @brief Rolling monitor for one power rail (in millivolts). */
-struct HwRailMonitor
+typedef struct
 {
     uint32_t nominal_mv;
     uint32_t warn_mv; ///< below this -> SAG.
@@ -63,10 +61,10 @@ struct HwRailMonitor
     uint32_t min_mv;  ///< lowest sample seen (worst droop).
     uint32_t sag_events;
     uint32_t brownout_events;
-};
+} HwRailMonitor;
 
 /** @brief Hysteretic SPI clock backoff state. */
-struct HwSpiBackoff
+typedef struct
 {
     uint32_t hz;     ///< current clock.
     uint32_t min_hz; ///< floor.
@@ -75,7 +73,7 @@ struct HwSpiBackoff
     uint16_t ok_streak;
     uint16_t fail_trip; ///< consecutive failures that halve the clock.
     uint16_t ok_trip;   ///< consecutive successes that double the clock.
-};
+} HwSpiBackoff;
 
 /** @brief Initialize a rail monitor. @p min_mv starts at @p nominal_mv. */
 void pc_hwhealth_rail_init(HwRailMonitor *m, uint32_t nominal_mv, uint32_t warn_mv, uint32_t crit_mv);
@@ -91,10 +89,10 @@ void pc_hwhealth_spi_init(HwSpiBackoff *s, uint32_t start_hz, uint32_t min_hz, u
                           uint16_t ok_trip);
 
 /** @brief Feed one transfer's CRC result; adjusts the clock with hysteresis. @return the new clock (hz). */
-uint32_t pc_hwhealth_spi_result(HwSpiBackoff *s, bool crc_ok);
+uint32_t pc_hwhealth_spi_result(HwSpiBackoff *s, proto_bool crc_ok);
 
 /** @brief Short-circuit test from a driven level and its readback. @return HW_GPIO_*. */
-HwGpioVerdict pc_hwhealth_gpio_short(bool driven_high, bool read_high);
+HwGpioVerdict pc_hwhealth_gpio_short(proto_bool driven_high, proto_bool read_high);
 
 /**
  * @brief Leakage test comparing a measured RC decay time to the expected one.

@@ -30,46 +30,43 @@
 
 #if PC_ENABLE_NRF24
 
-#include <stddef.h>
-#include <stdint.h>
-
 /** @brief Full-duplex SPI transfer of @p len bytes (chip-select toggled by the callback). */
 typedef void (*nrf_spi_fn)(const uint8_t *tx, uint8_t *rx, uint8_t len, void *ctx);
 /** @brief Drive the CE pin (true = high). */
-typedef void (*nrf_ce_fn)(bool level, void *ctx);
+typedef void (*nrf_ce_fn)(proto_bool level, void *ctx);
 
 /** @brief The bus a driver call uses: your SPI transfer + CE control behind it. */
-struct nrf_bus
+typedef struct
 {
     nrf_spi_fn spi;
     nrf_ce_fn ce;
     void *ctx;
-};
+} nrf_bus;
 
 /** @brief Radio configuration applied by pc_nrf24_init(). */
-struct nrf_config
+typedef struct
 {
     const uint8_t *address; ///< 5-byte pipe-0 / TX address (RX and TX share it here).
     uint8_t channel;        ///< RF channel 0..125 (2400 + channel MHz).
     uint8_t data_rate;      ///< 0 = 1 Mbps, 1 = 2 Mbps, 2 = 250 kbps.
     uint8_t tx_power;       ///< power level 0..3 (-18, -12, -6, 0 dBm).
-};
+} nrf_config;
 
 /**
  * @brief Configure the nRF24L01+ and power it up (standby).
  * @return true; false if a written register does not read back - i.e. the bus is not
  *         talking to the chip.
  */
-bool pc_nrf24_init(const nrf_bus *bus, const nrf_config *cfg);
+proto_bool pc_nrf24_init(const nrf_bus *bus, const nrf_config *cfg);
 
 /**
  * @brief Transmit @p len bytes (zero-padded to PC_NRF24_PAYLOAD). Poll pc_nrf24_tx_done().
  * @return true; false if @p len exceeds PC_NRF24_PAYLOAD.
  */
-bool pc_nrf24_send(const nrf_bus *bus, const uint8_t *data, uint8_t len);
+proto_bool pc_nrf24_send(const nrf_bus *bus, const uint8_t *data, uint8_t len);
 
 /** @brief True once a transmit has finished (STATUS TX_DS); clears the flag. */
-bool pc_nrf24_tx_done(const nrf_bus *bus);
+proto_bool pc_nrf24_tx_done(const nrf_bus *bus);
 
 /** @brief Enter receive mode (PRX + CE high); then poll pc_nrf24_recv(). */
 void pc_nrf24_set_rx(const nrf_bus *bus);

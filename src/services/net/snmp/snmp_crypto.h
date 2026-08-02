@@ -22,8 +22,6 @@
 #define PROTOCORE_SNMP_CRYPTO_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_SNMP_V3
 
@@ -62,7 +60,7 @@ void pc_snmp_usm_localize_key(const char *password, const uint8_t *engine_id, si
  * @param encrypt  true to encrypt, false to decrypt.
  */
 void pc_snmp_aes128_cfb(const uint8_t key[16], const uint8_t iv[16], const uint8_t *in, uint8_t *out, size_t len,
-                        bool encrypt);
+                        proto_bool encrypt);
 
 #endif // PC_ENABLE_SNMP_V3
 

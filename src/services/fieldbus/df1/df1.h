@@ -31,19 +31,16 @@
 
 #if PC_ENABLE_DF1
 
-#include <stddef.h>
-#include <stdint.h>
-
 #define DF1_DLE 0x10
 #define DF1_STX 0x02
 #define DF1_ETX 0x03
 
 /** @brief Which error check the frame carries. */
-enum class Df1Check : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     DF1_CHECK_BCC, ///< 1-octet block check character
     DF1_CHECK_CRC  ///< 2-octet CRC-16
-};
+} Df1Check;
 
 /** @brief BCC: 2's complement of the modulo-256 sum of [data, data+len). */
 uint8_t pc_df1_bcc(const uint8_t *data, size_t len);
@@ -53,7 +50,7 @@ uint16_t pc_df1_crc(const uint8_t *data, size_t len);
 
 /**
  * @brief Build a full-duplex frame around @p data: DLE STX + stuffed data + DLE ETX + check.
- * @param check Df1Check::DF1_CHECK_BCC (1 octet) or Df1Check::DF1_CHECK_CRC (2 octets, low byte first; CRC over
+ * @param check DF1_CHECK_BCC (1 octet) or DF1_CHECK_CRC (2 octets, low byte first; CRC over
  *              the data + ETX).
  * @return total octets written, or 0 on overflow / bad input.
  */
@@ -67,7 +64,8 @@ size_t pc_df1_build_frame(uint8_t *buf, size_t cap, const uint8_t *data, size_t 
  * @return true on a complete, check-valid frame; false on bad framing, truncation, an
  *         out overflow, or a BCC/CRC mismatch.
  */
-bool pc_df1_parse_frame(const uint8_t *buf, size_t len, Df1Check check, uint8_t *out, size_t out_cap, size_t *out_len);
+proto_bool pc_df1_parse_frame(const uint8_t *buf, size_t len, Df1Check check, uint8_t *out, size_t out_cap,
+                              size_t *out_len);
 
 #endif // PC_ENABLE_DF1
 

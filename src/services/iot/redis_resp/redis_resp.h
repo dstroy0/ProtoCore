@@ -32,11 +32,8 @@
 
 #if PC_ENABLE_REDIS
 
-#include <stddef.h>
-#include <stdint.h>
-
 /** @brief RESP2/RESP3 reply value types. */
-enum class RespType : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     RESP_SIMPLE,  ///< simple string (+); value in str/str_len
     RESP_ERROR,   ///< error (-); message in str/str_len
@@ -53,19 +50,19 @@ enum class RespType : uint8_t
     RESP_MAP,        ///< map (%); count = 2 * pairs = following child count
     RESP_SET,        ///< set (~); element count in count
     RESP_PUSH,       ///< push (>); element count in count
-};
+} RespType;
 
 /** @brief One decoded RESP value. String fields point INTO the source buffer (not copied). */
-struct RespReply
+typedef struct
 {
     RespType type;
-    int64_t ival;    ///< value for RespType::RESP_INTEGER; 0/1 for RespType::RESP_BOOL; child count for aggregates
-    double dval;     ///< value for RespType::RESP_DOUBLE (best-effort; str is authoritative)
+    int64_t ival;    ///< value for RESP_INTEGER; 0/1 for RESP_BOOL; child count for aggregates
+    double dval;     ///< value for RESP_DOUBLE (best-effort; str is authoritative)
     const char *str; ///< bytes for simple/error/bulk/big-number/bulk-error/verbatim/double text
     size_t str_len;  ///< length of @ref str
-    int64_t count;   ///< child count for RespType::RESP_ARRAY / RespType::RESP_SET / RespType::RESP_PUSH /
-                     ///< RespType::RESP_MAP (map = 2*pairs)
-};
+    int64_t count;   ///< child count for RESP_ARRAY / RESP_SET / RESP_PUSH /
+                     ///< RESP_MAP (map = 2*pairs)
+} RespReply;
 
 /**
  * @brief Encode a command (array of bulk strings) into @p buf.
@@ -85,7 +82,7 @@ size_t pc_resp_encode_command(char *buf, size_t cap, const char *const *args, co
  * @return true on a complete value; false if the buffer holds an incomplete or
  *         malformed value (then @p out / @p consumed are unspecified).
  */
-bool pc_resp_parse(const uint8_t *buf, size_t len, RespReply *out, size_t *consumed);
+proto_bool pc_resp_parse(const uint8_t *buf, size_t len, RespReply *out, size_t *consumed);
 
 #endif // PC_ENABLE_REDIS
 

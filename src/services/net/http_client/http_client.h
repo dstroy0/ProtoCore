@@ -26,13 +26,11 @@
 #define PROTOCORE_HTTP_CLIENT_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_HTTP_CLIENT
 
 // Transport / result error codes (negative; HTTP status codes are positive).
-enum class HttpClientError : int32_t
+typedef enum PROTO_ENUM_PACKED
 {
     HTTP_CLIENT_ERR_URL = -1,      ///< Malformed URL.
     HTTP_CLIENT_ERR_DNS = -2,      ///< Host resolution failed.
@@ -41,15 +39,15 @@ enum class HttpClientError : int32_t
     HTTP_CLIENT_ERR_SEND = -5,     ///< Failed to send the request.
     HTTP_CLIENT_ERR_RESPONSE = -6, ///< Malformed / unparseable response.
     HTTP_CLIENT_ERR_TLS = -7,      ///< HTTPS requested but TLS unavailable / handshake failed.
-};
+} HttpClientError;
 
 /** @brief Result of an HTTP client request. */
-struct HttpClientResult
+typedef struct
 {
     int status;          ///< HTTP status code (e.g. 200), or a negative HttpClientError.
     const uint8_t *body; ///< Response body (points into the client's static buffer).
     size_t body_len;     ///< Response body length in bytes.
-};
+} HttpClientResult;
 
 // ---------------------------------------------------------------------------
 // Pure helpers (host-testable; no sockets, no heap)
@@ -63,8 +61,8 @@ struct HttpClientResult
  *
  * @return true on success; false if malformed or a field overflows its buffer.
  */
-bool http_client_parse_url(const char *url, bool *is_https, char *host, size_t host_cap, uint16_t *port, char *path,
-                           size_t path_cap);
+proto_bool http_client_parse_url(const char *url, proto_bool *is_https, char *host, size_t host_cap, uint16_t *port,
+                                 char *path, size_t path_cap);
 
 /**
  * @brief Build an HTTP/1.1 request line + headers (+ optional body) into @p out.

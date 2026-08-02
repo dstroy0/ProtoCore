@@ -31,8 +31,6 @@
 #include "network_drivers/presentation/codec/codec.h" // pc_codec_type - one item vocabulary
 #include "protocore_config.h"
 #include "shared_primitives/span.h" // pc_span / pc_cspan - the region, bound with pc_span_from()
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_MSGPACK
 
@@ -44,7 +42,7 @@ void pc_msgpack_int(pc_span *w, int64_t v);                         ///< signed 
 void pc_msgpack_bytes(pc_span *w, const uint8_t *data, size_t len); ///< binary (bin family)
 void pc_msgpack_str(pc_span *w, const char *s);                     ///< UTF-8 string (null-terminated)
 void pc_msgpack_str_n(pc_span *w, const char *s, size_t len);       ///< UTF-8 string (explicit length)
-void pc_msgpack_bool(pc_span *w, bool b);                           ///< true / false
+void pc_msgpack_bool(pc_span *w, proto_bool b);                     ///< true / false
 void pc_msgpack_null(pc_span *w);                                   ///< nil
 void pc_msgpack_float(pc_span *w, float f);                         ///< IEEE-754 single (float32, 0xca)
 void pc_msgpack_array(pc_span *w, size_t count);                    ///< array header
@@ -58,16 +56,16 @@ void pc_msgpack_label(pc_span *w, const char *name, int64_t num);   ///< map key
 /** @brief Type of the next object without consuming it. ext and the unused 0xc1 report INVALID. */
 pc_codec_type pc_msgpack_peek(pc_cspan *r);
 
-bool pc_msgpack_read_uint(pc_cspan *r, uint64_t *out);                ///< unsigned integer (fixint / uint8..64)
-bool pc_msgpack_read_int(pc_cspan *r, int64_t *out);                  ///< signed integer (also accepts unsigned)
-bool pc_msgpack_read_bool(pc_cspan *r, bool *out);                    ///< true / false
-bool pc_msgpack_read_null(pc_cspan *r);                               ///< nil
-bool pc_msgpack_read_float(pc_cspan *r, float *out);                  ///< float32 (0xca) or float64 (0xcb)
-bool pc_msgpack_read_str(pc_cspan *r, const char **out, size_t *len); ///< str family (points into the buffer)
-bool pc_msgpack_read_bytes(pc_cspan *r, const uint8_t **out,
-                           size_t *len);                ///< bin family (points into the buffer)
-bool pc_msgpack_read_array(pc_cspan *r, size_t *count); ///< array header (object count)
-bool pc_msgpack_read_map(pc_cspan *r, size_t *count);   ///< map header (key/value pair count)
+proto_bool pc_msgpack_read_uint(pc_cspan *r, uint64_t *out);                ///< unsigned integer (fixint / uint8..64)
+proto_bool pc_msgpack_read_int(pc_cspan *r, int64_t *out);                  ///< signed integer (also accepts unsigned)
+proto_bool pc_msgpack_read_bool(pc_cspan *r, proto_bool *out);              ///< true / false
+proto_bool pc_msgpack_read_null(pc_cspan *r);                               ///< nil
+proto_bool pc_msgpack_read_float(pc_cspan *r, float *out);                  ///< float32 (0xca) or float64 (0xcb)
+proto_bool pc_msgpack_read_str(pc_cspan *r, const char **out, size_t *len); ///< str family (points into the buffer)
+proto_bool pc_msgpack_read_bytes(pc_cspan *r, const uint8_t **out,
+                                 size_t *len);                ///< bin family (points into the buffer)
+proto_bool pc_msgpack_read_array(pc_cspan *r, size_t *count); ///< array header (object count)
+proto_bool pc_msgpack_read_map(pc_cspan *r, size_t *count);   ///< map header (key/value pair count)
 
 #endif // PC_ENABLE_MSGPACK
 #endif // PROTOCORE_MSGPACK_H

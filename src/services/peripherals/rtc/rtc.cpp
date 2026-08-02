@@ -14,23 +14,21 @@
 
 #if PC_ENABLE_RTC
 
-#if defined(ARDUINO)
+#if PROTOCORE_HOT
 #include "services/peripherals/i2c.h"
 #include <Wire.h>
 #endif
-namespace
-{
-int bcd2int(uint8_t b)
+static int bcd2int(uint8_t b)
 {
     return (b >> 4) * 10 + (b & 0x0F);
 }
-uint8_t int2bcd(int v)
+static uint8_t int2bcd(int v)
 {
     return (uint8_t)(((v / 10) << 4) | (v % 10));
 }
 
 // Days from 1970-01-01 for a civil (y, m, d), and its inverse.
-long days_from_civil(int y, int m, int d)
+static long days_from_civil(int y, int m, int d)
 {
     y -= m <= 2;
     long era = (y >= 0 ? y : y - 399) / 400; // GCOVR_EXCL_BR_LINE  y<0 unreachable: the only caller
@@ -41,7 +39,7 @@ long days_from_civil(int y, int m, int d)
     unsigned doe = yoe * 365u + yoe / 4u - yoe / 100u + doy;
     return era * 146097L + (long)doe - 719468L;
 }
-void civil_from_days(long z, int *y, int *m, int *d)
+static void civil_from_days(long z, int *y, int *m, int *d)
 {
     z += 719468;
     long era = (z >= 0 ? z : z - 146096) / 146097; // GCOVR_EXCL_BR_LINE  z<0 unreachable: the only
@@ -56,13 +54,12 @@ void civil_from_days(long z, int *y, int *m, int *d)
     *m = (int)(mp < 10 ? mp + 3 : mp - 9);
     *y = (int)(yy + (*m <= 2));
 }
-} // namespace
 
-bool pc_rtc_regs_to_epoch(const uint8_t r[RTC_REG_COUNT], uint32_t *epoch)
+proto_bool pc_rtc_regs_to_epoch(const uint8_t r[RTC_REG_COUNT], uint32_t *epoch)
 {
     if (!r || !epoch)
     {
-        return false;
+        return PROTO_FALSE;
     }
     int sec = bcd2int(r[0] & 0x7F); // mask the DS1307 clock-halt bit
     int min = bcd2int(r[1] & 0x7F);
@@ -72,9 +69,9 @@ bool pc_rtc_regs_to_epoch(const uint8_t r[RTC_REG_COUNT], uint32_t *epoch)
         int h12 = bcd2int(r[2] & 0x1F);
         if (h12 < 1 || h12 > 12)
         {
-            return false;
+            return PROTO_FALSE;
         }
-        bool pm = (r[2] & 0x20) != 0;
+        proto_bool pm = (r[2] & 0x20) != 0;
         hour = (h12 % 12) + (pm ? 12 : 0);
     }
     else
@@ -86,7 +83,7 @@ bool pc_rtc_regs_to_epoch(const uint8_t r[RTC_REG_COUNT], uint32_t *epoch)
     int year = 2000 + bcd2int(r[6]);
     if (sec > 59 || min > 59 || hour > 23 || date < 1 || date > 31 || month < 1 || month > 12)
     {
-        return false;
+        return PROTO_FALSE;
     }
     // int64: days*86400 exceeds a 32-bit long (Windows host and ESP32 both) past ~2038.
     int64_t t = (int64_t)days_from_civil(year, month, date) * 86400 + hour * 3600 + min * 60 + sec;
@@ -94,10 +91,10 @@ bool pc_rtc_regs_to_epoch(const uint8_t r[RTC_REG_COUNT], uint32_t *epoch)
                                    // is always >= 2000, so days_from_civil (and t) is always positive;
                                    // t > 0xFFFFFFFF (year rollover past 2106) is real and tested below
     {
-        return false;
+        return PROTO_FALSE;
     }
     *epoch = (uint32_t)t;
-    return true;
+    return PROTO_TRUE;
 }
 
 void pc_rtc_epoch_to_regs(uint32_t epoch, uint8_t r[RTC_REG_COUNT])
@@ -121,12 +118,12 @@ void pc_rtc_epoch_to_regs(uint32_t epoch, uint8_t r[RTC_REG_COUNT])
 // I2C binding
 // ---------------------------------------------------------------------------
 
-#if defined(ARDUINO)
+#if PROTOCORE_HOT
 
-bool pc_rtc_begin()
+proto_bool pc_rtc_begin()
 {
     pc_i2c_begin();
-    return true;
+    return PROTO_TRUE;
 }
 
 uint32_t pc_rtc_read_epoch()
@@ -150,7 +147,7 @@ uint32_t pc_rtc_read_epoch()
     return pc_rtc_regs_to_epoch(r, &e) ? e : 0;
 }
 
-bool pc_rtc_set_epoch(uint32_t epoch)
+proto_bool pc_rtc_set_epoch(uint32_t epoch)
 {
     uint8_t r[RTC_REG_COUNT];
     pc_rtc_epoch_to_regs(epoch, r);
@@ -170,23 +167,23 @@ uint32_t pc_rtc_time_source()
 
 #else // host build: no I2C. The BCD<->epoch conversions above are host-tested.
 
-bool pc_rtc_begin()
+proto_bool pc_rtc_begin()
 {
-    return true;
+    return PROTO_TRUE;
 }
 uint32_t pc_rtc_read_epoch()
 {
     return 0;
 }
-bool pc_rtc_set_epoch(uint32_t)
+proto_bool pc_rtc_set_epoch(uint32_t)
 {
-    return false;
+    return PROTO_FALSE;
 }
 uint32_t pc_rtc_time_source()
 {
     return 0;
 }
 
-#endif // ARDUINO
+#endif // PROTOCORE_HOT
 
 #endif // PC_ENABLE_RTC

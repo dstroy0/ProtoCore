@@ -20,23 +20,23 @@ SshChannel ssh_chan[MAX_SSH_CONNS][PC_SSH_MAX_CHANNELS];
 // All SSH channel-layer callbacks, owned by one instance (internal linkage): the channel-data
 // sink and the local/remote port-forward hooks. Grouped so it is one named owner, unreachable
 // from any other translation unit. (The ssh_chan[][] table is the shared cross-TU substrate.)
-struct SshChannelCtx
+typedef struct
 {
-    SshChannelDataCb data_cb = nullptr;
-    SshForwardOpenCb forward_open_cb = nullptr;
-    SshForwardDataCb forward_data_cb = nullptr;
-    SshRemoteForwardOpenCb rfwd_open_cb = nullptr;
-    SshRemoteForwardCancelCb rfwd_cancel_cb = nullptr;
-    SshForwardConfirmCb forward_confirm_cb = nullptr;
+    SshChannelDataCb data_cb = NULL;
+    SshForwardOpenCb forward_open_cb = NULL;
+    SshForwardDataCb forward_data_cb = NULL;
+    SshRemoteForwardOpenCb rfwd_open_cb = NULL;
+    SshRemoteForwardCancelCb rfwd_cancel_cb = NULL;
+    SshForwardConfirmCb forward_confirm_cb = NULL;
 #if PC_ENABLE_SSH_SFTP
-    SshSftpOpenCb pc_sftp_open_cb = nullptr;
-    SshSftpDataCb pc_sftp_data_cb = nullptr;
+    SshSftpOpenCb pc_sftp_open_cb = NULL;
+    SshSftpDataCb pc_sftp_data_cb = NULL;
 #endif
 #if PC_ENABLE_SSH_SCP
-    SshScpOpenCb pc_scp_open_cb = nullptr;
-    SshScpDataCb pc_scp_data_cb = nullptr;
+    SshScpOpenCb pc_scp_open_cb = NULL;
+    SshScpDataCb pc_scp_data_cb = NULL;
 #endif
-};
+} SshChannelCtx;
 static SshChannelCtx s_chcb;
 
 void pc_ssh_channel_set_data_cb(SshChannelDataCb cb)
@@ -118,22 +118,22 @@ static void wr_u32(uint8_t *p, uint32_t v)
 }
 
 // Read an SSH string: out points at the data, *slen its length. Advances *off.
-static bool rd_string(const uint8_t *p, size_t len, size_t *off, const uint8_t **out, uint32_t *slen)
+static proto_bool rd_string(const uint8_t *p, size_t len, size_t *off, const uint8_t **out, uint32_t *slen)
 {
     if (*off + 4 > len)
     {
-        return false;
+        return PROTO_FALSE;
     }
     uint32_t n = rd_u32(p + *off);
     *off += 4;
     if (*off + n > len)
     {
-        return false;
+        return PROTO_FALSE;
     }
     *out = p + *off;
     *slen = n;
     *off += n;
-    return true;
+    return PROTO_TRUE;
 }
 
 // ---------------------------------------------------------------------------
@@ -147,7 +147,7 @@ static SshChannel *chan_by_id(uint8_t i, uint32_t id)
     // looking a channel up, so only the id / open halves of this guard are exercisable.
     if (i >= MAX_SSH_CONNS || id >= PC_SSH_MAX_CHANNELS || !ssh_chan[i][id].open) // GCOVR_EXCL_LINE
     {
-        return nullptr;
+        return NULL;
     }
     return &ssh_chan[i][id];
 }
@@ -159,7 +159,7 @@ static SshChannel *chan_pending_by_id(uint8_t i, uint32_t id)
     // GCOVR_EXCL_LINE below: i is always in range (same reason as chan_by_id above).
     if (i >= MAX_SSH_CONNS || id >= PC_SSH_MAX_CHANNELS || !ssh_chan[i][id].pending) // GCOVR_EXCL_LINE
     {
-        return nullptr;
+        return NULL;
     }
     return &ssh_chan[i][id];
 }
@@ -217,10 +217,10 @@ int ssh_global_request_handle(uint8_t i, const uint8_t *payload, size_t len, uin
     {
         return -1;
     }
-    bool want_reply = payload[off++] != 0;
+    proto_bool want_reply = payload[off++] != 0;
 
-    bool is_fwd = (name_len == 13 && memcmp(name, "tcpip-forward", 13) == 0);
-    bool is_cancel = (name_len == 20 && memcmp(name, "cancel-tcpip-forward", 20) == 0);
+    proto_bool is_fwd = (name_len == 13 && memcmp(name, "tcpip-forward", 13) == 0);
+    proto_bool is_cancel = (name_len == 20 && memcmp(name, "cancel-tcpip-forward", 20) == 0);
 
     if (is_fwd || is_cancel)
     {
@@ -349,9 +349,9 @@ int pc_ssh_channel_open_forwarded(uint8_t i, const char *conn_addr, uint16_t con
     off += 4;
 
     SshChannel *c = &ssh_chan[i][slot];
-    c->open = false;
-    c->pending = true; // awaiting the client's CHANNEL_OPEN_CONFIRMATION
-    c->type = SshChanType::SSH_CHAN_FORWARDED_TCPIP;
+    c->open = PROTO_FALSE;
+    c->pending = PROTO_TRUE; // awaiting the client's CHANNEL_OPEN_CONFIRMATION
+    c->type = SSH_CHAN_FORWARDED_TCPIP;
     c->local_id = (uint32_t)slot;
     c->peer_id = 0;
     pc_ssh_flow_init(&c->flow, SSH_CHAN_WINDOW, 0, 0);
@@ -375,11 +375,11 @@ int pc_ssh_channel_handle_open_confirm(uint8_t i, const uint8_t *payload, size_t
     c->peer_id = rd_u32(payload + 5);
     pc_ssh_flow_peer_add(&c->flow, rd_u32(payload + 9));
     c->flow.peer_max_pkt = rd_u32(payload + 13);
-    c->pending = false;
-    c->open = true;
+    c->pending = PROTO_FALSE;
+    c->open = PROTO_TRUE;
     if (s_chcb.forward_confirm_cb)
     {
-        s_chcb.forward_confirm_cb(i, c->local_id, true);
+        s_chcb.forward_confirm_cb(i, c->local_id, PROTO_TRUE);
     }
     return 0;
 }
@@ -397,11 +397,11 @@ int pc_ssh_channel_handle_open_failure(uint8_t i, const uint8_t *payload, size_t
         return -1;
     }
     uint32_t ch = c->local_id;
-    c->pending = false;
-    c->open = false; // free the slot; the client refused the forward
+    c->pending = PROTO_FALSE;
+    c->open = PROTO_FALSE; // free the slot; the client refused the forward
     if (s_chcb.forward_confirm_cb)
     {
-        s_chcb.forward_confirm_cb(i, ch, false);
+        s_chcb.forward_confirm_cb(i, ch, PROTO_FALSE);
     }
     return 0;
 }
@@ -429,15 +429,15 @@ int pc_ssh_channel_handle_open(uint8_t i, const uint8_t *payload, size_t len, ui
     uint32_t max_pkt = rd_u32(payload + off + 8);
     off += 12;
 
-    bool is_session = (type_len == 7 && memcmp(type, "session", 7) == 0);
-    bool is_dtcpip = (type_len == 12 && memcmp(type, "direct-tcpip", 12) == 0);
+    proto_bool is_session = (type_len == 7 && memcmp(type, "session", 7) == 0);
+    proto_bool is_dtcpip = (type_len == 12 && memcmp(type, "direct-tcpip", 12) == 0);
     if (!is_session && !is_dtcpip)
     {
         return build_open_failure(out, cap, sender, 3u, out_len); // unknown channel type
     }
 
     // direct-tcpip data: host(string) port(u32) orig_host(string) orig_port(u32).
-    const uint8_t *fhost = nullptr;
+    const uint8_t *fhost = NULL;
     uint32_t fhost_len = 0;
     uint16_t fport = 0;
     if (is_dtcpip)
@@ -460,8 +460,8 @@ int pc_ssh_channel_handle_open(uint8_t i, const uint8_t *payload, size_t len, ui
     }
 
     SshChannel *c = &ssh_chan[i][slot];
-    c->open = true;
-    c->type = is_dtcpip ? SshChanType::SSH_CHAN_DIRECT_TCPIP : SshChanType::SSH_CHAN_SESSION;
+    c->open = PROTO_TRUE;
+    c->type = is_dtcpip ? SSH_CHAN_DIRECT_TCPIP : SSH_CHAN_SESSION;
     c->local_id = (uint32_t)slot;
     c->peer_id = sender;
     pc_ssh_flow_init(&c->flow, SSH_CHAN_WINDOW, init_window, max_pkt);
@@ -472,7 +472,7 @@ int pc_ssh_channel_handle_open(uint8_t i, const uint8_t *payload, size_t len, ui
         // free the channel and fail closed.
         if (s_chcb.forward_open_cb(i, c->local_id, (const char *)fhost, fhost_len, fport) < 0)
         {
-            c->open = false;
+            c->open = PROTO_FALSE;
             return build_open_failure(out, cap, sender, 2u, out_len); // connect failed
         }
     }
@@ -484,13 +484,11 @@ int pc_ssh_channel_handle_open(uint8_t i, const uint8_t *payload, size_t len, ui
 // ---------------------------------------------------------------------------
 
 #if PC_ENABLE_SSH_SFTP || PC_ENABLE_SSH_SCP
-namespace
-{
 // A subsystem/exec CHANNEL_REQUEST may name a file-transfer service (SFTP or SCP). Tag @p c and fire the
 // matching open callback when it does; @p off points at the request-specific arg and may be advanced. Flips
 // *accept true for an accepted SFTP subsystem (exec is already in the base accept set).
-void classify_file_transfer_request(uint8_t i, SshChannel *c, const uint8_t *rtype, uint32_t rtype_len,
-                                    const uint8_t *payload, size_t len, size_t *off, bool *accept)
+static void classify_file_transfer_request(uint8_t i, SshChannel *c, const uint8_t *rtype, uint32_t rtype_len,
+                                           const uint8_t *payload, size_t len, size_t *off, proto_bool *accept)
 {
 #if !PC_ENABLE_SSH_SFTP
     (void)accept; // only the SFTP subsystem path flips acceptance; scp exec is already accepted
@@ -499,12 +497,12 @@ void classify_file_transfer_request(uint8_t i, SshChannel *c, const uint8_t *rty
     // subsystem "sftp": not in the base accept set, so accept it here and tag the channel for the SFTP binding.
     if (rtype_len == 9 && memcmp(rtype, "subsystem", 9) == 0)
     {
-        const uint8_t *arg = nullptr;
+        const uint8_t *arg = NULL;
         uint32_t arg_len = 0;
         if (rd_string(payload, len, off, &arg, &arg_len) && arg_len == 4 && memcmp(arg, "sftp", 4) == 0)
         {
-            *accept = true;
-            c->type = SshChanType::SSH_CHAN_SFTP;
+            *accept = PROTO_TRUE;
+            c->type = SSH_CHAN_SFTP;
             if (s_chcb.pc_sftp_open_cb)
             {
                 s_chcb.pc_sftp_open_cb(i, c->local_id);
@@ -516,11 +514,11 @@ void classify_file_transfer_request(uint8_t i, SshChannel *c, const uint8_t *rty
     // exec "scp …": already accepted (exec is in the base set); tag the channel + hand the command to the binding.
     if (rtype_len == 4 && memcmp(rtype, "exec", 4) == 0)
     {
-        const uint8_t *arg = nullptr;
+        const uint8_t *arg = NULL;
         uint32_t arg_len = 0;
         if (rd_string(payload, len, off, &arg, &arg_len) && arg_len >= 4 && memcmp(arg, "scp ", 4) == 0)
         {
-            c->type = SshChanType::SSH_CHAN_SCP;
+            c->type = SSH_CHAN_SCP;
             if (s_chcb.pc_scp_open_cb)
             {
                 s_chcb.pc_scp_open_cb(i, c->local_id, (const char *)arg, arg_len);
@@ -529,7 +527,6 @@ void classify_file_transfer_request(uint8_t i, SshChannel *c, const uint8_t *rty
     }
 #endif
 }
-} // namespace
 #endif
 
 int pc_ssh_channel_handle_request(uint8_t i, const uint8_t *payload, size_t len, uint8_t *out, size_t *out_len,
@@ -558,7 +555,7 @@ int pc_ssh_channel_handle_request(uint8_t i, const uint8_t *payload, size_t len,
     {
         return -1;
     }
-    bool want_reply = payload[off++] != 0;
+    proto_bool want_reply = payload[off++] != 0;
 
     SshChannel *c = chan_by_id(i, recipient);
     if (!c)
@@ -566,7 +563,7 @@ int pc_ssh_channel_handle_request(uint8_t i, const uint8_t *payload, size_t len,
         return -1;
     }
 
-    bool accept =
+    proto_bool accept =
         (rtype_len == 5 && memcmp(rtype, "shell", 5) == 0) || (rtype_len == 4 && memcmp(rtype, "exec", 4) == 0) ||
         (rtype_len == 7 && memcmp(rtype, "pty-req", 7) == 0) || (rtype_len == 3 && memcmp(rtype, "env", 3) == 0);
 
@@ -629,15 +626,15 @@ int pc_ssh_channel_handle_data(uint8_t i, const uint8_t *payload, size_t len, ui
     {
         switch (c->type)
         {
-        case SshChanType::SSH_CHAN_DIRECT_TCPIP:
-        case SshChanType::SSH_CHAN_FORWARDED_TCPIP: // forwarded TCP bytes (ssh -L / -R) -> the forward owner
+        case SSH_CHAN_DIRECT_TCPIP:
+        case SSH_CHAN_FORWARDED_TCPIP: // forwarded TCP bytes (ssh -L / -R) -> the forward owner
             if (s_chcb.forward_data_cb)
             {
                 s_chcb.forward_data_cb(i, c->local_id, data, dlen);
             }
             break;
 #if PC_ENABLE_SSH_SFTP
-        case SshChanType::SSH_CHAN_SFTP: // SSH_FXP_* bytes -> the SFTP binding
+        case SSH_CHAN_SFTP: // SSH_FXP_* bytes -> the SFTP binding
             if (s_chcb.pc_sftp_data_cb)
             {
                 s_chcb.pc_sftp_data_cb(i, c->local_id, data, dlen);
@@ -645,7 +642,7 @@ int pc_ssh_channel_handle_data(uint8_t i, const uint8_t *payload, size_t len, ui
             break;
 #endif
 #if PC_ENABLE_SSH_SCP
-        case SshChanType::SSH_CHAN_SCP: // RCP protocol bytes -> the SCP binding
+        case SSH_CHAN_SCP: // RCP protocol bytes -> the SCP binding
             if (s_chcb.pc_scp_data_cb)
             {
                 s_chcb.pc_scp_data_cb(i, c->local_id, data, dlen);
@@ -681,7 +678,7 @@ int pc_ssh_channel_handle_data(uint8_t i, const uint8_t *payload, size_t len, ui
 int pc_ssh_channel_build_data(uint8_t i, uint32_t channel, const uint8_t *data, size_t len, uint8_t *out,
                               size_t *out_len, size_t cap)
 {
-    SshChannel *c = (i < MAX_SSH_CONNS) ? chan_by_id(i, channel) : nullptr;
+    SshChannel *c = (i < MAX_SSH_CONNS) ? chan_by_id(i, channel) : NULL;
     if (!c)
     {
         return -1;
@@ -720,7 +717,7 @@ static int build_close_chan(SshChannel *c, uint8_t *out, size_t *out_len, size_t
     {
         return -1;
     }
-    c->open = false; // freeing the slot is the mux's half; the message body is the signaling owner's
+    c->open = PROTO_FALSE; // freeing the slot is the mux's half; the message body is the signaling owner's
     return 0;
 }
 

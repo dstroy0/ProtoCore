@@ -21,8 +21,7 @@
 #ifndef PROTOCORE_RSA_H
 #define PROTOCORE_RSA_H
 
-#include <stddef.h>
-#include <stdint.h>
+#include "protocore_config.h" // the entry point: PROTO_ENUM_PACKED, and types.h for the widths
 
 /** @brief RSA modulus / signature size in bytes (RSA-2048). */
 #define PC_RSA_KEY_BYTES 256
@@ -35,11 +34,11 @@
  *
  * Only the message hash and its DigestInfo OID differ between the two.
  */
-enum class pc_rsa_hash : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
-    SHA256 = 0, ///< RSASSA-PKCS1-v1.5 with SHA-256
-    SHA512 = 1  ///< RSASSA-PKCS1-v1.5 with SHA-512
-};
+    PC_RSA_HASH_SHA256 = 0, ///< RSASSA-PKCS1-v1.5 with SHA-256
+    PC_RSA_HASH_SHA512 = 1  ///< RSASSA-PKCS1-v1.5 with SHA-512
+} pc_rsa_hash;
 
 /** @brief Length of the DER DigestInfo wrapper for SHA-256 (RFC 8017 / RFC 5754). */
 #define PC_PKCS1_DIGESTINFO_LEN 19
@@ -68,7 +67,7 @@ extern const uint8_t pc_pkcs1_sha512_digestinfo[PC_PKCS1_SHA512_DIGESTINFO_LEN];
 int pc_rsa_verify(const uint8_t n_be[PC_RSA_KEY_BYTES], const uint8_t e_be4[4], const uint8_t *msg, size_t msg_len,
                   const uint8_t *sig, size_t sig_len, pc_rsa_hash hash);
 
-#ifndef ARDUINO
+#if !PROTOCORE_HOT
 /**
  * @brief Software RSA-2048 PKCS#1 v1.5 sign with a raw private key (native reference path).
  *

@@ -21,18 +21,17 @@
 #define PROTOCORE_PROTO_HANDLER_H
 
 #include "protocore_config.h"
-#include <stdint.h>
 
 /**
  * @brief Per-protocol connection event/poll callbacks (Layer 5 dispatch vtable).
  */
-struct ProtoHandler
+typedef struct ProtoHandler
 {
     void (*on_accept)(uint8_t slot); ///< EvtType::EVT_CONNECT: a new connection was accepted.
     void (*on_data)(uint8_t slot);   ///< EvtType::EVT_DATA: bytes are available in the slot's rx ring.
     void (*on_close)(uint8_t slot);  ///< EvtType::EVT_DISCONNECT / EvtType::EVT_ERROR: tear down slot state.
     void (*on_poll)(uint8_t slot);   ///< Called for an active slot each handle() loop (nullable).
-};
+} ProtoHandler;
 
 /** @brief Register @p h for protocol @p proto (replaces any previous handler). */
 void proto_register(ConnProto proto, const ProtoHandler *h);

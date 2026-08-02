@@ -13,31 +13,28 @@
 
 #if PC_ENABLE_TIME_SOURCE
 
-namespace
-{
-struct Src
+typedef struct
 {
     const char *name;
     TimeSourceFn fn;
     uint8_t priority;
-    bool used;
-};
+    proto_bool used;
+} Src;
 
 // All time-source state, owned by one instance (internal linkage): the priority-ordered
 // source table and the last-selected source name, grouped so it is one named owner.
-struct TimeSourceCtx
+typedef struct
 {
     Src sources[PC_TIME_SOURCE_MAX];
-    const char *active = nullptr;
-};
-TimeSourceCtx s_ts;
-} // namespace
+    const char *active = NULL;
+} TimeSourceCtx;
+static TimeSourceCtx s_ts;
 
-bool pc_time_source_add(const char *name, uint8_t priority, TimeSourceFn fn)
+proto_bool pc_time_source_add(const char *name, uint8_t priority, TimeSourceFn fn)
 {
     if (!fn)
     {
-        return false;
+        return PROTO_FALSE;
     }
     for (int i = 0; i < PC_TIME_SOURCE_MAX; i++)
     {
@@ -46,16 +43,16 @@ bool pc_time_source_add(const char *name, uint8_t priority, TimeSourceFn fn)
             s_ts.sources[i].name = name;
             s_ts.sources[i].fn = fn;
             s_ts.sources[i].priority = priority;
-            s_ts.sources[i].used = true;
-            return true;
+            s_ts.sources[i].used = PROTO_TRUE;
+            return PROTO_TRUE;
         }
     }
-    return false; // table full
+    return PROTO_FALSE; // table full
 }
 
 uint32_t pc_time_now(void)
 {
-    s_ts.active = nullptr;
+    s_ts.active = NULL;
 
     // Query sources in ascending priority (lowest value first); stop at the first
     // that returns a nonzero epoch. A selection scan avoids sorting and, more
@@ -103,14 +100,14 @@ void pc_time_source_reset(void)
     {
         s_ts.sources[i] = Src{};
     }
-    s_ts.active = nullptr;
+    s_ts.active = NULL;
 }
 
 #else // PC_ENABLE_TIME_SOURCE == 0 -> no-op stubs
 
-bool pc_time_source_add(const char *, uint8_t, TimeSourceFn)
+proto_bool pc_time_source_add(const char *, uint8_t, TimeSourceFn)
 {
-    return false;
+    return PROTO_FALSE;
 }
 uint32_t pc_time_now(void)
 {
@@ -118,7 +115,7 @@ uint32_t pc_time_now(void)
 }
 const char *pc_time_source_active(void)
 {
-    return nullptr;
+    return NULL;
 }
 void pc_time_source_reset(void)
 {

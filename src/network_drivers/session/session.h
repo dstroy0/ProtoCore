@@ -19,9 +19,6 @@
 #define PROTOCORE_SESSION_H
 
 #include "../transport/tcp.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/queue.h"
-#include <Arduino.h>
 
 /**
  * @brief Drive the session layer for one Arduino loop iteration.
@@ -38,12 +35,12 @@
  *    - `EvtType::EVT_DATA` → http_parse()
  *
  * 3. **Returns** - upper layers may then inspect http_pool[] for
- *    ParseState::PARSE_COMPLETE slots and send responses.
+ *    PARSE_COMPLETE slots and send responses.
  *
  * @note The event-drain loop is bounded by the queue depth (16 entries).
  *       Even in the absolute worst case this function executes in O(1).
  */
-void server_tick(int worker_id = 0);
+void server_tick(int worker_id);
 
 // ---------------------------------------------------------------------------
 // Forward declarations for Layer 6 functions used by server_tick()

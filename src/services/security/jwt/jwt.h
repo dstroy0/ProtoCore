@@ -27,8 +27,6 @@
 #define PROTOCORE_JWT_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_JWT
 
@@ -45,7 +43,7 @@
  * @param secret_len  key length.
  * @return true if the signature is valid.
  */
-bool pc_jwt_verify_hs256(const char *token, size_t token_len, const uint8_t *secret, size_t secret_len);
+proto_bool pc_jwt_verify_hs256(const char *token, size_t token_len, const uint8_t *secret, size_t secret_len);
 
 /**
  * @brief Validate an `Authorization` header value carrying a Bearer JWT.
@@ -58,7 +56,7 @@ bool pc_jwt_verify_hs256(const char *token, size_t token_len, const uint8_t *sec
  * @param secret_len  key length.
  * @return true if a well-formed Bearer token validates.
  */
-bool pc_jwt_bearer_valid(const char *auth_header, const uint8_t *secret, size_t secret_len);
+proto_bool pc_jwt_bearer_valid(const char *auth_header, const uint8_t *secret, size_t secret_len);
 
 /**
  * @brief Check a JWT's time-based validity (RFC 7519 `exp` / `nbf`) against a clock.
@@ -75,7 +73,7 @@ bool pc_jwt_bearer_valid(const char *auth_header, const uint8_t *secret, size_t 
  * @param leeway_s   allowed clock skew in seconds (0 for none).
  * @return true if the token is currently within its validity window (or no clock is set).
  */
-bool pc_jwt_time_valid(const char *token, size_t token_len, long now_epoch, long leeway_s);
+proto_bool pc_jwt_time_valid(const char *token, size_t token_len, long now_epoch, long leeway_s);
 
 /**
  * @brief Verify a JWT's HS256 signature AND its `exp` / `nbf` time claims.
@@ -83,8 +81,8 @@ bool pc_jwt_time_valid(const char *token, size_t token_len, long now_epoch, long
  * pc_jwt_verify_hs256() && pc_jwt_time_valid(). On a clockless device (@p now_epoch <= 0)
  * this reduces to the signature-only check.
  */
-bool pc_jwt_verify_hs256_at(const char *token, size_t token_len, const uint8_t *secret, size_t secret_len,
-                            long now_epoch, long leeway_s);
+proto_bool pc_jwt_verify_hs256_at(const char *token, size_t token_len, const uint8_t *secret, size_t secret_len,
+                                  long now_epoch, long leeway_s);
 
 /**
  * @brief Validate a Bearer `Authorization` header, enforcing `exp` / `nbf` when clocked.
@@ -92,8 +90,8 @@ bool pc_jwt_verify_hs256_at(const char *token, size_t token_len, const uint8_t *
  * pc_jwt_bearer_valid() plus the RFC 7519 time-claim check. Pass @p now_epoch from your
  * time source (e.g. `(long)pc_time_now()`); 0 skips the time checks.
  */
-bool pc_jwt_bearer_valid_at(const char *auth_header, const uint8_t *secret, size_t secret_len, long now_epoch,
-                            long leeway_s);
+proto_bool pc_jwt_bearer_valid_at(const char *auth_header, const uint8_t *secret, size_t secret_len, long now_epoch,
+                                  long leeway_s);
 
 /**
  * @brief Read an integer claim (e.g. "exp", "iat", "nbf") from a JWT payload.
@@ -108,7 +106,7 @@ bool pc_jwt_bearer_valid_at(const char *auth_header, const uint8_t *secret, size
  * @param out        receives the parsed value on success.
  * @return true if the claim is present and parses as an integer.
  */
-bool pc_jwt_claim_int(const char *token, size_t token_len, const char *name, long *out);
+proto_bool pc_jwt_claim_int(const char *token, size_t token_len, const char *name, long *out);
 
 /**
  * @brief Read a string claim (e.g. "sub", "role", "scope") from a JWT payload.
@@ -121,7 +119,7 @@ bool pc_jwt_claim_int(const char *token, size_t token_len, const char *name, lon
  *
  * @return true if the claim is present and is a string that fit in @p out.
  */
-bool pc_jwt_claim_str(const char *token, size_t token_len, const char *name, char *out, size_t out_cap);
+proto_bool pc_jwt_claim_str(const char *token, size_t token_len, const char *name, char *out, size_t out_cap);
 
 /**
  * @brief Test whether a space-separated OAuth2 scope claim grants @p required.
@@ -130,7 +128,7 @@ bool pc_jwt_claim_str(const char *token, size_t token_len, const char *name, cha
  * @param required    the scope to look for.
  * @return true if @p required is one of the whole space-separated tokens.
  */
-bool pc_jwt_scope_allows(const char *scope_claim, const char *required);
+proto_bool pc_jwt_scope_allows(const char *scope_claim, const char *required);
 
 #endif // PC_ENABLE_JWT
 

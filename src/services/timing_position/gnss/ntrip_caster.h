@@ -31,27 +31,24 @@
 
 #if PC_ENABLE_NTRIP_CASTER
 
-#include <stddef.h>
-#include <stdint.h>
-
 /** @brief NTRIP protocol revision detected in / used for a request or response. */
-enum class NtripVersion : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     NTRIP_V1 = 1, ///< legacy: ICY 200 OK / SOURCETABLE 200 OK
     NTRIP_V2 = 2, ///< RFC-style: HTTP/1.1 200 OK, Content-Type: gnss/data
-};
+} NtripVersion;
 
 /** @brief A parsed NTRIP rover request. String spans point into the caller's request buffer. */
-struct NtripRequest
+typedef struct
 {
-    bool complete;                       ///< the full request header block (up to a blank line) was present
-    bool is_get;                         ///< the request line was a GET
+    proto_bool complete;                 ///< the full request header block (up to a blank line) was present
+    proto_bool is_get;                   ///< the request line was a GET
     NtripVersion version;                ///< NTRIP_V2 if an Ntrip-Version: Ntrip/2.0 header was present, else NTRIP_V1
     char mountpoint[PC_NTRIP_MOUNT_MAX]; ///< requested mountpoint (empty = source-table request, "GET /")
-    bool want_sourcetable;               ///< the request targets "/" (list the source table)
+    proto_bool want_sourcetable;         ///< the request targets "/" (list the source table)
     const char *auth_b64;                ///< base64 of user:pass from an "Authorization: Basic" header, or null
     uint16_t auth_b64_len;               ///< length of @c auth_b64 (0 if none)
-};
+} NtripRequest;
 
 /**
  * @brief Parse an NTRIP request from the bytes buffered so far.
@@ -60,7 +57,7 @@ struct NtripRequest
  *         filled; false if more bytes are still needed. A completed request with @c is_get false is a
  *         malformed / unsupported request the caller should reject.
  */
-bool pc_ntrip_request_parse(const char *buf, size_t len, NtripRequest *out);
+proto_bool pc_ntrip_request_parse(const char *buf, size_t len, NtripRequest *out);
 
 /**
  * @brief Build the stream-accept response the caster sends before streaming RTCM to a rover.
@@ -84,7 +81,7 @@ size_t pc_ntrip_build_error_response(char *out, size_t cap, NtripVersion version
 size_t pc_ntrip_build_unauthorized_response(char *out, size_t cap, NtripVersion version);
 
 /** @brief One mountpoint's source-table (`STR;...`) description. Unset string fields default sensibly. */
-struct NtripMount
+typedef struct
 {
     const char *mountpoint;     ///< e.g. "BASE1" (required)
     const char *identifier;     ///< source / place identifier, e.g. "Lab roof"
@@ -94,8 +91,8 @@ struct NtripMount
     const char *generator;      ///< producing hardware/software (null -> "PC")
     double lat_deg;             ///< approximate base latitude (source-table advertises 2 decimals)
     double lon_deg;             ///< approximate base longitude
-    bool nmea_required;         ///< rover must send a GGA (1) or not (0); false for a single-base caster
-};
+    proto_bool nmea_required;   ///< rover must send a GGA (1) or not (0); false for a single-base caster
+} NtripMount;
 
 /**
  * @brief Build one NTRIP source-table `STR;...` record (no trailing CRLF) for @p m into @p out.

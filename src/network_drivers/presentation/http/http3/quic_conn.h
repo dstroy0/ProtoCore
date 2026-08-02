@@ -38,8 +38,6 @@
 
 #include "network_drivers/presentation/http/http3/quic_crypto.h"
 #include "network_drivers/presentation/http/http3/quic_tls.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #ifndef PC_QUIC_MAX_DATAGRAM
 #define PC_QUIC_MAX_DATAGRAM 1350 ///< largest UDP payload we send/accept (conservative < 1500 MTU)
@@ -61,51 +59,52 @@
 #endif
 
 /** @brief Per-connection stream state (client-initiated + server-initiated). */
-struct QuicStream
+typedef struct
 {
-    uint64_t id;      ///< stream id (UINT64_MAX = free slot)
-    uint64_t rx_off;  ///< next in-order byte offset expected
-    uint64_t tx_off;  ///< next send offset
-    bool rx_fin;      ///< a FIN was received (final size known)
-    bool tx_fin;      ///< a FIN should be sent after the buffered tx bytes
-    bool tx_fin_sent; ///< the FIN has been sent
+    uint64_t id;            ///< stream id (UINT64_MAX = free slot)
+    uint64_t rx_off;        ///< next in-order byte offset expected
+    uint64_t tx_off;        ///< next send offset
+    proto_bool rx_fin;      ///< a FIN was received (final size known)
+    proto_bool tx_fin;      ///< a FIN should be sent after the buffered tx bytes
+    proto_bool tx_fin_sent; ///< the FIN has been sent
     uint8_t rx[PC_QUIC_STREAM_RX];
     size_t rx_have; ///< contiguous bytes buffered in rx (from offset rx_off - rx_have)
     uint8_t tx[PC_QUIC_STREAM_TX];
     size_t tx_have; ///< bytes buffered to send
     size_t tx_sent; ///< bytes of tx already put on the wire
-};
+} QuicStream;
 
 struct QuicConn;
 
 /** @brief HTTP/3 (or test) hooks the engine drives. All nullable. */
-struct QuicConnCallbacks
+typedef struct
 {
     /** @brief In-order stream bytes arrived on @p stream_id (@p fin marks the final bytes). */
-    void (*on_stream_data)(void *app, QuicConn *qc, uint64_t stream_id, const uint8_t *data, size_t len, bool fin);
+    void (*on_stream_data)(void *app, QuicConn *qc, uint64_t stream_id, const uint8_t *data, size_t len,
+                           proto_bool fin);
     /** @brief The handshake completed (client Finished verified); 1-RTT is open. */
     void (*on_handshake_done)(void *app, QuicConn *qc);
     void *app; ///< opaque, passed back to the callbacks
-};
+} QuicConnCallbacks;
 
 /** @brief One packet-number space (Initial / Handshake / Application). */
-struct QuicPnSpace
+typedef struct
 {
-    uint64_t next_pn;       ///< next packet number to send in this space
-    int64_t largest_acked;  ///< largest of our PNs the peer has acknowledged (-1 = none)
-    int64_t last_ae_pn;     ///< PN of the last ack-eliciting packet we sent here (-1 = none); loss recovery
-    uint64_t largest_rx;    ///< largest PN received in this space
-    bool have_rx;           ///< at least one packet received
-    bool ack_eliciting_rx;  ///< an ack-eliciting packet is unacknowledged (we owe an ACK)
-    bool discarded;         ///< this space's keys have been dropped (nothing more sent/received)
-    uint64_t crypto_rx_off; ///< in-order CRYPTO bytes already delivered to pc_quic_tls
+    uint64_t next_pn;            ///< next packet number to send in this space
+    int64_t largest_acked;       ///< largest of our PNs the peer has acknowledged (-1 = none)
+    int64_t last_ae_pn;          ///< PN of the last ack-eliciting packet we sent here (-1 = none); loss recovery
+    uint64_t largest_rx;         ///< largest PN received in this space
+    proto_bool have_rx;          ///< at least one packet received
+    proto_bool ack_eliciting_rx; ///< an ack-eliciting packet is unacknowledged (we owe an ACK)
+    proto_bool discarded;        ///< this space's keys have been dropped (nothing more sent/received)
+    uint64_t crypto_rx_off;      ///< in-order CRYPTO bytes already delivered to pc_quic_tls
     uint8_t crypto_rx[PC_QUIC_CRYPTO_RX];
     size_t crypto_rx_have;  ///< contiguous CRYPTO bytes buffered at crypto_rx_off
     uint64_t crypto_tx_off; ///< CRYPTO flight bytes already sent from this level
-};
+} QuicPnSpace;
 
 /** @brief One QUIC connection's engine state (fixed storage, no heap). */
-struct QuicConn
+typedef struct QuicConn
 {
     uint8_t scid[QUIC_MAX_CID_LEN]; ///< our connection ID (peer's DCID toward us)
     uint8_t scid_len;
@@ -123,24 +122,24 @@ struct QuicConn
 
     QuicConnCallbacks cb;
 
-    bool handshake_done_queued; ///< a HANDSHAKE_DONE frame still needs sending
-    bool handshake_done_sent;
-    bool closed;            ///< a CONNECTION_CLOSE has been sent or received
-    bool draining;          ///< peer closed; we only drain
-    uint64_t recv_bytes;    ///< total bytes received (anti-amplification budget)
-    uint64_t sent_bytes;    ///< total bytes sent before address validation
-    bool address_validated; ///< handshake-complete or received enough to lift the 3x limit
+    proto_bool handshake_done_queued; ///< a HANDSHAKE_DONE frame still needs sending
+    proto_bool handshake_done_sent;
+    proto_bool closed;            ///< a CONNECTION_CLOSE has been sent or received
+    proto_bool draining;          ///< peer closed; we only drain
+    uint64_t recv_bytes;          ///< total bytes received (anti-amplification budget)
+    uint64_t sent_bytes;          ///< total bytes sent before address validation
+    proto_bool address_validated; ///< handshake-complete or received enough to lift the 3x limit
 
-    bool pto_armed;           ///< a Probe Timeout is running for the outstanding handshake flight
+    proto_bool pto_armed;     ///< a Probe Timeout is running for the outstanding handshake flight
     uint8_t pto_count;        ///< consecutive PTO expirations (exponential backoff exponent)
     uint32_t pto_deadline_ms; ///< when the PTO fires (caller's monotonic ms; valid when pto_armed)
 
-    bool close_queued;         ///< a transport CONNECTION_CLOSE is owed to the peer (fatal error hit)
-    bool close_sent;           ///< the CONNECTION_CLOSE has been put on the wire
+    proto_bool close_queued;   ///< a transport CONNECTION_CLOSE is owed to the peer (fatal error hit)
+    proto_bool close_sent;     ///< the CONNECTION_CLOSE has been put on the wire
     uint64_t close_error;      ///< transport error code to report (RFC 9000 sec 20.1)
     uint64_t close_frame_type; ///< frame type that triggered it (0 when not frame-specific)
     uint8_t close_level;       ///< encryption level to send the close at (the peer holds those keys)
-};
+} QuicConn;
 
 /**
  * @brief Initialize a server connection from the client's first Initial packet.
@@ -164,7 +163,7 @@ void pc_quic_conn_init(QuicConn *qc, const QuicTlsConfig *cfg, const uint8_t *od
  * @return true if the datagram was processed (even partially); false if it was undecryptable /
  * malformed enough to drop entirely. Frames drive the handshake, ACK state, and stream callbacks.
  */
-bool pc_quic_conn_recv(QuicConn *qc, const uint8_t *datagram, size_t len);
+proto_bool pc_quic_conn_recv(QuicConn *qc, const uint8_t *datagram, size_t len);
 
 /**
  * @brief Build the next outbound datagram (coalesced Initial / Handshake / 1-RTT packets).
@@ -186,7 +185,7 @@ void pc_quic_conn_on_timeout(QuicConn *qc, uint32_t now_ms);
  * @brief Queue @p len bytes (with optional @p fin) to send on @p stream_id.
  * @return bytes accepted into the stream's send buffer (may be < len if it is full).
  */
-size_t pc_quic_conn_stream_send(QuicConn *qc, uint64_t stream_id, const uint8_t *data, size_t len, bool fin);
+size_t pc_quic_conn_stream_send(QuicConn *qc, uint64_t stream_id, const uint8_t *data, size_t len, proto_bool fin);
 
 /**
  * @brief Initiate an immediate close: queue a transport CONNECTION_CLOSE (RFC 9000 sec 19.19) with
@@ -197,10 +196,10 @@ size_t pc_quic_conn_stream_send(QuicConn *qc, uint64_t stream_id, const uint8_t 
 void pc_quic_conn_close(QuicConn *qc, uint64_t error_code);
 
 /** @brief True once the TLS handshake has completed (client Finished verified). */
-bool pc_quic_conn_established(const QuicConn *qc);
+proto_bool pc_quic_conn_established(const QuicConn *qc);
 
 /** @brief True if the connection is closed or draining. */
-bool pc_quic_conn_is_closed(const QuicConn *qc);
+proto_bool pc_quic_conn_is_closed(const QuicConn *qc);
 
 #endif // PC_ENABLE_HTTP3
 #endif // PROTOCORE_QUIC_CONN_H

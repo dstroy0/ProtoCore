@@ -90,7 +90,7 @@ void pc_cbor_str(pc_span *w, const char *s)
     pc_cbor_str_n(w, s, s ? strnlen(s, w->cap + 1) : 0);
 }
 
-void pc_cbor_bool(pc_span *w, bool b)
+void pc_cbor_bool(pc_span *w, proto_bool b)
 {
     put(w, b ? 0xf5 : 0xf4);
 }
@@ -130,12 +130,12 @@ void pc_cbor_label(pc_span *w, const char *name, int64_t num)
 
 // Read a CBOR head at r->pos: major type + argument, advancing pos. Sets err and
 // returns false on out-of-bounds or a reserved/indefinite additional-info value.
-static bool read_head(pc_cspan *r, uint8_t *major, uint64_t *val)
+static proto_bool read_head(pc_cspan *r, uint8_t *major, uint64_t *val)
 {
     if (r->err || r->pos >= r->len)
     {
-        r->err = true;
-        return false;
+        r->err = PROTO_TRUE;
+        return PROTO_FALSE;
     }
     uint8_t b = r->buf[r->pos];
     uint8_t info = (uint8_t)(b & 0x1f);
@@ -144,7 +144,7 @@ static bool read_head(pc_cspan *r, uint8_t *major, uint64_t *val)
     {
         *val = info;
         r->pos += 1;
-        return true;
+        return PROTO_TRUE;
     }
     size_t need;
     switch (info)
@@ -162,8 +162,8 @@ static bool read_head(pc_cspan *r, uint8_t *major, uint64_t *val)
         need = 8;
         break;
     default:
-        r->err = true; // 28-31: reserved / indefinite-length, unsupported
-        return false;
+        r->err = PROTO_TRUE; // 28-31: reserved / indefinite-length, unsupported
+        return PROTO_FALSE;
     }
     // The argument is the `need` big-endian bytes after this head byte, so step over the head first.
     r->pos += 1;
@@ -174,68 +174,68 @@ pc_codec_type pc_cbor_peek(pc_cspan *r)
 {
     if (r->err || r->pos >= r->len)
     {
-        return pc_codec_type::PC_CODEC_INVALID;
+        return PC_CODEC_INVALID;
     }
     uint8_t b = r->buf[r->pos];
     switch (b >> 5)
     {
     case 0:
-        return pc_codec_type::PC_CODEC_UINT;
+        return PC_CODEC_UINT;
     case 1:
-        return pc_codec_type::PC_CODEC_INT;
+        return PC_CODEC_INT;
     case 2:
-        return pc_codec_type::PC_CODEC_BYTES;
+        return PC_CODEC_BYTES;
     case 3:
-        return pc_codec_type::PC_CODEC_STR;
+        return PC_CODEC_STR;
     case 4:
-        return pc_codec_type::PC_CODEC_ARRAY;
+        return PC_CODEC_ARRAY;
     case 5:
-        return pc_codec_type::PC_CODEC_MAP;
+        return PC_CODEC_MAP;
     case 7: {
         uint8_t info = (uint8_t)(b & 0x1f);
         if (info == 20 || info == 21)
         {
-            return pc_codec_type::PC_CODEC_BOOL;
+            return PC_CODEC_BOOL;
         }
         if (info == 22)
         {
-            return pc_codec_type::PC_CODEC_NULL;
+            return PC_CODEC_NULL;
         }
         if (info == 26 || info == 27)
         {
-            return pc_codec_type::PC_CODEC_FLOAT;
+            return PC_CODEC_FLOAT;
         }
-        return pc_codec_type::PC_CODEC_INVALID;
+        return PC_CODEC_INVALID;
     }
     default:
-        return pc_codec_type::PC_CODEC_INVALID; // major 6 (tags) unsupported
+        return PC_CODEC_INVALID; // major 6 (tags) unsupported
     }
 }
 
-bool pc_cbor_read_uint(pc_cspan *r, uint64_t *out)
+proto_bool pc_cbor_read_uint(pc_cspan *r, uint64_t *out)
 {
     uint8_t m;
     uint64_t v;
     if (!read_head(r, &m, &v))
     {
-        return false;
+        return PROTO_FALSE;
     }
     if (m != 0)
     {
-        r->err = true;
-        return false;
+        r->err = PROTO_TRUE;
+        return PROTO_FALSE;
     }
     *out = v;
-    return true;
+    return PROTO_TRUE;
 }
 
-bool pc_cbor_read_int(pc_cspan *r, int64_t *out)
+proto_bool pc_cbor_read_int(pc_cspan *r, int64_t *out)
 {
     uint8_t m;
     uint64_t v;
     if (!read_head(r, &m, &v))
     {
-        return false;
+        return PROTO_FALSE;
     }
     if (m == 0)
     {
@@ -247,54 +247,54 @@ bool pc_cbor_read_int(pc_cspan *r, int64_t *out)
     }
     else
     {
-        r->err = true;
-        return false;
+        r->err = PROTO_TRUE;
+        return PROTO_FALSE;
     }
-    return true;
+    return PROTO_TRUE;
 }
 
-bool pc_cbor_read_bool(pc_cspan *r, bool *out)
+proto_bool pc_cbor_read_bool(pc_cspan *r, proto_bool *out)
 {
     if (r->err || r->pos >= r->len)
     {
-        r->err = true;
-        return false;
+        r->err = PROTO_TRUE;
+        return PROTO_FALSE;
     }
     uint8_t b = r->buf[r->pos];
     if (b == 0xf4)
     {
-        *out = false;
+        *out = PROTO_FALSE;
     }
     else if (b == 0xf5)
     {
-        *out = true;
+        *out = PROTO_TRUE;
     }
     else
     {
-        r->err = true;
-        return false;
+        r->err = PROTO_TRUE;
+        return PROTO_FALSE;
     }
     r->pos += 1;
-    return true;
+    return PROTO_TRUE;
 }
 
-bool pc_cbor_read_null(pc_cspan *r)
+proto_bool pc_cbor_read_null(pc_cspan *r)
 {
     if (r->err || r->pos >= r->len || r->buf[r->pos] != 0xf6)
     {
-        r->err = true;
-        return false;
+        r->err = PROTO_TRUE;
+        return PROTO_FALSE;
     }
     r->pos += 1;
-    return true;
+    return PROTO_TRUE;
 }
 
-bool pc_cbor_read_float(pc_cspan *r, float *out)
+proto_bool pc_cbor_read_float(pc_cspan *r, float *out)
 {
     if (r->err || r->pos >= r->len)
     {
-        r->err = true;
-        return false;
+        r->err = PROTO_TRUE;
+        return PROTO_FALSE;
     }
     uint8_t b = r->buf[r->pos];
     if (b == 0xfa) // single
@@ -303,11 +303,11 @@ bool pc_cbor_read_float(pc_cspan *r, float *out)
         r->pos += 1; // step over the head byte; the argument follows it
         if (!pc_br_take_be(r, 4, &v))
         {
-            return false;
+            return PROTO_FALSE;
         }
         uint32_t bits = (uint32_t)v;
         memcpy(out, &bits, sizeof(*out));
-        return true;
+        return PROTO_TRUE;
     }
     if (b == 0xfb) // double -> narrow to float
     {
@@ -315,79 +315,79 @@ bool pc_cbor_read_float(pc_cspan *r, float *out)
         r->pos += 1; // step over the head byte; the argument follows it
         if (!pc_br_take_be(r, 8, &bits))
         {
-            return false;
+            return PROTO_FALSE;
         }
         double d;
         memcpy(&d, &bits, sizeof(d));
         *out = (float)d;
-        return true;
+        return PROTO_TRUE;
     }
-    r->err = true;
-    return false;
+    r->err = PROTO_TRUE;
+    return PROTO_FALSE;
 }
 
 // Shared body for text (major 3) and byte (major 2) strings.
-static bool read_str(pc_cspan *r, uint8_t want_major, const uint8_t **out, size_t *len)
+static proto_bool read_str(pc_cspan *r, uint8_t want_major, const uint8_t **out, size_t *len)
 {
     uint8_t m;
     uint64_t v;
     if (!read_head(r, &m, &v))
     {
-        return false;
+        return PROTO_FALSE;
     }
     if (m != want_major || r->pos + v > r->len)
     {
-        r->err = true;
-        return false;
+        r->err = PROTO_TRUE;
+        return PROTO_FALSE;
     }
     *out = &r->buf[r->pos];
     *len = (size_t)v;
     r->pos += (size_t)v;
-    return true;
+    return PROTO_TRUE;
 }
 
-bool pc_cbor_read_str(pc_cspan *r, const char **out, size_t *len)
+proto_bool pc_cbor_read_str(pc_cspan *r, const char **out, size_t *len)
 {
     return read_str(r, 3, (const uint8_t **)out, len);
 }
 
-bool pc_cbor_read_bytes(pc_cspan *r, const uint8_t **out, size_t *len)
+proto_bool pc_cbor_read_bytes(pc_cspan *r, const uint8_t **out, size_t *len)
 {
     return read_str(r, 2, out, len);
 }
 
-bool pc_cbor_read_array(pc_cspan *r, size_t *count)
+proto_bool pc_cbor_read_array(pc_cspan *r, size_t *count)
 {
     uint8_t m;
     uint64_t v;
     if (!read_head(r, &m, &v))
     {
-        return false;
+        return PROTO_FALSE;
     }
     if (m != 4)
     {
-        r->err = true;
-        return false;
+        r->err = PROTO_TRUE;
+        return PROTO_FALSE;
     }
     *count = (size_t)v;
-    return true;
+    return PROTO_TRUE;
 }
 
-bool pc_cbor_read_map(pc_cspan *r, size_t *count)
+proto_bool pc_cbor_read_map(pc_cspan *r, size_t *count)
 {
     uint8_t m;
     uint64_t v;
     if (!read_head(r, &m, &v))
     {
-        return false;
+        return PROTO_FALSE;
     }
     if (m != 5)
     {
-        r->err = true;
-        return false;
+        r->err = PROTO_TRUE;
+        return PROTO_FALSE;
     }
     *count = (size_t)v;
-    return true;
+    return PROTO_TRUE;
 }
 
 #endif // PC_NEED_CBOR

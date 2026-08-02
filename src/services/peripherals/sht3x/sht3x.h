@@ -26,8 +26,7 @@
 #ifndef PROTOCORE_SHT3X_H
 #define PROTOCORE_SHT3X_H
 
-#include <stddef.h>
-#include <stdint.h>
+#include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
 
 // Single-shot measurement commands (16-bit, sent most-significant byte first).
 #define SHT3X_CMD_SINGLE_HIGH 0x2400 ///< high repeatability, no clock stretching
@@ -52,17 +51,17 @@ int32_t pc_sht3x_rh_mpct(uint16_t raw);
  * CRC-8 words, then fills @p temp_mc and @p rh_mpct (either may be null).
  * @return false if a CRC does not match (a corrupt read).
  */
-bool pc_sht3x_parse(const uint8_t resp[6], int32_t *temp_mc, int32_t *rh_mpct);
+proto_bool pc_sht3x_parse(const uint8_t resp[6], int32_t *temp_mc, int32_t *rh_mpct);
 
 // --- ESP32 binding (I2C via Wire; no-ops on a host build) ------------------------------------
 
 /** @brief Soft-reset the SHT3x at @p addr over I2C. @return true if it acknowledged. */
-bool pc_sht3x_begin(uint8_t addr);
+proto_bool pc_sht3x_begin(uint8_t addr);
 
 /**
  * @brief Trigger a single-shot high-repeatability measurement, read + verify the six bytes, and
  * return the temperature (milli-C) and humidity (milli-%RH). @return false on I2C or CRC error.
  */
-bool pc_sht3x_read(int32_t *temp_mc, int32_t *rh_mpct);
+proto_bool pc_sht3x_read(int32_t *temp_mc, int32_t *rh_mpct);
 
 #endif // PROTOCORE_SHT3X_H

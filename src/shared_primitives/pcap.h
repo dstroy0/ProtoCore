@@ -17,9 +17,8 @@
 #ifndef PROTOCORE_PCAP_H
 #define PROTOCORE_PCAP_H
 
-#include "shared_primitives/endian.h"
-#include <stddef.h>
-#include <stdint.h>
+#include "protocore_config.h"         // the entry point: types.h for the widths and PC_INLINE
+#include "shared_primitives/endian.h" // pc_wr32le / pc_wr16le - libpcap headers are little-endian
 
 /** @brief libpcap header sizes. */
 #define PC_PCAP_GLOBAL_HDR_LEN 24
@@ -37,7 +36,7 @@
  * @param linktype the DLT_* link type of the frames that follow (e.g. ::PC_DLT_IEEE802_11).
  * @return ::PC_PCAP_GLOBAL_HDR_LEN, or 0 if @p cap is too small.
  */
-inline size_t pc_pcap_global_header(uint8_t *out, size_t cap, uint32_t linktype)
+PC_INLINE size_t pc_pcap_global_header(uint8_t *out, size_t cap, uint32_t linktype)
 {
     if (!out || cap < PC_PCAP_GLOBAL_HDR_LEN)
     {
@@ -57,8 +56,8 @@ inline size_t pc_pcap_global_header(uint8_t *out, size_t cap, uint32_t linktype)
  * @brief Write a 16-byte libpcap record header for one captured frame.
  * @return ::PC_PCAP_REC_HDR_LEN, or 0 if @p cap is too small.
  */
-inline size_t pc_pcap_record_header(uint8_t *out, size_t cap, uint32_t ts_sec, uint32_t ts_usec, uint32_t caplen,
-                                    uint32_t origlen)
+PC_INLINE size_t pc_pcap_record_header(uint8_t *out, size_t cap, uint32_t ts_sec, uint32_t ts_usec, uint32_t caplen,
+                                       uint32_t origlen)
 {
     if (!out || cap < PC_PCAP_REC_HDR_LEN)
     {

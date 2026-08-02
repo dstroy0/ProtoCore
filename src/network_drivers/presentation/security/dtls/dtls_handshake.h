@@ -34,9 +34,6 @@
 
 #if PC_ENABLE_DTLS
 
-#include <stddef.h>
-#include <stdint.h>
-
 /** @brief DTLS handshake header length: msg_type(1) + length(3) + message_seq(2) + fragment_offset(3)
  *         + fragment_length(3) = 12 bytes (RFC 9147 §5.2). */
 #define PC_DTLS_HS_HDR_LEN 12
@@ -50,7 +47,7 @@
 // ---------------------------------------------------------------------------
 
 /** @brief Parsed view of one DTLS handshake message fragment (fields point into the caller buffer). */
-struct DtlsHsHeader
+typedef struct
 {
     uint8_t msg_type;        ///< HandshakeType (client_hello, server_hello, finished, ...)
     uint32_t length;         ///< full reassembled body length (uint24 on the wire)
@@ -58,7 +55,7 @@ struct DtlsHsHeader
     uint32_t frag_offset;    ///< byte offset of this fragment within the body (uint24)
     uint32_t frag_length;    ///< length of this fragment (uint24)
     const uint8_t *fragment; ///< fragment bytes, into the input buffer
-};
+} DtlsHsHeader;
 
 /**
  * @brief Parse one DTLS handshake message fragment.
@@ -99,10 +96,10 @@ size_t pc_dtls_hs_frag_build(uint8_t msg_type, uint16_t msg_seq, uint32_t full_l
  * an implementation to handle overlap). Received byte ranges are merged into a bounded interval list;
  * the message is complete when a single interval covers [0, length).
  */
-struct DtlsHsReasm
+typedef struct
 {
-    bool active;                                    ///< false until the first fragment of the target message is seen
-    bool have_len;                                  ///< true once a fragment established the full message length
+    proto_bool active;                              ///< false until the first fragment of the target message is seen
+    proto_bool have_len;                            ///< true once a fragment established the full message length
     uint8_t msg_type;                               ///< HandshakeType of the message being reassembled
     uint16_t msg_seq;                               ///< the message sequence number this reassembler accepts
     uint32_t length;                                ///< full body length (from the first non-empty fragment)
@@ -111,7 +108,7 @@ struct DtlsHsReasm
     uint32_t range_lo[PC_DTLS_HS_REASM_MAX_RANGES]; ///< received interval starts
     uint32_t range_hi[PC_DTLS_HS_REASM_MAX_RANGES]; ///< received interval ends (exclusive)
     uint8_t range_count;                            ///< number of active intervals
-};
+} DtlsHsReasm;
 
 /**
  * @brief Prepare a reassembler for the message numbered @p msg_seq into @p buf.
@@ -138,11 +135,11 @@ int pc_dtls_hs_reasm_add(DtlsHsReasm *r, const DtlsHsHeader *frag);
 
 /** @brief A record identified for acknowledgement: (epoch, sequence_number), 8 bytes each on the
  *         wire (RFC 9147 §7). */
-struct DtlsRecordNumber
+typedef struct
 {
     uint64_t epoch;
     uint64_t seq;
-};
+} DtlsRecordNumber;
 
 /**
  * @brief Build an ACK message body (RFC 9147 §7): uint16 length prefix then @p count 16-byte record
@@ -158,7 +155,7 @@ size_t pc_dtls_ack_build(const DtlsRecordNumber *nums, size_t count, uint8_t *ou
  * @param out_count  receives the number of record numbers parsed.
  * @return true on a well-formed ACK that fits in @p out; false if malformed or too many entries.
  */
-bool pc_dtls_ack_parse(const uint8_t *body, size_t len, DtlsRecordNumber *out, size_t out_cap, size_t *out_count);
+proto_bool pc_dtls_ack_parse(const uint8_t *body, size_t len, DtlsRecordNumber *out, size_t out_cap, size_t *out_count);
 
 // ---------------------------------------------------------------------------
 // HelloRetryRequest cookie (RFC 9147 §5.1): stateless return-routability
@@ -202,9 +199,9 @@ size_t pc_dtls_cookie_make(const uint8_t pc_hmac_key[32], uint64_t timestamp, co
  * @param payload_len_out  receives the payload length on success.
  * @return true if the cookie is authentic, fresh, and bound to @p client_addr.
  */
-bool pc_dtls_cookie_verify(const uint8_t pc_hmac_key[32], uint64_t now, uint64_t max_age, const uint8_t *client_addr,
-                           size_t addr_len, const uint8_t *cookie, size_t cookie_len, uint8_t *payload_out,
-                           size_t payload_cap, size_t *payload_len_out);
+proto_bool pc_dtls_cookie_verify(const uint8_t pc_hmac_key[32], uint64_t now, uint64_t max_age,
+                                 const uint8_t *client_addr, size_t addr_len, const uint8_t *cookie, size_t cookie_len,
+                                 uint8_t *payload_out, size_t payload_cap, size_t *payload_len_out);
 
 #endif // PC_ENABLE_DTLS
 #endif // PROTOCORE_DTLS_HANDSHAKE_H

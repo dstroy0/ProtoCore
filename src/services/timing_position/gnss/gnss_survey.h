@@ -29,24 +29,21 @@
 
 #if PC_ENABLE_NTRIP_CASTER
 
-#include <stddef.h>
-#include <stdint.h>
-
 /** @brief A WGS84 geodetic position: latitude/longitude in degrees, ellipsoidal height in metres. */
-struct GnssGeodetic
+typedef struct
 {
     double lat_deg;
     double lon_deg;
     double height_m; ///< height above the WGS84 ellipsoid (NOT mean sea level)
-};
+} GnssGeodetic;
 
 /** @brief An Earth-Centerd, Earth-Fixed position in metres (WGS84 / EPSG:4978). */
-struct GnssEcef
+typedef struct
 {
     double x;
     double y;
     double z;
-};
+} GnssEcef;
 
 /** @brief WGS84 geodetic -> ECEF (exact closed form). */
 void pc_gnss_geodetic_to_ecef(const GnssGeodetic *g, GnssEcef *e);
@@ -64,10 +61,10 @@ int64_t pc_gnss_ecef_m_to_01mm(double metres);
  * the variance is free of the catastrophic cancellation a raw sum-of-squares at ~6.4e6 m would suffer.
  * Zero heap; carries no per-fix history.
  */
-struct GnssSurvey
+typedef struct
 {
-    bool has_origin; ///< the first fix has been recorded as the shift origin
-    double ox;       ///< origin ECEF (metres) - the first fix
+    proto_bool has_origin; ///< the first fix has been recorded as the shift origin
+    double ox;             ///< origin ECEF (metres) - the first fix
     double oy;
     double oz;
     double sdx; ///< sum of (x - origin) over all fixes
@@ -77,7 +74,7 @@ struct GnssSurvey
     double sdy2;
     double sdz2;
     uint32_t count; ///< number of fixes accumulated
-};
+} GnssSurvey;
 
 /** @brief Reset a survey to empty (no fixes). */
 void pc_gnss_survey_reset(GnssSurvey *s);
@@ -92,7 +89,7 @@ void pc_gnss_survey_add_geodetic(GnssSurvey *s, const GnssGeodetic *g);
 uint32_t pc_gnss_survey_count(const GnssSurvey *s);
 
 /** @brief Mean ECEF position. @return false (and leaves @p out untouched) if no fixes yet. */
-bool pc_gnss_survey_mean(const GnssSurvey *s, GnssEcef *out);
+proto_bool pc_gnss_survey_mean(const GnssSurvey *s, GnssEcef *out);
 
 /**
  * @brief 3-D standard deviation of the accumulated fixes, in metres (sqrt of the summed per-axis
@@ -104,7 +101,7 @@ double pc_gnss_survey_accuracy_m(const GnssSurvey *s);
  * @brief Whether the survey has converged: at least @p min_obs fixes and a 3-D spread within
  *        @p acc_limit_m metres. Mirrors a u-blox TMODE3 survey-in's min-observations / accuracy-limit gate.
  */
-bool pc_gnss_survey_complete(const GnssSurvey *s, uint32_t min_obs, double acc_limit_m);
+proto_bool pc_gnss_survey_complete(const GnssSurvey *s, uint32_t min_obs, double acc_limit_m);
 
 #if PC_NEED_NMEA0183
 struct Nmea0183;
@@ -114,10 +111,10 @@ struct Nmea0183;
  *        separation). @return false if @p m is not a GGA, the fix quality is 0 (no fix), or a field is
  *        missing / malformed.
  */
-bool pc_gnss_gga_to_geodetic(const Nmea0183 *m, GnssGeodetic *out);
+proto_bool pc_gnss_gga_to_geodetic(const Nmea0183 *m, GnssGeodetic *out);
 
 /** @brief Parse a GGA and, if it carries a valid fix, fold it into the survey. @return true if added. */
-bool pc_gnss_survey_add_gga(GnssSurvey *s, const Nmea0183 *m);
+proto_bool pc_gnss_survey_add_gga(GnssSurvey *s, const Nmea0183 *m);
 #endif
 
 #endif // PC_ENABLE_NTRIP_CASTER

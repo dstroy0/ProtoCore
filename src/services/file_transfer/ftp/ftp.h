@@ -29,9 +29,6 @@
 
 #if PC_ENABLE_FTP
 
-#include <stddef.h>
-#include <stdint.h>
-
 /**
  * @brief Build a control command line: `VERB<CRLF>` or `VERB<SP>ARG<CRLF>`.
  *
@@ -56,7 +53,7 @@ size_t pc_ftp_build_port(char *buf, size_t cap, const uint8_t ip[4], uint16_t po
  * @param ipv6   false => net-prt 1 (IPv4), true => net-prt 2 (IPv6).
  * @return bytes written (excluding NUL), or 0 on overflow.
  */
-size_t pc_ftp_build_eprt(char *buf, size_t cap, const char *ip_str, bool ipv6, uint16_t port);
+size_t pc_ftp_build_eprt(char *buf, size_t cap, const char *ip_str, proto_bool ipv6, uint16_t port);
 
 /**
  * @brief Detect and measure a complete control-channel reply at the head of @p buf.
@@ -68,7 +65,7 @@ size_t pc_ftp_build_eprt(char *buf, size_t cap, const char *ip_str, bool ipv6, u
  * @return true if a complete reply is present; false if the buffer holds only a partial reply
  *         (need more bytes) or a malformed head (then @p code / @p consumed are unspecified).
  */
-bool pc_ftp_parse_reply(const char *buf, size_t len, int *code, size_t *consumed);
+proto_bool pc_ftp_parse_reply(const char *buf, size_t len, int *code, size_t *consumed);
 
 /**
  * @brief Decode the data address from a `227` passive-mode reply.
@@ -78,7 +75,7 @@ bool pc_ftp_parse_reply(const char *buf, size_t len, int *code, size_t *consumed
  *
  * @return true on a well-formed tuple, false otherwise (then @p ip / @p port are unspecified).
  */
-bool pc_ftp_parse_pasv(const char *buf, size_t len, uint8_t ip[4], uint16_t *port);
+proto_bool pc_ftp_parse_pasv(const char *buf, size_t len, uint8_t ip[4], uint16_t *port);
 
 /**
  * @brief Decode the port from a `229` extended-passive reply `(<d><d><d>port<d>)` (RFC 2428).
@@ -87,7 +84,7 @@ bool pc_ftp_parse_pasv(const char *buf, size_t len, uint8_t ip[4], uint16_t *por
  *
  * @return true on a well-formed reply, false otherwise (then @p port is unspecified).
  */
-bool pc_ftp_parse_epsv(const char *buf, size_t len, uint16_t *port);
+proto_bool pc_ftp_parse_epsv(const char *buf, size_t len, uint16_t *port);
 
 /** @brief First digit of a reply code (1 preliminary, 2 complete, 3 intermediate, 4/5 error), or 0. */
 static inline int pc_ftp_reply_class(int code)
@@ -96,7 +93,7 @@ static inline int pc_ftp_reply_class(int code)
 }
 
 /** @brief A 2xx positive-completion reply. */
-static inline bool pc_ftp_reply_ok(int code)
+static inline proto_bool pc_ftp_reply_ok(int code)
 {
     return pc_ftp_reply_class(code) == 2;
 }

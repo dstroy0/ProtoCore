@@ -21,8 +21,6 @@
 #define PROTOCORE_EXC_DECODER_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_EXC_DECODER
 
@@ -31,23 +29,23 @@
 #endif
 
 /** @brief One backtrace frame: a program counter and its stack pointer. */
-struct ExcFrame
+typedef struct
 {
     uint32_t pc;
     uint32_t sp;
-};
+} ExcFrame;
 
 /** @brief A decoded panic. Fields not found in the input are left at their zeroed / -1 defaults. */
-struct ExcInfo
+typedef struct
 {
     int core;                           ///< panicking core number, or -1 if not present.
     char cause[32];                     ///< exception cause text (e.g. "LoadProhibited"), "" if absent.
     uint32_t pc;                        ///< faulting PC (register-dump PC, else first backtrace frame).
     uint32_t excvaddr;                  ///< faulting data address (EXCVADDR), 0 if absent.
-    bool has_excvaddr;                  ///< true if an EXCVADDR field was present.
+    proto_bool has_excvaddr;            ///< true if an EXCVADDR field was present.
     ExcFrame frames[PC_EXC_MAX_FRAMES]; ///< backtrace, outermost-first as printed.
     size_t frame_count;
-};
+} ExcInfo;
 
 /**
  * @brief Parse an ESP32 panic dump into @p out.
@@ -56,7 +54,7 @@ struct ExcInfo
  * `Backtrace: pc:sp pc:sp ...` frame list. Tolerant of missing fields and of a trailing "|<-CORRUPTED".
  * @return true if at least one of {cause, pc, a backtrace frame} was found.
  */
-bool pc_exc_parse(const char *text, ExcInfo *out);
+proto_bool pc_exc_parse(const char *text, ExcInfo *out);
 
 /**
  * @brief Serialize a decoded panic as
@@ -66,7 +64,7 @@ bool pc_exc_parse(const char *text, ExcInfo *out);
  */
 size_t pc_exc_json(const ExcInfo *info, char *out, size_t cap);
 
-#if defined(ARDUINO)
+#if PROTOCORE_HOT
 // --- Core-dump partition (ESP32) ---------------------------------------------------------
 //
 // A panic that reboots the device takes its console output with it. ESP-IDF also writes a core
@@ -81,18 +79,18 @@ class FS;
 }
 
 /** @brief Where the stored core dump lives, and how big it is. */
-struct ExcCoreDump
+typedef struct
 {
     uint32_t addr; ///< absolute flash address of the image
     size_t size;   ///< image size in bytes
-};
+} ExcCoreDump;
 
 /**
  * @brief Is a core dump stored, and is its checksum intact?
  * @param out optional; filled with the image address/size when one is present.
  * @return true if a valid dump is waiting to be read.
  */
-bool pc_exc_coredump_present(ExcCoreDump *out);
+proto_bool pc_exc_coredump_present(ExcCoreDump *out);
 
 /**
  * @brief Fill an ExcInfo from the stored dump's summary, so the existing `/exception` panel can
@@ -108,7 +106,7 @@ bool pc_exc_coredump_present(ExcCoreDump *out);
  *
  * @return true if a summary was read.
  */
-bool pc_exc_coredump_summary(ExcInfo *out);
+proto_bool pc_exc_coredump_summary(ExcInfo *out);
 
 /**
  * @brief Read @p len raw bytes of the stored image starting at @p offset within it.
@@ -121,7 +119,7 @@ bool pc_exc_coredump_summary(ExcInfo *out);
  * @return true if the whole range was read; false if no valid dump is stored or the range runs
  *         past its end (a short read is never reported as success).
  */
-bool pc_exc_coredump_read(size_t offset, void *buf, size_t len);
+proto_bool pc_exc_coredump_read(size_t offset, void *buf, size_t len);
 
 /**
  * @brief Copy the raw core-dump image out of flash into a file (SD, LittleFS, ...).
@@ -137,14 +135,14 @@ bool pc_exc_coredump_read(size_t offset, void *buf, size_t len);
  *
  * @return true if the whole image was written.
  */
-bool pc_exc_coredump_save(fs::FS &file_sys, const char *path);
+proto_bool pc_exc_coredump_save(fs::FS &file_sys, const char *path);
 
 /**
  * @brief Erase the stored dump so the next boot does not re-offload the same crash.
  *        Call only after a successful save.
  */
-bool pc_exc_coredump_erase(void);
-#endif // ARDUINO
+proto_bool pc_exc_coredump_erase(void);
+#endif // PROTOCORE_HOT
 
 #endif // PC_ENABLE_EXC_DECODER
 #endif // PROTOCORE_EXC_DECODER_H

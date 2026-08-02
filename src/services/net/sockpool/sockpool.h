@@ -20,33 +20,31 @@
 #define PROTOCORE_SOCKPOOL_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_SOCKPOOL
 
 /** @brief One connection slot. */
-struct SockSlot
+typedef struct
 {
-    bool in_use;
+    proto_bool in_use;
     uint32_t id;        ///< application connection id (e.g. a socket fd / handle).
     uint32_t last_used; ///< tick of the last acquire/touch (for LRU).
-};
+} SockSlot;
 
 /** @brief A fixed pool of connection slots (storage is caller-owned). */
-struct SockPool
+typedef struct
 {
     SockSlot *slots;
     size_t n;
-};
+} SockPool;
 
 /** @brief Acquire outcome (the sole return of pc_sockpool_acquire). */
-enum class SockAcq : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     SOCK_ACQ_FREE = 0,     ///< a free slot was used.
     SOCK_ACQ_RECYCLED = 1, ///< the pool was full; the LRU slot was recycled (see evicted_id).
     SOCK_ACQ_FAIL = 2      ///< the pool has zero slots / bad args.
-};
+} SockAcq;
 
 /** @brief Initialize a pool over caller storage; all slots start free. */
 void pc_sockpool_init(SockPool *p, SockSlot *slots, size_t n);
@@ -65,10 +63,10 @@ SockAcq pc_sockpool_acquire(SockPool *p, uint32_t id, uint32_t now, size_t *idx,
 void pc_sockpool_touch(SockPool *p, size_t idx, uint32_t now);
 
 /** @brief Free slot @p idx. @return true if it was a valid, in-use slot. */
-bool pc_sockpool_release(SockPool *p, size_t idx);
+proto_bool pc_sockpool_release(SockPool *p, size_t idx);
 
 /** @brief Find the slot holding connection @p id. @p idx (may be null) gets the index. @return found. */
-bool pc_sockpool_find(const SockPool *p, uint32_t id, size_t *idx);
+proto_bool pc_sockpool_find(const SockPool *p, uint32_t id, size_t *idx);
 
 /** @brief Count of in-use slots. */
 size_t pc_sockpool_in_use(const SockPool *p);

@@ -31,8 +31,6 @@
 
 #include "protocore_config.h"       // PC_WORK_AESGCM sizes a context
 #include "shared_primitives/span.h" // pc_cspan: what the seal produced (empty == it did not)
-#include <stddef.h>
-#include <stdint.h>
 
 /** @brief AES-256-GCM key length (bytes). */
 #define PC_AESGCM_KEY_LEN 32
@@ -54,12 +52,12 @@ struct pc_aesgcm_key;
  *                that macro and it cannot be wrong - the backend static_asserts its context fits, so
  *                the size is settled at compile time and there is nothing to check here. Must outlive
  *                every seal/open against it, and must be wiped on rekey and on close.
- * @return the context, or nullptr if the vendor rejected the key.
+ * @return the context, or NULL if the vendor rejected the key.
  */
-pc_aesgcm_key *pc_aesgcm_key_init(void *storage, const uint8_t key[PC_AESGCM_KEY_LEN]);
+struct pc_aesgcm_key *pc_aesgcm_key_init(void *storage, const uint8_t key[PC_AESGCM_KEY_LEN]);
 
 /** @brief Wipe the expanded schedule. Call on rekey and on close; the storage stays the caller's. */
-void pc_aesgcm_key_wipe(pc_aesgcm_key *k);
+void pc_aesgcm_key_wipe(struct pc_aesgcm_key *k);
 
 /**
  * @brief Seal one record under @p k and @p nonce.
@@ -67,15 +65,17 @@ void pc_aesgcm_key_wipe(pc_aesgcm_key *k);
  * @p ct_out receives @p pt_len ciphertext bytes (may alias @p pt) and @p tag_out the 16-byte tag. No
  * state is kept or advanced - the caller owns the nonce.
  */
-pc_cspan pc_aesgcm_seal(pc_aesgcm_key *k, const uint8_t nonce[PC_AESGCM_IV_LEN], const uint8_t *aad, size_t aad_len,
-                        const uint8_t *pt, size_t pt_len, uint8_t *ct_out, uint8_t tag_out[PC_AESGCM_TAG_LEN]);
+pc_cspan pc_aesgcm_seal(struct pc_aesgcm_key *k, const uint8_t nonce[PC_AESGCM_IV_LEN], const uint8_t *aad,
+                        size_t aad_len, const uint8_t *pt, size_t pt_len, uint8_t *ct_out,
+                        uint8_t tag_out[PC_AESGCM_TAG_LEN]);
 
 /**
  * @brief Open one record: verify @p tag over @p aad || @p ct in constant time, then (only on success)
  *        decrypt @p ct into @p out (may alias @p ct). @return true iff the tag is valid.
  */
-bool pc_aesgcm_open(pc_aesgcm_key *k, const uint8_t nonce[PC_AESGCM_IV_LEN], const uint8_t *aad, size_t aad_len,
-                    const uint8_t *ct, size_t ct_len, const uint8_t tag[PC_AESGCM_TAG_LEN], uint8_t *out);
+proto_bool pc_aesgcm_open(struct pc_aesgcm_key *k, const uint8_t nonce[PC_AESGCM_IV_LEN], const uint8_t *aad,
+                          size_t aad_len, const uint8_t *ct, size_t ct_len, const uint8_t tag[PC_AESGCM_TAG_LEN],
+                          uint8_t *out);
 
 /**
  * @brief Advance the RFC 5647 invocation counter: the low 8 bytes of the 12-byte nonce as a big-endian

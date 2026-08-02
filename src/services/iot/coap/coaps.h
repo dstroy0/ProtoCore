@@ -25,8 +25,6 @@
 #if PC_ENABLE_DTLS && PC_ENABLE_COAP
 
 #include "network_drivers/presentation/security/dtls/dtls_conn.h"
-#include <stddef.h>
-#include <stdint.h>
 
 /**
  * @brief Process one inbound DTLS datagram for a CoAP-over-DTLS connection @p c.

@@ -19,7 +19,6 @@
 #define PROTOCORE_WEBHOOK_H
 
 #include "protocore_config.h"
-#include <stddef.h>
 
 #if PC_ENABLE_WEBHOOK
 

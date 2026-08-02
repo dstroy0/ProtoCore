@@ -49,8 +49,6 @@
 #define PROTOCORE_SIGNALING_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 /**
  * @brief The server's state, as the loop deposited it.
@@ -58,7 +56,7 @@
  * A struct rather than a set of getters so a reader takes one consistent picture in one call instead
  * of interleaving reads while the loop runs between them.
  */
-struct pc_signal_snapshot
+typedef struct
 {
     uint32_t uptime_ms;      ///< Milliseconds the server has been up.
     uint32_t requests_total; ///< Responses sent.
@@ -68,12 +66,12 @@ struct pc_signal_snapshot
 
     // Masks, not counts. Which slot and which listener is the fact the pools already hold, and a
     // count throws it away: __builtin_popcount recovers the tally from the mask in one instruction,
-    // while nothing recovers the identity from a tally. It is also the shape the pools are already
-    // allocated with (pc_conn_alloc_free in tcp.cpp, the SFTP handle table), so a reader comparing
-    // the bucket against the pool is comparing like with like.
+    // while nothing recovers the identity from a tally. It is the shape the pools are allocated with
+    // (pc_conn_alloc_free in tcp.c, the SFTP handle table), so a reader comparing the bucket against
+    // the pool is comparing like with like.
     uint32_t conns_active; ///< One bit per connection slot in use.
     uint32_t listeners_up; ///< One bit per bound listener.
-};
+} pc_signal_snapshot;
 
 static_assert(CONN_POOL_SLOTS <= 32, "pc_signal_snapshot::conns_active is one 32-bit word, one bit per slot");
 static_assert(MAX_LISTENERS <= 32, "pc_signal_snapshot::listeners_up is one 32-bit word, one bit per listener");

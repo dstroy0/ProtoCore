@@ -15,7 +15,6 @@
 #include "crypto/aead/chachapoly.h"
 #include "crypto/asymmetric/bignum.h"
 #include "crypto/cipher/aes256ctr.h"
-#include "crypto/crypto_scratch.h" // pc_ct_eq
 #include "crypto/hash/sha256.h"
 #include "crypto/mac/ghash.h"
 #include "crypto/mac/hmac_sha256.h"

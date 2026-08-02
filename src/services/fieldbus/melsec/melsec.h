@@ -39,9 +39,6 @@
 
 #if PC_ENABLE_MELSEC
 
-#include <stddef.h>
-#include <stdint.h>
-
 #define MELSEC_3E_REQ_SUBHEADER0 0x50 ///< request subheader (sent 0x50 then 0x00)
 #define MELSEC_3E_REQ_SUBHEADER1 0x00
 #define MELSEC_3E_RES_SUBHEADER0 0xD0 ///< response subheader (0xD0 0x00)
@@ -102,15 +99,15 @@ size_t pc_melsec_build_write(uint8_t *buf, size_t cap, uint8_t device_code, uint
                              uint16_t monitoring_timer, const uint8_t *data, size_t data_len);
 
 /** @brief A parsed 3E response. @ref data points INTO the source buffer (LE word values). */
-struct MelsecResponse
+typedef struct
 {
     uint16_t end_code;   ///< 0x0000 on success
     const uint8_t *data; ///< response payload (empty on error)
     size_t data_len;
-};
+} MelsecResponse;
 
 /** @brief Parse + validate a binary 3E response (subheader 0xD0 0x00, length, end code, data). */
-bool pc_melsec_parse_response(const uint8_t *buf, size_t len, MelsecResponse *out);
+proto_bool pc_melsec_parse_response(const uint8_t *buf, size_t len, MelsecResponse *out);
 
 #endif // PC_ENABLE_MELSEC
 

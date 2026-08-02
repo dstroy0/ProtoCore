@@ -31,9 +31,6 @@
 
 #if PC_ENABLE_NTRIP_CASTER
 
-#include <stddef.h>
-#include <stdint.h>
-
 #define RTCM3_PREAMBLE 0xD3u ///< frame start byte
 #define RTCM3_HDR_LEN 3      ///< preamble (1) + 6 reserved bits + 10-bit length (2)
 #define RTCM3_CRC_LEN 3      ///< trailing CRC-24Q
@@ -52,13 +49,13 @@ uint32_t pc_rtcm3_crc24q(const uint8_t *data, size_t len);
 // ---------------------------------------------------------------------------------------------
 
 /// A bit cursor over a byte buffer for writing MSB-first fields. Pre-zero the buffer before writing.
-struct RtcmBitWriter
+typedef struct
 {
     uint8_t *buf;
     size_t cap_bits; ///< capacity in bits
     size_t pos;      ///< current bit offset
-    bool ok;         ///< cleared if a write would overflow
-};
+    proto_bool ok;   ///< cleared if a write would overflow
+} RtcmBitWriter;
 
 /** @brief Start a writer over @p buf (@p cap bytes). The buffer must already be zeroed. */
 void pc_rtcm_bw_init(RtcmBitWriter *w, uint8_t *buf, size_t cap);
@@ -77,13 +74,13 @@ int64_t pc_rtcm_br_s(const uint8_t *buf, size_t *pos, uint8_t nbits);
 // ---------------------------------------------------------------------------------------------
 
 /// A parsed RTCM3 frame view (payload points into the caller's buffer).
-struct Rtcm3Frame
+typedef struct
 {
     uint16_t msg_type;      ///< DF002 message number (first 12 payload bits)
     const uint8_t *payload; ///< start of the payload inside the parsed buffer
     uint16_t payload_len;   ///< payload length in bytes
-    bool crc_ok;            ///< the trailing CRC-24Q matched
-};
+    proto_bool crc_ok;      ///< the trailing CRC-24Q matched
+} Rtcm3Frame;
 
 /**
  * @brief Parse one RTCM3 frame beginning at @p buf[0] (which must be the preamble).
@@ -108,15 +105,15 @@ size_t pc_rtcm3_frame_build(uint8_t *out, size_t cap, const uint8_t *payload, ui
 // ---------------------------------------------------------------------------------------------
 
 /// Decoded 1005 / 1006 antenna reference point.
-struct Rtcm3StationArp
+typedef struct
 {
     uint16_t station_id;
     int64_t ecef_x_01mm; ///< ECEF X in 0.1 mm (RTCM3 0.0001 m resolution)
     int64_t ecef_y_01mm;
     int64_t ecef_z_01mm;
     uint16_t antenna_height_01mm; ///< 1006 only (0 for 1005)
-    bool has_height;              ///< true for 1006
-};
+    proto_bool has_height;        ///< true for 1006
+} Rtcm3StationArp;
 
 /** @brief Build a full 1005 frame (ARP, no antenna height). @return frame length or 0. */
 size_t pc_rtcm3_build_1005(uint8_t *out, size_t cap, uint16_t station_id, int64_t ecef_x_01mm, int64_t ecef_y_01mm,
@@ -130,7 +127,7 @@ size_t pc_rtcm3_build_1006(uint8_t *out, size_t cap, uint16_t station_id, int64_
  * @brief Decode a 1005 / 1006 payload (not the framed message) into @p out.
  * @return true if @p payload is a well-formed 1005 or 1006; false otherwise.
  */
-bool pc_rtcm3_parse_1005(const uint8_t *payload, uint16_t payload_len, Rtcm3StationArp *out);
+proto_bool pc_rtcm3_parse_1005(const uint8_t *payload, uint16_t payload_len, Rtcm3StationArp *out);
 
 #endif // PC_ENABLE_NTRIP_CASTER
 

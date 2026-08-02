@@ -21,18 +21,16 @@
 #define PROTOCORE_PSRAM_POOL_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_PSRAM_POOL
 
 /** @brief Placement verdict (the sole return of pc_psram_place). */
-enum class pc_place : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     PLACE_DRAM = 0,  ///< allocate in internal DRAM.
     PLACE_PSRAM = 1, ///< allocate in external PSRAM.
     PLACE_FAIL = 2   ///< neither heap can satisfy the request.
-};
+} pc_place;
 
 /**
  * @brief Decide where a buffer should live.
@@ -49,14 +47,14 @@ enum class pc_place : uint8_t
  * @param dram_reserve   internal DRAM to keep free after a DRAM placement.
  * @return PLACE_DRAM / PLACE_PSRAM / PLACE_FAIL.
  */
-pc_place pc_psram_place(size_t size, bool dma_required, size_t free_dram, size_t free_psram, size_t psram_threshold,
-                        size_t dram_reserve);
+pc_place pc_psram_place(size_t size, proto_bool dma_required, size_t free_dram, size_t free_psram,
+                        size_t psram_threshold, size_t dram_reserve);
 
 /** @brief SPI DMA ping-pong double-buffer state. */
-struct PingPong
+typedef struct
 {
     uint8_t fill_idx; ///< buffer the CPU is filling (DMA drains the other).
-};
+} PingPong;
 
 /** @brief Initialize: CPU fills buffer 0, DMA drains buffer 1. */
 void pc_pingpong_init(PingPong *pp);

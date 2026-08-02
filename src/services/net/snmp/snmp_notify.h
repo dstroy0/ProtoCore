@@ -21,13 +21,11 @@
 #define PROTOCORE_SNMP_NOTIFY_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_SNMP_TRAP
 
 /** @brief Variable-binding value types accepted in a notification. */
-enum class SnmpVbType : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     SNMP_VB_INT = 0,       ///< INTEGER (ival)
     SNMP_VB_STRING = 1,    ///< OCTET STRING (bytes/blen)
@@ -36,10 +34,10 @@ enum class SnmpVbType : uint8_t
     SNMP_VB_GAUGE32 = 4,   ///< Gauge32 (ival)
     SNMP_VB_TIMETICKS = 5, ///< TimeTicks (ival)
     SNMP_VB_IPADDR = 6,    ///< IpAddress (bytes, 4 octets)
-};
+} SnmpVbType;
 
 /** @brief One caller-supplied variable-binding (OID + typed value). */
-struct SnmpVarbind
+typedef struct
 {
     const uint32_t *oid;     ///< binding OID arcs
     size_t oid_len;          ///< number of arcs
@@ -49,7 +47,7 @@ struct SnmpVarbind
     size_t blen;             ///< byte length
     const uint32_t *oid_val; ///< OID-valued binding arcs
     size_t oid_val_len;      ///< OID-valued arc count
-};
+} SnmpVarbind;
 
 // ---------------------------------------------------------------------------
 // Pure builder (host-testable; no sockets)
@@ -62,7 +60,7 @@ struct SnmpVarbind
  * varbinds } }` where the varbinds begin with `sysUpTime.0` = @p uptime_ticks and
  * `snmpTrapOID.0` = @p trap_oid, followed by the @p n caller @p vbs.
  *
- * @param pdu_tag  SnmpTag::SNMP_PDU_TRAPV2 (0xA7) for a trap, 0xA6 for an InformRequest.
+ * @param pdu_tag  SNMP_TAG_SNMP_PDU_TRAPV2 (0xA7) for a trap, 0xA6 for an InformRequest.
  * @return total message length, or 0 if it would not fit @p cap.
  */
 size_t pc_snmp_notify_build_v2c(uint8_t *out, size_t cap, const char *community, uint8_t pdu_tag, uint32_t request_id,
@@ -89,8 +87,8 @@ size_t pc_snmp_notify_build_pdu(BerEnc *e, uint8_t pdu_tag, uint32_t request_id,
  * @brief Send an SNMPv2c Trap to @p dst_ip:@p port (sysUpTime.0 is taken from millis()).
  * @return true if the datagram was queued.
  */
-bool pc_snmp_trap_v2c(const char *dst_ip, uint16_t port, const char *community, const uint32_t *trap_oid,
-                      size_t trap_oid_len, const SnmpVarbind *vbs, size_t n);
+proto_bool pc_snmp_trap_v2c(const char *dst_ip, uint16_t port, const char *community, const uint32_t *trap_oid,
+                            size_t trap_oid_len, const SnmpVarbind *vbs, size_t n);
 
 /**
  * @brief Send an SNMPv2c InformRequest to @p dst_ip:@p port.
@@ -99,8 +97,8 @@ bool pc_snmp_trap_v2c(const char *dst_ip, uint16_t port, const char *community, 
  * retransmitted); @p request_id lets the caller match a Response if it listens.
  * @return true if the datagram was queued.
  */
-bool pc_snmp_inform_v2c(const char *dst_ip, uint16_t port, const char *community, uint32_t request_id,
-                        const uint32_t *trap_oid, size_t trap_oid_len, const SnmpVarbind *vbs, size_t n);
+proto_bool pc_snmp_inform_v2c(const char *dst_ip, uint16_t port, const char *community, uint32_t request_id,
+                              const uint32_t *trap_oid, size_t trap_oid_len, const SnmpVarbind *vbs, size_t n);
 
 #if PC_ENABLE_SNMP_V3
 /**
@@ -110,8 +108,8 @@ bool pc_snmp_inform_v2c(const char *dst_ip, uint16_t port, const char *community
  * notification from the engine ID and localized keys configured via
  * pc_snmp_v3_init() / pc_snmp_v3_set_user(). @return true if the datagram was queued.
  */
-bool pc_snmp_trap_v3(const char *dst_ip, uint16_t port, const uint32_t *trap_oid, size_t trap_oid_len,
-                     const SnmpVarbind *vbs, size_t n);
+proto_bool pc_snmp_trap_v3(const char *dst_ip, uint16_t port, const uint32_t *trap_oid, size_t trap_oid_len,
+                           const SnmpVarbind *vbs, size_t n);
 
 /**
  * @brief Send an SNMPv3 USM InformRequest (authPriv) - the confirmed counterpart
@@ -122,8 +120,8 @@ bool pc_snmp_trap_v3(const char *dst_ip, uint16_t port, const uint32_t *trap_oid
  * caller owns it and, for confirmed delivery, retransmits until that Response
  * arrives. @return true if the datagram was queued.
  */
-bool pc_snmp_inform_v3(const char *dst_ip, uint16_t port, uint32_t request_id, const uint32_t *trap_oid,
-                       size_t trap_oid_len, const SnmpVarbind *vbs, size_t n);
+proto_bool pc_snmp_inform_v3(const char *dst_ip, uint16_t port, uint32_t request_id, const uint32_t *trap_oid,
+                             size_t trap_oid_len, const SnmpVarbind *vbs, size_t n);
 #endif
 
 #endif // PC_ENABLE_SNMP_TRAP

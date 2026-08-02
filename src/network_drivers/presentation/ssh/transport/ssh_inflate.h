@@ -28,8 +28,6 @@
 #define PROTOCORE_SSH_INFLATE_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_SSH_ZLIB
 
@@ -46,7 +44,7 @@
  * The 32 KB circular @ref window is caller-supplied (it lives in PSRAM alongside the s2c compressor).
  * ssh_inflate_init() binds it and resets the stream; the small carry/bit state is inline.
  */
-struct SshInflate
+typedef struct
 {
     uint8_t *window;                  ///< 32 KB circular back-reference window (SSH_INFLATE_WINDOW bytes).
     uint32_t wpos;                    ///< next write position in @ref window (0..SSH_INFLATE_WINDOW-1).
@@ -54,8 +52,8 @@ struct SshInflate
     uint8_t carry[SSH_INFLATE_CARRY]; ///< un-decoded tail bytes from the previous packet (flush block).
     uint8_t carry_len;                ///< number of valid bytes in @ref carry.
     uint8_t bit_off;                  ///< bits already consumed from carry[0] at the last block boundary (0..7).
-    bool header_seen;                 ///< true once the leading 2-byte RFC 1950 zlib header was consumed.
-};
+    proto_bool header_seen;           ///< true once the leading 2-byte RFC 1950 zlib header was consumed.
+} SshInflate;
 
 /**
  * @brief Bind a caller-owned 32 KB window to a decompressor and reset it to stream start.

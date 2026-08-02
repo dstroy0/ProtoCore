@@ -13,13 +13,11 @@
 
 #include <string.h> // memcpy, strlen
 
-#if defined(ARDUINO)
+#if PROTOCORE_HOT
 #include "network_drivers/transport/udp.h"
 #endif
-namespace
-{
 // Case-insensitive ASCII string equality (DNS names are case-insensitive).
-bool ci_eq(const char *a, const char *b)
+static proto_bool ci_eq(const char *a, const char *b)
 {
     while (*a && *b)
     {
@@ -35,7 +33,7 @@ bool ci_eq(const char *a, const char *b)
         }
         if (ca != cb)
         {
-            return false;
+            return PROTO_FALSE;
         }
         a++;
         b++;
@@ -45,12 +43,13 @@ bool ci_eq(const char *a, const char *b)
 
 // Parse the first question: write the dotted name into @p name, set *qtype and *qend (the
 // byte just past QTYPE/QCLASS). Returns false on a malformed or over-long question.
-bool parse_question(const uint8_t *q, size_t qlen, char *name, size_t name_cap, uint16_t *qtype, size_t *qend)
+static proto_bool parse_question(const uint8_t *q, size_t qlen, char *name, size_t name_cap, uint16_t *qtype,
+                                 size_t *qend)
 {
     // GCOVR_EXCL_START  the sole caller (pc_dns_server_build_response) already rejects qlen < 12
     if (qlen < 12)
     {
-        return false;
+        return PROTO_FALSE;
     }
     // GCOVR_EXCL_STOP
     size_t i = 12;
@@ -59,7 +58,7 @@ bool parse_question(const uint8_t *q, size_t qlen, char *name, size_t name_cap, 
     {
         if (i >= qlen)
         {
-            return false;
+            return PROTO_FALSE;
         }
         uint8_t len = q[i++];
         if (len == 0)
@@ -68,17 +67,17 @@ bool parse_question(const uint8_t *q, size_t qlen, char *name, size_t name_cap, 
         }
         if (len & 0xC0) // a compression pointer is illegal inside a question
         {
-            return false;
+            return PROTO_FALSE;
         }
         if (i + len > qlen)
         {
-            return false;
+            return PROTO_FALSE;
         }
         if (n)
         {
             if (n + 1 >= name_cap)
             {
-                return false;
+                return PROTO_FALSE;
             }
             name[n++] = '.';
         }
@@ -86,7 +85,7 @@ bool parse_question(const uint8_t *q, size_t qlen, char *name, size_t name_cap, 
         {
             if (n + 1 >= name_cap)
             {
-                return false;
+                return PROTO_FALSE;
             }
             name[n++] = (char)q[i++];
         }
@@ -94,13 +93,12 @@ bool parse_question(const uint8_t *q, size_t qlen, char *name, size_t name_cap, 
     name[n] = '\0';
     if (i + 4 > qlen)
     {
-        return false;
+        return PROTO_FALSE;
     }
     *qtype = (uint16_t)((q[i] << 8) | q[i + 1]);
     *qend = i + 4;
-    return true;
+    return PROTO_TRUE;
 }
-} // namespace
 
 size_t pc_dns_server_build_response(const uint8_t *query, size_t qlen, uint32_t ttl, DnsResolveFn resolve, uint8_t *out,
                                     size_t out_cap)
@@ -184,38 +182,35 @@ size_t pc_dns_server_build_response(const uint8_t *query, size_t qlen, uint32_t 
 // Built-in A-record table (host-testable; used by pc_dns_server_begin()).
 // ---------------------------------------------------------------------------
 
-namespace
-{
 // All DNS-server state, owned by one instance (internal linkage): the A-record table,
 // grouped so it is one named owner, unreachable from other translation units.
-struct DnsSrvCtx
+typedef struct
 {
     char names[PC_DNS_SERVER_MAX_RECORDS][PC_DNS_NAME_MAX];
     uint32_t ips[PC_DNS_SERVER_MAX_RECORDS];
     size_t count = 0;
-};
-DnsSrvCtx s_dns;
-} // namespace
+} DnsSrvCtx;
+static DnsSrvCtx s_dns;
 
-bool pc_dns_server_add(const char *name, uint8_t a, uint8_t b, uint8_t c, uint8_t d)
+proto_bool pc_dns_server_add(const char *name, uint8_t a, uint8_t b, uint8_t c, uint8_t d)
 {
     if (!name || !name[0])
     {
-        return false;
+        return PROTO_FALSE;
     }
     size_t nlen = strnlen(name, PC_DNS_NAME_MAX);
     if (nlen >= PC_DNS_NAME_MAX)
     {
-        return false;
+        return PROTO_FALSE;
     }
     if (s_dns.count >= PC_DNS_SERVER_MAX_RECORDS)
     {
-        return false;
+        return PROTO_FALSE;
     }
     memcpy(s_dns.names[s_dns.count], name, nlen + 1);
     s_dns.ips[s_dns.count] = ((uint32_t)a << 24) | ((uint32_t)b << 16) | ((uint32_t)c << 8) | (uint32_t)d;
     s_dns.count++;
-    return true;
+    return PROTO_TRUE;
 }
 
 uint32_t pc_dns_server_lookup(const char *name)
@@ -239,11 +234,9 @@ void pc_dns_server_clear()
     s_dns.count = 0;
 }
 
-#if defined(ARDUINO)
+#if PROTOCORE_HOT
 
-namespace
-{
-void pc_dns_server_udp_handler(const uint8_t *data, size_t len, const struct pc_udp_peer *peer, void *ctx)
+static void pc_dns_server_udp_handler(const uint8_t *data, size_t len, const struct pc_udp_peer *peer, void *ctx)
 {
     (void)ctx;
     uint8_t resp[PC_DNS_NAME_MAX + 32]; // header + question + one A answer
@@ -253,20 +246,19 @@ void pc_dns_server_udp_handler(const uint8_t *data, size_t len, const struct pc_
         pc_udp_send(peer, resp, n);
     }
 }
-} // namespace
 
-bool pc_dns_server_begin()
+proto_bool pc_dns_server_begin()
 {
-    return pc_udp_listen(53, pc_dns_server_udp_handler, nullptr);
+    return pc_udp_listen(53, pc_dns_server_udp_handler, NULL);
 }
 
 #else // host build: no lwIP. The codec + table above are host-tested; begin is a stub.
 
-bool pc_dns_server_begin()
+proto_bool pc_dns_server_begin()
 {
-    return false;
+    return PROTO_FALSE;
 }
 
-#endif // ARDUINO
+#endif // PROTOCORE_HOT
 
 #endif // PC_ENABLE_DNS_SERVER

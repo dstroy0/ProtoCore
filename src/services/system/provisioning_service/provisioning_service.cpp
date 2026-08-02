@@ -19,7 +19,7 @@
 // Form-field parser (always compiled; the only non-trivial logic, unit-tested).
 // ---------------------------------------------------------------------------
 
-#if PC_ENABLE_PROVISIONING && defined(ARDUINO)
+#if PC_ENABLE_PROVISIONING && PROTOCORE_HOT
 #include "network_drivers/application/web_assets.h"
 #include "network_drivers/physical/physical.h"
 #include "network_drivers/transport/udp.h"
@@ -27,7 +27,7 @@
 #include <Arduino.h>
 #include <Preferences.h>
 #endif
-bool pc_prov_form_field(const char *body, const char *key, char *out, size_t cap)
+proto_bool pc_prov_form_field(const char *body, const char *key, char *out, size_t cap)
 {
     if (out && cap)
     {
@@ -35,11 +35,11 @@ bool pc_prov_form_field(const char *body, const char *key, char *out, size_t cap
     }
     if (!body || !key || !out || cap == 0)
     {
-        return false;
+        return PROTO_FALSE;
     }
 
     size_t klen = strnlen(key, cap); // a form field name longer than the value buffer cannot yield a value
-    const char *val = nullptr;
+    const char *val = NULL;
     for (const char *p = body; *p; p++)
     {
         // Match the key only as a whole field name: at the start or after '&'.
@@ -51,7 +51,7 @@ bool pc_prov_form_field(const char *body, const char *key, char *out, size_t cap
     }
     if (!val)
     {
-        return false;
+        return PROTO_FALSE;
     }
 
     size_t o = 0;
@@ -82,22 +82,22 @@ bool pc_prov_form_field(const char *body, const char *key, char *out, size_t cap
         }
     }
     out[o] = '\0';
-    return true;
+    return PROTO_TRUE;
 }
 
 // ---------------------------------------------------------------------------
 // ESP32 captive portal (softAP + lwIP UDP DNS + form/save routes)
 // ---------------------------------------------------------------------------
 
-#if PC_ENABLE_PROVISIONING && defined(ARDUINO)
+#if PC_ENABLE_PROVISIONING && PROTOCORE_HOT
 
 // All provisioning-service state, owned by one instance (internal linkage): the server handle
 // and the softAP IP the captive-portal DNS answers with. Grouped so it is one named owner,
 // unreachable cross-TU.
-struct ProvCtx
+typedef struct
 {
     uint8_t ap_ip[4] = {192, 168, 4, 1};
-};
+} ProvCtx;
 static ProvCtx s_prov;
 
 // The NVS namespace + credential keys (PC_PROV_NVS_NAMESPACE / _KEY_SSID / _KEY_PSK) live in
@@ -159,7 +159,7 @@ static void prov_dns_recv(const uint8_t *req, size_t qlen, const struct pc_udp_p
     pc_udp_send(peer, resp, n);
 }
 
-bool pc_provisioning_load(char *ssid, size_t ssid_cap, char *psk, size_t psk_cap)
+proto_bool pc_provisioning_load(char *ssid, size_t ssid_cap, char *psk, size_t psk_cap)
 {
     if (ssid && ssid_cap)
     {
@@ -170,28 +170,28 @@ bool pc_provisioning_load(char *ssid, size_t ssid_cap, char *psk, size_t psk_cap
         psk[0] = '\0';
     }
     Preferences prefs;
-    if (!prefs.begin(PC_PROV_NVS_NAMESPACE, true))
+    if (!prefs.begin(PC_PROV_NVS_NAMESPACE, PROTO_TRUE))
     {
-        return false;
+        return PROTO_FALSE;
     }
     String s = prefs.getString(PC_PROV_KEY_SSID, "");
     String k = prefs.getString(PC_PROV_KEY_PSK, "");
     prefs.end();
     if (s.length() == 0)
     {
-        return false;
+        return PROTO_FALSE;
     }
     strncpy(ssid, s.c_str(), ssid_cap - 1);
     ssid[ssid_cap - 1] = '\0';
     strncpy(psk, k.c_str(), psk_cap - 1);
     psk[psk_cap - 1] = '\0';
-    return true;
+    return PROTO_TRUE;
 }
 
 void pc_provisioning_clear()
 {
     Preferences prefs;
-    if (prefs.begin(PC_PROV_NVS_NAMESPACE, false))
+    if (prefs.begin(PC_PROV_NVS_NAMESPACE, PROTO_FALSE))
     {
         prefs.clear();
         prefs.end();
@@ -208,7 +208,7 @@ static void prov_save_handler(uint8_t slot_id, HttpReq *req)
 {
     char ssid[33];
     char psk[64];
-    bool have_ssid =
+    proto_bool have_ssid =
         pc_prov_form_field((const char *)req->body, PC_PROV_KEY_SSID, ssid, sizeof(ssid)) && ssid[0] != '\0';
     pc_prov_form_field((const char *)req->body, PC_PROV_KEY_PSK, psk, sizeof(psk));
     if (!have_ssid)
@@ -217,7 +217,7 @@ static void prov_save_handler(uint8_t slot_id, HttpReq *req)
         return;
     }
     Preferences prefs;
-    prefs.begin(PC_PROV_NVS_NAMESPACE, false);
+    prefs.begin(PC_PROV_NVS_NAMESPACE, PROTO_FALSE);
     prefs.putString(PC_PROV_KEY_SSID, ssid);
     prefs.putString(PC_PROV_KEY_PSK, psk);
     prefs.end();
@@ -228,15 +228,15 @@ static void prov_save_handler(uint8_t slot_id, HttpReq *req)
 
 void pc_provisioning_begin(const char *ap_ssid)
 {
-    init_wifi_ap_physical(ap_ssid, nullptr); // AP mode is implied by which bring-up you call
-    uint32_t ip = pc_net_ap_ip();            // network byte order
+    init_wifi_ap_physical(ap_ssid, NULL); // AP mode is implied by which bring-up you call
+    uint32_t ip = pc_net_ap_ip();         // network byte order
     s_prov.ap_ip[0] = (uint8_t)(ip & 0xFF);
     s_prov.ap_ip[1] = (uint8_t)((ip >> 8) & 0xFF);
     s_prov.ap_ip[2] = (uint8_t)((ip >> 16) & 0xFF);
     s_prov.ap_ip[3] = (uint8_t)((ip >> 24) & 0xFF);
 
     // Catch-all DNS on UDP/53 via the transport-layer UDP service (callback-driven).
-    pc_udp_listen(53, prov_dns_recv, nullptr);
+    pc_udp_listen(53, prov_dns_recv, NULL);
 
     on_http("/save", HttpMethod::HTTP_POST, prov_save_handler);
     on_http("/*", HttpMethod::HTTP_GET, prov_form_handler); // any other path -> the form
@@ -244,7 +244,7 @@ void pc_provisioning_begin(const char *ap_ssid)
 
 #else // disabled / non-Arduino: stubs (form-field parser above stays available)
 
-bool pc_provisioning_load(char *ssid, size_t ssid_cap, char *psk, size_t psk_cap)
+proto_bool pc_provisioning_load(char *ssid, size_t ssid_cap, char *psk, size_t psk_cap)
 {
     if (ssid && ssid_cap)
     {
@@ -254,7 +254,7 @@ bool pc_provisioning_load(char *ssid, size_t ssid_cap, char *psk, size_t psk_cap
     {
         psk[0] = '\0';
     }
-    return false;
+    return PROTO_FALSE;
 }
 // The host stub: the Arduino build registers routes via on_http(); there is nothing to do here.
 void pc_provisioning_begin(const char *ap_ssid)
@@ -265,4 +265,4 @@ void pc_provisioning_clear()
 {
 }
 
-#endif // PC_ENABLE_PROVISIONING && ARDUINO
+#endif // PC_ENABLE_PROVISIONING && PROTOCORE_HOT

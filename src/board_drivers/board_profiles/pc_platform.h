@@ -11,14 +11,18 @@
  * so nothing downstream has to re-test toolchain-specific macros - a backend keys off `PC_VENDOR_*`, not
  * off `CONFIG_IDF_TARGET_*` / `STM32*` / `PICO_*` scattered across the tree.
  *
- * Exactly one `PC_VENDOR_*` is 1; every other is defined 0 (so `#if PC_VENDOR_ESP` is always valid, never
+ * Exactly one of these is 1; every other is defined 0 (so `#if PC_VENDOR_ESP` is always valid, never
  * relies on an undefined-macro-is-0 fallback). The vendor is derived from the toolchain's own target macro:
  *
- *   - `PC_VENDOR_ESP`  - any Espressif target (ESP-IDF `ESP_PLATFORM` / Arduino-ESP32 `ARDUINO_ARCH_ESP32`).
- *   - `PC_VENDOR_STM`  - STM32 (Arduino_Core_STM32 `ARDUINO_ARCH_STM32` / STM32Cube `USE_HAL_DRIVER`).
- *   - `PC_VENDOR_RP`   - Raspberry Pi silicon (RP2040 / RP2350: `ARDUINO_ARCH_RP2040` / `PICO_*`).
- *   - `PC_VENDOR_TI`   - Texas Instruments (`__TI_COMPILER_VERSION__` or an explicit force).
- *   - `PC_VENDOR_HOST` - native / host build (unit tests): no accelerator, portable software everywhere.
+ *   - `PC_VENDOR_ESP` - any Espressif target (ESP-IDF `ESP_PLATFORM` / Arduino-ESP32 `ARDUINO_ARCH_ESP32`).
+ *   - `PC_VENDOR_STM` - STM32 (Arduino_Core_STM32 `ARDUINO_ARCH_STM32` / STM32Cube `USE_HAL_DRIVER`).
+ *   - `PC_VENDOR_RP`  - Raspberry Pi silicon (RP2040 / RP2350: `ARDUINO_ARCH_RP2040` / `PICO_*`).
+ *   - `PC_VENDOR_TI`  - Texas Instruments (`__TI_COMPILER_VERSION__` or an explicit force).
+ *   - `PROTOCORE_HOST` - the build runs on the machine that compiled it: no silicon, no scheduler,
+ *     portable software everywhere. The test envs state it; otherwise it is what no detected vendor means.
+ *
+ * A file with a device path and a host path selects on `PROTOCORE_HOST`, never on a vendor's own macro:
+ * `ARDUINO` names one vendor's toolchain, so keying on it drops every other vendor down the host path.
  *
  * ESP is detected first and stays byte-for-byte compatible with the pre-selector behavior: on every ESP
  * build `PC_VENDOR_ESP` is 1, and on host builds it is 0, exactly matching the old
@@ -29,6 +33,22 @@
 #define PROTOCORE_PC_PLATFORM_H
 
 #include <stdint.h>
+
+/**
+ * @brief Linkage for a leaf primitive whose body is cheaper than the call that reaches it.
+ *
+ * Stated here rather than in protocore_config.h because that header reaches this one through
+ * board_profile.h before it defines anything of its own, so this is the earliest point the
+ * linkage can be settled. protocore_config.h keeps the same definition behind #ifndef, which
+ * covers a translation unit that arrives without this header.
+ */
+#ifndef PC_INLINE
+#if defined(__GNUC__)
+#define PC_INLINE static inline __attribute__((always_inline))
+#else
+#define PC_INLINE static inline
+#endif
+#endif
 
 // sdkconfig.h carries CONFIG_IDF_TARGET_* on ESP-IDF / Arduino-ESP32 builds and is absent on host and on
 // other vendors' toolchains. Pull it in here (guarded by __has_include) so vendor + die detection is
@@ -51,10 +71,10 @@
 #elif defined(__TI_COMPILER_VERSION__) || defined(PC_VENDOR_TI_FORCE)
 #define PC_VENDOR_TI 1
 #else
-#define PC_VENDOR_HOST 1
+#define PROTOCORE_HOST 1
 #endif
 
-// Every vendor macro is defined (0 when not selected) so downstream code can `#if PC_VENDOR_x` freely.
+// Every one is defined (0 when not selected) so downstream code can `#if` it freely.
 #ifndef PC_VENDOR_ESP
 #define PC_VENDOR_ESP 0
 #endif
@@ -67,8 +87,18 @@
 #ifndef PC_VENDOR_TI
 #define PC_VENDOR_TI 0
 #endif
-#ifndef PC_VENDOR_HOST
-#define PC_VENDOR_HOST 0
+#ifndef PROTOCORE_HOST
+#define PROTOCORE_HOST 0
+#endif
+
+// The core's two paths. PROTOCORE_HOT runs on the target, PROTOCORE_HOST is the test build,
+// and they are exact complements - there is no third. A gate in the core keys on these and
+// never on a vendor's own macro: `ARDUINO` names one framework, so it cannot select a path
+// for a core that answers to every vendor. Which vendor is board_drivers' question.
+#if PROTOCORE_HOST
+#define PROTOCORE_HOT 0
+#else
+#define PROTOCORE_HOT 1
 #endif
 
 // ---------------------------------------------------------------------------
@@ -90,7 +120,7 @@
 #ifndef PC_HAS_HW_AESGCM
 #if PC_VENDOR_ESP
 #define PC_HAS_HW_AESGCM 1
-#elif PC_VENDOR_HOST
+#elif PROTOCORE_HOST
 #define PC_HAS_HW_AESGCM 0 // a unit-test build has no silicon by definition
 #else
 #error                                                                                                                 \
@@ -104,7 +134,7 @@
 #ifndef PC_HAS_HW_BIGNUM
 #if PC_VENDOR_ESP
 #define PC_HAS_HW_BIGNUM 1
-#elif PC_VENDOR_HOST
+#elif PROTOCORE_HOST
 #define PC_HAS_HW_BIGNUM 0 // a unit-test build has no silicon by definition
 #else
 #error                                                                                                                 \
@@ -123,6 +153,226 @@
 // Returns 0 where there is no such concept (host builds): a single context, so every comparison
 // trivially agrees and the tripwire is a no-op rather than a false alarm.
 uintptr_t pc_platform_context_id(void);
+
+// ---------------------------------------------------------------------------
+// The target's scheduler and network stack, under our names
+// ---------------------------------------------------------------------------
+//
+// The core needs queues, tasks and TCP, and every target already has them, so these are aliases,
+// not a layer: our name expands to the target's call, one for one, with no wrapper function, no
+// translation and no state of our own. The whole cost is the name.
+//
+// A target that supplies none of it defines these to nothing, the same way board_profile.h answers
+// the rest of the platform questions.
+
+#if PC_VENDOR_ESP
+
+#include "driver/gpio.h"          // PC_ALLOW_LATE_INCLUDE: ordered - see above
+#include "driver/uart.h"          // PC_ALLOW_LATE_INCLUDE: ordered - see above
+#include "esp_cpu.h"              // PC_ALLOW_LATE_INCLUDE: ordered - see above
+#include "esp_random.h"           // PC_ALLOW_LATE_INCLUDE: ordered - see above
+#include "esp_timer.h"            // PC_ALLOW_LATE_INCLUDE: ordered - see above
+#include "freertos/FreeRTOS.h"    // PC_ALLOW_LATE_INCLUDE: ordered - only exists once the vendor above resolved to ESP
+#include "freertos/queue.h"       // PC_ALLOW_LATE_INCLUDE: ordered - see above
+#include "freertos/task.h"        // PC_ALLOW_LATE_INCLUDE: ordered - see above
+#include "lwip/igmp.h"            // PC_ALLOW_LATE_INCLUDE: ordered - see above
+#include "lwip/pbuf.h"            // PC_ALLOW_LATE_INCLUDE: ordered - see above
+#include "lwip/priv/tcpip_priv.h" // PC_ALLOW_LATE_INCLUDE: ordered - see above
+#include "lwip/tcp.h"             // PC_ALLOW_LATE_INCLUDE: ordered - see above
+#include "lwip/udp.h"             // PC_ALLOW_LATE_INCLUDE: ordered - see above
+
+typedef QueueHandle_t pc_platform_queue;
+typedef StaticQueue_t pc_platform_queue_ctrl; ///< a caller-owned queue control block
+typedef TaskHandle_t pc_platform_task;
+typedef TaskFunction_t pc_platform_task_fn;
+typedef BaseType_t pc_platform_status;
+typedef TickType_t pc_platform_ticks;
+
+typedef struct tcp_pcb pc_pcb;                  ///< a TCP control block
+typedef struct pbuf pc_pbuf;                    ///< a received packet buffer chain
+typedef err_t pc_net_err;                       ///< a network stack result
+typedef struct tcpip_api_call_data pc_net_call; ///< the marshal record for a stack call
+
+#define PC_PLATFORM_OK pdTRUE
+#define PC_PLATFORM_PASS pdPASS
+#define PC_PLATFORM_FALSE pdFALSE
+#define PC_PLATFORM_WAIT_FOREVER portMAX_DELAY
+#define PC_PLATFORM_CORES portNUM_PROCESSORS
+
+#define pc_platform_queue_create xQueueCreateStatic
+#define pc_platform_queue_send xQueueSendToBack
+#define pc_platform_queue_send_front xQueueSendToFront
+#define pc_platform_queue_send_isr xQueueSendToBackFromISR
+#define pc_platform_queue_recv xQueueReceive
+#define pc_platform_queue_waiting uxQueueMessagesWaiting
+#define pc_platform_queue_waiting_isr uxQueueMessagesWaitingFromISR
+#define pc_platform_queue_delete vQueueDelete
+
+#define pc_platform_task_start xTaskCreatePinnedToCore
+#define pc_platform_task_stop vTaskDelete
+#define pc_platform_task_notify xTaskNotifyGive
+#define pc_platform_task_wait ulTaskNotifyTake
+#define pc_platform_task_delay vTaskDelay
+#define pc_platform_task_yield_from_isr portYIELD_FROM_ISR
+#define pc_platform_task_self xTaskGetCurrentTaskHandle
+
+// Buses. The bridge and the peripheral drivers drive UART / SPI / I2C; these are the IDF C
+// drivers that Arduino's HardwareSerial, SPI and Wire objects are built over, so the core reaches
+// a bus without naming a framework. A unit the SoC does not have fails closed rather than trapping.
+#ifndef PC_UART_RX_BUF
+#define PC_UART_RX_BUF 512 // driver RX ring per unit; a bridge transaction is far smaller
+#endif
+#define PC_UART_UNITS SOC_UART_NUM
+
+PC_INLINE int pc_platform_uart_begin(uint8_t unit, uint32_t baud)
+{
+    if (unit >= PC_UART_UNITS)
+    {
+        return 0;
+    }
+    uart_config_t c = {0};
+    c.baud_rate = (int)baud;
+    c.data_bits = UART_DATA_8_BITS;
+    c.parity = UART_PARITY_DISABLE;
+    c.stop_bits = UART_STOP_BITS_1;
+    c.flow_ctrl = UART_HW_FLOWCTRL_DISABLE;
+    c.source_clk = UART_SCLK_DEFAULT;
+    if (uart_param_config((uart_port_t)unit, &c) != ESP_OK)
+    {
+        return 0;
+    }
+    if (!uart_is_driver_installed((uart_port_t)unit))
+    {
+        return uart_driver_install((uart_port_t)unit, PC_UART_RX_BUF, 0, 0, NULL, 0) == ESP_OK ? 1 : 0;
+    }
+    return 1;
+}
+#define pc_platform_uart_write(unit, buf, len) uart_write_bytes((uart_port_t)(unit), (const char *)(buf), (len))
+#define pc_platform_uart_read(unit, buf, len, ms) uart_read_bytes((uart_port_t)(unit), (buf), (len), pdMS_TO_TICKS(ms))
+PC_INLINE uint32_t pc_platform_uart_available(uint8_t unit)
+{
+    size_t n = 0;
+    return (uart_get_buffered_data_len((uart_port_t)unit, &n) == ESP_OK) ? (uint32_t)n : 0u;
+}
+
+#define PC_SPI_MSBFIRST 0
+#define PC_SPI_LSBFIRST 1
+
+// SPI. The pins come from the caller because they are a board fact, not a library one - a bridge
+// target names its own bus. Bring the bus up once with the pins, then run transactions on it.
+int pc_platform_spi_begin(int mosi, int miso, int sclk);
+int pc_platform_spi_txn(uint32_t hz, uint8_t bit_order, uint8_t mode, const uint8_t *tx, uint8_t *rx, uint32_t len);
+
+// Entropy. The ESP32 RNG is a true hardware source: it samples thermal / RF analog noise rather
+// than running a deterministic generator, so this is the one the key material is drawn from.
+// esp_random() is the IDF entry point Arduino random() is built over.
+#define pc_platform_rand_u32() ((uint32_t)esp_random())
+#define pc_platform_rand_fill(buf, len) esp_fill_random((buf), (len))
+
+// GPIO. The IDF driver is C and is what Arduino digitalWrite()/pinMode() sit on, so the core
+// reaches the pins through these rather than through a framework it is not allowed to name.
+#define PC_GPIO_IN 0
+#define PC_GPIO_OUT 1
+#define PC_GPIO_IN_PULLUP 2
+#define PC_GPIO_IN_PULLDOWN 3
+#define PC_GPIO_LOW 0
+#define PC_GPIO_HIGH 1
+
+PC_INLINE void pc_platform_gpio_mode(uint8_t pin, uint8_t mode)
+{
+    gpio_num_t g = (gpio_num_t)pin;
+    gpio_set_direction(g, (mode == PC_GPIO_OUT) ? GPIO_MODE_OUTPUT : GPIO_MODE_INPUT);
+    gpio_set_pull_mode(g, (mode == PC_GPIO_IN_PULLUP)     ? GPIO_PULLUP_ONLY
+                          : (mode == PC_GPIO_IN_PULLDOWN) ? GPIO_PULLDOWN_ONLY
+                                                          : GPIO_FLOATING);
+}
+#define pc_platform_gpio_write(pin, level) gpio_set_level((gpio_num_t)(pin), (level) ? 1 : 0)
+#define pc_platform_gpio_read(pin) ((uint8_t)gpio_get_level((gpio_num_t)(pin)))
+
+// Time base. esp_timer/esp_cpu are the IDF primitives underneath Arduino millis()/micros(), so
+// these are the same counters by a name the core can call from C.
+#define pc_platform_micros() ((uint32_t)esp_timer_get_time())
+#define pc_platform_millis() ((uint32_t)(esp_timer_get_time() / 1000))
+#define pc_platform_cycles() ((uint32_t)esp_cpu_get_cycle_count())
+
+#define PC_NET_OK ERR_OK
+#define PC_NET_ERR_MEM ERR_MEM
+#define PC_NET_ERR_BUF ERR_BUF
+#define PC_NET_ERR_VAL ERR_VAL
+#define PC_NET_ERR_ARG ERR_ARG
+#define PC_NET_ERR_USE ERR_USE
+#define PC_NET_ERR_CONN ERR_CONN
+#define PC_NET_ERR_CLSD ERR_CLSD
+#define PC_NET_ERR_RST ERR_RST
+#define PC_NET_ERR_ABRT ERR_ABRT
+#define PC_NET_ADDR_ANY IP_ANY_TYPE
+#define PC_NET_TYPE_ANY IPADDR_TYPE_ANY
+#define PC_NET_TYPE_V4 IPADDR_TYPE_V4
+#define PC_NET_WRITE_COPY TCP_WRITE_FLAG_COPY
+
+#define pc_net_new tcp_new_ip_type
+#define pc_net_bind tcp_bind
+#define pc_net_listen tcp_listen_with_backlog
+#define pc_net_connect tcp_connect
+#define pc_net_close tcp_close
+#define pc_net_abort tcp_abort
+#define pc_net_arg tcp_arg
+#define pc_net_on_accept tcp_accept
+#define pc_net_on_recv tcp_recv
+#define pc_net_on_sent tcp_sent
+#define pc_net_on_err tcp_err
+#define pc_net_write tcp_write
+#define pc_net_output tcp_output
+#define pc_net_recved tcp_recved
+#define pc_net_sndbuf tcp_sndbuf
+#define pc_net_nagle_disable tcp_nagle_disable
+#define pc_net_pbuf_free pbuf_free
+#define pc_net_pbuf_copy pbuf_copy_partial
+#define pc_net_pbuf_alloc pbuf_alloc
+#define pc_net_call_marshal tcpip_api_call
+
+#define PC_NET_PBUF_TRANSPORT PBUF_TRANSPORT
+#define PC_NET_PBUF_RAM PBUF_RAM
+#define PC_NET_ADDR_ANY4 IP4_ADDR_ANY
+#define PC_NET_ADDR_ANY4_P IP4_ADDR_ANY4
+#define PC_NET_OPT_REUSEADDR SOF_REUSEADDR
+
+typedef struct udp_pcb pc_udp_pcb;
+typedef ip_addr_t pc_net_ip;
+
+#define pc_net_udp_new udp_new
+#define pc_net_udp_bind udp_bind
+#define pc_net_udp_recv udp_recv
+#define pc_net_udp_sendto udp_sendto
+#define pc_net_udp_remove udp_remove
+#define pc_net_opt_set ip_set_option
+#define pc_net_ip_parse ipaddr_aton
+#define pc_net_ip_print ipaddr_ntoa_r
+#define pc_net_ip_is_v4 IP_IS_V4
+#define pc_net_ip_is_v6 IP_IS_V6
+#define pc_net_ip_as_v4 ip_2_ip4
+#define pc_net_ip_as_v6 ip_2_ip6
+#define pc_net_ip4_u32 ip4_addr_get_u32
+#define pc_net_ip4_set IP_ADDR4
+#define pc_net_rcv_wnd_update tcp_update_rcv_ann_wnd
+#define pc_net_ip4_is_multicast ip4_addr_ismulticast
+#define PC_NET_HAS_IGMP LWIP_IGMP
+#define pc_net_igmp_join igmp_joingroup
+#define pc_net_igmp_leave igmp_leavegroup
+
+#elif PROTOCORE_HOST
+
+// The test build has no vendor stack, so the same surface comes from a host driver the test
+// environment puts on the include path (test/mocks/pc_net_host.h), exactly the way it supplies
+// <Arduino.h>. Guarded on presence so a host build without that path is unchanged: it simply has
+// no transport, which is what it had before this arm existed.
+#if defined(__has_include)
+#if __has_include("pc_net_host.h")
+#include "pc_net_host.h" // PC_ALLOW_LATE_INCLUDE: ordered - the host driver for the block above
+#endif
+#endif
+
+#endif // PC_VENDOR_ESP
 
 // A single "targets real silicon" convenience (any vendor backend, i.e. not the host software floor).
 #define PC_VENDOR_SILICON (PC_VENDOR_ESP || PC_VENDOR_STM || PC_VENDOR_RP || PC_VENDOR_TI)

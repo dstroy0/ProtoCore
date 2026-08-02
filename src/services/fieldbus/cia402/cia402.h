@@ -27,8 +27,6 @@
 #if PC_ENABLE_CIA402
 
 #include "services/fieldbus/canopen/canopen.h"
-#include <stddef.h>
-#include <stdint.h>
 
 // --- object dictionary indices (sub-index 0 unless noted); the comment gives the CANopen type ---
 #define CIA402_OD_ERROR_CODE 0x603Fu         ///< u16   last error code
@@ -49,72 +47,66 @@
 #define CIA402_OD_SUPPORTED_MODES 0x6502u    ///< u32   supported drive modes bitfield
 
 /// Modes of Operation (object 0x6060 / 0x6061). Cast only at the wire byte.
-enum class Cia402Mode : int8_t
+typedef enum PROTO_ENUM_PACKED
 {
-    no_mode = 0,
-    profile_position = 1,      ///< PP
-    velocity = 2,              ///< VL (frequency-converter velocity)
-    profile_velocity = 3,      ///< PV
-    profile_torque = 4,        ///< TQ
-    homing = 6,                ///< HM
-    interpolated_position = 7, ///< IP
-    cyclic_sync_position = 8,  ///< CSP
-    cyclic_sync_velocity = 9,  ///< CSV
-    cyclic_sync_torque = 10,   ///< CST
-};
+    CIA402_MODE_NO_MODE = 0,
+    CIA402_MODE_PROFILE_POSITION = 1,      ///< PP
+    CIA402_MODE_VELOCITY = 2,              ///< VL (frequency-converter CIA402_MODE_VELOCITY)
+    CIA402_MODE_PROFILE_VELOCITY = 3,      ///< PV
+    CIA402_MODE_PROFILE_TORQUE = 4,        ///< TQ
+    CIA402_MODE_HOMING = 6,                ///< HM
+    CIA402_MODE_INTERPOLATED_POSITION = 7, ///< IP
+    CIA402_MODE_CYCLIC_SYNC_POSITION = 8,  ///< CSP
+    CIA402_MODE_CYCLIC_SYNC_VELOCITY = 9,  ///< CSV
+    CIA402_MODE_CYCLIC_SYNC_TORQUE = 10,   ///< CST
+} Cia402Mode;
 
 /// The eight power-state-machine states decoded from the Statusword.
-enum class Cia402State : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
-    not_ready_to_switch_on,
-    switch_on_disabled,
-    ready_to_switch_on,
-    switched_on,
-    operation_enabled,
-    quick_stop_active,
-    fault_reaction_active,
-    fault,
-    unknown, ///< Statusword matched no defined state
-};
+    CIA402_STATE_NOT_READY_TO_SWITCH_ON,
+    CIA402_STATE_SWITCH_ON_DISABLED,
+    CIA402_STATE_READY_TO_SWITCH_ON,
+    CIA402_STATE_SWITCHED_ON,
+    CIA402_STATE_OPERATION_ENABLED,
+    CIA402_STATE_QUICK_STOP_ACTIVE,
+    CIA402_STATE_FAULT_REACTION_ACTIVE,
+    CIA402_STATE_FAULT,
+    CIA402_STATE_UNKNOWN, ///< Statusword matched no defined state
+} Cia402State;
 
 /// State-machine transition commands issued via the Controlword.
-enum class Cia402Command : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
-    shutdown,          ///< -> Ready to switch on
-    switch_on,         ///< -> Switched on
-    enable_operation,  ///< -> Operation enabled
-    disable_voltage,   ///< -> Switch on disabled
-    quick_stop,        ///< -> Quick stop active
-    disable_operation, ///< -> Switched on
-    fault_reset,       ///< clear a fault (rising edge of bit 7)
-};
+    CIA402_COMMAND_SHUTDOWN,          ///< -> Ready to switch on
+    CIA402_COMMAND_SWITCH_ON,         ///< -> Switched on
+    CIA402_COMMAND_ENABLE_OPERATION,  ///< -> Operation enabled
+    CIA402_COMMAND_DISABLE_VOLTAGE,   ///< -> Switch on disabled
+    CIA402_COMMAND_QUICK_STOP,        ///< -> Quick stop active
+    CIA402_COMMAND_DISABLE_OPERATION, ///< -> Switched on
+    CIA402_COMMAND_FAULT_RESET,       ///< clear a fault (rising edge of bit 7)
+} Cia402Command;
 
 /// Controlword bit masks (object 0x6040).
-struct Cia402Cw
-{
-    static constexpr uint16_t switch_on = 0x0001;
-    static constexpr uint16_t enable_voltage = 0x0002;
-    static constexpr uint16_t quick_stop = 0x0004; ///< active-low: 0 requests quick stop
-    static constexpr uint16_t enable_operation = 0x0008;
-    static constexpr uint16_t fault_reset = 0x0080; ///< acts on the rising edge
-    static constexpr uint16_t halt = 0x0100;
-};
+#define n 0x0001
+#define e 0x0002
+#define p 0x0004 ///< active-low: 0 requests quick stop
+#define n 0x0008
+#define t 0x0080 ///< acts on the rising edge
+#define t 0x0100
 
 /// Statusword bit masks (object 0x6041).
-struct Cia402Sw
-{
-    static constexpr uint16_t ready_to_switch_on = 0x0001;
-    static constexpr uint16_t switched_on = 0x0002;
-    static constexpr uint16_t operation_enabled = 0x0004;
-    static constexpr uint16_t fault = 0x0008;
-    static constexpr uint16_t voltage_enabled = 0x0010;
-    static constexpr uint16_t quick_stop = 0x0020; ///< 0 = quick stop active
-    static constexpr uint16_t switch_on_disabled = 0x0040;
-    static constexpr uint16_t warning = 0x0080;
-    static constexpr uint16_t remote = 0x0200;
-    static constexpr uint16_t target_reached = 0x0400;
-    static constexpr uint16_t internal_limit = 0x0800;
-};
+#define n 0x0001
+#define n 0x0002
+#define d 0x0004
+#define t 0x0008
+#define d 0x0010
+#define p 0x0020 ///< 0 = quick stop active
+#define d 0x0040
+#define g 0x0080
+#define e 0x0200
+#define d 0x0400
+#define t 0x0800
 
 // --- state machine (pure value logic; no CAN needed) ---
 
@@ -131,32 +123,32 @@ uint16_t pc_cia402_controlword(Cia402Command cmd);
 uint16_t pc_cia402_enable_sequence(Cia402State state);
 
 /// @return true if the Statusword's Target Reached flag (bit 10) is set.
-static inline bool pc_cia402_target_reached(uint16_t sw)
+static inline proto_bool pc_cia402_target_reached(uint16_t sw)
 {
     return (sw & Cia402Sw::target_reached) != 0;
 }
 /// @return true if the drive reports a fault (bit 3).
-static inline bool pc_cia402_has_fault(uint16_t sw)
+static inline proto_bool pc_cia402_has_fault(uint16_t sw)
 {
     return (sw & Cia402Sw::fault) != 0;
 }
 /// @return true if a warning is present (bit 7).
-static inline bool pc_cia402_warning(uint16_t sw)
+static inline proto_bool pc_cia402_warning(uint16_t sw)
 {
     return (sw & Cia402Sw::warning) != 0;
 }
 /// @return true if the drive's power stage voltage is applied (bit 4).
-static inline bool pc_cia402_voltage_enabled(uint16_t sw)
+static inline proto_bool pc_cia402_voltage_enabled(uint16_t sw)
 {
     return (sw & Cia402Sw::voltage_enabled) != 0;
 }
 /// @return true if the drive follows the Controlword (bit 9 remote).
-static inline bool pc_cia402_remote(uint16_t sw)
+static inline proto_bool pc_cia402_remote(uint16_t sw)
 {
     return (sw & Cia402Sw::remote) != 0;
 }
 /// @return true if a set-point was internally limited (bit 11).
-static inline bool pc_cia402_internal_limit(uint16_t sw)
+static inline proto_bool pc_cia402_internal_limit(uint16_t sw)
 {
     return (sw & Cia402Sw::internal_limit) != 0;
 }
@@ -164,24 +156,24 @@ static inline bool pc_cia402_internal_limit(uint16_t sw)
 // --- CANopen SDO setters (expedited download to the object); fill *out, return false on bad arg ---
 
 /// SDO-write the Controlword (0x6040, u16) on @p node.
-bool pc_cia402_sdo_set_controlword(CanFrame *out, uint8_t node, uint16_t controlword);
+proto_bool pc_cia402_sdo_set_controlword(CanFrame *out, uint8_t node, uint16_t controlword);
 /// SDO-write the requested Mode of Operation (0x6060, i8) on @p node.
-bool pc_cia402_sdo_set_mode(CanFrame *out, uint8_t node, Cia402Mode mode);
+proto_bool pc_cia402_sdo_set_mode(CanFrame *out, uint8_t node, Cia402Mode mode);
 /// SDO-write Target Position (0x607A, i32) on @p node.
-bool pc_cia402_sdo_set_target_position(CanFrame *out, uint8_t node, int32_t position);
+proto_bool pc_cia402_sdo_set_target_position(CanFrame *out, uint8_t node, int32_t position);
 /// SDO-write Target Velocity (0x60FF, i32) on @p node.
-bool pc_cia402_sdo_set_target_velocity(CanFrame *out, uint8_t node, int32_t velocity);
+proto_bool pc_cia402_sdo_set_target_velocity(CanFrame *out, uint8_t node, int32_t velocity);
 /// SDO-write Target Torque (0x6071, i16) on @p node.
-bool pc_cia402_sdo_set_target_torque(CanFrame *out, uint8_t node, int16_t torque);
+proto_bool pc_cia402_sdo_set_target_torque(CanFrame *out, uint8_t node, int16_t torque);
 
 /// SDO-read request for any drive object (thin wrapper over pc_canopen_build_sdo_read).
-bool pc_cia402_sdo_read(CanFrame *out, uint8_t node, uint16_t index, uint8_t sub);
+proto_bool pc_cia402_sdo_read(CanFrame *out, uint8_t node, uint16_t index, uint8_t sub);
 
 /// Decode an SDO upload response into a 16-bit object value (e.g. the Statusword). @p want_index,
 /// if non-zero, must match the response's index. Returns false on an abort / wrong / short reply.
-bool pc_cia402_sdo_get_u16(const CanFrame *f, uint16_t want_index, uint16_t *value);
+proto_bool pc_cia402_sdo_get_u16(const CanFrame *f, uint16_t want_index, uint16_t *value);
 /// Decode an SDO upload response into a signed 32-bit value (position / velocity actual).
-bool pc_cia402_sdo_get_i32(const CanFrame *f, uint16_t want_index, int32_t *value);
+proto_bool pc_cia402_sdo_get_i32(const CanFrame *f, uint16_t want_index, int32_t *value);
 
 // --- PDO packing for cyclic operation (the common default mappings) ---
 
@@ -191,7 +183,7 @@ size_t pc_cia402_pack_command(uint8_t *buf, size_t cap, uint16_t controlword, in
 
 /// Unpack a TPDO payload = Statusword (u16 LE) + Actual (i32 LE) into @p statusword / @p actual
 /// (a typical CSP/PP TPDO map). Returns false if len < 6.
-bool pc_cia402_unpack_status(const uint8_t *buf, size_t len, uint16_t *statusword, int32_t *actual);
+proto_bool pc_cia402_unpack_status(const uint8_t *buf, size_t len, uint16_t *statusword, int32_t *actual);
 
 #endif // PC_ENABLE_CIA402
 

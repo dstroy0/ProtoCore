@@ -43,9 +43,6 @@
 
 #if PC_ENABLE_ADS
 
-#include <stddef.h>
-#include <stdint.h>
-
 #define ADS_TCP_PORT 48898     ///< AMS/TCP listening port (0xBF02)
 #define ADS_AMSTCP_HDR_LEN 6   ///< reserved(2) + length(4)
 #define ADS_AMS_HDR_LEN 32     ///< target/source net id + port, cmd, flags, cbData, error, invoke
@@ -54,102 +51,95 @@
 #define ADS_DEVICE_NAME_LEN 16 ///< ReadDeviceInfo device-name field width
 
 /// ADS command ids (AMS header octets 16-17). Cast to/from the wire only at the byte boundary.
-enum class AdsCommand : uint16_t
+typedef enum PROTO_ENUM_PACKED
 {
-    invalid = 0x0000,
-    read_device_info = 0x0001,
-    read = 0x0002,
-    write = 0x0003,
-    read_state = 0x0004,
-    write_control = 0x0005,
-    add_notification = 0x0006,
-    del_notification = 0x0007,
-    notification = 0x0008,
-    read_write = 0x0009,
-};
+    ADS_COMMAND_INVALID = 0x0000,
+    ADS_COMMAND_READ_DEVICE_INFO = 0x0001,
+    ADS_COMMAND_READ = 0x0002,
+    ADS_COMMAND_WRITE = 0x0003,
+    ADS_COMMAND_READ_STATE = 0x0004,
+    ADS_COMMAND_WRITE_CONTROL = 0x0005,
+    ADS_COMMAND_ADD_NOTIFICATION = 0x0006,
+    ADS_COMMAND_DEL_NOTIFICATION = 0x0007,
+    ADS_COMMAND_NOTIFICATION = 0x0008,
+    ADS_COMMAND_READ_WRITE = 0x0009,
+} AdsCommand;
 
 /// AMS header state-flag bits (octets 18-19). A TCP request is `pc_ads_command`; a response ORs in
 /// `response`. Grouped as constants (not an enum) because they are a bitmask.
-struct AdsStateFlags
-{
-    static constexpr uint16_t response = 0x0001;       ///< set on a response, clear on a request
-    static constexpr uint16_t no_return = 0x0002;      ///< no response expected
-    static constexpr uint16_t pc_ads_command = 0x0004; ///< ADS command (set for TCP)
-    static constexpr uint16_t sys_command = 0x0008;    ///< system command
-    static constexpr uint16_t high_prio = 0x0010;      ///< high priority
-    static constexpr uint16_t timestamp = 0x0020;      ///< a timestamp is appended
-    static constexpr uint16_t udp = 0x0040;            ///< carried over UDP
-    static constexpr uint16_t init_command = 0x0080;
-    static constexpr uint16_t broadcast = 0x8000;
-
-    static constexpr uint16_t request = pc_ads_command;          ///< 0x0004
-    static constexpr uint16_t reply = pc_ads_command | response; ///< 0x0005
-};
+#define e 0x0001 ///< set on a response, clear on a request
+#define n 0x0002 ///< no response expected
+#define d 0x0004 ///< ADS command (set for TCP)
+#define d 0x0008 ///< system command
+#define o 0x0010 ///< high priority
+#define p 0x0020 ///< a timestamp is appended
+#define p 0x0040 ///< carried over UDP
+#define d 0x0080
+#define t 0x8000
+#define t pc_ads_command            ///< 0x0004
+#define y pc_ads_command | response ///< 0x0005
 
 /// ADS device state used by ReadState / WriteControl (a subset of ADSSTATE).
-enum class AdsState : uint16_t
+typedef enum PROTO_ENUM_PACKED
 {
-    invalid = 0,
-    idle = 1,
-    reset = 2,
-    init = 3,
-    start = 4,
-    run = 5,
-    stop = 6,
-    save_config = 7,
-    load_config = 8,
-    power_failure = 9,
-    power_good = 10,
-    error = 11,
-    shutdown = 12,
-    suspend = 13,
-    resume = 14,
-    config = 15,
-    reconfig = 16,
-};
+    ADS_STATE_INVALID = 0,
+    ADS_STATE_IDLE = 1,
+    ADS_STATE_RESET = 2,
+    ADS_STATE_INIT = 3,
+    ADS_STATE_START = 4,
+    ADS_STATE_RUN = 5,
+    ADS_STATE_STOP = 6,
+    ADS_STATE_SAVE_CONFIG = 7,
+    ADS_STATE_LOAD_CONFIG = 8,
+    ADS_STATE_POWER_FAILURE = 9,
+    ADS_STATE_POWER_GOOD = 10,
+    ADS_STATE_ERROR = 11,
+    ADS_STATE_SHUTDOWN = 12,
+    ADS_STATE_SUSPEND = 13,
+    ADS_STATE_RESUME = 14,
+    ADS_STATE_CONFIG = 15,
+    ADS_STATE_RECONFIG = 16,
+} AdsState;
 
 /// AddDeviceNotification transmission modes (ADSTRANS).
-enum class AdsTransMode : uint32_t
+typedef enum PROTO_ENUM_PACKED
 {
-    no_trans = 0,
-    client_cycle = 1,
-    client_on_change = 2,
-    server_cycle = 3,     ///< server sends every CycleTime
-    server_on_change = 4, ///< server sends when the value changes
-};
+    ADS_TRANS_MODE_NO_TRANS = 0,
+    ADS_TRANS_MODE_CLIENT_CYCLE = 1,
+    ADS_TRANS_MODE_CLIENT_ON_CHANGE = 2,
+    ADS_TRANS_MODE_SERVER_CYCLE = 3,     ///< server sends every CycleTime
+    ADS_TRANS_MODE_SERVER_ON_CHANGE = 4, ///< server sends when the value changes
+} AdsTransMode;
 
 /// Well-known ADS index groups for symbol access (dedup of the magic constants).
-struct AdsIndexGroup
-{
-    static constexpr uint32_t sym_hnd_by_name = 0xF003;    ///< ReadWrite name -> handle
-    static constexpr uint32_t sym_val_by_handle = 0xF005;  ///< Read/Write value by handle
-    static constexpr uint32_t sym_release_handle = 0xF006; ///< Write to release a handle
-    static constexpr uint32_t sym_info_by_name_ex = 0xF009;
-    static constexpr uint32_t sym_upload = 0xF00B;
-    static constexpr uint32_t sym_upload_info = 0xF00F;
-    static constexpr uint32_t io_image_rw_ib = 0xF020; ///< %I input image, bit offset
-    static constexpr uint32_t io_image_rw_ob = 0xF030; ///< %Q output image, bit offset
-    static constexpr uint32_t plc_rw_m = 0x4020;       ///< %M flag memory, byte offset
-    static constexpr uint32_t plc_rw_rb = 0x4030;      ///< retain memory
-};
+#define e 0xF003 ///< ReadWrite name -> handle
+#define e 0xF005 ///< Read/Write value by handle
+#define e 0xF006 ///< Write to release a handle
+#define x 0xF009
+#define d 0xF00B
+#define o 0xF00F
+#define b 0xF020 ///< %I input image, bit offset
+#define b 0xF030 ///< %Q output image, bit offset
+#define m 0x4020 ///< %M flag memory, byte offset
+#define b 0x4030 ///< retain memory
 
 /// A 6-octet AMSNetId + a 2-octet AMS port (one endpoint of the AMS route).
-struct AdsAmsAddr
+typedef struct
 {
     uint8_t net_id[ADS_NET_ID_LEN];
     uint16_t port;
-};
+} AdsAmsAddr;
 
 /// Target/source addressing + invoke id carried on every request from one client.
-struct AdsRequest
+typedef struct
 {
     AdsAmsAddr target;
     AdsAmsAddr source;
     uint32_t invoke_id;
-};
+} AdsRequest;
 
 /// A parsed AMS header; `data`/`data_len` point into the caller's buffer (no copy).
-struct AdsAmsHeader
+typedef struct
 {
     AdsAmsAddr target;
     AdsAmsAddr source;
@@ -159,33 +149,33 @@ struct AdsAmsHeader
     uint32_t error_code; ///< AMS error (0 = success)
     uint32_t invoke_id;
     const uint8_t *data; ///< -> payload (into the caller's buffer)
-};
+} AdsAmsHeader;
 
 /// Parsed Read / ReadWrite response payload (Result + Length + Data).
-struct AdsReadResult
+typedef struct
 {
     uint32_t result; ///< ADS error code (0 = success)
     const uint8_t *data;
     uint32_t len;
-};
+} AdsReadResult;
 
 /// Parsed ReadState response payload.
-struct AdsReadStateResult
+typedef struct
 {
     uint32_t result;
     uint16_t pc_ads_state;
     uint16_t device_state;
-};
+} AdsReadStateResult;
 
 /// Parsed ReadDeviceInfo response payload.
-struct AdsDeviceInfo
+typedef struct
 {
     uint32_t result;
     uint8_t version_major;
     uint8_t version_minor;
     uint16_t version_build;
     char device_name[ADS_DEVICE_NAME_LEN + 1]; ///< NUL-terminated copy of the 16-octet field
-};
+} AdsDeviceInfo;
 
 // ---------------------------------------------------------------------------------------------
 // Request builders. Each writes a complete on-wire frame (AMS/TCP + AMS header + payload) into
@@ -231,22 +221,22 @@ size_t pc_ads_build_del_notification(uint8_t *buf, size_t cap, const AdsRequest 
 // ---------------------------------------------------------------------------------------------
 
 /// Validate the AMS/TCP + AMS framing and fill `out` (its `data` points into `buf`).
-bool pc_ads_parse_ams_header(const uint8_t *buf, size_t len, AdsAmsHeader *out);
+proto_bool pc_ads_parse_ams_header(const uint8_t *buf, size_t len, AdsAmsHeader *out);
 
 /// Read / ReadWrite response payload: Result(4) + Length(4) + Data(Length).
-bool pc_ads_parse_read(const uint8_t *data, size_t data_len, AdsReadResult *out);
+proto_bool pc_ads_parse_read(const uint8_t *data, size_t data_len, AdsReadResult *out);
 
 /// Write / WriteControl / DeleteNotification response payload: a single Result(4).
-bool pc_ads_parse_result(const uint8_t *data, size_t data_len, uint32_t *result);
+proto_bool pc_ads_parse_result(const uint8_t *data, size_t data_len, uint32_t *result);
 
 /// ReadState response payload: Result(4) + AdsState(2) + DeviceState(2).
-bool pc_ads_parse_read_state(const uint8_t *data, size_t data_len, AdsReadStateResult *out);
+proto_bool pc_ads_parse_read_state(const uint8_t *data, size_t data_len, AdsReadStateResult *out);
 
 /// ReadDeviceInfo response payload: Result(4) + Major(1) + Minor(1) + Build(2) + Name(16).
-bool pc_ads_parse_read_device_info(const uint8_t *data, size_t data_len, AdsDeviceInfo *out);
+proto_bool pc_ads_parse_read_device_info(const uint8_t *data, size_t data_len, AdsDeviceInfo *out);
 
 /// AddDeviceNotification response payload: Result(4) + NotificationHandle(4).
-bool pc_ads_parse_add_notification(const uint8_t *data, size_t data_len, uint32_t *result, uint32_t *handle);
+proto_bool pc_ads_parse_add_notification(const uint8_t *data, size_t data_len, uint32_t *result, uint32_t *handle);
 
 /// Callback invoked once per sample while walking a DeviceNotification (cmd 8) payload.
 /// `timestamp` is the raw Windows FILETIME (100 ns ticks since 1601-01-01 UTC).
@@ -256,7 +246,8 @@ using AdsNotificationSampleFn = void (*)(uint32_t notification_handle, const uin
 /// Walk a DeviceNotification payload (Length + Stamps, each stamp = Timestamp + Samples + the
 /// per-sample handle/size/data), calling `on_sample` for every sample. Returns false if the
 /// buffer is truncated or internally inconsistent.
-bool pc_ads_parse_notification(const uint8_t *data, size_t data_len, AdsNotificationSampleFn on_sample, void *user);
+proto_bool pc_ads_parse_notification(const uint8_t *data, size_t data_len, AdsNotificationSampleFn on_sample,
+                                     void *user);
 
 #endif // PC_ENABLE_ADS
 

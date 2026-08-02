@@ -10,29 +10,27 @@
 #include "shared_primitives/http_date.h" // pc_http_date() - the shared IMF-fixdate formatter
 #include <time.h>                        // time_t / time() - used by both the Arduino SNTP and host test-seam paths
 
-#if PC_ENABLE_NTP && defined(ARDUINO)
-
-#include <Arduino.h>
+#if PC_ENABLE_NTP && PROTOCORE_HOT
 
 // A successful sync moves the clock well past this sentinel (2021-01-01 UTC);
 // a cold-booted RTC sits near the Unix epoch.
 static const time_t PC_NTP_PLAUSIBLE_EPOCH = 1609459200;
 
-bool pc_ntp_begin(const char *tz, const char *server1, const char *server2)
+proto_bool pc_ntp_begin(const char *tz, const char *server1, const char *server2)
 {
     // configTzTime applies the POSIX TZ and starts the SNTP client (async).
     configTzTime(tz ? tz : "UTC0", server1, server2);
-    return true;
+    return PROTO_TRUE;
 }
 
-bool pc_ntp_synced()
+proto_bool pc_ntp_synced()
 {
-    return time(nullptr) > PC_NTP_PLAUSIBLE_EPOCH;
+    return time(NULL) > PC_NTP_PLAUSIBLE_EPOCH;
 }
 
 time_t pc_ntp_epoch()
 {
-    time_t now = time(nullptr);
+    time_t now = time(NULL);
     return (now > PC_NTP_PLAUSIBLE_EPOCH) ? now : 0;
 }
 
@@ -47,27 +45,24 @@ size_t pc_ntp_http_date(char *out, size_t out_cap)
 // the Date-header path (and any time-dependent code) is exercisable off-device.
 // All host NTP test-seam state, owned by one instance (internal linkage): the injected
 // wall-clock epoch, so it is one named owner, unreachable from any other translation unit.
-namespace
-{
-struct NtpSvcCtx
+typedef struct
 {
     time_t host_test_epoch = 0;
-};
-NtpSvcCtx s_ntp_svc;
-} // namespace
+} NtpSvcCtx;
+static NtpSvcCtx s_ntp_svc;
 void pc_ntp_set_test_epoch(time_t epoch)
 {
     s_ntp_svc.host_test_epoch = epoch;
 }
 
-bool pc_ntp_begin(const char *tz, const char *server1, const char *server2)
+proto_bool pc_ntp_begin(const char *tz, const char *server1, const char *server2)
 {
     (void)tz;
     (void)server1;
     (void)server2;
-    return false;
+    return PROTO_FALSE;
 }
-bool pc_ntp_synced()
+proto_bool pc_ntp_synced()
 {
     return s_ntp_svc.host_test_epoch != 0;
 }
@@ -80,7 +75,7 @@ size_t pc_ntp_http_date(char *out, size_t out_cap)
     return pc_http_date(pc_ntp_epoch(), out, out_cap);
 }
 
-#endif // PC_ENABLE_NTP && ARDUINO
+#endif // PC_ENABLE_NTP && PROTOCORE_HOT
 
 // NTP as a registry time source (defined for both the device and host builds; pc_ntp_epoch is 0
 // until synced / when no test epoch is injected). Register it with pc_time_source_add() so the

@@ -27,9 +27,6 @@
 
 #if PC_ENABLE_PTP
 
-#include <stddef.h>
-#include <stdint.h>
-
 /** @brief PTPv2 messageType values (low nibble of octet 0). */
 enum pc_ptp_msg_type
 {
@@ -49,14 +46,14 @@ enum pc_ptp_msg_type
 #define PC_PTP_GENERAL_PORT 320 ///< UDP port for general messages (Follow_Up, Delay_Resp, Announce)
 
 /** @brief A PTP timestamp: 48-bit seconds + 32-bit nanoseconds. */
-struct pc_ptp_timestamp
+typedef struct
 {
     uint64_t seconds;     ///< seconds (only the low 48 bits are on the wire)
     uint32_t nanoseconds; ///< nanoseconds within the second (0 .. 999999999)
-};
+} pc_ptp_timestamp;
 
 /** @brief The 34-octet PTPv2 common header. */
-struct pc_ptp_header
+typedef struct
 {
     uint8_t message_type;       ///< pc_ptp_msg_type (octet 0 low nibble)
     uint8_t transport_specific; ///< octet 0 high nibble (majorSdoId)
@@ -70,26 +67,26 @@ struct pc_ptp_header
     uint16_t sequence_id;       ///< sequenceId
     uint8_t control;            ///< controlField
     int8_t log_interval;        ///< logMessageInterval
-};
+} pc_ptp_header;
 
 /** @brief Parsed Delay_Resp body. */
-struct pc_ptp_delay_resp
+typedef struct
 {
     pc_ptp_timestamp receive; ///< receiveTimestamp (t4, when the master got our Delay_Req)
     uint8_t req_clock_id[8];  ///< requestingPortIdentity clockIdentity (echoes our clock id)
     uint16_t req_port;        ///< requestingPortIdentity portNumber
-};
+} pc_ptp_delay_resp;
 
 /** @brief Parsed Pdelay_Resp / Pdelay_Resp_Follow_Up body (P2P peer-delay mechanism). */
-struct pc_ptp_pdelay_resp
+typedef struct
 {
     pc_ptp_timestamp timestamp; ///< Pdelay_Resp: requestReceiptTimestamp (t2); Follow_Up: responseOriginTimestamp (t3)
     uint8_t req_clock_id[8];    ///< requestingPortIdentity clockIdentity (echoes the Pdelay_Req sender)
     uint16_t req_port;          ///< requestingPortIdentity portNumber
-};
+} pc_ptp_pdelay_resp;
 
 /** @brief Parsed Announce body (the master's quality, for best-master selection / display). */
-struct pc_ptp_announce
+typedef struct
 {
     pc_ptp_timestamp origin;   ///< originTimestamp
     int16_t utc_offset;        ///< currentUtcOffset (TAI - UTC, seconds)
@@ -101,14 +98,14 @@ struct pc_ptp_announce
     uint8_t gm_identity[8];    ///< grandmasterIdentity
     uint16_t steps_removed;    ///< stepsRemoved
     uint8_t time_source;       ///< timeSource
-};
+} pc_ptp_announce;
 
 /** @brief Slave sync result: offset from master and mean path delay, in nanoseconds. */
-struct pc_ptp_sync
+typedef struct
 {
     int64_t offset_ns; ///< offsetFromMaster (local - master); subtract to correct the local clock
     int64_t delay_ns;  ///< meanPathDelay
-};
+} pc_ptp_sync;
 
 // -- timestamp helpers --
 
@@ -129,7 +126,7 @@ void pc_ptp_ts_from_ns(int64_t ns, pc_ptp_timestamp *ts);
  */
 size_t pc_ptp_build_header(uint8_t *buf, size_t cap, const pc_ptp_header *h, uint16_t body_len);
 /** @brief Parse the common header from @p s (@p len octets). Returns false if too short. */
-bool pc_ptp_parse_header(const uint8_t *s, size_t len, pc_ptp_header *h);
+proto_bool pc_ptp_parse_header(const uint8_t *s, size_t len, pc_ptp_header *h);
 
 // -- messages (build stamps the type-specific messageType / control / length for you) --
 
@@ -163,17 +160,17 @@ size_t pc_ptp_build_pdelay_resp_follow_up(uint8_t *buf, size_t cap, const pc_ptp
  * @brief Parse a Sync / Delay_Req / Follow_Up message: fills @p h and its single timestamp @p ts.
  * Returns false on a short frame or a non-timestamp message type.
  */
-bool pc_ptp_parse_timestamp_msg(const uint8_t *s, size_t len, pc_ptp_header *h, pc_ptp_timestamp *ts);
+proto_bool pc_ptp_parse_timestamp_msg(const uint8_t *s, size_t len, pc_ptp_header *h, pc_ptp_timestamp *ts);
 /** @brief Parse a Delay_Resp into @p h + @p out. Returns false on a short / wrong-type frame. */
-bool pc_ptp_parse_delay_resp(const uint8_t *s, size_t len, pc_ptp_header *h, pc_ptp_delay_resp *out);
+proto_bool pc_ptp_parse_delay_resp(const uint8_t *s, size_t len, pc_ptp_header *h, pc_ptp_delay_resp *out);
 /** @brief Parse an Announce into @p h + @p out. Returns false on a short / wrong-type frame. */
-bool pc_ptp_parse_announce(const uint8_t *s, size_t len, pc_ptp_header *h, pc_ptp_announce *out);
+proto_bool pc_ptp_parse_announce(const uint8_t *s, size_t len, pc_ptp_header *h, pc_ptp_announce *out);
 /** @brief Parse a Pdelay_Req into @p h + its originTimestamp @p ts. False on a short / wrong-type frame. */
-bool pc_ptp_parse_pdelay_req(const uint8_t *s, size_t len, pc_ptp_header *h, pc_ptp_timestamp *ts);
+proto_bool pc_ptp_parse_pdelay_req(const uint8_t *s, size_t len, pc_ptp_header *h, pc_ptp_timestamp *ts);
 /** @brief Parse a Pdelay_Resp into @p h + @p out (@c timestamp is t2). False on a short / wrong-type frame. */
-bool pc_ptp_parse_pdelay_resp(const uint8_t *s, size_t len, pc_ptp_header *h, pc_ptp_pdelay_resp *out);
+proto_bool pc_ptp_parse_pdelay_resp(const uint8_t *s, size_t len, pc_ptp_header *h, pc_ptp_pdelay_resp *out);
 /** @brief Parse a Pdelay_Resp_Follow_Up into @p h + @p out (@c timestamp is t3). False on short / wrong type. */
-bool pc_ptp_parse_pdelay_resp_follow_up(const uint8_t *s, size_t len, pc_ptp_header *h, pc_ptp_pdelay_resp *out);
+proto_bool pc_ptp_parse_pdelay_resp_follow_up(const uint8_t *s, size_t len, pc_ptp_header *h, pc_ptp_pdelay_resp *out);
 
 // -- slave clock math --
 

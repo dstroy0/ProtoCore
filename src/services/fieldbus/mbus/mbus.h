@@ -33,9 +33,6 @@
 
 #if PC_ENABLE_MBUS
 
-#include <stddef.h>
-#include <stdint.h>
-
 #define MBUS_START_SHORT 0x10u ///< short-frame start octet
 #define MBUS_START_LONG 0x68u  ///< long / control-frame start octet
 #define MBUS_STOP 0x16u        ///< frame stop octet
@@ -57,16 +54,16 @@
 #define MBUS_MAX_DATA 252u ///< max user-data octets (L is one octet; 255 - 3)
 
 /** @brief M-Bus frame kinds. */
-enum class MbusFrameType : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     MBUS_FRAME_NONE = 0,
     MBUS_FRAME_ACK,   ///< single 0xE5
     MBUS_FRAME_SHORT, ///< 10 C A CS 16
     MBUS_FRAME_LONG,  ///< 68 L L 68 C A CI ... CS 16 (control frame = long with no data)
-};
+} MbusFrameType;
 
 /** @brief A parsed M-Bus frame (data points into the caller's buffer). */
-struct MbusFrame
+typedef struct
 {
     MbusFrameType type;
     uint8_t c;           ///< control field (short / long)
@@ -74,10 +71,10 @@ struct MbusFrame
     uint8_t ci;          ///< control-information field (long only)
     const uint8_t *data; ///< user data (long only), or nullptr
     uint8_t data_len;    ///< user-data length (long only)
-};
+} MbusFrame;
 
 // DIF data-field coding (low nibble of the DIF). The decoded fixed lengths are in octets.
-enum class MbusDifCoding : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     MBUS_DIF_NONE = 0x0,     ///< no data
     MBUS_DIF_INT8 = 0x1,     ///< 8-bit integer
@@ -95,17 +92,17 @@ enum class MbusDifCoding : uint8_t
     MBUS_DIF_VARIABLE = 0xD, ///< variable length (LVAR octet precedes the data)
     MBUS_DIF_BCD12 = 0xE,    ///< 12-digit BCD (6 octets)
     MBUS_DIF_SPECIAL = 0xF,  ///< special functions (no data)
-};
+} MbusDifCoding;
 
 /** @brief One decoded EN 13757-3 data record. */
-struct MbusRecord
+typedef struct
 {
     uint8_t dif;         ///< first data-information octet
     uint8_t coding;      ///< DIF low nibble (see MbusDifCoding)
     uint8_t vif;         ///< first value-information octet (0 if none)
     const uint8_t *data; ///< value octets (points into the caller buffer)
     uint8_t data_len;    ///< value length in octets
-};
+} MbusRecord;
 
 // --- builders: write into @p buf (cap), return frame length or 0 on overflow ---
 
@@ -123,11 +120,11 @@ size_t pc_mbus_build_long(uint8_t *buf, size_t cap, uint8_t c, uint8_t a, uint8_
 size_t pc_mbus_build_snd_nke(uint8_t *buf, size_t cap, uint8_t a);
 
 /** @brief Convenience: a REQ_UD2 short frame to address @p a (@p fcb toggles the FCB bit). */
-size_t pc_mbus_build_req_ud2(uint8_t *buf, size_t cap, uint8_t a, bool fcb);
+size_t pc_mbus_build_req_ud2(uint8_t *buf, size_t cap, uint8_t a, proto_bool fcb);
 
 /** @brief Convenience: a REQ_UD1 (class-1 / alarm data request) short frame to address @p a (@p fcb toggles
  *  the FCB bit). Where REQ_UD2 fetches routine class-2 data, REQ_UD1 fetches class-1 (alarm) data. */
-size_t pc_mbus_build_req_ud1(uint8_t *buf, size_t cap, uint8_t a, bool fcb);
+size_t pc_mbus_build_req_ud1(uint8_t *buf, size_t cap, uint8_t a, proto_bool fcb);
 
 // --- parser ---
 
@@ -135,7 +132,7 @@ size_t pc_mbus_build_req_ud1(uint8_t *buf, size_t cap, uint8_t a, bool fcb);
  * @brief Parse one M-Bus frame from @p buf. Validates the start/stop octets, the doubled
  * length, and the checksum. On success fills @p out and sets @p consumed to the frame length.
  */
-bool pc_mbus_parse(const uint8_t *buf, size_t len, MbusFrame *out, size_t *consumed);
+proto_bool pc_mbus_parse(const uint8_t *buf, size_t len, MbusFrame *out, size_t *consumed);
 
 // --- variable-data records (DIF / VIF) ---
 
@@ -147,7 +144,7 @@ uint8_t pc_mbus_dif_data_len(uint8_t coding);
  * Skips DIFE / VIFE extension chains, decodes the data length (incl. the LVAR variable form),
  * and advances @p *pos past the record. Returns false at the end of data or on overflow.
  */
-bool pc_mbus_record_next(const uint8_t *body, size_t len, size_t *pos, MbusRecord *out);
+proto_bool pc_mbus_record_next(const uint8_t *body, size_t len, size_t *pos, MbusRecord *out);
 
 // --- record value + unit decoding ---
 
@@ -158,13 +155,13 @@ bool pc_mbus_record_next(const uint8_t *body, size_t len, size_t *pos, MbusRecor
  * digits, with a 0xF most-significant nibble marking a negative value. @return false for a real / variable
  * / no-data coding, or an invalid BCD nibble.
  */
-bool pc_mbus_record_value_int(const MbusRecord *r, int64_t *out);
+proto_bool pc_mbus_record_value_int(const MbusRecord *r, int64_t *out);
 
 /** @brief Decode a record's value as an IEEE-754 float (only the REAL32 DIF coding). @return false otherwise. */
-bool pc_mbus_record_value_real(const MbusRecord *r, float *out);
+proto_bool pc_mbus_record_value_real(const MbusRecord *r, float *out);
 
 /** @brief Physical unit a VIF decodes to (the common EN 13757-3 measurement ranges). */
-enum class MbusUnit : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     MBUS_UNIT_UNKNOWN = 0,
     MBUS_UNIT_WH,       ///< energy, watt-hours
@@ -177,7 +174,7 @@ enum class MbusUnit : uint8_t
     MBUS_UNIT_CELSIUS,  ///< temperature, degrees Celsius
     MBUS_UNIT_K,        ///< temperature difference, kelvin
     MBUS_UNIT_BAR,      ///< pressure, bar
-};
+} MbusUnit;
 
 /**
  * @brief Decode a VIF octet into its unit and the base-10 exponent applied to the raw value.
@@ -186,7 +183,7 @@ enum class MbusUnit : uint8_t
  * temperature, pressure). The physical value is (raw value) * 10^(@p exp10) in @p unit.
  * @return true for a decoded measurement VIF; false (unit UNKNOWN) for one outside those ranges.
  */
-bool pc_mbus_vif_decode(uint8_t vif, MbusUnit *unit, int8_t *exp10);
+proto_bool pc_mbus_vif_decode(uint8_t vif, MbusUnit *unit, int8_t *exp10);
 
 // --- variable-data-structure fixed header (EN 13757-3): the 12 octets before the data records ---
 //
@@ -211,7 +208,7 @@ bool pc_mbus_vif_decode(uint8_t vif, MbusUnit *unit, int8_t *exp10);
 #define MBUS_MEDIUM_COLD_WATER 0x16u
 
 /** @brief The decoded EN 13757-3 variable-data-structure fixed header. */
-struct MbusVarHeader
+typedef struct
 {
     uint32_t id;               ///< identification number (secondary-address serial), decoded from the 4-octet BCD
     char manufacturer[4];      ///< 3-letter manufacturer code + NUL (decoded from the 2-octet field)
@@ -221,14 +218,14 @@ struct MbusVarHeader
     uint8_t access_no;         ///< access number (increments each readout)
     uint8_t status;            ///< status octet (error / alarm bits)
     uint16_t signature;        ///< signature word (usually 0)
-};
+} MbusVarHeader;
 
 /**
  * @brief Decode the 12-octet variable-data-structure fixed header (the header that precedes the data records
  *        in a CI = MBUS_CI_RSP_VARIABLE (0x72) long-frame body) into @p out.
  * @return true iff @p len is at least 12 octets and the identification number is valid BCD; false otherwise.
  */
-bool pc_mbus_parse_var_header(const uint8_t *body, size_t len, MbusVarHeader *out);
+proto_bool pc_mbus_parse_var_header(const uint8_t *body, size_t len, MbusVarHeader *out);
 
 #endif // PC_ENABLE_MBUS
 #endif // PROTOCORE_MBUS_H

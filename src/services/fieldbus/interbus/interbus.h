@@ -23,8 +23,6 @@
 #define PROTOCORE_INTERBUS_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_INTERBUS
 
@@ -55,7 +53,8 @@ size_t pc_interbus_build(const uint16_t *words, size_t word_count, uint8_t *out,
  * @param out_count set to the number of words decoded.
  * @return true if the loopback word + FCS are valid and the words fit @p max_words.
  */
-bool pc_interbus_parse(const uint8_t *frame, size_t len, uint16_t *out_words, size_t max_words, size_t *out_count);
+proto_bool pc_interbus_parse(const uint8_t *frame, size_t len, uint16_t *out_words, size_t max_words,
+                             size_t *out_count);
 
 #endif // PC_ENABLE_INTERBUS
 #endif // PROTOCORE_INTERBUS_H

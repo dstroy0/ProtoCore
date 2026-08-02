@@ -20,10 +20,10 @@
 
 // All SSH server-layer state, owned by one instance (internal linkage): the packet-emit
 // callback. One named owner, unreachable from any other translation unit.
-struct SshServerCtx
+typedef struct
 {
-    SshEmitCb emit_cb = nullptr;
-};
+    SshEmitCb emit_cb = NULL;
+} SshServerCtx;
 static SshServerCtx s_srv;
 
 void pc_ssh_server_set_emit_cb(SshEmitCb cb)
@@ -114,11 +114,11 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         {
             return -1; // GCOVR_EXCL_LINE  ephemeral generation is infallible for i < MAX_SSH_CONNS
         }
-        s->phase = SshPhase::SSH_PHASE_DH_INIT;
+        s->phase = SSH_PHASE_DH_INIT;
         return 0;
 
     case SSH_MSG_KEXDH_INIT:
-        if (s->phase != SshPhase::SSH_PHASE_DH_INIT)
+        if (s->phase != SSH_PHASE_DH_INIT)
         {
             return -1;
         }
@@ -154,7 +154,7 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         // advances the phase to SSH_PHASE_SERVICE and turns on encryption). Rejecting it in any earlier
         // phase stops a client from jumping from DH_INIT straight to userauth in cleartext, skipping the
         // whole key exchange + host-key verification. Found by the pentest's ssh_msgtype_abuse.
-        if (s->phase != SshPhase::SSH_PHASE_SERVICE)
+        if (s->phase != SSH_PHASE_SERVICE)
         {
             return -1;
         }
@@ -163,11 +163,11 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
             return -1;
         }
         emit(i, reply.buf, n);
-        s->phase = SshPhase::SSH_PHASE_AUTH;
+        s->phase = SSH_PHASE_AUTH;
         return 0;
 
     case SSH_MSG_USERAUTH_REQUEST:
-        if (s->phase != SshPhase::SSH_PHASE_AUTH)
+        if (s->phase != SSH_PHASE_AUTH)
         {
             return -1;
         }
@@ -203,7 +203,7 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         // and only when an exchange was armed (the handler enforces the latter). Same SUCCESS/FAILURE
         // accounting as a USERAUTH_REQUEST: SUCCESS starts s2c compression and advances the phase; a
         // FAILURE counts toward the brute-force limit.
-        if (s->phase != SshPhase::SSH_PHASE_AUTH)
+        if (s->phase != SSH_PHASE_AUTH)
         {
             return -1;
         }

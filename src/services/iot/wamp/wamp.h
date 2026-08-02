@@ -29,9 +29,6 @@
 
 #if PC_ENABLE_WAMP
 
-#include <stddef.h>
-#include <stdint.h>
-
 // WAMP message type codes (basic + advanced profile).
 #define WAMP_HELLO 1
 #define WAMP_WELCOME 2
@@ -92,19 +89,19 @@ size_t pc_wamp_build_yield(char *buf, size_t cap, uint64_t request, const char *
 // ---- parser (positional access over an inbound JSON-array message) ----
 
 /** @brief Slice the raw text of the top-level array element at @p index (into @p msg). */
-bool pc_wamp_element(const char *msg, size_t index, const char **start, size_t *len);
+proto_bool pc_wamp_element(const char *msg, size_t index, const char **start, size_t *len);
 
 /** @brief Read the message type (element 0) as an integer. */
-bool pc_wamp_get_type(const char *msg, int *out);
+proto_bool pc_wamp_get_type(const char *msg, int *out);
 
 /** @brief Read the unsigned integer (e.g. a Request / Subscription / Publication id) at @p index. */
-bool pc_wamp_get_uint(const char *msg, size_t index, uint64_t *out);
+proto_bool pc_wamp_get_uint(const char *msg, size_t index, uint64_t *out);
 
 /**
  * @brief Copy the URI/string element at @p index (surrounding quotes stripped) into @p out.
  * @note No unescaping - WAMP URIs are restricted to unescaped characters. Bounded by @p out_cap.
  */
-bool pc_wamp_get_uri(const char *msg, size_t index, char *out, size_t out_cap);
+proto_bool pc_wamp_get_uri(const char *msg, size_t index, char *out, size_t out_cap);
 
 #endif // PC_ENABLE_WAMP
 

@@ -26,8 +26,7 @@
 #ifndef PROTOCORE_LD2410_H
 #define PROTOCORE_LD2410_H
 
-#include <stddef.h>
-#include <stdint.h>
+#include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
 
 /** @brief Range gates the LD2410 reports energy for in engineering mode (gate 0..8). */
 #define LD2410_MAX_GATES 9
@@ -36,16 +35,13 @@
 #define LD2410_FRAME_MAX 72
 
 /** @brief Target presence state (report payload byte 2). */
-struct Ld2410State
-{
-    static constexpr uint8_t LD2410_STATE_NONE = 0x00;   ///< no target
-    static constexpr uint8_t LD2410_STATE_MOVING = 0x01; ///< moving target only
-    static constexpr uint8_t LD2410_STATE_STATIC = 0x02; ///< stationary target only
-    static constexpr uint8_t LD2410_STATE_BOTH = 0x03;   ///< both a moving and a stationary target
-};
+#define E 0x00 ///< no target
+#define G 0x01 ///< moving target only
+#define C 0x02 ///< stationary target only
+#define H 0x03 ///< both a moving and a stationary target
 
 /** @brief A decoded LD2410 target report. Engineering fields are 0 unless @ref engineering. */
-struct Ld2410Report
+typedef struct
 {
     uint8_t engineering;   ///< 1 if this was an engineering-mode frame (per-gate energies valid)
     uint8_t state;         ///< one of LD2410_STATE_*
@@ -61,7 +57,7 @@ struct Ld2410Report
     uint8_t static_gate_energy[LD2410_MAX_GATES]; ///< per-gate stationary energy (0-100)
     uint8_t light;                                ///< photosensor level (0-255)
     uint8_t out_pin;                              ///< OUT pin level (0/1)
-};
+} Ld2410Report;
 
 /**
  * @brief Decode one whole LD2410 report frame (header `F4 F3 F2 F1` .. footer `F8 F7 F6 F5`).
@@ -69,17 +65,17 @@ struct Ld2410Report
  * (0x02 basic / 0x01 engineering), the `0xAA` head marker and the `0x55` tail.
  * @return true on a valid frame; false on any mismatch or a short buffer.
  */
-bool pc_ld2410_parse_report(const uint8_t *frame, size_t len, Ld2410Report *out);
+proto_bool pc_ld2410_parse_report(const uint8_t *frame, size_t len, Ld2410Report *out);
 
 /** @brief Byte-by-byte report-frame reassembler (fixed buffer, resyncs on noise). */
-struct Ld2410Stream
+typedef struct
 {
     uint8_t buf[LD2410_FRAME_MAX]; ///< frame under construction
     uint16_t pos;                  ///< bytes collected so far
     uint16_t total;                ///< expected full-frame length (known after the length field)
     uint8_t hdr_match;             ///< header bytes matched while syncing (phase = pos<4)
     uint8_t phase;                 ///< 0 sync, 1 length, 2 body
-};
+} Ld2410Stream;
 
 /** @brief Reset a stream to the syncing state. */
 void pc_ld2410_stream_reset(Ld2410Stream *s);
@@ -88,10 +84,10 @@ void pc_ld2410_stream_reset(Ld2410Stream *s);
  * @brief Feed one received byte. When it completes a valid report frame, fills @p out and
  * returns true; otherwise returns false (still syncing / mid-frame / bad frame - it resyncs).
  */
-bool pc_ld2410_stream_push(Ld2410Stream *s, uint8_t byte, Ld2410Report *out);
+proto_bool pc_ld2410_stream_push(Ld2410Stream *s, uint8_t byte, Ld2410Report *out);
 
 /** @brief true if @p r shows any target (moving or stationary). */
-bool pc_ld2410_present(const Ld2410Report *r);
+proto_bool pc_ld2410_present(const Ld2410Report *r);
 
 /** @brief Best available target distance (cm): the moving distance if moving, else stationary. */
 uint16_t pc_ld2410_distance_cm(const Ld2410Report *r);
@@ -105,7 +101,7 @@ size_t pc_ld2410_cmd_config_enable(uint8_t *buf, size_t cap);
 /** @brief "End configuration" (word 0x00FE). */
 size_t pc_ld2410_cmd_config_end(uint8_t *buf, size_t cap);
 /** @brief Enable (0x0062) or disable (0x0063) engineering mode. */
-size_t pc_ld2410_cmd_engineering(uint8_t *buf, size_t cap, bool on);
+size_t pc_ld2410_cmd_engineering(uint8_t *buf, size_t cap, proto_bool on);
 /** @brief Restart the module (word 0x00A3). */
 size_t pc_ld2410_cmd_restart(uint8_t *buf, size_t cap);
 
@@ -117,7 +113,7 @@ size_t pc_ld2410_cmd_restart(uint8_t *buf, size_t cap);
 // enable/end like any other config command.
 
 /** @brief LD2410B: turn the Bluetooth radio on (value 0x0001) or off (0x0000). Word 0x00A4. */
-size_t pc_ld2410_cmd_bluetooth(uint8_t *buf, size_t cap, bool on);
+size_t pc_ld2410_cmd_bluetooth(uint8_t *buf, size_t cap, proto_bool on);
 
 /** @brief LD2410B: query the module's Bluetooth MAC address (word 0x00A5, value 0x0001). */
 size_t pc_ld2410_cmd_get_mac(uint8_t *buf, size_t cap);
@@ -141,44 +137,44 @@ size_t pc_ld2410_cmd_set_bt_password(uint8_t *buf, size_t cap, const char passwo
 // rejected one; the report stream (`F4 F3 F2 F1`) is a separate frame kind and is unaffected.
 
 /** @brief A decoded command-ACK frame. @ref payload points into the caller's frame (not copied). */
-struct Ld2410Ack
+typedef struct
 {
     uint16_t command;       ///< ACK command word: the request word | 0x0100 (e.g. 0x01A5 for get-MAC).
     uint16_t status;        ///< 0 = success, 1 = failure.
     const uint8_t *payload; ///< command-specific data after the status word (nullptr if none).
     size_t payload_len;     ///< octets at @ref payload.
-};
+} Ld2410Ack;
 
 /**
  * @brief Decode one command-ACK frame (header, intra-frame length, footer and length agreement all
  *        checked). @return false if @p frame is not a well-formed ACK.
  */
-bool pc_ld2410_parse_ack(const uint8_t *frame, size_t len, Ld2410Ack *out);
+proto_bool pc_ld2410_parse_ack(const uint8_t *frame, size_t len, Ld2410Ack *out);
 
 /** @brief True if @p ack reports success (@ref Ld2410Ack::status == 0). */
-bool pc_ld2410_ack_ok(const Ld2410Ack *ack);
+proto_bool pc_ld2410_ack_ok(const Ld2410Ack *ack);
 
 /**
  * @brief Extract the 6-octet MAC from a get-MAC ACK (word 0x01A5) into @p mac, in wire order.
  * @return false unless @p ack is a successful get-MAC ACK carrying at least 6 payload octets.
  */
-bool pc_ld2410_ack_mac(const Ld2410Ack *ack, uint8_t mac[6]);
+proto_bool pc_ld2410_ack_mac(const Ld2410Ack *ack, uint8_t mac[6]);
 
 // --- ESP32 binding (Serial pump; no-ops on a host build) -------------------------------------
 
 /** @brief Open UART2 at PC_LD2410_BAUD on @p rx_pin / @p tx_pin. @return true on ESP32. */
-bool pc_ld2410_begin(int rx_pin, int tx_pin);
+proto_bool pc_ld2410_begin(int rx_pin, int tx_pin);
 
 /** @brief Pump the UART through the stream. @return true if a fresh report was decoded. */
-bool pc_ld2410_poll();
+proto_bool pc_ld2410_poll();
 
 /** @brief The most recently decoded report, or nullptr before the first one arrives. */
 const Ld2410Report *pc_ld2410_last();
 
 /** @brief Enable/disable engineering mode (brackets the command with enable/end). */
-bool pc_ld2410_set_engineering(bool on);
+proto_bool pc_ld2410_set_engineering(proto_bool on);
 
 /** @brief Restart the module (brackets the command with enable/end). */
-bool pc_ld2410_restart();
+proto_bool pc_ld2410_restart();
 
 #endif // PROTOCORE_LD2410_H

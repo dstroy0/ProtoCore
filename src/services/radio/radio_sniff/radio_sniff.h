@@ -21,8 +21,6 @@
 
 #include "protocore_config.h"
 #include "shared_primitives/pcap.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_RADIO_SNIFF
 

@@ -35,40 +35,38 @@
 #define PROTOCORE_GRAPHQL_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_GRAPHQL
 
 /** @brief Scalar value kinds a resolver can return. */
-enum class pc_gql_type : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     PC_GQL_NULL = 0,
     PC_GQL_INT,
     PC_GQL_FLOAT,
     PC_GQL_BOOL,
     PC_GQL_STR, ///< s points to a NUL-terminated string stable for the call.
-};
+} pc_gql_type;
 
 /** @brief A scalar value (resolver output, or an argument). */
-struct pc_gql_value
+typedef struct
 {
     pc_gql_type type; ///< the value's type.
     long long i;
     double f;
-    bool b;
+    proto_bool b;
     const char *s;
-};
+} pc_gql_value;
 
 /** @brief Opaque view of the arguments in scope at a resolved field. */
 struct pc_gql_args;
 
 /** @brief Read an int argument @p name; false if absent / not an int. */
-bool pc_gql_arg_int(const pc_gql_args *args, const char *name, long long *out);
+proto_bool pc_gql_arg_int(const pc_gql_args *args, const char *name, long long *out);
 /** @brief Read a string argument @p name; false if absent / not a string. */
-bool pc_gql_arg_str(const pc_gql_args *args, const char *name, const char **out);
+proto_bool pc_gql_arg_str(const pc_gql_args *args, const char *name, const char **out);
 /** @brief Read a bool argument @p name; false if absent / not a bool. */
-bool pc_gql_arg_bool(const pc_gql_args *args, const char *name, bool *out);
+proto_bool pc_gql_arg_bool(const pc_gql_args *args, const char *name, proto_bool *out);
 
 /**
  * @brief Resolve the scalar leaf at dotted @p path (e.g. "device.uptime").
@@ -76,16 +74,16 @@ bool pc_gql_arg_bool(const pc_gql_args *args, const char *name, bool *out);
  * Fill @p out with the value and return true; return false to emit JSON null.
  * @p args exposes every argument in scope along the path.
  */
-typedef bool (*pc_gql_resolver_fn)(const char *path, const pc_gql_args *args, pc_gql_value *out);
+typedef proto_bool (*pc_gql_resolver_fn)(const char *path, const pc_gql_args *args, pc_gql_value *out);
 
 /** @brief pc_graphql_execute() result codes. */
-enum class pc_gql_result : int32_t
+typedef enum PROTO_ENUM_PACKED
 {
     PC_GQL_OK = 0,           ///< Executed; @p out holds `{"data":{...}}`.
     PC_GQL_ERR_PARSE = -1,   ///< Malformed query (syntax / unsupported construct).
     PC_GQL_ERR_LIMIT = -2,   ///< Exceeded a PC_GQL_* bound (nodes/args/depth/name).
     PC_GQL_ERR_OVERFLOW = -3 ///< Response did not fit @p cap.
-};
+} pc_gql_result;
 
 /**
  * @brief Parse and execute a GraphQL query, writing the JSON response.

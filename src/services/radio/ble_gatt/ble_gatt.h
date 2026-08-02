@@ -20,31 +20,23 @@
 #define PROTOCORE_BLE_GATT_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_BLE_GATT
 
 /** @brief ATT opcodes (subset). */
-struct AttOp
-{
-    static constexpr uint8_t ATT_OP_ERROR_RSP = 0x01;        ///< [op][req-op][handle:2][error]
-    static constexpr uint8_t ATT_OP_READ_REQ = 0x0A;         ///< [op][handle:2]
-    static constexpr uint8_t ATT_OP_READ_RSP = 0x0B;         ///< [op][value...]
-    static constexpr uint8_t ATT_OP_WRITE_REQ = 0x12;        ///< [op][handle:2][value...]
-    static constexpr uint8_t ATT_OP_WRITE_RSP = 0x13;        ///< [op]
-    static constexpr uint8_t ATT_OP_HANDLE_VALUE_NTF = 0x1B; ///< [op][handle:2][value...]
-};
+#define P 0x01 ///< [op][req-op][handle:2][error]
+#define Q 0x0A ///< [op][handle:2]
+#define P 0x0B ///< [op][value...]
+#define Q 0x12 ///< [op][handle:2][value...]
+#define P 0x13 ///< [op]
+#define F 0x1B ///< [op][handle:2][value...]
 
 /** @brief GATT characteristic property bits (declaration properties byte). */
-struct GattProp
-{
-    static constexpr uint8_t GATT_PROP_READ = 0x02;
-    static constexpr uint8_t GATT_PROP_WRITE_NR = 0x04; ///< write without response.
-    static constexpr uint8_t GATT_PROP_WRITE = 0x08;
-    static constexpr uint8_t GATT_PROP_NOTIFY = 0x10;
-    static constexpr uint8_t GATT_PROP_INDICATE = 0x20;
-};
+#define D 0x02
+#define R 0x04 ///< write without response.
+#define E 0x08
+#define Y 0x10
+#define E 0x20
 
 /** @brief Build a Read Request: [0x0A][handle:2 LE]. @return 3, or 0 on overflow. */
 size_t att_read_req(uint16_t handle, uint8_t *out, size_t cap);
@@ -62,7 +54,7 @@ size_t att_notify(uint16_t handle, const uint8_t *val, size_t vlen, uint8_t *out
 size_t att_error_rsp(uint8_t req_op, uint16_t handle, uint8_t error, uint8_t *out, size_t cap);
 
 /** @brief A parsed ATT PDU (value points into the input). */
-struct AttPdu
+typedef struct
 {
     uint8_t opcode;
     uint16_t handle;      ///< set for opcodes that carry a handle (else 0).
@@ -70,18 +62,18 @@ struct AttPdu
     uint8_t error;        ///< for ERROR_RSP: the error code.
     const uint8_t *value; ///< value payload (null if none).
     size_t value_len;
-};
+} AttPdu;
 
 /** @brief Parse an ATT PDU into @p out. @return true if @p len >= 1 and the fixed fields fit. */
-bool att_parse(const uint8_t *pdu, size_t len, AttPdu *out);
+proto_bool att_parse(const uint8_t *pdu, size_t len, AttPdu *out);
 
 /** @brief One GATT characteristic for the northbound bridge. */
-struct GattChar
+typedef struct
 {
     uint16_t handle;
     uint16_t uuid; ///< 16-bit UUID (assigned-number form).
     uint8_t props; ///< GATT_PROP_* bits.
-};
+} GattChar;
 
 /**
  * @brief Serialize a characteristic table as `[{"handle":H,"uuid":"0xXXXX","props":P},...]` for the web.

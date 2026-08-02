@@ -47,8 +47,6 @@
 
 #if PC_ENABLE_RCWL0516
 
-#include <stdint.h>
-
 /**
  * @brief Default hold time (ms) for the RCWL-0516.
  *
@@ -69,7 +67,7 @@
 // ---------------------------------------------------------------------------
 
 /** @brief Debounced, hold-extended state of one active-high presence pin. Pure: it decides. */
-struct PresenceCore
+typedef struct
 {
     uint32_t debounce_ms;  ///< a level must hold this long before it is believed.
     uint32_t hold_ms;      ///< presence persists this long past the last believed-HIGH sample.
@@ -79,7 +77,7 @@ struct PresenceCore
     uint8_t stable;        ///< believed level, after debouncing (0/1).
     uint8_t present;       ///< presence output (0/1) - @ref stable, extended by @ref hold_ms.
     uint8_t changed;       ///< set when @ref present flipped; cleared by @ref pc_presence_take_event.
-};
+} PresenceCore;
 
 /**
  * @brief Initialize to *absent* at @p now, with the pin treated as idle (LOW).
@@ -100,17 +98,17 @@ void pc_presence_core_init(PresenceCore *c, uint32_t debounce_ms, uint32_t hold_
  *
  * @return the presence state after this sample (also in @ref PresenceCore::present).
  */
-bool pc_presence_core_update(PresenceCore *c, bool pin_high, uint32_t now);
+proto_bool pc_presence_core_update(PresenceCore *c, proto_bool pin_high, uint32_t now);
 
 /** @brief Current presence, without sampling. */
-bool pc_presence_core_get(const PresenceCore *c);
+proto_bool pc_presence_core_get(const PresenceCore *c);
 
 /**
  * @brief Consume the presence-changed event.
  * @return true exactly once per transition, so a caller can publish an event per edge rather than
  *         re-publishing a level every poll. Clears the flag.
  */
-bool pc_presence_take_event(PresenceCore *c);
+proto_bool pc_presence_take_event(PresenceCore *c);
 
 // ---------------------------------------------------------------------------
 // RCWL-0516 convenience
@@ -124,13 +122,13 @@ void pc_rcwl0516_core_init(PresenceCore *c, uint32_t now);
 // ---------------------------------------------------------------------------
 
 /** @brief Configure @p out_pin as an input and start the core. @return true on ESP32. */
-bool pc_rcwl0516_begin(int out_pin);
+proto_bool pc_rcwl0516_begin(int out_pin);
 
 /** @brief Sample the pin at the current time. @return true if presence changed on this poll. */
-bool pc_rcwl0516_poll();
+proto_bool pc_rcwl0516_poll();
 
 /** @brief Latest debounced, hold-extended presence. */
-bool pc_rcwl0516_present();
+proto_bool pc_rcwl0516_present();
 
 #endif // PC_ENABLE_RCWL0516
 #endif // PROTOCORE_RCWL0516_H

@@ -23,22 +23,20 @@
 #define PROTOCORE_SSH_AUTH_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 /** @brief Parsed SSH_MSG_USERAUTH_REQUEST. */
-struct SshAuthReq
+typedef struct
 {
     char user[SSH_AUTH_USER_MAX];     ///< User name, null-terminated.
     char service[32];                 ///< Requested service ("ssh-connection").
     char method[24];                  ///< Method name ("none", "password", "publickey", "keyboard-interactive").
     char password[SSH_AUTH_PASS_MAX]; ///< Password (method == "password").
-    bool is_password;                 ///< True if a password method-request was parsed.
-    bool is_kbdint;                   ///< True if a keyboard-interactive method-request was parsed (RFC 4256).
+    proto_bool is_password;           ///< True if a password method-request was parsed.
+    proto_bool is_kbdint;             ///< True if a keyboard-interactive method-request was parsed (RFC 4256).
 
     // publickey method (RFC 4252 §7)
-    bool is_pubkey;               ///< True if a publickey method-request was parsed.
-    bool has_signature;           ///< True if the request carried a signature.
+    proto_bool is_pubkey;         ///< True if a publickey method-request was parsed.
+    proto_bool has_signature;     ///< True if the request carried a signature.
     char pk_algo[20];             ///< Public-key algorithm name.
     const uint8_t *pk_blob;       ///< Public-key blob (points into the payload).
     uint32_t pk_blob_len;         ///< Length of pk_blob.
@@ -46,13 +44,13 @@ struct SshAuthReq
     uint32_t signature_len;       ///< Length of signature.
     const uint8_t *signed_prefix; ///< Bytes of the request that the signature covers.
     size_t signed_prefix_len;     ///< Length of signed_prefix (payload up to the signature).
-};
+} SshAuthReq;
 
 /**
  * @brief Application callback that validates a username/password pair.
  * @return true to accept the credentials.
  */
-typedef bool (*SshPasswordCb)(const char *user, const char *password);
+typedef proto_bool (*SshPasswordCb)(const char *user, const char *password);
 
 /** @brief Install the password-verification callback (nullptr → all fail). */
 void pc_ssh_auth_set_password_cb(SshPasswordCb cb);
@@ -62,7 +60,7 @@ void pc_ssh_auth_set_password_cb(SshPasswordCb cb);
  *        for @p user. @p blob is the "ssh-rsa" public-key blob.
  * @return true if the key may authenticate this user.
  */
-typedef bool (*SshPubkeyCb)(const char *user, const uint8_t *blob, size_t blob_len);
+typedef proto_bool (*SshPubkeyCb)(const char *user, const uint8_t *blob, size_t blob_len);
 
 /** @brief Install the publickey-authorization callback (nullptr → all fail). */
 void pc_ssh_auth_set_pubkey_cb(SshPubkeyCb cb);
@@ -81,7 +79,7 @@ int pc_ssh_auth_handle_service_request(const uint8_t *payload, size_t len, uint8
 int pc_ssh_auth_parse_request(const uint8_t *payload, size_t len, SshAuthReq *req);
 
 /** @brief Build SSH_MSG_USERAUTH_FAILURE advertising "password". */
-int pc_ssh_auth_build_failure(uint8_t *out, size_t *out_len, size_t cap, bool partial);
+int pc_ssh_auth_build_failure(uint8_t *out, size_t *out_len, size_t cap, proto_bool partial);
 
 /** @brief Build SSH_MSG_USERAUTH_SUCCESS. */
 int pc_ssh_auth_build_success(uint8_t *out, size_t *out_len, size_t cap);

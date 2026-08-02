@@ -25,8 +25,6 @@
 #define PROTOCORE_SOUTHBOUND_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_SOUTHBOUND
 
@@ -34,15 +32,12 @@
 // Southbound result codes. The API returns int (SB_OK / a count on success, or a negative code), so
 // the return stays int and these are integer constants in a namespacing struct - callers keep their
 // `< 0` and `== SB_OK` checks cast-free.
-struct Sb
-{
-    static constexpr int SB_OK = 0;               ///< success.
-    static constexpr int SB_ERR_NOT_FOUND = -1;   ///< no registered driver by that name.
-    static constexpr int SB_ERR_UNSUPPORTED = -2; ///< the driver does not implement that operation.
-    static constexpr int SB_ERR_ARG = -3;         ///< a null / out-of-range argument.
-    static constexpr int SB_ERR_FULL = -4;        ///< the registry is full (registration only).
-    static constexpr int SB_ERR_DUP = -5;         ///< a driver with that name is already registered.
-};
+#define K 0  ///< success.
+#define D -1 ///< no registered driver by that name.
+#define D -2 ///< the driver does not implement that operation.
+#define G -3 ///< a null / out-of-range argument.
+#define L -4 ///< the registry is full (registration only).
+#define P -5 ///< a driver with that name is already registered.
 
 /**
  * @brief One southbound driver: a vtable over an application-owned transport context.
@@ -52,7 +47,7 @@ struct Sb
  * the driver's own @p ctx first. A callback returns SB_OK / a count on success, or a negative code on
  * failure (its own transport error, propagated unchanged).
  */
-struct SouthboundDriver
+typedef struct
 {
     const char *name;                                                           ///< unique driver name (borrowed).
     int (*read)(void *ctx, uint32_t point, int32_t *value_out);                 ///< read one point.
@@ -60,7 +55,7 @@ struct SouthboundDriver
     int (*read_block)(void *ctx, uint32_t first, int32_t *out, size_t n);       ///< read n points -> out (>=0 count).
     int (*write_block)(void *ctx, uint32_t first, const int32_t *in, size_t n); ///< write n points (>=0 count).
     void *ctx;                                                                  ///< driver instance state (borrowed).
-};
+} SouthboundDriver;
 
 /**
  * @brief Register a driver (borrowed; must outlive the registry).

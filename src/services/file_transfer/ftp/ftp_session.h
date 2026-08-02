@@ -28,17 +28,14 @@
 
 #if PC_ENABLE_FTP_SESSION
 
-#include <stddef.h>
-#include <stdint.h>
-
 /** @brief Where to connect and who to log in as. */
-struct FtpTarget
+typedef struct
 {
     const char *host; ///< server hostname or dotted-quad
     uint16_t port;    ///< control port, or 0 for the default 21
     const char *user; ///< username, or nullptr for "anonymous"
     const char *pass; ///< password, or nullptr for "" (anonymous)
-};
+} FtpTarget;
 
 /**
  * @brief Fill up to @p cap bytes of the payload starting at @p offset.
@@ -61,7 +58,7 @@ typedef size_t (*pc_ftp_source)(void *ctx, size_t offset, uint8_t *buf, size_t c
  *
  * @return true only if the server confirmed the completed transfer.
  */
-bool pc_ftp_store(const FtpTarget *target, const char *remote_path, size_t total, pc_ftp_source src, void *ctx);
+proto_bool pc_ftp_store(const FtpTarget *target, const char *remote_path, size_t total, pc_ftp_source src, void *ctx);
 
 #endif // PC_ENABLE_FTP_SESSION
 

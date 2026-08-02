@@ -26,7 +26,6 @@
 #define PROTOCORE_TELEMETRY_H
 
 #include "protocore_config.h"
-#include <stdint.h>
 
 #if PC_ENABLE_TELEMETRY
 
@@ -40,7 +39,7 @@
  * The caller owns the `float` storage (no heap). Mean and variance are kept O(1)
  * via running sums; min/max are an O(window) scan.
  */
-struct pc_window
+typedef struct
 {
     float *buf;     ///< caller-provided sample storage (>= cap floats).
     uint16_t cap;   ///< window capacity (samples).
@@ -48,7 +47,7 @@ struct pc_window
     uint16_t head;  ///< next write index (oldest sample when full).
     double sum;     ///< running sum of held samples.
     double sum_sq;  ///< running sum of squares of held samples.
-};
+} pc_window;
 
 /** @brief Bind @p w to @p buf (capacity @p cap samples) and reset it to empty. */
 void pc_window_init(pc_window *w, float *buf, uint16_t cap);
@@ -79,12 +78,12 @@ float pc_window_max(const pc_window *w);
 // ---------------------------------------------------------------------------
 
 /** @brief Derivative / rate-of-change tracker between successive samples. */
-struct pc_rate
+typedef struct
 {
-    float last_value; ///< previous sample value.
-    uint32_t last_ms; ///< millis() of the previous sample.
-    bool primed;      ///< false until the first sample is seen.
-};
+    float last_value;  ///< previous sample value.
+    uint32_t last_ms;  ///< millis() of the previous sample.
+    proto_bool primed; ///< false until the first sample is seen.
+} pc_rate;
 
 /** @brief Reset @p r so the next sample is treated as the first. */
 void pc_rate_init(pc_rate *r);
@@ -104,13 +103,13 @@ float pc_rate_update(pc_rate *r, float value, uint32_t now_ms);
 // ---------------------------------------------------------------------------
 
 /** @brief Running total from trapezoidal integration of a rate over time. */
-struct pc_totalizer
+typedef struct
 {
-    double total;     ///< accumulated total (in rate-units * seconds).
-    float last_rate;  ///< previous rate sample.
-    uint32_t last_ms; ///< millis() of the previous rate sample.
-    bool primed;      ///< false until the first rate sample is seen.
-};
+    double total;      ///< accumulated total (in rate-units * seconds).
+    float last_rate;   ///< previous rate sample.
+    uint32_t last_ms;  ///< millis() of the previous rate sample.
+    proto_bool primed; ///< false until the first rate sample is seen.
+} pc_totalizer;
 
 /** @brief Reset @p t to a zero total with no prior sample. */
 void pc_totalizer_init(pc_totalizer *t);

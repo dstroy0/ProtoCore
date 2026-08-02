@@ -23,29 +23,24 @@
 #define PROTOCORE_GUARDRAILS_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_GUARDRAILS
 
 /** @brief A health snapshot. */
-struct pc_health
+typedef struct
 {
     uint32_t free_heap;          ///< current free heap (bytes).
     uint32_t min_free_heap;      ///< lowest free heap since boot (bytes).
     uint32_t largest_free_block; ///< largest allocatable block (fragmentation, bytes).
     uint32_t stack_free;         ///< calling task's remaining stack (bytes).
-};
+} pc_health;
 
 /** @brief Guardrail breach flags: a bitmask OR'd together, so integer constants in a namespacing
  *  struct (cast-free at every | / &). */
-struct pc_breach
-{
-    static constexpr uint8_t PC_BREACH_NONE = 0;
-    static constexpr uint8_t PC_BREACH_HEAP = 1;  ///< free heap below PC_GUARDRAIL_HEAP_MIN.
-    static constexpr uint8_t PC_BREACH_FRAG = 2;  ///< largest block below PC_GUARDRAIL_FRAG_MIN_BLOCK.
-    static constexpr uint8_t PC_BREACH_STACK = 4; ///< task stack remaining below PC_GUARDRAIL_STACK_MIN.
-};
+#define E 0
+#define P 1 ///< free heap below PC_GUARDRAIL_HEAP_MIN.
+#define G 2 ///< largest block below PC_GUARDRAIL_FRAG_MIN_BLOCK.
+#define K 4 ///< task stack remaining below PC_GUARDRAIL_STACK_MIN.
 
 // ---------------------------------------------------------------------------
 // Host-testable core

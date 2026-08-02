@@ -34,8 +34,6 @@
 
 #include "services/security/ikev2/ikev2.h"
 #include "services/system/esp/esp.h"
-#include <stddef.h>
-#include <stdint.h>
 
 /** @brief Longest selector address (IPv6). IPv4 uses the low 4 bytes. */
 #define PC_IPSEC_ADDR_MAX 16
@@ -45,12 +43,12 @@
 #define PC_IPSEC_SAD_MAX 8
 
 /** @brief SPD policy action (RFC 4301 §4.4.1). */
-enum class IpsecAction : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
-    DISCARD = 0, ///< drop the packet
-    BYPASS = 1,  ///< forward without IPsec
-    PROTECT = 2, ///< apply ESP with the bound SA
-};
+    IPSEC_ACTION_DISCARD = 0, ///< drop the packet
+    IPSEC_ACTION_BYPASS = 1,  ///< forward without IPsec
+    IPSEC_ACTION_PROTECT = 2, ///< apply ESP with the bound SA
+} IpsecAction;
 
 /**
  * @brief A traffic selector as an SPD range (value type, addresses inline big-endian).
@@ -58,7 +56,7 @@ enum class IpsecAction : uint8_t
  * A packet matches when its family and protocol agree and its source / destination addresses and ports
  * each fall within the inclusive [lo, hi] ranges. A protocol of 0 or a port range of [0, 65535] is "any".
  */
-struct IpsecSelector
+typedef struct
 {
     uint8_t addr_len;    ///< 4 (IPv4) or 16 (IPv6); also selects the family
     uint8_t ip_protocol; ///< 0 = any
@@ -70,25 +68,25 @@ struct IpsecSelector
     uint16_t src_port_hi;
     uint16_t dst_port_lo;
     uint16_t dst_port_hi;
-};
+} IpsecSelector;
 
 /** @brief One SPD policy: a selector, its action, and (for PROTECT) the outbound SA's SPI. */
-struct IpsecPolicy
+typedef struct
 {
     IpsecSelector sel;
     IpsecAction action;
     uint32_t sa_spi; ///< PROTECT: the SAD entry to encapsulate with (0 = not yet bound)
-};
+} IpsecPolicy;
 
 /** @brief An ordered Security Policy Database (first match wins). */
-struct IpsecSpd
+typedef struct
 {
     IpsecPolicy entries[PC_IPSEC_SPD_MAX];
     size_t count;
-};
+} IpsecSpd;
 
 /** @brief A concrete packet's 5-tuple, looked up against the SPD. Addresses point at big-endian octets. */
-struct IpsecFlow
+typedef struct
 {
     uint8_t addr_len; ///< 4 or 16 (must match the selector family)
     uint8_t ip_protocol;
@@ -96,10 +94,10 @@ struct IpsecFlow
     const uint8_t *dst; ///< @ref addr_len octets
     uint16_t src_port;
     uint16_t dst_port;
-};
+} IpsecFlow;
 
 /** @brief One Security Association (RFC 4301 §4.4.2). */
-struct IpsecSaEntry
+typedef struct
 {
     uint32_t spi;                   ///< the SA's SPI (its SAD key)
     uint8_t dst[PC_IPSEC_ADDR_MAX]; ///< SA destination address
@@ -108,16 +106,16 @@ struct IpsecSaEntry
     uint8_t salt[PC_ESP_SALT_LEN];  ///< AES-GCM salt (the key's tail)
     uint32_t seq;                   ///< outbound: last sequence number issued (0 = none yet)
     EspReplay replay;               ///< inbound: anti-replay window
-    bool inbound;                   ///< true = receive SA, false = send SA
-    bool valid;                     ///< false = free slot
-};
+    proto_bool inbound;             ///< true = receive SA, false = send SA
+    proto_bool valid;               ///< false = free slot
+} IpsecSaEntry;
 
 /** @brief The active Security Association Database, keyed by SPI. */
-struct IpsecSad
+typedef struct
 {
     IpsecSaEntry entries[PC_IPSEC_SAD_MAX];
     size_t count;
-};
+} IpsecSad;
 
 // ── SPD ─────────────────────────────────────────────────────────────────────────────────────────
 
@@ -129,7 +127,7 @@ void pc_ipsec_spd_init(IpsecSpd *spd);
  * @param sa_spi for a PROTECT action, the SAD SPI to bind (ignored otherwise).
  * @return true on success, false if @p spd is full or an argument is null.
  */
-bool pc_ipsec_spd_add(IpsecSpd *spd, const IpsecSelector *sel, IpsecAction action, uint32_t sa_spi);
+proto_bool pc_ipsec_spd_add(IpsecSpd *spd, const IpsecSelector *sel, IpsecAction action, uint32_t sa_spi);
 
 /**
  * @brief Find the first SPD policy whose selector matches @p flow (RFC 4301 §4.4.1 ordered match).
@@ -138,7 +136,7 @@ bool pc_ipsec_spd_add(IpsecSpd *spd, const IpsecSelector *sel, IpsecAction actio
 const IpsecPolicy *pc_ipsec_spd_lookup(const IpsecSpd *spd, const IpsecFlow *flow);
 
 /** @brief True iff @p flow falls inside @p sel (family, protocol, address ranges, and port ranges). */
-bool pc_ipsec_selector_match(const IpsecSelector *sel, const IpsecFlow *flow);
+proto_bool pc_ipsec_selector_match(const IpsecSelector *sel, const IpsecFlow *flow);
 
 /**
  * @brief Fill @p out from an IKEv2-negotiated TSi / TSr pair (RFC 4301 §4.4.1 SPD-from-TS).
@@ -148,7 +146,8 @@ bool pc_ipsec_selector_match(const IpsecSelector *sel, const IpsecFlow *flow);
  * family.
  * @return true on success, false on a null argument or a family / length mismatch.
  */
-bool pc_ipsec_selector_from_ts(IpsecSelector *out, const IkeTrafficSelector *ts_src, const IkeTrafficSelector *ts_dst);
+proto_bool pc_ipsec_selector_from_ts(IpsecSelector *out, const IkeTrafficSelector *ts_src,
+                                     const IkeTrafficSelector *ts_dst);
 
 // ── SAD ─────────────────────────────────────────────────────────────────────────────────────────
 
@@ -163,13 +162,14 @@ void pc_ipsec_sad_init(IpsecSad *sad);
  * @return the installed entry, or nullptr if the SAD is full, an argument is null, or @p spi already exists.
  */
 IpsecSaEntry *pc_ipsec_sad_add(IpsecSad *sad, uint32_t spi, const uint8_t *dst, uint8_t addr_len,
-                               const uint8_t key[PC_ESP_KEY_LEN], const uint8_t salt[PC_ESP_SALT_LEN], bool inbound);
+                               const uint8_t key[PC_ESP_KEY_LEN], const uint8_t salt[PC_ESP_SALT_LEN],
+                               proto_bool inbound);
 
 /** @brief Look up a valid SA by SPI (inbound ESP demux, RFC 4301 §4.1). nullptr if absent. */
 IpsecSaEntry *pc_ipsec_sad_find(IpsecSad *sad, uint32_t spi);
 
 /** @brief Remove the SA with @p spi (e.g. on an IKE DELETE). @return true if one was removed. */
-bool pc_ipsec_sad_remove(IpsecSad *sad, uint32_t spi);
+proto_bool pc_ipsec_sad_remove(IpsecSad *sad, uint32_t spi);
 
 /**
  * @brief Allocate the next outbound sequence number for @p sa (RFC 4303 §3.3.3, pre-increment from 1).
@@ -177,7 +177,7 @@ bool pc_ipsec_sad_remove(IpsecSad *sad, uint32_t spi);
  * @return true on success; false (and @p sa left unchanged) if the 32-bit counter would wrap - the SA
  *         must be rekeyed before any further packets, since a repeated sequence number breaks GCM.
  */
-bool pc_ipsec_sad_next_seq(IpsecSaEntry *sa, uint32_t *seq_out);
+proto_bool pc_ipsec_sad_next_seq(IpsecSaEntry *sa, uint32_t *seq_out);
 
 #endif // PC_ENABLE_IKEV2
 #endif // PROTOCORE_IPSEC_DB_H

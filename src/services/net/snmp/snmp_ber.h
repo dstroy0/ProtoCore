@@ -17,63 +17,61 @@
 #define PROTOCORE_SNMP_BER_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_SNMP
 
 // ASN.1 / SNMP tags
-enum class SnmpTag : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
-    BER_INTEGER = 0x02,
-    BER_OCTET_STRING = 0x04,
-    BER_NULL = 0x05,
-    BER_OID = 0x06,
-    BER_SEQUENCE = 0x30,
+    SNMP_TAG_BER_INTEGER = 0x02,
+    SNMP_TAG_BER_OCTET_STRING = 0x04,
+    SNMP_TAG_BER_NULL = 0x05,
+    SNMP_TAG_BER_OID = 0x06,
+    SNMP_TAG_BER_SEQUENCE = 0x30,
     // SNMP application types (RFC 2578)
-    SNMP_IPADDRESS = 0x40,
-    SNMP_COUNTER32 = 0x41,
-    SNMP_GAUGE32 = 0x42,
-    SNMP_TIMETICKS = 0x43,
-    SNMP_OPAQUE = 0x44,
-    SNMP_COUNTER64 = 0x46,
+    SNMP_TAG_SNMP_IPADDRESS = 0x40,
+    SNMP_TAG_SNMP_COUNTER32 = 0x41,
+    SNMP_TAG_SNMP_GAUGE32 = 0x42,
+    SNMP_TAG_SNMP_TIMETICKS = 0x43,
+    SNMP_TAG_SNMP_OPAQUE = 0x44,
+    SNMP_TAG_SNMP_COUNTER64 = 0x46,
     // VarBind exception markers (RFC 3416)
-    SNMP_NO_SUCH_OBJECT = 0x80,
-    SNMP_NO_SUCH_INSTANCE = 0x81,
-    SNMP_END_OF_MIB_VIEW = 0x82,
+    SNMP_TAG_SNMP_NO_SUCH_OBJECT = 0x80,
+    SNMP_TAG_SNMP_NO_SUCH_INSTANCE = 0x81,
+    SNMP_TAG_SNMP_END_OF_MIB_VIEW = 0x82,
     // PDU tags (context-specific, constructed)
-    SNMP_PDU_GET = 0xA0,
-    SNMP_PDU_GETNEXT = 0xA1,
-    SNMP_PDU_RESPONSE = 0xA2,
-    SNMP_PDU_SET = 0xA3,
-    SNMP_PDU_GETBULK = 0xA5,
-    SNMP_PDU_TRAPV2 = 0xA7,
-    SNMP_PDU_REPORT = 0xA8,
-};
+    SNMP_TAG_SNMP_PDU_GET = 0xA0,
+    SNMP_TAG_SNMP_PDU_GETNEXT = 0xA1,
+    SNMP_TAG_SNMP_PDU_RESPONSE = 0xA2,
+    SNMP_TAG_SNMP_PDU_SET = 0xA3,
+    SNMP_TAG_SNMP_PDU_GETBULK = 0xA5,
+    SNMP_TAG_SNMP_PDU_TRAPV2 = 0xA7,
+    SNMP_TAG_SNMP_PDU_REPORT = 0xA8,
+} SnmpTag;
 
 // ---------------------------------------------------------------------------
 // Encoder - forward writer over a caller buffer. Constructed types reserve a
 // 3-byte long-form length that is back-patched at close (valid BER; accepted by
 // net-snmp etc.), so no buffering or shifting is needed.
 // ---------------------------------------------------------------------------
-struct BerEnc
+typedef struct BerEnc
 {
     uint8_t *buf;
     size_t cap;
     size_t len;
-    bool ok;
-};
+    proto_bool ok;
+} BerEnc;
 
 void pc_ber_enc_init(BerEnc *e, uint8_t *buf, size_t cap);
 
-bool pc_ber_put_integer(BerEnc *e, long v);               ///< INTEGER (signed, minimal)
-bool pc_ber_put_uint(BerEnc *e, uint8_t tag, uint32_t v); ///< non-negative int with @p tag
-bool pc_ber_put_octet_string(BerEnc *e, uint8_t tag, const uint8_t *d,
-                             size_t n);                                    ///< OCTET STRING / IpAddress / Opaque
-bool pc_ber_put_null(BerEnc *e);                                           ///< NULL
-bool pc_ber_put_oid(BerEnc *e, const uint32_t *arcs, size_t n);            ///< OBJECT IDENTIFIER (n >= 2)
-bool pc_ber_put_tlv(BerEnc *e, uint8_t tag, const uint8_t *val, size_t n); ///< raw primitive TLV
-bool pc_ber_put_raw(BerEnc *e, const uint8_t *bytes, size_t n);            ///< append pre-encoded bytes verbatim
+proto_bool pc_ber_put_integer(BerEnc *e, long v);               ///< INTEGER (signed, minimal)
+proto_bool pc_ber_put_uint(BerEnc *e, uint8_t tag, uint32_t v); ///< non-negative int with @p tag
+proto_bool pc_ber_put_octet_string(BerEnc *e, uint8_t tag, const uint8_t *d,
+                                   size_t n);                                    ///< OCTET STRING / IpAddress / Opaque
+proto_bool pc_ber_put_null(BerEnc *e);                                           ///< NULL
+proto_bool pc_ber_put_oid(BerEnc *e, const uint32_t *arcs, size_t n);            ///< OBJECT IDENTIFIER (n >= 2)
+proto_bool pc_ber_put_tlv(BerEnc *e, uint8_t tag, const uint8_t *val, size_t n); ///< raw primitive TLV
+proto_bool pc_ber_put_raw(BerEnc *e, const uint8_t *bytes, size_t n);            ///< append pre-encoded bytes verbatim
 
 size_t pc_ber_seq_begin(BerEnc *e, uint8_t tag); ///< open a constructed type; returns a token
 void pc_ber_seq_end(BerEnc *e, size_t token);    ///< close it (back-patch the length)
@@ -81,24 +79,24 @@ void pc_ber_seq_end(BerEnc *e, size_t token);    ///< close it (back-patch the l
 // ---------------------------------------------------------------------------
 // Decoder - forward reader over a buffer.
 // ---------------------------------------------------------------------------
-struct BerDec
+typedef struct
 {
     const uint8_t *buf;
     size_t len;
     size_t pos;
-    bool ok;
-};
+    proto_bool ok;
+} BerDec;
 
 void pc_ber_dec_init(BerDec *d, const uint8_t *buf, size_t len);
 
 /** @brief Read a tag + length; on success @p d->pos is left at the value. */
-bool pc_ber_read_header(BerDec *d, uint8_t *tag, size_t *length);
+proto_bool pc_ber_read_header(BerDec *d, uint8_t *tag, size_t *length);
 /** @brief Read an INTEGER into @p out. */
-bool pc_ber_read_integer(BerDec *d, long *out);
+proto_bool pc_ber_read_integer(BerDec *d, long *out);
 /** @brief Read an OBJECT IDENTIFIER into @p arcs (capacity @p max); count in @p n. */
-bool pc_ber_read_oid(BerDec *d, uint32_t *arcs, size_t max, size_t *n);
+proto_bool pc_ber_read_oid(BerDec *d, uint32_t *arcs, size_t max, size_t *n);
 /** @brief Advance the cursor past @p length value bytes. */
-bool pc_ber_skip(BerDec *d, size_t length);
+proto_bool pc_ber_skip(BerDec *d, size_t length);
 
 #endif // PC_ENABLE_SNMP
 

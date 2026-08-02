@@ -34,8 +34,6 @@
 #include "mmgr/frame.h" // the one frame engine
 #include "protocore_config.h"
 #include "server/filesystem/mnt.h"
-#include <stddef.h>
-#include <stdint.h>
 
 // root, dir, name. A whole path is these three pieces, so it is ONE build: a caller that assembled
 // dir+name itself and handed the result over would frame the same bytes twice, into two buffers,
@@ -116,16 +114,16 @@ inline size_t pc_fs_join(const char *root, const char *dir, const char *name, ch
 /** @brief True if @p s contains a `..` traversal.
  *
  * ".." is two bytes at one offset, not a pattern to search for: compare the pair and advance. */
-inline bool pc_fs_has_dotdot(const char *s)
+inline proto_bool pc_fs_has_dotdot(const char *s)
 {
     for (const char *p = s; p[0] != '\0' && p[1] != '\0'; p++)
     {
         if (p[0] == '.' && p[1] == '.')
         {
-            return true;
+            return PROTO_TRUE;
         }
     }
-    return false;
+    return PROTO_FALSE;
 }
 
 inline int pc_fs_resolve(const char *root, const char *dir, const char *name, char *out, size_t cap)
@@ -181,7 +179,7 @@ void pc_fs_clear_status(void);
 
 /** @brief True while no store is mounted - the local-only configuration, stated rather than inferred
  *         from a call that returned false. */
-bool pc_fs_storage_present(void);
+proto_bool pc_fs_storage_present(void);
 
 /**
  * @brief Bind a root and get the handle a service works through (e.g. "mnt/scp", "mnt/sftp").
@@ -227,13 +225,13 @@ int pc_fs_write(int handle, const void *buf, size_t n);
 /** @brief Close an open file or directory @p handle. */
 void pc_fs_close(int handle);
 /** @brief Seek @p handle to absolute offset @p off. @return true on success. */
-bool pc_fs_seek(int handle, uint64_t off);
+proto_bool pc_fs_seek(int handle, uint64_t off);
 /** @brief Size of the file at @p dir + @p name. @return the size in bytes, or -1 if absent. */
 long pc_fs_size(int root, const char *dir, const char *name);
 /** @brief @return true if @p dir + @p name exists. */
-bool pc_fs_exists(int root, const char *dir, const char *name);
+proto_bool pc_fs_exists(int root, const char *dir, const char *name);
 /** @brief Fill @p out with the facts about @p dir + @p name. @return false if absent. */
-bool pc_fs_stat(int root, const char *dir, const char *name, pc_mnt_stat *out);
+proto_bool pc_fs_stat(int root, const char *dir, const char *name, pc_mnt_stat *out);
 /**
  * @brief Delete @p dir + @p name: a file, or a directory and everything under it.
  *
@@ -245,19 +243,19 @@ bool pc_fs_stat(int root, const char *dir, const char *name, pc_mnt_stat *out);
  *
  * @return true when the whole tree is gone; false if any part of it could not be removed.
  */
-bool pc_fs_remove(int root, const char *dir, const char *name);
+proto_bool pc_fs_remove(int root, const char *dir, const char *name);
 /** @brief Rename @p from_dir + @p from_name to @p to_dir + @p to_name. @return true on success. */
-bool pc_fs_rename(int root, const char *from_dir, const char *from_name, const char *to_dir, const char *to_name);
+proto_bool pc_fs_rename(int root, const char *from_dir, const char *from_name, const char *to_dir, const char *to_name);
 /**
  * @brief Copy @p from_dir + @p from_name onto @p to_dir + @p to_name: a file, or a whole tree.
  *
  * The destination is replaced if it exists. @return true when the whole tree arrived.
  */
-bool pc_fs_copy(int root, const char *from_dir, const char *from_name, const char *to_dir, const char *to_name);
+proto_bool pc_fs_copy(int root, const char *from_dir, const char *from_name, const char *to_dir, const char *to_name);
 /** @brief Create a directory at @p dir + @p name. @return true on success. */
-bool pc_fs_mkdir(int root, const char *dir, const char *name);
+proto_bool pc_fs_mkdir(int root, const char *dir, const char *name);
 /** @brief Remove the empty directory at @p dir + @p name. @return true on success. */
-bool pc_fs_rmdir(int root, const char *dir, const char *name);
+proto_bool pc_fs_rmdir(int root, const char *dir, const char *name);
 /** @brief Open @p dir + @p name as a directory. @return a handle (>= 0), or -1. */
 int pc_fs_opendir(int root, const char *dir, const char *name);
 /**
@@ -265,12 +263,12 @@ int pc_fs_opendir(int root, const char *dir, const char *name);
  * @return false at the end of the directory. @p name_cap is the caller's, derived from what that
  *         caller's own frame must hold - this file imposes no name length.
  */
-bool pc_fs_readdir(int handle, pc_mnt_stat *out, char *name, size_t name_cap);
+proto_bool pc_fs_readdir(int handle, pc_mnt_stat *out, char *name, size_t name_cap);
 
 /** @brief Read the whole file at @p dir + @p name into @p buf.
  *  @return bytes read (0..cap), or -1 if absent / would exceed @p cap. */
 long pc_fs_read_file(int root, const char *dir, const char *name, void *buf, size_t cap);
 /** @brief Create/truncate @p dir + @p name and write @p n bytes. @return true on success. */
-bool pc_fs_write_file(int root, const char *dir, const char *name, const void *buf, size_t n);
+proto_bool pc_fs_write_file(int root, const char *dir, const char *name, const void *buf, size_t n);
 
 #endif // PROTOCORE_FILESYSTEM_H

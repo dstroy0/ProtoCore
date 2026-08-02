@@ -18,57 +18,57 @@ WebDavMethod pc_webdav_method(const char *m)
 {
     if (!m)
     {
-        return WebDavMethod::DAV_M_UNSUPPORTED;
+        return DAV_M_UNSUPPORTED;
     }
     if (!strcmp(m, "OPTIONS"))
     {
-        return WebDavMethod::DAV_M_OPTIONS;
+        return DAV_M_OPTIONS;
     }
     if (!strcmp(m, "GET"))
     {
-        return WebDavMethod::DAV_M_GET;
+        return DAV_M_GET;
     }
     if (!strcmp(m, "HEAD"))
     {
-        return WebDavMethod::DAV_M_HEAD;
+        return DAV_M_HEAD;
     }
     if (!strcmp(m, "PUT"))
     {
-        return WebDavMethod::DAV_M_PUT;
+        return DAV_M_PUT;
     }
     if (!strcmp(m, "DELETE"))
     {
-        return WebDavMethod::DAV_M_DELETE;
+        return DAV_M_DELETE;
     }
     if (!strcmp(m, "PROPFIND"))
     {
-        return WebDavMethod::DAV_M_PROPFIND;
+        return DAV_M_PROPFIND;
     }
     if (!strcmp(m, "PROPPATCH"))
     {
-        return WebDavMethod::DAV_M_PROPPATCH;
+        return DAV_M_PROPPATCH;
     }
     if (!strcmp(m, "MKCOL"))
     {
-        return WebDavMethod::DAV_M_MKCOL;
+        return DAV_M_MKCOL;
     }
     if (!strcmp(m, "COPY"))
     {
-        return WebDavMethod::DAV_M_COPY;
+        return DAV_M_COPY;
     }
     if (!strcmp(m, "MOVE"))
     {
-        return WebDavMethod::DAV_M_MOVE;
+        return DAV_M_MOVE;
     }
     if (!strcmp(m, "LOCK"))
     {
-        return WebDavMethod::DAV_M_LOCK;
+        return DAV_M_LOCK;
     }
     if (!strcmp(m, "UNLOCK"))
     {
-        return WebDavMethod::DAV_M_UNLOCK;
+        return DAV_M_UNLOCK;
     }
-    return WebDavMethod::DAV_M_UNSUPPORTED;
+    return DAV_M_UNSUPPORTED;
 }
 
 int pc_webdav_depth(const char *depth_hdr, int dflt)
@@ -94,17 +94,17 @@ int pc_webdav_depth(const char *depth_hdr, int dflt)
 
 // Append a NUL-terminated string if it fits; returns false (leaving *len and the
 // NUL terminator intact) when it would overflow.
-static bool app(char *buf, size_t cap, size_t *len, const char *s)
+static proto_bool app(char *buf, size_t cap, size_t *len, const char *s)
 {
     size_t n = strnlen(s, cap + 1);
     if (*len + n + 1 > cap)
     {
-        return false;
+        return PROTO_FALSE;
     }
     memcpy(buf + *len, s, n);
     *len += n;
     buf[*len] = '\0';
-    return true;
+    return PROTO_TRUE;
 }
 
 size_t pc_webdav_xml_escape(char *dst, size_t cap, const char *src)
@@ -116,7 +116,7 @@ size_t pc_webdav_xml_escape(char *dst, size_t cap, const char *src)
     }
     for (const char *p = src; *p; p++)
     {
-        const char *rep = nullptr;
+        const char *rep = NULL;
         switch (*p)
         {
         case '&':
@@ -160,11 +160,11 @@ size_t pc_webdav_xml_escape(char *dst, size_t cap, const char *src)
     return o;
 }
 
-bool pc_webdav_dest_path(const char *destination, char *out, size_t cap)
+proto_bool pc_webdav_dest_path(const char *destination, char *out, size_t cap)
 {
     if (!destination || !out || cap == 0)
     {
-        return false;
+        return PROTO_FALSE;
     }
 
     // Skip an absolute-URI scheme + authority: after "://", advance to the first
@@ -180,12 +180,12 @@ bool pc_webdav_dest_path(const char *destination, char *out, size_t cap)
         }
         if (*p != '/')
         {
-            return false; // authority with no path
+            return PROTO_FALSE; // authority with no path
         }
     }
     else if (*p != '/')
     {
-        return false; // not an absolute path
+        return PROTO_FALSE; // not an absolute path
     }
 
     // Percent-decode into out. A while loop so the %XX case can consume its two
@@ -200,20 +200,20 @@ bool pc_webdav_dest_path(const char *destination, char *out, size_t cap)
             int lo = (hi >= 0) ? pc_hex_val(p[2]) : -1;
             if (hi < 0 || lo < 0)
             {
-                return false; // malformed escape
+                return PROTO_FALSE; // malformed escape
             }
             c = (char)((hi << 4) | lo);
             p += 2;
         }
         if (o + 1 >= cap)
         {
-            return false; // no room for char + NUL
+            return PROTO_FALSE; // no room for char + NUL
         }
         out[o++] = c;
         p++;
     }
     out[o] = '\0';
-    return true;
+    return PROTO_TRUE;
 }
 
 size_t pc_webdav_ms_begin(char *buf, size_t cap, size_t len)
@@ -222,7 +222,7 @@ size_t pc_webdav_ms_begin(char *buf, size_t cap, size_t len)
     return len;
 }
 
-size_t pc_webdav_ms_entry(char *buf, size_t cap, size_t len, const char *href, bool is_collection, uint32_t size,
+size_t pc_webdav_ms_entry(char *buf, size_t cap, size_t len, const char *href, proto_bool is_collection, uint32_t size,
                           const char *rfc1123_mtime, const char *content_type)
 {
     // Build the whole <response> in a temp first so the append is atomic: a
@@ -329,7 +329,7 @@ size_t pc_webdav_ms_end(char *buf, size_t cap, size_t len)
 }
 
 // True for a byte that ends an XML element name (whitespace, '/', '>').
-static bool name_end_char(char c)
+static proto_bool name_end_char(char c)
 {
     // The only caller scans a name span bounded by the '>' index (its tag-end loop stops there),
     // so this helper never sees '>'; that leg is a defensive, host-unreachable arm. gcov attributes
@@ -359,7 +359,7 @@ size_t pc_webdav_proppatch_ms(char *buf, size_t cap, const char *href, const cha
     // (propertyupdate / set / remove / prop) are skipped; only the properties are
     // reflected, each refused 403 below.
     int emitted = 0;
-    bool in_prop = false;
+    proto_bool in_prop = PROTO_FALSE;
     size_t i = 0;
     while (i < body_len && emitted < PC_WEBDAV_MAX_PROPS)
     {
@@ -378,7 +378,7 @@ size_t pc_webdav_proppatch_ms(char *buf, size_t cap, const char *href, const cha
             i++;
             continue;
         }
-        bool closing = (start < body_len && body[start] == '/');
+        proto_bool closing = (start < body_len && body[start] == '/');
         if (closing)
         {
             start++;
@@ -392,7 +392,7 @@ size_t pc_webdav_proppatch_ms(char *buf, size_t cap, const char *href, const cha
         {
             break; // unterminated tag
         }
-        bool self_closed = (end > start && body[end - 1] == '/');
+        proto_bool self_closed = (end > start && body[end - 1] == '/');
         size_t name_end = start;
         while (name_end < end && !name_end_char(body[name_end]))
         {
@@ -406,13 +406,13 @@ size_t pc_webdav_proppatch_ms(char *buf, size_t cap, const char *href, const cha
                 local = k + 1;
             }
         }
-        bool is_prop = (name_end - local) == 4 && !strncmp(&body[local], "prop", 4);
+        proto_bool is_prop = (name_end - local) == 4 && !strncmp(&body[local], "prop", 4);
 
         if (closing)
         {
             if (is_prop)
             {
-                in_prop = false;
+                in_prop = PROTO_FALSE;
             }
             i = end + 1;
             continue;
@@ -421,7 +421,7 @@ size_t pc_webdav_proppatch_ms(char *buf, size_t cap, const char *href, const cha
         {
             if (!self_closed) // <prop> opens a block; <prop/> is an empty block
             {
-                in_prop = true;
+                in_prop = PROTO_TRUE;
             }
             i = end + 1;
             continue;
@@ -437,12 +437,12 @@ size_t pc_webdav_proppatch_ms(char *buf, size_t cap, const char *href, const cha
             {
                 copy_end--;
             }
-            bool ok = copy_end > start;
+            proto_bool ok = copy_end > start;
             for (size_t k = start; k < copy_end && ok; k++)
             {
                 if (body[k] == '<')
                 {
-                    ok = false;
+                    ok = PROTO_FALSE;
                 }
             }
             char tag[256];
@@ -491,19 +491,19 @@ size_t pc_webdav_proppatch_ms(char *buf, size_t cap, const char *href, const cha
 // ── lock manager (RFC 4918 §6-7) ───────────────────────────────────────────────────────────────
 
 // Copy src into dst[cap], NUL-terminated; false if it does not fit.
-static bool dav_lock_copy(char *dst, size_t cap, const char *src)
+static proto_bool dav_lock_copy(char *dst, size_t cap, const char *src)
 {
     size_t n = strnlen(src, cap);
     if (n + 1 > cap)
     {
-        return false;
+        return PROTO_FALSE;
     }
     memcpy(dst, src, n + 1);
-    return true;
+    return PROTO_TRUE;
 }
 
 // Normalize a path into dst, stripping trailing '/' (but keeping a lone root "/"). false on overflow.
-static bool dav_lock_norm(char *dst, size_t cap, const char *path)
+static proto_bool dav_lock_norm(char *dst, size_t cap, const char *path)
 {
     size_t n = strnlen(path, cap);
     while (n > 1 && path[n - 1] == '/') // drop trailing slashes so "/a/" and "/a" are one resource
@@ -512,56 +512,56 @@ static bool dav_lock_norm(char *dst, size_t cap, const char *path)
     }
     if (n + 1 > cap)
     {
-        return false;
+        return PROTO_FALSE;
     }
     memcpy(dst, path, n);
     dst[n] = 0;
-    return true;
+    return PROTO_TRUE;
 }
 
 // True if `child` equals `parent` or lies (at a segment boundary) under it. Both trailing-slash-normalized.
-static bool dav_lock_same_or_under(const char *parent, const char *child)
+static proto_bool dav_lock_same_or_under(const char *parent, const char *child)
 {
     size_t pn = strnlen(parent, PC_DAV_LOCK_PATH_MAX);
     if (strncmp(parent, child, pn) != 0)
     {
-        return false;
+        return PROTO_FALSE;
     }
     if (child[pn] == 0) // exactly equal
     {
-        return true;
+        return PROTO_TRUE;
     }
     if (pn == 1 && parent[0] == '/') // root covers everything below it
     {
-        return true;
+        return PROTO_TRUE;
     }
     return child[pn] == '/'; // only a real path-segment boundary, so "/a" does not cover "/ab"
 }
 
 // Do two lock scopes overlap? A Depth-infinity lock's scope is its whole subtree.
-static bool dav_lock_overlap(const char *pa, bool ia, const char *pb, bool ib)
+static proto_bool dav_lock_overlap(const char *pa, proto_bool ia, const char *pb, proto_bool ib)
 {
     if (strcmp(pa, pb) == 0)
     {
-        return true;
+        return PROTO_TRUE;
     }
     if (ia && dav_lock_same_or_under(pa, pb)) // pb sits under the infinity lock pa
     {
-        return true;
+        return PROTO_TRUE;
     }
     if (ib && dav_lock_same_or_under(pb, pa)) // pa sits under the infinity lock pb
     {
-        return true;
+        return PROTO_TRUE;
     }
-    return false;
+    return PROTO_FALSE;
 }
 
 // Does an active lock's scope cover the normalized query path?
-static bool dav_lock_covers(const DavLock *l, const char *np)
+static proto_bool dav_lock_covers(const DavLock *l, const char *np)
 {
     if (strcmp(l->path, np) == 0)
     {
-        return true;
+        return PROTO_TRUE;
     }
     return l->depth_infinity && dav_lock_same_or_under(l->path, np);
 }
@@ -574,25 +574,25 @@ void pc_dav_lock_init(DavLockTable *t)
     }
     for (size_t i = 0; i < PC_DAV_LOCK_MAX; i++)
     {
-        t->locks[i].active = false;
+        t->locks[i].active = PROTO_FALSE;
     }
 }
 
-const DavLock *pc_dav_lock_acquire(DavLockTable *t, const char *path, const char *token, bool exclusive,
-                                   bool depth_infinity, uint32_t expiry_s)
+const DavLock *pc_dav_lock_acquire(DavLockTable *t, const char *path, const char *token, proto_bool exclusive,
+                                   proto_bool depth_infinity, uint32_t expiry_s)
 {
     if (!t || !path || !token)
     {
-        return nullptr;
+        return NULL;
     }
     char np[PC_DAV_LOCK_PATH_MAX];
     if (!dav_lock_norm(np, sizeof(np), path))
     {
-        return nullptr;
+        return NULL;
     }
     if (strnlen(token, PC_DAV_LOCK_TOKEN_MAX) + 1 > PC_DAV_LOCK_TOKEN_MAX) // token would not fit
     {
-        return nullptr;
+        return NULL;
     }
 
     // Conflict: an exclusive request clashes with any overlapping lock; a shared one only with an
@@ -603,7 +603,7 @@ const DavLock *pc_dav_lock_acquire(DavLockTable *t, const char *path, const char
         if (l->active && dav_lock_overlap(l->path, l->depth_infinity, np, depth_infinity) &&
             (exclusive || l->exclusive))
         {
-            return nullptr;
+            return NULL;
         }
     }
 
@@ -619,10 +619,10 @@ const DavLock *pc_dav_lock_acquire(DavLockTable *t, const char *path, const char
         l->exclusive = exclusive;
         l->depth_infinity = depth_infinity;
         l->expiry_s = expiry_s;
-        l->active = true;
+        l->active = PROTO_TRUE;
         return l;
     }
-    return nullptr; // table full
+    return NULL; // table full
 }
 
 size_t pc_dav_lock_sweep(DavLockTable *t, uint32_t now_s)
@@ -637,7 +637,7 @@ size_t pc_dav_lock_sweep(DavLockTable *t, uint32_t now_s)
         DavLock *l = &t->locks[i];
         if (l->active && l->expiry_s != 0 && l->expiry_s <= now_s) // 0 = never expires
         {
-            l->active = false;
+            l->active = PROTO_FALSE;
             dropped++;
         }
     }
@@ -648,7 +648,7 @@ const DavLock *pc_dav_lock_refresh(DavLockTable *t, const char *token, uint32_t 
 {
     if (!t || !token)
     {
-        return nullptr;
+        return NULL;
     }
     for (size_t i = 0; i < PC_DAV_LOCK_MAX; i++)
     {
@@ -659,19 +659,19 @@ const DavLock *pc_dav_lock_refresh(DavLockTable *t, const char *token, uint32_t 
             return l;
         }
     }
-    return nullptr;
+    return NULL;
 }
 
 const DavLock *pc_dav_lock_find(const DavLockTable *t, const char *path)
 {
     if (!t || !path)
     {
-        return nullptr;
+        return NULL;
     }
     char np[PC_DAV_LOCK_PATH_MAX];
     if (!dav_lock_norm(np, sizeof(np), path))
     {
-        return nullptr;
+        return NULL;
     }
     for (size_t i = 0; i < PC_DAV_LOCK_MAX; i++)
     {
@@ -680,42 +680,42 @@ const DavLock *pc_dav_lock_find(const DavLockTable *t, const char *path)
             return &t->locks[i];
         }
     }
-    return nullptr;
+    return NULL;
 }
 
-bool pc_dav_lock_release(DavLockTable *t, const char *token)
+proto_bool pc_dav_lock_release(DavLockTable *t, const char *token)
 {
     if (!t || !token)
     {
-        return false;
+        return PROTO_FALSE;
     }
     for (size_t i = 0; i < PC_DAV_LOCK_MAX; i++)
     {
         if (t->locks[i].active && strcmp(t->locks[i].token, token) == 0)
         {
-            t->locks[i].active = false;
-            return true;
+            t->locks[i].active = PROTO_FALSE;
+            return PROTO_TRUE;
         }
     }
-    return false;
+    return PROTO_FALSE;
 }
 
-bool pc_dav_lock_can_write(const DavLockTable *t, const char *path, const char *presented_token)
+proto_bool pc_dav_lock_can_write(const DavLockTable *t, const char *path, const char *presented_token)
 {
     if (!t)
     {
-        return true; // no table => nothing is locked
+        return PROTO_TRUE; // no table => nothing is locked
     }
     if (!path)
     {
-        return false;
+        return PROTO_FALSE;
     }
     char np[PC_DAV_LOCK_PATH_MAX];
     if (!dav_lock_norm(np, sizeof(np), path))
     {
-        return true; // an unparseable path is not something the lock table can guard
+        return PROTO_TRUE; // an unparseable path is not something the lock table can guard
     }
-    bool covered = false;
+    proto_bool covered = PROTO_FALSE;
     for (size_t i = 0; i < PC_DAV_LOCK_MAX; i++)
     {
         const DavLock *l = &t->locks[i];
@@ -723,46 +723,46 @@ bool pc_dav_lock_can_write(const DavLockTable *t, const char *path, const char *
         {
             continue;
         }
-        covered = true;
+        covered = PROTO_TRUE;
         if (presented_token && strcmp(l->token, presented_token) == 0)
         {
-            return true; // the request holds a covering lock's token
+            return PROTO_TRUE; // the request holds a covering lock's token
         }
     }
     return !covered; // unlocked => allowed; locked with no / wrong token => denied
 }
 
-bool pc_dav_if_token(const char *if_header, char *out, size_t cap)
+proto_bool pc_dav_if_token(const char *if_header, char *out, size_t cap)
 {
     if (!if_header || !out || cap == 0)
     {
-        return false;
+        return PROTO_FALSE;
     }
     // The state tokens live inside a condition list "( ... )"; take the first Coded-URL "<...>" within it
     // (which also skips the tagged-list resource URL that precedes the '(').
     const char *lp = strchr(if_header, '(');
     if (!lp)
     {
-        return false;
+        return PROTO_FALSE;
     }
     const char *lt = strchr(lp, '<');
     if (!lt)
     {
-        return false;
+        return PROTO_FALSE;
     }
     const char *gt = strchr(lt, '>');
     if (!gt)
     {
-        return false;
+        return PROTO_FALSE;
     }
     size_t n = (size_t)(gt - lt - 1);
     if (n + 1 > cap)
     {
-        return false;
+        return PROTO_FALSE;
     }
     memcpy(out, lt + 1, n);
     out[n] = 0;
-    return true;
+    return PROTO_TRUE;
 }
 
 #endif // PC_ENABLE_WEBDAV

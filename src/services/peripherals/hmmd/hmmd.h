@@ -50,9 +50,6 @@
 
 #if PC_ENABLE_HMMD
 
-#include <stddef.h>
-#include <stdint.h>
-
 /** @brief Range gates the HMMD reports energy for (gate 0..15). */
 #define PC_HMMD_GATES 16
 
@@ -63,12 +60,12 @@
 #define PC_HMMD_FRAME_MAX 45
 
 /** @brief A decoded HMMD target report. */
-struct HmmdReport
+typedef struct
 {
     uint8_t detected;                    ///< 1 if a target is present.
     uint16_t distance_cm;                ///< target distance (cm); meaningless unless detected.
     uint16_t gate_energy[PC_HMMD_GATES]; ///< per-gate energy, gate 0..15.
-};
+} HmmdReport;
 
 /**
  * @brief Decode one whole HMMD report frame (header `F4 F3 F2 F1` .. footer `F8 F7 F6 F5`).
@@ -76,17 +73,17 @@ struct HmmdReport
  * @ref PC_HMMD_REPORT_LEN and frames the buffer.
  * @return true on a valid frame; false on any mismatch or a short buffer.
  */
-bool pc_hmmd_parse_report(const uint8_t *frame, size_t len, HmmdReport *out);
+proto_bool pc_hmmd_parse_report(const uint8_t *frame, size_t len, HmmdReport *out);
 
 /** @brief Byte-by-byte report-frame reassembler (fixed buffer, resyncs on noise). */
-struct HmmdStream
+typedef struct
 {
     uint8_t buf[PC_HMMD_FRAME_MAX]; ///< frame under construction
     uint16_t pos;                   ///< octets collected so far
     uint16_t total;                 ///< expected full-frame length (known after the length field)
     uint8_t hdr_match;              ///< header octets matched while syncing
     uint8_t phase;                  ///< 0 sync, 1 length, 2 body
-};
+} HmmdStream;
 
 /** @brief Reset a stream to the syncing state. */
 void pc_hmmd_stream_reset(HmmdStream *s);
@@ -95,10 +92,10 @@ void pc_hmmd_stream_reset(HmmdStream *s);
  * @brief Feed one received octet. When it completes a valid report frame, fills @p out and returns
  * true; otherwise false (still syncing / mid-frame / bad frame - it resyncs).
  */
-bool pc_hmmd_stream_push(HmmdStream *s, uint8_t byte, HmmdReport *out);
+proto_bool pc_hmmd_stream_push(HmmdStream *s, uint8_t byte, HmmdReport *out);
 
 /** @brief true if @p r shows a target. */
-bool pc_hmmd_present(const HmmdReport *r);
+proto_bool pc_hmmd_present(const HmmdReport *r);
 
 /** @brief Target distance (cm), or 0 when nothing is detected. */
 uint16_t pc_hmmd_distance_cm(const HmmdReport *r);
@@ -138,12 +135,12 @@ size_t pc_hmmd_cmd_read_register(uint8_t *buf, size_t cap, const uint8_t *value,
 // --- Command-ACK decoding ----------------------------------------------------------------------
 
 /** @brief A decoded command-ACK frame. @ref payload points into the caller's frame (not copied). */
-struct HmmdAck
+typedef struct
 {
     uint16_t command;       ///< the ACK's command word, as sent on the wire.
     const uint8_t *payload; ///< octets following the command word (nullptr if none).
     size_t payload_len;     ///< octets at @ref payload.
-};
+} HmmdAck;
 
 /**
  * @brief Decode one command-ACK frame (header, intra-frame length, footer and length agreement all
@@ -153,7 +150,7 @@ struct HmmdAck
  * establishes that the ACK echoes the request's command octet, so how many leading octets are a
  * status is not something this codec asserts.
  */
-bool pc_hmmd_parse_ack(const uint8_t *frame, size_t len, HmmdAck *out);
+proto_bool pc_hmmd_parse_ack(const uint8_t *frame, size_t len, HmmdAck *out);
 
 /**
  * @brief True if @p ack is the reply to request @p word.
@@ -161,15 +158,15 @@ bool pc_hmmd_parse_ack(const uint8_t *frame, size_t len, HmmdAck *out);
  * Matches on the low octet, which is what the reference verifies. This family conventionally sets
  * bit 8 in the reply (0x0008 -> 0x0108), but that is not asserted here.
  */
-bool pc_hmmd_ack_matches(const HmmdAck *ack, uint16_t word);
+proto_bool pc_hmmd_ack_matches(const HmmdAck *ack, uint16_t word);
 
 // --- Binding (no-ops on a host build) ----------------------------------------------------------
 
 /** @brief Open UART2 at PC_HMMD_BAUD on @p rx_pin / @p tx_pin. @return true on ESP32. */
-bool pc_hmmd_begin(int rx_pin, int tx_pin);
+proto_bool pc_hmmd_begin(int rx_pin, int tx_pin);
 
 /** @brief Pump the UART through the stream. @return true if a fresh report was decoded. */
-bool pc_hmmd_poll();
+proto_bool pc_hmmd_poll();
 
 /** @brief The most recently decoded report, or nullptr before the first one arrives. */
 const HmmdReport *pc_hmmd_last();

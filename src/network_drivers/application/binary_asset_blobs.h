@@ -19,14 +19,12 @@
 
 #if PC_ENABLE_THEMES
 
-#include <stddef.h>
-
 /** @brief One embedded theme: its name and its minified CSS (NUL-terminated flash string). */
-struct pc_theme_blob
+typedef struct
 {
     const char *name;
     const char *css;
-};
+} pc_theme_blob;
 
 /** @brief The embedded theme registry (sorted by name) and its count. */
 extern const pc_theme_blob PC_THEME_BLOBS[];

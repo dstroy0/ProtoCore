@@ -37,22 +37,20 @@
 #define PROTOCORE_SPA_ROUTER_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_SPA_ROUTER
 
 /** @brief What to do with a request path. */
-enum class pc_spa_action : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     PC_SPA_SERVE_FILE,     ///< a real asset (has a file extension): serve it statically.
     PC_SPA_SERVE_SHELL,    ///< a client route (extensionless): serve the SPA shell (index.html).
     PC_SPA_PASSTHROUGH,    ///< under the API prefix: let the app's handlers run.
     PC_SPA_SERVE_FALLBACK, ///< a client route the SPA cannot serve: serve the no-JS control page.
-};
+} pc_spa_action;
 
 /** @brief True if the last path segment has a file extension (a '.' after the last '/'). */
-bool pc_spa_has_extension(const char *path);
+proto_bool pc_spa_has_extension(const char *path);
 
 /**
  * @brief Decide how to route @p path for a single-page app.
@@ -66,13 +64,13 @@ bool pc_spa_has_extension(const char *path);
 pc_spa_action pc_spa_route(const char *path, const char *api_prefix);
 
 /** @brief What the server currently knows about its ability to serve the SPA. */
-struct pc_spa_ctx
+typedef struct
 {
-    const char *api_prefix; ///< paths under this always pass through; null/empty = none.
-    bool shell_available;   ///< is the shell asset actually present and servable?
-    bool client_scripting;  ///< will the client run the SPA (false = text browser, curl, no-JS)?
-    bool degraded;          ///< force the plain control page (recovery mode, failsafe, low memory).
-};
+    const char *api_prefix;      ///< paths under this always pass through; null/empty = none.
+    proto_bool shell_available;  ///< is the shell asset actually present and servable?
+    proto_bool client_scripting; ///< will the client run the SPA (false = text browser, curl, no-JS)?
+    proto_bool degraded;         ///< force the plain control page (recovery mode, failsafe, low memory).
+} pc_spa_ctx;
 
 /**
  * @brief Decide how to route @p path, choosing the fallback HMI when the SPA cannot serve it.
@@ -89,26 +87,26 @@ pc_spa_action pc_spa_route_ex(const char *path, const pc_spa_ctx *ctx);
 // ---------------------------------------------------------------------------
 
 /** @brief Predicate deciding whether a fragment is part of this render. */
-typedef bool (*pc_ui_when_fn)(void *ctx);
+typedef proto_bool (*pc_ui_when_fn)(void *ctx);
 
 /** @brief One UI panel and the condition under which it is shown. Nothing is copied. */
-struct pc_ui_fragment
+typedef struct
 {
     const char *name;   ///< label, for diagnostics; not emitted.
     const char *html;   ///< the fragment body (borrowed).
     pc_ui_when_fn when; ///< nullptr = always included.
-};
+} pc_ui_fragment;
 
 /** @brief Cursor over a fragment set. Resumes mid-fragment, so output is chunk-size independent. */
-struct pc_ui_stream
+typedef struct
 {
     const pc_ui_fragment *frags;
     size_t count;
     void *ctx;  ///< passed to each predicate.
     size_t idx; ///< next fragment to consider.
     size_t off; ///< bytes of the current fragment already emitted.
-    bool done;
-};
+    proto_bool done;
+} pc_ui_stream;
 
 /**
  * @brief Start streaming @p frags, evaluating each predicate against @p ctx.
@@ -129,7 +127,7 @@ void pc_ui_stream_begin(pc_ui_stream *s, const pc_ui_fragment *frags, size_t cou
 size_t pc_ui_stream_next(pc_ui_stream *s, char *out, size_t cap);
 
 /** @brief True once every included fragment has been emitted. */
-bool pc_ui_stream_done(const pc_ui_stream *s);
+proto_bool pc_ui_stream_done(const pc_ui_stream *s);
 
 #endif // PC_ENABLE_SPA_ROUTER
 #endif // PROTOCORE_SPA_ROUTER_H

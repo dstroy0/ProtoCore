@@ -29,9 +29,6 @@
 
 #if PC_ENABLE_COTP
 
-#include <stddef.h>
-#include <stdint.h>
-
 #define TPKT_VERSION 0x03  ///< RFC 1006 TPKT version (always 3)
 #define TPKT_HEADER_SIZE 4 ///< version + reserved + 2-octet length
 
@@ -57,12 +54,13 @@ size_t pc_tpkt_build(uint8_t *buf, size_t cap, const uint8_t *payload, size_t pa
  * @brief Parse a TPKT envelope; reports the X.224 payload slice and bytes consumed.
  * @return true on a complete, version-3 packet; false on bad version / truncation.
  */
-bool pc_tpkt_parse(const uint8_t *buf, size_t len, const uint8_t **payload, size_t *payload_len, size_t *consumed);
+proto_bool pc_tpkt_parse(const uint8_t *buf, size_t len, const uint8_t **payload, size_t *payload_len,
+                         size_t *consumed);
 
 // ---- COTP (X.224 class 0) ----
 
 /** @brief Build a COTP Data TPDU around @p data: `LI=2, 0xF0, (EOT|0)` + data. */
-size_t pc_cotp_build_dt(uint8_t *buf, size_t cap, const uint8_t *data, size_t data_len, bool eot);
+size_t pc_cotp_build_dt(uint8_t *buf, size_t cap, const uint8_t *data, size_t data_len, proto_bool eot);
 
 /**
  * @brief Build a COTP Connection Request: `LI 0xE0 dst-ref(0) src-ref class(0)` + a TPDU-size
@@ -83,18 +81,18 @@ size_t pc_cotp_build_cc(uint8_t *buf, size_t cap, uint16_t dst_ref, uint16_t src
                         const uint8_t *extra_params, size_t extra_len);
 
 /** @brief A parsed COTP header. For DT, @ref data is the user data; for CR/CC, the refs. */
-struct CotpHeader
+typedef struct
 {
     uint8_t code;        ///< TPDU type (high nibble): COTP_DT / COTP_CR / ...
     uint16_t dst_ref;    ///< CR / CC destination reference
     uint16_t src_ref;    ///< CR / CC source reference
-    bool eot;            ///< DT end-of-TSDU flag
+    proto_bool eot;      ///< DT end-of-TSDU flag
     const uint8_t *data; ///< DT user data (points INTO the source buffer)
     size_t data_len;
-};
+} CotpHeader;
 
 /** @brief Parse a COTP TPDU (typically the TPKT payload). */
-bool pc_cotp_parse(const uint8_t *buf, size_t len, CotpHeader *out);
+proto_bool pc_cotp_parse(const uint8_t *buf, size_t len, CotpHeader *out);
 
 #endif // PC_ENABLE_COTP
 

@@ -12,12 +12,12 @@
  *
  * @code
  *   int32_t li = server.listen(2323, ConnProto::PROTO_BRIDGE);          // front port 2323
- *   BridgeTarget uart = {BridgeBus::uart, BridgeMode::stream, 1, 0, 115200, 0, 0};
- *   pc_iface_bridge_publish((uint8_t)li, 2323, BridgeProto::tcp, &uart);     // -> UART1 raw passthrough
+ *   BridgeTarget uart = {BRIDGE_BUS_UART, BRIDGE_MODE_STREAM, 1, 0, 115200, 0, 0};
+ *   pc_iface_bridge_publish((uint8_t)li, 2323, BRIDGE_PROTO_TCP, &uart);     // -> UART1 raw passthrough
  *
  *   int32_t ls = server.listen(2324, ConnProto::PROTO_BRIDGE);
- *   BridgeTarget spi = {BridgeBus::spi, BridgeMode::transaction, 0, 5, 1000000, 0, 0}; // 5 = CS gpio
- *   pc_iface_bridge_publish((uint8_t)ls, 2324, BridgeProto::tcp, &spi);      // -> SPI write-then-read frames
+ *   BridgeTarget spi = {BRIDGE_BUS_SPI, BRIDGE_MODE_TRANSACTION, 0, 5, 1000000, 0, 0}; // 5 = CS gpio
+ *   pc_iface_bridge_publish((uint8_t)ls, 2324, BRIDGE_PROTO_TCP, &spi);      // -> SPI write-then-read frames
  * @endcode
  *
  * Security: a published port is a direct pipe to the bus. Only expose it on a trusted interface / behind
@@ -35,7 +35,6 @@
 #if PC_ENABLE_IFACE_BRIDGE
 
 #include "services/net/iface_bridge/iface_bridge.h"
-#include <stdint.h>
 
 /**
  * @brief Bind a PROTO_BRIDGE listener to a hardware target and install the handler (first call).
@@ -49,7 +48,7 @@
  * @param target       the UART / SPI / I2C endpoint (copied into the rule).
  * @return true; false if @p target is null, the rule table is full, or the port+proto is already bound.
  */
-bool pc_iface_bridge_publish(uint8_t listener_id, uint16_t port, BridgeProto proto, const BridgeTarget *target);
+proto_bool pc_iface_bridge_publish(uint8_t listener_id, uint16_t port, BridgeProto proto, const BridgeTarget *target);
 
 /** @brief Clear all listener bindings and rules (start from empty). */
 void pc_iface_bridge_listener_reset(void);

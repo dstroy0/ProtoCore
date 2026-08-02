@@ -23,7 +23,6 @@
 #define PROTOCORE_PROVISIONING_H
 
 #include "protocore_config.h"
-#include <stddef.h>
 
 /**
  * @brief Extract and URL-decode a field from an x-www-form-urlencoded body.
@@ -38,7 +37,7 @@
  * @param cap   Capacity of @p out (>= 1).
  * @return true if the field was found, false otherwise (out set to "").
  */
-bool pc_prov_form_field(const char *body, const char *key, char *out, size_t cap);
+proto_bool pc_prov_form_field(const char *body, const char *key, char *out, size_t cap);
 
 /**
  * @brief Load stored WiFi credentials from NVS.
@@ -48,7 +47,7 @@ bool pc_prov_form_field(const char *body, const char *key, char *out, size_t cap
  * @param psk_cap   Capacity of @p psk.
  * @return true if a non-empty SSID is stored (the app should connect in STA mode).
  */
-bool pc_provisioning_load(char *ssid, size_t ssid_cap, char *psk, size_t psk_cap);
+proto_bool pc_provisioning_load(char *ssid, size_t ssid_cap, char *psk, size_t psk_cap);
 
 /**
  * @brief Start the captive portal: softAP @p ap_ssid + catch-all DNS + form routes.

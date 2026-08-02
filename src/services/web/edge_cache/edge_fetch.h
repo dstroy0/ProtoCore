@@ -22,31 +22,28 @@
 
 #if PC_ENABLE_EDGE_CACHE
 
-#include <stddef.h>
-#include <stdint.h>
-
 /** @brief The origin transport, bound to pc_client on the device and a mock in host tests. */
-struct EdgeFetchTransport
+typedef struct
 {
     int (*open)(void *ctx, const char *host, uint16_t port, uint32_t timeout_ms); ///< cid >= 0, or < 0 on failure
-    bool (*send)(void *ctx, int cid, const void *data, size_t len);
+    proto_bool (*send)(void *ctx, int cid, const void *data, size_t len);
     size_t (*read)(void *ctx, int cid, uint8_t *buf, size_t cap); ///< 0 = nothing available right now
-    bool (*closed)(void *ctx, int cid);                           ///< true once the origin closed its side
+    proto_bool (*closed)(void *ctx, int cid);                     ///< true once the origin closed its side
     void (*close)(void *ctx, int cid);
     void *ctx;
-};
+} EdgeFetchTransport;
 
 /** @brief Fetch progress. */
-enum class EdgeFetchStatus : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
-    PENDING,  ///< still receiving
-    DONE,     ///< a complete response is parsed (status / body_off / body_len valid)
-    OVERSIZE, ///< response exceeded the buffer - not cacheable (caller passes through / fails open)
-    FAILED,   ///< connect / send / timeout / closed-before-complete
-};
+    EDGE_FETCH_STATUS_PENDING,  ///< still receiving
+    EDGE_FETCH_STATUS_DONE,     ///< a complete response is parsed (status / body_off / body_len valid)
+    EDGE_FETCH_STATUS_OVERSIZE, ///< response exceeded the buffer - not cacheable (caller passes through / fails open)
+    EDGE_FETCH_STATUS_FAILED,   ///< connect / send / timeout / closed-before-complete
+} EdgeFetchStatus;
 
 /** @brief One in-flight origin fetch (fixed-size, zero-heap). */
-struct EdgeFetch
+typedef struct
 {
     EdgeFetchStatus st;
     int cid;
@@ -57,7 +54,7 @@ struct EdgeFetch
     size_t body_off;
     size_t body_len;
     uint8_t buf[PC_EDGE_FETCH_BUF];
-};
+} EdgeFetch;
 
 /** @brief Open + send @p request; begin receiving. Sets @p st to PENDING, or FAILED on open/send error. */
 void edge_fetch_begin(EdgeFetch *f, const EdgeFetchTransport *t, const char *host, uint16_t port, const void *request,
@@ -77,7 +74,7 @@ void edge_fetch_end(EdgeFetch *f, const EdgeFetchTransport *t);
  *        terminator / connection close). Sets @p head_len to the header-block length (0 if not yet whole).
  *        Pure - host-testable without a transport.
  */
-bool edge_resp_complete(const uint8_t *buf, size_t len, bool conn_closed, size_t *head_len);
+proto_bool edge_resp_complete(const uint8_t *buf, size_t len, proto_bool conn_closed, size_t *head_len);
 
 #endif // PC_ENABLE_EDGE_CACHE
 

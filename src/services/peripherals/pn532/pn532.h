@@ -31,9 +31,6 @@
 
 #if PC_ENABLE_PN532
 
-#include <stddef.h>
-#include <stdint.h>
-
 /** @brief Frame identifier: host -> PN532. */
 #define PN532_TFI_HOST 0xD4
 /** @brief Frame identifier: PN532 -> host. */
@@ -57,7 +54,7 @@ uint16_t pc_pn532_build_frame(uint8_t tfi, const uint8_t *data, uint8_t len, uin
 int pc_pn532_parse_frame(const uint8_t *raw, uint16_t len, uint8_t *tfi, const uint8_t **pdata, uint8_t *pdata_len);
 
 /** @brief True if @p raw starts with a PN532 ACK frame (00 00 FF 00 FF 00). */
-bool pc_pn532_is_ack(const uint8_t *raw, uint16_t len);
+proto_bool pc_pn532_is_ack(const uint8_t *raw, uint16_t len);
 
 /** @brief Write the 6-byte ACK frame into @p out. @return 6, or 0 if @p cap < 6. */
 uint16_t pc_pn532_build_ack(uint8_t *out, uint16_t cap);

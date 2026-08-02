@@ -60,7 +60,7 @@
 #define PROTOCORE_CRYPTO_OPT_H
 
 #if defined(__GNUC__) && !defined(__clang__)
-#ifdef ARDUINO
+#if PROTOCORE_HOT
 #include "sdkconfig.h" // CONFIG_IDF_TARGET_* - the per-die default below + the single-transform die guards in the TUs
 #endif
 #ifndef PC_CRYPTO_OPT_LEVEL

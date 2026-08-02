@@ -21,8 +21,7 @@
 #ifndef PROTOCORE_RTC_H
 #define PROTOCORE_RTC_H
 
-#include <stddef.h>
-#include <stdint.h>
+#include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
 
 /** @brief Number of time registers read from the RTC (seconds..year). */
 #define RTC_REG_COUNT 7
@@ -35,7 +34,7 @@
  * @param epoch  out: seconds since 1970-01-01 UTC.
  * @return true on a valid time; false if a field is out of range (bad/uninitialized RTC).
  */
-bool pc_rtc_regs_to_epoch(const uint8_t regs[RTC_REG_COUNT], uint32_t *epoch);
+proto_bool pc_rtc_regs_to_epoch(const uint8_t regs[RTC_REG_COUNT], uint32_t *epoch);
 
 /**
  * @brief Convert a Unix timestamp to the 7 RTC time registers (BCD, 24-hour). Pure - no I2C.
@@ -44,7 +43,7 @@ bool pc_rtc_regs_to_epoch(const uint8_t regs[RTC_REG_COUNT], uint32_t *epoch);
 void pc_rtc_epoch_to_regs(uint32_t epoch, uint8_t regs[RTC_REG_COUNT]);
 
 /** @brief Initialize the I2C bus for the RTC. @return true on a host build (no-op) or on ESP32. */
-bool pc_rtc_begin();
+proto_bool pc_rtc_begin();
 
 /**
  * @brief Read the current time from the RTC over I2C.
@@ -53,7 +52,7 @@ bool pc_rtc_begin();
 uint32_t pc_rtc_read_epoch();
 
 /** @brief Set the RTC to @p epoch over I2C. @return true if the write succeeded. */
-bool pc_rtc_set_epoch(uint32_t epoch);
+proto_bool pc_rtc_set_epoch(uint32_t epoch);
 
 /**
  * @brief A ::TimeSourceFn wrapper (returns pc_rtc_read_epoch()) to register with

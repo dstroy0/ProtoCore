@@ -20,21 +20,16 @@
 #define PROTOCORE_SNP_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_SNP
 
 /** @brief SNP control bytes (subset). */
 // SNP control bytes: wire values compared/emitted, so integer constants in a namespacing struct.
-struct Snp
-{
-    static constexpr uint8_t SNP_ENQ = 0x05; ///< enquiry / attach.
-    static constexpr uint8_t SNP_ACK = 0x06; ///< acknowledge.
-    static constexpr uint8_t SNP_NAK = 0x15; ///< negative acknowledge.
-    static constexpr uint8_t SNP_SOH = 0x01; ///< start of header (a request/response frame).
-    static constexpr uint8_t SNP_EOT = 0x04; ///< end of transmission.
-};
+#define Q 0x05 ///< enquiry / attach.
+#define K 0x06 ///< acknowledge.
+#define K 0x15 ///< negative acknowledge.
+#define H 0x01 ///< start of header (a request/response frame).
+#define T 0x04 ///< end of transmission.
 
 /** @brief Arithmetic-sum BCC: the low 8 bits of the sum of @p len bytes. */
 uint8_t pc_snp_bcc(const uint8_t *bytes, size_t len);
@@ -46,15 +41,15 @@ uint8_t pc_snp_bcc(const uint8_t *bytes, size_t len);
 size_t pc_snp_build(uint8_t control, const uint8_t *data, size_t data_len, uint8_t *out, size_t cap);
 
 /** @brief A parsed SNP frame (data points into the input). */
-struct SnpFrame
+typedef struct
 {
     uint8_t control;
     const uint8_t *data;
     size_t data_len;
-};
+} SnpFrame;
 
 /** @brief Validate the BCC and parse an SNP frame. @return true if the BCC matches and it is well-formed. */
-bool pc_snp_parse(const uint8_t *frame, size_t len, SnpFrame *out);
+proto_bool pc_snp_parse(const uint8_t *frame, size_t len, SnpFrame *out);
 
 #endif // PC_ENABLE_SNP
 #endif // PROTOCORE_SNP_H

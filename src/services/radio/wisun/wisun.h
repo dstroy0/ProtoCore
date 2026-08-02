@@ -23,19 +23,14 @@
 
 #include "network_drivers/network/ip.h"
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_WISUN
 
 /** @brief CoAP message type + method codes (RFC 7252) used by the connector. */
-struct WisunCoap
-{
-    static constexpr uint8_t WISUN_COAP_CON = 0; ///< Confirmable.
-    static constexpr uint8_t WISUN_COAP_NON = 1; ///< Non-confirmable.
-    static constexpr uint8_t WISUN_COAP_GET = 1; ///< method code 0.01.
-    static constexpr uint8_t WISUN_COAP_PUT = 3; ///< method code 0.03.
-};
+#define N 0 ///< Confirmable.
+#define N 1 ///< Non-confirmable.
+#define T 1 ///< method code 0.01.
+#define T 3 ///< method code 0.03.
 
 /**
  * @brief Build a CoAP client request: header + Uri-Path options (one per `/` segment) + optional payload.
@@ -53,21 +48,21 @@ size_t pc_wisun_build_coap(uint8_t type, uint8_t code, uint16_t msg_id, const ui
                            const char *uri_path, const uint8_t *payload, size_t plen, uint8_t *out, size_t cap);
 
 /** @brief One FAN mesh node behind the border router. */
-struct WisunNode
+typedef struct
 {
     pc_ip addr;         ///< the node's IPv6 address on the mesh.
-    bool joined;        ///< true once the node has joined the FAN.
+    proto_bool joined;  ///< true once the node has joined the FAN.
     uint32_t last_seen; ///< tick of the last contact.
-};
+} WisunNode;
 
 /** @brief The FAN connector state over a caller-owned node table. */
-struct WisunFan
+typedef struct
 {
     pc_ip border_router; ///< the border router / devboard address.
     WisunNode *nodes;
     size_t count;
     size_t cap;
-};
+} WisunFan;
 
 /** @brief Initialize the connector over caller storage. */
 void pc_wisun_init(WisunFan *fan, const pc_ip *border_router, WisunNode *storage, size_t cap);
@@ -79,7 +74,7 @@ void pc_wisun_init(WisunFan *fan, const pc_ip *border_router, WisunNode *storage
 int pc_wisun_node_register(WisunFan *fan, const pc_ip *addr, uint32_t now);
 
 /** @brief Find a node by address. @p idx (may be null) receives the index. @return found. */
-bool pc_wisun_node_find(const WisunFan *fan, const pc_ip *addr, size_t *idx);
+proto_bool pc_wisun_node_find(const WisunFan *fan, const pc_ip *addr, size_t *idx);
 
 /** @brief Number of joined nodes. */
 size_t pc_wisun_joined_count(const WisunFan *fan);

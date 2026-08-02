@@ -64,7 +64,7 @@ void pc_worker_wake(int worker_id);
 void pc_workers_stop(void);
 
 /** @brief True while worker task(s) are running (always false on host). */
-bool pc_workers_running(void);
+proto_bool pc_workers_running(void);
 
 // ---------------------------------------------------------------------------
 // Deferred work (thread-safe app -> worker submission)
@@ -87,7 +87,7 @@ bool pc_workers_running(void);
 typedef void (*pc_deferred_fn)(void *arg);
 
 /** @brief Run @p fn(@p arg) on worker @p worker_id. Returns false if the queue is full. */
-bool pc_defer(int worker_id, pc_deferred_fn fn, void *arg);
+proto_bool pc_defer(int worker_id, pc_deferred_fn fn, void *arg);
 
 /** @brief Drain and run worker @p worker_id's deferred callbacks (called by the worker). */
 void pc_worker_run_deferred(int worker_id);

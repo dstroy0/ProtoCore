@@ -23,38 +23,35 @@
 
 #if PC_ENABLE_SMB
 
-#include <stddef.h>
-#include <stdint.h>
-
 /** @brief NTLMSSP NegotiateFlags (MS-NLMP §2.2.2.5), the subset a basic NTLMv2 client uses.
  *
  * A flags word is OR'd/AND'd, so these are integer constants in a namespacing struct, not an enum
  * class (which would force a cast at every | / &). */
-struct NtlmsspFlags
+typedef struct
 {
-    static constexpr uint32_t NTLMSSP_NEGOTIATE_UNICODE = 0x00000001;
-    static constexpr uint32_t NTLMSSP_REQUEST_TARGET = 0x00000004;
-    static constexpr uint32_t NTLMSSP_NEGOTIATE_NTLM = 0x00000200;
-    static constexpr uint32_t NTLMSSP_NEGOTIATE_ALWAYS_SIGN = 0x00008000;
-    static constexpr uint32_t NTLMSSP_NEGOTIATE_EXTENDED_SESSIONSECURITY = 0x00080000;
-    static constexpr uint32_t NTLMSSP_NEGOTIATE_TARGET_INFO = 0x00800000;
-    static constexpr uint32_t NTLMSSP_NEGOTIATE_VERSION = 0x02000000;
-    static constexpr uint32_t NTLMSSP_NEGOTIATE_128 = 0x20000000;
-    static constexpr uint32_t NTLMSSP_NEGOTIATE_56 = 0x80000000;
+#define E 0x00000001
+#define T 0x00000004
+#define M 0x00000200
+#define N 0x00008000
+#define Y 0x00080000
+#define O 0x00800000
+#define N 0x02000000
+#define _128 0x20000000
+#define _56 0x80000000
     // the default NEGOTIATE flag set for an NTLMv2 client
     static constexpr uint32_t NTLMSSP_CLIENT_DEFAULT_FLAGS = NTLMSSP_NEGOTIATE_UNICODE | NTLMSSP_REQUEST_TARGET |
                                                              NTLMSSP_NEGOTIATE_NTLM | NTLMSSP_NEGOTIATE_ALWAYS_SIGN |
                                                              NTLMSSP_NEGOTIATE_EXTENDED_SESSIONSECURITY;
-};
+} NtlmsspFlags;
 
 /** @brief Parsed CHALLENGE_MESSAGE (type 2). @ref target_info points INTO the source message. */
-struct NtlmChallenge
+typedef struct
 {
     uint32_t flags;
     uint8_t server_challenge[8];
     const uint8_t *target_info; ///< the AV_PAIR blob, or nullptr if absent
     uint16_t target_info_len;
-};
+} NtlmChallenge;
 
 /**
  * @brief Build a NEGOTIATE_MESSAGE (type 1) with @p flags and empty domain/workstation.
@@ -68,7 +65,7 @@ size_t pc_ntlmssp_build_negotiate(uint8_t *buf, size_t cap, uint32_t flags);
  * @return true on a valid CHALLENGE; false on a bad signature / type / truncation / out-of-bounds
  *         target info.
  */
-bool pc_ntlmssp_parse_challenge(const uint8_t *msg, size_t len, NtlmChallenge *out);
+proto_bool pc_ntlmssp_parse_challenge(const uint8_t *msg, size_t len, NtlmChallenge *out);
 
 /**
  * @brief Offset of the 16-byte MIC field within an AUTHENTICATE_MESSAGE built @p with_mic (MS-NLMP
@@ -95,7 +92,7 @@ bool pc_ntlmssp_parse_challenge(const uint8_t *msg, size_t len, NtlmChallenge *o
  */
 size_t pc_ntlmssp_build_authenticate(uint8_t *buf, size_t cap, const uint8_t *lm_resp, size_t lm_len,
                                      const uint8_t *nt_resp, size_t nt_len, const char *domain, const char *user,
-                                     const char *workstation, uint32_t flags, bool with_mic = false);
+                                     const char *workstation, uint32_t flags, proto_bool with_mic = PROTO_FALSE);
 
 #endif // PC_ENABLE_SMB
 

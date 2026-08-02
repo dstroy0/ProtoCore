@@ -28,9 +28,6 @@
 
 #if PC_ENABLE_SDI12
 
-#include <stddef.h>
-#include <stdint.h>
-
 #define SDI12_CRC_POLY 0xA001u ///< CRC-16 polynomial (reflected 0x8005), init 0x0000
 #define SDI12_CRC_CHARS 3      ///< the CRC is appended as 3 printable ASCII octets
 
@@ -46,29 +43,29 @@ size_t pc_sdi12_build_ack(char *buf, size_t cap, char addr);
 size_t pc_sdi12_build_identify(char *buf, size_t cap, char addr);
 
 /** @brief Start-measurement command `aM!` (or `aMC!` when @p with_crc). */
-size_t pc_sdi12_build_measure(char *buf, size_t cap, char addr, bool with_crc);
+size_t pc_sdi12_build_measure(char *buf, size_t cap, char addr, proto_bool with_crc);
 
 /** @brief Concurrent-measurement command `aC!` (or `aCC!` when @p with_crc). */
-size_t pc_sdi12_build_concurrent(char *buf, size_t cap, char addr, bool with_crc);
+size_t pc_sdi12_build_concurrent(char *buf, size_t cap, char addr, proto_bool with_crc);
 
 /**
  * @brief Additional-measurement command `aM<n>!` (or `aMC<n>!` when @p with_crc), @p m_index 1..9 - the
  *        secondary measurement sets a multi-parameter sensor exposes beyond the primary `aM!`. @return 0 for
  *        an @p m_index outside 1..9.
  */
-size_t pc_sdi12_build_measure_additional(char *buf, size_t cap, char addr, uint8_t m_index, bool with_crc);
+size_t pc_sdi12_build_measure_additional(char *buf, size_t cap, char addr, uint8_t m_index, proto_bool with_crc);
 
 /**
  * @brief Additional-concurrent command `aC<n>!` (or `aCC<n>!` when @p with_crc), @p c_index 1..9 - the
  *        concurrent-mode counterpart of the additional measurement. @return 0 for a @p c_index outside 1..9.
  */
-size_t pc_sdi12_build_concurrent_additional(char *buf, size_t cap, char addr, uint8_t c_index, bool with_crc);
+size_t pc_sdi12_build_concurrent_additional(char *buf, size_t cap, char addr, uint8_t c_index, proto_bool with_crc);
 
 /**
  * @brief Continuous-measurement command `aR<n>!` (or `aRC<n>!` when @p with_crc), @p r_index 0..9. Unlike
  *        `aM!`, a continuous-measurement sensor returns its values immediately (no service-request delay).
  */
-size_t pc_sdi12_build_continuous(char *buf, size_t cap, char addr, uint8_t r_index, bool with_crc);
+size_t pc_sdi12_build_continuous(char *buf, size_t cap, char addr, uint8_t r_index, proto_bool with_crc);
 
 /** @brief Start-verification command `aV!`; the response uses the same `atttn` timing form as `aM!`. */
 size_t pc_sdi12_build_verify(char *buf, size_t cap, char addr);
@@ -89,32 +86,32 @@ size_t pc_sdi12_build_query_address(char *buf, size_t cap);
  * ready, @p num_values = how many values will be available. Works for both the 1-digit (`aM!`)
  * and 2-digit (`aC!`) value-count forms. @p addr (optional) receives the echoed address.
  */
-bool pc_sdi12_parse_measure(const char *resp, size_t len, char *addr, uint16_t *ready_sec, uint8_t *num_values);
+proto_bool pc_sdi12_parse_measure(const char *resp, size_t len, char *addr, uint16_t *ready_sec, uint8_t *num_values);
 
 /**
  * @brief Split a data response `a<+/-value...><CR><LF>` into floats. Skips the leading address,
  * decodes each sign-prefixed number, and stops at CR/LF or the buffer end. Returns the count
  * via @p n (capped at @p max).
  */
-bool pc_sdi12_parse_values(const char *resp, size_t len, float *out, size_t max, size_t *n);
+proto_bool pc_sdi12_parse_values(const char *resp, size_t len, float *out, size_t max, size_t *n);
 
 /** @brief A decoded identify (aI!) response. Each field is fixed-width per the SDI-12 spec and
  *  NUL-terminated (the spec pads short values with spaces, which are left in place). */
-struct Sdi12Identity
+typedef struct
 {
     char addr;              ///< sensor address
     char sdi_version[3];    ///< SDI-12 version "ll" (e.g. "14" = version 1.4) + NUL
     char vendor[9];         ///< 8-character vendor identification + NUL
     char model[7];          ///< 6-character sensor model number + NUL
     char sensor_version[4]; ///< 3-character sensor version + NUL
-};
+} Sdi12Identity;
 
 /**
  * @brief Parse an identify (aI!) response: address + 2-char SDI-12 version + 8-char vendor + 6-char model +
  *        3-char sensor version (any optional field and the CRC / CR-LF that follow are ignored).
  * @return true iff @p len covers the 20 fixed octets; false otherwise.
  */
-bool pc_sdi12_parse_identify(const char *resp, size_t len, Sdi12Identity *out);
+proto_bool pc_sdi12_parse_identify(const char *resp, size_t len, Sdi12Identity *out);
 
 // --- CRC (RFC-free SDI-12 16-bit CRC) ---
 
@@ -129,7 +126,7 @@ void pc_sdi12_crc_encode(uint16_t crc, char out[SDI12_CRC_CHARS]);
  * the CRC of everything before them. @p len should include the data and the 3 CRC octets (the
  * `<CR><LF>` may or may not be included).
  */
-bool pc_sdi12_check_crc(const char *resp, size_t len);
+proto_bool pc_sdi12_check_crc(const char *resp, size_t len);
 
 #endif // PC_ENABLE_SDI12
 #endif // PROTOCORE_SDI12_H

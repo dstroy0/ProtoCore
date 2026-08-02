@@ -33,8 +33,6 @@
 
 #include "protocore_config.h"
 #include "services/storage/wal/wal.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_WAL
 
@@ -55,17 +53,17 @@
  * bytes moved (== @p len on success; a short/zero return is a failure). @c sync is the durability barrier
  * (fsync / File::flush) and returns true on success. @c size is the total bytes of the backing region.
  */
-struct WalDev
+typedef struct
 {
     size_t (*read)(void *ctx, uint64_t off, uint8_t *buf, size_t len);
     size_t (*write)(void *ctx, uint64_t off, const uint8_t *buf, size_t len);
-    bool (*sync)(void *ctx);
+    proto_bool (*sync)(void *ctx);
     void *ctx;
     uint64_t size;
-};
+} WalDev;
 
 /** @brief A mounted durable WAL store. Treat fields as read-only; use the accessors below. */
-struct WalStore
+typedef struct
 {
     WalDev dev;
     uint64_t data_off;  ///< first byte of the data region (== ::WAL_DATA_OFFSET)
@@ -75,33 +73,33 @@ struct WalStore
     uint64_t next_seq;  ///< sequence number the next appended record will carry
     uint64_t gen;       ///< generation of the currently newest superblock
     int ab;             ///< index (0/1) of the newest superblock copy; the next checkpoint writes 1 - ab
-};
+} WalStore;
 
 /**
  * @brief Format @p dev into an empty store (writes a generation-1 superblock). Erases any existing log.
  * @return false if @p dev is too small to hold both superblocks plus a data region.
  */
-bool pc_wal_store_format(WalStore *s, const WalDev *dev);
+proto_bool pc_wal_store_format(WalStore *s, const WalDev *dev);
 
 /**
  * @brief Mount an existing store: pick the newest valid superblock, then replay the tail past its committed
  * head to recover records appended since the last checkpoint. @return false if neither superblock is valid
  * (unformatted / both torn).
  */
-bool pc_wal_store_mount(WalStore *s, const WalDev *dev);
+proto_bool pc_wal_store_mount(WalStore *s, const WalDev *dev);
 
 /**
  * @brief Append one record (wal.h framing) at the current head. Does **not** sync - call ::pc_wal_store_checkpoint
  * to make appends durable. @return false if the record does not fit the remaining data region (log full) or a
  * device write is short.
  */
-bool pc_wal_store_append(WalStore *s, const uint8_t *payload, uint32_t len);
+proto_bool pc_wal_store_append(WalStore *s, const uint8_t *payload, uint32_t len);
 
 /**
  * @brief Make every append so far durable and advance the committed head: sync data, write the next-generation
  * superblock to the inactive copy, sync it. @return false on a device write/sync failure.
  */
-bool pc_wal_store_checkpoint(WalStore *s);
+proto_bool pc_wal_store_checkpoint(WalStore *s);
 
 /** @brief Per-record callback for ::pc_wal_store_scan - like ::WalRecordCb but also gives the record's
  * data-region byte offset (so an index can record where to re-read the payload later). */
@@ -120,7 +118,7 @@ size_t pc_wal_store_scan(WalStore *s, WalStoreRecordCb cb, void *ctx, uint8_t *s
  * @brief Read @p len bytes from data-region offset @p off (as reported to ::WalStoreRecordCb) into @p buf.
  * @return true on success. Lets an index re-read a value straight from the log without buffering it.
  */
-bool pc_wal_store_pread(WalStore *s, uint64_t off, uint8_t *buf, size_t len);
+proto_bool pc_wal_store_pread(WalStore *s, uint64_t off, uint8_t *buf, size_t len);
 
 /** @brief Bytes used in the data region (including appends not yet checkpointed). */
 static inline uint64_t pc_wal_store_used(const WalStore *s)

@@ -27,42 +27,37 @@
 #define PROTOCORE_NTS_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_NTS
 
 /** @brief NTS-KE record types (RFC 8915 sec 4). The critical bit is 0x8000. */
-struct Nts
+typedef struct
 {
-    static constexpr uint16_t NTS_KE_CRITICAL = 0x8000;
-    static constexpr uint16_t NTS_KE_END_OF_MESSAGE = 0;
-    static constexpr uint16_t NTS_KE_NEXT_PROTOCOL = 1;
-    static constexpr uint16_t NTS_KE_ERROR = 2;
-    static constexpr uint16_t NTS_KE_WARNING = 3;
-    static constexpr uint16_t NTS_KE_AEAD_ALGORITHM = 4;
-    static constexpr uint16_t NTS_KE_COOKIE = 5;
-    static constexpr uint16_t NTS_KE_NTPV4_SERVER = 6;
-    static constexpr uint16_t NTS_KE_NTPV4_PORT = 7;
-    static constexpr uint16_t NTS_NEXT_PROTO_NTPV4 = 0; ///< the only next-protocol defined.
-    static constexpr uint16_t NTS_AEAD_AES_SIV_CMAC_256 =
-        15; ///< the mandatory-to-implement AEAD (RFC 5297 / IANA id 15).
-};
+#define L 0x8000
+#define E 0
+#define L 1
+#define R 2
+#define G 3
+#define M 4
+#define E 5
+#define R 6
+#define T 7
+#define V4 0    ///< the only next-protocol defined.
+#define _256 15 ///< the mandatory-to-implement AEAD (RFC 5297 / IANA id 15).
+} Nts;
 
 /** @brief NTS NTP extension-field types (RFC 8915 sec 5.3; RFC 7822 EF format). */
-struct NtsEf
-{
-    static constexpr uint16_t NTS_EF_UNIQUE_IDENTIFIER = 0x0104;
-    static constexpr uint16_t NTS_EF_COOKIE = 0x0204;
-    static constexpr uint16_t NTS_EF_COOKIE_PLACEHOLDER = 0x0304;
-    static constexpr uint16_t NTS_EF_AUTH_AND_ENCRYPTED = 0x0404;
-};
+#define R 0x0104
+#define E 0x0204
+#define R 0x0304
+#define D 0x0404
 
 /** @brief RFC 8915 sec 5.1 TLS exporter label + per-direction context (C2S = 0x0000_0001_00, S2C = ..01). */
 extern const char NTS_EXPORTER_LABEL[]; ///< "EXPORTER-network-time-security".
 
 /** @brief Build one NTS-KE record `[critical|type][len][body]`. @return bytes written, or 0 if it won't fit. */
-size_t pc_nts_ke_record(bool critical, uint16_t type, const uint8_t *body, size_t body_len, uint8_t *out, size_t cap);
+size_t pc_nts_ke_record(proto_bool critical, uint16_t type, const uint8_t *body, size_t body_len, uint8_t *out,
+                        size_t cap);
 
 /**
  * @brief Build the standard NTS-KE client request: Next Protocol (NTPv4), AEAD (AES-SIV-CMAC-256), End
@@ -71,13 +66,13 @@ size_t pc_nts_ke_record(bool critical, uint16_t type, const uint8_t *body, size_
 size_t pc_nts_ke_request(uint8_t *out, size_t cap);
 
 /** @brief One record surfaced by pc_nts_ke_parse. */
-typedef void (*pc_nts_ke_cb)(bool critical, uint16_t type, const uint8_t *body, size_t body_len, void *arg);
+typedef void (*pc_nts_ke_cb)(proto_bool critical, uint16_t type, const uint8_t *body, size_t body_len, void *arg);
 
 /**
  * @brief Walk an NTS-KE record stream, invoking @p cb for each record.
  * @return true if the stream is well-formed and ends with an End-of-Message record.
  */
-bool pc_nts_ke_parse(const uint8_t *buf, size_t len, pc_nts_ke_cb cb, void *arg);
+proto_bool pc_nts_ke_parse(const uint8_t *buf, size_t len, pc_nts_ke_cb cb, void *arg);
 
 /**
  * @brief Build an RFC 7822 extension field `[type][length][value][padding-to-4]`.

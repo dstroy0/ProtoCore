@@ -23,25 +23,20 @@
 #define PROTOCORE_DIRECTNET_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_DIRECTNET
 
 /** @brief DirectNET control bytes: wire values compared/emitted, so integer constants in a struct. */
-struct DnetByte
-{
-    static constexpr uint8_t DNET_ENQ = 0x05;
-    static constexpr uint8_t DNET_ACK = 0x06;
-    static constexpr uint8_t DNET_NAK = 0x15;
-    static constexpr uint8_t DNET_SOH = 0x01;
-    static constexpr uint8_t DNET_STX = 0x02;
-    static constexpr uint8_t DNET_ETX = 0x03;
-    static constexpr uint8_t DNET_ETB = 0x17;
-    static constexpr uint8_t DNET_EOT = 0x04;
-    static constexpr uint8_t DNET_READ = 0x30;  ///< request type: read ('0').
-    static constexpr uint8_t DNET_WRITE = 0x38; ///< request type: write ('8').
-};
+#define Q 0x05
+#define K 0x06
+#define K 0x15
+#define H 0x01
+#define X 0x02
+#define X 0x03
+#define B 0x17
+#define T 0x04
+#define D 0x30 ///< request type: read ('0').
+#define E 0x38 ///< request type: write ('8').
 
 /** @brief Longitudinal XOR checksum (the DirectNET LRC) over @p len bytes. */
 uint8_t pc_dnet_lrc(const uint8_t *bytes, size_t len);
@@ -66,7 +61,7 @@ size_t pc_dnet_data(const uint8_t *data, size_t data_len, uint8_t *out, size_t c
  * @brief Validate a DirectNET data frame (STX..ETX + LRC) and expose its payload.
  * @return true if it is well-formed and the LRC matches; sets @p data / @p data_len (pointers into @p frame).
  */
-bool pc_dnet_data_parse(const uint8_t *frame, size_t len, const uint8_t **data, size_t *data_len);
+proto_bool pc_dnet_data_parse(const uint8_t *frame, size_t len, const uint8_t **data, size_t *data_len);
 
 #endif // PC_ENABLE_DIRECTNET
 #endif // PROTOCORE_DIRECTNET_H

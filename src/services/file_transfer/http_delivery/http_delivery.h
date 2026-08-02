@@ -26,19 +26,17 @@
 #define PROTOCORE_HTTP_DELIVERY_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_HTTP_DELIVERY
 
 /** @brief Freshness verdict for a cached response. */
 /** @brief Cache-freshness verdict (the sole return of pc_delivery_swr). */
-enum class DeliveryVerdict : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     DELIVERY_FRESH = 0,            ///< age <= max-age: serve from cache, no revalidation.
     DELIVERY_STALE_REVALIDATE = 1, ///< within the stale-while-revalidate window: serve stale, refresh in bg.
     DELIVERY_EXPIRED = 2           ///< past both windows: must revalidate before serving.
-};
+} DeliveryVerdict;
 
 /**
  * @brief RFC 5861 freshness decision.
@@ -71,7 +69,7 @@ size_t pc_delivery_cache_control(uint32_t max_age_s, uint32_t swr_s, char *out, 
  */
 size_t pc_delivery_sw_manifest(const char *const *paths, size_t n, const char *version, char *out, size_t cap);
 
-#if defined(ARDUINO)
+#if PROTOCORE_HOT
 
 /**
  * @brief Serve the service worker and its precache manifest.
@@ -90,8 +88,8 @@ size_t pc_delivery_sw_manifest(const char *const *paths, size_t n, const char *v
  * @param version cache version tag, e.g. a firmware version string.
  * @return true if both routes were registered.
  */
-bool pc_delivery_serve_sw(const char *const *paths, size_t n, const char *version);
-#endif // ARDUINO
+proto_bool pc_delivery_serve_sw(const char *const *paths, size_t n, const char *version);
+#endif // PROTOCORE_HOT
 
 #endif // PC_ENABLE_HTTP_DELIVERY
 #endif // PROTOCORE_HTTP_DELIVERY_H

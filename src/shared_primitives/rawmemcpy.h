@@ -43,8 +43,6 @@
 #define PROTOCORE_RAWMEMCPY_H
 
 #include "protocore_config.h" // PROTO_WORD_BITS: the register width the die declared
-#include <stddef.h>
-#include <stdint.h>
 
 /**
  * @brief The attributes that make a raw access legal, named once.

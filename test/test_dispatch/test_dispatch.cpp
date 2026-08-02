@@ -227,7 +227,7 @@ void test_slowloris_incomplete_request_reaped_past_deadline()
     conn_pool[0].req_start_ms = 1;                   // armed as the first byte would have, at t=1
     push_str(0, "GET /res HTTP/1.1\r\nHost: x\r\n"); // headers unterminated -> parse never completes
     http_parse(0);
-    TEST_ASSERT_NOT_EQUAL(ParseState::PARSE_COMPLETE, http_pool[0].parse_state);
+    TEST_ASSERT_NOT_EQUAL(PARSE_COMPLETE, http_pool[0].parse_state);
 
     set_millis(1 + PC_REQUEST_TIMEOUT_MS); // elapsed == deadline
     // The slow-loris keeps its idle timer fresh (a trickle byte refreshes last_activity_ms every few seconds),
@@ -280,9 +280,9 @@ void test_streaming_body_upload_not_reaped_past_deadline()
     // for its whole duration and must NOT be reaped, however long it takes. Model a slot mid-upload, well past
     // the header deadline, still receiving (idle timer kept fresh by arriving body bytes).
     on_http("/res", HttpMethod::HTTP_POST, handle_ok);
-    conn_pool[0].req_start_ms = 1;                     // armed on the first byte, not yet disarmed (still in body)
-    http_pool[0].parse_state = ParseState::PARSE_BODY; // headers done, streaming the body
-    http_pool[0].content_length = 100000;              // a large upload, not yet complete
+    conn_pool[0].req_start_ms = 1;         // armed on the first byte, not yet disarmed (still in body)
+    http_pool[0].parse_state = PARSE_BODY; // headers done, streaming the body
+    http_pool[0].content_length = 100000;  // a large upload, not yet complete
     http_pool[0].body_bytes_read = 10;
     set_millis(1 + PC_REQUEST_TIMEOUT_MS + 5000);                     // well past the header deadline
     conn_pool[0].last_activity_ms = 1 + PC_REQUEST_TIMEOUT_MS + 5000; // body bytes keep the idle timer fresh

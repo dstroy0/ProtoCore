@@ -30,8 +30,6 @@
 #include "protocore_config.h"
 #include "services/fieldbus/modbus/modbus.h"    // ModbusFunction, MODBUS_ADU_MAX
 #include "services/net/southbound/southbound.h" // SouthboundDriver, Sb
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_SOUTHBOUND && PC_ENABLE_MODBUS_MASTER
 
@@ -53,7 +51,7 @@ typedef int (*pc_sb_modbus_txn)(void *io, const uint8_t *req, size_t req_len, ui
  *
  * Fill it with pc_sb_modbus_init(), then build a SouthboundDriver over it with pc_sb_modbus_driver().
  */
-struct pc_sb_modbus_ctx
+typedef struct
 {
     pc_sb_modbus_txn txn;   ///< app transport seam (send request, receive reply).
     void *io;               ///< opaque transport context passed to @ref txn.
@@ -61,14 +59,14 @@ struct pc_sb_modbus_ctx
     uint8_t unit;           ///< Modbus unit / slave id.
     uint16_t txid;          ///< rolling transaction id, incremented per request.
     uint8_t last_exception; ///< raw Modbus exception code from the last read (0 = none).
-};
+} pc_sb_modbus_ctx;
 
 /**
  * @brief Initialize a driver context.
  * @param ctx   the instance to fill.
  * @param txn   the transport seam (must be non-null).
  * @param io    opaque context passed to @p txn on each request (may be null).
- * @param fc    ModbusFunction::MODBUS_FC_READ_HOLDING_REGS or ::MODBUS_FC_READ_INPUT_REGS.
+ * @param fc    MODBUS_FC_READ_HOLDING_REGS or ::MODBUS_FC_READ_INPUT_REGS.
  * @param unit  Modbus unit / slave id.
  * @return Sb::SB_OK, or Sb::SB_ERR_ARG on a null ctx/txn or an fc that is not a read function code.
  */

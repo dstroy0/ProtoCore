@@ -106,10 +106,10 @@ void http_parse(uint8_t slot_id)
     {
         switch (req->parse_state)
         {
-        case ParseState::PARSE_COMPLETE:
-        case ParseState::PARSE_ERROR:
-        case ParseState::PARSE_ENTITY_TOO_LARGE:
-        case ParseState::PARSE_URI_TOO_LONG:
+        case PARSE_COMPLETE:
+        case PARSE_ERROR:
+        case PARSE_ENTITY_TOO_LARGE:
+        case PARSE_URI_TOO_LONG:
             return; // terminal state - drain nothing further
         default:
             break;
@@ -213,9 +213,8 @@ static void tls_data(uint8_t slot)
         HttpReq *req = &http_pool[slot];
         for (int i = 0; i < n; i++)
         {
-            if (req->parse_state == ParseState::PARSE_COMPLETE || req->parse_state == ParseState::PARSE_ERROR ||
-                req->parse_state == ParseState::PARSE_ENTITY_TOO_LARGE ||
-                req->parse_state == ParseState::PARSE_URI_TOO_LONG)
+            if (req->parse_state == PARSE_COMPLETE || req->parse_state == PARSE_ERROR ||
+                req->parse_state == PARSE_ENTITY_TOO_LARGE || req->parse_state == PARSE_URI_TOO_LONG)
             {
                 break; // terminal state - let handle() dispatch before reading more
             }
@@ -237,7 +236,7 @@ static void http_evt_accept(uint8_t slot)
 #if PC_ENABLE_HTTP2
     conn_pool[slot].h2 = 0; // a reused slot must re-run the post-handshake ALPN check
     conn_pool[slot].pc_h2_checked = 0;
-    conn_pool[slot].pc_resp_sink = nullptr; // back to the HTTP/1.1 builder until ALPN says otherwise
+    conn_pool[slot].pc_resp_sink = NULL; // back to the HTTP/1.1 builder until ALPN says otherwise
 #endif
 }
 static void http_evt_data(uint8_t slot)
@@ -266,7 +265,7 @@ static void http_evt_close(uint8_t slot)
 // core installs it here at begin() via http_proto_set_poll(). The trampoline lets the ProtoHandler
 // stay a plain static const while the actual pump lives in the application TU - the on_poll analogue
 // of the pc_resp_sink TX seam. Until installed (e.g. the native harness before begin()) it is a no-op.
-static void (*s_http_poll)(uint8_t slot) = nullptr;
+static void (*s_http_poll)(uint8_t slot) = NULL;
 static void http_evt_poll(uint8_t slot)
 {
     if (s_http_poll)

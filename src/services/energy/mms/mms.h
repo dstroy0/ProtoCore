@@ -23,22 +23,17 @@
 #define PROTOCORE_MMS_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_MMS
 
 /** @brief MMS PDU tags (context-specific) + the service tags used here. */
 // MMS PDU / service / BER tags: wire bytes, so integer constants in a namespacing struct.
-struct Mms
-{
-    static constexpr uint8_t MMS_PDU_CONFIRMED_REQUEST = 0xA0;
-    static constexpr uint8_t MMS_PDU_CONFIRMED_RESPONSE = 0xA1;
-    static constexpr uint8_t MMS_PDU_CONFIRMED_ERROR = 0xA2;
-    static constexpr uint8_t MMS_SERVICE_READ = 0xA4;  ///< confirmedServiceRequest/Response [4] read.
-    static constexpr uint8_t MMS_SERVICE_WRITE = 0xA5; ///< [5] write.
-    static constexpr uint8_t MMS_TAG_INVOKE_ID = 0x02; ///< Unsigned32 invokeID (INTEGER tag).
-};
+#define T 0xA0
+#define E 0xA1
+#define R 0xA2
+#define D 0xA4 ///< confirmedServiceRequest/Response [4] read.
+#define E 0xA5 ///< [5] write.
+#define D 0x02 ///< Unsigned32 invokeID (INTEGER tag).
 
 /**
  * @brief Build an MMS confirmed-request Read PDU for one named variable.
@@ -59,17 +54,17 @@ size_t pc_mms_read_request(uint32_t invoke_id, const char *item_name, uint8_t *o
 size_t pc_mms_read_response(uint32_t invoke_id, const uint8_t *data, size_t data_len, uint8_t *out, size_t cap);
 
 /** @brief A parsed MMS confirmed PDU (top-level). */
-struct MmsPdu
+typedef struct
 {
     uint8_t pdu_tag;             ///< MMS_PDU_CONFIRMED_REQUEST / _RESPONSE / _ERROR.
     uint32_t invoke_id;          ///< the decoded invokeID.
     uint8_t service_tag;         ///< the confirmedService tag (MMS_SERVICE_READ, ...), or 0 if none.
     const uint8_t *service_body; ///< the service content (points into the input), or null.
     size_t service_len;
-};
+} MmsPdu;
 
 /** @brief Parse an MMS confirmed PDU header (pdu tag + invokeID + service tag). @return true if well-formed. */
-bool pc_mms_parse(const uint8_t *pdu, size_t len, MmsPdu *out);
+proto_bool pc_mms_parse(const uint8_t *pdu, size_t len, MmsPdu *out);
 
 #endif // PC_ENABLE_MMS
 #endif // PROTOCORE_MMS_H

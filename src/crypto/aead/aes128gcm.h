@@ -28,8 +28,6 @@
 #if (PC_ENABLE_HTTP3 || PC_ENABLE_DTLS || PC_ENABLE_SMB)
 
 #include "shared_primitives/span.h" // pc_cspan: what the seal produced (empty == it did not)
-#include <stddef.h>
-#include <stdint.h>
 
 /** @brief AEAD_AES_128_GCM key length in bytes. */
 #define PC_AES128GCM_KEY_LEN 16
@@ -118,9 +116,9 @@ pc_cspan pc_aes128gcm_seal(pc_aes128gcm_key *k, const uint8_t nonce[PC_AES128GCM
  * @p ct_len is the ciphertext length, NOT including the tag.
  * @return true iff the tag is valid; on mismatch nothing is written.
  */
-bool pc_aes128gcm_open(pc_aes128gcm_key *k, const uint8_t nonce[PC_AES128GCM_IV_LEN], const uint8_t *aad,
-                       size_t aad_len, const uint8_t *ct, size_t ct_len, const uint8_t tag[PC_AES128GCM_TAG_LEN],
-                       uint8_t *out);
+proto_bool pc_aes128gcm_open(pc_aes128gcm_key *k, const uint8_t nonce[PC_AES128GCM_IV_LEN], const uint8_t *aad,
+                             size_t aad_len, const uint8_t *ct, size_t ct_len, const uint8_t tag[PC_AES128GCM_TAG_LEN],
+                             uint8_t *out);
 
 #endif // PC_ENABLE_HTTP3 || PC_ENABLE_DTLS
 

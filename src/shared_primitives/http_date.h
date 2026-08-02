@@ -20,10 +20,9 @@
 #ifndef PROTOCORE_HTTP_DATE_H
 #define PROTOCORE_HTTP_DATE_H
 
-#include <stdint.h>
-#include <time.h>
+#include <time.h> // time_t and strftime
 
-#include "shared_primitives/time_compat.h"
+#include "shared_primitives/time_compat.h" // pc_gmtime_r, and the entry point behind it
 
 /**
  * @brief Smallest buffer that holds an RFC 7231 IMF-fixdate plus its NUL.
@@ -38,7 +37,7 @@
  * @brief Write @p epoch into @p out as an IMF-fixdate in GMT.
  * @return characters written, excluding the NUL, or 0 with an empty @p out on any rejection.
  */
-inline uint8_t pc_http_date(time_t epoch, char *out, uint32_t out_cap)
+PC_INLINE uint8_t pc_http_date(time_t epoch, char *out, uint32_t out_cap)
 {
     if (!out || out_cap == 0)
     {

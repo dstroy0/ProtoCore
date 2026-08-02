@@ -24,9 +24,6 @@
 
 #if PC_ENABLE_PQC_KEX
 
-#include <stddef.h>
-#include <stdint.h>
-
 /// Sponge rates (block size in octets = 1600/8 - 2*capacity/8) for the modes we use.
 #define KECCAK_RATE_SHA3_256 136
 #define KECCAK_RATE_SHA3_512 72
@@ -34,12 +31,12 @@
 #define KECCAK_RATE_SHAKE256 136
 
 /// A Keccak sponge in the squeeze phase; `out_pos` is how many octets of the current block are spent.
-struct KeccakCtx
+typedef struct
 {
     uint64_t st[25];
     uint32_t rate;
     uint32_t out_pos;
-};
+} KeccakCtx;
 
 /// Absorb the whole message with domain-separation byte @p domain (0x06 SHA3, 0x1F SHAKE) and pad,
 /// leaving @p c ready to squeeze. Handles any input length (multi-block).

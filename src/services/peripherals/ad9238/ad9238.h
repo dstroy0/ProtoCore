@@ -42,11 +42,8 @@
 
 #if PC_ENABLE_AD9238
 
-#include <stddef.h>
-#include <stdint.h>
-
 /** @brief SPI register addresses (13-bit address field). Verify against your datasheet revision. */
-enum class Ad9238Reg : uint16_t
+typedef enum PROTO_ENUM_PACKED
 {
     AD9238_REG_CHIP_PORT_CONFIG = 0x00, ///< SDIO direction, LSB/MSB-first, soft reset (mirrored bits)
     AD9238_REG_CHIP_ID = 0x01,          ///< read-only device id
@@ -62,10 +59,10 @@ enum class Ad9238Reg : uint16_t
     AD9238_REG_TEST_IO = 0x15,          ///< per-channel: output test pattern select (see Ad9238TestPattern)
     AD9238_REG_OFFSET_ADJUST = 0x18,    ///< per-channel: digital offset trim
     AD9238_REG_DEVICE_UPDATE = 0xFF,    ///< bit0 = SW transfer: latch all shadowed writes into effect
-};
+} Ad9238Reg;
 
 /** @brief AD9238_REG_TEST_IO[2:0] - the output test pattern (0x15, bits 2:0). */
-enum class Ad9238TestPattern : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     AD9238_TEST_OFF = 0x00, ///< normal operation
     AD9238_TEST_MIDSCALE_SHORT = 0x01,
@@ -75,23 +72,23 @@ enum class Ad9238TestPattern : uint8_t
     AD9238_TEST_PN23 = 0x05,
     AD9238_TEST_PN9 = 0x06,
     AD9238_TEST_ONE_ZERO_TOGGLE = 0x07,
-};
+} Ad9238TestPattern;
 
 /** @brief AD9238_REG_OUTPUT_MODE[1:0] - the output data format (0x0A, bits 1:0). */
-enum class Ad9238OutputFormat : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     AD9238_FORMAT_OFFSET_BINARY = 0x00,
     AD9238_FORMAT_TWOS_COMPLEMENT = 0x01,
     AD9238_FORMAT_GRAY_CODE = 0x02,
-};
+} Ad9238OutputFormat;
 
 /** @brief Which channel a per-channel register write targets (AD9238_REG_CHANNEL_INDEX bits). */
-enum class Ad9238Channel : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     AD9238_CHAN_A = 0x01,
     AD9238_CHAN_B = 0x02,
     AD9238_CHAN_BOTH = 0x03,
-};
+} Ad9238Channel;
 
 /**
  * @brief Build the 16-bit SPI instruction word (MSB first on the wire: high byte then low byte).
@@ -103,7 +100,7 @@ enum class Ad9238Channel : uint8_t
  * @param out2      receives the 2-byte instruction word.
  * @return true; false only if @p out2 is null or @p nbytes is 0 or > 4.
  */
-bool pc_ad9238_build_instruction(bool read, uint16_t reg_addr, uint8_t nbytes, uint8_t out2[2]);
+proto_bool pc_ad9238_build_instruction(proto_bool read, uint16_t reg_addr, uint8_t nbytes, uint8_t out2[2]);
 
 /**
  * @brief Build a complete single-register write transaction (instruction word + one data byte)

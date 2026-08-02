@@ -43,8 +43,6 @@
 #include "crypto/kdf/tls13_kdf.h"
 #include "network_drivers/presentation/security/dtls/dtls_handshake.h"
 #include "network_drivers/presentation/security/dtls/dtls_record.h"
-#include <stddef.h>
-#include <stdint.h>
 
 /** @brief Largest inbound handshake message body reassembled (ClientHello / client Finished). */
 #define PC_DTLS_CONN_REASM_CAP 1024
@@ -76,21 +74,21 @@
 
 /** @brief One buffered outbound handshake message: where its DTLS fragment sits in @ref DtlsConn.flight_buf
  *         and which epoch protects it. */
-struct DtlsFlightMsg
+typedef struct
 {
     uint16_t off;  ///< byte offset of the fragment in flight_buf
     uint16_t len;  ///< fragment length
     uint8_t epoch; ///< 0 (DTLSPlaintext) or 2 (DTLSCiphertext)
-};
+} DtlsFlightMsg;
 
 /** @brief Handshake progress. */
-enum class DtlsConnState : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
-    START,         ///< awaiting ClientHello
-    WAIT_FINISHED, ///< server flight sent; awaiting client Finished
-    DONE,          ///< handshake complete; application keys installed
-    FAILED         ///< fatal error (see @ref pc_dtls_conn_alert)
-};
+    DTLS_CONN_STATE_START,         ///< awaiting ClientHello
+    DTLS_CONN_STATE_WAIT_FINISHED, ///< server flight sent; awaiting client Finished
+    DTLS_CONN_STATE_DONE,          ///< handshake complete; application keys installed
+    DTLS_CONN_STATE_FAILED         ///< fatal error (see @ref pc_dtls_conn_alert)
+} DtlsConnState;
 
 /**
  * @brief The server's long-lived identity plus this handshake's fresh randomness.
@@ -99,7 +97,7 @@ enum class DtlsConnState : uint8_t
  * @c ephemeral_priv and @c server_random must be freshly generated per connection by the caller
  * (from a CSPRNG); they are the X25519 ephemeral private key and the ServerHello random.
  */
-struct DtlsServerConfig
+typedef struct
 {
     const uint8_t *cert_der; ///< Ed25519 leaf certificate, DER
     size_t cert_len;
@@ -107,10 +105,10 @@ struct DtlsServerConfig
     const uint8_t *ephemeral_priv; ///< 32-byte X25519 server ephemeral private key (fresh per handshake)
     const uint8_t *server_random;  ///< 32-byte ServerHello random (fresh per handshake)
     const uint8_t *cookie_key;     ///< 32-byte server-wide secret keying the HelloRetryRequest cookie MAC (§5.1)
-};
+} DtlsServerConfig;
 
 /** @brief One DTLS 1.3 server handshake. Owns all per-connection state; no heap. */
-struct DtlsConn
+typedef struct
 {
     DtlsServerConfig cfg;
     DtlsConnState state;
@@ -122,25 +120,25 @@ struct DtlsConn
     DtlsRecordKeys ep2_cli;                         ///< epoch 2 client read keys
     DtlsRecordKeys ep3_srv;                         ///< epoch 3 server write keys (application traffic)
     DtlsRecordKeys ep3_cli;                         ///< epoch 3 client read keys
-    bool ep2_ready;                                 ///< epoch 2 keys installed
-    bool ep3_ready;                                 ///< epoch 3 keys installed
+    proto_bool ep2_ready;                           ///< epoch 2 keys installed
+    proto_bool ep3_ready;                           ///< epoch 3 keys installed
     uint8_t hs_finished_hash[PC_SHA256_DIGEST_LEN]; ///< Transcript-Hash(CH..server Finished)
 
     uint64_t tx_seq_ep0;         ///< next outbound record sequence number, epoch 0
     uint64_t tx_seq_ep2;         ///< next outbound record sequence number, epoch 2
     uint64_t tx_seq_ep3;         ///< next outbound record sequence number, epoch 3
     uint16_t tx_msg_seq;         ///< next outbound handshake message_seq (advances across an optional HRR)
-    bool hrr_sent;               ///< a HelloRetryRequest was sent; the next ClientHello is the retry (§5.1)
+    proto_bool hrr_sent;         ///< a HelloRetryRequest was sent; the next ClientHello is the retry (§5.1)
     uint16_t next_recv_msg_seq;  ///< handshake message_seq expected next from the client
     DtlsReplayWindow replay_ep2; ///< anti-replay window for inbound epoch-2 records
     DtlsReplayWindow replay_ep3; ///< anti-replay window for inbound epoch-3 (application) records
     uint64_t rx_ep2_seq;         ///< sequence number of the last inbound epoch-2 record (the client Finished)
-    bool hs_ack_sent;            ///< the client Finished has been acknowledged (RFC 9147 §5.8.3 / §7)
+    proto_bool hs_ack_sent;      ///< the client Finished has been acknowledged (RFC 9147 §5.8.3 / §7)
     uint8_t peer_addr[PC_DTLS_PEER_ADDR_MAX]; ///< serialized peer address the HRR cookie is bound to (§5.1)
     uint8_t peer_addr_len;                    ///< bytes of @ref peer_addr in use (0 = no address bound)
 
     // Connection ids (RFC 9146 / RFC 9147 §9), negotiated by the connection_id extension.
-    bool cid_negotiated; ///< the client offered connection_id and we accepted it
+    proto_bool cid_negotiated; ///< the client offered connection_id and we accepted it
     uint8_t
         peer_cid[PC_DTLS_CID_MAX]; ///< the client's CID: placed in every record we send to the client (may be empty)
     uint8_t peer_cid_len;          ///< bytes of @ref peer_cid in use
@@ -153,16 +151,16 @@ struct DtlsConn
     DtlsRecordNumber flight_rec[PC_DTLS_FLIGHT_MSGS]; ///< record numbers of each message's last transmission (for ACKs)
     uint8_t flight_count;                             ///< messages in the current flight
     uint16_t flight_len;                              ///< bytes used in @ref flight_buf
-    bool awaiting_reply;     ///< a flight is outstanding and a peer reply is expected (timer runs)
-    uint8_t retransmits;     ///< times the current flight has been retransmitted
-    uint32_t pto_ms;         ///< current retransmission timeout (doubles each retransmit)
-    uint32_t flight_sent_ms; ///< pc_millis() when the flight was last (re)transmitted
+    proto_bool awaiting_reply; ///< a flight is outstanding and a peer reply is expected (timer runs)
+    uint8_t retransmits;       ///< times the current flight has been retransmitted
+    uint32_t pto_ms;           ///< current retransmission timeout (doubles each retransmit)
+    uint32_t flight_sent_ms;   ///< pc_millis() when the flight was last (re)transmitted
 
     DtlsHsReasm reasm;                             ///< inbound handshake reassembler
     uint8_t reasm_buf[4 + PC_DTLS_CONN_REASM_CAP]; ///< TLS message = 4-byte header [0..3] + body [4..]
     uint8_t msgbuf[PC_DTLS_CONN_MSG_CAP];          ///< scratch for one outbound TLS message
     uint8_t flight_buf[PC_DTLS_FLIGHT_CAP]; ///< the current flight's DTLS handshake fragments, for retransmission
-};
+} DtlsConn;
 
 /**
  * @brief Initialize a connection for a new handshake. @p cfg is copied (its pointers must outlive @p c).
@@ -207,7 +205,7 @@ int pc_dtls_conn_timeout_ms(const DtlsConn *c);
 int pc_dtls_conn_on_timeout(DtlsConn *c, uint8_t *out, size_t out_cap);
 
 /** @brief True once the handshake has completed and the application-traffic keys are installed. */
-bool pc_dtls_conn_established(const DtlsConn *c);
+proto_bool pc_dtls_conn_established(const DtlsConn *c);
 
 /** @brief The alert code (RFC 8446 §6) set when the handshake failed, or 0. */
 uint8_t pc_dtls_conn_alert(const DtlsConn *c);
@@ -238,8 +236,8 @@ size_t pc_dtls_conn_local_cid(const DtlsConn *c, uint8_t *out);
  * @return true and sets @p *out_len on success; false if the connection is not established, the record
  *         fails to open, it is a replay, or it is not application data.
  */
-bool pc_dtls_conn_open_app(DtlsConn *c, const uint8_t *rec, size_t rec_len, uint8_t *out, size_t out_cap,
-                           size_t *out_len);
+proto_bool pc_dtls_conn_open_app(DtlsConn *c, const uint8_t *rec, size_t rec_len, uint8_t *out, size_t out_cap,
+                                 size_t *out_len);
 
 /**
  * @brief Seal @p data as one outbound epoch-3 application record (RFC 9147 §4), advancing the shared

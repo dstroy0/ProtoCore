@@ -34,8 +34,6 @@
 #define PROTOCORE_DEFLATE_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_WS_DEFLATE
 
@@ -48,12 +46,12 @@
 #define DEFLATE_SCRATCH_SIZE 4096
 
 /** @brief deflate_raw() return codes (mirror ::InflateResult). */
-enum class DeflateResult : int32_t
+typedef enum PROTO_ENUM_PACKED
 {
     DEFLATE_OK = 0,            ///< success; *out_len holds the compressed length
     DEFLATE_ERR_OVERFLOW = -2, ///< output would exceed dst_cap (incompressible)
     DEFLATE_ERR_SCRATCH = -3   ///< scratch_len < DEFLATE_SCRATCH_SIZE
-};
+} DeflateResult;
 
 /**
  * @brief Compress @p src into a raw permessage-deflate payload (RFC 7692).
@@ -67,7 +65,7 @@ enum class DeflateResult : int32_t
  * @param dst,dst_cap         output buffer and its capacity.
  * @param out_len             set to the compressed length on success.
  * @param scratch,scratch_len caller working memory (>= DEFLATE_SCRATCH_SIZE).
- * @return DeflateResult::DEFLATE_OK (0) on success, else a negative ::DeflateResult.
+ * @return DEFLATE_OK (0) on success, else a negative ::DeflateResult.
  */
 DeflateResult deflate_raw(const uint8_t *src, size_t src_len, uint8_t *dst, size_t dst_cap, size_t *out_len,
                           void *scratch, size_t scratch_len);

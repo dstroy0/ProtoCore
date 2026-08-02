@@ -34,7 +34,7 @@
  * on every inbound and outbound SSH packet) and the KEX exchange-hash assembled from several
  * separately-encoded fields, so hardware acceleration matters for bulk throughput, not just handshakes.
  */
-#ifdef ARDUINO
+#if PROTOCORE_HOT
 #include <mbedtls/sha256.h>
 typedef struct
 {

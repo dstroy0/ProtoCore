@@ -28,13 +28,11 @@
 #define PROTOCORE_MQTT_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_MQTT
 
 /** @brief MQTT control packet types (high nibble of byte 0), MQTT 3.1.1 §2.2.1. */
-enum class MqttType : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     MQTT_CONNECT = 1,
     MQTT_CONNACK = 2,
@@ -50,22 +48,22 @@ enum class MqttType : uint8_t
     MQTT_PINGREQ = 12,
     MQTT_PINGRESP = 13,
     MQTT_DISCONNECT = 14,
-};
+} MqttType;
 
 /** @brief CONNECT options (credentials, keep-alive, clean session, Last-Will). */
-struct MqttConnectOpts
+typedef struct
 {
-    const char *client_id;   ///< Client identifier (required; may be "" for a broker-assigned id).
-    const char *user;        ///< Username, or nullptr for none.
-    const char *pass;        ///< Password, or nullptr for none.
-    uint16_t keepalive_s;    ///< Keep-alive seconds (0 disables).
-    bool clean_session;      ///< Clean Session flag.
-    const char *will_topic;  ///< Last-Will topic, or nullptr for no will.
-    const uint8_t *will_msg; ///< Last-Will payload (may be nullptr when will_len is 0).
-    size_t will_len;         ///< Last-Will payload length.
-    uint8_t will_qos;        ///< Last-Will QoS (0-2).
-    bool will_retain;        ///< Last-Will retain flag.
-};
+    const char *client_id;    ///< Client identifier (required; may be "" for a broker-assigned id).
+    const char *user;         ///< Username, or nullptr for none.
+    const char *pass;         ///< Password, or nullptr for none.
+    uint16_t keepalive_s;     ///< Keep-alive seconds (0 disables).
+    proto_bool clean_session; ///< Clean Session flag.
+    const char *will_topic;   ///< Last-Will topic, or nullptr for no will.
+    const uint8_t *will_msg;  ///< Last-Will payload (may be nullptr when will_len is 0).
+    size_t will_len;          ///< Last-Will payload length.
+    uint8_t will_qos;         ///< Last-Will QoS (0-2).
+    proto_bool will_retain;   ///< Last-Will retain flag.
+} MqttConnectOpts;
 
 // ---------------------------------------------------------------------------
 // Pure codec (host-testable; no sockets, no heap)
@@ -84,7 +82,7 @@ size_t pc_mqtt_encode_remlen(uint8_t *out, uint32_t len);
  * @param used   receives the number of bytes consumed (1-4).
  * @return true on success; false if the field is incomplete or malformed (>4 bytes).
  */
-bool pc_mqtt_decode_remlen(const uint8_t *buf, size_t avail, uint32_t *value, size_t *used);
+proto_bool pc_mqtt_decode_remlen(const uint8_t *buf, size_t avail, uint32_t *value, size_t *used);
 
 /**
  * @brief Build a CONNECT packet from @p opts.
@@ -98,7 +96,7 @@ size_t pc_mqtt_build_connect(uint8_t *out, size_t cap, const MqttConnectOpts *op
  * @return total packet length, or 0 if it would not fit @p cap.
  */
 size_t pc_mqtt_build_publish(uint8_t *out, size_t cap, const char *topic, const uint8_t *payload, size_t payload_len,
-                             uint8_t qos, uint16_t packet_id, bool retain, bool dup);
+                             uint8_t qos, uint16_t packet_id, proto_bool retain, proto_bool dup);
 
 /** @brief Build a SUBSCRIBE packet for a single topic filter at @p qos. */
 size_t pc_mqtt_build_subscribe(uint8_t *out, size_t cap, uint16_t packet_id, const char *topic, uint8_t qos);
@@ -123,8 +121,8 @@ size_t pc_mqtt_build_disconnect(uint8_t *out, size_t cap);
  * @param header_len  receives the fixed-header size (1 + remlen-field bytes).
  * @return true if a complete fixed header is present in @p avail bytes.
  */
-bool pc_mqtt_parse_fixed_header(const uint8_t *buf, size_t avail, uint8_t *type, uint8_t *flags,
-                                uint32_t *remaining_len, size_t *header_len);
+proto_bool pc_mqtt_parse_fixed_header(const uint8_t *buf, size_t avail, uint8_t *type, uint8_t *flags,
+                                      uint32_t *remaining_len, size_t *header_len);
 
 /**
  * @brief Parse a PUBLISH variable header + payload (the @p remaining_len bytes
@@ -135,8 +133,9 @@ bool pc_mqtt_parse_fixed_header(const uint8_t *buf, size_t avail, uint8_t *type,
  * @param packet_id    receives the packet id (QoS>0 only; 0 for QoS 0).
  * @return true on success; false if malformed or the topic overflows @p topic_cap.
  */
-bool pc_mqtt_parse_publish(const uint8_t *buf, uint32_t remaining_len, uint8_t flags, char *topic_out, size_t topic_cap,
-                           size_t *topic_len, const uint8_t **payload, size_t *payload_len, uint16_t *packet_id);
+proto_bool pc_mqtt_parse_publish(const uint8_t *buf, uint32_t remaining_len, uint8_t flags, char *topic_out,
+                                 size_t topic_cap, size_t *topic_len, const uint8_t **payload, size_t *payload_len,
+                                 uint16_t *packet_id);
 
 /**
  * @brief Read the 2-byte packet id from a PUBACK/PUBREC/PUBREL/PUBCOMP/UNSUBACK
@@ -150,7 +149,7 @@ uint16_t pc_mqtt_parse_ack(const uint8_t *buf, uint32_t remaining_len);
  * @param session_present  receives the Session Present flag (may be nullptr).
  * @return the return code (0 = Connection Accepted), or -1 if malformed.
  */
-int pc_mqtt_parse_connack(const uint8_t *buf, uint32_t remaining_len, bool *session_present);
+int pc_mqtt_parse_connack(const uint8_t *buf, uint32_t remaining_len, proto_bool *session_present);
 
 /**
  * @brief Read a SUBACK from its @p remaining_len bytes.
@@ -158,7 +157,7 @@ int pc_mqtt_parse_connack(const uint8_t *buf, uint32_t remaining_len, bool *sess
  * @param return_code  receives the first granted-QoS / failure (0x80) byte.
  * @return true on success.
  */
-bool pc_mqtt_parse_suback(const uint8_t *buf, uint32_t remaining_len, uint16_t *packet_id, uint8_t *return_code);
+proto_bool pc_mqtt_parse_suback(const uint8_t *buf, uint32_t remaining_len, uint16_t *packet_id, uint8_t *return_code);
 
 // ---------------------------------------------------------------------------
 // Transport (ESP32 only; the calls are no-ops / false on a host build)
@@ -177,16 +176,16 @@ void pc_mqtt_set_message_cb(MqttMessageCb cb);
  * sends CONNECT (from @p opts) and waits for an accepted CONNACK.
  * @return true on an accepted connection.
  */
-bool pc_mqtt_connect(const char *host, uint16_t port, bool use_tls, const MqttConnectOpts *opts);
+proto_bool pc_mqtt_connect(const char *host, uint16_t port, proto_bool use_tls, const MqttConnectOpts *opts);
 
 /** @brief Publish @p payload to @p topic at @p qos (0/1/2). @return true if accepted. */
-bool pc_mqtt_publish(const char *topic, const uint8_t *payload, size_t len, uint8_t qos, bool retain);
+proto_bool pc_mqtt_publish(const char *topic, const uint8_t *payload, size_t len, uint8_t qos, proto_bool retain);
 
 /** @brief Subscribe to @p topic at @p qos (0/1/2). @return true if the SUBSCRIBE was sent. */
-bool pc_mqtt_subscribe(const char *topic, uint8_t qos);
+proto_bool pc_mqtt_subscribe(const char *topic, uint8_t qos);
 
 /** @brief Unsubscribe from @p topic. @return true if the UNSUBSCRIBE was sent. */
-bool pc_mqtt_unsubscribe(const char *topic);
+proto_bool pc_mqtt_unsubscribe(const char *topic);
 
 /**
  * @brief Pump the connection: read inbound packets (dispatching PUBLISH to the
@@ -194,10 +193,10 @@ bool pc_mqtt_unsubscribe(const char *topic);
  *        unacked outbound QoS 1/2 messages, and send a keep-alive PINGREQ when
  *        due. Call once per loop(). @return false if the connection has dropped.
  */
-bool pc_mqtt_loop();
+proto_bool pc_mqtt_loop();
 
 /** @brief True while connected to the broker. */
-bool pc_mqtt_connected();
+proto_bool pc_mqtt_connected();
 
 /** @brief Send DISCONNECT and close the connection. */
 void pc_mqtt_disconnect();

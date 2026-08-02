@@ -73,8 +73,6 @@
 #include "crypto/mac/hmac_sha256.h"
 #include "network_drivers/presentation/ssh/transport/ssh_keymat.h"
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 // ---------------------------------------------------------------------------
 // Sequence number overflow threshold
@@ -145,28 +143,28 @@
  * Key material is in ssh_keys[] - a separate BSS symbol to prevent linear
  * overflow from packet buffers into key material.
  */
-struct SshPacketState
+typedef struct
 {
-    uint32_t seq_no_send; ///< Outgoing sequence number (incremented per packet).
-    uint32_t seq_no_recv; ///< Incoming sequence number (incremented per packet).
-    bool kex_active;      ///< True while KEX is in progress (no user data).
+    uint32_t seq_no_send;  ///< Outgoing sequence number (incremented per packet).
+    uint32_t seq_no_recv;  ///< Incoming sequence number (incremented per packet).
+    proto_bool kex_active; ///< True while KEX is in progress (no user data).
     // Encryption activates per direction (RFC 4253 sec 7.3): our outbound turns on when we send our
     // SSH_MSG_NEWKEYS, our inbound when we receive the peer's. The send path (pack) reads enc_out; the
     // receive path (unpack) reads enc_in. A strict peer may activate its send direction before we
     // activate ours, so the two are tracked independently rather than as one flag.
-    bool enc_out; ///< True once we have sent our NEWKEYS (outbound cipher/MAC active).
-    bool enc_in;  ///< True once we have received the peer's NEWKEYS (inbound cipher/MAC active).
+    proto_bool enc_out; ///< True once we have sent our NEWKEYS (outbound cipher/MAC active).
+    proto_bool enc_in;  ///< True once we have received the peer's NEWKEYS (inbound cipher/MAC active).
 
     // SSH keys are named by direction (client->server "c2s", server->client "s2c"), fixed by RFC 4253
     // §7.2 regardless of role. A server sends s2c / receives c2s; a client is the mirror. This flag
     // selects the direction at each cipher/MAC site so one packet implementation serves both roles.
     // Default false = server (so existing server code is unchanged); ssh_pkt_set_client() flips it.
-    bool is_client;
+    proto_bool is_client;
 
     // Receive reassembly: we may receive partial packets across TCP segments.
     uint8_t rx_buf[SSH_PKT_BUF_SIZE]; ///< Raw receive buffer (from transport).
     size_t rx_len;                    ///< Bytes currently in rx_buf.
-};
+} SshPacketState;
 
 /** @brief Static packet state pool (BSS). One entry per SSH slot. */
 extern SshPacketState ssh_pkt[MAX_SSH_CONNS];

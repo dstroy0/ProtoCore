@@ -30,9 +30,6 @@
 
 #if PC_ENABLE_HOSTLINK
 
-#include <stddef.h>
-#include <stdint.h>
-
 /** @brief FCS: 8-bit XOR of [data, data+len). */
 uint8_t pc_hostlink_fcs(const char *data, size_t len);
 
@@ -49,22 +46,22 @@ size_t pc_hostlink_build(char *buf, size_t cap, uint8_t node, const char *header
                          size_t text_len);
 
 /** @brief A parsed frame; @ref text points INTO the source buffer (after the header, before the FCS). */
-struct HostlinkFrame
+typedef struct
 {
     uint8_t node;
     char header_code[3]; ///< 2 chars + NUL
     const char *text;
     size_t text_len;
-};
+} HostlinkFrame;
 
 /**
  * @brief Parse + FCS-validate a frame (command or response).
  * @return true on a complete, FCS-valid `@...*CR` frame; false otherwise.
  */
-bool pc_hostlink_parse(const char *buf, size_t len, HostlinkFrame *out);
+proto_bool pc_hostlink_parse(const char *buf, size_t len, HostlinkFrame *out);
 
 /** @brief Read a response's 2-char end code (the first two text characters) as a byte. */
-bool pc_hostlink_end_code(const HostlinkFrame *f, uint8_t *code);
+proto_bool pc_hostlink_end_code(const HostlinkFrame *f, uint8_t *code);
 
 /**
  * @brief Build an RD (DM-area read) command: `@UU` + `RD` + a 4-digit beginning word address + a 4-digit
@@ -78,7 +75,7 @@ size_t pc_hostlink_build_read(char *buf, size_t cap, uint8_t node, uint16_t addr
  *        2-character end code.
  * @return true iff the response text holds that word and it is valid hex; false otherwise.
  */
-bool pc_hostlink_read_word(const HostlinkFrame *f, size_t index, uint16_t *out);
+proto_bool pc_hostlink_read_word(const HostlinkFrame *f, size_t index, uint16_t *out);
 
 /**
  * @brief Build a WR (DM-area write) command: `@UU` + `WR` + a 4-digit beginning word address + one

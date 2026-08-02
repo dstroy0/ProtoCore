@@ -24,9 +24,6 @@
 
 #if PC_ENABLE_SSH_SFTP
 
-#include <stddef.h>
-#include <stdint.h>
-
 #define PC_SFTP_VERSION 3
 
 // --- request message types (client -> server) ---
@@ -85,41 +82,41 @@
 #define PC_SFTP_S_IFREG 0100000
 
 /** @brief A decoded/encoded ATTRS blob (only the v3 fields the server sets/reads). */
-struct SftpAttrs
+typedef struct
 {
     uint32_t flags;       ///< which fields below are present (SSH_FILEXFER_ATTR_*)
     uint64_t size;        ///< file size (ATTR_SIZE)
     uint32_t permissions; ///< POSIX mode incl. S_IFDIR/S_IFREG (ATTR_PERMISSIONS)
     uint32_t atime;       ///< access time, unix epoch (ATTR_ACMODTIME)
     uint32_t mtime;       ///< modify time, unix epoch (ATTR_ACMODTIME)
-};
+} SftpAttrs;
 
 // --- reader: a bounds-checked cursor over a packet payload (the bytes after the 4-byte length prefix) ---
-struct SftpReader
+typedef struct
 {
     const uint8_t *p;
     size_t len;
     size_t off;
-    bool ok; ///< false once any read ran past the end (all further reads are no-ops)
-};
+    proto_bool ok; ///< false once any read ran past the end (all further reads are no-ops)
+} SftpReader;
 
 void pc_sftp_rd_init(SftpReader *r, const uint8_t *payload, size_t len);
 uint8_t pc_sftp_rd_u8(SftpReader *r);
 uint32_t pc_sftp_rd_u32(SftpReader *r);
 uint64_t pc_sftp_rd_u64(SftpReader *r);
 /** @brief Read a `uint32 len || bytes` string as a pointer into the payload (no copy). @return r->ok. */
-bool pc_sftp_rd_string(SftpReader *r, const uint8_t **out, uint32_t *out_len);
+proto_bool pc_sftp_rd_string(SftpReader *r, const uint8_t **out, uint32_t *out_len);
 /** @brief Parse an ATTRS blob (only known fields kept; unknown/extended fields skipped). @return r->ok. */
-bool pc_sftp_rd_attrs(SftpReader *r, SftpAttrs *a);
+proto_bool pc_sftp_rd_attrs(SftpReader *r, SftpAttrs *a);
 
 // --- writer: build a packet into a caller buffer; reserves the 4-byte length prefix, backfilled by finish ---
-struct SftpWriter
+typedef struct
 {
     uint8_t *p;
     size_t cap;
-    size_t off; ///< current write position (starts at 4, past the reserved length prefix)
-    bool ovf;   ///< set once a write would exceed cap
-};
+    size_t off;     ///< current write position (starts at 4, past the reserved length prefix)
+    proto_bool ovf; ///< set once a write would exceed cap
+} SftpWriter;
 
 void pc_sftp_wr_init(SftpWriter *w, uint8_t *out, size_t cap);
 void pc_sftp_wr_u8(SftpWriter *w, uint8_t v);
@@ -157,8 +154,8 @@ size_t pc_sftp_build_name1(uint32_t id, const char *name, const char *longname, 
  * @brief Format a Unix `ls -l`-style longname for a NAME entry, e.g. "-rw-r--r-- 1 0 0 1234 Jan  1 2026 name".
  *        @return the string length written (excluding NUL), clamped to @p cap-1.
  */
-size_t pc_sftp_format_longname(bool is_dir, uint32_t perms, uint64_t size, uint32_t mtime, const char *name, char *out,
-                               size_t cap);
+size_t pc_sftp_format_longname(proto_bool is_dir, uint32_t perms, uint64_t size, uint32_t mtime, const char *name,
+                               char *out, size_t cap);
 
 #endif // PC_ENABLE_SSH_SFTP
 

@@ -23,24 +23,24 @@
 #define PROTOCORE_AES_BLOCK_H
 
 #include "crypto/cipher/aes_sbox.h" // PC_AES_SBOX
-#include <stdint.h>
+#include "protocore_config.h"       // the entry point: PC_INLINE, and types.h for the widths
 #include <string.h>
 
 /** @brief GF(2^8) multiply-by-2 (xtime) for the AES MixColumns step. */
-inline uint8_t pc_aes_xtime(uint8_t a)
+PC_INLINE uint8_t pc_aes_xtime(uint8_t a)
 {
     return (uint8_t)((a << 1) ^ ((a >> 7) ? 0x1bu : 0x00u));
 }
 
 /** @brief AES SubWord (FIPS 197 sec 5.2): apply the S-box to each of the four bytes of a 32-bit word. */
-inline uint32_t pc_aes_sub_word(uint32_t w)
+PC_INLINE uint32_t pc_aes_sub_word(uint32_t w)
 {
     return ((uint32_t)PC_AES_SBOX[w >> 24] << 24) | ((uint32_t)PC_AES_SBOX[(w >> 16) & 0xff] << 16) |
            ((uint32_t)PC_AES_SBOX[(w >> 8) & 0xff] << 8) | (uint32_t)PC_AES_SBOX[w & 0xff];
 }
 
 /** @brief AES RotWord (FIPS 197 sec 5.2): cyclically rotate a 32-bit word one byte left. */
-inline uint32_t pc_aes_rot_word(uint32_t w)
+PC_INLINE uint32_t pc_aes_rot_word(uint32_t w)
 {
     return (w << 8) | (w >> 24);
 }
@@ -49,7 +49,7 @@ inline uint32_t pc_aes_rot_word(uint32_t w)
  * @brief AES key expansion (FIPS 197 sec 5.2). @p nk key words (4=AES-128, 8=AES-256); @p rk receives
  *        4*(@p nk + 7) round-key words (44 for AES-128, 60 for AES-256).
  */
-inline void pc_aes_key_expand(const uint8_t *key, int nk, uint32_t *rk)
+PC_INLINE void pc_aes_key_expand(const uint8_t *key, int nk, uint32_t *rk)
 {
     // Rcon[1..10] (index 0 unused); AES-128 uses up to [10], AES-256 up to [7].
     static const uint8_t RCON[11] = {0x00, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36};
@@ -79,7 +79,7 @@ inline void pc_aes_key_expand(const uint8_t *key, int nk, uint32_t *rk)
  * @brief AES single-block encrypt (FIPS 197 sec 5.1), @p nr rounds (10=AES-128, 14=AES-256). State is
  *        column-major: s[col*4 + row]. @p rk is the schedule from pc_aes_key_expand.
  */
-inline void pc_aes_encrypt_block(const uint32_t *rk, int nr, const uint8_t in[16], uint8_t out[16])
+PC_INLINE void pc_aes_encrypt_block(const uint32_t *rk, int nr, const uint8_t in[16], uint8_t out[16])
 {
     uint8_t s[16];
     for (int i = 0; i < 16; i++)

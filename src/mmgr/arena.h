@@ -3,7 +3,7 @@
 
 /**
  * @file arena.h
- * @brief Unified double-ended server arena (Phase 1: core allocator, one region).
+ * @brief Unified double-ended server arena.
  *
  * One contiguous region is shared by two allocators that grow toward each other, with
  * the free space floating in the middle:
@@ -21,7 +21,7 @@
  * fixed pools. Both ends fail closed (return NULL) rather than crossing the boundary.
  *
  * All state lives in ::pc_arena (no globals), so it is unit-testable and can back several
- * arenas (a DRAM base and a PSRAM extension, in a later phase). No heap; no stdlib.
+ * arenas (a DRAM base and a PSRAM extension - see ::pc_arena_set). No heap; no stdlib.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -31,8 +31,6 @@
 #define PROTOCORE_ARENA_H
 
 #include "protocore_config.h" // PC_WORKER_COUNT - how many slots the pools are cut into
-#include <stddef.h>
-#include <stdint.h>
 
 // ---------------------------------------------------------------------------
 // Slot identity - which arena is mine
@@ -52,12 +50,12 @@ int pc_worker_count(void);
  *
  * With PC_WORKER_COUNT == 1 (the default) there is exactly one worker, so the answer is 0 by
  * construction and this is an inline constant - no lookup, no call. That matters because every pool
- * borrow asks: the multi-worker path reads a `thread_local`, which on FreeRTOS resolves through the
+ * borrow asks: the multi-worker path reads a `_Thread_local`, which on FreeRTOS resolves through the
  * task's TLS block rather than a register, and it was being paid on operations that are otherwise a
  * single struct-field read.
  */
 #if PC_WORKER_COUNT == 1
-inline int pc_worker_self(void)
+PC_INLINE int pc_worker_self(void)
 {
     return 0;
 }
@@ -72,7 +70,7 @@ void pc_worker_set_self(int id);
 #define PC_ARENA_ALIGN 8u
 
 /** @brief Round @p n up to PC_ARENA_ALIGN. */
-inline size_t pc_arena_align_up(size_t n)
+PC_INLINE size_t pc_arena_align_up(size_t n)
 {
     return (n + (PC_ARENA_ALIGN - 1)) & ~(size_t)(PC_ARENA_ALIGN - 1);
 }
@@ -128,11 +126,8 @@ void pc_arena_persist_free(pc_arena *a, void *p);
 
 // --- scratch end (bump, bulk reset, grows down) -----------------------------
 //
-// Defined inline, not in arena.cpp, because these are the pool's hot path and they are small: a
-// borrow is a few loads, a mask and a store. Out of line they cost three cross-TU calls per
-// borrow+release (measured: 190 cycles on an ESP32-S3 against a stack local's 24). Inlined, and with
-// the literal size/alignment every real call site passes, the clamp and the round-up constant-fold
-// and what remains is the pointer arithmetic itself.
+// Inline: a borrow is a few loads, a mask and a store, so a call would cost more than the work.
+// PC_INLINE, not bare inline - a bare C inline needs a second out-of-line definition to link.
 
 /**
  * @brief Bump-allocate @p n bytes of transient storage, aligned to @p align.
@@ -141,7 +136,7 @@ void pc_arena_persist_free(pc_arena *a, void *p);
  *              `[PC_ARENA_ALIGN, PC_ARENA_MAX_ALIGN]`.
  * @return aligned pointer (NOT zeroed), or NULL if it would cross the persistent end.
  */
-inline void *pc_arena_scratch_alloc_aligned(pc_arena *a, size_t n, size_t align)
+PC_INLINE void *pc_arena_scratch_alloc_aligned(pc_arena *a, size_t n, size_t align)
 {
     if (align < PC_ARENA_ALIGN)
     {
@@ -154,7 +149,7 @@ inline void *pc_arena_scratch_alloc_aligned(pc_arena *a, size_t n, size_t align)
     n = pc_arena_align_up(n ? n : PC_ARENA_ALIGN);
     if (a->scratch_top < n)
     {
-        return nullptr;
+        return NULL;
     }
     // The base is PC_ARENA_MAX_ALIGN-aligned, so aligning the offset down aligns the pointer.
     size_t nt = (a->scratch_top - n) & ~(size_t)(align - 1);
@@ -163,7 +158,7 @@ inline void *pc_arena_scratch_alloc_aligned(pc_arena *a, size_t n, size_t align)
     // only ever decrease the value further - nt <= a->scratch_top always holds.
     if (nt < a->persist_end || nt > a->scratch_top) // GCOVR_EXCL_BR_LINE
     {
-        return nullptr; // would cross the persistent end (or underflow)
+        return NULL; // would cross the persistent end (or underflow)
     }
     a->scratch_top = nt;
     size_t used = a->size - a->scratch_top;
@@ -178,13 +173,13 @@ inline void *pc_arena_scratch_alloc_aligned(pc_arena *a, size_t n, size_t align)
 void *pc_arena_scratch_alloc(pc_arena *a, size_t n);
 
 /** @brief Capture the current scratch position (a savepoint for pc_arena_scratch_release()). */
-inline size_t pc_arena_scratch_mark(const pc_arena *a)
+PC_INLINE size_t pc_arena_scratch_mark(const pc_arena *a)
 {
     return a->scratch_top;
 }
 
 /** @brief Free every scratch allocation made since @p mark (a value from pc_arena_scratch_mark()). */
-inline void pc_arena_scratch_release(pc_arena *a, size_t mark)
+PC_INLINE void pc_arena_scratch_release(pc_arena *a, size_t mark)
 {
     // A mark is an earlier (higher) scratch_top; releasing frees everything below it.
     if (mark >= a->scratch_top && mark <= a->size)
@@ -194,7 +189,7 @@ inline void pc_arena_scratch_release(pc_arena *a, size_t mark)
 }
 
 /** @brief Free ALL scratch allocations in O(1). */
-inline void pc_arena_scratch_reset(pc_arena *a)
+PC_INLINE void pc_arena_scratch_reset(pc_arena *a)
 {
     a->scratch_top = a->size;
 }
@@ -206,19 +201,16 @@ inline void pc_arena_scratch_reset(pc_arena *a)
  *
  * Ownership is an address-range property, not bookkeeping. The pools occupy disjoint regions, so a
  * pointer belongs to exactly one of them and the owner is recoverable from the address alone. That
- * is what stops a secret-pool pointer from ever being accepted where a plaintext one is expected,
- * and what makes a write that ran off the end land outside the range instead of silently into a
- * neighbour.
+ * is what stops a secret-pool pointer from being accepted where a plaintext one is expected, and
+ * what makes a write that ran off the end land outside the range rather than in a neighbour.
  *
- * The accessors answer this more cheaply still: their slot count and slot size are compile-time, so
- * the whole pool is one region of known extent and the test is a single unsigned subtract against a
- * constant bound - see pc_plaintext_owns() / pc_secure_owns(). This general version is two compares,
- * for an arena whose base and size are only known at run time.
+ * Two compares, because this arena's base and size are only known at run time. pc_plaintext_owns()
+ * / pc_secure_owns() answer the same question against a compile-time bound in one subtract.
  */
-inline bool pc_arena_owns(const pc_arena *a, const void *p)
+PC_INLINE proto_bool pc_arena_owns(const pc_arena *a, const void *p)
 {
     const uint8_t *q = (const uint8_t *)p;
-    return a->base != nullptr && q >= a->base && q < a->base + a->size;
+    return a->base != NULL && q >= a->base && q < a->base + a->size;
 }
 
 // --- observability ----------------------------------------------------------
@@ -230,7 +222,7 @@ size_t pc_arena_free_bytes(const pc_arena *a);
 size_t pc_arena_persist_used(const pc_arena *a);
 
 /** @brief Scratch bytes currently allocated. */
-inline size_t pc_arena_scratch_used(const pc_arena *a)
+PC_INLINE size_t pc_arena_scratch_used(const pc_arena *a)
 {
     return a->size - a->scratch_top;
 }
@@ -272,7 +264,7 @@ void pc_arena_set_init(pc_arena_set *s);
  * @brief Add a region `[base, base+size)`; regions are searched in the order added.
  * @return true if added, false if the set is full or the region is too small.
  */
-bool pc_arena_set_add(pc_arena_set *s, void *base, size_t size);
+proto_bool pc_arena_set_add(pc_arena_set *s, void *base, size_t size);
 
 /** @brief Persistent alloc from the first region that fits (see pc_arena_persist_alloc()). */
 void *pc_arena_set_persist_alloc(pc_arena_set *s, size_t n);

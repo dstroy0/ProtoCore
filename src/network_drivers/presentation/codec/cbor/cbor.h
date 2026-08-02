@@ -24,8 +24,6 @@
 #include "network_drivers/presentation/codec/codec.h" // pc_codec_type - one item vocabulary
 #include "protocore_config.h"
 #include "shared_primitives/span.h" // pc_span / pc_cspan - the region, bound with pc_span_from()
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_NEED_CBOR
 
@@ -39,7 +37,7 @@ void pc_cbor_int(pc_span *w, int64_t v);                         ///< signed int
 void pc_cbor_bytes(pc_span *w, const uint8_t *data, size_t len); ///< byte string
 void pc_cbor_str(pc_span *w, const char *s);                     ///< text string (null-terminated)
 void pc_cbor_str_n(pc_span *w, const char *s, size_t len);       ///< text string (explicit length)
-void pc_cbor_bool(pc_span *w, bool b);                           ///< true / false
+void pc_cbor_bool(pc_span *w, proto_bool b);                     ///< true / false
 void pc_cbor_null(pc_span *w);                                   ///< null
 void pc_cbor_float(pc_span *w, float f);                         ///< IEEE-754 single (major 7, 0xfa)
 void pc_cbor_array(pc_span *w, size_t count);                    ///< definite-length array header
@@ -56,15 +54,15 @@ void pc_cbor_label(pc_span *w, const char *name, int64_t num);   ///< map key: t
 /** @brief Type of the next item without consuming it. */
 pc_codec_type pc_cbor_peek(pc_cspan *r);
 
-bool pc_cbor_read_uint(pc_cspan *r, uint64_t *out);                     ///< unsigned integer
-bool pc_cbor_read_int(pc_cspan *r, int64_t *out);                       ///< signed integer (also accepts unsigned)
-bool pc_cbor_read_bool(pc_cspan *r, bool *out);                         ///< true / false
-bool pc_cbor_read_null(pc_cspan *r);                                    ///< null
-bool pc_cbor_read_float(pc_cspan *r, float *out);                       ///< float32 (0xfa) or double (0xfb)
-bool pc_cbor_read_str(pc_cspan *r, const char **out, size_t *len);      ///< text string (points into the buffer)
-bool pc_cbor_read_bytes(pc_cspan *r, const uint8_t **out, size_t *len); ///< byte string (points into the buffer)
-bool pc_cbor_read_array(pc_cspan *r, size_t *count);                    ///< definite-length array header
-bool pc_cbor_read_map(pc_cspan *r, size_t *count);                      ///< definite-length map header
+proto_bool pc_cbor_read_uint(pc_cspan *r, uint64_t *out);                ///< unsigned integer
+proto_bool pc_cbor_read_int(pc_cspan *r, int64_t *out);                  ///< signed integer (also accepts unsigned)
+proto_bool pc_cbor_read_bool(pc_cspan *r, proto_bool *out);              ///< true / false
+proto_bool pc_cbor_read_null(pc_cspan *r);                               ///< null
+proto_bool pc_cbor_read_float(pc_cspan *r, float *out);                  ///< float32 (0xfa) or double (0xfb)
+proto_bool pc_cbor_read_str(pc_cspan *r, const char **out, size_t *len); ///< text string (points into the buffer)
+proto_bool pc_cbor_read_bytes(pc_cspan *r, const uint8_t **out, size_t *len); ///< byte string (points into the buffer)
+proto_bool pc_cbor_read_array(pc_cspan *r, size_t *count);                    ///< definite-length array header
+proto_bool pc_cbor_read_map(pc_cspan *r, size_t *count);                      ///< definite-length map header
 
 #endif // PC_NEED_CBOR
 #endif // PROTOCORE_CBOR_H

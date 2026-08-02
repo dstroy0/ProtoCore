@@ -21,21 +21,18 @@
 #define PROTOCORE_NEMA_TS2_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_NEMA_TS2
 
 /** @brief Common TS 2 frame types (the third octet). */
 // NEMA TS2 frame types: wire values compared, so integer constants in a namespacing struct.
-struct NemaTs2
+typedef struct
 {
-    static constexpr uint8_t NEMA_TS2_FT_CMD_LOADSWITCH = 0; ///< controller -> BIU: load-switch (signal-head) drivers.
-    static constexpr uint8_t NEMA_TS2_FT_STATUS_LOADSWITCH =
-        128;                                           ///< BIU -> controller: load-switch status (frame type + 128).
-    static constexpr uint8_t NEMA_TS2_FT_CMD_MMU = 3;  ///< controller <-> MMU status frame.
-    static constexpr uint8_t NEMA_TS2_FT_DETECTOR = 9; ///< detector BIU -> controller: detector call/status.
-};
+#define H 0   ///< controller -> BIU: load-switch (signal-head) drivers.
+#define H 128 ///< BIU -> controller: load-switch status (frame type + 128).
+#define U 3   ///< controller <-> MMU status frame.
+#define R 9   ///< detector BIU -> controller: detector call/status.
+} NemaTs2;
 
 /** @brief HDLC/X.25 CRC-16 (CRC-16/X-25) over @p len bytes. */
 uint16_t pc_nema_ts2_crc(const uint8_t *bytes, size_t len);
@@ -48,17 +45,17 @@ size_t pc_nema_ts2_build(uint8_t address, uint8_t control, uint8_t frame_type, c
                          uint8_t *out, size_t cap);
 
 /** @brief A parsed TS 2 frame (data points into the input). */
-struct NemaTs2Frame
+typedef struct
 {
     uint8_t address;
     uint8_t control;
     uint8_t frame_type;
     const uint8_t *data;
     size_t data_len;
-};
+} NemaTs2Frame;
 
 /** @brief Validate the FCS and parse a TS 2 frame. @return true if the CRC matches and it is well-formed. */
-bool pc_nema_ts2_parse(const uint8_t *frame, size_t len, NemaTs2Frame *out);
+proto_bool pc_nema_ts2_parse(const uint8_t *frame, size_t len, NemaTs2Frame *out);
 
 #endif // PC_ENABLE_NEMA_TS2
 #endif // PROTOCORE_NEMA_TS2_H

@@ -25,8 +25,7 @@
 #ifndef PROTOCORE_PCA9685_H
 #define PROTOCORE_PCA9685_H
 
-#include <stddef.h>
-#include <stdint.h>
+#include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
 
 #define PCA9685_CHANNELS 16     ///< PWM output channels
 #define PCA9685_COUNT_MAX 4095  ///< a PWM count is 12-bit (0..4095)
@@ -64,12 +63,12 @@ size_t pc_pca9685_set_pwm_bytes(uint8_t *buf, size_t cap, uint8_t channel, uint1
 // --- ESP32 binding (I2C via Wire; no-ops on a host build) ------------------------------------
 
 /** @brief Reset the PCA9685 at @p addr and set the PWM frequency @p freq_hz. @return true on ack. */
-bool pc_pca9685_begin(uint8_t addr, uint32_t freq_hz);
+proto_bool pc_pca9685_begin(uint8_t addr, uint32_t freq_hz);
 
 /** @brief Set @p channel's raw 12-bit ON / OFF counts. @return false on I2C error / bad channel. */
-bool pc_pca9685_set_pwm(uint8_t channel, uint16_t on, uint16_t off);
+proto_bool pc_pca9685_set_pwm(uint8_t channel, uint16_t on, uint16_t off);
 
 /** @brief Drive a servo on @p channel to a @p microseconds pulse (uses the configured frequency). */
-bool pc_pca9685_set_servo_us(uint8_t channel, uint32_t microseconds);
+proto_bool pc_pca9685_set_servo_us(uint8_t channel, uint32_t microseconds);
 
 #endif // PROTOCORE_PCA9685_H

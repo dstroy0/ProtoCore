@@ -17,9 +17,8 @@
 #include <string.h>
 
 // Public host key (BSS - no secret material).
-#if defined(ARDUINO)
+#if PROTOCORE_HOT
 #include <Preferences.h> // ESP-IDF NVS wrapper
-#include <esp_random.h>  // esp_fill_random() for the RSA blinding RNG
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h> // serialize signs on the shared cached key context
 #include <mbedtls/md.h>
@@ -28,7 +27,7 @@
 #endif
 SshRsaPubKey ssh_host_pubkey;
 
-#ifdef ARDUINO
+#if PROTOCORE_HOT
 
 // ---------------------------------------------------------------------------
 // Arduino - cached mbedtls host-key signer (NVS-backed)
@@ -38,7 +37,7 @@ SshRsaPubKey ssh_host_pubkey;
 static int ssh_mbedtls_rng(void *ctx, unsigned char *buf, size_t len)
 {
     (void)ctx;
-    esp_fill_random(buf, len);
+    pc_platform_rand_fill(buf, len);
     return 0;
 }
 
@@ -47,12 +46,12 @@ static int ssh_mbedtls_rng(void *ctx, unsigned char *buf, size_t len)
 // resident means each sign pays only the CRT modexp. The private key stays in RAM for the server
 // lifetime (as an SSH host key normally does); the mutex serializes signs because mbedtls mutates the
 // blinding values per operation. Loaded once at startup by pc_ssh_rsa_load_pubkey().
-struct SshRsaCtx
+typedef struct
 {
     mbedtls_pk_context pk;  ///< parsed host key + cached blinding state
     SemaphoreHandle_t lock; ///< serializes signs on the shared context
-    bool ready;             ///< pk holds a valid parsed key
-};
+    proto_bool ready;       ///< pk holds a valid parsed key
+} SshRsaCtx;
 static SshRsaCtx s_rsa;
 
 int pc_ssh_rsa_load_pubkey(void)
@@ -63,7 +62,7 @@ int pc_ssh_rsa_load_pubkey(void)
     }
 
     Preferences prefs;
-    if (!prefs.begin("ssh_host_key", true))
+    if (!prefs.begin("ssh_host_key", PROTO_TRUE))
     {
         return -1;
     }
@@ -82,13 +81,13 @@ int pc_ssh_rsa_load_pubkey(void)
     if (s_rsa.ready)
     {
         mbedtls_pk_free(&s_rsa.pk);
-        s_rsa.ready = false;
+        s_rsa.ready = PROTO_FALSE;
     }
     mbedtls_pk_init(&s_rsa.pk);
-    int rc = mbedtls_pk_parse_key(&s_rsa.pk, der, der_len, nullptr, 0
+    int rc = mbedtls_pk_parse_key(&s_rsa.pk, der, der_len, NULL, 0
 #if MBEDTLS_VERSION_MAJOR >= 3
                                   ,
-                                  ssh_mbedtls_rng, nullptr
+                                  ssh_mbedtls_rng, NULL
 #endif
     );
     pc_secure_wipe(der, der_len);
@@ -111,15 +110,15 @@ int pc_ssh_rsa_load_pubkey(void)
     mbedtls_mpi e_mpi;
     mbedtls_mpi_init(&n_mpi);
     mbedtls_mpi_init(&e_mpi);
-    mbedtls_rsa_export(rsa, &n_mpi, nullptr, nullptr, nullptr, &e_mpi);
+    mbedtls_rsa_export(rsa, &n_mpi, NULL, NULL, NULL, &e_mpi);
     mbedtls_mpi_write_binary(&n_mpi, ssh_host_pubkey.n, PC_RSA_KEY_BYTES);
     mbedtls_mpi_write_binary(&e_mpi, ssh_host_pubkey.e_bytes + 4 - sizeof(ssh_host_pubkey.e_bytes),
                              sizeof(ssh_host_pubkey.e_bytes));
     mbedtls_mpi_free(&n_mpi);
     mbedtls_mpi_free(&e_mpi);
 
-    s_rsa.ready = true;
-    ssh_host_pubkey.loaded = true;
+    s_rsa.ready = PROTO_TRUE;
+    ssh_host_pubkey.loaded = PROTO_TRUE;
     return 0;
 }
 
@@ -133,7 +132,7 @@ int ssh_rsa_sign(const uint8_t *msg, size_t msg_len, pc_rsa_hash hash, uint8_t s
 
     // mbedtls_pk_sign() PKCS#1-pads the supplied digest (it does NOT hash), so for rsa-sha2-256/512 we
     // pass SHA-256(msg) / SHA-512(msg).
-    const bool sha512 = (hash == pc_rsa_hash::SHA512);
+    const proto_bool sha512 = (hash == PC_RSA_HASH_SHA512);
     const mbedtls_md_type_t md = sha512 ? MBEDTLS_MD_SHA512 : MBEDTLS_MD_SHA256;
     const size_t dlen = sha512 ? PC_SHA512_DIGEST_LEN : PC_SHA256_DIGEST_LEN;
     uint8_t digest[PC_SHA512_DIGEST_LEN];
@@ -153,9 +152,9 @@ int ssh_rsa_sign(const uint8_t *msg, size_t msg_len, pc_rsa_hash hash, uint8_t s
     }
     size_t sig_len = 0;
 #if MBEDTLS_VERSION_MAJOR >= 3
-    int rc = mbedtls_pk_sign(&s_rsa.pk, md, digest, dlen, sig, PC_RSA_SIG_BYTES, &sig_len, ssh_mbedtls_rng, nullptr);
+    int rc = mbedtls_pk_sign(&s_rsa.pk, md, digest, dlen, sig, PC_RSA_SIG_BYTES, &sig_len, ssh_mbedtls_rng, NULL);
 #else
-    int rc = mbedtls_pk_sign(&s_rsa.pk, md, digest, dlen, sig, &sig_len, ssh_mbedtls_rng, nullptr);
+    int rc = mbedtls_pk_sign(&s_rsa.pk, md, digest, dlen, sig, &sig_len, ssh_mbedtls_rng, NULL);
 #endif
     if (s_rsa.lock)
     {
@@ -181,7 +180,7 @@ int pc_ssh_rsa_load_pubkey(void)
 {
     memcpy(ssh_host_pubkey.n, _test_rsa_n, PC_RSA_KEY_BYTES);
     memcpy(ssh_host_pubkey.e_bytes, _test_rsa_e, 4);
-    ssh_host_pubkey.loaded = true;
+    ssh_host_pubkey.loaded = PROTO_TRUE;
     return 0;
 }
 
@@ -190,7 +189,7 @@ int ssh_rsa_sign(const uint8_t *msg, size_t msg_len, pc_rsa_hash hash, uint8_t s
     return pc_rsa_sign_sw(_test_rsa_n, _test_rsa_d, msg, msg_len, hash, sig);
 }
 
-#endif // ARDUINO
+#endif // PROTOCORE_HOT
 
 // ---------------------------------------------------------------------------
 // "ssh-rsa" public-key blob serialization (both platforms)
@@ -216,7 +215,7 @@ static uint8_t *put_mpint(uint8_t *p, const uint8_t *data, size_t data_len)
     }
     const uint8_t *src = data + off;
     size_t src_len = data_len - off;
-    bool need_pad = (src_len > 0) && (src[0] & 0x80u);
+    proto_bool need_pad = (src_len > 0) && (src[0] & 0x80u);
     uint32_t mpint_len = (uint32_t)src_len + (need_pad ? 1u : 0u);
     p = put_u32(p, mpint_len);
     if (need_pad)

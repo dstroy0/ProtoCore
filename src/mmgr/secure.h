@@ -37,8 +37,6 @@
 
 #include "protocore_config.h"
 #include "shared_primitives/span.h"
-#include <stddef.h>
-#include <stdint.h>
 
 /**
  * @brief Slots in the secure pool.
@@ -96,7 +94,7 @@ static inline void pc_secure_wipe(void *ptr, size_t len)
 /**
  * @brief Borrow @p n bytes of secure storage, aligned to @p align.
  *
- * Returns uninitialized memory (the pool wipes on release, not on hand-out). Returns nullptr if the
+ * Returns uninitialized memory (the pool wipes on release, not on hand-out). Returns NULL if the
  * request does not fit - callers MUST handle null and fail closed.
  *
  * @param n     bytes requested.
@@ -121,8 +119,8 @@ size_t pc_secure_mark(void);
  *
  * The wipe happens BEFORE the position moves, so the bytes are already zero at the instant they
  * become available again - there is no window in which a subsequent borrow could be handed memory
- * still holding the previous tenant's key material. Use SecureScope rather than calling this by
- * hand, so no return path can skip it.
+ * still holding the previous tenant's key material. Every return path out of a borrow must reach
+ * this, including the early ones taken when a peer sends something malformed.
  */
 void pc_secure_release(size_t mark);
 
@@ -145,62 +143,9 @@ size_t pc_secure_capacity(void);
  * one region of known extent. Mutually exclusive with pc_plaintext_owns() because the regions are
  * disjoint - which is the whole access control, with no per-allocation bookkeeping.
  */
-bool pc_secure_owns(const void *p);
+proto_bool pc_secure_owns(const void *p);
 
 /** @brief Which secure slot owns @p p, or -1 if @p p is not in the secure pool. */
 int pc_secure_slot_of(const void *p);
-
-/**
- * @brief A secure borrow whose acquire and release are one call each.
- *
- * SecureScope + pc_secure_span crosses this module's boundary three times (mark, alloc, release);
- * mark and alloc always happen together, so one of those is structure rather than work. Measured on
- * an ESP32-S3: 129 cycles against 172 for the three-call form.
- *
- * Releases exactly like SecureScope - the region is wiped BEFORE the position moves, so no later
- * borrow can be handed memory still holding this one's key material.
- */
-class SecureBorrow
-{
-  public:
-    SecureBorrow(size_t n, size_t align);
-    ~SecureBorrow();
-    SecureBorrow(const SecureBorrow &) = delete;
-    SecureBorrow &operator=(const SecureBorrow &) = delete;
-
-    /** @brief The borrowed region; empty if the pool could not satisfy it. */
-    const pc_span &span() const
-    {
-        return m_span;
-    }
-
-  private:
-    size_t m_mark;
-    pc_span m_span;
-};
-
-/**
- * @brief RAII scope guard for secure borrows - marks on entry, wipes and reclaims on every exit.
- *
- * The reason to prefer this over pc_secure_release(): a secret's wipe must happen on *every* path,
- * including the early returns taken when a peer sends something malformed, and those are exactly the
- * paths a hand-written wipe gets forgotten on.
- */
-class SecureScope
-{
-  public:
-    SecureScope() : m_mark(pc_secure_mark())
-    {
-    }
-    ~SecureScope()
-    {
-        pc_secure_release(m_mark);
-    }
-    SecureScope(const SecureScope &) = delete;
-    SecureScope &operator=(const SecureScope &) = delete;
-
-  private:
-    size_t m_mark;
-};
 
 #endif // PROTOCORE_SECURE_H

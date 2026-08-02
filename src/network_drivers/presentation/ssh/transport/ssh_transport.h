@@ -38,8 +38,6 @@
 #include "network_drivers/presentation/ssh/crypto/ssh_kexhash.h"
 #include "network_drivers/presentation/ssh/transport/ssh_keymat.h"
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 // ---------------------------------------------------------------------------
 // Sizing
@@ -62,7 +60,7 @@
 // ---------------------------------------------------------------------------
 
 /** @brief SSH connection lifecycle phase. */
-enum class SshPhase : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     SSH_PHASE_BANNER,  ///< Awaiting the client identification string.
     SSH_PHASE_KEXINIT, ///< Awaiting the client KEXINIT.
@@ -71,7 +69,7 @@ enum class SshPhase : uint8_t
     SSH_PHASE_SERVICE, ///< Awaiting SERVICE_REQUEST ("ssh-userauth").
     SSH_PHASE_AUTH,    ///< User authentication in progress (RFC 4252).
     SSH_PHASE_OPEN     ///< Authenticated; connection/channel protocol active.
-};
+} SshPhase;
 
 // ---------------------------------------------------------------------------
 // Per-connection transport state
@@ -87,25 +85,25 @@ enum class SshPhase : uint8_t
  * is required for key derivation and for every later re-key.
  */
 /** @brief Negotiated key-exchange method (crypto-agnostic KEX dispatch). */
-enum class SshKexAlg : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     SSH_KEX_DH_GROUP14 = 0,      ///< diffie-hellman-group14-sha256 (HW-accelerated MPI on ESP32)
     SSH_KEX_CURVE25519 = 1,      ///< curve25519-sha256 (RFC 8731, X25519)
     SSH_KEX_MLKEM768_X25519 = 2, ///< mlkem768x25519-sha256 (PQ/T hybrid, draft-ietf-sshm-mlkem-hybrid-kex)
     SSH_KEX_ECDH_NISTP256 = 3,   ///< ecdh-sha2-nistp256 (NIST P-256 ECDH, RFC 5656 §4)
     SSH_KEX_SNTRUP761_X25519 = 4 ///< sntrup761x25519-sha512@openssh.com (PQ/T hybrid, SHA-512 exchange hash)
-};
+} SshKexAlg;
 
 /** @brief Negotiated host-key / signature algorithm. */
-enum class SshHostkeyAlg : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     SSH_HOSTKEY_RSA_SHA256 = 0,    ///< rsa-sha2-256 (HW-accelerated on ESP32)
     SSH_HOSTKEY_ED25519 = 1,       ///< ssh-ed25519 (RFC 8032)
     SSH_HOSTKEY_RSA_SHA512 = 2,    ///< rsa-sha2-512 (same "ssh-rsa" key, SHA-512 signature; RFC 8332)
     SSH_HOSTKEY_ECDSA_NISTP256 = 3 ///< ecdsa-sha2-nistp256 (NIST P-256, RFC 5656)
-};
+} SshHostkeyAlg;
 
-struct SshSession
+typedef struct
 {
     SshPhase phase; ///< Current handshake phase.
 
@@ -129,13 +127,13 @@ struct SshSession
 
     uint8_t session_id[SSH_KEXHASH_MAX_LEN]; ///< H from the first KEX (RFC 4253 §7.2); 32 or 64 bytes.
     uint8_t session_id_len;                  ///< session_id length (the first KEX's exchange-hash length).
-    bool have_session_id;                    ///< True once the first KEX completes.
+    proto_bool have_session_id;              ///< True once the first KEX completes.
 
-    bool ext_info_c;       ///< Client advertised ext-info-c (RFC 8308): send EXT_INFO.
-    bool authed;           ///< True after successful user authentication.
+    proto_bool ext_info_c; ///< Client advertised ext-info-c (RFC 8308): send EXT_INFO.
+    proto_bool authed;     ///< True after successful user authentication.
     uint8_t auth_failures; ///< Failed USERAUTH_REQUESTs (brute-force limit, RFC 4252 §4).
     uint32_t last_kex_ms;  ///< pc_millis() when the last KEX completed (server-initiated re-key timer).
-};
+} SshSession;
 
 /** @brief Static pool of SSH session state (BSS), one per SSH slot. */
 extern SshSession ssh_sess[MAX_SSH_CONNS];
@@ -207,10 +205,10 @@ int ssh_kexinit_parse(uint8_t i, const uint8_t *payload, size_t len);
  *
  * Runtime-selectable so one firmware can flip per deployment. Default: prefer RSA.
  */
-void ssh_kex_set_prefer_rsa(bool prefer);
+void ssh_kex_set_prefer_rsa(proto_bool prefer);
 
 /** @brief Current negotiation preference (true = prefer RSA/DH, the ESP32-accelerated path). */
-bool ssh_kex_prefer_rsa(void);
+proto_bool ssh_kex_prefer_rsa(void);
 
 /**
  * @brief Install an ssh-ed25519 host key from its 32-byte seed (RFC 8032 private key).
@@ -222,7 +220,7 @@ bool ssh_kex_prefer_rsa(void);
 void pc_ssh_hostkey_ed25519_set(const uint8_t seed[32]);
 
 /** @brief True if an ssh-ed25519 host key has been installed. */
-bool pc_ssh_hostkey_ed25519_available(void);
+proto_bool pc_ssh_hostkey_ed25519_available(void);
 
 /**
  * @brief Install an ecdsa-sha2-nistp256 host key from its 32-byte P-256 private scalar.
@@ -234,7 +232,7 @@ bool pc_ssh_hostkey_ed25519_available(void);
 void pc_ssh_hostkey_ecdsa_set(const uint8_t priv[32]);
 
 /** @brief True if an ecdsa-sha2-nistp256 host key has been installed. */
-bool pc_ssh_hostkey_ecdsa_available(void);
+proto_bool pc_ssh_hostkey_ecdsa_available(void);
 
 /**
  * @brief Generate the server ephemeral for the negotiated KEX method (call after parse).
@@ -346,12 +344,12 @@ int ssh_kexdh_handle(uint8_t i, const uint8_t *payload, size_t len, uint8_t *rep
 // (shared-secret X25519 + host-key sign + exchange hash + KDF + reply assembly) into last_kexreply_us and
 // bumps kex_count. The rig firmware watches kex_count and prints both over its own serial - src writes no
 // output. Compiled out entirely unless PC_SSH_KEX_BENCH is defined (a rig-only measurement build).
-struct SshKexBenchCtx
+typedef struct
 {
     volatile long long last_kexgen_us;   ///< ssh_kex_generate: ephemeral X25519 base-multiply span.
     volatile long long last_kexreply_us; ///< ssh_kexdh_handle: reply span (shared secret + sign + hash + KDF).
     volatile unsigned kex_count;         ///< bumped after each completed KEX; the rig prints on change.
-};
+} SshKexBenchCtx;
 extern SshKexBenchCtx pc_ssh_kex_bench;
 #endif
 
@@ -369,7 +367,7 @@ void ssh_newkeys_sent(uint8_t i);
  *
  * Called once the client's SSH_MSG_NEWKEYS has been received (the server having already sent its own,
  * via ssh_newkeys_sent()). Turns on the inbound cipher/MAC (enc_in), clears kex_active, and moves to
- * SshPhase::SSH_PHASE_SERVICE (or back to SshPhase::SSH_PHASE_OPEN on a re-key).
+ * SSH_PHASE_SERVICE (or back to SSH_PHASE_OPEN on a re-key).
  */
 void ssh_newkeys_complete(uint8_t i);
 
@@ -378,7 +376,7 @@ void ssh_newkeys_complete(uint8_t i);
  *
  * Checks both packet sequence numbers against SSH_REKEY_PACKET_THRESHOLD.
  */
-bool ssh_rekey_needed(uint8_t i);
+proto_bool ssh_rekey_needed(uint8_t i);
 
 /**
  * @brief Pure re-key decision (RFC 4253 §9: "after each gigabyte ... or after each hour").
@@ -389,14 +387,14 @@ bool ssh_rekey_needed(uint8_t i);
  * @param time_threshold_ms the elapsed-time trigger (SSH_REKEY_TIME_MS); 0 disables the time trigger.
  * @return true if either a packet counter or the elapsed time has crossed its threshold.
  */
-bool ssh_rekey_due(uint32_t seq_send, uint32_t seq_recv, uint32_t elapsed_ms, uint32_t pkt_threshold,
-                   uint32_t time_threshold_ms);
+proto_bool ssh_rekey_due(uint32_t seq_send, uint32_t seq_recv, uint32_t elapsed_ms, uint32_t pkt_threshold,
+                         uint32_t time_threshold_ms);
 
 /**
  * @brief Begin a server-initiated re-key by emitting a fresh KEXINIT.
  *
  * Generates a new ephemeral DH key pair, builds and stores a new server
- * KEXINIT (I_S), and returns the transport to SshPhase::SSH_PHASE_KEXINIT. The session
+ * KEXINIT (I_S), and returns the transport to SSH_PHASE_KEXINIT. The session
  * id and authentication state are preserved, so once the re-key completes the
  * connection resumes in its prior (authenticated) phase.
  *

@@ -41,9 +41,6 @@
 
 #if PC_ENABLE_LSV2
 
-#include <stddef.h>
-#include <stdint.h>
-
 /** @brief Default LSV/2-over-TCP port a Heidenhain control listens on. */
 #define PC_LSV2_TCP_PORT 19000
 /** @brief Every LSV/2 command / response mnemonic is exactly four ASCII characters. */
@@ -100,12 +97,12 @@ enum Lsv2RunInfo : uint16_t // NOSONAR(cpp:S3642): unscoped so a selector conver
 
 /** @brief One parsed telegram: the 4-char mnemonic (NOT null-terminated) plus the payload slice, which
  *  points INTO the caller's buffer (zero-copy; the buffer must outlive the struct). */
-struct Lsv2Telegram
+typedef struct
 {
     char mnemonic[PC_LSV2_MNEMONIC_LEN];
     const uint8_t *payload;
     size_t payload_len;
-};
+} Lsv2Telegram;
 
 /**
  * @brief Frame a telegram: a 4-byte big-endian @p payload_len, the 4-character @p mnemonic, then the
@@ -121,12 +118,12 @@ size_t pc_lsv2_build(uint8_t *buf, size_t cap, const char *mnemonic, const uint8
  * @return true if a complete telegram was found; false if fewer than `8 + payload_len` bytes are
  *         available yet (the caller should accumulate more).
  */
-bool pc_lsv2_parse(const uint8_t *buf, size_t len, Lsv2Telegram *out, size_t *consumed);
+proto_bool pc_lsv2_parse(const uint8_t *buf, size_t len, Lsv2Telegram *out, size_t *consumed);
 
 /**
  * @brief True if the parsed telegram's mnemonic equals the four characters at @p mnemonic4.
  */
-bool pc_lsv2_is(const Lsv2Telegram *t, const char *mnemonic4);
+proto_bool pc_lsv2_is(const Lsv2Telegram *t, const char *mnemonic4);
 
 /**
  * @brief Build a login telegram (`A_LG`): payload is the NUL-terminated privilege group (one of the
@@ -160,18 +157,18 @@ size_t pc_lsv2_build_run_info(uint8_t *buf, size_t cap, uint16_t info_code);
 /**
  * @brief True if the response is `T_OK` (transaction completed).
  */
-bool pc_lsv2_is_ok(const Lsv2Telegram *t);
+proto_bool pc_lsv2_is_ok(const Lsv2Telegram *t);
 
 /**
  * @brief True if the response is an error mnemonic (`T_ER` transaction error or `T_BD` transfer error).
  */
-bool pc_lsv2_is_error(const Lsv2Telegram *t);
+proto_bool pc_lsv2_is_error(const Lsv2Telegram *t);
 
 /**
  * @brief Decode an error response's two-byte payload into @p err_class and @p err_code.
  * @return true on an error mnemonic (`T_ER` / `T_BD`) carrying exactly two payload bytes.
  */
-bool pc_lsv2_error(const Lsv2Telegram *t, uint8_t *err_class, uint8_t *err_code);
+proto_bool pc_lsv2_error(const Lsv2Telegram *t, uint8_t *err_class, uint8_t *err_code);
 
 #endif // PC_ENABLE_LSV2
 

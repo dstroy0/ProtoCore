@@ -29,8 +29,6 @@
 #define PROTOCORE_CONFIG_STORE_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_CONFIG_STORE
 
@@ -39,10 +37,10 @@
  *        get/set. On ESP32 this opens the NVS namespace read-write.
  * @return true on success.
  */
-bool pc_config_begin(const char *ns);
+proto_bool pc_config_begin(const char *ns);
 
 /** @brief Store a string value. @return true on success. */
-bool pc_config_set_str(const char *key, const char *val);
+proto_bool pc_config_set_str(const char *key, const char *val);
 
 /**
  * @brief Read a string value into @p out (always null-terminated, bounded by
@@ -52,13 +50,13 @@ bool pc_config_set_str(const char *key, const char *val);
 size_t pc_config_get_str(const char *key, char *out, size_t out_cap, const char *def);
 
 /** @brief Store a `uint32_t` value. @return true on success. */
-bool pc_config_set_u32(const char *key, uint32_t val);
+proto_bool pc_config_set_u32(const char *key, uint32_t val);
 
 /** @brief Read a `uint32_t` value, or @p def if the key is absent. */
 uint32_t pc_config_get_u32(const char *key, uint32_t def);
 
 /** @brief Store a raw blob. @return true on success. */
-bool pc_config_set_blob(const char *key, const void *data, size_t len);
+proto_bool pc_config_set_blob(const char *key, const void *data, size_t len);
 
 /**
  * @brief Read a blob into @p out (bounded by @p out_cap).
@@ -67,10 +65,10 @@ bool pc_config_set_blob(const char *key, const void *data, size_t len);
 size_t pc_config_get_blob(const char *key, void *out, size_t out_cap);
 
 /** @brief Erase a single key. @return true if the key existed. */
-bool pc_config_erase(const char *key);
+proto_bool pc_config_erase(const char *key);
 
 /** @brief Erase every key in the open namespace. @return true on success. */
-bool pc_config_clear(void);
+proto_bool pc_config_clear(void);
 
 #endif // PC_ENABLE_CONFIG_STORE
 #endif // PROTOCORE_CONFIG_STORE_H

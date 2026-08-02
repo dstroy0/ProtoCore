@@ -25,13 +25,11 @@
 #define PROTOCORE_WEBDAV_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_WEBDAV
 
 /** @brief WebDAV request methods recognized by the server. */
-enum class WebDavMethod : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     DAV_M_OPTIONS,
     DAV_M_GET,
@@ -46,7 +44,7 @@ enum class WebDavMethod : uint8_t
     DAV_M_LOCK,
     DAV_M_UNLOCK,
     DAV_M_UNSUPPORTED ///< Anything else - answered 405 Method Not Allowed.
-};
+} WebDavMethod;
 
 /** @brief "infinity" Depth value (RFC 4918 §10.2). */
 /** @brief Depth: infinity sentinel (a lone constant). */
@@ -74,7 +72,7 @@ size_t pc_webdav_xml_escape(char *dst, size_t cap, const char *src);
  * scheme + authority are skipped and `%xx` escapes are decoded into @p out.
  * @return false on overflow or a malformed value.
  */
-bool pc_webdav_dest_path(const char *destination, char *out, size_t cap);
+proto_bool pc_webdav_dest_path(const char *destination, char *out, size_t cap);
 
 // 207 Multi-Status incremental builder. Each call appends to a buffer already
 // holding @p len bytes and returns the new length, never exceeding @p cap. A
@@ -93,7 +91,7 @@ size_t pc_webdav_ms_begin(char *buf, size_t cap, size_t len);
  * @param rfc1123_mtime  Last-Modified string, or "" to omit.
  * @param content_type   MIME type (files only), or "" to omit.
  */
-size_t pc_webdav_ms_entry(char *buf, size_t cap, size_t len, const char *href, bool is_collection, uint32_t size,
+size_t pc_webdav_ms_entry(char *buf, size_t cap, size_t len, const char *href, proto_bool is_collection, uint32_t size,
                           const char *rfc1123_mtime, const char *content_type);
 
 /** @brief Close the <multistatus> element. */
@@ -133,21 +131,21 @@ size_t pc_webdav_proppatch_ms(char *buf, size_t cap, const char *href, const cha
 #define PC_DAV_LOCK_TOKEN_MAX 48
 
 /** @brief One active lock (RFC 4918 §6.4). */
-struct DavLock
+typedef struct
 {
     char path[PC_DAV_LOCK_PATH_MAX];   ///< the locked resource path (trailing slash normalized off)
     char token[PC_DAV_LOCK_TOKEN_MAX]; ///< the lock token (an opaquelocktoken URI)
-    bool exclusive;                    ///< exclusive-write (true) or shared (false)
-    bool depth_infinity;               ///< the lock covers the whole subtree (Depth: infinity) vs just the resource
-    bool active;                       ///< false = free slot
+    proto_bool exclusive;              ///< exclusive-write (true) or shared (false)
+    proto_bool depth_infinity;         ///< the lock covers the whole subtree (Depth: infinity) vs just the resource
+    proto_bool active;                 ///< false = free slot
     uint32_t expiry_s;                 ///< monotonic second the lock expires (0 = no timeout); swept by _sweep
-};
+} DavLock;
 
 /** @brief The server-global lock table (one instance, not per-connection). */
-struct DavLockTable
+typedef struct
 {
     DavLock locks[PC_DAV_LOCK_MAX];
-};
+} DavLockTable;
 
 /** @brief Reset a lock table (no locks held). */
 void pc_dav_lock_init(DavLockTable *t);
@@ -163,8 +161,8 @@ void pc_dav_lock_init(DavLockTable *t);
  *                  its own now + timeout.
  * @return the stored lock on success, nullptr on conflict / full.
  */
-const DavLock *pc_dav_lock_acquire(DavLockTable *t, const char *path, const char *token, bool exclusive,
-                                   bool depth_infinity, uint32_t expiry_s);
+const DavLock *pc_dav_lock_acquire(DavLockTable *t, const char *path, const char *token, proto_bool exclusive,
+                                   proto_bool depth_infinity, uint32_t expiry_s);
 
 /**
  * @brief Expire and drop every lock whose timeout has passed (RFC 4918 §6.6). Call before a lock query so
@@ -187,7 +185,7 @@ const DavLock *pc_dav_lock_refresh(DavLockTable *t, const char *token, uint32_t 
 const DavLock *pc_dav_lock_find(const DavLockTable *t, const char *path);
 
 /** @brief Release the lock whose token equals @p token (UNLOCK). @return true if one was removed. */
-bool pc_dav_lock_release(DavLockTable *t, const char *token);
+proto_bool pc_dav_lock_release(DavLockTable *t, const char *token);
 
 /**
  * @brief May a write to @p path proceed given the token the request presented (RFC 4918 §7)?
@@ -195,7 +193,7 @@ bool pc_dav_lock_release(DavLockTable *t, const char *token);
  * Allowed when no lock covers @p path, or when @p presented_token (from the If header, may be nullptr)
  * matches a covering lock. A locked resource with no / wrong token is denied (the handler answers 423).
  */
-bool pc_dav_lock_can_write(const DavLockTable *t, const char *path, const char *presented_token);
+proto_bool pc_dav_lock_can_write(const DavLockTable *t, const char *path, const char *presented_token);
 
 /**
  * @brief Extract the first lock token from an If header value (RFC 4918 §10.4).
@@ -203,7 +201,7 @@ bool pc_dav_lock_can_write(const DavLockTable *t, const char *path, const char *
  * Handles the tagged (`<res> (<token>)`) and untagged (`(<token>)`) list forms and a `Not` condition by
  * taking the first Coded-URL inside the first condition list. @return true and fills @p out on success.
  */
-bool pc_dav_if_token(const char *if_header, char *out, size_t cap);
+proto_bool pc_dav_if_token(const char *if_header, char *out, size_t cap);
 
 #endif // PC_ENABLE_WEBDAV
 

@@ -88,11 +88,8 @@
 #include "network_drivers/presentation/ssh/transport/ssh_transport.h"
 #endif
 
-// This header declares bool, size_t, uint8_t and int64_t in its own signatures, so it names their
+// This header declares size_t, uint8_t and int64_t in its own signatures, so it names their
 // headers itself rather than inheriting them from whichever include above happens to pull them in.
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
 
 // ---------------------------------------------------------------------------
 // Every service API, surfaced here
@@ -105,6 +102,7 @@
 #include "mmgr/plaintext.h"
 #include "mmgr/secure.h"
 #include "network_drivers/network/route.h"
+#include "network_drivers/session/preempt_queue.h"
 #include "server/filesystem/filesystem.h"
 #include "server/filesystem/mnt.h"
 #include "server/filesystem/wearlevel.h"
@@ -304,7 +302,6 @@
 #include "services/system/ota_rollback/ota_rollback.h"
 #include "services/system/ota_service/ota_service.h"
 #include "services/system/power_mgmt/power_mgmt.h"
-#include "services/system/preempt_queue/preempt_queue.h"
 #include "services/system/provisioning_service/provisioning_service.h"
 #include "services/system/radio_power/radio_power.h"
 #include "services/system/roaming/roaming.h"
@@ -550,18 +547,18 @@ typedef struct Route
 #endif
 
 #if PC_ENABLE_AUTH
-    bool auth_required;            ///< True when this route requires authentication.
-    bool auth_digest;              ///< True for Digest auth; false for Basic.
+    proto_bool auth_required;      ///< True when this route requires authentication.
+    proto_bool auth_digest;        ///< True for Digest auth; false for Basic.
     char auth_realm[MAX_AUTH_LEN]; ///< WWW-Authenticate realm string.
     char auth_user[MAX_AUTH_LEN];  ///< Required username.
     char auth_pass[MAX_AUTH_LEN];  ///< Required password.
 #endif
 
-    bool is_active;        ///< `false` for unused table slots.
-    bool is_wildcard;      ///< `true` when path ends with `*`.
-    bool is_param;         ///< `true` when the path contains a `:name` segment.
-    bool is_regex;         ///< `true` when the path is a regex (see on_regex()).
-    pc_iface iface_filter; ///< Interface gate; PC_IFACE_ANY (0) = match any interface.
+    proto_bool is_active;   ///< `false` for unused table slots.
+    proto_bool is_wildcard; ///< `true` when path ends with `*`.
+    proto_bool is_param;    ///< `true` when the path contains a `:name` segment.
+    proto_bool is_regex;    ///< `true` when the path is a regex (see on_regex()).
+    pc_iface iface_filter;  ///< Interface gate; PC_IFACE_ANY (0) = match any interface.
 } Route;
 
 // ---------------------------------------------------------------------------
@@ -608,14 +605,14 @@ typedef size_t (*ChunkSource)(uint8_t *buf, size_t cap, void *ctx);
  * @return true if a middleware returned MW_HALT (a response was sent and
  *         dispatch must stop); false to continue to route matching.
  */
-bool run_middleware(uint8_t slot_id, HttpReq *req);
+proto_bool run_middleware(uint8_t slot_id, HttpReq *req);
 
 /**
  * @brief Built-in fixed-window rate-limit check (see enable_rate_limit()).
  * @return true if the request was rejected with 429 (response sent, dispatch
  *         must stop); false when rate limiting is disabled or within budget.
  */
-bool rate_limit_check(uint8_t slot_id);
+proto_bool rate_limit_check(uint8_t slot_id);
 
 /**
  * @brief Evaluate whether a route pattern matches a request path.
@@ -628,7 +625,7 @@ bool rate_limit_check(uint8_t slot_id);
  * @param req_path    Null-terminated path from the parsed request.
  * @return True if the route matches the request path.
  */
-bool path_matches(const char *route, bool is_wildcard, const char *req_path);
+proto_bool path_matches(const char *route, proto_bool is_wildcard, const char *req_path);
 
 /// @brief Record a response for stats + the access-log hook. Reads method/path from http_pool[slot_id].
 void note_response(uint8_t slot_id, int code, int body_len);
@@ -637,13 +634,13 @@ void note_response(uint8_t slot_id, int code, int body_len);
 /**
  * @brief Decide whether the current response should keep the connection alive.
  *
- * Only a cleanly-parsed request (ParseState::PARSE_COMPLETE) is eligible: HTTP/1.1 keeps
+ * Only a cleanly-parsed request (PARSE_COMPLETE) is eligible: HTTP/1.1 keeps
  * alive unless the client sent `Connection: close`; HTTP/1.0 keeps alive only
  * with `Connection: keep-alive`. On a true return the slot's request tally is
  * incremented; the PC_KEEPALIVE_MAX_REQUESTS-th request returns false so
  * the connection is closed deliberately. Always false with keep-alive off.
  */
-bool keepalive_eval(uint8_t slot_id);
+proto_bool keepalive_eval(uint8_t slot_id);
 #endif
 
 /**
@@ -655,7 +652,7 @@ bool keepalive_eval(uint8_t slot_id);
  * @param pre_flushed the caller already emitted the final bytes with pc_conn_send_flush()
  *        (write+tcp_output coalesced into one marshal), so skip the redundant flush here.
  */
-void pc_resp_end(uint8_t slot_id, int code, int body_len, bool keep, bool pre_flushed);
+void pc_resp_end(uint8_t slot_id, int code, int body_len, proto_bool keep, proto_bool pre_flushed);
 
 /**
  * @brief Resolve the Connection response header and report keep-alive intent.
@@ -664,7 +661,7 @@ void pc_resp_end(uint8_t slot_id, int code, int body_len, bool keep, bool pre_fl
  * or "Connection: close\r\n" and, via @p keep_out, whether the slot is kept
  * alive. Always reports close when keep-alive is compiled out.
  */
-const char *pc_resp_conn_hdr(uint8_t slot_id, bool *keep_out);
+const char *pc_resp_conn_hdr(uint8_t slot_id, proto_bool *keep_out);
 
 /**
  * @brief Append the shared response trailer (CORS block, custom headers, the
@@ -680,15 +677,15 @@ void chunk_send_pump(uint8_t slot_id);
 
 #if PC_ENABLE_AUTH
 /// @brief Validate the request's HTTP Basic credentials against route @p r. @return true if authorized.
-bool check_basic_auth(uint8_t slot_id, HttpReq *req, const Route *r);
+proto_bool check_basic_auth(uint8_t slot_id, HttpReq *req, const Route *r);
 /// @brief Validate an `Authorization: Digest` (RFC 7616, SHA-256, qop=auth) request against route @p r.
 /// @param stale  set true when the credentials verify but the nonce has expired (RFC 7616 3.3): the
 ///               caller reissues a fresh challenge with `stale=true` so the client retries without a
 ///               re-prompt. Left untouched on a credential mismatch or forged nonce.
-bool check_digest_auth(uint8_t slot_id, HttpReq *req, const Route *r, bool *stale);
+proto_bool check_digest_auth(uint8_t slot_id, HttpReq *req, const Route *r, proto_bool *stale);
 /// @brief Send 401 Unauthorized with a Basic or Digest `WWW-Authenticate` challenge per route @p r.
 /// @param stale  emit `stale=true` in the Digest challenge (expired-nonce transparent retry).
-void send_unauth(uint8_t slot_id, const Route *r, bool stale);
+void send_unauth(uint8_t slot_id, const Route *r, proto_bool stale);
 // The Digest keying secret is NOT here. It lives in server/auth.cpp's AuthCtx, which is the only
 // file that reads it: a definition in this header gives every translation unit that includes it a
 // separate copy of the secret (and a multiple-definition link error), which is the opposite of one
@@ -699,7 +696,7 @@ void regen_digest_secret();
 void make_digest_nonce(char *out, size_t cap);
 /// @brief Verify a client nonce's MAC and freshness. @return true if the MAC is authentic (issued by
 ///        this server); sets @p *expired when the nonce is authentic but older than its lifetime.
-bool verify_digest_nonce(const char *nonce, bool *expired);
+proto_bool verify_digest_nonce(const char *nonce, proto_bool *expired);
 #endif
 
 #if PC_ENABLE_FILE_SERVING
@@ -707,7 +704,7 @@ bool verify_digest_nonce(const char *nonce, bool *expired);
 void serve_static_request(uint8_t slot_id, HttpReq *req, const Route *r);
 /// @brief Open @p fs_path on @p file_sys and stream it as 200 with the given type and optional
 ///        Content-Encoding. A null @p file_sys means whatever is mounted.
-void serve_file_internal(uint8_t slot_id, bool head, const pc_mnt_backend *file_sys, const char *fs_path,
+void serve_file_internal(uint8_t slot_id, proto_bool head, const pc_mnt_backend *file_sys, const char *fs_path,
                          const char *content_type, const char *content_encoding);
 /// @brief Resume a pending file response: page out one send-buffer window, finishing when drained.
 void file_send_pump(uint8_t slot_id);
@@ -715,14 +712,14 @@ void file_send_pump(uint8_t slot_id);
 
 #if PC_ENABLE_WEBDAV
 /// @brief If @p req matches a ROUTE_DAV mount, handle it as WebDAV and return true.
-bool try_serve_dav(uint8_t slot_id, HttpReq *req);
+proto_bool try_serve_dav(uint8_t slot_id, HttpReq *req);
 /// @brief Dispatch a WebDAV request against the mount @p r (resolves the FS path, then the method).
 void serve_dav_request(uint8_t slot_id, HttpReq *req, const Route *r);
 /// @brief Send a bodyless WebDAV status with optional extra header lines (each ending in CRLF).
 void dav_send_status(uint8_t slot_id, int code, const char *extra_headers);
 #if PC_ENABLE_STREAM_BODY
 /// @brief Stream-begin hook: if @p req is a PUT under a DAV mount, open the file and stream the body.
-bool dav_stream_put_begin(HttpReq *req);
+proto_bool dav_stream_put_begin(HttpReq *req);
 /// @brief Stream-data hook: write one body chunk to @p req's slot's DAV PUT file.
 void dav_stream_put_data(HttpReq *req, const uint8_t *data, size_t len);
 /// @brief Stream-abort hook: close the half-written PUT file if the transfer is torn down early.
@@ -744,18 +741,18 @@ void match_and_execute(uint8_t slot_id);
 /// @brief Route-selection predicate: true if route @p r is active, its path pattern matches
 ///        @p req, and its interface filter admits this slot's connection. Matching a param route
 ///        captures its path parameters into @p req as a side effect (as the inline match did).
-bool route_admits(const Route *r, uint8_t slot_id, HttpReq *req);
+proto_bool route_admits(const Route *r, uint8_t slot_id, HttpReq *req);
 
 /// @brief Dispatch a route whose path + interface already matched (WS/SSE/STATIC/HTTP + auth).
 /// @return true when a response was sent (the caller stops); false to keep scanning later routes,
 ///         with @p path_matched / @p allow_buf updated for a possible 405.
-bool dispatch_matched_route(uint8_t slot_id, HttpReq *req, HttpMethod method, Route *r, bool *path_matched,
-                            char *allow_buf, size_t allow_cap);
+proto_bool dispatch_matched_route(uint8_t slot_id, HttpReq *req, HttpMethod method, Route *r, proto_bool *path_matched,
+                                  char *allow_buf, size_t allow_cap);
 
 #if PC_ENABLE_CSRF
 /// @brief Built-in CSRF gate: serve the `GET /csrf` token endpoint and enforce a valid
 ///        `X-CSRF-Token` on every state-changing method. @return true if a response was sent.
-bool pc_csrf_gate(uint8_t slot_id, HttpReq *req, HttpMethod method);
+proto_bool pc_csrf_gate(uint8_t slot_id, HttpReq *req, HttpMethod method);
 #endif
 
 #if PC_ENABLE_WEBSOCKET
@@ -766,7 +763,7 @@ void handle_ws_route(uint8_t slot_id, HttpReq *req, HttpMethod method, const Rou
 #if PC_ENABLE_AUTH
 /// @brief Enforce route @p r's auth (lockout gate + Digest/Basic credential check, with lockout
 ///        accounting). @return true if authorized; on failure the 401/429 is already sent.
-bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const Route *r);
+proto_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const Route *r);
 #endif
 
 #if PC_ENABLE_WEBSOCKET
@@ -844,7 +841,7 @@ int32_t begin_http(uint16_t port, const WebServerConfig *cfg);
  *
  * @return true on success; false if the cert/key/pool setup failed.
  */
-bool tls_cert(const uint8_t *cert, size_t cert_len, const uint8_t *key, size_t key_len);
+proto_bool tls_cert(const uint8_t *cert, size_t cert_len, const uint8_t *key, size_t key_len);
 
 /**
  * @brief Register a TLS (HTTPS) HTTP listener on @p port (typically 443).
@@ -885,7 +882,7 @@ int32_t begin_tls(uint16_t port, const uint8_t *cert, size_t cert_len, const uin
  * @return true on success; false if the engine is not ready or the CA failed
  *         to parse.
  */
-bool tls_require_client_cert(const uint8_t *ca, size_t ca_len);
+proto_bool tls_require_client_cert(const uint8_t *ca, size_t ca_len);
 
 /**
  * @brief Copy the connecting client's verified certificate subject DN.
@@ -912,7 +909,7 @@ int tls_client_subject(uint8_t slot_id, char *out, size_t out_len);
  *
  * Profile: TLS_AES_128_GCM_SHA256 + X25519 + Ed25519 (a client offering none of these is refused).
  */
-bool pc_h3_cert(const uint8_t *cert_der, size_t cert_len, const uint8_t ed25519_seed[32], uint16_t port);
+proto_bool pc_h3_cert(const uint8_t *cert_der, size_t cert_len, const uint8_t ed25519_seed[32], uint16_t port);
 
 /**
  * @brief Internal: run a completed HTTP/3 request through the shared route dispatcher on the
@@ -1033,7 +1030,7 @@ void set_ap_ip(uint32_t ap_ip);
  * @param digest   When true, use Digest authentication instead of Basic.
  */
 void on_http_auth(const char *path, HttpMethod method, Handler callback, const char *realm, const char *user,
-                  const char *pass, bool digest);
+                  const char *pass, proto_bool digest);
 #endif // PC_ENABLE_AUTH
 
 #if PC_ENABLE_FILE_SERVING
@@ -1228,7 +1225,7 @@ void set_cache_control(const char *value);
  *
  * @return true if the directive was built and applied.
  */
-bool set_cache_control_swr(uint32_t max_age_s, uint32_t swr_s);
+proto_bool set_cache_control_swr(uint32_t max_age_s, uint32_t swr_s);
 #endif
 
 /**
@@ -1244,11 +1241,11 @@ bool set_cache_control_swr(uint32_t max_age_s, uint32_t swr_s);
  * 1. Calls `DeterministicAsyncTCP::check_timeouts()` to kill stale
  *    connections.
  * 2. Drains the event queue (connections, data, disconnects, errors).
- * 3. Scans all connection slots for `ParseState::PARSE_COMPLETE` requests and
+ * 3. Scans all connection slots for `PARSE_COMPLETE` requests and
  *    dispatches them to the matching route handler.
- * 4. Auto-sends 400 for any slot stuck in `ParseState::PARSE_ERROR`.
- * 5. Auto-sends 413 for any slot stuck in `ParseState::PARSE_ENTITY_TOO_LARGE`.
- * 6. Auto-sends 414 for any slot stuck in `ParseState::PARSE_URI_TOO_LONG`.
+ * 4. Auto-sends 400 for any slot stuck in `PARSE_ERROR`.
+ * 5. Auto-sends 413 for any slot stuck in `PARSE_ENTITY_TOO_LARGE`.
+ * 6. Auto-sends 414 for any slot stuck in `PARSE_URI_TOO_LONG`.
  *
  * Threading note: with the worker task running, route/WS/SSE handlers execute
  * in the worker task. Do server I/O from handlers; pushing from `loop()` (e.g.
@@ -1292,7 +1289,7 @@ void http_poll_slot(uint8_t slot_id);
  *
  * @return false if the slot is invalid or the worker's defer queue is full.
  */
-bool defer(uint8_t slot, pc_deferred_fn fn, void *arg);
+proto_bool defer(uint8_t slot, pc_deferred_fn fn, void *arg);
 
 /**
  * @brief Send an HTTP response with a body and close the connection.
@@ -1493,7 +1490,7 @@ void ws_send_binary(uint8_t ws_id, const uint8_t *data, uint16_t len);
 /**
  * @brief Initiate a graceful WebSocket close.
  *
- * Sends a Close frame with WsCloseCode::WS_CLOSE_NORMAL and marks the slot WsParseState::WS_CLOSED.
+ * Sends a Close frame with WS_CLOSE_NORMAL and marks the slot WS_CLOSED.
  * The on_close handler fires on the next handle() call.
  *
  * @param ws_id  Index into ws_pool[].
@@ -1575,17 +1572,17 @@ void fill_route_base(Route *r, const char *path);
 void http_rfc1123(int64_t epoch, char *out, size_t cap);
 
 /** @brief True if the request in slot @p slot_id used the HEAD method (send headers, no body). */
-bool req_is_head(uint8_t slot_id);
+proto_bool req_is_head(uint8_t slot_id);
 
 /** @brief Whole-path regex match (anchored both ends; bounded by RE_MAX_STEPS, fails closed). */
-bool regex_match(const char *pattern, const char *path);
+proto_bool regex_match(const char *pattern, const char *path);
 
 // An outbound transfer owns its slot: the poll skips the rest of the pipeline until the body is
 // out. Each kind is owned by the file that runs it, so neither continuation struct is declared
 // anywhere - the poll asks each owner whether it holds the slot rather than reading its state.
 
 /** @brief True while a chunked response is paging out on @p slot (owner: server/response.cpp). */
-bool pc_resp_holds_slot(uint8_t slot);
+proto_bool pc_resp_holds_slot(uint8_t slot);
 
 /** @brief Drop this file's per-run configuration and any in-flight chunked send. See
  *         pc_server_reset(), which is what callers use. */
@@ -1608,7 +1605,7 @@ void pc_server_reset(void);
 // The header blocks every response carries, owned by server/response.cpp.
 
 /** @brief True after a non-empty set_cors(). */
-bool pc_resp_cors_enabled(void);
+proto_bool pc_resp_cors_enabled(void);
 /** @brief The pre-built CORS header block, or "" when CORS is off. */
 const char *pc_resp_cors_header(void);
 /** @brief The pre-built Cache-Control line, or "" when unset. */
@@ -1618,12 +1615,12 @@ char *pc_resp_extra_hdr(uint8_t slot);
 
 #if PC_ENABLE_FILE_SERVING
 /** @brief True while a file response is paging out on @p slot (owner: server/file_serving.cpp). */
-bool pc_file_holds_slot(uint8_t slot);
+proto_bool pc_file_holds_slot(uint8_t slot);
 #endif
 
 #if PC_ENABLE_WEBSOCKET
 /** @brief Perform the RFC 6455 101 handshake and hand the slot to the WS frame parser. */
-bool ws_do_upgrade(uint8_t slot_id, HttpReq *req, WsConnectHandler on_connect);
+proto_bool ws_do_upgrade(uint8_t slot_id, HttpReq *req, WsConnectHandler on_connect);
 
 /** @brief Reject an unsupported Sec-WebSocket-Version with a 426 (RFC 6455 4.2.1) and close. */
 void ws_send_version_required(uint8_t slot_id);
@@ -1631,6 +1628,6 @@ void ws_send_version_required(uint8_t slot_id);
 
 #if PC_ENABLE_SSE
 /** @brief Send the SSE 200 headers and promote the slot to server-sent-events mode. */
-bool pc_sse_do_upgrade(uint8_t slot_id, HttpReq *req, SseConnectHandler on_connect);
+proto_bool pc_sse_do_upgrade(uint8_t slot_id, HttpReq *req, SseConnectHandler on_connect);
 #endif
 #endif

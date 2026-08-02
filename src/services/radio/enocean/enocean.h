@@ -29,14 +29,11 @@
 
 #if PC_ENABLE_ENOCEAN
 
-#include <stddef.h>
-#include <stdint.h>
-
 /** @brief ESP3 sync byte that starts every telegram. */
 #define ESP3_SYNC 0x55
 
 /** @brief ESP3 packet types (the common ones). */
-enum class pc_esp3_type : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     ESP3_RADIO_ERP1 = 0x01,
     ESP3_RESPONSE = 0x02,
@@ -46,17 +43,17 @@ enum class pc_esp3_type : uint8_t
     ESP3_SMART_ACK = 0x06,
     ESP3_REMOTE_MAN = 0x07,
     ESP3_RADIO_ERP2 = 0x0A,
-};
+} pc_esp3_type;
 
 /** @brief A parsed ESP3 telegram (pointers alias the caller's buffer). */
-struct pc_esp3_packet
+typedef struct
 {
     const uint8_t *data; ///< data field
     const uint8_t *opt;  ///< optional-data field
     uint16_t data_len;   ///< data length
     uint8_t opt_len;     ///< optional-data length
     pc_esp3_type type;   ///< packet type (pc_esp3_type)
-};
+} pc_esp3_packet;
 
 /** @brief CRC-8 used by ESP3 (polynomial 0x07, MSB-first, init 0x00). */
 uint8_t pc_esp3_crc8(const uint8_t *buf, uint16_t len);
@@ -94,20 +91,20 @@ uint16_t pc_esp3_build(pc_esp3_type type, const uint8_t *data, uint16_t data_len
 #define PC_ERP_RORG_UTE 0xD4 ///< Universal Teach-in
 
 /** @brief A decoded ERP1 radio telegram (the payload aliases the caller's buffer). */
-struct pc_erp1
+typedef struct
 {
     uint8_t rorg;           ///< telegram type (PC_ERP_RORG_*)
     const uint8_t *payload; ///< RORG-specific data, or nullptr if none
     uint8_t payload_len;    ///< payload octets (data length - 6)
     uint32_t sender_id;     ///< 4-octet sender id (big-endian)
     uint8_t status;         ///< status octet (repeater count + telegram-type bits)
-};
+} pc_erp1;
 
 /**
  * @brief Decode an ERP1 radio telegram: RORG + payload + 4-octet sender id + status octet.
  * @return true iff @p len is at least 6 octets (RORG + sender id + status); false otherwise.
  */
-bool pc_erp1_parse(const uint8_t *data, uint16_t len, pc_erp1 *out);
+proto_bool pc_erp1_parse(const uint8_t *data, uint16_t len, pc_erp1 *out);
 
 /**
  * @brief Assemble an ERP1 radio telegram (the inverse of pc_erp1_parse): @p rorg + @p payload + the 4-octet

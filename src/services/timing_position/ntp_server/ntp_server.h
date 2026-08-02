@@ -24,8 +24,7 @@
 #ifndef PROTOCORE_NTP_SERVER_H
 #define PROTOCORE_NTP_SERVER_H
 
-#include <stddef.h>
-#include <stdint.h>
+#include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
 
 /** @brief One NTP packet on the wire is exactly 48 octets (no extension/auth fields). */
 #define NTP_PACKET_LEN 48u
@@ -70,6 +69,6 @@ size_t pc_ntp_server_build_response(const uint8_t *req, size_t req_len, uint8_t 
  * @param refid   the reference identifier to advertise (NTP_REFID_LOCL, NTP_REFID_GPS, ...).
  * @return true if the UDP listener bound; false on a host build or if the port is taken.
  */
-bool pc_ntp_server_begin(uint8_t stratum, uint32_t refid = NTP_REFID_LOCL);
+proto_bool pc_ntp_server_begin(uint8_t stratum, uint32_t refid = NTP_REFID_LOCL);
 
 #endif // PROTOCORE_NTP_SERVER_H

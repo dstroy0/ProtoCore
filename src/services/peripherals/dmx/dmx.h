@@ -27,9 +27,6 @@
 
 #if PC_ENABLE_DMX
 
-#include <stddef.h>
-#include <stdint.h>
-
 #define DMX_MAX_CHANNELS 512u ///< slots per DMX512 universe
 #define DMX_SC_DIMMER 0x00u   ///< start code for standard dimmer data
 
@@ -77,7 +74,7 @@ uint8_t pc_dmx_get_channel(const uint8_t *buf, size_t len, uint16_t ch);
 // --- RDM (ANSI E1.20) ---
 
 /** @brief A parsed / to-be-built RDM packet. UIDs are 48-bit (manufacturer<<32 | device). */
-struct RdmPacket
+typedef struct
 {
     uint64_t dest_uid;
     uint64_t src_uid;
@@ -89,7 +86,7 @@ struct RdmPacket
     uint16_t pid;         ///< parameter id
     uint8_t pdl;          ///< parameter data length
     const uint8_t *pdata; ///< parameter data (points into the parsed buffer); nullptr when pdl 0
-};
+} RdmPacket;
 
 /** @brief Compose a 48-bit RDM UID from a manufacturer id and a device id. */
 uint64_t pc_rdm_uid(uint16_t manufacturer, uint32_t device);
@@ -107,7 +104,7 @@ size_t pc_rdm_build(uint8_t *buf, size_t cap, const RdmPacket *p, const uint8_t 
  * @brief Parse an RDM packet: validates the start codes, the message length vs PDL, and the
  * checksum. Fills @p out and @p consumed (the whole packet length).
  */
-bool pc_rdm_parse(const uint8_t *buf, size_t len, RdmPacket *out, size_t *consumed);
+proto_bool pc_rdm_parse(const uint8_t *buf, size_t len, RdmPacket *out, size_t *consumed);
 
 /**
  * @brief Decode a DISC_UNIQUE_BRANCH discovery response into the responder's 48-bit UID. This reply is not a
@@ -117,7 +114,7 @@ bool pc_rdm_parse(const uint8_t *buf, size_t len, RdmPacket *out, size_t *consum
  *        additive sum of the 12 encoded UID octets) is verified.
  * @return true iff the separator is present, the 16 encoded octets fit, and the checksum matches.
  */
-bool pc_rdm_decode_disc_response(const uint8_t *buf, size_t len, uint64_t *uid);
+proto_bool pc_rdm_decode_disc_response(const uint8_t *buf, size_t len, uint64_t *uid);
 
 /**
  * @brief Build the DISC_UNIQUE_BRANCH discovery response a responder sends for its 48-bit @p uid (the
@@ -132,7 +129,7 @@ size_t pc_rdm_build_disc_response(uint8_t *buf, size_t cap, uint64_t uid, uint8_
 
 /** @brief Decoded DEVICE_INFO (PID 0x0060) parameter data - the descriptor every RDM responder must
  *  answer, carrying the fields a controller needs to patch and identify the device. */
-struct RdmDeviceInfo
+typedef struct
 {
     uint8_t proto_major;          ///< RDM protocol version major (1 for E1.20)
     uint8_t proto_minor;          ///< RDM protocol version minor
@@ -145,7 +142,7 @@ struct RdmDeviceInfo
     uint16_t dmx_start_address;   ///< DMX512 start address (1-512; 0xFFFF if the device uses no DMX)
     uint16_t sub_device_count;    ///< number of sub-devices (0 = none)
     uint8_t sensor_count;         ///< number of sensors
-};
+} RdmDeviceInfo;
 
 /**
  * @brief Pack a DEVICE_INFO (PID 0x0060) GET-response parameter block from @p info into @p pdata: the
@@ -161,7 +158,7 @@ size_t pc_rdm_build_device_info(uint8_t *pdata, size_t cap, const RdmDeviceInfo 
  *        pc_rdm_build_device_info).
  * @return true iff @p pdl is at least 19 octets; false on a null argument or a short block.
  */
-bool pc_rdm_parse_device_info(const uint8_t *pdata, uint8_t pdl, RdmDeviceInfo *out);
+proto_bool pc_rdm_parse_device_info(const uint8_t *pdata, uint8_t pdl, RdmDeviceInfo *out);
 
 #endif // PC_ENABLE_DMX
 #endif // PROTOCORE_DMX_H

@@ -28,48 +28,45 @@
 
 #if PC_ENABLE_CC1101
 
-#include <stddef.h>
-#include <stdint.h>
-
 /** @brief Full-duplex SPI transfer of @p len bytes (chip-select toggled by the callback). */
 typedef void (*pc_cc1101_spi_fn)(const uint8_t *tx, uint8_t *rx, uint8_t len, void *ctx);
 
 /** @brief The bus a driver call uses: your SPI transfer behind it. */
-struct pc_cc1101_bus
+typedef struct
 {
     pc_cc1101_spi_fn spi;
     void *ctx;
-};
+} pc_cc1101_bus;
 
 /** @brief One modem-config register write (address + value). */
-struct pc_cc1101_reg
+typedef struct
 {
     uint8_t addr;
     uint8_t value;
-};
+} pc_cc1101_reg;
 
 /** @brief Radio configuration applied by pc_cc1101_init(). */
-struct pc_cc1101_config
+typedef struct
 {
     const pc_cc1101_reg *regs; ///< SmartRF-exported register settings (may be null for none).
     size_t nregs;
     uint8_t channel; ///< CHANNR (0x0A): channel number on top of the base frequency.
-};
+} pc_cc1101_config;
 
 /**
  * @brief Reset the CC1101, apply @p cfg, set the channel, and confirm it is present.
  * @return true; false if the VERSION status register reads 0x00 / 0xFF (the bus is not talking).
  */
-bool pc_cc1101_init(const pc_cc1101_bus *bus, const pc_cc1101_config *cfg);
+proto_bool pc_cc1101_init(const pc_cc1101_bus *bus, const pc_cc1101_config *cfg);
 
 /**
  * @brief Transmit @p len bytes as a variable-length packet (leading length byte), then strobe TX.
  * @return true; false if @p len is 0 or exceeds 63 (one FIFO fill).
  */
-bool pc_cc1101_send(const pc_cc1101_bus *bus, const uint8_t *data, uint8_t len);
+proto_bool pc_cc1101_send(const pc_cc1101_bus *bus, const uint8_t *data, uint8_t len);
 
 /** @brief True once the state machine has returned to IDLE after a transmit. */
-bool pc_cc1101_tx_done(const pc_cc1101_bus *bus);
+proto_bool pc_cc1101_tx_done(const pc_cc1101_bus *bus);
 
 /** @brief Flush RX and enter receive mode (strobe RX). Then poll pc_cc1101_recv(). */
 void pc_cc1101_set_rx(const pc_cc1101_bus *bus);

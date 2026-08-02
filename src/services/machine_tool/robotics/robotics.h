@@ -51,7 +51,6 @@
 #if PC_ENABLE_ROBOTICS
 
 #include "services/fieldbus/opcua/opcua.h" // OpcUaVariant / OpcUaReference / handler typedefs (shares the OPC UA codec)
-#include <stdint.h>
 
 /** @brief The OPC UA for Robotics companion-spec namespace URI (OPC 40010-1). */
 #define ROBOTICS_NS_URI "http://opcfoundation.org/UA/Robotics/"
@@ -60,7 +59,7 @@
  * @brief MotionDeviceCategory (OPC 40010-1 MotionDeviceCategoryEnumeration). Exposed as Int32; the
  *        numeric values follow the companion-spec enumeration.
  */
-enum class RoboticsMotionDeviceCategory : int32_t
+typedef enum PROTO_ENUM_PACKED
 {
     ROBOTICS_CAT_OTHER = 0,             ///< a category outside the ones below.
     ROBOTICS_CAT_ARTICULATED_ROBOT = 1, ///< articulated (jointed-arm) robot.
@@ -69,45 +68,45 @@ enum class RoboticsMotionDeviceCategory : int32_t
     ROBOTICS_CAT_SPHERICAL_ROBOT = 4,   ///< spherical / polar robot.
     ROBOTICS_CAT_PARALLEL_ROBOT = 5,    ///< parallel (delta) robot.
     ROBOTICS_CAT_CYLINDRICAL_ROBOT = 6, ///< cylindrical robot.
-};
+} RoboticsMotionDeviceCategory;
 
 /**
  * @brief Axis MotionProfile (OPC 40010-1 AxisMotionProfileEnumeration). Exposed as Int32; the numeric
  *        values follow the companion-spec enumeration.
  */
-enum class RoboticsMotionProfile : int32_t
+typedef enum PROTO_ENUM_PACKED
 {
     ROBOTICS_PROFILE_OTHER = 0,          ///< a profile outside the ones below.
     ROBOTICS_PROFILE_ROTARY = 1,         ///< rotary axis (bounded travel).
     ROBOTICS_PROFILE_ROTARY_ENDLESS = 2, ///< rotary axis with endless rotation.
     ROBOTICS_PROFILE_LINEAR = 3,         ///< linear axis (bounded travel).
     ROBOTICS_PROFILE_LINEAR_ENDLESS = 4, ///< linear axis with endless travel.
-};
+} RoboticsMotionProfile;
 
 /**
  * @brief SafetyState OperationalMode (OPC 40010-1 OperationalModeEnumeration). Exposed as Int32; the
  *        numeric values follow the companion-spec enumeration.
  */
-enum class RoboticsOperationalMode : int32_t
+typedef enum PROTO_ENUM_PACKED
 {
     ROBOTICS_MODE_OTHER = 0,                ///< a mode outside the ones below.
     ROBOTICS_MODE_MANUAL_REDUCED_SPEED = 1, ///< manual jog, reduced speed (T1).
     ROBOTICS_MODE_MANUAL_HIGH_SPEED = 2,    ///< manual, high speed (T2).
     ROBOTICS_MODE_AUTOMATIC = 3,            ///< automatic program execution.
     ROBOTICS_MODE_AUTOMATIC_EXTERNAL = 4,   ///< automatic, externally commanded.
-};
+} RoboticsOperationalMode;
 
 /** @brief One axis' live monitoring values (OPC 40010-1 AxisType, common subset). */
-struct RoboticsAxis
+typedef struct
 {
     double actual_position;               ///< ActualPosition (mm or deg).
     double actual_speed;                  ///< ActualSpeed.
     double actual_acceleration;           ///< ActualAcceleration.
     RoboticsMotionProfile motion_profile; ///< MotionProfile.
-};
+} RoboticsAxis;
 
 /** @brief The Controller identity + software (OPC 40010-1 ControllerType + SoftwareType). */
-struct RoboticsController
+typedef struct
 {
     const char *manufacturer;    ///< Manufacturer (LocalizedText -> String).
     const char *model;           ///< Model (LocalizedText -> String).
@@ -116,43 +115,43 @@ struct RoboticsController
     const char *sw_manufacturer; ///< Software.Manufacturer (String).
     const char *sw_model;        ///< Software.Model (String).
     const char *sw_revision;     ///< Software.SoftwareRevision (String).
-};
+} RoboticsController;
 
 /** @brief The SafetyState (OPC 40010-1 SafetyStateType, common subset). */
-struct RoboticsSafetyState
+typedef struct
 {
     RoboticsOperationalMode operational_mode; ///< ParameterSet.OperationalMode.
-    bool emergency_stop;                      ///< ParameterSet.EmergencyStop.
-    bool protective_stop;                     ///< ParameterSet.ProtectiveStop.
-};
+    proto_bool emergency_stop;                ///< ParameterSet.EmergencyStop.
+    proto_bool protective_stop;               ///< ParameterSet.ProtectiveStop.
+} RoboticsSafetyState;
 
 /** @brief One MotionDevice: identity + live motion state (OPC 40010-1 MotionDeviceType, common subset). */
-struct RoboticsMotionDevice
+typedef struct
 {
     const char *manufacturer;              ///< Manufacturer (LocalizedText -> String).
     const char *model;                     ///< Model (LocalizedText -> String).
     const char *product_code;              ///< ProductCode (String).
     const char *serial_number;             ///< SerialNumber (String).
     RoboticsMotionDeviceCategory category; ///< MotionDeviceCategory.
-    bool on_path;                          ///< ParameterSet.OnPath.
-    bool in_control;                       ///< ParameterSet.InControl.
+    proto_bool on_path;                    ///< ParameterSet.OnPath.
+    proto_bool in_control;                 ///< ParameterSet.InControl.
     double speed_override;                 ///< ParameterSet.SpeedOverride (%).
     uint32_t axis_count;                   ///< number of Axes exposed (<= PC_ROBOTICS_AXES).
     RoboticsAxis axes[PC_ROBOTICS_AXES];   ///< the axes (axes[0..axis_count-1] are live).
-};
+} RoboticsMotionDevice;
 
 /**
  * @brief The whole MotionDeviceSystem the server exposes. Own it in your sketch and refresh its fields
  *        each loop from your robot I/O; the robotics resolvers read straight out of it (no copy). String
  *        fields may be null (served as an empty String).
  */
-struct RoboticsMotionDeviceSystem
+typedef struct
 {
     const char *name;              ///< MotionDeviceSystem BrowseName / DisplayName.
     RoboticsMotionDevice device;   ///< the MotionDevice.
     RoboticsController controller; ///< the Controller.
     RoboticsSafetyState safety;    ///< the SafetyState.
-};
+} RoboticsMotionDeviceSystem;
 
 /**
  * @brief Bind the MotionDeviceSystem the resolvers serve. @p mds must outlive the server (own it
@@ -165,7 +164,7 @@ void pc_robotics_bind(const RoboticsMotionDeviceSystem *mds);
  *        robotics node's Value attribute. Returns false for a node outside the model (the server answers
  *        BadNodeIdUnknown). Install with `pc_opcua_set_read_handler(pc_robotics_read)`.
  */
-bool pc_robotics_read(uint16_t ns, uint32_t id, uint32_t attribute, OpcUaVariant *out);
+proto_bool pc_robotics_read(uint16_t ns, uint32_t id, uint32_t attribute, OpcUaVariant *out);
 
 /**
  * @brief Browse resolver for the MotionDeviceSystem model (an @ref OpcUaBrowseHandler): writes the child

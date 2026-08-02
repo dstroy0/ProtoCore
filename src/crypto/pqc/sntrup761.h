@@ -26,9 +26,6 @@
 
 #if PC_ENABLE_SSH_SNTRUP761
 
-#include <stddef.h>
-#include <stdint.h>
-
 #define PC_SNTRUP761_PK_BYTES 1158 ///< public key (Rq-encoded h)
 #define PC_SNTRUP761_SK_BYTES 1763 ///< secret key (f, 1/g, pk, rho, cache)
 #define PC_SNTRUP761_CT_BYTES 1039 ///< ciphertext (Rounded-encoded c || 32-byte Confirm)

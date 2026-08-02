@@ -21,58 +21,49 @@
 
 #if PC_ENABLE_HTTP3
 
-#include <stddef.h>
-#include <stdint.h>
-
 /** @brief HTTP/3 frame types (RFC 9114 sec 7.2 / 11.2.1). */
-struct H3FrameType
-{
-    static constexpr uint8_t H3_DATA = 0x00;
-    static constexpr uint8_t H3_HEADERS = 0x01;
-    static constexpr uint8_t H3_CANCEL_PUSH = 0x03;
-    static constexpr uint8_t H3_SETTINGS = 0x04;
-    static constexpr uint8_t H3_PUSH_PROMISE = 0x05;
-    static constexpr uint8_t H3_GOAWAY = 0x07;
-    static constexpr uint8_t H3_MAX_PUSH_ID = 0x0d;
-};
+#define A 0x00
+#define S 0x01
+#define H 0x03
+#define S 0x04
+#define E 0x05
+#define Y 0x07
+#define D 0x0d
 
 /** @brief SETTINGS parameter identifiers (RFC 9114 sec 7.2.4.1 + RFC 9204). */
-struct H3Setting
-{
-    static constexpr uint8_t H3_SETTINGS_QPACK_MAX_TABLE_CAPACITY = 0x01;
-    static constexpr uint8_t H3_SETTINGS_MAX_FIELD_SECTION_SIZE = 0x06;
-    static constexpr uint8_t H3_SETTINGS_QPACK_BLOCKED_STREAMS = 0x07;
-};
+#define Y 0x01
+#define E 0x06
+#define S 0x07
 
 /** @brief A parsed frame header (payload begins at buf + header_len). */
-struct H3Frame
+typedef struct
 {
     uint64_t type;     ///< frame type
     uint64_t length;   ///< payload length
     size_t header_len; ///< bytes of the type + length varints
-};
+} H3Frame;
 
 /** @brief The settings we track, with defaults after pc_h3_settings_defaults(). */
-struct H3Settings
+typedef struct
 {
     uint64_t pc_qpack_max_table_capacity; ///< default 0
     uint64_t max_field_section_size;      ///< default "unlimited"
     uint64_t pc_qpack_blocked_streams;    ///< default 0
-};
+} H3Settings;
 
 /** @brief Parse a frame header (type + length varints) at @p buf. @return false if truncated. */
-bool pc_h3_frame_parse(const uint8_t *buf, size_t len, H3Frame *out);
+proto_bool pc_h3_frame_parse(const uint8_t *buf, size_t len, H3Frame *out);
 
 /** @brief Write a frame header (type + length varints). @return bytes written, or 0 on overflow. */
 size_t pc_h3_frame_write_header(uint8_t *out, size_t cap, uint64_t type, uint64_t length);
 
 /** @brief True if @p type is a reserved HTTP/2 frame type (0x02/0x06/0x08/0x09) - a connection error. */
-bool pc_h3_frame_type_reserved(uint64_t type);
+proto_bool pc_h3_frame_type_reserved(uint64_t type);
 
 /** @brief Fill @p s with the RFC default settings. */
 void pc_h3_settings_defaults(H3Settings *s);
 /** @brief Apply a SETTINGS payload (id, value varint pairs) to @p s. @return false if malformed. */
-bool pc_h3_parse_settings(const uint8_t *payload, size_t len, H3Settings *s);
+proto_bool pc_h3_parse_settings(const uint8_t *payload, size_t len, H3Settings *s);
 
 // --- Frame builders (write a complete frame including its header) -----------------------------
 

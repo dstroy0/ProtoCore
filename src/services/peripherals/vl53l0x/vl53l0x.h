@@ -21,7 +21,7 @@
 #ifndef PROTOCORE_VL53L0X_H
 #define PROTOCORE_VL53L0X_H
 
-#include <stdint.h>
+#include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
 
 #define VL53L0X_REG_SYSRANGE_START 0x00
 #define VL53L0X_REG_SYSTEM_INTERRUPT_CLEAR 0x0B
@@ -36,23 +36,23 @@
 uint16_t pc_vl53l0x_range_mm(uint8_t hi, uint8_t lo);
 
 /** @brief True if a new measurement is ready (any of the low 3 interrupt-status bits set). */
-bool pc_vl53l0x_data_ready(uint8_t interrupt_status);
+proto_bool pc_vl53l0x_data_ready(uint8_t interrupt_status);
 
 /** @brief The DeviceRangeStatus field (bits 6:3) of the RESULT_RANGE_STATUS register. */
 uint8_t pc_vl53l0x_range_status(uint8_t range_status_reg);
 
 /** @brief True if the range-status field reports a valid measurement (== VL53L0X_RANGE_VALID). */
-bool pc_vl53l0x_range_valid(uint8_t range_status_reg);
+proto_bool pc_vl53l0x_range_valid(uint8_t range_status_reg);
 
 // --- ESP32 binding (I2C via Wire; no-ops on a host build) ------------------------------------
 
 /** @brief Verify the model id and start continuous back-to-back ranging at @p addr. @return present + ack. */
-bool pc_vl53l0x_begin(uint8_t addr);
+proto_bool pc_vl53l0x_begin(uint8_t addr);
 
 /**
  * @brief If a measurement is ready, read the distance into @p mm and clear the interrupt.
  * @return true on a fresh, valid reading; false if not ready / invalid / I2C error.
  */
-bool pc_vl53l0x_read_mm(uint16_t *mm);
+proto_bool pc_vl53l0x_read_mm(uint16_t *mm);
 
 #endif // PROTOCORE_VL53L0X_H

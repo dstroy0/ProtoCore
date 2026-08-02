@@ -5,19 +5,10 @@
  * @file frame.h
  * @brief Declarative frame builder: a frame is a static table of typed fields, built by one engine.
  *
- * The problem this solves. Replacing printf-style formatting with hand-written pc_sb append
- * sequences trades one call for a dozen, and every one of those dozens is new code with its own
- * chance of a wrong order, a missing separator, or a forgotten overflow test. Across the ~160
- * formatting sites in this library that is well over a thousand new lines, none of which any test
- * covers individually. A frame SPEC moves that structure into data: the shape of the frame is a
- * `static const pc_field[]` in rodata, the engine that walks it is one function, and the engine is
- * what gets tested. Adding a frame after that adds a table, not logic.
- *
- * Why not a format string. A format string encodes the same table, but re-parses it from text on
- * every call - scanning characters, decoding widths, dispatching per conversion - to rediscover
- * what was known when the code was written. The spec is pre-decoded: the engine reads an opcode
- * and a width from a struct and jumps. Nothing is parsed at runtime, and no float formatter is
- * linked in unless a frame actually declares a float field.
+ * A frame's shape is data, not code: a `static const pc_field[]` in rodata, walked by one engine.
+ * The spec is pre-decoded, so the engine reads an opcode and a width out of a struct and jumps -
+ * nothing is parsed at runtime, and no float formatter is linked unless a frame declares a float
+ * field. Adding a frame adds a table, not logic.
  *
  * **Contract.**
  *   - Returns the number of bytes written (excluding the NUL) on success.
@@ -31,9 +22,8 @@
  * **Arguments** are passed variadically in spec order, one per field that declares one (PC_FK_LIT
  * and PC_FK_END take none). They are read at their default-promoted types, so a `uint8_t` passed
  * to PC_FK_U32 arrives as `unsigned` and a `float` passed to PC_FK_G arrives as `double`, which is
- * what the engine expects. The compiler cannot check that arity, but a spec's field count and its
- * call sites are visible in the same translation unit, so it is checkable offline - that gate lands
- * with the rollout, and until it does a mismatched spec is caught only by its test.
+ * what the engine expects. The compiler cannot check that arity: a mismatched spec is caught by
+ * its test, not by the build.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -44,8 +34,6 @@
 
 #include "mmgr/membuild.h"
 #include <stdarg.h>
-#include <stddef.h>
-#include <stdint.h>
 
 /**
  * @brief Field kinds. The value is an opcode, so the enum is the name for a byte, not a type gate.
@@ -75,9 +63,8 @@ typedef enum
  * @brief One field of a frame. Frames are `static const pc_field[]`, so they live in rodata.
  *
  * @c len carries a literal's length, written out in the spec and verified by
- * ci_tooling/check/check_frame_specs.py. A spec is fixed when the code is written, so having the
- * engine re-scan each literal for its NUL at runtime is the same waste as re-parsing a format
- * string: measured at +54% on a response frame and +184% on a literal-only one.
+ * ci_tooling/check/check_frame_specs.py. The length is fixed when the spec is written, so the
+ * engine reads it rather than scanning each literal for its NUL on every call.
  */
 typedef struct
 {
@@ -87,22 +74,18 @@ typedef struct
     const char *lit; ///< PC_FK_LIT only
 } pc_field;
 
-// Spec constructors. These read as the frame they describe:
-//   static const pc_field RESP[] = {{PC_FK_LIT, 0, 9, "HTTP/1.1 "}, PC_U32, {PC_FK_LIT, 0, 1, " "}, PC_STR, PC_END};
-// Field order is {kind, width, len, lit}. A valued field that needs no width or literal takes an
-// object-like macro; a field carrying a width or a literal is written as a plain aggregate, because
-// a macro that took the width or the string as a parameter would be a function-like macro
-// (AUTOSAR A16-0-1). The literal's length is therefore spelled out rather than computed:
+// Spec constructors, one per valued field carrying neither a width nor a literal. Field order is
+// {kind, width, len, lit}; a field that does carry one is written as a plain aggregate, because a
+// macro taking it as a parameter would be function-like (AUTOSAR A16-0-1).
 //
 //   static const pc_field RESP[] = {
 //       {PC_FK_LIT, 0, 9, "HTTP/1.1 "},   // 9 == the literal's length
 //       PC_U32,
-//       {PC_FK_HEX, 8, 0, NULL},       // 8 == zero-pad width
+//       {PC_FK_HEX, 8, 0, NULL},          // 8 == zero-pad width
 //       PC_END,
 //   };
 //
-// Hand-counting is not trusted: ci_tooling/check/check_frame_specs.py fails the build when any
-// PC_FK_LIT field's len disagrees with its literal, and --fix rewrites it.
+// check_frame_specs.py fails the build when a len disagrees with its literal; --fix rewrites it.
 #define PC_STR {PC_FK_STR, 0, 0, NULL}
 #define PC_U32 {PC_FK_U32, 0, 0, NULL}
 #define PC_U64 {PC_FK_U64, 0, 0, NULL}

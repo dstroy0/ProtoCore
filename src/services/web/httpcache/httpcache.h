@@ -32,9 +32,6 @@
 
 #if PC_ENABLE_HTTP_CACHE
 
-#include <stddef.h>
-#include <stdint.h>
-
 /**
  * @brief A `Cache-Control` directive set (a superset of request + response directives).
  *
@@ -42,20 +39,20 @@
  * field-name lists on `no-cache` / `private` are not captured (presence only). @ref max_stale
  * uses -1 = absent and -2 = present with no value ("accept any staleness").
  */
-struct pc_cache_control
+typedef struct
 {
     // response cacheability
-    bool cc_public;        ///< `public`
-    bool cc_private;       ///< `private` (field-name list not captured)
-    bool no_store;         ///< `no-store`
-    bool no_cache;         ///< `no-cache` (field-name list not captured)
-    bool no_transform;     ///< `no-transform`
-    bool must_revalidate;  ///< `must-revalidate`
-    bool proxy_revalidate; ///< `proxy-revalidate`
-    bool must_understand;  ///< `must-understand`
-    bool cc_immutable;     ///< `immutable` (RFC 8246)
+    proto_bool cc_public;        ///< `public`
+    proto_bool cc_private;       ///< `private` (field-name list not captured)
+    proto_bool no_store;         ///< `no-store`
+    proto_bool no_cache;         ///< `no-cache` (field-name list not captured)
+    proto_bool no_transform;     ///< `no-transform`
+    proto_bool must_revalidate;  ///< `must-revalidate`
+    proto_bool proxy_revalidate; ///< `proxy-revalidate`
+    proto_bool must_understand;  ///< `must-understand`
+    proto_bool cc_immutable;     ///< `immutable` (RFC 8246)
     // request
-    bool only_if_cached; ///< `only-if-cached` (request)
+    proto_bool only_if_cached; ///< `only-if-cached` (request)
     // delta-seconds (-1 = absent)
     int32_t max_age;                ///< `max-age=N`
     int32_t s_maxage;               ///< `s-maxage=N`
@@ -63,7 +60,7 @@ struct pc_cache_control
     int32_t stale_if_error;         ///< `stale-if-error=N` (RFC 5861)
     int32_t max_stale;              ///< `max-stale[=N]` (request; -1 absent, -2 no value)
     int32_t min_fresh;              ///< `min-fresh=N` (request)
-};
+} pc_cache_control;
 
 /** @brief Reset to an empty set (all flags false, all delta-seconds -1). */
 void cache_control_init(pc_cache_control *cc);
@@ -86,7 +83,7 @@ size_t cache_control_build(char *buf, size_t cap, const pc_cache_control *cc);
  *
  * @return true if at least one known directive was parsed.
  */
-bool cache_control_parse(const char *s, size_t len, pc_cache_control *cc);
+proto_bool cache_control_parse(const char *s, size_t len, pc_cache_control *cc);
 
 // --- first-class origin presets (fill @p cc for a common edge-cacheable response) ---
 
@@ -113,7 +110,7 @@ void cache_shared(pc_cache_control *cc, uint32_t max_age, uint32_t s_maxage);
  * @param expires_minus_date `Expires` minus `Date` in seconds, or < 0 when that pair is absent.
  * @return the freshness lifetime in seconds, or -1 when none is explicit (caller applies a heuristic).
  */
-long cache_freshness_lifetime(const pc_cache_control *cc, bool shared, long expires_minus_date);
+long cache_freshness_lifetime(const pc_cache_control *cc, proto_bool shared, long expires_minus_date);
 
 #endif // PC_ENABLE_HTTP_CACHE
 

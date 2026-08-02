@@ -15,7 +15,7 @@ static char *mem_find(char *hay, size_t hlen, const char *needle, size_t nlen)
 {
     if (nlen == 0 || nlen > hlen) // GCOVR_EXCL_BR_LINE  nlen==0 never true: every caller in this file passes
     {
-        return nullptr; // a fixed literal (2) or a length derived from an already-checked nonzero blen
+        return NULL; // a fixed literal (2) or a length derived from an already-checked nonzero blen
     }
     for (size_t i = 0; i + nlen <= hlen; i++)
     {
@@ -24,7 +24,7 @@ static char *mem_find(char *hay, size_t hlen, const char *needle, size_t nlen)
             return hay + i;
         }
     }
-    return nullptr;
+    return NULL;
 }
 
 // Extract parameter value: search for `key="<value>"` inside `src`.
@@ -35,39 +35,39 @@ static char *extract_quoted_param(char *src, const char *key)
     char *p = strstr(src, key);
     if (!p)
     {
-        return nullptr;
+        return NULL;
     }
 #define PC_key_max 32 // param keys are short literals ("name=", "filename=")
     p += strnlen(key, PC_key_max);
     if (*p != '"')
     {
-        return nullptr;
+        return NULL;
     }
     p++; // skip opening quote
     char *end = strchr(p, '"');
     if (!end)
     {
-        return nullptr;
+        return NULL;
     }
     *end = '\0';
     return p;
 }
 
-bool pc_multipart_parse(HttpReq *req, Multipart *mp)
+proto_bool pc_multipart_parse(HttpReq *req, Multipart *mp)
 {
     mp->part_count = 0;
 
     const char *ct = http_get_header(req, "Content-Type");
     if (!ct)
     {
-        return false;
+        return PROTO_FALSE;
     }
 
     // Extract boundary value (may be quoted or unquoted)
     const char *bsearch = strstr(ct, "boundary=");
     if (!bsearch)
     {
-        return false;
+        return PROTO_FALSE;
     }
     bsearch += 9;
     if (*bsearch == '"')
@@ -89,7 +89,7 @@ bool pc_multipart_parse(HttpReq *req, Multipart *mp)
 
     if (blen == 0)
     {
-        return false;
+        return PROTO_FALSE;
     }
 
     // Delimiter is "--" + boundary
@@ -114,7 +114,7 @@ bool pc_multipart_parse(HttpReq *req, Multipart *mp)
     char *pos = mem_find(body, (size_t)(end - body), delim, dlen);
     if (!pos)
     {
-        return false;
+        return PROTO_FALSE;
     }
     pos += dlen;
     if (pos + 2 <= end && pos[0] == '\r' && pos[1] == '\n')
@@ -131,10 +131,10 @@ bool pc_multipart_parse(HttpReq *req, Multipart *mp)
         }
 
         MultipartPart *part = &mp->parts[mp->part_count];
-        part->name = nullptr;
-        part->filename = nullptr;
-        part->type = nullptr;
-        part->data = nullptr;
+        part->name = NULL;
+        part->filename = NULL;
+        part->type = NULL;
+        part->data = NULL;
         part->data_len = 0;
 
         // Parse the per-part headers (text) until the blank line.
@@ -149,7 +149,7 @@ bool pc_multipart_parse(HttpReq *req, Multipart *mp)
             char *line_end = mem_find(pos, (size_t)(end - pos), "\r\n", 2);
             if (!line_end)
             {
-                return false;
+                return PROTO_FALSE;
             }
 
             *line_end = '\0'; // null-terminate header line
@@ -184,7 +184,7 @@ bool pc_multipart_parse(HttpReq *req, Multipart *mp)
         char *next = mem_find(pos, (size_t)(end - pos), ddelim, ddlen);
         if (!next)
         {
-            return false;
+            return PROTO_FALSE;
         }
 
         part->data = pos;
@@ -212,5 +212,5 @@ const char *pc_multipart_get_field(const Multipart *mp, const char *field)
             return mp->parts[i].data;
         }
     }
-    return nullptr;
+    return NULL;
 }

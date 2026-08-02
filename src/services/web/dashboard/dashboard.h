@@ -25,13 +25,11 @@
 #define PROTOCORE_DASHBOARD_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_DASHBOARD
 
 /** @brief Widget rendering / interaction style. */
-enum class pc_widget_type : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     // Display widgets - updated from the SSE value stream.
     PC_WIDGET_VALUE = 0, ///< plain numeric readout
@@ -43,13 +41,13 @@ enum class pc_widget_type : uint8_t
     PC_WIDGET_BUTTON, ///< momentary button -> control value 1
     PC_WIDGET_TOGGLE, ///< on/off toggle -> control value 0/1 (reflects SSE state)
     PC_WIDGET_SLIDER  ///< range slider over [min, max] -> control value
-};
+} pc_widget_type;
 
 /** @brief Control callback: invoked when a control widget sends a value over WebSocket. */
 typedef void (*pc_control_cb)(const char *key, float value);
 
 /** @brief One dashboard widget, declared in a fixed compile-time table. */
-struct pc_widget
+typedef struct
 {
     pc_widget_type type; ///< rendering style.
     const char *label;   ///< display label.
@@ -57,7 +55,7 @@ struct pc_widget
     float min;           ///< scale minimum (gauge / bar / sparkline).
     float max;           ///< scale maximum.
     const char *unit;    ///< unit suffix shown by the widget (may be "").
-};
+} pc_widget;
 
 // ---------------------------------------------------------------------------
 // Host-testable core (no server dependency)
@@ -67,7 +65,7 @@ struct pc_widget
 void pc_dashboard_configure(const pc_widget *widgets, uint8_t count);
 
 /** @brief Set a widget's current value by key. @return false if the key is unknown. */
-bool pc_dashboard_set(const char *key, float value);
+proto_bool pc_dashboard_set(const char *key, float value);
 
 /**
  * @brief Serialize the widget layout as a JSON array into @p out.
@@ -88,13 +86,13 @@ void pc_dashboard_on_control(pc_control_cb cb);
  * @brief Parse a control message `{"k":"<key>","v":<number>}` from the page.
  * @return true if well-formed; writes the key (bounded by @p key_cap) and value.
  */
-bool pc_dashboard_parse_control(const char *msg, char *key_out, size_t key_cap, float *value_out);
+proto_bool pc_dashboard_parse_control(const char *msg, char *key_out, size_t key_cap, float *value_out);
 
 /**
  * @brief Parse a control message and invoke the registered control callback.
  * @return true if the message parsed and a callback was set.
  */
-bool pc_dashboard_dispatch_control(const char *msg);
+proto_bool pc_dashboard_dispatch_control(const char *msg);
 
 // ---------------------------------------------------------------------------
 // Server integration

@@ -38,13 +38,10 @@
 #ifndef PROTOCORE_TCP_H
 #define PROTOCORE_TCP_H
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/queue.h"
-#include "lwip/tcp.h"
+#include "board_drivers/board_profiles/pc_platform.h"
 #include "network_drivers/network/ip.h" // pc_ip (family-tagged peer address)
 #include "protocore_config.h"
 #include "shared_primitives/ring.h" // PROTO_ATOMIC_LOAD/STORE + the shared SPSC ring drain primitive
-#include <Arduino.h>
 
 // ---------------------------------------------------------------------------
 // Connection state
@@ -76,7 +73,7 @@ typedef struct TcpConn
 {
     uint8_t id;                ///< Fixed slot index (0 … MAX_CONNS-1).
     _Atomic ConnState state;   ///< Lifecycle state; acquire/release for inter-task visibility.
-    struct tcp_pcb *pcb;       ///< Stack control block; null when slot is free.
+    pc_pcb *pcb;               ///< Stack control block; null when slot is free.
     uint32_t last_activity_ms; ///< `pc_millis()` timestamp of last TX/RX event.
     uint32_t req_start_ms;     ///< `pc_millis()` at the first byte of the in-progress request (0 = none). The
                                ///< request-header deadline (PC_REQUEST_TIMEOUT_MS, slow-loris defense) measures
@@ -100,7 +97,7 @@ typedef struct TcpConn
     /// Self-framing protocol response sink (Layer 5 TX seam): HTTP/2 installs it at ALPN, HTTP/3 at
     /// dispatch, so the response methods route through it instead of building an HTTP/1.1 message.
     /// Null means plain HTTP/1.1 (the default builder). Extends the ProtoHandler seam to the TX side.
-    bool (*pc_resp_sink)(uint8_t slot, int code, const char *content_type, const char *body, size_t len);
+    proto_bool (*pc_resp_sink)(uint8_t slot, int code, const char *content_type, const char *body, size_t len);
 #endif
 #if PC_ENABLE_HTTP2
     uint8_t h2;            ///< Non-zero once this connection negotiated HTTP/2 (ALPN "h2").
@@ -126,7 +123,7 @@ typedef struct TcpConn
  */
 extern uint32_t pc_ap_ip;
 
-/** @brief Static pool of connection contexts.  Defined in tcp.cpp.
+/** @brief Static pool of connection contexts.  Defined in tcp.c.
  *  Sized CONN_POOL_SLOTS: MAX_CONNS TCP slots plus any reserved internal dispatch slot(s)
  *  (HTTP/3); the TCP accept path only ever uses [0, MAX_CONNS). */
 extern TcpConn conn_pool[CONN_POOL_SLOTS];
@@ -224,7 +221,7 @@ void proto_tcp_check_timeouts(int worker_id);
 uint32_t proto_tcp_conn_timeout_ms(void);
 
 // ---------------------------------------------------------------------------
-// Connection output API (defined in tcp.cpp)
+// Connection output API (defined in tcp.c)
 // ---------------------------------------------------------------------------
 // The one send/flush/close path for all higher layers. Presentation (WebSocket,
 // SSE, SSH) and the HTTP application call these instead of touching the stack, so the
@@ -239,7 +236,7 @@ uint32_t proto_tcp_conn_timeout_ms(void);
  *         pc_conn_sndbuf() and resume on a later loop; existing fixed-size
  *         senders may ignore the result.
  */
-bool pc_conn_send(uint8_t slot, const void *data, u16_t len);
+proto_bool pc_conn_send(uint8_t slot, const void *data, proto_u16 len);
 
 /**
  * @brief Send @p len bytes on @p slot and flush in a single round-trip to the stack.
@@ -251,7 +248,7 @@ bool pc_conn_send(uint8_t slot, const void *data, u16_t len);
  * loops must keep using pc_conn_send() + a single trailing pc_conn_flush(). TLS-identical to
  * pc_conn_send (the record BIO already outputs per record). Same return contract as pc_conn_send.
  */
-bool pc_conn_send_flush(uint8_t slot, const void *data, u16_t len);
+proto_bool pc_conn_send_flush(uint8_t slot, const void *data, proto_u16 len);
 
 /**
  * @brief Bytes that can currently be queued for sending on @p slot.
@@ -262,7 +259,7 @@ bool pc_conn_send_flush(uint8_t slot, const void *data, u16_t len);
  * plaintext is somewhat less (TLS record + cipher overhead). Returns 0 when
  * the slot has no live connection.
  */
-u16_t pc_conn_sndbuf(uint8_t slot);
+proto_u16 pc_conn_sndbuf(uint8_t slot);
 
 /** @brief Flush queued bytes / finish the send on @p slot (TLS-aware). */
 void pc_conn_flush(uint8_t slot);
@@ -316,7 +313,7 @@ static inline size_t pc_conn_available(uint8_t slot)
 }
 
 /** @brief Pop one byte into @p out; false if the ring is empty. */
-static inline bool pc_conn_read_byte(uint8_t slot, uint8_t *out)
+static inline proto_bool pc_conn_read_byte(uint8_t slot, uint8_t *out)
 {
     TcpConn *c = &conn_pool[slot];
     return pc_ring_read_byte(c->rx_buffer, RX_BUF_SIZE, &c->rx_head, &c->rx_tail, out);
@@ -351,7 +348,7 @@ static inline size_t pc_conn_read(uint8_t slot, uint8_t *buf, size_t cap)
  * .pcb themselves - .pcb is a raw stack pointer, so poking it couples a higher layer to
  * the transport's internals. Guard a send with `if (!pc_conn_active(slot)) return;`.
  */
-static inline bool pc_conn_active(uint8_t slot)
+static inline proto_bool pc_conn_active(uint8_t slot)
 {
     const TcpConn *c = &conn_pool[slot];
     return PROTO_ATOMIC_LOAD(&c->state) == CONN_ACTIVE && c->pcb != NULL; // GCOVR_EXCL_BR_LINE
@@ -387,7 +384,7 @@ uint8_t pc_conn_active_count(void);
  * unsynchronized write from the main loop. Flushes on success.
  * @return true if the bytes were queued; false on a full send buffer.
  */
-bool pc_conn_raw_send(struct tcp_pcb *pcb, const void *data, u16_t len);
+proto_bool pc_conn_raw_send(pc_pcb *pcb, const void *data, proto_u16 len);
 
 /**
  * @brief Close connection @p slot gracefully, aborting if the FIN
@@ -412,10 +409,10 @@ void pc_conn_close(uint8_t slot);
 void pc_conn_begin_close(uint8_t slot_id);
 
 /** @brief Detach @p pcb from its slot's stack callbacks before the slot is freed. */
-void pc_conn_detach(struct tcp_pcb *pcb);
+void pc_conn_detach(pc_pcb *pcb);
 
 /** @brief Hard-abort @p pcb (RST) for a fatal condition; no graceful FIN. */
-void pc_conn_abort(struct tcp_pcb *pcb);
+void pc_conn_abort(pc_pcb *pcb);
 
 /**
  * @brief Hard-abort connection @p slot (RST) for a fatal condition. The transport
@@ -442,19 +439,19 @@ uint32_t pc_conn_remote_ip(uint8_t slot);
  * pc_ip_format() or classify it with pc_ip_classify().
  * @return true if @p slot has an active connection whose address was written to @p out.
  */
-bool pc_conn_remote_addr(uint8_t slot, pc_ip *out);
+proto_bool pc_conn_remote_addr(uint8_t slot, pc_ip *out);
 
 /**
  * @brief A stable per-peer 32-bit identity key for @p slot (the v4 address, or an FNV-1a hash of a
  *        v6 address). For rate-limit / auth-lockout buckets, where a v6 peer must not silently
  *        share the all-zero v4 bucket. Returns 0 if the slot has no active connection.
  */
-#ifdef ARDUINO
+#if PROTOCORE_HOT
 /**
  * @brief Convert a raw stack address to the portable family-tagged pc_ip - for the accept callback,
  *        which has the connection but no slot yet. Target builds only (the parameter is a stack type).
  */
-void pc_lwip_to_ip(const ip_addr_t *ra, pc_ip *out);
+void pc_lwip_to_ip(const pc_net_ip *ra, pc_ip *out);
 #endif
 
 // ---------------------------------------------------------------------------
@@ -509,8 +506,8 @@ pc_conn_counters pc_conn_counters_get(void);
 /** @brief Zero the cumulative counters (the live CONN_CLOSING gauge is untouched). */
 void pc_conn_counters_reset(void);
 
-// Internal notify points (tcp.cpp), reached via the macros below so both
-// tcp.cpp and listener.cpp (accept) record through one path.
+// Internal notify points (tcp.c), reached via the macros below so both
+// tcp.c and listener.c (accept) record through one path.
 void pc_obs_transition(uint8_t slot, ConnState olds, ConnState news, pc_conn_reason reason);
 void pc_obs_notice(uint8_t slot, ConnState st, pc_conn_reason reason);
 #define PC_OBS_TRANSITION(slot, olds, news, reason) pc_obs_transition((slot), (olds), (news), (reason))
@@ -526,29 +523,29 @@ void pc_obs_notice(uint8_t slot, ConnState st, pc_conn_reason reason);
 #endif // PC_ENABLE_OBSERVABILITY
 
 // ---------------------------------------------------------------------------
-// Per-connection stack callbacks (defined in tcp.cpp, used in listener.cpp)
+// Per-connection stack callbacks (defined in tcp.c, used in listener.c)
 // ---------------------------------------------------------------------------
 
 /**
  * @brief Receive callback - wired to each new connection by listener_accept_cb.
- * @see tcp.cpp
+ * @see tcp.c
  */
-err_t lowlevel_recv_cb(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err);
+pc_net_err lowlevel_recv_cb(void *arg, pc_pcb *tpcb, pc_pbuf *p, pc_net_err err);
 
 /**
  * @brief Sent callback - refreshes the idle-timeout timestamp.
- * @see tcp.cpp
+ * @see tcp.c
  */
-err_t lowlevel_sent_cb(void *arg, struct tcp_pcb *tpcb, u16_t len);
+pc_net_err lowlevel_sent_cb(void *arg, pc_pcb *tpcb, proto_u16 len);
 
 /**
  * @brief Error callback - fires when the stack detects a fatal error.
- * @see tcp.cpp
+ * @see tcp.c
  */
-void lowlevel_err_cb(void *arg, err_t err);
+void lowlevel_err_cb(void *arg, pc_net_err err);
 
 // ---------------------------------------------------------------------------
-// Event enqueue (defined in listener.cpp, called from tcp.cpp)
+// Event enqueue (defined in listener.c, called from tcp.c)
 // ---------------------------------------------------------------------------
 
 /*
@@ -557,6 +554,6 @@ void lowlevel_err_cb(void *arg, err_t err);
  * Returns true if the event was queued, false if it was dropped (queue full or
  * inactive listener) - the transport observes drops as PC_CONN_R_DEFER_DROP.
  */
-bool listener_enqueue(uint8_t listener_id, const TcpEvt *evt);
+proto_bool listener_enqueue(uint8_t listener_id, const TcpEvt *evt);
 
 #endif

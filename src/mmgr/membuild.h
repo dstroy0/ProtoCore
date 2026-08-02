@@ -19,10 +19,7 @@
 #define PROTOCORE_MEMBUILD_H
 
 #include "shared_primitives/rawmemcpy.h" // proto_raw_u64 - the IEEE-754 field reads below
-#include "shared_primitives/runops.h"   // proto_scan_nul - a word per test, bounded by a known width
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include "shared_primitives/runops.h"    // proto_scan_nul - a word per test, bounded by a known width
 
 /** @brief Bump-append target; @c ok latches false once an append would overflow @c cap. */
 typedef struct
@@ -30,7 +27,7 @@ typedef struct
     char *p;
     size_t cap;
     size_t len;
-    bool ok;
+    proto_bool ok;
 } pc_sb;
 
 /**
@@ -48,7 +45,7 @@ static inline void pc_sb_put_n(pc_sb *b, const char *s, size_t sl)
     }
     if (b->len + sl >= b->cap)
     {
-        b->ok = false;
+        b->ok = PROTO_FALSE;
         return;
     }
     char *d = b->p + b->len;
@@ -182,7 +179,7 @@ static inline void pc_sb_xml(pc_sb *b, const char *s)
         {
             if (b->len + 1 >= b->cap)
             {
-                b->ok = false;
+                b->ok = PROTO_FALSE;
                 return;
             }
             b->p[b->len] = *s;
@@ -200,7 +197,7 @@ static inline void pc_sb_ch(pc_sb *b, char c)
     }
     if (b->len + 1 >= b->cap)
     {
-        b->ok = false;
+        b->ok = PROTO_FALSE;
         return;
     }
     b->p[b->len++] = c;
@@ -224,14 +221,12 @@ static inline void pc_sb_uint(pc_sb *b, uint64_t v, unsigned base, unsigned min_
     // divide. Naming the width says which it is; the constants are the digit width, not a
     // hand-tuned bit pattern.
     const unsigned bits_per_digit = (base == 16) ? 4u : (base == 8) ? 3u : 0u;
-    const bool power_of_two = bits_per_digit != 0;
+    const proto_bool power_of_two = bits_per_digit != 0;
     const uint64_t digit_mask = power_of_two ? ((1ull << bits_per_digit) - 1u) : 0u;
 
-    // Decimal on a value that fits 32 bits uses 32-bit arithmetic. The Xtensa cores here are
-    // 32-bit, so a uint64_t `/= 10` is a __udivdi3 libgcc call PER DIGIT - routing every decimal
-    // through the 64-bit engine measured slower than the snprintf it replaced (2842 vs 2632 cyc for
-    // one u32). Hex and octal never had the problem because they shift.
-    const bool narrow = !power_of_two && v <= 0xFFFFFFFFu;
+    // Decimal on a value that fits 32 bits uses 32-bit arithmetic: these cores are 32-bit, so a
+    // uint64_t `/= 10` is a __udivdi3 libgcc call per digit. Hex and octal shift, so neither cares.
+    const proto_bool narrow = !power_of_two && v <= 0xFFFFFFFFu;
 
     uint64_t probe = v;
     unsigned digits = 1;
@@ -265,7 +260,7 @@ static inline void pc_sb_uint(pc_sb *b, uint64_t v, unsigned base, unsigned min_
     }
     if (b->len + digits >= b->cap)
     {
-        b->ok = false;
+        b->ok = PROTO_FALSE;
         return;
     }
     if (power_of_two)
@@ -338,13 +333,13 @@ static inline void pc_sb_i64(pc_sb *b, int64_t v)
 static const double PC_POW10_BIN[9] = {1e1, 1e2, 1e4, 1e8, 1e16, 1e32, 1e64, 1e128, 1e256};
 
 /** @brief True if @p v carries the IEEE-754 sign bit, including for -0.0 (a mask, not a divide). */
-static inline bool pc_signbit(double v)
+static inline proto_bool pc_signbit(double v)
 {
     return (proto_raw_u64(&v) >> 63) != 0;
 }
 
 /** @brief True if @p v is an infinity: all exponent bits set, zero significand. */
-static inline bool pc_isinf(double v)
+static inline proto_bool pc_isinf(double v)
 {
     const uint64_t bits = proto_raw_u64(&v);
     return ((bits >> 52) & 0x7FFu) == 0x7FFu && (bits & 0xFFFFFFFFFFFFFull) == 0;
@@ -369,9 +364,7 @@ static inline double pc_pow10i(int p)
  *
  * The binary exponent is a field of the IEEE-754 encoding, so it is a mask and a shift rather
  * than something to converge on: multiplying it by log10(2) in fixed point (78913/2^18) gives the
- * decimal exponent to within one, which a single comparison settles. The loop this replaces
- * stepped one decade per iteration - about 320 of them for a denormal - to recover a number the
- * representation was already carrying.
+ * decimal exponent to within one, which a single comparison settles.
  */
 static inline int pc_dec_exp(double v)
 {
@@ -433,9 +426,9 @@ static inline void pc_sb_digits(pc_sb *b, uint64_t mant, unsigned digits, unsign
  * the format string produced rather than being approximated with fixed decimals.
  *
  * Byte-identical to printf %.<sig>g for sig <= 10, which covers every call site in this library
- * (SCPI uses 10, JSON/SenML use the default 6); verified against libc over 450k values including
- * ties, denormals, +/-0, inf and NaN. Above that the scaling is done in double, which runs out of
- * precision around 16 significant digits, so sig >= 15 can differ from libc in the last digit.
+ * (SCPI uses 10, JSON/SenML use the default 6). Above that the scaling is done in double, which
+ * runs out of precision around 16 significant digits, so sig >= 15 can differ from libc in the
+ * last digit.
  */
 static inline void pc_sb_g(pc_sb *b, double v, unsigned sig)
 {
@@ -480,9 +473,6 @@ static inline void pc_sb_g(pc_sb *b, double v, unsigned sig)
         limit *= 10;
     }
     // One scaling of the ORIGINAL value, not a round trip: multiply or divide, never both.
-    // Beyond ~1e300 the scale factor itself overflows to infinity, which turned 1e-300 into
-    // garbage ("0.000000001e-301"), so those fall back to the already-normalized mantissa. The
-    // round-trip costs tie accuracy, which is meaningless at an exponent that extreme anyway.
     int p = (int)sig - 1 - e;
     double scaled;
     if (p > 300 || p < -300)
@@ -587,11 +577,9 @@ static inline void pc_sb_fixed(pc_sb *b, double v, unsigned decimals)
         pc_sb_put(b, "inf");
         return;
     }
-    // Beyond the 64-bit range the integer part cannot be taken through uint64 at all: casting
-    // 1e20 wrapped and rendered "0.00" for a value twenty digits long. Printing such a magnitude
-    // exactly in %f form needs big-integer arithmetic (the expansion runs to ~309 digits), which
-    // is not what a fixed-decimal appender is for, so it falls back to the significant-digit form.
-    // Truthful and obviously not a small number, rather than silently wrong.
+    // Beyond the 64-bit range the integer part cannot go through uint64 at all - the cast wraps.
+    // An exact %f expansion of such a magnitude needs big-integer arithmetic (~309 digits), so it
+    // falls back to the significant-digit form rather than rendering a wrapped value.
     if (v >= 18446744073709551616.0)
     {
         pc_sb_g(b, v, 10); // 10 is the precision pc_sb_g is exact to; asking for more only adds noise
@@ -619,7 +607,7 @@ static inline void pc_sb_fixed(pc_sb *b, double v, unsigned decimals)
 }
 
 /** @brief Append @p s as a JSON string literal: double-quoted, with `"` and `\` backslash-escaped. A NULL
- * @p s emits `""`. (Control chars are passed through, matching the emitters this replaced.) */
+ * @p s appends `""`. Control characters are passed through unescaped. */
 static inline void pc_sb_json(pc_sb *b, const char *s)
 {
     pc_sb_put(b, "\"");
@@ -629,7 +617,7 @@ static inline void pc_sb_json(pc_sb *b, const char *s)
         {
             if (b->len + 2 >= b->cap)
             {
-                b->ok = false;
+                b->ok = PROTO_FALSE;
                 return;
             }
             b->p[b->len++] = '\\';
@@ -641,7 +629,7 @@ static inline void pc_sb_json(pc_sb *b, const char *s)
         }
         else
         {
-            b->ok = false;
+            b->ok = PROTO_FALSE;
         }
     }
     pc_sb_put(b, "\"");

@@ -22,8 +22,6 @@
 #define PROTOCORE_TLS_POLICY_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_TLS_POLICY
 
@@ -51,7 +49,7 @@ uint16_t pc_tls_select_cipher(const uint16_t *client_offered, size_t n_client, c
                               size_t n_server);
 
 /** @brief True if @p suite is one of the modern AEAD suites (GCM / ChaCha20-Poly1305). */
-bool pc_tls_is_aead(uint16_t suite);
+proto_bool pc_tls_is_aead(uint16_t suite);
 
 #endif // PC_ENABLE_TLS_POLICY
 #endif // PROTOCORE_TLS_POLICY_H

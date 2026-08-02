@@ -22,28 +22,26 @@
 #include "services/system/clock.h"
 #include <string.h>
 
-namespace
-{
 // All audit-log state, owned by one instance (internal linkage): the record ring, its
 // head/count/seq cursors, the moving chain anchor, and the sink, grouped so it is one
 // named owner, unreachable from any other translation unit.
-struct AuditCtx
+typedef struct
 {
     pc_audit_entry ring[PC_AUDIT_LOG_ENTRIES];
     uint16_t head = 0;                      // index of the oldest retained record
     uint16_t count = 0;                     // records currently retained
     uint32_t seq = 0;                       // last assigned sequence number (monotonic)
     uint8_t anchor[PC_AUDIT_HASH_LEN] = {}; // prev-hash for the oldest retained record
-    pc_audit_sink_fn sink = nullptr;
-};
-AuditCtx s_audit;
+    pc_audit_sink_fn sink = NULL;
+} AuditCtx;
+static AuditCtx s_audit;
 
-inline uint16_t idx(const AuditCtx &c, uint16_t i)
+static inline uint16_t idx(const AuditCtx &c, uint16_t i)
 {
     return (uint16_t)((c.head + i) % PC_AUDIT_LOG_ENTRIES);
 }
 
-void put_le32(uint8_t out[4], uint32_t v)
+static void put_le32(uint8_t out[4], uint32_t v)
 {
     out[0] = (uint8_t)(v & 0xFF);
     out[1] = (uint8_t)((v >> 8) & 0xFF);
@@ -53,7 +51,7 @@ void put_le32(uint8_t out[4], uint32_t v)
 
 // hash = SHA-256(prev_hash || seq_le || ts_le || category || msg_len || msg).
 // msg_len is length-prefixed so two records can never serialize ambiguously.
-void chain_hash(const uint8_t prev[PC_AUDIT_HASH_LEN], const pc_audit_entry *e, uint8_t out[PC_AUDIT_HASH_LEN])
+static void chain_hash(const uint8_t prev[PC_AUDIT_HASH_LEN], const pc_audit_entry *e, uint8_t out[PC_AUDIT_HASH_LEN])
 {
     pc_sha256_ctx c;
     pc_sha256_init(&c);
@@ -72,12 +70,12 @@ void chain_hash(const uint8_t prev[PC_AUDIT_HASH_LEN], const pc_audit_entry *e, 
 
 // Append @p n JSON-escaped bytes of @p s into out[pos..cap); returns new pos, or
 // cap+1 on overflow (caller checks pos <= cap).
-size_t json_escape(char *out, size_t pos, size_t cap, const char *s)
+static size_t json_escape(char *out, size_t pos, size_t cap, const char *s)
 {
     for (size_t i = 0; s[i]; i++)
     {
         unsigned char ch = (unsigned char)s[i];
-        const char *esc = nullptr;
+        const char *esc = NULL;
         char ub[7];
         size_t n;
         if (ch == '"')
@@ -103,8 +101,8 @@ size_t json_escape(char *out, size_t pos, size_t cap, const char *s)
         else if (ch < 0x20)
         {
             ub[0] = '\\', ub[1] = 'u', ub[2] = '0', ub[3] = '0';
-            ub[4] = pc_hex_digit((ch >> 4) & 0xF);
-            ub[5] = pc_hex_digit(ch & 0xF);
+            ub[4] = pc_hex_digit((ch >> 4) & 0xF, PROTO_FALSE);
+            ub[5] = pc_hex_digit(ch & 0xF, PROTO_FALSE);
             ub[6] = '\0';
             esc = ub, n = 6;
         }
@@ -127,7 +125,7 @@ size_t json_escape(char *out, size_t pos, size_t cap, const char *s)
     return pos;
 }
 
-size_t hex_hash(char *out, size_t pos, size_t cap, const uint8_t *h)
+static size_t hex_hash(char *out, size_t pos, size_t cap, const uint8_t *h)
 {
     if (pos + PC_AUDIT_HASH_LEN * 2 > cap)
     {
@@ -135,12 +133,11 @@ size_t hex_hash(char *out, size_t pos, size_t cap, const uint8_t *h)
     }
     for (size_t i = 0; i < PC_AUDIT_HASH_LEN; i++)
     {
-        out[pos++] = pc_hex_digit((h[i] >> 4) & 0xF);
-        out[pos++] = pc_hex_digit(h[i] & 0xF);
+        out[pos++] = pc_hex_digit((h[i] >> 4) & 0xF, PROTO_FALSE);
+        out[pos++] = pc_hex_digit(h[i] & 0xF, PROTO_FALSE);
     }
     return pos;
 }
-} // namespace
 
 void pc_audit_reset(void)
 {
@@ -211,12 +208,12 @@ const pc_audit_entry *pc_audit_at(uint16_t i)
 {
     if (i >= s_audit.count)
     {
-        return nullptr;
+        return NULL;
     }
     return &s_audit.ring[idx(s_audit, i)];
 }
 
-bool pc_audit_verify(uint32_t *first_broken_seq)
+proto_bool pc_audit_verify(uint32_t *first_broken_seq)
 {
     uint8_t expected[PC_AUDIT_HASH_LEN];
     memcpy(expected, s_audit.anchor, PC_AUDIT_HASH_LEN);
@@ -231,26 +228,26 @@ bool pc_audit_verify(uint32_t *first_broken_seq)
             {
                 *first_broken_seq = e->seq;
             }
-            return false;
+            return PROTO_FALSE;
         }
         memcpy(expected, e->hash, PC_AUDIT_HASH_LEN);
     }
-    return true;
+    return PROTO_TRUE;
 }
 
 const char *pc_audit_cat_name(pc_audit_cat category)
 {
     switch (category)
     {
-    case pc_audit_cat::PC_AUDIT_AUTH:
+    case PC_AUDIT_AUTH:
         return "auth";
-    case pc_audit_cat::PC_AUDIT_AUTH_FAIL:
+    case PC_AUDIT_AUTH_FAIL:
         return "auth_fail";
-    case pc_audit_cat::PC_AUDIT_ACCESS:
+    case PC_AUDIT_ACCESS:
         return "access";
-    case pc_audit_cat::PC_AUDIT_CONFIG:
+    case PC_AUDIT_CONFIG:
         return "config";
-    case pc_audit_cat::PC_AUDIT_ADMIN:
+    case PC_AUDIT_ADMIN:
         return "admin";
     default:
         return "system";
@@ -263,7 +260,7 @@ int pc_audit_format(const pc_audit_entry *e, char *out, size_t cap)
     {
         return 0;
     }
-    pc_sb sb_out = {out, cap, 0, true};
+    pc_sb sb_out = {out, cap, 0, PROTO_TRUE};
     pc_sb_put(&sb_out, "{\"seq\":");
     pc_sb_u32(&sb_out, (uint32_t)((unsigned long)e->seq));
     pc_sb_put(&sb_out, ",\"ts\":");
@@ -323,12 +320,12 @@ int pc_audit_dump_json(char *out, size_t cap)
         return 0;
     }
     uint32_t broken = 0;
-    bool intact = pc_audit_verify(&broken);
+    proto_bool intact = pc_audit_verify(&broken);
 
     int head;
     if (intact)
     {
-        pc_sb sb_out2 = {out, cap, 0, true};
+        pc_sb sb_out2 = {out, cap, 0, PROTO_TRUE};
         pc_sb_put(&sb_out2, "{\"intact\":true,\"count\":");
         pc_sb_u32(&sb_out2, (uint32_t)((unsigned)s_audit.count));
         pc_sb_put(&sb_out2, ",\"entries\":[");
@@ -336,7 +333,7 @@ int pc_audit_dump_json(char *out, size_t cap)
     }
     else
     {
-        pc_sb sb_out3 = {out, cap, 0, true};
+        pc_sb sb_out3 = {out, cap, 0, PROTO_TRUE};
         pc_sb_put(&sb_out3, "{\"intact\":false,\"first_broken\":");
         pc_sb_u32(&sb_out3, (uint32_t)((unsigned long)broken));
         pc_sb_put(&sb_out3, ",\"count\":");

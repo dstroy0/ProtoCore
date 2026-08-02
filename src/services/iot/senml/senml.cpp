@@ -27,7 +27,7 @@
 #define SENML_LBL_T 6
 
 // True when @p d is an integer that fits in int64 (so it can be emitted losslessly as one).
-static bool is_integral(double d)
+static proto_bool is_integral(double d)
 {
     return d >= -9.2e18 && d <= 9.2e18 && d == (double)(int64_t)d;
 }
@@ -39,7 +39,7 @@ static void json_num(JsonWriter &w, double d)
     char tmp[32];
     if (is_integral(d))
     {
-        pc_sb sb_tmp = {tmp, sizeof(tmp), 0, true};
+        pc_sb sb_tmp = {tmp, sizeof(tmp), 0, PROTO_TRUE};
         pc_sb_i64(&sb_tmp, (int64_t)((long long)d));
         if (pc_sb_finish(&sb_tmp) == 0)
         {
@@ -48,7 +48,7 @@ static void json_num(JsonWriter &w, double d)
     }
     else
     {
-        pc_sb sb_tmp2 = {tmp, sizeof(tmp), 0, true};
+        pc_sb sb_tmp2 = {tmp, sizeof(tmp), 0, PROTO_TRUE};
         pc_sb_g(&sb_tmp2, (double)(d), 6);
         if (pc_sb_finish(&sb_tmp2) == 0)
         {
@@ -91,20 +91,20 @@ size_t pc_senml_json_build(char *buf, size_t cap, const SenmlRecord *records, si
         // emits for the uint8_t-backed enum is unreachable for any value the API admits.
         switch (r.value_kind) // GCOVR_EXCL_LINE  exhaustive enum switch; the default edge is dead
         {
-        case SenmlValueKind::SENML_V_FLOAT:
+        case SENML_V_FLOAT:
             w.key("v");
             json_num(w, r.value);
             break;
-        case SenmlValueKind::SENML_V_STRING:
+        case SENML_V_STRING:
             if (r.value_str)
             {
                 w.kv_str("vs", r.value_str);
             }
             break;
-        case SenmlValueKind::SENML_V_BOOL:
+        case SENML_V_BOOL:
             w.kv_bool("vb", r.value_bool);
             break;
-        case SenmlValueKind::SENML_V_NONE:
+        case SENML_V_NONE:
             break;
         }
         if (r.has_time)
@@ -150,8 +150,7 @@ static size_t record_fields(const SenmlRecord &r)
     {
         n++;
     }
-    if (r.value_kind != SenmlValueKind::SENML_V_NONE &&
-        !(r.value_kind == SenmlValueKind::SENML_V_STRING && !r.value_str))
+    if (r.value_kind != SENML_V_NONE && !(r.value_kind == SENML_V_STRING && !r.value_str))
     {
         n++;
     }
@@ -199,22 +198,22 @@ size_t pc_senml_build(const pc_codec *c, uint8_t *buf, size_t cap, const SenmlRe
         // against the same four kinds so the declared field count always matches what is emitted.
         switch (r.value_kind) // GCOVR_EXCL_LINE  exhaustive enum switch; the default edge is dead
         {
-        case SenmlValueKind::SENML_V_FLOAT:
+        case SENML_V_FLOAT:
             c->put_label(&w, "v", SENML_LBL_V);
             codec_num(c, &w, r.value);
             break;
-        case SenmlValueKind::SENML_V_STRING:
+        case SENML_V_STRING:
             if (r.value_str)
             {
                 c->put_label(&w, "vs", SENML_LBL_VS);
                 c->put_str(&w, r.value_str);
             }
             break;
-        case SenmlValueKind::SENML_V_BOOL:
+        case SENML_V_BOOL:
             c->put_label(&w, "vb", SENML_LBL_VB);
             c->put_bool(&w, r.value_bool);
             break;
-        case SenmlValueKind::SENML_V_NONE:
+        case SENML_V_NONE:
             break;
         }
         if (r.has_time)
@@ -234,8 +233,8 @@ size_t pc_senml_resolve(const SenmlRecord *in, size_t n, SenmlResolved *out, siz
     {
         return 0;
     }
-    const char *base_name = nullptr; // the active base name (bn), carried forward
-    bool base_time_set = false;
+    const char *base_name = NULL; // the active base name (bn), carried forward
+    proto_bool base_time_set = PROTO_FALSE;
     double base_time = 0.0; // the active base time (bt)
 
     size_t count = n < max ? n : max;
@@ -249,12 +248,12 @@ size_t pc_senml_resolve(const SenmlRecord *in, size_t n, SenmlResolved *out, siz
         if (r->has_base_time)
         {
             base_time = r->base_time;
-            base_time_set = true;
+            base_time_set = PROTO_TRUE;
         }
 
         SenmlResolved *o = &out[i];
         // Resolved name = active base name + record name (either part may be absent).
-        pc_sb sb_name = {o->name, sizeof(o->name), 0, true};
+        pc_sb sb_name = {o->name, sizeof(o->name), 0, PROTO_TRUE};
         pc_sb_put(&sb_name, base_name ? base_name : "");
         pc_sb_put(&sb_name, r->name ? r->name : "");
         int w = (int)pc_sb_finish(&sb_name);

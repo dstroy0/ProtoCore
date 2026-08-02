@@ -33,9 +33,6 @@
 
 #if PC_ENABLE_MQTT_SN
 
-#include <stddef.h>
-#include <stdint.h>
-
 #define MQTTSN_LEN3_PREFIX 0x01 ///< a first Length octet of 0x01 signals the 3-octet length form
 
 // Message types (MQTT-SN v1.2 Table 5).
@@ -86,7 +83,8 @@
 #define MQTTSN_PROTOCOL_ID 0x01 ///< CONNECT ProtocolId octet
 
 /** @brief Compose a Flags octet. @p qos is 0..3 (3 = QoS -1); @p topic_id_type is MQTTSN_TOPIC_*. */
-uint8_t pc_mqttsn_make_flags(bool dup, uint8_t qos, bool retain, bool will, bool clean, uint8_t topic_id_type);
+uint8_t pc_mqttsn_make_flags(proto_bool dup, uint8_t qos, proto_bool retain, proto_bool will, proto_bool clean,
+                             uint8_t topic_id_type);
 
 // ---- builders (return total bytes written, or 0 on overflow / bad input) ----
 
@@ -116,7 +114,7 @@ size_t pc_mqttsn_build_subscribe_id(uint8_t *buf, size_t cap, uint8_t flags, uin
 size_t pc_mqttsn_build_pingreq(uint8_t *buf, size_t cap, const char *client_id);
 
 /** @brief DISCONNECT: optional sleep Duration (pass with_duration=false for a plain disconnect). */
-size_t pc_mqttsn_build_disconnect(uint8_t *buf, size_t cap, bool with_duration, uint16_t duration);
+size_t pc_mqttsn_build_disconnect(uint8_t *buf, size_t cap, proto_bool with_duration, uint16_t duration);
 
 /** @brief SEARCHGW: broadcast Radius. */
 size_t pc_mqttsn_build_searchgw(uint8_t *buf, size_t cap, uint8_t radius);
@@ -124,32 +122,32 @@ size_t pc_mqttsn_build_searchgw(uint8_t *buf, size_t cap, uint8_t radius);
 // ---- parsing ----
 
 /** @brief A decoded message header: type + a slice of the body (past the MsgType octet). */
-struct MqttsnHeader
+typedef struct
 {
     uint8_t msg_type;
     const uint8_t *payload; ///< message body (points INTO the source buffer)
     size_t payload_len;
-};
+} MqttsnHeader;
 
 /**
  * @brief Parse the Length + MsgType header at the head of [buf, buf+len).
  * @param consumed receives the full message length (so the caller can advance).
  * @return true on a complete, self-consistent message; false if incomplete / malformed.
  */
-bool pc_mqttsn_parse_header(const uint8_t *buf, size_t len, MqttsnHeader *out, size_t *consumed);
+proto_bool pc_mqttsn_parse_header(const uint8_t *buf, size_t len, MqttsnHeader *out, size_t *consumed);
 
 // The typed parsers below take the @ref MqttsnHeader payload/payload_len.
-bool pc_mqttsn_parse_connack(const uint8_t *payload, size_t len, uint8_t *ret_code);
-bool pc_mqttsn_parse_regack(const uint8_t *payload, size_t len, uint16_t *topic_id, uint16_t *msg_id,
-                            uint8_t *ret_code);
-bool pc_mqttsn_parse_puback(const uint8_t *payload, size_t len, uint16_t *topic_id, uint16_t *msg_id,
-                            uint8_t *ret_code);
-bool pc_mqttsn_parse_suback(const uint8_t *payload, size_t len, uint8_t *flags, uint16_t *topic_id, uint16_t *msg_id,
-                            uint8_t *ret_code);
-bool pc_mqttsn_parse_publish(const uint8_t *payload, size_t len, uint8_t *flags, uint16_t *topic_id, uint16_t *msg_id,
-                             const uint8_t **data, size_t *data_len);
-bool pc_mqttsn_parse_register(const uint8_t *payload, size_t len, uint16_t *topic_id, uint16_t *msg_id,
-                              const char **topic_name, size_t *topic_name_len);
+proto_bool pc_mqttsn_parse_connack(const uint8_t *payload, size_t len, uint8_t *ret_code);
+proto_bool pc_mqttsn_parse_regack(const uint8_t *payload, size_t len, uint16_t *topic_id, uint16_t *msg_id,
+                                  uint8_t *ret_code);
+proto_bool pc_mqttsn_parse_puback(const uint8_t *payload, size_t len, uint16_t *topic_id, uint16_t *msg_id,
+                                  uint8_t *ret_code);
+proto_bool pc_mqttsn_parse_suback(const uint8_t *payload, size_t len, uint8_t *flags, uint16_t *topic_id,
+                                  uint16_t *msg_id, uint8_t *ret_code);
+proto_bool pc_mqttsn_parse_publish(const uint8_t *payload, size_t len, uint8_t *flags, uint16_t *topic_id,
+                                   uint16_t *msg_id, const uint8_t **data, size_t *data_len);
+proto_bool pc_mqttsn_parse_register(const uint8_t *payload, size_t len, uint16_t *topic_id, uint16_t *msg_id,
+                                    const char **topic_name, size_t *topic_name_len);
 
 #endif // PC_ENABLE_MQTT_SN
 

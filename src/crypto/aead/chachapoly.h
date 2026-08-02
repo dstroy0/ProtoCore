@@ -24,8 +24,7 @@
 #ifndef PROTOCORE_CHACHAPOLY_H
 #define PROTOCORE_CHACHAPOLY_H
 
-#include <stddef.h>
-#include <stdint.h>
+#include "protocore_config.h" // the entry point: types.h for proto_bool and the widths
 
 #define PC_CHACHAPOLY_KEY_LEN 64 ///< two 256-bit ChaCha20 keys
 #define PC_CHACHAPOLY_TAG_LEN 16 ///< Poly1305 tag
@@ -53,7 +52,7 @@ void pc_chachapoly_encrypt(const uint8_t key[PC_CHACHAPOLY_KEY_LEN], uint32_t se
  * @param dest  output: plaintext length (4) || plaintext payload (@p payload_len). May alias @p src.
  * @return true if the Poly1305 tag verified; false (and no usable plaintext) otherwise.
  */
-bool pc_chachapoly_decrypt(const uint8_t key[PC_CHACHAPOLY_KEY_LEN], uint32_t seqnr, uint8_t *dest, const uint8_t *src,
-                           uint32_t payload_len);
+proto_bool pc_chachapoly_decrypt(const uint8_t key[PC_CHACHAPOLY_KEY_LEN], uint32_t seqnr, uint8_t *dest,
+                                 const uint8_t *src, uint32_t payload_len);
 
 #endif // PROTOCORE_CHACHAPOLY_H

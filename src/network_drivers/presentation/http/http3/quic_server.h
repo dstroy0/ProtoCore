@@ -35,8 +35,6 @@
 
 #include "network_drivers/presentation/http/http3/h3_conn.h"
 #include "network_drivers/presentation/http/http3/quic_conn.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #ifndef PC_QUIC_MAX_CONNS
 #define PC_QUIC_MAX_CONNS 2 ///< simultaneous HTTP/3 connections (each is a QuicConn + H3Conn, PSRAM-class)
@@ -64,13 +62,13 @@ typedef void (*QuicServerRequestFn)(void *app, uint32_t conn_id, uint64_t stream
                                     const char *path, const char *authority, const uint8_t *body, size_t body_len);
 
 /** @brief Server configuration: the Ed25519 leaf certificate + its key, and a randomness source. */
-struct QuicServerConfig
+typedef struct
 {
     const uint8_t *cert_der; ///< DER X.509 leaf certificate (Ed25519 public key)
     size_t cert_len;
     uint8_t ed25519_seed[32];              ///< Ed25519 private seed matching the certificate
     void (*rng)(uint8_t *out, size_t len); ///< fills @p out with @p len random bytes (ephemeral keys, SCIDs)
-};
+} QuicServerConfig;
 
 /**
  * @brief Start the HTTP/3 server: install @p cfg, bind @p port over UDP, and route datagrams into the
@@ -78,7 +76,7 @@ struct QuicServerConfig
  * @return false if UDP is unavailable (host build) or the bind fails; the server is still usable on
  * host builds through pc_quic_server_ingest() / the output sink.
  */
-bool pc_quic_server_begin(uint16_t port, const QuicServerConfig *cfg, QuicServerRequestFn on_request, void *app);
+proto_bool pc_quic_server_begin(uint16_t port, const QuicServerConfig *cfg, QuicServerRequestFn on_request, void *app);
 
 /**
  * @brief Drive the server once: drain queued inbound datagrams into their connections, run the
@@ -93,8 +91,8 @@ void pc_quic_server_poll(uint32_t now_ms);
  * connection @p conn_id. Call from within the request callback. @return false on a stale conn_id /
  * stream or a serialization overflow.
  */
-bool pc_quic_server_respond(uint32_t conn_id, uint64_t stream_id, int status, const char *content_type,
-                            const uint8_t *body, size_t body_len);
+proto_bool pc_quic_server_respond(uint32_t conn_id, uint64_t stream_id, int status, const char *content_type,
+                                  const uint8_t *body, size_t body_len);
 
 /** @brief Number of pool slots currently in use (open connections). For diagnostics / tests. */
 uint8_t pc_quic_server_active_conns(void);
@@ -105,7 +103,7 @@ void pc_quic_server_stop(void);
 // ---------------------------------------------------------------------------
 // Host / test seam (no UDP on host builds)
 // ---------------------------------------------------------------------------
-#if !defined(ARDUINO)
+#if !PROTOCORE_HOT
 /** @brief Sink invoked for every outbound datagram (host builds route sends here instead of UDP). */
 typedef void (*QuicServerOutFn)(void *ctx, const uint8_t *datagram, size_t len, const char *ip, uint16_t port);
 
@@ -116,7 +114,7 @@ void pc_quic_server_set_out_sink_cb(QuicServerOutFn fn, void *ctx);
  * @brief Inject a received datagram from @p ip:@p port (the host-build stand-in for the UDP handler).
  * pc_quic_server_poll() then processes it exactly as a real datagram. @return false if the ring is full.
  */
-bool pc_quic_server_ingest(const uint8_t *datagram, size_t len, const char *ip, uint16_t port);
+proto_bool pc_quic_server_ingest(const uint8_t *datagram, size_t len, const char *ip, uint16_t port);
 #endif
 
 #endif // PC_ENABLE_HTTP3

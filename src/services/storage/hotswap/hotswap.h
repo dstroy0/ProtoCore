@@ -37,25 +37,23 @@
 #define PROTOCORE_HOTSWAP_H
 
 #include "protocore_config.h"
-#include <stddef.h>
-#include <stdint.h>
 
 #if PC_ENABLE_HOTSWAP
 
 /** @brief Where a removable volume currently stands. */
-enum class StorageState : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
-    ABSENT = 0,  ///< nothing mounted; no filesystem call is safe.
-    READY = 1,   ///< mounted and healthy.
-    FAULTED = 2, ///< was mounted, I/O is failing; unmounted and awaiting a remount probe.
-};
+    STORAGE_STATE_ABSENT = 0,  ///< nothing mounted; no filesystem call is safe.
+    STORAGE_STATE_READY = 1,   ///< mounted and healthy.
+    STORAGE_STATE_FAULTED = 2, ///< was mounted, I/O is failing; unmounted and awaiting a remount probe.
+} StorageState;
 
 // ---------------------------------------------------------------------------
 // Host-testable core
 // ---------------------------------------------------------------------------
 
 /** @brief The whole state machine. Pure: it decides, the binding acts. */
-struct HotswapCore
+typedef struct
 {
     StorageState state;         ///< current state.
     uint8_t fail_run;           ///< consecutive I/O failures seen while READY.
@@ -64,7 +62,7 @@ struct HotswapCore
     uint32_t last_probe_ms;     ///< when the last probe ran.
     uint32_t mounts;            ///< successful mounts since init (a removal/insert cycle count).
     uint32_t faults;            ///< times a healthy volume was declared faulted.
-};
+} HotswapCore;
 
 /**
  * @brief Initialize to ABSENT at @p now.
@@ -84,7 +82,7 @@ void pc_hotswap_core_init(HotswapCore *c, uint8_t fail_threshold, uint32_t probe
  *
  * @return true if the state changed (so the binding knows to unmount + notify).
  */
-bool pc_hotswap_core_io(HotswapCore *c, bool ok);
+proto_bool pc_hotswap_core_io(HotswapCore *c, proto_bool ok);
 
 /**
  * @brief Is a (re)mount probe due at @p now?
@@ -92,7 +90,7 @@ bool pc_hotswap_core_io(HotswapCore *c, bool ok);
  * Only while not READY, and only once per probe_interval_ms - so a missing card costs one cheap
  * check every interval instead of a mount storm. Wrap-safe across a millis() rollover.
  */
-bool pc_hotswap_core_due(const HotswapCore *c, uint32_t now);
+proto_bool pc_hotswap_core_due(const HotswapCore *c, uint32_t now);
 
 /**
  * @brief Report what a probe found.
@@ -102,18 +100,18 @@ bool pc_hotswap_core_due(const HotswapCore *c, uint32_t now);
  * Present-but-unmountable stays ABSENT rather than READY: a card that will not mount is not storage.
  * @return true if the state changed.
  */
-bool pc_hotswap_core_probe(HotswapCore *c, bool present, bool mounted, uint32_t now);
+proto_bool pc_hotswap_core_probe(HotswapCore *c, proto_bool present, proto_bool mounted, uint32_t now);
 
 // ---------------------------------------------------------------------------
 // Binding
 // ---------------------------------------------------------------------------
 
 /** @brief Mount the volume. @return true on success. */
-typedef bool (*pc_hotswap_mount)(void *ctx);
+typedef proto_bool (*pc_hotswap_mount)(void *ctx);
 /** @brief Drop the mount and any handles it owns. Must tolerate being called when not mounted. */
 typedef void (*pc_hotswap_unmount)(void *ctx);
 /** @brief Optional card-detect probe. nullptr means "assume present and let the mount decide". */
-typedef bool (*pc_hotswap_present)(void *ctx);
+typedef proto_bool (*pc_hotswap_present)(void *ctx);
 /** @brief Fired on every state change, so an app can log it or light an LED. */
 typedef void (*pc_hotswap_event)(StorageState from, StorageState to, void *ctx);
 
@@ -132,10 +130,10 @@ void pc_hotswap_poll_at(uint32_t now);
  *
  * The gate every caller checks first. False whenever the volume is ABSENT or FAULTED.
  */
-bool pc_hotswap_ready(void);
+proto_bool pc_hotswap_ready(void);
 
 /** @brief Report a filesystem outcome; unmounts and notifies if this is the failure that faults it. */
-void pc_hotswap_io(bool ok);
+void pc_hotswap_io(proto_bool ok);
 
 /** @brief Current state. */
 StorageState pc_hotswap_state(void);

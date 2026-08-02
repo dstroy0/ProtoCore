@@ -38,8 +38,6 @@
 #include "services/web/edge_cache/edge_cache.h"    // EdgeEntry
 #include "services/web/edge_cache/edge_cache_sd.h" // PC_EDGE_SD_VALUE_MAX + the shared entry serializer
 #include "services/web/edge_cache/edge_fetch.h"    // EdgeFetchTransport (reused transport seam)
-#include <stddef.h>
-#include <stdint.h>
 
 #define PC_EDGE_MESH_MAGIC0 ('E')
 #define PC_EDGE_MESH_MAGIC1 ('M')
@@ -53,13 +51,13 @@
 /** @brief Worst-case response frame (header + entry on a HIT). */
 
 /** @brief Tri-state parse result for the length-delimited frames (partial reads accumulate to complete). */
-enum class EdgeMeshParse : int8_t
+typedef enum PROTO_ENUM_PACKED
 {
-    MALFORMED = -1, ///< bad magic/version/opcode, or a field that cannot fit the destination
-    INCOMPLETE = 0, ///< a valid prefix so far - need more bytes
-    MISS = 1,       ///< a complete response with no object
-    HIT = 2,        ///< a complete request (outputs filled) / a complete response carrying an entry
-};
+    EDGE_MESH_PARSE_MALFORMED = -1, ///< bad magic/version/opcode, or a field that cannot fit the destination
+    EDGE_MESH_PARSE_INCOMPLETE = 0, ///< a valid prefix so far - need more bytes
+    EDGE_MESH_PARSE_MISS = 1,       ///< a complete response with no object
+    EDGE_MESH_PARSE_HIT = 2,        ///< a complete request (outputs filled) / a complete response carrying an entry
+} EdgeMeshParse;
 
 // --- frame codec (pure) --------------------------------------------------------------------------
 
@@ -73,7 +71,7 @@ size_t edge_mesh_build_request(const uint8_t digest[32], const char *canon, cons
 
 /**
  * @brief Parse an accumulated request buffer.
- * @return EdgeMeshParse::HIT with @p digest_out / @p canon_out / @p hdrs_out filled when a whole valid GET is
+ * @return EDGE_MESH_PARSE_HIT with @p digest_out / @p canon_out / @p hdrs_out filled when a whole valid GET is
  *         present, INCOMPLETE if a valid prefix needs more bytes, or MALFORMED. (No MISS for a request.)
  */
 EdgeMeshParse edge_mesh_parse_request(const uint8_t *buf, size_t len, uint8_t digest_out[32], char *canon_out,
@@ -94,10 +92,10 @@ size_t edge_mesh_serialize_entry(const EdgeEntry *e, long current_age, uint8_t *
  * owns @p e's `used`/LRU linkage (typically an ::edge_store_alloc slot) and must re-check freshness + that the
  * restored key matches the request (guards a wrong / colliding object). @return false on a short/corrupt frame.
  */
-bool edge_mesh_deserialize_entry(const uint8_t *buf, size_t len, EdgeEntry *e, uint32_t now_ms);
+proto_bool edge_mesh_deserialize_entry(const uint8_t *buf, size_t len, EdgeEntry *e, uint32_t now_ms);
 
 /** @brief Build a response (@p hit -> carry @p entry / @p entry_len; else a MISS). @return length or 0. */
-size_t edge_mesh_build_response(bool hit, const uint8_t *entry, size_t entry_len, uint8_t *out, size_t cap);
+size_t edge_mesh_build_response(proto_bool hit, const uint8_t *entry, size_t entry_len, uint8_t *out, size_t cap);
 
 /**
  * @brief Parse an accumulated response buffer.
@@ -108,20 +106,20 @@ EdgeMeshParse edge_mesh_parse_response(const uint8_t *buf, size_t len, size_t *e
 // --- async requester engine (over the EdgeFetchTransport seam) ------------------------------------
 
 /** @brief Peer-query progress. */
-enum class EdgeMeshStatus : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
-    PENDING, ///< still connecting / receiving
-    HIT,     ///< a complete entry frame arrived (entry_off / entry_len valid)
-    MISS,    ///< the peer does not have (a fresh copy of) the object
-    FAILED,  ///< connect / send / timeout / closed-before-complete / malformed
-};
+    EDGE_MESH_STATUS_PENDING, ///< still connecting / receiving
+    EDGE_MESH_STATUS_HIT,     ///< a complete entry frame arrived (entry_off / entry_len valid)
+    EDGE_MESH_STATUS_MISS,    ///< the peer does not have (a fresh copy of) the object
+    EDGE_MESH_STATUS_FAILED,  ///< connect / send / timeout / closed-before-complete / malformed
+} EdgeMeshStatus;
 
 /**
  * @brief One in-flight peer query (zero-heap). The response accumulates into a caller-owned @c buf (>=
  *        PC_EDGE_MESH_RESP_MAX) supplied at begin - a fetch slot reuses its origin buffer, since the mesh and
  *        origin phases never run at once.
  */
-struct EdgeMeshFetch
+typedef struct
 {
     EdgeMeshStatus st;
     int cid;
@@ -131,7 +129,7 @@ struct EdgeMeshFetch
     size_t entry_len; ///< length of the entry frame (valid on HIT)
     uint8_t *buf;     ///< caller-owned accumulation buffer
     size_t cap;       ///< its capacity (must be >= PC_EDGE_MESH_RESP_MAX)
-};
+} EdgeMeshFetch;
 
 /**
  * @brief Dial @p host:@p port, send @p request, begin receiving into @p buf (@p cap >= PC_EDGE_MESH_RESP_MAX).

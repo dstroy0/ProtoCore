@@ -27,41 +27,39 @@
 
 #if PC_ENABLE_SEN0192
 
-#include <stdint.h>
-
 /**
  * @brief Debounced motion-presence tracker over a single digital line.
  *
  * Presence asserts on an active-level sample and is held for @c hold_ms after the last active sample; an
  * inactive stretch longer than @c hold_ms clears it. Pure: time is passed in, so it is fully host-testable.
  */
-struct Sen0192Motion
+typedef struct
 {
-    bool present;            ///< presence currently asserted (respecting the hold window)
-    bool seeded;             ///< a first sample has been fed (so the hold timing is meaningful)
-    bool active_high;        ///< the active (motion) state is a logic HIGH
+    proto_bool present;      ///< presence currently asserted (respecting the hold window)
+    proto_bool seeded;       ///< a first sample has been fed (so the hold timing is meaningful)
+    proto_bool active_high;  ///< the active (motion) state is a logic HIGH
     uint32_t hold_ms;        ///< presence is held this long after the last active sample
     uint32_t last_active_ms; ///< timestamp of the last active-level sample
     uint32_t motion_events;  ///< count of clear -> present transitions (rising edges of presence)
-};
+} Sen0192Motion;
 
 /** @brief Initialize a tracker: @p active_high sets the motion polarity, @p hold_ms the presence hold. */
-void pc_sen0192_motion_init(Sen0192Motion *m, uint32_t hold_ms, bool active_high);
+void pc_sen0192_motion_init(Sen0192Motion *m, uint32_t hold_ms, proto_bool active_high);
 
 /**
  * @brief Feed one sampled line level at @p now_ms.
  * @return true iff this sample started a new presence (a clear -> present edge).
  */
-bool pc_sen0192_motion_update(Sen0192Motion *m, bool level_high, uint32_t now_ms);
+proto_bool pc_sen0192_motion_update(Sen0192Motion *m, proto_bool level_high, uint32_t now_ms);
 
 /**
  * @brief Re-evaluate presence against the hold window at @p now_ms without a new sample (call each tick so
  *        presence clears on time even when no fresh sample arrives). @return the current presence.
  */
-bool pc_sen0192_motion_tick(Sen0192Motion *m, uint32_t now_ms);
+proto_bool pc_sen0192_motion_tick(Sen0192Motion *m, uint32_t now_ms);
 
 /** @brief Current presence (respecting the hold window). */
-bool pc_sen0192_motion_present(const Sen0192Motion *m);
+proto_bool pc_sen0192_motion_present(const Sen0192Motion *m);
 
 /** @brief Number of clear -> present transitions since init. */
 uint32_t pc_sen0192_motion_events(const Sen0192Motion *m);
@@ -75,13 +73,13 @@ uint32_t pc_sen0192_motion_active_age_ms(const Sen0192Motion *m, uint32_t now_ms
  * @brief Configure PC_SEN0192_PIN as an input and start tracking (polarity / hold from ServerConfig).
  * @return true on ESP32, false on a host build.
  */
-bool pc_sen0192_begin(void);
+proto_bool pc_sen0192_begin(void);
 
 /** @brief Sample the pin now (via pc_millis()). @return true iff a new presence just started. */
-bool pc_sen0192_poll(void);
+proto_bool pc_sen0192_poll(void);
 
 /** @brief Current presence. */
-bool pc_sen0192_present(void);
+proto_bool pc_sen0192_present(void);
 
 /** @brief Count of motion events (clear -> present transitions) since pc_sen0192_begin(). */
 uint32_t pc_sen0192_motion_count(void);

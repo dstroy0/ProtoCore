@@ -25,17 +25,16 @@
 #ifndef PROTOCORE_STATSD_H
 #define PROTOCORE_STATSD_H
 
-#include <stddef.h>
-#include <stdint.h>
+#include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
 
 /** @brief StatsD metric type codes (the token after the `|`). */
-enum class StatsdType : uint8_t
+typedef enum PROTO_ENUM_PACKED
 {
     STATSD_COUNTER = 'c',
     STATSD_GAUGE = 'g',
     STATSD_TIMING = 'm', ///< emitted as "ms"
     STATSD_SET = 's',
-};
+} StatsdType;
 
 /**
  * @brief Format one StatsD line: `name:value|type[|@rate][|#tags]`. Pure - no I/O.

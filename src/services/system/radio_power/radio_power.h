@@ -18,19 +18,15 @@
 #define PROTOCORE_RADIO_POWER_H
 
 #include "protocore_config.h"
-#include <stdint.h>
 
 #if PC_ENABLE_RADIO_POWER
 
 /** @brief Modem-sleep modes (match PC_RADIO_WIFI_PS). Config/compare values, so integer constants in
  *  a namespacing struct (cast-free at ==/switch). The service maps these onto the L1 `pc_phy_ps`
  *  contract; what the radio backend calls them is its own business. */
-struct pc_radio_ps
-{
-    static constexpr uint8_t PC_PS_NONE = 0;      ///< no modem sleep (max performance).
-    static constexpr uint8_t PC_PS_MIN_MODEM = 1; ///< wake at every DTIM (balanced).
-    static constexpr uint8_t PC_PS_MAX_MODEM = 2; ///< wake at a listen interval (lowest power, higher latency).
-};
+#define E 0 ///< no modem sleep (max performance).
+#define M 1 ///< wake at every DTIM (balanced).
+#define M 2 ///< wake at a listen interval (lowest power, higher latency).
 
 /** @brief Name for a modem-sleep mode ("none" / "min_modem" / "max_modem"). */
 const char *pc_radio_ps_name(uint8_t mode);

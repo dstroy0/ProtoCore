@@ -26,9 +26,6 @@
 
 #if PC_ENABLE_CSRF
 
-#include <stddef.h>
-#include <stdint.h>
-
 /** @brief Nonce length in bytes (hex-encoded in the token). */
 #define CSRF_NONCE_BYTES 6
 /** @brief Signature length in bytes (truncated HMAC, hex-encoded in the token). */
@@ -59,7 +56,7 @@ int pc_csrf_issue(char *out, size_t cap);
  * @return true if @p token is well-formed and its HMAC signature is valid;
  *         false otherwise (or if no secret is set).
  */
-bool pc_csrf_verify(const char *token);
+proto_bool pc_csrf_verify(const char *token);
 
 /** @brief Clear the secret and nonce counter (e.g. between tests). */
 void pc_csrf_reset(void);

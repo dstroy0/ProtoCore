@@ -34,35 +34,32 @@
 
 #if PC_ENABLE_SUNSPEC
 
-#include <stddef.h>
-#include <stdint.h>
-
 #define SUNSPEC_MARKER 0x53756E53u ///< "SunS"
 #define SUNSPEC_END_MODEL 0xFFFFu  ///< end-model id
 #define SUNSPEC_COMMON_MODEL 1     ///< common model id
 
 /** @brief One model located in the register map. @ref body points INTO the source buffer. */
-struct SunSpecModel
+typedef struct
 {
     uint16_t id;
     uint16_t length;     ///< body registers (after the length point)
     const uint8_t *body; ///< model body, big-endian (id+length header excluded)
     size_t body_len;     ///< length * 2 bytes
-};
+} SunSpecModel;
 
 // ---- reader ----
 
 /** @brief True if the SunS identifier (0x53756E53) is at the head of @p regs. */
-bool pc_sunspec_check_marker(const uint8_t *regs, size_t len);
+proto_bool pc_sunspec_check_marker(const uint8_t *regs, size_t len);
 
 /** @brief Begin a walk: verifies the marker and sets *offset just past it (to 4). */
-bool pc_sunspec_begin(const uint8_t *regs, size_t len, size_t *offset);
+proto_bool pc_sunspec_begin(const uint8_t *regs, size_t len, size_t *offset);
 
 /**
  * @brief Read the model at *offset and advance past it.
  * @return true and fills @p out for a model; false at the end model (0xFFFF) or on truncation.
  */
-bool pc_sunspec_next_model(const uint8_t *regs, size_t len, size_t *offset, SunSpecModel *out);
+proto_bool pc_sunspec_next_model(const uint8_t *regs, size_t len, size_t *offset, SunSpecModel *out);
 
 // Typed point readers at a register offset within a model body (big-endian).
 uint16_t pc_sunspec_u16(const uint8_t *body, size_t reg);
@@ -74,29 +71,29 @@ int32_t pc_sunspec_i32(const uint8_t *body, size_t reg);
  * @brief Copy a SunSpec string point (@p nregs registers, NUL-padded) into @p out.
  * @return true on success (NUL-terminated, content up to the first NUL), false on bad args.
  */
-bool pc_sunspec_string(const uint8_t *body, size_t reg, size_t nregs, char *out, size_t out_cap);
+proto_bool pc_sunspec_string(const uint8_t *body, size_t reg, size_t nregs, char *out, size_t out_cap);
 
 // ---- writer ----
 
 /** @brief Cursor for building a SunSpec map. Treat the fields as opaque. */
-struct SunSpecWriter
+typedef struct
 {
     uint8_t *buf;
     size_t cap;
     size_t pos;
-    bool error;
-};
+    proto_bool error;
+} SunSpecWriter;
 
 void pc_sunspec_writer_init(SunSpecWriter *w, uint8_t *buf, size_t cap);
-bool pc_sunspec_write_marker(SunSpecWriter *w); ///< "SunS"
-bool pc_sunspec_write_model_header(SunSpecWriter *w, uint16_t id, uint16_t length);
-bool pc_sunspec_write_u16(SunSpecWriter *w, uint16_t v);
-bool pc_sunspec_write_i16(SunSpecWriter *w, int16_t v);
-bool pc_sunspec_write_u32(SunSpecWriter *w, uint32_t v);
-bool pc_sunspec_write_i32(SunSpecWriter *w, int32_t v);
-bool pc_sunspec_write_string(SunSpecWriter *w, const char *s, size_t nregs); ///< nregs registers, NUL-padded
-bool pc_sunspec_write_end_model(SunSpecWriter *w);                           ///< [0xFFFF][0]
-size_t pc_sunspec_writer_finish(SunSpecWriter *w);                           ///< bytes written, or 0 on overflow
+proto_bool pc_sunspec_write_marker(SunSpecWriter *w); ///< "SunS"
+proto_bool pc_sunspec_write_model_header(SunSpecWriter *w, uint16_t id, uint16_t length);
+proto_bool pc_sunspec_write_u16(SunSpecWriter *w, uint16_t v);
+proto_bool pc_sunspec_write_i16(SunSpecWriter *w, int16_t v);
+proto_bool pc_sunspec_write_u32(SunSpecWriter *w, uint32_t v);
+proto_bool pc_sunspec_write_i32(SunSpecWriter *w, int32_t v);
+proto_bool pc_sunspec_write_string(SunSpecWriter *w, const char *s, size_t nregs); ///< nregs registers, NUL-padded
+proto_bool pc_sunspec_write_end_model(SunSpecWriter *w);                           ///< [0xFFFF][0]
+size_t pc_sunspec_writer_finish(SunSpecWriter *w);                                 ///< bytes written, or 0 on overflow
 
 #endif // PC_ENABLE_SUNSPEC
 

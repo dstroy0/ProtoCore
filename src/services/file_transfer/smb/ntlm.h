@@ -29,9 +29,6 @@
 
 #if PC_ENABLE_SMB
 
-#include <stddef.h>
-#include <stdint.h>
-
 /** @brief The NT hash: MD4 of the UTF-16LE password (@p password is ASCII/UTF-8, NUL-terminated). */
 void pc_ntlm_nt_hash(const char *password, uint8_t nt_hash[16]);
 
@@ -41,7 +38,7 @@ void pc_ntlm_nt_hash(const char *password, uint8_t nt_hash[16]);
  * Only the @p user is uppercased (ASCII), not the @p domain (MS-NLMP). Both are NUL-terminated.
  * @return true; false if user + domain exceed the internal 256-char scratch.
  */
-bool pc_ntlm_ntowfv2(const uint8_t nt_hash[16], const char *user, const char *domain, uint8_t owf[16]);
+proto_bool pc_ntlm_ntowfv2(const uint8_t nt_hash[16], const char *user, const char *domain, uint8_t owf[16]);
 
 /**
  * @brief Compute the NTLMv2 NtChallengeResponse (NTProofStr + temp) and the session base key.

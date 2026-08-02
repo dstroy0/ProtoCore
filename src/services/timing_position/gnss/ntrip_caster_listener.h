@@ -42,8 +42,6 @@
 #if PC_ENABLE_NTRIP_CASTER
 
 #include "services/timing_position/gnss/ntrip_caster.h"
-#include <stddef.h>
-#include <stdint.h>
 
 /**
  * @brief Register a mountpoint the caster serves and install the handler (first call).
@@ -54,7 +52,7 @@
  *                     access. Referenced, not copied.
  * @return true; false if @p mount / its mountpoint is null or too long, or the mount table is full.
  */
-bool pc_ntrip_caster_add_mount(uint8_t listener_id, const NtripMount *mount, const char *auth_b64);
+proto_bool pc_ntrip_caster_add_mount(uint8_t listener_id, const NtripMount *mount, const char *auth_b64);
 
 /**
  * @brief Push RTCM bytes to every rover currently streaming @p mountpoint.

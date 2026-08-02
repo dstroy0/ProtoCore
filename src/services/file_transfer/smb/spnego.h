@@ -28,9 +28,6 @@
 
 #if PC_ENABLE_SMB
 
-#include <stddef.h>
-#include <stdint.h>
-
 /**
  * @brief Wrap an NTLMSSP NEGOTIATE token in a SPNEGO GSS-API InitialContextToken (the first
  *        SESSION_SETUP security buffer).
@@ -43,7 +40,8 @@ size_t pc_spnego_wrap_negotiate(const uint8_t *ntlm, size_t pc_ntlm_len, uint8_t
  * @param pc_resp_token receives a pointer INTO @p blob; @p pc_resp_len its length.
  * @return true if a `[2]` responseToken OCTET STRING was found and is within bounds.
  */
-bool pc_spnego_parse_response(const uint8_t *blob, size_t len, const uint8_t **pc_resp_token, size_t *pc_resp_len);
+proto_bool pc_spnego_parse_response(const uint8_t *blob, size_t len, const uint8_t **pc_resp_token,
+                                    size_t *pc_resp_len);
 
 /**
  * @brief Wrap an NTLMSSP AUTHENTICATE token in a SPNEGO NegTokenResp (the second SESSION_SETUP

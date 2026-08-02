@@ -24,8 +24,6 @@
 
 #include "protocore_config.h"
 
-#include <stdint.h>
-
 #if PC_SSH_PORT_FORWARD
 
 /**
@@ -35,7 +33,7 @@
  * forward is permitted (an open proxy for authenticated users) - install one to
  * restrict the reachable host:port set.
  */
-typedef bool (*SshForwardPolicyCb)(const char *host, uint16_t port);
+typedef proto_bool (*SshForwardPolicyCb)(const char *host, uint16_t port);
 
 /** @brief Install the forward-target policy (optional; default permits all). */
 void pc_ssh_forward_set_policy_cb(SshForwardPolicyCb cb);
