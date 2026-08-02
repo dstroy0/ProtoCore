@@ -16,6 +16,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update test report + coverage [skip ci] ([`5cedaba`](https://github.com/dstroy0/ProtoCore/commit/5cedabacd81b1338b94919c959bba2eaf2d39462))
+- update CHANGELOG.md [skip ci] ([`85312bf`](https://github.com/dstroy0/ProtoCore/commit/85312bf9608bb253d7f4cca9e50d8d70a401acdb))
 - update test report + coverage [skip ci] ([`886bd8a`](https://github.com/dstroy0/ProtoCore/commit/886bd8ac256fde8928df1188508c7fae6d250a5a))
 - update CHANGELOG.md [skip ci] ([`260ca5a`](https://github.com/dstroy0/ProtoCore/commit/260ca5aa5f608d221939b6cadcf84b57bb1e85bf))
 - update CHANGELOG.md [skip ci] ([`0194c7d`](https://github.com/dstroy0/ProtoCore/commit/0194c7d68334fe635c7936e64a5eefcb663645a7))
@@ -50,6 +52,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- Bump version: 0.0.3 → 0.0.4 ([`4619ab9`](https://github.com/dstroy0/ProtoCore/commit/4619ab9624c47d45d0d5d73ca896c87fffd57e06))
 - Merge remote-tracking branch 'origin/main' into refactor/lib-wide ([`dd7a7a1`](https://github.com/dstroy0/ProtoCore/commit/dd7a7a1e354b12feee9b5365653e217b872fd0fe))
 - Merge pull request #20 from dstroy0/refactor/json-codec ([`3103251`](https://github.com/dstroy0/ProtoCore/commit/3103251059e3e69ff6dca2ab00a27367a1d38903))
 - Merge remote-tracking branch 'origin/main' into refactor/json-codec ([`f12ca3f`](https://github.com/dstroy0/ProtoCore/commit/f12ca3f301fd878bf606ad34c2c9b6800e24ae14))
@@ -64,6 +67,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`27a9294`](https://github.com/dstroy0/ProtoCore/commit/27a9294173dc9856b338196465b7002f591457ba))
 - move the CI badges to the top of the README ([`75a9345`](https://github.com/dstroy0/ProtoCore/commit/75a934560c4e55760f081b7402c3e128af89e705))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`9346b62`](https://github.com/dstroy0/ProtoCore/commit/9346b6247809ad826fe7134eb114167885260aa9))
 - publish features.html and the diagrams, and cut the README down ([`5dca79b`](https://github.com/dstroy0/ProtoCore/commit/5dca79bbf3c8d2fa038096836bf35965274a7aa5))
@@ -93,6 +97,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Refactor
 
+- convert src/ to C11 and split the build into PROTOCORE_HOT / PROTOCORE_HOST ([`40d217a`](https://github.com/dstroy0/ProtoCore/commit/40d217a7272b721e83230cb1ca6d0517622824e2))
 - split swar into an access layer and bounded-run operations ([`d5d947e`](https://github.com/dstroy0/ProtoCore/commit/d5d947ed28b48109556e8bce14e5fbeb55a80f90))
 - finish removing the PC class, and default every feature off ([`65a3886`](https://github.com/dstroy0/ProtoCore/commit/65a3886a0bd147bcc5d039fab5243a86db53ce4a))
 - give the filesystem accessor the tree operations, and mnt back its blindness ([`09227b6`](https://github.com/dstroy0/ProtoCore/commit/09227b6ca482d960510a2215af1ed390e118d98b))
