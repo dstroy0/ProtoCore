@@ -169,14 +169,15 @@ src/
 │   │   │   ├── CLASSIC_CRYPTO_REG_SYMBOLS.md
 │   │   │   ├── DMA_GDMA.md
 │   │   │   ├── E_CRYPTO_REG_SYMBOLS.md
-│   │   │   ├── esp_aes128gcm.cpp
-│   │   │   ├── esp_aesgcm.cpp
-│   │   │   ├── esp_bignum.cpp
-│   │   │   ├── esp_crypto_hal.cpp
+│   │   │   ├── esp_aes128gcm.c
+│   │   │   ├── esp_aesgcm.c
+│   │   │   ├── esp_bignum.c
+│   │   │   ├── esp_bus.c
+│   │   │   ├── esp_crypto_hal.c
 │   │   │   ├── esp_crypto_hal.h
-│   │   │   ├── esp_mnt_fs.cpp
+│   │   │   ├── esp_mnt_fs.c
 │   │   │   ├── esp_mnt_fs.h
-│   │   │   ├── esp_platform.cpp
+│   │   │   ├── esp_platform.c
 │   │   │   ├── H2_CRYPTO_REG_SYMBOLS.md
 │   │   │   ├── P4_CRYPTO_REG_SYMBOLS.md
 │   │   │   ├── P4_MIPI_DSI_CSI.md
@@ -184,172 +185,186 @@ src/
 │   │   │   ├── S2.md
 │   │   │   └── S3_CRYPTO_REG_SYMBOLS.md
 │   │   └── portable/
-│   │       ├── portable_aes128gcm.cpp
+│   │       ├── portable_aes128gcm.c
 │   │       ├── portable_aesgcm.cpp
 │   │       ├── portable_bignum.cpp
-│   │       └── portable_platform.cpp
+│   │       └── portable_platform.c
 │   └── physical/
 │       └── esp/
-│           └── physical_esp.cpp
+│           └── physical_esp.c
 ├── crypto/
 │   ├── aead/
 │   │   ├── aes128gcm.h
-│   │   ├── aesccm.cpp
+│   │   ├── aesccm.c
 │   │   ├── aesccm.h
-│   │   ├── aesgcm.cpp
+│   │   ├── aesgcm.c
 │   │   ├── aesgcm.h
-│   │   ├── chachapoly.cpp
+│   │   ├── chachapoly.c
 │   │   └── chachapoly.h
 │   ├── asymmetric/
-│   │   ├── bignum.cpp
+│   │   ├── bignum.c
 │   │   ├── bignum.h
-│   │   ├── curve25519.cpp
+│   │   ├── curve25519.c
 │   │   ├── curve25519.h
-│   │   ├── ecdsa.cpp
+│   │   ├── ecdsa.c
 │   │   ├── ecdsa.h
-│   │   ├── ed25519.cpp
+│   │   ├── ed25519.c
 │   │   ├── ed25519.h
 │   │   ├── ed25519_comb_table.h
 │   │   ├── fe25519.h
-│   │   ├── rsa.cpp
+│   │   ├── rsa.c
 │   │   └── rsa.h
 │   ├── cipher/
-│   │   ├── aes256ctr.cpp
+│   │   ├── aes256ctr.c
 │   │   ├── aes256ctr.h
 │   │   ├── aes_block.h
 │   │   ├── aes_sbox.h
-│   │   ├── chacha20.cpp
+│   │   ├── chacha20.c
 │   │   └── chacha20.h
 │   ├── hash/
-│   │   ├── md.cpp
+│   │   ├── md.c
 │   │   ├── md.h
-│   │   ├── sha1.cpp
+│   │   ├── sha1.c
 │   │   ├── sha1.h
-│   │   ├── sha256.cpp
+│   │   ├── sha256.c
 │   │   ├── sha256.h
-│   │   ├── sha3.cpp
+│   │   ├── sha3.c
 │   │   ├── sha3.h
-│   │   ├── sha512.cpp
+│   │   ├── sha512.c
 │   │   └── sha512.h
 │   ├── kdf/
-│   │   ├── hkdf.cpp
+│   │   ├── hkdf.c
 │   │   ├── hkdf.h
-│   │   ├── kdf.cpp
+│   │   ├── kdf.c
 │   │   ├── kdf.h
-│   │   ├── tls13_kdf.cpp
+│   │   ├── tls13_kdf.c
 │   │   └── tls13_kdf.h
 │   ├── mac/
-│   │   ├── aes_cmac.cpp
+│   │   ├── aes_cmac.c
 │   │   ├── aes_cmac.h
 │   │   ├── ghash.h
-│   │   ├── hmac_sha256.cpp
+│   │   ├── hmac_sha256.c
 │   │   ├── hmac_sha256.h
-│   │   ├── hmac_sha512.cpp
+│   │   ├── hmac_sha512.c
 │   │   ├── hmac_sha512.h
-│   │   ├── poly1305.cpp
+│   │   ├── poly1305.c
 │   │   └── poly1305.h
 │   ├── pqc/
-│   │   ├── mlkem.cpp
+│   │   ├── mlkem.c
 │   │   ├── mlkem.h
-│   │   ├── sntrup761.cpp
+│   │   ├── sntrup761.c
 │   │   └── sntrup761.h
 │   ├── crypto_opt.h
 │   └── ct_eq.h
 ├── mmgr/
-│   ├── arena.cpp
+│   ├── arena.c
 │   ├── arena.h
-│   ├── frame.cpp
+│   ├── frame.c
 │   ├── frame.h
 │   ├── membuild.h
-│   ├── plaintext.cpp
+│   ├── plaintext.c
 │   ├── plaintext.h
-│   ├── secure.cpp
+│   ├── secure.c
 │   └── secure.h
 ├── network_drivers/
 │   ├── application/
-│   │   ├── binary_asset_blobs.cpp
+│   │   ├── binary_asset_blobs.c
 │   │   ├── binary_asset_blobs.h
-│   │   ├── web_assets.cpp
+│   │   ├── web_assets.c
 │   │   └── web_assets.h
-│   ├── datalink/  (datalink.h, datalink.cpp)
+│   ├── datalink/
+│   │   ├── datalink.c
+│   │   └── datalink.h
 │   ├── network/
-│   │   ├── ip.cpp
+│   │   ├── ip.c
 │   │   ├── ip.h
-│   │   ├── network.cpp
+│   │   ├── network.c
 │   │   ├── network.h
-│   │   ├── route.cpp
+│   │   ├── route.c
 │   │   └── route.h
-│   ├── physical/  (physical.h, physical.cpp)
+│   ├── physical/
+│   │   ├── physical.c
+│   │   └── physical.h
 │   ├── presentation/
 │   │   ├── codec/
-│   │   │   ├── base64/  (base64.h, base64.cpp)
+│   │   │   ├── base64/
+│   │   │   │   ├── base64.c
+│   │   │   │   └── base64.h
 │   │   │   ├── cbor/  (cbor.h, cbor.cpp)
-│   │   │   ├── deflate/  (deflate.h, deflate.cpp)
-│   │   │   ├── hpack_prim/  (hpack_prim.h, hpack_prim.cpp)
-│   │   │   ├── inflate/  (inflate.h, inflate.cpp)
-│   │   │   ├── json/  (json.h, json.cpp)
+│   │   │   ├── deflate/
+│   │   │   │   ├── deflate.c
+│   │   │   │   └── deflate.h
+│   │   │   ├── hpack_prim/
+│   │   │   │   ├── hpack_prim.c
+│   │   │   │   └── hpack_prim.h
+│   │   │   ├── inflate/
+│   │   │   │   ├── inflate.c
+│   │   │   │   └── inflate.h
+│   │   │   ├── json/
+│   │   │   │   ├── json.c
+│   │   │   │   └── json.h
 │   │   │   ├── msgpack/  (msgpack.h, msgpack.cpp)
 │   │   │   ├── multipart/  (multipart.h, multipart.cpp)
 │   │   │   ├── codec.cpp
 │   │   │   └── codec.h
 │   │   ├── http/
 │   │   │   ├── http2/
-│   │   │   │   ├── h2_conn.cpp
+│   │   │   │   ├── h2_conn.c
 │   │   │   │   ├── h2_conn.h
-│   │   │   │   ├── h2_frame.cpp
+│   │   │   │   ├── h2_frame.c
 │   │   │   │   ├── h2_frame.h
-│   │   │   │   ├── h2_server.cpp
+│   │   │   │   ├── h2_server.c
 │   │   │   │   ├── h2_server.h
-│   │   │   │   ├── hpack.cpp
+│   │   │   │   ├── hpack.c
 │   │   │   │   └── hpack.h
 │   │   │   ├── http3/
-│   │   │   │   ├── h3_conn.cpp
+│   │   │   │   ├── h3_conn.c
 │   │   │   │   ├── h3_conn.h
-│   │   │   │   ├── h3_frame.cpp
+│   │   │   │   ├── h3_frame.c
 │   │   │   │   ├── h3_frame.h
-│   │   │   │   ├── qpack.cpp
+│   │   │   │   ├── qpack.c
 │   │   │   │   ├── qpack.h
-│   │   │   │   ├── quic_conn.cpp
+│   │   │   │   ├── quic_conn.c
 │   │   │   │   ├── quic_conn.h
-│   │   │   │   ├── quic_crypto.cpp
+│   │   │   │   ├── quic_crypto.c
 │   │   │   │   ├── quic_crypto.h
-│   │   │   │   ├── quic_frame.cpp
+│   │   │   │   ├── quic_frame.c
 │   │   │   │   ├── quic_frame.h
-│   │   │   │   ├── quic_packet.cpp
+│   │   │   │   ├── quic_packet.c
 │   │   │   │   ├── quic_packet.h
-│   │   │   │   ├── quic_server.cpp
+│   │   │   │   ├── quic_server.c
 │   │   │   │   ├── quic_server.h
-│   │   │   │   ├── quic_tls.cpp
+│   │   │   │   ├── quic_tls.c
 │   │   │   │   ├── quic_tls.h
-│   │   │   │   ├── quic_tp.cpp
+│   │   │   │   ├── quic_tp.c
 │   │   │   │   ├── quic_tp.h
-│   │   │   │   ├── quic_varint.cpp
+│   │   │   │   ├── quic_varint.c
 │   │   │   │   ├── quic_varint.h
-│   │   │   │   ├── tls13_msg.cpp
+│   │   │   │   ├── tls13_msg.c
 │   │   │   │   └── tls13_msg.h
 │   │   │   ├── http_parser/  (http_parser.h, http_parser.cpp)
 │   │   │   ├── sse/  (sse.h, sse.cpp)
 │   │   │   └── websocket/  (websocket.h, websocket.cpp)
 │   │   ├── security/
 │   │   │   └── dtls/
-│   │   │       ├── dtls_conn.cpp
+│   │   │       ├── dtls_conn.c
 │   │   │       ├── dtls_conn.h
-│   │   │       ├── dtls_handshake.cpp
+│   │   │       ├── dtls_handshake.c
 │   │   │       ├── dtls_handshake.h
-│   │   │       ├── dtls_record.cpp
+│   │   │       ├── dtls_record.c
 │   │   │       └── dtls_record.h
 │   │   ├── ssh/
 │   │   │   ├── auth/  (ssh_auth.h, ssh_auth.cpp)
 │   │   │   ├── connection/
 │   │   │   │   ├── ssh_channel.cpp
 │   │   │   │   ├── ssh_channel.h
-│   │   │   │   ├── ssh_client.cpp
+│   │   │   │   ├── ssh_client.c
 │   │   │   │   ├── ssh_client.h
 │   │   │   │   ├── ssh_conn.cpp
 │   │   │   │   ├── ssh_conn.h
 │   │   │   │   ├── ssh_flow_control.cpp
 │   │   │   │   ├── ssh_flow_control.h
-│   │   │   │   ├── ssh_forward.cpp
+│   │   │   │   ├── ssh_forward.c
 │   │   │   │   ├── ssh_forward.h
 │   │   │   │   ├── ssh_server.cpp
 │   │   │   │   └── ssh_server.h
@@ -358,11 +373,11 @@ src/
 │   │   │   │   ├── ssh_rsa.cpp
 │   │   │   │   └── ssh_rsa.h
 │   │   │   └── transport/
-│   │   │       ├── ssh_comp.cpp
+│   │   │       ├── ssh_comp.c
 │   │   │       ├── ssh_comp.h
 │   │   │       ├── ssh_dh.cpp
 │   │   │       ├── ssh_dh.h
-│   │   │       ├── ssh_inflate.cpp
+│   │   │       ├── ssh_inflate.c
 │   │   │       ├── ssh_inflate.h
 │   │   │       ├── ssh_keymat.cpp
 │   │   │       ├── ssh_keymat.h
@@ -370,364 +385,664 @@ src/
 │   │   │       ├── ssh_packet.h
 │   │   │       ├── ssh_transport.cpp
 │   │   │       ├── ssh_transport.h
-│   │   │       ├── ssh_zlib.cpp
+│   │   │       ├── ssh_zlib.c
 │   │   │       └── ssh_zlib.h
-│   │   ├── telnet/  (telnet.h, telnet.cpp)
+│   │   ├── telnet/
+│   │   │   ├── telnet.c
+│   │   │   └── telnet.h
 │   │   ├── presentation.cpp
 │   │   └── presentation.h
 │   ├── session/
+│   │   ├── preempt_queue.c
+│   │   ├── preempt_queue.h
 │   │   ├── proto_builtins.cpp
 │   │   ├── proto_handler.h
 │   │   ├── session.cpp
 │   │   ├── session.h
-│   │   ├── worker.cpp
+│   │   ├── worker.c
 │   │   └── worker.h
 │   ├── tls/  (tls.h, tls.cpp)
 │   └── transport/
-│       ├── client.cpp
+│       ├── client.c
 │       ├── client.h
-│       ├── diffserv.cpp
+│       ├── diffserv.c
 │       ├── diffserv.h
-│       ├── listener.cpp
+│       ├── listener.c
 │       ├── listener.h
 │       ├── tcp.c
 │       ├── tcp.h
-│       ├── udp.cpp
+│       ├── udp.c
 │       └── udp.h
 ├── server/
 │   ├── filesystem/
-│   │   ├── filesystem.cpp
+│   │   ├── filesystem.c
 │   │   ├── filesystem.h
-│   │   ├── mnt.cpp
+│   │   ├── mnt.c
 │   │   ├── mnt.h
-│   │   ├── wearlevel.cpp
+│   │   ├── wearlevel.c
 │   │   └── wearlevel.h
-│   ├── signaling/  (signaling.h, signaling.cpp)
-│   ├── auth.cpp
-│   ├── file_serving.cpp
-│   ├── http_range.cpp
+│   ├── signaling/
+│   │   ├── signaling.c
+│   │   └── signaling.h
+│   ├── auth.c
+│   ├── file_serving.c
+│   ├── http_range.c
 │   ├── http_range.h
-│   ├── middleware.cpp
-│   ├── regex.cpp
-│   ├── response.cpp
-│   ├── ssh_scp.cpp
+│   ├── middleware.c
+│   ├── regex.c
+│   ├── response.c
+│   ├── ssh_scp.c
 │   ├── ssh_scp.h
-│   ├── ssh_sftp.cpp
+│   ├── ssh_sftp.c
 │   ├── ssh_sftp.h
-│   ├── webdav.cpp
-│   └── websocket_sse.cpp
+│   ├── webdav.c
+│   └── websocket_sse.c
 ├── services/
 │   ├── energy/
-│   │   ├── c37118/  (c37118.h, c37118.cpp)
-│   │   ├── dnp3/  (dnp3.h, dnp3.cpp)
-│   │   ├── goose/  (goose.h, goose.cpp)
-│   │   ├── iccp/  (iccp.h, iccp.cpp)
-│   │   ├── iec60870/  (iec60870.h, iec60870.cpp)
-│   │   ├── mms/  (mms.h, mms.cpp)
-│   │   ├── openadr/  (openadr.h, openadr.cpp)
-│   │   ├── sep2/  (sep2.h, sep2.cpp)
-│   │   └── sunspec/  (sunspec.h, sunspec.cpp)
+│   │   ├── c37118/
+│   │   │   ├── c37118.c
+│   │   │   └── c37118.h
+│   │   ├── dnp3/
+│   │   │   ├── dnp3.c
+│   │   │   └── dnp3.h
+│   │   ├── goose/
+│   │   │   ├── goose.c
+│   │   │   └── goose.h
+│   │   ├── iccp/
+│   │   │   ├── iccp.c
+│   │   │   └── iccp.h
+│   │   ├── iec60870/
+│   │   │   ├── iec60870.c
+│   │   │   └── iec60870.h
+│   │   ├── mms/
+│   │   │   ├── mms.c
+│   │   │   └── mms.h
+│   │   ├── openadr/
+│   │   │   ├── openadr.c
+│   │   │   └── openadr.h
+│   │   ├── sep2/
+│   │   │   ├── sep2.c
+│   │   │   └── sep2.h
+│   │   └── sunspec/
+│   │       ├── sunspec.c
+│   │       └── sunspec.h
 │   ├── fieldbus/
-│   │   ├── ads/  (ads.h, ads.cpp)
-│   │   ├── bacnet/  (bacnet.h, bacnet.cpp)
-│   │   ├── canopen/  (canopen.h, canopen.cpp)
-│   │   ├── cclink/  (cclink.h, cclink.cpp)
-│   │   ├── cia402/  (cia402.h, cia402.cpp)
-│   │   ├── cip/  (cip.h, cip.cpp)
-│   │   ├── cotp/  (cotp.h, cotp.cpp)
-│   │   ├── devicenet/  (devicenet.h, devicenet.cpp)
-│   │   ├── df1/  (df1.h, df1.cpp)
-│   │   ├── directnet/  (directnet.h, directnet.cpp)
-│   │   ├── enip/  (enip.h, enip.cpp)
-│   │   ├── fins/  (fins.h, fins.cpp)
-│   │   ├── hart/  (hart.h, hart.cpp)
-│   │   ├── hostlink/  (hostlink.h, hostlink.cpp)
-│   │   ├── interbus/  (interbus.h, interbus.cpp)
-│   │   ├── iolink/  (iolink.h, iolink.cpp)
-│   │   ├── j1939/  (j1939.h, j1939.cpp)
-│   │   ├── lonworks/  (lonworks.h, lonworks.cpp)
-│   │   ├── mbplus/  (mbplus.h, mbplus.cpp)
-│   │   ├── mbus/  (mbus.h, mbus.cpp)
-│   │   ├── melsec/  (melsec.h, melsec.cpp)
+│   │   ├── ads/
+│   │   │   ├── ads.c
+│   │   │   └── ads.h
+│   │   ├── bacnet/
+│   │   │   ├── bacnet.c
+│   │   │   └── bacnet.h
+│   │   ├── canopen/
+│   │   │   ├── canopen.c
+│   │   │   └── canopen.h
+│   │   ├── cclink/
+│   │   │   ├── cclink.c
+│   │   │   └── cclink.h
+│   │   ├── cia402/
+│   │   │   ├── cia402.c
+│   │   │   └── cia402.h
+│   │   ├── cip/
+│   │   │   ├── cip.c
+│   │   │   └── cip.h
+│   │   ├── cotp/
+│   │   │   ├── cotp.c
+│   │   │   └── cotp.h
+│   │   ├── devicenet/
+│   │   │   ├── devicenet.c
+│   │   │   └── devicenet.h
+│   │   ├── df1/
+│   │   │   ├── df1.c
+│   │   │   └── df1.h
+│   │   ├── directnet/
+│   │   │   ├── directnet.c
+│   │   │   └── directnet.h
+│   │   ├── enip/
+│   │   │   ├── enip.c
+│   │   │   └── enip.h
+│   │   ├── fins/
+│   │   │   ├── fins.c
+│   │   │   └── fins.h
+│   │   ├── hart/
+│   │   │   ├── hart.c
+│   │   │   └── hart.h
+│   │   ├── hostlink/
+│   │   │   ├── hostlink.c
+│   │   │   └── hostlink.h
+│   │   ├── interbus/
+│   │   │   ├── interbus.c
+│   │   │   └── interbus.h
+│   │   ├── iolink/
+│   │   │   ├── iolink.c
+│   │   │   └── iolink.h
+│   │   ├── j1939/
+│   │   │   ├── j1939.c
+│   │   │   └── j1939.h
+│   │   ├── lonworks/
+│   │   │   ├── lonworks.c
+│   │   │   └── lonworks.h
+│   │   ├── mbplus/
+│   │   │   ├── mbplus.c
+│   │   │   └── mbplus.h
+│   │   ├── mbus/
+│   │   │   ├── mbus.c
+│   │   │   └── mbus.h
+│   │   ├── melsec/
+│   │   │   ├── melsec.c
+│   │   │   └── melsec.h
 │   │   ├── modbus/
-│   │   │   ├── modbus.cpp
+│   │   │   ├── modbus.c
 │   │   │   ├── modbus.h
-│   │   │   ├── modbus_master.cpp
+│   │   │   ├── modbus_master.c
 │   │   │   └── modbus_master.h
-│   │   ├── opcua/  (opcua.h, opcua.cpp)
-│   │   ├── opcua_client/  (opcua_client.h, opcua_client.cpp)
-│   │   ├── powerlink/  (powerlink.h, powerlink.cpp)
-│   │   ├── profibus/  (profibus.h, profibus.cpp)
-│   │   ├── profinet/  (profinet.h, profinet.cpp)
-│   │   ├── rawl2/  (rawl2.h, rawl2.cpp)
-│   │   ├── s7comm/  (s7comm.h, s7comm.cpp)
-│   │   ├── sercos/  (sercos.h, sercos.cpp)
-│   │   ├── simatic/  (simatic.h, simatic.cpp)
-│   │   └── snp/  (snp.h, snp.cpp)
+│   │   ├── opcua/
+│   │   │   ├── opcua.c
+│   │   │   └── opcua.h
+│   │   ├── opcua_client/
+│   │   │   ├── opcua_client.c
+│   │   │   └── opcua_client.h
+│   │   ├── powerlink/
+│   │   │   ├── powerlink.c
+│   │   │   └── powerlink.h
+│   │   ├── profibus/
+│   │   │   ├── profibus.c
+│   │   │   └── profibus.h
+│   │   ├── profinet/
+│   │   │   ├── profinet.c
+│   │   │   └── profinet.h
+│   │   ├── rawl2/
+│   │   │   ├── rawl2.c
+│   │   │   └── rawl2.h
+│   │   ├── s7comm/
+│   │   │   ├── s7comm.c
+│   │   │   └── s7comm.h
+│   │   ├── sercos/
+│   │   │   ├── sercos.c
+│   │   │   └── sercos.h
+│   │   ├── simatic/
+│   │   │   ├── simatic.c
+│   │   │   └── simatic.h
+│   │   └── snp/
+│   │       ├── snp.c
+│   │       └── snp.h
 │   ├── file_transfer/
 │   │   ├── ftp/
-│   │   │   ├── ftp.cpp
+│   │   │   ├── ftp.c
 │   │   │   ├── ftp.h
-│   │   │   ├── ftp_session.cpp
+│   │   │   ├── ftp_session.c
 │   │   │   └── ftp_session.h
 │   │   ├── http_delivery/
-│   │   │   ├── http_delivery.cpp
+│   │   │   ├── http_delivery.c
 │   │   │   ├── http_delivery.h
-│   │   │   └── http_delivery_routes.cpp
-│   │   ├── scp/  (scp.h, scp.cpp)
-│   │   ├── sftp/  (sftp.h, sftp.cpp)
+│   │   │   └── http_delivery_routes.c
+│   │   ├── scp/
+│   │   │   ├── scp.c
+│   │   │   └── scp.h
+│   │   ├── sftp/
+│   │   │   ├── sftp.c
+│   │   │   └── sftp.h
 │   │   ├── smb/
-│   │   │   ├── ntlm.cpp
+│   │   │   ├── ntlm.c
 │   │   │   ├── ntlm.h
-│   │   │   ├── ntlmssp.cpp
+│   │   │   ├── ntlmssp.c
 │   │   │   ├── ntlmssp.h
-│   │   │   ├── smb2.cpp
+│   │   │   ├── smb2.c
 │   │   │   ├── smb2.h
-│   │   │   ├── smb_client.cpp
+│   │   │   ├── smb_client.c
 │   │   │   ├── smb_client.h
-│   │   │   ├── spnego.cpp
+│   │   │   ├── spnego.c
 │   │   │   └── spnego.h
-│   │   ├── upload_service/  (upload_service.h, upload_service.cpp)
+│   │   ├── upload_service/
+│   │   │   ├── upload_service.c
+│   │   │   └── upload_service.h
 │   │   └── webdav/  (webdav.h, webdav.cpp)
 │   ├── instrumentation/
-│   │   ├── gpib/  (gpib.h, gpib.cpp)
-│   │   ├── hislip/  (hislip.h, hislip.cpp)
-│   │   ├── scpi/  (scpi.h, scpi.cpp)
-│   │   └── vxi11/  (vxi11.h, vxi11.cpp)
+│   │   ├── gpib/
+│   │   │   ├── gpib.c
+│   │   │   └── gpib.h
+│   │   ├── hislip/
+│   │   │   ├── hislip.c
+│   │   │   └── hislip.h
+│   │   ├── scpi/
+│   │   │   ├── scpi.c
+│   │   │   └── scpi.h
+│   │   └── vxi11/
+│   │       ├── vxi11.c
+│   │       └── vxi11.h
 │   ├── iot/
-│   │   ├── amqp/  (amqp.h, amqp.cpp)
-│   │   ├── cloudevents/  (cloudevents.h, cloudevents.cpp)
+│   │   ├── amqp/
+│   │   │   ├── amqp.c
+│   │   │   └── amqp.h
+│   │   ├── cloudevents/
+│   │   │   ├── cloudevents.c
+│   │   │   └── cloudevents.h
 │   │   ├── coap/
-│   │   │   ├── coap.cpp
+│   │   │   ├── coap.c
 │   │   │   ├── coap.h
-│   │   │   ├── coaps.cpp
+│   │   │   ├── coaps.c
 │   │   │   ├── coaps.h
-│   │   │   ├── coaps_server.cpp
+│   │   │   ├── coaps_server.c
 │   │   │   └── coaps_server.h
-│   │   ├── dds/  (dds.h, dds.cpp)
-│   │   ├── graphql/  (graphql.h, graphql.cpp)
-│   │   ├── grpcweb/  (grpcweb.h, grpcweb.cpp)
-│   │   ├── lwm2m/  (lwm2m_tlv.h, lwm2m_tlv.cpp)
+│   │   ├── dds/
+│   │   │   ├── dds.c
+│   │   │   └── dds.h
+│   │   ├── graphql/
+│   │   │   ├── graphql.c
+│   │   │   └── graphql.h
+│   │   ├── grpcweb/
+│   │   │   ├── grpcweb.c
+│   │   │   └── grpcweb.h
+│   │   ├── lwm2m/
+│   │   │   ├── lwm2m_tlv.c
+│   │   │   └── lwm2m_tlv.h
 │   │   ├── mqtt/
 │   │   │   ├── mqtt.cpp
 │   │   │   ├── mqtt.h
-│   │   │   ├── mqtt_sn.cpp
+│   │   │   ├── mqtt_sn.c
 │   │   │   └── mqtt_sn.h
-│   │   ├── nats/  (nats.h, nats.cpp)
-│   │   ├── protobuf/  (protobuf.h, protobuf.cpp)
-│   │   ├── redis_resp/  (redis_resp.h, redis_resp.cpp)
+│   │   ├── nats/
+│   │   │   ├── nats.c
+│   │   │   └── nats.h
+│   │   ├── protobuf/
+│   │   │   ├── protobuf.c
+│   │   │   └── protobuf.h
+│   │   ├── redis_resp/
+│   │   │   ├── redis_resp.c
+│   │   │   └── redis_resp.h
 │   │   ├── senml/  (senml.h, senml.cpp)
-│   │   ├── sparkplug/  (sparkplug.h, sparkplug.cpp)
+│   │   ├── sparkplug/
+│   │   │   ├── sparkplug.c
+│   │   │   └── sparkplug.h
 │   │   ├── statsd/  (statsd.h, statsd.cpp)
-│   │   ├── stomp/  (stomp.h, stomp.cpp)
-│   │   ├── telemetry/  (telemetry.h, telemetry.cpp)
-│   │   ├── udp_telemetry/  (udp_telemetry.h, udp_telemetry.cpp)
-│   │   ├── wamp/  (wamp.h, wamp.cpp)
-│   │   └── xmpp/  (xmpp.h, xmpp.cpp)
+│   │   ├── stomp/
+│   │   │   ├── stomp.c
+│   │   │   └── stomp.h
+│   │   ├── telemetry/
+│   │   │   ├── telemetry.c
+│   │   │   └── telemetry.h
+│   │   ├── udp_telemetry/
+│   │   │   ├── udp_telemetry.c
+│   │   │   └── udp_telemetry.h
+│   │   ├── wamp/
+│   │   │   ├── wamp.c
+│   │   │   └── wamp.h
+│   │   └── xmpp/
+│   │       ├── xmpp.c
+│   │       └── xmpp.h
 │   ├── machine_tool/
-│   │   ├── atc/  (atc.h, atc.cpp)
+│   │   ├── atc/
+│   │   │   ├── atc.c
+│   │   │   └── atc.h
 │   │   ├── dnc/
-│   │   │   ├── dnc.cpp
+│   │   │   ├── dnc.c
 │   │   │   ├── dnc.h
-│   │   │   ├── dnc_stream.cpp
+│   │   │   ├── dnc_stream.c
 │   │   │   └── dnc_stream.h
-│   │   ├── euromap77/  (euromap77.h, euromap77.cpp)
-│   │   ├── fanuc_j519/  (fanuc_j519.h, fanuc_j519.cpp)
-│   │   ├── focas/  (focas.h, focas.cpp)
-│   │   ├── haas_mdc/  (haas_mdc.h, haas_mdc.cpp)
-│   │   ├── lsv2/  (lsv2.h, lsv2.cpp)
-│   │   ├── mtconnect/  (mtconnect.h, mtconnect.cpp)
-│   │   ├── packml/  (packml.h, packml.cpp)
-│   │   ├── robotics/  (robotics.h, robotics.cpp)
-│   │   ├── safety_scl/  (safety_scl.h, safety_scl.cpp)
-│   │   └── umati/  (umati.h, umati.cpp)
+│   │   ├── euromap77/
+│   │   │   ├── euromap77.c
+│   │   │   └── euromap77.h
+│   │   ├── fanuc_j519/
+│   │   │   ├── fanuc_j519.c
+│   │   │   └── fanuc_j519.h
+│   │   ├── focas/
+│   │   │   ├── focas.c
+│   │   │   └── focas.h
+│   │   ├── haas_mdc/
+│   │   │   ├── haas_mdc.c
+│   │   │   └── haas_mdc.h
+│   │   ├── lsv2/
+│   │   │   ├── lsv2.c
+│   │   │   └── lsv2.h
+│   │   ├── mtconnect/
+│   │   │   ├── mtconnect.c
+│   │   │   └── mtconnect.h
+│   │   ├── packml/
+│   │   │   ├── packml.c
+│   │   │   └── packml.h
+│   │   ├── robotics/
+│   │   │   ├── robotics.c
+│   │   │   └── robotics.h
+│   │   ├── safety_scl/
+│   │   │   ├── safety_scl.c
+│   │   │   └── safety_scl.h
+│   │   └── umati/
+│   │       ├── umati.c
+│   │       └── umati.h
 │   ├── net/
-│   │   ├── dns_resolver/  (dns_resolver.h, dns_resolver.cpp)
+│   │   ├── dns_resolver/
+│   │   │   ├── dns_resolver.c
+│   │   │   └── dns_resolver.h
 │   │   ├── dns_server/  (dns_server.h, dns_server.cpp)
-│   │   ├── flow_export/  (flow_export.h, flow_export.cpp)
-│   │   ├── forward/  (forward.h, forward.cpp)
-│   │   ├── gateway/  (gateway.h, gateway.cpp)
-│   │   ├── happy_eyeballs/  (happy_eyeballs.h, happy_eyeballs.cpp)
+│   │   ├── flow_export/
+│   │   │   ├── flow_export.c
+│   │   │   └── flow_export.h
+│   │   ├── forward/
+│   │   │   ├── forward.c
+│   │   │   └── forward.h
+│   │   ├── gateway/
+│   │   │   ├── gateway.c
+│   │   │   └── gateway.h
+│   │   ├── happy_eyeballs/
+│   │   │   ├── happy_eyeballs.c
+│   │   │   └── happy_eyeballs.h
 │   │   ├── http_client/  (http_client.h, http_client.cpp)
 │   │   ├── iface_bridge/
-│   │   │   ├── iface_bridge.cpp
+│   │   │   ├── iface_bridge.c
 │   │   │   ├── iface_bridge.h
-│   │   │   ├── iface_bridge_hw.cpp
+│   │   │   ├── iface_bridge_hw.c
 │   │   │   └── iface_bridge_hw.h
-│   │   ├── mdns_adaptive/  (mdns_adaptive.h, mdns_adaptive.cpp)
+│   │   ├── mdns_adaptive/
+│   │   │   ├── mdns_adaptive.c
+│   │   │   └── mdns_adaptive.h
 │   │   ├── mdns_service/  (mdns_service.h, mdns_service.cpp)
-│   │   ├── netadapt/  (netadapt.h, netadapt.cpp)
-│   │   ├── proxy_protocol/  (proxy_protocol.h, proxy_protocol.cpp)
+│   │   ├── netadapt/
+│   │   │   ├── netadapt.c
+│   │   │   └── netadapt.h
+│   │   ├── proxy_protocol/
+│   │   │   ├── proxy_protocol.c
+│   │   │   └── proxy_protocol.h
 │   │   ├── relay/
-│   │   │   ├── relay.cpp
+│   │   │   ├── relay.c
 │   │   │   ├── relay.h
-│   │   │   ├── relay_listener.cpp
+│   │   │   ├── relay_listener.c
 │   │   │   └── relay_listener.h
 │   │   ├── smtp/  (smtp.h, smtp.cpp)
 │   │   ├── snmp/
-│   │   │   ├── snmp_agent.cpp
+│   │   │   ├── snmp_agent.c
 │   │   │   ├── snmp_agent.h
-│   │   │   ├── snmp_ber.cpp
+│   │   │   ├── snmp_ber.c
 │   │   │   ├── snmp_ber.h
-│   │   │   ├── snmp_crypto.cpp
+│   │   │   ├── snmp_crypto.c
 │   │   │   ├── snmp_crypto.h
-│   │   │   ├── snmp_notify.cpp
+│   │   │   ├── snmp_notify.c
 │   │   │   ├── snmp_notify.h
-│   │   │   ├── snmp_v3.cpp
+│   │   │   ├── snmp_v3.c
 │   │   │   └── snmp_v3.h
-│   │   ├── sockpool/  (sockpool.h, sockpool.cpp)
+│   │   ├── sockpool/
+│   │   │   ├── sockpool.c
+│   │   │   └── sockpool.h
 │   │   ├── southbound/
-│   │   │   ├── sb_modbus.cpp
+│   │   │   ├── sb_modbus.c
 │   │   │   ├── sb_modbus.h
-│   │   │   ├── southbound.cpp
+│   │   │   ├── southbound.c
 │   │   │   └── southbound.h
-│   │   ├── syslog/  (syslog.h, syslog.cpp)
-│   │   ├── webhook/  (webhook.h, webhook.cpp)
+│   │   ├── syslog/
+│   │   │   ├── syslog.c
+│   │   │   └── syslog.h
+│   │   ├── webhook/
+│   │   │   ├── webhook.c
+│   │   │   └── webhook.h
 │   │   └── ws_client/  (ws_client.h, ws_client.cpp)
 │   ├── peripherals/
-│   │   ├── ad9238/  (ad9238.h, ad9238.cpp)
+│   │   ├── ad9238/
+│   │   │   ├── ad9238.c
+│   │   │   └── ad9238.h
 │   │   ├── ads1115/  (ads1115.h, ads1115.cpp)
-│   │   ├── dmx/  (dmx.h, dmx.cpp)
-│   │   ├── dshot/  (dshot.h, dshot.cpp)
+│   │   ├── dmx/
+│   │   │   ├── dmx.c
+│   │   │   └── dmx.h
+│   │   ├── dshot/
+│   │   │   ├── dshot.c
+│   │   │   └── dshot.h
 │   │   ├── fdc2214/  (fdc2214.h, fdc2214.cpp)
-│   │   ├── hmmd/  (hmmd.h, hmmd.cpp)
+│   │   ├── hmmd/
+│   │   │   ├── hmmd.c
+│   │   │   └── hmmd.h
 │   │   ├── ina219/  (ina219.h, ina219.cpp)
 │   │   ├── ld2410/  (ld2410.h, ld2410.cpp)
 │   │   ├── ldc1614/  (ldc1614.h, ldc1614.cpp)
 │   │   ├── mpr121/  (mpr121.h, mpr121.cpp)
 │   │   ├── pca9685/  (pca9685.h, pca9685.cpp)
-│   │   ├── pn532/  (pn532.h, pn532.cpp)
-│   │   ├── rcwl0516/  (rcwl0516.h, rcwl0516.cpp)
+│   │   ├── pn532/
+│   │   │   ├── pn532.c
+│   │   │   └── pn532.h
+│   │   ├── rcwl0516/
+│   │   │   ├── rcwl0516.c
+│   │   │   └── rcwl0516.h
 │   │   ├── rtc/  (rtc.h, rtc.cpp)
-│   │   ├── sdi12/  (sdi12.h, sdi12.cpp)
-│   │   ├── sen0192/  (sen0192.h, sen0192.cpp)
+│   │   ├── sdi12/
+│   │   │   ├── sdi12.c
+│   │   │   └── sdi12.h
+│   │   ├── sen0192/
+│   │   │   ├── sen0192.c
+│   │   │   └── sen0192.h
 │   │   ├── sht3x/  (sht3x.h, sht3x.cpp)
 │   │   ├── vl53l0x/  (vl53l0x.h, vl53l0x.cpp)
 │   │   └── i2c.h
 │   ├── radio/
-│   │   ├── ble_gatt/  (ble_gatt.h, ble_gatt.cpp)
-│   │   ├── cc1101/  (cc1101.h, cc1101.cpp)
-│   │   ├── enocean/  (enocean.h, enocean.cpp)
-│   │   ├── espnow/  (espnow.h, espnow.cpp)
-│   │   ├── lora/  (lora.h, lora.cpp)
-│   │   ├── nrf24/  (nrf24.h, nrf24.cpp)
-│   │   ├── promisc/  (promisc.h, promisc.cpp)
-│   │   ├── radio_sniff/  (radio_sniff.h, radio_sniff.cpp)
-│   │   ├── sigfox/  (sigfox.h, sigfox.cpp)
-│   │   ├── thread/  (thread.h, thread.cpp)
-│   │   ├── wifi_sniffer/  (wifi_sniffer.h, wifi_sniffer.cpp)
-│   │   ├── wisun/  (wisun.h, wisun.cpp)
-│   │   ├── zigbee/  (zigbee.h, zigbee.cpp)
-│   │   └── zwave/  (zwave.h, zwave.cpp)
+│   │   ├── ble_gatt/
+│   │   │   ├── ble_gatt.c
+│   │   │   └── ble_gatt.h
+│   │   ├── cc1101/
+│   │   │   ├── cc1101.c
+│   │   │   └── cc1101.h
+│   │   ├── enocean/
+│   │   │   ├── enocean.c
+│   │   │   └── enocean.h
+│   │   ├── espnow/
+│   │   │   ├── espnow.c
+│   │   │   └── espnow.h
+│   │   ├── lora/
+│   │   │   ├── lora.c
+│   │   │   └── lora.h
+│   │   ├── nrf24/
+│   │   │   ├── nrf24.c
+│   │   │   └── nrf24.h
+│   │   ├── promisc/
+│   │   │   ├── promisc.c
+│   │   │   └── promisc.h
+│   │   ├── radio_sniff/
+│   │   │   ├── radio_sniff.c
+│   │   │   └── radio_sniff.h
+│   │   ├── sigfox/
+│   │   │   ├── sigfox.c
+│   │   │   └── sigfox.h
+│   │   ├── thread/
+│   │   │   ├── thread.c
+│   │   │   └── thread.h
+│   │   ├── wifi_sniffer/
+│   │   │   ├── wifi_sniffer.c
+│   │   │   └── wifi_sniffer.h
+│   │   ├── wisun/
+│   │   │   ├── wisun.c
+│   │   │   └── wisun.h
+│   │   ├── zigbee/
+│   │   │   ├── zigbee.c
+│   │   │   └── zigbee.h
+│   │   └── zwave/
+│   │       ├── zwave.c
+│   │       └── zwave.h
 │   ├── security/
 │   │   ├── audit_log/  (audit_log.h, audit_log.cpp)
-│   │   ├── auth_lockout/  (auth_lockout.h, auth_lockout.cpp)
-│   │   ├── csrf/  (csrf.h, csrf.cpp)
-│   │   ├── forwarded_trust/  (forwarded_trust.h, forwarded_trust.cpp)
-│   │   ├── guardrails/  (guardrails.h, guardrails.cpp)
+│   │   ├── auth_lockout/
+│   │   │   ├── auth_lockout.c
+│   │   │   └── auth_lockout.h
+│   │   ├── csrf/
+│   │   │   ├── csrf.c
+│   │   │   └── csrf.h
+│   │   ├── forwarded_trust/
+│   │   │   ├── forwarded_trust.c
+│   │   │   └── forwarded_trust.h
+│   │   ├── guardrails/
+│   │   │   ├── guardrails.c
+│   │   │   └── guardrails.h
 │   │   ├── ikev2/
-│   │   │   ├── ikev2.cpp
+│   │   │   ├── ikev2.c
 │   │   │   ├── ikev2.h
-│   │   │   ├── ikev2_natt.cpp
+│   │   │   ├── ikev2_natt.c
 │   │   │   └── ikev2_natt.h
-│   │   ├── jwt/  (jwt.h, jwt.cpp)
+│   │   ├── jwt/
+│   │   │   ├── jwt.c
+│   │   │   └── jwt.h
 │   │   ├── oauth2/  (oauth2.h, oauth2.cpp)
-│   │   ├── oidc/  (oidc.h, oidc.cpp)
-│   │   ├── tls_policy/  (tls_policy.h, tls_policy.cpp)
-│   │   └── totp/  (totp.h, totp.cpp)
+│   │   ├── oidc/
+│   │   │   ├── oidc.c
+│   │   │   └── oidc.h
+│   │   ├── tls_policy/
+│   │   │   ├── tls_policy.c
+│   │   │   └── tls_policy.h
+│   │   └── totp/
+│   │       ├── totp.c
+│   │       └── totp.h
 │   ├── storage/
-│   │   ├── config_io/  (config_io.h, config_io.cpp)
-│   │   ├── config_store/  (config_store.h, config_store.cpp)
-│   │   ├── dbm/  (dbm.h, dbm.cpp)
-│   │   ├── docstore/  (docstore.h, docstore.cpp)
-│   │   ├── hotswap/  (hotswap.h, hotswap.cpp)
+│   │   ├── config_io/
+│   │   │   ├── config_io.c
+│   │   │   └── config_io.h
+│   │   ├── config_store/
+│   │   │   ├── config_store.c
+│   │   │   └── config_store.h
+│   │   ├── dbm/
+│   │   │   ├── dbm.c
+│   │   │   └── dbm.h
+│   │   ├── docstore/
+│   │   │   ├── docstore.c
+│   │   │   └── docstore.h
+│   │   ├── hotswap/
+│   │   │   ├── hotswap.c
+│   │   │   └── hotswap.h
 │   │   ├── partition_monitor/
-│   │   │   ├── partition_monitor.cpp
+│   │   │   ├── partition_monitor.c
 │   │   │   ├── partition_monitor.h
-│   │   │   └── partition_monitor_routes.cpp
-│   │   ├── psram_pool/  (psram_pool.h, psram_pool.cpp)
-│   │   ├── sqlite/  (sqlite_format.h, sqlite_format.cpp)
+│   │   │   └── partition_monitor_routes.c
+│   │   ├── psram_pool/
+│   │   │   ├── psram_pool.c
+│   │   │   └── psram_pool.h
+│   │   ├── sqlite/
+│   │   │   ├── sqlite_format.c
+│   │   │   └── sqlite_format.h
 │   │   └── wal/
-│   │       ├── wal.cpp
+│   │       ├── wal.c
 │   │       ├── wal.h
 │   │       ├── wal_fs.h
-│   │       ├── wal_store.cpp
+│   │       ├── wal_store.c
 │   │       └── wal_store.h
 │   ├── system/
-│   │   ├── bus_capture/  (bus_capture.h, bus_capture.cpp)
-│   │   ├── control/  (control.h, control.cpp)
+│   │   ├── bus_capture/
+│   │   │   ├── bus_capture.c
+│   │   │   └── bus_capture.h
+│   │   ├── control/
+│   │   │   ├── control.c
+│   │   │   └── control.h
 │   │   ├── device_id/  (device_id.h, device_id.cpp)
-│   │   ├── dma/  (dma.h, dma.cpp)
+│   │   ├── dma/
+│   │   │   ├── dma.c
+│   │   │   └── dma.h
 │   │   ├── esp/
-│   │   │   ├── esp.cpp
+│   │   │   ├── esp.c
 │   │   │   ├── esp.h
-│   │   │   ├── ipsec_db.cpp
+│   │   │   ├── ipsec_db.c
 │   │   │   └── ipsec_db.h
 │   │   ├── exc_decoder/
-│   │   │   ├── exc_coredump.cpp
-│   │   │   ├── exc_decoder.cpp
+│   │   │   ├── exc_coredump.c
+│   │   │   ├── exc_decoder.c
 │   │   │   └── exc_decoder.h
-│   │   ├── failsafe/  (failsafe.h, failsafe.cpp)
+│   │   ├── failsafe/
+│   │   │   ├── failsafe.c
+│   │   │   └── failsafe.h
 │   │   ├── gpio_map/
-│   │   │   ├── gpio_map.cpp
+│   │   │   ├── gpio_map.c
 │   │   │   ├── gpio_map.h
-│   │   │   └── gpio_map_routes.cpp
-│   │   ├── hw_health/  (hw_health.h, hw_health.cpp)
-│   │   ├── link_manager/  (link_manager.h, link_manager.cpp)
-│   │   ├── logbuf/  (logbuf.h, logbuf.cpp)
-│   │   ├── ota_rollback/  (ota_rollback.h, ota_rollback.cpp)
+│   │   │   └── gpio_map_routes.c
+│   │   ├── hw_health/
+│   │   │   ├── hw_health.c
+│   │   │   └── hw_health.h
+│   │   ├── link_manager/
+│   │   │   ├── link_manager.c
+│   │   │   └── link_manager.h
+│   │   ├── logbuf/
+│   │   │   ├── logbuf.c
+│   │   │   └── logbuf.h
+│   │   ├── ota_rollback/
+│   │   │   ├── ota_rollback.c
+│   │   │   └── ota_rollback.h
 │   │   ├── ota_service/  (ota_service.h, ota_service.cpp)
-│   │   ├── power_mgmt/  (power_mgmt.h, power_mgmt.cpp)
-│   │   ├── preempt_queue/  (preempt_queue.h, preempt_queue.cpp)
+│   │   ├── power_mgmt/
+│   │   │   ├── power_mgmt.c
+│   │   │   └── power_mgmt.h
 │   │   ├── provisioning_service/  (provisioning_service.h, provisioning_service.cpp)
-│   │   ├── radio_power/  (radio_power.h, radio_power.cpp)
-│   │   ├── roaming/  (roaming.h, roaming.cpp)
-│   │   ├── sleep_sched/  (sleep_sched.h, sleep_sched.cpp)
-│   │   ├── trace_capture/  (trace_capture.h, trace_capture.cpp)
+│   │   ├── radio_power/
+│   │   │   ├── radio_power.c
+│   │   │   └── radio_power.h
+│   │   ├── roaming/
+│   │   │   ├── roaming.c
+│   │   │   └── roaming.h
+│   │   ├── sleep_sched/
+│   │   │   ├── sleep_sched.c
+│   │   │   └── sleep_sched.h
+│   │   ├── trace_capture/
+│   │   │   ├── trace_capture.c
+│   │   │   └── trace_capture.h
+│   │   ├── clock.c
 │   │   └── clock.h
 │   ├── timing_position/
 │   │   ├── gnss/
-│   │   │   ├── gnss_survey.cpp
+│   │   │   ├── gnss_survey.c
 │   │   │   ├── gnss_survey.h
-│   │   │   ├── ntrip_caster.cpp
+│   │   │   ├── ntrip_caster.c
 │   │   │   ├── ntrip_caster.h
-│   │   │   ├── ntrip_caster_listener.cpp
+│   │   │   ├── ntrip_caster_listener.c
 │   │   │   ├── ntrip_caster_listener.h
-│   │   │   ├── rtcm3.cpp
+│   │   │   ├── rtcm3.c
 │   │   │   └── rtcm3.h
-│   │   ├── nmea0183/  (nmea0183.h, nmea0183.cpp)
-│   │   ├── nmea2000/  (nmea2000.h, nmea2000.cpp)
+│   │   ├── nmea0183/
+│   │   │   ├── nmea0183.c
+│   │   │   └── nmea0183.h
+│   │   ├── nmea2000/
+│   │   │   ├── nmea2000.c
+│   │   │   └── nmea2000.h
 │   │   ├── ntp_server/  (ntp_server.h, ntp_server.cpp)
 │   │   ├── ntp_service/  (ntp_service.h, ntp_service.cpp)
-│   │   ├── nts/  (nts.h, nts.cpp)
-│   │   ├── ptp/  (ptp.h, ptp.cpp)
+│   │   ├── nts/
+│   │   │   ├── nts.c
+│   │   │   └── nts.h
+│   │   ├── ptp/
+│   │   │   ├── ptp.c
+│   │   │   └── ptp.h
 │   │   ├── time_source/  (time_source.h, time_source.cpp)
-│   │   └── ubx/  (ubx.h, ubx.cpp)
+│   │   └── ubx/
+│   │       ├── ubx.c
+│   │       └── ubx.h
 │   ├── transportation/
-│   │   ├── j2735/  (j2735.h, j2735.cpp)
-│   │   ├── nema_ts2/  (nema_ts2.h, nema_ts2.cpp)
-│   │   ├── ntcip/  (ntcip.h, ntcip.cpp)
-│   │   ├── ocit/  (ocit.h, ocit.cpp)
-│   │   ├── utmc/  (utmc.h, utmc.cpp)
-│   │   └── wave/  (wave.h, wave.cpp)
+│   │   ├── j2735/
+│   │   │   ├── j2735.c
+│   │   │   └── j2735.h
+│   │   ├── nema_ts2/
+│   │   │   ├── nema_ts2.c
+│   │   │   └── nema_ts2.h
+│   │   ├── ntcip/
+│   │   │   ├── ntcip.c
+│   │   │   └── ntcip.h
+│   │   ├── ocit/
+│   │   │   ├── ocit.c
+│   │   │   └── ocit.h
+│   │   ├── utmc/
+│   │   │   ├── utmc.c
+│   │   │   └── utmc.h
+│   │   └── wave/
+│   │       ├── wave.c
+│   │       └── wave.h
 │   └── web/
 │       ├── dashboard/
-│       │   ├── dashboard.cpp
+│       │   ├── dashboard.c
 │       │   ├── dashboard.h
-│       │   └── dashboard_routes.cpp
+│       │   └── dashboard_routes.c
 │       ├── edge_cache/
-│       │   ├── edge_cache.cpp
+│       │   ├── edge_cache.c
 │       │   ├── edge_cache.h
-│       │   ├── edge_cache_proxy.cpp
+│       │   ├── edge_cache_proxy.c
 │       │   ├── edge_cache_proxy.h
-│       │   ├── edge_cache_sd.cpp
+│       │   ├── edge_cache_sd.c
 │       │   ├── edge_cache_sd.h
-│       │   ├── edge_fetch.cpp
+│       │   ├── edge_fetch.c
 │       │   ├── edge_fetch.h
-│       │   ├── edge_mesh.cpp
+│       │   ├── edge_mesh.c
 │       │   └── edge_mesh.h
-│       ├── httpcache/  (httpcache.h, httpcache.cpp)
-│       ├── spa_router/  (spa_router.h, spa_router.cpp)
+│       ├── httpcache/
+│       │   ├── httpcache.c
+│       │   └── httpcache.h
+│       ├── spa_router/
+│       │   ├── spa_router.c
+│       │   └── spa_router.h
 │       └── web_terminal/  (web_terminal.h, web_terminal.cpp)
 ├── shared_primitives/
 │   ├── bitio.h
@@ -737,7 +1052,7 @@ src/
 │   ├── endian.h
 │   ├── hex.h
 │   ├── http_date.h
-│   ├── log.cpp
+│   ├── log.c
 │   ├── log.h
 │   ├── mime.h
 │   ├── numparse.h
