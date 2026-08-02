@@ -43,7 +43,7 @@ void pc_hkdf_extract(const uint8_t *salt, size_t salt_len, const uint8_t *ikm, s
 
 /** @brief The RFC 8446 sec 7.1 HKDF-Expand-Label prefix used by TLS 1.3 and QUIC. DTLS 1.3 overrides
  *  it with "dtls13" (RFC 9147 sec 5.9); callers that need it pass it explicitly. */
-static constexpr char PC_HKDF_LABEL_PREFIX[] = "tls13 ";
+#define PC_HKDF_LABEL_PREFIX "tls13 "
 
 /**
  * @brief HKDF-Expand-Label (RFC 8446 sec 7.1) with the QUIC/TLS 1.3 "tls13 " label prefix.
@@ -58,10 +58,10 @@ static constexpr char PC_HKDF_LABEL_PREFIX[] = "tls13 ";
  * @param label         Short ASCII label, e.g. "quic key" (without the prefix), <= 249 bytes.
  * @param out           Output keying material.
  * @param out_len       Number of output bytes requested.
- * @param label_prefix  HkdfLabel prefix; defaults to the TLS 1.3 "tls13 " prefix. DTLS 1.3 passes "dtls13".
+ * @param label_prefix  HkdfLabel prefix: PC_HKDF_LABEL_PREFIX for TLS 1.3 and QUIC, "dtls13" for DTLS 1.3.
  */
 void pc_hkdf_expand_label(const uint8_t secret[PC_HKDF_HASH_LEN], const char *label, uint8_t *out, size_t out_len,
-                          const char *label_prefix = PC_HKDF_LABEL_PREFIX);
+                          const char *label_prefix);
 
 /**
  * @brief HKDF-Expand-Label with an explicit context (RFC 8446 sec 7.1, the general form).
@@ -76,11 +76,10 @@ void pc_hkdf_expand_label(const uint8_t secret[PC_HKDF_HASH_LEN], const char *la
  * @param context_len  Context length.
  * @param out          Output keying material.
  * @param out_len      Number of output bytes requested.
- * @param label_prefix HkdfLabel prefix; defaults to the TLS 1.3 "tls13 " prefix. DTLS 1.3 passes "dtls13".
+ * @param label_prefix HkdfLabel prefix: PC_HKDF_LABEL_PREFIX for TLS 1.3 and QUIC, "dtls13" for DTLS 1.3.
  */
 void pc_hkdf_expand_label_ctx(const uint8_t secret[PC_HKDF_HASH_LEN], const char *label, const uint8_t *context,
-                              size_t context_len, uint8_t *out, size_t out_len,
-                              const char *label_prefix = PC_HKDF_LABEL_PREFIX);
+                              size_t context_len, uint8_t *out, size_t out_len, const char *label_prefix);
 
 #endif // PC_ENABLE_HTTP3 || PC_ENABLE_DTLS
 #endif // PROTOCORE_HKDF_H

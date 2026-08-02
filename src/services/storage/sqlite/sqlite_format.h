@@ -148,9 +148,10 @@ double pc_sqlite_column_float(const uint8_t *val, uint32_t val_len);
 
 /**
  * @brief Fetch page number @p pgno (1-based) into @p page (@p page_size bytes). @return true on success.
- * The table cursor pulls pages through this so it works over any backing store (a RAM image, pc_wal_fs, fs::FS).
+ * The table cursor pulls pages through this so it works over any backing store (a RAM image, pc_wal_fs, or a
+ * board driver's filesystem).
  */
-using SqlitePageReader = proto_bool (*)(void *ctx, uint32_t pgno, uint8_t *page, uint32_t page_size);
+typedef proto_bool (*SqlitePageReader)(void *ctx, uint32_t pgno, uint8_t *page, uint32_t page_size);
 
 /**
  * @brief Reassemble a row's full record payload, following the overflow-page chain (fileformat2.html 1.6).

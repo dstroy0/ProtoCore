@@ -130,8 +130,8 @@ proto_bool pc_sqlite_parse_btree_header(const uint8_t *page, size_t page_len, si
     const uint8_t *p = page + offset;
     uint8_t type = p[0];
     proto_bool interior =
-        (type == SqliteBtree::SQLITE_BTREE_INTERIOR_INDEX || type == SqliteBtree::SQLITE_BTREE_INTERIOR_TABLE);
-    proto_bool leaf = (type == SqliteBtree::SQLITE_BTREE_LEAF_INDEX || type == SqliteBtree::SQLITE_BTREE_LEAF_TABLE);
+        (type == SQLITE_BTREE_INTERIOR_INDEX || type == SQLITE_BTREE_INTERIOR_TABLE);
+    proto_bool leaf = (type == SQLITE_BTREE_LEAF_INDEX || type == SQLITE_BTREE_LEAF_TABLE);
     if (!interior && !leaf)
     {
         return PROTO_FALSE;
@@ -410,7 +410,7 @@ static proto_bool cursor_descend(SqliteTableCursor *c, uint32_t pgno)
         {
             return PROTO_FALSE;
         }
-        if (h.type == SqliteBtree::SQLITE_BTREE_LEAF_TABLE)
+        if (h.type == SQLITE_BTREE_LEAF_TABLE)
         {
             memcpy(c->leaf, c->work, c->page_size);
             c->leaf_hdr = h;
@@ -420,7 +420,7 @@ static proto_bool cursor_descend(SqliteTableCursor *c, uint32_t pgno)
             c->leaf_cell = 0;
             return PROTO_TRUE;
         }
-        if (h.type != SqliteBtree::SQLITE_BTREE_INTERIOR_TABLE)
+        if (h.type != SQLITE_BTREE_INTERIOR_TABLE)
         {
             return PROTO_FALSE; // an index b-tree or garbage - not a table scan
         }
@@ -755,7 +755,7 @@ static proto_bool write_leaf_page(uint8_t *page, uint32_t page_size, uint32_t hd
 
     // b-tree leaf-table header.
     uint8_t *h = page + hdr_off;
-    h[0] = (uint8_t)SqliteBtree::SQLITE_BTREE_LEAF_TABLE;
+    h[0] = (uint8_t)SQLITE_BTREE_LEAF_TABLE;
     wr_be16(h + 1, 0);               // first freeblock
     wr_be16(h + 3, (uint16_t)nrows); // cell count
     wr_be16(h + 5, (uint16_t)(content_start == 65536 ? 0 : content_start));
@@ -903,11 +903,11 @@ uint32_t pc_sqlite_build_table_db(uint32_t page_size, const char *table_name, co
     uint32_t name_len = (uint32_t)strnlen(table_name, out_cap);
     uint32_t sql_len = (uint32_t)strnlen(create_sql, out_cap);
     SqliteValue master[5];
-    master[0] = {SQLITE_COL_TEXT, 0, 0, (const uint8_t *)"table", 5};
-    master[1] = {SQLITE_COL_TEXT, 0, 0, (const uint8_t *)table_name, name_len};
-    master[2] = {SQLITE_COL_TEXT, 0, 0, (const uint8_t *)table_name, name_len};
-    master[3] = {SQLITE_COL_INT, 2, 0, NULL, 0}; // rootpage = 2
-    master[4] = {SQLITE_COL_TEXT, 0, 0, (const uint8_t *)create_sql, sql_len};
+    master[0] = (SqliteValue){SQLITE_COL_TEXT, 0, 0, (const uint8_t *)"table", 5};
+    master[1] = (SqliteValue){SQLITE_COL_TEXT, 0, 0, (const uint8_t *)table_name, name_len};
+    master[2] = (SqliteValue){SQLITE_COL_TEXT, 0, 0, (const uint8_t *)table_name, name_len};
+    master[3] = (SqliteValue){SQLITE_COL_INT, 2, 0, NULL, 0}; // rootpage = 2
+    master[4] = (SqliteValue){SQLITE_COL_TEXT, 0, 0, (const uint8_t *)create_sql, sql_len};
     SqliteRow master_row = {1, master, 5};
     if (!write_leaf_page(out, page_size, 100, &master_row, 1))
     {

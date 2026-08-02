@@ -53,16 +53,16 @@ struct pc_aes128;
  *
  * @return a context to pass to pc_aes128_init(), or nullptr if the pool could not satisfy it.
  */
-pc_aes128 *pc_aes128_wants(void);
+struct pc_aes128 *pc_aes128_wants(void);
 
 /** @brief Load a 128-bit key and expand the encryption key schedule. */
-void pc_aes128_init(pc_aes128 *ctx, const uint8_t key[16]);
+void pc_aes128_init(struct pc_aes128 *ctx, const uint8_t key[16]);
 
 /** @brief Encrypt one 16-byte block (ECB). @p in and @p out may alias. */
-void pc_aes128_encrypt_block(pc_aes128 *ctx, const uint8_t in[16], uint8_t out[16]);
+void pc_aes128_encrypt_block(struct pc_aes128 *ctx, const uint8_t in[16], uint8_t out[16]);
 
 /** @brief Wipe the key schedule (and release mbedtls state on Arduino). */
-void pc_aes128_wipe(pc_aes128 *ctx);
+void pc_aes128_wipe(struct pc_aes128 *ctx);
 
 // ---------------------------------------------------------------------------
 // AEAD_AES_128_GCM (96-bit nonce, 128-bit tag) - keyed
@@ -91,10 +91,10 @@ struct pc_aes128gcm_key;
  *                time and there is nothing to check here.
  * @return the context, or nullptr if the vendor rejected the key.
  */
-pc_aes128gcm_key *pc_aes128gcm_key_init(void *storage, const uint8_t key[PC_AES128GCM_KEY_LEN]);
+struct pc_aes128gcm_key *pc_aes128gcm_key_init(void *storage, const uint8_t key[PC_AES128GCM_KEY_LEN]);
 
 /** @brief Wipe the expanded schedule. Call on rekey and on close; the storage stays the caller's. */
-void pc_aes128gcm_key_wipe(pc_aes128gcm_key *k);
+void pc_aes128gcm_key_wipe(struct pc_aes128gcm_key *k);
 
 /**
  * @brief Seal one record: encrypt @p pt and authenticate it together with @p aad.
@@ -105,7 +105,7 @@ void pc_aes128gcm_key_wipe(pc_aes128gcm_key *k);
  * DTLS) is not a different operation - pass `ct_out + pt_len` as @p tag_out and it is written in place.
  * That is why there is no second "attached" pair of entry points.
  */
-pc_cspan pc_aes128gcm_seal(pc_aes128gcm_key *k, const uint8_t nonce[PC_AES128GCM_IV_LEN], const uint8_t *aad,
+pc_cspan pc_aes128gcm_seal(struct pc_aes128gcm_key *k, const uint8_t nonce[PC_AES128GCM_IV_LEN], const uint8_t *aad,
                            size_t aad_len, const uint8_t *pt, size_t pt_len, uint8_t *ct_out,
                            uint8_t tag_out[PC_AES128GCM_TAG_LEN]);
 
@@ -116,7 +116,7 @@ pc_cspan pc_aes128gcm_seal(pc_aes128gcm_key *k, const uint8_t nonce[PC_AES128GCM
  * @p ct_len is the ciphertext length, NOT including the tag.
  * @return true iff the tag is valid; on mismatch nothing is written.
  */
-proto_bool pc_aes128gcm_open(pc_aes128gcm_key *k, const uint8_t nonce[PC_AES128GCM_IV_LEN], const uint8_t *aad,
+proto_bool pc_aes128gcm_open(struct pc_aes128gcm_key *k, const uint8_t nonce[PC_AES128GCM_IV_LEN], const uint8_t *aad,
                              size_t aad_len, const uint8_t *ct, size_t ct_len, const uint8_t tag[PC_AES128GCM_TAG_LEN],
                              uint8_t *out);
 
