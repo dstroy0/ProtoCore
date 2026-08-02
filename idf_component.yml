@@ -5,7 +5,7 @@
 # built as a component. Ignored by PlatformIO (library.json) and Arduino (library.properties).
 #
 # Keep `version` in sync with library.json / library.properties (bump2version updates all three).
-version: "0.0.4"
+version: "0.0.5"
 description: >-
   Zero-heap, deterministic asynchronous multi-protocol network server for ESP32: HTTP/1.1,
   HTTP/2 and HTTP/3, WebSocket (RFC 6455), Server-Sent Events, Basic/Digest auth, static file
