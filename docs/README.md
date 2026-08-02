@@ -269,6 +269,7 @@ src/
 ├── network_drivers/
 │   ├── application/
 │   │   ├── binary_asset_blobs.c
+│   │   ├── binary_asset_blobs.cpp
 │   │   ├── binary_asset_blobs.h
 │   │   ├── web_assets.c
 │   │   └── web_assets.h

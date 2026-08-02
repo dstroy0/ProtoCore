@@ -32098,7 +32098,7 @@ A thorough directory of all **5268 test cases** across **295 suites**. Expand a 
     * **Objective**: On a host build (no ARDUINO/lwIP) pc_ntp_server_begin() cannot bind UDP/123, so it must
     * **Assertions**:
       * <code>Assert false (pc_ntp_server_begin(1, NTP_REFID_GPS))</code>
-      * <code>Assert false (pc_ntp_server_begin(3))</code>
+      * <code>Assert false (pc_ntp_server_begin(3, NTP_REFID_LOCL))</code>
   </details>
 
 </details>
@@ -48224,7 +48224,7 @@ A thorough directory of all **5268 test cases** across **295 suites**. Expand a 
 
     * **Objective**: Add string null value
     * **Assertions**:
-      * <code>Assert true (pc_snmp_agent_add_string(OID_NULLSTR, 9, nullptr))</code>
+      * <code>Assert true (pc_snmp_agent_add_string(OID_NULLSTR, 9, nullptr, nullptr))</code>
       * <code>Assert true (parse_resp(resp, n, &rv))</code>
       * <code>TEST_ASSERT_EQUAL_HEX8((uint8_t)SnmpTag::BER_OCTET_STRING, rv.val_tag);</code>
       * <code>TEST_ASSERT_EQUAL_size_t(0, rv.str_len);</code>
@@ -48235,10 +48235,10 @@ A thorough directory of all **5268 test cases** across **295 suites**. Expand a 
 
     * **Objective**: set_system on a full table registers nothing (its sysObjectID mib_alloc returns null).
     * **Assertions**:
-      * <code>Assert false (pc_snmp_agent_add_integer(toolong, SNMP_MAX_OID_LEN + 1, 1))</code>
-      * <code>Assert true (pc_snmp_agent_add_integer(oid, 9, (long)i))</code>
-      * <code>Assert false (pc_snmp_agent_add_integer(oid, 9, 1))</code>
-      * <code>Assert false (pc_snmp_agent_add_string(oid, 9, "x"))</code>
+      * <code>Assert false (pc_snmp_agent_add_integer(toolong, SNMP_MAX_OID_LEN + 1, 1, nullptr))</code>
+      * <code>Assert true (pc_snmp_agent_add_integer(oid, 9, (long)i, nullptr))</code>
+      * <code>Assert false (pc_snmp_agent_add_integer(oid, 9, 1, nullptr))</code>
+      * <code>Assert false (pc_snmp_agent_add_string(oid, 9, "x", nullptr))</code>
       * <code>Assert false (pc_snmp_agent_add_dynamic(oid, 9, (uint8_t)SnmpTag::SNMP_COUNTER32, ctr_getter))</code>
       * <code>Assert true (parse_resp(resp, n, &rv))</code>
       * <code>TEST_ASSERT_EQUAL_HEX8((uint8_t)SnmpTag::SNMP_NO_SUCH_OBJECT, rv.val_tag); // sysDescr never got in</code>
@@ -48249,7 +48249,7 @@ A thorough directory of all **5268 test cases** across **295 suites**. Expand a 
 
     * **Objective**: Getnext picks smallest out of order
     * **Assertions**:
-      * <code>Assert true (pc_snmp_agent_add_integer(OID_EARLY, 9, 1234))</code>
+      * <code>Assert true (pc_snmp_agent_add_integer(OID_EARLY, 9, 1234, nullptr))</code>
       * <code>Assert true (parse_resp(resp, n, &rv))</code>
       * <code>Assert equal uint (9, rv.oid_len)</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(0u, rv.oid[7]); // the late-registered .0.0, not sysDescr .1.0</code>
