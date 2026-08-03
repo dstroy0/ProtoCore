@@ -45,6 +45,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- generate the native base env, at C11 ([`a44ce4d`](https://github.com/dstroy0/ProtoCore/commit/a44ce4d446871c38eb6efd5942bc767abf3c7c58))
+- update CHANGELOG.md [skip ci] ([`1dfbdea`](https://github.com/dstroy0/ProtoCore/commit/1dfbdea7ec7d7463da5b637d27188b1f2a04a814))
 - update test report + coverage [skip ci] ([`7ebeb27`](https://github.com/dstroy0/ProtoCore/commit/7ebeb274dc5aa64cf6ff49d0c9646388a3587b31))
 - update CHANGELOG.md [skip ci] ([`caf1e1e`](https://github.com/dstroy0/ProtoCore/commit/caf1e1eee99768cc9373281bedc9f452c229a260))
 - update test report + coverage [skip ci] ([`68c8c92`](https://github.com/dstroy0/ProtoCore/commit/68c8c9284e2b587a2e19ca35b683523238db23cd))
@@ -269,6 +271,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- enable PC_ENABLE_AUTH for the auth suites ([`102cc67`](https://github.com/dstroy0/ProtoCore/commit/102cc67f86b910c47b3c54d97976f1c842486a52))
+- finish the auth arity and give the host seam a settable send buffer ([`84a9c6c`](https://github.com/dstroy0/ProtoCore/commit/84a9c6c244e56e17c063685267ba3dff4d84f906))
 - match the arities C left behind ([`201dcb5`](https://github.com/dstroy0/ProtoCore/commit/201dcb52a4faf6d9294c4b679bc35677a1ee80d6))
 - convert the remaining JSON writers to the C API ([`2900695`](https://github.com/dstroy0/ProtoCore/commit/2900695432d60a30797e4e5ead31ae25a7c2fe77))
 - move the JSON suite onto the C writer API ([`5e95259`](https://github.com/dstroy0/ProtoCore/commit/5e95259d88120cffb5a277be8c13c1fb03ff1adc))
