@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- strip 516 verified C++ scope qualifiers from code ([`fb95b57`](https://github.com/dstroy0/ProtoCore/commit/fb95b573540c707da29e25c12dcd6602436284dc))
 - spell the opaque QuicConn tag and drop a missed reinterpret_cast ([`03a3609`](https://github.com/dstroy0/ProtoCore/commit/03a3609c9b40ebb1a360718eb03e5b7f53616823))
 - strip the QuicTp scope qualifier in quic_tp ([`7428210`](https://github.com/dstroy0/ProtoCore/commit/7428210b298e78ad086884ab087ca618b262fa5a))
 - replace the SecureBorrow RAII in quic_crypto with the C pool API ([`960430e`](https://github.com/dstroy0/ProtoCore/commit/960430e2e4f2f091b9f4c4081322c8eb9753eebf))
@@ -29,6 +30,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update test report + coverage [skip ci] ([`1cd9cdc`](https://github.com/dstroy0/ProtoCore/commit/1cd9cdcd713aaadf302f67de063e948c7b445dc6))
+- update CHANGELOG.md [skip ci] ([`2b9c20b`](https://github.com/dstroy0/ProtoCore/commit/2b9c20baa5c87848cd707c2c7190ece7c809c01b))
 - update CHANGELOG.md [skip ci] ([`7870cdb`](https://github.com/dstroy0/ProtoCore/commit/7870cdbbfd3fd83f3cf862f3717d36f5929f92f8))
 - update test report + coverage [skip ci] ([`f2509a3`](https://github.com/dstroy0/ProtoCore/commit/f2509a3f3cbfc5ede3d792fc378a7875e6f46e9c))
 - update CHANGELOG.md [skip ci] ([`40d7ddb`](https://github.com/dstroy0/ProtoCore/commit/40d7ddba723a62d81bc56b7a8c7fa650b528442d))
