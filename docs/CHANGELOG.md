@@ -38,6 +38,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`6495f67`](https://github.com/dstroy0/ProtoCore/commit/6495f67297dd8c1c2c5639229caee0540e807f15))
 - update CHANGELOG.md [skip ci] ([`8a33977`](https://github.com/dstroy0/ProtoCore/commit/8a339771ac15e9b1581bd168f2a9bc610cc855ed))
 - update test report + coverage [skip ci] ([`adaa1bc`](https://github.com/dstroy0/ProtoCore/commit/adaa1bc70a8af0cdd4380daa7a6334db251ca4c3))
 - update CHANGELOG.md [skip ci] ([`14991c1`](https://github.com/dstroy0/ProtoCore/commit/14991c11e16693d97b8e903c71605cdeb0f1b842))
@@ -208,6 +209,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- convert test_forward to C ([`cd51377`](https://github.com/dstroy0/ProtoCore/commit/cd5137768304755897491ed960dfa40bb7306294))
 - build the clock TU in native_clock ([`5ab8253`](https://github.com/dstroy0/ProtoCore/commit/5ab82534bf6a084ab9ee782de6a1a7b3bed4835c))
 - make the host mocks compile as C and restore the virtual clock ([`940c3fd`](https://github.com/dstroy0/ProtoCore/commit/940c3fdd966f46480dc0e866055008ad324271c9))
 - restore packml enum member names after the C++ scope strip ([`cfd42e8`](https://github.com/dstroy0/ProtoCore/commit/cfd42e850b9394a48c54c708fe4377f5be82a203))
