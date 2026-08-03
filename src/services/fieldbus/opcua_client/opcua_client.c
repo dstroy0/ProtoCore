@@ -305,7 +305,7 @@ static proto_bool cr_msg_open(const uint8_t *msg, size_t len, UaReader *r, uint3
     {
         return PROTO_FALSE;
     }
-    *r = UaReader{msg + 8, len - 8, 0, PROTO_FALSE};
+    *r = (UaReader){msg + 8, len - 8, 0, PROTO_FALSE};
     (void)pc_ua_r_u32(r); // SecureChannelId
     (void)pc_ua_r_u32(r); // TokenId
     (void)pc_ua_r_u32(r); // SequenceNumber

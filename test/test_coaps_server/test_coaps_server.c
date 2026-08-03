@@ -371,7 +371,7 @@ static void client_handshake(const char *ip, uint16_t port, DtlsRecordKeys *cli_
     pc_tls13_ks_early(&DTLS13_KDF, &cks);
     pc_tls13_ks_handshake(&cks, ecdhe, hh, 32);
     DtlsRecordKeys srv_read;
-    pc_dtls_record_keys_derive(&srv_read, AES_128_GCM_SHA256, 2, cks.server_hs_traffic);
+    pc_dtls_record_keys_derive(&srv_read, DTLS_CIPHER_AES_128_GCM_SHA256, 2, cks.server_hs_traffic);
 
     uint64_t exp_seq = 0;
     while (off < fl)
@@ -399,7 +399,7 @@ static void client_handshake(const char *ip, uint16_t port, DtlsRecordKeys *cli_
     uint8_t cfin[64];
     size_t cfin_len = pc_tls13_build_finished(cfin, sizeof(cfin), cfin_verify);
     DtlsRecordKeys cli_write;
-    pc_dtls_record_keys_derive(&cli_write, AES_128_GCM_SHA256, 2, cks.client_hs_traffic);
+    pc_dtls_record_keys_derive(&cli_write, DTLS_CIPHER_AES_128_GCM_SHA256, 2, cks.client_hs_traffic);
     uint8_t cfin_frag[80];
     size_t cff = pc_dtls_hs_frag_build(cfin[0], 1, (uint32_t)(cfin_len - 4), 0, cfin + 4, (uint32_t)(cfin_len - 4),
                                        cfin_frag, sizeof(cfin_frag));
@@ -414,8 +414,8 @@ static void client_handshake(const char *ip, uint16_t port, DtlsRecordKeys *cli_
     OutDg ackdg;
     take_out_for(ip, port, &ackdg);
 
-    pc_dtls_record_keys_derive(cli_app_read, AES_128_GCM_SHA256, 3, cks.server_ap_traffic);
-    pc_dtls_record_keys_derive(cli_app_write, AES_128_GCM_SHA256, 3, cks.client_ap_traffic);
+    pc_dtls_record_keys_derive(cli_app_read, DTLS_CIPHER_AES_128_GCM_SHA256, 3, cks.server_ap_traffic);
+    pc_dtls_record_keys_derive(cli_app_write, DTLS_CIPHER_AES_128_GCM_SHA256, 3, cks.client_ap_traffic);
 }
 
 // Seal a CoAP CON GET /temp as one epoch-3 client application record (client send-seq @p cseq).

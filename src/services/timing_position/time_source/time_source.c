@@ -98,7 +98,7 @@ void pc_time_source_reset(void)
 {
     for (int i = 0; i < PC_TIME_SOURCE_MAX; i++)
     {
-        s_ts.sources[i] = Src{};
+        s_ts.sources[i] = (Src){};
     }
     s_ts.active = NULL;
 }

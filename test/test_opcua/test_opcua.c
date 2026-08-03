@@ -1728,14 +1728,14 @@ void test_r_string_optional_len_zero_cap_and_frame_underrun()
     TEST_ASSERT_FALSE(r.err);
 
     // A null String with no room to write the terminator is still accepted (nothing is stored).
-    r = UaReader{nul, w.n, 0, PROTO_FALSE};
+    r = (UaReader){nul, w.n, 0, PROTO_FALSE};
     int32_t len = 99;
     TEST_ASSERT_TRUE(pc_ua_r_string(&r, s, 0, &len));
     TEST_ASSERT_EQUAL_INT32(-1, len);
 
     // Length 4 fits s[8] but the frame holds only 2 payload bytes -> underrun, err latches.
     uint8_t trunc[6] = {4, 0, 0, 0, 'a', 'b'};
-    r = UaReader{trunc, sizeof(trunc), 0, PROTO_FALSE};
+    r = (UaReader){trunc, sizeof(trunc), 0, PROTO_FALSE};
     TEST_ASSERT_FALSE(pc_ua_r_string(&r, s, sizeof(s), &len));
     TEST_ASSERT_TRUE(r.err);
 }
@@ -1756,10 +1756,10 @@ void test_w_nodeid_numeric_widens_for_large_identifier()
     TEST_ASSERT_EQUAL_UINT32(0x10000, id.id);
 
     // The other way round: a small identifier in a namespace too large for a byte also widens.
-    w = UaWriter{buf, sizeof(buf), 0, PROTO_TRUE};
+    w = (UaWriter){buf, sizeof(buf), 0, PROTO_TRUE};
     pc_ua_w_nodeid_numeric(&w, 0x0100, 5);
     TEST_ASSERT_EQUAL_HEX8(0x02, buf[0]);
-    r = UaReader{buf, w.n, 0, PROTO_FALSE};
+    r = (UaReader){buf, w.n, 0, PROTO_FALSE};
     TEST_ASSERT_TRUE(pc_ua_r_nodeid(&r, &id));
     TEST_ASSERT_EQUAL_UINT16(0x0100, id.ns);
     TEST_ASSERT_EQUAL_UINT32(5, id.id);
@@ -1864,7 +1864,7 @@ void test_ack_negotiation_clamps_oversized_client_request()
     TEST_ASSERT_TRUE(pc_opcua_parse_hello(hel, n, &hello));
     an = pc_opcua_build_ack(&hello, ack, sizeof(ack));
     TEST_ASSERT_EQUAL_UINT(28, an);
-    r = UaReader{ack + 8, an - 8, 0, PROTO_FALSE};
+    r = (UaReader){ack + 8, an - 8, 0, PROTO_FALSE};
     TEST_ASSERT_EQUAL_UINT32(0, pc_ua_r_u32(&r)); // ProtocolVersion
     TEST_ASSERT_EQUAL_UINT32(small, pc_ua_r_u32(&r));
     TEST_ASSERT_EQUAL_UINT32(small, pc_ua_r_u32(&r));
@@ -2119,7 +2119,7 @@ void test_datavalue_status_only_with_and_without_status_sink()
     TEST_ASSERT_EQUAL_HEX32(OPCUA_STATUS_BAD_NODE_ID_UNKNOWN, st);
     TEST_ASSERT_EQUAL(OPCUA_VAR_NULL, v.type); // no Value was present
 
-    r = UaReader{buf, w.n, 0, PROTO_FALSE};
+    r = (UaReader){buf, w.n, 0, PROTO_FALSE};
     TEST_ASSERT_TRUE(pc_ua_r_datavalue(&r, &v, NULL)); // status discarded, still well-formed
     TEST_ASSERT_FALSE(r.err);
 }
@@ -2369,24 +2369,24 @@ void test_localizedtext_every_field_combination()
     TEST_ASSERT_FALSE(r.err);
 
     // Locale only: mask 0x01, no Text string follows.
-    w = UaWriter{buf, sizeof(buf), 0, PROTO_TRUE};
+    w = (UaWriter){buf, sizeof(buf), 0, PROTO_TRUE};
     pc_ua_w_localizedtext(&w, "de-DE", NULL);
-    r = UaReader{buf, w.n, 0, PROTO_FALSE};
+    r = (UaReader){buf, w.n, 0, PROTO_FALSE};
     TEST_ASSERT_EQUAL_HEX8(0x01, pc_ua_r_u8(&r));
     TEST_ASSERT_TRUE(pc_ua_r_string(&r, s, sizeof(s), &sl));
     TEST_ASSERT_EQUAL_STRING("de-DE", s);
     TEST_ASSERT_EQUAL_UINT(w.n, r.off); // nothing after the Locale
 
     // Text only (the form every server-side caller uses): mask 0x02.
-    w = UaWriter{buf, sizeof(buf), 0, PROTO_TRUE};
+    w = (UaWriter){buf, sizeof(buf), 0, PROTO_TRUE};
     pc_ua_w_localizedtext(&w, NULL, "Uptime");
-    r = UaReader{buf, w.n, 0, PROTO_FALSE};
+    r = (UaReader){buf, w.n, 0, PROTO_FALSE};
     TEST_ASSERT_EQUAL_HEX8(0x02, pc_ua_r_u8(&r));
     TEST_ASSERT_TRUE(pc_ua_r_string(&r, s, sizeof(s), &sl));
     TEST_ASSERT_EQUAL_STRING("Uptime", s);
 
     // Neither: a bare zero mask, one byte total.
-    w = UaWriter{buf, sizeof(buf), 0, PROTO_TRUE};
+    w = (UaWriter){buf, sizeof(buf), 0, PROTO_TRUE};
     pc_ua_w_localizedtext(&w, NULL, NULL);
     TEST_ASSERT_EQUAL_UINT(1, w.n);
     TEST_ASSERT_EQUAL_HEX8(0x00, buf[0]);
