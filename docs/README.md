@@ -376,7 +376,7 @@ src/
 │   │   │   │   ├── quic_varint.h
 │   │   │   │   ├── tls13_msg.c
 │   │   │   │   └── tls13_msg.h
-│   │   │   ├── http_parser/  (http_parser.h, http_parser.cpp)
+│   │   │   ├── http_parser/  (http_parser.h, http_parser.c)
 │   │   │   ├── sse/  (sse.h, sse.cpp)
 │   │   │   └── websocket/  (websocket.h, websocket.cpp)
 │   │   ├── security/
