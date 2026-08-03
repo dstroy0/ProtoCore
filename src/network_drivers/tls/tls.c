@@ -88,9 +88,9 @@
 typedef struct
 {
     uint8_t arena[PC_TLS_ARENA_SIZE];
-    proto_bool inited = PROTO_FALSE;
-    size_t used = 0;
-    size_t peak = 0;
+    proto_bool inited;
+    size_t used;
+    size_t peak;
 } TlsPoolCtx;
 PC_TLS_ARENA_ATTR static TlsPoolCtx s_pool;
 
@@ -206,7 +206,7 @@ static void pool_free(void *ptr)
 // setup is unused.
 typedef struct
 {
-    proto_bool ready = PROTO_FALSE;
+    proto_bool ready;
 } TlsServerReadyCtx;
 static TlsServerReadyCtx s_srv_ready;
 
@@ -735,9 +735,9 @@ int pc_tls_peer_subject(uint8_t slot, char *out, size_t out_len)
 typedef struct
 {
     mbedtls_x509_crt ca;
-    proto_bool ca_set = PROTO_FALSE;
+    proto_bool ca_set;
     uint8_t pin[32];
-    proto_bool pin_set = PROTO_FALSE;
+    proto_bool pin_set;
 } TlsClientAuthCtx;
 static TlsClientAuthCtx s_cli;
 
@@ -1008,10 +1008,10 @@ typedef struct
 {
     mbedtls_ssl_context ssl;
     mbedtls_ssl_config conf;
-    proto_bool active = PROTO_FALSE;
+    proto_bool active;
 #if PC_ENABLE_TLS_RESUMPTION
     mbedtls_ssl_session saved;
-    proto_bool saved_valid = PROTO_FALSE;
+    proto_bool saved_valid;
 #endif
 } TlsCsessCtx;
 static TlsCsessCtx s_csess;

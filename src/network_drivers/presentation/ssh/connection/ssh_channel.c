@@ -22,19 +22,19 @@ SshChannel ssh_chan[MAX_SSH_CONNS][PC_SSH_MAX_CHANNELS];
 // from any other translation unit. (The ssh_chan[][] table is the shared cross-TU substrate.)
 typedef struct
 {
-    SshChannelDataCb data_cb = NULL;
-    SshForwardOpenCb forward_open_cb = NULL;
-    SshForwardDataCb forward_data_cb = NULL;
-    SshRemoteForwardOpenCb rfwd_open_cb = NULL;
-    SshRemoteForwardCancelCb rfwd_cancel_cb = NULL;
-    SshForwardConfirmCb forward_confirm_cb = NULL;
+    SshChannelDataCb data_cb;
+    SshForwardOpenCb forward_open_cb;
+    SshForwardDataCb forward_data_cb;
+    SshRemoteForwardOpenCb rfwd_open_cb;
+    SshRemoteForwardCancelCb rfwd_cancel_cb;
+    SshForwardConfirmCb forward_confirm_cb;
 #if PC_ENABLE_SSH_SFTP
-    SshSftpOpenCb pc_sftp_open_cb = NULL;
-    SshSftpDataCb pc_sftp_data_cb = NULL;
+    SshSftpOpenCb pc_sftp_open_cb;
+    SshSftpDataCb pc_sftp_data_cb;
 #endif
 #if PC_ENABLE_SSH_SCP
-    SshScpOpenCb pc_scp_open_cb = NULL;
-    SshScpDataCb pc_scp_data_cb = NULL;
+    SshScpOpenCb pc_scp_open_cb;
+    SshScpDataCb pc_scp_data_cb;
 #endif
 } SshChannelCtx;
 static SshChannelCtx s_chcb;

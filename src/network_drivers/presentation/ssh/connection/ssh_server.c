@@ -22,7 +22,7 @@
 // callback. One named owner, unreachable from any other translation unit.
 typedef struct
 {
-    SshEmitCb emit_cb = NULL;
+    SshEmitCb emit_cb;
 } SshServerCtx;
 static SshServerCtx s_srv;
 

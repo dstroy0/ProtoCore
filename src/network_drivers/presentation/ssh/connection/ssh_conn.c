@@ -29,7 +29,7 @@
 typedef struct
 {
     uint8_t conn_for_ssh[MAX_SSH_CONNS];
-    proto_bool init_done = PROTO_FALSE;
+    proto_bool init_done;
     volatile proto_bool close[MAX_SSH_CONNS];
 } SshConnCtx;
 static SshConnCtx s_sshc;

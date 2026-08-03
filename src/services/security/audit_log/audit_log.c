@@ -28,11 +28,11 @@
 typedef struct
 {
     pc_audit_entry ring[PC_AUDIT_LOG_ENTRIES];
-    uint16_t head = 0;                 // index of the oldest retained record
-    uint16_t count = 0;                // records currently retained
-    uint32_t seq = 0;                  // last assigned sequence number (monotonic)
+    uint16_t head;                     // index of the oldest retained record
+    uint16_t count;                    // records currently retained
+    uint32_t seq;                      // last assigned sequence number (monotonic)
     uint8_t anchor[PC_AUDIT_HASH_LEN]; // prev-hash for the oldest retained record
-    pc_audit_sink_fn sink = NULL;
+    pc_audit_sink_fn sink;
 } AuditCtx;
 static AuditCtx s_audit;
 

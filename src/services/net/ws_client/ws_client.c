@@ -285,7 +285,7 @@ proto_bool ws_client_parse_frame(const uint8_t *buf, size_t avail, uint8_t *opco
 typedef struct
 {
     WsClientMessageCb cb;
-    int cid = -1;               // outbound connection id (pc_client pool)
+    int cid;                    // outbound connection id (pc_client pool)
     volatile proto_bool closed; // peer closed / error (set when the pump sees it)
     proto_bool ws_up;
     proto_bool use_tls;
@@ -303,7 +303,7 @@ typedef struct
     size_t msg_len;
     uint8_t msg_op;
 } WsClientCtx;
-static WsClientCtx s_wsc;
+static WsClientCtx s_wsc = {.cid = -1};
 
 static inline size_t ring_avail()
 {

@@ -26,8 +26,8 @@
 // and public-key verifiers. One named owner, unreachable from any other translation unit.
 typedef struct
 {
-    SshPasswordCb pw_cb = NULL;
-    SshPubkeyCb pk_cb = NULL;
+    SshPasswordCb pw_cb;
+    SshPubkeyCb pk_cb;
 #if PC_ENABLE_SSH_KEYBOARD_INTERACTIVE
     // Per-slot keyboard-interactive exchange state: armed by a "keyboard-interactive" USERAUTH_REQUEST
     // (we send one INFO_REQUEST), consumed by the matching INFO_RESPONSE. The user is remembered across

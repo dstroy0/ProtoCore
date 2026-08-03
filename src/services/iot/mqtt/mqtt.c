@@ -467,7 +467,7 @@ typedef struct
 typedef struct
 {
     MqttMessageCb cb;
-    int cid = -1;               // outbound connection id (pc_client pool)
+    int cid;                    // outbound connection id (pc_client pool)
     volatile proto_bool closed; // peer closed / error (set when the pump sees it)
 
     // Inbound plaintext byte ring (consumer = process_rx). It is fed by a pump in
@@ -486,14 +486,14 @@ typedef struct
     uint32_t last_tx_ms;
     proto_bool ping_pending;
     uint32_t ping_sent_ms;
-    uint16_t next_pid = 1;
+    uint16_t next_pid;
     int connack_code; // set by process_rx during the connect handshake
 
     MqttInflight inflight[PC_MQTT_MAX_INFLIGHT];
     // Inbound QoS 2 packet ids that have been PUBREC'd and await PUBREL (0 = empty).
     uint16_t rx_qos2[PC_MQTT_RX_QOS2_SLOTS];
 } MqttCtx;
-static MqttCtx s_mqtt;
+static MqttCtx s_mqtt = {.cid = -1, .next_pid = 1};
 
 static uint16_t next_pid()
 {

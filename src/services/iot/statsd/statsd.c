@@ -159,11 +159,11 @@ size_t pc_statsd_format(char *out, size_t cap, const char *name, const char *val
 typedef struct
 {
     char host[64];
-    uint16_t port = PC_STATSD_PORT;
+    uint16_t port;
     char tags[96];
-    proto_bool ready = PROTO_FALSE;
+    proto_bool ready;
 } StatsdCtx;
-static StatsdCtx s_statsd;
+static StatsdCtx s_statsd = {.port = PC_STATSD_PORT};
 
 static void emit(const StatsdCtx *c, const char *name, const char *value, StatsdType type, float rate)
 {
