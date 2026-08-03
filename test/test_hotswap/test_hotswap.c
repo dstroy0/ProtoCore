@@ -29,8 +29,8 @@ static int g_present_calls = 0;
 static int g_event_calls = 0;
 static proto_bool g_mount_ok = PROTO_TRUE;
 static proto_bool g_present_ok = PROTO_TRUE;
-static StorageState g_event_from = ABSENT;
-static StorageState g_event_to = ABSENT;
+static StorageState g_event_from = STORAGE_STATE_ABSENT;
+static StorageState g_event_to = STORAGE_STATE_ABSENT;
 static void *g_seen_ctx = NULL;
 static int g_ctx_token = 0;
 
@@ -90,8 +90,8 @@ static void mount_it(uint32_t now)
 
 void test_starts_absent_not_ready()
 {
-    // Starting READY would let a caller write before anything was ever mounted.
-    TEST_ASSERT_EQUAL_INT((int)ABSENT, (int)c.state);
+    // Starting STORAGE_STATE_READY would let a caller write before anything was ever mounted.
+    TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_ABSENT, (int)c.state);
     TEST_ASSERT_EQUAL_UINT32(0, c.mounts);
     TEST_ASSERT_EQUAL_UINT32(0, c.faults);
 }
@@ -119,7 +119,7 @@ void test_zero_threshold_is_clamped_to_one()
     mount_it(0);
     // With an unclamped 0 the volume would fault before any failure was reported.
     TEST_ASSERT_TRUE(pc_hotswap_core_io(&c, PROTO_FALSE));
-    TEST_ASSERT_EQUAL_INT((int)FAULTED, (int)c.state);
+    TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_FAULTED, (int)c.state);
 }
 
 // --- the fault threshold --------------------------------------------------
@@ -128,7 +128,7 @@ void test_one_failure_does_not_fault_a_healthy_volume()
 {
     mount_it(100000);
     TEST_ASSERT_FALSE(pc_hotswap_core_io(&c, PROTO_FALSE));
-    TEST_ASSERT_EQUAL_INT((int)READY, (int)c.state);
+    TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_READY, (int)c.state);
     TEST_ASSERT_EQUAL_UINT8(1, c.fail_run);
 }
 
@@ -138,7 +138,7 @@ void test_threshold_run_faults_and_counts()
     TEST_ASSERT_FALSE(pc_hotswap_core_io(&c, PROTO_FALSE));
     TEST_ASSERT_FALSE(pc_hotswap_core_io(&c, PROTO_FALSE));
     TEST_ASSERT_TRUE(pc_hotswap_core_io(&c, PROTO_FALSE)); // 3rd == threshold -> state change
-    TEST_ASSERT_EQUAL_INT((int)FAULTED, (int)c.state);
+    TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_FAULTED, (int)c.state);
     TEST_ASSERT_EQUAL_UINT32(1, c.faults);
 }
 
@@ -152,7 +152,7 @@ void test_a_success_resets_the_failure_run()
     // So intermittent noise never accumulates into a false removal.
     TEST_ASSERT_FALSE(pc_hotswap_core_io(&c, PROTO_FALSE));
     TEST_ASSERT_FALSE(pc_hotswap_core_io(&c, PROTO_FALSE));
-    TEST_ASSERT_EQUAL_INT((int)READY, (int)c.state);
+    TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_READY, (int)c.state);
 }
 
 void test_further_failures_while_faulted_are_ignored()
@@ -167,13 +167,13 @@ void test_further_failures_while_faulted_are_ignored()
     TEST_ASSERT_FALSE(pc_hotswap_core_io(&c, PROTO_FALSE));
     TEST_ASSERT_FALSE(pc_hotswap_core_io(&c, PROTO_TRUE));
     TEST_ASSERT_EQUAL_UINT32(1, c.faults);
-    TEST_ASSERT_EQUAL_INT((int)FAULTED, (int)c.state);
+    TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_FAULTED, (int)c.state);
 }
 
 void test_io_while_absent_is_ignored()
 {
     TEST_ASSERT_FALSE(pc_hotswap_core_io(&c, PROTO_FALSE));
-    TEST_ASSERT_EQUAL_INT((int)ABSENT, (int)c.state);
+    TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_ABSENT, (int)c.state);
     TEST_ASSERT_EQUAL_UINT32(0, c.faults);
 }
 
@@ -186,7 +186,7 @@ void test_fail_run_saturates_instead_of_wrapping()
         pc_hotswap_core_io(&c, PROTO_FALSE);
     }
     // A wrapping counter would drop back under the threshold and un-fault the volume.
-    TEST_ASSERT_EQUAL_INT((int)FAULTED, (int)c.state);
+    TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_FAULTED, (int)c.state);
 }
 
 void test_fail_run_at_the_uint8_ceiling_does_not_wrap()
@@ -199,7 +199,7 @@ void test_fail_run_at_the_uint8_ceiling_does_not_wrap()
     c.fail_run = 0xFF;
     TEST_ASSERT_TRUE(pc_hotswap_core_io(&c, PROTO_FALSE));
     TEST_ASSERT_EQUAL_UINT8(0xFF, c.fail_run);
-    TEST_ASSERT_EQUAL_INT((int)FAULTED, (int)c.state);
+    TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_FAULTED, (int)c.state);
 }
 
 // --- probe pacing ---------------------------------------------------------
@@ -231,7 +231,7 @@ void test_present_but_unmountable_stays_absent()
 {
     // A card that will not mount is not storage, however present the detect pin says it is.
     TEST_ASSERT_FALSE(pc_hotswap_core_probe(&c, PROTO_TRUE, PROTO_FALSE, 100000));
-    TEST_ASSERT_EQUAL_INT((int)ABSENT, (int)c.state);
+    TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_ABSENT, (int)c.state);
     TEST_ASSERT_EQUAL_UINT32(0, c.mounts);
 }
 
@@ -254,36 +254,36 @@ void test_full_removal_and_reinsertion_cycle()
     {
         pc_hotswap_core_io(&c, PROTO_FALSE);
     }
-    TEST_ASSERT_EQUAL_INT((int)FAULTED, (int)c.state);
+    TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_FAULTED, (int)c.state);
 
     // Probe while it is still out.
     TEST_ASSERT_TRUE(pc_hotswap_core_due(&c, 102000));
     pc_hotswap_core_probe(&c, PROTO_FALSE, PROTO_FALSE, 102000);
-    TEST_ASSERT_EQUAL_INT((int)ABSENT, (int)c.state);
+    TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_ABSENT, (int)c.state);
 
     // Card back in.
     TEST_ASSERT_TRUE(pc_hotswap_core_due(&c, 104000));
     TEST_ASSERT_TRUE(pc_hotswap_core_probe(&c, PROTO_TRUE, PROTO_TRUE, 104000));
-    TEST_ASSERT_EQUAL_INT((int)READY, (int)c.state);
+    TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_READY, (int)c.state);
     TEST_ASSERT_EQUAL_UINT32(2, c.mounts);
     TEST_ASSERT_EQUAL_UINT32(1, c.faults);
     TEST_ASSERT_EQUAL_UINT8(0, c.fail_run); // a fresh mount starts with a clean run
 
     // And it is usable again: the old failures must not carry over.
     TEST_ASSERT_FALSE(pc_hotswap_core_io(&c, PROTO_FALSE));
-    TEST_ASSERT_EQUAL_INT((int)READY, (int)c.state);
+    TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_READY, (int)c.state);
 }
 
 void test_faulted_volume_can_go_straight_back_to_ready()
 {
-    // A card reseated quickly enough that the probe finds it mounted without an ABSENT step.
+    // A card reseated quickly enough that the probe finds it mounted without an STORAGE_STATE_ABSENT step.
     mount_it(100000);
     for (int i = 0; i < 3; i++)
     {
         pc_hotswap_core_io(&c, PROTO_FALSE);
     }
     TEST_ASSERT_TRUE(pc_hotswap_core_probe(&c, PROTO_TRUE, PROTO_TRUE, 102000));
-    TEST_ASSERT_EQUAL_INT((int)READY, (int)c.state);
+    TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_READY, (int)c.state);
     TEST_ASSERT_EQUAL_UINT32(2, c.mounts);
 }
 
@@ -299,9 +299,9 @@ void test_null_core_is_not_a_crash()
 
 void test_state_names()
 {
-    TEST_ASSERT_EQUAL_STRING("absent", pc_hotswap_state_name(ABSENT));
-    TEST_ASSERT_EQUAL_STRING("ready", pc_hotswap_state_name(READY));
-    TEST_ASSERT_EQUAL_STRING("faulted", pc_hotswap_state_name(FAULTED));
+    TEST_ASSERT_EQUAL_STRING("absent", pc_hotswap_state_name(STORAGE_STATE_ABSENT));
+    TEST_ASSERT_EQUAL_STRING("ready", pc_hotswap_state_name(STORAGE_STATE_READY));
+    TEST_ASSERT_EQUAL_STRING("faulted", pc_hotswap_state_name(STORAGE_STATE_FAULTED));
 }
 
 void test_json_and_overflow_is_fail_closed()
@@ -331,7 +331,7 @@ void test_binding_poll_before_begin_does_nothing()
     pc_hotswap_poll_at(500000);
     TEST_ASSERT_EQUAL_INT(0, g_mount_calls);
     TEST_ASSERT_EQUAL_INT(0, g_present_calls);
-    TEST_ASSERT_EQUAL_INT((int)ABSENT, (int)pc_hotswap_state());
+    TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_ABSENT, (int)pc_hotswap_state());
     TEST_ASSERT_FALSE(pc_hotswap_ready());
 }
 
@@ -356,24 +356,24 @@ void test_binding_mounts_on_the_first_poll_and_notifies()
     g_ms = 10000;
     pc_hotswap_begin(fake_mount, fake_unmount, fake_present, &g_ctx_token);
     pc_hotswap_set_event_cb(fake_event);
-    TEST_ASSERT_FALSE(pc_hotswap_ready()); // begin() resets to ABSENT
+    TEST_ASSERT_FALSE(pc_hotswap_ready()); // begin() resets to STORAGE_STATE_ABSENT
     reset_counts();
 
     pc_hotswap_poll_at(10000);
     TEST_ASSERT_TRUE(pc_hotswap_ready());
-    TEST_ASSERT_EQUAL_INT((int)READY, (int)pc_hotswap_state());
+    TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_READY, (int)pc_hotswap_state());
     TEST_ASSERT_EQUAL_INT(1, g_present_calls);
     TEST_ASSERT_EQUAL_INT(1, g_mount_calls);
     TEST_ASSERT_EQUAL_INT(0, g_unmount_calls);
     TEST_ASSERT_EQUAL_PTR(&g_ctx_token, g_seen_ctx); // the app's ctx is handed back
     TEST_ASSERT_EQUAL_INT(1, g_event_calls);
-    TEST_ASSERT_EQUAL_INT((int)ABSENT, (int)g_event_from);
-    TEST_ASSERT_EQUAL_INT((int)READY, (int)g_event_to);
+    TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_ABSENT, (int)g_event_from);
+    TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_READY, (int)g_event_to);
 }
 
 void test_binding_ready_volume_is_never_reprobed()
 {
-    // Nothing to remount while READY, so the per-loop poll must cost no callbacks at all.
+    // Nothing to remount while STORAGE_STATE_READY, so the per-loop poll must cost no callbacks at all.
     bind_and_mount(20000);
     pc_hotswap_poll_at(20000 + 999999);
     TEST_ASSERT_EQUAL_INT(0, g_present_calls);
@@ -394,11 +394,11 @@ void test_binding_io_fault_unmounts_immediately_and_notifies()
 
     pc_hotswap_io(PROTO_FALSE); // 3rd in a row == PC_HOTSWAP_FAIL_THRESHOLD
     TEST_ASSERT_FALSE(pc_hotswap_ready());
-    TEST_ASSERT_EQUAL_INT((int)FAULTED, (int)pc_hotswap_state());
+    TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_FAULTED, (int)pc_hotswap_state());
     TEST_ASSERT_EQUAL_INT(1, g_unmount_calls);
     TEST_ASSERT_EQUAL_INT(1, g_event_calls);
-    TEST_ASSERT_EQUAL_INT((int)READY, (int)g_event_from);
-    TEST_ASSERT_EQUAL_INT((int)FAULTED, (int)g_event_to);
+    TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_READY, (int)g_event_from);
+    TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_FAULTED, (int)g_event_to);
 
     // Outcomes reported after the fault are ignored: no second unmount, no second event.
     pc_hotswap_io(PROTO_FALSE);
@@ -417,14 +417,14 @@ void test_binding_drops_a_faulted_mount_before_retrying()
         pc_hotswap_io(PROTO_FALSE);
     }
     TEST_ASSERT_EQUAL_INT(1, g_unmount_calls); // the fault itself
-    TEST_ASSERT_EQUAL_INT((int)FAULTED, (int)pc_hotswap_state());
+    TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_FAULTED, (int)pc_hotswap_state());
 
     pc_hotswap_poll_at(52000); // one probe interval later
     TEST_ASSERT_EQUAL_INT(2, g_unmount_calls);
     TEST_ASSERT_EQUAL_INT(1, g_mount_calls);
     TEST_ASSERT_TRUE(pc_hotswap_ready());
-    TEST_ASSERT_EQUAL_INT((int)FAULTED, (int)g_event_from);
-    TEST_ASSERT_EQUAL_INT((int)READY, (int)g_event_to);
+    TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_FAULTED, (int)g_event_from);
+    TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_READY, (int)g_event_to);
 }
 
 void test_binding_faults_and_retries_without_an_unmount_callback()
@@ -444,25 +444,25 @@ void test_binding_faults_and_retries_without_an_unmount_callback()
     {
         pc_hotswap_io(PROTO_FALSE);
     }
-    TEST_ASSERT_EQUAL_INT((int)FAULTED, (int)pc_hotswap_state());
+    TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_FAULTED, (int)pc_hotswap_state());
     TEST_ASSERT_EQUAL_INT(0, g_unmount_calls);
     TEST_ASSERT_EQUAL_INT(1, g_event_calls);
 
-    // Card is really gone now: the retry finds nothing and settles on ABSENT.
+    // Card is really gone now: the retry finds nothing and settles on STORAGE_STATE_ABSENT.
     g_present_ok = PROTO_FALSE;
     pc_hotswap_poll_at(42000);
     TEST_ASSERT_EQUAL_INT(0, g_unmount_calls);
     TEST_ASSERT_EQUAL_INT(1, g_present_calls);
     TEST_ASSERT_EQUAL_INT(0, g_mount_calls); // not present -> mount is not attempted
-    TEST_ASSERT_EQUAL_INT((int)ABSENT, (int)pc_hotswap_state());
+    TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_ABSENT, (int)pc_hotswap_state());
     TEST_ASSERT_EQUAL_INT(2, g_event_calls);
-    TEST_ASSERT_EQUAL_INT((int)ABSENT, (int)g_event_to);
+    TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_ABSENT, (int)g_event_to);
 }
 
 void test_binding_without_card_detect_lets_the_mount_decide()
 {
     // A NULL present callback means "assume a card is there"; an unmountable volume
-    // then stays ABSENT, and an unchanged state fires no event.
+    // then stays STORAGE_STATE_ABSENT, and an unchanged state fires no event.
     g_ms = 60000;
     g_mount_ok = PROTO_FALSE;
     pc_hotswap_begin(fake_mount, fake_unmount, NULL, &g_ctx_token);
@@ -473,19 +473,19 @@ void test_binding_without_card_detect_lets_the_mount_decide()
     TEST_ASSERT_EQUAL_INT(0, g_present_calls); // nothing to ask
     TEST_ASSERT_EQUAL_INT(1, g_mount_calls);
     TEST_ASSERT_FALSE(pc_hotswap_ready());
-    TEST_ASSERT_EQUAL_INT(0, g_event_calls); // ABSENT -> ABSENT is not a transition
+    TEST_ASSERT_EQUAL_INT(0, g_event_calls); // STORAGE_STATE_ABSENT -> STORAGE_STATE_ABSENT is not a transition
 
     g_mount_ok = PROTO_TRUE;
     pc_hotswap_poll_at(62000);
     TEST_ASSERT_TRUE(pc_hotswap_ready());
     TEST_ASSERT_EQUAL_INT(1, g_event_calls);
-    TEST_ASSERT_EQUAL_INT((int)READY, (int)g_event_to);
+    TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_READY, (int)g_event_to);
 }
 
 void test_binding_without_a_mount_callback_never_becomes_ready()
 {
     // No way to mount anything means no storage: it must stay fail-closed rather than
-    // report READY on the strength of card-detect alone.
+    // report STORAGE_STATE_READY on the strength of card-detect alone.
     g_ms = 70000;
     g_present_ok = PROTO_TRUE;
     pc_hotswap_begin(NULL, fake_unmount, fake_present, &g_ctx_token);
@@ -496,7 +496,7 @@ void test_binding_without_a_mount_callback_never_becomes_ready()
     TEST_ASSERT_EQUAL_INT(1, g_present_calls);
     TEST_ASSERT_EQUAL_INT(0, g_mount_calls);
     TEST_ASSERT_FALSE(pc_hotswap_ready());
-    TEST_ASSERT_EQUAL_INT((int)ABSENT, (int)pc_hotswap_state());
+    TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_ABSENT, (int)pc_hotswap_state());
 }
 
 void test_binding_event_callback_is_optional()
@@ -516,7 +516,7 @@ void test_binding_event_callback_is_optional()
     {
         pc_hotswap_io(PROTO_FALSE);
     }
-    TEST_ASSERT_EQUAL_INT((int)FAULTED, (int)pc_hotswap_state());
+    TEST_ASSERT_EQUAL_INT((int)STORAGE_STATE_FAULTED, (int)pc_hotswap_state());
     TEST_ASSERT_EQUAL_INT(1, g_unmount_calls);
     TEST_ASSERT_EQUAL_INT(0, g_event_calls);
 }
