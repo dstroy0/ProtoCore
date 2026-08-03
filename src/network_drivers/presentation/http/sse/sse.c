@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file sse.cpp
+ * @file sse.c
  * @brief Server-Sent Events connection pool implementation.
  */
 
@@ -17,7 +17,7 @@ void pc_sse_init()
 {
     for (int i = 0; i < MAX_SSE_CONNS; i++)
     {
-        pc_sse_pool[i] = {};
+        pc_sse_pool[i] = (SseConn){0};
         pc_sse_pool[i].pc_sse_id = (uint8_t)i;
     }
 }
@@ -28,7 +28,7 @@ SseConn *pc_sse_alloc(uint8_t slot_id, const char *path)
     {
         if (!pc_sse_pool[i].active)
         {
-            pc_sse_pool[i] = {};
+            pc_sse_pool[i] = (SseConn){0};
             pc_sse_pool[i].pc_sse_id = (uint8_t)i;
             pc_sse_pool[i].slot_id = slot_id;
             pc_sse_pool[i].active = PROTO_TRUE;
@@ -58,7 +58,7 @@ void pc_sse_free(uint8_t slot_id)
     {
         if (pc_sse_pool[i].active && pc_sse_pool[i].slot_id == slot_id)
         {
-            pc_sse_pool[i] = {};
+            pc_sse_pool[i] = (SseConn){0};
             pc_sse_pool[i].pc_sse_id = (uint8_t)i;
             return;
         }
