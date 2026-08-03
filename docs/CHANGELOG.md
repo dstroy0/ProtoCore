@@ -25,6 +25,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update test report + coverage [skip ci] ([`4214270`](https://github.com/dstroy0/ProtoCore/commit/4214270b317aa4c4712cec42b4859eb42eeee56e))
+- update CHANGELOG.md [skip ci] ([`3e4a9e4`](https://github.com/dstroy0/ProtoCore/commit/3e4a9e4971832eeb481b3b950854b1dc1474c2ce))
 - update test report + coverage [skip ci] ([`8d82ee3`](https://github.com/dstroy0/ProtoCore/commit/8d82ee3729b1287ff0d64e76942ef32c52b33dc3))
 - update CHANGELOG.md [skip ci] ([`a32dece`](https://github.com/dstroy0/ProtoCore/commit/a32dece4fe3ac4ee0e9295269ba21940a4db8670))
 - update test report + coverage [skip ci] ([`2e4e0bc`](https://github.com/dstroy0/ProtoCore/commit/2e4e0bc232efe80d4e93e76d4c82fb2f700b4c5f))
@@ -157,6 +159,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- give the QUIC/TLS suites the library's own truth type ([`c68d9a8`](https://github.com/dstroy0/ProtoCore/commit/c68d9a8adfbe8072b2418e20fe40a8b4513997c8))
 - convert the mechanically-convertible suites to C11 ([`79e56d1`](https://github.com/dstroy0/ProtoCore/commit/79e56d1187c33e042ef04f3370e3d2fb17762a8c))
 - assert the six enum widths at compile time ([`4ef3417`](https://github.com/dstroy0/ProtoCore/commit/4ef34170f4da2ebfc929917337b8d566ddc24724))
 
