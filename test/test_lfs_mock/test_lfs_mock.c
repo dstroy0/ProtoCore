@@ -200,6 +200,52 @@ void test_fill_leaving_room_still_creates_but_cannot_write()
     TEST_ASSERT_LESS_THAN_INT(8 * (int)sizeof(big), total); // it ran out before taking it all
 }
 
+// WebDAV COPY holds the source open for reading while it writes the destination. If the fixture
+// cannot do that, every recursive copy in the suite is running on borrowed luck.
+void test_read_one_file_while_writing_another()
+{
+    const pc_mnt_backend *b = lfsm();
+    TEST_ASSERT_TRUE(lfsm_write_text("/src.txt", "source-bytes"));
+
+    int r = b->open("/src.txt", PC_MNT_READ);
+    TEST_ASSERT_GREATER_OR_EQUAL_INT(0, r);
+    int w = b->open("/dst.txt", PC_MNT_WRITE);
+    TEST_ASSERT_GREATER_OR_EQUAL_INT(0, w);
+
+    char buf[8];
+    for (;;)
+    {
+        int n = b->read(r, buf, sizeof(buf));
+        if (n <= 0)
+        {
+            break;
+        }
+        TEST_ASSERT_EQUAL_INT(n, b->write(w, buf, (size_t)n));
+    }
+    b->close(w);
+    b->close(r);
+    TEST_ASSERT_EQUAL_INT(12, b->size("/dst.txt"));
+}
+
+// Two writers at once, which a recursive copy of a collection reaches.
+void test_two_writers_at_once()
+{
+    const pc_mnt_backend *b = lfsm();
+    int a = b->open("/a.bin", PC_MNT_WRITE);
+    int c = b->open("/b.bin", PC_MNT_WRITE);
+    TEST_ASSERT_GREATER_OR_EQUAL_INT(0, a);
+    TEST_ASSERT_GREATER_OR_EQUAL_INT(0, c);
+    for (int i = 0; i < 40; i++)
+    {
+        TEST_ASSERT_EQUAL_INT(4, b->write(a, "aaaa", 4));
+        TEST_ASSERT_EQUAL_INT(4, b->write(c, "bbbb", 4));
+    }
+    b->close(a);
+    b->close(c);
+    TEST_ASSERT_EQUAL_INT(160, b->size("/a.bin"));
+    TEST_ASSERT_EQUAL_INT(160, b->size("/b.bin"));
+}
+
 int main()
 {
     UNITY_BEGIN();
@@ -214,5 +260,7 @@ int main()
     RUN_TEST(test_a_full_volume_refuses_rather_than_pretending);
     RUN_TEST(test_fill_volume_leaves_nothing_creatable);
     RUN_TEST(test_fill_leaving_room_still_creates_but_cannot_write);
+    RUN_TEST(test_read_one_file_while_writing_another);
+    RUN_TEST(test_two_writers_at_once);
     return UNITY_END();
 }
