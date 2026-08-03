@@ -54,6 +54,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`6023235`](https://github.com/dstroy0/ProtoCore/commit/6023235a99d94e406a52f8192f452df2efb1e126))
 - update CHANGELOG.md [skip ci] ([`b31e5d1`](https://github.com/dstroy0/ProtoCore/commit/b31e5d1d208d74b741cef460a1d5f94a9e0aa446))
 - update CHANGELOG.md [skip ci] ([`7655c0f`](https://github.com/dstroy0/ProtoCore/commit/7655c0f9094b498f5861e50d3bbec186bff3751d))
 - update CHANGELOG.md [skip ci] ([`9919310`](https://github.com/dstroy0/ProtoCore/commit/99193102fbfe83b29a97f8cb9e1d2a5b15842b0e))
@@ -386,6 +387,10 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- finish the six suites ([`ec21e1a`](https://github.com/dstroy0/ProtoCore/commit/ec21e1a9d4839ba2d7cf755884574e2da37de675))
+- count aborts on the host seam ([`8b9e96e`](https://github.com/dstroy0/ProtoCore/commit/8b9e96ec4e11e307896f6a20e1e5f41208748ce7))
+- serve test_range from the real filesystem instead of the Arduino FS mock ([`b9856b2`](https://github.com/dstroy0/ProtoCore/commit/b9856b2a0aa96e0bc13ab96cf0cf2d9127ae4382))
+- fixed accumulators in place of the vectors, six more suites to C ([`fbbd051`](https://github.com/dstroy0/ProtoCore/commit/fbbd051fd0f188b7cebb80a990d2347f28e5f085))
 - sweep the mechanical C++ tokens out of the suites ([`53cfef4`](https://github.com/dstroy0/ProtoCore/commit/53cfef46e0a9ec83f19267432e10187ca42ea4f0))
 - hoist the dns_server resolver callback to file scope ([`e73f033`](https://github.com/dstroy0/ProtoCore/commit/e73f03367f67569aa6fdbec2415097167fa70413))
 - name the lambdas and drop the heap from three suites ([`72867d5`](https://github.com/dstroy0/ProtoCore/commit/72867d518ed097cba91d6000240a89fd1fc2f65c))
