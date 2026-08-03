@@ -783,8 +783,8 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Accept cb global throttle rejects over budget
     * **Assertions**:
-      * <code>Assert equal int (ERR_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb, ERR_OK))</code>
-      * <code>Assert equal int (ERR_ABRT, listener_accept_cb((void *)(uintptr_t)0, &over_budget, ERR_OK))</code>
+      * <code>Assert equal int (PC_NET_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb, PC_NET_OK))</code>
+      * <code>Assert equal int (PC_NET_ERR_ABRT, listener_accept_cb((void *)(uintptr_t)0, &over_budget, PC_NET_OK))</code>
       * <code>Assert equal int (before_aborts + 1, mock_abort_call_count())</code>
   </details>
 
@@ -793,7 +793,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Accept cb ip allowlist allows when empty
     * **Assertions**:
-      * <code>Assert equal int (ERR_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb, ERR_OK))</code>
+      * <code>Assert equal int (PC_NET_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb, PC_NET_OK))</code>
       * <code>Assert equal (CONN_ACTIVE, (ConnState)conn_pool[0].state)</code>
   </details>
 
@@ -803,7 +803,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
     * **Objective**: Accept cb ip allowlist rejects once a rule exists
     * **Assertions**:
       * <code>Assert true (listener_ip_allow_add(&rule_net, 24))</code>
-      * <code>Assert equal int (ERR_ABRT, listener_accept_cb((void *)(uintptr_t)0, &pcb, ERR_OK))</code>
+      * <code>Assert equal int (PC_NET_ERR_ABRT, listener_accept_cb((void *)(uintptr_t)0, &pcb, PC_NET_OK))</code>
       * <code>Assert equal int (before_aborts + 1, mock_abort_call_count())</code>
       * <code>Assert equal (CONN_FREE, (ConnState)conn_pool[0].state)</code>
   </details>
@@ -4838,7 +4838,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Backpressure counts when ring full
     * **Assertions**:
-      * <code>Assert equal (ERR_MEM, rc)</code>
+      * <code>Assert equal (PC_NET_ERR_MEM, rc)</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(1, pc_conn_counters_get().backpressure);</code>
       * <code>Assert equal (PC_CONN_R_BACKPRESSURE, g_reason)</code>
   </details>
@@ -4893,7 +4893,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
     * **Objective**: Late inbound data while closing: acked + dropped, slot stays CLOSING.
     * **Assertions**:
       * <code>Assert equal (CONN_CLOSING, (ConnState)conn_pool[0].state)</code>
-      * <code>Assert equal (ERR_OK, rc)</code>
+      * <code>Assert equal (PC_NET_OK, rc)</code>
       * <code>Assert equal (CONN_CLOSING, (ConnState)conn_pool[0].state)</code>
   </details>
 
@@ -4924,7 +4924,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Enqueue failure from recv cb counts defer drop
     * **Assertions**:
-      * <code>Assert equal int (ERR_OK, lowlevel_recv_cb(&conn_pool[0], &pcb, &p, ERR_OK))</code>
+      * <code>Assert equal int (PC_NET_OK, lowlevel_recv_cb(&conn_pool[0], &pcb, &p, PC_NET_OK))</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(1, pc_conn_counters_get().defer_drops);</code>
       * <code>Assert equal (PC_CONN_R_DEFER_DROP, g_reason)</code>
   </details>
@@ -4934,7 +4934,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Accept cb posts accept transition
     * **Assertions**:
-      * <code>Assert equal int (ERR_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb, ERR_OK))</code>
+      * <code>Assert equal int (PC_NET_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb, PC_NET_OK))</code>
       * <code>Assert equal (PC_CONN_R_ACCEPT, g_reason)</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(1, pc_conn_counters_get().accepts);</code>
   </details>
@@ -4944,7 +4944,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Accept cb enqueue failure posts defer drop
     * **Assertions**:
-      * <code>Assert equal int (ERR_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb, ERR_OK))</code>
+      * <code>Assert equal int (PC_NET_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb, PC_NET_OK))</code>
       * <code>Assert equal (PC_CONN_R_DEFER_DROP, g_reason)</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(1, pc_conn_counters_get().defer_drops);</code>
       * <code>Assert equal (CONN_ACTIVE, (ConnState)conn_pool[0].state)</code>
@@ -8410,7 +8410,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Pool init applies custom config
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_UINT32(12345, DeterministicAsyncTCP::conn_timeout_ms);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(12345, proto_tcp_conn_timeout_ms);</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -8426,13 +8426,13 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: A normal call afterward still succeeds (the failure knobs auto-cleared).
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_INT32(-1, listener_add((uint8_t)MAX_LISTENERS, 80, PROTO_HTTP));</code>
-      * <code>TEST_ASSERT_EQUAL_INT32(-1, listener_add(1, 81, PROTO_HTTP));</code>
-      * <code>TEST_ASSERT_EQUAL_INT32(-1, listener_add(1, 81, PROTO_HTTP));</code>
-      * <code>TEST_ASSERT_EQUAL_INT32(-1, listener_add(1, 81, PROTO_HTTP));</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(-1, listener_add((uint8_t)MAX_LISTENERS, 80, PROTO_HTTP, PROTO_FALSE));</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(-1, listener_add(1, 81, PROTO_HTTP, PROTO_FALSE));</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(-1, listener_add(1, 81, PROTO_HTTP, PROTO_FALSE));</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(-1, listener_add(1, 81, PROTO_HTTP, PROTO_FALSE));</code>
       * <code>Assert equal int (before + 1, mock_abort_call_count())</code>
-      * <code>TEST_ASSERT_EQUAL_INT32(-1, listener_add(1, 81, PROTO_HTTP));</code>
-      * <code>TEST_ASSERT_EQUAL_INT32(1, listener_add(1, 81, PROTO_HTTP));</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(-1, listener_add(1, 81, PROTO_HTTP, PROTO_FALSE));</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(1, listener_add(1, 81, PROTO_HTTP, PROTO_FALSE));</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -8905,10 +8905,10 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Recv cb null arg and closing drain
     * **Assertions**:
-      * <code>Assert equal int (ERR_VAL, lowlevel_recv_cb(NULL, &fake, NULL, ERR_OK))</code>
-      * <code>Assert equal int (ERR_OK, lowlevel_recv_cb(&conn_pool[0], &fake, &seg, ERR_OK))</code>
+      * <code>Assert equal int (PC_NET_ERR_VAL, lowlevel_recv_cb(NULL, &fake, NULL, PC_NET_OK))</code>
+      * <code>Assert equal int (PC_NET_OK, lowlevel_recv_cb(&conn_pool[0], &fake, &seg, PC_NET_OK))</code>
       * <code>Assert equal (CONN_CLOSING, (ConnState)conn_pool[0].state)</code>
-      * <code>Assert equal int (ERR_OK, lowlevel_recv_cb(&conn_pool[0], &fake, NULL, ERR_OK))</code>
+      * <code>Assert equal int (PC_NET_OK, lowlevel_recv_cb(&conn_pool[0], &fake, NULL, PC_NET_OK))</code>
       * <code>Assert equal (CONN_CLOSING, (ConnState)conn_pool[0].state)</code>
   </details>
 
@@ -8917,7 +8917,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Recv cb fin close falls back to abort on tcp close failure
     * **Assertions**:
-      * <code>Assert equal int (ERR_OK, lowlevel_recv_cb(&conn_pool[0], &fake, NULL, ERR_OK))</code>
+      * <code>Assert equal int (PC_NET_OK, lowlevel_recv_cb(&conn_pool[0], &fake, NULL, PC_NET_OK))</code>
       * <code>Assert equal int (before + 1, mock_abort_call_count())</code>
       * <code>Assert equal (CONN_FREE, (ConnState)conn_pool[0].state)</code>
       * <code>Assert null (conn_pool[0].pcb)</code>
@@ -8928,7 +8928,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Recv cb fin close ordinary path does not abort
     * **Assertions**:
-      * <code>Assert equal int (ERR_OK, lowlevel_recv_cb(&conn_pool[0], &fake, NULL, ERR_OK))</code>
+      * <code>Assert equal int (PC_NET_OK, lowlevel_recv_cb(&conn_pool[0], &fake, NULL, PC_NET_OK))</code>
       * <code>Assert equal int (before, mock_abort_call_count())</code>
       * <code>Assert equal (CONN_FREE, (ConnState)conn_pool[0].state)</code>
   </details>
@@ -8938,7 +8938,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Recv cb rejects non active slot
     * **Assertions**:
-      * <code>Assert equal int (ERR_VAL, lowlevel_recv_cb(&conn_pool[0], &fake, NULL, ERR_OK))</code>
+      * <code>Assert equal int (PC_NET_ERR_VAL, lowlevel_recv_cb(&conn_pool[0], &fake, NULL, PC_NET_OK))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -8946,7 +8946,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Recv cb refuses a segment that does not fit
     * **Assertions**:
-      * <code>Assert equal int (ERR_MEM, lowlevel_recv_cb(&conn_pool[0], &fake, &seg, ERR_OK))</code>
+      * <code>Assert equal int (PC_NET_ERR_MEM, lowlevel_recv_cb(&conn_pool[0], &fake, &seg, PC_NET_OK))</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(5, conn_pool[0].last_activity_ms); // NOT refreshed on refusal (see tcp.cpp comment)</code>
   </details>
 
@@ -8955,12 +8955,12 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: A second segment must NOT re-arm req_start_ms (only the first byte of a request does).
     * **Assertions**:
-      * <code>Assert equal int (ERR_OK, lowlevel_recv_cb(&conn_pool[0], &fake, &seg1, ERR_OK))</code>
+      * <code>Assert equal int (PC_NET_OK, lowlevel_recv_cb(&conn_pool[0], &fake, &seg1, PC_NET_OK))</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(4242, conn_pool[0].last_activity_ms);</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(4242, conn_pool[0].req_start_ms); // first byte of a new request arms the deadline</code>
       * <code>Assert equal (5u, (size_t)conn_pool[0].rx_head)</code>
       * <code>Assert equal int (0, memcmp("abcde", got, 5))</code>
-      * <code>Assert equal int (ERR_OK, lowlevel_recv_cb(&conn_pool[0], &fake, &seg3, ERR_OK))</code>
+      * <code>Assert equal int (PC_NET_OK, lowlevel_recv_cb(&conn_pool[0], &fake, &seg3, PC_NET_OK))</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(4242, conn_pool[0].req_start_ms); // unchanged</code>
   </details>
 
@@ -8969,9 +8969,9 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Recv cb zero clock and zero length segment edge cases
     * **Assertions**:
-      * <code>Assert equal int (ERR_OK, lowlevel_recv_cb(&conn_pool[0], &fake, &seg, ERR_OK))</code>
+      * <code>Assert equal int (PC_NET_OK, lowlevel_recv_cb(&conn_pool[0], &fake, &seg, PC_NET_OK))</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(1, conn_pool[0].req_start_ms); // rx_now==0 -&gt; armed to 1, not left "unarmed"</code>
-      * <code>Assert equal int (ERR_OK, lowlevel_recv_cb(&conn_pool[0], &fake, &empty_seg, ERR_OK))</code>
+      * <code>Assert equal int (PC_NET_OK, lowlevel_recv_cb(&conn_pool[0], &fake, &empty_seg, PC_NET_OK))</code>
       * <code>Assert equal (1u, (size_t)conn_pool[0].rx_head)</code>
   </details>
 
@@ -8980,11 +8980,11 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Sent cb null active and closing
     * **Assertions**:
-      * <code>Assert equal int (ERR_OK, lowlevel_sent_cb(NULL, NULL, 0))</code>
-      * <code>Assert equal int (ERR_OK, lowlevel_sent_cb(&conn_pool[0], &fake, 10))</code>
+      * <code>Assert equal int (PC_NET_OK, lowlevel_sent_cb(NULL, NULL, 0))</code>
+      * <code>Assert equal int (PC_NET_OK, lowlevel_sent_cb(&conn_pool[0], &fake, 10))</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(777, conn_pool[0].last_activity_ms);</code>
       * <code>Assert equal (CONN_ACTIVE, (ConnState)conn_pool[0].state)</code>
-      * <code>Assert equal int (ERR_OK, lowlevel_sent_cb(&conn_pool[1], &fake, 0))</code>
+      * <code>Assert equal int (PC_NET_OK, lowlevel_sent_cb(&conn_pool[1], &fake, 0))</code>
       * <code>Assert equal (CONN_FREE, (ConnState)conn_pool[1].state); // finalized (drained: snd_queuelen==0)</code>
   </details>
 
@@ -9004,9 +9004,9 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Accept cb rejects error and null pcb
     * **Assertions**:
-      * <code>Assert equal int (ERR_VAL, listener_accept_cb((void *)(uintptr_t)0, &fake, ERR_ABRT))</code>
+      * <code>Assert equal int (PC_NET_ERR_VAL, listener_accept_cb((void *)(uintptr_t)0, &fake, PC_NET_ERR_ABRT))</code>
       * <code>TEST_ASSERT_EQUAL_INT32(before, pc_conn_alloc_free()); // no slot claimed</code>
-      * <code>Assert equal int (ERR_VAL, listener_accept_cb((void *)(uintptr_t)0, NULL, ERR_OK))</code>
+      * <code>Assert equal int (PC_NET_ERR_VAL, listener_accept_cb((void *)(uintptr_t)0, NULL, PC_NET_OK))</code>
       * <code>TEST_ASSERT_EQUAL_INT32(before, pc_conn_alloc_free());</code>
   </details>
 
@@ -9015,7 +9015,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Accept cb rejects out of range listener idx
     * **Assertions**:
-      * <code>Assert equal int (ERR_VAL, listener_accept_cb((void *)(uintptr_t)MAX_LISTENERS, &fake, ERR_OK))</code>
+      * <code>Assert equal int (PC_NET_ERR_VAL, listener_accept_cb((void *)(uintptr_t)MAX_LISTENERS, &fake, PC_NET_OK))</code>
       * <code>Assert equal int (before_aborts, mock_abort_call_count())</code>
   </details>
 
@@ -9025,7 +9025,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
     * **Objective**: Accept cb rejects when pool full
     * **Assertions**:
       * <code>TEST_ASSERT_EQUAL_INT32(-1, pc_conn_alloc_free());</code>
-      * <code>Assert equal int (ERR_ABRT, listener_accept_cb((void *)(uintptr_t)0, &fake, ERR_OK))</code>
+      * <code>Assert equal int (PC_NET_ERR_ABRT, listener_accept_cb((void *)(uintptr_t)0, &fake, PC_NET_OK))</code>
       * <code>Assert equal int (before_aborts + 1, mock_abort_call_count())</code>
   </details>
 
@@ -9034,7 +9034,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Accept cb claims slot and wires connection
     * **Assertions**:
-      * <code>Assert equal int (ERR_OK, listener_accept_cb((void *)(uintptr_t)0, &fake, ERR_OK))</code>
+      * <code>Assert equal int (PC_NET_OK, listener_accept_cb((void *)(uintptr_t)0, &fake, PC_NET_OK))</code>
       * <code>Assert equal (CONN_ACTIVE, (ConnState)c-&gt;state)</code>
       * <code>Assert equal ptr (&fake, c-&gt;pcb)</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(9001, c-&gt;last_activity_ms);</code>
@@ -9052,8 +9052,8 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Accept cb second accept claims a different slot
     * **Assertions**:
-      * <code>Assert equal int (ERR_OK, listener_accept_cb((void *)(uintptr_t)0, &fake1, ERR_OK))</code>
-      * <code>Assert equal int (ERR_OK, listener_accept_cb((void *)(uintptr_t)0, &fake2, ERR_OK))</code>
+      * <code>Assert equal int (PC_NET_OK, listener_accept_cb((void *)(uintptr_t)0, &fake1, PC_NET_OK))</code>
+      * <code>Assert equal int (PC_NET_OK, listener_accept_cb((void *)(uintptr_t)0, &fake2, PC_NET_OK))</code>
       * <code>Assert equal ptr (&fake1, conn_pool[0].pcb)</code>
       * <code>Assert equal ptr (&fake2, conn_pool[1].pcb)</code>
   </details>
@@ -9063,7 +9063,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Accept cb survives a failed enqueue
     * **Assertions**:
-      * <code>Assert equal int (ERR_OK, listener_accept_cb((void *)(uintptr_t)0, &fake, ERR_OK))</code>
+      * <code>Assert equal int (PC_NET_OK, listener_accept_cb((void *)(uintptr_t)0, &fake, PC_NET_OK))</code>
       * <code>Assert equal (CONN_ACTIVE, (ConnState)conn_pool[0].state)</code>
       * <code>Assert equal ptr (&fake, conn_pool[0].pcb)</code>
   </details>
