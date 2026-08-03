@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- a reserved handle must never reach littlefs ([`3b64a8a`](https://github.com/dstroy0/ProtoCore/commit/3b64a8a4c618ffa19ced9deed14dbc12131275b3))
 - spell swar's width assert so C++ can parse it, and typedef MockHdr ([`e8e3296`](https://github.com/dstroy0/ProtoCore/commit/e8e3296cc75340db75ab44e07c96da2fddb99ab1))
 - stop 404-ing a static mount that named no backend ([`e407e63`](https://github.com/dstroy0/ProtoCore/commit/e407e633983afec0fab97e61cdceee25bb8b047d))
 - stop two envs overriding the src filter they inherit ([`94db75d`](https://github.com/dstroy0/ProtoCore/commit/94db75dbb934fe10ee54ae2ef0a661c8815d279c))
@@ -48,6 +49,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`1ee9964`](https://github.com/dstroy0/ProtoCore/commit/1ee9964a95030b3fc98b4d68973d29011ad8cb2d))
 - update CHANGELOG.md [skip ci] ([`23df5d4`](https://github.com/dstroy0/ProtoCore/commit/23df5d49398bacf3bf441730c7c6d33b7c935596))
 - update CHANGELOG.md [skip ci] ([`74c02f8`](https://github.com/dstroy0/ProtoCore/commit/74c02f8a7624aec4283bb95c5d7ea2cbd7b9a6f4))
 - update CHANGELOG.md [skip ci] ([`cbdb3fc`](https://github.com/dstroy0/ProtoCore/commit/cbdb3fc9e1c636ec8da56eec461342428ab6662f))
@@ -315,6 +317,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- use the proven fill for the remaining WebDAV creation-refused cases ([`4d3376b`](https://github.com/dstroy0/ProtoCore/commit/4d3376bfa80fa3b7820f3d3565bf9098cb11f5aa))
 - prove the fill helper actually exhausts the store ([`00c4ca1`](https://github.com/dstroy0/ProtoCore/commit/00c4ca106290ba6dd5caade7b917632acf7ce508))
 - fill the volume for the copy-destination-refused case ([`3c89931`](https://github.com/dstroy0/ProtoCore/commit/3c899315cadd140e0b81b44daaf49edc564fe2d4))
 - leave headroom so the 507 case fails on the write, not the open ([`db8fbe1`](https://github.com/dstroy0/ProtoCore/commit/db8fbe1c19f25bfb25717c3be6504c29f95dd7c5))
