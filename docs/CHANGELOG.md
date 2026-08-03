@@ -54,6 +54,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`f97963b`](https://github.com/dstroy0/ProtoCore/commit/f97963bb555e7ef6d1c74f7902fa5513407a5e98))
 - update CHANGELOG.md [skip ci] ([`b6f7596`](https://github.com/dstroy0/ProtoCore/commit/b6f7596c30912a4b85ed520e2d98881c63b2152f))
 - update CHANGELOG.md [skip ci] ([`b81a73a`](https://github.com/dstroy0/ProtoCore/commit/b81a73a07cd5527508c8a893a3d63e459978b827))
 - update CHANGELOG.md [skip ci] ([`647b62c`](https://github.com/dstroy0/ProtoCore/commit/647b62c0c019b9f05982b865529b67dcef728b09))
@@ -265,6 +266,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`506e29c`](https://github.com/dstroy0/ProtoCore/commit/506e29cacdb62b548ffd701d15c0d7391ecc18b5))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`18ca7d1`](https://github.com/dstroy0/ProtoCore/commit/18ca7d1027f2026e0e23dc78f7f5951da299106f))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`33e79ed`](https://github.com/dstroy0/ProtoCore/commit/33e79ed30353153c100a1ea86fe6a67a8153985c))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`9a18380`](https://github.com/dstroy0/ProtoCore/commit/9a18380b1f77a4afce3dff8f9a93f96f1d69dca1))
@@ -368,6 +370,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- finish the tier-1 suite conversions ([`423c920`](https://github.com/dstroy0/ProtoCore/commit/423c920b299416c1500cd43887a362304f141820))
 - convert the low-residue suites from .cpp to .c ([`b73b584`](https://github.com/dstroy0/ProtoCore/commit/b73b5846fdff32369d34d5fb51e8be5ccb673c4a))
 - strip the default arguments from the suite-local helpers ([`b64541a`](https://github.com/dstroy0/ProtoCore/commit/b64541a288f0d11174db4bcb68d9f47d1ff68553))
 - take the address at the remaining DTLS record-key call sites ([`ff461f5`](https://github.com/dstroy0/ProtoCore/commit/ff461f50c8fb9b11134ebaf039b5bf7bb2fe7f78))
