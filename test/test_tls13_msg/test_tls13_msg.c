@@ -249,11 +249,11 @@ static size_t build_ch(uint8_t *msg, const uint8_t *exts, size_t exts_len)
 // A malformed extension body is skipped without failing the overall parse (the guard just returns).
 void test_tls13_malformed_extensions()
 {
-    struct EC
+    typedef struct
     {
         uint8_t ext[8];
         size_t elen;
-    };
+    } EC;
     static const EC cases[] = {
         {{0x00, 0x0a, 0x00, 0x01, 0x00}, 5},                   // supported_groups body < 2
         {{0x00, 0x33, 0x00, 0x03, 0x00, 0xFF, 0x00}, 7},       // key_share list len > body
@@ -521,11 +521,11 @@ void test_tls13_client_hello_field_truncations()
 // entry that is not a host_name or overruns, and malformed cookie / connection_id bodies.
 void test_tls13_extension_body_guards()
 {
-    struct EC
+    typedef struct
     {
         uint8_t ext[16];
         size_t elen;
-    };
+    } EC;
     static const EC cases[] = {
         // supported_groups: declared list length (255) exceeds the extension body.
         {{0x00, 0x0a, 0x00, 0x04, 0x00, 0xFF, 0x00, 0x1d}, 8},
