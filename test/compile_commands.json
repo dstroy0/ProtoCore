@@ -324,22 +324,22 @@
     "output": ".pio/build/native_swar/src/board_drivers/hal/portable/portable_aes128gcm.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_ikev2/src/crypto/asymmetric/curve25519.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_ENABLE_IKEV2=1 -Itest/mocks -Itest/support -Isrc src/crypto/asymmetric/curve25519.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/crypto/asymmetric/curve25519.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/crypto/asymmetric/curve25519.c",
     "directory": "@ROOT@",
     "file": "src/crypto/asymmetric/curve25519.c",
-    "output": ".pio/build/native_ikev2/src/crypto/asymmetric/curve25519.o"
+    "output": ".pio/build/native_swar/src/crypto/asymmetric/curve25519.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_ssh/src/crypto/asymmetric/ed25519.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_SSH_MAX_CHANNELS=3 -DPC_ENABLE_SSH=1 -DPC_ENABLE_MNT=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_SSH_SCP=1 -Itest/mocks -Itest/support -Isrc src/crypto/asymmetric/ed25519.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/crypto/asymmetric/ed25519.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/crypto/asymmetric/ed25519.c",
     "directory": "@ROOT@",
     "file": "src/crypto/asymmetric/ed25519.c",
-    "output": ".pio/build/native_ssh/src/crypto/asymmetric/ed25519.o"
+    "output": ".pio/build/native_swar/src/crypto/asymmetric/ed25519.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_ikev2/src/crypto/hash/sha512.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_ENABLE_IKEV2=1 -Itest/mocks -Itest/support -Isrc src/crypto/hash/sha512.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/crypto/hash/sha512.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/crypto/hash/sha512.c",
     "directory": "@ROOT@",
     "file": "src/crypto/hash/sha512.c",
-    "output": ".pio/build/native_ikev2/src/crypto/hash/sha512.o"
+    "output": ".pio/build/native_swar/src/crypto/hash/sha512.o"
   },
   {
     "command": "/usr/bin/gcc -o .pio/build/native_swar/src/crypto/kdf/hkdf.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/crypto/kdf/hkdf.c",
@@ -348,16 +348,16 @@
     "output": ".pio/build/native_swar/src/crypto/kdf/hkdf.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_ikev2/src/crypto/mac/hmac_sha256.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_ENABLE_IKEV2=1 -Itest/mocks -Itest/support -Isrc src/crypto/mac/hmac_sha256.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/crypto/mac/hmac_sha256.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/crypto/mac/hmac_sha256.c",
     "directory": "@ROOT@",
     "file": "src/crypto/mac/hmac_sha256.c",
-    "output": ".pio/build/native_ikev2/src/crypto/mac/hmac_sha256.o"
+    "output": ".pio/build/native_swar/src/crypto/mac/hmac_sha256.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_ikev2/src/mmgr/secure.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_ENABLE_IKEV2=1 -Itest/mocks -Itest/support -Isrc src/mmgr/secure.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/mmgr/secure.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/mmgr/secure.c",
     "directory": "@ROOT@",
     "file": "src/mmgr/secure.c",
-    "output": ".pio/build/native_ikev2/src/mmgr/secure.o"
+    "output": ".pio/build/native_swar/src/mmgr/secure.o"
   },
   {
     "command": "/usr/bin/gcc -o .pio/build/native_swar/src/network_drivers/presentation/http/http3/tls13_msg.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/http/http3/tls13_msg.c",
@@ -426,22 +426,22 @@
     "output": ".pio/build/native_swar/src/services/fieldbus/cotp/cotp.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_ssh/src/crypto/cipher/chacha20.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_SSH_MAX_CHANNELS=3 -DPC_ENABLE_SSH=1 -DPC_ENABLE_MNT=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_SSH_SCP=1 -Itest/mocks -Itest/support -Isrc src/crypto/cipher/chacha20.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/crypto/cipher/chacha20.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/crypto/cipher/chacha20.c",
     "directory": "@ROOT@",
     "file": "src/crypto/cipher/chacha20.c",
-    "output": ".pio/build/native_ssh/src/crypto/cipher/chacha20.o"
+    "output": ".pio/build/native_swar/src/crypto/cipher/chacha20.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_ssh/src/crypto/mac/hmac_sha512.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_SSH_MAX_CHANNELS=3 -DPC_ENABLE_SSH=1 -DPC_ENABLE_MNT=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_SSH_SCP=1 -Itest/mocks -Itest/support -Isrc src/crypto/mac/hmac_sha512.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/crypto/mac/hmac_sha512.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/crypto/mac/hmac_sha512.c",
     "directory": "@ROOT@",
     "file": "src/crypto/mac/hmac_sha512.c",
-    "output": ".pio/build/native_ssh/src/crypto/mac/hmac_sha512.o"
+    "output": ".pio/build/native_swar/src/crypto/mac/hmac_sha512.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_ssh/src/crypto/mac/poly1305.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_SSH_MAX_CHANNELS=3 -DPC_ENABLE_SSH=1 -DPC_ENABLE_MNT=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_SSH_SCP=1 -Itest/mocks -Itest/support -Isrc src/crypto/mac/poly1305.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/crypto/mac/poly1305.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/crypto/mac/poly1305.c",
     "directory": "@ROOT@",
     "file": "src/crypto/mac/poly1305.c",
-    "output": ".pio/build/native_ssh/src/crypto/mac/poly1305.o"
+    "output": ".pio/build/native_swar/src/crypto/mac/poly1305.o"
   },
   {
     "command": "/usr/bin/gcc -o .pio/build/native_swar/src/services/security/csrf/csrf.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/services/security/csrf/csrf.c",
@@ -624,16 +624,16 @@
     "output": ".pio/build/native_swar/src/services/radio/enocean/enocean.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_ikev2/src/board_drivers/hal/portable/portable_aesgcm.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_ENABLE_IKEV2=1 -Itest/mocks -Itest/support -Isrc src/board_drivers/hal/portable/portable_aesgcm.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/board_drivers/hal/portable/portable_aesgcm.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/board_drivers/hal/portable/portable_aesgcm.cpp",
     "directory": "@ROOT@",
     "file": "src/board_drivers/hal/portable/portable_aesgcm.cpp",
-    "output": ".pio/build/native_ikev2/src/board_drivers/hal/portable/portable_aesgcm.o"
+    "output": ".pio/build/native_swar/src/board_drivers/hal/portable/portable_aesgcm.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_ikev2/src/crypto/aead/aesgcm.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_ENABLE_IKEV2=1 -Itest/mocks -Itest/support -Isrc src/crypto/aead/aesgcm.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/crypto/aead/aesgcm.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/crypto/aead/aesgcm.c",
     "directory": "@ROOT@",
     "file": "src/crypto/aead/aesgcm.c",
-    "output": ".pio/build/native_ikev2/src/crypto/aead/aesgcm.o"
+    "output": ".pio/build/native_swar/src/crypto/aead/aesgcm.o"
   },
   {
     "command": "/usr/bin/gcc -o .pio/build/native_swar/src/services/system/esp/esp.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/services/system/esp/esp.c",
@@ -936,46 +936,46 @@
     "output": ".pio/build/native_swar/src/services/net/iface_bridge/iface_bridge.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_ikev2/src/board_drivers/hal/portable/portable_bignum.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_ENABLE_IKEV2=1 -Itest/mocks -Itest/support -Isrc src/board_drivers/hal/portable/portable_bignum.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/board_drivers/hal/portable/portable_bignum.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/board_drivers/hal/portable/portable_bignum.cpp",
     "directory": "@ROOT@",
     "file": "src/board_drivers/hal/portable/portable_bignum.cpp",
-    "output": ".pio/build/native_ikev2/src/board_drivers/hal/portable/portable_bignum.o"
+    "output": ".pio/build/native_swar/src/board_drivers/hal/portable/portable_bignum.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_ikev2/src/crypto/asymmetric/bignum.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_ENABLE_IKEV2=1 -Itest/mocks -Itest/support -Isrc src/crypto/asymmetric/bignum.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/crypto/asymmetric/bignum.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/crypto/asymmetric/bignum.c",
     "directory": "@ROOT@",
     "file": "src/crypto/asymmetric/bignum.c",
-    "output": ".pio/build/native_ikev2/src/crypto/asymmetric/bignum.o"
+    "output": ".pio/build/native_swar/src/crypto/asymmetric/bignum.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_ikev2/src/crypto/asymmetric/ecdsa.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_ENABLE_IKEV2=1 -Itest/mocks -Itest/support -Isrc src/crypto/asymmetric/ecdsa.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/crypto/asymmetric/ecdsa.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/crypto/asymmetric/ecdsa.c",
     "directory": "@ROOT@",
     "file": "src/crypto/asymmetric/ecdsa.c",
-    "output": ".pio/build/native_ikev2/src/crypto/asymmetric/ecdsa.o"
+    "output": ".pio/build/native_swar/src/crypto/asymmetric/ecdsa.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_ikev2/src/crypto/asymmetric/rsa.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_ENABLE_IKEV2=1 -Itest/mocks -Itest/support -Isrc src/crypto/asymmetric/rsa.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/crypto/asymmetric/rsa.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/crypto/asymmetric/rsa.c",
     "directory": "@ROOT@",
     "file": "src/crypto/asymmetric/rsa.c",
-    "output": ".pio/build/native_ikev2/src/crypto/asymmetric/rsa.o"
+    "output": ".pio/build/native_swar/src/crypto/asymmetric/rsa.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_ikev2/src/network_drivers/tls/ssh_rsa.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_ENABLE_IKEV2=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/tls/ssh_rsa.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/network_drivers/tls/ssh_rsa.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/tls/ssh_rsa.cpp",
     "directory": "@ROOT@",
     "file": "src/network_drivers/tls/ssh_rsa.cpp",
-    "output": ".pio/build/native_ikev2/src/network_drivers/tls/ssh_rsa.o"
+    "output": ".pio/build/native_swar/src/network_drivers/tls/ssh_rsa.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_ikev2/src/services/security/ikev2/ikev2.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_ENABLE_IKEV2=1 -Itest/mocks -Itest/support -Isrc src/services/security/ikev2/ikev2.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/services/security/ikev2/ikev2.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/services/security/ikev2/ikev2.c",
     "directory": "@ROOT@",
     "file": "src/services/security/ikev2/ikev2.c",
-    "output": ".pio/build/native_ikev2/src/services/security/ikev2/ikev2.o"
+    "output": ".pio/build/native_swar/src/services/security/ikev2/ikev2.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_ikev2/src/services/security/ikev2/ikev2_natt.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_ENABLE_IKEV2=1 -Itest/mocks -Itest/support -Isrc src/services/security/ikev2/ikev2_natt.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/services/security/ikev2/ikev2_natt.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/services/security/ikev2/ikev2_natt.c",
     "directory": "@ROOT@",
     "file": "src/services/security/ikev2/ikev2_natt.c",
-    "output": ".pio/build/native_ikev2/src/services/security/ikev2/ikev2_natt.o"
+    "output": ".pio/build/native_swar/src/services/security/ikev2/ikev2_natt.o"
   },
   {
     "command": "/usr/bin/g++ -o .pio/build/native_swar/src/services/peripherals/ina219/ina219.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/services/peripherals/ina219/ina219.cpp",
@@ -1230,10 +1230,10 @@
     "output": ".pio/build/native_swar/src/services/transportation/ocit/ocit.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_oidc/src/services/security/oidc/oidc.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_ENABLE_OIDC=1 -Itest/mocks -Itest/support -Isrc src/services/security/oidc/oidc.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/services/security/oidc/oidc.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/services/security/oidc/oidc.c",
     "directory": "@ROOT@",
     "file": "src/services/security/oidc/oidc.c",
-    "output": ".pio/build/native_oidc/src/services/security/oidc/oidc.o"
+    "output": ".pio/build/native_swar/src/services/security/oidc/oidc.o"
   },
   {
     "command": "/usr/bin/gcc -o .pio/build/native_swar/src/services/fieldbus/opcua_client/opcua_client.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/services/fieldbus/opcua_client/opcua_client.c",
@@ -1380,22 +1380,22 @@
     "output": ".pio/build/native_swar/src/services/fieldbus/powerlink/powerlink.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_ssh_pqc/src/crypto/hash/sha3.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_SSH_MAX_CHANNELS=3 -DPC_ENABLE_PQC_KEX=1 -Itest/mocks -Itest/support -Isrc src/crypto/hash/sha3.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/crypto/hash/sha3.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/crypto/hash/sha3.c",
     "directory": "@ROOT@",
     "file": "src/crypto/hash/sha3.c",
-    "output": ".pio/build/native_ssh_pqc/src/crypto/hash/sha3.o"
+    "output": ".pio/build/native_swar/src/crypto/hash/sha3.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_ssh_pqc/src/crypto/pqc/mlkem.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_SSH_MAX_CHANNELS=3 -DPC_ENABLE_PQC_KEX=1 -Itest/mocks -Itest/support -Isrc src/crypto/pqc/mlkem.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/crypto/pqc/mlkem.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/crypto/pqc/mlkem.c",
     "directory": "@ROOT@",
     "file": "src/crypto/pqc/mlkem.c",
-    "output": ".pio/build/native_ssh_pqc/src/crypto/pqc/mlkem.o"
+    "output": ".pio/build/native_swar/src/crypto/pqc/mlkem.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_ssh_pqc/src/crypto/pqc/sntrup761.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_SSH_MAX_CHANNELS=3 -DPC_ENABLE_PQC_KEX=1 -Itest/mocks -Itest/support -Isrc src/crypto/pqc/sntrup761.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/crypto/pqc/sntrup761.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/crypto/pqc/sntrup761.c",
     "directory": "@ROOT@",
     "file": "src/crypto/pqc/sntrup761.c",
-    "output": ".pio/build/native_ssh_pqc/src/crypto/pqc/sntrup761.o"
+    "output": ".pio/build/native_swar/src/crypto/pqc/sntrup761.o"
   },
   {
     "command": "/usr/bin/gcc -o .pio/build/native_swar/src/network_drivers/session/preempt_queue.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/session/preempt_queue.c",
@@ -1656,64 +1656,64 @@
     "output": ".pio/build/native_swar/src/services/iot/sparkplug/sparkplug.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_ssh/src/crypto/aead/chachapoly.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_SSH_MAX_CHANNELS=3 -DPC_ENABLE_SSH=1 -DPC_ENABLE_MNT=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_SSH_SCP=1 -Itest/mocks -Itest/support -Isrc src/crypto/aead/chachapoly.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/crypto/aead/chachapoly.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/crypto/aead/chachapoly.c",
     "directory": "@ROOT@",
     "file": "src/crypto/aead/chachapoly.c",
-    "output": ".pio/build/native_ssh/src/crypto/aead/chachapoly.o"
+    "output": ".pio/build/native_swar/src/crypto/aead/chachapoly.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_ssh/src/crypto/cipher/aes256ctr.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_SSH_MAX_CHANNELS=3 -DPC_ENABLE_SSH=1 -DPC_ENABLE_MNT=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_SSH_SCP=1 -Itest/mocks -Itest/support -Isrc src/crypto/cipher/aes256ctr.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/crypto/cipher/aes256ctr.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/crypto/cipher/aes256ctr.c",
     "directory": "@ROOT@",
     "file": "src/crypto/cipher/aes256ctr.c",
-    "output": ".pio/build/native_ssh/src/crypto/cipher/aes256ctr.o"
+    "output": ".pio/build/native_swar/src/crypto/cipher/aes256ctr.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_ssh/src/network_drivers/presentation/ssh/auth/ssh_auth.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_SSH_MAX_CHANNELS=3 -DPC_ENABLE_SSH=1 -DPC_ENABLE_MNT=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_SSH_SCP=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/ssh/auth/ssh_auth.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/network_drivers/presentation/ssh/auth/ssh_auth.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/ssh/auth/ssh_auth.cpp",
     "directory": "@ROOT@",
     "file": "src/network_drivers/presentation/ssh/auth/ssh_auth.cpp",
-    "output": ".pio/build/native_ssh/src/network_drivers/presentation/ssh/auth/ssh_auth.o"
+    "output": ".pio/build/native_swar/src/network_drivers/presentation/ssh/auth/ssh_auth.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_ssh/src/network_drivers/presentation/ssh/connection/ssh_channel.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_SSH_MAX_CHANNELS=3 -DPC_ENABLE_SSH=1 -DPC_ENABLE_MNT=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_SSH_SCP=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/ssh/connection/ssh_channel.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/network_drivers/presentation/ssh/connection/ssh_channel.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/ssh/connection/ssh_channel.cpp",
     "directory": "@ROOT@",
     "file": "src/network_drivers/presentation/ssh/connection/ssh_channel.cpp",
-    "output": ".pio/build/native_ssh/src/network_drivers/presentation/ssh/connection/ssh_channel.o"
+    "output": ".pio/build/native_swar/src/network_drivers/presentation/ssh/connection/ssh_channel.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_ssh/src/network_drivers/presentation/ssh/connection/ssh_flow_control.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_SSH_MAX_CHANNELS=3 -DPC_ENABLE_SSH=1 -DPC_ENABLE_MNT=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_SSH_SCP=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/ssh/connection/ssh_flow_control.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/network_drivers/presentation/ssh/connection/ssh_flow_control.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/ssh/connection/ssh_flow_control.cpp",
     "directory": "@ROOT@",
     "file": "src/network_drivers/presentation/ssh/connection/ssh_flow_control.cpp",
-    "output": ".pio/build/native_ssh/src/network_drivers/presentation/ssh/connection/ssh_flow_control.o"
+    "output": ".pio/build/native_swar/src/network_drivers/presentation/ssh/connection/ssh_flow_control.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_ssh/src/network_drivers/presentation/ssh/connection/ssh_server.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_SSH_MAX_CHANNELS=3 -DPC_ENABLE_SSH=1 -DPC_ENABLE_MNT=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_SSH_SCP=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/ssh/connection/ssh_server.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/network_drivers/presentation/ssh/connection/ssh_server.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/ssh/connection/ssh_server.cpp",
     "directory": "@ROOT@",
     "file": "src/network_drivers/presentation/ssh/connection/ssh_server.cpp",
-    "output": ".pio/build/native_ssh/src/network_drivers/presentation/ssh/connection/ssh_server.o"
+    "output": ".pio/build/native_swar/src/network_drivers/presentation/ssh/connection/ssh_server.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_ssh/src/network_drivers/presentation/ssh/transport/ssh_dh.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_SSH_MAX_CHANNELS=3 -DPC_ENABLE_SSH=1 -DPC_ENABLE_MNT=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_SSH_SCP=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/ssh/transport/ssh_dh.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/network_drivers/presentation/ssh/transport/ssh_dh.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/ssh/transport/ssh_dh.cpp",
     "directory": "@ROOT@",
     "file": "src/network_drivers/presentation/ssh/transport/ssh_dh.cpp",
-    "output": ".pio/build/native_ssh/src/network_drivers/presentation/ssh/transport/ssh_dh.o"
+    "output": ".pio/build/native_swar/src/network_drivers/presentation/ssh/transport/ssh_dh.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_ssh/src/network_drivers/presentation/ssh/transport/ssh_keymat.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_SSH_MAX_CHANNELS=3 -DPC_ENABLE_SSH=1 -DPC_ENABLE_MNT=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_SSH_SCP=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/ssh/transport/ssh_keymat.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/network_drivers/presentation/ssh/transport/ssh_keymat.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/ssh/transport/ssh_keymat.c",
     "directory": "@ROOT@",
     "file": "src/network_drivers/presentation/ssh/transport/ssh_keymat.c",
-    "output": ".pio/build/native_ssh/src/network_drivers/presentation/ssh/transport/ssh_keymat.o"
+    "output": ".pio/build/native_swar/src/network_drivers/presentation/ssh/transport/ssh_keymat.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_ssh/src/network_drivers/presentation/ssh/transport/ssh_packet.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_SSH_MAX_CHANNELS=3 -DPC_ENABLE_SSH=1 -DPC_ENABLE_MNT=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_SSH_SCP=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/ssh/transport/ssh_packet.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/network_drivers/presentation/ssh/transport/ssh_packet.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/ssh/transport/ssh_packet.cpp",
     "directory": "@ROOT@",
     "file": "src/network_drivers/presentation/ssh/transport/ssh_packet.cpp",
-    "output": ".pio/build/native_ssh/src/network_drivers/presentation/ssh/transport/ssh_packet.o"
+    "output": ".pio/build/native_swar/src/network_drivers/presentation/ssh/transport/ssh_packet.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_ssh/src/network_drivers/presentation/ssh/transport/ssh_transport.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_SSH_MAX_CHANNELS=3 -DPC_ENABLE_SSH=1 -DPC_ENABLE_MNT=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_SSH_SCP=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/ssh/transport/ssh_transport.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/network_drivers/presentation/ssh/transport/ssh_transport.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/ssh/transport/ssh_transport.cpp",
     "directory": "@ROOT@",
     "file": "src/network_drivers/presentation/ssh/transport/ssh_transport.cpp",
-    "output": ".pio/build/native_ssh/src/network_drivers/presentation/ssh/transport/ssh_transport.o"
+    "output": ".pio/build/native_swar/src/network_drivers/presentation/ssh/transport/ssh_transport.o"
   },
   {
     "command": "/usr/bin/gcc -o .pio/build/native_swar/src/network_drivers/presentation/ssh/transport/ssh_comp.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/ssh/transport/ssh_comp.c",
@@ -1734,10 +1734,10 @@
     "output": ".pio/build/native_swar/src/network_drivers/presentation/ssh/transport/ssh_zlib.o"
   },
   {
-    "command": "/usr/bin/g++ -o .pio/build/native_ssh_conn/src/network_drivers/presentation/ssh/connection/ssh_conn.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_ENABLE_SSH=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/ssh/connection/ssh_conn.cpp",
+    "command": "/usr/bin/g++ -o .pio/build/native_swar/src/network_drivers/presentation/ssh/connection/ssh_conn.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/ssh/connection/ssh_conn.cpp",
     "directory": "@ROOT@",
     "file": "src/network_drivers/presentation/ssh/connection/ssh_conn.cpp",
-    "output": ".pio/build/native_ssh_conn/src/network_drivers/presentation/ssh/connection/ssh_conn.o"
+    "output": ".pio/build/native_swar/src/network_drivers/presentation/ssh/connection/ssh_conn.o"
   },
   {
     "command": "/usr/bin/gcc -o .pio/build/native_swar/src/network_drivers/application/sftp/sftp.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/application/sftp/sftp.c",

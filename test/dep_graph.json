@@ -2974,21 +2974,21 @@
 "native_swar"
 ],
 "src/network_drivers/presentation/codec/multipart/multipart.c": [
-"native_json"
+"native_json",
+"native_keepalive",
+"native_swar",
+"native_upload"
 ],
 "src/network_drivers/presentation/codec/multipart/multipart.cpp": [
 "native_accept_gate",
 "native_base64",
 "native_http_parser",
-"native_keepalive",
 "native_presentation",
 "native_session",
 "native_sse",
 "native_ssh_conn",
 "native_stack_l46",
-"native_swar",
 "native_transport",
-"native_upload",
 "native_websocket"
 ],
 "src/network_drivers/presentation/codec/multipart/multipart.h": [
@@ -3255,7 +3255,10 @@
 "native_tls13_msg"
 ],
 "src/network_drivers/presentation/http/http_parser/http_parser.c": [
-"native_json"
+"native_json",
+"native_keepalive",
+"native_swar",
+"native_upload"
 ],
 "src/network_drivers/presentation/http/http_parser/http_parser.cpp": [
 "native_accept_gate",
@@ -3263,16 +3266,13 @@
 "native_cloudevents",
 "native_compliance",
 "native_http_parser",
-"native_keepalive",
 "native_ota",
 "native_presentation",
 "native_session",
 "native_sse",
 "native_ssh_conn",
 "native_stack_l46",
-"native_swar",
 "native_transport",
-"native_upload",
 "native_websocket"
 ],
 "src/network_drivers/presentation/http/http_parser/http_parser.h": [
@@ -3295,21 +3295,21 @@
 "native_websocket"
 ],
 "src/network_drivers/presentation/http/sse/sse.c": [
-"native_json"
+"native_json",
+"native_keepalive",
+"native_swar",
+"native_upload"
 ],
 "src/network_drivers/presentation/http/sse/sse.cpp": [
 "native_accept_gate",
 "native_base64",
 "native_http_parser",
-"native_keepalive",
 "native_presentation",
 "native_session",
 "native_sse",
 "native_ssh_conn",
 "native_stack_l46",
-"native_swar",
 "native_transport",
-"native_upload",
 "native_websocket"
 ],
 "src/network_drivers/presentation/http/sse/sse.h": [
@@ -3329,21 +3329,21 @@
 "native_websocket"
 ],
 "src/network_drivers/presentation/http/websocket/websocket.c": [
-"native_json"
+"native_json",
+"native_keepalive",
+"native_swar",
+"native_upload"
 ],
 "src/network_drivers/presentation/http/websocket/websocket.cpp": [
 "native_accept_gate",
 "native_base64",
 "native_http_parser",
-"native_keepalive",
 "native_presentation",
 "native_session",
 "native_sse",
 "native_ssh_conn",
 "native_stack_l46",
-"native_swar",
 "native_transport",
-"native_upload",
 "native_websocket"
 ],
 "src/network_drivers/presentation/http/websocket/websocket.h": [
@@ -3363,21 +3363,21 @@
 "native_websocket"
 ],
 "src/network_drivers/presentation/presentation.c": [
-"native_json"
+"native_json",
+"native_keepalive",
+"native_swar",
+"native_upload"
 ],
 "src/network_drivers/presentation/presentation.cpp": [
 "native_accept_gate",
 "native_base64",
 "native_http_parser",
-"native_keepalive",
 "native_presentation",
 "native_session",
 "native_sse",
 "native_ssh_conn",
 "native_stack_l46",
-"native_swar",
 "native_transport",
-"native_upload",
 "native_websocket"
 ],
 "src/network_drivers/presentation/presentation.h": [
@@ -3649,21 +3649,21 @@
 "native_websocket"
 ],
 "src/network_drivers/session/session.c": [
-"native_json"
+"native_json",
+"native_keepalive",
+"native_swar",
+"native_upload"
 ],
 "src/network_drivers/session/session.cpp": [
 "native_accept_gate",
 "native_base64",
 "native_http_parser",
-"native_keepalive",
 "native_presentation",
 "native_session",
 "native_sse",
 "native_ssh_conn",
 "native_stack_l46",
-"native_swar",
 "native_transport",
-"native_upload",
 "native_websocket"
 ],
 "src/network_drivers/session/session.h": [
@@ -4291,12 +4291,14 @@
 "native_clock",
 "native_forward",
 "native_json",
+"native_keepalive",
 "native_ssh",
 "native_ssh_conn",
 "native_ssh_hardened",
 "native_ssh_kbdint",
 "native_ssh_pqc",
-"native_swar"
+"native_swar",
+"native_upload"
 ],
 "src/server/clock/clock.h": [
 "native_accept_gate",
@@ -6759,9 +6761,7 @@
 "native_upload"
 ],
 "src/services/web/web_terminal/web_terminal.c": [
-"native_json"
-],
-"src/services/web/web_terminal/web_terminal.cpp": [
+"native_json",
 "native_swar"
 ],
 "src/services/web/web_terminal/web_terminal.h": [
@@ -7548,6 +7548,7 @@
 "native_forward",
 "native_ikev2",
 "native_json",
+"native_keepalive",
 "native_modbus",
 "native_modbus_master",
 "native_oidc",
@@ -7558,7 +7559,8 @@
 "native_ssh_hardened",
 "native_ssh_kbdint",
 "native_ssh_pqc",
-"native_swar"
+"native_swar",
+"native_upload"
 ],
 "test/mocks/pc_net_host.h": [
 "native_accept_gate",
