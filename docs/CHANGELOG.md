@@ -48,6 +48,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`23df5d4`](https://github.com/dstroy0/ProtoCore/commit/23df5d49398bacf3bf441730c7c6d33b7c935596))
 - update CHANGELOG.md [skip ci] ([`74c02f8`](https://github.com/dstroy0/ProtoCore/commit/74c02f8a7624aec4283bb95c5d7ea2cbd7b9a6f4))
 - update CHANGELOG.md [skip ci] ([`cbdb3fc`](https://github.com/dstroy0/ProtoCore/commit/cbdb3fc9e1c636ec8da56eec461342428ab6662f))
 - update CHANGELOG.md [skip ci] ([`fba71e5`](https://github.com/dstroy0/ProtoCore/commit/fba71e59277d1e615d335390138d3874e03048b0))
@@ -314,6 +315,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- prove the fill helper actually exhausts the store ([`00c4ca1`](https://github.com/dstroy0/ProtoCore/commit/00c4ca106290ba6dd5caade7b917632acf7ce508))
 - fill the volume for the copy-destination-refused case ([`3c89931`](https://github.com/dstroy0/ProtoCore/commit/3c899315cadd140e0b81b44daaf49edc564fe2d4))
 - leave headroom so the 507 case fails on the write, not the open ([`db8fbe1`](https://github.com/dstroy0/ProtoCore/commit/db8fbe1c19f25bfb25717c3be6504c29f95dd7c5))
 - express the WebDAV storage-failure cases as real conditions ([`11eb59a`](https://github.com/dstroy0/ProtoCore/commit/11eb59a5bec6cafa84e3cbb46ad17eaca1789cd2))
