@@ -3,14 +3,14 @@
 
 /**
  * @file webdav.h
- * @brief WebDAV server core (RFC 4918): method classification, header parsing,
+ * @brief WebDAV wire format (RFC 4918): method classification, header parsing,
  *        and the 207 Multi-Status XML builder.
  *
  * Mirrors the CoAP/SNMP split: this header declares the pure, host-testable core
  * (no sockets, no filesystem - unit-tested in env:native_webdav). The
  * filesystem-backed request handling (PROPFIND directory walk, PUT/MKCOL/DELETE/
- * COPY/MOVE, GET via the file-serving path) lives in serve_dav_*
- * and runs only on a build with a real Arduino FS.
+ * COPY/MOVE, GET via the file-serving path) lives in server/webdav_handler.h
+ * and runs only on a build with a real filesystem.
  *
  * Scope: class 1 (PROPFIND Depth 0/1, PROPPATCH, PUT, DELETE, MKCOL, COPY, MOVE)
  * plus OPTIONS and class 2 LOCK/UNLOCK, now enforced by a small lock table (see

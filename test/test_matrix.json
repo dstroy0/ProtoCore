@@ -684,7 +684,7 @@
         "+<server/websocket_sse.c>",
         "+<server/regex.c>",
         "+<server/middleware.c>",
-        "+<network_drivers/application/webdav/webdav.c>",
+        "+<server/webdav_handler.c>",
         "+<network_drivers/presentation/codec/json/json.c>",
         "+<network_drivers/application/web_assets.c>",
         "+<services/web/web_terminal/web_terminal.cpp>",
@@ -818,18 +818,18 @@
         "+<server/websocket_sse.c>",
         "+<server/regex.c>",
         "+<server/middleware.c>",
-        "+<network_drivers/application/webdav/webdav.c>",
+        "+<server/webdav_handler.c>",
         "+<network_drivers/presentation/codec/json/json.c>",
         "+<network_drivers/application/web_assets.c>",
         "+<services/web/web_terminal/web_terminal.cpp>",
-        "+<network_drivers/application/webdav/webdav.cpp>",
+        "+<network_drivers/application/webdav/webdav.c>",
         "+<board_drivers/hal/portable/portable_platform.c>",
         "+<mmgr/frame.c>"
       ],
       "tests": ["test_webdav_handler"]
     },
     "native_diag": {
-      "desc": "Runtime build-flag reporter (server.diag() / PC_ENABLE_DIAG). The gated\ndiag() method + the compile-time PC_DIAG_JSON build-info string are enabled by\nno other env, so this one keeps them compiled + exercised in CI. Reuses the full\napp src via the native_stack_http base.",
+      "desc": "Build-flag reporter (diag() / PC_ENABLE_DIAG). The gated diag() entry point\nand its DIAG_DOC frame spec are enabled by no other env, so this one keeps them\ncompiled + exercised in CI. Reuses the full app src via the native_stack_http\nbase.",
       "base": "env:native_stack_http",
       "flags": ["-DPC_ENABLE_DIAG=1"],
       "src": ["${env:native_stack_http.build_src_filter}"],
@@ -913,7 +913,7 @@
     "native_webdav": {
       "desc": "WebDAV server core (RFC 4918): method classification, header parsing, XML\nescaping, and the 207 Multi-Status builder. Pure core - no FS/sockets - so it\nunit-tests on the host. The FS-backed handling is HW-tested on a real LittleFS.",
       "flags": ["-DPC_ENABLE_WEBDAV=1"],
-      "src": ["+<network_drivers/application/webdav/webdav.cpp>"],
+      "src": ["+<network_drivers/application/webdav/webdav.c>"],
       "tests": ["test_webdav"]
     },
     "native_modbus": {
@@ -1601,7 +1601,7 @@
         "+<services/iot/amqp/amqp.c>",
         "+<services/energy/mms/mms.c>",
         "+<services/iot/dds/dds.c>",
-        "+<network_drivers/application/webdav/webdav.cpp>",
+        "+<network_drivers/application/webdav/webdav.c>",
         "+<mmgr/arena.c>",
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
@@ -1643,7 +1643,7 @@
         "+<server/websocket_sse.c>",
         "+<server/regex.c>",
         "+<server/middleware.c>",
-        "+<network_drivers/application/webdav/webdav.c>",
+        "+<server/webdav_handler.c>",
         "+<board_drivers/hal/portable/portable_platform.c>",
         "+<mmgr/frame.c>"
       ],
@@ -1677,7 +1677,7 @@
         "+<server/websocket_sse.c>",
         "+<server/regex.c>",
         "+<server/middleware.c>",
-        "+<network_drivers/application/webdav/webdav.c>",
+        "+<server/webdav_handler.c>",
         "+<board_drivers/hal/portable/portable_platform.c>",
         "+<mmgr/frame.c>"
       ],
@@ -1908,7 +1908,7 @@
         "+<server/websocket_sse.c>",
         "+<server/regex.c>",
         "+<server/middleware.c>",
-        "+<network_drivers/application/webdav/webdav.c>",
+        "+<server/webdav_handler.c>",
         "+<network_drivers/application/upload_service/upload_service.c>",
         "+<board_drivers/hal/portable/portable_platform.c>",
         "+<mmgr/frame.c>"

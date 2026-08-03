@@ -81,7 +81,8 @@
 #endif
 #if PC_ENABLE_WEBDAV
 #include "network_drivers/application/webdav/webdav.h"
-#include <time.h> // RFC 1123 Last-Modified formatting
+#include "server/webdav_handler.h" // try_serve_dav()
+#include <time.h>                  // RFC 1123 Last-Modified formatting
 #endif
 #if PC_ENABLE_METRICS || PC_ENABLE_STATS
 #include "network_drivers/application/web_assets.h" // PC_METRICS_PROM / PC_STATS_JSON (generated)
