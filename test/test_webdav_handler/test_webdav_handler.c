@@ -626,21 +626,22 @@ void test_webdav_copy_dest_path_too_long_414()
 // DELETE of such a resource answers 403, and a COPY whose child cannot be opened answers 409.
 void test_webdav_recursive_open_failure()
 {
-    // DELETE: the resource exists but its open() fails -> dav_rm_recursive bails -> 403.
+    // DELETE: the store cannot remove the name -> 403. Unlinking is a metadata write, not an
+    // open, so refusing writes is what actually stops it.
     tree_put("/dav/locked.txt", "data");
-    lfsm_hold_all_handles(); // every descriptor spent, so the next open fails as it would in the field
+    lfsm_fail_prog_always();
     feed_and_handle(0, "DELETE /dav/locked.txt HTTP/1.1\r\nHost: x\r\n\r\n");
     TEST_ASSERT_TRUE(pc_resp_status(403));
-    lfsm_release_handles();
+    lfsm_no_prog_failure();
     TEST_ASSERT_TRUE(tree_has("/dav/locked.txt")); // nothing removed
 
-    // COPY of a collection whose child cannot be opened during recursion -> 409.
+    // COPY of a collection the recursion cannot write out -> 409.
     rearm();
     populate_src();
-    lfsm_hold_all_handles(); // a child the walk finds but cannot open
+    lfsm_fail_prog_always();
     feed_and_handle(0, "COPY /dav/src HTTP/1.1\r\nHost: x\r\nDestination: /dav/cdst\r\n\r\n");
     TEST_ASSERT_TRUE(pc_resp_status(409));
-    lfsm_release_handles();
+    lfsm_no_prog_failure();
 }
 
 // A request under a mount whose fs root is so long that root + the request sub-path would
