@@ -67,7 +67,7 @@ size_t pc_snmp_notify_build_v2c(uint8_t *out, size_t cap, const char *community,
                                 const uint32_t *trap_oid, size_t trap_oid_len, uint32_t uptime_ticks,
                                 const SnmpVarbind *vbs, size_t n);
 
-struct BerEnc; // (pc_snmp_ber.h)
+typedef struct BerEnc BerEnc; // (snmp_ber.h)
 
 /**
  * @brief Append a notification PDU (request-id, 0, 0, varbinds) under @p pdu_tag

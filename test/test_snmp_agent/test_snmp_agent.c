@@ -34,7 +34,7 @@ static long g_set_value = 0;
 static proto_bool rw_setter(const SnmpValue *in)
 {
     g_set_called = PROTO_TRUE;
-    if (in->type != (uint8_t)BER_INTEGER)
+    if (in->type != (uint8_t)SNMP_TAG_BER_INTEGER)
     {
         return PROTO_FALSE;
     }
@@ -74,23 +74,23 @@ static size_t build_req(uint8_t *buf, size_t cap, long version, const char *comm
 {
     BerEnc e;
     pc_ber_enc_init(&e, buf, cap);
-    size_t msg = pc_ber_seq_begin(&e, (uint8_t)BER_SEQUENCE);
+    size_t msg = pc_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
     pc_ber_put_integer(&e, version);
-    pc_ber_put_octet_string(&e, (uint8_t)BER_OCTET_STRING, (const uint8_t *)comm, strlen(comm));
+    pc_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, (const uint8_t *)comm, strlen(comm));
     size_t pdus = pc_ber_seq_begin(&e, pdu);
     pc_ber_put_integer(&e, reqid);
     pc_ber_put_integer(&e, f2);
     pc_ber_put_integer(&e, f3);
-    size_t vbl = pc_ber_seq_begin(&e, (uint8_t)BER_SEQUENCE);
-    size_t vb = pc_ber_seq_begin(&e, (uint8_t)BER_SEQUENCE);
+    size_t vbl = pc_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
+    size_t vb = pc_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
     pc_ber_put_oid(&e, oid, oidn);
-    if (setval && setval->type == (uint8_t)BER_INTEGER)
+    if (setval && setval->type == (uint8_t)SNMP_TAG_BER_INTEGER)
     {
         pc_ber_put_integer(&e, setval->ival);
     }
-    else if (setval && setval->type == (uint8_t)BER_OCTET_STRING)
+    else if (setval && setval->type == (uint8_t)SNMP_TAG_BER_OCTET_STRING)
     {
-        pc_ber_put_octet_string(&e, (uint8_t)BER_OCTET_STRING, (const uint8_t *)setval->str, setval->str_len);
+        pc_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, (const uint8_t *)setval->str, setval->str_len);
     }
     else
     {
@@ -126,17 +126,17 @@ static size_t build_pdu(uint8_t *buf, size_t cap, int knob)
     pc_ber_put_integer(&e, 0);
     if (knob == VB_BAD_VBL_TAG)
     {
-        pc_ber_put_octet_string(&e, (uint8_t)BER_OCTET_STRING, (const uint8_t *)"x",
+        pc_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, (const uint8_t *)"x",
                                 1); // varbind list not a SEQUENCE
     }
     else
     {
-        size_t vbl = pc_ber_seq_begin(&e, (uint8_t)BER_SEQUENCE);
+        size_t vbl = pc_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
         if (knob == VB_TOO_MANY)
         {
             for (int i = 0; i <= SNMP_MAX_VARBINDS; i++) // one more than the table holds
             {
-                size_t vb = pc_ber_seq_begin(&e, (uint8_t)BER_SEQUENCE);
+                size_t vb = pc_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
                 pc_ber_put_oid(&e, OID_SYSDESCR, 9);
                 pc_ber_put_null(&e);
                 pc_ber_seq_end(&e, vb);
@@ -144,42 +144,44 @@ static size_t build_pdu(uint8_t *buf, size_t cap, int knob)
         }
         else if (knob == VB_BAD_VB_TAG)
         {
-            pc_ber_put_octet_string(&e, (uint8_t)BER_OCTET_STRING, (const uint8_t *)"x",
+            pc_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, (const uint8_t *)"x",
                                     1); // a varbind that is not a SEQUENCE
         }
         else if (knob == VB_BAD_OID)
         {
-            size_t vb = pc_ber_seq_begin(&e, (uint8_t)BER_SEQUENCE);
+            size_t vb = pc_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
             pc_ber_put_integer(&e, 5); // first field is not an OID
             pc_ber_put_null(&e);
             pc_ber_seq_end(&e, vb);
         }
         else if (knob == VB_BAD_VALUE)
         {
-            size_t vb = pc_ber_seq_begin(&e, (uint8_t)BER_SEQUENCE);
+            size_t vb = pc_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
             pc_ber_put_oid(&e, OID_SYSDESCR, 9);
-            uint8_t badv[2] = {(uint8_t)BER_OCTET_STRING, 0x7F}; // declares 127 value octets that are not present
+            uint8_t badv[2] = {(uint8_t)SNMP_TAG_BER_OCTET_STRING,
+                               0x7F}; // declares 127 value octets that are not present
             pc_ber_put_raw(&e, badv, sizeof(badv));
             pc_ber_seq_end(&e, vb);
         }
-        else if (knob == VB_OID_VALUE) // a varbind whose value is a valid OID (dec_value (uint8_t)BER_OID success)
+        else if (knob ==
+                 VB_OID_VALUE) // a varbind whose value is a valid OID (dec_value (uint8_t)SNMP_TAG_BER_OID success)
         {
-            size_t vb = pc_ber_seq_begin(&e, (uint8_t)BER_SEQUENCE);
+            size_t vb = pc_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
             pc_ber_put_oid(&e, OID_SYSDESCR, 9);
             pc_ber_put_oid(&e, OID_SYSUPTIME, 9);
             pc_ber_seq_end(&e, vb);
         }
         else if (knob == VB_BAD_OID_VALUE) // an OID-typed value that fails to decode (empty OID)
         {
-            size_t vb = pc_ber_seq_begin(&e, (uint8_t)BER_SEQUENCE);
+            size_t vb = pc_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
             pc_ber_put_oid(&e, OID_SYSDESCR, 9);
-            uint8_t empty_oid[2] = {(uint8_t)BER_OID, 0x00}; // OID tag, zero length -> pc_ber_read_oid rejects
+            uint8_t empty_oid[2] = {(uint8_t)SNMP_TAG_BER_OID, 0x00}; // OID tag, zero length -> pc_ber_read_oid rejects
             pc_ber_put_raw(&e, empty_oid, sizeof(empty_oid));
             pc_ber_seq_end(&e, vb);
         }
         else // VB_VALID: a well-formed GET varbind (name + NULL value)
         {
-            size_t vb = pc_ber_seq_begin(&e, (uint8_t)BER_SEQUENCE);
+            size_t vb = pc_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
             pc_ber_put_oid(&e, OID_SYSDESCR, 9);
             pc_ber_put_null(&e);
             pc_ber_seq_end(&e, vb);
@@ -215,7 +217,7 @@ static proto_bool parse_resp(const uint8_t *buf, size_t len, RespView *rv)
     pc_ber_dec_init(&d, buf, len);
     uint8_t tag;
     size_t l;
-    if (!pc_ber_read_header(&d, &tag, &l) || tag != (uint8_t)BER_SEQUENCE)
+    if (!pc_ber_read_header(&d, &tag, &l) || tag != (uint8_t)SNMP_TAG_BER_SEQUENCE)
     {
         return PROTO_FALSE;
     }
@@ -241,7 +243,7 @@ static proto_bool parse_resp(const uint8_t *buf, size_t len, RespView *rv)
     }
     uint8_t vt;
     size_t vl;
-    if (!pc_ber_read_header(&d, &vt, &vl) || vt != (uint8_t)BER_SEQUENCE)
+    if (!pc_ber_read_header(&d, &vt, &vl) || vt != (uint8_t)SNMP_TAG_BER_SEQUENCE)
     {
         return PROTO_FALSE;
     }
@@ -251,7 +253,7 @@ static proto_bool parse_resp(const uint8_t *buf, size_t len, RespView *rv)
     {
         uint8_t st;
         size_t sl;
-        if (!pc_ber_read_header(&d, &st, &sl) || st != (uint8_t)BER_SEQUENCE)
+        if (!pc_ber_read_header(&d, &st, &sl) || st != (uint8_t)SNMP_TAG_BER_SEQUENCE)
         {
             return PROTO_FALSE;
         }
@@ -274,12 +276,12 @@ static proto_bool parse_resp(const uint8_t *buf, size_t len, RespView *rv)
             memcpy(rv->oid, oid, on * sizeof(uint32_t));
             rv->oid_len = on;
             rv->val_tag = valtag;
-            if (valtag == (uint8_t)BER_INTEGER)
+            if (valtag == (uint8_t)SNMP_TAG_BER_INTEGER)
             {
                 d.pos = save;
                 pc_ber_read_integer(&d, &rv->ival);
             }
-            else if (valtag == (uint8_t)BER_OCTET_STRING || valtag == (uint8_t)SNMP_IPADDRESS ||
+            else if (valtag == (uint8_t)SNMP_TAG_BER_OCTET_STRING || valtag == (uint8_t)SNMP_IPADDRESS ||
                      valtag == (uint8_t)SNMP_OPAQUE)
             {
                 size_t cpy = vallen < sizeof(rv->str) - 1 ? vallen : sizeof(rv->str) - 1;
@@ -322,7 +324,7 @@ void test_get_string_v2c()
     TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_PDU_RESPONSE, rv.pdu_tag);
     TEST_ASSERT_EQUAL_INT(111, rv.request_id);
     TEST_ASSERT_EQUAL_INT((int)SNMP_ERR_NO_ERROR, rv.err_status);
-    TEST_ASSERT_EQUAL_HEX8((uint8_t)BER_OCTET_STRING, rv.val_tag);
+    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_BER_OCTET_STRING, rv.val_tag);
     TEST_ASSERT_EQUAL_STRING(SYSDESCR_VAL, rv.str);
 }
 
@@ -373,7 +375,7 @@ void test_getnext_walks_to_first()
     RespView rv;
     TEST_ASSERT_TRUE(parse_resp(resp, n, &rv));
     TEST_ASSERT_EQUAL_INT((int)SNMP_ERR_NO_ERROR, rv.err_status);
-    TEST_ASSERT_EQUAL_HEX8((uint8_t)BER_OCTET_STRING, rv.val_tag);
+    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_BER_OCTET_STRING, rv.val_tag);
     TEST_ASSERT_EQUAL_UINT(9, rv.oid_len);
     TEST_ASSERT_EQUAL_UINT32(1u, rv.oid[7]); // sysDescr index .1
     TEST_ASSERT_EQUAL_STRING(SYSDESCR_VAL, rv.str);
@@ -396,7 +398,7 @@ void test_set_without_rw_community_denied()
     uint8_t req[256], resp[256];
     SnmpValue sv;
     memset(&sv, 0, sizeof(sv));
-    sv.type = (uint8_t)BER_INTEGER;
+    sv.type = (uint8_t)SNMP_TAG_BER_INTEGER;
     sv.ival = 99;
     size_t rl = build_req(req, sizeof(req), (int)SNMP_V2C, "public", (uint8_t)SNMP_PDU_SET, 3, 0, 0, OID_RW, 9, &sv);
     size_t n = pc_snmp_agent_process(req, rl, resp, sizeof(resp));
@@ -411,7 +413,7 @@ void test_set_with_rw_community_invokes_setter()
     uint8_t req[256], resp[256];
     SnmpValue sv;
     memset(&sv, 0, sizeof(sv));
-    sv.type = (uint8_t)BER_INTEGER;
+    sv.type = (uint8_t)SNMP_TAG_BER_INTEGER;
     sv.ival = 99;
     size_t rl = build_req(req, sizeof(req), (int)SNMP_V2C, "private", (uint8_t)SNMP_PDU_SET, 3, 0, 0, OID_RW, 9, &sv);
     size_t n = pc_snmp_agent_process(req, rl, resp, sizeof(resp));
@@ -427,7 +429,7 @@ void test_set_readonly_not_writable()
     uint8_t req[256], resp[256];
     SnmpValue sv;
     memset(&sv, 0, sizeof(sv));
-    sv.type = (uint8_t)BER_INTEGER;
+    sv.type = (uint8_t)SNMP_TAG_BER_INTEGER;
     sv.ival = 1;
     size_t rl = build_req(req, sizeof(req), (int)SNMP_V2C, "private", (uint8_t)SNMP_PDU_SET, 3, 0, 0, OID_RO, 9, &sv);
     size_t n = pc_snmp_agent_process(req, rl, resp, sizeof(resp));
@@ -447,7 +449,7 @@ void test_getbulk_returns_multiple()
     TEST_ASSERT_TRUE(parse_resp(resp, n, &rv));
     TEST_ASSERT_EQUAL_INT((int)SNMP_ERR_NO_ERROR, rv.err_status);
     TEST_ASSERT_EQUAL_UINT(3, rv.nvb);
-    TEST_ASSERT_EQUAL_HEX8((uint8_t)BER_OCTET_STRING, rv.val_tag); // first = sysDescr
+    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_BER_OCTET_STRING, rv.val_tag); // first = sysDescr
 }
 
 void test_dynamic_counter_value()
@@ -486,7 +488,7 @@ void test_v3_message_dropped()
     uint8_t req[64];
     BerEnc e;
     pc_ber_enc_init(&e, req, sizeof(req));
-    size_t msg = pc_ber_seq_begin(&e, (uint8_t)BER_SEQUENCE);
+    size_t msg = pc_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
     pc_ber_put_integer(&e, (int)SNMP_V3);
     pc_ber_seq_end(&e, msg);
     uint8_t resp[64];
@@ -508,7 +510,7 @@ void test_registration_and_rw_edges()
     const uint32_t shortoid[] = {1};
     TEST_ASSERT_FALSE(pc_snmp_agent_add_string(shortoid, 1, "x", NULL));
     TEST_ASSERT_FALSE(pc_snmp_agent_add_integer(shortoid, 1, 5, NULL));
-    TEST_ASSERT_FALSE(pc_snmp_agent_add_dynamic(shortoid, 1, (uint8_t)BER_INTEGER, NULL));
+    TEST_ASSERT_FALSE(pc_snmp_agent_add_dynamic(shortoid, 1, (uint8_t)SNMP_TAG_BER_INTEGER, NULL));
 
     // With the rw community cleared, a Set arriving on the ro community is answered
     // (community is still known) but denied write access.
@@ -516,7 +518,7 @@ void test_registration_and_rw_edges()
     uint8_t req[256], resp[256];
     SnmpValue sv;
     memset(&sv, 0, sizeof(sv));
-    sv.type = (uint8_t)BER_INTEGER;
+    sv.type = (uint8_t)SNMP_TAG_BER_INTEGER;
     sv.ival = 1;
     size_t rl = build_req(req, sizeof(req), (int)SNMP_V2C, "public", (uint8_t)SNMP_PDU_SET, 3, 0, 0, OID_RW, 9, &sv);
     size_t n = pc_snmp_agent_process(req, rl, resp, sizeof(resp));
@@ -549,7 +551,7 @@ void test_set_wrong_type_and_unknown()
     RespView rv;
     SnmpValue s;
     memset(&s, 0, sizeof(s));
-    s.type = (uint8_t)BER_OCTET_STRING;
+    s.type = (uint8_t)SNMP_TAG_BER_OCTET_STRING;
     s.str = "hi";
     s.str_len = 2;
     size_t rl = build_req(req, sizeof(req), (int)SNMP_V2C, "private", (uint8_t)SNMP_PDU_SET, 3, 0, 0, OID_RW, 9, &s);
@@ -559,7 +561,7 @@ void test_set_wrong_type_and_unknown()
 
     SnmpValue iv;
     memset(&iv, 0, sizeof(iv));
-    iv.type = (uint8_t)BER_INTEGER;
+    iv.type = (uint8_t)SNMP_TAG_BER_INTEGER;
     iv.ival = 1;
     rl = build_req(req, sizeof(req), (int)SNMP_V2C, "private", (uint8_t)SNMP_PDU_SET, 3, 0, 0, OID_UNKNOWN, 8, &iv);
     n = pc_snmp_agent_process(req, rl, resp, sizeof(resp));
@@ -604,8 +606,8 @@ static size_t build_pdu_with_value(uint8_t *buf, size_t cap, uint8_t pdu_tag, in
     pc_ber_put_integer(&e, 1);
     pc_ber_put_integer(&e, 0);
     pc_ber_put_integer(&e, 0);
-    size_t vbl = pc_ber_seq_begin(&e, (uint8_t)BER_SEQUENCE);
-    size_t vb = pc_ber_seq_begin(&e, (uint8_t)BER_SEQUENCE);
+    size_t vbl = pc_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
+    size_t vb = pc_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
     pc_ber_put_oid(&e, OID_SYSDESCR, 9);
     if (value_kind == 1)
     {
@@ -746,7 +748,7 @@ void test_malformed_message_guards()
 }
 
 // Each malformed varbind list is rejected by the dispatcher's per-varbind guards; an OID-typed value
-// is decoded (dec_value's (uint8_t)BER_OID branch) then handled as a normal GET.
+// is decoded (dec_value's (uint8_t)SNMP_TAG_BER_OID branch) then handled as a normal GET.
 void test_snmp_dispatch_varbind_guards()
 {
     uint8_t pdu[512], resp[256];
@@ -809,7 +811,7 @@ void test_empty_rw_community_clears_write()
     uint8_t req[256], resp[256];
     SnmpValue sv;
     memset(&sv, 0, sizeof(sv));
-    sv.type = (uint8_t)BER_INTEGER;
+    sv.type = (uint8_t)SNMP_TAG_BER_INTEGER;
     sv.ival = 5;
     size_t rl = build_req(req, sizeof(req), (int)SNMP_V2C, "public", (uint8_t)SNMP_PDU_SET, 61, 0, 0, OID_RW, 9, &sv);
     size_t n = pc_snmp_agent_process(req, rl, resp, sizeof(resp));
@@ -831,7 +833,7 @@ void test_add_string_null_value()
     size_t n = pc_snmp_agent_process(req, rl, resp, sizeof(resp));
     RespView rv;
     TEST_ASSERT_TRUE(parse_resp(resp, n, &rv));
-    TEST_ASSERT_EQUAL_HEX8((uint8_t)BER_OCTET_STRING, rv.val_tag);
+    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_BER_OCTET_STRING, rv.val_tag);
     TEST_ASSERT_EQUAL_size_t(0, rv.str_len);
 }
 
@@ -900,7 +902,7 @@ void test_set_v1_error_variants()
 
     SnmpValue iv;
     memset(&iv, 0, sizeof(iv));
-    iv.type = (uint8_t)BER_INTEGER;
+    iv.type = (uint8_t)SNMP_TAG_BER_INTEGER;
     iv.ival = 1;
     // Writable community, but the object has no setter -> readOnly (v2c would say notWritable).
     size_t rl = build_req(req, sizeof(req), (int)SNMP_V1, "private", (uint8_t)SNMP_PDU_SET, 70, 0, 0, OID_RO, 9, &iv);
@@ -911,7 +913,7 @@ void test_set_v1_error_variants()
     // Setter rejects the value type -> badValue (v2c would say wrongType).
     SnmpValue sv;
     memset(&sv, 0, sizeof(sv));
-    sv.type = (uint8_t)BER_OCTET_STRING;
+    sv.type = (uint8_t)SNMP_TAG_BER_OCTET_STRING;
     sv.str = "hi";
     sv.str_len = 2;
     rl = build_req(req, sizeof(req), (int)SNMP_V1, "private", (uint8_t)SNMP_PDU_SET, 71, 0, 0, OID_RW, 9, &sv);
@@ -975,17 +977,17 @@ static size_t build_getbulk_multi(uint8_t *buf, size_t cap, long reqid, long non
 {
     BerEnc e;
     pc_ber_enc_init(&e, buf, cap);
-    size_t msg = pc_ber_seq_begin(&e, (uint8_t)BER_SEQUENCE);
+    size_t msg = pc_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
     pc_ber_put_integer(&e, (int)SNMP_V2C);
-    pc_ber_put_octet_string(&e, (uint8_t)BER_OCTET_STRING, (const uint8_t *)"public", 6);
+    pc_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, (const uint8_t *)"public", 6);
     size_t pdus = pc_ber_seq_begin(&e, (uint8_t)SNMP_PDU_GETBULK);
     pc_ber_put_integer(&e, reqid);
     pc_ber_put_integer(&e, non_rep);
     pc_ber_put_integer(&e, max_rep);
-    size_t vbl = pc_ber_seq_begin(&e, (uint8_t)BER_SEQUENCE);
+    size_t vbl = pc_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
     for (size_t i = 0; i < nvb; i++)
     {
-        size_t vb = pc_ber_seq_begin(&e, (uint8_t)BER_SEQUENCE);
+        size_t vb = pc_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
         pc_ber_put_oid(&e, oid, oidn);
         pc_ber_put_null(&e);
         pc_ber_seq_end(&e, vb);
@@ -1043,7 +1045,7 @@ void test_dispatch_empty_varbind_list_tiny_buffer()
     pc_ber_put_integer(&e, 1);
     pc_ber_put_integer(&e, 0);
     pc_ber_put_integer(&e, 0);
-    size_t vbl = pc_ber_seq_begin(&e, (uint8_t)BER_SEQUENCE);
+    size_t vbl = pc_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
     pc_ber_seq_end(&e, vbl); // no varbinds
     pc_ber_seq_end(&e, p);
     TEST_ASSERT_TRUE(e.ok);

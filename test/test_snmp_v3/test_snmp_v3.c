@@ -135,8 +135,8 @@ static size_t build_get(uint8_t *out, size_t cap, proto_bool auth, proto_bool pr
     pc_ber_put_integer(&pe, req_id);
     pc_ber_put_integer(&pe, 0);
     pc_ber_put_integer(&pe, 0);
-    size_t vbl = pc_ber_seq_begin(&pe, (uint8_t)BER_SEQUENCE);
-    size_t vb = pc_ber_seq_begin(&pe, (uint8_t)BER_SEQUENCE);
+    size_t vbl = pc_ber_seq_begin(&pe, (uint8_t)SNMP_TAG_BER_SEQUENCE);
+    size_t vb = pc_ber_seq_begin(&pe, (uint8_t)SNMP_TAG_BER_SEQUENCE);
     pc_ber_put_oid(&pe, oid, oid_len);
     pc_ber_put_null(&pe);
     pc_ber_seq_end(&pe, vb);
@@ -147,9 +147,9 @@ static size_t build_get(uint8_t *out, size_t cap, proto_bool auth, proto_bool pr
     uint8_t scoped[320];
     BerEnc se;
     pc_ber_enc_init(&se, scoped, sizeof(scoped));
-    size_t ss = pc_ber_seq_begin(&se, (uint8_t)BER_SEQUENCE);
-    pc_ber_put_octet_string(&se, (uint8_t)BER_OCTET_STRING, eid, eid_len);
-    pc_ber_put_octet_string(&se, (uint8_t)BER_OCTET_STRING, NULL, 0);
+    size_t ss = pc_ber_seq_begin(&se, (uint8_t)SNMP_TAG_BER_SEQUENCE);
+    pc_ber_put_octet_string(&se, (uint8_t)SNMP_TAG_BER_OCTET_STRING, eid, eid_len);
+    pc_ber_put_octet_string(&se, (uint8_t)SNMP_TAG_BER_OCTET_STRING, NULL, 0);
     pc_ber_put_raw(&se, pdu, pe.len);
     pc_ber_seq_end(&se, ss);
 
@@ -172,49 +172,49 @@ static size_t build_get(uint8_t *out, size_t cap, proto_bool auth, proto_bool pr
     uint8_t secp[128];
     BerEnc se2;
     pc_ber_enc_init(&se2, secp, sizeof(secp));
-    size_t s2 = pc_ber_seq_begin(&se2, (uint8_t)BER_SEQUENCE);
-    pc_ber_put_octet_string(&se2, (uint8_t)BER_OCTET_STRING, eid, eid_len);
+    size_t s2 = pc_ber_seq_begin(&se2, (uint8_t)SNMP_TAG_BER_SEQUENCE);
+    pc_ber_put_octet_string(&se2, (uint8_t)SNMP_TAG_BER_OCTET_STRING, eid, eid_len);
     pc_ber_put_integer(&se2, boots);
     pc_ber_put_integer(&se2, time);
-    pc_ber_put_octet_string(&se2, (uint8_t)BER_OCTET_STRING, (const uint8_t *)user, strlen(user));
+    pc_ber_put_octet_string(&se2, (uint8_t)SNMP_TAG_BER_OCTET_STRING, (const uint8_t *)user, strlen(user));
     size_t auth_off = 0;
     if (auth)
     {
         auth_off = se2.len + 2;
         uint8_t z[SNMP_V3_AUTH_PARAM_LEN] = {0};
-        pc_ber_put_octet_string(&se2, (uint8_t)BER_OCTET_STRING, z, SNMP_V3_AUTH_PARAM_LEN);
+        pc_ber_put_octet_string(&se2, (uint8_t)SNMP_TAG_BER_OCTET_STRING, z, SNMP_V3_AUTH_PARAM_LEN);
     }
     else
     {
-        pc_ber_put_octet_string(&se2, (uint8_t)BER_OCTET_STRING, NULL, 0);
+        pc_ber_put_octet_string(&se2, (uint8_t)SNMP_TAG_BER_OCTET_STRING, NULL, 0);
     }
     if (priv)
     {
-        pc_ber_put_octet_string(&se2, (uint8_t)BER_OCTET_STRING, salt, 8);
+        pc_ber_put_octet_string(&se2, (uint8_t)SNMP_TAG_BER_OCTET_STRING, salt, 8);
     }
     else
     {
-        pc_ber_put_octet_string(&se2, (uint8_t)BER_OCTET_STRING, NULL, 0);
+        pc_ber_put_octet_string(&se2, (uint8_t)SNMP_TAG_BER_OCTET_STRING, NULL, 0);
     }
     pc_ber_seq_end(&se2, s2);
 
     // message
     BerEnc e;
     pc_ber_enc_init(&e, out, cap);
-    size_t msg = pc_ber_seq_begin(&e, (uint8_t)BER_SEQUENCE);
+    size_t msg = pc_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
     pc_ber_put_integer(&e, (int)SNMP_V3);
-    size_t hdr = pc_ber_seq_begin(&e, (uint8_t)BER_SEQUENCE);
+    size_t hdr = pc_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
     pc_ber_put_integer(&e, msg_id);
     pc_ber_put_integer(&e, 65507);
     uint8_t fl = (uint8_t)((auth ? 1 : 0) | (priv ? 2 : 0) | (auth ? 0 : 4)); // reportable on discovery
-    pc_ber_put_octet_string(&e, (uint8_t)BER_OCTET_STRING, &fl, 1);
+    pc_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, &fl, 1);
     pc_ber_put_integer(&e, 3);
     pc_ber_seq_end(&e, hdr);
-    pc_ber_put_octet_string(&e, (uint8_t)BER_OCTET_STRING, secp, se2.len);
+    pc_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, secp, se2.len);
     size_t sec_value_pos = e.len - se2.len;
     if (priv)
     {
-        pc_ber_put_octet_string(&e, (uint8_t)BER_OCTET_STRING, data, data_len);
+        pc_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, data, data_len);
     }
     else
     {
@@ -238,7 +238,7 @@ static proto_bool parse_v3(const uint8_t *buf, size_t len, const uint8_t *privke
     pc_ber_dec_init(&d, buf, len);
     uint8_t tag;
     size_t l;
-    if (!pc_ber_read_header(&d, &tag, &l) || tag != (uint8_t)BER_SEQUENCE)
+    if (!pc_ber_read_header(&d, &tag, &l) || tag != (uint8_t)SNMP_TAG_BER_SEQUENCE)
     {
         return PROTO_FALSE;
     }
@@ -247,7 +247,7 @@ static proto_bool parse_v3(const uint8_t *buf, size_t len, const uint8_t *privke
     {
         return PROTO_FALSE;
     }
-    if (!pc_ber_read_header(&d, &tag, &l) || tag != (uint8_t)BER_SEQUENCE) // global data
+    if (!pc_ber_read_header(&d, &tag, &l) || tag != (uint8_t)SNMP_TAG_BER_SEQUENCE) // global data
     {
         return PROTO_FALSE;
     }
@@ -257,7 +257,7 @@ static proto_bool parse_v3(const uint8_t *buf, size_t len, const uint8_t *privke
         return PROTO_FALSE;
     }
     size_t fl;
-    if (!pc_ber_read_header(&d, &tag, &fl) || tag != (uint8_t)BER_OCTET_STRING)
+    if (!pc_ber_read_header(&d, &tag, &fl) || tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
     {
         return PROTO_FALSE;
     }
@@ -269,19 +269,19 @@ static proto_bool parse_v3(const uint8_t *buf, size_t len, const uint8_t *privke
     }
     // secparams
     size_t seclen;
-    if (!pc_ber_read_header(&d, &tag, &seclen) || tag != (uint8_t)BER_OCTET_STRING)
+    if (!pc_ber_read_header(&d, &tag, &seclen) || tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
     {
         return PROTO_FALSE;
     }
     BerDec sd;
     pc_ber_dec_init(&sd, d.buf + d.pos, seclen);
     d.pos += seclen;
-    if (!pc_ber_read_header(&sd, &tag, &l) || tag != (uint8_t)BER_SEQUENCE)
+    if (!pc_ber_read_header(&sd, &tag, &l) || tag != (uint8_t)SNMP_TAG_BER_SEQUENCE)
     {
         return PROTO_FALSE;
     }
     size_t eidl;
-    if (!pc_ber_read_header(&sd, &tag, &eidl) || tag != (uint8_t)BER_OCTET_STRING)
+    if (!pc_ber_read_header(&sd, &tag, &eidl) || tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
     {
         return PROTO_FALSE;
     }
@@ -293,19 +293,19 @@ static proto_bool parse_v3(const uint8_t *buf, size_t len, const uint8_t *privke
         return PROTO_FALSE;
     }
     size_t ul;
-    if (!pc_ber_read_header(&sd, &tag, &ul) || tag != (uint8_t)BER_OCTET_STRING) // user
+    if (!pc_ber_read_header(&sd, &tag, &ul) || tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING) // user
     {
         return PROTO_FALSE;
     }
     sd.pos += ul;
     size_t al;
-    if (!pc_ber_read_header(&sd, &tag, &al) || tag != (uint8_t)BER_OCTET_STRING) // authparams
+    if (!pc_ber_read_header(&sd, &tag, &al) || tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING) // authparams
     {
         return PROTO_FALSE;
     }
     sd.pos += al;
     size_t pl;
-    if (!pc_ber_read_header(&sd, &tag, &pl) || tag != (uint8_t)BER_OCTET_STRING) // privparams
+    if (!pc_ber_read_header(&sd, &tag, &pl) || tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING) // privparams
     {
         return PROTO_FALSE;
     }
@@ -316,7 +316,7 @@ static proto_bool parse_v3(const uint8_t *buf, size_t len, const uint8_t *privke
     if (v->flags & 0x02)
     {
         size_t ctl;
-        if (!pc_ber_read_header(&d, &tag, &ctl) || tag != (uint8_t)BER_OCTET_STRING)
+        if (!pc_ber_read_header(&d, &tag, &ctl) || tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
         {
             return PROTO_FALSE;
         }
@@ -337,16 +337,16 @@ static proto_bool parse_v3(const uint8_t *buf, size_t len, const uint8_t *privke
     // scopedPDU -> inner PDU
     BerDec cd;
     pc_ber_dec_init(&cd, scoped, scoped_len);
-    if (!pc_ber_read_header(&cd, &tag, &l) || tag != (uint8_t)BER_SEQUENCE)
+    if (!pc_ber_read_header(&cd, &tag, &l) || tag != (uint8_t)SNMP_TAG_BER_SEQUENCE)
     {
         return PROTO_FALSE;
     }
-    if (!pc_ber_read_header(&cd, &tag, &l) || tag != (uint8_t)BER_OCTET_STRING) // ctxEngineID
+    if (!pc_ber_read_header(&cd, &tag, &l) || tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING) // ctxEngineID
     {
         return PROTO_FALSE;
     }
     cd.pos += l;
-    if (!pc_ber_read_header(&cd, &tag, &l) || tag != (uint8_t)BER_OCTET_STRING) // ctxName
+    if (!pc_ber_read_header(&cd, &tag, &l) || tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING) // ctxName
     {
         return PROTO_FALSE;
     }
@@ -364,13 +364,13 @@ static proto_bool parse_v3(const uint8_t *buf, size_t len, const uint8_t *privke
     {
         return PROTO_FALSE;
     }
-    if (!pc_ber_read_header(&cd, &tag, &l) || tag != (uint8_t)BER_SEQUENCE) // varbind list
+    if (!pc_ber_read_header(&cd, &tag, &l) || tag != (uint8_t)SNMP_TAG_BER_SEQUENCE) // varbind list
     {
         return PROTO_FALSE;
     }
     if (cd.pos < cd.len)
     {
-        if (!pc_ber_read_header(&cd, &tag, &l) || tag != (uint8_t)BER_SEQUENCE) // first varbind
+        if (!pc_ber_read_header(&cd, &tag, &l) || tag != (uint8_t)SNMP_TAG_BER_SEQUENCE) // first varbind
         {
             return PROTO_FALSE;
         }
@@ -383,7 +383,7 @@ static proto_bool parse_v3(const uint8_t *buf, size_t len, const uint8_t *privke
         {
             return PROTO_FALSE;
         }
-        if (v->val_tag == (uint8_t)BER_OCTET_STRING)
+        if (v->val_tag == (uint8_t)SNMP_TAG_BER_OCTET_STRING)
         {
             size_t c = vl < sizeof(v->str) - 1 ? vl : sizeof(v->str) - 1;
             memcpy(v->str, cd.buf + cd.pos, c);
@@ -438,7 +438,7 @@ void test_authnopriv_get()
     TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_PDU_RESPONSE, v.pdu_tag);
     TEST_ASSERT_EQUAL_INT(42, v.request_id);
     TEST_ASSERT_EQUAL_INT((int)SNMP_ERR_NO_ERROR, v.err_status);
-    TEST_ASSERT_EQUAL_HEX8((uint8_t)BER_OCTET_STRING, v.val_tag);
+    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_BER_OCTET_STRING, v.val_tag);
     TEST_ASSERT_EQUAL_STRING(SYSDESCR_VAL, v.str);
     TEST_ASSERT_EQUAL_UINT8(0x01, v.flags & 0x03); // response is authNoPriv
 }
@@ -705,44 +705,44 @@ static size_t build_v3_raw_scoped(uint8_t *out, size_t cap, proto_bool auth, con
     uint8_t secp[128];
     BerEnc se2;
     pc_ber_enc_init(&se2, secp, sizeof(secp));
-    size_t s2 = pc_ber_seq_begin(&se2, (uint8_t)BER_SEQUENCE);
-    pc_ber_put_octet_string(&se2, (uint8_t)BER_OCTET_STRING, eid, eid_len);
+    size_t s2 = pc_ber_seq_begin(&se2, (uint8_t)SNMP_TAG_BER_SEQUENCE);
+    pc_ber_put_octet_string(&se2, (uint8_t)SNMP_TAG_BER_OCTET_STRING, eid, eid_len);
     pc_ber_put_integer(&se2, boots);
     pc_ber_put_integer(&se2, time);
-    pc_ber_put_octet_string(&se2, (uint8_t)BER_OCTET_STRING, (const uint8_t *)user, strlen(user));
+    pc_ber_put_octet_string(&se2, (uint8_t)SNMP_TAG_BER_OCTET_STRING, (const uint8_t *)user, strlen(user));
     size_t auth_off = 0;
     if (auth)
     {
         auth_off = se2.len + 2;
         uint8_t z[SNMP_V3_AUTH_PARAM_LEN] = {0};
-        pc_ber_put_octet_string(&se2, (uint8_t)BER_OCTET_STRING, z, auth_plen);
+        pc_ber_put_octet_string(&se2, (uint8_t)SNMP_TAG_BER_OCTET_STRING, z, auth_plen);
     }
     else
     {
-        pc_ber_put_octet_string(&se2, (uint8_t)BER_OCTET_STRING, NULL, 0);
+        pc_ber_put_octet_string(&se2, (uint8_t)SNMP_TAG_BER_OCTET_STRING, NULL, 0);
     }
     if (priv)
     {
-        pc_ber_put_octet_string(&se2, (uint8_t)BER_OCTET_STRING, salt, priv_plen);
+        pc_ber_put_octet_string(&se2, (uint8_t)SNMP_TAG_BER_OCTET_STRING, salt, priv_plen);
     }
     else
     {
-        pc_ber_put_octet_string(&se2, (uint8_t)BER_OCTET_STRING, NULL, 0);
+        pc_ber_put_octet_string(&se2, (uint8_t)SNMP_TAG_BER_OCTET_STRING, NULL, 0);
     }
     pc_ber_seq_end(&se2, s2);
 
     BerEnc e;
     pc_ber_enc_init(&e, out, cap);
-    size_t msg = pc_ber_seq_begin(&e, (uint8_t)BER_SEQUENCE);
+    size_t msg = pc_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
     pc_ber_put_integer(&e, (int)SNMP_V3);
-    size_t hdr = pc_ber_seq_begin(&e, (uint8_t)BER_SEQUENCE);
+    size_t hdr = pc_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
     pc_ber_put_integer(&e, msg_id);
     pc_ber_put_integer(&e, 65507);
     uint8_t fl = (uint8_t)((auth ? 0x01 : 0) | (priv ? 0x02 : 0) | (auth ? 0 : 0x04)); // reportable on discovery
-    pc_ber_put_octet_string(&e, (uint8_t)BER_OCTET_STRING, &fl, 1);
+    pc_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, &fl, 1);
     pc_ber_put_integer(&e, 3);
     pc_ber_seq_end(&e, hdr);
-    pc_ber_put_octet_string(&e, (uint8_t)BER_OCTET_STRING, secp, se2.len);
+    pc_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, secp, se2.len);
     size_t sec_value_pos = e.len - se2.len;
     pc_ber_put_raw(&e, scoped, scoped_len); // scopedPDU / msgData carried verbatim (may be deliberately malformed)
     pc_ber_seq_end(&e, msg);
@@ -967,7 +967,7 @@ static size_t g_big_len = 0;
 static uint8_t g_big[1600];
 static proto_bool big_getter(SnmpValue *out)
 {
-    out->type = (uint8_t)BER_OCTET_STRING;
+    out->type = (uint8_t)SNMP_TAG_BER_OCTET_STRING;
     out->str = (const char *)g_big;
     out->str_len = g_big_len;
     return PROTO_TRUE;
@@ -977,7 +977,7 @@ void test_v3_response_scopedpdu_overflow()
 {
     memset(g_big, 0x42, sizeof(g_big));
     static const uint32_t big_oid[] = {1, 3, 6, 1, 4, 1, 49374, 7, 0};
-    TEST_ASSERT_TRUE(pc_snmp_agent_add_dynamic(big_oid, 9, (uint8_t)BER_OCTET_STRING, big_getter));
+    TEST_ASSERT_TRUE(pc_snmp_agent_add_dynamic(big_oid, 9, (uint8_t)SNMP_TAG_BER_OCTET_STRING, big_getter));
 
     V3View disc;
     discover(&disc);
@@ -1015,15 +1015,15 @@ static size_t build_v3_frame(uint8_t *out, size_t cap, long msg_id, uint8_t flag
 {
     BerEnc e;
     pc_ber_enc_init(&e, out, cap);
-    size_t msg = pc_ber_seq_begin(&e, (uint8_t)BER_SEQUENCE);
+    size_t msg = pc_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
     pc_ber_put_integer(&e, (int)SNMP_V3);
-    size_t hdr = pc_ber_seq_begin(&e, (uint8_t)BER_SEQUENCE);
+    size_t hdr = pc_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
     pc_ber_put_integer(&e, msg_id);
     pc_ber_put_integer(&e, 65507);
-    pc_ber_put_octet_string(&e, (uint8_t)BER_OCTET_STRING, &flags, 1);
+    pc_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, &flags, 1);
     pc_ber_put_integer(&e, 3);
     pc_ber_seq_end(&e, hdr);
-    pc_ber_put_octet_string(&e, (uint8_t)BER_OCTET_STRING, sec, sec_len);
+    pc_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, sec, sec_len);
     pc_ber_put_raw(&e, tail, tail_len);
     pc_ber_seq_end(&e, msg);
     return e.ok ? e.len : 0;
@@ -1035,10 +1035,10 @@ static size_t build_secparams_prefix(uint8_t *out, size_t cap, unsigned nfields)
 {
     BerEnc e;
     pc_ber_enc_init(&e, out, cap);
-    size_t s = pc_ber_seq_begin(&e, (uint8_t)BER_SEQUENCE);
+    size_t s = pc_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
     if (nfields >= 1)
     {
-        pc_ber_put_octet_string(&e, (uint8_t)BER_OCTET_STRING, NULL, 0);
+        pc_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, NULL, 0);
     }
     if (nfields >= 2)
     {
@@ -1050,11 +1050,11 @@ static size_t build_secparams_prefix(uint8_t *out, size_t cap, unsigned nfields)
     }
     if (nfields >= 4)
     {
-        pc_ber_put_octet_string(&e, (uint8_t)BER_OCTET_STRING, NULL, 0);
+        pc_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, NULL, 0);
     }
     if (nfields >= 5)
     {
-        pc_ber_put_octet_string(&e, (uint8_t)BER_OCTET_STRING, NULL, 0);
+        pc_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, NULL, 0);
     }
     pc_ber_seq_end(&e, s);
     return e.ok ? e.len : 0;
@@ -1072,11 +1072,11 @@ void test_v3_truncated_fields_fail_closed()
     {
         BerEnc e;
         pc_ber_enc_init(&e, req, sizeof(req));
-        size_t msg = pc_ber_seq_begin(&e, (uint8_t)BER_SEQUENCE);
+        size_t msg = pc_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
         pc_ber_put_integer(&e, (int)SNMP_V3);
         if (stop >= 1)
         {
-            size_t hdr = pc_ber_seq_begin(&e, (uint8_t)BER_SEQUENCE);
+            size_t hdr = pc_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
             pc_ber_put_integer(&e, 500 + stop); // msgID
             if (stop >= 2)
             {
@@ -1085,7 +1085,7 @@ void test_v3_truncated_fields_fail_closed()
             if (stop >= 3)
             {
                 uint8_t fl = 0x04;
-                pc_ber_put_octet_string(&e, (uint8_t)BER_OCTET_STRING, &fl, 1);
+                pc_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, &fl, 1);
             }
             if (stop >= 4)
             {
@@ -1126,15 +1126,15 @@ void test_v3_outer_tag_and_empty_flags()
     uint8_t req[320];
     BerEnc e;
     pc_ber_enc_init(&e, req, sizeof(req));
-    size_t msg = pc_ber_seq_begin(&e, (uint8_t)BER_SEQUENCE);
+    size_t msg = pc_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
     pc_ber_put_integer(&e, (int)SNMP_V3);
-    size_t hdr = pc_ber_seq_begin(&e, (uint8_t)BER_SEQUENCE);
+    size_t hdr = pc_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
     pc_ber_put_integer(&e, 530);
     pc_ber_put_integer(&e, 65507);
-    pc_ber_put_octet_string(&e, (uint8_t)BER_OCTET_STRING, NULL, 0); // msgFlags, zero length
+    pc_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, NULL, 0); // msgFlags, zero length
     pc_ber_put_integer(&e, 3);
     pc_ber_seq_end(&e, hdr);
-    pc_ber_put_octet_string(&e, (uint8_t)BER_OCTET_STRING, NULL, 0);
+    pc_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, NULL, 0);
     pc_ber_seq_end(&e, msg);
     TEST_ASSERT_TRUE(e.ok);
     TEST_ASSERT_EQUAL_UINT(0, pc_snmp_v3_process(req, e.len, resp, sizeof(resp)));
