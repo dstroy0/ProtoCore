@@ -12,19 +12,25 @@
 #include "mmgr/dma.h"
 #include <string.h>
 #include <unity.h>
-#include <vector>
 
-struct Ev
+// Bounds for the recorded completions: the suite drives a handful of transfers of a few dozen
+// bytes, so these are stated once rather than grown.
+#define EV_MAX 64
+#define EV_DATA_MAX 256
+
+typedef struct
 {
     pc_dma_dir dir;
     uint8_t channel;
     uint16_t len;
     uint16_t seq;
     const void *ptr; // RX buffer address (to prove the ping-pong flip)
-    std::vector<uint8_t> data;
-};
+    uint8_t data[EV_DATA_MAX];
+    size_t data_len;
+} Ev;
 
-static std::vector<Ev> g_ev;
+static Ev g_ev[EV_MAX];
+static size_t g_ev_n;
 
 static void on_ev(const pc_dma_event *ev, void *ctx)
 {
@@ -35,11 +41,16 @@ static void on_ev(const pc_dma_event *ev, void *ctx)
     e.len = ev->len;
     e.seq = ev->seq;
     e.ptr = ev->data;
+    e.data_len = 0;
     if (ev->dir == PC_DMA_RX && ev->data)
     {
-        e.data.assign(ev->data, ev->data + ev->len);
+        e.data_len = ev->len < EV_DATA_MAX ? ev->len : EV_DATA_MAX;
+        memcpy(e.data, ev->data, e.data_len);
     }
-    g_ev.push_back(e);
+    if (g_ev_n < EV_MAX)
+    {
+        g_ev[g_ev_n++] = e;
+    }
 }
 
 static proto_bool open_ch(uint8_t ch, proto_bool loop)
@@ -53,23 +64,27 @@ static proto_bool open_ch(uint8_t ch, proto_bool loop)
     return pc_dma_open(&c);
 }
 
-static std::vector<uint8_t> rx_concat()
+// The RX stream in order, reassembled from the recorded completions. Returns the byte count and
+// fills g_rx; one buffer, so a caller reads it before the next call.
+static uint8_t g_rx[EV_MAX * EV_DATA_MAX];
+static size_t rx_concat(void)
 {
-    std::vector<uint8_t> v;
-    for (size_t i = 0; i < g_ev.size(); i++)
+    size_t n = 0;
+    for (size_t i = 0; i < g_ev_n; i++)
     {
-        if (g_ev[i].dir == PC_DMA_RX)
+        if (g_ev[i].dir == PC_DMA_RX && n + g_ev[i].data_len <= sizeof(g_rx))
         {
-            v.insert(v.end(), g_ev[i].data.begin(), g_ev[i].data.end());
+            memcpy(g_rx + n, g_ev[i].data, g_ev[i].data_len);
+            n += g_ev[i].data_len;
         }
     }
-    return v;
+    return n;
 }
 
 static size_t count_dir(pc_dma_dir dir)
 {
     size_t n = 0;
-    for (size_t i = 0; i < g_ev.size(); i++)
+    for (size_t i = 0; i < g_ev_n; i++)
     {
         if (g_ev[i].dir == dir)
         {
@@ -81,7 +96,7 @@ static size_t count_dir(pc_dma_dir dir)
 
 void setUp()
 {
-    g_ev.clear();
+    g_ev_n = 0;
     pc_dma_close(0);
     pc_dma_close(1);
 }
@@ -110,7 +125,7 @@ void test_ingress_emits_rx_event()
     TEST_ASSERT_TRUE(open_ch(0, PROTO_FALSE));
     const uint8_t msg[] = {'h', 'e', 'l', 'l', 'o'};
     TEST_ASSERT_TRUE(pc_dma_sim_feed(0, msg, sizeof(msg)));
-    TEST_ASSERT_EQUAL_size_t(0, g_ev.size()); // nothing until we pump the engine
+    TEST_ASSERT_EQUAL_size_t(0, g_ev_n); // nothing until we pump the engine
     pc_dma_poll();
     TEST_ASSERT_EQUAL_size_t(1, count_dir(PC_DMA_RX));
     TEST_ASSERT_EQUAL_UINT16(5, g_ev[0].len);
@@ -132,9 +147,9 @@ void test_buffer_fills_then_partial_flush()
     TEST_ASSERT_EQUAL_size_t(2, count_dir(PC_DMA_RX));
     TEST_ASSERT_EQUAL_UINT16(PC_DMA_BUF_SIZE, g_ev[0].len);
     TEST_ASSERT_EQUAL_UINT16(3, g_ev[1].len);
-    std::vector<uint8_t> got = rx_concat();
-    TEST_ASSERT_EQUAL_size_t(sizeof(msg), got.size());
-    TEST_ASSERT_EQUAL_MEMORY(msg, got.data(), sizeof(msg));
+    size_t got_n = rx_concat();
+    TEST_ASSERT_EQUAL_size_t(sizeof(msg), got_n);
+    TEST_ASSERT_EQUAL_MEMORY(msg, g_rx, sizeof(msg));
 }
 
 void test_ping_pong_flips_buffer()
@@ -152,8 +167,8 @@ void test_ping_pong_flips_buffer()
     TEST_ASSERT_NOT_EQUAL(g_ev[0].ptr, g_ev[1].ptr);
     TEST_ASSERT_EQUAL_UINT16(0, g_ev[0].seq);
     TEST_ASSERT_EQUAL_UINT16(1, g_ev[1].seq); // per-channel sequence increments
-    std::vector<uint8_t> got = rx_concat();
-    TEST_ASSERT_EQUAL_MEMORY(msg, got.data(), sizeof(msg));
+    size_t got_n = rx_concat();
+    TEST_ASSERT_EQUAL_MEMORY(msg, g_rx, sizeof(msg));
 }
 
 void test_egress_captures_tx()
@@ -204,9 +219,9 @@ void test_loopback_round_trip()
     pc_dma_poll(); // one poll: TX drains, loops into ingress, RX completes
     TEST_ASSERT_EQUAL_size_t(1, count_dir(PC_DMA_TX));
     TEST_ASSERT_EQUAL_size_t(1, count_dir(PC_DMA_RX));
-    std::vector<uint8_t> got = rx_concat();
-    TEST_ASSERT_EQUAL_size_t(sizeof(ping), got.size());
-    TEST_ASSERT_EQUAL_MEMORY(ping, got.data(), sizeof(ping)); // byte-exact round trip
+    size_t got_n = rx_concat();
+    TEST_ASSERT_EQUAL_size_t(sizeof(ping), got_n);
+    TEST_ASSERT_EQUAL_MEMORY(ping, g_rx, sizeof(ping)); // byte-exact round trip
 }
 
 void test_feed_fail_closed_when_full()
@@ -224,7 +239,7 @@ void test_closed_channel_is_inert()
     TEST_ASSERT_FALSE(pc_dma_sim_feed(0, x, sizeof(x))); // never opened
     TEST_ASSERT_FALSE(pc_dma_tx_submit(0, x, sizeof(x)));
     pc_dma_poll();
-    TEST_ASSERT_EQUAL_size_t(0, g_ev.size());
+    TEST_ASSERT_EQUAL_size_t(0, g_ev_n);
     TEST_ASSERT_TRUE(open_ch(0, PROTO_FALSE));
     pc_dma_close(0);
     TEST_ASSERT_FALSE(pc_dma_sim_feed(0, x, sizeof(x))); // closed again
@@ -240,7 +255,7 @@ void test_two_channels_independent()
     TEST_ASSERT_TRUE(pc_dma_sim_feed(1, b, sizeof(b)));
     pc_dma_poll();
     size_t ch0 = 0, ch1 = 0;
-    for (size_t i = 0; i < g_ev.size(); i++)
+    for (size_t i = 0; i < g_ev_n; i++)
     {
         if (g_ev[i].dir != PC_DMA_RX)
         {
