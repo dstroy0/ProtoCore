@@ -493,11 +493,16 @@ src/
 │   │   ├── ota_service.cpp
 │   │   └── ota_service.h
 │   ├── auth.c
+│   ├── exc_coredump.c
+│   ├── exc_decoder.c
+│   ├── exc_decoder.h
 │   ├── failsafe.c
 │   ├── failsafe.h
 │   ├── logbuf.c
 │   ├── logbuf.h
 │   ├── middleware.c
+│   ├── power_mgmt.c
+│   ├── power_mgmt.h
 │   ├── regex.c
 │   ├── response.c
 │   ├── sleep_sched.c
@@ -967,13 +972,6 @@ src/
 │   │   │   ├── esp.h
 │   │   │   ├── ipsec_db.c
 │   │   │   └── ipsec_db.h
-│   │   ├── exc_decoder/
-│   │   │   ├── exc_coredump.c
-│   │   │   ├── exc_decoder.c
-│   │   │   └── exc_decoder.h
-│   │   ├── power_mgmt/
-│   │   │   ├── power_mgmt.c
-│   │   │   └── power_mgmt.h
 │   │   └── provisioning_service/  (provisioning_service.h, provisioning_service.cpp)
 │   ├── timing_position/
 │   │   ├── gnss/
