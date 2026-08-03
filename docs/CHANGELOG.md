@@ -54,6 +54,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`700e016`](https://github.com/dstroy0/ProtoCore/commit/700e016c643bd0aa833bdcc3d0104f5f8f707687))
 - update CHANGELOG.md [skip ci] ([`f97963b`](https://github.com/dstroy0/ProtoCore/commit/f97963bb555e7ef6d1c74f7902fa5513407a5e98))
 - update CHANGELOG.md [skip ci] ([`b6f7596`](https://github.com/dstroy0/ProtoCore/commit/b6f7596c30912a4b85ed520e2d98881c63b2152f))
 - update CHANGELOG.md [skip ci] ([`b81a73a`](https://github.com/dstroy0/ProtoCore/commit/b81a73a07cd5527508c8a893a3d63e459978b827))
@@ -370,6 +371,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- use the transport layer's C names ([`111f9cc`](https://github.com/dstroy0/ProtoCore/commit/111f9ccc92c5b7971bf4db37dcac871e7b9286e2))
+- index the hpack roundtrip table instead of a range-for ([`8f4993c`](https://github.com/dstroy0/ProtoCore/commit/8f4993cf2dab77c437671ad8531f43b18fcdc69a))
 - finish the tier-1 suite conversions ([`423c920`](https://github.com/dstroy0/ProtoCore/commit/423c920b299416c1500cd43887a362304f141820))
 - convert the low-residue suites from .cpp to .c ([`b73b584`](https://github.com/dstroy0/ProtoCore/commit/b73b5846fdff32369d34d5fb51e8be5ccb673c4a))
 - strip the default arguments from the suite-local helpers ([`b64541a`](https://github.com/dstroy0/ProtoCore/commit/b64541a288f0d11174db4bcb68d9f47d1ff68553))
