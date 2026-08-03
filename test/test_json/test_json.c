@@ -226,15 +226,15 @@ void test_writer_null_and_remaining_escapes()
     char b2[16];
     pc_json_writer e;
     pc_json_init(&e, b2, sizeof(b2));
-    e.str("\r\b\f");
-    TEST_ASSERT_TRUE(e.ok());
-    TEST_ASSERT_EQUAL_STRING("\"\\r\\b\\f\"", e.c_str());
+    pc_json_str(&e, "\r\b\f");
+    TEST_ASSERT_TRUE(pc_json_ok(&e));
+    TEST_ASSERT_EQUAL_STRING("\"\\r\\b\\f\"", pc_json_c_str(&e));
 
     char b3[16];
     pc_json_writer u;
     pc_json_init(&u, b3, sizeof(b3));
-    u.end_object(); // nothing open -> unbalanced
-    TEST_ASSERT_FALSE(u.ok());
+    pc_json_end_object(&u); // nothing open -> unbalanced
+    TEST_ASSERT_FALSE(pc_json_ok(&u));
 }
 
 // Reader guards: null out / null json / zero capacity are rejected.
@@ -268,12 +268,12 @@ void test_writer_null_buffer_and_zero_capacity()
 {
     pc_json_writer w1;
     pc_json_init(&w1, NULL, 16);
-    TEST_ASSERT_FALSE(w1.ok());
+    TEST_ASSERT_FALSE(pc_json_ok(&w1));
 
     char buf[4];
     pc_json_writer w2;
     pc_json_init(&w2, buf, 0);
-    TEST_ASSERT_FALSE(w2.ok());
+    TEST_ASSERT_FALSE(pc_json_ok(&w2));
 }
 
 // Whitespace (space, tab, CR, LF) between tokens is skipped by the reader, exercising every
