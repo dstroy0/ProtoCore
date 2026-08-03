@@ -46,6 +46,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`a2b3031`](https://github.com/dstroy0/ProtoCore/commit/a2b303145ae39abfd34d7f9ebd4d349f7be681b6))
 - update CHANGELOG.md [skip ci] ([`1789944`](https://github.com/dstroy0/ProtoCore/commit/1789944f224888985c0a8eba87598c177f5f1c80))
 - update CHANGELOG.md [skip ci] ([`aee14c8`](https://github.com/dstroy0/ProtoCore/commit/aee14c85cb409a1e744e5548eb941483ab158468))
 - update CHANGELOG.md [skip ci] ([`e7b2366`](https://github.com/dstroy0/ProtoCore/commit/e7b2366b12815f420c9ad2569c2c21da54fb86cd))
@@ -191,6 +192,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`d1cea96`](https://github.com/dstroy0/ProtoCore/commit/d1cea965f967058099e5aeb8414f06bd734aebc6))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`e8a0034`](https://github.com/dstroy0/ProtoCore/commit/e8a003460b0a7525892b7178c76658fce6c6399b))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`0af15b8`](https://github.com/dstroy0/ProtoCore/commit/0af15b881340d16b7db7f1c7f7d45b87559cc6ed))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`4fc79d3`](https://github.com/dstroy0/ProtoCore/commit/4fc79d3eaed4b8820ec5b3c2b403a8c233c5b2d6))
@@ -275,6 +277,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- use on_http_iface for the interface-scoped overload ([`93920a6`](https://github.com/dstroy0/ProtoCore/commit/93920a68af6578f64065697a23a592fec2a9adf7))
 - spell the infinite loop without the C++ keyword ([`030b761`](https://github.com/dstroy0/ProtoCore/commit/030b761011044df82440ba3aa3377b5ce6666bc0))
 - convert the defer and presentation suites to C ([`b0d3177`](https://github.com/dstroy0/ProtoCore/commit/b0d317764278d3810e6ac4e54ce5f1fc8618c72b))
 - enable PC_ENABLE_AUTH for the auth suites ([`102cc67`](https://github.com/dstroy0/ProtoCore/commit/102cc67f86b910c47b3c54d97976f1c842486a52))
