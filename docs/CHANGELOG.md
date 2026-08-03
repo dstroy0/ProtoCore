@@ -200,6 +200,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Refactor
 
+- move stdatomic into types.h ([`d7d2093`](https://github.com/dstroy0/ProtoCore/commit/d7d20933cb0772ecf9550cbd680d74b6bbecc2e2))
 - convert the session layer to C ([`8eb49f4`](https://github.com/dstroy0/ProtoCore/commit/8eb49f4ad14b95c88dfac42c1da248671b3e595a))
 - rename pentesting/ to penetration_testing/ and analyze the repo's Python ([`9cdad1a`](https://github.com/dstroy0/ProtoCore/commit/9cdad1a5e3f98b3e5de0e89b4a128be30697cfa9))
 - drop the C++ default arguments from the SSH KDF entry points ([`ef9541c`](https://github.com/dstroy0/ProtoCore/commit/ef9541c495fdc482cf68b8cde8fcce830bb749e2))
@@ -224,6 +225,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- convert test_session to C ([`6d760e4`](https://github.com/dstroy0/ProtoCore/commit/6d760e4f8d148680faf649b7b873850ae8852bab))
 - convert test_forward to C ([`cd51377`](https://github.com/dstroy0/ProtoCore/commit/cd5137768304755897491ed960dfa40bb7306294))
 - build the clock TU in native_clock ([`5ab8253`](https://github.com/dstroy0/ProtoCore/commit/5ab82534bf6a084ab9ee782de6a1a7b3bed4835c))
 - make the host mocks compile as C and restore the virtual clock ([`940c3fd`](https://github.com/dstroy0/ProtoCore/commit/940c3fdd966f46480dc0e866055008ad324271c9))
