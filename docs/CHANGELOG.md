@@ -19,6 +19,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`9f9e696`](https://github.com/dstroy0/ProtoCore/commit/9f9e6969e066a5f2aeae51c671fa9cae990ea552))
 - update CHANGELOG.md [skip ci] ([`92692fe`](https://github.com/dstroy0/ProtoCore/commit/92692feeb69f0fb1eae77e48e94ab7f94f65cf2f))
 - update CHANGELOG.md [skip ci] ([`35227fe`](https://github.com/dstroy0/ProtoCore/commit/35227fe81e139d38478bdabfd176d0d415685b18))
 - update CHANGELOG.md [skip ci] ([`f8ee54e`](https://github.com/dstroy0/ProtoCore/commit/f8ee54e88c0686db636b3f4e39622c62322fc47e))
@@ -116,6 +117,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Refactor
 
+- move HTTP authentication into the L7 application layer ([`a602846`](https://github.com/dstroy0/ProtoCore/commit/a602846800937ce64a664fa8cb3f2f51c1a346ef))
 - move the TLS 1.3 key schedule into network_drivers/tls ([`ba1f6f2`](https://github.com/dstroy0/ProtoCore/commit/ba1f6f213d0d9b7417c73e07445da63292c8475f))
 - mirror the layer each module moved to ([`f575b3d`](https://github.com/dstroy0/ProtoCore/commit/f575b3dbfe9d40e243dbb67fffd804884cf2b59c))
 - move exc_decoder and power_mgmt into server/ ([`d14ca1e`](https://github.com/dstroy0/ProtoCore/commit/d14ca1e69c88b656b593965e9b5cf1cc569dab97))
