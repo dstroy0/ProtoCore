@@ -75,7 +75,7 @@ typedef enum PROTO_ENUM_PACKED
  * @brief Egress: emit @p len bytes on interface @p if_id.
  * @return true if the interface accepted the bytes; false drops (counted as a send fail).
  */
-using pc_if_send_fn = proto_bool (*)(uint8_t if_id, const uint8_t *data, uint16_t len, void *ctx);
+typedef proto_bool (*pc_if_send_fn)(uint8_t if_id, const uint8_t *data, uint16_t len, void *ctx);
 
 /** @brief Forwarding counters (monotonic since the last pc_forward_reset()). */
 typedef struct

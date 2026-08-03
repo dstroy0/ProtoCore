@@ -222,15 +222,20 @@ const char *pc_packml_command_name(PackMlCommand c)
 // state/reset timestamps - grouped in one owner (BSS, no heap), unreachable from any other translation unit.
 typedef struct
 {
-    PackMlState state = PACK_ML_STATE_UNDEFINED;
-    PackMlMode mode = PACK_ML_MODE_PRODUCING;
-    float mach_speed_cmd = 0.0f;
-    uint32_t prod_processed = 0;
-    uint32_t prod_defective = 0;
-    uint32_t reset_ms = 0;       // pc_millis at the last Reset -> AccTimeSinceReset base
-    uint32_t state_entry_ms = 0; // pc_millis at the last state change -> StateCurrentTime base
+    PackMlState state;
+    PackMlMode mode;
+    float mach_speed_cmd;
+    uint32_t prod_processed;
+    uint32_t prod_defective;
+    uint32_t reset_ms;       // pc_millis at the last Reset -> AccTimeSinceReset base
+    uint32_t state_entry_ms; // pc_millis at the last state change -> StateCurrentTime base
 } PackMlSvcCtx;
-static PackMlSvcCtx s_pml;
+// mode is the only member whose default is not the zero fill: PACK_ML_MODE_PRODUCING is 1, and
+// nothing sets it before a read (pc_packml_set_mode is a caller-driven setter).
+// PACK_ML_STATE_UNDEFINED is 0, so state needs no initializer.
+static PackMlSvcCtx s_pml = {
+    .mode = PACK_ML_MODE_PRODUCING,
+};
 
 static void enter_state(PackMlState s)
 {

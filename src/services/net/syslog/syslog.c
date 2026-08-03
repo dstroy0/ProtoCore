@@ -19,12 +19,12 @@
 // heap), grouped so it is one named owner, unreachable from any other translation unit.
 typedef struct
 {
-    char server_ip[16] = {0}; // "255.255.255.255" + NUL
-    uint16_t port = PC_SYSLOG_DEFAULT_PORT;
-    char hostname[PC_SYSLOG_FIELD_MAX] = {0};
-    char appname[PC_SYSLOG_FIELD_MAX] = {0};
-    SyslogFacility facility = SYSLOG_FAC_LOCAL0;
-    proto_bool ready = PROTO_FALSE;
+    char server_ip[16]; // "255.255.255.255" + NUL
+    uint16_t port;      // set by pc_syslog_init(); every read is gated on `ready`
+    char hostname[PC_SYSLOG_FIELD_MAX];
+    char appname[PC_SYSLOG_FIELD_MAX];
+    SyslogFacility facility; // likewise set by pc_syslog_init()
+    proto_bool ready;
     char buf[PC_SYSLOG_MSG_MAX];
 } SyslogCtx;
 static SyslogCtx s_syslog;

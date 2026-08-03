@@ -24,10 +24,10 @@ typedef struct
 {
     char lines[PC_LOG_LINES][PC_LOG_LINE_LEN]; // ring storage (BSS)
     uint8_t level[PC_LOG_LINES];               // per-line severity
-    uint16_t head = 0;                         // index of the oldest line
-    uint16_t count = 0;                        // lines currently held
-    uint8_t trap_threshold = 0xFF;             // 0xFF = trap disabled
-    pc_log_trap_fn trap = NULL;
+    uint16_t head;                             // index of the oldest line
+    uint16_t count;                            // lines currently held
+    uint8_t trap_threshold;                    // set with `trap` by pc_log_set_trap(); 0xFF disables
+    pc_log_trap_fn trap;                       // NULL until set; the null check gates trap_threshold
 } LogbufCtx;
 static LogbufCtx s_log;
 
@@ -35,11 +35,11 @@ static char level_letter(uint8_t level)
 {
     switch (level)
     {
-    case pc_log_level::PC_LOG_ERROR:
+    case PC_LOG_ERROR:
         return 'E';
-    case pc_log_level::PC_LOG_WARN:
+    case PC_LOG_WARN:
         return 'W';
-    case pc_log_level::PC_LOG_INFO:
+    case PC_LOG_INFO:
         return 'I';
     default:
         return 'D';

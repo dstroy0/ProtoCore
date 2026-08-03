@@ -75,17 +75,22 @@ typedef struct
     rule rules[PC_FWD_MAX_RULES];
     acl_entry acl[PC_FWD_MAX_ACL];
     route routes[PC_FWD_MAX_ROUTES];
-    pc_fwd_action acl_default = PC_FWD_ALLOW; // frames matching no ACL entry (opt-in ACL)
+    pc_fwd_action acl_default; // frames matching no ACL entry (opt-in ACL)
 #if PC_FWD_INSPECT
-    pc_fwd_inspect_fn inspector = NULL; // opt-in ingress inspection hook
-    void *inspect_ctx = NULL;
+    pc_fwd_inspect_fn inspector; // opt-in ingress inspection hook
+    void *inspect_ctx;
 #endif
     pc_forward_stats stats;
 #if !PROTOCORE_HOT
-    uint32_t now_ms = 0; // host test clock (real builds use pc_millis())
+    uint32_t now_ms; // host test clock (real builds use pc_millis())
 #endif
 } ForwardCtx;
-static ForwardCtx s_fwd;
+// acl_default must start at PC_FWD_ALLOW, which is 1: the ACL is opt-in, so an empty table passes
+// everything. pc_forward_reset() also sets it, but nothing in src/ calls that - it is the
+// application's to call - so the zero fill would silently make PC_FWD_DENY the default instead.
+static ForwardCtx s_fwd = {
+    .acl_default = PC_FWD_ALLOW,
+};
 
 #if PROTOCORE_HOT
 static uint32_t fwd_now()
@@ -99,13 +104,13 @@ static uint32_t fwd_now()
 }
 #endif
 
-static const iface *find_if(const ForwardCtx &f, uint8_t id)
+static const iface *find_if(const ForwardCtx *f, uint8_t id)
 {
     for (uint8_t i = 0; i < PC_FWD_MAX_IFACES; i++)
     {
-        if (f.if_[i].used && f.if_[i].id == id)
+        if (f->if_[i].used && f->if_[i].id == id)
         {
-            return &f.if_[i];
+            return &f->if_[i];
         }
     }
     return NULL;
@@ -119,17 +124,17 @@ typedef enum PROTO_ENUM_PACKED
     RESOLVE_RESULT_R_DENY,
     RESOLVE_RESULT_R_ALLOW,
 } resolve_result;
-static resolve_result resolve(const ForwardCtx &f, uint8_t src, uint8_t dst, int *allow_idx)
+static resolve_result resolve(const ForwardCtx *f, uint8_t src, uint8_t dst, int *allow_idx)
 {
     int allow = -1;
     proto_bool deny = PROTO_FALSE;
     for (uint8_t i = 0; i < PC_FWD_MAX_RULES; i++)
     {
-        if (!f.rules[i].used || f.rules[i].src != src || f.rules[i].dst != dst)
+        if (!f->rules[i].used || f->rules[i].src != src || f->rules[i].dst != dst)
         {
             continue;
         }
-        if (f.rules[i].action == PC_FWD_DENY)
+        if (f->rules[i].action == PC_FWD_DENY)
         {
             deny = PROTO_TRUE;
         }
@@ -152,29 +157,29 @@ static resolve_result resolve(const ForwardCtx &f, uint8_t src, uint8_t dst, int
 
 // Fixed 1-second window rate cap; fail-closed (returns true = drop) once the cap is hit.
 // Shared by the src->dst rules and the policy routes (same window bookkeeping fields).
-static proto_bool rate_gate(uint32_t &window_start, uint16_t &count, uint16_t rate_cap)
+static proto_bool rate_gate(uint32_t *window_start, uint16_t *count, uint16_t rate_cap)
 {
     if (rate_cap == 0)
     {
         return PROTO_FALSE; // unlimited
     }
     uint32_t now = fwd_now();
-    if ((now - window_start) >= 1000)
+    if ((now - *window_start) >= 1000)
     {
-        window_start = now;
-        count = 0;
+        *window_start = now;
+        *count = 0;
     }
-    if (count >= rate_cap)
+    if (*count >= rate_cap)
     {
         return PROTO_TRUE;
     }
-    count++;
+    (*count)++;
     return PROTO_FALSE;
 }
 
 static proto_bool rate_exceeded(rule *r)
 {
-    return rate_gate(r->window_start, r->count, r->rate_cap);
+    return rate_gate(&r->window_start, &r->count, r->rate_cap);
 }
 
 // Does a stored byte pattern match this frame? (already-masked @p pattern under @p mask at
@@ -211,16 +216,16 @@ static proto_bool acl_match(const acl_entry *a, uint8_t src, const uint8_t *data
 }
 
 // Ingress ACL: the first matching entry's action decides; otherwise the default.
-static proto_bool acl_permits(const ForwardCtx &f, uint8_t src, const uint8_t *data, uint16_t len)
+static proto_bool acl_permits(const ForwardCtx *f, uint8_t src, const uint8_t *data, uint16_t len)
 {
     for (uint8_t i = 0; i < PC_FWD_MAX_ACL; i++)
     {
-        if (f.acl[i].used && acl_match(&f.acl[i], src, data, len))
+        if (f->acl[i].used && acl_match(&f->acl[i], src, data, len))
         {
-            return f.acl[i].action == PC_FWD_ALLOW;
+            return f->acl[i].action == PC_FWD_ALLOW;
         }
     }
-    return f.acl_default == PC_FWD_ALLOW;
+    return f->acl_default == PC_FWD_ALLOW;
 }
 
 void pc_forward_reset(void)
@@ -307,7 +312,7 @@ proto_bool pc_forward_route_add(uint8_t src_if, uint16_t offset, const uint8_t *
 
 proto_bool pc_forward_add_if(uint8_t if_id, pc_if_kind kind, pc_if_send_fn send, void *ctx)
 {
-    if (!send || find_if(s_fwd, if_id))
+    if (!send || find_if(&s_fwd, if_id))
     {
         return PROTO_FALSE;
     }
@@ -354,27 +359,27 @@ static uint8_t forward_policy_route(uint8_t src_if, const uint8_t *data, uint16_
     *handled = PROTO_TRUE;
     for (uint8_t i = 0; i < PC_FWD_MAX_ROUTES; i++)
     {
-        route &rt = s_fwd.routes[i];
-        if (!rt.used || (rt.src != PC_FWD_IF_ANY && rt.src != src_if))
+        route *rt = &s_fwd.routes[i];
+        if (!rt->used || (rt->src != PC_FWD_IF_ANY && rt->src != src_if))
         {
             continue;
         }
-        if (!pat_match(rt.offset, rt.pattern, rt.mask, rt.patlen, data, len))
+        if (!pat_match(rt->offset, rt->pattern, rt->mask, rt->patlen, data, len))
         {
             continue;
         }
         s_fwd.stats.policy_routed++;
-        if (rt.egress == src_if) // never reflect to the source interface
+        if (rt->egress == src_if) // never reflect to the source interface
         {
             return 0;
         }
-        const iface *out = find_if(s_fwd, rt.egress);
+        const iface *out = find_if(&s_fwd, rt->egress);
         if (!out) // egress not registered -> drop, fail-closed
         {
             s_fwd.stats.send_fail++;
             return 0;
         }
-        if (rate_gate(rt.window_start, rt.count, rt.rate_cap))
+        if (rate_gate(&rt->window_start, &rt->count, rt->rate_cap))
         {
             s_fwd.stats.rate_dropped++;
             return 0;
@@ -394,7 +399,7 @@ static uint8_t forward_policy_route(uint8_t src_if, const uint8_t *data, uint16_
 uint8_t pc_forward_ingress(uint8_t src_if, const uint8_t *data, uint16_t len)
 {
     s_fwd.stats.frames_in++;
-    if (!acl_permits(s_fwd, src_if, data, len)) // ingress ACL runs before any forwarding rule
+    if (!acl_permits(&s_fwd, src_if, data, len)) // ingress ACL runs before any forwarding rule
     {
         s_fwd.stats.acl_denied++;
         return 0;
@@ -423,7 +428,7 @@ uint8_t pc_forward_ingress(uint8_t src_if, const uint8_t *data, uint16_t len)
             continue;
         }
         int idx = -1;
-        resolve_result r = resolve(s_fwd, src_if, s_fwd.if_[i].id, &idx);
+        resolve_result r = resolve(&s_fwd, src_if, s_fwd.if_[i].id, &idx);
         if (r == RESOLVE_RESULT_R_NOROUTE)
         {
             continue; // default-deny, silent

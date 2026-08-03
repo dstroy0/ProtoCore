@@ -55,12 +55,12 @@ typedef enum PROTO_ENUM_PACKED
  *
  * @param server_ip dotted-quad IPv4 of the syslog server (e.g. "192.168.1.10").
  * @param port      server UDP port (514 is the IANA syslog port).
- * @param hostname  this device's HOSTNAME field (copied; pass nullptr/"" for "-").
- * @param appname   APP-NAME field (copied; pass nullptr/"" for "-").
- * @param facility  syslog facility (default LOCAL0).
+ * @param hostname  this device's HOSTNAME field (copied; pass NULL/"" for "-").
+ * @param appname   APP-NAME field (copied; pass NULL/"" for "-").
+ * @param facility  syslog facility, e.g. SYSLOG_FAC_LOCAL0.
  */
 void pc_syslog_init(const char *server_ip, uint16_t port, const char *hostname, const char *appname,
-                    SyslogFacility facility = SYSLOG_FAC_LOCAL0);
+                    SyslogFacility facility);
 
 /**
  * @brief Format one RFC 5424 line into @p out (host-testable; no sockets/heap).
