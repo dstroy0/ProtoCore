@@ -33,21 +33,24 @@ void tearDown()
 }
 
 // Parse an ASCII hex string into bytes.
+// One hex digit to its value.
+static int nyb(char c)
+{
+    if (c >= '0' && c <= '9')
+    {
+        return c - '0';
+    }
+    if (c >= 'a' && c <= 'f')
+    {
+        return c - 'a' + 10;
+    }
+    return c - 'A' + 10;
+}
+
 static void hx(const char *s, uint8_t *out, size_t n)
 {
     for (size_t i = 0; i < n; i++)
     {
-        auto nyb = [](char c) -> int {
-            if (c >= '0' && c <= '9')
-            {
-                return c - '0';
-            }
-            if (c >= 'a' && c <= 'f')
-            {
-                return c - 'a' + 10;
-            }
-            return c - 'A' + 10;
-        };
         out[i] = (uint8_t)((nyb(s[2 * i]) << 4) | nyb(s[2 * i + 1]));
     }
 }

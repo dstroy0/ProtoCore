@@ -173,9 +173,9 @@ void test_aesgcm_gctr_counter_byte_carry(void)
     }
 
     const size_t n = 255 * 16; // 4080 B > 254 blocks -> GCTR counter byte 15 carries mid-seal
-    uint8_t *pt = new uint8_t[n];
-    uint8_t *out = new uint8_t[n + 16];
-    uint8_t *rt = new uint8_t[n];
+    static uint8_t pt[255 * 16];
+    static uint8_t out[255 * 16 + 16];
+    static uint8_t rt[255 * 16];
     for (size_t i = 0; i < n; i++)
     {
         pt[i] = (uint8_t)(i * 31 + 7);
@@ -184,10 +184,6 @@ void test_aesgcm_gctr_counter_byte_carry(void)
     pc_aesgcm_seal(gcm_key(key), iv, NULL, 0, pt, n, out, out + n);
     TEST_ASSERT_TRUE(pc_aesgcm_open(gcm_key(key), iv, NULL, 0, out, n, out + n, rt));
     TEST_ASSERT_EQUAL_UINT8_ARRAY(pt, rt, n);
-
-    delete[] pt;
-    delete[] out;
-    delete[] rt;
 }
 
 int main()

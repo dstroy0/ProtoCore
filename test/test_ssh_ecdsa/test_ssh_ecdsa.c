@@ -20,12 +20,17 @@ void tearDown()
 {
 }
 
+// One hex digit to its value.
+static int nib(char c)
+{
+    return c >= 'a' ? c - 'a' + 10 : (c >= 'A' ? c - 'A' + 10 : c - '0');
+}
+
 static size_t hexdec(const char *h, uint8_t *out)
 {
     size_t n = 0;
     for (; h[0] && h[1]; h += 2)
     {
-        auto nib = [](char c) -> int { return c >= 'a' ? c - 'a' + 10 : (c >= 'A' ? c - 'A' + 10 : c - '0'); };
         out[n++] = (uint8_t)((nib(h[0]) << 4) | nib(h[1]));
     }
     return n;
@@ -146,21 +151,24 @@ static void test_ecdsa_roundtrip_other_key(void)
 // Stress the scalar multiplication across many distinct secret scalars: pubkey -> sign -> verify must
 // round-trip and a one-bit tamper must be rejected, for 48 deterministic pseudo-random keys/messages.
 // A fixed-window ladder has index/table-zero edge cases the two KAT vectors alone would not exercise.
+// One byte of the deterministic xorshift64 stream, advancing the caller's state.
+static uint8_t next_byte(uint64_t *st)
+{
+    *st ^= *st << 13;
+    *st ^= *st >> 7;
+    *st ^= *st << 17;
+    return (uint8_t)(*st >> 24);
+}
+
 static void test_ecdsa_random_roundtrip_stress(void)
 {
     uint64_t st = 0x9e3779b97f4a7c15ULL; // deterministic xorshift64 (reproducible, no RNG dependency)
-    auto next = [&st]() -> uint8_t {
-        st ^= st << 13;
-        st ^= st >> 7;
-        st ^= st << 17;
-        return (uint8_t)(st >> 24);
-    };
     for (int iter = 0; iter < 48; iter++)
     {
         uint8_t priv[32];
         for (int i = 0; i < 32; i++)
         {
-            priv[i] = next();
+            priv[i] = next_byte(&st);
         }
         priv[0] &= 0x7F; // keep d < n (n's top byte is 0xFF, so clearing the MSB is sufficient and non-zero)
         priv[31] |= 0x01;
@@ -170,7 +178,7 @@ static void test_ecdsa_random_roundtrip_stress(void)
         uint8_t msg[24];
         for (int i = 0; i < 24; i++)
         {
-            msg[i] = next();
+            msg[i] = next_byte(&st);
         }
         uint8_t sig[64];
         TEST_ASSERT_TRUE(pc_ecdsa_p256_sign(sig, msg, sizeof(msg), priv));
