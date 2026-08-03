@@ -33,7 +33,7 @@ void setUp()
 {
     set_millis(0);
     queue_stage_reset(); // clear any staged events from previous test
-    DeterministicAsyncTCP::pool_init();
+    proto_tcp_pool_init(NULL);
     listener_add(0, 80, PROTO_HTTP);
     for (int i = 0; i < MAX_CONNS; i++)
     {
@@ -357,10 +357,10 @@ void test_dispatch_ignores_unknown_evt_type()
 // skipped by the drain loop, not dereferenced.
 void test_tick_skips_active_listener_with_null_queue()
 {
-    listener_pool[1].active = true;
+    listener_pool[1].active = PROTO_TRUE;
     listener_pool[1].queue = NULL;
     server_tick(0); // must not crash
-    listener_pool[1].active = false;
+    listener_pool[1].active = PROTO_FALSE;
     TEST_PASS();
 }
 
