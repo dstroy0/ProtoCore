@@ -52,6 +52,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`2877f9f`](https://github.com/dstroy0/ProtoCore/commit/2877f9f911990d199c86e9a4a04e9ce11d8a1fc7))
 - update CHANGELOG.md [skip ci] ([`a74dfd9`](https://github.com/dstroy0/ProtoCore/commit/a74dfd93ab4a546d29955ab8f9352b5f2ac407d4))
 - update CHANGELOG.md [skip ci] ([`b468456`](https://github.com/dstroy0/ProtoCore/commit/b468456fb315a99958491667752fba85b1d2efb8))
 - update CHANGELOG.md [skip ci] ([`09e6682`](https://github.com/dstroy0/ProtoCore/commit/09e6682cd48080970ecde9b23abcf2412c4df955))
@@ -335,6 +336,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- a real filesystem always has a root, so the bare mount resolves ([`94115b5`](https://github.com/dstroy0/ProtoCore/commit/94115b5a9d94ce422625978eafdd11e0cfe12fda))
 - stop a WebDAV delete through the write it needs, not a handle ([`28620ea`](https://github.com/dstroy0/ProtoCore/commit/28620eaa287a894899e8b7a61f1a3d6b8874c315))
 - add a medium that refuses every write ([`1345032`](https://github.com/dstroy0/ProtoCore/commit/134503202fadcac46a6631aa63ff438efbbe032e))
 - WebDAV storage refusals now come from the medium ([`5b0624b`](https://github.com/dstroy0/ProtoCore/commit/5b0624b57dc61f025c534d06aeb3b9454465fd86))
