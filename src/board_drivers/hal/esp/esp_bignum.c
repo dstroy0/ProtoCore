@@ -42,10 +42,11 @@ void bn_expmod_group14(pc_bignum *out, const pc_bignum *base, const pc_bignum *e
 {
     // Big-endian temporaries live in the shared crypto scratch, not on the stack: exp holds the DH private
     // exponent and res the shared secret, so the whole region is wiped on exit (mmgr/secure.h).
-    SecureBorrow ws_b(sizeof(BnExpmodBytes), alignof(BnExpmodBytes));
-    const pc_span &ws = ws_b.span();
+    size_t mark = pc_secure_mark();
+    pc_span ws = pc_secure_span(sizeof(BnExpmodBytes), _Alignof(BnExpmodBytes));
     if (!pc_span_ok(ws))
     {
+        pc_secure_release(mark);
         memset(out, 0, sizeof(*out)); // pool exhausted: a zero result fails every downstream check
         return;
     }
@@ -80,6 +81,7 @@ void bn_expmod_group14(pc_bignum *out, const pc_bignum *base, const pc_bignum *e
     mbedtls_mpi_free(&R);
 
     bn_from_bytes(out, res_be, 256);
+    pc_secure_release(mark);
 }
 
 #endif // PC_HAS_HW_BIGNUM

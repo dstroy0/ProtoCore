@@ -19,7 +19,7 @@
 #include "crypto/kdf/kdf.h"         // pc_kdf_ctr_hmac_sha256 for SMB 3.x key derivation
 #include "crypto/mac/aes_cmac.h"    // pc_aes_cmac for SMB 3.x message signing
 #include "crypto/mac/hmac_sha256.h" // pc_hmac_sha256 for SMB 2.x message signing
-#include "mmgr/secure.h"            // SecureBorrow: the per-call GCM context
+#include "mmgr/secure.h"            // the per-call GCM context borrow
 #include "shared_primitives/endian.h"
 
 static const uint8_t SMB2_PROTOCOL_ID[4] = {0xFE, 'S', 'M', 'B'};
@@ -931,10 +931,11 @@ size_t pc_smb2_encrypt(uint16_t cipher, const uint8_t *key, const uint8_t nonce[
     case SMB2_ENCRYPTION_AES128_GCM: {
         // Per-call context: same reasoning as the AES-256 branch below - not a hot enough path to justify
         // a per-session one, and the lifecycle cost is at least visible here.
-        SecureBorrow g_b(PC_WORK_AES128GCM, 8);
-        pc_aes128gcm_key *g = pc_aes128gcm_key_init(g_b.span().buf, key);
+        size_t mark = pc_secure_mark();
+        pc_aes128gcm_key *g = pc_aes128gcm_key_init(pc_secure_span(PC_WORK_AES128GCM, 8).buf, key);
         pc_aes128gcm_seal(g, out + 20, aad, 32, msg, msg_len, ct, tag);
         pc_aes128gcm_key_wipe(g);
+        pc_secure_release(mark);
     }
         ok = PROTO_TRUE;
         break;
@@ -942,10 +943,11 @@ size_t pc_smb2_encrypt(uint16_t cipher, const uint8_t *key, const uint8_t nonce[
         // Per-call context: this path is not hot enough to justify a per-session one. The cost is the
         // ~9,200-cycle lifecycle documented in aesgcm.h - hoist the context into session state if it
         // ever shows up in a profile.
-        SecureBorrow gcm_b(PC_WORK_AESGCM, 8);
-        struct pc_aesgcm_key *gcm = pc_aesgcm_key_init(gcm_b.span().buf, key);
+        size_t mark = pc_secure_mark();
+        struct pc_aesgcm_key *gcm = pc_aesgcm_key_init(pc_secure_span(PC_WORK_AESGCM, 8).buf, key);
         pc_aesgcm_seal(gcm, out + 20, aad, 32, msg, msg_len, ct, tag);
         pc_aesgcm_key_wipe(gcm);
+        pc_secure_release(mark);
     }
         ok = PROTO_TRUE;
         break;
@@ -999,20 +1001,22 @@ size_t pc_smb2_decrypt(uint16_t cipher, const uint8_t *key, const uint8_t *in, s
     case SMB2_ENCRYPTION_AES128_GCM: {
         // Per-call context: same reasoning as the AES-256 branch below - not a hot enough path to justify
         // a per-session one, and the lifecycle cost is at least visible here.
-        SecureBorrow g_b(PC_WORK_AES128GCM, 8);
-        pc_aes128gcm_key *g = pc_aes128gcm_key_init(g_b.span().buf, key);
+        size_t mark = pc_secure_mark();
+        pc_aes128gcm_key *g = pc_aes128gcm_key_init(pc_secure_span(PC_WORK_AES128GCM, 8).buf, key);
         ok = pc_aes128gcm_open(g, aad, aad, 32, ct, ct_len, tag, out);
         pc_aes128gcm_key_wipe(g);
+        pc_secure_release(mark);
     }
     break;
     case SMB2_ENCRYPTION_AES256_GCM: {
         // Per-call context: this path is not hot enough to justify a per-session one. The cost is the
         // ~9,200-cycle lifecycle documented in aesgcm.h - hoist the context into session state if it
         // ever shows up in a profile.
-        SecureBorrow gcm_b(PC_WORK_AESGCM, 8);
-        struct pc_aesgcm_key *gcm = pc_aesgcm_key_init(gcm_b.span().buf, key);
+        size_t mark = pc_secure_mark();
+        struct pc_aesgcm_key *gcm = pc_aesgcm_key_init(pc_secure_span(PC_WORK_AESGCM, 8).buf, key);
         ok = pc_aesgcm_open(gcm, aad, aad, 32, ct, ct_len, tag, out);
         pc_aesgcm_key_wipe(gcm);
+        pc_secure_release(mark);
     }
     break;
     case SMB2_ENCRYPTION_AES128_CCM:

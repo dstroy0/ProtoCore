@@ -16,7 +16,7 @@
 #include "crypto/asymmetric/rsa.h"        // RSA-2048 certificate AUTH verify
 #include "crypto/hash/sha256.h"           // anti-DoS COOKIE hash (RFC 7296 §2.6)
 #include "crypto/mac/hmac_sha256.h"       // PRF = HMAC-SHA2-256
-#include "mmgr/secure.h"                  // SecureBorrow: the per-call GCM context
+#include "mmgr/secure.h"                  // the per-call GCM context borrow
 #include <string.h>                       // memcpy / memset (framing is hand-rolled)
 
 // ── big-endian scalar helpers ─────────────────────────────────────────────────────────────────
@@ -1430,10 +1430,11 @@ proto_bool pc_ike_sk_aead_seal(const uint8_t key[PC_IKE_AEAD_KEY_LEN], const uin
         // Per-call context: this path is not hot enough to justify a per-session one. The cost is the
         // ~9,200-cycle lifecycle documented in aesgcm.h - hoist the context into session state if it
         // ever shows up in a profile.
-        SecureBorrow gcm_b(PC_WORK_AESGCM, 8);
-        struct pc_aesgcm_key *gcm = pc_aesgcm_key_init(gcm_b.span().buf, key);
+        size_t mark = pc_secure_mark();
+        struct pc_aesgcm_key *gcm = pc_aesgcm_key_init(pc_secure_span(PC_WORK_AESGCM, 8).buf, key);
         pc_aesgcm_seal(gcm, nonce, aad, aad_len, pt, pt_len, out, out + pt_len); // out = ct || 16-byte tag
         pc_aesgcm_key_wipe(gcm);
+        pc_secure_release(mark);
     }
     return PROTO_TRUE;
 }
@@ -1453,10 +1454,11 @@ proto_bool pc_ike_sk_aead_open(const uint8_t key[PC_IKE_AEAD_KEY_LEN], const uin
         // Per-call context: this path is not hot enough to justify a per-session one. The cost is the
         // ~9,200-cycle lifecycle documented in aesgcm.h - hoist the context into session state if it
         // ever shows up in a profile.
-        SecureBorrow gcm_b(PC_WORK_AESGCM, 8);
-        struct pc_aesgcm_key *gcm = pc_aesgcm_key_init(gcm_b.span().buf, key);
+        size_t mark = pc_secure_mark();
+        struct pc_aesgcm_key *gcm = pc_aesgcm_key_init(pc_secure_span(PC_WORK_AESGCM, 8).buf, key);
         ok = pc_aesgcm_open(gcm, nonce, aad, aad_len, ct, ct_len, tag, out);
         pc_aesgcm_key_wipe(gcm);
+        pc_secure_release(mark);
     }
     return ok;
 }

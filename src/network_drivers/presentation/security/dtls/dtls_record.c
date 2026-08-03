@@ -71,15 +71,15 @@ void pc_dtls_record_keys_derive(DtlsRecordKeys *out, DtlsCipher cipher, uint16_t
     // The pool cannot come up short here: PC_SECURE_ARENA_SIZE is the SUM of every PC_WORK_*, a
     // strict upper bound rather than a deepest-nest estimate, so a borrow inside that budget always
     // succeeds. The borrow also wipes on release, on every exit path.
-    SecureBorrow kb(PC_AES128GCM_KEY_LEN, 8);
-    uint8_t *k = kb.span().buf;
+    size_t mark = pc_secure_mark();
+    uint8_t *k = pc_secure_span(PC_AES128GCM_KEY_LEN, 8).buf;
     pc_tls13_kdf_expand_label(&DTLS13_KDF, secret, "key", k, PC_AES128GCM_KEY_LEN);
     pc_aes128gcm_key_init(out->gcm, k);
     pc_tls13_kdf_expand_label(&DTLS13_KDF, secret, "iv", out->iv, sizeof(out->iv));
-    SecureBorrow snb(PC_AES128GCM_KEY_LEN, 8);
-    uint8_t *snk = snb.span().buf;
+    uint8_t *snk = pc_secure_span(PC_AES128GCM_KEY_LEN, 8).buf;
     pc_tls13_kdf_expand_label(&DTLS13_KDF, secret, "sn", snk, PC_AES128GCM_KEY_LEN);
     pc_aes128_init((pc_aes128 *)(out->sn_key), snk);
+    pc_secure_release(mark);
 }
 
 // ---------------------------------------------------------------------------

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file portable_bignum.cpp
+ * @file portable_bignum.c
  * @brief Software Montgomery modexp - the bignum backend for a vendor with no accelerator.
  *
  * Selected EXPLICITLY by a vendor profile that sets PC_HAS_HW_BIGNUM 0. It is never a fallback: the
@@ -192,10 +192,11 @@ void bn_expmod_group14(pc_bignum *out, const pc_bignum *base, const pc_bignum *e
 
     // The whole working set in one borrow. These are the same bytes the fixed layout carved by hand;
     // as struct members they cannot drift from a layout documented somewhere else.
-    SecureBorrow ws_b(sizeof(BnExpmodWork), alignof(BnExpmodWork));
-    const pc_span &ws = ws_b.span();
+    size_t mark = pc_secure_mark();
+    pc_span ws = pc_secure_span(sizeof(BnExpmodWork), _Alignof(BnExpmodWork));
     if (!pc_span_ok(ws))
     {
+        pc_secure_release(mark);
         memset(out, 0, sizeof(*out)); // pool exhausted: a zero result fails every downstream check
         return;
     }
@@ -235,6 +236,7 @@ void bn_expmod_group14(pc_bignum *out, const pc_bignum *base, const pc_bignum *e
     memset(one.d, 0, sizeof(pc_bignum));
     one.d[0] = 1u;
     bn_monpro(out, result, &one, w->t);
+    pc_secure_release(mark);
 }
 
 #endif // !PC_HAS_HW_BIGNUM

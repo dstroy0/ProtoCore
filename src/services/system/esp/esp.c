@@ -11,7 +11,7 @@
 #if PC_ENABLE_IKEV2
 
 #include "crypto/aead/aesgcm.h"
-#include "mmgr/secure.h" // SecureBorrow: the per-call GCM context
+#include "mmgr/secure.h" // the per-call GCM context borrow
 #include <string.h>
 
 static void put32be(uint8_t *p, uint32_t v)
@@ -75,10 +75,11 @@ size_t pc_esp_gcm_encapsulate(uint32_t spi, uint32_t seq, const uint8_t key[PC_E
         // Per-call context: this path is not hot enough to justify a per-session one. The cost is the
         // ~9,200-cycle lifecycle documented in aesgcm.h - hoist the context into session state if it
         // ever shows up in a profile.
-        SecureBorrow gcm_b(PC_WORK_AESGCM, 8);
-        struct pc_aesgcm_key *gcm = pc_aesgcm_key_init(gcm_b.span().buf, key);
+        size_t mark = pc_secure_mark();
+        struct pc_aesgcm_key *gcm = pc_aesgcm_key_init(pc_secure_span(PC_WORK_AESGCM, 8).buf, key);
         pc_aesgcm_seal(gcm, nonce, out, PC_ESP_HDR_LEN, pt, pt_len, pt, pt + pt_len);
         pc_aesgcm_key_wipe(gcm);
+        pc_secure_release(mark);
     }
     return total;
 }
@@ -109,10 +110,11 @@ proto_bool pc_esp_gcm_decapsulate(const uint8_t key[PC_ESP_KEY_LEN], const uint8
         // Per-call context: this path is not hot enough to justify a per-session one. The cost is the
         // ~9,200-cycle lifecycle documented in aesgcm.h - hoist the context into session state if it
         // ever shows up in a profile.
-        SecureBorrow gcm_b(PC_WORK_AESGCM, 8);
-        struct pc_aesgcm_key *gcm = pc_aesgcm_key_init(gcm_b.span().buf, key);
+        size_t mark = pc_secure_mark();
+        struct pc_aesgcm_key *gcm = pc_aesgcm_key_init(pc_secure_span(PC_WORK_AESGCM, 8).buf, key);
         ok = pc_aesgcm_open(gcm, nonce, packet, PC_ESP_HDR_LEN, ct, ct_len, tag, ct); // AAD = SPI | Seq
         pc_aesgcm_key_wipe(gcm);
+        pc_secure_release(mark);
     }
     if (!ok)
     {
