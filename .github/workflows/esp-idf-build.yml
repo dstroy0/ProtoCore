@@ -1,0 +1,73 @@
+name: ESP-IDF Build
+
+# Builds the library through the ESP-IDF CMake toolchain, the third consumer path alongside
+# PlatformIO (esp32-build.yml) and arduino-cli (arduino-build.yml). Those two both compile the
+# tree as an Arduino library; this one compiles it as an IDF component via the repo-root
+# CMakeLists.txt, which is the only path that exercises idf_component_register, the REQUIRES
+# list, and the whole-tree source glob. The glob takes src/*.c AND src/*.cpp, so a duplicate
+# translation unit or a source that only compiles under a C++ driver fails here and nowhere else.
+#
+# The two projects under examples/esp-idf/ are built as committed, sdkconfig.defaults included.
+# Both set CONFIG_AUTOSTART_ARDUINO, so this is the Arduino-as-component flavor; the plain-IDF
+# flavor (idf.py -DPC_WITH_ARDUINO=OFF) is not covered here.
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - "src/**"
+      - "examples/esp-idf/**"
+      - "CMakeLists.txt"
+      - "idf_component.yml"
+      - ".github/workflows/esp-idf-build.yml"
+  pull_request:
+    branches: [main, master]
+    paths:
+      - "src/**"
+      - "examples/esp-idf/**"
+      - "CMakeLists.txt"
+      - "idf_component.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: esp-idf-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: ${{ matrix.example }} (IDF ${{ matrix.idf }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        example: [minimal, Industrial_ESPIDF]
+        # idf_component.yml declares idf ">=5.3,<5.6". v5.5 is the top of that range; bump both
+        # together, since a version outside it fails dependency resolution rather than the build.
+        idf: [v5.5]
+    steps:
+      - uses: actions/checkout@v7
+
+      # arduino-esp32 is fetched from the ESP Component Registry on first build (minutes), and
+      # lands in the example's own managed_components/. Keyed on the manifest, which is what
+      # pins the dependency version.
+      - uses: actions/cache@v4
+        with:
+          path: examples/esp-idf/${{ matrix.example }}/managed_components
+          key: idf-${{ matrix.idf }}-${{ matrix.example }}-${{ hashFiles('idf_component.yml') }}
+          restore-keys: idf-${{ matrix.idf }}-${{ matrix.example }}-
+
+      - uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: ${{ matrix.idf }}
+          target: esp32
+          path: examples/esp-idf/${{ matrix.example }}
+
+      - name: Size report
+        working-directory: examples/esp-idf/${{ matrix.example }}
+        run: |
+          BIN=$(find build -maxdepth 1 -name "*.bin" ! -name "bootloader*" ! -name "partition*" | head -1)
+          [ -n "$BIN" ] || { echo "no application binary produced"; exit 1; }
+          echo "### ${{ matrix.example }} (IDF ${{ matrix.idf }})" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          ls -l "$BIN" | awk '{print $9, $5 " bytes"}' >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
