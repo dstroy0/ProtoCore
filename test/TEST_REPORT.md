@@ -1,8 +1,8 @@
 # Test Report
 
-**Generated:** 2026-08-03 23:06:33
+**Generated:** 2026-08-03 23:18:37
 **Command:** `pio test` over 304 auto-discovered native envs (excludes native_pentest, native_codeql)
-**Result:** ✅ 13 passed - 169s
+**Result:** ✅ 13 passed - 170s
 
 ---
 
@@ -150,6 +150,7 @@
 | `test_telnet`            | `native_telnet`         |     0 |   ✅   | 00:00:01.115 |
 | `test_hpack`             | `native_hpack`          |     0 |   ✅   | 00:00:10.587 |
 | `test_transport`         | `native_transport`      |     0 |   ✅   | 00:00:09.465 |
+| `test_provisioning`      | `native_prov`           |     0 |   ✅   | 00:00:01.420 |
 
 ---
 

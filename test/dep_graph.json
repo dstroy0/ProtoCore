@@ -1,4 +1,16 @@
 {
+".pio/libdeps/native_crypto_kat/littlefs/include/lfs.h": [
+"native_crypto_kat"
+],
+".pio/libdeps/native_crypto_kat/littlefs/include/lfs_util.h": [
+"native_crypto_kat"
+],
+".pio/libdeps/native_crypto_kat/littlefs/src/lfs.c": [
+"native_crypto_kat"
+],
+".pio/libdeps/native_crypto_kat/littlefs/src/lfs_util.c": [
+"native_crypto_kat"
+],
 ".pio/libdeps/native_hpack/littlefs/include/lfs.h": [
 "native_hpack"
 ],
@@ -10,6 +22,30 @@
 ],
 ".pio/libdeps/native_hpack/littlefs/src/lfs_util.c": [
 "native_hpack"
+],
+".pio/libdeps/native_prov/littlefs/include/lfs.h": [
+"native_prov"
+],
+".pio/libdeps/native_prov/littlefs/include/lfs_util.h": [
+"native_prov"
+],
+".pio/libdeps/native_prov/littlefs/src/lfs.c": [
+"native_prov"
+],
+".pio/libdeps/native_prov/littlefs/src/lfs_util.c": [
+"native_prov"
+],
+".pio/libdeps/native_smb/littlefs/include/lfs.h": [
+"native_smb"
+],
+".pio/libdeps/native_smb/littlefs/include/lfs_util.h": [
+"native_smb"
+],
+".pio/libdeps/native_smb/littlefs/src/lfs.c": [
+"native_smb"
+],
+".pio/libdeps/native_smb/littlefs/src/lfs_util.c": [
+"native_smb"
 ],
 ".pio/libdeps/native_sse/littlefs/include/lfs.h": [
 "native_sse"
@@ -23,6 +59,18 @@
 ".pio/libdeps/native_sse/littlefs/src/lfs_util.c": [
 "native_sse"
 ],
+".pio/libdeps/native_ssh/littlefs/include/lfs.h": [
+"native_ssh"
+],
+".pio/libdeps/native_ssh/littlefs/include/lfs_util.h": [
+"native_ssh"
+],
+".pio/libdeps/native_ssh/littlefs/src/lfs.c": [
+"native_ssh"
+],
+".pio/libdeps/native_ssh/littlefs/src/lfs_util.c": [
+"native_ssh"
+],
 ".pio/libdeps/native_ssh_conn/littlefs/include/lfs.h": [
 "native_ssh_conn"
 ],
@@ -34,6 +82,18 @@
 ],
 ".pio/libdeps/native_ssh_conn/littlefs/src/lfs_util.c": [
 "native_ssh_conn"
+],
+".pio/libdeps/native_ssh_kbdint/littlefs/include/lfs.h": [
+"native_ssh_kbdint"
+],
+".pio/libdeps/native_ssh_kbdint/littlefs/include/lfs_util.h": [
+"native_ssh_kbdint"
+],
+".pio/libdeps/native_ssh_kbdint/littlefs/src/lfs.c": [
+"native_ssh_kbdint"
+],
+".pio/libdeps/native_ssh_kbdint/littlefs/src/lfs_util.c": [
+"native_ssh_kbdint"
 ],
 ".pio/libdeps/native_telnet/littlefs/include/lfs.h": [
 "native_telnet"
@@ -1241,26 +1301,30 @@
 "native_smb",
 "native_swar"
 ],
+"src/board_drivers/hal/portable/portable_aesgcm.c": [
+"native_smb",
+"native_ssh",
+"native_ssh_kbdint"
+],
 "src/board_drivers/hal/portable/portable_aesgcm.cpp": [
 "native_esp",
 "native_ikev2",
 "native_ipsec_db",
-"native_smb",
-"native_ssh",
 "native_ssh_aesgcm",
 "native_ssh_conn",
 "native_ssh_hardened",
-"native_ssh_kbdint",
 "native_ssh_pqc",
 "native_swar"
+],
+"src/board_drivers/hal/portable/portable_bignum.c": [
+"native_ssh",
+"native_ssh_kbdint"
 ],
 "src/board_drivers/hal/portable/portable_bignum.cpp": [
 "native_ikev2",
 "native_oidc",
-"native_ssh",
 "native_ssh_conn",
 "native_ssh_hardened",
-"native_ssh_kbdint",
 "native_ssh_pqc",
 "native_swar"
 ],
@@ -3496,11 +3560,13 @@
 "native_dtls_conn",
 "native_swar"
 ],
-"src/network_drivers/presentation/ssh/auth/ssh_auth.cpp": [
+"src/network_drivers/presentation/ssh/auth/ssh_auth.c": [
 "native_ssh",
+"native_ssh_kbdint"
+],
+"src/network_drivers/presentation/ssh/auth/ssh_auth.cpp": [
 "native_ssh_conn",
 "native_ssh_hardened",
-"native_ssh_kbdint",
 "native_ssh_pqc",
 "native_swar"
 ],
@@ -3512,11 +3578,13 @@
 "native_ssh_pqc",
 "native_swar"
 ],
-"src/network_drivers/presentation/ssh/connection/ssh_channel.cpp": [
+"src/network_drivers/presentation/ssh/connection/ssh_channel.c": [
 "native_ssh",
+"native_ssh_kbdint"
+],
+"src/network_drivers/presentation/ssh/connection/ssh_channel.cpp": [
 "native_ssh_conn",
 "native_ssh_hardened",
-"native_ssh_kbdint",
 "native_ssh_pqc",
 "native_swar"
 ],
@@ -3542,11 +3610,13 @@
 "native_ssh_conn",
 "native_swar"
 ],
-"src/network_drivers/presentation/ssh/connection/ssh_flow_control.cpp": [
+"src/network_drivers/presentation/ssh/connection/ssh_flow_control.c": [
 "native_ssh",
+"native_ssh_kbdint"
+],
+"src/network_drivers/presentation/ssh/connection/ssh_flow_control.cpp": [
 "native_ssh_conn",
 "native_ssh_hardened",
-"native_ssh_kbdint",
 "native_ssh_pqc",
 "native_swar"
 ],
@@ -3565,11 +3635,13 @@
 "native_ssh_conn",
 "native_swar"
 ],
-"src/network_drivers/presentation/ssh/connection/ssh_server.cpp": [
+"src/network_drivers/presentation/ssh/connection/ssh_server.c": [
 "native_ssh",
+"native_ssh_kbdint"
+],
+"src/network_drivers/presentation/ssh/connection/ssh_server.cpp": [
 "native_ssh_conn",
 "native_ssh_hardened",
-"native_ssh_kbdint",
 "native_ssh_pqc",
 "native_swar"
 ],
@@ -3587,11 +3659,13 @@
 "src/network_drivers/presentation/ssh/transport/ssh_comp.h": [
 "native_swar"
 ],
-"src/network_drivers/presentation/ssh/transport/ssh_dh.cpp": [
+"src/network_drivers/presentation/ssh/transport/ssh_dh.c": [
 "native_ssh",
+"native_ssh_kbdint"
+],
+"src/network_drivers/presentation/ssh/transport/ssh_dh.cpp": [
 "native_ssh_conn",
 "native_ssh_hardened",
-"native_ssh_kbdint",
 "native_ssh_pqc",
 "native_swar"
 ],
@@ -3629,11 +3703,13 @@
 "native_ssh_pqc",
 "native_swar"
 ],
-"src/network_drivers/presentation/ssh/transport/ssh_packet.cpp": [
+"src/network_drivers/presentation/ssh/transport/ssh_packet.c": [
 "native_ssh",
+"native_ssh_kbdint"
+],
+"src/network_drivers/presentation/ssh/transport/ssh_packet.cpp": [
 "native_ssh_conn",
 "native_ssh_hardened",
-"native_ssh_kbdint",
 "native_ssh_pqc",
 "native_swar"
 ],
@@ -3848,13 +3924,15 @@
 "native_ssh_pqc",
 "native_swar"
 ],
+"src/network_drivers/tls/ssh_rsa.c": [
+"native_ssh",
+"native_ssh_kbdint"
+],
 "src/network_drivers/tls/ssh_rsa.cpp": [
 "native_ikev2",
 "native_oidc",
-"native_ssh",
 "native_ssh_conn",
 "native_ssh_hardened",
-"native_ssh_kbdint",
 "native_ssh_pqc",
 "native_swar"
 ],
@@ -4356,6 +4434,7 @@
 "native_http_client",
 "native_json",
 "native_keepalive",
+"native_prov",
 "native_sse",
 "native_ssh",
 "native_ssh_conn",
@@ -6564,8 +6643,10 @@
 "native_swar",
 "native_upload"
 ],
+"src/services/system/provisioning_service/provisioning_service.c": [
+"native_prov"
+],
 "src/services/system/provisioning_service/provisioning_service.cpp": [
-"native_prov",
 "native_swar"
 ],
 "src/services/system/provisioning_service/provisioning_service.h": [
@@ -7614,6 +7695,7 @@
 ],
 "test/mocks/Arduino.h": [
 "native_clock",
+"native_crypto_kat",
 "native_edge_cache",
 "native_edge_cache_sd",
 "native_edge_mesh",
@@ -7626,7 +7708,9 @@
 "native_modbus",
 "native_modbus_master",
 "native_oidc",
+"native_prov",
 "native_sb_modbus",
+"native_smb",
 "native_sse",
 "native_ssh",
 "native_ssh_comp",
