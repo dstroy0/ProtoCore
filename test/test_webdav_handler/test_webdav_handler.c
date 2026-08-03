@@ -560,15 +560,7 @@ void test_webdav_copy_fs_table_full()
 {
     tree_put("/dav/f.txt", "data");
     tree_mkdir("/dav/d");
-    char p[32];
-    for (int i = 0; i < 100; i++) // fill every remaining node slot
-    {
-        snprintf(p, sizeof p, "/dav/p%03d", i);
-        if (!lfsm_write_text(p, ""))
-        {
-            break;
-        }
-    }
+    lfsm_fill_volume(); // no room left to create anything: both a file and a collection are refused
     feed_and_handle(0, "COPY /dav/f.txt HTTP/1.1\r\nHost: x\r\nDestination: /dav/fc\r\n\r\n"); // dst open("w") fails
     TEST_ASSERT_TRUE(pc_resp_status(409));
 
