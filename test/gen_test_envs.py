@@ -73,9 +73,37 @@ def render_env(name, e):
     return "\n".join(lines)
 
 
+# The flags every native env extends. Generated rather than left in the static head, because the
+# head is only preserved - never rewritten - so a value in it could not be corrected by running
+# this script, which is the one way platformio.ini is allowed to change.
+NATIVE_BASE = """; Shared flags for all native environments
+[native_base]
+platform = native
+build_flags =
+    ; src/ is C11 (docs/SRC_LAW.md section 0). gcc only warns that this is not the language of a
+    ; .cpp test suite, so the ones still awaiting conversion take g++'s own default.
+    -std=c11
+    ; src/ contains no throw / try / catch (no-heap, no-stdlib, deterministic - and the ESP32
+    ; target builds without exceptions anyway), so this only strips what the host toolchain would
+    ; add on its own. It matters for coverage: with exceptions on, g++ emits an unwind edge at
+    ; every call to a function that is not noexcept, and gcov counts each one as a BRANCH. Those
+    ; edges are unreachable by construction in a codebase that never throws, so they are pure
+    ; noise in the branch numbers and they make 100% branch coverage unattainable - wamp.cpp alone
+    ; carried 114 of them (280 branches -> 166, and 57 of its 84 "uncovered" branches vanished).
+    ; Keep this here rather than only in the coverage run so the tested build and the measured
+    ; build are the same build.
+    -fno-exceptions
+    -I test/mocks
+    -I test/support
+    -I src
+    -DPROTOCORE_HOST=1
+test_build_src = yes"""
+
+
 def render_block(table):
     envs = table["envs"]
-    parts = [BEGIN, "; Single source of truth: test/test_matrix.json  (" + str(len(envs)) + " native envs)"]
+    parts = [BEGIN, "; Single source of truth: test/test_matrix.json  (" + str(len(envs)) + " native envs)",
+             "", NATIVE_BASE]
     for name, e in envs.items():
         parts.append("")
         parts.append(render_env(name, e))
@@ -84,10 +112,32 @@ def render_block(table):
     return "\n".join(parts) + "\n"
 
 
+def strip_native_base(head):
+    """Drop a [native_base] left in the head; render_block emits it now.
+
+    Without this the block would appear twice on the first run after it moved, and the stale copy
+    is the one PlatformIO would read.
+    """
+    lines = head.split("\n")
+    out = []
+    i = 0
+    while i < len(lines):
+        if lines[i].strip() == "[native_base]":
+            while out and (out[-1].strip() == "" or out[-1].lstrip().startswith(";")):
+                out.pop()  # its own comment header goes with it
+            i += 1
+            while i < len(lines) and not lines[i].startswith("["):
+                i += 1
+            continue
+        out.append(lines[i])
+        i += 1
+    return "\n".join(out)
+
+
 def split_head(text):
     """Return the static head (everything above the generated region)."""
     if BEGIN in text:
-        return text.split(BEGIN, 1)[0].rstrip("\n") + "\n\n"
+        return strip_native_base(text.split(BEGIN, 1)[0]).rstrip("\n") + "\n\n"
     # First run: head = everything up to the first native env (minus its comments).
     lines = text.split("\n")
     first = next((i for i, l in enumerate(lines) if l.startswith("[env:native")), len(lines))
