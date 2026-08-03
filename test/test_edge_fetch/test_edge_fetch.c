@@ -18,7 +18,7 @@ void tearDown()
 
 // --- scripted mock origin transport --------------------------------------------------------------
 
-struct MockOrigin
+typedef struct
 {
     const uint8_t *data;
     size_t len;
@@ -31,7 +31,7 @@ struct MockOrigin
     proto_bool send_fail; // make send() report failure (the request never leaves)
     int close_calls;      // how many times the engine closed the connection
     int last_closed;      // cid passed to the last close()
-};
+} MockOrigin;
 
 static int m_open(void *c, const char *h, uint16_t p, uint32_t t)
 {
@@ -89,7 +89,7 @@ static EdgeFetchTransport make_transport(MockOrigin *m)
 // Pump to a terminal state (bounded iterations); returns the final status.
 static EdgeFetchStatus run_fetch(EdgeFetch *f, const EdgeFetchTransport *t, uint32_t now)
 {
-    for (int i = 0; i < 100000 && f->st == PENDING; i++)
+    for (int i = 0; i < 100000 && f->st == EDGE_FETCH_STATUS_PENDING; i++)
     {
         edge_fetch_pump(f, t, now);
     }
@@ -105,7 +105,7 @@ static void test_fetch_content_length()
     EdgeFetchTransport t = make_transport(&m);
     EdgeFetch f;
     edge_fetch_begin(&f, &t, "h", 80, "GET / HTTP/1.1\r\n\r\n", 18, 1000);
-    TEST_ASSERT_EQUAL(DONE, run_fetch(&f, &t, 1000));
+    TEST_ASSERT_EQUAL(EDGE_FETCH_STATUS_DONE, run_fetch(&f, &t, 1000));
     TEST_ASSERT_EQUAL_INT(200, f.status);
     TEST_ASSERT_EQUAL_UINT(5, f.body_len);
     TEST_ASSERT_EQUAL_MEMORY("hello", f.buf + f.body_off, 5);
@@ -119,7 +119,7 @@ static void test_fetch_chunked()
     EdgeFetchTransport t = make_transport(&m);
     EdgeFetch f;
     edge_fetch_begin(&f, &t, "h", 80, "GET / HTTP/1.1\r\n\r\n", 18, 1000);
-    TEST_ASSERT_EQUAL(DONE, run_fetch(&f, &t, 1000));
+    TEST_ASSERT_EQUAL(EDGE_FETCH_STATUS_DONE, run_fetch(&f, &t, 1000));
     TEST_ASSERT_EQUAL_INT(200, f.status);
     TEST_ASSERT_EQUAL_UINT(11, f.body_len);
     TEST_ASSERT_EQUAL_MEMORY("hello world", f.buf + f.body_off, 11);
@@ -132,7 +132,7 @@ static void test_fetch_close_delimited()
     EdgeFetchTransport t = make_transport(&m);
     EdgeFetch f;
     edge_fetch_begin(&f, &t, "h", 80, "GET / HTTP/1.1\r\n\r\n", 18, 1000);
-    TEST_ASSERT_EQUAL(DONE, run_fetch(&f, &t, 1000));
+    TEST_ASSERT_EQUAL(EDGE_FETCH_STATUS_DONE, run_fetch(&f, &t, 1000));
     TEST_ASSERT_EQUAL_INT(200, f.status);
     TEST_ASSERT_EQUAL_MEMORY("body-till-close", f.buf + f.body_off, 15);
 }
@@ -148,7 +148,7 @@ static void test_fetch_oversize()
     EdgeFetchTransport t = make_transport(&m);
     EdgeFetch f;
     edge_fetch_begin(&f, &t, "h", 80, "GET / HTTP/1.1\r\n\r\n", 18, 1000);
-    TEST_ASSERT_EQUAL(OVERSIZE, run_fetch(&f, &t, 1000));
+    TEST_ASSERT_EQUAL(EDGE_FETCH_STATUS_OVERSIZE, run_fetch(&f, &t, 1000));
 }
 
 static void test_fetch_timeout()
@@ -158,8 +158,8 @@ static void test_fetch_timeout()
     EdgeFetchTransport t = make_transport(&m);
     EdgeFetch f;
     edge_fetch_begin(&f, &t, "h", 80, "GET / HTTP/1.1\r\n\r\n", 18, 1000);
-    TEST_ASSERT_EQUAL(PENDING, edge_fetch_pump(&f, &t, 1000)); // drained, still waiting
-    TEST_ASSERT_EQUAL(FAILED, edge_fetch_pump(&f, &t, 1000 + PC_EDGE_FETCH_TIMEOUT_MS));
+    TEST_ASSERT_EQUAL(EDGE_FETCH_STATUS_PENDING, edge_fetch_pump(&f, &t, 1000)); // drained, still waiting
+    TEST_ASSERT_EQUAL(EDGE_FETCH_STATUS_FAILED, edge_fetch_pump(&f, &t, 1000 + PC_EDGE_FETCH_TIMEOUT_MS));
 }
 
 static void test_fetch_open_fail()
@@ -168,7 +168,7 @@ static void test_fetch_open_fail()
     EdgeFetchTransport t = make_transport(&m);
     EdgeFetch f;
     edge_fetch_begin(&f, &t, "h", 80, "GET / HTTP/1.1\r\n\r\n", 18, 1000);
-    TEST_ASSERT_EQUAL(FAILED, f.st);
+    TEST_ASSERT_EQUAL(EDGE_FETCH_STATUS_FAILED, f.st);
 }
 
 static void test_resp_complete_unit()
@@ -203,7 +203,7 @@ static void test_fetch_send_fail()
     EdgeFetchTransport t = make_transport(&m);
     EdgeFetch f;
     edge_fetch_begin(&f, &t, "h", 80, "GET / HTTP/1.1\r\n\r\n", 18, 1000);
-    TEST_ASSERT_EQUAL(FAILED, f.st);
+    TEST_ASSERT_EQUAL(EDGE_FETCH_STATUS_FAILED, f.st);
     TEST_ASSERT_EQUAL_INT(4, f.cid); // the connection was opened, so it still has to be released
 }
 
@@ -216,7 +216,7 @@ static void test_fetch_end_releases_once()
     EdgeFetchTransport t = make_transport(&m);
     EdgeFetch f;
     edge_fetch_begin(&f, &t, "h", 80, "GET / HTTP/1.1\r\n\r\n", 18, 1000);
-    TEST_ASSERT_EQUAL(DONE, run_fetch(&f, &t, 1000));
+    TEST_ASSERT_EQUAL(EDGE_FETCH_STATUS_DONE, run_fetch(&f, &t, 1000));
     edge_fetch_end(&f, &t);
     TEST_ASSERT_EQUAL_INT(1, m.close_calls);
     TEST_ASSERT_EQUAL_INT(11, m.last_closed);
@@ -242,9 +242,9 @@ static void test_fetch_pump_after_terminal_is_inert()
     EdgeFetchTransport t = make_transport(&m);
     EdgeFetch f;
     edge_fetch_begin(&f, &t, "h", 80, "GET / HTTP/1.1\r\n\r\n", 18, 1000);
-    TEST_ASSERT_EQUAL(DONE, run_fetch(&f, &t, 1000));
+    TEST_ASSERT_EQUAL(EDGE_FETCH_STATUS_DONE, run_fetch(&f, &t, 1000));
     size_t got_before = f.got;
-    TEST_ASSERT_EQUAL(DONE, edge_fetch_pump(&f, &t, 9999999));
+    TEST_ASSERT_EQUAL(EDGE_FETCH_STATUS_DONE, edge_fetch_pump(&f, &t, 9999999));
     TEST_ASSERT_EQUAL_UINT(got_before, f.got); // no further reads
 }
 
@@ -257,7 +257,7 @@ static void test_fetch_malformed_status_line()
     EdgeFetchTransport t = make_transport(&m);
     EdgeFetch f;
     edge_fetch_begin(&f, &t, "h", 80, "GET / HTTP/1.1\r\n\r\n", 18, 1000);
-    TEST_ASSERT_EQUAL(FAILED, run_fetch(&f, &t, 1000));
+    TEST_ASSERT_EQUAL(EDGE_FETCH_STATUS_FAILED, run_fetch(&f, &t, 1000));
 }
 
 // The origin hangs up mid-body: a Content-Length that never arrives fails on the close, not on the
@@ -269,7 +269,7 @@ static void test_fetch_closed_before_complete()
     EdgeFetchTransport t = make_transport(&m);
     EdgeFetch f;
     edge_fetch_begin(&f, &t, "h", 80, "GET / HTTP/1.1\r\n\r\n", 18, 1000);
-    TEST_ASSERT_EQUAL(FAILED, edge_fetch_pump(&f, &t, 1000)); // well inside the timeout
+    TEST_ASSERT_EQUAL(EDGE_FETCH_STATUS_FAILED, edge_fetch_pump(&f, &t, 1000)); // well inside the timeout
 }
 
 // Chunk sizes are hexadecimal: the a-f digits (either case) and a size wide enough to need them.

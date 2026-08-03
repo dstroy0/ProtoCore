@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file http_client.cpp
+ * @file http_client.c
  * @brief Outbound HTTP(S) client: URL parse + request build + response parse,
  *        and the raw-lwIP / mbedTLS transport (ESP32 only).
  */
@@ -187,7 +187,7 @@ size_t http_client_build_request(const char *method, const char *host, uint16_t 
 }
 
 // Case-insensitive search for header @p name in the header block [buf, end);
-// returns a pointer to the value (past "name:" and spaces) or nullptr.
+// returns a pointer to the value (past "name:" and spaces) or NULL.
 static const char *find_header(const uint8_t *buf, const uint8_t *end, const char *name)
 {
     size_t nlen = strnlen(name, (size_t)(end - buf) + 1);

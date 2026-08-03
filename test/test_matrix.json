@@ -79,7 +79,7 @@
       ],
       "src": [
         "+<services/web/httpcache/httpcache.c>",
-        "+<services/net/http_client/http_client.cpp>",
+        "+<services/net/http_client/http_client.c>",
         "+<services/web/edge_cache/edge_cache.c>",
         "+<services/web/edge_cache/edge_fetch.c>",
         "+<network_drivers/application/http_range.c>",
@@ -103,7 +103,7 @@
         "+<services/storage/wal/wal_store.c>",
         "+<services/storage/dbm/dbm.c>",
         "+<services/web/httpcache/httpcache.c>",
-        "+<services/net/http_client/http_client.cpp>",
+        "+<services/net/http_client/http_client.c>",
         "+<services/web/edge_cache/edge_cache.c>",
         "+<services/web/edge_cache/edge_cache_sd.c>",
         "+<crypto/hash/sha256.c>",
@@ -121,7 +121,7 @@
       ],
       "src": [
         "+<services/web/httpcache/httpcache.c>",
-        "+<services/net/http_client/http_client.cpp>",
+        "+<services/net/http_client/http_client.c>",
         "+<services/web/edge_cache/edge_cache.c>",
         "+<services/web/edge_cache/edge_cache_sd.c>",
         "+<services/web/edge_cache/edge_mesh.c>",
@@ -1983,7 +1983,7 @@
       "desc": "Outbound HTTP client: URL parser + request builder + response parser. Pure\nstring logic (the lwIP/mbedTLS transport is ESP32-only) so it unit-tests host.",
       "flags": ["-DPC_ENABLE_HTTP_CLIENT=1"],
       "src": [
-        "+<services/net/http_client/http_client.cpp>",
+        "+<services/net/http_client/http_client.c>",
         "+<server/clock/clock.c>"
       ],
       "tests": ["test_http_client"]
