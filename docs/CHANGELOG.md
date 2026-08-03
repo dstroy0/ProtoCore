@@ -46,6 +46,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`3997fb2`](https://github.com/dstroy0/ProtoCore/commit/3997fb2e1b181c9f3591a77de9fdda25cc95d97c))
 - update CHANGELOG.md [skip ci] ([`9c92256`](https://github.com/dstroy0/ProtoCore/commit/9c92256c1d0a7a91dad5b81c42dfc862cce28676))
 - update CHANGELOG.md [skip ci] ([`b4be567`](https://github.com/dstroy0/ProtoCore/commit/b4be5675cd19c39291a84b593193d222d17ea9f8))
 - update CHANGELOG.md [skip ci] ([`0741e6b`](https://github.com/dstroy0/ProtoCore/commit/0741e6b7a6af13e8831b53dbbb4724cd3654cd44))
@@ -284,6 +285,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- mount the file-serving fixture ([`0441bd0`](https://github.com/dstroy0/ProtoCore/commit/0441bd00f77aedb1e2bcd28beb3fafe2b6e2236c))
 - build the filesystem accessor and mount seam in the http stack ([`a528ad4`](https://github.com/dstroy0/ProtoCore/commit/a528ad4843b731355ec48be23b4f781c34226fc0))
 - enable PC_ENABLE_FILE_SERVING for its own suite ([`94413d8`](https://github.com/dstroy0/ProtoCore/commit/94413d8adda9074e792f697c9d23ef42e5e52cbd))
 - set the mock send buffer through its setter ([`b4b9a64`](https://github.com/dstroy0/ProtoCore/commit/b4b9a644f5d4aefb773f685d646143cb84c8a965))
