@@ -328,28 +328,25 @@ void test_put_empty_buffered()
     TEST_ASSERT_TRUE(tree_has("/dav/empty.txt"));
 }
 
-// A body larger than the mock node's buffer short-writes -> the sink flags an
-// error and the handler answers 507 Insufficient Storage.
+// A body the store has no room for -> the sink flags the failed write and the handler answers
+// 507 Insufficient Storage. The volume is filled first, so the refusal is a real ENOSPC.
 void test_put_stream_write_fails_507()
 {
+    lfsm_fill_volume();
     static uint8_t big[2100];
-    memset(big, 'A', sizeof(big)); // > MockNode::data (2048) -> write() short-returns
+    memset(big, 'A', sizeof(big));
     feed_put(0, "/dav/big.txt", big, sizeof(big));
     TEST_ASSERT_TRUE(pc_resp_status(507));
 }
 
-// When the FS cannot open the target (here: the mock's node table is full), the
-// sink never activates and the handler answers 409 Conflict.
+// When the store cannot open the target the sink never activates and the handler answers 409
+// Conflict. Every descriptor is held, which is how a device runs out of them.
 void test_put_stream_open_fails_409()
 {
-    char p[24];
-    for (int i = 0; i < 64; i++) // exhaust MockNode table (64 slots)
-    {
-        snprintf(p, sizeof(p), "/dav/f%d", i);
-        TEST_ASSERT_TRUE(lfsm_write_text(p, ""));
-    }
+    lfsm_hold_all_handles();
     const char *body = "abc";
     feed_put(0, "/dav/overflow.txt", (const uint8_t *)body, strlen(body));
+    lfsm_release_handles();
     TEST_ASSERT_TRUE(pc_resp_status(409));
 }
 
