@@ -4289,7 +4289,11 @@
 ],
 "src/server/clock/clock.c": [
 "native_clock",
+"native_edge_cache",
+"native_edge_cache_sd",
+"native_edge_mesh",
 "native_forward",
+"native_http_client",
 "native_json",
 "native_keepalive",
 "native_ssh",
@@ -5611,11 +5615,13 @@
 "native_swar",
 "native_upload"
 ],
-"src/services/net/http_client/http_client.cpp": [
+"src/services/net/http_client/http_client.c": [
 "native_edge_cache",
 "native_edge_cache_sd",
 "native_edge_mesh",
-"native_http_client",
+"native_http_client"
+],
+"src/services/net/http_client/http_client.cpp": [
 "native_swar"
 ],
 "src/services/net/http_client/http_client.h": [
@@ -7545,7 +7551,11 @@
 ],
 "test/mocks/Arduino.h": [
 "native_clock",
+"native_edge_cache",
+"native_edge_cache_sd",
+"native_edge_mesh",
 "native_forward",
+"native_http_client",
 "native_ikev2",
 "native_json",
 "native_keepalive",
