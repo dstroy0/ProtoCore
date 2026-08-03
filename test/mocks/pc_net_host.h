@@ -794,6 +794,15 @@ static inline void pc_net_on_err(pc_pcb *p, pc_net_err_fn fn)
 __attribute__((weak)) uint8_t pc_net_host_tx[PC_NET_HOST_TXCAP];
 __attribute__((weak)) size_t pc_net_host_tx_len;
 
+// After this many successful writes the next pc_net_write reports a full send buffer and queues
+// nothing, so a send pump takes its un-read-and-retry path. -1 never fails.
+__attribute__((weak)) int pc_net_host_write_fail_after = -1;
+
+static inline void mock_send_fail_after(int n)
+{
+    pc_net_host_write_fail_after = n;
+}
+
 static inline pc_net_err pc_net_write(pc_pcb *p, const void *data, uint16_t len, uint8_t flags)
 {
     (void)p;
@@ -801,6 +810,14 @@ static inline pc_net_err pc_net_write(pc_pcb *p, const void *data, uint16_t len,
     if (!data)
     {
         return PC_NET_ERR_ARG;
+    }
+    if (pc_net_host_write_fail_after == 0)
+    {
+        return PC_NET_ERR_MEM;
+    }
+    if (pc_net_host_write_fail_after > 0)
+    {
+        pc_net_host_write_fail_after--;
     }
     if (pc_net_host_tx_len + len > sizeof(pc_net_host_tx))
     {
@@ -975,6 +992,7 @@ static inline void tcp_capture_reset(void)
 {
     pc_net_host_tx_len = 0;
     pc_net_host_tx[0] = '\0';
+    pc_net_host_write_fail_after = -1; // clear a send failure a prior test armed
 }
 
 static inline void tcp_capture_disable(void)

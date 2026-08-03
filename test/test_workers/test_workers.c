@@ -130,13 +130,13 @@ void test_enqueue_routes_by_slot_owner_and_rejects_bad_owner(void)
 void test_accept_cb_round_robins_slot_owner(void)
 {
     proto_tcp_pool_init(NULL);
-    TEST_ASSERT_EQUAL_INT32(1, listener_add(0, 80, PROTO_HTTP)); // also exercises the
-                                                                 // WORKER_COUNT>1 branch
-                                                                 // of listener_add() itself
-    struct tcp_pcb pcb1 = {0}, pcb2 = {0}, pcb3 = {0};
-    TEST_ASSERT_EQUAL_INT(ERR_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb1, ERR_OK));
-    TEST_ASSERT_EQUAL_INT(ERR_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb2, ERR_OK));
-    TEST_ASSERT_EQUAL_INT(ERR_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb3, ERR_OK));
+    TEST_ASSERT_EQUAL_INT32(1, listener_add(0, 80, PROTO_HTTP, PROTO_FALSE)); // also exercises the
+                                                                              // WORKER_COUNT>1 branch
+                                                                              // of listener_add() itself
+    pc_pcb pcb1 = {0}, pcb2 = {0}, pcb3 = {0};
+    TEST_ASSERT_EQUAL_INT(PC_NET_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb1, PC_NET_OK));
+    TEST_ASSERT_EQUAL_INT(PC_NET_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb2, PC_NET_OK));
+    TEST_ASSERT_EQUAL_INT(PC_NET_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb3, PC_NET_OK));
     // Three accepts across 2 workers: owners cycle 0,1,0 (exact slot indices aren't asserted -
     // only that a full round-robin cycle, including the wrap back to 0, actually ran).
     TEST_ASSERT_TRUE(conn_pool[0].owner <= 1);

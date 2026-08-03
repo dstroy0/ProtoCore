@@ -1410,9 +1410,9 @@ void test_ws_send_frame_header_write_failure()
     WsConn *ws = ws_alloc(0);
     ws_set_frag_size(0);
     tcp_capture_reset();
-    mock_send_fail_after() = 0; // the very first write (the header) fails
+    mock_send_fail_after(0); // the very first write (the header) fails
     TEST_ASSERT_FALSE(ws_send_frame(ws, WS_OP_TEXT, (const uint8_t *)"hi", 2));
-    mock_send_fail_after() = -1;
+    mock_send_fail_after(-1);
     tcp_capture_disable();
 }
 
@@ -1422,9 +1422,9 @@ void test_ws_send_frame_payload_write_failure()
     WsConn *ws = ws_alloc(0);
     ws_set_frag_size(0);
     tcp_capture_reset();
-    mock_send_fail_after() = 1; // header write succeeds; the payload write fails
+    mock_send_fail_after(1); // header write succeeds; the payload write fails
     TEST_ASSERT_FALSE(ws_send_frame(ws, WS_OP_TEXT, (const uint8_t *)"hi", 2));
-    mock_send_fail_after() = -1;
+    mock_send_fail_after(-1);
     tcp_capture_disable();
 }
 
@@ -1475,9 +1475,9 @@ void test_ws_send_frame_fragmentation_mid_send_failure()
     ws_set_frag_size(4);
     const uint8_t msg[10] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     tcp_capture_reset();
-    mock_send_fail_after() = 2; // frame 1's header+payload succeed; frame 2's header fails
+    mock_send_fail_after(2); // frame 1's header+payload succeed; frame 2's header fails
     TEST_ASSERT_FALSE(ws_send_frame(ws, WS_OP_BINARY, msg, sizeof(msg)));
-    mock_send_fail_after() = -1;
+    mock_send_fail_after(-1);
     tcp_capture_disable();
     ws_set_frag_size(0);
 }
