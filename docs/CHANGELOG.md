@@ -36,6 +36,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update test report + coverage [skip ci] ([`19b5080`](https://github.com/dstroy0/ProtoCore/commit/19b50803aa9b8f081199d11f62af819d3379701a))
+- update CHANGELOG.md [skip ci] ([`3227657`](https://github.com/dstroy0/ProtoCore/commit/3227657a08fc51bba13cc90b5005c4da5ddf2bea))
 - update test report + coverage [skip ci] ([`3ca3f75`](https://github.com/dstroy0/ProtoCore/commit/3ca3f75b4b8ea37d81879cb458fa05bed4639bdd))
 - update CHANGELOG.md [skip ci] ([`a1af822`](https://github.com/dstroy0/ProtoCore/commit/a1af822e0fde44ba653b3f091f83040c5ebc6b0e))
 - update test report + coverage [skip ci] ([`b2b1226`](https://github.com/dstroy0/ProtoCore/commit/b2b1226a2919349f3260a7b4f39c65245ff16021))
@@ -197,6 +199,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- restore packml enum member names after the C++ scope strip ([`cfd42e8`](https://github.com/dstroy0/ProtoCore/commit/cfd42e850b9394a48c54c708fe4377f5be82a203))
 - give the remaining 134 suites the library's own truth type ([`3661181`](https://github.com/dstroy0/ProtoCore/commit/3661181b56353ee44717595f3e3c3f91b5c9a43c))
 - fix a missed ks_handshake call site and the Ext case table ([`70f03b6`](https://github.com/dstroy0/ProtoCore/commit/70f03b6984e9d3ed70e9fad597cced9e68fa1e30))
 - spell the local case-table structs as typedefs in test_tls13_msg ([`98641c1`](https://github.com/dstroy0/ProtoCore/commit/98641c125944c5dfb017a9aaf9d98058e72b3d1a))
