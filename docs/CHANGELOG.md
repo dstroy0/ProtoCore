@@ -6,6 +6,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- emit binary_asset_blobs as C and drop the resurrected .cpp ([`3da92d9`](https://github.com/dstroy0/ProtoCore/commit/3da92d94bd7ebb9cc49de3bf6b3a6b7018bc1c96))
+- read .c sources in the checkers the C conversion left behind ([`8eb81fa`](https://github.com/dstroy0/ProtoCore/commit/8eb81fa075ac8b17a6313ae053d9c7fd6bb6da62))
 - give ip.h C linkage so C++ callers link against it ([`c1ad16a`](https://github.com/dstroy0/ProtoCore/commit/c1ad16aa3b8ff9bea85acb94e65e4029eeadb8e4))
 - restore the enum widths the C conversion dropped ([`6bc50b1`](https://github.com/dstroy0/ProtoCore/commit/6bc50b19daaf6754c3b0d98edab1c6d5ed3fed9b))
 - make the checkers agree with a C11 tree ([`0c2bd52`](https://github.com/dstroy0/ProtoCore/commit/0c2bd52a962b3a93b6ce865868debb3cb3089aaa))
@@ -21,6 +23,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- build the ESP-IDF component on GitHub ([`b58882c`](https://github.com/dstroy0/ProtoCore/commit/b58882c22e95496c37067b597f5bdaf7a5d722f6))
+- update CHANGELOG.md [skip ci] ([`5b0eb19`](https://github.com/dstroy0/ProtoCore/commit/5b0eb19f834a6a84becc9edba24b4f4ab8c87a40))
 - update CHANGELOG.md [skip ci] ([`2bc470d`](https://github.com/dstroy0/ProtoCore/commit/2bc470d7f1f5a95a7e911c7d419a989a1c293501))
 - update CHANGELOG.md [skip ci] ([`906bc4a`](https://github.com/dstroy0/ProtoCore/commit/906bc4a0ae923616d1448d33e881531f5286d3a9))
 - update CHANGELOG.md [skip ci] ([`9f9e696`](https://github.com/dstroy0/ProtoCore/commit/9f9e6969e066a5f2aeae51c671fa9cae990ea552))
@@ -86,6 +90,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- describe diag as the runtime frame build it is ([`2e4176f`](https://github.com/dstroy0/ProtoCore/commit/2e4176f9327d4c8da9eaee07416942a64002a953))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`5127742`](https://github.com/dstroy0/ProtoCore/commit/51277427f26c15063c7af53ff87bc185c0ebe7cb))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`7f88800`](https://github.com/dstroy0/ProtoCore/commit/7f88800b01dfd0308e1487019dac72888363b3d7))
 - state C11 in the law, and retire DONE as a status in the sweep notes ([`0a52923`](https://github.com/dstroy0/ProtoCore/commit/0a529237c945b81248cbce7198770475a65790ec))
@@ -122,6 +127,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Refactor
 
+- split WebDAV into the L7 wire codec and the server handler ([`593e45a`](https://github.com/dstroy0/ProtoCore/commit/593e45a25d14a01599aa08017898d05c80acd7dc))
 - move HTTP authentication into the L7 application layer ([`a602846`](https://github.com/dstroy0/ProtoCore/commit/a602846800937ce64a664fa8cb3f2f51c1a346ef))
 - move the TLS 1.3 key schedule into network_drivers/tls ([`ba1f6f2`](https://github.com/dstroy0/ProtoCore/commit/ba1f6f213d0d9b7417c73e07445da63292c8475f))
 - mirror the layer each module moved to ([`f575b3d`](https://github.com/dstroy0/ProtoCore/commit/f575b3dbfe9d40e243dbb67fffd804884cf2b59c))
@@ -138,6 +144,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- convert the mechanically-convertible suites to C11 ([`79e56d1`](https://github.com/dstroy0/ProtoCore/commit/79e56d1187c33e042ef04f3370e3d2fb17762a8c))
 - assert the six enum widths at compile time ([`4ef3417`](https://github.com/dstroy0/ProtoCore/commit/4ef34170f4da2ebfc929917337b8d566ddc24724))
 
 ## [0.0.1] - 2026-07-31
