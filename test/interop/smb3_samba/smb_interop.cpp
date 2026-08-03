@@ -85,7 +85,7 @@ int main()
     memset(&h, 0, sizeof(h));
     SmbResult r = smb_open(&cfg, &h, sock_send, sock_recv, &fd);
     printf("smb_open -> %d\n", (int)r);
-    if (r != SmbResult::SMB_OK)
+    if (r != SMB_OK)
     {
         close(fd);
         return 3;

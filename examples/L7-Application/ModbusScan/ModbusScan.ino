@@ -52,7 +52,7 @@ void setup()
     on_http("/scan", HTTP_GET, [](uint8_t id, HttpReq *) {
         uint8_t req[16], resp[MODBUS_ADU_MAX];
         size_t rn =
-            pc_modbus_build_read((uint8_t)ModbusFunction::MODBUS_FC_READ_HOLDING_REGS, 1, 1, 0, 3, req, sizeof(req));
+            pc_modbus_build_read((uint8_t)MODBUS_FC_READ_HOLDING_REGS, 1, 1, 0, 3, req, sizeof(req));
         size_t pn = pc_modbus_process_adu(req, rn, resp, sizeof(resp));
         uint16_t regs[3];
         uint8_t ex = 0;

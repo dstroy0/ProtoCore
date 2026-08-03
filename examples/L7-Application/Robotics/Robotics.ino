@@ -57,11 +57,11 @@ void setup()
     mds.device.model = "AR-6";
     mds.device.product_code = "AR6-STD";
     mds.device.serial_number = "SN-R-0007";
-    mds.device.category = RoboticsMotionDeviceCategory::ROBOTICS_CAT_ARTICULATED_ROBOT;
+    mds.device.category = ROBOTICS_CAT_ARTICULATED_ROBOT;
     mds.device.axis_count = 6; // a 6-axis articulated arm
     for (uint32_t k = 0; k < mds.device.axis_count; k++)
     {
-        mds.device.axes[k].motion_profile = RoboticsMotionProfile::ROBOTICS_PROFILE_ROTARY;
+        mds.device.axes[k].motion_profile = ROBOTICS_PROFILE_ROTARY;
     }
 
     // --- Controller + Software identity ---
@@ -74,7 +74,7 @@ void setup()
     mds.controller.sw_revision = "1.0.0";
 
     // --- Initial safety state ---
-    mds.safety.operational_mode = RoboticsOperationalMode::ROBOTICS_MODE_AUTOMATIC;
+    mds.safety.operational_mode = ROBOTICS_MODE_AUTOMATIC;
     mds.safety.emergency_stop = false;
     mds.safety.protective_stop = false;
 

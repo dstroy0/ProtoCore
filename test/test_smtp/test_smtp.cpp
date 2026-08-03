@@ -96,7 +96,7 @@ SmtpConfig base_cfg()
     SmtpConfig c;
     c.host = "mail.example.net";
     c.port = 25;
-    c.security = SmtpSecurity::SMTP_PLAIN;
+    c.security = SMTP_PLAIN;
     c.user = nullptr;
     c.pass = nullptr;
     c.from = "device@example.net";
@@ -126,7 +126,7 @@ void test_happy_path_no_auth()
     m.replies = happy_replies();
     SmtpConfig c = base_cfg();
     SmtpMessage msg = base_msg();
-    TEST_ASSERT_EQUAL_INT(SmtpResult::SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m));
+    TEST_ASSERT_EQUAL_INT(SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m));
     // Commands, in order.
     TEST_ASSERT_TRUE(m.sent.find("EHLO esp32\r\n") != std::string::npos);
     TEST_ASSERT_TRUE(m.sent.find("MAIL FROM:<device@example.net>\r\n") != std::string::npos);
@@ -151,7 +151,7 @@ void test_auth_login()
     c.user = "user";
     c.pass = "pass";
     SmtpMessage msg = base_msg();
-    TEST_ASSERT_EQUAL_INT(SmtpResult::SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m));
+    TEST_ASSERT_EQUAL_INT(SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m));
     TEST_ASSERT_TRUE(m.sent.find("AUTH LOGIN\r\n") != std::string::npos);
     TEST_ASSERT_TRUE(m.sent.find("dXNlcg==\r\n") != std::string::npos); // base64("user")
     TEST_ASSERT_TRUE(m.sent.find("cGFzcw==\r\n") != std::string::npos); // base64("pass")
@@ -165,7 +165,7 @@ void test_auth_rejected()
     c.user = "user";
     c.pass = "wrong";
     SmtpMessage msg = base_msg();
-    TEST_ASSERT_EQUAL_INT(SmtpResult::SMTP_ERR_AUTH, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m));
+    TEST_ASSERT_EQUAL_INT(SMTP_ERR_AUTH, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m));
 }
 
 void test_greeting_not_ready()
@@ -174,7 +174,7 @@ void test_greeting_not_ready()
     m.replies = {"554 no service\r\n"};
     SmtpConfig c = base_cfg();
     SmtpMessage msg = base_msg();
-    TEST_ASSERT_EQUAL_INT(SmtpResult::SMTP_ERR_PROTOCOL, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m));
+    TEST_ASSERT_EQUAL_INT(SMTP_ERR_PROTOCOL, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m));
 }
 
 void test_rcpt_rejected()
@@ -183,7 +183,7 @@ void test_rcpt_rejected()
     m.replies = {"220 ESMTP\r\n", "250 OK\r\n", "250 Ok\r\n", "550 5.1.1 no such user\r\n"};
     SmtpConfig c = base_cfg();
     SmtpMessage msg = base_msg();
-    TEST_ASSERT_EQUAL_INT(SmtpResult::SMTP_ERR_PROTOCOL, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m));
+    TEST_ASSERT_EQUAL_INT(SMTP_ERR_PROTOCOL, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m));
 }
 
 void test_data_refused()
@@ -192,7 +192,7 @@ void test_data_refused()
     m.replies = {"220 ESMTP\r\n", "250 OK\r\n", "250 Ok\r\n", "250 Ok\r\n", "451 try later\r\n"};
     SmtpConfig c = base_cfg();
     SmtpMessage msg = base_msg();
-    TEST_ASSERT_EQUAL_INT(SmtpResult::SMTP_ERR_PROTOCOL, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m));
+    TEST_ASSERT_EQUAL_INT(SMTP_ERR_PROTOCOL, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m));
 }
 
 void test_dot_stuffing()
@@ -202,7 +202,7 @@ void test_dot_stuffing()
     SmtpConfig c = base_cfg();
     SmtpMessage msg = base_msg();
     msg.body = "line1\n.hidden\n..two dots\nlast"; // lines starting with '.' must be stuffed
-    TEST_ASSERT_EQUAL_INT(SmtpResult::SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m));
+    TEST_ASSERT_EQUAL_INT(SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m));
     TEST_ASSERT_TRUE(m.sent.find("..hidden\r\n") != std::string::npos);    // '.' -> '..'
     TEST_ASSERT_TRUE(m.sent.find("...two dots\r\n") != std::string::npos); // '..' -> '...'
     TEST_ASSERT_TRUE(m.sent.find("last\r\n.\r\n") != std::string::npos);   // real terminator intact
@@ -215,7 +215,7 @@ void test_multiline_reply_and_lf_body()
     SmtpConfig c = base_cfg();
     SmtpMessage msg = base_msg();
     msg.body = "a\nb"; // bare LF must be normalized to CRLF
-    TEST_ASSERT_EQUAL_INT(SmtpResult::SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m));
+    TEST_ASSERT_EQUAL_INT(SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m));
     TEST_ASSERT_TRUE(m.sent.find("a\r\nb\r\n") != std::string::npos);
 }
 
@@ -226,7 +226,7 @@ void test_partial_reads_dribble()
     m.dribble = true; // deliver every reply one byte at a time
     SmtpConfig c = base_cfg();
     SmtpMessage msg = base_msg();
-    TEST_ASSERT_EQUAL_INT(SmtpResult::SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m));
+    TEST_ASSERT_EQUAL_INT(SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m));
 }
 
 void test_missing_required_arg()
@@ -236,7 +236,7 @@ void test_missing_required_arg()
     SmtpConfig c = base_cfg();
     c.from = ""; // empty sender
     SmtpMessage msg = base_msg();
-    TEST_ASSERT_EQUAL_INT(SmtpResult::SMTP_ERR_ARG, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m));
+    TEST_ASSERT_EQUAL_INT(SMTP_ERR_ARG, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m));
 }
 
 void test_io_error_when_server_hangs()
@@ -244,7 +244,7 @@ void test_io_error_when_server_hangs()
     Mock m; // no replies scripted -> recv returns -1 on the greeting read
     SmtpConfig c = base_cfg();
     SmtpMessage msg = base_msg();
-    TEST_ASSERT_EQUAL_INT(SmtpResult::SMTP_ERR_IO, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m));
+    TEST_ASSERT_EQUAL_INT(SMTP_ERR_IO, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m));
 }
 
 // Run a dialogue with the given scripted replies and return smtp_run's result.
@@ -264,7 +264,7 @@ void test_reply_buffer_overflow()
     {
         huge += "250-continuation\r\n"; // > PC_SMTP_REPLY_MAX, no final line
     }
-    TEST_ASSERT_EQUAL_INT(SmtpResult::SMTP_ERR_IO, dialogue({huge}, base_cfg(), base_msg()));
+    TEST_ASSERT_EQUAL_INT(SMTP_ERR_IO, dialogue({huge}, base_cfg(), base_msg()));
 }
 
 // A short write on a command line (here EHLO) is an I/O error.
@@ -275,7 +275,7 @@ void test_command_send_fails()
     m.fail_send_prefix = "EHLO";
     SmtpConfig c = base_cfg();
     SmtpMessage msg = base_msg();
-    TEST_ASSERT_EQUAL_INT(SmtpResult::SMTP_ERR_IO, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m));
+    TEST_ASSERT_EQUAL_INT(SMTP_ERR_IO, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m));
 }
 
 // The DATA payload send failing (short write) is an I/O error.
@@ -286,7 +286,7 @@ void test_body_send_fails()
     m.fail_send_prefix = "From:"; // only the DATA payload begins "From: <...>"
     SmtpConfig c = base_cfg();
     SmtpMessage msg = base_msg();
-    TEST_ASSERT_EQUAL_INT(SmtpResult::SMTP_ERR_IO, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m));
+    TEST_ASSERT_EQUAL_INT(SMTP_ERR_IO, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m));
 }
 
 // An AUTH secret too long to base64-encode into the line buffer overflows.
@@ -296,8 +296,7 @@ void test_auth_secret_too_long()
     std::string longuser(400, 'u'); // base64 grows it past PC_SMTP_LINE_MAX
     c.user = longuser.c_str();
     c.pass = "pw";
-    TEST_ASSERT_EQUAL_INT(SmtpResult::SMTP_ERR_OVERFLOW,
-                          dialogue({"220 ESMTP\r\n", "250 OK\r\n", "334 x\r\n"}, c, base_msg()));
+    TEST_ASSERT_EQUAL_INT(SMTP_ERR_OVERFLOW, dialogue({"220 ESMTP\r\n", "250 OK\r\n", "334 x\r\n"}, c, base_msg()));
 }
 
 // I/O failure (server hangs up) at each step of the dialogue -> SmtpResult::SMTP_ERR_IO.
@@ -309,17 +308,16 @@ void test_io_error_at_each_step()
     cu.pass = "pass";
     SmtpMessage msg = base_msg();
     // greeting ok, then hang before: EHLO / MAIL(no auth) / AUTH(user) / pass-leg / RCPT / DATA / final.
-    TEST_ASSERT_EQUAL_INT(SmtpResult::SMTP_ERR_IO, dialogue({"220 x\r\n"}, c, msg));                // EHLO
-    TEST_ASSERT_EQUAL_INT(SmtpResult::SMTP_ERR_IO, dialogue({"220 x\r\n", "250 OK\r\n"}, c, msg));  // MAIL FROM
-    TEST_ASSERT_EQUAL_INT(SmtpResult::SMTP_ERR_IO, dialogue({"220 x\r\n", "250 OK\r\n"}, cu, msg)); // AUTH LOGIN
-    TEST_ASSERT_EQUAL_INT(SmtpResult::SMTP_ERR_IO,
+    TEST_ASSERT_EQUAL_INT(SMTP_ERR_IO, dialogue({"220 x\r\n"}, c, msg));                // EHLO
+    TEST_ASSERT_EQUAL_INT(SMTP_ERR_IO, dialogue({"220 x\r\n", "250 OK\r\n"}, c, msg));  // MAIL FROM
+    TEST_ASSERT_EQUAL_INT(SMTP_ERR_IO, dialogue({"220 x\r\n", "250 OK\r\n"}, cu, msg)); // AUTH LOGIN
+    TEST_ASSERT_EQUAL_INT(SMTP_ERR_IO,
                           dialogue({"220 x\r\n", "250 OK\r\n", "334 a\r\n", "334 b\r\n"}, cu, msg)); // pass leg
-    TEST_ASSERT_EQUAL_INT(SmtpResult::SMTP_ERR_IO, dialogue({"220 x\r\n", "250 OK\r\n", "250 Ok\r\n"}, c, msg)); // RCPT
-    TEST_ASSERT_EQUAL_INT(SmtpResult::SMTP_ERR_IO,
+    TEST_ASSERT_EQUAL_INT(SMTP_ERR_IO, dialogue({"220 x\r\n", "250 OK\r\n", "250 Ok\r\n"}, c, msg)); // RCPT
+    TEST_ASSERT_EQUAL_INT(SMTP_ERR_IO,
                           dialogue({"220 x\r\n", "250 OK\r\n", "250 Ok\r\n", "250 Ok\r\n"}, c, msg)); // DATA
     TEST_ASSERT_EQUAL_INT( // final acceptance read
-        SmtpResult::SMTP_ERR_IO,
-        dialogue({"220 x\r\n", "250 OK\r\n", "250 Ok\r\n", "250 Ok\r\n", "354 go\r\n"}, c, msg));
+        SMTP_ERR_IO, dialogue({"220 x\r\n", "250 OK\r\n", "250 Ok\r\n", "250 Ok\r\n", "354 go\r\n"}, c, msg));
 }
 
 // A wrong reply code at each step -> the step-specific SmtpResult.
@@ -330,17 +328,15 @@ void test_protocol_error_at_each_step()
     cu.user = "user";
     cu.pass = "pass";
     SmtpMessage msg = base_msg();
-    TEST_ASSERT_EQUAL_INT(SmtpResult::SMTP_ERR_PROTOCOL,
-                          dialogue({"220 x\r\n", "500 no ehlo\r\n"}, c, msg)); // EHLO != 250
-    TEST_ASSERT_EQUAL_INT(SmtpResult::SMTP_ERR_AUTH,
+    TEST_ASSERT_EQUAL_INT(SMTP_ERR_PROTOCOL, dialogue({"220 x\r\n", "500 no ehlo\r\n"}, c, msg)); // EHLO != 250
+    TEST_ASSERT_EQUAL_INT(SMTP_ERR_AUTH,
                           dialogue({"220 x\r\n", "250 OK\r\n", "500 no auth\r\n"}, cu, msg)); // AUTH != 334
     TEST_ASSERT_EQUAL_INT(
-        SmtpResult::SMTP_ERR_AUTH,
-        dialogue({"220 x\r\n", "250 OK\r\n", "334 a\r\n", "500 bad user\r\n"}, cu, msg)); // user != 334
-    TEST_ASSERT_EQUAL_INT(SmtpResult::SMTP_ERR_PROTOCOL,
+        SMTP_ERR_AUTH, dialogue({"220 x\r\n", "250 OK\r\n", "334 a\r\n", "500 bad user\r\n"}, cu, msg)); // user != 334
+    TEST_ASSERT_EQUAL_INT(SMTP_ERR_PROTOCOL,
                           dialogue({"220 x\r\n", "250 OK\r\n", "550 denied\r\n"}, c, msg)); // MAIL != 250
     TEST_ASSERT_EQUAL_INT(                                                                  // final acceptance != 250
-        SmtpResult::SMTP_ERR_PROTOCOL,
+        SMTP_ERR_PROTOCOL,
         dialogue({"220 x\r\n", "250 OK\r\n", "250 Ok\r\n", "250 Ok\r\n", "354 go\r\n", "451 rejected\r\n"}, c, msg));
 }
 
@@ -351,16 +347,15 @@ void test_command_line_overflows()
     std::string big(300, 'z');
     SmtpConfig ch = base_cfg();
     ch.helo = big.c_str();
-    TEST_ASSERT_EQUAL_INT(SmtpResult::SMTP_ERR_OVERFLOW, dialogue({"220 x\r\n"}, ch, base_msg())); // EHLO line
+    TEST_ASSERT_EQUAL_INT(SMTP_ERR_OVERFLOW, dialogue({"220 x\r\n"}, ch, base_msg())); // EHLO line
 
     SmtpConfig cf = base_cfg();
     cf.from = big.c_str();
-    TEST_ASSERT_EQUAL_INT(SmtpResult::SMTP_ERR_OVERFLOW,
-                          dialogue({"220 x\r\n", "250 OK\r\n"}, cf, base_msg())); // MAIL FROM line
+    TEST_ASSERT_EQUAL_INT(SMTP_ERR_OVERFLOW, dialogue({"220 x\r\n", "250 OK\r\n"}, cf, base_msg())); // MAIL FROM line
 
     SmtpMessage mt = base_msg();
     mt.to = big.c_str();
-    TEST_ASSERT_EQUAL_INT(SmtpResult::SMTP_ERR_OVERFLOW,
+    TEST_ASSERT_EQUAL_INT(SMTP_ERR_OVERFLOW,
                           dialogue({"220 x\r\n", "250 OK\r\n", "250 Ok\r\n"}, base_cfg(), mt)); // RCPT TO line
 }
 
@@ -371,7 +366,7 @@ void test_message_header_overflow()
     SmtpMessage msg = base_msg();
     msg.subject = bigsub.c_str();
     TEST_ASSERT_EQUAL_INT(
-        SmtpResult::SMTP_ERR_OVERFLOW,
+        SMTP_ERR_OVERFLOW,
         dialogue({"220 x\r\n", "250 OK\r\n", "250 Ok\r\n", "250 Ok\r\n", "354 go\r\n"}, base_cfg(), msg));
 }
 
@@ -383,7 +378,7 @@ void test_cr_in_body_dropped()
     SmtpConfig c = base_cfg();
     SmtpMessage msg = base_msg();
     msg.body = "x\r\ny"; // the bare CR is stripped, the LF becomes CRLF
-    TEST_ASSERT_EQUAL_INT(SmtpResult::SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m));
+    TEST_ASSERT_EQUAL_INT(SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m));
     TEST_ASSERT_TRUE(m.sent.find("x\r\ny\r\n") != std::string::npos);
 }
 
@@ -403,8 +398,8 @@ void test_build_message_boundary_overflows()
             SmtpMessage msg = base_msg();
             msg.body = body.c_str();
             SmtpResult r = dialogue(to_data, base_cfg(), msg);
-            TEST_ASSERT_NOT_EQUAL(SmtpResult::SMTP_OK, r); // no final 250 scripted -> never succeeds
-            if (r == SmtpResult::SMTP_ERR_OVERFLOW)
+            TEST_ASSERT_NOT_EQUAL(SMTP_OK, r); // no final 250 scripted -> never succeeds
+            if (r == SMTP_ERR_OVERFLOW)
             {
                 saw_overflow = true;
             }
@@ -418,7 +413,7 @@ void test_host_smtp_send_stub()
 {
     SmtpConfig c = base_cfg();
     SmtpMessage msg = base_msg();
-    TEST_ASSERT_EQUAL_INT(SmtpResult::SMTP_ERR_CONNECT, smtp_send(&c, &msg));
+    TEST_ASSERT_EQUAL_INT(SMTP_ERR_CONNECT, smtp_send(&c, &msg));
 }
 
 // --- STARTTLS (RFC 3207) --------------------------------------------------
@@ -445,9 +440,9 @@ void test_starttls_upgrades_and_reissues_ehlo()
     Mock m = starttls_mock();
     SmtpConfig c = base_cfg();
     c.port = 587;
-    c.security = SmtpSecurity::SMTP_STARTTLS;
+    c.security = SMTP_STARTTLS;
     SmtpMessage msg = base_msg();
-    TEST_ASSERT_EQUAL_INT(SmtpResult::SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, mock_starttls, &m));
+    TEST_ASSERT_EQUAL_INT(SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, mock_starttls, &m));
     TEST_ASSERT_EQUAL_INT(1, m.upgrades);
     TEST_ASSERT_TRUE(m.sent.find("STARTTLS\r\n") != std::string::npos);
     // RFC 3207 sec 4.2: EHLO must be reissued after the upgrade, so it appears twice.
@@ -468,12 +463,11 @@ void test_starttls_not_advertised_fails_before_auth()
                  "221 2.0.0 Bye\r\n"};
     SmtpConfig c = base_cfg();
     c.port = 587;
-    c.security = SmtpSecurity::SMTP_STARTTLS;
+    c.security = SMTP_STARTTLS;
     c.user = "device";
     c.pass = "hunter2";
     SmtpMessage msg = base_msg();
-    TEST_ASSERT_EQUAL_INT(SmtpResult::SMTP_ERR_NO_STARTTLS,
-                          smtp_run(&c, &msg, mock_send, mock_recv, mock_starttls, &m));
+    TEST_ASSERT_EQUAL_INT(SMTP_ERR_NO_STARTTLS, smtp_run(&c, &msg, mock_send, mock_recv, mock_starttls, &m));
     TEST_ASSERT_EQUAL_INT(0, m.upgrades);
     TEST_ASSERT_TRUE(m.sent.find("AUTH") == std::string::npos);         // no credentials offered
     TEST_ASSERT_TRUE(m.sent.find("aHVudGVyMg==") == std::string::npos); // base64("hunter2")
@@ -488,10 +482,9 @@ void test_starttls_partial_keyword_is_not_a_match()
                  "221 2.0.0 Bye\r\n"};
     SmtpConfig c = base_cfg();
     c.port = 587;
-    c.security = SmtpSecurity::SMTP_STARTTLS;
+    c.security = SMTP_STARTTLS;
     SmtpMessage msg = base_msg();
-    TEST_ASSERT_EQUAL_INT(SmtpResult::SMTP_ERR_NO_STARTTLS,
-                          smtp_run(&c, &msg, mock_send, mock_recv, mock_starttls, &m));
+    TEST_ASSERT_EQUAL_INT(SMTP_ERR_NO_STARTTLS, smtp_run(&c, &msg, mock_send, mock_recv, mock_starttls, &m));
 }
 
 void test_starttls_capability_match_is_case_insensitive()
@@ -500,9 +493,9 @@ void test_starttls_capability_match_is_case_insensitive()
     m.replies[1] = "250-mail.example.net\r\n250-StartTls\r\n250 OK\r\n";
     SmtpConfig c = base_cfg();
     c.port = 587;
-    c.security = SmtpSecurity::SMTP_STARTTLS;
+    c.security = SMTP_STARTTLS;
     SmtpMessage msg = base_msg();
-    TEST_ASSERT_EQUAL_INT(SmtpResult::SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, mock_starttls, &m));
+    TEST_ASSERT_EQUAL_INT(SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, mock_starttls, &m));
     TEST_ASSERT_EQUAL_INT(1, m.upgrades);
 }
 
@@ -512,9 +505,9 @@ void test_starttls_server_refuses_the_upgrade()
     m.replies[2] = "454 4.7.0 TLS not available right now\r\n";
     SmtpConfig c = base_cfg();
     c.port = 587;
-    c.security = SmtpSecurity::SMTP_STARTTLS;
+    c.security = SMTP_STARTTLS;
     SmtpMessage msg = base_msg();
-    TEST_ASSERT_EQUAL_INT(SmtpResult::SMTP_ERR_TLS, smtp_run(&c, &msg, mock_send, mock_recv, mock_starttls, &m));
+    TEST_ASSERT_EQUAL_INT(SMTP_ERR_TLS, smtp_run(&c, &msg, mock_send, mock_recv, mock_starttls, &m));
     TEST_ASSERT_EQUAL_INT(0, m.upgrades); // never attempted, because the server said no
 }
 
@@ -524,9 +517,9 @@ void test_starttls_handshake_failure_aborts()
     m.upgrade_ok = false;
     SmtpConfig c = base_cfg();
     c.port = 587;
-    c.security = SmtpSecurity::SMTP_STARTTLS;
+    c.security = SMTP_STARTTLS;
     SmtpMessage msg = base_msg();
-    TEST_ASSERT_EQUAL_INT(SmtpResult::SMTP_ERR_TLS, smtp_run(&c, &msg, mock_send, mock_recv, mock_starttls, &m));
+    TEST_ASSERT_EQUAL_INT(SMTP_ERR_TLS, smtp_run(&c, &msg, mock_send, mock_recv, mock_starttls, &m));
     TEST_ASSERT_EQUAL_INT(1, m.upgrades);
     TEST_ASSERT_TRUE(m.sent.find("MAIL FROM") == std::string::npos); // nothing sent after a failed upgrade
 }
@@ -536,9 +529,9 @@ void test_starttls_without_an_upgrade_callback_is_an_arg_error()
     Mock m = starttls_mock();
     SmtpConfig c = base_cfg();
     c.port = 587;
-    c.security = SmtpSecurity::SMTP_STARTTLS;
+    c.security = SMTP_STARTTLS;
     SmtpMessage msg = base_msg();
-    TEST_ASSERT_EQUAL_INT(SmtpResult::SMTP_ERR_ARG, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m));
+    TEST_ASSERT_EQUAL_INT(SMTP_ERR_ARG, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m));
 }
 
 void test_plain_ignores_an_advertised_starttls()
@@ -554,7 +547,7 @@ void test_plain_ignores_an_advertised_starttls()
                  "221 2.0.0 Bye\r\n"};
     SmtpConfig c = base_cfg(); // SMTP_PLAIN
     SmtpMessage msg = base_msg();
-    TEST_ASSERT_EQUAL_INT(SmtpResult::SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, mock_starttls, &m));
+    TEST_ASSERT_EQUAL_INT(SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, mock_starttls, &m));
     TEST_ASSERT_EQUAL_INT(0, m.upgrades);
     TEST_ASSERT_TRUE(m.sent.find("STARTTLS\r\n") == std::string::npos);
 }
@@ -583,7 +576,7 @@ void test_reply_parser_skips_malformed_lines()
         m.replies[0] = std::string(junk[i]) + "220 mail.example.net ESMTP\r\n";
         SmtpConfig c = base_cfg();
         SmtpMessage msg = base_msg();
-        TEST_ASSERT_EQUAL_INT(SmtpResult::SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m));
+        TEST_ASSERT_EQUAL_INT(SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m));
     }
 }
 
@@ -596,7 +589,7 @@ void test_reply_bare_three_digit_line_is_final()
     m.replies[0] = "220\r\n";
     SmtpConfig c = base_cfg();
     SmtpMessage msg = base_msg();
-    TEST_ASSERT_EQUAL_INT(SmtpResult::SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m));
+    TEST_ASSERT_EQUAL_INT(SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m));
 }
 
 // The EHLO capability scan handles the shapes a real server emits around the keyword:
@@ -616,9 +609,9 @@ void test_ehlo_capability_scan_edges()
         m.replies[1] = ehlo_replies[i];
         SmtpConfig c = base_cfg();
         c.port = 587;
-        c.security = SmtpSecurity::SMTP_STARTTLS;
+        c.security = SMTP_STARTTLS;
         SmtpMessage msg = base_msg();
-        TEST_ASSERT_EQUAL_INT(SmtpResult::SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, mock_starttls, &m));
+        TEST_ASSERT_EQUAL_INT(SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, mock_starttls, &m));
         TEST_ASSERT_EQUAL_INT(1, m.upgrades); // STARTTLS was still recognised in each shape
     }
 }
@@ -638,7 +631,7 @@ void test_null_optional_fields()
         SmtpMessage msg = base_msg();
         msg.subject = nullptr;
         msg.body = nullptr;
-        TEST_ASSERT_EQUAL_INT(SmtpResult::SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m));
+        TEST_ASSERT_EQUAL_INT(SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m));
         TEST_ASSERT_TRUE(m.sent.find("EHLO esp32\r\n") != std::string::npos);
         TEST_ASSERT_TRUE(m.sent.find("Subject: \r\n") != std::string::npos); // empty, not "(null)"
         TEST_ASSERT_TRUE(m.sent.find("\r\n\r\n.\r\n") != std::string::npos); // empty body, then the terminator
@@ -655,7 +648,7 @@ void test_null_password_sends_empty_secret()
     c.user = "user";
     c.pass = nullptr;
     SmtpMessage msg = base_msg();
-    TEST_ASSERT_EQUAL_INT(SmtpResult::SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m));
+    TEST_ASSERT_EQUAL_INT(SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m));
     TEST_ASSERT_TRUE(m.sent.find("dXNlcg==\r\n") != std::string::npos); // base64("user")
     TEST_ASSERT_TRUE(m.sent.find("AUTH LOGIN\r\n\r\n") == std::string::npos);
 }
@@ -670,7 +663,7 @@ void test_empty_user_skips_auth()
     c.user = ""; // configured but empty
     c.pass = "pw";
     SmtpMessage msg = base_msg();
-    TEST_ASSERT_EQUAL_INT(SmtpResult::SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m));
+    TEST_ASSERT_EQUAL_INT(SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m));
     TEST_ASSERT_TRUE(m.sent.find("AUTH") == std::string::npos);
 }
 
@@ -682,26 +675,26 @@ void test_arg_validation_rejects_each_missing_field()
     SmtpConfig c = base_cfg();
     SmtpMessage msg = base_msg();
 
-    TEST_ASSERT_EQUAL_INT(SmtpResult::SMTP_ERR_ARG, smtp_run(nullptr, &msg, mock_send, mock_recv, nullptr, &m));
-    TEST_ASSERT_EQUAL_INT(SmtpResult::SMTP_ERR_ARG, smtp_run(&c, nullptr, mock_send, mock_recv, nullptr, &m));
-    TEST_ASSERT_EQUAL_INT(SmtpResult::SMTP_ERR_ARG, smtp_run(&c, &msg, nullptr, mock_recv, nullptr, &m));
-    TEST_ASSERT_EQUAL_INT(SmtpResult::SMTP_ERR_ARG, smtp_run(&c, &msg, mock_send, nullptr, nullptr, &m));
+    TEST_ASSERT_EQUAL_INT(SMTP_ERR_ARG, smtp_run(nullptr, &msg, mock_send, mock_recv, nullptr, &m));
+    TEST_ASSERT_EQUAL_INT(SMTP_ERR_ARG, smtp_run(&c, nullptr, mock_send, mock_recv, nullptr, &m));
+    TEST_ASSERT_EQUAL_INT(SMTP_ERR_ARG, smtp_run(&c, &msg, nullptr, mock_recv, nullptr, &m));
+    TEST_ASSERT_EQUAL_INT(SMTP_ERR_ARG, smtp_run(&c, &msg, mock_send, nullptr, nullptr, &m));
 
     SmtpConfig nohost = base_cfg();
     nohost.host = nullptr;
-    TEST_ASSERT_EQUAL_INT(SmtpResult::SMTP_ERR_ARG, smtp_run(&nohost, &msg, mock_send, mock_recv, nullptr, &m));
+    TEST_ASSERT_EQUAL_INT(SMTP_ERR_ARG, smtp_run(&nohost, &msg, mock_send, mock_recv, nullptr, &m));
 
     SmtpConfig nofrom = base_cfg();
     nofrom.from = nullptr;
-    TEST_ASSERT_EQUAL_INT(SmtpResult::SMTP_ERR_ARG, smtp_run(&nofrom, &msg, mock_send, mock_recv, nullptr, &m));
+    TEST_ASSERT_EQUAL_INT(SMTP_ERR_ARG, smtp_run(&nofrom, &msg, mock_send, mock_recv, nullptr, &m));
 
     SmtpMessage noto = base_msg();
     noto.to = nullptr;
-    TEST_ASSERT_EQUAL_INT(SmtpResult::SMTP_ERR_ARG, smtp_run(&c, &noto, mock_send, mock_recv, nullptr, &m));
+    TEST_ASSERT_EQUAL_INT(SMTP_ERR_ARG, smtp_run(&c, &noto, mock_send, mock_recv, nullptr, &m));
 
     SmtpMessage emptyto = base_msg();
     emptyto.to = "";
-    TEST_ASSERT_EQUAL_INT(SmtpResult::SMTP_ERR_ARG, smtp_run(&c, &emptyto, mock_send, mock_recv, nullptr, &m));
+    TEST_ASSERT_EQUAL_INT(SMTP_ERR_ARG, smtp_run(&c, &emptyto, mock_send, mock_recv, nullptr, &m));
 
     TEST_ASSERT_TRUE(m.sent.empty()); // nothing was ever transmitted
 }
@@ -716,7 +709,7 @@ void test_rcpt_251_is_accepted()
     m.replies[3] = "251 User not local; will forward\r\n";
     SmtpConfig c = base_cfg();
     SmtpMessage msg = base_msg();
-    TEST_ASSERT_EQUAL_INT(SmtpResult::SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m));
+    TEST_ASSERT_EQUAL_INT(SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m));
 }
 
 // A short write on a command issued through the command() helper (rather than the EHLO
@@ -728,7 +721,7 @@ void test_command_helper_send_failure()
     m.fail_send_prefix = "MAIL FROM"; // goes out via cmd_expect -> command -> send_str
     SmtpConfig c = base_cfg();
     SmtpMessage msg = base_msg();
-    TEST_ASSERT_EQUAL_INT(SmtpResult::SMTP_ERR_IO, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m));
+    TEST_ASSERT_EQUAL_INT(SMTP_ERR_IO, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m));
 }
 
 int main()

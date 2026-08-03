@@ -44,7 +44,7 @@ void send_alert(const char *subject, const char *body)
     // ordinary connection in band and is what mail providers expect for submission; SMTP_TLS (465)
     // is encrypted from the first byte. With STARTTLS the client refuses to continue if the server
     // does not advertise it, so a stripped capability cannot downgrade you into sending in the clear.
-    cfg.security = SmtpSecurity::SMTP_PLAIN;
+    cfg.security = SMTP_PLAIN;
     cfg.user = nullptr; // no login needed for a LAN relay that trusts your network
     cfg.pass = nullptr;
     cfg.from = MAIL_FROM;
@@ -57,7 +57,7 @@ void send_alert(const char *subject, const char *body)
     msg.body = body;
 
     SmtpResult rc = smtp_send(&cfg, &msg);
-    if (rc == SmtpResult::SMTP_OK)
+    if (rc == SMTP_OK)
     {
         Serial.println("email sent - check the mailbox on your mail server");
     }

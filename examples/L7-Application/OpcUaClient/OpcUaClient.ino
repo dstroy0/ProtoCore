@@ -46,19 +46,19 @@ static bool srv_read(uint16_t ns, uint32_t id, uint32_t attr, OpcUaVariant *out)
     }
     if (id == 1)
     {
-        out->type = OpcUaVariantType::OPCUA_VAR_UINT32;
+        out->type = OPCUA_VAR_UINT32;
         out->u32 = millis() / 1000;
         return true;
     }
     if (id == 2)
     {
-        out->type = OpcUaVariantType::OPCUA_VAR_DOUBLE;
+        out->type = OPCUA_VAR_DOUBLE;
         out->f64 = 23.5;
         return true;
     }
     if (id == 3)
     {
-        out->type = OpcUaVariantType::OPCUA_VAR_UINT32;
+        out->type = OPCUA_VAR_UINT32;
         out->u32 = setpoint;
         return true;
     }
@@ -67,7 +67,7 @@ static bool srv_read(uint16_t ns, uint32_t id, uint32_t attr, OpcUaVariant *out)
 
 static uint32_t srv_write(uint16_t ns, uint32_t id, uint32_t attr, const OpcUaVariant *value)
 {
-    if (ns == 1 && id == 3 && attr == OPCUA_ATTR_VALUE && value->type == OpcUaVariantType::OPCUA_VAR_UINT32)
+    if (ns == 1 && id == 3 && attr == OPCUA_ATTR_VALUE && value->type == OPCUA_VAR_UINT32)
     {
         setpoint = value->u32;
         return 0; // Good
@@ -211,7 +211,7 @@ static void run_client(uint32_t ip)
     wi[0].id = 3;
     wi[0].numeric = true;
     wi[0].attribute = OPCUA_ATTR_VALUE;
-    wi[0].value.type = OpcUaVariantType::OPCUA_VAR_UINT32;
+    wi[0].value.type = OPCUA_VAR_UINT32;
     wi[0].value.u32 = 555;
     n = exchange(cid, pc_opcua_client_write(&c, wi, 1, c_req, sizeof(c_req)));
     uint32_t wres[1];

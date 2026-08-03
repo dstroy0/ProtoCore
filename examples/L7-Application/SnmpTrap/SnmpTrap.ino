@@ -62,7 +62,7 @@ void loop()
         memset(&vb, 0, sizeof(vb));
         vb.oid = HEAP_OID;
         vb.oid_len = sizeof(HEAP_OID) / sizeof(uint32_t);
-        vb.type = (uint8_t)SnmpVbType::SNMP_VB_GAUGE32;
+        vb.type = (uint8_t)SNMP_VB_GAUGE32;
         vb.ival = (long)ESP.getFreeHeap();
 
         bool ok = pc_snmp_trap_v2c(MANAGER, TRAP_PORT, "public", TRAP_OID, sizeof(TRAP_OID) / sizeof(uint32_t), &vb, 1);

@@ -60,8 +60,8 @@ void setup()
     mt.ident.year_of_construction = 2026;
 
     // --- Initial monitoring state ---
-    mt.operation_mode = UmatiOperationMode::UMATI_OP_AUTOMATIC;
-    mt.channel.state = UmatiChannelState::UMATI_CH_RUNNING;
+    mt.operation_mode = UMATI_OP_AUTOMATIC;
+    mt.channel.state = UMATI_CH_RUNNING;
     mt.channel.feed_override = 100.0;
     mt.channel.rapid_override = 100.0;
     mt.channel.active_program = "PART_A.NC";

@@ -32,7 +32,7 @@ void test_spsc_ring_no_race()
 {
     g_slot.rx_head = 0;
     g_slot.rx_tail = 0;
-    g_slot.state = ConnState::CONN_ACTIVE;
+    g_slot.state = CONN_ACTIVE;
 
     std::thread producer([] {
         for (int i = 0; i < kCount;)
@@ -82,21 +82,21 @@ void test_spsc_ring_no_race()
 // proves the state field is race-free across the boundary.
 void test_state_handoff_no_race()
 {
-    g_slot.state = ConnState::CONN_ACTIVE;
+    g_slot.state = CONN_ACTIVE;
     volatile int observed_free = 0;
 
     std::thread flipper([] {
         for (int i = 0; i < kCount; ++i)
         {
-            g_slot.state = ConnState::CONN_FREE;
-            g_slot.state = ConnState::CONN_ACTIVE;
+            g_slot.state = CONN_FREE;
+            g_slot.state = CONN_ACTIVE;
         }
-        g_slot.state = ConnState::CONN_FREE;
+        g_slot.state = CONN_FREE;
     });
 
     for (int i = 0; i < kCount; ++i)
     {
-        if (g_slot.state == ConnState::CONN_FREE)
+        if (g_slot.state == CONN_FREE)
         {
             observed_free++;
         }
@@ -106,7 +106,7 @@ void test_state_handoff_no_race()
     // The slot ends FREE; the observer must not have crashed/torn (TSan checks the
     // race). observed_free is timing-dependent, so only assert the final state.
     (void)observed_free;
-    TEST_ASSERT_EQUAL_INT(ConnState::CONN_FREE, (ConnState)g_slot.state);
+    TEST_ASSERT_EQUAL_INT(CONN_FREE, (ConnState)g_slot.state);
 }
 
 int main()

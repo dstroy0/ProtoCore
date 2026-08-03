@@ -62,7 +62,7 @@ void setup()
     imm.info.device_revision = "D2";
     imm.info.manufacturer_uri = "urn:acme:plastics:IM-200";
     imm.status.is_present = true;
-    imm.status.machine_mode = EmMachineMode::EM_MODE_AUTOMATIC;
+    imm.status.machine_mode = EM_MODE_AUTOMATIC;
 
     // --- Active job (static parameters) ---
     imm.active_job.job_name = "JOB-A";
@@ -73,7 +73,7 @@ void setup()
     imm.active_job.expected_cycle_time = 12.5;
     imm.active_job.num_cavities = 4;
     imm.active_job.nominal_parts = 100000;
-    imm.active_job_values.job_status = EmJobStatus::EM_JOB_IN_PRODUCTION;
+    imm.active_job_values.job_status = EM_JOB_IN_PRODUCTION;
 
     pc_em77_install(&imm); // bind + register the OPC UA Browse/Read resolvers
     on_http("/", HTTP_GET,

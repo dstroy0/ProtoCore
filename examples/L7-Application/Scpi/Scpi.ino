@@ -88,7 +88,7 @@ static void run_session(const char *host)
     size_t n;
 
     // 1) *IDN? - identify the instrument (4 comma-separated fields).
-    n = pc_scpi_build(c_cmd, sizeof(c_cmd), pc_scpi_common(ScpiCommon::SCPI_IDN_Q), nullptr, 0);
+    n = pc_scpi_build(c_cmd, sizeof(c_cmd), pc_scpi_common(SCPI_IDN_Q), nullptr, 0);
     if (scpi_exchange(cid, c_cmd, n))
     {
         Serial.printf("[scpi] *IDN? -> %s\n", c_resp);
@@ -99,7 +99,7 @@ static void run_session(const char *host)
     }
 
     // 2) *CLS - clear status byte + error queue (no response).
-    n = pc_scpi_build(c_cmd, sizeof(c_cmd), pc_scpi_common(ScpiCommon::SCPI_CLS), nullptr, 0);
+    n = pc_scpi_build(c_cmd, sizeof(c_cmd), pc_scpi_common(SCPI_CLS), nullptr, 0);
     pc_client_send(cid, c_cmd, n);
 
     // 3) MEAS:VOLT:DC? - take a DC voltage reading and parse it as a number.

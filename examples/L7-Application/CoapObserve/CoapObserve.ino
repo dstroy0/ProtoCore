@@ -36,8 +36,8 @@ void h_count(const CoapRequest *req, CoapResponse *resp)
     (void)req;
     int n = snprintf((char *)resp->payload, resp->payload_cap, "%lu", (unsigned long)g_count);
     resp->payload_len = (n > 0) ? (size_t)n : 0;
-    resp->content_format = CoapContentFormat::COAP_CF_TEXT;
-    resp->code = (uint8_t)CoapResponseCode::COAP_RSP_CONTENT;
+    resp->content_format = COAP_CF_TEXT;
+    resp->code = (uint8_t)COAP_RSP_CONTENT;
 }
 
 void setup()
@@ -56,7 +56,7 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     pc_coap_server_reset();
-    pc_coap_server_add_resource("/count", CoapMethodMask::COAP_ALLOW_GET, h_count);
+    pc_coap_server_add_resource("/count", COAP_ALLOW_GET, h_count);
     pc_coap_server_begin(5683);
     Serial.println("CoAP server on :5683, observe coap://<ip>/count");
 }

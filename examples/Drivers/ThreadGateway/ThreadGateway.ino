@@ -48,7 +48,7 @@ static void drop_front(uint16_t n)
 static void rcp_get(uint32_t prop)
 {
     uint8_t payload[16];
-    uint16_t plen = pc_spinel_command_build(pc_spinel_header(0, 1), SpinelCmd::SPINEL_CMD_PROP_VALUE_GET, prop, nullptr,
+    uint16_t plen = pc_spinel_command_build(pc_spinel_header(0, 1), SPINEL_CMD_PROP_VALUE_GET, prop, nullptr,
                                             0, payload, sizeof(payload));
     uint8_t frame[32];
     uint16_t n = pc_spinel_frame_encode(payload, plen, frame, sizeof(frame));
@@ -69,7 +69,7 @@ static void print_property(const uint8_t *payload, uint16_t plen)
     {
         return;
     }
-    if (cmd != SpinelCmd::SPINEL_CMD_PROP_VALUE_IS)
+    if (cmd != SPINEL_CMD_PROP_VALUE_IS)
     {
         return; // only report property updates
     }
@@ -77,7 +77,7 @@ static void print_property(const uint8_t *payload, uint16_t plen)
     SpinelReader r;
     pc_spinel_reader_init(&r, val, vlen);
     const char *name = pc_spinel_prop_name(prop);
-    if (prop == SpinelProp::SPINEL_PROP_LAST_STATUS)
+    if (prop == SPINEL_PROP_LAST_STATUS)
     {
         uint32_t status = 0;
         if (pc_spinel_get_uint(&r, &status))
@@ -85,7 +85,7 @@ static void print_property(const uint8_t *payload, uint16_t plen)
             Serial.printf("  %s = %s (%u)\n", name, pc_spinel_status_name(status), status);
         }
     }
-    else if (prop == SpinelProp::SPINEL_PROP_NCP_VERSION || prop == SpinelProp::SPINEL_PROP_NET_NETWORK_NAME)
+    else if (prop == SPINEL_PROP_NCP_VERSION || prop == SPINEL_PROP_NET_NETWORK_NAME)
     {
         const char *s = nullptr;
         uint16_t slen = 0;
@@ -94,7 +94,7 @@ static void print_property(const uint8_t *payload, uint16_t plen)
             Serial.printf("  %s = %.*s\n", name, (int)slen, s);
         }
     }
-    else if (prop == SpinelProp::SPINEL_PROP_PROTOCOL_VERSION)
+    else if (prop == SPINEL_PROP_PROTOCOL_VERSION)
     {
         uint32_t major = 0, minor = 0;
         if (pc_spinel_get_uint(&r, &major) && pc_spinel_get_uint(&r, &minor))
@@ -102,7 +102,7 @@ static void print_property(const uint8_t *payload, uint16_t plen)
             Serial.printf("  %s = %u.%u\n", name, major, minor);
         }
     }
-    else if (prop == SpinelProp::SPINEL_PROP_MAC_15_4_PANID || prop == SpinelProp::SPINEL_PROP_MAC_15_4_SADDR)
+    else if (prop == SPINEL_PROP_MAC_15_4_PANID || prop == SPINEL_PROP_MAC_15_4_SADDR)
     {
         uint16_t v = 0;
         if (pc_spinel_get_u16(&r, &v))
@@ -110,7 +110,7 @@ static void print_property(const uint8_t *payload, uint16_t plen)
             Serial.printf("  %s = 0x%04X\n", name, v);
         }
     }
-    else if (prop == SpinelProp::SPINEL_PROP_HWADDR || prop == SpinelProp::SPINEL_PROP_MAC_15_4_LADDR)
+    else if (prop == SPINEL_PROP_HWADDR || prop == SPINEL_PROP_MAC_15_4_LADDR)
     {
         const uint8_t *eui = nullptr;
         if (pc_spinel_get_eui64(&r, &eui))
@@ -140,14 +140,14 @@ void setup()
     pc_gateway_set_topic_prefix("thread");
 
     // Reset the NCP: spinel RESET command (header | CMD_RESET), then query identity.
-    const uint8_t reset[2] = {pc_spinel_header(0, 0), SpinelCmd::SPINEL_CMD_RESET};
+    const uint8_t reset[2] = {pc_spinel_header(0, 0), SPINEL_CMD_RESET};
     uint8_t frame[8];
     uint16_t n = pc_spinel_frame_encode(reset, 2, frame, sizeof(frame));
     Serial2.write(frame, n);
     delay(200);
-    rcp_get(SpinelProp::SPINEL_PROP_PROTOCOL_VERSION);
-    rcp_get(SpinelProp::SPINEL_PROP_NCP_VERSION);
-    rcp_get(SpinelProp::SPINEL_PROP_HWADDR);
+    rcp_get(SPINEL_PROP_PROTOCOL_VERSION);
+    rcp_get(SPINEL_PROP_NCP_VERSION);
+    rcp_get(SPINEL_PROP_HWADDR);
     Serial.println("Thread gateway: spinel/HDLC -> codec -> property decode + publish (thread/0/<tid>)");
 }
 

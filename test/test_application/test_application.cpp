@@ -33,7 +33,7 @@ static void arm_slot(uint8_t slot, const char *raw)
 {
     conn_pool[slot] = {};
     conn_pool[slot].id = slot;
-    conn_pool[slot].state = ConnState::CONN_ACTIVE;
+    conn_pool[slot].state = CONN_ACTIVE;
     conn_pool[slot].proto = PROTO_HTTP; // dispatch requires an explicit protocol
     conn_pool[slot].pcb = nullptr;
 
@@ -68,7 +68,7 @@ void setUp()
     {
         conn_pool[i] = {};
         conn_pool[i].id = i;
-        conn_pool[i].state = ConnState::CONN_ACTIVE;
+        conn_pool[i].state = CONN_ACTIVE;
         conn_pool[i].proto = PROTO_HTTP; // dispatch requires an explicit protocol
         http_reset(i);
     }
@@ -490,7 +490,7 @@ void race_conn_freed_after_parse_complete()
     TEST_ASSERT_EQUAL(PARSE_COMPLETE, http_pool[0].parse_state);
 
     // Simulate connection drop between parse and dispatch
-    conn_pool[0].state = ConnState::CONN_FREE;
+    conn_pool[0].state = CONN_FREE;
     conn_pool[0].pcb = nullptr;
 
     handle(); // must not crash; slot must be cleaned up
@@ -606,7 +606,7 @@ void test_transfer_encoding_identity_is_501()
 
 void test_redirect_emits_location_and_status()
 {
-    conn_pool[0].state = ConnState::CONN_ACTIVE;
+    conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].proto = PROTO_HTTP; // dispatch requires an explicit protocol
     conn_pool[0].pcb = &_mock_pcb;
     tcp_capture_reset();
@@ -616,12 +616,12 @@ void test_redirect_emits_location_and_status()
     TEST_ASSERT_NOT_NULL(strstr(out, "Location: /index.html\r\n"));
     TEST_ASSERT_NOT_NULL(strstr(out, "Content-Length: 0\r\n"));
     tcp_capture_disable();
-    TEST_ASSERT_EQUAL(ConnState::CONN_FREE, (ConnState)conn_pool[0].state); // slot released
+    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state); // slot released
 }
 
 void test_redirect_invalid_code_defaults_to_302()
 {
-    conn_pool[0].state = ConnState::CONN_ACTIVE;
+    conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].proto = PROTO_HTTP; // dispatch requires an explicit protocol
     conn_pool[0].pcb = &_mock_pcb;
     tcp_capture_reset();
@@ -1165,7 +1165,7 @@ void test_metrics_emits_prometheus()
 {
     conn_pool[0] = {};
     conn_pool[0].id = 0;
-    conn_pool[0].state = ConnState::CONN_ACTIVE;
+    conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].proto = PROTO_HTTP; // dispatch requires an explicit protocol
     conn_pool[0].pcb = &_mock_pcb;
     http_reset(0);
@@ -1230,7 +1230,7 @@ void test_sse_broadcast_after_upgrade_matches_path()
 
     conn_pool[0] = {};
     conn_pool[0].id = 0;
-    conn_pool[0].state = ConnState::CONN_ACTIVE;
+    conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].proto = PROTO_HTTP; // dispatch requires an explicit protocol
     conn_pool[0].pcb = &_mock_pcb;
     push_bytes(0, "GET /events HTTP/1.1\r\n\r\n");
@@ -1256,7 +1256,7 @@ void test_ws_send_api()
     ws_init();
     conn_pool[0] = {};
     conn_pool[0].id = 0;
-    conn_pool[0].state = ConnState::CONN_ACTIVE;
+    conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].proto = PROTO_HTTP;
     conn_pool[0].pcb = &_mock_pcb;
     WsConn *ws = ws_alloc(0);
@@ -1283,12 +1283,12 @@ void test_ws_send_api()
     TEST_ASSERT_EQUAL_HEX8(0x82, (uint8_t)tcp_captured()[0]);
 
     // A terminal parse state suppresses further sends.
-    ws->parse_state = WsParseState::WS_CLOSED;
+    ws->parse_state = WS_CLOSED;
     tcp_capture_reset();
     ws_send_text(0, "nope");
     ws_send_binary(0, payload, sizeof(payload));
     TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len());
-    ws->parse_state = WsParseState::WS_HEADER1; // reopen for disconnect
+    ws->parse_state = WS_HEADER1; // reopen for disconnect
 
     // Disconnect: Close frame (opcode 0x88); the out-of-range id is a no-op.
     tcp_capture_reset();
@@ -1309,7 +1309,7 @@ void test_sse_send_api()
     pc_sse_init();
     conn_pool[0] = {};
     conn_pool[0].id = 0;
-    conn_pool[0].state = ConnState::CONN_ACTIVE;
+    conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].proto = PROTO_HTTP;
     conn_pool[0].pcb = &_mock_pcb;
     SseConn *sse = pc_sse_alloc(0, "/events");
@@ -1377,7 +1377,7 @@ void test_status_text_reason_phrases()
     {
         conn_pool[0] = {};
         conn_pool[0].id = 0;
-        conn_pool[0].state = ConnState::CONN_ACTIVE;
+        conn_pool[0].state = CONN_ACTIVE;
         conn_pool[0].proto = PROTO_HTTP;
         conn_pool[0].pcb = &_mock_pcb;
         http_reset(0);
@@ -1396,7 +1396,7 @@ void test_status_text_reason_phrases()
 void test_send_binary_body_with_nul()
 {
     conn_pool[0].id = 0;
-    conn_pool[0].state = ConnState::CONN_ACTIVE;
+    conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].proto = PROTO_HTTP;
     conn_pool[0].pcb = &_mock_pcb;
     http_reset(0);
@@ -1538,7 +1538,7 @@ void test_send_family_slot_and_conn_gone_guards()
     send_template(MAX_CONNS, 200, "text/html", "hi", nullptr);
     send_chunked(MAX_CONNS, 200, "text/plain", nullptr, nullptr);
 
-    conn_pool[0].state = ConnState::CONN_FREE; // connection gone
+    conn_pool[0].state = CONN_FREE; // connection gone
     conn_pool[0].pcb = nullptr;
     redirect(0, 302, "/x");
     send_template(0, 200, "text/html", "hi", nullptr);
@@ -1550,7 +1550,7 @@ void test_redirect_response_and_code_normalization()
 {
     conn_pool[0] = {};
     conn_pool[0].id = 0;
-    conn_pool[0].state = ConnState::CONN_ACTIVE;
+    conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].proto = PROTO_HTTP;
     conn_pool[0].pcb = &_mock_pcb;
     http_reset(0);
@@ -1560,7 +1560,7 @@ void test_redirect_response_and_code_normalization()
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "Location: /new"));
 
     // An out-of-range redirect code normalizes to 302.
-    conn_pool[0].state = ConnState::CONN_ACTIVE;
+    conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].pcb = &_mock_pcb;
     http_reset(0);
     tcp_capture_reset();
@@ -1718,7 +1718,7 @@ static void live_slot(uint8_t slot)
 {
     conn_pool[slot] = {};
     conn_pool[slot].id = slot;
-    conn_pool[slot].state = ConnState::CONN_ACTIVE;
+    conn_pool[slot].state = CONN_ACTIVE;
     conn_pool[slot].proto = PROTO_HTTP;
     conn_pool[slot].pcb = &_mock_pcb;
     http_reset(slot);
@@ -2285,7 +2285,7 @@ void test_ws_dispatch_without_message_or_close_handler()
     push_ws_text_frame(0, "hi");
     handle(); // ws_dispatch_message finds no handler; frame consumed
     TEST_ASSERT_NOT_NULL(ws_find(0));
-    TEST_ASSERT_NOT_EQUAL(WsParseState::WS_FRAME_READY, ws->parse_state);
+    TEST_ASSERT_NOT_EQUAL(WS_FRAME_READY, ws->parse_state);
 
     ws->parse_state = WsParseState::WS_ERROR; // protocol error seen by the parser
     handle();                                 // ws_dispatch_close finds no handler; slot freed
@@ -2429,7 +2429,7 @@ void test_ws_send_api_inactive_error_state_and_dead_slot()
     TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len());
 
     // Live pool entry, dead TCP slot: the frame write fails, so nothing is flushed.
-    ws->parse_state = WsParseState::WS_HEADER1;
+    ws->parse_state = WS_HEADER1;
     conn_pool[0].pcb = nullptr;
     tcp_capture_reset();
     ws_send_text(ws->ws_id, "nope");

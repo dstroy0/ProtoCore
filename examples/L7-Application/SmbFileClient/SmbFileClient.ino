@@ -114,7 +114,7 @@ void read_program()
     SmbHandle h;
     x.deadline = millis() + 8000;
     SmbResult rc = smb_open(&cfg, &h, cl_send, cl_recv, &x);
-    if (rc != SmbResult::SMB_OK)
+    if (rc != SMB_OK)
     {
         Serial.printf("smb_open failed (SmbResult %d) - see the README troubleshooting table\n", (int)rc);
         pc_client_close(cid);
@@ -126,7 +126,7 @@ void read_program()
     size_t got = 0;
     x.deadline = millis() + 8000;
     rc = smb_read(&h, 0, buf, sizeof(buf), &got, cl_send, cl_recv, &x);
-    if (rc == SmbResult::SMB_OK)
+    if (rc == SMB_OK)
     {
         Serial.printf("--- first %u bytes ---\n", (unsigned)got);
         Serial.write(buf, got);

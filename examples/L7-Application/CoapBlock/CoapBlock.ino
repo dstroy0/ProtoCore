@@ -46,8 +46,8 @@ void h_big(const CoapRequest *req, CoapResponse *resp)
         resp->payload[i] = (uint8_t)('0' + (int)(i % 10)); // "0123456789012..."
     }
     resp->payload_len = (n < resp->payload_cap) ? n : resp->payload_cap;
-    resp->content_format = CoapContentFormat::COAP_CF_TEXT;
-    resp->code = (uint8_t)CoapResponseCode::COAP_RSP_CONTENT;
+    resp->content_format = COAP_CF_TEXT;
+    resp->code = (uint8_t)COAP_RSP_CONTENT;
 }
 
 // PUT /upload: the library reassembles a block-wise upload and calls this once,
@@ -61,7 +61,7 @@ void h_upload(const CoapRequest *req, CoapResponse *resp)
     }
     Serial.printf("upload: %u bytes, checksum=%lu\n", (unsigned)req->payload_len, (unsigned long)sum);
     resp->payload_len = 0;
-    resp->code = (uint8_t)CoapResponseCode::COAP_RSP_CHANGED;
+    resp->code = (uint8_t)COAP_RSP_CHANGED;
 }
 
 void setup()
@@ -80,8 +80,8 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     pc_coap_server_reset();
-    pc_coap_server_add_resource("/big", CoapMethodMask::COAP_ALLOW_GET, h_big);
-    pc_coap_server_add_resource("/upload", CoapMethodMask::COAP_ALLOW_PUT, h_upload);
+    pc_coap_server_add_resource("/big", COAP_ALLOW_GET, h_big);
+    pc_coap_server_add_resource("/upload", COAP_ALLOW_PUT, h_upload);
     pc_coap_server_begin(5683);
     Serial.println("CoAP server on :5683");
     Serial.println("  GET coap://<ip>/big      (block-wise responses)");

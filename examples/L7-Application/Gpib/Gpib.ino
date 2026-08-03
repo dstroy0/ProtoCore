@@ -83,7 +83,7 @@ static void run_session(const char *host)
 
     // Send "*IDN?" as (escaped) data, then request a read until EOI.
     pc_client_send(cid, c_data, pc_gpib_build_data(c_data, sizeof(c_data), (const uint8_t *)"*IDN?", 5));
-    pc_client_send(cid, c_cmd, pc_gpib_read(c_cmd, sizeof(c_cmd), GpibRead::UNTIL_EOI, 0));
+    pc_client_send(cid, c_cmd, pc_gpib_read(c_cmd, sizeof(c_cmd), UNTIL_EOI, 0));
 
     char resp[160];
     size_t r = read_line(cid, resp, sizeof(resp));

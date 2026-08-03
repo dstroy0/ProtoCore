@@ -40,7 +40,7 @@ static void rearm()
 {
     conn_pool[0] = {};
     conn_pool[0].id = 0;
-    conn_pool[0].state = ConnState::CONN_ACTIVE;
+    conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].proto = PROTO_HTTP;
     conn_pool[0].pcb = &_mock_pcb;
     http_reset(0);
@@ -97,7 +97,7 @@ void setUp()
     {
         conn_pool[i] = {};
         conn_pool[i].id = (uint8_t)i;
-        conn_pool[i].state = ConnState::CONN_ACTIVE;
+        conn_pool[i].state = CONN_ACTIVE;
         conn_pool[i].proto = PROTO_HTTP;
         conn_pool[i].pcb = &_mock_pcb;
         http_reset(i);

@@ -40,9 +40,9 @@ static void access_log(const char *method, const char *path, int status, int len
 {
     char line[96];
     snprintf(line, sizeof(line), "%s %s -> %d (%d bytes)", method, path, status, len);
-    pc_syslog_log(status >= 500   ? SyslogSeverity::SYSLOG_ERR
-                  : status >= 400 ? SyslogSeverity::SYSLOG_WARNING
-                                  : SyslogSeverity::SYSLOG_INFO,
+    pc_syslog_log(status >= 500   ? SYSLOG_ERR
+                  : status >= 400 ? SYSLOG_WARNING
+                                  : SYSLOG_INFO,
                   line);
 }
 
@@ -61,8 +61,8 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    pc_syslog_init(SYSLOG_SERVER, SYSLOG_PORT, "esp32-pc", "pc", SyslogFacility::SYSLOG_FAC_LOCAL0);
-    pc_syslog_log(SyslogSeverity::SYSLOG_NOTICE, "device booted");
+    pc_syslog_init(SYSLOG_SERVER, SYSLOG_PORT, "esp32-pc", "pc", SYSLOG_FAC_LOCAL0);
+    pc_syslog_log(SYSLOG_NOTICE, "device booted");
 
     on_http("/", HTTP_GET, [](uint8_t id, HttpReq *) { send_text(id, 200, "text/plain", "ok"); });
     on_request_log(access_log); // every response is logged to syslog
@@ -89,6 +89,6 @@ void loop()
         char hb[48];
         snprintf(hb, sizeof(hb), "heartbeat uptime=%lus heap=%u", (unsigned long)(millis() / 1000),
                  (unsigned)ESP.getFreeHeap());
-        pc_syslog_log(SyslogSeverity::SYSLOG_INFO, hb);
+        pc_syslog_log(SYSLOG_INFO, hb);
     }
 }
