@@ -68,6 +68,12 @@ jobs:
         # caught. See ci_tooling/check/check_owned_context.py for the allow-list rationale (shared substrate).
         run: python3 ci_tooling/check/check_owned_context.py
 
+      - name: Test-coverage guard (every src/ TU has a test env)
+        # A module ships with its native_<name> Unity env or it does not ship. Ratcheted: fails on a
+        # src/ translation unit that no env's build_src_filter names, while the recorded gaps are
+        # worked down. board_drivers/ is exempt - it only runs on silicon.
+        run: python3 ci_tooling/check/check_test_coverage.py
+
       - name: Banned-constructs guard (src/ hard bans)
         # Server-side twin of the pre-commit hook: fails if any src/ source uses a construct banned
         # by docs/SRCBANNED.md (strlen, <stdlib.h> / heap / parse functions, auto, delay(), a

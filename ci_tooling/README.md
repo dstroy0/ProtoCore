@@ -140,8 +140,16 @@ for g in ci_tooling/generate/gen_*.py; do python3 "$g" --check || echo "STALE: $
 python3 ci_tooling/check/check_docs.py
 python3 ci_tooling/check/check_owned_context.py
 python3 ci_tooling/check/check_src_banned.py --all
+python3 ci_tooling/check/check_test_coverage.py
 python3 ci_tooling/check/check_examples.py
 ```
+
+`check_test_coverage.py` asserts that every `src/` translation unit outside
+`board_drivers/` is named by some env's `build_src_filter` in `test/test_matrix.json`.
+Being compiled does not count: 24 envs carry no filter and build the whole tree, so
+compilation alone would mark every file covered while testing none of it deliberately.
+It ratchets like the other guards - `--list` prints the current gaps, `--save` re-records
+the floor after a suite lands.
 
 ## Status
 

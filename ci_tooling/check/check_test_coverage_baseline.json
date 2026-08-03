@@ -1,0 +1,21 @@
+[
+  "src/network_drivers/application/binary_asset_blobs.c",
+  "src/network_drivers/application/mdns_service/mdns_service.c",
+  "src/network_drivers/application/scp/ssh_scp.c",
+  "src/network_drivers/application/sftp/ssh_sftp.c",
+  "src/network_drivers/datalink/datalink.c",
+  "src/network_drivers/network/network.c",
+  "src/network_drivers/network/route.c",
+  "src/network_drivers/presentation/http/http2/h2_server.c",
+  "src/network_drivers/presentation/ssh/connection/ssh_client.c",
+  "src/network_drivers/presentation/ssh/connection/ssh_forward.c",
+  "src/network_drivers/tls/tls.cpp",
+  "src/server/exc_coredump.c",
+  "src/server/update/ota_service.cpp",
+  "src/services/file_transfer/ftp/ftp_session.c",
+  "src/services/file_transfer/http_delivery/http_delivery_routes.c",
+  "src/services/net/iface_bridge/iface_bridge_hw.c",
+  "src/services/net/relay/relay_listener.c",
+  "src/services/timing_position/gnss/ntrip_caster_listener.c",
+  "src/services/web/edge_cache/edge_cache_proxy.c"
+]
