@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- spell the opaque QuicConn tag and drop a missed reinterpret_cast ([`03a3609`](https://github.com/dstroy0/ProtoCore/commit/03a3609c9b40ebb1a360718eb03e5b7f53616823))
 - strip the QuicTp scope qualifier in quic_tp ([`7428210`](https://github.com/dstroy0/ProtoCore/commit/7428210b298e78ad086884ab087ca618b262fa5a))
 - replace the SecureBorrow RAII in quic_crypto with the C pool API ([`960430e`](https://github.com/dstroy0/ProtoCore/commit/960430e2e4f2f091b9f4c4081322c8eb9753eebf))
 - spell alignof and the opaque AEAD key the C way in the portable backend ([`506a3d5`](https://github.com/dstroy0/ProtoCore/commit/506a3d5cb4d3b52577ecab53c31b2241792d2593))
@@ -28,6 +29,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`7870cdb`](https://github.com/dstroy0/ProtoCore/commit/7870cdbbfd3fd83f3cf862f3717d36f5929f92f8))
+- update test report + coverage [skip ci] ([`f2509a3`](https://github.com/dstroy0/ProtoCore/commit/f2509a3f3cbfc5ede3d792fc378a7875e6f46e9c))
 - update CHANGELOG.md [skip ci] ([`40d7ddb`](https://github.com/dstroy0/ProtoCore/commit/40d7ddba723a62d81bc56b7a8c7fa650b528442d))
 - update CHANGELOG.md [skip ci] ([`b58bfe4`](https://github.com/dstroy0/ProtoCore/commit/b58bfe4df7b2cd2291c1b782039630f02d5b46d5))
 - update test report + coverage [skip ci] ([`8e89fce`](https://github.com/dstroy0/ProtoCore/commit/8e89fcec6f81a900c0526a937b4745a61d33f7e8))
