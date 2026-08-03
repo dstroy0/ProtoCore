@@ -35,6 +35,7 @@ typedef struct
 {
     proto_bool open;
     proto_bool is_dir;
+    proto_bool held; ///< reserved by a test, with no littlefs object behind it
     lfs_file_t file;
     lfs_dir_t dir;
 } LfsmHandle;
@@ -98,6 +99,7 @@ static inline void lfsm_format(void)
     for (int i = 0; i < LFSM_HANDLES; i++)
     {
         g_lfsm.h[i].open = PROTO_FALSE;
+        g_lfsm.h[i].held = PROTO_FALSE;
     }
 
     memset(&g_lfsm.cfg, 0, sizeof(g_lfsm.cfg));
@@ -194,6 +196,7 @@ static inline void lfsm_hold_all_handles(void)
         {
             g_lfsm.h[i].open = PROTO_TRUE;
             g_lfsm.h[i].is_dir = PROTO_FALSE;
+            g_lfsm.h[i].held = PROTO_TRUE;
         }
     }
 }
@@ -329,7 +332,8 @@ static inline int lfsm_open(const char *path, int mode)
 
 static inline int lfsm_read(int handle, void *buf, size_t n)
 {
-    if (handle < 0 || handle >= LFSM_HANDLES || !g_lfsm.h[handle].open || g_lfsm.h[handle].is_dir)
+    if (handle < 0 || handle >= LFSM_HANDLES || !g_lfsm.h[handle].open || g_lfsm.h[handle].is_dir ||
+        g_lfsm.h[handle].held)
     {
         return -1;
     }
@@ -338,7 +342,8 @@ static inline int lfsm_read(int handle, void *buf, size_t n)
 
 static inline int lfsm_write(int handle, const void *buf, size_t n)
 {
-    if (handle < 0 || handle >= LFSM_HANDLES || !g_lfsm.h[handle].open || g_lfsm.h[handle].is_dir)
+    if (handle < 0 || handle >= LFSM_HANDLES || !g_lfsm.h[handle].open || g_lfsm.h[handle].is_dir ||
+        g_lfsm.h[handle].held)
     {
         return -1;
     }
@@ -351,7 +356,11 @@ static inline void lfsm_close(int handle)
     {
         return;
     }
-    if (g_lfsm.h[handle].is_dir)
+    if (g_lfsm.h[handle].held)
+    {
+        g_lfsm.h[handle].held = PROTO_FALSE; // reserved by a test; littlefs never saw it
+    }
+    else if (g_lfsm.h[handle].is_dir)
     {
         lfs_dir_close(&g_lfsm.lfs, &g_lfsm.h[handle].dir);
     }
@@ -364,7 +373,8 @@ static inline void lfsm_close(int handle)
 
 static inline proto_bool lfsm_seek(int handle, uint64_t off)
 {
-    if (handle < 0 || handle >= LFSM_HANDLES || !g_lfsm.h[handle].open || g_lfsm.h[handle].is_dir)
+    if (handle < 0 || handle >= LFSM_HANDLES || !g_lfsm.h[handle].open || g_lfsm.h[handle].is_dir ||
+        g_lfsm.h[handle].held)
     {
         return PROTO_FALSE;
     }
