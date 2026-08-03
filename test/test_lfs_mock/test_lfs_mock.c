@@ -167,6 +167,39 @@ void test_a_full_volume_refuses_rather_than_pretending()
     TEST_ASSERT_LESS_THAN_INT(LFSM_BLOCK_SIZE * LFSM_BLOCK_COUNT * 2, total); // before writing past the volume
 }
 
+// The fill helper the failure-injection tests lean on has to actually exhaust the store,
+// otherwise a test that expects a refusal quietly gets a success.
+void test_fill_volume_leaves_nothing_creatable()
+{
+    const pc_mnt_backend *b = lfsm();
+    lfsm_fill_volume();
+    TEST_ASSERT_EQUAL_INT(-1, b->open("/after_fill.txt", PC_MNT_WRITE));
+    TEST_ASSERT_FALSE(b->mkdir("/after_fill_dir"));
+}
+
+// Leaving headroom is the other half: the file must be creatable, its body must not fit.
+void test_fill_leaving_room_still_creates_but_cannot_write()
+{
+    const pc_mnt_backend *b = lfsm();
+    lfsm_fill_volume_leaving(2);
+    int h = b->open("/hdr.bin", PC_MNT_WRITE);
+    TEST_ASSERT_GREATER_OR_EQUAL_INT(0, h);
+    static uint8_t big[4096];
+    memset(big, 'B', sizeof(big));
+    int total = 0, rc = 0;
+    for (int i = 0; i < 8; i++)
+    {
+        rc = b->write(h, big, sizeof(big));
+        if (rc < 0)
+        {
+            break;
+        }
+        total += rc;
+    }
+    b->close(h);
+    TEST_ASSERT_LESS_THAN_INT(8 * (int)sizeof(big), total); // it ran out before taking it all
+}
+
 int main()
 {
     UNITY_BEGIN();
@@ -179,5 +212,7 @@ int main()
     RUN_TEST(test_append_adds_to_the_end);
     RUN_TEST(test_open_missing_for_read_fails);
     RUN_TEST(test_a_full_volume_refuses_rather_than_pretending);
+    RUN_TEST(test_fill_volume_leaves_nothing_creatable);
+    RUN_TEST(test_fill_leaving_room_still_creates_but_cannot_write);
     return UNITY_END();
 }

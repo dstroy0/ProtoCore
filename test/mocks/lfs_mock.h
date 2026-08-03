@@ -227,8 +227,51 @@ static inline void lfsm_fill_volume_leaving(int spare)
     while (lfs_file_write(&g_lfsm.lfs, &f, chunk, sizeof(chunk)) == (lfs_ssize_t)sizeof(chunk))
     {
         written++;
+        if (lfs_file_sync(&g_lfsm.lfs, &f) < 0)
+        {
+            break; // littlefs buffers, so a write can succeed and the commit still not fit
+        }
     }
     lfs_file_close(&g_lfsm.lfs, &f);
+
+    // Creating a file takes metadata blocks a data write does not, so "the body stopped growing"
+    // is not the same as "nothing more can be made". Keep making entries until one is refused.
+    if (spare == 0)
+    {
+        char probe[32];
+        for (int i = 0; i < LFSM_BLOCK_COUNT * 4; i++)
+        {
+            int n = 0;
+            for (int v = i; v > 0; v /= 10)
+            {
+                n++;
+            }
+            (void)n;
+            probe[0] = '/';
+            probe[1] = '.';
+            probe[2] = 'p';
+            int len = 3;
+            int val = i;
+            char digits[8];
+            int d = 0;
+            do
+            {
+                digits[d++] = (char)('0' + (val % 10));
+                val /= 10;
+            } while (val > 0 && d < (int)sizeof(digits));
+            while (d > 0)
+            {
+                probe[len++] = digits[--d];
+            }
+            probe[len] = '\0';
+            lfs_file_t pf;
+            if (lfs_file_open(&g_lfsm.lfs, &pf, probe, LFS_O_WRONLY | LFS_O_CREAT | LFS_O_TRUNC) < 0)
+            {
+                return; // the store now refuses to create anything, which is the condition wanted
+            }
+            lfs_file_close(&g_lfsm.lfs, &pf);
+        }
+    }
 
     // Give the spare back by truncating the filler, which is the only way to free blocks here.
     if (spare > 0 && lfs_file_open(&g_lfsm.lfs, &f, "/.fill", LFS_O_WRONLY) >= 0)
