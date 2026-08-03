@@ -851,7 +851,9 @@
         "+<mmgr/frame.c>",
         "+<server/clock/clock.c>",
         "+<server/filesystem/filesystem.c>",
-        "+<server/filesystem/mnt.c>"
+        "+<server/filesystem/mnt.c>",
+        "+<network_drivers/network/route.c>",
+        "+<server/signaling/signaling.c>"
       ],
       "tests": ["test_webdav_handler"]
     },
