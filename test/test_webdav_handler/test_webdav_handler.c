@@ -3,11 +3,11 @@
 //
 // Host tests for the WebDAV request handler's recursive filesystem operations
 // (COPY / MOVE / DELETE of collections, RFC 4918). These exercise the real
-// handler in protocore.cpp against the directory-capable
-// in-memory FS mock (test/mocks/FS.h, opt-in via mock_fs_tree_enable()), which
-// the files-only mock could not cover - so recursion was previously only
-// HW-verifiable.
+// handler against real littlefs on a RAM block device (test/mocks/lfs_mock.h) - the same
+// filesystem the device runs, so a recursive walk is answered here exactly as it is on
+// hardware, and the gate does not cost a flash cycle.
 
+#include "lfs_mock.h" // the littlefs-backed store this suite walks
 #include "protocore.h"
 #include "server/filesystem/filesystem.h" // pc_fs_join()/pc_fs_resolve(): a pure header shared with SFTP/SCP,
                                           // neither of which is linked into this env, so tested directly below
