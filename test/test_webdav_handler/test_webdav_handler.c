@@ -861,20 +861,13 @@ void test_webdav_route_scan_skips_non_dav_routes()
 // has nothing to close.
 void test_webdav_stream_put_abort_without_open()
 {
-    char p[24];
-    for (int i = 0; i < 100; i++) // exhaust the node table -> open("w") fails
-    {
-        snprintf(p, sizeof p, "/dav/f%03d", i);
-        if (!lfsm_write_text(p, ""))
-        {
-            break;
-        }
-    }
+    lfsm_fail_prog_always(); // the store refuses the write that would create it
     push_str(0, "PUT /dav/never.txt HTTP/1.1\r\nHost: x\r\nContent-Length: 10\r\n\r\nabcd");
     http_parse(0);
-    TEST_ASSERT_FALSE(tree_has("/dav/never.txt")); // the open failed: no node was created
+    TEST_ASSERT_FALSE(tree_has("/dav/never.txt")); // the open failed: nothing was created
     http_reset(0);                                 // body_streaming && !COMPLETE -> abort hook
     TEST_ASSERT_FALSE(tree_has("/dav/never.txt"));
+    lfsm_no_prog_failure();
 }
 
 // The peer disappears between the request being parsed and the response being written:
