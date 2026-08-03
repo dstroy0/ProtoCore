@@ -734,8 +734,22 @@ static inline pc_net_err pc_net_connect(pc_pcb *p, const pc_net_ip *a, uint16_t 
     p->remote_port = port;
     return PC_NET_OK;
 }
+// One-shot close failure: the next pc_net_close() reports no memory and leaves the pcb open, the
+// way a stack that cannot queue the FIN does. The caller has to keep the slot draining, not drop it.
+__attribute__((weak)) int pc_net_host_close_fail_once;
+
+static inline void mock_close_fail_once(void)
+{
+    pc_net_host_close_fail_once = 1;
+}
+
 static inline pc_net_err pc_net_close(pc_pcb *p)
 {
+    if (pc_net_host_close_fail_once)
+    {
+        pc_net_host_close_fail_once = 0;
+        return PC_NET_ERR_MEM;
+    }
     if (p)
     {
         p->in_use = 0;

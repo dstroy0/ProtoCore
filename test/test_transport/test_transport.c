@@ -142,7 +142,7 @@ void test_timeout_does_not_fire_on_free_slot()
 {
     conn_pool[0].state = CONN_FREE;
     set_millis(CONN_TIMEOUT_MS + 1);
-    proto_tcp_check_timeouts();
+    proto_tcp_check_timeouts(0);
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
 }
 
@@ -152,7 +152,7 @@ void test_timeout_does_not_fire_before_deadline()
     conn_pool[0].pcb = NULL;
     conn_pool[0].last_activity_ms = 0;
     set_millis(CONN_TIMEOUT_MS - 1);
-    proto_tcp_check_timeouts();
+    proto_tcp_check_timeouts(0);
     TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)conn_pool[0].state);
 }
 
@@ -162,7 +162,7 @@ void test_timeout_fires_at_deadline()
     conn_pool[0].pcb = NULL;
     conn_pool[0].last_activity_ms = 0;
     set_millis(CONN_TIMEOUT_MS);
-    proto_tcp_check_timeouts();
+    proto_tcp_check_timeouts(0);
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
     TEST_ASSERT_NULL(conn_pool[0].pcb);
 }
@@ -178,7 +178,7 @@ void test_timeout_fires_only_on_stale_slots()
     conn_pool[1].last_activity_ms = CONN_TIMEOUT_MS; // fresh
 
     set_millis(CONN_TIMEOUT_MS);
-    proto_tcp_check_timeouts();
+    proto_tcp_check_timeouts(0);
 
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
     TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)conn_pool[1].state);
@@ -201,7 +201,7 @@ void test_active_send_not_reaped()
 
     set_millis(CONN_TIMEOUT_MS + 10); // past the idle deadline
     pc_conn_touch_active(0);          // the pump's per-poll refresh for an in-flight body
-    proto_tcp_check_timeouts();
+    proto_tcp_check_timeouts(0);
 
     TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)conn_pool[0].state); // survives (streaming)
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[1].state);   // reaped (idle)
@@ -370,7 +370,7 @@ void stress_all_slots_timeout_simultaneously()
     }
 
     set_millis(CONN_TIMEOUT_MS);
-    proto_tcp_check_timeouts();
+    proto_tcp_check_timeouts(0);
 
     for (int i = 0; i < MAX_CONNS; i++)
     {
@@ -394,7 +394,7 @@ void stress_timeout_arm_recover_cycle()
         }
 
         set_millis((uint32_t)(CONN_TIMEOUT_MS * (cycle + 1)));
-        proto_tcp_check_timeouts();
+        proto_tcp_check_timeouts(0);
 
         for (int i = 0; i < MAX_CONNS; i++)
         {
@@ -420,7 +420,7 @@ void stress_check_timeouts_high_call_rate()
 
     for (int i = 0; i < 2000; i++)
     {
-        proto_tcp_check_timeouts();
+        proto_tcp_check_timeouts(0);
     }
 
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
@@ -940,7 +940,7 @@ void test_close_falls_back_to_abort_on_tcp_close_failure()
     pc_conn_set_state(0, CONN_ACTIVE);
 
     int before = mock_abort_call_count();
-    mock_close_fail_once() = PROTO_TRUE;
+    mock_close_fail_once();
     pc_conn_close(0);
     TEST_ASSERT_EQUAL_INT(before + 1, mock_abort_call_count());
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
@@ -981,7 +981,7 @@ void test_begin_close_finalizes_immediately_with_and_without_a_pcb()
     conn_pool[3].id = 3;
     conn_pool[3].pcb = &fake2;
     pc_conn_set_state(3, CONN_ACTIVE);
-    mock_close_fail_once() = PROTO_TRUE;
+    mock_close_fail_once();
     before = mock_abort_call_count();
     pc_conn_begin_close(3);
     TEST_ASSERT_EQUAL_INT(before + 1, mock_abort_call_count());
@@ -1050,13 +1050,13 @@ void test_check_timeouts_reaps_stale_closing_slots()
     conn_pool[1].last_activity_ms = 0;
 
     set_millis(PC_CLOSING_TIMEOUT_MS - 1); // not yet stale: both must survive
-    proto_tcp_check_timeouts();
+    proto_tcp_check_timeouts(0);
     TEST_ASSERT_EQUAL(CONN_CLOSING, (ConnState)conn_pool[0].state);
     TEST_ASSERT_EQUAL(CONN_CLOSING, (ConnState)conn_pool[1].state);
 
     int before = mock_abort_call_count();
     set_millis(PC_CLOSING_TIMEOUT_MS); // now stale: force-freed
-    proto_tcp_check_timeouts();
+    proto_tcp_check_timeouts(0);
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
     TEST_ASSERT_NULL(conn_pool[0].pcb);
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[1].state);
@@ -1075,7 +1075,7 @@ void test_check_timeouts_detaches_and_aborts_a_real_pcb()
 
     int before = mock_abort_call_count();
     set_millis(CONN_TIMEOUT_MS);
-    proto_tcp_check_timeouts();
+    proto_tcp_check_timeouts(0);
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
     TEST_ASSERT_NULL(conn_pool[0].pcb);
     TEST_ASSERT_EQUAL_INT(before + 1, mock_abort_call_count());
@@ -1131,7 +1131,7 @@ void test_recv_cb_fin_close_falls_back_to_abort_on_tcp_close_failure()
     conn_pool[0].listener_id = 0;
     pc_conn_set_state(0, CONN_ACTIVE);
 
-    mock_close_fail_once() = PROTO_TRUE;
+    mock_close_fail_once();
     int before = mock_abort_call_count();
     TEST_ASSERT_EQUAL_INT(PC_NET_OK, lowlevel_recv_cb(&conn_pool[0], &fake, NULL, PC_NET_OK));
     TEST_ASSERT_EQUAL_INT(before + 1, mock_abort_call_count());
