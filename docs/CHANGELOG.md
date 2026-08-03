@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- restore constant names mangled by the C++ to C conversion ([`2a639ea`](https://github.com/dstroy0/ProtoCore/commit/2a639ea418d29874bf40582f94504aff567ca15f))
 - emit binary_asset_blobs as C and drop the resurrected .cpp ([`3da92d9`](https://github.com/dstroy0/ProtoCore/commit/3da92d94bd7ebb9cc49de3bf6b3a6b7018bc1c96))
 - read .c sources in the checkers the C conversion left behind ([`8eb81fa`](https://github.com/dstroy0/ProtoCore/commit/8eb81fa075ac8b17a6313ae053d9c7fd6bb6da62))
 - give ip.h C linkage so C++ callers link against it ([`c1ad16a`](https://github.com/dstroy0/ProtoCore/commit/c1ad16aa3b8ff9bea85acb94e65e4029eeadb8e4))
@@ -23,6 +24,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update test report + coverage [skip ci] ([`2e4e0bc`](https://github.com/dstroy0/ProtoCore/commit/2e4e0bc232efe80d4e93e76d4c82fb2f700b4c5f))
+- update CHANGELOG.md [skip ci] ([`f42f5a0`](https://github.com/dstroy0/ProtoCore/commit/f42f5a09bc2eba6254bd2b9d098f1834ef334afd))
 - update test report + coverage [skip ci] ([`7653e4c`](https://github.com/dstroy0/ProtoCore/commit/7653e4cbb44e4cd65aa48c5ac3dc11e968ac3263))
 - update CHANGELOG.md [skip ci] ([`b632f92`](https://github.com/dstroy0/ProtoCore/commit/b632f926416c3aab876bdfcbf01fbdb5ee107877))
 - build the ESP-IDF component on GitHub ([`b58882c`](https://github.com/dstroy0/ProtoCore/commit/b58882c22e95496c37067b597f5bdaf7a5d722f6))
@@ -92,6 +95,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- strip narrative from the i2c and proto_builtins comments ([`8e303b5`](https://github.com/dstroy0/ProtoCore/commit/8e303b5cf49a525a492d16cd687f7116bbf48b17))
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`29e3da9`](https://github.com/dstroy0/ProtoCore/commit/29e3da95aea09a5bcc47a54a4db5f4fb34137035))
 - describe diag as the runtime frame build it is ([`2e4176f`](https://github.com/dstroy0/ProtoCore/commit/2e4176f9327d4c8da9eaee07416942a64002a953))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`5127742`](https://github.com/dstroy0/ProtoCore/commit/51277427f26c15063c7af53ff87bc185c0ebe7cb))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`7f88800`](https://github.com/dstroy0/ProtoCore/commit/7f88800b01dfd0308e1487019dac72888363b3d7))
@@ -129,6 +134,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Refactor
 
+- move mDNS, NTP, NTS and PTP into the L7 application layer ([`bcf041b`](https://github.com/dstroy0/ProtoCore/commit/bcf041b7358b324f34ddccceeae40be286a24161))
 - restore internal linkage, bridge I2C, convert six files to C11 ([`ef26ac7`](https://github.com/dstroy0/ProtoCore/commit/ef26ac7ba100e631e7543645961de3865aca4785))
 - split WebDAV into the L7 wire codec and the server handler ([`593e45a`](https://github.com/dstroy0/ProtoCore/commit/593e45a25d14a01599aa08017898d05c80acd7dc))
 - move HTTP authentication into the L7 application layer ([`a602846`](https://github.com/dstroy0/ProtoCore/commit/a602846800937ce64a664fa8cb3f2f51c1a346ef))
