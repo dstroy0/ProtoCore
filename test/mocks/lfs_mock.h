@@ -26,7 +26,7 @@
 #define LFSM_READ_SIZE 16
 #define LFSM_PROG_SIZE 16
 #define LFSM_BLOCK_SIZE 512
-#define LFSM_BLOCK_COUNT 64 ///< 32 KB volume - enough for a tree, small enough to stay in BSS
+#define LFSM_BLOCK_COUNT 256 ///< 128 KB: room for littlefs to still split metadata at exhaustion
 #define LFSM_CACHE_SIZE 64
 #define LFSM_LOOKAHEAD 16
 #define LFSM_HANDLES 8
