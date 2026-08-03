@@ -793,6 +793,23 @@ Built-in radio:
   (`native_psram_pool`). _Remaining:_ the `heap_caps_calloc` allocation glue at begin + the
   COMPONENT_EMBED_TXTFILES asset-offload build wiring (M).
 
+- [ ] **Mount a filesystem over SSH** (M, RFC 4254 + draft-ietf-secsh-filexfer) - a `pc_mnt_backend`
+      whose calls travel the SSH connection instead of a local bus, so a remote directory mounts
+      beside a card and every reader above it stays unchanged. The seam already allows it: mnt is
+      divorced from the store at the mount point, the way a VFS is, and RAM is the buffer between
+      them, so what a mount points at is not the accessor's business. The wire half is already here
+      and host-tested - `application/sftp` builds and walks SSH_FXP_\* frames, `application/scp`
+      the RCP stream - so what is missing is the client session that issues the requests and the
+      adapter that presents it as the fourteen backend calls. Wants the multipoint mnt below first:
+      a remote store is the case where mounting one thing must not unmount another.
+- [ ] **Multipoint mnt** (M) - `pc_mnt_mount()` records one backend today, so a second call replaces
+      the first and every root resolves through whichever store was mounted last. Register mount
+      points instead, resolve a path to the longest match, and let the backend a caller names select
+      among them. The callers are already written for it: `serve_file()`, `serve_static()` and
+      WebDAV all take a `pc_mnt_backend *`, and `Route::static_fs` is documented as "NULL uses
+      whatever is mounted" - the selection is passed in and then dropped, because there is only one
+      place to resolve to.
+
 ### Observability, diagnostics & reliability
 
 - [~] Hardware health (M): power-rail voltage-drop logger, SPI-bus CRC audit + clock backoff, GPIO
