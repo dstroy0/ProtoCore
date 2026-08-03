@@ -80,10 +80,10 @@ struct QuicConn;
 typedef struct
 {
     /** @brief In-order stream bytes arrived on @p stream_id (@p fin marks the final bytes). */
-    void (*on_stream_data)(void *app, QuicConn *qc, uint64_t stream_id, const uint8_t *data, size_t len,
+    void (*on_stream_data)(void *app, struct QuicConn *qc, uint64_t stream_id, const uint8_t *data, size_t len,
                            proto_bool fin);
     /** @brief The handshake completed (client Finished verified); 1-RTT is open. */
-    void (*on_handshake_done)(void *app, QuicConn *qc);
+    void (*on_handshake_done)(void *app, struct QuicConn *qc);
     void *app; ///< opaque, passed back to the callbacks
 } QuicConnCallbacks;
 

@@ -25,8 +25,8 @@
 static void assert_ctx_match(uint8_t *a, uint8_t *b)
 {
     uint8_t n12[12] = {0}, zpt[16] = {0}, c1[16], t1[16], c2[16], t2[16];
-    pc_aes128gcm_seal(reinterpret_cast<pc_aes128gcm_key *>(a), n12, NULL, 0, zpt, sizeof zpt, c1, t1);
-    pc_aes128gcm_seal(reinterpret_cast<pc_aes128gcm_key *>(b), n12, NULL, 0, zpt, sizeof zpt, c2, t2);
+    (void)pc_aes128gcm_seal((struct pc_aes128gcm_key *)(a), n12, NULL, 0, zpt, sizeof zpt, c1, t1);
+    (void)pc_aes128gcm_seal((struct pc_aes128gcm_key *)(b), n12, NULL, 0, zpt, sizeof zpt, c2, t2);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(c1, c2, sizeof c1);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(t1, t2, sizeof t1);
 }
