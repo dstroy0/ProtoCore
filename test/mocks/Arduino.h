@@ -15,22 +15,21 @@
 #include <strings.h>
 #endif
 
-// Use a function-local static so the variable is shared across all TUs
-// (inline functions with static locals are merged by the linker per C++11 §3.2).
-// A plain `static` variable in a header would give each TU its own copy,
-// causing set_millis() in test files to not affect millis() in tcp.cpp.
-inline uint32_t &_millis_ref()
+// The virtual clock the suite drives: a test calls set_millis() and the library reads it back
+// through pc_millis(). The counter is one object for the whole program - a test writes it from
+// its own translation unit and server/clock/clock.c reads it from another, so a per-TU copy
+// would leave the library reading a counter nobody set. A weak definition in the header gives
+// every TU the same symbol and lets the linker collapse them to one instance, which is what the
+// C++ build got for free from ODR merging of inline-function-local statics.
+__attribute__((weak)) uint32_t g_pc_mock_millis = 0;
+
+static inline uint32_t millis(void)
 {
-    static uint32_t v = 0;
-    return v;
+    return g_pc_mock_millis;
 }
-inline uint32_t millis()
+static inline void set_millis(uint32_t v)
 {
-    return _millis_ref();
-}
-inline void set_millis(uint32_t v)
-{
-    _millis_ref() = v;
+    g_pc_mock_millis = v;
 }
 
 // ---------------------------------------------------------------------------
@@ -47,20 +46,19 @@ inline void set_millis(uint32_t v)
 #include <stdlib.h>
 #include <time.h>
 
-// static inline: each TU gets its own copy; no multiple-definition link error.
-// The shared seed state is in the function-local static (merged per C++11 §3.2
-// for inline functions, but we use static to avoid the linkage issue entirely).
-static inline uint32_t esp_random()
+// static inline: each TU gets its own seed flag and counter, which only costs a re-seed per TU.
+static inline uint32_t esp_random(void)
 {
-    static bool seeded = false;
+    static int seeded = 0;
     static uint32_t ctr = 0;
     if (!seeded)
     {
-        srand((unsigned)time(nullptr) ^ 0xDEADBEEFu);
-        seeded = true;
+        srand((unsigned)time(NULL) ^ 0xDEADBEEFu);
+        seeded = 1;
     }
     // Mix in a counter so repeated calls within the same millisecond differ.
-    return (uint32_t)rand() ^ (++ctr * 0x9e3779b9u);
+    ctr++;
+    return (uint32_t)rand() ^ (ctr * 0x9e3779b9u);
 }
 
 static inline void esp_fill_random(void *buf, size_t len)

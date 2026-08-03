@@ -17,6 +17,7 @@
 #ifndef PROTOCORE_PC_NET_HOST_H
 #define PROTOCORE_PC_NET_HOST_H
 
+#include <Arduino.h> // the virtual clock the host time base reads: millis() / set_millis()
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
@@ -264,16 +265,17 @@ static inline uint8_t pc_gpio_host_mode(uint8_t pin)
 // Time base
 // ---------------------------------------------------------------------------
 //
-// The host has no tick timer, so the default clock is the C library's. Tests that need to
-// control time install their own through pc_set_clock() and never reach these.
+// The host has no tick timer, so the platform default is the virtual clock in the Arduino mock:
+// set_millis() moves it and nothing else does. That makes the default path deterministic, which
+// is what a timeout test drives when it reverts an override with pc_set_clock(NULL, 0).
 
-static inline uint32_t pc_platform_micros(void)
-{
-    return (uint32_t)((uint64_t)clock() * 1000000u / CLOCKS_PER_SEC);
-}
 static inline uint32_t pc_platform_millis(void)
 {
-    return (uint32_t)((uint64_t)clock() * 1000u / CLOCKS_PER_SEC);
+    return millis();
+}
+static inline uint32_t pc_platform_micros(void)
+{
+    return millis() * 1000u;
 }
 // No cycle counter on the host; deltas only, so a micros-derived stand-in is honest enough.
 static inline uint32_t pc_platform_cycles(void)
