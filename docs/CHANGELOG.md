@@ -54,6 +54,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`154f7e9`](https://github.com/dstroy0/ProtoCore/commit/154f7e9141faa3da71d7291c7178eda3a07db0d3))
 - update CHANGELOG.md [skip ci] ([`94177b3`](https://github.com/dstroy0/ProtoCore/commit/94177b3bbc8e3f61111853a2e290fb1d0b40f62d))
 - update CHANGELOG.md [skip ci] ([`b4a7a48`](https://github.com/dstroy0/ProtoCore/commit/b4a7a48a7ade52c519b421c81e74f0c71f54c3aa))
 - update CHANGELOG.md [skip ci] ([`7829ec0`](https://github.com/dstroy0/ProtoCore/commit/7829ec061c271ceb6c09e5320d08c251add43e91))
@@ -334,6 +335,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Refactor
 
+- drop the enum scope qualifiers and the last peripheral member initializers ([`499751f`](https://github.com/dstroy0/ProtoCore/commit/499751f19ae1b827a4ad2b4538be87e15984bab8))
 - fifteen more src/ .cpp files that were already C become .c ([`59d01c2`](https://github.com/dstroy0/ProtoCore/commit/59d01c2f6df213ef8d6da041eccb31f70e6a48a7))
 - the file-local helpers take their owning context by pointer ([`5e179c0`](https://github.com/dstroy0/ProtoCore/commit/5e179c06dcbac6975d367902b2974f05eb8b8e42))
 - replace the C++ in-class member initializers ([`59b92b8`](https://github.com/dstroy0/ProtoCore/commit/59b92b887da8cc66cff56c8a6edaa96102bfc138))
