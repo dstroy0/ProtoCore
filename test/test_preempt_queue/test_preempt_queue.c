@@ -9,17 +9,21 @@
 #include "services/system/preempt_queue/preempt_queue.h"
 #include <string.h> // memcpy
 #include <unity.h>
-#include <vector>
 
-static std::vector<uint32_t> g_seen;
-static std::vector<uint32_t> g_seen_dma; // items drained on the internal DMA lane
+static uint32_t g_seen[256];
+static size_t g_seen_n;
+static uint32_t g_seen_dma[256]; // items drained on the internal DMA lane
+static size_t g_seen_dma_n;
 
 static void on_item(const void *item, void *ctx)
 {
     (void)ctx;
     uint32_t v;
     memcpy(&v, item, sizeof(v));
-    g_seen.push_back(v);
+    if (g_seen_n < 256)
+    {
+        g_seen[g_seen_n++] = v;
+    }
 }
 
 static void on_item_dma(const void *item, void *ctx)
@@ -27,7 +31,10 @@ static void on_item_dma(const void *item, void *ctx)
     (void)ctx;
     uint32_t v;
     memcpy(&v, item, sizeof(v));
-    g_seen_dma.push_back(v);
+    if (g_seen_dma_n < 256)
+    {
+        g_seen_dma[g_seen_dma_n++] = v;
+    }
 }
 
 static proto_bool post_u32(uint32_t v)
@@ -45,8 +52,8 @@ static void stop_all_lanes()
 
 void setUp()
 {
-    g_seen.clear();
-    g_seen_dma.clear();
+    g_seen_n = 0;
+    g_seen_dma_n = 0;
     stop_all_lanes();
     pc_pq_config cfg = {0};
     cfg.handler = on_item;
@@ -81,7 +88,7 @@ void test_fifo_order()
     TEST_ASSERT_TRUE(post_u32(20));
     TEST_ASSERT_TRUE(post_u32(30));
     pc_pq_drain();
-    TEST_ASSERT_EQUAL_size_t(3, g_seen.size());
+    TEST_ASSERT_EQUAL_size_t(3, g_seen_n);
     TEST_ASSERT_EQUAL_UINT32(10, g_seen[0]);
     TEST_ASSERT_EQUAL_UINT32(20, g_seen[1]);
     TEST_ASSERT_EQUAL_UINT32(30, g_seen[2]);
@@ -94,7 +101,7 @@ void test_urgent_goes_to_front()
     uint32_t u = 99;
     TEST_ASSERT_TRUE(pc_pq_post_urgent(&u, 0));
     pc_pq_drain();
-    TEST_ASSERT_EQUAL_size_t(3, g_seen.size());
+    TEST_ASSERT_EQUAL_size_t(3, g_seen_n);
     TEST_ASSERT_EQUAL_UINT32(99, g_seen[0]); // urgent first
     TEST_ASSERT_EQUAL_UINT32(1, g_seen[1]);
     TEST_ASSERT_EQUAL_UINT32(2, g_seen[2]);
@@ -109,7 +116,7 @@ void test_fail_closed_when_full()
     }
     TEST_ASSERT_FALSE(post_u32(999)); // full -> dropped, not blocked
     pc_pq_drain();
-    TEST_ASSERT_EQUAL_size_t(PC_PQ_DEPTH, g_seen.size());
+    TEST_ASSERT_EQUAL_size_t(PC_PQ_DEPTH, g_seen_n);
 }
 
 void test_high_water_tracks_peak()
@@ -128,7 +135,7 @@ void test_from_isr_enqueues()
     uint32_t v = 7;
     TEST_ASSERT_TRUE(pc_pq_post_from_isr(&v));
     pc_pq_drain();
-    TEST_ASSERT_EQUAL_size_t(1, g_seen.size());
+    TEST_ASSERT_EQUAL_size_t(1, g_seen_n);
     TEST_ASSERT_EQUAL_UINT32(7, g_seen[0]);
 }
 
@@ -136,16 +143,16 @@ void test_drain_empties_and_reuses()
 {
     post_u32(1);
     pc_pq_drain();
-    g_seen.clear();
+    g_seen_n = 0;
     pc_pq_drain(); // empty: no-op
-    TEST_ASSERT_EQUAL_size_t(0, g_seen.size());
+    TEST_ASSERT_EQUAL_size_t(0, g_seen_n);
     // ring wraps cleanly after a drain
     for (uint32_t i = 0; i < PC_PQ_DEPTH; i++)
     {
         TEST_ASSERT_TRUE(post_u32(100 + i));
     }
     pc_pq_drain();
-    TEST_ASSERT_EQUAL_size_t(PC_PQ_DEPTH, g_seen.size());
+    TEST_ASSERT_EQUAL_size_t(PC_PQ_DEPTH, g_seen_n);
     TEST_ASSERT_EQUAL_UINT32(100, g_seen[0]);
 }
 
@@ -176,12 +183,12 @@ void test_lanes_are_isolated()
 
     // Draining one lane must not touch the other's queue or handler.
     pc_pq_drain_lane(pc_pq_lane::PC_PQ_LANE_DMA);
-    TEST_ASSERT_EQUAL_size_t(0, g_seen.size());
-    TEST_ASSERT_EQUAL_size_t(1, g_seen_dma.size());
+    TEST_ASSERT_EQUAL_size_t(0, g_seen_n);
+    TEST_ASSERT_EQUAL_size_t(1, g_seen_dma_n);
     TEST_ASSERT_EQUAL_UINT32(22, g_seen_dma[0]);
 
     pc_pq_drain(); // USER
-    TEST_ASSERT_EQUAL_size_t(1, g_seen.size());
+    TEST_ASSERT_EQUAL_size_t(1, g_seen_n);
     TEST_ASSERT_EQUAL_UINT32(11, g_seen[0]);
 }
 
@@ -223,7 +230,7 @@ void test_lane_api_urgent_and_drain()
     TEST_ASSERT_TRUE(pc_pq_post_lane(pc_pq_lane::PC_PQ_LANE_DMA, &a, 0));
     TEST_ASSERT_TRUE(pc_pq_post_lane_urgent(pc_pq_lane::PC_PQ_LANE_DMA, &b, 0)); // urgent -> jumps the queue
     pc_pq_drain_lane(pc_pq_lane::PC_PQ_LANE_DMA);
-    TEST_ASSERT_EQUAL_UINT32(2u, (uint32_t)g_seen_dma.size());
+    TEST_ASSERT_EQUAL_UINT32(2u, (uint32_t)g_seen_dma_n);
     TEST_ASSERT_EQUAL_UINT32(20u, g_seen_dma[0]); // urgent item first
     TEST_ASSERT_EQUAL_UINT32(10u, g_seen_dma[1]);
     // Guards: urgent-post to a bad lane / with a null item fails closed; drain of a bad lane is a no-op.
@@ -264,7 +271,7 @@ void test_post_lane_urgent_fails_closed_when_full()
     uint32_t urgent = 999;
     TEST_ASSERT_FALSE(pc_pq_post_lane_urgent(pc_pq_lane::PC_PQ_LANE_DMA, &urgent, 0)); // full -> dropped, not bumped in
     pc_pq_drain_lane(pc_pq_lane::PC_PQ_LANE_DMA);
-    TEST_ASSERT_EQUAL_size_t(PC_PQ_DEPTH, g_seen_dma.size());
+    TEST_ASSERT_EQUAL_size_t(PC_PQ_DEPTH, g_seen_dma_n);
     pc_pq_stop_lane(pc_pq_lane::PC_PQ_LANE_DMA);
 }
 
@@ -276,8 +283,8 @@ void test_drain_lane_without_handler_skips_call_safely()
     uint32_t v = 42;
     TEST_ASSERT_TRUE(pc_pq_post_lane(pc_pq_lane::PC_PQ_LANE_FORWARD, &v, 0));
     pc_pq_drain_lane(pc_pq_lane::PC_PQ_LANE_FORWARD); // must not crash with a null handler
-    TEST_ASSERT_EQUAL_size_t(0, g_seen.size());
-    TEST_ASSERT_EQUAL_size_t(0, g_seen_dma.size());
+    TEST_ASSERT_EQUAL_size_t(0, g_seen_n);
+    TEST_ASSERT_EQUAL_size_t(0, g_seen_dma_n);
 }
 
 int main()

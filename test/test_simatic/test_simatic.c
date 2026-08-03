@@ -8,17 +8,21 @@
 #include "services/fieldbus/simatic/simatic.h"
 #include <string.h>
 #include <unity.h>
-#include <vector>
 
 // ---- tx / rx capture for the state machine --------------------------------
 
-static std::vector<uint8_t> g_tx;
-static std::vector<uint8_t> g_rx;
+static uint8_t g_tx[2048];
+static size_t g_tx_n;
+static uint8_t g_rx[2048];
+static size_t g_rx_n;
 
 static void cap_tx(void *user, uint8_t b)
 {
     (void)user;
-    g_tx.push_back(b);
+    if (g_tx_n < 2048)
+    {
+        g_tx[g_tx_n++] = b;
+    }
 }
 static void cap_rx(void *user, const uint8_t *d, size_t n)
 {
@@ -28,8 +32,8 @@ static void cap_rx(void *user, const uint8_t *d, size_t n)
 
 void setUp()
 {
-    g_tx.clear();
-    g_rx.clear();
+    g_tx_n = 0;
+    g_rx_n = 0;
 }
 void tearDown()
 {
@@ -171,12 +175,12 @@ void test_sm_send_happy_path()
     const uint8_t msg[] = {0x31, 0x32};
     TEST_ASSERT_TRUE(pc_3964r_send(&c, msg, sizeof(msg), 0));
     // first tx is STX; awaiting connect
-    TEST_ASSERT_EQUAL_size_t(1, g_tx.size());
+    TEST_ASSERT_EQUAL_size_t(1, g_tx_n);
     TEST_ASSERT_EQUAL_HEX8(SIMATIC_STX, g_tx[0]);
     // partner acks connect with DLE -> we send the block
     pc_3964r_rx_byte(&c, SIMATIC_DLE, 1);
-    TEST_ASSERT_GREATER_THAN_size_t(1, g_tx.size());            // block bytes emitted
-    TEST_ASSERT_EQUAL_HEX8(SIMATIC_ETX, g_tx[g_tx.size() - 2]); // ... DLE ETX BCC tail
+    TEST_ASSERT_GREATER_THAN_size_t(1, g_tx_n);            // block bytes emitted
+    TEST_ASSERT_EQUAL_HEX8(SIMATIC_ETX, g_tx[g_tx_n - 2]); // ... DLE ETX BCC tail
     // partner acks the block with DLE -> done
     pc_3964r_rx_byte(&c, SIMATIC_DLE, 2);
     TEST_ASSERT_TRUE(pc_3964r_idle(&c));
@@ -192,7 +196,7 @@ void test_sm_receive_path_delivers()
     size_t n = pc_3964r_build_block(blk, sizeof(blk), payload, sizeof(payload), PROTO_TRUE);
     // partner opens with STX -> we reply DLE (ready)
     pc_3964r_rx_byte(&c, SIMATIC_STX, 0);
-    TEST_ASSERT_EQUAL_size_t(1, g_tx.size());
+    TEST_ASSERT_EQUAL_size_t(1, g_tx_n);
     TEST_ASSERT_EQUAL_HEX8(SIMATIC_DLE, g_tx[0]);
     // feed the block body byte by byte
     for (size_t i = 0; i < n; i++)
@@ -201,8 +205,8 @@ void test_sm_receive_path_delivers()
     }
     // we ack with a final DLE and deliver the un-stuffed payload
     TEST_ASSERT_EQUAL_HEX8(SIMATIC_DLE, g_tx.back());
-    TEST_ASSERT_EQUAL_size_t(sizeof(payload), g_rx.size());
-    TEST_ASSERT_EQUAL_HEX8_ARRAY(payload, g_rx.data(), g_rx.size());
+    TEST_ASSERT_EQUAL_size_t(sizeof(payload), g_rx_n);
+    TEST_ASSERT_EQUAL_HEX8_ARRAY(payload, g_rx, g_rx_n);
     TEST_ASSERT_TRUE(pc_3964r_idle(&c));
 }
 
@@ -213,10 +217,10 @@ void test_sm_block_nak_retries()
     const uint8_t msg[] = {0x01};
     pc_3964r_send(&c, msg, sizeof(msg), 0);
     pc_3964r_rx_byte(&c, SIMATIC_DLE, 1); // connect
-    size_t before = g_tx.size();
+    size_t before = g_tx_n;
     pc_3964r_rx_byte(&c, SIMATIC_NAK, 2); // reject the block -> resend STX
     TEST_ASSERT_EQUAL_HEX8(SIMATIC_STX, g_tx.back());
-    TEST_ASSERT_GREATER_THAN_size_t(before, g_tx.size());
+    TEST_ASSERT_GREATER_THAN_size_t(before, g_tx_n);
     TEST_ASSERT_FALSE(pc_3964r_idle(&c)); // retrying
 }
 
@@ -243,7 +247,7 @@ void test_sm_priority_arbitration()
     pc_3964r_init(&lo, PROTO_FALSE, PROTO_TRUE, cap_tx, cap_rx, NULL);
     const uint8_t msg[] = {0x01};
     pc_3964r_send(&lo, msg, sizeof(msg), 0); // sent our STX, awaiting connect
-    g_tx.clear();
+    g_tx_n = 0;
     pc_3964r_rx_byte(&lo, SIMATIC_STX, 1);        // collision
     TEST_ASSERT_EQUAL_HEX8(SIMATIC_DLE, g_tx[0]); // yielded: replied DLE (now receiving)
 
@@ -251,9 +255,9 @@ void test_sm_priority_arbitration()
     Simatic3964Ctx hi;
     pc_3964r_init(&hi, PROTO_TRUE, PROTO_TRUE, cap_tx, cap_rx, NULL);
     pc_3964r_send(&hi, msg, sizeof(msg), 0);
-    g_tx.clear();
+    g_tx_n = 0;
     pc_3964r_rx_byte(&hi, SIMATIC_STX, 1);
-    TEST_ASSERT_EQUAL_size_t(0, g_tx.size()); // ignored; still awaiting its own connect DLE
+    TEST_ASSERT_EQUAL_size_t(0, g_tx_n); // ignored; still awaiting its own connect DLE
     TEST_ASSERT_FALSE(pc_3964r_idle(&hi));
 }
 
@@ -324,9 +328,9 @@ void test_sm_null_callbacks_are_safe()
     {
         pc_3964r_rx_byte(&c, blk[i], (uint32_t)(1 + i));
     }
-    TEST_ASSERT_EQUAL_size_t(0, g_tx.size()); // no sink -> nothing emitted
-    TEST_ASSERT_EQUAL_size_t(0, g_rx.size()); // no delivery callback
-    TEST_ASSERT_TRUE(pc_3964r_idle(&c));      // the block was still consumed and the link freed
+    TEST_ASSERT_EQUAL_size_t(0, g_tx_n); // no sink -> nothing emitted
+    TEST_ASSERT_EQUAL_size_t(0, g_rx_n); // no delivery callback
+    TEST_ASSERT_TRUE(pc_3964r_idle(&c)); // the block was still consumed and the link freed
 }
 
 void test_sm_receive_bad_bcc_naks()
@@ -344,7 +348,7 @@ void test_sm_receive_bad_bcc_naks()
         pc_3964r_rx_byte(&c, blk[i], (uint32_t)(1 + i));
     }
     TEST_ASSERT_EQUAL_HEX8(SIMATIC_NAK, g_tx.back());
-    TEST_ASSERT_EQUAL_size_t(0, g_rx.size());
+    TEST_ASSERT_EQUAL_size_t(0, g_rx_n);
     TEST_ASSERT_TRUE(pc_3964r_idle(&c));
 }
 
@@ -362,8 +366,8 @@ void test_sm_receive_no_bcc_variant_delivers()
         pc_3964r_rx_byte(&c, blk[i], (uint32_t)(1 + i));
     }
     TEST_ASSERT_EQUAL_HEX8(SIMATIC_DLE, g_tx.back()); // acked
-    TEST_ASSERT_EQUAL_size_t(sizeof(payload), g_rx.size());
-    TEST_ASSERT_EQUAL_HEX8_ARRAY(payload, g_rx.data(), g_rx.size());
+    TEST_ASSERT_EQUAL_size_t(sizeof(payload), g_rx_n);
+    TEST_ASSERT_EQUAL_HEX8_ARRAY(payload, g_rx, g_rx_n);
     TEST_ASSERT_TRUE(pc_3964r_idle(&c));
 }
 
@@ -376,7 +380,7 @@ void test_sm_receive_illegal_control_naks()
     pc_3964r_rx_byte(&c, SIMATIC_DLE, 1);
     pc_3964r_rx_byte(&c, 0x55, 2);
     TEST_ASSERT_EQUAL_HEX8(SIMATIC_NAK, g_tx.back());
-    TEST_ASSERT_EQUAL_size_t(0, g_rx.size());
+    TEST_ASSERT_EQUAL_size_t(0, g_rx_n);
     TEST_ASSERT_TRUE(pc_3964r_idle(&c));
 }
 
@@ -402,7 +406,7 @@ void test_sm_idle_ignores_non_stx()
     Simatic3964Ctx c;
     pc_3964r_init(&c, PROTO_TRUE, PROTO_FALSE, cap_tx, cap_rx, NULL);
     pc_3964r_rx_byte(&c, 0x55, 0);
-    TEST_ASSERT_EQUAL_size_t(0, g_tx.size());
+    TEST_ASSERT_EQUAL_size_t(0, g_tx_n);
     TEST_ASSERT_TRUE(pc_3964r_idle(&c));
 }
 
@@ -430,9 +434,9 @@ void test_sm_await_conn_ignores_other_bytes()
     pc_3964r_init(&c, PROTO_TRUE, PROTO_FALSE, cap_tx, cap_rx, NULL);
     const uint8_t msg[] = {0x01};
     pc_3964r_send(&c, msg, sizeof(msg), 0);
-    g_tx.clear();
+    g_tx_n = 0;
     pc_3964r_rx_byte(&c, 0x55, 1);
-    TEST_ASSERT_EQUAL_size_t(0, g_tx.size());
+    TEST_ASSERT_EQUAL_size_t(0, g_tx_n);
     TEST_ASSERT_FALSE(pc_3964r_idle(&c));
 }
 
@@ -445,9 +449,9 @@ void test_sm_await_end_ignores_noise_then_gives_up()
     const uint8_t msg[] = {0x01};
     pc_3964r_send(&c, msg, sizeof(msg), 0);
     pc_3964r_rx_byte(&c, SIMATIC_DLE, 1); // connect -> block sent
-    g_tx.clear();
+    g_tx_n = 0;
     pc_3964r_rx_byte(&c, 0x55, 2);
-    TEST_ASSERT_EQUAL_size_t(0, g_tx.size());
+    TEST_ASSERT_EQUAL_size_t(0, g_tx_n);
     TEST_ASSERT_FALSE(pc_3964r_idle(&c));
     for (int i = 0; i < SIMATIC_MAX_BLOCK_RETRY - 1; i++)
     {
@@ -466,9 +470,9 @@ void test_sm_tick_before_deadline_is_a_noop()
     pc_3964r_init(&c, PROTO_TRUE, PROTO_FALSE, cap_tx, cap_rx, NULL);
     const uint8_t msg[] = {0x01};
     pc_3964r_send(&c, msg, sizeof(msg), 0);
-    g_tx.clear();
+    g_tx_n = 0;
     pc_3964r_tick(&c, PC_SIMATIC_QVZ_MS - 1);
-    TEST_ASSERT_EQUAL_size_t(0, g_tx.size());
+    TEST_ASSERT_EQUAL_size_t(0, g_tx_n);
     TEST_ASSERT_FALSE(pc_3964r_idle(&c));
 }
 
@@ -516,7 +520,7 @@ void test_sm_unknown_state_is_inert()
     c.deadline_ms = 0;
     pc_3964r_rx_byte(&c, SIMATIC_STX, 10);
     pc_3964r_tick(&c, 10); // deadline already past, so the switch is reached
-    TEST_ASSERT_EQUAL_size_t(0, g_tx.size());
+    TEST_ASSERT_EQUAL_size_t(0, g_tx_n);
     TEST_ASSERT_FALSE(pc_3964r_idle(&c));
     TEST_ASSERT_EQUAL_UINT8(0x7F, (uint8_t)c.state);
 }
