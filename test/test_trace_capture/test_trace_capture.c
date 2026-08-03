@@ -85,15 +85,15 @@ void test_pretrigger_ring_wraps_and_freezes_on_trigger()
     TEST_ASSERT_FALSE(pc_tc_capturing()); // window completed, fired
 
     TEST_ASSERT_EQUAL_size_t(1, g_windows_n);
-    const CapturedWindow &w = g_windows[0];
-    TEST_ASSERT_EQUAL_UINT16(4, w.pretrigger_samples);
-    TEST_ASSERT_EQUAL_size_t(8, w.samples_len);
+    const CapturedWindow *w = &g_windows[0];
+    TEST_ASSERT_EQUAL_UINT16(4, w->pretrigger_samples);
+    TEST_ASSERT_EQUAL_size_t(8, w->samples_len);
     const uint16_t expect[] = {2, 3, 4, 5, 100, 101, 102, 103};
     for (int i = 0; i < 8; i++)
     {
-        TEST_ASSERT_EQUAL_UINT16(expect[i], w.samples[i]);
+        TEST_ASSERT_EQUAL_UINT16(expect[i], w->samples[i]);
     }
-    TEST_ASSERT_EQUAL_UINT32(0, w.trace_id);
+    TEST_ASSERT_EQUAL_UINT32(0, w->trace_id);
 
     pc_tc_stats st;
     pc_tc_get_stats(&st);
