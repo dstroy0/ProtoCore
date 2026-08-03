@@ -19,15 +19,15 @@
  * **divides it down to its internal 1000 Hz**, so timeouts and polling keep the
  * exact 1 ms granularity the tests verify regardless of how fast your clock runs.
  * Pass a rate >= 1000, ideally a multiple of 1000 for exact division (e.g. a
- * 1 MHz timer -> ticks_per_second = 1000000, divided by 1000). Pass `nullptr` to
+ * 1 MHz timer -> ticks_per_second = 1000000, divided by 1000). Pass `NULL` to
  * revert to the platform default. One source covers everything - swap it once and
  * every subsystem follows.
  *
  * The worker poll cadence is fixed at 1000 Hz (the tested default); a build can
  * trade latency for idle power with PC_WORKER_POLL_TICKS - see protocore_config.h.
  *
- * Header-only (the override state lives in inline-function-local statics, a single
- * instance across the whole program), so there is nothing extra to compile or link.
+ * The installed clocks live in clock.c, one instance for the whole program, so a
+ * build that reads the clock links that translation unit.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -92,7 +92,7 @@ PC_INLINE void pcdelay(uint32_t ms)
 
 /**
  * @brief Install a custom microsecond clock running at @p ticks_per_second; the
- *        library divides it down to 1 MHz. Pass (nullptr, 0) for the platform
+ *        library divides it down to 1 MHz. Pass (NULL, 0) for the platform
  *        default.
  */
 void pc_set_micros_clock(pc_clock_fn fn, uint32_t ticks_per_second);
@@ -198,7 +198,7 @@ uint32_t pc_cycles(void);
  *        frequency, e.g. getCpuFrequencyMhz() on ESP32). @p delta_cycles must come
  *        from a wrap-safe unsigned subtraction of two pc_cycles() reads.
  */
-inline uint32_t pc_cycles_to_ns(uint32_t delta_cycles, uint32_t cpu_mhz)
+PC_INLINE uint32_t pc_cycles_to_ns(uint32_t delta_cycles, uint32_t cpu_mhz)
 {
     return cpu_mhz ? (uint32_t)(((uint64_t)delta_cycles * 1000u) / cpu_mhz) : 0u;
 }

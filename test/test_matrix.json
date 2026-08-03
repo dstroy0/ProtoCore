@@ -83,7 +83,8 @@
         "+<services/web/edge_cache/edge_cache.c>",
         "+<services/web/edge_cache/edge_fetch.c>",
         "+<network_drivers/application/http_range.c>",
-        "+<crypto/hash/sha256.c>"
+        "+<crypto/hash/sha256.c>",
+        "+<server/clock/clock.c>"
       ],
       "tests": ["test_edge_cache", "test_edge_fetch"]
     },
@@ -105,7 +106,8 @@
         "+<services/net/http_client/http_client.cpp>",
         "+<services/web/edge_cache/edge_cache.c>",
         "+<services/web/edge_cache/edge_cache_sd.c>",
-        "+<crypto/hash/sha256.c>"
+        "+<crypto/hash/sha256.c>",
+        "+<server/clock/clock.c>"
       ],
       "tests": ["test_edge_cache_sd"]
     },
@@ -123,7 +125,8 @@
         "+<services/web/edge_cache/edge_cache.c>",
         "+<services/web/edge_cache/edge_cache_sd.c>",
         "+<services/web/edge_cache/edge_mesh.c>",
-        "+<crypto/hash/sha256.c>"
+        "+<crypto/hash/sha256.c>",
+        "+<server/clock/clock.c>"
       ],
       "tests": ["test_edge_mesh"]
     },
@@ -289,14 +292,16 @@
         "+<network_drivers/presentation/http/websocket/websocket.cpp>",
         "+<network_drivers/presentation/http/sse/sse.cpp>",
         "+<network_drivers/presentation/codec/multipart/multipart.cpp>",
-        "+<board_drivers/hal/portable/portable_platform.c>"
+        "+<board_drivers/hal/portable/portable_platform.c>",
+        "+<server/clock/clock.c>"
       ],
       "tests": []
     },
     "native_transport": {
       "desc": "test_transport against the native_stack_l46 stack.",
       "base": "env:native_stack_l46",
-      "tests": ["test_transport"]
+      "tests": ["test_transport"],
+      "src": ["+<server/clock/clock.c>"]
     },
     "native_presentation": {
       "desc": "test_presentation against the native_stack_l46 stack.",
@@ -334,7 +339,8 @@
       "src": [
         "+<network_drivers/network/ip.c>",
         "+<network_drivers/transport/tcp.c>",
-        "+<network_drivers/transport/listener.c>"
+        "+<network_drivers/transport/listener.c>",
+        "+<server/clock/clock.c>"
       ],
       "tests": ["test_observability"]
     },
@@ -351,7 +357,8 @@
         "+<network_drivers/network/ip.c>",
         "+<network_drivers/transport/tcp.c>",
         "+<network_drivers/transport/listener.c>",
-        "+<network_drivers/transport/diffserv.c>"
+        "+<network_drivers/transport/diffserv.c>",
+        "+<server/clock/clock.c>"
       ],
       "tests": ["test_diffserv"]
     },
@@ -385,7 +392,8 @@
         "+<network_drivers/presentation/http/websocket/websocket.cpp>",
         "+<network_drivers/presentation/http/sse/sse.cpp>",
         "+<network_drivers/presentation/codec/multipart/multipart.cpp>",
-        "+<board_drivers/hal/portable/portable_platform.c>"
+        "+<board_drivers/hal/portable/portable_platform.c>",
+        "+<server/clock/clock.c>"
       ],
       "tests": ["test_accept_gate"]
     },
@@ -401,7 +409,8 @@
     "native_prov": {
       "desc": "Provisioning form-field parser - the only host-testable part of the captive\nportal (softAP / lwIP UDP / NVS are ESP32-only and compiled out here).",
       "src": [
-        "+<services/system/provisioning_service/provisioning_service.cpp>"
+        "+<services/system/provisioning_service/provisioning_service.cpp>",
+        "+<server/clock/clock.c>"
       ],
       "tests": ["test_provisioning"]
     },
@@ -444,7 +453,8 @@
         "+<mmgr/arena.c>",
         "+<network_drivers/session/worker.c>",
         "+<mmgr/secure.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>"
+        "+<board_drivers/hal/portable/portable_platform.c>",
+        "+<server/clock/clock.c>"
       ],
       "tests": [
         "test_ssh_crypto",
@@ -487,7 +497,8 @@
         "+<mmgr/arena.c>",
         "+<network_drivers/session/worker.c>",
         "+<mmgr/secure.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>"
+        "+<board_drivers/hal/portable/portable_platform.c>",
+        "+<server/clock/clock.c>"
       ],
       "tests": ["test_ssh_kbdint", "test_ssh_auth"]
     },
@@ -527,7 +538,8 @@
         "+<mmgr/arena.c>",
         "+<network_drivers/session/worker.c>",
         "+<mmgr/secure.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>"
+        "+<board_drivers/hal/portable/portable_platform.c>",
+        "+<server/clock/clock.c>"
       ],
       "tests": ["test_ssh_pqc"]
     },
@@ -564,7 +576,8 @@
         "+<mmgr/arena.c>",
         "+<network_drivers/session/worker.c>",
         "+<mmgr/secure.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>"
+        "+<board_drivers/hal/portable/portable_platform.c>",
+        "+<server/clock/clock.c>"
       ],
       "tests": ["test_ssh_hardening"]
     },
@@ -614,7 +627,8 @@
         "+<network_drivers/presentation/ssh/connection/ssh_server.cpp>",
         "+<network_drivers/presentation/ssh/connection/ssh_conn.cpp>",
         "+<mmgr/secure.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>"
+        "+<board_drivers/hal/portable/portable_platform.c>",
+        "+<server/clock/clock.c>"
       ],
       "tests": ["test_ssh_conn"]
     },
@@ -690,7 +704,8 @@
         "+<services/web/web_terminal/web_terminal.cpp>",
         "+<network_drivers/application/ntp_service/ntp_service.c>",
         "+<board_drivers/hal/portable/portable_platform.c>",
-        "+<mmgr/frame.c>"
+        "+<mmgr/frame.c>",
+        "+<server/clock/clock.c>"
       ],
       "tests": []
     },
@@ -737,7 +752,8 @@
     "native_digest_auth": {
       "desc": "test_digest_auth against the native_stack_http stack.",
       "base": "env:native_stack_http",
-      "tests": ["test_digest_auth"]
+      "tests": ["test_digest_auth"],
+      "src": ["+<server/clock/clock.c>"]
     },
     "native_digest_vectors": {
       "desc": "test_digest_vectors against the native_stack_http stack.",
@@ -824,7 +840,8 @@
         "+<services/web/web_terminal/web_terminal.cpp>",
         "+<network_drivers/application/webdav/webdav.c>",
         "+<board_drivers/hal/portable/portable_platform.c>",
-        "+<mmgr/frame.c>"
+        "+<mmgr/frame.c>",
+        "+<server/clock/clock.c>"
       ],
       "tests": ["test_webdav_handler"]
     },
@@ -841,7 +858,8 @@
       "src": [
         "+<services/net/snmp/snmp_ber.c>",
         "+<services/net/snmp/snmp_agent.c>",
-        "+<network_drivers/transport/udp.c>"
+        "+<network_drivers/transport/udp.c>",
+        "+<server/clock/clock.c>"
       ],
       "tests": ["test_snmp_ber", "test_snmp_agent"]
     },
@@ -865,7 +883,8 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<network_drivers/session/worker.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>"
+        "+<board_drivers/hal/portable/portable_platform.c>",
+        "+<server/clock/clock.c>"
       ],
       "tests": ["test_snmp_v3"]
     },
@@ -877,7 +896,8 @@
         "+<network_drivers/transport/tcp.c>",
         "+<network_drivers/transport/listener.c>",
         "+<network_drivers/presentation/telnet/telnet.c>",
-        "+<mmgr/frame.c>"
+        "+<mmgr/frame.c>",
+        "+<server/clock/clock.c>"
       ],
       "tests": ["test_telnet"]
     },
@@ -891,7 +911,8 @@
       ],
       "src": [
         "+<services/iot/coap/coap.c>",
-        "+<network_drivers/transport/udp.c>"
+        "+<network_drivers/transport/udp.c>",
+        "+<server/clock/clock.c>"
       ],
       "tests": ["test_coap"]
     },
@@ -906,7 +927,8 @@
       ],
       "src": [
         "+<services/iot/coap/coap.c>",
-        "+<network_drivers/transport/udp.c>"
+        "+<network_drivers/transport/udp.c>",
+        "+<server/clock/clock.c>"
       ],
       "tests": ["test_coap"]
     },
@@ -986,13 +1008,13 @@
         "-DPC_DMA_BUF_SIZE=8",
         "-DPC_DMA_CHANNELS=2"
       ],
-      "src": ["+<mmgr/dma.c>"],
+      "src": ["+<mmgr/dma.c>", "+<server/clock/clock.c>"],
       "tests": ["test_dma"]
     },
     "native_trace_capture": {
       "desc": "Pre/post-trigger sample-window assembler (server/signaling/trace_capture), v5 high-rate\nacquisition: a continuously-running pre-trigger ring, trigger() freezing it as the window's\npre-trigger half, feed() filling the post-trigger half and firing the sink on completion,\none capture in flight fail-closed (dropped triggers counted), samples fed before begin() /\nafter end() counted dropped, and multiple sequential windows with a correct trace_id\nsequence. Pure host tests (pc_cycles() falls back to a coarse host stand-in; only ordering,\nnot magnitude, is asserted for assembly_cycles).",
       "flags": ["-DPC_ENABLE_TRACE_CAPTURE=1", "-DPC_TC_MAX_WINDOW_SAMPLES=32"],
-      "src": ["+<server/signaling/trace_capture.c>"],
+      "src": ["+<server/signaling/trace_capture.c>", "+<server/clock/clock.c>"],
       "tests": ["test_trace_capture"]
     },
     "native_ad9238": {
@@ -1011,13 +1033,13 @@
         "-DPC_FWD_MAX_ROUTES=4",
         "-DPC_FWD_INSPECT=1"
       ],
-      "src": ["+<services/net/forward/forward.c>"],
+      "src": ["+<services/net/forward/forward.c>", "+<server/clock/clock.c>"],
       "tests": ["test_forward"]
     },
     "native_gateway": {
       "desc": "Radio / wireless gateway bridge (services/net/gateway), v5 southbound-to-northbound: an\nuplink envelopes a received frame (src address / port / rssi / seq) and publishes it,\nfail-closed on no sink / unknown port / rate cap / sink refusal; a downlink routes to the\nport transmit callback; the topic helper formats <prefix>/<port>/<addr>; port table limits.\nPure host tests; the DMA + FORWARD-lane ingest is HW-verified separately.",
       "flags": ["-DPC_ENABLE_GATEWAY=1", "-DPC_GW_MAX_PORTS=4"],
-      "src": ["+<services/net/gateway/gateway.c>"],
+      "src": ["+<services/net/gateway/gateway.c>", "+<server/clock/clock.c>"],
       "tests": ["test_gateway"]
     },
     "native_lora": {
@@ -1158,7 +1180,10 @@
     "native_packml": {
       "desc": "PackML / OMAC packaging-machine state model (services/machine_tool/packml), ISA-TR88.00.02: the pure\n17-state transition engine (command / state-complete / execute-complete + command validity) and the\nowned PackTags service (state advance, production counters, unit-mode rules, machine speed, and the\nstate/reset timers). Pure host tests.",
       "flags": ["-DPC_ENABLE_PACKML=1"],
-      "src": ["+<services/machine_tool/packml/packml.c>"],
+      "src": [
+        "+<services/machine_tool/packml/packml.c>",
+        "+<server/clock/clock.c>"
+      ],
       "tests": ["test_packml"]
     },
     "native_lsv2": {
@@ -1385,7 +1410,7 @@
     "native_ota_rollback": {
       "desc": "OTA rollback decision (server/update/ota_rollback): pure decision matrix host-tested;\nthe esp_ota commit/rollback are ESP32-only.",
       "flags": ["-DPC_ENABLE_OTA_ROLLBACK=1"],
-      "src": ["+<server/update/ota_rollback.c>"],
+      "src": ["+<server/update/ota_rollback.c>", "+<server/clock/clock.c>"],
       "tests": ["test_ota_rollback"]
     },
     "native_totp": {
@@ -1409,7 +1434,10 @@
     "native_dns_resolver": {
       "desc": "DNS resolver answer classifier/verifier (network_drivers/network/dns_resolver): host-tested;\nthe lwIP resolve is ESP32-only.",
       "flags": ["-DPC_ENABLE_DNS_RESOLVER=1"],
-      "src": ["+<network_drivers/network/dns_resolver.c>"],
+      "src": [
+        "+<network_drivers/network/dns_resolver.c>",
+        "+<server/clock/clock.c>"
+      ],
       "tests": ["test_dns_resolver"]
     },
     "native_audit_log": {
@@ -1417,7 +1445,8 @@
       "flags": ["-DPC_ENABLE_AUDIT_LOG=1"],
       "src": [
         "+<services/security/audit_log/audit_log.cpp>",
-        "+<crypto/hash/sha256.c>"
+        "+<crypto/hash/sha256.c>",
+        "+<server/clock/clock.c>"
       ],
       "tests": ["test_audit_log"]
     },
@@ -1607,7 +1636,8 @@
         "+<mmgr/plaintext.c>",
         "+<network_drivers/session/worker.c>",
         "+<board_drivers/hal/portable/portable_platform.c>",
-        "+<network_drivers/presentation/codec/codec.c>"
+        "+<network_drivers/presentation/codec/codec.c>",
+        "+<server/clock/clock.c>"
       ],
       "tests": ["test_pentest"]
     },
@@ -1645,7 +1675,8 @@
         "+<server/middleware.c>",
         "+<server/webdav_handler.c>",
         "+<board_drivers/hal/portable/portable_platform.c>",
-        "+<mmgr/frame.c>"
+        "+<mmgr/frame.c>",
+        "+<server/clock/clock.c>"
       ],
       "tests": ["test_keepalive"]
     },
@@ -1679,7 +1710,8 @@
         "+<server/middleware.c>",
         "+<server/webdav_handler.c>",
         "+<board_drivers/hal/portable/portable_platform.c>",
-        "+<mmgr/frame.c>"
+        "+<mmgr/frame.c>",
+        "+<server/clock/clock.c>"
       ],
       "tests": ["test_range"]
     },
@@ -1731,14 +1763,18 @@
       "flags": ["-DPC_ENABLE_SMTP=1"],
       "src": [
         "+<services/net/smtp/smtp.cpp>",
-        "+<network_drivers/presentation/codec/base64/base64.c>"
+        "+<network_drivers/presentation/codec/base64/base64.c>",
+        "+<server/clock/clock.c>"
       ],
       "tests": ["test_smtp"]
     },
     "native_ntp_server": {
       "desc": "NTP/SNTP server (RFC 5905 server mode) response codec (ntp_server_build_response):\nversion echo, mode/LI/stratum, origin-timestamp copy, reference/receive/transmit\nstamps, big-endian encoding, and the length guards. Pure - host-tested, no lwIP.",
       "flags": ["-DPC_ENABLE_NTP_SERVER=1"],
-      "src": ["+<network_drivers/application/ntp_server/ntp_server.c>"],
+      "src": [
+        "+<network_drivers/application/ntp_server/ntp_server.c>",
+        "+<server/clock/clock.c>"
+      ],
       "tests": ["test_ntp_server"]
     },
     "native_dns_server": {
@@ -1780,25 +1816,37 @@
     "native_rcwl0516": {
       "desc": "RCWL-0516 Doppler presence sensor + the shared one-GPIO presence facade\n(services/peripherals/rcwl0516): the debounce that swallows comparator chatter, the hold that bridges the\nmodule's ~2s retrigger gaps into one continuous presence span, the consume-once edge event,\nwrap-safety across a millis() rollover, and the degenerate zero-debounce / zero-hold configs.\nPure core driven by a synthetic clock - no GPIO, no real time. Pure host tests.",
       "flags": ["-DPC_ENABLE_RCWL0516=1"],
-      "src": ["+<services/peripherals/rcwl0516/rcwl0516.c>"],
+      "src": [
+        "+<services/peripherals/rcwl0516/rcwl0516.c>",
+        "+<server/clock/clock.c>"
+      ],
       "tests": ["test_rcwl0516"]
     },
     "native_sen0192": {
       "desc": "SEN0192 microwave motion sensor presence state machine (services/peripherals/sen0192): presence\nasserts on an active sample and holds for the configured window after the last active sample, clears\nafter it, counts clear->present edges, and honors OUT polarity. Pure - the GPIO read is ESP32-only.",
       "flags": ["-DPC_ENABLE_SEN0192=1"],
-      "src": ["+<services/peripherals/sen0192/sen0192.c>"],
+      "src": [
+        "+<services/peripherals/sen0192/sen0192.c>",
+        "+<server/clock/clock.c>"
+      ],
       "tests": ["test_sen0192"]
     },
     "native_mpr121": {
       "desc": "MPR121 capacitive-touch codec (services/peripherals/mpr121): decoding the touch-status word into\nan electrode bitmask (masking proximity / over-current), the per-electrode touched test, the\nproximity / over-current flags, the 10-bit filtered/baseline word, and the exact bytes of the\nregister bring-up sequence. Pure - the I2C read/write is ESP32-only.",
       "flags": ["-DPC_ENABLE_MPR121=1"],
-      "src": ["+<services/peripherals/mpr121/mpr121.cpp>"],
+      "src": [
+        "+<services/peripherals/mpr121/mpr121.cpp>",
+        "+<server/clock/clock.c>"
+      ],
       "tests": ["test_mpr121"]
     },
     "native_sht3x": {
       "desc": "Sensirion SHT3x temperature/humidity codec (services/peripherals/sht3x): the CRC-8 against the\ndatasheet check value (0xBEEF -> 0x92), the raw-tick -> milli-unit temperature/humidity\nconversions at the range endpoints and a mid value, and the six-byte single-shot response\nparse (both CRCs checked, corrupt CRC rejected). Pure - the I2C transfer is ESP32-only.",
       "flags": ["-DPC_ENABLE_SHT3X=1"],
-      "src": ["+<services/peripherals/sht3x/sht3x.cpp>"],
+      "src": [
+        "+<services/peripherals/sht3x/sht3x.cpp>",
+        "+<server/clock/clock.c>"
+      ],
       "tests": ["test_sht3x"]
     },
     "native_pca9685": {
@@ -1810,7 +1858,10 @@
     "native_ads1115": {
       "desc": "ADS1115 16-bit ADC codec (services/peripherals/ads1115): building the 16-bit config word for a\nsingle-shot single-ended reading (channel MUX, gain, data rate, start/mode/comparator bits,\nwith out-of-range fallbacks), and converting a signed 16-bit sample to microvolts across the\ngain's full-scale range. Pure - the I2C transfer is ESP32-only.",
       "flags": ["-DPC_ENABLE_ADS1115=1"],
-      "src": ["+<services/peripherals/ads1115/ads1115.cpp>"],
+      "src": [
+        "+<services/peripherals/ads1115/ads1115.cpp>",
+        "+<server/clock/clock.c>"
+      ],
       "tests": ["test_ads1115"]
     },
     "native_ina219": {
@@ -1911,14 +1962,18 @@
         "+<server/webdav_handler.c>",
         "+<network_drivers/application/upload_service/upload_service.c>",
         "+<board_drivers/hal/portable/portable_platform.c>",
-        "+<mmgr/frame.c>"
+        "+<mmgr/frame.c>",
+        "+<server/clock/clock.c>"
       ],
       "tests": ["test_upload"]
     },
     "native_http_client": {
       "desc": "Outbound HTTP client: URL parser + request builder + response parser. Pure\nstring logic (the lwIP/mbedTLS transport is ESP32-only) so it unit-tests host.",
       "flags": ["-DPC_ENABLE_HTTP_CLIENT=1"],
-      "src": ["+<services/net/http_client/http_client.cpp>"],
+      "src": [
+        "+<services/net/http_client/http_client.cpp>",
+        "+<server/clock/clock.c>"
+      ],
       "tests": ["test_http_client"]
     },
     "native_compliance": {
@@ -1931,7 +1986,7 @@
     },
     "native_mqtt": {
       "flags": ["-DPC_ENABLE_MQTT=1"],
-      "src": ["+<services/iot/mqtt/mqtt.cpp>"],
+      "src": ["+<services/iot/mqtt/mqtt.cpp>", "+<server/clock/clock.c>"],
       "tests": ["test_mqtt"]
     },
     "native_ws_client": {
@@ -1939,7 +1994,8 @@
       "src": [
         "+<services/net/ws_client/ws_client.cpp>",
         "+<crypto/hash/sha1.c>",
-        "+<network_drivers/presentation/codec/base64/base64.c>"
+        "+<network_drivers/presentation/codec/base64/base64.c>",
+        "+<server/clock/clock.c>"
       ],
       "tests": ["test_ws_client"]
     },
@@ -1957,7 +2013,8 @@
       "flags": ["-DPC_ENABLE_SNMP=1", "-DPC_ENABLE_SNMP_TRAP=1"],
       "src": [
         "+<services/net/snmp/snmp_notify.c>",
-        "+<services/net/snmp/snmp_ber.c>"
+        "+<services/net/snmp/snmp_ber.c>",
+        "+<server/clock/clock.c>"
       ],
       "tests": ["test_snmp_trap"]
     },
@@ -2030,7 +2087,8 @@
         "+<mmgr/arena.c>",
         "+<network_drivers/session/worker.c>",
         "+<mmgr/secure.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>"
+        "+<board_drivers/hal/portable/portable_platform.c>",
+        "+<server/clock/clock.c>"
       ],
       "tests": ["test_ssh_comp"]
     },
@@ -2055,7 +2113,8 @@
         "+<network_drivers/presentation/codec/multipart/multipart.cpp>",
         "+<network_drivers/presentation/codec/inflate/inflate.c>",
         "+<network_drivers/presentation/codec/deflate/deflate.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>"
+        "+<board_drivers/hal/portable/portable_platform.c>",
+        "+<server/clock/clock.c>"
       ],
       "tests": ["test_websocket"]
     },
@@ -2133,7 +2192,10 @@
     },
     "native_client": {
       "desc": "Outbound TCP client transport (network_drivers/transport/client.cpp), the pooled\nlayer-4 peer of tcp.cpp used by http_client / mqtt / ws_client / relay / smtp / ssh\nport-forward (PC_NEED_DET_CLIENT). The tcpip_api_call-marshaled lwIP path is\nARDUINO-only; on native this file compiles to just the !NEED stub (fail-closed: no\nlwIP on the host, so every call reports no connection), host-tested here for its own sake\nsince no other env's build_src_filter pulls this file in at all.",
-      "src": ["+<network_drivers/transport/client.c>"],
+      "src": [
+        "+<network_drivers/transport/client.c>",
+        "+<server/clock/clock.c>"
+      ],
       "tests": ["test_client"]
     },
     "native_partition": {
@@ -2166,7 +2228,11 @@
     "native_gpio_map": {
       "desc": "GPIO pin-mapper / browser diag core (server/signaling/gpio_map): direction names, JSON\nserializer, control-POST parser, output guard - all pure and host-tested.",
       "flags": ["-DPC_ENABLE_GPIO_MAP=1"],
-      "src": ["+<server/signaling/gpio_map.c>", "+<mmgr/frame.c>"],
+      "src": [
+        "+<server/signaling/gpio_map.c>",
+        "+<mmgr/frame.c>",
+        "+<server/clock/clock.c>"
+      ],
       "tests": ["test_gpio_map"]
     },
     "native_udp_telemetry": {
@@ -2193,7 +2259,7 @@
     "native_failsafe": {
       "desc": "Software watchdog / deadlock detection + safe-state (server/failsafe): the wrap-safe\noverdue predicate, the lifeline registry, fire-once-per-episode breach callback, and JSON.\nPure host tests with a synthetic clock.",
       "flags": ["-DPC_ENABLE_FAILSAFE=1"],
-      "src": ["+<server/failsafe.c>"],
+      "src": ["+<server/failsafe.c>", "+<server/clock/clock.c>"],
       "tests": ["test_failsafe"]
     },
     "native_sleep_sched": {
@@ -2450,7 +2516,10 @@
     "native_mdns_adaptive": {
       "desc": "Adaptive mDNS beacon scheduling (network_drivers/application/mdns_adaptive): RF-contention backoff/recovery\nof the announce interval, the TTL/2 continuous-refresher cadence, the announce-due check, and the\nauto-sleep beacon (announce before a sleep that would lapse the record). Wrap-safe. Pure host tests.",
       "flags": ["-DPC_ENABLE_MDNS_ADAPTIVE=1"],
-      "src": ["+<network_drivers/application/mdns_adaptive/mdns_adaptive.c>"],
+      "src": [
+        "+<network_drivers/application/mdns_adaptive/mdns_adaptive.c>",
+        "+<server/clock/clock.c>"
+      ],
       "tests": ["test_mdns_adaptive"]
     },
     "native_sockpool": {
@@ -2477,7 +2546,10 @@
     "native_wifi_sniffer": {
       "desc": "802.11 sniffer / traffic analyzer (services/radio/wifi_sniffer): decode an 802.11 MAC header\n(frame-control type/subtype + flags, ToDS/FromDS-dependent addresses), tally frames by type, the\nRSSI-hysteresis channel-agility roaming decision, the channel-hop dwell schedule (hop/wrap/sweep\ncounting, clamping, millis-rollover safety), and the per-channel RSSI survey (best RSSI + BSSID per\nchannel, out-of-range rejection, strongest-other-channel candidate feeding the roam decision).\nPure host tests.",
       "flags": ["-DPC_ENABLE_WIFI_SNIFFER=1"],
-      "src": ["+<services/radio/wifi_sniffer/wifi_sniffer.c>"],
+      "src": [
+        "+<services/radio/wifi_sniffer/wifi_sniffer.c>",
+        "+<server/clock/clock.c>"
+      ],
       "tests": ["test_wifi_sniffer"]
     },
     "native_link_manager": {
@@ -2552,7 +2624,10 @@
     "native_hotswap": {
       "desc": "Removable-storage hot-swap safeties (services/storage/hotswap): the ABSENT/READY/FAULTED state\nmachine - a run of consecutive I/O errors faults a volume while a single one does not, any success\nresets the run, the fail counter saturates instead of wrapping, probe attempts are rate-limited (and\nwrap-safe across a millis() rollover), present-but-unmountable stays absent, and a full\nremoval/reinsertion cycle returns to a clean mount. Pure host tests with a synthetic clock.",
       "flags": ["-DPC_ENABLE_HOTSWAP=1"],
-      "src": ["+<services/storage/hotswap/hotswap.c>"],
+      "src": [
+        "+<services/storage/hotswap/hotswap.c>",
+        "+<server/clock/clock.c>"
+      ],
       "tests": ["test_hotswap"]
     },
     "native_log": {
@@ -2582,7 +2657,8 @@
         "+<network_drivers/network/ip.c>",
         "+<network_drivers/transport/tcp.c>",
         "+<network_drivers/transport/listener.c>",
-        "+<network_drivers/session/worker.c>"
+        "+<network_drivers/session/worker.c>",
+        "+<server/clock/clock.c>"
       ],
       "tests": ["test_workers"]
     },
@@ -2776,7 +2852,7 @@
     },
     "native_clock": {
       "desc": "Pluggable monotonic clock (services/pc_clock): default millis(), custom clock\ndivided down to the internal 1000 Hz. Header-only, so no src to build.",
-      "src": ["-<*>"],
+      "src": ["-<*>", "+<server/clock/clock.c>"],
       "tests": ["test_clock"],
       "test_build_src": "no"
     },
@@ -2900,7 +2976,8 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<network_drivers/session/worker.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>"
+        "+<board_drivers/hal/portable/portable_platform.c>",
+        "+<server/clock/clock.c>"
       ],
       "tests": ["test_dtls_conn"]
     },
@@ -2927,7 +3004,8 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<network_drivers/session/worker.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>"
+        "+<board_drivers/hal/portable/portable_platform.c>",
+        "+<server/clock/clock.c>"
       ],
       "tests": ["test_coaps"]
     },
@@ -2955,7 +3033,8 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<network_drivers/session/worker.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>"
+        "+<board_drivers/hal/portable/portable_platform.c>",
+        "+<server/clock/clock.c>"
       ],
       "tests": ["test_coaps_server"]
     },
@@ -3174,7 +3253,8 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<network_drivers/session/worker.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>"
+        "+<board_drivers/hal/portable/portable_platform.c>",
+        "+<server/clock/clock.c>"
       ],
       "tests": ["test_quic_server"]
     },
