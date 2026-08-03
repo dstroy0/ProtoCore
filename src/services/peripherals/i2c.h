@@ -6,19 +6,15 @@
  * @brief The one owner of the shared I2C bus for the peripheral drivers.
  *
  * The sensor / peripheral drivers (RTC, SHT3x, MPR121, ADS1115, INA219, PCA9685, VL53L0X,
- * LDC1614, FDC2214) all share a single I2C bus, so they bring it up and address it through
- * these rather than reaching a framework object themselves. That gives one place to choose the
- * pins: PC_I2C_SDA_PIN / PC_I2C_SCL_PIN (default -1 = the platform default GPIO 21 / 22). Move
- * them off 21/22 when those pins are needed elsewhere - most importantly a wired-Ethernet PHY:
- * the LAN8720 RMII on the classic ESP32 (WROOM/WROVER) and the ESP32-P4 uses GPIO 21 and 22 (the
- * S3/C3 have no RMII EMAC and use an SPI Ethernet such as the W5500 instead). Re-begin is
- * idempotent, so per-driver calls are harmless.
+ * LDC1614, FDC2214) share one bus and bring it up through these verbs. The pins come from
+ * PC_I2C_SDA_PIN / PC_I2C_SCL_PIN (default -1 = the platform default GPIO 21 / 22). Re-begin
+ * is idempotent, so per-driver calls are harmless.
  *
  * The transfer verbs are the three shapes the drivers use: a write, a read, and a register read,
  * which is a write and a read joined by a repeated start. They forward to the platform bus seam
- * (board_drivers), so this header names no vendor driver and no framework.
+ * in board_drivers.
  *
- * Host builds compile the bodies to a refusal; the I2C transfer is silicon-only.
+ * Host builds compile the bodies to a refusal.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -30,12 +26,12 @@
 #include "board_drivers/board_profiles/pc_platform.h"
 #include "protocore_config.h"
 
-/** @brief Bus clock for the shared peripheral bus; 100 kHz standard mode suits every driver here. */
+/** @brief Bus clock for the shared peripheral bus; 100 kHz standard mode. */
 #ifndef PC_I2C_HZ
 #define PC_I2C_HZ 100000u
 #endif
 
-/** @brief Per-transfer timeout in milliseconds, so a wedged device stops one transfer, not the loop. */
+/** @brief Per-transfer timeout in milliseconds. */
 #ifndef PC_I2C_TIMEOUT_MS
 #define PC_I2C_TIMEOUT_MS 50u
 #endif
@@ -68,7 +64,7 @@ PC_INLINE proto_bool pc_i2c_write_read(uint8_t addr, const uint8_t *w, size_t wl
     return pc_platform_i2c_write_read(addr, w, (uint32_t)wlen, r, (uint32_t)rlen, PC_I2C_TIMEOUT_MS) != 0;
 }
 
-#else // host build: no bus. The codecs above these drivers are host-tested; the transfer is not.
+#else // host build: no bus
 
 PC_INLINE proto_bool pc_i2c_begin(void)
 {

@@ -3,17 +3,12 @@
 
 /**
  * @file proto_builtins.c
- * @brief The built-in protocol registry (policy, not mechanism).
+ * @brief Installs the built-in protocol handlers.
  *
- * The session dispatcher is pure mechanism: it routes events to whatever ProtoHandler is
- * registered for a connection's ConnProto and names no protocol. This file is the one place
- * that knows which protocols the build includes. Each built-in's handler + callbacks live in
- * its own module and are exposed by a pure `*_proto_handler()` accessor (no session
- * dependency); here we install each behind the matching feature flag. Adding a protocol means
- * writing its module and adding one guarded line here - never editing the dispatcher.
+ * Each built-in exposes a `*_proto_handler()` accessor in its own module; this calls
+ * proto_register() for each one behind the matching feature flag.
  *
- * (The SSH remote-forward listener, PROTO_SSH_RFWD, is intentionally NOT here: it is a
- * runtime opt-in that self-registers from pc_ssh_forward_begin().)
+ * PROTO_SSH_RFWD self-registers at runtime from pc_ssh_forward_begin().
  */
 
 #include "network_drivers/session/proto_handler.h"
@@ -32,8 +27,7 @@
 #include "services/fieldbus/opcua/opcua.h"
 #endif
 
-// Register @p h for @p proto only if the module actually supplied one (modbus / opcua return NULL
-// on host builds, where there is no TCP transport handler).
+// Registers @p h for @p proto when the module supplied one; modbus / opcua return NULL on host builds.
 static inline void register_if(ConnProto proto, const ProtoHandler *h)
 {
     if (h != NULL) // GCOVR_EXCL_BR_LINE  null half needs modbus/opcua compiled in alongside this file; no env does
@@ -44,7 +38,7 @@ static inline void register_if(ConnProto proto, const ProtoHandler *h)
 
 void proto_register_builtins(void)
 {
-    register_if(PROTO_HTTP, http_proto_handler()); // always present (the core request/response protocol)
+    register_if(PROTO_HTTP, http_proto_handler()); // always present
 #if PC_ENABLE_TELNET
     register_if(PROTO_TELNET, pc_telnet_proto_handler());
 #endif
