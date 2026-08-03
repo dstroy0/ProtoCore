@@ -25,6 +25,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`d98e86d`](https://github.com/dstroy0/ProtoCore/commit/d98e86d14f1dfc9f22eb383bc5f3e42e8fa36ab8))
 - update CHANGELOG.md [skip ci] ([`c683801`](https://github.com/dstroy0/ProtoCore/commit/c68380103cde6f57592d0e9ecc87fd4a5af0729c))
 - update test report + coverage [skip ci] ([`4214270`](https://github.com/dstroy0/ProtoCore/commit/4214270b317aa4c4712cec42b4859eb42eeee56e))
 - update CHANGELOG.md [skip ci] ([`3e4a9e4`](https://github.com/dstroy0/ProtoCore/commit/3e4a9e4971832eeb481b3b950854b1dc1474c2ce))
@@ -160,6 +161,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- fix a missed ks_handshake call site and the Ext case table ([`70f03b6`](https://github.com/dstroy0/ProtoCore/commit/70f03b6984e9d3ed70e9fad597cced9e68fa1e30))
 - spell the local case-table structs as typedefs in test_tls13_msg ([`98641c1`](https://github.com/dstroy0/ProtoCore/commit/98641c125944c5dfb017a9aaf9d98058e72b3d1a))
 - give the QUIC/TLS suites the library's own truth type ([`c68d9a8`](https://github.com/dstroy0/ProtoCore/commit/c68d9a8adfbe8072b2418e20fe40a8b4513997c8))
 - convert the mechanically-convertible suites to C11 ([`79e56d1`](https://github.com/dstroy0/ProtoCore/commit/79e56d1187c33e042ef04f3370e3d2fb17762a8c))
