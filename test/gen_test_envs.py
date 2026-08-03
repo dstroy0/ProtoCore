@@ -97,6 +97,11 @@ build_flags =
     -I test/support
     -I src
     -DPROTOCORE_HOST=1
+; The filesystem the device actually runs, so a host test asserts against real directory
+; semantics rather than a hand-rolled tree that agrees with itself. Only the envs whose sources
+; include lfs.h build it - the dependency finder does not compile what nothing reaches for.
+lib_deps =
+    anurag3301/littlefs@^2.11.6
 test_build_src = yes"""
 
 
