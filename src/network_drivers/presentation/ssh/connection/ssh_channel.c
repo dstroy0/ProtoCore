@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file ssh_channel.cpp
+ * @file ssh_channel.c
  * @brief SSH connection protocol - multiplexed session channels (RFC 4254).
  *
  * The channel table is owned here; inbound messages are routed to a channel by the

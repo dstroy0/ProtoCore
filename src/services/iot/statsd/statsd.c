@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file statsd.cpp
+ * @file statsd.c
  * @brief StatsD metrics client - implementation. See statsd.h.
  *
  * The value and sample-rate are rendered by hand (no printf %lld/%f, which need extra
@@ -158,24 +158,24 @@ size_t pc_statsd_format(char *out, size_t cap, const char *name, const char *val
 // global tags, and the ready flag, grouped so it is one named owner, unreachable cross-TU.
 typedef struct
 {
-    char host[64] = {};
+    char host[64];
     uint16_t port = PC_STATSD_PORT;
-    char tags[96] = {};
+    char tags[96];
     proto_bool ready = PROTO_FALSE;
 } StatsdCtx;
 static StatsdCtx s_statsd;
 
-static void emit(const StatsdCtx &c, const char *name, const char *value, StatsdType type, float rate)
+static void emit(const StatsdCtx *c, const char *name, const char *value, StatsdType type, float rate)
 {
-    if (!c.ready)
+    if (!c->ready)
     {
         return;
     }
     char line[PC_STATSD_LINE_MAX];
-    size_t n = pc_statsd_format(line, sizeof(line), name, value, type, rate, c.tags[0] ? c.tags : NULL);
+    size_t n = pc_statsd_format(line, sizeof(line), name, value, type, rate, c->tags[0] ? c->tags : NULL);
     if (n)
     {
-        pc_udp_sendto(c.host, c.port, (const uint8_t *)line, n);
+        pc_udp_sendto(c->host, c->port, (const uint8_t *)line, n);
     }
 }
 
@@ -205,40 +205,40 @@ void pc_statsd_count(const char *name, int64_t delta)
 {
     char v[24];
     v[i64_str(v, delta)] = '\0';
-    emit(s_statsd, name, v, STATSD_COUNTER, 1.0f);
+    emit(&s_statsd, name, v, STATSD_COUNTER, 1.0f);
 }
 
 void pc_statsd_count_sampled(const char *name, int64_t delta, float rate)
 {
     char v[24];
     v[i64_str(v, delta)] = '\0';
-    emit(s_statsd, name, v, STATSD_COUNTER, rate);
+    emit(&s_statsd, name, v, STATSD_COUNTER, rate);
 }
 
 void pc_statsd_gauge(const char *name, int64_t value)
 {
     char v[24];
     v[i64_str(v, value)] = '\0';
-    emit(s_statsd, name, v, STATSD_GAUGE, 1.0f);
+    emit(&s_statsd, name, v, STATSD_GAUGE, 1.0f);
 }
 
 void pc_statsd_gauge_delta(const char *name, int64_t delta)
 {
     char v[24];
     v[i64_delta_str(v, delta)] = '\0';
-    emit(s_statsd, name, v, STATSD_GAUGE, 1.0f);
+    emit(&s_statsd, name, v, STATSD_GAUGE, 1.0f);
 }
 
 void pc_statsd_timing(const char *name, uint32_t ms)
 {
     char v[16];
     v[u64_str(v, ms)] = '\0';
-    emit(s_statsd, name, v, STATSD_TIMING, 1.0f);
+    emit(&s_statsd, name, v, STATSD_TIMING, 1.0f);
 }
 
 void pc_statsd_set(const char *name, const char *member)
 {
-    emit(s_statsd, name, member ? member : "", STATSD_SET, 1.0f);
+    emit(&s_statsd, name, member ? member : "", STATSD_SET, 1.0f);
 }
 
 #endif // PC_ENABLE_STATSD

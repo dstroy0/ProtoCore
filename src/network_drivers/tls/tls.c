@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file tls.cpp
+ * @file tls.c
  * @brief Deterministic TLS engine implementation (mbedTLS + static pool).
  *
  * ESP32/Arduino only. All mbedTLS allocations are served from a fixed BSS arena

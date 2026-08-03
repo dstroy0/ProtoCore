@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file senml.cpp
+ * @file senml.c
  * @brief SenML pack builders: JSON, plus any binary codec via pc_codec (pure, host-tested).
  */
 
@@ -34,7 +34,7 @@ static proto_bool is_integral(double d)
 
 // Emit a SenML number into a JSON value position: an integer when integral (keeps timestamp
 // precision), otherwise a %g float.
-static void json_num(JsonWriter &w, double d)
+static void json_num(JsonWriter *w, double d)
 {
     char tmp[32];
     if (is_integral(d))
@@ -55,7 +55,7 @@ static void json_num(JsonWriter &w, double d)
             tmp[0] = '\0';
         }
     }
-    w.raw(tmp);
+    w->raw(tmp);
 }
 
 size_t pc_senml_json_build(char *buf, size_t cap, const SenmlRecord *records, size_t count)
@@ -68,49 +68,49 @@ size_t pc_senml_json_build(char *buf, size_t cap, const SenmlRecord *records, si
     w.begin_array();
     for (size_t i = 0; i < count; i++)
     {
-        const SenmlRecord &r = records[i];
+        const SenmlRecord *r = &records[i];
         w.begin_object();
-        if (r.base_name)
+        if (r->base_name)
         {
-            w.kv_str("bn", r.base_name);
+            w.kv_str("bn", r->base_name);
         }
-        if (r.has_base_time)
+        if (r->has_base_time)
         {
             w.key("bt");
-            json_num(w, r.base_time);
+            json_num(&w, r->base_time);
         }
-        if (r.name)
+        if (r->name)
         {
-            w.kv_str("n", r.name);
+            w.kv_str("n", r->name);
         }
-        if (r.unit)
+        if (r->unit)
         {
-            w.kv_str("u", r.unit);
+            w.kv_str("u", r->unit);
         }
         // Every SenmlValueKind enumerator has a case below, so the default edge the compiler
         // emits for the uint8_t-backed enum is unreachable for any value the API admits.
-        switch (r.value_kind) // GCOVR_EXCL_LINE  exhaustive enum switch; the default edge is dead
+        switch (r->value_kind) // GCOVR_EXCL_LINE  exhaustive enum switch; the default edge is dead
         {
         case SENML_V_FLOAT:
             w.key("v");
-            json_num(w, r.value);
+            json_num(&w, r->value);
             break;
         case SENML_V_STRING:
-            if (r.value_str)
+            if (r->value_str)
             {
-                w.kv_str("vs", r.value_str);
+                w.kv_str("vs", r->value_str);
             }
             break;
         case SENML_V_BOOL:
-            w.kv_bool("vb", r.value_bool);
+            w.kv_bool("vb", r->value_bool);
             break;
         case SENML_V_NONE:
             break;
         }
-        if (r.has_time)
+        if (r->has_time)
         {
             w.key("t");
-            json_num(w, r.time);
+            json_num(&w, r->time);
         }
         w.end_object();
     }
@@ -131,30 +131,30 @@ static void codec_num(const pc_codec *c, pc_span *w, double d)
     }
 }
 
-static size_t record_fields(const SenmlRecord &r)
+static size_t record_fields(const SenmlRecord *r)
 {
     size_t n = 0;
-    if (r.base_name)
+    if (r->base_name)
     {
         n++;
     }
-    if (r.has_base_time)
+    if (r->has_base_time)
     {
         n++;
     }
-    if (r.name)
+    if (r->name)
     {
         n++;
     }
-    if (r.unit)
+    if (r->unit)
     {
         n++;
     }
-    if (r.value_kind != SENML_V_NONE && !(r.value_kind == SENML_V_STRING && !r.value_str))
+    if (r->value_kind != SENML_V_NONE && !(r->value_kind == SENML_V_STRING && !r->value_str))
     {
         n++;
     }
-    if (r.has_time)
+    if (r->has_time)
     {
         n++;
     }
@@ -171,55 +171,55 @@ size_t pc_senml_build(const pc_codec *c, uint8_t *buf, size_t cap, const SenmlRe
     c->put_array(&w, count);
     for (size_t i = 0; i < count; i++)
     {
-        const SenmlRecord &r = records[i];
+        const SenmlRecord *r = &records[i];
         c->put_map(&w, record_fields(r));
-        if (r.base_name)
+        if (r->base_name)
         {
             c->put_label(&w, "bn", SENML_LBL_BN);
-            c->put_str(&w, r.base_name);
+            c->put_str(&w, r->base_name);
         }
-        if (r.has_base_time)
+        if (r->has_base_time)
         {
             c->put_label(&w, "bt", SENML_LBL_BT);
-            codec_num(c, &w, r.base_time);
+            codec_num(c, &w, r->base_time);
         }
-        if (r.name)
+        if (r->name)
         {
             c->put_label(&w, "n", SENML_LBL_N);
-            c->put_str(&w, r.name);
+            c->put_str(&w, r->name);
         }
-        if (r.unit)
+        if (r->unit)
         {
             c->put_label(&w, "u", SENML_LBL_U);
-            c->put_str(&w, r.unit);
+            c->put_str(&w, r->unit);
         }
         // Exhaustive over SenmlValueKind, as in the JSON builder above: the compiler's default
         // edge for the uint8_t-backed enum is unreachable, and record_fields() above is written
         // against the same four kinds so the declared field count always matches what is emitted.
-        switch (r.value_kind) // GCOVR_EXCL_LINE  exhaustive enum switch; the default edge is dead
+        switch (r->value_kind) // GCOVR_EXCL_LINE  exhaustive enum switch; the default edge is dead
         {
         case SENML_V_FLOAT:
             c->put_label(&w, "v", SENML_LBL_V);
-            codec_num(c, &w, r.value);
+            codec_num(c, &w, r->value);
             break;
         case SENML_V_STRING:
-            if (r.value_str)
+            if (r->value_str)
             {
                 c->put_label(&w, "vs", SENML_LBL_VS);
-                c->put_str(&w, r.value_str);
+                c->put_str(&w, r->value_str);
             }
             break;
         case SENML_V_BOOL:
             c->put_label(&w, "vb", SENML_LBL_VB);
-            c->put_bool(&w, r.value_bool);
+            c->put_bool(&w, r->value_bool);
             break;
         case SENML_V_NONE:
             break;
         }
-        if (r.has_time)
+        if (r->has_time)
         {
             c->put_label(&w, "t", SENML_LBL_T);
-            codec_num(c, &w, r.time);
+            codec_num(c, &w, r->time);
         }
     }
     return pc_span_ok(w) ? pc_span_len(w) : 0;

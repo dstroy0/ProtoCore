@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file ssh_conn.cpp
+ * @file ssh_conn.c
  * @brief TCP-transport ↔ SSH-protocol glue.
  */
 
@@ -70,19 +70,22 @@ static void ssh_emit(uint8_t i, const uint8_t *payload, size_t len)
 
     // Borrow the wire buffer from the shared scratch arena (released on return).
     const size_t wire_cap = SSH_WIRE_CAP;
-    PlaintextScope scope;
+    size_t mark = pc_plaintext_mark();
     uint8_t *wire = (uint8_t *)pc_plaintext_alloc(wire_cap, 16);
     if (!wire)
     {
+        pc_plaintext_release(mark);
         return; // arena exhausted: drop the outbound message (fail closed)
     }
     size_t wlen = 0;
     if (ssh_pkt_send(i, payload, len, wire, &wlen, wire_cap) != 0)
     {
+        pc_plaintext_release(mark);
         return;
     }
     pc_conn_send(conn->id, wire, (proto_u16)wlen);
     pc_conn_flush(conn->id);
+    pc_plaintext_release(mark);
 }
 
 // ssh_pkt_recv handler: dispatch one decrypted message, remember fatal results.
@@ -131,26 +134,31 @@ int pc_ssh_conn_send(uint8_t ssh_slot, uint32_t channel, const uint8_t *data, si
     // Borrow the payload + wire buffers from the shared scratch arena (released on
     // return); an exhausted arena fails closed.
     const size_t wire_cap = SSH_WIRE_CAP;
-    PlaintextScope scope;
+    size_t mark = pc_plaintext_mark();
     uint8_t *payload = (uint8_t *)pc_plaintext_alloc(SSH_PKT_BUF_SIZE, 16);
     uint8_t *wire = (uint8_t *)pc_plaintext_alloc(wire_cap, 16);
     if (!payload || !wire)
     {
+        pc_plaintext_release(mark);
         return -1;
     }
     size_t plen = 0;
     if (pc_ssh_channel_build_data(ssh_slot, channel, data, len, payload, &plen, SSH_PKT_BUF_SIZE) != 0)
     {
+        pc_plaintext_release(mark);
         return -1;
     }
     size_t wlen = 0;
     if (ssh_pkt_send(ssh_slot, payload, plen, wire, &wlen, wire_cap) != 0)
     {
+        pc_plaintext_release(mark);
         return -1;
     }
     pc_conn_send(conn->id, wire, (proto_u16)wlen);
     pc_conn_flush(conn->id);
+    pc_plaintext_release(mark);
     return (int)len;
+    pc_plaintext_release(mark);
 }
 
 int pc_ssh_conn_close_channel(uint8_t ssh_slot, uint32_t channel)
@@ -179,10 +187,11 @@ int pc_ssh_conn_close_channel(uint8_t ssh_slot, uint32_t channel)
     // so frame and send the two halves as two binary packets (RFC 4253 6). Borrow
     // the wire buffer from the shared scratch arena (released on return).
     const size_t wire_cap = SSH_WIRE_CAP;
-    PlaintextScope scope;
+    size_t mark = pc_plaintext_mark();
     uint8_t *wire = (uint8_t *)pc_plaintext_alloc(wire_cap, 16);
     if (!wire)
     {
+        pc_plaintext_release(mark);
         return -1;
     }
     for (size_t off = 0; off < 10; off += 5)
@@ -190,12 +199,15 @@ int pc_ssh_conn_close_channel(uint8_t ssh_slot, uint32_t channel)
         size_t wlen = 0;
         if (ssh_pkt_send(ssh_slot, close_msgs + off, 5, wire, &wlen, wire_cap) != 0)
         {
+            pc_plaintext_release(mark);
             return -1;
         }
         pc_conn_send(conn->id, wire, (proto_u16)wlen);
     }
     pc_conn_flush(conn->id);
+    pc_plaintext_release(mark);
     return 0;
+    pc_plaintext_release(mark);
 }
 
 int pc_ssh_conn_open_forwarded(uint8_t ssh_slot, const char *conn_addr, uint16_t conn_port, const char *orig_addr,
@@ -214,11 +226,12 @@ int pc_ssh_conn_open_forwarded(uint8_t ssh_slot, const char *conn_addr, uint16_t
     // Borrow the payload + wire buffers from the shared scratch arena (released on
     // return); an exhausted arena fails closed.
     const size_t wire_cap = SSH_WIRE_CAP;
-    PlaintextScope scope;
+    size_t mark = pc_plaintext_mark();
     uint8_t *payload = (uint8_t *)pc_plaintext_alloc(SSH_PKT_BUF_SIZE, 16);
     uint8_t *wire = (uint8_t *)pc_plaintext_alloc(wire_cap, 16);
     if (!payload || !wire)
     {
+        pc_plaintext_release(mark);
         return -1;
     }
     size_t plen = 0;
@@ -226,16 +239,20 @@ int pc_ssh_conn_open_forwarded(uint8_t ssh_slot, const char *conn_addr, uint16_t
                                            SSH_PKT_BUF_SIZE);
     if (ch < 0)
     {
+        pc_plaintext_release(mark);
         return -1; // channel pool full / build failed
     }
     size_t wlen = 0;
     if (ssh_pkt_send(ssh_slot, payload, plen, wire, &wlen, wire_cap) != 0)
     {
+        pc_plaintext_release(mark);
         return -1;
     }
     pc_conn_send(conn->id, wire, (proto_u16)wlen);
     pc_conn_flush(conn->id);
+    pc_plaintext_release(mark);
     return ch;
+    pc_plaintext_release(mark);
 }
 
 void pc_ssh_conn_poll(uint8_t conn_slot)

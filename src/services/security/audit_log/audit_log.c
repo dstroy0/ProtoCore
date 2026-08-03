@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file audit_log.cpp
+ * @file audit_log.c
  * @brief Hash-chained audit log - implementation.
  *
  * Fixed RAM ring of records. Each record's hash chains the previous record's
@@ -28,17 +28,17 @@
 typedef struct
 {
     pc_audit_entry ring[PC_AUDIT_LOG_ENTRIES];
-    uint16_t head = 0;                      // index of the oldest retained record
-    uint16_t count = 0;                     // records currently retained
-    uint32_t seq = 0;                       // last assigned sequence number (monotonic)
-    uint8_t anchor[PC_AUDIT_HASH_LEN] = {}; // prev-hash for the oldest retained record
+    uint16_t head = 0;                 // index of the oldest retained record
+    uint16_t count = 0;                // records currently retained
+    uint32_t seq = 0;                  // last assigned sequence number (monotonic)
+    uint8_t anchor[PC_AUDIT_HASH_LEN]; // prev-hash for the oldest retained record
     pc_audit_sink_fn sink = NULL;
 } AuditCtx;
 static AuditCtx s_audit;
 
-static inline uint16_t idx(const AuditCtx &c, uint16_t i)
+static inline uint16_t idx(const AuditCtx *c, uint16_t i)
 {
-    return (uint16_t)((c.head + i) % PC_AUDIT_LOG_ENTRIES);
+    return (uint16_t)((c->head + i) % PC_AUDIT_LOG_ENTRIES);
 }
 
 static void put_le32(uint8_t out[4], uint32_t v)
@@ -162,7 +162,7 @@ uint32_t pc_audit_append(pc_audit_cat category, const char *msg)
     }
     else
     {
-        memcpy(prev, s_audit.ring[idx(s_audit, (uint16_t)(s_audit.count - 1))].hash, PC_AUDIT_HASH_LEN);
+        memcpy(prev, s_audit.ring[idx(&s_audit, (uint16_t)(s_audit.count - 1))].hash, PC_AUDIT_HASH_LEN);
     }
 
     // Full ring: evict the oldest; its hash advances the chain anchor so the
@@ -175,7 +175,7 @@ uint32_t pc_audit_append(pc_audit_cat category, const char *msg)
         s_audit.count--;
     }
 
-    pc_audit_entry *e = &s_audit.ring[idx(s_audit, s_audit.count)];
+    pc_audit_entry *e = &s_audit.ring[idx(&s_audit, s_audit.count)];
     e->seq = ++s_audit.seq;
     e->ts = pc_millis();
     e->category = category;
@@ -210,7 +210,7 @@ const pc_audit_entry *pc_audit_at(uint16_t i)
     {
         return NULL;
     }
-    return &s_audit.ring[idx(s_audit, i)];
+    return &s_audit.ring[idx(&s_audit, i)];
 }
 
 proto_bool pc_audit_verify(uint32_t *first_broken_seq)
@@ -219,7 +219,7 @@ proto_bool pc_audit_verify(uint32_t *first_broken_seq)
     memcpy(expected, s_audit.anchor, PC_AUDIT_HASH_LEN);
     for (uint16_t i = 0; i < s_audit.count; i++)
     {
-        const pc_audit_entry *e = &s_audit.ring[idx(s_audit, i)];
+        const pc_audit_entry *e = &s_audit.ring[idx(&s_audit, i)];
         uint8_t h[PC_AUDIT_HASH_LEN];
         chain_hash(expected, e, h);
         if (memcmp(h, e->hash, PC_AUDIT_HASH_LEN) != 0)
@@ -369,7 +369,7 @@ int pc_audit_dump_json(char *out, size_t cap)
             // GCOVR_EXCL_STOP
             out[pos++] = ',';
         }
-        int n = pc_audit_format(&s_audit.ring[idx(s_audit, i)], out + pos, cap - pos);
+        int n = pc_audit_format(&s_audit.ring[idx(&s_audit, i)], out + pos, cap - pos);
         if (n <= 0)
         {
             return 0;

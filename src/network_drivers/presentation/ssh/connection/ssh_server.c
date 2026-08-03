@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file ssh_server.cpp
+ * @file ssh_server.c
  * @brief SSH message dispatcher implementation.
  */
 
@@ -82,10 +82,11 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
     // single largest frame on the SSH path and the handshake below it (curve25519 / ed25519) is
     // already the deepest call chain in the library. pc_plaintext_span binds the capacity to the
     // allocation, so every `reply.cap` below is the number that was actually reserved.
-    PlaintextBorrow reply_b(SSH_PKT_BUF_SIZE, 16);
-    const pc_span &reply = reply_b.span();
+    size_t mark = pc_plaintext_mark();
+    pc_span reply = pc_plaintext_span(SSH_PKT_BUF_SIZE, 16);
     if (!pc_span_ok(reply))
     {
+        pc_plaintext_release(mark);
         return -1; // arena exhausted: fail closed, the caller drops the connection
     }
     size_t n = 0;
@@ -93,9 +94,11 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
     switch (msg_type)
     {
     case SSH_MSG_IGNORE:
+        pc_plaintext_release(mark);
         return 0;
 
     case SSH_MSG_DISCONNECT:
+        pc_plaintext_release(mark);
         return -1; // peer is closing
 
     case SSH_MSG_KEXINIT:
@@ -103,27 +106,33 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         // own KEXINIT, generate a fresh ephemeral, and await KEXDH_INIT.
         if (ssh_kexinit_parse(i, payload, len) != 0)
         {
+            pc_plaintext_release(mark);
             return -1;
         }
         if (ssh_kexinit_build(i, reply.buf, &n, reply.cap) != 0) // GCOVR_EXCL_LINE  cannot fail: i is checked above and
         {
+            pc_plaintext_release(mark);
             return -1; // GCOVR_EXCL_LINE  buf is SSH_PKT_BUF_SIZE
         }
         emit(i, reply.buf, n);
         if (ssh_kex_generate(i) != 0) // GCOVR_EXCL_LINE  cannot fail: i is checked above and every method's
         {
+            pc_plaintext_release(mark);
             return -1; // GCOVR_EXCL_LINE  ephemeral generation is infallible for i < MAX_SSH_CONNS
         }
         s->phase = SSH_PHASE_DH_INIT;
+        pc_plaintext_release(mark);
         return 0;
 
     case SSH_MSG_KEXDH_INIT:
         if (s->phase != SSH_PHASE_DH_INIT)
         {
+            pc_plaintext_release(mark);
             return -1;
         }
         if (ssh_kexdh_handle(i, payload, len, reply.buf, &n, reply.cap) != 0)
         {
+            pc_plaintext_release(mark);
             return -1;
         }
         emit(i, reply.buf, n); // KEXDH_REPLY
@@ -132,6 +141,7 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
             emit(i, &newkeys, 1); // server NEWKEYS (this one still goes out unencrypted)
             ssh_newkeys_sent(i);  // ...but our outbound is encrypted from the next packet on
         }
+        pc_plaintext_release(mark);
         return 0; // ssh_kexdh_handle advanced phase to NEWKEYS
 
     case SSH_MSG_NEWKEYS:
@@ -144,9 +154,11 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         {
             emit(i, reply.buf, n); // fail: EXT_INFO is ~90 bytes and buf is SSH_PKT_BUF_SIZE
         }
+        pc_plaintext_release(mark);
         return 0;
 
     case SSH_MSG_EXT_INFO:
+        pc_plaintext_release(mark);
         return 0; // RFC 8308: a client may send its own EXT_INFO; we ignore it
 
     case SSH_MSG_SERVICE_REQUEST:
@@ -156,23 +168,28 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         // whole key exchange + host-key verification. Found by the pentest's ssh_msgtype_abuse.
         if (s->phase != SSH_PHASE_SERVICE)
         {
+            pc_plaintext_release(mark);
             return -1;
         }
         if (pc_ssh_auth_handle_service_request(payload, len, reply.buf, &n, reply.cap) != 0)
         {
+            pc_plaintext_release(mark);
             return -1;
         }
         emit(i, reply.buf, n);
         s->phase = SSH_PHASE_AUTH;
+        pc_plaintext_release(mark);
         return 0;
 
     case SSH_MSG_USERAUTH_REQUEST:
         if (s->phase != SSH_PHASE_AUTH)
         {
+            pc_plaintext_release(mark);
             return -1;
         }
         if (pc_ssh_auth_handle_request(i, payload, len, reply.buf, &n, reply.cap) != 0)
         {
+            pc_plaintext_release(mark);
             return -1;
         }
         emit(i, reply.buf, n); // SUCCESS (→ phase OPEN), PK_OK probe, or FAILURE
@@ -192,9 +209,11 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
             if (++s->auth_failures >= SSH_MAX_AUTH_ATTEMPTS)
             {
                 emit_auth_failure_disconnect(i, reply);
+                pc_plaintext_release(mark);
                 return -1; // close the connection
             }
         }
+        pc_plaintext_release(mark);
         return 0;
 
 #if PC_ENABLE_SSH_KEYBOARD_INTERACTIVE
@@ -205,10 +224,12 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         // FAILURE counts toward the brute-force limit.
         if (s->phase != SSH_PHASE_AUTH)
         {
+            pc_plaintext_release(mark);
             return -1;
         }
         if (pc_ssh_auth_handle_info_response(i, payload, len, reply.buf, &n, reply.cap) != 0)
         {
+            pc_plaintext_release(mark);
             return -1;
         }
         emit(i, reply.buf, n);
@@ -223,9 +244,11 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
             if (++s->auth_failures >= SSH_MAX_AUTH_ATTEMPTS)
             {
                 emit_auth_failure_disconnect(i, reply);
+                pc_plaintext_release(mark);
                 return -1;
             }
         }
+        pc_plaintext_release(mark);
         return 0;
 #endif
 
@@ -234,28 +257,34 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         // meaningful post-auth; reply REQUEST_SUCCESS/FAILURE when want_reply is set.
         if (!s->authed)
         {
+            pc_plaintext_release(mark);
             return -1;
         }
         if (ssh_global_request_handle(i, payload, len, reply.buf, &n, reply.cap) != 0)
         {
+            pc_plaintext_release(mark);
             return -1;
         }
         if (n > 0)
         {
             emit(i, reply.buf, n);
         }
+        pc_plaintext_release(mark);
         return 0;
 
     case SSH_MSG_CHANNEL_OPEN:
         if (!s->authed)
         {
+            pc_plaintext_release(mark);
             return -1;
         }
         if (pc_ssh_channel_handle_open(i, payload, len, reply.buf, &n, reply.cap) != 0)
         {
+            pc_plaintext_release(mark);
             return -1;
         }
         emit(i, reply.buf, n);
+        pc_plaintext_release(mark);
         return 0;
 
     case SSH_MSG_CHANNEL_OPEN_CONFIRM:
@@ -263,49 +292,61 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         // the peer window and start the bridge. A stray confirm is ignored (not fatal).
         if (!s->authed)
         {
+            pc_plaintext_release(mark);
             return -1;
         }
         pc_ssh_channel_handle_open_confirm(i, payload, len);
+        pc_plaintext_release(mark);
         return 0;
 
     case SSH_MSG_CHANNEL_OPEN_FAILURE:
         // The client refused a server-initiated forwarded-tcpip open: tear the bridge down.
         if (!s->authed)
         {
+            pc_plaintext_release(mark);
             return -1;
         }
         pc_ssh_channel_handle_open_failure(i, payload, len);
+        pc_plaintext_release(mark);
         return 0;
 
     case SSH_MSG_CHANNEL_REQUEST:
         if (!s->authed)
         {
+            pc_plaintext_release(mark);
             return -1;
         }
         if (pc_ssh_channel_handle_request(i, payload, len, reply.buf, &n, reply.cap) != 0)
         {
+            pc_plaintext_release(mark);
             return -1;
         }
         emit(i, reply.buf, n); // SUCCESS/FAILURE only when want_reply was set
+        pc_plaintext_release(mark);
         return 0;
 
     case SSH_MSG_CHANNEL_DATA:
         if (!s->authed)
         {
+            pc_plaintext_release(mark);
             return -1;
         }
         if (pc_ssh_channel_handle_data(i, payload, len, reply.buf, &n, reply.cap) != 0)
         {
+            pc_plaintext_release(mark);
             return -1;
         }
         emit(i, reply.buf, n); // WINDOW_ADJUST when the receive window is replenished
+        pc_plaintext_release(mark);
         return 0;
 
     case SSH_MSG_CHANNEL_WINDOW_ADJUST:
         pc_ssh_channel_handle_window_adjust(i, payload, len);
+        pc_plaintext_release(mark);
         return 0;
 
     case SSH_MSG_CHANNEL_EOF:
+        pc_plaintext_release(mark);
         return 0;
 
     case SSH_MSG_CHANNEL_CLOSE:
@@ -321,6 +362,7 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
             emit(i, reply.buf + 5, 5); // CHANNEL_CLOSE
         }
         // GCOVR_EXCL_STOP
+        pc_plaintext_release(mark);
         return 0;
 
     default: {
@@ -335,7 +377,9 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         reply.buf[3] = (uint8_t)(rej >> 8);
         reply.buf[4] = (uint8_t)(rej);
         emit(i, reply.buf, 5);
+        pc_plaintext_release(mark);
         return 0;
     }
     }
+    pc_plaintext_release(mark);
 }

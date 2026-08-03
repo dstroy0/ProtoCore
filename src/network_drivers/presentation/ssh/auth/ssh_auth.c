@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file ssh_auth.cpp
+ * @file ssh_auth.c
  * @brief SSH user-authentication layer (RFC 4252) - password method.
  */
 
@@ -472,13 +472,14 @@ static int pc_ssh_auth_handle_pubkey(uint8_t i, const SshAuthReq *req, uint8_t *
     // material and the signed-data staging buffer are what drive the worker stack requirement.
     // pc_plaintext_span binds each capacity to its allocation, so the bounds below are the reserved
     // sizes rather than a second set of constants that has to be kept in step by hand.
-    PlaintextBorrow n_be_b(PC_RSA_KEY_BYTES, 4);
-    const pc_span &n_be = n_be_b.span();
+    size_t mark = pc_plaintext_mark();
+    pc_span n_be = pc_plaintext_span(PC_RSA_KEY_BYTES, 4);
     pc_span e_be = pc_plaintext_span(4, 4);
     pc_span ed_pub = pc_plaintext_span(32, 4);
     pc_span ec_pub = pc_plaintext_span(PC_ECDSA_P256_PUB_LEN, 4);
     if (!pc_span_ok(n_be) || !pc_span_ok(e_be) || !pc_span_ok(ed_pub) || !pc_span_ok(ec_pub))
     {
+        pc_plaintext_release(mark);
         return pc_ssh_auth_build_failure(out, out_len, cap, PROTO_FALSE); // arena exhausted: fail closed
     }
     proto_bool parsed = PROTO_FALSE;
@@ -497,11 +498,13 @@ static int pc_ssh_auth_handle_pubkey(uint8_t i, const SshAuthReq *req, uint8_t *
     proto_bool key_ok = parsed && s_auth.pk_cb && s_auth.pk_cb(req->user, req->pk_blob, req->pk_blob_len);
     if (!key_ok)
     {
+        pc_plaintext_release(mark);
         return pc_ssh_auth_build_failure(out, out_len, cap, PROTO_FALSE);
     }
 
     if (!req->has_signature)
     {
+        pc_plaintext_release(mark);
         return build_pk_ok(req, out, out_len, cap); // probe: ask for a signature
     }
 
@@ -511,10 +514,12 @@ static int pc_ssh_auth_handle_pubkey(uint8_t i, const SshAuthReq *req, uint8_t *
     pc_span signed_data = pc_plaintext_span(SSH_PKT_BUF_SIZE + 4 + SSH_KEXHASH_MAX_LEN, 4);
     if (!pc_span_ok(signed_data))
     {
+        pc_plaintext_release(mark);
         return pc_ssh_auth_build_failure(out, out_len, cap, PROTO_FALSE); // arena exhausted: fail closed
     }
     if (req->signed_prefix_len > SSH_PKT_BUF_SIZE || 4 + sid_len + req->signed_prefix_len > signed_data.cap)
     {
+        pc_plaintext_release(mark);
         return pc_ssh_auth_build_failure(out, out_len, cap, PROTO_FALSE);
     }
     size_t sd = 0;
@@ -548,9 +553,12 @@ static int pc_ssh_auth_handle_pubkey(uint8_t i, const SshAuthReq *req, uint8_t *
     {
         ssh_sess[i].authed = PROTO_TRUE;
         ssh_sess[i].phase = SSH_PHASE_OPEN;
+        pc_plaintext_release(mark);
         return pc_ssh_auth_build_success(out, out_len, cap);
     }
+    pc_plaintext_release(mark);
     return pc_ssh_auth_build_failure(out, out_len, cap, PROTO_FALSE);
+    pc_plaintext_release(mark);
 }
 
 int pc_ssh_auth_handle_request(uint8_t i, const uint8_t *payload, size_t len, uint8_t *out, size_t *out_len, size_t cap)

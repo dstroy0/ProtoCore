@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file smtp.cpp
+ * @file smtp.c
  * @brief Outbound SMTP client (RFC 5321) - implementation. See smtp.h for the model.
  *
  * smtp_run() is the pure dialogue engine (host-testable via the send/recv seam);
