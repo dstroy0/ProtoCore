@@ -392,7 +392,7 @@ static void complete_handshake_from_flight(DtlsConn *conn, pc_sha256_ctx tr, uin
     pc_tls13_ks_handshake(&cks, ecdhe, h, 32);
 
     DtlsRecordKeys srv_read; // client reads the server's epoch-2 records
-    pc_dtls_record_keys_derive(&srv_read, AES_128_GCM_SHA256, 2, cks.server_hs_traffic);
+    pc_dtls_record_keys_derive(&srv_read, DTLS_CIPHER_AES_128_GCM_SHA256, 2, cks.server_hs_traffic);
 
     // records 1..4: EncryptedExtensions, Certificate, CertificateVerify, Finished (DTLSCiphertext)
     uint8_t cert_pub[32];
@@ -477,7 +477,7 @@ static void complete_handshake_from_flight(DtlsConn *conn, pc_sha256_ctx tr, uin
     size_t cfin_len = pc_tls13_build_finished(cfin, sizeof(cfin), cfin_verify);
 
     DtlsRecordKeys cli_write; // client writes its epoch-2 Finished
-    pc_dtls_record_keys_derive(&cli_write, AES_128_GCM_SHA256, 2, cks.client_hs_traffic);
+    pc_dtls_record_keys_derive(&cli_write, DTLS_CIPHER_AES_128_GCM_SHA256, 2, cks.client_hs_traffic);
 
     uint8_t cfin_frag[80];
     size_t cff = pc_dtls_hs_frag_build(cfin[0], cfin_msg_seq, (uint32_t)(cfin_len - 4), 0, cfin + 4,
@@ -494,8 +494,8 @@ static void complete_handshake_from_flight(DtlsConn *conn, pc_sha256_ctx tr, uin
     // --- both sides agree on the application-traffic keys ---
     DtlsRecordKeys cli_app_read;  // client reads server app data (from server_ap_traffic)
     DtlsRecordKeys cli_app_write; // client writes app data (from client_ap_traffic)
-    pc_dtls_record_keys_derive(&cli_app_read, AES_128_GCM_SHA256, 3, cks.server_ap_traffic);
-    pc_dtls_record_keys_derive(&cli_app_write, AES_128_GCM_SHA256, 3, cks.client_ap_traffic);
+    pc_dtls_record_keys_derive(&cli_app_read, DTLS_CIPHER_AES_128_GCM_SHA256, 3, cks.server_ap_traffic);
+    pc_dtls_record_keys_derive(&cli_app_write, DTLS_CIPHER_AES_128_GCM_SHA256, 3, cks.client_ap_traffic);
 
     // The ACK is an epoch-3 (application) record of content type 26 that the client can decrypt.
     uint8_t ack_pt[64];
@@ -923,7 +923,7 @@ static void test_pto_ack_cancels_retransmit(void)
     pc_tls13_ks_early(&DTLS13_KDF, &cks);
     pc_tls13_ks_handshake(&cks, ecdhe, h, 32);
     DtlsRecordKeys cli_write;
-    pc_dtls_record_keys_derive(&cli_write, AES_128_GCM_SHA256, 2, cks.client_hs_traffic);
+    pc_dtls_record_keys_derive(&cli_write, DTLS_CIPHER_AES_128_GCM_SHA256, 2, cks.client_hs_traffic);
 
     // ACK the whole flight: ServerHello (epoch 0, seq 0) + the four epoch-2 messages (seq 0..3).
     DtlsRecordNumber rns[5] = {{0, 0}, {2, 0}, {2, 1}, {2, 2}, {2, 3}};
@@ -931,7 +931,8 @@ static void test_pto_ack_cancels_retransmit(void)
     size_t bl = pc_dtls_ack_build(rns, 5, ack_body, sizeof(ack_body));
     TEST_ASSERT_TRUE(bl > 0);
     uint8_t ack_rec[160];
-    size_t ar = pc_dtls_ciphertext_protect(cli_write, 0, PC_DTLS_CT_ACK, ack_body, bl, ack_rec, sizeof(ack_rec), NULL, 0);
+    size_t ar =
+        pc_dtls_ciphertext_protect(cli_write, 0, PC_DTLS_CT_ACK, ack_body, bl, ack_rec, sizeof(ack_rec), NULL, 0);
     TEST_ASSERT_TRUE(ar > 0);
 
     uint8_t out[64];
@@ -1026,8 +1027,8 @@ static proto_bool run_to_finished(DtlsConn *conn, DtlsServerConfig *cfg, ClientS
     pc_sha256_final(&tmp, h);
     pc_tls13_ks_early(&DTLS13_KDF, &st->cks);
     pc_tls13_ks_handshake(&st->cks, ecdhe, h, 32);
-    pc_dtls_record_keys_derive(&st->srv_hs_read, AES_128_GCM_SHA256, 2, st->cks.server_hs_traffic);
-    pc_dtls_record_keys_derive(&st->cli_hs_write, AES_128_GCM_SHA256, 2, st->cks.client_hs_traffic);
+    pc_dtls_record_keys_derive(&st->srv_hs_read, DTLS_CIPHER_AES_128_GCM_SHA256, 2, st->cks.server_hs_traffic);
+    pc_dtls_record_keys_derive(&st->cli_hs_write, DTLS_CIPHER_AES_128_GCM_SHA256, 2, st->cks.client_hs_traffic);
 
     uint64_t exp_seq = 0;
     while (off < (size_t)fl)
@@ -1039,7 +1040,8 @@ static proto_bool run_to_finished(DtlsConn *conn, DtlsServerConfig *cfg, ClientS
         }
         uint8_t inner[512];
         DtlsCiphertext info;
-        if (!pc_dtls_ciphertext_unprotect(st->srv_hs_read, exp_seq, flight + off, crl, inner, sizeof(inner), &info, NULL, 0))
+        if (!pc_dtls_ciphertext_unprotect(st->srv_hs_read, exp_seq, flight + off, crl, inner, sizeof(inner), &info,
+                                          NULL, 0))
         {
             return PROTO_FALSE;
         }
@@ -1058,8 +1060,8 @@ static proto_bool run_to_finished(DtlsConn *conn, DtlsServerConfig *cfg, ClientS
     pc_sha256_ctx s = tr;
     pc_sha256_final(&s, h_sfin);
     pc_tls13_ks_master(&st->cks, h_sfin);
-    pc_dtls_record_keys_derive(&st->cli_app_write, AES_128_GCM_SHA256, 3, st->cks.client_ap_traffic);
-    pc_dtls_record_keys_derive(&st->cli_app_read, AES_128_GCM_SHA256, 3, st->cks.server_ap_traffic);
+    pc_dtls_record_keys_derive(&st->cli_app_write, DTLS_CIPHER_AES_128_GCM_SHA256, 3, st->cks.client_ap_traffic);
+    pc_dtls_record_keys_derive(&st->cli_app_read, DTLS_CIPHER_AES_128_GCM_SHA256, 3, st->cks.server_ap_traffic);
 
     uint8_t verify[32];
     pc_tls13_finished_mac(&DTLS13_KDF, st->cks.client_hs_traffic, h_sfin, verify);
@@ -1100,7 +1102,8 @@ static int feed_epoch2_msg(DtlsConn *conn, ClientSession *st, uint64_t seq, uint
         return -2;
     }
     uint8_t rec[192];
-    size_t rl = pc_dtls_ciphertext_protect(st->cli_hs_write, seq, PC_DTLS_CT_HANDSHAKE, frag, fl, rec, sizeof(rec), NULL, 0);
+    size_t rl =
+        pc_dtls_ciphertext_protect(st->cli_hs_write, seq, PC_DTLS_CT_HANDSHAKE, frag, fl, rec, sizeof(rec), NULL, 0);
     if (!rl)
     {
         return -2;
@@ -1113,7 +1116,8 @@ static int feed_epoch2_ack(DtlsConn *conn, ClientSession *st, uint64_t seq, cons
                            uint8_t *out, size_t out_cap)
 {
     uint8_t rec[192];
-    size_t rl = pc_dtls_ciphertext_protect(st->cli_hs_write, seq, PC_DTLS_CT_ACK, body, blen, rec, sizeof(rec), NULL, 0);
+    size_t rl =
+        pc_dtls_ciphertext_protect(st->cli_hs_write, seq, PC_DTLS_CT_ACK, body, blen, rec, sizeof(rec), NULL, 0);
     if (!rl)
     {
         return -2;

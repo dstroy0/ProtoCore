@@ -42,7 +42,7 @@ static const uint8_t KAT_CT = PC_DTLS_CT_APPLICATION_DATA; // 23
 static void test_dtls_record_keys_derive_kat(void)
 {
     DtlsRecordKeys k;
-    pc_dtls_record_keys_derive(&k, AES_128_GCM_SHA256, KAT_EPOCH, KAT_SECRET);
+    pc_dtls_record_keys_derive(&k, DTLS_CIPHER_AES_128_GCM_SHA256, KAT_EPOCH, KAT_SECRET);
     // The raw key is no longer stored - it becomes a keyed context - so prove it a step removed: a
     // context built from the expected key must seal identically to the derived one. That is the same
     // assertion plus proof the context was actually built, rather than that two byte arrays matched.
@@ -71,7 +71,7 @@ static void test_dtls_record_keys_derive_kat(void)
 static void test_dtls_ciphertext_protect_kat(void)
 {
     DtlsRecordKeys k;
-    pc_dtls_record_keys_derive(&k, AES_128_GCM_SHA256, KAT_EPOCH, KAT_SECRET);
+    pc_dtls_record_keys_derive(&k, DTLS_CIPHER_AES_128_GCM_SHA256, KAT_EPOCH, KAT_SECRET);
     uint8_t out[64];
     size_t n = pc_dtls_ciphertext_protect(k, KAT_SEQ, KAT_CT, (const uint8_t *)KAT_PLAINTEXT, strlen(KAT_PLAINTEXT),
                                           out, sizeof(out), NULL, 0);
@@ -83,7 +83,7 @@ static void test_dtls_ciphertext_protect_kat(void)
 static void test_dtls_ciphertext_unprotect_kat(void)
 {
     DtlsRecordKeys k;
-    pc_dtls_record_keys_derive(&k, AES_128_GCM_SHA256, KAT_EPOCH, KAT_SECRET);
+    pc_dtls_record_keys_derive(&k, DTLS_CIPHER_AES_128_GCM_SHA256, KAT_EPOCH, KAT_SECRET);
     uint8_t out[64];
     DtlsCiphertext info;
     TEST_ASSERT_TRUE(
@@ -98,7 +98,7 @@ static void test_dtls_ciphertext_unprotect_kat(void)
 static void test_dtls_ciphertext_roundtrip(void)
 {
     DtlsRecordKeys k;
-    pc_dtls_record_keys_derive(&k, AES_128_GCM_SHA256, 2, KAT_SECRET);
+    pc_dtls_record_keys_derive(&k, DTLS_CIPHER_AES_128_GCM_SHA256, 2, KAT_SECRET);
 
     const size_t sizes[] = {0, 1, 15, 16, 40, 250};
     for (unsigned i = 0; i < sizeof(sizes) / sizeof(sizes[0]); i++)
@@ -133,7 +133,7 @@ static void test_dtls_ciphertext_roundtrip(void)
 static void test_dtls_seq_reconstruction(void)
 {
     DtlsRecordKeys k;
-    pc_dtls_record_keys_derive(&k, AES_128_GCM_SHA256, 2, KAT_SECRET);
+    pc_dtls_record_keys_derive(&k, DTLS_CIPHER_AES_128_GCM_SHA256, 2, KAT_SECRET);
     const uint8_t pt[4] = {0xDE, 0xAD, 0xBE, 0xEF};
 
     // Full sequence numbers whose low 16 bits are all that travel on the wire; unprotect with the
@@ -158,7 +158,7 @@ static void test_dtls_seq_reconstruction(void)
 static void test_dtls_ciphertext_unprotect_rejects(void)
 {
     DtlsRecordKeys k;
-    pc_dtls_record_keys_derive(&k, AES_128_GCM_SHA256, KAT_EPOCH, KAT_SECRET);
+    pc_dtls_record_keys_derive(&k, DTLS_CIPHER_AES_128_GCM_SHA256, KAT_EPOCH, KAT_SECRET);
     uint8_t out[64];
     DtlsCiphertext info;
 
@@ -170,7 +170,7 @@ static void test_dtls_ciphertext_unprotect_rejects(void)
 
     // Keys for a different epoch (low 2 bits mismatch the header) -> rejected before AEAD.
     DtlsRecordKeys k2;
-    pc_dtls_record_keys_derive(&k2, AES_128_GCM_SHA256, 2, KAT_SECRET); // epoch 2 != header's 3
+    pc_dtls_record_keys_derive(&k2, DTLS_CIPHER_AES_128_GCM_SHA256, 2, KAT_SECRET); // epoch 2 != header's 3
     TEST_ASSERT_FALSE(
         pc_dtls_ciphertext_unprotect(k2, KAT_SEQ, KAT_WIRE, sizeof(KAT_WIRE), out, sizeof(out), &info, NULL, 0));
 
@@ -238,7 +238,7 @@ static void test_dtls_replay_window(void)
 static void test_dtls_cid_roundtrip(void)
 {
     DtlsRecordKeys k;
-    pc_dtls_record_keys_derive(&k, AES_128_GCM_SHA256, 3, KAT_SECRET);
+    pc_dtls_record_keys_derive(&k, DTLS_CIPHER_AES_128_GCM_SHA256, 3, KAT_SECRET);
     const uint8_t cid[4] = {0xCA, 0xFE, 0xBA, 0xBE};
     const uint8_t pt[10] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
 
@@ -262,7 +262,7 @@ static void test_dtls_cid_roundtrip(void)
 static void test_dtls_cid_rejects(void)
 {
     DtlsRecordKeys k;
-    pc_dtls_record_keys_derive(&k, AES_128_GCM_SHA256, 3, KAT_SECRET);
+    pc_dtls_record_keys_derive(&k, DTLS_CIPHER_AES_128_GCM_SHA256, 3, KAT_SECRET);
     const uint8_t cid[4] = {0xCA, 0xFE, 0xBA, 0xBE};
     const uint8_t pt[8] = {9, 8, 7, 6, 5, 4, 3, 2};
     uint8_t out[64];
@@ -301,7 +301,7 @@ static void test_dtls_cid_rejects(void)
 static void test_dtls_seq_rollover_both_directions(void)
 {
     DtlsRecordKeys k;
-    pc_dtls_record_keys_derive(&k, AES_128_GCM_SHA256, 2, KAT_SECRET);
+    pc_dtls_record_keys_derive(&k, DTLS_CIPHER_AES_128_GCM_SHA256, 2, KAT_SECRET);
     const uint8_t pt[6] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66};
     uint8_t wire[64];
     uint8_t out[64];
@@ -361,7 +361,7 @@ static void test_dtls_plaintext_bounds(void)
 static void test_dtls_protect_bounds(void)
 {
     DtlsRecordKeys k;
-    pc_dtls_record_keys_derive(&k, AES_128_GCM_SHA256, KAT_EPOCH, KAT_SECRET);
+    pc_dtls_record_keys_derive(&k, DTLS_CIPHER_AES_128_GCM_SHA256, KAT_EPOCH, KAT_SECRET);
     const uint8_t pt[8] = {1, 2, 3, 4, 5, 6, 7, 8};
     uint8_t out[64];
 
@@ -384,7 +384,7 @@ static void test_dtls_protect_bounds(void)
 static void test_dtls_unprotect_bounds(void)
 {
     DtlsRecordKeys k;
-    pc_dtls_record_keys_derive(&k, AES_128_GCM_SHA256, KAT_EPOCH, KAT_SECRET);
+    pc_dtls_record_keys_derive(&k, DTLS_CIPHER_AES_128_GCM_SHA256, KAT_EPOCH, KAT_SECRET);
     uint8_t out[64];
     DtlsCiphertext info;
 
@@ -436,7 +436,7 @@ static void test_dtls_unprotect_bounds(void)
 static void test_dtls_unprotect_all_zero_inner(void)
 {
     DtlsRecordKeys k;
-    pc_dtls_record_keys_derive(&k, AES_128_GCM_SHA256, KAT_EPOCH, KAT_SECRET);
+    pc_dtls_record_keys_derive(&k, DTLS_CIPHER_AES_128_GCM_SHA256, KAT_EPOCH, KAT_SECRET);
     const uint8_t zeros[4] = {0, 0, 0, 0};
     uint8_t wire[64];
     // content_type 0 with an all-zero payload -> the sealed inner plaintext is all zeros.
@@ -481,7 +481,7 @@ static void test_dtls_plaintext_parse_wrong_version_low_byte(void)
 static void test_dtls_cid_record_too_short_for_expected_cid(void)
 {
     DtlsRecordKeys k;
-    pc_dtls_record_keys_derive(&k, AES_128_GCM_SHA256, 3, KAT_SECRET);
+    pc_dtls_record_keys_derive(&k, DTLS_CIPHER_AES_128_GCM_SHA256, 3, KAT_SECRET);
     const uint8_t cid[4] = {0xCA, 0xFE, 0xBA, 0xBE};
     const uint8_t pt[8] = {1, 2, 3, 4, 5, 6, 7, 8};
     uint8_t wire[64];
@@ -503,7 +503,7 @@ static void test_dtls_cid_record_too_short_for_expected_cid(void)
 static void test_dtls_unprotect_seq8_variant(void)
 {
     DtlsRecordKeys k;
-    pc_dtls_record_keys_derive(&k, AES_128_GCM_SHA256, 0, KAT_SECRET);
+    pc_dtls_record_keys_derive(&k, DTLS_CIPHER_AES_128_GCM_SHA256, 0, KAT_SECRET);
     // byte0: fixed(001) | L=1 | epoch=0, S=0 -> 8-bit sequence number. 1 (hdr) + 1 (seq8) + 2 (length) +
     // 17 (enc_len, >= tag(16) + 1 inner byte) = 21 bytes.
     uint8_t rec[21];
@@ -526,7 +526,7 @@ static void test_dtls_unprotect_seq8_variant(void)
 static void test_dtls_seq_reconstruction_overflow_guard(void)
 {
     DtlsRecordKeys k;
-    pc_dtls_record_keys_derive(&k, AES_128_GCM_SHA256, 2, KAT_SECRET);
+    pc_dtls_record_keys_derive(&k, DTLS_CIPHER_AES_128_GCM_SHA256, 2, KAT_SECRET);
     const uint8_t pt[4] = {1, 2, 3, 4};
     uint8_t wire[64];
     // seq's low 16 bits are 0 and its high bits are all 1s so that "candidate + win" wraps to 0.

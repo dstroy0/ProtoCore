@@ -200,7 +200,7 @@ static void test_aes128gcm(void)
         TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(tag, sealed + plen, 16, m);
 
         // open: recovers the plaintext and authenticates
-        bool ok = pc_aes128gcm_open(key, iv, alen ? aad : nullptr, alen, sealed, plen + 16, opened);
+        bool ok = pc_aes128gcm_open(key, iv, alen ? aad : nullptr, alen, sealed, plen + 16, NULL, opened);
         TEST_ASSERT_TRUE_MESSAGE(ok, m);
         if (plen)
         {
@@ -209,7 +209,8 @@ static void test_aes128gcm(void)
 
         // negative: a flipped tag byte must fail authentication
         sealed[plen + 15] ^= 0x80;
-        TEST_ASSERT_FALSE_MESSAGE(pc_aes128gcm_open(key, iv, alen ? aad : nullptr, alen, sealed, plen + 16, opened), m);
+        TEST_ASSERT_FALSE_MESSAGE(
+            pc_aes128gcm_open(key, iv, alen ? aad : nullptr, alen, sealed, plen + 16, NULL, opened), m);
     }
 }
 
@@ -236,13 +237,13 @@ static void test_aes128gcm_ctr_carry(void)
     }
 
     pc_aes128gcm_seal(key, iv, nullptr, 0, pt, CTR_CARRY_PT_LEN, sealed);
-    bool ok = pc_aes128gcm_open(key, iv, nullptr, 0, sealed, CTR_CARRY_PT_LEN + 16, opened);
+    bool ok = pc_aes128gcm_open(key, iv, nullptr, 0, sealed, CTR_CARRY_PT_LEN + 16, NULL, opened);
     TEST_ASSERT_TRUE(ok);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(pt, opened, CTR_CARRY_PT_LEN);
 
     // negative: a flipped tag byte must still fail authentication past the carry boundary
     sealed[CTR_CARRY_PT_LEN + 15] ^= 0x80;
-    TEST_ASSERT_FALSE(pc_aes128gcm_open(key, iv, nullptr, 0, sealed, CTR_CARRY_PT_LEN + 16, opened));
+    TEST_ASSERT_FALSE(pc_aes128gcm_open(key, iv, nullptr, 0, sealed, CTR_CARRY_PT_LEN + 16, NULL, opened));
 }
 
 // ====================================================================

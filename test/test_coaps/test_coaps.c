@@ -235,7 +235,7 @@ static void handshake(DtlsConn *conn, DtlsRecordKeys *cli_app_write, DtlsRecordK
     pc_tls13_ks_early(&DTLS13_KDF, &cks);
     pc_tls13_ks_handshake(&cks, ecdhe, h, 32);
     DtlsRecordKeys srv_read;
-    pc_dtls_record_keys_derive(&srv_read, AES_128_GCM_SHA256, 2, cks.server_hs_traffic);
+    pc_dtls_record_keys_derive(&srv_read, DTLS_CIPHER_AES_128_GCM_SHA256, 2, cks.server_hs_traffic);
 
     uint64_t exp_seq = 0;
     while (off < (size_t)fl)
@@ -263,7 +263,7 @@ static void handshake(DtlsConn *conn, DtlsRecordKeys *cli_app_write, DtlsRecordK
     uint8_t cfin[64];
     size_t cfin_len = pc_tls13_build_finished(cfin, sizeof(cfin), cfin_verify);
     DtlsRecordKeys cli_write;
-    pc_dtls_record_keys_derive(&cli_write, AES_128_GCM_SHA256, 2, cks.client_hs_traffic);
+    pc_dtls_record_keys_derive(&cli_write, DTLS_CIPHER_AES_128_GCM_SHA256, 2, cks.client_hs_traffic);
     uint8_t cfin_frag[80];
     size_t cff = pc_dtls_hs_frag_build(cfin[0], 1, (uint32_t)(cfin_len - 4), 0, cfin + 4, (uint32_t)(cfin_len - 4),
                                        cfin_frag, sizeof(cfin_frag));
@@ -274,8 +274,8 @@ static void handshake(DtlsConn *conn, DtlsRecordKeys *cli_app_write, DtlsRecordK
     TEST_ASSERT_TRUE(pc_dtls_conn_process(conn, cfin_rec, cfr, out2, sizeof(out2)) > 0);
     TEST_ASSERT_TRUE(pc_dtls_conn_established(conn));
 
-    pc_dtls_record_keys_derive(cli_app_read, AES_128_GCM_SHA256, 3, cks.server_ap_traffic);
-    pc_dtls_record_keys_derive(cli_app_write, AES_128_GCM_SHA256, 3, cks.client_ap_traffic);
+    pc_dtls_record_keys_derive(cli_app_read, DTLS_CIPHER_AES_128_GCM_SHA256, 3, cks.server_ap_traffic);
+    pc_dtls_record_keys_derive(cli_app_write, DTLS_CIPHER_AES_128_GCM_SHA256, 3, cks.client_ap_traffic);
 }
 
 static void test_coap_over_dtls(void)
@@ -424,9 +424,9 @@ static void test_quic_aead_open_rejects_short_ciphertext(void)
     uint8_t key[16] = {0};
     uint8_t nonce[12] = {0};
     uint8_t out[16];
-    TEST_ASSERT_FALSE(pc_aes128gcm_open(key, nonce, NULL, 0, NULL, 0, out));
+    TEST_ASSERT_FALSE(pc_aes128gcm_open(key, nonce, NULL, 0, NULL, 0, NULL, out));
     uint8_t short_ct[PC_AES128GCM_TAG_LEN - 1] = {0};
-    TEST_ASSERT_FALSE(pc_aes128gcm_open(key, nonce, NULL, 0, short_ct, sizeof(short_ct), out));
+    TEST_ASSERT_FALSE(pc_aes128gcm_open(key, nonce, NULL, 0, short_ct, sizeof(short_ct), NULL, out));
 }
 
 // aes_block.h's key schedule is shared by AES-128 (nk=4, used here by QUIC/DTLS) and AES-256 (nk=8, used
