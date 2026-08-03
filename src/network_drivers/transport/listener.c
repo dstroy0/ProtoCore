@@ -626,7 +626,14 @@ void listener_stop(uint8_t idx)
 #if PROTOCORE_HOT
     listener_lwip_marshal(idx, 0, PROTO_FALSE); // close the listen pcb in tcpip_thread
 #else
-    lst->listen_pcb = NULL; // host build: no real pcb to close (matches listener_stop_dynamic)
+    // Hand the pcb back to the stack that issued it. Dropping the reference without saying so
+    // leaves the owner holding a control block nothing will ever use again, and the next
+    // pc_net_new() after the pool is spent returns null.
+    if (lst->listen_pcb != NULL)
+    {
+        pc_net_abort(lst->listen_pcb);
+        lst->listen_pcb = NULL;
+    }
 #endif
     if (lst->queue)
     {
