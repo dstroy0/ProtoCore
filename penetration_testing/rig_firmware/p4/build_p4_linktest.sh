@@ -27,7 +27,7 @@ rm -rf "$STAGE"
 mkdir -p "$STAGE/P4LinkTest"
 cp "$HERE/P4LinkTest/P4LinkTest.ino" "$STAGE/P4LinkTest/"
 cp "$HERE/P4LinkTest/build_opt.h" "$STAGE/P4LinkTest/"
-cp "$REPO/pentesting/rig_firmware/src/main_linktest.cpp" "$STAGE/P4LinkTest/"
+cp "$REPO/penetration_testing/rig_firmware/src/main_linktest.cpp" "$STAGE/P4LinkTest/"
 cd "$STAGE/P4LinkTest"
 
 echo ">> compiling for $FQBN"

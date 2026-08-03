@@ -4,7 +4,7 @@
 /**
  * @file main_smb.cpp
  * @brief Slim SMB2-client test-rig firmware (env:rig_s3_smb) - the target for the SMB2 interop peer +
- *        the malicious-SMB2-server attack in pentesting/pc_pentest.py.
+ *        the malicious-SMB2-server attack in penetration_testing/pc_pentest.py.
  *
  * The device is the SMB2 *client*: the /smb/probe endpoint connects OUT to the server named in the query
  * (?host=&port=&user=&pass=&share=&path=) over the shared outbound transport (pc_client_*), runs the

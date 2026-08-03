@@ -31,7 +31,7 @@ from ._common import Probe, require, wait_until
 NAME = "ftp"
 HELP = "drive the device as an FTP client against a real pyftpdlib server (device-as-client)"
 
-# Must match the rig's h_ftp_probe upload (pentesting/rig_firmware/src/main.cpp: FTP_UPLOAD).
+# Must match the rig's h_ftp_probe upload (penetration_testing/rig_firmware/src/main.cpp: FTP_UPLOAD).
 _EXPECT = b"pc-ftp-rig-upload\n"
 _UPLOAD_NAME = "pc_rig.txt"
 

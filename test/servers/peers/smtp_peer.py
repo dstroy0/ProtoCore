@@ -29,7 +29,7 @@ from ._common import Probe, require
 NAME = "smtp"
 HELP = "drive the device as an SMTP client against a real aiosmtpd server (device-as-client)"
 
-# The rig's h_smtp_probe body (pentesting/rig_firmware/src/main.cpp) - checked server-side.
+# The rig's h_smtp_probe body (penetration_testing/rig_firmware/src/main.cpp) - checked server-side.
 _BODY_MARK = b"automated alert from the pc-s3 rig"
 
 

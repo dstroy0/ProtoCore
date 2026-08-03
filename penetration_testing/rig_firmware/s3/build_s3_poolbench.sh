@@ -1,5 +1,5 @@
 #!/bin/bash
-# Build the S3 formatting microbench (see ../BENCH.md).
+# Build the S3 memory-manager microbench (see ../BENCH.md).
 #
 # Stages the shared bench source next to its sketch anchor, then compiles with arduino-cli. The S3 on
 # this rig (MAC ...:73:1c) is an OCTAL-PSRAM DevKitC-1, so PSRAM=opi; the quad board needs
@@ -10,8 +10,8 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 ROOT=$(cd ../../.. && pwd)
-SKETCH="$PWD/S3FmtBench"
-SHARED="$ROOT/pentesting/rig_firmware/src/main_fmtbench.cpp"
+SKETCH="$PWD/S3PoolBench"
+SHARED="$ROOT/penetration_testing/rig_firmware/src/main_poolbench.cpp"
 ACLI=$(command -v arduino-cli || echo "$HOME/bin/arduino-cli")
 FQBN="${PC_FQBN:-esp32:esp32:esp32s3:PSRAM=opi,FlashMode=qio,FlashSize=16M,CDCOnBoot=cdc,USBMode=hwcdc}"
 LIBDIR="$HOME/Arduino/libraries"
@@ -27,8 +27,8 @@ if [ "$(readlink -f "$LIBDIR/ProtoCore" 2>/dev/null)" != "$(readlink -f "$ROOT")
     ln -s "$ROOT" "$LIBDIR/ProtoCore" 2>/dev/null || cp -r "$ROOT" "$LIBDIR/ProtoCore"
 fi
 
-cp "$SHARED" "$SKETCH/main_fmtbench.cpp"
-trap 'rm -f "$SKETCH/main_fmtbench.cpp"' EXIT
+cp "$SHARED" "$SKETCH/main_poolbench.cpp"
+trap 'rm -f "$SKETCH/main_poolbench.cpp"' EXIT
 
 echo ">> compiling for $FQBN"
 "$ACLI" compile --fqbn "$FQBN" --libraries "$LIBDIR" --build-path "$SKETCH/build" "$SKETCH" 2>&1 | tail -30

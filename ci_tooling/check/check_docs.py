@@ -52,12 +52,12 @@ def main() -> int:
     # "#define": PC_OK and PC_OP_SEND are enum MEMBERS, and PC_ names also arrive via
     # namespacing structs of static constexpr. The question is "does this symbol exist",
     # not "is it a macro".
-    # test/ and pentesting/ define their own PC_ symbols (PC_SSH_BENCH,
+    # test/ and penetration_testing/ define their own PC_ symbols (PC_SSH_BENCH,
     # PC_SSH_TEST_HOST_KEY_DER); a doc citing those is not stale.
     src_blob = "".join(read(f) for f in sh(
         "git", "ls-files", "src/*.h", "src/*.c", "src/*.cpp",
         "test/*.h", "test/*.c", "test/*.cpp",
-        "pentesting/*.h", "pentesting/*.c", "pentesting/*.cpp").split())
+        "penetration_testing/*.h", "penetration_testing/*.c", "penetration_testing/*.cpp").split())
     known_flags = set(re.findall(r"\b(PC_[A-Z0-9_]+)\b", src_blob))
     known_funcs = set(re.findall(r"\b(pc_[a-z0-9_]+)\s*\(", src_blob))
 

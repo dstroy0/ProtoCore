@@ -18,7 +18,7 @@ cd "$(dirname "$0")"
 
 ROOT=$(cd ../../.. && pwd)
 SKETCH="$PWD/S3PoolBench"
-SHARED="$ROOT/pentesting/rig_firmware/src/main_poolbench.cpp"
+SHARED="$ROOT/penetration_testing/rig_firmware/src/main_poolbench.cpp"
 ACLI=$(command -v arduino-cli || echo "$HOME/bin/arduino-cli")
 FQBN="${PC_FQBN:-esp32:esp32:esp32s3:PSRAM=opi,FlashMode=qio,FlashSize=16M,CDCOnBoot=cdc,USBMode=hwcdc}"
 LIBDIR="$HOME/Arduino/libraries"

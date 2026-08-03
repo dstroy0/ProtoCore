@@ -269,7 +269,7 @@ def classify(changed, envs, graph, total_testable, base=None, head=None):
                 continue
             return "FULL"  # shared test infra under test/ not caught above
         # Anything else is a top-level path outside src/ + test/ + the build-config allowlist
-        # handled above (e.g. pentesting/, .github/*, cspell.json, root docs/scripts). It cannot
+        # handled above (e.g. penetration_testing/, .github/*, cspell.json, root docs/scripts). It cannot
         # affect what the native suite compiles, so it selects nothing rather than forcing FULL.
         continue
 

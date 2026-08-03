@@ -3,8 +3,8 @@
 //
 // On-device CCOUNT microbenchmark for representative SSH crypto primitives (network_drivers/
 // crypto): SHA-256 and the ChaCha20 stream cipher (bulk). The full crypto suite is
-// exercised in depth by pentesting/rig_firmware/main_cryptobench; this is the performance_benching/ counterpart.
-// Build/flash: pio run -d performance_benching/network_drivers/presentation/ssh -t upload
+// exercised in depth by penetration_testing/rig_firmware/main_cryptobench; this is the performance_benching/
+// counterpart. Build/flash: pio run -d performance_benching/network_drivers/presentation/ssh -t upload
 #include "crypto/cipher/chacha20.h"
 #include "crypto/hash/sha256.h"
 #include "device_bench.h"

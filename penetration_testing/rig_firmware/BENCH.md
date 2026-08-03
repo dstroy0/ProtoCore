@@ -27,7 +27,7 @@ Two toolchains reach these boards; use whichever matches the die.
 **PlatformIO (S3, Arduino-ESP32 2.x):**
 
 ```
-cd pentesting/rig_firmware
+cd penetration_testing/rig_firmware
 pio run -e rig_s3_fmtbench -t upload --upload-port COM4
 ```
 

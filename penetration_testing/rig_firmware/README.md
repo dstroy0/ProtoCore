@@ -61,7 +61,7 @@ The board target is `esp32-s3-devkitc-1`; platform is **pinned** to `espressif32
 (Arduino-ESP32 2.x core). WiFi credentials come from the environment and are **never committed**:
 
 ```sh
-cd pentesting/rig_firmware
+cd penetration_testing/rig_firmware
 RIG_WIFI_SSID='your-ssid' RIG_WIFI_PASS='your-pass' \
   pio run -e rig_s3 -t upload --upload-port /dev/ttyACM0
 ```

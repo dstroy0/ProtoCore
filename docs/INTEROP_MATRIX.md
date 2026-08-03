@@ -11,7 +11,7 @@ a feature is judged by something other than itself:
 2. **Throughput bench** - host ns/op + on-device µs/op, recorded in
    [FEATURE_PERFORMANCE.md](FEATURE_PERFORMANCE.md) (device numbers via the rig `/bench` CCOUNT harness).
 3. **Advanced attack** - targeted, protocol-aware exploits fired at a **live rig over the network**
-   (`pentesting/pc_pentest.py`), with the determinism and liveness oracles.
+   (`penetration_testing/pc_pentest.py`), with the determinism and liveness oracles.
 4. **Adversarial fuzz** - host-level hostile input in the `native_pentest` env, run separately from the
    main suite because it is heavy.
 
@@ -35,11 +35,11 @@ Related: [AUDIT.md](AUDIT.md) records the per-standard conformance verdicts this
 | -------------------- | ----: | ------------------------------------------------ |
 | Interop peers        |    39 | `test/servers/peers/*_peer.py`                   |
 | Throughput benches   |   207 | `performance_benching/**/platformio.ini`         |
-| Advanced attacks     |    79 | `@attack(...)` in `pentesting/pc_pentest.py`     |
+| Advanced attacks     |    79 | `@attack(...)` in `penetration_testing/pc_pentest.py`     |
 | Adversarial fuzz     |    78 | `native_pentest` (`test/test_pentest/`)          |
-| Service modules      |   197 | `src/services/<group>/<module>/`                 |
+| Service modules      |   166 | `src/services/<group>/<module>/`                 |
 
-Interop peers cover **39 of 197** service modules. Not every module needs a third-party
+Interop peers cover **39 of 166** service modules. Not every module needs a third-party
 peer - many are pure codecs with pinned spec vectors, and some need hardware the project does not have -
 but the ratio is the honest measure of how much is judged by something other than ourselves.
 
@@ -175,6 +175,6 @@ but the ratio is the honest measure of how much is judged by something other tha
 - **Interop**: add `test/servers/peers/<proto>_peer.py` (`NAME`/`HELP`/`add_args`/`run`), register in
   `interop.py` `_MODULES`; see the existing peers for the shape.
 - **Bench**: pure host op -> `performance_benching/*.cpp` (host ns/op); device µs/op -> add the op to the rig `/bench`
-  endpoint (`pentesting/rig_firmware`) and read it over HTTP; record both in `FEATURE_PERFORMANCE.md`.
-- **Attack**: add an `@attack(...)` to `pentesting/pc_pentest.py` gated on the feature flag; keep the
+  endpoint (`penetration_testing/rig_firmware`) and read it over HTTP; record both in `FEATURE_PERFORMANCE.md`.
+- **Attack**: add an `@attack(...)` to `penetration_testing/pc_pentest.py` gated on the feature flag; keep the
   determinism + liveness oracles and `--authorized`; live-fire against the rig.

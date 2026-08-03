@@ -49,7 +49,7 @@ non-goal or needs hardware / proprietary docs) - **DONE** (`[x]`, the shipped re
   plus the selector; then an STM32 backend (PKA/CRYP/HASH crypto + ETH MAC/PHY). Includes the library rename
   (drop "esp" -> `DeterministicAsyncWebServer`; the `pc_`/`PC_` prefix is already vendor-neutral). Full
   design in [ROADMAP.md](ROADMAP.md#multi-vendor-portability-esp--stm--rp--ti-).
-- **Cryptobench harness: put the S3 env on the 3.x core** - `pentesting/rig_firmware` `rig_s3*` builds with
+- **Cryptobench harness: put the S3 env on the 3.x core** - `penetration_testing/rig_firmware` `rig_s3*` builds with
   `platform = espressif32@6.13.0` (Arduino-ESP32 **2.x**) while the P4/C6 benches use arduino-cli **3.3.10**
   (3.x). Cross-die crypto numbers therefore compare two different mbedtls builds (2.x S3 has no HW ECC/GCM);
   rebuild S3 on the 3.x core (or bench all dies via one toolchain) so the sweep is apples-to-apples. Surfaced

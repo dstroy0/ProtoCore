@@ -33,7 +33,7 @@ cp "$HERE/P4CryptoBench/build_opt.h" "$STAGE/P4CryptoBench/"
 if [ -n "${1:-}" ]; then
   echo "-DPC_CRYPTO_OPT_LEVEL=$1" >>"$STAGE/P4CryptoBench/build_opt.h"
 fi
-cp "$REPO/pentesting/rig_firmware/src/main_cryptobench.cpp" "$STAGE/P4CryptoBench/"
+cp "$REPO/penetration_testing/rig_firmware/src/main_cryptobench.cpp" "$STAGE/P4CryptoBench/"
 cp "$REPO/test/fixtures/ssh_test_host_key/ssh_test_host_key.h" "$STAGE/P4CryptoBench/"
 cd "$STAGE/P4CryptoBench"
 

@@ -9,7 +9,7 @@ cd "$(dirname "$0")"
 
 ROOT=$(cd ../../.. && pwd)
 SKETCH="$PWD/S3CryptoBench"
-SHARED="$ROOT/pentesting/rig_firmware/src/main_cryptobench.cpp"
+SHARED="$ROOT/penetration_testing/rig_firmware/src/main_cryptobench.cpp"
 ACLI=$(command -v arduino-cli || echo "$HOME/bin/arduino-cli")
 FQBN="${PC_FQBN:-esp32:esp32:esp32s3:PSRAM=opi,FlashMode=qio,FlashSize=16M,CDCOnBoot=cdc,USBMode=hwcdc}"
 LIBDIR="$HOME/Arduino/libraries"

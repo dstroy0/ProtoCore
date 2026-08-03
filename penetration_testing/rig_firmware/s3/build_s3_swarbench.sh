@@ -11,7 +11,7 @@ cd "$(dirname "$0")"
 
 ROOT=$(cd ../../.. && pwd)
 SKETCH="$PWD/S3SwarBench"
-SHARED="$ROOT/pentesting/rig_firmware/src/main_swarbench.cpp"
+SHARED="$ROOT/penetration_testing/rig_firmware/src/main_swarbench.cpp"
 ACLI=$(command -v arduino-cli || echo "$HOME/bin/arduino-cli")
 FQBN="${PC_FQBN:-esp32:esp32:esp32s3:PSRAM=opi,FlashMode=qio,FlashSize=16M,CDCOnBoot=cdc,USBMode=hwcdc}"
 

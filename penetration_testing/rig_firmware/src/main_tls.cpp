@@ -4,7 +4,7 @@
 /**
  * @file main_tls.cpp
  * @brief Slim HTTPS test-rig firmware (env:rig_s3_tls) - the target for the TLS interop peer + the TLS
- *        attacks in pentesting/pc_pentest.py.
+ *        attacks in penetration_testing/pc_pentest.py.
  *
  * A deliberately minimal build: just HTTP/80 (for the liveness oracle) + HTTPS/443 (the TLS surface). With
  * only a handful of routes and no other protocol stacks, the fixed 48 KB TLS arena (PC_TLS_ARENA_SIZE,

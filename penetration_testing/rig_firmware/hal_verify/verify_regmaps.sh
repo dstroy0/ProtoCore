@@ -4,7 +4,7 @@
 # proves the map matches Espressif's own implementation - including dies we have no board for. Run in WSL with
 # the arduino-esp32 3.x core installed (arduino-cli on PATH):
 #
-#   bash pentesting/rig_firmware/hal_verify/verify_regmaps.sh
+#   bash penetration_testing/rig_firmware/hal_verify/verify_regmaps.sh
 #
 set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"

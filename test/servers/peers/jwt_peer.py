@@ -24,7 +24,7 @@ from ._common import Probe, require
 NAME = "jwt"
 HELP = "validate the device's JWT HS256 bearer-auth verifier with a real PyJWT client (device-as-server)"
 
-# Must match the rig's JWT_RIG_SECRET (pentesting/rig_firmware/src/main.cpp).
+# Must match the rig's JWT_RIG_SECRET (penetration_testing/rig_firmware/src/main.cpp).
 _SECRET = "pc-rig-jwt-secret-2026"
 
 

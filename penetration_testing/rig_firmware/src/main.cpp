@@ -3,7 +3,7 @@
 
 /**
  * @file main.cpp
- * @brief ESP32-S3 test-rig firmware: the target for pentesting/pc_pentest.py and the JTAG
+ * @brief ESP32-S3 test-rig firmware: the target for penetration_testing/pc_pentest.py and the JTAG
  *        perf-profiling harness.
  *
  * Exposes a broad attack surface (auth, file serving + range, websocket, SSE, CSRF, accept
@@ -14,7 +14,7 @@
  *
  * WiFi credentials are NEVER committed: they come from the WIFI_SSID / WIFI_PASS build macros,
  * which platformio.ini fills from the RIG_WIFI_SSID / RIG_WIFI_PASS environment variables. See
- * pentesting/rig_firmware/README.md for the exact reproducible build + flash + profile recipe.
+ * penetration_testing/rig_firmware/README.md for the exact reproducible build + flash + profile recipe.
  */
 #include "network_drivers/application/ntp_server/ntp_server.h" // NTP/SNTP server (UDP/123) + ntp_server_build_response bench
 #include "network_drivers/application/nts/nts.h"       // NTS (RFC 8915) framing codecs - nts_ke_parse device bench

@@ -85,7 +85,7 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 - **Symptom:** none yet. The next doc to cite a symbol that lives only in a `.c` file gets reported
   as a stale citation and fails CI, with the symbol sitting in the tree the whole time.
 - **Root cause:** the checker builds its authority set - "does this symbol exist" - from
-  `git ls-files src/*.h src/*.cpp test/*.h test/*.cpp pentesting/*.h pentesting/*.cpp`. That list
+  `git ls-files src/*.h src/*.cpp test/*.h test/*.cpp penetration_testing/*.h penetration_testing/*.cpp`. That list
   was written when every implementation file was a `.cpp`. The C conversion left 576 `.c` files
   outside it, and with them 78 `PC_*` names and 63 `pc_*` functions that no longer appear anywhere
   the checker looks.
@@ -1196,7 +1196,7 @@ ssh_gf_mul`. The QUIC TLS-1.3 handshake **reuses the SSH ed25519 signer**, whose
 ## SSE teardown slot leak wedges the whole HTTP server (sse_free never called)
 
 - **Status:** FIXED (found on hardware 2026-07-11 by the pentest rig's new `sse_exhaustion` attack).
-- **Found:** `pentesting/pc_pentest.py --only sse_exhaustion` against the S3 rig (`pentesting/rig_firmware`,
+- **Found:** `penetration_testing/pc_pentest.py --only sse_exhaustion` against the S3 rig (`penetration_testing/rig_firmware`,
   pinned `espressif32@6.13.0`, MAX_CONNS=4, MAX_SSE_CONNS=2). A **single clean run** on a freshly-booted,
   healthy board (heap 252636) drove the server permanently unresponsive: `/health` -> `56` then `28`
   (timeout), no recovery past `CONN_TIMEOUT_MS` (5 s), and **no crash/reboot** (serial clean) - a hard wedge.
@@ -1230,7 +1230,7 @@ ssh_gf_mul`. The QUIC TLS-1.3 handshake **reuses the SSH ed25519 signer**, whose
 ## Basic-auth password compared with strcmp: NUL-truncating + not constant-time
 
 - **Status:** FIXED (found on hardware 2026-07-11 by the pentest rig's `auth_bypass` attack).
-- **Found:** `pentesting/pc_pentest.py --only auth_bypass` against the S3 rig. Sending
+- **Found:** `penetration_testing/pc_pentest.py --only auth_bypass` against the S3 rig. Sending
   `Authorization: Basic base64("admin:admin\x00GARBAGE")` returned **200** on the protected route.
 - **Symptom:** a submitted password of the form `correct-password` + `\0` + junk authenticated, because
   `check_basic_auth` compared the password with `strcmp(pass, r->auth_pass)` and `strcmp` stops at the
@@ -1293,8 +1293,8 @@ ssh_gf_mul`. The QUIC TLS-1.3 handshake **reuses the SSH ed25519 signer**, whose
   calling `tcp_write`/`tcp_output` on freed memory. HW re-attack with the pentest rig
   (`http_oversized_request_line` + `http_conn_saturation`, confirm no panic + no heap drift) is the
   remaining validation.
-- **Found:** `pentesting/pc_pentest.py --host <rig> --diag` (attacks `http_oversized_request_line` +
-  `http_conn_saturation`) against the ESP32-S3 rig firmware (`pentesting/rig_firmware`, pinned
+- **Found:** `penetration_testing/pc_pentest.py --host <rig> --diag` (attacks `http_oversized_request_line` +
+  `http_conn_saturation`) against the ESP32-S3 rig firmware (`penetration_testing/rig_firmware`, pinned
   `espressif32@6.13.0`, MAX_CONNS=4). Reproduced standalone with ~15 oversized-request-line connections.
 - **Symptom:** the device **panics and reboots**. Serial:
   `assert failed: tcp_output .../lwip/src/core/tcp_out.c:1249 (tcp_output: invalid pcb)` + backtrace +

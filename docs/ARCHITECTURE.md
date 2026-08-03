@@ -360,7 +360,7 @@ a vendor subdir.
   `esp_crypto_hal` rule, applied per vendor). STM32 backends poke CRYP/HASH/PKA
   registers directly.
 - **Ground-truth-verify every backend** against that vendor's own headers with the
-  `static_assert` regmap cross-check (`pentesting/rig_firmware/hal_verify` today
+  `static_assert` regmap cross-check (`penetration_testing/rig_firmware/hal_verify` today
   for ESP soc macros; add an STM CMSIS variant), so a map is proven correct even
   for silicon we have no board for, plus an on-device KAT where a board exists.
 - **lwIP stays the common L3+ core** _for portability_; only L1/L2 (MAC + PHY) and

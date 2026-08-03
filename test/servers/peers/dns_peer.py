@@ -19,7 +19,7 @@ from ._common import Probe, require
 NAME = "dns"
 HELP = "query the device's authoritative DNS server (UDP/53) with a real dnspython client (device-as-server)"
 
-# The A records the rig seeds (pentesting/rig_firmware/src/main.cpp).
+# The A records the rig seeds (penetration_testing/rig_firmware/src/main.cpp).
 _EXPECT = {"rig.lan": "192.168.1.29", "printer.lan": "192.168.1.5", "gateway.lan": "192.168.1.1"}
 
 

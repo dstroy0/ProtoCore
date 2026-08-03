@@ -31,7 +31,7 @@ roots is worse than either root alone:
 - `tools/gen_crypto_vectors.py` and the other vector generators - test **data**
 - `web_assets/wizard/*` - the web asset build
 - `tools/git-hooks/` - git hooks
-- `pentesting/`, `performance_benching/`, `reverse_engineering/` - separate domains
+- `penetration_testing/`, `performance_benching/`, `reverse_engineering/` - separate domains
 
 ## The contract for a generator
 

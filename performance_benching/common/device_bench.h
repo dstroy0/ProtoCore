@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // Shared on-device CCOUNT microbench macros for performance_benching/device/<service>/main.cpp. Ported from
-// pentesting/rig_firmware/src/main_cryptobench.cpp's BENCH_OP/BENCH_BULK onto pc_cycles() /
+// penetration_testing/rig_firmware/src/main_cryptobench.cpp's BENCH_OP/BENCH_BULK onto pc_cycles() /
 // pc_cycles_to_ns() (server/clock/clock.h) - the library's own documented wrapper around the Xtensa
 // cycle counter (CCOUNT, JTAG-observable), rather than calling ESP.getCycleCount() directly. Every
 // performance_benching/device/<service>/main.cpp includes this and prints one "DB ..." line per benched operation

@@ -219,7 +219,7 @@ Notes:
 ### On-device CCOUNT microbench (auth / conditional-GET primitives)
 
 Cycle-accurate on the ESP32-S3 @ 240 MHz via the CPU cycle counter (`ESP.getCycleCount()` = CCOUNT),
-measured in-firmware by the pentest rig's `/bench` endpoint ([`pentesting/rig_firmware`](../pentesting/rig_firmware),
+measured in-firmware by the pentest rig's `/bench` endpoint ([`penetration_testing/rig_firmware`](../penetration_testing/rig_firmware),
 N=20000 warm iterations; three runs agree to within 0.3%, so the figures are stable). These are the real
 device costs of hot pure primitives on the auth and ETag/Digest paths - no network in the measurement.
 
@@ -459,14 +459,14 @@ host column is the software variable-base ladder (the comb is an S3 flash table 
   classic ESP32 has no single-shot MODMULT (it takes two MULT passes) so it keeps the SIMD/scalar `pc_gf`
   ladder, as does native.
 - **ESP32-P4 (HW MODMULT, hw_ver3): X25519 19.9 ms, ed25519_sign 15.5 ms, one `fe_mul` 2,118 cyc / 5.9 us**
-  (`rig_s3_cryptobench`'s P4 twin `pentesting/rig_firmware/p4/P4CryptoBench`, `-Og`, 360 MHz). The P4 has no
+  (`rig_s3_cryptobench`'s P4 twin `penetration_testing/rig_firmware/p4/P4CryptoBench`, `-Og`, 360 MHz). The P4 has no
   software 25519 HW path otherwise (its dedicated ECC accelerator does only NIST P-192/P-256), so this takes the
   P4's X25519 from ~131 ms (mbedTLS software) to 19.9 ms (**6.6x**) and its Ed25519 host-key sign into 15.5 ms -
   the whole SSH/QUIC ed25519 handshake (2 X25519 + one comb sign) drops from ~0.5 s of software crypto to **~55
   ms** of device compute. Byte-exact: the on-device RFC 8032 §7.1 Ed25519 KAT passes on the P4 (the P-256 ECDSA
   stays on the P4's faster dedicated ECC HW via mbedTLS `ecc_alt`, so it is left there, not moved to MODMULT).
   **HTTP/3 shares the same `pc_x25519` + `pc_ed25519`, so the QUIC handshake gets the win too.** The
-  reproducible probe lives in `pentesting/rig_firmware/src/main_ssh.cpp` under `PC_SSH_BENCH`.
+  reproducible probe lives in `penetration_testing/rig_firmware/src/main_ssh.cpp` under `PC_SSH_BENCH`.
 - **`-O2` does not speed up the crypto (measured).** Rebuilt `rig_s3_ssh` at `-O2` (pre-MODMULT SIMD build):
   X25519 **97.3 ms**, ed25519_sign **380 ms** - identical to the `-Og` numbers. The ladder is hand-written
   vector assembly plus already-`int32` C glue, neither of which the optimizer can improve, so the shipped `-Og`
@@ -555,7 +555,7 @@ Every cryptographic primitive the library implements itself (not the mbedtls TLS
 **ESP32-S3 @ 240 MHz** with the Xtensa cycle counter (`ESP.getCycleCount()` reads CCOUNT). Each op is warmed
 once then averaged over N iterations on a high-priority core-1 task; N is sized per op so the total stays
 under the 32-bit CCOUNT wrap (2^32 cyc ≈ 17.9 s) - the one trap here (a too-large N silently wraps and
-reports a fraction of the true cost). Reproducible firmware: [`pentesting/rig_firmware/src/main_cryptobench.cpp`](../pentesting/rig_firmware/src/main_cryptobench.cpp),
+reports a fraction of the true cost). Reproducible firmware: [`penetration_testing/rig_firmware/src/main_cryptobench.cpp`](../penetration_testing/rig_firmware/src/main_cryptobench.cpp),
 env `rig_s3_cryptobench` (stock `espressif32@6.13.0`, arduino 2.x / mbedtls v2, `-Og`). The KEX/signature
 figures agree with the independently measured numbers in the SSH section above to ~1% (x25519 23.1 vs 23.2 ms,
 ed25519_sign 84.6 vs 85.6 ms, `fe_mul` 1377 vs 1386 cyc), which cross-validates the harness.
@@ -997,7 +997,7 @@ median 498 ms** over 8 handshakes - matching the numbers below.
 The wall-clock above is the client's view; a guarded server-side probe (`PC_TLS_HS_BENCH`, in
 [`tls.cpp`](../src/network_drivers/tls/tls.cpp)) times the actual handshake **on the device** - it sums the
 CPU spent inside the pumped `mbedtls_ssl_handshake` calls (network waits fall between pumps) and the wall
-time. Measured on the two S3 rigs and a wired **ESP32-P4** (`rig_s3_tls` twin, [`pentesting/rig_firmware/p4`](../pentesting/rig_firmware/p4);
+time. Measured on the two S3 rigs and a wired **ESP32-P4** (`rig_s3_tls` twin, [`penetration_testing/rig_firmware/p4`](../penetration_testing/rig_firmware/p4);
 `performance_benching/tls/tls_hs_time.py` + `s3_hs_investigate.py`):
 
 | Board / curve (ECDHE)                   | device CPU |   wall | client-observed | ping RTT |
@@ -1096,8 +1096,8 @@ h3 rig.
 ## 2b. Formatting: snprintf vs the frame builder (measured)
 
 **Measured**, not conjecture. ESP32-S3 DevKitC-1 @ 240 MHz, `arduino-cli` `-Os`, cycles from CCOUNT,
-averaged over 2000-5000 iterations after a warm call. Source `pentesting/rig_firmware/src/main_fmtbench.cpp`;
-procedure in [../pentesting/rig_firmware/BENCH.md](../pentesting/rig_firmware/BENCH.md). Every variant is
+averaged over 2000-5000 iterations after a warm call. Source `penetration_testing/rig_firmware/src/main_fmtbench.cpp`;
+procedure in [../penetration_testing/rig_firmware/BENCH.md](../penetration_testing/rig_firmware/BENCH.md). Every variant is
 proven byte-identical to the `snprintf` it replaces before it is timed (the bench's `CHECK` pairs).
 
 This is the number behind [SRCBANNED.md](SRCBANNED.md) ban 20. Whole frames:
