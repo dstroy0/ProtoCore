@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file http_parser.cpp
+ * @file http_parser.c
  * @brief Standalone HTTP/1.1 request parser - implementation.
  *
  * No dependency on transport, session, or lwIP.  Consumes one byte at a
@@ -39,21 +39,19 @@ void http_parser_set_stream_hooks(HttpStreamBeginCb begin, HttpStreamDataCb data
 // ---------------------------------------------------------------------------
 // FNV-1a hash constants for HTTP version validation
 // ---------------------------------------------------------------------------
-// Precomputed at compile time via constexpr; zero runtime cost.
 // The hash of the 8-byte version token ("HTTP/1.0" or "HTTP/1.1") is
 // compared against the accumulated _version_hash when CR terminates the
 // version field.
+//
+// Both tokens are fixed by RFC 7230, so their hashes are constants and are written as
+// constants. The fold is h = (h ^ byte) * PC_FNV_PRIME over the 8 bytes, seeded with
+// PC_FNV_OFFSET, which is the same fold the accumulator below runs per byte.
 
 #define PC_FNV_OFFSET 2166136261u
 #define PC_FNV_PRIME 16777619u
 
-static constexpr uint32_t fnv1a(const char *s, uint32_t h = PC_FNV_OFFSET)
-{
-    return *s ? fnv1a(s + 1, (h ^ (uint8_t)*s) * PC_FNV_PRIME) : h;
-}
-
-#define PC_HASH_HTTP10 (fnv1a("HTTP/1.0"))
-#define PC_HASH_HTTP11 (fnv1a("HTTP/1.1"))
+#define PC_HASH_HTTP10 0xF69731FBu ///< FNV-1a of "HTTP/1.0"
+#define PC_HASH_HTTP11 0xF5973068u ///< FNV-1a of "HTTP/1.1"
 
 // ---------------------------------------------------------------------------
 // RFC 7230 character-class table (hot path)
@@ -71,8 +69,8 @@ static constexpr uint32_t fnv1a(const char *s, uint32_t h = PC_FNV_OFFSET)
 #define PC_CC_VCHAR 0x02
 #define PC_CC_FIELD_VALUE 0x04
 
-// The 256-entry class table, one const byte per input octet (lands in flash .rodata). A plain literal so it is
-// standard-independent (the arduino-esp32 build is gnu++11, where a constexpr loop-built table is ill-formed).
+// The 256-entry class table, one const byte per input octet (lands in flash .rodata). Written out as a
+// literal, so it is data the compiler places rather than code it has to fold.
 // Each entry ORs the classes that octet belongs to; regenerate via tools if the character classes ever change:
 //   tchar = ALPHA/DIGIT/"!#$%&'*+-.^_`|~"  vchar = %x21-7E  field-value = HTAB/%x20-7E/obs-text(%x80-FF)
 static const uint8_t kCharClass[256] = {

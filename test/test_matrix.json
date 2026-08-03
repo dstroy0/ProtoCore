@@ -278,7 +278,7 @@
       "flags": ["-DPC_ENFORCE_HOST_HEADER=0"],
       "src": [
         "+<network_drivers/network/ip.c>",
-        "+<network_drivers/presentation/http/http_parser/http_parser.cpp>",
+        "+<network_drivers/presentation/http/http_parser/http_parser.c>",
         "+<network_drivers/transport/listener.c>",
         "+<network_drivers/transport/tcp.c>",
         "+<network_drivers/presentation/presentation.c>",
@@ -378,7 +378,7 @@
       ],
       "src": [
         "+<network_drivers/network/ip.c>",
-        "+<network_drivers/presentation/http/http_parser/http_parser.cpp>",
+        "+<network_drivers/presentation/http/http_parser/http_parser.c>",
         "+<network_drivers/transport/listener.c>",
         "+<network_drivers/transport/tcp.c>",
         "+<network_drivers/presentation/presentation.c>",
@@ -401,7 +401,7 @@
       "desc": "Parser streaming-body hook (OTA) - exercises http_parser with PC_ENABLE_OTA=1\nusing a mock sink (no ESP32 Update dependency).",
       "flags": ["-DPC_ENFORCE_HOST_HEADER=0", "-DPC_ENABLE_OTA=1"],
       "src": [
-        "+<network_drivers/presentation/http/http_parser/http_parser.cpp>",
+        "+<network_drivers/presentation/http/http_parser/http_parser.c>",
         "+<network_drivers/network/ip.c>"
       ],
       "tests": ["test_http_ota"]
@@ -586,7 +586,7 @@
       "flags": ["-DPC_ENABLE_SSH=1"],
       "src": [
         "+<network_drivers/network/ip.c>",
-        "+<network_drivers/presentation/http/http_parser/http_parser.cpp>",
+        "+<network_drivers/presentation/http/http_parser/http_parser.c>",
         "+<network_drivers/transport/listener.c>",
         "+<network_drivers/transport/tcp.c>",
         "+<network_drivers/presentation/presentation.c>",
@@ -675,7 +675,7 @@
       ],
       "src": [
         "+<network_drivers/network/ip.c>",
-        "+<network_drivers/presentation/http/http_parser/http_parser.cpp>",
+        "+<network_drivers/presentation/http/http_parser/http_parser.c>",
         "+<network_drivers/transport/listener.c>",
         "+<network_drivers/transport/tcp.c>",
         "+<network_drivers/presentation/presentation.c>",
@@ -811,7 +811,7 @@
       ],
       "src": [
         "+<network_drivers/network/ip.c>",
-        "+<network_drivers/presentation/http/http_parser/http_parser.cpp>",
+        "+<network_drivers/presentation/http/http_parser/http_parser.c>",
         "+<network_drivers/transport/listener.c>",
         "+<network_drivers/transport/tcp.c>",
         "+<network_drivers/presentation/presentation.c>",
@@ -951,7 +951,7 @@
         "+<network_drivers/network/ip.c>",
         "+<services/iot/cloudevents/cloudevents.c>",
         "+<network_drivers/presentation/codec/json/json.c>",
-        "+<network_drivers/presentation/http/http_parser/http_parser.cpp>"
+        "+<network_drivers/presentation/http/http_parser/http_parser.c>"
       ],
       "tests": ["test_cloudevents"]
     },
@@ -1579,7 +1579,7 @@
         "+<network_drivers/presentation/codec/hpack_prim/hpack_prim.c>",
         "+<network_drivers/presentation/http/http2/hpack.c>",
         "+<network_drivers/presentation/http/http3/qpack.c>",
-        "+<network_drivers/presentation/http/http_parser/http_parser.cpp>",
+        "+<network_drivers/presentation/http/http_parser/http_parser.c>",
         "+<network_drivers/presentation/codec/multipart/multipart.cpp>",
         "+<network_drivers/presentation/codec/json/json.c>",
         "+<network_drivers/presentation/codec/cbor/cbor.cpp>",
@@ -1650,7 +1650,7 @@
       ],
       "src": [
         "+<network_drivers/network/ip.c>",
-        "+<network_drivers/presentation/http/http_parser/http_parser.cpp>",
+        "+<network_drivers/presentation/http/http_parser/http_parser.c>",
         "+<network_drivers/transport/listener.c>",
         "+<network_drivers/transport/tcp.c>",
         "+<network_drivers/presentation/presentation.c>",
@@ -1685,7 +1685,7 @@
       "flags": ["-DPC_ENFORCE_HOST_HEADER=0", "-DPC_ENABLE_RANGE=1"],
       "src": [
         "+<network_drivers/network/ip.c>",
-        "+<network_drivers/presentation/http/http_parser/http_parser.cpp>",
+        "+<network_drivers/presentation/http/http_parser/http_parser.c>",
         "+<network_drivers/transport/listener.c>",
         "+<network_drivers/transport/tcp.c>",
         "+<network_drivers/presentation/presentation.c>",
@@ -1936,7 +1936,7 @@
       ],
       "src": [
         "+<network_drivers/network/ip.c>",
-        "+<network_drivers/presentation/http/http_parser/http_parser.cpp>",
+        "+<network_drivers/presentation/http/http_parser/http_parser.c>",
         "+<network_drivers/transport/listener.c>",
         "+<network_drivers/transport/tcp.c>",
         "+<network_drivers/presentation/presentation.c>",
@@ -1979,7 +1979,7 @@
     "native_compliance": {
       "desc": "RFC-compliance suite: builds with all enforcement at production defaults\n(PC_ENFORCE_HOST_HEADER=1) and exercises the strict behaviors.",
       "src": [
-        "+<network_drivers/presentation/http/http_parser/http_parser.cpp>",
+        "+<network_drivers/presentation/http/http_parser/http_parser.c>",
         "+<network_drivers/network/ip.c>"
       ],
       "tests": ["test_compliance"]
@@ -2097,7 +2097,7 @@
       "flags": ["-DPC_ENFORCE_HOST_HEADER=0", "-DPC_ENABLE_WS_DEFLATE=1"],
       "src": [
         "+<network_drivers/network/ip.c>",
-        "+<network_drivers/presentation/http/http_parser/http_parser.cpp>",
+        "+<network_drivers/presentation/http/http_parser/http_parser.c>",
         "+<network_drivers/transport/listener.c>",
         "+<network_drivers/transport/tcp.c>",
         "+<network_drivers/presentation/presentation.c>",
