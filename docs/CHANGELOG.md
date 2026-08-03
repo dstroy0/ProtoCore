@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- repoint the Sonar suppressions the C conversion orphaned ([`20d73cb`](https://github.com/dstroy0/ProtoCore/commit/20d73cb21e11a984d417aa39f25dad0772be44e6))
 - link the clock TU into every native env that reads it ([`183e693`](https://github.com/dstroy0/ProtoCore/commit/183e693528cb219327c7a123679eadce290c8422))
 - convert four more owned-context structs out of C++ ([`586cfd4`](https://github.com/dstroy0/ProtoCore/commit/586cfd4603660e8073792292404649932949a03e))
 - strip 772 verified scope qualifiers from test/ and examples/ ([`eb59261`](https://github.com/dstroy0/ProtoCore/commit/eb59261d7287fa8064e5b8cb1c1ccec5cf9005f3))
@@ -37,6 +38,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`8a33977`](https://github.com/dstroy0/ProtoCore/commit/8a339771ac15e9b1581bd168f2a9bc610cc855ed))
 - update test report + coverage [skip ci] ([`adaa1bc`](https://github.com/dstroy0/ProtoCore/commit/adaa1bc70a8af0cdd4380daa7a6334db251ca4c3))
 - update CHANGELOG.md [skip ci] ([`14991c1`](https://github.com/dstroy0/ProtoCore/commit/14991c11e16693d97b8e903c71605cdeb0f1b842))
 - update CHANGELOG.md [skip ci] ([`ec41e69`](https://github.com/dstroy0/ProtoCore/commit/ec41e69eef350640effdc95b4ae3ba348b5d12f9))
