@@ -74,7 +74,7 @@ static void test_dtls_ciphertext_protect_kat(void)
     pc_dtls_record_keys_derive(&k, AES_128_GCM_SHA256, KAT_EPOCH, KAT_SECRET);
     uint8_t out[64];
     size_t n = pc_dtls_ciphertext_protect(k, KAT_SEQ, KAT_CT, (const uint8_t *)KAT_PLAINTEXT, strlen(KAT_PLAINTEXT),
-                                          out, sizeof(out));
+                                          out, sizeof(out), NULL, 0);
     TEST_ASSERT_EQUAL_size_t(sizeof(KAT_WIRE), n);
     TEST_ASSERT_EQUAL_MEMORY(KAT_WIRE, out, sizeof(KAT_WIRE));
 }
@@ -86,7 +86,8 @@ static void test_dtls_ciphertext_unprotect_kat(void)
     pc_dtls_record_keys_derive(&k, AES_128_GCM_SHA256, KAT_EPOCH, KAT_SECRET);
     uint8_t out[64];
     DtlsCiphertext info;
-    TEST_ASSERT_TRUE(pc_dtls_ciphertext_unprotect(k, KAT_SEQ, KAT_WIRE, sizeof(KAT_WIRE), out, sizeof(out), &info));
+    TEST_ASSERT_TRUE(
+        pc_dtls_ciphertext_unprotect(k, KAT_SEQ, KAT_WIRE, sizeof(KAT_WIRE), out, sizeof(out), &info, NULL, 0));
     TEST_ASSERT_EQUAL_UINT8(KAT_CT, info.content_type);
     TEST_ASSERT_EQUAL_UINT64(KAT_SEQ, info.seq);
     TEST_ASSERT_EQUAL_size_t(strlen(KAT_PLAINTEXT), info.pt_len);
@@ -111,12 +112,12 @@ static void test_dtls_ciphertext_roundtrip(void)
         uint8_t ct = (i & 1) ? PC_DTLS_CT_HANDSHAKE : PC_DTLS_CT_APPLICATION_DATA;
 
         uint8_t wire[320];
-        size_t n = pc_dtls_ciphertext_protect(k, seq, ct, pt, sizes[i], wire, sizeof(wire));
+        size_t n = pc_dtls_ciphertext_protect(k, seq, ct, pt, sizes[i], wire, sizeof(wire), NULL, 0);
         TEST_ASSERT_TRUE(n > 0);
 
         uint8_t out[320];
         DtlsCiphertext info;
-        TEST_ASSERT_TRUE(pc_dtls_ciphertext_unprotect(k, seq, wire, n, out, sizeof(out), &info));
+        TEST_ASSERT_TRUE(pc_dtls_ciphertext_unprotect(k, seq, wire, n, out, sizeof(out), &info, NULL, 0));
         TEST_ASSERT_EQUAL_UINT8(ct, info.content_type);
         TEST_ASSERT_EQUAL_UINT64(seq, info.seq);
         TEST_ASSERT_EQUAL_size_t(sizes[i], info.pt_len);
@@ -141,13 +142,13 @@ static void test_dtls_seq_reconstruction(void)
     for (unsigned i = 0; i < sizeof(seqs) / sizeof(seqs[0]); i++)
     {
         uint8_t wire[64];
-        size_t n =
-            pc_dtls_ciphertext_protect(k, seqs[i], PC_DTLS_CT_APPLICATION_DATA, pt, sizeof(pt), wire, sizeof(wire));
+        size_t n = pc_dtls_ciphertext_protect(k, seqs[i], PC_DTLS_CT_APPLICATION_DATA, pt, sizeof(pt), wire,
+                                              sizeof(wire), NULL, 0);
         TEST_ASSERT_TRUE(n > 0);
         uint8_t out[64];
         DtlsCiphertext info;
         // next_seq = seqs[i] (the receiver expects this record next); reconstruction returns it exactly.
-        TEST_ASSERT_TRUE(pc_dtls_ciphertext_unprotect(k, seqs[i], wire, n, out, sizeof(out), &info));
+        TEST_ASSERT_TRUE(pc_dtls_ciphertext_unprotect(k, seqs[i], wire, n, out, sizeof(out), &info, NULL, 0));
         TEST_ASSERT_EQUAL_UINT64(seqs[i], info.seq);
         TEST_ASSERT_EQUAL_MEMORY(pt, out, sizeof(pt));
     }
@@ -165,20 +166,21 @@ static void test_dtls_ciphertext_unprotect_rejects(void)
     uint8_t bad[36];
     memcpy(bad, KAT_WIRE, sizeof(bad));
     bad[20] ^= 0x01;
-    TEST_ASSERT_FALSE(pc_dtls_ciphertext_unprotect(k, KAT_SEQ, bad, sizeof(bad), out, sizeof(out), &info));
+    TEST_ASSERT_FALSE(pc_dtls_ciphertext_unprotect(k, KAT_SEQ, bad, sizeof(bad), out, sizeof(out), &info, NULL, 0));
 
     // Keys for a different epoch (low 2 bits mismatch the header) -> rejected before AEAD.
     DtlsRecordKeys k2;
     pc_dtls_record_keys_derive(&k2, AES_128_GCM_SHA256, 2, KAT_SECRET); // epoch 2 != header's 3
-    TEST_ASSERT_FALSE(pc_dtls_ciphertext_unprotect(k2, KAT_SEQ, KAT_WIRE, sizeof(KAT_WIRE), out, sizeof(out), &info));
+    TEST_ASSERT_FALSE(
+        pc_dtls_ciphertext_unprotect(k2, KAT_SEQ, KAT_WIRE, sizeof(KAT_WIRE), out, sizeof(out), &info, NULL, 0));
 
     // A connection-id record (C bit set) when no CID was negotiated (the default) is rejected.
     memcpy(bad, KAT_WIRE, sizeof(bad));
     bad[0] |= 0x10; // set C
-    TEST_ASSERT_FALSE(pc_dtls_ciphertext_unprotect(k, KAT_SEQ, bad, sizeof(bad), out, sizeof(out), &info));
+    TEST_ASSERT_FALSE(pc_dtls_ciphertext_unprotect(k, KAT_SEQ, bad, sizeof(bad), out, sizeof(out), &info, NULL, 0));
 
     // Truncated record (no room for the 16-byte sequence-number sample) is rejected.
-    TEST_ASSERT_FALSE(pc_dtls_ciphertext_unprotect(k, KAT_SEQ, KAT_WIRE, 10, out, sizeof(out), &info));
+    TEST_ASSERT_FALSE(pc_dtls_ciphertext_unprotect(k, KAT_SEQ, KAT_WIRE, 10, out, sizeof(out), &info, NULL, 0));
 }
 
 // DTLSPlaintext builds and parses back to the same fields (initial-flight / alert records).
@@ -272,7 +274,7 @@ static void test_dtls_cid_rejects(void)
     TEST_ASSERT_TRUE(n > 0);
 
     // A CID record but the receiver expects none -> rejected (unexpected CID).
-    TEST_ASSERT_FALSE(pc_dtls_ciphertext_unprotect(k, 3, wire, n, out, sizeof(out), &info));
+    TEST_ASSERT_FALSE(pc_dtls_ciphertext_unprotect(k, 3, wire, n, out, sizeof(out), &info, NULL, 0));
     // Wrong CID of the right length -> rejected.
     const uint8_t other[4] = {0xDE, 0xAD, 0xBE, 0xEF};
     TEST_ASSERT_FALSE(pc_dtls_ciphertext_unprotect(k, 3, wire, n, out, sizeof(out), &info, other, sizeof(other)));
@@ -281,7 +283,8 @@ static void test_dtls_cid_rejects(void)
 
     // A non-CID record but the receiver expects a CID -> rejected.
     uint8_t plain[64];
-    size_t pn = pc_dtls_ciphertext_protect(k, 3, PC_DTLS_CT_APPLICATION_DATA, pt, sizeof(pt), plain, sizeof(plain));
+    size_t pn =
+        pc_dtls_ciphertext_protect(k, 3, PC_DTLS_CT_APPLICATION_DATA, pt, sizeof(pt), plain, sizeof(plain), NULL, 0);
     TEST_ASSERT_TRUE(pn > 0);
     TEST_ASSERT_FALSE(pc_dtls_ciphertext_unprotect(k, 3, plain, pn, out, sizeof(out), &info, cid, sizeof(cid)));
 
@@ -305,17 +308,18 @@ static void test_dtls_seq_rollover_both_directions(void)
     DtlsCiphertext info;
 
     // Forward wrap: sender used 0x10000 (low 16 bits 0x0000); receiver expected 0xF000 (previous window).
-    size_t n =
-        pc_dtls_ciphertext_protect(k, 0x10000ull, PC_DTLS_CT_APPLICATION_DATA, pt, sizeof(pt), wire, sizeof(wire));
+    size_t n = pc_dtls_ciphertext_protect(k, 0x10000ull, PC_DTLS_CT_APPLICATION_DATA, pt, sizeof(pt), wire,
+                                          sizeof(wire), NULL, 0);
     TEST_ASSERT_TRUE(n > 0);
-    TEST_ASSERT_TRUE(pc_dtls_ciphertext_unprotect(k, 0xF000ull, wire, n, out, sizeof(out), &info));
+    TEST_ASSERT_TRUE(pc_dtls_ciphertext_unprotect(k, 0xF000ull, wire, n, out, sizeof(out), &info, NULL, 0));
     TEST_ASSERT_EQUAL_UINT64(0x10000ull, info.seq);
     TEST_ASSERT_EQUAL_MEMORY(pt, out, sizeof(pt));
 
     // Backward wrap: sender used 0xFFFF (low 16 bits 0xFFFF); receiver expected 0x10000 (next window).
-    n = pc_dtls_ciphertext_protect(k, 0xFFFFull, PC_DTLS_CT_APPLICATION_DATA, pt, sizeof(pt), wire, sizeof(wire));
+    n = pc_dtls_ciphertext_protect(k, 0xFFFFull, PC_DTLS_CT_APPLICATION_DATA, pt, sizeof(pt), wire, sizeof(wire), NULL,
+                                   0);
     TEST_ASSERT_TRUE(n > 0);
-    TEST_ASSERT_TRUE(pc_dtls_ciphertext_unprotect(k, 0x10000ull, wire, n, out, sizeof(out), &info));
+    TEST_ASSERT_TRUE(pc_dtls_ciphertext_unprotect(k, 0x10000ull, wire, n, out, sizeof(out), &info, NULL, 0));
     TEST_ASSERT_EQUAL_UINT64(0xFFFFull, info.seq);
     TEST_ASSERT_EQUAL_MEMORY(pt, out, sizeof(pt));
 }
@@ -364,12 +368,13 @@ static void test_dtls_protect_bounds(void)
     DtlsRecordKeys kbad = k;
     kbad.cipher = (DtlsCipher)0x7F; // unsupported cipher
     TEST_ASSERT_EQUAL_size_t(
-        0, pc_dtls_ciphertext_protect(kbad, 1, PC_DTLS_CT_APPLICATION_DATA, pt, sizeof(pt), out, sizeof(out)));
+        0, pc_dtls_ciphertext_protect(kbad, 1, PC_DTLS_CT_APPLICATION_DATA, pt, sizeof(pt), out, sizeof(out), NULL, 0));
     // cid_len > 0 with a null cid pointer.
     TEST_ASSERT_EQUAL_size_t(
         0, pc_dtls_ciphertext_protect(k, 1, PC_DTLS_CT_APPLICATION_DATA, pt, sizeof(pt), out, sizeof(out), NULL, 4));
     // Output buffer too small for header + body.
-    TEST_ASSERT_EQUAL_size_t(0, pc_dtls_ciphertext_protect(k, 1, PC_DTLS_CT_APPLICATION_DATA, pt, sizeof(pt), out, 5));
+    TEST_ASSERT_EQUAL_size_t(
+        0, pc_dtls_ciphertext_protect(k, 1, PC_DTLS_CT_APPLICATION_DATA, pt, sizeof(pt), out, 5, NULL, 0));
 }
 
 // pc_dtls_ciphertext_unprotect rejects every malformed shape: unsupported cipher, zero-length record,
@@ -385,9 +390,10 @@ static void test_dtls_unprotect_bounds(void)
 
     DtlsRecordKeys kbad = k;
     kbad.cipher = (DtlsCipher)0x7F;
-    TEST_ASSERT_FALSE(pc_dtls_ciphertext_unprotect(kbad, KAT_SEQ, KAT_WIRE, sizeof(KAT_WIRE), out, sizeof(out), &info));
+    TEST_ASSERT_FALSE(
+        pc_dtls_ciphertext_unprotect(kbad, KAT_SEQ, KAT_WIRE, sizeof(KAT_WIRE), out, sizeof(out), &info, NULL, 0));
     // Zero-length record.
-    TEST_ASSERT_FALSE(pc_dtls_ciphertext_unprotect(k, KAT_SEQ, KAT_WIRE, 0, out, sizeof(out), &info));
+    TEST_ASSERT_FALSE(pc_dtls_ciphertext_unprotect(k, KAT_SEQ, KAT_WIRE, 0, out, sizeof(out), &info, NULL, 0));
     // expected_cid_len beyond PC_DTLS_CID_MAX.
     uint8_t bigcid[PC_DTLS_CID_MAX + 1] = {0};
     TEST_ASSERT_FALSE(pc_dtls_ciphertext_unprotect(k, KAT_SEQ, KAT_WIRE, sizeof(KAT_WIRE), out, sizeof(out), &info,
@@ -397,30 +403,32 @@ static void test_dtls_unprotect_bounds(void)
     uint8_t bad[sizeof(KAT_WIRE)];
     memcpy(bad, KAT_WIRE, sizeof(bad));
     bad[0] = 0x00;
-    TEST_ASSERT_FALSE(pc_dtls_ciphertext_unprotect(k, KAT_SEQ, bad, sizeof(bad), out, sizeof(out), &info));
+    TEST_ASSERT_FALSE(pc_dtls_ciphertext_unprotect(k, KAT_SEQ, bad, sizeof(bad), out, sizeof(out), &info, NULL, 0));
 
     // Too short for the 16-bit sequence number, and too short for the 2-byte length field.
-    TEST_ASSERT_FALSE(pc_dtls_ciphertext_unprotect(k, KAT_SEQ, KAT_WIRE, 2, out, sizeof(out), &info));
-    TEST_ASSERT_FALSE(pc_dtls_ciphertext_unprotect(k, KAT_SEQ, KAT_WIRE, 4, out, sizeof(out), &info));
+    TEST_ASSERT_FALSE(pc_dtls_ciphertext_unprotect(k, KAT_SEQ, KAT_WIRE, 2, out, sizeof(out), &info, NULL, 0));
+    TEST_ASSERT_FALSE(pc_dtls_ciphertext_unprotect(k, KAT_SEQ, KAT_WIRE, 4, out, sizeof(out), &info, NULL, 0));
 
     // Well-formed header (byte0 0x2f: 001, S=1, L=1, epoch 3) but a length below the AEAD minimum: 10 (< 16)
     // and exactly 16 (== tag, no inner byte). Both rejected before any AEAD work.
     const uint8_t rec_enc10[15] = {0x2f, 0x00, 0x05, 0x00, 0x0A, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    TEST_ASSERT_FALSE(pc_dtls_ciphertext_unprotect(k, 0, rec_enc10, sizeof(rec_enc10), out, sizeof(out), &info));
+    TEST_ASSERT_FALSE(
+        pc_dtls_ciphertext_unprotect(k, 0, rec_enc10, sizeof(rec_enc10), out, sizeof(out), &info, NULL, 0));
     uint8_t rec_enc16[21];
     memset(rec_enc16, 0, sizeof(rec_enc16));
     rec_enc16[0] = 0x2f;
     rec_enc16[2] = 0x05;
     rec_enc16[4] = 0x10; // enc_len = 16
-    TEST_ASSERT_FALSE(pc_dtls_ciphertext_unprotect(k, 0, rec_enc16, sizeof(rec_enc16), out, sizeof(out), &info));
+    TEST_ASSERT_FALSE(
+        pc_dtls_ciphertext_unprotect(k, 0, rec_enc16, sizeof(rec_enc16), out, sizeof(out), &info, NULL, 0));
 
     // Output buffer too small for the recovered plaintext (KAT inner_len = 15).
-    TEST_ASSERT_FALSE(pc_dtls_ciphertext_unprotect(k, KAT_SEQ, KAT_WIRE, sizeof(KAT_WIRE), out, 10, &info));
+    TEST_ASSERT_FALSE(pc_dtls_ciphertext_unprotect(k, KAT_SEQ, KAT_WIRE, sizeof(KAT_WIRE), out, 10, &info, NULL, 0));
 
     // An L=0 record: parsed to end-of-datagram, then fails the AEAD open (its AAD/offsets no longer match).
     memcpy(bad, KAT_WIRE, sizeof(bad));
     bad[0] = (uint8_t)(KAT_WIRE[0] & ~0x04); // clear the L bit
-    TEST_ASSERT_FALSE(pc_dtls_ciphertext_unprotect(k, KAT_SEQ, bad, sizeof(bad), out, sizeof(out), &info));
+    TEST_ASSERT_FALSE(pc_dtls_ciphertext_unprotect(k, KAT_SEQ, bad, sizeof(bad), out, sizeof(out), &info, NULL, 0));
 }
 
 // An all-zero inner plaintext carries no content type (RFC 8446 §5.2/§5.4): unprotect strips every zero
@@ -432,11 +440,11 @@ static void test_dtls_unprotect_all_zero_inner(void)
     const uint8_t zeros[4] = {0, 0, 0, 0};
     uint8_t wire[64];
     // content_type 0 with an all-zero payload -> the sealed inner plaintext is all zeros.
-    size_t n = pc_dtls_ciphertext_protect(k, 9, 0x00, zeros, sizeof(zeros), wire, sizeof(wire));
+    size_t n = pc_dtls_ciphertext_protect(k, 9, 0x00, zeros, sizeof(zeros), wire, sizeof(wire), NULL, 0);
     TEST_ASSERT_TRUE(n > 0);
     uint8_t out[64];
     DtlsCiphertext info;
-    TEST_ASSERT_FALSE(pc_dtls_ciphertext_unprotect(k, 9, wire, n, out, sizeof(out), &info));
+    TEST_ASSERT_FALSE(pc_dtls_ciphertext_unprotect(k, 9, wire, n, out, sizeof(out), &info, NULL, 0));
 }
 
 // Marking a sequence number far below the window's high-water mark is a no-op (RFC 9147 §4.5.1): it stays
@@ -507,7 +515,7 @@ static void test_dtls_unprotect_seq8_variant(void)
     uint8_t out[64];
     DtlsCiphertext info;
     // Garbage AEAD body -> tag check fails, but the seq_len=1 branch is exercised on the way there.
-    TEST_ASSERT_FALSE(pc_dtls_ciphertext_unprotect(k, 0, rec, sizeof(rec), out, sizeof(out), &info));
+    TEST_ASSERT_FALSE(pc_dtls_ciphertext_unprotect(k, 0, rec, sizeof(rec), out, sizeof(out), &info, NULL, 0));
 }
 
 // Sequence-number reconstruction where the near-expected candidate would overflow past UINT64_MAX when
@@ -523,13 +531,15 @@ static void test_dtls_seq_reconstruction_overflow_guard(void)
     uint8_t wire[64];
     // seq's low 16 bits are 0 and its high bits are all 1s so that "candidate + win" wraps to 0.
     uint64_t seq = 0xFFFFFFFFFFFF0000ull;
-    size_t n = pc_dtls_ciphertext_protect(k, seq, PC_DTLS_CT_APPLICATION_DATA, pt, sizeof(pt), wire, sizeof(wire));
+    size_t n =
+        pc_dtls_ciphertext_protect(k, seq, PC_DTLS_CT_APPLICATION_DATA, pt, sizeof(pt), wire, sizeof(wire), NULL, 0);
     TEST_ASSERT_TRUE(n > 0);
     uint8_t out[64];
     DtlsCiphertext info;
     // next_seq = UINT64_MAX drives candidate + hwin <= next_seq (true) while candidate + win overflows
     // (so > candidate reads false); the resulting mis-decoded sequence number fails the AEAD tag.
-    TEST_ASSERT_FALSE(pc_dtls_ciphertext_unprotect(k, 0xFFFFFFFFFFFFFFFFull, wire, n, out, sizeof(out), &info));
+    TEST_ASSERT_FALSE(
+        pc_dtls_ciphertext_unprotect(k, 0xFFFFFFFFFFFFFFFFull, wire, n, out, sizeof(out), &info, NULL, 0));
 }
 
 int main(int, char **)

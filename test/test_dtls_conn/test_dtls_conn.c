@@ -931,7 +931,7 @@ static void test_pto_ack_cancels_retransmit(void)
     size_t bl = pc_dtls_ack_build(rns, 5, ack_body, sizeof(ack_body));
     TEST_ASSERT_TRUE(bl > 0);
     uint8_t ack_rec[160];
-    size_t ar = pc_dtls_ciphertext_protect(cli_write, 0, PC_DTLS_CT_ACK, ack_body, bl, ack_rec, sizeof(ack_rec));
+    size_t ar = pc_dtls_ciphertext_protect(cli_write, 0, PC_DTLS_CT_ACK, ack_body, bl, ack_rec, sizeof(ack_rec), NULL, 0);
     TEST_ASSERT_TRUE(ar > 0);
 
     uint8_t out[64];
@@ -1039,7 +1039,7 @@ static proto_bool run_to_finished(DtlsConn *conn, DtlsServerConfig *cfg, ClientS
         }
         uint8_t inner[512];
         DtlsCiphertext info;
-        if (!pc_dtls_ciphertext_unprotect(st->srv_hs_read, exp_seq, flight + off, crl, inner, sizeof(inner), &info))
+        if (!pc_dtls_ciphertext_unprotect(st->srv_hs_read, exp_seq, flight + off, crl, inner, sizeof(inner), &info, NULL, 0))
         {
             return PROTO_FALSE;
         }
@@ -1079,7 +1079,7 @@ static int feed_client_finished(DtlsConn *conn, ClientSession *st, uint64_t seq,
 {
     uint8_t rec[128];
     size_t rl = pc_dtls_ciphertext_protect(st->cli_hs_write, seq, PC_DTLS_CT_HANDSHAKE, st->cfin_frag,
-                                           st->cfin_frag_len, rec, sizeof(rec));
+                                           st->cfin_frag_len, rec, sizeof(rec), NULL, 0);
     if (!rl)
     {
         return -2;
@@ -1100,7 +1100,7 @@ static int feed_epoch2_msg(DtlsConn *conn, ClientSession *st, uint64_t seq, uint
         return -2;
     }
     uint8_t rec[192];
-    size_t rl = pc_dtls_ciphertext_protect(st->cli_hs_write, seq, PC_DTLS_CT_HANDSHAKE, frag, fl, rec, sizeof(rec));
+    size_t rl = pc_dtls_ciphertext_protect(st->cli_hs_write, seq, PC_DTLS_CT_HANDSHAKE, frag, fl, rec, sizeof(rec), NULL, 0);
     if (!rl)
     {
         return -2;
@@ -1113,7 +1113,7 @@ static int feed_epoch2_ack(DtlsConn *conn, ClientSession *st, uint64_t seq, cons
                            uint8_t *out, size_t out_cap)
 {
     uint8_t rec[192];
-    size_t rl = pc_dtls_ciphertext_protect(st->cli_hs_write, seq, PC_DTLS_CT_ACK, body, blen, rec, sizeof(rec));
+    size_t rl = pc_dtls_ciphertext_protect(st->cli_hs_write, seq, PC_DTLS_CT_ACK, body, blen, rec, sizeof(rec), NULL, 0);
     if (!rl)
     {
         return -2;
@@ -1548,7 +1548,7 @@ static void test_ack_replay_and_late_ack_ignored(void)
     size_t bl = pc_dtls_ack_build(rns, 5, body, sizeof(body));
     TEST_ASSERT_TRUE(bl > 0);
     uint8_t rec[192];
-    size_t rl = pc_dtls_ciphertext_protect(st.cli_hs_write, 0, PC_DTLS_CT_ACK, body, bl, rec, sizeof(rec));
+    size_t rl = pc_dtls_ciphertext_protect(st.cli_hs_write, 0, PC_DTLS_CT_ACK, body, bl, rec, sizeof(rec), NULL, 0);
     TEST_ASSERT_TRUE(rl > 0);
     TEST_ASSERT_EQUAL_INT(0, pc_dtls_conn_process(&conn, rec, rl, out, sizeof(out)));
     TEST_ASSERT_EQUAL_INT(-1, pc_dtls_conn_timeout_ms(&conn)); // disarmed
@@ -1589,7 +1589,7 @@ static void test_completion_ack_deferred_when_out_full(void)
     TEST_ASSERT_TRUE(n > 0);
     uint8_t pt[64];
     DtlsCiphertext info;
-    TEST_ASSERT_TRUE(pc_dtls_ciphertext_unprotect(st.cli_app_read, 0, out, (size_t)n, pt, sizeof(pt), &info));
+    TEST_ASSERT_TRUE(pc_dtls_ciphertext_unprotect(st.cli_app_read, 0, out, (size_t)n, pt, sizeof(pt), &info, NULL, 0));
     TEST_ASSERT_EQUAL_UINT8(PC_DTLS_CT_ACK, info.content_type);
 }
 
@@ -1638,14 +1638,14 @@ static void test_app_records_before_and_after_established(void)
     // A record that opens cleanly but whose inner content type is not application_data.
     uint8_t ackrec[64];
     size_t al = pc_dtls_ciphertext_protect(st.cli_app_write, 0, PC_DTLS_CT_ACK, payload, sizeof(payload), ackrec,
-                                           sizeof(ackrec));
+                                           sizeof(ackrec), NULL, 0);
     TEST_ASSERT_TRUE(al > 0);
     TEST_ASSERT_FALSE(pc_dtls_conn_open_app(&conn, ackrec, al, plain, sizeof(plain), &plen));
 
     // Genuine application data opens once, and its replay is refused.
     uint8_t apprec[64];
     size_t pl = pc_dtls_ciphertext_protect(st.cli_app_write, 1, PC_DTLS_CT_APPLICATION_DATA, payload, sizeof(payload),
-                                           apprec, sizeof(apprec));
+                                           apprec, sizeof(apprec), NULL, 0);
     TEST_ASSERT_TRUE(pl > 0);
     TEST_ASSERT_TRUE(pc_dtls_conn_open_app(&conn, apprec, pl, plain, sizeof(plain), &plen));
     TEST_ASSERT_EQUAL_UINT32(sizeof(payload), (uint32_t)plen);
@@ -1658,7 +1658,7 @@ static void test_app_records_before_and_after_established(void)
     size_t sl = pc_dtls_conn_seal_app(&conn, payload, sizeof(payload), srec, sizeof(srec));
     TEST_ASSERT_TRUE(sl > 0);
     DtlsCiphertext info;
-    TEST_ASSERT_TRUE(pc_dtls_ciphertext_unprotect(st.cli_app_read, 1, srec, sl, plain, sizeof(plain), &info));
+    TEST_ASSERT_TRUE(pc_dtls_ciphertext_unprotect(st.cli_app_read, 1, srec, sl, plain, sizeof(plain), &info, NULL, 0));
     TEST_ASSERT_EQUAL_UINT8(PC_DTLS_CT_APPLICATION_DATA, info.content_type);
     TEST_ASSERT_EQUAL_UINT32(sizeof(payload), (uint32_t)info.pt_len);
     TEST_ASSERT_EQUAL_MEMORY(payload, plain, sizeof(payload));
@@ -1894,7 +1894,7 @@ static void test_epoch2_other_content_type_ignored(void)
     const uint8_t payload[4] = {0xDE, 0xAD, 0xBE, 0xEF};
     uint8_t rec[128];
     size_t rl = pc_dtls_ciphertext_protect(st.cli_hs_write, 0, PC_DTLS_CT_APPLICATION_DATA, payload, sizeof(payload),
-                                           rec, sizeof(rec));
+                                           rec, sizeof(rec), NULL, 0);
     TEST_ASSERT_TRUE(rl > 0);
     uint8_t out[128];
     TEST_ASSERT_EQUAL_INT(0, pc_dtls_conn_process(&conn, rec, rl, out, sizeof(out)));

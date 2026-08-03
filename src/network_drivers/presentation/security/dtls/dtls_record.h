@@ -141,8 +141,7 @@ size_t pc_dtls_plaintext_parse(const uint8_t *rec, size_t rec_len, DtlsPlaintext
  * @return bytes written, or 0 on overflow / unsupported cipher / an over-long CID.
  */
 size_t pc_dtls_ciphertext_protect(DtlsRecordKeys *keys, uint64_t seq, uint8_t content_type, const uint8_t *plaintext,
-                                  size_t pt_len, uint8_t *out, size_t out_cap, const uint8_t *cid = NULL,
-                                  size_t cid_len = 0);
+                                  size_t pt_len, uint8_t *out, size_t out_cap, const uint8_t *cid, size_t cid_len);
 
 /** @brief Result of a successful @ref pc_dtls_ciphertext_unprotect. */
 typedef struct
@@ -171,8 +170,8 @@ typedef struct
  *         mismatch, an unexpected / mismatched connection id, a failed AEAD tag, or an output overflow.
  */
 proto_bool pc_dtls_ciphertext_unprotect(DtlsRecordKeys *keys, uint64_t next_seq, const uint8_t *rec, size_t rec_len,
-                                        uint8_t *out, size_t out_cap, DtlsCiphertext *info,
-                                        const uint8_t *expected_cid = NULL, size_t expected_cid_len = 0);
+                                        uint8_t *out, size_t out_cap, DtlsCiphertext *info, const uint8_t *expected_cid,
+                                        size_t expected_cid_len);
 
 // ---------------------------------------------------------------------------
 // Anti-replay sliding window (RFC 9147 §4.5.1)

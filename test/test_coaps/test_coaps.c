@@ -245,7 +245,7 @@ static void handshake(DtlsConn *conn, DtlsRecordKeys *cli_app_write, DtlsRecordK
         uint8_t inner[512];
         DtlsCiphertext info;
         TEST_ASSERT_TRUE(
-            pc_dtls_ciphertext_unprotect(&srv_read, exp_seq, flight + off, crl, inner, sizeof(inner), &info));
+            pc_dtls_ciphertext_unprotect(&srv_read, exp_seq, flight + off, crl, inner, sizeof(inner), &info, NULL, 0));
         exp_seq = info.seq + 1;
         off += crl;
         uint8_t msg[512];
@@ -268,8 +268,8 @@ static void handshake(DtlsConn *conn, DtlsRecordKeys *cli_app_write, DtlsRecordK
     size_t cff = pc_dtls_hs_frag_build(cfin[0], 1, (uint32_t)(cfin_len - 4), 0, cfin + 4, (uint32_t)(cfin_len - 4),
                                        cfin_frag, sizeof(cfin_frag));
     uint8_t cfin_rec[128];
-    size_t cfr =
-        pc_dtls_ciphertext_protect(&cli_write, 0, PC_DTLS_CT_HANDSHAKE, cfin_frag, cff, cfin_rec, sizeof(cfin_rec));
+    size_t cfr = pc_dtls_ciphertext_protect(&cli_write, 0, PC_DTLS_CT_HANDSHAKE, cfin_frag, cff, cfin_rec,
+                                            sizeof(cfin_rec), NULL, 0);
     uint8_t out2[64];
     TEST_ASSERT_TRUE(pc_dtls_conn_process(conn, cfin_rec, cfr, out2, sizeof(out2)) > 0);
     TEST_ASSERT_TRUE(pc_dtls_conn_established(conn));
@@ -288,7 +288,7 @@ static void test_coap_over_dtls(void)
     const uint8_t coap_get[] = {0x40, 0x01, 0x12, 0x34, 0xB4, 't', 'e', 'm', 'p'};
     uint8_t app_rec[128];
     size_t ar = pc_dtls_ciphertext_protect(&cli_app_write, 0, PC_DTLS_CT_APPLICATION_DATA, coap_get, sizeof(coap_get),
-                                           app_rec, sizeof(app_rec));
+                                           app_rec, sizeof(app_rec), NULL, 0);
     TEST_ASSERT_TRUE(ar > 0);
 
     uint8_t out[256];
@@ -299,7 +299,7 @@ static void test_coap_over_dtls(void)
     uint8_t coap_resp[256];
     DtlsCiphertext info;
     TEST_ASSERT_TRUE(
-        pc_dtls_ciphertext_unprotect(&cli_app_read, 1, out, (size_t)on, coap_resp, sizeof(coap_resp), &info));
+        pc_dtls_ciphertext_unprotect(&cli_app_read, 1, out, (size_t)on, coap_resp, sizeof(coap_resp), &info, NULL, 0));
     TEST_ASSERT_EQUAL_UINT8(PC_DTLS_CT_APPLICATION_DATA, info.content_type);
 
     // CoAP response: piggybacked ACK, code 2.05 Content (0x45), MID echoed, token echoed (none),
@@ -324,7 +324,7 @@ static void test_coap_over_dtls_replay_dropped(void)
     const uint8_t coap_get[] = {0x40, 0x01, 0x12, 0x34, 0xB4, 't', 'e', 'm', 'p'};
     uint8_t app_rec[128];
     size_t ar = pc_dtls_ciphertext_protect(&cli_app_write, 0, PC_DTLS_CT_APPLICATION_DATA, coap_get, sizeof(coap_get),
-                                           app_rec, sizeof(app_rec));
+                                           app_rec, sizeof(app_rec), NULL, 0);
     uint8_t out[256];
     TEST_ASSERT_TRUE(pc_coaps_process(&conn, app_rec, ar, out, sizeof(out)) > 0);     // first: answered
     TEST_ASSERT_EQUAL_INT(0, pc_coaps_process(&conn, app_rec, ar, out, sizeof(out))); // replay: dropped
@@ -342,7 +342,7 @@ static void test_coaps_no_coap_response(void)
     const uint8_t coap_ack[] = {0x60, 0x00, 0x12, 0x34}; // Ver 1, Type ACK (2), TKL 0, MID 0x1234
     uint8_t app_rec[128];
     size_t ar = pc_dtls_ciphertext_protect(&cli_app_write, 0, PC_DTLS_CT_APPLICATION_DATA, coap_ack, sizeof(coap_ack),
-                                           app_rec, sizeof(app_rec));
+                                           app_rec, sizeof(app_rec), NULL, 0);
     TEST_ASSERT_TRUE(ar > 0);
 
     uint8_t out[256];

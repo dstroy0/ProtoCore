@@ -217,8 +217,9 @@ static void crypto_bench_task(void *)
             uint8_t secret[32] = {0};
             pc_dtls_record_keys_derive(&keys, DtlsCipher::AES_128_GCM_SHA256, 1, secret);
             static uint8_t rec[BULK + 64];
-            BENCH_BULK("dtls_record protect (DTLS1.3)", 300, BULK,
-                       pc_dtls_ciphertext_protect(keys, 0, PC_DTLS_CT_APPLICATION_DATA, buf, BULK, rec, sizeof rec));
+            BENCH_BULK(
+                "dtls_record protect (DTLS1.3)", 300, BULK,
+                pc_dtls_ciphertext_protect(keys, 0, PC_DTLS_CT_APPLICATION_DATA, buf, BULK, rec, sizeof rec, NULL, 0));
         }
 #endif
 
