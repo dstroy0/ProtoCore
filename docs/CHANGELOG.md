@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- repoint the checker baselines the C conversion orphaned ([`1476252`](https://github.com/dstroy0/ProtoCore/commit/14762523da710113549a6aaf8165ea244feb0109))
 - name the incomplete struct tag in the SSH GCM wipe casts ([`770fa67`](https://github.com/dstroy0/ProtoCore/commit/770fa67576af3da5d8ae443f5d025567810875ae))
 - repoint the Sonar suppressions the C conversion orphaned ([`20d73cb`](https://github.com/dstroy0/ProtoCore/commit/20d73cb21e11a984d417aa39f25dad0772be44e6))
 - link the clock TU into every native env that reads it ([`183e693`](https://github.com/dstroy0/ProtoCore/commit/183e693528cb219327c7a123679eadce290c8422))
@@ -39,6 +40,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`6abb05f`](https://github.com/dstroy0/ProtoCore/commit/6abb05f330c76574fdb3e5479d1abf794798d5c7))
 - update CHANGELOG.md [skip ci] ([`9b73d9b`](https://github.com/dstroy0/ProtoCore/commit/9b73d9bd08ff40beb876c3c3e4bab52d7c75f426))
 - update CHANGELOG.md [skip ci] ([`7de0efa`](https://github.com/dstroy0/ProtoCore/commit/7de0efa10d4e0866e726d9f51e28f736ad838970))
 - update CHANGELOG.md [skip ci] ([`856d2f2`](https://github.com/dstroy0/ProtoCore/commit/856d2f291073c3036fc54b50c35e6504c259302c))
@@ -158,6 +160,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`5656c29`](https://github.com/dstroy0/ProtoCore/commit/5656c295f8cfeff71b00e93ade9447db4dc14364))
 - add pass-the-reference-down to the end of the roadmap ([`fe124e7`](https://github.com/dstroy0/ProtoCore/commit/fe124e786f6c7ac407d5c260f8f2198c8b0ac776))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`f50be82`](https://github.com/dstroy0/ProtoCore/commit/f50be824906686817bbec97bf82bbce289203be6))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`ec1fbd1`](https://github.com/dstroy0/ProtoCore/commit/ec1fbd1e3051b887a499fa71db1eae8aa30b3354))
