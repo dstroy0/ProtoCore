@@ -1213,7 +1213,7 @@ ssh_gf_mul`. The QUIC TLS-1.3 handshake **reuses the SSH ed25519 signer**, whose
   already `CONN_FREE` (stale binding to a freed slot), a `GET /health` curl sat unparsed in a slot's rx ring,
   and `conn_pool[0].last_activity_ms` climbed 163048 -> 423695 across two halts (each hung-then-retried
   connection refreshed it), so the idle sweep never reaped it. `loopTask`/`worker`/`tcpip_thread` all alive.
-- **Fix:** `src/network_drivers/presentation/presentation.cpp` - new `http_release_upgrade_bindings(slot)` calls
+- **Fix:** `src/network_drivers/presentation/presentation.c` - new `http_release_upgrade_bindings(slot)` calls
   `ws_free(slot)` + `sse_free(slot)` (both no-ops when unbound). Invoked from `http_evt_close()` (FIN/RST/error
   on an SSE or WS slot frees its binding) **and** `http_conn_open()` (a reused slot must not inherit a stale
   binding - covers the idle-sweep / abort free paths that never fire a close event). Verified on the rig: the
