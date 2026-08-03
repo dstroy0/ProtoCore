@@ -54,6 +54,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`d5fd6f5`](https://github.com/dstroy0/ProtoCore/commit/d5fd6f5c5892ce8dab75398807b5820f7d99da32))
 - update CHANGELOG.md [skip ci] ([`e98383f`](https://github.com/dstroy0/ProtoCore/commit/e98383f6f20f7abfef52870e63050a54851b45eb))
 - update CHANGELOG.md [skip ci] ([`3c773d6`](https://github.com/dstroy0/ProtoCore/commit/3c773d6852bb951f6ca5707225868ddbabb0af27))
 - update test report + coverage [skip ci] ([`ca2dfc7`](https://github.com/dstroy0/ProtoCore/commit/ca2dfc722ad6ed164289757c0bbfc2d1d9bc7c0f))
@@ -259,6 +260,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`18ca7d1`](https://github.com/dstroy0/ProtoCore/commit/18ca7d1027f2026e0e23dc78f7f5951da299106f))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`33e79ed`](https://github.com/dstroy0/ProtoCore/commit/33e79ed30353153c100a1ea86fe6a67a8153985c))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`9a18380`](https://github.com/dstroy0/ProtoCore/commit/9a18380b1f77a4afce3dff8f9a93f96f1d69dca1))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`97e73b6`](https://github.com/dstroy0/ProtoCore/commit/97e73b690f926278af32bea0a9a87dc3dff9480a))
@@ -319,6 +321,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Refactor
 
+- spell the opaque handles as struct at every use ([`f509479`](https://github.com/dstroy0/ProtoCore/commit/f5094791006747f6adfa9721338f5d86ba3b925b))
 - the eight src/ .cpp files that were already C become .c ([`ed97f45`](https://github.com/dstroy0/ProtoCore/commit/ed97f45d9a6d99725a2b4922496bb06814d52477))
 - convert SecureScope, the DTLS key references, and the opaque GCM handles ([`4e1954c`](https://github.com/dstroy0/ProtoCore/commit/4e1954cd83fd6bfcd37d009e37dd79056ea6cbb3))
 - replace the SecureBorrow RAII holder with the mark/span/release shape ([`8d94018`](https://github.com/dstroy0/ProtoCore/commit/8d94018e564f3a3163197bd6e3e6ca623a6221db))
