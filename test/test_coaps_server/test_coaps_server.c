@@ -425,7 +425,7 @@ static size_t client_get_temp(DtlsRecordKeys *w, uint64_t cseq, uint8_t *out, si
                               size_t cid_len = 0)
 {
     const uint8_t coap_get[] = {0x40, 0x01, 0x12, 0x34, 0xB4, 't', 'e', 'm', 'p'};
-    return pc_dtls_ciphertext_protect(w, cseq, PC_DTLS_CT_APPLICATION_DATA, coap_get, sizeof(coap_get), out, cap, cid,
+    return pc_dtls_ciphertext_protect(&w, cseq, PC_DTLS_CT_APPLICATION_DATA, coap_get, sizeof(coap_get), out, cap, cid,
                                       cid_len);
 }
 
@@ -436,7 +436,7 @@ static void assert_coap_205(DtlsRecordKeys *r, const OutDg *dg, const uint8_t *c
     uint8_t coap_resp[256];
     DtlsCiphertext info;
     TEST_ASSERT_TRUE(
-        pc_dtls_ciphertext_unprotect(r, 1, dg->buf, dg->len, coap_resp, sizeof(coap_resp), &info, cid, cid_len));
+        pc_dtls_ciphertext_unprotect(&r, 1, dg->buf, dg->len, coap_resp, sizeof(coap_resp), &info, cid, cid_len));
     TEST_ASSERT_EQUAL_UINT8(PC_DTLS_CT_APPLICATION_DATA, info.content_type);
     TEST_ASSERT_TRUE(info.pt_len >= 6);
     TEST_ASSERT_EQUAL_UINT8(0x60, coap_resp[0] & 0xF0); // Ver 1, Type ACK
