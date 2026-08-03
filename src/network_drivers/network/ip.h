@@ -28,7 +28,7 @@
 #include "protocore_config.h" // the entry point; it sets the widths and reaches types.h for proto_bool
 
 /** @brief Address family tag. */
-typedef enum
+typedef enum PROTO_ENUM_PACKED
 {
     PC_IP_NONE = 0, ///< empty / unparsed
     PC_IP_V4 = 4,   ///< IPv4 (bytes[0..3])
@@ -36,7 +36,7 @@ typedef enum
 } pc_ip_family;
 
 /** @brief Address scope, in rough order of reachability (used for allow/deny policy + logging). */
-typedef enum
+typedef enum PROTO_ENUM_PACKED
 {
     PC_IP_SCOPE_UNSPECIFIED = 0, ///< 0.0.0.0 / ::
     PC_IP_SCOPE_LOOPBACK,        ///< 127.0.0.0/8 / ::1

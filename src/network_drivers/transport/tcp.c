@@ -187,7 +187,7 @@ static void closing_check(uint8_t slot, pc_pcb *pcb);
 
 #if PROTOCORE_HOT
 
-typedef enum
+typedef enum PROTO_ENUM_PACKED
 {
     PC_OP_SEND,
     PC_OP_OUTPUT,

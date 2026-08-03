@@ -55,7 +55,7 @@
  * - `CONN_ACTIVE → CONN_FREE` : graceful close, error, or timeout.
  * - `CONN_ACTIVE → CONN_CLOSING` : (reserved for future half-close support).
  */
-typedef enum
+typedef enum PROTO_ENUM_PACKED
 {
     CONN_FREE,   ///< Slot is available; no PCB is attached.
     CONN_ACTIVE, ///< Live connection; PCB is valid.
@@ -144,7 +144,7 @@ int32_t pc_conn_alloc_free(void);
 /**
  * @brief Type of connection event posted to a listener's event queue.
  */
-typedef enum
+typedef enum PROTO_ENUM_PACKED
 {
     EVT_CONNECT,    ///< New connection accepted.
     EVT_DATA,       ///< Data received; bytes are already in the ring buffer.
@@ -460,7 +460,7 @@ void pc_lwip_to_ip(const pc_net_ip *ra, pc_ip *out);
 #if PC_ENABLE_OBSERVABILITY
 
 /** @brief Why a connection event fired (the reason for a transition or notice). */
-typedef enum
+typedef enum PROTO_ENUM_PACKED
 {
     PC_CONN_R_ACCEPT,       ///< New connection accepted (CONN_FREE -> CONN_ACTIVE).
     PC_CONN_R_CLOSE_REMOTE, ///< Peer closed gracefully (FIN received).

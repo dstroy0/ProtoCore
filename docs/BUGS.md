@@ -8,6 +8,36 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ---
 
+## Six `network_drivers` enums lost their declared width in the C conversion, growing every struct that holds one
+
+- **Status:** FIXED (2026-08-02), pending a target build. Found by diffing `network_drivers/`
+  against v0.0.1.
+- **Symptom:** no failure and no diagnostic. `sizeof` grew on `TcpConn`, `TcpEvt` and `pc_ip`, so
+  the static pools built from them grew with no source change naming a size.
+- **Root cause:** `enum class X : uint8_t` states the width in the declaration. Rewriting it as a
+  plain `typedef enum` drops that clause, and a C enum with no attribute is whatever the
+  implementation picks, which is `int` on every target here. Six declarations lost it:
+  `ConnState`, `EvtType` and `pc_conn_reason` in `transport/tcp.h`, `pc_ip_family` and
+  `pc_ip_scope` in `network/ip.h`, and `pc_tcp_op` in `transport/tcp.c`. Three are stored rather
+  than only passed, so each one multiplies: `TcpConn` holds `_Atomic ConnState state` and
+  `conn_pool` is `TcpConn[CONN_POOL_SLOTS]`; `TcpEvt` holds `EvtType type` and every listener
+  carries `_queue_storage[EVT_QUEUE_DEPTH * sizeof(TcpEvt)]`; `pc_ip` holds `pc_ip_family family`
+  and is embedded wherever an address is stored. One byte to four, per instance, in the pools whose
+  total is meant to be computable before flashing.
+- **Why nothing caught it:** the width was never asserted anywhere. It lived only in the
+  declaration, so removing the declaration removed the requirement with it, and nothing downstream
+  reads a size it could disagree with. Every test still passes because no behavior depends on the
+  width, only the footprint does.
+- **Fix:** `PROTO_ENUM_PACKED` on all six. The attribute asks for the narrowest type the values fit,
+  which is a byte for each of these, and `types.h` already proves the toolchain honors it with a
+  `static_assert` on `proto_enum_probe`. `pc_phy_ps` in `physical/physical.h` was the same defect,
+  found and fixed separately, which is what prompted pairing every `enum class X : T` in v0.0.1
+  against its counterpart here: 34 enums carried a declared width, 6 had lost it.
+- **Not affected:** `WsCloseCode` (`uint16_t` -> packed) still occupies two bytes because its values
+  run 1000-4999 and packed widens to fit. `DeflateResult` and `InflateResult` (`int32_t` -> packed)
+  narrow to a byte, and both are return values rather than stored fields. `CborType` and
+  `MsgpackType` were folded into `pc_codec_type`, which is packed.
+
 ## A mount root without a trailing slash silently concatenates: `/gcode` + `/part.nc` -> `/gcodepart.nc`
 
 - **Status:** FIXED (2026-07-31, host-validated). Pre-existing; found while moving the path join
