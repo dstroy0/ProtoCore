@@ -41,9 +41,9 @@ proto_bool pc_vl53l0x_range_valid(uint8_t range_status_reg)
 // so it is one named owner, unreachable from any other translation unit.
 typedef struct
 {
-    uint8_t addr = 0x29;
+    uint8_t addr;
 } Vl53l0xCtx;
-static Vl53l0xCtx s_vl;
+static Vl53l0xCtx s_vl = {.addr = 0x29};
 
 static proto_bool w8(uint8_t reg, uint8_t val)
 {

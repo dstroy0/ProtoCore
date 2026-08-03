@@ -61,9 +61,9 @@ size_t pc_ldc1614_build_config(uint8_t *buf, size_t cap, uint16_t rcount, uint16
 // so it is one named owner, unreachable from any other translation unit.
 typedef struct
 {
-    uint8_t addr = 0x2A;
+    uint8_t addr;
 } Ldc1614Ctx;
-static Ldc1614Ctx s_ldc;
+static Ldc1614Ctx s_ldc = {.addr = 0x2A};
 
 static proto_bool read16(uint8_t reg, uint16_t *out)
 {

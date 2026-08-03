@@ -62,9 +62,9 @@ size_t pc_fdc2214_build_config(uint8_t *buf, size_t cap, uint16_t rcount, uint16
 // so it is one named owner, unreachable from any other translation unit.
 typedef struct
 {
-    uint8_t addr = 0x2A;
+    uint8_t addr;
 } Fdc2214Ctx;
-static Fdc2214Ctx s_fdc;
+static Fdc2214Ctx s_fdc = {.addr = 0x2A};
 
 static proto_bool read16(uint8_t reg, uint16_t *out)
 {

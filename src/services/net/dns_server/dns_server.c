@@ -188,7 +188,7 @@ typedef struct
 {
     char names[PC_DNS_SERVER_MAX_RECORDS][PC_DNS_NAME_MAX];
     uint32_t ips[PC_DNS_SERVER_MAX_RECORDS];
-    size_t count = 0;
+    size_t count;
 } DnsSrvCtx;
 static DnsSrvCtx s_dns;
 

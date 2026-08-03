@@ -56,8 +56,8 @@ typedef struct
 
     void reset()
     {
-        head = 0;
-        len = 0;
+        head;
+        len;
     }
     uint16_t space() const
     {

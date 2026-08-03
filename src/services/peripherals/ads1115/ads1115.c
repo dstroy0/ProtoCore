@@ -72,9 +72,9 @@ int32_t pc_ads1115_raw_to_uv(int16_t raw, uint8_t gain)
 // address, so it is one named owner, unreachable from any other translation unit.
 typedef struct
 {
-    uint8_t addr = PC_ADS1115_I2C_ADDR;
+    uint8_t addr;
 } Ads1115Ctx;
-static Ads1115Ctx s_ads;
+static Ads1115Ctx s_ads = {.addr = PC_ADS1115_I2C_ADDR};
 
 static proto_bool wr16(uint8_t reg, uint16_t v)
 {

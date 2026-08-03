@@ -205,7 +205,7 @@ proto_bool pc_ld2410_stream_push(Ld2410Stream *s, uint8_t b, Ld2410Report *out)
 
 proto_bool pc_ld2410_present(const Ld2410Report *r)
 {
-    return r && r->state != Ld2410State::LD2410_STATE_NONE;
+    return r && r->state != LD2410_STATE_NONE;
 }
 
 uint16_t pc_ld2410_distance_cm(const Ld2410Report *r)
@@ -214,11 +214,11 @@ uint16_t pc_ld2410_distance_cm(const Ld2410Report *r)
     {
         return 0;
     }
-    if (r->state == Ld2410State::LD2410_STATE_MOVING || r->state == Ld2410State::LD2410_STATE_BOTH)
+    if (r->state == LD2410_STATE_MOVING || r->state == LD2410_STATE_BOTH)
     {
         return r->moving_cm;
     }
-    if (r->state == Ld2410State::LD2410_STATE_STATIC)
+    if (r->state == LD2410_STATE_STATIC)
     {
         return r->static_cm;
     }
@@ -334,7 +334,7 @@ typedef struct
 {
     Ld2410Stream stream;
     Ld2410Report last;
-    proto_bool have = PROTO_FALSE;
+    proto_bool have;
 } Ld2410Ctx;
 static Ld2410Ctx s_ld;
 

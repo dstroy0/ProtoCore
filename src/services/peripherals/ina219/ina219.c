@@ -57,10 +57,10 @@ int32_t pc_ina219_power_uw(int16_t raw, uint32_t current_lsb_ua)
 // and the current LSB, grouped so it is one named owner, unreachable from any other TU.
 typedef struct
 {
-    uint8_t addr = PC_INA219_I2C_ADDR;
-    uint32_t lsb_ua = PC_INA219_CURRENT_LSB_UA;
+    uint8_t addr;
+    uint32_t lsb_ua;
 } Ina219Ctx;
-static Ina219Ctx s_ina;
+static Ina219Ctx s_ina = {.addr = PC_INA219_I2C_ADDR, .lsb_ua = PC_INA219_CURRENT_LSB_UA};
 
 static proto_bool wr16(uint8_t reg, uint16_t v)
 {
