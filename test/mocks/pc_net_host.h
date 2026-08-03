@@ -742,8 +742,23 @@ static inline pc_net_err pc_net_close(pc_pcb *p)
     }
     return PC_NET_OK;
 }
+// How many aborts the code under test has issued. A slot reaped by an accept gate or a timeout
+// sweep is only distinguishable from one closed cleanly by whether the stack was told to abort.
+__attribute__((weak)) int pc_net_host_abort_calls;
+
+static inline int mock_abort_call_count(void)
+{
+    return pc_net_host_abort_calls;
+}
+
+static inline void mock_abort_call_reset(void)
+{
+    pc_net_host_abort_calls = 0;
+}
+
 static inline void pc_net_abort(pc_pcb *p)
 {
+    pc_net_host_abort_calls++;
     if (p)
     {
         p->in_use = 0;
