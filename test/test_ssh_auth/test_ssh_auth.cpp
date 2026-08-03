@@ -25,7 +25,7 @@ static struct pc_aesgcm_key *gcm_key(const uint8_t *key)
 {
     if (g_gcm_live)
     {
-        pc_aesgcm_key_wipe(reinterpret_cast<struct pc_aesgcm_key *>(g_gcm_ws));
+        pc_aesgcm_key_wipe((struct pc_aesgcm_key *)(g_gcm_ws));
     }
     g_gcm_live = true;
     return pc_aesgcm_key_init(g_gcm_ws, key);

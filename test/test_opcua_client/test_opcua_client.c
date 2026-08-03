@@ -457,7 +457,7 @@ void test_on_read_unknown_variant_rejected()
 
 // Build a minimal valid MSG response (header + security/sequence + TypeId + ResponseHeader) whose
 // service body starts with a single i32 - used to feed the array-count guards an out-of-range value.
-static size_t build_min_response(uint8_t *out, size_t cap, uint32_t type_id, int32_t count_field, int32_t str_table = 0)
+static size_t build_min_response(uint8_t *out, size_t cap, uint32_t type_id, int32_t count_field, int32_t str_table)
 {
     UaWriter w = {out, cap, 0, PROTO_TRUE};
     pc_ua_w_u8(&w, 'M');
@@ -494,14 +494,14 @@ void test_response_parsers_reject_negative_count()
     uint8_t resp[128];
     OpcUaVariant v[1];
     uint32_t s[1];
-    size_t n = build_min_response(resp, sizeof(resp), OPCUA_ID_READ_RESP, -1);
+    size_t n = build_min_response(resp, sizeof(resp), OPCUA_ID_READ_RESP, -1, 0);
     TEST_ASSERT_TRUE(n > 0);
     TEST_ASSERT_EQUAL_INT32(-1, pc_opcua_client_on_read(resp, n, v, s, 1));
     uint32_t wr[1];
-    n = build_min_response(resp, sizeof(resp), OPCUA_ID_WRITE_RESP, -1);
+    n = build_min_response(resp, sizeof(resp), OPCUA_ID_WRITE_RESP, -1, 0);
     TEST_ASSERT_EQUAL_INT32(-1, pc_opcua_client_on_write(resp, n, wr, 1));
     OpcUaClientRef refs[1];
-    n = build_min_response(resp, sizeof(resp), OPCUA_ID_BROWSE_RESP, -1);
+    n = build_min_response(resp, sizeof(resp), OPCUA_ID_BROWSE_RESP, -1, 0);
     TEST_ASSERT_EQUAL_INT32(-1, pc_opcua_client_on_browse(resp, n, refs, 1));
 }
 
@@ -509,8 +509,7 @@ void test_response_parsers_reject_negative_count()
 // ResponseHeader follows (and its ServiceResult), and whether the SecurityToken body follows - to
 // drive on_open's skip/guard paths. A String-kind TypeId exercises the non-numeric NodeId rejection.
 static size_t build_opn(uint8_t *out, size_t cap, uint32_t type_id, int32_t policy_len, proto_bool with_rh,
-                        uint32_t svc = OPCUA_STATUS_GOOD, proto_bool with_body = PROTO_FALSE,
-                        proto_bool string_type_id = PROTO_FALSE)
+                        uint32_t svc, proto_bool with_body, proto_bool string_type_id)
 {
     UaWriter w = {out, cap, 0, PROTO_TRUE};
     pc_ua_w_u8(&w, 'O');
@@ -568,7 +567,7 @@ static size_t build_opn(uint8_t *out, size_t cap, uint32_t type_id, int32_t poli
 // frame with a chosen ServiceResult and a truncated / hand-rolled body. `string_type_id` swaps the
 // numeric body TypeId for a String NodeId (what a peer using string identifiers would send).
 static size_t forge_msg(uint8_t *out, size_t cap, uint32_t type_id, uint32_t svc, const uint8_t *body, size_t body_len,
-                        proto_bool string_type_id = PROTO_FALSE, const char *magic = "MSG")
+                        proto_bool string_type_id, const char *magic)
 {
     UaWriter w = {out, cap, 0, PROTO_TRUE};
     pc_ua_w_u8(&w, (uint8_t)magic[0]);
@@ -615,10 +614,11 @@ void test_on_open_guards()
     uint8_t buf[128];
     // Non-empty SecurityPolicyUri exercises the cr_skip_string skip; then the missing ResponseHeader
     // underruns the reader -> parse fails.
-    size_t n = build_opn(buf, sizeof(buf), OPCUA_ID_OPEN_RESP, 10, PROTO_FALSE);
+    size_t n =
+        build_opn(buf, sizeof(buf), OPCUA_ID_OPEN_RESP, 10, PROTO_FALSE, OPCUA_STATUS_GOOD, PROTO_FALSE, PROTO_FALSE);
     TEST_ASSERT_FALSE(pc_opcua_client_on_open(&c, buf, n));
     // A wrong body TypeId is rejected.
-    n = build_opn(buf, sizeof(buf), 999, 0, PROTO_TRUE);
+    n = build_opn(buf, sizeof(buf), 999, 0, PROTO_TRUE, OPCUA_STATUS_GOOD, PROTO_FALSE, PROTO_FALSE);
     TEST_ASSERT_FALSE(pc_opcua_client_on_open(&c, buf, n));
     // A SecurityPolicyUri length larger than the frame overflows cr_skip.
     uint8_t ovf[16];
@@ -779,7 +779,8 @@ void test_msg_envelope_guards()
         TEST_ASSERT_EQUAL_INT32(-1, pc_opcua_client_on_read(resp, bad, v, s, 1));
     }
 
-    size_t sn = forge_msg(resp, sizeof(resp), OPCUA_ID_READ_RESP, OPCUA_STATUS_GOOD, cnt0, sizeof(cnt0));
+    size_t sn =
+        forge_msg(resp, sizeof(resp), OPCUA_ID_READ_RESP, OPCUA_STATUS_GOOD, cnt0, sizeof(cnt0), PROTO_FALSE, "MSG");
     TEST_ASSERT_TRUE(sn > 0);
     TEST_ASSERT_EQUAL_INT32(0, pc_opcua_client_on_read(resp, sn, v, s, 1)); // baseline: accepted, 0 results
     uint8_t save = resp[4];
@@ -789,7 +790,7 @@ void test_msg_envelope_guards()
 
     // A String body TypeId is well formed but is not the expected numeric ReadResponse id.
     sn = forge_msg(resp, sizeof(resp), OPCUA_ID_READ_RESP, OPCUA_STATUS_GOOD, cnt0, sizeof(cnt0),
-                   /*string_type_id=*/PROTO_TRUE);
+                   /*string_type_id=*/PROTO_TRUE, "MSG");
     TEST_ASSERT_TRUE(sn > 0);
     TEST_ASSERT_EQUAL_INT32(-1, pc_opcua_client_on_read(resp, sn, v, s, 1));
 }
@@ -804,8 +805,8 @@ void test_on_open_envelope_and_result_guards()
     TEST_ASSERT_FALSE(pc_opcua_client_on_open(&c, tiny, sizeof(tiny)));
 
     uint8_t buf[192];
-    size_t n =
-        build_opn(buf, sizeof(buf), OPCUA_ID_OPEN_RESP, 0, PROTO_TRUE, OPCUA_STATUS_GOOD, /*with_body=*/PROTO_TRUE);
+    size_t n = build_opn(buf, sizeof(buf), OPCUA_ID_OPEN_RESP, 0, PROTO_TRUE, OPCUA_STATUS_GOOD,
+                         /*with_body=*/PROTO_TRUE, PROTO_FALSE);
     TEST_ASSERT_TRUE(n > 0);
     TEST_ASSERT_TRUE(pc_opcua_client_on_open(&c, buf, n)); // baseline: Good + full SecurityToken
     TEST_ASSERT_EQUAL_UINT32(0x2A, c.channel_id);
@@ -818,11 +819,11 @@ void test_on_open_envelope_and_result_guards()
     TEST_ASSERT_FALSE(pc_opcua_client_on_open(&c, buf, n));
 
     // A Bad ServiceResult is rejected even though the token body is complete.
-    n = build_opn(buf, sizeof(buf), OPCUA_ID_OPEN_RESP, 0, PROTO_TRUE, OPCUA_STATUS_BAD_SERVICE_UNSUPPORTED,
-                  PROTO_TRUE);
+    n = build_opn(buf, sizeof(buf), OPCUA_ID_OPEN_RESP, 0, PROTO_TRUE, OPCUA_STATUS_BAD_SERVICE_UNSUPPORTED, PROTO_TRUE,
+                  PROTO_FALSE);
     TEST_ASSERT_FALSE(pc_opcua_client_on_open(&c, buf, n));
     // A Good ResponseHeader with the SecurityToken body missing underruns the reader.
-    n = build_opn(buf, sizeof(buf), OPCUA_ID_OPEN_RESP, 0, PROTO_TRUE, OPCUA_STATUS_GOOD, PROTO_FALSE);
+    n = build_opn(buf, sizeof(buf), OPCUA_ID_OPEN_RESP, 0, PROTO_TRUE, OPCUA_STATUS_GOOD, PROTO_FALSE, PROTO_FALSE);
     TEST_ASSERT_FALSE(pc_opcua_client_on_open(&c, buf, n));
     // A String body TypeId is not the numeric OpenSecureChannelResponse id.
     n = build_opn(buf, sizeof(buf), 0, 0, PROTO_TRUE, OPCUA_STATUS_GOOD, PROTO_TRUE, /*string_type_id=*/PROTO_TRUE);
@@ -838,8 +839,8 @@ void test_on_open_rejects_message_size_mismatch(void)
     OpcUaClient c;
     pc_opcua_client_init(&c);
     uint8_t buf[192];
-    size_t n =
-        build_opn(buf, sizeof(buf), OPCUA_ID_OPEN_RESP, 0, PROTO_TRUE, OPCUA_STATUS_GOOD, /*with_body=*/PROTO_TRUE);
+    size_t n = build_opn(buf, sizeof(buf), OPCUA_ID_OPEN_RESP, 0, PROTO_TRUE, OPCUA_STATUS_GOOD,
+                         /*with_body=*/PROTO_TRUE, PROTO_FALSE);
     TEST_ASSERT_TRUE(n > 0);
     TEST_ASSERT_TRUE(pc_opcua_client_on_open(&c, buf, n)); // baseline: header size == len
 
@@ -859,27 +860,27 @@ void test_parsers_reject_bad_service_result()
     const uint32_t bad = OPCUA_STATUS_BAD_NODE_ID_UNKNOWN;
     uint8_t resp[128];
 
-    size_t sn = forge_msg(resp, sizeof(resp), OPCUA_ID_GET_ENDPOINTS_RESP, bad, cnt0, sizeof(cnt0));
+    size_t sn = forge_msg(resp, sizeof(resp), OPCUA_ID_GET_ENDPOINTS_RESP, bad, cnt0, sizeof(cnt0), PROTO_FALSE, "MSG");
     TEST_ASSERT_TRUE(sn > 0);
     TEST_ASSERT_EQUAL_INT32(-1, pc_opcua_client_on_get_endpoints(resp, sn));
 
     OpcUaVariant v[1];
     uint32_t s[1];
-    sn = forge_msg(resp, sizeof(resp), OPCUA_ID_READ_RESP, bad, cnt0, sizeof(cnt0));
+    sn = forge_msg(resp, sizeof(resp), OPCUA_ID_READ_RESP, bad, cnt0, sizeof(cnt0), PROTO_FALSE, "MSG");
     TEST_ASSERT_EQUAL_INT32(-1, pc_opcua_client_on_read(resp, sn, v, s, 1));
 
-    sn = forge_msg(resp, sizeof(resp), OPCUA_ID_WRITE_RESP, bad, cnt0, sizeof(cnt0));
+    sn = forge_msg(resp, sizeof(resp), OPCUA_ID_WRITE_RESP, bad, cnt0, sizeof(cnt0), PROTO_FALSE, "MSG");
     TEST_ASSERT_EQUAL_INT32(-1, pc_opcua_client_on_write(resp, sn, s, 1));
 
     OpcUaClientRef refs[1];
-    sn = forge_msg(resp, sizeof(resp), OPCUA_ID_BROWSE_RESP, bad, cnt0, sizeof(cnt0));
+    sn = forge_msg(resp, sizeof(resp), OPCUA_ID_BROWSE_RESP, bad, cnt0, sizeof(cnt0), PROTO_FALSE, "MSG");
     TEST_ASSERT_EQUAL_INT32(-1, pc_opcua_client_on_browse(resp, sn, refs, 1));
 
     // CreateSession decodes its body first, then reports the fault through the return value.
     const uint8_t ids[4] = {0x00, 0x11, 0x00, 0x22}; // SessionId then AuthenticationToken (TwoByte NodeIds)
     OpcUaClient c;
     pc_opcua_client_init(&c);
-    sn = forge_msg(resp, sizeof(resp), OPCUA_ID_CREATE_SESSION_RESP, bad, ids, sizeof(ids));
+    sn = forge_msg(resp, sizeof(resp), OPCUA_ID_CREATE_SESSION_RESP, bad, ids, sizeof(ids), PROTO_FALSE, "MSG");
     TEST_ASSERT_FALSE(pc_opcua_client_on_create_session(&c, resp, sn));
     TEST_ASSERT_EQUAL_UINT32(0x22, c.session_auth_id); // token still captured from the decoded body
 }
@@ -889,26 +890,28 @@ void test_parsers_reject_bad_service_result()
 void test_parsers_reject_truncated_body()
 {
     uint8_t resp[96];
-    size_t sn = forge_msg(resp, sizeof(resp), OPCUA_ID_GET_ENDPOINTS_RESP, OPCUA_STATUS_GOOD, NULL, 0);
+    size_t sn =
+        forge_msg(resp, sizeof(resp), OPCUA_ID_GET_ENDPOINTS_RESP, OPCUA_STATUS_GOOD, NULL, 0, PROTO_FALSE, "MSG");
     TEST_ASSERT_TRUE(sn > 0);
     TEST_ASSERT_EQUAL_INT32(-1, pc_opcua_client_on_get_endpoints(resp, sn)); // Endpoints count underruns
 
     const uint8_t neg[4] = {0xFF, 0xFF, 0xFF, 0xFF}; // Endpoints[] count = -1
-    sn = forge_msg(resp, sizeof(resp), OPCUA_ID_GET_ENDPOINTS_RESP, OPCUA_STATUS_GOOD, neg, sizeof(neg));
+    sn = forge_msg(resp, sizeof(resp), OPCUA_ID_GET_ENDPOINTS_RESP, OPCUA_STATUS_GOOD, neg, sizeof(neg), PROTO_FALSE,
+                   "MSG");
     TEST_ASSERT_EQUAL_INT32(-1, pc_opcua_client_on_get_endpoints(resp, sn));
 
     OpcUaClient c;
     pc_opcua_client_init(&c);
-    sn = forge_msg(resp, sizeof(resp), OPCUA_ID_CREATE_SESSION_RESP, OPCUA_STATUS_GOOD, NULL, 0);
+    sn = forge_msg(resp, sizeof(resp), OPCUA_ID_CREATE_SESSION_RESP, OPCUA_STATUS_GOOD, NULL, 0, PROTO_FALSE, "MSG");
     TEST_ASSERT_FALSE(pc_opcua_client_on_create_session(&c, resp, sn)); // SessionId NodeId underruns
 
     const uint8_t one[4] = {1, 0, 0, 0}; // one result promised, none present
     uint32_t got[2];
-    sn = forge_msg(resp, sizeof(resp), OPCUA_ID_WRITE_RESP, OPCUA_STATUS_GOOD, one, sizeof(one));
+    sn = forge_msg(resp, sizeof(resp), OPCUA_ID_WRITE_RESP, OPCUA_STATUS_GOOD, one, sizeof(one), PROTO_FALSE, "MSG");
     TEST_ASSERT_EQUAL_INT32(-1, pc_opcua_client_on_write(resp, sn, got, 2));
 
     OpcUaClientRef refs[2];
-    sn = forge_msg(resp, sizeof(resp), OPCUA_ID_BROWSE_RESP, OPCUA_STATUS_GOOD, one, sizeof(one));
+    sn = forge_msg(resp, sizeof(resp), OPCUA_ID_BROWSE_RESP, OPCUA_STATUS_GOOD, one, sizeof(one), PROTO_FALSE, "MSG");
     TEST_ASSERT_EQUAL_INT32(-1, pc_opcua_client_on_browse(resp, sn, refs, 2));
 }
 
@@ -1024,7 +1027,7 @@ void test_on_browse_display_name_empty_mask()
     TEST_ASSERT_TRUE(b.ok);
 
     uint8_t resp[256];
-    size_t sn = forge_msg(resp, sizeof(resp), OPCUA_ID_BROWSE_RESP, OPCUA_STATUS_GOOD, body, b.n);
+    size_t sn = forge_msg(resp, sizeof(resp), OPCUA_ID_BROWSE_RESP, OPCUA_STATUS_GOOD, body, b.n, PROTO_FALSE, "MSG");
     TEST_ASSERT_TRUE(sn > 0);
 
     OpcUaClientRef refs[2];

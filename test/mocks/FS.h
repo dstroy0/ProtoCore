@@ -138,7 +138,7 @@ inline void mock_fs_set(const uint8_t *data, size_t size)
 
 inline void mock_fs_set(const char *text)
 {
-    _mock_data() = reinterpret_cast<const uint8_t *>(text);
+    _mock_data() = (const uint8_t *)(text);
     _mock_size() = strlen(text);
     _mock_valid() = true;
 }
@@ -375,7 +375,7 @@ inline void mock_fs_add(const char *path, const uint8_t *data, size_t size, time
 }
 inline void mock_fs_add(const char *path, const char *text, time_t mtime = 0)
 {
-    mock_fs_add(path, reinterpret_cast<const uint8_t *>(text), strlen(text), mtime);
+    mock_fs_add(path, (const uint8_t *)(text), strlen(text), mtime);
 }
 inline void mock_fs_reset()
 {

@@ -28,7 +28,7 @@ static struct pc_aes128gcm_key *gcm_key(const uint8_t *key)
 {
     if (g_gcm_live)
     {
-        pc_aes128gcm_key_wipe(reinterpret_cast<struct pc_aes128gcm_key *>(g_gcm_ws));
+        pc_aes128gcm_key_wipe((struct pc_aes128gcm_key *)(g_gcm_ws));
     }
     g_gcm_live = PROTO_TRUE;
     return pc_aes128gcm_key_init(g_gcm_ws, key);
@@ -39,11 +39,11 @@ static void check_same_hp(const uint8_t expect_key[16], uint8_t *derived_ctx)
 {
     static uint8_t ref[PC_WORK_AES128] __attribute__((aligned(8)));
     uint8_t blk[16] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}, m1[16], m2[16];
-    pc_aes128_init(reinterpret_cast<struct pc_aes128 *>(ref), expect_key);
-    pc_aes128_encrypt_block(reinterpret_cast<struct pc_aes128 *>(ref), blk, m1);
-    pc_aes128_encrypt_block(reinterpret_cast<struct pc_aes128 *>(derived_ctx), blk, m2);
+    pc_aes128_init((struct pc_aes128 *)(ref), expect_key);
+    pc_aes128_encrypt_block((struct pc_aes128 *)(ref), blk, m1);
+    pc_aes128_encrypt_block((struct pc_aes128 *)(derived_ctx), blk, m2);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(m1, m2, 16);
-    pc_aes128_wipe(reinterpret_cast<struct pc_aes128 *>(ref));
+    pc_aes128_wipe((struct pc_aes128 *)(ref));
 }
 
 // Assert that a context derived by the library seals exactly as one built from the expected raw key.
@@ -53,7 +53,7 @@ static void check_same_key(const uint8_t expect_key[16], uint8_t *derived_ctx)
     static uint8_t ref_ws[PC_WORK_AES128GCM] __attribute__((aligned(8)));
     struct pc_aes128gcm_key *ref = pc_aes128gcm_key_init(ref_ws, expect_key);
     pc_aes128gcm_seal(ref, n12, NULL, 0, zpt, sizeof zpt, c1, t1);
-    pc_aes128gcm_seal(reinterpret_cast<struct pc_aes128gcm_key *>(derived_ctx), n12, NULL, 0, zpt, sizeof zpt, c2, t2);
+    pc_aes128gcm_seal((struct pc_aes128gcm_key *)(derived_ctx), n12, NULL, 0, zpt, sizeof zpt, c2, t2);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(c1, c2, sizeof c1);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(t1, t2, sizeof t1);
     pc_aes128gcm_key_wipe(ref);

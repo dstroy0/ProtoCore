@@ -23,7 +23,7 @@ void tearDown()
 // Tamper helper: the test owns the storage, so cast away const to corrupt it.
 static pc_audit_entry *mutable_at(uint16_t i)
 {
-    return const_cast<pc_audit_entry *>(pc_audit_at(i));
+    return (pc_audit_entry *)(pc_audit_at(i));
 }
 
 void test_append_assigns_monotonic_seq()

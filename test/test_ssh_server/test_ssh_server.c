@@ -137,7 +137,7 @@ static size_t put_namelist(uint8_t *p, const char *s)
     return put_string(p, s);
 }
 
-static size_t build_client_kexinit(uint8_t *out, proto_bool ext_info_c = PROTO_TRUE)
+static size_t build_client_kexinit(uint8_t *out, proto_bool ext_info_c)
 {
     size_t o = 0;
     out[o++] = SSH_MSG_KEXINIT;
@@ -177,7 +177,7 @@ void test_full_handshake_to_channel_data()
 
     // 1. Client KEXINIT → server replies KEXINIT, generates ephemeral.
     uint8_t pkt[2048];
-    size_t n = build_client_kexinit(pkt);
+    size_t n = build_client_kexinit(pkt, PROTO_TRUE);
     emt_reset();
     TEST_ASSERT_EQUAL_INT(0, pc_ssh_server_dispatch(0, pkt[0], pkt, n));
     TEST_ASSERT_EQUAL_INT(1, emt_n);
@@ -540,7 +540,7 @@ static struct pc_aesgcm_key *gcm_key(const uint8_t *key)
 {
     if (g_gcm_live)
     {
-        pc_aesgcm_key_wipe(reinterpret_cast<struct pc_aesgcm_key *>(g_gcm_ws));
+        pc_aesgcm_key_wipe((struct pc_aesgcm_key *)(g_gcm_ws));
     }
     g_gcm_live = PROTO_TRUE;
     return pc_aesgcm_key_init(g_gcm_ws, key);
@@ -692,7 +692,7 @@ void test_ssh_kexdh_guards()
     s->v_c_len = (uint16_t)strlen(s->v_c);
     s->phase = SSH_PHASE_KEXINIT;
     uint8_t pkt[2048];
-    size_t n = build_client_kexinit(pkt);
+    size_t n = build_client_kexinit(pkt, PROTO_TRUE);
     TEST_ASSERT_EQUAL_INT(0, pc_ssh_server_dispatch(0, pkt[0], pkt, n));            // -> DH_INIT
     TEST_ASSERT_EQUAL_INT(-1, pc_ssh_server_dispatch(0, bad[0], bad, sizeof(bad))); // handler fails
 }
@@ -809,7 +809,7 @@ void test_ssh_dispatch_without_emit_cb()
     s->phase = SSH_PHASE_KEXINIT;
 
     uint8_t pkt[2048];
-    size_t n = build_client_kexinit(pkt); // KEXINIT reply dropped
+    size_t n = build_client_kexinit(pkt, PROTO_TRUE); // KEXINIT reply dropped
     TEST_ASSERT_EQUAL_INT(0, pc_ssh_server_dispatch(0, pkt[0], pkt, n));
     TEST_ASSERT_EQUAL(SSH_PHASE_DH_INIT, s->phase);
 
@@ -933,7 +933,7 @@ void test_ssh_kexinit_midsession_rekey()
     s->phase = SSH_PHASE_OPEN;
 
     uint8_t pkt[2048];
-    size_t n = build_client_kexinit(pkt);
+    size_t n = build_client_kexinit(pkt, PROTO_TRUE);
     emt_reset();
     TEST_ASSERT_EQUAL_INT(0, pc_ssh_server_dispatch(0, pkt[0], pkt, n));
     TEST_ASSERT_EQUAL_INT(1, emt_n);

@@ -545,7 +545,7 @@ void test_quic_tls_more_guards()
 // required extensions. With @p offer_hybrid_group false the hybrid share is sent but supported_groups
 // advertises only x25519, so the server must not select the hybrid.
 static size_t build_client_hello_hybrid(uint8_t *out, const uint8_t client_pub[32], const uint8_t *tp, size_t tp_len,
-                                        const uint8_t *ek = kat_ek, proto_bool offer_hybrid_group = PROTO_TRUE)
+                                        const uint8_t *ek, proto_bool offer_hybrid_group)
 {
     size_t p = 0;
     out[p++] = TLS_HS_CLIENT_HELLO;
@@ -750,7 +750,7 @@ void test_hybrid_hrr_roundtrip()
 
     // --- ClientHello2: the hybrid ClientHello -> completes ---
     static uint8_t ch2[2048];
-    size_t ch2_len = build_client_hello_hybrid(ch2, client_pub, ctp_enc, ctp_len);
+    size_t ch2_len = build_client_hello_hybrid(ch2, client_pub, ctp_enc, ctp_len, kat_ek, PROTO_TRUE);
     used = pc_quic_tls_recv_crypto(&qt, QUIC_ENC_INITIAL, ch2, ch2_len);
     TEST_ASSERT_EQUAL_UINT(ch2_len, used);
     TEST_ASSERT_EQUAL_UINT8(QTLS_WAIT_FINISHED, qt.state);
@@ -870,7 +870,7 @@ void test_hybrid_handshake_roundtrip()
     uint8_t client_pub[32];
     pc_x25519_base(client_pub, CLIENT_PRIV);
     static uint8_t ch[2048];
-    size_t ch_len = build_client_hello_hybrid(ch, client_pub, ctp_enc, ctp_len);
+    size_t ch_len = build_client_hello_hybrid(ch, client_pub, ctp_enc, ctp_len, kat_ek, PROTO_TRUE);
 
     size_t used = pc_quic_tls_recv_crypto(&qt, QUIC_ENC_INITIAL, ch, ch_len);
     TEST_ASSERT_EQUAL_UINT(ch_len, used);
@@ -1043,7 +1043,7 @@ void test_hybrid_bad_mlkem_key_rejected()
     bad_ek[1] = 0xFF;
 
     static uint8_t ch[2048];
-    size_t ch_len = build_client_hello_hybrid(ch, client_pub, ctp_enc, ctp_len, bad_ek);
+    size_t ch_len = build_client_hello_hybrid(ch, client_pub, ctp_enc, ctp_len, bad_ek, PROTO_TRUE);
     pc_quic_tls_recv_crypto(&qt, QUIC_ENC_INITIAL, ch, ch_len);
     TEST_ASSERT_EQUAL_UINT8(QTLS_FAILED, qt.state);
     TEST_ASSERT_EQUAL_UINT8(40, qt.alert); // handshake_failure

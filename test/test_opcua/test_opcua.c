@@ -1873,8 +1873,7 @@ void test_ack_negotiation_clamps_oversized_client_request()
 
 // Build a MSG frame whose body TypeId is a String NodeId (kind 0x03) rather than a numeric one, and
 // whose AdditionalHeader ExtensionObject carries an explicit but empty ByteString body.
-static size_t build_msg_string_typeid(uint8_t *out, size_t cap, uint8_t addhdr_body_enc,
-                                      proto_bool read_body = PROTO_FALSE)
+static size_t build_msg_string_typeid(uint8_t *out, size_t cap, uint8_t addhdr_body_enc, proto_bool read_body)
 {
     UaWriter w = {out, cap, 0, PROTO_TRUE};
     pc_ua_w_u8(&w, 'M');
@@ -1921,13 +1920,13 @@ static size_t build_msg_string_typeid(uint8_t *out, size_t cap, uint8_t addhdr_b
 void test_parse_msg_string_typeid_and_empty_extension_body()
 {
     uint8_t buf[128];
-    size_t n = build_msg_string_typeid(buf, sizeof(buf), 0x00); // no AdditionalHeader body
+    size_t n = build_msg_string_typeid(buf, sizeof(buf), 0x00, PROTO_FALSE); // no AdditionalHeader body
     OpcUaMsg m;
     TEST_ASSERT_TRUE(pc_opcua_parse_msg(buf, n, &m));
     TEST_ASSERT_EQUAL_UINT32(0, m.type_id); // a String TypeId is not a service id
     TEST_ASSERT_EQUAL_UINT32(77, m.request_handle);
 
-    n = build_msg_string_typeid(buf, sizeof(buf), 0x01); // ByteString body, null -> nothing to skip
+    n = build_msg_string_typeid(buf, sizeof(buf), 0x01, PROTO_FALSE); // ByteString body, null -> nothing to skip
     TEST_ASSERT_TRUE(pc_opcua_parse_msg(buf, n, &m));
     TEST_ASSERT_EQUAL_UINT32(0, m.type_id);
     TEST_ASSERT_EQUAL_UINT32(77, m.request_handle);

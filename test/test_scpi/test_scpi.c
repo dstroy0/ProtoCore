@@ -374,7 +374,7 @@ void test_common_commands_full_enum()
     TEST_ASSERT_EQUAL_STRING("*SRE?", pc_scpi_common(SCPI_SRE_Q));
     TEST_ASSERT_EQUAL_STRING("*TST?", pc_scpi_common(SCPI_TST_Q));
     // a value outside the enumeration falls past every case -> the empty string
-    TEST_ASSERT_EQUAL_STRING("", pc_scpi_common(static_cast<ScpiCommon>(200)));
+    TEST_ASSERT_EQUAL_STRING("", pc_scpi_common((ScpiCommon)(200)));
 }
 
 void test_build_guard_edges()

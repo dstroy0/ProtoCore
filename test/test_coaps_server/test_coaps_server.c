@@ -161,8 +161,7 @@ static void bmem(Buf *b, const uint8_t *m, size_t k)
     b->n += k;
 }
 
-static size_t build_client_hello(uint8_t *out, const uint8_t client_pub[32], const uint8_t *cid = NULL,
-                                 size_t cid_len = 0)
+static size_t build_client_hello(uint8_t *out, const uint8_t client_pub[32], const uint8_t *cid, size_t cid_len)
 {
     Buf b = {out, 0};
     b8(&b, 0x01); // client_hello
@@ -264,7 +263,7 @@ static size_t frag_to_tls(const uint8_t *payload, size_t plen, uint8_t *tls_out)
     return 4 + hh.length;
 }
 
-static size_t ct_record_len(const uint8_t *rec, size_t avail, size_t cid_len = 0)
+static size_t ct_record_len(const uint8_t *rec, size_t avail, size_t cid_len)
 {
     size_t pre = 1 + ((rec[0] & 0x10) ? cid_len : 0);
     size_t seq_len = (rec[0] & 0x08) ? 2 : 1;
@@ -314,8 +313,7 @@ static size_t sh_conn_id(const uint8_t *sh, size_t len, uint8_t *cid_out)
 // Complete the handshake for peer ip:port through the front-end seam and hand back the client's
 // application-traffic keys. Asserts each step so a failure pinpoints the stage.
 static void client_handshake(const char *ip, uint16_t port, DtlsRecordKeys *cli_app_write, DtlsRecordKeys *cli_app_read,
-                             const uint8_t *client_cid = NULL, size_t client_cid_len = 0, uint8_t *scid_out = NULL,
-                             size_t *scid_len_out = NULL)
+                             const uint8_t *client_cid, size_t client_cid_len, uint8_t *scid_out, size_t *scid_len_out)
 {
     uint8_t client_pub[32];
     pc_x25519_base(client_pub, CLIENT_X25519_PRIV);
@@ -421,8 +419,8 @@ static void client_handshake(const char *ip, uint16_t port, DtlsRecordKeys *cli_
 }
 
 // Seal a CoAP CON GET /temp as one epoch-3 client application record (client send-seq @p cseq).
-static size_t client_get_temp(DtlsRecordKeys *w, uint64_t cseq, uint8_t *out, size_t cap, const uint8_t *cid = NULL,
-                              size_t cid_len = 0)
+static size_t client_get_temp(DtlsRecordKeys *w, uint64_t cseq, uint8_t *out, size_t cap, const uint8_t *cid,
+                              size_t cid_len)
 {
     const uint8_t coap_get[] = {0x40, 0x01, 0x12, 0x34, 0xB4, 't', 'e', 'm', 'p'};
     return pc_dtls_ciphertext_protect(&w, cseq, PC_DTLS_CT_APPLICATION_DATA, coap_get, sizeof(coap_get), out, cap, cid,
@@ -431,7 +429,7 @@ static size_t client_get_temp(DtlsRecordKeys *w, uint64_t cseq, uint8_t *out, si
 
 // Decrypt the server's response record (epoch-3 send-seq 1, after the completion ACK) and assert it is
 // the piggybacked 2.05 Content "hi".
-static void assert_coap_205(DtlsRecordKeys *r, const OutDg *dg, const uint8_t *cid = NULL, size_t cid_len = 0)
+static void assert_coap_205(DtlsRecordKeys *r, const OutDg *dg, const uint8_t *cid, size_t cid_len)
 {
     uint8_t coap_resp[256];
     DtlsCiphertext info;
@@ -450,17 +448,17 @@ static void assert_coap_205(DtlsRecordKeys *r, const OutDg *dg, const uint8_t *c
 static void test_server_single_peer(void)
 {
     DtlsRecordKeys w, r;
-    client_handshake("10.0.0.5", 40001, &w, &r);
+    client_handshake("10.0.0.5", 40001, &w, &r, NULL, 0, NULL, NULL);
     TEST_ASSERT_EQUAL_UINT8(1, pc_coaps_server_active_conns());
 
     uint8_t rec[128];
-    size_t n = client_get_temp(&w, 0, rec, sizeof(rec));
+    size_t n = client_get_temp(&w, 0, rec, sizeof(rec), NULL, 0);
     TEST_ASSERT_TRUE(pc_coaps_server_ingest(rec, n, "10.0.0.5", 40001));
     pc_coaps_server_poll();
 
     OutDg dg;
     TEST_ASSERT_TRUE(take_out_for("10.0.0.5", 40001, &dg));
-    assert_coap_205(&r, &dg);
+    assert_coap_205(&r, &dg, NULL, 0);
 }
 
 // Two peers at different addresses each get their own connection; requests injected in the same poll are
@@ -468,13 +466,13 @@ static void test_server_single_peer(void)
 static void test_two_peers_routing(void)
 {
     DtlsRecordKeys wA, rA, wB, rB;
-    client_handshake("10.0.0.5", 40001, &wA, &rA);
-    client_handshake("10.0.0.6", 40002, &wB, &rB);
+    client_handshake("10.0.0.5", 40001, &wA, &rA, NULL, 0, NULL, NULL);
+    client_handshake("10.0.0.6", 40002, &wB, &rB, NULL, 0, NULL, NULL);
     TEST_ASSERT_EQUAL_UINT8(2, pc_coaps_server_active_conns());
 
     uint8_t recA[128], recB[128];
-    size_t nA = client_get_temp(&wA, 0, recA, sizeof(recA));
-    size_t nB = client_get_temp(&wB, 0, recB, sizeof(recB));
+    size_t nA = client_get_temp(&wA, 0, recA, sizeof(recA), NULL, 0);
+    size_t nB = client_get_temp(&wB, 0, recB, sizeof(recB), NULL, 0);
     TEST_ASSERT_TRUE(pc_coaps_server_ingest(recB, nB, "10.0.0.6", 40002));
     TEST_ASSERT_TRUE(pc_coaps_server_ingest(recA, nA, "10.0.0.5", 40001));
     pc_coaps_server_poll();
@@ -482,15 +480,15 @@ static void test_two_peers_routing(void)
     OutDg dgA, dgB;
     TEST_ASSERT_TRUE(take_out_for("10.0.0.5", 40001, &dgA));
     TEST_ASSERT_TRUE(take_out_for("10.0.0.6", 40002, &dgB));
-    assert_coap_205(&rA, &dgA);
-    assert_coap_205(&rB, &dgB);
+    assert_coap_205(&rA, &dgA, NULL, 0);
+    assert_coap_205(&rB, &dgB, NULL, 0);
 }
 
 // A connection with no inbound datagram for PC_COAPS_IDLE_MS is reclaimed by the poll.
 static void test_idle_reap(void)
 {
     DtlsRecordKeys w, r;
-    client_handshake("10.0.0.5", 40001, &w, &r);
+    client_handshake("10.0.0.5", 40001, &w, &r, NULL, 0, NULL, NULL);
     TEST_ASSERT_EQUAL_UINT8(1, pc_coaps_server_active_conns());
 
     g_ms += PC_COAPS_IDLE_MS + 1;
@@ -505,7 +503,7 @@ static void test_pto_retransmit_driven_by_poll(void)
     uint8_t client_pub[32];
     pc_x25519_base(client_pub, CLIENT_X25519_PRIV);
     uint8_t ch[256];
-    size_t ch_len = build_client_hello(ch, client_pub);
+    size_t ch_len = build_client_hello(ch, client_pub, NULL, 0);
     uint8_t ch_frag[300];
     size_t ch_fl = pc_dtls_hs_frag_build(ch[0], 0, (uint32_t)(ch_len - 4), 0, ch + 4, (uint32_t)(ch_len - 4), ch_frag,
                                          sizeof(ch_frag));
@@ -568,7 +566,7 @@ static void ingest_real_client_hello(const char *ip, uint16_t port)
     uint8_t client_pub[32];
     pc_x25519_base(client_pub, CLIENT_X25519_PRIV);
     uint8_t ch[256];
-    size_t ch_len = build_client_hello(ch, client_pub);
+    size_t ch_len = build_client_hello(ch, client_pub, NULL, 0);
     uint8_t ch_frag[300];
     size_t ch_fl = pc_dtls_hs_frag_build(ch[0], 0, (uint32_t)(ch_len - 4), 0, ch + 4, (uint32_t)(ch_len - 4), ch_frag,
                                          sizeof(ch_frag));
@@ -790,13 +788,13 @@ static void test_server_send_without_sink(void)
 static void test_slot_lookup_same_port_different_ip(void)
 {
     DtlsRecordKeys wA, rA, wB, rB;
-    client_handshake("10.0.2.5", 41000, &wA, &rA);
-    client_handshake("10.0.2.6", 41000, &wB, &rB); // same port, different ip
+    client_handshake("10.0.2.5", 41000, &wA, &rA, NULL, 0, NULL, NULL);
+    client_handshake("10.0.2.6", 41000, &wB, &rB, NULL, 0, NULL, NULL); // same port, different ip
     TEST_ASSERT_EQUAL_UINT8(2, pc_coaps_server_active_conns());
 
     uint8_t recA[128], recB[128];
-    size_t nA = client_get_temp(&wA, 0, recA, sizeof(recA));
-    size_t nB = client_get_temp(&wB, 0, recB, sizeof(recB));
+    size_t nA = client_get_temp(&wA, 0, recA, sizeof(recA), NULL, 0);
+    size_t nB = client_get_temp(&wB, 0, recB, sizeof(recB), NULL, 0);
     TEST_ASSERT_TRUE(pc_coaps_server_ingest(recA, nA, "10.0.2.5", 41000));
     TEST_ASSERT_TRUE(pc_coaps_server_ingest(recB, nB, "10.0.2.6", 41000));
     pc_coaps_server_poll();
@@ -804,8 +802,8 @@ static void test_slot_lookup_same_port_different_ip(void)
     OutDg dgA, dgB;
     TEST_ASSERT_TRUE(take_out_for("10.0.2.5", 41000, &dgA));
     TEST_ASSERT_TRUE(take_out_for("10.0.2.6", 41000, &dgB));
-    assert_coap_205(&rA, &dgA);
-    assert_coap_205(&rB, &dgB);
+    assert_coap_205(&rA, &dgA, NULL, 0);
+    assert_coap_205(&rB, &dgB, NULL, 0);
 }
 
 // slot_by_cid must skip a connection with no negotiated CID (sl == 0) while scanning for the one that
@@ -815,7 +813,7 @@ static void test_slot_by_cid_skips_and_bounds(void)
 {
     // A plain connection (no CID offered) occupies a slot whose local_cid_len is 0.
     DtlsRecordKeys wPlain, rPlain;
-    client_handshake("10.0.3.1", 42001, &wPlain, &rPlain);
+    client_handshake("10.0.3.1", 42001, &wPlain, &rPlain, NULL, 0, NULL, NULL);
 
     // A second connection negotiates a CID.
     const uint8_t client_cid[3] = {0xA1, 0xA2, 0xA3};

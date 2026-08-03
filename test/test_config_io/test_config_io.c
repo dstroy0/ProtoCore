@@ -114,7 +114,7 @@ void test_config_apply_field_rejects_unknown_type()
     // A field whose type is neither PC_CFG_STR nor PC_CFG_U32 (a malformed schema
     // entry) must be rejected rather than applied by either setter.
     static const pc_cfg_field bad_schema[] = {
-        {"weird", static_cast<pc_cfg_type>(9)},
+        {"weird", (pc_cfg_type)(9)},
     };
     pc_config_begin("t");
     const char *txt = "weird=5\n";
