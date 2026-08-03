@@ -112,6 +112,25 @@ void test_missing_file_fails_closed()
     TEST_ASSERT_FALSE(pc_fs_rename(s_root, "/nope", "", "/x", ""));
 }
 
+// Removing a directory is a recursive walk, so "remove the root" would mean "empty the mount".
+// A root is what the accessor is rooted at, not a resource inside it, and this is the layer that
+// can tell the difference - mnt is blind to what a path means. WebDAV reached this for real: COPY
+// clears an existing destination before writing, and a Destination that resolved to the root
+// deleted every file under it before failing the copy anyway.
+void test_remove_refuses_the_root_itself()
+{
+    TEST_ASSERT_TRUE(pc_fs_write_file(s_root, "/keep.txt", "", "data", 4));
+    TEST_ASSERT_TRUE(pc_fs_mkdir(s_root, "/sub", ""));
+    TEST_ASSERT_TRUE(pc_fs_write_file(s_root, "/sub/deep.txt", "", "more", 4));
+
+    TEST_ASSERT_FALSE(pc_fs_remove(s_root, "/", "")); // named with the separator
+    TEST_ASSERT_FALSE(pc_fs_remove(s_root, "", ""));  // and without
+
+    // nothing under it was touched
+    TEST_ASSERT_TRUE(pc_fs_exists(s_root, "/keep.txt", ""));
+    TEST_ASSERT_TRUE(pc_fs_exists(s_root, "/sub/deep.txt", ""));
+}
+
 void test_read_buffer_too_small_fails_closed()
 {
     pc_fs_write_file(s_root, "/big", "", "0123456789", 10);
@@ -586,5 +605,6 @@ int main()
     RUN_TEST(test_read_file_handle_exhaustion);
     RUN_TEST(test_write_file_larger_than_capacity);
     RUN_TEST(test_zero_progress_backend_terminates);
+    RUN_TEST(test_remove_refuses_the_root_itself);
     return UNITY_END();
 }

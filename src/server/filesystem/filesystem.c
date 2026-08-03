@@ -260,6 +260,29 @@ proto_bool pc_fs_remove(int root, const char *dir, const char *name)
         return PROTO_FALSE;
     }
 
+    // A root is what this file is rooted AT, never a resource inside it, so it is not the walk's to
+    // delete. This is the layer that can say so: mnt is blind to what a path means and a caller
+    // only knows the path it asked for, while the root table lives here. Without it the walk below
+    // empties the whole mount - WebDAV's COPY clears an existing destination before writing, and a
+    // Destination resolving here (a mount with an empty fs_root, target "/") turned that into
+    // "remove everything", after which the copy failed and answered 409 over an emptied volume.
+    const char *rp = s_fs.root[root].path;
+    size_t rlen = proto_scan_nul(rp, PC_FILESYSTEM_PATH_MAX);
+    size_t plen = proto_scan_nul(p, PC_FILESYSTEM_PATH_MAX);
+    if (rlen > 0 && rp[rlen - 1] == '/') // the root always carries the separator; a resolve may not
+    {
+        rlen--;
+    }
+    if (plen > 0 && p[plen - 1] == '/')
+    {
+        plen--;
+    }
+    if (plen == rlen && memcmp(p, rp, plen) == 0)
+    {
+        s_fs.status |= PC_FS_BAD_ROOT;
+        return PROTO_FALSE;
+    }
+
     // One stat decides which of the two this is. A plain file is the one call it always was; a
     // directory takes the walk below, which is what makes "delete this" mean the same thing to every
     // caller instead of each protocol carrying its own tree logic.
