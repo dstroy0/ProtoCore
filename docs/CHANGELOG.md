@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- replace the SecureBorrow RAII in quic_crypto with the C pool API ([`960430e`](https://github.com/dstroy0/ProtoCore/commit/960430e2e4f2f091b9f4c4081322c8eb9753eebf))
 - spell alignof and the opaque AEAD key the C way in the portable backend ([`506a3d5`](https://github.com/dstroy0/ProtoCore/commit/506a3d5cb4d3b52577ecab53c31b2241792d2593))
 - finish the C++ to C conversion in the QUIC/TLS handshake path ([`f657d7e`](https://github.com/dstroy0/ProtoCore/commit/f657d7ec187ef8349a59d838e69ca216017e2649))
 - restore constant names mangled by the C++ to C conversion ([`2a639ea`](https://github.com/dstroy0/ProtoCore/commit/2a639ea418d29874bf40582f94504aff567ca15f))
@@ -26,6 +27,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`b58bfe4`](https://github.com/dstroy0/ProtoCore/commit/b58bfe4df7b2cd2291c1b782039630f02d5b46d5))
 - update test report + coverage [skip ci] ([`8e89fce`](https://github.com/dstroy0/ProtoCore/commit/8e89fcec6f81a900c0526a937b4745a61d33f7e8))
 - update CHANGELOG.md [skip ci] ([`6f0da5b`](https://github.com/dstroy0/ProtoCore/commit/6f0da5b8f00d09df64503e03ba9947b61c92f490))
 - update CHANGELOG.md [skip ci] ([`d98e86d`](https://github.com/dstroy0/ProtoCore/commit/d98e86d14f1dfc9f22eb383bc5f3e42e8fa36ab8))
