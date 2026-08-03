@@ -11,7 +11,6 @@
 #include "services/security/ikev2/ikev2.h"
 #include <string.h>
 #include <unity.h>
-#include <vector>
 
 void setUp()
 {
@@ -452,13 +451,14 @@ void test_payload_build_raw()
 void test_oversize_payload_lengths()
 {
     // a payload whose total does not fit the 16-bit length field is refused
-    std::vector<uint8_t> out(0x10008, 0);
-    std::vector<uint8_t> body(0x10000, 0xab);
-    TEST_ASSERT_EQUAL_size_t(
-        0, pc_ike_payload_build(out.data(), out.size(), IKE_PL_NONE, PROTO_FALSE, body.data(), body.size()));
-    TEST_ASSERT_EQUAL_size_t(0, pc_ike_nonce_build(out.data(), out.size(), IKE_PL_NONE, body.data(), body.size()));
+    static uint8_t out[0x10008];
+    memset(out, 0, sizeof(out));
+    static uint8_t body[0x10000];
+    memset(body, 0xab, sizeof(body));
+    TEST_ASSERT_EQUAL_size_t(0, pc_ike_payload_build(out, 0x10008, IKE_PL_NONE, PROTO_FALSE, body, 0x10000));
+    TEST_ASSERT_EQUAL_size_t(0, pc_ike_nonce_build(out, 0x10008, IKE_PL_NONE, body, 0x10000));
     // exactly at the ceiling still builds
-    size_t n = pc_ike_nonce_build(out.data(), out.size(), IKE_PL_NONE, body.data(), 0xFFFF - PC_IKE_PAYLOAD_HDR_LEN);
+    size_t n = pc_ike_nonce_build(out, 0x10008, IKE_PL_NONE, body, 0xFFFF - PC_IKE_PAYLOAD_HDR_LEN);
     TEST_ASSERT_EQUAL_size_t(0xFFFF, n);
     TEST_ASSERT_EQUAL_UINT8(0xff, out[2]);
     TEST_ASSERT_EQUAL_UINT8(0xff, out[3]);
@@ -940,15 +940,17 @@ void test_sa_build_widest_proposal()
     // The widest SA this builder can emit - a 255-byte SPI and 255 keyed (12-byte) transforms,
     // every count being a uint8_t - still frames to 3327 bytes, far below the 16-bit length
     // ceiling the builder guards against. Pins that the guard cannot fire for any legal input.
-    std::vector<IkeTransform> tr(255);
-    for (size_t i = 0; i < tr.size(); i++)
+    static IkeTransform tr[255];
+    memset(tr, 0, sizeof(tr));
+    for (size_t i = 0; i < 255; i++)
     {
-        tr[i] = {IKE_TRANSFORM_ENCR, IKE_ENCR_AES_CBC, 256};
+        tr[i] = (IkeTransform){IKE_TRANSFORM_ENCR, IKE_ENCR_AES_CBC, 256};
     }
-    std::vector<uint8_t> spi(255, 0x5a);
-    std::vector<uint8_t> buf(0x11000, 0);
-
-    size_t n = pc_ike_sa_build(buf.data(), buf.size(), IKE_PL_NONE, 1, IKE_PROTO_ESP, spi.data(), 255, tr.data(), 255);
+    static uint8_t spi[255];
+    memset(spi, 0x5a, sizeof(spi));
+    static uint8_t buf[0x11000];
+    memset(buf, 0, sizeof(buf));
+    size_t n = pc_ike_sa_build(buf, 0x11000, IKE_PL_NONE, 1, IKE_PROTO_ESP, spi, 255, tr, 255);
     const size_t prop_len = 8 + 255 + 255 * 12; // proposal hdr + spi + keyed transforms
     TEST_ASSERT_EQUAL_size_t(PC_IKE_PAYLOAD_HDR_LEN + prop_len, n);
     TEST_ASSERT_TRUE(n <= 0xFFFF); // the ceiling the builder checks is unreachable
@@ -959,10 +961,10 @@ void test_sa_build_widest_proposal()
 
     // the whole tree still walks back out
     IkeProposalRef prop;
-    TEST_ASSERT_TRUE(pc_ike_sa_first_proposal(buf.data() + 4, n - 4, &prop));
+    TEST_ASSERT_TRUE(pc_ike_sa_first_proposal(buf + 4, n - 4, &prop));
     TEST_ASSERT_EQUAL_UINT8(255, prop.spi_size);
     TEST_ASSERT_EQUAL_UINT8(255, prop.num_transforms);
-    TEST_ASSERT_EQUAL_MEMORY(spi.data(), prop.spi, 255);
+    TEST_ASSERT_EQUAL_MEMORY(spi, prop.spi, 255);
     IkeTransformIter it;
     IkeTransformRef t;
     pc_ike_transform_iter_init(&it, &prop);
@@ -982,21 +984,22 @@ void test_ts_build_widest_selector_list()
     // 10208 bytes, so the builder's 16-bit length ceiling cannot fire for any legal input.
     const uint8_t s6[16] = {0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x01};
     const uint8_t e6[16] = {0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff};
-    std::vector<IkeTrafficSelector> sels(255);
-    for (size_t i = 0; i < sels.size(); i++)
+    static IkeTrafficSelector sels[255];
+    memset(sels, 0, sizeof(sels));
+    for (size_t i = 0; i < 255; i++)
     {
         sels[i] = {IKE_TS_IPV6_ADDR_RANGE, 6, 500, 500, s6, e6, 16};
     }
-    std::vector<uint8_t> buf(0x11000, 0);
-
-    size_t n = pc_ike_ts_build(buf.data(), buf.size(), IKE_PL_NONE, sels.data(), 255);
+    static uint8_t buf[0x11000];
+    memset(buf, 0, sizeof(buf));
+    size_t n = pc_ike_ts_build(buf, 0x11000, IKE_PL_NONE, sels, 255);
     TEST_ASSERT_EQUAL_size_t(4 + 4 + 255 * 40, n);
     TEST_ASSERT_TRUE(n <= 0xFFFF); // the ceiling the builder checks is unreachable
     TEST_ASSERT_EQUAL_UINT16((uint16_t)n, (uint16_t)((buf[2] << 8) | buf[3]));
-    TEST_ASSERT_EQUAL_UINT8(255, pc_ike_ts_count(buf.data() + 4, n - 4));
+    TEST_ASSERT_EQUAL_UINT8(255, pc_ike_ts_count(buf + 4, n - 4));
     // the last selector is still addressable, so every one of the 255 was framed
     IkeTrafficSelector got;
-    TEST_ASSERT_TRUE(pc_ike_ts_get(buf.data() + 4, n - 4, 254, &got));
+    TEST_ASSERT_TRUE(pc_ike_ts_get(buf + 4, n - 4, 254, &got));
     TEST_ASSERT_EQUAL_size_t(16, got.addr_len);
     TEST_ASSERT_EQUAL_MEMORY(s6, got.start_addr, 16);
     TEST_ASSERT_EQUAL_MEMORY(e6, got.end_addr, 16);
