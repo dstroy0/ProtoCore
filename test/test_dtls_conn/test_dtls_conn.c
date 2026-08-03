@@ -1040,7 +1040,7 @@ static proto_bool run_to_finished(DtlsConn *conn, DtlsServerConfig *cfg, ClientS
         }
         uint8_t inner[512];
         DtlsCiphertext info;
-        if (!pc_dtls_ciphertext_unprotect(st->srv_hs_read, exp_seq, flight + off, crl, inner, sizeof(inner), &info,
+        if (!pc_dtls_ciphertext_unprotect(&st->srv_hs_read, exp_seq, flight + off, crl, inner, sizeof(inner), &info,
                                           NULL, 0))
         {
             return PROTO_FALSE;
@@ -1080,7 +1080,7 @@ static proto_bool run_to_finished(DtlsConn *conn, DtlsServerConfig *cfg, ClientS
 static int feed_client_finished(DtlsConn *conn, ClientSession *st, uint64_t seq, uint8_t *out, size_t out_cap)
 {
     uint8_t rec[128];
-    size_t rl = pc_dtls_ciphertext_protect(st->cli_hs_write, seq, PC_DTLS_CT_HANDSHAKE, st->cfin_frag,
+    size_t rl = pc_dtls_ciphertext_protect(&st->cli_hs_write, seq, PC_DTLS_CT_HANDSHAKE, st->cfin_frag,
                                            st->cfin_frag_len, rec, sizeof(rec), NULL, 0);
     if (!rl)
     {
@@ -1103,7 +1103,7 @@ static int feed_epoch2_msg(DtlsConn *conn, ClientSession *st, uint64_t seq, uint
     }
     uint8_t rec[192];
     size_t rl =
-        pc_dtls_ciphertext_protect(st->cli_hs_write, seq, PC_DTLS_CT_HANDSHAKE, frag, fl, rec, sizeof(rec), NULL, 0);
+        pc_dtls_ciphertext_protect(&st->cli_hs_write, seq, PC_DTLS_CT_HANDSHAKE, frag, fl, rec, sizeof(rec), NULL, 0);
     if (!rl)
     {
         return -2;
@@ -1117,7 +1117,7 @@ static int feed_epoch2_ack(DtlsConn *conn, ClientSession *st, uint64_t seq, cons
 {
     uint8_t rec[192];
     size_t rl =
-        pc_dtls_ciphertext_protect(st->cli_hs_write, seq, PC_DTLS_CT_ACK, body, blen, rec, sizeof(rec), NULL, 0);
+        pc_dtls_ciphertext_protect(&st->cli_hs_write, seq, PC_DTLS_CT_ACK, body, blen, rec, sizeof(rec), NULL, 0);
     if (!rl)
     {
         return -2;
