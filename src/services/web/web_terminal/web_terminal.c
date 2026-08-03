@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file web_terminal.cpp
+ * @file web_terminal.c
  * @brief Browser web-serial terminal over WebSocket (PC_ENABLE_WEB_TERMINAL).
  */
 
