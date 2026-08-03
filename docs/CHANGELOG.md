@@ -43,6 +43,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`2974b57`](https://github.com/dstroy0/ProtoCore/commit/2974b57a3dc8a9c4f680fb762c3851c25d8adf3d))
 - update CHANGELOG.md [skip ci] ([`ddbe826`](https://github.com/dstroy0/ProtoCore/commit/ddbe826b5788df15315993ee1e9f299ee22ea810))
 - update CHANGELOG.md [skip ci] ([`4341255`](https://github.com/dstroy0/ProtoCore/commit/4341255a69d3a34c3bb7d14ad55e03ab50e7ff41))
 - update CHANGELOG.md [skip ci] ([`c1f81dc`](https://github.com/dstroy0/ProtoCore/commit/c1f81dc4949462a66b8ebe05795c1248ffb94d02))
@@ -173,6 +174,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`e8a0034`](https://github.com/dstroy0/ProtoCore/commit/e8a003460b0a7525892b7178c76658fce6c6399b))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`0af15b8`](https://github.com/dstroy0/ProtoCore/commit/0af15b881340d16b7db7f1c7f7d45b87559cc6ed))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`4fc79d3`](https://github.com/dstroy0/ProtoCore/commit/4fc79d3eaed4b8820ec5b3c2b403a8c233c5b2d6))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`7ca75f0`](https://github.com/dstroy0/ProtoCore/commit/7ca75f028cb39a7f529e2ed9dabaa5f3cf5e33e1))
@@ -256,6 +258,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- give the host seam the send-capture accessors, and build route + signaling ([`25435d5`](https://github.com/dstroy0/ProtoCore/commit/25435d52b992c3f2478acb0d581b699335d03eed))
 - bind slots through the host seam and fix the value-init assignments ([`fa14afe`](https://github.com/dstroy0/ProtoCore/commit/fa14afe4ef97d3cab6f198ba86bddcbceb0148c9))
 - enable the dependencies the feature gates require ([`c7e7725`](https://github.com/dstroy0/ProtoCore/commit/c7e77251b877096ebfc4c22ecb47bd2171f84697))
 - pass the tls flag listener_add no longer defaults ([`d8048bc`](https://github.com/dstroy0/ProtoCore/commit/d8048bcc63166e41d550c397146de2aa9a0b1620))
