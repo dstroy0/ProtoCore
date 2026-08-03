@@ -300,8 +300,7 @@
     "native_transport": {
       "desc": "test_transport against the native_stack_l46 stack.",
       "base": "env:native_stack_l46",
-      "tests": ["test_transport"],
-      "src": ["+<server/clock/clock.c>"]
+      "tests": ["test_transport"]
     },
     "native_presentation": {
       "desc": "test_presentation against the native_stack_l46 stack.",
@@ -757,7 +756,6 @@
       "desc": "test_digest_auth against the native_stack_http stack.",
       "base": "env:native_stack_http",
       "tests": ["test_digest_auth"],
-      "src": ["+<server/clock/clock.c>"],
       "flags": ["-DPC_ENABLE_AUTH=1"]
     },
     "native_digest_vectors": {
