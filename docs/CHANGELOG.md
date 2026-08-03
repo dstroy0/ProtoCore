@@ -50,6 +50,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`6176780`](https://github.com/dstroy0/ProtoCore/commit/617678047959afcb731f8c4c4c17500fb907b18a))
 - update CHANGELOG.md [skip ci] ([`980290e`](https://github.com/dstroy0/ProtoCore/commit/980290e3c7d81b0559eeee210aa574499fd09ed8))
 - update CHANGELOG.md [skip ci] ([`1e32f1a`](https://github.com/dstroy0/ProtoCore/commit/1e32f1a5e552da840c92c61a0b25cf2022abfd2f))
 - update CHANGELOG.md [skip ci] ([`1ee9964`](https://github.com/dstroy0/ProtoCore/commit/1ee9964a95030b3fc98b4d68973d29011ad8cb2d))
@@ -320,6 +321,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- check the store still answers after a full fill ([`464b6ee`](https://github.com/dstroy0/ProtoCore/commit/464b6ee3336650d3cef1bac9e03a2d9b0d567140))
 - check the fixture supports the concurrent handles a COPY needs ([`ab2e29a`](https://github.com/dstroy0/ProtoCore/commit/ab2e29aff032a64a10825916827f915af1b9e10f))
 - use the proven fill for the remaining WebDAV creation-refused cases ([`4d3376b`](https://github.com/dstroy0/ProtoCore/commit/4d3376bfa80fa3b7820f3d3565bf9098cb11f5aa))
 - prove the fill helper actually exhausts the store ([`00c4ca1`](https://github.com/dstroy0/ProtoCore/commit/00c4ca106290ba6dd5caade7b917632acf7ce508))
