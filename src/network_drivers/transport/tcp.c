@@ -201,6 +201,7 @@ typedef enum PROTO_ENUM_PACKED
     PC_OP_SET_TOS // in stack context: set the DS field (DiffServ DSCP) on a live connection; k->len carries the byte
 #endif
 } pc_tcp_op;
+static_assert(sizeof(pc_tcp_op) == 1, "pc_tcp_op must stay one byte (PROTO_ENUM_PACKED)");
 
 // TCP transport context, owned by one instance (internal linkage): the stack task
 // handle, captured the first time pc_tcp_do() runs (that op is always marshaled into stack context).

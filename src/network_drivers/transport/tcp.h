@@ -61,6 +61,8 @@ typedef enum PROTO_ENUM_PACKED
     CONN_ACTIVE, ///< Live connection; PCB is valid.
     CONN_CLOSING ///< FIN sent; waiting for final ACK (reserved).
 } ConnState;
+static_assert(sizeof(ConnState) == 1,
+              "ConnState must stay one byte (PROTO_ENUM_PACKED); TcpConn and conn_pool[] size themselves on it");
 
 /**
  * @brief A single TCP connection context.
@@ -151,6 +153,8 @@ typedef enum PROTO_ENUM_PACKED
     EVT_DISCONNECT, ///< Remote peer closed the connection gracefully.
     EVT_ERROR       ///< The stack reported an error (the control block may already be freed).
 } EvtType;
+static_assert(sizeof(EvtType) == 1,
+              "EvtType must stay one byte (PROTO_ENUM_PACKED); every listener's queue storage sizes itself on TcpEvt");
 
 /**
  * @brief Event record posted from the stack callbacks to the session layer.
@@ -472,6 +476,7 @@ typedef enum PROTO_ENUM_PACKED
     PC_CONN_R_BACKPRESSURE, ///< RX segment refused (ring full); no state change.
     PC_CONN_R_DEFER_DROP    ///< Event queue full; an event was dropped (no state change).
 } pc_conn_reason;
+static_assert(sizeof(pc_conn_reason) == 1, "pc_conn_reason must stay one byte (PROTO_ENUM_PACKED)");
 
 /** @brief Snapshot of the transport's lifetime counters (plus a live gauge). */
 typedef struct pc_conn_counters

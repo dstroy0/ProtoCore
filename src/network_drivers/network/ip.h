@@ -34,6 +34,8 @@ typedef enum PROTO_ENUM_PACKED
     PC_IP_V4 = 4,   ///< IPv4 (bytes[0..3])
     PC_IP_V6 = 6,   ///< IPv6 (bytes[0..15])
 } pc_ip_family;
+static_assert(sizeof(pc_ip_family) == 1,
+              "pc_ip_family must stay one byte (PROTO_ENUM_PACKED); pc_ip is embedded wherever an address is stored");
 
 /** @brief Address scope, in rough order of reachability (used for allow/deny policy + logging). */
 typedef enum PROTO_ENUM_PACKED
@@ -45,6 +47,7 @@ typedef enum PROTO_ENUM_PACKED
     PC_IP_SCOPE_MULTICAST,       ///< 224.0.0.0/4 / ff00::/8
     PC_IP_SCOPE_GLOBAL,          ///< globally routable unicast
 } pc_ip_scope;
+static_assert(sizeof(pc_ip_scope) == 1, "pc_ip_scope must stay one byte (PROTO_ENUM_PACKED)");
 
 /** @brief A v4 or v6 address in network (big-endian) byte order. */
 typedef struct
