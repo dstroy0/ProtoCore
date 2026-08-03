@@ -761,7 +761,7 @@ src/
 │       │   └── edge_mesh.h
 │       ├── httpcache/  (httpcache.h, httpcache.c)
 │       ├── spa_router/  (spa_router.h, spa_router.c)
-│       └── web_terminal/  (web_terminal.h, web_terminal.cpp)
+│       └── web_terminal/  (web_terminal.h, web_terminal.c)
 ├── shared_primitives/
 │   ├── bitio.h
 │   ├── bytes.h
