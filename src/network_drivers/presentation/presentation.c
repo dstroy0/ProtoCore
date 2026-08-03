@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file presentation.cpp
+ * @file presentation.c
  * @brief Layer 6 (Presentation) - wires the transport ring buffer to the HTTP parser.
  *
  * This file is now a thin adapter.  The HTTP parsing logic lives in
- * http_parser.cpp.  This layer only knows about:
+ * http_parser.c.  This layer only knows about:
  *   - The transport RX read API (pc_conn_available / pc_conn_read_byte) - it
  *     never indexes the ring itself; transport owns rx_buffer / rx_head / rx_tail
  *   - Slot-indexed helpers that the session and application layers expect
@@ -48,7 +48,7 @@ void http_reset(uint8_t slot_id)
 }
 
 // Release any WebSocket / SSE binding still attached to a slot. WS and SSE upgrades leave the slot
-// as ConnProto::PROTO_HTTP (SSE is just a long-lived HTTP response; WS is pumped separately), so this
+// as PROTO_HTTP (SSE is just a long-lived HTTP response; WS is pumped separately), so this
 // HTTP proto handler owns their teardown. Both frees are no-ops when the slot has no such binding.
 // Called on close AND on a fresh accept, because a slot can be reaped by the idle sweep or aborted
 // (SSE pool full) without a close event ever firing - so a reused slot must not inherit a stale
@@ -121,10 +121,10 @@ void http_parse(uint8_t slot_id)
         // compare the same slot's rx_head vs rx_tail, and nothing between the two
         // calls here mutates either (the switch above only reads req->parse_state).
         // rx_tail is single-consumer-owned - this loop is the only writer for this
-        // slot - and the producer (tcp.cpp's recv callback) always checks
+        // slot - and the producer (tcp.c's recv callback) always checks
         // pc_ring_free() before writing, so rx_head can never be advanced to equal
         // the rx_tail snapshot available() just found nonzero ("the free-space check
-        // ... guarantees it fits, so head can never overrun tail" - tcp.cpp). A
+        // ... guarantees it fits, so head can never overrun tail" - tcp.c). A
         // "drain" of the ring between the two calls would require a second consumer,
         // which the single-consumer-per-slot design does not have.
         if (!pc_conn_read_byte(slot_id, &byte)) // GCOVR_EXCL_BR_LINE
@@ -255,7 +255,7 @@ static void http_evt_close(uint8_t slot)
 #if PC_ENABLE_TLS
     if (conn_pool[slot].tls)
     {
-        pc_tls_conn_free(slot); // also covers timeouts (EvtType::EVT_ERROR)
+        pc_tls_conn_free(slot); // also covers timeouts (EVT_ERROR)
     }
 #endif
     http_release_upgrade_bindings(slot); // FIN/RST/error on an SSE or WS slot must free its binding
