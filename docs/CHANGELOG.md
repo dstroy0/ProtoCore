@@ -51,6 +51,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`ccc6e7e`](https://github.com/dstroy0/ProtoCore/commit/ccc6e7e7bf5a15c391195004b95a51da22c3bffd))
+- update CHANGELOG.md [skip ci] ([`149bb8a`](https://github.com/dstroy0/ProtoCore/commit/149bb8a5e7bf4175209a6f9dc179b4089b75592c))
 - update CHANGELOG.md [skip ci] ([`047b662`](https://github.com/dstroy0/ProtoCore/commit/047b662beb5b491e0eec06bd7772c6c69627bc5e))
 - update CHANGELOG.md [skip ci] ([`e5ab957`](https://github.com/dstroy0/ProtoCore/commit/e5ab9575127bf666817180f16ea62aac3402791c))
 - update CHANGELOG.md [skip ci] ([`e63cf94`](https://github.com/dstroy0/ProtoCore/commit/e63cf9411155e0c18dbaa14d2d69d27a35616ea2))
@@ -328,6 +330,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- refuse through the medium instead of through exhaustion ([`5f6a8ce`](https://github.com/dstroy0/ProtoCore/commit/5f6a8ce64c12f3d9126914463e1677ba9330c71f))
 - remount after filling, so the fixture starts from the medium ([`86bcc96`](https://github.com/dstroy0/ProtoCore/commit/86bcc964e5d7db807d58c780664ab70d4c5f0385))
 - measure whether a larger fixture volume survives exhaustion ([`b6eca8a`](https://github.com/dstroy0/ProtoCore/commit/b6eca8abd918d8583fa12213e1786d28a12453cf))
 - check the store still answers after a full fill ([`464b6ee`](https://github.com/dstroy0/ProtoCore/commit/464b6ee3336650d3cef1bac9e03a2d9b0d567140))
