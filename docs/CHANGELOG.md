@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- restore the enum widths the C conversion dropped ([`6bc50b1`](https://github.com/dstroy0/ProtoCore/commit/6bc50b19daaf6754c3b0d98edab1c6d5ed3fed9b))
 - make the checkers agree with a C11 tree ([`0c2bd52`](https://github.com/dstroy0/ProtoCore/commit/0c2bd52a962b3a93b6ce865868debb3cb3089aaa))
 - convert the C++ type declarations behind sqlite, aes128gcm and hkdf ([`a437340`](https://github.com/dstroy0/ProtoCore/commit/a437340764f7dc33866768552b8272287914ef67))
 - restore the constant names the constexpr sweep truncated, and close the guard chain ([`0e46ddf`](https://github.com/dstroy0/ProtoCore/commit/0e46ddff0c913c41cb86bda959a5e35c83960fe8))
@@ -19,6 +20,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`906bc4a`](https://github.com/dstroy0/ProtoCore/commit/906bc4a0ae923616d1448d33e881531f5286d3a9))
 - update CHANGELOG.md [skip ci] ([`9f9e696`](https://github.com/dstroy0/ProtoCore/commit/9f9e6969e066a5f2aeae51c671fa9cae990ea552))
 - update CHANGELOG.md [skip ci] ([`92692fe`](https://github.com/dstroy0/ProtoCore/commit/92692feeb69f0fb1eae77e48e94ab7f94f65cf2f))
 - update CHANGELOG.md [skip ci] ([`35227fe`](https://github.com/dstroy0/ProtoCore/commit/35227fe81e139d38478bdabfd176d0d415685b18))
@@ -130,6 +132,10 @@ All notable changes to ProtoCore are documented here.
 - give storage one owner and take the vendor out of the file-transfer servers ([`5081912`](https://github.com/dstroy0/ProtoCore/commit/5081912b66c3d24aa60b61ca3ed57d462e9f0a36))
 - take the codec's tag byte out of the shared read cursor ([`d4956d8`](https://github.com/dstroy0/ProtoCore/commit/d4956d85f4a3382d7ddfccf836bf44c33e32bef7))
 - collapse the codec cursors onto pc_span and give SSH signaling an owner ([`e2d0b4e`](https://github.com/dstroy0/ProtoCore/commit/e2d0b4e7a104053a6135ca68dc7955ed59fa9687))
+
+### Testing
+
+- assert the six enum widths at compile time ([`4ef3417`](https://github.com/dstroy0/ProtoCore/commit/4ef34170f4da2ebfc929917337b8d566ddc24724))
 
 ## [0.0.1] - 2026-07-31
 
