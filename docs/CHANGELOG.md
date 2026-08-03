@@ -54,6 +54,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`b81a73a`](https://github.com/dstroy0/ProtoCore/commit/b81a73a07cd5527508c8a893a3d63e459978b827))
 - update CHANGELOG.md [skip ci] ([`647b62c`](https://github.com/dstroy0/ProtoCore/commit/647b62c0c019b9f05982b865529b67dcef728b09))
 - update CHANGELOG.md [skip ci] ([`55a1149`](https://github.com/dstroy0/ProtoCore/commit/55a1149162734ad632f778781fcf499c041aef01))
 - update CHANGELOG.md [skip ci] ([`66db608`](https://github.com/dstroy0/ProtoCore/commit/66db608a0c80cc820346ded35f6aa6f62cfd3794))
@@ -324,6 +325,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Refactor
 
+- the file-local helpers take their owning context by pointer ([`5e179c0`](https://github.com/dstroy0/ProtoCore/commit/5e179c06dcbac6975d367902b2974f05eb8b8e42))
 - replace the C++ in-class member initializers ([`59b92b8`](https://github.com/dstroy0/ProtoCore/commit/59b92b887da8cc66cff56c8a6edaa96102bfc138))
 - write the C++ temporaries as compound literals ([`1cdc9f6`](https://github.com/dstroy0/ProtoCore/commit/1cdc9f670d7f95cb6241c74cb76fc21232ac9c88))
 - drop the DTLS ciphertext default arguments, state them at every call ([`e5cc867`](https://github.com/dstroy0/ProtoCore/commit/e5cc86712bd33a811514ce526048441e356a5cdc))
