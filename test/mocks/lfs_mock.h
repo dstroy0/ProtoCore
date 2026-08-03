@@ -207,8 +207,14 @@ static inline void lfsm_release_handles(void)
     }
 }
 
-/** @brief Write until the volume refuses, so the next write is a real ENOSPC. */
-static inline void lfsm_fill_volume(void)
+/**
+ * @brief Fill the volume, stopping @p spare blocks short.
+ *
+ * spare == 0 leaves it completely full, where even creating a file fails - that is an open
+ * failure, not a write one. A caller that wants the write to be what fails leaves a block or
+ * two, so the new file's metadata still fits and only its body does not.
+ */
+static inline void lfsm_fill_volume_leaving(int spare)
 {
     static uint8_t chunk[LFSM_BLOCK_SIZE];
     memset(chunk, 'F', sizeof(chunk));
@@ -217,10 +223,26 @@ static inline void lfsm_fill_volume(void)
     {
         return;
     }
+    lfs_ssize_t written = 0;
     while (lfs_file_write(&g_lfsm.lfs, &f, chunk, sizeof(chunk)) == (lfs_ssize_t)sizeof(chunk))
     {
+        written++;
     }
     lfs_file_close(&g_lfsm.lfs, &f);
+
+    // Give the spare back by truncating the filler, which is the only way to free blocks here.
+    if (spare > 0 && lfs_file_open(&g_lfsm.lfs, &f, "/.fill", LFS_O_WRONLY) >= 0)
+    {
+        lfs_soff_t keep = (lfs_soff_t)((written > spare ? written - spare : 0) * LFSM_BLOCK_SIZE);
+        lfs_file_truncate(&g_lfsm.lfs, &f, (lfs_off_t)keep);
+        lfs_file_close(&g_lfsm.lfs, &f);
+    }
+}
+
+/** @brief Write until the volume refuses, so the next write is a real ENOSPC. */
+static inline void lfsm_fill_volume(void)
+{
+    lfsm_fill_volume_leaving(0);
 }
 
 // --- the backend --------------------------------------------------------------

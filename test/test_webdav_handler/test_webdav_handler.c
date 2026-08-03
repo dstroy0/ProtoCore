@@ -332,7 +332,7 @@ void test_put_empty_buffered()
 // 507 Insufficient Storage. The volume is filled first, so the refusal is a real ENOSPC.
 void test_put_stream_write_fails_507()
 {
-    lfsm_fill_volume();
+    lfsm_fill_volume_leaving(2); // room for the new file, none for its body
     static uint8_t big[2100];
     memset(big, 'A', sizeof(big));
     feed_put(0, "/dav/big.txt", big, sizeof(big));
