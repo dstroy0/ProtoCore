@@ -1,4 +1,16 @@
 {
+".pio/libdeps/native_hpack/littlefs/include/lfs.h": [
+"native_hpack"
+],
+".pio/libdeps/native_hpack/littlefs/include/lfs_util.h": [
+"native_hpack"
+],
+".pio/libdeps/native_hpack/littlefs/src/lfs.c": [
+"native_hpack"
+],
+".pio/libdeps/native_hpack/littlefs/src/lfs_util.c": [
+"native_hpack"
+],
 ".pio/libdeps/native_sse/littlefs/include/lfs.h": [
 "native_sse"
 ],
@@ -7593,6 +7605,7 @@
 "native_edge_cache_sd",
 "native_edge_mesh",
 "native_forward",
+"native_hpack",
 "native_http_client",
 "native_ikev2",
 "native_json",

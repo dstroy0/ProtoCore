@@ -1,8 +1,8 @@
 # Test Report
 
-**Generated:** 2026-08-03 21:54:43
+**Generated:** 2026-08-03 22:23:46
 **Command:** `pio test` over 304 auto-discovered native envs (excludes native_pentest, native_codeql)
-**Result:** ✅ 13 passed - 149s
+**Result:** ✅ 13 passed - 159s
 
 ---
 
@@ -148,6 +148,7 @@
 | `test_http_client`       | `native_http_client`    |     0 |   ✅   | 00:00:00.835 |
 | `test_sse`               | `native_sse`            |     0 |   ✅   | 00:00:03.778 |
 | `test_telnet`            | `native_telnet`         |     0 |   ✅   | 00:00:01.115 |
+| `test_hpack`             | `native_hpack`          |     0 |   ✅   | 00:00:10.587 |
 
 ---
 

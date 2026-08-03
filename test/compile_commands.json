@@ -774,10 +774,10 @@
     "output": ".pio/build/native_swar/src/services/security/guardrails/guardrails.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/network_drivers/presentation/codec/hpack_prim/hpack_prim.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/codec/hpack_prim/hpack_prim.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_hpack/src/network_drivers/presentation/codec/hpack_prim/hpack_prim.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_ENABLE_HTTP2=1 -I.pio/libdeps/native_hpack/littlefs/include -I.pio/libdeps/native_hpack/littlefs/src -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/codec/hpack_prim/hpack_prim.c",
     "directory": "@ROOT@",
     "file": "src/network_drivers/presentation/codec/hpack_prim/hpack_prim.c",
-    "output": ".pio/build/native_swar/src/network_drivers/presentation/codec/hpack_prim/hpack_prim.o"
+    "output": ".pio/build/native_hpack/src/network_drivers/presentation/codec/hpack_prim/hpack_prim.o"
   },
   {
     "command": "/usr/bin/gcc -o .pio/build/native_swar/src/network_drivers/presentation/http/http2/h2_conn.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/http/http2/h2_conn.c",
@@ -792,10 +792,10 @@
     "output": ".pio/build/native_swar/src/network_drivers/presentation/http/http2/h2_frame.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/network_drivers/presentation/http/http2/hpack.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/http/http2/hpack.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_hpack/src/network_drivers/presentation/http/http2/hpack.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_ENABLE_HTTP2=1 -I.pio/libdeps/native_hpack/littlefs/include -I.pio/libdeps/native_hpack/littlefs/src -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/http/http2/hpack.c",
     "directory": "@ROOT@",
     "file": "src/network_drivers/presentation/http/http2/hpack.c",
-    "output": ".pio/build/native_swar/src/network_drivers/presentation/http/http2/hpack.o"
+    "output": ".pio/build/native_hpack/src/network_drivers/presentation/http/http2/hpack.o"
   },
   {
     "command": "/usr/bin/gcc -o .pio/build/native_swar/src/network_drivers/presentation/http/http3/h3_conn.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/http/http3/h3_conn.c",
@@ -2182,5 +2182,17 @@
     "directory": "@ROOT@",
     "file": ".pio/libdeps/native_telnet/littlefs/src/lfs_util.c",
     "output": ".pio/build/native_telnet/lib31c/littlefs/lfs_util.o"
+  },
+  {
+    "command": "/usr/bin/gcc -o .pio/build/native_hpack/lib76c/littlefs/lfs.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_ENABLE_HTTP2=1 -I.pio/libdeps/native_hpack/littlefs/include -I.pio/libdeps/native_hpack/littlefs/src -Itest/mocks -Itest/support -Isrc .pio/libdeps/native_hpack/littlefs/src/lfs.c",
+    "directory": "@ROOT@",
+    "file": ".pio/libdeps/native_hpack/littlefs/src/lfs.c",
+    "output": ".pio/build/native_hpack/lib76c/littlefs/lfs.o"
+  },
+  {
+    "command": "/usr/bin/gcc -o .pio/build/native_hpack/lib76c/littlefs/lfs_util.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_ENABLE_HTTP2=1 -I.pio/libdeps/native_hpack/littlefs/include -I.pio/libdeps/native_hpack/littlefs/src -Itest/mocks -Itest/support -Isrc .pio/libdeps/native_hpack/littlefs/src/lfs_util.c",
+    "directory": "@ROOT@",
+    "file": ".pio/libdeps/native_hpack/littlefs/src/lfs_util.c",
+    "output": ".pio/build/native_hpack/lib76c/littlefs/lfs_util.o"
   }
 ]
