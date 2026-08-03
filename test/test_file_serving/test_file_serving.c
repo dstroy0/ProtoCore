@@ -18,7 +18,7 @@
 #include <unity.h>
 
 static const pc_mnt_backend *g_fs; // the mock store the serve_static mounts read through
-static bool handler_called = false;
+static proto_bool handler_called = PROTO_FALSE;
 
 static void push_str(uint8_t slot, const char *s)
 {
@@ -34,7 +34,7 @@ static void push_str(uint8_t slot, const char *s)
 static void handle_html(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    handler_called = true;
+    handler_called = PROTO_TRUE;
     const pc_mnt_backend *fs = mock_mnt();
     serve_file(slot_id, fs, "/index.html", "text/html");
 }
@@ -42,7 +42,7 @@ static void handle_html(uint8_t slot_id, HttpReq *req)
 static void handle_js(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    handler_called = true;
+    handler_called = PROTO_TRUE;
     const pc_mnt_backend *fs = mock_mnt();
     serve_file(slot_id, fs, "/app.js", "application/javascript");
 }
@@ -50,7 +50,7 @@ static void handle_js(uint8_t slot_id, HttpReq *req)
 static void handle_missing(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    handler_called = true;
+    handler_called = PROTO_TRUE;
     const pc_mnt_backend *fs = mock_mnt();
     serve_file(slot_id, fs, "/missing.txt", "text/plain");
 }
@@ -58,7 +58,7 @@ static void handle_missing(uint8_t slot_id, HttpReq *req)
 void setUp()
 {
     pc_server_reset();
-    handler_called = false;
+    handler_called = PROTO_FALSE;
 
     for (int i = 0; i < MAX_CONNS; i++)
     {
@@ -154,13 +154,44 @@ void test_file_body_is_sent()
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), body));
 }
 
+static void h_empty(uint8_t slot_id, HttpReq *req)
+{
+    (void)req;
+    const pc_mnt_backend *fs = mock_mnt();
+    serve_file(slot_id, fs, "/empty.txt", "text/plain");
+}
+
+static void h_big(uint8_t slot_id, HttpReq *req)
+{
+    (void)req;
+    const pc_mnt_backend *fs = mock_mnt();
+    serve_file(slot_id, fs, "/big.bin", "application/octet-stream");
+}
+
+static void h_other(uint8_t slot_id, HttpReq *req)
+{
+    (void)req;
+    other_called = PROTO_TRUE;
+    send_text(slot_id, 200, "text/plain", "other");
+}
+
+static void h_case(uint8_t slot_id, HttpReq *req)
+{
+    (void)req;
+    const pc_mnt_backend *fs = mock_mnt();
+    serve_file(slot_id, fs, cur_path, cur_ctype);
+}
+
+static void h_f(uint8_t slot_id, HttpReq *req)
+{
+    (void)req;
+    const pc_mnt_backend *fs = mock_mnt();
+    serve_file(slot_id, fs, "/f.txt", "text/plain");
+}
+
 void test_empty_file_returns_200_with_zero_length()
 {
-    on_http("/empty", HTTP_GET, [](uint8_t slot_id, HttpReq *req) {
-        (void)req;
-        const pc_mnt_backend *fs = mock_mnt();
-        serve_file(slot_id, fs, "/empty.txt", "text/plain");
-    });
+    on_http("/empty", HTTP_GET, h_empty);
     uint8_t zero_data[] = {};
     mock_mnt_set(zero_data, 0);
 
@@ -175,25 +206,21 @@ void test_large_file_body_fully_sent()
     // deliver every byte, not truncate at the window. (The host mock never returns
     // ERR_MEM, so this guards the pump's body-length accounting; the real TCP
     // send-window paging is verified on hardware.)
-    static const size_t N = 16000;
-    static uint8_t big[N];
-    for (size_t i = 0; i < N; i++)
+#define BIG_N 16000
+    static uint8_t big[BIG_N];
+    for (size_t i = 0; i < BIG_N; i++)
     {
         big[i] = (uint8_t)('A' + (i % 26)); // printable, no NUL, position-dependent
     }
 
-    on_http("/big", HTTP_GET, [](uint8_t slot_id, HttpReq *req) {
-        (void)req;
-        const pc_mnt_backend *fs = mock_mnt();
-        serve_file(slot_id, fs, "/big.bin", "application/octet-stream");
-    });
-    mock_mnt_set(big, N);
+    on_http("/big", HTTP_GET, h_big);
+    mock_mnt_set(big, BIG_N);
 
     feed_and_handle(0, "GET /big HTTP/1.1\r\n\r\n");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "200 OK"));
 
     char expected_cl[64];
-    snprintf(expected_cl, sizeof(expected_cl), "Content-Length: %u", (unsigned)N);
+    snprintf(expected_cl, sizeof(expected_cl), "Content-Length: %u", (unsigned)BIG_N);
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), expected_cl));
 
     // The whole body must be present after the header boundary, byte-exact.
@@ -202,8 +229,8 @@ void test_large_file_body_fully_sent()
     TEST_ASSERT_NOT_NULL(body);
     body += 4;
     size_t body_len = tcp_captured_len() - (size_t)(body - cap);
-    TEST_ASSERT_EQUAL_size_t(N, body_len); // no truncation
-    for (size_t i = 0; i < N; i++)
+    TEST_ASSERT_EQUAL_size_t(BIG_N, body_len); // no truncation
+    for (size_t i = 0; i < BIG_N; i++)
     {
         TEST_ASSERT_EQUAL_UINT8((uint8_t)('A' + (i % 26)), (uint8_t)body[i]);
     }
@@ -211,12 +238,8 @@ void test_large_file_body_fully_sent()
 
 void test_serve_file_does_not_affect_other_routes()
 {
-    static bool other_called = false;
-    on_http("/other", HTTP_GET, [](uint8_t slot_id, HttpReq *req) {
-        (void)req;
-        other_called = true;
-        send_text(slot_id, 200, "text/plain", "other");
-    });
+    static proto_bool other_called = PROTO_FALSE;
+    on_http("/other", HTTP_GET, h_other);
     on_http("/file", HTTP_GET, handle_html);
 
     mock_mnt_set_text("<html/>");
@@ -256,11 +279,7 @@ void test_multiple_content_types()
         http_reset(0);
         tcp_capture_reset();
 
-        on_http(cur_path, HTTP_GET, [](uint8_t slot_id, HttpReq *req) {
-            (void)req;
-            const pc_mnt_backend *fs = mock_mnt();
-            serve_file(slot_id, fs, cur_path, cur_ctype);
-        });
+        on_http(cur_path, HTTP_GET, h_case);
 
         mock_mnt_set_text(cases[i].body);
         char req_str[128];
@@ -448,9 +467,9 @@ void test_file_send_pump_connection_lost_midtransfer()
 {
     mock_mnt_reset();
     static const size_t N = 9000;
-    static uint8_t big[N];
-    memset(big, 'Z', N);
-    mock_mnt_add_text("/www/big.bin", big, N);
+    static uint8_t big[BIG_N];
+    memset(big, 'Z', BIG_N);
+    mock_mnt_add_text("/www/big.bin", big, BIG_N);
     serve_static("/", g_fs, "/www");
 
     mock_sndbuf() = 0; // no window: the headers queue, then the body transfer parks
@@ -487,7 +506,7 @@ void stress_serve_file_50_requests()
         conn_pool[slot].pcb = pc_net_host_pcb();
         http_reset(slot);
         tcp_capture_reset();
-        handler_called = false;
+        handler_called = PROTO_FALSE;
 
         push_str(slot, "GET /f HTTP/1.1\r\n\r\n");
         http_parse(slot);
@@ -501,11 +520,7 @@ void stress_serve_file_50_requests()
 
 void stress_alternate_missing_and_found()
 {
-    on_http("/f", HTTP_GET, [](uint8_t slot_id, HttpReq *req) {
-        (void)req;
-        const pc_mnt_backend *fs = mock_mnt();
-        serve_file(slot_id, fs, "/f.txt", "text/plain");
-    });
+    on_http("/f", HTTP_GET, h_f);
 
     for (int i = 0; i < 40; i++)
     {
