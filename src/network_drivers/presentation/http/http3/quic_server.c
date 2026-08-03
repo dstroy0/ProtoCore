@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_quic_server.cpp
+ * @file pc_quic_server.c
  * @brief HTTP/3 server glue - implementation. See pc_quic_server.h.
  */
 

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file wearlevel.cpp
+ * @file wearlevel.c
  * @brief Flash wear-leveling slot selector core (see wearlevel.h).
  */
 

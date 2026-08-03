@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file portable_aesgcm.cpp
+ * @file portable_aesgcm.c
  * @brief AES-256-GCM in software - the backend for a target with no accelerated AEAD.
  *
  * Software AES-256 plus a 4-bit-table GHASH. Selected explicitly by a vendor profile that sets

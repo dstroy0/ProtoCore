@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_snmp_ber.cpp
+ * @file pc_snmp_ber.c
  * @brief ASN.1 BER codec implementation for the SNMP agent.
  */
 

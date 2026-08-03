@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_h2_server.cpp
+ * @file pc_h2_server.c
  * @brief HTTP/2 engine <-> request-pipeline bridge - implementation. See pc_h2_server.h.
  */
 

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_tls13_msg.cpp
+ * @file pc_tls13_msg.c
  * @brief TLS 1.3 handshake messages for the QUIC handshake (see pc_tls13_msg.h).
  */
 

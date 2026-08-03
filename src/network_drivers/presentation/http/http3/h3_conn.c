@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_h3_conn.cpp
+ * @file pc_h3_conn.c
  * @brief HTTP/3 application engine over QUIC streams (see pc_h3_conn.h).
  */
 

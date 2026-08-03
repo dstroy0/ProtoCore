@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_snmp_crypto.cpp
+ * @file pc_snmp_crypto.c
  * @brief USM key localization (SHA-256) + AES-128-CFB implementation.
  */
 

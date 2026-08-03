@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_ntrip_caster_listener.cpp
+ * @file pc_ntrip_caster_listener.c
  * @brief Server-side NTRIP caster listener (see pc_ntrip_caster_listener.h). Answers PROTO_NTRIP_CASTER rover
  *        requests via the pure pc_ntrip_caster codec and fans RTCM corrections out to subscribed rovers.
  */

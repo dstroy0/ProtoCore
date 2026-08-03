@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_modbus_master.cpp
+ * @file pc_modbus_master.c
  * @brief Modbus TCP master codec - build read requests, parse responses (pure).
  */
 

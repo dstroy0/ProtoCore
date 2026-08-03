@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_dtls_record.cpp
+ * @file pc_dtls_record.c
  * @brief DTLS 1.3 record layer (RFC 9147 §4). See pc_dtls_record.h.
  */
 

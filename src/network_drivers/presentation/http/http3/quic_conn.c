@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_quic_conn.cpp
+ * @file pc_quic_conn.c
  * @brief Stateful QUIC v1 server connection engine (see pc_quic_conn.h).
  */
 

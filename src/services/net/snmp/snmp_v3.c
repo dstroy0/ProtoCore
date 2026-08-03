@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_snmp_v3.cpp
+ * @file pc_snmp_v3.c
  * @brief SNMPv3 USM: message framing, engine discovery, timeliness, auth, privacy.
  */
 

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file mnt.cpp
+ * @file mnt.c
  * @brief The mount registry and the built-in RAM backend.
  *
  * The RAM backend is a fixed pool of named in-BSS files and a fixed handle table; everything is

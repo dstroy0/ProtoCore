@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_snmp_agent.cpp
+ * @file pc_snmp_agent.c
  * @brief SNMP v1/v2c agent: MIB table, PDU dispatch, and the UDP binding.
  */
 

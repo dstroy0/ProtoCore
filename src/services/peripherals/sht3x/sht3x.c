@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file sht3x.cpp
+ * @file sht3x.c
  * @brief Sensirion SHT3x temperature / humidity codec - implementation. See sht3x.h.
  */
 

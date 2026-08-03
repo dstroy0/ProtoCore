@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file provisioning_service.cpp
+ * @file provisioning_service.c
  * @brief First-boot WiFi provisioning / captive portal (PC_ENABLE_PROVISIONING).
  *
  * The catch-all DNS responder uses the transport-layer UDP service (no add-on library);

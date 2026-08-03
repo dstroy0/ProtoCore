@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pca9685.cpp
+ * @file pca9685.c
  * @brief NXP PCA9685 PWM / servo driver codec - implementation. See pca9685.h.
  *
  * Prescale changes require the oscillator to be asleep, so begin() sleeps, writes PRESCALE,

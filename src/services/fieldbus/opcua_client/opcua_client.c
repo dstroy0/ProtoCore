@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_opcua_client.cpp
+ * @file pc_opcua_client.c
  * @brief OPC UA Binary client - request builders + response parsers (implementation).
  *
  * Pure byte-buffer logic reusing the opcua.h codec; no transport, no heap, no stdlib.

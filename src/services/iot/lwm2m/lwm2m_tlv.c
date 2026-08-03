@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_lwm2m_tlv.cpp
+ * @file pc_lwm2m_tlv.c
  * @brief OMA LwM2M TLV writer + reader (pure, host-tested).
  */
 

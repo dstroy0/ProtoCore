@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_quic_tp.cpp
+ * @file pc_quic_tp.c
  * @brief QUIC transport parameters codec (see pc_quic_tp.h).
  */
 

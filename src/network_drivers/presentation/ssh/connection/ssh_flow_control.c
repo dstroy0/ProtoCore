@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file ssh_flow_control.cpp
+ * @file ssh_flow_control.c
  * @brief SSH channel flow control - RFC 4254 sec 5.2 window arithmetic.
  */
 

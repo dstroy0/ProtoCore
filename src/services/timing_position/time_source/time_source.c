@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file time_source.cpp
+ * @file time_source.c
  * @brief Multi-source time fallback matrix - implementation.
  *
  * A fixed BSS table of sources queried in ascending priority. See time_source.h.

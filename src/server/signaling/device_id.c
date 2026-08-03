@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file device_id.cpp
+ * @file device_id.c
  * @brief Stable MAC-derived device UUID - implementation. See device_id.h.
  */
 

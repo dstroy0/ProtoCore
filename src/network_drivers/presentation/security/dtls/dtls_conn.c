@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_dtls_conn.cpp
+ * @file pc_dtls_conn.c
  * @brief DTLS 1.3 server handshake state machine (RFC 9147 §5-6). See pc_dtls_conn.h.
  */
 

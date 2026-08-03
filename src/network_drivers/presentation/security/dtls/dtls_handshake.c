@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_dtls_handshake.cpp
+ * @file pc_dtls_handshake.c
  * @brief DTLS 1.3 handshake framing and reliability (RFC 9147 §5, §7). See pc_dtls_handshake.h.
  */
 

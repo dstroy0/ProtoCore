@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file ota_service.cpp
+ * @file ota_service.c
  * @brief Authenticated streaming OTA firmware update (PC_ENABLE_OTA).
  */
 

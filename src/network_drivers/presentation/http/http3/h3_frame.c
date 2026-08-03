@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_h3_frame.cpp
+ * @file pc_h3_frame.c
  * @brief HTTP/3 framing - implementation. See pc_h3_frame.h.
  */
 

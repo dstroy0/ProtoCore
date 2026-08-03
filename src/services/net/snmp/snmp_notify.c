@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_snmp_notify.cpp
+ * @file pc_snmp_notify.c
  * @brief Outbound SNMP Trap / Inform PDU builder (host-testable) + the UDP send
  *        (ESP32 only). SNMPv3 USM notifications live in pc_snmp_v3.cpp.
  */

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_quic_frame.cpp
+ * @file pc_quic_frame.c
  * @brief QUIC frame parsing and building - implementation. See pc_quic_frame.h.
  */
 

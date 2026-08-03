@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file mpr121.cpp
+ * @file mpr121.c
  * @brief NXP MPR121 capacitive-touch codec - implementation. See mpr121.h.
  *
  * The bring-up register values are the NXP AN3944 / reference defaults (rising/falling/touched

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_gnss_survey.cpp
+ * @file pc_gnss_survey.c
  * @brief GNSS survey-in: WGS84 geodetic <-> ECEF + fixed-position averaging. See pc_gnss_survey.h.
  */
 

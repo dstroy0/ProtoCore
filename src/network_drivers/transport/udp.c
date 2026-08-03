@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file udp.cpp
+ * @file udp.c
  * @brief Layer 4 UDP datagram service - the only place lwIP UDP is touched.
  */
 

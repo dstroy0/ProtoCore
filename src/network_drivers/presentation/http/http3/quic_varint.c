@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_quic_varint.cpp
+ * @file pc_quic_varint.c
  * @brief QUIC variable-length integer coding - implementation. See pc_quic_varint.h.
  */
 

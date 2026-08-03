@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_hpack_prim.cpp
+ * @file pc_hpack_prim.c
  * @brief Shared HPACK/QPACK field-coding primitives - implementation. See pc_hpack_prim.h.
  *
  * The Huffman code (Appendix B) and the canonical Huffman decode tables are generated verbatim

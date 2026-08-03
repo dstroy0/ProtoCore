@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_sqlite_format.cpp
+ * @file pc_sqlite_format.c
  * @brief SQLite3 on-disk file-format parsers (see pc_sqlite_format.h).
  */
 
