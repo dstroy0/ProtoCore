@@ -47,6 +47,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`52fc242`](https://github.com/dstroy0/ProtoCore/commit/52fc242c7e62a7f2574e6c0b3320fce155885591))
 - update CHANGELOG.md [skip ci] ([`9e67986`](https://github.com/dstroy0/ProtoCore/commit/9e6798621951a5cfaae9c85dfd1f32ba91e70438))
 - update CHANGELOG.md [skip ci] ([`ae17dab`](https://github.com/dstroy0/ProtoCore/commit/ae17dab8c3b6ad50533a5a299fe1b836f88fda8a))
 - update CHANGELOG.md [skip ci] ([`e2e58ee`](https://github.com/dstroy0/ProtoCore/commit/e2e58ee0d130ddb85d190e4b712f3b96640ec132))
@@ -203,6 +204,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- correct what the SSH-mount entry claims is already tested ([`95e96ce`](https://github.com/dstroy0/ProtoCore/commit/95e96ce90f1b18830490b67687a79032c8bd1fb7))
+- roadmap the SSH mount and the multipoint mnt it needs ([`39a1a99`](https://github.com/dstroy0/ProtoCore/commit/39a1a99a37bf1b1ede7b69f13f5ccac785bd8c96))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`cc3e721`](https://github.com/dstroy0/ProtoCore/commit/cc3e7213562864d8b3389377526eb0a5333a648c))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`d1cea96`](https://github.com/dstroy0/ProtoCore/commit/d1cea965f967058099e5aeb8414f06bd734aebc6))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`e8a0034`](https://github.com/dstroy0/ProtoCore/commit/e8a003460b0a7525892b7178c76658fce6c6399b))
@@ -257,6 +260,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Refactor
 
+- pass the config-store owner by pointer ([`640069f`](https://github.com/dstroy0/ProtoCore/commit/640069fe39d86a75bb2086ce37e81969caccd932))
 - convert the web terminal to C ([`4d6f64f`](https://github.com/dstroy0/ProtoCore/commit/4d6f64ff8deedf87173471016bce5ab3a8b80b41))
 - convert the chunked-send reference variables to pointers ([`a5d1823`](https://github.com/dstroy0/ProtoCore/commit/a5d18230f7d6685610e2dae97df0dd002bb502d9))
 - convert the SSE module to C ([`a3f0813`](https://github.com/dstroy0/ProtoCore/commit/a3f08133fcd1fc661f9b1d76eeb5f004239a06f2))
@@ -289,6 +293,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- move the upload suite onto the mount seam ([`74f9f78`](https://github.com/dstroy0/ProtoCore/commit/74f9f785a2d85804ac1880e7a0d4489ddf73b8bd))
+- restore the SCP mode names after the scope strip ([`48888d8`](https://github.com/dstroy0/ProtoCore/commit/48888d81cb5850f95bf6e002a785f081ff0963b7))
 - restore the hotswap state names after the scope strip ([`9f745df`](https://github.com/dstroy0/ProtoCore/commit/9f745df97b836b0288162dc10633858fae28c12f))
 - size the host send capture for a whole multi-window response ([`392d378`](https://github.com/dstroy0/ProtoCore/commit/392d378ee9ce3c84cfd006564baf3730a944de50))
 - mount the file-serving fixture ([`0441bd0`](https://github.com/dstroy0/ProtoCore/commit/0441bd00f77aedb1e2bcd28beb3fafe2b6e2236c))
