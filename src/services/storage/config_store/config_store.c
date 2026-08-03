@@ -130,20 +130,20 @@ static proto_bool key_ok(const char *key)
     return key && key[0] && strnlen(key, PC_CONFIG_KEY_MAX + 1) < PC_CONFIG_KEY_MAX;
 }
 
-// Returns a mutable entry (callers mutate it), so it takes the owner by non-const reference.
-static Entry *find(ConfigStoreCtx &c, const char *key)
+// Returns a mutable entry (callers mutate it), so it takes the owner by non-const pointer.
+static Entry *find(ConfigStoreCtx *c, const char *key)
 {
     for (int i = 0; i < PC_CONFIG_MAX_ENTRIES; i++)
     {
-        if (c.tbl[i].used && strcmp(c.tbl[i].key, key) == 0)
+        if (c->tbl[i].used && strcmp(c->tbl[i].key, key) == 0)
         {
-            return &c.tbl[i];
+            return &c->tbl[i];
         }
     }
     return NULL;
 }
 
-static Entry *find_or_alloc(ConfigStoreCtx &c, const char *key)
+static Entry *find_or_alloc(ConfigStoreCtx *c, const char *key)
 {
     Entry *e = find(c, key);
     if (e)
@@ -152,19 +152,19 @@ static Entry *find_or_alloc(ConfigStoreCtx &c, const char *key)
     }
     for (int i = 0; i < PC_CONFIG_MAX_ENTRIES; i++)
     {
-        if (!c.tbl[i].used)
+        if (!c->tbl[i].used)
         {
-            c.tbl[i].used = PROTO_TRUE;
-            strncpy(c.tbl[i].key, key, PC_CONFIG_KEY_MAX - 1);
-            c.tbl[i].key[PC_CONFIG_KEY_MAX - 1] = '\0';
-            c.tbl[i].len = 0;
-            return &c.tbl[i];
+            c->tbl[i].used = PROTO_TRUE;
+            strncpy(c->tbl[i].key, key, PC_CONFIG_KEY_MAX - 1);
+            c->tbl[i].key[PC_CONFIG_KEY_MAX - 1] = '\0';
+            c->tbl[i].len = 0;
+            return &c->tbl[i];
         }
     }
     return NULL; // table full
 }
 
-static proto_bool store(ConfigStoreCtx &c, const char *key, const void *data, size_t len)
+static proto_bool store(ConfigStoreCtx *c, const char *key, const void *data, size_t len)
 {
     if (!key_ok(key) || len > PC_CONFIG_VAL_MAX)
     {
@@ -192,7 +192,7 @@ proto_bool pc_config_set_str(const char *key, const char *val)
     {
         return PROTO_FALSE;
     }
-    return store(s_cfg, key, val, strnlen(val, PC_CONFIG_VAL_MAX) + 1); // include the null terminator
+    return store(&s_cfg, key, val, strnlen(val, PC_CONFIG_VAL_MAX) + 1); // include the null terminator
 }
 
 size_t pc_config_get_str(const char *key, char *out, size_t out_cap, const char *def)
@@ -201,7 +201,7 @@ size_t pc_config_get_str(const char *key, char *out, size_t out_cap, const char 
     {
         return 0;
     }
-    Entry *e = key_ok(key) ? find(s_cfg, key) : NULL;
+    Entry *e = key_ok(key) ? find(&s_cfg, key) : NULL;
     const char *src = e ? (const char *)e->val : (def ? def : "");
     size_t n = strnlen(src, out_cap);
     if (n > out_cap - 1)
@@ -216,12 +216,12 @@ size_t pc_config_get_str(const char *key, char *out, size_t out_cap, const char 
 proto_bool pc_config_set_u32(const char *key, uint32_t val)
 {
     uint8_t b[4] = {(uint8_t)val, (uint8_t)(val >> 8), (uint8_t)(val >> 16), (uint8_t)(val >> 24)};
-    return store(s_cfg, key, b, sizeof(b));
+    return store(&s_cfg, key, b, sizeof(b));
 }
 
 uint32_t pc_config_get_u32(const char *key, uint32_t def)
 {
-    Entry *e = key_ok(key) ? find(s_cfg, key) : NULL;
+    Entry *e = key_ok(key) ? find(&s_cfg, key) : NULL;
     if (!e || e->len < 4)
     {
         return def;
@@ -235,12 +235,12 @@ proto_bool pc_config_set_blob(const char *key, const void *data, size_t len)
     {
         return PROTO_FALSE;
     }
-    return store(s_cfg, key, data, len);
+    return store(&s_cfg, key, data, len);
 }
 
 size_t pc_config_get_blob(const char *key, void *out, size_t out_cap)
 {
-    Entry *e = key_ok(key) ? find(s_cfg, key) : NULL;
+    Entry *e = key_ok(key) ? find(&s_cfg, key) : NULL;
     if (!e || !out)
     {
         return 0;
@@ -252,7 +252,7 @@ size_t pc_config_get_blob(const char *key, void *out, size_t out_cap)
 
 proto_bool pc_config_erase(const char *key)
 {
-    Entry *e = key_ok(key) ? find(s_cfg, key) : NULL;
+    Entry *e = key_ok(key) ? find(&s_cfg, key) : NULL;
     if (!e)
     {
         return PROTO_FALSE;
@@ -266,7 +266,7 @@ proto_bool pc_config_clear(void)
 {
     for (int i = 0; i < PC_CONFIG_MAX_ENTRIES; i++)
     {
-        s_cfg.tbl[i] = Entry{};
+        s_cfg.tbl[i] = (Entry){0};
     }
     return PROTO_TRUE;
 }
