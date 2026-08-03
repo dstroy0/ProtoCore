@@ -23,8 +23,8 @@ static void ads1115_bench_task(void *)
         volatile uint16_t sink16 = 0;
         volatile int32_t sink32 = 0;
         DBENCH_OP("pc_ads1115_config_single", 200000,
-                  sink16 += pc_ads1115_config_single(0, Ads1115Gain::ADS1115_GAIN_1, Ads1115DataRate::ADS1115_DR_128));
-        DBENCH_OP("pc_ads1115_raw_to_uv", 200000, sink32 += pc_ads1115_raw_to_uv(16384, Ads1115Gain::ADS1115_GAIN_2));
+                  sink16 += pc_ads1115_config_single(0, ADS1115_GAIN_1, ADS1115_DR_128));
+        DBENCH_OP("pc_ads1115_raw_to_uv", 200000, sink32 += pc_ads1115_raw_to_uv(16384, ADS1115_GAIN_2));
         (void)sink16;
         (void)sink32;
         Serial.println("DB ==== DONE ====");

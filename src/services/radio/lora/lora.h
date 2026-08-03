@@ -64,9 +64,9 @@ uint16_t pc_lora_frame_build(const pc_lora_header *hdr, const uint8_t *payload, 
 // --- Driver: SX127x over a register-access bus ----------------------------------------
 
 /** @brief Read one SX127x register (@p reg is the bare 7-bit address). */
-using pc_lora_reg_read_fn = uint8_t (*)(uint8_t reg, void *ctx);
+typedef uint8_t (*pc_lora_reg_read_fn)(uint8_t reg, void *ctx);
 /** @brief Write one SX127x register (@p reg is the bare 7-bit address). */
-using pc_lora_reg_write_fn = void (*)(uint8_t reg, uint8_t val, void *ctx);
+typedef void (*pc_lora_reg_write_fn)(uint8_t reg, uint8_t val, void *ctx);
 
 /** @brief The register-access bus a driver call uses (your SPI + chip-select behind it). */
 typedef struct

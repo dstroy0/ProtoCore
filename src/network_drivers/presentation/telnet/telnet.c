@@ -15,17 +15,16 @@
 #include <stdarg.h>
 #include <string.h>
 
-// Telnet protocol bytes (RFC 854 / 858 / 857): wire values compared/emitted, so integer constants
-// in a namespacing struct.
-#define E 240
-#define B 250
-#define L 251
-#define T 252
-#define O 253
-#define T 254
-#define C 255
-#define O 1
-#define A 3
+// Telnet protocol bytes (RFC 854 / 858 / 857).
+#define T_SE 240
+#define T_SB 250
+#define T_WILL 251
+#define T_WONT 252
+#define T_DO 253
+#define T_DONT 254
+#define T_IAC 255
+#define OPT_ECHO 1
+#define OPT_SGA 3
 
 // IAC parser state per connection (a mutually-exclusive state, not a wire value).
 typedef enum PROTO_ENUM_PACKED
@@ -51,7 +50,7 @@ typedef struct
 typedef struct
 {
     TelnetConn tn[MAX_TELNET_CONNS];
-    TelnetCommandCb cmd_cb = NULL;
+    TelnetCommandCb cmd_cb;
 } TelnetCtx;
 static TelnetCtx s_telnet;
 
@@ -139,8 +138,7 @@ void pc_telnet_accept(uint8_t slot)
     t->st = TN_NORMAL;
 
     // Server-side echo + character-at-a-time (suppress go-ahead).
-    static const uint8_t neg[] = {TelnetByte::T_IAC, TelnetByte::T_WILL, TelnetByte::OPT_ECHO,
-                                  TelnetByte::T_IAC, TelnetByte::T_WILL, TelnetByte::OPT_SGA};
+    static const uint8_t neg[] = {T_IAC, T_WILL, OPT_ECHO, T_IAC, T_WILL, OPT_SGA};
     raw_send(slot, neg, sizeof(neg));
     raw_send(slot, "PC Telnet ready\r\n> ", 22);
 }
@@ -209,7 +207,7 @@ void pc_telnet_rx(uint8_t slot)
                        // branch can't be reached from any host input
         {
         case TN_NORMAL:
-            if (b == TelnetByte::T_IAC)
+            if (b == T_IAC)
             {
                 t->st = TN_IAC;
             }
@@ -219,17 +217,16 @@ void pc_telnet_rx(uint8_t slot)
             }
             break;
         case TN_IAC:
-            if (b == TelnetByte::T_SB)
+            if (b == T_SB)
             {
                 t->st = TN_SB;
             }
-            else if (b == TelnetByte::T_WILL || b == TelnetByte::T_WONT || b == TelnetByte::T_DO ||
-                     b == TelnetByte::T_DONT)
+            else if (b == T_WILL || b == T_WONT || b == T_DO || b == T_DONT)
             {
                 t->cmd = b;
                 t->st = TN_OPT;
             }
-            else if (b == TelnetByte::T_IAC)
+            else if (b == T_IAC)
             {
                 handle_data(slot, t, 0xFF); // escaped literal 0xFF
                 t->st = TN_NORMAL;
@@ -243,24 +240,24 @@ void pc_telnet_rx(uint8_t slot)
             // Refuse what we don't actively support; stay quiet on options we
             // already offered (ECHO/SGA) to avoid negotiation loops.
             uint8_t reply = 0;
-            if (t->cmd == TelnetByte::T_DO && b != TelnetByte::OPT_ECHO && b != TelnetByte::OPT_SGA)
+            if (t->cmd == T_DO && b != OPT_ECHO && b != OPT_SGA)
             {
-                reply = TelnetByte::T_WONT;
+                reply = T_WONT;
             }
-            else if (t->cmd == TelnetByte::T_WILL)
+            else if (t->cmd == T_WILL)
             {
-                reply = TelnetByte::T_DONT;
+                reply = T_DONT;
             }
             if (reply)
             {
-                uint8_t resp[3] = {TelnetByte::T_IAC, reply, b};
+                uint8_t resp[3] = {T_IAC, reply, b};
                 raw_send(slot, resp, 3);
             }
             t->st = TN_NORMAL;
             break;
         }
         case TN_SB:
-            if (b == TelnetByte::T_SE)
+            if (b == T_SE)
             {
                 t->st = TN_NORMAL; // end of subnegotiation (contents ignored)
             }

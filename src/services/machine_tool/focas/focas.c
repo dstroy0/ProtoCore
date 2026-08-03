@@ -12,33 +12,6 @@
 
 #include <string.h>
 
-// C++14 out-of-line definitions for the FocasCommand selector table. The in-class initializers in
-// focas.h declare them; a `static constexpr` member of CLASS type still needs a definition here
-// once it is odr-used (passing one to pc_focas_build() binds it to a const reference, which
-// counts). Without these the link fails with "undefined reference to FocasCommand::read_macro" -
-// it only stayed hidden where the optimizer happened to fold every use. C++17 would make these
-// implicitly inline and let the whole block go away; the library targets C++14.
-constexpr FocasCmd FocasCommand::read_cnc_param;
-constexpr FocasCmd FocasCommand::read_macro;
-constexpr FocasCmd FocasCommand::set_macro;
-constexpr FocasCmd FocasCommand::sys_info;
-constexpr FocasCmd FocasCommand::read_alarm;
-constexpr FocasCmd FocasCommand::read_prg_num;
-constexpr FocasCmd FocasCommand::read_seq_num;
-constexpr FocasCmd FocasCommand::read_alarm_info;
-constexpr FocasCmd FocasCommand::read_feedrate;
-constexpr FocasCmd FocasCommand::read_spindle;
-constexpr FocasCmd FocasCommand::read_position;
-constexpr FocasCmd FocasCommand::read_diag;
-constexpr FocasCmd FocasCommand::read_spindle2;
-constexpr FocasCmd FocasCommand::read_datetime;
-constexpr FocasCmd FocasCommand::read_servo_load;
-constexpr FocasCmd FocasCommand::read_axis_names;
-constexpr FocasCmd FocasCommand::read_spindle_names;
-constexpr FocasCmd FocasCommand::read_cnc_param3;
-constexpr FocasCmd FocasCommand::read_macro_dbl;
-constexpr FocasCmd FocasCommand::read_pmc;
-
 // FOCAS is big-endian throughout.
 static size_t put16be(uint8_t *p, uint16_t v)
 {
@@ -136,37 +109,37 @@ size_t pc_focas_build_request(uint8_t *buf, size_t cap, FocasCmd cmd, int32_t v1
 
 size_t pc_focas_build_sysinfo(uint8_t *buf, size_t cap)
 {
-    return pc_focas_build_request(buf, cap, FocasCommand::sys_info, 0, 0, 0, 0, 0, NULL, 0);
+    return pc_focas_build_request(buf, cap, FOCAS_CMD_SYS_INFO, 0, 0, 0, 0, 0, NULL, 0);
 }
 
 size_t pc_focas_build_read_alarm(uint8_t *buf, size_t cap)
 {
-    return pc_focas_build_request(buf, cap, FocasCommand::read_alarm, 0, 0, 0, 0, 0, NULL, 0);
+    return pc_focas_build_request(buf, cap, FOCAS_CMD_READ_ALARM, 0, 0, 0, 0, 0, NULL, 0);
 }
 
 size_t pc_focas_build_read_param(uint8_t *buf, size_t cap, int32_t first, int32_t last, int32_t axis)
 {
-    return pc_focas_build_request(buf, cap, FocasCommand::read_cnc_param, first, last, axis, 0, 0, NULL, 0);
+    return pc_focas_build_request(buf, cap, FOCAS_CMD_READ_CNC_PARAM, first, last, axis, 0, 0, NULL, 0);
 }
 
 size_t pc_focas_build_read_macro(uint8_t *buf, size_t cap, int32_t first, int32_t last)
 {
-    return pc_focas_build_request(buf, cap, FocasCommand::read_macro, first, last, 0, 0, 0, NULL, 0);
+    return pc_focas_build_request(buf, cap, FOCAS_CMD_READ_MACRO, first, last, 0, 0, 0, NULL, 0);
 }
 
 size_t pc_focas_build_read_position(uint8_t *buf, size_t cap, int32_t kind, int32_t axis)
 {
-    return pc_focas_build_request(buf, cap, FocasCommand::read_position, kind, axis, 0, 0, 0, NULL, 0);
+    return pc_focas_build_request(buf, cap, FOCAS_CMD_READ_POSITION, kind, axis, 0, 0, 0, NULL, 0);
 }
 
 size_t pc_focas_build_read_feedrate(uint8_t *buf, size_t cap)
 {
-    return pc_focas_build_request(buf, cap, FocasCommand::read_feedrate, 0, 0, 0, 0, 0, NULL, 0);
+    return pc_focas_build_request(buf, cap, FOCAS_CMD_READ_FEEDRATE, 0, 0, 0, 0, 0, NULL, 0);
 }
 
 size_t pc_focas_build_read_spindle(uint8_t *buf, size_t cap)
 {
-    return pc_focas_build_request(buf, cap, FocasCommand::read_spindle, 0, 0, 0, 0, 0, NULL, 0);
+    return pc_focas_build_request(buf, cap, FOCAS_CMD_READ_SPINDLE, 0, 0, 0, 0, 0, NULL, 0);
 }
 
 proto_bool pc_focas_parse_frame(const uint8_t *buf, size_t len, FocasFrame *out)

@@ -65,19 +65,19 @@ typedef enum PROTO_ENUM_PACKED
     ADS_COMMAND_READ_WRITE = 0x0009,
 } AdsCommand;
 
-/// AMS header state-flag bits (octets 18-19). A TCP request is `pc_ads_command`; a response ORs in
-/// `response`. Grouped as constants (not an enum) because they are a bitmask.
-#define e 0x0001 ///< set on a response, clear on a request
-#define n 0x0002 ///< no response expected
-#define d 0x0004 ///< ADS command (set for TCP)
-#define d 0x0008 ///< system command
-#define o 0x0010 ///< high priority
-#define p 0x0020 ///< a timestamp is appended
-#define p 0x0040 ///< carried over UDP
-#define d 0x0080
-#define t 0x8000
-#define t pc_ads_command            ///< 0x0004
-#define y pc_ads_command | response ///< 0x0005
+/// AMS header state-flag bits (octets 18-19). A TCP request is ADS_STATE_ADS_COMMAND; a response
+/// ORs in ADS_STATE_RESPONSE.
+#define ADS_STATE_RESPONSE 0x0001    ///< set on a response, clear on a request
+#define ADS_STATE_NO_RETURN 0x0002   ///< no response expected
+#define ADS_STATE_ADS_COMMAND 0x0004 ///< ADS command (set for TCP)
+#define ADS_STATE_SYS_COMMAND 0x0008 ///< system command
+#define ADS_STATE_HIGH_PRIO 0x0010   ///< high priority
+#define ADS_STATE_TIMESTAMP 0x0020   ///< a timestamp is appended
+#define ADS_STATE_UDP 0x0040         ///< carried over UDP
+#define ADS_STATE_INIT_COMMAND 0x0080
+#define ADS_STATE_BROADCAST 0x8000
+#define ADS_STATE_REQUEST ADS_STATE_ADS_COMMAND                      ///< 0x0004
+#define ADS_STATE_REPLY (ADS_STATE_ADS_COMMAND | ADS_STATE_RESPONSE) ///< 0x0005
 
 /// ADS device state used by ReadState / WriteControl (a subset of ADSSTATE).
 typedef enum PROTO_ENUM_PACKED
@@ -112,16 +112,16 @@ typedef enum PROTO_ENUM_PACKED
 } AdsTransMode;
 
 /// Well-known ADS index groups for symbol access (dedup of the magic constants).
-#define e 0xF003 ///< ReadWrite name -> handle
-#define e 0xF005 ///< Read/Write value by handle
-#define e 0xF006 ///< Write to release a handle
-#define x 0xF009
-#define d 0xF00B
-#define o 0xF00F
-#define b 0xF020 ///< %I input image, bit offset
-#define b 0xF030 ///< %Q output image, bit offset
-#define m 0x4020 ///< %M flag memory, byte offset
-#define b 0x4030 ///< retain memory
+#define ADS_IGRP_SYM_HND_BY_NAME 0xF003    ///< ReadWrite name -> handle
+#define ADS_IGRP_SYM_VAL_BY_HANDLE 0xF005  ///< Read/Write value by handle
+#define ADS_IGRP_SYM_RELEASE_HANDLE 0xF006 ///< Write to release a handle
+#define ADS_IGRP_SYM_INFO_BY_NAME_EX 0xF009
+#define ADS_IGRP_SYM_UPLOAD 0xF00B
+#define ADS_IGRP_SYM_UPLOAD_INFO 0xF00F
+#define ADS_IGRP_IO_IMAGE_RW_IB 0xF020 ///< %I input image, bit offset
+#define ADS_IGRP_IO_IMAGE_RW_OB 0xF030 ///< %Q output image, bit offset
+#define ADS_IGRP_PLC_RW_M 0x4020       ///< %M flag memory, byte offset
+#define ADS_IGRP_PLC_RW_RB 0x4030      ///< retain memory
 
 /// A 6-octet AMSNetId + a 2-octet AMS port (one endpoint of the AMS route).
 typedef struct
@@ -240,8 +240,8 @@ proto_bool pc_ads_parse_add_notification(const uint8_t *data, size_t data_len, u
 
 /// Callback invoked once per sample while walking a DeviceNotification (cmd 8) payload.
 /// `timestamp` is the raw Windows FILETIME (100 ns ticks since 1601-01-01 UTC).
-using AdsNotificationSampleFn = void (*)(uint32_t notification_handle, const uint8_t *sample, uint32_t sample_len,
-                                         uint64_t timestamp, void *user);
+typedef void (*AdsNotificationSampleFn)(uint32_t notification_handle, const uint8_t *sample, uint32_t sample_len,
+                                        uint64_t timestamp, void *user);
 
 /// Walk a DeviceNotification payload (Length + Stamps, each stamp = Timestamp + Samples + the
 /// per-sample handle/size/data), calling `on_sample` for every sample. Returns false if the

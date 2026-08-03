@@ -209,14 +209,14 @@ size_t pc_smb2_build_negotiate_311(uint8_t *buf, size_t cap, const uint8_t clien
     // GCOVR_EXCL_STOP
 
     uint8_t *b = buf + PC_SMB2_HEADER_SIZE;
-    memset(b, 0, ctx_start - PC_SMB2_HEADER_SIZE);               // fixed body + dialects + alignment pad
-    pc_wr16le(b + 0, 36);                                        // StructureSize
-    pc_wr16le(b + 2, ndialects);                                 // DialectCount
-    pc_wr16le(b + 4, security_mode);                             // SecurityMode
-    pc_wr32le(b + 8, Smb2GlobalCap::SMB2_GLOBAL_CAP_ENCRYPTION); // Capabilities: advertise encryption support
-    memcpy(b + 12, client_guid, 16);                             // ClientGuid
-    pc_wr32le(b + 28, (uint32_t)ctx_start);                      // NegotiateContextOffset (overlays ClientStartTime)
-    pc_wr16le(b + 32, ctx_count); // NegotiateContextCount (preauth + signing [+ encryption])
+    memset(b, 0, ctx_start - PC_SMB2_HEADER_SIZE); // fixed body + dialects + alignment pad
+    pc_wr16le(b + 0, 36);                          // StructureSize
+    pc_wr16le(b + 2, ndialects);                   // DialectCount
+    pc_wr16le(b + 4, security_mode);               // SecurityMode
+    pc_wr32le(b + 8, SMB2_GLOBAL_CAP_ENCRYPTION);  // Capabilities: advertise encryption support
+    memcpy(b + 12, client_guid, 16);               // ClientGuid
+    pc_wr32le(b + 28, (uint32_t)ctx_start);        // NegotiateContextOffset (overlays ClientStartTime)
+    pc_wr16le(b + 32, ctx_count);                  // NegotiateContextCount (preauth + signing [+ encryption])
     for (uint16_t i = 0; i < ndialects; i++)
     {
         pc_wr16le(b + 36 + i * 2, (uint16_t)dialects[i]);
@@ -224,13 +224,13 @@ size_t pc_smb2_build_negotiate_311(uint8_t *buf, size_t cap, const uint8_t clien
 
     // Context 1 - PREAUTH_INTEGRITY_CAPABILITIES (mandatory once 0x0311 is offered), §2.2.3.1.1.
     uint8_t *c = buf + ctx_start;
-    pc_wr16le(c + 0, Smb2NegotiateContextType::SMB2_PREAUTH_INTEGRITY_CAPABILITIES);
+    pc_wr16le(c + 0, SMB2_PREAUTH_INTEGRITY_CAPABILITIES);
     pc_wr16le(c + 2, (uint16_t)preauth_data);
-    pc_wr32le(c + 4, 0);                                                 // Reserved
-    pc_wr16le(c + 8, 1);                                                 // HashAlgorithmCount
-    pc_wr16le(c + 10, (uint16_t)salt_len);                               // SaltLength
-    pc_wr16le(c + 12, Smb2HashAlgorithm::SMB2_PREAUTH_INTEGRITY_SHA512); // HashAlgorithms[0]
-    memcpy(c + 14, salt, salt_len);                                      // Salt
+    pc_wr32le(c + 4, 0);                              // Reserved
+    pc_wr16le(c + 8, 1);                              // HashAlgorithmCount
+    pc_wr16le(c + 10, (uint16_t)salt_len);            // SaltLength
+    pc_wr16le(c + 12, SMB2_PREAUTH_INTEGRITY_SHA512); // HashAlgorithms[0]
+    memcpy(c + 14, salt, salt_len);                   // Salt
 
     // Context 2 - SIGNING_CAPABILITIES advertising AES-CMAC (the algorithm this client signs 3.x with;
     // the mandatory-to-implement SMB 3.x signer and the Windows default). A 3.1.1 server that accepts it
@@ -240,11 +240,11 @@ size_t pc_smb2_build_negotiate_311(uint8_t *buf, size_t cap, const uint8_t clien
     {
         memset(c + preauth_ctx, 0, preauth_pad);
     }
-    pc_wr16le(c2 + 0, Smb2NegotiateContextType::SMB2_SIGNING_CAPABILITIES);
-    pc_wr16le(c2 + 2, 4);                                            // DataLength
-    pc_wr32le(c2 + 4, 0);                                            // Reserved
-    pc_wr16le(c2 + 8, 1);                                            // SigningAlgorithmCount
-    pc_wr16le(c2 + 10, Smb2SigningAlgorithm::SMB2_SIGNING_AES_CMAC); // SigningAlgorithms[0]
+    pc_wr16le(c2 + 0, SMB2_SIGNING_CAPABILITIES);
+    pc_wr16le(c2 + 2, 4);                      // DataLength
+    pc_wr32le(c2 + 4, 0);                      // Reserved
+    pc_wr16le(c2 + 8, 1);                      // SigningAlgorithmCount
+    pc_wr16le(c2 + 10, SMB2_SIGNING_AES_CMAC); // SigningAlgorithms[0]
 
     // Context 3 - ENCRYPTION_CAPABILITIES listing the offered ciphers in preference order (§2.2.3.1.2). A
     // server that accepts one may require an encrypted session/share; we then wrap messages in a
@@ -256,7 +256,7 @@ size_t pc_smb2_build_negotiate_311(uint8_t *buf, size_t cap, const uint8_t clien
         {
             memset(c2 + sign_ctx, 0, sign_pad);
         }
-        pc_wr16le(c3 + 0, Smb2NegotiateContextType::SMB2_ENCRYPTION_CAPABILITIES);
+        pc_wr16le(c3 + 0, SMB2_ENCRYPTION_CAPABILITIES);
         pc_wr16le(c3 + 2, (uint16_t)(2 + 2 * cipher_count)); // DataLength = CipherCount(2) + Ciphers[]
         pc_wr32le(c3 + 4, 0);                                // Reserved
         pc_wr16le(c3 + 8, (uint16_t)cipher_count);           // CipherCount
@@ -312,7 +312,7 @@ proto_bool pc_smb2_parse_negotiate_contexts(const uint8_t *msg, size_t len, Smb2
             return PROTO_FALSE;
         }
         const uint8_t *d = msg + data;
-        if (ctype == Smb2NegotiateContextType::SMB2_PREAUTH_INTEGRITY_CAPABILITIES && dlen >= 6)
+        if (ctype == SMB2_PREAUTH_INTEGRITY_CAPABILITIES && dlen >= 6)
         {
             uint16_t hcount = pc_rd16le(d + 0); // HashAlgorithmCount
             uint16_t slen = pc_rd16le(d + 2);   // SaltLength
@@ -324,7 +324,7 @@ proto_bool pc_smb2_parse_negotiate_contexts(const uint8_t *msg, size_t len, Smb2
                 out->salt = slen ? d + 4 + (size_t)hcount * 2 : NULL;
             }
         }
-        else if (ctype == Smb2NegotiateContextType::SMB2_SIGNING_CAPABILITIES && dlen >= 4)
+        else if (ctype == SMB2_SIGNING_CAPABILITIES && dlen >= 4)
         {
             uint16_t scount = pc_rd16le(d + 0); // SigningAlgorithmCount
             if (scount >= 1 && (size_t)dlen >= 2 + (size_t)scount * 2)
@@ -333,7 +333,7 @@ proto_bool pc_smb2_parse_negotiate_contexts(const uint8_t *msg, size_t len, Smb2
                 out->signing_algorithm = pc_rd16le(d + 2); // SigningAlgorithms[0]
             }
         }
-        else if (ctype == Smb2NegotiateContextType::SMB2_ENCRYPTION_CAPABILITIES && dlen >= 4)
+        else if (ctype == SMB2_ENCRYPTION_CAPABILITIES && dlen >= 4)
         {
             uint16_t ccount = pc_rd16le(d + 0); // CipherCount
             if (ccount >= 1 && (size_t)dlen >= 2 + (size_t)ccount * 2)
@@ -756,7 +756,7 @@ static void smb2_sign_framed(const uint8_t key[16], uint8_t *msg, size_t msg_len
     {
         return;
     }
-    pc_wr32le(msg + PC_SMB2_FLAGS_OFF, pc_rd32le(msg + PC_SMB2_FLAGS_OFF) | Smb2HeaderFlags::SMB2_FLAGS_SIGNED);
+    pc_wr32le(msg + PC_SMB2_FLAGS_OFF, pc_rd32le(msg + PC_SMB2_FLAGS_OFF) | SMB2_FLAGS_SIGNED);
     memset(msg + PC_SMB2_SIGNATURE_OFF, 0, PC_SMB2_SIGNATURE_LEN); // zero the Signature before the MAC
     uint8_t tag[PC_SMB2_SIGNATURE_LEN];
     mac(key, msg, msg_len, tag);
@@ -928,7 +928,7 @@ size_t pc_smb2_encrypt(uint16_t cipher, const uint8_t *key, const uint8_t nonce[
     proto_bool ok = PROTO_FALSE;
     switch (cipher)
     {
-    case Smb2Cipher::SMB2_ENCRYPTION_AES128_GCM: {
+    case SMB2_ENCRYPTION_AES128_GCM: {
         // Per-call context: same reasoning as the AES-256 branch below - not a hot enough path to justify
         // a per-session one, and the lifecycle cost is at least visible here.
         SecureBorrow g_b(PC_WORK_AES128GCM, 8);
@@ -938,7 +938,7 @@ size_t pc_smb2_encrypt(uint16_t cipher, const uint8_t *key, const uint8_t nonce[
     }
         ok = PROTO_TRUE;
         break;
-    case Smb2Cipher::SMB2_ENCRYPTION_AES256_GCM: {
+    case SMB2_ENCRYPTION_AES256_GCM: {
         // Per-call context: this path is not hot enough to justify a per-session one. The cost is the
         // ~9,200-cycle lifecycle documented in aesgcm.h - hoist the context into session state if it
         // ever shows up in a profile.
@@ -949,8 +949,8 @@ size_t pc_smb2_encrypt(uint16_t cipher, const uint8_t *key, const uint8_t nonce[
     }
         ok = PROTO_TRUE;
         break;
-    case Smb2Cipher::SMB2_ENCRYPTION_AES128_CCM:
-    case Smb2Cipher::SMB2_ENCRYPTION_AES256_CCM:
+    case SMB2_ENCRYPTION_AES128_CCM:
+    case SMB2_ENCRYPTION_AES256_CCM:
         ok = pc_aesccm_seal_tag(key, key_len, out + 20, nonce_len, aad, 32, msg, msg_len, ct, tag);
         break;
     default:
@@ -996,7 +996,7 @@ size_t pc_smb2_decrypt(uint16_t cipher, const uint8_t *key, const uint8_t *in, s
     proto_bool ok = PROTO_FALSE;
     switch (cipher)
     {
-    case Smb2Cipher::SMB2_ENCRYPTION_AES128_GCM: {
+    case SMB2_ENCRYPTION_AES128_GCM: {
         // Per-call context: same reasoning as the AES-256 branch below - not a hot enough path to justify
         // a per-session one, and the lifecycle cost is at least visible here.
         SecureBorrow g_b(PC_WORK_AES128GCM, 8);
@@ -1005,7 +1005,7 @@ size_t pc_smb2_decrypt(uint16_t cipher, const uint8_t *key, const uint8_t *in, s
         pc_aes128gcm_key_wipe(g);
     }
     break;
-    case Smb2Cipher::SMB2_ENCRYPTION_AES256_GCM: {
+    case SMB2_ENCRYPTION_AES256_GCM: {
         // Per-call context: this path is not hot enough to justify a per-session one. The cost is the
         // ~9,200-cycle lifecycle documented in aesgcm.h - hoist the context into session state if it
         // ever shows up in a profile.
@@ -1015,8 +1015,8 @@ size_t pc_smb2_decrypt(uint16_t cipher, const uint8_t *key, const uint8_t *in, s
         pc_aesgcm_key_wipe(gcm);
     }
     break;
-    case Smb2Cipher::SMB2_ENCRYPTION_AES128_CCM:
-    case Smb2Cipher::SMB2_ENCRYPTION_AES256_CCM:
+    case SMB2_ENCRYPTION_AES128_CCM:
+    case SMB2_ENCRYPTION_AES256_CCM:
         ok = pc_aesccm_open_tag(key, key_len, aad, nonce_len, aad, 32, ct, ct_len, tag, out);
         break;
     default:

@@ -281,8 +281,8 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
 
 static proto_bool process_client_finished(QuicTls *qt, const uint8_t *msg, size_t msg_len)
 {
-    if (msg[0] != TlsHs::TLS_HS_FINISHED || msg_len != 4 + 32) // GCOVR_EXCL_LINE  process_message only routes a
-    {                                                          // Finished here, so the type arm cannot be taken
+    if (msg[0] != TLS_HS_FINISHED || msg_len != 4 + 32) // GCOVR_EXCL_LINE  process_message only routes a
+    {                                                   // Finished here, so the type arm cannot be taken
         fail(qt, TlsAlert::TLS_ALERT_DECODE_ERROR);
         return PROTO_FALSE;
     }
@@ -306,11 +306,11 @@ static proto_bool process_client_finished(QuicTls *qt, const uint8_t *msg, size_
 
 static proto_bool process_message(QuicTls *qt, int level, const uint8_t *msg, size_t msg_len)
 {
-    if (level == QuicEnc::QUIC_ENC_INITIAL && qt->state == QTLS_START && msg[0] == TlsHs::TLS_HS_CLIENT_HELLO)
+    if (level == QuicEnc::QUIC_ENC_INITIAL && qt->state == QTLS_START && msg[0] == TLS_HS_CLIENT_HELLO)
     {
         return process_client_hello(qt, msg, msg_len);
     }
-    if (level == QuicEnc::QUIC_ENC_HANDSHAKE && qt->state == QTLS_WAIT_FINISHED && msg[0] == TlsHs::TLS_HS_FINISHED)
+    if (level == QuicEnc::QUIC_ENC_HANDSHAKE && qt->state == QTLS_WAIT_FINISHED && msg[0] == TLS_HS_FINISHED)
     {
         return process_client_finished(qt, msg, msg_len);
     }

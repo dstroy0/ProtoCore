@@ -64,9 +64,8 @@ typedef enum PROTO_ENUM_PACKED
     SMB2_DIALECT_0311 = 0x0311, ///< SMB 3.1.1
 } Smb2Dialect;
 
-// These are SMB2 wire constants: flag words that get OR'd/AND'd and field values compared against the
-// uint8/16/32 wire fields of a parsed header. They live in namespacing structs of static constexpr
-// members - not enum class, which would force a cast at every bitwise op and every wire compare.
+// SMB2 wire constants: flag words that get OR'd/AND'd, and field values compared against the
+// uint8/16/32 wire fields of a parsed header.
 
 /** @brief Fixed SMB2 sync header size (MS-SMB2 §2.2.1). */
 #define PC_SMB2_HEADER_SIZE 64
@@ -141,10 +140,10 @@ typedef struct
 #define SMB2_SIGNING_CAPABILITIES 0x0008
 
 /** @brief Preauth-integrity hash algorithm IDs (MS-SMB2 §2.2.3.1.1). */
-#define A512 0x0001
+#define SMB2_PREAUTH_INTEGRITY_SHA512 0x0001
 
 /** @brief Signing algorithm IDs (MS-SMB2 §2.2.3.1.7). */
-#define A256 0x0000
+#define SMB2_SIGNING_HMAC_SHA256 0x0000
 #define SMB2_SIGNING_AES_CMAC 0x0001
 #define SMB2_SIGNING_AES_GMAC 0x0002
 
@@ -165,11 +164,11 @@ inline size_t pc_smb2_cipher_key_len(uint16_t cipher)
 {
     switch (cipher)
     {
-    case Smb2Cipher::SMB2_ENCRYPTION_AES128_CCM:
-    case Smb2Cipher::SMB2_ENCRYPTION_AES128_GCM:
+    case SMB2_ENCRYPTION_AES128_CCM:
+    case SMB2_ENCRYPTION_AES128_GCM:
         return 16;
-    case Smb2Cipher::SMB2_ENCRYPTION_AES256_CCM:
-    case Smb2Cipher::SMB2_ENCRYPTION_AES256_GCM:
+    case SMB2_ENCRYPTION_AES256_CCM:
+    case SMB2_ENCRYPTION_AES256_GCM:
         return 32;
     default:
         return 0;
@@ -183,11 +182,11 @@ inline size_t pc_smb2_cipher_nonce_len(uint16_t cipher)
 {
     switch (cipher)
     {
-    case Smb2Cipher::SMB2_ENCRYPTION_AES128_GCM:
-    case Smb2Cipher::SMB2_ENCRYPTION_AES256_GCM:
+    case SMB2_ENCRYPTION_AES128_GCM:
+    case SMB2_ENCRYPTION_AES256_GCM:
         return 12;
-    case Smb2Cipher::SMB2_ENCRYPTION_AES128_CCM:
-    case Smb2Cipher::SMB2_ENCRYPTION_AES256_CCM:
+    case SMB2_ENCRYPTION_AES128_CCM:
+    case SMB2_ENCRYPTION_AES256_CCM:
         return 11;
     default:
         return 0;

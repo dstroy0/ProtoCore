@@ -86,11 +86,11 @@ static void ads_bench_task(void *)
         volatile bool sinkb = false;
 
         DBENCH_OP("pc_ads_build_read", 100000,
-                  sink += pc_ads_build_read(buf, sizeof(buf), &r, AdsIndexGroup::plc_rw_m, 0, 4));
+                  sink += pc_ads_build_read(buf, sizeof(buf), &r, ADS_IGRP_PLC_RW_M, 0, 4));
         DBENCH_OP("pc_ads_build_write", 100000,
-                  sink += pc_ads_build_write(buf, sizeof(buf), &r, AdsIndexGroup::plc_rw_m, 8, val, sizeof(val)));
+                  sink += pc_ads_build_write(buf, sizeof(buf), &r, ADS_IGRP_PLC_RW_M, 8, val, sizeof(val)));
         DBENCH_OP("pc_ads_build_read_write", 50000,
-                  sink += pc_ads_build_read_write(buf, sizeof(buf), &r, AdsIndexGroup::sym_hnd_by_name, 0, 4,
+                  sink += pc_ads_build_read_write(buf, sizeof(buf), &r, ADS_IGRP_SYM_HND_BY_NAME, 0, 4,
                                                   (const uint8_t *)name, (uint32_t)name_len));
 
         AdsAmsHeader h;

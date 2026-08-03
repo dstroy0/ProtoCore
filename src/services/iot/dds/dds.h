@@ -36,7 +36,7 @@
 #define RTPS_SM_GAP 0x08
 #define RTPS_SM_INFO_TS 0x09
 #define RTPS_SM_INFO_SRC 0x0c
-#define P4 0x0d
+#define RTPS_SM_INFO_REPLY_IP4 0x0d
 #define RTPS_SM_INFO_DST 0x0e
 #define RTPS_SM_INFO_REPLY 0x0f
 #define RTPS_SM_DATA 0x15

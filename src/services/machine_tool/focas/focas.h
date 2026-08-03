@@ -78,35 +78,35 @@ typedef struct
     uint16_t c3;
 } FocasCmd;
 
-/// The documented FOCAS function selectors (verbatim from the pyfanuc protocol notes). Grouped as
-/// constants (not an enum) because a selector is a struct, not a single scalar.
-#define m {1, 1, 0x0e}  ///< cnc_rdparam
-#define o {1, 1, 0x15}  ///< cnc_rdmacro
-#define o {1, 1, 0x16}  ///< cnc_wrmacro
-#define o {1, 1, 0x18}  ///< cnc_sysinfo (ODBSYS)
-#define m {1, 1, 0x1a}  ///< cnc_alarm (u32 status word)
-#define m {1, 1, 0x1c}  ///< cnc_rdprgnum (main/running)
-#define m {1, 1, 0x1d}  ///< cnc_rdseqnum
-#define o {1, 1, 0x23}  ///< cnc_rdalminfo
-#define e {1, 1, 0x24}  ///< cnc_actf (actual feed)
-#define e {1, 1, 0x25}  ///< cnc_acts (actual spindle speed)
-#define n {1, 1, 0x26}  ///< cnc_rdposition / axis read
-#define g {1, 1, 0x30}  ///< cnc_diagnoss
-#define e2 {1, 1, 0x40} ///< cnc_acts2 (speed + load)
-#define e {1, 1, 0x45}  ///< cnc_rdtimer (v1=0 date, 1 time)
-#define d {1, 1, 0x56}  ///< servo load, MAX_AXIS
-#define s {1, 1, 0x89}  ///< controlled-axis names
-#define s {1, 1, 0x8a}
-#define m3 {1, 1, 0x8d}  ///< cnc_rdparam3
-#define l {1, 1, 0xa7}   ///< cnc_rdmacror (double)
-#define c {2, 1, 0x8001} ///< pmc_rdpmcrng
+/// The documented FOCAS function selectors (verbatim from the pyfanuc protocol notes). Each is a
+/// compound literal, so it passes by value wherever a FocasCmd argument is taken.
+#define FOCAS_CMD_READ_CNC_PARAM ((FocasCmd){1, 1, 0x0e})  ///< cnc_rdparam
+#define FOCAS_CMD_READ_MACRO ((FocasCmd){1, 1, 0x15})      ///< cnc_rdmacro
+#define FOCAS_CMD_SET_MACRO ((FocasCmd){1, 1, 0x16})       ///< cnc_wrmacro
+#define FOCAS_CMD_SYS_INFO ((FocasCmd){1, 1, 0x18})        ///< cnc_sysinfo (ODBSYS)
+#define FOCAS_CMD_READ_ALARM ((FocasCmd){1, 1, 0x1a})      ///< cnc_alarm (u32 status word)
+#define FOCAS_CMD_READ_PRG_NUM ((FocasCmd){1, 1, 0x1c})    ///< cnc_rdprgnum (main/running)
+#define FOCAS_CMD_READ_SEQ_NUM ((FocasCmd){1, 1, 0x1d})    ///< cnc_rdseqnum
+#define FOCAS_CMD_READ_ALARM_INFO ((FocasCmd){1, 1, 0x23}) ///< cnc_rdalminfo
+#define FOCAS_CMD_READ_FEEDRATE ((FocasCmd){1, 1, 0x24})   ///< cnc_actf (actual feed)
+#define FOCAS_CMD_READ_SPINDLE ((FocasCmd){1, 1, 0x25})    ///< cnc_acts (actual spindle speed)
+#define FOCAS_CMD_READ_POSITION ((FocasCmd){1, 1, 0x26})   ///< cnc_rdposition / axis read
+#define FOCAS_CMD_READ_DIAG ((FocasCmd){1, 1, 0x30})       ///< cnc_diagnoss
+#define FOCAS_CMD_READ_SPINDLE2 ((FocasCmd){1, 1, 0x40})   ///< cnc_acts2 (speed + load)
+#define FOCAS_CMD_READ_DATETIME ((FocasCmd){1, 1, 0x45})   ///< cnc_rdtimer (v1=0 date, 1 time)
+#define FOCAS_CMD_READ_SERVO_LOAD ((FocasCmd){1, 1, 0x56}) ///< servo load, MAX_AXIS
+#define FOCAS_CMD_READ_AXIS_NAMES ((FocasCmd){1, 1, 0x89}) ///< controlled-axis names
+#define FOCAS_CMD_READ_SPINDLE_NAMES ((FocasCmd){1, 1, 0x8a})
+#define FOCAS_CMD_READ_CNC_PARAM3 ((FocasCmd){1, 1, 0x8d}) ///< cnc_rdparam3
+#define FOCAS_CMD_READ_MACRO_DBL ((FocasCmd){1, 1, 0xa7})  ///< cnc_rdmacror (double)
+#define FOCAS_CMD_READ_PMC ((FocasCmd){2, 1, 0x8001})      ///< pmc_rdpmcrng
 
 /// Position/axis read kinds (SysInfo 0x26 `v1`); the axis argument is `v2` (0 = all axes).
-#define e 1 ///< machine (reference) coordinate
-#define e 4 ///< absolute (program) coordinate
-#define e 6 ///< relative coordinate
-#define e 7 ///< distance to go
-#define p 8 ///< skip position
+#define FOCAS_POS_MACHINE 1  ///< machine (reference) coordinate
+#define FOCAS_POS_ABSOLUTE 4 ///< absolute (program) coordinate
+#define FOCAS_POS_RELATIVE 6 ///< relative coordinate
+#define FOCAS_POS_DISTANCE 7 ///< distance to go
+#define FOCAS_POS_SKIP 8     ///< skip position
 
 /// A parsed frame envelope; `payload`/`payload_len` point into the caller's buffer (no copy).
 typedef struct

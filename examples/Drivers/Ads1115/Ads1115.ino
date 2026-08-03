@@ -32,7 +32,7 @@ void setup()
 void loop()
 {
     int32_t uv = 0; // microvolts
-    if (pc_ads1115_read_uv(0, Ads1115Gain::ADS1115_GAIN_1, &uv))
+    if (pc_ads1115_read_uv(0, ADS1115_GAIN_1, &uv))
     {
         // Print microvolts as V.mmm (millivolt precision) by hand - no float formatting.
         long v_whole = uv / 1000000;

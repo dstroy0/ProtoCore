@@ -88,25 +88,25 @@ typedef enum PROTO_ENUM_PACKED
 } Cia402Command;
 
 /// Controlword bit masks (object 0x6040).
-#define n 0x0001
-#define e 0x0002
-#define p 0x0004 ///< active-low: 0 requests quick stop
-#define n 0x0008
-#define t 0x0080 ///< acts on the rising edge
-#define t 0x0100
+#define CIA402_CW_SWITCH_ON 0x0001
+#define CIA402_CW_ENABLE_VOLTAGE 0x0002
+#define CIA402_CW_QUICK_STOP 0x0004 ///< active-low: 0 requests quick stop
+#define CIA402_CW_ENABLE_OPERATION 0x0008
+#define CIA402_CW_FAULT_RESET 0x0080 ///< acts on the rising edge
+#define CIA402_CW_HALT 0x0100
 
 /// Statusword bit masks (object 0x6041).
-#define n 0x0001
-#define n 0x0002
-#define d 0x0004
-#define t 0x0008
-#define d 0x0010
-#define p 0x0020 ///< 0 = quick stop active
-#define d 0x0040
-#define g 0x0080
-#define e 0x0200
-#define d 0x0400
-#define t 0x0800
+#define CIA402_SW_READY_TO_SWITCH_ON 0x0001
+#define CIA402_SW_SWITCHED_ON 0x0002
+#define CIA402_SW_OPERATION_ENABLED 0x0004
+#define CIA402_SW_FAULT 0x0008
+#define CIA402_SW_VOLTAGE_ENABLED 0x0010
+#define CIA402_SW_QUICK_STOP 0x0020 ///< 0 = quick stop active
+#define CIA402_SW_SWITCH_ON_DISABLED 0x0040
+#define CIA402_SW_WARNING 0x0080
+#define CIA402_SW_REMOTE 0x0200
+#define CIA402_SW_TARGET_REACHED 0x0400
+#define CIA402_SW_INTERNAL_LIMIT 0x0800
 
 // --- state machine (pure value logic; no CAN needed) ---
 
@@ -125,32 +125,32 @@ uint16_t pc_cia402_enable_sequence(Cia402State state);
 /// @return true if the Statusword's Target Reached flag (bit 10) is set.
 static inline proto_bool pc_cia402_target_reached(uint16_t sw)
 {
-    return (sw & Cia402Sw::target_reached) != 0;
+    return (sw & CIA402_SW_TARGET_REACHED) != 0;
 }
 /// @return true if the drive reports a fault (bit 3).
 static inline proto_bool pc_cia402_has_fault(uint16_t sw)
 {
-    return (sw & Cia402Sw::fault) != 0;
+    return (sw & CIA402_SW_FAULT) != 0;
 }
 /// @return true if a warning is present (bit 7).
 static inline proto_bool pc_cia402_warning(uint16_t sw)
 {
-    return (sw & Cia402Sw::warning) != 0;
+    return (sw & CIA402_SW_WARNING) != 0;
 }
 /// @return true if the drive's power stage voltage is applied (bit 4).
 static inline proto_bool pc_cia402_voltage_enabled(uint16_t sw)
 {
-    return (sw & Cia402Sw::voltage_enabled) != 0;
+    return (sw & CIA402_SW_VOLTAGE_ENABLED) != 0;
 }
 /// @return true if the drive follows the Controlword (bit 9 remote).
 static inline proto_bool pc_cia402_remote(uint16_t sw)
 {
-    return (sw & Cia402Sw::remote) != 0;
+    return (sw & CIA402_SW_REMOTE) != 0;
 }
 /// @return true if a set-point was internally limited (bit 11).
 static inline proto_bool pc_cia402_internal_limit(uint16_t sw)
 {
-    return (sw & Cia402Sw::internal_limit) != 0;
+    return (sw & CIA402_SW_INTERNAL_LIMIT) != 0;
 }
 
 // --- CANopen SDO setters (expedited download to the object); fill *out, return false on bad arg ---

@@ -427,7 +427,7 @@ static int handle_client_hello(DtlsConn *c, const uint8_t *msg, size_t msg_len, 
 // Verify the client's Finished and complete the handshake.
 static int handle_client_finished(DtlsConn *c, const uint8_t *msg, size_t msg_len)
 {
-    if (msg[0] != TlsHs::TLS_HS_FINISHED || msg_len != 4 + PC_SHA256_DIGEST_LEN) // GCOVR_EXCL_LINE  dispatch_message
+    if (msg[0] != TLS_HS_FINISHED || msg_len != 4 + PC_SHA256_DIGEST_LEN) // GCOVR_EXCL_LINE  dispatch_message
     {
         return fail(c, ALERT_DECODE_ERROR); // only routes a Finished here, so the type arm cannot be taken
     }
@@ -454,15 +454,15 @@ static int handle_client_finished(DtlsConn *c, const uint8_t *msg, size_t msg_le
 static int dispatch_message(DtlsConn *c, const uint8_t *tls_msg, size_t tls_len, uint8_t *out, size_t out_cap,
                             size_t *out_len)
 {
-    if (c->state == DTLS_CONN_STATE_START && tls_msg[0] == TlsHs::TLS_HS_CLIENT_HELLO)
+    if (c->state == DTLS_CONN_STATE_START && tls_msg[0] == TLS_HS_CLIENT_HELLO)
     {
         return handle_client_hello(c, tls_msg, tls_len, out, out_cap, out_len);
     }
-    if (c->state == DTLS_CONN_STATE_WAIT_FINISHED && tls_msg[0] == TlsHs::TLS_HS_FINISHED)
+    if (c->state == DTLS_CONN_STATE_WAIT_FINISHED && tls_msg[0] == TLS_HS_FINISHED)
     {
         return handle_client_finished(c, tls_msg, tls_len);
     }
-    if (c->state == DTLS_CONN_STATE_DONE && tls_msg[0] == TlsHs::TLS_HS_FINISHED)
+    if (c->state == DTLS_CONN_STATE_DONE && tls_msg[0] == TLS_HS_FINISHED)
     {
         c->hs_ack_sent = PROTO_FALSE; // a retransmitted client Finished (our ACK was lost): re-acknowledge it
         pc_dtls_hs_reasm_init(&c->reasm, c->next_recv_msg_seq, c->reasm_buf + 4,

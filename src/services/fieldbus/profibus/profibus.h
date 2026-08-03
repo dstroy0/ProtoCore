@@ -26,12 +26,12 @@
 
 #if PC_ENABLE_PROFIBUS
 
-// PROFIBUS telegram delimiters + Frame Control values: wire bytes, so integer constants in a struct.
-#define D1 0x10    ///< start delimiter: no data.
-#define D2 0x68    ///< start delimiter: variable data.
-#define D3 0xA2    ///< start delimiter: fixed 8 data.
-#define D4 0xDC    ///< token telegram.
-#define PB_ED 0x16 ///< end delimiter.
+// PROFIBUS telegram delimiters + Frame Control values.
+#define PB_SD1 0x10 ///< start delimiter: no data.
+#define PB_SD2 0x68 ///< start delimiter: variable data.
+#define PB_SD3 0xA2 ///< start delimiter: fixed 8 data.
+#define PB_SD4 0xDC ///< token telegram.
+#define PB_ED 0x16  ///< end delimiter.
 // Frame Control (FC) common values.
 #define PB_FC_REQUEST_FDL_STATUS 0x49 ///< request FDL status (with FCB/FCV).
 #define PB_FC_SRD_LOW 0x6C            ///< Send and Request Data, low priority.

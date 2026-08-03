@@ -25,12 +25,12 @@
 
 #if PC_ENABLE_RAWL2
 
-// Ethernet II framing sizes + ethertypes: wire values, so integer constants in a namespacing struct.
+// Ethernet II framing sizes + ethertypes.
 #define ETH_ALEN 6            ///< MAC address length.
 #define ETH_HDR_LEN 14        ///< dst + src + ethertype.
 #define ETH_VLAN_HDR_LEN 18   ///< with the 4-octet 802.1Q tag.
 #define ETH_TPID_8021Q 0x8100 ///< 802.1Q tag protocol id.
-#define V4 0x0800
+#define ETHERTYPE_IPV4 0x0800
 #define ETHERTYPE_ARP 0x0806
 #define ETHERTYPE_PROFINET 0x8892 ///< PROFINET RT / DCP.
 #define ETHERTYPE_GOOSE 0x88B8    ///< IEC 61850 GOOSE.

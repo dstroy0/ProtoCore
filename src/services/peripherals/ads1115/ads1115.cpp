@@ -32,11 +32,11 @@ uint16_t pc_ads1115_config_single(uint8_t channel, uint8_t gain, uint8_t dr)
     {
         channel = 0;
     }
-    if (gain > Ads1115Gain::ADS1115_GAIN_16)
+    if (gain > ADS1115_GAIN_16)
     {
         gain = (uint8_t)PC_ADS1115_GAIN;
     }
-    if (dr > Ads1115DataRate::ADS1115_DR_860)
+    if (dr > ADS1115_DR_860)
     {
         dr = (uint8_t)PC_ADS1115_DR;
     }
@@ -55,7 +55,7 @@ uint16_t pc_ads1115_config_single(uint8_t channel, uint8_t gain, uint8_t dr)
 
 int32_t pc_ads1115_raw_to_uv(int16_t raw, uint8_t gain)
 {
-    if (gain > Ads1115Gain::ADS1115_GAIN_16)
+    if (gain > ADS1115_GAIN_16)
     {
         gain = (uint8_t)PC_ADS1115_GAIN;
     }
@@ -117,9 +117,9 @@ proto_bool pc_ads1115_read_raw(uint8_t channel, uint8_t gain, int16_t *raw)
         return PROTO_FALSE;
     }
     uint8_t dr = (uint8_t)PC_ADS1115_DR;
-    if (dr > Ads1115DataRate::ADS1115_DR_860)
+    if (dr > ADS1115_DR_860)
     {
-        dr = Ads1115DataRate::ADS1115_DR_128;
+        dr = ADS1115_DR_128;
     }
     if (!wr16(ADS1115_REG_CONFIG, pc_ads1115_config_single(channel, gain, dr)))
     {

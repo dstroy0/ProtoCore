@@ -57,8 +57,8 @@ typedef struct
     const char *workstation; ///< client name to announce (null => none)
     const char *share;       ///< the tree path, UNC `\\server\share`
     const char *path;        ///< file name relative to the share root (e.g. `PROGRAMS\A.NC`)
-    uint32_t desired_access; ///< Smb2Access::SMB2_FILE_GENERIC_READ and/or _WRITE
-    uint32_t disposition;    ///< Smb2Disposition::SMB2_FILE_OPEN / _OPEN_IF / _OVERWRITE_IF / _CREATE
+    uint32_t desired_access; ///< SMB2_FILE_GENERIC_READ and/or _WRITE
+    uint32_t disposition;    ///< SMB2_FILE_OPEN / _OPEN_IF / _OVERWRITE_IF / _CREATE
     proto_bool encrypt;      ///< request SMB 3.x transport encryption from the session on (client-forced, like
                              ///< smbclient -e): needed to reach a share whose server requires encryption, which
                              ///< rejects the unencrypted TREE_CONNECT before it can advertise the share flag.

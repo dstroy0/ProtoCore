@@ -27,7 +27,7 @@
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
 #include "network_drivers/transport/client.h"
-#include "network_drivers/application/smb/smb2.h" // Smb2Access::SMB2_FILE_GENERIC_READ / Smb2Disposition::SMB2_FILE_OPEN
+#include "network_drivers/application/smb/smb2.h" // SMB2_FILE_GENERIC_READ / SMB2_FILE_OPEN
 #include "network_drivers/application/smb/smb_client.h" // smb_open / smb_read / smb_close
 #include <string.h>
 
@@ -108,8 +108,8 @@ void read_program()
     cfg.workstation = "esp32";
     cfg.share = SMB_SHARE;
     cfg.path = SMB_PATH;
-    cfg.desired_access = Smb2Access::SMB2_FILE_GENERIC_READ;
-    cfg.disposition = Smb2Disposition::SMB2_FILE_OPEN; // open an existing file, fail if absent
+    cfg.desired_access = SMB2_FILE_GENERIC_READ;
+    cfg.disposition = SMB2_FILE_OPEN; // open an existing file, fail if absent
 
     SmbHandle h;
     x.deadline = millis() + 8000;
@@ -132,7 +132,7 @@ void read_program()
         Serial.write(buf, got);
         Serial.println("\n--- end ---");
         // To read a larger file, loop smb_read with a growing offset until got == 0.
-        // To upload instead, open with Smb2Access::SMB2_FILE_GENERIC_WRITE + Smb2Disposition::SMB2_FILE_OVERWRITE_IF
+        // To upload instead, open with SMB2_FILE_GENERIC_WRITE + SMB2_FILE_OVERWRITE_IF
         // and call smb_write(&h, 0, data, len, &wrote, cl_send, cl_recv, &x).
     }
     else

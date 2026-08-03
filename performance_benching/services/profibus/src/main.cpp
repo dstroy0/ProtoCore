@@ -23,15 +23,14 @@ static void profibus_bench_task(void *)
     // SD2 process-data payload (spec-conformant vector shape from test/test_profibus).
     static const uint8_t data3[3] = {0xAA, 0xBB, 0xCC};
     // FCS body: DA + SA + FC (matches test_fcs: 0x03 + 0x02 + 0x49 -> 0x4E).
-    static const uint8_t fcs_body[3] = {0x03, 0x02, Profibus::PB_FC_REQUEST_FDL_STATUS};
+    static const uint8_t fcs_body[3] = {0x03, 0x02, PB_FC_REQUEST_FDL_STATUS};
     static uint8_t out[16];
 
     // Prebuilt telegrams for the parse bench (known-good, so pc_pb_parse takes the accept path).
     static uint8_t sd1_frame[8];
     static uint8_t sd2_frame[16];
-    size_t sd1_len = pc_pb_build_sd1(0x03, 0x02, Profibus::PB_FC_REQUEST_FDL_STATUS, sd1_frame, sizeof(sd1_frame));
-    size_t sd2_len =
-        pc_pb_build_sd2(0x05, 0x02, Profibus::PB_FC_SRD_HIGH, data3, sizeof(data3), sd2_frame, sizeof(sd2_frame));
+    size_t sd1_len = pc_pb_build_sd1(0x03, 0x02, PB_FC_REQUEST_FDL_STATUS, sd1_frame, sizeof(sd1_frame));
+    size_t sd2_len = pc_pb_build_sd2(0x05, 0x02, PB_FC_SRD_HIGH, data3, sizeof(data3), sd2_frame, sizeof(sd2_frame));
 
     for (;;)
     {
@@ -43,10 +42,9 @@ static void profibus_bench_task(void *)
 
         DBENCH_OP("pc_pb_fcs (DA+SA+FC)", 100000, sink8 += pc_pb_fcs(fcs_body, sizeof(fcs_body)));
         DBENCH_OP("pc_pb_build_sd1", 100000,
-                  sink += pc_pb_build_sd1(0x03, 0x02, Profibus::PB_FC_REQUEST_FDL_STATUS, out, sizeof(out)));
+                  sink += pc_pb_build_sd1(0x03, 0x02, PB_FC_REQUEST_FDL_STATUS, out, sizeof(out)));
         DBENCH_OP("pc_pb_build_sd2 (3B data)", 50000,
-                  sink +=
-                  pc_pb_build_sd2(0x05, 0x02, Profibus::PB_FC_SRD_HIGH, data3, sizeof(data3), out, sizeof(out)));
+                  sink += pc_pb_build_sd2(0x05, 0x02, PB_FC_SRD_HIGH, data3, sizeof(data3), out, sizeof(out)));
         DBENCH_OP("pc_pb_parse SD1", 100000, sink += pc_pb_parse(sd1_frame, sd1_len, &tg) ? 1 : 0);
         DBENCH_OP("pc_pb_parse SD2 (3B data)", 100000, sink += pc_pb_parse(sd2_frame, sd2_len, &tg) ? 1 : 0);
 

@@ -20,18 +20,18 @@ size_t pc_eth_build(const uint8_t *dst, const uint8_t *src, uint16_t ethertype, 
     {
         return 0;
     }
-    size_t n = RawL2::ETH_HDR_LEN + payload_len;
+    size_t n = ETH_HDR_LEN + payload_len;
     if (n > cap)
     {
         return 0;
     }
-    memcpy(out, dst, RawL2::ETH_ALEN);
-    memcpy(out + RawL2::ETH_ALEN, src, RawL2::ETH_ALEN);
+    memcpy(out, dst, ETH_ALEN);
+    memcpy(out + ETH_ALEN, src, ETH_ALEN);
     out[12] = (uint8_t)(ethertype >> 8);
     out[13] = (uint8_t)ethertype;
     if (payload_len)
     {
-        memcpy(out + RawL2::ETH_HDR_LEN, payload, payload_len);
+        memcpy(out + ETH_HDR_LEN, payload, payload_len);
     }
     return n;
 }
@@ -43,15 +43,15 @@ size_t pc_eth_build_vlan(const uint8_t *dst, const uint8_t *src, uint8_t pcp, pr
     {
         return 0;
     }
-    size_t n = RawL2::ETH_VLAN_HDR_LEN + payload_len;
+    size_t n = ETH_VLAN_HDR_LEN + payload_len;
     if (n > cap)
     {
         return 0;
     }
-    memcpy(out, dst, RawL2::ETH_ALEN);
-    memcpy(out + RawL2::ETH_ALEN, src, RawL2::ETH_ALEN);
-    out[12] = (uint8_t)(RawL2::ETH_TPID_8021Q >> 8);
-    out[13] = (uint8_t)RawL2::ETH_TPID_8021Q;
+    memcpy(out, dst, ETH_ALEN);
+    memcpy(out + ETH_ALEN, src, ETH_ALEN);
+    out[12] = (uint8_t)(ETH_TPID_8021Q >> 8);
+    out[13] = (uint8_t)ETH_TPID_8021Q;
     uint16_t tci = (uint16_t)(((pcp & 0x7) << 13) | ((dei ? 1 : 0) << 12) | (vid & 0x0FFF));
     out[14] = (uint8_t)(tci >> 8);
     out[15] = (uint8_t)tci;
@@ -59,23 +59,23 @@ size_t pc_eth_build_vlan(const uint8_t *dst, const uint8_t *src, uint8_t pcp, pr
     out[17] = (uint8_t)ethertype;
     if (payload_len)
     {
-        memcpy(out + RawL2::ETH_VLAN_HDR_LEN, payload, payload_len);
+        memcpy(out + ETH_VLAN_HDR_LEN, payload, payload_len);
     }
     return n;
 }
 
 proto_bool pc_eth_parse(const uint8_t *frame, size_t len, EthFrame *out)
 {
-    if (!frame || !out || len < RawL2::ETH_HDR_LEN)
+    if (!frame || !out || len < ETH_HDR_LEN)
     {
         return PROTO_FALSE;
     }
     out->dst = frame;
-    out->src = frame + RawL2::ETH_ALEN;
+    out->src = frame + ETH_ALEN;
     uint16_t et = (uint16_t)((frame[12] << 8) | frame[13]);
-    if (et == RawL2::ETH_TPID_8021Q)
+    if (et == ETH_TPID_8021Q)
     {
-        if (len < RawL2::ETH_VLAN_HDR_LEN)
+        if (len < ETH_VLAN_HDR_LEN)
         {
             return PROTO_FALSE;
         }
@@ -84,8 +84,8 @@ proto_bool pc_eth_parse(const uint8_t *frame, size_t len, EthFrame *out)
         out->pcp = (uint8_t)((tci >> 13) & 0x7);
         out->vid = (uint16_t)(tci & 0x0FFF);
         out->ethertype = (uint16_t)((frame[16] << 8) | frame[17]);
-        out->payload = frame + RawL2::ETH_VLAN_HDR_LEN;
-        out->payload_len = len - RawL2::ETH_VLAN_HDR_LEN;
+        out->payload = frame + ETH_VLAN_HDR_LEN;
+        out->payload_len = len - ETH_VLAN_HDR_LEN;
     }
     else
     {
@@ -93,8 +93,8 @@ proto_bool pc_eth_parse(const uint8_t *frame, size_t len, EthFrame *out)
         out->pcp = 0;
         out->vid = 0;
         out->ethertype = et;
-        out->payload = frame + RawL2::ETH_HDR_LEN;
-        out->payload_len = len - RawL2::ETH_HDR_LEN;
+        out->payload = frame + ETH_HDR_LEN;
+        out->payload_len = len - ETH_HDR_LEN;
     }
     return PROTO_TRUE;
 }

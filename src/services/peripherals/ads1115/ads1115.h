@@ -33,24 +33,24 @@
 #define ADS1115_REG_CONVERSION 0x00 ///< conversion result register
 #define ADS1115_REG_CONFIG 0x01     ///< configuration register
 
-/** @brief Programmable-gain settings (PGA register codes; full-scale +/- range). Config field values
- *  shifted into the config word, so integer constants in a namespacing struct - cast-free. */
+/** @brief Programmable-gain settings (PGA register codes; full-scale +/- range), shifted into the
+ *  config word. */
 #define ADS1115_GAIN_TWOTHIRDS 0 ///< +/- 6.144 V
-#define _1 1                     ///< +/- 4.096 V
-#define _2 2                     ///< +/- 2.048 V (default)
-#define _4 3                     ///< +/- 1.024 V
-#define _8 4                     ///< +/- 0.512 V
-#define _16 5                    ///< +/- 0.256 V
+#define ADS1115_GAIN_1 1         ///< +/- 4.096 V
+#define ADS1115_GAIN_2 2         ///< +/- 2.048 V (default)
+#define ADS1115_GAIN_4 3         ///< +/- 1.024 V
+#define ADS1115_GAIN_8 4         ///< +/- 0.512 V
+#define ADS1115_GAIN_16 5        ///< +/- 0.256 V
 
 /** @brief Data-rate settings (DR register codes; samples per second). */
-#define _8 0   ///< 8 SPS
-#define _16 1  ///< 16 SPS
-#define _32 2  ///< 32 SPS
-#define _64 3  ///< 64 SPS
-#define _128 4 ///< 128 SPS (default)
-#define _250 5 ///< 250 SPS
-#define _475 6 ///< 475 SPS
-#define _860 7 ///< 860 SPS
+#define ADS1115_DR_8 0   ///< 8 SPS
+#define ADS1115_DR_16 1  ///< 16 SPS
+#define ADS1115_DR_32 2  ///< 32 SPS
+#define ADS1115_DR_64 3  ///< 64 SPS
+#define ADS1115_DR_128 4 ///< 128 SPS (default)
+#define ADS1115_DR_250 5 ///< 250 SPS
+#define ADS1115_DR_475 6 ///< 475 SPS
+#define ADS1115_DR_860 7 ///< 860 SPS
 
 /**
  * @brief Build the 16-bit config word for a single-shot, single-ended reading of @p channel

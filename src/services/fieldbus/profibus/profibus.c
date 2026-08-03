@@ -28,13 +28,13 @@ size_t pc_pb_build_sd1(uint8_t da, uint8_t sa, uint8_t fc, uint8_t *out, size_t 
     {
         return 0;
     }
-    out[0] = Profibus::PB_SD1;
+    out[0] = PB_SD1;
     out[1] = da;
     out[2] = sa;
     out[3] = fc;
     uint8_t body[3] = {da, sa, fc};
     out[4] = pc_pb_fcs(body, 3);
-    out[5] = Profibus::PB_ED;
+    out[5] = PB_ED;
     return 6;
 }
 
@@ -53,10 +53,10 @@ size_t pc_pb_build_sd2(uint8_t da, uint8_t sa, uint8_t fc, const uint8_t *data, 
     }
     uint8_t le = (uint8_t)(3 + data_len); // length of DA+SA+FC+data
     size_t i = 0;
-    out[i++] = Profibus::PB_SD2;
+    out[i++] = PB_SD2;
     out[i++] = le;
     out[i++] = le; // LEr (redundant length)
-    out[i++] = Profibus::PB_SD2;
+    out[i++] = PB_SD2;
     out[i++] = da;
     out[i++] = sa;
     out[i++] = fc;
@@ -67,7 +67,7 @@ size_t pc_pb_build_sd2(uint8_t da, uint8_t sa, uint8_t fc, const uint8_t *data, 
     }
     // FCS over DA+SA+FC+data (out[4 .. 4+le-1]).
     out[i++] = pc_pb_fcs(out + 4, le);
-    out[i++] = Profibus::PB_ED;
+    out[i++] = PB_ED;
     return i;
 }
 
@@ -77,13 +77,13 @@ size_t pc_pb_build_sd3(uint8_t da, uint8_t sa, uint8_t fc, const uint8_t *data, 
     {
         return 0;
     }
-    out[0] = Profibus::PB_SD3;
+    out[0] = PB_SD3;
     out[1] = da;
     out[2] = sa;
     out[3] = fc;
     memcpy(out + 4, data, 8);
     out[12] = pc_pb_fcs(out + 1, 11); // FCS over DA+SA+FC+data(8)
-    out[13] = Profibus::PB_ED;
+    out[13] = PB_ED;
     return 14;
 }
 
@@ -94,11 +94,11 @@ static proto_bool pb_parse_sd3(const uint8_t *frame, size_t len, PbTelegram *out
     {
         return PROTO_FALSE;
     }
-    if (pc_pb_fcs(frame + 1, 11) != frame[12] || frame[13] != Profibus::PB_ED)
+    if (pc_pb_fcs(frame + 1, 11) != frame[12] || frame[13] != PB_ED)
     {
         return PROTO_FALSE;
     }
-    out->sd = Profibus::PB_SD3;
+    out->sd = PB_SD3;
     out->da = frame[1];
     out->sa = frame[2];
     out->fc = frame[3];
@@ -112,11 +112,11 @@ static proto_bool pb_parse_sd1(const uint8_t *frame, size_t len, PbTelegram *out
 {
     (void)len; // len >= 6 already guaranteed by pc_pb_parse
     uint8_t body[3] = {frame[1], frame[2], frame[3]};
-    if (pc_pb_fcs(body, 3) != frame[4] || frame[5] != Profibus::PB_ED)
+    if (pc_pb_fcs(body, 3) != frame[4] || frame[5] != PB_ED)
     {
         return PROTO_FALSE;
     }
-    out->sd = Profibus::PB_SD1;
+    out->sd = PB_SD1;
     out->da = frame[1];
     out->sa = frame[2];
     out->fc = frame[3];
@@ -133,7 +133,7 @@ static proto_bool pb_parse_sd2(const uint8_t *frame, size_t len, PbTelegram *out
         return PROTO_FALSE;
     }
     uint8_t le = frame[1];
-    if (frame[2] != le || frame[3] != Profibus::PB_SD2)
+    if (frame[2] != le || frame[3] != PB_SD2)
     {
         return PROTO_FALSE;
     }
@@ -146,11 +146,11 @@ static proto_bool pb_parse_sd2(const uint8_t *frame, size_t len, PbTelegram *out
     {
         return PROTO_FALSE;
     }
-    if (pc_pb_fcs(frame + 4, le) != frame[4 + le] || frame[4 + le + 1] != Profibus::PB_ED)
+    if (pc_pb_fcs(frame + 4, le) != frame[4 + le] || frame[4 + le + 1] != PB_ED)
     {
         return PROTO_FALSE;
     }
-    out->sd = Profibus::PB_SD2;
+    out->sd = PB_SD2;
     out->da = frame[4];
     out->sa = frame[5];
     out->fc = frame[6];
@@ -166,15 +166,15 @@ proto_bool pc_pb_parse(const uint8_t *frame, size_t len, PbTelegram *out)
     {
         return PROTO_FALSE;
     }
-    if (frame[0] == Profibus::PB_SD3)
+    if (frame[0] == PB_SD3)
     {
         return pb_parse_sd3(frame, len, out);
     }
-    if (frame[0] == Profibus::PB_SD1)
+    if (frame[0] == PB_SD1)
     {
         return pb_parse_sd1(frame, len, out);
     }
-    if (frame[0] == Profibus::PB_SD2)
+    if (frame[0] == PB_SD2)
     {
         return pb_parse_sd2(frame, len, out);
     }

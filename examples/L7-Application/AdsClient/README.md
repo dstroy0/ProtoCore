@@ -27,9 +27,9 @@ to index group `0xF003` to get a 4-octet handle, then `Read` the value from inde
 group `0xF005` at that handle (and `Write` the handle back to `0xF006` to release it):
 
 ```cpp
-pc_ads_build_read_write(c_req, sizeof(c_req), &r, AdsIndexGroup::sym_hnd_by_name,
+pc_ads_build_read_write(c_req, sizeof(c_req), &r, ADS_IGRP_SYM_HND_BY_NAME,
                      0, 4, (const uint8_t *)"MAIN.nCounter", 13); // name -> handle
-pc_ads_build_read(c_req, sizeof(c_req), &r, AdsIndexGroup::sym_val_by_handle, handle, 4);
+pc_ads_build_read(c_req, sizeof(c_req), &r, ADS_IGRP_SYM_VAL_BY_HANDLE, handle, 4);
 ```
 
 The codec also covers `ReadDeviceInfo`, `Write`, `WriteControl`, and device

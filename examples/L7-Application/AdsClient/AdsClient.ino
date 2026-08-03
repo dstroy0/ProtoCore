@@ -157,7 +157,7 @@ static void run_client(const char *host)
 
     // 3) ReadWrite: resolve the symbol name to a handle.
     r = next_request();
-    n = exchange(cid, pc_ads_build_read_write(c_req, sizeof(c_req), &r, AdsIndexGroup::sym_hnd_by_name, 0, 4,
+    n = exchange(cid, pc_ads_build_read_write(c_req, sizeof(c_req), &r, ADS_IGRP_SYM_HND_BY_NAME, 0, 4,
                                               (const uint8_t *)SYMBOL, (uint32_t)strlen(SYMBOL)));
     AdsReadResult rr;
     if (!n || !pc_ads_parse_ams_header(c_resp, n, &h) || !pc_ads_parse_read(h.data, h.data_len, &rr) ||
@@ -172,7 +172,7 @@ static void run_client(const char *host)
 
     // 4) Read the symbol value (INT32) by handle.
     r = next_request();
-    n = exchange(cid, pc_ads_build_read(c_req, sizeof(c_req), &r, AdsIndexGroup::sym_val_by_handle, handle, 4));
+    n = exchange(cid, pc_ads_build_read(c_req, sizeof(c_req), &r, ADS_IGRP_SYM_VAL_BY_HANDLE, handle, 4));
     if (n && pc_ads_parse_ams_header(c_resp, n, &h) && pc_ads_parse_read(h.data, h.data_len, &rr) && rr.result == 0 &&
         rr.len >= 4)
     {
@@ -188,7 +188,7 @@ static void run_client(const char *host)
     // 5) Release the handle (Write the 4-octet handle to index group 0xF006).
     r = next_request();
     uint8_t hb[4] = {(uint8_t)handle, (uint8_t)(handle >> 8), (uint8_t)(handle >> 16), (uint8_t)(handle >> 24)};
-    exchange(cid, pc_ads_build_write(c_req, sizeof(c_req), &r, AdsIndexGroup::sym_release_handle, 0, hb, 4));
+    exchange(cid, pc_ads_build_write(c_req, sizeof(c_req), &r, ADS_IGRP_SYM_RELEASE_HANDLE, 0, hb, 4));
 
     pc_client_close(cid);
     Serial.println("[ads] done");

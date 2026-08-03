@@ -34,8 +34,8 @@ static void ocit_bench_task(void *)
         volatile bool sinkb = false;
 
         DBENCH_OP("pc_ocit_build SET u32", 200000,
-                  sinkn += pc_ocit_build(OcitMsgType::OCIT_MSG_SET, 0x0102, 0x0003, OcitType::OCIT_TYPE_UINT32, val32,
-                                         sizeof(val32), out, sizeof(out)));
+                  sinkn += pc_ocit_build(OCIT_MSG_SET, 0x0102, 0x0003, OCIT_TYPE_UINT32, val32, sizeof(val32), out,
+                                         sizeof(out)));
         DBENCH_OP("pc_ocit_set_u16", 200000, sinkn += pc_ocit_set_u16(0x00A0, 0x0005, 0xBEEF, out, sizeof(out)));
 
         OcitMsg m;
@@ -43,7 +43,7 @@ static void ocit_bench_task(void *)
         // Parse once so the accessor bench reads a valid message.
         pc_ocit_parse(wire, sizeof(wire), &m);
         // Re-tag the parsed message as UINT16 so the accessor returns the value (wire is UINT32).
-        m.data_type = OcitType::OCIT_TYPE_UINT16;
+        m.data_type = OCIT_TYPE_UINT16;
         DBENCH_OP("pc_ocit_value_u16", 200000, sink16 += pc_ocit_value_u16(&m));
 
         (void)sinkn;

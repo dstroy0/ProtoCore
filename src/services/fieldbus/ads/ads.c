@@ -35,7 +35,7 @@ static size_t write_header(uint8_t *buf, size_t cap, const AdsRequest *r, AdsCom
     p += ADS_NET_ID_LEN;
     p += pc_wr16le(buf + p, r->source.port);
     p += pc_wr16le(buf + p, (uint16_t)cmd); // wire byte in
-    p += pc_wr16le(buf + p, AdsStateFlags::request);
+    p += pc_wr16le(buf + p, ADS_STATE_REQUEST);
     p += pc_wr32le(buf + p, payload_len); // cbData
     p += pc_wr32le(buf + p, 0);           // error code (0 on a request)
     p += pc_wr32le(buf + p, r->invoke_id);

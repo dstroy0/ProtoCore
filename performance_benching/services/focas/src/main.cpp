@@ -53,7 +53,7 @@ static void focas_bench_task(void *)
 
         DBENCH_OP("pc_focas_build_sysinfo", 50000, sinkz += pc_focas_build_sysinfo(buf, sizeof(buf)));
         DBENCH_OP("pc_focas_build_read_position", 50000,
-                  sinkz += pc_focas_build_read_position(buf, sizeof(buf), FocasPosKind::absolute, 0));
+                  sinkz += pc_focas_build_read_position(buf, sizeof(buf), FOCAS_POS_ABSOLUTE, 0));
 
         FocasResponse resp;
         DBENCH_OP("pc_focas_parse_command_frame", 50000,

@@ -16,14 +16,13 @@
 #include "server/clock/clock.h" // pc_millis(): Observe notification sequencing + dedup entry freshness
 #endif
 
-// CoAP option numbers we understand (RFC 7252 §5.10, RFC 7959). Others are skipped. Wire values
-// compared against the parsed option number, so integer constants in a namespacing struct.
-#define E 6
-#define H 11
-#define T 12
-#define Y 15
-#define K2 23 ///< block-wise responses (RFC 7959)
-#define K1 27 ///< block-wise request uploads (RFC 7959)
+// CoAP option numbers we understand (RFC 7252 §5.10, RFC 7959). Others are skipped.
+#define COAP_OPT_OBSERVE 6
+#define COAP_OPT_URI_PATH 11
+#define COAP_OPT_CONTENT_FORMAT 12
+#define COAP_OPT_URI_QUERY 15
+#define COAP_OPT_BLOCK2 23 ///< block-wise responses (RFC 7959)
+#define COAP_OPT_BLOCK1 27 ///< block-wise request uploads (RFC 7959)
 
 static const uint8_t COAP_PAYLOAD_MARKER = 0xFF;
 static const size_t COAP_MAX_TOKEN = 8;
@@ -267,24 +266,24 @@ static size_t emit_options_payload(uint8_t *resp, size_t cap, size_t n, uint8_t 
 
     if (observe_seq >= 0 && (code >> 5) == 2)
     {
-        n = append_opt(resp, cap, n, &last_opt, CoapOpt::COAP_OPT_OBSERVE, v,
+        n = append_opt(resp, cap, n, &last_opt, COAP_OPT_OBSERVE, v,
                        enc_uint_minimal((uint32_t)observe_seq & 0xFFFFFF, v));
     }
 
     if (content_format != COAP_CF_NONE)
     {
-        n = append_opt(resp, cap, n, &last_opt, CoapOpt::COAP_OPT_CONTENT_FORMAT, v,
+        n = append_opt(resp, cap, n, &last_opt, COAP_OPT_CONTENT_FORMAT, v,
                        enc_uint_minimal((uint16_t)content_format, v));
     }
 
 #if PC_ENABLE_COAP_BLOCK
     if (block2_val >= 0)
     {
-        n = append_opt(resp, cap, n, &last_opt, CoapOpt::COAP_OPT_BLOCK2, v, enc_uint_minimal((uint32_t)block2_val, v));
+        n = append_opt(resp, cap, n, &last_opt, COAP_OPT_BLOCK2, v, enc_uint_minimal((uint32_t)block2_val, v));
     }
     if (block1_val >= 0)
     {
-        n = append_opt(resp, cap, n, &last_opt, CoapOpt::COAP_OPT_BLOCK1, v, enc_uint_minimal((uint32_t)block1_val, v));
+        n = append_opt(resp, cap, n, &last_opt, COAP_OPT_BLOCK1, v, enc_uint_minimal((uint32_t)block1_val, v));
     }
 #else
     (void)block2_val;
@@ -444,28 +443,28 @@ size_t pc_coap_server_process_ex(const uint8_t *req, size_t req_len, uint8_t *re
 
         switch (opt_num)
         {
-        case CoapOpt::COAP_OPT_URI_PATH:
+        case COAP_OPT_URI_PATH:
             if (!seg_append(s_coap.path, sizeof(s_coap.path), &path_len, '/', val, olen))
             {
                 bad = PROTO_TRUE;
             }
             break;
-        case CoapOpt::COAP_OPT_URI_QUERY:
+        case COAP_OPT_URI_QUERY:
             if (!seg_append(s_coap.query, sizeof(s_coap.query), &query_len, query_len ? '&' : '\0', val, olen))
             {
                 bad = PROTO_TRUE;
             }
             break;
-        case CoapOpt::COAP_OPT_CONTENT_FORMAT:
+        case COAP_OPT_CONTENT_FORMAT:
             req_cf = (CoapContentFormat)opt_uint(val, olen);
             break;
 #if PC_ENABLE_COAP_OBSERVE
-        case CoapOpt::COAP_OPT_OBSERVE:
+        case COAP_OPT_OBSERVE:
             s_coap.last_observe = (int)opt_uint(val, olen); // 0 = register, 1 = deregister
             break;
 #endif
 #if PC_ENABLE_COAP_BLOCK
-        case CoapOpt::COAP_OPT_BLOCK1: // block-wise request uploads (RFC 7959)
+        case COAP_OPT_BLOCK1: // block-wise request uploads (RFC 7959)
             if (olen > 3)
             {
                 bad = PROTO_TRUE;
@@ -475,7 +474,7 @@ size_t pc_coap_server_process_ex(const uint8_t *req, size_t req_len, uint8_t *re
                 req_block1 = (int32_t)opt_uint(val, olen);
             }
             break;
-        case CoapOpt::COAP_OPT_BLOCK2: // block-wise responses (RFC 7959)
+        case COAP_OPT_BLOCK2: // block-wise responses (RFC 7959)
             if (olen > 3)
             {
                 bad = PROTO_TRUE;

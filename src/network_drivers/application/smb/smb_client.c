@@ -272,9 +272,8 @@ static SmbResult smb_negotiate(SmbSendFn send, SmbRecvFn recv, void *ctx, uint16
     uint8_t salt[32];
     pc_platform_rand_fill(guid, 16);
     pc_platform_rand_fill(salt, sizeof(salt));
-    size_t mlen = pc_smb2_build_negotiate_311(s_smb.tx + 4, sizeof(s_smb.tx) - 4, guid,
-                                              Smb2SecurityMode::SMB2_NEGOTIATE_SIGNING_ENABLED, salt, sizeof(salt),
-                                              offer_ciphers, offer_count);
+    size_t mlen = pc_smb2_build_negotiate_311(s_smb.tx + 4, sizeof(s_smb.tx) - 4, guid, SMB2_NEGOTIATE_SIGNING_ENABLED,
+                                              salt, sizeof(salt), offer_ciphers, offer_count);
     if (!mlen) // GCOVR_EXCL_LINE - the static_assert at the top of this file makes this unreachable
     {
         return SMB_ERR_OVERFLOW; // GCOVR_EXCL_LINE - unreachable body of the guard above
@@ -329,10 +328,10 @@ static SmbResult smb_session_setup(const SmbConfig *cfg, const char *domain, pro
     // 2. SESSION_SETUP round 1: NTLMSSP NEGOTIATE wrapped in SPNEGO
     uint8_t ntneg[64];
     uint8_t sp1[128];
-    size_t ntneg_n = pc_ntlmssp_build_negotiate(ntneg, sizeof(ntneg), NtlmsspFlags::NTLMSSP_CLIENT_DEFAULT_FLAGS);
+    size_t ntneg_n = pc_ntlmssp_build_negotiate(ntneg, sizeof(ntneg), NTLMSSP_CLIENT_DEFAULT_FLAGS);
     size_t sp1_n = pc_spnego_wrap_negotiate(ntneg, ntneg_n, sp1, sizeof(sp1));
-    size_t mlen = pc_smb2_build_session_setup(s_smb.tx + 4, sizeof(s_smb.tx) - 4, 1, 0,
-                                              Smb2SecurityMode::SMB2_NEGOTIATE_SIGNING_ENABLED, sp1, sp1_n);
+    size_t mlen = pc_smb2_build_session_setup(s_smb.tx + 4, sizeof(s_smb.tx) - 4, 1, 0, SMB2_NEGOTIATE_SIGNING_ENABLED,
+                                              sp1, sp1_n);
     if (!mlen) // GCOVR_EXCL_LINE - the static_assert at the top of this file makes this unreachable
     {
         return SMB_ERR_OVERFLOW; // GCOVR_EXCL_LINE - unreachable body of the guard above
@@ -347,8 +346,7 @@ static SmbResult smb_session_setup(const SmbConfig *cfg, const char *domain, pro
     }
     pc_smb_preauth_update(preauth, s_smb.rx, (size_t)rl); // fold SESSION_SETUP response 1
     Smb2Header h1;
-    if (!pc_smb2_parse_header(s_smb.rx, (size_t)rl, &h1) ||
-        h1.status != Smb2Status::SMB2_STATUS_MORE_PROCESSING_REQUIRED)
+    if (!pc_smb2_parse_header(s_smb.rx, (size_t)rl, &h1) || h1.status != SMB2_STATUS_MORE_PROCESSING_REQUIRED)
     {
         return SMB_ERR_AUTH;
     }
@@ -415,7 +413,7 @@ static SmbResult smb_session_setup(const SmbConfig *cfg, const char *domain, pro
     // 4. SESSION_SETUP round 2 (echo the server SessionId). This request completes authentication and is
     // folded into the preauth chain (unsigned), whose final value derives the SMB 3.x signing key.
     mlen = pc_smb2_build_session_setup(s_smb.tx + 4, sizeof(s_smb.tx) - 4, 2, *session_id,
-                                       Smb2SecurityMode::SMB2_NEGOTIATE_SIGNING_ENABLED, s_smb.sp2, sp2_n);
+                                       SMB2_NEGOTIATE_SIGNING_ENABLED, s_smb.sp2, sp2_n);
     if (!mlen) // GCOVR_EXCL_LINE - the static_assert at the top of this file makes this unreachable
     {
         return SMB_ERR_OVERFLOW; // GCOVR_EXCL_LINE - unreachable body of the guard above
@@ -454,7 +452,7 @@ static SmbResult smb_session_setup(const SmbConfig *cfg, const char *domain, pro
     {
         return SMB_ERR_PROTOCOL;
     }
-    if (h2.status != Smb2Status::SMB2_STATUS_SUCCESS)
+    if (h2.status != SMB2_STATUS_SUCCESS)
     {
         return SMB_ERR_AUTH;
     }
@@ -466,8 +464,7 @@ static SmbResult smb_session_setup(const SmbConfig *cfg, const char *domain, pro
     if (pc_smb2_parse_session_setup_response(s_smb.rx, (size_t)rl, &ss2))
     {
         sess_flags = ss2.session_flags;
-        guest_or_null = (sess_flags & (Smb2SessionFlags::SMB2_SESSION_FLAG_IS_GUEST |
-                                       Smb2SessionFlags::SMB2_SESSION_FLAG_IS_NULL)) != 0;
+        guest_or_null = (sess_flags & (SMB2_SESSION_FLAG_IS_GUEST | SMB2_SESSION_FLAG_IS_NULL)) != 0;
     }
     sign->active = want_signing && !guest_or_null;
     sign->algo = algo;
@@ -493,7 +490,7 @@ static SmbResult smb_session_setup(const SmbConfig *cfg, const char *domain, pro
         if (crypt->available)
         {
             crypt->cipher = cipher;
-            if ((sess_flags & Smb2SessionFlags::SMB2_SESSION_FLAG_ENCRYPT_DATA) || cfg->encrypt)
+            if ((sess_flags & SMB2_SESSION_FLAG_ENCRYPT_DATA) || cfg->encrypt)
             {
                 crypt->active = PROTO_TRUE;
             }
@@ -524,7 +521,7 @@ static SmbResult smb_tree_connect(const SmbConfig *cfg, uint64_t session_id, con
     }
     Smb2Header h3;
     Smb2TreeConnectResp tc;
-    if (!pc_smb2_parse_header(s_smb.rx, (size_t)rl, &h3) || h3.status != Smb2Status::SMB2_STATUS_SUCCESS)
+    if (!pc_smb2_parse_header(s_smb.rx, (size_t)rl, &h3) || h3.status != SMB2_STATUS_SUCCESS)
     {
         return SMB_ERR_PROTOCOL;
     }
@@ -535,7 +532,7 @@ static SmbResult smb_tree_connect(const SmbConfig *cfg, uint64_t session_id, con
     *tree_id = h3.tree_id;
     // A share flagged encrypt-data turns encryption on for everything from CREATE onward (MS-SMB2 §3.2.5.5),
     // provided the cipher keys were derived at session setup.
-    if (crypt && crypt->available && (tc.share_flags & Smb2ShareFlags::SMB2_SHAREFLAG_ENCRYPT_DATA))
+    if (crypt && crypt->available && (tc.share_flags & SMB2_SHAREFLAG_ENCRYPT_DATA))
     {
         crypt->active = PROTO_TRUE;
     }
@@ -551,10 +548,9 @@ static SmbResult smb_create(const SmbConfig *cfg, SmbHandle *h, uint64_t session
     {
         return SMB_ERR_OVERFLOW;
     }
-    size_t mlen =
-        pc_smb2_build_create(s_smb.tx + 4, sizeof(s_smb.tx) - 4, 4, session_id, tree_id, cfg->desired_access,
-                             Smb2ShareAccess::SMB2_FILE_SHARE_READ | Smb2ShareAccess::SMB2_FILE_SHARE_WRITE,
-                             cfg->disposition, Smb2CreateOptions::SMB2_FILE_NON_DIRECTORY_FILE, s_smb.utf16, utf16_n);
+    size_t mlen = pc_smb2_build_create(s_smb.tx + 4, sizeof(s_smb.tx) - 4, 4, session_id, tree_id, cfg->desired_access,
+                                       SMB2_FILE_SHARE_READ | SMB2_FILE_SHARE_WRITE, cfg->disposition,
+                                       SMB2_FILE_NON_DIRECTORY_FILE, s_smb.utf16, utf16_n);
     if (!mlen) // GCOVR_EXCL_LINE - the static_assert at the top of this file makes this unreachable
     {
         return SMB_ERR_OVERFLOW; // GCOVR_EXCL_LINE - unreachable body of the guard above
@@ -567,7 +563,7 @@ static SmbResult smb_create(const SmbConfig *cfg, SmbHandle *h, uint64_t session
     }
     Smb2Header h4;
     Smb2CreateResp cr;
-    if (!pc_smb2_parse_header(s_smb.rx, (size_t)rl, &h4) || h4.status != Smb2Status::SMB2_STATUS_SUCCESS)
+    if (!pc_smb2_parse_header(s_smb.rx, (size_t)rl, &h4) || h4.status != SMB2_STATUS_SUCCESS)
     {
         return SMB_ERR_PROTOCOL;
     }
@@ -605,9 +601,8 @@ SmbResult smb_open(const SmbConfig *cfg, SmbHandle *h, SmbSendFn send, SmbRecvFn
     // Offer all four SMB 3.1.1 ciphers in preference order (a server selects the first it supports). cfg->
     // cipher_pref, when set, is moved to the front so a caller can pin a specific cipher (used to exercise
     // each one against a real server).
-    uint16_t offer[PC_SMB2_MAX_OFFER_CIPHERS] = {
-        Smb2Cipher::SMB2_ENCRYPTION_AES128_GCM, Smb2Cipher::SMB2_ENCRYPTION_AES256_GCM,
-        Smb2Cipher::SMB2_ENCRYPTION_AES128_CCM, Smb2Cipher::SMB2_ENCRYPTION_AES256_CCM};
+    uint16_t offer[PC_SMB2_MAX_OFFER_CIPHERS] = {SMB2_ENCRYPTION_AES128_GCM, SMB2_ENCRYPTION_AES256_GCM,
+                                                 SMB2_ENCRYPTION_AES128_CCM, SMB2_ENCRYPTION_AES256_CCM};
     if (cfg->cipher_pref != 0 && pc_smb2_cipher_key_len(cfg->cipher_pref) != 0)
     {
         for (size_t i = 1; i < PC_SMB2_MAX_OFFER_CIPHERS; i++)
@@ -635,7 +630,7 @@ SmbResult smb_open(const SmbConfig *cfg, SmbHandle *h, SmbSendFn send, SmbRecvFn
         return r;
     }
     // The client advertises SIGNING_ENABLED, so the session is signed exactly when the server requires it.
-    proto_bool want_signing = (sec_mode & Smb2SecurityMode::SMB2_NEGOTIATE_SIGNING_REQUIRED) != 0;
+    proto_bool want_signing = (sec_mode & SMB2_NEGOTIATE_SIGNING_REQUIRED) != 0;
 
     SmbSign sign = {PROTO_FALSE, SMB2_SIGN_ALGO_HMAC_SHA256, {0}};
     SmbCrypt crypt = {PROTO_FALSE, PROTO_FALSE, 0, {0}, {0}, 0, 0};
@@ -683,7 +678,7 @@ SmbResult smb_close(SmbHandle *h, SmbSendFn send, SmbRecvFn recv, void *ctx)
     }
     Smb2Header hd;
     Smb2CloseResp cl;
-    if (!pc_smb2_parse_header(s_smb.rx, (size_t)rl, &hd) || hd.status != Smb2Status::SMB2_STATUS_SUCCESS)
+    if (!pc_smb2_parse_header(s_smb.rx, (size_t)rl, &hd) || hd.status != SMB2_STATUS_SUCCESS)
     {
         return SMB_ERR_PROTOCOL;
     }
@@ -736,11 +731,11 @@ SmbResult smb_read(SmbHandle *h, uint64_t offset, uint8_t *out, size_t cap, size
             return SMB_ERR_PROTOCOL;
         }
         h->next_message_id++;
-        if (hd.status == Smb2Status::SMB2_STATUS_END_OF_FILE)
+        if (hd.status == SMB2_STATUS_END_OF_FILE)
         {
             break;
         }
-        if (hd.status != Smb2Status::SMB2_STATUS_SUCCESS)
+        if (hd.status != SMB2_STATUS_SUCCESS)
         {
             return SMB_ERR_PROTOCOL;
         }
@@ -805,7 +800,7 @@ SmbResult smb_write(SmbHandle *h, uint64_t offset, const uint8_t *data, size_t l
             return SMB_ERR_PROTOCOL;
         }
         h->next_message_id++;
-        if (hd.status != Smb2Status::SMB2_STATUS_SUCCESS)
+        if (hd.status != SMB2_STATUS_SUCCESS)
         {
             return SMB_ERR_PROTOCOL;
         }

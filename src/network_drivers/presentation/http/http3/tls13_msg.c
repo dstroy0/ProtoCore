@@ -17,16 +17,16 @@
 #include <string.h>
 
 // TLS extension types used here (RFC 8446 sec 4.2 + RFC 9001).
-#define E 0x0000
-#define S 0x000a
-#define S 0x000d
-#define N 0x0010
-#define E 0x0013 ///< RFC 7250 (IANA 19)
-#define E 0x0014 ///< RFC 7250 (IANA 20)
-#define S 0x002b
-#define E 0x002c
-#define E 0x0033
-#define D 0x0036 ///< RFC 9146 / RFC 9147 §9
+#define TLS_EXT_SERVER_NAME 0x0000
+#define TLS_EXT_SUPPORTED_GROUPS 0x000a
+#define TLS_EXT_SIGNATURE_ALGORITHMS 0x000d
+#define TLS_EXT_ALPN 0x0010
+#define TLS_EXT_CLIENT_CERTIFICATE_TYPE 0x0013 ///< RFC 7250 (IANA 19)
+#define TLS_EXT_SERVER_CERTIFICATE_TYPE 0x0014 ///< RFC 7250 (IANA 20)
+#define TLS_EXT_SUPPORTED_VERSIONS 0x002b
+#define TLS_EXT_COOKIE 0x002c
+#define TLS_EXT_KEY_SHARE 0x0033
+#define TLS_EXT_CONNECTION_ID 0x0036 ///< RFC 9146 / RFC 9147 §9
 
 // ---------------------------------------------------------------------------
 // A minimal bounds-checked byte writer (back-patches length prefixes).
@@ -279,7 +279,7 @@ static void parse_extension(uint16_t type, const uint8_t *body, size_t blen, Tls
 {
     switch (type)
     {
-    case TlsExt::TLS_EXT_SUPPORTED_VERSIONS: {
+    case TLS_EXT_SUPPORTED_VERSIONS: {
         // 1-byte list length, then 2-byte versions. DTLS 1.3 advertises 0xFEFC, TLS 1.3 advertises 0x0304.
         if (blen < 1)
         {
@@ -289,7 +289,7 @@ static void parse_extension(uint16_t type, const uint8_t *body, size_t blen, Tls
         out->offers_tls13 = list16_contains(body + 1, blen - 1, ll, dtls ? PC_TLS_VERSION_DTLS_1_3 : TLS_VERSION_1_3);
         break;
     }
-    case TlsExt::TLS_EXT_SUPPORTED_GROUPS: {
+    case TLS_EXT_SUPPORTED_GROUPS: {
         if (blen < 2)
         {
             return;
@@ -301,7 +301,7 @@ static void parse_extension(uint16_t type, const uint8_t *body, size_t blen, Tls
 #endif
         break;
     }
-    case TlsExt::TLS_EXT_SIGNATURE_ALGORITHMS: {
+    case TLS_EXT_SIGNATURE_ALGORITHMS: {
         if (blen < 2)
         {
             return;
@@ -310,14 +310,14 @@ static void parse_extension(uint16_t type, const uint8_t *body, size_t blen, Tls
         out->offers_ed25519 = list16_contains(body + 2, blen - 2, ll, TLS_SIG_ED25519);
         break;
     }
-    case TlsExt::TLS_EXT_KEY_SHARE:
+    case TLS_EXT_KEY_SHARE:
         parse_key_share(body, blen, out);
         break;
-    case TlsExt::TLS_EXT_ALPN:
+    case TLS_EXT_ALPN:
         parse_alpn(body, blen, out);
         break;
 #if PC_ENABLE_TLS_RPK
-    case TlsExt::TLS_EXT_SERVER_CERTIFICATE_TYPE: {
+    case TLS_EXT_SERVER_CERTIFICATE_TYPE: {
         // server_certificate_type (RFC 7250 sec 4.2): a 1-byte list length then 1-byte CertificateType
         // values. RawPublicKey(2) in the list means the client accepts a bare SubjectPublicKeyInfo from us.
         if (blen < 1)
@@ -343,7 +343,7 @@ static void parse_extension(uint16_t type, const uint8_t *body, size_t blen, Tls
         out->pc_quic_tp = body;
         out->pc_quic_tp_len = blen;
         break;
-    case TlsExt::TLS_EXT_COOKIE: {
+    case TLS_EXT_COOKIE: {
         // Cookie { opaque cookie<1..2^16-1> } (RFC 8446 §4.2.2): 2-byte length then the cookie bytes.
         if (blen < 2)
         {
@@ -358,7 +358,7 @@ static void parse_extension(uint16_t type, const uint8_t *body, size_t blen, Tls
         out->cookie_len = cl;
         break;
     }
-    case TlsExt::TLS_EXT_CONNECTION_ID: {
+    case TLS_EXT_CONNECTION_ID: {
         // ConnectionId { opaque cid<0..2^8-1> } (RFC 9146 §3): a 1-byte length then the CID the client
         // wants the server to place in records it sends to the client (an empty CID is legal).
         if (blen < 1)
@@ -375,7 +375,7 @@ static void parse_extension(uint16_t type, const uint8_t *body, size_t blen, Tls
         out->conn_id_len = cl;
         break;
     }
-    case TlsExt::TLS_EXT_SERVER_NAME:
+    case TLS_EXT_SERVER_NAME:
         parse_server_name(body, blen, out);
         break;
     default:
@@ -390,7 +390,7 @@ proto_bool pc_tls13_parse_client_hello(const uint8_t *msg, size_t len, Tls13Clie
     Reader r = {msg, len, 0};
     uint8_t type = 0;
     uint32_t body_len = 0;
-    if (!r_u8(&r, &type) || type != TlsHs::TLS_HS_CLIENT_HELLO || !r_u24(&r, &body_len))
+    if (!r_u8(&r, &type) || type != TLS_HS_CLIENT_HELLO || !r_u24(&r, &body_len))
     {
         return PROTO_FALSE;
     }
@@ -478,7 +478,7 @@ size_t pc_tls13_build_server_hello(uint8_t *out, size_t cap, const uint8_t rando
                                    proto_bool dtls, const uint8_t *conn_id, size_t conn_id_len)
 {
     Writer w = {out, cap, 0, PROTO_TRUE};
-    w_u8(&w, TlsHs::TLS_HS_SERVER_HELLO);
+    w_u8(&w, TLS_HS_SERVER_HELLO);
     size_t hs_len = w_mark(&w, 3);
 
     // legacy_version is 0x0303 (TLS 1.2) for TLS/QUIC, 0xFEFD (DTLS 1.2) for DTLS (RFC 9147 §5.3).
@@ -492,20 +492,20 @@ size_t pc_tls13_build_server_hello(uint8_t *out, size_t cap, const uint8_t rando
     size_t ext_len = w_mark(&w, 2);
     // key_share -> server KeyShareEntry { group, key_exchange }. (Ordered key_share then
     // supported_versions to match the RFC 8448 sec 3 ServerHello; extension order is not significant.)
-    w_u16(&w, TlsExt::TLS_EXT_KEY_SHARE);
+    w_u16(&w, TLS_EXT_KEY_SHARE);
     w_u16(&w, (uint16_t)(4 + share_len));
     w_u16(&w, group);
     w_u16(&w, (uint16_t)share_len);
     w_bytes(&w, share, share_len);
     // supported_versions -> selected version (DTLS 1.3 = 0xFEFC, TLS 1.3 = 0x0304).
-    w_u16(&w, TlsExt::TLS_EXT_SUPPORTED_VERSIONS);
+    w_u16(&w, TLS_EXT_SUPPORTED_VERSIONS);
     w_u16(&w, 2);
     w_u16(&w, dtls ? PC_TLS_VERSION_DTLS_1_3 : TLS_VERSION_1_3);
     // connection_id (RFC 9146 / RFC 9147 §9) -> the server's CID the client must place in the records
     // it sends. Sent in the ServerHello (epoch 0) so the client uses it from its first protected record.
     if (conn_id)
     {
-        w_u16(&w, TlsExt::TLS_EXT_CONNECTION_ID);
+        w_u16(&w, TLS_EXT_CONNECTION_ID);
         w_u16(&w, (uint16_t)(1 + conn_id_len));
         w_u8(&w, (uint8_t)conn_id_len);
         w_bytes(&w, conn_id, conn_id_len);
@@ -530,7 +530,7 @@ size_t pc_tls13_build_hello_retry_request(uint8_t *out, size_t cap, const uint8_
         return 0; // cookie extension body (cookie_len + 2) must fit a uint16
     }
     Writer w = {out, cap, 0, PROTO_TRUE};
-    w_u8(&w, TlsHs::TLS_HS_SERVER_HELLO);
+    w_u8(&w, TLS_HS_SERVER_HELLO);
     size_t hs_len = w_mark(&w, 3);
 
     // legacy_version and the supported_versions selection use the DTLS codepoints for DTLS 1.3
@@ -545,17 +545,17 @@ size_t pc_tls13_build_hello_retry_request(uint8_t *out, size_t cap, const uint8_
 
     size_t ext_len = w_mark(&w, 2);
     // supported_versions -> the selected version.
-    w_u16(&w, TlsExt::TLS_EXT_SUPPORTED_VERSIONS);
+    w_u16(&w, TLS_EXT_SUPPORTED_VERSIONS);
     w_u16(&w, 2);
     w_u16(&w, dtls ? PC_TLS_VERSION_DTLS_1_3 : TLS_VERSION_1_3);
     // key_share (HelloRetryRequest form) -> just the selected group (RFC 8446 §4.2.8).
-    w_u16(&w, TlsExt::TLS_EXT_KEY_SHARE);
+    w_u16(&w, TLS_EXT_KEY_SHARE);
     w_u16(&w, 2);
     w_u16(&w, selected_group);
     // cookie -> the return-routability token the client must echo (RFC 8446 §4.2.2).
     if (cookie_len)
     {
-        w_u16(&w, TlsExt::TLS_EXT_COOKIE);
+        w_u16(&w, TLS_EXT_COOKIE);
         w_u16(&w, (uint16_t)(cookie_len + 2));
         w_u16(&w, (uint16_t)cookie_len);
         w_bytes(&w, cookie, cookie_len);
@@ -570,7 +570,7 @@ size_t pc_tls13_build_hello_retry_request(uint8_t *out, size_t cap, const uint8_
 // server_certificate_type response (RFC 7250 sec 4.2): a single CertificateType value, RawPublicKey.
 static void w_server_cert_type_rpk(Writer *w)
 {
-    w_u16(w, TlsExt::TLS_EXT_SERVER_CERTIFICATE_TYPE);
+    w_u16(w, TLS_EXT_SERVER_CERTIFICATE_TYPE);
     w_u16(w, 1); // extension_data length
     w_u8(w, TLS_CERT_TYPE_RAW_PUBLIC_KEY);
 }
@@ -579,7 +579,7 @@ static void w_server_cert_type_rpk(Writer *w)
 size_t pc_tls13_build_encrypted_extensions_empty(uint8_t *out, size_t cap, proto_bool rpk_server_cert)
 {
     Writer w = {out, cap, 0, PROTO_TRUE};
-    w_u8(&w, TlsHs::TLS_HS_ENCRYPTED_EXTENSIONS);
+    w_u8(&w, TLS_HS_ENCRYPTED_EXTENSIONS);
     size_t hs_len = w_mark(&w, 3);
     // The DTLS profile carries no ALPN / transport params; the only possible extension is the
     // negotiated server_certificate_type (RFC 7250) when RawPublicKey was selected.
@@ -610,12 +610,12 @@ size_t pc_tls13_build_encrypted_extensions(uint8_t *out, size_t cap, const uint8
                                            proto_bool rpk_server_cert)
 {
     Writer w = {out, cap, 0, PROTO_TRUE};
-    w_u8(&w, TlsHs::TLS_HS_ENCRYPTED_EXTENSIONS);
+    w_u8(&w, TLS_HS_ENCRYPTED_EXTENSIONS);
     size_t hs_len = w_mark(&w, 3);
 
     size_t ext_len = w_mark(&w, 2);
     // ALPN -> ProtocolNameList [ "h3" ].
-    w_u16(&w, TlsExt::TLS_EXT_ALPN);
+    w_u16(&w, TLS_EXT_ALPN);
     w_u16(&w, 5); // ext body length: 2 (list len) + 1 + 2
     w_u16(&w, 3); // ProtocolNameList length
     w_u8(&w, 2);  // name length
@@ -642,7 +642,7 @@ size_t pc_tls13_build_encrypted_extensions(uint8_t *out, size_t cap, const uint8
 size_t pc_tls13_build_certificate(uint8_t *out, size_t cap, const uint8_t *cert_der, size_t cert_len)
 {
     Writer w = {out, cap, 0, PROTO_TRUE};
-    w_u8(&w, TlsHs::TLS_HS_CERTIFICATE);
+    w_u8(&w, TLS_HS_CERTIFICATE);
     size_t hs_len = w_mark(&w, 3);
 
     w_u8(&w, 0); // certificate_request_context: empty
@@ -718,7 +718,7 @@ size_t pc_tls13_build_cert_verify(uint8_t *out, size_t cap, const uint8_t transc
     pc_ed25519_sign(sig, content, clen, seed);
 
     Writer w = {out, cap, 0, PROTO_TRUE};
-    w_u8(&w, TlsHs::TLS_HS_CERTIFICATE_VERIFY);
+    w_u8(&w, TLS_HS_CERTIFICATE_VERIFY);
     size_t hs_len = w_mark(&w, 3);
     w_u16(&w, TLS_SIG_ED25519);
     w_u16(&w, PC_ED25519_SIG_LEN);
@@ -730,7 +730,7 @@ size_t pc_tls13_build_cert_verify(uint8_t *out, size_t cap, const uint8_t transc
 size_t pc_tls13_build_finished(uint8_t *out, size_t cap, const uint8_t verify_data[32])
 {
     Writer w = {out, cap, 0, PROTO_TRUE};
-    w_u8(&w, TlsHs::TLS_HS_FINISHED);
+    w_u8(&w, TLS_HS_FINISHED);
     size_t hs_len = w_mark(&w, 3);
     w_bytes(&w, verify_data, 32);
     w_patch24(&w, hs_len);

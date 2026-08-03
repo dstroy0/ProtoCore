@@ -43,11 +43,9 @@ static void dds_bench_task(void *)
     static uint8_t msg[64];
     size_t msg_len = pc_rtps_header(GUID, VENDOR, msg, sizeof(msg));
     uint8_t ts_body[8] = {0};
-    msg_len += pc_rtps_submessage(Rtps::RTPS_SM_INFO_TS, Rtps::RTPS_FLAG_ENDIAN, ts_body, 8, msg + msg_len,
-                                  sizeof(msg) - msg_len);
+    msg_len += pc_rtps_submessage(RTPS_SM_INFO_TS, RTPS_FLAG_ENDIAN, ts_body, 8, msg + msg_len, sizeof(msg) - msg_len);
     uint8_t data_body[4] = {0xDE, 0xAD, 0xBE, 0xEF};
-    msg_len += pc_rtps_submessage(Rtps::RTPS_SM_DATA, Rtps::RTPS_FLAG_ENDIAN, data_body, 4, msg + msg_len,
-                                  sizeof(msg) - msg_len);
+    msg_len += pc_rtps_submessage(RTPS_SM_DATA, RTPS_FLAG_ENDIAN, data_body, 4, msg + msg_len, sizeof(msg) - msg_len);
 
     for (;;)
     {
@@ -55,11 +53,10 @@ static void dds_bench_task(void *)
         volatile size_t sink = 0;
         DBENCH_OP("pc_rtps_header", 100000, sink += pc_rtps_header(GUID, VENDOR, hdr_out, sizeof(hdr_out)));
         DBENCH_OP("pc_rtps_submessage LE", 100000,
-                  sink += pc_rtps_submessage(Rtps::RTPS_SM_INFO_TS, Rtps::RTPS_FLAG_ENDIAN, sm_body, sizeof(sm_body),
-                                             sm_out, sizeof(sm_out)));
+                  sink += pc_rtps_submessage(RTPS_SM_INFO_TS, RTPS_FLAG_ENDIAN, sm_body, sizeof(sm_body), sm_out,
+                                             sizeof(sm_out)));
         DBENCH_OP("pc_rtps_submessage BE", 100000,
-                  sink +=
-                  pc_rtps_submessage(Rtps::RTPS_SM_DATA, 0x00, sm_body, sizeof(sm_body), sm_out, sizeof(sm_out)));
+                  sink += pc_rtps_submessage(RTPS_SM_DATA, 0x00, sm_body, sizeof(sm_body), sm_out, sizeof(sm_out)));
         DBENCH_BULK("pc_rtps_parse", 50000, msg_len,
                     sink += pc_rtps_parse(msg, msg_len, count_submessage, nullptr) ? 1 : 0);
         (void)sink;

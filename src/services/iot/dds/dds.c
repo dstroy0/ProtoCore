@@ -16,7 +16,7 @@ const uint8_t RTPS_VERSION[2] = {2, 4};
 
 size_t pc_rtps_header(const uint8_t *guid_prefix, const uint8_t *vendor_id, uint8_t *out, size_t cap)
 {
-    if (!guid_prefix || !vendor_id || !out || cap < Rtps::RTPS_HEADER_LEN)
+    if (!guid_prefix || !vendor_id || !out || cap < RTPS_HEADER_LEN)
     {
         return 0;
     }
@@ -28,8 +28,8 @@ size_t pc_rtps_header(const uint8_t *guid_prefix, const uint8_t *vendor_id, uint
     out[5] = RTPS_VERSION[1];
     out[6] = vendor_id[0];
     out[7] = vendor_id[1];
-    memcpy(out + 8, guid_prefix, Rtps::RTPS_GUIDPREFIX_LEN);
-    return Rtps::RTPS_HEADER_LEN;
+    memcpy(out + 8, guid_prefix, RTPS_GUIDPREFIX_LEN);
+    return RTPS_HEADER_LEN;
 }
 
 size_t pc_rtps_submessage(uint8_t id, uint8_t flags, const uint8_t *body, uint16_t body_len, uint8_t *out, size_t cap)
@@ -46,7 +46,7 @@ size_t pc_rtps_submessage(uint8_t id, uint8_t flags, const uint8_t *body, uint16
     out[0] = id;
     out[1] = flags;
     // octetsToNextHeader is written in the submessage's own byte order (the E flag).
-    if (flags & Rtps::RTPS_FLAG_ENDIAN)
+    if (flags & RTPS_FLAG_ENDIAN)
     {
         out[2] = (uint8_t)body_len;
         out[3] = (uint8_t)(body_len >> 8);
@@ -65,7 +65,7 @@ size_t pc_rtps_submessage(uint8_t id, uint8_t flags, const uint8_t *body, uint16
 
 proto_bool pc_rtps_parse(const uint8_t *msg, size_t len, pc_rtps_cb cb, void *arg)
 {
-    if (!msg || len < Rtps::RTPS_HEADER_LEN)
+    if (!msg || len < RTPS_HEADER_LEN)
     {
         return PROTO_FALSE;
     }
@@ -79,13 +79,13 @@ proto_bool pc_rtps_parse(const uint8_t *msg, size_t len, pc_rtps_cb cb, void *ar
         return PROTO_FALSE;
     }
 
-    size_t off = Rtps::RTPS_HEADER_LEN;
+    size_t off = RTPS_HEADER_LEN;
     while (off + 4 <= len)
     {
         uint8_t id = msg[off];
         uint8_t flags = msg[off + 1];
-        uint16_t oth = (flags & Rtps::RTPS_FLAG_ENDIAN) ? (uint16_t)(msg[off + 2] | (msg[off + 3] << 8))
-                                                        : (uint16_t)((msg[off + 2] << 8) | msg[off + 3]);
+        uint16_t oth = (flags & RTPS_FLAG_ENDIAN) ? (uint16_t)(msg[off + 2] | (msg[off + 3] << 8))
+                                                  : (uint16_t)((msg[off + 2] << 8) | msg[off + 3]);
         size_t body = oth ? oth : (len - (off + 4)); // 0 = extends to end of message
         if (off + 4 + body > len)
         {

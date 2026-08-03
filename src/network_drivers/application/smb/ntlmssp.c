@@ -104,7 +104,7 @@ size_t pc_ntlmssp_build_authenticate(uint8_t *buf, size_t cap, const uint8_t *lm
     const size_t HDR = with_mic ? 88 : 64;
     if (with_mic)
     {
-        flags |= NtlmsspFlags::NTLMSSP_NEGOTIATE_VERSION;
+        flags |= NTLMSSP_NEGOTIATE_VERSION;
     }
     size_t dlen = utf16_len(domain);
     size_t ulen = utf16_len(user);

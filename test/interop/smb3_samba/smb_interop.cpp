@@ -48,7 +48,7 @@ static const char *env_or(const char *k, const char *dflt)
 }
 static const char *algo_name(Smb2SignAlgo a)
 {
-    return a == Smb2SignAlgo::AES_CMAC ? "AES-CMAC" : "HMAC-SHA256";
+    return a == SMB2_SIGN_ALGO_AES_CMAC ? "AES-CMAC" : "HMAC-SHA256";
 }
 
 int main()
@@ -78,8 +78,8 @@ int main()
     cfg.workstation = "PCCLIENT";
     cfg.share = env_or("SMB_SHARE", "\\\\127.0.0.1\\pcshare");
     cfg.path = env_or("SMB_PATH", "interop.txt");
-    cfg.desired_access = Smb2Access::SMB2_FILE_GENERIC_READ | Smb2Access::SMB2_FILE_GENERIC_WRITE;
-    cfg.disposition = Smb2Disposition::SMB2_FILE_OVERWRITE_IF;
+    cfg.desired_access = SMB2_FILE_GENERIC_READ | SMB2_FILE_GENERIC_WRITE;
+    cfg.disposition = SMB2_FILE_OVERWRITE_IF;
 
     SmbHandle h;
     memset(&h, 0, sizeof(h));
