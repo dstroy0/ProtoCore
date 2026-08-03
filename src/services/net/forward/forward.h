@@ -158,7 +158,7 @@ typedef enum PROTO_ENUM_PACKED
  *        return a ::pc_fwd_verdict. Runs after the ACL and before policy routes / the fan-out.
  *        The callback must not block; it may record metrics, log, or decide to drop.
  */
-using pc_fwd_inspect_fn = pc_fwd_verdict (*)(uint8_t src_if, const uint8_t *data, uint16_t len, void *ctx);
+typedef pc_fwd_verdict (*pc_fwd_inspect_fn)(uint8_t src_if, const uint8_t *data, uint16_t len, void *ctx);
 
 /**
  * @brief Install (or clear, with @p fn null) the ingress inspection hook.

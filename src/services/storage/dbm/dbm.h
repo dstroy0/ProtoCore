@@ -88,7 +88,7 @@ proto_bool pc_dbm_sync(pc_dbm *db);
 
 /** @brief Per-key callback for ::pc_dbm_iterate; return false to stop early. The key bytes are not
  * NUL-terminated. Do not put/delete during iteration (it mutates the index). */
-using pc_dbm_iter_cb = proto_bool (*)(const char *key, uint16_t key_len, void *ctx);
+typedef proto_bool (*pc_dbm_iter_cb)(const char *key, uint16_t key_len, void *ctx);
 
 /** @brief Visit every live key (unordered). @return the number of keys visited. */
 uint32_t pc_dbm_iterate(const pc_dbm *db, pc_dbm_iter_cb cb, void *ctx);

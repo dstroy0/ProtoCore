@@ -62,8 +62,8 @@ proto_bool pc_docstore_sync(pc_doc_store *ds);
  * @brief Per-match callback for the find calls: the matching document's id and JSON body (the body points
  * into a temporary buffer valid only for this call). Return false to stop the scan early.
  */
-using pc_doc_match_cb = proto_bool (*)(const char *id, uint16_t id_len, const uint8_t *json, uint32_t json_len,
-                                       void *ctx);
+typedef proto_bool (*pc_doc_match_cb)(const char *id, uint16_t id_len, const uint8_t *json, uint32_t json_len,
+                                      void *ctx);
 
 /**
  * @brief Find documents whose top-level string field @p field equals @p value. @return the match count.

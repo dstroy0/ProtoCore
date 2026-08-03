@@ -103,7 +103,7 @@ proto_bool pc_wal_store_checkpoint(WalStore *s);
 
 /** @brief Per-record callback for ::pc_wal_store_scan - like ::WalRecordCb but also gives the record's
  * data-region byte offset (so an index can record where to re-read the payload later). */
-using WalStoreRecordCb = void (*)(uint64_t seq, uint64_t data_off, const uint8_t *payload, uint32_t len, void *ctx);
+typedef void (*WalStoreRecordCb)(uint64_t seq, uint64_t data_off, const uint8_t *payload, uint32_t len, void *ctx);
 
 /**
  * @brief Walk every valid record currently in the store (offsets [0, head)) in order, invoking @p cb for each.

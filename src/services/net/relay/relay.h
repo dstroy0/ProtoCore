@@ -44,17 +44,17 @@ typedef enum PROTO_ENUM_PACKED
  * @return bytes read (> 0), 0 if none are available now, or < 0 once the peer has closed its send
  *         side (EOF) or errored.
  */
-using pc_relay_recv_fn = int (*)(void *ctx, uint8_t *buf, size_t cap);
+typedef int (*pc_relay_recv_fn)(void *ctx, uint8_t *buf, size_t cap);
 
 /**
  * @brief Write up to @p len bytes to the peer.
  * @return bytes accepted (> 0, may be < @p len under backpressure), 0 if none can be accepted right
  *         now, or < 0 on error.
  */
-using pc_relay_send_fn = int (*)(void *ctx, const uint8_t *buf, size_t len);
+typedef int (*pc_relay_send_fn)(void *ctx, const uint8_t *buf, size_t len);
 
 /** @brief Optional: signal the peer that no more data will be sent to it (a write-side half-close). */
-using pc_relay_shutdown_fn = void (*)(void *ctx);
+typedef void (*pc_relay_shutdown_fn)(void *ctx);
 
 /** @brief One end of a relay (a socket, behind seams). @p shutdown may be null. */
 typedef struct

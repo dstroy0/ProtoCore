@@ -96,7 +96,7 @@ void pc_coaps_server_stop();
 // ---------------------------------------------------------------------------
 #if !PROTOCORE_HOT
 /** @brief Sink invoked for every outbound datagram (host builds route sends here instead of UDP). */
-using CoapsServerOutFn = void (*)(void *ctx, const uint8_t *datagram, size_t len, const char *ip, uint16_t port);
+typedef void (*CoapsServerOutFn)(void *ctx, const uint8_t *datagram, size_t len, const char *ip, uint16_t port);
 
 /** @brief Register the outbound-datagram sink used on host builds. */
 void pc_coaps_server_set_out_sink_cb(CoapsServerOutFn fn, void *ctx);

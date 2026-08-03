@@ -87,7 +87,7 @@ size_t edge_key_canon(const char *method, const char *host, const char *path, co
 void edge_key_digest(const char *canon, size_t len, uint8_t digest[32]);
 
 /** @brief Request-header lookup used to build the Vary secondary key; return nullptr when absent. */
-using EdgeHdrLookup = const char *(*)(void *ctx, const char *name);
+typedef const char *(*EdgeHdrLookup)(void *ctx, const char *name);
 
 /**
  * @brief Serialize a request's values for each field-name in a response `Vary` header into @p out
@@ -161,7 +161,7 @@ typedef struct
  * engine ever depending on dbm: the glue installs the callback, the engine only calls it. @p victim is
  * still fully populated (not yet unlinked). Transient passthrough entries (empty key) are not offered.
  */
-using EdgeEvictFn = void (*)(void *ctx, const EdgeEntry *victim);
+typedef void (*EdgeEvictFn)(void *ctx, const EdgeEntry *victim);
 
 /** @brief The L1 store: a fixed pool of entries with an intrusive MRU..LRU list. */
 typedef struct
