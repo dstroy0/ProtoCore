@@ -473,7 +473,7 @@ void test_file_send_pump_connection_lost_midtransfer()
     mock_mnt_add_text("/www/big.bin", big, BIG_N);
     serve_static("/", g_fs, "/www");
 
-    mock_sndbuf() = 0; // no window: the headers queue, then the body transfer parks
+    mock_sndbuf_set(0); // no window: the headers queue, then the body transfer parks
     feed_and_handle(0, "GET /big.bin HTTP/1.1\r\nHost: x\r\n\r\n");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "200 OK"));
     TEST_ASSERT_TRUE(pc_file_holds_slot(0)); // parked, waiting for the window to reopen
@@ -483,7 +483,7 @@ void test_file_send_pump_connection_lost_midtransfer()
     TEST_ASSERT_FALSE(pc_file_holds_slot(0));         // continuation dropped
     TEST_ASSERT_NULL(strstr(tcp_captured(), "ZZZZ")); // no body bytes were ever written
 
-    mock_sndbuf() = MOCK_SNDBUF_DEFAULT; // restore the window for the remaining tests
+    mock_sndbuf_set(MOCK_SNDBUF_DEFAULT); // restore the window for the remaining tests
     mock_mnt_reset();
 }
 
