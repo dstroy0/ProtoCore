@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file websocket.cpp
+ * @file websocket.c
  * @brief WebSocket frame parser and connection pool implementation.
  *
  * Handles RFC 6455 framing.  Control frames (ping/pong/close) are handled
@@ -32,7 +32,7 @@ void ws_init()
 {
     for (int i = 0; i < MAX_WS_CONNS; i++)
     {
-        ws_pool[i] = {};
+        ws_pool[i] = (WsConn){0};
         ws_pool[i].ws_id = (uint8_t)i;
     }
 }
@@ -53,7 +53,7 @@ WsConn *ws_alloc(uint8_t slot_id)
     {
         if (!ws_pool[i].active)
         {
-            ws_pool[i] = {};
+            ws_pool[i] = (WsConn){0};
             ws_pool[i].ws_id = (uint8_t)i;
             ws_pool[i].slot_id = slot_id;
             ws_pool[i].active = PROTO_TRUE;
@@ -82,7 +82,7 @@ void ws_free(uint8_t slot_id)
     {
         if (ws_pool[i].active && ws_pool[i].slot_id == slot_id)
         {
-            ws_pool[i] = {};
+            ws_pool[i] = (WsConn){0};
             ws_pool[i].ws_id = (uint8_t)i;
             return;
         }
@@ -124,9 +124,9 @@ void ws_reset_frame(WsConn *ws)
 // One named owner, unreachable cross-TU. (The ws_pool[] table is the shared substrate.)
 typedef struct
 {
-    uint16_t frag_size = PC_WS_FRAG_SIZE;
+    uint16_t frag_size;
 } WsCtx;
-static WsCtx s_ws;
+static WsCtx s_ws = {.frag_size = PC_WS_FRAG_SIZE};
 void ws_set_frag_size(uint16_t bytes)
 {
     s_ws.frag_size = bytes;
@@ -181,7 +181,9 @@ proto_bool ws_send_frame(WsConn *ws, WsOpcode opcode, const uint8_t *payload, ui
     // worst case and cannot fail. A longer message is sent uncompressed, which the per-message RSV1
     // flag makes legal.
     static_assert(PC_PLAINTEXT_WORK_WS_SEND <= PC_PLAINTEXT_ARENA_SIZE, "WS deflate scratch exceeds the arena");
-    PlaintextScope scope;
+    // The compressed buffer is handed to `payload` below and read by the emit calls at the end of
+    // this function, so the borrow spans the whole function and is released at each exit.
+    size_t pt_mark = pc_plaintext_mark();
     if (ws->pmd && len > 0 && len <= PC_WS_DEFLATE_MAX && (opcode == WS_OP_TEXT || opcode == WS_OP_BINARY))
     {
         size_t cap = (size_t)len + len / 8 + 16; // static-Huffman worst-case headroom
@@ -216,7 +218,11 @@ proto_bool ws_send_frame(WsConn *ws, WsOpcode opcode, const uint8_t *payload, ui
     uint16_t frag = s_ws.frag_size;
     if (!data || frag == 0 || len <= frag)
     {
-        return ws_emit_one(conn, (uint8_t)(0x80 | rsv1 | (uint8_t)opcode), payload, len);
+        proto_bool sent = ws_emit_one(conn, (uint8_t)(0x80 | rsv1 | (uint8_t)opcode), payload, len);
+#if PC_ENABLE_WS_DEFLATE
+        pc_plaintext_release(pt_mark);
+#endif
+        return sent;
     }
 
     // Split into <= frag-byte frames: the opcode (+ RSV1) rides the first frame, the rest are
@@ -231,11 +237,17 @@ proto_bool ws_send_frame(WsConn *ws, WsOpcode opcode, const uint8_t *payload, ui
         uint8_t b0 = (uint8_t)((last ? 0x80 : 0x00) | (first ? (rsv1 | (uint8_t)opcode) : (uint8_t)WS_OP_CONTINUATION));
         if (!ws_emit_one(conn, b0, payload + off, chunk))
         {
+#if PC_ENABLE_WS_DEFLATE
+            pc_plaintext_release(pt_mark);
+#endif
             return PROTO_FALSE;
         }
         off = (uint16_t)(off + chunk);
         first = PROTO_FALSE;
     }
+#if PC_ENABLE_WS_DEFLATE
+    pc_plaintext_release(pt_mark);
+#endif
     return PROTO_TRUE;
 }
 
@@ -310,13 +322,14 @@ static void ws_finish_frame(WsConn *ws, TcpConn *conn)
             // The parser closes 1009 before msg_len passes WS_FRAME_SIZE, so all three borrows are
             // bounded and cannot fail.
             static_assert(PC_PLAINTEXT_WORK_WS_RECV <= PC_PLAINTEXT_ARENA_SIZE, "WS inflate scratch exceeds the arena");
-            PlaintextScope scope;
+            size_t pt_mark = pc_plaintext_mark();
             size_t comp_len = ws->msg_len;
             uint8_t *in = (uint8_t *)pc_plaintext_alloc(comp_len + 4, 1);
             uint8_t *out = (uint8_t *)pc_plaintext_alloc(WS_FRAME_SIZE, 1);
             uint8_t *tbl = (uint8_t *)pc_plaintext_alloc(INFLATE_SCRATCH_SIZE, 16);
             if (!in || !out || !tbl)
             {
+                pc_plaintext_release(pt_mark);
                 ws_close(ws, WS_CLOSE_PROTOCOL); // arena exhausted: fail closed
                 ws->parse_state = WS_ERROR;
                 return;
@@ -330,12 +343,14 @@ static void ws_finish_frame(WsConn *ws, TcpConn *conn)
             InflateResult rc = inflate_raw(in, comp_len + 4, out, WS_FRAME_SIZE, &dlen, tbl, INFLATE_SCRATCH_SIZE);
             if (rc == INFLATE_ERR_OVERFLOW)
             {
+                pc_plaintext_release(pt_mark);
                 ws_close(ws, WS_CLOSE_TOO_BIG);
                 ws->parse_state = WS_ERROR;
                 return;
             }
             if (rc != INFLATE_OK)
             {
+                pc_plaintext_release(pt_mark);
                 ws_close(ws, WS_CLOSE_PROTOCOL);
                 ws->parse_state = WS_ERROR;
                 return;
@@ -343,6 +358,7 @@ static void ws_finish_frame(WsConn *ws, TcpConn *conn)
             memcpy(ws->buf, out, dlen);
             ws->msg_len = dlen;
             ws->msg_compressed = PROTO_FALSE;
+            pc_plaintext_release(pt_mark);
         }
 #endif
         // Whole message received - surface it to the application.
