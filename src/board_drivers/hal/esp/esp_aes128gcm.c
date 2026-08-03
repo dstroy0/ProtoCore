@@ -66,7 +66,7 @@ static_assert(sizeof(mbedtls_gcm_context) <= PC_WORK_AES128GCM,
               "mbedtls_gcm_context outgrew PC_WORK_AES128GCM - raise it in protocore_config.h, which derives "
               "PC_SECURE_ARENA_SIZE from it");
 
-pc_aes128gcm_key *pc_aes128gcm_key_init(void *storage, const uint8_t key[PC_AES128GCM_KEY_LEN])
+struct pc_aes128gcm_key *pc_aes128gcm_key_init(void *storage, const uint8_t key[PC_AES128GCM_KEY_LEN])
 {
     mbedtls_gcm_context *g = (mbedtls_gcm_context *)(storage);
     mbedtls_gcm_init(g);
@@ -75,17 +75,17 @@ pc_aes128gcm_key *pc_aes128gcm_key_init(void *storage, const uint8_t key[PC_AES1
         mbedtls_gcm_free(g);
         return NULL;
     }
-    return (pc_aes128gcm_key *)(g);
+    return (struct pc_aes128gcm_key *)(g);
 }
 
-void pc_aes128gcm_key_wipe(pc_aes128gcm_key *k)
+void pc_aes128gcm_key_wipe(struct pc_aes128gcm_key *k)
 {
     mbedtls_gcm_context *g = (mbedtls_gcm_context *)(k);
     mbedtls_gcm_free(g); // releases whatever the vendor attached
     pc_secure_wipe((uint8_t *)(g), sizeof(mbedtls_gcm_context));
 }
 
-pc_cspan pc_aes128gcm_seal(pc_aes128gcm_key *k, const uint8_t nonce[PC_AES128GCM_IV_LEN], const uint8_t *aad,
+pc_cspan pc_aes128gcm_seal(struct pc_aes128gcm_key *k, const uint8_t nonce[PC_AES128GCM_IV_LEN], const uint8_t *aad,
                            size_t aad_len, const uint8_t *pt, size_t pt_len, uint8_t *ct_out,
                            uint8_t tag_out[PC_AES128GCM_TAG_LEN])
 {
@@ -98,7 +98,7 @@ pc_cspan pc_aes128gcm_seal(pc_aes128gcm_key *k, const uint8_t nonce[PC_AES128GCM
     return pc_cspan_from(ct_out, pt_len); // the tag rides in tag_out, not in this span
 }
 
-proto_bool pc_aes128gcm_open(pc_aes128gcm_key *k, const uint8_t nonce[PC_AES128GCM_IV_LEN], const uint8_t *aad,
+proto_bool pc_aes128gcm_open(struct pc_aes128gcm_key *k, const uint8_t nonce[PC_AES128GCM_IV_LEN], const uint8_t *aad,
                              size_t aad_len, const uint8_t *ct, size_t ct_len, const uint8_t tag[PC_AES128GCM_TAG_LEN],
                              uint8_t *out)
 {

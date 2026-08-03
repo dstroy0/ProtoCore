@@ -932,7 +932,7 @@ size_t pc_smb2_encrypt(uint16_t cipher, const uint8_t *key, const uint8_t nonce[
         // Per-call context: same reasoning as the AES-256 branch below - not a hot enough path to justify
         // a per-session one, and the lifecycle cost is at least visible here.
         size_t mark = pc_secure_mark();
-        pc_aes128gcm_key *g = pc_aes128gcm_key_init(pc_secure_span(PC_WORK_AES128GCM, 8).buf, key);
+        struct pc_aes128gcm_key *g = pc_aes128gcm_key_init(pc_secure_span(PC_WORK_AES128GCM, 8).buf, key);
         pc_aes128gcm_seal(g, out + 20, aad, 32, msg, msg_len, ct, tag);
         pc_aes128gcm_key_wipe(g);
         pc_secure_release(mark);
@@ -1002,7 +1002,7 @@ size_t pc_smb2_decrypt(uint16_t cipher, const uint8_t *key, const uint8_t *in, s
         // Per-call context: same reasoning as the AES-256 branch below - not a hot enough path to justify
         // a per-session one, and the lifecycle cost is at least visible here.
         size_t mark = pc_secure_mark();
-        pc_aes128gcm_key *g = pc_aes128gcm_key_init(pc_secure_span(PC_WORK_AES128GCM, 8).buf, key);
+        struct pc_aes128gcm_key *g = pc_aes128gcm_key_init(pc_secure_span(PC_WORK_AES128GCM, 8).buf, key);
         ok = pc_aes128gcm_open(g, aad, aad, 32, ct, ct_len, tag, out);
         pc_aes128gcm_key_wipe(g);
         pc_secure_release(mark);

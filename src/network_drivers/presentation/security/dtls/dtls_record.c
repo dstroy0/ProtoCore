@@ -142,10 +142,10 @@ size_t pc_dtls_plaintext_parse(const uint8_t *rec, size_t rec_len, DtlsPlaintext
 // DTLSCiphertext
 // ---------------------------------------------------------------------------
 
-size_t pc_dtls_ciphertext_protect(DtlsRecordKeys &keys, uint64_t seq, uint8_t content_type, const uint8_t *plaintext,
+size_t pc_dtls_ciphertext_protect(DtlsRecordKeys *keys, uint64_t seq, uint8_t content_type, const uint8_t *plaintext,
                                   size_t pt_len, uint8_t *out, size_t out_cap, const uint8_t *cid, size_t cid_len)
 {
-    if (keys.cipher != DTLS_CIPHER_AES_128_GCM_SHA256)
+    if (keys->cipher != DTLS_CIPHER_AES_128_GCM_SHA256)
     {
         return 0;
     }
@@ -164,7 +164,7 @@ size_t pc_dtls_ciphertext_protect(DtlsRecordKeys &keys, uint64_t seq, uint8_t co
         return 0;
     }
 
-    uint8_t flags = (uint8_t)(DTLS_UH_FIXED | DTLS_UH_SEQ16 | DTLS_UH_LENGTH | (keys.epoch & DTLS_UH_EPOCH_MASK));
+    uint8_t flags = (uint8_t)(DTLS_UH_FIXED | DTLS_UH_SEQ16 | DTLS_UH_LENGTH | (keys->epoch & DTLS_UH_EPOCH_MASK));
     if (cid_len)
     {
         flags |= DTLS_UH_CID;
@@ -185,10 +185,10 @@ size_t pc_dtls_ciphertext_protect(DtlsRecordKeys &keys, uint64_t seq, uint8_t co
     out[hdr_len + pt_len] = content_type;
 
     uint8_t nonce[12];
-    build_nonce(keys.iv, seq, nonce);
+    build_nonce(keys->iv, seq, nonce);
     // AAD = the whole unified header (including any connection id) carrying the plaintext sequence
     // number (before §4.2.3 encryption).
-    pc_aes128gcm_seal((pc_aes128gcm_key *)(keys.gcm), nonce, out, hdr_len, out + hdr_len, inner_len, out + hdr_len,
+    pc_aes128gcm_seal((pc_aes128gcm_key *)(keys->gcm), nonce, out, hdr_len, out + hdr_len, inner_len, out + hdr_len,
                       out + hdr_len + inner_len);
 
     // Encrypt the sequence number (RFC 9147 §4.2.3): mask = AES-ECB(sn_key, ciphertext[0..15]).
@@ -196,17 +196,17 @@ size_t pc_dtls_ciphertext_protect(DtlsRecordKeys &keys, uint64_t seq, uint8_t co
     // The sequence-number context is already keyed and lives in the key material; rebuilding it here
     // costs ~556 cycles per record plus a pool borrow and wipe, independent of record size.
     uint8_t mask[16];
-    pc_aes128_encrypt_block((pc_aes128 *)(keys.sn_key), out + hdr_len, mask);
+    pc_aes128_encrypt_block((pc_aes128 *)(keys->sn_key), out + hdr_len, mask);
     out[seq_off] ^= mask[0];
     out[seq_off + 1] ^= mask[1];
     return total;
 }
 
-proto_bool pc_dtls_ciphertext_unprotect(DtlsRecordKeys &keys, uint64_t next_seq, const uint8_t *rec, size_t rec_len,
+proto_bool pc_dtls_ciphertext_unprotect(DtlsRecordKeys *keys, uint64_t next_seq, const uint8_t *rec, size_t rec_len,
                                         uint8_t *out, size_t out_cap, DtlsCiphertext *info, const uint8_t *expected_cid,
                                         size_t expected_cid_len)
 {
-    if (keys.cipher != DTLS_CIPHER_AES_128_GCM_SHA256 || rec_len < 1)
+    if (keys->cipher != DTLS_CIPHER_AES_128_GCM_SHA256 || rec_len < 1)
     {
         return PROTO_FALSE;
     }
@@ -219,7 +219,7 @@ proto_bool pc_dtls_ciphertext_unprotect(DtlsRecordKeys &keys, uint64_t next_seq,
     {
         return PROTO_FALSE; // top 3 bits must be 001
     }
-    if ((b0 & DTLS_UH_EPOCH_MASK) != (keys.epoch & DTLS_UH_EPOCH_MASK))
+    if ((b0 & DTLS_UH_EPOCH_MASK) != (keys->epoch & DTLS_UH_EPOCH_MASK))
     {
         return PROTO_FALSE; // wrong epoch keys for this record
     }
@@ -279,7 +279,7 @@ proto_bool pc_dtls_ciphertext_unprotect(DtlsRecordKeys &keys, uint64_t next_seq,
     // The sequence-number context is already keyed and lives in the key material; rebuilding it here
     // costs ~556 cycles per record plus a pool borrow and wipe, independent of record size.
     uint8_t mask[16];
-    pc_aes128_encrypt_block((pc_aes128 *)(keys.sn_key), enc, mask);
+    pc_aes128_encrypt_block((pc_aes128 *)(keys->sn_key), enc, mask);
     uint64_t trunc = 0;
     for (size_t i = 0; i < seq_len; i++)
     {
@@ -303,9 +303,9 @@ proto_bool pc_dtls_ciphertext_unprotect(DtlsRecordKeys &keys, uint64_t next_seq,
     }
 
     uint8_t nonce[12];
-    build_nonce(keys.iv, full_seq, nonce);
+    build_nonce(keys->iv, full_seq, nonce);
     const size_t pt_len = inner_len;
-    if (!pc_aes128gcm_open((pc_aes128gcm_key *)(keys.gcm), nonce, hdr, hdr_len, enc, pt_len, enc + pt_len, out))
+    if (!pc_aes128gcm_open((pc_aes128gcm_key *)(keys->gcm), nonce, hdr, hdr_len, enc, pt_len, enc + pt_len, out))
     {
         return PROTO_FALSE;
     }
@@ -323,7 +323,7 @@ proto_bool pc_dtls_ciphertext_unprotect(DtlsRecordKeys &keys, uint64_t next_seq,
     info->content_type = out[n - 1];
     info->pt_len = n - 1;
     info->seq = full_seq;
-    info->epoch = keys.epoch;
+    info->epoch = keys->epoch;
     return PROTO_TRUE;
 }
 

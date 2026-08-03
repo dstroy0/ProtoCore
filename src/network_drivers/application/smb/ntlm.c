@@ -16,10 +16,11 @@
 
 void pc_ntlm_nt_hash(const char *password, uint8_t nt_hash[16])
 {
-    SecureScope scope; // the borrow below is reclaimed - and wiped - when this returns
+    size_t mark = pc_secure_mark();
     struct MdCtx *c = pc_md_wants();
     if (c == NULL)
     {
+        pc_secure_release(mark);
         return;
     }
     pc_md4_init(c);
@@ -29,6 +30,7 @@ void pc_ntlm_nt_hash(const char *password, uint8_t nt_hash[16])
         pc_md4_update(c, pair, 2);
     }
     pc_md4_final(c, nt_hash);
+    pc_secure_release(mark);
 }
 
 proto_bool pc_ntlm_ntowfv2(const uint8_t nt_hash[16], const char *user, const char *domain, uint8_t owf[16])
@@ -76,10 +78,11 @@ static void pc_hmac_md5_2(const uint8_t key[16], const uint8_t *m1, size_t l1, c
         opad[i] = (uint8_t)(k ^ 0x5c);
     }
     uint8_t inner[16];
-    SecureScope scope; // the borrow below is reclaimed - and wiped - when this returns
+    size_t mark = pc_secure_mark();
     struct MdCtx *c = pc_md_wants();
     if (c == NULL)
     {
+        pc_secure_release(mark);
         return;
     }
     pc_md5_init(c);
@@ -94,6 +97,7 @@ static void pc_hmac_md5_2(const uint8_t key[16], const uint8_t *m1, size_t l1, c
     pc_md5_update(c, opad, 64);
     pc_md5_update(c, inner, 16);
     pc_md5_final(c, out);
+    pc_secure_release(mark);
 }
 
 size_t pc_ntlm_v2_response(const uint8_t owf[16], const uint8_t server_challenge[8], const uint8_t client_challenge[8],
@@ -210,10 +214,11 @@ void pc_ntlm_mic(const uint8_t session_key[16], const uint8_t *neg, size_t neg_l
         ipad[i] = (uint8_t)(k ^ 0x36);
         opad[i] = (uint8_t)(k ^ 0x5c);
     }
-    SecureScope scope; // the borrow below is reclaimed - and wiped - when this returns
+    size_t mark = pc_secure_mark();
     struct MdCtx *c = pc_md_wants();
     if (c == NULL)
     {
+        pc_secure_release(mark);
         return;
     }
     uint8_t inner[16];
@@ -227,6 +232,7 @@ void pc_ntlm_mic(const uint8_t session_key[16], const uint8_t *neg, size_t neg_l
     pc_md5_update(c, opad, 64);
     pc_md5_update(c, inner, 16);
     pc_md5_final(c, out);
+    pc_secure_release(mark);
 }
 
 #endif // PC_ENABLE_SMB

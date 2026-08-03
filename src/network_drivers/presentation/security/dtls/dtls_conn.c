@@ -146,7 +146,7 @@ static proto_bool flight_transmit(DtlsConn *c, uint8_t *out, size_t out_cap, siz
         else
         {
             seq = c->tx_seq_ep2++;
-            rn = pc_dtls_ciphertext_protect(c->ep2_srv, seq, PC_DTLS_CT_HANDSHAKE, frag, flen, out + *out_len,
+            rn = pc_dtls_ciphertext_protect(&c->ep2_srv, seq, PC_DTLS_CT_HANDSHAKE, frag, flen, out + *out_len,
                                             out_cap - *out_len, c->cid_negotiated ? c->peer_cid : NULL,
                                             c->cid_negotiated ? c->peer_cid_len : 0);
         }
@@ -567,7 +567,7 @@ static DtlsRecStep process_ciphertext_record(DtlsConn *c, const uint8_t *dgram, 
     uint8_t inner[PC_DTLS_CONN_REASM_CAP + PC_DTLS_TAG_LEN];
     DtlsCiphertext info;
     uint64_t next = c->replay_ep2.seeded ? c->replay_ep2.highest + 1 : 0;
-    if (!pc_dtls_ciphertext_unprotect(c->ep2_cli, next, dgram + *off, rlen, inner, sizeof(inner), &info,
+    if (!pc_dtls_ciphertext_unprotect(&c->ep2_cli, next, dgram + *off, rlen, inner, sizeof(inner), &info,
                                       c->cid_negotiated ? c->local_cid : NULL,
                                       c->cid_negotiated ? c->local_cid_len : 0))
     {
@@ -627,7 +627,7 @@ static void maybe_send_completion_ack(DtlsConn *c, uint8_t *out, size_t out_cap,
     DtlsRecordNumber rn = {2, c->rx_ep2_seq};
     uint8_t ack_body[2 + 16];
     size_t bl = pc_dtls_ack_build(&rn, 1, ack_body, sizeof(ack_body));
-    size_t rec = pc_dtls_ciphertext_protect(c->ep3_srv, c->tx_seq_ep3++, PC_DTLS_CT_ACK, ack_body, bl, out + *out_len,
+    size_t rec = pc_dtls_ciphertext_protect(&c->ep3_srv, c->tx_seq_ep3++, PC_DTLS_CT_ACK, ack_body, bl, out + *out_len,
                                             out_cap - *out_len, c->cid_negotiated ? c->peer_cid : NULL,
                                             c->cid_negotiated ? c->peer_cid_len : 0);
     if (rec)
@@ -763,7 +763,7 @@ proto_bool pc_dtls_conn_open_app(DtlsConn *c, const uint8_t *rec, size_t rec_len
     }
     DtlsCiphertext info;
     uint64_t next = c->replay_ep3.seeded ? c->replay_ep3.highest + 1 : 0;
-    if (!pc_dtls_ciphertext_unprotect(c->ep3_cli, next, rec, rec_len, out, out_cap, &info,
+    if (!pc_dtls_ciphertext_unprotect(&c->ep3_cli, next, rec, rec_len, out, out_cap, &info,
                                       c->cid_negotiated ? c->local_cid : NULL,
                                       c->cid_negotiated ? c->local_cid_len : 0))
     {
@@ -789,8 +789,9 @@ size_t pc_dtls_conn_seal_app(DtlsConn *c, const uint8_t *data, size_t len, uint8
         return 0;
     }
     // tx_seq_ep3 is shared with the completion ACK, so app records never reuse its sequence number.
-    return pc_dtls_ciphertext_protect(c->ep3_srv, c->tx_seq_ep3++, PC_DTLS_CT_APPLICATION_DATA, data, len, out, out_cap,
-                                      c->cid_negotiated ? c->peer_cid : NULL, c->cid_negotiated ? c->peer_cid_len : 0);
+    return pc_dtls_ciphertext_protect(&c->ep3_srv, c->tx_seq_ep3++, PC_DTLS_CT_APPLICATION_DATA, data, len, out,
+                                      out_cap, c->cid_negotiated ? c->peer_cid : NULL,
+                                      c->cid_negotiated ? c->peer_cid_len : 0);
 }
 
 #endif // PC_ENABLE_DTLS

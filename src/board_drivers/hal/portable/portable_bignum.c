@@ -31,9 +31,9 @@ typedef struct
 {
     pc_bignum r1; // R mod p = 2^2048 - p (two's complement of p in 2048 bits)
     pc_bignum r2; // R^2 mod p = 2^4096 mod p (bn_init() via repeated doubling)
-    proto_bool initialized = PROTO_FALSE;
+    proto_bool initialized;
 } Group14Ctx;
-static Group14Ctx s_g14;
+static Group14Ctx s_g14 = {0};
 
 // Subtract b from a in place (a -= b).  Assumes a >= b.  Both are n limbs.
 static void bn_sub_inplace(uint32_t *a, const uint32_t *b, int n)
