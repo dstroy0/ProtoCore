@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- refuse to remove a mount root, at the layer that knows it is one ([`a1d50e6`](https://github.com/dstroy0/ProtoCore/commit/a1d50e62f6c72f058df89a8b1b87e22f84776025))
 - search the Allow buffer to its NUL, not to its capacity ([`3a93744`](https://github.com/dstroy0/ProtoCore/commit/3a9374409315b928f31ef27fe29b4e3e12d54e70))
 - do not drive the fixture volume to the block littlefs cannot recover from ([`ca03735`](https://github.com/dstroy0/ProtoCore/commit/ca037352fcf8327e80bfedf88bc71ebcc8a99b59))
 - close open files before unmounting the fixture volume ([`52c5a07`](https://github.com/dstroy0/ProtoCore/commit/52c5a0725c7ca18294b688b26462150022114184))
@@ -52,6 +53,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`07e151d`](https://github.com/dstroy0/ProtoCore/commit/07e151d54a63e2894a9ba8e56959430344364611))
 - update CHANGELOG.md [skip ci] ([`2877f9f`](https://github.com/dstroy0/ProtoCore/commit/2877f9f911990d199c86e9a4a04e9ce11d8a1fc7))
 - update CHANGELOG.md [skip ci] ([`a74dfd9`](https://github.com/dstroy0/ProtoCore/commit/a74dfd93ab4a546d29955ab8f9352b5f2ac407d4))
 - update CHANGELOG.md [skip ci] ([`b468456`](https://github.com/dstroy0/ProtoCore/commit/b468456fb315a99958491667752fba85b1d2efb8))
@@ -222,6 +224,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- Revert "test: copying onto the root collection is refused, not created" ([`7cda282`](https://github.com/dstroy0/ProtoCore/commit/7cda282cc97f95d3fd756943bb9072925938bb11))
 - Revert "test: remount after filling, so the fixture starts from the medium" ([`e19b85f`](https://github.com/dstroy0/ProtoCore/commit/e19b85f48e5c12c39baf91ee0e7cfb4a47e3cc58))
 - Revert "fix: do not drive the fixture volume to the block littlefs cannot recover from" ([`a348f72`](https://github.com/dstroy0/ProtoCore/commit/a348f724a0d85945fb7378453924b662e47803d3))
 - Merge Dependabot #21: build(deps): bump github/codeql-action from 4 to 4.37.4 ([`e587e2a`](https://github.com/dstroy0/ProtoCore/commit/e587e2a935c429d3163a536015960c6e5da06a76))
@@ -336,6 +339,10 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- refuse the abort-path PUT through the store, not a node table ([`098343d`](https://github.com/dstroy0/ProtoCore/commit/098343d7fbabad95aa9c1299ed45496f71b4df9f))
+- COPY onto the root collection answers 409, observed not assumed ([`bd32327`](https://github.com/dstroy0/ProtoCore/commit/bd323271215a809a4bdde7e519b5f5083f5b1fe4))
+- temporary diagnostic on the COPY-onto-root response ([`422f1b4`](https://github.com/dstroy0/ProtoCore/commit/422f1b467fd011266ff4cabd931d6e05e49cafd0))
+- copying onto the root collection is refused, not created ([`124b6b7`](https://github.com/dstroy0/ProtoCore/commit/124b6b75596ee408e73290d8eb5c75e07c0c2bf8))
 - a real filesystem always has a root, so the bare mount resolves ([`94115b5`](https://github.com/dstroy0/ProtoCore/commit/94115b5a9d94ce422625978eafdd11e0cfe12fda))
 - stop a WebDAV delete through the write it needs, not a handle ([`28620ea`](https://github.com/dstroy0/ProtoCore/commit/28620eaa287a894899e8b7a61f1a3d6b8874c315))
 - add a medium that refuses every write ([`1345032`](https://github.com/dstroy0/ProtoCore/commit/134503202fadcac46a6631aa63ff438efbbe032e))
