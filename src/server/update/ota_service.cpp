@@ -140,7 +140,7 @@ void pc_ota_begin(const char *path, const char *user, const char *pass)
     strncpy(s_ota.pass, pass ? pass : "", sizeof(s_ota.pass) - 1);
     s_ota.pass[sizeof(s_ota.pass) - 1] = '\0';
 
-    http_parser_set_stream_hooks(ota_stream_begin, ota_stream_data);
+    http_parser_set_stream_hooks(ota_stream_begin, ota_stream_data, NULL);
     on_http(path, HTTP_POST, ota_handle);
 }
 

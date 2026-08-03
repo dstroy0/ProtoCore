@@ -9,11 +9,12 @@ the parser's streaming-body hook - the same mechanism OTA uses - so an upload
 never has to fit in RAM. A GET route serves the stored file back to verify the
 round-trip.
 
-**One call wires the upload sink.** `pc_upload_begin(server, path, fs, dest)`
+**One call wires the upload sink.** `pc_upload_begin(path, dest)`
 registers a POST route whose body is streamed to `dest` as it arrives:
 
 ```cpp
-pc_upload_begin(server, "/upload", LittleFS, DEST);     // POST body -> file, chunk by chunk
+pc_mnt_mount(pc_mnt_fs(&LittleFS));
+pc_upload_begin("/upload", DEST);     // POST body -> file, chunk by chunk
 server.on("/file", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {   // read it back
     server.serve_file(id, LittleFS, DEST, "application/octet-stream");
 });
@@ -86,7 +87,8 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // POST /upload -> stream the body into DEST on LittleFS (chunked, never in RAM).
-    pc_upload_begin(server, "/upload", LittleFS, DEST);
+    pc_mnt_mount(pc_mnt_fs(&LittleFS));
+pc_upload_begin("/upload", DEST);
 
     // GET /file -> serve the stored file back.
     server.on("/file", HttpMethod::HTTP_GET,

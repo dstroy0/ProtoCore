@@ -22,21 +22,21 @@
 
 #if PC_ENABLE_UPLOAD
 
-#include <FS.h>
-
 /**
  * @brief Register a streaming-upload endpoint.
  *
- * A `POST @p path` request streams its body into @p dest_path on @p fs (the file
- * is truncated/created). The route handler replies `200 OK <n> bytes` on success
- * or 500 on a write failure.
+ * A `POST @p path` request streams its body into @p dest_path on the mounted store
+ * (the file is truncated/created). The route handler replies `200 OK <n> bytes` on
+ * success, or 500 on a write failure or when nothing is mounted.
  *
- * @param server    the web server.
+ * The destination store is whatever pc_mnt_mount() last mounted, read through
+ * pc_mnt_active() at each request, so an upload follows a hotswap rather than
+ * capturing one filesystem at registration time.
+ *
  * @param path      the upload URL (e.g. "/upload").
- * @param fs        target filesystem (LittleFS / SPIFFS / SD).
  * @param dest_path destination file path (e.g. "/uploads/data.bin").
  */
-void pc_upload_begin(const char *path, fs::FS &fs, const char *dest_path);
+void pc_upload_begin(const char *path, const char *dest_path);
 
 /** @brief Bytes written by the most recent upload (for handlers / tests). */
 size_t pc_upload_last_size();

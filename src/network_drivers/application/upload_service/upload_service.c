@@ -13,6 +13,7 @@
 
 #include "network_drivers/presentation/http/http_parser/http_parser.h"
 #include "protocore.h"
+#include "server/filesystem/mnt.h" // the storage seam: pc_mnt_active()
 #include "shared_primitives/mime.h"
 #include <stdio.h>
 #include <string.h>
@@ -25,13 +26,12 @@ static const pc_field UPLOAD_OK[] = {{PC_FK_LIT, 0, 3, "OK "}, PC_U32, {PC_FK_LI
 // unreachable.
 typedef struct
 {
-    const char *path = NULL;
-    fs::FS *fs = NULL;
-    const char *dest = NULL;
-    fs::File file;
-    proto_bool active = PROTO_FALSE; ///< Destination file opened for the current upload.
-    proto_bool error = PROTO_FALSE;  ///< A write failed during the current upload.
-    size_t written = 0;              ///< Bytes written so far / in the last upload.
+    const char *path;
+    const char *dest;
+    int handle;        ///< Open destination handle from the mount; only read while `active`.
+    proto_bool active; ///< Destination file opened for the current upload.
+    proto_bool error;  ///< A write failed during the current upload.
+    size_t written;    ///< Bytes written so far / in the last upload.
 } UploadCtx;
 static UploadCtx s_upl;
 
@@ -54,13 +54,14 @@ static proto_bool upload_stream_begin(HttpReq *req)
     s_upl.active = PROTO_FALSE;
     s_upl.error = PROTO_FALSE;
     s_upl.written = 0;
-    // The `s_upl.fs` half is unreachable: it is always the address of the `fs::FS &fs` reference
-    // parameter of pc_upload_begin(), and a reference can't be null without UB at the call site -
-    // only s_upl.dest (a plain pointer) can legitimately be null here.
-    if (s_upl.fs && s_upl.dest) // GCOVR_EXCL_BR_LINE  null fs unreachable (see above)
+    s_upl.handle = -1;
+    // The seam fails closed when nothing is mounted, so a cold mount answers "upload failed"
+    // rather than faulting.
+    const pc_mnt_backend *mnt = pc_mnt_active();
+    if (mnt && s_upl.dest)
     {
-        s_upl.file = s_upl.fs->open(s_upl.dest, "w");
-        if (s_upl.file)
+        s_upl.handle = mnt->open(s_upl.dest, PC_MNT_WRITE);
+        if (s_upl.handle >= 0)
         {
             s_upl.active = PROTO_TRUE;
         }
@@ -68,6 +69,10 @@ static proto_bool upload_stream_begin(HttpReq *req)
         {
             s_upl.error = PROTO_TRUE;
         }
+    }
+    else
+    {
+        s_upl.error = PROTO_TRUE;
     }
     // Stream regardless so the body is consumed and the route handler can reply.
     return PROTO_TRUE;
@@ -79,7 +84,8 @@ static void upload_stream_data(HttpReq *req, const uint8_t *data, size_t len)
     (void)req; // a single upload streams at a time
     if (s_upl.active && !s_upl.error)
     {
-        if (s_upl.file.write(data, len) != len)
+        const pc_mnt_backend *mnt = pc_mnt_active();
+        if (!mnt || mnt->write(s_upl.handle, data, len) != (int)len)
         {
             s_upl.error = PROTO_TRUE;
         }
@@ -100,7 +106,12 @@ static void upload_handle(uint8_t slot_id, HttpReq *req)
     }
     if (s_upl.active)
     {
-        s_upl.file.close();
+        const pc_mnt_backend *mnt = pc_mnt_active();
+        if (mnt)
+        {
+            mnt->close(s_upl.handle);
+        }
+        s_upl.handle = -1;
     }
     if (!s_upl.active || s_upl.error)
     {
@@ -117,13 +128,13 @@ size_t pc_upload_last_size()
     return s_upl.written;
 }
 
-void pc_upload_begin(const char *path, fs::FS &fs, const char *dest_path)
+void pc_upload_begin(const char *path, const char *dest_path)
 {
     s_upl.path = path;
-    s_upl.fs = &fs;
     s_upl.dest = dest_path;
+    s_upl.handle = -1;
 
-    http_parser_set_stream_hooks(upload_stream_begin, upload_stream_data);
+    http_parser_set_stream_hooks(upload_stream_begin, upload_stream_data, NULL);
     on_http(path, HTTP_POST, upload_handle);
 }
 

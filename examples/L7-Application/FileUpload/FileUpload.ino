@@ -31,6 +31,8 @@
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
 #include "network_drivers/application/upload_service/upload_service.h"
+#include "board_drivers/hal/esp/esp_mnt_fs.h" // pc_mnt_fs(): bind an Arduino FS to the storage seam
+#include "server/filesystem/mnt.h"            // pc_mnt_mount()
 #include <LittleFS.h>
 
 static const char *SSID = "YOUR_SSID";
@@ -59,8 +61,11 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    // POST /upload -> stream the body into DEST on LittleFS.
-    pc_upload_begin("/upload", LittleFS, DEST);
+    // Mount LittleFS through the storage seam; the upload service writes to whatever is mounted.
+    pc_mnt_mount(pc_mnt_fs(&LittleFS));
+
+    // POST /upload -> stream the body into DEST on the mounted store.
+    pc_upload_begin("/upload", DEST);
 
     // GET /file -> serve the stored file back.
     on_http("/file", HTTP_GET,

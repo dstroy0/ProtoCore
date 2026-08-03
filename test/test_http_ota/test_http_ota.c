@@ -48,7 +48,7 @@ void setUp()
 {
     g_total = 0;
     g_chunks = 0;
-    http_parser_set_stream_hooks(NULL, NULL);
+    http_parser_set_stream_hooks(NULL, NULL, NULL);
 }
 void tearDown()
 {
@@ -57,7 +57,7 @@ void tearDown()
 // A >BODY_BUF_SIZE body on the matched route streams to completion in chunks.
 void test_large_body_streams_to_completion()
 {
-    http_parser_set_stream_hooks(begin_cb, data_cb);
+    http_parser_set_stream_hooks(begin_cb, data_cb, NULL);
     HttpReq r;
     r.slot_id = 0;
     http_parser_reset(&r);
@@ -86,7 +86,7 @@ void test_large_body_streams_to_completion()
 // flush at 483). N = 256 + 44 fills one whole chunk, then a 44-byte remainder.
 void test_partial_tail_chunk_is_flushed()
 {
-    http_parser_set_stream_hooks(begin_cb, data_cb);
+    http_parser_set_stream_hooks(begin_cb, data_cb, NULL);
     HttpReq r;
     r.slot_id = 0;
     http_parser_reset(&r);
@@ -110,7 +110,7 @@ void test_partial_tail_chunk_is_flushed()
 // stream_data arm) without dispatching or crashing. N = 300 exercises both flush sites.
 void test_stream_begin_without_data_sink_tolerates_null()
 {
-    http_parser_set_stream_hooks(begin_cb, NULL); // begin matches, but no data sink
+    http_parser_set_stream_hooks(begin_cb, NULL, NULL); // begin matches, but no data sink
     HttpReq r;
     r.slot_id = 0;
     http_parser_reset(&r);
@@ -142,7 +142,7 @@ void test_no_hooks_large_body_is_413()
 // A non-matching path is not streamed, so the large body still 413s.
 void test_nonmatching_path_not_streamed()
 {
-    http_parser_set_stream_hooks(begin_cb, data_cb);
+    http_parser_set_stream_hooks(begin_cb, data_cb, NULL);
     HttpReq r;
     r.slot_id = 0;
     http_parser_reset(&r);

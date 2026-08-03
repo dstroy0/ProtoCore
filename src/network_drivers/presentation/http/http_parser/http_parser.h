@@ -202,8 +202,8 @@ typedef void (*HttpStreamDataCb)(HttpReq *req, const uint8_t *data, size_t len);
  */
 typedef void (*HttpStreamAbortCb)(HttpReq *req);
 
-/** @brief Install the streaming-body hooks (pass nullptr to disable; abort optional). */
-void http_parser_set_stream_hooks(HttpStreamBeginCb begin, HttpStreamDataCb data, HttpStreamAbortCb abort = NULL);
+/** @brief Install the streaming-body hooks (pass NULL to disable; NULL abort if none is wanted). */
+void http_parser_set_stream_hooks(HttpStreamBeginCb begin, HttpStreamDataCb data, HttpStreamAbortCb abort);
 #endif // PC_ENABLE_STREAM_BODY
 
 // ---------------------------------------------------------------------------
