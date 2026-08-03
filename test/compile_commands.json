@@ -1254,10 +1254,10 @@
     "output": ".pio/build/native_swar/src/server/update/ota_rollback.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/services/machine_tool/packml/packml.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/services/machine_tool/packml/packml.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_packml/src/services/machine_tool/packml/packml.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_ENABLE_PACKML=1 -Itest/mocks -Itest/support -Isrc src/services/machine_tool/packml/packml.c",
     "directory": "@ROOT@",
     "file": "src/services/machine_tool/packml/packml.c",
-    "output": ".pio/build/native_swar/src/services/machine_tool/packml/packml.o"
+    "output": ".pio/build/native_packml/src/services/machine_tool/packml/packml.o"
   },
   {
     "command": "/usr/bin/gcc -o .pio/build/native_swar/src/services/storage/partition_monitor/partition_monitor.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/services/storage/partition_monitor/partition_monitor.c",
