@@ -54,6 +54,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`7829ec0`](https://github.com/dstroy0/ProtoCore/commit/7829ec061c271ceb6c09e5320d08c251add43e91))
+- update test report + coverage [skip ci] ([`bff06c0`](https://github.com/dstroy0/ProtoCore/commit/bff06c01f2e8d17a036d26f632f16a1f4505ef69))
 - update CHANGELOG.md [skip ci] ([`700e016`](https://github.com/dstroy0/ProtoCore/commit/700e016c643bd0aa833bdcc3d0104f5f8f707687))
 - update CHANGELOG.md [skip ci] ([`f97963b`](https://github.com/dstroy0/ProtoCore/commit/f97963bb555e7ef6d1c74f7902fa5513407a5e98))
 - update CHANGELOG.md [skip ci] ([`b6f7596`](https://github.com/dstroy0/ProtoCore/commit/b6f7596c30912a4b85ed520e2d98881c63b2152f))
@@ -267,6 +269,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`823cc89`](https://github.com/dstroy0/ProtoCore/commit/823cc898d0f2c1e07223dd4e0280cd83d728c9ae))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`506e29c`](https://github.com/dstroy0/ProtoCore/commit/506e29cacdb62b548ffd701d15c0d7391ecc18b5))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`18ca7d1`](https://github.com/dstroy0/ProtoCore/commit/18ca7d1027f2026e0e23dc78f7f5951da299106f))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`33e79ed`](https://github.com/dstroy0/ProtoCore/commit/33e79ed30353153c100a1ea86fe6a67a8153985c))
@@ -371,6 +374,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- name the lambdas and drop the heap from three suites ([`72867d5`](https://github.com/dstroy0/ProtoCore/commit/72867d518ed097cba91d6000240a89fd1fc2f65c))
 - use the transport layer's C names ([`111f9cc`](https://github.com/dstroy0/ProtoCore/commit/111f9ccc92c5b7971bf4db37dcac871e7b9286e2))
 - index the hpack roundtrip table instead of a range-for ([`8f4993c`](https://github.com/dstroy0/ProtoCore/commit/8f4993cf2dab77c437671ad8531f43b18fcdc69a))
 - finish the tier-1 suite conversions ([`423c920`](https://github.com/dstroy0/ProtoCore/commit/423c920b299416c1500cd43887a362304f141820))
