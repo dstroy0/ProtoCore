@@ -12,6 +12,7 @@
 //   - Empty file → 200 with Content-Length: 0
 
 #include "mnt_mock.h"
+#include "server/filesystem/mnt.h" // pc_mnt_mount: the fixture is the mounted store
 #include "protocore.h" // pc_file_holds_slot: does the file pump hold this slot
 #include <stdio.h>
 #include <string.h>
@@ -72,7 +73,10 @@ void setUp()
     ws_init();
     pc_sse_init();
 
-    mock_mnt_clear();
+    mock_mnt_reset();
+    // serve_file_internal resolves through the accessor, not through the backend handed to
+    // serve_file(), so the fixture has to be the mounted store rather than just a pointer passed in.
+    pc_mnt_mount(mock_mnt());
     tcp_capture_reset();
 }
 
