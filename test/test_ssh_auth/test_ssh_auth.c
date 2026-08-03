@@ -21,6 +21,12 @@
 // context (ESP's mbedtls does) does not leak one per vector.
 static uint8_t g_gcm_ws[PC_WORK_AESGCM] __attribute__((aligned(8)));
 static proto_bool g_gcm_live = PROTO_FALSE;
+// One hex digit to its value.
+static int nib(char c)
+{
+    return c >= 'a' ? c - 'a' + 10 : c - '0';
+}
+
 static struct pc_aesgcm_key *gcm_key(const uint8_t *key)
 {
     if (g_gcm_live)
@@ -235,7 +241,7 @@ static size_t hexdec(const char *h, uint8_t *out)
     size_t n = 0;
     for (; h[0] && h[1]; h += 2)
     {
-        auto nib = [](char c) -> int { return c >= 'a' ? c - 'a' + 10 : c - '0'; };
+
         out[n++] = (uint8_t)((nib(h[0]) << 4) | nib(h[1]));
     }
     return n;

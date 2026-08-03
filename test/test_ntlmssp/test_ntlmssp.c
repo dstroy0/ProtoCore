@@ -11,6 +11,12 @@
 #include <string.h>
 #include <unity.h>
 
+// One hex digit to its value.
+static int nib(char x)
+{
+    return x <= '9' ? x - '0' : (x | 0x20) - 'a' + 10;
+}
+
 void setUp()
 {
 }
@@ -43,7 +49,7 @@ static size_t unhex(const char *h, uint8_t *out)
     size_t n = 0;
     for (; h[0] && h[1]; h += 2)
     {
-        auto nib = [](char x) -> int { return x <= '9' ? x - '0' : (x | 0x20) - 'a' + 10; };
+
         out[n++] = (uint8_t)((nib(h[0]) << 4) | nib(h[1]));
     }
     return n;

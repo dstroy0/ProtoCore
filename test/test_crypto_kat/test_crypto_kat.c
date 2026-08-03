@@ -102,22 +102,26 @@ struct KatPoly
 #define MAXB 2048 // largest vector field (ed25519 msg is 1023 bytes)
 
 // Decode a lowercase-hex C-string into @p out; returns the byte length.
+// One hex digit to its value.
+static int nib(char c)
+{
+    if (c >= '0' && c <= '9')
+    {
+        return c - '0';
+    }
+    if (c >= 'a' && c <= 'f')
+    {
+        return c - 'a' + 10;
+    }
+    return c - 'A' + 10;
+}
+
 static size_t hexdec(const char *h, uint8_t *out)
 {
     size_t n = 0;
     for (const char *p = h; p[0] && p[1]; p += 2)
     {
-        auto nib = [](char c) -> int {
-            if (c >= '0' && c <= '9')
-            {
-                return c - '0';
-            }
-            if (c >= 'a' && c <= 'f')
-            {
-                return c - 'a' + 10;
-            }
-            return c - 'A' + 10;
-        };
+
         out[n++] = (uint8_t)((nib(p[0]) << 4) | nib(p[1]));
     }
     return n;
@@ -138,9 +142,9 @@ static void run_hmac(const KatMac *arr, size_t n, proto_bool is512)
 {
     for (size_t i = 0; i < n; i++)
     {
-        const KatMac &v = arr[i];
+        const KatMac *v = &arr[i];
         uint8_t key[MAXB], msg[MAXB], want[64], got[64];
-        size_t klen = hexdec(v.key, key), mlen = hexdec(v.msg, msg), wlen = hexdec(v.tag, want);
+        size_t klen = hexdec(v->key, key), mlen = hexdec(v->msg, msg), wlen = hexdec(v->tag, want);
         if (is512)
         {
             pc_hmac_sha512(key, klen, msg, mlen, got);
@@ -149,11 +153,11 @@ static void run_hmac(const KatMac *arr, size_t n, proto_bool is512)
         {
             pc_hmac_sha256(key, klen, msg, mlen, got);
         }
-        size_t cmp = (size_t)v.tag_bits / 8; // truncated-tag length the vector pins
+        size_t cmp = (size_t)v->tag_bits / 8; // truncated-tag length the vector pins
         char m[64];
-        snprintf(m, sizeof(m), "HMAC%s tcId=%d", is512 ? "512" : "256", v.tc);
+        snprintf(m, sizeof(m), "HMAC%s tcId=%d", is512 ? "512" : "256", v->tc);
         proto_bool match = (wlen == cmp) && memcmp(got, want, cmp) == 0;
-        if (v.valid)
+        if (v->valid)
         {
             TEST_ASSERT_TRUE_MESSAGE(match, m);
         }
@@ -180,16 +184,16 @@ static void test_aes128gcm(void)
 {
     for (size_t i = 0; i < ARRAY_LEN(KAT_AES128GCM); i++)
     {
-        const KatAead &v = KAT_AES128GCM[i];
+        const KatAead *v = &KAT_AES128GCM[i];
         uint8_t key[16], iv[12], aad[MAXB], pt[MAXB], ct[MAXB], tag[16];
         uint8_t sealed[MAXB + 16], opened[MAXB];
-        hexdec(v.key, key);
-        hexdec(v.iv, iv);
-        size_t alen = hexdec(v.aad, aad), plen = hexdec(v.msg, pt);
-        size_t clen = hexdec(v.ct, ct);
-        hexdec(v.tag, tag);
+        hexdec(v->key, key);
+        hexdec(v->iv, iv);
+        size_t alen = hexdec(v->aad, aad), plen = hexdec(v->msg, pt);
+        size_t clen = hexdec(v->ct, ct);
+        hexdec(v->tag, tag);
         char m[48];
-        snprintf(m, sizeof(m), "AES128GCM tcId=%d", v.tc);
+        snprintf(m, sizeof(m), "AES128GCM tcId=%d", v->tc);
 
         // seal: out == ciphertext || tag (ciphertext is empty when plaintext is)
         pc_aes128gcm_seal(key, iv, alen ? aad : NULL, alen, plen ? pt : NULL, plen, sealed);
@@ -254,14 +258,14 @@ static void test_x25519(void)
 {
     for (size_t i = 0; i < ARRAY_LEN(KAT_X25519); i++)
     {
-        const KatX25519 &v = KAT_X25519[i];
+        const KatX25519 *v = &KAT_X25519[i];
         uint8_t pub[32], priv[32], want[32], got[32];
-        hexdec(v.pub, pub);
-        hexdec(v.priv, priv);
-        size_t wlen = hexdec(v.shared, want);
+        hexdec(v->pub, pub);
+        hexdec(v->priv, priv);
+        size_t wlen = hexdec(v->shared, want);
         pc_x25519(got, priv, pub);
         char m[48];
-        snprintf(m, sizeof(m), "X25519 tcId=%d", v.tc);
+        snprintf(m, sizeof(m), "X25519 tcId=%d", v->tc);
         TEST_ASSERT_EQUAL_MESSAGE(32, wlen, m);
         TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(want, got, 32, m);
     }
@@ -275,21 +279,21 @@ static void test_ed25519_verify(void)
 {
     for (size_t i = 0; i < ARRAY_LEN(KAT_ED25519); i++)
     {
-        const KatEd25519 &v = KAT_ED25519[i];
+        const KatEd25519 *v = &KAT_ED25519[i];
         uint8_t pub[32], msg[MAXB], sig[64];
-        hexdec(v.pub, pub);
-        size_t mlen = hexdec(v.msg, msg), slen = hexdec(v.sig, sig);
+        hexdec(v->pub, pub);
+        size_t mlen = hexdec(v->msg, msg), slen = hexdec(v->sig, sig);
         char m[48];
-        snprintf(m, sizeof(m), "Ed25519 tcId=%d", v.tc);
+        snprintf(m, sizeof(m), "Ed25519 tcId=%d", v->tc);
         if (slen != 64)
         {
             // A non-64-byte signature is malformed; the framing rejects it before
             // the crypto ever runs. Such vectors are all "invalid".
-            TEST_ASSERT_FALSE_MESSAGE(v.valid, m);
+            TEST_ASSERT_FALSE_MESSAGE(v->valid, m);
             continue;
         }
         proto_bool ok = pc_ed25519_verify(pub, msg, mlen, sig);
-        TEST_ASSERT_EQUAL_MESSAGE(v.valid ? PROTO_TRUE : PROTO_FALSE, ok, m);
+        TEST_ASSERT_EQUAL_MESSAGE(v->valid ? PROTO_TRUE : PROTO_FALSE, ok, m);
     }
 }
 
@@ -302,14 +306,14 @@ static void test_ed25519_sign(void)
 {
     for (size_t i = 0; i < ARRAY_LEN(KAT_ED25519_SIGN); i++)
     {
-        const KatEd25519Sign &v = KAT_ED25519_SIGN[i];
+        const KatEd25519Sign *v = &KAT_ED25519_SIGN[i];
         uint8_t seed[32], want_pub[32], msg[MAXB], want_sig[64], got_pub[32], got_sig[64];
-        hexdec(v.seed, seed);
-        hexdec(v.pub, want_pub);
-        hexdec(v.sig, want_sig);
-        size_t mlen = hexdec(v.msg, msg);
+        hexdec(v->seed, seed);
+        hexdec(v->pub, want_pub);
+        hexdec(v->sig, want_sig);
+        size_t mlen = hexdec(v->msg, msg);
         char m[48];
-        snprintf(m, sizeof(m), "Ed25519-sign tcId=%d", v.tc);
+        snprintf(m, sizeof(m), "Ed25519-sign tcId=%d", v->tc);
         pc_ed25519_pubkey(got_pub, seed);
         TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(want_pub, got_pub, 32, m);
         pc_ed25519_sign(got_sig, msg, mlen, seed);
@@ -324,13 +328,13 @@ static void test_hkdf_extract(void)
 {
     for (size_t i = 0; i < ARRAY_LEN(KAT_HKDF_EXTRACT); i++)
     {
-        const KatHkdf &v = KAT_HKDF_EXTRACT[i];
+        const KatHkdf *v = &KAT_HKDF_EXTRACT[i];
         uint8_t salt[MAXB], ikm[MAXB], want[32], got[32];
-        size_t slen = hexdec(v.salt, salt), ilen = hexdec(v.ikm, ikm);
-        hexdec(v.prk, want);
+        size_t slen = hexdec(v->salt, salt), ilen = hexdec(v->ikm, ikm);
+        hexdec(v->prk, want);
         pc_hkdf_extract(slen ? salt : NULL, slen, ikm, ilen, got);
         char m[48];
-        snprintf(m, sizeof(m), "HKDF-Extract tcId=%d", v.tc);
+        snprintf(m, sizeof(m), "HKDF-Extract tcId=%d", v->tc);
         TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(want, got, 32, m);
     }
 }
@@ -342,14 +346,14 @@ static void test_chacha20_block(void)
 {
     for (size_t i = 0; i < ARRAY_LEN(KAT_CHACHA20); i++)
     {
-        const KatChacha &v = KAT_CHACHA20[i];
+        const KatChacha *v = &KAT_CHACHA20[i];
         uint8_t key[32], nonce[12], want[64], got[64];
-        hexdec(v.key, key);
-        hexdec(v.nonce, nonce);
-        hexdec(v.keystream, want);
-        pc_chacha20_block_ietf(key, v.counter, nonce, got);
+        hexdec(v->key, key);
+        hexdec(v->nonce, nonce);
+        hexdec(v->keystream, want);
+        pc_chacha20_block_ietf(key, v->counter, nonce, got);
         char m[48];
-        snprintf(m, sizeof(m), "ChaCha20 tcId=%d", v.tc);
+        snprintf(m, sizeof(m), "ChaCha20 tcId=%d", v->tc);
         TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(want, got, 64, m);
     }
 }
@@ -357,14 +361,14 @@ static void test_poly1305(void)
 {
     for (size_t i = 0; i < ARRAY_LEN(KAT_POLY1305); i++)
     {
-        const KatPoly &v = KAT_POLY1305[i];
+        const KatPoly *v = &KAT_POLY1305[i];
         uint8_t key[32], msg[MAXB], want[16], got[16];
-        hexdec(v.key, key);
-        size_t mlen = hexdec(v.msg, msg);
-        hexdec(v.tag, want);
+        hexdec(v->key, key);
+        size_t mlen = hexdec(v->msg, msg);
+        hexdec(v->tag, want);
         pc_poly1305(got, msg, mlen, key);
         char m[48];
-        snprintf(m, sizeof(m), "Poly1305 tcId=%d", v.tc);
+        snprintf(m, sizeof(m), "Poly1305 tcId=%d", v->tc);
         TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(want, got, 16, m);
     }
 }

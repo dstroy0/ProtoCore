@@ -126,13 +126,9 @@ void test_provisioning_load_partial_null_or_zero_cap()
 // call it to prove that. PC is forward-declared in provisioning_service.h and
 // never given a full definition on this (non-Arduino) build, so a minimal local
 // stand-in is enough to bind the reference without ever being dereferenced.
-class PC
-{
-};
-
 void test_provisioning_begin_stub()
 {
-    pc_provisioning_begin(server, "TestAP"); // must not crash, must not touch server
+    pc_provisioning_begin("TestAP"); // must not crash
 }
 
 int main()
