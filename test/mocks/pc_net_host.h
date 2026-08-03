@@ -336,12 +336,51 @@ static inline int pc_platform_queue_send_isr(pc_platform_queue q, const void *it
     }
     return PC_PLATFORM_OK;
 }
-// Always empty: the host drains inline, so a receive never has anything pending.
+// Staged-event buffer: a test calls queue_stage_raw() before server_tick(), and the receive below
+// drains those items FIFO and then reports empty, which is what a real queue does once emptied.
+// A send is still inert (the host runs the pipeline inline), so the only way an item enters is a
+// test staging it deliberately. One instance for the whole program - the test stages from its own
+// translation unit and the session layer drains from another - so the definition is weak and the
+// linker collapses it, the same way the millis counter in Arduino.h is shared.
+#define PC_QUEUE_STAGE_MAX 16
+#define PC_QUEUE_STAGE_ITEM 32
+
+typedef struct
+{
+    uint8_t items[PC_QUEUE_STAGE_MAX][PC_QUEUE_STAGE_ITEM];
+    int item_sz[PC_QUEUE_STAGE_MAX];
+    int count;
+    int idx;
+} PcQueueStage;
+__attribute__((weak)) PcQueueStage g_pc_queue_stage;
+
+static inline void queue_stage_raw(const void *item, int sz)
+{
+    if (sz > 0 && sz <= PC_QUEUE_STAGE_ITEM && g_pc_queue_stage.count < PC_QUEUE_STAGE_MAX)
+    {
+        memcpy(g_pc_queue_stage.items[g_pc_queue_stage.count], item, (size_t)sz);
+        g_pc_queue_stage.item_sz[g_pc_queue_stage.count] = sz;
+        g_pc_queue_stage.count++;
+    }
+}
+
+static inline void queue_stage_reset(void)
+{
+    g_pc_queue_stage.count = 0;
+    g_pc_queue_stage.idx = 0;
+}
+
 static inline int pc_platform_queue_recv(pc_platform_queue q, void *item, uint32_t ticks)
 {
     (void)q;
-    (void)item;
     (void)ticks;
+    if (g_pc_queue_stage.idx < g_pc_queue_stage.count)
+    {
+        memcpy(item, g_pc_queue_stage.items[g_pc_queue_stage.idx],
+               (size_t)g_pc_queue_stage.item_sz[g_pc_queue_stage.idx]);
+        g_pc_queue_stage.idx++;
+        return PC_PLATFORM_OK;
+    }
     return 0;
 }
 static inline size_t pc_platform_queue_waiting(pc_platform_queue q)

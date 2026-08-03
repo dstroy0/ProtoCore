@@ -113,13 +113,13 @@ void server_tick(int worker_id)
 
 #if PC_WORKER_COUNT > 1
     // Drain only this worker's queue: it is the sole consumer of its slots.
-    QueueHandle_t q = listener_worker_queue(worker_id);
+    pc_platform_queue q = listener_worker_queue(worker_id);
     if (!q)
     {
         return;
     }
     TcpEvt evt;
-    while (xQueueReceive(q, &evt, 0) == pdTRUE)
+    while (pc_platform_queue_recv(q, &evt, 0) == PC_PLATFORM_OK)
     {
         dispatch_event(&evt);
     }
@@ -134,7 +134,7 @@ void server_tick(int worker_id)
         }
 
         TcpEvt evt;
-        while (xQueueReceive(lst->queue, &evt, 0) == pdTRUE)
+        while (pc_platform_queue_recv(lst->queue, &evt, 0) == PC_PLATFORM_OK)
         {
             dispatch_event(&evt);
         }
