@@ -272,6 +272,30 @@ void test_store_still_answers_after_a_full_fill()
     TEST_ASSERT_TRUE(b->exists("/keep.txt"));
 }
 
+// Refusing through the medium rather than through exhaustion: littlefs unwinds an I/O error on
+// its normal path, so the store stays usable afterwards and the caller simply sees a failure.
+void test_medium_error_refuses_a_write_and_leaves_the_store_usable()
+{
+    const pc_mnt_backend *b = lfsm();
+    TEST_ASSERT_TRUE(lfsm_write_text("/before.txt", "ok"));
+
+    lfsm_fail_prog_after(1);
+    int h = b->open("/fails.txt", PC_MNT_WRITE);
+    int rc = 0;
+    if (h >= 0)
+    {
+        rc = b->write(h, "payload", 7);
+        b->close(h);
+    }
+    lfsm_no_prog_failure();
+    TEST_ASSERT_TRUE(h < 0 || rc < 7); // the open or the write was refused
+
+    // and the store still answers, which exhaustion could not promise
+    TEST_ASSERT_TRUE(b->exists("/before.txt"));
+    TEST_ASSERT_TRUE(lfsm_write_text("/after.txt", "still-here"));
+    TEST_ASSERT_EQUAL_INT(10, b->size("/after.txt"));
+}
+
 int main()
 {
     UNITY_BEGIN();
@@ -289,5 +313,6 @@ int main()
     RUN_TEST(test_read_one_file_while_writing_another);
     RUN_TEST(test_two_writers_at_once);
     RUN_TEST(test_store_still_answers_after_a_full_fill);
+    RUN_TEST(test_medium_error_refuses_a_write_and_leaves_the_store_usable);
     return UNITY_END();
 }

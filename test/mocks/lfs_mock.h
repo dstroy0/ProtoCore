@@ -51,6 +51,11 @@ typedef struct
     uint8_t pbuf[LFSM_CACHE_SIZE];
     uint8_t lbuf[LFSM_LOOKAHEAD];
 
+    // Medium failure, counted down in prog calls. littlefs treats an error from the block device
+    // as exactly that - a bad write - and unwinds through its normal error path, which is a far
+    // better way to refuse a caller than driving the volume to exhaustion and hoping.
+    int prog_fail_in; ///< 0 = never; N = the Nth prog from now returns an I/O error
+
     LfsmHandle h[LFSM_HANDLES];
 } LfsmCtx;
 
@@ -71,6 +76,10 @@ static inline int lfsm_bd_prog(const struct lfs_config *c, lfs_block_t block, lf
                                lfs_size_t size)
 {
     (void)c;
+    if (g_lfsm.prog_fail_in > 0 && --g_lfsm.prog_fail_in == 0)
+    {
+        return LFS_ERR_IO; // the medium refused this write
+    }
     memcpy(g_lfsm.storage + (size_t)block * LFSM_BLOCK_SIZE + off, buf, size);
     return 0;
 }
@@ -119,6 +128,7 @@ static inline void lfsm_format(void)
         g_lfsm.h[i].open = PROTO_FALSE;
         g_lfsm.h[i].held = PROTO_FALSE;
     }
+    g_lfsm.prog_fail_in = 0;
 
     memset(&g_lfsm.cfg, 0, sizeof(g_lfsm.cfg));
     g_lfsm.cfg.read = lfsm_bd_read;
@@ -204,6 +214,18 @@ static inline proto_bool lfsm_mkdir(const char *path)
 // handle makes the next open fail exactly as it does on a device with its descriptors spent, and
 // filling the volume makes the next write return ENOSPC. The code under test then takes the same
 // branch for the same reason it would in the field.
+
+/** @brief Make the Nth program from now fail, the way a worn or full medium does. */
+static inline void lfsm_fail_prog_after(int n)
+{
+    g_lfsm.prog_fail_in = n;
+}
+
+/** @brief Stop failing programs. */
+static inline void lfsm_no_prog_failure(void)
+{
+    g_lfsm.prog_fail_in = 0;
+}
 
 /** @brief Occupy every free handle, so the next open() has nowhere to go. */
 static inline void lfsm_hold_all_handles(void)
