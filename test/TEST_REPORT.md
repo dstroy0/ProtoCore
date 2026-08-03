@@ -1,8 +1,8 @@
 # Test Report
 
-**Generated:** 2026-08-03 17:14:17
+**Generated:** 2026-08-03 18:59:54
 **Command:** `pio test` over 304 auto-discovered native envs (excludes native_pentest, native_codeql)
-**Result:** ✅ 13 passed - 134s
+**Result:** ✅ 13 passed - 139s
 
 ---
 
@@ -142,6 +142,7 @@
 | `test_syslog`            | `native_syslog`         |     0 |   ✅   | 00:00:00.850 |
 | `test_clock`             | `native_clock`          |     0 |   ✅   | 00:00:03.860 |
 | `test_forward`           | `native_forward`        |     0 |   ✅   | 00:00:10.158 |
+| `test_json`              | `native_json`           |     0 |   ✅   | 00:00:04.575 |
 
 ---
 

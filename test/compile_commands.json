@@ -1,39 +1,39 @@
 [
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_ikev2/src/board_drivers/hal/portable/portable_platform.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_ENABLE_IKEV2=1 -Itest/mocks -Itest/support -Isrc src/board_drivers/hal/portable/portable_platform.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_json/src/board_drivers/hal/portable/portable_platform.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_WEBSOCKET=1 -Itest/mocks -Itest/support -Isrc src/board_drivers/hal/portable/portable_platform.c",
     "directory": "@ROOT@",
     "file": "src/board_drivers/hal/portable/portable_platform.c",
-    "output": ".pio/build/native_ikev2/src/board_drivers/hal/portable/portable_platform.o"
+    "output": ".pio/build/native_json/src/board_drivers/hal/portable/portable_platform.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_ikev2/src/crypto/hash/sha1.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_ENABLE_IKEV2=1 -Itest/mocks -Itest/support -Isrc src/crypto/hash/sha1.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_json/src/crypto/hash/sha1.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_WEBSOCKET=1 -Itest/mocks -Itest/support -Isrc src/crypto/hash/sha1.c",
     "directory": "@ROOT@",
     "file": "src/crypto/hash/sha1.c",
-    "output": ".pio/build/native_ikev2/src/crypto/hash/sha1.o"
+    "output": ".pio/build/native_json/src/crypto/hash/sha1.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_ikev2/src/mmgr/arena.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_ENABLE_IKEV2=1 -Itest/mocks -Itest/support -Isrc src/mmgr/arena.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_json/src/mmgr/arena.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_WEBSOCKET=1 -Itest/mocks -Itest/support -Isrc src/mmgr/arena.c",
     "directory": "@ROOT@",
     "file": "src/mmgr/arena.c",
-    "output": ".pio/build/native_ikev2/src/mmgr/arena.o"
+    "output": ".pio/build/native_json/src/mmgr/arena.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_ikev2/src/mmgr/plaintext.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_ENABLE_IKEV2=1 -Itest/mocks -Itest/support -Isrc src/mmgr/plaintext.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_json/src/mmgr/plaintext.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_WEBSOCKET=1 -Itest/mocks -Itest/support -Isrc src/mmgr/plaintext.c",
     "directory": "@ROOT@",
     "file": "src/mmgr/plaintext.c",
-    "output": ".pio/build/native_ikev2/src/mmgr/plaintext.o"
+    "output": ".pio/build/native_json/src/mmgr/plaintext.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_ssh_conn/src/network_drivers/network/ip.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_ENABLE_SSH=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/network/ip.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_json/src/network_drivers/network/ip.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_WEBSOCKET=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/network/ip.c",
     "directory": "@ROOT@",
     "file": "src/network_drivers/network/ip.c",
-    "output": ".pio/build/native_ssh_conn/src/network_drivers/network/ip.o"
+    "output": ".pio/build/native_json/src/network_drivers/network/ip.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_oidc/src/network_drivers/presentation/codec/base64/base64.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_ENABLE_OIDC=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/codec/base64/base64.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_json/src/network_drivers/presentation/codec/base64/base64.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_WEBSOCKET=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/codec/base64/base64.c",
     "directory": "@ROOT@",
     "file": "src/network_drivers/presentation/codec/base64/base64.c",
-    "output": ".pio/build/native_oidc/src/network_drivers/presentation/codec/base64/base64.o"
+    "output": ".pio/build/native_json/src/network_drivers/presentation/codec/base64/base64.o"
   },
   {
     "command": "/usr/bin/g++ -o .pio/build/native_ssh_conn/src/network_drivers/presentation/codec/multipart/multipart.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_ENABLE_SSH=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/codec/multipart/multipart.cpp",
@@ -72,28 +72,28 @@
     "output": ".pio/build/native_ssh_conn/src/network_drivers/session/session.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_ikev2/src/network_drivers/session/worker.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_ENABLE_IKEV2=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/session/worker.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_json/src/network_drivers/session/worker.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_WEBSOCKET=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/session/worker.c",
     "directory": "@ROOT@",
     "file": "src/network_drivers/session/worker.c",
-    "output": ".pio/build/native_ikev2/src/network_drivers/session/worker.o"
+    "output": ".pio/build/native_json/src/network_drivers/session/worker.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_ssh_conn/src/network_drivers/transport/listener.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_ENABLE_SSH=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/transport/listener.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_json/src/network_drivers/transport/listener.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_WEBSOCKET=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/transport/listener.c",
     "directory": "@ROOT@",
     "file": "src/network_drivers/transport/listener.c",
-    "output": ".pio/build/native_ssh_conn/src/network_drivers/transport/listener.o"
+    "output": ".pio/build/native_json/src/network_drivers/transport/listener.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_ssh_conn/src/network_drivers/transport/tcp.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_ENABLE_SSH=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/transport/tcp.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_json/src/network_drivers/transport/tcp.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_WEBSOCKET=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/transport/tcp.c",
     "directory": "@ROOT@",
     "file": "src/network_drivers/transport/tcp.c",
-    "output": ".pio/build/native_ssh_conn/src/network_drivers/transport/tcp.o"
+    "output": ".pio/build/native_json/src/network_drivers/transport/tcp.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_ssh_conn/src/server/proto_builtins.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_ENABLE_SSH=1 -Itest/mocks -Itest/support -Isrc src/server/proto_builtins.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_json/src/server/proto_builtins.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_WEBSOCKET=1 -Itest/mocks -Itest/support -Isrc src/server/proto_builtins.c",
     "directory": "@ROOT@",
     "file": "src/server/proto_builtins.c",
-    "output": ".pio/build/native_ssh_conn/src/server/proto_builtins.o"
+    "output": ".pio/build/native_json/src/server/proto_builtins.o"
   },
   {
     "command": "/usr/bin/gcc -o .pio/build/native_swar/src/services/peripherals/ad9238/ad9238.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/services/peripherals/ad9238/ad9238.c",
@@ -120,88 +120,88 @@
     "output": ".pio/build/native_swar/src/services/iot/amqp/amqp.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_ikev2/src/crypto/hash/sha256.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_ENABLE_IKEV2=1 -Itest/mocks -Itest/support -Isrc src/crypto/hash/sha256.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_json/src/crypto/hash/sha256.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_WEBSOCKET=1 -Itest/mocks -Itest/support -Isrc src/crypto/hash/sha256.c",
     "directory": "@ROOT@",
     "file": "src/crypto/hash/sha256.c",
-    "output": ".pio/build/native_ikev2/src/crypto/hash/sha256.o"
+    "output": ".pio/build/native_json/src/crypto/hash/sha256.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/mmgr/frame.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/mmgr/frame.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_json/src/mmgr/frame.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_WEBSOCKET=1 -Itest/mocks -Itest/support -Isrc src/mmgr/frame.c",
     "directory": "@ROOT@",
     "file": "src/mmgr/frame.c",
-    "output": ".pio/build/native_swar/src/mmgr/frame.o"
+    "output": ".pio/build/native_json/src/mmgr/frame.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/network_drivers/application/auth/auth.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/application/auth/auth.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_json/src/network_drivers/application/auth/auth.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_WEBSOCKET=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/application/auth/auth.c",
     "directory": "@ROOT@",
     "file": "src/network_drivers/application/auth/auth.c",
-    "output": ".pio/build/native_swar/src/network_drivers/application/auth/auth.o"
+    "output": ".pio/build/native_json/src/network_drivers/application/auth/auth.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/network_drivers/application/file_serving/file_serving.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/application/file_serving/file_serving.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_json/src/network_drivers/application/file_serving/file_serving.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_WEBSOCKET=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/application/file_serving/file_serving.c",
     "directory": "@ROOT@",
     "file": "src/network_drivers/application/file_serving/file_serving.c",
-    "output": ".pio/build/native_swar/src/network_drivers/application/file_serving/file_serving.o"
+    "output": ".pio/build/native_json/src/network_drivers/application/file_serving/file_serving.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/network_drivers/application/http_range.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/application/http_range.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_json/src/network_drivers/application/http_range.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_WEBSOCKET=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/application/http_range.c",
     "directory": "@ROOT@",
     "file": "src/network_drivers/application/http_range.c",
-    "output": ".pio/build/native_swar/src/network_drivers/application/http_range.o"
+    "output": ".pio/build/native_json/src/network_drivers/application/http_range.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/network_drivers/application/ntp_service/ntp_service.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/application/ntp_service/ntp_service.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_json/src/network_drivers/application/ntp_service/ntp_service.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_WEBSOCKET=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/application/ntp_service/ntp_service.c",
     "directory": "@ROOT@",
     "file": "src/network_drivers/application/ntp_service/ntp_service.c",
-    "output": ".pio/build/native_swar/src/network_drivers/application/ntp_service/ntp_service.o"
+    "output": ".pio/build/native_json/src/network_drivers/application/ntp_service/ntp_service.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/network_drivers/application/web_assets.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/application/web_assets.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_json/src/network_drivers/application/web_assets.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_WEBSOCKET=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/application/web_assets.c",
     "directory": "@ROOT@",
     "file": "src/network_drivers/application/web_assets.c",
-    "output": ".pio/build/native_swar/src/network_drivers/application/web_assets.o"
+    "output": ".pio/build/native_json/src/network_drivers/application/web_assets.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/network_drivers/presentation/codec/json/json.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/codec/json/json.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_json/src/network_drivers/presentation/codec/json/json.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_WEBSOCKET=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/codec/json/json.c",
     "directory": "@ROOT@",
     "file": "src/network_drivers/presentation/codec/json/json.c",
-    "output": ".pio/build/native_swar/src/network_drivers/presentation/codec/json/json.o"
+    "output": ".pio/build/native_json/src/network_drivers/presentation/codec/json/json.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/protocore.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/protocore.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_json/src/protocore.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_WEBSOCKET=1 -Itest/mocks -Itest/support -Isrc src/protocore.c",
     "directory": "@ROOT@",
     "file": "src/protocore.c",
-    "output": ".pio/build/native_swar/src/protocore.o"
+    "output": ".pio/build/native_json/src/protocore.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/server/middleware.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/server/middleware.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_json/src/server/middleware.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_WEBSOCKET=1 -Itest/mocks -Itest/support -Isrc src/server/middleware.c",
     "directory": "@ROOT@",
     "file": "src/server/middleware.c",
-    "output": ".pio/build/native_swar/src/server/middleware.o"
+    "output": ".pio/build/native_json/src/server/middleware.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/server/regex.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/server/regex.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_json/src/server/regex.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_WEBSOCKET=1 -Itest/mocks -Itest/support -Isrc src/server/regex.c",
     "directory": "@ROOT@",
     "file": "src/server/regex.c",
-    "output": ".pio/build/native_swar/src/server/regex.o"
+    "output": ".pio/build/native_json/src/server/regex.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/server/response.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/server/response.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_json/src/server/response.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_WEBSOCKET=1 -Itest/mocks -Itest/support -Isrc src/server/response.c",
     "directory": "@ROOT@",
     "file": "src/server/response.c",
-    "output": ".pio/build/native_swar/src/server/response.o"
+    "output": ".pio/build/native_json/src/server/response.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/server/webdav_handler.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/server/webdav_handler.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_json/src/server/webdav_handler.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_WEBSOCKET=1 -Itest/mocks -Itest/support -Isrc src/server/webdav_handler.c",
     "directory": "@ROOT@",
     "file": "src/server/webdav_handler.c",
-    "output": ".pio/build/native_swar/src/server/webdav_handler.o"
+    "output": ".pio/build/native_json/src/server/webdav_handler.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/server/websocket_sse.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/server/websocket_sse.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_json/src/server/websocket_sse.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_WEBSOCKET=1 -Itest/mocks -Itest/support -Isrc src/server/websocket_sse.c",
     "directory": "@ROOT@",
     "file": "src/server/websocket_sse.c",
-    "output": ".pio/build/native_swar/src/server/websocket_sse.o"
+    "output": ".pio/build/native_json/src/server/websocket_sse.o"
   },
   {
     "command": "/usr/bin/g++ -o .pio/build/native_swar/src/services/web/web_terminal/web_terminal.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/services/web/web_terminal/web_terminal.cpp",
@@ -1584,10 +1584,10 @@
     "output": ".pio/build/native_swar/src/services/radio/sigfox/sigfox.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/server/signaling/signaling.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/server/signaling/signaling.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_json/src/server/signaling/signaling.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_WEBSOCKET=1 -Itest/mocks -Itest/support -Isrc src/server/signaling/signaling.c",
     "directory": "@ROOT@",
     "file": "src/server/signaling/signaling.c",
-    "output": ".pio/build/native_swar/src/server/signaling/signaling.o"
+    "output": ".pio/build/native_json/src/server/signaling/signaling.o"
   },
   {
     "command": "/usr/bin/gcc -o .pio/build/native_swar/src/services/fieldbus/simatic/simatic.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/services/fieldbus/simatic/simatic.c",
@@ -1860,10 +1860,10 @@
     "output": ".pio/build/native_swar/src/network_drivers/network/network.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/network_drivers/network/route.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/network/route.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_json/src/network_drivers/network/route.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_WEBSOCKET=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/network/route.c",
     "directory": "@ROOT@",
     "file": "src/network_drivers/network/route.c",
-    "output": ".pio/build/native_swar/src/network_drivers/network/route.o"
+    "output": ".pio/build/native_json/src/network_drivers/network/route.o"
   },
   {
     "command": "/usr/bin/gcc -o .pio/build/native_swar/src/network_drivers/presentation/http/http2/h2_server.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/http/http2/h2_server.c",
@@ -1896,10 +1896,10 @@
     "output": ".pio/build/native_swar/src/network_drivers/tls/tls.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_ssh/src/server/clock/clock.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_SSH_MAX_CHANNELS=3 -DPC_ENABLE_SSH=1 -DPC_ENABLE_MNT=1 -DPC_ENABLE_SSH_SFTP=1 -DPC_ENABLE_SSH_SCP=1 -Itest/mocks -Itest/support -Isrc src/server/clock/clock.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_json/src/server/clock/clock.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_WEBSOCKET=1 -Itest/mocks -Itest/support -Isrc src/server/clock/clock.c",
     "directory": "@ROOT@",
     "file": "src/server/clock/clock.c",
-    "output": ".pio/build/native_ssh/src/server/clock/clock.o"
+    "output": ".pio/build/native_json/src/server/clock/clock.o"
   },
   {
     "command": "/usr/bin/gcc -o .pio/build/native_swar/src/server/exc_coredump.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/server/exc_coredump.c",
@@ -2098,5 +2098,47 @@
     "directory": "@ROOT@",
     "file": "src/services/web/edge_cache/edge_cache_proxy.c",
     "output": ".pio/build/native_swar/src/services/web/edge_cache/edge_cache_proxy.o"
+  },
+  {
+    "command": "/usr/bin/gcc -o .pio/build/native_json/src/network_drivers/presentation/codec/multipart/multipart.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_WEBSOCKET=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/codec/multipart/multipart.c",
+    "directory": "@ROOT@",
+    "file": "src/network_drivers/presentation/codec/multipart/multipart.c",
+    "output": ".pio/build/native_json/src/network_drivers/presentation/codec/multipart/multipart.o"
+  },
+  {
+    "command": "/usr/bin/gcc -o .pio/build/native_json/src/network_drivers/presentation/http/http_parser/http_parser.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_WEBSOCKET=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/http/http_parser/http_parser.c",
+    "directory": "@ROOT@",
+    "file": "src/network_drivers/presentation/http/http_parser/http_parser.c",
+    "output": ".pio/build/native_json/src/network_drivers/presentation/http/http_parser/http_parser.o"
+  },
+  {
+    "command": "/usr/bin/gcc -o .pio/build/native_json/src/network_drivers/presentation/http/sse/sse.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_WEBSOCKET=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/http/sse/sse.c",
+    "directory": "@ROOT@",
+    "file": "src/network_drivers/presentation/http/sse/sse.c",
+    "output": ".pio/build/native_json/src/network_drivers/presentation/http/sse/sse.o"
+  },
+  {
+    "command": "/usr/bin/gcc -o .pio/build/native_json/src/network_drivers/presentation/http/websocket/websocket.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_WEBSOCKET=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/http/websocket/websocket.c",
+    "directory": "@ROOT@",
+    "file": "src/network_drivers/presentation/http/websocket/websocket.c",
+    "output": ".pio/build/native_json/src/network_drivers/presentation/http/websocket/websocket.o"
+  },
+  {
+    "command": "/usr/bin/gcc -o .pio/build/native_json/src/network_drivers/presentation/presentation.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_WEBSOCKET=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/presentation.c",
+    "directory": "@ROOT@",
+    "file": "src/network_drivers/presentation/presentation.c",
+    "output": ".pio/build/native_json/src/network_drivers/presentation/presentation.o"
+  },
+  {
+    "command": "/usr/bin/gcc -o .pio/build/native_json/src/network_drivers/session/session.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_WEBSOCKET=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/session/session.c",
+    "directory": "@ROOT@",
+    "file": "src/network_drivers/session/session.c",
+    "output": ".pio/build/native_json/src/network_drivers/session/session.o"
+  },
+  {
+    "command": "/usr/bin/gcc -o .pio/build/native_json/src/services/web/web_terminal/web_terminal.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DBODY_BUF_SIZE=512 -DPC_ENFORCE_HOST_HEADER=0 -DPC_ENABLE_STATS=1 -DPC_ENABLE_METRICS=1 -DPC_ENABLE_ETAG=1 -DPC_ENABLE_WEB_TERMINAL=1 -DPC_HTTP_EMIT_DATE=1 -DPC_ENABLE_WEBSOCKET=1 -Itest/mocks -Itest/support -Isrc src/services/web/web_terminal/web_terminal.c",
+    "directory": "@ROOT@",
+    "file": "src/services/web/web_terminal/web_terminal.c",
+    "output": ".pio/build/native_json/src/services/web/web_terminal/web_terminal.o"
   }
 ]
