@@ -703,12 +703,14 @@ void test_webdav_join_root_variants()
     TEST_ASSERT_TRUE(pc_resp_status(200));
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "yo"));
 
-    // (c) the bare mount prefix under an empty root joins to "/" - a one-character path,
-    // so the trailing-slash strip must leave it alone (stripping would yield ""). No such
-    // node exists, so the GET is a clean 404 rather than a malformed lookup.
+    // (c) the bare mount prefix under an empty root joins to "/" - a one-character path, so the
+    // trailing-slash strip must leave it alone (stripping would yield ""). What proves the lookup
+    // was well formed is that it resolves to the root directory and GET refuses a collection with
+    // 405. The flat mock answered 404 here only because it had no "/" entry to find; a real
+    // filesystem always has a root.
     rearm();
     feed_and_handle(0, "GET /er HTTP/1.1\r\nHost: x\r\n\r\n");
-    TEST_ASSERT_TRUE(pc_resp_status(404));
+    TEST_ASSERT_TRUE(pc_resp_status(405));
 
     // (d) a null fs_root behaves exactly like an empty one.
     rearm();
