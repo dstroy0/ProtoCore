@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- spell swar's width assert so C++ can parse it, and typedef MockHdr ([`e8e3296`](https://github.com/dstroy0/ProtoCore/commit/e8e3296cc75340db75ab44e07c96da2fddb99ab1))
 - stop 404-ing a static mount that named no backend ([`e407e63`](https://github.com/dstroy0/ProtoCore/commit/e407e633983afec0fab97e61cdceee25bb8b047d))
 - stop two envs overriding the src filter they inherit ([`94db75d`](https://github.com/dstroy0/ProtoCore/commit/94db75dbb934fe10ee54ae2ef0a661c8815d279c))
 - reset the middleware chain with the rest of the server ([`48eccdd`](https://github.com/dstroy0/ProtoCore/commit/48eccdd4685ff5e3fe4103f564d0429f6a6adb9b))
@@ -47,6 +48,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`e21315c`](https://github.com/dstroy0/ProtoCore/commit/e21315cba6aa77e7bd6459eb189c8c5bd0479973))
 - update CHANGELOG.md [skip ci] ([`5607ab2`](https://github.com/dstroy0/ProtoCore/commit/5607ab2667c17f6a7fd6bcfcedd5c80efc31981c))
 - update CHANGELOG.md [skip ci] ([`b9a717a`](https://github.com/dstroy0/ProtoCore/commit/b9a717a7e1d274b743601be4c47a20ecbd76370f))
 - update CHANGELOG.md [skip ci] ([`52fc242`](https://github.com/dstroy0/ProtoCore/commit/52fc242c7e62a7f2574e6c0b3320fce155885591))
