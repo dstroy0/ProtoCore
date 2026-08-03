@@ -20,8 +20,8 @@
 // driver table and its count, grouped so it is one named owner, unreachable cross-TU.
 typedef struct
 {
-    const SouthboundDriver *drivers[PC_SOUTHBOUND_MAX_DRIVERS] = {};
-    size_t count = 0;
+    const SouthboundDriver *drivers[PC_SOUTHBOUND_MAX_DRIVERS];
+    size_t count;
 } SouthboundCtx;
 static SouthboundCtx s_sb;
 

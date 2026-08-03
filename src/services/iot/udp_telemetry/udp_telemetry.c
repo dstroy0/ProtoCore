@@ -186,9 +186,9 @@ proto_bool pc_line_ok(const pc_line *l)
 // endpoint and the begun flag, grouped so it is one named owner, unreachable cross-TU.
 typedef struct
 {
-    char ip[16] = {0};
-    uint16_t port = 0;
-    proto_bool begun = PROTO_FALSE;
+    char ip[16];
+    uint16_t port;
+    proto_bool begun;
 } UdpTelemetryCtx;
 static UdpTelemetryCtx s_ut;
 

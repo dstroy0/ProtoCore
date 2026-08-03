@@ -38,7 +38,7 @@ typedef struct
 typedef struct
 {
     SshFwd fwd[PC_SSH_FWD_MAX];
-    SshForwardPolicyCb policy = NULL;
+    SshForwardPolicyCb policy;
 } SshFwdCtx;
 static SshFwdCtx s_fwd;
 

@@ -27,10 +27,10 @@ static const pc_field QUOTED_KEY[] = {{PC_FK_LIT, 0, 1, "\""}, PC_STR, {PC_FK_LI
 // unreachable from any other translation unit.
 typedef struct
 {
-    const pc_widget *widgets = NULL;
-    uint8_t count = 0;
-    float values[PC_DASHBOARD_MAX_WIDGETS] = {};
-    pc_control_cb control_cb = NULL;
+    const pc_widget *widgets;
+    uint8_t count;
+    float values[PC_DASHBOARD_MAX_WIDGETS];
+    pc_control_cb control_cb;
 } DashboardCtx;
 static DashboardCtx s_dash;
 

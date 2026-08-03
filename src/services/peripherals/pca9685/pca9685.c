@@ -85,10 +85,10 @@ size_t pc_pca9685_set_pwm_bytes(uint8_t *buf, size_t cap, uint8_t channel, uint1
 // and the configured PWM frequency, grouped so it is one named owner, unreachable cross-TU.
 typedef struct
 {
-    uint8_t addr = PC_PCA9685_I2C_ADDR;
-    uint32_t freq = PC_PCA9685_FREQ;
+    uint8_t addr;
+    uint32_t freq;
 } Pca9685Ctx;
-static Pca9685Ctx s_pca;
+static Pca9685Ctx s_pca = {.addr = PC_PCA9685_I2C_ADDR, .freq = PC_PCA9685_FREQ};
 
 static proto_bool wr(uint8_t reg, uint8_t val)
 {

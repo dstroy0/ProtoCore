@@ -113,9 +113,9 @@ void pc_rcwl0516_core_init(PresenceCore *c, uint32_t now)
 typedef struct
 {
     PresenceCore core;
-    int pin = -1;
+    int pin;
 } Rcwl0516Ctx;
-static Rcwl0516Ctx s_rcwl;
+static Rcwl0516Ctx s_rcwl = {.pin = -1};
 
 proto_bool pc_rcwl0516_begin(int out_pin)
 {

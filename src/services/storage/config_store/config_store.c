@@ -24,7 +24,7 @@
 typedef struct
 {
     Preferences prefs;
-    proto_bool open = PROTO_FALSE;
+    proto_bool open;
 } ConfigStoreCtx;
 static ConfigStoreCtx s_cfg;
 

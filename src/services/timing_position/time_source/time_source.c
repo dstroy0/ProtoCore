@@ -26,7 +26,7 @@ typedef struct
 typedef struct
 {
     Src sources[PC_TIME_SOURCE_MAX];
-    const char *active = NULL;
+    const char *active;
 } TimeSourceCtx;
 static TimeSourceCtx s_ts;
 

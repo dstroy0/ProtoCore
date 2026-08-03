@@ -23,12 +23,12 @@
 // this single-task device). Grouped so it is one named owner, unreachable cross-TU.
 typedef struct
 {
-    const char *path = NULL;
-    char user[MAX_AUTH_LEN] = {0};
-    char pass[MAX_AUTH_LEN] = {0};
-    proto_bool authed = PROTO_FALSE; ///< Credentials validated for the current upload.
-    proto_bool active = PROTO_FALSE; ///< Update.begin() succeeded for the current upload.
-    proto_bool error = PROTO_FALSE;  ///< A write failed during the current upload.
+    const char *path;
+    char user[MAX_AUTH_LEN];
+    char pass[MAX_AUTH_LEN];
+    proto_bool authed; ///< Credentials validated for the current upload.
+    proto_bool active; ///< Update.begin() succeeded for the current upload.
+    proto_bool error;  ///< A write failed during the current upload.
 } OtaCtx;
 static OtaCtx s_ota;
 

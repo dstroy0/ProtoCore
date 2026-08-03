@@ -80,7 +80,7 @@ int pc_health_json(const pc_health *h, char *out, size_t cap)
 // callback, so it is one named owner, unreachable from any other translation unit.
 typedef struct
 {
-    pc_breach_fn cb = NULL;
+    pc_breach_fn cb;
 } GuardrailsCtx;
 static GuardrailsCtx s_gr;
 

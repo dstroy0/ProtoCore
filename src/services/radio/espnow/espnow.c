@@ -80,8 +80,8 @@ typedef struct
 {
     Peer peers[PC_ESPNOW_MAX_PEERS];
 #if PROTOCORE_HOT
-    pc_espnow_recv_fn recv = NULL;
-    uint8_t channel = 0;
+    pc_espnow_recv_fn recv;
+    uint8_t channel;
 #endif
 } EspnowCtx;
 static EspnowCtx s_espnow;

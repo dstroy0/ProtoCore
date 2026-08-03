@@ -21,8 +21,8 @@
 // (The route handlers are fixed-signature callbacks, so they reach this single owner directly.)
 typedef struct
 {
-    pc_gpio_pin *pins = NULL;
-    uint8_t count = 0;
+    pc_gpio_pin *pins;
+    uint8_t count;
 } GpioRoutesCtx;
 static GpioRoutesCtx s_gpior;
 

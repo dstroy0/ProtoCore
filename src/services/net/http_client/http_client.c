@@ -365,9 +365,9 @@ int http_client_parse_response(uint8_t *buf, size_t len, size_t *body_off, size_
 typedef struct
 {
     uint8_t rx[PC_HTTP_CLIENT_BUF_SIZE];
-    int cid = -1; // active outbound connection id (pc_client pool)
+    int cid; // active outbound connection id (pc_client pool)
 } HttpClientCtx;
-static HttpClientCtx s_http;
+static HttpClientCtx s_http = {.cid = -1};
 
 #if PC_ENABLE_HTTP_CLIENT_TLS
 // mbedTLS BIO over the shared client transport: send wire bytes through the pool,

@@ -119,9 +119,9 @@ size_t pc_snmp_notify_build_v2c(uint8_t *out, size_t cap, const char *community,
 // request-id counter, so it is one named owner, unreachable from any other translation unit.
 typedef struct
 {
-    uint32_t trap_reqid = 1;
+    uint32_t trap_reqid;
 } SnmpNotifyCtx;
-static SnmpNotifyCtx s_notify;
+static SnmpNotifyCtx s_notify = {.trap_reqid = 1};
 
 proto_bool pc_snmp_trap_v2c(const char *dst_ip, uint16_t port, const char *community, const uint32_t *trap_oid,
                             size_t trap_oid_len, const SnmpVarbind *vbs, size_t n)

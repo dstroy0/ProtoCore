@@ -54,8 +54,8 @@ size_t can_to_socketcan(const CanFrame *f, uint8_t *out, size_t cap)
 // the running flag, grouped so it is one named owner, unreachable from any other TU.
 typedef struct
 {
-    bus_capture_sink_fn sink = NULL;
-    proto_bool running = PROTO_FALSE;
+    bus_capture_sink_fn sink;
+    proto_bool running;
 } BusCaptureCtx;
 static BusCaptureCtx s_bus;
 

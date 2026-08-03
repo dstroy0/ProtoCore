@@ -17,8 +17,8 @@
 typedef struct
 {
     pc_lifeline lines[PC_FAILSAFE_MAX_LIFELINES];
-    pc_failsafe_cb cb = NULL;
-    void *cb_arg = NULL;
+    pc_failsafe_cb cb;
+    void *cb_arg;
 } FailsafeCtx;
 static FailsafeCtx s_fs;
 

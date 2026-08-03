@@ -34,10 +34,10 @@ typedef struct
     // its own schedule, so it can arrive first. This used to be inferred from a stored server
     // pointer being non-null; with the routes registered through free functions there is no pointer
     // to infer it from, and "has this service started" was always the real question.
-    proto_bool started = PROTO_FALSE;
-    char stream_path[MAX_PATH_LEN] = {0};
+    proto_bool started;
+    char stream_path[MAX_PATH_LEN];
 #if PC_ENABLE_WEBSOCKET
-    char ws_path[MAX_PATH_LEN] = {0};
+    char ws_path[MAX_PATH_LEN];
 #endif
 } DashRoutesCtx;
 static DashRoutesCtx s_dashr;

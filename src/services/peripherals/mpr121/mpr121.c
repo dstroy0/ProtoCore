@@ -99,9 +99,9 @@ size_t pc_mpr121_build_init(uint8_t *buf, size_t cap, uint8_t n, uint8_t touch_t
 // so it is one named owner, unreachable from any other translation unit.
 typedef struct
 {
-    uint8_t addr = PC_MPR121_I2C_ADDR;
+    uint8_t addr;
 } Mpr121Ctx;
-static Mpr121Ctx s_mpr;
+static Mpr121Ctx s_mpr = {.addr = PC_MPR121_I2C_ADDR};
 
 static proto_bool wr(uint8_t reg, uint8_t val)
 {

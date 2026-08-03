@@ -111,7 +111,7 @@ proto_bool wifi_frame_parse(const uint8_t *frame, uint16_t len, WifiFrameInfo *o
 // One named owner, unreachable from any other translation unit.
 typedef struct
 {
-    pc_promisc_sink_fn sink = NULL;
+    pc_promisc_sink_fn sink;
 } PromiscCtx;
 static PromiscCtx s_promisc;
 

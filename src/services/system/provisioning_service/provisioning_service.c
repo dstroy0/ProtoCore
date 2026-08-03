@@ -96,9 +96,9 @@ proto_bool pc_prov_form_field(const char *body, const char *key, char *out, size
 // unreachable cross-TU.
 typedef struct
 {
-    uint8_t ap_ip[4] = {192, 168, 4, 1};
+    uint8_t ap_ip[4];
 } ProvCtx;
-static ProvCtx s_prov;
+static ProvCtx s_prov = {.ap_ip = {192, 168, 4, 1}};
 
 // The NVS namespace + credential keys (PC_PROV_NVS_NAMESPACE / _KEY_SSID / _KEY_PSK) live in
 // protocore_config.h under PC_ENABLE_PROVISIONING so a deployment can override them; used across

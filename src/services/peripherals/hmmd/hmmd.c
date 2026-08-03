@@ -247,7 +247,7 @@ typedef struct
 {
     HmmdStream stream;
     HmmdReport last;
-    proto_bool have = PROTO_FALSE;
+    proto_bool have;
 } HmmdCtx;
 static HmmdCtx s_hmmd;
 

@@ -66,9 +66,9 @@ proto_bool pc_sht3x_parse(const uint8_t resp[6], int32_t *temp_mc, int32_t *rh_m
 // so it is one named owner, unreachable from any other translation unit.
 typedef struct
 {
-    uint8_t addr = PC_SHT3X_I2C_ADDR;
+    uint8_t addr;
 } Sht3xCtx;
-static Sht3xCtx s_sht;
+static Sht3xCtx s_sht = {.addr = PC_SHT3X_I2C_ADDR};
 
 static proto_bool send_cmd(uint16_t cmd)
 {

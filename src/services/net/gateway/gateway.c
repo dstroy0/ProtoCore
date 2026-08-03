@@ -39,16 +39,16 @@ typedef struct
 typedef struct
 {
     port ports[PC_GW_MAX_PORTS];
-    pc_gateway_uplink_fn uplink = NULL;
-    void *uplink_ctx = NULL;
-    const char *prefix = PC_GW_DEFAULT_PREFIX;
-    uint32_t seq = 0;
+    pc_gateway_uplink_fn uplink;
+    void *uplink_ctx;
+    const char *prefix;
+    uint32_t seq;
     pc_gateway_stats stats;
 #if !PROTOCORE_HOT
-    uint32_t now_ms = 0; // host test clock (real builds use pc_millis())
+    uint32_t now_ms; // host test clock (real builds use pc_millis())
 #endif
 } GatewayCtx;
-static GatewayCtx s_gw;
+static GatewayCtx s_gw = {.prefix = PC_GW_DEFAULT_PREFIX};
 
 #if PROTOCORE_HOT
 static uint32_t gw_now()

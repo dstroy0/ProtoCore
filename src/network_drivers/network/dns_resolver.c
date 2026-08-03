@@ -82,8 +82,8 @@ proto_bool pc_dns_resolver_verify(uint32_t ip)
 typedef struct
 {
     ip_addr_t addr;
-    volatile proto_bool done = PROTO_FALSE;
-    volatile proto_bool ok = PROTO_FALSE;
+    volatile proto_bool done;
+    volatile proto_bool ok;
 } DnsResolverCtx;
 static DnsResolverCtx s_dr;
 

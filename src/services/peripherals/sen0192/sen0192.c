@@ -80,9 +80,9 @@ uint32_t pc_sen0192_motion_active_age_ms(const Sen0192Motion *m, uint32_t now_ms
 typedef struct
 {
     Sen0192Motion motion;
-    int pin = -1;
+    int pin;
 } Sen0192Ctx;
-static Sen0192Ctx s_sen;
+static Sen0192Ctx s_sen = {.pin = -1};
 
 proto_bool pc_sen0192_begin(void)
 {

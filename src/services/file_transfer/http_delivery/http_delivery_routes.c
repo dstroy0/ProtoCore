@@ -22,9 +22,9 @@
 // fixed-signature callbacks, so they reach this single owner directly.
 typedef struct
 {
-    const char *const *paths = NULL;
-    size_t n = 0;
-    const char *version = NULL;
+    const char *const *paths;
+    size_t n;
+    const char *version;
 } DeliveryRoutesCtx;
 static DeliveryRoutesCtx s_delr;
 
