@@ -34,7 +34,7 @@ void setUp()
     set_millis(0);
     queue_stage_reset(); // clear any staged events from previous test
     proto_tcp_pool_init(NULL);
-    listener_add(0, 80, PROTO_HTTP);
+    listener_add(0, 80, PROTO_HTTP, PROTO_FALSE);
     for (int i = 0; i < MAX_CONNS; i++)
     {
         conn_pool[i].state = CONN_ACTIVE;
