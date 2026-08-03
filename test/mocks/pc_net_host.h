@@ -311,11 +311,25 @@ typedef uint32_t pc_platform_ticks;
 
 // The host runs the pipeline inline, so a queue is a handle the core can hold and compare and a
 // task never starts. Depth/'item size' are accepted and ignored.
+// One-shot creation failure: the next queue create reports no room, the way a kernel out of
+// queue objects does, so the caller has to unwind the listener it was building.
+__attribute__((weak)) int pc_platform_queue_create_fail_once;
+
+static inline void mock_queue_create_fail_once(void)
+{
+    pc_platform_queue_create_fail_once = 1;
+}
+
 static inline pc_platform_queue pc_platform_queue_create(size_t depth, size_t item, void *storage, void *ctrl)
 {
     (void)depth;
     (void)item;
     (void)ctrl;
+    if (pc_platform_queue_create_fail_once)
+    {
+        pc_platform_queue_create_fail_once = 0;
+        return NULL;
+    }
     return storage ? storage : (void *)1;
 }
 // One-shot send failure: the next pc_platform_queue_send() reports a full queue and clears the
@@ -691,9 +705,22 @@ static inline pc_pcb *pc_net_host_pcb(void)
     return &pc_net_host_pcbs[PC_NET_HOST_PCBS - 1];
 }
 
+// One-shot allocation failure: the next pc_net_new() reports the control-block pool spent.
+__attribute__((weak)) int pc_net_host_new_fail_once;
+
+static inline void mock_new_pcb_fail_once(void)
+{
+    pc_net_host_new_fail_once = 1;
+}
+
 static inline pc_pcb *pc_net_new(int type)
 {
     (void)type;
+    if (pc_net_host_new_fail_once)
+    {
+        pc_net_host_new_fail_once = 0;
+        return NULL;
+    }
     for (int i = 0; i < PC_NET_HOST_PCBS; i++)
     {
         if (!pc_net_host_pcbs[i].in_use)
@@ -705,9 +732,22 @@ static inline pc_pcb *pc_net_new(int type)
     }
     return NULL;
 }
+// One-shot bind failure: the next bind reports the address already in use.
+__attribute__((weak)) int pc_net_host_bind_fail_once;
+
+static inline void mock_bind_fail_once(void)
+{
+    pc_net_host_bind_fail_once = 1;
+}
+
 static inline pc_net_err pc_net_bind(pc_pcb *p, const pc_net_ip *a, uint16_t port)
 {
     (void)a;
+    if (pc_net_host_bind_fail_once)
+    {
+        pc_net_host_bind_fail_once = 0;
+        return PC_NET_ERR_USE;
+    }
     if (!p)
     {
         return PC_NET_ERR_ARG;
@@ -715,9 +755,22 @@ static inline pc_net_err pc_net_bind(pc_pcb *p, const pc_net_ip *a, uint16_t por
     p->local_port = port;
     return PC_NET_OK;
 }
+// One-shot listen failure: the next listen reports no memory for the listen block.
+__attribute__((weak)) int pc_net_host_listen_fail_once;
+
+static inline void mock_listen_fail_once(void)
+{
+    pc_net_host_listen_fail_once = 1;
+}
+
 static inline pc_pcb *pc_net_listen(pc_pcb *p, uint8_t backlog)
 {
     (void)backlog;
+    if (pc_net_host_listen_fail_once)
+    {
+        pc_net_host_listen_fail_once = 0;
+        return NULL;
+    }
     return p;
 }
 static inline pc_net_err pc_net_connect(pc_pcb *p, const pc_net_ip *a, uint16_t port, pc_net_connect_fn cb)

@@ -231,18 +231,18 @@ void test_listener_add_bounds_and_lwip_failure_paths()
 {
     TEST_ASSERT_EQUAL_INT32(-1, listener_add((uint8_t)MAX_LISTENERS, 80, PROTO_HTTP, PROTO_FALSE));
 
-    mock_new_pcb_fail_once() = PROTO_TRUE;
+    mock_new_pcb_fail_once();
     TEST_ASSERT_EQUAL_INT32(-1, listener_add(1, 81, PROTO_HTTP, PROTO_FALSE));
 
-    mock_bind_fail_once() = PROTO_TRUE;
+    mock_bind_fail_once();
     TEST_ASSERT_EQUAL_INT32(-1, listener_add(1, 81, PROTO_HTTP, PROTO_FALSE));
 
-    mock_listen_fail_once() = PROTO_TRUE;
+    mock_listen_fail_once();
     int before = mock_abort_call_count();
     TEST_ASSERT_EQUAL_INT32(-1, listener_add(1, 81, PROTO_HTTP, PROTO_FALSE));
     TEST_ASSERT_EQUAL_INT(before + 1, mock_abort_call_count()); // the allocated pcb is aborted, not leaked
 
-    mock_queue_create_fail_once() = PROTO_TRUE;
+    mock_queue_create_fail_once();
     TEST_ASSERT_EQUAL_INT32(-1, listener_add(1, 81, PROTO_HTTP, PROTO_FALSE));
 
     // A normal call afterward still succeeds (the failure knobs auto-cleared).
@@ -775,7 +775,7 @@ void test_enqueue_rejects_out_of_range_listener_id()
     TcpEvt evt = {EVT_DATA, 0, 0};
     TEST_ASSERT_FALSE(listener_enqueue((uint8_t)MAX_LISTENERS, &evt));
 
-    mock_queue_send_fail_once() = PROTO_TRUE;
+    mock_queue_send_fail_once();
     TEST_ASSERT_FALSE(listener_enqueue(0, &evt)); // listener 0 is active (setUp's listener_add)
 
     listener_pool[0].active = PROTO_TRUE; // active but no queue - an inconsistent state a real
@@ -790,7 +790,7 @@ void test_dynamic_listener_lifecycle()
 {
     TEST_ASSERT_EQUAL_INT32(-1, listener_add_dynamic((uint8_t)MAX_LISTENERS, 2222, PROTO_HTTP));
 
-    mock_queue_create_fail_once() = PROTO_TRUE;
+    mock_queue_create_fail_once();
     TEST_ASSERT_EQUAL_INT32(-1, listener_add_dynamic(1, 2222, PROTO_HTTP));
 
     TEST_ASSERT_EQUAL_INT32(1, listener_add_dynamic(1, 2222, PROTO_HTTP));
@@ -911,9 +911,9 @@ void test_send_flush_success_and_write_failure()
     conn_pool[0].pcb = &fake;
     TEST_ASSERT_TRUE(pc_conn_send_flush(0, "x", 1));
 
-    mock_send_fail_after() = 0; // next tcp_write call fails
+    mock_send_fail_after(0); // next tcp_write call fails
     TEST_ASSERT_FALSE(pc_conn_send_flush(0, "x", 1));
-    mock_send_fail_after() = -1; // restore: never fail
+    mock_send_fail_after(-1); // restore: never fail
 }
 
 // pc_conn_raw_send: null pcb rejected, a normal write succeeds, and a failed write
@@ -925,9 +925,9 @@ void test_raw_send_null_success_and_failure()
     pc_pcb fake = {0};
     TEST_ASSERT_TRUE(pc_conn_raw_send(&fake, "hello", 5));
 
-    mock_send_fail_after() = 0;
+    mock_send_fail_after(0);
     TEST_ASSERT_FALSE(pc_conn_raw_send(&fake, "x", 1));
-    mock_send_fail_after() = -1;
+    mock_send_fail_after(-1);
 }
 
 // pc_conn_close's host tcp_close-fails fallback: tcp_abort is called (proven via the
