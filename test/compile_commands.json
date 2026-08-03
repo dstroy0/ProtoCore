@@ -1896,10 +1896,10 @@
     "output": ".pio/build/native_swar/src/network_drivers/tls/tls.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_prov/src/server/clock/clock.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -I.pio/libdeps/native_prov/littlefs/include -I.pio/libdeps/native_prov/littlefs/src -Itest/mocks -Itest/support -Isrc src/server/clock/clock.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_trace_capture/src/server/clock/clock.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_ENABLE_TRACE_CAPTURE=1 -DPC_TC_MAX_WINDOW_SAMPLES=32 -I.pio/libdeps/native_trace_capture/littlefs/include -I.pio/libdeps/native_trace_capture/littlefs/src -Itest/mocks -Itest/support -Isrc src/server/clock/clock.c",
     "directory": "@ROOT@",
     "file": "src/server/clock/clock.c",
-    "output": ".pio/build/native_prov/src/server/clock/clock.o"
+    "output": ".pio/build/native_trace_capture/src/server/clock/clock.o"
   },
   {
     "command": "/usr/bin/gcc -o .pio/build/native_swar/src/server/exc_coredump.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/server/exc_coredump.c",
@@ -1920,10 +1920,10 @@
     "output": ".pio/build/native_swar/src/server/signaling/gpio_map_routes.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/server/signaling/trace_capture.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/server/signaling/trace_capture.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_trace_capture/src/server/signaling/trace_capture.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_ENABLE_TRACE_CAPTURE=1 -DPC_TC_MAX_WINDOW_SAMPLES=32 -I.pio/libdeps/native_trace_capture/littlefs/include -I.pio/libdeps/native_trace_capture/littlefs/src -Itest/mocks -Itest/support -Isrc src/server/signaling/trace_capture.c",
     "directory": "@ROOT@",
     "file": "src/server/signaling/trace_capture.c",
-    "output": ".pio/build/native_swar/src/server/signaling/trace_capture.o"
+    "output": ".pio/build/native_trace_capture/src/server/signaling/trace_capture.o"
   },
   {
     "command": "/usr/bin/g++ -o .pio/build/native_swar/src/server/update/ota_service.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/server/update/ota_service.cpp",
@@ -2326,5 +2326,17 @@
     "directory": "@ROOT@",
     "file": ".pio/libdeps/native_ssh_kbdint/littlefs/src/lfs_util.c",
     "output": ".pio/build/native_ssh_kbdint/libffe/littlefs/lfs_util.o"
+  },
+  {
+    "command": "/usr/bin/gcc -o .pio/build/native_trace_capture/lib666/littlefs/lfs.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_ENABLE_TRACE_CAPTURE=1 -DPC_TC_MAX_WINDOW_SAMPLES=32 -I.pio/libdeps/native_trace_capture/littlefs/include -I.pio/libdeps/native_trace_capture/littlefs/src -Itest/mocks -Itest/support -Isrc .pio/libdeps/native_trace_capture/littlefs/src/lfs.c",
+    "directory": "@ROOT@",
+    "file": ".pio/libdeps/native_trace_capture/littlefs/src/lfs.c",
+    "output": ".pio/build/native_trace_capture/lib666/littlefs/lfs.o"
+  },
+  {
+    "command": "/usr/bin/gcc -o .pio/build/native_trace_capture/lib666/littlefs/lfs_util.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_ENABLE_TRACE_CAPTURE=1 -DPC_TC_MAX_WINDOW_SAMPLES=32 -I.pio/libdeps/native_trace_capture/littlefs/include -I.pio/libdeps/native_trace_capture/littlefs/src -Itest/mocks -Itest/support -Isrc .pio/libdeps/native_trace_capture/littlefs/src/lfs_util.c",
+    "directory": "@ROOT@",
+    "file": ".pio/libdeps/native_trace_capture/littlefs/src/lfs_util.c",
+    "output": ".pio/build/native_trace_capture/lib666/littlefs/lfs_util.o"
   }
 ]

@@ -107,6 +107,18 @@
 ".pio/libdeps/native_telnet/littlefs/src/lfs_util.c": [
 "native_telnet"
 ],
+".pio/libdeps/native_trace_capture/littlefs/include/lfs.h": [
+"native_trace_capture"
+],
+".pio/libdeps/native_trace_capture/littlefs/include/lfs_util.h": [
+"native_trace_capture"
+],
+".pio/libdeps/native_trace_capture/littlefs/src/lfs.c": [
+"native_trace_capture"
+],
+".pio/libdeps/native_trace_capture/littlefs/src/lfs_util.c": [
+"native_trace_capture"
+],
 ".pio/libdeps/native_transport/littlefs/include/lfs.h": [
 "native_transport"
 ],
@@ -4443,6 +4455,7 @@
 "native_ssh_pqc",
 "native_swar",
 "native_telnet",
+"native_trace_capture",
 "native_transport",
 "native_upload"
 ],
@@ -7720,6 +7733,7 @@
 "native_ssh_pqc",
 "native_swar",
 "native_telnet",
+"native_trace_capture",
 "native_transport",
 "native_upload"
 ],
