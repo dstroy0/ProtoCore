@@ -51,6 +51,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`e63cf94`](https://github.com/dstroy0/ProtoCore/commit/e63cf9411155e0c18dbaa14d2d69d27a35616ea2))
 - update CHANGELOG.md [skip ci] ([`8a830a0`](https://github.com/dstroy0/ProtoCore/commit/8a830a0c0f8c29b910a870cdcc8054a9836e765c))
 - update CHANGELOG.md [skip ci] ([`6176780`](https://github.com/dstroy0/ProtoCore/commit/617678047959afcb731f8c4c4c17500fb907b18a))
 - update CHANGELOG.md [skip ci] ([`980290e`](https://github.com/dstroy0/ProtoCore/commit/980290e3c7d81b0559eeee210aa574499fd09ed8))
@@ -211,6 +212,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- Revert "fix: do not drive the fixture volume to the block littlefs cannot recover from" ([`a348f72`](https://github.com/dstroy0/ProtoCore/commit/a348f724a0d85945fb7378453924b662e47803d3))
 - Merge Dependabot #21: build(deps): bump github/codeql-action from 4 to 4.37.4 ([`e587e2a`](https://github.com/dstroy0/ProtoCore/commit/e587e2a935c429d3163a536015960c6e5da06a76))
 - clang-format the two benches the layer move left unformatted ([`2db2997`](https://github.com/dstroy0/ProtoCore/commit/2db299722f2a5d330b198a71e4cc7fd18702b47f))
 - Bump version: 0.0.6 → 0.0.7 ([`4a6ac90`](https://github.com/dstroy0/ProtoCore/commit/4a6ac90370aaad684ff0656dacefe860615f667d))
