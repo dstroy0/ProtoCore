@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- search the Allow buffer to its NUL, not to its capacity ([`3a93744`](https://github.com/dstroy0/ProtoCore/commit/3a9374409315b928f31ef27fe29b4e3e12d54e70))
 - do not drive the fixture volume to the block littlefs cannot recover from ([`ca03735`](https://github.com/dstroy0/ProtoCore/commit/ca037352fcf8327e80bfedf88bc71ebcc8a99b59))
 - close open files before unmounting the fixture volume ([`52c5a07`](https://github.com/dstroy0/ProtoCore/commit/52c5a0725c7ca18294b688b26462150022114184))
 - a reserved handle must never reach littlefs ([`3b64a8a`](https://github.com/dstroy0/ProtoCore/commit/3b64a8a4c618ffa19ced9deed14dbc12131275b3))
@@ -51,6 +52,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`a74dfd9`](https://github.com/dstroy0/ProtoCore/commit/a74dfd93ab4a546d29955ab8f9352b5f2ac407d4))
 - update CHANGELOG.md [skip ci] ([`b468456`](https://github.com/dstroy0/ProtoCore/commit/b468456fb315a99958491667752fba85b1d2efb8))
 - update CHANGELOG.md [skip ci] ([`09e6682`](https://github.com/dstroy0/ProtoCore/commit/09e6682cd48080970ecde9b23abcf2412c4df955))
 - update CHANGELOG.md [skip ci] ([`dcda99b`](https://github.com/dstroy0/ProtoCore/commit/dcda99b00da72981ce97a0139acfb26c36d58179))
