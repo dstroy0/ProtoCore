@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- finish the C to C++ residue in the CoAP server ([`bb25d76`](https://github.com/dstroy0/ProtoCore/commit/bb25d764c8a89de9278f5029588a42d40a0490f0))
 - drop the in-class initializers from OpcuaCtx and hoist proto_handler.h ([`e398dfb`](https://github.com/dstroy0/ProtoCore/commit/e398dfb72c88b3bc9c22966c77e984abcb0ebd72))
 - replace the pc_atomic template and in-class initializers in two servers ([`fd1a387`](https://github.com/dstroy0/ProtoCore/commit/fd1a387ae52b3568a70ad041ba17da7a2cc4006b))
 - spell the opaque H3Conn tag and hoist a lambda out of test_quic_server ([`794cd33`](https://github.com/dstroy0/ProtoCore/commit/794cd33df4b4be0b431f9f87e88c25b6a715a52e))
@@ -33,6 +34,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update test report + coverage [skip ci] ([`22587e5`](https://github.com/dstroy0/ProtoCore/commit/22587e5b95d2dfa5c71149070b5fac24499dd573))
+- update CHANGELOG.md [skip ci] ([`e41f977`](https://github.com/dstroy0/ProtoCore/commit/e41f97757fc2d294616cd743ddbba46d860f95c5))
 - update CHANGELOG.md [skip ci] ([`f1f7376`](https://github.com/dstroy0/ProtoCore/commit/f1f73762f82c0339c729045bbe94bdc7e4676d77))
 - update test report + coverage [skip ci] ([`e336f4f`](https://github.com/dstroy0/ProtoCore/commit/e336f4fdeec3519ae8991d804485faade037e787))
 - update CHANGELOG.md [skip ci] ([`2970762`](https://github.com/dstroy0/ProtoCore/commit/29707623c374871dcc552747561396a40c1ec2d6))
