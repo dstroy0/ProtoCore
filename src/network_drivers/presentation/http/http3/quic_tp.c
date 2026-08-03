@@ -71,31 +71,30 @@ size_t pc_quic_tp_encode(const QuicTransportParams *tp, uint8_t *out, size_t cap
     {
         // This is the first assignment in the ok-chain (ok is still its line-64 default), so the
         // "ok already false" arm of this && can never fire.
-        ok = ok && put_param(out, cap, &p, QuicTp::QUIC_TP_ORIGINAL_DCID, tp->original_dcid, // GCOVR_EXCL_BR_LINE
+        ok = ok && put_param(out, cap, &p, QUIC_TP_ORIGINAL_DCID, tp->original_dcid, // GCOVR_EXCL_BR_LINE
                              tp->original_dcid_len);
     }
     if (tp->has_initial_scid)
     {
-        ok = ok && put_param(out, cap, &p, QuicTp::QUIC_TP_INITIAL_SCID, tp->initial_scid, tp->initial_scid_len);
+        ok = ok && put_param(out, cap, &p, QUIC_TP_INITIAL_SCID, tp->initial_scid, tp->initial_scid_len);
     }
     if (tp->has_retry_scid)
     {
-        ok = ok && put_param(out, cap, &p, QuicTp::QUIC_TP_RETRY_SCID, tp->retry_scid, tp->retry_scid_len);
+        ok = ok && put_param(out, cap, &p, QUIC_TP_RETRY_SCID, tp->retry_scid, tp->retry_scid_len);
     }
 
-    ok = ok && put_varint_param(out, cap, &p, QuicTp::QUIC_TP_INITIAL_MAX_DATA, tp->initial_max_data);
-    ok = ok && put_varint_param(out, cap, &p, QuicTp::QUIC_TP_INITIAL_MAX_SD_BIDI_LOCAL, tp->initial_max_sd_bidi_local);
-    ok = ok &&
-         put_varint_param(out, cap, &p, QuicTp::QUIC_TP_INITIAL_MAX_SD_BIDI_REMOTE, tp->initial_max_sd_bidi_remote);
-    ok = ok && put_varint_param(out, cap, &p, QuicTp::QUIC_TP_INITIAL_MAX_SD_UNI, tp->initial_max_sd_uni);
-    ok = ok && put_varint_param(out, cap, &p, QuicTp::QUIC_TP_INITIAL_MAX_STREAMS_BIDI, tp->initial_max_streams_bidi);
-    ok = ok && put_varint_param(out, cap, &p, QuicTp::QUIC_TP_INITIAL_MAX_STREAMS_UNI, tp->initial_max_streams_uni);
-    ok = ok && put_varint_param(out, cap, &p, QuicTp::QUIC_TP_MAX_IDLE_TIMEOUT, tp->max_idle_timeout);
-    ok = ok && put_varint_param(out, cap, &p, QuicTp::QUIC_TP_MAX_UDP_PAYLOAD_SIZE, tp->max_udp_payload_size);
-    ok = ok && put_varint_param(out, cap, &p, QuicTp::QUIC_TP_ACTIVE_CID_LIMIT, tp->active_connection_id_limit);
+    ok = ok && put_varint_param(out, cap, &p, QUIC_TP_INITIAL_MAX_DATA, tp->initial_max_data);
+    ok = ok && put_varint_param(out, cap, &p, QUIC_TP_INITIAL_MAX_SD_BIDI_LOCAL, tp->initial_max_sd_bidi_local);
+    ok = ok && put_varint_param(out, cap, &p, QUIC_TP_INITIAL_MAX_SD_BIDI_REMOTE, tp->initial_max_sd_bidi_remote);
+    ok = ok && put_varint_param(out, cap, &p, QUIC_TP_INITIAL_MAX_SD_UNI, tp->initial_max_sd_uni);
+    ok = ok && put_varint_param(out, cap, &p, QUIC_TP_INITIAL_MAX_STREAMS_BIDI, tp->initial_max_streams_bidi);
+    ok = ok && put_varint_param(out, cap, &p, QUIC_TP_INITIAL_MAX_STREAMS_UNI, tp->initial_max_streams_uni);
+    ok = ok && put_varint_param(out, cap, &p, QUIC_TP_MAX_IDLE_TIMEOUT, tp->max_idle_timeout);
+    ok = ok && put_varint_param(out, cap, &p, QUIC_TP_MAX_UDP_PAYLOAD_SIZE, tp->max_udp_payload_size);
+    ok = ok && put_varint_param(out, cap, &p, QUIC_TP_ACTIVE_CID_LIMIT, tp->active_connection_id_limit);
     if (tp->disable_active_migration)
     {
-        ok = ok && put_param(out, cap, &p, QuicTp::QUIC_TP_DISABLE_ACTIVE_MIGRATION, NULL, 0);
+        ok = ok && put_param(out, cap, &p, QUIC_TP_DISABLE_ACTIVE_MIGRATION, NULL, 0);
     }
 
     return ok ? p : 0;
@@ -133,11 +132,11 @@ static proto_bool pc_quic_tp_apply_cid(uint64_t id, const uint8_t *val, size_t v
     *handled = PROTO_TRUE;
     switch (id)
     {
-    case QuicTp::QUIC_TP_ORIGINAL_DCID:
+    case QUIC_TP_ORIGINAL_DCID:
         return copy_cid(val, vlen, tp->original_dcid, &tp->original_dcid_len, &tp->has_original_dcid);
-    case QuicTp::QUIC_TP_INITIAL_SCID:
+    case QUIC_TP_INITIAL_SCID:
         return copy_cid(val, vlen, tp->initial_scid, &tp->initial_scid_len, &tp->has_initial_scid);
-    case QuicTp::QUIC_TP_RETRY_SCID:
+    case QUIC_TP_RETRY_SCID:
         return copy_cid(val, vlen, tp->retry_scid, &tp->retry_scid_len, &tp->has_retry_scid);
     default:
         *handled = PROTO_FALSE;
@@ -152,27 +151,27 @@ static proto_bool pc_quic_tp_apply_varint(uint64_t id, const uint8_t *val, size_
     *handled = PROTO_TRUE;
     switch (id)
     {
-    case QuicTp::QUIC_TP_MAX_IDLE_TIMEOUT:
+    case QUIC_TP_MAX_IDLE_TIMEOUT:
         return value_varint(val, vlen, &tp->max_idle_timeout);
-    case QuicTp::QUIC_TP_MAX_UDP_PAYLOAD_SIZE:
+    case QUIC_TP_MAX_UDP_PAYLOAD_SIZE:
         return value_varint(val, vlen, &tp->max_udp_payload_size) && tp->max_udp_payload_size >= 1200;
-    case QuicTp::QUIC_TP_INITIAL_MAX_DATA:
+    case QUIC_TP_INITIAL_MAX_DATA:
         return value_varint(val, vlen, &tp->initial_max_data);
-    case QuicTp::QUIC_TP_INITIAL_MAX_SD_BIDI_LOCAL:
+    case QUIC_TP_INITIAL_MAX_SD_BIDI_LOCAL:
         return value_varint(val, vlen, &tp->initial_max_sd_bidi_local);
-    case QuicTp::QUIC_TP_INITIAL_MAX_SD_BIDI_REMOTE:
+    case QUIC_TP_INITIAL_MAX_SD_BIDI_REMOTE:
         return value_varint(val, vlen, &tp->initial_max_sd_bidi_remote);
-    case QuicTp::QUIC_TP_INITIAL_MAX_SD_UNI:
+    case QUIC_TP_INITIAL_MAX_SD_UNI:
         return value_varint(val, vlen, &tp->initial_max_sd_uni);
-    case QuicTp::QUIC_TP_INITIAL_MAX_STREAMS_BIDI:
+    case QUIC_TP_INITIAL_MAX_STREAMS_BIDI:
         return value_varint(val, vlen, &tp->initial_max_streams_bidi);
-    case QuicTp::QUIC_TP_INITIAL_MAX_STREAMS_UNI:
+    case QUIC_TP_INITIAL_MAX_STREAMS_UNI:
         return value_varint(val, vlen, &tp->initial_max_streams_uni);
-    case QuicTp::QUIC_TP_ACK_DELAY_EXPONENT:
+    case QUIC_TP_ACK_DELAY_EXPONENT:
         return value_varint(val, vlen, &tp->ack_delay_exponent) && tp->ack_delay_exponent <= 20;
-    case QuicTp::QUIC_TP_MAX_ACK_DELAY:
+    case QUIC_TP_MAX_ACK_DELAY:
         return value_varint(val, vlen, &tp->max_ack_delay) && tp->max_ack_delay < (1u << 14);
-    case QuicTp::QUIC_TP_ACTIVE_CID_LIMIT:
+    case QUIC_TP_ACTIVE_CID_LIMIT:
         return value_varint(val, vlen, &tp->active_connection_id_limit) && tp->active_connection_id_limit >= 2;
     default:
         *handled = PROTO_FALSE;
@@ -201,7 +200,7 @@ static proto_bool pc_quic_tp_apply(uint64_t id, const uint8_t *val, size_t vlen,
     {
         return PROTO_TRUE;
     }
-    if (id == QuicTp::QUIC_TP_DISABLE_ACTIVE_MIGRATION)
+    if (id == QUIC_TP_DISABLE_ACTIVE_MIGRATION)
     {
         if (vlen != 0)
         {
