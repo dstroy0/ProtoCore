@@ -3,7 +3,7 @@ flowchart TB
   %% Auto-generated from the public API, proto_builtins.cpp, and presentation/ on disk.
   subgraph SETUP["First, set up your server (once, at boot)"]
     direction LR
-    reg["1 Register routes<br/>on_http() / on_http_iface() / on_regex()<br/>on_http_auth() / serve_static() / dav()<br/>on_not_found() / on_request_log() / use()<br/>on_ws() / on_sse()"]
+    reg["1 Register routes<br/>on_http() / on_http_iface() / on_regex()<br/>on_http_auth() / dav() / on_not_found()<br/>on_request_log() / use() / on_ws()<br/>on_sse()"]
     cfg["2 Set options<br/>tls_cert() / tls_require_client_cert() / tls_client_subject()<br/>set_ap_ip() / enable_rate_limit() / set_cors()<br/>set_cache_control() / set_cache_control_swr() / set_cookie()"]
     run["3 Start it<br/>begin_http() / begin_tls() / stop()<br/>handle() / service_once() / defer()"]
   end
@@ -21,7 +21,7 @@ flowchart TB
   mw["Run your middleware"]
   routes[("Route table")]
   handler["YOUR HANDLER runs"]
-  resp["Build the response<br/>serve_file() / stats() / metrics()<br/>send_text() / send_bin() / send_empty()<br/>redirect() / send_template() / send_chunked()<br/>diag()"]
+  resp["Build the response<br/>stats() / metrics() / send_text()<br/>send_bin() / send_empty() / redirect()<br/>send_template() / send_chunked() / diag()"]
   sink{{"Frame the reply per protocol<br/>resp_sink seam<br/>HTTP/1.1 / h2 / h3"}}
   consend["Write bytes back<br/>pc_conn_send"]
   udptx["Send a datagram<br/>pc_udp"]

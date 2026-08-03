@@ -184,14 +184,18 @@ src/
 │   │   │   ├── P4_MIPI_HELPERS.md
 │   │   │   ├── S2.md
 │   │   │   └── S3_CRYPTO_REG_SYMBOLS.md
+│   │   ├── mock/
+│   │   │   └── mock_platform.c
 │   │   └── portable/
 │   │       ├── portable_aes128gcm.c
 │   │       ├── portable_aesgcm.cpp
 │   │       ├── portable_bignum.cpp
 │   │       └── portable_platform.c
 │   └── physical/
-│       └── esp/
-│           └── physical_esp.c
+│       ├── esp/
+│       │   └── physical_esp.c
+│       └── mock/
+│           └── physical_mock.c
 ├── crypto/
 │   ├── aead/
 │   │   ├── aes128gcm.h
@@ -410,10 +414,6 @@ src/
 │   │   │   │   ├── ssh_forward.h
 │   │   │   │   ├── ssh_server.cpp
 │   │   │   │   └── ssh_server.h
-│   │   │   ├── crypto/
-│   │   │   │   ├── ssh_kexhash.h
-│   │   │   │   ├── ssh_rsa.cpp
-│   │   │   │   └── ssh_rsa.h
 │   │   │   └── transport/
 │   │   │       ├── ssh_comp.c
 │   │   │       ├── ssh_comp.h
@@ -443,7 +443,12 @@ src/
 │   │   ├── session.h
 │   │   ├── worker.c
 │   │   └── worker.h
-│   ├── tls/  (tls.h, tls.cpp)
+│   ├── tls/
+│   │   ├── ssh_kexhash.h
+│   │   ├── ssh_rsa.cpp
+│   │   ├── ssh_rsa.h
+│   │   ├── tls.cpp
+│   │   └── tls.h
 │   └── transport/
 │       ├── client.c
 │       ├── client.h
@@ -456,6 +461,9 @@ src/
 │       ├── udp.c
 │       └── udp.h
 ├── server/
+│   ├── clock/
+│   │   ├── clock.c
+│   │   └── clock.h
 │   ├── filesystem/
 │   │   ├── filesystem.c
 │   │   ├── filesystem.h
@@ -463,9 +471,6 @@ src/
 │   │   ├── mnt.h
 │   │   ├── wearlevel.c
 │   │   └── wearlevel.h
-│   ├── clock/
-│   │   ├── clock.c
-│   │   └── clock.h
 │   ├── signaling/
 │   │   ├── bus_capture.c
 │   │   ├── bus_capture.h
@@ -490,17 +495,13 @@ src/
 │   ├── auth.c
 │   ├── failsafe.c
 │   ├── failsafe.h
-│   ├── file_serving.c
 │   ├── logbuf.c
 │   ├── logbuf.h
 │   ├── middleware.c
 │   ├── regex.c
 │   ├── response.c
-│   ├── ssh_scp.c
-│   ├── ssh_scp.h
-│   ├── ssh_sftp.c
-│   ├── ssh_sftp.h
-│   ├── webdav.c
+│   ├── sleep_sched.c
+│   ├── sleep_sched.h
 │   └── websocket_sse.c
 ├── services/
 │   ├── energy/
@@ -636,31 +637,10 @@ src/
 │   │   │   ├── ftp.h
 │   │   │   ├── ftp_session.c
 │   │   │   └── ftp_session.h
-│   │   ├── http_delivery/
-│   │   │   ├── http_delivery.c
-│   │   │   ├── http_delivery.h
-│   │   │   └── http_delivery_routes.c
-│   │   ├── scp/
-│   │   │   ├── scp.c
-│   │   │   └── scp.h
-│   │   ├── sftp/
-│   │   │   ├── sftp.c
-│   │   │   └── sftp.h
-│   │   ├── smb/
-│   │   │   ├── ntlm.c
-│   │   │   ├── ntlm.h
-│   │   │   ├── ntlmssp.c
-│   │   │   ├── ntlmssp.h
-│   │   │   ├── smb2.c
-│   │   │   ├── smb2.h
-│   │   │   ├── smb_client.c
-│   │   │   ├── smb_client.h
-│   │   │   ├── spnego.c
-│   │   │   └── spnego.h
-│   │   ├── upload_service/
-│   │   │   ├── upload_service.c
-│   │   │   └── upload_service.h
-│   │   └── webdav/  (webdav.h, webdav.cpp)
+│   │   └── http_delivery/
+│   │       ├── http_delivery.c
+│   │       ├── http_delivery.h
+│   │       └── http_delivery_routes.c
 │   ├── instrumentation/
 │   │   ├── gpib/
 │   │   │   ├── gpib.c

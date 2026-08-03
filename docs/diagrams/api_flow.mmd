@@ -3,7 +3,7 @@ flowchart TB
   %% Auto-generated from the public API, proto_builtins.cpp, and presentation/ on disk.
   subgraph SETUP["First, set up your server (once, at boot)"]
     direction LR
-    reg["1 Register routes<br/>on_http() / on_http_iface()<br/>+9 more"]
+    reg["1 Register routes<br/>on_http() / on_http_iface()<br/>+8 more"]
     cfg["2 Set options<br/>tls_cert() / tls_require_client_cert()<br/>+7 more"]
     run["3 Start it<br/>begin_http() / begin_tls()<br/>+4 more"]
   end
@@ -21,7 +21,7 @@ flowchart TB
   mw["Run your middleware"]
   routes[("Route table")]
   handler["YOUR HANDLER runs"]
-  resp["Build the response<br/>serve_file() / stats()<br/>+8 more"]
+  resp["Build the response<br/>stats() / metrics()<br/>+7 more"]
   sink{{"Frame the reply per protocol<br/>resp_sink seam<br/>HTTP/1.1 / h2 / h3"}}
   consend["Write bytes back<br/>pc_conn_send"]
   udptx["Send a datagram<br/>pc_udp"]
