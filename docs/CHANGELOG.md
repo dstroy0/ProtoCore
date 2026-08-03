@@ -54,6 +54,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`9919310`](https://github.com/dstroy0/ProtoCore/commit/99193102fbfe83b29a97f8cb9e1d2a5b15842b0e))
 - update CHANGELOG.md [skip ci] ([`154f7e9`](https://github.com/dstroy0/ProtoCore/commit/154f7e9141faa3da71d7291c7178eda3a07db0d3))
 - update CHANGELOG.md [skip ci] ([`94177b3`](https://github.com/dstroy0/ProtoCore/commit/94177b3bbc8e3f61111853a2e290fb1d0b40f62d))
 - update CHANGELOG.md [skip ci] ([`b4a7a48`](https://github.com/dstroy0/ProtoCore/commit/b4a7a48a7ade52c519b421c81e74f0c71f54c3aa))
@@ -272,6 +273,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`0331ff5`](https://github.com/dstroy0/ProtoCore/commit/0331ff5282b4ae427a18a405f6dbe4f3a28a0e30))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`823cc89`](https://github.com/dstroy0/ProtoCore/commit/823cc898d0f2c1e07223dd4e0280cd83d728c9ae))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`506e29c`](https://github.com/dstroy0/ProtoCore/commit/506e29cacdb62b548ffd701d15c0d7391ecc18b5))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`18ca7d1`](https://github.com/dstroy0/ProtoCore/commit/18ca7d1027f2026e0e23dc78f7f5951da299106f))
@@ -335,6 +337,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Refactor
 
+- convert the last ten src/ .cpp files except ssh_transport ([`667989a`](https://github.com/dstroy0/ProtoCore/commit/667989ac9e0be11e2d64b37313e371d39aeeabd5))
 - drop the enum scope qualifiers and the last peripheral member initializers ([`499751f`](https://github.com/dstroy0/ProtoCore/commit/499751f19ae1b827a4ad2b4538be87e15984bab8))
 - fifteen more src/ .cpp files that were already C become .c ([`59d01c2`](https://github.com/dstroy0/ProtoCore/commit/59d01c2f6df213ef8d6da041eccb31f70e6a48a7))
 - the file-local helpers take their owning context by pointer ([`5e179c0`](https://github.com/dstroy0/ProtoCore/commit/5e179c06dcbac6975d367902b2974f05eb8b8e42))
