@@ -772,8 +772,10 @@ static inline void pc_net_on_err(pc_pcb *p, pc_net_err_fn fn)
 }
 
 // Sends are captured, not transmitted; pc_net_host_sent() is what a test asserts on.
+// Large enough to hold a multi-window file response whole: a test asserts on the body it sent, and
+// a capture that stops at one window would report a truncation the transport never made.
 #ifndef PC_NET_HOST_TXCAP
-#define PC_NET_HOST_TXCAP 8192
+#define PC_NET_HOST_TXCAP 65536
 #endif
 __attribute__((weak)) uint8_t pc_net_host_tx[PC_NET_HOST_TXCAP];
 __attribute__((weak)) size_t pc_net_host_tx_len;
