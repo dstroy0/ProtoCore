@@ -55,6 +55,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`2290f20`](https://github.com/dstroy0/ProtoCore/commit/2290f20fc69ad7ef44ccb61d004e88681880f6c3))
 - update CHANGELOG.md [skip ci] ([`7d69553`](https://github.com/dstroy0/ProtoCore/commit/7d69553b1cb9e620868b433a8f0b46fce5cdd5c8))
 - update CHANGELOG.md [skip ci] ([`1070f26`](https://github.com/dstroy0/ProtoCore/commit/1070f267c51b202f0dd3ac8a50f08cadb77fb24e))
 - update CHANGELOG.md [skip ci] ([`54351fc`](https://github.com/dstroy0/ProtoCore/commit/54351fc3bef8ba9c5fa7ba1616099ae94efc9a68))
@@ -391,6 +392,9 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- drop the STL includes the C suites no longer need ([`710f311`](https://github.com/dstroy0/ProtoCore/commit/710f31109713796de41810e7f45bc28138a2108f))
+- four more suites to C (coap, transport, spa_router, statsd) ([`e681d79`](https://github.com/dstroy0/ProtoCore/commit/e681d79b6b09730139edb99ebac8a1b05496636a))
+- enable keep-alive in native_range ([`1267ccf`](https://github.com/dstroy0/ProtoCore/commit/1267ccf0daa8232d9c7050fd0afc0ea42146526f))
 - mount the store test_range serves from ([`edfdef5`](https://github.com/dstroy0/ProtoCore/commit/edfdef596aca734b2091fa8cc8a7515d7195bed6))
 - strip the verified scope qualifiers, typedef RamDisk ([`aef4dbf`](https://github.com/dstroy0/ProtoCore/commit/aef4dbf476cc26d6df788481229980065a8208ac))
 - finish the six suites ([`ec21e1a`](https://github.com/dstroy0/ProtoCore/commit/ec21e1a9d4839ba2d7cf755884574e2da37de675))
