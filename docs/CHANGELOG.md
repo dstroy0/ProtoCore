@@ -54,6 +54,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`94177b3`](https://github.com/dstroy0/ProtoCore/commit/94177b3bbc8e3f61111853a2e290fb1d0b40f62d))
 - update CHANGELOG.md [skip ci] ([`b4a7a48`](https://github.com/dstroy0/ProtoCore/commit/b4a7a48a7ade52c519b421c81e74f0c71f54c3aa))
 - update CHANGELOG.md [skip ci] ([`7829ec0`](https://github.com/dstroy0/ProtoCore/commit/7829ec061c271ceb6c09e5320d08c251add43e91))
 - update test report + coverage [skip ci] ([`bff06c0`](https://github.com/dstroy0/ProtoCore/commit/bff06c01f2e8d17a036d26f632f16a1f4505ef69))
@@ -333,6 +334,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Refactor
 
+- fifteen more src/ .cpp files that were already C become .c ([`59d01c2`](https://github.com/dstroy0/ProtoCore/commit/59d01c2f6df213ef8d6da041eccb31f70e6a48a7))
 - the file-local helpers take their owning context by pointer ([`5e179c0`](https://github.com/dstroy0/ProtoCore/commit/5e179c06dcbac6975d367902b2974f05eb8b8e42))
 - replace the C++ in-class member initializers ([`59b92b8`](https://github.com/dstroy0/ProtoCore/commit/59b92b887da8cc66cff56c8a6edaa96102bfc138))
 - write the C++ temporaries as compound literals ([`1cdc9f6`](https://github.com/dstroy0/ProtoCore/commit/1cdc9f670d7f95cb6241c74cb76fc21232ac9c88))
