@@ -988,7 +988,7 @@ void test_ts_build_widest_selector_list()
     memset(sels, 0, sizeof(sels));
     for (size_t i = 0; i < 255; i++)
     {
-        sels[i] = {IKE_TS_IPV6_ADDR_RANGE, 6, 500, 500, s6, e6, 16};
+        sels[i] = (IkeTrafficSelector){IKE_TS_IPV6_ADDR_RANGE, 6, 500, 500, s6, e6, 16};
     }
     static uint8_t buf[0x11000];
     memset(buf, 0, sizeof(buf));
