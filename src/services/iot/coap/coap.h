@@ -207,12 +207,13 @@ void pc_coap_dedup_store(const char *src_ip, uint16_t src_port, uint16_t mid, co
 // ---------------------------------------------------------------------------
 
 /**
- * @brief Bind the server to UDP @p port (default 5683) via the transport-layer UDP service.
+ * @brief Bind the server to UDP @p port (5683 is the RFC 7252 default) via the transport-layer
+ *        UDP service.
  *
  * Callback-driven (no per-loop servicing). Call after WiFi is up. On non-Arduino
  * builds pc_udp_listen() is a stub, so the core remains host-testable.
  */
-void pc_coap_server_begin(uint16_t port = 5683);
+void pc_coap_server_begin(uint16_t port);
 
 #if PC_ENABLE_COAP_OBSERVE
 /**

@@ -76,7 +76,7 @@ typedef struct
 typedef struct
 {
     CoapResource res[PC_COAP_MAX_RESOURCES]; // resource table: set before begin, read-only during dispatch
-    size_t res_count = 0;
+    size_t res_count;
 
     char path[PC_COAP_MAX_PATH];      // scratch: reconstructed Uri-Path of the request in flight
     char query[PC_COAP_MAX_QUERY];    // scratch: reconstructed Uri-Query
@@ -88,20 +88,20 @@ typedef struct
 #endif
 
 #if PC_ENABLE_COAP_OBSERVE
-    uint16_t port = PC_COAP_OBSERVE_PORT; // UDP port the observe transport notifies from
+    uint16_t port; // UDP port the observe transport notifies from; set by pc_coap_server_begin()
     CoapObserver obs[PC_COAP_MAX_OBSERVERS];
     // Last-request fields recorded by pc_coap_server_process_ex() for the Observe transport.
-    int last_observe = -1;
-    uint8_t last_method = 0;
+    int last_observe; // reset to -1 at the top of every request parse
+    uint8_t last_method;
     uint8_t last_token[8];
-    uint8_t last_tkl = 0;
+    uint8_t last_tkl;
 #endif
 
 #if PC_ENABLE_COAP_BLOCK
     // Single in-flight Block1 (request upload) reassembly (RFC 7959); one transfer at a time.
     uint8_t b1[PC_COAP_BLOCK1_MAX];
-    size_t b1_len = 0;  // bytes reassembled so far (also the next expected offset)
-    uint8_t b1_szx = 0; // negotiated block-size exponent for this transfer
+    size_t b1_len;  // bytes reassembled so far (also the next expected offset)
+    uint8_t b1_szx; // negotiated block-size exponent for this transfer
 #endif
 } CoapCtx;
 
@@ -171,13 +171,13 @@ static proto_bool seg_append(char *buf, size_t cap, size_t *len, char sep, const
     return PROTO_TRUE;
 }
 
-static const CoapResource *find_resource(const CoapCtx &c, const char *path)
+static const CoapResource *find_resource(const CoapCtx *c, const char *path)
 {
-    for (size_t i = 0; i < c.res_count; i++)
+    for (size_t i = 0; i < c->res_count; i++)
     {
-        if (strcmp(c.res[i].path, path) == 0)
+        if (strcmp(c->res[i].path, path) == 0)
         {
-            return &c.res[i];
+            return &c->res[i];
         }
     }
     return NULL;
@@ -570,7 +570,7 @@ size_t pc_coap_server_process_ex(const uint8_t *req, size_t req_len, uint8_t *re
     }
     else
     {
-        const CoapResource *r = find_resource(s_coap, s_coap.path);
+        const CoapResource *r = find_resource(&s_coap, s_coap.path);
         if (!r)
         {
             return emit_header(resp, pc_resp_cap, rsp_type, (uint8_t)COAP_RSP_NOT_FOUND, mid, token, tkl);
@@ -740,17 +740,17 @@ proto_bool pc_coap_dedup_lookup(const char *src_ip, uint16_t src_port, uint16_t 
     uint32_t now = pc_millis();
     for (size_t i = 0; i < PC_COAP_DEDUP_ENTRIES; i++)
     {
-        const CoapDedupEntry &e = s_coap.dedup[i];
-        if (e.valid && e.mid == mid && e.port == src_port && (now - e.stamp_ms) < PC_COAP_DEDUP_LIFETIME_MS &&
-            strncmp(e.ip, src_ip, sizeof(e.ip)) == 0)
+        const CoapDedupEntry *e = &s_coap.dedup[i];
+        if (e->valid && e->mid == mid && e->port == src_port && (now - e->stamp_ms) < PC_COAP_DEDUP_LIFETIME_MS &&
+            strncmp(e->ip, src_ip, sizeof(e->ip)) == 0)
         {
             if (out)
             {
-                *out = e.resp;
+                *out = e->resp;
             }
             if (out_len)
             {
-                *out_len = e.len;
+                *out_len = e->len;
             }
             return PROTO_TRUE;
         }
@@ -770,34 +770,34 @@ void pc_coap_dedup_store(const char *src_ip, uint16_t src_port, uint16_t mid, co
     uint32_t oldest = 0;
     for (size_t i = 0; i < PC_COAP_DEDUP_ENTRIES; i++)
     {
-        const CoapDedupEntry &e = s_coap.dedup[i];
-        if (e.valid && e.mid == mid && e.port == src_port && strncmp(e.ip, src_ip, sizeof(e.ip)) == 0)
+        const CoapDedupEntry *e = &s_coap.dedup[i];
+        if (e->valid && e->mid == mid && e->port == src_port && strncmp(e->ip, src_ip, sizeof(e->ip)) == 0)
         {
             victim = i;
             break;
         }
-        if (!e.valid || (now - e.stamp_ms) >= PC_COAP_DEDUP_LIFETIME_MS)
+        if (!e->valid || (now - e->stamp_ms) >= PC_COAP_DEDUP_LIFETIME_MS)
         {
             victim = i;
             break;
         }
-        uint32_t age = now - e.stamp_ms;
+        uint32_t age = now - e->stamp_ms;
         if (age >= oldest)
         {
             oldest = age;
             victim = i;
         }
     }
-    CoapDedupEntry &e = s_coap.dedup[victim];
-    size_t iplen = strnlen(src_ip, sizeof(e.ip) - 1);
-    memcpy(e.ip, src_ip, iplen);
-    e.ip[iplen] = 0;
-    e.port = src_port;
-    e.mid = mid;
-    e.stamp_ms = now;
-    e.len = (uint16_t)len;
-    memcpy(e.resp, resp, len);
-    e.valid = PROTO_TRUE;
+    CoapDedupEntry *e = &s_coap.dedup[victim];
+    size_t iplen = strnlen(src_ip, sizeof(e->ip) - 1);
+    memcpy(e->ip, src_ip, iplen);
+    e->ip[iplen] = 0;
+    e->port = src_port;
+    e->mid = mid;
+    e->stamp_ms = now;
+    e->len = (uint16_t)len;
+    memcpy(e->resp, resp, len);
+    e->valid = PROTO_TRUE;
 }
 #endif // PC_COAP_DEDUP_ENTRIES > 0
 
