@@ -39,6 +39,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`9b73d9b`](https://github.com/dstroy0/ProtoCore/commit/9b73d9bd08ff40beb876c3c3e4bab52d7c75f426))
 - update CHANGELOG.md [skip ci] ([`7de0efa`](https://github.com/dstroy0/ProtoCore/commit/7de0efa10d4e0866e726d9f51e28f736ad838970))
 - update CHANGELOG.md [skip ci] ([`856d2f2`](https://github.com/dstroy0/ProtoCore/commit/856d2f291073c3036fc54b50c35e6504c259302c))
 - update CHANGELOG.md [skip ci] ([`87ca7bd`](https://github.com/dstroy0/ProtoCore/commit/87ca7bd4ce21ecc55f38afab86179c8af6cec1a7))
@@ -202,6 +203,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Refactor
 
+- convert the HTTP parser to C ([`ef8dea4`](https://github.com/dstroy0/ProtoCore/commit/ef8dea48b351dce92bf1b33ab186c37dd31d0b18))
 - convert the presentation layer entry to C ([`b01e8ac`](https://github.com/dstroy0/ProtoCore/commit/b01e8ac1ed4b8523f61fcf5667e565613da7f92b))
 - move stdatomic into types.h ([`d7d2093`](https://github.com/dstroy0/ProtoCore/commit/d7d20933cb0772ecf9550cbd680d74b6bbecc2e2))
 - convert the session layer to C ([`8eb49f4`](https://github.com/dstroy0/ProtoCore/commit/8eb49f4ad14b95c88dfac42c1da248671b3e595a))
