@@ -597,7 +597,7 @@ We test session and socket race conditions by interleaved function calling:
 
 <!-- BEGIN GENERATED test-directory (run test/gen_test_readme.py) -->
 
-A thorough directory of all **841 test cases** across **31 suites**. Expand a suite to see its test cases, and a test case to see its objective and assertions.
+A thorough directory of all **831 test cases** across **30 suites**. Expand a suite to see its test cases, and a test case to see its objective and assertions.
 
 <details>
 <summary><b>test_accept_gate (19 tests)</b></summary>
@@ -10011,113 +10011,6 @@ A thorough directory of all **841 test cases** across **31 suites**. Expand a su
       * <code>Assert equal int (ERR_OK, listener_accept_cb((void *)(uintptr_t)0, &fake, ERR_OK))</code>
       * <code>Assert equal (CONN_ACTIVE, (ConnState)conn_pool[0].state)</code>
       * <code>Assert equal ptr (&fake, conn_pool[0].pcb)</code>
-  </details>
-
-</details>
-
-<details>
-<summary><b>test_workers (10 tests)</b></summary>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_worker_count_is_two</b> &mdash; <i>Worker count is two</i></summary>
-
-    * **Objective**: Worker count is two
-    * **Assertions**:
-      * <code>Assert equal int (2, pc_worker_count())</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_check_timeouts_reaps_only_owned_slots</b> &mdash; <i>Worker 0 sweeps: only its own slot is reaped; worker 1's slot is untouched.</i></summary>
-
-    * **Objective**: Worker 0 sweeps: only its own slot is reaped; worker 1's slot is untouched.
-    * **Assertions**:
-      * <code>Assert equal int (CONN_FREE, (ConnState)conn_pool[0].state)</code>
-      * <code>Assert equal int (CONN_ACTIVE, (ConnState)conn_pool[1].state)</code>
-      * <code>Assert equal int (CONN_FREE, (ConnState)conn_pool[1].state)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_pool_init_defaults_owner_zero</b> &mdash; <i>Pool init defaults owner zero</i></summary>
-
-    * **Objective**: Pool init defaults owner zero
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_UINT8(0, conn_pool[i].owner);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_worker_self_id_roundtrip</b> &mdash; <i>pc_worker_set_self binds the calling context's worker id; pc_worker_self reads it back.</i></summary>
-
-    * **Objective**: pc_worker_set_self binds the calling context's worker id; pc_worker_self reads it back.
-    * **Assertions**:
-      * <code>Assert equal int (1, pc_worker_self())</code>
-      * <code>Assert equal int (0, pc_worker_self())</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_host_worker_lifecycle_is_noops</b> &mdash; <i>On host there is no worker task: start/stop/wake are no-ops and running() stays false.</i></summary>
-
-    * **Objective**: On host there is no worker task: start/stop/wake are no-ops and running() stays false.
-    * **Assertions**:
-      * <code>Assert false (pc_workers_running())</code>
-      * <code>Assert false (pc_workers_running())</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_listener_worker_queues_init_and_lookup</b> &mdash; <i>Listener worker queues init and lookup</i></summary>
-
-    * **Objective**: Listener worker queues init and lookup
-    * **Assertions**:
-      * <code>Assert not null (listener_worker_queue(0))</code>
-      * <code>Assert not null (listener_worker_queue(1))</code>
-      * <code>Assert null (listener_worker_queue(-1))</code>
-      * <code>Assert null (listener_worker_queue(PC_WORKER_COUNT))</code>
-      * <code>Assert not null (listener_worker_queue(0))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_enqueue_routes_by_slot_owner_and_rejects_bad_owner</b> &mdash; <i>Enqueue routes by slot owner and rejects bad owner</i></summary>
-
-    * **Objective**: Enqueue routes by slot owner and rejects bad owner
-    * **Assertions**:
-      * <code>Assert true (listener_enqueue(0, &evt))</code>
-      * <code>Assert false (listener_enqueue(0, &evt))</code>
-      * <code>Assert false (listener_enqueue(0, &evt))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_accept_cb_round_robins_slot_owner</b> &mdash; <i>WORKER_COUNT>1 branch</i></summary>
-
-    * **Objective**: WORKER_COUNT>1 branch
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_INT32(1, listener_add(0, 80, PROTO_HTTP)); // also exercises the</code>
-      * <code>Assert equal int (ERR_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb1, ERR_OK))</code>
-      * <code>Assert equal int (ERR_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb2, ERR_OK))</code>
-      * <code>Assert equal int (ERR_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb3, ERR_OK))</code>
-      * <code>Assert true (conn_pool[0].owner &lt;= 1)</code>
-      * <code>Assert true (conn_pool[1].owner &lt;= 1)</code>
-      * <code>Assert true (conn_pool[2].owner &lt;= 1)</code>
-      * <code>Assert not equal (conn_pool[0].owner, conn_pool[1].owner)</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8(conn_pool[0].owner, conn_pool[2].owner); // wrapped back to the first owner</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_dynamic_listener_creates_worker_queues</b> &mdash; <i>Dynamic listener creates worker queues</i></summary>
-
-    * **Objective**: Dynamic listener creates worker queues
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_INT32(1, listener_add_dynamic(2, 4444, PROTO_HTTP));</code>
-      * <code>Assert not null (listener_worker_queue(0))</code>
-      * <code>Assert not null (listener_worker_queue(1))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_host_defer_runs_inline_and_rejects_null</b> &mdash; <i>On host the caller and pipeline are the same thread, so pc_defer runs the callback inline</i></summary>
-
-    * **Objective**: On host the caller and pipeline are the same thread, so pc_defer runs the callback inline
-    * **Assertions**:
-      * <code>Assert false (pc_defer(0, NULL, NULL))</code>
-      * <code>Assert true (pc_defer(0, set_flag_to_42, &flag))</code>
-      * <code>Assert equal int (42, flag)</code>
   </details>
 
 </details>
