@@ -54,42 +54,43 @@ typedef struct
     uint16_t head; // read cursor
     uint16_t len;  // bytes queued
 
-    void reset()
-    {
-        head;
-        len;
-    }
-    uint16_t space() const
-    {
-        return (uint16_t)(DMA_STAGE_CAP - len);
-    }
-    // Append n bytes; fail-closed (append nothing) if they would not all fit.
-    proto_bool push(const uint8_t *p, uint16_t n)
-    {
-        if (n > space())
-        {
-            return PROTO_FALSE;
-        }
-        for (uint16_t i = 0; i < n; i++)
-        {
-            buf[(head + len) % DMA_STAGE_CAP] = p[i];
-            len++;
-        }
-        return PROTO_TRUE;
-    }
-    // Pop up to max bytes into out; returns how many.
-    uint16_t pop(uint8_t *out, uint16_t max)
-    {
-        uint16_t n = (len < max) ? len : max;
-        for (uint16_t i = 0; i < n; i++)
-        {
-            out[i] = buf[head];
-            head = (head + 1) % DMA_STAGE_CAP;
-            len--;
-        }
-        return n;
-    }
 } byte_ring;
+
+static void ring_reset(byte_ring *r)
+{
+    r->head = 0;
+    r->len = 0;
+}
+static uint16_t ring_space(const byte_ring *r)
+{
+    return (uint16_t)(DMA_STAGE_CAP - r->len);
+}
+// Append n bytes; fail-closed (append nothing) if they would not all fit.
+static proto_bool ring_push(byte_ring *r, const uint8_t *p, uint16_t n)
+{
+    if (n > ring_space(r))
+    {
+        return PROTO_FALSE;
+    }
+    for (uint16_t i = 0; i < n; i++)
+    {
+        r->buf[(r->head + r->len) % DMA_STAGE_CAP] = p[i];
+        r->len++;
+    }
+    return PROTO_TRUE;
+}
+// Pop up to max bytes into out; returns how many.
+static uint16_t ring_pop(byte_ring *r, uint8_t *out, uint16_t max)
+{
+    uint16_t n = (r->len < max) ? r->len : max;
+    for (uint16_t i = 0; i < n; i++)
+    {
+        out[i] = r->buf[r->head];
+        r->head = (r->head + 1) % DMA_STAGE_CAP;
+        r->len--;
+    }
+    return n;
+}
 
 typedef struct
 {
@@ -117,23 +118,23 @@ typedef struct
 } DmaCtx;
 static DmaCtx s_dma;
 
-static void emit(dma_channel &c, uint8_t id, pc_dma_dir dir, const uint8_t *data, uint16_t len)
+static void emit(dma_channel *c, uint8_t id, pc_dma_dir dir, const uint8_t *data, uint16_t len)
 {
     pc_dma_event ev;
     ev.data = data;
     ev.t_ms = dma_now();
     ev.t_us = dma_now_us();
     ev.len = len;
-    ev.seq = c.seq++;
+    ev.seq = c->seq++;
     ev.channel = id;
-    ev.periph = c.periph;
+    ev.periph = c->periph;
     ev.dir = dir;
     ev._pad = 0;
-    if (c.cb) // GCOVR_EXCL_BR_LINE  cb is guaranteed non-null while a channel is open:
-              // pc_dma_open rejects a null on_complete, and emit() only runs via pump(),
-              // which pc_dma_poll() only calls for channels with open == true.
+    if (c->cb) // GCOVR_EXCL_BR_LINE  cb is guaranteed non-null while a channel is open:
+               // pc_dma_open rejects a null on_complete, and emit() only runs via pump(),
+               // which pc_dma_poll() only calls for channels with open == true.
     {
-        c.cb(&ev, c.ctx);
+        c->cb(&ev, c->ctx);
     }
 }
 
@@ -141,38 +142,38 @@ static void emit(dma_channel &c, uint8_t id, pc_dma_dir dir, const uint8_t *data
 // into ingress, then feed ingress into the ping-pong RX buffers, emitting one event per
 // full buffer and a final partial event (models the UART idle-line flush) so every poll
 // delivers all fed bytes.
-static void pump(dma_channel &c, uint8_t id)
+static void pump(dma_channel *c, uint8_t id)
 {
-    if (c.tx_busy)
+    if (c->tx_busy)
     {
-        if (c.loopback)
+        if (c->loopback)
         {
-            c.ingress.push(c.tx_buf, c.tx_len); // internal TX->RX jumper
+            ring_push(&c->ingress, c->tx_buf, c->tx_len); // internal TX->RX jumper
         }
-        c.egress.push(c.tx_buf, c.tx_len); // capture (best-effort)
-        uint16_t sent = c.tx_len;
-        c.tx_busy = PROTO_FALSE;
-        c.tx_len = 0;
+        ring_push(&c->egress, c->tx_buf, c->tx_len); // capture (best-effort)
+        uint16_t sent = c->tx_len;
+        c->tx_busy = PROTO_FALSE;
+        c->tx_len = 0;
         emit(c, id, PC_DMA_TX, NULL, sent);
     }
 
-    while (c.ingress.len > 0)
+    while (c->ingress.len > 0)
     {
-        uint16_t room = (uint16_t)(PC_DMA_BUF_SIZE - c.rx_fill);
-        uint16_t got = c.ingress.pop(c.rx_buf[c.rx_active] + c.rx_fill, room);
-        c.rx_fill += got;
-        if (c.rx_fill == PC_DMA_BUF_SIZE) // buffer full -> complete + ping-pong flip
+        uint16_t room = (uint16_t)(PC_DMA_BUF_SIZE - c->rx_fill);
+        uint16_t got = ring_pop(&c->ingress, c->rx_buf[c->rx_active] + c->rx_fill, room);
+        c->rx_fill += got;
+        if (c->rx_fill == PC_DMA_BUF_SIZE) // buffer full -> complete + ping-pong flip
         {
-            emit(c, id, PC_DMA_RX, c.rx_buf[c.rx_active], PC_DMA_BUF_SIZE);
-            c.rx_active ^= 1;
-            c.rx_fill = 0;
+            emit(c, id, PC_DMA_RX, c->rx_buf[c->rx_active], PC_DMA_BUF_SIZE);
+            c->rx_active ^= 1;
+            c->rx_fill = 0;
         }
     }
-    if (c.rx_fill > 0) // idle-line flush of the trailing partial buffer
+    if (c->rx_fill > 0) // idle-line flush of the trailing partial buffer
     {
-        emit(c, id, PC_DMA_RX, c.rx_buf[c.rx_active], c.rx_fill);
-        c.rx_active ^= 1;
-        c.rx_fill = 0;
+        emit(c, id, PC_DMA_RX, c->rx_buf[c->rx_active], c->rx_fill);
+        c->rx_active ^= 1;
+        c->rx_fill = 0;
     }
 }
 
@@ -182,23 +183,23 @@ proto_bool pc_dma_open(const pc_dma_config *cfg)
     {
         return PROTO_FALSE;
     }
-    dma_channel &c = s_dma.ch[cfg->channel];
-    if (c.open)
+    dma_channel *c = &s_dma.ch[cfg->channel];
+    if (c->open)
     {
         return PROTO_FALSE;
     }
-    c.ingress.reset();
-    c.egress.reset();
-    c.cb = cfg->on_complete;
-    c.ctx = cfg->ctx;
-    c.rx_fill = 0;
-    c.tx_len = 0;
-    c.seq = 0;
-    c.rx_active = 0;
-    c.periph = cfg->periph;
-    c.loopback = cfg->loopback;
-    c.tx_busy = PROTO_FALSE;
-    c.open = PROTO_TRUE;
+    ring_reset(&c->ingress);
+    ring_reset(&c->egress);
+    c->cb = cfg->on_complete;
+    c->ctx = cfg->ctx;
+    c->rx_fill = 0;
+    c->tx_len = 0;
+    c->seq = 0;
+    c->rx_active = 0;
+    c->periph = cfg->periph;
+    c->loopback = cfg->loopback;
+    c->tx_busy = PROTO_FALSE;
+    c->open = PROTO_TRUE;
     return PROTO_TRUE;
 }
 
@@ -208,14 +209,14 @@ proto_bool pc_dma_tx_submit(uint8_t ch, const uint8_t *buf, uint16_t len)
     {
         return PROTO_FALSE;
     }
-    dma_channel &c = s_dma.ch[ch];
-    if (!c.open || c.tx_busy) // one transfer in flight at a time (fail-closed)
+    dma_channel *c = &s_dma.ch[ch];
+    if (!c->open || c->tx_busy) // one transfer in flight at a time (fail-closed)
     {
         return PROTO_FALSE;
     }
-    memcpy(c.tx_buf, buf, len);
-    c.tx_len = len;
-    c.tx_busy = PROTO_TRUE;
+    memcpy(c->tx_buf, buf, len);
+    c->tx_len = len;
+    c->tx_busy = PROTO_TRUE;
     return PROTO_TRUE;
 }
 
@@ -234,7 +235,7 @@ void pc_dma_poll(void)
     {
         if (s_dma.ch[i].open)
         {
-            pump(s_dma.ch[i], i);
+            pump(&s_dma.ch[i], i);
         }
     }
 }
@@ -245,12 +246,12 @@ proto_bool pc_dma_sim_feed(uint8_t ch, const uint8_t *bytes, uint16_t len)
     {
         return PROTO_FALSE;
     }
-    dma_channel &c = s_dma.ch[ch];
-    if (!c.open)
+    dma_channel *c = &s_dma.ch[ch];
+    if (!c->open)
     {
         return PROTO_FALSE;
     }
-    return c.ingress.push(bytes, len);
+    return ring_push(&c->ingress, bytes, len);
 }
 
 uint16_t pc_dma_sim_capture(uint8_t ch, uint8_t *out, uint16_t max)
@@ -259,12 +260,12 @@ uint16_t pc_dma_sim_capture(uint8_t ch, uint8_t *out, uint16_t max)
     {
         return 0;
     }
-    dma_channel &c = s_dma.ch[ch];
-    if (!c.open)
+    dma_channel *c = &s_dma.ch[ch];
+    if (!c->open)
     {
         return 0;
     }
-    return c.egress.pop(out, max);
+    return ring_pop(&c->egress, out, max);
 }
 
 #else // real silicon backend: dispatch to weak hooks a driver overrides (fail-closed).
