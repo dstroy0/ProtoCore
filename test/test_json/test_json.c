@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the zero-heap JSON helper: JsonWriter (serialization) and the
+// Unit tests for the zero-heap JSON helper: pc_json_writer (serialization) and the
 // json_get_* top-level object readers.
 
 #include "network_drivers/presentation/codec/json/json.h"
@@ -22,94 +22,101 @@ void tearDown()
 void test_writer_simple_object()
 {
     char buf[64];
-    JsonWriter w(buf, sizeof(buf));
-    w.begin_object();
-    w.kv_str("status", "ok");
-    w.kv_int("count", 3);
-    w.end_object();
-    TEST_ASSERT_TRUE(w.ok());
-    TEST_ASSERT_EQUAL_STRING("{\"status\":\"ok\",\"count\":3}", w.c_str());
+    pc_json_writer w;
+    pc_json_init(&w, buf, sizeof(buf));
+    pc_json_begin_object(&w);
+    pc_json_kv_str(&w, "status", "ok");
+    pc_json_kv_int(&w, "count", 3);
+    pc_json_end_object(&w);
+    TEST_ASSERT_TRUE(pc_json_ok(&w));
+    TEST_ASSERT_EQUAL_STRING("{\"status\":\"ok\",\"count\":3}", pc_json_c_str(&w));
 }
 
 void test_writer_nested_and_array()
 {
     char buf[96];
-    JsonWriter w(buf, sizeof(buf));
-    w.begin_object();
-    w.key("a");
-    w.begin_array();
-    w.integer(1);
-    w.integer(2);
-    w.end_array();
-    w.kv_bool("b", PROTO_TRUE);
-    w.key("c");
-    w.begin_object();
-    w.kv_null("n");
-    w.end_object();
-    w.end_object();
-    TEST_ASSERT_TRUE(w.ok());
-    TEST_ASSERT_EQUAL_STRING("{\"a\":[1,2],\"b\":true,\"c\":{\"n\":null}}", w.c_str());
+    pc_json_writer w;
+    pc_json_init(&w, buf, sizeof(buf));
+    pc_json_begin_object(&w);
+    pc_json_key(&w, "a");
+    pc_json_begin_array(&w);
+    pc_json_int(&w, 1);
+    pc_json_int(&w, 2);
+    pc_json_end_array(&w);
+    pc_json_kv_bool(&w, "b", PROTO_TRUE);
+    pc_json_key(&w, "c");
+    pc_json_begin_object(&w);
+    pc_json_kv_null(&w, "n");
+    pc_json_end_object(&w);
+    pc_json_end_object(&w);
+    TEST_ASSERT_TRUE(pc_json_ok(&w));
+    TEST_ASSERT_EQUAL_STRING("{\"a\":[1,2],\"b\":true,\"c\":{\"n\":null}}", pc_json_c_str(&w));
 }
 
 void test_writer_value_types()
 {
     char buf[96];
-    JsonWriter w(buf, sizeof(buf));
-    w.begin_object();
-    w.kv_int("i", -7);
-    w.kv_uint("u", 42u);
-    w.kv_bool("t", PROTO_TRUE);
-    w.kv_bool("f", PROTO_FALSE);
-    w.kv_null("z");
-    w.kv_raw("r", "3.14");
-    w.end_object();
-    TEST_ASSERT_TRUE(w.ok());
-    TEST_ASSERT_EQUAL_STRING("{\"i\":-7,\"u\":42,\"t\":true,\"f\":false,\"z\":null,\"r\":3.14}", w.c_str());
+    pc_json_writer w;
+    pc_json_init(&w, buf, sizeof(buf));
+    pc_json_begin_object(&w);
+    pc_json_kv_int(&w, "i", -7);
+    pc_json_kv_uint(&w, "u", 42u);
+    pc_json_kv_bool(&w, "t", PROTO_TRUE);
+    pc_json_kv_bool(&w, "f", PROTO_FALSE);
+    pc_json_kv_null(&w, "z");
+    pc_json_kv_raw(&w, "r", "3.14");
+    pc_json_end_object(&w);
+    TEST_ASSERT_TRUE(pc_json_ok(&w));
+    TEST_ASSERT_EQUAL_STRING("{\"i\":-7,\"u\":42,\"t\":true,\"f\":false,\"z\":null,\"r\":3.14}", pc_json_c_str(&w));
 }
 
 void test_writer_escapes_strings()
 {
     char buf[64];
-    JsonWriter w(buf, sizeof(buf));
-    w.begin_object();
-    w.kv_str("k", "a\"b\nc\t\\d");
-    w.end_object();
-    TEST_ASSERT_TRUE(w.ok());
+    pc_json_writer w;
+    pc_json_init(&w, buf, sizeof(buf));
+    pc_json_begin_object(&w);
+    pc_json_kv_str(&w, "k", "a\"b\nc\t\\d");
+    pc_json_end_object(&w);
+    TEST_ASSERT_TRUE(pc_json_ok(&w));
     // a " b \n c \t \ d  ->  a\"b\nc\t\\d
-    TEST_ASSERT_EQUAL_STRING("{\"k\":\"a\\\"b\\nc\\t\\\\d\"}", w.c_str());
+    TEST_ASSERT_EQUAL_STRING("{\"k\":\"a\\\"b\\nc\\t\\\\d\"}", pc_json_c_str(&w));
 }
 
 void test_writer_control_char_unicode_escape()
 {
     char buf[48];
-    JsonWriter w(buf, sizeof(buf));
-    w.begin_object();
-    w.kv_str("c", "\x01"); // SOH -> 
-    w.end_object();
-    TEST_ASSERT_TRUE(w.ok());
-    TEST_ASSERT_EQUAL_STRING("{\"c\":\"\\u0001\"}", w.c_str());
+    pc_json_writer w;
+    pc_json_init(&w, buf, sizeof(buf));
+    pc_json_begin_object(&w);
+    pc_json_kv_str(&w, "c", "\x01"); // SOH -> 
+    pc_json_end_object(&w);
+    TEST_ASSERT_TRUE(pc_json_ok(&w));
+    TEST_ASSERT_EQUAL_STRING("{\"c\":\"\\u0001\"}", pc_json_c_str(&w));
 }
 
 void test_writer_overflow_sets_not_ok_and_stays_terminated()
 {
     char buf[8];
-    JsonWriter w(buf, sizeof(buf));
-    w.begin_object();
-    w.kv_str("aaaa", "bbbb"); // cannot fit in 8 bytes
-    w.end_object();
-    TEST_ASSERT_FALSE(w.ok());
-    TEST_ASSERT_TRUE(strlen(w.c_str()) < sizeof(buf)); // never overran the buffer
+    pc_json_writer w;
+    pc_json_init(&w, buf, sizeof(buf));
+    pc_json_begin_object(&w);
+    pc_json_kv_str(&w, "aaaa", "bbbb"); // cannot fit in 8 bytes
+    pc_json_end_object(&w);
+    TEST_ASSERT_FALSE(pc_json_ok(&w));
+    TEST_ASSERT_TRUE(strlen(pc_json_c_str(&w)) < sizeof(buf)); // never overran the buffer
 }
 
 void test_writer_depth_overflow_sets_not_ok()
 {
     char buf[64];
-    JsonWriter w(buf, sizeof(buf));
+    pc_json_writer w;
+    pc_json_init(&w, buf, sizeof(buf));
     for (int i = 0; i < JSON_MAX_DEPTH + 1; i++)
     {
-        w.begin_object();
+        pc_json_begin_object(&w);
     }
-    TEST_ASSERT_FALSE(w.ok()); // nesting past JSON_MAX_DEPTH
+    TEST_ASSERT_FALSE(pc_json_ok(&w)); // nesting past JSON_MAX_DEPTH
 }
 
 // ====================================================================
@@ -208,21 +215,24 @@ void test_reader_negative_int()
 void test_writer_null_and_remaining_escapes()
 {
     char buf[32];
-    JsonWriter w(buf, sizeof(buf));
-    w.begin_array();
-    w.str(NULL); // put_escaped(NULL) is a no-op
-    w.raw(NULL); // put_raw(NULL) is a no-op
-    w.end_array();
-    TEST_ASSERT_TRUE(w.ok()); // no overrun / crash
+    pc_json_writer w;
+    pc_json_init(&w, buf, sizeof(buf));
+    pc_json_begin_array(&w);
+    pc_json_str(&w, NULL); // put_escaped(NULL) is a no-op
+    pc_json_raw(&w, NULL); // put_raw(NULL) is a no-op
+    pc_json_end_array(&w);
+    TEST_ASSERT_TRUE(pc_json_ok(&w)); // no overrun / crash
 
     char b2[16];
-    JsonWriter e(b2, sizeof(b2));
+    pc_json_writer e;
+    pc_json_init(&e, b2, sizeof(b2));
     e.str("\r\b\f");
     TEST_ASSERT_TRUE(e.ok());
     TEST_ASSERT_EQUAL_STRING("\"\\r\\b\\f\"", e.c_str());
 
     char b3[16];
-    JsonWriter u(b3, sizeof(b3));
+    pc_json_writer u;
+    pc_json_init(&u, b3, sizeof(b3));
     u.end_object(); // nothing open -> unbalanced
     TEST_ASSERT_FALSE(u.ok());
 }
@@ -256,11 +266,13 @@ void test_reader_all_escapes()
 // (covers both operands of the `buf != NULL && cap >= 1` guard, and the ctor's `if (_ok)`).
 void test_writer_null_buffer_and_zero_capacity()
 {
-    JsonWriter w1(NULL, 16);
+    pc_json_writer w1;
+    pc_json_init(&w1, NULL, 16);
     TEST_ASSERT_FALSE(w1.ok());
 
     char buf[4];
-    JsonWriter w2(buf, 0);
+    pc_json_writer w2;
+    pc_json_init(&w2, buf, 0);
     TEST_ASSERT_FALSE(w2.ok());
 }
 
