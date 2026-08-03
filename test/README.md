@@ -596,7 +596,7 @@ We test session and socket race conditions by interleaved function calling:
 
 <!-- BEGIN GENERATED test-directory (run test/gen_test_readme.py) -->
 
-A thorough directory of all **892 test cases** across **33 suites**. Expand a suite to see its test cases, and a test case to see its objective and assertions.
+A thorough directory of all **884 test cases** across **32 suites**. Expand a suite to see its test cases, and a test case to see its objective and assertions.
 
 <details>
 <summary><b>test_accept_gate (19 tests)</b></summary>
@@ -10010,87 +10010,6 @@ A thorough directory of all **892 test cases** across **33 suites**. Expand a su
       * <code>Assert equal int (ERR_OK, listener_accept_cb((void *)(uintptr_t)0, &fake, ERR_OK))</code>
       * <code>Assert equal (CONN_ACTIVE, (ConnState)conn_pool[0].state)</code>
       * <code>Assert equal ptr (&fake, conn_pool[0].pcb)</code>
-  </details>
-
-</details>
-
-<details>
-<summary><b>test_upload (8 tests)</b></summary>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_upload_streams_body_to_file</b> &mdash; <i>200-byte body (> BODY_BUF_SIZE=64) -> several streamed chunks.</i></summary>
-
-    * **Objective**: 200-byte body (> BODY_BUF_SIZE=64) -> several streamed chunks.
-    * **Assertions**:
-      * <code>Assert equal uint (blen, fs::mock_fs_written())</code>
-      * <code>Assert equal memory (body, fs::mock_fs_wdata(), blen)</code>
-      * <code>Assert equal uint (blen, pc_upload_last_size())</code>
-      * <code>Assert not null (strstr(out, "200 OK"))</code>
-      * <code>Assert not null (strstr(out, expect))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_small_body_single_chunk</b> &mdash; <i>Small body single chunk</i></summary>
-
-    * **Objective**: Small body single chunk
-    * **Assertions**:
-      * <code>Assert equal uint (4, fs::mock_fs_written())</code>
-      * <code>Assert equal memory ("tiny", fs::mock_fs_wdata(), 4)</code>
-      * <code>Assert not null (strstr(tcp_captured(), "200 OK"))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_empty_body_not_streamed</b> &mdash; <i>No body -> not streamed -> handler replies 400, nothing written.</i></summary>
-
-    * **Objective**: No body -> not streamed -> handler replies 400, nothing written.
-    * **Assertions**:
-      * <code>Assert equal uint (0, fs::mock_fs_written())</code>
-      * <code>Assert not null (strstr(tcp_captured(), "400"))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_non_post_body_rejected_by_begin</b> &mdash; <i>Non post body rejected by begin</i></summary>
-
-    * **Objective**: Non post body rejected by begin
-    * **Assertions**:
-      * <code>Assert equal uint (0, fs::mock_fs_written())</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_wrong_path_rejected_by_begin</b> &mdash; <i>Wrong path rejected by begin</i></summary>
-
-    * **Objective**: Wrong path rejected by begin
-    * **Assertions**:
-      * <code>Assert equal uint (0, fs::mock_fs_written())</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_open_failure_replies_500</b> &mdash; <i>Open failure replies 500</i></summary>
-
-    * **Objective**: Open failure replies 500
-    * **Assertions**:
-      * <code>Assert equal uint (0, fs::mock_fs_written())</code>
-      * <code>Assert not null (strstr(out, "500"))</code>
-      * <code>Assert not null (strstr(out, "upload failed"))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_null_dest_replies_500</b> &mdash; <i>Null dest replies 500</i></summary>
-
-    * **Objective**: Null dest replies 500
-    * **Assertions**:
-      * <code>Assert equal uint (0, fs::mock_fs_written())</code>
-      * <code>Assert not null (strstr(tcp_captured(), "500"))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_write_failure_replies_500</b> &mdash; <i>Write failure replies 500</i></summary>
-
-    * **Objective**: Write failure replies 500
-    * **Assertions**:
-      * <code>Assert equal uint (0, pc_upload_last_size())</code>
-      * <code>Assert not null (strstr(out, "500"))</code>
-      * <code>Assert not null (strstr(out, "upload failed"))</code>
   </details>
 
 </details>

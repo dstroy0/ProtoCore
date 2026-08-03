@@ -1972,7 +1972,9 @@
         "+<network_drivers/application/upload_service/upload_service.c>",
         "+<board_drivers/hal/portable/portable_platform.c>",
         "+<mmgr/frame.c>",
-        "+<server/clock/clock.c>"
+        "+<server/clock/clock.c>",
+        "+<network_drivers/network/route.c>",
+        "+<server/filesystem/mnt.c>"
       ],
       "tests": ["test_upload"]
     },
