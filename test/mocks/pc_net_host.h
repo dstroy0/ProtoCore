@@ -804,10 +804,21 @@ static inline void pc_net_recved(pc_pcb *p, uint16_t len)
     (void)p;
     (void)len;
 }
+// How much room the stack reports for the next write. A test shrinks it to drive the
+// backpressure-and-resume path, where a response has to page out across several worker loops
+// instead of fitting one send.
+#define MOCK_SNDBUF_DEFAULT 5744 /* a typical lwIP TCP_SND_BUF */
+__attribute__((weak)) uint16_t pc_net_host_sndbuf_val = MOCK_SNDBUF_DEFAULT;
+
+static inline void mock_sndbuf_set(uint16_t v)
+{
+    pc_net_host_sndbuf_val = v;
+}
+
 static inline uint16_t pc_net_sndbuf(pc_pcb *p)
 {
     (void)p;
-    return 4096;
+    return pc_net_host_sndbuf_val;
 }
 static inline void pc_net_nagle_disable(pc_pcb *p)
 {

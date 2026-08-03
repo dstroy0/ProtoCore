@@ -1514,7 +1514,7 @@ void test_route_registration_variants_table_full()
     on_http("/i", HTTP_GET, record_handler, pc_iface::PC_IFACE_STA); // on(..., iface)
     on_regex("/re.*", HTTP_GET, record_handler);
 #if PC_ENABLE_AUTH
-    on_http("/a", HTTP_GET, record_handler, "realm", "u", "p", false);
+    on_http_auth("/a", HTTP_GET, record_handler, "realm", "u", "p", false);
 #endif
 #if PC_ENABLE_WEBSOCKET
     on_ws("/ws", nullptr, nullptr, nullptr);

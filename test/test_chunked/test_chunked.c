@@ -212,7 +212,7 @@ void setUp()
     ws_init();
     pc_sse_init();
     tcp_capture_reset();
-    mock_sndbuf() = MOCK_SNDBUF_DEFAULT; // reopen the window a backpressure test may have shrunk
+    mock_sndbuf_set(MOCK_SNDBUF_DEFAULT); // reopen the window a backpressure test may have shrunk
     g_log_status = 0;
     g_log_len = -1;
     g_step = 0;
@@ -367,15 +367,15 @@ void test_http10_large_body_not_truncated()
 void test_chunked_backpressure_resumes_across_polls()
 {
     on_http("/c", HTTP_GET, h_two5);
-    mock_sndbuf() = 8; // below the 12-byte chunk framing reserve: no room for a useful chunk
+    mock_sndbuf_set(8); // below the 12-byte chunk framing reserve: no room for a useful chunk
     feed_and_handle(0, "GET /c HTTP/1.1\r\n\r\n");
     const char *r = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(r, "Transfer-Encoding: chunked\r\n")); // headers went out
     TEST_ASSERT_NULL(strstr(r, "hello"));                              // body deferred
     TEST_ASSERT_NULL(strstr(r, "0\r\n\r\n"));                          // no terminating chunk yet
 
-    mock_sndbuf() = MOCK_SNDBUF_DEFAULT; // window reopens
-    handle();                            // worker poll resumes the in-flight chunked response
+    mock_sndbuf_set(MOCK_SNDBUF_DEFAULT); // window reopens
+    handle();                             // worker poll resumes the in-flight chunked response
     r = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(r, "5\r\nhello\r\n5\r\nworld\r\n0\r\n\r\n")); // full body + terminator
 }
