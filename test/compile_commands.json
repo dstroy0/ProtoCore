@@ -1896,10 +1896,10 @@
     "output": ".pio/build/native_swar/src/network_drivers/tls/tls.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/server/clock/clock.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/server/clock/clock.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_clock/src/server/clock/clock.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/server/clock/clock.c",
     "directory": "@ROOT@",
     "file": "src/server/clock/clock.c",
-    "output": ".pio/build/native_swar/src/server/clock/clock.o"
+    "output": ".pio/build/native_clock/src/server/clock/clock.o"
   },
   {
     "command": "/usr/bin/gcc -o .pio/build/native_swar/src/server/exc_coredump.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/server/exc_coredump.c",

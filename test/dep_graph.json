@@ -22,6 +22,7 @@
 "native_cia402",
 "native_cip",
 "native_client",
+"native_clock",
 "native_cloudevents",
 "native_coap",
 "native_coap_observe",
@@ -293,6 +294,7 @@
 "native_cia402",
 "native_cip",
 "native_client",
+"native_clock",
 "native_cloudevents",
 "native_coap",
 "native_coap_observe",
@@ -564,6 +566,7 @@
 "native_cia402",
 "native_cip",
 "native_client",
+"native_clock",
 "native_cloudevents",
 "native_coap",
 "native_coap_observe",
@@ -838,6 +841,7 @@
 "native_cia402",
 "native_cip",
 "native_client",
+"native_clock",
 "native_cloudevents",
 "native_coap",
 "native_coap_observe",
@@ -3939,6 +3943,7 @@
 "native_cia402",
 "native_cip",
 "native_client",
+"native_clock",
 "native_cloudevents",
 "native_coap",
 "native_coap_observe",
@@ -4188,6 +4193,7 @@
 "native_zwave"
 ],
 "src/server/clock/clock.c": [
+"native_clock",
 "native_swar"
 ],
 "src/server/clock/clock.h": [
@@ -4195,6 +4201,7 @@
 "native_ads1115",
 "native_audit_log",
 "native_base64",
+"native_clock",
 "native_coap",
 "native_coap_observe",
 "native_coaps",
@@ -6932,6 +6939,7 @@
 "native_cia402",
 "native_cip",
 "native_client",
+"native_clock",
 "native_cloudevents",
 "native_coap",
 "native_coap_observe",
@@ -7197,6 +7205,7 @@
 "native_websocket"
 ],
 "test/mocks/Arduino.h": [
+"native_clock",
 "native_ssh",
 "native_ssh_conn",
 "native_ssh_hardened",
@@ -7230,6 +7239,7 @@
 "native_cia402",
 "native_cip",
 "native_client",
+"native_clock",
 "native_cloudevents",
 "native_coap",
 "native_coap_observe",
