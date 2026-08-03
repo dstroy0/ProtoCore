@@ -39,6 +39,9 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update test report + coverage [skip ci] ([`60644ab`](https://github.com/dstroy0/ProtoCore/commit/60644abfe8e373451abceb72d24d0d00113b623b))
+- update CHANGELOG.md [skip ci] ([`1cc1ae7`](https://github.com/dstroy0/ProtoCore/commit/1cc1ae739bd82d4a9cd4ff42eee50c8af5c12e3e))
+- update CHANGELOG.md [skip ci] ([`de620ec`](https://github.com/dstroy0/ProtoCore/commit/de620ece45ec719c4248e4a16627b0c3391a1f2a))
 - update test report + coverage [skip ci] ([`be9d0b7`](https://github.com/dstroy0/ProtoCore/commit/be9d0b792f7771544e6d3ea2024f3e1035576ecf))
 - update CHANGELOG.md [skip ci] ([`09bcda6`](https://github.com/dstroy0/ProtoCore/commit/09bcda6c7e6d16409bedddd6f9dd37e76d26ceb2))
 - update test report + coverage [skip ci] ([`2e774fb`](https://github.com/dstroy0/ProtoCore/commit/2e774fb9ae6f96aebc2e4b71dbf1b06e5df34daf))
@@ -194,6 +197,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Refactor
 
+- convert the session layer to C ([`8eb49f4`](https://github.com/dstroy0/ProtoCore/commit/8eb49f4ad14b95c88dfac42c1da248671b3e595a))
 - rename pentesting/ to penetration_testing/ and analyze the repo's Python ([`9cdad1a`](https://github.com/dstroy0/ProtoCore/commit/9cdad1a5e3f98b3e5de0e89b4a128be30697cfa9))
 - drop the C++ default arguments from the SSH KDF entry points ([`ef9541c`](https://github.com/dstroy0/ProtoCore/commit/ef9541c495fdc482cf68b8cde8fcce830bb749e2))
 - convert the remaining using-aliases to C typedefs ([`13ebde2`](https://github.com/dstroy0/ProtoCore/commit/13ebde29ad0b83d1e58559135c5639c5e1f50b2b))
