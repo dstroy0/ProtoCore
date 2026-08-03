@@ -37,6 +37,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update test report + coverage [skip ci] ([`adaa1bc`](https://github.com/dstroy0/ProtoCore/commit/adaa1bc70a8af0cdd4380daa7a6334db251ca4c3))
+- update CHANGELOG.md [skip ci] ([`14991c1`](https://github.com/dstroy0/ProtoCore/commit/14991c11e16693d97b8e903c71605cdeb0f1b842))
 - update CHANGELOG.md [skip ci] ([`ec41e69`](https://github.com/dstroy0/ProtoCore/commit/ec41e69eef350640effdc95b4ae3ba348b5d12f9))
 - update test report + coverage [skip ci] ([`89de4e0`](https://github.com/dstroy0/ProtoCore/commit/89de4e0921db8c7a5198ba87c03338c52785140f))
 - update CHANGELOG.md [skip ci] ([`6584c65`](https://github.com/dstroy0/ProtoCore/commit/6584c65bcb36f3d674b93ad6b514ed2cd8b801b7))
@@ -183,6 +185,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Refactor
 
+- convert the remaining using-aliases to C typedefs ([`13ebde2`](https://github.com/dstroy0/ProtoCore/commit/13ebde29ad0b83d1e58559135c5639c5e1f50b2b))
 - move the upload service onto the mnt storage seam ([`9a2bbaa`](https://github.com/dstroy0/ProtoCore/commit/9a2bbaa03e88b3a89c9797b89d1c38c77d784883))
 - move mDNS, NTP, NTS and PTP into the L7 application layer ([`bcf041b`](https://github.com/dstroy0/ProtoCore/commit/bcf041b7358b324f34ddccceeae40be286a24161))
 - restore internal linkage, bridge I2C, convert six files to C11 ([`ef26ac7`](https://github.com/dstroy0/ProtoCore/commit/ef26ac7ba100e631e7543645961de3865aca4785))
@@ -203,6 +206,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- build the clock TU in native_clock ([`5ab8253`](https://github.com/dstroy0/ProtoCore/commit/5ab82534bf6a084ab9ee782de6a1a7b3bed4835c))
 - make the host mocks compile as C and restore the virtual clock ([`940c3fd`](https://github.com/dstroy0/ProtoCore/commit/940c3fdd966f46480dc0e866055008ad324271c9))
 - restore packml enum member names after the C++ scope strip ([`cfd42e8`](https://github.com/dstroy0/ProtoCore/commit/cfd42e850b9394a48c54c708fe4377f5be82a203))
 - give the remaining 134 suites the library's own truth type ([`3661181`](https://github.com/dstroy0/ProtoCore/commit/3661181b56353ee44717595f3e3c3f91b5c9a43c))
