@@ -99,7 +99,7 @@ char *pc_resp_extra_hdr(uint8_t slot)
  * The header string is constructed once here rather than at response time, so the hot path emits
  * bytes it already has. It is injected verbatim into every response while cors_enabled is set.
  *
- * These two setters live beside the buffers they fill. They were in protocore.cpp, reaching across
+ * These two setters live beside the buffers they fill. They were in protocore.c, reaching across
  * for storage this file owns - which is why the readers above had to hand out a writable pointer to
  * a buffer whose capacity only this file knows. A reader hands back bytes; a writer is the owner.
  *
@@ -345,14 +345,14 @@ void send_chunked(uint8_t slot_id, int code, const char *content_type, ChunkSour
         return;
     }
 
-    ChunkSend &s = s_resp.chunk[slot_id];
-    s.source = source;
-    s.ctx = ctx;
-    s.status = code;
-    s.total = 0;
-    s.keep = keep;
-    s.active = PROTO_TRUE;
-    s.raw = raw;
+    ChunkSend *s = &s_resp.chunk[slot_id];
+    s->source = source;
+    s->ctx = ctx;
+    s->status = code;
+    s->total = 0;
+    s->keep = keep;
+    s->active = PROTO_TRUE;
+    s->raw = raw;
     chunk_send_pump(slot_id);
 }
 
@@ -360,11 +360,11 @@ void send_chunked(uint8_t slot_id, int code, const char *content_type, ChunkSour
 // the send window each worker loop, resuming on later loops as the window drains.
 void chunk_send_pump(uint8_t slot_id)
 {
-    ChunkSend &s = s_resp.chunk[slot_id];
+    ChunkSend *s = &s_resp.chunk[slot_id];
     // GCOVR_EXCL_START  unreachable: both callers already established the state - send_chunked() sets
-    // s.active immediately before its call, and the poll loop in protocore.cpp only pumps a slot whose
+    // s->active immediately before its call, and the poll loop in protocore.c only pumps a slot whose
     // s_resp.chunk[i].active is set. Kept so the pump is safe to call unconditionally.
-    if (!s.active)
+    if (!s->active)
     {
         return;
     }
@@ -372,7 +372,7 @@ void chunk_send_pump(uint8_t slot_id)
 
     if (!pc_conn_active(slot_id))
     {
-        s.active = PROTO_FALSE; // connection gone mid-stream
+        s->active = PROTO_FALSE; // connection gone mid-stream
         return;
     }
 
@@ -386,7 +386,7 @@ void chunk_send_pump(uint8_t slot_id)
     // the body in place and the whole "<hex>\r\n<body>\r\n" is one pc_conn_send with no extra copy.
     // FRAME reserves send-window room for that framing; the raw (HTTP/1.0) path sends the body verbatim.
     static const proto_u16 CHUNK_HDR_RESERVE = 8; // "<hex>\r\n" is <= 6 bytes for a chunk <= 0xFFFF
-    const proto_u16 FRAME = s.raw ? 0 : 12;
+    const proto_u16 FRAME = s->raw ? 0 : 12;
     uint8_t framed[CHUNK_HDR_RESERVE + CHUNK_BUF_SIZE + 2];
     for (;;)
     {
@@ -403,16 +403,16 @@ void chunk_send_pump(uint8_t slot_id)
         }
 
         uint8_t *body = framed + CHUNK_HDR_RESERVE;
-        size_t n = s.source(body, cap, s.ctx);
+        size_t n = s->source(body, cap, s->ctx);
         if (n == 0)
         {
-            if (!s.raw)
+            if (!s->raw)
             {
                 pc_conn_send(slot_id, "0\r\n\r\n", 5); // terminating chunk (1.1 only)
             }
             pc_conn_flush(slot_id);
-            s.active = PROTO_FALSE;
-            pc_resp_end(slot_id, s.status, s.total, s.keep,
+            s->active = PROTO_FALSE;
+            pc_resp_end(slot_id, s->status, s->total, s->keep,
                         /*pre_flushed=*/PROTO_FALSE); // raw: keep==false -> connection close ends the body
             return;
         }
@@ -421,7 +421,7 @@ void chunk_send_pump(uint8_t slot_id)
             n = cap; // defensive: a misbehaving source must not overrun the window
         }
 
-        if (s.raw)
+        if (s->raw)
         {
             pc_conn_send(slot_id, body, (proto_u16)n); // close-delimited: no chunk framing
         }
@@ -442,7 +442,7 @@ void chunk_send_pump(uint8_t slot_id)
             body[n + 1] = '\n';
             pc_conn_send(slot_id, start, (proto_u16)(sn + n + 2));
         }
-        s.total += (int)n;
+        s->total += (int)n;
     }
 }
 
