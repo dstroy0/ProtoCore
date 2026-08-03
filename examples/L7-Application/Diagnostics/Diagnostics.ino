@@ -3,11 +3,12 @@
 
 /**
  * @file Diagnostics.ino
- * @brief Compile-time configuration endpoint (PC_ENABLE_DIAG).
+ * @brief Build configuration endpoint (PC_ENABLE_DIAG).
  *
- * diag(slot_id) serves PC_DIAG_JSON - a compile-time snapshot of the
- * enabled features and buffer sizes. Handy while developing; it exposes the
- * build configuration, so keep it OFF (or behind auth) in production.
+ * diag(slot_id) serves a JSON snapshot of the enabled features and buffer
+ * sizes. Every value in it is a compile-time constant. Handy while developing;
+ * it exposes the build configuration, so keep it OFF (or behind auth) in
+ * production.
  *
  * NOTE: this feature is compiled into the library only when PC_ENABLE_DIAG
  * is set for the whole build (a .ino #define does not reach the separately
@@ -25,7 +26,6 @@
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
-
 
 void setup()
 {

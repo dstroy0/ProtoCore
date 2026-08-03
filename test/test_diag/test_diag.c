@@ -1,10 +1,10 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Exercises the runtime build-flag reporter (diag() / PC_ENABLE_DIAG):
-// the gated diag() method + the compile-time PC_DIAG_JSON build-info string are
-// only compiled when the flag is on, so this env (native_diag) is what keeps that
-// code building + running in CI rather than bit-rotting.
+// Exercises the build-flag reporter (diag() / PC_ENABLE_DIAG): the gated diag()
+// entry point and its DIAG_DOC frame spec are only compiled when the flag is on,
+// so this env (native_diag) is what keeps that code building + running in CI
+// rather than bit-rotting.
 
 #include "protocore.h"
 #include <string.h>

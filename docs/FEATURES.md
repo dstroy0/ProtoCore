@@ -224,7 +224,7 @@ Allen-Bradley DF1 full-duplex frame codec. Default off. services/fieldbus/df1 is
 
 `PC_ENABLE_DIAG`
 
-Expose a diagnostic JSON endpoint via server.diag(). Disabled by default - enabling it exposes compile-time configuration (buffer sizes, feature flags) which could aid an attacker. Only enable in development or behind an authenticated route. When enabled, PC_DIAG_JSON is a compile-time string constant you can serve from any route handler:
+Expose a diagnostic JSON endpoint via `diag(slot_id)`, which reports which features are enabled and how the buffers are sized. Disabled by default - enabling it exposes compile-time configuration (buffer sizes, feature flags) which could aid an attacker. Only enable in development or behind an authenticated route. The document is a frame spec (`DIAG_DOC` in src/protocore.c): each feature flag renders as `true` or `false` and each sizing constant as a decimal, so every value in the report is a compile-time constant and cannot drift from the build. `diag()` borrows the worst-case 975 bytes from the plaintext arena, fills the spec with `pc_frame_build()`, sends the result as `application/json`, and releases the borrow; a failed borrow or build answers 503 with an empty body, so no partial document reaches the wire. Host-tested (`native_diag`). See src/protocore.c.
 
 ## DiffServ QoS Marking
 
