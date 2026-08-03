@@ -56,6 +56,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`2f86534`](https://github.com/dstroy0/ProtoCore/commit/2f86534c918c0c245fc8788fd1e634b65476e6cb))
 - update test report + coverage [skip ci] ([`3b4d006`](https://github.com/dstroy0/ProtoCore/commit/3b4d006c4deb528472de654b74805f67d1e99166))
 - update CHANGELOG.md [skip ci] ([`99dafc8`](https://github.com/dstroy0/ProtoCore/commit/99dafc82633e1f9be44c1d1f63de39875059a4dd))
 - update test report + coverage [skip ci] ([`2766b6f`](https://github.com/dstroy0/ProtoCore/commit/2766b6f2757f09e05493fe27b2d52c41a8e64447))
@@ -402,6 +403,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- typedef the KAT structs, name ntlm's nibble lambda, restore SMB2_SIGN_ALGO_AES_CMAC ([`a06f4da`](https://github.com/dstroy0/ProtoCore/commit/a06f4dafac8ee69ceb81adf2cb65b11b432cffa2))
 - name the hex-nibble lambdas, five more suites to C ([`45046ce`](https://github.com/dstroy0/ProtoCore/commit/45046ce30ccd636f7de8a6a0a83c8b33180b804f))
 - call proto_tcp_conn_timeout_ms instead of comparing its address ([`569d2c7`](https://github.com/dstroy0/ProtoCore/commit/569d2c79d37b948cbe1a84ed65d381afd9845898))
 - the transport helpers the qualifier strip left bare ([`6a3dbe6`](https://github.com/dstroy0/ProtoCore/commit/6a3dbe68dde65896e6558ab5f7ef1d0058875098))
