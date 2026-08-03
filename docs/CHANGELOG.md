@@ -47,6 +47,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`9e67986`](https://github.com/dstroy0/ProtoCore/commit/9e6798621951a5cfaae9c85dfd1f32ba91e70438))
 - update CHANGELOG.md [skip ci] ([`ae17dab`](https://github.com/dstroy0/ProtoCore/commit/ae17dab8c3b6ad50533a5a299fe1b836f88fda8a))
 - update CHANGELOG.md [skip ci] ([`e2e58ee`](https://github.com/dstroy0/ProtoCore/commit/e2e58ee0d130ddb85d190e4b712f3b96640ec132))
 - update CHANGELOG.md [skip ci] ([`3997fb2`](https://github.com/dstroy0/ProtoCore/commit/3997fb2e1b181c9f3591a77de9fdda25cc95d97c))
@@ -288,6 +289,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- restore the hotswap state names after the scope strip ([`9f745df`](https://github.com/dstroy0/ProtoCore/commit/9f745df97b836b0288162dc10633858fae28c12f))
 - size the host send capture for a whole multi-window response ([`392d378`](https://github.com/dstroy0/ProtoCore/commit/392d378ee9ce3c84cfd006564baf3730a944de50))
 - mount the file-serving fixture ([`0441bd0`](https://github.com/dstroy0/ProtoCore/commit/0441bd00f77aedb1e2bcd28beb3fafe2b6e2236c))
 - build the filesystem accessor and mount seam in the http stack ([`a528ad4`](https://github.com/dstroy0/ProtoCore/commit/a528ad4843b731355ec48be23b4f781c34226fc0))
