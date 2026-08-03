@@ -47,6 +47,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`5607ab2`](https://github.com/dstroy0/ProtoCore/commit/5607ab2667c17f6a7fd6bcfcedd5c80efc31981c))
 - update CHANGELOG.md [skip ci] ([`b9a717a`](https://github.com/dstroy0/ProtoCore/commit/b9a717a7e1d274b743601be4c47a20ecbd76370f))
 - update CHANGELOG.md [skip ci] ([`52fc242`](https://github.com/dstroy0/ProtoCore/commit/52fc242c7e62a7f2574e6c0b3320fce155885591))
 - update CHANGELOG.md [skip ci] ([`9e67986`](https://github.com/dstroy0/ProtoCore/commit/9e6798621951a5cfaae9c85dfd1f32ba91e70438))
@@ -294,6 +295,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- build the signaling TU for the upload suite ([`8f0555f`](https://github.com/dstroy0/ProtoCore/commit/8f0555f811c3c2dfaf1e2acd91aef2d06c74cd1e))
 - build the route table and mount seam for the upload suite ([`21f6be5`](https://github.com/dstroy0/ProtoCore/commit/21f6be5031001e3516c19c86a4141bbd27edea8d))
 - move the upload suite onto the mount seam ([`74f9f78`](https://github.com/dstroy0/ProtoCore/commit/74f9f785a2d85804ac1880e7a0d4489ddf73b8bd))
 - restore the SCP mode names after the scope strip ([`48888d8`](https://github.com/dstroy0/ProtoCore/commit/48888d81cb5850f95bf6e002a785f081ff0963b7))
