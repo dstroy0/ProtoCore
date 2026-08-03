@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- drop the leftovers of the query redesign ([`d5698d2`](https://github.com/dstroy0/ProtoCore/commit/d5698d276df47227973d028250647c4cd0432363))
 - restore the v0.0.1 query and path-parameter behavior ([`6050ce4`](https://github.com/dstroy0/ProtoCore/commit/6050ce4793465af0bac7d5dc5b629922f7e97287))
 - route the session drain through the platform queue seam ([`a8fa333`](https://github.com/dstroy0/ProtoCore/commit/a8fa33372b8e9ece9b02fb0443f2ac5b23e58bfa))
 - repoint the checker baselines the C conversion orphaned ([`1476252`](https://github.com/dstroy0/ProtoCore/commit/14762523da710113549a6aaf8165ea244feb0109))
@@ -42,6 +43,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`b14719d`](https://github.com/dstroy0/ProtoCore/commit/b14719d1aa2e66f326991b0e0b26c86f5618237d))
 - update CHANGELOG.md [skip ci] ([`f136ce3`](https://github.com/dstroy0/ProtoCore/commit/f136ce35bca290840f132ea93a2777a5fa0c7018))
 - update CHANGELOG.md [skip ci] ([`d55e811`](https://github.com/dstroy0/ProtoCore/commit/d55e811f43a34ecf97cfc0a0f369b048aaff7b82))
 - update CHANGELOG.md [skip ci] ([`004ba2e`](https://github.com/dstroy0/ProtoCore/commit/004ba2e9b07b24a7ae56b9259dcc8d19a4611a89))
@@ -168,6 +170,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`0af15b8`](https://github.com/dstroy0/ProtoCore/commit/0af15b881340d16b7db7f1c7f7d45b87559cc6ed))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`4fc79d3`](https://github.com/dstroy0/ProtoCore/commit/4fc79d3eaed4b8820ec5b3c2b403a8c233c5b2d6))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`7ca75f0`](https://github.com/dstroy0/ProtoCore/commit/7ca75f028cb39a7f529e2ed9dabaa5f3cf5e33e1))
 - repoint the BUGS.md citation of the presentation layer to its .c path ([`c3cdaaa`](https://github.com/dstroy0/ProtoCore/commit/c3cdaaa1b35003446a5b2e8560c9ec519564ce12))
