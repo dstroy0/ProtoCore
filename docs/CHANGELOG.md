@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- static inline in the C headers ([`52c571e`](https://github.com/dstroy0/ProtoCore/commit/52c571ed8dcf918bc88895cb51807c0a6e8e94de))
 - hand the listen pcb back to the stack on listener_stop ([`b70bb7e`](https://github.com/dstroy0/ProtoCore/commit/b70bb7eb79f1881eccd816baec890d2cce10d045))
 - restore the SNMP_TAG_ prefix, WAL pointer params, and the BerEnc forward typedef ([`88efecc`](https://github.com/dstroy0/ProtoCore/commit/88efecc73952d060f17b5378a5058094bb6b0557))
 - refuse to remove a mount root, at the layer that knows it is one ([`a1d50e6`](https://github.com/dstroy0/ProtoCore/commit/a1d50e62f6c72f058df89a8b1b87e22f84776025))
@@ -55,6 +56,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update test report + coverage [skip ci] ([`3b4d006`](https://github.com/dstroy0/ProtoCore/commit/3b4d006c4deb528472de654b74805f67d1e99166))
+- update CHANGELOG.md [skip ci] ([`99dafc8`](https://github.com/dstroy0/ProtoCore/commit/99dafc82633e1f9be44c1d1f63de39875059a4dd))
 - update test report + coverage [skip ci] ([`2766b6f`](https://github.com/dstroy0/ProtoCore/commit/2766b6f2757f09e05493fe27b2d52c41a8e64447))
 - update CHANGELOG.md [skip ci] ([`ada0f6e`](https://github.com/dstroy0/ProtoCore/commit/ada0f6e80b9a1cc737d198c13a9ded6d55fc9b6e))
 - update CHANGELOG.md [skip ci] ([`e9edadf`](https://github.com/dstroy0/ProtoCore/commit/e9edadf9aaca29318f2e95107ce23bdf4aa77740))
@@ -286,6 +289,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`aaffcd0`](https://github.com/dstroy0/ProtoCore/commit/aaffcd03396e6da0343f1bb6a42e264df3af5946))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`b193396`](https://github.com/dstroy0/ProtoCore/commit/b1933961007eaecd77b9b7f2524689ca9900e442))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`a3760f2`](https://github.com/dstroy0/ProtoCore/commit/a3760f23ae4ea7ca8bc9a445abafbe22d20504ac))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`0331ff5`](https://github.com/dstroy0/ProtoCore/commit/0331ff5282b4ae427a18a405f6dbe4f3a28a0e30))
