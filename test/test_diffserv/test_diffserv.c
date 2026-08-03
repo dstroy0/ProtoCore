@@ -7,7 +7,6 @@
 // (listener_accept_cb is non-static - see listener.cpp - specifically so this env can drive it
 // directly with a fabricated pcb rather than needing a real lwIP accept event).
 
-#include "lwip/tcp.h" // mock struct tcp_pcb (carries the tos field)
 #include "network_drivers/transport/diffserv.h"
 #include "network_drivers/transport/listener.h"
 #include "network_drivers/transport/tcp.h"
@@ -58,7 +57,7 @@ static void test_udp_dscp_roundtrip()
 
 static void test_conn_set_dscp_writes_pcb_tos()
 {
-    struct tcp_pcb pcb;
+    pc_pcb pcb;
     pcb.tos = 0;
     conn_pool[0].pcb = &pcb;
 
@@ -102,7 +101,7 @@ static void test_accept_cb_applies_per_listener_dscp_override()
     TEST_ASSERT_EQUAL(1, listener_add(0, 8080, PROTO_HTTP));
     TEST_ASSERT_TRUE(pc_listen_set_dscp(8080, PC_DSCP_EF));
 
-    struct tcp_pcb pcb;
+    pc_pcb pcb;
     pcb.tos = 0;
     TEST_ASSERT_EQUAL_INT(ERR_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb, ERR_OK));
     TEST_ASSERT_EQUAL_UINT8(0xB8, pcb.tos); // EF, straight from the listener override
@@ -117,7 +116,7 @@ static void test_accept_cb_falls_back_to_server_default_dscp()
     TEST_ASSERT_EQUAL(1, listener_add(0, 8080, PROTO_HTTP)); // no override -> UNSET
     pc_set_default_dscp(PC_DSCP_AF41);
 
-    struct tcp_pcb pcb;
+    pc_pcb pcb;
     pcb.tos = 0;
     TEST_ASSERT_EQUAL_INT(ERR_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb, ERR_OK));
     TEST_ASSERT_EQUAL_UINT8(0x88, pcb.tos); // server-wide default applied
@@ -131,7 +130,7 @@ static void test_accept_cb_skips_tos_write_at_best_effort()
     DeterministicAsyncTCP::pool_init();
     TEST_ASSERT_EQUAL(1, listener_add(0, 8080, PROTO_HTTP)); // UNSET override, default dscp == 0
 
-    struct tcp_pcb pcb;
+    pc_pcb pcb;
     pcb.tos = 0x77; // sentinel: must survive untouched
     TEST_ASSERT_EQUAL_INT(ERR_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb, ERR_OK));
     TEST_ASSERT_EQUAL_UINT8(0x77, pcb.tos);

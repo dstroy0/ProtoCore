@@ -38,6 +38,16 @@ static void reset_slot(uint8_t slot)
     http_reset(slot);
 }
 
+// Feed bytes into a slot's rx ring, the way the lwIP recv callback would.
+static void push_rx(TcpConn *c, const char *s, size_t n)
+{
+    for (size_t i = 0; i < n; i++)
+    {
+        c->rx_buffer[c->rx_head] = (uint8_t)s[i];
+        c->rx_head = (c->rx_head + 1) % RX_BUF_SIZE;
+    }
+}
+
 // Build a complete HTTP POST with multipart body, parse it, return request ptr.
 // body_buf is caller-supplied working space (the parser modifies body in-place).
 static HttpReq *build_multipart_req(uint8_t slot, const char *boundary, const char *body, char *body_buf,
@@ -62,16 +72,8 @@ static HttpReq *build_multipart_req(uint8_t slot, const char *boundary, const ch
 
     // Push headers then body into the ring buffer
     TcpConn *c = &conn_pool[slot];
-    auto push = [&](const char *s, size_t n) {
-        for (size_t i = 0; i < n; i++)
-        {
-            size_t next = (c->rx_head + 1) % RX_BUF_SIZE;
-            c->rx_buffer[c->rx_head] = (uint8_t)s[i];
-            c->rx_head = next;
-        }
-    };
-    push(hdr, strlen(hdr));
-    push(body_buf, blen);
+    push_rx(c, hdr, strlen(hdr));
+    push_rx(c, body_buf, blen);
 
     http_parse(slot);
     return &http_pool[slot];
@@ -89,15 +91,8 @@ static HttpReq *build_multipart_req_bin(uint8_t slot, const char *boundary, cons
              "\r\n",
              boundary, (unsigned)blen);
     TcpConn *c = &conn_pool[slot];
-    auto push = [&](const char *s, size_t n) {
-        for (size_t i = 0; i < n; i++)
-        {
-            c->rx_buffer[c->rx_head] = (uint8_t)s[i];
-            c->rx_head = (c->rx_head + 1) % RX_BUF_SIZE;
-        }
-    };
-    push(hdr, strlen(hdr));
-    push(body, blen);
+    push_rx(c, hdr, strlen(hdr));
+    push_rx(c, body, blen);
     http_parse(slot);
     return &http_pool[slot];
 }
@@ -136,7 +131,7 @@ void test_no_content_type_returns_false()
     http_parse(0);
 
     Multipart mp;
-    bool ok = pc_multipart_parse(&http_pool[0], &mp);
+    proto_bool ok = pc_multipart_parse(&http_pool[0], &mp);
     TEST_ASSERT_FALSE(ok);
 }
 

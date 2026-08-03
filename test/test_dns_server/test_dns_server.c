@@ -13,7 +13,7 @@
 #include <unity.h>
 
 // Build a DNS query: header + one question (QNAME / QTYPE / QCLASS=IN).
-static size_t make_query(uint8_t *buf, uint16_t id, const char *name, uint16_t qtype, bool rd)
+static size_t make_query(uint8_t *buf, uint16_t id, const char *name, uint16_t qtype, proto_bool rd)
 {
     size_t n = 0;
     buf[n++] = (uint8_t)(id >> 8);
@@ -69,7 +69,7 @@ void tearDown()
 void test_a_record_answer()
 {
     uint8_t q[128], out[256];
-    size_t qlen = make_query(q, 0x1234, "foo.lan", 1, true);
+    size_t qlen = make_query(q, 0x1234, "foo.lan", 1, PROTO_TRUE);
     size_t n = pc_dns_server_build_response(q, qlen, 60, resolve_foo, out, sizeof(out));
 
     TEST_ASSERT_EQUAL_UINT(qlen + 16, n);  // header+question copied + 16-byte A answer
@@ -100,7 +100,7 @@ void test_a_record_answer()
 void test_nxdomain()
 {
     uint8_t q[128], out[256];
-    size_t qlen = make_query(q, 1, "unknown.lan", 1, false);
+    size_t qlen = make_query(q, 1, "unknown.lan", 1, PROTO_FALSE);
     size_t n = pc_dns_server_build_response(q, qlen, 60, resolve_none, out, sizeof(out));
     TEST_ASSERT_EQUAL_UINT(qlen, n);              // no answer appended
     TEST_ASSERT_EQUAL_UINT8(0x00, out[7]);        // ANCOUNT = 0
@@ -110,7 +110,7 @@ void test_nxdomain()
 void test_non_a_query_no_error()
 {
     uint8_t q[128], out[256];
-    size_t qlen = make_query(q, 1, "foo.lan", 28, false); // AAAA
+    size_t qlen = make_query(q, 1, "foo.lan", 28, PROTO_FALSE); // AAAA
     size_t n = pc_dns_server_build_response(q, qlen, 60, resolve_foo, out, sizeof(out));
     TEST_ASSERT_EQUAL_UINT(qlen, n);
     TEST_ASSERT_EQUAL_UINT8(0x00, out[7]);        // ANCOUNT = 0
@@ -130,7 +130,7 @@ void test_multilabel_name_reaches_resolver()
         }
     };
     uint8_t q[128], out[256];
-    size_t qlen = make_query(q, 1, "a.b.c.example", 1, false);
+    size_t qlen = make_query(q, 1, "a.b.c.example", 1, PROTO_FALSE);
     pc_dns_server_build_response(q, qlen, 60, L::cap, out, sizeof(out));
     TEST_ASSERT_EQUAL_STRING("a.b.c.example", seen);
 }
@@ -138,7 +138,7 @@ void test_multilabel_name_reaches_resolver()
 void test_malformed_guards()
 {
     uint8_t q[128], out[256];
-    size_t qlen = make_query(q, 1, "foo.lan", 1, false);
+    size_t qlen = make_query(q, 1, "foo.lan", 1, PROTO_FALSE);
     TEST_ASSERT_EQUAL_UINT(0, pc_dns_server_build_response(q, 11, 60, resolve_foo, out, sizeof(out))); // < header
     TEST_ASSERT_EQUAL_UINT(0, pc_dns_server_build_response(NULL, qlen, 60, resolve_foo, out, sizeof(out)));
     TEST_ASSERT_EQUAL_UINT(0, pc_dns_server_build_response(q, qlen, 60, NULL, out, sizeof(out)));
@@ -169,7 +169,7 @@ void test_end_to_end_with_table()
 {
     pc_dns_server_add("gw.lan", 10, 0, 0, 1);
     uint8_t q[128], out[256];
-    size_t qlen = make_query(q, 0xABCD, "gw.lan", 1, false);
+    size_t qlen = make_query(q, 0xABCD, "gw.lan", 1, PROTO_FALSE);
     size_t n = pc_dns_server_build_response(q, qlen, 60, pc_dns_server_lookup, out, sizeof(out));
     TEST_ASSERT_EQUAL_UINT(qlen + 16, n);
     const uint8_t *a = out + qlen;
@@ -205,7 +205,7 @@ static size_t make_query_labels(uint8_t *buf, const uint8_t *label_lens, int nla
 void test_dns_opcode_notimp()
 {
     uint8_t q[128], out[256];
-    size_t qlen = make_query(q, 0x2222, "foo.lan", 1, false);
+    size_t qlen = make_query(q, 0x2222, "foo.lan", 1, PROTO_FALSE);
     q[2] = (uint8_t)(q[2] | (2u << 3)); // opcode = 2 (STATUS)
     size_t n = pc_dns_server_build_response(q, qlen, 60, resolve_foo, out, sizeof(out));
     TEST_ASSERT_EQUAL_UINT(12, n);
@@ -247,7 +247,7 @@ void test_dns_oversized_name()
 void test_dns_question_exceeds_out_cap()
 {
     uint8_t q[128], out[256];
-    size_t qlen = make_query(q, 1, "foo.lan", 1, false); // qend ~ 24
+    size_t qlen = make_query(q, 1, "foo.lan", 1, PROTO_FALSE); // qend ~ 24
     TEST_ASSERT_EQUAL_UINT(0, pc_dns_server_build_response(q, qlen, 60, resolve_foo, out, 20));
 }
 

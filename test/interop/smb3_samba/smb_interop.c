@@ -103,7 +103,7 @@ int main()
     uint8_t buf[256];
     size_t got = 0;
     r = smb_read(&h, 0, buf, sizeof(buf), &got, sock_send, sock_recv, &fd);
-    bool match = (got == plen) && (memcmp(buf, payload, plen) == 0);
+    proto_bool match = (got == plen) && (memcmp(buf, payload, plen) == 0);
     printf("smb_read -> %d (%zu bytes) match=%s\n", (int)r, got, match ? "YES" : "NO");
 
     smb_close(&h, sock_send, sock_recv, &fd);
