@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- give ip.h C linkage so C++ callers link against it ([`c1ad16a`](https://github.com/dstroy0/ProtoCore/commit/c1ad16aa3b8ff9bea85acb94e65e4029eeadb8e4))
 - restore the enum widths the C conversion dropped ([`6bc50b1`](https://github.com/dstroy0/ProtoCore/commit/6bc50b19daaf6754c3b0d98edab1c6d5ed3fed9b))
 - make the checkers agree with a C11 tree ([`0c2bd52`](https://github.com/dstroy0/ProtoCore/commit/0c2bd52a962b3a93b6ce865868debb3cb3089aaa))
 - convert the C++ type declarations behind sqlite, aes128gcm and hkdf ([`a437340`](https://github.com/dstroy0/ProtoCore/commit/a437340764f7dc33866768552b8272287914ef67))
@@ -20,6 +21,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`2bc470d`](https://github.com/dstroy0/ProtoCore/commit/2bc470d7f1f5a95a7e911c7d419a989a1c293501))
 - update CHANGELOG.md [skip ci] ([`906bc4a`](https://github.com/dstroy0/ProtoCore/commit/906bc4a0ae923616d1448d33e881531f5286d3a9))
 - update CHANGELOG.md [skip ci] ([`9f9e696`](https://github.com/dstroy0/ProtoCore/commit/9f9e6969e066a5f2aeae51c671fa9cae990ea552))
 - update CHANGELOG.md [skip ci] ([`92692fe`](https://github.com/dstroy0/ProtoCore/commit/92692feeb69f0fb1eae77e48e94ab7f94f65cf2f))
@@ -65,6 +67,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- clang-format the two benches the layer move left unformatted ([`2db2997`](https://github.com/dstroy0/ProtoCore/commit/2db299722f2a5d330b198a71e4cc7fd18702b47f))
 - Bump version: 0.0.6 → 0.0.7 ([`4a6ac90`](https://github.com/dstroy0/ProtoCore/commit/4a6ac90370aaad684ff0656dacefe860615f667d))
 - Bump version: 0.0.5 → 0.0.6 ([`0b8de8e`](https://github.com/dstroy0/ProtoCore/commit/0b8de8e038484f35d0864a0595895ae7c966d014))
 - Bump version: 0.0.4 → 0.0.5 ([`df66a22`](https://github.com/dstroy0/ProtoCore/commit/df66a22c04544a452ddb3ba16b8e87f8bd55e649))
