@@ -644,20 +644,19 @@ void test_webdav_recursive_open_failure()
 {
     // DELETE: the resource exists but its open() fails -> dav_rm_recursive bails -> 403.
     tree_put("/dav/locked.txt", "data");
-    (void)("/dav/locked.txt"); // a real store has no forced-open hook
+    lfsm_hold_all_handles(); // every descriptor spent, so the next open fails as it would in the field
     feed_and_handle(0, "DELETE /dav/locked.txt HTTP/1.1\r\nHost: x\r\n\r\n");
     TEST_ASSERT_TRUE(pc_resp_status(403));
-    (void)("");                                    // a real store has no forced-open hook
+    lfsm_release_handles();
     TEST_ASSERT_TRUE(tree_has("/dav/locked.txt")); // nothing removed
 
     // COPY of a collection whose child cannot be opened during recursion -> 409.
     rearm();
     populate_src();
-    (void)("/dav/src/a.txt"); // a real store has no forced-open hook // a child that openNextFile finds but open()
-                              // rejects
+    lfsm_hold_all_handles(); // a child the walk finds but cannot open
     feed_and_handle(0, "COPY /dav/src HTTP/1.1\r\nHost: x\r\nDestination: /dav/cdst\r\n\r\n");
     TEST_ASSERT_TRUE(pc_resp_status(409));
-    (void)(""); // a real store has no forced-open hook
+    lfsm_release_handles();
 }
 
 // A request under a mount whose fs root is so long that root + the request sub-path would

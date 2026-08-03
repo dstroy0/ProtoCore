@@ -177,6 +177,52 @@ static inline proto_bool lfsm_mkdir(const char *path)
     return (rc == 0 || rc == LFS_ERR_EXIST) ? PROTO_TRUE : PROTO_FALSE;
 }
 
+// --- forcing a failure, by causing it rather than flagging it -------------------
+//
+// The flat mocks carried hooks - a path whose open "fails", a table that reports itself full. A
+// real store has neither, and does not need them: the conditions are reachable. Holding every
+// handle makes the next open fail exactly as it does on a device with its descriptors spent, and
+// filling the volume makes the next write return ENOSPC. The code under test then takes the same
+// branch for the same reason it would in the field.
+
+/** @brief Occupy every free handle, so the next open() has nowhere to go. */
+static inline void lfsm_hold_all_handles(void)
+{
+    for (int i = 0; i < LFSM_HANDLES; i++)
+    {
+        if (!g_lfsm.h[i].open)
+        {
+            g_lfsm.h[i].open = PROTO_TRUE;
+            g_lfsm.h[i].is_dir = PROTO_FALSE;
+        }
+    }
+}
+
+/** @brief Give them back. The volume is untouched either way. */
+static inline void lfsm_release_handles(void)
+{
+    for (int i = 0; i < LFSM_HANDLES; i++)
+    {
+        g_lfsm.h[i].open = PROTO_FALSE;
+    }
+}
+
+/** @brief Write until the volume refuses, so the next write is a real ENOSPC. */
+static inline void lfsm_fill_volume(void)
+{
+    static uint8_t chunk[LFSM_BLOCK_SIZE];
+    memset(chunk, 'F', sizeof(chunk));
+    lfs_file_t f;
+    if (lfs_file_open(&g_lfsm.lfs, &f, "/.fill", LFS_O_WRONLY | LFS_O_CREAT | LFS_O_TRUNC) < 0)
+    {
+        return;
+    }
+    while (lfs_file_write(&g_lfsm.lfs, &f, chunk, sizeof(chunk)) == (lfs_ssize_t)sizeof(chunk))
+    {
+    }
+    lfs_file_close(&g_lfsm.lfs, &f);
+}
+
 // --- the backend --------------------------------------------------------------
 
 static inline int lfsm_slot(void)
