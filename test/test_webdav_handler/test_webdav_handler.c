@@ -594,15 +594,7 @@ void test_webdav_get_put_dest_edges()
     TEST_ASSERT_TRUE(tree_has("/dav/g.txt")); // no trailing-slash node
 
     rearm();
-    char p[32];
-    for (int i = 0; i < 100; i++) // exhaust the node table
-    {
-        snprintf(p, sizeof p, "/dav/q%03d", i);
-        if (!lfsm_write_text(p, ""))
-        {
-            break;
-        }
-    }
+    lfsm_fill_volume(); // nothing can be created, so the open fails
     feed_and_handle(0, "PUT /dav/newfile.txt HTTP/1.1\r\nHost: x\r\nContent-Length: 0\r\n\r\n"); // open("w") fails
     TEST_ASSERT_TRUE(pc_resp_status(409));
 }
@@ -765,15 +757,7 @@ void test_webdav_method_dispatch_edges()
     TEST_ASSERT_FALSE(tree_has("/dav/mv"));
 
     rearm();
-    char p[24];
-    for (int i = 0; i < 100; i++) // exhaust the node table so mkdir() cannot allocate
-    {
-        snprintf(p, sizeof p, "/dav/q%03d", i);
-        if (!lfsm_write_text(p, ""))
-        {
-            break;
-        }
-    }
+    lfsm_fill_volume(); // nothing can be created, so mkdir fails
     feed_and_handle(0, "MKCOL /dav/newcol HTTP/1.1\r\nHost: x\r\n\r\n");
     TEST_ASSERT_TRUE(pc_resp_status(409)); // does not exist, but mkdir failed
 }
