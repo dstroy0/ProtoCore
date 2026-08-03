@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- reset the middleware chain with the rest of the server ([`48eccdd`](https://github.com/dstroy0/ProtoCore/commit/48eccdd4685ff5e3fe4103f564d0429f6a6adb9b))
 - give the host driver's state one instance instead of one per TU ([`43f9c41`](https://github.com/dstroy0/ProtoCore/commit/43f9c416bf9f25e13569f108e5b702d1fa1bfad1))
 - drop the leftovers of the query redesign ([`d5698d2`](https://github.com/dstroy0/ProtoCore/commit/d5698d276df47227973d028250647c4cd0432363))
 - restore the v0.0.1 query and path-parameter behavior ([`6050ce4`](https://github.com/dstroy0/ProtoCore/commit/6050ce4793465af0bac7d5dc5b629922f7e97287))
@@ -44,6 +45,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update test report + coverage [skip ci] ([`68c8c92`](https://github.com/dstroy0/ProtoCore/commit/68c8c9284e2b587a2e19ca35b683523238db23cd))
+- update CHANGELOG.md [skip ci] ([`4b3225b`](https://github.com/dstroy0/ProtoCore/commit/4b3225b6229ba2a89e3b3b6aef09f72acb8c9168))
 - update CHANGELOG.md [skip ci] ([`729f02f`](https://github.com/dstroy0/ProtoCore/commit/729f02f51254de8ee053ca53c8e34c45fa790bfa))
 - bump github/codeql-action from 4 to 4.37.4 ([`5098e9b`](https://github.com/dstroy0/ProtoCore/commit/5098e9b02554f105b77a1fb574ca19f84a54bc96))
 - update CHANGELOG.md [skip ci] ([`30ee2b8`](https://github.com/dstroy0/ProtoCore/commit/30ee2b8c0568fe5b26278665e989866c2d756c81))
