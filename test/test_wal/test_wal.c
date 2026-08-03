@@ -16,13 +16,13 @@ void tearDown(void)
 }
 
 // Replay callback: collect seq + payload of each recovered record.
-struct Collected
+typedef struct
 {
     int n;
     uint64_t seq[16];
     uint32_t len[16];
     uint8_t first[16]; // first payload byte (spot check)
-};
+} Collected;
 static void collect(uint64_t seq, const uint8_t *payload, uint32_t len, void *ctx)
 {
     Collected *c = (Collected *)ctx;

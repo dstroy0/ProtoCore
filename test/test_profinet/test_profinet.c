@@ -17,8 +17,8 @@ void tearDown(void)
 void test_header_roundtrip(void)
 {
     uint8_t out[16];
-    size_t n = pc_pn_dcp_header(PN_FRAMEID_DCP_IDENT_REQ, PN_DCP_SERVICE_IDENTIFY, PN_DCP_TYPE_REQUEST,
-                                0x11223344, 8, out, sizeof(out));
+    size_t n = pc_pn_dcp_header(PN_FRAMEID_DCP_IDENT_REQ, PN_DCP_SERVICE_IDENTIFY, PN_DCP_TYPE_REQUEST, 0x11223344, 8,
+                                out, sizeof(out));
     TEST_ASSERT_EQUAL_size_t(10, n);
     const uint8_t expect[] = {0xFE, 0xFE, 0x05, 0x00, 0x11, 0x22, 0x33, 0x44, 0x00, 0x08};
     TEST_ASSERT_EQUAL_HEX8_ARRAY(expect, out, 10);
@@ -35,8 +35,8 @@ void test_block_even_padding(void)
 {
     // NameOfStation "plc" is 3 bytes (odd) -> padded to an even total, filler not counted in length.
     uint8_t out[16];
-    size_t n = pc_pn_dcp_block(PN_DCP_OPT_DEVICE, PN_DCP_SUB_DEV_NAME_OF_STATION, (const uint8_t *)"plc", 3,
-                               out, sizeof(out));
+    size_t n =
+        pc_pn_dcp_block(PN_DCP_OPT_DEVICE, PN_DCP_SUB_DEV_NAME_OF_STATION, (const uint8_t *)"plc", 3, out, sizeof(out));
     TEST_ASSERT_EQUAL_size_t(4 + 3 + 1, n); // 4 header + 3 value + 1 pad
     const uint8_t expect[] = {0x02, 0x02, 0x00, 0x03, 'p', 'l', 'c', 0x00};
     TEST_ASSERT_EQUAL_HEX8_ARRAY(expect, out, n);
@@ -45,13 +45,13 @@ void test_block_even_padding(void)
     TEST_ASSERT_EQUAL_size_t(8, n);
 }
 
-struct Seen
+typedef struct
 {
     int count;
     uint8_t opt[4];
     uint8_t sub[4];
     size_t len[4];
-};
+} Seen;
 static void collect(uint8_t option, uint8_t suboption, const uint8_t *value, size_t value_len, void *arg)
 {
     (void)value;
@@ -71,8 +71,7 @@ void test_walk_blocks(void)
     size_t n = 0;
     n += pc_pn_dcp_block(PN_DCP_OPT_DEVICE, PN_DCP_SUB_DEV_NAME_OF_STATION, (const uint8_t *)"plc", 3, buf + n,
                          sizeof(buf) - n);
-    n += pc_pn_dcp_block(PN_DCP_OPT_IP, PN_DCP_SUB_IP_PARAM, (const uint8_t *)"ABCD", 4, buf + n,
-                         sizeof(buf) - n);
+    n += pc_pn_dcp_block(PN_DCP_OPT_IP, PN_DCP_SUB_IP_PARAM, (const uint8_t *)"ABCD", 4, buf + n, sizeof(buf) - n);
 
     Seen s = {0, {0}, {0}, {0}};
     TEST_ASSERT_TRUE(pc_pn_dcp_walk(buf, n, collect, &s));
@@ -95,10 +94,10 @@ void test_walk_rejects_truncated(void)
 void test_pn_guards(void)
 {
     uint8_t out[16];
-    TEST_ASSERT_EQUAL_size_t(0, pc_pn_dcp_header(0, 0, 0, 0, 0, NULL, sizeof(out))); // null out
-    TEST_ASSERT_EQUAL_size_t(0, pc_pn_dcp_header(0, 0, 0, 0, 0, out, 4));               // cap < header len
+    TEST_ASSERT_EQUAL_size_t(0, pc_pn_dcp_header(0, 0, 0, 0, 0, NULL, sizeof(out)));                // null out
+    TEST_ASSERT_EQUAL_size_t(0, pc_pn_dcp_header(0, 0, 0, 0, 0, out, 4));                           // cap < header len
     TEST_ASSERT_EQUAL_size_t(0, pc_pn_dcp_block(0, 0, (const uint8_t *)"x", 1, NULL, sizeof(out))); // null out
-    TEST_ASSERT_EQUAL_size_t(0, pc_pn_dcp_block(0, 0, NULL, 5, out, sizeof(out)));         // len but null value
+    TEST_ASSERT_EQUAL_size_t(0, pc_pn_dcp_block(0, 0, NULL, 5, out, sizeof(out)));            // len but null value
     TEST_ASSERT_EQUAL_size_t(0, pc_pn_dcp_block(0, 0, (const uint8_t *)"sixval", 6, out, 4)); // block > cap
 
     PnDcpHeader h;
@@ -143,8 +142,7 @@ void test_walk_null_callback(void)
     // cb == NULL over a well-formed (non-truncated) block list: the walk still succeeds, it just
     // skips invoking the callback for each block.
     uint8_t buf[16];
-    size_t n =
-        pc_pn_dcp_block(PN_DCP_OPT_IP, PN_DCP_SUB_IP_PARAM, (const uint8_t *)"ABCD", 4, buf, sizeof(buf));
+    size_t n = pc_pn_dcp_block(PN_DCP_OPT_IP, PN_DCP_SUB_IP_PARAM, (const uint8_t *)"ABCD", 4, buf, sizeof(buf));
     TEST_ASSERT_TRUE(pc_pn_dcp_walk(buf, n, NULL, NULL));
 }
 

@@ -59,11 +59,11 @@ void tearDown()
 }
 
 // ---- minimal DTLS 1.3 client helpers (offering X25519 directly, no HRR) ----
-struct Buf
+typedef struct
 {
     uint8_t *p;
     size_t n;
-};
+} Buf;
 static void b8(Buf *b, uint8_t v)
 {
     b->p[b->n++] = v;

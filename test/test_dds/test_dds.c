@@ -43,13 +43,13 @@ void test_submessage_endianness(void)
     TEST_ASSERT_EQUAL_HEX8(0x08, out[3]);
 }
 
-struct Seen
+typedef struct
 {
     int count;
     uint8_t ids[8];
     size_t lens[8];
     const uint8_t *bodies[8];
-};
+} Seen;
 static void collect(uint8_t id, uint8_t flags, const uint8_t *body, size_t body_len, void *arg)
 {
     (void)flags;

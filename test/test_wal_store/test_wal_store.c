@@ -17,12 +17,12 @@ void tearDown(void)
 }
 
 // A RAM-backed WalDev: the "flash" is just a byte buffer; sync is a no-op that succeeds.
-struct RamDisk
+typedef struct
 {
     uint8_t *buf;
     uint64_t size;
     int syncs;
-};
+} RamDisk;
 static size_t ram_read(void *ctx, uint64_t off, uint8_t *buf, size_t len)
 {
     RamDisk *d = (RamDisk *)ctx;
@@ -68,7 +68,7 @@ static const uint32_t REC = (uint32_t)WAL_RECORD_HEADER; // header-only record s
 // A fault-injecting device: a byte buffer with optional read/write faults keyed on offset or length,
 // plus a sync that fails on a chosen call. make_fault() injects nothing; a test then arms a field to
 // exercise the "device I/O failed" guards (short read/write, unreadable data region, sync failure).
-struct FaultDisk
+typedef struct
 {
     uint8_t *buf;
     uint64_t size;
@@ -78,7 +78,7 @@ struct FaultDisk
     uint64_t write_fail_lt; // writes at off <  this return short
     int sync_calls;
     int sync_fail_on; // 1-based sync call number that returns false (0 = never)
-};
+} FaultDisk;
 static size_t fault_read(void *ctx, uint64_t off, uint8_t *buf, size_t len)
 {
     FaultDisk *d = (FaultDisk *)ctx;

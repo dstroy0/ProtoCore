@@ -190,7 +190,7 @@ static size_t build_pdu(uint8_t *buf, size_t cap, int knob)
     return e.ok ? e.len : 0;
 }
 
-struct RespView
+typedef struct
 {
     long version;
     uint8_t pdu_tag;
@@ -206,7 +206,7 @@ struct RespView
     uint32_t uval;
     char str[64];
     size_t str_len;
-};
+} RespView;
 
 static proto_bool parse_resp(const uint8_t *buf, size_t len, RespView *rv)
 {

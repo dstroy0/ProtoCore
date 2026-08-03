@@ -18,7 +18,7 @@ void tearDown()
 }
 
 // A mock socket: `in` is what the relay reads from this peer; `out` is what the relay writes to it.
-struct MockSock
+typedef struct
 {
     uint8_t in[4096];
     size_t in_len, in_pos;
@@ -28,7 +28,7 @@ struct MockSock
     size_t send_cap; // max bytes a single send accepts (0 = unlimited) - drives backpressure
     proto_bool fail_send;
     proto_bool shutdown_called;
-};
+} MockSock;
 
 static int msock_recv(void *c, uint8_t *buf, size_t cap)
 {

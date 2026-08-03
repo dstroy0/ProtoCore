@@ -21,7 +21,7 @@ void tearDown()
 // A mock controller: mock_send decodes the streamed bytes back into lines + program markers;
 // mock_recv is the reverse channel, optionally injecting an XOFF (then XON) once the feed passes a
 // byte threshold, to exercise the pause/resume path.
-struct MockCtrl
+typedef struct
 {
     DncDecoder dec;
     char lines[16][PC_DNC_LINE_MAX + 1];
@@ -40,7 +40,7 @@ struct MockCtrl
     int fail_send_at; // 1-based send-call index that reports an error (0 = never)
     long recv_calls;
     proto_bool fail_recv; // every reverse-channel poll reports an error
-};
+} MockCtrl;
 
 static void mock_init(MockCtrl *m, DncCode code)
 {

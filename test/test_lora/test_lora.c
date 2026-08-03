@@ -13,12 +13,12 @@
 
 // --- Mock SX127x -----------------------------------------------------------------------
 
-struct MockChip
+typedef struct
 {
     uint8_t reg[128];
     uint8_t fifo[256];
     uint16_t fifo_ptr;
-};
+} MockChip;
 static MockChip g_chip;
 
 static uint8_t mock_read(uint8_t reg, void *ctx)

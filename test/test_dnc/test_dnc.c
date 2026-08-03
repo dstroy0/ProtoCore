@@ -179,14 +179,14 @@ void test_flow_control()
 }
 
 // Helper: feed a whole buffer through the decoder, collecting lines and the marker sequence.
-struct DecodeCapture
+typedef struct
 {
     char lines[8][PC_DNC_LINE_MAX + 1];
     int nlines;
     int starts;
     int ends;
     int overflows;
-};
+} DecodeCapture;
 
 static void decode_all(DncCode code, const uint8_t *buf, size_t len, DecodeCapture *cap)
 {

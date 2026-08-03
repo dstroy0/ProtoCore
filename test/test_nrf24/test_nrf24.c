@@ -12,7 +12,7 @@
 #include <string.h>
 #include <unity.h>
 
-struct MockNrf
+typedef struct
 {
     uint8_t reg[32];
     uint8_t rx_addr_p0[5]; // 5-byte registers have their own internal storage on the chip
@@ -22,7 +22,7 @@ struct MockNrf
     uint8_t tx_len;
     proto_bool ce;
     proto_bool present;
-};
+} MockNrf;
 static MockNrf g;
 
 static void mock_spi(const uint8_t *tx, uint8_t *rx, uint8_t len, void *)

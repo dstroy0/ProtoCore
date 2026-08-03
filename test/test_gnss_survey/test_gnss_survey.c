@@ -19,11 +19,11 @@ void tearDown()
 }
 
 // One pyproj-derived case: geodetic in, ECEF (metres) out.
-struct EcefCase
+typedef struct
 {
     double lat, lon, h;
     double x, y, z;
-};
+} EcefCase;
 
 static const EcefCase CASES[] = {
     {0.0, 0.0, 0.0, 6378137.000000, 0.000000, 0.000000},

@@ -7,11 +7,11 @@
 #include <unity.h>
 
 // A fake driver backed by a small register file, to prove dispatch reaches the right ctx.
-struct FakeCtx
+typedef struct
 {
     int32_t regs[16];
     int fail_next; // if nonzero, the next read/write returns this negative code once.
-};
+} FakeCtx;
 
 static int fake_read(void *ctx, uint32_t p, int32_t *out)
 {

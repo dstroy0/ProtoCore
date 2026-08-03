@@ -67,11 +67,11 @@ static const uint8_t SERVER_COOKIE_KEY[32] = {0x5c, 0x5d, 0x5e, 0x5f, 0x60, 0x61
 static const uint8_t TEST_PEER_ADDR[6] = {192, 168, 1, 50, 0xC3, 0x50}; // IPv4 192.168.1.50 : port 50000
 
 // ---- a tiny byte writer ----
-struct Buf
+typedef struct
 {
     uint8_t *p;
     size_t n;
-};
+} Buf;
 static void b8(Buf *b, uint8_t v)
 {
     b->p[b->n++] = v;
@@ -961,7 +961,7 @@ static size_t plain_hs_record(uint8_t *out, size_t out_cap, const uint8_t *tls_m
 // Everything the minimal test client holds after the server flight: the epoch-2 and epoch-3 record
 // keys plus a VALID client Finished fragment left unsent, so a test can deliver it (or something else)
 // under its own conditions.
-struct ClientSession
+typedef struct
 {
     Tls13KeySchedule cks;
     DtlsRecordKeys cli_hs_write;  ///< client -> server, epoch 2
@@ -970,7 +970,7 @@ struct ClientSession
     DtlsRecordKeys cli_app_read;  ///< server -> client, epoch 3
     uint8_t cfin_frag[80];
     size_t cfin_frag_len;
-};
+} ClientSession;
 
 // Drive a fresh connection through ClientHello -> server flight (state WAIT_FINISHED) and run the
 // client half of the key schedule over the real transcript. No assertions: the caller decides what to

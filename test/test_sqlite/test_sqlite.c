@@ -262,11 +262,11 @@ void test_leaf_cell_overflow_detection(void)
 }
 
 // Page reader over an in-memory database image (pages are 1-based).
-struct MemDb
+typedef struct
 {
     const uint8_t *data;
     uint32_t size;
-};
+} MemDb;
 static proto_bool mem_read(void *ctx, uint32_t pgno, uint8_t *page, uint32_t page_size)
 {
     MemDb *m = (MemDb *)ctx;
@@ -898,11 +898,11 @@ void test_column_decoder_rejects(void)
 
 // ---- Overflow-chain edges, driven by a synthetic 64-byte-page image ----
 
-struct OvfSynth
+typedef struct
 {
     uint8_t pages[2][64];
     uint32_t count;
-};
+} OvfSynth;
 
 static proto_bool ovf_synth_read(void *ctx, uint32_t pgno, uint8_t *page, uint32_t page_size)
 {
@@ -979,14 +979,14 @@ void test_read_payload_chain_edges(void)
 
 #define SYNTH_PAGE_SIZE 512
 
-struct SynthDb
+typedef struct
 {
     uint8_t pages[6][SYNTH_PAGE_SIZE];
     uint32_t count;
     int reads;
     int fail_after;    // once `reads` passes this every read fails (-1 = never)
     int corrupt_after; // once `reads` passes this the page comes back with a bad type byte (-1 = never)
-};
+} SynthDb;
 
 static proto_bool synth_read(void *ctx, uint32_t pgno, uint8_t *page, uint32_t page_size)
 {

@@ -99,7 +99,7 @@ void test_aes_cfb_roundtrip_partial_block()
 
 static uint8_t g_dec[1024]; // scratch for response decryption
 
-struct V3View
+typedef struct
 {
     uint8_t engine_id[64];
     size_t engine_id_len;
@@ -112,7 +112,7 @@ struct V3View
     uint8_t val_tag;
     char str[64];
     size_t str_len;
-};
+} V3View;
 
 static void put_be32(uint8_t *p, uint32_t v)
 {

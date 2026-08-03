@@ -9,7 +9,7 @@
 #include <string.h>
 #include <unity.h>
 
-struct MockCC
+typedef struct
 {
     uint8_t reg[0x30]; // config registers 0x00-0x2E
     uint8_t version;
@@ -21,7 +21,7 @@ struct MockCC
     uint8_t rxcount; // bytes available in the RX FIFO
     uint8_t rxread;  // read cursor
     uint8_t last_strobe;
-};
+} MockCC;
 static MockCC g;
 
 static void mock_spi(const uint8_t *tx, uint8_t *rx, uint8_t len, void *)

@@ -245,7 +245,7 @@ static void test_response_malformed()
 }
 
 // --- scripted mock peer transport (delivers a canned response) -----------------------------------
-struct MockPeer
+typedef struct
 {
     const uint8_t *data;
     size_t len, cursor, throttle;
@@ -253,7 +253,7 @@ struct MockPeer
     int open_ret;
     proto_bool send_ok;
     int reads; ///< how many times the engine asked the transport for bytes
-};
+} MockPeer;
 static int p_open(void *c, const char *h, uint16_t p, uint32_t t)
 {
     (void)h;

@@ -112,7 +112,7 @@ enum SsSecBufMode
 };
 
 // The scripted mock SMB2 server: on each client request it appends the matching framed response.
-struct Mock
+typedef struct
 {
     uint8_t rx[8192];
     size_t rx_len, rx_pos;
@@ -165,7 +165,7 @@ struct Mock
     uint8_t enc_c2s[PC_SMB2_MAX_CIPHER_KEY_LEN]; // client->server key: the mock decrypts requests with it
     uint8_t enc_s2c[PC_SMB2_MAX_CIPHER_KEY_LEN]; // server->client key: the mock encrypts responses with it
     uint64_t enc_nonce;                          // the mock's monotonic response nonce
-};
+} Mock;
 
 static void append_frame(Mock *m, const uint8_t *resp, size_t rlen)
 {
@@ -1061,13 +1061,13 @@ void test_av_truncated_timestamp()
 
 // ---- a canned single-response seam for smb_read / smb_write / smb_close error paths, driven on a
 // hand-built handle (no open handshake needed). ----
-struct Canned
+typedef struct
 {
     uint8_t resp[512];
     size_t pc_resp_len;
     size_t pos;
     proto_bool short_send; // send returns a short count (1) instead of the true length
-};
+} Canned;
 
 static int canned_send(void *c, const uint8_t *d, size_t n)
 {

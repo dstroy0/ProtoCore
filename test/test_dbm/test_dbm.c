@@ -19,11 +19,11 @@ void tearDown(void)
 }
 
 // RAM-backed WalDev (same shape as the pc_wal_store tests).
-struct RamDisk
+typedef struct
 {
     uint8_t *buf;
     uint64_t size;
-};
+} RamDisk;
 // Fault-injection switches (default off): simulate a device whose read or sync fails, to exercise the
 // compaction fail-closed / no-data-loss paths.
 static proto_bool g_fail_read = PROTO_FALSE;
@@ -596,11 +596,11 @@ void test_get_fails_when_the_value_cannot_be_read_back(void)
     TEST_ASSERT_TRUE(get_eq("v", "payload")); // and it reads fine once the device recovers
 }
 
-struct IterCtx
+typedef struct
 {
     int seen;
     int stop_after; // 0 = never stop
-};
+} IterCtx;
 static proto_bool iter_cb(const char *key, uint16_t key_len, void *ctx)
 {
     (void)key;

@@ -36,12 +36,12 @@ void test_ke_request(void)
     TEST_ASSERT_EQUAL_HEX8_ARRAY(expect, out, n);
 }
 
-struct Collected
+typedef struct
 {
     int count;
     uint16_t types[8];
     proto_bool crit[8];
-};
+} Collected;
 static void collect(proto_bool critical, uint16_t type, const uint8_t *body, size_t body_len, void *arg)
 {
     (void)body;

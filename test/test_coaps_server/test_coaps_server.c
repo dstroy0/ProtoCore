@@ -62,13 +62,13 @@ static void test_rng(uint8_t *out, size_t len)
 }
 
 // ---- outbound-datagram capture queue (the host stand-in for the wire) ----
-struct OutDg
+typedef struct
 {
     uint8_t buf[2048];
     size_t len;
     char ip[16];
     uint16_t port;
-};
+} OutDg;
 static OutDg g_out[16];
 static int g_out_n = 0;
 static void out_reset()
@@ -141,11 +141,11 @@ void tearDown()
 }
 
 // ---- minimal DTLS 1.3 client (offers X25519 directly, no HRR) ----
-struct Buf
+typedef struct
 {
     uint8_t *p;
     size_t n;
-};
+} Buf;
 static void b8(Buf *b, uint8_t v)
 {
     b->p[b->n++] = v;
