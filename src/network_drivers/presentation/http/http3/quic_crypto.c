@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_quic_crypto.cpp
- * @brief QUIC packet protection and Initial secrets (see pc_quic_crypto.h).
+ * @file quic_crypto.c
+ * @brief QUIC packet protection and Initial secrets (see quic_crypto.h).
  */
 
 #include "network_drivers/presentation/http/http3/quic_crypto.h"
@@ -69,7 +69,7 @@ void pc_quic_derive_initial_secrets(const uint8_t *dcid, size_t dcid_len, QuicIn
 }
 
 size_t pc_quic_packet_protect(uint8_t *pkt, size_t cap, size_t pn_offset, uint8_t pn_len, uint64_t full_pn,
-                              size_t payload_len, QuicPacketKeys &keys, proto_bool is_long)
+                              size_t payload_len, QuicPacketKeys *keys, proto_bool is_long)
 {
     if (pn_len < 1 || pn_len > 4)
     {
@@ -84,8 +84,8 @@ size_t pc_quic_packet_protect(uint8_t *pkt, size_t cap, size_t pn_offset, uint8_
 
     // AEAD-seal the payload in place; associated data is the unprotected header.
     uint8_t nonce[12];
-    build_nonce(keys.iv, full_pn, nonce);
-    pc_aes128gcm_seal((pc_aes128gcm_key *)(keys.gcm), nonce, pkt, hdr_len, pkt + hdr_len, payload_len, pkt + hdr_len,
+    build_nonce(keys->iv, full_pn, nonce);
+    pc_aes128gcm_seal((pc_aes128gcm_key *)(keys->gcm), nonce, pkt, hdr_len, pkt + hdr_len, payload_len, pkt + hdr_len,
                       pkt + hdr_len + payload_len);
 
     // Header protection (RFC 9001 sec 5.4): sample 16 bytes at pn_offset + 4 (always inside the
@@ -94,7 +94,7 @@ size_t pc_quic_packet_protect(uint8_t *pkt, size_t cap, size_t pn_offset, uint8_
     // costs ~556 cycles per packet plus a pool borrow and wipe. (The ECB block itself is ~7,842 - a
     // single HW-AES operation is expensive on this die, and that is the bigger target.)
     uint8_t mask[16];
-    pc_aes128_encrypt_block((pc_aes128 *)(keys.hp), pkt + pn_offset + 4, mask);
+    pc_aes128_encrypt_block((pc_aes128 *)(keys->hp), pkt + pn_offset + 4, mask);
 
     pkt[0] ^= mask[0] & (is_long ? 0x0f : 0x1f);
     for (uint8_t i = 0; i < pn_len; i++)
@@ -106,7 +106,7 @@ size_t pc_quic_packet_protect(uint8_t *pkt, size_t cap, size_t pn_offset, uint8_
 }
 
 size_t pc_quic_packet_unprotect(uint8_t *pkt, size_t pn_offset, size_t length, uint64_t largest_pn,
-                                QuicPacketKeys &keys, proto_bool is_long, uint8_t *out, uint64_t *out_pn)
+                                QuicPacketKeys *keys, proto_bool is_long, uint8_t *out, uint64_t *out_pn)
 {
     // Header protection needs a full 16-byte sample starting at pn_offset + 4, and the AEAD region
     // must carry at least the 16-byte tag once the (<=4-byte) packet number is removed.
@@ -118,7 +118,7 @@ size_t pc_quic_packet_unprotect(uint8_t *pkt, size_t pn_offset, size_t length, u
     // The header-protection context is already keyed and lives in the key material; building one here
     // would cost ~8,400 cycles to encrypt sixteen bytes.
     uint8_t mask[16];
-    pc_aes128_encrypt_block((pc_aes128 *)(keys.hp), pkt + pn_offset + 4, mask);
+    pc_aes128_encrypt_block((pc_aes128 *)(keys->hp), pkt + pn_offset + 4, mask);
 
     pkt[0] ^= mask[0] & (is_long ? 0x0f : 0x1f);
     uint8_t pn_len = (uint8_t)((pkt[0] & 0x03) + 1);
@@ -146,9 +146,9 @@ size_t pc_quic_packet_unprotect(uint8_t *pkt, size_t pn_offset, size_t length, u
         return (size_t)-1;
     }
     uint8_t nonce[12];
-    build_nonce(keys.iv, full_pn, nonce);
+    build_nonce(keys->iv, full_pn, nonce);
     const size_t pt_len = ct_len - PC_AES128GCM_TAG_LEN;
-    if (!pc_aes128gcm_open((pc_aes128gcm_key *)(keys.gcm), nonce, pkt, hdr_len, pkt + hdr_len, pt_len,
+    if (!pc_aes128gcm_open((pc_aes128gcm_key *)(keys->gcm), nonce, pkt, hdr_len, pkt + hdr_len, pt_len,
                            pkt + hdr_len + pt_len, out))
     {
         return (size_t)-1;

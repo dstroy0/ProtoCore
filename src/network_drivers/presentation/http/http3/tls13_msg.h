@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_tls13_msg.h
+ * @file tls13_msg.h
  * @brief TLS 1.3 handshake messages for the QUIC handshake (RFC 8446 sec 4).
  *
  * The wire formats of the handshake messages a QUIC server exchanges: it parses the client's
@@ -91,8 +91,7 @@ typedef struct
  * @return false if it is not a well-formed ClientHello. Missing/!supported extensions are reported
  * through the offers_* flags rather than failing the parse, so the caller can send the right alert.
  */
-proto_bool pc_tls13_parse_client_hello(const uint8_t *msg, size_t len, Tls13ClientHello *out,
-                                       proto_bool dtls = PROTO_FALSE);
+proto_bool pc_tls13_parse_client_hello(const uint8_t *msg, size_t len, Tls13ClientHello *out, proto_bool dtls);
 
 /**
  * @brief Build a ServerHello (RFC 8446 sec 4.1.3) selecting TLS 1.3 / AES-128-GCM-SHA256 and a
@@ -104,16 +103,16 @@ proto_bool pc_tls13_parse_client_hello(const uint8_t *msg, size_t len, Tls13Clie
  * @param share           the server's key_share (X25519 pub for the classical group, or the
  *                        ciphertext || X25519 concatenation for X25519MLKEM768).
  * @param share_len       length of @p share (32 for X25519, 1120 for the hybrid).
- * @param group           the selected named group (default TLS_GROUP_X25519).
+ * @param group           the selected named group (TLS_GROUP_X25519 or TLS_GROUP_X25519MLKEM768).
+ * @param dtls            true to emit the DTLS 1.3 version codepoints (RFC 9147 §5.3), false for TLS 1.3.
  * @param conn_id          when non-NULL, emit a connection_id extension (RFC 9146 / RFC 9147 §9)
  *                         carrying the server's CID (the id the client must place in records it sends).
  * @param conn_id_len      length of @p conn_id (0..255).
  * @return bytes written, or 0 on overflow.
  */
 size_t pc_tls13_build_server_hello(uint8_t *out, size_t cap, const uint8_t random[32], const uint8_t *session_id,
-                                   uint8_t session_id_len, const uint8_t *share, size_t share_len = 32,
-                                   uint16_t group = TLS_GROUP_X25519, proto_bool dtls = PROTO_FALSE,
-                                   const uint8_t *conn_id = NULL, size_t conn_id_len = 0);
+                                   uint8_t session_id_len, const uint8_t *share, size_t share_len, uint16_t group,
+                                   proto_bool dtls, const uint8_t *conn_id, size_t conn_id_len);
 
 /**
  * @brief Build EncryptedExtensions (RFC 8446 sec 4.3.1) carrying ALPN "h3" and the server's
@@ -124,7 +123,7 @@ size_t pc_tls13_build_server_hello(uint8_t *out, size_t cap, const uint8_t rando
  * @return bytes written, or 0.
  */
 size_t pc_tls13_build_encrypted_extensions(uint8_t *out, size_t cap, const uint8_t *pc_quic_tp, size_t pc_quic_tp_len,
-                                           proto_bool rpk_server_cert = PROTO_FALSE);
+                                           proto_bool rpk_server_cert);
 
 /**
  * @brief Build a Certificate message (RFC 8446 sec 4.4.2) with an empty request context and one
@@ -200,7 +199,7 @@ extern const uint8_t pc_tls13_hrr_random[32];
  */
 size_t pc_tls13_build_hello_retry_request(uint8_t *out, size_t cap, const uint8_t *session_id, uint8_t session_id_len,
                                           uint16_t selected_group, const uint8_t *cookie, size_t cookie_len,
-                                          proto_bool dtls = PROTO_FALSE);
+                                          proto_bool dtls);
 
 /**
  * @brief Build an EncryptedExtensions (RFC 8446 §4.3.1) for the DTLS profile, which carries no ALPN or
@@ -208,7 +207,7 @@ size_t pc_tls13_build_hello_retry_request(uint8_t *out, size_t cap, const uint8_
  * server_certificate_type = RawPublicKey extension (RFC 7250 sec 4.2); otherwise the list is empty.
  * @return bytes written, or 0 on overflow.
  */
-size_t pc_tls13_build_encrypted_extensions_empty(uint8_t *out, size_t cap, proto_bool rpk_server_cert = PROTO_FALSE);
+size_t pc_tls13_build_encrypted_extensions_empty(uint8_t *out, size_t cap, proto_bool rpk_server_cert);
 
 /**
  * @brief Write the synthetic @c message_hash handshake message that replaces ClientHello1 in the

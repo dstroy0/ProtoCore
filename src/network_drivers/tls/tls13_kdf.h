@@ -110,7 +110,7 @@ void pc_tls13_ks_early(const Tls13Kdf *kdf, Tls13KeySchedule *ks);
  * @param ecdhe_len   Length of @p ecdhe (32 for X25519, 64 for the hybrid).
  */
 void pc_tls13_ks_handshake(Tls13KeySchedule *ks, const uint8_t *ecdhe, const uint8_t ch_sh_hash[TLS13_SECRET_LEN],
-                           size_t ecdhe_len = TLS13_SECRET_LEN);
+                           size_t ecdhe_len);
 
 /**
  * @brief Step 3: master_secret and the client/server application traffic secrets.
@@ -137,5 +137,5 @@ void pc_tls13_ks_master(Tls13KeySchedule *ks, const uint8_t ch_sfin_hash[TLS13_S
 void pc_tls13_finished_mac(const Tls13Kdf *kdf, const uint8_t base_secret[TLS13_SECRET_LEN],
                            const uint8_t transcript_hash[TLS13_SECRET_LEN], uint8_t out[TLS13_SECRET_LEN]);
 
-#endif // PC_ENABLE_HTTP3
+#endif // PC_ENABLE_HTTP3 || PC_ENABLE_DTLS
 #endif // PROTOCORE_TLS13_KDF_H

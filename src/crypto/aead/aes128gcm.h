@@ -120,6 +120,6 @@ proto_bool pc_aes128gcm_open(struct pc_aes128gcm_key *k, const uint8_t nonce[PC_
                              size_t aad_len, const uint8_t *ct, size_t ct_len, const uint8_t tag[PC_AES128GCM_TAG_LEN],
                              uint8_t *out);
 
-#endif // PC_ENABLE_HTTP3 || PC_ENABLE_DTLS
+#endif // PC_ENABLE_HTTP3 || PC_ENABLE_DTLS || PC_ENABLE_SMB
 
 #endif // PROTOCORE_AES128GCM_H

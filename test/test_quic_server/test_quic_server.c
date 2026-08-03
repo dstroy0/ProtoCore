@@ -119,7 +119,7 @@ static size_t build_long(uint8_t *out, size_t cap, uint8_t type, const uint8_t *
     wr_pn(out + p, pn, pn_len);
     p += pn_len;
     memcpy(out + p, frames, frame_len);
-    return pc_quic_packet_protect(out, cap, pn_off, pn_len, pn, frame_len, *keys, true);
+    return pc_quic_packet_protect(out, cap, pn_off, pn_len, pn, frame_len, keys, true);
 }
 static size_t build_short(uint8_t *out, size_t cap, const uint8_t *dcid, uint8_t dcl, uint64_t pn, QuicPacketKeys *keys,
                           const uint8_t *frames, size_t frame_len)
@@ -130,7 +130,7 @@ static size_t build_short(uint8_t *out, size_t cap, const uint8_t *dcid, uint8_t
     size_t pn_off = 1 + dcl;
     wr_pn(out + pn_off, pn, pn_len);
     memcpy(out + pn_off + pn_len, frames, frame_len);
-    return pc_quic_packet_protect(out, cap, pn_off, pn_len, pn, frame_len, *keys, false);
+    return pc_quic_packet_protect(out, cap, pn_off, pn_len, pn, frame_len, keys, false);
 }
 static size_t open_long(const uint8_t *dg, size_t len, QuicPacketKeys *keys, uint8_t *plain, size_t *wire,
                         uint8_t *type)
@@ -154,14 +154,14 @@ static size_t open_long(const uint8_t *dg, size_t len, QuicPacketKeys *keys, uin
     static uint8_t work[2048];
     memcpy(work, dg, *wire);
     uint64_t pn = 0;
-    return pc_quic_packet_unprotect(work, off, (size_t)length, 0, *keys, true, plain, &pn);
+    return pc_quic_packet_unprotect(work, off, (size_t)length, 0, keys, true, plain, &pn);
 }
 static size_t open_short(const uint8_t *dg, size_t len, uint8_t dcl, QuicPacketKeys *keys, uint8_t *plain)
 {
     static uint8_t work[2048];
     memcpy(work, dg, len);
     uint64_t pn = 0;
-    return pc_quic_packet_unprotect(work, 1 + dcl, len - (1 + dcl), 0, *keys, false, plain, &pn);
+    return pc_quic_packet_unprotect(work, 1 + dcl, len - (1 + dcl), 0, keys, false, plain, &pn);
 }
 static size_t extract_crypto(const uint8_t *p, size_t len, uint8_t *out)
 {
@@ -275,8 +275,7 @@ static bool response_ok(QuicPacketKeys *ap_s)
                 break;
             }
             fo += n;
-            if (!(f.type >= QUIC_FT_STREAM && f.type <= QUIC_FT_STREAM + 7 &&
-                  f.stream.id == 0))
+            if (!(f.type >= QUIC_FT_STREAM && f.type <= QUIC_FT_STREAM + 7 && f.stream.id == 0))
             {
                 continue;
             }
@@ -362,8 +361,8 @@ void test_quic_server_http3_get()
     memset(frames + fl, 0, 1100 - fl);
     fl = 1100;
     uint8_t dg[1500];
-    size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID,
-                           sizeof(CLIENT_SCID), 0, &init.client, frames, fl);
+    size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
+                           &init.client, frames, fl);
 
     // Deliver it: pc_quic_server opens the connection and produces the server flight.
     g_out_n = 0;
@@ -410,15 +409,15 @@ void test_quic_server_http3_get()
     uint8_t ifr[64];
     size_t ifl = pc_quic_build_ack(ifr, sizeof(ifr), 0, 0, 0);
     uint8_t idg[256];
-    size_t idl = build_long(idg, sizeof(idg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID,
-                            sizeof(CLIENT_SCID), 1, &init.client, ifr, ifl);
+    size_t idl = build_long(idg, sizeof(idg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID),
+                            1, &init.client, ifr, ifl);
     uint8_t cfin[36] = {TLS_HS_FINISHED, 0x00, 0x00, 0x20};
     pc_tls13_finished_mac(&TLS13_KDF, cks.client_hs_traffic, chsf, cfin + 4);
     uint8_t hfr[64];
     size_t hfl = pc_quic_build_ack(hfr, sizeof(hfr), 0, 0, 0);
     hfl += pc_quic_build_crypto(hfr + hfl, sizeof(hfr) - hfl, 0, cfin, sizeof(cfin));
-    size_t hdl = build_long(idg + idl, sizeof(idg) - idl, QUIC_LP_HANDSHAKE, ODCID, sizeof(ODCID),
-                            CLIENT_SCID, sizeof(CLIENT_SCID), 0, &hs_c, hfr, hfl);
+    size_t hdl = build_long(idg + idl, sizeof(idg) - idl, QUIC_LP_HANDSHAKE, ODCID, sizeof(ODCID), CLIENT_SCID,
+                            sizeof(CLIENT_SCID), 0, &hs_c, hfr, hfl);
     g_out_n = 0;
     TEST_ASSERT_TRUE(pc_quic_server_ingest(idg, idl + hdl, "192.0.2.10", 40000));
     pc_quic_server_poll(0); // drains HANDSHAKE_DONE + the server's control/QPACK streams (ignored)
@@ -482,8 +481,8 @@ void test_idle_connection_reaped()
     memset(frames + fl, 0, 1100 - fl);
     fl = 1100;
     uint8_t dg[1500];
-    size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID,
-                           sizeof(CLIENT_SCID), 0, &init.client, frames, fl);
+    size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
+                           &init.client, frames, fl);
     pc_quic_server_ingest(dg, dl, "192.0.2.10", 40000);
     pc_quic_server_poll(now);
     TEST_ASSERT_EQUAL_UINT8(1, pc_quic_server_active_conns());
@@ -516,8 +515,8 @@ static size_t make_min_initial(uint8_t *dg, size_t cap, const uint8_t *dcid, uin
     pc_quic_derive_initial_secrets(dcid, dcl, &init);
     uint8_t frames[64];
     size_t fl = pc_quic_build_ack(frames, sizeof(frames), 0, 0, 0);
-    return build_long(dg, cap, QUIC_LP_INITIAL, dcid, dcl, CLIENT_SCID, sizeof(CLIENT_SCID), 0,
-                      &init.client, frames, fl);
+    return build_long(dg, cap, QUIC_LP_INITIAL, dcid, dcl, CLIENT_SCID, sizeof(CLIENT_SCID), 0, &init.client, frames,
+                      fl);
 }
 
 void test_quic_server_input_guards()
@@ -655,8 +654,8 @@ void test_quic_server_no_out_sink()
     memset(frames + fl, 0, 1100 - fl);
     fl = 1100;
     uint8_t dg[1500];
-    size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID,
-                           sizeof(CLIENT_SCID), 0, &init.client, frames, fl);
+    size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
+                           &init.client, frames, fl);
 
     TEST_ASSERT_TRUE(pc_quic_server_ingest(dg, dl, "192.0.2.10", 40000));
     pc_quic_server_poll(0); // generates a handshake-response flight that server_send must drop silently
@@ -740,16 +739,16 @@ void test_quic_server_route_header_edges()
     // version/type guard's "type != INITIAL" branch keeps it from opening a new connection.
     uint8_t short_dcid[4] = {0x11, 0x22, 0x33, 0x44};
     uint8_t hs_hdr[64];
-    size_t hs_len = pc_quic_build_long_header(hs_hdr, sizeof(hs_hdr), QUIC_LP_HANDSHAKE, QUIC_VERSION_1,
-                                              short_dcid, sizeof(short_dcid), CLIENT_SCID, sizeof(CLIENT_SCID), 1);
+    size_t hs_len = pc_quic_build_long_header(hs_hdr, sizeof(hs_hdr), QUIC_LP_HANDSHAKE, QUIC_VERSION_1, short_dcid,
+                                              sizeof(short_dcid), CLIENT_SCID, sizeof(CLIENT_SCID), 1);
     TEST_ASSERT_TRUE(pc_quic_server_ingest(hs_hdr, hs_len, "192.0.2.11", 40001));
 
     // A long-header Initial with an unsupported version: the "version == 1" branch goes false and
     // short-circuits before the type check.
     uint8_t other_dcid[8] = {0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78};
     uint8_t ver_hdr[64];
-    size_t ver_len = pc_quic_build_long_header(ver_hdr, sizeof(ver_hdr), QUIC_LP_INITIAL, 0xAABBCCDDu,
-                                               other_dcid, sizeof(other_dcid), CLIENT_SCID, sizeof(CLIENT_SCID), 1);
+    size_t ver_len = pc_quic_build_long_header(ver_hdr, sizeof(ver_hdr), QUIC_LP_INITIAL, 0xAABBCCDDu, other_dcid,
+                                               sizeof(other_dcid), CLIENT_SCID, sizeof(CLIENT_SCID), 1);
     TEST_ASSERT_TRUE(pc_quic_server_ingest(ver_hdr, ver_len, "192.0.2.12", 40002));
 
     // A long-header HANDSHAKE packet whose DCID is exactly the open connection's SCID (SERVER_SCID):
@@ -757,8 +756,8 @@ void test_quic_server_route_header_edges()
     // compare is short-circuited away).
     uint8_t scid_hdr[64];
     size_t scid_hdr_len =
-        pc_quic_build_long_header(scid_hdr, sizeof(scid_hdr), QUIC_LP_HANDSHAKE, QUIC_VERSION_1,
-                                  SERVER_SCID, sizeof(SERVER_SCID), CLIENT_SCID, sizeof(CLIENT_SCID), 1);
+        pc_quic_build_long_header(scid_hdr, sizeof(scid_hdr), QUIC_LP_HANDSHAKE, QUIC_VERSION_1, SERVER_SCID,
+                                  sizeof(SERVER_SCID), CLIENT_SCID, sizeof(CLIENT_SCID), 1);
     TEST_ASSERT_TRUE(pc_quic_server_ingest(scid_hdr, scid_hdr_len, "192.0.2.13", 40003));
 
     pc_quic_server_poll(0);
@@ -802,8 +801,8 @@ void test_quic_server_close_reaped_before_idle()
     uint8_t frames0[64];
     size_t fl0 = pc_quic_build_ack(frames0, sizeof(frames0), 0, 0, 0);
     uint8_t dg0[256];
-    size_t dl0 = build_long(dg0, sizeof(dg0), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID,
-                            sizeof(CLIENT_SCID), 0, &init.client, frames0, fl0);
+    size_t dl0 = build_long(dg0, sizeof(dg0), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID),
+                            0, &init.client, frames0, fl0);
     TEST_ASSERT_TRUE(pc_quic_server_ingest(dg0, dl0, "192.0.2.20", 40010));
     pc_quic_server_poll(now);
     TEST_ASSERT_EQUAL_UINT8(1, pc_quic_server_active_conns());
@@ -811,8 +810,8 @@ void test_quic_server_close_reaped_before_idle()
     uint8_t cc_frames[64];
     size_t cc_len = pc_quic_build_connection_close(cc_frames, sizeof(cc_frames), 0, 0, NULL, 0);
     uint8_t dg1[256];
-    size_t dl1 = build_long(dg1, sizeof(dg1), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID,
-                            sizeof(CLIENT_SCID), 1, &init.client, cc_frames, cc_len);
+    size_t dl1 = build_long(dg1, sizeof(dg1), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID),
+                            1, &init.client, cc_frames, cc_len);
     TEST_ASSERT_TRUE(pc_quic_server_ingest(dg1, dl1, "192.0.2.20", 40010));
     now += 5; // far short of PC_QUIC_IDLE_MS
     pc_quic_server_poll(now);
@@ -855,8 +854,8 @@ void test_quic_server_on_request_null()
     memset(frames + fl, 0, 1100 - fl);
     fl = 1100;
     uint8_t dg[1500];
-    size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID,
-                           sizeof(CLIENT_SCID), 0, &init.client, frames, fl);
+    size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
+                           &init.client, frames, fl);
 
     g_out_n = 0;
     TEST_ASSERT_TRUE(pc_quic_server_ingest(dg, dl, "192.0.2.10", 40000));
@@ -899,15 +898,15 @@ void test_quic_server_on_request_null()
     uint8_t ifr[64];
     size_t ifl = pc_quic_build_ack(ifr, sizeof(ifr), 0, 0, 0);
     uint8_t idg[256];
-    size_t idl = build_long(idg, sizeof(idg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID,
-                            sizeof(CLIENT_SCID), 1, &init.client, ifr, ifl);
+    size_t idl = build_long(idg, sizeof(idg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID),
+                            1, &init.client, ifr, ifl);
     uint8_t cfin[36] = {TLS_HS_FINISHED, 0x00, 0x00, 0x20};
     pc_tls13_finished_mac(&TLS13_KDF, cks.client_hs_traffic, chsf, cfin + 4);
     uint8_t hfr[64];
     size_t hfl = pc_quic_build_ack(hfr, sizeof(hfr), 0, 0, 0);
     hfl += pc_quic_build_crypto(hfr + hfl, sizeof(hfr) - hfl, 0, cfin, sizeof(cfin));
-    size_t hdl = build_long(idg + idl, sizeof(idg) - idl, QUIC_LP_HANDSHAKE, ODCID, sizeof(ODCID),
-                            CLIENT_SCID, sizeof(CLIENT_SCID), 0, &hs_c, hfr, hfl);
+    size_t hdl = build_long(idg + idl, sizeof(idg) - idl, QUIC_LP_HANDSHAKE, ODCID, sizeof(ODCID), CLIENT_SCID,
+                            sizeof(CLIENT_SCID), 0, &hs_c, hfr, hfl);
     g_out_n = 0;
     TEST_ASSERT_TRUE(pc_quic_server_ingest(idg, idl + hdl, "192.0.2.10", 40000));
     pc_quic_server_poll(0);

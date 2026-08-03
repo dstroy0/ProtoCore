@@ -110,23 +110,23 @@ void pc_quic_tls_server_init(QuicTls *qt, const QuicTlsConfig *cfg);
 /**
  * @brief Feed in-order CRYPTO stream bytes for encryption level @p level.
  *
- * Consumes as many complete handshake messages as @p data holds. At QuicEnc::QUIC_ENC_INITIAL it expects the
+ * Consumes as many complete handshake messages as @p data holds. At QUIC_ENC_INITIAL it expects the
  * ClientHello and, on success, builds the whole server flight and derives the Handshake + 1-RTT keys.
- * At QuicEnc::QUIC_ENC_HANDSHAKE it expects the client Finished and verifies it. On a fatal error it sets the
+ * At QUIC_ENC_HANDSHAKE it expects the client Finished and verifies it. On a fatal error it sets the
  * state to QTLS_FAILED and an alert. @return the number of leading bytes of @p data consumed (a
  * partial trailing message is left for the next call).
  */
 size_t pc_quic_tls_recv_crypto(QuicTls *qt, int level, const uint8_t *data, size_t len);
 
 /**
- * @brief The pending outbound CRYPTO flight for @p level (QuicEnc::QUIC_ENC_INITIAL / QuicEnc::QUIC_ENC_HANDSHAKE).
+ * @brief The pending outbound CRYPTO flight for @p level (QUIC_ENC_INITIAL / QUIC_ENC_HANDSHAKE).
  * @return a pointer to the flight bytes and its length via @p len (0 if none). The transport engine
  * fragments these into CRYPTO frames and tracks its own send offset / retransmission.
  */
 const uint8_t *pc_quic_tls_flight(const QuicTls *qt, int level, size_t *len);
 
 /**
- * @brief The packet-protection keys for @p level (QuicEnc::QUIC_ENC_HANDSHAKE / QuicEnc::QUIC_ENC_APP), @p is_server
+ * @brief The packet-protection keys for @p level (QUIC_ENC_HANDSHAKE / QUIC_ENC_APP), @p is_server
  * picking the seal (server) or open (client) direction. @return NULL if those keys are not ready.
  */
 QuicPacketKeys *pc_quic_tls_keys(QuicTls *qt, int level, proto_bool is_server);

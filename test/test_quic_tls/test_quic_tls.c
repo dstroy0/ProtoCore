@@ -457,7 +457,8 @@ void test_quic_tls_cert_size_boundary_emit_fails()
     uint8_t scratch[4096];
     uint8_t tp_enc[512];
     size_t tp_len = pc_quic_tp_encode(&cfg.params, tp_enc, sizeof(tp_enc));
-    size_t ee = pc_tls13_build_encrypted_extensions(scratch, sizeof(scratch), tp_enc, tp_len);
+    size_t ee =
+        pc_tls13_build_encrypted_extensions(scratch, sizeof(scratch), tp_enc, tp_len, /*rpk_server_cert=*/PROTO_FALSE);
     size_t cert_overhead = pc_tls13_build_certificate(scratch, sizeof(scratch), CERT, 0); // fixed part only
     uint8_t z[32] = {0};
     size_t cv = pc_tls13_build_cert_verify(scratch, sizeof(scratch), z, cfg.ed25519_seed);
@@ -1147,7 +1148,7 @@ void test_hybrid_key_share_entry_skipping()
     ch[hs_len_at + 2] = (uint8_t)hs_len;
 
     Tls13ClientHello parsed;
-    TEST_ASSERT_TRUE(pc_tls13_parse_client_hello(ch, p, &parsed));
+    TEST_ASSERT_TRUE(pc_tls13_parse_client_hello(ch, p, &parsed, /*dtls=*/PROTO_FALSE));
     TEST_ASSERT_TRUE(parsed.has_hybrid_share); // the third entry was picked up
     TEST_ASSERT_FALSE(parsed.has_key_share);   // neither unusable entry was mistaken for X25519
     TEST_ASSERT_TRUE(parsed.offers_x25519mlkem768);

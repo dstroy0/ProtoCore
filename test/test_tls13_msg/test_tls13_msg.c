@@ -97,7 +97,7 @@ void test_parse_client_hello()
     uint8_t msg[256];
     size_t n = hx(CH, msg, sizeof(msg));
     Tls13ClientHello ch;
-    TEST_ASSERT_TRUE(pc_tls13_parse_client_hello(msg, n, &ch));
+    TEST_ASSERT_TRUE(pc_tls13_parse_client_hello(msg, n, &ch, /*dtls=*/PROTO_FALSE));
     TEST_ASSERT_TRUE(ch.has_key_share);
     uint8_t exp_pub[32];
     hx("99381de560e4bd43d23d8e435a7dbafeb3c06e51c13cae4d5413691e529aaf2c", exp_pub, 32);
@@ -118,7 +118,8 @@ void test_build_server_hello()
     hx("a6af06a4121860dc5e6e60249cd34c95930c8ac5cb1434dac155772ed3e26928", random, 32);
     hx("c9828876112095fe66762bdbf7c672e156d6cc253b833df1dd69b1b04e751f0f", pub, 32);
     uint8_t out[128];
-    size_t n = pc_tls13_build_server_hello(out, sizeof(out), random, NULL, 0, pub);
+    size_t n = pc_tls13_build_server_hello(out, sizeof(out), random, NULL, 0, pub, 32, TLS_GROUP_X25519,
+                                           /*dtls=*/PROTO_FALSE, /*conn_id=*/NULL, 0);
     TEST_ASSERT_EQUAL_UINT(elen, n);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(exp, out, elen);
 }
@@ -152,7 +153,7 @@ void test_encrypted_extensions()
 {
     uint8_t tp[] = {0x04, 0x01, 0x20}; // a tiny transport-params blob
     uint8_t out[64];
-    size_t n = pc_tls13_build_encrypted_extensions(out, sizeof(out), tp, sizeof(tp));
+    size_t n = pc_tls13_build_encrypted_extensions(out, sizeof(out), tp, sizeof(tp), /*rpk_server_cert=*/PROTO_FALSE);
     TEST_ASSERT_TRUE(n > 0);
     // Handshake header: type 8, 24-bit length = n - 4.
     TEST_ASSERT_EQUAL_UINT8(TLS_HS_ENCRYPTED_EXTENSIONS, out[0]);
@@ -268,7 +269,8 @@ void test_tls13_malformed_extensions()
     for (size_t k = 0; k < sizeof(cases) / sizeof(cases[0]); k++)
     {
         size_t n = build_ch(msg, cases[k].ext, cases[k].elen);
-        TEST_ASSERT_TRUE(pc_tls13_parse_client_hello(msg, n, &ch)); // malformed ext skipped, not fatal
+        TEST_ASSERT_TRUE(
+            pc_tls13_parse_client_hello(msg, n, &ch, /*dtls=*/PROTO_FALSE)); // malformed ext skipped, not fatal
     }
 }
 
@@ -277,23 +279,28 @@ void test_tls13_parse_guards()
 {
     Tls13ClientHello ch;
     uint8_t bad_type[4] = {0x02, 0, 0, 0};
-    TEST_ASSERT_FALSE(pc_tls13_parse_client_hello(bad_type, sizeof(bad_type), &ch)); // wrong hs type
+    TEST_ASSERT_FALSE(
+        pc_tls13_parse_client_hello(bad_type, sizeof(bad_type), &ch, /*dtls=*/PROTO_FALSE)); // wrong hs type
     uint8_t short_hdr[2] = {TLS_HS_CLIENT_HELLO, 0x00};
-    TEST_ASSERT_FALSE(pc_tls13_parse_client_hello(short_hdr, sizeof(short_hdr), &ch)); // r_u24 body len
+    TEST_ASSERT_FALSE(
+        pc_tls13_parse_client_hello(short_hdr, sizeof(short_hdr), &ch, /*dtls=*/PROTO_FALSE)); // r_u24 body len
     uint8_t big_body[4] = {TLS_HS_CLIENT_HELLO, 0x00, 0x00, 0xFF};
-    TEST_ASSERT_FALSE(pc_tls13_parse_client_hello(big_body, sizeof(big_body), &ch)); // body len > msg
+    TEST_ASSERT_FALSE(
+        pc_tls13_parse_client_hello(big_body, sizeof(big_body), &ch, /*dtls=*/PROTO_FALSE)); // body len > msg
     uint8_t no_ver[5] = {TLS_HS_CLIENT_HELLO, 0x00, 0x00, 0x01, 0x03};
-    TEST_ASSERT_FALSE(pc_tls13_parse_client_hello(no_ver, sizeof(no_ver), &ch)); // r_u16 legacy_version
+    TEST_ASSERT_FALSE(
+        pc_tls13_parse_client_hello(no_ver, sizeof(no_ver), &ch, /*dtls=*/PROTO_FALSE)); // r_u16 legacy_version
 
     // session id length > 32: body_len 35 = version(2)+random(32)+sid_len(1).
     uint8_t sid_big[39] = {TLS_HS_CLIENT_HELLO, 0x00, 0x00, 0x23, 0x03, 0x03};
     sid_big[38] = 33;
-    TEST_ASSERT_FALSE(pc_tls13_parse_client_hello(sid_big, sizeof(sid_big), &ch)); // sid_len > 32
+    TEST_ASSERT_FALSE(pc_tls13_parse_client_hello(sid_big, sizeof(sid_big), &ch, /*dtls=*/PROTO_FALSE)); // sid_len > 32
 
     // session id length 32 but the bytes are not present (r_take fails).
     uint8_t sid_trunc[39] = {TLS_HS_CLIENT_HELLO, 0x00, 0x00, 0x23, 0x03, 0x03};
     sid_trunc[38] = 32;
-    TEST_ASSERT_FALSE(pc_tls13_parse_client_hello(sid_trunc, sizeof(sid_trunc), &ch)); // sid r_take
+    TEST_ASSERT_FALSE(
+        pc_tls13_parse_client_hello(sid_trunc, sizeof(sid_trunc), &ch, /*dtls=*/PROTO_FALSE)); // sid r_take
 
     // A valid-through-extensions base, then corrupt one internal length field each.
     uint8_t base[64];
@@ -301,14 +308,14 @@ void test_tls13_parse_guards()
     uint8_t v[64];
     memcpy(v, base, bn);
     v[40] = 3; // cipher_suites length odd
-    TEST_ASSERT_FALSE(pc_tls13_parse_client_hello(v, bn, &ch));
+    TEST_ASSERT_FALSE(pc_tls13_parse_client_hello(v, bn, &ch, /*dtls=*/PROTO_FALSE));
     memcpy(v, base, bn);
     v[43] = 255; // compression_methods length overruns
-    TEST_ASSERT_FALSE(pc_tls13_parse_client_hello(v, bn, &ch));
+    TEST_ASSERT_FALSE(pc_tls13_parse_client_hello(v, bn, &ch, /*dtls=*/PROTO_FALSE));
     memcpy(v, base, bn);
     v[45] = 0xFF;
     v[46] = 0xFF; // extensions_length overruns
-    TEST_ASSERT_FALSE(pc_tls13_parse_client_hello(v, bn, &ch));
+    TEST_ASSERT_FALSE(pc_tls13_parse_client_hello(v, bn, &ch, /*dtls=*/PROTO_FALSE));
 
     // ext_total unreadable: message ends exactly after compression_methods.
     uint8_t no_ext[44] = {TLS_HS_CLIENT_HELLO, 0x00, 0x00, 0x28, 0x03, 0x03};
@@ -318,13 +325,13 @@ void test_tls13_parse_guards()
     no_ext[41] = 0x13;
     no_ext[42] = 0x01; // cipher_suites
     no_ext[43] = 0x00; // comp_len 0 -> body ends here, no ext_total
-    TEST_ASSERT_FALSE(pc_tls13_parse_client_hello(no_ext, sizeof(no_ext), &ch));
+    TEST_ASSERT_FALSE(pc_tls13_parse_client_hello(no_ext, sizeof(no_ext), &ch, /*dtls=*/PROTO_FALSE));
 
     // An extension whose declared length runs past the buffer.
     uint8_t bad_ext[4] = {0x00, 0x0a, 0x00, 0xFF}; // ext len 255, no body
     uint8_t msg[64];
     size_t mn = build_ch(msg, bad_ext, sizeof(bad_ext));
-    TEST_ASSERT_FALSE(pc_tls13_parse_client_hello(msg, mn, &ch));
+    TEST_ASSERT_FALSE(pc_tls13_parse_client_hello(msg, mn, &ch, /*dtls=*/PROTO_FALSE));
 }
 
 // Builder capacity guards: a buffer too small for a w_bytes copy, and cert_verify_content overflow.
@@ -332,7 +339,9 @@ void test_tls13_builder_cap_guards()
 {
     uint8_t out[16];
     uint8_t r32[32] = {0}, pub[32] = {0};
-    TEST_ASSERT_EQUAL_UINT(0, pc_tls13_build_server_hello(out, 10, r32, NULL, 0, pub)); // w_bytes(random) overruns
+    TEST_ASSERT_EQUAL_UINT(0, pc_tls13_build_server_hello(out, 10, r32, NULL, 0, pub, 32, TLS_GROUP_X25519,
+                                                          /*dtls=*/PROTO_FALSE, /*conn_id=*/NULL,
+                                                          0)); // w_bytes(random) overruns
     uint8_t thash[32] = {0};
     TEST_ASSERT_EQUAL_UINT(0, pc_tls13_cert_verify_content(out, 10, thash, true)); // total > cap
 }
@@ -351,7 +360,7 @@ void test_tls13_extension_and_truncation_coverage()
     ct[40] = 0x02;
     ct[41] = 0x13;
     ct[42] = 0x01; // cipher_suites, then no compression_methods byte
-    TEST_ASSERT_FALSE(pc_tls13_parse_client_hello(ct, sizeof(ct), &ch));
+    TEST_ASSERT_FALSE(pc_tls13_parse_client_hello(ct, sizeof(ct), &ch, /*dtls=*/PROTO_FALSE));
 
     // One ClientHello carrying malformed and valid extensions. Malformed bodies return
     // from parse_extension without failing the overall parse; the valid ALPN + pc_quic_tp set
@@ -369,7 +378,7 @@ void test_tls13_extension_and_truncation_coverage()
     };
     uint8_t msg[256];
     size_t n = build_ch(msg, ex, sizeof(ex));
-    TEST_ASSERT_TRUE(pc_tls13_parse_client_hello(msg, n, &ch));
+    TEST_ASSERT_TRUE(pc_tls13_parse_client_hello(msg, n, &ch, /*dtls=*/PROTO_FALSE));
     TEST_ASSERT_TRUE(ch.offers_h3_alpn);
     TEST_ASSERT_NOT_NULL(ch.pc_quic_tp);
     TEST_ASSERT_EQUAL_UINT(3, (unsigned)ch.pc_quic_tp_len);
@@ -476,35 +485,35 @@ void test_tls13_client_hello_field_truncations()
     uint8_t msg[64];
 
     // No bytes at all: even the handshake type cannot be read.
-    TEST_ASSERT_FALSE(pc_tls13_parse_client_hello(msg, 0, &ch));
+    TEST_ASSERT_FALSE(pc_tls13_parse_client_hello(msg, 0, &ch, /*dtls=*/PROTO_FALSE));
 
     // legacy_version present, but fewer than 32 random bytes follow.
     size_t n = build_ch_stub(msg, 10);
-    TEST_ASSERT_FALSE(pc_tls13_parse_client_hello(msg, n, &ch));
+    TEST_ASSERT_FALSE(pc_tls13_parse_client_hello(msg, n, &ch, /*dtls=*/PROTO_FALSE));
 
     // Body ends exactly after the random: no session-id length byte.
     n = build_ch_stub(msg, 34);
-    TEST_ASSERT_FALSE(pc_tls13_parse_client_hello(msg, n, &ch));
+    TEST_ASSERT_FALSE(pc_tls13_parse_client_hello(msg, n, &ch, /*dtls=*/PROTO_FALSE));
 
     // Body ends after the (empty) session id: no cipher_suites length.
     n = build_ch_stub(msg, 36);
-    TEST_ASSERT_FALSE(pc_tls13_parse_client_hello(msg, n, &ch));
+    TEST_ASSERT_FALSE(pc_tls13_parse_client_hello(msg, n, &ch, /*dtls=*/PROTO_FALSE));
 
     // cipher_suites length announces more bytes than the body holds.
     n = build_ch_stub(msg, 40);
     msg[4 + 35] = 0x00;
     msg[4 + 36] = 0x20; // 32 octets of cipher suites, but only 2 follow
-    TEST_ASSERT_FALSE(pc_tls13_parse_client_hello(msg, n, &ch));
+    TEST_ASSERT_FALSE(pc_tls13_parse_client_hello(msg, n, &ch, /*dtls=*/PROTO_FALSE));
 
     // extensions_length says 1, so the extension type's two bytes cannot be read.
     uint8_t one[1] = {0x00};
     n = build_ch(msg, one, sizeof(one));
-    TEST_ASSERT_FALSE(pc_tls13_parse_client_hello(msg, n, &ch));
+    TEST_ASSERT_FALSE(pc_tls13_parse_client_hello(msg, n, &ch, /*dtls=*/PROTO_FALSE));
 
     // extensions_length says 3: the type reads, the extension length's two bytes do not.
     uint8_t three[3] = {0x00, 0x0a, 0x00};
     n = build_ch(msg, three, sizeof(three));
-    TEST_ASSERT_FALSE(pc_tls13_parse_client_hello(msg, n, &ch));
+    TEST_ASSERT_FALSE(pc_tls13_parse_client_hello(msg, n, &ch, /*dtls=*/PROTO_FALSE));
 }
 
 // Extension-body guards that return without failing the overall parse: an oversized supported_groups
@@ -543,7 +552,8 @@ void test_tls13_extension_body_guards()
     for (size_t k = 0; k < sizeof(cases) / sizeof(cases[0]); k++)
     {
         size_t n = build_ch(msg, cases[k].ext, cases[k].elen);
-        TEST_ASSERT_TRUE(pc_tls13_parse_client_hello(msg, n, &ch)); // guard returns, parse survives
+        TEST_ASSERT_TRUE(
+            pc_tls13_parse_client_hello(msg, n, &ch, /*dtls=*/PROTO_FALSE)); // guard returns, parse survives
     }
     // None of the malformed bodies set their flag.
     TEST_ASSERT_FALSE(ch.has_conn_id);
@@ -555,7 +565,7 @@ void test_tls13_extension_body_guards()
         0x00, 0x36, 0x00, 0x03, 0x02, 0xAA, 0xBB,             // connection_id -> AA BB
     };
     size_t n = build_ch(msg, good, sizeof(good));
-    TEST_ASSERT_TRUE(pc_tls13_parse_client_hello(msg, n, &ch));
+    TEST_ASSERT_TRUE(pc_tls13_parse_client_hello(msg, n, &ch, /*dtls=*/PROTO_FALSE));
     TEST_ASSERT_NOT_NULL(ch.cookie);
     TEST_ASSERT_EQUAL_UINT(3, (unsigned)ch.cookie_len);
     TEST_ASSERT_EQUAL_UINT8(0x11, ch.cookie[0]);
@@ -576,7 +586,7 @@ void test_tls13_builders_dtls_codepoints()
     uint8_t out[128];
 
     size_t n = pc_tls13_build_server_hello(out, sizeof(out), random, NULL, 0, pub, 32, TLS_GROUP_X25519,
-                                           /*dtls=*/true);
+                                           /*dtls=*/true, /*conn_id=*/NULL, 0);
     TEST_ASSERT_TRUE(n > 0);
     TEST_ASSERT_EQUAL_UINT8(0xFE, out[4]); // legacy_version = DTLS 1.2
     TEST_ASSERT_EQUAL_UINT8(0xFD, out[5]);
@@ -585,7 +595,8 @@ void test_tls13_builders_dtls_codepoints()
     TEST_ASSERT_EQUAL_UINT8(0xFC, out[n - 1]);
 
     // The TLS/QUIC form of the same call uses 0x0303 / 0x0304.
-    n = pc_tls13_build_server_hello(out, sizeof(out), random, NULL, 0, pub, 32, TLS_GROUP_X25519, /*dtls=*/false);
+    n = pc_tls13_build_server_hello(out, sizeof(out), random, NULL, 0, pub, 32, TLS_GROUP_X25519, /*dtls=*/false,
+                                    /*conn_id=*/NULL, 0);
     TEST_ASSERT_TRUE(n > 0);
     TEST_ASSERT_EQUAL_UINT8(0x03, out[4]);
     TEST_ASSERT_EQUAL_UINT8(0x03, out[5]);
@@ -631,8 +642,8 @@ void test_tls13_builder_overflow_guards()
                                                                  sizeof(cookie), /*dtls=*/true));
 
     // The empty (DTLS-profile) EncryptedExtensions is 6 bytes; 5 is not enough.
-    TEST_ASSERT_EQUAL_UINT(6, pc_tls13_build_encrypted_extensions_empty(out, 6));
-    TEST_ASSERT_EQUAL_UINT(0, pc_tls13_build_encrypted_extensions_empty(out, 5));
+    TEST_ASSERT_EQUAL_UINT(6, pc_tls13_build_encrypted_extensions_empty(out, 6, /*rpk_server_cert=*/PROTO_FALSE));
+    TEST_ASSERT_EQUAL_UINT(0, pc_tls13_build_encrypted_extensions_empty(out, 5, /*rpk_server_cert=*/PROTO_FALSE));
 
     // message_hash is 36 bytes; 35 is not enough.
     uint8_t h[32];
@@ -642,9 +653,10 @@ void test_tls13_builder_overflow_guards()
 
     // The QUIC EncryptedExtensions (ALPN + transport params) in a buffer one byte short.
     const uint8_t tp[3] = {0x04, 0x01, 0x20};
-    need = pc_tls13_build_encrypted_extensions(out, sizeof(out), tp, sizeof(tp));
+    need = pc_tls13_build_encrypted_extensions(out, sizeof(out), tp, sizeof(tp), /*rpk_server_cert=*/PROTO_FALSE);
     TEST_ASSERT_TRUE(need > 0);
-    TEST_ASSERT_EQUAL_UINT(0, pc_tls13_build_encrypted_extensions(out, need - 1, tp, sizeof(tp)));
+    TEST_ASSERT_EQUAL_UINT(
+        0, pc_tls13_build_encrypted_extensions(out, need - 1, tp, sizeof(tp), /*rpk_server_cert=*/PROTO_FALSE));
 
     // Certificate: a buffer one byte short of what a small DER cert needs.
     uint8_t der[8] = {0x30, 0x06, 0x02, 0x01, 0x01, 0x02, 0x01, 0x02};
@@ -693,7 +705,8 @@ void test_tls13_build_server_hello_conn_id()
     const uint8_t conn_id[3] = {0xC1, 0xC2, 0xC3};
 
     uint8_t out[128];
-    size_t without = pc_tls13_build_server_hello(out, sizeof(out), random, NULL, 0, pub);
+    size_t without = pc_tls13_build_server_hello(out, sizeof(out), random, NULL, 0, pub, 32, TLS_GROUP_X25519,
+                                                 /*dtls=*/PROTO_FALSE, /*conn_id=*/NULL, 0);
     size_t with = pc_tls13_build_server_hello(out, sizeof(out), random, NULL, 0, pub, 32, TLS_GROUP_X25519,
                                               /*dtls=*/false, conn_id, sizeof(conn_id));
     TEST_ASSERT_TRUE(with > without);

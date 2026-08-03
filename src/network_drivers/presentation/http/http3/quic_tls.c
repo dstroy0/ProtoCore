@@ -18,15 +18,15 @@
 #include <string.h>
 
 // TLS alert codes we may raise (RFC 8446 sec 6).
-#define E 10
-#define E 40
-#define R 47
-#define R 50
-#define R 51
-#define N 70
-#define R 80
-#define N 109
-#define L 120
+#define TLS_ALERT_UNEXPECTED_MESSAGE 10
+#define TLS_ALERT_HANDSHAKE_FAILURE 40
+#define TLS_ALERT_ILLEGAL_PARAMETER 47
+#define TLS_ALERT_DECODE_ERROR 50
+#define TLS_ALERT_DECRYPT_ERROR 51
+#define TLS_ALERT_PROTOCOL_VERSION 70
+#define TLS_ALERT_INTERNAL_ERROR 80
+#define TLS_ALERT_MISSING_EXTENSION 109
+#define TLS_ALERT_NO_APPLICATION_PROTOCOL 120
 
 /// Capacity of the encoded-transport-parameters scratch the EncryptedExtensions builder is fed.
 #define PC_QUIC_TLS_TP_ENC_CAP 512
@@ -41,7 +41,7 @@
 // and PC_H3_CRYPTO_BUF is an overridable macro (protocore_config.h), so pin the relationship here:
 // a build that shrank it would silently make the excluded path reachable.
 static_assert(PC_H3_CRYPTO_BUF >= PC_QUIC_TLS_EE_MAX,
-              "PC_H3_CRYPTO_BUF (QuicTls::flight_hs) must hold a whole EncryptedExtensions: the fixed "
+              "PC_H3_CRYPTO_BUF (QuicTls.flight_hs) must hold a whole EncryptedExtensions: the fixed "
               "512-byte transport-parameter buffer plus the ALPN and extension framing");
 
 static void fail(QuicTls *qt, uint8_t alert)
@@ -65,7 +65,7 @@ static proto_bool emit(QuicTls *qt, uint8_t *flight, size_t cap, size_t *plen, s
     // this only fires if that contract is ever broken - it keeps flight+*plen in bounds regardless).
     if (!written || written > cap - *plen) // GCOVR_EXCL_LINE  every caller passes the builder exactly cap - *plen
     {                                      // as its own capacity, so a non-zero return can never exceed it
-        fail(qt, TlsAlert::TLS_ALERT_INTERNAL_ERROR);
+        fail(qt, TLS_ALERT_INTERNAL_ERROR);
         return PROTO_FALSE;
     }
     pc_sha256_update(&qt->transcript, flight + *plen, written);
@@ -92,8 +92,8 @@ static proto_bool send_hello_retry(QuicTls *qt, const uint8_t *msg, size_t msg_l
     size_t mhn = pc_tls13_build_message_hash(mh, sizeof(mh), ch1_hash);
     if (!mhn) // GCOVR_EXCL_LINE  mh[40] always fits the 36-byte hash
     {
-        fail(qt, TlsAlert::TLS_ALERT_INTERNAL_ERROR); // GCOVR_EXCL_LINE
-        return PROTO_FALSE;                           // GCOVR_EXCL_LINE
+        fail(qt, TLS_ALERT_INTERNAL_ERROR); // GCOVR_EXCL_LINE
+        return PROTO_FALSE;                 // GCOVR_EXCL_LINE
     }
     pc_sha256_update(&qt->transcript, mh, mhn); // message_hash is transcript-only, never sent
 
@@ -113,14 +113,14 @@ static proto_bool send_hello_retry(QuicTls *qt, const uint8_t *msg, size_t msg_l
 static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t msg_len)
 {
     Tls13ClientHello ch;
-    if (!pc_tls13_parse_client_hello(msg, msg_len, &ch))
+    if (!pc_tls13_parse_client_hello(msg, msg_len, &ch, /*dtls=*/PROTO_FALSE))
     {
-        fail(qt, TlsAlert::TLS_ALERT_DECODE_ERROR);
+        fail(qt, TLS_ALERT_DECODE_ERROR);
         return PROTO_FALSE;
     }
     if (!ch.offers_tls13)
     {
-        fail(qt, TlsAlert::TLS_ALERT_PROTOCOL_VERSION);
+        fail(qt, TLS_ALERT_PROTOCOL_VERSION);
         return PROTO_FALSE;
     }
     proto_bool use_hybrid = PROTO_FALSE;
@@ -138,28 +138,28 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
     // A retry that still lacks the hybrid share is fatal - one HRR only, so a client cannot loop us.
     if (qt->hrr_sent && !use_hybrid)
     {
-        fail(qt, TlsAlert::TLS_ALERT_HANDSHAKE_FAILURE);
+        fail(qt, TLS_ALERT_HANDSHAKE_FAILURE);
         return PROTO_FALSE;
     }
 #endif
     if (!ch.offers_ed25519 || (!use_hybrid && (!ch.has_key_share || !ch.offers_x25519)))
     {
-        fail(qt, TlsAlert::TLS_ALERT_HANDSHAKE_FAILURE);
+        fail(qt, TLS_ALERT_HANDSHAKE_FAILURE);
         return PROTO_FALSE;
     }
     if (!ch.offers_h3_alpn)
     {
-        fail(qt, TlsAlert::TLS_ALERT_NO_APPLICATION_PROTOCOL);
+        fail(qt, TLS_ALERT_NO_APPLICATION_PROTOCOL);
         return PROTO_FALSE;
     }
     if (!ch.pc_quic_tp)
     {
-        fail(qt, TlsAlert::TLS_ALERT_MISSING_EXTENSION);
+        fail(qt, TLS_ALERT_MISSING_EXTENSION);
         return PROTO_FALSE;
     }
     if (!pc_quic_tp_parse(ch.pc_quic_tp, ch.pc_quic_tp_len, &qt->peer))
     {
-        fail(qt, TlsAlert::TLS_ALERT_ILLEGAL_PARAMETER);
+        fail(qt, TLS_ALERT_ILLEGAL_PARAMETER);
         return PROTO_FALSE;
     }
     qt->have_peer = PROTO_TRUE;
@@ -177,7 +177,7 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
         uint8_t ml_ss[32];
         if (!pc_mlkem768_encaps(ch.client_mlkem_ek, qt->cfg.mlkem_m, server_share, ml_ss))
         {
-            fail(qt, TlsAlert::TLS_ALERT_HANDSHAKE_FAILURE); // malformed ML-KEM key
+            fail(qt, TLS_ALERT_HANDSHAKE_FAILURE); // malformed ML-KEM key
             return PROTO_FALSE;
         }
         uint8_t x_ss[32];
@@ -212,7 +212,8 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
     // current offset (0 on the happy path, the HRR's end on a retry) and do not reset the length.
     size_t n = pc_tls13_build_server_hello(qt->flight_initial + qt->flight_initial_len,
                                            sizeof(qt->flight_initial) - qt->flight_initial_len, qt->cfg.random,
-                                           ch.session_id, ch.session_id_len, server_share, share_len, group);
+                                           ch.session_id, ch.session_id_len, server_share, share_len, group,
+                                           /*dtls=*/PROTO_FALSE, /*conn_id=*/NULL, /*conn_id_len=*/0);
     if (!emit(qt, qt->flight_initial, sizeof(qt->flight_initial), &qt->flight_initial_len, n)) // GCOVR_EXCL_LINE
     {
         return PROTO_FALSE; // GCOVR_EXCL_LINE  ServerHello always fits flight_initial (classical <=~160B; the
@@ -234,7 +235,8 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
     size_t tp_len = pc_quic_tp_encode(&qt->cfg.params, tp_enc, sizeof(tp_enc));
 
     n = pc_tls13_build_encrypted_extensions(qt->flight_hs + qt->flight_hs_len,
-                                            sizeof(qt->flight_hs) - qt->flight_hs_len, tp_enc, tp_len);
+                                            sizeof(qt->flight_hs) - qt->flight_hs_len, tp_enc, tp_len,
+                                            /*rpk_server_cert=*/PROTO_FALSE);
     if (!emit(qt, qt->flight_hs, sizeof(qt->flight_hs), &qt->flight_hs_len, n)) // GCOVR_EXCL_LINE
     {
         return PROTO_FALSE; // GCOVR_EXCL_LINE  EncryptedExtensions is the first message written into flight_hs and
@@ -283,7 +285,7 @@ static proto_bool process_client_finished(QuicTls *qt, const uint8_t *msg, size_
 {
     if (msg[0] != TLS_HS_FINISHED || msg_len != 4 + 32) // GCOVR_EXCL_LINE  process_message only routes a
     {                                                   // Finished here, so the type arm cannot be taken
-        fail(qt, TlsAlert::TLS_ALERT_DECODE_ERROR);
+        fail(qt, TLS_ALERT_DECODE_ERROR);
         return PROTO_FALSE;
     }
     uint8_t expected[32];
@@ -295,7 +297,7 @@ static proto_bool process_client_finished(QuicTls *qt, const uint8_t *msg, size_
     }
     if (diff)
     {
-        fail(qt, TlsAlert::TLS_ALERT_DECRYPT_ERROR);
+        fail(qt, TLS_ALERT_DECRYPT_ERROR);
         return PROTO_FALSE;
     }
     pc_sha256_update(&qt->transcript, msg, msg_len);
@@ -306,15 +308,15 @@ static proto_bool process_client_finished(QuicTls *qt, const uint8_t *msg, size_
 
 static proto_bool process_message(QuicTls *qt, int level, const uint8_t *msg, size_t msg_len)
 {
-    if (level == QuicEnc::QUIC_ENC_INITIAL && qt->state == QTLS_START && msg[0] == TLS_HS_CLIENT_HELLO)
+    if (level == QUIC_ENC_INITIAL && qt->state == QTLS_START && msg[0] == TLS_HS_CLIENT_HELLO)
     {
         return process_client_hello(qt, msg, msg_len);
     }
-    if (level == QuicEnc::QUIC_ENC_HANDSHAKE && qt->state == QTLS_WAIT_FINISHED && msg[0] == TLS_HS_FINISHED)
+    if (level == QUIC_ENC_HANDSHAKE && qt->state == QTLS_WAIT_FINISHED && msg[0] == TLS_HS_FINISHED)
     {
         return process_client_finished(qt, msg, msg_len);
     }
-    fail(qt, TlsAlert::TLS_ALERT_UNEXPECTED_MESSAGE);
+    fail(qt, TLS_ALERT_UNEXPECTED_MESSAGE);
     return PROTO_FALSE;
 }
 
@@ -356,12 +358,12 @@ size_t pc_quic_tls_recv_crypto(QuicTls *qt, int level, const uint8_t *data, size
 
 const uint8_t *pc_quic_tls_flight(const QuicTls *qt, int level, size_t *len)
 {
-    if (level == QuicEnc::QUIC_ENC_INITIAL)
+    if (level == QUIC_ENC_INITIAL)
     {
         *len = qt->flight_initial_len;
         return qt->flight_initial;
     }
-    if (level == QuicEnc::QUIC_ENC_HANDSHAKE)
+    if (level == QUIC_ENC_HANDSHAKE)
     {
         *len = qt->flight_hs_len;
         return qt->flight_hs;
@@ -372,11 +374,11 @@ const uint8_t *pc_quic_tls_flight(const QuicTls *qt, int level, size_t *len)
 
 QuicPacketKeys *pc_quic_tls_keys(QuicTls *qt, int level, proto_bool is_server)
 {
-    if (level == QuicEnc::QUIC_ENC_HANDSHAKE && qt->hs_keys_ready)
+    if (level == QUIC_ENC_HANDSHAKE && qt->hs_keys_ready)
     {
         return is_server ? &qt->hs_server : &qt->hs_client;
     }
-    if (level == QuicEnc::QUIC_ENC_APP && qt->ap_keys_ready)
+    if (level == QUIC_ENC_APP && qt->ap_keys_ready)
     {
         return is_server ? &qt->ap_server : &qt->ap_client;
     }

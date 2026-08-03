@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_quic_crypto.h
+ * @file quic_crypto.h
  * @brief QUIC packet protection: Initial secrets, AEAD payload protection, header protection,
  *        and the Retry integrity tag (RFC 9001).
  *
@@ -93,7 +93,7 @@ void pc_quic_keys_from_secret(const uint8_t secret[PC_HKDF_HASH_LEN], QuicPacket
  * @return total protected packet length, or 0 on a capacity/parameter error.
  */
 size_t pc_quic_packet_protect(uint8_t *pkt, size_t cap, size_t pn_offset, uint8_t pn_len, uint64_t full_pn,
-                              size_t payload_len, QuicPacketKeys &keys, proto_bool is_long);
+                              size_t payload_len, QuicPacketKeys *keys, proto_bool is_long);
 
 /**
  * @brief Remove header protection and AEAD-open one QUIC packet in place (RFC 9001 sec 5.3/5.4).
@@ -115,7 +115,7 @@ size_t pc_quic_packet_protect(uint8_t *pkt, size_t cap, size_t pn_offset, uint8_
  * @return plaintext length, or (size_t)-1 on parameter error or AEAD authentication failure.
  */
 size_t pc_quic_packet_unprotect(uint8_t *pkt, size_t pn_offset, size_t length, uint64_t largest_pn,
-                                QuicPacketKeys &keys, proto_bool is_long, uint8_t *out, uint64_t *out_pn);
+                                QuicPacketKeys *keys, proto_bool is_long, uint8_t *out, uint64_t *out_pn);
 
 /**
  * @brief Compute the Retry Integrity Tag (RFC 9001 sec 5.8).

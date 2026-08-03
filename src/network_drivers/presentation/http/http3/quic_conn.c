@@ -36,7 +36,7 @@ static_assert(PC_QUIC_MAX_DATAGRAM >= 1200,
 // 1-RTT keys from the TLS handshake. Returns NULL if that level's keys are not available yet.
 static QuicPacketKeys *open_keys(QuicConn *qc, int level)
 {
-    if (level == QuicEnc::QUIC_ENC_INITIAL)
+    if (level == QUIC_ENC_INITIAL)
     {
         return &qc->initial.client;
     }
@@ -44,7 +44,7 @@ static QuicPacketKeys *open_keys(QuicConn *qc, int level)
 }
 static QuicPacketKeys *seal_keys(QuicConn *qc, int level)
 {
-    if (level == QuicEnc::QUIC_ENC_INITIAL)
+    if (level == QUIC_ENC_INITIAL)
     {
         return &qc->initial.server;
     }
@@ -306,7 +306,7 @@ static proto_bool parse_packet_header(const QuicConn *qc, const uint8_t *dg, siz
     if (!is_long)
     {
         // Short header: DCID length is our locally chosen scid_len; the packet runs to datagram end.
-        *level = QuicEnc::QUIC_ENC_APP;
+        *level = QUIC_ENC_APP;
         *pn_offset = 1 + qc->scid_len;
         if (*pn_offset >= len)
         {
@@ -328,11 +328,11 @@ static proto_bool parse_packet_header(const QuicConn *qc, const uint8_t *dg, siz
     }
     if (h.type == QuicLongPacket::QUIC_LP_INITIAL)
     {
-        *level = QuicEnc::QUIC_ENC_INITIAL;
+        *level = QUIC_ENC_INITIAL;
     }
     else if (h.type == QuicLongPacket::QUIC_LP_HANDSHAKE)
     {
-        *level = QuicEnc::QUIC_ENC_HANDSHAKE;
+        *level = QUIC_ENC_HANDSHAKE;
     }
     else
     {
@@ -340,7 +340,7 @@ static proto_bool parse_packet_header(const QuicConn *qc, const uint8_t *dg, siz
     }
 
     size_t off = h.hdr_len;
-    if (*level == QuicEnc::QUIC_ENC_INITIAL && !skip_initial_token(dg, len, &off))
+    if (*level == QUIC_ENC_INITIAL && !skip_initial_token(dg, len, &off))
     {
         return PROTO_FALSE;
     }
@@ -389,7 +389,7 @@ static size_t recv_packet(QuicConn *qc, const uint8_t *dg, size_t len)
     }
     memcpy(work, dg, pkt_len);
     uint64_t pn = 0;
-    size_t pt = pc_quic_packet_unprotect(work, pn_offset, (size_t)payload_length, qc->space[level].largest_rx, *keys,
+    size_t pt = pc_quic_packet_unprotect(work, pn_offset, (size_t)payload_length, qc->space[level].largest_rx, keys,
                                          is_long, plain, &pn);
     if (pt == (size_t)-1)
     {
@@ -403,10 +403,10 @@ static size_t recv_packet(QuicConn *qc, const uint8_t *dg, size_t len)
     qc->space[level].have_rx = PROTO_TRUE;
 
     // Receiving a Handshake packet validates the client's address (lifts anti-amplification).
-    if (level == QuicEnc::QUIC_ENC_HANDSHAKE)
+    if (level == QUIC_ENC_HANDSHAKE)
     {
         qc->address_validated = PROTO_TRUE;
-        qc->space[QuicEnc::QUIC_ENC_INITIAL].discarded = PROTO_TRUE;
+        qc->space[QUIC_ENC_INITIAL].discarded = PROTO_TRUE;
     }
 
     proto_bool ack_eliciting = PROTO_FALSE;
@@ -463,7 +463,7 @@ static size_t build_ack_frame(QuicPnSpace *s, uint8_t *buf, size_t cap)
 static size_t build_crypto_frame(const QuicConn *qc, int level, QuicPnSpace *s, uint8_t *buf, size_t cap,
                                  proto_bool *ae)
 {
-    if (level != QuicEnc::QUIC_ENC_INITIAL && level != QuicEnc::QUIC_ENC_HANDSHAKE)
+    if (level != QUIC_ENC_INITIAL && level != QUIC_ENC_HANDSHAKE)
     {
         return 0;
     }
@@ -493,7 +493,7 @@ static size_t build_crypto_frame(const QuicConn *qc, int level, QuicPnSpace *s, 
 // Append 1-RTT extras (HANDSHAKE_DONE + stream data) at APP level; returns bytes written, sets *ae.
 static size_t build_app_frames(QuicConn *qc, int level, uint8_t *buf, size_t cap, proto_bool *ae)
 {
-    if (level != QuicEnc::QUIC_ENC_APP)
+    if (level != QUIC_ENC_APP)
     {
         return 0;
     }
@@ -566,7 +566,7 @@ static size_t build_frames(QuicConn *qc, int level, uint8_t *buf, size_t cap, pr
 // Long-header packet type for an encryption level.
 static uint8_t level_lp_type(int level)
 {
-    return level == QuicEnc::QUIC_ENC_INITIAL ? QuicLongPacket::QUIC_LP_INITIAL : QuicLongPacket::QUIC_LP_HANDSHAKE;
+    return level == QUIC_ENC_INITIAL ? QuicLongPacket::QUIC_LP_INITIAL : QuicLongPacket::QUIC_LP_HANDSHAKE;
 }
 
 // Bytes a protected packet needs on top of its payload: AEAD tag + packet number, plus the header.
@@ -602,7 +602,7 @@ static size_t build_packet(QuicConn *qc, int level, uint8_t *out, size_t cap)
 
     uint64_t pn = s->next_pn;
     uint8_t pn_len = pc_quic_pn_length(pn, s->largest_acked);
-    proto_bool is_long = (level != QuicEnc::QUIC_ENC_APP);
+    proto_bool is_long = (level != QUIC_ENC_APP);
 
     // Reserve the framing BEFORE filling the payload. build_frames() advances the connection's send
     // offsets (crypto_tx_off, and each stream's tx_off / tx_sent) as it writes, so a payload that
@@ -661,7 +661,7 @@ static size_t build_packet(QuicConn *qc, int level, uint8_t *out, size_t cap)
             return 0; // GCOVR_EXCL_LINE
         }
         p = hn;
-        if (level == QuicEnc::QUIC_ENC_INITIAL)
+        if (level == QUIC_ENC_INITIAL)
         {
             size_t n = pc_quic_varint_encode(out + p, cap - p, 0); // empty token
             if (!n)                                                // GCOVR_EXCL_BR_LINE - reserved in `overhead`
@@ -709,7 +709,7 @@ static size_t build_packet(QuicConn *qc, int level, uint8_t *out, size_t cap)
 
     memcpy(out + p, frames, frame_len);
 
-    size_t total = pc_quic_packet_protect(out, cap, pn_offset, pn_len, pn, frame_len, *keys, is_long);
+    size_t total = pc_quic_packet_protect(out, cap, pn_offset, pn_len, pn, frame_len, keys, is_long);
     if (!total) // GCOVR_EXCL_LINE  the pn_offset bound above already guarantees protect has room, and with
     {
         return 0; // GCOVR_EXCL_LINE  valid keys the AEAD seal cannot otherwise fail
@@ -726,14 +726,14 @@ static size_t build_packet(QuicConn *qc, int level, uint8_t *out, size_t cap)
 // level at which a CONNECTION_CLOSE can still be decrypted by the peer. Falls back to INITIAL.
 static int pc_quic_highest_sealed_level(QuicConn *qc)
 {
-    for (int l = QuicEnc::QUIC_ENC_APP; l >= QuicEnc::QUIC_ENC_INITIAL; l--)
+    for (int l = QUIC_ENC_APP; l >= QUIC_ENC_INITIAL; l--)
     {
         if (!qc->space[l].discarded && seal_keys(qc, l))
         {
             return l;
         }
     }
-    return QuicEnc::QUIC_ENC_INITIAL;
+    return QUIC_ENC_INITIAL;
 }
 
 size_t pc_quic_conn_send(QuicConn *qc, uint8_t *out, size_t cap)
@@ -763,10 +763,9 @@ size_t pc_quic_conn_send(QuicConn *qc, uint8_t *out, size_t cap)
         // Send at the level the error was seen on (the peer holds those keys); if that space has since
         // been discarded, fall back to the highest level we still hold keys for.
         int level = qc->close_level;
-        // GCOVR_EXCL_START  close_level is a uint8_t and QuicEnc::QUIC_ENC_INITIAL is 0, so the underflow
+        // GCOVR_EXCL_START  close_level is a uint8_t and QUIC_ENC_INITIAL is 0, so the underflow
         // arm of the range check below can never be taken; the other three arms are all tested.
-        if (level < QuicEnc::QUIC_ENC_INITIAL || level > QuicEnc::QUIC_ENC_APP || qc->space[level].discarded ||
-            !seal_keys(qc, level))
+        if (level < QUIC_ENC_INITIAL || level > QUIC_ENC_APP || qc->space[level].discarded || !seal_keys(qc, level))
         {
             level = pc_quic_highest_sealed_level(qc);
         }
@@ -783,7 +782,7 @@ size_t pc_quic_conn_send(QuicConn *qc, uint8_t *out, size_t cap)
 
     size_t dg = 0;
     // Coalesce Initial, then Handshake, then 1-RTT into one datagram.
-    for (int level = QuicEnc::QUIC_ENC_INITIAL; level <= QuicEnc::QUIC_ENC_APP; level++)
+    for (int level = QUIC_ENC_INITIAL; level <= QUIC_ENC_APP; level++)
     {
         size_t n = build_packet(qc, level, out + dg, cap - dg);
         dg += n;
@@ -823,9 +822,9 @@ void pc_quic_conn_on_timeout(QuicConn *qc, uint32_t now_ms)
     // packet is not re-triggered by the peer (a duplicate ClientHello re-delivers no CRYPTO; a lost
     // 1-RTT response is never re-requested). Anything the peer has not acknowledged in a live space -
     // the handshake CRYPTO flight, HANDSHAKE_DONE, or the 1-RTT response - is outstanding.
-    proto_bool outstanding = space_outstanding(&qc->space[QuicEnc::QUIC_ENC_INITIAL]) ||
-                             space_outstanding(&qc->space[QuicEnc::QUIC_ENC_HANDSHAKE]) ||
-                             space_outstanding(&qc->space[QuicEnc::QUIC_ENC_APP]);
+    proto_bool outstanding = space_outstanding(&qc->space[QUIC_ENC_INITIAL]) ||
+                             space_outstanding(&qc->space[QUIC_ENC_HANDSHAKE]) ||
+                             space_outstanding(&qc->space[QUIC_ENC_APP]);
     if (!outstanding)
     {
         qc->pto_armed = PROTO_FALSE; // everything acknowledged: nothing to retransmit
@@ -845,14 +844,14 @@ void pc_quic_conn_on_timeout(QuicConn *qc, uint32_t now_ms)
 
     // PTO fired: mark the unacknowledged data in each outstanding space for retransmission so the next
     // pc_quic_conn_send() re-sends it, then back the timer off.
-    for (int level = QuicEnc::QUIC_ENC_INITIAL; level <= QuicEnc::QUIC_ENC_HANDSHAKE; level++)
+    for (int level = QUIC_ENC_INITIAL; level <= QUIC_ENC_HANDSHAKE; level++)
     {
         if (space_outstanding(&qc->space[level]))
         {
             qc->space[level].crypto_tx_off = 0; // re-send the CRYPTO flight for this level
         }
     }
-    if (space_outstanding(&qc->space[QuicEnc::QUIC_ENC_APP]))
+    if (space_outstanding(&qc->space[QUIC_ENC_APP]))
     {
         // Re-send 1-RTT data. The peer dedups STREAM data by offset, so rewinding each stream to 0
         // recovers a lost response and is a no-op for data already received.

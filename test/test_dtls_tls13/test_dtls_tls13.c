@@ -52,9 +52,8 @@ static void test_hrr_build_kat(void)
 {
     const uint8_t cookie[4] = {0xAA, 0xBB, 0xCC, 0xDD};
     uint8_t out[128];
-    size_t n =
-        pc_tls13_build_hello_retry_request(out, sizeof(out), NULL, 0, TLS_GROUP_X25519, cookie, sizeof(cookie),
-                                           /*dtls=*/true);
+    size_t n = pc_tls13_build_hello_retry_request(out, sizeof(out), NULL, 0, TLS_GROUP_X25519, cookie, sizeof(cookie),
+                                                  /*dtls=*/true);
     TEST_ASSERT_EQUAL_size_t(sizeof(HRR_WIRE), n);
     TEST_ASSERT_EQUAL_MEMORY(HRR_WIRE, out, sizeof(HRR_WIRE));
     // The random field carries the magic, i.e. this ServerHello is a HelloRetryRequest.
@@ -94,7 +93,7 @@ static void test_message_hash(void)
 static void test_empty_encrypted_extensions(void)
 {
     uint8_t out[16];
-    size_t n = pc_tls13_build_encrypted_extensions_empty(out, sizeof(out));
+    size_t n = pc_tls13_build_encrypted_extensions_empty(out, sizeof(out), /*rpk_server_cert=*/PROTO_FALSE);
     const uint8_t want[6] = {0x08, 0x00, 0x00, 0x02, 0x00, 0x00}; // EE, len 2, extensions length 0
     TEST_ASSERT_EQUAL_size_t(sizeof(want), n);
     TEST_ASSERT_EQUAL_MEMORY(want, out, sizeof(want));
@@ -144,7 +143,7 @@ static void test_client_hello_cookie_parse(void)
     ch[body_len_at + 2] = (uint8_t)body_len;
 
     Tls13ClientHello hello;
-    TEST_ASSERT_TRUE(pc_tls13_parse_client_hello(ch, p, &hello));
+    TEST_ASSERT_TRUE(pc_tls13_parse_client_hello(ch, p, &hello, /*dtls=*/PROTO_FALSE));
     TEST_ASSERT_NOT_NULL(hello.cookie);
     TEST_ASSERT_EQUAL_size_t(sizeof(cookie), hello.cookie_len);
     TEST_ASSERT_EQUAL_MEMORY(cookie, hello.cookie, sizeof(cookie));
@@ -210,7 +209,7 @@ static void test_ee_rpk_extension(void)
     TEST_ASSERT_EQUAL_size_t(sizeof(want), n);
     TEST_ASSERT_EQUAL_MEMORY(want, out, sizeof(want));
     // Default (no RPK) stays byte-identical to the historical empty EE.
-    n = pc_tls13_build_encrypted_extensions_empty(out, sizeof(out));
+    n = pc_tls13_build_encrypted_extensions_empty(out, sizeof(out), /*rpk_server_cert=*/PROTO_FALSE);
     const uint8_t empty[6] = {0x08, 0x00, 0x00, 0x02, 0x00, 0x00};
     TEST_ASSERT_EQUAL_size_t(sizeof(empty), n);
     TEST_ASSERT_EQUAL_MEMORY(empty, out, sizeof(empty));
@@ -261,7 +260,7 @@ static void test_parse_server_cert_type_rpk(void)
     uint8_t ch[128];
     size_t n = build_ch_one_ext(ch, 0x0014, ebody, sizeof(ebody));
     Tls13ClientHello hello;
-    TEST_ASSERT_TRUE(pc_tls13_parse_client_hello(ch, n, &hello));
+    TEST_ASSERT_TRUE(pc_tls13_parse_client_hello(ch, n, &hello, /*dtls=*/PROTO_FALSE));
     TEST_ASSERT_TRUE(hello.offers_rpk_server_cert);
 }
 
@@ -272,12 +271,12 @@ static void test_parse_server_cert_type_x509_only(void)
     uint8_t ch[128];
     size_t n = build_ch_one_ext(ch, 0x0014, ebody, sizeof(ebody));
     Tls13ClientHello hello;
-    TEST_ASSERT_TRUE(pc_tls13_parse_client_hello(ch, n, &hello));
+    TEST_ASSERT_TRUE(pc_tls13_parse_client_hello(ch, n, &hello, /*dtls=*/PROTO_FALSE));
     TEST_ASSERT_FALSE(hello.offers_rpk_server_cert);
     // A ClientHello with no server_certificate_type at all also leaves the flag clear.
     const uint8_t cookie[1] = {0x00};
     n = build_ch_one_ext(ch, 0x002c, cookie, sizeof(cookie));
-    TEST_ASSERT_TRUE(pc_tls13_parse_client_hello(ch, n, &hello));
+    TEST_ASSERT_TRUE(pc_tls13_parse_client_hello(ch, n, &hello, /*dtls=*/PROTO_FALSE));
     TEST_ASSERT_FALSE(hello.offers_rpk_server_cert);
 }
 
@@ -290,13 +289,13 @@ static void test_parse_server_cert_type_malformed(void)
 
     // Empty extension body: there is not even a list-length byte.
     size_t n = build_ch_one_ext(ch, 0x0014, NULL, 0);
-    TEST_ASSERT_TRUE(pc_tls13_parse_client_hello(ch, n, &hello));
+    TEST_ASSERT_TRUE(pc_tls13_parse_client_hello(ch, n, &hello, /*dtls=*/PROTO_FALSE));
     TEST_ASSERT_FALSE(hello.offers_rpk_server_cert);
 
     // The declared list length runs past the extension body.
     const uint8_t overrun[1] = {0x05}; // list length 5, but no entries follow
     n = build_ch_one_ext(ch, 0x0014, overrun, sizeof(overrun));
-    TEST_ASSERT_TRUE(pc_tls13_parse_client_hello(ch, n, &hello));
+    TEST_ASSERT_TRUE(pc_tls13_parse_client_hello(ch, n, &hello, /*dtls=*/PROTO_FALSE));
     TEST_ASSERT_FALSE(hello.offers_rpk_server_cert);
 }
 
@@ -350,7 +349,7 @@ static void test_parse_every_extension_arm(void)
     for (size_t i = 0; i < sizeof(exts) / sizeof(exts[0]); i++)
     {
         size_t n = build_ch_one_ext(ch, exts[i].type, exts[i].body, exts[i].len);
-        TEST_ASSERT_TRUE(pc_tls13_parse_client_hello(ch, n, &hello));
+        TEST_ASSERT_TRUE(pc_tls13_parse_client_hello(ch, n, &hello, /*dtls=*/PROTO_FALSE));
     }
     // The last one (an unknown type) is ignored outright, leaving every flag clear.
     TEST_ASSERT_FALSE(hello.offers_tls13);
