@@ -54,6 +54,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`eab059e`](https://github.com/dstroy0/ProtoCore/commit/eab059e23e8ff97b50c50956504a48237855682a))
 - update CHANGELOG.md [skip ci] ([`c7c9078`](https://github.com/dstroy0/ProtoCore/commit/c7c90789b343c8a3d107628c93a16022eb221768))
 - update CHANGELOG.md [skip ci] ([`a042d94`](https://github.com/dstroy0/ProtoCore/commit/a042d9470615b7ed0f905e2955862738a76d9549))
 - update CHANGELOG.md [skip ci] ([`e26b53f`](https://github.com/dstroy0/ProtoCore/commit/e26b53f7824a4f5417547140febc5673319f05d7))
@@ -252,6 +253,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`9a18380`](https://github.com/dstroy0/ProtoCore/commit/9a18380b1f77a4afce3dff8f9a93f96f1d69dca1))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`97e73b6`](https://github.com/dstroy0/ProtoCore/commit/97e73b690f926278af32bea0a9a87dc3dff9480a))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`aa3d2f2`](https://github.com/dstroy0/ProtoCore/commit/aa3d2f2d4bbc61051b7d440bc6169d26f0a49d7e))
 - correct what the SSH-mount entry claims is already tested ([`95e96ce`](https://github.com/dstroy0/ProtoCore/commit/95e96ce90f1b18830490b67687a79032c8bd1fb7))
@@ -344,6 +346,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- give the host seam the write-failure hook the lwIP mock owned ([`b763ab2`](https://github.com/dstroy0/ProtoCore/commit/b763ab20740765865c0e261cf53102fdeb92b3eb))
 - convert the workers suite to C ([`b8ad778`](https://github.com/dstroy0/ProtoCore/commit/b8ad7784d14fa3e5cf36a78fde9f23233f3998cc))
 - drop the default arguments from build_v3_raw_scoped ([`caae75e`](https://github.com/dstroy0/ProtoCore/commit/caae75e08551e7fd2b2cde50023e23a747505f91))
 - restore the SnmpTag member prefix across the snmp suites ([`3a3decc`](https://github.com/dstroy0/ProtoCore/commit/3a3decc4aeed188ae130be8d31a73c25be5ec3af))
