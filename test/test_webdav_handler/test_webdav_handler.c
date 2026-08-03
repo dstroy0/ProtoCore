@@ -801,8 +801,14 @@ void test_webdav_copy_dest_joins_to_root()
     dav("/z", davfs, "");
     tree_put("/src.txt", "s");
     feed_and_handle(0, "COPY /z/src.txt HTTP/1.1\r\nHost: x\r\nDestination: /z\r\n\r\n");
-    TEST_ASSERT_TRUE(pc_resp_status(201));
-    TEST_ASSERT_TRUE(tree_has("/"));
+    // The destination joins to "/", which proves the resolve. On a real store that is the root
+    // collection and it already exists, so the handler takes its overwrite path: remove the target
+    // then copy onto it. Neither can be done to a root, so the copy is refused rather than
+    // replacing the whole volume with a file. The flat mock allowed it because "/" was just
+    // another name there.
+    TEST_ASSERT_TRUE(pc_resp_status(409));
+    TEST_ASSERT_TRUE(tree_is_dir("/"));     // still the root, not clobbered by the file
+    TEST_ASSERT_TRUE(tree_has("/src.txt")); // and the source is untouched
 }
 
 // PROPFIND property selection: a plain file reports getcontentlength + getcontenttype and
