@@ -48,6 +48,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`53d3768`](https://github.com/dstroy0/ProtoCore/commit/53d3768544ceecbe9cea6597f840f02fa0861aa1))
 - update CHANGELOG.md [skip ci] ([`372545b`](https://github.com/dstroy0/ProtoCore/commit/372545b1d4affba2555996badad047131047b9ad))
 - update CHANGELOG.md [skip ci] ([`3fa1036`](https://github.com/dstroy0/ProtoCore/commit/3fa103690c8ddc18b88bfddf0f48f9efe2b512d9))
 - update CHANGELOG.md [skip ci] ([`fecc38b`](https://github.com/dstroy0/ProtoCore/commit/fecc38b27a01eb43ecd305afb49d5abbb7a65914))
@@ -308,6 +309,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- create the collections above a fixture write ([`6bf5651`](https://github.com/dstroy0/ProtoCore/commit/6bf56513b22ae4b9633555cd08a6b96125263a9d))
 - build the route table and signaling for the WebDAV suite ([`4b5d1cf`](https://github.com/dstroy0/ProtoCore/commit/4b5d1cfdda3885fe32b5842062e57d2a435398e8))
 - build the accessor and mount seam for the WebDAV suite ([`c17d8bb`](https://github.com/dstroy0/ProtoCore/commit/c17d8bba6c0c273dbb606344f1239145582e57b1))
 - include the littlefs fixture in the WebDAV suite ([`0d0407b`](https://github.com/dstroy0/ProtoCore/commit/0d0407b5fd127d9e6cc50b1598ff8a72a30ad7bf))
