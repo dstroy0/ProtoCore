@@ -987,7 +987,7 @@ codec, see [FEATURES.md](FEATURES.md) and [STANDARDS.md](STANDARDS.md).
 
 <!-- prettier-ignore-start -->
 
-**77 modules** attach to something physical. Every one takes its wiring **through the API** -
+**73 modules** attach to something physical. Every one takes its wiring **through the API** -
 an I2C address, explicit pins, or a caller-supplied bus struct - so the library never dictates a
 pinout and none is documented here. Pure codecs have no bring-up call at all: you own the link.
 
@@ -1084,15 +1084,6 @@ pinout and none is documented here. Pure codecs have no bring-up call at all: yo
 | `nmea0183` | codec only - caller owns the link | _none (pure codec)_ | `PC_ENABLE_NMEA0183` |
 | `nmea2000` | CAN | _none (pure codec)_ | `PC_ENABLE_NMEA2000` |
 
-### Time & Discovery
-
-| Module | Attaches via | Bring-up call | Feature flag |
-| ------ | ------------ | ------------- | ------------ |
-| `ntp_server` | caller-supplied link | `pc_ntp_server_begin(uint8_t stratum, uint32_t refid = NTP_REFID_LOCL)` | `PC_ENABLE_NTP_SERVER` |
-| `ntp_service` | caller-supplied link | `pc_ntp_begin(const char *tz = nullptr, const char *server1 = "pool.ntp.org", const char *server2 = "time.nist.gov")` | `PC_ENABLE_NTP` |
-| `nts` | codec only - caller owns the link | _none (pure codec)_ | `PC_ENABLE_NTS` |
-| `ptp` | codec only - caller owns the link | _none (pure codec)_ | `PC_ENABLE_PTP` |
-
 ### Application (L7) - Other
 
 | Module | Attaches via | Bring-up call | Feature flag |
@@ -1100,7 +1091,7 @@ pinout and none is documented here. Pure codecs have no bring-up call at all: yo
 | `ad9238` | codec only - caller owns the link | _none (pure codec)_ | `PC_ENABLE_AD9238` |
 | `hmmd` | UART | `pc_hmmd_begin(int rx_pin, int tx_pin)` | `PC_ENABLE_HMMD` |
 | `rcwl0516` | caller-supplied link | `pc_rcwl0516_core_init(PresenceCore *c, uint32_t now)` | `PC_ENABLE_RCWL0516` |
-| `sen0192` | caller-supplied link | `pc_sen0192_motion_init(Sen0192Motion *m, uint32_t hold_ms, bool active_high)` | `PC_ENABLE_SEN0192` |
+| `sen0192` | caller-supplied link | `pc_sen0192_motion_init(Sen0192Motion *m, uint32_t hold_ms, proto_bool active_high)` | `PC_ENABLE_SEN0192` |
 | `gpib` | codec only - caller owns the link | _none (pure codec)_ | `PC_ENABLE_GPIB` |
 | `hislip` | codec only - caller owns the link | _none (pure codec)_ | `PC_ENABLE_HISLIP` |
 | `scpi` | caller-supplied link | `pc_scpi_status_init(ScpiStatus *s)` | `PC_ENABLE_SCPI` |

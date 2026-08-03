@@ -12,7 +12,6 @@
 
 #include "http_parser.h"
 #include "network_drivers/network/ip.h" // validate a recovered proxy client IP (v4/v6)
-#include "shared_primitives/swar.h"     // one load, both delimiters (see next_sep)
 
 HttpReq http_pool[CONN_POOL_SLOTS];
 
@@ -22,9 +21,9 @@ HttpReq http_pool[CONN_POOL_SLOTS];
 // request table is the shared cross-TU substrate.)
 typedef struct
 {
-    HttpStreamBeginCb stream_begin = NULL;
-    HttpStreamDataCb stream_data = NULL;
-    HttpStreamAbortCb stream_abort = NULL;
+    HttpStreamBeginCb stream_begin;
+    HttpStreamDataCb stream_data;
+    HttpStreamAbortCb stream_abort;
 } HttpParserCtx;
 static HttpParserCtx s_hp;
 
