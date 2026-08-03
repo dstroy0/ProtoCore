@@ -706,7 +706,9 @@
         "+<network_drivers/application/ntp_service/ntp_service.c>",
         "+<board_drivers/hal/portable/portable_platform.c>",
         "+<mmgr/frame.c>",
-        "+<server/clock/clock.c>"
+        "+<server/clock/clock.c>",
+        "+<network_drivers/network/route.c>",
+        "+<server/signaling/signaling.c>"
       ],
       "tests": []
     },

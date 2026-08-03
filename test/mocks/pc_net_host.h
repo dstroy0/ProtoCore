@@ -935,6 +935,32 @@ static inline void pc_net_host_reset(void)
     memset(pc_net_host_udp_pcbs, 0, sizeof(pc_net_host_udp_pcbs));
 }
 
+// The same capture read as text. A response is a string for most of the suite - it asserts on a
+// status line or a header - so this NUL-terminates what was written and hands it back. The write
+// path bounds the length against the buffer, so there is always a byte left for the terminator.
+static inline void tcp_capture_reset(void)
+{
+    pc_net_host_tx_len = 0;
+    pc_net_host_tx[0] = '\0';
+}
+
+static inline void tcp_capture_disable(void)
+{
+    tcp_capture_reset();
+}
+
+static inline const char *tcp_captured(void)
+{
+    size_t n = pc_net_host_tx_len < sizeof(pc_net_host_tx) ? pc_net_host_tx_len : sizeof(pc_net_host_tx) - 1;
+    pc_net_host_tx[n] = '\0';
+    return (const char *)pc_net_host_tx;
+}
+
+static inline size_t tcp_captured_len(void)
+{
+    return pc_net_host_tx_len;
+}
+
 /** @brief Deliver @p n bytes to @p p's recv callback as one segment. */
 static inline pc_net_err pc_net_host_deliver(pc_pcb *p, void *data, uint16_t n)
 {
