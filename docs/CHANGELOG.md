@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- do not drive the fixture volume to the block littlefs cannot recover from ([`ca03735`](https://github.com/dstroy0/ProtoCore/commit/ca037352fcf8327e80bfedf88bc71ebcc8a99b59))
 - close open files before unmounting the fixture volume ([`52c5a07`](https://github.com/dstroy0/ProtoCore/commit/52c5a0725c7ca18294b688b26462150022114184))
 - a reserved handle must never reach littlefs ([`3b64a8a`](https://github.com/dstroy0/ProtoCore/commit/3b64a8a4c618ffa19ced9deed14dbc12131275b3))
 - spell swar's width assert so C++ can parse it, and typedef MockHdr ([`e8e3296`](https://github.com/dstroy0/ProtoCore/commit/e8e3296cc75340db75ab44e07c96da2fddb99ab1))
@@ -50,6 +51,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`8a830a0`](https://github.com/dstroy0/ProtoCore/commit/8a830a0c0f8c29b910a870cdcc8054a9836e765c))
 - update CHANGELOG.md [skip ci] ([`6176780`](https://github.com/dstroy0/ProtoCore/commit/617678047959afcb731f8c4c4c17500fb907b18a))
 - update CHANGELOG.md [skip ci] ([`980290e`](https://github.com/dstroy0/ProtoCore/commit/980290e3c7d81b0559eeee210aa574499fd09ed8))
 - update CHANGELOG.md [skip ci] ([`1e32f1a`](https://github.com/dstroy0/ProtoCore/commit/1e32f1a5e552da840c92c61a0b25cf2022abfd2f))
