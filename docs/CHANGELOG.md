@@ -54,6 +54,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`54351fc`](https://github.com/dstroy0/ProtoCore/commit/54351fc3bef8ba9c5fa7ba1616099ae94efc9a68))
 - update CHANGELOG.md [skip ci] ([`6023235`](https://github.com/dstroy0/ProtoCore/commit/6023235a99d94e406a52f8192f452df2efb1e126))
 - update CHANGELOG.md [skip ci] ([`b31e5d1`](https://github.com/dstroy0/ProtoCore/commit/b31e5d1d208d74b741cef460a1d5f94a9e0aa446))
 - update CHANGELOG.md [skip ci] ([`7655c0f`](https://github.com/dstroy0/ProtoCore/commit/7655c0f9094b498f5861e50d3bbec186bff3751d))
@@ -387,6 +388,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- strip the verified scope qualifiers, typedef RamDisk ([`aef4dbf`](https://github.com/dstroy0/ProtoCore/commit/aef4dbf476cc26d6df788481229980065a8208ac))
 - finish the six suites ([`ec21e1a`](https://github.com/dstroy0/ProtoCore/commit/ec21e1a9d4839ba2d7cf755884574e2da37de675))
 - count aborts on the host seam ([`8b9e96e`](https://github.com/dstroy0/ProtoCore/commit/8b9e96ec4e11e307896f6a20e1e5f41208748ce7))
 - serve test_range from the real filesystem instead of the Arduino FS mock ([`b9856b2`](https://github.com/dstroy0/ProtoCore/commit/b9856b2a0aa96e0bc13ab96cf0cf2d9127ae4382))
