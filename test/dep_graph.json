@@ -4195,6 +4195,11 @@
 "src/server/clock/clock.c": [
 "native_clock",
 "native_forward",
+"native_ssh",
+"native_ssh_conn",
+"native_ssh_hardened",
+"native_ssh_kbdint",
+"native_ssh_pqc",
 "native_swar"
 ],
 "src/server/clock/clock.h": [
@@ -7209,7 +7214,13 @@
 "test/mocks/Arduino.h": [
 "native_clock",
 "native_forward",
+"native_ikev2",
+"native_modbus",
+"native_modbus_master",
+"native_oidc",
+"native_sb_modbus",
 "native_ssh",
+"native_ssh_comp",
 "native_ssh_conn",
 "native_ssh_hardened",
 "native_ssh_kbdint",
