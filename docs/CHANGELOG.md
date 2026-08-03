@@ -32,6 +32,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update test report + coverage [skip ci] ([`e336f4f`](https://github.com/dstroy0/ProtoCore/commit/e336f4fdeec3519ae8991d804485faade037e787))
+- update CHANGELOG.md [skip ci] ([`2970762`](https://github.com/dstroy0/ProtoCore/commit/29707623c374871dcc552747561396a40c1ec2d6))
 - update test report + coverage [skip ci] ([`450b3e8`](https://github.com/dstroy0/ProtoCore/commit/450b3e8b3472ccb8c8612e5937f359e674d26d12))
 - update CHANGELOG.md [skip ci] ([`9f572b4`](https://github.com/dstroy0/ProtoCore/commit/9f572b4c051a2aa022973bd1ea5384ad69f5cbfd))
 - update CHANGELOG.md [skip ci] ([`e5c6df1`](https://github.com/dstroy0/ProtoCore/commit/e5c6df10377b88c0d7d353231343c48d4242f01e))
@@ -180,6 +182,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- give the remaining 134 suites the library's own truth type ([`3661181`](https://github.com/dstroy0/ProtoCore/commit/3661181b56353ee44717595f3e3c3f91b5c9a43c))
 - fix a missed ks_handshake call site and the Ext case table ([`70f03b6`](https://github.com/dstroy0/ProtoCore/commit/70f03b6984e9d3ed70e9fad597cced9e68fa1e30))
 - spell the local case-table structs as typedefs in test_tls13_msg ([`98641c1`](https://github.com/dstroy0/ProtoCore/commit/98641c125944c5dfb017a9aaf9d98058e72b3d1a))
 - give the QUIC/TLS suites the library's own truth type ([`c68d9a8`](https://github.com/dstroy0/ProtoCore/commit/c68d9a8adfbe8072b2418e20fe40a8b4513997c8))
