@@ -13,6 +13,9 @@
 //
 // Two knobs model the failures a real store has and memory does not: a short-read cap, so the
 // paging loop is driven across several reads, and a path whose open is forced to fail.
+//
+// Reads come from the registry; writes land in one capture buffer a test reads back, because what
+// an upload asserts is the bytes that reached the store, not where they were filed.
 
 #ifndef PROTOCORE_MNT_MOCK_H
 #define PROTOCORE_MNT_MOCK_H
@@ -22,6 +25,7 @@
 
 #define MOCK_MNT_FILES 16
 #define MOCK_MNT_HANDLES 8
+#define MOCK_MNT_WRITE_CAP 8192
 
 typedef struct
 {
@@ -52,12 +56,17 @@ typedef struct
     size_t read_limit;          ///< cap on one read(), so a caller has to loop
     const char *open_fail_path; ///< opening exactly this path returns -1
 
+    // What a writer sent, kept whole so a test can compare the bytes it streamed. The store is the
+    // resource here, so the fixture records the write rather than the caller reporting it.
+    uint8_t wbuf[MOCK_MNT_WRITE_CAP];
+    size_t wlen;
+
     MockMntHandle h[MOCK_MNT_HANDLES];
 } MockMntCtx;
 
 // One instance for the whole program: the test registers files from its own translation unit and
 // the code under test reads them from another. See the note on linkage in pc_net_host.h.
-__attribute__((weak)) MockMntCtx g_mock_mnt = {{{0, 0, 0, 0}}, 0, 0, 0, 0, (size_t)-1, "", {{0, 0, 0}}};
+__attribute__((weak)) MockMntCtx g_mock_mnt;
 
 static inline int mock_mnt_find(const char *path)
 {
@@ -113,6 +122,7 @@ static inline void mock_mnt_reset(void)
     mock_mnt_clear();
     g_mock_mnt.read_limit = (size_t)-1;
     g_mock_mnt.open_fail_path = "";
+    g_mock_mnt.wlen = 0;
     for (int i = 0; i < MOCK_MNT_HANDLES; i++)
     {
         g_mock_mnt.h[i].open = PROTO_FALSE;
@@ -133,13 +143,16 @@ static inline void mock_mnt_fail_open(const char *path)
 
 static inline int mock_mnt_open(const char *path, int mode)
 {
-    (void)mode; // read-only fixture: serving never writes
     if (g_mock_mnt.open_fail_path && g_mock_mnt.open_fail_path[0] && strcmp(path, g_mock_mnt.open_fail_path) == 0)
     {
         return -1;
     }
     int e = mock_mnt_find(path);
-    if (e < 0 && (g_mock_mnt.count > 0 || !g_mock_mnt.one_valid))
+    if (e < 0 && mode != (int)PC_MNT_READ)
+    {
+        e = -1; // a write creates: the bytes land in the write capture, not in the registry
+    }
+    else if (e < 0 && (g_mock_mnt.count > 0 || !g_mock_mnt.one_valid))
     {
         return -1; // path-aware once anything is registered; otherwise the legacy single file
     }
@@ -195,10 +208,41 @@ static inline int mock_mnt_read(int handle, void *buf, size_t n)
 
 static inline int mock_mnt_write(int handle, const void *buf, size_t n)
 {
-    (void)handle;
-    (void)buf;
-    (void)n;
-    return -1; // read-only fixture
+    if (handle < 0 || handle >= MOCK_MNT_HANDLES || !g_mock_mnt.h[handle].open)
+    {
+        return -1;
+    }
+    size_t room = sizeof(g_mock_mnt.wbuf) - g_mock_mnt.wlen;
+    if (n > room)
+    {
+        n = room; // a full store short-writes; the caller sees the count it actually placed
+    }
+    memcpy(g_mock_mnt.wbuf + g_mock_mnt.wlen, buf, n);
+    g_mock_mnt.wlen += n;
+    return (int)n;
+}
+
+/** @brief Bytes a writer has sent since the last reset. */
+static inline size_t mock_mnt_written(void)
+{
+    return g_mock_mnt.wlen;
+}
+
+/** @brief Those bytes. */
+static inline const uint8_t *mock_mnt_wdata(void)
+{
+    return g_mock_mnt.wbuf;
+}
+
+static inline void mock_mnt_write_reset(void)
+{
+    g_mock_mnt.wlen = 0;
+}
+
+/** @brief Pre-fill the capture so only (cap - n) bytes of room are left, to drive a short write. */
+static inline void mock_mnt_write_fill(size_t n)
+{
+    g_mock_mnt.wlen = (n < sizeof(g_mock_mnt.wbuf)) ? n : sizeof(g_mock_mnt.wbuf);
 }
 
 static inline void mock_mnt_close(int handle)
