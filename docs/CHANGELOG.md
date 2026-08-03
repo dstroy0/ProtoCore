@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- finish the C++ to C conversion in the QUIC/TLS handshake path ([`f657d7e`](https://github.com/dstroy0/ProtoCore/commit/f657d7ec187ef8349a59d838e69ca216017e2649))
 - restore constant names mangled by the C++ to C conversion ([`2a639ea`](https://github.com/dstroy0/ProtoCore/commit/2a639ea418d29874bf40582f94504aff567ca15f))
 - emit binary_asset_blobs as C and drop the resurrected .cpp ([`3da92d9`](https://github.com/dstroy0/ProtoCore/commit/3da92d94bd7ebb9cc49de3bf6b3a6b7018bc1c96))
 - read .c sources in the checkers the C conversion left behind ([`8eb81fa`](https://github.com/dstroy0/ProtoCore/commit/8eb81fa075ac8b17a6313ae053d9c7fd6bb6da62))
@@ -24,6 +25,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update test report + coverage [skip ci] ([`8d82ee3`](https://github.com/dstroy0/ProtoCore/commit/8d82ee3729b1287ff0d64e76942ef32c52b33dc3))
+- update CHANGELOG.md [skip ci] ([`a32dece`](https://github.com/dstroy0/ProtoCore/commit/a32dece4fe3ac4ee0e9295269ba21940a4db8670))
 - update test report + coverage [skip ci] ([`2e4e0bc`](https://github.com/dstroy0/ProtoCore/commit/2e4e0bc232efe80d4e93e76d4c82fb2f700b4c5f))
 - update CHANGELOG.md [skip ci] ([`f42f5a0`](https://github.com/dstroy0/ProtoCore/commit/f42f5a09bc2eba6254bd2b9d098f1834ef334afd))
 - update test report + coverage [skip ci] ([`7653e4c`](https://github.com/dstroy0/ProtoCore/commit/7653e4cbb44e4cd65aa48c5ac3dc11e968ac3263))
@@ -95,6 +98,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- document the mmgr memory model ([`a2b6c58`](https://github.com/dstroy0/ProtoCore/commit/a2b6c5828b9a2699cc5d3d030a3c87108fd81f72))
 - strip narrative from the i2c and proto_builtins comments ([`8e303b5`](https://github.com/dstroy0/ProtoCore/commit/8e303b5cf49a525a492d16cd687f7116bbf48b17))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`29e3da9`](https://github.com/dstroy0/ProtoCore/commit/29e3da95aea09a5bcc47a54a4db5f4fb34137035))
 - describe diag as the runtime frame build it is ([`2e4176f`](https://github.com/dstroy0/ProtoCore/commit/2e4176f9327d4c8da9eaee07416942a64002a953))
