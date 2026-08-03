@@ -2851,10 +2851,9 @@
       "tests": ["test_dispatch"]
     },
     "native_clock": {
-      "desc": "Pluggable monotonic clock (services/pc_clock): default millis(), custom clock\ndivided down to the internal 1000 Hz. Header-only, so no src to build.",
+      "desc": "Pluggable monotonic clock (server/clock): default millis(), custom clock\ndivided down to the internal 1000 Hz, plus the microsecond base and latency\nbudgeting. Builds server/clock/clock.c, which owns the installed-clock state.",
       "src": ["-<*>", "+<server/clock/clock.c>"],
-      "tests": ["test_clock"],
-      "test_build_src": "no"
+      "tests": ["test_clock"]
     },
     "native_concurrency": {
       "desc": "Concurrency proof for the cross-thread slot fields (pc_atomic state / rx_head /\nrx_tail). Two threads drive one slot's SPSC ring with the production access\npattern; asserts byte-exact in-order delivery. Portable (-pthread), runs on any\nhost including Windows - this verifies the data integrity / logic.",
