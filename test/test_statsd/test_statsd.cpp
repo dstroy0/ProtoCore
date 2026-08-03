@@ -31,26 +31,26 @@ void tearDown()
 void test_format_types()
 {
     char out[64];
-    TEST_ASSERT_TRUE(pc_statsd_format(out, sizeof(out), "api.hits", "1", STATSD_COUNTER, 1.0f, nullptr));
+    TEST_ASSERT_TRUE(pc_statsd_format(out, sizeof(out), "api.hits", "1", STATSD_COUNTER, 1.0f, NULL));
     TEST_ASSERT_EQUAL_STRING("api.hits:1|c", out);
-    pc_statsd_format(out, sizeof(out), "temp", "42", STATSD_GAUGE, 1.0f, nullptr);
+    pc_statsd_format(out, sizeof(out), "temp", "42", STATSD_GAUGE, 1.0f, NULL);
     TEST_ASSERT_EQUAL_STRING("temp:42|g", out);
-    pc_statsd_format(out, sizeof(out), "req.latency", "120", STATSD_TIMING, 1.0f, nullptr);
+    pc_statsd_format(out, sizeof(out), "req.latency", "120", STATSD_TIMING, 1.0f, NULL);
     TEST_ASSERT_EQUAL_STRING("req.latency:120|ms", out); // timing renders as "ms"
-    pc_statsd_format(out, sizeof(out), "users", "u42", STATSD_SET, 1.0f, nullptr);
+    pc_statsd_format(out, sizeof(out), "users", "u42", STATSD_SET, 1.0f, NULL);
     TEST_ASSERT_EQUAL_STRING("users:u42|s", out);
 }
 
 void test_format_sample_rate()
 {
     char out[64];
-    pc_statsd_format(out, sizeof(out), "x", "1", STATSD_COUNTER, 0.1f, nullptr);
+    pc_statsd_format(out, sizeof(out), "x", "1", STATSD_COUNTER, 0.1f, NULL);
     TEST_ASSERT_EQUAL_STRING("x:1|c|@0.1", out);
-    pc_statsd_format(out, sizeof(out), "x", "1", STATSD_COUNTER, 0.5f, nullptr);
+    pc_statsd_format(out, sizeof(out), "x", "1", STATSD_COUNTER, 0.5f, NULL);
     TEST_ASSERT_EQUAL_STRING("x:1|c|@0.5", out);
-    pc_statsd_format(out, sizeof(out), "x", "1", STATSD_COUNTER, 0.01f, nullptr);
+    pc_statsd_format(out, sizeof(out), "x", "1", STATSD_COUNTER, 0.01f, NULL);
     TEST_ASSERT_EQUAL_STRING("x:1|c|@0.01", out);
-    pc_statsd_format(out, sizeof(out), "x", "1", STATSD_COUNTER, 1.0f, nullptr); // >=1 -> no annotation
+    pc_statsd_format(out, sizeof(out), "x", "1", STATSD_COUNTER, 1.0f, NULL); // >=1 -> no annotation
     TEST_ASSERT_EQUAL_STRING("x:1|c", out);
 }
 
@@ -66,18 +66,18 @@ void test_format_tags_and_both()
 void test_format_guards()
 {
     char out[64];
-    TEST_ASSERT_EQUAL_UINT(0, pc_statsd_format(out, sizeof(out), "x", "1", (StatsdType)'z', 1.0f, nullptr)); // bad type
-    TEST_ASSERT_EQUAL_UINT(0, pc_statsd_format(out, sizeof(out), nullptr, "1", STATSD_COUNTER, 1.0f, nullptr));
-    TEST_ASSERT_EQUAL_UINT(0, pc_statsd_format(out, sizeof(out), "", "1", STATSD_COUNTER, 1.0f, nullptr));
-    TEST_ASSERT_EQUAL_UINT(0, pc_statsd_format(out, sizeof(out), "x", nullptr, STATSD_COUNTER, 1.0f, nullptr));
-    TEST_ASSERT_EQUAL_UINT(0, pc_statsd_format(out, 5, "toolongname", "1", STATSD_COUNTER, 1.0f, nullptr)); // overflow
+    TEST_ASSERT_EQUAL_UINT(0, pc_statsd_format(out, sizeof(out), "x", "1", (StatsdType)'z', 1.0f, NULL)); // bad type
+    TEST_ASSERT_EQUAL_UINT(0, pc_statsd_format(out, sizeof(out), NULL, "1", STATSD_COUNTER, 1.0f, NULL));
+    TEST_ASSERT_EQUAL_UINT(0, pc_statsd_format(out, sizeof(out), "", "1", STATSD_COUNTER, 1.0f, NULL));
+    TEST_ASSERT_EQUAL_UINT(0, pc_statsd_format(out, sizeof(out), "x", NULL, STATSD_COUNTER, 1.0f, NULL));
+    TEST_ASSERT_EQUAL_UINT(0, pc_statsd_format(out, 5, "toolongname", "1", STATSD_COUNTER, 1.0f, NULL)); // overflow
 }
 
 // ---- emit helpers (formatted + "sent", captured via the UDP seam) ----
 
 void test_emit_counter_and_negative()
 {
-    pc_statsd_begin("collector.local", 8125, nullptr);
+    pc_statsd_begin("collector.local", 8125, NULL);
     pc_statsd_count("api.hits", 3);
     TEST_ASSERT_EQUAL_STRING("api.hits:3|c", captured().c_str());
     pc_udp_capture_reset();
@@ -87,7 +87,7 @@ void test_emit_counter_and_negative()
 
 void test_emit_gauge_and_delta()
 {
-    pc_statsd_begin("h", 0, nullptr); // 0 -> default port
+    pc_statsd_begin("h", 0, NULL); // 0 -> default port
     pc_statsd_gauge("heap.free", 200000);
     TEST_ASSERT_EQUAL_STRING("heap.free:200000|g", captured().c_str());
     pc_udp_capture_reset();
@@ -100,7 +100,7 @@ void test_emit_gauge_and_delta()
 
 void test_emit_timing_set_sampled()
 {
-    pc_statsd_begin("h", 8125, nullptr);
+    pc_statsd_begin("h", 8125, NULL);
     pc_statsd_timing("db.query", 120);
     TEST_ASSERT_EQUAL_STRING("db.query:120|ms", captured().c_str());
     pc_udp_capture_reset();
@@ -120,7 +120,7 @@ void test_emit_global_tags()
 
 void test_emit_noop_until_begin()
 {
-    pc_statsd_begin(nullptr, 0, nullptr); // clears the target
+    pc_statsd_begin(NULL, 0, NULL); // clears the target
     pc_udp_capture_reset();
     pc_statsd_count("x", 1); // no target -> nothing sent, no crash
     TEST_ASSERT_EQUAL_UINT(0, pc_udp_captured_len());
@@ -130,12 +130,12 @@ void test_rate_clamp_and_stage_overflow()
 {
     char out[64];
     // A rate rounding below one thousandth clamps up to 1; a rate near 1 clamps down to 999.
-    TEST_ASSERT_TRUE(pc_statsd_format(out, sizeof(out), "m", "1", STATSD_COUNTER, 0.0001f, nullptr) > 0);
-    TEST_ASSERT_TRUE(pc_statsd_format(out, sizeof(out), "m", "1", STATSD_COUNTER, 0.9999f, nullptr) > 0);
+    TEST_ASSERT_TRUE(pc_statsd_format(out, sizeof(out), "m", "1", STATSD_COUNTER, 0.0001f, NULL) > 0);
+    TEST_ASSERT_TRUE(pc_statsd_format(out, sizeof(out), "m", "1", STATSD_COUNTER, 0.9999f, NULL) > 0);
     // Overflow at successive build stages all fail closed.
-    TEST_ASSERT_EQUAL_size_t(0, pc_statsd_format(out, 2, "metric", "1", STATSD_COUNTER, 1.0f, nullptr));
-    TEST_ASSERT_EQUAL_size_t(0, pc_statsd_format(out, 4, "m", "1", STATSD_TIMING, 1.0f, nullptr));
-    TEST_ASSERT_EQUAL_size_t(0, pc_statsd_format(out, 6, "m", "1", STATSD_COUNTER, 0.5f, nullptr));
+    TEST_ASSERT_EQUAL_size_t(0, pc_statsd_format(out, 2, "metric", "1", STATSD_COUNTER, 1.0f, NULL));
+    TEST_ASSERT_EQUAL_size_t(0, pc_statsd_format(out, 4, "m", "1", STATSD_TIMING, 1.0f, NULL));
+    TEST_ASSERT_EQUAL_size_t(0, pc_statsd_format(out, 6, "m", "1", STATSD_COUNTER, 0.5f, NULL));
     TEST_ASSERT_EQUAL_size_t(0, pc_statsd_format(out, 7, "m", "1", STATSD_COUNTER, 1.0f, "#tag:x"));
 }
 
@@ -144,8 +144,8 @@ void test_rate_clamp_and_stage_overflow()
 void test_format_guard_null_out_and_zero_cap()
 {
     char out[64];
-    TEST_ASSERT_EQUAL_size_t(0, pc_statsd_format(nullptr, sizeof(out), "a", "1", STATSD_COUNTER, 1.0f, nullptr));
-    TEST_ASSERT_EQUAL_size_t(0, pc_statsd_format(out, 0, "a", "1", STATSD_COUNTER, 1.0f, nullptr));
+    TEST_ASSERT_EQUAL_size_t(0, pc_statsd_format(NULL, sizeof(out), "a", "1", STATSD_COUNTER, 1.0f, NULL));
+    TEST_ASSERT_EQUAL_size_t(0, pc_statsd_format(out, 0, "a", "1", STATSD_COUNTER, 1.0f, NULL));
 }
 
 // ---- every append-chain stage failing closed individually (name:value|type[|@rate][|#tags]) ----
@@ -153,16 +153,14 @@ void test_format_guard_null_out_and_zero_cap()
 void test_format_append_chain_overflow_points()
 {
     char out[64];
+    TEST_ASSERT_EQUAL_size_t(0, pc_statsd_format(out, 2, "a", "1", STATSD_COUNTER, 1.0f, NULL)); // fails appending ":"
     TEST_ASSERT_EQUAL_size_t(0,
-                             pc_statsd_format(out, 2, "a", "1", STATSD_COUNTER, 1.0f, nullptr)); // fails appending ":"
-    TEST_ASSERT_EQUAL_size_t(
-        0, pc_statsd_format(out, 3, "a", "1", STATSD_COUNTER, 1.0f, nullptr)); // fails appending value
+                             pc_statsd_format(out, 3, "a", "1", STATSD_COUNTER, 1.0f, NULL)); // fails appending value
     TEST_ASSERT_EQUAL_size_t(0, pc_statsd_format(out, 5, "a", "1", STATSD_COUNTER, 1.0f,
-                                                 nullptr)); // fails appending the type char
-    TEST_ASSERT_EQUAL_size_t(0,
-                             pc_statsd_format(out, 6, "a", "1", STATSD_TIMING, 1.0f, nullptr)); // fails appending "ms"
+                                                 NULL)); // fails appending the type char
+    TEST_ASSERT_EQUAL_size_t(0, pc_statsd_format(out, 6, "a", "1", STATSD_TIMING, 1.0f, NULL)); // fails appending "ms"
     TEST_ASSERT_EQUAL_size_t(0, pc_statsd_format(out, 8, "a", "1", STATSD_COUNTER, 0.5f,
-                                                 nullptr)); // "|@" fits, rate text doesn't
+                                                 NULL)); // "|@" fits, rate text doesn't
     TEST_ASSERT_EQUAL_size_t(0, pc_statsd_format(out, 8, "a", "1", STATSD_COUNTER, 1.0f,
                                                  "tg")); // "|#" fits, tag text doesn't
 }
@@ -172,7 +170,7 @@ void test_format_append_chain_overflow_points()
 void test_format_rate_zero_and_empty_tags()
 {
     char out[64];
-    pc_statsd_format(out, sizeof(out), "x", "1", STATSD_COUNTER, 0.0f, nullptr);
+    pc_statsd_format(out, sizeof(out), "x", "1", STATSD_COUNTER, 0.0f, NULL);
     TEST_ASSERT_EQUAL_STRING("x:1|c", out);
     pc_statsd_format(out, sizeof(out), "x", "1", STATSD_COUNTER, 1.0f, "");
     TEST_ASSERT_EQUAL_STRING("x:1|c", out);
@@ -183,17 +181,17 @@ void test_format_rate_zero_and_empty_tags()
 
 void test_emit_zero_value_and_set_null_member()
 {
-    pc_statsd_begin("h", 8125, nullptr);
+    pc_statsd_begin("h", 8125, NULL);
     pc_statsd_timing("db.zero", 0);
     TEST_ASSERT_EQUAL_STRING("db.zero:0|ms", captured().c_str());
     pc_udp_capture_reset();
-    pc_statsd_set("uniques", nullptr); // null member -> emitted as an empty value, not a crash
+    pc_statsd_set("uniques", NULL); // null member -> emitted as an empty value, not a crash
     TEST_ASSERT_EQUAL_STRING("uniques:|s", captured().c_str());
 }
 
 void test_emit_overlong_name_is_noop()
 {
-    pc_statsd_begin("h", 8125, nullptr);
+    pc_statsd_begin("h", 8125, NULL);
     char longname[300];
     for (size_t i = 0; i < sizeof(longname) - 1; i++)
     {

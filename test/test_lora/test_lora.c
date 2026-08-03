@@ -51,7 +51,7 @@ static pc_lora_bus g_bus = {mock_read, mock_write, &g_chip};
 
 static pc_lora_config default_cfg()
 {
-    pc_lora_config c = {};
+    pc_lora_config c = {0};
     c.freq_hz = 915000000UL;
     c.spreading = 7;
     c.bandwidth = 7; // 125 kHz
@@ -80,7 +80,7 @@ void test_frame_build_then_parse()
     uint16_t n = pc_lora_frame_build(&h, pay, 3, frame, sizeof(frame));
     TEST_ASSERT_EQUAL_UINT16(7, n); // 4 header + 3 payload
 
-    pc_lora_header out = {};
+    pc_lora_header out = {0};
     const uint8_t *p = NULL;
     uint16_t pl = 0;
     TEST_ASSERT_TRUE(pc_lora_frame_parse(frame, n, &out, &p, &pl));
@@ -93,14 +93,14 @@ void test_frame_build_then_parse()
 
 void test_frame_parse_rejects_short()
 {
-    pc_lora_header h = {};
+    pc_lora_header h = {0};
     const uint8_t raw[3] = {1, 2, 3};
     TEST_ASSERT_FALSE(pc_lora_frame_parse(raw, 3, &h, NULL, NULL)); // shorter than the header
 }
 
 void test_frame_build_bounds()
 {
-    pc_lora_header h = {};
+    pc_lora_header h = {0};
     uint8_t pay[8] = {0};
     uint8_t small[5];
     TEST_ASSERT_EQUAL_UINT16(0, pc_lora_frame_build(&h, pay, 8, small, sizeof(small))); // 12 > cap 5
@@ -210,7 +210,7 @@ void test_recv_truncates_to_cap()
 
 void test_frame_parse_build_guards()
 {
-    pc_lora_header hdr = {};
+    pc_lora_header hdr = {0};
     const uint8_t *payload = NULL;
     uint16_t payload_len = 0;
     uint8_t too_short[1] = {0};
@@ -224,7 +224,7 @@ void test_frame_parse_build_guards()
 // payload-length outputs are optional - a caller wanting only the header may omit both.
 void test_frame_parse_null_guards_and_optional_outs()
 {
-    pc_lora_header h = {};
+    pc_lora_header h = {0};
     const uint8_t raw[6] = {0x11, 0x22, 0x33, 0x44, 0xAB, 0xCD};
     const uint8_t *p = NULL;
     uint16_t pl = 0;
@@ -243,7 +243,7 @@ void test_frame_parse_null_guards_and_optional_outs()
 // the radio's maximum - each before writing a byte.
 void test_frame_build_null_and_size_guards()
 {
-    pc_lora_header h = {};
+    pc_lora_header h = {0};
     uint8_t pay[8] = {0};
     uint8_t out[PC_LORA_MAX_PAYLOAD + 4];
 

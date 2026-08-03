@@ -134,7 +134,7 @@ void tearDown()
 // HMAC (RFC 4231 / Wycheproof): compute the full MAC, compare the first
 // tag_bits/8 bytes to the vector; valid must match, invalid must not.
 // ====================================================================
-static void run_hmac(const KatMac *arr, size_t n, bool is512)
+static void run_hmac(const KatMac *arr, size_t n, proto_bool is512)
 {
     for (size_t i = 0; i < n; i++)
     {
@@ -152,7 +152,7 @@ static void run_hmac(const KatMac *arr, size_t n, bool is512)
         size_t cmp = (size_t)v.tag_bits / 8; // truncated-tag length the vector pins
         char m[64];
         snprintf(m, sizeof(m), "HMAC%s tcId=%d", is512 ? "512" : "256", v.tc);
-        bool match = (wlen == cmp) && memcmp(got, want, cmp) == 0;
+        proto_bool match = (wlen == cmp) && memcmp(got, want, cmp) == 0;
         if (v.valid)
         {
             TEST_ASSERT_TRUE_MESSAGE(match, m);
@@ -165,11 +165,11 @@ static void run_hmac(const KatMac *arr, size_t n, bool is512)
 }
 static void test_hmac_sha256(void)
 {
-    run_hmac(KAT_HMAC_SHA256, ARRAY_LEN(KAT_HMAC_SHA256), false);
+    run_hmac(KAT_HMAC_SHA256, ARRAY_LEN(KAT_HMAC_SHA256), PROTO_FALSE);
 }
 static void test_hmac_sha512(void)
 {
-    run_hmac(KAT_HMAC_SHA512, ARRAY_LEN(KAT_HMAC_SHA512), true);
+    run_hmac(KAT_HMAC_SHA512, ARRAY_LEN(KAT_HMAC_SHA512), PROTO_TRUE);
 }
 
 // ====================================================================
@@ -192,7 +192,7 @@ static void test_aes128gcm(void)
         snprintf(m, sizeof(m), "AES128GCM tcId=%d", v.tc);
 
         // seal: out == ciphertext || tag (ciphertext is empty when plaintext is)
-        pc_aes128gcm_seal(key, iv, alen ? aad : nullptr, alen, plen ? pt : nullptr, plen, sealed);
+        pc_aes128gcm_seal(key, iv, alen ? aad : NULL, alen, plen ? pt : NULL, plen, sealed);
         if (clen)
         {
             TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(ct, sealed, clen, m);
@@ -200,7 +200,7 @@ static void test_aes128gcm(void)
         TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(tag, sealed + plen, 16, m);
 
         // open: recovers the plaintext and authenticates
-        bool ok = pc_aes128gcm_open(key, iv, alen ? aad : nullptr, alen, sealed, plen + 16, NULL, opened);
+        proto_bool ok = pc_aes128gcm_open(key, iv, alen ? aad : NULL, alen, sealed, plen + 16, NULL, opened);
         TEST_ASSERT_TRUE_MESSAGE(ok, m);
         if (plen)
         {
@@ -209,8 +209,8 @@ static void test_aes128gcm(void)
 
         // negative: a flipped tag byte must fail authentication
         sealed[plen + 15] ^= 0x80;
-        TEST_ASSERT_FALSE_MESSAGE(
-            pc_aes128gcm_open(key, iv, alen ? aad : nullptr, alen, sealed, plen + 16, NULL, opened), m);
+        TEST_ASSERT_FALSE_MESSAGE(pc_aes128gcm_open(key, iv, alen ? aad : NULL, alen, sealed, plen + 16, NULL, opened),
+                                  m);
     }
 }
 
@@ -236,14 +236,14 @@ static void test_aes128gcm_ctr_carry(void)
         pt[i] = (uint8_t)(i * 131u + 7u);
     }
 
-    pc_aes128gcm_seal(key, iv, nullptr, 0, pt, CTR_CARRY_PT_LEN, sealed);
-    bool ok = pc_aes128gcm_open(key, iv, nullptr, 0, sealed, CTR_CARRY_PT_LEN + 16, NULL, opened);
+    pc_aes128gcm_seal(key, iv, NULL, 0, pt, CTR_CARRY_PT_LEN, sealed);
+    proto_bool ok = pc_aes128gcm_open(key, iv, NULL, 0, sealed, CTR_CARRY_PT_LEN + 16, NULL, opened);
     TEST_ASSERT_TRUE(ok);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(pt, opened, CTR_CARRY_PT_LEN);
 
     // negative: a flipped tag byte must still fail authentication past the carry boundary
     sealed[CTR_CARRY_PT_LEN + 15] ^= 0x80;
-    TEST_ASSERT_FALSE(pc_aes128gcm_open(key, iv, nullptr, 0, sealed, CTR_CARRY_PT_LEN + 16, NULL, opened));
+    TEST_ASSERT_FALSE(pc_aes128gcm_open(key, iv, NULL, 0, sealed, CTR_CARRY_PT_LEN + 16, NULL, opened));
 }
 
 // ====================================================================
@@ -288,8 +288,8 @@ static void test_ed25519_verify(void)
             TEST_ASSERT_FALSE_MESSAGE(v.valid, m);
             continue;
         }
-        bool ok = pc_ed25519_verify(pub, msg, mlen, sig);
-        TEST_ASSERT_EQUAL_MESSAGE(v.valid ? true : false, ok, m);
+        proto_bool ok = pc_ed25519_verify(pub, msg, mlen, sig);
+        TEST_ASSERT_EQUAL_MESSAGE(v.valid ? PROTO_TRUE : PROTO_FALSE, ok, m);
     }
 }
 
@@ -328,7 +328,7 @@ static void test_hkdf_extract(void)
         uint8_t salt[MAXB], ikm[MAXB], want[32], got[32];
         size_t slen = hexdec(v.salt, salt), ilen = hexdec(v.ikm, ikm);
         hexdec(v.prk, want);
-        pc_hkdf_extract(slen ? salt : nullptr, slen, ikm, ilen, got);
+        pc_hkdf_extract(slen ? salt : NULL, slen, ikm, ilen, got);
         char m[48];
         snprintf(m, sizeof(m), "HKDF-Extract tcId=%d", v.tc);
         TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(want, got, 32, m);

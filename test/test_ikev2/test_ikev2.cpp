@@ -119,7 +119,7 @@ void test_ke()
     TEST_ASSERT_EQUAL_MEMORY(GV_KE, buf, sizeof(GV_KE));
     // parse the body (after the 4-byte generic header)
     uint16_t group = 0;
-    const uint8_t *d = nullptr;
+    const uint8_t *d = NULL;
     size_t dl = 0;
     TEST_ASSERT_TRUE(pc_ike_ke_parse(GV_KE + 4, sizeof(GV_KE) - 4, &group, &d, &dl));
     TEST_ASSERT_EQUAL_UINT16(IKE_DH_MODP2048, group);
@@ -144,15 +144,14 @@ void test_notify()
 {
     uint8_t buf[64];
     const uint8_t data[] = {0xde, 0xad, 0xbe, 0xef};
-    size_t n =
-        pc_ike_notify_build(buf, sizeof(buf), IKE_PL_NONE, IKE_PROTO_NONE, nullptr, 0, 16388, data, sizeof(data));
+    size_t n = pc_ike_notify_build(buf, sizeof(buf), IKE_PL_NONE, IKE_PROTO_NONE, NULL, 0, 16388, data, sizeof(data));
     TEST_ASSERT_EQUAL_size_t(sizeof(GV_NOTIFY), n);
     TEST_ASSERT_EQUAL_MEMORY(GV_NOTIFY, buf, sizeof(GV_NOTIFY));
     // parse
     IkeProtocol proto = IKE_PROTO_ESP;
     uint8_t ss = 0xff;
     uint16_t type = 0;
-    const uint8_t *spi = (const uint8_t *)1, *d = nullptr;
+    const uint8_t *spi = (const uint8_t *)1, *d = NULL;
     size_t dl = 0;
     TEST_ASSERT_TRUE(pc_ike_notify_parse(GV_NOTIFY + 4, sizeof(GV_NOTIFY) - 4, &proto, &type, &spi, &ss, &d, &dl));
     TEST_ASSERT_EQUAL_UINT8((uint8_t)IKE_PROTO_NONE, (uint8_t)proto);
@@ -166,7 +165,7 @@ void test_notify()
 void test_delete()
 {
     uint8_t buf[32];
-    size_t n = pc_ike_delete_build(buf, sizeof(buf), IKE_PL_NONE, IKE_PROTO_IKE, 0, nullptr, 0);
+    size_t n = pc_ike_delete_build(buf, sizeof(buf), IKE_PL_NONE, IKE_PROTO_IKE, 0, NULL, 0);
     TEST_ASSERT_EQUAL_size_t(sizeof(GV_DELETE), n);
     TEST_ASSERT_EQUAL_MEMORY(GV_DELETE, buf, sizeof(GV_DELETE));
     IkeProtocol proto = IKE_PROTO_NONE;
@@ -186,7 +185,7 @@ void test_sa_build_no_keylen()
 {
     uint8_t buf[64];
     IkeTransform tr[2] = {{IKE_TRANSFORM_ENCR, IKE_ENCR_AES_CBC, -1}, {IKE_TRANSFORM_PRF, IKE_PRF_HMAC_SHA2_256, -1}};
-    size_t n = pc_ike_sa_build(buf, sizeof(buf), IKE_PL_KE, 1, IKE_PROTO_IKE, nullptr, 0, tr, 2);
+    size_t n = pc_ike_sa_build(buf, sizeof(buf), IKE_PL_KE, 1, IKE_PROTO_IKE, NULL, 0, tr, 2);
     TEST_ASSERT_EQUAL_size_t(sizeof(GV_SA), n);
     TEST_ASSERT_EQUAL_MEMORY(GV_SA, buf, sizeof(GV_SA));
 }
@@ -195,7 +194,7 @@ void test_sa_build_keylen()
 {
     uint8_t buf[64];
     IkeTransform tr[2] = {{IKE_TRANSFORM_ENCR, IKE_ENCR_AES_CBC, 256}, {IKE_TRANSFORM_PRF, IKE_PRF_HMAC_SHA2_256, -1}};
-    size_t n = pc_ike_sa_build(buf, sizeof(buf), IKE_PL_KE, 1, IKE_PROTO_IKE, nullptr, 0, tr, 2);
+    size_t n = pc_ike_sa_build(buf, sizeof(buf), IKE_PL_KE, 1, IKE_PROTO_IKE, NULL, 0, tr, 2);
     TEST_ASSERT_EQUAL_size_t(sizeof(GV_SA_KEYLEN), n);
     TEST_ASSERT_EQUAL_MEMORY(GV_SA_KEYLEN, buf, sizeof(GV_SA_KEYLEN));
 }
@@ -238,7 +237,7 @@ void test_id_auth()
     // generic header: next=AUTH(39), len; body: id_type + 3 reserved + data
     TEST_ASSERT_EQUAL_UINT8(IKE_PL_AUTH, buf[0]);
     IkeIdType id_type = IKE_ID_FQDN;
-    const uint8_t *d = nullptr;
+    const uint8_t *d = NULL;
     size_t dl = 0;
     TEST_ASSERT_TRUE(pc_ike_id_parse(buf + 4, n - 4, &id_type, &d, &dl));
     TEST_ASSERT_EQUAL_UINT8((uint8_t)IKE_ID_FQDN, (uint8_t)id_type);
@@ -289,7 +288,7 @@ void test_sk_frame()
     size_t n = pc_ike_sk_build(buf, sizeof(buf), IKE_PL_IDI, iv, sizeof(iv), ct, sizeof(ct), icv, sizeof(icv));
     TEST_ASSERT_EQUAL_size_t(4 + 16 + 8 + 16, n);
     TEST_ASSERT_EQUAL_UINT8(IKE_PL_IDI, buf[0]);
-    const uint8_t *piv = nullptr, *pct = nullptr, *picv = nullptr;
+    const uint8_t *piv = NULL, *pct = NULL, *picv = NULL;
     size_t ctl = 0;
     TEST_ASSERT_TRUE(pc_ike_sk_parse(buf + 4, n - 4, 16, 16, &piv, &pct, &ctl, &picv));
     TEST_ASSERT_EQUAL_MEMORY(iv, piv, 16);
@@ -309,7 +308,7 @@ void test_full_build()
     fill_hdr(&h, IKE_PL_SA, 0);
     size_t off = pc_ike_hdr_build(buf, sizeof(buf), &h);
     IkeTransform tr[2] = {{IKE_TRANSFORM_ENCR, IKE_ENCR_AES_CBC, -1}, {IKE_TRANSFORM_PRF, IKE_PRF_HMAC_SHA2_256, -1}};
-    off += pc_ike_sa_build(buf + off, sizeof(buf) - off, IKE_PL_KE, 1, IKE_PROTO_IKE, nullptr, 0, tr, 2);
+    off += pc_ike_sa_build(buf + off, sizeof(buf) - off, IKE_PL_KE, 1, IKE_PROTO_IKE, NULL, 0, tr, 2);
     uint8_t ke[8];
     memset(ke, 0xaa, sizeof(ke));
     off += pc_ike_ke_build(buf + off, sizeof(buf) - off, IKE_PL_NONCE, IKE_DH_MODP2048, ke, sizeof(ke));
@@ -346,7 +345,7 @@ void test_full_chain_walk()
     TEST_ASSERT_EQUAL_UINT8(IKE_PL_KE, pl.type);
     TEST_ASSERT_EQUAL_UINT8(IKE_PL_NONCE, pl.next_payload);
     uint16_t group = 0;
-    const uint8_t *d = nullptr;
+    const uint8_t *d = NULL;
     size_t dl = 0;
     TEST_ASSERT_TRUE(pc_ike_ke_parse(pl.body, pl.body_len, &group, &d, &dl));
     TEST_ASSERT_EQUAL_UINT16(IKE_DH_MODP2048, group);
@@ -375,7 +374,7 @@ void test_parse_malformed()
     // notify body shorter than the fixed 4-byte prefix
     IkeProtocol proto = IKE_PROTO_NONE;
     uint16_t type = 0;
-    const uint8_t *spi = nullptr, *d = nullptr;
+    const uint8_t *spi = NULL, *d = NULL;
     uint8_t ss = 0;
     size_t dl = 0;
     const uint8_t short_notify[] = {0x00, 0x00};
@@ -389,17 +388,17 @@ void test_hdr_guards()
     uint8_t buf[64];
     IkeHeader h;
     fill_hdr(&h, IKE_PL_NONE, 28);
-    TEST_ASSERT_EQUAL_size_t(0, pc_ike_hdr_build(nullptr, sizeof(buf), &h));
-    TEST_ASSERT_EQUAL_size_t(0, pc_ike_hdr_build(buf, sizeof(buf), nullptr));
-    TEST_ASSERT_FALSE(pc_ike_hdr_parse(GV_HDR, sizeof(GV_HDR), nullptr));
+    TEST_ASSERT_EQUAL_size_t(0, pc_ike_hdr_build(NULL, sizeof(buf), &h));
+    TEST_ASSERT_EQUAL_size_t(0, pc_ike_hdr_build(buf, sizeof(buf), NULL));
+    TEST_ASSERT_FALSE(pc_ike_hdr_parse(GV_HDR, sizeof(GV_HDR), NULL));
     // a null buffer still clears the out struct before it fails
     IkeHeader r;
     memset(&r, 0xff, sizeof(r));
-    TEST_ASSERT_FALSE(pc_ike_hdr_parse(nullptr, 64, &r));
+    TEST_ASSERT_FALSE(pc_ike_hdr_parse(NULL, 64, &r));
     TEST_ASSERT_EQUAL_UINT32(0, r.length);
     TEST_ASSERT_EQUAL_UINT8(0, r.init_spi[0]);
     // patching the length needs a real buffer holding at least a header
-    TEST_ASSERT_FALSE(pc_ike_set_length(nullptr, 64, 92));
+    TEST_ASSERT_FALSE(pc_ike_set_length(NULL, 64, 92));
     TEST_ASSERT_FALSE(pc_ike_set_length(buf, PC_IKE_HDR_LEN - 1, 92));
 }
 
@@ -407,17 +406,17 @@ void test_payload_iter_guards()
 {
     IkePayloadIter it;
     IkePayload pl;
-    pc_ike_payload_iter_init(nullptr, IKE_PL_SA, GV_FULL, sizeof(GV_FULL)); // no-op, no crash
+    pc_ike_payload_iter_init(NULL, IKE_PL_SA, GV_FULL, sizeof(GV_FULL)); // no-op, no crash
     pc_ike_payload_iter_init(&it, IKE_PL_SA, GV_FULL + PC_IKE_HDR_LEN, sizeof(GV_FULL) - PC_IKE_HDR_LEN);
-    TEST_ASSERT_FALSE(pc_ike_payload_next(&it, nullptr));
+    TEST_ASSERT_FALSE(pc_ike_payload_next(&it, NULL));
     // a null iterator: the out payload is cleared first
     memset(&pl, 0xff, sizeof(pl));
-    TEST_ASSERT_FALSE(pc_ike_payload_next(nullptr, &pl));
+    TEST_ASSERT_FALSE(pc_ike_payload_next(NULL, &pl));
     TEST_ASSERT_NULL(pl.body);
     TEST_ASSERT_EQUAL_size_t(0, pl.body_len);
     TEST_ASSERT_FALSE(pl.critical);
     // an iterator over a null area
-    pc_ike_payload_iter_init(&it, IKE_PL_SA, nullptr, 16);
+    pc_ike_payload_iter_init(&it, IKE_PL_SA, NULL, 16);
     TEST_ASSERT_FALSE(pc_ike_payload_next(&it, &pl));
     // an area too small to hold even a generic header
     const uint8_t tiny[] = {0x00, 0x00};
@@ -429,7 +428,7 @@ void test_payload_build_raw()
 {
     uint8_t buf[32];
     const uint8_t body[] = {0xde, 0xad, 0xbe, 0xef};
-    size_t n = pc_ike_payload_build(buf, sizeof(buf), IKE_PL_KE, false, body, sizeof(body));
+    size_t n = pc_ike_payload_build(buf, sizeof(buf), IKE_PL_KE, PROTO_FALSE, body, sizeof(body));
     TEST_ASSERT_EQUAL_size_t(8, n);
     TEST_ASSERT_EQUAL_UINT8((uint8_t)IKE_PL_KE, buf[0]);
     TEST_ASSERT_EQUAL_UINT8(0x00, buf[1]);
@@ -437,17 +436,17 @@ void test_payload_build_raw()
     TEST_ASSERT_EQUAL_UINT8(0x08, buf[3]);
     TEST_ASSERT_EQUAL_MEMORY(body, buf + 4, sizeof(body));
     // critical bit set
-    n = pc_ike_payload_build(buf, sizeof(buf), IKE_PL_NONE, true, body, sizeof(body));
+    n = pc_ike_payload_build(buf, sizeof(buf), IKE_PL_NONE, PROTO_TRUE, body, sizeof(body));
     TEST_ASSERT_EQUAL_size_t(8, n);
     TEST_ASSERT_EQUAL_UINT8(PC_IKE_CRITICAL, buf[1]);
     // an empty body is just the generic header
-    n = pc_ike_payload_build(buf, sizeof(buf), IKE_PL_NONE, false, nullptr, 0);
+    n = pc_ike_payload_build(buf, sizeof(buf), IKE_PL_NONE, PROTO_FALSE, NULL, 0);
     TEST_ASSERT_EQUAL_size_t(4, n);
     TEST_ASSERT_EQUAL_UINT8(0x04, buf[3]);
     // guards
-    TEST_ASSERT_EQUAL_size_t(0, pc_ike_payload_build(nullptr, sizeof(buf), IKE_PL_NONE, false, body, sizeof(body)));
-    TEST_ASSERT_EQUAL_size_t(0, pc_ike_payload_build(buf, sizeof(buf), IKE_PL_NONE, false, nullptr, 4));
-    TEST_ASSERT_EQUAL_size_t(0, pc_ike_payload_build(buf, 7, IKE_PL_NONE, false, body, sizeof(body)));
+    TEST_ASSERT_EQUAL_size_t(0, pc_ike_payload_build(NULL, sizeof(buf), IKE_PL_NONE, PROTO_FALSE, body, sizeof(body)));
+    TEST_ASSERT_EQUAL_size_t(0, pc_ike_payload_build(buf, sizeof(buf), IKE_PL_NONE, PROTO_FALSE, NULL, 4));
+    TEST_ASSERT_EQUAL_size_t(0, pc_ike_payload_build(buf, 7, IKE_PL_NONE, PROTO_FALSE, body, sizeof(body)));
 }
 
 void test_oversize_payload_lengths()
@@ -456,7 +455,7 @@ void test_oversize_payload_lengths()
     std::vector<uint8_t> out(0x10008, 0);
     std::vector<uint8_t> body(0x10000, 0xab);
     TEST_ASSERT_EQUAL_size_t(
-        0, pc_ike_payload_build(out.data(), out.size(), IKE_PL_NONE, false, body.data(), body.size()));
+        0, pc_ike_payload_build(out.data(), out.size(), IKE_PL_NONE, PROTO_FALSE, body.data(), body.size()));
     TEST_ASSERT_EQUAL_size_t(0, pc_ike_nonce_build(out.data(), out.size(), IKE_PL_NONE, body.data(), body.size()));
     // exactly at the ceiling still builds
     size_t n = pc_ike_nonce_build(out.data(), out.size(), IKE_PL_NONE, body.data(), 0xFFFF - PC_IKE_PAYLOAD_HDR_LEN);
@@ -471,28 +470,27 @@ void test_typed_builder_guards()
     const uint8_t data[] = {0x01, 0x02, 0x03, 0x04};
 
     // null destination
-    TEST_ASSERT_EQUAL_size_t(0,
-                             pc_ike_ke_build(nullptr, sizeof(buf), IKE_PL_NONE, IKE_DH_MODP2048, data, sizeof(data)));
-    TEST_ASSERT_EQUAL_size_t(0, pc_ike_nonce_build(nullptr, sizeof(buf), IKE_PL_NONE, data, sizeof(data)));
-    TEST_ASSERT_EQUAL_size_t(0, pc_ike_id_build(nullptr, sizeof(buf), IKE_PL_NONE, IKE_ID_FQDN, data, sizeof(data)));
-    TEST_ASSERT_EQUAL_size_t(0, pc_ike_auth_build(nullptr, sizeof(buf), IKE_PL_NONE, IKE_AUTH_PSK, data, sizeof(data)));
-    TEST_ASSERT_EQUAL_size_t(0, pc_ike_cert_build(nullptr, sizeof(buf), IKE_PL_NONE, 4, data, sizeof(data)));
-    TEST_ASSERT_EQUAL_size_t(0, pc_ike_notify_build(nullptr, sizeof(buf), IKE_PL_NONE, IKE_PROTO_IKE, nullptr, 0, 16388,
-                                                    data, sizeof(data)));
-    TEST_ASSERT_EQUAL_size_t(0, pc_ike_delete_build(nullptr, sizeof(buf), IKE_PL_NONE, IKE_PROTO_IKE, 0, nullptr, 0));
+    TEST_ASSERT_EQUAL_size_t(0, pc_ike_ke_build(NULL, sizeof(buf), IKE_PL_NONE, IKE_DH_MODP2048, data, sizeof(data)));
+    TEST_ASSERT_EQUAL_size_t(0, pc_ike_nonce_build(NULL, sizeof(buf), IKE_PL_NONE, data, sizeof(data)));
+    TEST_ASSERT_EQUAL_size_t(0, pc_ike_id_build(NULL, sizeof(buf), IKE_PL_NONE, IKE_ID_FQDN, data, sizeof(data)));
+    TEST_ASSERT_EQUAL_size_t(0, pc_ike_auth_build(NULL, sizeof(buf), IKE_PL_NONE, IKE_AUTH_PSK, data, sizeof(data)));
+    TEST_ASSERT_EQUAL_size_t(0, pc_ike_cert_build(NULL, sizeof(buf), IKE_PL_NONE, 4, data, sizeof(data)));
+    TEST_ASSERT_EQUAL_size_t(
+        0, pc_ike_notify_build(NULL, sizeof(buf), IKE_PL_NONE, IKE_PROTO_IKE, NULL, 0, 16388, data, sizeof(data)));
+    TEST_ASSERT_EQUAL_size_t(0, pc_ike_delete_build(NULL, sizeof(buf), IKE_PL_NONE, IKE_PROTO_IKE, 0, NULL, 0));
 
     // a non-zero length with a null body
-    TEST_ASSERT_EQUAL_size_t(0, pc_ike_ke_build(buf, sizeof(buf), IKE_PL_NONE, IKE_DH_MODP2048, nullptr, 4));
-    TEST_ASSERT_EQUAL_size_t(0, pc_ike_nonce_build(buf, sizeof(buf), IKE_PL_NONE, nullptr, 4));
-    TEST_ASSERT_EQUAL_size_t(0, pc_ike_id_build(buf, sizeof(buf), IKE_PL_NONE, IKE_ID_FQDN, nullptr, 4));
-    TEST_ASSERT_EQUAL_size_t(0, pc_ike_auth_build(buf, sizeof(buf), IKE_PL_NONE, IKE_AUTH_PSK, nullptr, 4));
-    TEST_ASSERT_EQUAL_size_t(0, pc_ike_cert_build(buf, sizeof(buf), IKE_PL_NONE, 4, nullptr, 4));
+    TEST_ASSERT_EQUAL_size_t(0, pc_ike_ke_build(buf, sizeof(buf), IKE_PL_NONE, IKE_DH_MODP2048, NULL, 4));
+    TEST_ASSERT_EQUAL_size_t(0, pc_ike_nonce_build(buf, sizeof(buf), IKE_PL_NONE, NULL, 4));
+    TEST_ASSERT_EQUAL_size_t(0, pc_ike_id_build(buf, sizeof(buf), IKE_PL_NONE, IKE_ID_FQDN, NULL, 4));
+    TEST_ASSERT_EQUAL_size_t(0, pc_ike_auth_build(buf, sizeof(buf), IKE_PL_NONE, IKE_AUTH_PSK, NULL, 4));
+    TEST_ASSERT_EQUAL_size_t(0, pc_ike_cert_build(buf, sizeof(buf), IKE_PL_NONE, 4, NULL, 4));
     // notify: the SPI and the data are checked independently
     TEST_ASSERT_EQUAL_size_t(
-        0, pc_ike_notify_build(buf, sizeof(buf), IKE_PL_NONE, IKE_PROTO_ESP, nullptr, 4, 16388, data, sizeof(data)));
+        0, pc_ike_notify_build(buf, sizeof(buf), IKE_PL_NONE, IKE_PROTO_ESP, NULL, 4, 16388, data, sizeof(data)));
     TEST_ASSERT_EQUAL_size_t(
-        0, pc_ike_notify_build(buf, sizeof(buf), IKE_PL_NONE, IKE_PROTO_ESP, nullptr, 0, 16388, nullptr, 4));
-    TEST_ASSERT_EQUAL_size_t(0, pc_ike_delete_build(buf, sizeof(buf), IKE_PL_NONE, IKE_PROTO_ESP, 4, nullptr, 2));
+        0, pc_ike_notify_build(buf, sizeof(buf), IKE_PL_NONE, IKE_PROTO_ESP, NULL, 0, 16388, NULL, 4));
+    TEST_ASSERT_EQUAL_size_t(0, pc_ike_delete_build(buf, sizeof(buf), IKE_PL_NONE, IKE_PROTO_ESP, 4, NULL, 2));
 
     // capacity one byte below the framed total
     TEST_ASSERT_EQUAL_size_t(0, pc_ike_ke_build(buf, 11, IKE_PL_NONE, IKE_DH_MODP2048, data, sizeof(data)));
@@ -501,24 +499,24 @@ void test_typed_builder_guards()
     TEST_ASSERT_EQUAL_size_t(0, pc_ike_auth_build(buf, 11, IKE_PL_NONE, IKE_AUTH_PSK, data, sizeof(data)));
     TEST_ASSERT_EQUAL_size_t(0, pc_ike_cert_build(buf, 8, IKE_PL_NONE, 4, data, sizeof(data)));
     TEST_ASSERT_EQUAL_size_t(
-        0, pc_ike_notify_build(buf, 11, IKE_PL_NONE, IKE_PROTO_IKE, nullptr, 0, 16388, data, sizeof(data)));
-    TEST_ASSERT_EQUAL_size_t(0, pc_ike_delete_build(buf, 7, IKE_PL_NONE, IKE_PROTO_IKE, 0, nullptr, 0));
+        0, pc_ike_notify_build(buf, 11, IKE_PL_NONE, IKE_PROTO_IKE, NULL, 0, 16388, data, sizeof(data)));
+    TEST_ASSERT_EQUAL_size_t(0, pc_ike_delete_build(buf, 7, IKE_PL_NONE, IKE_PROTO_IKE, 0, NULL, 0));
 }
 
 void test_builder_empty_bodies()
 {
     uint8_t buf[64];
     // every variable-length builder frames an empty body
-    TEST_ASSERT_EQUAL_size_t(8, pc_ike_ke_build(buf, sizeof(buf), IKE_PL_NONE, IKE_DH_CURVE25519, nullptr, 0));
+    TEST_ASSERT_EQUAL_size_t(8, pc_ike_ke_build(buf, sizeof(buf), IKE_PL_NONE, IKE_DH_CURVE25519, NULL, 0));
     TEST_ASSERT_EQUAL_UINT8(0x00, buf[4]);
     TEST_ASSERT_EQUAL_UINT8(0x1f, buf[5]); // group 31
-    TEST_ASSERT_EQUAL_size_t(4, pc_ike_nonce_build(buf, sizeof(buf), IKE_PL_NONE, nullptr, 0));
+    TEST_ASSERT_EQUAL_size_t(4, pc_ike_nonce_build(buf, sizeof(buf), IKE_PL_NONE, NULL, 0));
     TEST_ASSERT_EQUAL_UINT8(0x04, buf[3]);
-    TEST_ASSERT_EQUAL_size_t(8, pc_ike_id_build(buf, sizeof(buf), IKE_PL_NONE, IKE_ID_IPV4_ADDR, nullptr, 0));
+    TEST_ASSERT_EQUAL_size_t(8, pc_ike_id_build(buf, sizeof(buf), IKE_PL_NONE, IKE_ID_IPV4_ADDR, NULL, 0));
     TEST_ASSERT_EQUAL_UINT8((uint8_t)IKE_ID_IPV4_ADDR, buf[4]);
-    TEST_ASSERT_EQUAL_size_t(8, pc_ike_auth_build(buf, sizeof(buf), IKE_PL_NONE, IKE_AUTH_DIGITAL_SIG, nullptr, 0));
+    TEST_ASSERT_EQUAL_size_t(8, pc_ike_auth_build(buf, sizeof(buf), IKE_PL_NONE, IKE_AUTH_DIGITAL_SIG, NULL, 0));
     TEST_ASSERT_EQUAL_UINT8((uint8_t)IKE_AUTH_DIGITAL_SIG, buf[4]);
-    TEST_ASSERT_EQUAL_size_t(5, pc_ike_cert_build(buf, sizeof(buf), IKE_PL_NONE, 4, nullptr, 0));
+    TEST_ASSERT_EQUAL_size_t(5, pc_ike_cert_build(buf, sizeof(buf), IKE_PL_NONE, 4, NULL, 0));
     TEST_ASSERT_EQUAL_UINT8(0x05, buf[3]);
 }
 
@@ -540,7 +538,7 @@ void test_notify_build_with_spi()
 {
     uint8_t buf[32];
     const uint8_t spi[4] = {0xaa, 0xbb, 0xcc, 0xdd};
-    size_t n = pc_ike_notify_build(buf, sizeof(buf), IKE_PL_NONE, IKE_PROTO_ESP, spi, 4, 16386, nullptr, 0);
+    size_t n = pc_ike_notify_build(buf, sizeof(buf), IKE_PL_NONE, IKE_PROTO_ESP, spi, 4, 16386, NULL, 0);
     TEST_ASSERT_EQUAL_size_t(12, n); // generic(4) + proto/spisize/type(4) + spi(4)
     TEST_ASSERT_EQUAL_UINT8((uint8_t)IKE_PROTO_ESP, buf[4]);
     TEST_ASSERT_EQUAL_UINT8(4, buf[5]);
@@ -551,7 +549,7 @@ void test_notify_build_with_spi()
     IkeProtocol proto = IKE_PROTO_NONE;
     uint16_t type = 0;
     uint8_t ss = 0;
-    const uint8_t *pspi = nullptr, *d = nullptr;
+    const uint8_t *pspi = NULL, *d = NULL;
     size_t dl = 1;
     TEST_ASSERT_TRUE(pc_ike_notify_parse(buf + 4, n - 4, &proto, &type, &pspi, &ss, &d, &dl));
     TEST_ASSERT_EQUAL_UINT8((uint8_t)IKE_PROTO_ESP, (uint8_t)proto);
@@ -576,7 +574,7 @@ void test_delete_build_with_spis()
     IkeProtocol proto = IKE_PROTO_NONE;
     uint8_t ss = 0;
     uint16_t num = 0;
-    const uint8_t *list = nullptr;
+    const uint8_t *list = NULL;
     TEST_ASSERT_TRUE(pc_ike_delete_parse(buf + 4, n - 4, &proto, &ss, &num, &list));
     TEST_ASSERT_EQUAL_UINT8(4, ss);
     TEST_ASSERT_EQUAL_UINT16(2, num);
@@ -588,14 +586,14 @@ void test_sk_build_variants()
     uint8_t buf[64];
     const uint8_t blob[4] = {1, 2, 3, 4};
     // every component is optional: an empty envelope is just the generic header
-    size_t n = pc_ike_sk_build(buf, sizeof(buf), IKE_PL_IDI, nullptr, 0, nullptr, 0, nullptr, 0);
+    size_t n = pc_ike_sk_build(buf, sizeof(buf), IKE_PL_IDI, NULL, 0, NULL, 0, NULL, 0);
     TEST_ASSERT_EQUAL_size_t(4, n);
     TEST_ASSERT_EQUAL_UINT8(0x04, buf[3]);
     // a length without its buffer is refused, component by component
-    TEST_ASSERT_EQUAL_size_t(0, pc_ike_sk_build(nullptr, sizeof(buf), IKE_PL_IDI, blob, 4, blob, 4, blob, 4));
-    TEST_ASSERT_EQUAL_size_t(0, pc_ike_sk_build(buf, sizeof(buf), IKE_PL_IDI, nullptr, 4, nullptr, 0, nullptr, 0));
-    TEST_ASSERT_EQUAL_size_t(0, pc_ike_sk_build(buf, sizeof(buf), IKE_PL_IDI, blob, 4, nullptr, 4, nullptr, 0));
-    TEST_ASSERT_EQUAL_size_t(0, pc_ike_sk_build(buf, sizeof(buf), IKE_PL_IDI, blob, 4, blob, 4, nullptr, 4));
+    TEST_ASSERT_EQUAL_size_t(0, pc_ike_sk_build(NULL, sizeof(buf), IKE_PL_IDI, blob, 4, blob, 4, blob, 4));
+    TEST_ASSERT_EQUAL_size_t(0, pc_ike_sk_build(buf, sizeof(buf), IKE_PL_IDI, NULL, 4, NULL, 0, NULL, 0));
+    TEST_ASSERT_EQUAL_size_t(0, pc_ike_sk_build(buf, sizeof(buf), IKE_PL_IDI, blob, 4, NULL, 4, NULL, 0));
+    TEST_ASSERT_EQUAL_size_t(0, pc_ike_sk_build(buf, sizeof(buf), IKE_PL_IDI, blob, 4, blob, 4, NULL, 4));
     // capacity one byte below the framed total
     TEST_ASSERT_EQUAL_size_t(0, pc_ike_sk_build(buf, 15, IKE_PL_IDI, blob, 4, blob, 4, blob, 4));
 }
@@ -608,17 +606,15 @@ void test_sa_build_guards_and_spi()
     IkeTransform tr[1] = {{IKE_TRANSFORM_ENCR, IKE_ENCR_AES_GCM_16, 128}};
     const uint8_t spi[4] = {0x0a, 0x0b, 0x0c, 0x0d};
 
-    TEST_ASSERT_EQUAL_size_t(0,
-                             pc_ike_sa_build(nullptr, sizeof(buf), IKE_PL_NONE, 1, IKE_PROTO_ESP, nullptr, 0, tr, 1));
-    TEST_ASSERT_EQUAL_size_t(0,
-                             pc_ike_sa_build(buf, sizeof(buf), IKE_PL_NONE, 1, IKE_PROTO_ESP, nullptr, 0, nullptr, 1));
-    TEST_ASSERT_EQUAL_size_t(0, pc_ike_sa_build(buf, sizeof(buf), IKE_PL_NONE, 1, IKE_PROTO_ESP, nullptr, 0, tr, 0));
+    TEST_ASSERT_EQUAL_size_t(0, pc_ike_sa_build(NULL, sizeof(buf), IKE_PL_NONE, 1, IKE_PROTO_ESP, NULL, 0, tr, 1));
+    TEST_ASSERT_EQUAL_size_t(0, pc_ike_sa_build(buf, sizeof(buf), IKE_PL_NONE, 1, IKE_PROTO_ESP, NULL, 0, NULL, 1));
+    TEST_ASSERT_EQUAL_size_t(0, pc_ike_sa_build(buf, sizeof(buf), IKE_PL_NONE, 1, IKE_PROTO_ESP, NULL, 0, tr, 0));
     // an SPI size with no SPI
-    TEST_ASSERT_EQUAL_size_t(0, pc_ike_sa_build(buf, sizeof(buf), IKE_PL_NONE, 1, IKE_PROTO_ESP, nullptr, 4, tr, 1));
+    TEST_ASSERT_EQUAL_size_t(0, pc_ike_sa_build(buf, sizeof(buf), IKE_PL_NONE, 1, IKE_PROTO_ESP, NULL, 4, tr, 1));
     // capacity below the generic + proposal headers
-    TEST_ASSERT_EQUAL_size_t(0, pc_ike_sa_build(buf, 11, IKE_PL_NONE, 1, IKE_PROTO_ESP, nullptr, 0, tr, 1));
+    TEST_ASSERT_EQUAL_size_t(0, pc_ike_sa_build(buf, 11, IKE_PL_NONE, 1, IKE_PROTO_ESP, NULL, 0, tr, 1));
     // room for the headers but not for the first transform
-    TEST_ASSERT_EQUAL_size_t(0, pc_ike_sa_build(buf, 12, IKE_PL_NONE, 1, IKE_PROTO_ESP, nullptr, 0, tr, 1));
+    TEST_ASSERT_EQUAL_size_t(0, pc_ike_sa_build(buf, 12, IKE_PL_NONE, 1, IKE_PROTO_ESP, NULL, 0, tr, 1));
 
     // an ESP proposal carrying a 4-byte SPI
     size_t n = pc_ike_sa_build(buf, sizeof(buf), IKE_PL_NONE, 1, IKE_PROTO_ESP, spi, 4, tr, 1);
@@ -653,8 +649,8 @@ void test_ts_build_guards()
     const uint8_t e4[4] = {10, 0, 0, 255};
     IkeTrafficSelector sel = {IKE_TS_IPV4_ADDR_RANGE, 0, 0, 65535, s4, e4, 4};
 
-    TEST_ASSERT_EQUAL_size_t(0, pc_ike_ts_build(nullptr, sizeof(buf), IKE_PL_NONE, &sel, 1));
-    TEST_ASSERT_EQUAL_size_t(0, pc_ike_ts_build(buf, sizeof(buf), IKE_PL_NONE, nullptr, 1));
+    TEST_ASSERT_EQUAL_size_t(0, pc_ike_ts_build(NULL, sizeof(buf), IKE_PL_NONE, &sel, 1));
+    TEST_ASSERT_EQUAL_size_t(0, pc_ike_ts_build(buf, sizeof(buf), IKE_PL_NONE, NULL, 1));
     TEST_ASSERT_EQUAL_size_t(0, pc_ike_ts_build(buf, sizeof(buf), IKE_PL_NONE, &sel, 0));
     // capacity below the generic + count headers, then below the first selector
     TEST_ASSERT_EQUAL_size_t(0, pc_ike_ts_build(buf, 7, IKE_PL_NONE, &sel, 1));
@@ -664,10 +660,10 @@ void test_ts_build_guards()
     bad.addr_len = 8;
     TEST_ASSERT_EQUAL_size_t(0, pc_ike_ts_build(buf, sizeof(buf), IKE_PL_NONE, &bad, 1));
     bad = sel;
-    bad.start_addr = nullptr;
+    bad.start_addr = NULL;
     TEST_ASSERT_EQUAL_size_t(0, pc_ike_ts_build(buf, sizeof(buf), IKE_PL_NONE, &bad, 1));
     bad = sel;
-    bad.end_addr = nullptr;
+    bad.end_addr = NULL;
     TEST_ASSERT_EQUAL_size_t(0, pc_ike_ts_build(buf, sizeof(buf), IKE_PL_NONE, &bad, 1));
 
     // an IPv6 selector: 8 fixed bytes + two 16-byte addresses
@@ -692,8 +688,8 @@ void test_parse_optional_outparams()
 {
     // every out-param is optional, and a short body clears the ones that were supplied
     const uint8_t ke_body[] = {0x00, 0x1f, 0x00, 0x00, 0xaa, 0xbb};
-    TEST_ASSERT_TRUE(pc_ike_ke_parse(ke_body, sizeof(ke_body), nullptr, nullptr, nullptr));
-    TEST_ASSERT_FALSE(pc_ike_ke_parse(nullptr, sizeof(ke_body), nullptr, nullptr, nullptr));
+    TEST_ASSERT_TRUE(pc_ike_ke_parse(ke_body, sizeof(ke_body), NULL, NULL, NULL));
+    TEST_ASSERT_FALSE(pc_ike_ke_parse(NULL, sizeof(ke_body), NULL, NULL, NULL));
     uint16_t group = 0xffff;
     const uint8_t *d = ke_body;
     size_t dl = 9;
@@ -703,8 +699,8 @@ void test_parse_optional_outparams()
     TEST_ASSERT_EQUAL_size_t(0, dl);
 
     const uint8_t id_body[] = {0x02, 0x00, 0x00, 0x00, 'a', 'b'};
-    TEST_ASSERT_TRUE(pc_ike_id_parse(id_body, sizeof(id_body), nullptr, nullptr, nullptr));
-    TEST_ASSERT_FALSE(pc_ike_id_parse(nullptr, sizeof(id_body), nullptr, nullptr, nullptr));
+    TEST_ASSERT_TRUE(pc_ike_id_parse(id_body, sizeof(id_body), NULL, NULL, NULL));
+    TEST_ASSERT_FALSE(pc_ike_id_parse(NULL, sizeof(id_body), NULL, NULL, NULL));
     IkeIdType id_type = IKE_ID_KEY_ID;
     d = id_body;
     dl = 9;
@@ -714,8 +710,8 @@ void test_parse_optional_outparams()
     TEST_ASSERT_EQUAL_size_t(0, dl);
 
     const uint8_t auth_body[] = {0x02, 0x00, 0x00, 0x00, 0xde, 0xad};
-    TEST_ASSERT_TRUE(pc_ike_auth_parse(auth_body, sizeof(auth_body), nullptr, nullptr, nullptr));
-    TEST_ASSERT_FALSE(pc_ike_auth_parse(nullptr, sizeof(auth_body), nullptr, nullptr, nullptr));
+    TEST_ASSERT_TRUE(pc_ike_auth_parse(auth_body, sizeof(auth_body), NULL, NULL, NULL));
+    TEST_ASSERT_FALSE(pc_ike_auth_parse(NULL, sizeof(auth_body), NULL, NULL, NULL));
     IkeAuthMethod method = IKE_AUTH_PSK;
     d = auth_body;
     dl = 9;
@@ -725,14 +721,12 @@ void test_parse_optional_outparams()
     TEST_ASSERT_EQUAL_size_t(0, dl);
 
     const uint8_t notify_body[] = {0x00, 0x00, 0x40, 0x04, 0xde, 0xad};
-    TEST_ASSERT_TRUE(
-        pc_ike_notify_parse(notify_body, sizeof(notify_body), nullptr, nullptr, nullptr, nullptr, nullptr, nullptr));
-    TEST_ASSERT_FALSE(
-        pc_ike_notify_parse(nullptr, sizeof(notify_body), nullptr, nullptr, nullptr, nullptr, nullptr, nullptr));
+    TEST_ASSERT_TRUE(pc_ike_notify_parse(notify_body, sizeof(notify_body), NULL, NULL, NULL, NULL, NULL, NULL));
+    TEST_ASSERT_FALSE(pc_ike_notify_parse(NULL, sizeof(notify_body), NULL, NULL, NULL, NULL, NULL, NULL));
 
     const uint8_t delete_body[] = {0x01, 0x00, 0x00, 0x00};
-    TEST_ASSERT_TRUE(pc_ike_delete_parse(delete_body, sizeof(delete_body), nullptr, nullptr, nullptr, nullptr));
-    TEST_ASSERT_FALSE(pc_ike_delete_parse(nullptr, sizeof(delete_body), nullptr, nullptr, nullptr, nullptr));
+    TEST_ASSERT_TRUE(pc_ike_delete_parse(delete_body, sizeof(delete_body), NULL, NULL, NULL, NULL));
+    TEST_ASSERT_FALSE(pc_ike_delete_parse(NULL, sizeof(delete_body), NULL, NULL, NULL, NULL));
     IkeProtocol proto = IKE_PROTO_ESP;
     uint8_t ss = 0xff;
     uint16_t num = 0xff;
@@ -751,7 +745,7 @@ void test_notify_parse_spi()
     IkeProtocol proto = IKE_PROTO_NONE;
     uint16_t type = 0;
     uint8_t ss = 0;
-    const uint8_t *spi = nullptr, *d = nullptr;
+    const uint8_t *spi = NULL, *d = NULL;
     size_t dl = 0;
     TEST_ASSERT_TRUE(pc_ike_notify_parse(body, sizeof(body), &proto, &type, &spi, &ss, &d, &dl));
     TEST_ASSERT_EQUAL_UINT8((uint8_t)IKE_PROTO_ESP, (uint8_t)proto);
@@ -772,7 +766,7 @@ void test_delete_parse_spis()
     IkeProtocol proto = IKE_PROTO_NONE;
     uint8_t ss = 0;
     uint16_t num = 0;
-    const uint8_t *spis = nullptr;
+    const uint8_t *spis = NULL;
     TEST_ASSERT_TRUE(pc_ike_delete_parse(body, sizeof(body), &proto, &ss, &num, &spis));
     TEST_ASSERT_EQUAL_UINT8(4, ss);
     TEST_ASSERT_EQUAL_UINT16(2, num);
@@ -792,7 +786,7 @@ void test_delete_parse_spis()
 void test_sk_parse_variants()
 {
     const uint8_t body[] = {0x11, 0x22, 0x33, 0x44};
-    const uint8_t *iv = body, *ct = nullptr, *icv = body;
+    const uint8_t *iv = body, *ct = NULL, *icv = body;
     size_t ctl = 0;
     // an implicit-IV / no-ICV cipher leaves the whole body as ciphertext
     TEST_ASSERT_TRUE(pc_ike_sk_parse(body, sizeof(body), 0, 0, &iv, &ct, &ctl, &icv));
@@ -801,9 +795,9 @@ void test_sk_parse_variants()
     TEST_ASSERT_EQUAL_size_t(4, ctl);
     TEST_ASSERT_NULL(icv);
     // every out-param is optional
-    TEST_ASSERT_TRUE(pc_ike_sk_parse(body, sizeof(body), 0, 0, nullptr, nullptr, nullptr, nullptr));
+    TEST_ASSERT_TRUE(pc_ike_sk_parse(body, sizeof(body), 0, 0, NULL, NULL, NULL, NULL));
     // null body
-    TEST_ASSERT_FALSE(pc_ike_sk_parse(nullptr, 16, 0, 0, &iv, &ct, &ctl, &icv));
+    TEST_ASSERT_FALSE(pc_ike_sk_parse(NULL, 16, 0, 0, &iv, &ct, &ctl, &icv));
 }
 
 // ── SA / proposal / transform reject paths ─────────────────────────────────────────────────────
@@ -811,9 +805,9 @@ void test_sk_parse_variants()
 void test_sa_proposal_malformed()
 {
     IkeProposalRef prop;
-    TEST_ASSERT_FALSE(pc_ike_sa_first_proposal(GV_SA + 4, sizeof(GV_SA) - 4, nullptr));
+    TEST_ASSERT_FALSE(pc_ike_sa_first_proposal(GV_SA + 4, sizeof(GV_SA) - 4, NULL));
     memset(&prop, 0xff, sizeof(prop));
-    TEST_ASSERT_FALSE(pc_ike_sa_first_proposal(nullptr, 24, &prop));
+    TEST_ASSERT_FALSE(pc_ike_sa_first_proposal(NULL, 24, &prop));
     TEST_ASSERT_EQUAL_UINT8(0, prop.num_transforms); // out is zeroed before the body is inspected
     TEST_ASSERT_NULL(prop.transforms);
     TEST_ASSERT_FALSE(pc_ike_sa_first_proposal(GV_SA + 4, 7, &prop));
@@ -832,21 +826,21 @@ void test_transform_iter_guards()
 {
     IkeTransformIter it;
     IkeTransformRef t;
-    pc_ike_transform_iter_init(nullptr, nullptr); // no-op, no crash
+    pc_ike_transform_iter_init(NULL, NULL); // no-op, no crash
     // a null proposal leaves an empty iterator
-    pc_ike_transform_iter_init(&it, nullptr);
+    pc_ike_transform_iter_init(&it, NULL);
     TEST_ASSERT_NULL(it.area);
     TEST_ASSERT_EQUAL_size_t(0, it.len);
     memset(&t, 0, sizeof(t));
     TEST_ASSERT_FALSE(pc_ike_transform_next(&it, &t));
     TEST_ASSERT_EQUAL_INT32(-1, t.key_length); // out is reset before the iterator is inspected
     TEST_ASSERT_TRUE(t.last);
-    TEST_ASSERT_FALSE(pc_ike_transform_next(nullptr, &t));
+    TEST_ASSERT_FALSE(pc_ike_transform_next(NULL, &t));
 
     IkeProposalRef prop;
     TEST_ASSERT_TRUE(pc_ike_sa_first_proposal(GV_SA + 4, sizeof(GV_SA) - 4, &prop));
     pc_ike_transform_iter_init(&it, &prop);
-    TEST_ASSERT_FALSE(pc_ike_transform_next(&it, nullptr));
+    TEST_ASSERT_FALSE(pc_ike_transform_next(&it, NULL));
     // a transform length below the fixed 8-byte transform header
     const uint8_t short_tlen[] = {0x00, 0x00, 0x00, 0x04, 0x01, 0x00, 0x00, 0x0c};
     prop.transforms = short_tlen;
@@ -894,11 +888,11 @@ void test_ts_parse_malformed()
 {
     IkeTrafficSelector got;
     const uint8_t tiny[] = {0x01, 0x00, 0x00};
-    TEST_ASSERT_EQUAL_UINT8(0, pc_ike_ts_count(nullptr, 8));
+    TEST_ASSERT_EQUAL_UINT8(0, pc_ike_ts_count(NULL, 8));
     TEST_ASSERT_EQUAL_UINT8(0, pc_ike_ts_count(tiny, sizeof(tiny)));
-    TEST_ASSERT_FALSE(pc_ike_ts_get(tiny, sizeof(tiny), 0, nullptr));
+    TEST_ASSERT_FALSE(pc_ike_ts_get(tiny, sizeof(tiny), 0, NULL));
     memset(&got, 0xff, sizeof(got));
-    TEST_ASSERT_FALSE(pc_ike_ts_get(nullptr, 8, 0, &got));
+    TEST_ASSERT_FALSE(pc_ike_ts_get(NULL, 8, 0, &got));
     TEST_ASSERT_NULL(got.start_addr); // out is zeroed before the body is inspected
     TEST_ASSERT_FALSE(pc_ike_ts_get(tiny, sizeof(tiny), 0, &got));
     // a selector header past the end of the body
@@ -1032,8 +1026,8 @@ void test_prf_plus_kat()
 void test_prf_plus_guards()
 {
     uint8_t out[8];
-    TEST_ASSERT_FALSE(pc_ike_prf_plus(nullptr, 1, out, 1, out, 1)); // null key
-    TEST_ASSERT_FALSE(pc_ike_prf_plus(out, 1, out, 1, out, 0));     // zero out_len
+    TEST_ASSERT_FALSE(pc_ike_prf_plus(NULL, 1, out, 1, out, 1)); // null key
+    TEST_ASSERT_FALSE(pc_ike_prf_plus(out, 1, out, 1, out, 0));  // zero out_len
     // out_len over 255 blocks fails closed (the 1-byte prf+ counter caps the chain).
     static uint8_t huge[255 * 32 + 1];
     TEST_ASSERT_FALSE(pc_ike_prf_plus(out, 1, out, 1, huge, sizeof(huge)));
@@ -1132,8 +1126,8 @@ void test_derive_keys_guards()
     static const uint8_t spi[8] = {0};
     IkeKeyLengths lens = {32, 32, 32, 32};
     IkeKeyMaterial km;
-    TEST_ASSERT_FALSE(pc_ike_derive_keys(nullptr, 32, buf, 16, buf, 16, spi, spi, &lens, &km)); // null dh
-    TEST_ASSERT_FALSE(pc_ike_derive_keys(buf, 32, buf, 0, buf, 16, spi, spi, &lens, &km));      // zero ni
+    TEST_ASSERT_FALSE(pc_ike_derive_keys(NULL, 32, buf, 16, buf, 16, spi, spi, &lens, &km)); // null dh
+    TEST_ASSERT_FALSE(pc_ike_derive_keys(buf, 32, buf, 0, buf, 16, spi, spi, &lens, &km));   // zero ni
     IkeKeyLengths toobig = {PC_IKE_SK_MAX + 1, 32, 32, 32};
     TEST_ASSERT_FALSE(pc_ike_derive_keys(buf, 32, buf, 16, buf, 16, spi, spi, &toobig, &km)); // sk_d too big
     IkeKeyLengths zero = {0, 32, 32, 32};
@@ -1209,9 +1203,8 @@ void test_sk_aead_inplace_and_guards()
 
     // Null-argument guards.
     uint8_t o[16];
-    TEST_ASSERT_FALSE(pc_ike_sk_aead_seal(nullptr, kat_aead_salt, kat_aead_iv, nullptr, 0, nullptr, 0, o));
-    TEST_ASSERT_FALSE(
-        pc_ike_sk_aead_open(kat_aead_key, kat_aead_salt, kat_aead_iv, nullptr, 0, nullptr, 0, nullptr, o));
+    TEST_ASSERT_FALSE(pc_ike_sk_aead_seal(NULL, kat_aead_salt, kat_aead_iv, NULL, 0, NULL, 0, o));
+    TEST_ASSERT_FALSE(pc_ike_sk_aead_open(kat_aead_key, kat_aead_salt, kat_aead_iv, NULL, 0, NULL, 0, NULL, o));
 }
 
 // ── tier 2: Diffie-Hellman shared secret (curve25519 / X25519, group 31) ───────────────────────
@@ -1278,7 +1271,7 @@ void test_dh_guards()
     // Bad lengths / small cap / null.
     TEST_ASSERT_EQUAL_size_t(0, pc_ike_dh_compute(IKE_DH_CURVE25519, kat_alice_priv, 31, kat_bob_pub, 32, out, 32));
     TEST_ASSERT_EQUAL_size_t(0, pc_ike_dh_compute(IKE_DH_CURVE25519, kat_alice_priv, 32, kat_bob_pub, 32, out, 31));
-    TEST_ASSERT_EQUAL_size_t(0, pc_ike_dh_public(IKE_DH_CURVE25519, nullptr, 32, out, 32));
+    TEST_ASSERT_EQUAL_size_t(0, pc_ike_dh_public(IKE_DH_CURVE25519, NULL, 32, out, 32));
 }
 
 // ── tier 2: IKE_AUTH pre-shared-key authentication (RFC 7296 §2.15) ─────────────────────────────
@@ -1322,9 +1315,9 @@ void test_auth_psk_guards()
 {
     uint8_t out[PC_IKE_AUTH_LEN];
     static const uint8_t b[8] = {0};
-    TEST_ASSERT_FALSE(pc_ike_auth_psk(nullptr, 1, b, 8, b, 8, b, 8, b, 8, out)); // null psk
-    TEST_ASSERT_FALSE(pc_ike_auth_psk(b, 8, b, 8, b, 8, b, 8, b, 8, nullptr));   // null out
-    TEST_ASSERT_FALSE(pc_ike_auth_psk(b, 8, nullptr, 8, b, 8, b, 8, b, 8, out)); // null real_msg
+    TEST_ASSERT_FALSE(pc_ike_auth_psk(NULL, 1, b, 8, b, 8, b, 8, b, 8, out)); // null psk
+    TEST_ASSERT_FALSE(pc_ike_auth_psk(b, 8, b, 8, b, 8, b, 8, b, 8, NULL));   // null out
+    TEST_ASSERT_FALSE(pc_ike_auth_psk(b, 8, NULL, 8, b, 8, b, 8, b, 8, out)); // null real_msg
 }
 
 // ── tier 2: IKE_SA_INIT message assembly (RFC 7296 §1.2) ───────────────────────────────────────
@@ -1349,8 +1342,8 @@ void test_sa_init_build_parse()
         ni[i] = (uint8_t)(0x40 + i);
     }
     uint8_t buf[512];
-    size_t n = pc_ike_sa_init_build(buf, sizeof(buf), ispi, rspi, 0, /*is_response=*/false, 1, tf, 4, IKE_DH_CURVE25519,
-                                    ke, sizeof(ke), ni, sizeof(ni));
+    size_t n = pc_ike_sa_init_build(buf, sizeof(buf), ispi, rspi, 0, /*is_response=*/PROTO_FALSE, 1, tf, 4,
+                                    IKE_DH_CURVE25519, ke, sizeof(ke), ni, sizeof(ni));
     TEST_ASSERT_TRUE(n > PC_IKE_HDR_LEN);
 
     // Raw header bytes: Next Payload = SA(33), version 0x20, exchange = IKE_SA_INIT(34), INITIATOR flag.
@@ -1398,14 +1391,14 @@ void test_sa_init_parse_guards()
     uint8_t n32[32] = {0};
     uint8_t buf[256];
     size_t n =
-        pc_ike_sa_init_build(buf, sizeof(buf), spi, spi, 0, false, 1, tf, 1, IKE_DH_CURVE25519, n32, 32, n32, 32);
+        pc_ike_sa_init_build(buf, sizeof(buf), spi, spi, 0, PROTO_FALSE, 1, tf, 1, IKE_DH_CURVE25519, n32, 32, n32, 32);
     TEST_ASSERT_TRUE(n > 0);
     IkeSaInitMsg m;
     // A truncated message (Length says more than is present) fails closed.
     TEST_ASSERT_FALSE(pc_ike_sa_init_parse(buf, n - 1, &m));
     // A too-small build buffer returns 0.
     TEST_ASSERT_EQUAL_size_t(
-        0, pc_ike_sa_init_build(buf, 30, spi, spi, 0, false, 1, tf, 1, IKE_DH_CURVE25519, n32, 32, n32, 32));
+        0, pc_ike_sa_init_build(buf, 30, spi, spi, 0, PROTO_FALSE, 1, tf, 1, IKE_DH_CURVE25519, n32, 32, n32, 32));
     // Wrong exchange type: flip the exchange byte to IKE_AUTH -> parse rejects it.
     uint8_t buf2[256];
     memcpy(buf2, buf, n);
@@ -1443,7 +1436,7 @@ void test_auth_msg_roundtrip()
     }
 
     uint8_t msg[256];
-    size_t n = pc_ike_auth_msg_build(msg, sizeof(msg), ispi, rspi, 1, /*is_response=*/false, IKE_PL_IDI, inner,
+    size_t n = pc_ike_auth_msg_build(msg, sizeof(msg), ispi, rspi, 1, /*is_response=*/PROTO_FALSE, IKE_PL_IDI, inner,
                                      inner_len, key, salt, iv);
     TEST_ASSERT_TRUE(n > 0);
     // Raw framing: header Next Payload = SK(46), exchange = IKE_AUTH(35), SK Next Payload = IDi(35).
@@ -1455,7 +1448,7 @@ void test_auth_msg_roundtrip()
     uint8_t work[256];
     memcpy(work, msg, n);
     IkePayloadType first = IKE_PL_NONE;
-    const uint8_t *got = nullptr;
+    const uint8_t *got = NULL;
     size_t got_len = 0;
     TEST_ASSERT_TRUE(pc_ike_auth_msg_open(work, n, key, salt, &first, &got, &got_len));
     TEST_ASSERT_EQUAL_UINT8((uint8_t)IKE_PL_IDI, (uint8_t)first);
@@ -1479,8 +1472,8 @@ void test_auth_msg_tamper_and_guards()
     const uint8_t spi[8] = {1, 2, 3, 4, 5, 6, 7, 8};
     uint8_t key[32] = {0}, salt[4] = {1, 2, 3, 4}, iv[8] = {9, 9, 9, 9, 9, 9, 9, 9};
     uint8_t msg[128];
-    size_t n =
-        pc_ike_auth_msg_build(msg, sizeof(msg), spi, spi, 1, false, IKE_PL_IDI, inner, sizeof(inner), key, salt, iv);
+    size_t n = pc_ike_auth_msg_build(msg, sizeof(msg), spi, spi, 1, PROTO_FALSE, IKE_PL_IDI, inner, sizeof(inner), key,
+                                     salt, iv);
     TEST_ASSERT_TRUE(n > 0);
 
     IkePayloadType first;
@@ -1498,7 +1491,7 @@ void test_auth_msg_tamper_and_guards()
     TEST_ASSERT_FALSE(pc_ike_auth_msg_open(w2, n, key, salt, &first, &got, &got_len));
     // A too-small build buffer returns 0; open on a non-SK header returns false.
     TEST_ASSERT_EQUAL_size_t(
-        0, pc_ike_auth_msg_build(msg, 40, spi, spi, 1, false, IKE_PL_IDI, inner, sizeof(inner), key, salt, iv));
+        0, pc_ike_auth_msg_build(msg, 40, spi, spi, 1, PROTO_FALSE, IKE_PL_IDI, inner, sizeof(inner), key, salt, iv));
     uint8_t w3[128];
     memcpy(w3, msg, n);
     w3[16] = (uint8_t)IKE_PL_SA; // header Next Payload no longer SK
@@ -1630,10 +1623,10 @@ void test_sa_keys_from_init_agreement()
     memset(&resp, 0, sizeof(resp));
     memcpy(ini.init_spi, sa_spii, 8);
     memcpy(ini.resp_spi, sa_spir, 8);
-    ini.is_initiator = true;
+    ini.is_initiator = PROTO_TRUE;
     ini.suite = gcm;
     resp = ini;
-    resp.is_initiator = false;
+    resp.is_initiator = PROTO_FALSE;
 
     TEST_ASSERT_TRUE(pc_ike_sa_keys_from_init(&ini, kat_alice_priv, 32, kat_bob_pub, 32, sa_ni, 16, sa_nr, 16));
     TEST_ASSERT_TRUE(pc_ike_sa_keys_from_init(&resp, kat_bob_priv, 32, kat_alice_pub, 32, sa_ni, 16, sa_nr, 16));
@@ -1692,8 +1685,8 @@ void test_initiator_sa_init_handshake()
     const uint8_t resp_nonce[16] = {0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47,
                                     0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f};
     uint8_t resp[512];
-    size_t rspn = pc_ike_sa_init_build(resp, sizeof(resp), our_spi, resp_spi, 0, /*is_response=*/true, 1, g_hs_tf, 3,
-                                       IKE_DH_CURVE25519, kat_bob_pub, 32, resp_nonce, 16);
+    size_t rspn = pc_ike_sa_init_build(resp, sizeof(resp), our_spi, resp_spi, 0, /*is_response=*/PROTO_TRUE, 1, g_hs_tf,
+                                       3, IKE_DH_CURVE25519, kat_bob_pub, 32, resp_nonce, 16);
     TEST_ASSERT_TRUE(rspn > 0);
 
     TEST_ASSERT_TRUE(pc_ike_initiator_on_sa_init(&hs, resp, rspn));
@@ -1728,14 +1721,14 @@ void test_initiator_handshake_guards()
                            sizeof(req));
     const uint8_t wrong_spi[8] = {9, 9, 9, 9, 9, 9, 9, 9};
     uint8_t rbad[512];
-    size_t bn = pc_ike_sa_init_build(rbad, sizeof(rbad), wrong_spi, resp_spi, 0, true, 1, g_hs_tf, 3, IKE_DH_CURVE25519,
-                                     kat_bob_pub, 32, resp_nonce, 16);
+    size_t bn = pc_ike_sa_init_build(rbad, sizeof(rbad), wrong_spi, resp_spi, 0, PROTO_TRUE, 1, g_hs_tf, 3,
+                                     IKE_DH_CURVE25519, kat_bob_pub, 32, resp_nonce, 16);
     TEST_ASSERT_FALSE(pc_ike_initiator_on_sa_init(&hs, rbad, bn));
     TEST_ASSERT_EQUAL_UINT8((uint8_t)IKE_ST_FAILED, (uint8_t)hs.state);
     // Once FAILED, a subsequent (even valid) response is rejected: wrong state.
     uint8_t rgood[512];
-    size_t gn = pc_ike_sa_init_build(rgood, sizeof(rgood), our_spi, resp_spi, 0, true, 1, g_hs_tf, 3, IKE_DH_CURVE25519,
-                                     kat_bob_pub, 32, resp_nonce, 16);
+    size_t gn = pc_ike_sa_init_build(rgood, sizeof(rgood), our_spi, resp_spi, 0, PROTO_TRUE, 1, g_hs_tf, 3,
+                                     IKE_DH_CURVE25519, kat_bob_pub, 32, resp_nonce, 16);
     TEST_ASSERT_FALSE(pc_ike_initiator_on_sa_init(&hs, rgood, gn));
 
     // A message that is NOT a response (INITIATOR flag) is rejected on a fresh handshake.
@@ -1743,8 +1736,8 @@ void test_initiator_handshake_guards()
     pc_ike_initiator_start(&hs2, our_spi, kat_alice_priv, kat_alice_pub, our_nonce, 16, &gcm, g_hs_tf, 3, req,
                            sizeof(req));
     uint8_t notresp[512];
-    size_t nn = pc_ike_sa_init_build(notresp, sizeof(notresp), our_spi, resp_spi, 0, /*is_response=*/false, 1, g_hs_tf,
-                                     3, IKE_DH_CURVE25519, kat_bob_pub, 32, resp_nonce, 16);
+    size_t nn = pc_ike_sa_init_build(notresp, sizeof(notresp), our_spi, resp_spi, 0, /*is_response=*/PROTO_FALSE, 1,
+                                     g_hs_tf, 3, IKE_DH_CURVE25519, kat_bob_pub, 32, resp_nonce, 16);
     TEST_ASSERT_FALSE(pc_ike_initiator_on_sa_init(&hs2, notresp, nn));
 }
 
@@ -1765,8 +1758,8 @@ void test_initiator_ike_auth_send()
     const uint8_t resp_nonce[16] = {0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47,
                                     0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f};
     uint8_t resp[512];
-    size_t rspn = pc_ike_sa_init_build(resp, sizeof(resp), our_spi, resp_spi, 0, true, 1, g_hs_tf, 3, IKE_DH_CURVE25519,
-                                       kat_bob_pub, 32, resp_nonce, 16);
+    size_t rspn = pc_ike_sa_init_build(resp, sizeof(resp), our_spi, resp_spi, 0, PROTO_TRUE, 1, g_hs_tf, 3,
+                                       IKE_DH_CURVE25519, kat_bob_pub, 32, resp_nonce, 16);
     TEST_ASSERT_TRUE(pc_ike_initiator_on_sa_init(&hs, resp, rspn));
 
     // build_auth_psk before SA_INIT_DONE would fail; here the state is right.
@@ -1833,8 +1826,8 @@ static size_t drive_to_auth_sent(IkeHandshake *hs, uint8_t *resp, size_t resp_ca
     uint8_t req[512];
     pc_ike_initiator_start(hs, g_our_spi, kat_alice_priv, kat_alice_pub, g_our_nonce, 16, &gcm, g_hs_tf, 3, req,
                            sizeof(req));
-    size_t rspn = pc_ike_sa_init_build(resp, resp_cap, g_our_spi, g_resp_spi, 0, true, 1, g_hs_tf, 3, IKE_DH_CURVE25519,
-                                       kat_bob_pub, 32, g_resp_nonce, 16);
+    size_t rspn = pc_ike_sa_init_build(resp, resp_cap, g_our_spi, g_resp_spi, 0, PROTO_TRUE, 1, g_hs_tf, 3,
+                                       IKE_DH_CURVE25519, kat_bob_pub, 32, g_resp_nonce, 16);
     pc_ike_initiator_on_sa_init(hs, resp, rspn);
     const uint8_t iv[8] = {0, 0, 0, 0, 0, 0, 0, 1};
     const uint8_t idi[6] = {'r', 'o', 'u', 't', 'e', 'r'};
@@ -1858,7 +1851,7 @@ static size_t build_responder_auth(const IkeKeyMaterial *keys, const uint8_t *rm
     size_t ran =
         pc_ike_auth_build(rinner + ridn, sizeof(rinner) - ridn, IKE_PL_NONE, IKE_AUTH_PSK, rauth, sizeof(rauth));
     const uint8_t iv2[8] = {0, 0, 0, 0, 0, 0, 0, 2};
-    return pc_ike_auth_msg_build(out, out_cap, g_our_spi, g_resp_spi, 1, /*is_response=*/true, IKE_PL_IDR, rinner,
+    return pc_ike_auth_msg_build(out, out_cap, g_our_spi, g_resp_spi, 1, /*is_response=*/PROTO_TRUE, IKE_PL_IDR, rinner,
                                  ridn + ran, keys->sk_er, keys->sk_er + PC_IKE_AEAD_KEY_LEN, iv2);
 }
 
@@ -2010,7 +2003,7 @@ void test_informational_exchange()
     // DPD: the initiator sends an empty INFORMATIONAL; the responder decrypts it (empty inner).
     const uint8_t iv3[8] = {0, 0, 0, 0, 0, 0, 0, 3};
     uint8_t dpd[128], work[128];
-    size_t dn = pc_ike_informational_build(&ini.sa, false, 2, IKE_PL_NONE, nullptr, 0, iv3, dpd, sizeof(dpd));
+    size_t dn = pc_ike_informational_build(&ini.sa, PROTO_FALSE, 2, IKE_PL_NONE, NULL, 0, iv3, dpd, sizeof(dpd));
     TEST_ASSERT_TRUE(dn > 0);
     TEST_ASSERT_EQUAL_UINT8(37, dpd[18]); // exchange type = IKE_INFORMATIONAL
     memcpy(work, dpd, dn);
@@ -2021,7 +2014,7 @@ void test_informational_exchange()
     // The responder answers with an empty INFORMATIONAL response; the initiator decrypts it.
     const uint8_t iv4[8] = {0, 0, 0, 0, 0, 0, 0, 4};
     uint8_t dpdr[128], work2[128];
-    size_t drn = pc_ike_informational_build(&resp.sa, true, 2, IKE_PL_NONE, nullptr, 0, iv4, dpdr, sizeof(dpdr));
+    size_t drn = pc_ike_informational_build(&resp.sa, PROTO_TRUE, 2, IKE_PL_NONE, NULL, 0, iv4, dpdr, sizeof(dpdr));
     TEST_ASSERT_TRUE(drn > 0);
     memcpy(work2, dpdr, drn);
     TEST_ASSERT_TRUE(pc_ike_informational_open(&ini.sa, work2, drn, &first, &inner, &inner_len));
@@ -2029,12 +2022,12 @@ void test_informational_exchange()
 
     // A Delete: the initiator sends an INFORMATIONAL carrying Delete(IKE); the responder recovers it.
     uint8_t del_inner[64];
-    size_t deln = pc_ike_delete_build(del_inner, sizeof(del_inner), IKE_PL_NONE, IKE_PROTO_IKE, 0, nullptr, 0);
+    size_t deln = pc_ike_delete_build(del_inner, sizeof(del_inner), IKE_PL_NONE, IKE_PROTO_IKE, 0, NULL, 0);
     TEST_ASSERT_TRUE(deln > 0);
     const uint8_t iv5[8] = {0, 0, 0, 0, 0, 0, 0, 5};
     uint8_t delmsg[128], work3[128];
-    size_t dmn =
-        pc_ike_informational_build(&ini.sa, false, 3, IKE_PL_DELETE, del_inner, deln, iv5, delmsg, sizeof(delmsg));
+    size_t dmn = pc_ike_informational_build(&ini.sa, PROTO_FALSE, 3, IKE_PL_DELETE, del_inner, deln, iv5, delmsg,
+                                            sizeof(delmsg));
     TEST_ASSERT_TRUE(dmn > 0);
     memcpy(work3, delmsg, dmn);
     TEST_ASSERT_TRUE(pc_ike_informational_open(&resp.sa, work3, dmn, &first, &inner, &inner_len));
@@ -2101,14 +2094,14 @@ void test_child_keymat_kat()
         0xb3, 0x74, 0xc6, 0x62, 0xa9, 0x45, 0x65, 0x38, 0x20, 0x6a, 0xb7, 0x1f, 0x55, 0x2f, 0xdb, 0x99, 0x31, 0x27};
     uint8_t out[72];
     // No PFS: KEYMAT = prf+(SK_d, Ni | Nr).
-    TEST_ASSERT_TRUE(pc_ike_child_keymat(ck_skd, 32, nullptr, 0, ck_ni, 16, ck_nr, 16, out, 72));
+    TEST_ASSERT_TRUE(pc_ike_child_keymat(ck_skd, 32, NULL, 0, ck_ni, 16, ck_nr, 16, out, 72));
     TEST_ASSERT_EQUAL_MEMORY(ck_keymat, out, 72);
     // PFS: KEYMAT = prf+(SK_d, g^ir | Ni | Nr).
     TEST_ASSERT_TRUE(pc_ike_child_keymat(ck_skd, 32, ck_dh, 32, ck_ni, 16, ck_nr, 16, out, 72));
     TEST_ASSERT_EQUAL_MEMORY(ck_keymat_pfs, out, 72);
     // Guards.
-    TEST_ASSERT_FALSE(pc_ike_child_keymat(nullptr, 32, nullptr, 0, ck_ni, 16, ck_nr, 16, out, 72));
-    TEST_ASSERT_FALSE(pc_ike_child_keymat(ck_skd, 32, nullptr, 0, ck_ni, 16, ck_nr, 16, out, 0));
+    TEST_ASSERT_FALSE(pc_ike_child_keymat(NULL, 32, NULL, 0, ck_ni, 16, ck_nr, 16, out, 72));
+    TEST_ASSERT_FALSE(pc_ike_child_keymat(ck_skd, 32, NULL, 0, ck_ni, 16, ck_nr, 16, out, 0));
 }
 
 void test_create_child_sa_msg()
@@ -2124,7 +2117,7 @@ void test_create_child_sa_msg()
     size_t inl = pc_ike_nonce_build(inner, sizeof(inner), IKE_PL_NONE, ni_child, sizeof(ni_child));
     const uint8_t iv[8] = {0, 0, 0, 0, 0, 0, 0, 9};
     uint8_t msg[128], work[128];
-    size_t mn = pc_ike_create_child_sa_build(&ini.sa, false, 2, IKE_PL_NONCE, inner, inl, iv, msg, sizeof(msg));
+    size_t mn = pc_ike_create_child_sa_build(&ini.sa, PROTO_FALSE, 2, IKE_PL_NONCE, inner, inl, iv, msg, sizeof(msg));
     TEST_ASSERT_TRUE(mn > 0);
     TEST_ASSERT_EQUAL_UINT8(36, msg[18]); // exchange type = IKE_CREATE_CHILD_SA
 
@@ -2202,8 +2195,8 @@ void test_auth_verify_rsa()
     TEST_ASSERT_FALSE(pc_ike_auth_verify_rsa_sha256(rsa_n, rsa_e, bad_sig, 256, scratch, sizeof(scratch), rsa_real, 40,
                                                     rsa_nonce, 16, rsa_skp, 32, rsa_id, 8));
     // Null-argument guard.
-    TEST_ASSERT_FALSE(pc_ike_auth_verify_rsa_sha256(nullptr, rsa_e, rsa_sig, 256, scratch, sizeof(scratch), rsa_real,
-                                                    40, rsa_nonce, 16, rsa_skp, 32, rsa_id, 8));
+    TEST_ASSERT_FALSE(pc_ike_auth_verify_rsa_sha256(NULL, rsa_e, rsa_sig, 256, scratch, sizeof(scratch), rsa_real, 40,
+                                                    rsa_nonce, 16, rsa_skp, 32, rsa_id, 8));
 }
 
 // ── IKE SA rekey key schedule (RFC 7296 §2.18): SKEYSEED = prf(SK_d_old, g^ir | Ni | Nr) ────────
@@ -2247,7 +2240,7 @@ void test_rekey_derive_keys()
 
     // Guards: null SK_d and a missing g^ir (a rekey always has a fresh D-H) fail closed.
     TEST_ASSERT_FALSE(
-        pc_ike_rekey_derive_keys(nullptr, 32, rk_dh, 32, rk_ni, 16, rk_nr, 16, rk_spii, rk_spir, &lens, &km));
+        pc_ike_rekey_derive_keys(NULL, 32, rk_dh, 32, rk_ni, 16, rk_nr, 16, rk_spii, rk_spir, &lens, &km));
     TEST_ASSERT_FALSE(
         pc_ike_rekey_derive_keys(rk_skd, 32, rk_dh, 0, rk_ni, 16, rk_nr, 16, rk_spii, rk_spir, &lens, &km));
 }
@@ -2280,7 +2273,7 @@ void test_cp_parse_roundtrip()
 {
     // Parse the golden body (after the 4-byte generic header) and walk its attributes.
     IkeCfgType ct = IKE_CFG_REQUEST;
-    const uint8_t *area = nullptr;
+    const uint8_t *area = NULL;
     size_t area_len = 0;
     TEST_ASSERT_TRUE(pc_ike_cp_parse(cp_golden + 4, sizeof(cp_golden) - 4, &ct, &area, &area_len));
     TEST_ASSERT_EQUAL(IKE_CFG_REPLY, ct);
@@ -2304,14 +2297,14 @@ void test_cp_parse_roundtrip()
 void test_cp_request_empty_and_guards()
 {
     // A CFG_REQUEST asks for an address with an empty (zero-length) attribute.
-    IkeCfgAttr req = {PC_IKE_CFG_INTERNAL_IP4_ADDRESS, nullptr, 0};
+    IkeCfgAttr req = {PC_IKE_CFG_INTERNAL_IP4_ADDRESS, NULL, 0};
     uint8_t buf[32];
     size_t n = pc_ike_cp_build(buf, sizeof(buf), IKE_PL_SA, IKE_CFG_REQUEST, &req, 1);
     TEST_ASSERT_EQUAL_size_t(12, n); // 4 gen + 4 cfg + 4 attr header, no value
     TEST_ASSERT_EQUAL_UINT8((uint8_t)IKE_PL_SA, buf[0]);
 
     IkeCfgType ct = IKE_CFG_REPLY;
-    const uint8_t *area = nullptr;
+    const uint8_t *area = NULL;
     size_t area_len = 0;
     TEST_ASSERT_TRUE(pc_ike_cp_parse(buf + 4, n - 4, &ct, &area, &area_len));
     TEST_ASSERT_EQUAL(IKE_CFG_REQUEST, ct);
@@ -2346,7 +2339,7 @@ void test_skf_build_parse()
     TEST_ASSERT_EQUAL_UINT8((uint8_t)IKE_PL_IDI, buf[0]);
 
     uint16_t fn = 0, tf = 0;
-    const uint8_t *piv = nullptr, *pct = nullptr, *picv = nullptr;
+    const uint8_t *piv = NULL, *pct = NULL, *picv = NULL;
     size_t pct_len = 0;
     TEST_ASSERT_TRUE(pc_ike_skf_parse(buf + 4, n - 4, &fn, &tf, 8, 16, &piv, &pct, &pct_len, &picv));
     TEST_ASSERT_EQUAL_UINT16(2, fn);
@@ -2472,7 +2465,7 @@ void test_cookie_notify_build()
     TEST_ASSERT_TRUE(n > 4);
     IkeProtocol proto = IKE_PROTO_IKE;
     uint16_t ntype = 0;
-    const uint8_t *spi = nullptr, *data = nullptr;
+    const uint8_t *spi = NULL, *data = NULL;
     uint8_t spi_size = 0xff;
     size_t data_len = 0;
     TEST_ASSERT_TRUE(pc_ike_notify_parse(buf + 4, n - 4, &proto, &ntype, &spi, &spi_size, &data, &data_len));

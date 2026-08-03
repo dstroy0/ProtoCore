@@ -17,7 +17,7 @@ void tearDown()
 
 static FinsHeader make_header()
 {
-    FinsHeader h = {};
+    FinsHeader h = {0};
     h.icf = FINS_ICF_COMMAND; // 0x80
     h.rsv = 0x00;
     h.gct = 0x02;

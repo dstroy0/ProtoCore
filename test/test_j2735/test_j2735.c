@@ -170,7 +170,7 @@ void test_uper_overflow_and_bsm_guard()
     pc_uper_put_bits(&w, 0xFFFFFFFFu, 32);
     pc_uper_put_bits(&w, 0xFFFFFFFFu, 32); // past the 4-byte buffer -> not ok
     TEST_ASSERT_EQUAL_size_t(0, pc_uper_writer_finish(&w));
-    J2735BsmCore c = {};
+    J2735BsmCore c = {0};
     TEST_ASSERT_EQUAL_size_t(0, pc_j2735_bsm_core_encode(&c, buf, 1)); // tiny cap fails closed
 }
 
@@ -193,7 +193,7 @@ void test_j2735_guards_and_truncation()
     TEST_ASSERT_EQUAL_UINT32(0, pc_uper_get_bits(&rn, 4));
 
     // encode/decode null-argument guards.
-    J2735BsmCore c = {};
+    J2735BsmCore c = {0};
     TEST_ASSERT_EQUAL_size_t(0, pc_j2735_bsm_core_encode(NULL, buf, sizeof(buf)));
     TEST_ASSERT_EQUAL_size_t(0, pc_j2735_bsm_core_encode(&c, NULL, sizeof(buf)));
     TEST_ASSERT_FALSE(pc_j2735_bsm_core_decode(NULL, 16, &c));

@@ -78,7 +78,7 @@ void test_export_overflow_fails_closed()
 void test_export_import_null_guards()
 {
     char out[128];
-    pc_cfg_field fields[1] = {};
+    pc_cfg_field fields[1] = {0};
     TEST_ASSERT_EQUAL_INT(0, pc_config_export("ns", fields, 1, NULL, sizeof(out))); // null out
     TEST_ASSERT_EQUAL_INT(0, pc_config_export("ns", NULL, 1, out, sizeof(out)));    // null fields
     TEST_ASSERT_EQUAL_INT(0, pc_config_import("ns", NULL, 1, "text", 4));           // null fields

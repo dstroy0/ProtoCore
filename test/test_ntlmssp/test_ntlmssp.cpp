@@ -119,8 +119,8 @@ void test_build_authenticate()
     uint8_t nt[48];
     memset(nt, 0xEE, sizeof(nt));
     uint8_t buf[256];
-    size_t n = pc_ntlmssp_build_authenticate(buf, sizeof(buf), nullptr, 0, nt, sizeof(nt), "Domain", "User", "WS",
-                                             0x12345678, false);
+    size_t n = pc_ntlmssp_build_authenticate(buf, sizeof(buf), NULL, 0, nt, sizeof(nt), "Domain", "User", "WS",
+                                             0x12345678, PROTO_FALSE);
     TEST_ASSERT_GREATER_THAN_size_t(64, n);
     TEST_ASSERT_EQUAL_MEMORY(SIG, buf, 8);
     TEST_ASSERT_EQUAL_UINT32(3, r32(buf + 8)); // AUTHENTICATE
@@ -140,8 +140,8 @@ void test_build_authenticate()
     const uint8_t user16[8] = {'U', 0, 's', 0, 'e', 0, 'r', 0};
     TEST_ASSERT_EQUAL_MEMORY(user16, buf + u_off, 8);
 
-    TEST_ASSERT_EQUAL_size_t(0, pc_ntlmssp_build_authenticate(buf, 80, nullptr, 0, nt, sizeof(nt), "Domain", "User",
-                                                              nullptr, 0, false)); // overflow
+    TEST_ASSERT_EQUAL_size_t(0, pc_ntlmssp_build_authenticate(buf, 80, NULL, 0, nt, sizeof(nt), "Domain", "User", NULL,
+                                                              0, PROTO_FALSE)); // overflow
 }
 
 // with_mic=true: the AUTHENTICATE reserves an 8-byte Version + 16-byte MIC before the payload, sets
@@ -154,8 +154,8 @@ void test_build_authenticate_with_mic()
         nt[i] = (uint8_t)(0x40 + i);
     }
     uint8_t buf[256];
-    size_t n = pc_ntlmssp_build_authenticate(buf, sizeof(buf), nullptr, 0, nt, sizeof(nt), "Domain", "User", "WS",
-                                             0x00000001, /*with_mic=*/true);
+    size_t n = pc_ntlmssp_build_authenticate(buf, sizeof(buf), NULL, 0, nt, sizeof(nt), "Domain", "User", "WS",
+                                             0x00000001, /*with_mic=*/PROTO_TRUE);
     TEST_ASSERT_GREATER_THAN_size_t(88, n);
     // NTLMSSP_NEGOTIATE_VERSION (0x02000000) OR'd into the flags word by the builder.
     TEST_ASSERT_EQUAL_UINT32(0x00000001u | NTLMSSP_NEGOTIATE_VERSION, r32(buf + 60));
@@ -193,8 +193,8 @@ void test_end_to_end()
     TEST_ASSERT_GREATER_THAN_size_t(0, nt_len);
 
     uint8_t auth[512];
-    size_t an = pc_ntlmssp_build_authenticate(auth, sizeof(auth), nullptr, 0, nt_resp, nt_len, "Domain", "User",
-                                              nullptr, ch.flags, false);
+    size_t an = pc_ntlmssp_build_authenticate(auth, sizeof(auth), NULL, 0, nt_resp, nt_len, "Domain", "User", NULL,
+                                              ch.flags, PROTO_FALSE);
     TEST_ASSERT_GREATER_THAN_size_t(0, an);
 
     uint32_t nt_off = r32(auth + 24);
@@ -208,7 +208,7 @@ void test_end_to_end()
 // coverage only drives the cap side).
 void test_build_negotiate_null_buf()
 {
-    TEST_ASSERT_EQUAL_size_t(0, pc_ntlmssp_build_negotiate(nullptr, 64, NTLMSSP_CLIENT_DEFAULT_FLAGS));
+    TEST_ASSERT_EQUAL_size_t(0, pc_ntlmssp_build_negotiate(NULL, 64, NTLMSSP_CLIENT_DEFAULT_FLAGS));
 }
 
 // The CHALLENGE parser rejects a null message and a null output struct (the !msg / !out sides of
@@ -220,8 +220,8 @@ void test_parse_challenge_null_args()
     uint8_t m[128];
     size_t n = build_challenge(m, sc, ti, 4);
     NtlmChallenge ch;
-    TEST_ASSERT_FALSE(pc_ntlmssp_parse_challenge(nullptr, n, &ch));
-    TEST_ASSERT_FALSE(pc_ntlmssp_parse_challenge(m, n, nullptr));
+    TEST_ASSERT_FALSE(pc_ntlmssp_parse_challenge(NULL, n, &ch));
+    TEST_ASSERT_FALSE(pc_ntlmssp_parse_challenge(m, n, NULL));
     TEST_ASSERT_TRUE(pc_ntlmssp_parse_challenge(m, n, &ch)); // the same message is otherwise fine
 }
 
@@ -251,7 +251,7 @@ void test_build_authenticate_null_buf()
     uint8_t nt[16];
     memset(nt, 0x11, sizeof(nt));
     TEST_ASSERT_EQUAL_size_t(
-        0, pc_ntlmssp_build_authenticate(nullptr, 256, nullptr, 0, nt, sizeof(nt), "Dom", "Usr", "Wks", 0, false));
+        0, pc_ntlmssp_build_authenticate(NULL, 256, NULL, 0, nt, sizeof(nt), "Dom", "Usr", "Wks", 0, PROTO_FALSE));
 }
 
 // An LM response is laid out ahead of the NT response and its field triplet points at it. The SMB
@@ -263,7 +263,7 @@ void test_build_authenticate_with_lm()
     memset(nt, 0xA5, sizeof(nt));
     uint8_t buf[256];
     size_t n = pc_ntlmssp_build_authenticate(buf, sizeof(buf), lm, sizeof(lm), nt, sizeof(nt), "Dom", "Usr", "Wks",
-                                             0x11223344, false);
+                                             0x11223344, PROTO_FALSE);
     TEST_ASSERT_EQUAL_size_t(64 + 24 + 24 + 6 + 6 + 6, n);
 
     TEST_ASSERT_EQUAL_UINT16(24, r16(buf + 12)); // LmChallengeResponseLen
@@ -286,7 +286,8 @@ void test_build_authenticate_empty_responses()
 
     // lm_resp non-null but lm_len 0, and nt_resp null: neither payload is written
     memset(buf, 0, sizeof(buf));
-    size_t n = pc_ntlmssp_build_authenticate(buf, sizeof(buf), resp, 0, nullptr, 0, "D", "U", "W", 0x0BADF00D, false);
+    size_t n =
+        pc_ntlmssp_build_authenticate(buf, sizeof(buf), resp, 0, NULL, 0, "D", "U", "W", 0x0BADF00D, PROTO_FALSE);
     TEST_ASSERT_EQUAL_size_t(64 + 2 + 2 + 2, n); // header + "D"/"U"/"W" UTF-16LE, no responses
     TEST_ASSERT_EQUAL_UINT16(0, r16(buf + 12));  // LmChallengeResponseLen
     TEST_ASSERT_EQUAL_UINT16(0, r16(buf + 20));  // NtChallengeResponseLen
@@ -296,7 +297,7 @@ void test_build_authenticate_empty_responses()
 
     // nt_resp non-null but nt_len 0: the NT payload is still empty, so the names start at 64
     memset(buf, 0, sizeof(buf));
-    n = pc_ntlmssp_build_authenticate(buf, sizeof(buf), nullptr, 0, resp, 0, "D", "U", "W", 0, false);
+    n = pc_ntlmssp_build_authenticate(buf, sizeof(buf), NULL, 0, resp, 0, "D", "U", "W", 0, PROTO_FALSE);
     TEST_ASSERT_EQUAL_size_t(64 + 2 + 2 + 2, n);
     TEST_ASSERT_EQUAL_UINT16(0, r16(buf + 20));  // NtChallengeResponseLen
     TEST_ASSERT_EQUAL_UINT16(2, r16(buf + 28));  // DomainNameLen

@@ -20,7 +20,7 @@ void tearDown()
 // The RFC 8428 single-record example.
 void test_json_canonical()
 {
-    SenmlRecord r = {};
+    SenmlRecord r = {0};
     r.base_name = "urn:dev:ow:10e2073a01080063";
     r.unit = "Cel";
     r.value_kind = SENML_V_FLOAT;
@@ -34,7 +34,7 @@ void test_json_canonical()
 // A multi-record pack: a base name on the first record, plain names after.
 void test_json_multi_record()
 {
-    SenmlRecord r[2] = {};
+    SenmlRecord r[2] = {0};
     r[0].base_name = "urn:dev:ow:1;";
     r[0].name = "voltage";
     r[0].unit = "V";
@@ -56,7 +56,7 @@ void test_json_multi_record()
 // String / boolean values, and an integral time emitted as an integer (full precision).
 void test_json_string_bool_time()
 {
-    SenmlRecord rs = {};
+    SenmlRecord rs = {0};
     rs.name = "status";
     rs.value_kind = SENML_V_STRING;
     rs.value_str = "ok";
@@ -66,7 +66,7 @@ void test_json_string_bool_time()
     TEST_ASSERT_GREATER_THAN(0, (int)pc_senml_json_build(buf, sizeof(buf), &rs, 1));
     TEST_ASSERT_EQUAL_STRING("[{\"n\":\"status\",\"vs\":\"ok\",\"t\":1600000000}]", buf);
 
-    SenmlRecord rb = {};
+    SenmlRecord rb = {0};
     rb.name = "open";
     rb.value_kind = SENML_V_BOOL;
     rb.value_bool = PROTO_TRUE;
@@ -77,7 +77,7 @@ void test_json_string_bool_time()
 // SenML-CBOR: a CBOR array of integer-keyed maps; read it back with the CBOR reader.
 void test_cbor_round_trip()
 {
-    SenmlRecord r = {};
+    SenmlRecord r = {0};
     r.name = "temp";
     r.unit = "Cel";
     r.value_kind = SENML_V_FLOAT;
@@ -119,7 +119,7 @@ void test_cbor_round_trip()
 // A negative base-label is encoded (bn = -2) and reads back as a negative key.
 void test_cbor_base_name_key()
 {
-    SenmlRecord r = {};
+    SenmlRecord r = {0};
     r.base_name = "dev1";
     r.value_kind = SENML_V_NONE;
     uint8_t buf[32];
@@ -137,7 +137,7 @@ void test_cbor_base_name_key()
 
 void test_overflow_fails_closed()
 {
-    SenmlRecord r = {};
+    SenmlRecord r = {0};
     r.base_name = "urn:dev:ow:10e2073a01080063";
     r.unit = "Cel";
     r.value_kind = SENML_V_FLOAT;
@@ -151,7 +151,7 @@ void test_overflow_fails_closed()
 // JSON with a base time and a value-less (PC_NONE) record.
 void test_json_base_time_and_none()
 {
-    SenmlRecord r = {};
+    SenmlRecord r = {0};
     r.base_name = "dev";
     r.has_base_time = PROTO_TRUE;
     r.base_time = 100; // integral -> "100"
@@ -164,7 +164,7 @@ void test_json_base_time_and_none()
 // CBOR with base time + string value + time, and a separate boolean value.
 void test_cbor_all_kinds()
 {
-    SenmlRecord r = {};
+    SenmlRecord r = {0};
     r.has_base_time = PROTO_TRUE;
     r.base_time = 5;
     r.name = "s";
@@ -201,7 +201,7 @@ void test_cbor_all_kinds()
     TEST_ASSERT_TRUE(pc_cbor_read_int(&rd, &iv));
     TEST_ASSERT_EQUAL_INT64(9, iv);
 
-    SenmlRecord rb = {};
+    SenmlRecord rb = {0};
     rb.name = "b";
     rb.value_kind = SENML_V_BOOL;
     rb.value_bool = PROTO_TRUE;
@@ -224,7 +224,7 @@ void test_cbor_all_kinds()
 
 void test_senml_null_args()
 {
-    SenmlRecord r = {};
+    SenmlRecord r = {0};
     char jb[32];
     uint8_t cb[32];
     TEST_ASSERT_EQUAL_size_t(0, pc_senml_json_build(NULL, sizeof(jb), &r, 1));
@@ -237,7 +237,7 @@ void test_senml_null_args()
 // through the integral fast path.
 void test_json_non_integral_magnitudes()
 {
-    SenmlRecord r = {};
+    SenmlRecord r = {0};
     r.name = "big";
     r.value_kind = SENML_V_FLOAT;
 
@@ -255,7 +255,7 @@ void test_json_non_integral_magnitudes()
 // field count drops to match, so the pack stays well-formed.
 void test_string_kind_without_value()
 {
-    SenmlRecord r = {};
+    SenmlRecord r = {0};
     r.name = "s";
     r.value_kind = SENML_V_STRING;
     r.value_str = NULL;

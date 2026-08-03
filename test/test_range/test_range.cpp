@@ -35,7 +35,7 @@ static void serve_data(uint8_t slot_id, HttpReq *req)
 static void serve_data_conn_gone(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    conn_pool[slot_id].pcb = nullptr;
+    conn_pool[slot_id].pcb = NULL;
     fs::FS fs;
     serve_file(slot_id, fs, "/data.bin", "application/octet-stream");
 }
@@ -70,7 +70,7 @@ void tearDown()
 static const char *body_ptr()
 {
     const char *sep = strstr(tcp_captured(), "\r\n\r\n");
-    return sep ? sep + 4 : nullptr;
+    return sep ? sep + 4 : NULL;
 }
 
 static size_t body_len()
@@ -103,7 +103,7 @@ static void request(const char *range_hdr)
 
 void test_no_range_full_200()
 {
-    request(nullptr);
+    request(NULL);
     const char *r = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(r, "200 OK"));
     TEST_ASSERT_NOT_NULL(strstr(r, "Accept-Ranges: bytes"));
@@ -239,7 +239,7 @@ void test_head_with_range_no_body()
 void test_file_send_backpressure_resumes_across_polls()
 {
     mock_sndbuf() = 0; // window shut: no room to page any body this loop
-    request(nullptr);
+    request(NULL);
     const char *r = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(r, "200 OK"));
     TEST_ASSERT_NOT_NULL(strstr(r, "Content-Length: 20")); // headers went out
@@ -258,7 +258,7 @@ void test_file_send_backpressure_resumes_across_polls()
 void test_file_send_write_fails_then_retries()
 {
     mock_send_fail_after() = 1; // header write succeeds; the next (first body) write fails
-    request(nullptr);
+    request(NULL);
     const char *r = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(r, "200 OK"));
     TEST_ASSERT_NOT_NULL(strstr(r, "Content-Length: 20")); // header queued
@@ -276,7 +276,7 @@ void test_file_send_write_fails_then_retries()
 void test_file_send_short_read_stops()
 {
     fs::_mock_read_limit() = 8; // the underlying file yields only 8 of its 20 bytes
-    request(nullptr);
+    request(NULL);
     const char *r = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(r, "200 OK"));
     TEST_ASSERT_NOT_NULL(strstr(r, "Content-Length: 20")); // header still advertises the stat size

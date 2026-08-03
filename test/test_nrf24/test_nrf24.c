@@ -88,7 +88,7 @@ static const uint8_t ADDR[5] = {0xE7, 0xE7, 0xE7, 0xE7, 0xE7};
 
 static nrf_config default_cfg()
 {
-    nrf_config c = {};
+    nrf_config c = {0};
     c.address = ADDR;
     c.channel = 76;
     c.data_rate = 0;

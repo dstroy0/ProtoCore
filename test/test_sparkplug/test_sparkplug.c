@@ -32,7 +32,7 @@ void test_topic()
 // A double metric "temperature" = 23.5 -> exact Tahu Metric protobuf bytes.
 void test_metric_bytes()
 {
-    SpbMetric m = {};
+    SpbMetric m = {0};
     m.name = "temperature";
     m.datatype = SPB_DT_DOUBLE;
     m.kind = SPB_M_DOUBLE;
@@ -51,7 +51,7 @@ void test_metric_bytes()
 // Build a Payload and walk it back with the protobuf cursor.
 void test_payload_round_trip()
 {
-    SpbMetric m = {};
+    SpbMetric m = {0};
     m.name = "temperature";
     m.datatype = SPB_DT_DOUBLE;
     m.kind = SPB_M_DOUBLE;
@@ -93,7 +93,7 @@ void test_payload_round_trip()
 
 void test_metric_int_and_string()
 {
-    SpbMetric mi = {};
+    SpbMetric mi = {0};
     mi.name = "count";
     mi.datatype = SPB_DT_INT32;
     mi.kind = SPB_M_INT;
@@ -109,7 +109,7 @@ void test_metric_int_and_string()
     TEST_ASSERT_EQUAL_UINT32(10, f.field_number);
     TEST_ASSERT_EQUAL_UINT64(42, f.value);
 
-    SpbMetric ms = {};
+    SpbMetric ms = {0};
     ms.name = "status";
     ms.datatype = SPB_DT_STRING;
     ms.kind = SPB_M_STRING;
@@ -126,7 +126,7 @@ void test_metric_int_and_string()
 // A metric carrying an alias instead of a name (DATA messages after birth).
 void test_metric_alias()
 {
-    SpbMetric m = {};
+    SpbMetric m = {0};
     m.has_alias = PROTO_TRUE;
     m.alias = 7;
     m.datatype = SPB_DT_BOOLEAN;
@@ -143,7 +143,7 @@ void test_metric_alias()
 
 void test_overflow_fails_closed()
 {
-    SpbMetric m = {};
+    SpbMetric m = {0};
     m.name = "temperature";
     m.datatype = SPB_DT_DOUBLE;
     m.kind = SPB_M_DOUBLE;
@@ -166,7 +166,7 @@ void test_spb_error_and_kind_paths()
     TEST_ASSERT_EQUAL_UINT(0, pc_spb_build_metric(NULL, sizeof(buf), NULL));
     TEST_ASSERT_EQUAL_UINT(0, pc_spb_build_metric(buf, sizeof(buf), NULL));
 
-    SpbMetric ml = {};
+    SpbMetric ml = {0};
     ml.name = "lng";
     ml.has_timestamp = PROTO_TRUE;
     ml.timestamp = 123;
@@ -175,7 +175,7 @@ void test_spb_error_and_kind_paths()
     ml.long_value = 0x1122334455ull;
     TEST_ASSERT_TRUE(pc_spb_build_metric(buf, sizeof(buf), &ml) > 0); // timestamp + Long
 
-    SpbMetric mf = {};
+    SpbMetric mf = {0};
     mf.name = "flt";
     mf.datatype = SPB_DT_DOUBLE;
     mf.kind = SPB_M_FLOAT;
@@ -187,7 +187,7 @@ void test_spb_error_and_kind_paths()
     static char big[PC_SPB_METRIC_MAX + 64];
     memset(big, 'x', sizeof(big) - 1);
     big[sizeof(big) - 1] = '\0';
-    SpbMetric ms = {};
+    SpbMetric ms = {0};
     ms.name = "s";
     ms.datatype = SPB_DT_STRING;
     ms.kind = SPB_M_STRING;
@@ -208,7 +208,7 @@ void test_spb_more_branch_coverage()
     TEST_ASSERT_EQUAL_UINT(0, pc_spb_build_topic(tbuf, sizeof(tbuf), "g", "NDATA", NULL, NULL));
 
     // STRING kind with no string_value: name + datatype only, no value field.
-    SpbMetric ms2 = {};
+    SpbMetric ms2 = {0};
     ms2.name = "s2";
     ms2.datatype = SPB_DT_STRING;
     ms2.kind = SPB_M_STRING;
@@ -224,7 +224,7 @@ void test_spb_more_branch_coverage()
     TEST_ASSERT_FALSE(pc_pb_read_field(buf2, n2, &pos2, &f2)); // no string_value field
 
     // Out-of-range kind: none of the switch cases match, so again just name + datatype.
-    SpbMetric mu = {};
+    SpbMetric mu = {0};
     mu.name = "unk";
     mu.datatype = SPB_DT_INT32;
     mu.kind = (SpbMetricKind)99;
@@ -257,7 +257,7 @@ void test_spb_more_branch_coverage()
 // Build a two-metric payload, then decode it back with the subscriber-side parser.
 void test_decode_payload_and_metrics()
 {
-    SpbMetric m[2] = {};
+    SpbMetric m[2] = {0};
     m[0].name = "temperature";
     m[0].has_timestamp = PROTO_TRUE;
     m[0].timestamp = 12345;

@@ -30,7 +30,7 @@ static void on_item_dma(const void *item, void *ctx)
     g_seen_dma.push_back(v);
 }
 
-static bool post_u32(uint32_t v)
+static proto_bool post_u32(uint32_t v)
 {
     return pc_pq_post(&v, 0);
 }
@@ -48,9 +48,9 @@ void setUp()
     g_seen.clear();
     g_seen_dma.clear();
     stop_all_lanes();
-    pc_pq_config cfg = {};
+    pc_pq_config cfg = {0};
     cfg.handler = on_item;
-    cfg.ctx = nullptr;
+    cfg.ctx = NULL;
     cfg.priority = 5;
     cfg.core = 1;
     cfg.name = "test_pq";
@@ -64,11 +64,11 @@ void tearDown()
 void test_start_validates_and_runs()
 {
     pc_pq_stop();
-    TEST_ASSERT_FALSE(pc_pq_start(nullptr)); // null config
-    pc_pq_config bad = {};
-    bad.handler = nullptr;
+    TEST_ASSERT_FALSE(pc_pq_start(NULL)); // null config
+    pc_pq_config bad = {0};
+    bad.handler = NULL;
     TEST_ASSERT_FALSE(pc_pq_start(&bad)); // null handler
-    pc_pq_config ok = {};
+    pc_pq_config ok = {0};
     ok.handler = on_item;
     TEST_ASSERT_TRUE(pc_pq_start(&ok));
     TEST_ASSERT_TRUE(pc_pq_running());
@@ -165,7 +165,7 @@ void test_internal_lanes_outrank_user()
 void test_lanes_are_isolated()
 {
     // The USER lane is already started by setUp; start the internal DMA lane too.
-    pc_pq_config dma = {};
+    pc_pq_config dma = {0};
     dma.handler = on_item_dma;
     dma.core = 1;
     TEST_ASSERT_TRUE(pc_pq_start_lane(pc_pq_lane::PC_PQ_LANE_DMA, &dma));
@@ -190,7 +190,7 @@ void test_lane_start_stop_running_independent()
     TEST_ASSERT_TRUE(pc_pq_running_lane(pc_pq_lane::PC_PQ_LANE_USER)); // setUp started it
     TEST_ASSERT_FALSE(pc_pq_running_lane(pc_pq_lane::PC_PQ_LANE_DMA));
 
-    pc_pq_config dma = {};
+    pc_pq_config dma = {0};
     dma.handler = on_item_dma;
     TEST_ASSERT_TRUE(pc_pq_start_lane(pc_pq_lane::PC_PQ_LANE_DMA, &dma));
     TEST_ASSERT_TRUE(pc_pq_running_lane(pc_pq_lane::PC_PQ_LANE_DMA));
@@ -203,7 +203,7 @@ void test_lane_start_stop_running_independent()
 
 void test_lane_high_water_is_per_lane()
 {
-    pc_pq_config dma = {};
+    pc_pq_config dma = {0};
     dma.handler = on_item_dma;
     TEST_ASSERT_TRUE(pc_pq_start_lane(pc_pq_lane::PC_PQ_LANE_DMA, &dma));
     uint32_t v = 5;
@@ -216,7 +216,7 @@ void test_lane_high_water_is_per_lane()
 void test_lane_api_urgent_and_drain()
 {
     stop_all_lanes();
-    pc_pq_config cfg = {};
+    pc_pq_config cfg = {0};
     cfg.handler = on_item_dma;
     TEST_ASSERT_TRUE(pc_pq_start_lane(pc_pq_lane::PC_PQ_LANE_DMA, &cfg));
     uint32_t a = 10, b = 20;
@@ -228,7 +228,7 @@ void test_lane_api_urgent_and_drain()
     TEST_ASSERT_EQUAL_UINT32(10u, g_seen_dma[1]);
     // Guards: urgent-post to a bad lane / with a null item fails closed; drain of a bad lane is a no-op.
     TEST_ASSERT_FALSE(pc_pq_post_lane_urgent((pc_pq_lane)pc_pq_lane::PC_PQ_LANE_COUNT, &a, 0));
-    TEST_ASSERT_FALSE(pc_pq_post_lane_urgent(pc_pq_lane::PC_PQ_LANE_DMA, nullptr, 0));
+    TEST_ASSERT_FALSE(pc_pq_post_lane_urgent(pc_pq_lane::PC_PQ_LANE_DMA, NULL, 0));
     pc_pq_drain_lane((pc_pq_lane)pc_pq_lane::PC_PQ_LANE_COUNT);
     pc_pq_stop_lane(pc_pq_lane::PC_PQ_LANE_DMA);
 }
@@ -239,7 +239,7 @@ void test_lane_guards_reject_bad_lane_and_null_item()
     // lane-scoped entry point, and a null item must be rejected on the plain post path
     // (mirrors the already-covered null-item guard on the urgent post path).
     pc_pq_lane bad = (pc_pq_lane)pc_pq_lane::PC_PQ_LANE_COUNT;
-    pc_pq_config cfg = {};
+    pc_pq_config cfg = {0};
     cfg.handler = on_item_dma;
     TEST_ASSERT_FALSE(pc_pq_start_lane(bad, &cfg));
     uint32_t v = 1;
@@ -248,13 +248,13 @@ void test_lane_guards_reject_bad_lane_and_null_item()
     TEST_ASSERT_EQUAL_size_t(0, pc_pq_high_water_lane(bad));
     pc_pq_stop_lane(bad); // must not crash; no state to change
 
-    TEST_ASSERT_FALSE(pc_pq_post_lane(pc_pq_lane::PC_PQ_LANE_FORWARD, nullptr, 0));
+    TEST_ASSERT_FALSE(pc_pq_post_lane(pc_pq_lane::PC_PQ_LANE_FORWARD, NULL, 0));
 }
 
 void test_post_lane_urgent_fails_closed_when_full()
 {
     stop_all_lanes();
-    pc_pq_config cfg = {};
+    pc_pq_config cfg = {0};
     cfg.handler = on_item_dma;
     TEST_ASSERT_TRUE(pc_pq_start_lane(pc_pq_lane::PC_PQ_LANE_DMA, &cfg));
     for (uint32_t i = 0; i < PC_PQ_DEPTH; i++)

@@ -27,7 +27,7 @@ void test_has_extension(void)
     // Trailing dot is not an extension.
     TEST_ASSERT_FALSE(pc_spa_has_extension("/weird."));
     // Null path: bail out before touching it.
-    TEST_ASSERT_FALSE(pc_spa_has_extension(nullptr));
+    TEST_ASSERT_FALSE(pc_spa_has_extension(NULL));
     // No '/' at all: the whole path is the segment (ternary's non-slash branch).
     TEST_ASSERT_TRUE(pc_spa_has_extension("file.txt"));
     // Segment starts with the dot (dotfile): the dot is the segment, not an extension.
@@ -45,9 +45,9 @@ void test_route(void)
     TEST_ASSERT_EQUAL_INT(pc_spa_action::PC_SPA_PASSTHROUGH, pc_spa_route("/api/state", "/api/"));
     TEST_ASSERT_EQUAL_INT(pc_spa_action::PC_SPA_PASSTHROUGH, pc_spa_route("/api/devices/42", "/api/"));
     // No API prefix configured: an /api path is just a route.
-    TEST_ASSERT_EQUAL_INT(pc_spa_action::PC_SPA_SERVE_SHELL, pc_spa_route("/api/state", nullptr));
+    TEST_ASSERT_EQUAL_INT(pc_spa_action::PC_SPA_SERVE_SHELL, pc_spa_route("/api/state", NULL));
     // Null path: bail out before touching it.
-    TEST_ASSERT_EQUAL_INT(pc_spa_action::PC_SPA_SERVE_SHELL, pc_spa_route(nullptr, "/api/"));
+    TEST_ASSERT_EQUAL_INT(pc_spa_action::PC_SPA_SERVE_SHELL, pc_spa_route(NULL, "/api/"));
     // A path that doesn't start with '/' is neither the empty/root case nor under the prefix.
     TEST_ASSERT_EQUAL_INT(pc_spa_action::PC_SPA_SERVE_FILE, pc_spa_route("relative.txt", "/api/"));
     // Non-null but empty API prefix: treated as "none configured".
@@ -60,9 +60,9 @@ static pc_spa_ctx healthy_ctx(void)
 {
     pc_spa_ctx c;
     c.api_prefix = "/api/";
-    c.shell_available = true;
-    c.client_scripting = true;
-    c.degraded = false;
+    c.shell_available = PROTO_TRUE;
+    c.client_scripting = PROTO_TRUE;
+    c.degraded = PROTO_FALSE;
     return c;
 }
 
@@ -77,7 +77,7 @@ void test_route_ex_healthy_matches_the_plain_router(void)
 void test_missing_shell_falls_back(void)
 {
     pc_spa_ctx c = healthy_ctx();
-    c.shell_available = false; // half-finished upload, wiped filesystem
+    c.shell_available = PROTO_FALSE; // half-finished upload, wiped filesystem
     TEST_ASSERT_EQUAL_INT(pc_spa_action::PC_SPA_SERVE_FALLBACK, pc_spa_route_ex("/dashboard", &c));
     TEST_ASSERT_EQUAL_INT(pc_spa_action::PC_SPA_SERVE_FALLBACK, pc_spa_route_ex("/", &c));
 }
@@ -85,14 +85,14 @@ void test_missing_shell_falls_back(void)
 void test_non_scripting_client_falls_back(void)
 {
     pc_spa_ctx c = healthy_ctx();
-    c.client_scripting = false; // curl, a text browser, scripting disabled
+    c.client_scripting = PROTO_FALSE; // curl, a text browser, scripting disabled
     TEST_ASSERT_EQUAL_INT(pc_spa_action::PC_SPA_SERVE_FALLBACK, pc_spa_route_ex("/devices/42", &c));
 }
 
 void test_degraded_device_falls_back(void)
 {
     pc_spa_ctx c = healthy_ctx();
-    c.degraded = true; // recovery mode / failsafe / low memory
+    c.degraded = PROTO_TRUE; // recovery mode / failsafe / low memory
     TEST_ASSERT_EQUAL_INT(pc_spa_action::PC_SPA_SERVE_FALLBACK, pc_spa_route_ex("/dashboard", &c));
 }
 
@@ -101,9 +101,9 @@ void test_api_still_passes_through_in_fallback(void)
     // The property that makes the fallback worth having: its own controls POST to these endpoints,
     // so cutting them off would leave an operator looking at a page that cannot actuate anything.
     pc_spa_ctx c = healthy_ctx();
-    c.shell_available = false;
-    c.client_scripting = false;
-    c.degraded = true;
+    c.shell_available = PROTO_FALSE;
+    c.client_scripting = PROTO_FALSE;
+    c.degraded = PROTO_TRUE;
     TEST_ASSERT_EQUAL_INT(pc_spa_action::PC_SPA_PASSTHROUGH, pc_spa_route_ex("/api/stop", &c));
     TEST_ASSERT_EQUAL_INT(pc_spa_action::PC_SPA_PASSTHROUGH, pc_spa_route_ex("/api/state", &c));
 }
@@ -113,33 +113,33 @@ void test_assets_are_unaffected_by_degradation(void)
     // An asset request stays an asset request; a real 404 is the caller's to report. Rewriting it to
     // the fallback page would hand the browser HTML where it asked for CSS.
     pc_spa_ctx c = healthy_ctx();
-    c.shell_available = false;
-    c.degraded = true;
+    c.shell_available = PROTO_FALSE;
+    c.degraded = PROTO_TRUE;
     TEST_ASSERT_EQUAL_INT(pc_spa_action::PC_SPA_SERVE_FILE, pc_spa_route_ex("/style.css", &c));
 }
 
 void test_route_ex_null_ctx_degrades_to_the_plain_router(void)
 {
-    TEST_ASSERT_EQUAL_INT(pc_spa_action::PC_SPA_SERVE_SHELL, pc_spa_route_ex("/dashboard", nullptr));
+    TEST_ASSERT_EQUAL_INT(pc_spa_action::PC_SPA_SERVE_SHELL, pc_spa_route_ex("/dashboard", NULL));
 }
 
 // --- conditional UI streaming ---------------------------------------------
 
-static bool when_true(void *)
+static proto_bool when_true(void *)
 {
-    return true;
+    return PROTO_TRUE;
 }
-static bool when_false(void *)
+static proto_bool when_false(void *)
 {
-    return false;
+    return PROTO_FALSE;
 }
-static bool when_flag(void *ctx)
+static proto_bool when_flag(void *ctx)
 {
-    return *(bool *)ctx;
+    return *(proto_bool *)ctx;
 }
 
 static const pc_ui_fragment FRAGS[] = {
-    {"header", "<h1>HMI</h1>", nullptr},
+    {"header", "<h1>HMI</h1>", NULL},
     {"alarm", "<p>ALARM</p>", when_flag},
     {"controls", "<button>stop</button>", when_true},
     {"debug", "<pre>debug</pre>", when_false},
@@ -160,7 +160,7 @@ static std::string drain(pc_ui_stream *s, size_t chunk)
 
 void test_stream_includes_only_passing_fragments(void)
 {
-    bool alarm = false;
+    proto_bool alarm = PROTO_FALSE;
     pc_ui_stream s;
     pc_ui_stream_begin(&s, FRAGS, 4, &alarm);
     TEST_ASSERT_EQUAL_STRING("<h1>HMI</h1><button>stop</button>", drain(&s, 64).c_str());
@@ -169,7 +169,7 @@ void test_stream_includes_only_passing_fragments(void)
 
 void test_stream_reflects_the_predicate_state(void)
 {
-    bool alarm = true;
+    proto_bool alarm = PROTO_TRUE;
     pc_ui_stream s;
     pc_ui_stream_begin(&s, FRAGS, 4, &alarm);
     TEST_ASSERT_EQUAL_STRING("<h1>HMI</h1><p>ALARM</p><button>stop</button>", drain(&s, 64).c_str());
@@ -179,7 +179,7 @@ void test_stream_is_chunk_size_independent(void)
 {
     // The point of the cursor: a buffer smaller than a single fragment must still produce the exact
     // same bytes, resuming mid-fragment across calls.
-    bool alarm = true;
+    proto_bool alarm = PROTO_TRUE;
     for (size_t chunk = 1; chunk <= 40; chunk++)
     {
         pc_ui_stream s;
@@ -193,7 +193,7 @@ void test_stream_all_excluded_emits_nothing(void)
 {
     static const pc_ui_fragment none[] = {{"a", "<p>a</p>", when_false}, {"b", "<p>b</p>", when_false}};
     pc_ui_stream s;
-    pc_ui_stream_begin(&s, none, 2, nullptr);
+    pc_ui_stream_begin(&s, none, 2, NULL);
     char buf[32];
     TEST_ASSERT_EQUAL_UINT32(0, pc_ui_stream_next(&s, buf, sizeof(buf)));
     TEST_ASSERT_TRUE(pc_ui_stream_done(&s));
@@ -202,7 +202,7 @@ void test_stream_all_excluded_emits_nothing(void)
 void test_stream_empty_set_is_done_immediately(void)
 {
     pc_ui_stream s;
-    pc_ui_stream_begin(&s, FRAGS, 0, nullptr);
+    pc_ui_stream_begin(&s, FRAGS, 0, NULL);
     TEST_ASSERT_TRUE(pc_ui_stream_done(&s));
     char buf[8];
     TEST_ASSERT_EQUAL_UINT32(0, pc_ui_stream_next(&s, buf, sizeof(buf)));
@@ -210,9 +210,9 @@ void test_stream_empty_set_is_done_immediately(void)
 
 void test_stream_skips_a_null_body(void)
 {
-    static const pc_ui_fragment withnull[] = {{"a", nullptr, nullptr}, {"b", "<p>b</p>", nullptr}};
+    static const pc_ui_fragment withnull[] = {{"a", NULL, NULL}, {"b", "<p>b</p>", NULL}};
     pc_ui_stream s;
-    pc_ui_stream_begin(&s, withnull, 2, nullptr);
+    pc_ui_stream_begin(&s, withnull, 2, NULL);
     TEST_ASSERT_EQUAL_STRING("<p>b</p>", drain(&s, 64).c_str());
 }
 
@@ -220,14 +220,14 @@ void test_stream_bad_args_do_not_crash(void)
 {
     char buf[8];
     pc_ui_stream s;
-    pc_ui_stream_begin(&s, FRAGS, 4, nullptr);
-    TEST_ASSERT_EQUAL_UINT32(0, pc_ui_stream_next(nullptr, buf, sizeof(buf)));
-    TEST_ASSERT_EQUAL_UINT32(0, pc_ui_stream_next(&s, nullptr, 8));
+    pc_ui_stream_begin(&s, FRAGS, 4, NULL);
+    TEST_ASSERT_EQUAL_UINT32(0, pc_ui_stream_next(NULL, buf, sizeof(buf)));
+    TEST_ASSERT_EQUAL_UINT32(0, pc_ui_stream_next(&s, NULL, 8));
     TEST_ASSERT_EQUAL_UINT32(0, pc_ui_stream_next(&s, buf, 0));
-    pc_ui_stream_begin(nullptr, FRAGS, 4, nullptr); // must not crash
-    TEST_ASSERT_TRUE(pc_ui_stream_done(nullptr));
+    pc_ui_stream_begin(NULL, FRAGS, 4, NULL); // must not crash
+    TEST_ASSERT_TRUE(pc_ui_stream_done(NULL));
     pc_ui_stream n;
-    pc_ui_stream_begin(&n, nullptr, 5, nullptr); // null set with a nonzero count
+    pc_ui_stream_begin(&n, NULL, 5, NULL); // null set with a nonzero count
     TEST_ASSERT_TRUE(pc_ui_stream_done(&n));
 }
 
@@ -235,7 +235,7 @@ void test_stream_not_done_mid_stream(void)
 {
     // A valid, non-null stream that still has fragments left must report not-done - the counterpart
     // to the null-stream and already-finished cases covered elsewhere.
-    bool alarm = true;
+    proto_bool alarm = PROTO_TRUE;
     pc_ui_stream s;
     pc_ui_stream_begin(&s, FRAGS, 4, &alarm);
     TEST_ASSERT_FALSE(pc_ui_stream_done(&s));

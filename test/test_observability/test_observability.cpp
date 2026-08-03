@@ -329,8 +329,8 @@ void test_enqueue_failure_from_recv_cb_counts_defer_drop()
     conn_pool[0].pcb = &pcb;
     conn_pool[0].rx_head = 0;
     conn_pool[0].rx_tail = 0;
-    conn_pool[0].listener_id = 1;    // listener 1 was never listener_add()'ed by setUp()
-    listener_pool[1].active = false; // -> listener_enqueue() reports failure
+    conn_pool[0].listener_id = 1;          // listener 1 was never listener_add()'ed by setUp()
+    listener_pool[1].active = PROTO_FALSE; // -> listener_enqueue() reports failure
 
     uint8_t byte = 'x';
     struct pbuf p;
@@ -349,7 +349,7 @@ void test_enqueue_failure_from_recv_cb_counts_defer_drop()
 // listener.cpp / listener.h.)
 void test_accept_cb_posts_accept_transition()
 {
-    struct tcp_pcb pcb = {};
+    struct tcp_pcb pcb = {0};
     TEST_ASSERT_EQUAL_INT(PC_NET_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb, PC_NET_OK));
     TEST_ASSERT_EQUAL(PC_CONN_R_ACCEPT, g_reason);
     TEST_ASSERT_EQUAL_UINT32(1, pc_conn_counters_get().accepts);
@@ -360,8 +360,8 @@ void test_accept_cb_posts_accept_transition()
 // post is dropped.
 void test_accept_cb_enqueue_failure_posts_defer_drop()
 {
-    listener_pool[0].active = false;
-    struct tcp_pcb pcb = {};
+    listener_pool[0].active = PROTO_FALSE;
+    struct tcp_pcb pcb = {0};
     TEST_ASSERT_EQUAL_INT(PC_NET_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb, PC_NET_OK));
     TEST_ASSERT_EQUAL(PC_CONN_R_DEFER_DROP, g_reason);
     TEST_ASSERT_EQUAL_UINT32(1, pc_conn_counters_get().defer_drops);

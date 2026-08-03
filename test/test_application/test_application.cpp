@@ -18,12 +18,12 @@
 
 // ---- Shared helpers ------------------------------------------------
 
-static bool handler_called;
+static proto_bool handler_called;
 static uint8_t handler_slot;
 
 static void record_handler(uint8_t slot_id, HttpReq *)
 {
-    handler_called = true;
+    handler_called = PROTO_TRUE;
     handler_slot = slot_id;
 }
 
@@ -35,7 +35,7 @@ static void arm_slot(uint8_t slot, const char *raw)
     conn_pool[slot].id = slot;
     conn_pool[slot].state = CONN_ACTIVE;
     conn_pool[slot].proto = PROTO_HTTP; // dispatch requires an explicit protocol
-    conn_pool[slot].pcb = nullptr;
+    conn_pool[slot].pcb = NULL;
 
     TcpConn *s = &conn_pool[slot];
     for (size_t i = 0; raw[i]; i++)
@@ -72,7 +72,7 @@ void setUp()
         conn_pool[i].proto = PROTO_HTTP; // dispatch requires an explicit protocol
         http_reset(i);
     }
-    handler_called = false;
+    handler_called = PROTO_FALSE;
     handler_slot = 255;
 #if PC_ENABLE_WEBSOCKET
     ws_init(); // isolate ws_pool[] between tests (a leftover WS slot makes http_parse skip it)
@@ -129,10 +129,10 @@ void test_fn_on_table_full_extra_routes_dropped()
 
 void test_fn_on_same_path_different_methods_are_distinct()
 {
-    static bool get_called = false;
-    static bool post_called = false;
-    on_http("/r", HTTP_GET, [](uint8_t, HttpReq *) { get_called = true; });
-    on_http("/r", HTTP_POST, [](uint8_t, HttpReq *) { post_called = true; });
+    static proto_bool get_called = PROTO_FALSE;
+    static proto_bool post_called = PROTO_FALSE;
+    on_http("/r", HTTP_GET, [](uint8_t, HttpReq *) { get_called = PROTO_TRUE; });
+    on_http("/r", HTTP_POST, [](uint8_t, HttpReq *) { post_called = PROTO_TRUE; });
 
     arm_slot(0, "GET /r HTTP/1.1\r\n\r\n");
     handle();
@@ -158,9 +158,9 @@ void test_fn_on_not_found_called_when_no_match()
 
 void test_fn_on_not_found_not_called_when_match_exists()
 {
-    static bool nf = false;
+    static proto_bool nf = PROTO_FALSE;
     on_http("/here", HTTP_GET, record_handler);
-    on_not_found([](uint8_t, HttpReq *) { nf = true; });
+    on_not_found([](uint8_t, HttpReq *) { nf = PROTO_TRUE; });
     arm_slot(0, "GET /here HTTP/1.1\r\n\r\n");
     handle();
     TEST_ASSERT_TRUE(handler_called);
@@ -211,7 +211,7 @@ void test_wrong_path_does_not_match()
 
 void test_all_http_methods_dispatched()
 {
-    static int counts[7] = {};
+    static int counts[7] = {0};
     on_http("/get", HTTP_GET, [](uint8_t, HttpReq *) { counts[0]++; });
     on_http("/post", HTTP_POST, [](uint8_t, HttpReq *) { counts[1]++; });
     on_http("/put", HTTP_PUT, [](uint8_t, HttpReq *) { counts[2]++; });
@@ -275,8 +275,8 @@ void test_wildcard_does_not_match_unrelated_prefix()
 
 void test_exact_route_wins_when_registered_first()
 {
-    static bool exact_called = false;
-    on_http("/api/status", HTTP_GET, [](uint8_t, HttpReq *) { exact_called = true; });
+    static proto_bool exact_called = PROTO_FALSE;
+    on_http("/api/status", HTTP_GET, [](uint8_t, HttpReq *) { exact_called = PROTO_TRUE; });
     on_http("/api/*", HTTP_GET, record_handler);
     arm_slot(0, "GET /api/status HTTP/1.1\r\n\r\n");
     handle();
@@ -305,7 +305,7 @@ void test_parse_error_slot_auto_reset()
 // Handler reads req->body from a POST request
 void test_handler_reads_body()
 {
-    static char body_seen[32] = {};
+    static char body_seen[32] = {0};
     on_http("/body", HTTP_POST,
             [](uint8_t, HttpReq *req) { strncpy(body_seen, (const char *)req->body, sizeof(body_seen) - 1); });
     arm_slot(0, "POST /body HTTP/1.1\r\nContent-Length: 5\r\n\r\nhello");
@@ -318,7 +318,7 @@ void test_handler_reads_body()
 // http_pool[] before handle() returns to the test.
 void test_handler_reads_query_param()
 {
-    static char q_seen[48] = {};
+    static char q_seen[48] = {0};
     on_http("/q", HTTP_GET, [](uint8_t, HttpReq *req) {
         const char *v = http_get_query(req, "id");
         if (v)
@@ -335,7 +335,7 @@ void test_handler_reads_query_param()
 // Same copy-inside-handler pattern as test_handler_reads_query_param.
 void test_handler_reads_header()
 {
-    static char h_seen[48] = {};
+    static char h_seen[48] = {0};
     on_http("/h", HTTP_GET, [](uint8_t, HttpReq *req) {
         const char *v = http_get_header(req, "X-Token");
         if (v)
@@ -352,10 +352,10 @@ void test_handler_reads_header()
 // (Complement of test_exact_route_wins_when_registered_first.)
 void test_wildcard_before_exact_wildcard_wins()
 {
-    static bool wildcard_called = false;
-    static bool exact_called = false;
-    on_http("/api/*", HTTP_GET, [](uint8_t, HttpReq *) { wildcard_called = true; });
-    on_http("/api/status", HTTP_GET, [](uint8_t, HttpReq *) { exact_called = true; });
+    static proto_bool wildcard_called = PROTO_FALSE;
+    static proto_bool exact_called = PROTO_FALSE;
+    on_http("/api/*", HTTP_GET, [](uint8_t, HttpReq *) { wildcard_called = PROTO_TRUE; });
+    on_http("/api/status", HTTP_GET, [](uint8_t, HttpReq *) { exact_called = PROTO_TRUE; });
     arm_slot(0, "GET /api/status HTTP/1.1\r\n\r\n");
     handle();
     TEST_ASSERT_TRUE(wildcard_called);
@@ -402,7 +402,7 @@ void stress_sequential_requests_no_state_leak()
 // All four slots serve different routes simultaneously in a single handle() call.
 void stress_all_slots_dispatched_simultaneously()
 {
-    static int counts[4] = {};
+    static int counts[4] = {0};
     on_http("/s0", HTTP_GET, [](uint8_t, HttpReq *) { counts[0]++; });
     on_http("/s1", HTTP_GET, [](uint8_t, HttpReq *) { counts[1]++; });
     on_http("/s2", HTTP_GET, [](uint8_t, HttpReq *) { counts[2]++; });
@@ -468,8 +468,8 @@ void stress_handle_with_no_complete_slots_is_nop()
 // a slot that became complete since the last call.
 void race_slot_complete_between_handle_calls()
 {
-    static bool dispatched = false;
-    on_http("/late", HTTP_GET, [](uint8_t, HttpReq *) { dispatched = true; });
+    static proto_bool dispatched = PROTO_FALSE;
+    on_http("/late", HTTP_GET, [](uint8_t, HttpReq *) { dispatched = PROTO_TRUE; });
 
     handle(); // no complete slots yet
     TEST_ASSERT_FALSE(dispatched);
@@ -491,7 +491,7 @@ void race_conn_freed_after_parse_complete()
 
     // Simulate connection drop between parse and dispatch
     conn_pool[0].state = CONN_FREE;
-    conn_pool[0].pcb = nullptr;
+    conn_pool[0].pcb = NULL;
 
     handle(); // must not crash; slot must be cleaned up
     TEST_ASSERT_NOT_EQUAL(PARSE_COMPLETE, http_pool[0].parse_state);
@@ -515,8 +515,8 @@ void race_double_handle_no_double_dispatch()
 // process the error slot (send 400) and also dispatch the valid slot.
 void race_error_and_valid_slot_in_same_handle()
 {
-    static bool valid_dispatched = false;
-    on_http("/ok", HTTP_GET, [](uint8_t, HttpReq *) { valid_dispatched = true; });
+    static proto_bool valid_dispatched = PROTO_FALSE;
+    on_http("/ok", HTTP_GET, [](uint8_t, HttpReq *) { valid_dispatched = PROTO_TRUE; });
 
     // Slot 0: inject a parse error
     push_bytes(0, "TOOLONGMETHODNAME /path HTTP/1.1\r\n\r\n");
@@ -537,9 +537,9 @@ void race_error_and_valid_slot_in_same_handle()
 // not confuse handle()'s post-dispatch guard.
 void race_callback_manually_resets_slot()
 {
-    static bool manual_reset_called = false;
+    static proto_bool manual_reset_called = PROTO_FALSE;
     on_http("/mr", HTTP_GET, [](uint8_t slot_id, HttpReq *) {
-        manual_reset_called = true;
+        manual_reset_called = PROTO_TRUE;
         http_reset(slot_id); // reset without sending a response
     });
 
@@ -633,17 +633,17 @@ void test_redirect_invalid_code_defaults_to_302()
 
 void test_mime_type_detection()
 {
-    TEST_ASSERT_EQUAL_STRING("text/html", PC::mime_type("/index.html"));
-    TEST_ASSERT_EQUAL_STRING("text/css", PC::mime_type("/css/site.css"));
-    TEST_ASSERT_EQUAL_STRING("application/javascript", PC::mime_type("/app.JS")); // case-insensitive
-    TEST_ASSERT_EQUAL_STRING("application/json", PC::mime_type("/api/data.json"));
-    TEST_ASSERT_EQUAL_STRING("image/svg+xml", PC::mime_type("logo.svg"));
-    TEST_ASSERT_EQUAL_STRING("image/png", PC::mime_type("a.b.c.png")); // last extension wins
+    TEST_ASSERT_EQUAL_STRING("text/html", mime_type("/index.html"));
+    TEST_ASSERT_EQUAL_STRING("text/css", mime_type("/css/site.css"));
+    TEST_ASSERT_EQUAL_STRING("application/javascript", mime_type("/app.JS")); // case-insensitive
+    TEST_ASSERT_EQUAL_STRING("application/json", mime_type("/api/data.json"));
+    TEST_ASSERT_EQUAL_STRING("image/svg+xml", mime_type("logo.svg"));
+    TEST_ASSERT_EQUAL_STRING("image/png", mime_type("a.b.c.png")); // last extension wins
     // Unknown / missing extension and dotfiles fall back.
-    TEST_ASSERT_EQUAL_STRING("application/octet-stream", PC::mime_type("/file.unknownext"));
-    TEST_ASSERT_EQUAL_STRING("application/octet-stream", PC::mime_type("/noext"));
-    TEST_ASSERT_EQUAL_STRING("application/octet-stream", PC::mime_type("/dir.with.dot/file"));
-    TEST_ASSERT_EQUAL_STRING("application/octet-stream", PC::mime_type(nullptr));
+    TEST_ASSERT_EQUAL_STRING("application/octet-stream", mime_type("/file.unknownext"));
+    TEST_ASSERT_EQUAL_STRING("application/octet-stream", mime_type("/noext"));
+    TEST_ASSERT_EQUAL_STRING("application/octet-stream", mime_type("/dir.with.dot/file"));
+    TEST_ASSERT_EQUAL_STRING("application/octet-stream", mime_type(NULL));
 }
 
 // ====================================================================
@@ -761,7 +761,7 @@ static void hdr_guard_handler(uint8_t id, HttpReq *)
     static char big[512];
     memset(big, 'a', sizeof(big) - 1);
     big[sizeof(big) - 1] = '\0';
-    set_cookie(id, "toobig", big, nullptr);     // overflow -> dropped
+    set_cookie(id, "toobig", big, NULL);        // overflow -> dropped
     proto_add_response_header(id, "X-Ok", "1"); // fits
     send_text(id, 200, "text/plain", "ok");
 }
@@ -769,9 +769,9 @@ static void hdr_guard_handler(uint8_t id, HttpReq *)
 void test_response_header_cookie_guards()
 {
     proto_add_response_header(MAX_CONNS, "X", "y"); // out-of-range slot
-    proto_add_response_header(0, nullptr, "y");     // null name
-    set_cookie(MAX_CONNS, "s", "1", nullptr);       // out-of-range slot
-    set_cookie(0, nullptr, "1", nullptr);           // null name
+    proto_add_response_header(0, NULL, "y");        // null name
+    set_cookie(MAX_CONNS, "s", "1", NULL);          // out-of-range slot
+    set_cookie(0, NULL, "1", NULL);                 // null name
     clear_response_headers(MAX_CONNS);              // out-of-range slot
 
     on_http("/hdrtest", HTTP_GET, hdr_guard_handler);
@@ -1139,7 +1139,7 @@ void test_request_log_hook_fires()
     TEST_ASSERT_EQUAL_STRING("/hi", g_log_path);
     TEST_ASSERT_EQUAL_INT(200, g_log_status);
     TEST_ASSERT_EQUAL_INT(5, g_log_bytes); // "hello"
-    on_request_log(nullptr);
+    on_request_log(NULL);
 }
 
 void test_stats_endpoint_emits_json()
@@ -1197,7 +1197,7 @@ void test_metrics_emits_prometheus()
         if (len && ln[0] != '#')
         {
             // "name{labels} value" - the last space must be followed by at least one character.
-            const char *sp = nullptr;
+            const char *sp = NULL;
             for (size_t i = 0; i < len; i++)
             {
                 if (ln[i] == ' ')
@@ -1226,7 +1226,7 @@ void test_metrics_emits_prometheus()
 // reaches the client. (A dangling path pointer made broadcasts silently miss.)
 void test_sse_broadcast_after_upgrade_matches_path()
 {
-    on_sse("/events", nullptr);
+    on_sse("/events", NULL);
 
     conn_pool[0] = (TcpConn){0};
     conn_pool[0].id = 0;
@@ -1514,18 +1514,18 @@ void test_route_registration_variants_table_full()
     on_http_iface("/i", HTTP_GET, record_handler, pc_iface::PC_IFACE_STA); // on(..., iface)
     on_regex("/re.*", HTTP_GET, record_handler);
 #if PC_ENABLE_AUTH
-    on_http_auth("/a", HTTP_GET, record_handler, "realm", "u", "p", false);
+    on_http_auth("/a", HTTP_GET, record_handler, "realm", "u", "p", PROTO_FALSE);
 #endif
 #if PC_ENABLE_WEBSOCKET
-    on_ws("/ws", nullptr, nullptr, nullptr);
+    on_ws("/ws", NULL, NULL, NULL);
 #endif
 #if PC_ENABLE_SSE
-    on_sse("/sse", nullptr);
+    on_sse("/sse", NULL);
 #endif
 
     // The dropped iface route does not dispatch: a request to it falls through (handler untouched).
     arm_slot(0, "GET /i HTTP/1.1\r\n\r\n");
-    handler_called = false;
+    handler_called = PROTO_FALSE;
     handle();
     TEST_ASSERT_FALSE(handler_called);
 }
@@ -1535,14 +1535,14 @@ void test_route_registration_variants_table_full()
 void test_send_family_slot_and_conn_gone_guards()
 {
     redirect(MAX_CONNS, 302, "/x"); // slot out of range -> no-op
-    send_template(MAX_CONNS, 200, "text/html", "hi", nullptr);
-    send_chunked(MAX_CONNS, 200, "text/plain", nullptr, nullptr);
+    send_template(MAX_CONNS, 200, "text/html", "hi", NULL);
+    send_chunked(MAX_CONNS, 200, "text/plain", NULL, NULL);
 
     conn_pool[0].state = CONN_FREE; // connection gone
-    conn_pool[0].pcb = nullptr;
+    conn_pool[0].pcb = NULL;
     redirect(0, 302, "/x");
-    send_template(0, 200, "text/html", "hi", nullptr);
-    send_chunked(0, 200, "text/plain", nullptr, nullptr);
+    send_template(0, 200, "text/html", "hi", NULL);
+    send_chunked(0, 200, "text/plain", NULL, NULL);
     TEST_PASS(); // guards hit, nothing sent, no crash
 }
 
@@ -1573,7 +1573,7 @@ void test_request_error_paths_te_method_ws()
 {
     on_http("/only-get", HTTP_GET, record_handler);
 #if PC_ENABLE_WEBSOCKET
-    on_ws("/ws", nullptr, nullptr, nullptr);
+    on_ws("/ws", NULL, NULL, NULL);
 #endif
     // Wrong method to a GET-only route -> 405 with an Allow header.
     arm_slot(0, "POST /only-get HTTP/1.1\r\nHost: x\r\n\r\n");
@@ -1612,7 +1612,7 @@ void test_request_error_paths_te_method_ws()
 void test_ws_sse_upgrade_failure_paths()
 {
 #if PC_ENABLE_WEBSOCKET
-    on_ws("/ws", nullptr, nullptr, nullptr);
+    on_ws("/ws", NULL, NULL, NULL);
 
     // (a) A Sec-WebSocket-Key that does not base64-decode to 16 bytes -> ws_accept_key rejects -> 400.
     arm_slot(0, "GET /ws HTTP/1.1\r\nHost: x\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n"
@@ -1650,7 +1650,7 @@ void test_ws_sse_upgrade_failure_paths()
 // the optimistic 200 event-stream header.
 void test_sse_upgrade_pool_exhausted()
 {
-    on_sse("/events", nullptr);
+    on_sse("/events", NULL);
     pc_sse_alloc(1, "/a");
     pc_sse_alloc(2, "/b"); // fill the 2-slot pc_sse_pool (MAX_SSE_CONNS)
     arm_slot(0, "GET /events HTTP/1.1\r\nHost: x\r\n\r\n");
@@ -1731,7 +1731,7 @@ static QueryParam g_seen_params[MAX_PATH_PARAMS];
 static uint8_t g_seen_param_count;
 static void capture_params_handler(uint8_t, HttpReq *req)
 {
-    handler_called = true;
+    handler_called = PROTO_TRUE;
     g_seen_param_count = req->path_param_count;
     memcpy(g_seen_params, req->path_params, sizeof(g_seen_params));
 }
@@ -1765,7 +1765,7 @@ void test_response_trailer_cors_block_and_null_disable()
     send_text(0, 200, "text/plain", "ok");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "Access-Control-Allow-Origin: https://a.example\r\n"));
 
-    set_cors(nullptr); // null origin disables CORS (same as "")
+    set_cors(NULL); // null origin disables CORS (same as "")
     live_slot(0);
     tcp_capture_reset();
     send_text(0, 200, "text/plain", "ok");
@@ -1783,7 +1783,7 @@ void test_cache_control_null_clears_header()
     serve_static("/", g_static_fs, "/www");
 
     set_cache_control("max-age=60");
-    set_cache_control(nullptr); // cleared, not "Cache-Control: (null)"
+    set_cache_control(NULL); // cleared, not "Cache-Control: (null)"
     arm_slot(0, "GET /c.txt HTTP/1.1\r\nHost: x\r\n\r\n");
     conn_pool[0].pcb = pc_net_host_pcb();
     tcp_capture_reset();
@@ -1822,7 +1822,7 @@ void test_path_param_capture_limits()
     TEST_ASSERT_EQUAL_STRING("4", g_seen_params[3].val);          // last stored capture
 
     // An over-long :name and an over-long value are both truncated, not overflowed.
-    handler_called = false;
+    handler_called = PROTO_FALSE;
     srv2.on("/k/:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", HTTP_GET, capture_params_handler);
     char req[160];
     char big[60];
@@ -1855,7 +1855,7 @@ void test_path_param_segment_mismatches()
     };
     for (size_t i = 0; i < sizeof(misses) / sizeof(misses[0]); i++)
     {
-        handler_called = false;
+        handler_called = PROTO_FALSE;
         arm_slot(0, misses[i]);
         conn_pool[0].pcb = pc_net_host_pcb();
         tcp_capture_reset();
@@ -1865,7 +1865,7 @@ void test_path_param_segment_mismatches()
     }
 
     // "//v": both route and path carry an empty segment, then ":a" captures "v".
-    handler_called = false;
+    handler_called = PROTO_FALSE;
     arm_slot(0, "GET //v HTTP/1.1\r\nHost: x\r\n\r\n");
     conn_pool[0].pcb = pc_net_host_pcb();
     handle();
@@ -1902,12 +1902,12 @@ void test_slot_poll_requires_registered_handler_with_poll()
     handle();
     TEST_ASSERT_FALSE(handler_called);
 
-    static const ProtoHandler no_poll = {nullptr, nullptr, nullptr, nullptr};
+    static const ProtoHandler no_poll = {NULL, NULL, NULL, NULL};
     proto_register(PROTO_TELNET, &no_poll); // registered, but nothing to poll
     handle();
     TEST_ASSERT_FALSE(handler_called);
 
-    proto_register(PROTO_TELNET, nullptr); // restore: telnet is unregistered here
+    proto_register(PROTO_TELNET, NULL); // restore: telnet is unregistered here
     conn_pool[0].proto = PROTO_HTTP;
     handle();
     TEST_ASSERT_TRUE(handler_called); // same slot, now polled
@@ -1963,7 +1963,7 @@ void test_error_close_head_and_dead_connection()
     // Slot no longer ACTIVE (pcb still attached) -> nothing written.
     arm_slot(0, "GET /po HTTP/1.1\r\nHost: x\r\n\r\n");
     conn_pool[0].pcb = pc_net_host_pcb();
-    conn_pool[0].state = ConnState::CONN_CLOSING;
+    conn_pool[0].state = CONN_CLOSING;
     tcp_capture_reset();
     handle();
     TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len());
@@ -2032,7 +2032,7 @@ void test_send_null_payload_and_slot_bounds()
     TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len());
 
     tcp_capture_reset();
-    send_text(0, 200, "text/plain", (const char *)nullptr);
+    send_text(0, 200, "text/plain", (const char *)NULL);
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "Content-Length: 0\r\n"));
     tcp_capture_disable();
 }
@@ -2076,7 +2076,7 @@ void test_send_body_framing_paths()
 void test_send_empty_and_redirect_dead_connection_guards()
 {
     live_slot(0);
-    conn_pool[0].state = ConnState::CONN_CLOSING; // not ACTIVE, pcb still attached
+    conn_pool[0].state = CONN_CLOSING; // not ACTIVE, pcb still attached
     tcp_capture_reset();
     send_empty(0, 204);
     redirect(0, 302, "/x");
@@ -2084,7 +2084,7 @@ void test_send_empty_and_redirect_dead_connection_guards()
     TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len());
 
     live_slot(0);
-    conn_pool[0].pcb = nullptr; // ACTIVE, but the pcb is gone
+    conn_pool[0].pcb = NULL; // ACTIVE, but the pcb is gone
     tcp_capture_reset();
     send_empty(0, 204);
     redirect(0, 302, "/x");
@@ -2100,7 +2100,7 @@ void test_send_empty_and_redirect_dead_connection_guards()
 
 static const char *tmpl_resolver(const char *name)
 {
-    return strcmp(name, "who") == 0 ? "world" : nullptr;
+    return strcmp(name, "who") == 0 ? "world" : NULL;
 }
 
 // The template walker emits a placeholder literally when its name exceeds the 32-char
@@ -2126,7 +2126,7 @@ void test_send_chunked_without_source()
 {
     live_slot(0);
     tcp_capture_reset();
-    send_chunked(0, 200, "text/plain", nullptr, nullptr);
+    send_chunked(0, 200, "text/plain", NULL, NULL);
     const char *out = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(out, "Transfer-Encoding: chunked\r\n"));
     TEST_ASSERT_NULL(strstr(out, "0\r\n\r\n"));
@@ -2155,7 +2155,7 @@ void test_chunked_pump_small_window_and_connection_lost()
     mock_sndbuf() = 64; // smaller than CHUNK_BUF_SIZE: cap comes from the window
     live_slot(0);
     tcp_capture_reset();
-    send_chunked(0, 200, "text/plain", chunk_src_fill, nullptr);
+    send_chunked(0, 200, "text/plain", chunk_src_fill, NULL);
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "Transfer-Encoding: chunked\r\n"));
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "28\r\nqqqq")); // 0x28 == 40 bytes framed
     TEST_ASSERT_FALSE(pc_resp_holds_slot(0));                   // source drained, response finished
@@ -2165,10 +2165,10 @@ void test_chunked_pump_small_window_and_connection_lost()
     mock_sndbuf() = 0;
     live_slot(0);
     tcp_capture_reset();
-    send_chunked(0, 200, "text/plain", chunk_src_fill, nullptr);
+    send_chunked(0, 200, "text/plain", chunk_src_fill, NULL);
     TEST_ASSERT_TRUE(pc_resp_holds_slot(0));
 
-    conn_pool[0].pcb = nullptr; // peer went away before the window reopened
+    conn_pool[0].pcb = NULL; // peer went away before the window reopened
     handle();
     TEST_ASSERT_FALSE(pc_resp_holds_slot(0)); // continuation dropped
     TEST_ASSERT_NULL(strstr(tcp_captured(), "qqqq"));
@@ -2185,15 +2185,15 @@ void test_response_header_null_value_empty_attrs_and_overflow()
     live_slot(0);
     clear_response_headers(0);
     proto_add_response_header(0, "X-Keep", "1");
-    proto_add_response_header(0, "X-Null", nullptr); // null value -> ignored
-    set_cookie(0, "c-null", nullptr, nullptr);       // null value -> ignored
-    set_cookie(0, "sid", "abc", "");                 // empty attrs -> no "; " suffix
+    proto_add_response_header(0, "X-Null", NULL); // null value -> ignored
+    set_cookie(0, "c-null", NULL, NULL);          // null value -> ignored
+    set_cookie(0, "sid", "abc", "");              // empty attrs -> no "; " suffix
 
     char filler[EXTRA_HDR_BUF_SIZE];
     memset(filler, 'f', sizeof(filler) - 1);
     filler[sizeof(filler) - 1] = '\0';
     proto_add_response_header(0, "X-Too-Big", filler); // would overflow -> dropped whole
-    set_cookie(0, "big", filler, nullptr);             // would overflow -> dropped whole
+    set_cookie(0, "big", filler, NULL);                // would overflow -> dropped whole
 
     tcp_capture_reset();
     send_text(0, 200, "text/plain", "ok");
@@ -2212,11 +2212,11 @@ void test_response_header_null_value_empty_attrs_and_overflow()
 // non-letter exercises the case-folding compare on a character outside 'A'..'Z'.
 void test_mime_type_extension_edges()
 {
-    TEST_ASSERT_EQUAL_STRING("application/octet-stream", PC::mime_type("/file.")); // dot, no extension
-    TEST_ASSERT_EQUAL_STRING("application/octet-stream", PC::mime_type("/a.7z"));  // digit first
-    TEST_ASSERT_EQUAL_STRING("application/octet-stream", PC::mime_type("/a.jsx")); // longer than "js"
-    TEST_ASSERT_EQUAL_STRING("application/octet-stream", PC::mime_type("/a.h"));   // shorter than "htm"
-    TEST_ASSERT_EQUAL_STRING("font/woff2", PC::mime_type("/a.WOFF2"));             // upper-case folds
+    TEST_ASSERT_EQUAL_STRING("application/octet-stream", mime_type("/file.")); // dot, no extension
+    TEST_ASSERT_EQUAL_STRING("application/octet-stream", mime_type("/a.7z"));  // digit first
+    TEST_ASSERT_EQUAL_STRING("application/octet-stream", mime_type("/a.jsx")); // longer than "js"
+    TEST_ASSERT_EQUAL_STRING("application/octet-stream", mime_type("/a.h"));   // shorter than "htm"
+    TEST_ASSERT_EQUAL_STRING("font/woff2", mime_type("/a.WOFF2"));             // upper-case folds
 }
 
 // ====================================================================
@@ -2261,7 +2261,7 @@ static void ws_upgrade_slot0(const char *path)
 void test_ws_upgrade_without_connect_handler()
 {
     ws_init();
-    on_ws("/wsn", nullptr, nullptr, nullptr);
+    on_ws("/wsn", NULL, NULL, NULL);
     tcp_capture_reset();
     ws_upgrade_slot0("/wsn");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "101 Switching Protocols"));
@@ -2277,7 +2277,7 @@ void test_ws_dispatch_without_message_or_close_handler()
 {
     ws_init();
     on_http("/plain", HTTP_GET, record_handler); // a non-WS route to scan past
-    on_ws("/wsq", nullptr, nullptr, nullptr);
+    on_ws("/wsq", NULL, NULL, NULL);
     ws_upgrade_slot0("/wsq");
     WsConn *ws = ws_find(0);
     TEST_ASSERT_NOT_NULL(ws);
@@ -2287,8 +2287,8 @@ void test_ws_dispatch_without_message_or_close_handler()
     TEST_ASSERT_NOT_NULL(ws_find(0));
     TEST_ASSERT_NOT_EQUAL(WS_FRAME_READY, ws->parse_state);
 
-    ws->parse_state = WsParseState::WS_ERROR; // protocol error seen by the parser
-    handle();                                 // ws_dispatch_close finds no handler; slot freed
+    ws->parse_state = WS_ERROR; // protocol error seen by the parser
+    handle();                   // ws_dispatch_close finds no handler; slot freed
     TEST_ASSERT_NULL(ws_find(0));
     ws_init();
 }
@@ -2298,7 +2298,7 @@ void test_ws_dispatch_without_message_or_close_handler()
 // handshake with a missing or non-13 version is 426.
 void test_ws_upgrade_handshake_gate()
 {
-    on_ws("/wsg", nullptr, nullptr, nullptr);
+    on_ws("/wsg", NULL, NULL, NULL);
     const char *bad[] = {
         "POST /wsg HTTP/1.1\r\nHost: x\r\nContent-Length: 0\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\n",
         "GET /wsg HTTP/1.1\r\nHost: x\r\nConnection: Upgrade\r\n\r\n",                          // no Upgrade header
@@ -2333,7 +2333,7 @@ void test_upgrade_entry_points_on_dead_slot()
 #if PC_ENABLE_WEBSOCKET
     arm_slot(0, "GET /w HTTP/1.1\r\nHost: x\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n"
                 "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n\r\n");
-    conn_pool[0].pcb = nullptr; // peer gone; the request is still parsed
+    conn_pool[0].pcb = NULL; // peer gone; the request is still parsed
     tcp_capture_reset();
     ws_send_version_required(0);
     TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len());
@@ -2341,16 +2341,16 @@ void test_upgrade_entry_points_on_dead_slot()
 
     arm_slot(0, "GET /w HTTP/1.1\r\nHost: x\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n"
                 "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n\r\n");
-    conn_pool[0].pcb = nullptr;
+    conn_pool[0].pcb = NULL;
     tcp_capture_reset();
-    TEST_ASSERT_FALSE(ws_do_upgrade(0, &http_pool[0], nullptr)); // valid key, dead slot
+    TEST_ASSERT_FALSE(ws_do_upgrade(0, &http_pool[0], NULL)); // valid key, dead slot
     TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len());
 #endif
 #if PC_ENABLE_SSE
     arm_slot(0, "GET /e HTTP/1.1\r\nHost: x\r\n\r\n");
-    conn_pool[0].pcb = nullptr;
+    conn_pool[0].pcb = NULL;
     tcp_capture_reset();
-    TEST_ASSERT_FALSE(pc_sse_do_upgrade(0, &http_pool[0], nullptr));
+    TEST_ASSERT_FALSE(pc_sse_do_upgrade(0, &http_pool[0], NULL));
     TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len());
 #endif
     tcp_capture_disable();
@@ -2393,7 +2393,7 @@ void test_sse_send_on_dead_slot_writes_nothing()
     live_slot(0);
     SseConn *sse = pc_sse_alloc(0, "/events");
     TEST_ASSERT_NOT_NULL(sse);
-    conn_pool[0].pcb = nullptr; // connection gone, pool entry still live
+    conn_pool[0].pcb = NULL; // connection gone, pool entry still live
 
     tcp_capture_reset();
     pc_sse_send(sse->pc_sse_id, "x");
@@ -2422,7 +2422,7 @@ void test_ws_send_api_inactive_error_state_and_dead_slot()
     TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len());
 
     // WS_ERROR is terminal for sends, exactly like WS_CLOSED.
-    ws->parse_state = WsParseState::WS_ERROR;
+    ws->parse_state = WS_ERROR;
     tcp_capture_reset();
     ws_send_text(ws->ws_id, "nope");
     ws_send_binary(ws->ws_id, (const uint8_t *)"x", 1);
@@ -2430,7 +2430,7 @@ void test_ws_send_api_inactive_error_state_and_dead_slot()
 
     // Live pool entry, dead TCP slot: the frame write fails, so nothing is flushed.
     ws->parse_state = WS_HEADER1;
-    conn_pool[0].pcb = nullptr;
+    conn_pool[0].pcb = NULL;
     tcp_capture_reset();
     ws_send_text(ws->ws_id, "nope");
     ws_send_binary(ws->ws_id, (const uint8_t *)"x", 1);

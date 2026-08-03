@@ -39,23 +39,23 @@ void tearDown()
     pc_tc_end();
 }
 
-static bool begin(uint16_t pre, uint16_t post)
+static proto_bool begin(uint16_t pre, uint16_t post)
 {
-    pc_tc_config cfg = {};
+    pc_tc_config cfg = {0};
     cfg.pretrigger_samples = pre;
     cfg.posttrigger_samples = post;
     cfg.sink = on_window;
-    cfg.ctx = nullptr;
+    cfg.ctx = NULL;
     return pc_tc_begin(&cfg);
 }
 
 void test_begin_validates()
 {
-    TEST_ASSERT_FALSE(pc_tc_begin(nullptr));
-    pc_tc_config cfg = {};
+    TEST_ASSERT_FALSE(pc_tc_begin(NULL));
+    pc_tc_config cfg = {0};
     cfg.pretrigger_samples = 4;
     cfg.posttrigger_samples = 4;
-    cfg.sink = nullptr; // missing sink
+    cfg.sink = NULL; // missing sink
     TEST_ASSERT_FALSE(pc_tc_begin(&cfg));
     cfg.sink = on_window;
     cfg.pretrigger_samples = 0;
@@ -165,7 +165,7 @@ void test_feed_null_samples_while_configured_drops()
     // line 76: configured is true, so `!s_tc.configured` is false and the OR
     // evaluates `!samples` (true) - a null buffer is counted dropped, not read.
     TEST_ASSERT_TRUE(begin(2, 2));
-    TEST_ASSERT_EQUAL_UINT16(0, pc_tc_feed(nullptr, 5));
+    TEST_ASSERT_EQUAL_UINT16(0, pc_tc_feed(NULL, 5));
     pc_tc_stats st;
     pc_tc_get_stats(&st);
     TEST_ASSERT_EQUAL_UINT32(5, st.samples_dropped);
@@ -189,7 +189,7 @@ void test_zero_posttrigger_never_completes()
 
 void test_get_stats_null_and_capturing_when_unconfigured()
 {
-    pc_tc_get_stats(nullptr);             // line 125 `if (out)` false arm - just must not crash
+    pc_tc_get_stats(NULL);                // line 125 `if (out)` false arm - just must not crash
     pc_tc_end();                          // ensure not configured
     TEST_ASSERT_FALSE(pc_tc_capturing()); // line 131: `configured` false short-circuits
 }

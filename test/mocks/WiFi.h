@@ -6,9 +6,9 @@ class WiFiClass
     void begin(const char *, const char *)
     {
     }
-    bool isConnected()
+    proto_bool isConnected()
     {
-        return false;
+        return PROTO_FALSE;
     }
 };
 

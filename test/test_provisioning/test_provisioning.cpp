@@ -92,10 +92,10 @@ void test_form_field_null_guards()
 {
     // Any null argument (or zero cap) fails closed and leaves a writable out empty.
     char v[8] = "x";
-    TEST_ASSERT_FALSE(pc_prov_form_field(nullptr, "ssid", v, sizeof(v)));
+    TEST_ASSERT_FALSE(pc_prov_form_field(NULL, "ssid", v, sizeof(v)));
     TEST_ASSERT_EQUAL_STRING("", v);
-    TEST_ASSERT_FALSE(pc_prov_form_field("ssid=x", nullptr, v, sizeof(v)));
-    TEST_ASSERT_FALSE(pc_prov_form_field("ssid=x", "ssid", nullptr, sizeof(v)));
+    TEST_ASSERT_FALSE(pc_prov_form_field("ssid=x", NULL, v, sizeof(v)));
+    TEST_ASSERT_FALSE(pc_prov_form_field("ssid=x", "ssid", NULL, sizeof(v)));
     TEST_ASSERT_FALSE(pc_prov_form_field("ssid=x", "ssid", v, 0));
 }
 
@@ -114,11 +114,11 @@ void test_host_provisioning_stubs()
 void test_provisioning_load_partial_null_or_zero_cap()
 {
     char psk[8] = "y";
-    TEST_ASSERT_FALSE(pc_provisioning_load(nullptr, 8, psk, 0));
+    TEST_ASSERT_FALSE(pc_provisioning_load(NULL, 8, psk, 0));
     TEST_ASSERT_EQUAL_STRING("y", psk); // psk_cap == 0 => psk left untouched
 
     char ssid[8] = "z";
-    TEST_ASSERT_FALSE(pc_provisioning_load(ssid, 0, nullptr, 8));
+    TEST_ASSERT_FALSE(pc_provisioning_load(ssid, 0, NULL, 8));
     TEST_ASSERT_EQUAL_STRING("z", ssid); // ssid_cap == 0 => ssid left untouched
 }
 

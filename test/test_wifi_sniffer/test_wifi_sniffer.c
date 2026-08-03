@@ -95,15 +95,15 @@ void test_roam(void)
 
 void test_stats_add_null_and_default_type()
 {
-    pc_wifi_stats_reset(NULL);        // null guard
+    pc_wifi_stats_reset(NULL);     // null guard
     pc_wifi_stats_add(NULL, NULL); // null guard
-    WifiStats st = {};
-    WifiFrame f = {};
+    WifiStats st = {0};
+    WifiFrame f = {0};
     f.type = 3; // reserved/extension type -> default switch arm (other++)
     pc_wifi_stats_add(&st, &f);
     TEST_ASSERT_EQUAL_UINT32(1, st.other);
 
-    WifiStats st2 = {};
+    WifiStats st2 = {0};
     pc_wifi_stats_add(&st2, NULL); // valid stats, null frame -> no-op
     TEST_ASSERT_EQUAL_UINT32(0, st2.total);
 }
@@ -162,7 +162,7 @@ void test_scan_null_guards()
 
 static WifiFrame make_frame(const uint8_t *bssid)
 {
-    WifiFrame f = {};
+    WifiFrame f = {0};
     f.type = WIFI_TYPE_MGMT;
     f.naddr = 2;
     if (bssid)

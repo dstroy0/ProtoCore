@@ -16,33 +16,33 @@ inline QueueHandle_t xQueueCreate(uint32_t, size_t)
 // Test hook: force the next xQueueCreateStatic() call to report failure. Models the real
 // FreeRTOS case a caller (listener_add/listener_add_dynamic) guards against, even though a
 // statically-allocated queue cannot actually fail to construct. Auto-clears after one use.
-inline bool &mock_queue_create_fail_once()
+inline proto_bool &mock_queue_create_fail_once()
 {
-    static bool v = false;
+    static proto_bool v = PROTO_FALSE;
     return v;
 }
 inline QueueHandle_t xQueueCreateStatic(uint32_t, size_t, uint8_t *, StaticQueue_t *)
 {
     if (mock_queue_create_fail_once())
     {
-        mock_queue_create_fail_once() = false;
-        return nullptr;
+        mock_queue_create_fail_once() = PROTO_FALSE;
+        return NULL;
     }
     return (void *)1;
 }
 // Test hook: force the next xQueueSend() call to report a full queue. Models the real
 // FreeRTOS "queue full" case (the application isn't draining server_tick() fast enough)
 // so a caller's fallback path (defer-drop, etc.) is host-testable. Auto-clears after one use.
-inline bool &mock_queue_send_fail_once()
+inline proto_bool &mock_queue_send_fail_once()
 {
-    static bool v = false;
+    static proto_bool v = PROTO_FALSE;
     return v;
 }
 inline int xQueueSend(QueueHandle_t, const void *, uint32_t)
 {
     if (mock_queue_send_fail_once())
     {
-        mock_queue_send_fail_once() = false;
+        mock_queue_send_fail_once() = PROTO_FALSE;
         return pdFALSE;
     }
     return pdTRUE;

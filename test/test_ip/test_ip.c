@@ -259,8 +259,8 @@ void test_ip_classify_equal_cidr_and_parse_edges()
 {
     // classify: null and a PC_IP_NONE address are UNSPECIFIED.
     TEST_ASSERT_EQUAL_INT(PC_IP_SCOPE_UNSPECIFIED, pc_ip_classify(NULL));
-    pc_ip none = {};
-    pc_ip none2 = {};
+    pc_ip none = {0};
+    pc_ip none2 = {0};
     TEST_ASSERT_EQUAL_INT(PC_IP_SCOPE_UNSPECIFIED, pc_ip_classify(&none));
     // equal: two PC_IP_NONE addresses compare equal (same non-address family).
     TEST_ASSERT_TRUE(pc_ip_equal(&none, &none2));
@@ -288,16 +288,16 @@ void test_ip_classify_equal_cidr_and_parse_edges()
     TEST_ASSERT_FALSE(pc_ip_parse("256.0.0.1", &p));         // octet out of range
     TEST_ASSERT_FALSE(pc_ip_parse("gg::1", &p));             // invalid hex
     TEST_ASSERT_FALSE(pc_ip_parse("1:2:3:4:5:6:7:8:9", &p)); // too many v6 groups
-    TEST_ASSERT_FALSE(pc_ip_parse(NULL, &p));             // null string
-    TEST_ASSERT_FALSE(pc_ip_parse("1.2.3.4", NULL));      // null out
+    TEST_ASSERT_FALSE(pc_ip_parse(NULL, &p));                // null string
+    TEST_ASSERT_FALSE(pc_ip_parse("1.2.3.4", NULL));         // null out
     TEST_ASSERT_FALSE(pc_ip_parse("1234.5.6.7", &p));        // octet has 4 digits
     TEST_ASSERT_FALSE(pc_ip_parse("1.2.3.z", &p));           // invalid char in v4
     // format guards: null ptr, non-v6/v4 family, and buffers too small for v4/v6/mapped.
     char buf[64];
     TEST_ASSERT_EQUAL_UINT(0, pc_ip_format(NULL, buf, sizeof(buf)));
-    TEST_ASSERT_EQUAL_UINT(0, pc_ip_format(&none, buf, sizeof(buf)));     // PC_IP_NONE family
+    TEST_ASSERT_EQUAL_UINT(0, pc_ip_format(&none, buf, sizeof(buf)));  // PC_IP_NONE family
     TEST_ASSERT_EQUAL_UINT(0, pc_ip_format(&none, NULL, sizeof(buf))); // null out buffer
-    TEST_ASSERT_EQUAL_UINT(0, pc_ip_format(&none, buf, 0));               // cap == 0
+    TEST_ASSERT_EQUAL_UINT(0, pc_ip_format(&none, buf, 0));            // cap == 0
     pc_ip v4 = pc_ip_from_v4_octets(255, 255, 255, 255);
     TEST_ASSERT_EQUAL_UINT(0, pc_ip_format(&v4, buf, 4)); // "255.255.255.255" needs 16
     pc_ip v6;

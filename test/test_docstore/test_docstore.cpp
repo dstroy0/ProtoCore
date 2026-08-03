@@ -45,9 +45,9 @@ static size_t ram_write(void *ctx, uint64_t off, const uint8_t *buf, size_t len)
     memcpy(d->buf + off, buf, len);
     return len;
 }
-static bool ram_sync(void *)
+static proto_bool ram_sync(void *)
 {
-    return true;
+    return PROTO_TRUE;
 }
 
 static uint8_t g_disk[64 * 1024];
@@ -76,32 +76,32 @@ static void fresh(void)
     TEST_ASSERT_TRUE(pc_dbm_open(&g_db, &g_wal));
     pc_docstore_open(&g_ds, &g_db);
 }
-static bool reboot(void)
+static proto_bool reboot(void)
 {
     g_dev = dev_over(&g_d);
     if (!pc_wal_store_mount(&g_wal, &g_dev))
     {
-        return false;
+        return PROTO_FALSE;
     }
     if (!pc_dbm_open(&g_db, &g_wal))
     {
-        return false;
+        return PROTO_FALSE;
     }
     pc_docstore_open(&g_ds, &g_db);
-    return true;
+    return PROTO_TRUE;
 }
 
-static bool put_doc(const char *id, const char *json)
+static proto_bool put_doc(const char *id, const char *json)
 {
     return pc_docstore_put(&g_ds, id, (uint16_t)strlen(id), (const uint8_t *)json, (uint32_t)strlen(json));
 }
-static bool get_eq(const char *id, const char *expect)
+static proto_bool get_eq(const char *id, const char *expect)
 {
     uint8_t buf[PC_DBM_VAL_MAX + 1];
     long n = pc_docstore_get(&g_ds, id, (uint16_t)strlen(id), buf, sizeof(buf));
     if (n < 0)
     {
-        return false;
+        return PROTO_FALSE;
     }
     return (size_t)n == strlen(expect) && memcmp(buf, expect, n) == 0;
 }
@@ -112,7 +112,7 @@ struct Collected
     int n;
     char ids[8][16];
 };
-static bool collect(const char *id, uint16_t id_len, const uint8_t *json, uint32_t json_len, void *ctx)
+static proto_bool collect(const char *id, uint16_t id_len, const uint8_t *json, uint32_t json_len, void *ctx)
 {
     (void)json;
     (void)json_len;
@@ -123,18 +123,18 @@ static bool collect(const char *id, uint16_t id_len, const uint8_t *json, uint32
         c->ids[c->n][id_len] = 0;
         c->n++;
     }
-    return true;
+    return PROTO_TRUE;
 }
-static bool has_id(const Collected *c, const char *id)
+static proto_bool has_id(const Collected *c, const char *id)
 {
     for (int i = 0; i < c->n; i++)
     {
         if (strcmp(c->ids[i], id) == 0)
         {
-            return true;
+            return PROTO_TRUE;
         }
     }
-    return false;
+    return PROTO_FALSE;
 }
 
 void test_put_get_del(void)
@@ -162,7 +162,7 @@ void test_find_by_field(void)
     put_doc("u3", "{\"name\":\"carol\",\"age\":25,\"city\":\"lyon\"}");
 
     // String field.
-    Collected c = {};
+    Collected c = {0};
     uint32_t m = pc_docstore_find_str(&g_ds, "city", "paris", collect, &c);
     TEST_ASSERT_EQUAL_UINT32(2, m);
     TEST_ASSERT_EQUAL_INT(2, c.n);
@@ -171,14 +171,14 @@ void test_find_by_field(void)
     TEST_ASSERT_FALSE(has_id(&c, "u3"));
 
     // Integer field.
-    Collected c2 = {};
+    Collected c2 = {0};
     m = pc_docstore_find_int(&g_ds, "age", 30, collect, &c2);
     TEST_ASSERT_EQUAL_UINT32(2, m);
     TEST_ASSERT_TRUE(has_id(&c2, "u1"));
     TEST_ASSERT_TRUE(has_id(&c2, "u2"));
 
     // No matches.
-    Collected c3 = {};
+    Collected c3 = {0};
     m = pc_docstore_find_str(&g_ds, "city", "berlin", collect, &c3);
     TEST_ASSERT_EQUAL_UINT32(0, m);
     TEST_ASSERT_EQUAL_INT(0, c3.n);
@@ -190,8 +190,8 @@ void test_find_bool(void)
     put_doc("a", "{\"on\":true,\"n\":1}");
     put_doc("b", "{\"on\":false,\"n\":2}");
     put_doc("c", "{\"on\":true,\"n\":3}");
-    Collected c = {};
-    uint32_t m = pc_docstore_find_bool(&g_ds, "on", true, collect, &c);
+    Collected c = {0};
+    uint32_t m = pc_docstore_find_bool(&g_ds, "on", PROTO_TRUE, collect, &c);
     TEST_ASSERT_EQUAL_UINT32(2, m);
     TEST_ASSERT_TRUE(has_id(&c, "a"));
     TEST_ASSERT_TRUE(has_id(&c, "c"));
@@ -210,7 +210,7 @@ void test_persist_and_query_across_reboot(void)
     TEST_ASSERT_TRUE(get_eq("u2", "{\"name\":\"bob\",\"role\":\"user\"}"));
 
     // The field index (JSON scan) works after a remount too.
-    Collected c = {};
+    Collected c = {0};
     uint32_t m = pc_docstore_find_str(&g_ds, "role", "admin", collect, &c);
     TEST_ASSERT_EQUAL_UINT32(2, m);
     TEST_ASSERT_TRUE(has_id(&c, "u1"));
@@ -235,13 +235,13 @@ void test_find_early_stop(void)
     } once = {0};
     struct L
     {
-        static bool cb(const char *, uint16_t, const uint8_t *, uint32_t, void *ctx)
+        static proto_bool cb(const char *, uint16_t, const uint8_t *, uint32_t, void *ctx)
         {
             ((Once *)ctx)->seen++;
-            return false; // stop immediately
+            return PROTO_FALSE; // stop immediately
         }
     };
-    uint32_t m = pc_docstore_find_str(&g_ds, "grp", "x", L::cb, &once);
+    uint32_t m = pc_docstore_find_str(&g_ds, "grp", "x", cb, &once);
     TEST_ASSERT_EQUAL_UINT32(1, m);
     TEST_ASSERT_EQUAL_INT(1, once.seen);
 }
@@ -253,17 +253,17 @@ void test_find_field_absent(void)
     put_doc("a", "{\"name\":\"x\",\"age\":5,\"on\":true}");
     put_doc("b", "{\"other\":\"y\"}"); // lacks name / age / on
 
-    Collected cs = {};
+    Collected cs = {0};
     TEST_ASSERT_EQUAL_UINT32(1, pc_docstore_find_str(&g_ds, "name", "x", collect, &cs)); // "b" has no name
     TEST_ASSERT_TRUE(has_id(&cs, "a"));
     TEST_ASSERT_FALSE(has_id(&cs, "b"));
 
-    Collected ci = {};
+    Collected ci = {0};
     TEST_ASSERT_EQUAL_UINT32(1, pc_docstore_find_int(&g_ds, "age", 5, collect, &ci)); // "b" has no age
     TEST_ASSERT_TRUE(has_id(&ci, "a"));
 
-    Collected cb = {};
-    TEST_ASSERT_EQUAL_UINT32(1, pc_docstore_find_bool(&g_ds, "on", true, collect, &cb)); // "b" has no on
+    Collected cb = {0};
+    TEST_ASSERT_EQUAL_UINT32(1, pc_docstore_find_bool(&g_ds, "on", PROTO_TRUE, collect, &cb)); // "b" has no on
     TEST_ASSERT_TRUE(has_id(&cb, "a"));
 }
 
@@ -291,7 +291,7 @@ void test_find_skips_unreadable_document(void)
     // without touching the in-RAM slot index that pc_dbm_iterate walks.
     g_d.size = 4;
 
-    Collected c = {};
+    Collected c = {0};
     uint32_t m = pc_docstore_find_str(&g_ds, "grp", "x", collect, &c);
     TEST_ASSERT_EQUAL_UINT32(0, m);
     TEST_ASSERT_EQUAL_INT(0, c.n);

@@ -12,8 +12,8 @@
 //   - Empty file → 200 with Content-Length: 0
 
 #include "mnt_mock.h"
+#include "protocore.h"             // pc_file_holds_slot: does the file pump hold this slot
 #include "server/filesystem/mnt.h" // pc_mnt_mount: the fixture is the mounted store
-#include "protocore.h" // pc_file_holds_slot: does the file pump hold this slot
 #include <stdio.h>
 #include <string.h>
 #include <unity.h>
@@ -201,7 +201,7 @@ static void h_f(uint8_t slot_id, HttpReq *req)
 void test_empty_file_returns_200_with_zero_length()
 {
     on_http("/empty", HTTP_GET, h_empty);
-    uint8_t zero_data[] = {};
+    uint8_t zero_data[] = {0};
     mock_mnt_set(zero_data, 0);
 
     feed_and_handle(0, "GET /empty HTTP/1.1\r\n\r\n");

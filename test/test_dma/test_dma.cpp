@@ -42,14 +42,14 @@ static void on_ev(const pc_dma_event *ev, void *ctx)
     g_ev.push_back(e);
 }
 
-static bool open_ch(uint8_t ch, bool loop)
+static proto_bool open_ch(uint8_t ch, proto_bool loop)
 {
-    pc_dma_config c = {};
+    pc_dma_config c = {0};
     c.channel = ch;
     c.periph = pc_dma_periph::PC_DMA_UART;
     c.loopback = loop;
     c.on_complete = on_ev;
-    c.ctx = nullptr;
+    c.ctx = NULL;
     return pc_dma_open(&c);
 }
 
@@ -93,21 +93,21 @@ void tearDown()
 
 void test_open_validates()
 {
-    TEST_ASSERT_FALSE(pc_dma_open(nullptr));
-    pc_dma_config c = {};
+    TEST_ASSERT_FALSE(pc_dma_open(NULL));
+    pc_dma_config c = {0};
     c.channel = 0;
-    c.on_complete = nullptr; // null callback
+    c.on_complete = NULL; // null callback
     TEST_ASSERT_FALSE(pc_dma_open(&c));
     c.on_complete = on_ev;
     c.channel = PC_DMA_CHANNELS; // out of range
     TEST_ASSERT_FALSE(pc_dma_open(&c));
-    TEST_ASSERT_TRUE(open_ch(0, false));
-    TEST_ASSERT_FALSE(open_ch(0, false)); // double open is a no-op
+    TEST_ASSERT_TRUE(open_ch(0, PROTO_FALSE));
+    TEST_ASSERT_FALSE(open_ch(0, PROTO_FALSE)); // double open is a no-op
 }
 
 void test_ingress_emits_rx_event()
 {
-    TEST_ASSERT_TRUE(open_ch(0, false));
+    TEST_ASSERT_TRUE(open_ch(0, PROTO_FALSE));
     const uint8_t msg[] = {'h', 'e', 'l', 'l', 'o'};
     TEST_ASSERT_TRUE(pc_dma_sim_feed(0, msg, sizeof(msg)));
     TEST_ASSERT_EQUAL_size_t(0, g_ev.size()); // nothing until we pump the engine
@@ -120,7 +120,7 @@ void test_ingress_emits_rx_event()
 
 void test_buffer_fills_then_partial_flush()
 {
-    TEST_ASSERT_TRUE(open_ch(0, false));
+    TEST_ASSERT_TRUE(open_ch(0, PROTO_FALSE));
     uint8_t msg[PC_DMA_BUF_SIZE + 3];
     for (size_t i = 0; i < sizeof(msg); i++)
     {
@@ -139,7 +139,7 @@ void test_buffer_fills_then_partial_flush()
 
 void test_ping_pong_flips_buffer()
 {
-    TEST_ASSERT_TRUE(open_ch(0, false));
+    TEST_ASSERT_TRUE(open_ch(0, PROTO_FALSE));
     uint8_t msg[PC_DMA_BUF_SIZE * 2]; // exactly two full buffers
     for (size_t i = 0; i < sizeof(msg); i++)
     {
@@ -158,7 +158,7 @@ void test_ping_pong_flips_buffer()
 
 void test_egress_captures_tx()
 {
-    TEST_ASSERT_TRUE(open_ch(0, false));
+    TEST_ASSERT_TRUE(open_ch(0, PROTO_FALSE));
     const uint8_t out[] = {'a', 'b', 'c', 'd'};
     TEST_ASSERT_TRUE(pc_dma_tx_submit(0, out, sizeof(out)));
     pc_dma_poll();
@@ -175,7 +175,7 @@ void test_egress_captures_tx()
 
 void test_tx_one_in_flight_fail_closed()
 {
-    TEST_ASSERT_TRUE(open_ch(0, false));
+    TEST_ASSERT_TRUE(open_ch(0, PROTO_FALSE));
     const uint8_t a[] = {1, 2, 3};
     const uint8_t b[] = {4, 5};
     TEST_ASSERT_TRUE(pc_dma_tx_submit(0, a, sizeof(a)));
@@ -188,17 +188,17 @@ void test_tx_one_in_flight_fail_closed()
 
 void test_tx_rejects_bad_len()
 {
-    TEST_ASSERT_TRUE(open_ch(0, false));
+    TEST_ASSERT_TRUE(open_ch(0, PROTO_FALSE));
     const uint8_t x[1] = {9};
     TEST_ASSERT_FALSE(pc_dma_tx_submit(0, x, 0)); // zero length
     uint8_t big[PC_DMA_BUF_SIZE + 1] = {0};
     TEST_ASSERT_FALSE(pc_dma_tx_submit(0, big, PC_DMA_BUF_SIZE + 1)); // oversize
-    TEST_ASSERT_FALSE(pc_dma_tx_submit(0, nullptr, 4));               // null buffer
+    TEST_ASSERT_FALSE(pc_dma_tx_submit(0, NULL, 4));                  // null buffer
 }
 
 void test_loopback_round_trip()
 {
-    TEST_ASSERT_TRUE(open_ch(0, true)); // internal TX -> RX jumper
+    TEST_ASSERT_TRUE(open_ch(0, PROTO_TRUE)); // internal TX -> RX jumper
     const uint8_t ping[] = {'P', 'I', 'N', 'G'};
     TEST_ASSERT_TRUE(pc_dma_tx_submit(0, ping, sizeof(ping)));
     pc_dma_poll(); // one poll: TX drains, loops into ingress, RX completes
@@ -211,7 +211,7 @@ void test_loopback_round_trip()
 
 void test_feed_fail_closed_when_full()
 {
-    TEST_ASSERT_TRUE(open_ch(0, false));
+    TEST_ASSERT_TRUE(open_ch(0, PROTO_FALSE));
     uint8_t big[PC_DMA_BUF_SIZE * 3 + 1] = {0};
     TEST_ASSERT_FALSE(pc_dma_sim_feed(0, big, sizeof(big))); // past staging -> reject whole
     uint8_t ok[PC_DMA_BUF_SIZE * 3] = {0};
@@ -225,15 +225,15 @@ void test_closed_channel_is_inert()
     TEST_ASSERT_FALSE(pc_dma_tx_submit(0, x, sizeof(x)));
     pc_dma_poll();
     TEST_ASSERT_EQUAL_size_t(0, g_ev.size());
-    TEST_ASSERT_TRUE(open_ch(0, false));
+    TEST_ASSERT_TRUE(open_ch(0, PROTO_FALSE));
     pc_dma_close(0);
     TEST_ASSERT_FALSE(pc_dma_sim_feed(0, x, sizeof(x))); // closed again
 }
 
 void test_two_channels_independent()
 {
-    TEST_ASSERT_TRUE(open_ch(0, false));
-    TEST_ASSERT_TRUE(open_ch(1, false));
+    TEST_ASSERT_TRUE(open_ch(0, PROTO_FALSE));
+    TEST_ASSERT_TRUE(open_ch(1, PROTO_FALSE));
     const uint8_t a[] = {0xA0, 0xA1};
     const uint8_t b[] = {0xB0, 0xB1, 0xB2};
     TEST_ASSERT_TRUE(pc_dma_sim_feed(0, a, sizeof(a)));
@@ -274,9 +274,9 @@ void test_channel_guard_subconditions()
     // otherwise exercised: a bad channel id and a null pointer are independent reasons to
     // fail closed, so both must be hit on their own (not only in combination).
     TEST_ASSERT_FALSE(pc_dma_sim_feed(PC_DMA_CHANNELS, b, sizeof(b)));  // bad channel
-    TEST_ASSERT_FALSE(pc_dma_sim_feed(0, nullptr, sizeof(b)));          // null bytes, valid channel
+    TEST_ASSERT_FALSE(pc_dma_sim_feed(0, NULL, sizeof(b)));             // null bytes, valid channel
     TEST_ASSERT_FALSE(pc_dma_tx_submit(PC_DMA_CHANNELS, b, sizeof(b))); // bad channel
-    TEST_ASSERT_EQUAL_UINT16(0, pc_dma_sim_capture(0, nullptr, 4));     // null out, valid channel
+    TEST_ASSERT_EQUAL_UINT16(0, pc_dma_sim_capture(0, NULL, 4));        // null out, valid channel
 }
 
 int main()

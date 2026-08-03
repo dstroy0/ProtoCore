@@ -54,7 +54,7 @@ void test_encode_replay_roundtrip(void)
     off += pc_wal_record_encode(log + off, sizeof(log) - off, 12, (const uint8_t *)p2, 1);
     TEST_ASSERT_EQUAL_size_t((size_t)(WAL_RECORD_HEADER * 3 + 5 + 13 + 1), off);
 
-    Collected c = {};
+    Collected c = {0};
     size_t durable = pc_wal_replay(log, off, collect, &c);
     TEST_ASSERT_EQUAL_size_t(off, durable); // all records good -> full length
     TEST_ASSERT_EQUAL_INT(3, c.n);
@@ -76,7 +76,7 @@ void test_replay_recovers_to_last_good_on_corrupt_tail(void)
     // Corrupt a payload byte of the third record -> its CRC now fails.
     log[r0 + r1 + WAL_RECORD_HEADER + 1] ^= 0xFF;
 
-    Collected c = {};
+    Collected c = {0};
     size_t durable = pc_wal_replay(log, total, collect, &c);
     TEST_ASSERT_EQUAL_size_t(r0 + r1, durable); // recovered up to the end of record 2
     TEST_ASSERT_EQUAL_INT(2, c.n);
@@ -91,7 +91,7 @@ void test_replay_stops_on_truncated_tail(void)
     size_t total = r0 + r1;
 
     // Simulate a power loss mid-write of record 2: only part of it made it to media.
-    Collected c = {};
+    Collected c = {0};
     size_t durable = pc_wal_replay(log, total - 4, collect, &c); // last 4 bytes never landed
     TEST_ASSERT_EQUAL_size_t(r0, durable);                       // only record 1 is durable
     TEST_ASSERT_EQUAL_INT(1, c.n);
@@ -111,7 +111,7 @@ void test_encode_capacity_and_empty_payload(void)
     uint8_t log[64];
     size_t n = pc_wal_record_encode(log, sizeof(log), 99, NULL, 0);
     TEST_ASSERT_EQUAL_size_t((size_t)WAL_RECORD_HEADER, n);
-    Collected c = {};
+    Collected c = {0};
     TEST_ASSERT_EQUAL_size_t(n, pc_wal_replay(log, n, collect, &c));
     TEST_ASSERT_EQUAL_INT(1, c.n);
     TEST_ASSERT_EQUAL_UINT64(99, c.seq[0]);
@@ -120,7 +120,7 @@ void test_encode_capacity_and_empty_payload(void)
 
 void test_replay_empty_and_garbage(void)
 {
-    Collected c = {};
+    Collected c = {0};
     TEST_ASSERT_EQUAL_size_t(0, pc_wal_replay(NULL, 0, collect, &c));
     uint8_t junk[40];
     memset(junk, 0xAB, sizeof(junk)); // no valid magic at the start

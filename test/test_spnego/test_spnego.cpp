@@ -64,7 +64,7 @@ void test_authenticate_roundtrip()
     size_t n = pc_spnego_wrap_authenticate(tok, sizeof(tok), out, sizeof(out));
     TEST_ASSERT_GREATER_THAN_size_t(sizeof(tok), n);
 
-    const uint8_t *rt = nullptr;
+    const uint8_t *rt = NULL;
     size_t rl = 0;
     TEST_ASSERT_TRUE(pc_spnego_parse_response(out, n, &rt, &rl));
     TEST_ASSERT_EQUAL_size_t(sizeof(tok), rl);
@@ -77,7 +77,7 @@ void test_parse_server_response()
 {
     uint8_t blob[64];
     size_t n = unhex("a11d301ba0030a0101a10c060a2b06010401823702020aa206040411223344", blob);
-    const uint8_t *rt = nullptr;
+    const uint8_t *rt = NULL;
     size_t rl = 0;
     TEST_ASSERT_TRUE(pc_spnego_parse_response(blob, n, &rt, &rl));
     TEST_ASSERT_EQUAL_size_t(4, rl);
@@ -89,7 +89,7 @@ void test_parse_rejects()
 {
     uint8_t blob[64];
     size_t n = unhex("a11d301ba0030a0101a10c060a2b06010401823702020aa206040411223344", blob);
-    const uint8_t *rt = nullptr;
+    const uint8_t *rt = NULL;
     size_t rl = 0;
     uint8_t bad[64];
     memcpy(bad, blob, n);
@@ -115,7 +115,7 @@ void test_wrap_len_2byte()
     size_t n = pc_spnego_wrap_authenticate(tok, sizeof(tok), out, sizeof(out));
     TEST_ASSERT_GREATER_THAN_size_t(sizeof(tok), n);
 
-    const uint8_t *rt = nullptr;
+    const uint8_t *rt = NULL;
     size_t rl = 0;
     TEST_ASSERT_TRUE(pc_spnego_parse_response(out, n, &rt, &rl));
     TEST_ASSERT_EQUAL_size_t(sizeof(tok), rl);
@@ -135,7 +135,7 @@ void test_wrap_len_3byte()
     size_t n = pc_spnego_wrap_authenticate(tok, sizeof(tok), out, sizeof(out));
     TEST_ASSERT_GREATER_THAN_size_t(sizeof(tok), n);
 
-    const uint8_t *rt = nullptr;
+    const uint8_t *rt = NULL;
     size_t rl = 0;
     TEST_ASSERT_TRUE(pc_spnego_parse_response(out, n, &rt, &rl));
     TEST_ASSERT_EQUAL_size_t(sizeof(tok), rl);
@@ -148,8 +148,8 @@ void test_wrap_negotiate_guards()
 {
     const uint8_t tok[8] = {1, 2, 3, 4, 5, 6, 7, 8};
     uint8_t out[64];
-    TEST_ASSERT_EQUAL_size_t(0, pc_spnego_wrap_negotiate(nullptr, sizeof(tok), out, sizeof(out)));
-    TEST_ASSERT_EQUAL_size_t(0, pc_spnego_wrap_negotiate(tok, sizeof(tok), nullptr, sizeof(out)));
+    TEST_ASSERT_EQUAL_size_t(0, pc_spnego_wrap_negotiate(NULL, sizeof(tok), out, sizeof(out)));
+    TEST_ASSERT_EQUAL_size_t(0, pc_spnego_wrap_negotiate(tok, sizeof(tok), NULL, sizeof(out)));
 }
 
 // pc_spnego_wrap_authenticate fails closed on a null token (spnego.cpp:116), on overflow
@@ -159,27 +159,27 @@ void test_wrap_authenticate_guards()
     uint8_t tok[200];
     memset(tok, 0x33, sizeof(tok));
     uint8_t out[256];
-    TEST_ASSERT_EQUAL_size_t(0, pc_spnego_wrap_authenticate(nullptr, sizeof(tok), out, sizeof(out)));
+    TEST_ASSERT_EQUAL_size_t(0, pc_spnego_wrap_authenticate(NULL, sizeof(tok), out, sizeof(out)));
     TEST_ASSERT_EQUAL_size_t(0, pc_spnego_wrap_authenticate(tok, sizeof(tok), out, 20));
-    TEST_ASSERT_EQUAL_size_t(0, pc_spnego_wrap_authenticate(tok, sizeof(tok), nullptr, sizeof(out)));
+    TEST_ASSERT_EQUAL_size_t(0, pc_spnego_wrap_authenticate(tok, sizeof(tok), NULL, sizeof(out)));
 }
 
 // pc_spnego_parse_response rejects null out-params (spnego.cpp:136-137).
 void test_parse_null_args()
 {
     const uint8_t blob[8] = {0xa1, 0x06, 0x30, 0x04, 0xa2, 0x02, 0x04, 0x00};
-    const uint8_t *rt = nullptr;
+    const uint8_t *rt = NULL;
     size_t rl = 0;
-    TEST_ASSERT_FALSE(pc_spnego_parse_response(nullptr, sizeof(blob), &rt, &rl));
-    TEST_ASSERT_FALSE(pc_spnego_parse_response(blob, sizeof(blob), nullptr, &rl));
-    TEST_ASSERT_FALSE(pc_spnego_parse_response(blob, sizeof(blob), &rt, nullptr));
+    TEST_ASSERT_FALSE(pc_spnego_parse_response(NULL, sizeof(blob), &rt, &rl));
+    TEST_ASSERT_FALSE(pc_spnego_parse_response(blob, sizeof(blob), NULL, &rl));
+    TEST_ASSERT_FALSE(pc_spnego_parse_response(blob, sizeof(blob), &rt, NULL));
 }
 
 // der_read rejects a TLV whose header does not even fit the buffer (spnego.cpp:60-61).
 void test_parse_truncated_header()
 {
     const uint8_t blob[2] = {0xa1, 0x02};
-    const uint8_t *rt = nullptr;
+    const uint8_t *rt = NULL;
     size_t rl = 0;
     TEST_ASSERT_FALSE(pc_spnego_parse_response(blob, 1, &rt, &rl));
 }
@@ -188,7 +188,7 @@ void test_parse_truncated_header()
 // whose bytes run off the end (p + nb > len) - spnego.cpp:67-68.
 void test_parse_bad_longform_len()
 {
-    const uint8_t *rt = nullptr;
+    const uint8_t *rt = NULL;
     size_t rl = 0;
     const uint8_t indef[2] = {0xa1, 0x80};
     TEST_ASSERT_FALSE(pc_spnego_parse_response(indef, sizeof(indef), &rt, &rl));
@@ -202,7 +202,7 @@ void test_parse_bad_longform_len()
 void test_parse_inner_not_seq()
 {
     const uint8_t blob[5] = {0xa1, 0x03, 0x04, 0x01, 0xFF};
-    const uint8_t *rt = nullptr;
+    const uint8_t *rt = NULL;
     size_t rl = 0;
     TEST_ASSERT_FALSE(pc_spnego_parse_response(blob, sizeof(blob), &rt, &rl));
 }
@@ -212,7 +212,7 @@ void test_parse_inner_not_seq()
 void test_parse_field_malformed()
 {
     const uint8_t blob[6] = {0xa1, 0x04, 0x30, 0x02, 0x04, 0x05};
-    const uint8_t *rt = nullptr;
+    const uint8_t *rt = NULL;
     size_t rl = 0;
     TEST_ASSERT_FALSE(pc_spnego_parse_response(blob, sizeof(blob), &rt, &rl));
 }
@@ -221,7 +221,7 @@ void test_parse_field_malformed()
 void test_parse_resptoken_not_octet()
 {
     const uint8_t blob[9] = {0xa1, 0x07, 0x30, 0x05, 0xa2, 0x03, 0x05, 0x01, 0xFF};
-    const uint8_t *rt = nullptr;
+    const uint8_t *rt = NULL;
     size_t rl = 0;
     TEST_ASSERT_FALSE(pc_spnego_parse_response(blob, sizeof(blob), &rt, &rl));
 }
@@ -232,7 +232,7 @@ void test_parse_resptoken_not_octet()
 void test_parse_seq_header_truncated()
 {
     const uint8_t blob[3] = {0xa1, 0x01, 0x30}; // [1] with a 1-byte content: a bare tag, no length
-    const uint8_t *rt = nullptr;
+    const uint8_t *rt = NULL;
     size_t rl = 0;
     TEST_ASSERT_FALSE(pc_spnego_parse_response(blob, sizeof(blob), &rt, &rl));
     TEST_ASSERT_NULL(rt);
@@ -245,7 +245,7 @@ void test_parse_resptoken_header_truncated()
 {
     // [1]{ SEQ{ [2] with a 1-byte content: a bare 0x04 tag and no length byte } }
     const uint8_t blob[7] = {0xa1, 0x05, 0x30, 0x03, 0xa2, 0x01, 0x04};
-    const uint8_t *rt = nullptr;
+    const uint8_t *rt = NULL;
     size_t rl = 0;
     TEST_ASSERT_FALSE(pc_spnego_parse_response(blob, sizeof(blob), &rt, &rl));
     TEST_ASSERT_NULL(rt);

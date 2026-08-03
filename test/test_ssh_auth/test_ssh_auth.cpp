@@ -20,14 +20,14 @@
 // enough - rebuilt per call, and released first so a backend that attaches vendor resources to a
 // context (ESP's mbedtls does) does not leak one per vector.
 static uint8_t g_gcm_ws[PC_WORK_AESGCM] __attribute__((aligned(8)));
-static bool g_gcm_live = false;
+static proto_bool g_gcm_live = PROTO_FALSE;
 static struct pc_aesgcm_key *gcm_key(const uint8_t *key)
 {
     if (g_gcm_live)
     {
         pc_aesgcm_key_wipe((struct pc_aesgcm_key *)(g_gcm_ws));
     }
-    g_gcm_live = true;
+    g_gcm_live = PROTO_TRUE;
     return pc_aesgcm_key_init(g_gcm_ws, key);
 }
 
@@ -40,7 +40,7 @@ extern uint8_t _test_rsa_e[4];
 void setUp()
 {
     ssh_transport_init(0);
-    pc_ssh_auth_set_password_cb(nullptr);
+    pc_ssh_auth_set_password_cb(NULL);
 }
 void tearDown()
 {
@@ -59,7 +59,7 @@ static size_t put_string(uint8_t *p, const char *s)
     return 4 + n;
 }
 
-static bool check_uv(const char *u, const char *p)
+static proto_bool check_uv(const char *u, const char *p)
 {
     return strcmp(u, "alice") == 0 && strcmp(p, "s3cret") == 0;
 }
@@ -155,7 +155,7 @@ void test_handle_request_success()
     TEST_ASSERT_EQUAL_INT(0, pc_ssh_auth_handle_request(0, pkt, n, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL(SSH_MSG_USERAUTH_SUCCESS, out[0]);
     TEST_ASSERT_TRUE(ssh_sess[0].authed);
-    TEST_ASSERT_EQUAL(SshPhase::SSH_PHASE_OPEN, ssh_sess[0].phase);
+    TEST_ASSERT_EQUAL(SSH_PHASE_OPEN, ssh_sess[0].phase);
 }
 
 void test_handle_request_wrong_password_fails()
@@ -170,12 +170,12 @@ void test_handle_request_wrong_password_fails()
     TEST_ASSERT_EQUAL(SSH_MSG_USERAUTH_FAILURE, out[0]);
     TEST_ASSERT_FALSE(ssh_sess[0].authed);
     // Failure advertises the "password" method.
-    bool adv = false;
+    proto_bool adv = PROTO_FALSE;
     for (size_t k = 0; k + 8 <= olen; k++)
     {
         if (memcmp(out + k, "password", 8) == 0)
         {
-            adv = true;
+            adv = PROTO_TRUE;
             break;
         }
     }
@@ -249,7 +249,7 @@ static void wr_u32(uint8_t *p, uint32_t v)
     p[3] = (uint8_t)v;
 }
 
-static bool pk_cb_alice(const char *u, const uint8_t *blob, size_t n)
+static proto_bool pk_cb_alice(const char *u, const uint8_t *blob, size_t n)
 {
     (void)blob;
     (void)n;
@@ -257,7 +257,7 @@ static bool pk_cb_alice(const char *u, const uint8_t *blob, size_t n)
 }
 
 static size_t build_pubkey_req(uint8_t *pkt, const uint8_t *blob, size_t blob_len, const uint8_t *sig, size_t sig_len,
-                               bool with_sig)
+                               proto_bool with_sig)
 {
     size_t n = 0;
     pkt[n++] = SSH_MSG_USERAUTH_REQUEST;
@@ -291,7 +291,7 @@ static void set_session_id_0_to_31()
         ssh_sess[0].session_id[j] = (uint8_t)j;
     }
     ssh_sess[0].session_id_len = 32; // a completed SHA-256 KEX
-    ssh_sess[0].have_session_id = true;
+    ssh_sess[0].have_session_id = PROTO_TRUE;
 }
 
 void test_pubkey_probe_returns_pk_ok()
@@ -302,7 +302,7 @@ void test_pubkey_probe_returns_pk_ok()
     size_t blob_len = hexdec(PK_BLOB_HEX, blob);
 
     uint8_t pkt[1024];
-    size_t n = build_pubkey_req(pkt, blob, blob_len, nullptr, 0, false);
+    size_t n = build_pubkey_req(pkt, blob, blob_len, NULL, 0, PROTO_FALSE);
     uint8_t out[1024];
     size_t olen = 0;
     TEST_ASSERT_EQUAL_INT(0, pc_ssh_auth_handle_request(0, pkt, n, out, &olen, sizeof(out)));
@@ -319,13 +319,13 @@ void test_pubkey_valid_signature_succeeds()
     size_t sig_len = hexdec(PK_SIG_HEX, sig);
 
     uint8_t pkt[1024];
-    size_t n = build_pubkey_req(pkt, blob, blob_len, sig, sig_len, true);
+    size_t n = build_pubkey_req(pkt, blob, blob_len, sig, sig_len, PROTO_TRUE);
     uint8_t out[64];
     size_t olen = 0;
     TEST_ASSERT_EQUAL_INT(0, pc_ssh_auth_handle_request(0, pkt, n, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL(SSH_MSG_USERAUTH_SUCCESS, out[0]);
     TEST_ASSERT_TRUE(ssh_sess[0].authed);
-    TEST_ASSERT_EQUAL(SshPhase::SSH_PHASE_OPEN, ssh_sess[0].phase);
+    TEST_ASSERT_EQUAL(SSH_PHASE_OPEN, ssh_sess[0].phase);
 }
 
 // Encode an SSH mpint from a big-endian value (strip leading zeros, prepend 0x00 if the
@@ -337,7 +337,7 @@ static size_t put_mpint(uint8_t *p, const uint8_t *v, size_t vlen)
     {
         off++;
     }
-    bool pad = (off < vlen) && (v[off] & 0x80);
+    proto_bool pad = (off < vlen) && (v[off] & 0x80);
     uint32_t mlen = (uint32_t)(vlen - off) + (pad ? 1u : 0u);
     wr_u32(p, mlen);
     size_t n = 4;
@@ -522,7 +522,7 @@ void test_pubkey_tampered_signature_fails()
     sig[100] ^= 0x01;
 
     uint8_t pkt[1024];
-    size_t n = build_pubkey_req(pkt, blob, blob_len, sig, sig_len, true);
+    size_t n = build_pubkey_req(pkt, blob, blob_len, sig, sig_len, PROTO_TRUE);
     uint8_t out[64];
     size_t olen = 0;
     TEST_ASSERT_EQUAL_INT(0, pc_ssh_auth_handle_request(0, pkt, n, out, &olen, sizeof(out)));
@@ -532,14 +532,14 @@ void test_pubkey_tampered_signature_fails()
 
 void test_pubkey_unauthorized_key_fails()
 {
-    pc_ssh_auth_set_pubkey_cb(nullptr); // no key authorized
+    pc_ssh_auth_set_pubkey_cb(NULL); // no key authorized
     set_session_id_0_to_31();
     uint8_t blob[512], sig[256];
     size_t blob_len = hexdec(PK_BLOB_HEX, blob);
     size_t sig_len = hexdec(PK_SIG_HEX, sig);
 
     uint8_t pkt[1024];
-    size_t n = build_pubkey_req(pkt, blob, blob_len, sig, sig_len, true);
+    size_t n = build_pubkey_req(pkt, blob, blob_len, sig, sig_len, PROTO_TRUE);
     uint8_t out[64];
     size_t olen = 0;
     TEST_ASSERT_EQUAL_INT(0, pc_ssh_auth_handle_request(0, pkt, n, out, &olen, sizeof(out)));
@@ -550,7 +550,7 @@ void test_pubkey_unauthorized_key_fails()
 
 // Assemble a publickey USERAUTH_REQUEST for an ssh-ed25519 key. Without with_sig this is
 // exactly the signed prefix; the signature blob is string("ssh-ed25519") || string(sig).
-static size_t build_pubkey_req_ed(uint8_t *pkt, const uint8_t *pub, const uint8_t *sig, bool with_sig,
+static size_t build_pubkey_req_ed(uint8_t *pkt, const uint8_t *pub, const uint8_t *sig, proto_bool with_sig,
                                   size_t *prefix_len)
 {
     size_t n = 0;
@@ -600,7 +600,7 @@ void test_pubkey_ed25519_valid_signature_succeeds()
     // Build the signed prefix, prepend string(session_id), sign the whole thing.
     uint8_t pkt[512];
     size_t prefix_len = 0;
-    build_pubkey_req_ed(pkt, pub, nullptr, false, &prefix_len);
+    build_pubkey_req_ed(pkt, pub, NULL, PROTO_FALSE, &prefix_len);
     uint8_t signed_data[4 + 32 + 512];
     size_t sd = 0;
     wr_u32(signed_data + sd, 32);
@@ -612,7 +612,7 @@ void test_pubkey_ed25519_valid_signature_succeeds()
     uint8_t sig[64];
     pc_ed25519_sign(sig, signed_data, sd, seed);
 
-    size_t n = build_pubkey_req_ed(pkt, pub, sig, true, nullptr);
+    size_t n = build_pubkey_req_ed(pkt, pub, sig, PROTO_TRUE, NULL);
     uint8_t out[64];
     size_t olen = 0;
     TEST_ASSERT_EQUAL_INT(0, pc_ssh_auth_handle_request(0, pkt, n, out, &olen, sizeof(out)));
@@ -624,7 +624,7 @@ void test_pubkey_ed25519_valid_signature_succeeds()
     pc_ssh_auth_set_pubkey_cb(pk_cb_alice);
     set_session_id_0_to_31();
     sig[10] ^= 0x01;
-    n = build_pubkey_req_ed(pkt, pub, sig, true, nullptr);
+    n = build_pubkey_req_ed(pkt, pub, sig, PROTO_TRUE, NULL);
     TEST_ASSERT_EQUAL_INT(0, pc_ssh_auth_handle_request(0, pkt, n, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL(SSH_MSG_USERAUTH_FAILURE, out[0]);
     TEST_ASSERT_FALSE(ssh_sess[0].authed);
@@ -652,8 +652,8 @@ void test_build_response_guards()
 {
     uint8_t out[8];
     size_t olen = 0;
-    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_auth_build_failure(out, &olen, 2, false)); // < 1+4+methods+1
-    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_auth_build_success(out, &olen, 0));        // cap < 1
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_auth_build_failure(out, &olen, 2, PROTO_FALSE)); // < 1+4+methods+1
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_auth_build_success(out, &olen, 0));              // cap < 1
 
     // build_pk_ok via a pubkey probe with a tiny output buffer.
     pc_ssh_auth_set_pubkey_cb(pk_cb_alice);
@@ -661,7 +661,7 @@ void test_build_response_guards()
     uint8_t blob[512];
     size_t blob_len = hexdec(PK_BLOB_HEX, blob);
     uint8_t pkt[1024];
-    size_t pn = build_pubkey_req(pkt, blob, blob_len, nullptr, 0, false);
+    size_t pn = build_pubkey_req(pkt, blob, blob_len, NULL, 0, PROTO_FALSE);
     TEST_ASSERT_EQUAL_INT(-1, pc_ssh_auth_handle_request(0, pkt, pn, out, &olen, 4));
 }
 
@@ -769,19 +769,19 @@ void test_pubkey_blob_parse_failures()
     size_t olen = 0, bl, pn;
 
     // empty blob: type string cannot be read.
-    pn = build_pubkey_req(pkt, b, 0, nullptr, 0, false);
+    pn = build_pubkey_req(pkt, b, 0, NULL, 0, PROTO_FALSE);
     TEST_ASSERT_EQUAL_INT(0, pc_ssh_auth_handle_request(0, pkt, pn, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL(SSH_MSG_USERAUTH_FAILURE, out[0]);
 
     // wrong key type.
     bl = put_string(b, "ssh-dss");
-    pn = build_pubkey_req(pkt, b, bl, nullptr, 0, false);
+    pn = build_pubkey_req(pkt, b, bl, NULL, 0, PROTO_FALSE);
     pc_ssh_auth_handle_request(0, pkt, pn, out, &olen, sizeof(out));
     TEST_ASSERT_EQUAL(SSH_MSG_USERAUTH_FAILURE, out[0]);
 
     // ssh-rsa with no exponent.
     bl = put_string(b, "ssh-rsa");
-    pn = build_pubkey_req(pkt, b, bl, nullptr, 0, false);
+    pn = build_pubkey_req(pkt, b, bl, NULL, 0, PROTO_FALSE);
     pc_ssh_auth_handle_request(0, pkt, pn, out, &olen, sizeof(out));
     TEST_ASSERT_EQUAL(SSH_MSG_USERAUTH_FAILURE, out[0]);
 
@@ -791,7 +791,7 @@ void test_pubkey_blob_parse_failures()
     bl += 4;
     memcpy(b + bl, "\x01\x02\x03\x04\x05", 5);
     bl += 5;
-    pn = build_pubkey_req(pkt, b, bl, nullptr, 0, false);
+    pn = build_pubkey_req(pkt, b, bl, NULL, 0, PROTO_FALSE);
     pc_ssh_auth_handle_request(0, pkt, pn, out, &olen, sizeof(out));
     TEST_ASSERT_EQUAL(SSH_MSG_USERAUTH_FAILURE, out[0]);
 
@@ -800,7 +800,7 @@ void test_pubkey_blob_parse_failures()
     wr_u32(b + bl, 1);
     bl += 4;
     b[bl++] = 3;
-    pn = build_pubkey_req(pkt, b, bl, nullptr, 0, false);
+    pn = build_pubkey_req(pkt, b, bl, NULL, 0, PROTO_FALSE);
     pc_ssh_auth_handle_request(0, pkt, pn, out, &olen, sizeof(out));
     TEST_ASSERT_EQUAL(SSH_MSG_USERAUTH_FAILURE, out[0]);
 
@@ -814,17 +814,17 @@ void test_pubkey_blob_parse_failures()
     bl += 4;
     memset(b + bl, 0x11, nlen);
     bl += nlen;
-    pn = build_pubkey_req(pkt, b, bl, nullptr, 0, false);
+    pn = build_pubkey_req(pkt, b, bl, NULL, 0, PROTO_FALSE);
     pc_ssh_auth_handle_request(0, pkt, pn, out, &olen, sizeof(out));
     TEST_ASSERT_EQUAL(SSH_MSG_USERAUTH_FAILURE, out[0]);
 }
 
-static bool pk_cb_any(const char *u, const uint8_t *blob, size_t n)
+static proto_bool pk_cb_any(const char *u, const uint8_t *blob, size_t n)
 {
     (void)u;
     (void)blob;
     (void)n;
-    return true;
+    return PROTO_TRUE;
 }
 
 // A publickey request whose signed prefix exceeds SSH_PKT_BUF_SIZE is rejected before
@@ -838,7 +838,7 @@ void test_pubkey_oversized_signed_prefix()
     memset(blob + base, 0, sizeof(blob) - base); // trailing padding (parse ignores it)
     static uint8_t pkt[4096], out[4096];
     uint8_t sig[8] = {0};
-    size_t n = build_pubkey_req(pkt, blob, sizeof(blob), sig, sizeof(sig), true);
+    size_t n = build_pubkey_req(pkt, blob, sizeof(blob), sig, sizeof(sig), PROTO_TRUE);
     size_t olen = 0;
     TEST_ASSERT_EQUAL_INT(0, pc_ssh_auth_handle_request(0, pkt, n, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL(SSH_MSG_USERAUTH_FAILURE, out[0]);
@@ -847,7 +847,7 @@ void test_pubkey_oversized_signed_prefix()
 // Assemble a publickey USERAUTH_REQUEST carrying an arbitrary algorithm name, key blob and raw
 // signature - enough to drive every blob / signature rejection path from the wire.
 static size_t build_pubkey_req_generic(uint8_t *pkt, const char *algo, const uint8_t *blob, size_t blob_len,
-                                       const uint8_t *sig, size_t sig_len, bool with_sig)
+                                       const uint8_t *sig, size_t sig_len, proto_bool with_sig)
 {
     size_t n = 0;
     pkt[n++] = SSH_MSG_USERAUTH_REQUEST;
@@ -877,13 +877,13 @@ static size_t build_pubkey_req_generic(uint8_t *pkt, const char *algo, const uin
 // With no public-key verifier installed no key can be authorized, however well-formed it is.
 void test_pubkey_without_verifier_fails()
 {
-    pc_ssh_auth_set_pubkey_cb(nullptr);
+    pc_ssh_auth_set_pubkey_cb(NULL);
     set_session_id_0_to_31();
     uint8_t blob[512];
     size_t bl = hexdec(PK_BLOB_HEX, blob);
     uint8_t pkt[1024], out[512];
     size_t olen = 0;
-    size_t n = build_pubkey_req(pkt, blob, bl, nullptr, 0, false);
+    size_t n = build_pubkey_req(pkt, blob, bl, NULL, 0, PROTO_FALSE);
     TEST_ASSERT_EQUAL_INT(0, pc_ssh_auth_handle_request(0, pkt, n, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL(SSH_MSG_USERAUTH_FAILURE, out[0]);
     TEST_ASSERT_FALSE(ssh_sess[0].authed);
@@ -901,7 +901,7 @@ void test_pubkey_rsa_blob_type_length_and_zero_mpint()
     size_t bl, n, olen = 0;
 
     bl = put_string(b, "ssh-rsa-x"); // 9 chars, not 7
-    n = build_pubkey_req(pkt, b, bl, nullptr, 0, false);
+    n = build_pubkey_req(pkt, b, bl, NULL, 0, PROTO_FALSE);
     TEST_ASSERT_EQUAL_INT(0, pc_ssh_auth_handle_request(0, pkt, n, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL(SSH_MSG_USERAUTH_FAILURE, out[0]);
 
@@ -914,7 +914,7 @@ void test_pubkey_rsa_blob_type_length_and_zero_mpint()
     bl += 4;
     memset(b + bl, 0, 4);
     bl += 4;
-    n = build_pubkey_req(pkt, b, bl, nullptr, 0, false);
+    n = build_pubkey_req(pkt, b, bl, NULL, 0, PROTO_FALSE);
     TEST_ASSERT_EQUAL_INT(0, pc_ssh_auth_handle_request(0, pkt, n, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL(SSH_MSG_USERAUTH_PK_OK, out[0]);
 }
@@ -931,7 +931,7 @@ void test_pubkey_ed25519_blob_and_siglen_rejections()
     bl = put_string(b, "ssh-ed25519");
     wr_u32(b + bl, 32); // declares 32 bytes, none present
     bl += 4;
-    n = build_pubkey_req_generic(pkt, "ssh-ed25519", b, bl, nullptr, 0, false);
+    n = build_pubkey_req_generic(pkt, "ssh-ed25519", b, bl, NULL, 0, PROTO_FALSE);
     TEST_ASSERT_EQUAL_INT(0, pc_ssh_auth_handle_request(0, pkt, n, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL(SSH_MSG_USERAUTH_FAILURE, out[0]);
 
@@ -940,7 +940,7 @@ void test_pubkey_ed25519_blob_and_siglen_rejections()
     bl += 4;
     memset(b + bl, 0xAB, 31);
     bl += 31;
-    n = build_pubkey_req_generic(pkt, "ssh-ed25519", b, bl, nullptr, 0, false);
+    n = build_pubkey_req_generic(pkt, "ssh-ed25519", b, bl, NULL, 0, PROTO_FALSE);
     TEST_ASSERT_EQUAL_INT(0, pc_ssh_auth_handle_request(0, pkt, n, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL(SSH_MSG_USERAUTH_FAILURE, out[0]);
 
@@ -952,7 +952,7 @@ void test_pubkey_ed25519_blob_and_siglen_rejections()
     bl += 32;
     uint8_t sig[63];
     memset(sig, 0x5C, sizeof(sig));
-    n = build_pubkey_req_generic(pkt, "ssh-ed25519", b, bl, sig, sizeof(sig), true);
+    n = build_pubkey_req_generic(pkt, "ssh-ed25519", b, bl, sig, sizeof(sig), PROTO_TRUE);
     TEST_ASSERT_EQUAL_INT(0, pc_ssh_auth_handle_request(0, pkt, n, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL(SSH_MSG_USERAUTH_FAILURE, out[0]);
     TEST_ASSERT_FALSE(ssh_sess[0].authed);
@@ -974,7 +974,7 @@ void test_pubkey_ecdsa_blob_rejections()
     bl = put_string(b, "ecdsa-sha2-nistp256");
     wr_u32(b + bl, 8);
     bl += 4;
-    n = build_pubkey_req_generic(pkt, "ecdsa-sha2-nistp256", b, bl, nullptr, 0, false);
+    n = build_pubkey_req_generic(pkt, "ecdsa-sha2-nistp256", b, bl, NULL, 0, PROTO_FALSE);
     TEST_ASSERT_EQUAL_INT(0, pc_ssh_auth_handle_request(0, pkt, n, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL(SSH_MSG_USERAUTH_FAILURE, out[0]);
 
@@ -988,7 +988,7 @@ void test_pubkey_ecdsa_blob_rejections()
         bl += 4;
         memcpy(b + bl, q, PC_ECDSA_P256_PUB_LEN);
         bl += PC_ECDSA_P256_PUB_LEN;
-        n = build_pubkey_req_generic(pkt, "ecdsa-sha2-nistp256", b, bl, nullptr, 0, false);
+        n = build_pubkey_req_generic(pkt, "ecdsa-sha2-nistp256", b, bl, NULL, 0, PROTO_FALSE);
         TEST_ASSERT_EQUAL_INT(0, pc_ssh_auth_handle_request(0, pkt, n, out, &olen, sizeof(out)));
         TEST_ASSERT_EQUAL(SSH_MSG_USERAUTH_FAILURE, out[0]);
     }
@@ -998,7 +998,7 @@ void test_pubkey_ecdsa_blob_rejections()
     bl += put_string(b + bl, "nistp256");
     wr_u32(b + bl, PC_ECDSA_P256_PUB_LEN);
     bl += 4;
-    n = build_pubkey_req_generic(pkt, "ecdsa-sha2-nistp256", b, bl, nullptr, 0, false);
+    n = build_pubkey_req_generic(pkt, "ecdsa-sha2-nistp256", b, bl, NULL, 0, PROTO_FALSE);
     TEST_ASSERT_EQUAL_INT(0, pc_ssh_auth_handle_request(0, pkt, n, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL(SSH_MSG_USERAUTH_FAILURE, out[0]);
 
@@ -1016,7 +1016,7 @@ void test_pubkey_ecdsa_blob_rejections()
             b[bl] = 0x02; // compressed form is not accepted
         }
         bl += qlen;
-        n = build_pubkey_req_generic(pkt, "ecdsa-sha2-nistp256", b, bl, nullptr, 0, false);
+        n = build_pubkey_req_generic(pkt, "ecdsa-sha2-nistp256", b, bl, NULL, 0, PROTO_FALSE);
         TEST_ASSERT_EQUAL_INT(0, pc_ssh_auth_handle_request(0, pkt, n, out, &olen, sizeof(out)));
         TEST_ASSERT_EQUAL(SSH_MSG_USERAUTH_FAILURE, out[0]);
     }
@@ -1056,13 +1056,13 @@ void test_pubkey_ecdsa_signature_rejections()
         size_t rlen;
         const uint8_t *s;
         size_t slen;
-        bool with_s;
+        proto_bool with_s;
     } cases[5] = {
-        {nullptr, 0, nullptr, 0, false},      // no r at all
-        {small, 1, nullptr, 0, false},        // r only, s missing
-        {wide, sizeof(wide), small, 1, true}, // r too wide
-        {small, 1, wide, sizeof(wide), true}, // s too wide
-        {small, 1, small, 1, true},           // parses, but signs nothing
+        {NULL, 0, NULL, 0, PROTO_FALSE},            // no r at all
+        {small, 1, NULL, 0, PROTO_FALSE},           // r only, s missing
+        {wide, sizeof(wide), small, 1, PROTO_TRUE}, // r too wide
+        {small, 1, wide, sizeof(wide), PROTO_TRUE}, // s too wide
+        {small, 1, small, 1, PROTO_TRUE},           // parses, but signs nothing
     };
     for (int c = 0; c < 5; c++)
     {
@@ -1081,19 +1081,19 @@ void test_pubkey_ecdsa_signature_rejections()
             memcpy(sigblob + sl, cases[c].s, cases[c].slen);
             sl += cases[c].slen;
         }
-        size_t n = build_pubkey_req_generic(pkt, "ecdsa-sha2-nistp256", b, bl, sigblob, sl, true);
+        size_t n = build_pubkey_req_generic(pkt, "ecdsa-sha2-nistp256", b, bl, sigblob, sl, PROTO_TRUE);
         TEST_ASSERT_EQUAL_INT(0, pc_ssh_auth_handle_request(0, pkt, n, out, &olen, sizeof(out)));
         TEST_ASSERT_EQUAL(SSH_MSG_USERAUTH_FAILURE, out[0]);
         TEST_ASSERT_FALSE(ssh_sess[0].authed);
     }
 }
 
-static bool pk_cb_reject(const char *u, const uint8_t *blob, size_t n)
+static proto_bool pk_cb_reject(const char *u, const uint8_t *blob, size_t n)
 {
     (void)u;
     (void)blob;
     (void)n;
-    return false;
+    return PROTO_FALSE;
 }
 
 // A verifier that IS installed but refuses the offered key produces USERAUTH_FAILURE - a distinct
@@ -1106,7 +1106,7 @@ void test_pubkey_verifier_rejects_key()
     size_t bl = hexdec(PK_BLOB_HEX, blob);
     uint8_t pkt[1024], out[512];
     size_t olen = 0;
-    size_t n = build_pubkey_req(pkt, blob, bl, nullptr, 0, false);
+    size_t n = build_pubkey_req(pkt, blob, bl, NULL, 0, PROTO_FALSE);
     TEST_ASSERT_EQUAL_INT(0, pc_ssh_auth_handle_request(0, pkt, n, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL(SSH_MSG_USERAUTH_FAILURE, out[0]);
     TEST_ASSERT_FALSE(ssh_sess[0].authed);
@@ -1118,10 +1118,10 @@ void test_build_failure_partial_success_flag()
 {
     uint8_t out[64];
     size_t olen = 0;
-    TEST_ASSERT_EQUAL_INT(0, pc_ssh_auth_build_failure(out, &olen, sizeof(out), true));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_auth_build_failure(out, &olen, sizeof(out), PROTO_TRUE));
     TEST_ASSERT_EQUAL(SSH_MSG_USERAUTH_FAILURE, out[0]);
     TEST_ASSERT_EQUAL_UINT8(1, out[olen - 1]);
-    TEST_ASSERT_EQUAL_INT(0, pc_ssh_auth_build_failure(out, &olen, sizeof(out), false));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_auth_build_failure(out, &olen, sizeof(out), PROTO_FALSE));
     TEST_ASSERT_EQUAL_UINT8(0, out[olen - 1]);
 }
 

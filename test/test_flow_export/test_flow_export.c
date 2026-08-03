@@ -18,7 +18,7 @@ void tearDown()
 
 void test_v5_header_bytes()
 {
-    FlowV5Header h = {};
+    FlowV5Header h = {0};
     h.count = 1;
     h.sys_uptime = 1000; // 0x000003E8
     h.unix_secs = 0x5F5E1100;
@@ -37,7 +37,7 @@ void test_v5_header_bytes()
 
 void test_v5_record_bytes()
 {
-    FlowV5Record r = {};
+    FlowV5Record r = {0};
     r.src_addr = 0x0A000001;
     r.dst_addr = 0x0A000002;
     r.next_hop = 0x0A0000FE;
@@ -78,7 +78,7 @@ void test_v5_record_bytes()
 
 void test_v5_overflow_fails_closed()
 {
-    FlowV5Record r = {};
+    FlowV5Record r = {0};
     uint8_t small[10];
     TEST_ASSERT_EQUAL_size_t(0, flow_v5_write_record(small, sizeof(small), &r));
 }
@@ -155,9 +155,9 @@ void test_finish_overflow_fails_closed()
 void test_v5_write_overflow()
 {
     uint8_t buf[4]; // smaller than a v5 header or record
-    FlowV5Header h = {};
+    FlowV5Header h = {0};
     TEST_ASSERT_EQUAL_size_t(0, flow_v5_write_header(buf, sizeof(buf), &h));
-    FlowV5Record r = {};
+    FlowV5Record r = {0};
     TEST_ASSERT_EQUAL_size_t(0, flow_v5_write_record(buf, sizeof(buf), &r));
 }
 
@@ -231,12 +231,12 @@ void test_flow_guards_and_overflows()
 // (test_v5_write_overflow only exercises the cap-too-small branch of the same guard).
 void test_v5_write_null_guards()
 {
-    FlowV5Header h = {};
+    FlowV5Header h = {0};
     uint8_t hbuf[FLOW_V5_HEADER_SIZE];
     TEST_ASSERT_EQUAL_size_t(0, flow_v5_write_header(NULL, sizeof(hbuf), &h));
     TEST_ASSERT_EQUAL_size_t(0, flow_v5_write_header(hbuf, sizeof(hbuf), NULL));
 
-    FlowV5Record r = {};
+    FlowV5Record r = {0};
     uint8_t rbuf[FLOW_V5_RECORD_SIZE];
     TEST_ASSERT_EQUAL_size_t(0, flow_v5_write_record(NULL, sizeof(rbuf), &r));
     TEST_ASSERT_EQUAL_size_t(0, flow_v5_write_record(rbuf, sizeof(rbuf), NULL));
@@ -253,7 +253,7 @@ void test_data_record_null_and_zero_len_with_set_open()
     TEST_ASSERT_TRUE(flow_export_data_begin(&w, 256));
     uint8_t rec[4] = {1, 2, 3, 4};
     TEST_ASSERT_FALSE(flow_export_data_record(&w, NULL, 4)); // !record, set open
-    TEST_ASSERT_FALSE(flow_export_data_record(&w, rec, 0));     // len == 0, set open + valid record
+    TEST_ASSERT_FALSE(flow_export_data_record(&w, rec, 0));  // len == 0, set open + valid record
 }
 
 int main()

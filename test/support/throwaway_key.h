@@ -44,17 +44,17 @@ static inline void throwaway_ed25519_seed(uint8_t out[32])
     };
 
     const char *pin = getenv("PC_TEST_KEY_SEED");
-    bool pinned = false;
+    proto_bool pinned = PROTO_FALSE;
     if (pin && strlen(pin) >= 64)
     {
         uint8_t tmp[32]; // parse into a scratch buffer; only commit to out[] once fully valid
-        pinned = true;
+        pinned = PROTO_TRUE;
         for (int i = 0; i < 32 && pinned; i++)
         {
             int hi = nib(pin[2 * i]), lo = nib(pin[2 * i + 1]);
             if (hi < 0 || lo < 0)
             {
-                pinned = false; // not valid hex -> fall back to random (out[] never saw pin bytes)
+                pinned = PROTO_FALSE; // not valid hex -> fall back to random (out[] never saw pin bytes)
             }
             else
             {

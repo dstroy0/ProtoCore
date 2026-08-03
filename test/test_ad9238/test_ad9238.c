@@ -53,7 +53,7 @@ void test_instruction_word_rejects_bad_input()
 
 void test_build_write_transaction()
 {
-    uint8_t out[3] = {};
+    uint8_t out[3] = {0};
     TEST_ASSERT_EQUAL_size_t(3, pc_ad9238_build_write((uint16_t)AD9238_REG_POWER_DOWN, 0x01, out, sizeof(out)));
     TEST_ASSERT_EQUAL_HEX8(0x00, out[0]);
     TEST_ASSERT_EQUAL_HEX8(0x09, out[1]);
@@ -66,7 +66,7 @@ void test_build_write_transaction()
 
 void test_build_read_transaction()
 {
-    uint8_t out[2] = {};
+    uint8_t out[2] = {0};
     TEST_ASSERT_EQUAL_size_t(2, pc_ad9238_build_read((uint16_t)AD9238_REG_CHIP_ID, out, sizeof(out)));
     TEST_ASSERT_EQUAL_HEX8(0x80, out[0]);
     TEST_ASSERT_EQUAL_HEX8(0x01, out[1]);
@@ -78,7 +78,7 @@ void test_build_read_transaction()
 
 void test_build_transfer_writes_device_update()
 {
-    uint8_t out[3] = {};
+    uint8_t out[3] = {0};
     TEST_ASSERT_EQUAL_size_t(3, pc_ad9238_build_transfer(out, sizeof(out)));
     TEST_ASSERT_EQUAL_HEX8(0x00, out[0]);
     TEST_ASSERT_EQUAL_HEX8(0xFF, out[1]); // AD9238_REG_DEVICE_UPDATE

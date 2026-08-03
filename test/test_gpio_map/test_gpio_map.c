@@ -104,7 +104,7 @@ void test_is_output()
 void test_host_gpio_stubs()
 {
     // Host build: the GPIO bind functions are no-ops (no digitalRead/Write).
-    pc_gpio_pin pins[1] = {};
+    pc_gpio_pin pins[1] = {0};
     pc_gpio_begin_pins(pins, 1);
     pc_gpio_read(pins, 1);
     pc_gpio_write(0, 1);

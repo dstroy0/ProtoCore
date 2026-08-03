@@ -33,7 +33,7 @@ static int find(const uint8_t *hay, size_t hlen, const uint8_t *needle, size_t n
 
 static pc_goose base(void)
 {
-    pc_goose g = {};
+    pc_goose g = {0};
     g.gocb_ref = "X";
     g.time_allowed_to_live = 1;
     g.dat_set = "D";

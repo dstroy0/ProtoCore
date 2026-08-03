@@ -206,7 +206,7 @@ void test_active_lockout_survives_eviction()
 void test_succeed_unspecified_and_table_full_eviction()
 {
     auth_lockout_reset();
-    pc_ip none = {};             // unspecified (family PC_IP_NONE)
+    pc_ip none = {0};            // unspecified (family PC_IP_NONE)
     auth_lockout_succeed(&none); // no-op guard on an unspecified address
     // Fill every bucket with an active lockout.
     for (int i = 0; i < PC_AUTH_LOCKOUT_SLOTS; i++)

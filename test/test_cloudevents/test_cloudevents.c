@@ -29,7 +29,7 @@ static void feed_request(uint8_t slot, const char *raw)
 // A minimal event carries the three required attributes and specversion 1.0.
 void test_build_minimal()
 {
-    CloudEvent ce = {};
+    CloudEvent ce = {0};
     ce.id = "1001";
     ce.source = "/devices/esp32-1";
     ce.type = "com.example.sensor.reading";
@@ -47,15 +47,15 @@ void test_build_minimal()
 void test_build_requires_id_source_type()
 {
     char buf[256];
-    CloudEvent a = {};
+    CloudEvent a = {0};
     a.source = "/s";
     a.type = "t"; // no id
     TEST_ASSERT_EQUAL_size_t(0, pc_cloudevents_build_json(buf, sizeof(buf), &a));
-    CloudEvent b = {};
+    CloudEvent b = {0};
     b.id = "1";
     b.type = "t"; // no source
     TEST_ASSERT_EQUAL_size_t(0, pc_cloudevents_build_json(buf, sizeof(buf), &b));
-    CloudEvent c = {};
+    CloudEvent c = {0};
     c.id = "1";
     c.source = "/s"; // no type
     TEST_ASSERT_EQUAL_size_t(0, pc_cloudevents_build_json(buf, sizeof(buf), &c));
@@ -64,7 +64,7 @@ void test_build_requires_id_source_type()
 // data_json is emitted verbatim (a JSON value), with datacontenttype defaulting.
 void test_build_with_json_data()
 {
-    CloudEvent ce = {};
+    CloudEvent ce = {0};
     ce.id = "7";
     ce.source = "/s";
     ce.type = "t";
@@ -81,7 +81,7 @@ void test_build_with_json_data()
 // data_str is emitted as a JSON string (escaped).
 void test_build_with_string_data()
 {
-    CloudEvent ce = {};
+    CloudEvent ce = {0};
     ce.id = "8";
     ce.source = "/s";
     ce.type = "t";
@@ -96,7 +96,7 @@ void test_build_with_string_data()
 // A too-small buffer fails closed (returns 0).
 void test_build_overflow_fails_closed()
 {
-    CloudEvent ce = {};
+    CloudEvent ce = {0};
     ce.id = "1";
     ce.source = "/s";
     ce.type = "t";
@@ -132,12 +132,12 @@ void test_from_headers_missing_required()
 void test_guards_and_datacontenttype_only()
 {
     char buf[256];
-    CloudEvent ce = {};
+    CloudEvent ce = {0};
     ce.id = "1";
     ce.source = "/s";
     ce.type = "t";
     TEST_ASSERT_EQUAL_size_t(0, pc_cloudevents_build_json(NULL, sizeof(buf), &ce)); // null buf
-    TEST_ASSERT_EQUAL_size_t(0, pc_cloudevents_build_json(buf, 0, &ce));               // zero cap
+    TEST_ASSERT_EQUAL_size_t(0, pc_cloudevents_build_json(buf, 0, &ce));            // zero cap
     TEST_ASSERT_EQUAL_size_t(0, pc_cloudevents_build_json(buf, sizeof(buf), NULL)); // null event
 
     // datacontenttype set but no data_json/data_str -> the third data branch emits only the type.
@@ -155,7 +155,7 @@ void test_guards_and_datacontenttype_only()
 // pointer (the s[0] != '\0' branch, distinct from the s != NULL branch).
 void test_present_empty_string_is_absent()
 {
-    CloudEvent ce = {};
+    CloudEvent ce = {0};
     ce.id = "1";
     ce.source = "/s";
     ce.type = "t";
@@ -170,7 +170,7 @@ void test_present_empty_string_is_absent()
 // (falls through past the data_json branch to the data_str branch below it).
 void test_data_json_empty_string_falls_through()
 {
-    CloudEvent ce = {};
+    CloudEvent ce = {0};
     ce.id = "1";
     ce.source = "/s";
     ce.type = "t";
@@ -186,7 +186,7 @@ void test_data_json_empty_string_falls_through()
 // "application/json" default.
 void test_data_json_explicit_datacontenttype()
 {
-    CloudEvent ce = {};
+    CloudEvent ce = {0};
     ce.id = "1";
     ce.source = "/s";
     ce.type = "t";
@@ -202,7 +202,7 @@ void test_data_json_explicit_datacontenttype()
 // data_str with no datacontenttype omits the datacontenttype key entirely.
 void test_data_str_without_datacontenttype()
 {
-    CloudEvent ce = {};
+    CloudEvent ce = {0};
     ce.id = "1";
     ce.source = "/s";
     ce.type = "t";

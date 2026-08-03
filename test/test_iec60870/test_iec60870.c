@@ -185,7 +185,7 @@ void test_104_parse_rejects()
 void test_asdu_ioa_guards()
 {
     uint8_t buf[8];
-    IecAsduHeader h = {};
+    IecAsduHeader h = {0};
     IecAsduHeader g;
     size_t c;
     TEST_ASSERT_EQUAL_size_t(0, pc_iec_asdu_build_header(buf, 4, &h)); // cap < 6

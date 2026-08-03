@@ -194,7 +194,7 @@ void test_parse_rejects_bad()
 
 void test_build_overflow_fails_closed()
 {
-    S7ReadItem item = {};
+    S7ReadItem item = {0};
     item.area = S7_AREA_DB;
     uint8_t small[16];
     TEST_ASSERT_EQUAL_size_t(0, pc_s7_build_read_request(small, sizeof(small), 1, &item, 1)); // needs 24
@@ -205,11 +205,11 @@ void test_build_overflow_fails_closed()
 void test_null_and_short_guards()
 {
     uint8_t buf[48];
-    S7ReadItem item = {};
+    S7ReadItem item = {0};
     item.area = S7_AREA_DB;
-    TEST_ASSERT_EQUAL_size_t(0, pc_s7_build_setup(NULL, sizeof(buf), 1, 1, 1, 480));       // null buf
-    TEST_ASSERT_EQUAL_size_t(0, pc_s7_build_read_request(NULL, sizeof(buf), 1, &item, 1)); // null buf
-    TEST_ASSERT_EQUAL_size_t(0, pc_s7_build_read_request(buf, sizeof(buf), 1, NULL, 1));   // null items
+    TEST_ASSERT_EQUAL_size_t(0, pc_s7_build_setup(NULL, sizeof(buf), 1, 1, 1, 480));          // null buf
+    TEST_ASSERT_EQUAL_size_t(0, pc_s7_build_read_request(NULL, sizeof(buf), 1, &item, 1));    // null buf
+    TEST_ASSERT_EQUAL_size_t(0, pc_s7_build_read_request(buf, sizeof(buf), 1, NULL, 1));      // null items
     TEST_ASSERT_EQUAL_size_t(0, pc_s7_build_read_request(buf, sizeof(buf), 1, &item, 0));     // n == 0
     TEST_ASSERT_EQUAL_size_t(0, pc_s7_build_read_request(buf, sizeof(buf), 1, &item, 0x100)); // n > 0xFF
 

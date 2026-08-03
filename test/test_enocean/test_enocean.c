@@ -37,7 +37,7 @@ void test_build_then_parse_round_trip()
     TEST_ASSERT_EQUAL_UINT16(17, n); // 6 header/crc + 7 data + 3 opt + 1 crc
     TEST_ASSERT_EQUAL_HEX8(ESP3_SYNC, buf[0]);
 
-    pc_esp3_packet p = {};
+    pc_esp3_packet p = {0};
     int c = pc_esp3_parse(buf, n, &p);
     TEST_ASSERT_EQUAL_INT(17, c);
     TEST_ASSERT_EQUAL_UINT8(ESP3_RADIO_ERP1, p.type);
@@ -100,7 +100,7 @@ void test_parse_resynchronises_after_junk()
     buf[0] = 0x00; // a stray byte before the telegram
     memcpy(buf + 1, tg, n);
     TEST_ASSERT_EQUAL_INT(-1, pc_esp3_parse(buf, (uint16_t)(n + 1), NULL)); // junk at [0]
-    pc_esp3_packet p = {};
+    pc_esp3_packet p = {0};
     TEST_ASSERT_EQUAL_INT((int)n, pc_esp3_parse(buf + 1, n, &p)); // resynced at the sync byte
     TEST_ASSERT_EQUAL_UINT16(4, p.data_len);
 }
@@ -109,11 +109,9 @@ void test_build_bounds()
 {
     uint8_t data[8] = {0};
     uint8_t small[10];
-    TEST_ASSERT_EQUAL_UINT16(
-        0, pc_esp3_build(ESP3_RADIO_ERP1, data, 8, NULL, 0, small, sizeof(small))); // 15 > 10
+    TEST_ASSERT_EQUAL_UINT16(0, pc_esp3_build(ESP3_RADIO_ERP1, data, 8, NULL, 0, small, sizeof(small))); // 15 > 10
     uint8_t big[64];
-    TEST_ASSERT_EQUAL_UINT16(
-        0, pc_esp3_build(ESP3_RADIO_ERP1, big, 17, NULL, 0, big, sizeof(big))); // 17 > MAX_DATA 16
+    TEST_ASSERT_EQUAL_UINT16(0, pc_esp3_build(ESP3_RADIO_ERP1, big, 17, NULL, 0, big, sizeof(big))); // 17 > MAX_DATA 16
 }
 
 void test_esp3_parse_null_guard()
@@ -170,7 +168,7 @@ void test_erp1_parse()
     // Integration: the ERP1 telegram is the data field of a RADIO_ERP1 ESP3 packet.
     uint8_t buf[64];
     uint16_t n = pc_esp3_build(ESP3_RADIO_ERP1, rps, sizeof(rps), NULL, 0, buf, sizeof(buf));
-    pc_esp3_packet p = {};
+    pc_esp3_packet p = {0};
     TEST_ASSERT_GREATER_THAN(0, pc_esp3_parse(buf, n, &p));
     TEST_ASSERT_TRUE(pc_erp1_parse(p.data, p.data_len, &t));
     TEST_ASSERT_EQUAL_HEX32(0x008B1234, t.sender_id);

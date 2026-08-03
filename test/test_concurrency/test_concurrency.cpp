@@ -52,7 +52,7 @@ void test_spsc_ring_no_race()
         }
     });
 
-    bool ok = true;
+    proto_bool ok = PROTO_TRUE;
     int recv = 0;
     while (recv < kCount)
     {
@@ -62,7 +62,7 @@ void test_spsc_ring_no_race()
             g_slot.rx_tail = (g_slot.rx_tail + 1) % RX_BUF_SIZE;
             if (b != (uint8_t)(recv & 0xFF))
             {
-                ok = false;
+                ok = PROTO_FALSE;
             }
             ++recv;
         }

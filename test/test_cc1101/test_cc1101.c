@@ -124,7 +124,7 @@ static const pc_cc1101_reg REGS[] = {{0x00, 0x29}, {0x08, 0x05}};
 
 static pc_cc1101_config default_cfg()
 {
-    pc_cc1101_config c = {};
+    pc_cc1101_config c = {0};
     c.regs = REGS;
     c.nregs = 2;
     c.channel = 20;
@@ -266,7 +266,7 @@ void test_init_null_args(void)
 // init with a null register table skips the table write loop but still sets the channel and detects.
 void test_init_no_regs(void)
 {
-    pc_cc1101_config c = {};
+    pc_cc1101_config c = {0};
     c.regs = NULL; // no table
     c.nregs = 2;   // nregs non-zero, but regs null -> loop body never runs
     c.channel = 7;

@@ -19,18 +19,18 @@ struct Sink
     std::vector<std::pair<std::string, std::string>> hdrs;
 };
 
-static bool fail_emit(void *, const char *, size_t, const char *, size_t)
+static proto_bool fail_emit(void *, const char *, size_t, const char *, size_t)
 {
-    return false;
+    return PROTO_FALSE;
 }
 
-static bool sink_emit(void *ctx, const char *n, size_t nl, const char *v, size_t vl)
+static proto_bool sink_emit(void *ctx, const char *n, size_t nl, const char *v, size_t vl)
 {
     ((Sink *)ctx)->hdrs.push_back({std::string(n, nl), std::string(v, vl)});
-    return true;
+    return PROTO_TRUE;
 }
 
-static bool decode_all(const uint8_t *block, size_t len, Sink *s)
+static proto_bool decode_all(const uint8_t *block, size_t len, Sink *s)
 {
     char scratch[512];
     return pc_qpack_decode(block, len, scratch, sizeof scratch, sink_emit, s);
@@ -244,9 +244,9 @@ void test_qpack_more_encode_decode_paths()
     // An emit callback that rejects a header aborts the decode (indexed + literal-name field lines).
     char sc[128];
     const uint8_t indexed[3] = {0x00, 0x00, 0xC0 | 17}; // Indexed Field Line, static index 17
-    TEST_ASSERT_FALSE(pc_qpack_decode(indexed, 3, sc, sizeof sc, fail_emit, nullptr));
+    TEST_ASSERT_FALSE(pc_qpack_decode(indexed, 3, sc, sizeof sc, fail_emit, NULL));
     const uint8_t litname[6] = {0x00, 0x00, 0x21, 'q', 0x01, 'v'}; // literal name "q" value "v"
-    TEST_ASSERT_FALSE(pc_qpack_decode(litname, 6, sc, sizeof sc, fail_emit, nullptr));
+    TEST_ASSERT_FALSE(pc_qpack_decode(litname, 6, sc, sizeof sc, fail_emit, NULL));
     // Literal-name encode running out of room mid-Huffman-name and at the value.
     for (size_t cap = 2; cap <= 7; cap++)
     {
@@ -260,7 +260,7 @@ void test_qpack_emit_fail_and_namelen_past()
     char sc[128];
     // Literal Field Line with Name Reference + a valid value, but the emit callback rejects it.
     const uint8_t nameref[5] = {0x00, 0x00, 0x51, 0x01, 'v'}; // :path name-ref, value "v"
-    TEST_ASSERT_FALSE(pc_qpack_decode(nameref, 5, sc, sizeof sc, fail_emit, nullptr));
+    TEST_ASSERT_FALSE(pc_qpack_decode(nameref, 5, sc, sizeof sc, fail_emit, NULL));
     // Literal Field Line with Literal Name whose NameLen (6, not the 3-bit escape 7) runs past the block.
     Sink s;
     const uint8_t namelen_past[3] = {0x00, 0x00, 0x26}; // NameLen 6, no name octets follow
