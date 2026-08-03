@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- restore the v0.0.1 query and path-parameter behavior ([`6050ce4`](https://github.com/dstroy0/ProtoCore/commit/6050ce4793465af0bac7d5dc5b629922f7e97287))
 - route the session drain through the platform queue seam ([`a8fa333`](https://github.com/dstroy0/ProtoCore/commit/a8fa33372b8e9ece9b02fb0443f2ac5b23e58bfa))
 - repoint the checker baselines the C conversion orphaned ([`1476252`](https://github.com/dstroy0/ProtoCore/commit/14762523da710113549a6aaf8165ea244feb0109))
 - name the incomplete struct tag in the SSH GCM wipe casts ([`770fa67`](https://github.com/dstroy0/ProtoCore/commit/770fa67576af3da5d8ae443f5d025567810875ae))
@@ -41,6 +42,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`f136ce3`](https://github.com/dstroy0/ProtoCore/commit/f136ce35bca290840f132ea93a2777a5fa0c7018))
 - update CHANGELOG.md [skip ci] ([`d55e811`](https://github.com/dstroy0/ProtoCore/commit/d55e811f43a34ecf97cfc0a0f369b048aaff7b82))
 - update CHANGELOG.md [skip ci] ([`004ba2e`](https://github.com/dstroy0/ProtoCore/commit/004ba2e9b07b24a7ae56b9259dcc8d19a4611a89))
 - update CHANGELOG.md [skip ci] ([`b6b5f08`](https://github.com/dstroy0/ProtoCore/commit/b6b5f08a230c8520e27783d1174a27626d8b5964))
