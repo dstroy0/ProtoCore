@@ -91,7 +91,7 @@
 #if PC_ENABLE_TIME_SOURCE
 #include "services/timing_position/time_source/time_source.h" // pc_time_http_date() - any NTP/GPS/RTC/... source
 #else
-#include "services/timing_position/ntp_service/ntp_service.h" // pc_ntp_http_date() - direct NTP (or the host test seam)
+#include "network_drivers/application/ntp_service/ntp_service.h" // pc_ntp_http_date() - direct NTP (or the host test seam)
 #endif
 #endif
 // No <string.h> and no <stdio.h>: every scan, compare, copy and search on this layer goes through

@@ -5,7 +5,7 @@
 // RFC 5905 server-mode reply builder - version echo, mode/LI/stratum, origin-timestamp copy,
 // reference/receive/transmit stamps, big-endian encoding, and the length guards.
 
-#include "services/timing_position/ntp_server/ntp_server.h"
+#include "network_drivers/application/ntp_server/ntp_server.h"
 #include <stdint.h>
 #include <string.h>
 #include <unity.h>

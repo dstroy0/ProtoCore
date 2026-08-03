@@ -3,7 +3,7 @@
 //
 // Host tests for services/mdns_adaptive: RF-aware backoff, TTL refresher, auto-sleep beacon.
 
-#include "services/net/mdns_adaptive/mdns_adaptive.h"
+#include "network_drivers/application/mdns_adaptive/mdns_adaptive.h"
 #include <unity.h>
 
 void setUp(void)
@@ -102,7 +102,7 @@ void test_refresh_interval_and_beacon()
     pc_mdns_beacon_adapt(&b, 5);                           // high contention
     pc_mdns_beacon_adapt(&b, 0);                           // no contention
     TEST_ASSERT_FALSE(pc_mdns_beacon_due(&b, 1000, 1000)); // not yet due
-    pc_mdns_beacon_init(NULL, 0, 0, 0);                 // null guard
+    pc_mdns_beacon_init(NULL, 0, 0, 0);                    // null guard
 }
 
 // --- contention window sampler --------------------------------------------

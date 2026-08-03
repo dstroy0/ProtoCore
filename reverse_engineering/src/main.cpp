@@ -62,9 +62,9 @@
 #define DAQ_FRONTEND DAQ_FRONTEND_SCPI_SCOPE
 #endif
 
-#include "network_drivers/transport/client.h"                 // pc_client_*
-#include "server/clock/clock.h"                               // pc_millis(), pcdelay(), pc_cycles_to_ns()
-#include "services/timing_position/ntp_service/ntp_service.h" // pc_ntp_* - wall-clock sync (see wall_clock_us_now())
+#include "network_drivers/application/ntp_service/ntp_service.h" // pc_ntp_* - wall-clock sync (see wall_clock_us_now())
+#include "network_drivers/transport/client.h"                    // pc_client_*
+#include "server/clock/clock.h"                                  // pc_millis(), pcdelay(), pc_cycles_to_ns()
 #include <Arduino.h>
 #include <WiFi.h>
 #include <math.h>
@@ -132,7 +132,7 @@ static void wifi_connect()
 
 // ── Wall-clock timestamping: NTP now, GNSS-upgradeable later ──────────────────────────────
 //
-// pc_ntp_epoch() (services/timing_position/ntp_service) only resolves whole seconds; pc_micros() gives a
+// pc_ntp_epoch() (network_drivers/application/ntp_service) only resolves whole seconds; pc_micros() gives a
 // free-running microsecond counter with no absolute meaning of its own. Combining them - an
 // anchor pair (epoch, micros) re-taken every time the epoch ticks over - gives every window a
 // real Unix-epoch-microsecond timestamp, not just a relative trace_id/assembly_ns: the actual

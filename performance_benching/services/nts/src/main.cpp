@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for the Network Time Security wire codec (services/timing_position/nts, RFC 8915):
+// On-device CCOUNT microbenchmark for the Network Time Security wire codec (network_drivers/application/nts, RFC 8915):
 // building the standard NTS-KE client request (Next-Protocol + AEAD + End-of-Message TLV records),
 // building a single NTS-KE record, walking an NTS-KE response stream, and framing the NTS NTP
 // extension fields (Unique Identifier / Cookie, with RFC 7822 4-byte padding). All of this is pure
@@ -17,7 +17,7 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "services/timing_position/nts/nts.h"
+#include "network_drivers/application/nts/nts.h"
 #include <Arduino.h>
 
 // No-op sink satisfying the pc_nts_ke_cb function-pointer arg of pc_nts_ke_parse; counts records so the

@@ -3613,8 +3613,8 @@ from halves and is slower than the width it decomposes into"
 /**
  * @brief Opt-in Network Time Security (NTS, RFC 8915) wire codec (PC_ENABLE_NTS).
  *
- * When set, services/timing_position/nts provides the NTS-KE record codec (build/parse the TLV records - next protocol,
- * AEAD, cookies, server/port) and the NTS NTP extension-field framing (Unique Identifier, Cookie,
+ * When set, network_drivers/application/nts provides the NTS-KE record codec (build/parse the TLV records - next
+ * protocol, AEAD, cookies, server/port) and the NTS NTP extension-field framing (Unique Identifier, Cookie,
  * Authenticator). Pure framing (the AES-SIV-CMAC-256 AEAD + TLS-exporter key derivation are the crypto
  * integration on top). Default off.
  */

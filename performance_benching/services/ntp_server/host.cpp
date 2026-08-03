@@ -8,10 +8,10 @@
 // ns/op + MB/s is a RELATIVE baseline. Build + run:
 //   g++ -O2 -std=c++17 -Isrc -Itest/mocks -Itest/support -DPC_ENABLE_NTP_SERVER=1
 //   performance_benching/services/ntp_server/host.cpp \
-//       src/services/timing_position/ntp_server/ntp_server.cpp -o /tmp/bn && /tmp/bn
+//       src/network_drivers/application/ntp_server/ntp_server.cpp -o /tmp/bn && /tmp/bn
 
 #define PC_ENABLE_NTP_SERVER 1
-#include "services/timing_position/ntp_server/ntp_server.h"
+#include "network_drivers/application/ntp_server/ntp_server.h"
 
 #include <chrono>
 #include <cstdint>

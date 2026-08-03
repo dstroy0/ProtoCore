@@ -6,7 +6,7 @@
  * @brief PTP / IEEE 1588-2008 (PTPv2) message codec + slave math (pure, host-tested).
  */
 
-#include "services/timing_position/ptp/ptp.h"
+#include "network_drivers/application/ptp/ptp.h"
 
 #if PC_ENABLE_PTP
 

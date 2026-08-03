@@ -2787,7 +2787,7 @@
 "native_senml",
 "native_swar"
 ],
-"src/network_drivers/presentation/codec/codec.c": [
+"src/network_drivers/presentation/codec/codec.cpp": [
 "native_cbor",
 "native_msgpack",
 "native_senml",
@@ -3415,7 +3415,7 @@
 "native_ssh_inflate",
 "native_swar"
 ],
-"src/network_drivers/presentation/ssh/transport/ssh_keymat.c": [
+"src/network_drivers/presentation/ssh/transport/ssh_keymat.cpp": [
 "native_ssh",
 "native_ssh_conn",
 "native_ssh_hardened",
@@ -3488,6 +3488,21 @@
 "native_preempt_queue",
 "native_swar",
 "native_upload"
+],
+"src/network_drivers/session/proto_builtins.cpp": [
+"native_accept_gate",
+"native_base64",
+"native_http_parser",
+"native_keepalive",
+"native_presentation",
+"native_session",
+"native_sse",
+"native_ssh_conn",
+"native_stack_l46",
+"native_swar",
+"native_transport",
+"native_upload",
+"native_websocket"
 ],
 "src/network_drivers/session/proto_handler.h": [
 "native_accept_gate",
@@ -4262,21 +4277,6 @@
 "native_power_mgmt",
 "native_swar",
 "native_upload"
-],
-"src/server/proto_builtins.c": [
-"native_accept_gate",
-"native_base64",
-"native_http_parser",
-"native_keepalive",
-"native_presentation",
-"native_session",
-"native_sse",
-"native_ssh_conn",
-"native_stack_l46",
-"native_swar",
-"native_transport",
-"native_upload",
-"native_websocket"
 ],
 "src/server/regex.c": [
 "native_keepalive",
@@ -5357,20 +5357,20 @@
 "native_swar",
 "native_upload"
 ],
-"src/services/net/mdns_adaptive/mdns_adaptive.c": [
+"src/network_drivers/application/mdns_adaptive/mdns_adaptive.c": [
 "native_mdns_adaptive",
 "native_swar"
 ],
-"src/services/net/mdns_adaptive/mdns_adaptive.h": [
+"src/network_drivers/application/mdns_adaptive/mdns_adaptive.h": [
 "native_keepalive",
 "native_mdns_adaptive",
 "native_swar",
 "native_upload"
 ],
-"src/services/net/mdns_service/mdns_service.c": [
+"src/network_drivers/application/mdns_service/mdns_service.cpp": [
 "native_swar"
 ],
-"src/services/net/mdns_service/mdns_service.h": [
+"src/network_drivers/application/mdns_service/mdns_service.h": [
 "native_keepalive",
 "native_swar",
 "native_upload"
@@ -6217,39 +6217,39 @@
 "native_swar",
 "native_upload"
 ],
-"src/services/timing_position/ntp_server/ntp_server.c": [
+"src/network_drivers/application/ntp_server/ntp_server.cpp": [
 "native_ntp_server",
 "native_swar"
 ],
-"src/services/timing_position/ntp_server/ntp_server.h": [
+"src/network_drivers/application/ntp_server/ntp_server.h": [
 "native_keepalive",
 "native_ntp_server",
 "native_swar",
 "native_upload"
 ],
-"src/services/timing_position/ntp_service/ntp_service.c": [
+"src/network_drivers/application/ntp_service/ntp_service.cpp": [
 "native_swar"
 ],
-"src/services/timing_position/ntp_service/ntp_service.h": [
+"src/network_drivers/application/ntp_service/ntp_service.h": [
 "native_keepalive",
 "native_swar",
 "native_upload"
 ],
-"src/services/timing_position/nts/nts.c": [
+"src/network_drivers/application/nts/nts.c": [
 "native_nts",
 "native_swar"
 ],
-"src/services/timing_position/nts/nts.h": [
+"src/network_drivers/application/nts/nts.h": [
 "native_keepalive",
 "native_nts",
 "native_swar",
 "native_upload"
 ],
-"src/services/timing_position/ptp/ptp.c": [
+"src/network_drivers/application/ptp/ptp.c": [
 "native_ptp",
 "native_swar"
 ],
-"src/services/timing_position/ptp/ptp.h": [
+"src/network_drivers/application/ptp/ptp.h": [
 "native_keepalive",
 "native_ptp",
 "native_swar",

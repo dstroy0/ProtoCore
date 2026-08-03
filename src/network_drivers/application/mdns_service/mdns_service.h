@@ -5,11 +5,9 @@
  * @file mdns_service.h
  * @brief Optional mDNS / DNS-SD advertisement (PC_ENABLE_MDNS).
  *
- * Thin wrapper over the ESP-IDF `mdns` component so a headless device is reachable
- * at `<hostname>.local` and advertises an `_http._tcp` service for browsers and
- * Bonjour / DNS-SD tools (with optional TXT records and extra service types).
- * Compiled to a no-op stub when PC_ENABLE_MDNS is 0 or on non-Arduino builds,
- * so it costs nothing unless enabled.
+ * Wraps the ESP-IDF `mdns` component: responds for `<hostname>.local` and advertises
+ * an `_http._tcp` service, with optional TXT records and extra service types.
+ * Compiles to a no-op stub when PC_ENABLE_MDNS is 0 or on non-Arduino builds.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -41,8 +39,7 @@ proto_bool pc_mdns_begin(const char *hostname, uint16_t http_port);
 /**
  * @brief Add a TXT key/value record to the advertised `_http._tcp` service.
  *
- * Bonjour / DNS-SD browsers display these (e.g. `"path"`=`"/"`, `"fw"`=`"1.2.3"`).
- * Call after pc_mdns_begin().
+ * Call after pc_mdns_begin(). Example: `"path"`=`"/"`, `"fw"`=`"1.2.3"`.
  *
  * @return true on success; false if mDNS is disabled or not running.
  */

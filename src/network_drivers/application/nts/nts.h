@@ -31,8 +31,6 @@
 #if PC_ENABLE_NTS
 
 /** @brief NTS-KE record types (RFC 8915 sec 4). The critical bit is 0x8000. */
-typedef struct
-{
 #define NTS_KE_CRITICAL 0x8000
 #define NTS_KE_END_OF_MESSAGE 0
 #define NTS_KE_NEXT_PROTOCOL 1
@@ -42,9 +40,8 @@ typedef struct
 #define NTS_KE_COOKIE 5
 #define NTS_KE_NTPV4_SERVER 6
 #define NTS_KE_NTPV4_PORT 7
-#define V4 0    ///< the only next-protocol defined.
-#define _256 15 ///< the mandatory-to-implement AEAD (RFC 5297 / IANA id 15).
-} Nts;
+#define NTS_NEXT_PROTO_NTPV4 0       ///< the only next-protocol defined.
+#define NTS_AEAD_AES_SIV_CMAC_256 15 ///< the mandatory-to-implement AEAD (RFC 5297 / IANA id 15).
 
 /** @brief NTS NTP extension-field types (RFC 8915 sec 5.3; RFC 7822 EF format). */
 #define NTS_EF_UNIQUE_IDENTIFIER 0x0104

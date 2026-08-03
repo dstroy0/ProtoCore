@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for the NTP/SNTP server codec (services/timing_position/ntp_server):
+// On-device CCOUNT microbenchmark for the NTP/SNTP server codec (network_drivers/application/ntp_server):
 // pc_ntp_server_build_response() takes a received 48-octet client request plus the current
 // NTP-epoch time and writes the RFC 5905 mode-4 server reply - echoing the version, copying the
 // client's transmit timestamp into the origin field, and stamping reference/receive/transmit
@@ -18,7 +18,7 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "services/timing_position/ntp_server/ntp_server.h"
+#include "network_drivers/application/ntp_server/ntp_server.h"
 #include <Arduino.h>
 
 static void ntp_server_bench_task(void *)

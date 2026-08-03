@@ -100,4 +100,4 @@ byte), all **big-endian**. Timestamps are 10 octets: 6 for seconds, 4 for nanose
 `_parse_announce` decode the bodies; the `pc_ptp_build_*` functions do the reverse and stamp the
 right message-type and control values for you. It is fixed-size with **no heap**, unit-tested on a PC
 (`test/test_ptp`) against the IEEE 1588-2008 wire format. Only the UDP send/receive and the
-timestamping run on the ESP32. See [`src/services/timing_position/ptp/ptp.h`](../../../src/services/timing_position/ptp/ptp.h).
+timestamping run on the ESP32. See [`src/network_drivers/application/ptp/ptp.h`](../../../src/network_drivers/application/ptp/ptp.h).

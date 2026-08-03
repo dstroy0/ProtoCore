@@ -5,8 +5,8 @@
 // shipped pieces together so the announce cadence tracks the air:
 //
 //   promiscuous capture (services/radio/promisc)  -> a live frame count = RF contention
-//   beacon scheduler (services/net/mdns_adaptive) -> backs the interval off when busy, recovers when quiet
-//   mDNS TXT re-apply (services/net/mdns_service) -> re-announces with no goodbye (a refresh, not an evict)
+//   beacon scheduler (network_drivers/application/mdns_adaptive) -> backs the interval off when busy, recovers when quiet
+//   mDNS TXT re-apply (network_drivers/application/mdns_service) -> re-announces with no goodbye (a refresh, not an evict)
 //
 // The contention signal comes from promiscuous mode - a radio-layer callback pinned to the station's
 // OWN channel - not from a second socket on UDP 5353. That distinction matters: a second 5353 bind
@@ -26,8 +26,8 @@
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
-#include "services/net/mdns_adaptive/mdns_adaptive.h"
-#include "services/net/mdns_service/mdns_service.h"
+#include "network_drivers/application/mdns_adaptive/mdns_adaptive.h"
+#include "network_drivers/application/mdns_service/mdns_service.h"
 #include "shared_primitives/mime.h"
 
 static const char *WIFI_SSID = "your-ssid";

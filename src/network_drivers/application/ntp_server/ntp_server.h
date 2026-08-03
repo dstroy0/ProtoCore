@@ -5,17 +5,14 @@
  * @file ntp_server.h
  * @brief NTP/SNTP time server (RFC 5905 / RFC 4330 server mode) on UDP/123.
  *
- * The device answers client NTP requests from its own clock, so a LAN with no path to the
- * public NTP pool (offline, air-gapped, or behind a strict firewall) can still keep its
- * devices in sync against this one. It is a stateless request/response: a client sends a
- * 48-octet packet, the server fills in the reference/receive/transmit timestamps (echoing
- * the client's transmit stamp as the origin so the client can compute round-trip delay)
- * and sends it back. Zero heap; gated by PC_ENABLE_NTP_SERVER (default off).
+ * Answers client NTP requests from the device's own clock. Stateless request/response: a
+ * client sends a 48-octet packet, the server fills in the reference/receive/transmit
+ * timestamps, echoes the client's transmit stamp as the origin, and sends it back. Zero
+ * heap; gated by PC_ENABLE_NTP_SERVER (default off).
  *
- * The response builder (pc_ntp_server_build_response) is pure - it takes the request bytes and
- * the current NTP-epoch time and writes the reply - so it is fully host-tested with no lwIP.
- * pc_ntp_server_begin() binds UDP/123 via the transport UDP service and drives it from
- * `pc_time_now()` (seconds) plus a `pc_millis()`-derived sub-second fraction.
+ * pc_ntp_server_build_response() is pure: request bytes and an NTP-epoch time in, reply
+ * bytes out. pc_ntp_server_begin() binds UDP/123 via the transport UDP service and drives
+ * it from `pc_time_now()` (seconds) plus a `pc_millis()`-derived sub-second fraction.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -47,7 +44,7 @@ PROTO_BEGIN_DECLS
  *
  * Echoes the request's protocol version, copies the client's transmit timestamp into the
  * response's origin field, and stamps the reference / receive / transmit times with
- * (@p pc_ntp_secs, @p pc_ntp_frac). Leap indicator 0, root dispersion ~1 s (a coarse clock).
+ * (@p pc_ntp_secs, @p pc_ntp_frac). Leap indicator 0, root dispersion ~1 s.
  *
  * @param req       the received request bytes.
  * @param req_len   length of @p req (must be >= NTP_PACKET_LEN).
@@ -66,8 +63,7 @@ size_t pc_ntp_server_build_response(const uint8_t *req, size_t req_len, uint8_t 
  * @brief Start answering NTP requests on UDP/123 from the device's own clock.
  *
  * Uses `pc_time_now()` for the seconds and `pc_millis()` for the sub-second fraction.
- * While the device has no time (`pc_time_now()` returns 0) the server does not reply, so
- * a client falls through to its next configured source rather than trusting an unset clock.
+ * While `pc_time_now()` returns 0 the server does not reply.
  *
  * @param stratum the stratum to advertise (1 for a GPS/reference clock, 2-15 for a relay).
  * @param refid   the reference identifier to advertise (NTP_REFID_LOCL, NTP_REFID_GPS, ...).

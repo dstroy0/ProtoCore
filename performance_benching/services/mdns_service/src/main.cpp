@@ -20,7 +20,7 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "services/net/mdns_service/mdns_service.h"
+#include "network_drivers/application/mdns_service/mdns_service.h"
 #include <Arduino.h>
 
 static void mdns_service_bench_task(void *)

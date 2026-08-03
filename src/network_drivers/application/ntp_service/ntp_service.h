@@ -5,10 +5,9 @@
  * @file ntp_service.h
  * @brief Optional SNTP wall-clock time sync (PC_ENABLE_NTP).
  *
- * Thin wrapper over the ESP-IDF SNTP client (`configTzTime`). Gives a
- * clock-less device wall-clock time for log timestamps, the HTTP `Date` header,
- * and future TLS certificate-validity checks. No-op stub when PC_ENABLE_NTP
- * is 0 or on non-Arduino builds.
+ * Wraps the ESP-IDF SNTP client (`configTzTime`): starts the client, reports
+ * sync state, and formats the current time. Compiles to a no-op stub when
+ * PC_ENABLE_NTP is 0 or on non-Arduino builds.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -36,10 +35,7 @@ PROTO_BEGIN_DECLS
  * Returns immediately; the first sync arrives asynchronously (poll
  * pc_ntp_synced()). Call once after the WiFi link is up.
  *
- * Every parameter takes NULL to mean the documented default, so a caller that
- * has no opinion passes NULL rather than restating the string.
- *
- * @param tz       POSIX TZ string (e.g. "UTC0", "EST5EDT,M3.2.0,M11.1.0"). NULL selects UTC.
+ * @param tz     POSIX TZ string (e.g. "UTC0", "EST5EDT,M3.2.0,M11.1.0"). NULL selects UTC.
  * @param server1  Primary NTP server. NULL selects PC_NTP_SERVER1.
  * @param server2  Secondary NTP server. NULL selects PC_NTP_SERVER2.
  * @return true if the client was started; false if disabled at compile time.
@@ -49,8 +45,7 @@ proto_bool pc_ntp_begin(const char *tz, const char *server1, const char *server2
 /**
  * @brief True once a plausible wall-clock time has been obtained from SNTP.
  *
- * Checks that the system clock has advanced past 2021-01-01, which only happens
- * after a successful sync (the RTC starts at the epoch on a cold boot).
+ * Checks that the system clock has advanced past 2021-01-01.
  */
 proto_bool pc_ntp_synced(void);
 
@@ -74,16 +69,14 @@ size_t pc_ntp_http_date(char *out, size_t out_cap);
 /**
  * @brief NTP as a time source for the multi-source registry (services/timing_position/time_source).
  *
- * Register with pc_time_source_add("ntp", priority, pc_ntp_time_source) so the aggregated
- * pc_time_now() (and thus the HTTP `Date` header when PC_ENABLE_TIME_SOURCE is set) can
- * be fed by NTP alongside an RTC / GPS. Returns the current epoch, or 0 when not synced.
+ * Register with pc_time_source_add("ntp", priority, pc_ntp_time_source). Returns the
+ * current epoch, or 0 when not synced.
  */
 uint32_t pc_ntp_time_source(void);
 
 #if PROTOCORE_HOST
 /**
- * @brief Host-only test seam: inject a wall-clock epoch so time-dependent paths
- *        (e.g. the optional HTTP Date header) are exercisable off-device. 0 = none.
+ * @brief Host-only test seam: sets the wall-clock epoch the accessors above report. 0 = none.
  */
 void pc_ntp_set_test_epoch(time_t epoch);
 #endif // PROTOCORE_HOST

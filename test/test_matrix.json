@@ -253,9 +253,9 @@
       "tests": ["test_ubx"]
     },
     "native_ptp": {
-      "desc": "PTP / IEEE 1588-2008 (PTPv2) message codec + slave clock math (services/timing_position/ptp): the 34-octet common\nheader, 10-octet timestamp, Sync/Delay_Req/Follow_Up/Delay_Resp/Announce build+parse, and the\noffset/mean-path-delay calculation from t1..t4. Pure host tests.",
+      "desc": "PTP / IEEE 1588-2008 (PTPv2) message codec + slave clock math (network_drivers/application/ptp): the 34-octet common\nheader, 10-octet timestamp, Sync/Delay_Req/Follow_Up/Delay_Resp/Announce build+parse, and the\noffset/mean-path-delay calculation from t1..t4. Pure host tests.",
       "flags": ["-DPC_ENABLE_PTP=1"],
-      "src": ["+<services/timing_position/ptp/ptp.c>"],
+      "src": ["+<network_drivers/application/ptp/ptp.c>"],
       "tests": ["test_ptp"]
     },
     "native_roaming": {
@@ -688,7 +688,7 @@
         "+<network_drivers/presentation/codec/json/json.c>",
         "+<network_drivers/application/web_assets.c>",
         "+<services/web/web_terminal/web_terminal.cpp>",
-        "+<services/timing_position/ntp_service/ntp_service.c>",
+        "+<network_drivers/application/ntp_service/ntp_service.c>",
         "+<board_drivers/hal/portable/portable_platform.c>",
         "+<mmgr/frame.c>"
       ],
@@ -1738,7 +1738,7 @@
     "native_ntp_server": {
       "desc": "NTP/SNTP server (RFC 5905 server mode) response codec (ntp_server_build_response):\nversion echo, mode/LI/stratum, origin-timestamp copy, reference/receive/transmit\nstamps, big-endian encoding, and the length guards. Pure - host-tested, no lwIP.",
       "flags": ["-DPC_ENABLE_NTP_SERVER=1"],
-      "src": ["+<services/timing_position/ntp_server/ntp_server.c>"],
+      "src": ["+<network_drivers/application/ntp_server/ntp_server.c>"],
       "tests": ["test_ntp_server"]
     },
     "native_dns_server": {
@@ -2232,9 +2232,9 @@
       "tests": ["test_hart"]
     },
     "native_nts": {
-      "desc": "Network Time Security codec (services/timing_position/nts, RFC 8915): the NTS-KE TLV records (build the\nstandard request, parse a response) and the NTS NTP extension-field framing (unique id / cookie,\nRFC 7822 4-byte padding). Pure host tests with spec-derived vectors.",
+      "desc": "Network Time Security codec (network_drivers/application/nts, RFC 8915): the NTS-KE TLV records (build the\nstandard request, parse a response) and the NTS NTP extension-field framing (unique id / cookie,\nRFC 7822 4-byte padding). Pure host tests with spec-derived vectors.",
       "flags": ["-DPC_ENABLE_NTS=1"],
-      "src": ["+<services/timing_position/nts/nts.c>"],
+      "src": ["+<network_drivers/application/nts/nts.c>"],
       "tests": ["test_nts"]
     },
     "native_dds": {
@@ -2448,9 +2448,9 @@
       "tests": ["test_hw_health"]
     },
     "native_mdns_adaptive": {
-      "desc": "Adaptive mDNS beacon scheduling (services/net/mdns_adaptive): RF-contention backoff/recovery\nof the announce interval, the TTL/2 continuous-refresher cadence, the announce-due check, and the\nauto-sleep beacon (announce before a sleep that would lapse the record). Wrap-safe. Pure host tests.",
+      "desc": "Adaptive mDNS beacon scheduling (network_drivers/application/mdns_adaptive): RF-contention backoff/recovery\nof the announce interval, the TTL/2 continuous-refresher cadence, the announce-due check, and the\nauto-sleep beacon (announce before a sleep that would lapse the record). Wrap-safe. Pure host tests.",
       "flags": ["-DPC_ENABLE_MDNS_ADAPTIVE=1"],
-      "src": ["+<services/net/mdns_adaptive/mdns_adaptive.c>"],
+      "src": ["+<network_drivers/application/mdns_adaptive/mdns_adaptive.c>"],
       "tests": ["test_mdns_adaptive"]
     },
     "native_sockpool": {
@@ -2713,7 +2713,7 @@
         "+<services/net/netadapt/netadapt.c>",
         "+<services/peripherals/dshot/dshot.c>",
         "+<services/fieldbus/hart/hart.c>",
-        "+<services/timing_position/nts/nts.c>",
+        "+<network_drivers/application/nts/nts.c>",
         "+<services/iot/dds/dds.c>",
         "+<services/iot/xmpp/xmpp.c>",
         "+<services/fieldbus/rawl2/rawl2.c>",
@@ -2745,7 +2745,7 @@
         "+<server/exc_decoder.c>",
         "+<services/file_transfer/http_delivery/http_delivery.c>",
         "+<server/signaling/hw_health.c>",
-        "+<services/net/mdns_adaptive/mdns_adaptive.c>",
+        "+<network_drivers/application/mdns_adaptive/mdns_adaptive.c>",
         "+<services/net/sockpool/sockpool.c>",
         "+<services/storage/psram_pool/psram_pool.c>",
         "+<services/net/happy_eyeballs/happy_eyeballs.c>",

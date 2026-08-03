@@ -6,7 +6,7 @@
  * @brief Network Time Security wire codec (see nts.h).
  */
 
-#include "services/timing_position/nts/nts.h"
+#include "network_drivers/application/nts/nts.h"
 
 #if PC_ENABLE_NTS
 
@@ -36,7 +36,7 @@ size_t pc_nts_ke_record(proto_bool critical, uint16_t type, const uint8_t *body,
     {
         return 0;
     }
-    put_u16(out, (uint16_t)((type & 0x7FFF) | (critical ? Nts::NTS_KE_CRITICAL : 0)));
+    put_u16(out, (uint16_t)((type & 0x7FFF) | (critical ? NTS_KE_CRITICAL : 0)));
     put_u16(out + 2, (uint16_t)body_len);
     if (body_len)
     {
@@ -48,25 +48,25 @@ size_t pc_nts_ke_record(proto_bool critical, uint16_t type, const uint8_t *body,
 size_t pc_nts_ke_request(uint8_t *out, size_t cap)
 {
     uint8_t proto[2];
-    put_u16(proto, Nts::NTS_NEXT_PROTO_NTPV4);
+    put_u16(proto, NTS_NEXT_PROTO_NTPV4);
     uint8_t aead[2];
-    put_u16(aead, Nts::NTS_AEAD_AES_SIV_CMAC_256);
+    put_u16(aead, NTS_AEAD_AES_SIV_CMAC_256);
 
     size_t n = 0;
     size_t r;
-    r = pc_nts_ke_record(PROTO_TRUE, Nts::NTS_KE_NEXT_PROTOCOL, proto, 2, out + n, cap - n);
+    r = pc_nts_ke_record(PROTO_TRUE, NTS_KE_NEXT_PROTOCOL, proto, 2, out + n, cap - n);
     if (!r)
     {
         return 0;
     }
     n += r;
-    r = pc_nts_ke_record(PROTO_TRUE, Nts::NTS_KE_AEAD_ALGORITHM, aead, 2, out + n, cap - n);
+    r = pc_nts_ke_record(PROTO_TRUE, NTS_KE_AEAD_ALGORITHM, aead, 2, out + n, cap - n);
     if (!r)
     {
         return 0;
     }
     n += r;
-    r = pc_nts_ke_record(PROTO_TRUE, Nts::NTS_KE_END_OF_MESSAGE, NULL, 0, out + n, cap - n);
+    r = pc_nts_ke_record(PROTO_TRUE, NTS_KE_END_OF_MESSAGE, NULL, 0, out + n, cap - n);
     if (!r)
     {
         return 0;
@@ -83,7 +83,7 @@ proto_bool pc_nts_ke_parse(const uint8_t *buf, size_t len, pc_nts_ke_cb cb, void
     {
         uint16_t tf = get_u16(buf + off);
         uint16_t blen = get_u16(buf + off + 2);
-        proto_bool critical = (tf & Nts::NTS_KE_CRITICAL) != 0;
+        proto_bool critical = (tf & NTS_KE_CRITICAL) != 0;
         uint16_t type = (uint16_t)(tf & 0x7FFF);
         if (off + 4 + blen > len)
         {
@@ -94,7 +94,7 @@ proto_bool pc_nts_ke_parse(const uint8_t *buf, size_t len, pc_nts_ke_cb cb, void
             cb(critical, type, blen ? (buf + off + 4) : NULL, blen, arg);
         }
         off += 4 + blen;
-        if (type == Nts::NTS_KE_END_OF_MESSAGE)
+        if (type == NTS_KE_END_OF_MESSAGE)
         {
             saw_end = PROTO_TRUE;
             break;
@@ -131,12 +131,12 @@ size_t pc_nts_ef(uint16_t field_type, const uint8_t *value, size_t value_len, ui
 
 size_t pc_nts_ef_unique_id(const uint8_t *nonce, size_t nonce_len, uint8_t *out, size_t cap)
 {
-    return pc_nts_ef(NtsEf::NTS_EF_UNIQUE_IDENTIFIER, nonce, nonce_len, out, cap);
+    return pc_nts_ef(NTS_EF_UNIQUE_IDENTIFIER, nonce, nonce_len, out, cap);
 }
 
 size_t pc_nts_ef_cookie(const uint8_t *cookie, size_t cookie_len, uint8_t *out, size_t cap)
 {
-    return pc_nts_ef(NtsEf::NTS_EF_COOKIE, cookie, cookie_len, out, cap);
+    return pc_nts_ef(NTS_EF_COOKIE, cookie, cookie_len, out, cap);
 }
 
 #endif // PC_ENABLE_NTS

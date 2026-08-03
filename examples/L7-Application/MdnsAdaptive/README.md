@@ -10,8 +10,8 @@ shipped pieces together so the announce cadence tracks the air:
 
 ```
 promiscuous capture (services/radio/promisc)     -> a live frame count = RF contention
-beacon scheduler   (services/net/mdns_adaptive) -> backs the interval off when busy, recovers when quiet
-mDNS TXT re-apply  (services/net/mdns_service)  -> re-announces with no goodbye (a refresh, not an evict)
+beacon scheduler   (network_drivers/application/mdns_adaptive) -> backs the interval off when busy, recovers when quiet
+mDNS TXT re-apply  (network_drivers/application/mdns_service)  -> re-announces with no goodbye (a refresh, not an evict)
 ```
 
 ## Why the contention signal is promiscuous mode, not a socket

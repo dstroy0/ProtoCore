@@ -68,8 +68,8 @@
   "src/network_drivers/physical/radio_power.cpp|s_busy#1",
   "src/server/signaling/trace_capture.cpp|s_tc#1",
   "src/services/timing_position/gnss/ntrip_caster_listener.cpp|s_ctx#1",
-  "src/services/timing_position/ntp_server/ntp_server.cpp|s_ntp#1",
-  "src/services/timing_position/ntp_service/ntp_service.cpp|s_ntp_svc#1",
+  "src/network_drivers/application/ntp_server/ntp_server.cpp|s_ntp#1",
+  "src/network_drivers/application/ntp_service/ntp_service.cpp|s_ntp_svc#1",
   "src/services/timing_position/time_source/time_source.cpp|s_ts#1",
   "src/services/web/edge_cache/edge_cache_proxy.cpp|s_ctx#1"
 ]

@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for the SNTP wall-clock service (services/timing_position/ntp_service). The
+// On-device CCOUNT microbenchmark for the SNTP wall-clock service (network_drivers/application/ntp_service). The
 // service is a thin wrapper over the ESP-IDF SNTP client: the network half (configTzTime / the
 // async pool.ntp.org sync in pc_ntp_begin) is real transport and is deliberately OUT OF SCOPE on
 // this rig - we never start SNTP, so nothing here touches WiFi or a socket. What IS benched is the
@@ -20,7 +20,7 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "services/timing_position/ntp_service/ntp_service.h"
+#include "network_drivers/application/ntp_service/ntp_service.h"
 #include "shared_primitives/http_date.h" // pc_http_date() - the shared IMF-fixdate formatter
 #include <Arduino.h>
 

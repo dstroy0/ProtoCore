@@ -7,10 +7,10 @@
 // exporter) sits on top and is not part of these hot ops. The device figure comes from the rig /bench op;
 // this host ns/op + MB/s is a RELATIVE baseline. Build + run:
 //   g++ -O2 -std=c++17 -Isrc -Itest/mocks -Itest/support -DPC_ENABLE_NTS=1 performance_benching/services/nts/host.cpp \
-//       src/services/timing_position/nts/nts.cpp -o /tmp/bn && /tmp/bn
+//       src/network_drivers/application/nts/nts.cpp -o /tmp/bn && /tmp/bn
 
 #define PC_ENABLE_NTS 1
-#include "services/timing_position/nts/nts.h"
+#include "network_drivers/application/nts/nts.h"
 
 #include <chrono>
 #include <cstdint>

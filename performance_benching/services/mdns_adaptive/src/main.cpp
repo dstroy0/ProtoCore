@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for the adaptive mDNS beacon scheduler (services/net/mdns_adaptive):
+// On-device CCOUNT microbenchmark for the adaptive mDNS beacon scheduler (network_drivers/application/mdns_adaptive):
 // the pure scheduling decisions that pick *when* to re-announce. Benched here -
 //   - pc_mdns_refresh_interval()      : the TTL/2 continuous-refresher cadence (overflow-guarded math),
 //   - pc_mdns_beacon_adapt()          : the RF-contention backoff/recovery step (double on crowded air,
@@ -22,7 +22,7 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a capture
 // opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "services/net/mdns_adaptive/mdns_adaptive.h"
+#include "network_drivers/application/mdns_adaptive/mdns_adaptive.h"
 #include <Arduino.h>
 
 static void mdns_adaptive_bench_task(void *)

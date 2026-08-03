@@ -28,7 +28,7 @@
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
 #include "services/peripherals/rtc/rtc.h"
-#include "services/timing_position/ntp_service/ntp_service.h"
+#include "network_drivers/application/ntp_service/ntp_service.h"
 #include "services/timing_position/time_source/time_source.h"
 
 static const char *SSID = "YOUR_SSID";

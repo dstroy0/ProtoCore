@@ -57,7 +57,7 @@ reproduced verbatim with added explanatory comments:
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
-#include "services/ntp_service.h"
+#include "network_drivers/application/ntp_service/ntp_service.h"
 #include "services/timing_position/time_source/time_source.h"
 
 static const char *SSID = "YOUR_SSID";

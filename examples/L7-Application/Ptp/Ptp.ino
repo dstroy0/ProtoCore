@@ -30,7 +30,7 @@
 #include "network_drivers/physical/physical.h"
 #include "network_drivers/transport/udp.h"
 #include "server/clock/clock.h"
-#include "services/timing_position/ptp/ptp.h"
+#include "network_drivers/application/ptp/ptp.h"
 #include <string.h>
 
 static const char *SSID = "YOUR_SSID";

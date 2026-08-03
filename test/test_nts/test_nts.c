@@ -3,7 +3,7 @@
 //
 // Host tests for services/nts: the NTS-KE record + NTS NTP extension-field wire codec (RFC 8915).
 
-#include "services/timing_position/nts/nts.h"
+#include "network_drivers/application/nts/nts.h"
 #include <string.h>
 #include <unity.h>
 
@@ -103,7 +103,7 @@ void test_ef_wrappers_and_guards()
     TEST_ASSERT_TRUE(pc_nts_ef_cookie(data, sizeof(data), out, sizeof(out)) > 0);
     TEST_ASSERT_TRUE(pc_nts_ef_unique_id(data, sizeof(data), out, sizeof(out)) > 0);
     TEST_ASSERT_EQUAL_size_t(0, pc_nts_ef(0x0304, data, sizeof(data), NULL, sizeof(out))); // null out
-    TEST_ASSERT_EQUAL_size_t(0, pc_nts_ef(0x0304, data, sizeof(data), out, 2));               // overflow
+    TEST_ASSERT_EQUAL_size_t(0, pc_nts_ef(0x0304, data, sizeof(data), out, 2));            // overflow
 }
 
 // Every argument guard on the record builder rejects independently.

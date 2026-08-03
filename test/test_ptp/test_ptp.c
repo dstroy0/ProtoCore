@@ -1,12 +1,12 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the PTP / IEEE 1588-2008 codec (services/timing_position/ptp): the 10-octet timestamp, the 34-octet
+// Unit tests for the PTP / IEEE 1588-2008 codec (network_drivers/application/ptp): the 10-octet timestamp, the 34-octet
 // common header, the Sync / Delay_Req / Follow_Up / Delay_Resp / Announce build+parse round-trips
 // (with the type-specific messageType / control / length), and the slave offset / mean-path-delay
 // math with a known symmetric-delay case (offset 25 ns, delay 50 ns). Pure host tests.
 
-#include "services/timing_position/ptp/ptp.h"
+#include "network_drivers/application/ptp/ptp.h"
 #include <stdio.h>
 #include <string.h>
 #include <unity.h>

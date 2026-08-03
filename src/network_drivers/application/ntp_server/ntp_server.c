@@ -6,7 +6,7 @@
  * @brief NTP server (RFC 5905 server mode) - implementation. See ntp_server.h.
  */
 
-#include "services/timing_position/ntp_server/ntp_server.h"
+#include "network_drivers/application/ntp_server/ntp_server.h"
 #include "protocore_config.h"
 
 #if PC_ENABLE_NTP_SERVER

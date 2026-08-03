@@ -22,7 +22,7 @@
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
-#include "services/timing_position/ntp_service/ntp_service.h"
+#include "network_drivers/application/ntp_service/ntp_service.h"
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
