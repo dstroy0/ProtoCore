@@ -611,7 +611,7 @@ src/
 │   │   ├── forward/  (forward.h, forward.c)
 │   │   ├── gateway/  (gateway.h, gateway.c)
 │   │   ├── happy_eyeballs/  (happy_eyeballs.h, happy_eyeballs.c)
-│   │   ├── http_client/  (http_client.h, http_client.cpp)
+│   │   ├── http_client/  (http_client.h, http_client.c)
 │   │   ├── iface_bridge/
 │   │   │   ├── iface_bridge.c
 │   │   │   ├── iface_bridge.h
