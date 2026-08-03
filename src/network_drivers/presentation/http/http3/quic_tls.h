@@ -36,9 +36,9 @@
 #if PC_ENABLE_HTTP3
 
 #include "crypto/hash/sha256.h"
-#include "crypto/kdf/tls13_kdf.h"
 #include "network_drivers/presentation/http/http3/quic_crypto.h"
 #include "network_drivers/presentation/http/http3/quic_tp.h"
+#include "network_drivers/tls/tls13_kdf.h"
 
 /** @brief QUIC encryption levels (RFC 9001 sec 4). 0-RTT is not supported. */
 #define QUIC_ENC_INITIAL 0

@@ -40,9 +40,9 @@
 #if PC_ENABLE_DTLS
 
 #include "crypto/hash/sha256.h"
-#include "crypto/kdf/tls13_kdf.h"
 #include "network_drivers/presentation/security/dtls/dtls_handshake.h"
 #include "network_drivers/presentation/security/dtls/dtls_record.h"
+#include "network_drivers/tls/tls13_kdf.h"
 
 /** @brief Largest inbound handshake message body reassembled (ClientHello / client Finished). */
 #define PC_DTLS_CONN_REASM_CAP 1024

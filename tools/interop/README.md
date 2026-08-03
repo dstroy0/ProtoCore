@@ -28,7 +28,7 @@ openssl pkey -in key.pem -outform DER | tail -c 32 > seed.bin   # the raw 32-byt
 ```sh
 R=../../src ; H=$R/network_drivers/presentation/http3 ; S=$R/network_drivers/tls
 g++ -std=c++17 -O2 -I "$R" -DPC_ENABLE_HTTP3=1 h3_server.cpp \
-  $H/quic_server.cpp $H/quic_conn.cpp $H/quic_tls.cpp $H/tls13_kdf.cpp $H/tls13_msg.cpp \
+  $H/quic_server.cpp $H/quic_conn.cpp $H/quic_tls.cpp $S/tls13_kdf.c $H/tls13_msg.cpp \
   $H/quic_tp.cpp $H/quic_crypto.cpp $H/quic_aead.cpp $H/quic_hkdf.cpp $H/quic_packet.cpp \
   $H/quic_frame.cpp $H/quic_varint.cpp $H/h3_conn.cpp $H/h3_frame.cpp $H/qpack.cpp \
   $R/network_drivers/presentation/hpack_prim/hpack_prim.cpp \

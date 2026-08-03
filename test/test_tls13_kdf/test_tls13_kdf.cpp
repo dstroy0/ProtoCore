@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the TLS 1.3 key schedule (network_drivers/presentation/http/http3/pc_tls13_kdf; RFC 8446
+// Unit tests for the TLS 1.3 key schedule (network_drivers/tls/tls13_kdf; RFC 8446
 // sec 7.1 / 4.4.4). Pinned to the RFC 8448 sec 3 "Simple 1-RTT Handshake" worked trace, which lists
 // every intermediate secret and the X25519 shared secret directly:
 //   - Early Secret         (Extract, salt 0, IKM 0^32).
@@ -13,7 +13,7 @@
 
 #include "crypto/hash/sha256.h"
 #include "crypto/kdf/hkdf.h"
-#include "crypto/kdf/tls13_kdf.h"
+#include "network_drivers/tls/tls13_kdf.h"
 #include <string.h>
 #include <unity.h>
 

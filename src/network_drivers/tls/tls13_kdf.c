@@ -6,7 +6,7 @@
  * @brief TLS 1.3 key schedule (see pc_tls13_kdf.h).
  */
 
-#include "crypto/kdf/tls13_kdf.h"
+#include "network_drivers/tls/tls13_kdf.h"
 
 #if (PC_ENABLE_HTTP3 || PC_ENABLE_DTLS)
 

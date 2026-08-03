@@ -240,9 +240,7 @@ src/
 │   │   ├── hkdf.c
 │   │   ├── hkdf.h
 │   │   ├── kdf.c
-│   │   ├── kdf.h
-│   │   ├── tls13_kdf.c
-│   │   └── tls13_kdf.h
+│   │   └── kdf.h
 │   ├── mac/
 │   │   ├── aes_cmac.c
 │   │   ├── aes_cmac.h
@@ -448,7 +446,9 @@ src/
 │   │   ├── ssh_rsa.cpp
 │   │   ├── ssh_rsa.h
 │   │   ├── tls.cpp
-│   │   └── tls.h
+│   │   ├── tls.h
+│   │   ├── tls13_kdf.c
+│   │   └── tls13_kdf.h
 │   └── transport/
 │       ├── client.c
 │       ├── client.h

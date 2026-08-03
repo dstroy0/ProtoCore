@@ -71,7 +71,7 @@ D="$ROOT/src/network_drivers/presentation"
 g++ -O2 -std=gnu++17 -DPC_ENABLE_DTLS=1 -DPC_ENABLE_TLS_RPK=1 -I"$ROOT/src" -I"$ROOT/test/mocks" \
   "$ROOT/test/servers/dtls_wolfssl/dtls_interop_server.cpp" \
   "$D/dtls/dtls_conn.cpp" "$D/dtls/dtls_record.cpp" "$D/dtls/dtls_handshake.cpp" \
-  "$D/http3/tls13_msg.cpp" "$D/http3/tls13_kdf.cpp" "$D/http3/quic_hkdf.cpp" "$D/http3/quic_aead.cpp" \
+  "$D/http3/tls13_msg.cpp" "$ROOT/src/network_drivers/tls/tls13_kdf.c" "$D/http3/quic_hkdf.cpp" "$D/http3/quic_aead.cpp" \
   "$D/ssh/crypto/ssh_sha256.cpp" "$D/ssh/crypto/ssh_hmac_sha256.cpp" "$D/ssh/crypto/ssh_sha512.cpp" \
   "$D/ssh/crypto/ssh_curve25519.cpp" "$D/ssh/crypto/ssh_ed25519.cpp" -o "$WORK/harness"
 

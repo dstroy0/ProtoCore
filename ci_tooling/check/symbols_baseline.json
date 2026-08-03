@@ -374,7 +374,7 @@
   "macro-prefix|src/crypto/hash/sha3.h|macro KECCAK_RATE_SHA3_512 lacks the PC_ prefix",
   "macro-prefix|src/crypto/hash/sha3.h|macro KECCAK_RATE_SHAKE128 lacks the PC_ prefix",
   "macro-prefix|src/crypto/hash/sha3.h|macro KECCAK_RATE_SHAKE256 lacks the PC_ prefix",
-  "macro-prefix|src/crypto/kdf/tls13_kdf.h|macro TLS13_SECRET_LEN lacks the PC_ prefix",
+  "macro-prefix|src/network_drivers/tls/tls13_kdf.h|macro TLS13_SECRET_LEN lacks the PC_ prefix",
   "macro-prefix|src/crypto/pqc/mlkem.h|macro MLKEM768_CT_BYTES lacks the PC_ prefix",
   "macro-prefix|src/crypto/pqc/mlkem.h|macro MLKEM768_DK_BYTES lacks the PC_ prefix",
   "macro-prefix|src/crypto/pqc/mlkem.h|macro MLKEM768_D_BYTES lacks the PC_ prefix",

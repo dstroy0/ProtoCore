@@ -9,9 +9,9 @@
 
 #include "crypto/asymmetric/curve25519.h"
 #include "crypto/hash/sha256.h"
-#include "crypto/kdf/tls13_kdf.h"
 #include "network_drivers/presentation/http/http3/quic_tls.h"
 #include "network_drivers/presentation/http/http3/tls13_msg.h"
+#include "network_drivers/tls/tls13_kdf.h"
 #if PC_ENABLE_PQC_KEX
 #include "../test_pqc_mlkem/mlkem_kat.h" // kat_ek, kat_dk (a valid ML-KEM key pair)
 #include "../test_ssh_pqc/mlkem_ref.h"   // pc_mlkem768_decaps_ref (the client side)

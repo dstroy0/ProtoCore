@@ -12,11 +12,11 @@
 #include "crypto/asymmetric/ed25519.h"
 #include "crypto/cipher/aes_block.h"
 #include "crypto/hash/sha256.h"
-#include "crypto/kdf/tls13_kdf.h"
 #include "network_drivers/presentation/http/http3/tls13_msg.h"
 #include "network_drivers/presentation/security/dtls/dtls_conn.h"
 #include "network_drivers/presentation/security/dtls/dtls_handshake.h"
 #include "network_drivers/presentation/security/dtls/dtls_record.h"
+#include "network_drivers/tls/tls13_kdf.h"
 #include "services/iot/coap/coap.h"
 #include "services/iot/coap/coaps.h"
 #include <stdint.h>
