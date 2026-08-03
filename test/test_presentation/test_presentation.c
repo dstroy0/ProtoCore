@@ -707,7 +707,7 @@ void race_ring_buffer_full_prevents_write()
     s->rx_tail = 0;
 
     int written = 0;
-    while (true)
+    while (1)
     {
         size_t next = (s->rx_head + 1) % RX_BUF_SIZE;
         if (next == s->rx_tail)
