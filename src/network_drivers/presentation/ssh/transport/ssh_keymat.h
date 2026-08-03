@@ -257,8 +257,8 @@ static inline void ssh_keymat_wipe(uint8_t i)
         // zeroing the bytes would leak it once per closed connection. Release first, then wipe.
         if (ssh_keys[i].active && ssh_keys[i].cipher_mode == SSH_CIPHER_AES256GCM)
         {
-            pc_aesgcm_key_wipe((pc_aesgcm_key *)(ssh_keys[i].gcm_ctx_c2s));
-            pc_aesgcm_key_wipe((pc_aesgcm_key *)(ssh_keys[i].gcm_ctx_s2c));
+            pc_aesgcm_key_wipe((struct pc_aesgcm_key *)(ssh_keys[i].gcm_ctx_c2s));
+            pc_aesgcm_key_wipe((struct pc_aesgcm_key *)(ssh_keys[i].gcm_ctx_s2c));
         }
         pc_secure_wipe(&ssh_keys[i], sizeof(SshKeyMat));
     }
