@@ -274,9 +274,9 @@ void test_find_count_only_null_cb(void)
     put_doc("u1", "{\"grp\":\"x\"}");
     put_doc("u2", "{\"grp\":\"x\"}");
     put_doc("u3", "{\"grp\":\"y\"}");
-    TEST_ASSERT_EQUAL_UINT32(2, pc_docstore_find_str(&g_ds, "grp", "x", nullptr, nullptr));
-    TEST_ASSERT_EQUAL_UINT32(1, pc_docstore_find_str(&g_ds, "grp", "y", nullptr, nullptr));
-    TEST_ASSERT_EQUAL_UINT32(0, pc_docstore_find_str(&g_ds, "grp", "z", nullptr, nullptr));
+    TEST_ASSERT_EQUAL_UINT32(2, pc_docstore_find_str(&g_ds, "grp", "x", NULL, NULL));
+    TEST_ASSERT_EQUAL_UINT32(1, pc_docstore_find_str(&g_ds, "grp", "y", NULL, NULL));
+    TEST_ASSERT_EQUAL_UINT32(0, pc_docstore_find_str(&g_ds, "grp", "z", NULL, NULL));
 }
 
 // A document whose value becomes unreadable mid-scan (e.g. a truncated/corrupted backing store) is

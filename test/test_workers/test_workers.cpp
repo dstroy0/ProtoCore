@@ -32,23 +32,23 @@ void test_check_timeouts_reaps_only_owned_slots()
     set_millis(100000); // far past CONN_TIMEOUT_MS so both slots are stale
 
     conn_pool[0].owner = 0;
-    conn_pool[0].state = ConnState::CONN_ACTIVE;
-    conn_pool[0].pcb = nullptr; // no pcb -> sweep frees the slot without a tcp_abort
+    conn_pool[0].state = CONN_ACTIVE;
+    conn_pool[0].pcb = NULL; // no pcb -> sweep frees the slot without a tcp_abort
     conn_pool[0].last_activity_ms = 0;
 
     conn_pool[1].owner = 1;
-    conn_pool[1].state = ConnState::CONN_ACTIVE;
-    conn_pool[1].pcb = nullptr;
+    conn_pool[1].state = CONN_ACTIVE;
+    conn_pool[1].pcb = NULL;
     conn_pool[1].last_activity_ms = 0;
 
     // Worker 0 sweeps: only its own slot is reaped; worker 1's slot is untouched.
     DeterministicAsyncTCP::check_timeouts(0);
-    TEST_ASSERT_EQUAL_INT(ConnState::CONN_FREE, (ConnState)conn_pool[0].state);
-    TEST_ASSERT_EQUAL_INT(ConnState::CONN_ACTIVE, (ConnState)conn_pool[1].state);
+    TEST_ASSERT_EQUAL_INT(CONN_FREE, (ConnState)conn_pool[0].state);
+    TEST_ASSERT_EQUAL_INT(CONN_ACTIVE, (ConnState)conn_pool[1].state);
 
     // Worker 1 sweeps: now its own slot is reaped.
     DeterministicAsyncTCP::check_timeouts(1);
-    TEST_ASSERT_EQUAL_INT(ConnState::CONN_FREE, (ConnState)conn_pool[1].state);
+    TEST_ASSERT_EQUAL_INT(CONN_FREE, (ConnState)conn_pool[1].state);
 }
 
 void test_pool_init_defaults_owner_zero()
@@ -71,7 +71,7 @@ void test_worker_self_id_roundtrip()
 void test_host_worker_lifecycle_is_noops()
 {
     // On host there is no worker task: start/stop/wake are no-ops and running() stays false.
-    pc_workers_start(nullptr);
+    pc_workers_start(NULL);
     TEST_ASSERT_FALSE(pc_workers_running());
     pc_worker_wake(0);
     pc_workers_stop();
@@ -86,7 +86,7 @@ void test_host_defer_runs_inline_and_rejects_null()
 {
     // On host the caller and pipeline are the same thread, so pc_defer runs the callback inline
     // immediately; a null callback is rejected.
-    TEST_ASSERT_FALSE(pc_defer(0, nullptr, nullptr));
+    TEST_ASSERT_FALSE(pc_defer(0, NULL, NULL));
     int flag = 0;
     TEST_ASSERT_TRUE(pc_defer(0, set_flag_to_42, &flag));
     TEST_ASSERT_EQUAL_INT(42, flag);
@@ -114,7 +114,7 @@ void test_enqueue_routes_by_slot_owner_and_rejects_bad_owner()
     DeterministicAsyncTCP::pool_init();
 
     conn_pool[0].owner = 1; // route to worker 1's queue
-    TcpEvt evt = {EvtType::EVT_DATA, 0, 0};
+    TcpEvt evt = {EVT_DATA, 0, 0};
     TEST_ASSERT_TRUE(listener_enqueue(0, &evt)); // listener_id is ignored in multi-worker mode
 
     conn_pool[0].owner = PC_WORKER_COUNT; // out-of-range owner -> rejected
@@ -130,9 +130,9 @@ void test_enqueue_routes_by_slot_owner_and_rejects_bad_owner()
 void test_accept_cb_round_robins_slot_owner()
 {
     DeterministicAsyncTCP::pool_init();
-    TEST_ASSERT_EQUAL_INT32(1, listener_add(0, 80, ConnProto::PROTO_HTTP)); // also exercises the
-                                                                            // WORKER_COUNT>1 branch
-                                                                            // of listener_add() itself
+    TEST_ASSERT_EQUAL_INT32(1, listener_add(0, 80, PROTO_HTTP)); // also exercises the
+                                                                 // WORKER_COUNT>1 branch
+                                                                 // of listener_add() itself
     struct tcp_pcb pcb1 = {}, pcb2 = {}, pcb3 = {};
     TEST_ASSERT_EQUAL_INT(ERR_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb1, ERR_OK));
     TEST_ASSERT_EQUAL_INT(ERR_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb2, ERR_OK));
@@ -152,7 +152,7 @@ void test_accept_cb_round_robins_slot_owner()
 void test_dynamic_listener_creates_worker_queues()
 {
     DeterministicAsyncTCP::pool_init();
-    TEST_ASSERT_EQUAL_INT32(1, listener_add_dynamic(2, 4444, ConnProto::PROTO_HTTP));
+    TEST_ASSERT_EQUAL_INT32(1, listener_add_dynamic(2, 4444, PROTO_HTTP));
     TEST_ASSERT_NOT_NULL(listener_worker_queue(0));
     TEST_ASSERT_NOT_NULL(listener_worker_queue(1));
     listener_stop_dynamic(2);

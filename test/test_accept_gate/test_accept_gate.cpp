@@ -36,7 +36,7 @@ static pc_ip v4(uint8_t a, uint8_t b, uint8_t c, uint8_t d)
 static pc_ip v6(const char *s)
 {
     pc_ip ip;
-    ip.family = pc_ip_family::PC_IP_NONE;
+    ip.family = PC_IP_NONE;
     pc_ip_parse(s, &ip);
     return ip;
 }
@@ -116,7 +116,7 @@ void test_per_ip_unspecified_defers()
 {
     listener_per_ip_throttle_reset();
     pc_ip none;
-    none.family = pc_ip_family::PC_IP_NONE;
+    none.family = PC_IP_NONE;
     for (uint32_t i = 0; i < 10; i++)
     {
         TEST_ASSERT_TRUE(listener_accept_allowed_ip(&none, i));
@@ -241,19 +241,19 @@ void test_ip_allowlist_rejects_bad_and_full()
 void test_proto_register_builtins_installs_http(void)
 {
     proto_register_builtins();
-    TEST_ASSERT_NOT_NULL(proto_get(ConnProto::PROTO_HTTP));
-    TEST_ASSERT_NULL(proto_get(ConnProto::PROTO_TELNET));
+    TEST_ASSERT_NOT_NULL(proto_get(PROTO_HTTP));
+    TEST_ASSERT_NULL(proto_get(PROTO_TELNET));
 }
 
 // With no custom clock installed, pc_millis() falls through to the platform millis() mock.
 void test_clock_default_is_platform_millis(void)
 {
-    pc_set_clock(nullptr, 0); // ensure no override from a prior test
+    pc_set_clock(NULL, 0); // ensure no override from a prior test
     set_millis(4242);
     TEST_ASSERT_EQUAL_UINT32(4242, pc_millis());
 }
 
-// A custom clock is divided down to the internal 1000 Hz, and (nullptr, 0) reverts to the
+// A custom clock is divided down to the internal 1000 Hz, and (NULL, 0) reverts to the
 // platform default.
 void test_clock_custom_and_revert(void)
 {
@@ -263,7 +263,7 @@ void test_clock_custom_and_revert(void)
     g_fake_ticks = 16000;
     TEST_ASSERT_EQUAL_UINT32(2000, pc_millis());
 
-    pc_set_clock(nullptr, 0);
+    pc_set_clock(NULL, 0);
     set_millis(777);
     TEST_ASSERT_EQUAL_UINT32(777, pc_millis());
 }
@@ -307,12 +307,12 @@ void test_accept_cb_ip_allowlist_allows_when_empty()
 
     struct tcp_pcb pcb = {};
     TEST_ASSERT_EQUAL_INT(ERR_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb, ERR_OK));
-    TEST_ASSERT_EQUAL(ConnState::CONN_ACTIVE, (ConnState)conn_pool[0].state);
+    TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)conn_pool[0].state);
 }
 
 // Once any allowlist rule exists, the accept callback rejects every connection: a host
 // build has no real lwIP pcb to read the peer's address from, so the synthesized source
-// (pc_ip_family::PC_IP_NONE, "unspecified") never matches a real CIDR rule - the accept-time
+// (PC_IP_NONE, "unspecified") never matches a real CIDR rule - the accept-time
 // firewall fails closed for a peer address this build cannot actually resolve.
 void test_accept_cb_ip_allowlist_rejects_once_a_rule_exists()
 {
@@ -329,7 +329,7 @@ void test_accept_cb_ip_allowlist_rejects_once_a_rule_exists()
     int before_aborts = mock_abort_call_count();
     TEST_ASSERT_EQUAL_INT(ERR_ABRT, listener_accept_cb((void *)(uintptr_t)0, &pcb, ERR_OK));
     TEST_ASSERT_EQUAL_INT(before_aborts + 1, mock_abort_call_count());
-    TEST_ASSERT_EQUAL(ConnState::CONN_FREE, (ConnState)conn_pool[0].state); // no slot claimed
+    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state); // no slot claimed
 }
 
 int main()

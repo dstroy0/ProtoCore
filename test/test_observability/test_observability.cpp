@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // Transport observability (PC_ENABLE_OBSERVABILITY): the pc_conn_on_event
-// hook, the by-reason counters, the live ConnState::CONN_CLOSING gauge, and that the real
+// hook, the by-reason counters, the live CONN_CLOSING gauge, and that the real
 // lwIP callbacks (recv FIN / error / timeout / local close / backpressure) drive
 // the right counter and fire the hook.
 
@@ -30,7 +30,7 @@ void setUp()
 {
     set_millis(0);
     DeterministicAsyncTCP::pool_init();
-    listener_add(0, 80, ConnProto::PROTO_HTTP);
+    listener_add(0, 80, PROTO_HTTP);
     pc_conn_on_event(on_event);
     pc_conn_counters_reset();
     g_calls = 0;
@@ -38,31 +38,31 @@ void setUp()
 
 void tearDown()
 {
-    pc_conn_on_event(nullptr);
+    pc_conn_on_event(NULL);
 }
 
 // ---- the notify machinery (drives every reason directly) -------------------
 
 void test_transition_fires_hook_with_args()
 {
-    pc_obs_transition(2, ConnState::CONN_FREE, ConnState::CONN_ACTIVE, pc_conn_reason::PC_CONN_R_ACCEPT);
+    pc_obs_transition(2, CONN_FREE, CONN_ACTIVE, PC_CONN_R_ACCEPT);
     TEST_ASSERT_EQUAL(1, g_calls);
     TEST_ASSERT_EQUAL(2, g_slot);
-    TEST_ASSERT_EQUAL(ConnState::CONN_FREE, g_old);
-    TEST_ASSERT_EQUAL(ConnState::CONN_ACTIVE, g_new);
-    TEST_ASSERT_EQUAL(pc_conn_reason::PC_CONN_R_ACCEPT, g_reason);
+    TEST_ASSERT_EQUAL(CONN_FREE, g_old);
+    TEST_ASSERT_EQUAL(CONN_ACTIVE, g_new);
+    TEST_ASSERT_EQUAL(PC_CONN_R_ACCEPT, g_reason);
 }
 
 void test_each_reason_bumps_its_counter()
 {
-    pc_obs_transition(0, ConnState::CONN_FREE, ConnState::CONN_ACTIVE, pc_conn_reason::PC_CONN_R_ACCEPT);
-    pc_obs_transition(0, ConnState::CONN_ACTIVE, ConnState::CONN_FREE, pc_conn_reason::PC_CONN_R_CLOSE_REMOTE);
-    pc_obs_transition(0, ConnState::CONN_ACTIVE, ConnState::CONN_FREE, pc_conn_reason::PC_CONN_R_CLOSE_LOCAL);
-    pc_obs_transition(0, ConnState::CONN_ACTIVE, ConnState::CONN_FREE, pc_conn_reason::PC_CONN_R_ERROR);
-    pc_obs_transition(0, ConnState::CONN_ACTIVE, ConnState::CONN_FREE, pc_conn_reason::PC_CONN_R_TIMEOUT);
-    pc_obs_transition(0, ConnState::CONN_ACTIVE, ConnState::CONN_FREE, pc_conn_reason::PC_CONN_R_ABORT);
-    pc_obs_notice(0, ConnState::CONN_ACTIVE, pc_conn_reason::PC_CONN_R_BACKPRESSURE);
-    pc_obs_notice(0, ConnState::CONN_ACTIVE, pc_conn_reason::PC_CONN_R_DEFER_DROP);
+    pc_obs_transition(0, CONN_FREE, CONN_ACTIVE, PC_CONN_R_ACCEPT);
+    pc_obs_transition(0, CONN_ACTIVE, CONN_FREE, PC_CONN_R_CLOSE_REMOTE);
+    pc_obs_transition(0, CONN_ACTIVE, CONN_FREE, PC_CONN_R_CLOSE_LOCAL);
+    pc_obs_transition(0, CONN_ACTIVE, CONN_FREE, PC_CONN_R_ERROR);
+    pc_obs_transition(0, CONN_ACTIVE, CONN_FREE, PC_CONN_R_TIMEOUT);
+    pc_obs_transition(0, CONN_ACTIVE, CONN_FREE, PC_CONN_R_ABORT);
+    pc_obs_notice(0, CONN_ACTIVE, PC_CONN_R_BACKPRESSURE);
+    pc_obs_notice(0, CONN_ACTIVE, PC_CONN_R_DEFER_DROP);
 
     pc_conn_counters c = pc_conn_counters_get();
     TEST_ASSERT_EQUAL_UINT32(1, c.accepts);
@@ -79,17 +79,17 @@ void test_closing_gauge_is_derived_from_pool()
 {
     TEST_ASSERT_EQUAL_UINT32(0, pc_conn_counters_get().closing_gauge);
 
-    conn_pool[1].state = ConnState::CONN_CLOSING; // a slot actually dwelling
+    conn_pool[1].state = CONN_CLOSING; // a slot actually dwelling
     TEST_ASSERT_EQUAL_UINT32(1, pc_conn_counters_get().closing_gauge);
-    conn_pool[2].state = ConnState::CONN_CLOSING;
+    conn_pool[2].state = CONN_CLOSING;
     TEST_ASSERT_EQUAL_UINT32(2, pc_conn_counters_get().closing_gauge);
 
-    conn_pool[1].state = ConnState::CONN_FREE;
-    conn_pool[2].state = ConnState::CONN_FREE;
+    conn_pool[1].state = CONN_FREE;
+    conn_pool[2].state = CONN_FREE;
     TEST_ASSERT_EQUAL_UINT32(0, pc_conn_counters_get().closing_gauge);
 
     // DRAINED is gauge-only: it must not inflate any cumulative close counter.
-    pc_obs_transition(1, ConnState::CONN_CLOSING, ConnState::CONN_FREE, pc_conn_reason::PC_CONN_R_DRAINED);
+    pc_obs_transition(1, CONN_CLOSING, CONN_FREE, PC_CONN_R_DRAINED);
     pc_conn_counters c = pc_conn_counters_get();
     TEST_ASSERT_EQUAL_UINT32(0, c.closes_local);
     TEST_ASSERT_EQUAL_UINT32(0, c.closes_remote);
@@ -97,8 +97,8 @@ void test_closing_gauge_is_derived_from_pool()
 
 void test_reset_clears_cumulative_not_derived_gauge()
 {
-    pc_obs_transition(0, ConnState::CONN_FREE, ConnState::CONN_ACTIVE, pc_conn_reason::PC_CONN_R_ACCEPT);
-    conn_pool[0].state = ConnState::CONN_CLOSING; // a slot is genuinely closing
+    pc_obs_transition(0, CONN_FREE, CONN_ACTIVE, PC_CONN_R_ACCEPT);
+    conn_pool[0].state = CONN_CLOSING; // a slot is genuinely closing
     pc_conn_counters_reset();
     pc_conn_counters c = pc_conn_counters_get();
     TEST_ASSERT_EQUAL_UINT32(0, c.accepts);       // cumulative cleared
@@ -107,8 +107,8 @@ void test_reset_clears_cumulative_not_derived_gauge()
 
 void test_no_hook_after_unregister()
 {
-    pc_conn_on_event(nullptr);
-    pc_obs_transition(0, ConnState::CONN_FREE, ConnState::CONN_ACTIVE, pc_conn_reason::PC_CONN_R_ACCEPT);
+    pc_conn_on_event(NULL);
+    pc_obs_transition(0, CONN_FREE, CONN_ACTIVE, PC_CONN_R_ACCEPT);
     TEST_ASSERT_EQUAL(0, g_calls);                               // hook silent
     TEST_ASSERT_EQUAL_UINT32(1, pc_conn_counters_get().accepts); // counters still move
 }
@@ -117,8 +117,8 @@ void test_no_hook_after_unregister()
 // still counts but must not dispatch - drives the null-callback arm of the notice's own guard.
 void test_notice_without_hook_still_counts()
 {
-    pc_conn_on_event(nullptr);
-    pc_obs_notice(0, ConnState::CONN_ACTIVE, pc_conn_reason::PC_CONN_R_BACKPRESSURE);
+    pc_conn_on_event(NULL);
+    pc_obs_notice(0, CONN_ACTIVE, PC_CONN_R_BACKPRESSURE);
     TEST_ASSERT_EQUAL(0, g_calls); // hook silent
     TEST_ASSERT_EQUAL_UINT32(1, pc_conn_counters_get().backpressure);
 }
@@ -128,33 +128,33 @@ void test_notice_without_hook_still_counts()
 void test_recv_fin_counts_remote_close()
 {
     struct tcp_pcb pcb;
-    conn_pool[0].state = ConnState::CONN_ACTIVE;
+    conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].pcb = &pcb;
-    lowlevel_recv_cb(&conn_pool[0], &pcb, nullptr, ERR_OK); // null pbuf = FIN
+    lowlevel_recv_cb(&conn_pool[0], &pcb, NULL, ERR_OK); // null pbuf = FIN
     TEST_ASSERT_EQUAL_UINT32(1, pc_conn_counters_get().closes_remote);
-    TEST_ASSERT_EQUAL(pc_conn_reason::PC_CONN_R_CLOSE_REMOTE, g_reason);
+    TEST_ASSERT_EQUAL(PC_CONN_R_CLOSE_REMOTE, g_reason);
 }
 
 void test_err_cb_counts_error_close()
 {
-    conn_pool[0].state = ConnState::CONN_ACTIVE;
-    conn_pool[0].pcb = nullptr;
+    conn_pool[0].state = CONN_ACTIVE;
+    conn_pool[0].pcb = NULL;
     lowlevel_err_cb(&conn_pool[0], ERR_ABRT);
     TEST_ASSERT_EQUAL_UINT32(1, pc_conn_counters_get().closes_error);
-    TEST_ASSERT_EQUAL(pc_conn_reason::PC_CONN_R_ERROR, g_reason);
+    TEST_ASSERT_EQUAL(PC_CONN_R_ERROR, g_reason);
 }
 
 void test_timeout_sweep_counts_timeout()
 {
-    conn_pool[0].state = ConnState::CONN_ACTIVE;
-    conn_pool[0].pcb = nullptr;
+    conn_pool[0].state = CONN_ACTIVE;
+    conn_pool[0].pcb = NULL;
     conn_pool[0].owner = 0;
     conn_pool[0].last_activity_ms = 0;
     set_millis(CONN_TIMEOUT_MS + 1);
     DeterministicAsyncTCP::check_timeouts(0);
-    TEST_ASSERT_EQUAL(ConnState::CONN_FREE, (ConnState)conn_pool[0].state);
+    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
     TEST_ASSERT_EQUAL_UINT32(1, pc_conn_counters_get().closes_timeout);
-    TEST_ASSERT_EQUAL(pc_conn_reason::PC_CONN_R_TIMEOUT, g_reason);
+    TEST_ASSERT_EQUAL(PC_CONN_R_TIMEOUT, g_reason);
 }
 
 void test_local_close_counts_local()
@@ -162,12 +162,12 @@ void test_local_close_counts_local()
     // pc_conn_close(slot) reads the slot's pcb, frees the slot, and counts a
     // local close. The transport owns the teardown: the slot ends FREE/null.
     struct tcp_pcb pcb;
-    conn_pool[0].state = ConnState::CONN_ACTIVE;
+    conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].pcb = &pcb;
     pc_conn_close(0);
     TEST_ASSERT_EQUAL_UINT32(1, pc_conn_counters_get().closes_local);
-    TEST_ASSERT_EQUAL(pc_conn_reason::PC_CONN_R_CLOSE_LOCAL, g_reason);
-    TEST_ASSERT_EQUAL(ConnState::CONN_FREE, (ConnState)conn_pool[0].state);
+    TEST_ASSERT_EQUAL(PC_CONN_R_CLOSE_LOCAL, g_reason);
+    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
     TEST_ASSERT_NULL(conn_pool[0].pcb);
 }
 
@@ -176,19 +176,19 @@ void test_local_close_counts_local()
 void test_abort_slot_counts_abort_and_frees()
 {
     struct tcp_pcb pcb;
-    conn_pool[0].state = ConnState::CONN_ACTIVE;
+    conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].pcb = &pcb;
     pc_conn_abort_slot(0);
     TEST_ASSERT_EQUAL_UINT32(1, pc_conn_counters_get().closes_abort);
-    TEST_ASSERT_EQUAL(pc_conn_reason::PC_CONN_R_ABORT, g_reason);
-    TEST_ASSERT_EQUAL(ConnState::CONN_FREE, (ConnState)conn_pool[0].state);
+    TEST_ASSERT_EQUAL(PC_CONN_R_ABORT, g_reason);
+    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
     TEST_ASSERT_NULL(conn_pool[0].pcb);
 }
 
 void test_abort_slot_noop_on_free_slot()
 {
-    conn_pool[0].state = ConnState::CONN_FREE;
-    conn_pool[0].pcb = nullptr;
+    conn_pool[0].state = CONN_FREE;
+    conn_pool[0].pcb = NULL;
     pc_conn_abort_slot(0);
     TEST_ASSERT_EQUAL_UINT32(0, pc_conn_counters_get().closes_abort);
     TEST_ASSERT_EQUAL(0, g_calls);
@@ -196,53 +196,53 @@ void test_abort_slot_noop_on_free_slot()
 
 void test_backpressure_counts_when_ring_full()
 {
-    conn_pool[0].state = ConnState::CONN_ACTIVE;
-    conn_pool[0].pcb = nullptr;
+    conn_pool[0].state = CONN_ACTIVE;
+    conn_pool[0].pcb = NULL;
     conn_pool[0].rx_head = 0;
     conn_pool[0].rx_tail = 0;
     struct pbuf p;
     memset(&p, 0, sizeof(p));
     p.tot_len = RX_BUF_SIZE * 2; // larger than the whole ring -> refused
-    err_t rc = lowlevel_recv_cb(&conn_pool[0], nullptr, &p, ERR_OK);
+    err_t rc = lowlevel_recv_cb(&conn_pool[0], NULL, &p, ERR_OK);
     TEST_ASSERT_EQUAL(ERR_MEM, rc);
     TEST_ASSERT_EQUAL_UINT32(1, pc_conn_counters_get().backpressure);
-    TEST_ASSERT_EQUAL(pc_conn_reason::PC_CONN_R_BACKPRESSURE, g_reason);
+    TEST_ASSERT_EQUAL(PC_CONN_R_BACKPRESSURE, g_reason);
 }
 
-// ---- ConnState::CONN_CLOSING real dwell (part 2) -------------------------------------
+// ---- CONN_CLOSING real dwell (part 2) -------------------------------------
 
 void test_begin_close_dwells_then_drains_on_ack()
 {
     struct tcp_pcb pcb;
     pcb.snd_queuelen = 1; // response still in flight -> must dwell
-    conn_pool[0].state = ConnState::CONN_ACTIVE;
+    conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].pcb = &pcb;
 
     pc_conn_begin_close(0);
-    TEST_ASSERT_EQUAL(ConnState::CONN_CLOSING, (ConnState)conn_pool[0].state); // dwelling
+    TEST_ASSERT_EQUAL(CONN_CLOSING, (ConnState)conn_pool[0].state); // dwelling
     pc_conn_counters c = pc_conn_counters_get();
     TEST_ASSERT_EQUAL_UINT32(1, c.closes_local);
     TEST_ASSERT_EQUAL_UINT32(1, c.closing_gauge);
-    TEST_ASSERT_EQUAL(pc_conn_reason::PC_CONN_R_CLOSE_LOCAL, g_reason);
+    TEST_ASSERT_EQUAL(PC_CONN_R_CLOSE_LOCAL, g_reason);
 
     // Peer ACKs the whole response -> the sent callback finalizes the close.
     pcb.snd_queuelen = 0;
     lowlevel_sent_cb(&conn_pool[0], &pcb, 100);
-    TEST_ASSERT_EQUAL(ConnState::CONN_FREE, (ConnState)conn_pool[0].state);
+    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
     c = pc_conn_counters_get();
     TEST_ASSERT_EQUAL_UINT32(0, c.closing_gauge);
-    TEST_ASSERT_EQUAL(pc_conn_reason::PC_CONN_R_DRAINED, g_reason);
+    TEST_ASSERT_EQUAL(PC_CONN_R_DRAINED, g_reason);
 }
 
 void test_begin_close_finalizes_immediately_when_already_drained()
 {
     struct tcp_pcb pcb;
     pcb.snd_queuelen = 0; // nothing pending -> close now, no dwell
-    conn_pool[0].state = ConnState::CONN_ACTIVE;
+    conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].pcb = &pcb;
 
     pc_conn_begin_close(0);
-    TEST_ASSERT_EQUAL(ConnState::CONN_FREE, (ConnState)conn_pool[0].state);
+    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
     pc_conn_counters c = pc_conn_counters_get();
     TEST_ASSERT_EQUAL_UINT32(1, c.closes_local);
     TEST_ASSERT_EQUAL_UINT32(0, c.closing_gauge);
@@ -250,7 +250,7 @@ void test_begin_close_finalizes_immediately_when_already_drained()
 
 void test_begin_close_noop_if_not_active()
 {
-    conn_pool[0].state = ConnState::CONN_FREE;
+    conn_pool[0].state = CONN_FREE;
     pc_conn_begin_close(0);
     TEST_ASSERT_EQUAL_UINT32(0, pc_conn_counters_get().closes_local);
     TEST_ASSERT_EQUAL_UINT32(0, pc_conn_counters_get().closing_gauge);
@@ -260,23 +260,23 @@ void test_closing_timeout_reaps_stuck_slot()
 {
     struct tcp_pcb pcb;
     pcb.snd_queuelen = 1; // peer never ACKs -> would dwell forever
-    conn_pool[0].state = ConnState::CONN_ACTIVE;
+    conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].pcb = &pcb;
     conn_pool[0].owner = 0;
     set_millis(1000);
 
     pc_conn_begin_close(0);
-    TEST_ASSERT_EQUAL(ConnState::CONN_CLOSING, (ConnState)conn_pool[0].state);
+    TEST_ASSERT_EQUAL(CONN_CLOSING, (ConnState)conn_pool[0].state);
 
     // Before the bound: not reaped.
     set_millis(1000 + PC_CLOSING_TIMEOUT_MS - 1);
     DeterministicAsyncTCP::check_timeouts(0);
-    TEST_ASSERT_EQUAL(ConnState::CONN_CLOSING, (ConnState)conn_pool[0].state);
+    TEST_ASSERT_EQUAL(CONN_CLOSING, (ConnState)conn_pool[0].state);
 
     // Past the bound: the sweep force-frees it (no pool leak).
     set_millis(1000 + PC_CLOSING_TIMEOUT_MS + 1);
     DeterministicAsyncTCP::check_timeouts(0);
-    TEST_ASSERT_EQUAL(ConnState::CONN_FREE, (ConnState)conn_pool[0].state);
+    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
     TEST_ASSERT_EQUAL_UINT32(0, pc_conn_counters_get().closing_gauge);
 }
 
@@ -287,15 +287,15 @@ void test_stop_posts_abort_transition_for_each_live_slot()
 {
     struct tcp_pcb pcb;
     conn_pool[0].id = 0;
-    conn_pool[0].state = ConnState::CONN_ACTIVE;
+    conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].pcb = &pcb;
 
     DeterministicAsyncTCP::stop();
-    TEST_ASSERT_EQUAL(pc_conn_reason::PC_CONN_R_ABORT, g_reason);
+    TEST_ASSERT_EQUAL(PC_CONN_R_ABORT, g_reason);
     TEST_ASSERT_EQUAL_UINT32(1, pc_conn_counters_get().closes_abort);
 }
 
-// A slot that errors while already dwelling in ConnState::CONN_CLOSING just releases the slot
+// A slot that errors while already dwelling in CONN_CLOSING just releases the slot
 // (DRAINED, gauge-only) - it must not also count as an ERROR close (its response was already
 // sent; the session already reset). This call site is lowlevel_err_cb's own CLOSING branch,
 // not the direct pc_obs_transition() call test_closing_gauge_is_derived_from_pool drives.
@@ -303,16 +303,16 @@ void test_err_cb_during_closing_counts_drained_not_error()
 {
     struct tcp_pcb pcb;
     pcb.snd_queuelen = 1; // dwell, don't finalize immediately
-    conn_pool[0].state = ConnState::CONN_ACTIVE;
+    conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].pcb = &pcb;
     pc_conn_begin_close(0);
-    TEST_ASSERT_EQUAL(ConnState::CONN_CLOSING, (ConnState)conn_pool[0].state);
+    TEST_ASSERT_EQUAL(CONN_CLOSING, (ConnState)conn_pool[0].state);
     pc_conn_counters_reset();
 
     lowlevel_err_cb(&conn_pool[0], ERR_ABRT);
-    TEST_ASSERT_EQUAL(ConnState::CONN_FREE, (ConnState)conn_pool[0].state);
+    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
     TEST_ASSERT_NULL(conn_pool[0].pcb);
-    TEST_ASSERT_EQUAL(pc_conn_reason::PC_CONN_R_DRAINED, g_reason);
+    TEST_ASSERT_EQUAL(PC_CONN_R_DRAINED, g_reason);
     pc_conn_counters c = pc_conn_counters_get();
     TEST_ASSERT_EQUAL_UINT32(0, c.closes_error); // not counted as an error close
     TEST_ASSERT_EQUAL_UINT32(0, c.closing_gauge);
@@ -325,7 +325,7 @@ void test_enqueue_failure_from_recv_cb_counts_defer_drop()
 {
     struct tcp_pcb pcb;
     conn_pool[0].id = 0;
-    conn_pool[0].state = ConnState::CONN_ACTIVE;
+    conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].pcb = &pcb;
     conn_pool[0].rx_head = 0;
     conn_pool[0].rx_tail = 0;
@@ -340,7 +340,7 @@ void test_enqueue_failure_from_recv_cb_counts_defer_drop()
     p.tot_len = 1;
     TEST_ASSERT_EQUAL_INT(ERR_OK, lowlevel_recv_cb(&conn_pool[0], &pcb, &p, ERR_OK));
     TEST_ASSERT_EQUAL_UINT32(1, pc_conn_counters_get().defer_drops);
-    TEST_ASSERT_EQUAL(pc_conn_reason::PC_CONN_R_DEFER_DROP, g_reason);
+    TEST_ASSERT_EQUAL(PC_CONN_R_DEFER_DROP, g_reason);
 }
 
 // listener_accept_cb() posts its own PC_CONN_R_ACCEPT transition on a successful accept -
@@ -351,31 +351,31 @@ void test_accept_cb_posts_accept_transition()
 {
     struct tcp_pcb pcb = {};
     TEST_ASSERT_EQUAL_INT(ERR_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb, ERR_OK));
-    TEST_ASSERT_EQUAL(pc_conn_reason::PC_CONN_R_ACCEPT, g_reason);
+    TEST_ASSERT_EQUAL(PC_CONN_R_ACCEPT, g_reason);
     TEST_ASSERT_EQUAL_UINT32(1, pc_conn_counters_get().accepts);
 }
 
 // listener_accept_cb()'s own enqueue-failure fallback (the target listener marked inactive)
-// posts a defer-drop notice - the accept itself still succeeds, only the EvtType::EVT_CONNECT
+// posts a defer-drop notice - the accept itself still succeeds, only the EVT_CONNECT
 // post is dropped.
 void test_accept_cb_enqueue_failure_posts_defer_drop()
 {
     listener_pool[0].active = false;
     struct tcp_pcb pcb = {};
     TEST_ASSERT_EQUAL_INT(ERR_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb, ERR_OK));
-    TEST_ASSERT_EQUAL(pc_conn_reason::PC_CONN_R_DEFER_DROP, g_reason);
+    TEST_ASSERT_EQUAL(PC_CONN_R_DEFER_DROP, g_reason);
     TEST_ASSERT_EQUAL_UINT32(1, pc_conn_counters_get().defer_drops);
-    TEST_ASSERT_EQUAL(ConnState::CONN_ACTIVE, (ConnState)conn_pool[0].state); // still claimed
+    TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)conn_pool[0].state); // still claimed
 }
 
 void test_recv_during_closing_is_drained_not_processed()
 {
     struct tcp_pcb pcb;
     pcb.snd_queuelen = 1;
-    conn_pool[0].state = ConnState::CONN_ACTIVE;
+    conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].pcb = &pcb;
     pc_conn_begin_close(0);
-    TEST_ASSERT_EQUAL(ConnState::CONN_CLOSING, (ConnState)conn_pool[0].state);
+    TEST_ASSERT_EQUAL(CONN_CLOSING, (ConnState)conn_pool[0].state);
 
     // Late inbound data while closing: acked + dropped, slot stays CLOSING.
     struct pbuf p;
@@ -383,7 +383,7 @@ void test_recv_during_closing_is_drained_not_processed()
     p.tot_len = 8;
     err_t rc = lowlevel_recv_cb(&conn_pool[0], &pcb, &p, ERR_OK);
     TEST_ASSERT_EQUAL(ERR_OK, rc);
-    TEST_ASSERT_EQUAL(ConnState::CONN_CLOSING, (ConnState)conn_pool[0].state);
+    TEST_ASSERT_EQUAL(CONN_CLOSING, (ConnState)conn_pool[0].state);
 }
 
 int main()
@@ -402,7 +402,7 @@ int main()
     RUN_TEST(test_abort_slot_counts_abort_and_frees);
     RUN_TEST(test_abort_slot_noop_on_free_slot);
     RUN_TEST(test_backpressure_counts_when_ring_full);
-    // ConnState::CONN_CLOSING real dwell
+    // CONN_CLOSING real dwell
     RUN_TEST(test_begin_close_dwells_then_drains_on_ack);
     RUN_TEST(test_begin_close_finalizes_immediately_when_already_drained);
     RUN_TEST(test_begin_close_noop_if_not_active);

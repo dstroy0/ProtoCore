@@ -36,7 +36,7 @@ void setUp()
     {
         conn_pool[i] = {};
         conn_pool[i].id = i;
-        conn_pool[i].state = ConnState::CONN_ACTIVE;
+        conn_pool[i].state = CONN_ACTIVE;
         http_reset(i);
     }
 }
@@ -732,32 +732,32 @@ void race_aba_slot_reuse_fresh_timestamp()
     const uint32_t T_DEAD = CONN_TIMEOUT_MS;
     const uint32_t T_NEW = CONN_TIMEOUT_MS + 1;
 
-    conn_pool[0].state = ConnState::CONN_ACTIVE;
-    conn_pool[0].pcb = nullptr;
+    conn_pool[0].state = CONN_ACTIVE;
+    conn_pool[0].pcb = NULL;
     conn_pool[0].last_activity_ms = T_OLD;
 
     set_millis(T_DEAD);
     DeterministicAsyncTCP::check_timeouts();
-    TEST_ASSERT_EQUAL(ConnState::CONN_FREE, (ConnState)conn_pool[0].state); // timed out
+    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state); // timed out
 
     // Simulate a new accept: re-arm the slot
-    conn_pool[0].state = ConnState::CONN_ACTIVE;
+    conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].last_activity_ms = T_NEW;
 
     set_millis(T_NEW); // now millis == last_activity → diff = 0, no timeout
     DeterministicAsyncTCP::check_timeouts();
-    TEST_ASSERT_EQUAL(ConnState::CONN_ACTIVE, (ConnState)conn_pool[0].state); // must NOT time out
+    TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)conn_pool[0].state); // must NOT time out
 }
 
-// Double-free: call check_timeouts() on a slot that is already ConnState::CONN_FREE.
+// Double-free: call check_timeouts() on a slot that is already CONN_FREE.
 // Must be a no-op - no state corruption and no crash.
 void race_double_free_is_nop()
 {
-    conn_pool[0].state = ConnState::CONN_FREE;
+    conn_pool[0].state = CONN_FREE;
     set_millis(CONN_TIMEOUT_MS * 10);
     DeterministicAsyncTCP::check_timeouts();
     DeterministicAsyncTCP::check_timeouts();
-    TEST_ASSERT_EQUAL(ConnState::CONN_FREE, (ConnState)conn_pool[0].state);
+    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
 }
 
 // Slot isolation: parsing on slot 0 must not affect slot 1's state,

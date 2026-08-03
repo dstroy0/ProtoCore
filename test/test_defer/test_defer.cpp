@@ -45,7 +45,7 @@ void test_server_defer_routes_by_owner()
 void test_defer_null_fn_fails()
 {
     // A null callback fails closed on every build (host and target).
-    TEST_ASSERT_FALSE(pc_defer(0, nullptr, nullptr));
+    TEST_ASSERT_FALSE(pc_defer(0, NULL, NULL));
     TEST_ASSERT_EQUAL_INT(0, g_ran);
 }
 

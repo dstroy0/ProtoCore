@@ -19,7 +19,7 @@ void setUp()
     pc_udp_set_dscp(0);
     for (uint8_t i = 0; i < MAX_CONNS; i++)
     {
-        conn_pool[i].pcb = nullptr;
+        conn_pool[i].pcb = NULL;
     }
 }
 
@@ -71,14 +71,14 @@ static void test_conn_set_dscp_writes_pcb_tos()
 
 static void test_conn_set_dscp_rejects_bad_slot()
 {
-    conn_pool[0].pcb = nullptr;
+    conn_pool[0].pcb = NULL;
     TEST_ASSERT_FALSE(pc_conn_set_dscp(0, PC_DSCP_EF));   // no live pcb
     TEST_ASSERT_FALSE(pc_conn_set_dscp(255, PC_DSCP_EF)); // slot out of range
 }
 
 static void test_listen_set_dscp_override_and_sentinel()
 {
-    TEST_ASSERT_EQUAL(1, listener_add(0, 8080, ConnProto::PROTO_HTTP));
+    TEST_ASSERT_EQUAL(1, listener_add(0, 8080, PROTO_HTTP));
     TEST_ASSERT_EQUAL_UINT8(PC_DSCP_UNSET, listener_pool[0].dscp); // no override until set
 
     TEST_ASSERT_TRUE(pc_listen_set_dscp(8080, PC_DSCP_EF));
@@ -99,7 +99,7 @@ static void test_listen_set_dscp_override_and_sentinel()
 static void test_accept_cb_applies_per_listener_dscp_override()
 {
     DeterministicAsyncTCP::pool_init();
-    TEST_ASSERT_EQUAL(1, listener_add(0, 8080, ConnProto::PROTO_HTTP));
+    TEST_ASSERT_EQUAL(1, listener_add(0, 8080, PROTO_HTTP));
     TEST_ASSERT_TRUE(pc_listen_set_dscp(8080, PC_DSCP_EF));
 
     struct tcp_pcb pcb;
@@ -114,7 +114,7 @@ static void test_accept_cb_applies_per_listener_dscp_override()
 static void test_accept_cb_falls_back_to_server_default_dscp()
 {
     DeterministicAsyncTCP::pool_init();
-    TEST_ASSERT_EQUAL(1, listener_add(0, 8080, ConnProto::PROTO_HTTP)); // no override -> UNSET
+    TEST_ASSERT_EQUAL(1, listener_add(0, 8080, PROTO_HTTP)); // no override -> UNSET
     pc_set_default_dscp(PC_DSCP_AF41);
 
     struct tcp_pcb pcb;
@@ -129,7 +129,7 @@ static void test_accept_cb_falls_back_to_server_default_dscp()
 static void test_accept_cb_skips_tos_write_at_best_effort()
 {
     DeterministicAsyncTCP::pool_init();
-    TEST_ASSERT_EQUAL(1, listener_add(0, 8080, ConnProto::PROTO_HTTP)); // UNSET override, default dscp == 0
+    TEST_ASSERT_EQUAL(1, listener_add(0, 8080, PROTO_HTTP)); // UNSET override, default dscp == 0
 
     struct tcp_pcb pcb;
     pcb.tos = 0x77; // sentinel: must survive untouched
@@ -142,7 +142,7 @@ static void test_accept_cb_skips_tos_write_at_best_effort()
 // per-listener DSCP override to UNSET, same as the static listener_add() path.
 static void test_dynamic_listener_inherits_default_dscp()
 {
-    TEST_ASSERT_EQUAL_INT32(1, listener_add_dynamic(1, 2222, ConnProto::PROTO_HTTP));
+    TEST_ASSERT_EQUAL_INT32(1, listener_add_dynamic(1, 2222, PROTO_HTTP));
     TEST_ASSERT_EQUAL_UINT8(PC_DSCP_UNSET, listener_pool[1].dscp);
     listener_stop_dynamic(1);
 }

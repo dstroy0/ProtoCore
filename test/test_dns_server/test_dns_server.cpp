@@ -140,9 +140,9 @@ void test_malformed_guards()
     uint8_t q[128], out[256];
     size_t qlen = make_query(q, 1, "foo.lan", 1, false);
     TEST_ASSERT_EQUAL_UINT(0, pc_dns_server_build_response(q, 11, 60, resolve_foo, out, sizeof(out))); // < header
-    TEST_ASSERT_EQUAL_UINT(0, pc_dns_server_build_response(nullptr, qlen, 60, resolve_foo, out, sizeof(out)));
-    TEST_ASSERT_EQUAL_UINT(0, pc_dns_server_build_response(q, qlen, 60, nullptr, out, sizeof(out)));
-    TEST_ASSERT_EQUAL_UINT(0, pc_dns_server_build_response(q, qlen, 60, resolve_foo, nullptr, sizeof(out)));
+    TEST_ASSERT_EQUAL_UINT(0, pc_dns_server_build_response(NULL, qlen, 60, resolve_foo, out, sizeof(out)));
+    TEST_ASSERT_EQUAL_UINT(0, pc_dns_server_build_response(q, qlen, 60, NULL, out, sizeof(out)));
+    TEST_ASSERT_EQUAL_UINT(0, pc_dns_server_build_response(q, qlen, 60, resolve_foo, NULL, sizeof(out)));
     // A compression pointer inside the question is illegal.
     uint8_t bad[16] = {0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0xC0, 0x0C, 0, 1};
     TEST_ASSERT_EQUAL_UINT(0, pc_dns_server_build_response(bad, sizeof(bad), 60, resolve_foo, out, sizeof(out)));
@@ -251,10 +251,10 @@ void test_dns_question_exceeds_out_cap()
     TEST_ASSERT_EQUAL_UINT(0, pc_dns_server_build_response(q, qlen, 60, resolve_foo, out, 20));
 }
 
-// pc_dns_server_add rejects an empty/null/over-long name and a full table; lookup(nullptr) is 0.
+// pc_dns_server_add rejects an empty/null/over-long name and a full table; lookup(NULL) is 0.
 void test_dns_add_and_lookup_guards()
 {
-    TEST_ASSERT_FALSE(pc_dns_server_add(nullptr, 1, 2, 3, 4));
+    TEST_ASSERT_FALSE(pc_dns_server_add(NULL, 1, 2, 3, 4));
     TEST_ASSERT_FALSE(pc_dns_server_add("", 1, 2, 3, 4));
     char toolong[PC_DNS_NAME_MAX + 4];
     memset(toolong, 'a', sizeof(toolong) - 1);
@@ -268,7 +268,7 @@ void test_dns_add_and_lookup_guards()
         TEST_ASSERT_TRUE(pc_dns_server_add(nm, 10, 0, 0, (uint8_t)i));
     }
     TEST_ASSERT_FALSE(pc_dns_server_add("overflow.lan", 10, 0, 0, 99)); // table full
-    TEST_ASSERT_EQUAL_HEX32(0u, pc_dns_server_lookup(nullptr));
+    TEST_ASSERT_EQUAL_HEX32(0u, pc_dns_server_lookup(NULL));
 }
 
 // The host build's pc_dns_server_begin() is a stub (no lwIP) and reports failure.
