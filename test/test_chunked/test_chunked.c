@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for send_chunked() / ChunkedResponse streaming responses.
+// Unit tests for send_chunked(, NULL) / ChunkedResponse streaming responses.
 
 #include "protocore.h"
 #include "shared_primitives/hex.h" // pc_hex_u32 (the chunk size-line writer)
@@ -153,48 +153,48 @@ static size_t src_overreport(uint8_t *buf, size_t cap, void *ctx)
 static void h_hello(uint8_t s, HttpReq *r)
 {
     (void)r;
-    send_chunked(s, 200, "text/plain", src_hello);
+    send_chunked(s, 200, "text/plain", src_hello, NULL);
 }
 static void h_multi(uint8_t s, HttpReq *r)
 {
     (void)r;
-    send_chunked(s, 200, "text/plain", src_multi);
+    send_chunked(s, 200, "text/plain", src_multi, NULL);
 }
 static void h_printf(uint8_t s, HttpReq *r)
 {
     (void)r;
-    send_chunked(s, 200, "text/plain", src_printf);
+    send_chunked(s, 200, "text/plain", src_printf, NULL);
 }
 static void h_ok(uint8_t s, HttpReq *r)
 {
     (void)r;
-    send_chunked(s, 200, "text/plain", src_ok);
+    send_chunked(s, 200, "text/plain", src_ok, NULL);
 }
 static void h_empty(uint8_t s, HttpReq *r)
 {
     (void)r;
-    send_chunked(s, 200, "text/plain", src_empty);
+    send_chunked(s, 200, "text/plain", src_empty, NULL);
 }
 static void h_two5(uint8_t s, HttpReq *r)
 {
     (void)r;
-    send_chunked(s, 200, "text/plain", src_two5);
+    send_chunked(s, 200, "text/plain", src_two5, NULL);
 }
 static void h_big(uint8_t s, HttpReq *r)
 {
     (void)r;
-    send_chunked(s, 200, "application/octet-stream", src_big);
+    send_chunked(s, 200, "application/octet-stream", src_big, NULL);
 }
 static void h_overreport(uint8_t s, HttpReq *r)
 {
     (void)r;
-    send_chunked(s, 200, "application/octet-stream", src_overreport);
+    send_chunked(s, 200, "application/octet-stream", src_overreport, NULL);
 }
 static void h_with_hdr(uint8_t s, HttpReq *r)
 {
     (void)r;
     proto_add_response_header(s, "X-Stream", "1");
-    send_chunked(s, 200, "text/plain", src_hello);
+    send_chunked(s, 200, "text/plain", src_hello, NULL);
 }
 
 void setUp()

@@ -92,7 +92,7 @@ void test_unprotected_route_fires_handler()
 
 void test_protected_route_no_header_returns_401()
 {
-    on_http("/admin", HTTP_GET, handle_ok, "Admin", "user", "pass");
+    on_http_auth("/admin", HTTP_GET, handle_ok, "Admin", "user", "pass");
     feed_and_handle(0, "GET /admin HTTP/1.1\r\n\r\n");
     TEST_ASSERT_FALSE(handler_called);
     TEST_ASSERT_TRUE(strstr(tcp_captured(), "401 Unauthorized") != NULL);
@@ -100,7 +100,7 @@ void test_protected_route_no_header_returns_401()
 
 void test_protected_route_wrong_password_returns_401()
 {
-    on_http("/admin", HTTP_GET, handle_ok, "Admin", "user", "pass");
+    on_http_auth("/admin", HTTP_GET, handle_ok, "Admin", "user", "pass");
     // base64("user:wrong") = "dXNlcjp3cm9uZw=="
     feed_and_handle(0, "GET /admin HTTP/1.1\r\n"
                        "Authorization: Basic dXNlcjp3cm9uZw==\r\n\r\n");
@@ -110,7 +110,7 @@ void test_protected_route_wrong_password_returns_401()
 
 void test_protected_route_wrong_username_returns_401()
 {
-    on_http("/admin", HTTP_GET, handle_ok, "Admin", "user", "pass");
+    on_http_auth("/admin", HTTP_GET, handle_ok, "Admin", "user", "pass");
     // base64("admin:pass") = "YWRtaW46cGFzcw=="
     feed_and_handle(0, "GET /admin HTTP/1.1\r\n"
                        "Authorization: Basic YWRtaW46cGFzcw==\r\n\r\n");
@@ -120,7 +120,7 @@ void test_protected_route_wrong_username_returns_401()
 
 void test_protected_route_valid_credentials_fires_handler()
 {
-    on_http("/admin", HTTP_GET, handle_ok, "Admin", "user", "pass");
+    on_http_auth("/admin", HTTP_GET, handle_ok, "Admin", "user", "pass");
     // base64("user:pass") = "dXNlcjpwYXNz"
     feed_and_handle(0, "GET /admin HTTP/1.1\r\n"
                        "Authorization: Basic dXNlcjpwYXNz\r\n\r\n");
@@ -130,14 +130,14 @@ void test_protected_route_valid_credentials_fires_handler()
 
 void test_401_includes_www_authenticate_header()
 {
-    on_http("/secret", HTTP_GET, handle_ok, "MyRealm", "u", "p");
+    on_http_auth("/secret", HTTP_GET, handle_ok, "MyRealm", "u", "p");
     feed_and_handle(0, "GET /secret HTTP/1.1\r\n\r\n");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "WWW-Authenticate: Basic realm=\"MyRealm\""));
 }
 
 void test_non_basic_scheme_returns_401()
 {
-    on_http("/admin", HTTP_GET, handle_ok, "Admin", "user", "pass");
+    on_http_auth("/admin", HTTP_GET, handle_ok, "Admin", "user", "pass");
     feed_and_handle(0, "GET /admin HTTP/1.1\r\n"
                        "Authorization: Bearer some_token\r\n\r\n");
     TEST_ASSERT_FALSE(handler_called);
@@ -146,7 +146,7 @@ void test_non_basic_scheme_returns_401()
 
 void test_credentials_without_colon_returns_401()
 {
-    on_http("/admin", HTTP_GET, handle_ok, "Admin", "user", "pass");
+    on_http_auth("/admin", HTTP_GET, handle_ok, "Admin", "user", "pass");
     // base64("nocolon") = "bm9jb2xvbg=="
     feed_and_handle(0, "GET /admin HTTP/1.1\r\n"
                        "Authorization: Basic bm9jb2xvbg==\r\n\r\n");
@@ -157,7 +157,7 @@ void test_credentials_without_colon_returns_401()
 void test_protected_and_unprotected_routes_coexist()
 {
     on_http("/public", HTTP_GET, handle_ok);
-    on_http("/private", HTTP_GET, handle_ok, "Priv", "u", "p");
+    on_http_auth("/private", HTTP_GET, handle_ok, "Priv", "u", "p");
 
     // Hit public route -- handler fires
     feed_and_handle(0, "GET /public HTTP/1.1\r\n\r\n");
@@ -177,7 +177,7 @@ void test_protected_and_unprotected_routes_coexist()
 
 void test_auth_route_returns_404_for_wrong_path()
 {
-    on_http("/admin", HTTP_GET, handle_ok, "Admin", "user", "pass");
+    on_http_auth("/admin", HTTP_GET, handle_ok, "Admin", "user", "pass");
     feed_and_handle(0, "GET /other HTTP/1.1\r\n\r\n");
     TEST_ASSERT_FALSE(handler_called);
     TEST_ASSERT_TRUE(strstr(tcp_captured(), "404") != NULL);
@@ -188,7 +188,7 @@ void test_auth_checked_per_method()
     // Route only handles POST; a GET to that path is 405 Method Not Allowed
     // (RFC 7231 §6.5.5) - auth is never evaluated for the wrong method, so the
     // response must not be 401.
-    on_http("/upload", HTTP_POST, handle_ok, "Upload", "u", "p");
+    on_http_auth("/upload", HTTP_POST, handle_ok, "Upload", "u", "p");
     feed_and_handle(0, "GET /upload HTTP/1.1\r\n\r\n");
     TEST_ASSERT_FALSE(handler_called);
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "405"));
@@ -202,7 +202,7 @@ void test_auth_checked_per_method()
 
 void stress_auth_50_valid_requests()
 {
-    on_http("/s", HTTP_GET, handle_ok, "R", "u", "p");
+    on_http_auth("/s", HTTP_GET, handle_ok, "R", "u", "p");
     // base64("u:p") = "dTpw"
     const char *req = "GET /s HTTP/1.1\r\n"
                       "Authorization: Basic dTpw\r\n\r\n";
@@ -227,7 +227,7 @@ void stress_auth_50_valid_requests()
 
 void stress_auth_50_invalid_requests()
 {
-    on_http("/s", HTTP_GET, handle_ok, "R", "u", "p");
+    on_http_auth("/s", HTTP_GET, handle_ok, "R", "u", "p");
     const char *req = "GET /s HTTP/1.1\r\n"
                       "Authorization: Basic d3Jvbmc6Y3JlZHM=\r\n\r\n"; // "wrong:creds"
 
@@ -269,7 +269,7 @@ static void rearm(uint8_t slot)
 // for the password independently.
 void test_basic_auth_same_length_wrong_credentials()
 {
-    on_http("/admin", HTTP_GET, handle_ok, "Admin", "user", "pass");
+    on_http_auth("/admin", HTTP_GET, handle_ok, "Admin", "user", "pass");
 
     // base64("xser:pass") - username same length, different bytes.
     feed_and_handle(0, "GET /admin HTTP/1.1\r\n"
@@ -289,7 +289,7 @@ void test_basic_auth_same_length_wrong_credentials()
 // decode is compared), so the request is unauthorized.
 void test_basic_auth_invalid_base64_rejected()
 {
-    on_http("/admin", HTTP_GET, handle_ok, "Admin", "user", "pass");
+    on_http_auth("/admin", HTTP_GET, handle_ok, "Admin", "user", "pass");
     feed_and_handle(0, "GET /admin HTTP/1.1\r\n"
                        "Authorization: Basic ****\r\n\r\n"); // not base64 alphabet
     TEST_ASSERT_FALSE(handler_called);
@@ -301,7 +301,7 @@ void test_basic_auth_invalid_base64_rejected()
 void test_unauth_challenge_cors_and_head()
 {
     set_cors("*");
-    on_http("/admin", HTTP_GET, handle_ok, "Admin", "user", "pass");
+    on_http_auth("/admin", HTTP_GET, handle_ok, "Admin", "user", "pass");
 
     feed_and_handle(0, "GET /admin HTTP/1.1\r\n\r\n");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "401"));
@@ -320,7 +320,7 @@ void test_unauth_challenge_cors_and_head()
 // writes nothing and resets the parser instead.
 void test_unauth_challenge_on_dead_connection()
 {
-    on_http("/admin", HTTP_GET, handle_ok, "Admin", "user", "pass");
+    on_http_auth("/admin", HTTP_GET, handle_ok, "Admin", "user", "pass");
     push_str(0, "GET /admin HTTP/1.1\r\n\r\n");
     http_parse(0);
     conn_pool[0].pcb = NULL; // peer vanished between parse and dispatch

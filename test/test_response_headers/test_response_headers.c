@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // Unit tests for custom response headers and cookies:
-//   proto_add_response_header(), set_cookie(), clear_response_headers().
+//   proto_add_response_header(), set_cookie(, NULL), clear_response_headers().
 //
 // Tests verify that:
 //   - A queued header appears in a send() response
 //   - Multiple headers all appear
-//   - set_cookie() emits Set-Cookie (with and without attributes)
+//   - set_cookie(, NULL) emits Set-Cookie (with and without attributes)
 //   - Custom headers appear on send_empty() and redirect() too
 //   - Headers do NOT leak from one request to the next on the same slot
 //   - clear_response_headers() discards queued headers
@@ -50,7 +50,7 @@ static void h_two_headers(uint8_t slot, HttpReq *req)
 static void h_cookie(uint8_t slot, HttpReq *req)
 {
     (void)req;
-    set_cookie(slot, "session", "abc123");
+    set_cookie(slot, "session", "abc123", NULL);
     send_text(slot, 200, "text/plain", "ok");
 }
 
