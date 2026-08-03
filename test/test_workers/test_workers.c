@@ -14,20 +14,20 @@
 #include <Arduino.h> // set_millis
 #include <unity.h>
 
-void setUp()
+void setUp(void)
 {
-    DeterministicAsyncTCP::pool_init();
+    proto_tcp_pool_init(NULL);
 }
-void tearDown()
+void tearDown(void)
 {
 }
 
-void test_worker_count_is_two()
+void test_worker_count_is_two(void)
 {
     TEST_ASSERT_EQUAL_INT(2, pc_worker_count());
 }
 
-void test_check_timeouts_reaps_only_owned_slots()
+void test_check_timeouts_reaps_only_owned_slots(void)
 {
     set_millis(100000); // far past CONN_TIMEOUT_MS so both slots are stale
 
@@ -42,16 +42,16 @@ void test_check_timeouts_reaps_only_owned_slots()
     conn_pool[1].last_activity_ms = 0;
 
     // Worker 0 sweeps: only its own slot is reaped; worker 1's slot is untouched.
-    DeterministicAsyncTCP::check_timeouts(0);
+    proto_tcp_check_timeouts(0);
     TEST_ASSERT_EQUAL_INT(CONN_FREE, (ConnState)conn_pool[0].state);
     TEST_ASSERT_EQUAL_INT(CONN_ACTIVE, (ConnState)conn_pool[1].state);
 
     // Worker 1 sweeps: now its own slot is reaped.
-    DeterministicAsyncTCP::check_timeouts(1);
+    proto_tcp_check_timeouts(1);
     TEST_ASSERT_EQUAL_INT(CONN_FREE, (ConnState)conn_pool[1].state);
 }
 
-void test_pool_init_defaults_owner_zero()
+void test_pool_init_defaults_owner_zero(void)
 {
     for (int i = 0; i < MAX_CONNS; i++)
     {
@@ -59,7 +59,7 @@ void test_pool_init_defaults_owner_zero()
     }
 }
 
-void test_worker_self_id_roundtrip()
+void test_worker_self_id_roundtrip(void)
 {
     // pc_worker_set_self binds the calling context's worker id; pc_worker_self reads it back.
     pc_worker_set_self(1);
@@ -68,7 +68,7 @@ void test_worker_self_id_roundtrip()
     TEST_ASSERT_EQUAL_INT(0, pc_worker_self());
 }
 
-void test_host_worker_lifecycle_is_noops()
+void test_host_worker_lifecycle_is_noops(void)
 {
     // On host there is no worker task: start/stop/wake are no-ops and running() stays false.
     pc_workers_start(NULL);
@@ -82,7 +82,7 @@ static void set_flag_to_42(void *arg)
 {
     *(int *)arg = 42;
 }
-void test_host_defer_runs_inline_and_rejects_null()
+void test_host_defer_runs_inline_and_rejects_null(void)
 {
     // On host the caller and pipeline are the same thread, so pc_defer runs the callback inline
     // immediately; a null callback is rejected.
@@ -94,7 +94,7 @@ void test_host_defer_runs_inline_and_rejects_null()
 
 // The per-worker event-queue table (PC_WORKER_COUNT > 1 only): created idempotently,
 // looked up by worker id, out-of-range ids (negative or >= count) report no queue.
-void test_listener_worker_queues_init_and_lookup()
+void test_listener_worker_queues_init_and_lookup(void)
 {
     listener_worker_queues_init();
     TEST_ASSERT_NOT_NULL(listener_worker_queue(0));
@@ -108,10 +108,10 @@ void test_listener_worker_queues_init_and_lookup()
 
 // listener_enqueue() in multi-worker mode routes by the event's slot owner (not the
 // listener id) and rejects an out-of-range owner before touching any queue.
-void test_enqueue_routes_by_slot_owner_and_rejects_bad_owner()
+void test_enqueue_routes_by_slot_owner_and_rejects_bad_owner(void)
 {
     listener_worker_queues_init();
-    DeterministicAsyncTCP::pool_init();
+    proto_tcp_pool_init(NULL);
 
     conn_pool[0].owner = 1; // route to worker 1's queue
     TcpEvt evt = {EVT_DATA, 0, 0};
@@ -121,19 +121,19 @@ void test_enqueue_routes_by_slot_owner_and_rejects_bad_owner()
     TEST_ASSERT_FALSE(listener_enqueue(0, &evt));
 
     conn_pool[0].owner = 0;
-    mock_queue_send_fail_once() = true;
+    mock_queue_send_fail_once();
     TEST_ASSERT_FALSE(listener_enqueue(0, &evt)); // full queue reported, not silently dropped
 }
 
 // listener_accept_cb() round-robins each new connection's owner across the workers
 // (PC_WORKER_COUNT > 1 only) so slots partition evenly, wrapping back to 0.
-void test_accept_cb_round_robins_slot_owner()
+void test_accept_cb_round_robins_slot_owner(void)
 {
-    DeterministicAsyncTCP::pool_init();
+    proto_tcp_pool_init(NULL);
     TEST_ASSERT_EQUAL_INT32(1, listener_add(0, 80, PROTO_HTTP)); // also exercises the
                                                                  // WORKER_COUNT>1 branch
                                                                  // of listener_add() itself
-    struct tcp_pcb pcb1 = {}, pcb2 = {}, pcb3 = {};
+    struct tcp_pcb pcb1 = {0}, pcb2 = {0}, pcb3 = {0};
     TEST_ASSERT_EQUAL_INT(ERR_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb1, ERR_OK));
     TEST_ASSERT_EQUAL_INT(ERR_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb2, ERR_OK));
     TEST_ASSERT_EQUAL_INT(ERR_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb3, ERR_OK));
@@ -149,16 +149,16 @@ void test_accept_cb_round_robins_slot_owner()
 
 // listener_add_dynamic() also creates the per-worker queues (idempotent with the static
 // listener_add() path above).
-void test_dynamic_listener_creates_worker_queues()
+void test_dynamic_listener_creates_worker_queues(void)
 {
-    DeterministicAsyncTCP::pool_init();
+    proto_tcp_pool_init(NULL);
     TEST_ASSERT_EQUAL_INT32(1, listener_add_dynamic(2, 4444, PROTO_HTTP));
     TEST_ASSERT_NOT_NULL(listener_worker_queue(0));
     TEST_ASSERT_NOT_NULL(listener_worker_queue(1));
     listener_stop_dynamic(2);
 }
 
-int main()
+int main(void)
 {
     UNITY_BEGIN();
     RUN_TEST(test_worker_count_is_two);

@@ -318,11 +318,25 @@ static inline pc_platform_queue pc_platform_queue_create(size_t depth, size_t it
     (void)ctrl;
     return storage ? storage : (void *)1;
 }
+// One-shot send failure: the next pc_platform_queue_send() reports a full queue and clears the
+// latch. Lets a test drive the enqueue path's rejection branch.
+__attribute__((weak)) int pc_platform_queue_send_fail_once = 0;
+
+static inline void mock_queue_send_fail_once(void)
+{
+    pc_platform_queue_send_fail_once = 1;
+}
+
 static inline int pc_platform_queue_send(pc_platform_queue q, const void *item, uint32_t ticks)
 {
     (void)q;
     (void)item;
     (void)ticks;
+    if (pc_platform_queue_send_fail_once)
+    {
+        pc_platform_queue_send_fail_once = 0;
+        return PC_PLATFORM_FALSE;
+    }
     return PC_PLATFORM_OK;
 }
 static inline int pc_platform_queue_send_front(pc_platform_queue q, const void *item, uint32_t ticks)
