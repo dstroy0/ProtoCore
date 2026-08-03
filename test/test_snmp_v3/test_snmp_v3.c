@@ -696,8 +696,8 @@ void test_v3_notify_paths()
 // scopedPDU (as build_get emits) can never reach.
 static size_t build_v3_raw_scoped(uint8_t *out, size_t cap, proto_bool auth, const uint8_t *eid, size_t eid_len,
                                   long boots, long time, const char *user, const uint8_t *authkey, long msg_id,
-                                  const uint8_t *scoped, size_t scoped_len, proto_bool priv = PROTO_FALSE,
-                                  size_t auth_plen = SNMP_V3_AUTH_PARAM_LEN, size_t priv_plen = SNMP_V3_PRIV_PARAM_LEN)
+                                  const uint8_t *scoped, size_t scoped_len, proto_bool priv, size_t auth_plen,
+                                  size_t priv_plen)
 {
     proto_bool digest =
         auth && auth_plen == SNMP_V3_AUTH_PARAM_LEN; // a non-standard authParams length is rejected pre-HMAC
@@ -862,7 +862,8 @@ void test_v3_scoped_parse_rejections(void)
     for (size_t i = 0; i < sizeof(scopeds) / sizeof(scopeds[0]); i++)
     {
         size_t rl = build_v3_raw_scoped(req, sizeof(req), PROTO_TRUE, v.engine_id, v.engine_id_len, v.boots, v.time,
-                                        "myuser", authkey, 400 + (long)i, scopeds[i], lens[i]);
+                                        "myuser", authkey, 400 + (long)i, scopeds[i], lens[i], PROTO_FALSE,
+                                        SNMP_V3_AUTH_PARAM_LEN, SNMP_V3_PRIV_PARAM_LEN);
         TEST_ASSERT_TRUE(rl > 0);
         TEST_ASSERT_EQUAL_UINT(0, pc_snmp_v3_process(req, rl, resp, sizeof(resp)));
     }
@@ -885,7 +886,8 @@ void test_v3_discovery_malformed_scoped(void)
     for (size_t i = 0; i < 2; i++)
     {
         size_t rl = build_v3_raw_scoped(req, sizeof(req), PROTO_FALSE, wrong_eid, sizeof(wrong_eid), v.boots, v.time,
-                                        "", NULL, 410 + (long)i, scopeds[i], lens[i]);
+                                        "", NULL, 410 + (long)i, scopeds[i], lens[i], PROTO_FALSE,
+                                        SNMP_V3_AUTH_PARAM_LEN, SNMP_V3_PRIV_PARAM_LEN);
         TEST_ASSERT_TRUE(rl > 0);
         // Engine mismatch -> a discovery Report is emitted regardless of the probe result.
         TEST_ASSERT_TRUE(pc_snmp_v3_process(req, rl, resp, sizeof(resp)) > 0);
@@ -905,9 +907,9 @@ void test_v3_auth_edge_rejections(void)
 
     // authParams length != 24 -> usmStatsWrongDigests Report (short-circuits before HMAC).
     const uint8_t any_scoped[] = {0x30, 0x02, 0x04, 0x00};
-    size_t rl =
-        build_v3_raw_scoped(req, sizeof(req), PROTO_TRUE, v.engine_id, v.engine_id_len, v.boots, v.time, "myuser",
-                            authkey, 420, any_scoped, sizeof(any_scoped), PROTO_FALSE, 16 /*bad authParams len*/);
+    size_t rl = build_v3_raw_scoped(req, sizeof(req), PROTO_TRUE, v.engine_id, v.engine_id_len, v.boots, v.time,
+                                    "myuser", authkey, 420, any_scoped, sizeof(any_scoped), PROTO_FALSE,
+                                    16 /*bad authParams len*/, SNMP_V3_PRIV_PARAM_LEN);
     TEST_ASSERT_TRUE(rl > 0);
     size_t n = pc_snmp_v3_process(req, rl, resp, sizeof(resp));
     TEST_ASSERT_TRUE(n > 0);
@@ -919,7 +921,8 @@ void test_v3_auth_edge_rejections(void)
     // authPriv with a valid digest but msgData that is not an OCTET STRING -> dropped (0).
     const uint8_t not_octet[] = {0x02, 0x01, 0x00};
     rl = build_v3_raw_scoped(req, sizeof(req), PROTO_TRUE, v.engine_id, v.engine_id_len, v.boots, v.time, "myuser",
-                             authkey, 421, not_octet, sizeof(not_octet), PROTO_TRUE /*priv*/);
+                             authkey, 421, not_octet, sizeof(not_octet), PROTO_TRUE /*priv*/, SNMP_V3_AUTH_PARAM_LEN,
+                             SNMP_V3_PRIV_PARAM_LEN);
     TEST_ASSERT_TRUE(rl > 0);
     TEST_ASSERT_EQUAL_UINT(0, pc_snmp_v3_process(req, rl, resp, sizeof(resp)));
 }
@@ -1158,7 +1161,8 @@ void test_v3_scoped_truncated_headers()
     for (unsigned i = 0; i < 3; i++)
     {
         size_t rl = build_v3_raw_scoped(req, sizeof(req), PROTO_TRUE, v.engine_id, v.engine_id_len, v.boots, v.time,
-                                        "myuser", authkey, 540 + (long)i, scopeds[i], lens[i]);
+                                        "myuser", authkey, 540 + (long)i, scopeds[i], lens[i], PROTO_FALSE,
+                                        SNMP_V3_AUTH_PARAM_LEN, SNMP_V3_PRIV_PARAM_LEN);
         TEST_ASSERT_TRUE(rl > 0);
         TEST_ASSERT_EQUAL_UINT(0, pc_snmp_v3_process(req, rl, resp, sizeof(resp)));
     }
@@ -1236,7 +1240,8 @@ void test_v3_oversized_message_is_wrong_digest()
     static uint8_t req[SNMP_MSG_BUF_SIZE + 256];
     uint8_t resp[512];
     size_t rl = build_v3_raw_scoped(req, sizeof(req), PROTO_TRUE, v.engine_id, v.engine_id_len, v.boots, v.time,
-                                    "myuser", authkey, 570, scoped, sizeof(scoped));
+                                    "myuser", authkey, 570, scoped, sizeof(scoped), PROTO_FALSE, SNMP_V3_AUTH_PARAM_LEN,
+                                    SNMP_V3_PRIV_PARAM_LEN);
     TEST_ASSERT_TRUE(rl > SNMP_MSG_BUF_SIZE); // genuinely past the scratch buffer
     size_t n = pc_snmp_v3_process(req, rl, resp, sizeof(resp));
     TEST_ASSERT_TRUE(n > 0);
@@ -1292,7 +1297,8 @@ void test_v3_privacy_parameter_edges()
 
     const uint8_t stub[] = {0x04}; // OCTET STRING tag with no length octet
     rl = build_v3_raw_scoped(req, sizeof(req), PROTO_TRUE, v.engine_id, v.engine_id_len, v.boots, v.time, "myuser",
-                             authkey, 591, stub, sizeof(stub), PROTO_TRUE);
+                             authkey, 591, stub, sizeof(stub), PROTO_TRUE, SNMP_V3_AUTH_PARAM_LEN,
+                             SNMP_V3_PRIV_PARAM_LEN);
     TEST_ASSERT_TRUE(rl > 0);
     TEST_ASSERT_EQUAL_UINT(0, pc_snmp_v3_process(req, rl, resp, sizeof(resp)));
 }
