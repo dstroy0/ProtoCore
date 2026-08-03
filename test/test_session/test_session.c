@@ -94,7 +94,7 @@ void test_tick_does_not_free_fresh_connection()
 // FUNCTION I/O TESTS - server_tick(0)
 // ====================================================================
 
-// tick() must call check_timeouts() BEFORE event drain, so a timed-out
+// tick() must call proto_tcp_check_timeouts() BEFORE event drain, so a timed-out
 // slot is already freed if an EVT_DISCONNECT arrives for the same slot.
 void test_fn_tick_timeout_before_event_drain_ordering()
 {

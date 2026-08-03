@@ -749,7 +749,7 @@ void race_aba_slot_reuse_fresh_timestamp()
     TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)conn_pool[0].state); // must NOT time out
 }
 
-// Double-free: call check_timeouts() on a slot that is already CONN_FREE.
+// Double-free: call proto_tcp_check_timeouts() on a slot that is already CONN_FREE.
 // Must be a no-op - no state corruption and no crash.
 void race_double_free_is_nop()
 {

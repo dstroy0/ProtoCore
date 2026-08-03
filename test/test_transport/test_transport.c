@@ -207,12 +207,12 @@ void test_active_send_not_reaped()
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[1].state);   // reaped (idle)
 }
 
-// pool_init() with a real config uses its conn_timeout_ms instead of the compile-time default.
+// proto_tcp_pool_init() with a real config uses its conn_timeout_ms instead of the compile-time default.
 void test_pool_init_applies_custom_config()
 {
     WebServerConfig cfg;
     cfg.conn_timeout_ms = 12345;
-    pool_init(&cfg);
+    proto_tcp_pool_init(&cfg);
     TEST_ASSERT_EQUAL_UINT32(12345, proto_tcp_conn_timeout_ms);
     proto_tcp_pool_init(NULL); // restore the default for the rest of this test file
 }
@@ -403,7 +403,7 @@ void stress_timeout_arm_recover_cycle()
     }
 }
 
-// Runs check_timeouts() 2000 times against a mix of free, active-fresh,
+// Runs proto_tcp_check_timeouts() 2000 times against a mix of free, active-fresh,
 // and active-stale slots - verifies no crash and final state is correct.
 void stress_check_timeouts_high_call_rate()
 {
@@ -813,7 +813,7 @@ void test_dynamic_listener_lifecycle()
 }
 
 // The live-slot bitmask + ctz allocator (pc_conn_set_state / pc_conn_alloc_free): claim, free, pool-full,
-// lowest-first, and that CONN_CLOSING keeps a slot reserved. setUp() ran pool_init() -> all slots free.
+// lowest-first, and that CONN_CLOSING keeps a slot reserved. setUp() ran proto_tcp_pool_init() -> all slots free.
 void test_freeslot_bitmask_alloc()
 {
     TEST_ASSERT_EQUAL_INT32(0, pc_conn_alloc_free()); // first free is slot 0
@@ -1033,7 +1033,7 @@ void test_stop_aborts_live_slots_and_skips_the_rest()
     }
 }
 
-// check_timeouts()'s CLOSING branch: a slot dwelling in CLOSING survives until
+// proto_tcp_check_timeouts()'s CLOSING branch: a slot dwelling in CLOSING survives until
 // PC_CLOSING_TIMEOUT_MS, then is force-freed (with, and without, a live pcb).
 void test_check_timeouts_reaps_stale_closing_slots()
 {
@@ -1063,7 +1063,7 @@ void test_check_timeouts_reaps_stale_closing_slots()
     TEST_ASSERT_EQUAL_INT(before + 1, mock_abort_call_count()); // only slot 0 had a pcb to abort
 }
 
-// check_timeouts()'s ACTIVE-slot reap path detaches and aborts a REAL pcb (not just the
+// proto_tcp_check_timeouts()'s ACTIVE-slot reap path detaches and aborts a REAL pcb (not just the
 // pcb==NULL case the constants/stress tests above already cover).
 void test_check_timeouts_detaches_and_aborts_a_real_pcb()
 {
@@ -1376,7 +1376,7 @@ void test_accept_cb_claims_slot_and_wires_connection()
 
     TEST_ASSERT_EQUAL_INT(PC_NET_OK, listener_accept_cb((void *)(uintptr_t)0, &fake, PC_NET_OK));
 
-    TcpConn *c = &conn_pool[0]; // pool_init() in setUp() guarantees slot 0 is the lowest free
+    TcpConn *c = &conn_pool[0]; // proto_tcp_pool_init() in setUp() guarantees slot 0 is the lowest free
     TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)c->state);
     TEST_ASSERT_EQUAL_PTR(&fake, c->pcb);
     TEST_ASSERT_EQUAL_UINT32(9001, c->last_activity_ms);
