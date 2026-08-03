@@ -48,6 +48,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`fb6eb2f`](https://github.com/dstroy0/ProtoCore/commit/fb6eb2f46c31f0d734411d5e9ca04a8a40c9a15d))
 - update CHANGELOG.md [skip ci] ([`e74c164`](https://github.com/dstroy0/ProtoCore/commit/e74c1642e03de357df71b60ee1147cb9b93df906))
 - update test report + coverage [skip ci] ([`862b804`](https://github.com/dstroy0/ProtoCore/commit/862b8043f655280494239b2609372ea0b30f1332))
 - update CHANGELOG.md [skip ci] ([`4d01c56`](https://github.com/dstroy0/ProtoCore/commit/4d01c56b26b26c7d945456ea24d92fe18aecf70e))
@@ -303,6 +304,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- move the WebDAV suite onto the littlefs fixture ([`4a11475`](https://github.com/dstroy0/ProtoCore/commit/4a11475068f4381fa9ce4737ff2fa7573d5c3abc))
 - back the host mount fixture with real littlefs ([`26c6ba4`](https://github.com/dstroy0/ProtoCore/commit/26c6ba4781b24dfa857a5de7f791eef60796af46))
 - depend on littlefs, the filesystem the device runs ([`ec4ec8b`](https://github.com/dstroy0/ProtoCore/commit/ec4ec8be659e56e0b7d7e2b998a94e504bcccdf6))
 - build the signaling TU for the upload suite ([`8f0555f`](https://github.com/dstroy0/ProtoCore/commit/8f0555f811c3c2dfaf1e2acd91aef2d06c74cd1e))
