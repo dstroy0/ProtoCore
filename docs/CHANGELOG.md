@@ -48,6 +48,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update test report + coverage [skip ci] ([`862b804`](https://github.com/dstroy0/ProtoCore/commit/862b8043f655280494239b2609372ea0b30f1332))
+- update CHANGELOG.md [skip ci] ([`4d01c56`](https://github.com/dstroy0/ProtoCore/commit/4d01c56b26b26c7d945456ea24d92fe18aecf70e))
 - update CHANGELOG.md [skip ci] ([`1e816ab`](https://github.com/dstroy0/ProtoCore/commit/1e816abe968cc2736e7a22be58718880f8a06f5c))
 - update CHANGELOG.md [skip ci] ([`e21315c`](https://github.com/dstroy0/ProtoCore/commit/e21315cba6aa77e7bd6459eb189c8c5bd0479973))
 - update CHANGELOG.md [skip ci] ([`5607ab2`](https://github.com/dstroy0/ProtoCore/commit/5607ab2667c17f6a7fd6bcfcedd5c80efc31981c))
@@ -209,6 +211,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`aa3d2f2`](https://github.com/dstroy0/ProtoCore/commit/aa3d2f2d4bbc61051b7d440bc6169d26f0a49d7e))
 - correct what the SSH-mount entry claims is already tested ([`95e96ce`](https://github.com/dstroy0/ProtoCore/commit/95e96ce90f1b18830490b67687a79032c8bd1fb7))
 - roadmap the SSH mount and the multipoint mnt it needs ([`39a1a99`](https://github.com/dstroy0/ProtoCore/commit/39a1a99a37bf1b1ede7b69f13f5ccac785bd8c96))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`cc3e721`](https://github.com/dstroy0/ProtoCore/commit/cc3e7213562864d8b3389377526eb0a5333a648c))
@@ -299,6 +302,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- depend on littlefs, the filesystem the device runs ([`ec4ec8b`](https://github.com/dstroy0/ProtoCore/commit/ec4ec8be659e56e0b7d7e2b998a94e504bcccdf6))
 - build the signaling TU for the upload suite ([`8f0555f`](https://github.com/dstroy0/ProtoCore/commit/8f0555f811c3c2dfaf1e2acd91aef2d06c74cd1e))
 - build the route table and mount seam for the upload suite ([`21f6be5`](https://github.com/dstroy0/ProtoCore/commit/21f6be5031001e3516c19c86a4141bbd27edea8d))
 - move the upload suite onto the mount seam ([`74f9f78`](https://github.com/dstroy0/ProtoCore/commit/74f9f785a2d85804ac1880e7a0d4489ddf73b8bd))
