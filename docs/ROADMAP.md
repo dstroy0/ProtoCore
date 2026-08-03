@@ -798,10 +798,12 @@ Built-in radio:
       beside a card and every reader above it stays unchanged. The seam already allows it: mnt is
       divorced from the store at the mount point, the way a VFS is, and RAM is the buffer between
       them, so what a mount points at is not the accessor's business. The wire half is already here
-      and host-tested - `application/sftp` builds and walks SSH_FXP_\* frames, `application/scp`
-      the RCP stream - so what is missing is the client session that issues the requests and the
-      adapter that presents it as the fourteen backend calls. Wants the multipoint mnt below first:
-      a remote store is the case where mounting one thing must not unmount another.
+      and host-tested: `application/sftp` builds and walks SSH_FXP_\* frames (`native_ssh_sftp`) and
+      `application/scp` the RCP stream (`native_scp`). Both are written from the device's side as
+      the server, though, so what is missing is the client half - the session that issues requests
+      rather than answering them - and the adapter presenting it as the fourteen backend calls.
+      Wants the multipoint mnt below first: a remote store is the case where mounting one thing
+      must not unmount another.
 - [ ] **Multipoint mnt** (M) - `pc_mnt_mount()` records one backend today, so a second call replaces
       the first and every root resolves through whichever store was mounted last. Register mount
       points instead, resolve a path to the longest match, and let the backend a caller names select
