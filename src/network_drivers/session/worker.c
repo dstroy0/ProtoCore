@@ -11,7 +11,6 @@
  */
 
 #include "network_drivers/session/worker.h"
-#include <stdatomic.h>
 
 #include "board_drivers/board_profiles/pc_platform.h" // the target's queues and tasks, under our names
 // Worker identity lives in mmgr/arena.c, with the pools it indexes.

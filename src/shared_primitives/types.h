@@ -37,8 +37,9 @@
 #error "include protocore_config.h instead of this file - it is the entry point that sets the widths"
 #endif
 
-#include <assert.h> // C11 spells static_assert here; C++ has it built in
-#include <stddef.h> // size_t, and the one place it enters the library
+#include <assert.h>    // C11 spells static_assert here; C++ has it built in
+#include <stdatomic.h> // the memory model: every cross-thread field in this library is _Atomic
+#include <stddef.h>    // size_t, and the one place it enters the library
 #include <stdint.h>
 
 /// @name Fixed-width integers

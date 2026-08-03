@@ -19,7 +19,6 @@
  */
 
 #include "shared_primitives/rawmemcpy.h" // proto_raw_read: the producer span move
-#include <stdatomic.h>
 
 // ---------------------------------------------------------------------------
 // Cross-thread field access
