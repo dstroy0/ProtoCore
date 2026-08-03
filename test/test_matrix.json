@@ -3409,6 +3409,12 @@
       "flags": [],
       "src": [],
       "tests": ["test_swar"]
+    },
+    "native_lfs_mock": {
+      "desc": "The littlefs-backed pc_mnt_backend used by the host tests that need a real tree\n(test/mocks/lfs_mock.h): round-trip, seek, directory listing, stat, rename/remove,\nappend, and a full volume refusing rather than pretending. Real littlefs on a RAM\nblock device, so the host answers the way the device does.",
+      "flags": ["-DPC_ENABLE_MNT=1"],
+      "src": ["-<*>", "+<server/filesystem/mnt.c>"],
+      "tests": ["test_lfs_mock"]
     }
   }
 }
