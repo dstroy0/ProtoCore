@@ -3,7 +3,7 @@
 //
 // On-device CCOUNT microbenchmark for the HTTP byte-range parser (server/http_range):
 // http_parse_byte_range() decodes a `Range: bytes=...` header against a known resource size - the
-// per-request hot op for 206 Partial Content. Pure. Build/flash: pio run -d performance_benching/server/http_range -t
+// per-request hot op for 206 Partial Content. Pure. Build/flash: pio run -d performance_benching/network_drivers/application/http_range -t
 // upload
 #include "device_bench.h"
 #include "network_drivers/application/http_range.h"

@@ -266,7 +266,7 @@ the pure, transport-free hot op behind every `pc_sse_send()` / `pc_sse_broadcast
 
 `pc_webdav_ms_entry()` builds one `<response>` element (RFC 4918 Multi-Status) for a resource; it runs
 once per directory child on every PROPFIND, and internally XML-escapes the href. Pure (no filesystem),
-so it benches standalone. Host figures from [`performance_benching/bench_webdav.cpp`](../performance_benching/services/webdav/); the
+so it benches standalone. Host figures from [`performance_benching/bench_webdav.cpp`](../performance_benching/network_drivers/application/webdav/); the
 device figure is the rig `/bench` CCOUNT op (N=20000 warm).
 
 | Operation                                | Host ns/op | Host MB/s | ESP32-S3 cyc/op | ESP32-S3 ns/op |
