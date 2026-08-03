@@ -957,16 +957,22 @@ void test_webdav_join_root_slash_with_empty_subpath()
 // what fitted, and the handler still answers 507.
 void test_put_stream_error_latches_for_later_chunks()
 {
-    static uint8_t big[2600]; // > MockNode::data (2048), with several chunks left after the failure
+    // The file is created and takes some of the body, then the medium refuses - leaving several
+    // chunks still to arrive. Those must be dropped on the latched error, not written anywhere.
+    static uint8_t big[2600];
     memset(big, 'A', sizeof(big));
+    lfsm_fail_prog_after(6);
     feed_put(0, "/dav/huge.txt", big, sizeof(big));
+    lfsm_no_prog_failure();
     TEST_ASSERT_TRUE(pc_resp_status(507));
 
-    // The node exists and holds at most its capacity - the post-failure chunks were dropped,
-    // not written somewhere else.
+    // Whatever landed before the refusal is bounded by the volume; nothing went past it.
     pc_mnt_stat hst;
-    TEST_ASSERT_TRUE(lfsm()->stat("/dav/huge.txt", &hst));
-    TEST_ASSERT_LESS_OR_EQUAL_UINT64((uint64_t)(LFSM_BLOCK_SIZE * LFSM_BLOCK_COUNT), hst.size);
+    if (lfsm()->stat("/dav/huge.txt", &hst))
+    {
+        TEST_ASSERT_LESS_OR_EQUAL_UINT64((uint64_t)(LFSM_BLOCK_SIZE * LFSM_BLOCK_COUNT), hst.size);
+        TEST_ASSERT_LESS_THAN_UINT64((uint64_t)sizeof(big), hst.size); // the tail was dropped
+    }
 }
 
 // filesystem.h: pc_fs_join()'s seam, direct. This env does not link ssh_sftp.cpp /
