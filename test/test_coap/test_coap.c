@@ -874,10 +874,10 @@ void test_well_known_core_discovery()
     TEST_ASSERT_EQUAL_UINT((uint16_t)COAP_CF_LINK, d.content_format);
     TEST_ASSERT_FALSE(g_called); // discovery is synthesized, not dispatched to a handler
     // The body must list the registered resources in Link Format.
-    string body((const char *)d.payload, d.payload_len);
-    TEST_ASSERT_TRUE(body.find("</temp>") != string::npos);
-    TEST_ASSERT_TRUE(body.find("</ro>") != string::npos);
-    TEST_ASSERT_TRUE(body.find("</a/b>") != string::npos);
+    std::string body((const char *)d.payload, d.payload_len);
+    TEST_ASSERT_TRUE(body.find("</temp>") != std::string::npos);
+    TEST_ASSERT_TRUE(body.find("</ro>") != std::string::npos);
+    TEST_ASSERT_TRUE(body.find("</a/b>") != std::string::npos);
 }
 
 // A non-GET to /.well-known/core is 4.05 Method Not Allowed (discovery is read-only).

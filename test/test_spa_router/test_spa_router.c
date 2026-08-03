@@ -145,15 +145,22 @@ static const pc_ui_fragment FRAGS[] = {
 };
 
 // Drain a stream through a buffer of exactly `chunk` bytes.
-static string drain(pc_ui_stream *s, size_t chunk)
+static const char *drain(pc_ui_stream *s, size_t chunk)
 {
-    string out;
+    static char out[2048];
     char buf[64];
+    size_t used = 0;
     size_t n;
     while ((n = pc_ui_stream_next(s, buf, chunk < sizeof(buf) ? chunk : sizeof(buf))) > 0)
     {
-        out.append(buf, n);
+        if (used + n >= sizeof(out))
+        {
+            break;
+        }
+        memcpy(out + used, buf, n);
+        used += n;
     }
+    out[used] = 0;
     return out;
 }
 
@@ -162,7 +169,7 @@ void test_stream_includes_only_passing_fragments(void)
     proto_bool alarm = PROTO_FALSE;
     pc_ui_stream s;
     pc_ui_stream_begin(&s, FRAGS, 4, &alarm);
-    TEST_ASSERT_EQUAL_STRING("<h1>HMI</h1><button>stop</button>", drain(&s, 64).c_str());
+    TEST_ASSERT_EQUAL_STRING("<h1>HMI</h1><button>stop</button>", drain(&s, 64));
     TEST_ASSERT_TRUE(pc_ui_stream_done(&s));
 }
 
@@ -171,7 +178,7 @@ void test_stream_reflects_the_predicate_state(void)
     proto_bool alarm = PROTO_TRUE;
     pc_ui_stream s;
     pc_ui_stream_begin(&s, FRAGS, 4, &alarm);
-    TEST_ASSERT_EQUAL_STRING("<h1>HMI</h1><p>ALARM</p><button>stop</button>", drain(&s, 64).c_str());
+    TEST_ASSERT_EQUAL_STRING("<h1>HMI</h1><p>ALARM</p><button>stop</button>", drain(&s, 64));
 }
 
 void test_stream_is_chunk_size_independent(void)
@@ -183,7 +190,7 @@ void test_stream_is_chunk_size_independent(void)
     {
         pc_ui_stream s;
         pc_ui_stream_begin(&s, FRAGS, 4, &alarm);
-        TEST_ASSERT_EQUAL_STRING("<h1>HMI</h1><p>ALARM</p><button>stop</button>", drain(&s, chunk).c_str());
+        TEST_ASSERT_EQUAL_STRING("<h1>HMI</h1><p>ALARM</p><button>stop</button>", drain(&s, chunk));
         TEST_ASSERT_TRUE(pc_ui_stream_done(&s));
     }
 }
@@ -212,7 +219,7 @@ void test_stream_skips_a_null_body(void)
     static const pc_ui_fragment withnull[] = {{"a", NULL, NULL}, {"b", "<p>b</p>", NULL}};
     pc_ui_stream s;
     pc_ui_stream_begin(&s, withnull, 2, NULL);
-    TEST_ASSERT_EQUAL_STRING("<p>b</p>", drain(&s, 64).c_str());
+    TEST_ASSERT_EQUAL_STRING("<p>b</p>", drain(&s, 64));
 }
 
 void test_stream_bad_args_do_not_crash(void)

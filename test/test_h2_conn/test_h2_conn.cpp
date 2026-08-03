@@ -25,10 +25,10 @@ void tearDown()
 struct Cap
 {
     std::vector<uint8_t> out;
-    std::vector<pair<string, string>> req_headers;
+    std::vector<std::pair<string, string>> req_headers;
     std::vector<uint32_t> headers_end;
     proto_bool last_end_stream = PROTO_FALSE;
-    string body;
+    std::string body;
     proto_bool data_end = PROTO_FALSE;
 };
 static void cap_write(void *io, const uint8_t *d, size_t n)
@@ -168,8 +168,8 @@ void test_respond_roundtrip()
     // Walk the frames; decode the response HEADERS block and check the DATA.
     HpackDynTable dt;
     pc_hpack_dyn_init(&dt, 4096);
-    std::vector<pair<string, string>> rh;
-    string data;
+    std::vector<std::pair<string, string>> rh;
+    std::string data;
     proto_bool data_end = PROTO_FALSE;
     size_t i = 0;
     while (i + 9 <= cap.out.size())
@@ -182,7 +182,7 @@ void test_respond_roundtrip()
             char scratch[256];
             struct RC
             {
-                std::vector<pair<string, string>> *v;
+                std::vector<std::pair<string, string>> *v;
             } rc{&rh};
             pc_hpack_decode(
                 &dt, pl, h.length, scratch, sizeof scratch,
@@ -625,7 +625,7 @@ void test_h2_respond_content_type_too_big()
     H2Conn c;
     establish(c, cap);
     open_stream(c, 1);
-    string big_ct(1000, 'a');
+    std::string big_ct(1000, 'a');
     TEST_ASSERT_FALSE(pc_h2_conn_respond(&c, 1, 200, big_ct.c_str(), "x", 1));
 }
 
@@ -740,7 +740,7 @@ void test_h2_respond_default_chunk_size()
     open_stream(c, 1);
     c.peer.max_frame_size = 0; // unset -> default 16384
     cap.out.clear();
-    string body(1000, 'z');
+    std::string body(1000, 'z');
     TEST_ASSERT_TRUE(pc_h2_conn_respond(&c, 1, 200, NULL, body.data(), body.size()));
     TEST_ASSERT_EQUAL_INT(1, count_frames(cap.out, H2_DATA));
 }
@@ -758,7 +758,7 @@ void test_h2_respond_content_length_no_room()
     // '&' has an 8-bit Huffman code, so the value is stored literally and its encoded size is
     // predictable: 2 (indexed name) + 2 (length prefix) + 250 = 254 of the 255 bytes left after
     // ":status: 200", leaving 1 byte - too few for content-length's 2-byte indexed name alone.
-    string ct(250, '&');
+    std::string ct(250, '&');
     TEST_ASSERT_FALSE(pc_h2_conn_respond(&c, 1, 200, ct.c_str(), "hi", 2));
     TEST_ASSERT_EQUAL_INT(0, count_frames(cap.out, H2_HEADERS)); // nothing emitted
     // A short content-type on the same connection still works, so the stream itself is fine.

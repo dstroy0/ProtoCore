@@ -10,10 +10,23 @@
 #include "services/iot/statsd/statsd.h"
 #include <unity.h>
 
-static string captured()
+// The captured datagram as a NUL-terminated string. The capture is length-counted, so this
+// terminates a copy rather than assuming the payload carries one.
+static const char *captured(void)
 {
+    static char buf[512];
     const uint8_t *p = pc_udp_captured();
-    return p ? string((const char *)p, pc_udp_captured_len()) : string();
+    size_t n = p ? pc_udp_captured_len() : 0;
+    if (n >= sizeof(buf))
+    {
+        n = sizeof(buf) - 1;
+    }
+    if (n)
+    {
+        memcpy(buf, p, n);
+    }
+    buf[n] = 0;
+    return buf;
 }
 
 void setUp()
@@ -78,43 +91,43 @@ void test_emit_counter_and_negative()
 {
     pc_statsd_begin("collector.local", 8125, NULL);
     pc_statsd_count("api.hits", 3);
-    TEST_ASSERT_EQUAL_STRING("api.hits:3|c", captured().c_str());
+    TEST_ASSERT_EQUAL_STRING("api.hits:3|c", captured());
     pc_udp_capture_reset();
     pc_statsd_count("api.hits", -4); // counters may go negative
-    TEST_ASSERT_EQUAL_STRING("api.hits:-4|c", captured().c_str());
+    TEST_ASSERT_EQUAL_STRING("api.hits:-4|c", captured());
 }
 
 void test_emit_gauge_and_delta()
 {
     pc_statsd_begin("h", 0, NULL); // 0 -> default port
     pc_statsd_gauge("heap.free", 200000);
-    TEST_ASSERT_EQUAL_STRING("heap.free:200000|g", captured().c_str());
+    TEST_ASSERT_EQUAL_STRING("heap.free:200000|g", captured());
     pc_udp_capture_reset();
     pc_statsd_gauge_delta("conns", 5);
-    TEST_ASSERT_EQUAL_STRING("conns:+5|g", captured().c_str());
+    TEST_ASSERT_EQUAL_STRING("conns:+5|g", captured());
     pc_udp_capture_reset();
     pc_statsd_gauge_delta("conns", -2);
-    TEST_ASSERT_EQUAL_STRING("conns:-2|g", captured().c_str());
+    TEST_ASSERT_EQUAL_STRING("conns:-2|g", captured());
 }
 
 void test_emit_timing_set_sampled()
 {
     pc_statsd_begin("h", 8125, NULL);
     pc_statsd_timing("db.query", 120);
-    TEST_ASSERT_EQUAL_STRING("db.query:120|ms", captured().c_str());
+    TEST_ASSERT_EQUAL_STRING("db.query:120|ms", captured());
     pc_udp_capture_reset();
     pc_statsd_set("uniques", "device-7");
-    TEST_ASSERT_EQUAL_STRING("uniques:device-7|s", captured().c_str());
+    TEST_ASSERT_EQUAL_STRING("uniques:device-7|s", captured());
     pc_udp_capture_reset();
     pc_statsd_count_sampled("rare", 1, 0.25f);
-    TEST_ASSERT_EQUAL_STRING("rare:1|c|@0.25", captured().c_str());
+    TEST_ASSERT_EQUAL_STRING("rare:1|c|@0.25", captured());
 }
 
 void test_emit_global_tags()
 {
     pc_statsd_begin("h", 8125, "env:prod,region:us");
     pc_statsd_count("x", 1);
-    TEST_ASSERT_EQUAL_STRING("x:1|c|#env:prod,region:us", captured().c_str());
+    TEST_ASSERT_EQUAL_STRING("x:1|c|#env:prod,region:us", captured());
 }
 
 void test_emit_noop_until_begin()
@@ -182,10 +195,10 @@ void test_emit_zero_value_and_set_null_member()
 {
     pc_statsd_begin("h", 8125, NULL);
     pc_statsd_timing("db.zero", 0);
-    TEST_ASSERT_EQUAL_STRING("db.zero:0|ms", captured().c_str());
+    TEST_ASSERT_EQUAL_STRING("db.zero:0|ms", captured());
     pc_udp_capture_reset();
     pc_statsd_set("uniques", NULL); // null member -> emitted as an empty value, not a crash
-    TEST_ASSERT_EQUAL_STRING("uniques:|s", captured().c_str());
+    TEST_ASSERT_EQUAL_STRING("uniques:|s", captured());
 }
 
 void test_emit_overlong_name_is_noop()
