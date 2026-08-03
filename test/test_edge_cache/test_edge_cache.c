@@ -154,11 +154,11 @@ static void test_key_digest_deterministic_and_distinct()
 // --- Vary secondary key --------------------------------------------------------------------------
 
 // Mock request-header lookup: a tiny name->value table.
-struct MockHdr
+typedef struct
 {
     const char *name;
     const char *value;
-};
+} MockHdr;
 static const MockHdr *g_hdrs = NULL;
 static size_t g_hdr_count = 0;
 

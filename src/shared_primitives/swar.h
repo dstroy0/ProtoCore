@@ -62,7 +62,9 @@ typedef uint8_t pc_swar_word;
 
 #define PC_SWAR_BYTES ((size_t)(PROTO_SWAR_BITS / 8u)) ///< lanes per word
 
-_Static_assert(sizeof(pc_swar_word) * 8u == PROTO_SWAR_BITS, "the lane carrier must be exactly PROTO_SWAR_BITS wide");
+// `static_assert`, not C11's `_Static_assert`: this header rides in through protocore.h to the
+// sketches, which are C++, where the underscored spelling is not a keyword. See types.h.
+static_assert(sizeof(pc_swar_word) * 8u == PROTO_SWAR_BITS, "the lane carrier must be exactly PROTO_SWAR_BITS wide");
 
 // One bit per lane, derived from the width rather than written out: the all-ones word divided by
 // 0xFF leaves exactly bit 0 of each lane (0xFFFFFFFF / 0xFF == 0x01010101), and the other two masks
