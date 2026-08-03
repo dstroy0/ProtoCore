@@ -273,6 +273,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- convert the defer and presentation suites to C ([`b0d3177`](https://github.com/dstroy0/ProtoCore/commit/b0d317764278d3810e6ac4e54ce5f1fc8618c72b))
 - enable PC_ENABLE_AUTH for the auth suites ([`102cc67`](https://github.com/dstroy0/ProtoCore/commit/102cc67f86b910c47b3c54d97976f1c842486a52))
 - finish the auth arity and give the host seam a settable send buffer ([`84a9c6c`](https://github.com/dstroy0/ProtoCore/commit/84a9c6c244e56e17c063685267ba3dff4d84f906))
 - match the arities C left behind ([`201dcb5`](https://github.com/dstroy0/ProtoCore/commit/201dcb52a4faf6d9294c4b679bc35677a1ee80d6))
