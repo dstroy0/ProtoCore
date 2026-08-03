@@ -21,7 +21,7 @@ static void test_parse_cmd_sink()
 {
     char path[128];
     ScpMode m = pc_scp_parse_cmd("scp -t /gcode/prog.nc", strlen("scp -t /gcode/prog.nc"), path, sizeof(path));
-    TEST_ASSERT_EQUAL(SINK, m);
+    TEST_ASSERT_EQUAL(SCP_MODE_SINK, m);
     TEST_ASSERT_EQUAL_STRING("/gcode/prog.nc", path);
 }
 
@@ -29,7 +29,7 @@ static void test_parse_cmd_source_with_flags()
 {
     char path[128];
     ScpMode m = pc_scp_parse_cmd("scp -v -p -f /a/b.txt", strlen("scp -v -p -f /a/b.txt"), path, sizeof(path));
-    TEST_ASSERT_EQUAL(SOURCE, m);
+    TEST_ASSERT_EQUAL(SCP_MODE_SOURCE, m);
     TEST_ASSERT_EQUAL_STRING("/a/b.txt", path);
 }
 
@@ -37,10 +37,10 @@ static void test_parse_cmd_invalid()
 {
     char path[128];
     // no -t/-f role
-    TEST_ASSERT_EQUAL(INVALID, pc_scp_parse_cmd("scp /x", strlen("scp /x"), path, sizeof(path)));
+    TEST_ASSERT_EQUAL(SCP_MODE_INVALID, pc_scp_parse_cmd("scp /x", strlen("scp /x"), path, sizeof(path)));
     // path too long for the buffer
     char small[4];
-    TEST_ASSERT_EQUAL(INVALID,
+    TEST_ASSERT_EQUAL(SCP_MODE_INVALID,
                       pc_scp_parse_cmd("scp -t /long/path", strlen("scp -t /long/path"), small, sizeof(small)));
 }
 
@@ -102,9 +102,9 @@ static void test_build_cline_roundtrip()
 static void test_parse_cmd_null_args()
 {
     char path[128];
-    TEST_ASSERT_EQUAL(INVALID, pc_scp_parse_cmd(NULL, 9, path, sizeof(path)));
-    TEST_ASSERT_EQUAL(INVALID, pc_scp_parse_cmd("scp -t /x", 9, NULL, sizeof(path)));
-    TEST_ASSERT_EQUAL(INVALID, pc_scp_parse_cmd("scp -t /x", 9, path, 0));
+    TEST_ASSERT_EQUAL(SCP_MODE_INVALID, pc_scp_parse_cmd(NULL, 9, path, sizeof(path)));
+    TEST_ASSERT_EQUAL(SCP_MODE_INVALID, pc_scp_parse_cmd("scp -t /x", 9, NULL, sizeof(path)));
+    TEST_ASSERT_EQUAL(SCP_MODE_INVALID, pc_scp_parse_cmd("scp -t /x", 9, path, 0));
 }
 
 // Trailing whitespace is consumed without inventing an empty final token.
@@ -112,7 +112,7 @@ static void test_parse_cmd_trailing_spaces()
 {
     char path[128];
     const char *c = "scp -t /x   ";
-    TEST_ASSERT_EQUAL(SINK, pc_scp_parse_cmd(c, strlen(c), path, sizeof(path)));
+    TEST_ASSERT_EQUAL(SCP_MODE_SINK, pc_scp_parse_cmd(c, strlen(c), path, sizeof(path)));
     TEST_ASSERT_EQUAL_STRING("/x", path);
 }
 
@@ -121,7 +121,7 @@ static void test_parse_cmd_single_char_path()
 {
     char path[128];
     const char *c = "scp -t a";
-    TEST_ASSERT_EQUAL(SINK, pc_scp_parse_cmd(c, strlen(c), path, sizeof(path)));
+    TEST_ASSERT_EQUAL(SCP_MODE_SINK, pc_scp_parse_cmd(c, strlen(c), path, sizeof(path)));
     TEST_ASSERT_EQUAL_STRING("a", path);
 }
 
@@ -129,8 +129,8 @@ static void test_parse_cmd_single_char_path()
 static void test_parse_cmd_flag_without_path()
 {
     char path[128];
-    TEST_ASSERT_EQUAL(INVALID, pc_scp_parse_cmd("-t", 2, path, sizeof(path)));
-    TEST_ASSERT_EQUAL(INVALID, pc_scp_parse_cmd("   ", 3, path, sizeof(path)));
+    TEST_ASSERT_EQUAL(SCP_MODE_INVALID, pc_scp_parse_cmd("-t", 2, path, sizeof(path)));
+    TEST_ASSERT_EQUAL(SCP_MODE_INVALID, pc_scp_parse_cmd("   ", 3, path, sizeof(path)));
 }
 
 // The C-record header guards: null line and zero length.
