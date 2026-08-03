@@ -63,7 +63,7 @@ static void push_bytes(uint8_t slot, const char *data)
 void setUp()
 {
     set_millis(0);
-    DeterministicAsyncTCP::pool_init();
+    proto_tcp_pool_init(NULL);
     for (int i = 0; i < MAX_CONNS; i++)
     {
         conn_pool[i] = (TcpConn){0};

@@ -29,8 +29,8 @@ static void on_event(uint8_t slot, ConnState olds, ConnState news, pc_conn_reaso
 void setUp()
 {
     set_millis(0);
-    DeterministicAsyncTCP::pool_init();
-    listener_add(0, 80, PROTO_HTTP);
+    proto_tcp_pool_init(NULL);
+    listener_add(0, 80, PROTO_HTTP, PROTO_FALSE);
     pc_conn_on_event(on_event);
     pc_conn_counters_reset();
     g_calls = 0;
@@ -130,7 +130,7 @@ void test_recv_fin_counts_remote_close()
     struct tcp_pcb pcb;
     conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].pcb = &pcb;
-    lowlevel_recv_cb(&conn_pool[0], &pcb, NULL, ERR_OK); // null pbuf = FIN
+    lowlevel_recv_cb(&conn_pool[0], &pcb, NULL, PC_NET_OK); // null pbuf = FIN
     TEST_ASSERT_EQUAL_UINT32(1, pc_conn_counters_get().closes_remote);
     TEST_ASSERT_EQUAL(PC_CONN_R_CLOSE_REMOTE, g_reason);
 }
@@ -139,7 +139,7 @@ void test_err_cb_counts_error_close()
 {
     conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].pcb = NULL;
-    lowlevel_err_cb(&conn_pool[0], ERR_ABRT);
+    lowlevel_err_cb(&conn_pool[0], PC_NET_ERR_ABRT);
     TEST_ASSERT_EQUAL_UINT32(1, pc_conn_counters_get().closes_error);
     TEST_ASSERT_EQUAL(PC_CONN_R_ERROR, g_reason);
 }
@@ -151,7 +151,7 @@ void test_timeout_sweep_counts_timeout()
     conn_pool[0].owner = 0;
     conn_pool[0].last_activity_ms = 0;
     set_millis(CONN_TIMEOUT_MS + 1);
-    DeterministicAsyncTCP::check_timeouts(0);
+    proto_tcp_check_timeouts(0);
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
     TEST_ASSERT_EQUAL_UINT32(1, pc_conn_counters_get().closes_timeout);
     TEST_ASSERT_EQUAL(PC_CONN_R_TIMEOUT, g_reason);
@@ -203,8 +203,8 @@ void test_backpressure_counts_when_ring_full()
     struct pbuf p;
     memset(&p, 0, sizeof(p));
     p.tot_len = RX_BUF_SIZE * 2; // larger than the whole ring -> refused
-    err_t rc = lowlevel_recv_cb(&conn_pool[0], NULL, &p, ERR_OK);
-    TEST_ASSERT_EQUAL(ERR_MEM, rc);
+    err_t rc = lowlevel_recv_cb(&conn_pool[0], NULL, &p, PC_NET_OK);
+    TEST_ASSERT_EQUAL(PC_NET_ERR_MEM, rc);
     TEST_ASSERT_EQUAL_UINT32(1, pc_conn_counters_get().backpressure);
     TEST_ASSERT_EQUAL(PC_CONN_R_BACKPRESSURE, g_reason);
 }
@@ -270,12 +270,12 @@ void test_closing_timeout_reaps_stuck_slot()
 
     // Before the bound: not reaped.
     set_millis(1000 + PC_CLOSING_TIMEOUT_MS - 1);
-    DeterministicAsyncTCP::check_timeouts(0);
+    proto_tcp_check_timeouts(0);
     TEST_ASSERT_EQUAL(CONN_CLOSING, (ConnState)conn_pool[0].state);
 
     // Past the bound: the sweep force-frees it (no pool leak).
     set_millis(1000 + PC_CLOSING_TIMEOUT_MS + 1);
-    DeterministicAsyncTCP::check_timeouts(0);
+    proto_tcp_check_timeouts(0);
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
     TEST_ASSERT_EQUAL_UINT32(0, pc_conn_counters_get().closing_gauge);
 }
@@ -290,7 +290,7 @@ void test_stop_posts_abort_transition_for_each_live_slot()
     conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].pcb = &pcb;
 
-    DeterministicAsyncTCP::stop();
+    proto_tcp_stop();
     TEST_ASSERT_EQUAL(PC_CONN_R_ABORT, g_reason);
     TEST_ASSERT_EQUAL_UINT32(1, pc_conn_counters_get().closes_abort);
 }
@@ -309,7 +309,7 @@ void test_err_cb_during_closing_counts_drained_not_error()
     TEST_ASSERT_EQUAL(CONN_CLOSING, (ConnState)conn_pool[0].state);
     pc_conn_counters_reset();
 
-    lowlevel_err_cb(&conn_pool[0], ERR_ABRT);
+    lowlevel_err_cb(&conn_pool[0], PC_NET_ERR_ABRT);
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
     TEST_ASSERT_NULL(conn_pool[0].pcb);
     TEST_ASSERT_EQUAL(PC_CONN_R_DRAINED, g_reason);
@@ -338,7 +338,7 @@ void test_enqueue_failure_from_recv_cb_counts_defer_drop()
     p.payload = &byte;
     p.len = 1;
     p.tot_len = 1;
-    TEST_ASSERT_EQUAL_INT(ERR_OK, lowlevel_recv_cb(&conn_pool[0], &pcb, &p, ERR_OK));
+    TEST_ASSERT_EQUAL_INT(PC_NET_OK, lowlevel_recv_cb(&conn_pool[0], &pcb, &p, PC_NET_OK));
     TEST_ASSERT_EQUAL_UINT32(1, pc_conn_counters_get().defer_drops);
     TEST_ASSERT_EQUAL(PC_CONN_R_DEFER_DROP, g_reason);
 }
@@ -350,7 +350,7 @@ void test_enqueue_failure_from_recv_cb_counts_defer_drop()
 void test_accept_cb_posts_accept_transition()
 {
     struct tcp_pcb pcb = {};
-    TEST_ASSERT_EQUAL_INT(ERR_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb, ERR_OK));
+    TEST_ASSERT_EQUAL_INT(PC_NET_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb, PC_NET_OK));
     TEST_ASSERT_EQUAL(PC_CONN_R_ACCEPT, g_reason);
     TEST_ASSERT_EQUAL_UINT32(1, pc_conn_counters_get().accepts);
 }
@@ -362,7 +362,7 @@ void test_accept_cb_enqueue_failure_posts_defer_drop()
 {
     listener_pool[0].active = false;
     struct tcp_pcb pcb = {};
-    TEST_ASSERT_EQUAL_INT(ERR_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb, ERR_OK));
+    TEST_ASSERT_EQUAL_INT(PC_NET_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb, PC_NET_OK));
     TEST_ASSERT_EQUAL(PC_CONN_R_DEFER_DROP, g_reason);
     TEST_ASSERT_EQUAL_UINT32(1, pc_conn_counters_get().defer_drops);
     TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)conn_pool[0].state); // still claimed
@@ -381,8 +381,8 @@ void test_recv_during_closing_is_drained_not_processed()
     struct pbuf p;
     memset(&p, 0, sizeof(p));
     p.tot_len = 8;
-    err_t rc = lowlevel_recv_cb(&conn_pool[0], &pcb, &p, ERR_OK);
-    TEST_ASSERT_EQUAL(ERR_OK, rc);
+    err_t rc = lowlevel_recv_cb(&conn_pool[0], &pcb, &p, PC_NET_OK);
+    TEST_ASSERT_EQUAL(PC_NET_OK, rc);
     TEST_ASSERT_EQUAL(CONN_CLOSING, (ConnState)conn_pool[0].state);
 }
 

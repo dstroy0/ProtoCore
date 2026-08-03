@@ -77,7 +77,7 @@ static void test_conn_set_dscp_rejects_bad_slot()
 
 static void test_listen_set_dscp_override_and_sentinel()
 {
-    TEST_ASSERT_EQUAL(1, listener_add(0, 8080, PROTO_HTTP));
+    TEST_ASSERT_EQUAL(1, listener_add(0, 8080, PROTO_HTTP, PROTO_FALSE));
     TEST_ASSERT_EQUAL_UINT8(PC_DSCP_UNSET, listener_pool[0].dscp); // no override until set
 
     TEST_ASSERT_TRUE(pc_listen_set_dscp(8080, PC_DSCP_EF));
@@ -97,13 +97,13 @@ static void test_listen_set_dscp_override_and_sentinel()
 // field at accept time: a per-listener override wins over the server-wide default.
 static void test_accept_cb_applies_per_listener_dscp_override()
 {
-    DeterministicAsyncTCP::pool_init();
-    TEST_ASSERT_EQUAL(1, listener_add(0, 8080, PROTO_HTTP));
+    proto_tcp_pool_init(NULL);
+    TEST_ASSERT_EQUAL(1, listener_add(0, 8080, PROTO_HTTP, PROTO_FALSE));
     TEST_ASSERT_TRUE(pc_listen_set_dscp(8080, PC_DSCP_EF));
 
     pc_pcb pcb;
     pcb.tos = 0;
-    TEST_ASSERT_EQUAL_INT(ERR_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb, ERR_OK));
+    TEST_ASSERT_EQUAL_INT(PC_NET_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb, PC_NET_OK));
     TEST_ASSERT_EQUAL_UINT8(0xB8, pcb.tos); // EF, straight from the listener override
     listener_stop(0);
 }
@@ -112,13 +112,13 @@ static void test_accept_cb_applies_per_listener_dscp_override()
 // the server-wide default DSCP.
 static void test_accept_cb_falls_back_to_server_default_dscp()
 {
-    DeterministicAsyncTCP::pool_init();
-    TEST_ASSERT_EQUAL(1, listener_add(0, 8080, PROTO_HTTP)); // no override -> UNSET
+    proto_tcp_pool_init(NULL);
+    TEST_ASSERT_EQUAL(1, listener_add(0, 8080, PROTO_HTTP, PROTO_FALSE)); // no override -> UNSET
     pc_set_default_dscp(PC_DSCP_AF41);
 
     pc_pcb pcb;
     pcb.tos = 0;
-    TEST_ASSERT_EQUAL_INT(ERR_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb, ERR_OK));
+    TEST_ASSERT_EQUAL_INT(PC_NET_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb, PC_NET_OK));
     TEST_ASSERT_EQUAL_UINT8(0x88, pcb.tos); // server-wide default applied
     listener_stop(0);
 }
@@ -127,12 +127,12 @@ static void test_accept_cb_falls_back_to_server_default_dscp()
 // rather than writing a redundant 0 over it.
 static void test_accept_cb_skips_tos_write_at_best_effort()
 {
-    DeterministicAsyncTCP::pool_init();
-    TEST_ASSERT_EQUAL(1, listener_add(0, 8080, PROTO_HTTP)); // UNSET override, default dscp == 0
+    proto_tcp_pool_init(NULL);
+    TEST_ASSERT_EQUAL(1, listener_add(0, 8080, PROTO_HTTP, PROTO_FALSE)); // UNSET override, default dscp == 0
 
     pc_pcb pcb;
     pcb.tos = 0x77; // sentinel: must survive untouched
-    TEST_ASSERT_EQUAL_INT(ERR_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb, ERR_OK));
+    TEST_ASSERT_EQUAL_INT(PC_NET_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb, PC_NET_OK));
     TEST_ASSERT_EQUAL_UINT8(0x77, pcb.tos);
     listener_stop(0);
 }
