@@ -40,6 +40,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`b6b5f08`](https://github.com/dstroy0/ProtoCore/commit/b6b5f08a230c8520e27783d1174a27626d8b5964))
 - gate on every src/ TU having a test env ([`0a7b6a6`](https://github.com/dstroy0/ProtoCore/commit/0a7b6a69e7169aaa4764e3b43a7e6d81d5f8615c))
 - update CHANGELOG.md [skip ci] ([`2fe512c`](https://github.com/dstroy0/ProtoCore/commit/2fe512c240a8270ec2993d7306029fe882f1897d))
 - update CHANGELOG.md [skip ci] ([`6abb05f`](https://github.com/dstroy0/ProtoCore/commit/6abb05f330c76574fdb3e5479d1abf794798d5c7))
@@ -162,6 +163,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- repoint the BUGS.md citation of the presentation layer to its .c path ([`c3cdaaa`](https://github.com/dstroy0/ProtoCore/commit/c3cdaaa1b35003446a5b2e8560c9ec519564ce12))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`ac0ff85`](https://github.com/dstroy0/ProtoCore/commit/ac0ff85df953edf153ee892d811895332691c9be))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`5656c29`](https://github.com/dstroy0/ProtoCore/commit/5656c295f8cfeff71b00e93ade9447db4dc14364))
 - add pass-the-reference-down to the end of the roadmap ([`fe124e7`](https://github.com/dstroy0/ProtoCore/commit/fe124e786f6c7ac407d5c260f8f2198c8b0ac776))
@@ -209,6 +211,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Refactor
 
+- convert the WebSocket module to C ([`2de589f`](https://github.com/dstroy0/ProtoCore/commit/2de589f87f78709adb1ce31dc3b2534a8ec2a869))
+- convert the multipart codec to C ([`4227997`](https://github.com/dstroy0/ProtoCore/commit/422799751a20dec48c6babedb9eebb0c7b7188a5))
 - convert the HTTP parser to C ([`ef8dea4`](https://github.com/dstroy0/ProtoCore/commit/ef8dea48b351dce92bf1b33ab186c37dd31d0b18))
 - convert the presentation layer entry to C ([`b01e8ac`](https://github.com/dstroy0/ProtoCore/commit/b01e8ac1ed4b8523f61fcf5667e565613da7f92b))
 - move stdatomic into types.h ([`d7d2093`](https://github.com/dstroy0/ProtoCore/commit/d7d20933cb0772ecf9550cbd680d74b6bbecc2e2))
