@@ -1,8 +1,8 @@
 # Test Report
 
-**Generated:** 2026-08-03 06:16:22
+**Generated:** 2026-08-03 06:34:20
 **Command:** `pio test` over 304 auto-discovered native envs (excludes native_pentest, native_codeql)
-**Result:** ✅ 13 passed - 66s
+**Result:** ✅ 13 passed - 67s
 
 ---
 
@@ -68,6 +68,7 @@
 | `test_span`           | `native_span`           |     0 |   ✅   | 00:00:00.795 |
 | `test_dtls_tls13`     | `native_dtls_tls13`     |     0 |   ✅   | 00:00:09.084 |
 | `test_quic_server`    | `native_quic_server`    |     0 |   ✅   | 00:00:07.555 |
+| `test_robotics`       | `native_robotics`       |     0 |   ✅   | 00:00:01.431 |
 
 ---
 

@@ -3548,9 +3548,13 @@
 "src/network_drivers/session/proto_handler.h": [
 "native_accept_gate",
 "native_base64",
+"native_euromap77",
 "native_http_parser",
 "native_keepalive",
+"native_opcua",
+"native_opcua_client",
 "native_presentation",
+"native_robotics",
 "native_session",
 "native_sse",
 "native_ssh_conn",
@@ -3558,6 +3562,7 @@
 "native_swar",
 "native_telnet",
 "native_transport",
+"native_umati",
 "native_upload",
 "native_websocket"
 ],
