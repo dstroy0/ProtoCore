@@ -325,6 +325,7 @@
     "native_sse": {
       "desc": "test_sse against the native_stack_l46 stack.",
       "base": "env:native_stack_l46",
+      "flags": ["-DPC_ENABLE_SSE=1"],
       "tests": ["test_sse"]
     },
     "native_base64": {

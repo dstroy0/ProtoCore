@@ -6,7 +6,6 @@
 // the bytes written back to the socket via the tcp_write capture mock.
 
 #include "crypto/asymmetric/bignum.h" // bn_expmod_group14 direct coverage (Montgomery guard sliver)
-#include "lwip/tcp.h"
 #include "mmgr/plaintext.h"
 #include "network_drivers/presentation/ssh/auth/ssh_auth.h" // password cb for the direct-dispatch handshake
 #include "network_drivers/presentation/ssh/connection/ssh_channel.h"

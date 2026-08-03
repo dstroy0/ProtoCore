@@ -5,7 +5,6 @@
 // conn_pool ring buffer and checks the IAC negotiation, line echo/editing, and
 // command dispatch via the tcp_write capture mock.
 
-#include "lwip/tcp.h"
 #include "network_drivers/presentation/telnet/telnet.h"
 #include "network_drivers/session/proto_handler.h" // ProtoHandler: full type needed to check pc_telnet_proto_handler()'s fields
 #include "network_drivers/transport/tcp.h"
