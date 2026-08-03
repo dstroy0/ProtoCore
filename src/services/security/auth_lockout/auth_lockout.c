@@ -25,33 +25,32 @@ typedef struct
     uint16_t fails;         ///< consecutive failures from this address.
 } LockoutBucket;
 
-    // All lockout state, owned by one instance (internal linkage): the per-peer bucket table,
-    // so it is one named owner, unreachable from any other translation unit.
-    typedef struct
-    {
-        LockoutBucket buckets[PC_AUTH_LOCKOUT_SLOTS];
-    } LockoutCtx;
-    LockoutCtx s_lock;
+// All lockout state, owned by one instance (internal linkage): the per-peer bucket table,
+// so it is one named owner, unreachable from any other translation unit.
+typedef struct
+{
+    LockoutBucket buckets[PC_AUTH_LOCKOUT_SLOTS];
+} LockoutCtx;
+LockoutCtx s_lock;
 
-    // Returns a mutable bucket (callers mutate it), so it takes the owner by non-const reference.
-    LockoutBucket *find_bucket(LockoutCtx &c, const pc_ip *ip)
+// Returns a mutable bucket (callers mutate it), so it takes the owner by non-const reference.
+LockoutBucket *find_bucket(LockoutCtx *c, const pc_ip *ip)
+{
+    for (int i = 0; i < PC_AUTH_LOCKOUT_SLOTS; i++)
     {
-        for (int i = 0; i < PC_AUTH_LOCKOUT_SLOTS; i++)
+        if (c->buckets[i].addr.family != pc_ip_family::PC_IP_NONE && pc_ip_equal(&c->buckets[i].addr, ip))
         {
-            if (c.buckets[i].addr.family != pc_ip_family::PC_IP_NONE && pc_ip_equal(&c.buckets[i].addr, ip))
-            {
-                return &c.buckets[i];
-            }
+            return &c->buckets[i];
         }
-        return NULL;
     }
+    return NULL;
+}
 
-    proto_bool bucket_locked(const LockoutBucket *b, uint32_t now_ms)
-    {
-        // Unsigned subtraction wraps correctly across the millis() rollover.
-        return b->lock_ms != 0 && (uint32_t)(now_ms - b->lock_start_ms) < b->lock_ms;
-    }
-
+proto_bool bucket_locked(const LockoutBucket *b, uint32_t now_ms)
+{
+    // Unsigned subtraction wraps correctly across the millis() rollover.
+    return b->lock_ms != 0 && (uint32_t)(now_ms - b->lock_start_ms) < b->lock_ms;
+}
 
 uint32_t auth_lockout_remaining_ms(const pc_ip *ip, uint32_t now_ms)
 {
@@ -59,7 +58,7 @@ uint32_t auth_lockout_remaining_ms(const pc_ip *ip, uint32_t now_ms)
     {
         return 0; // untrackable source -> never reported as locked
     }
-    LockoutBucket *b = find_bucket(s_lock, ip);
+    LockoutBucket *b = find_bucket(&s_lock, ip);
     if (!b || b->lock_ms == 0)
     {
         return 0;
@@ -79,7 +78,7 @@ void auth_lockout_fail(const pc_ip *ip, uint32_t now_ms)
         return; // untrackable source
     }
 
-    LockoutBucket *b = find_bucket(s_lock, ip);
+    LockoutBucket *b = find_bucket(&s_lock, ip);
     if (!b)
     {
         // Claim a bucket: an empty one first; else evict the least-recently-used
@@ -154,7 +153,7 @@ void auth_lockout_succeed(const pc_ip *ip)
     {
         return;
     }
-    LockoutBucket *b = find_bucket(s_lock, ip);
+    LockoutBucket *b = find_bucket(&s_lock, ip);
     if (b)
     {
         b->addr.family = pc_ip_family::PC_IP_NONE;

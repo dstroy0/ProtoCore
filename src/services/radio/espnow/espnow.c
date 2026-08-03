@@ -86,11 +86,11 @@ typedef struct
 } EspnowCtx;
 static EspnowCtx s_espnow;
 
-static int peer_find(const EspnowCtx &c, const uint8_t mac[6])
+static int peer_find(const EspnowCtx *c, const uint8_t mac[6])
 {
     for (int i = 0; i < PC_ESPNOW_MAX_PEERS; i++)
     {
-        if (c.peers[i].used && memcmp(c.peers[i].mac, mac, 6) == 0)
+        if (c->peers[i].used && memcmp(c->peers[i].mac, mac, 6) == 0)
         {
             return i;
         }
@@ -112,7 +112,7 @@ proto_bool pc_espnow_peer_add(const uint8_t mac[6])
     {
         return PROTO_FALSE;
     }
-    if (peer_find(s_espnow, mac) >= 0)
+    if (peer_find(&s_espnow, mac) >= 0)
     {
         return PROTO_TRUE; // idempotent
     }
@@ -130,12 +130,12 @@ proto_bool pc_espnow_peer_add(const uint8_t mac[6])
 
 proto_bool pc_espnow_peer_has(const uint8_t mac[6])
 {
-    return mac && peer_find(s_espnow, mac) >= 0;
+    return mac && peer_find(&s_espnow, mac) >= 0;
 }
 
 proto_bool pc_espnow_peer_remove(const uint8_t mac[6])
 {
-    int i = mac ? peer_find(s_espnow, mac) : -1;
+    int i = mac ? peer_find(&s_espnow, mac) : -1;
     if (i < 0)
     {
         return PROTO_FALSE;

@@ -487,25 +487,25 @@ typedef struct
     size_t n;
     proto_bool ovf;
 } Writer;
-static void w_raw(Writer &w, const char *s, size_t len)
+static void w_raw(Writer *w, const char *s, size_t len)
 {
-    if (w.ovf)
+    if (w->ovf)
     {
         return;
     }
-    if (w.n + len > w.cap)
+    if (w->n + len > w->cap)
     {
-        w.ovf = PROTO_TRUE;
+        w->ovf = PROTO_TRUE;
         return;
     }
-    memcpy(w.o + w.n, s, len);
-    w.n += len;
+    memcpy(w->o + w->n, s, len);
+    w->n += len;
 }
-static void w_str(Writer &w, const char *s)
+static void w_str(Writer *w, const char *s)
 {
-    w_raw(w, s, strnlen(s, w.cap + 1));
+    w_raw(w, s, strnlen(s, w->cap + 1));
 }
-static void w_json_str(Writer &w, const char *s)
+static void w_json_str(Writer *w, const char *s)
 {
     w_raw(w, "\"", 1);
     for (const char *p = s; *p; p++)
@@ -550,7 +550,7 @@ static void w_json_str(Writer &w, const char *s)
     }
     w_raw(w, "\"", 1);
 }
-static void w_scalar(Writer &w, const pc_gql_value *v)
+static void w_scalar(Writer *w, const pc_gql_value *v)
 {
     char b[40];
     switch (v->type)
@@ -587,7 +587,7 @@ static void w_scalar(Writer &w, const pc_gql_value *v)
     }
 }
 
-static void emit_field(Writer &w, int idx, int path_len)
+static void emit_field(Writer *w, int idx, int path_len)
 {
     Node *node = &s_gql.nodes[idx];
 
@@ -597,7 +597,7 @@ static void emit_field(Writer &w, int idx, int path_len)
     {
         if (plen + 1 >= PC_GQL_PATH_MAX)
         {
-            w.ovf = PROTO_TRUE;
+            w->ovf = PROTO_TRUE;
             return;
         }
         s_gql.path[plen++] = '.';
@@ -605,7 +605,7 @@ static void emit_field(Writer &w, int idx, int path_len)
     int nl = (int)strnlen(node->name, PC_GQL_PATH_MAX);
     if (plen + nl >= PC_GQL_PATH_MAX)
     {
-        w.ovf = PROTO_TRUE;
+        w->ovf = PROTO_TRUE;
         return;
     }
     memcpy(s_gql.path + plen, node->name, nl);
@@ -737,9 +737,9 @@ pc_gql_result pc_graphql_execute(const char *query, size_t len, pc_gql_resolver_
     {
         const char *msg = (s_gql.err == PC_GQL_ERR_LIMIT) ? "query exceeds a configured limit" : "syntax error";
         Writer w = {out, cap, 0, PROTO_FALSE};
-        w_str(w, "{\"errors\":[{\"message\":");
-        w_json_str(w, msg);
-        w_str(w, "}]}");
+        w_str(&w, "{\"errors\":[{\"message\":");
+        w_json_str(&w, msg);
+        w_str(&w, "}]}");
         if (!w.ovf && w.n < cap)
         {
             out[w.n] = '\0';
@@ -750,18 +750,18 @@ pc_gql_result pc_graphql_execute(const char *query, size_t len, pc_gql_resolver_
     }
 
     Writer w = {out, cap, 0, PROTO_FALSE};
-    w_str(w, "{\"data\":{");
+    w_str(&w, "{\"data\":{");
     proto_bool first = PROTO_TRUE;
     for (int c = s_gql.root; c >= 0; c = s_gql.nodes[c].next_sib)
     {
         if (!first)
         {
-            w_raw(w, ",", 1);
+            w_raw(&w, ",", 1);
         }
         first = PROTO_FALSE;
-        emit_field(w, c, 0);
+        emit_field(&w, c, 0);
     }
-    w_str(w, "}}");
+    w_str(&w, "}}");
     if (w.ovf || w.n >= cap)
     {
         return PC_GQL_ERR_OVERFLOW;

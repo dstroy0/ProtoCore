@@ -13,7 +13,7 @@
 #include "network_drivers/presentation/codec/json/json.h"
 
 // Emit a uint64 as a JSON number (JsonWriter's integer() is only platform-long wide).
-static void emit_uint(JsonWriter &w, uint64_t v)
+static void emit_uint(JsonWriter *w, uint64_t v)
 {
     char rev[20];
     size_t r = 0;
@@ -21,7 +21,7 @@ static void emit_uint(JsonWriter &w, uint64_t v)
     size_t n = 0;
     if (v == 0)
     {
-        w.raw("0");
+        w->raw("0");
         return;
     }
     while (v)
@@ -34,25 +34,25 @@ static void emit_uint(JsonWriter &w, uint64_t v)
         tmp[n++] = rev[--r];
     }
     tmp[n] = '\0';
-    w.raw(tmp);
+    w->raw(tmp);
 }
 
-static size_t finish(JsonWriter &w)
+static size_t finish(JsonWriter *w)
 {
-    return w.ok() ? w.length() : 0;
+    return w->ok() ? w->length() : 0;
 }
 
 // Append the trailing Arguments / ArgumentsKw of a PUBLISH / CALL / YIELD.
-static void emit_args(JsonWriter &w, const char *args_json, const char *kwargs_json)
+static void emit_args(JsonWriter *w, const char *args_json, const char *kwargs_json)
 {
     if (!args_json && !kwargs_json)
     {
         return;
     }
-    w.raw(args_json ? args_json : "[]"); // kwargs without args still needs a positional Arguments
+    w->raw(args_json ? args_json : "[]"); // kwargs without args still needs a positional Arguments
     if (kwargs_json)
     {
-        w.raw(kwargs_json);
+        w->raw(kwargs_json);
     }
 }
 
@@ -68,7 +68,7 @@ size_t pc_wamp_build_hello(char *buf, size_t cap, const char *realm, const char 
     w.str(realm);
     w.raw(details_json ? details_json : "{}");
     w.end_array();
-    return finish(w);
+    return finish(&w);
 }
 
 size_t pc_wamp_build_goodbye(char *buf, size_t cap, const char *reason_uri, const char *details_json)
@@ -83,7 +83,7 @@ size_t pc_wamp_build_goodbye(char *buf, size_t cap, const char *reason_uri, cons
     w.raw(details_json ? details_json : "{}");
     w.str(reason_uri);
     w.end_array();
-    return finish(w);
+    return finish(&w);
 }
 
 size_t pc_wamp_build_subscribe(char *buf, size_t cap, uint64_t request, const char *topic, const char *options_json)
@@ -95,11 +95,11 @@ size_t pc_wamp_build_subscribe(char *buf, size_t cap, uint64_t request, const ch
     JsonWriter w(buf, cap);
     w.begin_array();
     w.integer(WAMP_SUBSCRIBE);
-    emit_uint(w, request);
+    emit_uint(&w, request);
     w.raw(options_json ? options_json : "{}");
     w.str(topic);
     w.end_array();
-    return finish(w);
+    return finish(&w);
 }
 
 size_t pc_wamp_build_unsubscribe(char *buf, size_t cap, uint64_t request, uint64_t subscription_id)
@@ -111,10 +111,10 @@ size_t pc_wamp_build_unsubscribe(char *buf, size_t cap, uint64_t request, uint64
     JsonWriter w(buf, cap);
     w.begin_array();
     w.integer(WAMP_UNSUBSCRIBE);
-    emit_uint(w, request);
-    emit_uint(w, subscription_id);
+    emit_uint(&w, request);
+    emit_uint(&w, subscription_id);
     w.end_array();
-    return finish(w);
+    return finish(&w);
 }
 
 size_t pc_wamp_build_unregister(char *buf, size_t cap, uint64_t request, uint64_t registration_id)
@@ -126,10 +126,10 @@ size_t pc_wamp_build_unregister(char *buf, size_t cap, uint64_t request, uint64_
     JsonWriter w(buf, cap);
     w.begin_array();
     w.integer(WAMP_UNREGISTER);
-    emit_uint(w, request);
-    emit_uint(w, registration_id);
+    emit_uint(&w, request);
+    emit_uint(&w, registration_id);
     w.end_array();
-    return finish(w);
+    return finish(&w);
 }
 
 size_t pc_wamp_build_publish(char *buf, size_t cap, uint64_t request, const char *topic, const char *options_json,
@@ -142,12 +142,12 @@ size_t pc_wamp_build_publish(char *buf, size_t cap, uint64_t request, const char
     JsonWriter w(buf, cap);
     w.begin_array();
     w.integer(WAMP_PUBLISH);
-    emit_uint(w, request);
+    emit_uint(&w, request);
     w.raw(options_json ? options_json : "{}");
     w.str(topic);
-    emit_args(w, args_json, kwargs_json);
+    emit_args(&w, args_json, kwargs_json);
     w.end_array();
-    return finish(w);
+    return finish(&w);
 }
 
 size_t pc_wamp_build_call(char *buf, size_t cap, uint64_t request, const char *procedure, const char *options_json,
@@ -160,12 +160,12 @@ size_t pc_wamp_build_call(char *buf, size_t cap, uint64_t request, const char *p
     JsonWriter w(buf, cap);
     w.begin_array();
     w.integer(WAMP_CALL);
-    emit_uint(w, request);
+    emit_uint(&w, request);
     w.raw(options_json ? options_json : "{}");
     w.str(procedure);
-    emit_args(w, args_json, kwargs_json);
+    emit_args(&w, args_json, kwargs_json);
     w.end_array();
-    return finish(w);
+    return finish(&w);
 }
 
 size_t pc_wamp_build_register(char *buf, size_t cap, uint64_t request, const char *procedure, const char *options_json)
@@ -177,11 +177,11 @@ size_t pc_wamp_build_register(char *buf, size_t cap, uint64_t request, const cha
     JsonWriter w(buf, cap);
     w.begin_array();
     w.integer(WAMP_REGISTER);
-    emit_uint(w, request);
+    emit_uint(&w, request);
     w.raw(options_json ? options_json : "{}");
     w.str(procedure);
     w.end_array();
-    return finish(w);
+    return finish(&w);
 }
 
 size_t pc_wamp_build_yield(char *buf, size_t cap, uint64_t request, const char *options_json, const char *args_json,
@@ -194,11 +194,11 @@ size_t pc_wamp_build_yield(char *buf, size_t cap, uint64_t request, const char *
     JsonWriter w(buf, cap);
     w.begin_array();
     w.integer(WAMP_YIELD);
-    emit_uint(w, request);
+    emit_uint(&w, request);
     w.raw(options_json ? options_json : "{}");
-    emit_args(w, args_json, kwargs_json);
+    emit_args(&w, args_json, kwargs_json);
     w.end_array();
-    return finish(w);
+    return finish(&w);
 }
 
 // ---- positional parser ----

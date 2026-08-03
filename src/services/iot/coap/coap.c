@@ -844,11 +844,11 @@ static void coap_dedup_remember(const uint8_t *data, size_t len, const char *ip,
 // Observe registry + notifications (RFC 7641)
 // ---------------------------------------------------------------------------
 
-static int find_resource_index(const CoapCtx &c, const char *path)
+static int find_resource_index(const CoapCtx *c, const char *path)
 {
-    for (size_t i = 0; i < c.res_count; i++)
+    for (size_t i = 0; i < c->res_count; i++)
     {
-        if (strcmp(c.res[i].path, path) == 0)
+        if (strcmp(c->res[i].path, path) == 0)
         {
             return (int)i;
         }
@@ -909,7 +909,7 @@ static void obs_remove(const char *ip, uint16_t port, const uint8_t *token, uint
 
 void pc_coap_notify(const char *path)
 {
-    int ridx = find_resource_index(s_coap, path);
+    int ridx = find_resource_index(&s_coap, path);
     if (ridx < 0)
     {
         return;
@@ -996,7 +996,7 @@ static void coap_udp_handler(const uint8_t *data, size_t len, const struct pc_ud
     // lwIP receive with a null source address; the host UDP mock always injects a peer.
     if (s_coap.last_method == (uint8_t)COAP_GET && s_coap.last_observe == 0 && have_peer) // GCOVR_EXCL_LINE
     {
-        int ridx = find_resource_index(s_coap, s_coap.path);
+        int ridx = find_resource_index(&s_coap, s_coap.path);
         if (ridx >= 0)
         {
             int slot = obs_register(ip, pport, s_coap.last_token, s_coap.last_tkl, ridx);

@@ -63,13 +63,13 @@ static uint32_t gw_now()
 #endif
 
 // Returns a mutable port (callers mutate it), so it takes the owner by non-const reference.
-static port *find_port(GatewayCtx &g, uint8_t id)
+static port *find_port(GatewayCtx *g, uint8_t id)
 {
     for (uint8_t i = 0; i < PC_GW_MAX_PORTS; i++)
     {
-        if (g.ports[i].used && g.ports[i].id == id)
+        if (g->ports[i].used && g->ports[i].id == id)
         {
-            return &g.ports[i];
+            return &g->ports[i];
         }
     }
     return NULL;
@@ -141,7 +141,7 @@ void pc_gateway_reset(void)
 
 proto_bool pc_gateway_add_port(const pc_gateway_port_config *cfg)
 {
-    if (!cfg || find_port(s_gw, cfg->port_id))
+    if (!cfg || find_port(&s_gw, cfg->port_id))
     {
         return PROTO_FALSE;
     }
@@ -178,7 +178,7 @@ void pc_gateway_set_topic_prefix(const char *prefix)
 proto_bool pc_gateway_uplink(uint8_t port_id, uint16_t src_addr, const uint8_t *payload, uint16_t len, int16_t rssi)
 {
     s_gw.stats.up_in++;
-    port *p = find_port(s_gw, port_id);
+    port *p = find_port(&s_gw, port_id);
     if (!p || !s_gw.uplink || rate_exceeded(p))
     {
         s_gw.stats.up_dropped++;
@@ -204,7 +204,7 @@ proto_bool pc_gateway_uplink(uint8_t port_id, uint16_t src_addr, const uint8_t *
 proto_bool pc_gateway_downlink(uint8_t port_id, uint16_t dst_addr, const uint8_t *payload, uint16_t len)
 {
     s_gw.stats.down_in++;
-    port *p = find_port(s_gw, port_id);
+    port *p = find_port(&s_gw, port_id);
     if (!p || !p->tx || !p->tx(port_id, dst_addr, payload, len, p->ctx))
     {
         s_gw.stats.down_dropped++;
