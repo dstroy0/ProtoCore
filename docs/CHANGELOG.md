@@ -57,6 +57,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update test report + coverage [skip ci] ([`a80ef6d`](https://github.com/dstroy0/ProtoCore/commit/a80ef6db2a0e97f9256a6c48eb880dd0bb16691f))
+- update CHANGELOG.md [skip ci] ([`4002687`](https://github.com/dstroy0/ProtoCore/commit/400268761975bd1f1a29ed627d3ccfe1d8cfc541))
 - update CHANGELOG.md [skip ci] ([`e55865a`](https://github.com/dstroy0/ProtoCore/commit/e55865a97e01e6375fd0095cf8c1574a915d97f2))
 - update CHANGELOG.md [skip ci] ([`2f86534`](https://github.com/dstroy0/ProtoCore/commit/2f86534c918c0c245fc8788fd1e634b65476e6cb))
 - update test report + coverage [skip ci] ([`3b4d006`](https://github.com/dstroy0/ProtoCore/commit/3b4d006c4deb528472de654b74805f67d1e99166))
@@ -292,6 +294,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`3d8b3c4`](https://github.com/dstroy0/ProtoCore/commit/3d8b3c4bdcae4e29bda2632596e245e4aaeba1e8))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`aaffcd0`](https://github.com/dstroy0/ProtoCore/commit/aaffcd03396e6da0343f1bb6a42e264df3af5946))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`b193396`](https://github.com/dstroy0/ProtoCore/commit/b1933961007eaecd77b9b7f2524689ca9900e442))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`a3760f2`](https://github.com/dstroy0/ProtoCore/commit/a3760f23ae4ea7ca8bc9a445abafbe22d20504ac))
@@ -359,6 +362,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Refactor
 
+- finish the C11 conversion - the last seven .cpp files ([`eb378e6`](https://github.com/dstroy0/ProtoCore/commit/eb378e645c4ae03b51b0b4955af1b6bc5cbf547b))
 - the member initializers the renamed files still carried ([`b87038c`](https://github.com/dstroy0/ProtoCore/commit/b87038c6306c112de285fa90b87514710561b9a2))
 - convert the last ten src/ .cpp files except ssh_transport ([`667989a`](https://github.com/dstroy0/ProtoCore/commit/667989ac9e0be11e2d64b37313e371d39aeeabd5))
 - drop the enum scope qualifiers and the last peripheral member initializers ([`499751f`](https://github.com/dstroy0/ProtoCore/commit/499751f19ae1b827a4ad2b4538be87e15984bab8))
@@ -405,6 +409,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- copy the trace samples at their real width ([`bc9bec9`](https://github.com/dstroy0/ProtoCore/commit/bc9bec9bbec75d2dff19cfcd09f9cd0c69a75f70))
+- trace_capture reads its window through a pointer ([`33cc8a6`](https://github.com/dstroy0/ProtoCore/commit/33cc8a698d4cc6e778df5873e0f951233f8cf40d))
 - gateway and trace_capture record into fixed tables ([`1c0133e`](https://github.com/dstroy0/ProtoCore/commit/1c0133e79af98df388fcadc2cbc67327a371d809))
 - read the dma record payload directly ([`30c79d2`](https://github.com/dstroy0/ProtoCore/commit/30c79d234a154f7186a0e47bad919cab2b6e103e))
 - dma records completions into a fixed table ([`b012d3c`](https://github.com/dstroy0/ProtoCore/commit/b012d3c7d89ba7272de18e6613088fa92a1c1128))
