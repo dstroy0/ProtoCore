@@ -720,7 +720,8 @@
     "native_file_serving": {
       "desc": "test_file_serving against the native_stack_http stack.",
       "base": "env:native_stack_http",
-      "tests": ["test_file_serving"]
+      "tests": ["test_file_serving"],
+      "flags": ["-DPC_ENABLE_FILE_SERVING=1"]
     },
     "native_multipart": {
       "desc": "test_multipart against the native_stack_http stack.",
