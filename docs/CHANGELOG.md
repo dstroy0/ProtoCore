@@ -46,6 +46,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`b95c654`](https://github.com/dstroy0/ProtoCore/commit/b95c654948a1f75db7f9aad6da68dc095265af9f))
 - update CHANGELOG.md [skip ci] ([`af162fc`](https://github.com/dstroy0/ProtoCore/commit/af162fc7f91918185a4c324585d3ac3285b1ceea))
 - update CHANGELOG.md [skip ci] ([`f406586`](https://github.com/dstroy0/ProtoCore/commit/f406586e834ad4f2a4fee71e57616eafbef4d4a8))
 - update CHANGELOG.md [skip ci] ([`a2b3031`](https://github.com/dstroy0/ProtoCore/commit/a2b303145ae39abfd34d7f9ebd4d349f7be681b6))
@@ -280,6 +281,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- give the hoisted handlers their state and the defaulted mtime ([`d7152c2`](https://github.com/dstroy0/ProtoCore/commit/d7152c2db1efd2b0633790abd1cc5a5b8f8ac5d6))
 - hoist the file-serving handlers out of lambdas ([`22a0087`](https://github.com/dstroy0/ProtoCore/commit/22a0087ee5815de5a9663bb39e5568c10be3a3b4))
 - give the host a pc_mnt_backend fixture and move file serving onto it ([`18a0c36`](https://github.com/dstroy0/ProtoCore/commit/18a0c3620c2ac0c7465fcfa238f28f4f772efc4d))
 - use on_http_iface for the interface-scoped overload ([`93920a6`](https://github.com/dstroy0/ProtoCore/commit/93920a68af6578f64065697a23a592fec2a9adf7))
