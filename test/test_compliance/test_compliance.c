@@ -31,7 +31,7 @@ void setUp()
 {
     for (int i = 0; i < MAX_CONNS; i++)
     {
-        http_pool[i] = {};
+        http_pool[i] = (HttpReq){0};
         http_pool[i].slot_id = (uint8_t)i;
         http_parser_reset(&http_pool[i]);
     }

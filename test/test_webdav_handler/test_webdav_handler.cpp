@@ -38,11 +38,11 @@ static void feed_and_handle(uint8_t slot, const char *req)
 // Re-arm slot 0 for a fresh request on the (close-after-each-DAV-response) flow.
 static void rearm()
 {
-    conn_pool[0] = {};
+    conn_pool[0] = (TcpConn){0};
     conn_pool[0].id = 0;
     conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].proto = PROTO_HTTP;
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     http_reset(0);
     tcp_capture_reset();
 }
@@ -95,11 +95,11 @@ void setUp()
     pc_server_reset();
     for (int i = 0; i < MAX_CONNS; i++)
     {
-        conn_pool[i] = {};
+        conn_pool[i] = (TcpConn){0};
         conn_pool[i].id = (uint8_t)i;
         conn_pool[i].state = CONN_ACTIVE;
         conn_pool[i].proto = PROTO_HTTP;
-        conn_pool[i].pcb = &_mock_pcb;
+        conn_pool[i].pcb = pc_net_host_pcb();
         http_reset(i);
     }
     ws_init();

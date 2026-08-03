@@ -658,6 +658,19 @@ struct pc_udp_pcb
 static pc_pcb pc_net_host_pcbs[PC_NET_HOST_PCBS];
 static pc_udp_pcb pc_net_host_udp_pcbs[PC_NET_HOST_PCBS];
 
+/**
+ * @brief A stable pcb a test can bind a slot to, when what it needs is only "this slot has one".
+ *
+ * Slot state that is set up by hand rather than by an accept still has to carry a non-null pcb,
+ * because the core reads it to decide a connection is live. The last entry is reserved for that:
+ * pc_net_new() hands out from the front, so a test holding this one never collides with a pcb the
+ * code under test allocated.
+ */
+static inline pc_pcb *pc_net_host_pcb(void)
+{
+    return &pc_net_host_pcbs[PC_NET_HOST_PCBS - 1];
+}
+
 static inline pc_pcb *pc_net_new(int type)
 {
     (void)type;

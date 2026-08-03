@@ -100,11 +100,11 @@ void setUp()
     g_called = PROTO_FALSE;
     for (int i = 0; i < MAX_CONNS; i++)
     {
-        conn_pool[i] = {};
+        conn_pool[i] = (TcpConn){0};
         conn_pool[i].id = (uint8_t)i;
         conn_pool[i].state = CONN_ACTIVE;
         conn_pool[i].proto = PROTO_HTTP; // dispatch requires an explicit protocol
-        conn_pool[i].pcb = &_mock_pcb;
+        conn_pool[i].pcb = pc_net_host_pcb();
         http_reset(i);
     }
     ws_init();
@@ -120,11 +120,11 @@ void tearDown()
 
 static void rearm_slot(uint8_t slot)
 {
-    conn_pool[slot] = {};
+    conn_pool[slot] = (TcpConn){0};
     conn_pool[slot].id = slot;
     conn_pool[slot].state = CONN_ACTIVE;
     conn_pool[slot].proto = PROTO_HTTP; // dispatch requires an explicit protocol
-    conn_pool[slot].pcb = &_mock_pcb;
+    conn_pool[slot].pcb = pc_net_host_pcb();
     http_reset(slot);
     tcp_capture_reset();
 }

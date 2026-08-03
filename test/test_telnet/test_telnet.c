@@ -36,10 +36,10 @@ void setUp()
 {
     for (int i = 0; i < MAX_CONNS; i++)
     {
-        conn_pool[i] = {};
+        conn_pool[i] = (TcpConn){0};
         conn_pool[i].id = (uint8_t)i;
         conn_pool[i].state = CONN_ACTIVE;
-        conn_pool[i].pcb = &_mock_pcb;
+        conn_pool[i].pcb = pc_net_host_pcb();
         conn_pool[i].proto = PROTO_TELNET;
     }
     g_last_cmd[0] = '\0';

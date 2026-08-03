@@ -37,11 +37,11 @@ void setUp()
     handler_calls = 0;
     for (int i = 0; i < MAX_CONNS; i++)
     {
-        conn_pool[i] = {};
+        conn_pool[i] = (TcpConn){0};
         conn_pool[i].id = (uint8_t)i;
         conn_pool[i].state = CONN_ACTIVE;
         conn_pool[i].proto = PROTO_HTTP; // dispatch requires an explicit protocol
-        conn_pool[i].pcb = &_mock_pcb;
+        conn_pool[i].pcb = pc_net_host_pcb();
         http_conn_open(i); // resets parser + keep-alive request tally
     }
     ws_init();
@@ -180,7 +180,7 @@ void test_fresh_connection_resets_count()
     // Simulate a new connection landing in the same slot.
     conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].proto = PROTO_HTTP; // dispatch requires an explicit protocol
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     http_conn_open(0);
 
     tcp_capture_reset();

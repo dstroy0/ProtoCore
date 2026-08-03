@@ -62,11 +62,11 @@ void setUp()
 
     for (int i = 0; i < MAX_CONNS; i++)
     {
-        conn_pool[i] = {};
+        conn_pool[i] = (TcpConn){0};
         conn_pool[i].id = (uint8_t)i;
         conn_pool[i].state = CONN_ACTIVE;
         conn_pool[i].proto = PROTO_HTTP; // dispatch requires an explicit protocol
-        conn_pool[i].pcb = &_mock_pcb;
+        conn_pool[i].pcb = pc_net_host_pcb();
         http_reset(i);
     }
     ws_init();
@@ -248,11 +248,11 @@ void test_multiple_content_types()
         cur_path = cases[i].path;
 
         pc_server_reset();
-        conn_pool[0] = {};
+        conn_pool[0] = (TcpConn){0};
         conn_pool[0].id = 0;
         conn_pool[0].state = CONN_ACTIVE;
         conn_pool[0].proto = PROTO_HTTP; // dispatch requires an explicit protocol
-        conn_pool[0].pcb = &_mock_pcb;
+        conn_pool[0].pcb = pc_net_host_pcb();
         http_reset(0);
         tcp_capture_reset();
 
@@ -279,11 +279,11 @@ void test_multiple_content_types()
 // Re-arm slot 0 for another request within one test (a file response closes the slot).
 static void rearm(uint8_t slot)
 {
-    conn_pool[slot] = {};
+    conn_pool[slot] = (TcpConn){0};
     conn_pool[slot].id = slot;
     conn_pool[slot].state = CONN_ACTIVE;
     conn_pool[slot].proto = PROTO_HTTP;
-    conn_pool[slot].pcb = &_mock_pcb;
+    conn_pool[slot].pcb = pc_net_host_pcb();
     http_reset(slot);
     tcp_capture_reset();
 }
@@ -480,11 +480,11 @@ void stress_serve_file_50_requests()
     for (int i = 0; i < 50; i++)
     {
         uint8_t slot = (uint8_t)(i % MAX_CONNS);
-        conn_pool[slot] = {};
+        conn_pool[slot] = (TcpConn){0};
         conn_pool[slot].id = slot;
         conn_pool[slot].state = CONN_ACTIVE;
         conn_pool[slot].proto = PROTO_HTTP; // dispatch requires an explicit protocol
-        conn_pool[slot].pcb = &_mock_pcb;
+        conn_pool[slot].pcb = pc_net_host_pcb();
         http_reset(slot);
         tcp_capture_reset();
         handler_called = false;
@@ -510,11 +510,11 @@ void stress_alternate_missing_and_found()
     for (int i = 0; i < 40; i++)
     {
         uint8_t slot = (uint8_t)(i % MAX_CONNS);
-        conn_pool[slot] = {};
+        conn_pool[slot] = (TcpConn){0};
         conn_pool[slot].id = slot;
         conn_pool[slot].state = CONN_ACTIVE;
         conn_pool[slot].proto = PROTO_HTTP; // dispatch requires an explicit protocol
-        conn_pool[slot].pcb = &_mock_pcb;
+        conn_pool[slot].pcb = pc_net_host_pcb();
         http_reset(slot);
         tcp_capture_reset();
 

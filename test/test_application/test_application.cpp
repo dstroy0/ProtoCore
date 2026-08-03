@@ -31,7 +31,7 @@ static void record_handler(uint8_t slot_id, HttpReq *)
 // and run http_parse so the slot is ready for handle().
 static void arm_slot(uint8_t slot, const char *raw)
 {
-    conn_pool[slot] = {};
+    conn_pool[slot] = (TcpConn){0};
     conn_pool[slot].id = slot;
     conn_pool[slot].state = CONN_ACTIVE;
     conn_pool[slot].proto = PROTO_HTTP; // dispatch requires an explicit protocol
@@ -66,7 +66,7 @@ void setUp()
     DeterministicAsyncTCP::pool_init();
     for (int i = 0; i < MAX_CONNS; i++)
     {
-        conn_pool[i] = {};
+        conn_pool[i] = (TcpConn){0};
         conn_pool[i].id = i;
         conn_pool[i].state = CONN_ACTIVE;
         conn_pool[i].proto = PROTO_HTTP; // dispatch requires an explicit protocol
@@ -608,7 +608,7 @@ void test_redirect_emits_location_and_status()
 {
     conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].proto = PROTO_HTTP; // dispatch requires an explicit protocol
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     tcp_capture_reset();
     redirect(0, 301, "/index.html");
     const char *out = tcp_captured();
@@ -623,7 +623,7 @@ void test_redirect_invalid_code_defaults_to_302()
 {
     conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].proto = PROTO_HTTP; // dispatch requires an explicit protocol
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     tcp_capture_reset();
     redirect(0, 200, "/elsewhere"); // 200 is not a redirect code
     const char *out = tcp_captured();
@@ -659,7 +659,7 @@ void test_serve_static_file_and_mime()
     fs::mock_fs_add("/www/style.css", css);
     serve_static("/", g_static_fs, "/www");
     arm_slot(0, "GET /style.css HTTP/1.1\r\nHost: x\r\n\r\n");
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     tcp_capture_reset();
     handle();
     const char *out = tcp_captured();
@@ -678,7 +678,7 @@ void test_serve_static_cache_control()
 
     set_cache_control("max-age=3600");
     arm_slot(0, "GET /style.css HTTP/1.1\r\nHost: x\r\n\r\n");
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     tcp_capture_reset();
     handle();
     const char *out = tcp_captured();
@@ -689,7 +689,7 @@ void test_serve_static_cache_control()
     // Clearing it removes the header (and restores the default for later tests).
     set_cache_control("");
     arm_slot(0, "GET /style.css HTTP/1.1\r\nHost: x\r\n\r\n");
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     tcp_capture_reset();
     handle();
     out = tcp_captured();
@@ -704,7 +704,7 @@ void test_serve_static_index_fallback()
     fs::mock_fs_add("/www/index.html", html);
     serve_static("/", g_static_fs, "/www");
     arm_slot(0, "GET / HTTP/1.1\r\nHost: x\r\n\r\n");
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     tcp_capture_reset();
     handle();
     const char *out = tcp_captured();
@@ -722,7 +722,7 @@ void test_serve_static_gzip_when_accepted()
     fs::mock_fs_add("/www/app.js.gz", (const uint8_t *)gzbody, sizeof(gzbody) - 1);
     serve_static("/", g_static_fs, "/www");
     arm_slot(0, "GET /app.js HTTP/1.1\r\nHost: x\r\nAccept-Encoding: gzip, deflate\r\n\r\n");
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     tcp_capture_reset();
     handle();
     const char *out = tcp_captured();
@@ -741,7 +741,7 @@ void test_serve_static_wildcard_and_route_full()
     fs::mock_fs_add("/www/app.js", js);
     serve_static("/assets*", g_static_fs, "/www");
     arm_slot(0, "GET /assets/app.js HTTP/1.1\r\nHost: x\r\n\r\n");
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     tcp_capture_reset();
     handle();
     const char *out = tcp_captured();
@@ -776,7 +776,7 @@ void test_response_header_cookie_guards()
 
     on_http("/hdrtest", HTTP_GET, hdr_guard_handler);
     arm_slot(0, "GET /hdrtest HTTP/1.1\r\nHost: x\r\n\r\n");
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     tcp_capture_reset();
     handle();
     const char *out = tcp_captured();
@@ -793,7 +793,7 @@ void test_serve_static_no_gzip_when_not_accepted()
     fs::mock_fs_add("/www/app.js.gz", "GZIPPED");
     serve_static("/", g_static_fs, "/www");
     arm_slot(0, "GET /app.js HTTP/1.1\r\nHost: x\r\n\r\n"); // no Accept-Encoding
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     tcp_capture_reset();
     handle();
     const char *out = tcp_captured();
@@ -808,7 +808,7 @@ void test_serve_static_traversal_not_leaked()
     fs::mock_fs_add("/secret", "topsecret");
     serve_static("/", g_static_fs, "/www");
     arm_slot(0, "GET /../secret HTTP/1.1\r\nHost: x\r\n\r\n");
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     tcp_capture_reset();
     handle();
     const char *out = tcp_captured();
@@ -822,7 +822,7 @@ void test_serve_static_missing_is_404()
     fs::mock_fs_add("/www/exists.txt", "hi");
     serve_static("/", g_static_fs, "/www");
     arm_slot(0, "GET /nope.txt HTTP/1.1\r\nHost: x\r\n\r\n");
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     tcp_capture_reset();
     handle();
     const char *out = tcp_captured();
@@ -839,7 +839,7 @@ void test_serve_static_etag_conditional_get()
 
     // First GET: 200 with an ETag header.
     arm_slot(0, "GET /page.html HTTP/1.1\r\nHost: x\r\n\r\n");
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     tcp_capture_reset();
     handle();
     const char *out1 = tcp_captured();
@@ -861,7 +861,7 @@ void test_serve_static_etag_conditional_get()
     char req[160];
     snprintf(req, sizeof(req), "GET /page.html HTTP/1.1\r\nHost: x\r\nIf-None-Match: %s\r\n\r\n", etag);
     arm_slot(0, req);
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     tcp_capture_reset();
     handle();
     const char *out2 = tcp_captured();
@@ -881,7 +881,7 @@ void test_serve_static_inm_star_list_weak()
 
     // First GET to capture the strong ETag (with quotes).
     arm_slot(0, "GET /page.html HTTP/1.1\r\nHost: x\r\n\r\n");
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     tcp_capture_reset();
     handle();
     const char *out1 = tcp_captured();
@@ -901,7 +901,7 @@ void test_serve_static_inm_star_list_weak()
     char req[200];
     // (a) "*" matches any current representation -> 304.
     arm_slot(0, "GET /page.html HTTP/1.1\r\nHost: x\r\nIf-None-Match: *\r\n\r\n");
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     tcp_capture_reset();
     handle();
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "304 Not Modified"));
@@ -910,7 +910,7 @@ void test_serve_static_inm_star_list_weak()
     // (b) weak validator W/"x" matches our strong "x" -> 304.
     snprintf(req, sizeof(req), "GET /page.html HTTP/1.1\r\nHost: x\r\nIf-None-Match: W/%s\r\n\r\n", etag);
     arm_slot(0, req);
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     tcp_capture_reset();
     handle();
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "304 Not Modified"));
@@ -919,7 +919,7 @@ void test_serve_static_inm_star_list_weak()
     // (c) a list containing the tag (after a non-matching one) -> 304.
     snprintf(req, sizeof(req), "GET /page.html HTTP/1.1\r\nHost: x\r\nIf-None-Match: \"nope\", %s\r\n\r\n", etag);
     arm_slot(0, req);
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     tcp_capture_reset();
     handle();
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "304 Not Modified"));
@@ -927,7 +927,7 @@ void test_serve_static_inm_star_list_weak()
 
     // (d) a list with only non-matching tags -> 200 (full response).
     arm_slot(0, "GET /page.html HTTP/1.1\r\nHost: x\r\nIf-None-Match: \"a\", \"b\"\r\n\r\n");
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     tcp_capture_reset();
     handle();
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "HTTP/1.1 200 OK"));
@@ -936,7 +936,7 @@ void test_serve_static_inm_star_list_weak()
     // (e) a non-matching tag followed by a trailing comma+space: the scan reaches end
     // of string after the separator and stops -> 200 (exercises the empty-remainder break).
     arm_slot(0, "GET /page.html HTTP/1.1\r\nHost: x\r\nIf-None-Match: \"nope\", \r\n\r\n");
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     tcp_capture_reset();
     handle();
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "HTTP/1.1 200 OK"));
@@ -956,7 +956,7 @@ void test_serve_static_last_modified_conditional_get()
 
     // (1) plain GET: 200 carries the Last-Modified header.
     arm_slot(0, "GET /page.html HTTP/1.1\r\nHost: x\r\n\r\n");
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     tcp_capture_reset();
     handle();
     o = tcp_captured();
@@ -967,7 +967,7 @@ void test_serve_static_last_modified_conditional_get()
     // (2) If-Modified-Since == mtime -> not modified -> 304, no body.
     snprintf(req, sizeof(req), "GET /page.html HTTP/1.1\r\nHost: x\r\nIf-Modified-Since: %s\r\n\r\n", LM);
     arm_slot(0, req);
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     tcp_capture_reset();
     handle();
     o = tcp_captured();
@@ -977,7 +977,7 @@ void test_serve_static_last_modified_conditional_get()
 
     // (3) If-Modified-Since one second older than mtime -> file IS newer -> 200 + body.
     arm_slot(0, "GET /page.html HTTP/1.1\r\nHost: x\r\nIf-Modified-Since: Thu, 01 Jan 1970 00:16:39 GMT\r\n\r\n");
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     tcp_capture_reset();
     handle();
     o = tcp_captured();
@@ -987,7 +987,7 @@ void test_serve_static_last_modified_conditional_get()
 
     // (4) If-Modified-Since newer than mtime -> 304.
     arm_slot(0, "GET /page.html HTTP/1.1\r\nHost: x\r\nIf-Modified-Since: Fri, 02 Jan 1970 00:00:00 GMT\r\n\r\n");
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     tcp_capture_reset();
     handle();
     o = tcp_captured();
@@ -998,7 +998,7 @@ void test_serve_static_last_modified_conditional_get()
     snprintf(req, sizeof(req),
              "GET /page.html HTTP/1.1\r\nHost: x\r\nIf-None-Match: \"deadbeef\"\r\nIf-Modified-Since: %s\r\n\r\n", LM);
     arm_slot(0, req);
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     tcp_capture_reset();
     handle();
     o = tcp_captured();
@@ -1028,7 +1028,7 @@ void test_serve_static_ims_field_comparisons()
     {
         snprintf(req, sizeof(req), "GET /page.html HTTP/1.1\r\nHost: x\r\nIf-Modified-Since: %s\r\n\r\n", ims[i]);
         arm_slot(0, req);
-        conn_pool[0].pcb = &_mock_pcb;
+        conn_pool[0].pcb = pc_net_host_pcb();
         tcp_capture_reset();
         handle();
         const char *o = tcp_captured();
@@ -1038,7 +1038,7 @@ void test_serve_static_ims_field_comparisons()
     }
     // The year-younger direction takes the other branch of the same compare -> 200.
     arm_slot(0, "GET /page.html HTTP/1.1\r\nHost: x\r\nIf-Modified-Since: Wed, 01 Jan 1969 00:16:40 GMT\r\n\r\n");
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     tcp_capture_reset();
     handle();
     const char *o = tcp_captured();
@@ -1058,7 +1058,7 @@ void test_serve_static_unrepresentable_mtime()
 
     // (a) plain GET: 200 with no Last-Modified line (http_rfc1123 bailed).
     arm_slot(0, "GET /page.html HTTP/1.1\r\nHost: x\r\n\r\n");
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     tcp_capture_reset();
     handle();
     const char *o = tcp_captured();
@@ -1068,7 +1068,7 @@ void test_serve_static_unrepresentable_mtime()
 
     // (b) If-Modified-Since: gmtime_r on the file mtime fails -> not-modified false -> 200 + body.
     arm_slot(0, "GET /page.html HTTP/1.1\r\nHost: x\r\nIf-Modified-Since: Thu, 01 Jan 2099 00:00:00 GMT\r\n\r\n");
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     tcp_capture_reset();
     handle();
     o = tcp_captured();
@@ -1096,7 +1096,7 @@ void test_serve_static_if_modified_since_malformed()
         char req[200];
         snprintf(req, sizeof(req), "GET /page.html HTTP/1.1\r\nHost: x\r\nIf-Modified-Since: %s\r\n\r\n", bad[i]);
         arm_slot(0, req);
-        conn_pool[0].pcb = &_mock_pcb;
+        conn_pool[0].pcb = pc_net_host_pcb();
         tcp_capture_reset();
         handle();
         const char *o = tcp_captured();
@@ -1132,7 +1132,7 @@ void test_request_log_hook_fires()
     on_request_log(capture_log);
     on_http("/hi", HTTP_GET, [](uint8_t id, HttpReq *) { send_text(id, 200, "text/plain", "hello"); });
     arm_slot(0, "GET /hi HTTP/1.1\r\nHost: x\r\n\r\n");
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     handle();
     TEST_ASSERT_EQUAL_INT(1, g_log_calls);
     TEST_ASSERT_EQUAL_STRING("GET", g_log_method);
@@ -1146,7 +1146,7 @@ void test_stats_endpoint_emits_json()
 {
     on_http("/stats", HTTP_GET, [](uint8_t id, HttpReq *) { stats(id); });
     arm_slot(0, "GET /stats HTTP/1.1\r\nHost: x\r\n\r\n");
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     tcp_capture_reset();
     handle();
     const char *out = tcp_captured();
@@ -1163,11 +1163,11 @@ void test_stats_endpoint_emits_json()
 // Prometheus /metrics emits the stats counters in text exposition format.
 void test_metrics_emits_prometheus()
 {
-    conn_pool[0] = {};
+    conn_pool[0] = (TcpConn){0};
     conn_pool[0].id = 0;
     conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].proto = PROTO_HTTP; // dispatch requires an explicit protocol
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     http_reset(0);
     tcp_capture_reset();
     metrics(0);
@@ -1228,11 +1228,11 @@ void test_sse_broadcast_after_upgrade_matches_path()
 {
     on_sse("/events", nullptr);
 
-    conn_pool[0] = {};
+    conn_pool[0] = (TcpConn){0};
     conn_pool[0].id = 0;
     conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].proto = PROTO_HTTP; // dispatch requires an explicit protocol
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     push_bytes(0, "GET /events HTTP/1.1\r\n\r\n");
     http_reset(0);
     http_parse(0);
@@ -1254,11 +1254,11 @@ void test_sse_broadcast_after_upgrade_matches_path()
 void test_ws_send_api()
 {
     ws_init();
-    conn_pool[0] = {};
+    conn_pool[0] = (TcpConn){0};
     conn_pool[0].id = 0;
     conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].proto = PROTO_HTTP;
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     WsConn *ws = ws_alloc(0);
     TEST_ASSERT_NOT_NULL(ws);
 
@@ -1307,11 +1307,11 @@ void test_ws_send_api()
 void test_sse_send_api()
 {
     pc_sse_init();
-    conn_pool[0] = {};
+    conn_pool[0] = (TcpConn){0};
     conn_pool[0].id = 0;
     conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].proto = PROTO_HTTP;
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     SseConn *sse = pc_sse_alloc(0, "/events");
     TEST_ASSERT_NOT_NULL(sse);
 
@@ -1375,11 +1375,11 @@ void test_status_text_reason_phrases()
     };
     for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++)
     {
-        conn_pool[0] = {};
+        conn_pool[0] = (TcpConn){0};
         conn_pool[0].id = 0;
         conn_pool[0].state = CONN_ACTIVE;
         conn_pool[0].proto = PROTO_HTTP;
-        conn_pool[0].pcb = &_mock_pcb;
+        conn_pool[0].pcb = pc_net_host_pcb();
         http_reset(0);
         tcp_capture_reset();
         send_text(0, cases[i].code, "text/plain", "x");
@@ -1398,7 +1398,7 @@ void test_send_binary_body_with_nul()
     conn_pool[0].id = 0;
     conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].proto = PROTO_HTTP;
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     http_reset(0);
     const uint8_t body[] = {0x00, 0x00, 0x00, 0x00, 0x05, 'h', 'e', 0x00, 'l', 'o'}; // NUL-laden, 10 octets
     tcp_capture_reset();
@@ -1434,7 +1434,7 @@ void test_allow_header_lists_methods()
     on_http("/m", HTTP_PUT, record_handler);
     on_http("/m", HTTP_METHOD_UNKNOWN, record_handler); // -> method_name() default ""
     arm_slot(0, "DELETE /m HTTP/1.1\r\n\r\n");
-    conn_pool[0].pcb = &_mock_pcb; // arm_slot leaves pcb null; the 405 must emit
+    conn_pool[0].pcb = pc_net_host_pcb(); // arm_slot leaves pcb null; the 405 must emit
     tcp_capture_reset();
     handle();
     const char *out = tcp_captured();
@@ -1548,11 +1548,11 @@ void test_send_family_slot_and_conn_gone_guards()
 
 void test_redirect_response_and_code_normalization()
 {
-    conn_pool[0] = {};
+    conn_pool[0] = (TcpConn){0};
     conn_pool[0].id = 0;
     conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].proto = PROTO_HTTP;
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     http_reset(0);
     tcp_capture_reset();
     redirect(0, 307, "/new");
@@ -1561,7 +1561,7 @@ void test_redirect_response_and_code_normalization()
 
     // An out-of-range redirect code normalizes to 302.
     conn_pool[0].state = CONN_ACTIVE;
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     http_reset(0);
     tcp_capture_reset();
     redirect(0, 200, "/z");
@@ -1577,7 +1577,7 @@ void test_request_error_paths_te_method_ws()
 #endif
     // Wrong method to a GET-only route -> 405 with an Allow header.
     arm_slot(0, "POST /only-get HTTP/1.1\r\nHost: x\r\n\r\n");
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     tcp_capture_reset();
     handle();
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "405"));
@@ -1586,7 +1586,7 @@ void test_request_error_paths_te_method_ws()
 #if PC_ENABLE_WEBSOCKET
     // A WS route hit without an upgrade -> 400.
     arm_slot(0, "GET /ws HTTP/1.1\r\nHost: x\r\n\r\n");
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     tcp_capture_reset();
     handle();
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "400"));
@@ -1594,7 +1594,7 @@ void test_request_error_paths_te_method_ws()
     // A WS upgrade with an unsupported version -> 426 Upgrade Required.
     arm_slot(0, "GET /ws HTTP/1.1\r\nHost: x\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n"
                 "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 12\r\n\r\n");
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     tcp_capture_reset();
     handle();
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "426"));
@@ -1617,7 +1617,7 @@ void test_ws_sse_upgrade_failure_paths()
     // (a) A Sec-WebSocket-Key that does not base64-decode to 16 bytes -> ws_accept_key rejects -> 400.
     arm_slot(0, "GET /ws HTTP/1.1\r\nHost: x\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n"
                 "Sec-WebSocket-Key: dGVzdA==\r\nSec-WebSocket-Version: 13\r\n\r\n"); // "test" -> 4 bytes, not 16
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     tcp_capture_reset();
     handle();
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "400"));
@@ -1625,7 +1625,7 @@ void test_ws_sse_upgrade_failure_paths()
     // (b) Upgrade with Version: 13 but no Sec-WebSocket-Key -> 400.
     arm_slot(0, "GET /ws HTTP/1.1\r\nHost: x\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n"
                 "Sec-WebSocket-Version: 13\r\n\r\n");
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     tcp_capture_reset();
     handle();
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "400"));
@@ -1636,7 +1636,7 @@ void test_ws_sse_upgrade_failure_paths()
     ws_alloc(2); // fill the 2-slot ws_pool (MAX_WS_CONNS)
     arm_slot(0, "GET /ws HTTP/1.1\r\nHost: x\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n"
                 "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n\r\n");
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     tcp_capture_reset();
     handle();
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "101")); // optimistic handshake sent before the pool check
@@ -1654,7 +1654,7 @@ void test_sse_upgrade_pool_exhausted()
     pc_sse_alloc(1, "/a");
     pc_sse_alloc(2, "/b"); // fill the 2-slot pc_sse_pool (MAX_SSE_CONNS)
     arm_slot(0, "GET /events HTTP/1.1\r\nHost: x\r\n\r\n");
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     tcp_capture_reset();
     handle();
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "text/event-stream")); // header sent before the pool check
@@ -1680,7 +1680,7 @@ void test_response_headers_that_do_not_fit_are_refused()
     memset(bigct, 'a', 750);
     bigct[750] = '\0';
     arm_slot(0, "GET /x HTTP/1.1\r\nHost: x\r\n\r\n");
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     tcp_capture_reset();
     send_text(0, 200, bigct, "ok"); // public entry, no route needed
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "HTTP/1.1 500"));
@@ -1698,7 +1698,7 @@ void test_response_headers_that_do_not_fit_are_refused()
     memset(hv, 'c', 240);
     hv[240] = '\0';
     arm_slot(0, "GET /y HTTP/1.1\r\nHost: x\r\n\r\n");
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     proto_add_response_header(0, "X-Big", hv); // fill the extra-header block (~249 bytes)
     tcp_capture_reset();
     send_text(0, 200, midct, "ok");
@@ -1716,11 +1716,11 @@ void test_response_headers_that_do_not_fit_are_refused()
 // byte is written; these tests need the bytes.
 static void live_slot(uint8_t slot)
 {
-    conn_pool[slot] = {};
+    conn_pool[slot] = (TcpConn){0};
     conn_pool[slot].id = slot;
     conn_pool[slot].state = CONN_ACTIVE;
     conn_pool[slot].proto = PROTO_HTTP;
-    conn_pool[slot].pcb = &_mock_pcb;
+    conn_pool[slot].pcb = pc_net_host_pcb();
     http_reset(slot);
     http_pool[slot].version = HTTP_11; // an HTTP/1.1 peer (chunked is 1.1-only)
 }
@@ -1785,7 +1785,7 @@ void test_cache_control_null_clears_header()
     set_cache_control("max-age=60");
     set_cache_control(nullptr); // cleared, not "Cache-Control: (null)"
     arm_slot(0, "GET /c.txt HTTP/1.1\r\nHost: x\r\n\r\n");
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     tcp_capture_reset();
     handle();
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "200 OK"));
@@ -1800,7 +1800,7 @@ void test_empty_route_pattern_matches_nothing()
 {
     on_http("", HTTP_GET, record_handler);
     arm_slot(0, "GET / HTTP/1.1\r\nHost: x\r\n\r\n");
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     tcp_capture_reset();
     handle();
     TEST_ASSERT_FALSE(handler_called);
@@ -1815,7 +1815,7 @@ void test_path_param_capture_limits()
 {
     on_http("/q/:a/:b/:c/:d/:e", HTTP_GET, capture_params_handler);
     arm_slot(0, "GET /q/1/2/3/4/5 HTTP/1.1\r\nHost: x\r\n\r\n");
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     handle();
     TEST_ASSERT_TRUE(handler_called);
     TEST_ASSERT_EQUAL_UINT8(MAX_PATH_PARAMS, g_seen_param_count); // 5th capture dropped
@@ -1830,7 +1830,7 @@ void test_path_param_capture_limits()
     big[sizeof(big) - 1] = '\0';
     snprintf(req, sizeof(req), "GET /k/%s HTTP/1.1\r\nHost: x\r\n\r\n", big);
     arm_slot(0, req);
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     srv2.handle();
     TEST_ASSERT_TRUE(handler_called);
     TEST_ASSERT_EQUAL_UINT(QUERY_KEY_LEN - 1, (unsigned)strlen(g_seen_params[0].key));
@@ -1857,7 +1857,7 @@ void test_path_param_segment_mismatches()
     {
         handler_called = false;
         arm_slot(0, misses[i]);
-        conn_pool[0].pcb = &_mock_pcb;
+        conn_pool[0].pcb = pc_net_host_pcb();
         tcp_capture_reset();
         handle();
         TEST_ASSERT_FALSE_MESSAGE(handler_called, misses[i]);
@@ -1867,7 +1867,7 @@ void test_path_param_segment_mismatches()
     // "//v": both route and path carry an empty segment, then ":a" captures "v".
     handler_called = false;
     arm_slot(0, "GET //v HTTP/1.1\r\nHost: x\r\n\r\n");
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     handle();
     TEST_ASSERT_TRUE(handler_called);
     TEST_ASSERT_EQUAL_STRING("v", g_seen_params[0].val);
@@ -1919,7 +1919,7 @@ void test_entity_too_large_auto_413()
 {
     on_http("/big", HTTP_POST, record_handler);
     arm_slot(0, "POST /big HTTP/1.1\r\nHost: x\r\nContent-Length: 100000\r\n\r\n");
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     TEST_ASSERT_EQUAL(PARSE_ENTITY_TOO_LARGE, http_pool[0].parse_state);
     tcp_capture_reset();
     handle();
@@ -1935,7 +1935,7 @@ void test_allow_header_dedupes_repeated_method()
     on_http("/dup", HTTP_POST, record_handler);
     on_http("/dup", HTTP_POST, record_handler);
     arm_slot(0, "GET /dup HTTP/1.1\r\nHost: x\r\n\r\n");
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     tcp_capture_reset();
     handle();
     const char *out = tcp_captured();
@@ -1953,7 +1953,7 @@ void test_error_close_head_and_dead_connection()
 
     // HEAD on a POST-only route -> 405 headers, no body.
     arm_slot(0, "HEAD /po HTTP/1.1\r\nHost: x\r\n\r\n");
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     tcp_capture_reset();
     handle();
     const char *out = tcp_captured();
@@ -1962,7 +1962,7 @@ void test_error_close_head_and_dead_connection()
 
     // Slot no longer ACTIVE (pcb still attached) -> nothing written.
     arm_slot(0, "GET /po HTTP/1.1\r\nHost: x\r\n\r\n");
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     conn_pool[0].state = ConnState::CONN_CLOSING;
     tcp_capture_reset();
     handle();
@@ -2010,7 +2010,7 @@ void test_static_mount_rejects_non_get_methods()
     fs::mock_fs_add("/www/a.txt", body);
     serve_static("/", g_static_fs, "/www");
     arm_slot(0, "POST /a.txt HTTP/1.1\r\nHost: x\r\nContent-Length: 0\r\n\r\n");
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     tcp_capture_reset();
     handle();
     const char *out = tcp_captured();
@@ -2252,7 +2252,7 @@ static void ws_upgrade_slot0(const char *path)
              "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n\r\n",
              path);
     arm_slot(0, req);
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     handle();
 }
 
@@ -2308,7 +2308,7 @@ void test_ws_upgrade_handshake_gate()
     for (size_t i = 0; i < sizeof(bad) / sizeof(bad[0]); i++)
     {
         arm_slot(0, bad[i]);
-        conn_pool[0].pcb = &_mock_pcb;
+        conn_pool[0].pcb = pc_net_host_pcb();
         tcp_capture_reset();
         handle();
         TEST_ASSERT_NOT_NULL_MESSAGE(strstr(tcp_captured(), "400"), bad[i]);
@@ -2317,7 +2317,7 @@ void test_ws_upgrade_handshake_gate()
     // A real handshake with no Sec-WebSocket-Version at all -> 426, same as a wrong one.
     arm_slot(0, "GET /wsg HTTP/1.1\r\nHost: x\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n"
                 "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n\r\n");
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     tcp_capture_reset();
     handle();
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "426 Upgrade Required"));
@@ -2374,7 +2374,7 @@ void test_sse_upgrade_fires_connect_handler()
     g_sse_connected_id = 0xFF;
     on_sse("/evh", sse_on_connect);
     arm_slot(0, "GET /evh HTTP/1.1\r\nHost: x\r\n\r\n");
-    conn_pool[0].pcb = &_mock_pcb;
+    conn_pool[0].pcb = pc_net_host_pcb();
     tcp_capture_reset();
     handle();
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "text/event-stream"));

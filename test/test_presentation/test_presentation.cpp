@@ -34,7 +34,7 @@ void setUp()
 {
     for (int i = 0; i < MAX_CONNS; i++)
     {
-        conn_pool[i] = {};
+        conn_pool[i] = (TcpConn){0};
         conn_pool[i].id = i;
         conn_pool[i].state = CONN_ACTIVE;
         http_reset(i);
