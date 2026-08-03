@@ -117,22 +117,21 @@ void test_non_a_query_no_error()
     TEST_ASSERT_EQUAL_UINT8(0x00, out[3] & 0x0F); // RCODE 0 (not NXDOMAIN - we just don't serve AAAA)
 }
 
+// Records the name the builder handed the resolver, so the test can assert every label survived.
+static char g_seen[128];
+static uint32_t capture_name(const char *name)
+{
+    strncpy(g_seen, name, sizeof(g_seen) - 1);
+    g_seen[sizeof(g_seen) - 1] = 0;
+    return 0;
+}
+
 void test_multilabel_name_reaches_resolver()
 {
-    static char seen[128];
-    struct L
-    {
-        static uint32_t cap(const char *name)
-        {
-            strncpy(seen, name, sizeof(seen) - 1);
-            seen[sizeof(seen) - 1] = 0;
-            return 0;
-        }
-    };
     uint8_t q[128], out[256];
     size_t qlen = make_query(q, 1, "a.b.c.example", 1, PROTO_FALSE);
-    pc_dns_server_build_response(q, qlen, 60, L::cap, out, sizeof(out));
-    TEST_ASSERT_EQUAL_STRING("a.b.c.example", seen);
+    pc_dns_server_build_response(q, qlen, 60, capture_name, out, sizeof(out));
+    TEST_ASSERT_EQUAL_STRING("a.b.c.example", g_seen);
 }
 
 void test_malformed_guards()
