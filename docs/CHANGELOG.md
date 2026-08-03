@@ -46,6 +46,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`af162fc`](https://github.com/dstroy0/ProtoCore/commit/af162fc7f91918185a4c324585d3ac3285b1ceea))
 - update CHANGELOG.md [skip ci] ([`f406586`](https://github.com/dstroy0/ProtoCore/commit/f406586e834ad4f2a4fee71e57616eafbef4d4a8))
 - update CHANGELOG.md [skip ci] ([`a2b3031`](https://github.com/dstroy0/ProtoCore/commit/a2b303145ae39abfd34d7f9ebd4d349f7be681b6))
 - update CHANGELOG.md [skip ci] ([`1789944`](https://github.com/dstroy0/ProtoCore/commit/1789944f224888985c0a8eba87598c177f5f1c80))
@@ -193,6 +194,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`cc3e721`](https://github.com/dstroy0/ProtoCore/commit/cc3e7213562864d8b3389377526eb0a5333a648c))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`d1cea96`](https://github.com/dstroy0/ProtoCore/commit/d1cea965f967058099e5aeb8414f06bd734aebc6))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`e8a0034`](https://github.com/dstroy0/ProtoCore/commit/e8a003460b0a7525892b7178c76658fce6c6399b))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`0af15b8`](https://github.com/dstroy0/ProtoCore/commit/0af15b881340d16b7db7f1c7f7d45b87559cc6ed))
@@ -278,6 +280,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- hoist the file-serving handlers out of lambdas ([`22a0087`](https://github.com/dstroy0/ProtoCore/commit/22a0087ee5815de5a9663bb39e5568c10be3a3b4))
 - give the host a pc_mnt_backend fixture and move file serving onto it ([`18a0c36`](https://github.com/dstroy0/ProtoCore/commit/18a0c3620c2ac0c7465fcfa238f28f4f772efc4d))
 - use on_http_iface for the interface-scoped overload ([`93920a6`](https://github.com/dstroy0/ProtoCore/commit/93920a68af6578f64065697a23a592fec2a9adf7))
 - spell the infinite loop without the C++ keyword ([`030b761`](https://github.com/dstroy0/ProtoCore/commit/030b761011044df82440ba3aa3377b5ce6666bc0))
