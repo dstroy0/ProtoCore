@@ -272,6 +272,8 @@ src/
 │   └── secure.h
 ├── network_drivers/
 │   ├── application/
+│   │   ├── auth/
+│   │   │   └── auth.c
 │   │   ├── file_serving/
 │   │   │   ├── file_serving.c
 │   │   │   └── file_serving.h
@@ -492,7 +494,6 @@ src/
 │   │   ├── ota_rollback.h
 │   │   ├── ota_service.cpp
 │   │   └── ota_service.h
-│   ├── auth.c
 │   ├── exc_coredump.c
 │   ├── exc_decoder.c
 │   ├── exc_decoder.h

@@ -567,7 +567,7 @@ Falls out of the same pass:
 
 **Placement:** groups whose TU already exists fold into it - middleware + rate limit are ALREADY in
 `server/middleware.cpp` with only their state stranded in the class; likewise response ->
-`server/response.cpp`, file serving -> `network_drivers/application/file_serving/file_serving.cpp`, auth -> `server/auth.cpp`, ws/sse
+`server/response.cpp`, file serving -> `network_drivers/application/file_serving/file_serving.cpp`, auth -> `network_drivers/application/auth/auth.c`, ws/sse
 -> their presentation TUs. Only listeners, routing, stats and cors have no home.
 
 **Order is forced by the call graph, not by size.** `rate_limit_check()` calls

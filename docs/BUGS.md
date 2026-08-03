@@ -1121,7 +1121,7 @@ ssh_gf_mul`. The QUIC TLS-1.3 handshake **reuses the SSH ed25519 signer**, whose
   it grants no access they could not already get), but a real robustness + **timing-side-channel** weakness:
   `strcmp`/`memcmp` early-out, leaking via response timing how many leading credential bytes matched, and the
   NUL truncation means the decoded credential length was not validated.
-- **Root cause:** `src/server/auth.cpp check_basic_auth` used `memcmp` for the username (length-checked, ok)
+- **Root cause:** `src/network_drivers/application/auth/auth.c check_basic_auth` used `memcmp` for the username (length-checked, ok)
   but `strcmp` for the password, and never bounded the password to its decoded byte length.
 - **Fix:** compute the real password byte length (`plen = n - (pass - decoded)`) and compare BOTH fields with
   a new constant-time, length-bounded `ct_equal()` - so an embedded NUL cannot truncate the compare and the

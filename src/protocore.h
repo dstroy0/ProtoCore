@@ -687,10 +687,9 @@ proto_bool check_digest_auth(uint8_t slot_id, HttpReq *req, const Route *r, prot
 /// @brief Send 401 Unauthorized with a Basic or Digest `WWW-Authenticate` challenge per route @p r.
 /// @param stale  emit `stale=true` in the Digest challenge (expired-nonce transparent retry).
 void send_unauth(uint8_t slot_id, const Route *r, proto_bool stale);
-// The Digest keying secret is NOT here. It lives in server/auth.cpp's AuthCtx, which is the only
-// file that reads it: a definition in this header gives every translation unit that includes it a
-// separate copy of the secret (and a multiple-definition link error), which is the opposite of one
-// owner. See the comment on AuthCtx.
+// The Digest keying secret is NOT here. It lives in network_drivers/application/auth/auth.c's AuthCtx, which is the
+// only file that reads it: a definition in this header gives every translation unit that includes it a separate copy of
+// the secret (and a multiple-definition link error), which is the opposite of one owner. See the comment on AuthCtx.
 /// @brief (Re)seed the Digest keying secret from the CSPRNG.
 void regen_digest_secret();
 /// @brief Mint a fresh stateless nonce (issue time + keyed MAC) into @p out (needs cap >= 48).
