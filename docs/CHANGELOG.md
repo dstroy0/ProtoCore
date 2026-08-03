@@ -46,6 +46,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`1789944`](https://github.com/dstroy0/ProtoCore/commit/1789944f224888985c0a8eba87598c177f5f1c80))
+- update CHANGELOG.md [skip ci] ([`aee14c8`](https://github.com/dstroy0/ProtoCore/commit/aee14c85cb409a1e744e5548eb941483ab158468))
 - update CHANGELOG.md [skip ci] ([`e7b2366`](https://github.com/dstroy0/ProtoCore/commit/e7b2366b12815f420c9ad2569c2c21da54fb86cd))
 - generate the native base env, at C11 ([`a44ce4d`](https://github.com/dstroy0/ProtoCore/commit/a44ce4d446871c38eb6efd5942bc767abf3c7c58))
 - update CHANGELOG.md [skip ci] ([`1dfbdea`](https://github.com/dstroy0/ProtoCore/commit/1dfbdea7ec7d7463da5b637d27188b1f2a04a814))
@@ -273,6 +275,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- spell the infinite loop without the C++ keyword ([`030b761`](https://github.com/dstroy0/ProtoCore/commit/030b761011044df82440ba3aa3377b5ce6666bc0))
 - convert the defer and presentation suites to C ([`b0d3177`](https://github.com/dstroy0/ProtoCore/commit/b0d317764278d3810e6ac4e54ce5f1fc8618c72b))
 - enable PC_ENABLE_AUTH for the auth suites ([`102cc67`](https://github.com/dstroy0/ProtoCore/commit/102cc67f86b910c47b3c54d97976f1c842486a52))
 - finish the auth arity and give the host seam a settable send buffer ([`84a9c6c`](https://github.com/dstroy0/ProtoCore/commit/84a9c6c244e56e17c063685267ba3dff4d84f906))
