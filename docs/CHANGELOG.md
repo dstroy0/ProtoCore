@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- replace the pc_atomic template and in-class initializers in two servers ([`fd1a387`](https://github.com/dstroy0/ProtoCore/commit/fd1a387ae52b3568a70ad041ba17da7a2cc4006b))
 - spell the opaque H3Conn tag and hoist a lambda out of test_quic_server ([`794cd33`](https://github.com/dstroy0/ProtoCore/commit/794cd33df4b4be0b431f9f87e88c25b6a715a52e))
 - strip 516 verified C++ scope qualifiers from code ([`fb95b57`](https://github.com/dstroy0/ProtoCore/commit/fb95b573540c707da29e25c12dcd6602436284dc))
 - spell the opaque QuicConn tag and drop a missed reinterpret_cast ([`03a3609`](https://github.com/dstroy0/ProtoCore/commit/03a3609c9b40ebb1a360718eb03e5b7f53616823))
@@ -31,6 +32,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update test report + coverage [skip ci] ([`450b3e8`](https://github.com/dstroy0/ProtoCore/commit/450b3e8b3472ccb8c8612e5937f359e674d26d12))
+- update CHANGELOG.md [skip ci] ([`9f572b4`](https://github.com/dstroy0/ProtoCore/commit/9f572b4c051a2aa022973bd1ea5384ad69f5cbfd))
 - update CHANGELOG.md [skip ci] ([`e5c6df1`](https://github.com/dstroy0/ProtoCore/commit/e5c6df10377b88c0d7d353231343c48d4242f01e))
 - update test report + coverage [skip ci] ([`1cd9cdc`](https://github.com/dstroy0/ProtoCore/commit/1cd9cdcd713aaadf302f67de063e948c7b445dc6))
 - update CHANGELOG.md [skip ci] ([`2b9c20b`](https://github.com/dstroy0/ProtoCore/commit/2b9c20baa5c87848cd707c2c7190ece7c809c01b))
