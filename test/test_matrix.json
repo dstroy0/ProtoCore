@@ -715,7 +715,8 @@
     "native_auth": {
       "desc": "test_auth against the native_stack_http stack.",
       "base": "env:native_stack_http",
-      "tests": ["test_auth"]
+      "tests": ["test_auth"],
+      "flags": ["-DPC_ENABLE_AUTH=1"]
     },
     "native_file_serving": {
       "desc": "test_file_serving against the native_stack_http stack.",
@@ -756,12 +757,14 @@
       "desc": "test_digest_auth against the native_stack_http stack.",
       "base": "env:native_stack_http",
       "tests": ["test_digest_auth"],
-      "src": ["+<server/clock/clock.c>"]
+      "src": ["+<server/clock/clock.c>"],
+      "flags": ["-DPC_ENABLE_AUTH=1"]
     },
     "native_digest_vectors": {
       "desc": "test_digest_vectors against the native_stack_http stack.",
       "base": "env:native_stack_http",
-      "tests": ["test_digest_vectors"]
+      "tests": ["test_digest_vectors"],
+      "flags": ["-DPC_ENABLE_AUTH=1"]
     },
     "native_template": {
       "desc": "test_template against the native_stack_http stack.",
