@@ -54,6 +54,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`e98383f`](https://github.com/dstroy0/ProtoCore/commit/e98383f6f20f7abfef52870e63050a54851b45eb))
 - update CHANGELOG.md [skip ci] ([`3c773d6`](https://github.com/dstroy0/ProtoCore/commit/3c773d6852bb951f6ca5707225868ddbabb0af27))
 - update test report + coverage [skip ci] ([`ca2dfc7`](https://github.com/dstroy0/ProtoCore/commit/ca2dfc722ad6ed164289757c0bbfc2d1d9bc7c0f))
 - update CHANGELOG.md [skip ci] ([`063cd9c`](https://github.com/dstroy0/ProtoCore/commit/063cd9cb98ef9df9e3996457090642f28d2810d0))
@@ -318,6 +319,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Refactor
 
+- the eight src/ .cpp files that were already C become .c ([`ed97f45`](https://github.com/dstroy0/ProtoCore/commit/ed97f45d9a6d99725a2b4922496bb06814d52477))
 - convert SecureScope, the DTLS key references, and the opaque GCM handles ([`4e1954c`](https://github.com/dstroy0/ProtoCore/commit/4e1954cd83fd6bfcd37d009e37dd79056ea6cbb3))
 - replace the SecureBorrow RAII holder with the mark/span/release shape ([`8d94018`](https://github.com/dstroy0/ProtoCore/commit/8d94018e564f3a3163197bd6e3e6ca623a6221db))
 - convert the HTTP client to C and unblock the edge-cache suites ([`01858c0`](https://github.com/dstroy0/ProtoCore/commit/01858c0792548477d91736b76df8048caafb4648))
