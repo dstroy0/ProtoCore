@@ -51,6 +51,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`09e6682`](https://github.com/dstroy0/ProtoCore/commit/09e6682cd48080970ecde9b23abcf2412c4df955))
 - update CHANGELOG.md [skip ci] ([`dcda99b`](https://github.com/dstroy0/ProtoCore/commit/dcda99b00da72981ce97a0139acfb26c36d58179))
 - update CHANGELOG.md [skip ci] ([`ccc6e7e`](https://github.com/dstroy0/ProtoCore/commit/ccc6e7e7bf5a15c391195004b95a51da22c3bffd))
 - update CHANGELOG.md [skip ci] ([`149bb8a`](https://github.com/dstroy0/ProtoCore/commit/149bb8a5e7bf4175209a6f9dc179b4089b75592c))
@@ -331,6 +332,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- add a medium that refuses every write ([`1345032`](https://github.com/dstroy0/ProtoCore/commit/134503202fadcac46a6631aa63ff438efbbe032e))
 - WebDAV storage refusals now come from the medium ([`5b0624b`](https://github.com/dstroy0/ProtoCore/commit/5b0624b57dc61f025c534d06aeb3b9454465fd86))
 - refuse through the medium instead of through exhaustion ([`5f6a8ce`](https://github.com/dstroy0/ProtoCore/commit/5f6a8ce64c12f3d9126914463e1677ba9330c71f))
 - remount after filling, so the fixture starts from the medium ([`86bcc96`](https://github.com/dstroy0/ProtoCore/commit/86bcc964e5d7db807d58c780664ab70d4c5f0385))
