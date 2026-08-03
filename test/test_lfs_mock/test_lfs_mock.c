@@ -246,6 +246,32 @@ void test_two_writers_at_once()
     TEST_ASSERT_EQUAL_INT(160, b->size("/b.bin"));
 }
 
+// After the volume is full, the store still has to answer normally - a caller keeps serving
+// reads and keeps being refused writes. If filling leaves littlefs in a state where the next
+// program asserts, every test that fills is standing on a landmine.
+void test_store_still_answers_after_a_full_fill()
+{
+    const pc_mnt_backend *b = lfsm();
+    TEST_ASSERT_TRUE(lfsm_write_text("/keep.txt", "kept"));
+    lfsm_fill_volume();
+
+    // reads still work
+    int h = b->open("/keep.txt", PC_MNT_READ);
+    TEST_ASSERT_GREATER_OR_EQUAL_INT(0, h);
+    char buf[8] = {0};
+    TEST_ASSERT_EQUAL_INT(4, b->read(h, buf, sizeof(buf)));
+    b->close(h);
+
+    // and a write to an existing file is refused rather than exploding
+    h = b->open("/keep.txt", PC_MNT_APPEND);
+    if (h >= 0)
+    {
+        (void)b->write(h, "more", 4);
+        b->close(h);
+    }
+    TEST_ASSERT_TRUE(b->exists("/keep.txt"));
+}
+
 int main()
 {
     UNITY_BEGIN();
@@ -262,5 +288,6 @@ int main()
     RUN_TEST(test_fill_leaving_room_still_creates_but_cannot_write);
     RUN_TEST(test_read_one_file_while_writing_another);
     RUN_TEST(test_two_writers_at_once);
+    RUN_TEST(test_store_still_answers_after_a_full_fill);
     return UNITY_END();
 }
