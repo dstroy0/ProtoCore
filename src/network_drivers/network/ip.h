@@ -27,6 +27,8 @@
 
 #include "protocore_config.h" // the entry point; it sets the widths and reaches types.h for proto_bool
 
+PROTO_BEGIN_DECLS
+
 /** @brief Address family tag. */
 typedef enum PROTO_ENUM_PACKED
 {
@@ -109,5 +111,7 @@ proto_bool pc_ip_is_unspecified(const pc_ip *ip);
  * @return true if @p addr is covered; false on a family mismatch or an out-of-range prefix.
  */
 proto_bool pc_ip_prefix_match(const pc_ip *addr, const pc_ip *net, uint8_t prefix_len);
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_IP_H
