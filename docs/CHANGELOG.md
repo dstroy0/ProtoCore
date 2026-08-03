@@ -48,6 +48,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`dd0cf87`](https://github.com/dstroy0/ProtoCore/commit/dd0cf87d1ecdd9a941f0a5f6430f5716a05ed212))
 - update CHANGELOG.md [skip ci] ([`fc6720f`](https://github.com/dstroy0/ProtoCore/commit/fc6720f5570454879c2e16b5671ab2c88eb38686))
 - update CHANGELOG.md [skip ci] ([`53d3768`](https://github.com/dstroy0/ProtoCore/commit/53d3768544ceecbe9cea6597f840f02fa0861aa1))
 - update CHANGELOG.md [skip ci] ([`372545b`](https://github.com/dstroy0/ProtoCore/commit/372545b1d4affba2555996badad047131047b9ad))
@@ -310,6 +311,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- create the WebDAV mount root before serving from it ([`8735ff7`](https://github.com/dstroy0/ProtoCore/commit/8735ff7cd3ce59ac0b54858568473529103ea9db))
 - force the WebDAV failure paths by causing them, not flagging them ([`6d0cbf0`](https://github.com/dstroy0/ProtoCore/commit/6d0cbf046afca4414ad65000775391a0ee679f35))
 - create the collections above a fixture write ([`6bf5651`](https://github.com/dstroy0/ProtoCore/commit/6bf56513b22ae4b9633555cd08a6b96125263a9d))
 - build the route table and signaling for the WebDAV suite ([`4b5d1cf`](https://github.com/dstroy0/ProtoCore/commit/4b5d1cfdda3885fe32b5842062e57d2a435398e8))
