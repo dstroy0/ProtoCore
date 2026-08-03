@@ -38,6 +38,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update test report + coverage [skip ci] ([`2e774fb`](https://github.com/dstroy0/ProtoCore/commit/2e774fb9ae6f96aebc2e4b71dbf1b06e5df34daf))
+- update CHANGELOG.md [skip ci] ([`39d6728`](https://github.com/dstroy0/ProtoCore/commit/39d67280b18c3dc15add4133c107916ea71d50b2))
 - update CHANGELOG.md [skip ci] ([`6495f67`](https://github.com/dstroy0/ProtoCore/commit/6495f67297dd8c1c2c5639229caee0540e807f15))
 - update CHANGELOG.md [skip ci] ([`8a33977`](https://github.com/dstroy0/ProtoCore/commit/8a339771ac15e9b1581bd168f2a9bc610cc855ed))
 - update test report + coverage [skip ci] ([`adaa1bc`](https://github.com/dstroy0/ProtoCore/commit/adaa1bc70a8af0cdd4380daa7a6334db251ca4c3))
@@ -146,6 +148,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`ec1fbd1`](https://github.com/dstroy0/ProtoCore/commit/ec1fbd1e3051b887a499fa71db1eae8aa30b3354))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`f48be9f`](https://github.com/dstroy0/ProtoCore/commit/f48be9f74fc73d163374b5de90f882460162be90))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`c25ce38`](https://github.com/dstroy0/ProtoCore/commit/c25ce38d988f90b311ad1a5d98bb169598a5aa4f))
 - document the mmgr memory model ([`a2b6c58`](https://github.com/dstroy0/ProtoCore/commit/a2b6c5828b9a2699cc5d3d030a3c87108fd81f72))
@@ -188,6 +191,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Refactor
 
+- drop the C++ default arguments from the SSH KDF entry points ([`ef9541c`](https://github.com/dstroy0/ProtoCore/commit/ef9541c495fdc482cf68b8cde8fcce830bb749e2))
 - convert the remaining using-aliases to C typedefs ([`13ebde2`](https://github.com/dstroy0/ProtoCore/commit/13ebde29ad0b83d1e58559135c5639c5e1f50b2b))
 - move the upload service onto the mnt storage seam ([`9a2bbaa`](https://github.com/dstroy0/ProtoCore/commit/9a2bbaa03e88b3a89c9797b89d1c38c77d784883))
 - move mDNS, NTP, NTS and PTP into the L7 application layer ([`bcf041b`](https://github.com/dstroy0/ProtoCore/commit/bcf041b7358b324f34ddccceeae40be286a24161))
