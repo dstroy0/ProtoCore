@@ -1555,11 +1555,15 @@ static void allow_append(char *buf, size_t cap, const char *m)
 {
     // method_name() hands back one of the seven method literals, so the longest of them is the
     // bound on @p m - the Allow buffer's capacity is the bound on `buf` and says nothing about it.
-    if (!m[0] || proto_has(buf, cap, m, sizeof("OPTIONS")))
+    //
+    // The search runs to the NUL, not to the capacity: the caller sets only buf[0], so every byte
+    // past the text is whatever the stack held. Scanning those could match a method that was never
+    // appended and return early, and the Allow header would silently lose one.
+    size_t len = proto_scan_nul(buf, cap);
+    if (!m[0] || proto_has(buf, len, m, sizeof("OPTIONS")))
     {
         return;
     }
-    size_t len = proto_scan_nul(buf, cap);
     if (len == 0)
     {
         pc_sb sb_buf = {buf, cap, 0, PROTO_TRUE};
