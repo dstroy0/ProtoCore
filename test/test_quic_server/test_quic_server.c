@@ -395,7 +395,7 @@ void test_quic_server_http3_get()
     }
     Tls13KeySchedule cks;
     pc_tls13_ks_early(&TLS13_KDF, &cks);
-    pc_tls13_ks_handshake(&cks, ecdhe, chsh);
+    pc_tls13_ks_handshake(&cks, ecdhe, chsh, sizeof(ecdhe));
     QuicPacketKeys hs_s, hs_c, ap_s, ap_c;
     pc_quic_keys_from_secret(cks.server_hs_traffic, &hs_s);
     pc_quic_keys_from_secret(cks.client_hs_traffic, &hs_c);
@@ -886,7 +886,7 @@ void test_quic_server_on_request_null()
     }
     Tls13KeySchedule cks;
     pc_tls13_ks_early(&TLS13_KDF, &cks);
-    pc_tls13_ks_handshake(&cks, ecdhe, chsh);
+    pc_tls13_ks_handshake(&cks, ecdhe, chsh, sizeof(ecdhe));
     QuicPacketKeys hs_s, hs_c, ap_c;
     pc_quic_keys_from_secret(cks.server_hs_traffic, &hs_s);
     pc_quic_keys_from_secret(cks.client_hs_traffic, &hs_c);

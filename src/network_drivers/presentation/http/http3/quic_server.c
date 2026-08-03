@@ -84,17 +84,17 @@ static PC_QUIC_POOL_ATTR QuicServerPoolCtx s_qpool;
 // flag / next connection id, and (host) the outbound sink. One named owner, unreachable cross-TU.
 typedef struct
 {
-    pc_atomic<size_t> ring_head; ///< producer (udp / ingest) advances
-    pc_atomic<size_t> ring_tail; ///< consumer (poll) advances
+    _Atomic size_t ring_head; ///< producer (udp / ingest) advances
+    _Atomic size_t ring_tail; ///< consumer (poll) advances
     QuicServerConfig cfg;
-    QuicServerRequestFn on_request = NULL;
-    void *app = NULL;
-    uint16_t port = 0;
-    proto_bool running = PROTO_FALSE;
-    uint32_t next_id = 1;
+    QuicServerRequestFn on_request;
+    void *app;
+    uint16_t port;
+    proto_bool running;
+    uint32_t next_id; ///< set to 1 by pc_quic_server_begin(); never handed out as 0
 #if !PROTOCORE_HOT
-    QuicServerOutFn out_sink = NULL;
-    void *out_ctx = NULL;
+    QuicServerOutFn out_sink;
+    void *out_ctx;
 #endif
 } QuicServerCtx;
 static QuicServerCtx s_quic;

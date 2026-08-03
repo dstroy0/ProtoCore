@@ -70,18 +70,18 @@ static CoapsServerPoolCtx s_cpool;
 // sink. One named owner, unreachable cross-TU.
 typedef struct
 {
-    pc_atomic<size_t> ring_head; ///< producer (udp / ingest) advances
-    pc_atomic<size_t> ring_tail; ///< consumer (poll) advances
-    const uint8_t *cert_der = NULL;
-    size_t cert_len = 0;
+    _Atomic size_t ring_head; ///< producer (udp / ingest) advances
+    _Atomic size_t ring_tail; ///< consumer (poll) advances
+    const uint8_t *cert_der;
+    size_t cert_len;
     uint8_t ed25519_seed[32];
     uint8_t cookie_key[32];
-    void (*rng)(uint8_t *out, size_t len) = NULL;
-    uint16_t port = 0;
-    proto_bool running = PROTO_FALSE;
+    void (*rng)(uint8_t *out, size_t len);
+    uint16_t port;
+    proto_bool running;
 #if !PROTOCORE_HOT
-    CoapsServerOutFn out_sink = NULL;
-    void *out_ctx = NULL;
+    CoapsServerOutFn out_sink;
+    void *out_ctx;
 #endif
 } CoapsServerCtx;
 static CoapsServerCtx s_coaps;
