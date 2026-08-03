@@ -1,11 +1,11 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the MAC-derived device UUID (services/system/device_id). The expected
+// Unit tests for the MAC-derived device UUID (server/signaling/device_id). The expected
 // values are RFC 4122 v5 UUIDs (DNS namespace, name = lowercase MAC hex) computed
 // with Python's uuid.uuid5, so the implementation is checked against the standard.
 
-#include "services/system/device_id/device_id.h"
+#include "server/signaling/device_id.h"
 #include <string.h>
 #include <unity.h>
 

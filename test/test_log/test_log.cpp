@@ -10,7 +10,7 @@
 // reaches neither the sink nor the ring, with the argument-evaluation probe below proving the
 // arguments were never even evaluated.
 
-#include "services/system/logbuf/logbuf.h"
+#include "server/logbuf.h"
 #include "shared_primitives/log.h"
 #include "shared_primitives/ring.h" // shared SPSC byte-ring primitive, exercised at the bottom
 #include <stdio.h>

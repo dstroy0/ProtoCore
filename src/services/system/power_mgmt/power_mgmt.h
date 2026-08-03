@@ -6,7 +6,7 @@
  * @brief SoC power governor: frequency scaling, thermal throttle, brownout recovery, gating
  *        (PC_ENABLE_POWER_MGMT).
  *
- * services/system/radio_power owns the radio and services/system/sleep_sched decides how *long* to sleep. Neither
+ * network_drivers/physical/radio_power owns the radio and server/sleep_sched decides how *long* to sleep. Neither
  * owns the SoC itself, which is where the rest of the power budget goes: the CPU clock, the die
  * temperature, and the peripherals nobody is using.
  *

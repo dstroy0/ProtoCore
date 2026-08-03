@@ -5,7 +5,7 @@
 // into its sink/source role + target path (with extra flags), parsing + building the `C<mode> <size> <name>`
 // control line (octal mode, decimal size, name; malformed/D-record rejection), and the ack byte constants.
 
-#include "services/file_transfer/scp/scp.h"
+#include "network_drivers/application/scp/scp.h"
 #include <stdint.h>
 #include <string.h>
 #include <unity.h>

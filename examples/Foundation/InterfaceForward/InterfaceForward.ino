@@ -21,7 +21,7 @@
 
 #include "protocore.h" // discovers the library (adds src/ to the include path)
 #include "services/net/forward/forward.h"
-#include "services/system/dma/dma.h"
+#include "mmgr/dma.h"
 #include "services/system/preempt_queue/preempt_queue.h"
 #include <string.h>
 

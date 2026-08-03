@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for the multi-interface link-manager policy (services/system/link_manager):
+// On-device CCOUNT microbenchmark for the multi-interface link-manager policy (server/signaling/link_manager):
 // a caller-owned table of interfaces (kind + priority + up/down) with a deterministic "best link that
 // is up" selection (pc_link_select), initial-egress compute (pc_link_init), and up/down state change
 // with escalation/failover + change detection (pc_link_set). All three are pure integer table scans -
@@ -14,7 +14,7 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "services/system/link_manager/link_manager.h"
+#include "server/signaling/link_manager.h"
 #include <Arduino.h>
 
 static void link_manager_bench_task(void *)

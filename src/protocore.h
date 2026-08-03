@@ -84,8 +84,8 @@
 #include "network_drivers/presentation/ssh/connection/ssh_client.h"
 #include "network_drivers/presentation/ssh/connection/ssh_conn.h"
 #include "network_drivers/presentation/ssh/connection/ssh_forward.h"
-#include "network_drivers/presentation/ssh/crypto/ssh_rsa.h"
 #include "network_drivers/presentation/ssh/transport/ssh_transport.h"
+#include "network_drivers/tls/ssh_rsa.h"
 #endif
 
 // This header declares size_t, uint8_t and int64_t in its own signatures, so it names their
@@ -99,17 +99,43 @@
 // reachable from it. A feature the build did not enable costs nothing: each service header carries
 // its own PC_ENABLE_ guard, so a disabled one contributes no declarations and no code.
 #include "mmgr/arena.h"
+#include "mmgr/dma.h"
 #include "mmgr/plaintext.h"
 #include "mmgr/secure.h"
+#include "network_drivers/application/file_serving/file_serving.h"
+#include "network_drivers/application/http_range.h"
+#include "network_drivers/application/scp/scp.h"
+#include "network_drivers/application/scp/ssh_scp.h"
+#include "network_drivers/application/sftp/sftp.h"
+#include "network_drivers/application/sftp/ssh_sftp.h"
+#include "network_drivers/application/smb/ntlm.h"
+#include "network_drivers/application/smb/ntlmssp.h"
+#include "network_drivers/application/smb/smb2.h"
+#include "network_drivers/application/smb/smb_client.h"
+#include "network_drivers/application/smb/spnego.h"
+#include "network_drivers/application/upload_service/upload_service.h"
+#include "network_drivers/application/webdav/webdav.h"
+#include "network_drivers/datalink/roaming.h"
+#include "network_drivers/network/dns_resolver.h"
 #include "network_drivers/network/route.h"
+#include "network_drivers/physical/radio_power.h"
 #include "network_drivers/session/preempt_queue.h"
+#include "server/clock/clock.h"
+#include "server/failsafe.h"
 #include "server/filesystem/filesystem.h"
 #include "server/filesystem/mnt.h"
 #include "server/filesystem/wearlevel.h"
-#include "server/http_range.h"
+#include "server/logbuf.h"
+#include "server/signaling/bus_capture.h"
+#include "server/signaling/device_id.h"
+#include "server/signaling/gpio_map.h"
+#include "server/signaling/hw_health.h"
+#include "server/signaling/link_manager.h"
 #include "server/signaling/signaling.h"
-#include "server/ssh_scp.h"
-#include "server/ssh_sftp.h"
+#include "server/signaling/trace_capture.h"
+#include "server/sleep_sched.h"
+#include "server/update/ota_rollback.h"
+#include "server/update/ota_service.h"
 #include "services/energy/c37118/c37118.h"
 #include "services/energy/dnp3/dnp3.h"
 #include "services/energy/goose/goose.h"
@@ -155,15 +181,6 @@
 #include "services/file_transfer/ftp/ftp.h"
 #include "services/file_transfer/ftp/ftp_session.h"
 #include "services/file_transfer/http_delivery/http_delivery.h"
-#include "services/file_transfer/scp/scp.h"
-#include "services/file_transfer/sftp/sftp.h"
-#include "services/file_transfer/smb/ntlm.h"
-#include "services/file_transfer/smb/ntlmssp.h"
-#include "services/file_transfer/smb/smb2.h"
-#include "services/file_transfer/smb/smb_client.h"
-#include "services/file_transfer/smb/spnego.h"
-#include "services/file_transfer/upload_service/upload_service.h"
-#include "services/file_transfer/webdav/webdav.h"
 #include "services/instrumentation/gpib/gpib.h"
 #include "services/instrumentation/hislip/hislip.h"
 #include "services/instrumentation/scpi/scpi.h"
@@ -203,7 +220,6 @@
 #include "services/machine_tool/robotics/robotics.h"
 #include "services/machine_tool/safety_scl/safety_scl.h"
 #include "services/machine_tool/umati/umati.h"
-#include "services/net/dns_resolver/dns_resolver.h"
 #include "services/net/dns_server/dns_server.h"
 #include "services/net/flow_export/flow_export.h"
 #include "services/net/forward/forward.h"
@@ -286,27 +302,12 @@
 #include "services/storage/wal/wal.h"
 #include "services/storage/wal/wal_fs.h"
 #include "services/storage/wal/wal_store.h"
-#include "services/system/bus_capture/bus_capture.h"
-#include "services/system/clock.h"
 #include "services/system/control/control.h"
-#include "services/system/device_id/device_id.h"
-#include "services/system/dma/dma.h"
 #include "services/system/esp/esp.h"
 #include "services/system/esp/ipsec_db.h"
 #include "services/system/exc_decoder/exc_decoder.h"
-#include "services/system/failsafe/failsafe.h"
-#include "services/system/gpio_map/gpio_map.h"
-#include "services/system/hw_health/hw_health.h"
-#include "services/system/link_manager/link_manager.h"
-#include "services/system/logbuf/logbuf.h"
-#include "services/system/ota_rollback/ota_rollback.h"
-#include "services/system/ota_service/ota_service.h"
 #include "services/system/power_mgmt/power_mgmt.h"
 #include "services/system/provisioning_service/provisioning_service.h"
-#include "services/system/radio_power/radio_power.h"
-#include "services/system/roaming/roaming.h"
-#include "services/system/sleep_sched/sleep_sched.h"
-#include "services/system/trace_capture/trace_capture.h"
 #include "services/timing_position/gnss/gnss_survey.h"
 #include "services/timing_position/gnss/ntrip_caster.h"
 #include "services/timing_position/gnss/ntrip_caster_listener.h"
@@ -699,16 +700,7 @@ void make_digest_nonce(char *out, size_t cap);
 proto_bool verify_digest_nonce(const char *nonce, proto_bool *expired);
 #endif
 
-#if PC_ENABLE_FILE_SERVING
-/// @brief Dispatch a ROUTE_STATIC match: resolve the FS path and serve it (MIME/index/gzip).
-void serve_static_request(uint8_t slot_id, HttpReq *req, const Route *r);
-/// @brief Open @p fs_path on @p file_sys and stream it as 200 with the given type and optional
-///        Content-Encoding. A null @p file_sys means whatever is mounted.
-void serve_file_internal(uint8_t slot_id, proto_bool head, const pc_mnt_backend *file_sys, const char *fs_path,
-                         const char *content_type, const char *content_encoding);
-/// @brief Resume a pending file response: page out one send-buffer window, finishing when drained.
-void file_send_pump(uint8_t slot_id);
-#endif
+// serve_static_request / serve_file_internal / file_send_pump: file_serving.h
 
 #if PC_ENABLE_WEBDAV
 /// @brief If @p req matches a ROUTE_DAV mount, handle it as WebDAV and return true.
@@ -1033,46 +1025,7 @@ void on_http_auth(const char *path, HttpMethod method, Handler callback, const c
                   const char *pass, proto_bool digest);
 #endif // PC_ENABLE_AUTH
 
-#if PC_ENABLE_FILE_SERVING
-/**
- * @brief Serve a file from the mounted volume.
- *
- * Opens @p fs_path through the filesystem accessor, sends HTTP 200 with the appropriate
- * headers (Content-Type, Content-Length), and streams the file body in
- * FILE_CHUNK_SIZE chunks via tcp_write().  Sends 404 if the file cannot
- * be opened.
- *
- * @param slot_id      Connection slot index.
- * @param file_sys     Backend to read from; NULL uses whatever is mounted (the board's).
- * @param fs_path      Request path to the file, resolved against the mount root.
- * @param content_type MIME type string, e.g. "text/html".
- */
-void serve_file(uint8_t slot_id, const pc_mnt_backend *file_sys, const char *fs_path, const char *content_type);
-
-/**
- * @brief Mount a filesystem subtree at a URL prefix (one-call static serving).
- *
- * Registers a wildcard route so every request under @p url_prefix is served
- * from @p fs_root on the mounted volume. The request path beyond the prefix is
- * appended to @p fs_root; a request ending in `/` (or exactly the prefix)
- * serves `index.html`. Content-Type is auto-detected from the extension
- * (see mime_type()). If the client sends `Accept-Encoding: gzip` and a
- * `<path>.gz` exists, the pre-compressed file is served with
- * `Content-Encoding: gzip`. Paths containing `..` are rejected (404).
- *
- * Only GET and HEAD are served; other methods get 405.
- *
- * @code
- * server.serve_static("/", NULL, "/www");          // the board's own storage
- * server.serve_static("/ram/", pc_mnt_ram(), "/");    // or any backend that satisfies our vtable
- * @endcode
- *
- * @param url_prefix  URL prefix to mount (with or without a trailing `*`).
- * @param file_sys    Backend to serve from; NULL uses whatever is mounted (the board's).
- * @param fs_root     Subtree on that backend (persistent string).
- */
-void serve_static(const char *url_prefix, const pc_mnt_backend *file_sys, const char *fs_root);
-#endif // PC_ENABLE_FILE_SERVING
+// serve_file / serve_static: file_serving.h
 
 #if PC_ENABLE_WEBDAV
 /**
@@ -1569,7 +1522,7 @@ extern const size_t PC_RESP_HDR_OVERFLOW_LEN;
 void fill_route_base(Route *r, const char *path);
 
 /** @brief Format @p t as an RFC 1123 GMT date into @p out (cap bytes); @p out is emptied for t <= 0. */
-void http_rfc1123(int64_t epoch, char *out, size_t cap);
+// http_rfc1123: file_serving.h
 
 /** @brief True if the request in slot @p slot_id used the HEAD method (send headers, no body). */
 proto_bool req_is_head(uint8_t slot_id);
@@ -1613,10 +1566,7 @@ const char *pc_resp_cache_control(void);
 /** @brief This slot's queued custom headers / cookies (writable: the queue is appended in place). */
 char *pc_resp_extra_hdr(uint8_t slot);
 
-#if PC_ENABLE_FILE_SERVING
-/** @brief True while a file response is paging out on @p slot (owner: server/file_serving.cpp). */
-proto_bool pc_file_holds_slot(uint8_t slot);
-#endif
+// pc_file_holds_slot: file_serving.h
 
 #if PC_ENABLE_WEBSOCKET
 /** @brief Perform the RFC 6455 101 handshake and hand the slot to the WS frame parser. */

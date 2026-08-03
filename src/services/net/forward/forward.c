@@ -18,7 +18,7 @@
 #include <string.h>
 
 #if PROTOCORE_HOT
-#include "services/system/clock.h" // pc_millis()
+#include "server/clock/clock.h" // pc_millis()
 #endif
 
 typedef struct

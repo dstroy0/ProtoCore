@@ -1,13 +1,13 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the pre/post-trigger sample-window assembler (services/system/trace_capture):
+// Unit tests for the pre/post-trigger sample-window assembler (server/signaling/trace_capture):
 // the pre-trigger ring wrap + freeze on trigger(), post-trigger fill + sink firing, one
 // capture in flight fail-closed, feed() before begin()/after end() counted dropped, the
 // zero-pretrigger edge case, and a multi-window trace_id sequence. Pure host tests.
 // The env sizes PC_TC_MAX_WINDOW_SAMPLES = 32.
 
-#include "services/system/trace_capture/trace_capture.h"
+#include "server/signaling/trace_capture.h"
 #include <unity.h>
 #include <vector>
 

@@ -1,13 +1,13 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for the SFTP v3 wire codec (services/file_transfer/sftp): the zero-heap reader
+// On-device CCOUNT microbenchmark for the SFTP v3 wire codec (network_drivers/application/sftp): the zero-heap reader
 // (u32 / string) and writer (u32 / string / finish) used to parse SSH_FXP requests and build
 // responses. Pure; the SSH channel is elsewhere.
 //
 // Build/flash:  pio run -d performance_benching/device/sftp -t upload --upload-port COM7
 #include "device_bench.h"
-#include "services/file_transfer/sftp/sftp.h"
+#include "network_drivers/application/sftp/sftp.h"
 #include <Arduino.h>
 
 static void sftp_bench_task(void *)

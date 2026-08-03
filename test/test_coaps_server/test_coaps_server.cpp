@@ -17,9 +17,9 @@
 #include "network_drivers/presentation/security/dtls/dtls_conn.h"
 #include "network_drivers/presentation/security/dtls/dtls_handshake.h"
 #include "network_drivers/presentation/security/dtls/dtls_record.h"
+#include "server/clock/clock.h"
 #include "services/iot/coap/coap.h"
 #include "services/iot/coap/coaps_server.h"
-#include "services/system/clock.h"
 #include <stdint.h>
 #include <string.h>
 #include <unity.h>

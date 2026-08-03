@@ -1,16 +1,16 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the SMB2 client wire codec (services/file_transfer/smb, MS-SMB2): the Direct-TCP transport
+// Unit tests for the SMB2 client wire codec (network_drivers/application/smb, MS-SMB2): the Direct-TCP transport
 // frame, the 64-byte sync header (build/parse), the NEGOTIATE exchange, and the SESSION_SETUP
 // request/response framing - including a full auth round routed through the framing (SPNEGO +
 // NTLMSSP). All fields little-endian. Pure host tests against the MS-SMB2 field layout.
 
 #include "crypto/aead/aesccm.h" // KAT the AES-CCM primitive directly (SMB 3.x AES-128/256-CCM)
 #include "crypto/aead/aesgcm.h" // KAT the detached AES-256-GCM primitive
-#include "services/file_transfer/smb/ntlmssp.h"
-#include "services/file_transfer/smb/smb2.h"
-#include "services/file_transfer/smb/spnego.h"
+#include "network_drivers/application/smb/ntlmssp.h"
+#include "network_drivers/application/smb/smb2.h"
+#include "network_drivers/application/smb/spnego.h"
 #include <string.h>
 #include <unity.h>
 

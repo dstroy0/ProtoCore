@@ -17,7 +17,7 @@
 // The two mandatory bindings of any v2c/v3 notification (RFC 3416 4.2.6).
 #if PROTOCORE_HOT
 #include "network_drivers/transport/udp.h"
-#include "services/system/clock.h" // pc_millis() - the library's clock seam (ban 5: never bare millis)
+#include "server/clock/clock.h" // pc_millis() - the library's clock seam (ban 5: never bare millis)
 #endif
 static const uint32_t OID_SYSUPTIME_0[] = {1, 3, 6, 1, 2, 1, 1, 3, 0};
 static const uint32_t OID_SNMPTRAPOID_0[] = {1, 3, 6, 1, 6, 3, 1, 1, 4, 1, 0};

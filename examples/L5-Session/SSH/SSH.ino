@@ -46,7 +46,7 @@
 #include "network_drivers/presentation/ssh/connection/ssh_channel.h"
 #include "network_drivers/presentation/ssh/connection/ssh_conn.h"
 #include "network_drivers/presentation/ssh/connection/ssh_forward.h"
-#include "network_drivers/presentation/ssh/crypto/ssh_rsa.h"
+#include "network_drivers/tls/ssh_rsa.h"
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";

@@ -21,10 +21,10 @@
 #include "crypto/mac/hmac_sha512.h"
 #include "mmgr/plaintext.h"
 #include "mmgr/secure.h"
-#include "network_drivers/presentation/ssh/crypto/ssh_rsa.h"
 #include "network_drivers/presentation/ssh/transport/ssh_dh.h"
 #include "network_drivers/presentation/ssh/transport/ssh_keymat.h"
 #include "network_drivers/presentation/ssh/transport/ssh_packet.h"
+#include "network_drivers/tls/ssh_rsa.h"
 #include <stdint.h>
 #include <string.h>
 #include <unity.h>

@@ -8,7 +8,7 @@
  * The shared, protocol-agnostic RSA primitive: it takes raw big-endian key material (modulus n,
  * exponent) and a message, and does the RSASSA-PKCS1-v1.5 math with a SHA-256 or SHA-512 digest. It
  * knows nothing about SSH key blobs, host-key storage, or the "ssh-rsa" / "rsa-sha2-256" wire names -
- * that layer lives in network_drivers/presentation/ssh/crypto/ssh_rsa and calls into this primitive.
+ * that layer lives in network_drivers/tls/ssh_rsa and calls into this primitive.
  *
  * Verify runs on both platforms (mbedtls on Arduino/ESP32, software on native). The software sign
  * (pc_rsa_sign_sw, raw n/d) is the native-only reference path used by the tests; on-device signing

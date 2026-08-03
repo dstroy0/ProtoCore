@@ -54,7 +54,7 @@ DeliveryVerdict pc_delivery_swr(uint32_t age_s, uint32_t max_age_s, uint32_t swr
  */
 size_t pc_delivery_cache_control(uint32_t max_age_s, uint32_t swr_s, char *out, size_t cap);
 
-// Byte-range serving is NOT here. `server/http_range.h` (`http_parse_byte_range`, PC_ENABLE_RANGE)
+// Byte-range serving is NOT here. `network_drivers/application/http_range.h` (`http_parse_byte_range`, PC_ENABLE_RANGE)
 // owns the RFC 7233 range math and is already wired into static file serving and the edge cache -
 // it emits `Accept-Ranges`, the 206 `Content-Range`, and a 416 with `bytes */<size>`, which this
 // header's earlier duplicate could not signal. Two parsers for one concern is how a request ends up

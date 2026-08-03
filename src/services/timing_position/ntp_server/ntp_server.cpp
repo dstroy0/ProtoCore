@@ -16,7 +16,7 @@
 
 #if PROTOCORE_HOT
 #include "network_drivers/transport/udp.h"
-#include "services/system/clock.h"
+#include "server/clock/clock.h"
 #include "services/timing_position/time_source/time_source.h"
 #endif
 size_t pc_ntp_server_build_response(const uint8_t *req, size_t req_len, uint8_t stratum, uint32_t refid,

@@ -1,10 +1,10 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the Wi-Fi roaming decision layer (services/system/roaming): the pure policy that fuses the
+// Unit tests for the Wi-Fi roaming decision layer (network_drivers/network/roaming): the pure policy that fuses the
 // current RSSI, a candidate neighbour list, and an optional 802.11v BTM hint into a roam/stay decision.
 
-#include "services/system/roaming/roaming.h"
+#include "network_drivers/datalink/roaming.h"
 #include <string.h>
 #include <unity.h>
 

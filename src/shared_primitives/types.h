@@ -75,6 +75,23 @@ typedef _Bool proto_bool;
 #define PROTO_FALSE ((proto_bool)0) ///< the false value
 
 /**
+ * @brief Give a header's declarations C linkage, so their symbol names carry no parameter types.
+ *
+ * Wraps the declarations between them in `extern "C"` under a C++ compiler, and expands to nothing
+ * under a C one. The sketches, ESP-IDF app code and Unity suites that call this library are C++;
+ * src/ is C.
+ */
+#ifdef __cplusplus
+#define PROTO_BEGIN_DECLS                                                                                              \
+    extern "C"                                                                                                         \
+    {
+#define PROTO_END_DECLS }
+#else
+#define PROTO_BEGIN_DECLS
+#define PROTO_END_DECLS
+#endif
+
+/**
  * @brief Give an enum the narrowest type its values fit in. Carried by every enum in this library.
  *
  * C11 leaves an enum's underlying type to the implementation, and the target list does not agree:

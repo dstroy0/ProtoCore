@@ -153,7 +153,7 @@ Grouped by the area each belongs to.
 - [ ] **Break protocore.cpp into a `src/server/` of single-purpose files** (L) - carve the monolith into
       cohesive translation units (e.g. `server/lifecycle` for listen/begin/restart, `server/routing` for
       route matching + dispatch, `server/response` for the send/send_template/send_chunked builders,
-      `server/file_serving`, `server/webdav`, `server/auth`, and the `server/http2` / `server/http3` seams),
+      `network_drivers/application/file_serving/file_serving`, `network_drivers/application/webdav/webdav`, `server/auth`, and the `server/http2` / `server/http3` seams),
       each with a clear internal header. Pure move-and-split - no behavior change - so the native + dual-core
       builds and the full test suite stay green throughout; keep the owned-context / no-stdlib / single-owner
       rules. Makes the core easier to debug, extend, and maintain.

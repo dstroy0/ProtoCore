@@ -1,10 +1,10 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the WebDAV server core (services/file_transfer/webdav): method classification,
+// Unit tests for the WebDAV server core (network_drivers/application/webdav): method classification,
 // header parsing, XML escaping, and the 207 Multi-Status builder. No FS/sockets.
 
-#include "services/file_transfer/webdav/webdav.h"
+#include "network_drivers/application/webdav/webdav.h"
 #include <stdio.h>
 #include <string.h>
 #include <unity.h>

@@ -61,7 +61,7 @@
 #endif
 #if PC_ENABLE_AUTH
 #include "crypto/hash/sha256.h"
-#include "services/system/clock.h" // pc_millis() for the stateless Digest nonce timestamp
+#include "server/clock/clock.h" // pc_millis() for the stateless Digest nonce timestamp
 #if PC_ENABLE_HTTP_DELIVERY
 #include "services/file_transfer/http_delivery/http_delivery.h" // pc_delivery_cache_control (SWR directive)
 #endif
@@ -80,7 +80,7 @@
 #endif
 #endif
 #if PC_ENABLE_WEBDAV
-#include "services/file_transfer/webdav/webdav.h"
+#include "network_drivers/application/webdav/webdav.h"
 #include <time.h> // RFC 1123 Last-Modified formatting
 #endif
 #if PC_ENABLE_METRICS || PC_ENABLE_STATS
@@ -98,8 +98,9 @@
 // rather than ISO C, so they are absent under -std=c11 on a conforming libc.
 
 // Outbound-transfer state is not held here. Each kind of transfer belongs to the TU that runs it:
-// the chunked-send state to server/response.cpp, the file-send state to server/file_serving.cpp.
-// The poll below asks each owner whether it holds a slot instead of reading its state.
+// the chunked-send state to server/response.cpp, the file-send state to
+// network_drivers/application/file_serving/file_serving.cpp. The poll below asks each owner whether it holds a slot
+// instead of reading its state.
 
 /**
  * @brief Convert an HTTP status code to its standard reason phrase.

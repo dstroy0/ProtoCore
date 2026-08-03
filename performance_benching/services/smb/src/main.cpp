@@ -1,15 +1,15 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for the SMB/NTLM codec (services/file_transfer/smb): the NTLMv2 authentication
+// On-device CCOUNT microbenchmark for the SMB/NTLM codec (network_drivers/application/smb): the NTLMv2 authentication
 // crypto (NT hash, NTOWFv2, the NTLMv2 response) and the NTLMSSP / SMB2 message builders. Pure
 // crypto + framing (MD4 / MD5 / HMAC-MD5); the TCP socket is out of scope.
 //
 // Build/flash:  pio run -d performance_benching/device/smb -t upload --upload-port COM7
 #include "device_bench.h"
-#include "services/file_transfer/smb/ntlm.h"
-#include "services/file_transfer/smb/ntlmssp.h"
-#include "services/file_transfer/smb/smb2.h"
+#include "network_drivers/application/smb/ntlm.h"
+#include "network_drivers/application/smb/ntlmssp.h"
+#include "network_drivers/application/smb/smb2.h"
 #include <Arduino.h>
 
 static void smb_bench_task(void *)

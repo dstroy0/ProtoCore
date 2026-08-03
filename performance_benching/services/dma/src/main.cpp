@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device CCOUNT microbenchmark for the DMA peripheral ingest/egress simulator
-// (services/system/dma): pc_dma_open/close (channel config + re-arm), pc_dma_sim_feed +
+// (mmgr/dma): pc_dma_open/close (channel config + re-arm), pc_dma_sim_feed +
 // pc_dma_poll (ingress -> ping-pong RX completion), pc_dma_tx_submit + pc_dma_poll +
 // pc_dma_sim_capture (egress produce + read-back), and a loopback channel's TX->RX
 // round trip - all pure, in-memory engine work (PC_DMA_SIMULATE, the shipped/tested
@@ -15,7 +15,7 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "services/system/dma/dma.h"
+#include "mmgr/dma.h"
 #include <Arduino.h>
 
 namespace

@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for the CAN listen-only capture framing (services/system/bus_capture):
+// On-device CCOUNT microbenchmark for the CAN listen-only capture framing (server/signaling/bus_capture):
 // can_to_socketcan() building the 16-byte Linux SocketCAN frame (big-endian can_id, EFF/RTR flags,
 // length, data) for a standard data frame, an extended (29-bit) id frame, and an RTR frame, plus
 // pc_pcap_global_header() writing the libpcap global header with the DLT_CAN_SOCKETCAN link type
@@ -17,7 +17,7 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "services/system/bus_capture/bus_capture.h"
+#include "server/signaling/bus_capture.h"
 #include <Arduino.h>
 #include <string.h>
 

@@ -567,7 +567,7 @@ Falls out of the same pass:
 
 **Placement:** groups whose TU already exists fold into it - middleware + rate limit are ALREADY in
 `server/middleware.cpp` with only their state stranded in the class; likewise response ->
-`server/response.cpp`, file serving -> `server/file_serving.cpp`, auth -> `server/auth.cpp`, ws/sse
+`server/response.cpp`, file serving -> `network_drivers/application/file_serving/file_serving.cpp`, auth -> `server/auth.cpp`, ws/sse
 -> their presentation TUs. Only listeners, routing, stats and cors have no home.
 
 **Order is forced by the call graph, not by size.** `rate_limit_check()` calls
@@ -626,7 +626,7 @@ If two things use a resource, the resource gets an owner and both go through its
 
 ```
 struct SendCtx {
-    FileSend  file[MAX_CONNS];   // touched ONLY by server/file_serving.cpp
+    FileSend  file[MAX_CONNS];   // touched ONLY by network_drivers/application/file_serving/file_serving.cpp
     ChunkSend chunk[MAX_CONNS];  // touched ONLY by server/response.cpp
 };
 extern SendCtx s_send;           // defined in protocore.cpp, which uses NEITHER

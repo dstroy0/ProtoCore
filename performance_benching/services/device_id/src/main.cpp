@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for the MAC-derived device UUID codec (services/system/device_id):
+// On-device CCOUNT microbenchmark for the MAC-derived device UUID codec (server/signaling/device_id):
 // pc_uuid_from_mac() builds an RFC 4122 version-5 UUID from a 6-byte MAC (namespace = the RFC
 // 4122 DNS namespace, name = lowercase MAC hex) via a single-block SHA-1 - pure (no heap, no
 // hardware). Worked example for performance_benching/device/<service>/: like services/fieldbus/modbus, this is a pure
@@ -16,7 +16,7 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "services/system/device_id/device_id.h"
+#include "server/signaling/device_id.h"
 #include <Arduino.h>
 
 static void device_id_bench_task(void *)

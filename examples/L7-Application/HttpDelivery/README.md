@@ -28,7 +28,7 @@ exactly once.
 
 **3. Byte ranges (RFC 7233).** Already handled by the file server (`PC_ENABLE_RANGE`) - a client
 fetches only the new tail of a growing log with `Range: bytes=N-` and gets a `206`. Note this lives
-in `server/http_range.h`, which is the single owner of the range math (shared with the edge cache);
+in `network_drivers/application/http_range.h`, which is the single owner of the range math (shared with the edge cache);
 `services/http_delivery` deliberately does **not** carry a second parser.
 
 ## Verified on hardware

@@ -1,13 +1,13 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the NTLMSSP message codec (services/file_transfer/smb/ntlmssp, MS-NLMP 2.2.1): the
+// Unit tests for the NTLMSSP message codec (network_drivers/application/smb/ntlmssp, MS-NLMP 2.2.1): the
 // NEGOTIATE builder, the CHALLENGE parser, and the AUTHENTICATE builder. Plus an
 // end-to-end that ties the codec to the NTLMv2 response (ntlm.h) using the MS-NLMP 4.2
 // worked example.
 
-#include "services/file_transfer/smb/ntlm.h"
-#include "services/file_transfer/smb/ntlmssp.h"
+#include "network_drivers/application/smb/ntlm.h"
+#include "network_drivers/application/smb/ntlmssp.h"
 #include <string.h>
 #include <unity.h>
 

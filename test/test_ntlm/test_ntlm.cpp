@@ -1,12 +1,12 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// KAT test for the NTLMv2 response (services/file_transfer/smb/ntlm) against the MS-NLMP section 4.2
+// KAT test for the NTLMv2 response (network_drivers/application/smb/ntlm) against the MS-NLMP section 4.2
 // worked example. The expected NTOWFv2 is the MS-NLMP published value; NTProofStr /
 // SessionBaseKey / NtChallengeResponse were computed by an independent reference whose
 // NTOWFv2 matches the published value (so the whole pipeline is validated).
 
-#include "services/file_transfer/smb/ntlm.h"
+#include "network_drivers/application/smb/ntlm.h"
 #include <string.h>
 #include <unity.h>
 

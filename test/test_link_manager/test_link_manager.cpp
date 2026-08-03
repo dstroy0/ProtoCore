@@ -3,7 +3,7 @@
 //
 // Host tests for services/link_manager: egress selection, graceful escalation, failover.
 
-#include "services/system/link_manager/link_manager.h"
+#include "server/signaling/link_manager.h"
 #include <unity.h>
 
 // Eth (prio 20), WiFi STA (prio 10), softAP (prio 5).

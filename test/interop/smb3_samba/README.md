@@ -1,6 +1,6 @@
 # SMB 3.1.1 interop (real Samba)
 
-A **manual, on-the-wire interop test** for the SMB2/3 client (`src/services/file_transfer/smb`). It drives the real
+A **manual, on-the-wire interop test** for the SMB2/3 client (`src/network_drivers/application/smb`). It drives the real
 `smb_client` engine over a live TCP socket at a real Samba (or Windows) server and confirms a full SMB
 3.1.1 session works end to end against a third-party implementation - not just the host mock in
 `test/test_smb_client`.

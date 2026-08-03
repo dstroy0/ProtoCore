@@ -12,7 +12,7 @@
  *
  * The app owns the actual slots (NVS keys, flash sectors, VFS files) and the persisted counts; this core
  * just decides *where* the next write goes and reports the wear imbalance. Pure, zero heap, no stdlib,
- * so it is fully host-testable. It composes with the mount (the storage medium) and services/system/logbuf
+ * so it is fully host-testable. It composes with the mount (the storage medium) and server/logbuf
  * (whose sink can offload to a wear-leveled store).
  */
 

@@ -13,8 +13,8 @@
 #include <string.h>
 
 #if PC_ENABLE_PROMISC
+#include "server/clock/clock.h"             // pc_millis - the monotonic source
 #include "services/radio/promisc/promisc.h" // the promiscuous-capture owner
-#include "services/system/clock.h"          // pc_millis - the monotonic source
 #endif
 
 proto_bool pc_wifi_parse(const uint8_t *frame, size_t len, WifiFrame *out)

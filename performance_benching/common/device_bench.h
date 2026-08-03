@@ -3,7 +3,7 @@
 //
 // Shared on-device CCOUNT microbench macros for performance_benching/device/<service>/main.cpp. Ported from
 // pentesting/rig_firmware/src/main_cryptobench.cpp's BENCH_OP/BENCH_BULK onto pc_cycles() /
-// pc_cycles_to_ns() (services/system/clock.h) - the library's own documented wrapper around the Xtensa
+// pc_cycles_to_ns() (server/clock/clock.h) - the library's own documented wrapper around the Xtensa
 // cycle counter (CCOUNT, JTAG-observable), rather than calling ESP.getCycleCount() directly. Every
 // performance_benching/device/<service>/main.cpp includes this and prints one "DB ..." line per benched operation
 // over USB-CDC serial; a capture opened at any time still catches a full run because each sketch
@@ -12,7 +12,7 @@
 #ifndef PROTOCORE_PERF_DEVICE_BENCH_H
 #define PROTOCORE_PERF_DEVICE_BENCH_H
 
-#include "services/system/clock.h"
+#include "server/clock/clock.h"
 #include <Arduino.h>
 
 /// One-shot op (build/encode/decode/parse call that isn't a bulk byte stream). Warms once, runs

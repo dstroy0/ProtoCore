@@ -9,7 +9,7 @@
  * The generic gateway pattern that ties the hardware-ingest pipeline to the web stack. A
  * southbound radio (LoRa / nRF24 / CC1101 / Zigbee / Z-Wave / ... reached over SPI / I2C /
  * UART) is a **port**. When it receives a frame - the data-ready ISR reads it over DMA
- * (services/system/dma), posts it onto the FORWARD lane (services/system/preempt_queue), and a per-radio
+ * (mmgr/dma), posts it onto the FORWARD lane (services/system/preempt_queue), and a per-radio
  * codec extracts the source node address and payload - you call pc_gateway_uplink(). The
  * gateway **envelopes** the frame (source address, port, RSSI, a sequence number) and
  * **publishes it northbound** through the uplink callback, which you wire to MQTT / HTTP /

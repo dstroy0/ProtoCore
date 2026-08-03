@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for the hardware-health decision cores (services/system/hw_health): the
+// On-device CCOUNT microbenchmark for the hardware-health decision cores (server/signaling/hw_health): the
 // four pure verdict functions an app feeds with samples it has already read from the hardware -
 //   - pc_hwhealth_rail_sample(): fold one rail millivolt reading into the worst-droop min + sag/
 //     brownout counters (power-rail voltage-drop logger),
@@ -20,7 +20,7 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "services/system/hw_health/hw_health.h"
+#include "server/signaling/hw_health.h"
 #include <Arduino.h>
 
 static void hw_health_bench_task(void *)

@@ -6,8 +6,8 @@
 // the removal/reinsertion cycle, and that the whole thing is fail-closed. Plus the owned binding -
 // how poll()/io() drive the app's mount / unmount / card-detect callbacks and the state-change event.
 
+#include "server/clock/clock.h"
 #include "services/storage/hotswap/hotswap.h"
-#include "services/system/clock.h"
 #include <stdio.h>
 #include <string.h>
 #include <unity.h>

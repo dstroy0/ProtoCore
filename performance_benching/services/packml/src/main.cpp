@@ -6,7 +6,7 @@
 // service. Everything benched here is a pure, fixed-BSS state transition or a tag snapshot - no heap,
 // no I/O, no transport - so, like performance_benching/device/modbus (a pure protocol codec), every call exercises the
 // real production code path. The engine's only dependency is the header-only monotonic clock
-// (services/system/clock.h), which defaults to the platform millis() on device, so nothing is stubbed.
+// (server/clock/clock.h), which defaults to the platform millis() on device, so nothing is stubbed.
 //
 // Benched (the performance-relevant pure ops the model surfaces):
 //   - pc_packml_command          : apply a control command, return the resulting state (the core

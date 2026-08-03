@@ -18,7 +18,7 @@
 
 #include "network_drivers/transport/udp.h"
 #if PROTOCORE_HOT
-#include "services/system/clock.h" // pc_millis() - the library's clock seam (ban 5: never bare millis)
+#include "server/clock/clock.h" // pc_millis() - the library's clock seam (ban 5: never bare millis)
 static uint32_t pc_snmp_uptime_cs()
 {
     return (uint32_t)(pc_millis() / 10ULL); // hundredths of a second since boot

@@ -75,14 +75,14 @@ typedef enum PROTO_ENUM_PACKED
  */
 typedef struct
 {
-    DtlsCipher cipher;                         ///< negotiated AEAD (phase 1: AES-128-GCM)
-    uint16_t epoch;                            ///< this epoch number; its low 2 bits appear in the unified header
-    alignas(8) uint8_t gcm[PC_WORK_AES128GCM]; ///< keyed AEAD context, built once per key.
-                                               ///< Replaces the raw key: the schedule is what the
-                                               ///< AEAD needs, so no raw key stays resident.
-    uint8_t iv[12];                            ///< AEAD write IV (per-record nonce = iv XOR sequence_number)
-    alignas(8) uint8_t sn_key[PC_WORK_AES128]; ///< Keyed sequence-number-protection context.
-                                               ///< Built once; see quic_crypto.h for the numbers.
+    DtlsCipher cipher;                          ///< negotiated AEAD (phase 1: AES-128-GCM)
+    uint16_t epoch;                             ///< this epoch number; its low 2 bits appear in the unified header
+    _Alignas(8) uint8_t gcm[PC_WORK_AES128GCM]; ///< keyed AEAD context, built once per key.
+                                                ///< Replaces the raw key: the schedule is what the
+                                                ///< AEAD needs, so no raw key stays resident.
+    uint8_t iv[12];                             ///< AEAD write IV (per-record nonce = iv XOR sequence_number)
+    _Alignas(8) uint8_t sn_key[PC_WORK_AES128]; ///< Keyed sequence-number-protection context.
+                                                ///< Built once; see quic_crypto.h for the numbers.
 } DtlsRecordKeys;
 
 /**

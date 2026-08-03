@@ -136,7 +136,7 @@ void pc_phy_monitor_end(void)
 }
 size_t pc_net_ssid(char *out, size_t cap)
 {
-    if (out && cap)
+    if (out != NULL && cap != 0)
     {
         out[0] = '\0';
     }

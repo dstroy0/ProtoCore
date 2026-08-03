@@ -9,7 +9,7 @@
 
 #include "crypto/asymmetric/bignum.h" // bn_* direct coverage
 #include "mmgr/plaintext.h"
-#include "network_drivers/presentation/ssh/crypto/ssh_rsa.h" // in-test RS256 signing
+#include "network_drivers/tls/ssh_rsa.h" // in-test RS256 signing
 #include "services/security/oidc/oidc.h"
 #include <stdint.h>
 #include <stdio.h>

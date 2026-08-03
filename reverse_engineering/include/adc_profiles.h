@@ -7,7 +7,7 @@
  *        pipeline latency, and whether the part has a software-configurable SPI port.
  *
  * Any sub-GSPS ADC works behind the FPGA/CPLD burst-capture front end described in
- * main.cpp's top comment (services/system/dma drains a triggered burst; services/system/trace_capture
+ * main.cpp's top comment (mmgr/dma drains a triggered burst; server/signaling/trace_capture
  * holds an arbitrary pretrigger ring and flushes the whole pre+post window on trigger) -
  * this file is just the handful of per-part numbers that differ, so swapping the target
  * ADC is a `-DDAQ_ADC_PROFILE=...` build flag, not a rewrite:
@@ -27,7 +27,7 @@
  *    microphone. Audio-band acoustic leakage (coil whine, capacitor/relay clicks) is real,
  *    famous, and entirely within this profile's reach - see Genkin, Shamir & Tromer, "RSA Key
  *    Extraction via Low-Bandwidth Acoustic Cryptanalysis" (CRYPTO 2014). This is a genuinely
- *    different ingestion CODE PATH (main.cpp's internal-ADC polling task, not services/system/dma at
+ *    different ingestion CODE PATH (main.cpp's internal-ADC polling task, not mmgr/dma at
  *    all - there is no external peripheral to drive), selected by DAQ_ADC_INTERNAL_POLLED.
  *
  * **Pipeline latency.** Every pipelined ADC reports sample N for an analog instant that was
@@ -83,7 +83,7 @@
 #endif
 
 /** @brief Selects main.cpp's ingestion code path: 1 = a simple analogRead() polling task (no
- *         services/system/dma, no external peripheral); 0 = services/system/dma + trace_capture as usual. */
+ *         mmgr/dma, no external peripheral); 0 = mmgr/dma + trace_capture as usual. */
 #if DAQ_ADC_PROFILE == DAQ_ADC_INTERNAL_AUDIO
 #define DAQ_ADC_INTERNAL_POLLED 1
 #else

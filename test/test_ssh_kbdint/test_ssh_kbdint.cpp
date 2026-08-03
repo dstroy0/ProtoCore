@@ -7,9 +7,9 @@
 #include "network_drivers/presentation/ssh/auth/ssh_auth.h"
 #include "network_drivers/presentation/ssh/connection/ssh_channel.h" // full-switch dispatch coverage
 #include "network_drivers/presentation/ssh/connection/ssh_server.h"  // the dispatcher's INFO_RESPONSE case
-#include "network_drivers/presentation/ssh/crypto/ssh_rsa.h"         // host key for the KEXDH reply
 #include "network_drivers/presentation/ssh/transport/ssh_packet.h"
 #include "network_drivers/presentation/ssh/transport/ssh_transport.h"
+#include "network_drivers/tls/ssh_rsa.h" // host key for the KEXDH reply
 #include <stdint.h>
 #include <string.h>
 #include <unity.h>

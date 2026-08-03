@@ -30,7 +30,7 @@
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
-#include "services/file_transfer/upload_service/upload_service.h"
+#include "network_drivers/application/upload_service/upload_service.h"
 #include <LittleFS.h>
 
 static const char *SSID = "YOUR_SSID";

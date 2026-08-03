@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device CCOUNT microbenchmark for the pluggable monotonic clock (services/clock,
-// src/services/system/clock.h): pc_millis() on the platform default vs. a custom-clock override divided
+// src/server/clock/clock.h): pc_millis() on the platform default vs. a custom-clock override divided
 // down to the internal 1000 Hz, the latency-budget bookkeeping (pc_lat_begin/pc_lat_end) that
 // services like dma/hw_health drive per-transaction, and the pc_cycles_to_ns() conversion used to
 // report every "DB ..." line in this very harness. All four are pure CPU-side math/bookkeeping -
@@ -16,7 +16,7 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "services/system/clock.h"
+#include "server/clock/clock.h"
 #include <Arduino.h>
 
 // Free-running fake tick sources for the custom-clock benches below: deterministic, no hardware,

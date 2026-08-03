@@ -1,11 +1,11 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the CAN listen-only capture framing (services/system/bus_capture): can_to_socketcan()
+// Unit tests for the CAN listen-only capture framing (server/signaling/bus_capture): can_to_socketcan()
 // building the 16-byte Linux SocketCAN frame (big-endian can_id, EFF / RTR flags, length, data)
 // and the DLT_CAN_SOCKETCAN libpcap link type. Pure host tests.
 
-#include "services/system/bus_capture/bus_capture.h"
+#include "server/signaling/bus_capture.h"
 #include <string.h>
 #include <unity.h>
 

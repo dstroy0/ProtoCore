@@ -10,7 +10,7 @@
  */
 
 #include "provisioning_service.h"
-#include "services/system/clock.h" // pcdelay
+#include "server/clock/clock.h" // pcdelay
 #include "shared_primitives/hex.h"
 #include "shared_primitives/mime.h"
 #include <string.h>

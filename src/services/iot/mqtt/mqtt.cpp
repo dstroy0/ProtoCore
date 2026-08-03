@@ -8,7 +8,7 @@
  */
 
 #include "services/iot/mqtt/mqtt.h"
-#include "services/system/clock.h" // pcdelay
+#include "server/clock/clock.h" // pcdelay
 
 #if PC_ENABLE_MQTT
 

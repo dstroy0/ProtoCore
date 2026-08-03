@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for the SCP/RCP control-line codec (services/file_transfer/scp): parse and
+// On-device CCOUNT microbenchmark for the SCP/RCP control-line codec (network_drivers/application/scp): parse and
 // build the `C<mode> <size> <name>` transfer control line (octal mode, decimal size, name). Pure
 // string logic - the SSH channel/file plumbing is elsewhere; only the per-file control-line codec
 // is benched.
@@ -9,7 +9,7 @@
 // Build/flash (JTAG-capable S3 over its USB-Serial/JTAG port):
 //   pio run -d performance_benching/device/scp -t upload --upload-port COM7
 #include "device_bench.h"
-#include "services/file_transfer/scp/scp.h"
+#include "network_drivers/application/scp/scp.h"
 #include <Arduino.h>
 #include <string.h>
 

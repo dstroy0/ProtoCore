@@ -16,14 +16,14 @@
 #include "network_drivers/transport/client.h"                          // pc_client_*
 #include "network_drivers/transport/tcp.h"                             // pc_conn_active
 #include "protocore.h"                                                 // PC, Middleware, MwResult, ChunkSource
-#include "services/system/clock.h"                                     // pc_millis
+#include "server/clock/clock.h"                                        // pc_millis
 #include "services/web/edge_cache/edge_fetch.h"
 #if PC_ENABLE_DBM
 #include "services/web/edge_cache/edge_cache_sd.h" // L2 SD tier
 #endif
-#include "server/http_range.h"                    // http_parse_byte_range (Range/206 support)
-#include "services/net/http_client/http_client.h" // http_client_parse_url
-#include "shared_primitives/mime.h"               // PC_MIME_TEXT_PLAIN
+#include "network_drivers/application/http_range.h" // http_parse_byte_range (Range/206 support)
+#include "services/net/http_client/http_client.h"   // http_client_parse_url
+#include "shared_primitives/mime.h"                 // PC_MIME_TEXT_PLAIN
 #if PC_ENABLE_EDGE_ORIGIN_TLS
 #include "network_drivers/tls/tls.h" // pc_tls_client_session_* (TLS upstream origin fetch)
 #include <mbedtls/ssl.h>             // MBEDTLS_ERR_SSL_WANT_READ / WANT_WRITE

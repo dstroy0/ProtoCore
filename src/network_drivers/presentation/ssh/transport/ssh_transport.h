@@ -35,8 +35,8 @@
 #define PROTOCORE_SSH_TRANSPORT_H
 
 #include "crypto/hash/sha256.h"
-#include "network_drivers/presentation/ssh/crypto/ssh_kexhash.h"
 #include "network_drivers/presentation/ssh/transport/ssh_keymat.h"
+#include "network_drivers/tls/ssh_kexhash.h"
 #include "protocore_config.h"
 
 // ---------------------------------------------------------------------------

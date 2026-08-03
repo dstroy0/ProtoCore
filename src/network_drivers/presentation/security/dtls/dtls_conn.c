@@ -13,7 +13,7 @@
 #include "crypto/asymmetric/curve25519.h"
 #include "crypto/asymmetric/ed25519.h" // pc_ed25519_pubkey for the RFC 7250 RawPublicKey
 #include "network_drivers/presentation/http/http3/tls13_msg.h"
-#include "services/system/clock.h" // pc_millis() stamps / checks the HelloRetryRequest cookie freshness
+#include "server/clock/clock.h" // pc_millis() stamps / checks the HelloRetryRequest cookie freshness
 #include <string.h>
 
 // TLS alert codes used here (RFC 8446 §6).

@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for the OTA rollback decision core (services/system/ota_rollback):
+// On-device CCOUNT microbenchmark for the OTA rollback decision core (server/update/ota_rollback):
 // pc_ota_decide() is the pure, branch-free-enough decision matrix that each tick maps
 // (image state, self-test result, uptime, confirm window) -> WAIT / COMMIT / ROLLBACK, so a bad
 // update self-heals instead of soft-bricking. It is a pure function (no partitions, no flash), so
@@ -16,7 +16,7 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "services/system/ota_rollback/ota_rollback.h"
+#include "server/update/ota_rollback.h"
 #include <Arduino.h>
 
 static void ota_rollback_bench_task(void *)

@@ -17,7 +17,7 @@
 #include "network_drivers/presentation/codec/base64/base64.h" // pc_base64_decode (Basic)
 #include "network_drivers/transport/tcp.h"                    // conn_pool, pc_conn_send, TcpConn/ConnState
 #include "protocore.h"
-#include "services/system/clock.h" // pc_millis() for the stateless nonce
+#include "server/clock/clock.h"    // pc_millis() for the stateless nonce
 #include "shared_primitives/hex.h" // pc_hex_encode/decode
 #include <stdio.h>
 #include <string.h>

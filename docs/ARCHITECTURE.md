@@ -34,7 +34,7 @@ src/shared_primitives/  layer-agnostic header-only primitives shared across the
                 everywhere). Header-only so nothing has to be added to the per-env
                 test src filters. Two more shared concerns live in their natural
                 module instead of here: base64url (base64 module, used by JWT +
-                OIDC) and host->IP resolution (services/net/dns_resolver, used by the
+                OIDC) and host->IP resolution (network_drivers/network/dns_resolver, used by the
                 server-adjacent code AND pc_client, so a client has one DNS owner).
 ```
 

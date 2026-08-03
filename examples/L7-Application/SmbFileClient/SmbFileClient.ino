@@ -27,8 +27,8 @@
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
 #include "network_drivers/transport/client.h"
-#include "services/file_transfer/smb/smb2.h" // Smb2Access::SMB2_FILE_GENERIC_READ / Smb2Disposition::SMB2_FILE_OPEN
-#include "services/file_transfer/smb/smb_client.h" // smb_open / smb_read / smb_close
+#include "network_drivers/application/smb/smb2.h" // Smb2Access::SMB2_FILE_GENERIC_READ / Smb2Disposition::SMB2_FILE_OPEN
+#include "network_drivers/application/smb/smb_client.h" // smb_open / smb_read / smb_close
 #include <string.h>
 
 // --- CHANGE ME: your WiFi ---

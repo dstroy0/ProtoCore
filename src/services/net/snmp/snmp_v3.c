@@ -22,7 +22,7 @@
 #include "services/net/snmp/snmp_notify.h"
 #endif
 #if PROTOCORE_HOT
-#include "services/system/clock.h" // pc_millis() - the library's clock seam (ban 5: never bare millis)
+#include "server/clock/clock.h" // pc_millis() - the library's clock seam (ban 5: never bare millis)
 static uint32_t pc_snmp_v3_uptime_s()
 {
     return (uint32_t)(pc_millis() / 1000ULL);

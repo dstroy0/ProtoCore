@@ -13,7 +13,7 @@
  * destination's send callback - so the device bridges / routes between its interfaces
  * instead of only terminating traffic.
  *
- * The canonical wiring is DMA-driven: an inbound DMA-complete event (services/system/dma) is
+ * The canonical wiring is DMA-driven: an inbound DMA-complete event (mmgr/dma) is
  * posted onto the FORWARD lane (services/system/preempt_queue), whose task calls
  * pc_forward_ingress(), and each destination's send callback hands the bytes to that
  * interface's egress DMA. The plane itself is decoupled from both - it only knows

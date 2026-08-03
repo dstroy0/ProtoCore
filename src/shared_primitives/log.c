@@ -16,7 +16,7 @@
 #include <stdarg.h>
 
 #if PC_ENABLE_LOGBUF
-#include "services/system/logbuf/logbuf.h"
+#include "server/logbuf.h"
 #endif
 
 /** @brief Owned state: just the sink the formatted line is handed to. */

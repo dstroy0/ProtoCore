@@ -222,7 +222,7 @@ preempting queue, so sensing shares the real-time ingest path.
       through the web-asset pipeline that precaches the shell and serves it stale-while-revalidate client-side,
       cache named after the version so a bump invalidates once) plus `/precache.json` (rebuilt per request;
       answers 500 rather than truncating past `PC_DELIVERY_MANIFEST_BUF`). **Delta/offset log fetching** is
-      `server/http_range.h` (`PC_ENABLE_RANGE`), the single owner of the RFC 7233 range math already wired into
+      `network_drivers/application/http_range.h` (`PC_ENABLE_RANGE`), the single owner of the RFC 7233 range math already wired into
       file serving and the edge cache - the duplicate parser that had sat in this service was removed rather
       than given a second call site. Host-tested (`native_http_delivery`) and **HW-verified on an ESP32-P4
       serving from SD**: `bytes=10-19`, `bytes=-5`, and `bytes=995-` each returned byte-exact 206 payloads with
@@ -513,10 +513,10 @@ aes256-gcm + aes256-ctr, hmac-sha2-256/512 (+ETM), zlib@openssh.com s2c, passwor
           KAT + a negotiation test + an e2e KEXDH that verifies the host signature over the reconstructed hash.
 - [x] **SFTP + SCP subsystem over SSH** (XL, high value - ties to G-code deployment) _(done, HW-verified)_ -
       Cyclone has both SFTP and SCP client+server; we now have the **server** side. `PC_ENABLE_SSH_SFTP`
-      (services/file_transfer/sftp + server/ssh_sftp) - an SFTP v3 server subsystem (`SSH_FXP_*` over a session channel) with
+      (network_drivers/application/sftp + network_drivers/application/sftp/ssh_sftp) - an SFTP v3 server subsystem (`SSH_FXP_*` over a session channel) with
       a fixed-BSS handle table, streamed reads/writes, no heap, serving an `fs::FS` mount via
       `pc_ssh_sftp_begin(fs, root)`: OPEN/READ/WRITE/OPENDIR/READDIR/STAT/MKDIR/RMDIR/REMOVE/RENAME/REALPATH,
-      the `..` traversal guard (server/fs_path). `PC_ENABLE_SSH_SCP` (services/file_transfer/scp + server/ssh_scp) - the
+      the `..` traversal guard (server/fs_path). `PC_ENABLE_SSH_SCP` (network_drivers/application/scp + network_drivers/application/scp/ssh_scp) - the
       rcp SINK direction (`scp file device:/path`) via `exec "scp -t"`. The standards-track southbound path for
       **secure machine-agent G-code push** (drop NC programs on the device, or drip them to a controller via
       `services/dnc`) over the one authenticated SSH port. Pure codecs host-tested (native_ssh_sftp, native_scp);
@@ -1024,7 +1024,7 @@ BSS, no heap, behind a build flag.
       recovers after overload - no mask desync/leak).
 - [x] **SWAR / bit-sliced constant-time base64 decode** (M) - DONE (`PC_BASE64_SWAR`, default on). The mbedTLS
       decode delegation was replaced with a portable **branchless constant-time** codec
-      (`src/network_drivers/presentation/codec/base64/base64.cpp`) offering **two selectable implementations**, both
+      (`src/network_drivers/presentation/codec/base64/base64.c`) offering **two selectable implementations**, both
       constant-time (every alphabet range is an arithmetic mask, no branch and no data-indexed table): a scalar
       one-char-at-a-time path, and the default **SWAR** path that packs 4 characters into a word and classifies
       all four lanes in parallel with guard-bit range masks (every base64 char is < 0x80, so borrows never cross

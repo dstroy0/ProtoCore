@@ -1,9 +1,9 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for services/system/ota_service - EXCEPT there is nothing pure to
+// On-device CCOUNT microbenchmark for server/update/ota_service - EXCEPT there is nothing pure to
 // benchmark here, so this sketch deliberately benches nothing and exists only to keep
-// services/system/ota_service under the same performance_benching/device/<service>/ umbrella and to prove the real
+// server/update/ota_service under the same performance_benching/device/<service>/ umbrella and to prove the real
 // production ota_service.cpp still compiles and links on-device (built with -DPC_ENABLE_OTA=1).
 //
 // Why nothing is benched (a NOTE-4 service): ota_service.h exposes exactly one public function,
@@ -28,7 +28,7 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "services/system/ota_service/ota_service.h"
+#include "server/update/ota_service.h"
 #include <Arduino.h>
 
 static void ota_service_bench_task(void *)

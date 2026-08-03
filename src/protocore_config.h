@@ -400,7 +400,7 @@ from halves and is slower than the width it decomposes into"
  * raising it lowers idle wakeups (CPU/power on a battery device) WITHOUT the
  * latency penalty the old poll-based knob carried - e.g. 100 -> a ~10 Hz idle
  * sweep, still far below any connection timeout. The internal time base stays
- * 1000 Hz regardless (see services/system/clock.h).
+ * 1000 Hz regardless (see server/clock/clock.h).
  */
 #ifndef PC_WORKER_POLL_TICKS
 #define PC_WORKER_POLL_TICKS 1
@@ -469,7 +469,7 @@ from halves and is slower than the width it decomposes into"
 // queue (PC_ENABLE_PREEMPT_QUEUE) so the heavy processing runs off the ISR. RX
 // is double-buffered (ping-pong): the completed buffer is handed up while the DMA
 // engine fills the other. Storage is static (zero heap) - channel count and buffer
-// size are compile-time. See services/system/dma/dma.h.
+// size are compile-time. See mmgr/dma.h.
 //
 // PC_DMA_SIMULATE routes the transfers through an in-memory ingress/egress
 // simulator (feed bytes in, capture bytes out, optional TX->RX loopback) so the
@@ -516,7 +516,7 @@ from halves and is slower than the width it decomposes into"
 // trigger instant like a benchtop oscilloscope's pretrigger/posttrigger split. One
 // capture in flight at a time, fail-closed. Storage is static (zero heap) - the sum of
 // the configured pretrigger + posttrigger sample counts must fit PC_TC_MAX_WINDOW_SAMPLES.
-// See services/system/trace_capture/trace_capture.h.
+// See server/signaling/trace_capture.h.
 
 /** @brief Enable the pre/post-trigger window assembler (default off). */
 #ifndef PC_ENABLE_TRACE_CAPTURE
@@ -920,7 +920,7 @@ from halves and is slower than the width it decomposes into"
  *
  * The wired counterpart to promiscuous Wi-Fi capture: bus_capture_begin() installs the CAN (TWAI)
  * controller in listen-only mode - it decodes every frame on the bus but never ACKs or transmits,
- * so it stays invisible - and delivers each CanFrame to a sink (services/system/bus_capture). Wire the
+ * so it stays invisible - and delivers each CanFrame to a sink (server/signaling/bus_capture). Wire the
  * sink into the forwarding plane (PC_ENABLE_FORWARD) to bridge captured CAN frames to another
  * interface. can_to_socketcan() formats a frame as a Linux SocketCAN frame so, with the libpcap
  * DLT_CAN_SOCKETCAN link type, the stream is a capture Wireshark reads.
@@ -3239,7 +3239,7 @@ from halves and is slower than the width it decomposes into"
 /**
  * @brief Stable device UUID derived from the chip MAC (RFC 4122 v5).
  *
- * When set, src/services/system/device_id/device_id.h derives a deterministic v5 UUID
+ * When set, src/server/signaling/device_id.h derives a deterministic v5 UUID
  * from a MAC (via the library's SHA-1) - a storage-free, stable identity for
  * mDNS hostnames, MQTT client IDs, etc. The MAC->UUID core is host-testable;
  * pc_device_uuid() reads the ESP32 factory MAC. Default off.
@@ -3337,7 +3337,7 @@ from halves and is slower than the width it decomposes into"
 /**
  * @brief Opt-in browser GPIO pin-mapper / diagnostics endpoint (PC_ENABLE_GPIO_MAP).
  *
- * Default off. When set, services/system/gpio_map serves a compile-time table of GPIO
+ * Default off. When set, server/signaling/gpio_map serves a compile-time table of GPIO
  * pins (number, label, direction, live level) as JSON for a browser diag panel,
  * and accepts a control POST (`pin`, `level`) to drive an output. The live read /
  * write uses the Arduino digital API on ESP32; the JSON serializer and the control
@@ -3431,7 +3431,7 @@ from halves and is slower than the width it decomposes into"
 /**
  * @brief Opt-in software watchdog: deadlock detection + fail-safe safe-state (PC_ENABLE_FAILSAFE).
  *
- * When set, services/system/failsafe provides a fixed registry of "lifelines" (a task / worker / control loop
+ * When set, server/failsafe provides a fixed registry of "lifelines" (a task / worker / control loop
  * that must check in within its deadline). pc_failsafe_check() detects one that stopped feeding (a
  * hang / deadlock) and fires a breach callback once per episode so the app can enter a known-safe
  * state. App-defined and per-lifeline, on top of the hardware task watchdog. Pure core, zero heap.
@@ -3449,7 +3449,7 @@ from halves and is slower than the width it decomposes into"
 /**
  * @brief Opt-in dynamic sleep-cycle scheduler (PC_ENABLE_SLEEP_SCHED).
  *
- * When set, services/system/sleep_sched provides pc_sleep_next(): from the time since the last activity it
+ * When set, server/sleep_sched provides pc_sleep_next(): from the time since the last activity it
  * returns how long a low-power device should sleep (0 = stay awake), ramping the window from a floor up
  * to a ceiling the longer the idle streak runs. Pure decision core (the app applies the window via
  * light / modem / deep sleep). Complements services/radio_power. Default off.
@@ -3473,7 +3473,7 @@ from halves and is slower than the width it decomposes into"
 /**
  * @brief Opt-in SoC power governor (PC_ENABLE_POWER_MGMT).
  *
- * services/system/radio_power owns the radio and services/system/sleep_sched decides how long to sleep; neither
+ * network_drivers/physical/radio_power owns the radio and server/sleep_sched decides how long to sleep; neither
  * owns the SoC. When set, services/system/power_mgmt decides the CPU clock from load, die temperature and
  * the reset reason: idle work runs at the floor instead of spinning a 240 MHz core, a hot die clocks
  * down (with a lower restore threshold, so a part sitting at the limit does not oscillate), and a
@@ -4223,7 +4223,7 @@ from halves and is slower than the width it decomposes into"
 /**
  * @brief Opt-in SMB2 client (PC_ENABLE_SMB).
  *
- * services/file_transfer/smb is an SMB2 client (MS-SMB2) so a device can read/write files on a Windows share -
+ * network_drivers/application/smb is an SMB2 client (MS-SMB2) so a device can read/write files on a Windows share -
  * e.g. a CNC controller's program store. The full read/write-a-file path: the Direct-TCP transport
  * frame + SMB2 sync header, NEGOTIATE, the two-round NTLMv2 SESSION_SETUP (NTLM digests MD4/MD5/
  * HMAC-MD5, the NTLMv2 response, the NTLMSSP messages, SPNEGO wrapping), TREE_CONNECT, CREATE, READ,
@@ -4670,7 +4670,7 @@ from halves and is slower than the width it decomposes into"
  * @brief Opt-in multi-interface egress selection / failover policy (PC_ENABLE_LINK_MANAGER).
  *
  * The policy that drives which interface carries traffic once a device has more than one (a wired
- * Ethernet PHY alongside WiFi STA / softAP): services/system/link_manager keeps a small table of interfaces
+ * Ethernet PHY alongside WiFi STA / softAP): server/signaling/link_manager keeps a small table of interfaces
  * (kind + priority + up/down) and deterministically selects the best link that is up, escalating to a
  * higher-priority interface when it comes up and failing over when it drops, reporting only real
  * transitions so the app reconfigures the netif once. The PHY bring-up stays the app's. No
@@ -4791,7 +4791,7 @@ from halves and is slower than the width it decomposes into"
 /**
  * @brief Opt-in fixed-RAM rotating log buffer with severity traps (PC_ENABLE_LOGBUF).
  *
- * Default off. When set, services/system/logbuf keeps the last PC_LOG_LINES log lines
+ * Default off. When set, server/logbuf keeps the last PC_LOG_LINES log lines
  * in a fixed ring (oldest pruned on overflow - no heap, bounded), dumps them
  * oldest-first for a `/logs` endpoint, and fires a trap callback when a line is
  * logged at/above a severity threshold (forward criticals as an SNMP trap /
@@ -4909,7 +4909,7 @@ from halves and is slower than the width it decomposes into"
 /**
  * @brief Opt-in radio power controls (PC_ENABLE_RADIO_POWER).
  *
- * Default off. services/system/radio_power applies the WiFi modem-sleep mode and an
+ * Default off. network_drivers/physical/radio_power applies the WiFi modem-sleep mode and an
  * optional max-TX-power cap in one call - trade throughput/latency for lower average
  * power on a battery device. The mode names are host-tested; the apply needs a vendor
  * radio backend.
@@ -4931,7 +4931,7 @@ from halves and is slower than the width it decomposes into"
 /**
  * @brief Opt-in DNS resolver with answer verification (PC_ENABLE_DNS_RESOLVER).
  *
- * Default off. services/net/dns_resolver resolves a hostname to an IPv4 address (lwIP
+ * Default off. network_drivers/network/dns_resolver resolves a hostname to an IPv4 address (lwIP
  * dns_gethostbyname, marshalled to tcpip_thread like the http_client) and can
  * reject suspicious answers - 0.0.0.0, broadcast, loopback, multicast - which are
  * spoofing / DNS-rebinding indicators for a remote host. The address classifier /
@@ -5155,7 +5155,7 @@ from halves and is slower than the width it decomposes into"
 /**
  * @brief Streaming file upload: POST a body straight to a file on the filesystem.
  *
- * Default off. When set, src/services/file_transfer/upload_service/upload_service.h registers a POST route
+ * Default off. When set, src/network_drivers/application/upload_service/upload_service.h registers a POST route
  * that streams the request body directly into an Arduino FS file (LittleFS /
  * SPIFFS / SD) - the upload never has to fit in RAM. Reuses the same parser
  * streaming-body hook as OTA.
@@ -5800,7 +5800,7 @@ from halves and is slower than the width it decomposes into"
  * body), advertise `Accept-Ranges: bytes` on full responses, and answer an unsatisfiable range with
  * `416 Range Not Satisfiable`. This enables resumable downloads and media seeking. Multi-range
  * (multipart/byteranges) requests are not supported - the server falls back to a full 200 response,
- * which is RFC 7233 §3.1 compliant. The parser is shared (server/http_range.h).
+ * which is RFC 7233 §3.1 compliant. The parser is shared (network_drivers/application/http_range.h).
  */
 #ifndef PC_ENABLE_RANGE
 #define PC_ENABLE_RANGE 0

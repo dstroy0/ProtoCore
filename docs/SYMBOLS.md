@@ -43,31 +43,35 @@ implementation does not change mental models halfway.
 
 ## The contract
 
-| Thing                     | Form                              | Example                                 |
-| ------------------------- | --------------------------------- | --------------------------------------- |
-| Server API function       | `proto_snake_case`, flat          | `proto_begin_ws`, `proto_on_tcp`        |
-| Primitive function        | `pc_snake_case`, flat             | `pc_sha256_init`                        |
-| Type                      | `pc_snake_case`, flat             | `pc_sha256_ctx`                         |
-| Macro / compile-time flag | `PC_UPPER_SNAKE`, flat            | `PC_ENABLE_SSH`, `PC_SHA256_DIGEST_LEN` |
-| Sizing / capacity bound   | `PROTO_MAX_*`, flat               | `PROTO_MAX_CONNS`, `PROTO_MAX_HANDLERS` |
-| Enum type                 | `typedef enum`, `pc_snake_case`   | `typedef enum { … } pc_ip_family;`      |
-| Enum member               | keeps its descriptive prefix      | `PC_IP_V4`                              |
-| Include guard             | `PROTOCORE_<FILE>_H`, max 31      | `PROTOCORE_SHA256_H`                    |
-| File and directory        | `snake_case`                      | `src/crypto/mac/hmac_sha256.h`          |
-| Test env / suite          | `native_<topic>` / `test_<topic>` | `native_ip`, `test_ip`                  |
+| Thing                     | Form                               | Example                                       |
+| ------------------------- | ---------------------------------- | --------------------------------------------- |
+| Server API function       | `proto_snake_case`, flat           | `proto_begin_ws`, `proto_on_tcp`              |
+| Primitive function        | `proto_snake_case`, flat           | `proto_sha256_init`                           |
+| Type                      | `proto_snake_case`, flat           | `proto_sha256_ctx`                            |
+| Macro / compile-time flag | `PROTO_UPPER_SNAKE`, flat          | `PROTO_ENABLE_SSH`, `PROTO_SHA256_DIGEST_LEN` |
+| Sizing / capacity bound   | `PROTO_MAX_*`, flat                | `PROTO_MAX_CONNS`, `PROTO_MAX_HANDLERS`       |
+| Enum type                 | `typedef enum`, `proto_snake_case` | `typedef enum { … } proto_ip_family;`         |
+| Enum member               | keeps its descriptive prefix       | `PROTO_IP_V4`                                 |
+| Include guard             | `PROTOCORE_<FILE>_H`, max 31       | `PROTOCORE_SHA256_H`                          |
+| File and directory        | `snake_case`                       | `src/crypto/mac/hmac_sha256.h`                |
+| Test env / suite          | `native_<topic>` / `test_<topic>`  | `native_ip`, `test_ip`                        |
 
 No `namespace`. No `using namespace`. Everything below is the reasoning; the table is the rule.
+
+**One prefix, two cases: `proto_` for anything callable or nameable, `PROTO_` for anything the
+preprocessor sees.** A two-letter prefix does not own a token. Short prefixes are what a
+board-support header, a vendor SDK, and half the embedded projects on the internet also reach for,
+and a prefix somebody else is equally likely to pick buys none of the uniqueness that is the entire
+reason to have one. `PROTO_` is long enough and specific enough to actually be ours.
+
+It applies to every kind of symbol, so there is no split to remember: a name is `proto_`/`PROTO_`
+whether it is API or primitive, function or type or macro.
 
 **Hard ban: a bare `MAX_` name.** `MAX_CONNS`, `MAX_ROUTES`, `MAX_HEADERS` and their kind are among the
 most collided identifiers in embedded C. They are exactly the names a vendor SDK, an RTOS port, or a
 third-party header reaches for, and the preprocessor has no scope to protect ours from theirs
 (section 2). Every capacity bound carries `PROTO_MAX_`, with no exception, so the collision cannot
 happen in either direction.
-
-**Where the two function prefixes disagree, `proto_` wins.** `pc_` is short enough to be plausible in
-somebody else's library, so it buys less uniqueness than it looks like it does. New names take
-`proto_`; `pc_` remains correct on the primitives that already carry it and is not worth churn for
-its own sake, but it is not the default for anything new.
 
 **One exemption: `src/board_drivers/`.** That is where vendor SDKs are spoken to, and their headers
 are already full of names this law does not govern - unprefixed macros, their own casing, whatever
@@ -80,37 +84,27 @@ boundary is the point of the directory: contamination is contained by being conf
 
 ## 1. Prefixes, no namespaces
 
-**The rule: every symbol the library exports is prefixed, at global scope. Two function prefixes,
-split by what the symbol is for:**
+**The rule: every symbol the library exports is prefixed, at global scope. One prefix, in the case
+the language calls for:** `proto_` for functions and types, `PROTO_` for macros and enum members.
 
-- **`proto_`** - the server API. What an application calls to stand a protocol up and answer on it:
-  `proto_begin_ws`, `proto_begin_dav`, `proto_on_tcp`, `proto_send_text`. This is `protocore.h`'s
-  surface, the set a user reads to learn the library.
-- **`pc_`** - the primitives underneath it. Crypto, codecs, buffers, the frame engine, storage:
-  `pc_sha256_init`, `pc_frame_build`, `pc_route_add`. Callable, documented, and not what someone
-  reaches for to serve a request.
-
-Types stay `pc_`, macros stay `PC_`, whichever half they belong to.
-
-The split is for the reader, not the linker. Both prefixes are globally unique already, so `proto_`
-buys one thing: a name tells you which layer you are looking at before you look anything up, and the
-API a user learns is a list they can enumerate rather than a set they have to recognize.
+There is no split by layer. A prefix that varies with what a symbol is for makes the name
+unpredictable from the rule alone, because guessing right means already knowing which half the
+symbol lives in, and it doubles the token space the library has to defend for no gain.
 
 C has no namespaces. A C caller disambiguates by name alone, so every exported name must be globally
 unique on its own. The prefix is what buys that uniqueness, and it has to be on every symbol, because
 a prefix with holes in it is not a guarantee.
 
 C offers nothing to wrap internals in, so the prefix is the whole mechanism rather than a convention
-layered over one. `proto_` and `pc_` are not two conventions in that sense - they are one flat law
-with a layer marker, and a name is still predictable from the rule alone without knowing which file
-it lives in.
+layered over one. One prefix means the mechanism has no seam in it: there is no pair of names where a
+reader has to decide which law applies.
 
 ```c
-typedef struct pc_sha256_ctx { /* ... */ } pc_sha256_ctx;
+typedef struct proto_sha256_ctx { /* ... */ } proto_sha256_ctx;
 
-void pc_sha256_init(pc_sha256_ctx *ctx);
-void pc_sha256_update(pc_sha256_ctx *ctx, const uint8_t *data, size_t len);
-void pc_sha256_final(pc_sha256_ctx *ctx, uint8_t digest[PC_SHA256_DIGEST_LEN]);
+void proto_sha256_init(proto_sha256_ctx *ctx);
+void proto_sha256_update(proto_sha256_ctx *ctx, const uint8_t *data, size_t len);
+void proto_sha256_final(proto_sha256_ctx *ctx, uint8_t digest[PROTO_SHA256_DIGEST_LEN]);
 ```
 
 **Pick names that stay under the linker's and the preprocessor's limits.** See section 2 for the
@@ -120,7 +114,7 @@ void pc_sha256_final(pc_sha256_ctx *ctx, uint8_t digest[PC_SHA256_DIGEST_LEN]);
 
 ## 2. Macros are flat because they have to be
 
-**The rule: macros are `PC_UPPER_SNAKE`, at global scope, always.**
+**The rule: macros are `PROTO_UPPER_SNAKE`, at global scope, always.**
 
 The preprocessor runs before the compiler and knows nothing about scope. A macro is textual
 replacement across the whole translation unit. There is no construct that can contain one, so "flat"
@@ -132,17 +126,22 @@ will rewrite a token that is already scoped.
 ```c
 #define OUTPUT 1                                  // e.g. from a vendor header
 
-typedef enum { OUTPUT } pc_tcp_op;                // error: expands to `{ 1 }`
+typedef enum { OUTPUT } proto_tcp_op;             // error: expands to `{ 1 }`
 ```
 
 Substitution happens before the compiler sees a declaration at all, so there is nothing a member can
 be declared inside that would protect it. This is exactly why enum members keep descriptive prefixes
-(section 3), and why `PC_` on every macro matters: it keeps our macros out of everyone else's token
-space and theirs out of ours.
+(section 3), and why `PROTO_` on every macro matters: it keeps our macros out of everyone else's
+token space and theirs out of ours.
 
 **Keep macro names under 31 characters.** C89 guarantees only the first 31 characters of a macro name
 are significant, and ProtoCore targets toolchains where that limit is real, c2000 included. Two macros
 agreeing in their first 31 characters are the same macro there, silently.
+
+`PROTO_` spends six of those 31 characters before the name proper starts, leaving 25. That is the
+price of a prefix wide enough to actually be ours, and it is paid out of the budget below rather
+than waived: a name that does not fit gets abbreviated by the rules that follow, never truncated and
+never granted an exception.
 
 **When a name does not fit, abbreviate whole words. Never cut a word short.** The two produce names
 that look similar and read completely differently:
@@ -150,7 +149,7 @@ that look similar and read completely differently:
 |             |                                                                                         |
 | ----------- | --------------------------------------------------------------------------------------- |
 | Chopped     | last word cut off partway - reads as a typo; the reader stops to work out the real name |
-| Abbreviated | `PC_SSH_MSG_CH_WIN_ADJ` - reads as deliberate; every token maps back one-to-one         |
+| Abbreviated | `PROTO_SSH_MSG_CH_WIN_ADJ` - reads as deliberate; every token maps back one-to-one      |
 
 Abbreviation keeps the word boundaries, so the correspondence to the spec survives:
 `CH`=CHANNEL, `WIN`=WINDOW, `ADJ`=ADJUST still recovers `SSH_MSG_CHANNEL_WINDOW_ADJUST` from RFC 4254,
@@ -173,12 +172,13 @@ test is not "can this be decoded", it is "does every reader decode it the same w
 When a word has no unambiguous short form, use a synonym that does: `..._MSG_TYPE_ERR` says what
 `BadTcpMessageTypeInvalid` means and cannot be read any other way.
 
-Nine macros currently exceed the limit, longest 37 (`PC_OPCUA_BAD_TCP_NOT_ENOUGH_RESOURCES`), tracked
-in [ROADMAP.md](ROADMAP.md). One of them, `PC_ENABLE_SSH_KEYBOARD_INTERACTIVE`, is a user-facing
-feature flag that also appears in every example's `build_opt.h` and in the configurator, so renaming it
-means regenerating those too. It is renamed anyway, before 1.0.0: this is the last moment a flag can
-change without it costing anyone anything, and a name that violates the law on the day the law ships
-is a name nobody will ever fix.
+73 macros exceed the limit, longest 47 (`PROTO_ENABLE_SSH_KEYBOARD_INTERACTIVE_NEEDS_SSH`), tracked
+in [ROADMAP.md](ROADMAP.md). The dependency gates are the worst of them, because
+`PROTO_ENABLE_<A>_NEEDS_<B>` spends its budget twice over on two feature names plus the connective.
+Several are user-facing feature flags that also appear in every example's `build_opt.h` and in the
+configurator, so renaming one means regenerating those too. They are renamed anyway, before 1.0.0:
+this is the last moment a flag can change without it costing anyone anything, and a name that
+violates the law on the day the law ships is a name nobody will ever fix.
 
 ---
 
@@ -189,11 +189,11 @@ is a name nobody will ever fix.
 ```c
 typedef enum
 {
-    PC_IP_V4,
-    PC_IP_V6,
-} pc_ip_family;
+    PROTO_IP_V4,
+    PROTO_IP_V6,
+} proto_ip_family;
 
-pc_ip_family fam = PC_IP_V4;
+proto_ip_family fam = PROTO_IP_V4;
 ```
 
 C has no scoped enum. Every member lands in one global namespace the moment it is declared, so the
@@ -205,7 +205,7 @@ auditing this library found `FAILED` wanted by four enums, `IDLE` by three, and 
 The prefix is mandatory rather than a per-enum decision. Three further reasons:
 
 1. **Names are for human recognition.** A member is read far more often at a use site, in a log, a
-   packet dump, or a debugger than in its declaration. `PC_IP_V4` is self-describing when it appears
+   packet dump, or a debugger than in its declaration. `PROTO_IP_V4` is self-describing when it appears
    alone. `V4` is not.
 2. **De-prefixing collides with the preprocessor.** As section 2 shows, a bare member is still a
    macro-substitutable token. Auditing the library found roughly 80 members that would become common
@@ -230,23 +230,19 @@ enum, with no per-enum exception - there is no scope to fall back on if one is w
 **Include guards are `PROTOCORE_<FILE>_H`**, built from the file's own name:
 `src/crypto/hash/sha256.h` guards with `PROTOCORE_SHA256_H`.
 
-Guards take the full library name rather than the `PC_` prefix, because a guard is the one macro that
-has to be unique across _someone else's_ build. Every header a user compiles shares a single macro
-namespace, so `PC_HTTP_PARSER_H` is a plausible name for another library's guard while
-`PROTOCORE_HTTP_PARSER_H` is not. A guard is also not part of the API surface that `PC_` exists to
-keep short and typeable.
+Guards take the full library name rather than the `PROTO_` prefix, because a guard is the one macro
+that has to be unique across _someone else's_ build. Every header a user compiles shares a single
+macro namespace, so `PROTO_HTTP_PARSER_H` is a plausible name for another library's guard while
+`PROTOCORE_HTTP_PARSER_H` is not.
 
 **Every header file name under `src/` is unique, and `check_symbols.py` enforces it.** That uniqueness is what
 makes a filename-derived guard collision-proof, so it is checked rather than assumed: adding a second
 `parser.h` anywhere in the tree fails CI.
 
-This replaces an earlier `PC_<PATH>_H` rule that derived the guard from the full path. That rule was
-unsatisfiable in this tree: it also demanded the 31-character limit from section 2, and **283 of 373
-headers (75%) blew it** - median 38, worst 62
-(`PC_SERVICES_SYSTEM_PROVISIONING_SERVICE_PROVISIONING_SERVICE_H`). The path form was reasoned about
-against a three-level tree; the tree is now five and six levels deep. A rule that cannot be satisfied
-is not a strict rule, it is a rule that gets ignored, and an ignored rule stops protecting the case it
-was written for. `PROTOCORE_<FILE>_H` lands at median 20.
+The guard is derived from the file's own name and not from its path. A path-derived guard has to
+carry every directory it sits under, which in a tree five and six levels deep overruns the
+31-character limit from section 2 on three quarters of the headers here. The filename form lands at
+median 20.
 
 **The filename form is authoritative when it fits. When it does not, the guard must still convey
 intent.** Two headers overflow (`PROTOCORE_NTRIP_CASTER_LISTENER_H` at 33,
@@ -303,9 +299,9 @@ Markdown is the documented exception: docs use `UPPER_SNAKE` (`README.md`, `FEAT
 `#include` paths resolving differently per platform, which does not apply to prose.
 
 **Test environments and suites carry no house prefix.** They are `native_<topic>` and `test_<topic>`,
-not `native_pc_<topic>`. A prefix exists to prevent collisions in a shared global namespace; a test
+not `native_proto_<topic>`. A prefix exists to prevent collisions in a shared global namespace; a test
 environment name lives only in `platformio.ini` and has no such namespace to protect. `native_ip` says
-everything `native_pc_ip` would.
+everything `native_proto_ip` would.
 
 ---
 

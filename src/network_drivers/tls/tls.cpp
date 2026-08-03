@@ -13,7 +13,7 @@
  */
 
 #include "network_drivers/tls/tls.h"
-#include "services/system/clock.h" // pcdelay
+#include "server/clock/clock.h" // pcdelay
 
 #if PC_ENABLE_TLS && PROTOCORE_HOT
 

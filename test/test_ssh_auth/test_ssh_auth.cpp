@@ -9,9 +9,9 @@
 #include "crypto/asymmetric/ecdsa.h"
 #include "crypto/asymmetric/ed25519.h"
 #include "network_drivers/presentation/ssh/auth/ssh_auth.h"
-#include "network_drivers/presentation/ssh/crypto/ssh_rsa.h"
 #include "network_drivers/presentation/ssh/transport/ssh_packet.h"
 #include "network_drivers/presentation/ssh/transport/ssh_transport.h"
+#include "network_drivers/tls/ssh_rsa.h"
 #include <stdint.h>
 #include <string.h>
 #include <unity.h>

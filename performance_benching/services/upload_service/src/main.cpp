@@ -11,7 +11,7 @@
 //
 // Build/flash:  pio run -d performance_benching/device/upload_service -t upload --upload-port COM7
 #include "device_bench.h"
-#include "services/file_transfer/upload_service/upload_service.h"
+#include "network_drivers/application/upload_service/upload_service.h"
 #include <Arduino.h>
 
 static void upload_service_bench_task(void *)

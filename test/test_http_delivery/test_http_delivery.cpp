@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // Host tests for services/http_delivery: RFC 5861 stale-while-revalidate (decision + header) and
-// the service-worker precache manifest. Byte-range serving is server/http_range.h's job.
+// the service-worker precache manifest. Byte-range serving is network_drivers/application/http_range.h's job.
 
 #include "services/file_transfer/http_delivery/http_delivery.h"
 #include <string.h>
@@ -68,7 +68,7 @@ void test_delivery_guards_and_escape()
 }
 
 // Null-output and capacity guards on the cache-control / service-worker-manifest builders.
-// (Byte-range parsing lives in server/http_range.h and is tested by the file-serving suite.)
+// (Byte-range parsing lives in network_drivers/application/http_range.h and is tested by the file-serving suite.)
 void test_builder_edge_guards(void)
 {
     char buf[64];

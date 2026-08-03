@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the DMA ingest / egress simulator (services/system/dma) host core: an ingress
+// Unit tests for the DMA ingest / egress simulator (mmgr/dma) host core: an ingress
 // feed surfaces as RX completion events, a full buffer ping-pong flips and re-arms, egress
 // DMA is captured, TX is one-in-flight fail-closed, and a loopback channel round-trips its
 // own TX into RX. The ARDUINO ISR-post + preempt-queue hand-off is HW-verified separately
@@ -9,7 +9,7 @@
 //
 // The env sizes PC_DMA_BUF_SIZE = 8, PC_DMA_CHANNELS = 2 (staging = 24).
 
-#include "services/system/dma/dma.h"
+#include "mmgr/dma.h"
 #include <string.h>
 #include <unity.h>
 #include <vector>

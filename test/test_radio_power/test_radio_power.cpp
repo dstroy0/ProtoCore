@@ -1,10 +1,10 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the radio-power mode names (services/system/radio_power). Applying the
+// Unit tests for the radio-power mode names (network_drivers/physical/radio_power). Applying the
 // settings to the radio is ESP32-only (a no-op on host).
 
-#include "services/system/radio_power/radio_power.h"
+#include "network_drivers/physical/radio_power.h"
 #include <unity.h>
 
 void setUp()

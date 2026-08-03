@@ -397,7 +397,7 @@ records) is ~41.5 KB; the default arena is 48 KB.
 - [src/crypto/cipher/aes256ctr.h](@ref aes256ctr.h) / [.cpp](@ref aes256ctr.cpp) - AES-256-CTR (shared library primitive)
 - [src/network_drivers/presentation/ssh/transport/ssh_dh.h](@ref ssh_dh.h) / [.cpp](@ref ssh_dh.cpp) - DH-group14-SHA256 KEX
 - [src/crypto/asymmetric/rsa.h](@ref rsa.h) / [.cpp](@ref rsa.cpp) - RSA-2048 PKCS#1 v1.5 verify + software sign (shared primitive)
-- [src/network_drivers/presentation/ssh/crypto/ssh_rsa.h](@ref ssh_rsa.h) / [.cpp](@ref ssh_rsa.cpp) - SSH RSA host-key layer (NVS key, signing, "ssh-rsa" blob)
+- [src/network_drivers/tls/ssh_rsa.h](@ref ssh_rsa.h) / [.cpp](@ref ssh_rsa.cpp) - SSH RSA host-key layer (NVS key, signing, "ssh-rsa" blob)
 - [src/network_drivers/presentation/ssh/transport/ssh_packet.h](@ref ssh_packet.h) / [.cpp](@ref ssh_packet.cpp) - binary packet protocol
 
 ---

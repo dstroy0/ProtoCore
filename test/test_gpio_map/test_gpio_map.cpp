@@ -1,11 +1,11 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the GPIO pin-mapper core (services/system/gpio_map): the direction
+// Unit tests for the GPIO pin-mapper core (server/signaling/gpio_map): the direction
 // names, the JSON serializer, the control-POST parser, and the output guard. The
 // digital read / write are ESP32-only and no-ops on the host.
 
-#include "services/system/gpio_map/gpio_map.h"
+#include "server/signaling/gpio_map.h"
 #include <string.h>
 #include <unity.h>
 

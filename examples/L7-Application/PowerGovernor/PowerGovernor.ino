@@ -1,6 +1,6 @@
 // PowerGovernor - clock the SoC to what the work, the die temperature, and the supply allow.
 //
-// services/system/radio_power owns the radio and services/system/sleep_sched decides how long to sleep. Neither
+// network_drivers/physical/radio_power owns the radio and server/sleep_sched decides how long to sleep. Neither
 // owns the SoC itself, which is where the rest of the power budget goes. This governor answers one
 // question every tick: what should the CPU clock be right now.
 //
@@ -22,7 +22,7 @@
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
-#include "services/system/clock.h" // pc_millis - the library's monotonic source
+#include "server/clock/clock.h" // pc_millis - the library's monotonic source
 #include "services/system/power_mgmt/power_mgmt.h"
 #include "shared_primitives/mime.h"
 

@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for the software watchdog / deadlock detector (services/system/failsafe):
+// On-device CCOUNT microbenchmark for the software watchdog / deadlock detector (server/failsafe):
 // the wrap-safe overdue predicate (pc_lifeline_overdue), the lifeline registry check-in
 // (pc_failsafe_feed_at), the fire-once-per-episode breach evaluation (pc_failsafe_check_at), and
 // the /health-style JSON serializer (pc_failsafe_json_at) - all pure (zero heap, a fixed-size
@@ -18,7 +18,7 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "services/system/failsafe/failsafe.h"
+#include "server/failsafe.h"
 #include <Arduino.h>
 
 // Trivial breach callback (mirrors test_failsafe.cpp's on_breach): just counts fires so the

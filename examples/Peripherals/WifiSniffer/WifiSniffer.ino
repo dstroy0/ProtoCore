@@ -22,7 +22,7 @@
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
 #include "services/radio/wifi_sniffer/wifi_sniffer.h"
-#include "services/system/clock.h" // pc_millis
+#include "server/clock/clock.h" // pc_millis
 
 static const uint8_t CHAN_FIRST = 1; // sweep 1..11 (the US 2.4 GHz plan)
 static const uint8_t CHAN_LAST = 11;

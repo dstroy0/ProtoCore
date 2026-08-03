@@ -13,7 +13,8 @@
 // path - like performance_benching/device/modbus, a pure codec with no hardware involved. The Arduino-only route
 // registration half (pc_delivery_serve_sw, http_delivery_routes.cpp) needs a live PC server + real
 // sockets and is deliberately OUT OF SCOPE on this rig; only the deterministic cores are benched.
-// Byte-range/206 serving is server/http_range.h's job, not this service's, so it is not benched here.
+// Byte-range/206 serving is network_drivers/application/http_range.h's job, not this service's, so it is not benched
+// here.
 //
 // Build/flash (JTAG-capable S3 over its USB-Serial/JTAG port):
 //   pio run -d performance_benching/device/http_delivery -t upload --upload-port COM7

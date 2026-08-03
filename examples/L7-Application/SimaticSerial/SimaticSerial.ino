@@ -26,7 +26,7 @@
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
 #include "services/fieldbus/simatic/simatic.h"
-#include "services/system/clock.h"
+#include "server/clock/clock.h"
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";

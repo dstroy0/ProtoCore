@@ -1,10 +1,10 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the DNS answer classifier / verifier (services/net/dns_resolver).
+// Unit tests for the DNS answer classifier / verifier (network_drivers/network/dns_resolver).
 // The actual resolve is ESP32-only (returns false on host).
 
-#include "services/net/dns_resolver/dns_resolver.h"
+#include "network_drivers/network/dns_resolver.h"
 #include <unity.h>
 
 #define IPV4(a, b, c, d) (((uint32_t)(a) << 24) | ((uint32_t)(b) << 16) | ((uint32_t)(c) << 8) | (uint32_t)(d))

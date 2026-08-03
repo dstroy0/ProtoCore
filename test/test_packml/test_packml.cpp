@@ -5,8 +5,8 @@
 // (command / state-complete / execute-complete + command validity) and the owned PackTags service
 // (state advance, production counters, unit-mode rules, machine speed, and the state/reset timers).
 
+#include "server/clock/clock.h"
 #include "services/machine_tool/packml/packml.h"
-#include "services/system/clock.h"
 #include <unity.h>
 
 // Host clock seam so the timer tags (StateCurrentTime, AccTimeSinceReset) are deterministic.

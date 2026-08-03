@@ -11,8 +11,8 @@
 #if PC_ENABLE_DTLS && PC_ENABLE_COAP
 
 #include "network_drivers/presentation/security/dtls/dtls_conn.h"
+#include "server/clock/clock.h"      // pc_millis() - idle-reap clock (the DTLS PTO uses it internally too)
 #include "services/iot/coap/coaps.h" // pc_coaps_process()
-#include "services/system/clock.h"   // pc_millis() - idle-reap clock (the DTLS PTO uses it internally too)
 #include "shared_primitives/ring.h"  // pc_atomic (SPSC ingest-ring cursors)
 #include <string.h>
 

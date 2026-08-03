@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for the rotating log ring (services/system/logbuf): a fixed-RAM ring of
+// On-device CCOUNT microbenchmark for the rotating log ring (server/logbuf): a fixed-RAM ring of
 // the last PC_LOG_LINES lines with a severity trap, all pure (no heap, no ESP32 dependency). Four
 // deterministic operations are benched:
 //   - pc_log()      : the append hot path (snprintf of `<L> msg` into the next ring slot),
@@ -18,7 +18,7 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "services/system/logbuf/logbuf.h"
+#include "server/logbuf.h"
 #include <Arduino.h>
 
 // Stands in for the production severity-trap sink (an SNMP trap / webhook forwarder). Kept a pure

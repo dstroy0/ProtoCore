@@ -16,7 +16,7 @@
  * used (so a variable read only by a log does not warn). Enable the level and the same line starts
  * logging, with no source change.
  *
- * Where an emitted line goes is the caller's choice: it is handed to services/system/logbuf's ring when
+ * Where an emitted line goes is the caller's choice: it is handed to server/logbuf's ring when
  * PC_ENABLE_LOGBUF is on, and to a sink callback registered with pc_log_set_sink() (Serial,
  * syslog, a websocket console) if there is one.
  *

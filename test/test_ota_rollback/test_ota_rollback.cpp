@@ -1,10 +1,10 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the OTA rollback decision (services/system/ota_rollback). The esp_ota
+// Unit tests for the OTA rollback decision (server/update/ota_rollback). The esp_ota
 // commit/rollback are ESP32-only; here we exercise the pure decision matrix.
 
-#include "services/system/ota_rollback/ota_rollback.h"
+#include "server/update/ota_rollback.h"
 #include <unity.h>
 
 void setUp()

@@ -7,11 +7,11 @@
 // /bench endpoint; this host ns/op + MB/s is a RELATIVE baseline (a fast RPi core), not the device
 // cost. The 207 builder is pure, so it links standalone. Build + run:
 //   g++ -O2 -std=c++17 -Isrc -Itest/mocks -Itest/support -DPC_ENABLE_WEBDAV=1 \
-//       performance_benching/services/webdav/host.cpp src/services/file_transfer/webdav/webdav.cpp -o /tmp/bw &&
+//       performance_benching/services/webdav/host.cpp src/network_drivers/application/webdav/webdav.cpp -o /tmp/bw &&
 //       /tmp/bw
 
 #define PC_ENABLE_WEBDAV 1
-#include "services/file_transfer/webdav/webdav.h"
+#include "network_drivers/application/webdav/webdav.h"
 
 #include <chrono>
 #include <cstdint>

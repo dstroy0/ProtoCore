@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// KAT tests for the NTLM digests (services/file_transfer/smb/smb_md): MD5 (RFC 1321 App A.5),
+// KAT tests for the NTLM digests (network_drivers/application/smb/smb_md): MD5 (RFC 1321 App A.5),
 // MD4 (RFC 1320 App A.5), HMAC-MD5 (RFC 2104 / RFC 2202). MD5 + HMAC expected
 // values are also cross-checked against python hashlib; MD4 against the RFC text.
 
@@ -12,7 +12,7 @@
 #include "crypto/mac/aes_cmac.h"
 #include "crypto/mac/hmac_sha256.h"
 #include "mmgr/secure.h"
-#include "services/file_transfer/smb/smb2.h" // pc_smb3_derive_signing_key
+#include "network_drivers/application/smb/smb2.h" // pc_smb3_derive_signing_key
 #include <string.h>
 #include <unity.h>
 

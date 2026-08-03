@@ -8,8 +8,8 @@
  */
 
 #include "services/net/ws_client/ws_client.h"
-#include "mmgr/membuild.h"         // pc_sb frame builder
-#include "services/system/clock.h" // pcdelay
+#include "mmgr/membuild.h"      // pc_sb frame builder
+#include "server/clock/clock.h" // pcdelay
 
 #if PC_ENABLE_WS_CLIENT
 

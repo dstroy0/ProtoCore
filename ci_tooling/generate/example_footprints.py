@@ -104,7 +104,7 @@ def affected_items(items, changed, base=None, head=None):
         ):
             continue  # additive gate -> inert for every example that does not enable it
         elif f.startswith("src/services/") and f.count("/") >= 3:
-            features.add(f.split("/")[2])  # e.g. src/services/file_transfer/smb/smb2.cpp -> "smb"
+            features.add(f.split("/")[2])  # e.g. src/network_drivers/application/smb/smb2.cpp -> "smb"
         elif f.startswith("src/"):
             return items  # shared/core src (protocore, shared_primitives, a top-level services/*.h) -> FULL
         elif f == "ci_tooling/generate/example_footprints.py" or (

@@ -13,7 +13,7 @@
 
 #include "network_drivers/session/proto_handler.h"
 #include "network_drivers/transport/tcp.h"
-#include "services/system/clock.h" // pc_millis() pluggable monotonic clock
+#include "server/clock/clock.h" // pc_millis() pluggable monotonic clock
 
 // The Arduino bus headers MUST be included at global scope: pulling them into the anonymous namespace
 // below would make `SPI` / `Wire` anonymous-namespace symbols with no definition (link failure).
@@ -34,324 +34,323 @@ typedef struct
     const BridgeRule *rule;
 } BridgeBind;
 
-    // All of the glue's mutable state in one owned, feature-gated context (the owner-context guard requires
-    // the single file-scope mutable to be a `*Ctx` instance).
-    typedef struct
-    {
-        BridgeBind binds[PC_BRIDGE_MAX_RULES];
-        proto_bool registered; ///< the PROTO_BRIDGE handler is installed
-        proto_bool spi_begun;  ///< SPI.begin() has run (once, shared bus)
-    } BridgeGlueCtx;
-    BridgeGlueCtx s_ctx;
+// All of the glue's mutable state in one owned, feature-gated context (the owner-context guard requires
+// the single file-scope mutable to be a `*Ctx` instance).
+typedef struct
+{
+    BridgeBind binds[PC_BRIDGE_MAX_RULES];
+    proto_bool registered; ///< the PROTO_BRIDGE handler is installed
+    proto_bool spi_begun;  ///< SPI.begin() has run (once, shared bus)
+} BridgeGlueCtx;
+BridgeGlueCtx s_ctx;
 
-    const BridgeRule *rule_for_slot(uint8_t slot)
+const BridgeRule *rule_for_slot(uint8_t slot)
+{
+    uint8_t lid = pc_conn_listener_id(slot);
+    for (int i = 0; i < PC_BRIDGE_MAX_RULES; i++)
     {
-        uint8_t lid = pc_conn_listener_id(slot);
-        for (int i = 0; i < PC_BRIDGE_MAX_RULES; i++)
+        if (s_ctx.binds[i].active && s_ctx.binds[i].listener_id == lid)
         {
-            if (s_ctx.binds[i].active && s_ctx.binds[i].listener_id == lid)
-            {
-                return s_ctx.binds[i].rule;
-            }
+            return s_ctx.binds[i].rule;
         }
-        return NULL;
     }
+    return NULL;
+}
 
-    // ---------------------------------------------------------------------------------------------
-    // Bus I/O (ESP32 only). Host builds stub these out - the codec + rule table are host-tested.
-    // ---------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------------
+// Bus I/O (ESP32 only). Host builds stub these out - the codec + rule table are host-tested.
+// ---------------------------------------------------------------------------------------------
 
 #if PROTOCORE_HOT
 
-    // unit -> the matching HardwareSerial, or nullptr if this SoC has no such UART. SOC_UART_NUM mirrors the
-    // core's own guards on Serial1 / Serial2 (an S3 has fewer UARTs than a classic ESP32).
-    HardwareSerial *uart_for(uint8_t unit)
+// unit -> the matching HardwareSerial, or nullptr if this SoC has no such UART. SOC_UART_NUM mirrors the
+// core's own guards on Serial1 / Serial2 (an S3 has fewer UARTs than a classic ESP32).
+HardwareSerial *uart_for(uint8_t unit)
+{
+    switch (unit)
     {
-        switch (unit)
-        {
-        case 0:
-            // With USB-CDC-on-boot, `Serial` is the USB CDC (HWCDC) and UART0 is exposed as `Serial0`
-            // (a HardwareSerial); otherwise `Serial` itself is the UART0 HardwareSerial. Mirror the core's
-            // own guard (cores/esp32/HardwareSerial.h) so unit 0 always resolves to a real HardwareSerial.
+    case 0:
+        // With USB-CDC-on-boot, `Serial` is the USB CDC (HWCDC) and UART0 is exposed as `Serial0`
+        // (a HardwareSerial); otherwise `Serial` itself is the UART0 HardwareSerial. Mirror the core's
+        // own guard (cores/esp32/HardwareSerial.h) so unit 0 always resolves to a real HardwareSerial.
 #if ARDUINO_USB_CDC_ON_BOOT
-            return &Serial0;
+        return &Serial0;
 #else
-            return &Serial;
+        return &Serial;
 #endif
 #if SOC_UART_NUM > 1
-        case 1:
-            return &Serial1;
+    case 1:
+        return &Serial1;
 #endif
 #if SOC_UART_NUM > 2
-        case 2:
-            return &Serial2;
+    case 2:
+        return &Serial2;
 #endif
-        default:
-            return NULL;
-        }
+    default:
+        return NULL;
     }
+}
 
-    // Bring the target's bus up once at publish. UART begins at its baud; SPI drives the CS gpio high (idle)
-    // and starts the shared SPI bus once; I2C uses the shared bus owner.
-    void bus_begin(const BridgeTarget *t)
+// Bring the target's bus up once at publish. UART begins at its baud; SPI drives the CS gpio high (idle)
+// and starts the shared SPI bus once; I2C uses the shared bus owner.
+void bus_begin(const BridgeTarget *t)
+{
+    switch (t->bus)
     {
-        switch (t->bus)
+    case BRIDGE_BUS_UART: {
+        HardwareSerial *s = uart_for(t->unit);
+        if (s)
         {
-        case BRIDGE_BUS_UART: {
-            HardwareSerial *s = uart_for(t->unit);
-            if (s)
-            {
-                s->begin(t->rate ? t->rate : 115200);
-            }
-            break;
+            s->begin(t->rate ? t->rate : 115200);
         }
-        case BRIDGE_BUS_SPI:
-            pc_platform_gpio_mode((uint8_t)(t->addr_cs), PC_GPIO_OUT);
-            pc_platform_gpio_write((uint8_t)(t->addr_cs), PC_GPIO_HIGH); // CS idle-high
-            if (!s_ctx.spi_begun)
-            {
-                SPI.begin();
-                s_ctx.spi_begun = PROTO_TRUE;
-            }
-            break;
-        case BRIDGE_BUS_I2C:
-            pc_i2c_begin();
-            break;
-        }
+        break;
     }
-
-    // One write-then-read transaction against the target's bus. Clocks @p wlen bytes out, reads @p rlen bytes
-    // back into @p rbuf (short reads are zero-padded). Returns false only on a bus-level failure.
-    proto_bool bus_txn(const BridgeTarget *t, const uint8_t *wbuf, uint16_t wlen, uint8_t *rbuf, uint16_t rlen)
-    {
-        switch (t->bus)
+    case BRIDGE_BUS_SPI:
+        pc_platform_gpio_mode((uint8_t)(t->addr_cs), PC_GPIO_OUT);
+        pc_platform_gpio_write((uint8_t)(t->addr_cs), PC_GPIO_HIGH); // CS idle-high
+        if (!s_ctx.spi_begun)
         {
-        case BRIDGE_BUS_I2C:
-            if (wlen)
-            {
-                Wire.beginTransmission((uint8_t)t->addr_cs);
-                Wire.write(wbuf, wlen);
-                // repeated-start (no stop) when a read follows, so the device holds the register pointer
-                if (Wire.endTransmission(rlen == 0) != 0)
-                {
-                    return PROTO_FALSE;
-                }
-            }
-            if (rlen)
-            {
-                uint16_t got = (uint16_t)Wire.requestFrom((int)(uint8_t)t->addr_cs, (int)rlen);
-                for (uint16_t i = 0; i < rlen; i++)
-                {
-                    rbuf[i] = (i < got && Wire.available()) ? (uint8_t)Wire.read() : 0;
-                }
-            }
-            return PROTO_TRUE;
-
-        case BRIDGE_BUS_SPI: {
-            uint8_t order = t->bit_order ? LSBFIRST : MSBFIRST;
-            SPI.beginTransaction(SPISettings(t->rate ? t->rate : 1000000, order, t->spi_mode & 0x3));
-            pc_platform_gpio_write((uint8_t)(t->addr_cs), PC_GPIO_LOW);
-            for (uint16_t i = 0; i < wlen; i++)
-            {
-                SPI.transfer(wbuf[i]);
-            }
-            for (uint16_t i = 0; i < rlen; i++)
-            {
-                rbuf[i] = SPI.transfer(0x00); // clock dummies to read
-            }
-            pc_platform_gpio_write((uint8_t)(t->addr_cs), PC_GPIO_HIGH);
-            SPI.endTransaction();
-            return PROTO_TRUE;
+            SPI.begin();
+            s_ctx.spi_begun = PROTO_TRUE;
         }
+        break;
+    case BRIDGE_BUS_I2C:
+        pc_i2c_begin();
+        break;
+    }
+}
 
-        case BRIDGE_BUS_UART: {
-            HardwareSerial *s = uart_for(t->unit);
-            if (!s)
+// One write-then-read transaction against the target's bus. Clocks @p wlen bytes out, reads @p rlen bytes
+// back into @p rbuf (short reads are zero-padded). Returns false only on a bus-level failure.
+proto_bool bus_txn(const BridgeTarget *t, const uint8_t *wbuf, uint16_t wlen, uint8_t *rbuf, uint16_t rlen)
+{
+    switch (t->bus)
+    {
+    case BRIDGE_BUS_I2C:
+        if (wlen)
+        {
+            Wire.beginTransmission((uint8_t)t->addr_cs);
+            Wire.write(wbuf, wlen);
+            // repeated-start (no stop) when a read follows, so the device holds the register pointer
+            if (Wire.endTransmission(rlen == 0) != 0)
             {
                 return PROTO_FALSE;
             }
-            if (wlen)
-            {
-                s->write(wbuf, wlen);
-            }
-            uint16_t got = 0;
-            uint32_t deadline = pc_millis() + PC_BRIDGE_UART_TXN_MS;
-            while (got < rlen && (int32_t)(pc_millis() - deadline) < 0)
-            {
-                while (got < rlen && s->available())
-                {
-                    rbuf[got++] = (uint8_t)s->read();
-                }
-            }
-            for (; got < rlen; got++)
-            {
-                rbuf[got] = 0; // zero-pad a short read
-            }
-            return PROTO_TRUE;
         }
+        if (rlen)
+        {
+            uint16_t got = (uint16_t)Wire.requestFrom((int)(uint8_t)t->addr_cs, (int)rlen);
+            for (uint16_t i = 0; i < rlen; i++)
+            {
+                rbuf[i] = (i < got && Wire.available()) ? (uint8_t)Wire.read() : 0;
+            }
         }
-        return PROTO_FALSE;
+        return PROTO_TRUE;
+
+    case BRIDGE_BUS_SPI: {
+        uint8_t order = t->bit_order ? LSBFIRST : MSBFIRST;
+        SPI.beginTransaction(SPISettings(t->rate ? t->rate : 1000000, order, t->spi_mode & 0x3));
+        pc_platform_gpio_write((uint8_t)(t->addr_cs), PC_GPIO_LOW);
+        for (uint16_t i = 0; i < wlen; i++)
+        {
+            SPI.transfer(wbuf[i]);
+        }
+        for (uint16_t i = 0; i < rlen; i++)
+        {
+            rbuf[i] = SPI.transfer(0x00); // clock dummies to read
+        }
+        pc_platform_gpio_write((uint8_t)(t->addr_cs), PC_GPIO_HIGH);
+        SPI.endTransaction();
+        return PROTO_TRUE;
     }
 
-    // STREAM: pipe socket RX -> UART (called from on_data).
-    void stream_sock_to_uart(uint8_t slot, const BridgeTarget *t)
-    {
+    case BRIDGE_BUS_UART: {
         HardwareSerial *s = uart_for(t->unit);
         if (!s)
         {
-            return;
+            return PROTO_FALSE;
         }
-        uint8_t buf[PC_BRIDGE_STREAM_CHUNK];
+        if (wlen)
+        {
+            s->write(wbuf, wlen);
+        }
+        uint16_t got = 0;
+        uint32_t deadline = pc_millis() + PC_BRIDGE_UART_TXN_MS;
+        while (got < rlen && (int32_t)(pc_millis() - deadline) < 0)
+        {
+            while (got < rlen && s->available())
+            {
+                rbuf[got++] = (uint8_t)s->read();
+            }
+        }
+        for (; got < rlen; got++)
+        {
+            rbuf[got] = 0; // zero-pad a short read
+        }
+        return PROTO_TRUE;
+    }
+    }
+    return PROTO_FALSE;
+}
+
+// STREAM: pipe socket RX -> UART (called from on_data).
+void stream_sock_to_uart(uint8_t slot, const BridgeTarget *t)
+{
+    HardwareSerial *s = uart_for(t->unit);
+    if (!s)
+    {
+        return;
+    }
+    uint8_t buf[PC_BRIDGE_STREAM_CHUNK];
+    size_t n = 0;
+    while ((n = pc_conn_read(slot, buf, sizeof buf)) > 0)
+    {
+        s->write(buf, n);
+    }
+}
+
+// STREAM: pipe UART RX -> socket (called from on_poll).
+void stream_uart_to_sock(uint8_t slot, const BridgeTarget *t)
+{
+    HardwareSerial *s = uart_for(t->unit);
+    if (!s)
+    {
+        return;
+    }
+    uint8_t buf[PC_BRIDGE_STREAM_CHUNK];
+    while (s->available() > 0)
+    {
         size_t n = 0;
-        while ((n = pc_conn_read(slot, buf, sizeof buf)) > 0)
+        while (n < sizeof buf && s->available())
         {
-            s->write(buf, n);
+            buf[n++] = (uint8_t)s->read();
+        }
+        if (n && pc_conn_active(slot))
+        {
+            pc_conn_send(slot, buf, (proto_u16)n);
         }
     }
-
-    // STREAM: pipe UART RX -> socket (called from on_poll).
-    void stream_uart_to_sock(uint8_t slot, const BridgeTarget *t)
-    {
-        HardwareSerial *s = uart_for(t->unit);
-        if (!s)
-        {
-            return;
-        }
-        uint8_t buf[PC_BRIDGE_STREAM_CHUNK];
-        while (s->available() > 0)
-        {
-            size_t n = 0;
-            while (n < sizeof buf && s->available())
-            {
-                buf[n++] = (uint8_t)s->read();
-            }
-            if (n && pc_conn_active(slot))
-            {
-                pc_conn_send(slot, buf, (proto_u16)n);
-            }
-        }
-    }
+}
 
 #else // host build: no Serial / SPI / Wire. The codec + rule table are host-tested elsewhere.
 
-    void bus_begin(const BridgeTarget *)
-    {
-    }
-    proto_bool bus_txn(const BridgeTarget *, const uint8_t *, uint16_t, uint8_t *, uint16_t)
-    {
-        return PROTO_FALSE;
-    }
-    void stream_sock_to_uart(uint8_t, const BridgeTarget *)
-    {
-    }
-    void stream_uart_to_sock(uint8_t, const BridgeTarget *)
-    {
-    }
+void bus_begin(const BridgeTarget *)
+{
+}
+proto_bool bus_txn(const BridgeTarget *, const uint8_t *, uint16_t, uint8_t *, uint16_t)
+{
+    return PROTO_FALSE;
+}
+void stream_sock_to_uart(uint8_t, const BridgeTarget *)
+{
+}
+void stream_uart_to_sock(uint8_t, const BridgeTarget *)
+{
+}
 
 #endif // PROTOCORE_HOT
 
-    // TRANSACTION: drain complete write-then-read frames out of the slot's RX ring, run each against the bus,
-    // and send the read bytes back. Peeks a whole frame into a linear scratch so the pure codec stays the one
-    // owner of the frame format; consumes only once a frame is fully buffered (partial frames wait for more).
-    void service_txn(uint8_t slot, const BridgeTarget *t)
+// TRANSACTION: drain complete write-then-read frames out of the slot's RX ring, run each against the bus,
+// and send the read bytes back. Peeks a whole frame into a linear scratch so the pure codec stays the one
+// owner of the frame format; consumes only once a frame is fully buffered (partial frames wait for more).
+void service_txn(uint8_t slot, const BridgeTarget *t)
+{
+    uint8_t frame[PC_BRIDGE_TXN_HDR + PC_BRIDGE_TXN_MAX];
+    uint8_t rbuf[PC_BRIDGE_TXN_MAX];
+    for (;;)
     {
-        uint8_t frame[PC_BRIDGE_TXN_HDR + PC_BRIDGE_TXN_MAX];
-        uint8_t rbuf[PC_BRIDGE_TXN_MAX];
-        for (;;)
+        size_t avail = pc_conn_available(slot);
+        if (avail < PC_BRIDGE_TXN_HDR)
         {
-            size_t avail = pc_conn_available(slot);
-            if (avail < PC_BRIDGE_TXN_HDR)
-            {
-                return; // header not yet complete
-            }
-            uint8_t hdr[PC_BRIDGE_TXN_HDR];
-            pc_conn_peek(slot, 0, hdr, PC_BRIDGE_TXN_HDR);
-            uint16_t wlen = (uint16_t)((hdr[0] << 8) | hdr[1]);
-            uint16_t rlen = (uint16_t)((hdr[2] << 8) | hdr[3]);
-            if (wlen > PC_BRIDGE_TXN_MAX || rlen > PC_BRIDGE_TXN_MAX)
-            {
-                pc_conn_close(slot); // frame exceeds the configured cap - protocol error
-                return;
-            }
-            size_t need = (size_t)PC_BRIDGE_TXN_HDR + wlen;
-            if (avail < need)
-            {
-                return; // write payload not fully buffered yet
-            }
-            pc_conn_peek(slot, 0, frame, need);
-            uint16_t pw = 0;
-            uint16_t pr = 0;
-            const uint8_t *wd = NULL;
-            if (pc_iface_bridge_txn_parse(frame, need, &pw, &pr, &wd) != need)
-            {
-                pc_conn_close(slot); // codec disagreed with the header - drop the connection
-                return;
-            }
-            pc_conn_consume(slot, need);
-            if (!bus_txn(t, wd, pw, rbuf, pr))
-            {
-                pc_conn_close(slot); // bus fault
-                return;
-            }
-            if (pr && pc_conn_active(slot))
-            {
-                pc_conn_send(slot, rbuf, pr);
-            }
+            return; // header not yet complete
         }
-    }
-
-    // ---------------------------------------------------------------------------------------------
-    // PROTO_BRIDGE connection handler.
-    // ---------------------------------------------------------------------------------------------
-
-    void bridge_on_accept(uint8_t slot)
-    {
-        if (!rule_for_slot(slot))
+        uint8_t hdr[PC_BRIDGE_TXN_HDR];
+        pc_conn_peek(slot, 0, hdr, PC_BRIDGE_TXN_HDR);
+        uint16_t wlen = (uint16_t)((hdr[0] << 8) | hdr[1]);
+        uint16_t rlen = (uint16_t)((hdr[2] << 8) | hdr[3]);
+        if (wlen > PC_BRIDGE_TXN_MAX || rlen > PC_BRIDGE_TXN_MAX)
         {
-            pc_conn_close(slot); // no rule published for this listener
-        }
-    }
-
-    void bridge_on_data(uint8_t slot)
-    {
-        const BridgeRule *r = rule_for_slot(slot);
-        if (!r)
-        {
-            pc_conn_close(slot);
+            pc_conn_close(slot); // frame exceeds the configured cap - protocol error
             return;
         }
-        if (r->target.mode == BRIDGE_MODE_STREAM)
+        size_t need = (size_t)PC_BRIDGE_TXN_HDR + wlen;
+        if (avail < need)
         {
-            stream_sock_to_uart(slot, &r->target);
+            return; // write payload not fully buffered yet
         }
-        else
+        pc_conn_peek(slot, 0, frame, need);
+        uint16_t pw = 0;
+        uint16_t pr = 0;
+        const uint8_t *wd = NULL;
+        if (pc_iface_bridge_txn_parse(frame, need, &pw, &pr, &wd) != need)
         {
-            service_txn(slot, &r->target);
-        }
-    }
-
-    void bridge_on_poll(uint8_t slot)
-    {
-        if (!pc_conn_active(slot))
-        {
+            pc_conn_close(slot); // codec disagreed with the header - drop the connection
             return;
         }
-        const BridgeRule *r = rule_for_slot(slot);
-        if (!r || r->target.mode != BRIDGE_MODE_STREAM)
+        pc_conn_consume(slot, need);
+        if (!bus_txn(t, wd, pw, rbuf, pr))
         {
-            return; // transaction mode is request-driven; nothing to pump on poll
+            pc_conn_close(slot); // bus fault
+            return;
         }
-        stream_uart_to_sock(slot, &r->target);
+        if (pr && pc_conn_active(slot))
+        {
+            pc_conn_send(slot, rbuf, pr);
+        }
     }
+}
 
-    void bridge_on_close(uint8_t)
+// ---------------------------------------------------------------------------------------------
+// PROTO_BRIDGE connection handler.
+// ---------------------------------------------------------------------------------------------
+
+void bridge_on_accept(uint8_t slot)
+{
+    if (!rule_for_slot(slot))
     {
-        // Per-connection is stateless (the rule is re-derived from the listener id each callback), so there is
-        // nothing to free; the transport owns the closing slot.
+        pc_conn_close(slot); // no rule published for this listener
     }
+}
 
-    const ProtoHandler s_bridge_handler = {bridge_on_accept, bridge_on_data, bridge_on_close, bridge_on_poll};
+void bridge_on_data(uint8_t slot)
+{
+    const BridgeRule *r = rule_for_slot(slot);
+    if (!r)
+    {
+        pc_conn_close(slot);
+        return;
+    }
+    if (r->target.mode == BRIDGE_MODE_STREAM)
+    {
+        stream_sock_to_uart(slot, &r->target);
+    }
+    else
+    {
+        service_txn(slot, &r->target);
+    }
+}
 
+void bridge_on_poll(uint8_t slot)
+{
+    if (!pc_conn_active(slot))
+    {
+        return;
+    }
+    const BridgeRule *r = rule_for_slot(slot);
+    if (!r || r->target.mode != BRIDGE_MODE_STREAM)
+    {
+        return; // transaction mode is request-driven; nothing to pump on poll
+    }
+    stream_uart_to_sock(slot, &r->target);
+}
+
+void bridge_on_close(uint8_t)
+{
+    // Per-connection is stateless (the rule is re-derived from the listener id each callback), so there is
+    // nothing to free; the transport owns the closing slot.
+}
+
+const ProtoHandler s_bridge_handler = {bridge_on_accept, bridge_on_data, bridge_on_close, bridge_on_poll};
 
 proto_bool pc_iface_bridge_publish(uint8_t listener_id, uint16_t port, BridgeProto proto, const BridgeTarget *target)
 {

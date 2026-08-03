@@ -1,10 +1,10 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the rotating log ring (services/system/logbuf): append order, the
+// Unit tests for the rotating log ring (server/logbuf): append order, the
 // level prefix, oldest-pruned rotation, dump formatting, and the severity trap.
 
-#include "services/system/logbuf/logbuf.h"
+#include "server/logbuf.h"
 #include <stdio.h>
 #include <string.h>
 #include <unity.h>

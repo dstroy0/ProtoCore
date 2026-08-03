@@ -11,7 +11,7 @@
 // Build/flash (JTAG-capable S3 over its USB-Serial/JTAG port):
 //   pio run -d performance_benching/device/radio_power -t upload --upload-port COM7
 #include "device_bench.h"
-#include "services/system/radio_power/radio_power.h"
+#include "network_drivers/physical/radio_power.h"
 #include <Arduino.h>
 
 static void radio_power_bench_task(void *)

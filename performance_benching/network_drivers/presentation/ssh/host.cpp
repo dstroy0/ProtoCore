@@ -12,12 +12,12 @@
 // this host ns/op is a RELATIVE baseline. Build + run:
 //   g++ -O2 -std=c++17 -Isrc -Itest/mocks -Itest/support -DPC_ENABLE_SSH=1
 //   performance_benching/network_drivers/presentation/ssh/host.cpp \
-//       src/network_drivers/presentation/ssh/crypto/pc_curve25519.cpp \
-//       src/network_drivers/presentation/ssh/crypto/pc_ed25519.cpp \
-//       src/network_drivers/presentation/ssh/crypto/ssh_sha512.cpp \
-//       src/network_drivers/presentation/ssh/crypto/pc_chacha20.cpp \
-//       src/network_drivers/presentation/ssh/crypto/pc_poly1305.cpp \
-//       src/network_drivers/presentation/ssh/crypto/pc_chachapoly.cpp -o /tmp/bssh && /tmp/bssh
+//       src/network_drivers/tls/pc_curve25519.cpp \
+//       src/network_drivers/tls/pc_ed25519.cpp \
+//       src/network_drivers/tls/ssh_sha512.cpp \
+//       src/network_drivers/tls/pc_chacha20.cpp \
+//       src/network_drivers/tls/pc_poly1305.cpp \
+//       src/network_drivers/tls/pc_chachapoly.cpp -o /tmp/bssh && /tmp/bssh
 
 #define PC_ENABLE_SSH 1
 #include "crypto/aead/chachapoly.h"

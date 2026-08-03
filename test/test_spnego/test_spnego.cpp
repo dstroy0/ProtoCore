@@ -1,11 +1,11 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the SPNEGO GSS-API DER wrapping (services/file_transfer/smb/spnego): the InitialContextToken
+// Unit tests for the SPNEGO GSS-API DER wrapping (network_drivers/application/smb/spnego): the InitialContextToken
 // wrapping (byte-exact vs a hand-computed DER), the NegTokenResp round-trip, and extracting the
 // responseToken from a realistic server NegTokenResp (skipping negState + supportedMech).
 
-#include "services/file_transfer/smb/spnego.h"
+#include "network_drivers/application/smb/spnego.h"
 #include <string.h>
 #include <unity.h>
 

@@ -20,7 +20,7 @@
 #include "mmgr/secure.h"
 #include "network_drivers/session/proto_handler.h"
 #include "network_drivers/transport/tcp.h"
-#include "services/system/clock.h" // pc_millis() for the server-initiated re-key timer
+#include "server/clock/clock.h" // pc_millis() for the server-initiated re-key timer
 #include <string.h>
 
 // All SSH connection-layer state, owned by one instance (internal linkage): the SSH-slot ->

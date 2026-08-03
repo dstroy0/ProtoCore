@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for the DNS answer classifier/verifier (services/net/dns_resolver):
+// On-device CCOUNT microbenchmark for the DNS answer classifier/verifier (network_drivers/network/dns_resolver):
 // pc_dns_resolver_classify() buckets a host-order IPv4 word into an RFC special-purpose-range
 // category, and pc_dns_resolver_verify() uses it to reject spoof / DNS-rebinding indicators
 // (unspecified / broadcast / loopback / multicast) - both pure, branch-heavy, no lwIP involved.
@@ -17,7 +17,7 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "services/net/dns_resolver/dns_resolver.h"
+#include "network_drivers/network/dns_resolver.h"
 #include <Arduino.h>
 
 #define IPV4(a, b, c, d) (((uint32_t)(a) << 24) | ((uint32_t)(b) << 16) | ((uint32_t)(c) << 8) | (uint32_t)(d))

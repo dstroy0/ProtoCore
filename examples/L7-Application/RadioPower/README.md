@@ -48,7 +48,7 @@ with added explanatory comments:
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
-#include "services/system/radio_power/radio_power.h"
+#include "network_drivers/physical/radio_power.h"
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";

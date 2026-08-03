@@ -1,17 +1,17 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the SMB2 client dialogue engine (services/file_transfer/smb/smb_client): smb_open drives the
+// Unit tests for the SMB2 client dialogue engine (network_drivers/application/smb/smb_client): smb_open drives the
 // full NEGOTIATE -> two-round NTLMv2 SESSION_SETUP -> TREE_CONNECT -> CREATE handshake, and
 // smb_close releases the handle. Exercised end to end on the host with a scripted mock SMB2 server
 // (a send/recv seam), so no lwIP or real share is needed.
 
 #include "crypto/hash/md.h"
-#include "services/file_transfer/smb/ntlm.h"
-#include "services/file_transfer/smb/ntlmssp.h"
-#include "services/file_transfer/smb/smb2.h"
-#include "services/file_transfer/smb/smb_client.h"
-#include "services/file_transfer/smb/spnego.h"
+#include "network_drivers/application/smb/ntlm.h"
+#include "network_drivers/application/smb/ntlmssp.h"
+#include "network_drivers/application/smb/smb2.h"
+#include "network_drivers/application/smb/smb_client.h"
+#include "network_drivers/application/smb/spnego.h"
 #include <stdio.h>
 #include <string.h>
 #include <unity.h>

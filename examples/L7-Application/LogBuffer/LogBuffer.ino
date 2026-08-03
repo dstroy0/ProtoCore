@@ -19,7 +19,7 @@
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
-#include "services/system/logbuf/logbuf.h"
+#include "server/logbuf.h"
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";

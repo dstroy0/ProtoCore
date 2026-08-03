@@ -12,7 +12,7 @@
 
 #include "services/peripherals/mpr121/mpr121.h"
 #include "protocore_config.h"
-#include "services/system/clock.h" // pcdelay
+#include "server/clock/clock.h" // pcdelay
 
 #if PC_ENABLE_MPR121
 

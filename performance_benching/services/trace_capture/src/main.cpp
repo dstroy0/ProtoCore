@@ -1,14 +1,14 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for the pre/post-trigger capture assembler (services/system/trace_capture):
+// On-device CCOUNT microbenchmark for the pre/post-trigger capture assembler (server/signaling/trace_capture):
 // pc_tc_feed() is the per-batch hot op (most naturally called from a DMA-complete handler) that fills
 // the pre-trigger ring and, after a trigger, the post-trigger half. Pure ring bookkeeping over a
 // caller sample batch; the DMA source and the completed-window sink are the application's.
 //
 // Build/flash:  pio run -d performance_benching/device/trace_capture -t upload --upload-port COM7
 #include "device_bench.h"
-#include "services/system/trace_capture/trace_capture.h"
+#include "server/signaling/trace_capture.h"
 #include <Arduino.h>
 
 static volatile uint32_t g_windows;

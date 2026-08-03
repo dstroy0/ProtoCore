@@ -6,8 +6,8 @@
 // response - no sockets, no heap.
 
 #include "network_drivers/transport/udp.h" // pc_udp_inject / capture (host UDP mock)
+#include "server/clock/clock.h"            // pc_set_clock() to drive dedup freshness in tests
 #include "services/iot/coap/coap.h"
-#include "services/system/clock.h" // pc_set_clock() to drive dedup freshness in tests
 #include <string.h>
 #include <string> // std::string (test code may use the full STL; only src/ is constrained)
 #include <unity.h>

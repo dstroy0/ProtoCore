@@ -33,7 +33,7 @@
  *        front end with `-DDAQ_FRONTEND=DAQ_FRONTEND_SCPI_SCOPE` (a preprocessor #if needs a
  *        macro, not an enumerator).
  */
-#define DAQ_FRONTEND_ADC_DMA 0 ///< raw ADC (e.g. AD9226/AD9238-class) drained via services/system/dma + trace_capture
+#define DAQ_FRONTEND_ADC_DMA 0    ///< raw ADC (e.g. AD9226/AD9238-class) drained via mmgr/dma + trace_capture
 #define DAQ_FRONTEND_SCPI_SCOPE 1 ///< a real bench oscilloscope's :WAVeform:DATA? pulled over SCPI
 
 enum : uint8_t

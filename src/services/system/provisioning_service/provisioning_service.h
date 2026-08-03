@@ -54,7 +54,7 @@ proto_bool pc_provisioning_load(char *ssid, size_t ssid_cap, char *psk, size_t p
 /**
  * @brief Start the captive portal: softAP @p ap_ssid + catch-all DNS + form routes.
  *
- * Registers `GET /*` (the credentials form) and `POST /save` (persist + reboot)
+ * Registers a catch-all `GET` route (the credentials form) and `POST /save` (persist + reboot)
  * on @p server. The catch-all DNS responder runs from a transport-layer UDP callback,
  * so no per-loop servicing is required. Call after begin().
  */

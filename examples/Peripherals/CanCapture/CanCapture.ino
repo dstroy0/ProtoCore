@@ -19,7 +19,7 @@
 #include "network_drivers/physical/physical.h"
 #include "network_drivers/transport/udp.h"
 #include "services/net/forward/forward.h"
-#include "services/system/bus_capture/bus_capture.h"
+#include "server/signaling/bus_capture.h"
 #include <string.h>
 
 static const char *COLLECTOR_IP = "192.168.1.50";

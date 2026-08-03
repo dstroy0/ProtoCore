@@ -12,9 +12,9 @@
 
 #if PROTOCORE_HOT && PC_ENABLE_MDNS && PC_ENABLE_PROMISC
 #include "network_drivers/physical/physical.h"      // pc_net_channel
+#include "server/clock/clock.h"                     // pc_millis
 #include "services/net/mdns_service/mdns_service.h" // pc_mdns_txt
 #include "services/radio/promisc/promisc.h"         // pc_promisc_*
-#include "services/system/clock.h"                  // pc_millis
 #endif
 uint32_t pc_mdns_refresh_interval(uint32_t ttl_s)
 {

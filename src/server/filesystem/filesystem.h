@@ -96,7 +96,7 @@ static const pc_field FILESYSTEM_ROOT[] = {PC_STR, PC_END};
  *             site rather than tested here.
  * @return bytes written, or 0 on overflow - the engine already knows the length, so it is handed
  *         back rather than left for the caller to rediscover with a scan. */
-inline size_t pc_fs_join(const char *root, const char *dir, const char *name, char *out, size_t cap)
+PC_INLINE size_t pc_fs_join(const char *root, const char *dir, const char *name, char *out, size_t cap)
 {
     if (dir[0] == '/')
     {
@@ -114,7 +114,7 @@ inline size_t pc_fs_join(const char *root, const char *dir, const char *name, ch
 /** @brief True if @p s contains a `..` traversal.
  *
  * ".." is two bytes at one offset, not a pattern to search for: compare the pair and advance. */
-inline proto_bool pc_fs_has_dotdot(const char *s)
+PC_INLINE proto_bool pc_fs_has_dotdot(const char *s)
 {
     for (const char *p = s; p[0] != '\0' && p[1] != '\0'; p++)
     {
@@ -126,7 +126,7 @@ inline proto_bool pc_fs_has_dotdot(const char *s)
     return PROTO_FALSE;
 }
 
-inline int pc_fs_resolve(const char *root, const char *dir, const char *name, char *out, size_t cap)
+PC_INLINE int pc_fs_resolve(const char *root, const char *dir, const char *name, char *out, size_t cap)
 {
     // Both request-supplied pieces are checked; the root is ours.
     if (pc_fs_has_dotdot(dir) || pc_fs_has_dotdot(name))

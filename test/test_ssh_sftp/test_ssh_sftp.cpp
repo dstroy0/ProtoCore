@@ -7,8 +7,8 @@
 // ATTRS / NAME), a hand-built PC_SSH_FXP_OPEN request parsed back, a multi-entry NAME via the writer API, the
 // ls -l longname formatter, reader bounds safety, and builder overflow. Pure host tests (no fs, no SSH).
 
+#include "network_drivers/application/sftp/sftp.h"
 #include "server/filesystem/filesystem.h"
-#include "services/file_transfer/sftp/sftp.h"
 #include <stdint.h>
 #include <string.h>
 #include <unity.h>

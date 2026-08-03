@@ -24,7 +24,7 @@
 #if PROTOCORE_HOT
 #include "network_drivers/session/worker.h" // pc_worker_wake() - nudge the owning worker task
 #endif
-#include "services/system/clock.h" // pc_millis() pluggable monotonic clock (host-safe)
+#include "server/clock/clock.h" // pc_millis() pluggable monotonic clock (host-safe)
 
 // Listener pool - all storage in BSS.
 Listener listener_pool[MAX_LISTENERS];
@@ -484,7 +484,7 @@ pc_net_err listener_accept_cb(void *arg, pc_pcb *newpcb, pc_net_err err)
     // pcb IP) leave it unclassified for tests to set directly.
 #if PROTOCORE_HOT
     {
-        uint32_t lip = ip4_addr_get_u32(ip_2_ip4(&newpcb->local_ip));
+        uint32_t lip = pc_net_ip4_u32(pc_net_ip_as_v4(&newpcb->local_ip));
         slot->iface = (pc_ap_ip != 0 && lip == pc_ap_ip) ? PC_IFACE_AP : PC_IFACE_STA;
     }
 #else

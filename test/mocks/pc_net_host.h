@@ -588,6 +588,7 @@ struct pc_pcb
     uint8_t state;
     uint16_t local_port;
     uint16_t remote_port;
+    pc_net_ip local_ip;
     pc_net_ip remote_ip;
     uint32_t so_options;
     uint16_t snd_queuelen; // segments still unacknowledged; the core waits for this to drain
@@ -786,8 +787,12 @@ static inline pc_pbuf *pc_net_pbuf_alloc(int layer, uint16_t len, int type)
     return NULL; // a test that needs a pbuf builds one and calls the callback directly
 }
 
-// The core marshals stack calls through this; on the host there is no other thread, so run it now.
-typedef struct pc_net_call pc_net_call;
+// First member of the core's call record; fn casts back to that record. lwIP puts a semaphore here.
+typedef struct pc_net_call
+{
+    int sem;
+} pc_net_call;
+
 static inline pc_net_err pc_net_call_marshal(pc_net_err (*fn)(pc_net_call *), pc_net_call *c)
 {
     return fn ? fn(c) : PC_NET_OK;

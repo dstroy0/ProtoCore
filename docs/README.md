@@ -114,7 +114,7 @@ L1  src/network_drivers/physical/
     src/network_drivers/application/              Generated web assets (dashboard, terminal)
     src/network_drivers/presentation/ssh/         Zero-heap SSH-2.0 server
     src/services/                                 Optional L7 subsystems, one folder each:
-        opcua/ + opcua_client/, modbus/, mqtt/, coap/, snmp/, dns_resolver/, oidc/,
+        opcua/ + opcua_client/, modbus/, mqtt/, coap/, snmp/, oidc/,
         oauth2/, totp/, audit_log/, vfs/, graphql/, espnow/, ...  (see FEATURES.md)
 ```
 
@@ -259,6 +259,8 @@ src/
 ├── mmgr/
 │   ├── arena.c
 │   ├── arena.h
+│   ├── dma.c
+│   ├── dma.h
 │   ├── frame.c
 │   ├── frame.h
 │   ├── membuild.h
@@ -268,15 +270,52 @@ src/
 │   └── secure.h
 ├── network_drivers/
 │   ├── application/
+│   │   ├── file_serving/
+│   │   │   ├── file_serving.c
+│   │   │   └── file_serving.h
+│   │   ├── scp/
+│   │   │   ├── scp.c
+│   │   │   ├── scp.h
+│   │   │   ├── ssh_scp.c
+│   │   │   └── ssh_scp.h
+│   │   ├── sftp/
+│   │   │   ├── sftp.c
+│   │   │   ├── sftp.h
+│   │   │   ├── ssh_sftp.c
+│   │   │   └── ssh_sftp.h
+│   │   ├── smb/
+│   │   │   ├── ntlm.c
+│   │   │   ├── ntlm.h
+│   │   │   ├── ntlmssp.c
+│   │   │   ├── ntlmssp.h
+│   │   │   ├── smb2.c
+│   │   │   ├── smb2.h
+│   │   │   ├── smb_client.c
+│   │   │   ├── smb_client.h
+│   │   │   ├── spnego.c
+│   │   │   └── spnego.h
+│   │   ├── upload_service/
+│   │   │   ├── upload_service.c
+│   │   │   └── upload_service.h
+│   │   ├── webdav/
+│   │   │   ├── webdav.c
+│   │   │   ├── webdav.cpp
+│   │   │   └── webdav.h
 │   │   ├── binary_asset_blobs.c
 │   │   ├── binary_asset_blobs.cpp
 │   │   ├── binary_asset_blobs.h
+│   │   ├── http_range.c
+│   │   ├── http_range.h
 │   │   ├── web_assets.c
 │   │   └── web_assets.h
 │   ├── datalink/
 │   │   ├── datalink.c
-│   │   └── datalink.h
+│   │   ├── datalink.h
+│   │   ├── roaming.c
+│   │   └── roaming.h
 │   ├── network/
+│   │   ├── dns_resolver.c
+│   │   ├── dns_resolver.h
 │   │   ├── ip.c
 │   │   ├── ip.h
 │   │   ├── network.c
@@ -285,7 +324,9 @@ src/
 │   │   └── route.h
 │   ├── physical/
 │   │   ├── physical.c
-│   │   └── physical.h
+│   │   ├── physical.h
+│   │   ├── radio_power.c
+│   │   └── radio_power.h
 │   ├── presentation/
 │   │   ├── codec/
 │   │   │   ├── base64/
@@ -422,13 +463,36 @@ src/
 │   │   ├── mnt.h
 │   │   ├── wearlevel.c
 │   │   └── wearlevel.h
+│   ├── clock/
+│   │   ├── clock.c
+│   │   └── clock.h
 │   ├── signaling/
+│   │   ├── bus_capture.c
+│   │   ├── bus_capture.h
+│   │   ├── device_id.c
+│   │   ├── device_id.h
+│   │   ├── gpio_map.c
+│   │   ├── gpio_map.h
+│   │   ├── gpio_map_routes.c
+│   │   ├── hw_health.c
+│   │   ├── hw_health.h
+│   │   ├── link_manager.c
+│   │   ├── link_manager.h
 │   │   ├── signaling.c
-│   │   └── signaling.h
+│   │   ├── signaling.h
+│   │   ├── trace_capture.c
+│   │   └── trace_capture.h
+│   ├── update/
+│   │   ├── ota_rollback.c
+│   │   ├── ota_rollback.h
+│   │   ├── ota_service.cpp
+│   │   └── ota_service.h
 │   ├── auth.c
+│   ├── failsafe.c
+│   ├── failsafe.h
 │   ├── file_serving.c
-│   ├── http_range.c
-│   ├── http_range.h
+│   ├── logbuf.c
+│   ├── logbuf.h
 │   ├── middleware.c
 │   ├── regex.c
 │   ├── response.c
@@ -710,9 +774,6 @@ src/
 │   │       ├── umati.c
 │   │       └── umati.h
 │   ├── net/
-│   │   ├── dns_resolver/
-│   │   │   ├── dns_resolver.c
-│   │   │   └── dns_resolver.h
 │   │   ├── dns_server/  (dns_server.h, dns_server.cpp)
 │   │   ├── flow_export/
 │   │   │   ├── flow_export.c
@@ -918,16 +979,9 @@ src/
 │   │       ├── wal_store.c
 │   │       └── wal_store.h
 │   ├── system/
-│   │   ├── bus_capture/
-│   │   │   ├── bus_capture.c
-│   │   │   └── bus_capture.h
 │   │   ├── control/
 │   │   │   ├── control.c
 │   │   │   └── control.h
-│   │   ├── device_id/  (device_id.h, device_id.cpp)
-│   │   ├── dma/
-│   │   │   ├── dma.c
-│   │   │   └── dma.h
 │   │   ├── esp/
 │   │   │   ├── esp.c
 │   │   │   ├── esp.h
@@ -937,44 +991,10 @@ src/
 │   │   │   ├── exc_coredump.c
 │   │   │   ├── exc_decoder.c
 │   │   │   └── exc_decoder.h
-│   │   ├── failsafe/
-│   │   │   ├── failsafe.c
-│   │   │   └── failsafe.h
-│   │   ├── gpio_map/
-│   │   │   ├── gpio_map.c
-│   │   │   ├── gpio_map.h
-│   │   │   └── gpio_map_routes.c
-│   │   ├── hw_health/
-│   │   │   ├── hw_health.c
-│   │   │   └── hw_health.h
-│   │   ├── link_manager/
-│   │   │   ├── link_manager.c
-│   │   │   └── link_manager.h
-│   │   ├── logbuf/
-│   │   │   ├── logbuf.c
-│   │   │   └── logbuf.h
-│   │   ├── ota_rollback/
-│   │   │   ├── ota_rollback.c
-│   │   │   └── ota_rollback.h
-│   │   ├── ota_service/  (ota_service.h, ota_service.cpp)
 │   │   ├── power_mgmt/
 │   │   │   ├── power_mgmt.c
 │   │   │   └── power_mgmt.h
-│   │   ├── provisioning_service/  (provisioning_service.h, provisioning_service.cpp)
-│   │   ├── radio_power/
-│   │   │   ├── radio_power.c
-│   │   │   └── radio_power.h
-│   │   ├── roaming/
-│   │   │   ├── roaming.c
-│   │   │   └── roaming.h
-│   │   ├── sleep_sched/
-│   │   │   ├── sleep_sched.c
-│   │   │   └── sleep_sched.h
-│   │   ├── trace_capture/
-│   │   │   ├── trace_capture.c
-│   │   │   └── trace_capture.h
-│   │   ├── clock.c
-│   │   └── clock.h
+│   │   └── provisioning_service/  (provisioning_service.h, provisioning_service.cpp)
 │   ├── timing_position/
 │   │   ├── gnss/
 │   │   │   ├── gnss_survey.c

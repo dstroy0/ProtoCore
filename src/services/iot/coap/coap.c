@@ -13,7 +13,7 @@
 #include "network_drivers/transport/udp.h"
 #include <string.h>
 #if PC_ENABLE_COAP_OBSERVE || PC_COAP_DEDUP_ENTRIES > 0
-#include "services/system/clock.h" // pc_millis(): Observe notification sequencing + dedup entry freshness
+#include "server/clock/clock.h" // pc_millis(): Observe notification sequencing + dedup entry freshness
 #endif
 
 // CoAP option numbers we understand (RFC 7252 §5.10, RFC 7959). Others are skipped. Wire values

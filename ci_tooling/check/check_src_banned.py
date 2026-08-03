@@ -68,7 +68,7 @@ BANS = [
         "stdlib parse/util function; hand-roll it",
     ),
     (re.compile(r"\bauto\b"), 3, "auto keyword; spell the explicit type"),
-    (re.compile(r"\bdelay\s*\("), 4, "delay(); use pcdelay(ms) from services/system/clock.h"),
+    (re.compile(r"\bdelay\s*\("), 4, "delay(); use pcdelay(ms) from server/clock/clock.h"),
     (re.compile(r"\b(?:gmtime|localtime|ctime|asctime)\s*\("), 8, "non-reentrant time; use the _r form"),
     (re.compile("—"), 7, "em-dash; use a comma / parentheses / a linking word"),
     (re.compile(r"\bvirtual\b"), 22, _VIRTUAL_MSG),

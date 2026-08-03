@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device CCOUNT microbenchmark for representative SSH crypto primitives (network_drivers/
-// presentation/ssh/crypto): SHA-256 and the ChaCha20 stream cipher (bulk). The full crypto suite is
+// crypto): SHA-256 and the ChaCha20 stream cipher (bulk). The full crypto suite is
 // exercised in depth by pentesting/rig_firmware/main_cryptobench; this is the performance_benching/ counterpart.
 // Build/flash: pio run -d performance_benching/network_drivers/presentation/ssh -t upload
 #include "crypto/cipher/chacha20.h"

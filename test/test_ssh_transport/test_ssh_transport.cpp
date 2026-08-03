@@ -10,10 +10,10 @@
 #include "crypto/asymmetric/ed25519.h"
 #include "crypto/hash/sha256.h"
 #include "cyclone_kex_bytes.h"
-#include "network_drivers/presentation/ssh/crypto/ssh_rsa.h"
 #include "network_drivers/presentation/ssh/transport/ssh_dh.h"
 #include "network_drivers/presentation/ssh/transport/ssh_packet.h"
 #include "network_drivers/presentation/ssh/transport/ssh_transport.h"
+#include "network_drivers/tls/ssh_rsa.h"
 #include "throwaway_key.h"
 #include <stdint.h>
 #include <stdio.h>

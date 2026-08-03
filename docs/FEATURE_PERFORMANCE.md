@@ -674,14 +674,14 @@ ed25519_sign 84.6 vs 85.6 ms, `fe_mul` 1377 vs 1386 cyc), which cross-validates 
   `ssh_rsa_sign` used to re-read and re-parse the NVS key on every call, and re-parsing threw away mbedTLS's
   per-context blinding state so it re-ran the ~167 ms first-use blinding init (`r^-1 mod n`) every sign. On a
   device-CCOUNT breakdown the 440 ms split as ~3 ms NVS read + 0.2 ms parse + 270 ms CRT modexp + **167 ms
-  wasted blinding re-init**. Parsing the key once at startup and reusing the context ([`ssh_rsa.cpp`](../src/network_drivers/presentation/ssh/crypto/ssh_rsa.cpp),
+  wasted blinding re-init**. Parsing the key once at startup and reusing the context ([`ssh_rsa.cpp`](../src/network_drivers/tls/ssh_rsa.cpp),
   `SshRsaCtx`, mutex-guarded) drops the sign to **270 ms** with blinding fully preserved. The residual 270 ms
   is already CRT (two 1024-bit half-exponentiations) on the RSA/MPI hardware accelerator (Montgomery in
   silicon), so it is not reducible in software - the modexp is not the software big-integer multiply that
   Xtensa-assembly / CIOS tricks target, it is a hardware peripheral.
 - **ECDSA P-256 now rides the same RSA/MPI MODMULT as curve25519** (sign **54 ms**, verify **103 ms**, ECDH
   **51 ms** - **~2.7-2.9x** the old mbedtls ECP path, which measured 146 / 291 / 140 ms). A self-contained
-  P-256 ([`crypto/ecdsa.cpp`](../src/crypto/asymmetric/ecdsa.cpp)) does every field
+  P-256 ([`crypto/ecdsa.c`](../src/crypto/asymmetric/ecdsa.c)) does every field
   and scalar multiply as one 256-bit MODMULT - the accelerator is modulus-generic, so the same engine serves
   the field (mod p) and the scalar ring (mod n) by swapping the `{M, m', R^2}` constants. Point math uses
   exception-free complete (Renes-Costello-Batina) formulas under a constant-time 4-bit-window ladder, the
@@ -1202,7 +1202,7 @@ Notes:
 
 ### Chunked send-pump framing (`performance_benching/server/send_pump`)
 
-The response side: `chunk_send_pump` (`src/server/response.cpp`) frames every body piece as an HTTP/1.1
+The response side: `chunk_send_pump` (`src/server/response.c`) frames every body piece as an HTTP/1.1
 chunk - `"<hexlen>\r\n<body>\r\n"` - into one send-window buffer so it goes out in a single
 `pc_conn_send`. The body itself is written in place by the `ChunkSource` (file read = section 1, template
 render = the request path above), so the pump's own hot cost is just that per-chunk size line. It used

@@ -22,8 +22,8 @@
 
 #include "board_drivers/board_profiles/pc_platform.h" // the target's TCP, under our names
 #include "diffserv.h" // DiffServ DSCP marking for outbound client connections (compiles out when off)
-#include "services/net/dns_resolver/dns_resolver.h" // shared host->IP resolve (one DNS owner)
-#include "services/system/clock.h"                  // pc_millis()
+#include "network_drivers/network/dns_resolver.h" // shared host->IP resolve (one DNS owner)
+#include "server/clock/clock.h"                   // pc_millis()
 #include "shared_primitives/ring.h" // PROTO_ATOMIC_LOAD/STORE + SPSC ring drain (same primitive as the server)
 #include <string.h>
 
@@ -46,9 +46,7 @@ typedef struct
 } pc_client_ctx;
 static pc_client_ctx s_client;
 
-// Hostname resolution is delegated to the shared DNS resolver (pc_dns_resolver_resolve,
-// services/net/dns_resolver) so there is one owner of the gethostbyname-marshal +
-// deadline-poll pattern instead of a private copy here.
+// Hostname resolution calls pc_dns_resolver_resolve (network_drivers/network/dns_resolver).
 
 // --- lwIP callbacks (tcpip_thread); arg = the owning ClientConn* -------------
 

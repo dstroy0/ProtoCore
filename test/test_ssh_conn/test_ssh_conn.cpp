@@ -12,9 +12,9 @@
 #include "network_drivers/presentation/ssh/connection/ssh_channel.h"
 #include "network_drivers/presentation/ssh/connection/ssh_conn.h"
 #include "network_drivers/presentation/ssh/connection/ssh_server.h" // pc_ssh_server_set_emit_cb (emit-wiring regression)
-#include "network_drivers/presentation/ssh/crypto/ssh_rsa.h"
 #include "network_drivers/presentation/ssh/transport/ssh_packet.h"
 #include "network_drivers/presentation/ssh/transport/ssh_transport.h"
+#include "network_drivers/tls/ssh_rsa.h"
 #include "network_drivers/transport/tcp.h"
 #include <stdint.h>
 #include <stdlib.h>

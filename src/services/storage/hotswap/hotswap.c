@@ -11,7 +11,7 @@
 
 #if PC_ENABLE_HOTSWAP
 
-#include "services/system/clock.h" // pc_millis
+#include "server/clock/clock.h" // pc_millis
 #include <stdio.h>
 
 // ---------------------------------------------------------------------------

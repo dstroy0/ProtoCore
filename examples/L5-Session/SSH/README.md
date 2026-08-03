@@ -126,7 +126,7 @@ explanatory comments:
 #include "network_drivers/presentation/ssh/connection/ssh_channel.h" // pc_ssh_channel_set_data_cb
 #include "network_drivers/presentation/ssh/connection/ssh_conn.h"    // pc_ssh_conn_send / pc_ssh_conn_setup
 #include "network_drivers/presentation/ssh/connection/ssh_forward.h" // pc_ssh_forward_begin (ssh -L)
-#include "network_drivers/presentation/ssh/crypto/ssh_rsa.h"     // pc_ssh_rsa_load_pubkey
+#include "network_drivers/tls/ssh_rsa.h"     // pc_ssh_rsa_load_pubkey
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";

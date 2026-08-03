@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for the GPIO pin-mapper / browser diag core (services/system/gpio_map):
+// On-device CCOUNT microbenchmark for the GPIO pin-mapper / browser diag core (server/signaling/gpio_map):
 // the four pure, host-tested functions that turn a caller-owned pin table into the browser panel's
 // JSON and back - pc_gpio_dir_name() (direction -> short name), pc_gpio_json() (serialize the pin
 // table into a caller buffer, no allocation), pc_gpio_parse_set() (parse a `pin=<n>&level=<0|1>`
@@ -16,7 +16,7 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "services/system/gpio_map/gpio_map.h"
+#include "server/signaling/gpio_map.h"
 #include <Arduino.h>
 
 static void gpio_map_bench_task(void *)

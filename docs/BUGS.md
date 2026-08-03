@@ -184,7 +184,7 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 - **Status:** FIXED (2026-07-30), same session. 489 corrupted sites reverted, 0 residue, 310/310 tests
   green on every suite that had been touched.
-- **Symptom:** `src/services/file_transfer/smb/ntlmssp.cpp` stopped compiling with
+- **Symptom:** `src/network_drivers/application/smb/ntlmssp.c` stopped compiling with
   `narrowing conversion of 1346592592 from int to uint8_t`. 1346592592 is `'PC_P'` - a
   four-character literal - where the source had written `'P'`.
 - **Root cause:** the rule-18 converter prefixes a converted constant and then renames that token
@@ -853,7 +853,7 @@ SSH_KEXINIT_S_MAX` guard (which had been marked "never exceeds"). The production
 
 - **Status:** FIXED (test infra, 2026-07-11).
 - **Symptom:** `pio test -e native_ssh_conn` (and every native env that compiles `tcp.cpp`) fails at the build
-  stage: `src/network_drivers/transport/tcp.cpp:31:10: fatal error: freertos/task.h: No such file or directory`.
+  stage: `src/network_drivers/transport/tcp.c:31:10: fatal error: freertos/task.h: No such file or directory`.
 - **Root cause:** the TLS tcpip-thread self-detection fix (babf01f4) added `#include "freertos/task.h"` (for
   `xTaskGetCurrentTaskHandle()`) to `tcp.cpp` unconditionally, but the host build resolves `freertos/*` through
   `test/mocks/freertos/` and only `FreeRTOS.h` + `queue.h` were mocked - `task.h` was missing. Its symbols are
@@ -1135,7 +1135,7 @@ ssh_gf_mul`. The QUIC TLS-1.3 handshake **reuses the SSH ed25519 signer**, whose
 ## Connection pool wedges (no recovery) under a saturation + RST-race flood - was masked by the crash
 
 - **Status:** FIXED (library) - the remediation is implemented at
-  `src/network_drivers/transport/tcp.cpp` `lowlevel_recv_cb`: the idle-timer refresh
+  `src/network_drivers/transport/tcp.c` `lowlevel_recv_cb`: the idle-timer refresh
   (`slot->last_activity_ms = pc_millis()`) now sits **after** the backpressure check, and the
   refused-segment branch explicitly does not refresh (it returns `ERR_MEM` without touching the
   timer), so a no-progress connection idle-times-out and is reaped. HW re-attack with the pentest
@@ -1169,7 +1169,7 @@ ssh_gf_mul`. The QUIC TLS-1.3 handshake **reuses the SSH ed25519 signer**, whose
 ## Oversized request line / connection saturation reboots the device (tcp_output on a stale pcb)
 
 - **Status:** FIXED (library) - the remediation is implemented in
-  `src/network_drivers/transport/tcp.cpp` `pc_tcp_do`: `pcb_still_bound()` (and the O(1)
+  `src/network_drivers/transport/tcp.c` `pc_tcp_do`: `pcb_still_bound()` (and the O(1)
   `k->pcb == conn_pool[k->slot].pcb` check for the slot-carrying SEND/OUTPUT ops) re-validates the
   captured pcb at execution time on `tcpip_thread`; a stale pcb skips with `ERR_CLSD` instead of
   calling `tcp_write`/`tcp_output` on freed memory. HW re-attack with the pentest rig
@@ -1182,7 +1182,7 @@ ssh_gf_mul`. The QUIC TLS-1.3 handshake **reuses the SSH ed25519 signer**, whose
   `assert failed: tcp_output .../lwip/src/core/tcp_out.c:1249 (tcp_output: invalid pcb)` + backtrace +
   `rst:0xc (RTC_SW_CPU_RST)`. The determinism oracle also saw free heap drift down (251904 -> 245136)
   before the crash, and legitimate requests hang while the pool is saturated.
-- **Root cause:** `src/network_drivers/transport/tcp.cpp:232`, `pc_tcp_do()` (the `tcpip_api_call`
+- **Root cause:** `src/network_drivers/transport/tcp.c:232`, `pc_tcp_do()` (the `tcpip_api_call`
   marshalled raw-lwIP op) calls `tcp_output(k->pcb)` - and `tcp_write(k->pcb, ...)` for SEND/RAWSEND -
   **without re-validating that `k->pcb` is still live**. The worker captures the pcb, then marshals the
   op to `tcpip_thread`; in between, the connection can be torn down (RST / lwIP error callback / close

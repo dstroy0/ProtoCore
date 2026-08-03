@@ -25,9 +25,9 @@
  * no scope: an external high-speed ADC (AD9226 - 12-bit/65 MSPS single, or AD9238 - 12-bit/
  * 20-65 MSPS dual) behind an FPGA/CPLD burst-capture front end (its 12-bit parallel output
  * bus is far beyond an ESP32's reach directly - see services/peripherals/ad9238/ad9238.h) drains a
- * triggered burst into this node over SPI or UART DMA (services/system/dma, PC_DMA_SPI /
+ * triggered burst into this node over SPI or UART DMA (mmgr/dma, PC_DMA_SPI /
  * PC_DMA_UART), handed off ISR-safe through the preempting work queue's DMA lane
- * (services/system/preempt_queue) to services/system/trace_capture, which assembles the pre/post-trigger
+ * (services/system/preempt_queue) to server/signaling/trace_capture, which assembles the pre/post-trigger
  * window and fires the same network egress. AD9238's SPI *configuration* port (power-down,
  * output format, test pattern - not the sample data path) is set up over the real Arduino
  * SPI library via services/peripherals/ad9238's codec, with a write/read-back self-test at boot.
@@ -63,7 +63,7 @@
 #endif
 
 #include "network_drivers/transport/client.h"                 // pc_client_*
-#include "services/system/clock.h"                            // pc_millis(), pcdelay(), pc_cycles_to_ns()
+#include "server/clock/clock.h"                               // pc_millis(), pcdelay(), pc_cycles_to_ns()
 #include "services/timing_position/ntp_service/ntp_service.h" // pc_ntp_* - wall-clock sync (see wall_clock_us_now())
 #include <Arduino.h>
 #include <WiFi.h>
@@ -73,10 +73,10 @@
 #if DAQ_FRONTEND == DAQ_FRONTEND_SCPI_SCOPE
 #include "services/instrumentation/scpi/scpi.h"
 #else
+#include "mmgr/dma.h"
+#include "server/signaling/trace_capture.h"
 #include "services/peripherals/ad9238/ad9238.h"
-#include "services/system/dma/dma.h"
 #include "services/system/preempt_queue/preempt_queue.h"
-#include "services/system/trace_capture/trace_capture.h"
 #include <SPI.h>
 #endif
 
@@ -450,7 +450,7 @@ void loop()
 
 #else // DAQ_FRONTEND_ADC_DMA
 // ════════════════════════════════════════════════════════════════════════════════════════
-// Front end: raw high-speed ADC (any sub-GSPS part - see adc_profiles.h) via services/system/dma +
+// Front end: raw high-speed ADC (any sub-GSPS part - see adc_profiles.h) via mmgr/dma +
 // trace_capture. "Hold arbitrary ms of data in a ring and flush on a trigger": the pre/post
 // split below is sized in MILLISECONDS and converted to samples at DAQ_SAMPLE_RATE_HZ.
 //

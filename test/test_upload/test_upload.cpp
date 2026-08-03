@@ -7,8 +7,8 @@
 // captures the written bytes for verification.
 
 #include "FS.h"
+#include "network_drivers/application/upload_service/upload_service.h"
 #include "protocore.h"
-#include "services/file_transfer/upload_service/upload_service.h"
 #include <stdio.h>
 #include <string.h>
 #include <unity.h>

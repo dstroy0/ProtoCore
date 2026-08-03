@@ -1,14 +1,14 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for the WebDAV multi-status builder (services/file_transfer/webdav): the
+// On-device CCOUNT microbenchmark for the WebDAV multi-status builder (network_drivers/application/webdav): the
 // PROPFIND 207 Multi-Status response assembly (pc_webdav_ms_begin / _entry / _end) and the XML
 // escaper. Pure string logic - the FS traversal is elsewhere; only the per-response codec is benched.
 //
 // Build/flash (JTAG-capable S3 over its USB-Serial/JTAG port):
 //   pio run -d performance_benching/device/webdav -t upload --upload-port COM7
 #include "device_bench.h"
-#include "services/file_transfer/webdav/webdav.h"
+#include "network_drivers/application/webdav/webdav.h"
 #include <Arduino.h>
 
 static void webdav_bench_task(void *)

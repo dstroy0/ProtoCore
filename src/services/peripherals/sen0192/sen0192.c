@@ -15,7 +15,7 @@
 // ---------------------------------------------------------------------------
 
 #if PROTOCORE_HOT
-#include "services/system/clock.h" // pc_millis()
+#include "server/clock/clock.h" // pc_millis()
 #endif
 void pc_sen0192_motion_init(Sen0192Motion *m, uint32_t hold_ms, proto_bool active_high)
 {

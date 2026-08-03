@@ -8,7 +8,7 @@
 
 #include "services/peripherals/ads1115/ads1115.h"
 #include "protocore_config.h"
-#include "services/system/clock.h" // pcdelay
+#include "server/clock/clock.h" // pcdelay
 
 #if PC_ENABLE_ADS1115
 

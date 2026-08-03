@@ -21,11 +21,11 @@
 #include "crypto/asymmetric/ecdsa.h"      // ecdh-sha2-nistp256 + ecdsa host-key verify
 #include "crypto/asymmetric/ed25519.h"    // ssh-ed25519 host key + client auth
 #include "crypto/hash/sha256.h"
-#include "network_drivers/presentation/ssh/crypto/ssh_kexhash.h"   // SshKexHash (SHA-256/SHA-512 by method)
-#include "network_drivers/presentation/ssh/crypto/ssh_rsa.h"       // rsa-sha2-256/512 host-key verify
 #include "network_drivers/presentation/ssh/transport/ssh_dh.h"     // ssh_dh_derive_keys_sid, ssh_rng_fill
 #include "network_drivers/presentation/ssh/transport/ssh_keymat.h" // ssh_keys[], SshKeyMat, SSH_CIPHER_*, SSH_MAC_*
 #include "network_drivers/presentation/ssh/transport/ssh_packet.h"
+#include "network_drivers/tls/ssh_kexhash.h" // SshKexHash (SHA-256/SHA-512 by method)
+#include "network_drivers/tls/ssh_rsa.h"     // rsa-sha2-256/512 host-key verify
 #include "shared_primitives/log.h"
 #include <string.h>
 
@@ -42,7 +42,7 @@
 #if PROTOCORE_HOT
 #include "mmgr/arena.h"                       // pc_worker_set_self (own scratch slot)
 #include "network_drivers/transport/client.h" // pc_client_*
-#include "services/system/clock.h"            // pc_millis, pcdelay
+#include "server/clock/clock.h"               // pc_millis, pcdelay
 #endif
 
 // ---------------------------------------------------------------------------

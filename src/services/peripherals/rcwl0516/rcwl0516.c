@@ -13,7 +13,7 @@
  */
 
 #include "services/peripherals/rcwl0516/rcwl0516.h"
-#include "services/system/clock.h" // pc_millis()
+#include "server/clock/clock.h" // pc_millis()
 
 #if PC_ENABLE_RCWL0516
 

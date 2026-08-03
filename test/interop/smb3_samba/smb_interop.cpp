@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// SMB 3.1.1 interop driver: run the real PC smb_client engine (services/file_transfer/smb) over a live TCP socket
+// SMB 3.1.1 interop driver: run the real PC smb_client engine (network_drivers/application/smb) over a live TCP socket
 // against a real Samba/Windows server, proving the on-the-wire session - dialect 3.1.1, the
 // preauth-integrity chain, the SP800-108-derived signing key, AES-128-CMAC message signing, and the
 // NTLMSSP MIC - interoperates with a third-party implementation, not just the host mock. This is a
@@ -10,8 +10,8 @@
 // Config via environment (all optional): SMB_HOST (127.0.0.1), SMB_PORT (445), SMB_USER, SMB_PASS,
 // SMB_DOMAIN (""), SMB_SHARE (\\host\share UNC), SMB_PATH (file name). Exit 0 on a byte-exact round trip.
 
-#include "services/file_transfer/smb/smb2.h"
-#include "services/file_transfer/smb/smb_client.h"
+#include "network_drivers/application/smb/smb2.h"
+#include "network_drivers/application/smb/smb_client.h"
 #include <arpa/inet.h>
 #include <cstdio>
 #include <cstdlib>

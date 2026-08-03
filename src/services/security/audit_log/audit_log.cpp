@@ -19,7 +19,7 @@
 #if PC_ENABLE_AUDIT_LOG
 
 #include "crypto/hash/sha256.h"
-#include "services/system/clock.h"
+#include "server/clock/clock.h"
 #include <string.h>
 
 // All audit-log state, owned by one instance (internal linkage): the record ring, its

@@ -44,7 +44,7 @@
 #include "network_drivers/presentation/ssh/auth/ssh_auth.h"
 #include "network_drivers/presentation/ssh/connection/ssh_channel.h"
 #include "network_drivers/presentation/ssh/connection/ssh_conn.h"
-#include "network_drivers/presentation/ssh/crypto/ssh_rsa.h"          // pc_ssh_rsa_load_pubkey (NVS path)
+#include "network_drivers/tls/ssh_rsa.h"          // pc_ssh_rsa_load_pubkey (NVS path)
 #include "network_drivers/presentation/ssh/transport/ssh_transport.h" // pc_ssh_hostkey_ed25519_set (embed path)
 
 #if HOST_KEY_PROVISION == 1

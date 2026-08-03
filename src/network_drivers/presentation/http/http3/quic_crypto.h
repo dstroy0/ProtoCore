@@ -39,13 +39,13 @@
 /** @brief The client/server packet-protection secrets for one QUIC encryption level. */
 typedef struct
 {
-    alignas(8) uint8_t gcm[PC_WORK_AES128GCM]; ///< keyed AEAD context, built once per key.
-                                               ///< Replaces the raw key: the schedule is what the
-                                               ///< AEAD needs, so no raw key stays resident.
-    uint8_t iv[12];                            ///< AEAD nonce base (XOR'd with the padded packet number).
-    alignas(8) uint8_t hp[PC_WORK_AES128];     ///< Keyed header-protection context (AES-128-ECB mask).
-                                               ///< Built once: ~556 cycles per record, plus the pool
-                                               ///< borrow and wipe it also removes.
+    _Alignas(8) uint8_t gcm[PC_WORK_AES128GCM]; ///< keyed AEAD context, built once per key.
+                                                ///< Replaces the raw key: the schedule is what the
+                                                ///< AEAD needs, so no raw key stays resident.
+    uint8_t iv[12];                             ///< AEAD nonce base (XOR'd with the padded packet number).
+    _Alignas(8) uint8_t hp[PC_WORK_AES128];     ///< Keyed header-protection context (AES-128-ECB mask).
+                                                ///< Built once: ~556 cycles per record, plus the pool
+                                                ///< borrow and wipe it also removes.
 } QuicPacketKeys;
 
 /** @brief Both directions' Initial secrets derived from the client's Destination Connection ID. */
