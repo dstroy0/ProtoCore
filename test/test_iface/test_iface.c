@@ -92,7 +92,7 @@ static const char *do_req(pc_iface iface, const char *req_str)
 
 void test_ap_only_matches_on_ap()
 {
-    on_http("/cfg", HTTP_GET, h_ok, PC_IFACE_AP);
+    on_http_iface("/cfg", HTTP_GET, h_ok, PC_IFACE_AP);
     const char *r = do_req(PC_IFACE_AP, "GET /cfg HTTP/1.1\r\n\r\n");
     TEST_ASSERT_TRUE(g_called);
     TEST_ASSERT_NOT_NULL(strstr(r, "200 OK"));
@@ -100,7 +100,7 @@ void test_ap_only_matches_on_ap()
 
 void test_ap_only_hidden_on_sta()
 {
-    on_http("/cfg", HTTP_GET, h_ok, PC_IFACE_AP);
+    on_http_iface("/cfg", HTTP_GET, h_ok, PC_IFACE_AP);
     const char *r = do_req(PC_IFACE_STA, "GET /cfg HTTP/1.1\r\n\r\n");
     TEST_ASSERT_FALSE(g_called); // route invisible on STA
     TEST_ASSERT_NOT_NULL(strstr(r, "404 Not Found"));
@@ -108,7 +108,7 @@ void test_ap_only_hidden_on_sta()
 
 void test_sta_only_matches_on_sta()
 {
-    on_http("/api", HTTP_GET, h_ok, PC_IFACE_STA);
+    on_http_iface("/api", HTTP_GET, h_ok, PC_IFACE_STA);
     const char *r = do_req(PC_IFACE_STA, "GET /api HTTP/1.1\r\n\r\n");
     TEST_ASSERT_TRUE(g_called);
     TEST_ASSERT_NOT_NULL(strstr(r, "200 OK"));
@@ -116,7 +116,7 @@ void test_sta_only_matches_on_sta()
 
 void test_sta_only_hidden_on_ap()
 {
-    on_http("/api", HTTP_GET, h_ok, PC_IFACE_STA);
+    on_http_iface("/api", HTTP_GET, h_ok, PC_IFACE_STA);
     const char *r = do_req(PC_IFACE_AP, "GET /api HTTP/1.1\r\n\r\n");
     TEST_ASSERT_FALSE(g_called);
     TEST_ASSERT_NOT_NULL(strstr(r, "404 Not Found"));
@@ -139,8 +139,8 @@ void test_same_path_two_interfaces_picks_correct()
 {
     // Same path bound to different interfaces; the request's interface decides.
     g_ap_hit = g_sta_hit = PROTO_FALSE;
-    on_http("/p", HTTP_GET, h_ap, PC_IFACE_AP);
-    on_http("/p", HTTP_GET, h_sta, PC_IFACE_STA);
+    on_http_iface("/p", HTTP_GET, h_ap, PC_IFACE_AP);
+    on_http_iface("/p", HTTP_GET, h_sta, PC_IFACE_STA);
 
     const char *r = do_req(PC_IFACE_STA, "GET /p HTTP/1.1\r\n\r\n");
     TEST_ASSERT_TRUE(g_sta_hit);
