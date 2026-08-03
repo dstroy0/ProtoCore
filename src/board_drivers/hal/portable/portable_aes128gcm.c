@@ -38,7 +38,7 @@ static_assert(sizeof(pc_aes128) <= PC_WORK_AES128, "pc_aes128 outgrew PC_WORK_AE
 
 pc_aes128 *pc_aes128_wants(void)
 {
-    pc_span ws = pc_secure_span(sizeof(pc_aes128), alignof(pc_aes128));
+    pc_span ws = pc_secure_span(sizeof(pc_aes128), _Alignof(pc_aes128));
     return pc_span_ok(ws) ? (pc_aes128 *)(ws.buf) : NULL;
 }
 
@@ -218,24 +218,24 @@ static void gcm_tag(Aes128GcmWork *w, const uint8_t *aad, size_t aad_len, const 
     }
 }
 
-pc_aes128gcm_key *pc_aes128gcm_key_init(void *storage, const uint8_t key[PC_AES128GCM_KEY_LEN])
+struct pc_aes128gcm_key *pc_aes128gcm_key_init(void *storage, const uint8_t key[PC_AES128GCM_KEY_LEN])
 {
     Aes128GcmWork *w = (Aes128GcmWork *)(storage);
     pc_aes128_init(&w->aes, key);
     memset(w->h, 0, 16);
     pc_aes128_encrypt_block(&w->aes, w->h, w->h); // H = E(K, 0^128)
     ghash_key_init(&w->ghk, w->h);
-    return (pc_aes128gcm_key *)(w);
+    return (struct pc_aes128gcm_key *)(w);
 }
 
-void pc_aes128gcm_key_wipe(pc_aes128gcm_key *k)
+void pc_aes128gcm_key_wipe(struct pc_aes128gcm_key *k)
 {
     Aes128GcmWork *w = (Aes128GcmWork *)(k);
     pc_aes128_wipe(&w->aes);
     pc_secure_wipe((uint8_t *)(w), sizeof(Aes128GcmWork));
 }
 
-pc_cspan pc_aes128gcm_seal(pc_aes128gcm_key *k, const uint8_t nonce[PC_AES128GCM_IV_LEN], const uint8_t *aad,
+pc_cspan pc_aes128gcm_seal(struct pc_aes128gcm_key *k, const uint8_t nonce[PC_AES128GCM_IV_LEN], const uint8_t *aad,
                            size_t aad_len, const uint8_t *pt, size_t pt_len, uint8_t *ct_out,
                            uint8_t tag_out[PC_AES128GCM_TAG_LEN])
 {
@@ -249,7 +249,7 @@ pc_cspan pc_aes128gcm_seal(pc_aes128gcm_key *k, const uint8_t nonce[PC_AES128GCM
     return pc_cspan_from(ct_out, pt_len); // the tag rides in tag_out, not in this span
 }
 
-proto_bool pc_aes128gcm_open(pc_aes128gcm_key *k, const uint8_t nonce[PC_AES128GCM_IV_LEN], const uint8_t *aad,
+proto_bool pc_aes128gcm_open(struct pc_aes128gcm_key *k, const uint8_t nonce[PC_AES128GCM_IV_LEN], const uint8_t *aad,
                              size_t aad_len, const uint8_t *ct, size_t ct_len, const uint8_t tag[PC_AES128GCM_TAG_LEN],
                              uint8_t *out)
 {
