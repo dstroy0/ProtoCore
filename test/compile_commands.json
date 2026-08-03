@@ -1380,16 +1380,16 @@
     "output": ".pio/build/native_swar/src/services/fieldbus/powerlink/powerlink.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_quic_tls_pqc/src/crypto/hash/sha3.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_ENABLE_HTTP3=1 -DPC_ENABLE_PQC_KEX=1 -DPC_WORKER_TASK_STACK=16384 -Itest/mocks -Itest/support -Isrc src/crypto/hash/sha3.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/crypto/hash/sha3.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/crypto/hash/sha3.c",
     "directory": "@ROOT@",
     "file": "src/crypto/hash/sha3.c",
-    "output": ".pio/build/native_quic_tls_pqc/src/crypto/hash/sha3.o"
+    "output": ".pio/build/native_swar/src/crypto/hash/sha3.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_quic_tls_pqc/src/crypto/pqc/mlkem.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_ENABLE_HTTP3=1 -DPC_ENABLE_PQC_KEX=1 -DPC_WORKER_TASK_STACK=16384 -Itest/mocks -Itest/support -Isrc src/crypto/pqc/mlkem.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/crypto/pqc/mlkem.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/crypto/pqc/mlkem.c",
     "directory": "@ROOT@",
     "file": "src/crypto/pqc/mlkem.c",
-    "output": ".pio/build/native_quic_tls_pqc/src/crypto/pqc/mlkem.o"
+    "output": ".pio/build/native_swar/src/crypto/pqc/mlkem.o"
   },
   {
     "command": "/usr/bin/gcc -o .pio/build/native_swar/src/crypto/pqc/sntrup761.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/crypto/pqc/sntrup761.c",
