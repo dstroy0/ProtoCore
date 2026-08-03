@@ -1332,7 +1332,7 @@ guards at compile time.
 | `MAX_MIDDLEWARE` | `4` | Maximum globally-registered middleware functions. |
 | `MAX_MULTIPART_PARTS` | `4` | Maximum simultaneously parsed multipart parts per request. |
 | `MAX_PATH_LEN` | `64` | Maximum URL path length (including leading `/`). |
-| `MAX_PATH_PARAMS` | `4` |  |
+| `MAX_PATH_PARAMS` | `4` | Maximum number of `:name` path parameters captured per route match. |
 | `MAX_QUERY_LEN` | `128` | Maximum raw query-string length (everything after `?`). |
 | `MAX_QUERY_PARAMS` | `8` | Maximum number of parsed query-string parameters. |
 | `MAX_ROUTES` | `16` | Maximum simultaneously registered routes. |
@@ -1469,7 +1469,6 @@ guards at compile time.
 | `PC_OTA_CONFIRM_WINDOW_MS` | `30000` | Confirm window (ms): a pending image not confirmed within this rolls back. |
 | `PC_PARTITION_JSON_BUF` | `1024` | Stack buffer for the partition-map JSON (bytes). |
 | `PC_PARTITION_MAX` | `16` | Maximum partitions the monitor reports (BSS table). |
-| `PC_PATH_PARAM_BYTES` | `128` | Bytes one request holds for its `:name` path captures, keys and values together. |
 | `PC_PCA9685_FREQ` | `50` | Default PWM output frequency in Hz (50 Hz suits hobby servos). |
 | `PC_PCA9685_I2C_ADDR` | `0x40` | I2C address of the PCA9685 (0x40 default; the six address pins select 0x40..0x7F). |
 | `PC_PER_IP_THROTTLE_MAX` | `10` | Max accepted connections per window from one source IP (see PC_ENABLE_PER_IP_THROTTLE). |
