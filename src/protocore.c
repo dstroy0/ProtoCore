@@ -1038,30 +1038,20 @@ static void capture_path_param(HttpReq *req, const char *key, size_t klen, const
     {
         return;
     }
-    // Both pieces are packed into the request's own byte pool as key\0val\0, and the table points at
-    // them. A capture that would not fit is dropped whole rather than stored truncated: half a
-    // parameter names a different resource than the one the client asked for.
-    size_t need = klen + vlen + 2;
-    if (req->path_param_used + need > sizeof(req->path_param_bytes))
-    {
-        return;
-    }
-    char *at = req->path_param_bytes + req->path_param_used;
     QueryParam *qp = &req->path_params[req->path_param_count];
     req->path_param_count++;
-
-    qp->key = at;
-    proto_raw_read(at, key, klen);
-    at += klen;
-    *at = '\0';
-    at++;
-
-    qp->val = at;
-    proto_raw_read(at, val, vlen);
-    at += vlen;
-    *at = '\0';
-
-    req->path_param_used += (uint16_t)need;
+    if (klen > QUERY_KEY_LEN - 1)
+    {
+        klen = QUERY_KEY_LEN - 1;
+    }
+    proto_raw_read(qp->key, key, klen);
+    qp->key[klen] = '\0';
+    if (vlen > QUERY_VAL_LEN - 1)
+    {
+        vlen = QUERY_VAL_LEN - 1;
+    }
+    proto_raw_read(qp->val, val, vlen);
+    qp->val[vlen] = '\0';
 }
 
 /**

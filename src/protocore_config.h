@@ -971,19 +971,6 @@ from halves and is slower than the width it decomposes into"
 #endif
 
 /** @brief Maximum number of `:name` path parameters captured per route match. */
-/**
- * @brief Bytes one request holds for its `:name` path captures, keys and values together.
- *
- * A capture cannot point into the request path the way a query pair points into the query string
- * (see HttpReq::path_param_bytes), so its bytes are copied once into this pool and the table points
- * at them. One bound covers every capture in the request instead of a separate cap per key and per
- * value, so a long value is not truncated just because it shares a request with three short ones -
- * a capture that does not fit is dropped whole.
- */
-#ifndef PC_PATH_PARAM_BYTES
-#define PC_PATH_PARAM_BYTES 128
-#endif
-
 #ifndef MAX_PATH_PARAMS
 #define MAX_PATH_PARAMS 4
 #endif

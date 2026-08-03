@@ -110,78 +110,43 @@ static inline proto_bool is_field_value_char(uint8_t b)
  * value are split on the first `=`.  Keys or values longer than their
  * respective limits are silently truncated - the path itself remains valid.
  */
-// The next '&' or '=' at or after @p i, or @p len if neither is there.
-//
-// One load answers for both: the two lane masks are OR'd, so the first set lane is the first
-// separator of either kind. Testing them in separate passes would load every word twice and then
-// have to work out which hit came first.
-static size_t next_sep(const char *s, size_t i, size_t len)
+static void parse_query_params(HttpReq *req)
 {
-    while (i + PC_SWAR_BYTES <= len)
-    {
-        pc_swar_word w = pc_swar_load(s + i);
-        pc_swar_word m = pc_swar_eq(w, '&') | pc_swar_eq(w, '=');
-        if (m != 0)
-        {
-            return i + pc_swar_zero_lane(m); // the mask states the lane
-        }
-        i += PC_SWAR_BYTES;
-    }
-    // The final partial word, which cannot be loaded whole without reading past len.
-    while (i < len && s[i] != '&' && s[i] != '=')
-    {
-        i++;
-    }
-    return i;
-}
-
-/**
- * Split the raw query into key=value pairs IN PLACE, as the comment always claimed: the terminator
- * is written over the separator it consumed, so each key and value is a NUL-terminated substring of
- * req->query[] and the table holds two pointers rather than two more copies.
- *
- * Done on first access rather than during parsing, which is what makes writing into query[] safe:
- * anything that wants the query whole (Digest's uri comparison, RFC 7616 3.4) reads it at dispatch,
- * before a handler can ask for a parameter. A request that never asks does no work at all.
- */
-static void split_query(HttpReq *req)
-{
-    if (req->query_split)
-    {
-        return;
-    }
-    req->query_split = PROTO_TRUE;
-
-    char *qs = req->query;
+    const char *qs = req->query;
     size_t len = req->query_idx;
     size_t i = 0;
 
     while (i < len && req->query_count < MAX_QUERY_PARAMS)
     {
-        size_t key_at = i;
-        size_t sep = next_sep(qs, i, len);
+        QueryParam *qp = &req->query_params[req->query_count];
+        size_t key_idx = 0;
+        size_t val_idx = 0;
+        proto_bool in_val = PROTO_FALSE;
 
-        const char *val = ""; // a pair with no '=' has an empty value, not a missing one
-        if (sep < len && qs[sep] == '=')
+        while (i < len)
         {
-            qs[sep] = '\0'; // terminate the key over the '='
-            size_t val_at = sep + 1;
-            i = next_sep(qs, val_at, len);
-            val = qs + val_at;
-        }
-        else
-        {
-            i = sep;
-        }
-        if (i < len)
-        {
-            qs[i++] = '\0'; // terminate over the '&'
+            char c = qs[i++];
+            if (c == '&')
+            {
+                break;
+            }
+            if (c == '=' && !in_val)
+            {
+                in_val = PROTO_TRUE;
+                continue;
+            }
+            if (!in_val && key_idx < QUERY_KEY_LEN - 1)
+            {
+                qp->key[key_idx++] = c;
+            }
+            else if (in_val && val_idx < QUERY_VAL_LEN - 1)
+            {
+                qp->val[val_idx++] = c;
+            }
         }
 
-        if (qs[key_at] != '\0') // a bare '&' contributes no pair
+        if (key_idx > 0)
         {
-            req->query_params[req->query_count].key = qs + key_at;
-            req->query_params[req->query_count].val = val;
             req->query_count++;
         }
     }
@@ -201,7 +166,7 @@ void http_parser_reset(HttpReq *req)
     }
 #endif
     *req = (HttpReq){0}; // zero all fields
-    req->slot_id = id; // restore slot identity
+    req->slot_id = id;   // restore slot identity
     req->parse_state = PARSE_METHOD;
     req->_version_hash = PC_FNV_OFFSET; // seed the FNV-1a accumulator
 }
@@ -263,8 +228,7 @@ void http_parser_feed(HttpReq *p, uint8_t byte)
     case PARSE_QUERY:
         if (c == ' ')
         {
-            // Not split here: the query is tokenized on first access (see split_query), so anything
-            // that needs it whole still gets it whole.
+            parse_query_params(p);
             p->parse_state = PARSE_VERSION;
         }
         else if (!is_vchar(byte))
@@ -833,9 +797,8 @@ proto_bool http_forwarded_client(const HttpReq *req, char *ip_out, size_t ip_cap
     return PROTO_FALSE;
 }
 
-const char *http_get_query(HttpReq *req, const char *key)
+const char *http_get_query(const HttpReq *req, const char *key)
 {
-    split_query(req); // idempotent; the first caller pays for it, a request with no reader pays none
     for (uint8_t i = 0; i < req->query_count; i++)
     {
         if (strcmp(req->query_params[i].key, key) == 0)
