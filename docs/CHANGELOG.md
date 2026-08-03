@@ -43,6 +43,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`4341255`](https://github.com/dstroy0/ProtoCore/commit/4341255a69d3a34c3bb7d14ad55e03ab50e7ff41))
 - update CHANGELOG.md [skip ci] ([`c1f81dc`](https://github.com/dstroy0/ProtoCore/commit/c1f81dc4949462a66b8ebe05795c1248ffb94d02))
 - update CHANGELOG.md [skip ci] ([`b14719d`](https://github.com/dstroy0/ProtoCore/commit/b14719d1aa2e66f326991b0e0b26c86f5618237d))
 - update CHANGELOG.md [skip ci] ([`f136ce3`](https://github.com/dstroy0/ProtoCore/commit/f136ce35bca290840f132ea93a2777a5fa0c7018))
@@ -222,6 +223,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Refactor
 
+- convert the chunked-send reference variables to pointers ([`a5d1823`](https://github.com/dstroy0/ProtoCore/commit/a5d18230f7d6685610e2dae97df0dd002bb502d9))
 - convert the SSE module to C ([`a3f0813`](https://github.com/dstroy0/ProtoCore/commit/a3f08133fcd1fc661f9b1d76eeb5f004239a06f2))
 - convert the WebSocket module to C ([`2de589f`](https://github.com/dstroy0/ProtoCore/commit/2de589f87f78709adb1ce31dc3b2534a8ec2a869))
 - convert the multipart codec to C ([`4227997`](https://github.com/dstroy0/ProtoCore/commit/422799751a20dec48c6babedb9eebb0c7b7188a5))
@@ -252,6 +254,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- bind slots through the host seam and fix the value-init assignments ([`fa14afe`](https://github.com/dstroy0/ProtoCore/commit/fa14afe4ef97d3cab6f198ba86bddcbceb0148c9))
 - enable the dependencies the feature gates require ([`c7e7725`](https://github.com/dstroy0/ProtoCore/commit/c7e77251b877096ebfc4c22ecb47bd2171f84697))
 - pass the tls flag listener_add no longer defaults ([`d8048bc`](https://github.com/dstroy0/ProtoCore/commit/d8048bcc63166e41d550c397146de2aa9a0b1620))
 - convert test_session to C ([`6d760e4`](https://github.com/dstroy0/ProtoCore/commit/6d760e4f8d148680faf649b7b873850ae8852bab))
