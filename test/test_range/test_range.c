@@ -54,6 +54,7 @@ void setUp()
     ws_init();
     pc_sse_init();
     lfsm_format();
+    pc_mnt_mount(lfsm()); // the app hands us its filesystem; mnt is what everything reaches it through
     TEST_ASSERT_TRUE(lfsm_write_text("/data.bin", FILE_DATA)); // the 20 bytes every test serves
     tcp_capture_reset();
     mock_sndbuf_set(MOCK_SNDBUF_DEFAULT); // reopen the window a backpressure test may have shrunk
