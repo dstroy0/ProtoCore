@@ -53,7 +53,7 @@ static void test_hrr_build_kat(void)
     const uint8_t cookie[4] = {0xAA, 0xBB, 0xCC, 0xDD};
     uint8_t out[128];
     size_t n = pc_tls13_build_hello_retry_request(out, sizeof(out), NULL, 0, TLS_GROUP_X25519, cookie, sizeof(cookie),
-                                                  /*dtls=*/true);
+                                                  /*dtls=*/PROTO_TRUE);
     TEST_ASSERT_EQUAL_size_t(sizeof(HRR_WIRE), n);
     TEST_ASSERT_EQUAL_MEMORY(HRR_WIRE, out, sizeof(HRR_WIRE));
     // The random field carries the magic, i.e. this ServerHello is a HelloRetryRequest.
@@ -66,7 +66,7 @@ static void test_hrr_echoes_session_id(void)
     const uint8_t cookie[2] = {0x01, 0x02};
     uint8_t out[128];
     size_t n = pc_tls13_build_hello_retry_request(out, sizeof(out), sid, sizeof(sid), TLS_GROUP_X25519, cookie,
-                                                  sizeof(cookie), /*dtls=*/true);
+                                                  sizeof(cookie), /*dtls=*/PROTO_TRUE);
     TEST_ASSERT_TRUE(n > 0);
     TEST_ASSERT_EQUAL_UINT8(sizeof(sid), out[38]);        // legacy_session_id_echo length
     TEST_ASSERT_EQUAL_MEMORY(sid, out + 39, sizeof(sid)); // echoed verbatim
@@ -202,7 +202,7 @@ static void test_ee_rpk_extension(void)
 {
     // The empty (DTLS-profile) EncryptedExtensions with RPK selected carries server_certificate_type.
     uint8_t out[32];
-    size_t n = pc_tls13_build_encrypted_extensions_empty(out, sizeof(out), /*rpk_server_cert=*/true);
+    size_t n = pc_tls13_build_encrypted_extensions_empty(out, sizeof(out), /*rpk_server_cert=*/PROTO_TRUE);
     const uint8_t want[11] = {0x08, 0x00, 0x00, 0x07,        // EncryptedExtensions, length 7
                               0x00, 0x05,                    // extensions length 5
                               0x00, 0x14, 0x00, 0x01, 0x02}; // server_certificate_type(20) -> RawPublicKey(2)
@@ -306,8 +306,8 @@ static void test_quic_encrypted_extensions_rpk(void)
 {
     const uint8_t tp[3] = {0x04, 0x01, 0x20};
     uint8_t plain[64], rpk[64];
-    size_t pn = pc_tls13_build_encrypted_extensions(plain, sizeof(plain), tp, sizeof(tp), /*rpk=*/false);
-    size_t rn = pc_tls13_build_encrypted_extensions(rpk, sizeof(rpk), tp, sizeof(tp), /*rpk=*/true);
+    size_t pn = pc_tls13_build_encrypted_extensions(plain, sizeof(plain), tp, sizeof(tp), /*rpk=*/PROTO_FALSE);
+    size_t rn = pc_tls13_build_encrypted_extensions(rpk, sizeof(rpk), tp, sizeof(tp), /*rpk=*/PROTO_TRUE);
     TEST_ASSERT_TRUE(pn > 0);
     TEST_ASSERT_EQUAL_size_t(pn + 5, rn); // ext type(2) + length(2) + CertificateType(1)
 

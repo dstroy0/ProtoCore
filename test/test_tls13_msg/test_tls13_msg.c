@@ -174,7 +174,7 @@ void test_cert_verify_content()
     uint8_t thash[32];
     memset(thash, 0xab, 32);
     uint8_t content[160];
-    size_t n = pc_tls13_cert_verify_content(content, sizeof(content), thash, true);
+    size_t n = pc_tls13_cert_verify_content(content, sizeof(content), thash, PROTO_TRUE);
     TEST_ASSERT_EQUAL_UINT(64 + 33 + 1 + 32, n);
     for (int i = 0; i < 64; i++)
     {
@@ -207,11 +207,11 @@ void test_cert_verify_sign_roundtrip()
 
     // Rebuild the signed content and verify the signature.
     uint8_t content[160];
-    size_t clen = pc_tls13_cert_verify_content(content, sizeof(content), thash, true);
+    size_t clen = pc_tls13_cert_verify_content(content, sizeof(content), thash, PROTO_TRUE);
     TEST_ASSERT_TRUE(pc_ed25519_verify(pub, content, clen, out + 8));
     // A different transcript hash must not verify against the same signature.
     thash[0] ^= 0x01;
-    clen = pc_tls13_cert_verify_content(content, sizeof(content), thash, true);
+    clen = pc_tls13_cert_verify_content(content, sizeof(content), thash, PROTO_TRUE);
     TEST_ASSERT_FALSE(pc_ed25519_verify(pub, content, clen, out + 8));
 }
 
@@ -343,7 +343,7 @@ void test_tls13_builder_cap_guards()
                                                           /*dtls=*/PROTO_FALSE, /*conn_id=*/NULL,
                                                           0)); // w_bytes(random) overruns
     uint8_t thash[32] = {0};
-    TEST_ASSERT_EQUAL_UINT(0, pc_tls13_cert_verify_content(out, 10, thash, true)); // total > cap
+    TEST_ASSERT_EQUAL_UINT(0, pc_tls13_cert_verify_content(out, 10, thash, PROTO_TRUE)); // total > cap
 }
 
 // Remaining ClientHello parse coverage: the r_u8 compression-length truncation, the
@@ -455,26 +455,26 @@ void test_tls13_dtls_client_hello_shape()
     Tls13ClientHello ch;
 
     size_t n = build_ch_dtls(msg, sv_dtls, sizeof(sv_dtls), 0, 0);
-    TEST_ASSERT_TRUE(pc_tls13_parse_client_hello(msg, n, &ch, /*dtls=*/true));
+    TEST_ASSERT_TRUE(pc_tls13_parse_client_hello(msg, n, &ch, /*dtls=*/PROTO_TRUE));
     TEST_ASSERT_TRUE(ch.offers_tls13); // matched against PC_TLS_VERSION_DTLS_1_3
 
     // A non-empty legacy_cookie is skipped just the same.
     n = build_ch_dtls(msg, sv_dtls, sizeof(sv_dtls), 4, 4);
-    TEST_ASSERT_TRUE(pc_tls13_parse_client_hello(msg, n, &ch, /*dtls=*/true));
+    TEST_ASSERT_TRUE(pc_tls13_parse_client_hello(msg, n, &ch, /*dtls=*/PROTO_TRUE));
     TEST_ASSERT_TRUE(ch.offers_tls13);
 
     // The same bytes read as TLS/QUIC (no legacy_cookie field) do NOT yield a DTLS 1.3 offer:
     // the field misaligns everything after it.
-    TEST_ASSERT_FALSE(pc_tls13_parse_client_hello(msg, n, &ch, /*dtls=*/false) && ch.offers_tls13);
+    TEST_ASSERT_FALSE(pc_tls13_parse_client_hello(msg, n, &ch, /*dtls=*/PROTO_FALSE) && ch.offers_tls13);
 
     // The legacy_cookie length byte announces more bytes than are present -> parse fails.
     n = build_ch_dtls(msg, sv_dtls, sizeof(sv_dtls), 200, 0);
-    TEST_ASSERT_FALSE(pc_tls13_parse_client_hello(msg, n, &ch, /*dtls=*/true));
+    TEST_ASSERT_FALSE(pc_tls13_parse_client_hello(msg, n, &ch, /*dtls=*/PROTO_TRUE));
 
     // The message ends exactly after legacy_session_id, so the cookie length byte is absent.
     uint8_t stub[64];
     size_t sn = build_ch_stub(stub, 35); // legacy_version(2) + random(32) + session_id length(1)
-    TEST_ASSERT_FALSE(pc_tls13_parse_client_hello(stub, sn, &ch, /*dtls=*/true));
+    TEST_ASSERT_FALSE(pc_tls13_parse_client_hello(stub, sn, &ch, /*dtls=*/PROTO_TRUE));
 }
 
 // Every ClientHello field boundary the reader can run off: an empty message, and a body cut short
@@ -586,7 +586,7 @@ void test_tls13_builders_dtls_codepoints()
     uint8_t out[128];
 
     size_t n = pc_tls13_build_server_hello(out, sizeof(out), random, NULL, 0, pub, 32, TLS_GROUP_X25519,
-                                           /*dtls=*/true, /*conn_id=*/NULL, 0);
+                                           /*dtls=*/PROTO_TRUE, /*conn_id=*/NULL, 0);
     TEST_ASSERT_TRUE(n > 0);
     TEST_ASSERT_EQUAL_UINT8(0xFE, out[4]); // legacy_version = DTLS 1.2
     TEST_ASSERT_EQUAL_UINT8(0xFD, out[5]);
@@ -595,7 +595,7 @@ void test_tls13_builders_dtls_codepoints()
     TEST_ASSERT_EQUAL_UINT8(0xFC, out[n - 1]);
 
     // The TLS/QUIC form of the same call uses 0x0303 / 0x0304.
-    n = pc_tls13_build_server_hello(out, sizeof(out), random, NULL, 0, pub, 32, TLS_GROUP_X25519, /*dtls=*/false,
+    n = pc_tls13_build_server_hello(out, sizeof(out), random, NULL, 0, pub, 32, TLS_GROUP_X25519, /*dtls=*/PROTO_FALSE,
                                     /*conn_id=*/NULL, 0);
     TEST_ASSERT_TRUE(n > 0);
     TEST_ASSERT_EQUAL_UINT8(0x03, out[4]);
@@ -606,7 +606,7 @@ void test_tls13_builders_dtls_codepoints()
     // HelloRetryRequest, both profiles, with and without a cookie extension.
     const uint8_t cookie[4] = {0xAA, 0xBB, 0xCC, 0xDD};
     size_t with_cookie = pc_tls13_build_hello_retry_request(out, sizeof(out), NULL, 0, TLS_GROUP_X25519, cookie,
-                                                            sizeof(cookie), /*dtls=*/true);
+                                                            sizeof(cookie), /*dtls=*/PROTO_TRUE);
     TEST_ASSERT_TRUE(with_cookie > 0);
     TEST_ASSERT_EQUAL_UINT8(0xFE, out[4]);
     TEST_ASSERT_EQUAL_UINT8(0xFD, out[5]);
@@ -615,7 +615,7 @@ void test_tls13_builders_dtls_codepoints()
     // No cookie -> the cookie extension is omitted entirely (a shorter message), and the TLS
     // codepoints are used.
     size_t no_cookie = pc_tls13_build_hello_retry_request(out, sizeof(out), NULL, 0, TLS_GROUP_X25519, NULL, 0,
-                                                          /*dtls=*/false);
+                                                          /*dtls=*/PROTO_FALSE);
     TEST_ASSERT_TRUE(no_cookie > 0);
     TEST_ASSERT_TRUE(no_cookie < with_cookie);
     TEST_ASSERT_EQUAL_UINT8(0x03, out[4]);
@@ -632,14 +632,14 @@ void test_tls13_builder_overflow_guards()
 
     // cookie_len + 2 must fit a uint16: refused before anything is written.
     TEST_ASSERT_EQUAL_UINT(0, pc_tls13_build_hello_retry_request(out, sizeof(out), NULL, 0, TLS_GROUP_X25519, cookie,
-                                                                 0xFFFE, /*dtls=*/false));
+                                                                 0xFFFE, /*dtls=*/PROTO_FALSE));
 
     // A HelloRetryRequest that does not fit: sweep every capacity below the needed one.
     size_t need = pc_tls13_build_hello_retry_request(out, sizeof(out), NULL, 0, TLS_GROUP_X25519, cookie,
-                                                     sizeof(cookie), /*dtls=*/true);
+                                                     sizeof(cookie), /*dtls=*/PROTO_TRUE);
     TEST_ASSERT_TRUE(need > 0);
     TEST_ASSERT_EQUAL_UINT(0, pc_tls13_build_hello_retry_request(out, need - 1, NULL, 0, TLS_GROUP_X25519, cookie,
-                                                                 sizeof(cookie), /*dtls=*/true));
+                                                                 sizeof(cookie), /*dtls=*/PROTO_TRUE));
 
     // The empty (DTLS-profile) EncryptedExtensions is 6 bytes; 5 is not enough.
     TEST_ASSERT_EQUAL_UINT(6, pc_tls13_build_encrypted_extensions_empty(out, 6, /*rpk_server_cert=*/PROTO_FALSE));
@@ -686,8 +686,8 @@ void test_tls13_cert_verify_client_context()
     uint8_t thash[32];
     memset(thash, 0x5c, sizeof(thash));
     uint8_t server[160], client[160];
-    size_t sn = pc_tls13_cert_verify_content(server, sizeof(server), thash, true);
-    size_t cn = pc_tls13_cert_verify_content(client, sizeof(client), thash, false);
+    size_t sn = pc_tls13_cert_verify_content(server, sizeof(server), thash, PROTO_TRUE);
+    size_t cn = pc_tls13_cert_verify_content(client, sizeof(client), thash, PROTO_FALSE);
     TEST_ASSERT_EQUAL_UINT(sn, cn);
     TEST_ASSERT_EQUAL_UINT8_ARRAY("TLS 1.3, client CertificateVerify", client + 64, 33);
     TEST_ASSERT_EQUAL_UINT8(0x00, client[97]);
@@ -708,7 +708,7 @@ void test_tls13_build_server_hello_conn_id()
     size_t without = pc_tls13_build_server_hello(out, sizeof(out), random, NULL, 0, pub, 32, TLS_GROUP_X25519,
                                                  /*dtls=*/PROTO_FALSE, /*conn_id=*/NULL, 0);
     size_t with = pc_tls13_build_server_hello(out, sizeof(out), random, NULL, 0, pub, 32, TLS_GROUP_X25519,
-                                              /*dtls=*/false, conn_id, sizeof(conn_id));
+                                              /*dtls=*/PROTO_FALSE, conn_id, sizeof(conn_id));
     TEST_ASSERT_TRUE(with > without);
     // connection_id ext: type 0036, ext body length 0004, cid length 03, then the CID bytes.
     static const uint8_t tail[] = {0x00, 0x36, 0x00, 0x04, 0x03, 0xC1, 0xC2, 0xC3};

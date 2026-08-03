@@ -151,7 +151,7 @@ static void make_server_config(QuicTlsConfig *cfg)
     memcpy(cfg->ephemeral_priv, SERVER_PRIV, 32);
     memcpy(cfg->random, SERVER_RANDOM, 32);
     pc_quic_tp_defaults(&cfg->params);
-    cfg->params.has_initial_scid = true;
+    cfg->params.has_initial_scid = PROTO_TRUE;
     cfg->params.initial_scid_len = 4;
     memcpy(cfg->params.initial_scid, "\x11\x22\x33\x44", 4);
     cfg->params.initial_max_data = 1048576;
@@ -169,7 +169,7 @@ void test_full_handshake_roundtrip()
     // Client transport params.
     QuicTransportParams ctp;
     pc_quic_tp_defaults(&ctp);
-    ctp.has_initial_scid = true;
+    ctp.has_initial_scid = PROTO_TRUE;
     ctp.initial_scid_len = 4;
     memcpy(ctp.initial_scid, "\xaa\xbb\xcc\xdd", 4);
     ctp.initial_max_data = 524288;
@@ -246,8 +246,8 @@ void test_full_handshake_roundtrip()
     TEST_ASSERT_TRUE(qt.complete);
 
     // Keys are exposed for both directions at both levels.
-    TEST_ASSERT_NOT_NULL(pc_quic_tls_keys(&qt, QUIC_ENC_HANDSHAKE, true));
-    TEST_ASSERT_NOT_NULL(pc_quic_tls_keys(&qt, QUIC_ENC_APP, false));
+    TEST_ASSERT_NOT_NULL(pc_quic_tls_keys(&qt, QUIC_ENC_HANDSHAKE, PROTO_TRUE));
+    TEST_ASSERT_NOT_NULL(pc_quic_tls_keys(&qt, QUIC_ENC_APP, PROTO_FALSE));
 }
 
 void test_reject_bad_client_finished()
@@ -516,9 +516,9 @@ void test_quic_tls_more_guards()
     // keys() before the handshake has derived them -> NULL (both levels + an unknown level).
     QuicTls fresh;
     pc_quic_tls_server_init(&fresh, &cfg);
-    TEST_ASSERT_NULL(pc_quic_tls_keys(&fresh, QUIC_ENC_HANDSHAKE, true));
-    TEST_ASSERT_NULL(pc_quic_tls_keys(&fresh, QUIC_ENC_APP, false));
-    TEST_ASSERT_NULL(pc_quic_tls_keys(&fresh, 999, true));
+    TEST_ASSERT_NULL(pc_quic_tls_keys(&fresh, QUIC_ENC_HANDSHAKE, PROTO_TRUE));
+    TEST_ASSERT_NULL(pc_quic_tls_keys(&fresh, QUIC_ENC_APP, PROTO_FALSE));
+    TEST_ASSERT_NULL(pc_quic_tls_keys(&fresh, 999, PROTO_TRUE));
 
     // An oversized certificate overruns the handshake flight buffer, so the emit() flight-bound guard
     // fails the handshake with INTERNAL_ERROR (cert_der/cert_len are caller-supplied and unbounded).
@@ -545,7 +545,7 @@ void test_quic_tls_more_guards()
 // required extensions. With @p offer_hybrid_group false the hybrid share is sent but supported_groups
 // advertises only x25519, so the server must not select the hybrid.
 static size_t build_client_hello_hybrid(uint8_t *out, const uint8_t client_pub[32], const uint8_t *tp, size_t tp_len,
-                                        const uint8_t *ek = kat_ek, bool offer_hybrid_group = true)
+                                        const uint8_t *ek = kat_ek, proto_bool offer_hybrid_group = PROTO_TRUE)
 {
     size_t p = 0;
     out[p++] = TLS_HS_CLIENT_HELLO;
@@ -723,7 +723,7 @@ void test_hybrid_hrr_roundtrip()
 
     QuicTransportParams ctp;
     pc_quic_tp_defaults(&ctp);
-    ctp.has_initial_scid = true;
+    ctp.has_initial_scid = PROTO_TRUE;
     ctp.initial_scid_len = 4;
     memcpy(ctp.initial_scid, "\xaa\xbb\xcc\xdd", 4);
     uint8_t ctp_enc[128];
@@ -861,7 +861,7 @@ void test_hybrid_handshake_roundtrip()
 
     QuicTransportParams ctp;
     pc_quic_tp_defaults(&ctp);
-    ctp.has_initial_scid = true;
+    ctp.has_initial_scid = PROTO_TRUE;
     ctp.initial_scid_len = 4;
     memcpy(ctp.initial_scid, "\xaa\xbb\xcc\xdd", 4);
     uint8_t ctp_enc[128];
@@ -973,7 +973,8 @@ void test_hybrid_share_without_group_offer()
     uint8_t client_pub[32];
     pc_x25519_base(client_pub, CLIENT_PRIV);
     static uint8_t ch[2048];
-    size_t ch_len = build_client_hello_hybrid(ch, client_pub, ctp_enc, ctp_len, kat_ek, /*offer_hybrid_group=*/false);
+    size_t ch_len =
+        build_client_hello_hybrid(ch, client_pub, ctp_enc, ctp_len, kat_ek, /*offer_hybrid_group=*/PROTO_FALSE);
 
     pc_quic_tls_recv_crypto(&qt, QUIC_ENC_INITIAL, ch, ch_len);
     TEST_ASSERT_EQUAL_UINT8(QTLS_FAILED, qt.state);

@@ -119,7 +119,7 @@ static size_t build_long(uint8_t *out, size_t cap, uint8_t type, const uint8_t *
     wr_pn(out + p, pn, pn_len);
     p += pn_len;
     memcpy(out + p, frames, frame_len);
-    return pc_quic_packet_protect(out, cap, pn_off, pn_len, pn, frame_len, keys, true);
+    return pc_quic_packet_protect(out, cap, pn_off, pn_len, pn, frame_len, keys, PROTO_TRUE);
 }
 static size_t build_short(uint8_t *out, size_t cap, const uint8_t *dcid, uint8_t dcl, uint64_t pn, QuicPacketKeys *keys,
                           const uint8_t *frames, size_t frame_len)
@@ -130,7 +130,7 @@ static size_t build_short(uint8_t *out, size_t cap, const uint8_t *dcid, uint8_t
     size_t pn_off = 1 + dcl;
     wr_pn(out + pn_off, pn, pn_len);
     memcpy(out + pn_off + pn_len, frames, frame_len);
-    return pc_quic_packet_protect(out, cap, pn_off, pn_len, pn, frame_len, keys, false);
+    return pc_quic_packet_protect(out, cap, pn_off, pn_len, pn, frame_len, keys, PROTO_FALSE);
 }
 static size_t open_long(const uint8_t *dg, size_t len, QuicPacketKeys *keys, uint8_t *plain, size_t *wire,
                         uint8_t *type)
@@ -154,14 +154,14 @@ static size_t open_long(const uint8_t *dg, size_t len, QuicPacketKeys *keys, uin
     static uint8_t work[2048];
     memcpy(work, dg, *wire);
     uint64_t pn = 0;
-    return pc_quic_packet_unprotect(work, off, (size_t)length, 0, keys, true, plain, &pn);
+    return pc_quic_packet_unprotect(work, off, (size_t)length, 0, keys, PROTO_TRUE, plain, &pn);
 }
 static size_t open_short(const uint8_t *dg, size_t len, uint8_t dcl, QuicPacketKeys *keys, uint8_t *plain)
 {
     static uint8_t work[2048];
     memcpy(work, dg, len);
     uint64_t pn = 0;
-    return pc_quic_packet_unprotect(work, 1 + dcl, len - (1 + dcl), 0, keys, false, plain, &pn);
+    return pc_quic_packet_unprotect(work, 1 + dcl, len - (1 + dcl), 0, keys, PROTO_FALSE, plain, &pn);
 }
 static size_t extract_crypto(const uint8_t *p, size_t len, uint8_t *out)
 {
@@ -244,7 +244,7 @@ static size_t build_client_hello(uint8_t *out, const uint8_t client_pub[32], con
 
 // Scan every captured datagram for a 1-RTT STREAM frame on stream 0 carrying HTTP/3
 // HEADERS(:status 200) + DATA("hello h3"); returns true if found.
-static bool response_ok(QuicPacketKeys *ap_s)
+static proto_bool response_ok(QuicPacketKeys *ap_s)
 {
     uint8_t plain[2048];
     for (int d = 0; d < g_out_n; d++)
@@ -282,7 +282,7 @@ static bool response_ok(QuicPacketKeys *ap_s)
             const uint8_t *sp = f.stream.data;
             size_t so = 0, sn = (size_t)f.stream.length;
             char status[8] = {0};
-            bool data_ok = false;
+            proto_bool data_ok = PROTO_FALSE;
             while (so < sn)
             {
                 H3Frame hf;
@@ -300,13 +300,13 @@ static bool response_ok(QuicPacketKeys *ap_s)
                     } e = {status};
                     pc_qpack_decode(
                         hp, (size_t)hf.length, sc, sizeof(sc),
-                        [](void *c, const char *nm, size_t nl, const char *v, size_t vl) -> bool {
+                        [](void *c, const char *nm, size_t nl, const char *v, size_t vl) -> proto_bool {
                             if (nl == 7 && memcmp(nm, ":status", 7) == 0)
                             {
                                 memcpy(((E *)c)->s, v, vl);
                                 ((E *)c)->s[vl] = 0;
                             }
-                            return true;
+                            return PROTO_TRUE;
                         },
                         &e);
                 }
@@ -314,18 +314,18 @@ static bool response_ok(QuicPacketKeys *ap_s)
                 {
                     if (hf.length == 8 && memcmp(hp, "hello h3", 8) == 0)
                     {
-                        data_ok = true;
+                        data_ok = PROTO_TRUE;
                     }
                 }
                 so += hf.header_len + (size_t)hf.length;
             }
             if (strcmp(status, "200") == 0 && data_ok)
             {
-                return true;
+                return PROTO_TRUE;
             }
         }
     }
-    return false;
+    return PROTO_FALSE;
 }
 
 void test_quic_server_http3_get()
@@ -431,7 +431,7 @@ void test_quic_server_http3_get()
     uint8_t h3req[256];
     size_t h3l = pc_h3_build_headers(h3req, sizeof(h3req), block, bp);
     uint8_t sfr[300];
-    size_t sfrl = pc_quic_build_stream(sfr, sizeof(sfr), 0, 0, h3req, h3l, true);
+    size_t sfrl = pc_quic_build_stream(sfr, sizeof(sfr), 0, 0, h3req, h3l, PROTO_TRUE);
     uint8_t s1[512];
     size_t s1l = build_short(s1, sizeof(s1), SERVER_SCID, sizeof(SERVER_SCID), 0, &ap_c, sfr, sfrl);
 
@@ -919,7 +919,7 @@ void test_quic_server_on_request_null()
     uint8_t h3req[256];
     size_t h3l = pc_h3_build_headers(h3req, sizeof(h3req), block, bp);
     uint8_t sfr[300];
-    size_t sfrl = pc_quic_build_stream(sfr, sizeof(sfr), 0, 0, h3req, h3l, true);
+    size_t sfrl = pc_quic_build_stream(sfr, sizeof(sfr), 0, 0, h3req, h3l, PROTO_TRUE);
     uint8_t s1[512];
     size_t s1l = build_short(s1, sizeof(s1), SERVER_SCID, sizeof(SERVER_SCID), 0, &ap_c, sfr, sfrl);
 
