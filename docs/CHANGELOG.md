@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- name the incomplete struct tag in the SSH GCM wipe casts ([`770fa67`](https://github.com/dstroy0/ProtoCore/commit/770fa67576af3da5d8ae443f5d025567810875ae))
 - repoint the Sonar suppressions the C conversion orphaned ([`20d73cb`](https://github.com/dstroy0/ProtoCore/commit/20d73cb21e11a984d417aa39f25dad0772be44e6))
 - link the clock TU into every native env that reads it ([`183e693`](https://github.com/dstroy0/ProtoCore/commit/183e693528cb219327c7a123679eadce290c8422))
 - convert four more owned-context structs out of C++ ([`586cfd4`](https://github.com/dstroy0/ProtoCore/commit/586cfd4603660e8073792292404649932949a03e))
