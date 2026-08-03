@@ -19,6 +19,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`35227fe`](https://github.com/dstroy0/ProtoCore/commit/35227fe81e139d38478bdabfd176d0d415685b18))
 - update CHANGELOG.md [skip ci] ([`f8ee54e`](https://github.com/dstroy0/ProtoCore/commit/f8ee54e88c0686db636b3f4e39622c62322fc47e))
 - update CHANGELOG.md [skip ci] ([`10be3c0`](https://github.com/dstroy0/ProtoCore/commit/10be3c0340eef80f9a8e417435372a7656e20c34))
 - update CHANGELOG.md [skip ci] ([`49b3d78`](https://github.com/dstroy0/ProtoCore/commit/49b3d7834c6f6ba1508d112caaf1771579e4e1a4))
@@ -78,6 +79,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`7f88800`](https://github.com/dstroy0/ProtoCore/commit/7f88800b01dfd0308e1487019dac72888363b3d7))
 - state C11 in the law, and retire DONE as a status in the sweep notes ([`0a52923`](https://github.com/dstroy0/ProtoCore/commit/0a529237c945b81248cbce7198770475a65790ec))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`90e44e7`](https://github.com/dstroy0/ProtoCore/commit/90e44e76e787703bf942a4168e5b25b7fd2302f0))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`ab43d04`](https://github.com/dstroy0/ProtoCore/commit/ab43d047b2a0dd1465890580c10c5d341d0be9a1))
@@ -112,6 +114,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Refactor
 
+- mirror the layer each module moved to ([`f575b3d`](https://github.com/dstroy0/ProtoCore/commit/f575b3dbfe9d40e243dbb67fffd804884cf2b59c))
+- move exc_decoder and power_mgmt into server/ ([`d14ca1e`](https://github.com/dstroy0/ProtoCore/commit/d14ca1e69c88b656b593965e9b5cf1cc569dab97))
 - move each module under the layer that owns it ([`bddf3f4`](https://github.com/dstroy0/ProtoCore/commit/bddf3f4a37136505974a95c4ae7054d78423c16e))
 - convert src/ to C11 and split the build into PROTOCORE_HOT / PROTOCORE_HOST ([`40d217a`](https://github.com/dstroy0/ProtoCore/commit/40d217a7272b721e83230cb1ca6d0517622824e2))
 - split swar into an access layer and bounded-run operations ([`d5d947e`](https://github.com/dstroy0/ProtoCore/commit/d5d947ed28b48109556e8bce14e5fbeb55a80f90))
