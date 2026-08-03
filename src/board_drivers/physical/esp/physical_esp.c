@@ -118,7 +118,7 @@ proto_bool net_global_ipv6(pc_ip *out)
         {
             continue;
         }
-        out->family = pc_ip_family::PC_IP_V6;
+        out->family = PC_IP_V6;
         memcpy(out->bytes, a6->addr, 16); // lwIP holds the 16 bytes in network order
         return PROTO_TRUE;
     }
@@ -156,7 +156,7 @@ pc_iface pc_net_egress(void)
     uint32_t egress = pc_net_egress_ip();
     if (egress == 0)
     {
-        return pc_iface::PC_IFACE_ANY;
+        return PC_IFACE_ANY;
     }
     uint32_t sta = WiFi.isConnected() ? (uint32_t)WiFi.localIP() : 0;
     uint32_t ap = pc_net_ap_ip();
@@ -230,11 +230,11 @@ uint8_t pc_net_channel(void)
 
 static wifi_ps_type_t to_esp_ps(pc_phy_ps mode)
 {
-    if (mode == pc_phy_ps::PC_PHY_PS_MIN_MODEM)
+    if (mode == PC_PHY_PS_MIN_MODEM)
     {
         return WIFI_PS_MIN_MODEM;
     }
-    if (mode == pc_phy_ps::PC_PHY_PS_MAX_MODEM)
+    if (mode == PC_PHY_PS_MAX_MODEM)
     {
         return WIFI_PS_MAX_MODEM;
     }
@@ -274,17 +274,17 @@ pc_phy_ps pc_phy_ps_get(void)
     wifi_ps_type_t m = WIFI_PS_NONE;
     if (esp_wifi_get_ps(&m) != ESP_OK)
     {
-        return pc_phy_ps::PC_PHY_PS_NONE;
+        return PC_PHY_PS_NONE;
     }
     if (m == WIFI_PS_MIN_MODEM)
     {
-        return pc_phy_ps::PC_PHY_PS_MIN_MODEM;
+        return PC_PHY_PS_MIN_MODEM;
     }
     if (m == WIFI_PS_MAX_MODEM)
     {
-        return pc_phy_ps::PC_PHY_PS_MAX_MODEM;
+        return PC_PHY_PS_MAX_MODEM;
     }
-    return pc_phy_ps::PC_PHY_PS_NONE;
+    return PC_PHY_PS_NONE;
 }
 
 proto_bool pc_phy_tx_power_set(int8_t dbm)

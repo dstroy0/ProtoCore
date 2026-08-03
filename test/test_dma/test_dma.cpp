@@ -35,7 +35,7 @@ static void on_ev(const pc_dma_event *ev, void *ctx)
     e.len = ev->len;
     e.seq = ev->seq;
     e.ptr = ev->data;
-    if (ev->dir == pc_dma_dir::PC_DMA_RX && ev->data)
+    if (ev->dir == PC_DMA_RX && ev->data)
     {
         e.data.assign(ev->data, ev->data + ev->len);
     }
@@ -46,7 +46,7 @@ static proto_bool open_ch(uint8_t ch, proto_bool loop)
 {
     pc_dma_config c = {0};
     c.channel = ch;
-    c.periph = pc_dma_periph::PC_DMA_UART;
+    c.periph = PC_DMA_UART;
     c.loopback = loop;
     c.on_complete = on_ev;
     c.ctx = NULL;
@@ -58,7 +58,7 @@ static std::vector<uint8_t> rx_concat()
     std::vector<uint8_t> v;
     for (size_t i = 0; i < g_ev.size(); i++)
     {
-        if (g_ev[i].dir == pc_dma_dir::PC_DMA_RX)
+        if (g_ev[i].dir == PC_DMA_RX)
         {
             v.insert(v.end(), g_ev[i].data.begin(), g_ev[i].data.end());
         }
@@ -112,7 +112,7 @@ void test_ingress_emits_rx_event()
     TEST_ASSERT_TRUE(pc_dma_sim_feed(0, msg, sizeof(msg)));
     TEST_ASSERT_EQUAL_size_t(0, g_ev.size()); // nothing until we pump the engine
     pc_dma_poll();
-    TEST_ASSERT_EQUAL_size_t(1, count_dir(pc_dma_dir::PC_DMA_RX));
+    TEST_ASSERT_EQUAL_size_t(1, count_dir(PC_DMA_RX));
     TEST_ASSERT_EQUAL_UINT16(5, g_ev[0].len);
     TEST_ASSERT_EQUAL_UINT8(0, g_ev[0].channel);
     TEST_ASSERT_EQUAL_MEMORY(msg, g_ev[0].data.data(), sizeof(msg));
@@ -129,7 +129,7 @@ void test_buffer_fills_then_partial_flush()
     TEST_ASSERT_TRUE(pc_dma_sim_feed(0, msg, sizeof(msg)));
     pc_dma_poll();
     // one full-buffer completion + one partial idle-line flush
-    TEST_ASSERT_EQUAL_size_t(2, count_dir(pc_dma_dir::PC_DMA_RX));
+    TEST_ASSERT_EQUAL_size_t(2, count_dir(PC_DMA_RX));
     TEST_ASSERT_EQUAL_UINT16(PC_DMA_BUF_SIZE, g_ev[0].len);
     TEST_ASSERT_EQUAL_UINT16(3, g_ev[1].len);
     std::vector<uint8_t> got = rx_concat();
@@ -147,7 +147,7 @@ void test_ping_pong_flips_buffer()
     }
     TEST_ASSERT_TRUE(pc_dma_sim_feed(0, msg, sizeof(msg)));
     pc_dma_poll();
-    TEST_ASSERT_EQUAL_size_t(2, count_dir(pc_dma_dir::PC_DMA_RX));
+    TEST_ASSERT_EQUAL_size_t(2, count_dir(PC_DMA_RX));
     // consecutive completions use different buffers (the engine flipped, not reused)
     TEST_ASSERT_NOT_EQUAL(g_ev[0].ptr, g_ev[1].ptr);
     TEST_ASSERT_EQUAL_UINT16(0, g_ev[0].seq);
@@ -162,8 +162,8 @@ void test_egress_captures_tx()
     const uint8_t out[] = {'a', 'b', 'c', 'd'};
     TEST_ASSERT_TRUE(pc_dma_tx_submit(0, out, sizeof(out)));
     pc_dma_poll();
-    TEST_ASSERT_EQUAL_size_t(1, count_dir(pc_dma_dir::PC_DMA_TX));
-    TEST_ASSERT_EQUAL_size_t(0, count_dir(pc_dma_dir::PC_DMA_RX)); // no loopback -> no RX
+    TEST_ASSERT_EQUAL_size_t(1, count_dir(PC_DMA_TX));
+    TEST_ASSERT_EQUAL_size_t(0, count_dir(PC_DMA_RX)); // no loopback -> no RX
     TEST_ASSERT_EQUAL_UINT16(4, g_ev[0].len);
     TEST_ASSERT_NULL(g_ev[0].ptr); // TX events carry no buffer
 
@@ -183,7 +183,7 @@ void test_tx_one_in_flight_fail_closed()
     pc_dma_poll();                                        // TX completes, frees the channel
     TEST_ASSERT_TRUE(pc_dma_tx_submit(0, b, sizeof(b)));
     pc_dma_poll();
-    TEST_ASSERT_EQUAL_size_t(2, count_dir(pc_dma_dir::PC_DMA_TX));
+    TEST_ASSERT_EQUAL_size_t(2, count_dir(PC_DMA_TX));
 }
 
 void test_tx_rejects_bad_len()
@@ -202,8 +202,8 @@ void test_loopback_round_trip()
     const uint8_t ping[] = {'P', 'I', 'N', 'G'};
     TEST_ASSERT_TRUE(pc_dma_tx_submit(0, ping, sizeof(ping)));
     pc_dma_poll(); // one poll: TX drains, loops into ingress, RX completes
-    TEST_ASSERT_EQUAL_size_t(1, count_dir(pc_dma_dir::PC_DMA_TX));
-    TEST_ASSERT_EQUAL_size_t(1, count_dir(pc_dma_dir::PC_DMA_RX));
+    TEST_ASSERT_EQUAL_size_t(1, count_dir(PC_DMA_TX));
+    TEST_ASSERT_EQUAL_size_t(1, count_dir(PC_DMA_RX));
     std::vector<uint8_t> got = rx_concat();
     TEST_ASSERT_EQUAL_size_t(sizeof(ping), got.size());
     TEST_ASSERT_EQUAL_MEMORY(ping, got.data(), sizeof(ping)); // byte-exact round trip
@@ -242,7 +242,7 @@ void test_two_channels_independent()
     size_t ch0 = 0, ch1 = 0;
     for (size_t i = 0; i < g_ev.size(); i++)
     {
-        if (g_ev[i].dir != pc_dma_dir::PC_DMA_RX)
+        if (g_ev[i].dir != PC_DMA_RX)
         {
             continue;
         }

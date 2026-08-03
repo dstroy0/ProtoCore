@@ -16,7 +16,7 @@
 #endif
 pc_ota_action pc_ota_decide(uint8_t img_state, proto_bool self_test_ok, uint32_t ms_since_boot, uint32_t window_ms)
 {
-    if (img_state != pc_ota_img::PC_OTA_IMG_PENDING_VERIFY)
+    if (img_state != PC_OTA_IMG_PENDING_VERIFY)
     {
         return PC_OTA_WAIT; // not a freshly-updated image: nothing to do
     }
@@ -39,7 +39,7 @@ uint8_t pc_ota_img_state(void)
     esp_ota_img_states_t st = ESP_OTA_IMG_UNDEFINED;
     if (!running || esp_ota_get_state_partition(running, &st) != ESP_OK)
     {
-        return pc_ota_img::PC_OTA_IMG_UNDEFINED;
+        return PC_OTA_IMG_UNDEFINED;
     }
     return (uint8_t)st;
 }
@@ -72,7 +72,7 @@ pc_ota_action pc_ota_rollback_tick(proto_bool self_test_ok)
 
 uint8_t pc_ota_img_state(void)
 {
-    return pc_ota_img::PC_OTA_IMG_UNDEFINED;
+    return PC_OTA_IMG_UNDEFINED;
 }
 void pc_ota_commit(void)
 {

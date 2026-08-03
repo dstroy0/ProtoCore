@@ -22,22 +22,22 @@
 #endif
 uint8_t pc_guardrail_eval(const pc_health *h, uint32_t heap_min, uint32_t frag_min_block, uint32_t stack_min)
 {
-    uint8_t b = pc_breach::PC_BREACH_NONE;
+    uint8_t b = PC_BREACH_NONE;
     if (!h)
     {
         return b;
     }
     if (h->free_heap < heap_min)
     {
-        b |= pc_breach::PC_BREACH_HEAP;
+        b |= PC_BREACH_HEAP;
     }
     if (h->largest_free_block < frag_min_block)
     {
-        b |= pc_breach::PC_BREACH_FRAG;
+        b |= PC_BREACH_FRAG;
     }
     if (h->stack_free < stack_min)
     {
-        b |= pc_breach::PC_BREACH_STACK;
+        b |= PC_BREACH_STACK;
     }
     return b;
 }
@@ -106,7 +106,7 @@ uint8_t pc_guardrails_check(void)
     pc_health h;
     pc_guardrails_sample(&h);
     uint8_t b = pc_guardrail_eval(&h, PC_GUARDRAIL_HEAP_MIN, PC_GUARDRAIL_FRAG_MIN_BLOCK, PC_GUARDRAIL_STACK_MIN);
-    if (b != pc_breach::PC_BREACH_NONE && s_gr.cb)
+    if (b != PC_BREACH_NONE && s_gr.cb)
     {
         s_gr.cb(b, &h);
     }
@@ -127,7 +127,7 @@ void pc_guardrails_begin(pc_breach_fn)
 }
 uint8_t pc_guardrails_check(void)
 {
-    return pc_breach::PC_BREACH_NONE;
+    return PC_BREACH_NONE;
 }
 
 #endif // PROTOCORE_HOT

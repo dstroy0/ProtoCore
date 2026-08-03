@@ -112,9 +112,9 @@ inline proto_bool pc_wal_fs_prealloc(fs::FS &fsys, const char *path, uint64_t si
 inline WalDev pc_wal_fs_dev(fs::File *f, uint64_t size)
 {
     WalDev d;
-    d.read = pc_wal_fs_detail::fs_read;
-    d.write = pc_wal_fs_detail::fs_write;
-    d.sync = pc_wal_fs_detail::fs_sync;
+    d.read = fs_read;
+    d.write = fs_write;
+    d.sync = fs_sync;
     d.ctx = f;
     d.size = size;
     return d;

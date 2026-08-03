@@ -11,10 +11,10 @@
 #include <string>
 #include <unity.h>
 
-static std::string captured()
+static string captured()
 {
     const uint8_t *p = pc_udp_captured();
-    return p ? std::string((const char *)p, pc_udp_captured_len()) : std::string();
+    return p ? string((const char *)p, pc_udp_captured_len()) : string();
 }
 
 void setUp()

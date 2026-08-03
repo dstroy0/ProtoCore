@@ -32,11 +32,11 @@ proto_bool pc_forwarded_trust_add(const pc_ip *network, uint8_t prefix_len)
         return PROTO_FALSE;
     }
     int bits = -1; // stays negative for a family we do not recognize
-    if (network->family == pc_ip_family::PC_IP_V4)
+    if (network->family == PC_IP_V4)
     {
         bits = 32;
     }
-    else if (network->family == pc_ip_family::PC_IP_V6)
+    else if (network->family == PC_IP_V6)
     {
         bits = 128;
     }
@@ -82,13 +82,13 @@ proto_bool pc_forwarded_trust_add_cidr(const char *cidr)
     addr[n] = '\0';
 
     pc_ip net;
-    net.family = pc_ip_family::PC_IP_NONE;
+    net.family = PC_IP_NONE;
     if (!pc_ip_parse(addr, &net))
     {
         return PROTO_FALSE;
     }
 
-    uint8_t width = (net.family == pc_ip_family::PC_IP_V4) ? 32 : 128;
+    uint8_t width = (net.family == PC_IP_V4) ? 32 : 128;
     uint8_t prefix = width; // bare address -> host route
     if (slash)
     {
@@ -145,7 +145,7 @@ proto_bool pc_forwarded_effective_ip(const pc_ip *peer, const char *fwd_ip_str, 
     }
     else
     {
-        out->family = pc_ip_family::PC_IP_NONE;
+        out->family = PC_IP_NONE;
     }
 
     if (!peer || !pc_forwarded_trust_contains(peer))
@@ -158,7 +158,7 @@ proto_bool pc_forwarded_effective_ip(const pc_ip *peer, const char *fwd_ip_str, 
     }
 
     pc_ip fip;
-    fip.family = pc_ip_family::PC_IP_NONE;
+    fip.family = PC_IP_NONE;
     if (!pc_ip_parse(fwd_ip_str, &fip) || pc_ip_is_unspecified(&fip))
     {
         return PROTO_FALSE; // malformed / obfuscated / unspecified -> keep the proxy's address

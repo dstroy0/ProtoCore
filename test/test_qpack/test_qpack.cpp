@@ -16,7 +16,7 @@
 
 struct Sink
 {
-    std::vector<std::pair<std::string, std::string>> hdrs;
+    std::vector<pair<string, string>> hdrs;
 };
 
 static proto_bool fail_emit(void *, const char *, size_t, const char *, size_t)
@@ -26,7 +26,7 @@ static proto_bool fail_emit(void *, const char *, size_t, const char *, size_t)
 
 static proto_bool sink_emit(void *ctx, const char *n, size_t nl, const char *v, size_t vl)
 {
-    ((Sink *)ctx)->hdrs.push_back({std::string(n, nl), std::string(v, vl)});
+    ((Sink *)ctx)->hdrs.push_back({string(n, nl), string(v, vl)});
     return PROTO_TRUE;
 }
 

@@ -620,10 +620,10 @@ A thorough directory of all **625 test cases** across **18 suites**. Expand a su
 
     * **Objective**: Before any listener, restart() forwards the no-listeners error (no stop()/begin()).
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_INT32(pc_result::PC_ERR_NO_LISTENERS, restart());</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(PC_ERR_NO_LISTENERS, restart());</code>
       * <code>TEST_ASSERT_EQUAL_INT32(0, listen((uint16_t)9500));</code>
-      * <code>TEST_ASSERT_EQUAL_INT32(pc_result::PC_OK, begin());</code>
-      * <code>TEST_ASSERT_EQUAL_INT32(pc_result::PC_OK, restart());</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(PC_OK, begin());</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(PC_OK, restart());</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -1222,10 +1222,10 @@ A thorough directory of all **625 test cases** across **18 suites**. Expand a su
 
     * **Objective**: begin() before any listen() -> no-listeners error, no side effects.
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_INT32(pc_result::PC_ERR_NO_LISTENERS, begin());</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(PC_ERR_NO_LISTENERS, begin());</code>
       * <code>TEST_ASSERT_EQUAL_INT32(i, listen((uint16_t)(9100 + i)));</code>
-      * <code>TEST_ASSERT_EQUAL_INT32(pc_result::PC_ERR_LISTENER_FULL, listen(9999));</code>
-      * <code>TEST_ASSERT_EQUAL_INT32(pc_result::PC_OK, begin());</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(PC_ERR_LISTENER_FULL, listen(9999));</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(PC_OK, begin());</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -1233,8 +1233,8 @@ A thorough directory of all **625 test cases** across **18 suites**. Expand a su
 
     * **Objective**: Begin port convenience
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_INT32(pc_result::PC_OK, begin_http((uint16_t)8080));</code>
-      * <code>TEST_ASSERT_EQUAL_INT32(pc_result::PC_ERR_LISTENER_FULL, begin_http((uint16_t)9999));</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(PC_OK, begin_http((uint16_t)8080));</code>
+      * <code>TEST_ASSERT_EQUAL_INT32(PC_ERR_LISTENER_FULL, begin_http((uint16_t)9999));</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -2233,9 +2233,9 @@ A thorough directory of all **625 test cases** across **18 suites**. Expand a su
       * <code>Assert equal uint ((uint8_t)COAP_RSP_CONTENT, d.code)</code>
       * <code>Assert equal uint ((uint16_t)COAP_CF_LINK, d.content_format)</code>
       * <code>Assert false (g_called)</code>
-      * <code>Assert true (body.find("&lt;/temp&gt;") != std::string::npos)</code>
-      * <code>Assert true (body.find("&lt;/ro&gt;") != std::string::npos)</code>
-      * <code>Assert true (body.find("&lt;/a/b&gt;") != std::string::npos)</code>
+      * <code>Assert true (body.find("&lt;/temp&gt;") != string::npos)</code>
+      * <code>Assert true (body.find("&lt;/ro&gt;") != string::npos)</code>
+      * <code>Assert true (body.find("&lt;/a/b&gt;") != string::npos)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -2357,7 +2357,7 @@ A thorough directory of all **625 test cases** across **18 suites**. Expand a su
       * <code>Assert true (open_ch(0, PROTO_FALSE))</code>
       * <code>Assert true (pc_dma_sim_feed(0, msg, sizeof(msg)))</code>
       * <code>TEST_ASSERT_EQUAL_size_t(0, g_ev.size()); // nothing until we pump the engine</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(1, count_dir(pc_dma_dir::PC_DMA_RX));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(1, count_dir(PC_DMA_RX));</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(5, g_ev[0].len);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(0, g_ev[0].channel);</code>
       * <code>Assert equal memory (msg, g_ev[0].data.data(), sizeof(msg))</code>
@@ -2370,7 +2370,7 @@ A thorough directory of all **625 test cases** across **18 suites**. Expand a su
     * **Assertions**:
       * <code>Assert true (open_ch(0, PROTO_FALSE))</code>
       * <code>Assert true (pc_dma_sim_feed(0, msg, sizeof(msg)))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(2, count_dir(pc_dma_dir::PC_DMA_RX));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(2, count_dir(PC_DMA_RX));</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(PC_DMA_BUF_SIZE, g_ev[0].len);</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(3, g_ev[1].len);</code>
       * <code>TEST_ASSERT_EQUAL_size_t(sizeof(msg), got.size());</code>
@@ -2384,7 +2384,7 @@ A thorough directory of all **625 test cases** across **18 suites**. Expand a su
     * **Assertions**:
       * <code>Assert true (open_ch(0, PROTO_FALSE))</code>
       * <code>Assert true (pc_dma_sim_feed(0, msg, sizeof(msg)))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(2, count_dir(pc_dma_dir::PC_DMA_RX));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(2, count_dir(PC_DMA_RX));</code>
       * <code>Assert not equal (g_ev[0].ptr, g_ev[1].ptr)</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(0, g_ev[0].seq);</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(1, g_ev[1].seq); // per-channel sequence increments</code>
@@ -2398,8 +2398,8 @@ A thorough directory of all **625 test cases** across **18 suites**. Expand a su
     * **Assertions**:
       * <code>Assert true (open_ch(0, PROTO_FALSE))</code>
       * <code>Assert true (pc_dma_tx_submit(0, out, sizeof(out)))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(1, count_dir(pc_dma_dir::PC_DMA_TX));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, count_dir(pc_dma_dir::PC_DMA_RX)); // no loopback -&gt; no RX</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(1, count_dir(PC_DMA_TX));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, count_dir(PC_DMA_RX)); // no loopback -&gt; no RX</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(4, g_ev[0].len);</code>
       * <code>Assert null (g_ev[0].ptr)</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(4, n);</code>
@@ -2415,7 +2415,7 @@ A thorough directory of all **625 test cases** across **18 suites**. Expand a su
       * <code>Assert true (pc_dma_tx_submit(0, a, sizeof(a)))</code>
       * <code>Assert false (pc_dma_tx_submit(0, b, sizeof(b)))</code>
       * <code>Assert true (pc_dma_tx_submit(0, b, sizeof(b)))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(2, count_dir(pc_dma_dir::PC_DMA_TX));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(2, count_dir(PC_DMA_TX));</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -2436,8 +2436,8 @@ A thorough directory of all **625 test cases** across **18 suites**. Expand a su
     * **Assertions**:
       * <code>Assert true (open_ch(0, PROTO_TRUE))</code>
       * <code>Assert true (pc_dma_tx_submit(0, ping, sizeof(ping)))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(1, count_dir(pc_dma_dir::PC_DMA_TX));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(1, count_dir(pc_dma_dir::PC_DMA_RX));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(1, count_dir(PC_DMA_TX));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(1, count_dir(PC_DMA_RX));</code>
       * <code>TEST_ASSERT_EQUAL_size_t(sizeof(ping), got.size());</code>
       * <code>Assert equal memory (ping, got.data(), sizeof(ping))</code>
   </details>
@@ -2503,12 +2503,12 @@ A thorough directory of all **625 test cases** across **18 suites**. Expand a su
 
     * **Objective**: Uplink envelopes and publishes
     * **Assertions**:
-      * <code>Assert true (add_port(0, pc_gateway_kind::PC_GW_LORA, 0, PROTO_FALSE))</code>
+      * <code>Assert true (add_port(0, PC_GW_LORA, 0, PROTO_FALSE))</code>
       * <code>Assert true (pc_gateway_uplink(0, 0x42, hi, 2, -50))</code>
       * <code>TEST_ASSERT_EQUAL_size_t(1, g_up.size());</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(0x42, g_up[0].src_addr);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(0, g_up[0].port_id);</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8(pc_gateway_kind::PC_GW_LORA, g_up[0].kind);</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8(PC_GW_LORA, g_up[0].kind);</code>
       * <code>TEST_ASSERT_EQUAL_INT16(-50, g_up[0].rssi);</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(0, g_up[0].seq);</code>
       * <code>Assert equal memory (hi, g_up[0].payload.data(), 2)</code>
@@ -2611,12 +2611,12 @@ A thorough directory of all **625 test cases** across **18 suites**. Expand a su
     * **Objective**: Add port validation and table full
     * **Assertions**:
       * <code>Assert false (pc_gateway_add_port(NULL))</code>
-      * <code>Assert true (add_port(0, pc_gateway_kind::PC_GW_LORA, 0, PROTO_FALSE))</code>
-      * <code>Assert false (add_port(0, pc_gateway_kind::PC_GW_LORA, 0, PROTO_FALSE))</code>
-      * <code>Assert true (add_port(1, pc_gateway_kind::PC_GW_NRF24, 0, PROTO_FALSE))</code>
-      * <code>Assert true (add_port(2, pc_gateway_kind::PC_GW_ZIGBEE, 0, PROTO_FALSE))</code>
-      * <code>Assert true (add_port(3, pc_gateway_kind::PC_GW_BLE, 0, PROTO_FALSE))</code>
-      * <code>Assert false (add_port(4, pc_gateway_kind::PC_GW_LORA, 0, PROTO_FALSE)); // table full (PC_GW_MAX_PORTS = 4)</code>
+      * <code>Assert true (add_port(0, PC_GW_LORA, 0, PROTO_FALSE))</code>
+      * <code>Assert false (add_port(0, PC_GW_LORA, 0, PROTO_FALSE))</code>
+      * <code>Assert true (add_port(1, PC_GW_NRF24, 0, PROTO_FALSE))</code>
+      * <code>Assert true (add_port(2, PC_GW_ZIGBEE, 0, PROTO_FALSE))</code>
+      * <code>Assert true (add_port(3, PC_GW_BLE, 0, PROTO_FALSE))</code>
+      * <code>Assert false (add_port(4, PC_GW_LORA, 0, PROTO_FALSE)); // table full (PC_GW_MAX_PORTS = 4)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -5608,9 +5608,9 @@ A thorough directory of all **625 test cases** across **18 suites**. Expand a su
     * **Objective**: Null optional fields
     * **Assertions**:
       * <code>Assert equal int (SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, NULL, &m))</code>
-      * <code>Assert true (m.sent.find("EHLO esp32\\r\\n") != std::string::npos)</code>
-      * <code>Assert true (m.sent.find("Subject: \\r\\n") != std::string::npos); // empty, not "(null)</code>
-      * <code>Assert true (m.sent.find("\\r\\n\\r\\n.\\r\\n") != std::string::npos)</code>
+      * <code>Assert true (m.sent.find("EHLO esp32\\r\\n") != string::npos)</code>
+      * <code>Assert true (m.sent.find("Subject: \\r\\n") != string::npos); // empty, not "(null)</code>
+      * <code>Assert true (m.sent.find("\\r\\n\\r\\n.\\r\\n") != string::npos)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -5619,8 +5619,8 @@ A thorough directory of all **625 test cases** across **18 suites**. Expand a su
     * **Objective**: Null password sends empty secret
     * **Assertions**:
       * <code>Assert equal int (SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, NULL, &m))</code>
-      * <code>Assert true (m.sent.find("dXNlcg==\\r\\n") != std::string::npos); // base64("user")</code>
-      * <code>Assert true (m.sent.find("AUTH LOGIN\\r\\n\\r\\n") == std::string::npos)</code>
+      * <code>Assert true (m.sent.find("dXNlcg==\\r\\n") != string::npos); // base64("user")</code>
+      * <code>Assert true (m.sent.find("AUTH LOGIN\\r\\n\\r\\n") == string::npos)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -5629,7 +5629,7 @@ A thorough directory of all **625 test cases** across **18 suites**. Expand a su
     * **Objective**: Empty user skips auth
     * **Assertions**:
       * <code>Assert equal int (SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, NULL, &m))</code>
-      * <code>Assert true (m.sent.find("AUTH") == std::string::npos)</code>
+      * <code>Assert true (m.sent.find("AUTH") == string::npos)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -5670,16 +5670,16 @@ A thorough directory of all **625 test cases** across **18 suites**. Expand a su
     * **Objective**: Commands, in order.
     * **Assertions**:
       * <code>Assert equal int (SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, NULL, &m))</code>
-      * <code>Assert true (m.sent.find("EHLO esp32\\r\\n") != std::string::npos)</code>
-      * <code>Assert true (m.sent.find("MAIL FROM:&lt;device@example.net&gt;\\r\\n") != std::string::npos)</code>
-      * <code>Assert true (m.sent.find("RCPT TO:&lt;ops@example.net&gt;\\r\\n") != std::string::npos)</code>
-      * <code>Assert true (m.sent.find("DATA\\r\\n") != std::string::npos)</code>
-      * <code>Assert true (m.sent.find("QUIT\\r\\n") != std::string::npos)</code>
-      * <code>Assert true (m.sent.find("Subject: Alert\\r\\n") != std::string::npos)</code>
-      * <code>Assert true (m.sent.find("To: &lt;ops@example.net&gt;\\r\\n") != std::string::npos)</code>
-      * <code>Assert true (m.sent.find("sensor tripped\\r\\n") != std::string::npos)</code>
-      * <code>Assert true (m.sent.find("\\r\\n.\\r\\n") != std::string::npos)</code>
-      * <code>Assert true (m.sent.find("AUTH") == std::string::npos)</code>
+      * <code>Assert true (m.sent.find("EHLO esp32\\r\\n") != string::npos)</code>
+      * <code>Assert true (m.sent.find("MAIL FROM:&lt;device@example.net&gt;\\r\\n") != string::npos)</code>
+      * <code>Assert true (m.sent.find("RCPT TO:&lt;ops@example.net&gt;\\r\\n") != string::npos)</code>
+      * <code>Assert true (m.sent.find("DATA\\r\\n") != string::npos)</code>
+      * <code>Assert true (m.sent.find("QUIT\\r\\n") != string::npos)</code>
+      * <code>Assert true (m.sent.find("Subject: Alert\\r\\n") != string::npos)</code>
+      * <code>Assert true (m.sent.find("To: &lt;ops@example.net&gt;\\r\\n") != string::npos)</code>
+      * <code>Assert true (m.sent.find("sensor tripped\\r\\n") != string::npos)</code>
+      * <code>Assert true (m.sent.find("\\r\\n.\\r\\n") != string::npos)</code>
+      * <code>Assert true (m.sent.find("AUTH") == string::npos)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -5688,9 +5688,9 @@ A thorough directory of all **625 test cases** across **18 suites**. Expand a su
     * **Objective**: Auth login
     * **Assertions**:
       * <code>Assert equal int (SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, NULL, &m))</code>
-      * <code>Assert true (m.sent.find("AUTH LOGIN\\r\\n") != std::string::npos)</code>
-      * <code>Assert true (m.sent.find("dXNlcg==\\r\\n") != std::string::npos); // base64("user")</code>
-      * <code>Assert true (m.sent.find("cGFzcw==\\r\\n") != std::string::npos); // base64("pass")</code>
+      * <code>Assert true (m.sent.find("AUTH LOGIN\\r\\n") != string::npos)</code>
+      * <code>Assert true (m.sent.find("dXNlcg==\\r\\n") != string::npos); // base64("user")</code>
+      * <code>Assert true (m.sent.find("cGFzcw==\\r\\n") != string::npos); // base64("pass")</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -5731,9 +5731,9 @@ A thorough directory of all **625 test cases** across **18 suites**. Expand a su
     * **Objective**: Dot stuffing
     * **Assertions**:
       * <code>Assert equal int (SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, NULL, &m))</code>
-      * <code>Assert true (m.sent.find("..hidden\\r\\n") != std::string::npos)</code>
-      * <code>Assert true (m.sent.find("...two dots\\r\\n") != std::string::npos)</code>
-      * <code>Assert true (m.sent.find("last\\r\\n.\\r\\n") != std::string::npos)</code>
+      * <code>Assert true (m.sent.find("..hidden\\r\\n") != string::npos)</code>
+      * <code>Assert true (m.sent.find("...two dots\\r\\n") != string::npos)</code>
+      * <code>Assert true (m.sent.find("last\\r\\n.\\r\\n") != string::npos)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -5742,7 +5742,7 @@ A thorough directory of all **625 test cases** across **18 suites**. Expand a su
     * **Objective**: Multiline reply and lf body
     * **Assertions**:
       * <code>Assert equal int (SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, NULL, &m))</code>
-      * <code>Assert true (m.sent.find("a\\r\\nb\\r\\n") != std::string::npos)</code>
+      * <code>Assert true (m.sent.find("a\\r\\nb\\r\\n") != string::npos)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -5851,7 +5851,7 @@ A thorough directory of all **625 test cases** across **18 suites**. Expand a su
     * **Objective**: Cr in body dropped
     * **Assertions**:
       * <code>Assert equal int (SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, NULL, &m))</code>
-      * <code>Assert true (m.sent.find("x\\r\\ny\\r\\n") != std::string::npos)</code>
+      * <code>Assert true (m.sent.find("x\\r\\ny\\r\\n") != string::npos)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -5878,9 +5878,9 @@ A thorough directory of all **625 test cases** across **18 suites**. Expand a su
     * **Assertions**:
       * <code>Assert equal int (SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, mock_starttls, &m))</code>
       * <code>Assert equal int (1, m.upgrades)</code>
-      * <code>Assert true (m.sent.find("STARTTLS\\r\\n") != std::string::npos)</code>
-      * <code>Assert true (first != std::string::npos)</code>
-      * <code>Assert true (m.sent.find("EHLO", first + 1) != std::string::npos)</code>
+      * <code>Assert true (m.sent.find("STARTTLS\\r\\n") != string::npos)</code>
+      * <code>Assert true (first != string::npos)</code>
+      * <code>Assert true (m.sent.find("EHLO", first + 1) != string::npos)</code>
       * <code>Assert true (m.sent.find("STARTTLS\\r\\n") &lt; m.sent.find("MAIL FROM"))</code>
   </details>
 
@@ -5891,9 +5891,9 @@ A thorough directory of all **625 test cases** across **18 suites**. Expand a su
     * **Assertions**:
       * <code>Assert equal int (SMTP_ERR_NO_STARTTLS, smtp_run(&c, &msg, mock_send, mock_recv, mock_starttls, &m))</code>
       * <code>Assert equal int (0, m.upgrades)</code>
-      * <code>Assert true (m.sent.find("AUTH") == std::string::npos)</code>
-      * <code>Assert true (m.sent.find("aHVudGVyMg==") == std::string::npos); // base64("hunter2")</code>
-      * <code>Assert true (m.sent.find("MAIL FROM") == std::string::npos)</code>
+      * <code>Assert true (m.sent.find("AUTH") == string::npos)</code>
+      * <code>Assert true (m.sent.find("aHVudGVyMg==") == string::npos); // base64("hunter2")</code>
+      * <code>Assert true (m.sent.find("MAIL FROM") == string::npos)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -5929,7 +5929,7 @@ A thorough directory of all **625 test cases** across **18 suites**. Expand a su
     * **Assertions**:
       * <code>Assert equal int (SMTP_ERR_TLS, smtp_run(&c, &msg, mock_send, mock_recv, mock_starttls, &m))</code>
       * <code>Assert equal int (1, m.upgrades)</code>
-      * <code>Assert true (m.sent.find("MAIL FROM") == std::string::npos)</code>
+      * <code>Assert true (m.sent.find("MAIL FROM") == string::npos)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -5947,7 +5947,7 @@ A thorough directory of all **625 test cases** across **18 suites**. Expand a su
     * **Assertions**:
       * <code>Assert equal int (SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, mock_starttls, &m))</code>
       * <code>Assert equal int (0, m.upgrades)</code>
-      * <code>Assert true (m.sent.find("STARTTLS\\r\\n") == std::string::npos)</code>
+      * <code>Assert true (m.sent.find("STARTTLS\\r\\n") == string::npos)</code>
   </details>
 
 </details>
@@ -5978,18 +5978,18 @@ A thorough directory of all **625 test cases** across **18 suites**. Expand a su
 
     * **Objective**: No API prefix configured: an /api path is just a route.
     * **Assertions**:
-      * <code>Assert equal int (pc_spa_action::PC_SPA_SERVE_SHELL, pc_spa_route("/", "/api/"))</code>
-      * <code>Assert equal int (pc_spa_action::PC_SPA_SERVE_SHELL, pc_spa_route("", "/api/"))</code>
-      * <code>Assert equal int (pc_spa_action::PC_SPA_SERVE_SHELL, pc_spa_route("/dashboard", "/api/"))</code>
-      * <code>Assert equal int (pc_spa_action::PC_SPA_SERVE_SHELL, pc_spa_route("/devices/42", "/api/"))</code>
-      * <code>Assert equal int (pc_spa_action::PC_SPA_SERVE_FILE, pc_spa_route("/app.js", "/api/"))</code>
-      * <code>Assert equal int (pc_spa_action::PC_SPA_SERVE_FILE, pc_spa_route("/assets/logo.svg", "/api/"))</code>
-      * <code>Assert equal int (pc_spa_action::PC_SPA_PASSTHROUGH, pc_spa_route("/api/state", "/api/"))</code>
-      * <code>Assert equal int (pc_spa_action::PC_SPA_PASSTHROUGH, pc_spa_route("/api/devices/42", "/api/"))</code>
-      * <code>Assert equal int (pc_spa_action::PC_SPA_SERVE_SHELL, pc_spa_route("/api/state", NULL))</code>
-      * <code>Assert equal int (pc_spa_action::PC_SPA_SERVE_SHELL, pc_spa_route(NULL, "/api/"))</code>
-      * <code>Assert equal int (pc_spa_action::PC_SPA_SERVE_FILE, pc_spa_route("relative.txt", "/api/"))</code>
-      * <code>Assert equal int (pc_spa_action::PC_SPA_SERVE_SHELL, pc_spa_route("/dashboard", ""))</code>
+      * <code>Assert equal int (PC_SPA_SERVE_SHELL, pc_spa_route("/", "/api/"))</code>
+      * <code>Assert equal int (PC_SPA_SERVE_SHELL, pc_spa_route("", "/api/"))</code>
+      * <code>Assert equal int (PC_SPA_SERVE_SHELL, pc_spa_route("/dashboard", "/api/"))</code>
+      * <code>Assert equal int (PC_SPA_SERVE_SHELL, pc_spa_route("/devices/42", "/api/"))</code>
+      * <code>Assert equal int (PC_SPA_SERVE_FILE, pc_spa_route("/app.js", "/api/"))</code>
+      * <code>Assert equal int (PC_SPA_SERVE_FILE, pc_spa_route("/assets/logo.svg", "/api/"))</code>
+      * <code>Assert equal int (PC_SPA_PASSTHROUGH, pc_spa_route("/api/state", "/api/"))</code>
+      * <code>Assert equal int (PC_SPA_PASSTHROUGH, pc_spa_route("/api/devices/42", "/api/"))</code>
+      * <code>Assert equal int (PC_SPA_SERVE_SHELL, pc_spa_route("/api/state", NULL))</code>
+      * <code>Assert equal int (PC_SPA_SERVE_SHELL, pc_spa_route(NULL, "/api/"))</code>
+      * <code>Assert equal int (PC_SPA_SERVE_FILE, pc_spa_route("relative.txt", "/api/"))</code>
+      * <code>Assert equal int (PC_SPA_SERVE_SHELL, pc_spa_route("/dashboard", ""))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -5997,9 +5997,9 @@ A thorough directory of all **625 test cases** across **18 suites**. Expand a su
 
     * **Objective**: Route ex healthy matches the plain router
     * **Assertions**:
-      * <code>Assert equal int (pc_spa_action::PC_SPA_SERVE_SHELL, pc_spa_route_ex("/dashboard", &c))</code>
-      * <code>Assert equal int (pc_spa_action::PC_SPA_SERVE_FILE, pc_spa_route_ex("/app.js", &c))</code>
-      * <code>Assert equal int (pc_spa_action::PC_SPA_PASSTHROUGH, pc_spa_route_ex("/api/state", &c))</code>
+      * <code>Assert equal int (PC_SPA_SERVE_SHELL, pc_spa_route_ex("/dashboard", &c))</code>
+      * <code>Assert equal int (PC_SPA_SERVE_FILE, pc_spa_route_ex("/app.js", &c))</code>
+      * <code>Assert equal int (PC_SPA_PASSTHROUGH, pc_spa_route_ex("/api/state", &c))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -6007,8 +6007,8 @@ A thorough directory of all **625 test cases** across **18 suites**. Expand a su
 
     * **Objective**: Missing shell falls back
     * **Assertions**:
-      * <code>Assert equal int (pc_spa_action::PC_SPA_SERVE_FALLBACK, pc_spa_route_ex("/dashboard", &c))</code>
-      * <code>Assert equal int (pc_spa_action::PC_SPA_SERVE_FALLBACK, pc_spa_route_ex("/", &c))</code>
+      * <code>Assert equal int (PC_SPA_SERVE_FALLBACK, pc_spa_route_ex("/dashboard", &c))</code>
+      * <code>Assert equal int (PC_SPA_SERVE_FALLBACK, pc_spa_route_ex("/", &c))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -6016,7 +6016,7 @@ A thorough directory of all **625 test cases** across **18 suites**. Expand a su
 
     * **Objective**: Non scripting client falls back
     * **Assertions**:
-      * <code>Assert equal int (pc_spa_action::PC_SPA_SERVE_FALLBACK, pc_spa_route_ex("/devices/42", &c))</code>
+      * <code>Assert equal int (PC_SPA_SERVE_FALLBACK, pc_spa_route_ex("/devices/42", &c))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -6024,7 +6024,7 @@ A thorough directory of all **625 test cases** across **18 suites**. Expand a su
 
     * **Objective**: Degraded device falls back
     * **Assertions**:
-      * <code>Assert equal int (pc_spa_action::PC_SPA_SERVE_FALLBACK, pc_spa_route_ex("/dashboard", &c))</code>
+      * <code>Assert equal int (PC_SPA_SERVE_FALLBACK, pc_spa_route_ex("/dashboard", &c))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -6032,8 +6032,8 @@ A thorough directory of all **625 test cases** across **18 suites**. Expand a su
 
     * **Objective**: The property that makes the fallback worth having: its own controls POST to these endpoints,
     * **Assertions**:
-      * <code>Assert equal int (pc_spa_action::PC_SPA_PASSTHROUGH, pc_spa_route_ex("/api/stop", &c))</code>
-      * <code>Assert equal int (pc_spa_action::PC_SPA_PASSTHROUGH, pc_spa_route_ex("/api/state", &c))</code>
+      * <code>Assert equal int (PC_SPA_PASSTHROUGH, pc_spa_route_ex("/api/stop", &c))</code>
+      * <code>Assert equal int (PC_SPA_PASSTHROUGH, pc_spa_route_ex("/api/state", &c))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -6041,7 +6041,7 @@ A thorough directory of all **625 test cases** across **18 suites**. Expand a su
 
     * **Objective**: An asset request stays an asset request; a real 404 is the caller's to report. Rewriting it to
     * **Assertions**:
-      * <code>Assert equal int (pc_spa_action::PC_SPA_SERVE_FILE, pc_spa_route_ex("/style.css", &c))</code>
+      * <code>Assert equal int (PC_SPA_SERVE_FILE, pc_spa_route_ex("/style.css", &c))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -6049,7 +6049,7 @@ A thorough directory of all **625 test cases** across **18 suites**. Expand a su
 
     * **Objective**: Route ex null ctx degrades to the plain router
     * **Assertions**:
-      * <code>Assert equal int (pc_spa_action::PC_SPA_SERVE_SHELL, pc_spa_route_ex("/dashboard", NULL))</code>
+      * <code>Assert equal int (PC_SPA_SERVE_SHELL, pc_spa_route_ex("/dashboard", NULL))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -6554,7 +6554,7 @@ A thorough directory of all **625 test cases** across **18 suites**. Expand a su
 
     * **Objective**: Install the private key into the native RSA sign fixture, e = 65537.
     * **Assertions**:
-      * <code>Assert equal int (0, ssh_rsa_sign(sd, sn, pc_rsa_hash::SHA512, sig))</code>
+      * <code>Assert equal int (0, ssh_rsa_sign(sd, sn, PC_RSA_HASH_SHA512, sig))</code>
       * <code>Assert equal int (0, pc_ssh_auth_handle_request(0, pkt, n, out, &olen, sizeof(out)))</code>
       * <code>Assert equal (SSH_MSG_USERAUTH_SUCCESS, out[0])</code>
       * <code>Assert true (ssh_sess[0].authed)</code>

@@ -1454,7 +1454,7 @@ void test_listen_and_begin()
 {
 
     // begin() before any listen() -> no-listeners error, no side effects.
-    TEST_ASSERT_EQUAL_INT32(pc_result::PC_ERR_NO_LISTENERS, begin());
+    TEST_ASSERT_EQUAL_INT32(PC_ERR_NO_LISTENERS, begin());
 
     // Fill the listener table, then the next listen() is rejected. listen() returns each
     // listener's id (its index), so the i-th call returns i.
@@ -1462,10 +1462,10 @@ void test_listen_and_begin()
     {
         TEST_ASSERT_EQUAL_INT32(i, listen((uint16_t)(9100 + i)));
     }
-    TEST_ASSERT_EQUAL_INT32(pc_result::PC_ERR_LISTENER_FULL, listen(9999));
+    TEST_ASSERT_EQUAL_INT32(PC_ERR_LISTENER_FULL, listen(9999));
 
     // begin() now brings the registered listeners up.
-    TEST_ASSERT_EQUAL_INT32(pc_result::PC_OK, begin());
+    TEST_ASSERT_EQUAL_INT32(PC_OK, begin());
     listener_stop_all(); // release the global listener slots for later tests
 }
 
@@ -1474,14 +1474,14 @@ void test_listen_and_begin()
 // error without binding.
 void test_begin_port_convenience()
 {
-    TEST_ASSERT_EQUAL_INT32(pc_result::PC_OK, begin_http((uint16_t)8080));
+    TEST_ASSERT_EQUAL_INT32(PC_OK, begin_http((uint16_t)8080));
     listener_stop_all();
 
     for (int i = 0; i < MAX_LISTENERS; i++)
     {
         listen((uint16_t)(9300 + i));
     }
-    TEST_ASSERT_EQUAL_INT32(pc_result::PC_ERR_LISTENER_FULL, begin_http((uint16_t)9999));
+    TEST_ASSERT_EQUAL_INT32(PC_ERR_LISTENER_FULL, begin_http((uint16_t)9999));
 }
 
 // restart() = stop() + begin(): it forwards the no-listeners error before any listen(), and
@@ -1489,12 +1489,12 @@ void test_begin_port_convenience()
 void test_restart_and_stop()
 {
     // Before any listener, restart() forwards the no-listeners error (no stop()/begin()).
-    TEST_ASSERT_EQUAL_INT32(pc_result::PC_ERR_NO_LISTENERS, restart());
+    TEST_ASSERT_EQUAL_INT32(PC_ERR_NO_LISTENERS, restart());
 
     // Bring a listener up, then restart() tears down and re-binds it. The first listen() returns id 0.
     TEST_ASSERT_EQUAL_INT32(0, listen((uint16_t)9500));
-    TEST_ASSERT_EQUAL_INT32(pc_result::PC_OK, begin());
-    TEST_ASSERT_EQUAL_INT32(pc_result::PC_OK, restart());
+    TEST_ASSERT_EQUAL_INT32(PC_OK, begin());
+    TEST_ASSERT_EQUAL_INT32(PC_OK, restart());
 
     // stop() tears everything down; a second stop() with nothing active is a safe no-op.
     stop();
@@ -1511,7 +1511,7 @@ void test_route_registration_variants_table_full()
         on_http("/x", HTTP_GET, record_handler);
     }
 
-    on_http_iface("/i", HTTP_GET, record_handler, pc_iface::PC_IFACE_STA); // on(..., iface)
+    on_http_iface("/i", HTTP_GET, record_handler, PC_IFACE_STA); // on(..., iface)
     on_regex("/re.*", HTTP_GET, record_handler);
 #if PC_ENABLE_AUTH
     on_http_auth("/a", HTTP_GET, record_handler, "realm", "u", "p", PROTO_FALSE);

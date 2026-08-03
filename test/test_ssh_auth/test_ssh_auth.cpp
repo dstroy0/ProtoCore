@@ -417,7 +417,7 @@ void test_pubkey_rsa_sha512_signature_succeeds()
     memcpy(sd + sn, P, pn);
     sn += pn;
     uint8_t sig[256];
-    TEST_ASSERT_EQUAL_INT(0, ssh_rsa_sign(sd, sn, pc_rsa_hash::SHA512, sig));
+    TEST_ASSERT_EQUAL_INT(0, ssh_rsa_sign(sd, sn, PC_RSA_HASH_SHA512, sig));
 
     // Full request = P || string( string("rsa-sha2-512") || string(sig) ).
     uint8_t pkt[1024];

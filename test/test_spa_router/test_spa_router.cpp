@@ -36,22 +36,22 @@ void test_has_extension(void)
 
 void test_route(void)
 {
-    TEST_ASSERT_EQUAL_INT(pc_spa_action::PC_SPA_SERVE_SHELL, pc_spa_route("/", "/api/"));
-    TEST_ASSERT_EQUAL_INT(pc_spa_action::PC_SPA_SERVE_SHELL, pc_spa_route("", "/api/"));
-    TEST_ASSERT_EQUAL_INT(pc_spa_action::PC_SPA_SERVE_SHELL, pc_spa_route("/dashboard", "/api/"));
-    TEST_ASSERT_EQUAL_INT(pc_spa_action::PC_SPA_SERVE_SHELL, pc_spa_route("/devices/42", "/api/"));
-    TEST_ASSERT_EQUAL_INT(pc_spa_action::PC_SPA_SERVE_FILE, pc_spa_route("/app.js", "/api/"));
-    TEST_ASSERT_EQUAL_INT(pc_spa_action::PC_SPA_SERVE_FILE, pc_spa_route("/assets/logo.svg", "/api/"));
-    TEST_ASSERT_EQUAL_INT(pc_spa_action::PC_SPA_PASSTHROUGH, pc_spa_route("/api/state", "/api/"));
-    TEST_ASSERT_EQUAL_INT(pc_spa_action::PC_SPA_PASSTHROUGH, pc_spa_route("/api/devices/42", "/api/"));
+    TEST_ASSERT_EQUAL_INT(PC_SPA_SERVE_SHELL, pc_spa_route("/", "/api/"));
+    TEST_ASSERT_EQUAL_INT(PC_SPA_SERVE_SHELL, pc_spa_route("", "/api/"));
+    TEST_ASSERT_EQUAL_INT(PC_SPA_SERVE_SHELL, pc_spa_route("/dashboard", "/api/"));
+    TEST_ASSERT_EQUAL_INT(PC_SPA_SERVE_SHELL, pc_spa_route("/devices/42", "/api/"));
+    TEST_ASSERT_EQUAL_INT(PC_SPA_SERVE_FILE, pc_spa_route("/app.js", "/api/"));
+    TEST_ASSERT_EQUAL_INT(PC_SPA_SERVE_FILE, pc_spa_route("/assets/logo.svg", "/api/"));
+    TEST_ASSERT_EQUAL_INT(PC_SPA_PASSTHROUGH, pc_spa_route("/api/state", "/api/"));
+    TEST_ASSERT_EQUAL_INT(PC_SPA_PASSTHROUGH, pc_spa_route("/api/devices/42", "/api/"));
     // No API prefix configured: an /api path is just a route.
-    TEST_ASSERT_EQUAL_INT(pc_spa_action::PC_SPA_SERVE_SHELL, pc_spa_route("/api/state", NULL));
+    TEST_ASSERT_EQUAL_INT(PC_SPA_SERVE_SHELL, pc_spa_route("/api/state", NULL));
     // Null path: bail out before touching it.
-    TEST_ASSERT_EQUAL_INT(pc_spa_action::PC_SPA_SERVE_SHELL, pc_spa_route(NULL, "/api/"));
+    TEST_ASSERT_EQUAL_INT(PC_SPA_SERVE_SHELL, pc_spa_route(NULL, "/api/"));
     // A path that doesn't start with '/' is neither the empty/root case nor under the prefix.
-    TEST_ASSERT_EQUAL_INT(pc_spa_action::PC_SPA_SERVE_FILE, pc_spa_route("relative.txt", "/api/"));
+    TEST_ASSERT_EQUAL_INT(PC_SPA_SERVE_FILE, pc_spa_route("relative.txt", "/api/"));
     // Non-null but empty API prefix: treated as "none configured".
-    TEST_ASSERT_EQUAL_INT(pc_spa_action::PC_SPA_SERVE_SHELL, pc_spa_route("/dashboard", ""));
+    TEST_ASSERT_EQUAL_INT(PC_SPA_SERVE_SHELL, pc_spa_route("/dashboard", ""));
 }
 
 // --- fallback HMI ---------------------------------------------------------
@@ -69,31 +69,31 @@ static pc_spa_ctx healthy_ctx(void)
 void test_route_ex_healthy_matches_the_plain_router(void)
 {
     pc_spa_ctx c = healthy_ctx();
-    TEST_ASSERT_EQUAL_INT(pc_spa_action::PC_SPA_SERVE_SHELL, pc_spa_route_ex("/dashboard", &c));
-    TEST_ASSERT_EQUAL_INT(pc_spa_action::PC_SPA_SERVE_FILE, pc_spa_route_ex("/app.js", &c));
-    TEST_ASSERT_EQUAL_INT(pc_spa_action::PC_SPA_PASSTHROUGH, pc_spa_route_ex("/api/state", &c));
+    TEST_ASSERT_EQUAL_INT(PC_SPA_SERVE_SHELL, pc_spa_route_ex("/dashboard", &c));
+    TEST_ASSERT_EQUAL_INT(PC_SPA_SERVE_FILE, pc_spa_route_ex("/app.js", &c));
+    TEST_ASSERT_EQUAL_INT(PC_SPA_PASSTHROUGH, pc_spa_route_ex("/api/state", &c));
 }
 
 void test_missing_shell_falls_back(void)
 {
     pc_spa_ctx c = healthy_ctx();
     c.shell_available = PROTO_FALSE; // half-finished upload, wiped filesystem
-    TEST_ASSERT_EQUAL_INT(pc_spa_action::PC_SPA_SERVE_FALLBACK, pc_spa_route_ex("/dashboard", &c));
-    TEST_ASSERT_EQUAL_INT(pc_spa_action::PC_SPA_SERVE_FALLBACK, pc_spa_route_ex("/", &c));
+    TEST_ASSERT_EQUAL_INT(PC_SPA_SERVE_FALLBACK, pc_spa_route_ex("/dashboard", &c));
+    TEST_ASSERT_EQUAL_INT(PC_SPA_SERVE_FALLBACK, pc_spa_route_ex("/", &c));
 }
 
 void test_non_scripting_client_falls_back(void)
 {
     pc_spa_ctx c = healthy_ctx();
     c.client_scripting = PROTO_FALSE; // curl, a text browser, scripting disabled
-    TEST_ASSERT_EQUAL_INT(pc_spa_action::PC_SPA_SERVE_FALLBACK, pc_spa_route_ex("/devices/42", &c));
+    TEST_ASSERT_EQUAL_INT(PC_SPA_SERVE_FALLBACK, pc_spa_route_ex("/devices/42", &c));
 }
 
 void test_degraded_device_falls_back(void)
 {
     pc_spa_ctx c = healthy_ctx();
     c.degraded = PROTO_TRUE; // recovery mode / failsafe / low memory
-    TEST_ASSERT_EQUAL_INT(pc_spa_action::PC_SPA_SERVE_FALLBACK, pc_spa_route_ex("/dashboard", &c));
+    TEST_ASSERT_EQUAL_INT(PC_SPA_SERVE_FALLBACK, pc_spa_route_ex("/dashboard", &c));
 }
 
 void test_api_still_passes_through_in_fallback(void)
@@ -104,8 +104,8 @@ void test_api_still_passes_through_in_fallback(void)
     c.shell_available = PROTO_FALSE;
     c.client_scripting = PROTO_FALSE;
     c.degraded = PROTO_TRUE;
-    TEST_ASSERT_EQUAL_INT(pc_spa_action::PC_SPA_PASSTHROUGH, pc_spa_route_ex("/api/stop", &c));
-    TEST_ASSERT_EQUAL_INT(pc_spa_action::PC_SPA_PASSTHROUGH, pc_spa_route_ex("/api/state", &c));
+    TEST_ASSERT_EQUAL_INT(PC_SPA_PASSTHROUGH, pc_spa_route_ex("/api/stop", &c));
+    TEST_ASSERT_EQUAL_INT(PC_SPA_PASSTHROUGH, pc_spa_route_ex("/api/state", &c));
 }
 
 void test_assets_are_unaffected_by_degradation(void)
@@ -115,12 +115,12 @@ void test_assets_are_unaffected_by_degradation(void)
     pc_spa_ctx c = healthy_ctx();
     c.shell_available = PROTO_FALSE;
     c.degraded = PROTO_TRUE;
-    TEST_ASSERT_EQUAL_INT(pc_spa_action::PC_SPA_SERVE_FILE, pc_spa_route_ex("/style.css", &c));
+    TEST_ASSERT_EQUAL_INT(PC_SPA_SERVE_FILE, pc_spa_route_ex("/style.css", &c));
 }
 
 void test_route_ex_null_ctx_degrades_to_the_plain_router(void)
 {
-    TEST_ASSERT_EQUAL_INT(pc_spa_action::PC_SPA_SERVE_SHELL, pc_spa_route_ex("/dashboard", NULL));
+    TEST_ASSERT_EQUAL_INT(PC_SPA_SERVE_SHELL, pc_spa_route_ex("/dashboard", NULL));
 }
 
 // --- conditional UI streaming ---------------------------------------------
@@ -146,9 +146,9 @@ static const pc_ui_fragment FRAGS[] = {
 };
 
 // Drain a stream through a buffer of exactly `chunk` bytes.
-static std::string drain(pc_ui_stream *s, size_t chunk)
+static string drain(pc_ui_stream *s, size_t chunk)
 {
-    std::string out;
+    string out;
     char buf[64];
     size_t n;
     while ((n = pc_ui_stream_next(s, buf, chunk < sizeof(buf) ? chunk : sizeof(buf))) > 0)

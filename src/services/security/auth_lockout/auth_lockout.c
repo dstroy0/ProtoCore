@@ -38,7 +38,7 @@ LockoutBucket *find_bucket(LockoutCtx *c, const pc_ip *ip)
 {
     for (int i = 0; i < PC_AUTH_LOCKOUT_SLOTS; i++)
     {
-        if (c->buckets[i].addr.family != pc_ip_family::PC_IP_NONE && pc_ip_equal(&c->buckets[i].addr, ip))
+        if (c->buckets[i].addr.family != PC_IP_NONE && pc_ip_equal(&c->buckets[i].addr, ip))
         {
             return &c->buckets[i];
         }
@@ -89,7 +89,7 @@ void auth_lockout_fail(const pc_ip *ip, uint32_t now_ms)
         int lru = 0;
         for (int i = 0; i < PC_AUTH_LOCKOUT_SLOTS; i++)
         {
-            if (s_lock.buckets[i].addr.family == pc_ip_family::PC_IP_NONE)
+            if (s_lock.buckets[i].addr.family == PC_IP_NONE)
             {
                 slot = i;
                 break;
@@ -156,7 +156,7 @@ void auth_lockout_succeed(const pc_ip *ip)
     LockoutBucket *b = find_bucket(&s_lock, ip);
     if (b)
     {
-        b->addr.family = pc_ip_family::PC_IP_NONE;
+        b->addr.family = PC_IP_NONE;
         b->fails = 0;
         b->lock_ms = 0;
         b->lock_start_ms = 0;
@@ -168,7 +168,7 @@ void auth_lockout_reset(void)
 {
     for (int i = 0; i < PC_AUTH_LOCKOUT_SLOTS; i++)
     {
-        s_lock.buckets[i].addr.family = pc_ip_family::PC_IP_NONE;
+        s_lock.buckets[i].addr.family = PC_IP_NONE;
         s_lock.buckets[i].lock_start_ms = 0;
         s_lock.buckets[i].lock_ms = 0;
         s_lock.buckets[i].last_ms = 0;

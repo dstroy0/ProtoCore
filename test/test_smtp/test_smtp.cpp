@@ -16,12 +16,12 @@ namespace
 {
 struct Mock
 {
-    std::vector<std::string> replies; // server -> client, one per recv turn
+    std::vector<string> replies; // server -> client, one per recv turn
     size_t idx = 0;
-    std::string sent;                 // everything the client wrote
+    string sent;                      // everything the client wrote
     proto_bool dribble = PROTO_FALSE; // return replies one byte at a time (exercise the accumulate loop)
     size_t dribble_pos = 0;
-    std::string fail_send_prefix;       // a write beginning with this returns short (I/O failure)
+    string fail_send_prefix;            // a write beginning with this returns short (I/O failure)
     int upgrades = 0;                   // how many times the engine asked to go TLS
     proto_bool upgrade_ok = PROTO_TRUE; // make the simulated handshake fail
 };
@@ -54,7 +54,7 @@ int mock_recv(void *c, uint8_t *b, size_t cap)
     {
         return -1; // no more scripted data -> I/O error
     }
-    const std::string &r = m->replies[m->idx];
+    const string &r = m->replies[m->idx];
     if (m->dribble)
     {
         if (m->dribble_pos >= r.size())
@@ -81,7 +81,7 @@ int mock_recv(void *c, uint8_t *b, size_t cap)
 }
 
 // A standard successful conversation, with the message-acceptance reply configurable.
-std::vector<std::string> happy_replies()
+std::vector<string> happy_replies()
 {
     return {"220 mail.example.net ESMTP\r\n",
             "250-mail.example.net\r\n250 OK\r\n",
@@ -128,18 +128,18 @@ void test_happy_path_no_auth()
     SmtpMessage msg = base_msg();
     TEST_ASSERT_EQUAL_INT(SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, NULL, &m));
     // Commands, in order.
-    TEST_ASSERT_TRUE(m.sent.find("EHLO esp32\r\n") != std::string::npos);
-    TEST_ASSERT_TRUE(m.sent.find("MAIL FROM:<device@example.net>\r\n") != std::string::npos);
-    TEST_ASSERT_TRUE(m.sent.find("RCPT TO:<ops@example.net>\r\n") != std::string::npos);
-    TEST_ASSERT_TRUE(m.sent.find("DATA\r\n") != std::string::npos);
-    TEST_ASSERT_TRUE(m.sent.find("QUIT\r\n") != std::string::npos);
+    TEST_ASSERT_TRUE(m.sent.find("EHLO esp32\r\n") != string::npos);
+    TEST_ASSERT_TRUE(m.sent.find("MAIL FROM:<device@example.net>\r\n") != string::npos);
+    TEST_ASSERT_TRUE(m.sent.find("RCPT TO:<ops@example.net>\r\n") != string::npos);
+    TEST_ASSERT_TRUE(m.sent.find("DATA\r\n") != string::npos);
+    TEST_ASSERT_TRUE(m.sent.find("QUIT\r\n") != string::npos);
     // Message headers + body + terminator.
-    TEST_ASSERT_TRUE(m.sent.find("Subject: Alert\r\n") != std::string::npos);
-    TEST_ASSERT_TRUE(m.sent.find("To: <ops@example.net>\r\n") != std::string::npos);
-    TEST_ASSERT_TRUE(m.sent.find("sensor tripped\r\n") != std::string::npos);
-    TEST_ASSERT_TRUE(m.sent.find("\r\n.\r\n") != std::string::npos); // end-of-DATA
+    TEST_ASSERT_TRUE(m.sent.find("Subject: Alert\r\n") != string::npos);
+    TEST_ASSERT_TRUE(m.sent.find("To: <ops@example.net>\r\n") != string::npos);
+    TEST_ASSERT_TRUE(m.sent.find("sensor tripped\r\n") != string::npos);
+    TEST_ASSERT_TRUE(m.sent.find("\r\n.\r\n") != string::npos); // end-of-DATA
     // No AUTH when no user configured.
-    TEST_ASSERT_TRUE(m.sent.find("AUTH") == std::string::npos);
+    TEST_ASSERT_TRUE(m.sent.find("AUTH") == string::npos);
 }
 
 void test_auth_login()
@@ -152,9 +152,9 @@ void test_auth_login()
     c.pass = "pass";
     SmtpMessage msg = base_msg();
     TEST_ASSERT_EQUAL_INT(SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, NULL, &m));
-    TEST_ASSERT_TRUE(m.sent.find("AUTH LOGIN\r\n") != std::string::npos);
-    TEST_ASSERT_TRUE(m.sent.find("dXNlcg==\r\n") != std::string::npos); // base64("user")
-    TEST_ASSERT_TRUE(m.sent.find("cGFzcw==\r\n") != std::string::npos); // base64("pass")
+    TEST_ASSERT_TRUE(m.sent.find("AUTH LOGIN\r\n") != string::npos);
+    TEST_ASSERT_TRUE(m.sent.find("dXNlcg==\r\n") != string::npos); // base64("user")
+    TEST_ASSERT_TRUE(m.sent.find("cGFzcw==\r\n") != string::npos); // base64("pass")
 }
 
 void test_auth_rejected()
@@ -203,9 +203,9 @@ void test_dot_stuffing()
     SmtpMessage msg = base_msg();
     msg.body = "line1\n.hidden\n..two dots\nlast"; // lines starting with '.' must be stuffed
     TEST_ASSERT_EQUAL_INT(SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, NULL, &m));
-    TEST_ASSERT_TRUE(m.sent.find("..hidden\r\n") != std::string::npos);    // '.' -> '..'
-    TEST_ASSERT_TRUE(m.sent.find("...two dots\r\n") != std::string::npos); // '..' -> '...'
-    TEST_ASSERT_TRUE(m.sent.find("last\r\n.\r\n") != std::string::npos);   // real terminator intact
+    TEST_ASSERT_TRUE(m.sent.find("..hidden\r\n") != string::npos);    // '.' -> '..'
+    TEST_ASSERT_TRUE(m.sent.find("...two dots\r\n") != string::npos); // '..' -> '...'
+    TEST_ASSERT_TRUE(m.sent.find("last\r\n.\r\n") != string::npos);   // real terminator intact
 }
 
 void test_multiline_reply_and_lf_body()
@@ -216,7 +216,7 @@ void test_multiline_reply_and_lf_body()
     SmtpMessage msg = base_msg();
     msg.body = "a\nb"; // bare LF must be normalized to CRLF
     TEST_ASSERT_EQUAL_INT(SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, NULL, &m));
-    TEST_ASSERT_TRUE(m.sent.find("a\r\nb\r\n") != std::string::npos);
+    TEST_ASSERT_TRUE(m.sent.find("a\r\nb\r\n") != string::npos);
 }
 
 void test_partial_reads_dribble()
@@ -248,7 +248,7 @@ void test_io_error_when_server_hangs()
 }
 
 // Run a dialogue with the given scripted replies and return smtp_run's result.
-static SmtpResult dialogue(std::vector<std::string> replies, SmtpConfig c, SmtpMessage msg)
+static SmtpResult dialogue(std::vector<string> replies, SmtpConfig c, SmtpMessage msg)
 {
     Mock m;
     m.replies = std::move(replies);
@@ -259,7 +259,7 @@ static SmtpResult dialogue(std::vector<std::string> replies, SmtpConfig c, SmtpM
 // buffer; smtp_run maps that to an I/O error on the greeting read.
 void test_reply_buffer_overflow()
 {
-    std::string huge;
+    string huge;
     while (huge.size() < 600)
     {
         huge += "250-continuation\r\n"; // > PC_SMTP_REPLY_MAX, no final line
@@ -293,7 +293,7 @@ void test_body_send_fails()
 void test_auth_secret_too_long()
 {
     SmtpConfig c = base_cfg();
-    std::string longuser(400, 'u'); // base64 grows it past PC_SMTP_LINE_MAX
+    string longuser(400, 'u'); // base64 grows it past PC_SMTP_LINE_MAX
     c.user = longuser.c_str();
     c.pass = "pw";
     TEST_ASSERT_EQUAL_INT(SMTP_ERR_OVERFLOW, dialogue({"220 ESMTP\r\n", "250 OK\r\n", "334 x\r\n"}, c, base_msg()));
@@ -344,7 +344,7 @@ void test_protocol_error_at_each_step()
 // field (helo / from / to) is longer than PC_SMTP_LINE_MAX.
 void test_command_line_overflows()
 {
-    std::string big(300, 'z');
+    string big(300, 'z');
     SmtpConfig ch = base_cfg();
     ch.helo = big.c_str();
     TEST_ASSERT_EQUAL_INT(SMTP_ERR_OVERFLOW, dialogue({"220 x\r\n"}, ch, base_msg())); // EHLO line
@@ -362,7 +362,7 @@ void test_command_line_overflows()
 // A header field so long that the message headers do not fit -> build_message overflow.
 void test_message_header_overflow()
 {
-    std::string bigsub(2100, 'S');
+    string bigsub(2100, 'S');
     SmtpMessage msg = base_msg();
     msg.subject = bigsub.c_str();
     TEST_ASSERT_EQUAL_INT(
@@ -379,7 +379,7 @@ void test_cr_in_body_dropped()
     SmtpMessage msg = base_msg();
     msg.body = "x\r\ny"; // the bare CR is stripped, the LF becomes CRLF
     TEST_ASSERT_EQUAL_INT(SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, NULL, &m));
-    TEST_ASSERT_TRUE(m.sent.find("x\r\ny\r\n") != std::string::npos);
+    TEST_ASSERT_TRUE(m.sent.find("x\r\ny\r\n") != string::npos);
 }
 
 // Sweep the body length across the DATA-buffer boundary so every build_message overflow
@@ -387,14 +387,14 @@ void test_cr_in_body_dropped()
 // own boundary length, without hard-coding exact byte counts.
 void test_build_message_boundary_overflows()
 {
-    const std::vector<std::string> to_data = {"220 x\r\n", "250 OK\r\n", "250 Ok\r\n", "250 Ok\r\n", "354 go\r\n"};
+    const std::vector<string> to_data = {"220 x\r\n", "250 OK\r\n", "250 Ok\r\n", "250 Ok\r\n", "354 go\r\n"};
     proto_bool saw_overflow = PROTO_FALSE;
     for (size_t L = 1850; L <= 2060; L++)
     {
-        std::string base(L, 'x');
-        for (const std::string &suffix : {std::string(""), std::string("\n"), std::string("\n.")})
+        string base(L, 'x');
+        for (const string &suffix : {string(""), string("\n"), string("\n.")})
         {
-            std::string body = base + suffix;
+            string body = base + suffix;
             SmtpMessage msg = base_msg();
             msg.body = body.c_str();
             SmtpResult r = dialogue(to_data, base_cfg(), msg);
@@ -444,11 +444,11 @@ void test_starttls_upgrades_and_reissues_ehlo()
     SmtpMessage msg = base_msg();
     TEST_ASSERT_EQUAL_INT(SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, mock_starttls, &m));
     TEST_ASSERT_EQUAL_INT(1, m.upgrades);
-    TEST_ASSERT_TRUE(m.sent.find("STARTTLS\r\n") != std::string::npos);
+    TEST_ASSERT_TRUE(m.sent.find("STARTTLS\r\n") != string::npos);
     // RFC 3207 sec 4.2: EHLO must be reissued after the upgrade, so it appears twice.
     size_t first = m.sent.find("EHLO");
-    TEST_ASSERT_TRUE(first != std::string::npos);
-    TEST_ASSERT_TRUE(m.sent.find("EHLO", first + 1) != std::string::npos);
+    TEST_ASSERT_TRUE(first != string::npos);
+    TEST_ASSERT_TRUE(m.sent.find("EHLO", first + 1) != string::npos);
     // and the upgrade must precede the message data
     TEST_ASSERT_TRUE(m.sent.find("STARTTLS\r\n") < m.sent.find("MAIL FROM"));
 }
@@ -469,9 +469,9 @@ void test_starttls_not_advertised_fails_before_auth()
     SmtpMessage msg = base_msg();
     TEST_ASSERT_EQUAL_INT(SMTP_ERR_NO_STARTTLS, smtp_run(&c, &msg, mock_send, mock_recv, mock_starttls, &m));
     TEST_ASSERT_EQUAL_INT(0, m.upgrades);
-    TEST_ASSERT_TRUE(m.sent.find("AUTH") == std::string::npos);         // no credentials offered
-    TEST_ASSERT_TRUE(m.sent.find("aHVudGVyMg==") == std::string::npos); // base64("hunter2")
-    TEST_ASSERT_TRUE(m.sent.find("MAIL FROM") == std::string::npos);    // and no message body
+    TEST_ASSERT_TRUE(m.sent.find("AUTH") == string::npos);         // no credentials offered
+    TEST_ASSERT_TRUE(m.sent.find("aHVudGVyMg==") == string::npos); // base64("hunter2")
+    TEST_ASSERT_TRUE(m.sent.find("MAIL FROM") == string::npos);    // and no message body
 }
 
 void test_starttls_partial_keyword_is_not_a_match()
@@ -521,7 +521,7 @@ void test_starttls_handshake_failure_aborts()
     SmtpMessage msg = base_msg();
     TEST_ASSERT_EQUAL_INT(SMTP_ERR_TLS, smtp_run(&c, &msg, mock_send, mock_recv, mock_starttls, &m));
     TEST_ASSERT_EQUAL_INT(1, m.upgrades);
-    TEST_ASSERT_TRUE(m.sent.find("MAIL FROM") == std::string::npos); // nothing sent after a failed upgrade
+    TEST_ASSERT_TRUE(m.sent.find("MAIL FROM") == string::npos); // nothing sent after a failed upgrade
 }
 
 void test_starttls_without_an_upgrade_callback_is_an_arg_error()
@@ -549,7 +549,7 @@ void test_plain_ignores_an_advertised_starttls()
     SmtpMessage msg = base_msg();
     TEST_ASSERT_EQUAL_INT(SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, mock_starttls, &m));
     TEST_ASSERT_EQUAL_INT(0, m.upgrades);
-    TEST_ASSERT_TRUE(m.sent.find("STARTTLS\r\n") == std::string::npos);
+    TEST_ASSERT_TRUE(m.sent.find("STARTTLS\r\n") == string::npos);
 }
 
 // --- reply parsing edges --------------------------------------------------
@@ -573,7 +573,7 @@ void test_reply_parser_skips_malformed_lines()
     {
         Mock m;
         m.replies = happy_replies();
-        m.replies[0] = std::string(junk[i]) + "220 mail.example.net ESMTP\r\n";
+        m.replies[0] = string(junk[i]) + "220 mail.example.net ESMTP\r\n";
         SmtpConfig c = base_cfg();
         SmtpMessage msg = base_msg();
         TEST_ASSERT_EQUAL_INT(SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, NULL, &m));
@@ -632,9 +632,9 @@ void test_null_optional_fields()
         msg.subject = NULL;
         msg.body = NULL;
         TEST_ASSERT_EQUAL_INT(SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, NULL, &m));
-        TEST_ASSERT_TRUE(m.sent.find("EHLO esp32\r\n") != std::string::npos);
-        TEST_ASSERT_TRUE(m.sent.find("Subject: \r\n") != std::string::npos); // empty, not "(null)"
-        TEST_ASSERT_TRUE(m.sent.find("\r\n\r\n.\r\n") != std::string::npos); // empty body, then the terminator
+        TEST_ASSERT_TRUE(m.sent.find("EHLO esp32\r\n") != string::npos);
+        TEST_ASSERT_TRUE(m.sent.find("Subject: \r\n") != string::npos); // empty, not "(null)"
+        TEST_ASSERT_TRUE(m.sent.find("\r\n\r\n.\r\n") != string::npos); // empty body, then the terminator
     }
 }
 
@@ -649,8 +649,8 @@ void test_null_password_sends_empty_secret()
     c.pass = NULL;
     SmtpMessage msg = base_msg();
     TEST_ASSERT_EQUAL_INT(SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, NULL, &m));
-    TEST_ASSERT_TRUE(m.sent.find("dXNlcg==\r\n") != std::string::npos); // base64("user")
-    TEST_ASSERT_TRUE(m.sent.find("AUTH LOGIN\r\n\r\n") == std::string::npos);
+    TEST_ASSERT_TRUE(m.sent.find("dXNlcg==\r\n") != string::npos); // base64("user")
+    TEST_ASSERT_TRUE(m.sent.find("AUTH LOGIN\r\n\r\n") == string::npos);
 }
 
 // An empty username means "no credentials configured", exactly as a null one does: the
@@ -664,7 +664,7 @@ void test_empty_user_skips_auth()
     c.pass = "pw";
     SmtpMessage msg = base_msg();
     TEST_ASSERT_EQUAL_INT(SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, NULL, &m));
-    TEST_ASSERT_TRUE(m.sent.find("AUTH") == std::string::npos);
+    TEST_ASSERT_TRUE(m.sent.find("AUTH") == string::npos);
 }
 
 // Every required argument is checked before a single byte goes out.

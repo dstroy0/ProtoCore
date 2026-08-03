@@ -20,11 +20,11 @@ void tearDown(void)
 }
 
 // RAM-backed WalDev.
-struct RamDisk
+typedef struct
 {
     uint8_t *buf;
     uint64_t size;
-};
+} RamDisk;
 static size_t ram_read(void *ctx, uint64_t off, uint8_t *buf, size_t len)
 {
     RamDisk *d = (RamDisk *)ctx;

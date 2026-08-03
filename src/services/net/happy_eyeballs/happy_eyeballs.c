@@ -13,22 +13,22 @@
 // Effective family for interleave: an IPv4-mapped IPv6 address is treated as IPv4.
 static proto_bool eff_is_v6(const pc_ip *ip)
 {
-    return ip->family == pc_ip_family::PC_IP_V6 && !pc_ip_is_v4_mapped(ip);
+    return ip->family == PC_IP_V6 && !pc_ip_is_v4_mapped(ip);
 }
 
 static int scope_rank(const pc_ip *ip)
 {
     switch (pc_ip_classify(ip))
     {
-    case pc_ip_scope::PC_IP_SCOPE_GLOBAL:
+    case PC_IP_SCOPE_GLOBAL:
         return 5;
-    case pc_ip_scope::PC_IP_SCOPE_PRIVATE:
+    case PC_IP_SCOPE_PRIVATE:
         return 4;
-    case pc_ip_scope::PC_IP_SCOPE_LINK_LOCAL:
+    case PC_IP_SCOPE_LINK_LOCAL:
         return 3;
-    case pc_ip_scope::PC_IP_SCOPE_LOOPBACK:
+    case PC_IP_SCOPE_LOOPBACK:
         return 2;
-    case pc_ip_scope::PC_IP_SCOPE_MULTICAST:
+    case PC_IP_SCOPE_MULTICAST:
         return 1;
     default:
         return 0; // unspecified
@@ -37,7 +37,7 @@ static int scope_rank(const pc_ip *ip)
 
 int pc_he_pref(const pc_ip *ip)
 {
-    if (!ip || ip->family == pc_ip_family::PC_IP_NONE)
+    if (!ip || ip->family == PC_IP_NONE)
     {
         return -1;
     }

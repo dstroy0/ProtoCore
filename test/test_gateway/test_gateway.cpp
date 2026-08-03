@@ -102,14 +102,14 @@ void tearDown()
 
 void test_uplink_envelopes_and_publishes()
 {
-    TEST_ASSERT_TRUE(add_port(0, pc_gateway_kind::PC_GW_LORA, 0, PROTO_FALSE));
+    TEST_ASSERT_TRUE(add_port(0, PC_GW_LORA, 0, PROTO_FALSE));
     pc_gateway_set_uplink_cb(cap_uplink, NULL);
     const uint8_t hi[2] = {'h', 'i'};
     TEST_ASSERT_TRUE(pc_gateway_uplink(0, 0x42, hi, 2, -50));
     TEST_ASSERT_EQUAL_size_t(1, g_up.size());
     TEST_ASSERT_EQUAL_UINT16(0x42, g_up[0].src_addr);
     TEST_ASSERT_EQUAL_UINT8(0, g_up[0].port_id);
-    TEST_ASSERT_EQUAL_UINT8(pc_gateway_kind::PC_GW_LORA, g_up[0].kind);
+    TEST_ASSERT_EQUAL_UINT8(PC_GW_LORA, g_up[0].kind);
     TEST_ASSERT_EQUAL_INT16(-50, g_up[0].rssi);
     TEST_ASSERT_EQUAL_UINT32(0, g_up[0].seq);
     TEST_ASSERT_EQUAL_MEMORY(hi, g_up[0].payload.data(), 2);
@@ -118,7 +118,7 @@ void test_uplink_envelopes_and_publishes()
 
 void test_uplink_no_sink_drops()
 {
-    add_port(0, pc_gateway_kind::PC_GW_LORA, 0, PROTO_FALSE); // no pc_gateway_set_uplink_cb()
+    add_port(0, PC_GW_LORA, 0, PROTO_FALSE); // no pc_gateway_set_uplink_cb()
     const uint8_t x[1] = {1};
     TEST_ASSERT_FALSE(pc_gateway_uplink(0, 1, x, 1, 0));
     TEST_ASSERT_EQUAL_UINT32(1, stats().up_dropped);
@@ -136,7 +136,7 @@ void test_uplink_unknown_port_drops()
 
 void test_uplink_rate_cap()
 {
-    add_port(0, pc_gateway_kind::PC_GW_NRF24, 2, PROTO_FALSE); // 2 uplinks / second
+    add_port(0, PC_GW_NRF24, 2, PROTO_FALSE); // 2 uplinks / second
     pc_gateway_set_uplink_cb(cap_uplink, NULL);
     const uint8_t x[1] = {7};
     TEST_ASSERT_TRUE(pc_gateway_uplink(0, 1, x, 1, 0));
@@ -151,7 +151,7 @@ void test_uplink_rate_cap()
 
 void test_uplink_sink_refusal_counted()
 {
-    add_port(0, pc_gateway_kind::PC_GW_LORA, 0, PROTO_FALSE);
+    add_port(0, PC_GW_LORA, 0, PROTO_FALSE);
     pc_gateway_set_uplink_cb(cap_uplink, NULL);
     g_up_accept = PROTO_FALSE; // northbound stack refuses
     const uint8_t x[1] = {1};
@@ -162,7 +162,7 @@ void test_uplink_sink_refusal_counted()
 
 void test_downlink_transmits()
 {
-    add_port(0, pc_gateway_kind::PC_GW_LORA, 0, PROTO_TRUE); // with a tx callback
+    add_port(0, PC_GW_LORA, 0, PROTO_TRUE); // with a tx callback
     const uint8_t cmd[3] = {'c', 'm', 'd'};
     TEST_ASSERT_TRUE(pc_gateway_downlink(0, 0x10, cmd, 3));
     TEST_ASSERT_EQUAL_size_t(1, g_down.size());
@@ -174,7 +174,7 @@ void test_downlink_transmits()
 
 void test_downlink_no_tx_or_unknown_port_drops()
 {
-    add_port(0, pc_gateway_kind::PC_GW_LORA, 0, PROTO_FALSE); // receive-only (null tx)
+    add_port(0, PC_GW_LORA, 0, PROTO_FALSE); // receive-only (null tx)
     const uint8_t x[1] = {1};
     TEST_ASSERT_FALSE(pc_gateway_downlink(0, 1, x, 1)); // no tx
     TEST_ASSERT_FALSE(pc_gateway_downlink(9, 1, x, 1)); // unknown port
@@ -183,7 +183,7 @@ void test_downlink_no_tx_or_unknown_port_drops()
 
 void test_downlink_tx_refusal_counted()
 {
-    add_port(0, pc_gateway_kind::PC_GW_LORA, 0, PROTO_TRUE);
+    add_port(0, PC_GW_LORA, 0, PROTO_TRUE);
     g_tx_accept = PROTO_FALSE; // radio refuses
     const uint8_t x[1] = {1};
     TEST_ASSERT_FALSE(pc_gateway_downlink(0, 1, x, 1));
@@ -217,17 +217,17 @@ void test_topic_format()
 void test_add_port_validation_and_table_full()
 {
     TEST_ASSERT_FALSE(pc_gateway_add_port(NULL));
-    TEST_ASSERT_TRUE(add_port(0, pc_gateway_kind::PC_GW_LORA, 0, PROTO_FALSE));
-    TEST_ASSERT_FALSE(add_port(0, pc_gateway_kind::PC_GW_LORA, 0, PROTO_FALSE)); // duplicate id
-    TEST_ASSERT_TRUE(add_port(1, pc_gateway_kind::PC_GW_NRF24, 0, PROTO_FALSE));
-    TEST_ASSERT_TRUE(add_port(2, pc_gateway_kind::PC_GW_ZIGBEE, 0, PROTO_FALSE));
-    TEST_ASSERT_TRUE(add_port(3, pc_gateway_kind::PC_GW_BLE, 0, PROTO_FALSE));
-    TEST_ASSERT_FALSE(add_port(4, pc_gateway_kind::PC_GW_LORA, 0, PROTO_FALSE)); // table full (PC_GW_MAX_PORTS = 4)
+    TEST_ASSERT_TRUE(add_port(0, PC_GW_LORA, 0, PROTO_FALSE));
+    TEST_ASSERT_FALSE(add_port(0, PC_GW_LORA, 0, PROTO_FALSE)); // duplicate id
+    TEST_ASSERT_TRUE(add_port(1, PC_GW_NRF24, 0, PROTO_FALSE));
+    TEST_ASSERT_TRUE(add_port(2, PC_GW_ZIGBEE, 0, PROTO_FALSE));
+    TEST_ASSERT_TRUE(add_port(3, PC_GW_BLE, 0, PROTO_FALSE));
+    TEST_ASSERT_FALSE(add_port(4, PC_GW_LORA, 0, PROTO_FALSE)); // table full (PC_GW_MAX_PORTS = 4)
 }
 
 void test_seq_increments_per_uplink()
 {
-    add_port(0, pc_gateway_kind::PC_GW_LORA, 0, PROTO_FALSE);
+    add_port(0, PC_GW_LORA, 0, PROTO_FALSE);
     pc_gateway_set_uplink_cb(cap_uplink, NULL);
     const uint8_t x[1] = {1};
     pc_gateway_uplink(0, 1, x, 1, 0);
@@ -256,7 +256,7 @@ void test_topic_zero_and_overflow_steps()
 
 void test_get_stats_null_out_is_noop()
 {
-    add_port(0, pc_gateway_kind::PC_GW_LORA, 0, PROTO_FALSE);
+    add_port(0, PC_GW_LORA, 0, PROTO_FALSE);
     pc_gateway_set_uplink_cb(cap_uplink, NULL);
     const uint8_t x[1] = {1};
     pc_gateway_uplink(0, 1, x, 1, 0);
