@@ -7204,9 +7204,6 @@
 "native_ssh_pqc",
 "native_swar"
 ],
-"test/mocks/FS.h": [
-"native_upload"
-],
 "test/mocks/pc_net_host.h": [
 "native_accept_gate",
 "native_ad9238",
