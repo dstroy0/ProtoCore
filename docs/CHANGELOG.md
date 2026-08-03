@@ -54,6 +54,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`7655c0f`](https://github.com/dstroy0/ProtoCore/commit/7655c0f9094b498f5861e50d3bbec186bff3751d))
 - update CHANGELOG.md [skip ci] ([`9919310`](https://github.com/dstroy0/ProtoCore/commit/99193102fbfe83b29a97f8cb9e1d2a5b15842b0e))
 - update CHANGELOG.md [skip ci] ([`154f7e9`](https://github.com/dstroy0/ProtoCore/commit/154f7e9141faa3da71d7291c7178eda3a07db0d3))
 - update CHANGELOG.md [skip ci] ([`94177b3`](https://github.com/dstroy0/ProtoCore/commit/94177b3bbc8e3f61111853a2e290fb1d0b40f62d))
@@ -337,6 +338,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Refactor
 
+- the member initializers the renamed files still carried ([`b87038c`](https://github.com/dstroy0/ProtoCore/commit/b87038c6306c112de285fa90b87514710561b9a2))
 - convert the last ten src/ .cpp files except ssh_transport ([`667989a`](https://github.com/dstroy0/ProtoCore/commit/667989ac9e0be11e2d64b37313e371d39aeeabd5))
 - drop the enum scope qualifiers and the last peripheral member initializers ([`499751f`](https://github.com/dstroy0/ProtoCore/commit/499751f19ae1b827a4ad2b4538be87e15984bab8))
 - fifteen more src/ .cpp files that were already C become .c ([`59d01c2`](https://github.com/dstroy0/ProtoCore/commit/59d01c2f6df213ef8d6da041eccb31f70e6a48a7))
