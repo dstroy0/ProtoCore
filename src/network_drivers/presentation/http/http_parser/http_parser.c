@@ -200,7 +200,7 @@ void http_parser_reset(HttpReq *req)
         s_hp.stream_abort(req);
     }
 #endif
-    *req = {};         // zero all fields
+    *req = (HttpReq){0}; // zero all fields
     req->slot_id = id; // restore slot identity
     req->parse_state = PARSE_METHOD;
     req->_version_hash = PC_FNV_OFFSET; // seed the FNV-1a accumulator
