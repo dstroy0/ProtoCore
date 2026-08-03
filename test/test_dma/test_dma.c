@@ -130,7 +130,7 @@ void test_ingress_emits_rx_event()
     TEST_ASSERT_EQUAL_size_t(1, count_dir(PC_DMA_RX));
     TEST_ASSERT_EQUAL_UINT16(5, g_ev[0].len);
     TEST_ASSERT_EQUAL_UINT8(0, g_ev[0].channel);
-    TEST_ASSERT_EQUAL_MEMORY(msg, g_ev[0].data.data(), sizeof(msg));
+    TEST_ASSERT_EQUAL_MEMORY(msg, g_ev[0].data, sizeof(msg));
 }
 
 void test_buffer_fills_then_partial_flush()
@@ -264,12 +264,12 @@ void test_two_channels_independent()
         if (g_ev[i].channel == 0)
         {
             ch0++;
-            TEST_ASSERT_EQUAL_MEMORY(a, g_ev[i].data.data(), sizeof(a));
+            TEST_ASSERT_EQUAL_MEMORY(a, g_ev[i].data, sizeof(a));
         }
         else if (g_ev[i].channel == 1)
         {
             ch1++;
-            TEST_ASSERT_EQUAL_MEMORY(b, g_ev[i].data.data(), sizeof(b));
+            TEST_ASSERT_EQUAL_MEMORY(b, g_ev[i].data, sizeof(b));
         }
     }
     TEST_ASSERT_EQUAL_size_t(1, ch0);
