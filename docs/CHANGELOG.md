@@ -54,6 +54,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`9592949`](https://github.com/dstroy0/ProtoCore/commit/95929499fad7942466f3746074e6204f2b2c9923))
 - update CHANGELOG.md [skip ci] ([`eab059e`](https://github.com/dstroy0/ProtoCore/commit/eab059e23e8ff97b50c50956504a48237855682a))
 - update CHANGELOG.md [skip ci] ([`c7c9078`](https://github.com/dstroy0/ProtoCore/commit/c7c90789b343c8a3d107628c93a16022eb221768))
 - update CHANGELOG.md [skip ci] ([`a042d94`](https://github.com/dstroy0/ProtoCore/commit/a042d9470615b7ed0f905e2955862738a76d9549))
@@ -346,6 +347,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- stop tcp_capture_disable() from wiping the capture, build arena.c for native_workers ([`227973e`](https://github.com/dstroy0/ProtoCore/commit/227973e458c65403fd56c0501f71f7b86d90b499))
 - give the host seam the write-failure hook the lwIP mock owned ([`b763ab2`](https://github.com/dstroy0/ProtoCore/commit/b763ab20740765865c0e261cf53102fdeb92b3eb))
 - convert the workers suite to C ([`b8ad778`](https://github.com/dstroy0/ProtoCore/commit/b8ad7784d14fa3e5cf36a78fde9f23233f3998cc))
 - drop the default arguments from build_v3_raw_scoped ([`caae75e`](https://github.com/dstroy0/ProtoCore/commit/caae75e08551e7fd2b2cde50023e23a747505f91))
