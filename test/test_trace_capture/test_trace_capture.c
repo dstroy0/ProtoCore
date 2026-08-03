@@ -9,29 +9,33 @@
 
 #include "server/signaling/trace_capture.h"
 #include <unity.h>
-#include <vector>
 
-struct CapturedWindow
+typedef struct
 {
-    std::vector<uint16_t> samples;
+    uint16_t samples[1024];
+    size_t samples_len;
     uint16_t pretrigger_samples;
     uint32_t trace_id;
-};
+} CapturedWindow;
 
-static std::vector<CapturedWindow> g_windows;
-
+static CapturedWindow g_windows[64];
+static size_t g_windows_n;
 static void on_window(const pc_tc_window *w, void *)
 {
     CapturedWindow cw;
-    cw.samples.assign(w->samples, w->samples + w->n_samples);
+    cw.samples_len = (size_t)(w->n_samples) < 1024 ? (size_t)(w->n_samples) : 1024;
+    memcpy(cw.samples, w->samples, cw.samples_len);
     cw.pretrigger_samples = w->pretrigger_samples;
     cw.trace_id = w->trace_id;
-    g_windows.push_back(cw);
+    if (g_windows_n < 64)
+    {
+        g_windows[g_windows_n++] = cw;
+    }
 }
 
 void setUp()
 {
-    g_windows.clear();
+    g_windows_n = 0;
     pc_tc_end();
 }
 void tearDown()
@@ -80,10 +84,10 @@ void test_pretrigger_ring_wraps_and_freezes_on_trigger()
     TEST_ASSERT_EQUAL_UINT16(4, pc_tc_feed(post, 4));
     TEST_ASSERT_FALSE(pc_tc_capturing()); // window completed, fired
 
-    TEST_ASSERT_EQUAL_size_t(1, g_windows.size());
+    TEST_ASSERT_EQUAL_size_t(1, g_windows_n);
     const CapturedWindow &w = g_windows[0];
     TEST_ASSERT_EQUAL_UINT16(4, w.pretrigger_samples);
-    TEST_ASSERT_EQUAL_size_t(8, w.samples.size());
+    TEST_ASSERT_EQUAL_size_t(8, w.samples_len);
     const uint16_t expect[] = {2, 3, 4, 5, 100, 101, 102, 103};
     for (int i = 0; i < 8; i++)
     {
@@ -108,7 +112,7 @@ void test_trigger_fail_closed_while_capturing()
     pc_tc_stats st;
     pc_tc_get_stats(&st);
     TEST_ASSERT_EQUAL_UINT32(1, st.triggers_dropped);
-    TEST_ASSERT_EQUAL_size_t(0, g_windows.size()); // still filling, no sink call yet
+    TEST_ASSERT_EQUAL_size_t(0, g_windows_n); // still filling, no sink call yet
 }
 
 void test_feed_before_begin_or_after_end_drops()
@@ -131,9 +135,9 @@ void test_zero_pretrigger_edge_case()
     TEST_ASSERT_TRUE(pc_tc_trigger());
     const uint16_t post[] = {7, 8, 9};
     TEST_ASSERT_EQUAL_UINT16(3, pc_tc_feed(post, 3));
-    TEST_ASSERT_EQUAL_size_t(1, g_windows.size());
+    TEST_ASSERT_EQUAL_size_t(1, g_windows_n);
     TEST_ASSERT_EQUAL_UINT16(0, g_windows[0].pretrigger_samples);
-    TEST_ASSERT_EQUAL_size_t(3, g_windows[0].samples.size());
+    TEST_ASSERT_EQUAL_size_t(3, g_windows[0].samples_len);
     TEST_ASSERT_EQUAL_UINT16(7, g_windows[0].samples[0]);
     TEST_ASSERT_EQUAL_UINT16(9, g_windows[0].samples[2]);
 }
@@ -149,7 +153,7 @@ void test_multiple_sequential_windows_increment_trace_id()
         const uint16_t post[] = {(uint16_t)(200 + i)};
         pc_tc_feed(post, 1);
     }
-    TEST_ASSERT_EQUAL_size_t(3, g_windows.size());
+    TEST_ASSERT_EQUAL_size_t(3, g_windows_n);
     for (int i = 0; i < 3; i++)
     {
         TEST_ASSERT_EQUAL_UINT32((uint32_t)i, g_windows[i].trace_id);
@@ -183,8 +187,8 @@ void test_zero_posttrigger_never_completes()
     TEST_ASSERT_TRUE(pc_tc_capturing());
     const uint16_t more[] = {4, 5};
     TEST_ASSERT_EQUAL_UINT16(2, pc_tc_feed(more, 2));
-    TEST_ASSERT_TRUE(pc_tc_capturing());           // still capturing, guard stayed false
-    TEST_ASSERT_EQUAL_size_t(0, g_windows.size()); // 0 post-samples -> never fires
+    TEST_ASSERT_TRUE(pc_tc_capturing());      // still capturing, guard stayed false
+    TEST_ASSERT_EQUAL_size_t(0, g_windows_n); // 0 post-samples -> never fires
 }
 
 void test_get_stats_null_and_capturing_when_unconfigured()

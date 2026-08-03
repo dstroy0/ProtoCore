@@ -13,19 +13,20 @@
 #include "services/net/gateway/gateway.h"
 #include <string.h>
 #include <unity.h>
-#include <vector>
 
-struct UpMsg
+typedef struct
 {
-    std::vector<uint8_t> payload;
+    uint8_t payload[512];
+    size_t payload_len;
     uint32_t seq;
     uint16_t src_addr;
     uint16_t len;
     int16_t rssi;
     uint8_t port_id;
     pc_gateway_kind kind;
-};
-static std::vector<UpMsg> g_up;
+} UpMsg;
+static UpMsg g_up[64];
+static size_t g_up_n;
 static proto_bool g_up_accept = PROTO_TRUE;
 
 static proto_bool cap_uplink(const pc_gateway_msg *m, void *)
@@ -35,24 +36,30 @@ static proto_bool cap_uplink(const pc_gateway_msg *m, void *)
         return PROTO_FALSE;
     }
     UpMsg u;
-    u.payload.assign(m->payload, m->payload + m->len);
+    u.payload_len = (size_t)(m->len) < 512 ? (size_t)(m->len) : 512;
+    memcpy(u.payload, m->payload, u.payload_len);
     u.seq = m->seq;
     u.src_addr = m->src_addr;
     u.len = m->len;
     u.rssi = m->rssi;
     u.port_id = m->port_id;
     u.kind = m->kind;
-    g_up.push_back(u);
+    if (g_up_n < 64)
+    {
+        g_up[g_up_n++] = u;
+    }
     return PROTO_TRUE;
 }
 
-struct DownMsg
+typedef struct
 {
-    std::vector<uint8_t> payload;
+    uint8_t payload[512];
+    size_t payload_len;
     uint16_t dst;
     uint8_t port_id;
-};
-static std::vector<DownMsg> g_down;
+} DownMsg;
+static DownMsg g_down[64];
+static size_t g_down_n;
 static proto_bool g_tx_accept = PROTO_TRUE;
 
 static proto_bool cap_tx(uint8_t port, uint16_t dst, const uint8_t *d, uint16_t n, void *)
@@ -62,10 +69,14 @@ static proto_bool cap_tx(uint8_t port, uint16_t dst, const uint8_t *d, uint16_t 
         return PROTO_FALSE;
     }
     DownMsg x;
-    x.payload.assign(d, d + n);
+    x.payload_len = (size_t)(n) < 512 ? (size_t)(n) : 512;
+    memcpy(x.payload, d, x.payload_len);
     x.dst = dst;
     x.port_id = port;
-    g_down.push_back(x);
+    if (g_down_n < 64)
+    {
+        g_down[g_down_n++] = x;
+    }
     return PROTO_TRUE;
 }
 
@@ -88,8 +99,8 @@ static pc_gateway_stats stats()
 
 void setUp()
 {
-    g_up.clear();
-    g_down.clear();
+    g_up_n = 0;
+    g_down_n = 0;
     g_up_accept = PROTO_TRUE;
     g_tx_accept = PROTO_TRUE;
     pc_gateway_reset();
@@ -106,13 +117,13 @@ void test_uplink_envelopes_and_publishes()
     pc_gateway_set_uplink_cb(cap_uplink, NULL);
     const uint8_t hi[2] = {'h', 'i'};
     TEST_ASSERT_TRUE(pc_gateway_uplink(0, 0x42, hi, 2, -50));
-    TEST_ASSERT_EQUAL_size_t(1, g_up.size());
+    TEST_ASSERT_EQUAL_size_t(1, g_up_n);
     TEST_ASSERT_EQUAL_UINT16(0x42, g_up[0].src_addr);
     TEST_ASSERT_EQUAL_UINT8(0, g_up[0].port_id);
     TEST_ASSERT_EQUAL_UINT8(PC_GW_LORA, g_up[0].kind);
     TEST_ASSERT_EQUAL_INT16(-50, g_up[0].rssi);
     TEST_ASSERT_EQUAL_UINT32(0, g_up[0].seq);
-    TEST_ASSERT_EQUAL_MEMORY(hi, g_up[0].payload.data(), 2);
+    TEST_ASSERT_EQUAL_MEMORY(hi, g_up[0].payload, 2);
     TEST_ASSERT_EQUAL_UINT32(1, stats().up_published);
 }
 
@@ -131,7 +142,7 @@ void test_uplink_unknown_port_drops()
     const uint8_t x[1] = {1};
     TEST_ASSERT_FALSE(pc_gateway_uplink(9, 1, x, 1, 0)); // port 9 never registered
     TEST_ASSERT_EQUAL_UINT32(1, stats().up_dropped);
-    TEST_ASSERT_EQUAL_size_t(0, g_up.size());
+    TEST_ASSERT_EQUAL_size_t(0, g_up_n);
 }
 
 void test_uplink_rate_cap()
@@ -142,11 +153,11 @@ void test_uplink_rate_cap()
     TEST_ASSERT_TRUE(pc_gateway_uplink(0, 1, x, 1, 0));
     TEST_ASSERT_TRUE(pc_gateway_uplink(0, 1, x, 1, 0));
     TEST_ASSERT_FALSE(pc_gateway_uplink(0, 1, x, 1, 0)); // 3rd in the window -> dropped
-    TEST_ASSERT_EQUAL_size_t(2, g_up.size());
+    TEST_ASSERT_EQUAL_size_t(2, g_up_n);
     TEST_ASSERT_EQUAL_UINT32(1, stats().up_dropped);
     pc_gateway_test_set_now(1000); // next window
     TEST_ASSERT_TRUE(pc_gateway_uplink(0, 1, x, 1, 0));
-    TEST_ASSERT_EQUAL_size_t(3, g_up.size());
+    TEST_ASSERT_EQUAL_size_t(3, g_up_n);
 }
 
 void test_uplink_sink_refusal_counted()
@@ -165,10 +176,10 @@ void test_downlink_transmits()
     add_port(0, PC_GW_LORA, 0, PROTO_TRUE); // with a tx callback
     const uint8_t cmd[3] = {'c', 'm', 'd'};
     TEST_ASSERT_TRUE(pc_gateway_downlink(0, 0x10, cmd, 3));
-    TEST_ASSERT_EQUAL_size_t(1, g_down.size());
+    TEST_ASSERT_EQUAL_size_t(1, g_down_n);
     TEST_ASSERT_EQUAL_UINT8(0, g_down[0].port_id);
     TEST_ASSERT_EQUAL_UINT16(0x10, g_down[0].dst);
-    TEST_ASSERT_EQUAL_MEMORY(cmd, g_down[0].payload.data(), 3);
+    TEST_ASSERT_EQUAL_MEMORY(cmd, g_down[0].payload, 3);
     TEST_ASSERT_EQUAL_UINT32(1, stats().down_sent);
 }
 
@@ -232,7 +243,7 @@ void test_seq_increments_per_uplink()
     const uint8_t x[1] = {1};
     pc_gateway_uplink(0, 1, x, 1, 0);
     pc_gateway_uplink(0, 2, x, 1, 0);
-    TEST_ASSERT_EQUAL_size_t(2, g_up.size());
+    TEST_ASSERT_EQUAL_size_t(2, g_up_n);
     TEST_ASSERT_EQUAL_UINT32(0, g_up[0].seq);
     TEST_ASSERT_EQUAL_UINT32(1, g_up[1].seq);
 }
