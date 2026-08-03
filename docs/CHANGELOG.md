@@ -44,6 +44,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`729f02f`](https://github.com/dstroy0/ProtoCore/commit/729f02f51254de8ee053ca53c8e34c45fa790bfa))
 - bump github/codeql-action from 4 to 4.37.4 ([`5098e9b`](https://github.com/dstroy0/ProtoCore/commit/5098e9b02554f105b77a1fb574ca19f84a54bc96))
 - update CHANGELOG.md [skip ci] ([`30ee2b8`](https://github.com/dstroy0/ProtoCore/commit/30ee2b8c0568fe5b26278665e989866c2d756c81))
 - update CHANGELOG.md [skip ci] ([`1c2ad03`](https://github.com/dstroy0/ProtoCore/commit/1c2ad03e5ddc5e89a2e6de07c5d009ec0cdd0b65))
@@ -263,6 +264,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- convert the remaining JSON writers to the C API ([`2900695`](https://github.com/dstroy0/ProtoCore/commit/2900695432d60a30797e4e5ead31ae25a7c2fe77))
 - move the JSON suite onto the C writer API ([`5e95259`](https://github.com/dstroy0/ProtoCore/commit/5e95259d88120cffb5a277be8c13c1fb03ff1adc))
 - give the host seam the send-capture accessors, and build route + signaling ([`25435d5`](https://github.com/dstroy0/ProtoCore/commit/25435d52b992c3f2478acb0d581b699335d03eed))
 - bind slots through the host seam and fix the value-init assignments ([`fa14afe`](https://github.com/dstroy0/ProtoCore/commit/fa14afe4ef97d3cab6f198ba86bddcbceb0148c9))
