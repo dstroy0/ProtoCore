@@ -24,7 +24,7 @@ static void on_window(const pc_tc_window *w, void *)
 {
     CapturedWindow cw;
     cw.samples_len = (size_t)(w->n_samples) < 1024 ? (size_t)(w->n_samples) : 1024;
-    memcpy(cw.samples, w->samples, cw.samples_len);
+    memcpy(cw.samples, w->samples, cw.samples_len * sizeof(cw.samples[0]));
     cw.pretrigger_samples = w->pretrigger_samples;
     cw.trace_id = w->trace_id;
     if (g_windows_n < 64)
