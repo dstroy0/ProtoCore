@@ -12,6 +12,12 @@
 // stored so a test can fire them. Nothing here talks to a socket. A test that wants behavior
 // drives it through the pc_net_host_* entry points at the bottom.
 //
+// Every mutable global below carries external linkage through a weak definition rather than
+// `static`. A `static` in a header is one object PER TRANSLATION UNIT, so the core wrote its own
+// copy of the send capture while the test read a different one and found it empty - the state is
+// only a seam if both sides reach the same bytes. Weak lets every TU emit the same definition and
+// the linker keep exactly one.
+//
 // test/ is exempt from the src/ style rules, so this reads as plain host C.
 
 #ifndef PROTOCORE_PC_NET_HOST_H
@@ -37,11 +43,11 @@
 #define PC_BUS_HOST_CAP 1024
 #endif
 
-static uint8_t pc_bus_host_tx[PC_BUS_HOST_CAP];
-static uint32_t pc_bus_host_tx_len;
-static uint8_t pc_bus_host_rx[PC_BUS_HOST_CAP];
-static uint32_t pc_bus_host_rx_len;
-static uint32_t pc_bus_host_rx_pos;
+__attribute__((weak)) uint8_t pc_bus_host_tx[PC_BUS_HOST_CAP];
+__attribute__((weak)) uint32_t pc_bus_host_tx_len;
+__attribute__((weak)) uint8_t pc_bus_host_rx[PC_BUS_HOST_CAP];
+__attribute__((weak)) uint32_t pc_bus_host_rx_len;
+__attribute__((weak)) uint32_t pc_bus_host_rx_pos;
 
 static inline void pc_bus_host_capture(const void *buf, uint32_t len)
 {
@@ -87,7 +93,7 @@ static inline uint32_t pc_platform_uart_available(uint8_t unit)
 #define PC_SPI_MSBFIRST 0
 #define PC_SPI_LSBFIRST 1
 
-static int pc_spi_host_up;
+__attribute__((weak)) int pc_spi_host_up;
 
 static inline int pc_platform_spi_begin(int mosi, int miso, int sclk)
 {
@@ -160,7 +166,7 @@ static inline void pc_bus_host_reset(void)
 //
 // pc_rand_host_seed() makes a run repeatable from a chosen point.
 
-static uint32_t pc_rand_host_state = 0x2545F491u;
+__attribute__((weak)) uint32_t pc_rand_host_state = 0x2545F491u;
 
 static inline uint32_t pc_platform_rand_u32(void)
 {
@@ -215,8 +221,8 @@ static inline void pc_rand_host_seed(uint32_t seed)
 #ifndef PC_GPIO_HOST_PINS
 #define PC_GPIO_HOST_PINS 64
 #endif
-static uint8_t pc_gpio_host_mode_tbl[PC_GPIO_HOST_PINS];
-static uint8_t pc_gpio_host_level_tbl[PC_GPIO_HOST_PINS];
+__attribute__((weak)) uint8_t pc_gpio_host_mode_tbl[PC_GPIO_HOST_PINS];
+__attribute__((weak)) uint8_t pc_gpio_host_level_tbl[PC_GPIO_HOST_PINS];
 
 static inline void pc_platform_gpio_mode(uint8_t pin, uint8_t mode)
 {
@@ -655,8 +661,8 @@ struct pc_udp_pcb
 #ifndef PC_NET_HOST_PCBS
 #define PC_NET_HOST_PCBS 16
 #endif
-static pc_pcb pc_net_host_pcbs[PC_NET_HOST_PCBS];
-static pc_udp_pcb pc_net_host_udp_pcbs[PC_NET_HOST_PCBS];
+__attribute__((weak)) pc_pcb pc_net_host_pcbs[PC_NET_HOST_PCBS];
+__attribute__((weak)) pc_udp_pcb pc_net_host_udp_pcbs[PC_NET_HOST_PCBS];
 
 /**
  * @brief A stable pcb a test can bind a slot to, when what it needs is only "this slot has one".
@@ -769,8 +775,8 @@ static inline void pc_net_on_err(pc_pcb *p, pc_net_err_fn fn)
 #ifndef PC_NET_HOST_TXCAP
 #define PC_NET_HOST_TXCAP 8192
 #endif
-static uint8_t pc_net_host_tx[PC_NET_HOST_TXCAP];
-static size_t pc_net_host_tx_len;
+__attribute__((weak)) uint8_t pc_net_host_tx[PC_NET_HOST_TXCAP];
+__attribute__((weak)) size_t pc_net_host_tx_len;
 
 static inline pc_net_err pc_net_write(pc_pcb *p, const void *data, uint16_t len, uint8_t flags)
 {
