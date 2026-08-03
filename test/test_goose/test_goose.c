@@ -41,9 +41,9 @@ static pc_goose base(void)
     g.t = NULL; // -> 8 zero octets
     g.st_num = 1;
     g.sq_num = 2;
-    g.simulation = false;
+    g.simulation = PROTO_FALSE;
     g.conf_rev = 1;
-    g.nds_com = false;
+    g.nds_com = PROTO_FALSE;
     g.num_entries = 0;
     g.all_data = NULL;
     g.all_data_len = 0;
@@ -115,7 +115,7 @@ void test_goose_error_and_longform(void)
 
     TEST_ASSERT_EQUAL_size_t(0, pc_goose_pdu(NULL, out, sizeof(out))); // null g
     TEST_ASSERT_EQUAL_size_t(0, pc_goose_pdu(&g, NULL, sizeof(out)));  // null out
-    TEST_ASSERT_EQUAL_size_t(0, pc_goose_pdu(&g, out, 3));                // cap < reserved header
+    TEST_ASSERT_EQUAL_size_t(0, pc_goose_pdu(&g, out, 3));             // cap < reserved header
     TEST_ASSERT_EQUAL_size_t(0, pc_goose_pdu(&g, out, 10)); // fits the header but overflows on a field -> !ok
 
     // A >=128-octet allData forces multi-octet BER lengths (len_octets + write_len long-form).
@@ -132,7 +132,7 @@ void test_goose_error_and_longform(void)
     uint8_t src[6] = {0};
     pc_goose g2 = base();
     TEST_ASSERT_EQUAL_size_t(0, pc_goose_frame(NULL, src, 0x1234, &g2, out, sizeof(out))); // null dst
-    TEST_ASSERT_EQUAL_size_t(0, pc_goose_frame(dst, src, 0x1234, &g2, out, 20));              // cap < 22
+    TEST_ASSERT_EQUAL_size_t(0, pc_goose_frame(dst, src, 0x1234, &g2, out, 20));           // cap < 22
     TEST_ASSERT_EQUAL_size_t(0, pc_goose_frame(dst, src, 0x1234, &g2, out, 30)); // >=22 but the PDU cannot fit
 }
 
@@ -143,8 +143,8 @@ void test_goose_error_and_longform(void)
 void test_goose_null_string_true_bool_and_time(void)
 {
     pc_goose g = base();
-    g.gocb_ref = NULL; // pc_ber_str: s is null -> value "" / length 0.
-    g.simulation = true;  // pc_ber_bool: v is true -> 0xFF.
+    g.gocb_ref = NULL;         // pc_ber_str: s is null -> value "" / length 0.
+    g.simulation = PROTO_TRUE; // pc_ber_bool: v is true -> 0xFF.
     uint8_t tbuf[8] = {1, 2, 3, 4, 5, 6, 7, 8};
     g.t = tbuf; // g->t is non-null -> use it instead of ZT.
     uint8_t out[128];
@@ -215,9 +215,9 @@ void test_parse_roundtrip(void)
     g.t = tbuf;
     g.st_num = 200;      // forces a BER leading-zero integer (85 02 00 C8)
     g.sq_num = 0x012345; // a 3-octet integer
-    g.simulation = true;
+    g.simulation = PROTO_TRUE;
     g.conf_rev = 7;
-    g.nds_com = true;
+    g.nds_com = PROTO_TRUE;
     g.num_entries = 2;
     uint8_t adata[] = {0x83, 0x01, 0x01, 0x83, 0x01, 0x00}; // two boolean Data elements
     g.all_data = adata;

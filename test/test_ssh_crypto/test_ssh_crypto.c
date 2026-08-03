@@ -669,18 +669,16 @@ static void test_rsa_verify_and_encode_guards(void)
     uint8_t sig[256];
 
     memset(sig, 0, sizeof(sig));
-    TEST_ASSERT_EQUAL_INT(
-        -1, pc_rsa_verify(n, e, (const uint8_t *)"m", 1, sig, 255, SHA256)); // sig length mismatch
-    memset(sig, 0xFF, sizeof(sig));                                                       // all-ones >= any modulus
-    TEST_ASSERT_EQUAL_INT(
-        -1, pc_rsa_verify(n, e, (const uint8_t *)"m", 1, sig, 256, SHA256)); // sig not reduced mod n
+    TEST_ASSERT_EQUAL_INT(-1, pc_rsa_verify(n, e, (const uint8_t *)"m", 1, sig, 255, SHA256)); // sig length mismatch
+    memset(sig, 0xFF, sizeof(sig)); // all-ones >= any modulus
+    TEST_ASSERT_EQUAL_INT(-1, pc_rsa_verify(n, e, (const uint8_t *)"m", 1, sig, 256, SHA256)); // sig not reduced mod n
 
     setup_test_rsa_key();
     pc_ssh_rsa_load_pubkey();
     uint8_t blob[SSH_RSA_PUBKEY_BLOB_MAX];
     size_t blob_len = 0;
     TEST_ASSERT_EQUAL_INT(-1, ssh_rsa_encode_pubkey(blob, &blob_len, SSH_RSA_PUBKEY_BLOB_MAX - 1)); // out_cap too small
-    ssh_host_pubkey.loaded = false;
+    ssh_host_pubkey.loaded = PROTO_FALSE;
     TEST_ASSERT_EQUAL_INT(-1, ssh_rsa_encode_pubkey(blob, &blob_len, sizeof(blob))); // no key loaded
 
     // A zero private exponent takes the modexp exp==0 fast path (result 1), so signing succeeds
@@ -807,8 +805,7 @@ static void test_rsa_sha512_kat_sign_verify(void)
     TEST_ASSERT_EQUAL_INT(-1, pc_rsa_verify(n, e, (const uint8_t *)RSA512_MSG, mlen, sig, 256, SHA256));
 
     // A different message (same length) must fail SHA-512 verification.
-    TEST_ASSERT_EQUAL_INT(
-        -1, pc_rsa_verify(n, e, (const uint8_t *)"hello rsa-sha2-256", mlen, sig, 256, SHA512));
+    TEST_ASSERT_EQUAL_INT(-1, pc_rsa_verify(n, e, (const uint8_t *)"hello rsa-sha2-256", mlen, sig, 256, SHA512));
 
     setup_test_rsa_key(); // restore the fixture for any later test
     pc_ssh_rsa_load_pubkey();
@@ -953,8 +950,8 @@ static void test_pkt_encrypted_roundtrip(void)
 
     setup_encrypted_keys(); // reset cipher state for the receiver
     ssh_pkt_init(0);
-    ssh_pkt[0].enc_out = true;
-    ssh_pkt[0].enc_in = true;
+    ssh_pkt[0].enc_out = PROTO_TRUE;
+    ssh_pkt[0].enc_in = PROTO_TRUE;
     last_msg_type = 0xFF;
     last_payload_len = 0;
 
@@ -978,11 +975,11 @@ static void test_pkt_chacha20poly1305_roundtrip(void)
         km->chacha_key_c2s[i] = (uint8_t)(i * 3 + 1);
         km->chacha_key_s2c[i] = (uint8_t)(i * 3 + 1);
     }
-    km->active = true;
+    km->active = PROTO_TRUE;
 
     ssh_pkt_init(0);
-    ssh_pkt[0].enc_out = true;
-    ssh_pkt[0].enc_in = true;
+    ssh_pkt[0].enc_out = PROTO_TRUE;
+    ssh_pkt[0].enc_in = PROTO_TRUE;
 
     uint8_t payload[] = {SSH_MSG_IGNORE, 'c', 'h', 'a', 'c', 'h', 'a', '2', '0'};
     uint8_t wire[256];
@@ -1002,8 +999,8 @@ static void test_pkt_chacha20poly1305_roundtrip(void)
 
     // Tamper with a ciphertext byte -> Poly1305 rejects -> recv returns -1.
     ssh_pkt_init(0);
-    ssh_pkt[0].enc_out = true;
-    ssh_pkt[0].enc_in = true;
+    ssh_pkt[0].enc_out = PROTO_TRUE;
+    ssh_pkt[0].enc_in = PROTO_TRUE;
     wire[6] ^= 0x01;
     TEST_ASSERT_EQUAL_INT(-1, ssh_pkt_recv(0, wire, wlen, pkt_handler));
 
@@ -1034,11 +1031,11 @@ static void test_pkt_aes256gcm_roundtrip(void)
     pc_aesgcm_key_init(km->gcm_ctx_s2c, key);
     memcpy(km->aes_iv_c2s, iv, PC_AESGCM_IV_LEN);
     memcpy(km->aes_iv_s2c, iv, PC_AESGCM_IV_LEN); // same key/IV both directions (GCM reuses aes_iv_*)
-    km->active = true;
+    km->active = PROTO_TRUE;
 
     ssh_pkt_init(0);
-    ssh_pkt[0].enc_out = true;
-    ssh_pkt[0].enc_in = true;
+    ssh_pkt[0].enc_out = PROTO_TRUE;
+    ssh_pkt[0].enc_in = PROTO_TRUE;
 
     uint8_t payload[] = {SSH_MSG_IGNORE, 'a', 'e', 's', 'g', 'c', 'm', '2', '5', '6'};
     uint8_t wire[256];
@@ -1062,8 +1059,8 @@ static void test_pkt_aes256gcm_roundtrip(void)
 
     // Tamper a ciphertext byte -> GCM tag rejects -> recv returns -1, and no plaintext is delivered.
     ssh_pkt_init(0);
-    ssh_pkt[0].enc_out = true;
-    ssh_pkt[0].enc_in = true;
+    ssh_pkt[0].enc_out = PROTO_TRUE;
+    ssh_pkt[0].enc_in = PROTO_TRUE;
     memcpy(km->aes_iv_c2s, iv, PC_AESGCM_IV_LEN); // reset receiver nonce to the packet boundary
     wire[6] ^= 0x01;
     TEST_ASSERT_EQUAL_INT(-1, ssh_pkt_recv(0, wire, wlen, pkt_handler));
@@ -1096,11 +1093,11 @@ static void etm_roundtrip_helper(uint8_t mac_mode)
     {
         km->mac_key_c2s[i] = km->mac_key_s2c[i] = (uint8_t)(i * 5 + 3);
     }
-    km->active = true;
+    km->active = PROTO_TRUE;
 
     ssh_pkt_init(0);
-    ssh_pkt[0].enc_out = true;
-    ssh_pkt[0].enc_in = true;
+    ssh_pkt[0].enc_out = PROTO_TRUE;
+    ssh_pkt[0].enc_in = PROTO_TRUE;
     uint8_t payload[] = {SSH_MSG_IGNORE, 'e', 't', 'm', '!', '1', '2', '3'};
     uint8_t wire[256];
     size_t wlen = 0;
@@ -1118,8 +1115,8 @@ static void etm_roundtrip_helper(uint8_t mac_mode)
 
     // Tamper a ciphertext byte -> MAC rejects before any decryption.
     ssh_pkt_init(0);
-    ssh_pkt[0].enc_out = true;
-    ssh_pkt[0].enc_in = true;
+    ssh_pkt[0].enc_out = PROTO_TRUE;
+    ssh_pkt[0].enc_in = PROTO_TRUE;
     memcpy(km->aes_key_c2s, key, PC_AES256CTR_KEY_LEN);
     memcpy(km->aes_iv_c2s, iv, PC_AES256CTR_CTR_LEN);
     wire[6] ^= 0x01;
@@ -1150,8 +1147,8 @@ static void test_pkt_encrypted_fragmented(void)
 
     setup_encrypted_keys();
     ssh_pkt_init(0);
-    ssh_pkt[0].enc_out = true;
-    ssh_pkt[0].enc_in = true;
+    ssh_pkt[0].enc_out = PROTO_TRUE;
+    ssh_pkt[0].enc_in = PROTO_TRUE;
     last_msg_type = 0xFF;
     last_payload_len = 0;
 
@@ -1185,8 +1182,8 @@ static void test_pkt_encrypted_two_packets(void)
 
     setup_encrypted_keys();
     ssh_pkt_init(0);
-    ssh_pkt[0].enc_out = true;
-    ssh_pkt[0].enc_in = true;
+    ssh_pkt[0].enc_out = PROTO_TRUE;
+    ssh_pkt[0].enc_in = PROTO_TRUE;
     last_msg_type = 0xFF;
     last_payload_len = 0;
 
@@ -1244,7 +1241,7 @@ static void test_ssh_kdf_canonical_mpint_k(void)
     {
         off++;
     }
-    bool pad = (K_be[off] & 0x80u) != 0;
+    proto_bool pad = (K_be[off] & 0x80u) != 0;
     uint32_t mlen = (uint32_t)(256 - off) + (pad ? 1u : 0u);
     uint8_t len_be[4] = {(uint8_t)(mlen >> 24), (uint8_t)(mlen >> 16), (uint8_t)(mlen >> 8), (uint8_t)mlen};
     pc_sha256_ctx c;
@@ -1275,7 +1272,7 @@ static void kdf_hash_mpint(pc_sha256_ctx *c, const uint8_t K_be[256])
     {
         off++;
     }
-    bool pad = (K_be[off] & 0x80u) != 0;
+    proto_bool pad = (K_be[off] & 0x80u) != 0;
     uint32_t mlen = (uint32_t)(256 - off) + (pad ? 1u : 0u);
     uint8_t len_be[4] = {(uint8_t)(mlen >> 24), (uint8_t)(mlen >> 16), (uint8_t)(mlen >> 8), (uint8_t)mlen};
     pc_sha256_update(c, len_be, 4);
@@ -1339,10 +1336,10 @@ static void test_pkt_chacha_padding_and_incomplete(void)
     {
         km->chacha_key_c2s[i] = km->chacha_key_s2c[i] = (uint8_t)(i * 3 + 1);
     }
-    km->active = true;
+    km->active = PROTO_TRUE;
     ssh_pkt_init(0);
-    ssh_pkt[0].enc_out = true;
-    ssh_pkt[0].enc_in = true;
+    ssh_pkt[0].enc_out = PROTO_TRUE;
+    ssh_pkt[0].enc_in = PROTO_TRUE;
 
     uint8_t p4[4] = {SSH_MSG_IGNORE, 1, 2, 3}; // 1+4=5 mod 8 -> pad 3 -> +8
     uint8_t wire[256];
@@ -1352,11 +1349,11 @@ static void test_pkt_chacha_padding_and_incomplete(void)
 
     // Truncated packet (length still decodes, but the body is incomplete) -> held, returns 0.
     ssh_pkt_init(0);
-    ssh_pkt[0].enc_out = true;
-    ssh_pkt[0].enc_in = true;
+    ssh_pkt[0].enc_out = PROTO_TRUE;
+    ssh_pkt[0].enc_in = PROTO_TRUE;
     TEST_ASSERT_EQUAL_INT(0, ssh_pkt_send(0, p4, sizeof(p4), wire, &wlen, sizeof(wire)));
     ssh_pkt_init(0);
-    ssh_pkt[0].enc_in = true;
+    ssh_pkt[0].enc_in = PROTO_TRUE;
     TEST_ASSERT_EQUAL_INT(0, ssh_pkt_recv(0, wire, wlen - 8, pkt_handler));
     ssh_keymat_wipe(0);
 }
@@ -1386,10 +1383,10 @@ static void test_pkt_etm_padding_and_incomplete(void)
     {
         km->mac_key_c2s[i] = km->mac_key_s2c[i] = (uint8_t)(i * 5 + 3);
     }
-    km->active = true;
+    km->active = PROTO_TRUE;
     ssh_pkt_init(0);
-    ssh_pkt[0].enc_out = true;
-    ssh_pkt[0].enc_in = true;
+    ssh_pkt[0].enc_out = PROTO_TRUE;
+    ssh_pkt[0].enc_in = PROTO_TRUE;
 
     uint8_t p12[12]; // 1+12=13 mod 16 -> pad 3 -> +16
     p12[0] = SSH_MSG_IGNORE;
@@ -1405,15 +1402,15 @@ static void test_pkt_etm_padding_and_incomplete(void)
     TEST_ASSERT_EQUAL_INT(0, ssh_pkt_recv(0, wire, wlen, pkt_handler)); // valid round-trip
 
     ssh_pkt_init(0);
-    ssh_pkt[0].enc_out = true;
-    ssh_pkt[0].enc_in = true;
+    ssh_pkt[0].enc_out = PROTO_TRUE;
+    ssh_pkt[0].enc_in = PROTO_TRUE;
     memcpy(km->aes_key_c2s, key, PC_AES256CTR_KEY_LEN);
     memcpy(km->aes_iv_c2s, iv, PC_AES256CTR_CTR_LEN);
     memcpy(km->aes_key_s2c, key, PC_AES256CTR_KEY_LEN);
     memcpy(km->aes_iv_s2c, iv, PC_AES256CTR_CTR_LEN);
     TEST_ASSERT_EQUAL_INT(0, ssh_pkt_send(0, p12, sizeof(p12), wire, &wlen, sizeof(wire)));
     ssh_pkt_init(0);
-    ssh_pkt[0].enc_in = true;
+    ssh_pkt[0].enc_in = PROTO_TRUE;
     memcpy(km->aes_key_c2s, key, PC_AES256CTR_KEY_LEN);
     memcpy(km->aes_iv_c2s, iv, PC_AES256CTR_CTR_LEN);
     TEST_ASSERT_EQUAL_INT(0, ssh_pkt_recv(0, wire, wlen - 8, pkt_handler)); // truncated -> held
@@ -1449,9 +1446,9 @@ static void chacha_recv_setup(SshKeyMat *km)
     {
         km->chacha_key_c2s[i] = km->chacha_key_s2c[i] = (uint8_t)(i * 3 + 1);
     }
-    km->active = true;
+    km->active = PROTO_TRUE;
     ssh_pkt_init(0);
-    ssh_pkt[0].enc_in = true;
+    ssh_pkt[0].enc_in = PROTO_TRUE;
 }
 
 // A chacha packet that decrypts cleanly but carries a bad packet_length / padding_length, or arrives
@@ -1488,9 +1485,9 @@ static void test_pkt_etm_bad_length(void)
     uint8_t key[32] = {0}, iv[16] = {0};
     memcpy(km->aes_key_c2s, key, PC_AES256CTR_KEY_LEN);
     memcpy(km->aes_iv_c2s, iv, PC_AES256CTR_CTR_LEN);
-    km->active = true;
+    km->active = PROTO_TRUE;
     ssh_pkt_init(0);
-    ssh_pkt[0].enc_in = true;
+    ssh_pkt[0].enc_in = PROTO_TRUE;
     uint8_t wire[8] = {0, 0, 0, 17, 1, 2, 3, 4}; // pkt_len 17 is not a multiple of 16
     TEST_ASSERT_EQUAL_INT(-1, ssh_pkt_recv(0, wire, sizeof(wire), pkt_handler));
     ssh_keymat_wipe(0);
@@ -1513,9 +1510,9 @@ static void etm_recv_setup(SshKeyMat *km, uint8_t *key, uint8_t *iv)
     {
         km->mac_key_c2s[i] = (uint8_t)(i * 5 + 3);
     }
-    km->active = true;
+    km->active = PROTO_TRUE;
     ssh_pkt_init(0);
-    ssh_pkt[0].enc_in = true;
+    ssh_pkt[0].enc_in = PROTO_TRUE;
 }
 
 // Forge an aes256-ctr encrypt-then-MAC wire packet at a given seq with a chosen padding byte, with a
@@ -1631,21 +1628,21 @@ static void test_pkt_eam_forged_rejects(void)
 
     setup_encrypted_keys(); // non-block length (4 + 17 = 21) - caught at the length peek
     ssh_pkt_init(0);
-    ssh_pkt[0].enc_in = true;
+    ssh_pkt[0].enc_in = PROTO_TRUE;
     size_t wlen = forge_eam(km, 0, 17, 4, wire);
     setup_encrypted_keys();
     TEST_ASSERT_EQUAL_INT(-1, ssh_pkt_recv(0, wire, wlen, pkt_handler));
 
     setup_encrypted_keys(); // bad padding length (< 4); 4 + 12 = 16 is a valid block length
     ssh_pkt_init(0);
-    ssh_pkt[0].enc_in = true;
+    ssh_pkt[0].enc_in = PROTO_TRUE;
     wlen = forge_eam(km, 0, 12, 2, wire);
     setup_encrypted_keys();
     TEST_ASSERT_EQUAL_INT(-1, ssh_pkt_recv(0, wire, wlen, pkt_handler));
 
     setup_encrypted_keys(); // sequence at the close threshold
     ssh_pkt_init(0);
-    ssh_pkt[0].enc_in = true;
+    ssh_pkt[0].enc_in = PROTO_TRUE;
     ssh_pkt[0].seq_no_recv = SSH_SEQ_CLOSE_THRESHOLD;
     wlen = forge_eam(km, SSH_SEQ_CLOSE_THRESHOLD, 12, 4, wire);
     setup_encrypted_keys();
@@ -1653,7 +1650,7 @@ static void test_pkt_eam_forged_rejects(void)
 
     setup_encrypted_keys(); // exhausted scratch arena on an otherwise-valid packet
     ssh_pkt_init(0);
-    ssh_pkt[0].enc_in = true;
+    ssh_pkt[0].enc_in = PROTO_TRUE;
     wlen = forge_eam(km, 0, 12, 4, wire);
     setup_encrypted_keys();
     pc_plaintext_reset();

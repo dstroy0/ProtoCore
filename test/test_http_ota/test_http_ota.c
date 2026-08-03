@@ -21,7 +21,7 @@ static size_t g_total;
 static int g_chunks;
 static uint8_t g_capture[8192];
 
-static bool begin_cb(HttpReq *req)
+static proto_bool begin_cb(HttpReq *req)
 {
     return strcmp(req->method, "POST") == 0 && strcmp(req->path, "/update") == 0;
 }

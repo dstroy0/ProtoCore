@@ -16,48 +16,48 @@ void tearDown(void)
 // value 1046, no telemetry: v12 = 1046<<1 = 0x82C, nibbles 8^2^C = 6, frame = (0x82C<<4)|6 = 0x82C6.
 void test_encode_known_vector(void)
 {
-    TEST_ASSERT_EQUAL_HEX16(0x82C6, pc_dshot_encode(1046, false, false));
+    TEST_ASSERT_EQUAL_HEX16(0x82C6, pc_dshot_encode(1046, PROTO_FALSE, PROTO_FALSE));
     // motor stop (value 0) -> all zero.
-    TEST_ASSERT_EQUAL_HEX16(0x0000, pc_dshot_encode(DSHOT_CMD_MOTOR_STOP, false, false));
+    TEST_ASSERT_EQUAL_HEX16(0x0000, pc_dshot_encode(DSHOT_CMD_MOTOR_STOP, PROTO_FALSE, PROTO_FALSE));
     // value 1: v12 = 2 -> crc 2 -> 0x0022.
-    TEST_ASSERT_EQUAL_HEX16(0x0022, pc_dshot_encode(1, false, false));
+    TEST_ASSERT_EQUAL_HEX16(0x0022, pc_dshot_encode(1, PROTO_FALSE, PROTO_FALSE));
 }
 
 void test_encode_telemetry_bit(void)
 {
     // value 1046, telemetry set: v12 = 0x82D, nibbles 8^2^D = 7, frame = 0x82D7.
-    TEST_ASSERT_EQUAL_HEX16(0x82D7, pc_dshot_encode(1046, true, false));
+    TEST_ASSERT_EQUAL_HEX16(0x82D7, pc_dshot_encode(1046, PROTO_TRUE, PROTO_FALSE));
 }
 
 void test_encode_bidirectional_inverts_crc(void)
 {
     // Same value, bidirectional: crc = ~6 & 0xF = 9, frame = 0x82C9.
-    TEST_ASSERT_EQUAL_HEX16(0x82C9, pc_dshot_encode(1046, false, true));
+    TEST_ASSERT_EQUAL_HEX16(0x82C9, pc_dshot_encode(1046, PROTO_FALSE, PROTO_TRUE));
 }
 
 void test_value_masked_to_11_bits(void)
 {
     // 0xF000 | 1046: the high bits are dropped to the 11-bit field -> same as 1046.
-    TEST_ASSERT_EQUAL_HEX16(0x82C6, pc_dshot_encode((uint16_t)(1046 | 0xF800), false, false));
+    TEST_ASSERT_EQUAL_HEX16(0x82C6, pc_dshot_encode((uint16_t)(1046 | 0xF800), PROTO_FALSE, PROTO_FALSE));
 }
 
 void test_decode_roundtrip_and_crc(void)
 {
     uint16_t val = 0;
-    bool tel = true;
-    TEST_ASSERT_TRUE(pc_dshot_decode(0x82C6, &val, &tel, false));
+    proto_bool tel = PROTO_TRUE;
+    TEST_ASSERT_TRUE(pc_dshot_decode(0x82C6, &val, &tel, PROTO_FALSE));
     TEST_ASSERT_EQUAL_UINT16(1046, val);
     TEST_ASSERT_FALSE(tel);
 
-    TEST_ASSERT_TRUE(pc_dshot_decode(0x82D7, &val, &tel, false));
+    TEST_ASSERT_TRUE(pc_dshot_decode(0x82D7, &val, &tel, PROTO_FALSE));
     TEST_ASSERT_EQUAL_UINT16(1046, val);
     TEST_ASSERT_TRUE(tel);
 
     // A corrupted CRC nibble fails.
-    TEST_ASSERT_FALSE(pc_dshot_decode(0x82C5, NULL, NULL, false));
+    TEST_ASSERT_FALSE(pc_dshot_decode(0x82C5, NULL, NULL, PROTO_FALSE));
     // Standard CRC is not valid when decoded as bidirectional.
-    TEST_ASSERT_FALSE(pc_dshot_decode(0x82C6, NULL, NULL, true));
-    TEST_ASSERT_TRUE(pc_dshot_decode(0x82C9, &val, NULL, true));
+    TEST_ASSERT_FALSE(pc_dshot_decode(0x82C6, NULL, NULL, PROTO_TRUE));
+    TEST_ASSERT_TRUE(pc_dshot_decode(0x82C9, &val, NULL, PROTO_TRUE));
     TEST_ASSERT_EQUAL_UINT16(1046, val);
 }
 
@@ -66,15 +66,15 @@ void test_decode_null_out_params(void)
     // A valid frame decodes successfully even when the caller doesn't want the value or telemetry bit
     // back (both out-parameters null), exercising the false side of the "if (value11)" / "if (telemetry)"
     // null-checks on a *successful* decode (the existing null-pointer cases all hit CRC failure first).
-    TEST_ASSERT_TRUE(pc_dshot_decode(0x82C6, NULL, NULL, false));
+    TEST_ASSERT_TRUE(pc_dshot_decode(0x82C6, NULL, NULL, PROTO_FALSE));
 }
 
 void test_bit_timing(void)
 {
     // 600 kbit: period 1667 ns; "1" ~3/4, "0" ~3/8.
-    TEST_ASSERT_EQUAL_UINT32(1250, pc_dshot_bit_ns(600, true));
-    TEST_ASSERT_EQUAL_UINT32(625, pc_dshot_bit_ns(600, false));
-    TEST_ASSERT_EQUAL_UINT32(0, pc_dshot_bit_ns(999, true)); // unknown rate
+    TEST_ASSERT_EQUAL_UINT32(1250, pc_dshot_bit_ns(600, PROTO_TRUE));
+    TEST_ASSERT_EQUAL_UINT32(625, pc_dshot_bit_ns(600, PROTO_FALSE));
+    TEST_ASSERT_EQUAL_UINT32(0, pc_dshot_bit_ns(999, PROTO_TRUE)); // unknown rate
 }
 
 void test_esc_pwm_mapping(void)
@@ -97,10 +97,10 @@ void test_esc_pwm_mapping(void)
 void test_bit_ns_all_rates()
 {
     // Each supported line rate maps to a non-zero bit period; an unknown rate is rejected.
-    TEST_ASSERT_TRUE(pc_dshot_bit_ns(150, true) > 0);
-    TEST_ASSERT_TRUE(pc_dshot_bit_ns(300, false) > 0);
-    TEST_ASSERT_TRUE(pc_dshot_bit_ns(1200, true) > 0);
-    TEST_ASSERT_EQUAL_UINT32(0, pc_dshot_bit_ns(999, true));
+    TEST_ASSERT_TRUE(pc_dshot_bit_ns(150, PROTO_TRUE) > 0);
+    TEST_ASSERT_TRUE(pc_dshot_bit_ns(300, PROTO_FALSE) > 0);
+    TEST_ASSERT_TRUE(pc_dshot_bit_ns(1200, PROTO_TRUE) > 0);
+    TEST_ASSERT_EQUAL_UINT32(0, pc_dshot_bit_ns(999, PROTO_TRUE));
 }
 
 int main(void)

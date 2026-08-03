@@ -10,7 +10,7 @@
 #include <string.h>
 #include <unity.h>
 
-static bool g_called;
+static proto_bool g_called;
 
 static void push_str(uint8_t slot, const char *s)
 {
@@ -26,22 +26,22 @@ static void push_str(uint8_t slot, const char *s)
 static void h_ok(uint8_t slot, HttpReq *req)
 {
     (void)req;
-    g_called = true;
+    g_called = PROTO_TRUE;
     send_text(slot, 200, "text/plain", "ok");
 }
 
-static bool g_ap_hit;
-static bool g_sta_hit;
+static proto_bool g_ap_hit;
+static proto_bool g_sta_hit;
 static void h_ap(uint8_t slot, HttpReq *req)
 {
     (void)req;
-    g_ap_hit = true;
+    g_ap_hit = PROTO_TRUE;
     send_text(slot, 200, "text/plain", "ap");
 }
 static void h_sta(uint8_t slot, HttpReq *req)
 {
     (void)req;
-    g_sta_hit = true;
+    g_sta_hit = PROTO_TRUE;
     send_text(slot, 200, "text/plain", "sta");
 }
 
@@ -60,7 +60,7 @@ void setUp()
     ws_init();
     pc_sse_init();
     tcp_capture_reset();
-    g_called = false;
+    g_called = PROTO_FALSE;
     pc_ap_ip = 0;
 }
 
@@ -129,7 +129,7 @@ void test_unfiltered_route_matches_any_interface()
     TEST_ASSERT_TRUE(g_called);
     TEST_ASSERT_NOT_NULL(strstr(r1, "200 OK"));
 
-    g_called = false;
+    g_called = PROTO_FALSE;
     const char *r2 = do_req(PC_IFACE_STA, "GET /x HTTP/1.1\r\n\r\n");
     TEST_ASSERT_TRUE(g_called);
     TEST_ASSERT_NOT_NULL(strstr(r2, "200 OK"));
@@ -138,7 +138,7 @@ void test_unfiltered_route_matches_any_interface()
 void test_same_path_two_interfaces_picks_correct()
 {
     // Same path bound to different interfaces; the request's interface decides.
-    g_ap_hit = g_sta_hit = false;
+    g_ap_hit = g_sta_hit = PROTO_FALSE;
     on_http("/p", HTTP_GET, h_ap, PC_IFACE_AP);
     on_http("/p", HTTP_GET, h_sta, PC_IFACE_STA);
 

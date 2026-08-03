@@ -71,7 +71,7 @@ void test_stream()
     uint8_t b[32];
     const uint8_t data[3] = {1, 2, 3};
     // With offset + FIN.
-    size_t n = pc_quic_build_stream(b, sizeof b, 4, 100, data, 3, true);
+    size_t n = pc_quic_build_stream(b, sizeof b, 4, 100, data, 3, PROTO_TRUE);
     QuicFrame f;
     TEST_ASSERT_EQUAL_INT((int)n, (int)pc_quic_frame_parse(b, n, &f));
     TEST_ASSERT_TRUE((f.type & 0xf8) == QUIC_FT_STREAM);
@@ -79,7 +79,7 @@ void test_stream()
     TEST_ASSERT_EQUAL_UINT8_ARRAY(data, f.stream.data, 3);
 
     // No offset, no FIN.
-    n = pc_quic_build_stream(b, sizeof b, 0, 0, data, 3, false);
+    n = pc_quic_build_stream(b, sizeof b, 0, 0, data, 3, PROTO_FALSE);
     TEST_ASSERT_FALSE(b[0] & QUIC_STREAM_OFF);
     TEST_ASSERT_EQUAL_INT((int)n, (int)pc_quic_frame_parse(b, n, &f));
     TEST_ASSERT_TRUE(f.stream.id == 0 && f.stream.offset == 0 && f.stream.fin == 0);
@@ -103,8 +103,7 @@ void test_max_data_and_close()
     n = pc_quic_build_connection_close(b, sizeof b, 0x0a, QUIC_FT_STREAM, "bad", 3);
     TEST_ASSERT_EQUAL_INT((int)n, (int)pc_quic_frame_parse(b, n, &f));
     TEST_ASSERT_TRUE(f.type == QUIC_FT_CONNECTION_CLOSE && f.close.error_code == 0x0a);
-    TEST_ASSERT_TRUE(f.close.frame_type == QUIC_FT_STREAM && f.close.reason_len == 3 &&
-                     f.close.app == 0);
+    TEST_ASSERT_TRUE(f.close.frame_type == QUIC_FT_STREAM && f.close.reason_len == 3 && f.close.app == 0);
     TEST_ASSERT_EQUAL_UINT8_ARRAY("bad", f.close.reason, 3);
 
     // Application-level close (0x1d) has no triggering frame type.
@@ -152,8 +151,8 @@ void test_builder_overflow()
     TEST_ASSERT_EQUAL_INT(0, (int)pc_quic_build_ack(b, 1, 1000, 42, 3));
     TEST_ASSERT_EQUAL_INT(0, (int)pc_quic_build_crypto(b, 1, 7, d, 4)); // header fits, data does not
     TEST_ASSERT_EQUAL_INT(0, (int)pc_quic_build_crypto(b, 0, 0, d, 4)); // type varint does not fit
-    TEST_ASSERT_EQUAL_INT(0, (int)pc_quic_build_stream(b, 1, 4, 100, d, 4, true));
-    TEST_ASSERT_EQUAL_INT(0, (int)pc_quic_build_stream(b, 0, 0, 0, d, 4, false));
+    TEST_ASSERT_EQUAL_INT(0, (int)pc_quic_build_stream(b, 1, 4, 100, d, 4, PROTO_TRUE));
+    TEST_ASSERT_EQUAL_INT(0, (int)pc_quic_build_stream(b, 0, 0, 0, d, 4, PROTO_FALSE));
     TEST_ASSERT_EQUAL_INT(0, (int)pc_quic_build_max_data(b, 1, 1u << 30));
     TEST_ASSERT_EQUAL_INT(0, (int)pc_quic_build_connection_close(b, 1, 0x0a, 0, "x", 1));
     TEST_ASSERT_EQUAL_INT(0, (int)pc_quic_build_connection_close(b, 4, 0x0a, 0, "hello", 5)); // reason overflows
@@ -218,11 +217,11 @@ void test_frame_edge_guards()
     // CRYPTO: type+offset+length varints fit but the data does not.
     TEST_ASSERT_EQUAL_INT(0, (int)pc_quic_build_crypto(b, 4, 7, d, 3));
     // STREAM: type+id fit but the Offset varint does not.
-    TEST_ASSERT_EQUAL_INT(0, (int)pc_quic_build_stream(b, 2, 4, 100, d, 3, true));
+    TEST_ASSERT_EQUAL_INT(0, (int)pc_quic_build_stream(b, 2, 4, 100, d, 3, PROTO_TRUE));
     // STREAM (no offset): type+id fit but the Length varint does not.
-    TEST_ASSERT_EQUAL_INT(0, (int)pc_quic_build_stream(b, 2, 0, 0, d, 3, false));
+    TEST_ASSERT_EQUAL_INT(0, (int)pc_quic_build_stream(b, 2, 0, 0, d, 3, PROTO_FALSE));
     // STREAM: the header fits but the stream data does not.
-    TEST_ASSERT_EQUAL_INT(0, (int)pc_quic_build_stream(b, 3, 0, 0, d, 3, false));
+    TEST_ASSERT_EQUAL_INT(0, (int)pc_quic_build_stream(b, 3, 0, 0, d, 3, PROTO_FALSE));
 }
 
 // An ACK (with ECN) carrying two ACK Ranges: exercises the range-skip loop across more than one
@@ -244,10 +243,9 @@ void test_skip_and_extra_frames()
     QuicFrame f;
 
     // One-varint frames: type followed by a single varint.
-    const uint8_t one_varint[] = {
-        QUIC_FT_MAX_STREAMS_BIDI,    QUIC_FT_MAX_STREAMS_UNI,
-        QUIC_FT_DATA_BLOCKED,        QUIC_FT_STREAMS_BLOCKED_BIDI,
-        QUIC_FT_STREAMS_BLOCKED_UNI, QUIC_FT_RETIRE_CONNECTION_ID};
+    const uint8_t one_varint[] = {QUIC_FT_MAX_STREAMS_BIDI,    QUIC_FT_MAX_STREAMS_UNI,
+                                  QUIC_FT_DATA_BLOCKED,        QUIC_FT_STREAMS_BLOCKED_BIDI,
+                                  QUIC_FT_STREAMS_BLOCKED_UNI, QUIC_FT_RETIRE_CONNECTION_ID};
     for (size_t i = 0; i < sizeof one_varint; i++)
     {
         const uint8_t ok[2] = {one_varint[i], 0x0a};
@@ -258,8 +256,7 @@ void test_skip_and_extra_frames()
     }
 
     // Two-varint frames.
-    const uint8_t two_varint[] = {QUIC_FT_STOP_SENDING, QUIC_FT_MAX_STREAM_DATA,
-                                  QUIC_FT_STREAM_DATA_BLOCKED};
+    const uint8_t two_varint[] = {QUIC_FT_STOP_SENDING, QUIC_FT_MAX_STREAM_DATA, QUIC_FT_STREAM_DATA_BLOCKED};
     for (size_t i = 0; i < sizeof two_varint; i++)
     {
         const uint8_t ok[3] = {two_varint[i], 0x01, 0x02};
@@ -295,7 +292,7 @@ void test_skip_and_extra_frames()
     TEST_ASSERT_EQUAL_INT(24, (int)pc_quic_frame_parse(ncid, sizeof ncid, &f));
     TEST_ASSERT_EQUAL_UINT(QUIC_FT_NEW_CONNECTION_ID, (unsigned)f.type);
     TEST_ASSERT_EQUAL_INT(0, (int)pc_quic_frame_parse(ncid, sizeof ncid - 1, &f)); // one byte short of CID + token
-    const uint8_t ncid_hdr_only[3] = {QUIC_FT_NEW_CONNECTION_ID, 0x01, 0x00}; // no CID length byte
+    const uint8_t ncid_hdr_only[3] = {QUIC_FT_NEW_CONNECTION_ID, 0x01, 0x00};      // no CID length byte
     TEST_ASSERT_EQUAL_INT(0, (int)pc_quic_frame_parse(ncid_hdr_only, sizeof ncid_hdr_only, &f));
 
     // PATH_CHALLENGE / PATH_RESPONSE: 8 opaque bytes.
@@ -398,11 +395,11 @@ void test_builder_capacity_sweep()
     }
 
     // STREAM with an offset and FIN.
-    need = pc_quic_build_stream(out, sizeof out, 1000, 2000, data, sizeof data, true);
+    need = pc_quic_build_stream(out, sizeof out, 1000, 2000, data, sizeof data, PROTO_TRUE);
     TEST_ASSERT_TRUE(need > 0);
     for (size_t cap = 0; cap < need; cap++)
     {
-        TEST_ASSERT_EQUAL_INT(0, (int)pc_quic_build_stream(out, cap, 1000, 2000, data, sizeof data, true));
+        TEST_ASSERT_EQUAL_INT(0, (int)pc_quic_build_stream(out, cap, 1000, 2000, data, sizeof data, PROTO_TRUE));
     }
 
     // MAX_DATA.
@@ -438,7 +435,7 @@ void test_builders_with_empty_bodies()
     TEST_ASSERT_EQUAL_UINT64(0, f.crypto.length);
 
     // STREAM carrying no data but a FIN: the pure-FIN frame the engine sends to end a stream.
-    n = pc_quic_build_stream(out, sizeof out, 8, 0, NULL, 0, true);
+    n = pc_quic_build_stream(out, sizeof out, 8, 0, NULL, 0, PROTO_TRUE);
     TEST_ASSERT_TRUE(n > 0);
     TEST_ASSERT_EQUAL_INT((int)n, (int)pc_quic_frame_parse(out, n, &f));
     TEST_ASSERT_EQUAL_UINT64(8, f.stream.id);

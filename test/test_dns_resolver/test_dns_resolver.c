@@ -65,17 +65,17 @@ void test_resolve_verified_paths()
 {
     uint32_t ip = 0;
     // resolve fails -> false.
-    pc_dns_resolver_test_set_resolve(false, 0);
+    pc_dns_resolver_test_set_resolve(PROTO_FALSE, 0);
     TEST_ASSERT_FALSE(pc_dns_resolver_resolve_verified("example.com", &ip));
     // resolve succeeds but the answer is a loopback (DNS-rebinding) -> verify rejects it.
-    pc_dns_resolver_test_set_resolve(true, IPV4(127, 0, 0, 1));
+    pc_dns_resolver_test_set_resolve(PROTO_TRUE, IPV4(127, 0, 0, 1));
     TEST_ASSERT_FALSE(pc_dns_resolver_resolve_verified("example.com", &ip));
     // resolve succeeds and the answer is a plausible public address -> true, out_ip set.
-    pc_dns_resolver_test_set_resolve(true, IPV4(8, 8, 8, 8));
+    pc_dns_resolver_test_set_resolve(PROTO_TRUE, IPV4(8, 8, 8, 8));
     TEST_ASSERT_TRUE(pc_dns_resolver_resolve_verified("example.com", &ip));
     TEST_ASSERT_EQUAL_UINT32(IPV4(8, 8, 8, 8), ip);
     TEST_ASSERT_TRUE(pc_dns_resolver_resolve_verified("example.com", NULL)); // null out_ip ok
-    pc_dns_resolver_test_set_resolve(false, 0);                                 // reset the hook
+    pc_dns_resolver_test_set_resolve(PROTO_FALSE, 0);                        // reset the hook
 }
 
 void test_resolve_host_ok_null_out_ip()
@@ -83,9 +83,9 @@ void test_resolve_host_ok_null_out_ip()
     // Call pc_dns_resolver_resolve() (the host stub) directly - not via the _verified
     // wrapper, which always passes a non-null local pointer - with a synthetic "ok" answer
     // and a null out_ip, to cover the out_ip == NULL branch inside the stub itself.
-    pc_dns_resolver_test_set_resolve(true, IPV4(8, 8, 8, 8));
+    pc_dns_resolver_test_set_resolve(PROTO_TRUE, IPV4(8, 8, 8, 8));
     TEST_ASSERT_TRUE(pc_dns_resolver_resolve("example.com", NULL));
-    pc_dns_resolver_test_set_resolve(false, 0); // reset the hook
+    pc_dns_resolver_test_set_resolve(PROTO_FALSE, 0); // reset the hook
 }
 
 int main()

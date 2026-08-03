@@ -405,7 +405,7 @@ static void comp_rec_emit(uint8_t slot, const uint8_t *p, size_t n)
         comp_emt[comp_emt_n++] = p[0];
     }
 }
-static bool comp_pw_cb(const char *u, const char *p)
+static proto_bool comp_pw_cb(const char *u, const char *p)
 {
     return strcmp(u, "alice") == 0 && strcmp(p, "s3cret") == 0;
 }
@@ -536,12 +536,12 @@ void test_dh_generate_slot_guard_and_state(void)
     TEST_ASSERT_EQUAL_INT(-1, ssh_dh_generate(MAX_SSH_CONNS));
     TEST_ASSERT_EQUAL_INT(0, ssh_dh_generate(0));
     TEST_ASSERT_FALSE(ssh_dh[0].kex_done);
-    bool f_nonzero = false;
+    proto_bool f_nonzero = PROTO_FALSE;
     for (int j = 0; j < PC_BN_LIMBS; j++)
     {
         if (ssh_dh[0].f.d[j] != 0)
         {
-            f_nonzero = true;
+            f_nonzero = PROTO_TRUE;
         }
     }
     TEST_ASSERT_TRUE(f_nonzero); // f = g^y mod p, g = 2, y != 0 -> f != 0
@@ -620,7 +620,7 @@ static void expected_kdf_k1(const uint8_t K[256], const uint8_t H[PC_SHA256_DIGE
     }
     else
     {
-        bool pad = (K[off] & 0x80u) != 0;
+        proto_bool pad = (K[off] & 0x80u) != 0;
         uint32_t mlen = (uint32_t)(256 - off) + (pad ? 1u : 0u);
         uint8_t len_be[4] = {(uint8_t)(mlen >> 24), (uint8_t)(mlen >> 16), (uint8_t)(mlen >> 8), (uint8_t)mlen};
         pc_sha256_update(&c, len_be, 4);
@@ -693,7 +693,7 @@ void test_kdf_string_k_hybrid_branch(void)
     }
 
     uint8_t got_string[PC_SHA256_DIGEST_LEN];
-    ssh_kdf_derive(K, H, H, 'C', got_string, PC_SHA256_DIGEST_LEN, true);
+    ssh_kdf_derive(K, H, H, 'C', got_string, PC_SHA256_DIGEST_LEN, PROTO_TRUE);
 
     uint8_t len_be[4] = {0, 0, 0, 32};
     pc_sha256_ctx c;
@@ -709,7 +709,7 @@ void test_kdf_string_k_hybrid_branch(void)
     TEST_ASSERT_EQUAL_MEMORY(expected, got_string, PC_SHA256_DIGEST_LEN);
 
     uint8_t got_mpint[PC_SHA256_DIGEST_LEN];
-    ssh_kdf_derive(K, H, H, 'C', got_mpint, PC_SHA256_DIGEST_LEN, false);
+    ssh_kdf_derive(K, H, H, 'C', got_mpint, PC_SHA256_DIGEST_LEN, PROTO_FALSE);
     TEST_ASSERT_NOT_EQUAL(0, memcmp(got_string, got_mpint, PC_SHA256_DIGEST_LEN));
 }
 
@@ -801,7 +801,7 @@ static size_t dsp_put_mpint(uint8_t *p, const uint8_t *be, size_t len)
     {
         off++;
     }
-    bool pad = (off < len) && (be[off] & 0x80u);
+    proto_bool pad = (off < len) && (be[off] & 0x80u);
     size_t mlen = (len - off) + (pad ? 1 : 0);
     dsp_wr_u32(p, (uint32_t)mlen);
     size_t o = 4;
@@ -837,7 +837,7 @@ static size_t dsp_build_kexinit_ext(uint8_t *out)
     }
     return o;
 }
-static bool dsp_pw_cb(const char *u, const char *p)
+static proto_bool dsp_pw_cb(const char *u, const char *p)
 {
     return strcmp(u, "alice") == 0 && strcmp(p, "s3cret") == 0;
 }
@@ -1036,7 +1036,7 @@ void test_dispatch_guard_and_error_arms()
 
     // A wrong password below the limit -> FAILURE, connection stays open (limit not tripped).
     s->phase = SSH_PHASE_AUTH;
-    s->authed = false;
+    s->authed = PROTO_FALSE;
     s->auth_failures = 0;
     uint8_t pw[128];
     size_t pn = 0;
@@ -1056,7 +1056,7 @@ void test_dispatch_guard_and_error_arms()
     TEST_ASSERT_EQUAL(SSH_MSG_DISCONNECT, dsp_type[dsp_n - 1]);
 
     // Every post-auth connection message is rejected while unauthenticated.
-    s->authed = false;
+    s->authed = PROTO_FALSE;
     const uint8_t authed_arms[] = {SSH_MSG_GLOBAL_REQUEST,       SSH_MSG_CHANNEL_OPEN,    SSH_MSG_CHANNEL_OPEN_CONFIRM,
                                    SSH_MSG_CHANNEL_OPEN_FAILURE, SSH_MSG_CHANNEL_REQUEST, SSH_MSG_CHANNEL_DATA};
     for (size_t j = 0; j < sizeof(authed_arms) / sizeof(authed_arms[0]); j++)
@@ -1066,7 +1066,7 @@ void test_dispatch_guard_and_error_arms()
     }
 
     // Authenticated but malformed -> the arm's handler fails.
-    s->authed = true;
+    s->authed = PROTO_TRUE;
     const uint8_t handler_arms[] = {SSH_MSG_GLOBAL_REQUEST, SSH_MSG_CHANNEL_OPEN, SSH_MSG_CHANNEL_REQUEST,
                                     SSH_MSG_CHANNEL_DATA};
     for (size_t j = 0; j < sizeof(handler_arms) / sizeof(handler_arms[0]); j++)

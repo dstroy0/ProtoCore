@@ -121,7 +121,7 @@ void test_parse_number_rejects()
 
 void test_parse_bool()
 {
-    bool b = false;
+    proto_bool b = PROTO_FALSE;
     TEST_ASSERT_TRUE(pc_scpi_parse_bool("1", 1, &b));
     TEST_ASSERT_TRUE(b);
     TEST_ASSERT_TRUE(pc_scpi_parse_bool("0", 1, &b));
@@ -317,7 +317,7 @@ void test_std_error_lookup()
 
 // ── header matcher ───────────────────────────────────────────────────────────────────────────
 
-static bool match(const char *in, const char *pat)
+static proto_bool match(const char *in, const char *pat)
 {
     return pc_scpi_match(in, strlen(in), pat);
 }
@@ -414,7 +414,7 @@ void test_parse_number_guards_and_exponent_forms()
 
 void test_parse_bool_guards()
 {
-    bool b = false;
+    proto_bool b = PROTO_FALSE;
     TEST_ASSERT_FALSE(pc_scpi_parse_bool(NULL, 1, &b));
     TEST_ASSERT_FALSE(pc_scpi_parse_bool("1", 1, NULL));
     TEST_ASSERT_FALSE(pc_scpi_parse_bool("X", 1, &b)); // one character, neither '1' nor '0'

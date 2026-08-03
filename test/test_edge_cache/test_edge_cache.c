@@ -85,13 +85,14 @@ static void test_freshness_lifetime_precedence()
     cache_control_init(&cc);
     cc.max_age = 100;
     cc.s_maxage = 50;
-    TEST_ASSERT_EQUAL_INT32(50, edge_freshness_lifetime(&cc, /*shared=*/true, -1, -1));   // s-maxage wins (shared)
-    TEST_ASSERT_EQUAL_INT32(100, edge_freshness_lifetime(&cc, /*shared=*/false, -1, -1)); // private ignores s-maxage
+    TEST_ASSERT_EQUAL_INT32(50, edge_freshness_lifetime(&cc, /*shared=*/PROTO_TRUE, -1, -1)); // s-maxage wins (shared)
+    TEST_ASSERT_EQUAL_INT32(100,
+                            edge_freshness_lifetime(&cc, /*shared=*/PROTO_FALSE, -1, -1)); // private ignores s-maxage
 
     pc_cache_control empty;
     cache_control_init(&empty);
-    TEST_ASSERT_EQUAL_INT32(100, edge_freshness_lifetime(&empty, true, 1000, 1100)); // Expires - Date
-    TEST_ASSERT_EQUAL_INT32(-1, edge_freshness_lifetime(&empty, true, -1, -1));      // nothing explicit
+    TEST_ASSERT_EQUAL_INT32(100, edge_freshness_lifetime(&empty, PROTO_TRUE, 1000, 1100)); // Expires - Date
+    TEST_ASSERT_EQUAL_INT32(-1, edge_freshness_lifetime(&empty, PROTO_TRUE, -1, -1));      // nothing explicit
 }
 
 static void test_heuristic_lifetime()
@@ -126,15 +127,16 @@ static void test_is_fresh()
 static void test_key_canon()
 {
     char out[128];
-    size_t n = edge_key_canon("GET", "Example.COM", "/a/b", "x=1", /*include_query=*/true, out, sizeof(out));
+    size_t n = edge_key_canon("GET", "Example.COM", "/a/b", "x=1", /*include_query=*/PROTO_TRUE, out, sizeof(out));
     TEST_ASSERT_EQUAL_STRING("GET\nexample.com\n/a/b\nx=1", out); // host lowercased
     TEST_ASSERT_EQUAL_UINT(strlen("GET\nexample.com\n/a/b\nx=1"), n);
 
-    n = edge_key_canon("GET", "example.com", "/a/b", "x=1", /*include_query=*/false, out, sizeof(out));
+    n = edge_key_canon("GET", "example.com", "/a/b", "x=1", /*include_query=*/PROTO_FALSE, out, sizeof(out));
     TEST_ASSERT_EQUAL_STRING("GET\nexample.com\n/a/b", out); // query excluded
 
     char tiny[8];
-    TEST_ASSERT_EQUAL_UINT(0, edge_key_canon("GET", "example.com", "/a/b", "", false, tiny, sizeof(tiny))); // overflow
+    TEST_ASSERT_EQUAL_UINT(
+        0, edge_key_canon("GET", "example.com", "/a/b", "", PROTO_FALSE, tiny, sizeof(tiny))); // overflow
 }
 
 static void test_key_digest_deterministic_and_distinct()
@@ -194,7 +196,7 @@ static void test_vary_serialize_match_and_differ()
 static void test_vary_serialize_star_and_empty()
 {
     char out[64];
-    TEST_ASSERT_FALSE(edge_vary_serialize("*", mock_lookup, NULL, out, sizeof(out)));    // uncacheable
+    TEST_ASSERT_FALSE(edge_vary_serialize("*", mock_lookup, NULL, out, sizeof(out))); // uncacheable
     TEST_ASSERT_TRUE(edge_vary_serialize(NULL, mock_lookup, NULL, out, sizeof(out))); // no Vary
     TEST_ASSERT_EQUAL_STRING("", out);
 }
@@ -243,12 +245,12 @@ static void test_store_ttl_sweep()
     s1000.max_age = 1000;
 
     EdgeEntry *stale_noval = edge_store_alloc(&g_store, "GET\nh\n/x", "");
-    edge_entry_set_freshness(stale_noval, &s10, true, -1, -1, -1, 0, -1, 1000);
+    edge_entry_set_freshness(stale_noval, &s10, PROTO_TRUE, -1, -1, -1, 0, -1, 1000);
     EdgeEntry *stale_val = edge_store_alloc(&g_store, "GET\nh\n/y", "");
-    edge_entry_set_freshness(stale_val, &s10, true, -1, -1, -1, 0, -1, 1000);
+    edge_entry_set_freshness(stale_val, &s10, PROTO_TRUE, -1, -1, -1, 0, -1, 1000);
     strcpy(stale_val->etag, "\"v\"");
     EdgeEntry *fresh = edge_store_alloc(&g_store, "GET\nh\n/z", "");
-    edge_entry_set_freshness(fresh, &s1000, true, -1, -1, -1, 0, -1, 1000);
+    edge_entry_set_freshness(fresh, &s1000, PROTO_TRUE, -1, -1, -1, 0, -1, 1000);
 
     // 20 s later: /x stale+no-validator (swept), /y stale+validator (kept), /z fresh (kept)
     TEST_ASSERT_EQUAL_UINT32(1, edge_store_sweep(&g_store, 21000));
@@ -325,17 +327,17 @@ static void test_entry_freshness_resolution()
     cache_control_init(&empty);
 
     EdgeEntry *e = edge_store_alloc(&g_store, "GET\nh\n/a", "");
-    edge_entry_set_freshness(e, &cc, true, -1, -1, -1, 0, -1, 1000);
+    edge_entry_set_freshness(e, &cc, PROTO_TRUE, -1, -1, -1, 0, -1, 1000);
     TEST_ASSERT_EQUAL_INT32(100, (int32_t)e->lifetime_s);
     TEST_ASSERT_TRUE(edge_entry_fresh(e, 1000 + 99000));
     TEST_ASSERT_FALSE(edge_entry_fresh(e, 1000 + 101000));
 
     EdgeEntry *dflt = edge_store_alloc(&g_store, "GET\nh\n/b", "");
-    edge_entry_set_freshness(dflt, &empty, true, -1, -1, -1, 0, -1, 1000); // no directive -> default TTL
+    edge_entry_set_freshness(dflt, &empty, PROTO_TRUE, -1, -1, -1, 0, -1, 1000); // no directive -> default TTL
     TEST_ASSERT_EQUAL_INT32(PC_EDGE_DEFAULT_TTL_S, (int32_t)dflt->lifetime_s);
 
     EdgeEntry *heur = edge_store_alloc(&g_store, "GET\nh\n/c", "");
-    edge_entry_set_freshness(heur, &empty, true, 1000000, -1, 1000000 - 1000, 0, -1, 1000); // 10% heuristic
+    edge_entry_set_freshness(heur, &empty, PROTO_TRUE, 1000000, -1, 1000000 - 1000, 0, -1, 1000); // 10% heuristic
     TEST_ASSERT_EQUAL_INT32(100, (int32_t)heur->lifetime_s);
 
     TEST_ASSERT_FALSE(edge_entry_has_validator(e));
@@ -348,9 +350,9 @@ static void test_storeability()
     pc_cache_control cc, ns, pv;
     cache_control_init(&cc);
     cache_control_init(&ns);
-    ns.no_store = true;
+    ns.no_store = PROTO_TRUE;
     cache_control_init(&pv);
-    pv.cc_private = true;
+    pv.cc_private = PROTO_TRUE;
 
     TEST_ASSERT_TRUE(edge_is_storeable(200, "GET", &cc, NULL, 100));
     TEST_ASSERT_TRUE(edge_is_storeable(200, "GET", NULL, "Accept-Encoding", PC_EDGE_BODY_MAX));
@@ -358,7 +360,7 @@ static void test_storeability()
     TEST_ASSERT_FALSE(edge_is_storeable(404, "GET", &cc, NULL, 100));  // not 200
     TEST_ASSERT_FALSE(edge_is_storeable(200, "GET", &ns, NULL, 100));  // no-store
     TEST_ASSERT_FALSE(edge_is_storeable(200, "GET", &pv, NULL, 100));  // private
-    TEST_ASSERT_FALSE(edge_is_storeable(200, "GET", &cc, "*", 100));      // Vary: *
+    TEST_ASSERT_FALSE(edge_is_storeable(200, "GET", &cc, "*", 100));   // Vary: *
     TEST_ASSERT_FALSE(edge_is_storeable(200, "GET", &cc, "Accept-Encoding, *", 100));
     TEST_ASSERT_FALSE(edge_is_storeable(200, "GET", &cc, NULL, PC_EDGE_BODY_MAX + 1)); // oversize
 }
@@ -391,7 +393,7 @@ static void test_apply_304()
     e->body_len = 3;
     memcpy(e->body, "abc", 3);
     strcpy(e->etag, "\"v1\"");
-    edge_entry_set_freshness(e, &s10, true, -1, -1, -1, 0, -1, 1000);
+    edge_entry_set_freshness(e, &s10, PROTO_TRUE, -1, -1, -1, 0, -1, 1000);
     TEST_ASSERT_FALSE(edge_entry_fresh(e, 21000)); // stale 20 s later
 
     // origin answers the revalidation with 304 + a fresh max-age and a stronger validator
@@ -464,7 +466,7 @@ void test_range_ignored_forms()
 {
     size_t s = 0;
     size_t e = 0;
-    TEST_ASSERT_EQUAL_INT(0, http_parse_byte_range(NULL, 100, &s, &e));            // absent
+    TEST_ASSERT_EQUAL_INT(0, http_parse_byte_range(NULL, 100, &s, &e));               // absent
     TEST_ASSERT_EQUAL_INT(0, http_parse_byte_range("bytes=0-10,20-30", 100, &s, &e)); // multi-range -> full 200
     TEST_ASSERT_EQUAL_INT(0, http_parse_byte_range("items=0-10", 100, &s, &e));       // wrong unit
     TEST_ASSERT_EQUAL_INT(0, http_parse_byte_range("bytes=10", 100, &s, &e));         // no dash -> malformed
@@ -612,11 +614,11 @@ static void test_heuristic_and_initial_age_edges()
 static void test_key_canon_null_guards()
 {
     char out[64];
-    TEST_ASSERT_EQUAL_UINT(0, edge_key_canon(NULL, "h", "/a", "", false, out, sizeof(out)));
-    TEST_ASSERT_EQUAL_UINT(0, edge_key_canon("GET", NULL, "/a", "", false, out, sizeof(out)));
-    TEST_ASSERT_EQUAL_UINT(0, edge_key_canon("GET", "h", NULL, "", false, out, sizeof(out)));
-    TEST_ASSERT_EQUAL_UINT(0, edge_key_canon("GET", "h", "/a", "", false, NULL, sizeof(out)));
-    TEST_ASSERT_EQUAL_UINT(0, edge_key_canon("GET", "h", "/a", "", false, out, 0));
+    TEST_ASSERT_EQUAL_UINT(0, edge_key_canon(NULL, "h", "/a", "", PROTO_FALSE, out, sizeof(out)));
+    TEST_ASSERT_EQUAL_UINT(0, edge_key_canon("GET", NULL, "/a", "", PROTO_FALSE, out, sizeof(out)));
+    TEST_ASSERT_EQUAL_UINT(0, edge_key_canon("GET", "h", NULL, "", PROTO_FALSE, out, sizeof(out)));
+    TEST_ASSERT_EQUAL_UINT(0, edge_key_canon("GET", "h", "/a", "", PROTO_FALSE, NULL, sizeof(out)));
+    TEST_ASSERT_EQUAL_UINT(0, edge_key_canon("GET", "h", "/a", "", PROTO_FALSE, out, 0));
 }
 
 static void test_key_canon_overflow_at_each_append()
@@ -624,23 +626,23 @@ static void test_key_canon_overflow_at_each_append()
     // "GET\nexample.com\n/a/b\nx=1" - a cap that stops at each piece in turn must yield 0, never a
     // truncated key (two resources would collide).
     char out[64];
-    TEST_ASSERT_EQUAL_UINT(0, edge_key_canon("GET", "example.com", "/a/b", "x=1", true, out, 2));  // method
-    TEST_ASSERT_EQUAL_UINT(0, edge_key_canon("GET", "example.com", "/a/b", "x=1", true, out, 4));  // separator
-    TEST_ASSERT_EQUAL_UINT(0, edge_key_canon("GET", "example.com", "/a/b", "x=1", true, out, 8));  // host
-    TEST_ASSERT_EQUAL_UINT(0, edge_key_canon("GET", "example.com", "/a/b", "x=1", true, out, 16)); // separator
-    TEST_ASSERT_EQUAL_UINT(0, edge_key_canon("GET", "example.com", "/a/b", "x=1", true, out, 18)); // path
-    TEST_ASSERT_EQUAL_UINT(0, edge_key_canon("GET", "example.com", "/a/b", "x=1", true, out, 21)); // separator
-    TEST_ASSERT_EQUAL_UINT(0, edge_key_canon("GET", "example.com", "/a/b", "x=1", true, out, 22)); // query
-    TEST_ASSERT_EQUAL_UINT(24, edge_key_canon("GET", "example.com", "/a/b", "x=1", true, out, 25));
+    TEST_ASSERT_EQUAL_UINT(0, edge_key_canon("GET", "example.com", "/a/b", "x=1", PROTO_TRUE, out, 2));  // method
+    TEST_ASSERT_EQUAL_UINT(0, edge_key_canon("GET", "example.com", "/a/b", "x=1", PROTO_TRUE, out, 4));  // separator
+    TEST_ASSERT_EQUAL_UINT(0, edge_key_canon("GET", "example.com", "/a/b", "x=1", PROTO_TRUE, out, 8));  // host
+    TEST_ASSERT_EQUAL_UINT(0, edge_key_canon("GET", "example.com", "/a/b", "x=1", PROTO_TRUE, out, 16)); // separator
+    TEST_ASSERT_EQUAL_UINT(0, edge_key_canon("GET", "example.com", "/a/b", "x=1", PROTO_TRUE, out, 18)); // path
+    TEST_ASSERT_EQUAL_UINT(0, edge_key_canon("GET", "example.com", "/a/b", "x=1", PROTO_TRUE, out, 21)); // separator
+    TEST_ASSERT_EQUAL_UINT(0, edge_key_canon("GET", "example.com", "/a/b", "x=1", PROTO_TRUE, out, 22)); // query
+    TEST_ASSERT_EQUAL_UINT(24, edge_key_canon("GET", "example.com", "/a/b", "x=1", PROTO_TRUE, out, 25));
 }
 
 static void test_key_canon_query_requested_but_empty()
 {
     char out[64];
     // include_query with nothing to include is the same key as excluding it.
-    TEST_ASSERT_EQUAL_UINT(20, edge_key_canon("GET", "example.com", "/a/b", NULL, true, out, sizeof(out)));
+    TEST_ASSERT_EQUAL_UINT(20, edge_key_canon("GET", "example.com", "/a/b", NULL, PROTO_TRUE, out, sizeof(out)));
     TEST_ASSERT_EQUAL_STRING("GET\nexample.com\n/a/b", out);
-    TEST_ASSERT_EQUAL_UINT(20, edge_key_canon("GET", "example.com", "/a/b", "", true, out, sizeof(out)));
+    TEST_ASSERT_EQUAL_UINT(20, edge_key_canon("GET", "example.com", "/a/b", "", PROTO_TRUE, out, sizeof(out)));
     TEST_ASSERT_EQUAL_STRING("GET\nexample.com\n/a/b", out);
 }
 
@@ -720,7 +722,7 @@ static void test_store_alloc_no_free_slot_and_empty_lru()
     edge_store_init(&g_store);
     for (uint16_t i = 0; i < PC_EDGE_CACHE_SLOTS; i++)
     {
-        g_store.entries[i].used = true;
+        g_store.entries[i].used = PROTO_TRUE;
     }
     TEST_ASSERT_EQUAL_UINT16(PC_EDGE_LRU_NONE, g_store.lru_tail);
     TEST_ASSERT_NULL(edge_store_alloc(&g_store, "GET\nh\n/x", ""));

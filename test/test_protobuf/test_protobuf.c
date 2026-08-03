@@ -301,8 +301,8 @@ void test_bool_true_and_false()
     PbWriter w;
     uint8_t buf[8];
     pc_pb_writer_init(&w, buf, sizeof(buf));
-    TEST_ASSERT_TRUE(pc_pb_bool(&w, 1, true));
-    TEST_ASSERT_TRUE(pc_pb_bool(&w, 2, false));
+    TEST_ASSERT_TRUE(pc_pb_bool(&w, 1, PROTO_TRUE));
+    TEST_ASSERT_TRUE(pc_pb_bool(&w, 2, PROTO_FALSE));
     size_t n = pc_pb_writer_finish(&w);
     const uint8_t expect[] = {0x08, 0x01, 0x10, 0x00};
     TEST_ASSERT_EQUAL_size_t(sizeof(expect), n);

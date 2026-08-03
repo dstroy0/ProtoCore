@@ -249,7 +249,7 @@ static void test_build_name1_realpath()
 static void test_name_multi_entry()
 {
     const char *names[3] = {".", "a.nc", "sub"};
-    bool dirs[3] = {true, false, true};
+    proto_bool dirs[3] = {PROTO_TRUE, PROTO_FALSE, PROTO_TRUE};
     uint8_t buf[256];
     SftpWriter w;
     pc_sftp_wr_init(&w, buf, sizeof(buf));
@@ -296,13 +296,13 @@ static void test_name_multi_entry()
 static void test_longname_format()
 {
     char out[64];
-    size_t n = pc_sftp_format_longname(false, 0644, 1234, 0, "file.nc", out, sizeof(out));
+    size_t n = pc_sftp_format_longname(PROTO_FALSE, 0644, 1234, 0, "file.nc", out, sizeof(out));
     TEST_ASSERT_TRUE(n > 0);
     TEST_ASSERT_EQUAL_MEMORY("-rw-r--r-- ", out, 11); // mode string for a regular 0644 file
     TEST_ASSERT_NOT_NULL(strstr(out, "1234"));
     TEST_ASSERT_NOT_NULL(strstr(out, "file.nc"));
 
-    n = pc_sftp_format_longname(true, 0755, 0, 0, "dir", out, sizeof(out));
+    n = pc_sftp_format_longname(PROTO_TRUE, 0755, 0, 0, "dir", out, sizeof(out));
     TEST_ASSERT_EQUAL_MEMORY("drwxr-xr-x ", out, 11); // directory
 }
 
@@ -513,19 +513,19 @@ static void test_longname_truncates_to_the_buffer()
     // A longname that does not fit is clipped to the buffer (NUL included) and the clipped length is
     // reported, so the caller never emits more bytes than it owns.
     char full[64];
-    size_t nfull = pc_sftp_format_longname(false, 0644, 1234, 0, "file.nc", full, sizeof(full));
+    size_t nfull = pc_sftp_format_longname(PROTO_FALSE, 0644, 1234, 0, "file.nc", full, sizeof(full));
     TEST_ASSERT_TRUE(nfull > 12);
 
     char small[12];
     memset(small, 0x7F, sizeof(small));
-    size_t n = pc_sftp_format_longname(false, 0644, 1234, 0, "file.nc", small, sizeof(small));
+    size_t n = pc_sftp_format_longname(PROTO_FALSE, 0644, 1234, 0, "file.nc", small, sizeof(small));
     TEST_ASSERT_EQUAL_UINT(sizeof(small) - 1, n);
     TEST_ASSERT_EQUAL_CHAR('\0', small[sizeof(small) - 1]);
     TEST_ASSERT_EQUAL_MEMORY(full, small, sizeof(small) - 1); // the prefix that did fit
 
     // A zero-capacity buffer writes nothing and reports nothing.
     char none[1] = {0x7F};
-    TEST_ASSERT_EQUAL_UINT(0, pc_sftp_format_longname(false, 0644, 1234, 0, "file.nc", none, 0));
+    TEST_ASSERT_EQUAL_UINT(0, pc_sftp_format_longname(PROTO_FALSE, 0644, 1234, 0, "file.nc", none, 0));
     TEST_ASSERT_EQUAL_CHAR(0x7F, none[0]);
 }
 

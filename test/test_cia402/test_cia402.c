@@ -21,8 +21,8 @@ static CanFrame make_sdo_tx(uint8_t node, uint8_t cmd, uint16_t index, uint32_t 
 {
     CanFrame f{};
     f.id = 0x580u + node;
-    f.extended = false;
-    f.rtr = false;
+    f.extended = PROTO_FALSE;
+    f.rtr = PROTO_FALSE;
     f.dlc = 8;
     f.data[0] = cmd;
     f.data[1] = (uint8_t)index;
@@ -129,7 +129,7 @@ void test_sdo_get_roundtrip()
     // Server upload response (0x580+node): scs=2 expedited, 2 data bytes -> command 0x4B.
     CanFrame resp;
     resp.id = 0x587u; // SDO_TX + node 7
-    resp.extended = false;
+    resp.extended = PROTO_FALSE;
     resp.dlc = 8;
     resp.data[0] = 0x4B; // scs upload, expedited, size, n=2 unused
     resp.data[1] = 0x41;

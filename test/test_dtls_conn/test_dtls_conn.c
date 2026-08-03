@@ -94,10 +94,10 @@ static void bmem(Buf *b, const uint8_t *m, size_t k)
 // @p group / @p sigalg override the single advertised supported_group / signature_algorithm, so a
 // ClientHello that offers neither of the server's one profile can be built (the key_share entry, when
 // present, always stays X25519 - the server checks the offered algorithms before the share).
-static size_t build_client_hello_ex(uint8_t *out, const uint8_t client_pub[32], bool with_keyshare,
+static size_t build_client_hello_ex(uint8_t *out, const uint8_t client_pub[32], proto_bool with_keyshare,
                                     const uint8_t *cookie, size_t cookie_len, const uint8_t *cid = NULL,
-                                    size_t cid_len = 0, bool offer_rpk = false, uint16_t group = TLS_GROUP_X25519,
-                                    uint16_t sigalg = TLS_SIG_ED25519)
+                                    size_t cid_len = 0, proto_bool offer_rpk = PROTO_FALSE,
+                                    uint16_t group = TLS_GROUP_X25519, uint16_t sigalg = TLS_SIG_ED25519)
 {
     Buf b = {out, 0};
     b8(&b, 0x01); // client_hello
@@ -182,15 +182,15 @@ static size_t build_client_hello_ex(uint8_t *out, const uint8_t client_pub[32], 
 
 static size_t build_client_hello(uint8_t *out, const uint8_t client_pub[32])
 {
-    return build_client_hello_ex(out, client_pub, /*with_keyshare=*/true, NULL, 0);
+    return build_client_hello_ex(out, client_pub, /*with_keyshare=*/PROTO_TRUE, NULL, 0);
 }
 
 // Pull the 32-byte X25519 key_share out of a ServerHello (walks its extensions for type 0x0033).
-static bool sh_keyshare(const uint8_t *sh, size_t len, uint8_t pub[32])
+static proto_bool sh_keyshare(const uint8_t *sh, size_t len, uint8_t pub[32])
 {
     if (len < 44)
     {
-        return false;
+        return PROTO_FALSE;
     }
     size_t o = 4 + 2 + 32; // hdr + legacy_version + random
     uint8_t sid = sh[o++];
@@ -198,7 +198,7 @@ static bool sh_keyshare(const uint8_t *sh, size_t len, uint8_t pub[32])
     o += 2 + 1; // cipher_suite + compression
     if (o + 2 > len)
     {
-        return false;
+        return PROTO_FALSE;
     }
     size_t ext_end = o + 2 + ((sh[o] << 8) | sh[o + 1]);
     o += 2;
@@ -210,20 +210,20 @@ static bool sh_keyshare(const uint8_t *sh, size_t len, uint8_t pub[32])
         if (et == 0x0033 && el >= 4 + 32)
         {
             memcpy(pub, sh + o + 4, 32); // group(2) + klen(2) then the key
-            return true;
+            return PROTO_TRUE;
         }
         o += el;
     }
-    return false;
+    return PROTO_FALSE;
 }
 
 // Pull the cookie out of a HelloRetryRequest (a ServerHello walked for the 0x002c cookie extension,
 // whose body is opaque cookie<1..2^16-1>). Returns the inner cookie bytes and length.
-static bool hrr_cookie(const uint8_t *sh, size_t len, uint8_t *cookie_out, size_t *cookie_len)
+static proto_bool hrr_cookie(const uint8_t *sh, size_t len, uint8_t *cookie_out, size_t *cookie_len)
 {
     if (len < 44)
     {
-        return false;
+        return PROTO_FALSE;
     }
     size_t o = 4 + 2 + 32;
     uint8_t sid = sh[o++];
@@ -231,7 +231,7 @@ static bool hrr_cookie(const uint8_t *sh, size_t len, uint8_t *cookie_out, size_
     o += 2 + 1;
     if (o + 2 > len)
     {
-        return false;
+        return PROTO_FALSE;
     }
     size_t ext_end = o + 2 + ((sh[o] << 8) | sh[o + 1]);
     o += 2;
@@ -245,15 +245,15 @@ static bool hrr_cookie(const uint8_t *sh, size_t len, uint8_t *cookie_out, size_
             size_t cl = (size_t)((sh[o] << 8) | sh[o + 1]); // inner cookie length
             if (cl + 2 > el || o + 2 + cl > len)
             {
-                return false;
+                return PROTO_FALSE;
             }
             memcpy(cookie_out, sh + o + 2, cl);
             *cookie_len = cl;
-            return true;
+            return PROTO_TRUE;
         }
         o += el;
     }
-    return false;
+    return PROTO_FALSE;
 }
 
 // One DTLS handshake message per record in this phase: strip the 12-byte DTLS handshake header from a
@@ -327,11 +327,11 @@ static size_t sh_conn_id(const uint8_t *sh, size_t len, uint8_t *cid_out)
 // application-traffic keys. @p tr is taken by value so the caller's copy is untouched. Shared by the
 // one-round-trip and HelloRetryRequest paths (they differ only in the transcript prefix and message_seq).
 // server_certificate_type(0x0014) = RawPublicKey(2) present in an EncryptedExtensions message?
-static bool ee_has_rpk(const uint8_t *msg, size_t mlen)
+static proto_bool ee_has_rpk(const uint8_t *msg, size_t mlen)
 {
     if (mlen < 6)
     {
-        return false;
+        return PROTO_FALSE;
     }
     size_t o = 4; // hs header
     size_t ext_end = o + 2 + ((msg[o] << 8) | msg[o + 1]);
@@ -343,11 +343,11 @@ static bool ee_has_rpk(const uint8_t *msg, size_t mlen)
         o += 4;
         if (et == 0x0014 && el == 1 && msg[o] == 0x02)
         {
-            return true;
+            return PROTO_TRUE;
         }
         o += el;
     }
-    return false;
+    return PROTO_FALSE;
 }
 
 // The fixed 12-byte DER prefix of an Ed25519 SubjectPublicKeyInfo (RFC 8410 §4).
@@ -355,7 +355,7 @@ static const uint8_t SPKI_PREFIX[12] = {0x30, 0x2a, 0x30, 0x05, 0x06, 0x03, 0x2b
 
 static void complete_handshake_from_flight(DtlsConn *conn, pc_sha256_ctx tr, uint16_t cfin_msg_seq,
                                            const uint8_t *flight, size_t fl, const uint8_t *client_cid = NULL,
-                                           size_t client_cid_len = 0, bool expect_rpk = false)
+                                           size_t client_cid_len = 0, proto_bool expect_rpk = PROTO_FALSE)
 {
     size_t off = 0;
     // record 0: ServerHello (DTLSPlaintext, epoch 0)
@@ -396,7 +396,7 @@ static void complete_handshake_from_flight(DtlsConn *conn, pc_sha256_ctx tr, uin
 
     // records 1..4: EncryptedExtensions, Certificate, CertificateVerify, Finished (DTLSCiphertext)
     uint8_t cert_pub[32];
-    bool have_cert = false;
+    proto_bool have_cert = PROTO_FALSE;
     uint64_t exp_seq = 0;
     int seen_fin = 0;
     while (off < fl)
@@ -422,7 +422,7 @@ static void complete_handshake_from_flight(DtlsConn *conn, pc_sha256_ctx tr, uin
             pc_sha256_ctx sc = tr;
             pc_sha256_final(&sc, h_ch_cert);
             uint8_t content[160]; // 64*0x20 + 33-byte context + 0x00 + 32-byte hash = 130
-            size_t clen = pc_tls13_cert_verify_content(content, sizeof(content), h_ch_cert, true);
+            size_t clen = pc_tls13_cert_verify_content(content, sizeof(content), h_ch_cert, PROTO_TRUE);
             TEST_ASSERT_TRUE(clen > 0);
             const uint8_t *sig = msg + 4 + 2 + 2; // algorithm(2) + signature length(2)
             TEST_ASSERT_TRUE(pc_ed25519_verify(cert_pub, content, clen, sig));
@@ -460,7 +460,7 @@ static void complete_handshake_from_flight(DtlsConn *conn, pc_sha256_ctx tr, uin
                 TEST_ASSERT_EQUAL_UINT32(32, entry_len);
                 memcpy(cert_pub, cert_data, 32);
             }
-            have_cert = true;
+            have_cert = PROTO_TRUE;
         }
     }
     TEST_ASSERT_TRUE(seen_fin);
@@ -593,8 +593,8 @@ static void test_full_handshake_rpk(void)
     pc_dtls_conn_init(&conn, &cfg, NULL, 0);
 
     uint8_t ch[256];
-    size_t ch_len = build_client_hello_ex(ch, client_pub, /*with_keyshare=*/true, NULL, 0, NULL, 0,
-                                          /*offer_rpk=*/true);
+    size_t ch_len = build_client_hello_ex(ch, client_pub, /*with_keyshare=*/PROTO_TRUE, NULL, 0, NULL, 0,
+                                          /*offer_rpk=*/PROTO_TRUE);
 
     pc_sha256_ctx tr;
     pc_sha256_init(&tr);
@@ -611,7 +611,7 @@ static void test_full_handshake_rpk(void)
     TEST_ASSERT_TRUE(fl > 0);
 
     complete_handshake_from_flight(&conn, tr, /*cfin_msg_seq=*/1, flight, (size_t)fl, NULL, 0,
-                                   /*expect_rpk=*/true);
+                                   /*expect_rpk=*/PROTO_TRUE);
 }
 
 // Connection id negotiation (RFC 9146 / RFC 9147 §9): the ClientHello offers a connection_id, so the
@@ -633,7 +633,7 @@ static void test_cid_handshake(void)
     const uint8_t client_cid[3] = {0xC1, 0xC2, 0xC3};
     uint8_t ch[256];
     size_t ch_len =
-        build_client_hello_ex(ch, client_pub, /*with_keyshare=*/true, NULL, 0, client_cid, sizeof(client_cid));
+        build_client_hello_ex(ch, client_pub, /*with_keyshare=*/PROTO_TRUE, NULL, 0, client_cid, sizeof(client_cid));
     pc_sha256_ctx tr;
     pc_sha256_init(&tr);
     pc_sha256_update(&tr, ch, ch_len);
@@ -678,7 +678,7 @@ static void test_hrr_group_renegotiation(void)
 
     // --- client flight 1: ClientHello with NO key_share (message_seq 0) ---
     uint8_t ch1[256];
-    size_t ch1_len = build_client_hello_ex(ch1, client_pub, /*with_keyshare=*/false, NULL, 0);
+    size_t ch1_len = build_client_hello_ex(ch1, client_pub, /*with_keyshare=*/PROTO_FALSE, NULL, 0);
     uint8_t f1[300];
     size_t f1l =
         pc_dtls_hs_frag_build(ch1[0], 0, (uint32_t)(ch1_len - 4), 0, ch1 + 4, (uint32_t)(ch1_len - 4), f1, sizeof(f1));
@@ -721,7 +721,7 @@ static void test_hrr_group_renegotiation(void)
 
     // --- client flight 2: ClientHello with the X25519 share and the echoed cookie (message_seq 1) ---
     uint8_t ch2[320];
-    size_t ch2_len = build_client_hello_ex(ch2, client_pub, /*with_keyshare=*/true, cookie, cookie_len);
+    size_t ch2_len = build_client_hello_ex(ch2, client_pub, /*with_keyshare=*/PROTO_TRUE, cookie, cookie_len);
     pc_sha256_update(&tr, ch2, ch2_len);
 
     uint8_t f2[380];
@@ -753,7 +753,7 @@ static void test_hrr_retry_without_cookie_rejected(void)
 
     // CH1 without a key_share -> HRR.
     uint8_t ch1[256];
-    size_t ch1_len = build_client_hello_ex(ch1, client_pub, /*with_keyshare=*/false, NULL, 0);
+    size_t ch1_len = build_client_hello_ex(ch1, client_pub, /*with_keyshare=*/PROTO_FALSE, NULL, 0);
     uint8_t f1[300];
     size_t f1l =
         pc_dtls_hs_frag_build(ch1[0], 0, (uint32_t)(ch1_len - 4), 0, ch1 + 4, (uint32_t)(ch1_len - 4), f1, sizeof(f1));
@@ -764,7 +764,7 @@ static void test_hrr_retry_without_cookie_rejected(void)
 
     // CH2 with a key_share but NO cookie (message_seq 1) -> handshake_failure.
     uint8_t ch2[320];
-    size_t ch2_len = build_client_hello_ex(ch2, client_pub, /*with_keyshare=*/true, NULL, 0);
+    size_t ch2_len = build_client_hello_ex(ch2, client_pub, /*with_keyshare=*/PROTO_TRUE, NULL, 0);
     uint8_t f2[380];
     size_t f2l =
         pc_dtls_hs_frag_build(ch2[0], 1, (uint32_t)(ch2_len - 4), 0, ch2 + 4, (uint32_t)(ch2_len - 4), f2, sizeof(f2));
@@ -975,7 +975,7 @@ struct ClientSession
 // Drive a fresh connection through ClientHello -> server flight (state WAIT_FINISHED) and run the
 // client half of the key schedule over the real transcript. No assertions: the caller decides what to
 // do next. Returns false if any step of the client side failed.
-static bool run_to_finished(DtlsConn *conn, DtlsServerConfig *cfg, ClientSession *st)
+static proto_bool run_to_finished(DtlsConn *conn, DtlsServerConfig *cfg, ClientSession *st)
 {
     uint8_t client_pub[32];
     pc_x25519_base(client_pub, CLIENT_X25519_PRIV);
@@ -991,32 +991,32 @@ static bool run_to_finished(DtlsConn *conn, DtlsServerConfig *cfg, ClientSession
     size_t rl = plain_hs_record(rec, sizeof(rec), ch, ch_len, 0, 0);
     if (!rl)
     {
-        return false;
+        return PROTO_FALSE;
     }
     uint8_t flight[2048];
     int fl = pc_dtls_conn_process(conn, rec, rl, flight, sizeof(flight));
     if (fl <= 0)
     {
-        return false;
+        return PROTO_FALSE;
     }
 
     DtlsPlaintext pt;
     size_t off = pc_dtls_plaintext_parse(flight, (size_t)fl, &pt);
     if (!off)
     {
-        return false;
+        return PROTO_FALSE;
     }
     uint8_t sh[512];
     size_t sh_len = frag_to_tls(pt.fragment, pt.frag_len, sh);
     if (!sh_len)
     {
-        return false;
+        return PROTO_FALSE;
     }
     pc_sha256_update(&tr, sh, sh_len);
     uint8_t server_pub[32];
     if (!sh_keyshare(sh, sh_len, server_pub))
     {
-        return false;
+        return PROTO_FALSE;
     }
 
     uint8_t ecdhe[32];
@@ -1035,13 +1035,13 @@ static bool run_to_finished(DtlsConn *conn, DtlsServerConfig *cfg, ClientSession
         size_t crl = ct_record_len(flight + off, (size_t)fl - off);
         if (!crl)
         {
-            return false;
+            return PROTO_FALSE;
         }
         uint8_t inner[512];
         DtlsCiphertext info;
         if (!pc_dtls_ciphertext_unprotect(st->srv_hs_read, exp_seq, flight + off, crl, inner, sizeof(inner), &info))
         {
-            return false;
+            return PROTO_FALSE;
         }
         exp_seq = info.seq + 1;
         off += crl;
@@ -1049,7 +1049,7 @@ static bool run_to_finished(DtlsConn *conn, DtlsServerConfig *cfg, ClientSession
         size_t mlen = frag_to_tls(inner, info.pt_len, msg);
         if (!mlen)
         {
-            return false;
+            return PROTO_FALSE;
         }
         pc_sha256_update(&tr, msg, mlen);
     }
@@ -1067,7 +1067,7 @@ static bool run_to_finished(DtlsConn *conn, DtlsServerConfig *cfg, ClientSession
     size_t cfin_len = pc_tls13_build_finished(cfin, sizeof(cfin), verify);
     if (cfin_len < 4)
     {
-        return false;
+        return PROTO_FALSE;
     }
     st->cfin_frag_len = pc_dtls_hs_frag_build(cfin[0], 1, (uint32_t)(cfin_len - 4), 0, cfin + 4,
                                               (uint32_t)(cfin_len - 4), st->cfin_frag, sizeof(st->cfin_frag));
@@ -1313,7 +1313,8 @@ static void test_client_hello_missing_algorithms_rejected(void)
     DtlsConn a;
     pc_dtls_conn_init(&a, &cfg, NULL, 0);
     uint8_t ch_a[256];
-    size_t la = build_client_hello_ex(ch_a, client_pub, true, NULL, 0, NULL, 0, false, TLS_GROUP_X25519, 0x0804);
+    size_t la =
+        build_client_hello_ex(ch_a, client_pub, PROTO_TRUE, NULL, 0, NULL, 0, PROTO_FALSE, TLS_GROUP_X25519, 0x0804);
     size_t ra = plain_hs_record(rec, sizeof(rec), ch_a, la, 0, 0);
     TEST_ASSERT_TRUE(ra > 0);
     TEST_ASSERT_EQUAL_INT(-1, pc_dtls_conn_process(&a, rec, ra, out, sizeof(out)));
@@ -1323,7 +1324,8 @@ static void test_client_hello_missing_algorithms_rejected(void)
     DtlsConn b;
     pc_dtls_conn_init(&b, &cfg, NULL, 0);
     uint8_t ch_b[256];
-    size_t lb = build_client_hello_ex(ch_b, client_pub, true, NULL, 0, NULL, 0, false, 0x0017, TLS_SIG_ED25519);
+    size_t lb =
+        build_client_hello_ex(ch_b, client_pub, PROTO_TRUE, NULL, 0, NULL, 0, PROTO_FALSE, 0x0017, TLS_SIG_ED25519);
     size_t rb = plain_hs_record(rec, sizeof(rec), ch_b, lb, 0, 0);
     TEST_ASSERT_TRUE(rb > 0);
     TEST_ASSERT_EQUAL_INT(-1, pc_dtls_conn_process(&b, rec, rb, out, sizeof(out)));
@@ -1384,7 +1386,7 @@ static void test_flight_out_cap_too_small_is_internal_error(void)
     DtlsConn b;
     pc_dtls_conn_init(&b, &cfg, TEST_PEER_ADDR, sizeof(TEST_PEER_ADDR));
     uint8_t ch1[256];
-    size_t ch1_len = build_client_hello_ex(ch1, client_pub, /*with_keyshare=*/false, NULL, 0);
+    size_t ch1_len = build_client_hello_ex(ch1, client_pub, /*with_keyshare=*/PROTO_FALSE, NULL, 0);
     size_t r1 = plain_hs_record(rec, sizeof(rec), ch1, ch1_len, 0, 0);
     TEST_ASSERT_TRUE(r1 > 0);
     TEST_ASSERT_EQUAL_INT(-1, pc_dtls_conn_process(&b, rec, r1, tiny, sizeof(tiny)));
@@ -1683,7 +1685,7 @@ static void test_conn_id_edge_cases(void)
     DtlsConn a;
     pc_dtls_conn_init(&a, &cfg, NULL, 0);
     uint8_t ch_a[256];
-    size_t la = build_client_hello_ex(ch_a, client_pub, true, NULL, 0, big_cid, sizeof(big_cid));
+    size_t la = build_client_hello_ex(ch_a, client_pub, PROTO_TRUE, NULL, 0, big_cid, sizeof(big_cid));
     size_t ra = plain_hs_record(rec, sizeof(rec), ch_a, la, 0, 0);
     TEST_ASSERT_TRUE(ra > 0);
     int fa = pc_dtls_conn_process(&a, rec, ra, flight, sizeof(flight));
@@ -1699,7 +1701,7 @@ static void test_conn_id_edge_cases(void)
     DtlsConn b;
     pc_dtls_conn_init(&b, &cfg, NULL, 0);
     uint8_t ch_b[256];
-    size_t lb = build_client_hello_ex(ch_b, client_pub, true, NULL, 0, empty_cid, 0);
+    size_t lb = build_client_hello_ex(ch_b, client_pub, PROTO_TRUE, NULL, 0, empty_cid, 0);
     size_t rb = plain_hs_record(rec, sizeof(rec), ch_b, lb, 0, 0);
     TEST_ASSERT_TRUE(rb > 0);
     int fb = pc_dtls_conn_process(&b, rec, rb, flight, sizeof(flight));
@@ -1713,7 +1715,7 @@ static void test_conn_id_edge_cases(void)
 
 // Run the HelloRetryRequest round trip against a connection bound to @p addr / @p addr_len and report
 // whether the server accepted the retry (it answered with the full server flight).
-static bool hrr_roundtrip_accepted(const uint8_t *addr, size_t addr_len)
+static proto_bool hrr_roundtrip_accepted(const uint8_t *addr, size_t addr_len)
 {
     uint8_t client_pub[32];
     pc_x25519_base(client_pub, CLIENT_X25519_PRIV);
@@ -1725,24 +1727,24 @@ static bool hrr_roundtrip_accepted(const uint8_t *addr, size_t addr_len)
     pc_dtls_conn_init(&conn, &cfg, addr, addr_len);
 
     uint8_t ch1[256];
-    size_t ch1_len = build_client_hello_ex(ch1, client_pub, /*with_keyshare=*/false, NULL, 0);
+    size_t ch1_len = build_client_hello_ex(ch1, client_pub, /*with_keyshare=*/PROTO_FALSE, NULL, 0);
     uint8_t rec[420];
     size_t r1 = plain_hs_record(rec, sizeof(rec), ch1, ch1_len, 0, 0);
     if (!r1)
     {
-        return false;
+        return PROTO_FALSE;
     }
     uint8_t hrr_flight[512];
     int hf = pc_dtls_conn_process(&conn, rec, r1, hrr_flight, sizeof(hrr_flight));
     if (hf <= 0)
     {
-        return false;
+        return PROTO_FALSE;
     }
 
     DtlsPlaintext pt;
     if (!pc_dtls_plaintext_parse(hrr_flight, (size_t)hf, &pt))
     {
-        return false;
+        return PROTO_FALSE;
     }
     uint8_t hrr[512];
     size_t hrr_len = frag_to_tls(pt.fragment, pt.frag_len, hrr);
@@ -1750,15 +1752,15 @@ static bool hrr_roundtrip_accepted(const uint8_t *addr, size_t addr_len)
     size_t cookie_len = 0;
     if (!hrr_len || !hrr_cookie(hrr, hrr_len, cookie, &cookie_len))
     {
-        return false;
+        return PROTO_FALSE;
     }
 
     uint8_t ch2[320];
-    size_t ch2_len = build_client_hello_ex(ch2, client_pub, /*with_keyshare=*/true, cookie, cookie_len);
+    size_t ch2_len = build_client_hello_ex(ch2, client_pub, /*with_keyshare=*/PROTO_TRUE, cookie, cookie_len);
     size_t r2 = plain_hs_record(rec, sizeof(rec), ch2, ch2_len, 1, 1);
     if (!r2)
     {
-        return false;
+        return PROTO_FALSE;
     }
     uint8_t flight[2048];
     return pc_dtls_conn_process(&conn, rec, r2, flight, sizeof(flight)) > 0;
@@ -1792,7 +1794,7 @@ static void test_hrr_retry_without_keyshare_rejected(void)
     pc_dtls_conn_init(&conn, &cfg, TEST_PEER_ADDR, sizeof(TEST_PEER_ADDR));
 
     uint8_t ch[256];
-    size_t ch_len = build_client_hello_ex(ch, client_pub, /*with_keyshare=*/false, NULL, 0);
+    size_t ch_len = build_client_hello_ex(ch, client_pub, /*with_keyshare=*/PROTO_FALSE, NULL, 0);
     uint8_t rec[320];
     size_t r1 = plain_hs_record(rec, sizeof(rec), ch, ch_len, 0, 0);
     TEST_ASSERT_TRUE(r1 > 0);
@@ -1819,7 +1821,7 @@ static void test_hrr_retry_with_corrupt_cookie_rejected(void)
     pc_dtls_conn_init(&conn, &cfg, TEST_PEER_ADDR, sizeof(TEST_PEER_ADDR));
 
     uint8_t ch1[256];
-    size_t ch1_len = build_client_hello_ex(ch1, client_pub, /*with_keyshare=*/false, NULL, 0);
+    size_t ch1_len = build_client_hello_ex(ch1, client_pub, /*with_keyshare=*/PROTO_FALSE, NULL, 0);
     uint8_t rec[420];
     size_t r1 = plain_hs_record(rec, sizeof(rec), ch1, ch1_len, 0, 0);
     TEST_ASSERT_TRUE(r1 > 0);
@@ -1839,7 +1841,7 @@ static void test_hrr_retry_with_corrupt_cookie_rejected(void)
     cookie[cookie_len - 1] ^= 0xFF; // last byte of the HMAC
 
     uint8_t ch2[320];
-    size_t ch2_len = build_client_hello_ex(ch2, client_pub, /*with_keyshare=*/true, cookie, cookie_len);
+    size_t ch2_len = build_client_hello_ex(ch2, client_pub, /*with_keyshare=*/PROTO_TRUE, cookie, cookie_len);
     size_t r2 = plain_hs_record(rec, sizeof(rec), ch2, ch2_len, 1, 1);
     TEST_ASSERT_TRUE(r2 > 0);
     uint8_t out[2048];
@@ -1921,7 +1923,7 @@ static void test_timer_stopped_by_done_state(void)
     TEST_ASSERT_TRUE(pc_dtls_conn_established(&conn));
 
     // Re-arm the timer behind the state machine's back: DONE must still veto the retransmission.
-    conn.awaiting_reply = true;
+    conn.awaiting_reply = PROTO_TRUE;
     g_ms += PC_DTLS_PTO_MAX_MS;
     TEST_ASSERT_EQUAL_INT(-1, pc_dtls_conn_timeout_ms(&conn));
     TEST_ASSERT_EQUAL_INT(0, pc_dtls_conn_on_timeout(&conn, out, sizeof(out)));
@@ -1943,7 +1945,7 @@ static void test_established_requires_app_keys(void)
     TEST_ASSERT_TRUE(feed_client_finished(&conn, &st, 0, out, sizeof(out)) > 0);
     TEST_ASSERT_TRUE(pc_dtls_conn_established(&conn));
 
-    conn.ep3_ready = false;
+    conn.ep3_ready = PROTO_FALSE;
     TEST_ASSERT_FALSE(pc_dtls_conn_established(&conn));
     TEST_ASSERT_NULL(pc_dtls_conn_app_write_keys(&conn));
     TEST_ASSERT_NULL(pc_dtls_conn_app_read_keys(&conn));
@@ -1968,7 +1970,7 @@ static void test_local_cid_requires_nonempty_id(void)
     DtlsConn conn;
     pc_dtls_conn_init(&conn, &cfg, NULL, 0);
     uint8_t ch[256];
-    size_t chl = build_client_hello_ex(ch, client_pub, true, NULL, 0, peer_cid, sizeof(peer_cid));
+    size_t chl = build_client_hello_ex(ch, client_pub, PROTO_TRUE, NULL, 0, peer_cid, sizeof(peer_cid));
     uint8_t rec[320];
     size_t rl = plain_hs_record(rec, sizeof(rec), ch, chl, 0, 0);
     TEST_ASSERT_TRUE(rl > 0);

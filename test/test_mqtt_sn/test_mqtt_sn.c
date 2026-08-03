@@ -19,7 +19,7 @@ void tearDown()
 void test_make_flags()
 {
     // DUP, QoS 2, retain, will, clean, short topic name.
-    uint8_t f = pc_mqttsn_make_flags(true, 2, true, true, true, MQTTSN_TOPIC_SHORT);
+    uint8_t f = pc_mqttsn_make_flags(PROTO_TRUE, 2, PROTO_TRUE, PROTO_TRUE, PROTO_TRUE, MQTTSN_TOPIC_SHORT);
     TEST_ASSERT_EQUAL_HEX8(MQTTSN_FLAG_DUP, f & MQTTSN_FLAG_DUP);
     TEST_ASSERT_EQUAL_UINT8(2, (uint8_t)((f & MQTTSN_FLAG_QOS_MASK) >> MQTTSN_FLAG_QOS_SHIFT));
     TEST_ASSERT_EQUAL_HEX8(MQTTSN_FLAG_RETAIN, f & MQTTSN_FLAG_RETAIN);
@@ -28,7 +28,8 @@ void test_make_flags()
     TEST_ASSERT_EQUAL_UINT8(MQTTSN_TOPIC_SHORT, f & MQTTSN_FLAG_TOPICIDTYPE_MASK);
     // QoS -1 encodes as 0b11.
     TEST_ASSERT_EQUAL_UINT8(3,
-                            (uint8_t)((pc_mqttsn_make_flags(false, 3, false, false, false, 0) & MQTTSN_FLAG_QOS_MASK) >>
+                            (uint8_t)((pc_mqttsn_make_flags(PROTO_FALSE, 3, PROTO_FALSE, PROTO_FALSE, PROTO_FALSE, 0) &
+                                       MQTTSN_FLAG_QOS_MASK) >>
                                       MQTTSN_FLAG_QOS_SHIFT));
 }
 
@@ -36,7 +37,8 @@ void test_make_flags()
 void test_build_connect_bytes()
 {
     uint8_t buf[32];
-    uint8_t flags = pc_mqttsn_make_flags(false, 0, false, false, true, MQTTSN_TOPIC_NORMAL); // clean session
+    uint8_t flags = pc_mqttsn_make_flags(PROTO_FALSE, 0, PROTO_FALSE, PROTO_FALSE, PROTO_TRUE,
+                                         MQTTSN_TOPIC_NORMAL); // clean session
     size_t n = pc_mqttsn_build_connect(buf, sizeof(buf), flags, 30, "dev1");
     // total = 1(len) + 1(type) + 1(flags) + 1(protoid) + 2(duration) + 4(clientid) = 10
     TEST_ASSERT_EQUAL_size_t(10, n);
@@ -48,7 +50,7 @@ void test_build_connect_bytes()
 void test_build_publish_bytes()
 {
     uint8_t buf[32];
-    uint8_t flags = pc_mqttsn_make_flags(false, 1, false, false, false, MQTTSN_TOPIC_NORMAL);
+    uint8_t flags = pc_mqttsn_make_flags(PROTO_FALSE, 1, PROTO_FALSE, PROTO_FALSE, PROTO_FALSE, MQTTSN_TOPIC_NORMAL);
     const uint8_t data[] = {0xDE, 0xAD};
     size_t n = pc_mqttsn_build_publish(buf, sizeof(buf), flags, 0x0007, 0x0001, data, sizeof(data));
     // total = 1+1+1(flags)+2(topic)+2(msgid)+2(data) = 9
@@ -147,8 +149,8 @@ void test_optional_fields()
     TEST_ASSERT_EQUAL_size_t(2, pc_mqttsn_build_pingreq(buf, sizeof(buf), NULL));
     TEST_ASSERT_EQUAL_HEX8(MQTTSN_PINGREQ, buf[1]);
     // DISCONNECT without a duration is 2 bytes; with one it is 4.
-    TEST_ASSERT_EQUAL_size_t(2, pc_mqttsn_build_disconnect(buf, sizeof(buf), false, 0));
-    TEST_ASSERT_EQUAL_size_t(4, pc_mqttsn_build_disconnect(buf, sizeof(buf), true, 60));
+    TEST_ASSERT_EQUAL_size_t(2, pc_mqttsn_build_disconnect(buf, sizeof(buf), PROTO_FALSE, 0));
+    TEST_ASSERT_EQUAL_size_t(4, pc_mqttsn_build_disconnect(buf, sizeof(buf), PROTO_TRUE, 60));
     TEST_ASSERT_EQUAL_HEX8(0x00, buf[2]);
     TEST_ASSERT_EQUAL_HEX8(0x3C, buf[3]); // 60
     // SEARCHGW carries a 1-byte radius.
@@ -206,7 +208,7 @@ void test_build_regack_puback()
 void test_build_subscribe_variants()
 {
     uint8_t buf[16];
-    uint8_t flags = pc_mqttsn_make_flags(false, 1, false, false, false, MQTTSN_TOPIC_NORMAL);
+    uint8_t flags = pc_mqttsn_make_flags(PROTO_FALSE, 1, PROTO_FALSE, PROTO_FALSE, PROTO_FALSE, MQTTSN_TOPIC_NORMAL);
 
     size_t n = pc_mqttsn_build_subscribe_name(buf, sizeof(buf), flags, 0x0005, "a/b");
     TEST_ASSERT_EQUAL_size_t(8, n); // 1+1+1(flags)+2(msgid)+3(name)
@@ -243,7 +245,7 @@ void test_build_guards()
     TEST_ASSERT_EQUAL_size_t(0, pc_mqttsn_build_subscribe_name(NULL, 32, 0, 0, "x"));
     TEST_ASSERT_EQUAL_size_t(0, pc_mqttsn_build_subscribe_id(NULL, 32, 0, 0, 0));
     TEST_ASSERT_EQUAL_size_t(0, pc_mqttsn_build_pingreq(NULL, 32, "x"));
-    TEST_ASSERT_EQUAL_size_t(0, pc_mqttsn_build_disconnect(NULL, 32, false, 0));
+    TEST_ASSERT_EQUAL_size_t(0, pc_mqttsn_build_disconnect(NULL, 32, PROTO_FALSE, 0));
     TEST_ASSERT_EQUAL_size_t(0, pc_mqttsn_build_searchgw(NULL, 32, 0));
     // null string / data
     TEST_ASSERT_EQUAL_size_t(0, pc_mqttsn_build_connect(buf, 32, 0, 0, NULL));
@@ -258,9 +260,9 @@ void test_build_guards()
     TEST_ASSERT_EQUAL_size_t(0, pc_mqttsn_build_publish(tiny, sizeof(tiny), 0, 0, 0, d, 2));
     TEST_ASSERT_EQUAL_size_t(0, pc_mqttsn_build_subscribe_name(tiny, sizeof(tiny), 0, 0, "topic"));
     TEST_ASSERT_EQUAL_size_t(0, pc_mqttsn_build_subscribe_id(tiny, sizeof(tiny), 0, 0, 0));
-    TEST_ASSERT_EQUAL_size_t(0, pc_mqttsn_build_disconnect(tiny, 2, true, 0)); // needs 4
-    TEST_ASSERT_EQUAL_size_t(0, pc_mqttsn_build_searchgw(tiny, 2, 0));         // needs 3
-    TEST_ASSERT_EQUAL_size_t(0, pc_mqttsn_build_pingreq(tiny, 2, "toolong"));  // needs 9
+    TEST_ASSERT_EQUAL_size_t(0, pc_mqttsn_build_disconnect(tiny, 2, PROTO_TRUE, 0)); // needs 4
+    TEST_ASSERT_EQUAL_size_t(0, pc_mqttsn_build_searchgw(tiny, 2, 0));               // needs 3
+    TEST_ASSERT_EQUAL_size_t(0, pc_mqttsn_build_pingreq(tiny, 2, "toolong"));        // needs 9
 }
 
 // Typed payload parsers reject payloads shorter than their fixed layout.

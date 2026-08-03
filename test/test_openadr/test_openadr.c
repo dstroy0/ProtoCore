@@ -14,7 +14,7 @@ void tearDown(void)
 {
 }
 
-static bool has(const char *hay, const char *needle)
+static proto_bool has(const char *hay, const char *needle)
 {
     return strstr(hay, needle) != NULL;
 }
@@ -69,11 +69,11 @@ void test_openadr_escape_and_overflow()
     char out[512];
     size_t n = pc_openadr_event("prog", "line1\nline2", NULL, 0, out, sizeof(out));
     TEST_ASSERT_TRUE(n > 0);
-    TEST_ASSERT_NOT_NULL(strstr(out, "\\n"));                                                    // newline escaped
-    TEST_ASSERT_EQUAL_size_t(0, pc_openadr_event("p", "e", NULL, 0, NULL, sizeof(out)));   // null out
+    TEST_ASSERT_NOT_NULL(strstr(out, "\\n"));                                                 // newline escaped
+    TEST_ASSERT_EQUAL_size_t(0, pc_openadr_event("p", "e", NULL, 0, NULL, sizeof(out)));      // null out
     TEST_ASSERT_EQUAL_size_t(0, pc_openadr_event("p", "eventNameTooLong", NULL, 0, out, 8));  // overflow
     TEST_ASSERT_EQUAL_size_t(0, pc_openadr_report("p", "e", "r", 1.0, 0, NULL, sizeof(out))); // null out
-    TEST_ASSERT_EQUAL_size_t(0, pc_openadr_report("p", "e", "res", 1.0, 0, out, 8));             // overflow
+    TEST_ASSERT_EQUAL_size_t(0, pc_openadr_report("p", "e", "res", 1.0, 0, out, 8));          // overflow
 }
 
 void test_openadr_null_program_and_count_without_intervals(void)

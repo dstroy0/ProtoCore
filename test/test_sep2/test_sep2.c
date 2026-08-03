@@ -14,7 +14,7 @@ void tearDown(void)
 {
 }
 
-static bool has(const char *hay, const char *needle)
+static proto_bool has(const char *hay, const char *needle)
 {
     return strstr(hay, needle) != NULL;
 }

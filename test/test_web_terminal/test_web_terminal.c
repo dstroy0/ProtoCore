@@ -62,7 +62,7 @@ static size_t build_frame(uint8_t *dst, WsOpcode opcode, const uint8_t *payload,
 // Set for the one test that must observe the module before pc_web_terminal_begin()
 // has ever stored a server handle (the service is a file-static, so that state is
 // only reachable from the first test that runs).
-static bool g_skip_begin = false;
+static proto_bool g_skip_begin = PROTO_FALSE;
 
 void setUp()
 {
@@ -205,7 +205,7 @@ void test_close_clears_client()
     TEST_ASSERT_EQUAL_UINT(1, pc_web_terminal_client_count());
     WsConn *ws = ws_find(0);
     ws->parse_state = WS_CLOSED; // simulate client close
-    handle();                                  // handle() fires the ws_close route callback
+    handle();                    // handle() fires the ws_close route callback
     TEST_ASSERT_EQUAL_UINT(0, pc_web_terminal_client_count());
 }
 
@@ -294,7 +294,7 @@ void test_stale_client_slot_is_skipped()
     TEST_ASSERT_EQUAL_UINT(1, pc_web_terminal_client_count());
     WsConn *ws = ws_find(0);
     TEST_ASSERT_NOT_NULL(ws);
-    ws->active = false; // socket gone; the terminal has not been told yet
+    ws->active = PROTO_FALSE; // socket gone; the terminal has not been told yet
     TEST_ASSERT_EQUAL_UINT(0, pc_web_terminal_client_count());
     tcp_capture_reset();
     pc_web_terminal_print("ghost");
@@ -304,9 +304,9 @@ void test_stale_client_slot_is_skipped()
 int main()
 {
     UNITY_BEGIN();
-    g_skip_begin = true;
+    g_skip_begin = PROTO_TRUE;
     RUN_TEST(test_api_inert_before_begin);
-    g_skip_begin = false;
+    g_skip_begin = PROTO_FALSE;
     RUN_TEST(test_serves_terminal_page);
     RUN_TEST(test_ws_upgrade_tracks_client);
     RUN_TEST(test_ws_upgrade_requires_connection_token);

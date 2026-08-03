@@ -20,7 +20,7 @@ void test_frame_message_bytes()
 {
     const uint8_t msg[] = {0x08, 0x96, 0x01}; // a protobuf message (field 1 = 150)
     uint8_t buf[16];
-    size_t n = pc_grpcweb_frame_message(buf, sizeof(buf), msg, sizeof(msg), false);
+    size_t n = pc_grpcweb_frame_message(buf, sizeof(buf), msg, sizeof(msg), PROTO_FALSE);
     TEST_ASSERT_EQUAL_size_t(GRPCWEB_PREFIX_LEN + sizeof(msg), n);
     const uint8_t expect[] = {0x00, 0x00, 0x00, 0x00, 0x03, 0x08, 0x96, 0x01};
     TEST_ASSERT_EQUAL_HEX8_ARRAY(expect, buf, n);
@@ -30,7 +30,7 @@ void test_compressed_flag()
 {
     const uint8_t msg[] = {0xFF};
     uint8_t buf[16];
-    size_t n = pc_grpcweb_frame_message(buf, sizeof(buf), msg, sizeof(msg), true);
+    size_t n = pc_grpcweb_frame_message(buf, sizeof(buf), msg, sizeof(msg), PROTO_TRUE);
     TEST_ASSERT_EQUAL_size_t(6, n);
     TEST_ASSERT_EQUAL_HEX8(GRPCWEB_FLAG_COMPRESSED, buf[0]);
 }
@@ -97,7 +97,7 @@ void test_parse_stream()
 {
     const uint8_t msg[] = {0x12, 0x02, 'h', 'i'};
     uint8_t buf[128];
-    size_t n = pc_grpcweb_frame_message(buf, sizeof(buf), msg, sizeof(msg), false);
+    size_t n = pc_grpcweb_frame_message(buf, sizeof(buf), msg, sizeof(msg), PROTO_FALSE);
     n += pc_grpcweb_frame_trailer(buf + n, sizeof(buf) - n, 0, "OK");
 
     size_t pos = 0;
@@ -124,7 +124,7 @@ void test_parse_incomplete()
 {
     const uint8_t msg[] = {0xAA, 0xBB, 0xCC};
     uint8_t buf[16];
-    size_t n = pc_grpcweb_frame_message(buf, sizeof(buf), msg, sizeof(msg), false);
+    size_t n = pc_grpcweb_frame_message(buf, sizeof(buf), msg, sizeof(msg), PROTO_FALSE);
     GrpcWebFrame f;
     size_t c;
     TEST_ASSERT_FALSE(pc_grpcweb_parse(buf, GRPCWEB_PREFIX_LEN - 1, &f, &c)); // prefix incomplete
@@ -135,7 +135,7 @@ void test_frame_overflow_fails_closed()
 {
     const uint8_t msg[] = {1, 2, 3, 4};
     uint8_t small[6]; // 5 prefix + 4 body needs 9
-    TEST_ASSERT_EQUAL_size_t(0, pc_grpcweb_frame_message(small, sizeof(small), msg, sizeof(msg), false));
+    TEST_ASSERT_EQUAL_size_t(0, pc_grpcweb_frame_message(small, sizeof(small), msg, sizeof(msg), PROTO_FALSE));
     TEST_ASSERT_EQUAL_size_t(0, pc_grpcweb_frame_trailer(small, 3, 0, "x")); // smaller than the prefix
 }
 
@@ -151,7 +151,7 @@ void test_frame_and_trailer_guards()
     TEST_ASSERT_EQUAL_size_t(0, pc_grpcweb_frame_trailer(buf, 8, 0, NULL));            // status key overflows
     TEST_ASSERT_EQUAL_size_t(0, pc_grpcweb_frame_trailer(buf, sizeof(buf), -1, NULL)); // negative status
     TEST_ASSERT_EQUAL_size_t(0, pc_grpcweb_frame_trailer(buf, 17, 5, NULL));           // status digits overflow
-    TEST_ASSERT_EQUAL_size_t(0, pc_grpcweb_frame_trailer(buf, 24, 0, "msg"));             // grpc-message line overflows
+    TEST_ASSERT_EQUAL_size_t(0, pc_grpcweb_frame_trailer(buf, 24, 0, "msg"));          // grpc-message line overflows
 }
 
 // The status extractor rejects a null body, a key not followed by a digit, and a body
@@ -171,7 +171,7 @@ void test_trailer_status_parse_paths()
 void test_frame_zero_length_body()
 {
     uint8_t buf[16];
-    size_t n = pc_grpcweb_frame_message(buf, sizeof(buf), NULL, 0, false);
+    size_t n = pc_grpcweb_frame_message(buf, sizeof(buf), NULL, 0, PROTO_FALSE);
     TEST_ASSERT_EQUAL_size_t(GRPCWEB_PREFIX_LEN, n);
     const uint8_t expect[GRPCWEB_PREFIX_LEN] = {0, 0, 0, 0, 0};
     TEST_ASSERT_EQUAL_HEX8_ARRAY(expect, buf, GRPCWEB_PREFIX_LEN);

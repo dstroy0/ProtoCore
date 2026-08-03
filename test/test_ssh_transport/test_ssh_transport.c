@@ -24,14 +24,14 @@
 // enough - rebuilt per call, and released first so a backend that attaches vendor resources to a
 // context (ESP's mbedtls does) does not leak one per vector.
 static uint8_t g_gcm_ws[PC_WORK_AESGCM] __attribute__((aligned(8)));
-static bool g_gcm_live = false;
+static proto_bool g_gcm_live = PROTO_FALSE;
 static pc_aesgcm_key *gcm_key(const uint8_t *key)
 {
     if (g_gcm_live)
     {
         pc_aesgcm_key_wipe(reinterpret_cast<pc_aesgcm_key *>(g_gcm_ws));
     }
-    g_gcm_live = true;
+    g_gcm_live = PROTO_TRUE;
     return pc_aesgcm_key_init(g_gcm_ws, key);
 }
 
@@ -45,8 +45,8 @@ static void setup_rsa_fixture();
 void setUp()
 {
     ssh_transport_init(0);
-    ssh_kex_set_prefer_rsa(true); // deterministic default for negotiation tests
-    setup_rsa_fixture();          // a host key must be available for host-key negotiation
+    ssh_kex_set_prefer_rsa(PROTO_TRUE); // deterministic default for negotiation tests
+    setup_rsa_fixture();                // a host key must be available for host-key negotiation
 }
 void tearDown()
 {
@@ -193,7 +193,7 @@ void test_kexinit_hostkey_list_carries_all_four_when_all_keys_loaded()
                                           0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f};
     pc_ssh_hostkey_ed25519_set(BASELINE_ED25519_SEEDS[0]);
     pc_ssh_hostkey_ecdsa_set(EC_SCALAR);
-    ssh_kex_set_prefer_rsa(false); // modern-first order (RSA entries last, so truncation hits them)
+    ssh_kex_set_prefer_rsa(PROTO_FALSE); // modern-first order (RSA entries last, so truncation hits them)
     // RSA is already available via setup_rsa_fixture() in setUp().
 
     uint8_t buf[SSH_KEXINIT_MAX];
@@ -214,7 +214,7 @@ void test_kexinit_hostkey_list_carries_all_four_when_all_keys_loaded()
     TEST_ASSERT_NOT_NULL(strstr(hk, "ecdsa-sha2-nistp256"));
     TEST_ASSERT_NOT_NULL(strstr(hk, "rsa-sha2-512"));
     TEST_ASSERT_NOT_NULL(strstr(hk, "rsa-sha2-256")); // the entry the undersized buffer used to drop
-    ssh_kex_set_prefer_rsa(true);                     // restore the setUp default for later tests
+    ssh_kex_set_prefer_rsa(PROTO_TRUE);               // restore the setUp default for later tests
 }
 
 void test_kexinit_parse_accepts_supported()
@@ -261,14 +261,14 @@ void test_kexinit_parse_rejects_hostkey_we_lack()
 void test_kexinit_parse_steers_to_curve_ed25519()
 {
     pc_ssh_hostkey_ed25519_set(BASELINE_ED25519_SEEDS[0]); // deterministic baseline host key
-    ssh_kex_set_prefer_rsa(false);
+    ssh_kex_set_prefer_rsa(PROTO_FALSE);
     uint8_t buf[SSH_KEXINIT_MAX];
     size_t n = build_client_kexinit(buf, "curve25519-sha256,diffie-hellman-group14-sha256", "ssh-ed25519,rsa-sha2-256",
                                     "aes256-ctr", "hmac-sha2-256", "none");
     TEST_ASSERT_EQUAL_INT(0, ssh_kexinit_parse(0, buf, n));
     TEST_ASSERT_EQUAL(SSH_KEX_CURVE25519, ssh_sess[0].kex_alg);
     TEST_ASSERT_EQUAL(SSH_HOSTKEY_ED25519, ssh_sess[0].hostkey_alg);
-    ssh_kex_set_prefer_rsa(true); // restore default for later tests
+    ssh_kex_set_prefer_rsa(PROTO_TRUE); // restore default for later tests
 }
 
 void test_kexinit_parse_rejects_missing_cipher()
@@ -418,7 +418,7 @@ static size_t put_mpint(uint8_t *p, const uint8_t *be, size_t len)
     {
         return put_string(p, NULL, 0);
     }
-    bool pad = (be[off] & 0x80u) != 0;
+    proto_bool pad = (be[off] & 0x80u) != 0;
     size_t mlen = (len - off) + (pad ? 1 : 0);
     p[0] = (uint8_t)(mlen >> 24);
     p[1] = (uint8_t)(mlen >> 16);
@@ -585,23 +585,23 @@ void test_kexdh_build_reply_structure()
     TEST_ASSERT_EQUAL_UINT32(12, kslen);
     TEST_ASSERT_EQUAL_MEMORY(ks, out + 5, 12);
 
-    bool alg = false;
+    proto_bool alg = PROTO_FALSE;
     for (size_t k = 0; k + 12 <= n; k++)
     {
         if (memcmp(out + k, "rsa-sha2-256", 12) == 0)
         {
-            alg = true;
+            alg = PROTO_TRUE;
             break;
         }
     }
     TEST_ASSERT_TRUE(alg);
 
-    bool found_sig = false;
+    proto_bool found_sig = PROTO_FALSE;
     for (size_t k = 0; k + 256 <= n; k++)
     {
         if (memcmp(out + k, sig, 256) == 0)
         {
-            found_sig = true;
+            found_sig = PROTO_TRUE;
             break;
         }
     }
@@ -661,12 +661,12 @@ void test_kexdh_handle_produces_reply_and_installs_keys()
     TEST_ASSERT_EQUAL(SSH_PHASE_NEWKEYS, ssh_sess[0].phase);
     TEST_ASSERT_TRUE(ssh_keys[0].active);
 
-    bool alg = false;
+    proto_bool alg = PROTO_FALSE;
     for (size_t k = 0; k + 12 <= rlen; k++)
     {
         if (memcmp(reply + k, "rsa-sha2-256", 12) == 0)
         {
-            alg = true;
+            alg = PROTO_TRUE;
             break;
         }
     }
@@ -703,22 +703,22 @@ void test_kexdh_handle_rejects_invalid_e()
 // ---- curve25519-sha256 + ssh-ed25519 KEX (RFC 8731 / RFC 8709) ------------
 
 // Read an SSH string field at *off; point *d/*dl into buf and advance *off.
-static bool rd_string(const uint8_t *b, size_t len, size_t *off, const uint8_t **d, uint32_t *dl)
+static proto_bool rd_string(const uint8_t *b, size_t len, size_t *off, const uint8_t **d, uint32_t *dl)
 {
     if (*off + 4 > len)
     {
-        return false;
+        return PROTO_FALSE;
     }
     uint32_t n = ((uint32_t)b[*off] << 24) | ((uint32_t)b[*off + 1] << 16) | ((uint32_t)b[*off + 2] << 8) | b[*off + 3];
     *off += 4;
     if (*off + n > len)
     {
-        return false;
+        return PROTO_FALSE;
     }
     *d = b + *off;
     *dl = n;
     *off += n;
-    return true;
+    return PROTO_TRUE;
 }
 
 // A full server-side curve25519 + ed25519 key exchange, verified end-to-end the way a
@@ -1005,17 +1005,17 @@ void test_kexdh_handle_rsa_sha512_signature()
     TEST_ASSERT_EQUAL_INT(0, ssh_kexdh_handle(0, pkt, n, reply, &rlen, sizeof(reply)));
 
     // The negotiated signature name must be rsa-sha2-512, and rsa-sha2-256 absent.
-    bool has512 = false;
-    bool has256 = false;
+    proto_bool has512 = PROTO_FALSE;
+    proto_bool has256 = PROTO_FALSE;
     for (size_t k = 0; k + 12 <= rlen; k++)
     {
         if (memcmp(reply + k, "rsa-sha2-512", 12) == 0)
         {
-            has512 = true;
+            has512 = PROTO_TRUE;
         }
         if (memcmp(reply + k, "rsa-sha2-256", 12) == 0)
         {
-            has256 = true;
+            has256 = PROTO_TRUE;
         }
     }
     TEST_ASSERT_TRUE(has512);
@@ -1240,12 +1240,12 @@ void test_begin_rekey_preserves_session_and_auth()
 {
     ssh_transport_init(0);
     setup_rsa_fixture();
-    ssh_sess[0].have_session_id = true;
+    ssh_sess[0].have_session_id = PROTO_TRUE;
     for (int j = 0; j < 32; j++)
     {
         ssh_sess[0].session_id[j] = (uint8_t)j;
     }
-    ssh_sess[0].authed = true;
+    ssh_sess[0].authed = PROTO_TRUE;
     TEST_ASSERT_EQUAL_INT(0, ssh_dh_generate(0));
 
     uint8_t out[1024];
@@ -1450,14 +1450,14 @@ void test_kexinit_parse_truncation_points()
 // prefer-RSA accessor + the non-RSA build ordering, slot guards, and a malformed ECDH_INIT.
 void test_ssh_transport_more_guards()
 {
-    ssh_kex_set_prefer_rsa(true);
+    ssh_kex_set_prefer_rsa(PROTO_TRUE);
     TEST_ASSERT_TRUE(ssh_kex_prefer_rsa());
-    ssh_kex_set_prefer_rsa(false);
+    ssh_kex_set_prefer_rsa(PROTO_FALSE);
     TEST_ASSERT_FALSE(ssh_kex_prefer_rsa());
     uint8_t kbuf[1024]; // the full advertised KEXINIT (kex+hostkey+cipher+mac+comp lists) exceeds 512
     size_t kn = 0;
     TEST_ASSERT_EQUAL_INT(0, ssh_kexinit_build(0, kbuf, &kn, sizeof(kbuf))); // build_kex_list non-RSA branch
-    ssh_kex_set_prefer_rsa(true);                                            // restore the setUp default
+    ssh_kex_set_prefer_rsa(PROTO_TRUE);                                      // restore the setUp default
 
     TEST_ASSERT_EQUAL_INT(-1, ssh_kex_generate(200)); // out-of-range slot
     ssh_newkeys_sent(200);                            // out-of-range slot: no-op, no crash
@@ -1553,7 +1553,7 @@ void test_kdf_string_k_hybrid()
     }
 
     uint8_t got[PC_SHA256_DIGEST_LEN];
-    ssh_kdf_derive(K, H, sid, 'C', got, PC_SHA256_DIGEST_LEN, true); // K encoded as a 32-byte string
+    ssh_kdf_derive(K, H, sid, 'C', got, PC_SHA256_DIGEST_LEN, PROTO_TRUE); // K encoded as a 32-byte string
 
     // Independent: K1 = SHA256( string(K[224:256]) || H || 'C' || sid ), string = 4-byte len(32) || bytes.
     uint8_t len_be[4] = {0, 0, 0, 32};
@@ -1571,7 +1571,7 @@ void test_kdf_string_k_hybrid()
 
     // The mpint encoding of the same buffer yields a different key (string != mpint encoding).
     uint8_t as_mpint[PC_SHA256_DIGEST_LEN];
-    ssh_kdf_derive(K, H, sid, 'C', as_mpint, PC_SHA256_DIGEST_LEN, false);
+    ssh_kdf_derive(K, H, sid, 'C', as_mpint, PC_SHA256_DIGEST_LEN, PROTO_FALSE);
     TEST_ASSERT_NOT_EQUAL(0, memcmp(got, as_mpint, PC_SHA256_DIGEST_LEN));
 }
 
@@ -1617,7 +1617,7 @@ static void test_cyclonessh_kex_repro(void)
 // a bad key never ends up advertised in the KEXINIT host-key name-list.
 void test_hostkey_ecdsa_set_rejects_invalid_scalar()
 {
-    const bool before = pc_ssh_hostkey_ecdsa_available();
+    const proto_bool before = pc_ssh_hostkey_ecdsa_available();
 
     uint8_t zero[PC_ECDSA_P256_PRIV_LEN];
     memset(zero, 0, sizeof(zero)); // d = 0 is not in [1, n)
@@ -1702,9 +1702,9 @@ void test_extinfo_build_modern_first_order()
 {
     uint8_t out[128];
     size_t n = 0;
-    ssh_kex_set_prefer_rsa(false);
+    ssh_kex_set_prefer_rsa(PROTO_FALSE);
     const int rc = ssh_extinfo_build(out, &n, sizeof(out));
-    ssh_kex_set_prefer_rsa(true); // restore the setUp default before any assertion can abort
+    ssh_kex_set_prefer_rsa(PROTO_TRUE); // restore the setUp default before any assertion can abort
 
     TEST_ASSERT_EQUAL_INT(0, rc);
     TEST_ASSERT_EQUAL(SSH_MSG_EXT_INFO, out[0]);

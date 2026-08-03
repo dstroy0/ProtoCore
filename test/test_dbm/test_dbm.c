@@ -26,8 +26,8 @@ struct RamDisk
 };
 // Fault-injection switches (default off): simulate a device whose read or sync fails, to exercise the
 // compaction fail-closed / no-data-loss paths.
-static bool g_fail_read = false;
-static bool g_fail_sync = false;
+static proto_bool g_fail_read = PROTO_FALSE;
+static proto_bool g_fail_sync = PROTO_FALSE;
 
 static size_t ram_read(void *ctx, uint64_t off, uint8_t *buf, size_t len)
 {
@@ -53,7 +53,7 @@ static size_t ram_write(void *ctx, uint64_t off, const uint8_t *buf, size_t len)
     memcpy(d->buf + off, buf, len);
     return len;
 }
-static bool ram_sync(void *)
+static proto_bool ram_sync(void *)
 {
     return !g_fail_sync; // simulated sync barrier failure when set
 }
@@ -89,28 +89,28 @@ static void fresh(void)
     fresh_sized(sizeof(g_disk));
 }
 // Remount the store + reopen the dbm over the SAME disk bytes (a "reboot").
-static bool reboot(void)
+static proto_bool reboot(void)
 {
     g_dev = dev_over(&g_d);
     if (!pc_wal_store_mount(&g_wal, &g_dev))
     {
-        return false;
+        return PROTO_FALSE;
     }
     return pc_dbm_open(&g_db, &g_wal);
 }
 
-static bool put_s(const char *k, const char *v)
+static proto_bool put_s(const char *k, const char *v)
 {
     return pc_dbm_put(&g_db, k, (uint16_t)strlen(k), (const uint8_t *)v, (uint32_t)strlen(v));
 }
 // Get and compare to expected string. Returns true if present and equal.
-static bool get_eq(const char *k, const char *expect)
+static proto_bool get_eq(const char *k, const char *expect)
 {
     uint8_t buf[PC_DBM_VAL_MAX];
     long n = pc_dbm_get(&g_db, k, (uint16_t)strlen(k), buf, sizeof(buf));
     if (n < 0)
     {
-        return false;
+        return PROTO_FALSE;
     }
     return (size_t)n == strlen(expect) && memcmp(buf, expect, n) == 0;
 }
@@ -362,9 +362,9 @@ void test_compact_source_read_failure(void)
     put_s("a", "one-updated"); // some churn so there is real live data to copy
     WalStore *dst = fresh_dest(sizeof(g_disk2));
 
-    g_fail_read = true;
+    g_fail_read = PROTO_TRUE;
     TEST_ASSERT_FALSE(pc_dbm_compact(&g_db, dst)); // a source pread fails
-    g_fail_read = false;
+    g_fail_read = PROTO_FALSE;
 
     // db is untouched: still on the original log, every live key intact.
     TEST_ASSERT_EQUAL_UINT32(2, pc_dbm_count(&g_db));
@@ -381,9 +381,9 @@ void test_compact_checkpoint_failure(void)
     put_s("y", "20");
     WalStore *dst = fresh_dest(sizeof(g_disk2));
 
-    g_fail_sync = true;
+    g_fail_sync = PROTO_TRUE;
     TEST_ASSERT_FALSE(pc_dbm_compact(&g_db, dst)); // dst checkpoint sync fails
-    g_fail_sync = false;
+    g_fail_sync = PROTO_FALSE;
 
     TEST_ASSERT_EQUAL_UINT32(2, pc_dbm_count(&g_db));
     TEST_ASSERT_TRUE(get_eq("x", "10"));
@@ -401,7 +401,8 @@ void test_compact_checkpoint_failure(void)
 // the public API would never emit. key_len / val_len are written as given, independently of the actual
 // tail, which is how a truncated or garbage record is modeled.
 static const size_t DBM_RECORD_HDR = 1 + 2 + 4; // op u8 | key_len u16 | val_len u32
-static bool raw_append(uint8_t op, uint16_t key_len_field, uint32_t val_len_field, const void *tail, size_t tail_len)
+static proto_bool raw_append(uint8_t op, uint16_t key_len_field, uint32_t val_len_field, const void *tail,
+                             size_t tail_len)
 {
     uint8_t rec[DBM_RECORD_HDR + PC_DBM_KEY_MAX + PC_DBM_VAL_MAX];
     rec[0] = op;
@@ -426,12 +427,12 @@ void test_replay_skips_malformed_records(void)
     TEST_ASSERT_TRUE(put_s("good", "yes"));
 
     uint8_t stub[3] = {0, 0, 0};
-    TEST_ASSERT_TRUE(pc_wal_store_append(&g_wal, stub, sizeof(stub)));  // shorter than the record header
-    TEST_ASSERT_TRUE(raw_append(0, 0, 0, NULL, 0));                  // zero-length key
-    TEST_ASSERT_TRUE(raw_append(0, PC_DBM_KEY_MAX + 1, 0, NULL, 0)); // key longer than the bound
-    TEST_ASSERT_TRUE(raw_append(0, 4, 100, "abcd", 4));                 // claims 100 value bytes it does not have
-    TEST_ASSERT_TRUE(raw_append(7, 4, 0, "abcd", 4));                   // opcode that is neither put nor delete
-    TEST_ASSERT_TRUE(raw_append(1, 5, 0, "ghost", 5));                  // tombstone for a key never stored
+    TEST_ASSERT_TRUE(pc_wal_store_append(&g_wal, stub, sizeof(stub))); // shorter than the record header
+    TEST_ASSERT_TRUE(raw_append(0, 0, 0, NULL, 0));                    // zero-length key
+    TEST_ASSERT_TRUE(raw_append(0, PC_DBM_KEY_MAX + 1, 0, NULL, 0));   // key longer than the bound
+    TEST_ASSERT_TRUE(raw_append(0, 4, 100, "abcd", 4));                // claims 100 value bytes it does not have
+    TEST_ASSERT_TRUE(raw_append(7, 4, 0, "abcd", 4));                  // opcode that is neither put nor delete
+    TEST_ASSERT_TRUE(raw_append(1, 5, 0, "ghost", 5));                 // tombstone for a key never stored
     TEST_ASSERT_TRUE(pc_dbm_sync(&g_db));
 
     TEST_ASSERT_TRUE(reboot());
@@ -589,9 +590,9 @@ void test_get_fails_when_the_value_cannot_be_read_back(void)
     fresh();
     TEST_ASSERT_TRUE(put_s("v", "payload"));
     uint8_t out[16];
-    g_fail_read = true;
+    g_fail_read = PROTO_TRUE;
     TEST_ASSERT_EQUAL_INT(-1, pc_dbm_get(&g_db, "v", 1, out, sizeof(out)));
-    g_fail_read = false;
+    g_fail_read = PROTO_FALSE;
     TEST_ASSERT_TRUE(get_eq("v", "payload")); // and it reads fine once the device recovers
 }
 
@@ -600,7 +601,7 @@ struct IterCtx
     int seen;
     int stop_after; // 0 = never stop
 };
-static bool iter_cb(const char *key, uint16_t key_len, void *ctx)
+static proto_bool iter_cb(const char *key, uint16_t key_len, void *ctx)
 {
     (void)key;
     (void)key_len;

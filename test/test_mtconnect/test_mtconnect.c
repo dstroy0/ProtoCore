@@ -15,7 +15,7 @@ void tearDown(void)
 {
 }
 
-static bool contains(const char *hay, const char *needle)
+static proto_bool contains(const char *hay, const char *needle)
 {
     return strstr(hay, needle) != NULL;
 }
@@ -25,11 +25,9 @@ void test_streams_document(void)
     char buf[1024];
     pc_mtc_streams s;
     pc_mtc_streams_begin(&s, buf, sizeof(buf), 1500, 42, "cnc1");
-    pc_mtc_streams_add(&s, PC_MTC_EVENT, "Availability", "avail", 40, "2026-07-06T00:00:00Z",
-                       "AVAILABLE");
+    pc_mtc_streams_add(&s, PC_MTC_EVENT, "Availability", "avail", 40, "2026-07-06T00:00:00Z", "AVAILABLE");
     pc_mtc_streams_add(&s, PC_MTC_SAMPLE, "Position", "xpos", 41, "2026-07-06T00:00:01Z", "12.5");
-    pc_mtc_streams_add(&s, PC_MTC_CONDITION, "SystemCondition", "sys", 42, "2026-07-06T00:00:02Z",
-                       "Fault");
+    pc_mtc_streams_add(&s, PC_MTC_CONDITION, "SystemCondition", "sys", 42, "2026-07-06T00:00:02Z", "Fault");
     size_t n = pc_mtc_streams_end(&s);
     TEST_ASSERT_TRUE(n > 0);
     TEST_ASSERT_EQUAL_size_t(strlen(buf), n);
@@ -188,12 +186,9 @@ void test_sample_buffer_and_query(void)
 {
     pc_mtc_sample_buffer b;
     pc_mtc_sample_buffer_init(&b, 1);
-    TEST_ASSERT_EQUAL_UINT64(
-        1, pc_mtc_sample_buffer_add(&b, PC_MTC_SAMPLE, "Position", "xpos", "T1", "1.0"));
-    TEST_ASSERT_EQUAL_UINT64(
-        2, pc_mtc_sample_buffer_add(&b, PC_MTC_SAMPLE, "Position", "xpos", "T2", "2.0"));
-    TEST_ASSERT_EQUAL_UINT64(
-        3, pc_mtc_sample_buffer_add(&b, PC_MTC_EVENT, "Execution", "exec", "T3", "ACTIVE"));
+    TEST_ASSERT_EQUAL_UINT64(1, pc_mtc_sample_buffer_add(&b, PC_MTC_SAMPLE, "Position", "xpos", "T1", "1.0"));
+    TEST_ASSERT_EQUAL_UINT64(2, pc_mtc_sample_buffer_add(&b, PC_MTC_SAMPLE, "Position", "xpos", "T2", "2.0"));
+    TEST_ASSERT_EQUAL_UINT64(3, pc_mtc_sample_buffer_add(&b, PC_MTC_EVENT, "Execution", "exec", "T3", "ACTIVE"));
 
     char buf[1024];
     size_t n = pc_mtc_sample_query(&b, buf, sizeof(buf), 1500, "cnc1", 1, 10);
@@ -405,13 +400,11 @@ void test_sample_buffer_null_and_truncated_fields(void)
     pc_mtc_sample_buffer b;
     pc_mtc_sample_buffer_init(&b, 0);
     TEST_ASSERT_EQUAL_UINT64(1, b.next_seq);
-    TEST_ASSERT_EQUAL_UINT64(
-        1, pc_mtc_sample_buffer_add(&b, PC_MTC_EVENT, NULL, NULL, NULL, NULL));
+    TEST_ASSERT_EQUAL_UINT64(1, pc_mtc_sample_buffer_add(&b, PC_MTC_EVENT, NULL, NULL, NULL, NULL));
 
     const char *long_type = "AVeryLongDataItemTypeNameThatExceedsTheCap";
     TEST_ASSERT_TRUE(strlen(long_type) > PC_MTC_STR_MAX);
-    TEST_ASSERT_EQUAL_UINT64(2,
-                             pc_mtc_sample_buffer_add(&b, PC_MTC_SAMPLE, long_type, "x", "T2", "1.0"));
+    TEST_ASSERT_EQUAL_UINT64(2, pc_mtc_sample_buffer_add(&b, PC_MTC_SAMPLE, long_type, "x", "T2", "1.0"));
 
     char buf[4096];
     size_t n = pc_mtc_sample_query(&b, buf, sizeof(buf), 1, NULL, 1, 10);

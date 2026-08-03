@@ -19,7 +19,7 @@ void tearDown()
 
 void test_url_http_default()
 {
-    bool https;
+    proto_bool https;
     char host[64], path[64];
     uint16_t port;
     TEST_ASSERT_TRUE(
@@ -32,7 +32,7 @@ void test_url_http_default()
 
 void test_url_https_port_nopath()
 {
-    bool https;
+    proto_bool https;
     char host[64], path[64];
     uint16_t port;
     TEST_ASSERT_TRUE(
@@ -45,7 +45,7 @@ void test_url_https_port_nopath()
 
 void test_url_bad_scheme()
 {
-    bool https;
+    proto_bool https;
     char host[64], path[64];
     uint16_t port;
     TEST_ASSERT_FALSE(http_client_parse_url("ftp://x/y", &https, host, sizeof(host), &port, path, sizeof(path)));
@@ -146,12 +146,12 @@ void test_parse_malformed()
 
 void test_url_edge_rejections()
 {
-    bool https = false;
+    proto_bool https = PROTO_FALSE;
     char host[64], path[128];
     uint16_t port = 0;
-    TEST_ASSERT_FALSE(http_client_parse_url(NULL, &https, host, 64, &port, path, 128));      // null url
-    TEST_ASSERT_FALSE(http_client_parse_url("http://h/", NULL, host, 64, &port, path, 128)); // null out
-    TEST_ASSERT_FALSE(http_client_parse_url("http:///p", &https, host, 64, &port, path, 128));  // empty host
+    TEST_ASSERT_FALSE(http_client_parse_url(NULL, &https, host, 64, &port, path, 128));        // null url
+    TEST_ASSERT_FALSE(http_client_parse_url("http://h/", NULL, host, 64, &port, path, 128));   // null out
+    TEST_ASSERT_FALSE(http_client_parse_url("http:///p", &https, host, 64, &port, path, 128)); // empty host
     TEST_ASSERT_FALSE(
         http_client_parse_url("http://longhost.example/", &https, host, 6, &port, path, 128));   // host too long
     TEST_ASSERT_FALSE(http_client_parse_url("http://h:/x", &https, host, 64, &port, path, 128)); // ':' then no digit
@@ -168,13 +168,11 @@ void test_build_edge_rejections()
 {
     char out[256];
     const uint8_t body[] = "data";
-    TEST_ASSERT_EQUAL_size_t(0,
-                             http_client_build_request(NULL, "h", 80, "/", NULL, NULL, 0, out, sizeof(out)));
+    TEST_ASSERT_EQUAL_size_t(0, http_client_build_request(NULL, "h", 80, "/", NULL, NULL, 0, out, sizeof(out)));
     TEST_ASSERT_EQUAL_size_t(0, http_client_build_request("GET", "h", 80, "/", NULL, NULL, 0, out, 0));
     TEST_ASSERT_EQUAL_size_t(
         0, http_client_build_request("POST", "h", 80, "/", "text/plain", body, 4, out, 20)); // body overflow
-    TEST_ASSERT_EQUAL_size_t(
-        0, http_client_build_request("GET", "h", 80, "/", NULL, NULL, 0, out, 10)); // hdr overflow
+    TEST_ASSERT_EQUAL_size_t(0, http_client_build_request("GET", "h", 80, "/", NULL, NULL, 0, out, 10)); // hdr overflow
 
     size_t n = http_client_build_request("GET", "h", 8080, "/", NULL, NULL, 0, out, sizeof(out));
     TEST_ASSERT_GREATER_THAN(0, (int)n);
@@ -226,7 +224,7 @@ void test_host_transport_stubs()
 
 void test_url_parse_arg_and_port_edges()
 {
-    bool https;
+    proto_bool https;
     char host[64], path[64];
     uint16_t port;
 
@@ -256,12 +254,9 @@ void test_build_request_arg_and_port_edges()
 
     // Each out-param (host, path, out) must reject on its own (edge_rejections already covers
     // null method and cap == 0).
-    TEST_ASSERT_EQUAL_size_t(0,
-                             http_client_build_request("GET", NULL, 80, "/", NULL, NULL, 0, out, sizeof(out)));
-    TEST_ASSERT_EQUAL_size_t(0,
-                             http_client_build_request("GET", "h", 80, NULL, NULL, NULL, 0, out, sizeof(out)));
-    TEST_ASSERT_EQUAL_size_t(0,
-                             http_client_build_request("GET", "h", 80, "/", NULL, NULL, 0, NULL, sizeof(out)));
+    TEST_ASSERT_EQUAL_size_t(0, http_client_build_request("GET", NULL, 80, "/", NULL, NULL, 0, out, sizeof(out)));
+    TEST_ASSERT_EQUAL_size_t(0, http_client_build_request("GET", "h", 80, NULL, NULL, NULL, 0, out, sizeof(out)));
+    TEST_ASSERT_EQUAL_size_t(0, http_client_build_request("GET", "h", 80, "/", NULL, NULL, 0, NULL, sizeof(out)));
 
     // Port 443 is the other "default" port: the Host header omits it, same as port 80.
     size_t n = http_client_build_request("GET", "h", 443, "/", NULL, NULL, 0, out, sizeof(out));
@@ -287,8 +282,7 @@ void test_response_framing_edges()
     size_t off = 0, blen = 0;
 
     // Null buffer and a too-short buffer (< 12 bytes) are rejected before any parsing begins.
-    TEST_ASSERT_EQUAL_INT(HTTP_CLIENT_ERR_RESPONSE,
-                          http_client_parse_response(NULL, 20, &off, &blen));
+    TEST_ASSERT_EQUAL_INT(HTTP_CLIENT_ERR_RESPONSE, http_client_parse_response(NULL, 20, &off, &blen));
     char short_resp[] = "HTTP/1.1 2"; // 10 bytes, under the 12-byte floor
     TEST_ASSERT_EQUAL_INT(HTTP_CLIENT_ERR_RESPONSE,
                           http_client_parse_response((uint8_t *)short_resp, sizeof(short_resp) - 1, &off, &blen));

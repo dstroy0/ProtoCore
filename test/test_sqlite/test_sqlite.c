@@ -267,20 +267,20 @@ struct MemDb
     const uint8_t *data;
     uint32_t size;
 };
-static bool mem_read(void *ctx, uint32_t pgno, uint8_t *page, uint32_t page_size)
+static proto_bool mem_read(void *ctx, uint32_t pgno, uint8_t *page, uint32_t page_size)
 {
     MemDb *m = (MemDb *)ctx;
     if (pgno < 1)
     {
-        return false;
+        return PROTO_FALSE;
     }
     uint32_t off = (pgno - 1) * page_size;
     if (off + page_size > m->size)
     {
-        return false;
+        return PROTO_FALSE;
     }
     memcpy(page, m->data + off, page_size);
-    return true;
+    return PROTO_TRUE;
 }
 
 // Walk a real 2-level table b-tree (interior root on page 2) and read all 40 rows in rowid order.
@@ -323,15 +323,15 @@ void test_table_cursor_multipage(void)
 }
 
 // Page reader over the overflow fixture, whose pages are separate 512-byte arrays (1-based).
-static bool ovf_read(void *ctx, uint32_t pgno, uint8_t *page, uint32_t page_size)
+static proto_bool ovf_read(void *ctx, uint32_t pgno, uint8_t *page, uint32_t page_size)
 {
     (void)ctx;
     if (pgno < 1 || pgno > OVF_PAGE_COUNT || page_size != OVF_PAGE_SIZE)
     {
-        return false;
+        return PROTO_FALSE;
     }
     memcpy(page, OVF_PAGES[pgno - 1], OVF_PAGE_SIZE);
-    return true;
+    return PROTO_TRUE;
 }
 
 // Read the TEXT column b of a row record and assert it is `len` copies of `ch`.
@@ -367,7 +367,7 @@ static void assert_text_eq(SqliteRecordCursor *row, const char *s)
 // Scan the image for the first leaf-table page holding an overflowing cell; copy that leaf page into
 // @p leaf_out and return the parsed cell. (The table root here is an interior page whose leaves sit on
 // later pages, so we locate the leaf rather than assume the root is one.)
-static bool find_overflow_cell(uint8_t *leaf_out, SqliteTableLeafCell *cell_out)
+static proto_bool find_overflow_cell(uint8_t *leaf_out, SqliteTableLeafCell *cell_out)
 {
     for (uint32_t pg = 1; pg <= OVF_PAGE_COUNT; pg++)
     {
@@ -378,8 +378,7 @@ static bool find_overflow_cell(uint8_t *leaf_out, SqliteTableLeafCell *cell_out)
         }
         size_t off = (pg == 1) ? 100 : 0;
         SqliteBtreeHeader bh;
-        if (!pc_sqlite_parse_btree_header(page, OVF_PAGE_SIZE, off, &bh) ||
-            bh.type != SQLITE_BTREE_LEAF_TABLE)
+        if (!pc_sqlite_parse_btree_header(page, OVF_PAGE_SIZE, off, &bh) || bh.type != SQLITE_BTREE_LEAF_TABLE)
         {
             continue;
         }
@@ -392,11 +391,11 @@ static bool find_overflow_cell(uint8_t *leaf_out, SqliteTableLeafCell *cell_out)
             {
                 memcpy(leaf_out, page, OVF_PAGE_SIZE);
                 *cell_out = cell;
-                return true;
+                return PROTO_TRUE;
             }
         }
     }
-    return false;
+    return PROTO_FALSE;
 }
 
 // Reassemble an overflowing row's payload directly with pc_sqlite_read_payload and verify the full TEXT.
@@ -442,7 +441,7 @@ void test_read_payload_nonoverflow(void)
     cell.payload_len = 50;
     cell.local_off = 8;
     cell.local_len = 50;
-    cell.has_overflow = false;
+    cell.has_overflow = PROTO_FALSE;
     TEST_ASSERT_TRUE(pc_sqlite_read_payload(ovf_read, NULL, OVF_PAGE_SIZE, 0, leaf, &cell, out, sizeof(out), work));
     TEST_ASSERT_EQUAL_MEMORY(leaf + 8, out, 50);
 }
@@ -457,7 +456,7 @@ void test_read_payload_bad_overflow_pointer(void)
     cell.payload_len = 1000; // > local -> claims an overflow chain
     cell.local_off = 8;
     cell.local_len = 100;
-    cell.has_overflow = true;
+    cell.has_overflow = PROTO_TRUE;
     // The 4-byte first-overflow pointer sits right after the local prefix: point it at page 9999, which
     // ovf_read (only 11 pages) refuses -> the read fails and the reassembly returns false.
     uint32_t ptr = cell.local_off + cell.local_len;
@@ -475,8 +474,7 @@ void test_overflow_read_payload_bounds(void)
     SqliteTableLeafCell cell;
     TEST_ASSERT_TRUE(find_overflow_cell(leaf, &cell));
     uint8_t tiny[16]; // far smaller than the >=1000-byte overflowing payload
-    TEST_ASSERT_FALSE(
-        pc_sqlite_read_payload(ovf_read, NULL, OVF_PAGE_SIZE, 0, leaf, &cell, tiny, sizeof(tiny), work));
+    TEST_ASSERT_FALSE(pc_sqlite_read_payload(ovf_read, NULL, OVF_PAGE_SIZE, 0, leaf, &cell, tiny, sizeof(tiny), work));
 }
 
 // Drive the table cursor with an overflow buffer: every row (incl. the overflowing ones) fully reassembled.
@@ -906,15 +904,15 @@ struct OvfSynth
     uint32_t count;
 };
 
-static bool ovf_synth_read(void *ctx, uint32_t pgno, uint8_t *page, uint32_t page_size)
+static proto_bool ovf_synth_read(void *ctx, uint32_t pgno, uint8_t *page, uint32_t page_size)
 {
     OvfSynth *s = (OvfSynth *)ctx;
     if (pgno < 1 || pgno > s->count || page_size != 64)
     {
-        return false;
+        return PROTO_FALSE;
     }
     memcpy(page, s->pages[pgno - 1], 64);
-    return true;
+    return PROTO_TRUE;
 }
 
 void test_read_payload_chain_edges(void)
@@ -943,7 +941,7 @@ void test_read_payload_chain_edges(void)
     cell.payload_len = 70;
     cell.local_off = 0;
     cell.local_len = 10;
-    cell.has_overflow = true;
+    cell.has_overflow = PROTO_TRUE;
 
     // The payload completes exactly at the end of the first overflow page even though that page's
     // next pointer is non-zero: the byte count, not the pointer, ends the walk.
@@ -990,24 +988,24 @@ struct SynthDb
     int corrupt_after; // once `reads` passes this the page comes back with a bad type byte (-1 = never)
 };
 
-static bool synth_read(void *ctx, uint32_t pgno, uint8_t *page, uint32_t page_size)
+static proto_bool synth_read(void *ctx, uint32_t pgno, uint8_t *page, uint32_t page_size)
 {
     SynthDb *s = (SynthDb *)ctx;
     s->reads++;
     if (pgno < 1 || pgno > s->count || page_size != SYNTH_PAGE_SIZE)
     {
-        return false;
+        return PROTO_FALSE;
     }
     if (s->fail_after >= 0 && s->reads > s->fail_after)
     {
-        return false;
+        return PROTO_FALSE;
     }
     memcpy(page, s->pages[pgno - 1], SYNTH_PAGE_SIZE);
     if (s->corrupt_after >= 0 && s->reads > s->corrupt_after)
     {
         page[0] = 0x63; // not a b-tree page type
     }
-    return true;
+    return PROTO_TRUE;
 }
 
 static void synth_init(SynthDb *s, uint32_t count)
@@ -1058,13 +1056,13 @@ static void synth_interior(uint8_t *page, uint16_t ncells, const uint32_t *child
 
 // A page source that always hands back an interior-table page pointing at the next page number, so
 // the descent never reaches a leaf and must stop at the depth cap.
-static bool endless_interior_read(void *ctx, uint32_t pgno, uint8_t *page, uint32_t page_size)
+static proto_bool endless_interior_read(void *ctx, uint32_t pgno, uint8_t *page, uint32_t page_size)
 {
     (void)ctx;
     (void)page_size;
     const uint32_t child = pgno + 1;
     synth_interior(page, 1, &child, pgno + 2);
-    return true;
+    return PROTO_TRUE;
 }
 
 void test_cursor_descend_rejects(void)
@@ -1114,8 +1112,7 @@ void test_cursor_depth_cap(void)
     // An endless interior chain stops at SQLITE_BTREE_MAX_DEPTH instead of overrunning the stack.
     static uint8_t leaf[SYNTH_PAGE_SIZE], work[SYNTH_PAGE_SIZE];
     SqliteTableCursor c;
-    TEST_ASSERT_FALSE(
-        pc_sqlite_table_cursor_begin(&c, endless_interior_read, NULL, SYNTH_PAGE_SIZE, 0, 2, leaf, work));
+    TEST_ASSERT_FALSE(pc_sqlite_table_cursor_begin(&c, endless_interior_read, NULL, SYNTH_PAGE_SIZE, 0, 2, leaf, work));
     TEST_ASSERT_EQUAL_INT(SQLITE_BTREE_MAX_DEPTH, c.depth);
 }
 

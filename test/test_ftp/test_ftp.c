@@ -45,7 +45,7 @@ void test_build_command_fail_closed()
 {
     char b[8];
     TEST_ASSERT_EQUAL_size_t(0, pc_ftp_build_command(b, sizeof(b), "RETR", "/too/long/path")); // overflow
-    TEST_ASSERT_EQUAL_size_t(0, pc_ftp_build_command(b, sizeof(b), NULL, "x"));             // bad verb
+    TEST_ASSERT_EQUAL_size_t(0, pc_ftp_build_command(b, sizeof(b), NULL, "x"));                // bad verb
     TEST_ASSERT_EQUAL_size_t(0, pc_ftp_build_command(b, sizeof(b), "", "x"));
     // exact-fit boundary: "NO\r\n" + NUL needs 5 bytes
     char b5[5];
@@ -65,10 +65,10 @@ void test_build_port_and_eprt()
     n = pc_ftp_build_port(b, sizeof(b), ip, 40000); // 40000 = 156*256 + 64
     TEST_ASSERT_EQUAL_STRING("PORT 192,168,1,50,156,64\r\n", b);
 
-    n = pc_ftp_build_eprt(b, sizeof(b), "132.235.1.2", false, 6275); // RFC 2428 example
+    n = pc_ftp_build_eprt(b, sizeof(b), "132.235.1.2", PROTO_FALSE, 6275); // RFC 2428 example
     TEST_ASSERT_EQUAL_STRING("EPRT |1|132.235.1.2|6275|\r\n", b);
 
-    n = pc_ftp_build_eprt(b, sizeof(b), "1080::8:800:200C:417A", true, 5282); // RFC 2428 IPv6 example
+    n = pc_ftp_build_eprt(b, sizeof(b), "1080::8:800:200C:417A", PROTO_TRUE, 5282); // RFC 2428 IPv6 example
     TEST_ASSERT_EQUAL_STRING("EPRT |2|1080::8:800:200C:417A|5282|\r\n", b);
     (void)n;
 }
@@ -214,7 +214,7 @@ void test_reply_null_and_partial_multiline()
     int code = 0;
     size_t used = 0;
     TEST_ASSERT_FALSE(pc_ftp_parse_reply(NULL, 4, &code, &used)); // null buffer
-    const char *unterm_first = "211-Supported";                      // first multiline line lacks its CRLF
+    const char *unterm_first = "211-Supported";                   // first multiline line lacks its CRLF
     TEST_ASSERT_FALSE(pc_ftp_parse_reply(unterm_first, strlen(unterm_first), &code, &used));
     const char *unterm_term = "211-a\r\n211 End"; // terminator line lacks its CRLF
     TEST_ASSERT_FALSE(pc_ftp_parse_reply(unterm_term, strlen(unterm_term), &code, &used));
@@ -226,19 +226,19 @@ void test_build_overflow_and_null()
 {
     char tiny[10];
     const uint8_t ip[4] = {192, 168, 1, 50};
-    TEST_ASSERT_EQUAL_size_t(0, pc_ftp_build_port(tiny, sizeof(tiny), ip, 4096));      // overflows mid-number
-    TEST_ASSERT_EQUAL_size_t(0, pc_ftp_build_port(NULL, 32, ip, 80));               // null buffer
-    TEST_ASSERT_EQUAL_size_t(0, pc_ftp_build_eprt(tiny, 4, "1.2.3.4", false, 80));     // eprt overflow
-    TEST_ASSERT_EQUAL_size_t(0, pc_ftp_build_eprt(tiny, sizeof(tiny), "", false, 80)); // empty ip
+    TEST_ASSERT_EQUAL_size_t(0, pc_ftp_build_port(tiny, sizeof(tiny), ip, 4096));            // overflows mid-number
+    TEST_ASSERT_EQUAL_size_t(0, pc_ftp_build_port(NULL, 32, ip, 80));                        // null buffer
+    TEST_ASSERT_EQUAL_size_t(0, pc_ftp_build_eprt(tiny, 4, "1.2.3.4", PROTO_FALSE, 80));     // eprt overflow
+    TEST_ASSERT_EQUAL_size_t(0, pc_ftp_build_eprt(tiny, sizeof(tiny), "", PROTO_FALSE, 80)); // empty ip
 }
 
 void test_pasv_epsv_null_and_edges()
 {
     uint8_t ip[4];
     uint16_t port;
-    TEST_ASSERT_FALSE(pc_ftp_parse_pasv(NULL, 10, ip, &port));             // null buffer
+    TEST_ASSERT_FALSE(pc_ftp_parse_pasv(NULL, 10, ip, &port));                // null buffer
     TEST_ASSERT_FALSE(pc_ftp_parse_pasv("227 (x,1,2,3,4,5)", 17, ip, &port)); // leading non-digit
-    TEST_ASSERT_FALSE(pc_ftp_parse_epsv(NULL, 10, &port));                 // null buffer
+    TEST_ASSERT_FALSE(pc_ftp_parse_epsv(NULL, 10, &port));                    // null buffer
     TEST_ASSERT_FALSE(pc_ftp_parse_epsv("229 (", 5, &port));                  // ends right at '('
     TEST_ASSERT_FALSE(pc_ftp_parse_epsv("229 (|5|)", 9, &port));              // fewer than 3 delimiters
     TEST_ASSERT_FALSE(pc_ftp_parse_epsv("229 (|||99999|)", 15, &port));       // port > 65535
@@ -251,10 +251,10 @@ void test_build_null_args()
     const uint8_t ip[4] = {1, 2, 3, 4};
     uint8_t oip[4];
     uint16_t port;
-    TEST_ASSERT_EQUAL_size_t(0, pc_ftp_build_command(NULL, sizeof(b), "USER", "x"));       // !buf
-    TEST_ASSERT_EQUAL_size_t(0, pc_ftp_build_port(b, sizeof(b), NULL, 80));                // !ip
-    TEST_ASSERT_EQUAL_size_t(0, pc_ftp_build_eprt(NULL, sizeof(b), "1.2.3.4", false, 80)); // !buf
-    TEST_ASSERT_EQUAL_size_t(0, pc_ftp_build_eprt(b, sizeof(b), NULL, false, 80));         // !ip_str
+    TEST_ASSERT_EQUAL_size_t(0, pc_ftp_build_command(NULL, sizeof(b), "USER", "x"));             // !buf
+    TEST_ASSERT_EQUAL_size_t(0, pc_ftp_build_port(b, sizeof(b), NULL, 80));                      // !ip
+    TEST_ASSERT_EQUAL_size_t(0, pc_ftp_build_eprt(NULL, sizeof(b), "1.2.3.4", PROTO_FALSE, 80)); // !buf
+    TEST_ASSERT_EQUAL_size_t(0, pc_ftp_build_eprt(b, sizeof(b), NULL, PROTO_FALSE, 80));         // !ip_str
     const char *pasv = "227 (1,2,3,4,5,6)\r\n";
     TEST_ASSERT_FALSE(pc_ftp_parse_pasv(pasv, strlen(pasv), NULL, &port)); // !ip
     TEST_ASSERT_FALSE(pc_ftp_parse_pasv(pasv, strlen(pasv), oip, NULL));   // !port

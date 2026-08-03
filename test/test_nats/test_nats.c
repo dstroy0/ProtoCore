@@ -54,9 +54,9 @@ void test_build_sub_and_unsub()
     TEST_ASSERT_EQUAL_STRING("SUB foo 1\r\n", buf);
     TEST_ASSERT_GREATER_THAN(0, (int)pc_nats_build_sub(buf, sizeof(buf), "foo", "workers", "9"));
     TEST_ASSERT_EQUAL_STRING("SUB foo workers 9\r\n", buf);
-    TEST_ASSERT_GREATER_THAN(0, (int)pc_nats_build_unsub(buf, sizeof(buf), "1", 5, true));
+    TEST_ASSERT_GREATER_THAN(0, (int)pc_nats_build_unsub(buf, sizeof(buf), "1", 5, PROTO_TRUE));
     TEST_ASSERT_EQUAL_STRING("UNSUB 1 5\r\n", buf);
-    TEST_ASSERT_GREATER_THAN(0, (int)pc_nats_build_unsub(buf, sizeof(buf), "1", 0, false));
+    TEST_ASSERT_GREATER_THAN(0, (int)pc_nats_build_unsub(buf, sizeof(buf), "1", 0, PROTO_FALSE));
     TEST_ASSERT_EQUAL_STRING("UNSUB 1\r\n", buf);
 }
 
@@ -100,8 +100,7 @@ void test_build_hpub()
     TEST_ASSERT_EQUAL_MEMORY(expect, buf, n);
 
     // Guards: null headers and a zero header length fail closed.
-    TEST_ASSERT_EQUAL_size_t(0,
-                             pc_nats_build_hpub(buf, sizeof(buf), "foo", NULL, NULL, 5, (const uint8_t *)"h", 1));
+    TEST_ASSERT_EQUAL_size_t(0, pc_nats_build_hpub(buf, sizeof(buf), "foo", NULL, NULL, 5, (const uint8_t *)"h", 1));
     TEST_ASSERT_EQUAL_size_t(0, pc_nats_build_hpub(buf, sizeof(buf), "foo", NULL, hdrs, 0, NULL, 0));
 }
 
@@ -220,8 +219,8 @@ void test_build_null_args()
     TEST_ASSERT_EQUAL_size_t(0, pc_nats_build_sub(NULL, 64, "s", NULL, "1"));
     TEST_ASSERT_EQUAL_size_t(0, pc_nats_build_sub(buf, sizeof(buf), NULL, NULL, "1"));
     TEST_ASSERT_EQUAL_size_t(0, pc_nats_build_sub(buf, sizeof(buf), "s", NULL, NULL));
-    TEST_ASSERT_EQUAL_size_t(0, pc_nats_build_unsub(NULL, 64, "1", 0, false));
-    TEST_ASSERT_EQUAL_size_t(0, pc_nats_build_unsub(buf, sizeof(buf), NULL, 0, false));
+    TEST_ASSERT_EQUAL_size_t(0, pc_nats_build_unsub(NULL, 64, "1", 0, PROTO_FALSE));
+    TEST_ASSERT_EQUAL_size_t(0, pc_nats_build_unsub(buf, sizeof(buf), NULL, 0, PROTO_FALSE));
 }
 
 void test_build_overflow_put_ch()

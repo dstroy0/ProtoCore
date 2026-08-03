@@ -182,7 +182,7 @@ void test_parse_frame_server_text()
     // Server (unmasked) text frame "hello".
     uint8_t f[] = {0x81, 0x05, 'h', 'e', 'l', 'l', 'o'};
     uint8_t op;
-    bool fin;
+    proto_bool fin;
     size_t off, plen, consumed;
     TEST_ASSERT_TRUE(ws_client_parse_frame(f, sizeof(f), &op, &fin, &off, &plen, &consumed));
     TEST_ASSERT_EQUAL_UINT8(WSC_OP_TEXT, op);
@@ -197,7 +197,7 @@ void test_parse_frame_incomplete()
 {
     uint8_t f[] = {0x81, 0x05, 'h', 'e'}; // says 5 bytes, only 2 present
     uint8_t op;
-    bool fin;
+    proto_bool fin;
     size_t off, plen, consumed;
     TEST_ASSERT_FALSE(ws_client_parse_frame(f, sizeof(f), &op, &fin, &off, &plen, &consumed));
 }
@@ -211,7 +211,7 @@ void test_parse_frame_extended_len()
     f[3] = 0x2C; // 300
     memset(f + 4, 'z', 300);
     uint8_t op;
-    bool fin;
+    proto_bool fin;
     size_t off, plen, consumed;
     TEST_ASSERT_TRUE(ws_client_parse_frame(f, sizeof(f), &op, &fin, &off, &plen, &consumed));
     TEST_ASSERT_EQUAL_size_t(4, off);
@@ -224,7 +224,7 @@ void test_parse_frame_extended_len()
 void test_accept_for_key_guards()
 {
     char out[64];
-    ws_client_accept_for_key("key", out, 0);      // out_cap == 0
+    ws_client_accept_for_key("key", out, 0);   // out_cap == 0
     ws_client_accept_for_key("key", NULL, 10); // out == NULL
 
     out[0] = 'x';
@@ -283,16 +283,13 @@ void test_build_frame_guards_and_64bit()
 {
     uint8_t mask[4] = {1, 2, 3, 4};
     uint8_t out[16];
-    TEST_ASSERT_EQUAL_UINT(
-        0, ws_client_build_frame(NULL, sizeof(out), WSC_OP_TEXT, (const uint8_t *)"x", 1, mask));
-    TEST_ASSERT_EQUAL_UINT(
-        0, ws_client_build_frame(out, sizeof(out), WSC_OP_TEXT, (const uint8_t *)"x", 1, NULL));
-    TEST_ASSERT_EQUAL_UINT(
-        0, ws_client_build_frame(out, 4, WSC_OP_TEXT, (const uint8_t *)"hello", 5, mask)); // too small
+    TEST_ASSERT_EQUAL_UINT(0, ws_client_build_frame(NULL, sizeof(out), WSC_OP_TEXT, (const uint8_t *)"x", 1, mask));
+    TEST_ASSERT_EQUAL_UINT(0, ws_client_build_frame(out, sizeof(out), WSC_OP_TEXT, (const uint8_t *)"x", 1, NULL));
+    TEST_ASSERT_EQUAL_UINT(0,
+                           ws_client_build_frame(out, 4, WSC_OP_TEXT, (const uint8_t *)"hello", 5, mask)); // too small
 
     memset(s_big_pl, 'z', sizeof(s_big_pl));
-    size_t n = ws_client_build_frame(s_big_out, sizeof(s_big_out), WSC_OP_BINARY, s_big_pl,
-                                     sizeof(s_big_pl), mask);
+    size_t n = ws_client_build_frame(s_big_out, sizeof(s_big_out), WSC_OP_BINARY, s_big_pl, sizeof(s_big_pl), mask);
     TEST_ASSERT_TRUE(n > sizeof(s_big_pl));
     TEST_ASSERT_EQUAL_HEX8(0x80 | 127, s_big_out[1]); // 64-bit length marker
 }
@@ -302,7 +299,7 @@ void test_build_frame_guards_and_64bit()
 void test_parse_frame_edges()
 {
     uint8_t op;
-    bool fin;
+    proto_bool fin;
     size_t po, pl, cons;
     TEST_ASSERT_FALSE(ws_client_parse_frame(NULL, 2, &op, &fin, &po, &pl, &cons));
     uint8_t one[1] = {0x81};
@@ -329,7 +326,7 @@ void test_parse_frame_edges()
 void test_host_transport_stubs()
 {
     ws_client_on_message(NULL);
-    TEST_ASSERT_FALSE(ws_client_connect("h", 80, false, "/"));
+    TEST_ASSERT_FALSE(ws_client_connect("h", 80, PROTO_FALSE, "/"));
     TEST_ASSERT_FALSE(ws_client_send_text("hi"));
     TEST_ASSERT_FALSE(ws_client_send_binary((const uint8_t *)"x", 1));
     TEST_ASSERT_FALSE(ws_client_loop());

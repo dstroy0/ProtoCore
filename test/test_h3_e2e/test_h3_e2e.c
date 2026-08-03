@@ -81,7 +81,7 @@ static size_t build_long(uint8_t *out, size_t cap, uint8_t type, const uint8_t *
     wr_pn(out + p, pn, pn_len);
     p += pn_len;
     memcpy(out + p, frames, frame_len);
-    return pc_quic_packet_protect(out, cap, pn_off, pn_len, pn, frame_len, keys, true);
+    return pc_quic_packet_protect(out, cap, pn_off, pn_len, pn, frame_len, keys, PROTO_TRUE);
 }
 static size_t build_short(uint8_t *out, size_t cap, const uint8_t *dcid, uint8_t dcl, uint64_t pn,
                           const QuicPacketKeys *keys, const uint8_t *frames, size_t frame_len)
@@ -92,7 +92,7 @@ static size_t build_short(uint8_t *out, size_t cap, const uint8_t *dcid, uint8_t
     size_t pn_off = 1 + dcl;
     wr_pn(out + pn_off, pn, pn_len);
     memcpy(out + pn_off + pn_len, frames, frame_len);
-    return pc_quic_packet_protect(out, cap, pn_off, pn_len, pn, frame_len, keys, false);
+    return pc_quic_packet_protect(out, cap, pn_off, pn_len, pn, frame_len, keys, PROTO_FALSE);
 }
 static size_t open_long(const uint8_t *dg, size_t len, const QuicPacketKeys *keys, uint8_t *plain, size_t *wire,
                         uint8_t *type)
@@ -116,14 +116,14 @@ static size_t open_long(const uint8_t *dg, size_t len, const QuicPacketKeys *key
     static uint8_t work[2048];
     memcpy(work, dg, *wire);
     uint64_t pn = 0;
-    return pc_quic_packet_unprotect(work, off, (size_t)length, 0, keys, true, plain, &pn);
+    return pc_quic_packet_unprotect(work, off, (size_t)length, 0, keys, PROTO_TRUE, plain, &pn);
 }
 static size_t open_short(const uint8_t *dg, size_t len, uint8_t dcl, const QuicPacketKeys *keys, uint8_t *plain)
 {
     static uint8_t work[2048];
     memcpy(work, dg, len);
     uint64_t pn = 0;
-    return pc_quic_packet_unprotect(work, 1 + dcl, len - (1 + dcl), 0, keys, false, plain, &pn);
+    return pc_quic_packet_unprotect(work, 1 + dcl, len - (1 + dcl), 0, keys, PROTO_FALSE, plain, &pn);
 }
 static size_t extract_crypto(const uint8_t *p, size_t len, uint8_t *out)
 {
@@ -245,8 +245,8 @@ void test_http3_get_end_to_end()
     memset(frames + fl, 0, 1100 - fl);
     fl = 1100;
     uint8_t dg[1500];
-    size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID,
-                           sizeof(CLIENT_SCID), 0, &init.client, frames, fl);
+    size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
+                           &init.client, frames, fl);
     pc_quic_conn_recv(&qc, dg, dl);
 
     // Server flight -> derive client-side keys.
@@ -288,15 +288,15 @@ void test_http3_get_end_to_end()
     uint8_t ifr[64];
     size_t ifl = pc_quic_build_ack(ifr, sizeof(ifr), 0, 0, 0);
     uint8_t idg[256];
-    size_t idl = build_long(idg, sizeof(idg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID,
-                            sizeof(CLIENT_SCID), 1, &init.client, ifr, ifl);
+    size_t idl = build_long(idg, sizeof(idg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID),
+                            1, &init.client, ifr, ifl);
     uint8_t cfin[36] = {TLS_HS_FINISHED, 0x00, 0x00, 0x20};
     pc_tls13_finished_mac(&TLS13_KDF, cks.client_hs_traffic, chsf, cfin + 4);
     uint8_t hfr[64];
     size_t hfl = pc_quic_build_ack(hfr, sizeof(hfr), 0, 0, 0);
     hfl += pc_quic_build_crypto(hfr + hfl, sizeof(hfr) - hfl, 0, cfin, sizeof(cfin));
-    size_t hdl = build_long(idg + idl, sizeof(idg) - idl, QUIC_LP_HANDSHAKE, ODCID, sizeof(ODCID),
-                            CLIENT_SCID, sizeof(CLIENT_SCID), 0, &hs_c, hfr, hfl);
+    size_t hdl = build_long(idg + idl, sizeof(idg) - idl, QUIC_LP_HANDSHAKE, ODCID, sizeof(ODCID), CLIENT_SCID,
+                            sizeof(CLIENT_SCID), 0, &hs_c, hfr, hfl);
     pc_quic_conn_recv(&qc, idg, idl + hdl);
     TEST_ASSERT_TRUE(pc_quic_conn_established(&qc));
     // Drain the server's HANDSHAKE_DONE + control-stream datagram(s).
@@ -313,7 +313,7 @@ void test_http3_get_end_to_end()
     uint8_t h3req[256];
     size_t h3l = pc_h3_build_headers(h3req, sizeof(h3req), block, bp);
     uint8_t sfr[300];
-    size_t sfrl = pc_quic_build_stream(sfr, sizeof(sfr), 0, 0, h3req, h3l, true);
+    size_t sfrl = pc_quic_build_stream(sfr, sizeof(sfr), 0, 0, h3req, h3l, PROTO_TRUE);
     uint8_t s1[512];
     size_t s1l = build_short(s1, sizeof(s1), SERVER_SCID, sizeof(SERVER_SCID), 0, &ap_c, sfr, sfrl);
     pc_quic_conn_recv(&qc, s1, s1l);
@@ -323,7 +323,7 @@ void test_http3_get_end_to_end()
     TEST_ASSERT_EQUAL_STRING("/hello", g_path);
 
     // --- Server response: 1-RTT STREAM with HTTP/3 HEADERS(200) + DATA("hello h3") ---
-    bool got = false;
+    proto_bool got = PROTO_FALSE;
     while ((sl = pc_quic_conn_send(&qc, sdg, sizeof(sdg))) > 0)
     {
         size_t off = 0;
@@ -358,13 +358,12 @@ void test_http3_get_end_to_end()
                     break;
                 }
                 fo += n;
-                if (f.type >= QUIC_FT_STREAM && f.type <= QUIC_FT_STREAM + 7 &&
-                    f.stream.id == 0)
+                if (f.type >= QUIC_FT_STREAM && f.type <= QUIC_FT_STREAM + 7 && f.stream.id == 0)
                 {
                     const uint8_t *sp = f.stream.data;
                     size_t so = 0, sn = (size_t)f.stream.length;
                     char status[8] = {0};
-                    bool data_ok = false;
+                    proto_bool data_ok = PROTO_FALSE;
                     while (so < sn)
                     {
                         H3Frame hf;
@@ -382,13 +381,13 @@ void test_http3_get_end_to_end()
                             } e = {status};
                             pc_qpack_decode(
                                 hp, (size_t)hf.length, sc, sizeof(sc),
-                                [](void *c, const char *nm, size_t nl, const char *v, size_t vl) -> bool {
+                                [](void *c, const char *nm, size_t nl, const char *v, size_t vl) -> proto_bool {
                                     if (nl == 7 && memcmp(nm, ":status", 7) == 0)
                                     {
                                         memcpy(((E *)c)->s, v, vl);
                                         ((E *)c)->s[vl] = 0;
                                     }
-                                    return true;
+                                    return PROTO_TRUE;
                                 },
                                 &e);
                         }
@@ -396,14 +395,14 @@ void test_http3_get_end_to_end()
                         {
                             if (hf.length == 8 && memcmp(hp, "hello h3", 8) == 0)
                             {
-                                data_ok = true;
+                                data_ok = PROTO_TRUE;
                             }
                         }
                         so += hf.header_len + (size_t)hf.length;
                     }
                     if (strcmp(status, "200") == 0 && data_ok)
                     {
-                        got = true;
+                        got = PROTO_TRUE;
                     }
                 }
             }

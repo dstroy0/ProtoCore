@@ -21,7 +21,7 @@
 // Helpers
 // ---------------------------------------------------------------------------
 
-static bool handler_called = false;
+static proto_bool handler_called = PROTO_FALSE;
 static uint8_t handler_slot = 0xFF;
 
 static void push_str(uint8_t slot, const char *s)
@@ -38,7 +38,7 @@ static void push_str(uint8_t slot, const char *s)
 static void handle_ok(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    handler_called = true;
+    handler_called = PROTO_TRUE;
     handler_slot = slot_id;
     send_text(slot_id, 200, "text/plain", "OK");
 }
@@ -46,7 +46,7 @@ static void handle_ok(uint8_t slot_id, HttpReq *req)
 void setUp()
 {
     pc_server_reset();
-    handler_called = false;
+    handler_called = PROTO_FALSE;
     handler_slot = 0xFF;
 
     for (int i = 0; i < MAX_CONNS; i++)
@@ -162,7 +162,7 @@ void test_protected_and_unprotected_routes_coexist()
     // Hit public route -- handler fires
     feed_and_handle(0, "GET /public HTTP/1.1\r\n\r\n");
     TEST_ASSERT_TRUE(handler_called);
-    handler_called = false;
+    handler_called = PROTO_FALSE;
     conn_pool[1].state = CONN_ACTIVE;
     conn_pool[1].proto = PROTO_HTTP; // dispatch requires an explicit protocol
     conn_pool[1].pcb = &_mock_pcb;
@@ -217,7 +217,7 @@ void stress_auth_50_valid_requests()
         conn_pool[slot].pcb = &_mock_pcb;
         http_reset(slot);
 
-        handler_called = false;
+        handler_called = PROTO_FALSE;
         push_str(slot, req);
         http_parse(slot);
         handle();
@@ -241,7 +241,7 @@ void stress_auth_50_invalid_requests()
         conn_pool[slot].pcb = &_mock_pcb;
         http_reset(slot);
 
-        handler_called = false;
+        handler_called = PROTO_FALSE;
         push_str(slot, req);
         http_parse(slot);
         handle();
@@ -353,18 +353,18 @@ static void sha256_hex_str(const char *s, char out[65])
 }
 
 // Pull the nonce out of a WWW-Authenticate: Digest challenge.
-static bool grab_nonce(const char *resp, char *out, size_t n)
+static proto_bool grab_nonce(const char *resp, char *out, size_t n)
 {
     const char *p = strstr(resp, "nonce=\"");
     if (!p)
     {
-        return false;
+        return PROTO_FALSE;
     }
     p += 7;
     const char *e = strchr(p, '"');
     if (!e)
     {
-        return false;
+        return PROTO_FALSE;
     }
     size_t len = (size_t)(e - p);
     if (len > n - 1)
@@ -373,7 +373,7 @@ static bool grab_nonce(const char *resp, char *out, size_t n)
     }
     memcpy(out, p, len);
     out[len] = '\0';
-    return true;
+    return PROTO_TRUE;
 }
 
 static void digest_response(const char *uri, const char *nonce, char out[65])
@@ -405,7 +405,7 @@ static void digest_challenge(char *nonce, size_t n)
 // so none of them authenticates.
 void test_digest_field_parser_boundaries()
 {
-    on_http("/d", HTTP_GET, handle_ok, kDRealm, kDUser, kDPass, true);
+    on_http("/d", HTTP_GET, handle_ok, kDRealm, kDUser, kDPass, PROTO_TRUE);
     char nonce[48];
     digest_challenge(nonce, sizeof(nonce));
 
@@ -443,7 +443,7 @@ void test_digest_field_parser_boundaries()
 // than overflowed (a 40-char qop cannot equal "auth", so the request is refused).
 void test_digest_token_values_and_truncation()
 {
-    on_http("/d", HTTP_GET, handle_ok, kDRealm, kDUser, kDPass, true);
+    on_http("/d", HTTP_GET, handle_ok, kDRealm, kDUser, kDPass, PROTO_TRUE);
     char nonce[48];
     digest_challenge(nonce, sizeof(nonce));
 
@@ -478,7 +478,7 @@ void test_digest_token_values_and_truncation()
 // all refused.
 void test_digest_nonce_shape_and_mac()
 {
-    on_http("/d", HTTP_GET, handle_ok, kDRealm, kDUser, kDPass, true);
+    on_http("/d", HTTP_GET, handle_ok, kDRealm, kDUser, kDPass, PROTO_TRUE);
 
     static const char *bad_nonces[] = {
         "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", // 41 chars, no '.' at index 8
@@ -504,7 +504,7 @@ void test_digest_nonce_shape_and_mac()
 // of them aborts the check before any hashing.
 void test_digest_missing_field_rejected()
 {
-    on_http("/d", HTTP_GET, handle_ok, kDRealm, kDUser, kDPass, true);
+    on_http("/d", HTTP_GET, handle_ok, kDRealm, kDUser, kDPass, PROTO_TRUE);
     char nonce[48];
     digest_challenge(nonce, sizeof(nonce));
 
@@ -515,7 +515,7 @@ void test_digest_missing_field_rejected()
         int n = snprintf(hdr, sizeof(hdr), "GET /d HTTP/1.1\r\nHost: x\r\nAuthorization: Digest ");
         const char *fields[7][2] = {{"username", kDUser}, {"nonce", nonce},  {"uri", "/d"},     {"qop", "auth"},
                                     {"nc", "00000001"},   {"cnonce", "abc"}, {"response", "00"}};
-        bool first = true;
+        proto_bool first = PROTO_TRUE;
         for (size_t f = 0; f < 7; f++)
         {
             if (strcmp(fields[f][0], omit[i]) == 0)
@@ -524,7 +524,7 @@ void test_digest_missing_field_rejected()
             }
             n += snprintf(hdr + n, sizeof(hdr) - (size_t)n, "%s%s=\"%s\"", first ? "" : ", ", fields[f][0],
                           fields[f][1]);
-            first = false;
+            first = PROTO_FALSE;
         }
         snprintf(hdr + n, sizeof(hdr) - (size_t)n, "\r\n\r\n");
 
@@ -540,7 +540,7 @@ void test_digest_missing_field_rejected()
 // does (and is refused when it presents the path alone).
 void test_digest_uri_includes_query_string()
 {
-    on_http("/d", HTTP_GET, handle_ok, kDRealm, kDUser, kDPass, true);
+    on_http("/d", HTTP_GET, handle_ok, kDRealm, kDUser, kDPass, PROTO_TRUE);
     char nonce[48];
     rearm(0);
     feed_and_handle(0, "GET /d?a=1 HTTP/1.1\r\nHost: x\r\n\r\n");

@@ -60,7 +60,7 @@ void test_json_string_bool_time()
     rs.name = "status";
     rs.value_kind = SENML_V_STRING;
     rs.value_str = "ok";
-    rs.has_time = true;
+    rs.has_time = PROTO_TRUE;
     rs.time = 1600000000; // integral -> "1600000000", not "1.6e+09"
     char buf[128];
     TEST_ASSERT_GREATER_THAN(0, (int)pc_senml_json_build(buf, sizeof(buf), &rs, 1));
@@ -69,7 +69,7 @@ void test_json_string_bool_time()
     SenmlRecord rb = {};
     rb.name = "open";
     rb.value_kind = SENML_V_BOOL;
-    rb.value_bool = true;
+    rb.value_bool = PROTO_TRUE;
     TEST_ASSERT_GREATER_THAN(0, (int)pc_senml_json_build(buf, sizeof(buf), &rb, 1));
     TEST_ASSERT_EQUAL_STRING("[{\"n\":\"open\",\"vb\":true}]", buf);
 }
@@ -153,7 +153,7 @@ void test_json_base_time_and_none()
 {
     SenmlRecord r = {};
     r.base_name = "dev";
-    r.has_base_time = true;
+    r.has_base_time = PROTO_TRUE;
     r.base_time = 100; // integral -> "100"
     r.value_kind = SENML_V_NONE;
     char buf[64];
@@ -165,12 +165,12 @@ void test_json_base_time_and_none()
 void test_cbor_all_kinds()
 {
     SenmlRecord r = {};
-    r.has_base_time = true;
+    r.has_base_time = PROTO_TRUE;
     r.base_time = 5;
     r.name = "s";
     r.value_kind = SENML_V_STRING;
     r.value_str = "hi";
-    r.has_time = true;
+    r.has_time = PROTO_TRUE;
     r.time = 9;
     uint8_t buf[64];
     size_t n = pc_senml_build(pc_codec_cbor(), buf, sizeof(buf), &r, 1);
@@ -204,7 +204,7 @@ void test_cbor_all_kinds()
     SenmlRecord rb = {};
     rb.name = "b";
     rb.value_kind = SENML_V_BOOL;
-    rb.value_bool = true;
+    rb.value_bool = PROTO_TRUE;
     uint8_t bb[32];
     size_t bn = pc_senml_build(pc_codec_cbor(), bb, sizeof(bb), &rb, 1);
     TEST_ASSERT_GREATER_THAN(0, (int)bn);
@@ -217,7 +217,7 @@ void test_cbor_all_kinds()
     TEST_ASSERT_TRUE(pc_cbor_read_str(&rd2, &s, &sl));
     TEST_ASSERT_TRUE(pc_cbor_read_int(&rd2, &key));
     TEST_ASSERT_EQUAL_INT64(4, key); // vb
-    bool bv = false;
+    proto_bool bv = PROTO_FALSE;
     TEST_ASSERT_TRUE(pc_cbor_read_bool(&rd2, &bv));
     TEST_ASSERT_TRUE(bv);
 }
@@ -306,7 +306,7 @@ void test_resolve()
     SenmlRecord rec[3];
     memset(rec, 0, sizeof(rec));
     rec[0].base_name = "urn:dev:ow:10e2073a;";
-    rec[0].has_base_time = true;
+    rec[0].has_base_time = PROTO_TRUE;
     rec[0].base_time = 1276020076;
     rec[0].name = "temp";
     rec[0].unit = "Cel";
@@ -315,7 +315,7 @@ void test_resolve()
     rec[1].name = "humidity"; // no base fields: the base name / time from rec[0] carry forward
     rec[1].value_kind = SENML_V_FLOAT;
     rec[1].value = 40;
-    rec[1].has_time = true;
+    rec[1].has_time = PROTO_TRUE;
     rec[1].time = 10;
     rec[2].base_name = "urn:dev:ow:other;"; // overrides the base name; base time still carries
     rec[2].name = "status";
@@ -350,7 +350,7 @@ void test_resolve_edges()
     rec[0].value = 1;
     rec[1].name = "b";
     rec[1].value_kind = SENML_V_BOOL;
-    rec[1].value_bool = true;
+    rec[1].value_bool = PROTO_TRUE;
     SenmlResolved res[2];
     TEST_ASSERT_EQUAL_size_t(2, pc_senml_resolve(rec, 2, res, 2));
     TEST_ASSERT_FALSE(res[0].has_time);

@@ -103,11 +103,11 @@ void test_simple()
     uint8_t b[8];
     pc_span w;
     w = pc_span_from(b, sizeof(b));
-    pc_cbor_bool(&w, false);
+    pc_cbor_bool(&w, PROTO_FALSE);
     uint8_t e[] = {0xf4};
     check(b, pc_span_len(w), e, 1);
     w = pc_span_from(b, sizeof(b));
-    pc_cbor_bool(&w, true);
+    pc_cbor_bool(&w, PROTO_TRUE);
     uint8_t e2[] = {0xf5};
     check(b, pc_span_len(w), e2, 1);
     w = pc_span_from(b, sizeof(b));
@@ -217,7 +217,7 @@ void test_decode_roundtrip_map()
     pc_cbor_str(&w, "name");
     pc_cbor_str(&w, "esp");
     pc_cbor_str(&w, "on");
-    pc_cbor_bool(&w, true);
+    pc_cbor_bool(&w, PROTO_TRUE);
 
     pc_cspan r;
     r = pc_cspan_from(buf, pc_span_len(w));
@@ -229,7 +229,7 @@ void test_decode_roundtrip_map()
     uint64_t u;
     const char *s;
     size_t sl;
-    bool b;
+    proto_bool b;
     TEST_ASSERT_TRUE(pc_cbor_read_str(&r, &k, &kl));
     TEST_ASSERT_EQUAL_MEMORY("heap", k, 4);
     TEST_ASSERT_TRUE(pc_cbor_read_uint(&r, &u));
@@ -268,7 +268,7 @@ void test_cbor_reader_sticky_err_repeat()
     pc_cspan r;
     uint64_t uv;
     int64_t iv;
-    bool bv;
+    proto_bool bv;
     float fv;
     size_t c, sl;
     const char *s;
@@ -390,7 +390,7 @@ void test_peek_each_type()
     r = pc_cspan_from(b, pc_span_len(w));
     TEST_ASSERT_EQUAL_INT(PC_CODEC_MAP, pc_cbor_peek(&r));
     w = pc_span_from(b, sizeof(b));
-    pc_cbor_bool(&w, true);
+    pc_cbor_bool(&w, PROTO_TRUE);
     r = pc_cspan_from(b, pc_span_len(w));
     TEST_ASSERT_EQUAL_INT(PC_CODEC_BOOL, pc_cbor_peek(&r));
     w = pc_span_from(b, sizeof(b));
@@ -459,7 +459,7 @@ void test_cbor_decode_more_types()
 {
     pc_cspan r;
     int64_t iv;
-    bool bv;
+    proto_bool bv;
     float fv;
     const uint8_t *bp;
     const char *s;
@@ -536,7 +536,7 @@ void test_cbor_read_empty()
     uint8_t d = 0;
     uint64_t uv;
     int64_t iv;
-    bool bv;
+    proto_bool bv;
     float fv;
     const char *s;
     const uint8_t *bp;

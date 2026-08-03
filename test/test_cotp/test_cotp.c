@@ -37,7 +37,7 @@ void test_cotp_dt_bytes()
 {
     const uint8_t data[] = {0x41, 0x42, 0x43}; // "ABC"
     uint8_t buf[16];
-    size_t n = pc_cotp_build_dt(buf, sizeof(buf), data, sizeof(data), true);
+    size_t n = pc_cotp_build_dt(buf, sizeof(buf), data, sizeof(data), PROTO_TRUE);
     const uint8_t expect[] = {0x02, 0xF0, 0x80, 0x41, 0x42, 0x43}; // LI=2, DT, EOT
     TEST_ASSERT_EQUAL_size_t(sizeof(expect), n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(expect, buf, n);
@@ -106,10 +106,10 @@ void test_cotp_cc_bytes()
     // TSAP params append after the header, and the guards fail closed.
     const uint8_t tsaps[] = {0xC2, 0x02, 0x01, 0x02};
     n = pc_cotp_build_cc(buf, sizeof(buf), 0x0001, 0x0042, 0x0A, tsaps, sizeof(tsaps));
-    TEST_ASSERT_EQUAL_HEX8((uint8_t)(9 + sizeof(tsaps)), buf[0]); // LI grows by the extras
+    TEST_ASSERT_EQUAL_HEX8((uint8_t)(9 + sizeof(tsaps)), buf[0]);                          // LI grows by the extras
     TEST_ASSERT_EQUAL_size_t(0, pc_cotp_build_cc(NULL, sizeof(buf), 1, 2, 0x0A, NULL, 0)); // null buf
-    TEST_ASSERT_EQUAL_size_t(0, pc_cotp_build_cc(buf, sizeof(buf), 1, 2, 0x0A, NULL, 5));     // len but null params
-    TEST_ASSERT_EQUAL_size_t(0, pc_cotp_build_cc(buf, 8, 1, 2, 0x0A, NULL, 0));               // total > cap
+    TEST_ASSERT_EQUAL_size_t(0, pc_cotp_build_cc(buf, sizeof(buf), 1, 2, 0x0A, NULL, 5));  // len but null params
+    TEST_ASSERT_EQUAL_size_t(0, pc_cotp_build_cc(buf, 8, 1, 2, 0x0A, NULL, 0));            // total > cap
 }
 
 // The full stack: a TPKT carrying a COTP Data TPDU carrying an S7-ish payload.
@@ -117,7 +117,7 @@ void test_full_stack()
 {
     const uint8_t s7[] = {0x32, 0x01, 0x00, 0x00}; // S7 header start, say
     uint8_t cotp[32];
-    size_t clen = pc_cotp_build_dt(cotp, sizeof(cotp), s7, sizeof(s7), true);
+    size_t clen = pc_cotp_build_dt(cotp, sizeof(cotp), s7, sizeof(s7), PROTO_TRUE);
     uint8_t buf[48];
     size_t n = pc_tpkt_build(buf, sizeof(buf), cotp, clen);
     // total = 4 (tpkt) + 3 (cotp dt) + 4 (s7) = 11
@@ -147,7 +147,7 @@ void test_parse_rejects_bad()
     TEST_ASSERT_FALSE(pc_cotp_parse(bad_li, sizeof(bad_li), &h));
 
     uint8_t small[4];
-    TEST_ASSERT_EQUAL_size_t(0, pc_cotp_build_dt(small, sizeof(small), (const uint8_t *)"abcd", 4, true));
+    TEST_ASSERT_EQUAL_size_t(0, pc_cotp_build_dt(small, sizeof(small), (const uint8_t *)"abcd", 4, PROTO_TRUE));
 }
 
 // Builder guards (null / oversize) and the parser's short-buffer + per-TPDU-type branches.
@@ -158,7 +158,7 @@ void test_guards_and_types()
 
     TEST_ASSERT_EQUAL_size_t(0, pc_tpkt_build(NULL, sizeof(buf), data, 3)); // null buf
     TEST_ASSERT_EQUAL_size_t(0, pc_tpkt_build(buf, sizeof(buf), NULL, 3));  // len but null payload
-    TEST_ASSERT_EQUAL_size_t(0, pc_tpkt_build(buf, 5, data, 3));               // total > cap
+    TEST_ASSERT_EQUAL_size_t(0, pc_tpkt_build(buf, 5, data, 3));            // total > cap
 
     const uint8_t *p;
     size_t plen, consumed;
@@ -166,12 +166,12 @@ void test_guards_and_types()
     uint8_t two[2] = {0x03, 0x00};
     TEST_ASSERT_FALSE(pc_tpkt_parse(two, 2, &p, &plen, &consumed)); // len < TPKT header
 
-    TEST_ASSERT_EQUAL_size_t(0, pc_cotp_build_dt(NULL, sizeof(buf), data, 3, true)); // null buf
-    TEST_ASSERT_EQUAL_size_t(0, pc_cotp_build_dt(buf, sizeof(buf), NULL, 3, true));  // len but null data
+    TEST_ASSERT_EQUAL_size_t(0, pc_cotp_build_dt(NULL, sizeof(buf), data, 3, PROTO_TRUE)); // null buf
+    TEST_ASSERT_EQUAL_size_t(0, pc_cotp_build_dt(buf, sizeof(buf), NULL, 3, PROTO_TRUE));  // len but null data
 
     TEST_ASSERT_EQUAL_size_t(0, pc_cotp_build_cr(NULL, sizeof(buf), 1, 0x0A, NULL, 0)); // null buf
-    TEST_ASSERT_EQUAL_size_t(0, pc_cotp_build_cr(buf, sizeof(buf), 1, 0x0A, NULL, 5));     // len but null params
-    TEST_ASSERT_EQUAL_size_t(0, pc_cotp_build_cr(buf, 8, 1, 0x0A, NULL, 0));               // total > cap
+    TEST_ASSERT_EQUAL_size_t(0, pc_cotp_build_cr(buf, sizeof(buf), 1, 0x0A, NULL, 5));  // len but null params
+    TEST_ASSERT_EQUAL_size_t(0, pc_cotp_build_cr(buf, 8, 1, 0x0A, NULL, 0));            // total > cap
 
     CotpHeader h;
     TEST_ASSERT_FALSE(pc_cotp_parse(buf, 1, &h)); // len < 2
@@ -191,8 +191,7 @@ void test_guards_and_types()
 void test_tpkt_build_edge_cases()
 {
     uint8_t buf[16];
-    size_t n =
-        pc_tpkt_build(buf, sizeof(buf), NULL, 0); // payload_len==0: skip the null-payload check and the memcpy
+    size_t n = pc_tpkt_build(buf, sizeof(buf), NULL, 0); // payload_len==0: skip the null-payload check and the memcpy
     TEST_ASSERT_EQUAL_size_t(TPKT_HEADER_SIZE, n);
     TEST_ASSERT_EQUAL_HEX8(TPKT_VERSION, buf[0]);
     TEST_ASSERT_EQUAL_HEX8(0x00, buf[2]);
@@ -223,11 +222,11 @@ void test_tpkt_parse_edge_cases()
 void test_cotp_dt_edge_cases()
 {
     uint8_t buf[16];
-    size_t n = pc_cotp_build_dt(buf, sizeof(buf), NULL, 0, true); // data_len==0
+    size_t n = pc_cotp_build_dt(buf, sizeof(buf), NULL, 0, PROTO_TRUE); // data_len==0
     TEST_ASSERT_EQUAL_size_t(COTP_DT_HEADER_LEN, n);
 
     const uint8_t data[] = {0x01, 0x02};
-    n = pc_cotp_build_dt(buf, sizeof(buf), data, sizeof(data), false); // eot==false
+    n = pc_cotp_build_dt(buf, sizeof(buf), data, sizeof(data), PROTO_FALSE); // eot==false
     TEST_ASSERT_EQUAL_HEX8(0x00, buf[2]);
     CotpHeader h;
     TEST_ASSERT_TRUE(pc_cotp_parse(buf, n, &h));

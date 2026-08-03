@@ -54,10 +54,10 @@ void test_build_manual_and_edges()
 {
     pc_cache_control cc;
     cache_control_init(&cc);
-    cc.cc_private = true;
-    cc.no_cache = true;
+    cc.cc_private = PROTO_TRUE;
+    cc.no_cache = PROTO_TRUE;
     cc.max_age = 0;
-    cc.must_revalidate = true;
+    cc.must_revalidate = PROTO_TRUE;
     char b[96];
     cache_control_build(b, sizeof(b), &cc);
     TEST_ASSERT_EQUAL_STRING("private, no-cache, max-age=0, must-revalidate", b);
@@ -120,11 +120,11 @@ void test_build_parse_roundtrip()
 {
     pc_cache_control a;
     cache_control_init(&a);
-    a.cc_public = true;
+    a.cc_public = PROTO_TRUE;
     a.max_age = 300;
     a.s_maxage = 600;
-    a.must_revalidate = true;
-    a.no_transform = true;
+    a.must_revalidate = PROTO_TRUE;
+    a.no_transform = PROTO_TRUE;
     a.stale_if_error = 120;
     char b[128];
     size_t n = cache_control_build(b, sizeof(b), &a);
@@ -150,16 +150,16 @@ void test_freshness_precedence()
     cc.s_maxage = 200;
 
     // shared cache honors s-maxage first
-    TEST_ASSERT_EQUAL_INT(200, (int)cache_freshness_lifetime(&cc, true, 999));
+    TEST_ASSERT_EQUAL_INT(200, (int)cache_freshness_lifetime(&cc, PROTO_TRUE, 999));
     // private cache ignores s-maxage, uses max-age
-    TEST_ASSERT_EQUAL_INT(100, (int)cache_freshness_lifetime(&cc, false, 999));
+    TEST_ASSERT_EQUAL_INT(100, (int)cache_freshness_lifetime(&cc, PROTO_FALSE, 999));
 
     // no max-age/s-maxage -> Expires minus Date
     cache_control_init(&cc);
-    TEST_ASSERT_EQUAL_INT(50, (int)cache_freshness_lifetime(&cc, true, 50));
+    TEST_ASSERT_EQUAL_INT(50, (int)cache_freshness_lifetime(&cc, PROTO_TRUE, 50));
 
     // nothing explicit -> -1 (heuristic needed)
-    TEST_ASSERT_EQUAL_INT(-1, (int)cache_freshness_lifetime(&cc, true, -1));
+    TEST_ASSERT_EQUAL_INT(-1, (int)cache_freshness_lifetime(&cc, PROTO_TRUE, -1));
 }
 
 // Build every directive (exercises the less-common emit branches) and the request directives.
@@ -167,18 +167,18 @@ void test_build_all_directives()
 {
     pc_cache_control cc;
     cache_control_init(&cc);
-    cc.cc_private = true;
-    cc.no_cache = true;
+    cc.cc_private = PROTO_TRUE;
+    cc.no_cache = PROTO_TRUE;
     cc.max_age = 10;
     cc.s_maxage = 20;
-    cc.must_revalidate = true;
-    cc.proxy_revalidate = true;
-    cc.no_transform = true;
-    cc.must_understand = true;
-    cc.cc_immutable = true;
+    cc.must_revalidate = PROTO_TRUE;
+    cc.proxy_revalidate = PROTO_TRUE;
+    cc.no_transform = PROTO_TRUE;
+    cc.must_understand = PROTO_TRUE;
+    cc.cc_immutable = PROTO_TRUE;
     cc.stale_while_revalidate = 5;
     cc.stale_if_error = 6;
-    cc.only_if_cached = true;
+    cc.only_if_cached = PROTO_TRUE;
     cc.min_fresh = 7;
     cc.max_stale = 8;
     char b[256];
@@ -258,7 +258,7 @@ void test_build_boundaries()
     cache_control_init(&cc);
     cc.max_age = 5;
     TEST_ASSERT_EQUAL_size_t(0, cache_control_build(b, sizeof(b), NULL)); // !cc
-    char b7[7];                                                              // "max-age" fills cap -> no room for '='
+    char b7[7];                                                           // "max-age" fills cap -> no room for '='
     TEST_ASSERT_EQUAL_size_t(0, cache_control_build(b7, sizeof(b7), &cc));
     char b3[3]; // the key token overflows -> cc_kv sees the CC_SENT sentinel
     TEST_ASSERT_EQUAL_size_t(0, cache_control_build(b3, sizeof(b3), &cc));

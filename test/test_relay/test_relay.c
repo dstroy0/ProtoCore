@@ -22,12 +22,12 @@ struct MockSock
 {
     uint8_t in[4096];
     size_t in_len, in_pos;
-    bool in_eof; // recv returns <0 (EOF) once `in` is drained
+    proto_bool in_eof; // recv returns <0 (EOF) once `in` is drained
     uint8_t out[4096];
     size_t out_len;
     size_t send_cap; // max bytes a single send accepts (0 = unlimited) - drives backpressure
-    bool fail_send;
-    bool shutdown_called;
+    proto_bool fail_send;
+    proto_bool shutdown_called;
 };
 
 static int msock_recv(void *c, uint8_t *buf, size_t cap)
@@ -70,10 +70,10 @@ static int msock_send(void *c, const uint8_t *buf, size_t len)
 
 static void msock_shutdown(void *c)
 {
-    ((MockSock *)c)->shutdown_called = true;
+    ((MockSock *)c)->shutdown_called = PROTO_TRUE;
 }
 
-static void sock_init(MockSock *s, const void *in, size_t in_len, bool eof)
+static void sock_init(MockSock *s, const void *in, size_t in_len, proto_bool eof)
 {
     memset(s, 0, sizeof(*s));
     if (in_len)
@@ -110,8 +110,8 @@ static pc_relay_status run_relay(pc_relay *r, int max_steps)
 void test_bidirectional()
 {
     MockSock a, b;
-    sock_init(&a, "hello from client", 17, true);
-    sock_init(&b, "hi from origin", 14, true);
+    sock_init(&a, "hello from client", 17, PROTO_TRUE);
+    sock_init(&b, "hi from origin", 14, PROTO_TRUE);
     pc_relay_end ea = end_of(&a), eb = end_of(&b);
     pc_relay r;
     pc_relay_init(&r, &ea, &eb);
@@ -133,8 +133,8 @@ void test_backpressure()
         data[i] = (uint8_t)(i * 37 + 11);
     }
     MockSock a, b;
-    sock_init(&a, data, sizeof(data), true);
-    sock_init(&b, NULL, 0, true);
+    sock_init(&a, data, sizeof(data), PROTO_TRUE);
+    sock_init(&b, NULL, 0, PROTO_TRUE);
     b.send_cap = 7; // the origin accepts only 7 bytes per write
     pc_relay_end ea = end_of(&a), eb = end_of(&b);
     pc_relay r;
@@ -153,8 +153,8 @@ void test_half_close_shutdown()
         resp[i] = (uint8_t)(i ^ 0x3C);
     }
     MockSock a, b;
-    sock_init(&a, "req", 3, true);           // client sends a short request then closes
-    sock_init(&b, resp, sizeof(resp), true); // origin streams a long response
+    sock_init(&a, "req", 3, PROTO_TRUE);           // client sends a short request then closes
+    sock_init(&b, resp, sizeof(resp), PROTO_TRUE); // origin streams a long response
     a.send_cap = 64; // client drains slowly, so b->a stays multi-step regardless of PC_RELAY_BUF
     pc_relay_end ea = end_of(&a), eb = end_of(&b);
     pc_relay r;
@@ -182,9 +182,9 @@ void test_half_close_shutdown()
 void test_send_error()
 {
     MockSock a, b;
-    sock_init(&a, "data", 4, true);
-    sock_init(&b, NULL, 0, true);
-    b.fail_send = true; // the origin's send errors
+    sock_init(&a, "data", 4, PROTO_TRUE);
+    sock_init(&b, NULL, 0, PROTO_TRUE);
+    b.fail_send = PROTO_TRUE; // the origin's send errors
     pc_relay_end ea = end_of(&a), eb = end_of(&b);
     pc_relay r;
     pc_relay_init(&r, &ea, &eb);
@@ -201,8 +201,8 @@ void test_one_way_idle_then_close()
 {
     // origin never sends; client sends then closes -> relay completes cleanly
     MockSock a, b;
-    sock_init(&a, "GET / HTTP/1.0\r\n\r\n", 18, true);
-    sock_init(&b, NULL, 0, true);
+    sock_init(&a, "GET / HTTP/1.0\r\n\r\n", 18, PROTO_TRUE);
+    sock_init(&b, NULL, 0, PROTO_TRUE);
     pc_relay_end ea = end_of(&a), eb = end_of(&b);
     pc_relay r;
     pc_relay_init(&r, &ea, &eb);
@@ -217,8 +217,8 @@ void test_one_way_idle_then_close()
 void test_note_eof_out_of_band()
 {
     MockSock a, b;
-    sock_init(&a, "hello", 5, false); // in_eof=false: recv returns 0 (not -1) when drained
-    sock_init(&b, "world", 5, false);
+    sock_init(&a, "hello", 5, PROTO_FALSE); // in_eof=false: recv returns 0 (not -1) when drained
+    sock_init(&b, "world", 5, PROTO_FALSE);
     pc_relay_end ea = end_of(&a), eb = end_of(&b);
     pc_relay r;
     pc_relay_init(&r, &ea, &eb);
@@ -229,8 +229,8 @@ void test_note_eof_out_of_band()
     TEST_ASSERT_EQUAL_MEMORY("world", a.out, 5);
 
     // both peers close out of band -> the relay finishes and both shutdowns fire
-    pc_relay_note_eof(&r, false); // inbound closed
-    pc_relay_note_eof(&r, true);  // origin closed
+    pc_relay_note_eof(&r, PROTO_FALSE); // inbound closed
+    pc_relay_note_eof(&r, PROTO_TRUE);  // origin closed
     TEST_ASSERT_EQUAL_INT(PC_RELAY_DONE, run_relay(&r, 8));
     TEST_ASSERT_TRUE(a.shutdown_called);
     TEST_ASSERT_TRUE(b.shutdown_called);
@@ -242,8 +242,8 @@ void test_note_eof_out_of_band()
 void test_zero_length_read_no_progress()
 {
     MockSock a, b;
-    sock_init(&a, NULL, 0, false); // in_eof=false: recv keeps returning 0, never -1
-    sock_init(&b, NULL, 0, false);
+    sock_init(&a, NULL, 0, PROTO_FALSE); // in_eof=false: recv keeps returning 0, never -1
+    sock_init(&b, NULL, 0, PROTO_FALSE);
     pc_relay_end ea = end_of(&a), eb = end_of(&b);
     pc_relay r;
     pc_relay_init(&r, &ea, &eb);
@@ -258,8 +258,8 @@ void test_zero_length_read_no_progress()
     TEST_ASSERT_EQUAL_size_t(0, b.out_len);
 
     // now let both sides close out of band so the relay can still finish cleanly
-    pc_relay_note_eof(&r, false);
-    pc_relay_note_eof(&r, true);
+    pc_relay_note_eof(&r, PROTO_FALSE);
+    pc_relay_note_eof(&r, PROTO_TRUE);
     TEST_ASSERT_EQUAL_INT(PC_RELAY_DONE, run_relay(&r, 8));
 }
 
@@ -274,8 +274,8 @@ void test_flush_send_error()
         data[i] = (uint8_t)(i + 1);
     }
     MockSock a, b;
-    sock_init(&a, data, sizeof(data), true);
-    sock_init(&b, NULL, 0, true);
+    sock_init(&a, data, sizeof(data), PROTO_TRUE);
+    sock_init(&b, NULL, 0, PROTO_TRUE);
     b.send_cap = 10; // first step only flushes part of the 50 bytes, leaving a backlog
     pc_relay_end ea = end_of(&a), eb = end_of(&b);
     pc_relay r;
@@ -284,7 +284,7 @@ void test_flush_send_error()
     TEST_ASSERT_EQUAL_INT(PC_RELAY_RUNNING, pc_relay_step(&r));
     TEST_ASSERT_TRUE(r.a2b_off < r.a2b_len); // confirms a backlog is pending for the next flush
 
-    b.fail_send = true; // now the origin errors on the flush of that pending backlog
+    b.fail_send = PROTO_TRUE; // now the origin errors on the flush of that pending backlog
     TEST_ASSERT_EQUAL_INT(PC_RELAY_ERROR, pc_relay_step(&r));
 }
 
@@ -293,9 +293,9 @@ void test_flush_send_error()
 void test_send_error_reverse_direction()
 {
     MockSock a, b;
-    sock_init(&a, NULL, 0, true); // client has nothing to send: a->b finishes immediately, cleanly
-    sock_init(&b, "resp", 4, true);  // origin has data for the client
-    a.fail_send = true;              // the client's send (dst for b->a) errors
+    sock_init(&a, NULL, 0, PROTO_TRUE);   // client has nothing to send: a->b finishes immediately, cleanly
+    sock_init(&b, "resp", 4, PROTO_TRUE); // origin has data for the client
+    a.fail_send = PROTO_TRUE;             // the client's send (dst for b->a) errors
     pc_relay_end ea = end_of(&a), eb = end_of(&b);
     pc_relay r;
     pc_relay_init(&r, &ea, &eb);
@@ -307,8 +307,8 @@ void test_send_error_reverse_direction()
 void test_null_argument_guards()
 {
     MockSock a, b;
-    sock_init(&a, NULL, 0, true);
-    sock_init(&b, NULL, 0, true);
+    sock_init(&a, NULL, 0, PROTO_TRUE);
+    sock_init(&b, NULL, 0, PROTO_TRUE);
     pc_relay_end ea = end_of(&a), eb = end_of(&b);
     pc_relay r;
 
@@ -318,7 +318,7 @@ void test_null_argument_guards()
 
     TEST_ASSERT_EQUAL_INT(PC_RELAY_ERROR, pc_relay_step(NULL));
 
-    pc_relay_note_eof(NULL, false); // no crash
+    pc_relay_note_eof(NULL, PROTO_FALSE); // no crash
 }
 
 // An end with no shutdown seam (shutdown == NULL, allowed per relay.h) must not be called through
@@ -327,8 +327,8 @@ void test_null_argument_guards()
 void test_shutdown_null_seam()
 {
     MockSock a, b;
-    sock_init(&a, "hi", 2, true);
-    sock_init(&b, NULL, 0, true);
+    sock_init(&a, "hi", 2, PROTO_TRUE);
+    sock_init(&b, NULL, 0, PROTO_TRUE);
     pc_relay_end ea = end_of(&a);
     pc_relay_end eb = end_of(&b);
     eb.shutdown = NULL; // origin publishes no shutdown seam
@@ -353,9 +353,9 @@ void test_note_eof_with_backlog_pending()
         data[i] = (uint8_t)(i + 100);
     }
     MockSock a, b;
-    sock_init(&a, data, sizeof(data), false); // in_eof=false: only note_eof() signals EOF
-    sock_init(&b, NULL, 0, true);          // b->a finishes immediately, out of the way
-    b.send_cap = 5;                           // a->b needs multiple flushes to drain 20 bytes
+    sock_init(&a, data, sizeof(data), PROTO_FALSE); // in_eof=false: only note_eof() signals EOF
+    sock_init(&b, NULL, 0, PROTO_TRUE);             // b->a finishes immediately, out of the way
+    b.send_cap = 5;                                 // a->b needs multiple flushes to drain 20 bytes
     pc_relay_end ea = end_of(&a), eb = end_of(&b);
     pc_relay r;
     pc_relay_init(&r, &ea, &eb);
@@ -364,8 +364,8 @@ void test_note_eof_with_backlog_pending()
     TEST_ASSERT_EQUAL_size_t(5, r.a2b_off);
     TEST_ASSERT_EQUAL_size_t(20, r.a2b_len); // a backlog of 15 bytes is still pending
 
-    pc_relay_note_eof(&r, false);  // client EOF arrives out of band while the backlog is pending
-    TEST_ASSERT_FALSE(r.a2b_done); // must not finish yet: bytes are still queued to flush
+    pc_relay_note_eof(&r, PROTO_FALSE); // client EOF arrives out of band while the backlog is pending
+    TEST_ASSERT_FALSE(r.a2b_done);      // must not finish yet: bytes are still queued to flush
 
     TEST_ASSERT_EQUAL_INT(PC_RELAY_DONE, run_relay(&r, 16));
     TEST_ASSERT_EQUAL_size_t(20, b.out_len);

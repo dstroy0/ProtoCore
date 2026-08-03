@@ -13,50 +13,50 @@
 
 // Demo schema: a flat handful of fields + a nested `device` object and an
 // argument-driven `sensor`/`greet`.
-static bool resolver(const char *path, const pc_gql_args *args, pc_gql_value *out)
+static proto_bool resolver(const char *path, const pc_gql_args *args, pc_gql_value *out)
 {
     if (!strcmp(path, "name"))
     {
         out->type = PC_GQL_STR;
         out->s = "esp32";
-        return true;
+        return PROTO_TRUE;
     }
     if (!strcmp(path, "uptime"))
     {
         out->type = PC_GQL_INT;
         out->i = 12345;
-        return true;
+        return PROTO_TRUE;
     }
     if (!strcmp(path, "temp"))
     {
         out->type = PC_GQL_FLOAT;
         out->f = 21.5;
-        return true;
+        return PROTO_TRUE;
     }
     if (!strcmp(path, "online"))
     {
         out->type = PC_GQL_BOOL;
-        out->b = true;
-        return true;
+        out->b = PROTO_TRUE;
+        return PROTO_TRUE;
     }
     if (!strcmp(path, "device.name"))
     {
         out->type = PC_GQL_STR;
         out->s = "dev1";
-        return true;
+        return PROTO_TRUE;
     }
     if (!strcmp(path, "device.uptime"))
     {
         out->type = PC_GQL_INT;
         out->i = 99;
-        return true;
+        return PROTO_TRUE;
     }
     if (!strcmp(path, "sensor.value"))
     {
         long long id = 0;
         out->type = PC_GQL_INT;
         out->i = pc_gql_arg_int(args, "id", &id) ? id * 10 : -1;
-        return true;
+        return PROTO_TRUE;
     }
     if (!strcmp(path, "greet"))
     {
@@ -66,35 +66,35 @@ static bool resolver(const char *path, const pc_gql_args *args, pc_gql_value *ou
         snprintf(b, sizeof(b), "hi %s", who);
         out->type = PC_GQL_STR;
         out->s = b;
-        return true;
+        return PROTO_TRUE;
     }
     if (!strcmp(path, "flag")) // reads a bool argument
     {
-        bool on = false;
+        proto_bool on = PROTO_FALSE;
         pc_gql_arg_bool(args, "on", &on);
         out->type = PC_GQL_BOOL;
         out->b = on;
-        return true;
+        return PROTO_TRUE;
     }
     if (!strcmp(path, "ctrl")) // a string holding a control char (forces \uXXXX)
     {
         static const char c[] = {'a', 0x01, 'b', '\0'};
         out->type = PC_GQL_STR;
         out->s = c;
-        return true;
+        return PROTO_TRUE;
     }
     if (!strcmp(path, "nullval")) // resolves true with a null-typed value (w_scalar default)
     {
         out->type = PC_GQL_NULL;
-        return true;
+        return PROTO_TRUE;
     }
     if (!strcmp(path, "nullstr")) // reports a string value with a null pointer (w_scalar's ?: guard)
     {
         out->type = PC_GQL_STR;
         out->s = NULL;
-        return true;
+        return PROTO_TRUE;
     }
-    return false; // -> null
+    return PROTO_FALSE; // -> null
 }
 
 static char out[1024];
@@ -205,8 +205,7 @@ void test_number_arg_variants_parse()
 {
     // float, exponent, signed-exponent and negative-int argument values all parse
     // (the resolver only reads `id`, but every number branch is exercised).
-    TEST_ASSERT_EQUAL_INT(PC_GQL_OK,
-                          run_rc("{ sensor(id: 7, x: 1.5, y: 2e3, z: -4, w: 1.2e-2) { value } }"));
+    TEST_ASSERT_EQUAL_INT(PC_GQL_OK, run_rc("{ sensor(id: 7, x: 1.5, y: 2e3, z: -4, w: 1.2e-2) { value } }"));
     TEST_ASSERT_NOT_NULL(strstr(out, "\"value\":70"));
 }
 
@@ -260,8 +259,7 @@ void test_long_field_name_hits_limit()
     q[n++] = ' ';
     q[n++] = '}';
     q[n] = '\0';
-    TEST_ASSERT_EQUAL_INT(PC_GQL_ERR_LIMIT,
-                          pc_graphql_execute(q, strlen(q), resolver, out, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(PC_GQL_ERR_LIMIT, pc_graphql_execute(q, strlen(q), resolver, out, sizeof(out)));
 }
 
 void test_null_inputs_fail_closed()
@@ -397,7 +395,7 @@ void test_arg_accessors_edges()
 {
     long long i = 0;
     const char *s = NULL;
-    bool b = false;
+    proto_bool b = PROTO_FALSE;
     TEST_ASSERT_FALSE(pc_gql_arg_int(NULL, "x", &i));
     TEST_ASSERT_FALSE(pc_gql_arg_str(NULL, "x", &s));
     TEST_ASSERT_FALSE(pc_gql_arg_bool(NULL, "x", &b));
@@ -487,8 +485,7 @@ void test_resolver_null_string_pointer()
 // With no resolver installed at all every leaf is null; the document still parses and executes.
 void test_no_resolver_yields_all_null()
 {
-    TEST_ASSERT_EQUAL_INT(PC_GQL_OK,
-                          pc_graphql_execute("{ name uptime }", 15, NULL, out, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(PC_GQL_OK, pc_graphql_execute("{ name uptime }", 15, NULL, out, sizeof(out)));
     TEST_ASSERT_EQUAL_STRING("{\"data\":{\"name\":null,\"uptime\":null}}", out);
 }
 
@@ -548,8 +545,7 @@ static void test_long_bareword_argument_does_not_overflow_keyword_scratch()
     // subset, whatever its length - but the point is that it is rejected WITHOUT writing past kw[].
     TEST_ASSERT_EQUAL_INT(PC_GQL_ERR_PARSE, run_rc("{ f(a: LONGENUMVALUE) }"));
     // Well past PC_GQL_NAME_MAX (32) as well, not just past the scratch.
-    TEST_ASSERT_EQUAL_INT(PC_GQL_ERR_PARSE,
-                          run_rc("{ f(a: AAAAAAAAAABBBBBBBBBBCCCCCCCCCCDDDDDDDDDD) }"));
+    TEST_ASSERT_EQUAL_INT(PC_GQL_ERR_PARSE, run_rc("{ f(a: AAAAAAAAAABBBBBBBBBBCCCCCCCCCCDDDDDDDDDD) }"));
     // Exactly at the old 8-byte scratch boundary.
     TEST_ASSERT_EQUAL_INT(PC_GQL_ERR_PARSE, run_rc("{ f(a: ENUMVALU) }"));
     // The keywords the scratch actually exists for still parse.

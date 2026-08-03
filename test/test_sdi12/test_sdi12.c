@@ -23,11 +23,11 @@ void test_command_builders()
     TEST_ASSERT_EQUAL_STRING("0!", buf);
     TEST_ASSERT_EQUAL_size_t(3, pc_sdi12_build_identify(buf, sizeof(buf), '0'));
     TEST_ASSERT_EQUAL_STRING("0I!", buf);
-    pc_sdi12_build_measure(buf, sizeof(buf), '3', false);
+    pc_sdi12_build_measure(buf, sizeof(buf), '3', PROTO_FALSE);
     TEST_ASSERT_EQUAL_STRING("3M!", buf);
-    pc_sdi12_build_measure(buf, sizeof(buf), '3', true);
+    pc_sdi12_build_measure(buf, sizeof(buf), '3', PROTO_TRUE);
     TEST_ASSERT_EQUAL_STRING("3MC!", buf);
-    pc_sdi12_build_concurrent(buf, sizeof(buf), '1', false);
+    pc_sdi12_build_concurrent(buf, sizeof(buf), '1', PROTO_FALSE);
     TEST_ASSERT_EQUAL_STRING("1C!", buf);
     pc_sdi12_build_data(buf, sizeof(buf), '0', 0);
     TEST_ASSERT_EQUAL_STRING("0D0!", buf);
@@ -41,13 +41,13 @@ void test_command_builders()
 void test_build_continuous_and_verify()
 {
     char buf[16];
-    TEST_ASSERT_EQUAL_size_t(4, pc_sdi12_build_continuous(buf, sizeof(buf), '0', 0, false));
+    TEST_ASSERT_EQUAL_size_t(4, pc_sdi12_build_continuous(buf, sizeof(buf), '0', 0, PROTO_FALSE));
     TEST_ASSERT_EQUAL_STRING("0R0!", buf);
-    pc_sdi12_build_continuous(buf, sizeof(buf), '2', 5, false);
+    pc_sdi12_build_continuous(buf, sizeof(buf), '2', 5, PROTO_FALSE);
     TEST_ASSERT_EQUAL_STRING("2R5!", buf);
-    pc_sdi12_build_continuous(buf, sizeof(buf), '1', 3, true); // CRC variant inserts the 'C'
+    pc_sdi12_build_continuous(buf, sizeof(buf), '1', 3, PROTO_TRUE); // CRC variant inserts the 'C'
     TEST_ASSERT_EQUAL_STRING("1RC3!", buf);
-    TEST_ASSERT_EQUAL_size_t(0, pc_sdi12_build_continuous(buf, sizeof(buf), '0', 10, false)); // index > 9
+    TEST_ASSERT_EQUAL_size_t(0, pc_sdi12_build_continuous(buf, sizeof(buf), '0', 10, PROTO_FALSE)); // index > 9
 
     pc_sdi12_build_verify(buf, sizeof(buf), '7');
     TEST_ASSERT_EQUAL_STRING("7V!", buf);
@@ -57,23 +57,23 @@ void test_build_continuous_and_verify()
 void test_build_additional_measurements()
 {
     char buf[16];
-    TEST_ASSERT_EQUAL_size_t(4, pc_sdi12_build_measure_additional(buf, sizeof(buf), '0', 1, false));
+    TEST_ASSERT_EQUAL_size_t(4, pc_sdi12_build_measure_additional(buf, sizeof(buf), '0', 1, PROTO_FALSE));
     TEST_ASSERT_EQUAL_STRING("0M1!", buf);
-    pc_sdi12_build_measure_additional(buf, sizeof(buf), '3', 9, false);
+    pc_sdi12_build_measure_additional(buf, sizeof(buf), '3', 9, PROTO_FALSE);
     TEST_ASSERT_EQUAL_STRING("3M9!", buf);
-    pc_sdi12_build_measure_additional(buf, sizeof(buf), '1', 2, true); // CRC variant inserts the 'C'
+    pc_sdi12_build_measure_additional(buf, sizeof(buf), '1', 2, PROTO_TRUE); // CRC variant inserts the 'C'
     TEST_ASSERT_EQUAL_STRING("1MC2!", buf);
 
-    pc_sdi12_build_concurrent_additional(buf, sizeof(buf), '0', 1, false);
+    pc_sdi12_build_concurrent_additional(buf, sizeof(buf), '0', 1, PROTO_FALSE);
     TEST_ASSERT_EQUAL_STRING("0C1!", buf);
-    pc_sdi12_build_concurrent_additional(buf, sizeof(buf), '2', 4, true);
+    pc_sdi12_build_concurrent_additional(buf, sizeof(buf), '2', 4, PROTO_TRUE);
     TEST_ASSERT_EQUAL_STRING("2CC4!", buf);
 
     // The index must be 1..9 (0 is the primary aM! / aC!, handled by the base builders).
-    TEST_ASSERT_EQUAL_size_t(0, pc_sdi12_build_measure_additional(buf, sizeof(buf), '0', 0, false));
-    TEST_ASSERT_EQUAL_size_t(0, pc_sdi12_build_measure_additional(buf, sizeof(buf), '0', 10, false));
-    TEST_ASSERT_EQUAL_size_t(0, pc_sdi12_build_concurrent_additional(buf, sizeof(buf), '0', 0, false));
-    TEST_ASSERT_EQUAL_size_t(0, pc_sdi12_build_concurrent_additional(buf, sizeof(buf), '0', 10, false));
+    TEST_ASSERT_EQUAL_size_t(0, pc_sdi12_build_measure_additional(buf, sizeof(buf), '0', 0, PROTO_FALSE));
+    TEST_ASSERT_EQUAL_size_t(0, pc_sdi12_build_measure_additional(buf, sizeof(buf), '0', 10, PROTO_FALSE));
+    TEST_ASSERT_EQUAL_size_t(0, pc_sdi12_build_concurrent_additional(buf, sizeof(buf), '0', 0, PROTO_FALSE));
+    TEST_ASSERT_EQUAL_size_t(0, pc_sdi12_build_concurrent_additional(buf, sizeof(buf), '0', 10, PROTO_FALSE));
 }
 
 void test_parse_measure_m()
@@ -180,15 +180,15 @@ void test_crc_encode_printable()
 void test_sdi12_error_paths()
 {
     char buf[16];
-    TEST_ASSERT_EQUAL_size_t(0, pc_sdi12_build(NULL, sizeof(buf), '0', "M")); // null buf
-    TEST_ASSERT_EQUAL_size_t(0, pc_sdi12_build(buf, sizeof(buf), '0', NULL)); // null body
+    TEST_ASSERT_EQUAL_size_t(0, pc_sdi12_build(NULL, sizeof(buf), '0', "M"));    // null buf
+    TEST_ASSERT_EQUAL_size_t(0, pc_sdi12_build(buf, sizeof(buf), '0', NULL));    // null body
     TEST_ASSERT_EQUAL_size_t(0, pc_sdi12_build(buf, 2, '0', "M"));               // cap too small
     TEST_ASSERT_EQUAL_size_t(0, pc_sdi12_build_data(buf, sizeof(buf), '0', 10)); // d_index > 9
 
     char addr;
     uint16_t ready;
     uint8_t n;
-    TEST_ASSERT_FALSE(pc_sdi12_parse_measure(NULL, 5, &addr, &ready, &n)); // null resp
+    TEST_ASSERT_FALSE(pc_sdi12_parse_measure(NULL, 5, &addr, &ready, &n));    // null resp
     TEST_ASSERT_FALSE(pc_sdi12_parse_measure("012", 3, &addr, &ready, &n));   // len < 5
     TEST_ASSERT_FALSE(pc_sdi12_parse_measure("0X122", 5, &addr, &ready, &n)); // non-digit in the ttt field
     TEST_ASSERT_FALSE(pc_sdi12_parse_measure("0120X", 5, &addr, &ready, &n)); // non-digit value count
@@ -204,7 +204,7 @@ void test_sdi12_error_paths()
     TEST_ASSERT_EQUAL_size_t(1, cnt);
     TEST_ASSERT_FLOAT_WITHIN(0.0001f, 1.5f, v[0]);
 
-    TEST_ASSERT_FALSE(pc_sdi12_check_crc(NULL, 5));  // null
+    TEST_ASSERT_FALSE(pc_sdi12_check_crc(NULL, 5));     // null
     TEST_ASSERT_FALSE(pc_sdi12_check_crc("ab\r\n", 4)); // after trimming CRLF, too short for data + CRC
 }
 
@@ -212,7 +212,7 @@ void test_sdi12_error_paths()
 void test_build_concurrent_crc()
 {
     char buf[16];
-    pc_sdi12_build_concurrent(buf, sizeof(buf), '2', true);
+    pc_sdi12_build_concurrent(buf, sizeof(buf), '2', PROTO_TRUE);
     TEST_ASSERT_EQUAL_STRING("2CC!", buf);
 }
 

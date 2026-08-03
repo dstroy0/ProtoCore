@@ -174,8 +174,8 @@ void test_spinel_command_through_hdlc()
     // The command payload rides inside an HDLC frame: build the command, frame it, decode
     // the frame, then parse the command back out - the full Thread codec stack.
     uint8_t payload[16];
-    uint16_t plen = pc_spinel_command_build(0x82, SPINEL_CMD_PROP_VALUE_GET, 2 /*NCP_VERSION*/, NULL, 0,
-                                            payload, sizeof(payload));
+    uint16_t plen =
+        pc_spinel_command_build(0x82, SPINEL_CMD_PROP_VALUE_GET, 2 /*NCP_VERSION*/, NULL, 0, payload, sizeof(payload));
     uint8_t frame[32];
     uint16_t fn = pc_spinel_frame_encode(payload, plen, frame, sizeof(frame));
     TEST_ASSERT_GREATER_THAN_UINT16(0, fn);
@@ -225,7 +225,7 @@ void test_thread_more_guards()
     // command_build overflow at each stage: cmd pack, prop pack, value copy.
     TEST_ASSERT_EQUAL_UINT16(0, pc_spinel_command_build(0x81, 1, 1, NULL, 0, out, 1));    // cmd pack (cap 0)
     TEST_ASSERT_EQUAL_UINT16(0, pc_spinel_command_build(0x81, 1337, 1, NULL, 0, out, 3)); // prop pack
-    TEST_ASSERT_EQUAL_UINT16(0, pc_spinel_command_build(0x81, 1, 1, val, 10, out, 5));       // value copy
+    TEST_ASSERT_EQUAL_UINT16(0, pc_spinel_command_build(0x81, 1, 1, val, 10, out, 5));    // value copy
 
     // command_parse guards: null payload, then a truncated cmd, then a truncated prop.
     uint8_t hdr = 0;
@@ -279,7 +279,7 @@ void test_spinel_value_round_trip()
     pc_spinel_writer_init(&w, buf, sizeof(buf));
     const uint8_t eui[8] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
     const uint8_t v6[16] = {0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0x02, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77};
-    TEST_ASSERT_TRUE(pc_spinel_put_bool(&w, true));
+    TEST_ASSERT_TRUE(pc_spinel_put_bool(&w, PROTO_TRUE));
     TEST_ASSERT_TRUE(pc_spinel_put_u8(&w, 0xAB));
     TEST_ASSERT_TRUE(pc_spinel_put_i8(&w, -5));
     TEST_ASSERT_TRUE(pc_spinel_put_u16(&w, 0x1234));
@@ -295,7 +295,7 @@ void test_spinel_value_round_trip()
 
     SpinelReader r;
     pc_spinel_reader_init(&r, buf, n);
-    bool b = false;
+    proto_bool b = PROTO_FALSE;
     uint8_t u8 = 0;
     int8_t i8 = 0;
     uint16_t u16 = 0;
@@ -342,13 +342,13 @@ void test_spinel_put_bool_false()
     uint8_t buf[4];
     SpinelWriter w;
     pc_spinel_writer_init(&w, buf, sizeof(buf));
-    TEST_ASSERT_TRUE(pc_spinel_put_bool(&w, false));
+    TEST_ASSERT_TRUE(pc_spinel_put_bool(&w, PROTO_FALSE));
     TEST_ASSERT_EQUAL_UINT16(1, pc_spinel_writer_len(&w));
     TEST_ASSERT_EQUAL_HEX8(0x00, buf[0]);
 
     SpinelReader r;
     pc_spinel_reader_init(&r, buf, 1);
-    bool b = true;
+    proto_bool b = PROTO_TRUE;
     TEST_ASSERT_TRUE(pc_spinel_get_bool(&r, &b));
     TEST_ASSERT_FALSE(b);
 }
@@ -545,8 +545,8 @@ void test_spinel_last_status_decode()
     pc_spinel_writer_init(&w, val, sizeof(val));
     pc_spinel_put_uint(&w, SPINEL_STATUS_RESET_POWER_ON);
     uint16_t vlen = pc_spinel_writer_len(&w);
-    uint16_t plen = pc_spinel_command_build(pc_spinel_header(0, 0), SPINEL_CMD_PROP_VALUE_IS,
-                                            SPINEL_PROP_LAST_STATUS, val, vlen, payload, sizeof(payload));
+    uint16_t plen = pc_spinel_command_build(pc_spinel_header(0, 0), SPINEL_CMD_PROP_VALUE_IS, SPINEL_PROP_LAST_STATUS,
+                                            val, vlen, payload, sizeof(payload));
     TEST_ASSERT_GREATER_THAN_UINT16(0, plen);
 
     uint8_t header = 0;
@@ -606,7 +606,7 @@ void test_spinel_reader_init_variants()
 
 void test_spinel_getters_null_reader()
 {
-    bool b = false;
+    proto_bool b = PROTO_FALSE;
     uint8_t u8 = 0;
     int8_t i8 = 0;
     uint16_t u16 = 0;
@@ -637,7 +637,7 @@ void test_spinel_getters_short_value()
     // An empty value: every typed read runs off the end at its first byte.
     const uint8_t v[1] = {0x42};
     SpinelReader r;
-    bool b = false;
+    proto_bool b = PROTO_FALSE;
     int8_t i8 = 0;
     uint16_t u16 = 0;
     int16_t i16 = 0;
@@ -702,7 +702,7 @@ void test_spinel_getters_null_out_params()
     pc_spinel_writer_init(&w, buf, sizeof(buf));
     const uint8_t eui[8] = {1, 2, 3, 4, 5, 6, 7, 8};
     const uint8_t v6[16] = {0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
-    TEST_ASSERT_TRUE(pc_spinel_put_bool(&w, true));
+    TEST_ASSERT_TRUE(pc_spinel_put_bool(&w, PROTO_TRUE));
     TEST_ASSERT_TRUE(pc_spinel_put_u8(&w, 0x11));
     TEST_ASSERT_TRUE(pc_spinel_put_i8(&w, -2));
     TEST_ASSERT_TRUE(pc_spinel_put_u16(&w, 0x2233));
@@ -753,7 +753,7 @@ void test_spinel_writer_init_and_null_writer()
     // Every put through a null writer fails without dereferencing it.
     const uint8_t eui[8] = {1, 2, 3, 4, 5, 6, 7, 8};
     const uint8_t v6[16] = {0};
-    TEST_ASSERT_FALSE(pc_spinel_put_bool(NULL, true));
+    TEST_ASSERT_FALSE(pc_spinel_put_bool(NULL, PROTO_TRUE));
     TEST_ASSERT_FALSE(pc_spinel_put_u8(NULL, 1));
     TEST_ASSERT_FALSE(pc_spinel_put_i8(NULL, 1));
     TEST_ASSERT_FALSE(pc_spinel_put_u16(NULL, 1));
@@ -810,7 +810,7 @@ void test_spinel_put_no_room_each_type()
     SpinelWriter w;
 
     pc_spinel_writer_init(&w, buf, 0);
-    TEST_ASSERT_FALSE(pc_spinel_put_bool(&w, true));
+    TEST_ASSERT_FALSE(pc_spinel_put_bool(&w, PROTO_TRUE));
     pc_spinel_writer_init(&w, buf, 0);
     TEST_ASSERT_FALSE(pc_spinel_put_u16(&w, 1));
     pc_spinel_writer_init(&w, buf, 0);

@@ -206,7 +206,7 @@ void test_sdo_upload_response_expedited()
 void test_sdo_abort_roundtrip()
 {
     CanFrame f;
-    TEST_ASSERT_TRUE(pc_canopen_build_sdo_abort(&f, 0x20, 0x1000, 0, CANOPEN_ABORT_NO_OBJECT, false));
+    TEST_ASSERT_TRUE(pc_canopen_build_sdo_abort(&f, 0x20, 0x1000, 0, CANOPEN_ABORT_NO_OBJECT, PROTO_FALSE));
     TEST_ASSERT_EQUAL_UINT32(0x580 + 0x20, f.id); // server -> client
     TEST_ASSERT_EQUAL_HEX8(0x80, f.data[0]);
 
@@ -252,7 +252,7 @@ void test_parse_classifies()
     TEST_ASSERT_EQUAL_UINT8(15, m.node_id);
 
     // Extended frames are not CANopen default-profile.
-    f.extended = true;
+    f.extended = PROTO_TRUE;
     TEST_ASSERT_FALSE(pc_canopen_parse(&f, &m));
 }
 
@@ -273,8 +273,8 @@ void test_build_arg_validation()
     TEST_ASSERT_FALSE(pc_canopen_build_sdo_read(NULL, 5, 0, 0));
     TEST_ASSERT_FALSE(pc_canopen_build_sdo_read(&f, 0, 0, 0));
     TEST_ASSERT_FALSE(pc_canopen_build_sdo_read(&f, 128, 0, 0));
-    TEST_ASSERT_FALSE(pc_canopen_build_sdo_abort(&f, 0, 0, 0, 0, true));
-    TEST_ASSERT_FALSE(pc_canopen_build_sdo_abort(&f, 128, 0, 0, 0, true));
+    TEST_ASSERT_FALSE(pc_canopen_build_sdo_abort(&f, 0, 0, 0, 0, PROTO_TRUE));
+    TEST_ASSERT_FALSE(pc_canopen_build_sdo_abort(&f, 128, 0, 0, 0, PROTO_TRUE));
     // PDO builders reject a null out, node 0, and len>0 with a null payload.
     TEST_ASSERT_FALSE(pc_canopen_build_tpdo(NULL, 1, 5, d, 4));
     TEST_ASSERT_FALSE(pc_canopen_build_tpdo(&f, 1, 0, d, 4));
@@ -308,12 +308,10 @@ void test_parse_all_function_codes()
         uint8_t pdo;
     };
     const Case cases[] = {
-        {0x000, CANOPEN_T_NMT, 0, 0},    {0x100, CANOPEN_T_TIME, 0, 0},
-        {0x087, CANOPEN_T_EMCY, 7, 0},   {0x181, CANOPEN_T_TPDO, 1, 1},
-        {0x201, CANOPEN_T_RPDO, 1, 1},   {0x282, CANOPEN_T_TPDO, 2, 2},
-        {0x303, CANOPEN_T_RPDO, 3, 2},   {0x384, CANOPEN_T_TPDO, 4, 3},
-        {0x405, CANOPEN_T_RPDO, 5, 3},   {0x486, CANOPEN_T_TPDO, 6, 4},
-        {0x507, CANOPEN_T_RPDO, 7, 4},   {0x588, CANOPEN_T_SDO_TX, 8, 0},
+        {0x000, CANOPEN_T_NMT, 0, 0},    {0x100, CANOPEN_T_TIME, 0, 0},       {0x087, CANOPEN_T_EMCY, 7, 0},
+        {0x181, CANOPEN_T_TPDO, 1, 1},   {0x201, CANOPEN_T_RPDO, 1, 1},       {0x282, CANOPEN_T_TPDO, 2, 2},
+        {0x303, CANOPEN_T_RPDO, 3, 2},   {0x384, CANOPEN_T_TPDO, 4, 3},       {0x405, CANOPEN_T_RPDO, 5, 3},
+        {0x486, CANOPEN_T_TPDO, 6, 4},   {0x507, CANOPEN_T_RPDO, 7, 4},       {0x588, CANOPEN_T_SDO_TX, 8, 0},
         {0x609, CANOPEN_T_SDO_RX, 9, 0}, {0x70A, CANOPEN_T_HEARTBEAT, 10, 0},
     };
     for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++)
@@ -443,10 +441,10 @@ void test_sdo_write_arg_validation()
 void test_emcy_and_sdo_abort_null_out_and_to_server()
 {
     TEST_ASSERT_FALSE(pc_canopen_build_emcy(NULL, 5, 0, 0, NULL));
-    TEST_ASSERT_FALSE(pc_canopen_build_sdo_abort(NULL, 5, 0, 0, 0, true));
+    TEST_ASSERT_FALSE(pc_canopen_build_sdo_abort(NULL, 5, 0, 0, 0, PROTO_TRUE));
 
     CanFrame f;
-    TEST_ASSERT_TRUE(pc_canopen_build_sdo_abort(&f, 0x20, 0x1000, 0, CANOPEN_ABORT_TIMEOUT, true));
+    TEST_ASSERT_TRUE(pc_canopen_build_sdo_abort(&f, 0x20, 0x1000, 0, CANOPEN_ABORT_TIMEOUT, PROTO_TRUE));
     TEST_ASSERT_EQUAL_UINT32(0x600 + 0x20, f.id); // client -> server
     TEST_ASSERT_EQUAL_HEX8(0x80, f.data[0]);
 }
@@ -459,7 +457,7 @@ void test_parse_emcy_extended_and_null_outputs()
     const uint8_t msef[5] = {1, 2, 3, 4, 5};
     CanFrame f;
     pc_canopen_build_emcy(&f, 5, 0x1000, 0x02, msef);
-    f.extended = true;
+    f.extended = PROTO_TRUE;
     uint8_t node = 0, reg = 0, out_msef[5] = {0};
     uint16_t code = 0;
     TEST_ASSERT_FALSE(pc_canopen_parse_emcy(&f, &node, &code, &reg, out_msef));
@@ -478,7 +476,7 @@ void test_parse_heartbeat_extended_null_and_node_zero()
 
     CanFrame f;
     pc_canopen_build_heartbeat(&f, 9, CANOPEN_STATE_OPERATIONAL);
-    f.extended = true;
+    f.extended = PROTO_TRUE;
     TEST_ASSERT_FALSE(pc_canopen_parse_heartbeat(&f, &node, &state));
 
     CanFrame node_zero;
@@ -498,7 +496,7 @@ void test_parse_sdo_response_extended()
     memset(&f, 0, sizeof(f));
     f.id = 0x580 + 5;
     f.dlc = 8;
-    f.extended = true;
+    f.extended = PROTO_TRUE;
     CanopenSdoResponse r;
     TEST_ASSERT_FALSE(pc_canopen_parse_sdo_response(&f, &r));
 }
@@ -517,35 +515,35 @@ void test_sdo_segmented_download_build()
     TEST_ASSERT_EQUAL_HEX8(10, f.data[4]); // total size LE
 
     // First segment: toggle 0, 7 octets, not last -> command 0x00.
-    TEST_ASSERT_TRUE(pc_canopen_build_sdo_download_segment(&f, 5, false, obj, 7, false));
+    TEST_ASSERT_TRUE(pc_canopen_build_sdo_download_segment(&f, 5, PROTO_FALSE, obj, 7, PROTO_FALSE));
     TEST_ASSERT_EQUAL_HEX8(0x00, f.data[0]);
     TEST_ASSERT_EQUAL_MEMORY(obj, f.data + 1, 7);
     // Last segment: toggle 1, 3 octets -> command 0x10 | ((7-3)<<1) | 1 = 0x19.
-    TEST_ASSERT_TRUE(pc_canopen_build_sdo_download_segment(&f, 5, true, obj + 7, 3, true));
+    TEST_ASSERT_TRUE(pc_canopen_build_sdo_download_segment(&f, 5, PROTO_TRUE, obj + 7, 3, PROTO_TRUE));
     TEST_ASSERT_EQUAL_HEX8(0x19, f.data[0]);
     // Guards.
-    TEST_ASSERT_FALSE(pc_canopen_build_sdo_download_segment(&f, 5, false, obj, 8, false)); // len > 7
-    TEST_ASSERT_FALSE(pc_canopen_build_sdo_download_segment(&f, 0, false, obj, 3, false)); // bad node
+    TEST_ASSERT_FALSE(pc_canopen_build_sdo_download_segment(&f, 5, PROTO_FALSE, obj, 8, PROTO_FALSE)); // len > 7
+    TEST_ASSERT_FALSE(pc_canopen_build_sdo_download_segment(&f, 0, PROTO_FALSE, obj, 3, PROTO_FALSE)); // bad node
 }
 
 void test_sdo_segmented_upload_roundtrip()
 {
     const uint8_t obj[10] = {10, 11, 12, 13, 14, 15, 16, 17, 18, 19};
     CanFrame req;
-    TEST_ASSERT_TRUE(pc_canopen_build_sdo_upload_segment_req(&req, 5, false));
+    TEST_ASSERT_TRUE(pc_canopen_build_sdo_upload_segment_req(&req, 5, PROTO_FALSE));
     TEST_ASSERT_EQUAL_HEX8(0x60, req.data[0]);
-    TEST_ASSERT_TRUE(pc_canopen_build_sdo_upload_segment_req(&req, 5, true));
+    TEST_ASSERT_TRUE(pc_canopen_build_sdo_upload_segment_req(&req, 5, PROTO_TRUE));
     TEST_ASSERT_EQUAL_HEX8(0x70, req.data[0]); // 0x60 | toggle bit
 
     // Two server-response segments (same segment wire form), parsed + reassembled into the object.
     CanFrame s1, s2;
-    pc_canopen_build_sdo_download_segment(&s1, 5, false, obj, 7, false);
-    pc_canopen_build_sdo_download_segment(&s2, 5, true, obj + 7, 3, true);
+    pc_canopen_build_sdo_download_segment(&s1, 5, PROTO_FALSE, obj, 7, PROTO_FALSE);
+    pc_canopen_build_sdo_download_segment(&s2, 5, PROTO_TRUE, obj + 7, 3, PROTO_TRUE);
 
     uint8_t buf[16];
     CanopenSdoReasm r;
     pc_canopen_sdo_reasm_init(&r, buf, sizeof(buf));
-    bool tg = true, last = true;
+    proto_bool tg = PROTO_TRUE, last = PROTO_TRUE;
     uint8_t data[7], len = 0;
     TEST_ASSERT_TRUE(pc_canopen_parse_sdo_segment(&s1, &tg, data, &len, &last));
     TEST_ASSERT_FALSE(tg);
@@ -569,19 +567,19 @@ void test_sdo_segmented_guards()
     CanopenSdoReasm r;
     pc_canopen_sdo_reasm_init(&r, buf, sizeof(buf));
     uint8_t d[7] = {0};
-    TEST_ASSERT_FALSE(pc_canopen_sdo_reasm_feed(&r, d, 7, true, false)); // first segment must be toggle 0
-    TEST_ASSERT_TRUE(pc_canopen_sdo_reasm_feed(&r, d, 7, false, false));
-    TEST_ASSERT_FALSE(pc_canopen_sdo_reasm_feed(&r, d, 7, false, false)); // toggle must have flipped
+    TEST_ASSERT_FALSE(pc_canopen_sdo_reasm_feed(&r, d, 7, PROTO_TRUE, PROTO_FALSE)); // first segment must be toggle 0
+    TEST_ASSERT_TRUE(pc_canopen_sdo_reasm_feed(&r, d, 7, PROTO_FALSE, PROTO_FALSE));
+    TEST_ASSERT_FALSE(pc_canopen_sdo_reasm_feed(&r, d, 7, PROTO_FALSE, PROTO_FALSE)); // toggle must have flipped
 
     uint8_t tiny[4];
     CanopenSdoReasm r2;
     pc_canopen_sdo_reasm_init(&r2, tiny, sizeof(tiny));
-    TEST_ASSERT_FALSE(pc_canopen_sdo_reasm_feed(&r2, d, 7, false, false)); // overflow
+    TEST_ASSERT_FALSE(pc_canopen_sdo_reasm_feed(&r2, d, 7, PROTO_FALSE, PROTO_FALSE)); // overflow
 
     // parse rejects an expedited response (command high bits non-zero) as not a segment.
     CanFrame exp;
     pc_canopen_build_sdo_read(&exp, 5, 0x1000, 0); // 0x40 (ccs=2)
-    bool tg, last;
+    proto_bool tg, last;
     uint8_t data[7], len;
     TEST_ASSERT_FALSE(pc_canopen_parse_sdo_segment(&exp, &tg, data, &len, &last));
 }

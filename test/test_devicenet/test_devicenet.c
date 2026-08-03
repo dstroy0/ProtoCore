@@ -34,8 +34,7 @@ void test_id_group2()
 {
     uint32_t id = 0;
     // Group 2: 10 MAC(6) MsgID(3). mac 0x21, unconnected explicit request.
-    TEST_ASSERT_TRUE(
-        pc_devicenet_encode_id(&id, DEVICENET_GROUP_2, DEVICENET_G2_UNCONNECTED_EXPLICIT_REQ, 0x21));
+    TEST_ASSERT_TRUE(pc_devicenet_encode_id(&id, DEVICENET_GROUP_2, DEVICENET_G2_UNCONNECTED_EXPLICIT_REQ, 0x21));
     TEST_ASSERT_EQUAL_HEX32(0x400u | (0x21u << 3) | 4u, id);
     DeviceNetId d;
     TEST_ASSERT_TRUE(pc_devicenet_decode_id(id, &d));
@@ -71,9 +70,9 @@ void test_id_group3_and_4()
 
 void test_header_and_frag_octets()
 {
-    TEST_ASSERT_EQUAL_HEX8(0x80 | 0x21, pc_devicenet_msg_header(true, false, 0x21));
-    TEST_ASSERT_EQUAL_HEX8(0xC0 | 0x21, pc_devicenet_msg_header(true, true, 0x21));
-    TEST_ASSERT_EQUAL_HEX8(0x21, pc_devicenet_msg_header(false, false, 0x21));
+    TEST_ASSERT_EQUAL_HEX8(0x80 | 0x21, pc_devicenet_msg_header(PROTO_TRUE, PROTO_FALSE, 0x21));
+    TEST_ASSERT_EQUAL_HEX8(0xC0 | 0x21, pc_devicenet_msg_header(PROTO_TRUE, PROTO_TRUE, 0x21));
+    TEST_ASSERT_EQUAL_HEX8(0x21, pc_devicenet_msg_header(PROTO_FALSE, PROTO_FALSE, 0x21));
     TEST_ASSERT_EQUAL_HEX8(0x80 | 0x05, pc_devicenet_frag_octet(DEVICENET_FRAG_LAST, 5));
     TEST_ASSERT_EQUAL_HEX8(0x40 | 0x01, pc_devicenet_frag_octet(DEVICENET_FRAG_MIDDLE, 1));
 }
@@ -82,8 +81,8 @@ void test_build_explicit_single_frame()
 {
     const uint8_t cip[3] = {0x0E, 0x20, 0x01}; // a tiny CIP get-attribute-ish body
     CanFrame f;
-    TEST_ASSERT_TRUE(pc_devicenet_build_explicit(&f, DEVICENET_GROUP_2,
-                                                 DEVICENET_G2_UNCONNECTED_EXPLICIT_REQ, 0x21, cip, 3));
+    TEST_ASSERT_TRUE(
+        pc_devicenet_build_explicit(&f, DEVICENET_GROUP_2, DEVICENET_G2_UNCONNECTED_EXPLICIT_REQ, 0x21, cip, 3));
     TEST_ASSERT_FALSE(f.extended);
     TEST_ASSERT_EQUAL_UINT8(4, f.dlc);       // 1 header + 3 body
     TEST_ASSERT_EQUAL_HEX8(0x21, f.data[0]); // header, not fragmented, mac 0x21
@@ -132,10 +131,10 @@ void test_build_fragment_roundtrip()
     CanFrame f0, f1;
     const uint8_t part0[6] = {1, 2, 3, 4, 5, 6};
     const uint8_t part1[2] = {7, 8};
-    TEST_ASSERT_TRUE(pc_devicenet_build_fragment(&f0, DEVICENET_GROUP_2, 0x00, 0x21, false,
-                                                 DEVICENET_FRAG_FIRST, 0, part0, 6));
-    TEST_ASSERT_TRUE(pc_devicenet_build_fragment(&f1, DEVICENET_GROUP_2, 0x00, 0x21, false,
-                                                 DEVICENET_FRAG_LAST, 1, part1, 2));
+    TEST_ASSERT_TRUE(pc_devicenet_build_fragment(&f0, DEVICENET_GROUP_2, 0x00, 0x21, PROTO_FALSE, DEVICENET_FRAG_FIRST,
+                                                 0, part0, 6));
+    TEST_ASSERT_TRUE(
+        pc_devicenet_build_fragment(&f1, DEVICENET_GROUP_2, 0x00, 0x21, PROTO_FALSE, DEVICENET_FRAG_LAST, 1, part1, 2));
 
     // The frame body is the fragmented header + the fragmentation octet + the data.
     TEST_ASSERT_EQUAL_UINT8(8, f0.dlc); // header + frag octet + 6 data
@@ -152,14 +151,14 @@ void test_build_fragment_roundtrip()
     TEST_ASSERT_EQUAL_MEMORY(expect, rx.buf, 8);
 
     // Guards: data too long (> 6), a null data with a nonzero length, a frag count > 63, and a null out.
-    TEST_ASSERT_FALSE(pc_devicenet_build_fragment(&f0, DEVICENET_GROUP_2, 0, 0x21, false,
-                                                  DEVICENET_FRAG_FIRST, 0, part0, 7));
-    TEST_ASSERT_FALSE(pc_devicenet_build_fragment(&f0, DEVICENET_GROUP_2, 0, 0x21, false,
-                                                  DEVICENET_FRAG_FIRST, 0, NULL, 3));
-    TEST_ASSERT_FALSE(pc_devicenet_build_fragment(&f0, DEVICENET_GROUP_2, 0, 0x21, false,
-                                                  DEVICENET_FRAG_FIRST, 64, part1, 2));
-    TEST_ASSERT_FALSE(pc_devicenet_build_fragment(NULL, DEVICENET_GROUP_2, 0, 0x21, false,
-                                                  DEVICENET_FRAG_FIRST, 0, part1, 2));
+    TEST_ASSERT_FALSE(
+        pc_devicenet_build_fragment(&f0, DEVICENET_GROUP_2, 0, 0x21, PROTO_FALSE, DEVICENET_FRAG_FIRST, 0, part0, 7));
+    TEST_ASSERT_FALSE(
+        pc_devicenet_build_fragment(&f0, DEVICENET_GROUP_2, 0, 0x21, PROTO_FALSE, DEVICENET_FRAG_FIRST, 0, NULL, 3));
+    TEST_ASSERT_FALSE(
+        pc_devicenet_build_fragment(&f0, DEVICENET_GROUP_2, 0, 0x21, PROTO_FALSE, DEVICENET_FRAG_FIRST, 64, part1, 2));
+    TEST_ASSERT_FALSE(
+        pc_devicenet_build_fragment(NULL, DEVICENET_GROUP_2, 0, 0x21, PROTO_FALSE, DEVICENET_FRAG_FIRST, 0, part1, 2));
 }
 
 void test_frag_out_of_order_errors()
@@ -178,14 +177,13 @@ void test_frag_out_of_order_errors()
 void test_id_error_paths()
 {
     uint32_t id = 0;
-    TEST_ASSERT_FALSE(pc_devicenet_encode_id(&id, DEVICENET_GROUP_2, 8, 0)); // group 2 msg_id > 7
-    TEST_ASSERT_FALSE(pc_devicenet_encode_id(&id, DEVICENET_GROUP_3, 8, 0)); // group 3 msg_id > 7
-    TEST_ASSERT_FALSE(pc_devicenet_encode_id(&id, (DeviceNetGroup)99, 0, 0));                // invalid group
-    TEST_ASSERT_FALSE(pc_devicenet_decode_id(0x100, NULL));                               // null out
+    TEST_ASSERT_FALSE(pc_devicenet_encode_id(&id, DEVICENET_GROUP_2, 8, 0));  // group 2 msg_id > 7
+    TEST_ASSERT_FALSE(pc_devicenet_encode_id(&id, DEVICENET_GROUP_3, 8, 0));  // group 3 msg_id > 7
+    TEST_ASSERT_FALSE(pc_devicenet_encode_id(&id, (DeviceNetGroup)99, 0, 0)); // invalid group
+    TEST_ASSERT_FALSE(pc_devicenet_decode_id(0x100, NULL));                   // null out
     CanFrame f;
     const uint8_t one[1] = {0xAB};
-    TEST_ASSERT_FALSE(
-        pc_devicenet_build_explicit(&f, DEVICENET_GROUP_2, 8, 0, one, 1)); // id encode fails
+    TEST_ASSERT_FALSE(pc_devicenet_build_explicit(&f, DEVICENET_GROUP_2, 8, 0, one, 1)); // id encode fails
 }
 
 // The reassembler's reject/ignore branches.
@@ -195,11 +193,9 @@ void test_frag_reject_paths()
     pc_devicenet_frag_reset(&rx);
     const uint8_t body[3] = {0x80 | 0x21, DEVICENET_FRAG_FIRST, 0xAA};
 
-    TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_IGNORED,
-                          pc_devicenet_frag_feed(NULL, body, 3)); // null rx
-    TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_IGNORED,
-                          pc_devicenet_frag_feed(&rx, NULL, 3)); // null body
-    TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_IGNORED, pc_devicenet_frag_feed(&rx, body, 0)); // empty
+    TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_IGNORED, pc_devicenet_frag_feed(NULL, body, 3)); // null rx
+    TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_IGNORED, pc_devicenet_frag_feed(&rx, NULL, 3));  // null body
+    TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_IGNORED, pc_devicenet_frag_feed(&rx, body, 0));  // empty
 
     const uint8_t hdr_only[1] = {0x80 | 0x21}; // FRAG set but no fragmentation octet
     TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_ERR, pc_devicenet_frag_feed(&rx, hdr_only, 1));
@@ -207,8 +203,7 @@ void test_frag_reject_paths()
     // A LAST fragment with no active session -> error.
     pc_devicenet_frag_reset(&rx);
     uint8_t last_no_first[3] = {0x80 | 0x21, pc_devicenet_frag_octet(DEVICENET_FRAG_LAST, 0), 0xCC};
-    TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_ERR,
-                          pc_devicenet_frag_feed(&rx, last_no_first, sizeof(last_no_first)));
+    TEST_ASSERT_EQUAL_INT(DEVICENET_FRAG_ERR, pc_devicenet_frag_feed(&rx, last_no_first, sizeof(last_no_first)));
 
     // An ACK fragment type is flow control, not data -> ignored.
     pc_devicenet_frag_reset(&rx);
@@ -257,8 +252,8 @@ void test_build_explicit_body_arguments()
 {
     CanFrame f;
     // body_len 0 with a null body: valid, just the header octet.
-    TEST_ASSERT_TRUE(pc_devicenet_build_explicit(&f, DEVICENET_GROUP_2,
-                                                 DEVICENET_G2_UNCONNECTED_EXPLICIT_REQ, 0x21, NULL, 0));
+    TEST_ASSERT_TRUE(
+        pc_devicenet_build_explicit(&f, DEVICENET_GROUP_2, DEVICENET_G2_UNCONNECTED_EXPLICIT_REQ, 0x21, NULL, 0));
     TEST_ASSERT_EQUAL_UINT8(1, f.dlc);
     TEST_ASSERT_EQUAL_HEX8(0x21, f.data[0]);
     TEST_ASSERT_EQUAL_UINT8(0, f.data[1]); // the rest of the payload is zeroed

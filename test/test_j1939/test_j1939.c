@@ -79,7 +79,7 @@ void test_request_pgn()
 
 void test_address_claim_name()
 {
-    uint64_t name = pc_j1939_build_name(true, 2, 0, 5, 130, 0, 1, 0x1F2, 0x12345);
+    uint64_t name = pc_j1939_build_name(PROTO_TRUE, 2, 0, 5, 130, 0, 1, 0x1F2, 0x12345);
     CanFrame f;
     TEST_ASSERT_TRUE(pc_j1939_build_address_claim(&f, 0x80, name));
     J1939Id d;
@@ -172,20 +172,20 @@ void test_build_error_paths()
 
     TEST_ASSERT_FALSE(pc_j1939_build_message(NULL, 6, 0x00FEEE, 0x21, 0xFF, data, 3)); // null out
     TEST_ASSERT_FALSE(pc_j1939_build_message(&f, 6, 0x00FEEE, 0x21, 0xFF, NULL, 3));   // len but null data
-    TEST_ASSERT_FALSE(pc_j1939_build_message(&f, 8, 0x00FEEE, 0x21, 0xFF, data, 3));      // priority>7 -> encode fails
+    TEST_ASSERT_FALSE(pc_j1939_build_message(&f, 8, 0x00FEEE, 0x21, 0xFF, data, 3));   // priority>7 -> encode fails
 
     TEST_ASSERT_FALSE(pc_j1939_build_request(NULL, 0x21, 0, 0x00FEEC)); // null out
-    TEST_ASSERT_FALSE(pc_j1939_build_request(&f, 0x21, 0, 0x40000));       // pgn > 18 bits
+    TEST_ASSERT_FALSE(pc_j1939_build_request(&f, 0x21, 0, 0x40000));    // pgn > 18 bits
 
     TEST_ASSERT_FALSE(pc_j1939_build_bam_cm(NULL, 0x21, 0x00FECA, 16)); // null out
-    TEST_ASSERT_FALSE(pc_j1939_build_bam_cm(&f, 0x21, 0x00FECA, 8));       // total_size < 9
-    TEST_ASSERT_FALSE(pc_j1939_build_bam_cm(&f, 0x21, 0x40000, 16));       // pgn > 18 bits
+    TEST_ASSERT_FALSE(pc_j1939_build_bam_cm(&f, 0x21, 0x00FECA, 8));    // total_size < 9
+    TEST_ASSERT_FALSE(pc_j1939_build_bam_cm(&f, 0x21, 0x40000, 16));    // pgn > 18 bits
 
     const uint8_t chunk[7] = {1, 2, 3, 4, 5, 6, 7};
-    TEST_ASSERT_FALSE(pc_j1939_build_tp_dt(&f, 0x21, 0xFF, 0, chunk, 7));   // seq 0
-    TEST_ASSERT_FALSE(pc_j1939_build_tp_dt(&f, 0x21, 0xFF, 1, chunk, 0));   // chunk_len 0
-    TEST_ASSERT_FALSE(pc_j1939_build_tp_dt(&f, 0x21, 0xFF, 1, NULL, 7)); // null chunk
-    TEST_ASSERT_FALSE(pc_j1939_build_tp_dt(&f, 0x21, 0xFF, 1, chunk, 9));   // chunk_len > 7
+    TEST_ASSERT_FALSE(pc_j1939_build_tp_dt(&f, 0x21, 0xFF, 0, chunk, 7)); // seq 0
+    TEST_ASSERT_FALSE(pc_j1939_build_tp_dt(&f, 0x21, 0xFF, 1, chunk, 0)); // chunk_len 0
+    TEST_ASSERT_FALSE(pc_j1939_build_tp_dt(&f, 0x21, 0xFF, 1, NULL, 7));  // null chunk
+    TEST_ASSERT_FALSE(pc_j1939_build_tp_dt(&f, 0x21, 0xFF, 1, chunk, 9)); // chunk_len > 7
 }
 
 // Null-pointer guard branches whose non-null-argument paths are already exercised above.
@@ -211,7 +211,7 @@ void test_build_message_length_edges()
 // build_name: the false side of the arbitrary-address-capable ternary.
 void test_build_name_not_arbitrary_capable()
 {
-    uint64_t name = pc_j1939_build_name(false, 2, 0, 5, 130, 0, 1, 0x1F2, 0x12345);
+    uint64_t name = pc_j1939_build_name(PROTO_FALSE, 2, 0, 5, 130, 0, 1, 0x1F2, 0x12345);
     TEST_ASSERT_FALSE((name >> 63) & 1u);
 }
 
@@ -316,7 +316,7 @@ void test_tp_feed_error_paths()
     TEST_ASSERT_EQUAL_INT(J1939_TP_IGNORED, pc_j1939_tp_feed(NULL, &cm)); // null rx
     TEST_ASSERT_EQUAL_INT(J1939_TP_IGNORED, pc_j1939_tp_feed(&rx, NULL)); // null frame
     CanFrame notext = cm;
-    notext.extended = false;
+    notext.extended = PROTO_FALSE;
     TEST_ASSERT_EQUAL_INT(J1939_TP_IGNORED, pc_j1939_tp_feed(&rx, &notext)); // not a 29-bit frame
 
     CanFrame cm_ctrl = cm;

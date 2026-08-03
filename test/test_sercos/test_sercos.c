@@ -17,9 +17,9 @@ void tearDown(void)
 void test_idn_roundtrip(void)
 {
     // S-0-0100 (velocity loop): S-parameter, set 0, block 100.
-    uint16_t idn = pc_sercos_idn(false, 0, 100);
+    uint16_t idn = pc_sercos_idn(PROTO_FALSE, 0, 100);
     TEST_ASSERT_EQUAL_HEX16(0x0064, idn);
-    bool prod = true;
+    proto_bool prod = PROTO_TRUE;
     uint8_t set = 9;
     uint16_t block = 0;
     pc_sercos_idn_parse(idn, &prod, &set, &block);
@@ -28,7 +28,7 @@ void test_idn_roundtrip(void)
     TEST_ASSERT_EQUAL_UINT16(100, block);
 
     // P-1-0016: product param, set 1, block 16 -> bit15 | (1<<12) | 16 = 0x9010.
-    idn = pc_sercos_idn(true, 1, 16);
+    idn = pc_sercos_idn(PROTO_TRUE, 1, 16);
     TEST_ASSERT_EQUAL_HEX16(0x9010, idn);
     pc_sercos_idn_parse(idn, &prod, &set, &block);
     TEST_ASSERT_TRUE(prod);
@@ -75,11 +75,9 @@ void test_sercos_build_guards()
     uint8_t out[64];
     uint8_t data[4] = {1, 2, 3, 4};
     TEST_ASSERT_EQUAL_size_t(0, pc_sercos_build(0xEE, 0, 0, data, sizeof(data), out, sizeof(out))); // bad type
-    TEST_ASSERT_EQUAL_size_t(
-        0, pc_sercos_build(SERCOS_TEL_MDT, 0, 0, data, sizeof(data), out, 2)); // cap too small
-    TEST_ASSERT_EQUAL_size_t(0,
-                             pc_sercos_build(SERCOS_TEL_MDT, 0, 0, NULL, 4, out, sizeof(out))); // null data
-    TEST_ASSERT_EQUAL_size_t(0, pc_sercos_build(SERCOS_TEL_MDT, 0, 0, NULL, 0, NULL, 0));    // null out
+    TEST_ASSERT_EQUAL_size_t(0, pc_sercos_build(SERCOS_TEL_MDT, 0, 0, data, sizeof(data), out, 2)); // cap too small
+    TEST_ASSERT_EQUAL_size_t(0, pc_sercos_build(SERCOS_TEL_MDT, 0, 0, NULL, 4, out, sizeof(out)));  // null data
+    TEST_ASSERT_EQUAL_size_t(0, pc_sercos_build(SERCOS_TEL_MDT, 0, 0, NULL, 0, NULL, 0));           // null out
 }
 
 void test_idn_parse_null_out_pointers(void)
@@ -87,11 +85,11 @@ void test_idn_parse_null_out_pointers(void)
     // Doc contract: "any out-pointer may be null" - exercise every pointer being null
     // (including all three at once, which must not crash) and confirm the pointers
     // that ARE non-null are still populated correctly regardless of their null siblings.
-    uint16_t idn = pc_sercos_idn(true, 5, 200);
+    uint16_t idn = pc_sercos_idn(PROTO_TRUE, 5, 200);
 
     pc_sercos_idn_parse(idn, NULL, NULL, NULL);
 
-    bool prod = false;
+    proto_bool prod = PROTO_FALSE;
     pc_sercos_idn_parse(idn, &prod, NULL, NULL);
     TEST_ASSERT_TRUE(prod);
 

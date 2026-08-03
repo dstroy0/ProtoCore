@@ -41,7 +41,7 @@ void test_writer_nested_and_array()
     w.integer(1);
     w.integer(2);
     w.end_array();
-    w.kv_bool("b", true);
+    w.kv_bool("b", PROTO_TRUE);
     w.key("c");
     w.begin_object();
     w.kv_null("n");
@@ -58,8 +58,8 @@ void test_writer_value_types()
     w.begin_object();
     w.kv_int("i", -7);
     w.kv_uint("u", 42u);
-    w.kv_bool("t", true);
-    w.kv_bool("f", false);
+    w.kv_bool("t", PROTO_TRUE);
+    w.kv_bool("f", PROTO_FALSE);
     w.kv_null("z");
     w.kv_raw("r", "3.14");
     w.end_object();
@@ -135,7 +135,7 @@ void test_reader_get_int()
 
 void test_reader_get_bool()
 {
-    bool b = false;
+    proto_bool b = PROTO_FALSE;
     TEST_ASSERT_TRUE(json_get_bool(kBody, "on", &b));
     TEST_ASSERT_TRUE(b);
 }
@@ -152,7 +152,7 @@ void test_reader_missing_key()
 {
     char out[16];
     long v;
-    bool b;
+    proto_bool b;
     TEST_ASSERT_FALSE(json_get_str(kBody, "nope", out, sizeof(out)));
     TEST_ASSERT_FALSE(json_get_int(kBody, "nope", &v));
     TEST_ASSERT_FALSE(json_get_bool(kBody, "nope", &b));
@@ -161,7 +161,7 @@ void test_reader_missing_key()
 void test_reader_type_mismatch()
 {
     long v;
-    bool b;
+    proto_bool b;
     // "name" is a string, not an int or bool.
     TEST_ASSERT_FALSE(json_get_int(kBody, "name", &v));
     TEST_ASSERT_FALSE(json_get_bool(kBody, "name", &b));
@@ -232,7 +232,7 @@ void test_reader_null_guards()
 {
     char out[8];
     long v = 0;
-    bool b = false;
+    proto_bool b = PROTO_FALSE;
     TEST_ASSERT_FALSE(json_get_str(kBody, "name", NULL, 8));
     TEST_ASSERT_FALSE(json_get_str(kBody, "name", out, 0));
     TEST_ASSERT_FALSE(json_get_int(kBody, "port", NULL));
@@ -407,7 +407,7 @@ void test_reader_skips_primitive_terminated_by_close_brace()
 // covers this terminator via kBody; "false" needs its own direct hit).
 void test_reader_false_bool_before_comma()
 {
-    bool b = true;
+    proto_bool b = PROTO_TRUE;
     TEST_ASSERT_TRUE(json_get_bool("{\"a\":false,\"b\":1}", "a", &b));
     TEST_ASSERT_FALSE(b);
 }
@@ -461,7 +461,7 @@ void test_reader_unicode_above_surrogate_range_standalone()
 // trailing character does not.
 void test_reader_bool_terminators()
 {
-    bool b = false;
+    proto_bool b = PROTO_FALSE;
     TEST_ASSERT_TRUE(json_get_bool("{\"a\":true}", "a", &b));
     TEST_ASSERT_TRUE(b);
     TEST_ASSERT_TRUE(json_get_bool("{\"a\":false}", "a", &b));
@@ -540,7 +540,7 @@ void test_reader_unicode_surrogate_edges()
 // json_get_bool decodes false as well as true.
 void test_reader_false_bool()
 {
-    bool b = true;
+    proto_bool b = PROTO_TRUE;
     TEST_ASSERT_TRUE(json_get_bool("{\"f\":false}", "f", &b));
     TEST_ASSERT_FALSE(b);
 }

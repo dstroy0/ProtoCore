@@ -79,10 +79,10 @@ void test_asdu_header_roundtrip()
 {
     IecAsduHeader h;
     h.type_id = IEC_TYPE_M_ME_NC_1;
-    h.sq = false;
+    h.sq = PROTO_FALSE;
     h.count = 3;
-    h.test = false;
-    h.negative = false;
+    h.test = PROTO_FALSE;
+    h.negative = PROTO_FALSE;
     h.cot = IEC_COT_SPONTANEOUS;
     h.orig_addr = 0;
     h.common_addr = 0x000A;
@@ -159,12 +159,12 @@ void test_104_build_guards()
     const uint8_t asdu[6] = {0};
     TEST_ASSERT_EQUAL_size_t(0, pc_iec104_build_i(NULL, sizeof(buf), 0, 0, asdu, 6)); // null buf
     TEST_ASSERT_EQUAL_size_t(0, pc_iec104_build_i(buf, sizeof(buf), 0, 0, NULL, 6));  // len but null asdu
-    TEST_ASSERT_EQUAL_size_t(0, pc_iec104_build_i(buf, 512, 0, 0, asdu, 250));           // asdu_len > 249
-    TEST_ASSERT_EQUAL_size_t(0, pc_iec104_build_i(buf, 8, 0, 0, asdu, 6));               // cap < 6 + asdu_len
+    TEST_ASSERT_EQUAL_size_t(0, pc_iec104_build_i(buf, 512, 0, 0, asdu, 250));        // asdu_len > 249
+    TEST_ASSERT_EQUAL_size_t(0, pc_iec104_build_i(buf, 8, 0, 0, asdu, 6));            // cap < 6 + asdu_len
     TEST_ASSERT_EQUAL_size_t(0, pc_iec104_build_s(NULL, sizeof(buf), 0));             // null buf
-    TEST_ASSERT_EQUAL_size_t(0, pc_iec104_build_s(buf, 4, 0));                           // cap < APCI len
+    TEST_ASSERT_EQUAL_size_t(0, pc_iec104_build_s(buf, 4, 0));                        // cap < APCI len
     TEST_ASSERT_EQUAL_size_t(0, pc_iec104_build_u(NULL, sizeof(buf), 0));             // null buf
-    TEST_ASSERT_EQUAL_size_t(0, pc_iec104_build_u(buf, 4, 0));                           // cap < APCI len
+    TEST_ASSERT_EQUAL_size_t(0, pc_iec104_build_u(buf, 4, 0));                        // cap < APCI len
 }
 
 // -104 parse rejects a wrong start octet, an APDU length below 4, and a truncated frame.
@@ -174,7 +174,7 @@ void test_104_parse_rejects()
     size_t c;
     uint8_t bad_start[6] = {0x00, 0x04, 0, 0, 0, 0};
     TEST_ASSERT_FALSE(pc_iec104_parse(bad_start, sizeof(bad_start), &a, &c)); // buf[0] != 0x68
-    TEST_ASSERT_FALSE(pc_iec104_parse(NULL, 6, &a, &c));                   // null buf
+    TEST_ASSERT_FALSE(pc_iec104_parse(NULL, 6, &a, &c));                      // null buf
     uint8_t short_l[6] = {IEC_START_104, 0x03, 0, 0, 0, 0};
     TEST_ASSERT_FALSE(pc_iec104_parse(short_l, sizeof(short_l), &a, &c)); // L < 4
     uint8_t trunc[2] = {IEC_START_104, 0x0A};
@@ -200,11 +200,11 @@ void test_101_build_guards()
 {
     uint8_t buf[32];
     const uint8_t asdu[6] = {0};
-    TEST_ASSERT_EQUAL_size_t(0, pc_iec101_build_fixed(buf, 4, 0x49, 0x01));                    // cap < 5
+    TEST_ASSERT_EQUAL_size_t(0, pc_iec101_build_fixed(buf, 4, 0x49, 0x01));                 // cap < 5
     TEST_ASSERT_EQUAL_size_t(0, pc_iec101_build_fixed(NULL, sizeof(buf), 0x49, 0x01));      // null buf
     TEST_ASSERT_EQUAL_size_t(0, pc_iec101_build_variable(buf, sizeof(buf), 0, 0, NULL, 6)); // len but null asdu
-    TEST_ASSERT_EQUAL_size_t(0, pc_iec101_build_variable(buf, 512, 0, 0, asdu, 254));          // asdu_len > 253
-    TEST_ASSERT_EQUAL_size_t(0, pc_iec101_build_variable(buf, 10, 0, 0, asdu, 6));             // cap < 6 + L
+    TEST_ASSERT_EQUAL_size_t(0, pc_iec101_build_variable(buf, 512, 0, 0, asdu, 254));       // asdu_len > 253
+    TEST_ASSERT_EQUAL_size_t(0, pc_iec101_build_variable(buf, 10, 0, 0, asdu, 6));          // cap < 6 + L
 }
 
 // -101 parse rejects an empty buffer, a corrupt fixed frame, and malformed variable frames.
@@ -240,7 +240,7 @@ void test_104_parse_null_out_and_too_short()
     uint8_t buf[6] = {IEC_START_104, 4, 0, 0, 0, 0};
     size_t c;
     TEST_ASSERT_FALSE(pc_iec104_parse(buf, sizeof(buf), NULL, &c)); // null out
-    TEST_ASSERT_FALSE(pc_iec104_parse(buf, 1, &a, &c));                // len < 2
+    TEST_ASSERT_FALSE(pc_iec104_parse(buf, 1, &a, &c));             // len < 2
 }
 
 // -104 parse accepts a null 'consumed' output pointer.
@@ -261,10 +261,10 @@ void test_asdu_header_build_null_h_and_flag_branches()
 
     IecAsduHeader h;
     h.type_id = IEC_TYPE_C_SC_NA_1;
-    h.sq = true; // VSQ 'sq' true branch
+    h.sq = PROTO_TRUE; // VSQ 'sq' true branch
     h.count = 1;
-    h.test = true;     // COT 'test' true branch
-    h.negative = true; // COT 'negative' true branch
+    h.test = PROTO_TRUE;     // COT 'test' true branch
+    h.negative = PROTO_TRUE; // COT 'negative' true branch
     h.cot = IEC_COT_ACTIVATION;
     h.orig_addr = 0;
     h.common_addr = 1;
@@ -351,7 +351,7 @@ void test_101_parse_variable_bad_second_start_and_truncated_and_bad_stop()
 void test_io_single_point()
 {
     uint8_t buf[8];
-    size_t n = pc_iec_io_build_sp(buf, sizeof(buf), 0x001234, true, IEC_QUAL_IV);
+    size_t n = pc_iec_io_build_sp(buf, sizeof(buf), 0x001234, PROTO_TRUE, IEC_QUAL_IV);
     TEST_ASSERT_EQUAL_size_t(4, n);
     TEST_ASSERT_EQUAL_HEX8(0x34, buf[0]); // IOA little-endian
     TEST_ASSERT_EQUAL_HEX8(0x12, buf[1]);
@@ -359,13 +359,13 @@ void test_io_single_point()
     TEST_ASSERT_EQUAL_HEX8(0x81, buf[3]); // SPI (0x01) | IV (0x80)
 
     uint32_t ioa;
-    bool on;
+    proto_bool on;
     uint8_t q;
     TEST_ASSERT_TRUE(pc_iec_io_parse_sp(buf, n, &ioa, &on, &q));
     TEST_ASSERT_EQUAL_HEX32(0x1234, ioa);
     TEST_ASSERT_TRUE(on);
     TEST_ASSERT_EQUAL_HEX8(IEC_QUAL_IV, q);
-    TEST_ASSERT_EQUAL_size_t(0, pc_iec_io_build_sp(buf, 3, 0, false, 0)); // too small
+    TEST_ASSERT_EQUAL_size_t(0, pc_iec_io_build_sp(buf, 3, 0, PROTO_FALSE, 0)); // too small
     TEST_ASSERT_FALSE(pc_iec_io_parse_sp(buf, 3, &ioa, &on, &q));
 }
 
@@ -483,7 +483,7 @@ void test_io_single_command_in_asdu()
     uint8_t buf[32];
     size_t p = pc_iec_asdu_build_header(buf, sizeof(buf), &h);
     TEST_ASSERT_TRUE(p > 0);
-    size_t io = pc_iec_io_build_sc(buf + p, sizeof(buf) - p, 0x00000A, true, true);
+    size_t io = pc_iec_io_build_sc(buf + p, sizeof(buf) - p, 0x00000A, PROTO_TRUE, PROTO_TRUE);
     TEST_ASSERT_EQUAL_size_t(4, io);
     p += io;
 
@@ -492,13 +492,13 @@ void test_io_single_command_in_asdu()
     TEST_ASSERT_TRUE(pc_iec_asdu_parse_header(buf, p, &g, &consumed));
     TEST_ASSERT_EQUAL_UINT8(IEC_TYPE_C_SC_NA_1, g.type_id);
     uint32_t ioa;
-    bool on, sel;
+    proto_bool on, sel;
     TEST_ASSERT_TRUE(pc_iec_io_parse_sc(buf + consumed, p - consumed, &ioa, &on, &sel));
     TEST_ASSERT_EQUAL_HEX32(0x0A, ioa);
     TEST_ASSERT_TRUE(on);
     TEST_ASSERT_TRUE(sel);
     // An execute (not select) with OFF clears both flags.
-    pc_iec_io_build_sc(buf, sizeof(buf), 0x0A, false, false);
+    pc_iec_io_build_sc(buf, sizeof(buf), 0x0A, PROTO_FALSE, PROTO_FALSE);
     pc_iec_io_parse_sc(buf, 4, &ioa, &on, &sel);
     TEST_ASSERT_FALSE(on);
     TEST_ASSERT_FALSE(sel);
@@ -543,7 +543,7 @@ void test_io_double_command_in_asdu()
     uint8_t buf[32];
     size_t p = pc_iec_asdu_build_header(buf, sizeof(buf), &h);
     TEST_ASSERT_TRUE(p > 0);
-    size_t io = pc_iec_io_build_dc(buf + p, sizeof(buf) - p, 0x00000A, IEC_DP_ON, 3, true);
+    size_t io = pc_iec_io_build_dc(buf + p, sizeof(buf) - p, 0x00000A, IEC_DP_ON, 3, PROTO_TRUE);
     TEST_ASSERT_EQUAL_size_t(4, io);
     // DCO = DCS ON (0x02) | QU 3 << 2 (0x0C) | S/E (0x80) = 0x8E.
     TEST_ASSERT_EQUAL_HEX8(0x8E, buf[p + 3]);
@@ -555,7 +555,7 @@ void test_io_double_command_in_asdu()
     TEST_ASSERT_EQUAL_UINT8(IEC_TYPE_C_DC_NA_1, g.type_id);
     uint32_t ioa;
     uint8_t dcs, qu;
-    bool sel;
+    proto_bool sel;
     TEST_ASSERT_TRUE(pc_iec_io_parse_dc(buf + consumed, p - consumed, &ioa, &dcs, &qu, &sel));
     TEST_ASSERT_EQUAL_HEX32(0x0A, ioa);
     TEST_ASSERT_EQUAL_UINT8(IEC_DP_ON, dcs);
@@ -563,12 +563,12 @@ void test_io_double_command_in_asdu()
     TEST_ASSERT_TRUE(sel);
 
     // An execute (not select) with OFF and QU 0 clears the flag and qualifier.
-    pc_iec_io_build_dc(buf, sizeof(buf), 0x0A, IEC_DP_OFF, 0, false);
+    pc_iec_io_build_dc(buf, sizeof(buf), 0x0A, IEC_DP_OFF, 0, PROTO_FALSE);
     pc_iec_io_parse_dc(buf, 4, &ioa, &dcs, &qu, &sel);
     TEST_ASSERT_EQUAL_UINT8(IEC_DP_OFF, dcs);
     TEST_ASSERT_EQUAL_UINT8(0, qu);
     TEST_ASSERT_FALSE(sel);
-    TEST_ASSERT_EQUAL_size_t(0, pc_iec_io_build_dc(buf, 3, 0, IEC_DP_ON, 0, false)); // too small
+    TEST_ASSERT_EQUAL_size_t(0, pc_iec_io_build_dc(buf, 3, 0, IEC_DP_ON, 0, PROTO_FALSE)); // too small
     TEST_ASSERT_FALSE(pc_iec_io_parse_dc(buf, 3, &ioa, &dcs, &qu, &sel));
 }
 

@@ -48,7 +48,7 @@ void test_record_mark()
     const uint8_t expected[] = {0x80, 0x00, 0x00, 0x40}; // last-frag flag + length 64
     TEST_ASSERT_EQUAL_MEMORY(expected, buf, 4);
 
-    bool last = false;
+    proto_bool last = PROTO_FALSE;
     uint32_t frag = 0;
     TEST_ASSERT_TRUE(pc_rpc_parse_record_mark(buf, 4, &last, &frag));
     TEST_ASSERT_TRUE(last);
@@ -69,7 +69,7 @@ void test_record_mark()
 void test_create_link_vector()
 {
     uint8_t buf[128];
-    size_t n = pc_vxi11_build_create_link(buf, sizeof(buf), 1, 0x12345678, false, 0, "inst0");
+    size_t n = pc_vxi11_build_create_link(buf, sizeof(buf), 1, 0x12345678, PROTO_FALSE, 0, "inst0");
     const uint8_t expected[] = {
         0x80, 0x00, 0x00, 0x40, // record mark: last, 64
         0x00, 0x00, 0x00, 0x01, // xid = 1
@@ -284,8 +284,8 @@ void test_error_str()
 void test_build_overflow()
 {
     uint8_t small[16];
-    TEST_ASSERT_EQUAL_size_t(0, pc_vxi11_build_create_link(small, sizeof(small), 1, 0, false, 0, "inst0"));
-    TEST_ASSERT_EQUAL_size_t(0, pc_vxi11_build_create_link(NULL, 128, 1, 0, false, 0, "inst0"));
+    TEST_ASSERT_EQUAL_size_t(0, pc_vxi11_build_create_link(small, sizeof(small), 1, 0, PROTO_FALSE, 0, "inst0"));
+    TEST_ASSERT_EQUAL_size_t(0, pc_vxi11_build_create_link(NULL, 128, 1, 0, PROTO_FALSE, 0, "inst0"));
 }
 
 // ── guard / reject coverage ─────────────────────────────────────────────────────────────────────
@@ -366,13 +366,13 @@ void test_create_link_lock_and_empty_device()
 {
     uint8_t buf[128];
     // lockDevice sits at record-mark(4) + header(40) + clientId(4) = offset 48
-    size_t n = pc_vxi11_build_create_link(buf, sizeof(buf), 1, 0, true, 5000, "inst0");
+    size_t n = pc_vxi11_build_create_link(buf, sizeof(buf), 1, 0, PROTO_TRUE, 5000, "inst0");
     TEST_ASSERT_EQUAL_size_t(68, n);
     const uint8_t lock_true[] = {0x00, 0x00, 0x00, 0x01};
     TEST_ASSERT_EQUAL_MEMORY(lock_true, buf + 48, 4);
 
     // a null device name writes a zero-length opaque: just the length word, no data, no pad
-    n = pc_vxi11_build_create_link(buf, sizeof(buf), 1, 0, false, 0, NULL);
+    n = pc_vxi11_build_create_link(buf, sizeof(buf), 1, 0, PROTO_FALSE, 0, NULL);
     TEST_ASSERT_EQUAL_size_t(60, n);
     const uint8_t empty_opaque[] = {0x00, 0x00, 0x00, 0x00};
     TEST_ASSERT_EQUAL_MEMORY(empty_opaque, buf + 56, 4);
@@ -382,7 +382,7 @@ void test_opaque_overflows_after_a_good_header()
 {
     // 60 bytes hold the whole call header + the three fixed words, but not the device opaque
     uint8_t mid[60];
-    TEST_ASSERT_EQUAL_size_t(0, pc_vxi11_build_create_link(mid, sizeof(mid), 1, 0, false, 0, "inst0"));
+    TEST_ASSERT_EQUAL_size_t(0, pc_vxi11_build_create_link(mid, sizeof(mid), 1, 0, PROTO_FALSE, 0, "inst0"));
 }
 
 void test_create_link_resp_reject_paths()

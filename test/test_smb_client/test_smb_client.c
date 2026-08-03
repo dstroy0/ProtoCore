@@ -60,8 +60,7 @@ static size_t pc_ntlmssp_challenge(uint8_t *m, const uint8_t sc[8])
     const uint8_t sig[8] = {'N', 'T', 'L', 'M', 'S', 'S', 'P', 0};
     memcpy(m, sig, 8);
     w32(m + 8, 2); // CHALLENGE
-    w32(m + 20, NTLMSSP_NEGOTIATE_UNICODE | NTLMSSP_NEGOTIATE_NTLM |
-                    NTLMSSP_NEGOTIATE_TARGET_INFO);
+    w32(m + 20, NTLMSSP_NEGOTIATE_UNICODE | NTLMSSP_NEGOTIATE_NTLM | NTLMSSP_NEGOTIATE_TARGET_INFO);
     memcpy(m + 24, sc, 8);
     // target info at 48: MsvAvTimestamp(7, 8 bytes) + MsvAvEOL
     uint8_t *ti = m + 48;
@@ -85,8 +84,7 @@ static size_t pc_ntlmssp_challenge_ti(uint8_t *m, const uint8_t sc[8], const uin
     const uint8_t sig[8] = {'N', 'T', 'L', 'M', 'S', 'S', 'P', 0};
     memcpy(m, sig, 8);
     w32(m + 8, 2); // CHALLENGE
-    w32(m + 20, NTLMSSP_NEGOTIATE_UNICODE | NTLMSSP_NEGOTIATE_NTLM |
-                    NTLMSSP_NEGOTIATE_TARGET_INFO);
+    w32(m + 20, NTLMSSP_NEGOTIATE_UNICODE | NTLMSSP_NEGOTIATE_NTLM | NTLMSSP_NEGOTIATE_TARGET_INFO);
     memcpy(m + 24, sc, 8);
     memcpy(m + 48, ti, ti_len);
     w16(m + 40, (uint16_t)ti_len);
@@ -126,7 +124,7 @@ struct Mock
     uint32_t auth_status; // status for the 2nd SESSION_SETUP (SUCCESS or a logon failure)
     uint32_t tc_status;   // TREE_CONNECT status
     uint32_t create_status;
-    bool cut_after_negotiate; // simulate the peer closing mid-handshake
+    proto_bool cut_after_negotiate; // simulate the peer closing mid-handshake
     int req_count;
     uint8_t file_data[8192]; // the "file" backing READ / WRITE
     size_t file_data_len;
@@ -139,31 +137,31 @@ struct Mock
     // Signing reference-peer state (MS-SMB2 §3.1.4.1 / §3.1.5.1). When require_signing is set the mock
     // advertises SIGNING_REQUIRED, derives the same NTLMv2 session key from the client's AUTHENTICATE,
     // signs every response, and verifies every signed request - so the whole session runs signed.
-    bool require_signing;   // NEGOTIATE advertises SMB2_NEGOTIATE_SIGNING_REQUIRED and the mock signs
-    bool signing;           // set once the session key has been derived (round-2 onward)
-    uint8_t sign_key[16];   // the derived SMB 2.x signing key
-    int bad_req_sigs;       // count of client requests that arrived unsigned or wrongly signed
-    bool corrupt_read_sig;  // flip a byte of the signature on the READ response (tamper in transit)
-    const SmbConfig *creds; // the credentials the mock uses to re-derive the session key
+    proto_bool require_signing;  // NEGOTIATE advertises SMB2_NEGOTIATE_SIGNING_REQUIRED and the mock signs
+    proto_bool signing;          // set once the session key has been derived (round-2 onward)
+    uint8_t sign_key[16];        // the derived SMB 2.x signing key
+    int bad_req_sigs;            // count of client requests that arrived unsigned or wrongly signed
+    proto_bool corrupt_read_sig; // flip a byte of the signature on the READ response (tamper in transit)
+    const SmbConfig *creds;      // the credentials the mock uses to re-derive the session key
     // SMB 3.1.1 reference-peer state. When require_311 is set the mock answers NEGOTIATE with dialect
     // 0x0311 + preauth-integrity (SHA-512) and AES-CMAC signing contexts, maintains the same preauth-
     // integrity hash chain the client does, derives the SP800-108 signing key, and signs/verifies the
     // post-auth traffic with AES-CMAC - so the whole 3.1.1 session runs signed end to end.
-    bool require_311;       // NEGOTIATE advertises 3.1.1 + SIGNING_REQUIRED and the mock signs with AES-CMAC
+    proto_bool require_311; // NEGOTIATE advertises 3.1.1 + SIGNING_REQUIRED and the mock signs with AES-CMAC
     Smb2SignAlgo sign_algo; // the signing algorithm in force once signing begins (CMAC for 3.1.1)
     SmbPreauth preauth;     // the running preauth-integrity hash (seeded on the NEGOTIATE request)
     // SMB 3.1.1 encryption reference-peer state. When require_encrypt is set the mock offers @ref cipher (any of
     // the four SMB 3.1.1 ciphers; defaults to AES-128-GCM), derives the same C2S/S2C cipher keys, flags the
     // session encrypt-required, DECRYPTS every TRANSFORM-wrapped request and ENCRYPTS every response - so the
     // post-auth session runs encrypted end to end.
-    bool require_encrypt;
+    proto_bool require_encrypt;
     // Model a share (not the global server) that requires encryption, like Samba `smb encrypt = required` on a
     // share: the mock negotiates a cipher + derives keys but does NOT set the session ENCRYPT_DATA flag, and
     // rejects an unencrypted TREE_CONNECT with ACCESS_DENIED. Only a client that forces encryption (cfg.encrypt)
     // can then reach the share - the exact case that needs client-forced encryption.
-    bool encrypt_share_only;
-    uint16_t cipher; // the Smb2Cipher to negotiate (0 => AES-128-GCM); selects key + nonce length
-    bool enc_keys;   // cipher keys derived (round-2 onward)
+    proto_bool encrypt_share_only;
+    uint16_t cipher;     // the Smb2Cipher to negotiate (0 => AES-128-GCM); selects key + nonce length
+    proto_bool enc_keys; // cipher keys derived (round-2 onward)
     uint8_t enc_c2s[PC_SMB2_MAX_CIPHER_KEY_LEN]; // client->server key: the mock decrypts requests with it
     uint8_t enc_s2c[PC_SMB2_MAX_CIPHER_KEY_LEN]; // server->client key: the mock encrypts responses with it
     uint64_t enc_nonce;                          // the mock's monotonic response nonce
@@ -177,39 +175,39 @@ static void append_frame(Mock *m, const uint8_t *resp, size_t rlen)
 // Re-derive the SMB 2.x signing key (the NTLMv2 SessionBaseKey) from the client's round-2 SESSION_SETUP
 // request the way a real server would: unwrap the SPNEGO AUTHENTICATE, take the NTProofStr (the first
 // 16 bytes of the NtChallengeResponse), and HMAC-MD5 it under NTOWFv2 computed from the known creds.
-static bool mock_derive_key(const uint8_t *msg, size_t mlen, const SmbConfig *cfg, uint8_t key[16])
+static proto_bool mock_derive_key(const uint8_t *msg, size_t mlen, const SmbConfig *cfg, uint8_t key[16])
 {
     if (mlen < 88)
     {
-        return false;
+        return PROTO_FALSE;
     }
     uint16_t sec_off = rd16(msg + 76); // SESSION_SETUP SecurityBufferOffset / Length
     uint16_t sec_len = rd16(msg + 78);
     if ((size_t)sec_off + sec_len > mlen)
     {
-        return false;
+        return PROTO_FALSE;
     }
     const uint8_t *auth = NULL;
     size_t auth_len = 0;
     if (!pc_spnego_parse_response(msg + sec_off, sec_len, &auth, &auth_len) || auth_len < 28)
     {
-        return false;
+        return PROTO_FALSE;
     }
     uint16_t nt_len = rd16(auth + 20); // NtChallengeResponseFields: Len @20, BufferOffset @24
     uint32_t nt_off = rd32(auth + 24);
     if (nt_len < 16 || (size_t)nt_off + 16 > auth_len)
     {
-        return false;
+        return PROTO_FALSE;
     }
     uint8_t nt_hash[16];
     uint8_t owf[16];
     pc_ntlm_nt_hash(cfg->pass, nt_hash);
     if (!pc_ntlm_ntowfv2(nt_hash, cfg->user, cfg->domain ? cfg->domain : "", owf))
     {
-        return false;
+        return PROTO_FALSE;
     }
     pc_hmac_md5(owf, 16, auth + nt_off, 16, key); // SessionBaseKey = HMAC-MD5(NTOWFv2, NTProofStr)
-    return true;
+    return PROTO_TRUE;
 }
 
 // Sign / verify a message with the mock's in-force algorithm (HMAC-SHA256 for SMB 2.x, AES-CMAC for 3.1.1).
@@ -224,27 +222,27 @@ static void mock_sign(const Mock *m, uint8_t *msg, size_t len)
         pc_smb2_sign(m->sign_key, msg, len);
     }
 }
-static bool mock_verify(const Mock *m, uint8_t *msg, size_t len)
+static proto_bool mock_verify(const Mock *m, uint8_t *msg, size_t len)
 {
     return m->sign_algo == AES_CMAC ? pc_smb2_verify_cmac(m->sign_key, msg, len)
-                                                  : pc_smb2_verify(m->sign_key, msg, len);
+                                    : pc_smb2_verify(m->sign_key, msg, len);
 }
 
 // Build the SMB 3.1.1 NEGOTIATE response body (dialect 0x0311 + SIGNING_REQUIRED + a preauth-integrity
 // SHA-512 context with a server salt + an AES-CMAC signing context) into resp; returns the total length.
-static size_t build_neg_resp_311(uint8_t *resp, uint64_t msg_id, bool offer_encrypt, uint16_t cipher)
+static size_t build_neg_resp_311(uint8_t *resp, uint64_t msg_id, proto_bool offer_encrypt, uint16_t cipher)
 {
     pc_smb2_build_header(resp, PC_SMB_BUF + 128, SMB2_NEGOTIATE, 1, msg_id, 0, 0);
     uint8_t *b = resp + 64;
     memset(b, 0, 64);
-    w16(b + 0, 65);                                                // StructureSize
+    w16(b + 0, 65);                              // StructureSize
     w16(b + 2, SMB2_NEGOTIATE_SIGNING_REQUIRED); // SecurityMode
-    w16(b + 4, (uint16_t)SMB2_DIALECT_0311);          // DialectRevision
-    w16(b + 6, offer_encrypt ? 3 : 2);                             // NegotiateContextCount
-    w16(b + 56, 0);                                                // SecurityBufferOffset
-    w16(b + 58, 0);                                                // SecurityBufferLength
-    const uint32_t ctx = 128;                                      // 8-aligned, right after the 64-byte body
-    w32(b + 60, ctx);                                              // NegotiateContextOffset (from msg start)
+    w16(b + 4, (uint16_t)SMB2_DIALECT_0311);     // DialectRevision
+    w16(b + 6, offer_encrypt ? 3 : 2);           // NegotiateContextCount
+    w16(b + 56, 0);                              // SecurityBufferOffset
+    w16(b + 58, 0);                              // SecurityBufferLength
+    const uint32_t ctx = 128;                    // 8-aligned, right after the 64-byte body
+    w32(b + 60, ctx);                            // NegotiateContextOffset (from msg start)
     // Context 1 - PREAUTH_INTEGRITY_CAPABILITIES: SHA-512 + a 32-byte server salt.
     uint8_t *c = resp + ctx;
     w16(c + 0, SMB2_PREAUTH_INTEGRITY_CAPABILITIES);
@@ -284,7 +282,7 @@ static int mock_send(void *c, const uint8_t *d, size_t n)
     // SMB 3.x: a request wrapped in a TRANSFORM_HEADER (ProtocolId 0xFD 'S' 'M' 'B') is decrypted before
     // processing, using the same C2S key the client encrypted with (the mock is a reference peer).
     uint8_t plain[PC_SMB_BUF];
-    bool req_enc = false;
+    proto_bool req_enc = PROTO_FALSE;
     if (m->enc_keys && mlen >= PC_SMB2_TRANSFORM_HDR_LEN && msg[0] == 0xFD && msg[1] == 'S' && msg[2] == 'M' &&
         msg[3] == 'B')
     {
@@ -295,7 +293,7 @@ static int mock_send(void *c, const uint8_t *d, size_t n)
         }
         msg = plain;
         mlen = pl;
-        req_enc = true;
+        req_enc = PROTO_TRUE;
     }
     Smb2Header h;
     if (!pc_smb2_parse_header(msg, mlen, &h))
@@ -356,7 +354,7 @@ static int mock_send(void *c, const uint8_t *d, size_t n)
             w16(b + 2, SMB2_NEGOTIATE_SIGNING_REQUIRED); // SecurityMode
         }
         w16(b + 4, (uint16_t)SMB2_DIALECT_0210); // DialectRevision
-        rlen = 128;                                           // header + 64-byte fixed body, empty buffer
+        rlen = 128;                              // header + 64-byte fixed body, empty buffer
         break;
     case SMB2_SESSION_SETUP: {
         pc_smb2_build_header(resp, sizeof(resp), SMB2_SESSION_SETUP, 1, h.message_id, 0, m->session_id);
@@ -409,20 +407,18 @@ static int mock_send(void *c, const uint8_t *d, size_t n)
             {
                 if (m->require_311)
                 {
-                    pc_smb3_derive_signing_key(base_key, (uint16_t)SMB2_DIALECT_0311, m->preauth.hash,
-                                               m->sign_key);
+                    pc_smb3_derive_signing_key(base_key, (uint16_t)SMB2_DIALECT_0311, m->preauth.hash, m->sign_key);
                     m->sign_algo = AES_CMAC;
-                    m->signing = true;
+                    m->signing = PROTO_TRUE;
                     if (m->require_encrypt || m->encrypt_share_only)
                     {
                         // Derive the same cipher keys the client will. A globally-required server flags the
                         // session encrypt-required (the client then encrypts from TREE_CONNECT onward); a
                         // share-only requirement derives keys but leaves the flag clear, so only a client that
                         // forces encryption (cfg.encrypt) proceeds. This SS2 reply always stays plaintext.
-                        pc_smb3_derive_encryption_keys(base_key, (uint16_t)SMB2_DIALECT_0311,
-                                                       m->preauth.hash, pc_smb2_cipher_key_len(m->cipher), m->enc_c2s,
-                                                       m->enc_s2c);
-                        m->enc_keys = true;
+                        pc_smb3_derive_encryption_keys(base_key, (uint16_t)SMB2_DIALECT_0311, m->preauth.hash,
+                                                       pc_smb2_cipher_key_len(m->cipher), m->enc_c2s, m->enc_s2c);
+                        m->enc_keys = PROTO_TRUE;
                         if (m->require_encrypt)
                         {
                             w16(b + 2, SMB2_SESSION_FLAG_ENCRYPT_DATA); // SessionFlags
@@ -432,7 +428,7 @@ static int mock_send(void *c, const uint8_t *d, size_t n)
                 else if (m->require_signing)
                 {
                     memcpy(m->sign_key, base_key, 16);
-                    m->signing = true;
+                    m->signing = PROTO_TRUE;
                 }
             }
             w32(resp + 8, m->auth_status);
@@ -441,8 +437,7 @@ static int mock_send(void *c, const uint8_t *d, size_t n)
         break;
     }
     case SMB2_TREE_CONNECT:
-        pc_smb2_build_header(resp, sizeof(resp), SMB2_TREE_CONNECT, 1, h.message_id, m->tree_id,
-                             m->session_id);
+        pc_smb2_build_header(resp, sizeof(resp), SMB2_TREE_CONNECT, 1, h.message_id, m->tree_id, m->session_id);
         // A share that requires encryption rejects an unencrypted TREE_CONNECT (ACCESS_DENIED) - exactly what a
         // real Samba `smb encrypt = required` share does, forcing the client to encrypt from here on.
         if (m->encrypt_share_only && !req_enc)
@@ -517,12 +512,12 @@ static int mock_send(void *c, const uint8_t *d, size_t n)
         return -1;
     }
     resp[16] |= 0x01; // SMB2_FLAGS_SERVER_TO_REDIR
-    bool drop = m->cut_after_negotiate && h.command != SMB2_NEGOTIATE;
+    proto_bool drop = m->cut_after_negotiate && h.command != SMB2_NEGOTIATE;
     if (m->fault_at_req == m->req_count)
     {
         if (m->fault_kind == FAULT_DROP)
         {
-            drop = true;
+            drop = PROTO_TRUE;
         }
         else if (m->fault_kind == FAULT_BAD_HEADER)
         {
@@ -536,8 +531,7 @@ static int mock_send(void *c, const uint8_t *d, size_t n)
     // Fold the response into the preauth chain in the same order the client does: the NEGOTIATE response
     // and the round-1 SESSION_SETUP response (STATUS_MORE_PROCESSING). The round-2 response (SUCCESS) is
     // NOT folded - the key is already derived by then - so ss_round == 1 is exactly the round-1 case.
-    if (m->require_311 && (h.command == SMB2_NEGOTIATE ||
-                           (h.command == SMB2_SESSION_SETUP && m->ss_round == 1)))
+    if (m->require_311 && (h.command == SMB2_NEGOTIATE || (h.command == SMB2_SESSION_SETUP && m->ss_round == 1)))
     {
         pc_smb_preauth_update(&m->preauth, resp, rlen);
     }
@@ -676,7 +670,7 @@ void test_create_not_found()
 void test_io_error()
 {
     Mock m = make_mock();
-    m.cut_after_negotiate = true; // server stops responding after NEGOTIATE
+    m.cut_after_negotiate = PROTO_TRUE; // server stops responding after NEGOTIATE
     SmbConfig cfg = make_cfg();
     SmbHandle h;
     TEST_ASSERT_EQUAL_INT(SMB_ERR_IO, smb_open(&cfg, &h, mock_send, mock_recv, &m));
@@ -1072,7 +1066,7 @@ struct Canned
     uint8_t resp[512];
     size_t pc_resp_len;
     size_t pos;
-    bool short_send; // send returns a short count (1) instead of the true length
+    proto_bool short_send; // send returns a short count (1) instead of the true length
 };
 
 static int canned_send(void *c, const uint8_t *d, size_t n)
@@ -1133,12 +1127,9 @@ void test_read_arg()
     SmbHandle h = make_handle();
     uint8_t buf[16];
     size_t got = 0;
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_ARG,
-                          smb_read(&h, 0, NULL, sizeof(buf), &got, canned_send, canned_recv, &cn));
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_ARG,
-                          smb_read(&h, 0, buf, sizeof(buf), NULL, canned_send, canned_recv, &cn));
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_ARG,
-                          smb_read(NULL, 0, buf, sizeof(buf), &got, canned_send, canned_recv, &cn));
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_ARG, smb_read(&h, 0, NULL, sizeof(buf), &got, canned_send, canned_recv, &cn));
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_ARG, smb_read(&h, 0, buf, sizeof(buf), NULL, canned_send, canned_recv, &cn));
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_ARG, smb_read(NULL, 0, buf, sizeof(buf), &got, canned_send, canned_recv, &cn));
 }
 
 // send returns a short count -> the round trip reports IO (smb_round_trip's send-fail path).
@@ -1146,12 +1137,11 @@ void test_read_send_io()
 {
     Canned cn;
     memset(&cn, 0, sizeof(cn));
-    cn.short_send = true;
+    cn.short_send = PROTO_TRUE;
     SmbHandle h = make_handle();
     uint8_t buf[16];
     size_t got = 0;
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_IO,
-                          smb_read(&h, 0, buf, sizeof(buf), &got, canned_send, canned_recv, &cn));
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_IO, smb_read(&h, 0, buf, sizeof(buf), &got, canned_send, canned_recv, &cn));
 }
 
 // The peer sends nothing back -> IO error.
@@ -1162,8 +1152,7 @@ void test_read_recv_io()
     SmbHandle h = make_handle();
     uint8_t buf[16];
     size_t got = 0;
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_IO,
-                          smb_read(&h, 0, buf, sizeof(buf), &got, canned_send, canned_recv, &cn));
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_IO, smb_read(&h, 0, buf, sizeof(buf), &got, canned_send, canned_recv, &cn));
 }
 
 // The READ reply header is unparseable -> protocol error.
@@ -1181,8 +1170,7 @@ void test_read_bad_header()
     SmbHandle h = make_handle();
     uint8_t buf[16];
     size_t got = 0;
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL,
-                          smb_read(&h, 0, buf, sizeof(buf), &got, canned_send, canned_recv, &cn));
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, smb_read(&h, 0, buf, sizeof(buf), &got, canned_send, canned_recv, &cn));
 }
 
 // A READ status that is neither SUCCESS nor END_OF_FILE -> protocol error.
@@ -1199,8 +1187,7 @@ void test_read_status_error()
     SmbHandle h = make_handle();
     uint8_t buf[16];
     size_t got = 0;
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL,
-                          smb_read(&h, 0, buf, sizeof(buf), &got, canned_send, canned_recv, &cn));
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, smb_read(&h, 0, buf, sizeof(buf), &got, canned_send, canned_recv, &cn));
 }
 
 // A READ reply whose body StructureSize is wrong -> protocol error.
@@ -1217,8 +1204,7 @@ void test_read_bad_body()
     SmbHandle h = make_handle();
     uint8_t buf[16];
     size_t got = 0;
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL,
-                          smb_read(&h, 0, buf, sizeof(buf), &got, canned_send, canned_recv, &cn));
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, smb_read(&h, 0, buf, sizeof(buf), &got, canned_send, canned_recv, &cn));
 }
 
 // A READ reply that returns more data than requested -> protocol error (data_len > want).
@@ -1236,8 +1222,7 @@ void test_read_data_too_long()
     SmbHandle h = make_handle();
     uint8_t buf[16];
     size_t got = 0;
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL,
-                          smb_read(&h, 0, buf, sizeof(buf), &got, canned_send, canned_recv, &cn));
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, smb_read(&h, 0, buf, sizeof(buf), &got, canned_send, canned_recv, &cn));
 }
 
 // A READ reply with zero data stops the loop cleanly at 0 bytes.
@@ -1265,12 +1250,9 @@ void test_write_arg()
     SmbHandle h = make_handle();
     uint8_t data[16] = {0};
     size_t wrote = 0;
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_ARG,
-                          smb_write(&h, 0, NULL, sizeof(data), &wrote, canned_send, canned_recv, &cn));
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_ARG,
-                          smb_write(&h, 0, data, sizeof(data), NULL, canned_send, canned_recv, &cn));
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_ARG,
-                          smb_write(NULL, 0, data, sizeof(data), &wrote, canned_send, canned_recv, &cn));
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_ARG, smb_write(&h, 0, NULL, sizeof(data), &wrote, canned_send, canned_recv, &cn));
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_ARG, smb_write(&h, 0, data, sizeof(data), NULL, canned_send, canned_recv, &cn));
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_ARG, smb_write(NULL, 0, data, sizeof(data), &wrote, canned_send, canned_recv, &cn));
 }
 
 // send returns a short count -> IO error (smb_write uses send_msg directly).
@@ -1278,12 +1260,11 @@ void test_write_send_io()
 {
     Canned cn;
     memset(&cn, 0, sizeof(cn));
-    cn.short_send = true;
+    cn.short_send = PROTO_TRUE;
     SmbHandle h = make_handle();
     uint8_t data[16] = {0};
     size_t wrote = 0;
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_IO,
-                          smb_write(&h, 0, data, sizeof(data), &wrote, canned_send, canned_recv, &cn));
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_IO, smb_write(&h, 0, data, sizeof(data), &wrote, canned_send, canned_recv, &cn));
 }
 
 // The peer sends nothing back -> IO error.
@@ -1294,8 +1275,7 @@ void test_write_recv_io()
     SmbHandle h = make_handle();
     uint8_t data[16] = {0};
     size_t wrote = 0;
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_IO,
-                          smb_write(&h, 0, data, sizeof(data), &wrote, canned_send, canned_recv, &cn));
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_IO, smb_write(&h, 0, data, sizeof(data), &wrote, canned_send, canned_recv, &cn));
 }
 
 // A reply whose transport length prefix exceeds the work buffer -> overflow error.
@@ -1416,7 +1396,7 @@ void test_close_send_io()
 {
     Canned cn;
     memset(&cn, 0, sizeof(cn));
-    cn.short_send = true;
+    cn.short_send = PROTO_TRUE;
     SmbHandle h = make_handle();
     TEST_ASSERT_EQUAL_INT(SMB_ERR_IO, smb_close(&h, canned_send, canned_recv, &cn));
 }
@@ -1595,8 +1575,7 @@ void test_read_recv_overflow()
     SmbHandle h = make_handle();
     uint8_t buf[16];
     size_t got = 0;
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_OVERFLOW,
-                          smb_read(&h, 0, buf, sizeof(buf), &got, canned_send, canned_recv, &cn));
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_OVERFLOW, smb_read(&h, 0, buf, sizeof(buf), &got, canned_send, canned_recv, &cn));
 }
 
 // A READ answered with STATUS_END_OF_FILE ends the loop with whatever was read so far.
@@ -1632,8 +1611,7 @@ void test_write_no_extend()
     uint8_t data[16];
     memset(data, 0x5A, sizeof(data));
     size_t wrote = 0;
-    TEST_ASSERT_EQUAL_INT(SMB_OK,
-                          smb_write(&h, 0, data, sizeof(data), &wrote, canned_send, canned_recv, &cn));
+    TEST_ASSERT_EQUAL_INT(SMB_OK, smb_write(&h, 0, data, sizeof(data), &wrote, canned_send, canned_recv, &cn));
     TEST_ASSERT_EQUAL_UINT32(16, wrote);
     TEST_ASSERT_EQUAL_HEX64(4096, h.file_size); // unchanged: 0 + 16 <= 4096
 }
@@ -1662,7 +1640,7 @@ void test_signed_session_roundtrip()
 {
     Mock m = make_mock();
     SmbConfig cfg = make_cfg();
-    m.require_signing = true;
+    m.require_signing = PROTO_TRUE;
     m.creds = &cfg;
     for (int i = 0; i < 1200; i++)
     {
@@ -1702,9 +1680,9 @@ void test_signed_response_tampered()
 {
     Mock m = make_mock();
     SmbConfig cfg = make_cfg();
-    m.require_signing = true;
+    m.require_signing = PROTO_TRUE;
     m.creds = &cfg;
-    m.corrupt_read_sig = true;
+    m.corrupt_read_sig = PROTO_TRUE;
     for (int i = 0; i < 64; i++)
     {
         m.file_data[i] = (uint8_t)i;
@@ -1716,8 +1694,7 @@ void test_signed_response_tampered()
     TEST_ASSERT_EQUAL_INT(SMB_OK, smb_open(&cfg, &h, mock_send, mock_recv, &m)); // handshake sigs valid
     uint8_t buf[64];
     size_t got = 0;
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL,
-                          smb_read(&h, 0, buf, sizeof(buf), &got, mock_send, mock_recv, &m));
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, smb_read(&h, 0, buf, sizeof(buf), &got, mock_send, mock_recv, &m));
 }
 
 // When the server does not require signing the session stays unsigned (the client advertises only
@@ -1743,7 +1720,7 @@ void test_open_signed_311_roundtrip()
 {
     Mock m = make_mock();
     SmbConfig cfg = make_cfg();
-    m.require_311 = true;
+    m.require_311 = PROTO_TRUE;
     m.creds = &cfg;
     for (int i = 0; i < 1400; i++)
     {
@@ -1784,9 +1761,9 @@ void test_signed_311_response_tampered()
 {
     Mock m = make_mock();
     SmbConfig cfg = make_cfg();
-    m.require_311 = true;
+    m.require_311 = PROTO_TRUE;
     m.creds = &cfg;
-    m.corrupt_read_sig = true;
+    m.corrupt_read_sig = PROTO_TRUE;
     for (int i = 0; i < 64; i++)
     {
         m.file_data[i] = (uint8_t)i;
@@ -1799,8 +1776,7 @@ void test_signed_311_response_tampered()
     TEST_ASSERT_EQUAL_INT(AES_CMAC, h.signing_algo);
     uint8_t buf[64];
     size_t got = 0;
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL,
-                          smb_read(&h, 0, buf, sizeof(buf), &got, mock_send, mock_recv, &m));
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, smb_read(&h, 0, buf, sizeof(buf), &got, mock_send, mock_recv, &m));
 }
 
 // SMB 3.1.1 with transport encryption: the whole post-auth session (TREE_CONNECT .. CLOSE) is AES-128-GCM
@@ -1814,8 +1790,8 @@ void test_open_encrypted_311_roundtrip()
     SmbConfig cfg = make_cfg();
     cfg.desired_access = SMB2_FILE_GENERIC_READ | SMB2_FILE_GENERIC_WRITE;
     cfg.disposition = SMB2_FILE_OPEN_IF;
-    m.require_311 = true;
-    m.require_encrypt = true;
+    m.require_311 = PROTO_TRUE;
+    m.require_encrypt = PROTO_TRUE;
     m.creds = &cfg;
 
     SmbHandle h;
@@ -1855,10 +1831,10 @@ void test_encrypted_response_tampered()
     m.file_data_len = 100;
     m.file_size = 100;
     SmbConfig cfg = make_cfg();
-    m.require_311 = true;
-    m.require_encrypt = true;
+    m.require_311 = PROTO_TRUE;
+    m.require_encrypt = PROTO_TRUE;
     m.creds = &cfg;
-    m.corrupt_read_sig = true; // repurposed here: flip a ciphertext byte of the READ response
+    m.corrupt_read_sig = PROTO_TRUE; // repurposed here: flip a ciphertext byte of the READ response
 
     SmbHandle h;
     memset(&h, 0, sizeof(h));
@@ -1873,16 +1849,16 @@ void test_encrypted_response_tampered()
 // ciphers the mock offers it, derives the matching-length keys, and the whole post-auth session round-trips.
 void test_open_encrypted_all_ciphers()
 {
-    const uint16_t ciphers[4] = {SMB2_ENCRYPTION_AES128_GCM, SMB2_ENCRYPTION_AES256_GCM,
-                                 SMB2_ENCRYPTION_AES128_CCM, SMB2_ENCRYPTION_AES256_CCM};
+    const uint16_t ciphers[4] = {SMB2_ENCRYPTION_AES128_GCM, SMB2_ENCRYPTION_AES256_GCM, SMB2_ENCRYPTION_AES128_CCM,
+                                 SMB2_ENCRYPTION_AES256_CCM};
     SmbConfig cfg = make_cfg();
     cfg.desired_access = SMB2_FILE_GENERIC_READ | SMB2_FILE_GENERIC_WRITE;
     cfg.disposition = SMB2_FILE_OPEN_IF;
     for (int ci = 0; ci < 4; ci++)
     {
         Mock m = make_mock();
-        m.require_311 = true;
-        m.require_encrypt = true;
+        m.require_311 = PROTO_TRUE;
+        m.require_encrypt = PROTO_TRUE;
         m.cipher = ciphers[ci];
         m.creds = &cfg;
 
@@ -1922,8 +1898,8 @@ void test_open_encrypted_share_requires_client_force()
     // No client-forced encryption: TREE_CONNECT goes out unencrypted -> ACCESS_DENIED -> open fails.
     {
         Mock m = make_mock();
-        m.require_311 = true;
-        m.encrypt_share_only = true;
+        m.require_311 = PROTO_TRUE;
+        m.encrypt_share_only = PROTO_TRUE;
         m.creds = &cfg;
         SmbHandle h;
         memset(&h, 0, sizeof(h));
@@ -1939,12 +1915,12 @@ void test_open_encrypted_share_requires_client_force()
         }
         m.file_data_len = 60;
         m.file_size = 60;
-        m.require_311 = true;
-        m.encrypt_share_only = true;
+        m.require_311 = PROTO_TRUE;
+        m.encrypt_share_only = PROTO_TRUE;
         m.creds = &cfg;
 
         SmbConfig ecfg = cfg;
-        ecfg.encrypt = true;
+        ecfg.encrypt = PROTO_TRUE;
         SmbHandle h;
         memset(&h, 0, sizeof(h));
         TEST_ASSERT_EQUAL_INT(SMB_OK, smb_open(&ecfg, &h, mock_send, mock_recv, &m));

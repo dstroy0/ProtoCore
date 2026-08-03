@@ -200,9 +200,9 @@ void test_sad_add_find_remove()
     pc_ipsec_sad_init(&sad);
     const uint8_t dst[4] = {10, 0, 0, 5};
 
-    IpsecSaEntry *out_sa = pc_ipsec_sad_add(&sad, 0x1000, dst, 4, esp_key, esp_salt, /*inbound=*/false);
+    IpsecSaEntry *out_sa = pc_ipsec_sad_add(&sad, 0x1000, dst, 4, esp_key, esp_salt, /*inbound=*/PROTO_FALSE);
     TEST_ASSERT_NOT_NULL(out_sa);
-    IpsecSaEntry *in_sa = pc_ipsec_sad_add(&sad, 0x2000, dst, 4, esp_key, esp_salt, /*inbound=*/true);
+    IpsecSaEntry *in_sa = pc_ipsec_sad_add(&sad, 0x2000, dst, 4, esp_key, esp_salt, /*inbound=*/PROTO_TRUE);
     TEST_ASSERT_NOT_NULL(in_sa);
     TEST_ASSERT_EQUAL_size_t(2, sad.count);
 
@@ -212,7 +212,7 @@ void test_sad_add_find_remove()
     TEST_ASSERT_NULL(pc_ipsec_sad_find(&sad, 0x9999));
 
     // A duplicate SPI is rejected.
-    TEST_ASSERT_NULL(pc_ipsec_sad_add(&sad, 0x1000, dst, 4, esp_key, esp_salt, false));
+    TEST_ASSERT_NULL(pc_ipsec_sad_add(&sad, 0x1000, dst, 4, esp_key, esp_salt, PROTO_FALSE));
 
     // The inbound SA's replay window is live and rejects a replay.
     TEST_ASSERT_TRUE(pc_esp_replay_check(&in_sa->replay, 1));
@@ -232,9 +232,9 @@ void test_sad_full_and_seq()
     const uint8_t dst[4] = {10, 0, 0, 5};
     for (int i = 0; i < PC_IPSEC_SAD_MAX; i++)
     {
-        TEST_ASSERT_NOT_NULL(pc_ipsec_sad_add(&sad, 0x100 + i, dst, 4, esp_key, esp_salt, false));
+        TEST_ASSERT_NOT_NULL(pc_ipsec_sad_add(&sad, 0x100 + i, dst, 4, esp_key, esp_salt, PROTO_FALSE));
     }
-    TEST_ASSERT_NULL(pc_ipsec_sad_add(&sad, 0x999, dst, 4, esp_key, esp_salt, false)); // full
+    TEST_ASSERT_NULL(pc_ipsec_sad_add(&sad, 0x999, dst, 4, esp_key, esp_salt, PROTO_FALSE)); // full
 
     IpsecSaEntry *sa = pc_ipsec_sad_find(&sad, 0x100);
     // Outbound sequence numbers pre-increment from 1 and stay monotonic.

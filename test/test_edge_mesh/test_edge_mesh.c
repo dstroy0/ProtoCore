@@ -91,8 +91,7 @@ static void test_request_incomplete_then_complete()
     char v2[PC_MESH_HDRS_MAX];
     // A valid prefix (short of the full frame) accumulates rather than erroring.
     TEST_ASSERT_EQUAL(INCOMPLETE, edge_mesh_parse_request(req, 2, d2, c2, sizeof(c2), v2, sizeof(v2)));
-    TEST_ASSERT_EQUAL(INCOMPLETE,
-                      edge_mesh_parse_request(req, n - 1, d2, c2, sizeof(c2), v2, sizeof(v2)));
+    TEST_ASSERT_EQUAL(INCOMPLETE, edge_mesh_parse_request(req, n - 1, d2, c2, sizeof(c2), v2, sizeof(v2)));
     TEST_ASSERT_EQUAL(HIT, edge_mesh_parse_request(req, n, d2, c2, sizeof(c2), v2, sizeof(v2)));
 }
 
@@ -216,7 +215,7 @@ static void test_response_roundtrip()
     TEST_ASSERT_TRUE(fn > 0);
 
     uint8_t resp[PC_EDGE_MESH_RESP_MAX];
-    size_t rn = edge_mesh_build_response(true, frame, fn, resp, sizeof(resp));
+    size_t rn = edge_mesh_build_response(PROTO_TRUE, frame, fn, resp, sizeof(resp));
     TEST_ASSERT_TRUE(rn > 0);
 
     size_t eoff = 0;
@@ -229,7 +228,7 @@ static void test_response_roundtrip()
     TEST_ASSERT_EQUAL(INCOMPLETE, edge_mesh_parse_response(resp, rn - 1, &eoff, &elen));
 
     uint8_t miss[8];
-    size_t mn = edge_mesh_build_response(false, NULL, 0, miss, sizeof(miss));
+    size_t mn = edge_mesh_build_response(PROTO_FALSE, NULL, 0, miss, sizeof(miss));
     TEST_ASSERT_EQUAL(MISS, edge_mesh_parse_response(miss, mn, &eoff, &elen));
 }
 
@@ -250,9 +249,9 @@ struct MockPeer
 {
     const uint8_t *data;
     size_t len, cursor, throttle;
-    bool closes;
+    proto_bool closes;
     int open_ret;
-    bool send_ok;
+    proto_bool send_ok;
     int reads; ///< how many times the engine asked the transport for bytes
 };
 static int p_open(void *c, const char *h, uint16_t p, uint32_t t)
@@ -262,7 +261,7 @@ static int p_open(void *c, const char *h, uint16_t p, uint32_t t)
     (void)t;
     return ((MockPeer *)c)->open_ret;
 }
-static bool p_send(void *c, int cid, const void *d, size_t l)
+static proto_bool p_send(void *c, int cid, const void *d, size_t l)
 {
     (void)cid;
     (void)d;
@@ -284,7 +283,7 @@ static size_t p_read(void *c, int cid, uint8_t *buf, size_t cap)
     m->cursor += n;
     return n;
 }
-static bool p_closed(void *c, int cid)
+static proto_bool p_closed(void *c, int cid)
 {
     (void)cid;
     MockPeer *m = (MockPeer *)c;
@@ -324,9 +323,9 @@ static void test_requester_hit()
     size_t fn = 0;
     build_hit_frame(frame, sizeof(frame), &fn, 3);
     uint8_t resp[PC_EDGE_MESH_RESP_MAX];
-    size_t rn = edge_mesh_build_response(true, frame, fn, resp, sizeof(resp));
+    size_t rn = edge_mesh_build_response(PROTO_TRUE, frame, fn, resp, sizeof(resp));
 
-    MockPeer m = {resp, rn, 0, 4, true, 7, true}; // 4 bytes/read -> exercises multi-pump accumulation
+    MockPeer m = {resp, rn, 0, 4, PROTO_TRUE, 7, PROTO_TRUE}; // 4 bytes/read -> exercises multi-pump accumulation
     EdgeFetchTransport t = peer_transport(&m);
     EdgeMeshFetch mf;
     edge_mesh_fetch_begin(&mf, &t, "peer", 7645, resp, 8, g_rbuf, sizeof(g_rbuf), 1000); // request ignored by the mock
@@ -345,8 +344,8 @@ static void test_requester_hit()
 static void test_requester_miss()
 {
     uint8_t resp[8];
-    size_t rn = edge_mesh_build_response(false, NULL, 0, resp, sizeof(resp));
-    MockPeer m = {resp, rn, 0, 0, true, 7, true};
+    size_t rn = edge_mesh_build_response(PROTO_FALSE, NULL, 0, resp, sizeof(resp));
+    MockPeer m = {resp, rn, 0, 0, PROTO_TRUE, 7, PROTO_TRUE};
     EdgeFetchTransport t = peer_transport(&m);
     EdgeMeshFetch mf;
     edge_mesh_fetch_begin(&mf, &t, "peer", 7645, resp, 8, g_rbuf, sizeof(g_rbuf), 1000);
@@ -355,7 +354,7 @@ static void test_requester_miss()
 
 static void test_requester_open_fail()
 {
-    MockPeer m = {(const uint8_t *)"", 0, 0, 0, false, -1, true};
+    MockPeer m = {(const uint8_t *)"", 0, 0, 0, PROTO_FALSE, -1, PROTO_TRUE};
     EdgeFetchTransport t = peer_transport(&m);
     EdgeMeshFetch mf;
     edge_mesh_fetch_begin(&mf, &t, "peer", 7645, (const uint8_t *)"x", 1, g_rbuf, sizeof(g_rbuf), 1000);
@@ -364,7 +363,7 @@ static void test_requester_open_fail()
 
 static void test_requester_send_fail()
 {
-    MockPeer m = {(const uint8_t *)"", 0, 0, 0, false, 7, false}; // open ok, send fails
+    MockPeer m = {(const uint8_t *)"", 0, 0, 0, PROTO_FALSE, 7, PROTO_FALSE}; // open ok, send fails
     EdgeFetchTransport t = peer_transport(&m);
     EdgeMeshFetch mf;
     edge_mesh_fetch_begin(&mf, &t, "peer", 7645, (const uint8_t *)"x", 1, g_rbuf, sizeof(g_rbuf), 1000);
@@ -375,7 +374,7 @@ static void test_requester_timeout()
 {
     // A truncated frame that never completes and the peer never closes -> deadline drives FAILED.
     uint8_t partial[4] = {'E', 'M', PC_EDGE_MESH_VERSION, 1}; // HIT header, no entry
-    MockPeer m = {partial, sizeof(partial), 0, 0, false, 7, true};
+    MockPeer m = {partial, sizeof(partial), 0, 0, PROTO_FALSE, 7, PROTO_TRUE};
     EdgeFetchTransport t = peer_transport(&m);
     EdgeMeshFetch mf;
     edge_mesh_fetch_begin(&mf, &t, "peer", 7645, (const uint8_t *)"x", 1, g_rbuf, sizeof(g_rbuf), 1000);
@@ -386,7 +385,7 @@ static void test_requester_timeout()
 static void test_requester_peer_closed_early()
 {
     uint8_t partial[5] = {'E', 'M', PC_EDGE_MESH_VERSION, 1, 0}; // incomplete entry length prefix
-    MockPeer m = {partial, sizeof(partial), 0, 0, true, 7, true};
+    MockPeer m = {partial, sizeof(partial), 0, 0, PROTO_TRUE, 7, PROTO_TRUE};
     EdgeFetchTransport t = peer_transport(&m);
     EdgeMeshFetch mf;
     edge_mesh_fetch_begin(&mf, &t, "peer", 7645, (const uint8_t *)"x", 1, g_rbuf, sizeof(g_rbuf), 1000);
@@ -396,7 +395,7 @@ static void test_requester_peer_closed_early()
 static void test_requester_malformed()
 {
     uint8_t junk[6] = {'X', 'X', 0, 0, 0, 0};
-    MockPeer m = {junk, sizeof(junk), 0, 0, true, 7, true};
+    MockPeer m = {junk, sizeof(junk), 0, 0, PROTO_TRUE, 7, PROTO_TRUE};
     EdgeFetchTransport t = peer_transport(&m);
     EdgeMeshFetch mf;
     edge_mesh_fetch_begin(&mf, &t, "peer", 7645, (const uint8_t *)"x", 1, g_rbuf, sizeof(g_rbuf), 1000);
@@ -460,8 +459,7 @@ static void test_parse_request_incomplete_at_every_field()
     // Every truncation of a valid frame accumulates: never MALFORMED, never a partial fill.
     for (size_t l = 4; l < n; l++)
     {
-        TEST_ASSERT_EQUAL(INCOMPLETE,
-                          edge_mesh_parse_request(req, l, d2, c2, sizeof(c2), v2, sizeof(v2)));
+        TEST_ASSERT_EQUAL(INCOMPLETE, edge_mesh_parse_request(req, l, d2, c2, sizeof(c2), v2, sizeof(v2)));
     }
     TEST_ASSERT_EQUAL(HIT, edge_mesh_parse_request(req, n, d2, c2, sizeof(c2), v2, sizeof(v2)));
 }
@@ -494,8 +492,7 @@ static void test_parse_request_null_outputs()
     uint8_t req[PC_EDGE_MESH_REQ_MAX];
     size_t n = edge_mesh_build_request(digest, canon, "x", req, sizeof(req));
     // A peer that only needs to know the frame is whole can pass null outputs.
-    TEST_ASSERT_EQUAL(HIT,
-                      edge_mesh_parse_request(req, n, NULL, NULL, PC_EDGE_KEY_MAX, NULL, PC_MESH_HDRS_MAX));
+    TEST_ASSERT_EQUAL(HIT, edge_mesh_parse_request(req, n, NULL, NULL, PC_EDGE_KEY_MAX, NULL, PC_MESH_HDRS_MAX));
 }
 
 // --- entry frame guards --------------------------------------------------------------------------
@@ -558,13 +555,15 @@ static void test_build_response_guards()
 {
     uint8_t out[64];
     uint8_t entry[8] = {1, 2, 3, 4, 5, 6, 7, 8};
-    TEST_ASSERT_EQUAL_UINT(0, edge_mesh_build_response(false, NULL, 0, NULL, sizeof(out)));
-    TEST_ASSERT_EQUAL_UINT(0, edge_mesh_build_response(false, NULL, 0, out, 3));          // no header room
-    TEST_ASSERT_EQUAL_UINT(0, edge_mesh_build_response(true, NULL, 8, out, sizeof(out))); // hit without an entry
-    TEST_ASSERT_EQUAL_UINT(0, edge_mesh_build_response(true, entry, 0, out, sizeof(out)));   // hit with an empty one
-    TEST_ASSERT_EQUAL_UINT(0, edge_mesh_build_response(true, entry, 0x10000, out, sizeof(out))); // past the u16 length
-    TEST_ASSERT_EQUAL_UINT(0, edge_mesh_build_response(true, entry, 100, out, sizeof(out)));     // will not fit cap
-    TEST_ASSERT_EQUAL_UINT(4 + 2 + 8, edge_mesh_build_response(true, entry, 8, out, sizeof(out)));
+    TEST_ASSERT_EQUAL_UINT(0, edge_mesh_build_response(PROTO_FALSE, NULL, 0, NULL, sizeof(out)));
+    TEST_ASSERT_EQUAL_UINT(0, edge_mesh_build_response(PROTO_FALSE, NULL, 0, out, 3));          // no header room
+    TEST_ASSERT_EQUAL_UINT(0, edge_mesh_build_response(PROTO_TRUE, NULL, 8, out, sizeof(out))); // hit without an entry
+    TEST_ASSERT_EQUAL_UINT(0,
+                           edge_mesh_build_response(PROTO_TRUE, entry, 0, out, sizeof(out))); // hit with an empty one
+    TEST_ASSERT_EQUAL_UINT(
+        0, edge_mesh_build_response(PROTO_TRUE, entry, 0x10000, out, sizeof(out))); // past the u16 length
+    TEST_ASSERT_EQUAL_UINT(0, edge_mesh_build_response(PROTO_TRUE, entry, 100, out, sizeof(out))); // will not fit cap
+    TEST_ASSERT_EQUAL_UINT(4 + 2 + 8, edge_mesh_build_response(PROTO_TRUE, entry, 8, out, sizeof(out)));
 }
 
 static void test_parse_response_null_outputs()
@@ -574,7 +573,7 @@ static void test_parse_response_null_outputs()
     build_hit_frame(frame, sizeof(frame), &fn, 0);
     TEST_ASSERT_TRUE(fn > 0);
     uint8_t resp[PC_EDGE_MESH_RESP_MAX];
-    size_t rn = edge_mesh_build_response(true, frame, fn, resp, sizeof(resp));
+    size_t rn = edge_mesh_build_response(PROTO_TRUE, frame, fn, resp, sizeof(resp));
     TEST_ASSERT_TRUE(rn > 0);
     TEST_ASSERT_EQUAL(HIT, edge_mesh_parse_response(resp, rn, NULL, NULL));
 }
@@ -582,7 +581,7 @@ static void test_parse_response_null_outputs()
 // --- requester engine guards ---------------------------------------------------------------------
 static void test_requester_begin_argument_guards()
 {
-    MockPeer m = {(const uint8_t *)"", 0, 0, 0, false, 7, true};
+    MockPeer m = {(const uint8_t *)"", 0, 0, 0, PROTO_FALSE, 7, PROTO_TRUE};
     EdgeFetchTransport t = peer_transport(&m);
     const uint8_t req[1] = {'x'};
     EdgeMeshFetch mf;
@@ -604,7 +603,7 @@ static void test_requester_begin_argument_guards()
 
 static void test_requester_pump_guards()
 {
-    MockPeer m = {(const uint8_t *)"", 0, 0, 0, false, 7, true};
+    MockPeer m = {(const uint8_t *)"", 0, 0, 0, PROTO_FALSE, 7, PROTO_TRUE};
     EdgeFetchTransport t = peer_transport(&m);
     const uint8_t req[1] = {'x'};
     EdgeMeshFetch mf;
@@ -635,7 +634,7 @@ static void test_requester_buffer_full_without_a_frame()
     g_flood[3] = 1;
     g_flood[4] = 0xFF;
     g_flood[5] = 0xFF; // entry_len = 65535
-    MockPeer m = {g_flood, sizeof(g_flood), 0, 0, false, 7, true};
+    MockPeer m = {g_flood, sizeof(g_flood), 0, 0, PROTO_FALSE, 7, PROTO_TRUE};
     EdgeFetchTransport t = peer_transport(&m);
     EdgeMeshFetch mf;
     edge_mesh_fetch_begin(&mf, &t, "peer", 7645, (const uint8_t *)"x", 1, g_rbuf, sizeof(g_rbuf), 1000);
@@ -649,7 +648,7 @@ static void test_requester_pump_skips_the_read_when_the_buffer_is_already_full()
     // read outright rather than call the transport with a zero-length window, and settle the query as
     // FAILED (buffer exhausted with no complete frame). Pins that nothing can ever be written past cap.
     static uint8_t hdr[6] = {'E', 'M', PC_EDGE_MESH_VERSION, 1, 0xFF, 0xFF}; // HIT announcing a 64 KiB entry
-    MockPeer m = {hdr, sizeof(hdr), 0, 0, false, 7, true};
+    MockPeer m = {hdr, sizeof(hdr), 0, 0, PROTO_FALSE, 7, PROTO_TRUE};
     EdgeFetchTransport t = peer_transport(&m);
     EdgeMeshFetch mf;
     edge_mesh_fetch_begin(&mf, &t, "peer", 7645, (const uint8_t *)"x", 1, g_rbuf, sizeof(g_rbuf), 1000);
@@ -667,7 +666,7 @@ static void test_requester_pump_skips_the_read_when_the_buffer_is_already_full()
 
 static void test_requester_end_without_a_connection()
 {
-    MockPeer m = {(const uint8_t *)"", 0, 0, 0, false, -1, true}; // open fails
+    MockPeer m = {(const uint8_t *)"", 0, 0, 0, PROTO_FALSE, -1, PROTO_TRUE}; // open fails
     EdgeFetchTransport t = peer_transport(&m);
     EdgeMeshFetch mf;
     edge_mesh_fetch_begin(&mf, &t, "peer", 7645, (const uint8_t *)"x", 1, g_rbuf, sizeof(g_rbuf), 1000);

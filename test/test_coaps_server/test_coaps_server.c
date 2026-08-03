@@ -94,7 +94,7 @@ static void out_sink(void *, const uint8_t *dg, size_t len, const char *ip, uint
     o->port = port;
 }
 // Pull the first captured datagram addressed to ip:port out of the queue.
-static bool take_out_for(const char *ip, uint16_t port, OutDg *dst)
+static proto_bool take_out_for(const char *ip, uint16_t port, OutDg *dst)
 {
     for (int i = 0; i < g_out_n; i++)
     {
@@ -106,10 +106,10 @@ static bool take_out_for(const char *ip, uint16_t port, OutDg *dst)
                 g_out[j] = g_out[j + 1];
             }
             g_out_n--;
-            return true;
+            return PROTO_TRUE;
         }
     }
-    return false;
+    return PROTO_FALSE;
 }
 
 static uint8_t g_server_cert[32]; // Ed25519 public key used as the raw leaf "certificate" (as in test_coaps)
@@ -218,11 +218,11 @@ static size_t build_client_hello(uint8_t *out, const uint8_t client_pub[32], con
     return b.n;
 }
 
-static bool sh_keyshare(const uint8_t *sh, size_t len, uint8_t pub[32])
+static proto_bool sh_keyshare(const uint8_t *sh, size_t len, uint8_t pub[32])
 {
     if (len < 44)
     {
-        return false;
+        return PROTO_FALSE;
     }
     size_t o = 4 + 2 + 32;
     uint8_t sid = sh[o++];
@@ -230,7 +230,7 @@ static bool sh_keyshare(const uint8_t *sh, size_t len, uint8_t pub[32])
     o += 2 + 1;
     if (o + 2 > len)
     {
-        return false;
+        return PROTO_FALSE;
     }
     size_t ext_end = o + 2 + ((sh[o] << 8) | sh[o + 1]);
     o += 2;
@@ -242,11 +242,11 @@ static bool sh_keyshare(const uint8_t *sh, size_t len, uint8_t pub[32])
         if (et == 0x0033 && el >= 4 + 32)
         {
             memcpy(pub, sh + o + 4, 32);
-            return true;
+            return PROTO_TRUE;
         }
         o += el;
     }
-    return false;
+    return PROTO_FALSE;
 }
 
 static size_t frag_to_tls(const uint8_t *payload, size_t plen, uint8_t *tls_out)
@@ -314,8 +314,8 @@ static size_t sh_conn_id(const uint8_t *sh, size_t len, uint8_t *cid_out)
 // Complete the handshake for peer ip:port through the front-end seam and hand back the client's
 // application-traffic keys. Asserts each step so a failure pinpoints the stage.
 static void client_handshake(const char *ip, uint16_t port, DtlsRecordKeys *cli_app_write, DtlsRecordKeys *cli_app_read,
-                             const uint8_t *client_cid = NULL, size_t client_cid_len = 0,
-                             uint8_t *scid_out = NULL, size_t *scid_len_out = NULL)
+                             const uint8_t *client_cid = NULL, size_t client_cid_len = 0, uint8_t *scid_out = NULL,
+                             size_t *scid_len_out = NULL)
 {
     uint8_t client_pub[32];
     pc_x25519_base(client_pub, CLIENT_X25519_PRIV);

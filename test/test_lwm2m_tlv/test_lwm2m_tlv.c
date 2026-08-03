@@ -78,7 +78,7 @@ void test_round_trip_and_value_int()
     pc_lwm2m_tlv_write_int(&w, 0, 42);
     pc_lwm2m_tlv_write_int(&w, 1, 300);
     pc_lwm2m_tlv_write_int(&w, 2, -1);
-    pc_lwm2m_tlv_write_bool(&w, 3, true);
+    pc_lwm2m_tlv_write_bool(&w, 3, PROTO_TRUE);
     pc_lwm2m_tlv_write_string(&w, 4, "hi");
     size_t total = pc_lwm2m_tlv_finish(&w);
     TEST_ASSERT_GREATER_THAN(0, (int)total);
@@ -338,7 +338,7 @@ void test_write_bool_false()
     uint8_t buf[16];
     Lwm2mTlvWriter w;
     pc_lwm2m_tlv_init(&w, buf, sizeof(buf));
-    TEST_ASSERT_TRUE(pc_lwm2m_tlv_write_bool(&w, 5, false));
+    TEST_ASSERT_TRUE(pc_lwm2m_tlv_write_bool(&w, 5, PROTO_FALSE));
     size_t total = pc_lwm2m_tlv_finish(&w);
     const uint8_t expect[] = {0xC1, 0x05, 0x00};
     TEST_ASSERT_EQUAL_size_t(sizeof(expect), total);

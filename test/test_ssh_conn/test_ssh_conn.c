@@ -179,7 +179,7 @@ static size_t put_mpint(uint8_t *p, const uint8_t *be, size_t len)
     {
         off++;
     }
-    bool pad = (off < len) && (be[off] & 0x80u);
+    proto_bool pad = (off < len) && (be[off] & 0x80u);
     size_t mlen = (len - off) + (pad ? 1 : 0);
     wr_u32(p, (uint32_t)mlen);
     size_t o = 4;
@@ -215,7 +215,7 @@ static size_t build_kexinit_ext(uint8_t *out)
     }
     return o;
 }
-static bool dsp_pw_cb(const char *u, const char *p)
+static proto_bool dsp_pw_cb(const char *u, const char *p)
 {
     return strcmp(u, "alice") == 0 && strcmp(p, "s3cret") == 0;
 }
@@ -413,7 +413,7 @@ void test_dispatch_guard_and_error_arms()
 
     // A wrong password below the limit -> FAILURE, connection stays open (limit not tripped).
     s->phase = SSH_PHASE_AUTH;
-    s->authed = false;
+    s->authed = PROTO_FALSE;
     s->auth_failures = 0;
     uint8_t pw[128];
     size_t pn = 0;
@@ -433,7 +433,7 @@ void test_dispatch_guard_and_error_arms()
     TEST_ASSERT_EQUAL(SSH_MSG_DISCONNECT, dsp_type[dsp_n - 1]);
 
     // Every post-auth connection message is rejected while unauthenticated.
-    s->authed = false;
+    s->authed = PROTO_FALSE;
     const uint8_t authed_arms[] = {SSH_MSG_GLOBAL_REQUEST,       SSH_MSG_CHANNEL_OPEN,    SSH_MSG_CHANNEL_OPEN_CONFIRM,
                                    SSH_MSG_CHANNEL_OPEN_FAILURE, SSH_MSG_CHANNEL_REQUEST, SSH_MSG_CHANNEL_DATA};
     for (size_t j = 0; j < sizeof(authed_arms) / sizeof(authed_arms[0]); j++)
@@ -443,7 +443,7 @@ void test_dispatch_guard_and_error_arms()
     }
 
     // Authenticated but malformed -> the arm's handler fails.
-    s->authed = true;
+    s->authed = PROTO_TRUE;
     const uint8_t handler_arms[] = {SSH_MSG_GLOBAL_REQUEST, SSH_MSG_CHANNEL_OPEN, SSH_MSG_CHANNEL_REQUEST,
                                     SSH_MSG_CHANNEL_DATA};
     for (size_t j = 0; j < sizeof(handler_arms) / sizeof(handler_arms[0]); j++)
@@ -453,7 +453,7 @@ void test_dispatch_guard_and_error_arms()
     }
 
     // GLOBAL_REQUEST with want_reply = FALSE for an unknown request -> handled, nothing emitted.
-    s->authed = true;
+    s->authed = PROTO_TRUE;
     uint8_t gr[64];
     size_t gn = 0;
     gr[gn++] = SSH_MSG_GLOBAL_REQUEST;
@@ -512,12 +512,12 @@ void test_poll_triggers_server_rekey()
     pc_ssh_conn_accept(0);
     uint8_t j = conn_pool[0].proto_slot;
     // An authenticated, open session that has spent its volume budget (packet-count proxy).
-    ssh_sess[j].authed = true;
+    ssh_sess[j].authed = PROTO_TRUE;
     ssh_sess[j].phase = SSH_PHASE_OPEN;
     ssh_sess[j].last_kex_ms = 0;
-    ssh_pkt[j].kex_active = false;
-    ssh_pkt[j].enc_out = true;
-    ssh_pkt[j].enc_in = true;
+    ssh_pkt[j].kex_active = PROTO_FALSE;
+    ssh_pkt[j].enc_out = PROTO_TRUE;
+    ssh_pkt[j].enc_in = PROTO_TRUE;
     ssh_pkt[j].seq_no_send = SSH_REKEY_PACKET_THRESHOLD;
     tcp_capture_reset();
 
@@ -546,7 +546,7 @@ void test_proto_handler_accessor()
 void test_proto_handler_wires_emit()
 {
     pc_ssh_server_set_emit_cb(NULL); // simulate a dispatcher with no emit callback wired
-    (void)ssh_proto_handler();          // the one install seam must (re)wire it
+    (void)ssh_proto_handler();       // the one install seam must (re)wire it
 
     pc_ssh_conn_accept(0);
     const char *banner = "SSH-2.0-TestClient\r\n";
@@ -603,7 +603,7 @@ void test_conn_send_close_open_channel()
 {
     pc_ssh_conn_accept(0);
     uint8_t j = conn_pool[0].proto_slot;
-    ssh_chan[j][0].open = true;
+    ssh_chan[j][0].open = PROTO_TRUE;
     ssh_chan[j][0].local_id = 0;
     ssh_chan[j][0].peer_id = 1;
     ssh_chan[j][0].flow.peer_window = 100000;
@@ -614,7 +614,7 @@ void test_conn_send_close_open_channel()
     TEST_ASSERT_EQUAL_INT(5, pc_ssh_conn_send(j, 0, data, sizeof(data)));
     TEST_ASSERT_TRUE(tcp_captured_len() > 0);
 
-    ssh_chan[j][0].open = true; // pc_ssh_conn_send left it open
+    ssh_chan[j][0].open = PROTO_TRUE; // pc_ssh_conn_send left it open
     tcp_capture_reset();
     TEST_ASSERT_EQUAL_INT(0, pc_ssh_conn_close_channel(j, 0));
     TEST_ASSERT_TRUE(tcp_captured_len() > 0);
@@ -635,7 +635,7 @@ void test_send_channel_reject_paths()
 
     TEST_ASSERT_EQUAL_INT(-1, pc_ssh_conn_close_channel(j, 0)); // channel 0 is not open -> build_close fails
 
-    ssh_chan[j][0].open = true;
+    ssh_chan[j][0].open = PROTO_TRUE;
     ssh_chan[j][0].flow.peer_window = 2;
     ssh_chan[j][0].flow.peer_max_pkt = 100000;
     const uint8_t data[5] = {1, 2, 3, 4, 5};
@@ -704,7 +704,7 @@ void test_conn_outbound_arena_exhausted()
 {
     pc_ssh_conn_accept(0);
     uint8_t j = conn_pool[0].proto_slot;
-    ssh_chan[j][0].open = true;
+    ssh_chan[j][0].open = PROTO_TRUE;
     ssh_chan[j][0].local_id = 0;
     ssh_chan[j][0].peer_id = 1;
     ssh_chan[j][0].flow.peer_window = 100000;
@@ -724,7 +724,7 @@ void test_conn_outbound_pkt_send_fails()
 {
     pc_ssh_conn_accept(0);
     uint8_t j = conn_pool[0].proto_slot;
-    ssh_chan[j][0].open = true;
+    ssh_chan[j][0].open = PROTO_TRUE;
     ssh_chan[j][0].local_id = 0;
     ssh_chan[j][0].peer_id = 1;
     ssh_chan[j][0].flow.peer_window = 100000;
@@ -733,9 +733,9 @@ void test_conn_outbound_pkt_send_fails()
     const uint8_t data[3] = {1, 2, 3};
 
     TEST_ASSERT_EQUAL_INT(-1, pc_ssh_conn_send(j, 0, data, sizeof(data))); // build_data ok, pkt_send fails
-    ssh_chan[j][0].open = true;                                            // still open for the close
+    ssh_chan[j][0].open = PROTO_TRUE;                                      // still open for the close
     TEST_ASSERT_EQUAL_INT(-1, pc_ssh_conn_close_channel(j, 0));            // build_close ok, pkt_send fails
-    ssh_chan[j][0].open = false;                                           // free the slot for a forwarded open
+    ssh_chan[j][0].open = PROTO_FALSE;                                     // free the slot for a forwarded open
     TEST_ASSERT_EQUAL_INT(
         -1, pc_ssh_conn_open_forwarded(j, "10.0.0.1", 80, "192.168.0.9", 5000)); // open ok, pkt_send fails
 }
@@ -747,13 +747,13 @@ void test_poll_rekey_emit_fails()
     pc_ssh_conn_accept(0);
     uint8_t j = conn_pool[0].proto_slot;
     ssh_sess[j].phase = SSH_PHASE_OPEN;
-    ssh_pkt[j].kex_active = false;
+    ssh_pkt[j].kex_active = PROTO_FALSE;
     ssh_sess[j].last_kex_ms = 0;
     ssh_pkt[j].seq_no_send = SSH_SEQ_CLOSE_THRESHOLD; // rekey due; ssh_emit's pkt_send then fails
     pc_ssh_conn_poll(0);
 
     ssh_sess[j].phase = SSH_PHASE_OPEN;
-    ssh_pkt[j].kex_active = false;
+    ssh_pkt[j].kex_active = PROTO_FALSE;
     ssh_pkt[j].seq_no_send = SSH_REKEY_PACKET_THRESHOLD; // rekey due; ssh_emit's arena borrow then fails
     drain_arena();
     pc_ssh_conn_poll(0);
@@ -777,7 +777,7 @@ void test_conn_outbound_arena_fits_payload_not_wire()
 {
     pc_ssh_conn_accept(0);
     uint8_t j = conn_pool[0].proto_slot;
-    ssh_chan[j][0].open = true;
+    ssh_chan[j][0].open = PROTO_TRUE;
     ssh_chan[j][0].local_id = 0;
     ssh_chan[j][0].peer_id = 1;
     ssh_chan[j][0].flow.peer_window = 100000;
@@ -792,7 +792,7 @@ void test_conn_outbound_arena_fits_payload_not_wire()
 
     const uint8_t data[3] = {1, 2, 3};
     TEST_ASSERT_EQUAL_INT(-1, pc_ssh_conn_send(j, 0, data, sizeof(data)));
-    ssh_chan[j][0].open = false; // free the sole channel slot for a server-initiated open
+    ssh_chan[j][0].open = PROTO_FALSE; // free the sole channel slot for a server-initiated open
     TEST_ASSERT_EQUAL_INT(-1, pc_ssh_conn_open_forwarded(j, "10.0.0.1", 80, "1.2.3.4", 90));
     pc_plaintext_reset();
 }
@@ -847,12 +847,12 @@ void test_conn_poll_rekey_preconditions()
     ssh_pkt[j].seq_no_send = 0;
     ssh_pkt[j].seq_no_recv = 0;
 
-    ssh_pkt[j].kex_active = true; // a key exchange is already in flight
+    ssh_pkt[j].kex_active = PROTO_TRUE; // a key exchange is already in flight
     tcp_capture_reset();
     pc_ssh_conn_poll(0);
     TEST_ASSERT_EQUAL(0, tcp_captured_len());
 
-    ssh_pkt[j].kex_active = false; // open and idle, but nothing has been spent yet
+    ssh_pkt[j].kex_active = PROTO_FALSE; // open and idle, but nothing has been spent yet
     pc_ssh_conn_poll(0);
     TEST_ASSERT_EQUAL(0, tcp_captured_len());
     TEST_ASSERT_EQUAL(SSH_PHASE_OPEN, ssh_sess[j].phase);

@@ -66,7 +66,7 @@ void test_close_is_a_noop()
     pc_client_close(-1);
     pc_client_close(0);
     pc_client_close(1);
-    TEST_ASSERT_TRUE(true);
+    TEST_ASSERT_TRUE(PROTO_TRUE);
 }
 
 int main()

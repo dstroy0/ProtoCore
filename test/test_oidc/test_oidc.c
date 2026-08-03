@@ -142,7 +142,7 @@ void tearDown()
 void test_oidc_parse_edge_guards()
 {
     pc_oidc_key key;
-    key.loaded = false;
+    key.loaded = PROTO_FALSE;
     TEST_ASSERT_TRUE(pc_oidc_jwks_find(K_JWKS, "test-key-1", &key));
 
     // Crafted headers whose "alg" value trips a find_field edge (before sig verify) -> ERR_ALG:
@@ -169,7 +169,7 @@ void test_oidc_parse_edge_guards()
     // A JWK whose modulus base64url-decodes to nothing -> parse_rsa_jwk fails.
     static const char *K_JWKS_BADN = "{\"keys\":[{\"kty\":\"RSA\",\"kid\":\"bad\",\"n\":\"\",\"e\":\"AQAB\"}]}";
     pc_oidc_key bad;
-    bad.loaded = false;
+    bad.loaded = PROTO_FALSE;
     TEST_ASSERT_FALSE(pc_oidc_jwks_find(K_JWKS_BADN, "bad", &bad));
 }
 
@@ -186,7 +186,7 @@ void test_oidc_signed_claim_guards()
     pc_ssh_rsa_load_pubkey();
 
     pc_oidc_key key;
-    key.loaded = true;
+    key.loaded = PROTO_TRUE;
     hex2bytes(key.n, RT_N, 256);
     key.e[0] = 0;
     key.e[1] = 1;
@@ -200,26 +200,22 @@ void test_oidc_signed_claim_guards()
     char pl[256];
     snprintf(pl, sizeof(pl), "{\"iss\":\"%s\",\"exp\":4102444800}", II);
     make_jwt(pl, tok, sizeof(tok));
-    TEST_ASSERT_EQUAL_INT(PC_OIDC_ERR_AUD,
-                          pc_oidc_verify_with_key(tok, strlen(tok), &key, ISS, AUD, NOW, NULL));
+    TEST_ASSERT_EQUAL_INT(PC_OIDC_ERR_AUD, pc_oidc_verify_with_key(tok, strlen(tok), &key, ISS, AUD, NOW, NULL));
 
     // aud is an array with no matching entry -> the array loop finds no match -> ERR_AUD.
     snprintf(pl, sizeof(pl), "{\"iss\":\"%s\",\"aud\":[\"other-app\"],\"exp\":4102444800}", II);
     make_jwt(pl, tok, sizeof(tok));
-    TEST_ASSERT_EQUAL_INT(PC_OIDC_ERR_AUD,
-                          pc_oidc_verify_with_key(tok, strlen(tok), &key, ISS, AUD, NOW, NULL));
+    TEST_ASSERT_EQUAL_INT(PC_OIDC_ERR_AUD, pc_oidc_verify_with_key(tok, strlen(tok), &key, ISS, AUD, NOW, NULL));
 
     // aud array whose entry has an unterminated quote -> the inner scan bails -> ERR_AUD.
     snprintf(pl, sizeof(pl), "{\"iss\":\"%s\",\"aud\":[\"x],\"exp\":4102444800}", II);
     make_jwt(pl, tok, sizeof(tok));
-    TEST_ASSERT_EQUAL_INT(PC_OIDC_ERR_AUD,
-                          pc_oidc_verify_with_key(tok, strlen(tok), &key, ISS, AUD, NOW, NULL));
+    TEST_ASSERT_EQUAL_INT(PC_OIDC_ERR_AUD, pc_oidc_verify_with_key(tok, strlen(tok), &key, ISS, AUD, NOW, NULL));
 
     // A token whose nbf is in the future -> ERR_NOT_YET.
     snprintf(pl, sizeof(pl), "{\"iss\":\"%s\",\"aud\":\"%s\",\"exp\":4102444800,\"nbf\":4102444800}", II, AUD);
     make_jwt(pl, tok, sizeof(tok));
-    TEST_ASSERT_EQUAL_INT(PC_OIDC_ERR_NOT_YET,
-                          pc_oidc_verify_with_key(tok, strlen(tok), &key, ISS, AUD, NOW, NULL));
+    TEST_ASSERT_EQUAL_INT(PC_OIDC_ERR_NOT_YET, pc_oidc_verify_with_key(tok, strlen(tok), &key, ISS, AUD, NOW, NULL));
 
     // A valid signature over a payload segment that base64url-decodes to nothing -> ERR_FORMAT.
     {
@@ -231,8 +227,7 @@ void test_oidc_signed_claim_guards()
         ssh_rsa_sign((const uint8_t *)signing, (size_t)sl, SHA256, sig); // RS256 = SHA-256
         b64url_enc(sig, 256, seg2);
         snprintf(tok, sizeof(tok), "%s.A.%s", seg0, seg2);
-        TEST_ASSERT_EQUAL_INT(PC_OIDC_ERR_FORMAT,
-                              pc_oidc_verify_with_key(tok, strlen(tok), &key, ISS, AUD, NOW, NULL));
+        TEST_ASSERT_EQUAL_INT(PC_OIDC_ERR_FORMAT, pc_oidc_verify_with_key(tok, strlen(tok), &key, ISS, AUD, NOW, NULL));
     }
 }
 
@@ -246,7 +241,7 @@ void test_token_kid()
 void test_jwks_find()
 {
     pc_oidc_key key;
-    key.loaded = false;
+    key.loaded = PROTO_FALSE;
     TEST_ASSERT_TRUE(pc_oidc_jwks_find(K_JWKS, "test-key-1", &key));
     TEST_ASSERT_TRUE(key.loaded);
     // e = AQAB = 65537 -> 0x00 0x01 0x00 0x01 right-aligned.
@@ -259,7 +254,7 @@ void test_jwks_find()
 void test_jwks_find_missing_kid_fails()
 {
     pc_oidc_key key;
-    key.loaded = false;
+    key.loaded = PROTO_FALSE;
     TEST_ASSERT_FALSE(pc_oidc_jwks_find(K_JWKS, "nope", &key));
 }
 
@@ -358,7 +353,7 @@ void test_token_kid_guards()
 void test_jwks_find_guards()
 {
     pc_oidc_key key;
-    key.loaded = false;
+    key.loaded = PROTO_FALSE;
     TEST_ASSERT_FALSE(pc_oidc_jwks_find(NULL, "k", &key));
     TEST_ASSERT_FALSE(pc_oidc_jwks_find("{\"keys\":[]}", "k", NULL));
     TEST_ASSERT_FALSE(pc_oidc_jwks_find("{\"foo\":1}", "k", &key));                    // no keys array
@@ -372,33 +367,27 @@ void test_jwks_find_guards()
 void test_verify_guards_and_malformed()
 {
     pc_oidc_key unloaded;
-    unloaded.loaded = false;
-    TEST_ASSERT_EQUAL_INT(PC_OIDC_ERR_FORMAT,
-                          pc_oidc_verify_with_key("a.b.c", 5, &unloaded, ISS, AUD, NOW, NULL));
+    unloaded.loaded = PROTO_FALSE;
+    TEST_ASSERT_EQUAL_INT(PC_OIDC_ERR_FORMAT, pc_oidc_verify_with_key("a.b.c", 5, &unloaded, ISS, AUD, NOW, NULL));
 
     pc_oidc_key key;
-    key.loaded = false;
+    key.loaded = PROTO_FALSE;
     TEST_ASSERT_TRUE(pc_oidc_jwks_find(K_JWKS, "test-key-1", &key));
-    TEST_ASSERT_EQUAL_INT(PC_OIDC_ERR_FORMAT,
-                          pc_oidc_verify_with_key(NULL, 5, &key, ISS, AUD, NOW, NULL));
-    TEST_ASSERT_EQUAL_INT(PC_OIDC_ERR_FORMAT,
-                          pc_oidc_verify_with_key("a.b.c", 0, &key, ISS, AUD, NOW, NULL));
+    TEST_ASSERT_EQUAL_INT(PC_OIDC_ERR_FORMAT, pc_oidc_verify_with_key(NULL, 5, &key, ISS, AUD, NOW, NULL));
+    TEST_ASSERT_EQUAL_INT(PC_OIDC_ERR_FORMAT, pc_oidc_verify_with_key("a.b.c", 0, &key, ISS, AUD, NOW, NULL));
     TEST_ASSERT_EQUAL_INT(PC_OIDC_ERR_FORMAT,
                           pc_oidc_verify_with_key("A.b.c", 5, &key, ISS, AUD, NOW, NULL)); // header decode fail
 
     // Wrong segment counts (one '.' / three '.').
-    TEST_ASSERT_EQUAL_INT(PC_OIDC_ERR_FORMAT,
-                          pc_oidc_verify("aa.bb", 5, K_JWKS, ISS, AUD, NOW, NULL));
-    TEST_ASSERT_EQUAL_INT(PC_OIDC_ERR_FORMAT,
-                          pc_oidc_verify("a.b.c.d", 7, K_JWKS, ISS, AUD, NOW, NULL));
+    TEST_ASSERT_EQUAL_INT(PC_OIDC_ERR_FORMAT, pc_oidc_verify("aa.bb", 5, K_JWKS, ISS, AUD, NOW, NULL));
+    TEST_ASSERT_EQUAL_INT(PC_OIDC_ERR_FORMAT, pc_oidc_verify("a.b.c.d", 7, K_JWKS, ISS, AUD, NOW, NULL));
 
     // A valid header/payload but a truncated (wrong-length) signature.
     char buf[2048];
     snprintf(buf, sizeof(buf), "%s", K_TOK_VALID);
     char *last_dot = strrchr(buf, '.');
     last_dot[6] = '\0'; // keep only 5 signature chars -> decodes to != 256 bytes
-    TEST_ASSERT_EQUAL_INT(PC_OIDC_ERR_FORMAT,
-                          pc_oidc_verify(buf, strlen(buf), K_JWKS, ISS, AUD, NOW, NULL));
+    TEST_ASSERT_EQUAL_INT(PC_OIDC_ERR_FORMAT, pc_oidc_verify(buf, strlen(buf), K_JWKS, ISS, AUD, NOW, NULL));
 }
 
 // Crafted JWKS documents exercise the JSON field scanner and the RSA-JWK loader:
@@ -407,7 +396,7 @@ void test_verify_guards_and_malformed()
 void test_jwks_malformed_keys()
 {
     pc_oidc_key key;
-    key.loaded = false;
+    key.loaded = PROTO_FALSE;
 
     TEST_ASSERT_FALSE(pc_oidc_jwks_find("", "k", &key)); // needle longer than the document
 
@@ -448,7 +437,7 @@ static void setup_rt_key(pc_oidc_key &key)
     _test_rsa_e[2] = 0;
     _test_rsa_e[3] = 1; // e = 65537
     pc_ssh_rsa_load_pubkey();
-    key.loaded = true;
+    key.loaded = PROTO_TRUE;
     hex2bytes(key.n, RT_N, 256);
     key.e[0] = 0;
     key.e[1] = 1;
@@ -514,14 +503,12 @@ void test_get_int64_negative_and_non_numeric()
     // exp = -5 exercises the signed path; any now_unix is >= -5, so the token reads as expired.
     snprintf(pl, sizeof(pl), "{\"iss\":\"%s\",\"aud\":\"%s\",\"exp\":-5}", ISS, AUD);
     make_jwt(pl, tok, sizeof(tok));
-    TEST_ASSERT_EQUAL_INT(PC_OIDC_ERR_EXPIRED,
-                          pc_oidc_verify_with_key(tok, strlen(tok), &key, ISS, AUD, NOW, NULL));
+    TEST_ASSERT_EQUAL_INT(PC_OIDC_ERR_EXPIRED, pc_oidc_verify_with_key(tok, strlen(tok), &key, ISS, AUD, NOW, NULL));
 
     // exp present but a string, not a number -> get_int64 rejects on type.
     snprintf(pl, sizeof(pl), "{\"iss\":\"%s\",\"aud\":\"%s\",\"exp\":\"4102444800\"}", ISS, AUD);
     make_jwt(pl, tok, sizeof(tok));
-    TEST_ASSERT_EQUAL_INT(PC_OIDC_ERR_EXPIRED,
-                          pc_oidc_verify_with_key(tok, strlen(tok), &key, ISS, AUD, NOW, NULL));
+    TEST_ASSERT_EQUAL_INT(PC_OIDC_ERR_EXPIRED, pc_oidc_verify_with_key(tok, strlen(tok), &key, ISS, AUD, NOW, NULL));
 }
 
 // aud matching compares the whole value: a same-length-but-different string, a same-length
@@ -536,27 +523,24 @@ void test_aud_same_length_mismatch_and_numeric()
     // "client-124" is exactly as long as the expected "client-123" but differs.
     snprintf(pl, sizeof(pl), "{\"iss\":\"%s\",\"aud\":\"client-124\",\"exp\":4102444800}", ISS);
     make_jwt(pl, tok, sizeof(tok));
-    TEST_ASSERT_EQUAL_INT(PC_OIDC_ERR_AUD,
-                          pc_oidc_verify_with_key(tok, strlen(tok), &key, ISS, AUD, NOW, NULL));
+    TEST_ASSERT_EQUAL_INT(PC_OIDC_ERR_AUD, pc_oidc_verify_with_key(tok, strlen(tok), &key, ISS, AUD, NOW, NULL));
 
     // Same, inside an array: the entry length matches so memcmp decides.
     snprintf(pl, sizeof(pl), "{\"iss\":\"%s\",\"aud\":[\"client-124\"],\"exp\":4102444800}", ISS);
     make_jwt(pl, tok, sizeof(tok));
-    TEST_ASSERT_EQUAL_INT(PC_OIDC_ERR_AUD,
-                          pc_oidc_verify_with_key(tok, strlen(tok), &key, ISS, AUD, NOW, NULL));
+    TEST_ASSERT_EQUAL_INT(PC_OIDC_ERR_AUD, pc_oidc_verify_with_key(tok, strlen(tok), &key, ISS, AUD, NOW, NULL));
 
     // aud is a number: neither the string nor the array form applies.
     snprintf(pl, sizeof(pl), "{\"iss\":\"%s\",\"aud\":123,\"exp\":4102444800}", ISS);
     make_jwt(pl, tok, sizeof(tok));
-    TEST_ASSERT_EQUAL_INT(PC_OIDC_ERR_AUD,
-                          pc_oidc_verify_with_key(tok, strlen(tok), &key, ISS, AUD, NOW, NULL));
+    TEST_ASSERT_EQUAL_INT(PC_OIDC_ERR_AUD, pc_oidc_verify_with_key(tok, strlen(tok), &key, ISS, AUD, NOW, NULL));
 }
 
 // split3 requires all three segments to be non-empty, whichever one is missing.
 void test_split3_rejects_empty_segments()
 {
     pc_oidc_key key;
-    key.loaded = false;
+    key.loaded = PROTO_FALSE;
     TEST_ASSERT_TRUE(pc_oidc_jwks_find(K_JWKS, "test-key-1", &key));
 
     const char *empty_hdr = ".b.c";
@@ -575,7 +559,7 @@ void test_split3_rejects_empty_segments()
 void test_jwk_field_widths()
 {
     pc_oidc_key key;
-    key.loaded = false;
+    key.loaded = PROTO_FALSE;
 
     // e decodes to 5 bytes whose leading byte is NOT zero -> does not fit the 4-byte field.
     const uint8_t e5[5] = {0x01, 0x00, 0x00, 0x00, 0x01};
@@ -606,7 +590,7 @@ void test_jwk_field_widths()
 void test_jwks_empty_kid_and_truncated_document()
 {
     pc_oidc_key key;
-    key.loaded = false;
+    key.loaded = PROTO_FALSE;
 
     // Empty kid behaves like "no kid requested": the first usable RSA key is taken.
     TEST_ASSERT_TRUE(pc_oidc_jwks_find(K_JWKS, "", &key));
@@ -615,7 +599,7 @@ void test_jwks_empty_kid_and_truncated_document()
     // Empty kid + an unusable key: the scan must not treat it as a kid match and stop early,
     // it just moves on and runs out of document.
     pc_oidc_key none;
-    none.loaded = false;
+    none.loaded = PROTO_FALSE;
     TEST_ASSERT_FALSE(pc_oidc_jwks_find("{\"keys\":[{\"kid\":\"k1\"}]}", "", &none));
 
     // The document ends exactly at the key object's closing brace: the scan loop terminates
@@ -626,11 +610,10 @@ void test_jwks_empty_kid_and_truncated_document()
 // verify_with_key's argument guards: a null key pointer and a token over the length cap.
 void test_verify_with_key_arg_guards()
 {
-    TEST_ASSERT_EQUAL_INT(PC_OIDC_ERR_FORMAT,
-                          pc_oidc_verify_with_key("a.b.c", 5, NULL, ISS, AUD, NOW, NULL));
+    TEST_ASSERT_EQUAL_INT(PC_OIDC_ERR_FORMAT, pc_oidc_verify_with_key("a.b.c", 5, NULL, ISS, AUD, NOW, NULL));
 
     pc_oidc_key key;
-    key.loaded = false;
+    key.loaded = PROTO_FALSE;
     TEST_ASSERT_TRUE(pc_oidc_jwks_find(K_JWKS, "test-key-1", &key));
 
     // Longer than PC_OIDC_MAX_LEN: rejected before any parsing happens.
@@ -639,8 +622,7 @@ void test_verify_with_key_arg_guards()
     big[sizeof(big) - 1] = '\0';
     big[10] = '.';
     big[20] = '.';
-    TEST_ASSERT_EQUAL_INT(PC_OIDC_ERR_FORMAT,
-                          pc_oidc_verify_with_key(big, strlen(big), &key, ISS, AUD, NOW, NULL));
+    TEST_ASSERT_EQUAL_INT(PC_OIDC_ERR_FORMAT, pc_oidc_verify_with_key(big, strlen(big), &key, ISS, AUD, NOW, NULL));
 }
 
 // The iss / aud checks are opt-in: null or empty expectations skip them, while a set
@@ -655,15 +637,12 @@ void test_verify_optional_iss_aud_expectations()
     // A token carrying neither iss nor aud verifies when neither is expected...
     snprintf(pl, sizeof(pl), "{\"sub\":\"u\",\"exp\":4102444800}");
     make_jwt(pl, tok, sizeof(tok));
-    TEST_ASSERT_EQUAL_INT(PC_OIDC_OK,
-                          pc_oidc_verify_with_key(tok, strlen(tok), &key, NULL, NULL, NOW, NULL));
+    TEST_ASSERT_EQUAL_INT(PC_OIDC_OK, pc_oidc_verify_with_key(tok, strlen(tok), &key, NULL, NULL, NOW, NULL));
     // ...and equally when the expectations are present but empty.
-    TEST_ASSERT_EQUAL_INT(PC_OIDC_OK,
-                          pc_oidc_verify_with_key(tok, strlen(tok), &key, "", "", NOW, NULL));
+    TEST_ASSERT_EQUAL_INT(PC_OIDC_OK, pc_oidc_verify_with_key(tok, strlen(tok), &key, "", "", NOW, NULL));
 
     // But an expected issuer against a token with no iss claim is a mismatch.
-    TEST_ASSERT_EQUAL_INT(PC_OIDC_ERR_ISS,
-                          pc_oidc_verify_with_key(tok, strlen(tok), &key, ISS, NULL, NOW, NULL));
+    TEST_ASSERT_EQUAL_INT(PC_OIDC_ERR_ISS, pc_oidc_verify_with_key(tok, strlen(tok), &key, ISS, NULL, NOW, NULL));
 }
 
 // exp is mandatory; nbf is optional and passes once it is in the past.
@@ -677,14 +656,12 @@ void test_verify_exp_required_nbf_past()
     // No exp claim at all -> treated as expired, not as "no expiry".
     snprintf(pl, sizeof(pl), "{\"iss\":\"%s\",\"aud\":\"%s\",\"sub\":\"u\"}", ISS, AUD);
     make_jwt(pl, tok, sizeof(tok));
-    TEST_ASSERT_EQUAL_INT(PC_OIDC_ERR_EXPIRED,
-                          pc_oidc_verify_with_key(tok, strlen(tok), &key, ISS, AUD, NOW, NULL));
+    TEST_ASSERT_EQUAL_INT(PC_OIDC_ERR_EXPIRED, pc_oidc_verify_with_key(tok, strlen(tok), &key, ISS, AUD, NOW, NULL));
 
     // nbf already passed -> accepted.
     snprintf(pl, sizeof(pl), "{\"iss\":\"%s\",\"aud\":\"%s\",\"exp\":4102444800,\"nbf\":1600000000}", ISS, AUD);
     make_jwt(pl, tok, sizeof(tok));
-    TEST_ASSERT_EQUAL_INT(PC_OIDC_OK,
-                          pc_oidc_verify_with_key(tok, strlen(tok), &key, ISS, AUD, NOW, NULL));
+    TEST_ASSERT_EQUAL_INT(PC_OIDC_OK, pc_oidc_verify_with_key(tok, strlen(tok), &key, ISS, AUD, NOW, NULL));
 }
 
 // Leave exactly @p keep bytes free in the scratch arena, so the next N borrows can be made
@@ -702,7 +679,7 @@ static void scratch_leave(size_t keep)
 void test_verify_scratch_partial_exhaustion()
 {
     pc_oidc_key key;
-    key.loaded = false;
+    key.loaded = PROTO_FALSE;
     TEST_ASSERT_TRUE(pc_oidc_jwks_find(K_JWKS, "test-key-1", &key));
 
     const size_t HDR = 512;
@@ -891,8 +868,8 @@ void test_rsa_sign_verify_sha512(void)
     uint8_t n_be[PC_RSA_KEY_BYTES];
     hex2bytes(n_be, RT_N, 256);
     uint8_t e_be[4] = {0, 1, 0, 1};
-    TEST_ASSERT_EQUAL_INT(
-        0, pc_rsa_verify(n_be, e_be, (const uint8_t *)msg, strlen(msg), sig, PC_RSA_SIG_BYTES, SHA512));
+    TEST_ASSERT_EQUAL_INT(0,
+                          pc_rsa_verify(n_be, e_be, (const uint8_t *)msg, strlen(msg), sig, PC_RSA_SIG_BYTES, SHA512));
 }
 
 // bn_modexp_full's private-exponent scan short-circuits to "result = 1" when every limb
@@ -972,13 +949,13 @@ void test_rsa_verify_length_and_range_guards(void)
     static const char msg[] = "guard check";
 
     uint8_t short_sig[10] = {0};
-    TEST_ASSERT_EQUAL_INT(-1, pc_rsa_verify(n_be, e_be, (const uint8_t *)msg, strlen(msg), short_sig, sizeof(short_sig),
-                                            SHA256));
+    TEST_ASSERT_EQUAL_INT(
+        -1, pc_rsa_verify(n_be, e_be, (const uint8_t *)msg, strlen(msg), short_sig, sizeof(short_sig), SHA256));
 
     uint8_t big_sig[PC_RSA_KEY_BYTES];
     memset(big_sig, 0xFF, sizeof(big_sig));
-    TEST_ASSERT_EQUAL_INT(-1, pc_rsa_verify(n_be, e_be, (const uint8_t *)msg, strlen(msg), big_sig, sizeof(big_sig),
-                                            SHA256));
+    TEST_ASSERT_EQUAL_INT(
+        -1, pc_rsa_verify(n_be, e_be, (const uint8_t *)msg, strlen(msg), big_sig, sizeof(big_sig), SHA256));
 }
 
 // bn_modexp_pub's public-exponent bit scan starts unconditionally at bit 31 with no
@@ -999,8 +976,8 @@ void test_rsa_verify_zero_public_exponent(void)
 
     // s^0 mod n == 1, which never matches the expected PKCS#1 block, so verify still
     // fails - but only after bn_modexp_pub's e == 0 short-circuit runs without looping.
-    TEST_ASSERT_EQUAL_INT(
-        -1, pc_rsa_verify(n_be, e_be, (const uint8_t *)msg, strlen(msg), sig, PC_RSA_SIG_BYTES, SHA256));
+    TEST_ASSERT_EQUAL_INT(-1,
+                          pc_rsa_verify(n_be, e_be, (const uint8_t *)msg, strlen(msg), sig, PC_RSA_SIG_BYTES, SHA256));
 }
 
 // ssh_rsa_encode_pubkey: the not-yet-loaded guard, the too-small-buffer guard, and the
@@ -1011,7 +988,7 @@ void test_rsa_verify_zero_public_exponent(void)
 void test_rsa_encode_pubkey(void)
 {
     // Not loaded -> guard (line coverage only; state is fully re-established below).
-    ssh_host_pubkey.loaded = false;
+    ssh_host_pubkey.loaded = PROTO_FALSE;
     uint8_t out[SSH_RSA_PUBKEY_BLOB_MAX];
     size_t out_len = 0;
     TEST_ASSERT_EQUAL_INT(-1, ssh_rsa_encode_pubkey(out, &out_len, sizeof(out)));

@@ -37,11 +37,11 @@ static size_t put_string(uint8_t *p, const char *s)
     return 4 + n;
 }
 
-static bool always_ok(const char *u, const char *p)
+static proto_bool always_ok(const char *u, const char *p)
 {
     (void)u;
     (void)p;
-    return true;
+    return PROTO_TRUE;
 }
 
 // Same length-prefix wire format as put_string(), but for a raw byte buffer (not a NUL-terminated
@@ -56,12 +56,12 @@ static size_t put_bytes_string(uint8_t *p, const uint8_t *data, uint32_t n)
     return 4 + n;
 }
 
-static bool accept_any_pubkey(const char *u, const uint8_t *blob, size_t blob_len)
+static proto_bool accept_any_pubkey(const char *u, const uint8_t *blob, size_t blob_len)
 {
     (void)u;
     (void)blob;
     (void)blob_len;
-    return true;
+    return PROTO_TRUE;
 }
 
 void test_password_refused_even_with_correct_callback()
@@ -89,21 +89,21 @@ void test_failure_advertises_publickey_only()
 {
     uint8_t out[64];
     size_t olen = 0;
-    TEST_ASSERT_EQUAL_INT(0, pc_ssh_auth_build_failure(out, &olen, sizeof(out), false));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_auth_build_failure(out, &olen, sizeof(out), PROTO_FALSE));
     // name-list at out[1..]: must contain "publickey" and not "password".
-    bool has_pk = false, has_pw = false;
+    proto_bool has_pk = PROTO_FALSE, has_pw = PROTO_FALSE;
     for (size_t k = 0; k + 9 <= olen; k++)
     {
         if (memcmp(out + k, "publickey", 9) == 0)
         {
-            has_pk = true;
+            has_pk = PROTO_TRUE;
         }
     }
     for (size_t k = 0; k + 8 <= olen; k++)
     {
         if (memcmp(out + k, "password", 8) == 0)
         {
-            has_pw = true;
+            has_pw = PROTO_TRUE;
         }
     }
     TEST_ASSERT_TRUE(has_pk);

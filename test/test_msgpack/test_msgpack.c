@@ -119,11 +119,11 @@ void test_simple()
     uint8_t b[8];
     pc_span w;
     w = pc_span_from(b, sizeof(b));
-    pc_msgpack_bool(&w, false);
+    pc_msgpack_bool(&w, PROTO_FALSE);
     uint8_t e[] = {0xc2};
     check(b, pc_span_len(w), e, 1);
     w = pc_span_from(b, sizeof(b));
-    pc_msgpack_bool(&w, true);
+    pc_msgpack_bool(&w, PROTO_TRUE);
     uint8_t e2[] = {0xc3};
     check(b, pc_span_len(w), e2, 1);
     w = pc_span_from(b, sizeof(b));
@@ -250,7 +250,7 @@ void test_decode_simple_and_float()
     uint8_t in[] = {0xc0, 0xc2, 0xc3, 0xca, 0x3f, 0x80, 0x00, 0x00}; // nil false true float32(1.0)
     pc_cspan r;
     r = pc_cspan_from(in, sizeof(in));
-    bool bv;
+    proto_bool bv;
     float fv;
     TEST_ASSERT_EQUAL(PC_CODEC_NULL, pc_msgpack_peek(&r));
     TEST_ASSERT_TRUE(pc_msgpack_read_null(&r));
@@ -307,7 +307,7 @@ void test_decode_roundtrip()
     pc_msgpack_str(&w, "t");
     pc_msgpack_float(&w, 21.5f);
     pc_msgpack_str(&w, "ok");
-    pc_msgpack_bool(&w, true);
+    pc_msgpack_bool(&w, PROTO_TRUE);
     TEST_ASSERT_TRUE(pc_span_ok(w));
 
     pc_cspan r;
@@ -319,7 +319,7 @@ void test_decode_roundtrip()
     size_t kn;
     uint64_t uv;
     float fv;
-    bool bv;
+    proto_bool bv;
     TEST_ASSERT_TRUE(pc_msgpack_read_str(&r, &k, &kn));
     TEST_ASSERT_EQUAL_CHAR_ARRAY("id", k, 2);
     TEST_ASSERT_TRUE(pc_msgpack_read_uint(&r, &uv));
@@ -605,7 +605,7 @@ void test_read_on_empty_reader()
     uint8_t dummy = 0;
     uint64_t uv;
     int64_t iv;
-    bool bv;
+    proto_bool bv;
     float fv;
     const char *s;
     const uint8_t *bp;
@@ -633,7 +633,7 @@ void test_read_wrong_type_byte()
 {
     pc_cspan r;
     uint8_t nilb = 0xc0; // nil: not a bool/float/str/bin/array/map/int
-    bool bv;
+    proto_bool bv;
     float fv;
     const char *s;
     const uint8_t *bp;
@@ -739,7 +739,7 @@ void test_reads_after_sticky_error()
     TEST_ASSERT_FALSE(pc_cspan_ok(r));
 
     int64_t iv;
-    bool bv;
+    proto_bool bv;
     float fv;
     const char *sp;
     const uint8_t *bp;

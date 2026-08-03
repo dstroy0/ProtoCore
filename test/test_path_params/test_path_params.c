@@ -8,9 +8,9 @@
 #include <string.h>
 #include <unity.h>
 
-static bool g_called;
+static proto_bool g_called;
 static char g_a[32], g_b[32];
-static bool g_found_a, g_found_b, g_found_missing;
+static proto_bool g_found_a, g_found_b, g_found_missing;
 
 static void push_str(uint8_t slot, const char *s)
 {
@@ -23,7 +23,7 @@ static void push_str(uint8_t slot, const char *s)
     }
 }
 
-static void copy_param(const HttpReq *req, const char *key, char *out, size_t n, bool *found)
+static void copy_param(const HttpReq *req, const char *key, char *out, size_t n, proto_bool *found)
 {
     const char *v = http_get_param(req, key);
     *found = (v != NULL);
@@ -40,7 +40,7 @@ static void copy_param(const HttpReq *req, const char *key, char *out, size_t n,
 
 static void h_one(uint8_t slot, HttpReq *req)
 {
-    g_called = true;
+    g_called = PROTO_TRUE;
     copy_param(req, "id", g_a, sizeof(g_a), &g_found_a);
     char dummy[8];
     copy_param(req, "nope", dummy, sizeof(dummy), &g_found_missing);
@@ -49,7 +49,7 @@ static void h_one(uint8_t slot, HttpReq *req)
 
 static void h_two(uint8_t slot, HttpReq *req)
 {
-    g_called = true;
+    g_called = PROTO_TRUE;
     copy_param(req, "uid", g_a, sizeof(g_a), &g_found_a);
     copy_param(req, "pid", g_b, sizeof(g_b), &g_found_b);
     send_text(slot, 200, "text/plain", "ok");
@@ -58,14 +58,14 @@ static void h_two(uint8_t slot, HttpReq *req)
 static void h_exact(uint8_t slot, HttpReq *req)
 {
     (void)req;
-    g_called = true;
+    g_called = PROTO_TRUE;
     send_text(slot, 200, "text/plain", "exact");
 }
 
 void setUp()
 {
     pc_server_reset();
-    g_called = g_found_a = g_found_b = g_found_missing = false;
+    g_called = g_found_a = g_found_b = g_found_missing = PROTO_FALSE;
     g_a[0] = g_b[0] = '\0';
     for (int i = 0; i < MAX_CONNS; i++)
     {

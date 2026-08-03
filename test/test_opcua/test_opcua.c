@@ -22,8 +22,8 @@ void tearDown()
 void test_codec_roundtrip()
 {
     uint8_t buf[128];
-    UaWriter w = {buf, sizeof(buf), 0, true};
-    pc_ua_w_bool(&w, true);
+    UaWriter w = {buf, sizeof(buf), 0, PROTO_TRUE};
+    pc_ua_w_bool(&w, PROTO_TRUE);
     pc_ua_w_u8(&w, 0x7F);
     pc_ua_w_u16(&w, 0xBEEF);
     pc_ua_w_u32(&w, 0xDEADBEEF);
@@ -34,7 +34,7 @@ void test_codec_roundtrip()
     pc_ua_w_string(&w, "hello", 5);
     TEST_ASSERT_TRUE(w.ok);
 
-    UaReader r = {buf, w.n, 0, false};
+    UaReader r = {buf, w.n, 0, PROTO_FALSE};
     TEST_ASSERT_TRUE(pc_ua_r_bool(&r));
     TEST_ASSERT_EQUAL_HEX8(0x7F, pc_ua_r_u8(&r));
     TEST_ASSERT_EQUAL_HEX16(0xBEEF, pc_ua_r_u16(&r));
@@ -55,9 +55,9 @@ void test_codec_roundtrip()
 void test_string_null_roundtrip()
 {
     uint8_t buf[8];
-    UaWriter w = {buf, sizeof(buf), 0, true};
+    UaWriter w = {buf, sizeof(buf), 0, PROTO_TRUE};
     pc_ua_w_string(&w, NULL, -1);
-    UaReader r = {buf, w.n, 0, false};
+    UaReader r = {buf, w.n, 0, PROTO_FALSE};
     char s[4];
     int32_t slen = 99;
     TEST_ASSERT_TRUE(pc_ua_r_string(&r, s, sizeof(s), &slen));
@@ -67,7 +67,7 @@ void test_string_null_roundtrip()
 void test_reader_underrun_latches()
 {
     uint8_t buf[2] = {1, 2};
-    UaReader r = {buf, sizeof(buf), 0, false};
+    UaReader r = {buf, sizeof(buf), 0, PROTO_FALSE};
     pc_ua_r_u32(&r); // only 2 bytes available
     TEST_ASSERT_TRUE(r.err);
 }
@@ -75,7 +75,7 @@ void test_reader_underrun_latches()
 void test_writer_overflow_fails_closed()
 {
     uint8_t buf[3];
-    UaWriter w = {buf, sizeof(buf), 0, true};
+    UaWriter w = {buf, sizeof(buf), 0, PROTO_TRUE};
     pc_ua_w_u32(&w, 1); // 4 bytes into a 3-byte buffer
     TEST_ASSERT_FALSE(w.ok);
 }
@@ -83,7 +83,7 @@ void test_writer_overflow_fails_closed()
 // Build a Hello message and assert it parses; then build its Acknowledge.
 static size_t build_hello(uint8_t *out, size_t cap, uint32_t recv, uint32_t send, uint32_t maxmsg)
 {
-    UaWriter w = {out, cap, 0, true};
+    UaWriter w = {out, cap, 0, PROTO_TRUE};
     pc_ua_w_u8(&w, 'H');
     pc_ua_w_u8(&w, 'E');
     pc_ua_w_u8(&w, 'L');
@@ -147,7 +147,7 @@ void test_build_ack_negotiates()
     TEST_ASSERT_EQUAL_MEMORY("ACK", h.type, 3);
     TEST_ASSERT_EQUAL_UINT32(28, h.size);
 
-    UaReader r = {ack + 8, an - 8, 0, false};
+    UaReader r = {ack + 8, an - 8, 0, PROTO_FALSE};
     TEST_ASSERT_EQUAL_UINT32(0, pc_ua_r_u32(&r));    // ProtocolVersion
     TEST_ASSERT_EQUAL_UINT32(8192, pc_ua_r_u32(&r)); // recv = min(client send 65535, server 8192)
     TEST_ASSERT_EQUAL_UINT32(8192, pc_ua_r_u32(&r)); // send = min(client recv 65535, server 8192)
@@ -166,7 +166,7 @@ void test_build_error()
     TEST_ASSERT_EQUAL_MEMORY("ERR", h.type, 3);
     TEST_ASSERT_EQUAL_UINT32(24, h.size);
 
-    UaReader r = {buf + 8, n - 8, 0, false};
+    UaReader r = {buf + 8, n - 8, 0, PROTO_FALSE};
     TEST_ASSERT_EQUAL_UINT32(PC_OPCUA_BAD_TCP_MESSAGE_TYPE_INVALID, pc_ua_r_u32(&r));
     char reason[16];
     int32_t rlen = 0;
@@ -177,7 +177,7 @@ void test_build_error()
     // A null reason encodes a null String (length -1); the message is 16 octets.
     n = pc_opcua_build_error(PC_OPCUA_BAD_TCP_INTERNAL_ERROR, NULL, buf, sizeof(buf));
     TEST_ASSERT_EQUAL_size_t(16, n);
-    UaReader r2 = {buf + 8, n - 8, 0, false};
+    UaReader r2 = {buf + 8, n - 8, 0, PROTO_FALSE};
     TEST_ASSERT_EQUAL_UINT32(PC_OPCUA_BAD_TCP_INTERNAL_ERROR, pc_ua_r_u32(&r2));
     TEST_ASSERT_TRUE(pc_ua_r_string(&r2, reason, sizeof(reason), &rlen));
     TEST_ASSERT_EQUAL_INT32(-1, rlen); // null string
@@ -194,13 +194,13 @@ void test_build_error()
 void test_nodeid_roundtrip()
 {
     uint8_t buf[32];
-    UaWriter w = {buf, sizeof(buf), 0, true};
+    UaWriter w = {buf, sizeof(buf), 0, PROTO_TRUE};
     pc_ua_w_nodeid_numeric(&w, 0, 5);     // TwoByte
     pc_ua_w_nodeid_numeric(&w, 0, 446);   // FourByte (id > 255)
     pc_ua_w_nodeid_numeric(&w, 3, 70000); // Numeric (ns + 32-bit id)
     TEST_ASSERT_TRUE(w.ok);
 
-    UaReader r = {buf, w.n, 0, false};
+    UaReader r = {buf, w.n, 0, PROTO_FALSE};
     UaNodeId id;
     TEST_ASSERT_TRUE(pc_ua_r_nodeid(&r, &id));
     TEST_ASSERT_EQUAL_UINT16(0, id.ns);
@@ -225,7 +225,7 @@ void test_filetime_from_unix()
 static size_t build_open(uint8_t *out, size_t cap, uint32_t channel, uint32_t seq, uint32_t req_id, uint32_t handle,
                          uint32_t mode, uint32_t lifetime)
 {
-    UaWriter w = {out, cap, 0, true};
+    UaWriter w = {out, cap, 0, PROTO_TRUE};
     pc_ua_w_u8(&w, 'O');
     pc_ua_w_u8(&w, 'P');
     pc_ua_w_u8(&w, 'N');
@@ -247,14 +247,14 @@ static size_t build_open(uint8_t *out, size_t cap, uint32_t channel, uint32_t se
     pc_ua_w_u64(&w, 0);               // Timestamp
     pc_ua_w_u32(&w, handle);          // RequestHandle
     pc_ua_w_u32(&w, 0);               // ReturnDiagnostics
-    pc_ua_w_string(&w, NULL, -1);  // AuditEntryId
+    pc_ua_w_string(&w, NULL, -1);     // AuditEntryId
     pc_ua_w_u32(&w, 0);               // TimeoutHint
     pc_ua_w_nodeid_numeric(&w, 0, 0); // AdditionalHeader: null NodeId ...
     pc_ua_w_u8(&w, 0x00);             // ... + no body
     // OpenSecureChannelRequest body.
-    pc_ua_w_u32(&w, 0);              // ClientProtocolVersion
-    pc_ua_w_u32(&w, 0);              // RequestType = Issue
-    pc_ua_w_u32(&w, mode);           // MessageSecurityMode
+    pc_ua_w_u32(&w, 0);           // ClientProtocolVersion
+    pc_ua_w_u32(&w, 0);           // RequestType = Issue
+    pc_ua_w_u32(&w, mode);        // MessageSecurityMode
     pc_ua_w_string(&w, NULL, -1); // ClientNonce
     pc_ua_w_u32(&w, lifetime);
     out[4] = (uint8_t)w.n;
@@ -306,7 +306,7 @@ void test_build_open_response()
     TEST_ASSERT_EQUAL_CHAR('F', h.chunk);
     TEST_ASSERT_EQUAL_UINT32((uint32_t)rn, h.size);
 
-    UaReader r = {resp + 8, rn - 8, 0, false};
+    UaReader r = {resp + 8, rn - 8, 0, PROTO_FALSE};
     char str[64];
     int32_t sl = 0;
     TEST_ASSERT_EQUAL_UINT32(55, pc_ua_r_u32(&r)); // SecureChannelId
@@ -352,7 +352,7 @@ void test_build_open_response()
 static size_t build_msg(uint8_t *out, size_t cap, uint32_t type_id, uint32_t token, uint32_t seq, uint32_t req_id,
                         uint32_t handle)
 {
-    UaWriter w = {out, cap, 0, true};
+    UaWriter w = {out, cap, 0, PROTO_TRUE};
     pc_ua_w_u8(&w, 'M');
     pc_ua_w_u8(&w, 'S');
     pc_ua_w_u8(&w, 'G');
@@ -368,7 +368,7 @@ static size_t build_msg(uint8_t *out, size_t cap, uint32_t type_id, uint32_t tok
     pc_ua_w_u64(&w, 0);               // Timestamp
     pc_ua_w_u32(&w, handle);          // RequestHandle
     pc_ua_w_u32(&w, 0);               // ReturnDiagnostics
-    pc_ua_w_string(&w, NULL, -1);  // AuditEntryId
+    pc_ua_w_string(&w, NULL, -1);     // AuditEntryId
     pc_ua_w_u32(&w, 0);               // TimeoutHint
     pc_ua_w_nodeid_numeric(&w, 0, 0); // AdditionalHeader: null NodeId ...
     pc_ua_w_u8(&w, 0x00);             // ... + no body
@@ -418,7 +418,7 @@ void test_build_create_session_response()
     TEST_ASSERT_EQUAL_MEMORY("MSG", h.type, 3);
     TEST_ASSERT_EQUAL_UINT32((uint32_t)rn, h.size);
 
-    UaReader r = {resp + 8, rn - 8, 0, false};
+    UaReader r = {resp + 8, rn - 8, 0, PROTO_FALSE};
     char str[16];
     int32_t sl = 0;
     TEST_ASSERT_EQUAL_UINT32(0, pc_ua_r_u32(&r));   // SecureChannelId echoed
@@ -467,7 +467,7 @@ void test_build_activate_session_response()
     TEST_ASSERT_TRUE(pc_opcua_parse_header(resp, rn, &h));
     TEST_ASSERT_EQUAL_MEMORY("MSG", h.type, 3);
 
-    UaReader r = {resp + 8, rn - 8, 0, false};
+    UaReader r = {resp + 8, rn - 8, 0, PROTO_FALSE};
     char str[8];
     int32_t sl = 0;
     TEST_ASSERT_EQUAL_UINT32(0, pc_ua_r_u32(&r));   // SecureChannelId echoed
@@ -498,7 +498,7 @@ void test_build_activate_session_response()
 void test_datavalue_good_int32()
 {
     uint8_t buf[32];
-    UaWriter w = {buf, sizeof(buf), 0, true};
+    UaWriter w = {buf, sizeof(buf), 0, PROTO_TRUE};
     OpcUaVariant v;
     memset(&v, 0, sizeof(v));
     v.type = OPCUA_VAR_INT32;
@@ -506,8 +506,8 @@ void test_datavalue_good_int32()
     pc_ua_w_datavalue(&w, &v, OPCUA_STATUS_GOOD);
     TEST_ASSERT_TRUE(w.ok);
 
-    UaReader r = {buf, w.n, 0, false};
-    TEST_ASSERT_EQUAL_HEX8(0x01, pc_ua_r_u8(&r));                              // mask: value present
+    UaReader r = {buf, w.n, 0, PROTO_FALSE};
+    TEST_ASSERT_EQUAL_HEX8(0x01, pc_ua_r_u8(&r));            // mask: value present
     TEST_ASSERT_EQUAL_HEX8(OPCUA_VAR_INT32, pc_ua_r_u8(&r)); // Variant encoding byte
     TEST_ASSERT_EQUAL_INT32(-7, pc_ua_r_i32(&r));
     TEST_ASSERT_FALSE(r.err);
@@ -516,12 +516,12 @@ void test_datavalue_good_int32()
 void test_datavalue_bad_status()
 {
     uint8_t buf[16];
-    UaWriter w = {buf, sizeof(buf), 0, true};
+    UaWriter w = {buf, sizeof(buf), 0, PROTO_TRUE};
     OpcUaVariant v;
     memset(&v, 0, sizeof(v)); // null Variant
     pc_ua_w_datavalue(&w, &v, OPCUA_STATUS_BAD_NODE_ID_UNKNOWN);
 
-    UaReader r = {buf, w.n, 0, false};
+    UaReader r = {buf, w.n, 0, PROTO_FALSE};
     TEST_ASSERT_EQUAL_HEX8(0x02, pc_ua_r_u8(&r)); // mask: status only
     TEST_ASSERT_EQUAL_HEX32(OPCUA_STATUS_BAD_NODE_ID_UNKNOWN, pc_ua_r_u32(&r));
     TEST_ASSERT_FALSE(r.err);
@@ -533,7 +533,7 @@ void test_variant_u64_i64_roundtrip()
 {
     uint8_t buf[32];
     // UInt64
-    UaWriter w = {buf, sizeof(buf), 0, true};
+    UaWriter w = {buf, sizeof(buf), 0, PROTO_TRUE};
     OpcUaVariant v;
     memset(&v, 0, sizeof(v));
     v.type = OPCUA_VAR_UINT64;
@@ -541,21 +541,21 @@ void test_variant_u64_i64_roundtrip()
     pc_ua_w_variant(&w, &v);
     TEST_ASSERT_TRUE(w.ok);
     TEST_ASSERT_EQUAL_HEX8(9, buf[0]); // encoding byte = UInt64 built-in id
-    UaReader r = {buf, w.n, 0, false};
+    UaReader r = {buf, w.n, 0, PROTO_FALSE};
     OpcUaVariant out;
     TEST_ASSERT_TRUE(pc_ua_r_variant(&r, &out));
     TEST_ASSERT_EQUAL(OPCUA_VAR_UINT64, out.type);
     TEST_ASSERT_TRUE(out.u64 == 0x0123456789ABCDEFULL);
 
     // Int64 (negative -> two's-complement 8 bytes)
-    UaWriter w2 = {buf, sizeof(buf), 0, true};
+    UaWriter w2 = {buf, sizeof(buf), 0, PROTO_TRUE};
     memset(&v, 0, sizeof(v));
     v.type = OPCUA_VAR_INT64;
     v.i64 = -123456789012345LL;
     pc_ua_w_variant(&w2, &v);
     TEST_ASSERT_TRUE(w2.ok);
     TEST_ASSERT_EQUAL_HEX8(8, buf[0]); // encoding byte = Int64 built-in id
-    UaReader r2 = {buf, w2.n, 0, false};
+    UaReader r2 = {buf, w2.n, 0, PROTO_FALSE};
     OpcUaVariant out2;
     TEST_ASSERT_TRUE(pc_ua_r_variant(&r2, &out2));
     TEST_ASSERT_EQUAL(OPCUA_VAR_INT64, out2.type);
@@ -566,7 +566,7 @@ void test_variant_u64_i64_roundtrip()
 static size_t build_read(uint8_t *out, size_t cap, uint32_t token, uint32_t seq, uint32_t req_id, uint32_t handle,
                          const uint32_t *ids, uint32_t n)
 {
-    UaWriter w = {out, cap, 0, true};
+    UaWriter w = {out, cap, 0, PROTO_TRUE};
     pc_ua_w_u8(&w, 'M');
     pc_ua_w_u8(&w, 'S');
     pc_ua_w_u8(&w, 'G');
@@ -594,9 +594,9 @@ static size_t build_read(uint8_t *out, size_t cap, uint32_t token, uint32_t seq,
     {
         pc_ua_w_nodeid_numeric(&w, 1, ids[i]); // NodeId (ns=1)
         pc_ua_w_u32(&w, OPCUA_ATTR_VALUE);     // AttributeId
-        pc_ua_w_string(&w, NULL, -1);       // IndexRange
+        pc_ua_w_string(&w, NULL, -1);          // IndexRange
         pc_ua_w_u16(&w, 0);                    // DataEncoding QualifiedName.ns
-        pc_ua_w_string(&w, NULL, -1);       // QualifiedName.name
+        pc_ua_w_string(&w, NULL, -1);          // QualifiedName.name
     }
     out[4] = (uint8_t)w.n;
     out[5] = (uint8_t)(w.n >> 8);
@@ -646,7 +646,7 @@ void test_build_read_response()
     TEST_ASSERT_TRUE(pc_opcua_parse_header(resp, rn, &h));
     TEST_ASSERT_EQUAL_MEMORY("MSG", h.type, 3);
 
-    UaReader r = {resp + 8, rn - 8, 0, false};
+    UaReader r = {resp + 8, rn - 8, 0, PROTO_FALSE};
     TEST_ASSERT_EQUAL_UINT32(0, pc_ua_r_u32(&r));   // SecureChannelId echoed
     TEST_ASSERT_EQUAL_UINT32(7, pc_ua_r_u32(&r));   // TokenId echoed
     TEST_ASSERT_EQUAL_UINT32(9, pc_ua_r_u32(&r));   // SequenceNumber
@@ -686,7 +686,7 @@ static int32_t test_browse_handler(uint16_t ns, uint32_t id, OpcUaReference *out
     if (ns == 0 && id == 85 && max >= 1)
     {
         out[0].ref_type_id = OPCUA_REFTYPE_ORGANIZES;
-        out[0].is_forward = true;
+        out[0].is_forward = PROTO_TRUE;
         out[0].target_ns = 1;
         out[0].target_id = 1;
         out[0].browse_name_ns = 1;
@@ -703,7 +703,7 @@ static int32_t test_browse_handler(uint16_t ns, uint32_t id, OpcUaReference *out
 static size_t build_browse(uint8_t *out, size_t cap, uint32_t token, uint32_t seq, uint32_t req_id, uint32_t handle,
                            uint16_t ns, uint32_t id)
 {
-    UaWriter w = {out, cap, 0, true};
+    UaWriter w = {out, cap, 0, PROTO_TRUE};
     pc_ua_w_u8(&w, 'M');
     pc_ua_w_u8(&w, 'S');
     pc_ua_w_u8(&w, 'G');
@@ -732,7 +732,7 @@ static size_t build_browse(uint8_t *out, size_t cap, uint32_t token, uint32_t se
     pc_ua_w_nodeid_numeric(&w, ns, id); // BrowseDescription.NodeId
     pc_ua_w_u32(&w, 0);                 // BrowseDirection (Forward)
     pc_ua_w_nodeid_numeric(&w, 0, 0);   // ReferenceTypeId (null = all)
-    pc_ua_w_bool(&w, true);             // IncludeSubtypes
+    pc_ua_w_bool(&w, PROTO_TRUE);       // IncludeSubtypes
     pc_ua_w_u32(&w, 0);                 // NodeClassMask
     pc_ua_w_u32(&w, 0x3F);              // ResultMask (all)
     out[4] = (uint8_t)w.n;
@@ -769,7 +769,7 @@ void test_build_browse_response()
     TEST_ASSERT_TRUE(pc_opcua_parse_header(resp, rn, &h));
     TEST_ASSERT_EQUAL_MEMORY("MSG", h.type, 3);
 
-    UaReader r = {resp + 8, rn - 8, 0, false};
+    UaReader r = {resp + 8, rn - 8, 0, PROTO_FALSE};
     TEST_ASSERT_EQUAL_UINT32(0, pc_ua_r_u32(&r));   // SecureChannelId echoed
     TEST_ASSERT_EQUAL_UINT32(7, pc_ua_r_u32(&r));   // TokenId
     TEST_ASSERT_EQUAL_UINT32(11, pc_ua_r_u32(&r));  // SequenceNumber
@@ -830,7 +830,7 @@ void test_build_browse_response_unknown()
     size_t rn = pc_opcua_build_browse_response(&br, test_browse_handler, 11, 0, resp, sizeof(resp));
     TEST_ASSERT_TRUE(rn > 0);
 
-    UaReader r = {resp + 8, rn - 8, 0, false};
+    UaReader r = {resp + 8, rn - 8, 0, PROTO_FALSE};
     r.off = 16; // skip SecureChannelId/TokenId/Seq/RequestId
     UaNodeId tid;
     pc_ua_r_nodeid(&r, &tid);                                                   // TypeId
@@ -865,7 +865,7 @@ void test_build_close_session_response()
     TEST_ASSERT_TRUE(pc_opcua_parse_header(resp, rn, &h));
     TEST_ASSERT_EQUAL_MEMORY("MSG", h.type, 3);
 
-    UaReader r = {resp + 8, rn - 8, 0, false};
+    UaReader r = {resp + 8, rn - 8, 0, PROTO_FALSE};
     TEST_ASSERT_EQUAL_UINT32(0, pc_ua_r_u32(&r));   // SecureChannelId echoed
     TEST_ASSERT_EQUAL_UINT32(7, pc_ua_r_u32(&r));   // TokenId
     TEST_ASSERT_EQUAL_UINT32(12, pc_ua_r_u32(&r));  // SequenceNumber
@@ -896,7 +896,7 @@ void test_build_get_endpoints()
     size_t rn = pc_opcua_build_get_endpoints_response(&m, &si, 9, 0, resp, sizeof(resp));
     TEST_ASSERT_TRUE(rn > 0);
 
-    UaReader r = {resp + 8, rn - 8, 0, false};
+    UaReader r = {resp + 8, rn - 8, 0, PROTO_FALSE};
     r.off = 16; // skip SecureChannelId/TokenId/SequenceNumber/RequestId
     UaNodeId tid;
     TEST_ASSERT_TRUE(pc_ua_r_nodeid(&r, &tid));
@@ -959,7 +959,7 @@ void test_build_service_fault()
     size_t rn = pc_opcua_build_service_fault(&m, OPCUA_STATUS_BAD_SERVICE_UNSUPPORTED, 3, 0, resp, sizeof(resp));
     TEST_ASSERT_TRUE(rn > 0);
 
-    UaReader r = {resp + 8, rn - 8, 0, false};
+    UaReader r = {resp + 8, rn - 8, 0, PROTO_FALSE};
     r.off = 16;
     UaNodeId tid;
     TEST_ASSERT_TRUE(pc_ua_r_nodeid(&r, &tid));
@@ -977,14 +977,14 @@ void test_build_service_fault()
 void test_datavalue_roundtrip()
 {
     uint8_t buf[32];
-    UaWriter w = {buf, sizeof(buf), 0, true};
+    UaWriter w = {buf, sizeof(buf), 0, PROTO_TRUE};
     OpcUaVariant v;
     memset(&v, 0, sizeof(v));
     v.type = OPCUA_VAR_DOUBLE;
     v.f64 = 3.25;
     pc_ua_w_datavalue(&w, &v, OPCUA_STATUS_GOOD);
 
-    UaReader r = {buf, w.n, 0, false};
+    UaReader r = {buf, w.n, 0, PROTO_FALSE};
     OpcUaVariant got;
     uint32_t st = 0xFFFFFFFFu;
     TEST_ASSERT_TRUE(pc_ua_r_datavalue(&r, &got, &st));
@@ -998,7 +998,7 @@ void test_parse_and_build_write()
 {
     // Build a WriteRequest writing one Int32 to ns=1;i=10 (value-only DataValue).
     uint8_t buf[128];
-    UaWriter w = {buf, sizeof(buf), 0, true};
+    UaWriter w = {buf, sizeof(buf), 0, PROTO_TRUE};
     pc_ua_w_u8(&w, 'M');
     pc_ua_w_u8(&w, 'S');
     pc_ua_w_u8(&w, 'G');
@@ -1013,14 +1013,14 @@ void test_parse_and_build_write()
     pc_ua_w_u64(&w, 0);               // Timestamp
     pc_ua_w_u32(&w, 95);              // RequestHandle
     pc_ua_w_u32(&w, 0);               // ReturnDiagnostics
-    pc_ua_w_string(&w, NULL, -1);  // AuditEntryId
+    pc_ua_w_string(&w, NULL, -1);     // AuditEntryId
     pc_ua_w_u32(&w, 0);               // TimeoutHint
     pc_ua_w_nodeid_numeric(&w, 0, 0);
     pc_ua_w_u8(&w, 0x00);
     pc_ua_w_i32(&w, 1);                // NodesToWrite count
     pc_ua_w_nodeid_numeric(&w, 1, 10); // NodeId ns=1;i=10
     pc_ua_w_u32(&w, OPCUA_ATTR_VALUE); // AttributeId
-    pc_ua_w_string(&w, NULL, -1);   // IndexRange
+    pc_ua_w_string(&w, NULL, -1);      // IndexRange
     OpcUaVariant v;
     memset(&v, 0, sizeof(v));
     v.type = OPCUA_VAR_INT32;
@@ -1049,7 +1049,7 @@ void test_parse_and_build_write()
     UaMsgHeader h;
     TEST_ASSERT_TRUE(pc_opcua_parse_header(resp, rn, &h));
     TEST_ASSERT_EQUAL_MEMORY("MSG", h.type, 3);
-    UaReader r = {resp + 8, rn - 8, 0, false};
+    UaReader r = {resp + 8, rn - 8, 0, PROTO_FALSE};
     r.off = 16; // skip SecureChannelId/TokenId/Seq/RequestId
     UaNodeId tid;
     TEST_ASSERT_TRUE(pc_ua_r_nodeid(&r, &tid));
@@ -1074,10 +1074,10 @@ void test_parse_and_build_write()
 static void variant_rt(const OpcUaVariant *in, OpcUaVariant *out)
 {
     uint8_t buf[64];
-    UaWriter w = {buf, sizeof(buf), 0, true};
+    UaWriter w = {buf, sizeof(buf), 0, PROTO_TRUE};
     pc_ua_w_variant(&w, in);
     TEST_ASSERT_TRUE(w.ok);
-    UaReader r = {buf, w.n, 0, false};
+    UaReader r = {buf, w.n, 0, PROTO_FALSE};
     TEST_ASSERT_TRUE(pc_ua_r_variant(&r, out));
     TEST_ASSERT_FALSE(r.err);
 }
@@ -1093,13 +1093,13 @@ void test_variant_scalar_types()
     TEST_ASSERT_EQUAL_UINT8(OPCUA_VAR_NULL, out.type);
 
     uint8_t nb[8];
-    UaWriter wn = {nb, sizeof(nb), 0, true};
+    UaWriter wn = {nb, sizeof(nb), 0, PROTO_TRUE};
     pc_ua_w_variant(&wn, NULL); // null pointer -> Null Variant (encoding byte 0)
     TEST_ASSERT_EQUAL_UINT(1, wn.n);
     TEST_ASSERT_EQUAL_UINT8(OPCUA_VAR_NULL, nb[0]);
 
     in.type = OPCUA_VAR_BOOL;
-    in.b = true;
+    in.b = PROTO_TRUE;
     variant_rt(&in, &out);
     TEST_ASSERT_EQUAL_UINT8(OPCUA_VAR_BOOL, out.type);
     TEST_ASSERT_TRUE(out.b);
@@ -1127,7 +1127,7 @@ void test_variant_scalar_types()
     // STRING decodes as a pointer into the source buffer, so keep the buffer in scope
     // for the assertion (the variant_rt helper's buffer would already be out of scope).
     uint8_t sbuf[32];
-    UaWriter ws = {sbuf, sizeof(sbuf), 0, true};
+    UaWriter ws = {sbuf, sizeof(sbuf), 0, PROTO_TRUE};
     OpcUaVariant sv;
     memset(&sv, 0, sizeof(sv));
     sv.type = OPCUA_VAR_STRING;
@@ -1135,7 +1135,7 @@ void test_variant_scalar_types()
     sv.str_len = 2;
     pc_ua_w_variant(&ws, &sv);
     TEST_ASSERT_TRUE(ws.ok);
-    UaReader rs = {sbuf, ws.n, 0, false};
+    UaReader rs = {sbuf, ws.n, 0, PROTO_FALSE};
     TEST_ASSERT_TRUE(pc_ua_r_variant(&rs, &out));
     TEST_ASSERT_EQUAL_INT32(2, out.str_len);
     TEST_ASSERT_EQUAL_MEMORY("ab", out.str, 2);
@@ -1148,22 +1148,22 @@ void test_variant_errors()
     OpcUaVariant bad;
     memset(&bad, 0, sizeof(bad));
     bad.type = (OpcUaVariantType)200; // not a supported built-in type
-    UaWriter w = {buf, sizeof(buf), 0, true};
+    UaWriter w = {buf, sizeof(buf), 0, PROTO_TRUE};
     pc_ua_w_variant(&w, &bad);
     TEST_ASSERT_FALSE(w.ok); // fail closed
 
     OpcUaVariant o;
     uint8_t arr[4] = {0x80, 0, 0, 0}; // array bit set: unsupported by the scalar decoder
-    UaReader r1 = {arr, sizeof(arr), 0, false};
+    UaReader r1 = {arr, sizeof(arr), 0, PROTO_FALSE};
     TEST_ASSERT_FALSE(pc_ua_r_variant(&r1, &o));
     TEST_ASSERT_TRUE(r1.err);
 
     uint8_t ut[1] = {50}; // unsupported built-in type id
-    UaReader r2 = {ut, sizeof(ut), 0, false};
+    UaReader r2 = {ut, sizeof(ut), 0, PROTO_FALSE};
     TEST_ASSERT_FALSE(pc_ua_r_variant(&r2, &o));
 
     uint8_t st[5] = {(uint8_t)OPCUA_VAR_STRING, 0x10, 0, 0, 0}; // len=16 but no bytes follow
-    UaReader r3 = {st, sizeof(st), 0, false};
+    UaReader r3 = {st, sizeof(st), 0, PROTO_FALSE};
     TEST_ASSERT_FALSE(pc_ua_r_variant(&r3, &o));
     TEST_ASSERT_TRUE(r3.err);
 }
@@ -1172,7 +1172,7 @@ void test_variant_errors()
 void test_datavalue_all_masks()
 {
     uint8_t buf[64];
-    UaWriter w = {buf, sizeof(buf), 0, true};
+    UaWriter w = {buf, sizeof(buf), 0, PROTO_TRUE};
     pc_ua_w_u8(&w, 0x3F); // value|status|sourceTS|serverTS|sourcePS|serverPS
     OpcUaVariant v;
     memset(&v, 0, sizeof(v));
@@ -1186,7 +1186,7 @@ void test_datavalue_all_masks()
     pc_ua_w_u16(&w, 6);           // ServerPicoseconds
     TEST_ASSERT_TRUE(w.ok);
 
-    UaReader r = {buf, w.n, 0, false};
+    UaReader r = {buf, w.n, 0, PROTO_FALSE};
     OpcUaVariant out;
     uint32_t status = 0;
     TEST_ASSERT_TRUE(pc_ua_r_datavalue(&r, &out, &status));
@@ -1195,7 +1195,7 @@ void test_datavalue_all_masks()
     TEST_ASSERT_FALSE(r.err);
 
     uint8_t badv[2] = {0x01, 0x80}; // Value present, but Variant has the array bit set
-    UaReader rb = {badv, sizeof(badv), 0, false};
+    UaReader rb = {badv, sizeof(badv), 0, PROTO_FALSE};
     OpcUaVariant ov;
     uint32_t os = 0;
     TEST_ASSERT_FALSE(pc_ua_r_datavalue(&rb, &ov, &os));
@@ -1208,13 +1208,13 @@ void test_nodeid_encodings()
     UaNodeId id;
 
     uint8_t sid[10] = {0x03, 0x02, 0x00, 0x03, 0, 0, 0, 'a', 'b', 'c'}; // String, ns=2, len=3
-    UaReader rs = {sid, sizeof(sid), 0, false};
+    UaReader rs = {sid, sizeof(sid), 0, PROTO_FALSE};
     TEST_ASSERT_TRUE(pc_ua_r_nodeid(&rs, &id));
     TEST_ASSERT_FALSE(id.numeric);
     TEST_ASSERT_EQUAL_UINT16(2, id.ns);
 
     uint8_t bid[7] = {0x05, 0x00, 0x00, 0x00, 0, 0, 0}; // ByteString, len=0
-    UaReader rby = {bid, sizeof(bid), 0, false};
+    UaReader rby = {bid, sizeof(bid), 0, PROTO_FALSE};
     TEST_ASSERT_TRUE(pc_ua_r_nodeid(&rby, &id));
     TEST_ASSERT_FALSE(id.numeric);
 
@@ -1222,18 +1222,18 @@ void test_nodeid_encodings()
     memset(gid, 0, sizeof(gid));
     gid[0] = 0x04; // Guid, ns + 16 bytes
     gid[1] = 0x01;
-    UaReader rg = {gid, sizeof(gid), 0, false};
+    UaReader rg = {gid, sizeof(gid), 0, PROTO_FALSE};
     TEST_ASSERT_TRUE(pc_ua_r_nodeid(&rg, &id));
     TEST_ASSERT_FALSE(id.numeric);
 
     uint8_t inv[4] = {0x06, 0, 0, 0}; // unknown kind
-    UaReader ri = {inv, sizeof(inv), 0, false};
+    UaReader ri = {inv, sizeof(inv), 0, PROTO_FALSE};
     TEST_ASSERT_FALSE(pc_ua_r_nodeid(&ri, &id));
     TEST_ASSERT_TRUE(ri.err);
 
     // TwoByte id with NamespaceUri (0x80) + ServerIndex (0x40): id, nsUri string, index.
     uint8_t fl[12] = {0xC0, 0x05, 0x02, 0, 0, 0, 'n', 's', 0x09, 0, 0, 0};
-    UaReader rf = {fl, sizeof(fl), 0, false};
+    UaReader rf = {fl, sizeof(fl), 0, PROTO_FALSE};
     TEST_ASSERT_TRUE(pc_ua_r_nodeid(&rf, &id));
     TEST_ASSERT_EQUAL_UINT32(5, id.id);
     TEST_ASSERT_FALSE(rf.err);
@@ -1243,23 +1243,23 @@ void test_nodeid_encodings()
 void test_reader_underruns()
 {
     uint8_t b3[3] = {1, 2, 3};
-    UaReader r = {b3, 3, 0, false};
+    UaReader r = {b3, 3, 0, PROTO_FALSE};
     TEST_ASSERT_EQUAL_UINT64(0, pc_ua_r_u64(&r)); // 8-byte read on 3 bytes
     TEST_ASSERT_TRUE(r.err);
 
     char s[8];
     int32_t sl = 0;
-    UaReader re = {b3, 0, 0, false};
+    UaReader re = {b3, 0, 0, PROTO_FALSE};
     TEST_ASSERT_FALSE(pc_ua_r_string(&re, s, sizeof(s), &sl)); // length read underruns
 
     uint8_t big[8] = {0x05, 0, 0, 0, 'a', 'b', 'c', 'd'}; // len=5 into a 4-byte buffer
     char sc[4];
     int32_t scl = 0;
-    UaReader rc = {big, sizeof(big), 0, false};
+    UaReader rc = {big, sizeof(big), 0, PROTO_FALSE};
     TEST_ASSERT_FALSE(pc_ua_r_string(&rc, sc, sizeof(sc), &scl)); // exceeds cap
 
     uint8_t nid[7] = {0x03, 0, 0, 0x10, 0, 0, 0}; // String NodeId, len=16 but no bytes
-    UaReader rk = {nid, sizeof(nid), 0, false};
+    UaReader rk = {nid, sizeof(nid), 0, PROTO_FALSE};
     UaNodeId id;
     TEST_ASSERT_FALSE(pc_ua_r_nodeid(&rk, &id)); // r_skip overruns
     TEST_ASSERT_TRUE(rk.err);
@@ -1270,7 +1270,7 @@ void test_reader_underruns()
 // node carrying an IndexRange and a DataEncoding QualifiedName.
 static size_t build_read_full(uint8_t *out, size_t cap)
 {
-    UaWriter w = {out, cap, 0, true};
+    UaWriter w = {out, cap, 0, PROTO_TRUE};
     pc_ua_w_u8(&w, 'M');
     pc_ua_w_u8(&w, 'S');
     pc_ua_w_u8(&w, 'G');
@@ -1397,8 +1397,7 @@ void test_build_guards_and_overflow()
     TEST_ASSERT_EQUAL_UINT(0, pc_opcua_build_ack(NULL, big, sizeof(big)));
     TEST_ASSERT_EQUAL_UINT(0, pc_opcua_build_ack(&hello, NULL, sizeof(big)));
     TEST_ASSERT_EQUAL_UINT(0, pc_opcua_build_open_response(NULL, 1, 1, 1, 0, 1, big, sizeof(big)));
-    TEST_ASSERT_EQUAL_UINT(0,
-                           pc_opcua_build_create_session_response(NULL, 1, 1, 0.0, &info, 1, 0, big, sizeof(big)));
+    TEST_ASSERT_EQUAL_UINT(0, pc_opcua_build_create_session_response(NULL, 1, 1, 0.0, &info, 1, 0, big, sizeof(big)));
     TEST_ASSERT_EQUAL_UINT(0, pc_opcua_build_get_endpoints_response(NULL, &info, 1, 0, big, sizeof(big)));
     TEST_ASSERT_EQUAL_UINT(0, pc_opcua_build_service_fault(NULL, 0, 1, 0, big, sizeof(big)));
     TEST_ASSERT_EQUAL_UINT(0, pc_opcua_build_activate_session_response(NULL, 1, 0, big, sizeof(big)));
@@ -1443,7 +1442,7 @@ void test_parse_open_with_cert_and_nonce()
     // An OPEN carrying non-empty SenderCertificate + ReceiverCertificateThumbprint + ClientNonce
     // exercises the ByteString-skip paths in pc_opcua_parse_open that a null-field OPEN never reaches.
     uint8_t buf[256];
-    UaWriter w = {buf, sizeof(buf), 0, true};
+    UaWriter w = {buf, sizeof(buf), 0, PROTO_TRUE};
     pc_ua_w_u8(&w, 'O');
     pc_ua_w_u8(&w, 'P');
     pc_ua_w_u8(&w, 'N');
@@ -1463,7 +1462,7 @@ void test_parse_open_with_cert_and_nonce()
     pc_ua_w_u64(&w, 0);               // Timestamp
     pc_ua_w_u32(&w, 42);              // RequestHandle
     pc_ua_w_u32(&w, 0);               // ReturnDiagnostics
-    pc_ua_w_string(&w, NULL, -1);  // AuditEntryId
+    pc_ua_w_string(&w, NULL, -1);     // AuditEntryId
     pc_ua_w_u32(&w, 0);               // TimeoutHint
     pc_ua_w_nodeid_numeric(&w, 0, 0); // AdditionalHeader NodeId
     pc_ua_w_u8(&w, 0x00);             // ... no body
@@ -1528,7 +1527,7 @@ void test_parse_browse_truncated_item_rejected()
 // Build a WriteRequest with a controllable NodesToWrite count and IndexRange length (one real item).
 static size_t build_write(uint8_t *out, size_t cap, int32_t count_field, int32_t ir_len)
 {
-    UaWriter w = {out, cap, 0, true};
+    UaWriter w = {out, cap, 0, PROTO_TRUE};
     pc_ua_w_u8(&w, 'M');
     pc_ua_w_u8(&w, 'S');
     pc_ua_w_u8(&w, 'G');
@@ -1626,7 +1625,7 @@ void test_parse_write_malformed_datavalue_rejected()
 // A request built valid up to TimeoutHint but truncated before the AdditionalHeader ExtensionObject.
 static size_t build_req_trunc_at_addhdr(uint8_t *out, size_t cap, uint32_t type_id)
 {
-    UaWriter w = {out, cap, 0, true};
+    UaWriter w = {out, cap, 0, PROTO_TRUE};
     pc_ua_w_u8(&w, 'M');
     pc_ua_w_u8(&w, 'S');
     pc_ua_w_u8(&w, 'G');
@@ -1641,7 +1640,7 @@ static size_t build_req_trunc_at_addhdr(uint8_t *out, size_t cap, uint32_t type_
     pc_ua_w_u64(&w, 0);               // Timestamp
     pc_ua_w_u32(&w, 0);               // RequestHandle
     pc_ua_w_u32(&w, 0);               // ReturnDiagnostics
-    pc_ua_w_string(&w, NULL, -1);  // AuditEntryId
+    pc_ua_w_string(&w, NULL, -1);     // AuditEntryId
     pc_ua_w_u32(&w, 0);               // TimeoutHint
     // AdditionalHeader omitted -> r_ext_object_skip's NodeId read underruns
     out[4] = (uint8_t)w.n;
@@ -1661,18 +1660,18 @@ void test_parse_request_header_truncated_addhdr()
 // Build an OPN frame truncated at a chosen stage: 0 = no body TypeId, 2 = valid TypeId + partial header.
 static size_t build_open_frame(uint8_t *out, size_t cap, int stage)
 {
-    UaWriter w = {out, cap, 0, true};
+    UaWriter w = {out, cap, 0, PROTO_TRUE};
     pc_ua_w_u8(&w, 'O');
     pc_ua_w_u8(&w, 'P');
     pc_ua_w_u8(&w, 'N');
     pc_ua_w_u8(&w, 'F');
     pc_ua_w_u32(&w, 0);
-    pc_ua_w_u32(&w, 0);              // SecureChannelId
+    pc_ua_w_u32(&w, 0);           // SecureChannelId
     pc_ua_w_string(&w, NULL, -1); // SecurityPolicyUri
     pc_ua_w_string(&w, NULL, -1); // SenderCertificate
     pc_ua_w_string(&w, NULL, -1); // ReceiverCertificateThumbprint
-    pc_ua_w_u32(&w, 1);              // SequenceNumber
-    pc_ua_w_u32(&w, 100);            // RequestId
+    pc_ua_w_u32(&w, 1);           // SequenceNumber
+    pc_ua_w_u32(&w, 100);         // RequestId
     if (stage >= 1)
     {
         pc_ua_w_nodeid_numeric(&w, 0, OPCUA_ID_OPEN_REQ); // body TypeId
@@ -1707,11 +1706,11 @@ void test_parse_open_truncated_frames()
 void test_w_string_positive_len_null_pointer()
 {
     uint8_t buf[16];
-    UaWriter w = {buf, sizeof(buf), 0, true};
+    UaWriter w = {buf, sizeof(buf), 0, PROTO_TRUE};
     pc_ua_w_string(&w, NULL, 5); // length says 5, but there is nothing to copy
     TEST_ASSERT_TRUE(w.ok);
     TEST_ASSERT_EQUAL_UINT(4, w.n); // just the Int32 length prefix
-    UaReader r = {buf, w.n, 0, false};
+    UaReader r = {buf, w.n, 0, PROTO_FALSE};
     TEST_ASSERT_EQUAL_INT32(5, pc_ua_r_i32(&r));
 }
 
@@ -1720,23 +1719,23 @@ void test_w_string_positive_len_null_pointer()
 void test_r_string_optional_len_zero_cap_and_frame_underrun()
 {
     uint8_t nul[4];
-    UaWriter w = {nul, sizeof(nul), 0, true};
+    UaWriter w = {nul, sizeof(nul), 0, PROTO_TRUE};
     pc_ua_w_string(&w, NULL, -1); // null String
 
     char s[8];
-    UaReader r = {nul, w.n, 0, false};
+    UaReader r = {nul, w.n, 0, PROTO_FALSE};
     TEST_ASSERT_TRUE(pc_ua_r_string(&r, s, sizeof(s), NULL)); // no out_len sink
     TEST_ASSERT_FALSE(r.err);
 
     // A null String with no room to write the terminator is still accepted (nothing is stored).
-    r = UaReader{nul, w.n, 0, false};
+    r = UaReader{nul, w.n, 0, PROTO_FALSE};
     int32_t len = 99;
     TEST_ASSERT_TRUE(pc_ua_r_string(&r, s, 0, &len));
     TEST_ASSERT_EQUAL_INT32(-1, len);
 
     // Length 4 fits s[8] but the frame holds only 2 payload bytes -> underrun, err latches.
     uint8_t trunc[6] = {4, 0, 0, 0, 'a', 'b'};
-    r = UaReader{trunc, sizeof(trunc), 0, false};
+    r = UaReader{trunc, sizeof(trunc), 0, PROTO_FALSE};
     TEST_ASSERT_FALSE(pc_ua_r_string(&r, s, sizeof(s), &len));
     TEST_ASSERT_TRUE(r.err);
 }
@@ -1746,10 +1745,10 @@ void test_r_string_optional_len_zero_cap_and_frame_underrun()
 void test_w_nodeid_numeric_widens_for_large_identifier()
 {
     uint8_t buf[16];
-    UaWriter w = {buf, sizeof(buf), 0, true};
+    UaWriter w = {buf, sizeof(buf), 0, PROTO_TRUE};
     pc_ua_w_nodeid_numeric(&w, 1, 0x10000); // ns fits a byte, id does not fit a u16
     TEST_ASSERT_EQUAL_HEX8(0x02, buf[0]);   // Numeric, not FourByte (0x01)
-    UaReader r = {buf, w.n, 0, false};
+    UaReader r = {buf, w.n, 0, PROTO_FALSE};
     UaNodeId id;
     TEST_ASSERT_TRUE(pc_ua_r_nodeid(&r, &id));
     TEST_ASSERT_TRUE(id.numeric);
@@ -1757,10 +1756,10 @@ void test_w_nodeid_numeric_widens_for_large_identifier()
     TEST_ASSERT_EQUAL_UINT32(0x10000, id.id);
 
     // The other way round: a small identifier in a namespace too large for a byte also widens.
-    w = UaWriter{buf, sizeof(buf), 0, true};
+    w = UaWriter{buf, sizeof(buf), 0, PROTO_TRUE};
     pc_ua_w_nodeid_numeric(&w, 0x0100, 5);
     TEST_ASSERT_EQUAL_HEX8(0x02, buf[0]);
-    r = UaReader{buf, w.n, 0, false};
+    r = UaReader{buf, w.n, 0, PROTO_FALSE};
     TEST_ASSERT_TRUE(pc_ua_r_nodeid(&r, &id));
     TEST_ASSERT_EQUAL_UINT16(0x0100, id.ns);
     TEST_ASSERT_EQUAL_UINT32(5, id.id);
@@ -1771,7 +1770,7 @@ void test_w_nodeid_numeric_widens_for_large_identifier()
 void test_r_nodeid_guid_truncated_latches_error()
 {
     uint8_t enc_only[1] = {0x04}; // Guid kind, nothing after it
-    UaReader r = {enc_only, sizeof(enc_only), 0, false};
+    UaReader r = {enc_only, sizeof(enc_only), 0, PROTO_FALSE};
     UaNodeId id;
     TEST_ASSERT_FALSE(pc_ua_r_nodeid(&r, &id));
     TEST_ASSERT_TRUE(r.err);
@@ -1783,14 +1782,14 @@ void test_r_nodeid_guid_truncated_latches_error()
 void test_r_nodeid_null_namespace_uri_and_server_index_flags()
 {
     uint8_t buf[32];
-    UaWriter w = {buf, sizeof(buf), 0, true};
+    UaWriter w = {buf, sizeof(buf), 0, PROTO_TRUE};
     pc_ua_w_u8(&w, 0x00 | 0x80 | 0x40); // TwoByte + NamespaceUri + ServerIndex
     pc_ua_w_u8(&w, 42);                 // identifier
     pc_ua_w_i32(&w, -1);                // NamespaceUri (null String -> nothing to skip)
     pc_ua_w_u32(&w, 7);                 // ServerIndex
     pc_ua_w_u32(&w, 0xABCDEF01);        // a sentinel the reader must land on
 
-    UaReader r = {buf, w.n, 0, false};
+    UaReader r = {buf, w.n, 0, PROTO_FALSE};
     UaNodeId id;
     TEST_ASSERT_TRUE(pc_ua_r_nodeid(&r, &id));
     TEST_ASSERT_EQUAL_UINT32(42, id.id);
@@ -1853,7 +1852,7 @@ void test_ack_negotiation_clamps_oversized_client_request()
     uint8_t ack[64];
     size_t an = pc_opcua_build_ack(&hello, ack, sizeof(ack));
     TEST_ASSERT_EQUAL_UINT(28, an);
-    UaReader r = {ack + 8, an - 8, 0, false};
+    UaReader r = {ack + 8, an - 8, 0, PROTO_FALSE};
     TEST_ASSERT_EQUAL_UINT32(0, pc_ua_r_u32(&r)); // ProtocolVersion
     TEST_ASSERT_EQUAL_UINT32(PC_OPCUA_BUF, pc_ua_r_u32(&r));
     TEST_ASSERT_EQUAL_UINT32(PC_OPCUA_BUF, pc_ua_r_u32(&r));
@@ -1865,7 +1864,7 @@ void test_ack_negotiation_clamps_oversized_client_request()
     TEST_ASSERT_TRUE(pc_opcua_parse_hello(hel, n, &hello));
     an = pc_opcua_build_ack(&hello, ack, sizeof(ack));
     TEST_ASSERT_EQUAL_UINT(28, an);
-    r = UaReader{ack + 8, an - 8, 0, false};
+    r = UaReader{ack + 8, an - 8, 0, PROTO_FALSE};
     TEST_ASSERT_EQUAL_UINT32(0, pc_ua_r_u32(&r)); // ProtocolVersion
     TEST_ASSERT_EQUAL_UINT32(small, pc_ua_r_u32(&r));
     TEST_ASSERT_EQUAL_UINT32(small, pc_ua_r_u32(&r));
@@ -1874,9 +1873,10 @@ void test_ack_negotiation_clamps_oversized_client_request()
 
 // Build a MSG frame whose body TypeId is a String NodeId (kind 0x03) rather than a numeric one, and
 // whose AdditionalHeader ExtensionObject carries an explicit but empty ByteString body.
-static size_t build_msg_string_typeid(uint8_t *out, size_t cap, uint8_t addhdr_body_enc, bool read_body = false)
+static size_t build_msg_string_typeid(uint8_t *out, size_t cap, uint8_t addhdr_body_enc,
+                                      proto_bool read_body = PROTO_FALSE)
 {
-    UaWriter w = {out, cap, 0, true};
+    UaWriter w = {out, cap, 0, PROTO_TRUE};
     pc_ua_w_u8(&w, 'M');
     pc_ua_w_u8(&w, 'S');
     pc_ua_w_u8(&w, 'G');
@@ -1895,7 +1895,7 @@ static size_t build_msg_string_typeid(uint8_t *out, size_t cap, uint8_t addhdr_b
     pc_ua_w_u64(&w, 0);               // Timestamp
     pc_ua_w_u32(&w, 77);              // RequestHandle
     pc_ua_w_u32(&w, 0);               // ReturnDiagnostics
-    pc_ua_w_string(&w, NULL, -1);  // AuditEntryId
+    pc_ua_w_string(&w, NULL, -1);     // AuditEntryId
     pc_ua_w_u32(&w, 0);               // TimeoutHint
     pc_ua_w_nodeid_numeric(&w, 0, 0); // AdditionalHeader NodeId
     pc_ua_w_u8(&w, addhdr_body_enc);  // AdditionalHeader ExtensionObject body encoding
@@ -1934,7 +1934,7 @@ void test_parse_msg_string_typeid_and_empty_extension_body()
 
     // The shared service preamble reports the same way, so a String-TypeId frame reaching a service
     // parser carries type_id 0 and is answered with a ServiceFault rather than being misrouted.
-    n = build_msg_string_typeid(buf, sizeof(buf), 0x00, /*read_body=*/true);
+    n = build_msg_string_typeid(buf, sizeof(buf), 0x00, /*read_body=*/PROTO_TRUE);
     OpcUaReadRequest rr;
     TEST_ASSERT_TRUE(pc_opcua_parse_read(buf, n, &rr));
     TEST_ASSERT_EQUAL_UINT32(0, rr.msg.type_id);
@@ -1944,20 +1944,20 @@ void test_parse_msg_string_typeid_and_empty_extension_body()
 
 // Build an OPN whose body TypeId is either a String NodeId or a numeric one in a chosen namespace,
 // to drive each conjunct of parse_open's "numeric && ns == 0 && id == OpenSecureChannelRequest".
-static size_t build_open_typeid(uint8_t *out, size_t cap, bool string_type_id, uint16_t ns, uint32_t id)
+static size_t build_open_typeid(uint8_t *out, size_t cap, proto_bool string_type_id, uint16_t ns, uint32_t id)
 {
-    UaWriter w = {out, cap, 0, true};
+    UaWriter w = {out, cap, 0, PROTO_TRUE};
     pc_ua_w_u8(&w, 'O');
     pc_ua_w_u8(&w, 'P');
     pc_ua_w_u8(&w, 'N');
     pc_ua_w_u8(&w, 'F');
     pc_ua_w_u32(&w, 0);
-    pc_ua_w_u32(&w, 0);              // SecureChannelId
+    pc_ua_w_u32(&w, 0);           // SecureChannelId
     pc_ua_w_string(&w, NULL, -1); // SecurityPolicyUri
     pc_ua_w_string(&w, NULL, -1); // SenderCertificate
     pc_ua_w_string(&w, NULL, -1); // ReceiverCertificateThumbprint
-    pc_ua_w_u32(&w, 1);              // SequenceNumber
-    pc_ua_w_u32(&w, 100);            // RequestId
+    pc_ua_w_u32(&w, 1);           // SequenceNumber
+    pc_ua_w_u32(&w, 100);         // RequestId
     if (string_type_id)
     {
         pc_ua_w_u8(&w, 0x03);
@@ -1981,10 +1981,10 @@ void test_parse_open_rejects_non_numeric_and_wrong_namespace_typeid()
     uint8_t buf[128];
     OpcUaOpenChannel oc;
 
-    size_t n = build_open_typeid(buf, sizeof(buf), /*string_type_id=*/true, 0, 0);
+    size_t n = build_open_typeid(buf, sizeof(buf), /*string_type_id=*/PROTO_TRUE, 0, 0);
     TEST_ASSERT_FALSE(pc_opcua_parse_open(buf, n, &oc)); // not numeric
 
-    n = build_open_typeid(buf, sizeof(buf), false, /*ns=*/3, OPCUA_ID_OPEN_REQ);
+    n = build_open_typeid(buf, sizeof(buf), PROTO_FALSE, /*ns=*/3, OPCUA_ID_OPEN_REQ);
     TEST_ASSERT_FALSE(pc_opcua_parse_open(buf, n, &oc)); // right id, wrong namespace
 }
 
@@ -2059,7 +2059,7 @@ void test_read_response_without_values_or_statuses()
     size_t rn = pc_opcua_build_read_response(&rr, NULL, NULL, 9, 0, resp, sizeof(resp));
     TEST_ASSERT_TRUE(rn > 0);
 
-    UaReader r = {resp + 8, rn - 8, 0, false};
+    UaReader r = {resp + 8, rn - 8, 0, PROTO_FALSE};
     for (int i = 0; i < 4; i++)
     {
         (void)pc_ua_r_u32(&r); // channel / token / seq / request id
@@ -2085,7 +2085,7 @@ void test_read_response_without_values_or_statuses()
 void test_variant_null_string_roundtrip()
 {
     uint8_t buf[16];
-    UaWriter w = {buf, sizeof(buf), 0, true};
+    UaWriter w = {buf, sizeof(buf), 0, PROTO_TRUE};
     OpcUaVariant in;
     memset(&in, 0, sizeof(in));
     in.type = OPCUA_VAR_STRING;
@@ -2094,7 +2094,7 @@ void test_variant_null_string_roundtrip()
     pc_ua_w_variant(&w, &in);
     TEST_ASSERT_TRUE(w.ok);
 
-    UaReader r = {buf, w.n, 0, false};
+    UaReader r = {buf, w.n, 0, PROTO_FALSE};
     OpcUaVariant out;
     TEST_ASSERT_TRUE(pc_ua_r_variant(&r, &out));
     TEST_ASSERT_EQUAL(OPCUA_VAR_STRING, out.type);
@@ -2108,19 +2108,19 @@ void test_variant_null_string_roundtrip()
 void test_datavalue_status_only_with_and_without_status_sink()
 {
     uint8_t buf[16];
-    UaWriter w = {buf, sizeof(buf), 0, true};
+    UaWriter w = {buf, sizeof(buf), 0, PROTO_TRUE};
     pc_ua_w_datavalue(&w, NULL, OPCUA_STATUS_BAD_NODE_ID_UNKNOWN); // no Variant, Bad status
     TEST_ASSERT_TRUE(w.ok);
     TEST_ASSERT_EQUAL_HEX8(0x02, buf[0]); // StatusCode present, Value absent
 
     OpcUaVariant v;
     uint32_t st = 0;
-    UaReader r = {buf, w.n, 0, false};
+    UaReader r = {buf, w.n, 0, PROTO_FALSE};
     TEST_ASSERT_TRUE(pc_ua_r_datavalue(&r, &v, &st));
     TEST_ASSERT_EQUAL_HEX32(OPCUA_STATUS_BAD_NODE_ID_UNKNOWN, st);
     TEST_ASSERT_EQUAL(OPCUA_VAR_NULL, v.type); // no Value was present
 
-    r = UaReader{buf, w.n, 0, false};
+    r = UaReader{buf, w.n, 0, PROTO_FALSE};
     TEST_ASSERT_TRUE(pc_ua_r_datavalue(&r, &v, NULL)); // status discarded, still well-formed
     TEST_ASSERT_FALSE(r.err);
 }
@@ -2152,7 +2152,7 @@ void test_parse_captures_at_most_the_compiled_maximum()
 // Build a BrowseRequest listing `count` nodes, to drive the BrowseRequest item cap.
 static size_t build_browse_n(uint8_t *out, size_t cap, uint32_t count)
 {
-    UaWriter w = {out, cap, 0, true};
+    UaWriter w = {out, cap, 0, PROTO_TRUE};
     pc_ua_w_u8(&w, 'M');
     pc_ua_w_u8(&w, 'S');
     pc_ua_w_u8(&w, 'G');
@@ -2181,7 +2181,7 @@ static size_t build_browse_n(uint8_t *out, size_t cap, uint32_t count)
         pc_ua_w_nodeid_numeric(&w, 1, 3000 + i);
         pc_ua_w_u32(&w, 0);               // BrowseDirection
         pc_ua_w_nodeid_numeric(&w, 0, 0); // ReferenceTypeId
-        pc_ua_w_bool(&w, true);           // IncludeSubtypes
+        pc_ua_w_bool(&w, PROTO_TRUE);     // IncludeSubtypes
         pc_ua_w_u32(&w, 0);               // NodeClassMask
         pc_ua_w_u32(&w, 0x3F);            // ResultMask
     }
@@ -2194,7 +2194,7 @@ static size_t build_browse_n(uint8_t *out, size_t cap, uint32_t count)
 // Build a WriteRequest of `count` Int32 writes, to drive the WriteRequest item cap.
 static size_t build_write_n(uint8_t *out, size_t cap, uint32_t count)
 {
-    UaWriter w = {out, cap, 0, true};
+    UaWriter w = {out, cap, 0, PROTO_TRUE};
     pc_ua_w_u8(&w, 'M');
     pc_ua_w_u8(&w, 'S');
     pc_ua_w_u8(&w, 'G');
@@ -2218,7 +2218,7 @@ static size_t build_write_n(uint8_t *out, size_t cap, uint32_t count)
     {
         pc_ua_w_nodeid_numeric(&w, 1, 4000 + i);
         pc_ua_w_u32(&w, OPCUA_ATTR_VALUE); // AttributeId
-        pc_ua_w_string(&w, NULL, -1);   // IndexRange
+        pc_ua_w_string(&w, NULL, -1);      // IndexRange
         pc_ua_w_u8(&w, 0x01);              // DataValue mask: Value present
         pc_ua_w_u8(&w, (uint8_t)OPCUA_VAR_INT32);
         pc_ua_w_i32(&w, (int32_t)(500 + i));
@@ -2262,7 +2262,7 @@ void test_write_response_without_results_array()
     size_t rn = pc_opcua_build_write_response(&wr, NULL, 9, 0, resp, sizeof(resp));
     TEST_ASSERT_TRUE(rn > 0);
 
-    UaReader r = {resp + 8, rn - 8, 0, false};
+    UaReader r = {resp + 8, rn - 8, 0, PROTO_FALSE};
     for (int i = 0; i < 4; i++)
     {
         (void)pc_ua_r_u32(&r);
@@ -2295,7 +2295,7 @@ static int32_t nameless_ref_handler(uint16_t ns, uint32_t id, OpcUaReference *ou
     (void)id;
     (void)max; // the builder always offers PC_OPCUA_REF_MAX slots
     out[0].ref_type_id = OPCUA_REFTYPE_ORGANIZES;
-    out[0].is_forward = true;
+    out[0].is_forward = PROTO_TRUE;
     out[0].target_ns = 1;
     out[0].target_id = 9;
     out[0].browse_name_ns = 1;
@@ -2317,7 +2317,7 @@ void test_browse_response_reference_without_names()
     size_t rn = pc_opcua_build_browse_response(&br, nameless_ref_handler, 11, 0, resp, sizeof(resp));
     TEST_ASSERT_TRUE(rn > 0);
 
-    UaReader r = {resp + 8, rn - 8, 0, false};
+    UaReader r = {resp + 8, rn - 8, 0, PROTO_FALSE};
     for (int i = 0; i < 4; i++)
     {
         (void)pc_ua_r_u32(&r);
@@ -2358,10 +2358,10 @@ void test_localizedtext_every_field_combination()
     int32_t sl = 0;
 
     // Both fields present: mask 0x03, Locale then Text.
-    UaWriter w = {buf, sizeof(buf), 0, true};
+    UaWriter w = {buf, sizeof(buf), 0, PROTO_TRUE};
     pc_ua_w_localizedtext(&w, "en-US", "Uptime");
     TEST_ASSERT_TRUE(w.ok);
-    UaReader r = {buf, w.n, 0, false};
+    UaReader r = {buf, w.n, 0, PROTO_FALSE};
     TEST_ASSERT_EQUAL_HEX8(0x03, pc_ua_r_u8(&r));
     TEST_ASSERT_TRUE(pc_ua_r_string(&r, s, sizeof(s), &sl));
     TEST_ASSERT_EQUAL_STRING("en-US", s);
@@ -2370,24 +2370,24 @@ void test_localizedtext_every_field_combination()
     TEST_ASSERT_FALSE(r.err);
 
     // Locale only: mask 0x01, no Text string follows.
-    w = UaWriter{buf, sizeof(buf), 0, true};
+    w = UaWriter{buf, sizeof(buf), 0, PROTO_TRUE};
     pc_ua_w_localizedtext(&w, "de-DE", NULL);
-    r = UaReader{buf, w.n, 0, false};
+    r = UaReader{buf, w.n, 0, PROTO_FALSE};
     TEST_ASSERT_EQUAL_HEX8(0x01, pc_ua_r_u8(&r));
     TEST_ASSERT_TRUE(pc_ua_r_string(&r, s, sizeof(s), &sl));
     TEST_ASSERT_EQUAL_STRING("de-DE", s);
     TEST_ASSERT_EQUAL_UINT(w.n, r.off); // nothing after the Locale
 
     // Text only (the form every server-side caller uses): mask 0x02.
-    w = UaWriter{buf, sizeof(buf), 0, true};
+    w = UaWriter{buf, sizeof(buf), 0, PROTO_TRUE};
     pc_ua_w_localizedtext(&w, NULL, "Uptime");
-    r = UaReader{buf, w.n, 0, false};
+    r = UaReader{buf, w.n, 0, PROTO_FALSE};
     TEST_ASSERT_EQUAL_HEX8(0x02, pc_ua_r_u8(&r));
     TEST_ASSERT_TRUE(pc_ua_r_string(&r, s, sizeof(s), &sl));
     TEST_ASSERT_EQUAL_STRING("Uptime", s);
 
     // Neither: a bare zero mask, one byte total.
-    w = UaWriter{buf, sizeof(buf), 0, true};
+    w = UaWriter{buf, sizeof(buf), 0, PROTO_TRUE};
     pc_ua_w_localizedtext(&w, NULL, NULL);
     TEST_ASSERT_EQUAL_UINT(1, w.n);
     TEST_ASSERT_EQUAL_HEX8(0x00, buf[0]);
@@ -2398,7 +2398,7 @@ void test_localizedtext_every_field_combination()
 void test_w_reference_null_fails_writer_closed()
 {
     uint8_t buf[64];
-    UaWriter w = {buf, sizeof(buf), 0, true};
+    UaWriter w = {buf, sizeof(buf), 0, PROTO_TRUE};
     pc_ua_w_reference(&w, NULL);
     TEST_ASSERT_FALSE(w.ok);
     TEST_ASSERT_EQUAL_UINT(0, w.n); // nothing was written
@@ -2417,7 +2417,7 @@ void test_browse_response_without_a_resolver()
     size_t rn = pc_opcua_build_browse_response(&br, NULL, 11, 0, resp, sizeof(resp));
     TEST_ASSERT_TRUE(rn > 0);
 
-    UaReader r = {resp + 8, rn - 8, 0, false};
+    UaReader r = {resp + 8, rn - 8, 0, PROTO_FALSE};
     for (int i = 0; i < 4; i++)
     {
         (void)pc_ua_r_u32(&r);

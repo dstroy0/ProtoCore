@@ -12,7 +12,7 @@
 // Cross-test observation state (middlewares are plain function pointers, so they
 // communicate through file-static globals + the global server, just like the
 // application handlers do). setUp() resets all of it.
-static bool g_handler_called;
+static proto_bool g_handler_called;
 static int g_log_count;
 static char g_order[16];
 static size_t g_order_len;
@@ -64,7 +64,7 @@ static const char *do_req(uint8_t slot, const char *req_str)
 static void h_ok(uint8_t slot, HttpReq *req)
 {
     (void)req;
-    g_handler_called = true;
+    g_handler_called = PROTO_TRUE;
     send_text(slot, 200, "text/plain", "OK");
 }
 
@@ -123,7 +123,7 @@ void setUp()
     pc_sse_init();
     tcp_capture_reset();
 
-    g_handler_called = false;
+    g_handler_called = PROTO_FALSE;
     g_log_count = 0;
     g_order[0] = '\0';
     g_order_len = 0;

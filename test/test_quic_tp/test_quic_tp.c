@@ -34,10 +34,10 @@ void test_roundtrip()
 {
     QuicTransportParams tp;
     pc_quic_tp_defaults(&tp);
-    tp.has_original_dcid = true;
+    tp.has_original_dcid = PROTO_TRUE;
     tp.original_dcid_len = 8;
     memcpy(tp.original_dcid, "\x00\x01\x02\x03\x04\x05\x06\x07", 8);
-    tp.has_initial_scid = true;
+    tp.has_initial_scid = PROTO_TRUE;
     tp.initial_scid_len = 4;
     memcpy(tp.initial_scid, "\xaa\xbb\xcc\xdd", 4);
     tp.initial_max_data = 1048576;
@@ -47,7 +47,7 @@ void test_roundtrip()
     tp.initial_max_streams_bidi = 100;
     tp.initial_max_streams_uni = 3;
     tp.max_idle_timeout = 30000;
-    tp.disable_active_migration = true;
+    tp.disable_active_migration = PROTO_TRUE;
 
     uint8_t buf[256];
     size_t n = pc_quic_tp_encode(&tp, buf, sizeof(buf));
@@ -157,7 +157,7 @@ void test_quic_tp_more_paths()
 
     // Encode overflow: a CID param's ID varint, length varint, and value each fail at a tight cap.
     pc_quic_tp_defaults(&tp);
-    tp.has_original_dcid = true;
+    tp.has_original_dcid = PROTO_TRUE;
     tp.original_dcid_len = 8;
     memset(tp.original_dcid, 0xAB, 8);
     TEST_ASSERT_EQUAL_size_t(0, pc_quic_tp_encode(&tp, buf, 0)); // ID varint has no room
@@ -171,7 +171,7 @@ void test_quic_tp_more_paths()
 
     // Encode + parse a retry_source_connection_id round-trip (encode arm + valid-parse arm).
     pc_quic_tp_defaults(&tp);
-    tp.has_retry_scid = true;
+    tp.has_retry_scid = PROTO_TRUE;
     tp.retry_scid_len = 4;
     memcpy(tp.retry_scid, "\xaa\xbb\xcc\xdd", 4);
     size_t n = pc_quic_tp_encode(&tp, buf, sizeof(buf));
@@ -217,27 +217,27 @@ void test_encode_cid_ok_chain_gaps()
     // All three connection-ID params present; cap = 0 fails original_dcid immediately, so both the
     // initial_scid and retry_scid puts are skipped by the already-false "ok &&" (not even attempted).
     pc_quic_tp_defaults(&tp);
-    tp.has_original_dcid = true;
+    tp.has_original_dcid = PROTO_TRUE;
     tp.original_dcid_len = 8;
     memset(tp.original_dcid, 0xAB, 8);
-    tp.has_initial_scid = true;
+    tp.has_initial_scid = PROTO_TRUE;
     tp.initial_scid_len = 4;
     memset(tp.initial_scid, 0xCD, 4);
-    tp.has_retry_scid = true;
+    tp.has_retry_scid = PROTO_TRUE;
     tp.retry_scid_len = 4;
     memset(tp.retry_scid, 0xEF, 4);
     TEST_ASSERT_EQUAL_size_t(0, pc_quic_tp_encode(&tp, buf, 0));
 
     // initial_scid alone: cap enough for its ID + length varints but not its 4-octet value.
     pc_quic_tp_defaults(&tp);
-    tp.has_initial_scid = true;
+    tp.has_initial_scid = PROTO_TRUE;
     tp.initial_scid_len = 4;
     memset(tp.initial_scid, 0xEE, 4);
     TEST_ASSERT_EQUAL_size_t(0, pc_quic_tp_encode(&tp, buf, 5));
 
     // retry_scid alone: same cap-starved shape.
     pc_quic_tp_defaults(&tp);
-    tp.has_retry_scid = true;
+    tp.has_retry_scid = PROTO_TRUE;
     tp.retry_scid_len = 4;
     memset(tp.retry_scid, 0xFF, 4);
     TEST_ASSERT_EQUAL_size_t(0, pc_quic_tp_encode(&tp, buf, 5));
@@ -290,14 +290,14 @@ void test_encode_disable_migration_gaps()
 
     pc_quic_tp_defaults(&tp);
     tp.active_connection_id_limit = 0xFFFFFFFFFFFFFFFFull;
-    tp.disable_active_migration = true;
+    tp.disable_active_migration = PROTO_TRUE;
     TEST_ASSERT_EQUAL_size_t(0, pc_quic_tp_encode(&tp, buf, sizeof(buf)));
 
     // The 9 always-emitted params take exactly 30 bytes with an all-default tp (7 zero-valued 1-byte
     // varints at 3 bytes each, max_udp_payload_size's 4-byte varint at 6 bytes, active_connection_id_
     // limit's 1-byte varint at 3 bytes): 7*3 + 6 + 3 = 30. cap=30 leaves no room for the flag's ID byte.
     pc_quic_tp_defaults(&tp);
-    tp.disable_active_migration = true;
+    tp.disable_active_migration = PROTO_TRUE;
     TEST_ASSERT_EQUAL_size_t(0, pc_quic_tp_encode(&tp, buf, 30));
 }
 

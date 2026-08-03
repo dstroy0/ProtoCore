@@ -91,10 +91,10 @@ void test_read_input_registers()
 
 void test_read_coils_packs_bits()
 {
-    pc_modbus_set_coil(0, true);
-    pc_modbus_set_coil(1, false);
-    pc_modbus_set_coil(2, true);
-    pc_modbus_set_coil(9, true); // second byte, bit 1
+    pc_modbus_set_coil(0, PROTO_TRUE);
+    pc_modbus_set_coil(1, PROTO_FALSE);
+    pc_modbus_set_coil(2, PROTO_TRUE);
+    pc_modbus_set_coil(9, PROTO_TRUE); // second byte, bit 1
 
     uint8_t pdu[] = {0x01, 0x00, 0x00, 0x00, 0x0A}; // FC1, start 0, qty 10
     uint8_t req[260], resp[260];
@@ -247,13 +247,13 @@ static void assert_exception(const uint8_t *pdu, size_t plen, uint8_t fc, uint8_
 // Discrete inputs, out-of-range accessors, and an FC2 read (never exercised elsewhere).
 void test_discrete_and_input_accessors()
 {
-    pc_modbus_set_discrete_input(3, true);
-    pc_modbus_set_discrete_input(0xFFFF, true); // out of range -> ignored
+    pc_modbus_set_discrete_input(3, PROTO_TRUE);
+    pc_modbus_set_discrete_input(0xFFFF, PROTO_TRUE); // out of range -> ignored
     TEST_ASSERT_TRUE(pc_modbus_get_discrete_input(3));
     TEST_ASSERT_FALSE(pc_modbus_get_discrete_input(2));
     TEST_ASSERT_FALSE(pc_modbus_get_discrete_input(0xFFFF)); // out of range -> false
     TEST_ASSERT_EQUAL_UINT16(0, pc_modbus_get_input_reg(0xFFFF));
-    pc_modbus_set_coil(0xFFFF, true); // out-of-range coil / holding ignored
+    pc_modbus_set_coil(0xFFFF, PROTO_TRUE); // out-of-range coil / holding ignored
     TEST_ASSERT_FALSE(pc_modbus_get_coil(0xFFFF));
     pc_modbus_set_holding_reg(0xFFFF, 1);
     TEST_ASSERT_EQUAL_UINT16(0, pc_modbus_get_holding_reg(0xFFFF));
@@ -270,8 +270,7 @@ void test_discrete_and_input_accessors()
 // and an out-of-range address.
 void test_exceptions_per_function()
 {
-    const uint8_t EV = (uint8_t)MODBUS_EX_ILLEGAL_DATA_VALUE,
-                  EA = (uint8_t)MODBUS_EX_ILLEGAL_DATA_ADDRESS;
+    const uint8_t EV = (uint8_t)MODBUS_EX_ILLEGAL_DATA_VALUE, EA = (uint8_t)MODBUS_EX_ILLEGAL_DATA_ADDRESS;
     // FC1/FC2 read coils/discrete.
     const uint8_t fc1_short[] = {0x01, 0x00, 0x00};
     assert_exception(fc1_short, 3, 0x01, EV); // < 5
@@ -425,7 +424,7 @@ void test_rtu_edge_cases()
 void test_server_init_bounds_and_handler()
 {
     pc_modbus_server_init();
-    pc_modbus_set_coil(0xFFFF, true);
+    pc_modbus_set_coil(0xFFFF, PROTO_TRUE);
     TEST_ASSERT_FALSE(pc_modbus_get_coil(0xFFFF));                  // out of range -> false
     TEST_ASSERT_EQUAL_UINT16(0, pc_modbus_get_holding_reg(0xFFFF)); // out of range -> 0
     (void)pc_modbus_proto_handler();
@@ -455,7 +454,7 @@ void test_read_quantity_bounds()
 // Writing a single coil OFF (value 0x0000) is the other legal value.
 void test_write_single_coil_off()
 {
-    pc_modbus_set_coil(3, true);
+    pc_modbus_set_coil(3, PROTO_TRUE);
     uint8_t pdu[] = {0x05, 0x00, 0x03, 0x00, 0x00}; // clear coil 3
     uint8_t req[260], resp[260];
     size_t rl = build_adu(req, 7, 1, pdu, sizeof(pdu));

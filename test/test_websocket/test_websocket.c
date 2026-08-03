@@ -46,8 +46,8 @@ static void push_bytes(uint8_t slot, const uint8_t *data, size_t len)
 // Build a WebSocket frame into dst.
 // Uses mask key {0,0,0,0} so the stored payload equals the unmasked input.
 // Returns the number of bytes written.
-static size_t build_frame(uint8_t *dst, WsOpcode opcode, bool fin, const uint8_t *payload, uint16_t payload_len,
-                          bool masked)
+static size_t build_frame(uint8_t *dst, WsOpcode opcode, proto_bool fin, const uint8_t *payload, uint16_t payload_len,
+                          proto_bool masked)
 {
     size_t pos = 0;
     dst[pos++] = (fin ? 0x80u : 0x00u) | (uint8_t)opcode;
@@ -424,7 +424,7 @@ void test_ws_parse_text_frame_sets_ready()
     WsConn *ws = ws_alloc(0);
     const uint8_t payload[] = {'H', 'i'};
     uint8_t frame[12];
-    size_t flen = build_frame(frame, WS_OP_TEXT, true, payload, 2, true);
+    size_t flen = build_frame(frame, WS_OP_TEXT, PROTO_TRUE, payload, 2, PROTO_TRUE);
     push_bytes(0, frame, flen);
     ws_parse(ws);
     TEST_ASSERT_EQUAL(WS_FRAME_READY, ws->parse_state);
@@ -435,7 +435,7 @@ void test_ws_parse_payload_stored_correctly()
     WsConn *ws = ws_alloc(0);
     const char *text = "Hello";
     uint8_t frame[16];
-    size_t flen = build_frame(frame, WS_OP_TEXT, true, (const uint8_t *)text, (uint16_t)strlen(text), true);
+    size_t flen = build_frame(frame, WS_OP_TEXT, PROTO_TRUE, (const uint8_t *)text, (uint16_t)strlen(text), PROTO_TRUE);
     push_bytes(0, frame, flen);
     ws_parse(ws);
     TEST_ASSERT_EQUAL(WS_FRAME_READY, ws->parse_state);
@@ -448,7 +448,7 @@ void test_ws_parse_binary_frame_sets_ready()
     WsConn *ws = ws_alloc(0);
     const uint8_t payload[] = {0x01, 0x02, 0x03};
     uint8_t frame[16];
-    size_t flen = build_frame(frame, WS_OP_BINARY, true, payload, 3, true);
+    size_t flen = build_frame(frame, WS_OP_BINARY, PROTO_TRUE, payload, 3, PROTO_TRUE);
     push_bytes(0, frame, flen);
     ws_parse(ws);
     TEST_ASSERT_EQUAL(WS_FRAME_READY, ws->parse_state);
@@ -538,7 +538,7 @@ void test_ws_parse_16bit_length_frame()
     // (not TEXT) since the 0..129 byte ramp is not valid UTF-8; this test exercises
     // the 16-bit length field, not text validation.
     static uint8_t frame[142];
-    size_t flen = build_frame(frame, WS_OP_BINARY, true, payload, 130, true);
+    size_t flen = build_frame(frame, WS_OP_BINARY, PROTO_TRUE, payload, 130, PROTO_TRUE);
 
     push_bytes(0, frame, flen);
     ws_parse(ws);
@@ -620,8 +620,8 @@ void test_ws_fragmented_message_reassembled()
 {
     WsConn *ws = ws_alloc(0);
     uint8_t f1[16], f2[16];
-    size_t n1 = build_frame(f1, WS_OP_TEXT, false, (const uint8_t *)"He", 2, true);
-    size_t n2 = build_frame(f2, WS_OP_CONTINUATION, true, (const uint8_t *)"llo", 3, true);
+    size_t n1 = build_frame(f1, WS_OP_TEXT, PROTO_FALSE, (const uint8_t *)"He", 2, PROTO_TRUE);
+    size_t n2 = build_frame(f2, WS_OP_CONTINUATION, PROTO_TRUE, (const uint8_t *)"llo", 3, PROTO_TRUE);
 
     push_bytes(0, f1, n1);
     ws_parse(ws);
@@ -639,9 +639,9 @@ void test_ws_control_frame_interleaved_in_fragments()
 {
     WsConn *ws = ws_alloc(0);
     uint8_t f1[16], pf[16], f2[16];
-    size_t n1 = build_frame(f1, WS_OP_TEXT, false, (const uint8_t *)"He", 2, true);
-    size_t np = build_frame(pf, WS_OP_PING, true, (const uint8_t *)"x", 1, true);
-    size_t n2 = build_frame(f2, WS_OP_CONTINUATION, true, (const uint8_t *)"llo", 3, true);
+    size_t n1 = build_frame(f1, WS_OP_TEXT, PROTO_FALSE, (const uint8_t *)"He", 2, PROTO_TRUE);
+    size_t np = build_frame(pf, WS_OP_PING, PROTO_TRUE, (const uint8_t *)"x", 1, PROTO_TRUE);
+    size_t n2 = build_frame(f2, WS_OP_CONTINUATION, PROTO_TRUE, (const uint8_t *)"llo", 3, PROTO_TRUE);
 
     // A PING arrives between the two data fragments; it must be handled without
     // corrupting the partial message (RFC 6455 §5.4).
@@ -669,7 +669,7 @@ void test_ws_fragment_accumulation_overflow_rejected()
     }
 
     // Fragment 1 (FIN=0): exactly WS_FRAME_SIZE bytes - fits, starts reassembly.
-    size_t n1 = build_frame(frame, WS_OP_TEXT, false, payload, (uint16_t)WS_FRAME_SIZE, true);
+    size_t n1 = build_frame(frame, WS_OP_TEXT, PROTO_FALSE, payload, (uint16_t)WS_FRAME_SIZE, PROTO_TRUE);
     push_bytes(0, frame, n1);
     ws_parse(ws);
     TEST_ASSERT_TRUE(ws->fragmenting);
@@ -678,7 +678,7 @@ void test_ws_fragment_accumulation_overflow_rejected()
     // Fragment 2 (CONTINUATION, FIN=1): one more byte pushes the total over the
     // buffer - must be rejected with CLOSE_TOO_BIG, not overrun ws->buf.
     uint8_t one = 'x';
-    size_t n2 = build_frame(frame, WS_OP_CONTINUATION, true, &one, 1, true);
+    size_t n2 = build_frame(frame, WS_OP_CONTINUATION, PROTO_TRUE, &one, 1, PROTO_TRUE);
     push_bytes(0, frame, n2);
     ws_parse(ws);
     TEST_ASSERT_EQUAL(WS_ERROR, ws->parse_state);
@@ -698,9 +698,9 @@ void test_ws_new_data_frame_during_fragmentation_rejected()
 {
     WsConn *ws = ws_alloc(0);
     uint8_t f1[16], f2[16];
-    size_t n1 = build_frame(f1, WS_OP_TEXT, false, (const uint8_t *)"He", 2, true);
+    size_t n1 = build_frame(f1, WS_OP_TEXT, PROTO_FALSE, (const uint8_t *)"He", 2, PROTO_TRUE);
     // A second TEXT (new message) before finishing the first is illegal.
-    size_t n2 = build_frame(f2, WS_OP_TEXT, true, (const uint8_t *)"llo", 3, true);
+    size_t n2 = build_frame(f2, WS_OP_TEXT, PROTO_TRUE, (const uint8_t *)"llo", 3, PROTO_TRUE);
     push_bytes(0, f1, n1);
     push_bytes(0, f2, n2);
     ws_parse(ws);
@@ -751,8 +751,8 @@ void test_ws_parse_stops_at_frame_ready()
     WsConn *ws = ws_alloc(0);
     const uint8_t p[] = {'A'};
     uint8_t f1[8], f2[8];
-    size_t l1 = build_frame(f1, WS_OP_TEXT, true, p, 1, true);
-    size_t l2 = build_frame(f2, WS_OP_TEXT, true, p, 1, true);
+    size_t l1 = build_frame(f1, WS_OP_TEXT, PROTO_TRUE, p, 1, PROTO_TRUE);
+    size_t l2 = build_frame(f2, WS_OP_TEXT, PROTO_TRUE, p, 1, PROTO_TRUE);
 
     // Push two complete frames -- parser should stop after the first
     push_bytes(0, f1, l1);
@@ -777,7 +777,7 @@ void test_ws_parse_stops_after_close_leaves_ring_untouched()
     };
     const uint8_t p[] = {'z'};
     uint8_t next[8];
-    size_t nlen = build_frame(next, WS_OP_TEXT, true, p, 1, true);
+    size_t nlen = build_frame(next, WS_OP_TEXT, PROTO_TRUE, p, 1, PROTO_TRUE);
 
     push_bytes(0, close_frame, sizeof(close_frame));
     push_bytes(0, next, nlen);
@@ -794,8 +794,8 @@ void test_ws_reset_frame_clears_fields()
     ws->parse_state = WS_FRAME_READY;
     ws->payload_len = 10;
     ws->payload_idx = 10;
-    ws->fin = true;
-    ws->masked = true;
+    ws->fin = PROTO_TRUE;
+    ws->masked = PROTO_TRUE;
     ws->mask_key[0] = 0xAB;
     ws->buf[0] = 'X';
     ws->len64_count = 5;
@@ -879,7 +879,7 @@ void test_ws_text_invalid_utf8_rejected()
     WsConn *ws = ws_alloc(0);
     const uint8_t bad[] = {0xC3, 0x28}; // 0xC3 starts a 2-byte seq; 0x28 is not a continuation
     uint8_t frame[16];
-    size_t n = build_frame(frame, WS_OP_TEXT, true, bad, 2, true);
+    size_t n = build_frame(frame, WS_OP_TEXT, PROTO_TRUE, bad, 2, PROTO_TRUE);
     push_bytes(0, frame, n);
     ws_parse(ws);
     TEST_ASSERT_EQUAL(WS_ERROR, ws->parse_state);
@@ -891,7 +891,7 @@ void test_ws_text_valid_utf8_accepted()
     WsConn *ws = ws_alloc(0);
     const uint8_t ok[] = {'h', 0xC3, 0xA9, 'l', 'l', 'o'};
     uint8_t frame[16];
-    size_t n = build_frame(frame, WS_OP_TEXT, true, ok, (uint16_t)sizeof(ok), true);
+    size_t n = build_frame(frame, WS_OP_TEXT, PROTO_TRUE, ok, (uint16_t)sizeof(ok), PROTO_TRUE);
     push_bytes(0, frame, n);
     ws_parse(ws);
     TEST_ASSERT_EQUAL(WS_FRAME_READY, ws->parse_state);
@@ -904,7 +904,7 @@ void test_ws_binary_arbitrary_bytes_accepted()
     WsConn *ws = ws_alloc(0);
     const uint8_t bin[] = {0xFF, 0xFE, 0x00, 0xC3, 0x28};
     uint8_t frame[16];
-    size_t n = build_frame(frame, WS_OP_BINARY, true, bin, (uint16_t)sizeof(bin), true);
+    size_t n = build_frame(frame, WS_OP_BINARY, PROTO_TRUE, bin, (uint16_t)sizeof(bin), PROTO_TRUE);
     push_bytes(0, frame, n);
     ws_parse(ws);
     TEST_ASSERT_EQUAL(WS_FRAME_READY, ws->parse_state);
@@ -919,7 +919,7 @@ void stress_ws_parse_reset_100_cycles()
 {
     const char *text = "test";
     uint8_t frame[12];
-    size_t flen = build_frame(frame, WS_OP_TEXT, true, (const uint8_t *)text, 4, true);
+    size_t flen = build_frame(frame, WS_OP_TEXT, PROTO_TRUE, (const uint8_t *)text, 4, PROTO_TRUE);
     for (int i = 0; i < 100; i++)
     {
         WsConn *ws = ws_alloc(0);
@@ -962,15 +962,14 @@ void stress_ws_parse_incremental_byte_by_byte()
     WsConn *ws = ws_alloc(0);
     const char *text = "Incremental";
     uint8_t frame[20];
-    size_t flen = build_frame(frame, WS_OP_TEXT, true, (const uint8_t *)text, (uint16_t)strlen(text), true);
+    size_t flen = build_frame(frame, WS_OP_TEXT, PROTO_TRUE, (const uint8_t *)text, (uint16_t)strlen(text), PROTO_TRUE);
     for (size_t i = 0; i < flen; i++)
     {
         push_bytes(0, &frame[i], 1);
         ws_parse(ws);
         if (i < flen - 1)
         {
-            TEST_ASSERT_NOT_EQUAL_MESSAGE(WS_ERROR, ws->parse_state,
-                                          "WS_ERROR during valid incremental parse");
+            TEST_ASSERT_NOT_EQUAL_MESSAGE(WS_ERROR, ws->parse_state, "WS_ERROR during valid incremental parse");
         }
     }
     TEST_ASSERT_EQUAL(WS_FRAME_READY, ws->parse_state);
@@ -989,7 +988,7 @@ void stress_ws_parse_max_payload()
         payload[i] = (uint8_t)(i & 0xFF);
     }
 
-    size_t flen = build_frame(frame, WS_OP_BINARY, true, payload, (uint16_t)WS_FRAME_SIZE, true);
+    size_t flen = build_frame(frame, WS_OP_BINARY, PROTO_TRUE, payload, (uint16_t)WS_FRAME_SIZE, PROTO_TRUE);
     push_bytes(0, frame, flen);
     ws_parse(ws);
 
@@ -1007,8 +1006,8 @@ void stress_ws_parse_two_consecutive_frames()
     const char *t1 = "first";
     const char *t2 = "second";
     uint8_t f1[16], f2[16];
-    size_t l1 = build_frame(f1, WS_OP_TEXT, true, (const uint8_t *)t1, (uint16_t)strlen(t1), true);
-    size_t l2 = build_frame(f2, WS_OP_TEXT, true, (const uint8_t *)t2, (uint16_t)strlen(t2), true);
+    size_t l1 = build_frame(f1, WS_OP_TEXT, PROTO_TRUE, (const uint8_t *)t1, (uint16_t)strlen(t1), PROTO_TRUE);
+    size_t l2 = build_frame(f2, WS_OP_TEXT, PROTO_TRUE, (const uint8_t *)t2, (uint16_t)strlen(t2), PROTO_TRUE);
 
     // First frame
     push_bytes(0, f1, l1);
@@ -1033,10 +1032,10 @@ void test_ws_permessage_deflate_inbound()
     static const uint8_t comp[] = {242, 72, 205, 201, 201, 215, 81, 8, 207, 47, 202, 73, 81, 4, 0};
     WsConn *ws = ws_alloc(0);
     TEST_ASSERT_NOT_NULL(ws);
-    ws->pmd = true; // extension negotiated at handshake
+    ws->pmd = PROTO_TRUE; // extension negotiated at handshake
 
     uint8_t frame[64];
-    size_t n = build_frame(frame, WS_OP_TEXT, true, comp, (uint16_t)sizeof(comp), true);
+    size_t n = build_frame(frame, WS_OP_TEXT, PROTO_TRUE, comp, (uint16_t)sizeof(comp), PROTO_TRUE);
     frame[0] |= 0x40; // RSV1 = compressed message
 
     push_bytes(0, frame, n);
@@ -1052,9 +1051,9 @@ void test_ws_rsv1_without_negotiation_closes()
 {
     WsConn *ws = ws_alloc(0);
     TEST_ASSERT_NOT_NULL(ws);
-    ws->pmd = false;
+    ws->pmd = PROTO_FALSE;
     uint8_t frame[16];
-    size_t n = build_frame(frame, WS_OP_TEXT, true, (const uint8_t *)"x", 1, true);
+    size_t n = build_frame(frame, WS_OP_TEXT, PROTO_TRUE, (const uint8_t *)"x", 1, PROTO_TRUE);
     frame[0] |= 0x40;
     push_bytes(0, frame, n);
     ws_parse(ws);
@@ -1067,7 +1066,7 @@ void test_ws_permessage_deflate_outbound()
 {
     WsConn *ws = ws_alloc(0);
     TEST_ASSERT_NOT_NULL(ws);
-    ws->pmd = true;
+    ws->pmd = PROTO_TRUE;
 
     const char *msg = "The quick brown fox. The quick brown fox. The quick brown fox.";
     uint16_t mlen = (uint16_t)strlen(msg);
@@ -1116,7 +1115,7 @@ void test_ws_outbound_incompressible_not_flagged()
 {
     WsConn *ws = ws_alloc(0);
     TEST_ASSERT_NOT_NULL(ws);
-    ws->pmd = true;
+    ws->pmd = PROTO_TRUE;
 
     tcp_capture_reset();
     TEST_ASSERT_TRUE(ws_send_frame(ws, WS_OP_TEXT, (const uint8_t *)"x", 1));
@@ -1139,9 +1138,9 @@ void test_ws_deflate_inflate_error_closes()
     static const uint8_t garbage[] = {0xFF, 0xFF, 0xFF}; // invalid deflate block type
     WsConn *ws = ws_alloc(0);
     TEST_ASSERT_NOT_NULL(ws);
-    ws->pmd = true;
+    ws->pmd = PROTO_TRUE;
     uint8_t frame[32];
-    size_t n = build_frame(frame, WS_OP_BINARY, true, garbage, (uint16_t)sizeof(garbage), true);
+    size_t n = build_frame(frame, WS_OP_BINARY, PROTO_TRUE, garbage, (uint16_t)sizeof(garbage), PROTO_TRUE);
     frame[0] |= 0x40; // RSV1 = compressed
     push_bytes(0, frame, n);
     ws_parse(ws);
@@ -1157,10 +1156,10 @@ void test_ws_permessage_deflate_inflate_overflow_closes()
     static const uint8_t comp[] = {114, 116, 28, 5, 163, 128, 250, 0, 0};
     WsConn *ws = ws_alloc(0);
     TEST_ASSERT_NOT_NULL(ws);
-    ws->pmd = true;
+    ws->pmd = PROTO_TRUE;
 
     uint8_t frame[32];
-    size_t n = build_frame(frame, WS_OP_BINARY, true, comp, (uint16_t)sizeof(comp), true);
+    size_t n = build_frame(frame, WS_OP_BINARY, PROTO_TRUE, comp, (uint16_t)sizeof(comp), PROTO_TRUE);
     frame[0] |= 0x40; // RSV1 = compressed message
     push_bytes(0, frame, n);
     ws_parse(ws);
@@ -1176,14 +1175,14 @@ void test_ws_permessage_deflate_scratch_exhausted_closes()
     static const uint8_t comp[] = {242, 72, 205, 201, 201, 215, 81, 8, 207, 47, 202, 73, 81, 4, 0};
     WsConn *ws = ws_alloc(0);
     TEST_ASSERT_NOT_NULL(ws);
-    ws->pmd = true;
+    ws->pmd = PROTO_TRUE;
 
     // Consume the whole arena so every pc_plaintext_alloc() in ws_finish_frame returns null.
     void *hog = pc_plaintext_alloc(pc_plaintext_capacity(), 1);
     TEST_ASSERT_NOT_NULL(hog);
 
     uint8_t frame[32];
-    size_t n = build_frame(frame, WS_OP_BINARY, true, comp, (uint16_t)sizeof(comp), true);
+    size_t n = build_frame(frame, WS_OP_BINARY, PROTO_TRUE, comp, (uint16_t)sizeof(comp), PROTO_TRUE);
     frame[0] |= 0x40; // RSV1 = compressed message
     push_bytes(0, frame, n);
     ws_parse(ws);
@@ -1203,14 +1202,14 @@ static void feed_compressed_with_arena_leaving(size_t leave)
     ws_free(0);
     WsConn *ws = ws_alloc(0);
     TEST_ASSERT_NOT_NULL(ws);
-    ws->pmd = true;
+    ws->pmd = PROTO_TRUE;
 
     pc_plaintext_reset();
     void *hog = pc_plaintext_alloc(pc_plaintext_capacity() - leave, 1);
     TEST_ASSERT_NOT_NULL(hog);
 
     uint8_t frame[32];
-    size_t n = build_frame(frame, WS_OP_BINARY, true, comp, (uint16_t)sizeof(comp), true);
+    size_t n = build_frame(frame, WS_OP_BINARY, PROTO_TRUE, comp, (uint16_t)sizeof(comp), PROTO_TRUE);
     frame[0] |= 0x40;
     push_bytes(0, frame, n);
     ws_parse(ws);
@@ -1234,10 +1233,10 @@ void test_ws_pmd_negotiated_uncompressed_frame_accepted()
 {
     WsConn *ws = ws_alloc(0);
     TEST_ASSERT_NOT_NULL(ws);
-    ws->pmd = true; // extension negotiated, but this frame is not compressed
+    ws->pmd = PROTO_TRUE; // extension negotiated, but this frame is not compressed
     const char *text = "plain";
     uint8_t frame[16];
-    size_t n = build_frame(frame, WS_OP_TEXT, true, (const uint8_t *)text, (uint16_t)strlen(text), true);
+    size_t n = build_frame(frame, WS_OP_TEXT, PROTO_TRUE, (const uint8_t *)text, (uint16_t)strlen(text), PROTO_TRUE);
     push_bytes(0, frame, n);
     ws_parse(ws);
     TEST_ASSERT_EQUAL(WS_FRAME_READY, ws->parse_state);
@@ -1252,7 +1251,7 @@ void test_ws_outbound_binary_and_scratch_starved()
 {
     WsConn *ws = ws_alloc(0);
     TEST_ASSERT_NOT_NULL(ws);
-    ws->pmd = true;
+    ws->pmd = PROTO_TRUE;
     ws_set_frag_size(0);
 
     // BINARY, compressible: takes the opcode==BINARY leg and actually compresses.
@@ -1295,7 +1294,7 @@ void test_ws_outbound_pmd_zero_len_and_control()
 {
     WsConn *ws = ws_alloc(0);
     TEST_ASSERT_NOT_NULL(ws);
-    ws->pmd = true;
+    ws->pmd = PROTO_TRUE;
     ws_set_frag_size(0);
 
     tcp_capture_reset();
@@ -1303,8 +1302,7 @@ void test_ws_outbound_pmd_zero_len_and_control()
     tcp_capture_disable();
 
     tcp_capture_reset();
-    TEST_ASSERT_TRUE(
-        ws_send_frame(ws, WS_OP_PING, (const uint8_t *)"AAAA", 4)); // control, both data legs false
+    TEST_ASSERT_TRUE(ws_send_frame(ws, WS_OP_PING, (const uint8_t *)"AAAA", 4)); // control, both data legs false
     tcp_capture_disable();
 }
 
@@ -1316,18 +1314,18 @@ void test_ws_pmd_continuation_with_rsv1_rejected()
 {
     WsConn *ws = ws_alloc(0);
     TEST_ASSERT_NOT_NULL(ws);
-    ws->pmd = true;
+    ws->pmd = PROTO_TRUE;
 
     // Frame 1: TEXT, FIN=0 - opens a fragmented message.
     uint8_t f1[16];
-    size_t n1 = build_frame(f1, WS_OP_TEXT, false, (const uint8_t *)"He", 2, true);
+    size_t n1 = build_frame(f1, WS_OP_TEXT, PROTO_FALSE, (const uint8_t *)"He", 2, PROTO_TRUE);
     push_bytes(0, f1, n1);
     ws_parse(ws);
     TEST_ASSERT_TRUE(ws->fragmenting);
 
     // Frame 2: CONTINUATION, FIN=1, RSV1 set - illegal per RFC 7692.
     uint8_t f2[16];
-    size_t n2 = build_frame(f2, WS_OP_CONTINUATION, true, (const uint8_t *)"llo", 3, true);
+    size_t n2 = build_frame(f2, WS_OP_CONTINUATION, PROTO_TRUE, (const uint8_t *)"llo", 3, PROTO_TRUE);
     f2[0] |= 0x40; // RSV1 on a continuation frame
     push_bytes(0, f2, n2);
     ws_parse(ws);
@@ -1343,7 +1341,7 @@ void test_ws_outbound_fragmentation()
     WsConn *ws = ws_alloc(0);
     TEST_ASSERT_NOT_NULL(ws);
 #if PC_ENABLE_WS_DEFLATE
-    ws->pmd = false; // send the payload verbatim so the split is exactly these bytes
+    ws->pmd = PROTO_FALSE; // send the payload verbatim so the split is exactly these bytes
 #endif
     const uint8_t msg[10] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
 

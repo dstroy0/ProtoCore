@@ -18,28 +18,28 @@ void tearDown()
 void test_asserts_on_active_and_counts_edge()
 {
     Sen0192Motion m;
-    pc_sen0192_motion_init(&m, 2000, true);
+    pc_sen0192_motion_init(&m, 2000, PROTO_TRUE);
     TEST_ASSERT_FALSE(pc_sen0192_motion_present(&m));
 
     // An inactive (low) sample keeps it clear.
-    TEST_ASSERT_FALSE(pc_sen0192_motion_update(&m, false, 500));
+    TEST_ASSERT_FALSE(pc_sen0192_motion_update(&m, PROTO_FALSE, 500));
     TEST_ASSERT_FALSE(pc_sen0192_motion_present(&m));
 
     // First active (high) sample -> presence starts (returns the edge), one motion event.
-    TEST_ASSERT_TRUE(pc_sen0192_motion_update(&m, true, 1000));
+    TEST_ASSERT_TRUE(pc_sen0192_motion_update(&m, PROTO_TRUE, 1000));
     TEST_ASSERT_TRUE(pc_sen0192_motion_present(&m));
     TEST_ASSERT_EQUAL_UINT32(1, pc_sen0192_motion_events(&m));
 
     // A second active sample while already present is not a new edge.
-    TEST_ASSERT_FALSE(pc_sen0192_motion_update(&m, true, 1500));
+    TEST_ASSERT_FALSE(pc_sen0192_motion_update(&m, PROTO_TRUE, 1500));
     TEST_ASSERT_EQUAL_UINT32(1, pc_sen0192_motion_events(&m));
 }
 
 void test_holds_then_clears_after_window()
 {
     Sen0192Motion m;
-    pc_sen0192_motion_init(&m, 2000, true);
-    pc_sen0192_motion_update(&m, true, 1000); // present, last_active=1000
+    pc_sen0192_motion_init(&m, 2000, PROTO_TRUE);
+    pc_sen0192_motion_update(&m, PROTO_TRUE, 1000); // present, last_active=1000
 
     // Within the hold window (<= 2000 ms since last active): still present.
     TEST_ASSERT_TRUE(pc_sen0192_motion_tick(&m, 2999)); // 1999 ms later
@@ -55,21 +55,21 @@ void test_holds_then_clears_after_window()
 void test_reasserts_as_new_event()
 {
     Sen0192Motion m;
-    pc_sen0192_motion_init(&m, 1000, true);
-    TEST_ASSERT_TRUE(pc_sen0192_motion_update(&m, true, 100)); // event 1
-    pc_sen0192_motion_tick(&m, 1200);                          // clears (1100 > 1000)
+    pc_sen0192_motion_init(&m, 1000, PROTO_TRUE);
+    TEST_ASSERT_TRUE(pc_sen0192_motion_update(&m, PROTO_TRUE, 100)); // event 1
+    pc_sen0192_motion_tick(&m, 1200);                                // clears (1100 > 1000)
     TEST_ASSERT_FALSE(pc_sen0192_motion_present(&m));
-    TEST_ASSERT_TRUE(pc_sen0192_motion_update(&m, true, 2000)); // event 2 (new edge)
+    TEST_ASSERT_TRUE(pc_sen0192_motion_update(&m, PROTO_TRUE, 2000)); // event 2 (new edge)
     TEST_ASSERT_EQUAL_UINT32(2, pc_sen0192_motion_events(&m));
 }
 
 void test_active_low_polarity()
 {
     Sen0192Motion m;
-    pc_sen0192_motion_init(&m, 1000, false);                    // OUT reads LOW on motion
-    TEST_ASSERT_FALSE(pc_sen0192_motion_update(&m, true, 100)); // HIGH is inactive here
+    pc_sen0192_motion_init(&m, 1000, PROTO_FALSE);                    // OUT reads LOW on motion
+    TEST_ASSERT_FALSE(pc_sen0192_motion_update(&m, PROTO_TRUE, 100)); // HIGH is inactive here
     TEST_ASSERT_FALSE(pc_sen0192_motion_present(&m));
-    TEST_ASSERT_TRUE(pc_sen0192_motion_update(&m, false, 200)); // LOW is active
+    TEST_ASSERT_TRUE(pc_sen0192_motion_update(&m, PROTO_FALSE, 200)); // LOW is active
     TEST_ASSERT_TRUE(pc_sen0192_motion_present(&m));
     TEST_ASSERT_EQUAL_UINT32(1, pc_sen0192_motion_events(&m));
 }
@@ -77,9 +77,9 @@ void test_active_low_polarity()
 void test_active_age()
 {
     Sen0192Motion m;
-    pc_sen0192_motion_init(&m, 5000, true);
+    pc_sen0192_motion_init(&m, 5000, PROTO_TRUE);
     TEST_ASSERT_EQUAL_UINT32(0, pc_sen0192_motion_active_age_ms(&m, 1234)); // no sample yet
-    pc_sen0192_motion_update(&m, true, 1000);
+    pc_sen0192_motion_update(&m, PROTO_TRUE, 1000);
     TEST_ASSERT_EQUAL_UINT32(750, pc_sen0192_motion_active_age_ms(&m, 1750));
 }
 
@@ -90,9 +90,9 @@ void test_tick_present_unseeded_holds()
     // struct, so exercise the defensive combination directly: with no seeded timestamp to age against,
     // tick() must leave presence asserted rather than guess an age.
     Sen0192Motion m;
-    pc_sen0192_motion_init(&m, 1000, true);
-    m.present = true;
-    m.seeded = false;
+    pc_sen0192_motion_init(&m, 1000, PROTO_TRUE);
+    m.present = PROTO_TRUE;
+    m.seeded = PROTO_FALSE;
     TEST_ASSERT_TRUE(pc_sen0192_motion_tick(&m, 999999));
     TEST_ASSERT_TRUE(pc_sen0192_motion_present(&m));
 }

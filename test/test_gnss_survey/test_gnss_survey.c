@@ -130,7 +130,7 @@ void test_survey_accuracy_clamps_negative_variance()
 {
     GnssSurvey s;
     pc_gnss_survey_reset(&s);
-    s.has_origin = true;
+    s.has_origin = PROTO_TRUE;
     s.count = 2;
     s.sdx = s.sdy = s.sdz = 10.0;      // mean per axis = 5.0 -> mean^2 * n = 50.0
     s.sdx2 = s.sdy2 = s.sdz2 = 49.999; // < 50.0 -> vx/vy/vz all compute negative before the clamp
@@ -228,12 +228,12 @@ void test_ecef_to_geodetic_south_pole()
 }
 
 // Build a GGA body (checksum added by construction) and parse it back into @p m.
-static bool build_parse_gga(const char *body, char *buf, size_t cap, Nmea0183 *m)
+static proto_bool build_parse_gga(const char *body, char *buf, size_t cap, Nmea0183 *m)
 {
     size_t n = pc_nmea0183_build(buf, cap, body);
     if (n == 0)
     {
-        return false;
+        return PROTO_FALSE;
     }
     return pc_nmea0183_parse(buf, n, m);
 }

@@ -67,7 +67,7 @@ void setUp(void)
     g_mt.channel.active_program = "PART_A.NC";
     g_mt.spindle.rotation_speed = 1200.0;
     g_mt.spindle.override_value = 90.0;
-    g_mt.spindle.is_rotating = true;
+    g_mt.spindle.is_rotating = PROTO_TRUE;
     g_mt.axis_x.actual_position = 10.5;
     g_mt.axis_y.actual_position = -3.25;
     g_mt.axis_z.actual_position = 42.0;

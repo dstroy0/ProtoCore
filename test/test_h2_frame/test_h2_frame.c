@@ -111,27 +111,27 @@ void test_headers_and_data()
     uint8_t b[32];
     // HEADERS stream 1, one HPACK byte, end_stream -> flags END_HEADERS|END_STREAM = 0x05
     const uint8_t block[1] = {0x88};
-    TEST_ASSERT_EQUAL_INT(10, (int)pc_h2_build_headers(b, sizeof b, 1, block, 1, true));
+    TEST_ASSERT_EQUAL_INT(10, (int)pc_h2_build_headers(b, sizeof b, 1, block, 1, PROTO_TRUE));
     const uint8_t hh[10] = {0, 0, 1, 0x01, 0x05, 0, 0, 0, 1, 0x88};
     TEST_ASSERT_EQUAL_UINT8_ARRAY(hh, b, 10);
 
     // DATA stream 1, "hi", end_stream -> flags END_STREAM = 0x01
-    TEST_ASSERT_EQUAL_INT(11, (int)pc_h2_build_data(b, sizeof b, 1, (const uint8_t *)"hi", 2, true));
+    TEST_ASSERT_EQUAL_INT(11, (int)pc_h2_build_data(b, sizeof b, 1, (const uint8_t *)"hi", 2, PROTO_TRUE));
     const uint8_t dd[11] = {0, 0, 2, 0x00, 0x01, 0, 0, 0, 1, 'h', 'i'};
     TEST_ASSERT_EQUAL_UINT8_ARRAY(dd, b, 11);
 
     // HEADERS without end_stream -> flags END_HEADERS only = 0x04 (no END_STREAM).
-    TEST_ASSERT_EQUAL_INT(10, (int)pc_h2_build_headers(b, sizeof b, 1, block, 1, false));
+    TEST_ASSERT_EQUAL_INT(10, (int)pc_h2_build_headers(b, sizeof b, 1, block, 1, PROTO_FALSE));
     const uint8_t hh2[10] = {0, 0, 1, 0x01, 0x04, 0, 0, 0, 1, 0x88};
     TEST_ASSERT_EQUAL_UINT8_ARRAY(hh2, b, 10);
 
     // DATA without end_stream -> flags 0x00 (no END_STREAM).
-    TEST_ASSERT_EQUAL_INT(11, (int)pc_h2_build_data(b, sizeof b, 1, (const uint8_t *)"hi", 2, false));
+    TEST_ASSERT_EQUAL_INT(11, (int)pc_h2_build_data(b, sizeof b, 1, (const uint8_t *)"hi", 2, PROTO_FALSE));
     const uint8_t dd2[11] = {0, 0, 2, 0x00, 0x00, 0, 0, 0, 1, 'h', 'i'};
     TEST_ASSERT_EQUAL_UINT8_ARRAY(dd2, b, 11);
 
     // DATA with data_len 0 -> header only, memcpy skipped (data pointer not dereferenced).
-    TEST_ASSERT_EQUAL_INT(9, (int)pc_h2_build_data(b, sizeof b, 1, NULL, 0, true));
+    TEST_ASSERT_EQUAL_INT(9, (int)pc_h2_build_data(b, sizeof b, 1, NULL, 0, PROTO_TRUE));
     const uint8_t dd0[9] = {0, 0, 0, 0x00, 0x01, 0, 0, 0, 1};
     TEST_ASSERT_EQUAL_UINT8_ARRAY(dd0, b, 9);
 }
@@ -180,8 +180,8 @@ void test_settings_all_ids_and_build_guards()
     TEST_ASSERT_EQUAL_size_t(0, pc_h2_build_rst_stream(small, sizeof(small), 1, 0));
     TEST_ASSERT_EQUAL_size_t(0, pc_h2_build_goaway(small, sizeof(small), 1, 0));
     TEST_ASSERT_EQUAL_size_t(0, pc_h2_build_ping_ack(small, sizeof(small), op));
-    TEST_ASSERT_EQUAL_size_t(0, pc_h2_build_headers(small, sizeof(small), 1, blk, sizeof(blk), false));
-    TEST_ASSERT_EQUAL_size_t(0, pc_h2_build_data(small, sizeof(small), 1, blk, sizeof(blk), false));
+    TEST_ASSERT_EQUAL_size_t(0, pc_h2_build_headers(small, sizeof(small), 1, blk, sizeof(blk), PROTO_FALSE));
+    TEST_ASSERT_EQUAL_size_t(0, pc_h2_build_data(small, sizeof(small), 1, blk, sizeof(blk), PROTO_FALSE));
 }
 
 int main()

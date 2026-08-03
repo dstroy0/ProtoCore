@@ -41,21 +41,21 @@ void test_spi_backoff(void)
     HwSpiBackoff s;
     pc_hwhealth_spi_init(&s, 8000000, 1000000, 8000000, 3, 4); // 8MHz, floor 1MHz, ceil 8MHz
     // Two failures: not yet tripped.
-    TEST_ASSERT_EQUAL_UINT32(8000000, pc_hwhealth_spi_result(&s, false));
-    TEST_ASSERT_EQUAL_UINT32(8000000, pc_hwhealth_spi_result(&s, false));
+    TEST_ASSERT_EQUAL_UINT32(8000000, pc_hwhealth_spi_result(&s, PROTO_FALSE));
+    TEST_ASSERT_EQUAL_UINT32(8000000, pc_hwhealth_spi_result(&s, PROTO_FALSE));
     // Third consecutive failure halves the clock.
-    TEST_ASSERT_EQUAL_UINT32(4000000, pc_hwhealth_spi_result(&s, false));
+    TEST_ASSERT_EQUAL_UINT32(4000000, pc_hwhealth_spi_result(&s, PROTO_FALSE));
     // A success resets the fail streak (no change yet).
-    TEST_ASSERT_EQUAL_UINT32(4000000, pc_hwhealth_spi_result(&s, true));
+    TEST_ASSERT_EQUAL_UINT32(4000000, pc_hwhealth_spi_result(&s, PROTO_TRUE));
     // Three more failures halve again.
-    pc_hwhealth_spi_result(&s, false);
-    pc_hwhealth_spi_result(&s, false);
-    TEST_ASSERT_EQUAL_UINT32(2000000, pc_hwhealth_spi_result(&s, false));
+    pc_hwhealth_spi_result(&s, PROTO_FALSE);
+    pc_hwhealth_spi_result(&s, PROTO_FALSE);
+    TEST_ASSERT_EQUAL_UINT32(2000000, pc_hwhealth_spi_result(&s, PROTO_FALSE));
     // Four consecutive successes step back up.
-    pc_hwhealth_spi_result(&s, true);
-    pc_hwhealth_spi_result(&s, true);
-    pc_hwhealth_spi_result(&s, true);
-    TEST_ASSERT_EQUAL_UINT32(4000000, pc_hwhealth_spi_result(&s, true));
+    pc_hwhealth_spi_result(&s, PROTO_TRUE);
+    pc_hwhealth_spi_result(&s, PROTO_TRUE);
+    pc_hwhealth_spi_result(&s, PROTO_TRUE);
+    TEST_ASSERT_EQUAL_UINT32(4000000, pc_hwhealth_spi_result(&s, PROTO_TRUE));
 }
 
 void test_spi_backoff_clamps(void)
@@ -63,21 +63,21 @@ void test_spi_backoff_clamps(void)
     HwSpiBackoff s;
     pc_hwhealth_spi_init(&s, 2000000, 1000000, 8000000, 1, 1);
     // Fail once (trip=1): halve to 1MHz floor. Fail again: stays at floor.
-    TEST_ASSERT_EQUAL_UINT32(1000000, pc_hwhealth_spi_result(&s, false));
-    TEST_ASSERT_EQUAL_UINT32(1000000, pc_hwhealth_spi_result(&s, false));
+    TEST_ASSERT_EQUAL_UINT32(1000000, pc_hwhealth_spi_result(&s, PROTO_FALSE));
+    TEST_ASSERT_EQUAL_UINT32(1000000, pc_hwhealth_spi_result(&s, PROTO_FALSE));
     // Succeed to climb: 2M, 4M, 8M, then clamp at ceil.
-    TEST_ASSERT_EQUAL_UINT32(2000000, pc_hwhealth_spi_result(&s, true));
-    TEST_ASSERT_EQUAL_UINT32(4000000, pc_hwhealth_spi_result(&s, true));
-    TEST_ASSERT_EQUAL_UINT32(8000000, pc_hwhealth_spi_result(&s, true));
-    TEST_ASSERT_EQUAL_UINT32(8000000, pc_hwhealth_spi_result(&s, true));
+    TEST_ASSERT_EQUAL_UINT32(2000000, pc_hwhealth_spi_result(&s, PROTO_TRUE));
+    TEST_ASSERT_EQUAL_UINT32(4000000, pc_hwhealth_spi_result(&s, PROTO_TRUE));
+    TEST_ASSERT_EQUAL_UINT32(8000000, pc_hwhealth_spi_result(&s, PROTO_TRUE));
+    TEST_ASSERT_EQUAL_UINT32(8000000, pc_hwhealth_spi_result(&s, PROTO_TRUE));
 }
 
 void test_gpio_short(void)
 {
-    TEST_ASSERT_EQUAL_INT(HW_GPIO_OK, pc_hwhealth_gpio_short(true, true));
-    TEST_ASSERT_EQUAL_INT(HW_GPIO_OK, pc_hwhealth_gpio_short(false, false));
-    TEST_ASSERT_EQUAL_INT(HW_GPIO_SHORT_GND, pc_hwhealth_gpio_short(true, false));
-    TEST_ASSERT_EQUAL_INT(HW_GPIO_SHORT_VCC, pc_hwhealth_gpio_short(false, true));
+    TEST_ASSERT_EQUAL_INT(HW_GPIO_OK, pc_hwhealth_gpio_short(PROTO_TRUE, PROTO_TRUE));
+    TEST_ASSERT_EQUAL_INT(HW_GPIO_OK, pc_hwhealth_gpio_short(PROTO_FALSE, PROTO_FALSE));
+    TEST_ASSERT_EQUAL_INT(HW_GPIO_SHORT_GND, pc_hwhealth_gpio_short(PROTO_TRUE, PROTO_FALSE));
+    TEST_ASSERT_EQUAL_INT(HW_GPIO_SHORT_VCC, pc_hwhealth_gpio_short(PROTO_FALSE, PROTO_TRUE));
 }
 
 void test_cap_leak(void)
@@ -101,13 +101,13 @@ void test_rail_ok_spi_clamps_probes()
     pc_hwhealth_spi_init(&s, 1000000, 100000, 8000000, 2, 2);
     for (int i = 0; i < 80; i++)
     {
-        pc_hwhealth_spi_result(&s, false); // repeated CRC fails drive toward min_hz
+        pc_hwhealth_spi_result(&s, PROTO_FALSE); // repeated CRC fails drive toward min_hz
     }
     for (int i = 0; i < 80; i++)
     {
-        pc_hwhealth_spi_result(&s, true); // repeated successes ramp toward max_hz
+        pc_hwhealth_spi_result(&s, PROTO_TRUE); // repeated successes ramp toward max_hz
     }
-    pc_hwhealth_gpio_short(true, false);
+    pc_hwhealth_gpio_short(PROTO_TRUE, PROTO_FALSE);
     pc_hwhealth_cap_leak(90, 100, 5);
     TEST_PASS();
 }
@@ -124,19 +124,19 @@ void test_hwhealth_null_guards_and_init_clamps(void)
     HwRailMonitor m;
     pc_hwhealth_rail_init(&m, 3300, 3100, 2900);
     TEST_ASSERT_EQUAL_size_t(0, pc_hwhealth_rail_json(&m, NULL, sizeof(buf))); // null out
-    TEST_ASSERT_EQUAL_size_t(0, pc_hwhealth_rail_json(&m, buf, 0));               // zero cap
+    TEST_ASSERT_EQUAL_size_t(0, pc_hwhealth_rail_json(&m, buf, 0));            // zero cap
 
     pc_hwhealth_spi_init(NULL, 1, 1, 1, 1, 1); // no-op, no crash
-    TEST_ASSERT_EQUAL_UINT32(0, pc_hwhealth_spi_result(NULL, true));
+    TEST_ASSERT_EQUAL_UINT32(0, pc_hwhealth_spi_result(NULL, PROTO_TRUE));
 
     // init clamps the start clock into [min_hz, max_hz]; read it back via a non-tripping
     // result (fail_trip=2, so one failure leaves hz unchanged).
     HwSpiBackoff below;
     pc_hwhealth_spi_init(&below, 500000, 1000000, 8000000, 2, 2); // start < min_hz
-    TEST_ASSERT_EQUAL_UINT32(1000000, pc_hwhealth_spi_result(&below, false));
+    TEST_ASSERT_EQUAL_UINT32(1000000, pc_hwhealth_spi_result(&below, PROTO_FALSE));
     HwSpiBackoff above;
     pc_hwhealth_spi_init(&above, 20000000, 1000000, 8000000, 2, 2); // start > max_hz
-    TEST_ASSERT_EQUAL_UINT32(8000000, pc_hwhealth_spi_result(&above, false));
+    TEST_ASSERT_EQUAL_UINT32(8000000, pc_hwhealth_spi_result(&above, PROTO_FALSE));
 }
 
 // Remaining branch gaps: trip=0 defaulting to 1, the hz<<1 overflow clamp in the SPI
@@ -147,14 +147,14 @@ void test_hwhealth_trip_defaults_overflow_and_band_clamp(void)
     // first sample instead of requiring a streak.
     HwSpiBackoff s;
     pc_hwhealth_spi_init(&s, 4000000, 1000000, 8000000, 0, 0);
-    TEST_ASSERT_EQUAL_UINT32(2000000, pc_hwhealth_spi_result(&s, false)); // fail_trip defaulted to 1
-    TEST_ASSERT_EQUAL_UINT32(4000000, pc_hwhealth_spi_result(&s, true));  // ok_trip defaulted to 1
+    TEST_ASSERT_EQUAL_UINT32(2000000, pc_hwhealth_spi_result(&s, PROTO_FALSE)); // fail_trip defaulted to 1
+    TEST_ASSERT_EQUAL_UINT32(4000000, pc_hwhealth_spi_result(&s, PROTO_TRUE));  // ok_trip defaulted to 1
 
     // hz<<1 overflow: start near the top of the 32-bit range so doubling wraps below hz;
     // the wrap must be detected and clamped to max_hz rather than left wrapped.
     HwSpiBackoff ov;
     pc_hwhealth_spi_init(&ov, 4026531840UL, 4026531840UL, 4294967295UL, 1, 1);
-    TEST_ASSERT_EQUAL_UINT32(4294967295UL, pc_hwhealth_spi_result(&ov, true));
+    TEST_ASSERT_EQUAL_UINT32(4294967295UL, pc_hwhealth_spi_result(&ov, PROTO_TRUE));
 
     // Tolerance band >= expected: lo clamps to 0 instead of underflowing.
     TEST_ASSERT_EQUAL_INT(HW_CAP_OK, pc_hwhealth_cap_leak(0, 50, 100)); // band(50) >= expected(50)

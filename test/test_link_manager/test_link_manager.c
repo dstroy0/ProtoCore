@@ -12,9 +12,9 @@ static LinkManager g_m;
 
 void setUp(void)
 {
-    g_ifaces[0] = {LINK_KIND_ETH, 20, false};
-    g_ifaces[1] = {LINK_KIND_WIFI_STA, 10, false};
-    g_ifaces[2] = {LINK_KIND_WIFI_AP, 5, false};
+    g_ifaces[0] = {LINK_KIND_ETH, 20, PROTO_FALSE};
+    g_ifaces[1] = {LINK_KIND_WIFI_STA, 10, PROTO_FALSE};
+    g_ifaces[2] = {LINK_KIND_WIFI_AP, 5, PROTO_FALSE};
     pc_link_init(&g_m, g_ifaces, 3);
 }
 void tearDown(void)
@@ -30,32 +30,32 @@ void test_escalation_and_failover(void)
 {
     int from = 0, to = 0;
     // WiFi STA comes up first -> it becomes active.
-    TEST_ASSERT_TRUE(pc_link_set(&g_m, 1, true, &from, &to));
+    TEST_ASSERT_TRUE(pc_link_set(&g_m, 1, PROTO_TRUE, &from, &to));
     TEST_ASSERT_EQUAL_INT(-1, from);
     TEST_ASSERT_EQUAL_INT(1, to);
     // Ethernet comes up (higher priority) -> escalate to it.
-    TEST_ASSERT_TRUE(pc_link_set(&g_m, 0, true, &from, &to));
+    TEST_ASSERT_TRUE(pc_link_set(&g_m, 0, PROTO_TRUE, &from, &to));
     TEST_ASSERT_EQUAL_INT(1, from);
     TEST_ASSERT_EQUAL_INT(0, to);
     // softAP comes up (lower priority) -> no change.
-    TEST_ASSERT_FALSE(pc_link_set(&g_m, 2, true, &from, &to));
+    TEST_ASSERT_FALSE(pc_link_set(&g_m, 2, PROTO_TRUE, &from, &to));
     TEST_ASSERT_EQUAL_INT(0, pc_link_active(&g_m));
     // Ethernet drops -> fail over to the next best up (WiFi STA).
-    TEST_ASSERT_TRUE(pc_link_set(&g_m, 0, false, &from, &to));
+    TEST_ASSERT_TRUE(pc_link_set(&g_m, 0, PROTO_FALSE, &from, &to));
     TEST_ASSERT_EQUAL_INT(0, from);
     TEST_ASSERT_EQUAL_INT(1, to);
     // WiFi STA drops too -> fail over to softAP.
-    TEST_ASSERT_TRUE(pc_link_set(&g_m, 1, false, &from, &to));
+    TEST_ASSERT_TRUE(pc_link_set(&g_m, 1, PROTO_FALSE, &from, &to));
     TEST_ASSERT_EQUAL_INT(2, to);
     // softAP drops -> nothing up.
-    TEST_ASSERT_TRUE(pc_link_set(&g_m, 2, false, &from, &to));
+    TEST_ASSERT_TRUE(pc_link_set(&g_m, 2, PROTO_FALSE, &from, &to));
     TEST_ASSERT_EQUAL_INT(-1, pc_link_active(&g_m));
 }
 
 void test_tie_break_lower_index(void)
 {
     // Two interfaces at equal priority: the lower index wins.
-    LinkIface pair[2] = {{LINK_KIND_ETH, 10, true}, {LINK_KIND_WIFI_STA, 10, true}};
+    LinkIface pair[2] = {{LINK_KIND_ETH, 10, PROTO_TRUE}, {LINK_KIND_WIFI_STA, 10, PROTO_TRUE}};
     LinkManager m;
     pc_link_init(&m, pair, 2);
     TEST_ASSERT_EQUAL_INT(0, pc_link_active(&m));
@@ -65,7 +65,7 @@ void test_select_escalates_to_later_higher_priority(void)
 {
     // Both up, but the higher priority sits at the *later* index: the scan must still pick it,
     // exercising the right-hand side of `best < 0 || priority[i] > priority[best]` evaluating true.
-    LinkIface ifaces[2] = {{LINK_KIND_WIFI_AP, 5, true}, {LINK_KIND_ETH, 20, true}};
+    LinkIface ifaces[2] = {{LINK_KIND_WIFI_AP, 5, PROTO_TRUE}, {LINK_KIND_ETH, 20, PROTO_TRUE}};
     LinkManager m;
     pc_link_init(&m, ifaces, 2);
     TEST_ASSERT_EQUAL_INT(1, pc_link_active(&m));
@@ -73,9 +73,9 @@ void test_select_escalates_to_later_higher_priority(void)
 
 void test_out_of_range_no_change(void)
 {
-    pc_link_set(&g_m, 1, true, NULL, NULL);
+    pc_link_set(&g_m, 1, PROTO_TRUE, NULL, NULL);
     int from = 5, to = 5;
-    TEST_ASSERT_FALSE(pc_link_set(&g_m, 9, true, &from, &to));
+    TEST_ASSERT_FALSE(pc_link_set(&g_m, 9, PROTO_TRUE, &from, &to));
     TEST_ASSERT_EQUAL_INT(1, from);
     TEST_ASSERT_EQUAL_INT(1, to);
 }
@@ -103,7 +103,7 @@ void test_set_guard_paths(void)
 {
     int from = 7, to = 7;
     // Null manager: reports -1 for both previous and new active, returns false.
-    TEST_ASSERT_FALSE(pc_link_set(NULL, 0, true, &from, &to));
+    TEST_ASSERT_FALSE(pc_link_set(NULL, 0, PROTO_TRUE, &from, &to));
     TEST_ASSERT_EQUAL_INT(-1, from);
     TEST_ASSERT_EQUAL_INT(-1, to);
 
@@ -112,12 +112,12 @@ void test_set_guard_paths(void)
     pc_link_init(&m, NULL, 3);
     from = 7;
     to = 7;
-    TEST_ASSERT_FALSE(pc_link_set(&m, 0, true, &from, &to));
+    TEST_ASSERT_FALSE(pc_link_set(&m, 0, PROTO_TRUE, &from, &to));
     TEST_ASSERT_EQUAL_INT(-1, from);
     TEST_ASSERT_EQUAL_INT(-1, to);
 
     // Out-of-range index with null out-pointers: guard path must not dereference them.
-    TEST_ASSERT_FALSE(pc_link_set(&g_m, 9, true, NULL, NULL));
+    TEST_ASSERT_FALSE(pc_link_set(&g_m, 9, PROTO_TRUE, NULL, NULL));
 }
 
 int main(void)

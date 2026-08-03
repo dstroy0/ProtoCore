@@ -18,14 +18,14 @@
 // enough - rebuilt per call, and released first so a backend that attaches vendor resources to a
 // context (ESP's mbedtls does) does not leak one per vector.
 static uint8_t g_gcm_ws[PC_WORK_AESGCM] __attribute__((aligned(8)));
-static bool g_gcm_live = false;
+static proto_bool g_gcm_live = PROTO_FALSE;
 static pc_aesgcm_key *gcm_key(const uint8_t *key)
 {
     if (g_gcm_live)
     {
         pc_aesgcm_key_wipe(reinterpret_cast<pc_aesgcm_key *>(g_gcm_ws));
     }
-    g_gcm_live = true;
+    g_gcm_live = PROTO_TRUE;
     return pc_aesgcm_key_init(g_gcm_ws, key);
 }
 
@@ -88,8 +88,8 @@ void test_transport_frame()
 void test_build_and_parse_header()
 {
     uint8_t buf[64];
-    TEST_ASSERT_EQUAL_size_t(64, pc_smb2_build_header(buf, sizeof(buf), SMB2_TREE_CONNECT, 8,
-                                                      0x1122334455667788ULL, 0xABCD, 0x99AABBCCDDEEFF00ULL));
+    TEST_ASSERT_EQUAL_size_t(64, pc_smb2_build_header(buf, sizeof(buf), SMB2_TREE_CONNECT, 8, 0x1122334455667788ULL,
+                                                      0xABCD, 0x99AABBCCDDEEFF00ULL));
     // ProtocolId + StructureSize + Command at their offsets
     const uint8_t pid[4] = {0xFE, 'S', 'M', 'B'};
     TEST_ASSERT_EQUAL_MEMORY(pid, buf, 4);
@@ -154,9 +154,9 @@ static size_t build_neg_resp(uint8_t *m, Smb2Dialect dialect, const uint8_t *sec
     m[16] |= 0x01; // SMB2_FLAGS_SERVER_TO_REDIR
     uint8_t *b = m + 64;
     memset(b, 0, 64);
-    w16(b + 0, 65);                                                // StructureSize
+    w16(b + 0, 65);                              // StructureSize
     w16(b + 2, SMB2_NEGOTIATE_SIGNING_REQUIRED); // SecurityMode
-    w16(b + 4, (uint16_t)dialect);                                 // DialectRevision
+    w16(b + 4, (uint16_t)dialect);               // DialectRevision
     for (int i = 0; i < 16; i++)
     {
         b[8 + i] = (uint8_t)(0xA0 + i); // ServerGuid
@@ -239,11 +239,11 @@ void test_build_negotiate_311()
         salt[i] = (uint8_t)(0xA0 + i);
     }
     // The four SMB 3.1.1 ciphers, in the client's default preference order.
-    const uint16_t offer[4] = {SMB2_ENCRYPTION_AES128_GCM, SMB2_ENCRYPTION_AES256_GCM,
-                               SMB2_ENCRYPTION_AES128_CCM, SMB2_ENCRYPTION_AES256_CCM};
+    const uint16_t offer[4] = {SMB2_ENCRYPTION_AES128_GCM, SMB2_ENCRYPTION_AES256_GCM, SMB2_ENCRYPTION_AES128_CCM,
+                               SMB2_ENCRYPTION_AES256_CCM};
     uint8_t buf[256];
-    size_t n = pc_smb2_build_negotiate_311(buf, sizeof(buf), gid, SMB2_NEGOTIATE_SIGNING_ENABLED,
-                                           salt, sizeof(salt), offer, 4);
+    size_t n = pc_smb2_build_negotiate_311(buf, sizeof(buf), gid, SMB2_NEGOTIATE_SIGNING_ENABLED, salt, sizeof(salt),
+                                           offer, 4);
     // header(64)+body(36)+5 dialects(10) -> pad to 112; preauth ctx(46) -> pad to 160; signing ctx(12) -> pad
     // to 176; encryption ctx(8 + 2 + 4*2 = 18) = 194
     TEST_ASSERT_EQUAL_size_t(194, n);
@@ -257,8 +257,8 @@ void test_build_negotiate_311()
     TEST_ASSERT_EQUAL_UINT16(5, r16(b + 2));  // DialectCount now includes 3.1.1
     TEST_ASSERT_EQUAL_MEMORY(gid, b + 12, 16);
     TEST_ASSERT_EQUAL_UINT16(SMB2_DIALECT_0311, r16(b + 44)); // 5th dialect
-    TEST_ASSERT_EQUAL_UINT16(3, r16(b + 32));                              // NegotiateContextCount
-    uint32_t ctx_off = r32(b + 28);                                        // NegotiateContextOffset
+    TEST_ASSERT_EQUAL_UINT16(3, r16(b + 32));                 // NegotiateContextCount
+    uint32_t ctx_off = r32(b + 28);                           // NegotiateContextOffset
     TEST_ASSERT_EQUAL_UINT32(112, ctx_off);
     TEST_ASSERT_EQUAL_UINT32(0, ctx_off % 8); // 8-byte aligned
 
@@ -278,16 +278,16 @@ void test_build_negotiate_311()
 
     const uint8_t *c3 = buf + 176; // ENCRYPTION_CAPABILITIES, aligned after the signing context
     TEST_ASSERT_EQUAL_UINT16(SMB2_ENCRYPTION_CAPABILITIES, r16(c3 + 0));
-    TEST_ASSERT_EQUAL_UINT16(10, r16(c3 + 2)); // DataLength = CipherCount(2) + 4 ciphers(8)
-    TEST_ASSERT_EQUAL_UINT16(4, r16(c3 + 8));  // CipherCount = all four ciphers
+    TEST_ASSERT_EQUAL_UINT16(10, r16(c3 + 2));                          // DataLength = CipherCount(2) + 4 ciphers(8)
+    TEST_ASSERT_EQUAL_UINT16(4, r16(c3 + 8));                           // CipherCount = all four ciphers
     TEST_ASSERT_EQUAL_UINT16(SMB2_ENCRYPTION_AES128_GCM, r16(c3 + 10)); // Ciphers[0]
     TEST_ASSERT_EQUAL_UINT16(SMB2_ENCRYPTION_AES256_GCM, r16(c3 + 12)); // Ciphers[1]
     TEST_ASSERT_EQUAL_UINT16(SMB2_ENCRYPTION_AES128_CCM, r16(c3 + 14)); // Ciphers[2]
     TEST_ASSERT_EQUAL_UINT16(SMB2_ENCRYPTION_AES256_CCM, r16(c3 + 16)); // Ciphers[3]
 
     // With no ciphers offered the encryption context is omitted (NegotiateContextCount = 2, total 172).
-    size_t n0 = pc_smb2_build_negotiate_311(buf, sizeof(buf), gid, SMB2_NEGOTIATE_SIGNING_ENABLED,
-                                            salt, sizeof(salt), NULL, 0);
+    size_t n0 =
+        pc_smb2_build_negotiate_311(buf, sizeof(buf), gid, SMB2_NEGOTIATE_SIGNING_ENABLED, salt, sizeof(salt), NULL, 0);
     TEST_ASSERT_EQUAL_size_t(172, n0);
     TEST_ASSERT_EQUAL_UINT16(2, r16(buf + 64 + 32)); // NegotiateContextCount
 
@@ -295,8 +295,7 @@ void test_build_negotiate_311()
     TEST_ASSERT_EQUAL_size_t(0, pc_smb2_build_negotiate_311(buf, 100, gid, 0, salt, sizeof(salt), offer, 4));
     TEST_ASSERT_EQUAL_size_t(0, pc_smb2_build_negotiate_311(buf, sizeof(buf), gid, 0, NULL, 32, offer, 4));
     TEST_ASSERT_EQUAL_size_t(0, pc_smb2_build_negotiate_311(buf, sizeof(buf), gid, 0, salt, 0, offer, 4));
-    TEST_ASSERT_EQUAL_size_t(0,
-                             pc_smb2_build_negotiate_311(buf, sizeof(buf), gid, 0, salt, 32, NULL, 4));  // null list
+    TEST_ASSERT_EQUAL_size_t(0, pc_smb2_build_negotiate_311(buf, sizeof(buf), gid, 0, salt, 32, NULL, 4));  // null list
     TEST_ASSERT_EQUAL_size_t(0, pc_smb2_build_negotiate_311(buf, sizeof(buf), gid, 0, salt, 32, offer, 5)); // too many
 }
 
@@ -309,11 +308,11 @@ static size_t build_neg_resp_311(uint8_t *m)
     w16(b + 0, 65); // StructureSize
     w16(b + 2, SMB2_NEGOTIATE_SIGNING_REQUIRED);
     w16(b + 4, (uint16_t)SMB2_DIALECT_0311); // DialectRevision
-    w16(b + 56, 0);                                       // SecurityBufferOffset (none here)
-    w16(b + 58, 0);                                       // SecurityBufferLength
-    const uint32_t ctx = 128;                             // right after the 64-byte fixed body, 8-aligned
-    w16(b + 6, 3);                                        // NegotiateContextCount
-    w32(b + 60, ctx);                                     // NegotiateContextOffset
+    w16(b + 56, 0);                          // SecurityBufferOffset (none here)
+    w16(b + 58, 0);                          // SecurityBufferLength
+    const uint32_t ctx = 128;                // right after the 64-byte fixed body, 8-aligned
+    w16(b + 6, 3);                           // NegotiateContextCount
+    w32(b + 60, ctx);                        // NegotiateContextOffset
 
     uint8_t *p = m + ctx; // 1) PREAUTH_INTEGRITY: SHA-512 + a 16-byte salt
     w16(p + 0, SMB2_PREAUTH_INTEGRITY_CAPABILITIES);
@@ -422,8 +421,8 @@ void test_build_session_setup()
         tok[i] = (uint8_t)(i + 1);
     }
     uint8_t buf[256];
-    size_t n = pc_smb2_build_session_setup(buf, sizeof(buf), 7, 0xDEADBEEFULL,
-                                           SMB2_NEGOTIATE_SIGNING_ENABLED, tok, sizeof(tok));
+    size_t n = pc_smb2_build_session_setup(buf, sizeof(buf), 7, 0xDEADBEEFULL, SMB2_NEGOTIATE_SIGNING_ENABLED, tok,
+                                           sizeof(tok));
     TEST_ASSERT_EQUAL_size_t(64 + 24 + 40, n);
 
     Smb2Header h;
@@ -471,8 +470,8 @@ void test_parse_session_setup_response()
 {
     const uint8_t tok[] = {0xa1, 0x05, 'c', 'h', 'a', 'l'};
     uint8_t m[256];
-    size_t n = build_ss_resp(m, 0x1234ULL, SMB2_STATUS_MORE_PROCESSING_REQUIRED,
-                             SMB2_SESSION_FLAG_IS_GUEST, tok, sizeof(tok));
+    size_t n =
+        build_ss_resp(m, 0x1234ULL, SMB2_STATUS_MORE_PROCESSING_REQUIRED, SMB2_SESSION_FLAG_IS_GUEST, tok, sizeof(tok));
 
     Smb2Header h;
     TEST_ASSERT_TRUE(pc_smb2_parse_header(m, n, &h));
@@ -520,8 +519,7 @@ static size_t build_ntlmssp_challenge(uint8_t *m, const uint8_t sc[8])
     const uint8_t sig[8] = {'N', 'T', 'L', 'M', 'S', 'S', 'P', 0};
     memcpy(m, sig, 8);
     w32(m + 8, 2); // MessageType CHALLENGE
-    w32(m + 20, NTLMSSP_NEGOTIATE_UNICODE | NTLMSSP_NEGOTIATE_NTLM |
-                    NTLMSSP_NEGOTIATE_TARGET_INFO);
+    w32(m + 20, NTLMSSP_NEGOTIATE_UNICODE | NTLMSSP_NEGOTIATE_NTLM | NTLMSSP_NEGOTIATE_TARGET_INFO);
     memcpy(m + 24, sc, 8); // ServerChallenge
     w16(m + 40, 4);        // TargetInfoLen (a lone MsvAvEOL pair)
     w16(m + 42, 4);
@@ -540,8 +538,7 @@ void test_session_setup_spnego_flow()
     uint8_t spnego[128];
     size_t sp_n = pc_spnego_wrap_negotiate(neg, neg_n, spnego, sizeof(spnego));
     uint8_t req[256];
-    size_t req_n = pc_smb2_build_session_setup(req, sizeof(req), 1, 0, SMB2_NEGOTIATE_SIGNING_ENABLED,
-                                               spnego, sp_n);
+    size_t req_n = pc_smb2_build_session_setup(req, sizeof(req), 1, 0, SMB2_NEGOTIATE_SIGNING_ENABLED, spnego, sp_n);
     TEST_ASSERT_GREATER_THAN_size_t(0, req_n);
     TEST_ASSERT_EQUAL_MEMORY(spnego, req + 88, sp_n); // the token is framed at offset 88
 
@@ -621,9 +618,8 @@ void test_build_create()
 {
     const uint8_t name[] = {'a', 0, '.', 0, 'n', 0, 'c', 0}; // "a.nc" UTF-16LE
     uint8_t buf[256];
-    size_t n = pc_smb2_build_create(buf, sizeof(buf), 3, 0xAAAA, 0x777, SMB2_FILE_GENERIC_READ,
-                                    SMB2_FILE_SHARE_READ, SMB2_FILE_OPEN,
-                                    SMB2_FILE_NON_DIRECTORY_FILE, name, sizeof(name));
+    size_t n = pc_smb2_build_create(buf, sizeof(buf), 3, 0xAAAA, 0x777, SMB2_FILE_GENERIC_READ, SMB2_FILE_SHARE_READ,
+                                    SMB2_FILE_OPEN, SMB2_FILE_NON_DIRECTORY_FILE, name, sizeof(name));
     TEST_ASSERT_EQUAL_size_t(64 + 56 + sizeof(name), n);
 
     Smb2Header h;
@@ -1342,8 +1338,8 @@ void test_smb3_encrypt_decrypt_roundtrip()
     uint8_t preauth[64] = {0};
 
     // Every SMB 3.1.1 cipher must round-trip through the TRANSFORM_HEADER codec.
-    const uint16_t ciphers[4] = {SMB2_ENCRYPTION_AES128_GCM, SMB2_ENCRYPTION_AES256_GCM,
-                                 SMB2_ENCRYPTION_AES128_CCM, SMB2_ENCRYPTION_AES256_CCM};
+    const uint16_t ciphers[4] = {SMB2_ENCRYPTION_AES128_GCM, SMB2_ENCRYPTION_AES256_GCM, SMB2_ENCRYPTION_AES128_CCM,
+                                 SMB2_ENCRYPTION_AES256_CCM};
     for (int ci = 0; ci < 4; ci++)
     {
         const uint16_t cipher = ciphers[ci];
@@ -1376,9 +1372,8 @@ void test_smb3_encrypt_decrypt_roundtrip()
         TEST_ASSERT_EQUAL_MEMORY(msg, dec, sizeof(msg));
 
         // Decrypting with a different cipher id must fail (different key length / nonce length / construction).
-        const uint16_t other = (cipher == SMB2_ENCRYPTION_AES128_GCM)
-                                   ? SMB2_ENCRYPTION_AES128_CCM
-                                   : SMB2_ENCRYPTION_AES128_GCM;
+        const uint16_t other =
+            (cipher == SMB2_ENCRYPTION_AES128_GCM) ? SMB2_ENCRYPTION_AES128_CCM : SMB2_ENCRYPTION_AES128_GCM;
         TEST_ASSERT_EQUAL_UINT32(0, pc_smb2_decrypt(other, c2s, enc, elen, dec, sizeof(dec)));
     }
 }

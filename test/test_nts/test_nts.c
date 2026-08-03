@@ -18,7 +18,7 @@ void test_ke_record(void)
 {
     uint8_t body[2] = {0x00, 0x00};
     uint8_t out[8];
-    size_t n = pc_nts_ke_record(true, NTS_KE_NEXT_PROTOCOL, body, 2, out, sizeof(out));
+    size_t n = pc_nts_ke_record(PROTO_TRUE, NTS_KE_NEXT_PROTOCOL, body, 2, out, sizeof(out));
     const uint8_t expect[] = {0x80, 0x01, 0x00, 0x02, 0x00, 0x00}; // critical|type1, len2, NTPv4
     TEST_ASSERT_EQUAL_size_t(sizeof(expect), n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(expect, out, n);
@@ -40,9 +40,9 @@ struct Collected
 {
     int count;
     uint16_t types[8];
-    bool crit[8];
+    proto_bool crit[8];
 };
-static void collect(bool critical, uint16_t type, const uint8_t *body, size_t body_len, void *arg)
+static void collect(proto_bool critical, uint16_t type, const uint8_t *body, size_t body_len, void *arg)
 {
     (void)body;
     (void)body_len;
@@ -59,7 +59,7 @@ void test_ke_parse(void)
 {
     uint8_t req[32];
     size_t n = pc_nts_ke_request(req, sizeof(req));
-    Collected c = {0, {0}, {false}};
+    Collected c = {0, {0}, {PROTO_FALSE}};
     TEST_ASSERT_TRUE(pc_nts_ke_parse(req, n, collect, &c));
     TEST_ASSERT_EQUAL_INT(3, c.count);
     TEST_ASSERT_EQUAL_UINT16(NTS_KE_NEXT_PROTOCOL, c.types[0]);
@@ -111,21 +111,21 @@ void test_ke_record_guards(void)
 {
     uint8_t body[2] = {0x00, 0x00};
     uint8_t out[8];
-    TEST_ASSERT_EQUAL_size_t(0, pc_nts_ke_record(true, NTS_KE_NEXT_PROTOCOL, body, 2, NULL, sizeof(out)));
-    TEST_ASSERT_EQUAL_size_t(0, pc_nts_ke_record(true, NTS_KE_NEXT_PROTOCOL, NULL, 2, out, sizeof(out)));
+    TEST_ASSERT_EQUAL_size_t(0, pc_nts_ke_record(PROTO_TRUE, NTS_KE_NEXT_PROTOCOL, body, 2, NULL, sizeof(out)));
+    TEST_ASSERT_EQUAL_size_t(0, pc_nts_ke_record(PROTO_TRUE, NTS_KE_NEXT_PROTOCOL, NULL, 2, out, sizeof(out)));
     // A body longer than the 16-bit length field can express is refused (the pointer
     // is never read: the guard returns first).
-    TEST_ASSERT_EQUAL_size_t(0, pc_nts_ke_record(true, NTS_KE_NEXT_PROTOCOL, body, 0x10000, out, sizeof(out)));
+    TEST_ASSERT_EQUAL_size_t(0, pc_nts_ke_record(PROTO_TRUE, NTS_KE_NEXT_PROTOCOL, body, 0x10000, out, sizeof(out)));
     // Header + body must fit the destination.
-    TEST_ASSERT_EQUAL_size_t(0, pc_nts_ke_record(true, NTS_KE_NEXT_PROTOCOL, body, 2, out, 4));
-    TEST_ASSERT_EQUAL_size_t(6, pc_nts_ke_record(true, NTS_KE_NEXT_PROTOCOL, body, 2, out, 6)); // exact fit
+    TEST_ASSERT_EQUAL_size_t(0, pc_nts_ke_record(PROTO_TRUE, NTS_KE_NEXT_PROTOCOL, body, 2, out, 4));
+    TEST_ASSERT_EQUAL_size_t(6, pc_nts_ke_record(PROTO_TRUE, NTS_KE_NEXT_PROTOCOL, body, 2, out, 6)); // exact fit
 }
 
 // A non-critical record leaves the critical bit clear in the type field.
 void test_ke_record_non_critical(void)
 {
     uint8_t out[8];
-    size_t n = pc_nts_ke_record(false, NTS_KE_AEAD_ALGORITHM, NULL, 0, out, sizeof(out));
+    size_t n = pc_nts_ke_record(PROTO_FALSE, NTS_KE_AEAD_ALGORITHM, NULL, 0, out, sizeof(out));
     TEST_ASSERT_EQUAL_size_t(4, n);
     TEST_ASSERT_EQUAL_HEX8(0x00, out[0] & 0x80); // critical bit clear
     TEST_ASSERT_EQUAL_HEX8(NTS_KE_AEAD_ALGORITHM, out[1]);

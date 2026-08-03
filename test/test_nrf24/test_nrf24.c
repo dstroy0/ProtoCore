@@ -20,8 +20,8 @@ struct MockNrf
     uint8_t rx_payload[32];
     uint8_t tx_payload[32];
     uint8_t tx_len;
-    bool ce;
-    bool present;
+    proto_bool ce;
+    proto_bool present;
 };
 static MockNrf g;
 
@@ -78,7 +78,7 @@ static void mock_spi(const uint8_t *tx, uint8_t *rx, uint8_t len, void *)
     }
     // 0xE1 FLUSH_TX / 0xE2 FLUSH_RX / 0xFF NOP: STATUS only, already in rx[0]
 }
-static void mock_ce(bool level, void *)
+static void mock_ce(proto_bool level, void *)
 {
     g.ce = level;
 }
@@ -99,7 +99,7 @@ static nrf_config default_cfg()
 void setUp()
 {
     memset(&g, 0, sizeof(g));
-    g.present = true;
+    g.present = PROTO_TRUE;
 }
 void tearDown()
 {
@@ -120,7 +120,7 @@ void test_init_configures_and_powers_up()
 
 void test_init_fails_when_absent()
 {
-    g.present = false; // reads float -> the RF_CH read-back will not match
+    g.present = PROTO_FALSE; // reads float -> the RF_CH read-back will not match
     nrf_config c = default_cfg();
     TEST_ASSERT_FALSE(pc_nrf24_init(&g_bus, &c));
 }
@@ -235,7 +235,7 @@ void test_send_rejects_null_args_and_zero_len()
     const uint8_t data[3] = {0x01, 0x02, 0x03};
     TEST_ASSERT_FALSE(pc_nrf24_send(NULL, data, 3));   // null bus
     TEST_ASSERT_FALSE(pc_nrf24_send(&g_bus, NULL, 3)); // null data
-    TEST_ASSERT_FALSE(pc_nrf24_send(&g_bus, data, 0));    // zero length
+    TEST_ASSERT_FALSE(pc_nrf24_send(&g_bus, data, 0)); // zero length
 }
 
 void test_tx_done_null_bus()

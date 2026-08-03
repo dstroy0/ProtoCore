@@ -139,9 +139,9 @@ void test_map_roundtrip(void)
 {
     J2735MapIntersection isect = {12345, 40000, 55000};
     J2735Lane lanes[3];
-    lanes[0] = {1, true, -100, 200};
-    lanes[1] = {2, false, 2047, -2048};
-    lanes[2] = {9, true, 0, 0};
+    lanes[0] = {1, PROTO_TRUE, -100, 200};
+    lanes[1] = {2, PROTO_FALSE, 2047, -2048};
+    lanes[2] = {9, PROTO_TRUE, 0, 0};
     uint8_t buf[64];
     size_t n = pc_j2735_map_encode(&isect, lanes, 3, buf, sizeof(buf));
     TEST_ASSERT_TRUE(n > 0);
@@ -202,16 +202,16 @@ void test_j2735_guards_and_truncation()
     J2735MovementState st[2] = {{1, 6, 0, 0}, {2, 3, 0, 0}};
     J2735MovementState sout[4];
     size_t count = 0;
-    TEST_ASSERT_EQUAL_size_t(0, pc_j2735_spat_encode(st, 2, NULL, 16));       // null out
+    TEST_ASSERT_EQUAL_size_t(0, pc_j2735_spat_encode(st, 2, NULL, 16));          // null out
     TEST_ASSERT_EQUAL_size_t(0, pc_j2735_spat_encode(st, 32, buf, sizeof(buf))); // count > 31
-    TEST_ASSERT_FALSE(pc_j2735_spat_decode(NULL, 16, sout, 4, &count));       // null in
+    TEST_ASSERT_FALSE(pc_j2735_spat_decode(NULL, 16, sout, 4, &count));          // null in
 
     J2735MapIntersection isect = {1, 2, 3};
-    J2735Lane lanes[2] = {{1, true, 0, 0}, {2, false, 0, 0}};
+    J2735Lane lanes[2] = {{1, PROTO_TRUE, 0, 0}, {2, PROTO_FALSE, 0, 0}};
     J2735Lane lout[4];
-    TEST_ASSERT_EQUAL_size_t(0, pc_j2735_map_encode(NULL, lanes, 2, buf, sizeof(buf))); // null isect
+    TEST_ASSERT_EQUAL_size_t(0, pc_j2735_map_encode(NULL, lanes, 2, buf, sizeof(buf)));    // null isect
     TEST_ASSERT_EQUAL_size_t(0, pc_j2735_map_encode(&isect, lanes, 32, buf, sizeof(buf))); // count > 31
-    TEST_ASSERT_FALSE(pc_j2735_map_decode(NULL, 16, &isect, lout, 4, &count));          // null in
+    TEST_ASSERT_FALSE(pc_j2735_map_decode(NULL, 16, &isect, lout, 4, &count));             // null in
 
     // Truncated SPAT: the count reads, but the per-state fields underrun (post-loop r.ok guard).
     size_t sn = pc_j2735_spat_encode(st, 2, buf, sizeof(buf));
@@ -259,7 +259,7 @@ void test_j2735_extra_branch_coverage(void)
     // pc_j2735_map_encode: null out, count == 0 (lanes may be null), and count > 0 with null lanes.
     J2735MapIntersection isect = {1, 2, 3};
     uint8_t mbuf[16];
-    J2735Lane lanes[1] = {{1, true, 0, 0}};
+    J2735Lane lanes[1] = {{1, PROTO_TRUE, 0, 0}};
     TEST_ASSERT_EQUAL_size_t(0, pc_j2735_map_encode(&isect, lanes, 1, NULL, sizeof(mbuf))); // null out
     TEST_ASSERT_TRUE(pc_j2735_map_encode(&isect, NULL, 0, mbuf, sizeof(mbuf)) > 0);         // count == 0
     TEST_ASSERT_EQUAL_size_t(0, pc_j2735_map_encode(&isect, NULL, 5, mbuf, sizeof(mbuf)));  // count > 0, null lanes

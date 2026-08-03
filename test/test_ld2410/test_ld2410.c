@@ -201,11 +201,11 @@ void test_command_encoders()
     TEST_ASSERT_EQUAL_UINT8_ARRAY(end, f, sizeof(end));
 
     const uint8_t eng_on[] = {0xFD, 0xFC, 0xFB, 0xFA, 0x02, 0x00, 0x62, 0x00, 0x04, 0x03, 0x02, 0x01};
-    TEST_ASSERT_EQUAL_INT((int)(sizeof(eng_on)), (int)(pc_ld2410_cmd_engineering(f, sizeof(f), true)));
+    TEST_ASSERT_EQUAL_INT((int)(sizeof(eng_on)), (int)(pc_ld2410_cmd_engineering(f, sizeof(f), PROTO_TRUE)));
     TEST_ASSERT_EQUAL_UINT8_ARRAY(eng_on, f, sizeof(eng_on));
 
     const uint8_t eng_off[] = {0xFD, 0xFC, 0xFB, 0xFA, 0x02, 0x00, 0x63, 0x00, 0x04, 0x03, 0x02, 0x01};
-    TEST_ASSERT_EQUAL_INT((int)(sizeof(eng_off)), (int)(pc_ld2410_cmd_engineering(f, sizeof(f), false)));
+    TEST_ASSERT_EQUAL_INT((int)(sizeof(eng_off)), (int)(pc_ld2410_cmd_engineering(f, sizeof(f), PROTO_FALSE)));
     TEST_ASSERT_EQUAL_UINT8_ARRAY(eng_off, f, sizeof(eng_off));
 
     const uint8_t restart[] = {0xFD, 0xFC, 0xFB, 0xFA, 0x02, 0x00, 0xA3, 0x00, 0x04, 0x03, 0x02, 0x01};
@@ -222,7 +222,7 @@ void test_host_stubs_and_parse_guards()
     TEST_ASSERT_FALSE(pc_ld2410_begin(16, 17));
     TEST_ASSERT_FALSE(pc_ld2410_poll());
     TEST_ASSERT_NULL(pc_ld2410_last());
-    TEST_ASSERT_FALSE(pc_ld2410_set_engineering(true));
+    TEST_ASSERT_FALSE(pc_ld2410_set_engineering(PROTO_TRUE));
     TEST_ASSERT_FALSE(pc_ld2410_restart());
     // Malformed report frames fail closed.
     Ld2410Report rep;
@@ -243,11 +243,11 @@ void test_ld2410b_command_encoders(void)
     // "FD FC FB FA | 04 00 | A4 00 | 01 00 | 04 03 02 01"  (Bluetooth on)
     static const uint8_t want_bt_on[14] = {0xFD, 0xFC, 0xFB, 0xFA, 0x04, 0x00, 0xA4,
                                            0x00, 0x01, 0x00, 0x04, 0x03, 0x02, 0x01};
-    TEST_ASSERT_EQUAL_UINT32(14, (uint32_t)pc_ld2410_cmd_bluetooth(buf, sizeof(buf), true));
+    TEST_ASSERT_EQUAL_UINT32(14, (uint32_t)pc_ld2410_cmd_bluetooth(buf, sizeof(buf), PROTO_TRUE));
     TEST_ASSERT_EQUAL_UINT8_ARRAY(want_bt_on, buf, 14);
 
     // Bluetooth off differs only in the value word (0x0000)
-    TEST_ASSERT_EQUAL_UINT32(14, (uint32_t)pc_ld2410_cmd_bluetooth(buf, sizeof(buf), false));
+    TEST_ASSERT_EQUAL_UINT32(14, (uint32_t)pc_ld2410_cmd_bluetooth(buf, sizeof(buf), PROTO_FALSE));
     TEST_ASSERT_EQUAL_UINT8(0x00, buf[8]);
     TEST_ASSERT_EQUAL_UINT8(0x00, buf[9]);
 
@@ -265,7 +265,7 @@ void test_ld2410b_command_encoders(void)
     TEST_ASSERT_EQUAL_UINT8_ARRAY(want_pw, buf, 18);
 
     // capacity guards
-    TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)pc_ld2410_cmd_bluetooth(buf, 13, true));
+    TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)pc_ld2410_cmd_bluetooth(buf, 13, PROTO_TRUE));
     TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)pc_ld2410_cmd_get_mac(buf, 13));
     TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)pc_ld2410_cmd_get_mac(NULL, sizeof(buf)));
     TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)pc_ld2410_cmd_set_bt_password(buf, 17, "HiLink"));

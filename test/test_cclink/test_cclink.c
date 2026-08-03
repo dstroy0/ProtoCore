@@ -48,10 +48,10 @@ void test_bit_accessors(void)
     TEST_ASSERT_FALSE(pc_cclink_get_bit(bits, 2, 1));
     TEST_ASSERT_TRUE(pc_cclink_get_bit(bits, 2, 7));
     TEST_ASSERT_FALSE(pc_cclink_get_bit(bits, 2, 99)); // out of range
-    pc_cclink_set_bit(bits, 2, 8, true);
+    pc_cclink_set_bit(bits, 2, 8, PROTO_TRUE);
     TEST_ASSERT_TRUE(pc_cclink_get_bit(bits, 2, 8));
     TEST_ASSERT_EQUAL_HEX8(0x01, bits[1]);
-    pc_cclink_set_bit(bits, 2, 0, false);
+    pc_cclink_set_bit(bits, 2, 0, PROTO_FALSE);
     TEST_ASSERT_FALSE(pc_cclink_get_bit(bits, 2, 0));
 }
 
@@ -65,8 +65,7 @@ void test_parse_rejects(void)
     TEST_ASSERT_FALSE(pc_cclink_parse(buf, n, &f));
     TEST_ASSERT_FALSE(pc_cclink_parse(buf, 2, &f)); // too short
     // station > 63 rejected at build.
-    TEST_ASSERT_EQUAL_size_t(0,
-                             pc_cclink_build(64, CCLINK_CMD_POLL, NULL, 0, NULL, 0, buf, sizeof(buf)));
+    TEST_ASSERT_EQUAL_size_t(0, pc_cclink_build(64, CCLINK_CMD_POLL, NULL, 0, NULL, 0, buf, sizeof(buf)));
 }
 
 void test_build_and_accessor_guards()
@@ -75,7 +74,7 @@ void test_build_and_accessor_guards()
     uint8_t bits[2] = {0xFF, 0x00};
     uint8_t words[4] = {0x12, 0x34, 0x56, 0x78};
     TEST_ASSERT_EQUAL_size_t(0, pc_cclink_build(1, 0, bits, 16, words, 2, out, 2)); // cap too small
-    pc_cclink_set_bit(bits, 16, 999, true);                                         // out of range -> no-op
+    pc_cclink_set_bit(bits, 16, 999, PROTO_TRUE);                                   // out of range -> no-op
     TEST_ASSERT_FALSE(pc_cclink_get_bit(bits, 16, 999));                            // out of range -> false
     TEST_ASSERT_EQUAL_UINT16(0, pc_cclink_get_word(words, 2, 999));                 // out of range -> 0
 }
@@ -84,14 +83,11 @@ void test_build_null_args(void)
 {
     uint8_t buf[16];
     // out == NULL -> rejected before any other check.
-    TEST_ASSERT_EQUAL_size_t(
-        0, pc_cclink_build(1, CCLINK_CMD_POLL, NULL, 0, NULL, 0, NULL, sizeof(buf)));
+    TEST_ASSERT_EQUAL_size_t(0, pc_cclink_build(1, CCLINK_CMD_POLL, NULL, 0, NULL, 0, NULL, sizeof(buf)));
     // bit_len > 0 but bits == NULL -> rejected.
-    TEST_ASSERT_EQUAL_size_t(0,
-                             pc_cclink_build(1, CCLINK_CMD_POLL, NULL, 3, NULL, 0, buf, sizeof(buf)));
+    TEST_ASSERT_EQUAL_size_t(0, pc_cclink_build(1, CCLINK_CMD_POLL, NULL, 3, NULL, 0, buf, sizeof(buf)));
     // word_len > 0 but words == NULL -> rejected.
-    TEST_ASSERT_EQUAL_size_t(0,
-                             pc_cclink_build(1, CCLINK_CMD_POLL, NULL, 0, NULL, 3, buf, sizeof(buf)));
+    TEST_ASSERT_EQUAL_size_t(0, pc_cclink_build(1, CCLINK_CMD_POLL, NULL, 0, NULL, 3, buf, sizeof(buf)));
 }
 
 void test_build_zero_bit_len(void)
@@ -129,7 +125,7 @@ void test_parse_no_payload(void)
 void test_accessor_null_ptrs(void)
 {
     TEST_ASSERT_FALSE(pc_cclink_get_bit(NULL, 2, 0));
-    pc_cclink_set_bit(NULL, 2, 0, true); // out-of-range on null bits -> no-op, must not crash
+    pc_cclink_set_bit(NULL, 2, 0, PROTO_TRUE); // out-of-range on null bits -> no-op, must not crash
     TEST_ASSERT_EQUAL_UINT16(0, pc_cclink_get_word(NULL, 2, 0));
 }
 

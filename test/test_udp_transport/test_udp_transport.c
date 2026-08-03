@@ -196,7 +196,7 @@ void test_multicast_rejoin_scans_past_a_freed_lower_slot()
 {
     TEST_ASSERT_TRUE(pc_udp_listen_multicast("224.0.0.251", 5353, on_datagram, NULL));     // slot 0
     TEST_ASSERT_TRUE(pc_udp_listen_multicast("239.255.255.250", 1900, on_datagram, NULL)); // slot 1
-    TEST_ASSERT_TRUE(pc_udp_leave_multicast(5353));                                           // slot 0 -> hole
+    TEST_ASSERT_TRUE(pc_udp_leave_multicast(5353));                                        // slot 0 -> hole
     // Rebind port 1900 (reuses slot 1); post-bind lookup skips the now-unused slot 0 first.
     TEST_ASSERT_TRUE(pc_udp_listen_multicast("239.255.255.250", 1900, on_datagram, NULL));
     TEST_ASSERT_EQUAL_STRING("239.255.255.250", pc_udp_joined_group(1900));
@@ -241,9 +241,9 @@ void test_send_paths_are_captured()
     TEST_ASSERT_EQUAL_UINT(6, (unsigned)pc_udp_captured_len());
 
     // The test knob can force a listener-sourced send to fail (models an unreachable observer).
-    pc_udp_set_listener_sendto_result(false);
+    pc_udp_set_listener_sendto_result(PROTO_FALSE);
     TEST_ASSERT_FALSE(pc_udp_listener_sendto(5683, "192.168.1.20", 5683, (const uint8_t *)"x", 1));
-    pc_udp_set_listener_sendto_result(true); // restore for any test that runs after this one
+    pc_udp_set_listener_sendto_result(PROTO_TRUE); // restore for any test that runs after this one
 }
 
 // host_capture()'s guard rejects a null payload, a zero length, and a payload larger than the
@@ -251,9 +251,9 @@ void test_send_paths_are_captured()
 void test_capture_rejects_null_zero_and_oversized_payload()
 {
     pc_udp_capture_enable();
-    TEST_ASSERT_FALSE(pc_udp_send(NULL, NULL, 5));              // null data
+    TEST_ASSERT_FALSE(pc_udp_send(NULL, NULL, 5));                 // null data
     TEST_ASSERT_FALSE(pc_udp_send(NULL, (const uint8_t *)"x", 0)); // zero length
-    static uint8_t big[3000] = {0};                                   // larger than cap_buf (2048)
+    static uint8_t big[3000] = {0};                                // larger than cap_buf (2048)
     TEST_ASSERT_FALSE(pc_udp_send(NULL, big, sizeof(big)));
     TEST_ASSERT_NULL(pc_udp_captured()); // none of the above landed anything
 }
@@ -289,23 +289,23 @@ void test_multicast_lookup_skips_a_different_multicast_group()
 }
 
 static char g_edge_ip[16];
-static bool g_edge_had_ip_out = false;
-static bool g_edge_had_port_out = false;
+static proto_bool g_edge_had_ip_out = PROTO_FALSE;
+static proto_bool g_edge_had_port_out = PROTO_FALSE;
 
 // pc_udp_peer_addr()'s null-outparam tolerance: called from inside the handler where the peer
 // token is still valid, covering ip_out==null and ip_cap==0 (independently) and port_out==null.
 static void on_datagram_edge_cases(const uint8_t *, size_t, const struct pc_udp_peer *peer, void *)
 {
     uint16_t port_tmp = 0;
-    g_edge_had_ip_out = pc_udp_peer_addr(peer, NULL, sizeof(g_edge_ip), &port_tmp);        // ip_out null
+    g_edge_had_ip_out = pc_udp_peer_addr(peer, NULL, sizeof(g_edge_ip), &port_tmp);           // ip_out null
     g_edge_had_ip_out = g_edge_had_ip_out && pc_udp_peer_addr(peer, g_edge_ip, 0, &port_tmp); // ip_cap == 0
-    g_edge_had_port_out = pc_udp_peer_addr(peer, g_edge_ip, sizeof(g_edge_ip), NULL);      // port_out null
+    g_edge_had_port_out = pc_udp_peer_addr(peer, g_edge_ip, sizeof(g_edge_ip), NULL);         // port_out null
 }
 
 void test_peer_addr_tolerates_null_ip_out_and_zero_cap_and_null_port_out()
 {
-    g_edge_had_ip_out = false;
-    g_edge_had_port_out = false;
+    g_edge_had_ip_out = PROTO_FALSE;
+    g_edge_had_port_out = PROTO_FALSE;
     TEST_ASSERT_TRUE(pc_udp_listen(7002, on_datagram_edge_cases, NULL));
     pc_udp_inject(7002, "198.51.100.5", 9, (const uint8_t *)"e", 1);
     // pc_udp_peer_addr() still returns true in every case above (peer non-null); the point is

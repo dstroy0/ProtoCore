@@ -69,7 +69,7 @@ void test_connect_minimal()
     MqttConnectOpts o;
     memset(&o, 0, sizeof(o));
     o.client_id = "dev1";
-    o.clean_session = true;
+    o.clean_session = PROTO_TRUE;
     o.keepalive_s = 30;
     uint8_t buf[64];
     size_t len = pc_mqtt_build_connect(buf, sizeof(buf), &o);
@@ -100,12 +100,12 @@ void test_connect_full()
     o.client_id = "c";
     o.user = "u";
     o.pass = "p";
-    o.clean_session = true;
+    o.clean_session = PROTO_TRUE;
     o.will_topic = "w/t";
     o.will_msg = (const uint8_t *)"bye";
     o.will_len = 3;
     o.will_qos = 1;
-    o.will_retain = true;
+    o.will_retain = PROTO_TRUE;
     uint8_t buf[128];
     size_t len = pc_mqtt_build_connect(buf, sizeof(buf), &o);
     TEST_ASSERT_GREATER_THAN(0, len);
@@ -122,7 +122,8 @@ void test_connect_full()
 void test_publish_qos0_roundtrip()
 {
     uint8_t buf[64];
-    size_t len = pc_mqtt_build_publish(buf, sizeof(buf), "a/b", (const uint8_t *)"hi", 2, 0, 0, false, false);
+    size_t len =
+        pc_mqtt_build_publish(buf, sizeof(buf), "a/b", (const uint8_t *)"hi", 2, 0, 0, PROTO_FALSE, PROTO_FALSE);
     TEST_ASSERT_GREATER_THAN(0, len);
     TEST_ASSERT_EQUAL_HEX8(0x30, buf[0]); // PUBLISH, qos0
 
@@ -145,7 +146,8 @@ void test_publish_qos0_roundtrip()
 void test_publish_qos1_flags_and_id()
 {
     uint8_t buf[64];
-    size_t len = pc_mqtt_build_publish(buf, sizeof(buf), "t", (const uint8_t *)"x", 1, 1, 0x1234, true, true);
+    size_t len =
+        pc_mqtt_build_publish(buf, sizeof(buf), "t", (const uint8_t *)"x", 1, 1, 0x1234, PROTO_TRUE, PROTO_TRUE);
     TEST_ASSERT_GREATER_THAN(0, len);
     // PUBLISH(0x30) | dup(0x08) | qos1(0x02) | retain(0x01) = 0x3B
     TEST_ASSERT_EQUAL_HEX8(0x3B, buf[0]);
@@ -165,7 +167,8 @@ void test_publish_qos1_flags_and_id()
 void test_publish_topic_overflow_rejected()
 {
     uint8_t buf[64];
-    size_t len = pc_mqtt_build_publish(buf, sizeof(buf), "abcdef", (const uint8_t *)"", 0, 0, 0, false, false);
+    size_t len =
+        pc_mqtt_build_publish(buf, sizeof(buf), "abcdef", (const uint8_t *)"", 0, 0, 0, PROTO_FALSE, PROTO_FALSE);
     uint8_t type, flags;
     uint32_t rl;
     size_t hl;
@@ -183,7 +186,7 @@ void test_publish_topic_overflow_rejected()
 void test_publish_qos3_rejected()
 {
     uint8_t buf[64];
-    size_t len = pc_mqtt_build_publish(buf, sizeof(buf), "t", (const uint8_t *)"x", 1, 1, 1, false, false);
+    size_t len = pc_mqtt_build_publish(buf, sizeof(buf), "t", (const uint8_t *)"x", 1, 1, 1, PROTO_FALSE, PROTO_FALSE);
     uint8_t type, flags;
     uint32_t rl;
     size_t hl;
@@ -201,12 +204,12 @@ void test_publish_wildcard_topic_rejected()
 {
     uint8_t buf[64];
     TEST_ASSERT_EQUAL_size_t(
-        0, pc_mqtt_build_publish(buf, sizeof(buf), "a/+/b", (const uint8_t *)"x", 1, 0, 0, false, false));
+        0, pc_mqtt_build_publish(buf, sizeof(buf), "a/+/b", (const uint8_t *)"x", 1, 0, 0, PROTO_FALSE, PROTO_FALSE));
     TEST_ASSERT_EQUAL_size_t(
-        0, pc_mqtt_build_publish(buf, sizeof(buf), "a/#", (const uint8_t *)"x", 1, 0, 0, false, false));
+        0, pc_mqtt_build_publish(buf, sizeof(buf), "a/#", (const uint8_t *)"x", 1, 0, 0, PROTO_FALSE, PROTO_FALSE));
     // A plain topic with no wildcards still builds.
     TEST_ASSERT_GREATER_THAN(
-        0, pc_mqtt_build_publish(buf, sizeof(buf), "a/b/c", (const uint8_t *)"x", 1, 0, 0, false, false));
+        0, pc_mqtt_build_publish(buf, sizeof(buf), "a/b/c", (const uint8_t *)"x", 1, 0, 0, PROTO_FALSE, PROTO_FALSE));
 }
 
 // MQTT 1.5.3: a UTF-8 encoded string MUST be well-formed and MUST NOT contain U+0000.
@@ -274,7 +277,7 @@ void test_ack_packets()
 void test_connack()
 {
     uint8_t ok[2] = {0x01, 0x00};
-    bool sp = false;
+    proto_bool sp = PROTO_FALSE;
     TEST_ASSERT_EQUAL_INT(0, pc_mqtt_parse_connack(ok, 2, &sp));
     TEST_ASSERT_TRUE(sp);
     uint8_t bad[2] = {0x00, 0x05};
@@ -340,11 +343,13 @@ void test_build_guards_and_overflow()
     // A valid CONNECT that does not fit the output buffer (compose cap check).
     TEST_ASSERT_EQUAL_UINT(0, pc_mqtt_build_connect(out, 2, &o));
 
-    TEST_ASSERT_EQUAL_UINT(0, pc_mqtt_build_publish(NULL, sizeof(out), "t", NULL, 0, 0, 0, false, false));
-    TEST_ASSERT_EQUAL_UINT(0, pc_mqtt_build_publish(out, sizeof(out), "t", NULL, 0, 3, 0, false, false));    // qos>2
-    TEST_ASSERT_EQUAL_UINT(0, pc_mqtt_build_publish(out, sizeof(out), "t", NULL, 2000, 0, 0, false, false)); // body
-    TEST_ASSERT_EQUAL_UINT(0,
-                           pc_mqtt_build_publish(out, 2, "topic", (const uint8_t *)"hi", 2, 0, 0, false, false)); // cap
+    TEST_ASSERT_EQUAL_UINT(0, pc_mqtt_build_publish(NULL, sizeof(out), "t", NULL, 0, 0, 0, PROTO_FALSE, PROTO_FALSE));
+    TEST_ASSERT_EQUAL_UINT(
+        0, pc_mqtt_build_publish(out, sizeof(out), "t", NULL, 0, 3, 0, PROTO_FALSE, PROTO_FALSE)); // qos>2
+    TEST_ASSERT_EQUAL_UINT(
+        0, pc_mqtt_build_publish(out, sizeof(out), "t", NULL, 2000, 0, 0, PROTO_FALSE, PROTO_FALSE)); // body
+    TEST_ASSERT_EQUAL_UINT(
+        0, pc_mqtt_build_publish(out, 2, "topic", (const uint8_t *)"hi", 2, 0, 0, PROTO_FALSE, PROTO_FALSE)); // cap
 
     TEST_ASSERT_EQUAL_UINT(0, pc_mqtt_build_subscribe(NULL, sizeof(out), 1, "t", 0));
     TEST_ASSERT_EQUAL_UINT(0, pc_mqtt_build_subscribe(out, sizeof(out), 1, "t", 3));       // qos>2
@@ -396,8 +401,8 @@ void test_host_transport_stubs()
     MqttConnectOpts o;
     memset(&o, 0, sizeof(o));
     o.client_id = "c";
-    TEST_ASSERT_FALSE(pc_mqtt_connect("h", 1883, false, &o));
-    TEST_ASSERT_FALSE(pc_mqtt_publish("t", NULL, 0, 0, false));
+    TEST_ASSERT_FALSE(pc_mqtt_connect("h", 1883, PROTO_FALSE, &o));
+    TEST_ASSERT_FALSE(pc_mqtt_publish("t", NULL, 0, 0, PROTO_FALSE));
     TEST_ASSERT_FALSE(pc_mqtt_subscribe("t", 0));
     TEST_ASSERT_FALSE(pc_mqtt_unsubscribe("t"));
     TEST_ASSERT_FALSE(pc_mqtt_loop());
@@ -412,7 +417,7 @@ void test_host_transport_stubs()
 void test_build_null_topic_guards_and_empty_field()
 {
     uint8_t out[64];
-    TEST_ASSERT_EQUAL_UINT(0, pc_mqtt_build_publish(out, sizeof(out), NULL, NULL, 0, 0, 0, false, false));
+    TEST_ASSERT_EQUAL_UINT(0, pc_mqtt_build_publish(out, sizeof(out), NULL, NULL, 0, 0, 0, PROTO_FALSE, PROTO_FALSE));
     TEST_ASSERT_EQUAL_UINT(0, pc_mqtt_build_subscribe(out, sizeof(out), 1, NULL, 0));
     TEST_ASSERT_EQUAL_UINT(0, pc_mqtt_build_unsubscribe(out, sizeof(out), 1, NULL));
 

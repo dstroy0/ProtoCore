@@ -18,9 +18,9 @@ void tearDown(void)
 void test_snapshot_json(void)
 {
     AtcPoint pts[3] = {
-        {"det.1", false, 1},        // input
-        {"phase.2.green", true, 0}, // output
-        {"det.2", false, 0},        // input
+        {"det.1", PROTO_FALSE, 1},        // input
+        {"phase.2.green", PROTO_TRUE, 0}, // output
+        {"det.2", PROTO_FALSE, 0},        // input
     };
     AtcFieldIo io = {pts, 3};
     char buf[256];
@@ -34,7 +34,7 @@ void test_snapshot_json(void)
 
 void test_set_output(void)
 {
-    AtcPoint pts[2] = {{"det.1", false, 0}, {"phase.1.green", true, 0}};
+    AtcPoint pts[2] = {{"det.1", PROTO_FALSE, 0}, {"phase.1.green", PROTO_TRUE, 0}};
     AtcFieldIo io = {pts, 2};
     // Set an output.
     TEST_ASSERT_TRUE(pc_atc_set_output(&io, "phase.1.green", 1));
@@ -47,9 +47,9 @@ void test_set_output(void)
 
 void test_get(void)
 {
-    AtcPoint pts[2] = {{"det.1", false, 42}, {"out.1", true, 7}};
+    AtcPoint pts[2] = {{"det.1", PROTO_FALSE, 42}, {"out.1", PROTO_TRUE, 7}};
     AtcFieldIo io = {pts, 2};
-    bool found = false;
+    proto_bool found = PROTO_FALSE;
     TEST_ASSERT_EQUAL_UINT8(42, pc_atc_get(&io, "det.1", &found));
     TEST_ASSERT_TRUE(found);
     pc_atc_get(&io, "missing", &found);
@@ -64,7 +64,7 @@ void test_empty_and_overflow(void)
     TEST_ASSERT_EQUAL_STRING("{\"inputs\":[],\"outputs\":[]}", buf);
     TEST_ASSERT_EQUAL_size_t(strlen("{\"inputs\":[],\"outputs\":[]}"), n);
 
-    AtcPoint pts[1] = {{"a-long-input-name", false, 1}};
+    AtcPoint pts[1] = {{"a-long-input-name", PROTO_FALSE, 1}};
     AtcFieldIo io2 = {pts, 1};
     char small[16];
     TEST_ASSERT_EQUAL_size_t(0, pc_atc_snapshot_json(&io2, small, sizeof(small)));
@@ -72,7 +72,7 @@ void test_empty_and_overflow(void)
 
 void test_json_escapes_and_overflow()
 {
-    AtcPoint pts[1] = {{"a\"b\\c", false, 1}}; // name with a quote + backslash gets escaped
+    AtcPoint pts[1] = {{"a\"b\\c", PROTO_FALSE, 1}}; // name with a quote + backslash gets escaped
     AtcFieldIo io = {pts, 1};
     char buf[128];
     size_t n = pc_atc_snapshot_json(&io, buf, sizeof(buf));
@@ -83,7 +83,7 @@ void test_json_escapes_and_overflow()
 
 void test_atc_null_and_missing_args(void)
 {
-    AtcPoint pts[2] = {{"det.1", false, 1}, {"phase.1.green", true, 0}};
+    AtcPoint pts[2] = {{"det.1", PROTO_FALSE, 1}, {"phase.1.green", PROTO_TRUE, 0}};
     AtcFieldIo io = {pts, 2};
     AtcFieldIo io_null_points = {NULL, 1}; // count > 0 but points is null: must fail closed too
     char buf[64];
@@ -99,13 +99,13 @@ void test_atc_null_and_missing_args(void)
     TEST_ASSERT_FALSE(pc_atc_set_output(&io_null_points, "phase.1.green", 1));
 
     // pc_atc_get: null io / null name / null points all fail closed and report found=false.
-    bool found = true;
+    proto_bool found = PROTO_TRUE;
     TEST_ASSERT_EQUAL_UINT8(0, pc_atc_get(NULL, "det.1", &found));
     TEST_ASSERT_FALSE(found);
-    found = true;
+    found = PROTO_TRUE;
     TEST_ASSERT_EQUAL_UINT8(0, pc_atc_get(&io, NULL, &found));
     TEST_ASSERT_FALSE(found);
-    found = true;
+    found = PROTO_TRUE;
     TEST_ASSERT_EQUAL_UINT8(0, pc_atc_get(&io_null_points, "det.1", &found));
     TEST_ASSERT_FALSE(found);
 
@@ -119,8 +119,8 @@ void test_atc_null_name_point_and_multidigit_value(void)
     // A point with a null name renders as an empty JSON string and is safely skipped (never
     // matched) by name-based lookups; a value >=10 exercises put_u8's multi-digit path.
     AtcPoint pts[2] = {
-        {NULL, true, 5},
-        {"phase.9.red", true, 250},
+        {NULL, PROTO_TRUE, 5},
+        {"phase.9.red", PROTO_TRUE, 250},
     };
     AtcFieldIo io = {pts, 2};
     char buf[128];
@@ -134,7 +134,7 @@ void test_atc_null_name_point_and_multidigit_value(void)
     TEST_ASSERT_EQUAL_UINT8(99, pts[1].value);
 
     // get must skip the null-named point and still find the real one.
-    bool found = false;
+    proto_bool found = PROTO_FALSE;
     TEST_ASSERT_EQUAL_UINT8(99, pc_atc_get(&io, "phase.9.red", &found));
     TEST_ASSERT_TRUE(found);
 }
@@ -143,7 +143,7 @@ void test_strbuf_xml_and_json_direct(void)
 {
     // pc_sb_xml: all four escapes (&,<,>,") plus literal passthrough chars, in one pass.
     char buf[64];
-    pc_sb b = {buf, sizeof(buf), 0, true};
+    pc_sb b = {buf, sizeof(buf), 0, PROTO_TRUE};
     pc_sb_xml(&b, "<a>&\"b\"</a>");
     TEST_ASSERT_TRUE(b.ok);
     buf[b.len] = '\0';
@@ -157,7 +157,7 @@ void test_strbuf_xml_and_json_direct(void)
 
     // Overflow on the raw-copy path latches ok=false and stops writing (no further chars land).
     char tiny[2];
-    pc_sb b2 = {tiny, sizeof(tiny), 0, true};
+    pc_sb b2 = {tiny, sizeof(tiny), 0, PROTO_TRUE};
     pc_sb_xml(&b2, "ab");
     TEST_ASSERT_FALSE(b2.ok);
     TEST_ASSERT_EQUAL_size_t(1, b2.len); // only 'a' fit before latching closed
@@ -169,7 +169,7 @@ void test_strbuf_xml_and_json_direct(void)
 
     // pc_sb_json: a NULL s emits an empty string literal.
     char jbuf[8];
-    pc_sb b3 = {jbuf, sizeof(jbuf), 0, true};
+    pc_sb b3 = {jbuf, sizeof(jbuf), 0, PROTO_TRUE};
     pc_sb_json(&b3, NULL);
     TEST_ASSERT_TRUE(b3.ok);
     jbuf[b3.len] = '\0';
@@ -177,7 +177,7 @@ void test_strbuf_xml_and_json_direct(void)
 
     // pc_sb_json: quote/backslash escapes plus literal passthrough chars, ample buffer.
     char jbuf2[32];
-    pc_sb b4 = {jbuf2, sizeof(jbuf2), 0, true};
+    pc_sb b4 = {jbuf2, sizeof(jbuf2), 0, PROTO_TRUE};
     pc_sb_json(&b4, "a\"\\b");
     TEST_ASSERT_TRUE(b4.ok);
     jbuf2[b4.len] = '\0';
@@ -190,7 +190,7 @@ void test_strbuf_xml_and_json_direct(void)
 
     // pc_sb_json: overflow on the raw-copy path latches ok=false without writing past cap.
     char jtiny[3];
-    pc_sb b5 = {jtiny, sizeof(jtiny), 0, true};
+    pc_sb b5 = {jtiny, sizeof(jtiny), 0, PROTO_TRUE};
     pc_sb_json(&b5, "xy");
     TEST_ASSERT_FALSE(b5.ok);
     TEST_ASSERT_EQUAL_size_t(2, b5.len); // opening quote + 'x'; 'y' overflowed

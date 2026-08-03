@@ -38,8 +38,8 @@ void test_kind_data()
 void test_json()
 {
     pc_partition_info p[2] = {
-        {"nvs", 1, 0x02, 0x9000, 0x6000, false},
-        {"app0", 0, 0x10, 0x10000, 0x140000, true},
+        {"nvs", 1, 0x02, 0x9000, 0x6000, PROTO_FALSE},
+        {"app0", 0, 0x10, 0x10000, 0x140000, PROTO_TRUE},
     };
     char buf[512];
     int n = pc_partition_json(p, 2, buf, sizeof(buf));
@@ -54,7 +54,7 @@ void test_json()
 
 void test_json_small_buffer_fails_closed()
 {
-    pc_partition_info p[1] = {{"nvs", 1, 0x02, 0x9000, 0x6000, false}};
+    pc_partition_info p[1] = {{"nvs", 1, 0x02, 0x9000, 0x6000, PROTO_FALSE}};
     char buf[8];
     TEST_ASSERT_EQUAL_INT(0, pc_partition_json(p, 1, buf, sizeof(buf)));
 }
@@ -73,7 +73,7 @@ void test_partition_kind_data_subtypes()
 
 void test_json_null_out_and_zero_cap()
 {
-    pc_partition_info p[1] = {{"nvs", 1, 0x02, 0x9000, 0x6000, false}};
+    pc_partition_info p[1] = {{"nvs", 1, 0x02, 0x9000, 0x6000, PROTO_FALSE}};
     // out == NULL fails closed before touching the buffer.
     TEST_ASSERT_EQUAL_INT(0, pc_partition_json(p, 1, NULL, 16));
     // cap == 0 also fails closed, independent of the out == NULL check.
@@ -91,7 +91,7 @@ void test_json_null_parts()
 
 void test_json_entry_overflow_fails_closed()
 {
-    pc_partition_info p[1] = {{"nvs", 1, 0x02, 0x9000, 0x6000, false}};
+    pc_partition_info p[1] = {{"nvs", 1, 0x02, 0x9000, 0x6000, PROTO_FALSE}};
     // 20 bytes fits the opening `{"partitions":[` (15 chars) but not the first
     // entry, so the per-entry append fails and the call fails closed.
     char buf[20];
@@ -100,7 +100,7 @@ void test_json_entry_overflow_fails_closed()
 
 void test_json_closing_bracket_overflow_fails_closed()
 {
-    pc_partition_info p[1] = {{"nvs", 1, 0x02, 0x9000, 0x6000, false}};
+    pc_partition_info p[1] = {{"nvs", 1, 0x02, 0x9000, 0x6000, PROTO_FALSE}};
     // 107 bytes fits the opening bracket + the one entry (106 bytes total) but
     // not the closing `]}`, so that final append fails and the call fails
     // closed.

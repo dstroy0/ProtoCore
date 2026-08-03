@@ -16,7 +16,7 @@ void tearDown()
 {
 }
 
-static bool contains(const char *hay, const char *needle)
+static proto_bool contains(const char *hay, const char *needle)
 {
     return strstr(hay, needle) != NULL;
 }
@@ -56,7 +56,7 @@ void test_webdav_builder_guards()
 
     TEST_ASSERT_FALSE(pc_webdav_dest_path(NULL, out, sizeof(out)));  // null destination
     TEST_ASSERT_FALSE(pc_webdav_dest_path("/x", NULL, sizeof(out))); // null out
-    TEST_ASSERT_FALSE(pc_webdav_dest_path("/x", out, 0));               // zero cap
+    TEST_ASSERT_FALSE(pc_webdav_dest_path("/x", out, 0));            // zero cap
 
     // ms_entry: an href whose escaped form + fixed markup overruns the internal 512-byte
     // element scratch returns the input length unchanged (atomic: nothing committed).
@@ -64,7 +64,7 @@ void test_webdav_builder_guards()
     memset(href, 'a', 255);
     href[255] = '\0';
     char buf[4096];
-    TEST_ASSERT_EQUAL_size_t(7, pc_webdav_ms_entry(buf, sizeof(buf), 7, href, false, 42, NULL, "text/plain"));
+    TEST_ASSERT_EQUAL_size_t(7, pc_webdav_ms_entry(buf, sizeof(buf), 7, href, PROTO_FALSE, 42, NULL, "text/plain"));
 
     // proppatch: a cap that holds the preamble but not the closing envelope -> 0.
     char small[200];
@@ -80,7 +80,7 @@ void test_depth_parsing()
     TEST_ASSERT_EQUAL_INT(0, pc_webdav_depth("0", 1));
     TEST_ASSERT_EQUAL_INT(1, pc_webdav_depth("1", 0));
     TEST_ASSERT_EQUAL_INT(PC_DAV_DEPTH_INFINITY, pc_webdav_depth("infinity", 0));
-    TEST_ASSERT_EQUAL_INT(1, pc_webdav_depth(NULL, 1)); // absent -> default
+    TEST_ASSERT_EQUAL_INT(1, pc_webdav_depth(NULL, 1));    // absent -> default
     TEST_ASSERT_EQUAL_INT(7, pc_webdav_depth("bogus", 7)); // unrecognized -> default
 }
 
@@ -146,8 +146,8 @@ void test_multistatus_file_and_collection()
     char buf[1024];
     size_t len = 0;
     len = pc_webdav_ms_begin(buf, sizeof(buf), len);
-    len = pc_webdav_ms_entry(buf, sizeof(buf), len, "/dav/", true, 0, "Mon, 01 Jan 2026 00:00:00 GMT", "");
-    len = pc_webdav_ms_entry(buf, sizeof(buf), len, "/dav/readme.txt", false, 42, "Mon, 01 Jan 2026 00:00:00 GMT",
+    len = pc_webdav_ms_entry(buf, sizeof(buf), len, "/dav/", PROTO_TRUE, 0, "Mon, 01 Jan 2026 00:00:00 GMT", "");
+    len = pc_webdav_ms_entry(buf, sizeof(buf), len, "/dav/readme.txt", PROTO_FALSE, 42, "Mon, 01 Jan 2026 00:00:00 GMT",
                              "text/plain");
     len = pc_webdav_ms_end(buf, sizeof(buf), len);
     TEST_ASSERT_EQUAL_size_t(strlen(buf), len);
@@ -170,7 +170,7 @@ void test_multistatus_escapes_href()
     char buf[512];
     size_t len = 0;
     len = pc_webdav_ms_begin(buf, sizeof(buf), len);
-    len = pc_webdav_ms_entry(buf, sizeof(buf), len, "/dav/a&b.txt", false, 1, "", "text/plain");
+    len = pc_webdav_ms_entry(buf, sizeof(buf), len, "/dav/a&b.txt", PROTO_FALSE, 1, "", "text/plain");
     len = pc_webdav_ms_end(buf, sizeof(buf), len);
     TEST_ASSERT_TRUE(contains(buf, "<D:href>/dav/a&amp;b.txt</D:href>"));
 }
@@ -181,7 +181,7 @@ void test_multistatus_entry_stops_when_full()
     size_t len = 0;
     len = pc_webdav_ms_begin(buf, sizeof(buf), len);
     size_t before = len;
-    size_t after = pc_webdav_ms_entry(buf, sizeof(buf), before, "/dav/x.txt", false, 1, "", "text/plain");
+    size_t after = pc_webdav_ms_entry(buf, sizeof(buf), before, "/dav/x.txt", PROTO_FALSE, 1, "", "text/plain");
     TEST_ASSERT_EQUAL_size_t(before, after); // did not fit -> unchanged, no partial element
     TEST_ASSERT_TRUE(strlen(buf) <= sizeof(buf));
 }
@@ -213,7 +213,7 @@ void test_proppatch_windows_timestamp()
     assert_proppatch_envelope(buf, len);
     TEST_ASSERT_TRUE(contains(buf, "<D:href>/dav/file.txt</D:href>"));
     // property echoed self-closed with its prefix + xmlns intact
-    TEST_ASSERT_TRUE(contains(buf, "<Z:Win32LastModifiedTime>") == false); // not as an open tag with content
+    TEST_ASSERT_TRUE(contains(buf, "<Z:Win32LastModifiedTime>") == PROTO_FALSE); // not as an open tag with content
     TEST_ASSERT_TRUE(contains(buf, "<Z:Win32LastModifiedTime/>"));
     // wrappers must NOT be echoed as properties
     TEST_ASSERT_FALSE(contains(buf, "<D:set/>"));
@@ -335,7 +335,7 @@ void test_method_all_including_head()
 void test_depth_and_dest_path_guards()
 {
     TEST_ASSERT_EQUAL_INT(7, pc_webdav_depth(NULL, 7)); // null -> default
-    TEST_ASSERT_EQUAL_INT(7, pc_webdav_depth("", 7));      // empty -> default
+    TEST_ASSERT_EQUAL_INT(7, pc_webdav_depth("", 7));   // empty -> default
     TEST_ASSERT_EQUAL_INT(0, pc_webdav_depth("0", 7));
     TEST_ASSERT_EQUAL_INT(1, pc_webdav_depth("1", 7));
     char out[64];
@@ -356,7 +356,8 @@ void test_ms_entry_content_type_overflow()
     }
     ct[419] = '\0';
     // An oversized content-type overflows the internal element buffer -> len unchanged (atomic no-op).
-    size_t r = pc_webdav_ms_entry(buf, sizeof(buf), len, "/f.txt", false, 100, "Mon, 01 Jan 2026 00:00:00 GMT", ct);
+    size_t r =
+        pc_webdav_ms_entry(buf, sizeof(buf), len, "/f.txt", PROTO_FALSE, 100, "Mon, 01 Jan 2026 00:00:00 GMT", ct);
     TEST_ASSERT_EQUAL_size_t(len, r);
 }
 
@@ -370,10 +371,12 @@ void test_ms_entry_mtime_and_tiny_buf()
     }
     mtime[459] = '\0';
     // Oversized mtime overflows the element buffer -> len unchanged.
-    TEST_ASSERT_EQUAL_size_t(0, pc_webdav_ms_entry(buf, sizeof(buf), 0, "/f.txt", false, 100, mtime, "text/plain"));
+    TEST_ASSERT_EQUAL_size_t(0,
+                             pc_webdav_ms_entry(buf, sizeof(buf), 0, "/f.txt", PROTO_FALSE, 100, mtime, "text/plain"));
     // A well-formed entry that does not fit the OUTPUT buffer leaves len unchanged (atomic commit fails).
     char tiny[40];
-    TEST_ASSERT_EQUAL_size_t(0, pc_webdav_ms_entry(tiny, sizeof(tiny), 0, "/f.txt", false, 100, "", "text/plain"));
+    TEST_ASSERT_EQUAL_size_t(0,
+                             pc_webdav_ms_entry(tiny, sizeof(tiny), 0, "/f.txt", PROTO_FALSE, 100, "", "text/plain"));
 }
 
 void test_proppatch_ms_echo()
@@ -404,12 +407,12 @@ void test_ms_entry_content_type_null_and_empty()
 {
     char buf[1024];
     // content_type == NULL: the getcontenttype block is skipped entirely.
-    size_t r1 = pc_webdav_ms_entry(buf, sizeof(buf), 0, "/f.txt", false, 100, NULL, NULL);
+    size_t r1 = pc_webdav_ms_entry(buf, sizeof(buf), 0, "/f.txt", PROTO_FALSE, 100, NULL, NULL);
     TEST_ASSERT_TRUE(r1 > 0);
     TEST_ASSERT_FALSE(contains(buf, "getcontenttype"));
 
     // content_type == "" (non-null, empty): same effect as NULL.
-    size_t r2 = pc_webdav_ms_entry(buf, sizeof(buf), 0, "/f.txt", false, 100, NULL, "");
+    size_t r2 = pc_webdav_ms_entry(buf, sizeof(buf), 0, "/f.txt", PROTO_FALSE, 100, NULL, "");
     TEST_ASSERT_TRUE(r2 > 0);
     TEST_ASSERT_FALSE(contains(buf, "getcontenttype"));
 }
@@ -426,7 +429,7 @@ void test_ms_entry_getcontenttype_close_overflow()
     // The content_type itself fits the internal 512-byte element scratch, but the
     // closing "</D:getcontenttype>" tag appended afterward then overflows it ->
     // len unchanged. Distinct from the content_type-itself-overflowing case above.
-    TEST_ASSERT_EQUAL_size_t(0, pc_webdav_ms_entry(buf, sizeof(buf), 0, "/f.txt", false, 100, NULL, ct));
+    TEST_ASSERT_EQUAL_size_t(0, pc_webdav_ms_entry(buf, sizeof(buf), 0, "/f.txt", PROTO_FALSE, 100, NULL, ct));
 }
 
 void test_ms_entry_mtime_prefix_and_close_overflow()
@@ -440,7 +443,7 @@ void test_ms_entry_mtime_prefix_and_close_overflow()
         ct[i] = 'c';
     }
     ct[290] = '\0';
-    TEST_ASSERT_EQUAL_size_t(0, pc_webdav_ms_entry(buf, sizeof(buf), 0, "/f.txt", false, 100, "x", ct));
+    TEST_ASSERT_EQUAL_size_t(0, pc_webdav_ms_entry(buf, sizeof(buf), 0, "/f.txt", PROTO_FALSE, 100, "x", ct));
 
     // No content_type this time: the mtime prefix and the mtime content both fit,
     // but the closing "</D:getlastmodified>" tag then overflows.
@@ -450,7 +453,7 @@ void test_ms_entry_mtime_prefix_and_close_overflow()
         mtime[i] = 'm';
     }
     mtime[300] = '\0';
-    TEST_ASSERT_EQUAL_size_t(0, pc_webdav_ms_entry(buf, sizeof(buf), 0, "/f.txt", false, 100, mtime, NULL));
+    TEST_ASSERT_EQUAL_size_t(0, pc_webdav_ms_entry(buf, sizeof(buf), 0, "/f.txt", PROTO_FALSE, 100, mtime, NULL));
 }
 
 void test_proppatch_zero_cap()
@@ -614,9 +617,10 @@ void test_lock_acquire_and_write_gate()
     TEST_ASSERT_TRUE(pc_dav_lock_can_write(&t, "/a.txt", NULL));
 
     // Take an exclusive Depth-0 lock; now only the token holder may write.
-    const DavLock *l = pc_dav_lock_acquire(&t, "/a.txt", tok, /*exclusive=*/true, /*depth_infinity=*/false, 0);
+    const DavLock *l =
+        pc_dav_lock_acquire(&t, "/a.txt", tok, /*exclusive=*/PROTO_TRUE, /*depth_infinity=*/PROTO_FALSE, 0);
     TEST_ASSERT_NOT_NULL(l);
-    TEST_ASSERT_FALSE(pc_dav_lock_can_write(&t, "/a.txt", NULL));                 // no token
+    TEST_ASSERT_FALSE(pc_dav_lock_can_write(&t, "/a.txt", NULL));                    // no token
     TEST_ASSERT_FALSE(pc_dav_lock_can_write(&t, "/a.txt", "opaquelocktoken:other")); // wrong token
     TEST_ASSERT_TRUE(pc_dav_lock_can_write(&t, "/a.txt", tok));                      // right token
     // A sibling is unaffected by a Depth-0 lock.
@@ -634,10 +638,10 @@ void test_lock_depth_infinity_covers_subtree()
     pc_dav_lock_init(&t);
     const char *tok = "opaquelocktoken:22222222-pc";
     // A Depth-infinity lock on /dir covers the whole subtree, but not a same-prefix sibling like /dir2.
-    TEST_ASSERT_NOT_NULL(pc_dav_lock_acquire(&t, "/dir", tok, true, /*depth_infinity=*/true, 0));
+    TEST_ASSERT_NOT_NULL(pc_dav_lock_acquire(&t, "/dir", tok, PROTO_TRUE, /*depth_infinity=*/PROTO_TRUE, 0));
     TEST_ASSERT_FALSE(pc_dav_lock_can_write(&t, "/dir", NULL));
     TEST_ASSERT_FALSE(pc_dav_lock_can_write(&t, "/dir/sub/file.txt", NULL)); // deep descendant locked
-    TEST_ASSERT_TRUE(pc_dav_lock_can_write(&t, "/dir/sub/file.txt", tok));      // token unlocks the subtree
+    TEST_ASSERT_TRUE(pc_dav_lock_can_write(&t, "/dir/sub/file.txt", tok));   // token unlocks the subtree
     TEST_ASSERT_TRUE(pc_dav_lock_can_write(&t, "/dir2/file.txt", NULL));     // "/dir2" is NOT under "/dir"
 
     // pc_dav_lock_find reports the covering lock for a descendant, and a trailing slash is normalized.
@@ -651,19 +655,21 @@ void test_lock_conflicts_and_shared()
     DavLockTable t;
     pc_dav_lock_init(&t);
     // An exclusive infinity lock on /p blocks any overlapping lock (child, ancestor, or same).
-    TEST_ASSERT_NOT_NULL(pc_dav_lock_acquire(&t, "/p", "opaquelocktoken:a", true, true, 0));
-    TEST_ASSERT_NULL(pc_dav_lock_acquire(&t, "/p/c", "opaquelocktoken:b", true, false, 0)); // child conflicts
-    TEST_ASSERT_NULL(pc_dav_lock_acquire(&t, "/p", "opaquelocktoken:b", false, false, 0));  // same resource
-    TEST_ASSERT_NULL(pc_dav_lock_acquire(&t, "/", "opaquelocktoken:b", true, true, 0));     // ancestor (root) conflicts
+    TEST_ASSERT_NOT_NULL(pc_dav_lock_acquire(&t, "/p", "opaquelocktoken:a", PROTO_TRUE, PROTO_TRUE, 0));
+    TEST_ASSERT_NULL(
+        pc_dav_lock_acquire(&t, "/p/c", "opaquelocktoken:b", PROTO_TRUE, PROTO_FALSE, 0)); // child conflicts
+    TEST_ASSERT_NULL(pc_dav_lock_acquire(&t, "/p", "opaquelocktoken:b", PROTO_FALSE, PROTO_FALSE, 0)); // same resource
+    TEST_ASSERT_NULL(
+        pc_dav_lock_acquire(&t, "/", "opaquelocktoken:b", PROTO_TRUE, PROTO_TRUE, 0)); // ancestor (root) conflicts
     // A disjoint path is fine.
-    TEST_ASSERT_NOT_NULL(pc_dav_lock_acquire(&t, "/q", "opaquelocktoken:c", true, false, 0));
+    TEST_ASSERT_NOT_NULL(pc_dav_lock_acquire(&t, "/q", "opaquelocktoken:c", PROTO_TRUE, PROTO_FALSE, 0));
 
     // Two shared locks on the same resource coexist; an exclusive one over them does not.
     DavLockTable s;
     pc_dav_lock_init(&s);
-    TEST_ASSERT_NOT_NULL(pc_dav_lock_acquire(&s, "/f", "opaquelocktoken:s1", false, false, 0));
-    TEST_ASSERT_NOT_NULL(pc_dav_lock_acquire(&s, "/f", "opaquelocktoken:s2", false, false, 0));
-    TEST_ASSERT_NULL(pc_dav_lock_acquire(&s, "/f", "opaquelocktoken:x", true, false, 0));
+    TEST_ASSERT_NOT_NULL(pc_dav_lock_acquire(&s, "/f", "opaquelocktoken:s1", PROTO_FALSE, PROTO_FALSE, 0));
+    TEST_ASSERT_NOT_NULL(pc_dav_lock_acquire(&s, "/f", "opaquelocktoken:s2", PROTO_FALSE, PROTO_FALSE, 0));
+    TEST_ASSERT_NULL(pc_dav_lock_acquire(&s, "/f", "opaquelocktoken:x", PROTO_TRUE, PROTO_FALSE, 0));
     // Either shared token authorizes a write.
     TEST_ASSERT_TRUE(pc_dav_lock_can_write(&s, "/f", "opaquelocktoken:s2"));
     TEST_ASSERT_FALSE(pc_dav_lock_can_write(&s, "/f", NULL));
@@ -678,9 +684,10 @@ void test_lock_table_full_and_guards()
     {
         snprintf(path, sizeof(path), "/f%d", i);
         snprintf(tok, sizeof(tok), "opaquelocktoken:%d", i);
-        TEST_ASSERT_NOT_NULL(pc_dav_lock_acquire(&t, path, tok, true, false, 0));
+        TEST_ASSERT_NOT_NULL(pc_dav_lock_acquire(&t, path, tok, PROTO_TRUE, PROTO_FALSE, 0));
     }
-    TEST_ASSERT_NULL(pc_dav_lock_acquire(&t, "/overflow", "opaquelocktoken:z", true, false, 0)); // table full
+    TEST_ASSERT_NULL(
+        pc_dav_lock_acquire(&t, "/overflow", "opaquelocktoken:z", PROTO_TRUE, PROTO_FALSE, 0)); // table full
 
     // A token that would not fit is rejected; null arguments fail closed.
     DavLockTable t2;
@@ -688,8 +695,8 @@ void test_lock_table_full_and_guards()
     char longtok[PC_DAV_LOCK_TOKEN_MAX + 8];
     memset(longtok, 'x', sizeof(longtok) - 1);
     longtok[sizeof(longtok) - 1] = 0;
-    TEST_ASSERT_NULL(pc_dav_lock_acquire(&t2, "/a", longtok, true, false, 0));
-    TEST_ASSERT_NULL(pc_dav_lock_acquire(&t2, NULL, "opaquelocktoken:a", true, false, 0));
+    TEST_ASSERT_NULL(pc_dav_lock_acquire(&t2, "/a", longtok, PROTO_TRUE, PROTO_FALSE, 0));
+    TEST_ASSERT_NULL(pc_dav_lock_acquire(&t2, NULL, "opaquelocktoken:a", PROTO_TRUE, PROTO_FALSE, 0));
     TEST_ASSERT_TRUE(pc_dav_lock_can_write(NULL, "/a", NULL)); // no table => unlocked
 }
 
@@ -713,7 +720,7 @@ void test_if_header_token_extraction()
     // End-to-end: a write presenting the extracted token is allowed.
     DavLockTable t;
     pc_dav_lock_init(&t);
-    pc_dav_lock_acquire(&t, "/x", "opaquelocktoken:aaaa-pc", true, false, 0);
+    pc_dav_lock_acquire(&t, "/x", "opaquelocktoken:aaaa-pc", PROTO_TRUE, PROTO_FALSE, 0);
     TEST_ASSERT_TRUE(pc_dav_if_token("(<opaquelocktoken:aaaa-pc>)", out, sizeof(out)));
     TEST_ASSERT_TRUE(pc_dav_lock_can_write(&t, "/x", out));
 }
@@ -724,7 +731,8 @@ void test_lock_timeout_sweep()
     pc_dav_lock_init(&t);
 
     // A timed lock gates writes until a sweep reaches its expiry second (expiry_s <= now drops it).
-    TEST_ASSERT_NOT_NULL(pc_dav_lock_acquire(&t, "/timed", "opaquelocktoken:t", true, false, /*expiry_s=*/100));
+    TEST_ASSERT_NOT_NULL(
+        pc_dav_lock_acquire(&t, "/timed", "opaquelocktoken:t", PROTO_TRUE, PROTO_FALSE, /*expiry_s=*/100));
     TEST_ASSERT_FALSE(pc_dav_lock_can_write(&t, "/timed", NULL));
     TEST_ASSERT_EQUAL_size_t(0, pc_dav_lock_sweep(&t, 99)); // not yet expired
     TEST_ASSERT_FALSE(pc_dav_lock_can_write(&t, "/timed", NULL));
@@ -733,12 +741,12 @@ void test_lock_timeout_sweep()
     TEST_ASSERT_NULL(pc_dav_lock_find(&t, "/timed"));
 
     // A never-expiring lock (expiry_s == 0) survives any sweep.
-    TEST_ASSERT_NOT_NULL(pc_dav_lock_acquire(&t, "/perm", "opaquelocktoken:p", true, false, 0));
+    TEST_ASSERT_NOT_NULL(pc_dav_lock_acquire(&t, "/perm", "opaquelocktoken:p", PROTO_TRUE, PROTO_FALSE, 0));
     TEST_ASSERT_EQUAL_size_t(0, pc_dav_lock_sweep(&t, 0xFFFFFFFFu));
     TEST_ASSERT_FALSE(pc_dav_lock_can_write(&t, "/perm", NULL));
 
     // Refresh extends a lock's timeout; an unknown token refreshes nothing.
-    TEST_ASSERT_NOT_NULL(pc_dav_lock_acquire(&t, "/r", "opaquelocktoken:r", true, false, 50));
+    TEST_ASSERT_NOT_NULL(pc_dav_lock_acquire(&t, "/r", "opaquelocktoken:r", PROTO_TRUE, PROTO_FALSE, 50));
     TEST_ASSERT_NOT_NULL(pc_dav_lock_refresh(&t, "opaquelocktoken:r", 200));
     TEST_ASSERT_EQUAL_size_t(0, pc_dav_lock_sweep(&t, 100)); // was 50, now 200 -> survives
     TEST_ASSERT_FALSE(pc_dav_lock_can_write(&t, "/r", NULL));

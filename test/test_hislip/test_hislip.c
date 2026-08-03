@@ -131,7 +131,7 @@ void test_parse_initialize_rejects()
 
     // well-formed header, but wrong message type (DATA, not INITIALIZE)
     uint8_t data_buf[32];
-    size_t dn = pc_hislip_build_data(data_buf, sizeof(data_buf), false, 0, 0, NULL, 0);
+    size_t dn = pc_hislip_build_data(data_buf, sizeof(data_buf), PROTO_FALSE, 0, 0, NULL, 0);
     TEST_ASSERT_FALSE(pc_hislip_parse_initialize(data_buf, dn, &init));
 }
 
@@ -193,8 +193,8 @@ void test_build_dataend_vector()
 {
     uint8_t buf[64];
     const char *scpi = "*IDN?\n";
-    size_t n =
-        pc_hislip_build_data(buf, sizeof(buf), true, 0, PC_HISLIP_MESSAGE_ID_INIT, (const uint8_t *)scpi, strlen(scpi));
+    size_t n = pc_hislip_build_data(buf, sizeof(buf), PROTO_TRUE, 0, PC_HISLIP_MESSAGE_ID_INIT, (const uint8_t *)scpi,
+                                    strlen(scpi));
     const uint8_t expected[] = {'H',  'S',  0x07, 0x00, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00,
                                 0x00, 0x00, 0x00, 0x00, 0x06, '*',  'I',  'D',  'N',  '?',  '\n'};
     TEST_ASSERT_EQUAL_size_t(sizeof(expected), n);
@@ -205,7 +205,7 @@ void test_data_roundtrip()
 {
     uint8_t buf[64];
     const uint8_t payload[] = {'V', 'O', 'L', 'T', '?'};
-    size_t n = pc_hislip_build_data(buf, sizeof(buf), false, 0, 0x00001000, payload, sizeof(payload));
+    size_t n = pc_hislip_build_data(buf, sizeof(buf), PROTO_FALSE, 0, 0x00001000, payload, sizeof(payload));
     TEST_ASSERT_EQUAL_size_t(16 + sizeof(payload), n);
     HislipHeader h;
     TEST_ASSERT_TRUE(pc_hislip_parse_header(buf, n, &h));
@@ -228,17 +228,18 @@ void test_build_overflow()
 {
     uint8_t small[20];
     // a 6-byte payload needs 22 bytes; a 20-byte buffer fails closed
-    TEST_ASSERT_EQUAL_size_t(0, pc_hislip_build_data(small, sizeof(small), true, 0, 0, (const uint8_t *)"*IDN?\n", 6));
+    TEST_ASSERT_EQUAL_size_t(
+        0, pc_hislip_build_data(small, sizeof(small), PROTO_TRUE, 0, 0, (const uint8_t *)"*IDN?\n", 6));
     // null payload with non-zero length is rejected
     uint8_t buf[32];
-    TEST_ASSERT_EQUAL_size_t(0, pc_hislip_build_data(buf, sizeof(buf), false, 0, 0, NULL, 4));
+    TEST_ASSERT_EQUAL_size_t(0, pc_hislip_build_data(buf, sizeof(buf), PROTO_FALSE, 0, 0, NULL, 4));
 }
 
 void test_build_with_payload_edge_cases()
 {
     // build_with_payload (via build_data) fails closed on a null destination buffer
     const uint8_t payload[] = {'X'};
-    TEST_ASSERT_EQUAL_size_t(0, pc_hislip_build_data(NULL, 64, false, 0, 0, payload, sizeof(payload)));
+    TEST_ASSERT_EQUAL_size_t(0, pc_hislip_build_data(NULL, 64, PROTO_FALSE, 0, 0, payload, sizeof(payload)));
 
     // Initialize with a null sub-address takes the zero-length payload path (no memcpy, no
     // sub-address strnlen call)

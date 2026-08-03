@@ -62,8 +62,8 @@ void setUp(void)
     g_mds.device.product_code = "AR6-STD";
     g_mds.device.serial_number = "SN-R-0007";
     g_mds.device.category = ROBOTICS_CAT_ARTICULATED_ROBOT;
-    g_mds.device.on_path = true;
-    g_mds.device.in_control = true;
+    g_mds.device.on_path = PROTO_TRUE;
+    g_mds.device.in_control = PROTO_TRUE;
     g_mds.device.speed_override = 75.0;
     g_mds.device.axis_count = 3;
     // distinct per-axis values so a Read must pick the right axis
@@ -87,8 +87,8 @@ void setUp(void)
     g_mds.controller.sw_model = "RobOS";
     g_mds.controller.sw_revision = "4.2.0";
     g_mds.safety.operational_mode = ROBOTICS_MODE_AUTOMATIC;
-    g_mds.safety.emergency_stop = false;
-    g_mds.safety.protective_stop = true;
+    g_mds.safety.emergency_stop = PROTO_FALSE;
+    g_mds.safety.protective_stop = PROTO_TRUE;
     pc_robotics_bind(&g_mds);
 }
 void tearDown(void)

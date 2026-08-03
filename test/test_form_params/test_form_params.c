@@ -10,7 +10,7 @@
 #include <unity.h>
 
 static char g_a[64], g_b[64], g_missing[64];
-static bool g_found_a, g_found_b, g_found_missing;
+static proto_bool g_found_a, g_found_b, g_found_missing;
 
 static void push_str(uint8_t slot, const char *s)
 {
@@ -32,7 +32,7 @@ static void h_form(uint8_t slot, HttpReq *req)
 }
 
 static char g_trunc[4];
-static bool g_found_trunc;
+static proto_bool g_found_trunc;
 static void h_form_trunc(uint8_t slot, HttpReq *req)
 {
     g_found_trunc = http_get_form(req, "a", g_trunc, sizeof(g_trunc));
@@ -43,7 +43,7 @@ void setUp()
 {
     pc_server_reset();
     g_a[0] = g_b[0] = g_missing[0] = g_trunc[0] = '\0';
-    g_found_a = g_found_b = g_found_missing = g_found_trunc = false;
+    g_found_a = g_found_b = g_found_missing = g_found_trunc = PROTO_FALSE;
     for (int i = 0; i < MAX_CONNS; i++)
     {
         conn_pool[i] = {};

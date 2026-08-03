@@ -89,10 +89,10 @@ static int rfwd_cancel_cb(uint8_t slot, const char *addr, size_t addr_len, uint1
 
 // forwarded-tcpip (ssh -R) open-confirmation callback -----------------------
 static uint32_t confirm_channel;
-static bool confirm_ok;
+static proto_bool confirm_ok;
 static int confirm_count;
 
-static void confirm_cb(uint8_t slot, uint32_t channel, bool ok)
+static void confirm_cb(uint8_t slot, uint32_t channel, proto_bool ok)
 {
     (void)slot;
     confirm_channel = channel;
@@ -117,7 +117,7 @@ void setUp()
     rfwd_open_ret = 0;
     rfwd_cancel_ret = 0;
     confirm_channel = 0xFFFFFFFFu;
-    confirm_ok = false;
+    confirm_ok = PROTO_FALSE;
     confirm_count = 0;
     memset(last_data, 0, sizeof(last_data));
     last_data_len = 0;
@@ -546,7 +546,8 @@ void test_data_to_unknown_channel_rejected()
 // ---- global request (RFC 4254 §4; §7.1 tcpip-forward, ssh -R) --------------
 
 // GLOBAL_REQUEST tcpip-forward / cancel-tcpip-forward: name, want_reply, bind addr, port.
-static size_t make_global_fwd(uint8_t *pkt, const char *name, bool want_reply, const char *bind_addr, uint16_t port)
+static size_t make_global_fwd(uint8_t *pkt, const char *name, proto_bool want_reply, const char *bind_addr,
+                              uint16_t port)
 {
     size_t n = 0;
     pkt[n++] = SSH_MSG_GLOBAL_REQUEST;
@@ -559,7 +560,7 @@ static size_t make_global_fwd(uint8_t *pkt, const char *name, bool want_reply, c
 }
 
 // GLOBAL_REQUEST with an arbitrary (non-forward) name and no request-specific data.
-static size_t make_global_other(uint8_t *pkt, const char *name, bool want_reply)
+static size_t make_global_other(uint8_t *pkt, const char *name, proto_bool want_reply)
 {
     size_t n = 0;
     pkt[n++] = SSH_MSG_GLOBAL_REQUEST;
@@ -573,7 +574,7 @@ void test_rforward_no_cb_refused()
 {
     uint8_t pkt[64], out[16];
     size_t olen = 99;
-    size_t n = make_global_fwd(pkt, "tcpip-forward", true, "", 8080);
+    size_t n = make_global_fwd(pkt, "tcpip-forward", PROTO_TRUE, "", 8080);
     TEST_ASSERT_EQUAL_INT(0, ssh_global_request_handle(0, pkt, n, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL(1u, olen);
     TEST_ASSERT_EQUAL(SSH_MSG_REQUEST_FAILURE, out[0]);
@@ -587,7 +588,7 @@ void test_rforward_accept_specific_port()
     rfwd_open_ret = 8080;
     uint8_t pkt[64], out[16];
     size_t olen = 99;
-    size_t n = make_global_fwd(pkt, "tcpip-forward", true, "0.0.0.0", 8080);
+    size_t n = make_global_fwd(pkt, "tcpip-forward", PROTO_TRUE, "0.0.0.0", 8080);
     TEST_ASSERT_EQUAL_INT(0, ssh_global_request_handle(0, pkt, n, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL(1u, olen);
     TEST_ASSERT_EQUAL(SSH_MSG_REQUEST_SUCCESS, out[0]);
@@ -603,7 +604,7 @@ void test_rforward_port0_echoes_allocated()
     rfwd_open_ret = 54321;
     uint8_t pkt[64], out[16];
     size_t olen = 99;
-    size_t n = make_global_fwd(pkt, "tcpip-forward", true, "", 0);
+    size_t n = make_global_fwd(pkt, "tcpip-forward", PROTO_TRUE, "", 0);
     TEST_ASSERT_EQUAL_INT(0, ssh_global_request_handle(0, pkt, n, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL(5u, olen);
     TEST_ASSERT_EQUAL(SSH_MSG_REQUEST_SUCCESS, out[0]);
@@ -617,7 +618,7 @@ void test_rforward_no_reply_silent()
     rfwd_open_ret = 8080;
     uint8_t pkt[64], out[16];
     size_t olen = 99;
-    size_t n = make_global_fwd(pkt, "tcpip-forward", false, "", 8080);
+    size_t n = make_global_fwd(pkt, "tcpip-forward", PROTO_FALSE, "", 8080);
     TEST_ASSERT_EQUAL_INT(0, ssh_global_request_handle(0, pkt, n, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL(0u, olen);
     TEST_ASSERT_EQUAL_INT(1, rfwd_open_count);
@@ -630,7 +631,7 @@ void test_rforward_cancel()
     rfwd_cancel_ret = 0;
     uint8_t pkt[64], out[16];
     size_t olen = 99;
-    size_t n = make_global_fwd(pkt, "cancel-tcpip-forward", true, "", 8080);
+    size_t n = make_global_fwd(pkt, "cancel-tcpip-forward", PROTO_TRUE, "", 8080);
     TEST_ASSERT_EQUAL_INT(0, ssh_global_request_handle(0, pkt, n, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL(1u, olen);
     TEST_ASSERT_EQUAL(SSH_MSG_REQUEST_SUCCESS, out[0]);
@@ -644,13 +645,13 @@ void test_global_unknown_request()
 {
     uint8_t pkt[64], out[16];
     size_t olen = 99;
-    size_t n = make_global_other(pkt, "keepalive@openssh.com", true);
+    size_t n = make_global_other(pkt, "keepalive@openssh.com", PROTO_TRUE);
     TEST_ASSERT_EQUAL_INT(0, ssh_global_request_handle(0, pkt, n, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL(1u, olen);
     TEST_ASSERT_EQUAL(SSH_MSG_REQUEST_FAILURE, out[0]);
 
     olen = 99;
-    n = make_global_other(pkt, "hostkeys-00@openssh.com", false);
+    n = make_global_other(pkt, "hostkeys-00@openssh.com", PROTO_FALSE);
     TEST_ASSERT_EQUAL_INT(0, ssh_global_request_handle(0, pkt, n, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL(0u, olen); // no reply when want_reply is unset
 }
@@ -912,7 +913,7 @@ void test_chan_forward_and_channel_guards()
     uint8_t out[64];
     size_t ol = 0, n = 0;
     // While a slot is free: null address (262) and a too-small buffer (273).
-    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_open_forwarded(0, NULL, 80, "x", 90, out, &ol, sizeof(out))); // 262
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_open_forwarded(0, NULL, 80, "x", 90, out, &ol, sizeof(out)));    // 262
     TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_open_forwarded(0, "10.0.0.1", 80, "1.2.3.4", 90, out, &ol, 10)); // 273
 
     uint32_t ch = open_session(5, 32768);
@@ -934,7 +935,7 @@ void test_chan_forward_and_channel_guards()
     // With every channel slot occupied, a server-initiated open is refused (265).
     for (int c = 0; c < PC_SSH_MAX_CHANNELS; c++)
     {
-        ssh_chan[0][c].open = true;
+        ssh_chan[0][c].open = PROTO_TRUE;
     }
     TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_open_forwarded(0, "10.0.0.1", 80, "1.2.3.4", 90, out, &ol, sizeof(out)));
 }
@@ -1038,10 +1039,10 @@ void test_chan_same_length_names_do_not_match()
     // form. Both fall through to the unrecognized-request reply instead of the forward handler.
     pc_ssh_channel_set_rforward_open_cb(rfwd_open_cb);
     pc_ssh_channel_set_rforward_cancel_cb(rfwd_cancel_cb);
-    n = make_global_other(g, "tcpip-forwarX", true);
+    n = make_global_other(g, "tcpip-forwarX", PROTO_TRUE);
     TEST_ASSERT_EQUAL_INT(0, ssh_global_request_handle(0, g, n, out, &ol, sizeof(out)));
     TEST_ASSERT_EQUAL(SSH_MSG_REQUEST_FAILURE, out[0]);
-    n = make_global_other(g, "cancel-tcpip-forwarX", true);
+    n = make_global_other(g, "cancel-tcpip-forwarX", PROTO_TRUE);
     TEST_ASSERT_EQUAL_INT(0, ssh_global_request_handle(0, g, n, out, &ol, sizeof(out)));
     TEST_ASSERT_EQUAL(SSH_MSG_REQUEST_FAILURE, out[0]);
     TEST_ASSERT_EQUAL_INT(0, rfwd_open_count);
@@ -1136,12 +1137,12 @@ void test_chan_rforward_refused_paths()
     size_t ol = 99;
     uint8_t g[64];
 
-    size_t n = make_global_fwd(g, "tcpip-forward", false, "0.0.0.0", 8080); // no owner, no reply wanted
+    size_t n = make_global_fwd(g, "tcpip-forward", PROTO_FALSE, "0.0.0.0", 8080); // no owner, no reply wanted
     TEST_ASSERT_EQUAL_INT(0, ssh_global_request_handle(0, g, n, out, &ol, sizeof(out)));
     TEST_ASSERT_EQUAL(0u, ol);
 
     ol = 99;
-    n = make_global_fwd(g, "cancel-tcpip-forward", true, "0.0.0.0", 8080); // no cancel owner
+    n = make_global_fwd(g, "cancel-tcpip-forward", PROTO_TRUE, "0.0.0.0", 8080); // no cancel owner
     TEST_ASSERT_EQUAL_INT(0, ssh_global_request_handle(0, g, n, out, &ol, sizeof(out)));
     TEST_ASSERT_EQUAL(1u, ol);
     TEST_ASSERT_EQUAL(SSH_MSG_REQUEST_FAILURE, out[0]);
@@ -1239,7 +1240,7 @@ void test_chan_outbound_limits_and_window_saturation()
 #if PC_ENABLE_SSH_SFTP || PC_ENABLE_SSH_SCP
 // Build a CHANNEL_REQUEST on channel @p id: request type @p rtype, want_reply, then (optionally) a
 // request-specific string argument. @p trunc_arg appends a length header whose bytes never arrive.
-static size_t make_chan_request(uint8_t *rq, uint32_t id, const char *rtype, const char *arg, bool trunc_arg)
+static size_t make_chan_request(uint8_t *rq, uint32_t id, const char *rtype, const char *arg, proto_bool trunc_arg)
 {
     size_t n = 0;
     rq[n++] = SSH_MSG_CHANNEL_REQUEST;
@@ -1347,21 +1348,21 @@ void test_sftp_subsystem_match_and_missing_cb()
     uint8_t out[64];
     size_t ol = 0;
 
-    size_t n = make_chan_request(rq, id, "subsystex", "sftp", false); // 9 chars, not "subsystem"
+    size_t n = make_chan_request(rq, id, "subsystex", "sftp", PROTO_FALSE); // 9 chars, not "subsystem"
     TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_request(0, rq, n, out, &ol, sizeof(out)));
     TEST_ASSERT_EQUAL(SSH_MSG_CHANNEL_FAILURE, out[0]);
 
-    n = make_chan_request(rq, id, "subsystem", "sftq", false); // 4 chars, not "sftp"
+    n = make_chan_request(rq, id, "subsystem", "sftq", PROTO_FALSE); // 4 chars, not "sftp"
     TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_request(0, rq, n, out, &ol, sizeof(out)));
     TEST_ASSERT_EQUAL(SSH_MSG_CHANNEL_FAILURE, out[0]);
 
-    n = make_chan_request(rq, id, "subsystem", NULL, true); // argument length header only
+    n = make_chan_request(rq, id, "subsystem", NULL, PROTO_TRUE); // argument length header only
     TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_request(0, rq, n, out, &ol, sizeof(out)));
     TEST_ASSERT_EQUAL(SSH_MSG_CHANNEL_FAILURE, out[0]);
     TEST_ASSERT_EQUAL_INT(0, pc_sftp_open_count);
 
     // Accepted with no binding: the channel is tagged SFTP and its data is simply dropped.
-    n = make_chan_request(rq, id, "subsystem", "sftp", false);
+    n = make_chan_request(rq, id, "subsystem", "sftp", PROTO_FALSE);
     TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_request(0, rq, n, out, &ol, sizeof(out)));
     TEST_ASSERT_EQUAL(SSH_MSG_CHANNEL_SUCCESS, out[0]);
     TEST_ASSERT_EQUAL_INT(0, pc_sftp_open_count);
@@ -1443,7 +1444,7 @@ void test_scp_exec_match_and_missing_cb()
     uint8_t out[64];
     size_t ol = 0;
 
-    size_t n = make_chan_request(rq, id, "exeX", "scp -t /x", false); // 4 chars, not "exec"
+    size_t n = make_chan_request(rq, id, "exeX", "scp -t /x", PROTO_FALSE); // 4 chars, not "exec"
     TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_request(0, rq, n, out, &ol, sizeof(out)));
     TEST_ASSERT_EQUAL(SSH_MSG_CHANNEL_FAILURE, out[0]);
 
@@ -1463,7 +1464,7 @@ void test_scp_exec_match_and_missing_cb()
     TEST_ASSERT_EQUAL_INT(1, data_cb_count);
 
     // A real "scp " command with no binding installed: accepted, tagged, and its data dropped.
-    n = make_chan_request(rq, id, "exec", "scp -f /gcode/part.nc", false);
+    n = make_chan_request(rq, id, "exec", "scp -f /gcode/part.nc", PROTO_FALSE);
     TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_request(0, rq, n, out, &ol, sizeof(out)));
     TEST_ASSERT_EQUAL(SSH_MSG_CHANNEL_SUCCESS, out[0]);
     TEST_ASSERT_EQUAL_INT(0, pc_scp_open_count);

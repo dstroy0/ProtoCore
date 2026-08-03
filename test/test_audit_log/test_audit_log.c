@@ -291,10 +291,10 @@ void test_dump_fails_closed_at_exact_length(void)
 // arms directly.
 void test_hex_digit_upper_and_lower(void)
 {
-    TEST_ASSERT_EQUAL_CHAR('a', pc_hex_digit(10, false));
-    TEST_ASSERT_EQUAL_CHAR('A', pc_hex_digit(10, true));
-    TEST_ASSERT_EQUAL_CHAR('f', pc_hex_digit(15, false));
-    TEST_ASSERT_EQUAL_CHAR('F', pc_hex_digit(15, true));
+    TEST_ASSERT_EQUAL_CHAR('a', pc_hex_digit(10, PROTO_FALSE));
+    TEST_ASSERT_EQUAL_CHAR('A', pc_hex_digit(10, PROTO_TRUE));
+    TEST_ASSERT_EQUAL_CHAR('f', pc_hex_digit(15, PROTO_FALSE));
+    TEST_ASSERT_EQUAL_CHAR('F', pc_hex_digit(15, PROTO_TRUE));
 }
 
 // pc_hex_val: none of audit_log.cpp's call sites use it (it only ever encodes,
@@ -319,12 +319,12 @@ void test_hex_encode_upper_and_lower(void)
 {
     const uint8_t bytes[3] = {0x0A, 0xFF, 0x01};
     char out[7];
-    pc_hex_encode(bytes, 3, out, false); // lowercase
+    pc_hex_encode(bytes, 3, out, PROTO_FALSE); // lowercase
     TEST_ASSERT_EQUAL_STRING("0aff01", out);
-    pc_hex_encode(bytes, 3, out, true); // uppercase
+    pc_hex_encode(bytes, 3, out, PROTO_TRUE); // uppercase
     TEST_ASSERT_EQUAL_STRING("0AFF01", out);
     char empty_out[1];
-    pc_hex_encode(bytes, 0, empty_out, false); // loop body never runs
+    pc_hex_encode(bytes, 0, empty_out, PROTO_FALSE); // loop body never runs
     TEST_ASSERT_EQUAL_STRING("", empty_out);
 }
 

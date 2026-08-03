@@ -58,7 +58,7 @@ static void on_chan_data(uint8_t slot, uint32_t channel, const uint8_t *d, size_
     memcpy(chan_data, d, chan_data_len);
 }
 
-static bool pw_cb(const char *u, const char *p)
+static proto_bool pw_cb(const char *u, const char *p)
 {
     return strcmp(u, "alice") == 0 && strcmp(p, "s3cret") == 0;
 }
@@ -120,7 +120,7 @@ static size_t put_mpint(uint8_t *p, const uint8_t *be, size_t len)
     {
         off++;
     }
-    bool pad = (off < len) && (be[off] & 0x80u);
+    proto_bool pad = (off < len) && (be[off] & 0x80u);
     size_t mlen = (len - off) + (pad ? 1 : 0);
     wr_u32(p, (uint32_t)mlen);
     size_t o = 4;
@@ -137,7 +137,7 @@ static size_t put_namelist(uint8_t *p, const char *s)
     return put_string(p, s);
 }
 
-static size_t build_client_kexinit(uint8_t *out, bool ext_info_c = true)
+static size_t build_client_kexinit(uint8_t *out, proto_bool ext_info_c = PROTO_TRUE)
 {
     size_t o = 0;
     out[o++] = SSH_MSG_KEXINIT;
@@ -274,7 +274,7 @@ void test_full_handshake_to_channel_data()
 void test_channel_open_before_auth_rejected()
 {
     SshSession *s = &ssh_sess[0];
-    s->authed = false;
+    s->authed = PROTO_FALSE;
     s->phase = SSH_PHASE_SERVICE;
     uint8_t pkt[64];
     size_t n = 0;
@@ -336,7 +336,7 @@ void test_auth_bruteforce_disconnect()
 {
     SshSession *s = &ssh_sess[0];
     s->phase = SSH_PHASE_AUTH;
-    s->authed = false;
+    s->authed = PROTO_FALSE;
     s->auth_failures = 0;
 
     uint8_t pkt[128];
@@ -365,7 +365,7 @@ void test_auth_success_after_failures()
 {
     SshSession *s = &ssh_sess[0];
     s->phase = SSH_PHASE_AUTH;
-    s->authed = false;
+    s->authed = PROTO_FALSE;
     s->auth_failures = 0;
 
     uint8_t pkt[128];
@@ -432,7 +432,7 @@ void test_inbound_close_emits_eof_then_close_separately()
 // ordered by the negotiation preference) so a modern OpenSSH client picks a key type it can offer.
 void test_extinfo_build_advertises_server_sig_algs()
 {
-    ssh_kex_set_prefer_rsa(true); // deterministic ordering: rsa first
+    ssh_kex_set_prefer_rsa(PROTO_TRUE); // deterministic ordering: rsa first
     uint8_t out[128];
     size_t n = 0;
     TEST_ASSERT_EQUAL_INT(0, ssh_extinfo_build(out, &n, sizeof(out)));
@@ -497,7 +497,7 @@ void test_extinfo_not_sent_without_ext_info_c()
     s->phase = SSH_PHASE_KEXINIT;
 
     uint8_t pkt[2048];
-    size_t n = build_client_kexinit(pkt, /*ext_info_c=*/false);
+    size_t n = build_client_kexinit(pkt, /*ext_info_c=*/PROTO_FALSE);
     TEST_ASSERT_EQUAL_INT(0, pc_ssh_server_dispatch(0, pkt[0], pkt, n));
 
     uint8_t e_be[256];
@@ -535,14 +535,14 @@ void test_inbound_ext_info_ignored()
 // enough - rebuilt per call, and released first so a backend that attaches vendor resources to a
 // context (ESP's mbedtls does) does not leak one per vector.
 static uint8_t g_gcm_ws[PC_WORK_AESGCM] __attribute__((aligned(8)));
-static bool g_gcm_live = false;
+static proto_bool g_gcm_live = PROTO_FALSE;
 static pc_aesgcm_key *gcm_key(const uint8_t *key)
 {
     if (g_gcm_live)
     {
         pc_aesgcm_key_wipe(reinterpret_cast<pc_aesgcm_key *>(g_gcm_ws));
     }
-    g_gcm_live = true;
+    g_gcm_live = PROTO_TRUE;
     return pc_aesgcm_key_init(g_gcm_ws, key);
 }
 
@@ -621,8 +621,8 @@ void test_ssh_pkt_encrypted_roundtrip_and_mac_fail()
     memset(iv, 0x22, sizeof(iv));
 
     ssh_pkt_init(0);
-    ssh_pkt[0].enc_out = true;
-    ssh_pkt[0].enc_in = true;
+    ssh_pkt[0].enc_out = PROTO_TRUE;
+    ssh_pkt[0].enc_in = PROTO_TRUE;
     memcpy(ssh_keys[0].aes_key_s2c, key, PC_AES256CTR_KEY_LEN);
     memcpy(ssh_keys[0].aes_iv_s2c, iv, PC_AES256CTR_CTR_LEN);
     memcpy(ssh_keys[0].aes_key_c2s, key, PC_AES256CTR_KEY_LEN);
@@ -719,7 +719,7 @@ void test_ssh_userauth_guards()
 // Every post-auth connection message is rejected while unauthenticated.
 void test_ssh_postauth_authed_guard()
 {
-    ssh_sess[0].authed = false;
+    ssh_sess[0].authed = PROTO_FALSE;
     const uint8_t mts[] = {SSH_MSG_GLOBAL_REQUEST, SSH_MSG_CHANNEL_OPEN_CONFIRM, SSH_MSG_CHANNEL_OPEN_FAILURE,
                            SSH_MSG_CHANNEL_REQUEST, SSH_MSG_CHANNEL_DATA};
     for (size_t j = 0; j < sizeof(mts) / sizeof(mts[0]); j++)
@@ -732,7 +732,7 @@ void test_ssh_postauth_authed_guard()
 // Authenticated, a malformed post-auth message fails its handler.
 void test_ssh_postauth_handler_fails()
 {
-    ssh_sess[0].authed = true;
+    ssh_sess[0].authed = PROTO_TRUE;
     const uint8_t mts[] = {SSH_MSG_GLOBAL_REQUEST, SSH_MSG_CHANNEL_OPEN, SSH_MSG_CHANNEL_REQUEST, SSH_MSG_CHANNEL_DATA};
     for (size_t j = 0; j < sizeof(mts) / sizeof(mts[0]); j++)
     {
@@ -744,7 +744,7 @@ void test_ssh_postauth_handler_fails()
 // Authenticated, a stray OPEN_CONFIRM / OPEN_FAILURE is accepted-and-ignored (returns 0).
 void test_ssh_open_confirm_failure_authed()
 {
-    ssh_sess[0].authed = true;
+    ssh_sess[0].authed = PROTO_TRUE;
     uint8_t c[9] = {SSH_MSG_CHANNEL_OPEN_CONFIRM, 0, 0, 0, 0, 0, 0, 0, 0};
     TEST_ASSERT_EQUAL_INT(0, pc_ssh_server_dispatch(0, c[0], c, sizeof(c)));
     uint8_t f[5] = {SSH_MSG_CHANNEL_OPEN_FAILURE, 0, 0, 0, 0};
@@ -754,7 +754,7 @@ void test_ssh_open_confirm_failure_authed()
 // A well-formed GLOBAL_REQUEST with want_reply is handled and answered (REQUEST_SUCCESS/FAILURE).
 void test_ssh_global_request_reply()
 {
-    ssh_sess[0].authed = true;
+    ssh_sess[0].authed = PROTO_TRUE;
     uint8_t p[64];
     size_t n = 0;
     p[n++] = SSH_MSG_GLOBAL_REQUEST;
@@ -781,7 +781,7 @@ void test_ssh_window_adjust_and_eof()
 // channel 0. Leaves the session authenticated and in the OPEN phase.
 static void open_session_channel(uint32_t peer_id)
 {
-    ssh_sess[0].authed = true;
+    ssh_sess[0].authed = PROTO_TRUE;
     ssh_sess[0].phase = SSH_PHASE_OPEN;
     uint8_t p[64];
     size_t n = 0;
@@ -864,7 +864,7 @@ void test_ssh_dispatch_without_emit_cb()
 // leaves the reply empty and the dispatcher must not emit a zero-length packet.
 void test_ssh_global_request_silent_without_want_reply()
 {
-    ssh_sess[0].authed = true;
+    ssh_sess[0].authed = PROTO_TRUE;
     uint8_t p[64];
     size_t n = 0;
     p[n++] = SSH_MSG_GLOBAL_REQUEST;
@@ -923,8 +923,8 @@ void test_ssh_channel_close_unhandled_emits_nothing()
 void test_ssh_kexinit_midsession_rekey()
 {
     SshSession *s = &ssh_sess[0];
-    s->authed = true;
-    s->have_session_id = true;
+    s->authed = PROTO_TRUE;
+    s->have_session_id = PROTO_TRUE;
     s->session_id_len = 32;
     for (int j = 0; j < 32; j++)
     {
@@ -969,7 +969,7 @@ static const uint8_t PKT_MAC_BYTE = 0x77;
 
 // Install a loopback key set on slot 0: both directions carry identical key material, so a packet
 // this process sends can be fed straight back into the receive path whichever role is selected.
-static void pkt_loopback_keys(uint8_t cipher_mode, uint8_t mac_mode, bool client)
+static void pkt_loopback_keys(uint8_t cipher_mode, uint8_t mac_mode, proto_bool client)
 {
     uint8_t key[PC_CHACHAPOLY_KEY_LEN];
     uint8_t iv[16];
@@ -980,8 +980,8 @@ static void pkt_loopback_keys(uint8_t cipher_mode, uint8_t mac_mode, bool client
     {
         ssh_pkt_set_client(0);
     }
-    ssh_pkt[0].enc_out = true;
-    ssh_pkt[0].enc_in = true;
+    ssh_pkt[0].enc_out = PROTO_TRUE;
+    ssh_pkt[0].enc_in = PROTO_TRUE;
     memset(&ssh_keys[0], 0, sizeof(ssh_keys[0]));
     ssh_keys[0].cipher_mode = cipher_mode;
     ssh_keys[0].mac_mode = mac_mode;
@@ -997,7 +997,7 @@ static void pkt_loopback_keys(uint8_t cipher_mode, uint8_t mac_mode, bool client
 }
 
 // Frame one payload with the given cipher/MAC/role and feed the wire bytes straight back in.
-static void pkt_roundtrip(uint8_t cipher_mode, uint8_t mac_mode, bool client, const uint8_t *payload, size_t n)
+static void pkt_roundtrip(uint8_t cipher_mode, uint8_t mac_mode, proto_bool client, const uint8_t *payload, size_t n)
 {
     static uint8_t wire[SSH_WIRE_CAP];
     size_t wlen = 0;
@@ -1038,12 +1038,12 @@ void test_ssh_pkt_client_role_and_zero_remainder_padding()
 void test_ssh_pkt_client_role_all_cipher_modes()
 {
     const uint8_t payload[9] = {SSH_MSG_IGNORE, 1, 2, 3, 4, 5, 6, 7, 8};
-    pkt_roundtrip(SSH_CIPHER_CHACHA20POLY1305, SSH_MAC_HMAC_SHA256, true, payload, sizeof(payload));
-    pkt_roundtrip(SSH_CIPHER_AES256GCM, SSH_MAC_HMAC_SHA256, true, payload, sizeof(payload));
-    pkt_roundtrip(SSH_CIPHER_AES256CTR, SSH_MAC_HMAC_SHA256_ETM, true, payload, sizeof(payload));
-    pkt_roundtrip(SSH_CIPHER_AES256CTR, SSH_MAC_HMAC_SHA256, true, payload, sizeof(payload));
-    pkt_roundtrip(SSH_CIPHER_AES256CTR, SSH_MAC_HMAC_SHA512, true, payload, sizeof(payload));
-    pkt_roundtrip(SSH_CIPHER_AES256CTR, SSH_MAC_HMAC_SHA512_ETM, true, payload, sizeof(payload));
+    pkt_roundtrip(SSH_CIPHER_CHACHA20POLY1305, SSH_MAC_HMAC_SHA256, PROTO_TRUE, payload, sizeof(payload));
+    pkt_roundtrip(SSH_CIPHER_AES256GCM, SSH_MAC_HMAC_SHA256, PROTO_TRUE, payload, sizeof(payload));
+    pkt_roundtrip(SSH_CIPHER_AES256CTR, SSH_MAC_HMAC_SHA256_ETM, PROTO_TRUE, payload, sizeof(payload));
+    pkt_roundtrip(SSH_CIPHER_AES256CTR, SSH_MAC_HMAC_SHA256, PROTO_TRUE, payload, sizeof(payload));
+    pkt_roundtrip(SSH_CIPHER_AES256CTR, SSH_MAC_HMAC_SHA512, PROTO_TRUE, payload, sizeof(payload));
+    pkt_roundtrip(SSH_CIPHER_AES256CTR, SSH_MAC_HMAC_SHA512_ETM, PROTO_TRUE, payload, sizeof(payload));
     ssh_pkt_init(0);
 }
 
@@ -1055,7 +1055,7 @@ void test_ssh_pkt_aesgcm_minimum_padding()
     uint8_t payload[13]; // base 14 -> natural padding 2 -> below the minimum -> 18
     memset(payload, 0x3E, sizeof(payload));
     payload[0] = SSH_MSG_IGNORE;
-    pkt_loopback_keys(SSH_CIPHER_AES256GCM, SSH_MAC_HMAC_SHA256, false);
+    pkt_loopback_keys(SSH_CIPHER_AES256GCM, SSH_MAC_HMAC_SHA256, PROTO_FALSE);
     size_t wlen = 0;
     TEST_ASSERT_EQUAL_INT(0, ssh_pkt_send(0, payload, sizeof(payload), wire, &wlen, sizeof(wire)));
     const uint32_t pkt_len = rd_u32(wire);
@@ -1086,11 +1086,11 @@ void test_ssh_pkt_chachapoly_frame_errors()
     uint8_t rx[128];
     memset(rx, 0, sizeof(rx));
 
-    pkt_loopback_keys(SSH_CIPHER_CHACHA20POLY1305, SSH_MAC_HMAC_SHA256, false);
+    pkt_loopback_keys(SSH_CIPHER_CHACHA20POLY1305, SSH_MAC_HMAC_SHA256, PROTO_FALSE);
     chacha_len_field(rx, 0); // packet_length 0
     TEST_ASSERT_EQUAL_INT(-1, ssh_pkt_recv(0, rx, 64, pkt_rec_handler));
 
-    pkt_loopback_keys(SSH_CIPHER_CHACHA20POLY1305, SSH_MAC_HMAC_SHA256, false);
+    pkt_loopback_keys(SSH_CIPHER_CHACHA20POLY1305, SSH_MAC_HMAC_SHA256, PROTO_FALSE);
     chacha_len_field(rx, SSH_PKT_BUF_SIZE); // past the receive buffer
     TEST_ASSERT_EQUAL_INT(-1, ssh_pkt_recv(0, rx, 64, pkt_rec_handler));
 
@@ -1101,13 +1101,13 @@ void test_ssh_pkt_chachapoly_frame_errors()
     memset(plain, 0xEE, sizeof(plain));
     wr_u32(plain, pkt_len);
     plain[4] = 2;
-    pkt_loopback_keys(SSH_CIPHER_CHACHA20POLY1305, SSH_MAC_HMAC_SHA256, false);
+    pkt_loopback_keys(SSH_CIPHER_CHACHA20POLY1305, SSH_MAC_HMAC_SHA256, PROTO_FALSE);
     pc_chachapoly_encrypt(ssh_keys[0].chacha_key_c2s, 0, sealed, plain, pkt_len);
     TEST_ASSERT_EQUAL_INT(-1, ssh_pkt_recv(0, sealed, sizeof(sealed), pkt_rec_handler));
 
     // ...and one whose padding_length runs past the packet itself.
     plain[4] = (uint8_t)pkt_len;
-    pkt_loopback_keys(SSH_CIPHER_CHACHA20POLY1305, SSH_MAC_HMAC_SHA256, false);
+    pkt_loopback_keys(SSH_CIPHER_CHACHA20POLY1305, SSH_MAC_HMAC_SHA256, PROTO_FALSE);
     pc_chachapoly_encrypt(ssh_keys[0].chacha_key_c2s, 0, sealed, plain, pkt_len);
     TEST_ASSERT_EQUAL_INT(-1, ssh_pkt_recv(0, sealed, sizeof(sealed), pkt_rec_handler));
     ssh_pkt_init(0);
@@ -1133,27 +1133,27 @@ void test_ssh_pkt_aesgcm_frame_errors()
     uint8_t rx[128];
     memset(rx, 0, sizeof(rx));
 
-    pkt_loopback_keys(SSH_CIPHER_AES256GCM, SSH_MAC_HMAC_SHA256, false);
+    pkt_loopback_keys(SSH_CIPHER_AES256GCM, SSH_MAC_HMAC_SHA256, PROTO_FALSE);
     wr_u32(rx, 0); // packet_length 0
     TEST_ASSERT_EQUAL_INT(-1, ssh_pkt_recv(0, rx, 64, pkt_rec_handler));
 
-    pkt_loopback_keys(SSH_CIPHER_AES256GCM, SSH_MAC_HMAC_SHA256, false);
+    pkt_loopback_keys(SSH_CIPHER_AES256GCM, SSH_MAC_HMAC_SHA256, PROTO_FALSE);
     wr_u32(rx, SSH_PKT_BUF_SIZE); // past the receive buffer
     TEST_ASSERT_EQUAL_INT(-1, ssh_pkt_recv(0, rx, 64, pkt_rec_handler));
 
-    pkt_loopback_keys(SSH_CIPHER_AES256GCM, SSH_MAC_HMAC_SHA256, false);
+    pkt_loopback_keys(SSH_CIPHER_AES256GCM, SSH_MAC_HMAC_SHA256, PROTO_FALSE);
     wr_u32(rx, 17); // not a whole number of AES blocks
     TEST_ASSERT_EQUAL_INT(-1, ssh_pkt_recv(0, rx, 64, pkt_rec_handler));
 
     // Length announced but the body has not arrived: buffered, nothing dispatched.
-    pkt_loopback_keys(SSH_CIPHER_AES256GCM, SSH_MAC_HMAC_SHA256, false);
+    pkt_loopback_keys(SSH_CIPHER_AES256GCM, SSH_MAC_HMAC_SHA256, PROTO_FALSE);
     wr_u32(rx, 32);
     g_pkt_calls = 0;
     TEST_ASSERT_EQUAL_INT(0, ssh_pkt_recv(0, rx, 12, pkt_rec_handler));
     TEST_ASSERT_EQUAL_INT(0, g_pkt_calls);
 
     // Complete frame but no scratch to decrypt into -> discard + disconnect.
-    pkt_loopback_keys(SSH_CIPHER_AES256GCM, SSH_MAC_HMAC_SHA256, false);
+    pkt_loopback_keys(SSH_CIPHER_AES256GCM, SSH_MAC_HMAC_SHA256, PROTO_FALSE);
     wr_u32(rx, 16);
     pc_plaintext_reset();
     while (pc_plaintext_alloc(64, 1))
@@ -1166,7 +1166,7 @@ void test_ssh_pkt_aesgcm_frame_errors()
     static uint8_t wire[SSH_WIRE_CAP];
     size_t wlen = 0;
     const uint8_t payload[8] = {SSH_MSG_IGNORE, 1, 2, 3, 4, 5, 6, 7};
-    pkt_loopback_keys(SSH_CIPHER_AES256GCM, SSH_MAC_HMAC_SHA256, false);
+    pkt_loopback_keys(SSH_CIPHER_AES256GCM, SSH_MAC_HMAC_SHA256, PROTO_FALSE);
     TEST_ASSERT_EQUAL_INT(0, ssh_pkt_send(0, payload, sizeof(payload), wire, &wlen, sizeof(wire)));
     ssh_pkt[0].seq_no_recv = SSH_SEQ_CLOSE_THRESHOLD;
     ssh_pkt[0].rx_len = 0;
@@ -1177,12 +1177,12 @@ void test_ssh_pkt_aesgcm_frame_errors()
     uint8_t plain[pkt_len];
     memset(plain, 0xC5, sizeof(plain));
     plain[0] = 3;
-    pkt_loopback_keys(SSH_CIPHER_AES256GCM, SSH_MAC_HMAC_SHA256, false);
+    pkt_loopback_keys(SSH_CIPHER_AES256GCM, SSH_MAC_HMAC_SHA256, PROTO_FALSE);
     size_t n = gcm_seal_packet(wire, pkt_len, plain);
     TEST_ASSERT_EQUAL_INT(-1, ssh_pkt_recv(0, wire, n, pkt_rec_handler));
 
     plain[0] = (uint8_t)pkt_len;
-    pkt_loopback_keys(SSH_CIPHER_AES256GCM, SSH_MAC_HMAC_SHA256, false);
+    pkt_loopback_keys(SSH_CIPHER_AES256GCM, SSH_MAC_HMAC_SHA256, PROTO_FALSE);
     n = gcm_seal_packet(wire, pkt_len, plain);
     TEST_ASSERT_EQUAL_INT(-1, ssh_pkt_recv(0, wire, n, pkt_rec_handler));
     ssh_pkt_init(0);
@@ -1218,15 +1218,15 @@ void test_ssh_pkt_ctr_etm_frame_errors()
     uint8_t rx[128];
     memset(rx, 0, sizeof(rx));
 
-    pkt_loopback_keys(SSH_CIPHER_AES256CTR, SSH_MAC_HMAC_SHA256_ETM, false);
+    pkt_loopback_keys(SSH_CIPHER_AES256CTR, SSH_MAC_HMAC_SHA256_ETM, PROTO_FALSE);
     wr_u32(rx, 0);
     TEST_ASSERT_EQUAL_INT(-1, ssh_pkt_recv(0, rx, 64, pkt_rec_handler));
 
-    pkt_loopback_keys(SSH_CIPHER_AES256CTR, SSH_MAC_HMAC_SHA256_ETM, false);
+    pkt_loopback_keys(SSH_CIPHER_AES256CTR, SSH_MAC_HMAC_SHA256_ETM, PROTO_FALSE);
     wr_u32(rx, SSH_PKT_BUF_SIZE); // past the receive buffer
     TEST_ASSERT_EQUAL_INT(-1, ssh_pkt_recv(0, rx, 64, pkt_rec_handler));
 
-    pkt_loopback_keys(SSH_CIPHER_AES256CTR, SSH_MAC_HMAC_SHA256_ETM, false);
+    pkt_loopback_keys(SSH_CIPHER_AES256CTR, SSH_MAC_HMAC_SHA256_ETM, PROTO_FALSE);
     wr_u32(rx, 20); // not a whole number of AES blocks
     TEST_ASSERT_EQUAL_INT(-1, ssh_pkt_recv(0, rx, 64, pkt_rec_handler));
 
@@ -1236,12 +1236,12 @@ void test_ssh_pkt_ctr_etm_frame_errors()
     uint8_t plain[pkt_len];
     memset(plain, 0x91, sizeof(plain));
     plain[0] = 1;
-    pkt_loopback_keys(SSH_CIPHER_AES256CTR, SSH_MAC_HMAC_SHA256_ETM, false);
+    pkt_loopback_keys(SSH_CIPHER_AES256CTR, SSH_MAC_HMAC_SHA256_ETM, PROTO_FALSE);
     size_t n = ctr_etm_packet(wire, pkt_len, plain);
     TEST_ASSERT_EQUAL_INT(-1, ssh_pkt_recv(0, wire, n, pkt_rec_handler));
 
     plain[0] = (uint8_t)pkt_len;
-    pkt_loopback_keys(SSH_CIPHER_AES256CTR, SSH_MAC_HMAC_SHA256_ETM, false);
+    pkt_loopback_keys(SSH_CIPHER_AES256CTR, SSH_MAC_HMAC_SHA256_ETM, PROTO_FALSE);
     n = ctr_etm_packet(wire, pkt_len, plain);
     TEST_ASSERT_EQUAL_INT(-1, ssh_pkt_recv(0, wire, n, pkt_rec_handler));
 
@@ -1250,7 +1250,7 @@ void test_ssh_pkt_ctr_etm_frame_errors()
     static uint8_t flood[SSH_PKT_BUF_SIZE + 64];
     memset(flood, 0, sizeof(flood));
     wr_u32(flood, 2032);
-    pkt_loopback_keys(SSH_CIPHER_AES256CTR, SSH_MAC_HMAC_SHA256_ETM, false);
+    pkt_loopback_keys(SSH_CIPHER_AES256CTR, SSH_MAC_HMAC_SHA256_ETM, PROTO_FALSE);
     TEST_ASSERT_EQUAL_INT(-1, ssh_pkt_recv(0, flood, sizeof(flood), pkt_rec_handler));
     ssh_pkt_init(0);
 }
@@ -1267,7 +1267,7 @@ void test_ssh_pkt_ctr_emac_and_plain_frame_errors()
 
     // Fewer than 16 bytes: not enough to peek the encrypted length, so nothing is consumed.
     uint8_t partial[8] = {0};
-    pkt_loopback_keys(SSH_CIPHER_AES256CTR, SSH_MAC_HMAC_SHA256, false);
+    pkt_loopback_keys(SSH_CIPHER_AES256CTR, SSH_MAC_HMAC_SHA256, PROTO_FALSE);
     g_pkt_calls = 0;
     TEST_ASSERT_EQUAL_INT(0, ssh_pkt_recv(0, partial, sizeof(partial), pkt_rec_handler));
     TEST_ASSERT_EQUAL_INT(0, g_pkt_calls);
@@ -1282,7 +1282,7 @@ void test_ssh_pkt_ctr_emac_and_plain_frame_errors()
         uint8_t ctr[16];
         memcpy(ctr, iv, 16);
         pc_aes256ctr_crypt(key, ctr, hdr, wire, sizeof(hdr));
-        pkt_loopback_keys(SSH_CIPHER_AES256CTR, SSH_MAC_HMAC_SHA256, false);
+        pkt_loopback_keys(SSH_CIPHER_AES256CTR, SSH_MAC_HMAC_SHA256, PROTO_FALSE);
         TEST_ASSERT_EQUAL_INT(-1, ssh_pkt_recv(0, wire, sizeof(hdr), pkt_rec_handler));
     }
 
@@ -1308,7 +1308,7 @@ void test_ssh_pkt_ctr_emac_and_plain_frame_errors()
         memcpy(ctr, iv, 16);
         pc_aes256ctr_crypt(key, ctr, plain, wire, sizeof(plain));
 
-        pkt_loopback_keys(SSH_CIPHER_AES256CTR, SSH_MAC_HMAC_SHA256, false);
+        pkt_loopback_keys(SSH_CIPHER_AES256CTR, SSH_MAC_HMAC_SHA256, PROTO_FALSE);
         TEST_ASSERT_EQUAL_INT(-1, ssh_pkt_recv(0, wire, sizeof(plain) + 32, pkt_rec_handler));
     }
 

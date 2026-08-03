@@ -135,8 +135,8 @@ void test_nmea2000_error_paths()
 
     TEST_ASSERT_FALSE(pc_n2k_fastpacket_build_frame(NULL, 0, 0, 6, 0x01F801, 0x15, 0xFF, data, 8)); // null out
     TEST_ASSERT_FALSE(pc_n2k_fastpacket_build_frame(&f, 0, 0, 6, 0x01F801, 0x15, 0xFF, NULL, 8));   // null data
-    TEST_ASSERT_FALSE(pc_n2k_fastpacket_build_frame(&f, 8, 0, 6, 0x01F801, 0x15, 0xFF, data, 8));      // seq > 7
-    TEST_ASSERT_FALSE(pc_n2k_fastpacket_build_frame(&f, 0, 0, 6, 0x01F801, 0x15, 0xFF, data, 0));      // total_len 0
+    TEST_ASSERT_FALSE(pc_n2k_fastpacket_build_frame(&f, 8, 0, 6, 0x01F801, 0x15, 0xFF, data, 8));   // seq > 7
+    TEST_ASSERT_FALSE(pc_n2k_fastpacket_build_frame(&f, 0, 0, 6, 0x01F801, 0x15, 0xFF, data, 0));   // total_len 0
     TEST_ASSERT_FALSE(
         pc_n2k_fastpacket_build_frame(&f, 0, 5, 6, 0x01F801, 0x15, 0xFF, data, 8)); // frame_idx past the count
     TEST_ASSERT_FALSE(
@@ -148,7 +148,7 @@ void test_nmea2000_error_paths()
     TEST_ASSERT_EQUAL_INT(N2K_FP_IGNORED, pc_n2k_fastpacket_feed(NULL, &f));  // null rx
     TEST_ASSERT_EQUAL_INT(N2K_FP_IGNORED, pc_n2k_fastpacket_feed(&rx, NULL)); // null frame
     CanFrame notext = f;
-    notext.extended = false;
+    notext.extended = PROTO_FALSE;
     TEST_ASSERT_EQUAL_INT(N2K_FP_IGNORED, pc_n2k_fastpacket_feed(&rx, &notext)); // not a 29-bit frame
     CanFrame shortdlc = f;
     shortdlc.dlc = 1;
@@ -172,7 +172,7 @@ void test_fastpacket_build_frame_total_too_large()
 void test_fastpacket_reset_null_is_safe()
 {
     pc_n2k_fastpacket_reset(NULL);
-    TEST_ASSERT_TRUE(true);
+    TEST_ASSERT_TRUE(PROTO_TRUE);
 }
 
 // A first frame declaring a total length beyond PC_N2K_FP_MAX is rejected by the reassembler

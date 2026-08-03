@@ -38,7 +38,8 @@ void test_npdu_local()
 {
     const uint8_t apdu[] = {0x41, 0x42, 0x43};
     uint8_t buf[16];
-    size_t n = pc_npdu_build(buf, sizeof(buf), false, NPDU_PRIO_NORMAL, false, 0, NULL, 0, 0, apdu, sizeof(apdu));
+    size_t n =
+        pc_npdu_build(buf, sizeof(buf), PROTO_FALSE, NPDU_PRIO_NORMAL, PROTO_FALSE, 0, NULL, 0, 0, apdu, sizeof(apdu));
     const uint8_t expect[] = {0x01, 0x00, 0x41, 0x42, 0x43};
     TEST_ASSERT_EQUAL_size_t(sizeof(expect), n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(expect, buf, n);
@@ -57,8 +58,8 @@ void test_npdu_dest()
     const uint8_t dadr[] = {0x0A};
     const uint8_t apdu[] = {0x10};
     uint8_t buf[32];
-    size_t n = pc_npdu_build(buf, sizeof(buf), true, NPDU_PRIO_NORMAL, true, 0x0005, dadr, sizeof(dadr), 0xFF, apdu,
-                             sizeof(apdu));
+    size_t n = pc_npdu_build(buf, sizeof(buf), PROTO_TRUE, NPDU_PRIO_NORMAL, PROTO_TRUE, 0x0005, dadr, sizeof(dadr),
+                             0xFF, apdu, sizeof(apdu));
     // 01, control(0x20|0x04 reply), 00 05 (dnet), 01 (dlen), 0A (dadr), FF (hop), 10 (apdu)
     const uint8_t expect[] = {0x01, 0x24, 0x00, 0x05, 0x01, 0x0A, 0xFF, 0x10};
     TEST_ASSERT_EQUAL_size_t(sizeof(expect), n);
@@ -78,8 +79,8 @@ void test_npdu_broadcast()
 {
     const uint8_t apdu[] = {0x10, 0x08};
     uint8_t buf[16];
-    size_t n =
-        pc_npdu_build(buf, sizeof(buf), false, NPDU_PRIO_NORMAL, true, 0xFFFF, NULL, 0, 0xFF, apdu, sizeof(apdu));
+    size_t n = pc_npdu_build(buf, sizeof(buf), PROTO_FALSE, NPDU_PRIO_NORMAL, PROTO_TRUE, 0xFFFF, NULL, 0, 0xFF, apdu,
+                             sizeof(apdu));
     const uint8_t expect[] = {0x01, 0x20, 0xFF, 0xFF, 0x00, 0xFF, 0x10, 0x08};
     TEST_ASSERT_EQUAL_size_t(sizeof(expect), n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(expect, buf, n);
@@ -111,8 +112,8 @@ void test_full_stack()
 {
     const uint8_t apdu[] = {0x10, 0x08, 0x12, 0x34};
     uint8_t npdu[16];
-    size_t nlen =
-        pc_npdu_build(npdu, sizeof(npdu), false, NPDU_PRIO_NORMAL, false, 0, NULL, 0, 0, apdu, sizeof(apdu));
+    size_t nlen = pc_npdu_build(npdu, sizeof(npdu), PROTO_FALSE, NPDU_PRIO_NORMAL, PROTO_FALSE, 0, NULL, 0, 0, apdu,
+                                sizeof(apdu));
     uint8_t buf[32];
     size_t n = pc_bvlc_build(buf, sizeof(buf), BVLC_FUNC_ORIGINAL_BROADCAST, npdu, nlen);
 
@@ -150,7 +151,8 @@ void test_overflow_fails_closed()
     uint8_t small[4];
     TEST_ASSERT_EQUAL_size_t(0, pc_bvlc_build(small, sizeof(small), BVLC_FUNC_ORIGINAL_UNICAST, apdu, sizeof(apdu)));
     uint8_t nsmall[4];
-    TEST_ASSERT_EQUAL_size_t(0, pc_npdu_build(nsmall, sizeof(nsmall), false, 0, false, 0, NULL, 0, 0, apdu, 4));
+    TEST_ASSERT_EQUAL_size_t(
+        0, pc_npdu_build(nsmall, sizeof(nsmall), PROTO_FALSE, 0, PROTO_FALSE, 0, NULL, 0, 0, apdu, 4));
 }
 
 // BVLC / NPDU builders fail closed on null args, and NPDU parsing rejects a header
@@ -160,10 +162,10 @@ void test_bacnet_guards_and_truncations()
     uint8_t buf[64], npdu[4] = {NPDU_VERSION, 0, 0, 0};
     TEST_ASSERT_EQUAL_UINT(0, pc_bvlc_build(NULL, sizeof(buf), 0x0A, npdu, 4)); // null buffer
     TEST_ASSERT_EQUAL_UINT(0, pc_bvlc_build(buf, sizeof(buf), 0x0A, NULL, 5));  // pc_npdu_len w/o npdu
-    TEST_ASSERT_EQUAL_UINT(0,
-                           pc_npdu_build(NULL, sizeof(buf), false, 0, false, 0, NULL, 0, 0, npdu, 4)); // null buf
     TEST_ASSERT_EQUAL_UINT(
-        0, pc_npdu_build(buf, sizeof(buf), false, 0, false, 0, NULL, 0, 0, NULL, 5)); // apdu w/o ptr
+        0, pc_npdu_build(NULL, sizeof(buf), PROTO_FALSE, 0, PROTO_FALSE, 0, NULL, 0, 0, npdu, 4)); // null buf
+    TEST_ASSERT_EQUAL_UINT(
+        0, pc_npdu_build(buf, sizeof(buf), PROTO_FALSE, 0, PROTO_FALSE, 0, NULL, 0, 0, NULL, 5)); // apdu w/o ptr
 
     NpduInfo info;
     uint8_t dest_trunc[2] = {NPDU_VERSION, NPCI_DEST_PRESENT};
@@ -207,9 +209,8 @@ void test_bvlc_parse_edge_branches()
     const uint8_t small_total[4] = {0x81, 0x0A, 0x00, 0x03}; // declares total 3, less than the header
     TEST_ASSERT_FALSE(pc_bvlc_parse(small_total, sizeof(small_total), &func, &p, &plen));
 
-    const uint8_t header_only[4] = {0x81, 0x0A, 0x00, 0x04}; // valid, no npdu payload
-    TEST_ASSERT_TRUE(
-        pc_bvlc_parse(header_only, sizeof(header_only), NULL, NULL, NULL)); // all outputs optional
+    const uint8_t header_only[4] = {0x81, 0x0A, 0x00, 0x04};                             // valid, no npdu payload
+    TEST_ASSERT_TRUE(pc_bvlc_parse(header_only, sizeof(header_only), NULL, NULL, NULL)); // all outputs optional
 }
 
 // pc_npdu_build: a zero-length APDU (header-only NPDU) exercises the "no apdu" side of the
@@ -218,13 +219,13 @@ void test_bvlc_parse_edge_branches()
 void test_npdu_build_zero_apdu_and_null_dadr()
 {
     uint8_t buf[16];
-    size_t n = pc_npdu_build(buf, sizeof(buf), false, NPDU_PRIO_NORMAL, false, 0, NULL, 0, 0, NULL, 0);
+    size_t n = pc_npdu_build(buf, sizeof(buf), PROTO_FALSE, NPDU_PRIO_NORMAL, PROTO_FALSE, 0, NULL, 0, 0, NULL, 0);
     const uint8_t expect[] = {0x01, 0x00};
     TEST_ASSERT_EQUAL_size_t(sizeof(expect), n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(expect, buf, n);
 
     TEST_ASSERT_EQUAL_size_t(
-        0, pc_npdu_build(buf, sizeof(buf), false, NPDU_PRIO_NORMAL, true, 0x0005, NULL, 3, 0xFF, NULL, 0));
+        0, pc_npdu_build(buf, sizeof(buf), PROTO_FALSE, NPDU_PRIO_NORMAL, PROTO_TRUE, 0x0005, NULL, 3, 0xFF, NULL, 0));
 }
 
 // pc_npdu_parse: a null buffer, a null output pointer, and a length too short to hold the
@@ -235,7 +236,7 @@ void test_npdu_parse_null_buf_out_and_short()
     NpduInfo info;
     TEST_ASSERT_FALSE(pc_npdu_parse(NULL, sizeof(frame), &info)); // null buffer
     TEST_ASSERT_FALSE(pc_npdu_parse(frame, sizeof(frame), NULL)); // null output
-    TEST_ASSERT_FALSE(pc_npdu_parse(frame, 1, &info));               // len < 2
+    TEST_ASSERT_FALSE(pc_npdu_parse(frame, 1, &info));            // len < 2
 }
 
 void test_apdu_parse()
@@ -300,7 +301,7 @@ void test_apdu_build_who_is()
     BacnetApdu a;
 
     // Unbounded Who-Is (no limits): the 2-octet form every device answers.
-    size_t n = pc_apdu_build_who_is(buf, sizeof(buf), 0, 0, false);
+    size_t n = pc_apdu_build_who_is(buf, sizeof(buf), 0, 0, PROTO_FALSE);
     const uint8_t unbounded[] = {0x10, 0x08};
     TEST_ASSERT_EQUAL_size_t(sizeof(unbounded), n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(unbounded, buf, n);
@@ -310,28 +311,29 @@ void test_apdu_build_who_is()
     TEST_ASSERT_EQUAL_UINT8(BACNET_SVC_UN_WHO_IS, a.service_choice);
 
     // Bounded 100..200: 1-octet limits behind context tags 0 and 1.
-    n = pc_apdu_build_who_is(buf, sizeof(buf), 100, 200, true);
+    n = pc_apdu_build_who_is(buf, sizeof(buf), 100, 200, PROTO_TRUE);
     const uint8_t small_range[] = {0x10, 0x08, 0x09, 0x64, 0x19, 0xC8};
     TEST_ASSERT_EQUAL_size_t(sizeof(small_range), n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(small_range, buf, n);
 
     // Bounded 300..4000000: a 2-octet low limit and a 3-octet high limit (minimal length each).
-    n = pc_apdu_build_who_is(buf, sizeof(buf), 300, 4000000, true);
+    n = pc_apdu_build_who_is(buf, sizeof(buf), 300, 4000000, PROTO_TRUE);
     const uint8_t big_range[] = {0x10, 0x08, 0x0A, 0x01, 0x2C, 0x1B, 0x3D, 0x09, 0x00};
     TEST_ASSERT_EQUAL_size_t(sizeof(big_range), n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(big_range, buf, n);
 
     // A zero limit encodes as a single 0x00 value octet.
-    n = pc_apdu_build_who_is(buf, sizeof(buf), 0, 0, true);
+    n = pc_apdu_build_who_is(buf, sizeof(buf), 0, 0, PROTO_TRUE);
     const uint8_t zero_range[] = {0x10, 0x08, 0x09, 0x00, 0x19, 0x00};
     TEST_ASSERT_EQUAL_size_t(sizeof(zero_range), n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(zero_range, buf, n);
 
     // Guards: low > high, a limit beyond the 22-bit instance range, a null buffer, and a too-small buffer.
-    TEST_ASSERT_EQUAL_size_t(0, pc_apdu_build_who_is(buf, sizeof(buf), 200, 100, true));    // low > high
-    TEST_ASSERT_EQUAL_size_t(0, pc_apdu_build_who_is(buf, sizeof(buf), 0, 0x400000, true)); // > BACNET_MAX_INSTANCE
-    TEST_ASSERT_EQUAL_size_t(0, pc_apdu_build_who_is(NULL, sizeof(buf), 0, 0, false));
-    TEST_ASSERT_EQUAL_size_t(0, pc_apdu_build_who_is(buf, 1, 0, 0, false)); // needs 2
+    TEST_ASSERT_EQUAL_size_t(0, pc_apdu_build_who_is(buf, sizeof(buf), 200, 100, PROTO_TRUE)); // low > high
+    TEST_ASSERT_EQUAL_size_t(0,
+                             pc_apdu_build_who_is(buf, sizeof(buf), 0, 0x400000, PROTO_TRUE)); // > BACNET_MAX_INSTANCE
+    TEST_ASSERT_EQUAL_size_t(0, pc_apdu_build_who_is(NULL, sizeof(buf), 0, 0, PROTO_FALSE));
+    TEST_ASSERT_EQUAL_size_t(0, pc_apdu_build_who_is(buf, 1, 0, 0, PROTO_FALSE)); // needs 2
 }
 
 void test_apdu_build_i_am()

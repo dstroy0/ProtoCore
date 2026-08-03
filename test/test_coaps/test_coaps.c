@@ -128,11 +128,11 @@ static size_t build_client_hello(uint8_t *out, const uint8_t client_pub[32])
     return b.n;
 }
 
-static bool sh_keyshare(const uint8_t *sh, size_t len, uint8_t pub[32])
+static proto_bool sh_keyshare(const uint8_t *sh, size_t len, uint8_t pub[32])
 {
     if (len < 44)
     {
-        return false;
+        return PROTO_FALSE;
     }
     size_t o = 4 + 2 + 32;
     uint8_t sid = sh[o++];
@@ -140,7 +140,7 @@ static bool sh_keyshare(const uint8_t *sh, size_t len, uint8_t pub[32])
     o += 2 + 1;
     if (o + 2 > len)
     {
-        return false;
+        return PROTO_FALSE;
     }
     size_t ext_end = o + 2 + ((sh[o] << 8) | sh[o + 1]);
     o += 2;
@@ -152,11 +152,11 @@ static bool sh_keyshare(const uint8_t *sh, size_t len, uint8_t pub[32])
         if (et == 0x0033 && el >= 4 + 32)
         {
             memcpy(pub, sh + o + 4, 32);
-            return true;
+            return PROTO_TRUE;
         }
         o += el;
     }
-    return false;
+    return PROTO_FALSE;
 }
 
 static size_t frag_to_tls(const uint8_t *payload, size_t plen, uint8_t *tls_out)

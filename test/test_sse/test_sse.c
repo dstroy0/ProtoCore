@@ -463,7 +463,7 @@ void stress_sse_write_100_calls()
     SseConn *sse = pc_sse_alloc(0, "/events");
     for (int i = 0; i < 100; i++)
     {
-        bool ok = pc_sse_write(sse, "data", "update", "1");
+        proto_bool ok = pc_sse_write(sse, "data", "update", "1");
         TEST_ASSERT_TRUE_MESSAGE(ok, "write failed");
     }
     // Slot still intact after 100 writes

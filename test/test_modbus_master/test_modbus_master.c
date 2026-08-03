@@ -41,8 +41,7 @@ void test_round_trip_holding_regs()
     pc_modbus_set_holding_reg(1, 0xABCD);
 
     uint8_t req[16];
-    size_t rn =
-        pc_modbus_build_read((uint8_t)MODBUS_FC_READ_HOLDING_REGS, 7, 1, 0, 2, req, sizeof(req));
+    size_t rn = pc_modbus_build_read((uint8_t)MODBUS_FC_READ_HOLDING_REGS, 7, 1, 0, 2, req, sizeof(req));
     TEST_ASSERT_EQUAL_size_t(12, rn);
 
     uint8_t resp[MODBUS_ADU_MAX];
@@ -62,8 +61,7 @@ void test_round_trip_exception()
 {
     // Read a wildly out-of-range address: the slave returns an exception ADU.
     uint8_t req[16];
-    size_t rn =
-        pc_modbus_build_read((uint8_t)MODBUS_FC_READ_HOLDING_REGS, 9, 1, 60000, 1, req, sizeof(req));
+    size_t rn = pc_modbus_build_read((uint8_t)MODBUS_FC_READ_HOLDING_REGS, 9, 1, 60000, 1, req, sizeof(req));
     uint8_t resp[MODBUS_ADU_MAX];
     size_t pn = pc_modbus_process_adu(req, rn, resp, sizeof(resp));
     TEST_ASSERT_TRUE(pn > 0);
@@ -86,7 +84,7 @@ void test_build_null_out_and_input_fc()
 {
     uint8_t adu[16];
     TEST_ASSERT_EQUAL_size_t(0, pc_modbus_build_read(0x03, 1, 1, 0, 2, NULL, 16)); // null out
-    size_t n = pc_modbus_build_read(0x04, 1, 1, 0, 2, adu, sizeof(adu));              // FC 0x04 is valid
+    size_t n = pc_modbus_build_read(0x04, 1, 1, 0, 2, adu, sizeof(adu));           // FC 0x04 is valid
     TEST_ASSERT_EQUAL_size_t(12, n);
     TEST_ASSERT_EQUAL_HEX8(0x04, adu[7]);
 }
@@ -231,13 +229,13 @@ void test_build_write_rejects_bad_args()
 {
     uint8_t adu[300];
     const uint16_t vals[2] = {1, 2};
-    TEST_ASSERT_EQUAL_size_t(0, pc_modbus_build_write_single(1, 1, 0, 5, NULL, 16));         // null out
-    TEST_ASSERT_EQUAL_size_t(0, pc_modbus_build_write_single(1, 1, 0, 5, adu, 4));              // buffer too small
-    TEST_ASSERT_EQUAL_size_t(0, pc_modbus_build_write_multiple(1, 1, 0, vals, 2, NULL, 32)); // null out
-    TEST_ASSERT_EQUAL_size_t(0, pc_modbus_build_write_multiple(1, 1, 0, NULL, 2, adu, 32));  // null values
-    TEST_ASSERT_EQUAL_size_t(0, pc_modbus_build_write_multiple(1, 1, 0, vals, 0, adu, 32));     // count 0
-    TEST_ASSERT_EQUAL_size_t(0, pc_modbus_build_write_multiple(1, 1, 0, vals, 124, adu, 300));  // count > 123
-    TEST_ASSERT_EQUAL_size_t(0, pc_modbus_build_write_multiple(1, 1, 0, vals, 2, adu, 16));     // buffer too small
+    TEST_ASSERT_EQUAL_size_t(0, pc_modbus_build_write_single(1, 1, 0, 5, NULL, 16));           // null out
+    TEST_ASSERT_EQUAL_size_t(0, pc_modbus_build_write_single(1, 1, 0, 5, adu, 4));             // buffer too small
+    TEST_ASSERT_EQUAL_size_t(0, pc_modbus_build_write_multiple(1, 1, 0, vals, 2, NULL, 32));   // null out
+    TEST_ASSERT_EQUAL_size_t(0, pc_modbus_build_write_multiple(1, 1, 0, NULL, 2, adu, 32));    // null values
+    TEST_ASSERT_EQUAL_size_t(0, pc_modbus_build_write_multiple(1, 1, 0, vals, 0, adu, 32));    // count 0
+    TEST_ASSERT_EQUAL_size_t(0, pc_modbus_build_write_multiple(1, 1, 0, vals, 124, adu, 300)); // count > 123
+    TEST_ASSERT_EQUAL_size_t(0, pc_modbus_build_write_multiple(1, 1, 0, vals, 2, adu, 16));    // buffer too small
 }
 
 void test_parse_write_response_edges()
@@ -263,10 +261,10 @@ void test_parse_write_response_edges()
 // ── bit access: coils (FC 0x01 / 0x05 / 0x0F) and discrete inputs (FC 0x02) ──────────────────────
 void test_round_trip_read_coils()
 {
-    pc_modbus_set_coil(0, true);
-    pc_modbus_set_coil(1, false);
-    pc_modbus_set_coil(2, true);
-    pc_modbus_set_coil(9, true); // spans a byte boundary within the 10-bit read
+    pc_modbus_set_coil(0, PROTO_TRUE);
+    pc_modbus_set_coil(1, PROTO_FALSE);
+    pc_modbus_set_coil(2, PROTO_TRUE);
+    pc_modbus_set_coil(9, PROTO_TRUE); // spans a byte boundary within the 10-bit read
 
     uint8_t req[16];
     size_t rn = pc_modbus_build_read_bits((uint8_t)MODBUS_FC_READ_COILS, 7, 1, 0, 10, req, sizeof(req));
@@ -291,12 +289,11 @@ void test_round_trip_read_coils()
 
 void test_round_trip_read_discrete_inputs()
 {
-    pc_modbus_set_discrete_input(3, true);
-    pc_modbus_set_discrete_input(4, true);
+    pc_modbus_set_discrete_input(3, PROTO_TRUE);
+    pc_modbus_set_discrete_input(4, PROTO_TRUE);
 
     uint8_t req[16];
-    size_t rn = pc_modbus_build_read_bits((uint8_t)MODBUS_FC_READ_DISCRETE_INPUTS, 8, 1, 0, 6, req,
-                                          sizeof(req));
+    size_t rn = pc_modbus_build_read_bits((uint8_t)MODBUS_FC_READ_DISCRETE_INPUTS, 8, 1, 0, 6, req, sizeof(req));
     TEST_ASSERT_EQUAL_HEX8(0x02, req[7]);
     uint8_t resp[MODBUS_ADU_MAX];
     size_t pn = pc_modbus_process_adu(req, rn, resp, sizeof(resp));
@@ -311,9 +308,9 @@ void test_round_trip_read_discrete_inputs()
 
 void test_round_trip_write_single_coil()
 {
-    pc_modbus_set_coil(5, false);
+    pc_modbus_set_coil(5, PROTO_FALSE);
     uint8_t req[16];
-    size_t rn = pc_modbus_build_write_single_coil(11, 1, 5, true, req, sizeof(req));
+    size_t rn = pc_modbus_build_write_single_coil(11, 1, 5, PROTO_TRUE, req, sizeof(req));
     TEST_ASSERT_EQUAL_size_t(12, rn);
     TEST_ASSERT_EQUAL_HEX8(0x05, req[7]);
     TEST_ASSERT_EQUAL_HEX8(0xFF, req[10]); // on encodes as 0xFF00
@@ -335,7 +332,7 @@ void test_round_trip_write_multiple_coils()
     // Clear then write an alternating pattern across a byte boundary.
     for (uint16_t a = 0; a < 12; a++)
     {
-        pc_modbus_set_coil(a, false);
+        pc_modbus_set_coil(a, PROTO_FALSE);
     }
     const uint8_t pattern[12] = {1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 0, 1};
 
@@ -369,7 +366,7 @@ void test_bit_build_and_parse_guards()
     TEST_ASSERT_EQUAL_size_t(0, pc_modbus_build_read_bits(0x01, 1, 1, 0, 2001, adu, sizeof(adu))); // count > 2000
     TEST_ASSERT_EQUAL_size_t(0, pc_modbus_build_read_bits(0x01, 1, 1, 0, 8, NULL, 16));
     // write coil builders reject bad args.
-    TEST_ASSERT_EQUAL_size_t(0, pc_modbus_build_write_single_coil(1, 1, 0, true, NULL, 16));
+    TEST_ASSERT_EQUAL_size_t(0, pc_modbus_build_write_single_coil(1, 1, 0, PROTO_TRUE, NULL, 16));
     const uint8_t bits[4] = {1, 0, 1, 1};
     TEST_ASSERT_EQUAL_size_t(0, pc_modbus_build_write_multiple_coils(1, 1, 0, NULL, 4, adu, sizeof(adu)));
     TEST_ASSERT_EQUAL_size_t(0, pc_modbus_build_write_multiple_coils(1, 1, 0, bits, 0, adu, sizeof(adu)));    // count 0
@@ -461,11 +458,9 @@ void test_fc16_17_guards()
     TEST_ASSERT_EQUAL_UINT8(MODBUS_EX_ILLEGAL_DATA_ADDRESS, ex);
     // parse_mask_write_response rejects a normal (non-exception) frame that is too short, and a wrong FC.
     uint8_t shortf[10] = {0, 1, 0, 0, 0, 8, 1, 0x16, 0, 0}; // FC 0x16 but only 10 bytes, needs 14
-    TEST_ASSERT_EQUAL_INT(-1,
-                          pc_modbus_parse_mask_write_response(shortf, sizeof(shortf), NULL, NULL, NULL, &ex));
+    TEST_ASSERT_EQUAL_INT(-1, pc_modbus_parse_mask_write_response(shortf, sizeof(shortf), NULL, NULL, NULL, &ex));
     uint8_t badfc[14] = {0, 1, 0, 0, 0, 8, 1, 0x06, 0, 0, 0, 0, 0, 0};
-    TEST_ASSERT_EQUAL_INT(-1,
-                          pc_modbus_parse_mask_write_response(badfc, sizeof(badfc), NULL, NULL, NULL, &ex));
+    TEST_ASSERT_EQUAL_INT(-1, pc_modbus_parse_mask_write_response(badfc, sizeof(badfc), NULL, NULL, NULL, &ex));
 }
 
 int main()

@@ -49,9 +49,9 @@ void test_short_frame_roundtrip()
 void test_req_ud2_fcb()
 {
     uint8_t buf[8];
-    pc_mbus_build_req_ud2(buf, sizeof(buf), 0x01, false);
+    pc_mbus_build_req_ud2(buf, sizeof(buf), 0x01, PROTO_FALSE);
     TEST_ASSERT_EQUAL_HEX8(0x5B, buf[1]);
-    pc_mbus_build_req_ud2(buf, sizeof(buf), 0x01, true);
+    pc_mbus_build_req_ud2(buf, sizeof(buf), 0x01, PROTO_TRUE);
     TEST_ASSERT_EQUAL_HEX8(0x7B, buf[1]); // FCB set
 }
 
@@ -59,7 +59,7 @@ void test_req_ud1_fcb()
 {
     uint8_t buf[8];
     // REQ_UD1 (class-1 / alarm data): C = 0x5A, or 0x7A with the FCB bit set.
-    size_t n = pc_mbus_build_req_ud1(buf, sizeof(buf), 0x01, false);
+    size_t n = pc_mbus_build_req_ud1(buf, sizeof(buf), 0x01, PROTO_FALSE);
     TEST_ASSERT_EQUAL_size_t(5, n);
     const uint8_t expect[] = {0x10, 0x5A, 0x01, 0x5B, 0x16}; // CS = 0x5A + 0x01
     TEST_ASSERT_EQUAL_HEX8_ARRAY(expect, buf, 5);
@@ -69,7 +69,7 @@ void test_req_ud1_fcb()
     TEST_ASSERT_EQUAL_HEX8(MBUS_C_REQ_UD1, f.c);
     TEST_ASSERT_EQUAL_HEX8(0x01, f.a);
 
-    pc_mbus_build_req_ud1(buf, sizeof(buf), 0x01, true);
+    pc_mbus_build_req_ud1(buf, sizeof(buf), 0x01, PROTO_TRUE);
     TEST_ASSERT_EQUAL_HEX8(0x7A, buf[1]); // FCB set
 }
 
@@ -186,10 +186,9 @@ void test_build_and_parse_guards()
     TEST_ASSERT_EQUAL_size_t(0, pc_mbus_build_short(NULL, 8, 0x40, 1));
     TEST_ASSERT_EQUAL_size_t(0, pc_mbus_build_short(buf, 4, 0x40, 1)); // cap < 5
     TEST_ASSERT_EQUAL_size_t(0, pc_mbus_build_long(NULL, 32, 0, 0, 0, d, 4));
-    TEST_ASSERT_EQUAL_size_t(0, pc_mbus_build_long(buf, 32, 0, 0, 0, NULL, 4)); // data_len && !data
-    TEST_ASSERT_EQUAL_size_t(0, pc_mbus_build_long(buf, 5, 0, 0, 0, d, 4));        // cap < total
-    TEST_ASSERT_EQUAL_size_t(0,
-                             pc_mbus_build_long(buf, sizeof(buf), 0, 0, 0, NULL, 253)); // data_len > MBUS_MAX_DATA
+    TEST_ASSERT_EQUAL_size_t(0, pc_mbus_build_long(buf, 32, 0, 0, 0, NULL, 4));            // data_len && !data
+    TEST_ASSERT_EQUAL_size_t(0, pc_mbus_build_long(buf, 5, 0, 0, 0, d, 4));                // cap < total
+    TEST_ASSERT_EQUAL_size_t(0, pc_mbus_build_long(buf, sizeof(buf), 0, 0, 0, NULL, 253)); // data_len > MBUS_MAX_DATA
 
     // Parser guards.
     MbusFrame f;
@@ -321,8 +320,7 @@ void test_record_edges()
 // A VIF with the extension bit set is followed by a present VIFE octet (the chain read).
 void test_record_vife_chain()
 {
-    const uint8_t body[] = {(uint8_t)MBUS_DIF_INT8, 0x93, 0x13,
-                            0x42}; // DIF INT8, VIF 0x93 (ext), VIFE 0x13, data
+    const uint8_t body[] = {(uint8_t)MBUS_DIF_INT8, 0x93, 0x13, 0x42}; // DIF INT8, VIF 0x93 (ext), VIFE 0x13, data
     size_t pos = 0;
     MbusRecord r;
     TEST_ASSERT_TRUE(pc_mbus_record_next(body, sizeof(body), &pos, &r));

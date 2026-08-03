@@ -21,11 +21,11 @@ void tearDown()
 {
 }
 
-static bool aligned8(const void *p)
+static proto_bool aligned8(const void *p)
 {
     return ((uintptr_t)p & 7u) == 0;
 }
-static bool in_region(const pc_arena *ar, const void *p, size_t n)
+static proto_bool in_region(const pc_arena *ar, const void *p, size_t n)
 {
     const uint8_t *b = (const uint8_t *)p;
     return b >= ar->base && b + n <= ar->base + ar->size;
@@ -282,7 +282,7 @@ void test_zero_size_and_null_free()
 static uint8_t g_r0[512];  // stand-in for internal DRAM (preferred)
 static uint8_t g_r1[2048]; // stand-in for the PSRAM extension
 
-static bool in_buf(const void *p, const uint8_t *buf, size_t n)
+static proto_bool in_buf(const void *p, const uint8_t *buf, size_t n)
 {
     const uint8_t *b = (const uint8_t *)p;
     return b >= buf && b < buf + n;

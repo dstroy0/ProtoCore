@@ -81,7 +81,7 @@ static H3Stream *find_h3(H3Conn *h3, uint64_t id)
 
 // Emit target for decoding a response field section.
 static char e_status[8], e_ctype[32];
-static bool pc_resp_emit(void *, const char *name, size_t nlen, const char *value, size_t vlen)
+static proto_bool pc_resp_emit(void *, const char *name, size_t nlen, const char *value, size_t vlen)
 {
     if (nlen == 7 && memcmp(name, ":status", 7) == 0)
     {
@@ -93,7 +93,7 @@ static bool pc_resp_emit(void *, const char *name, size_t nlen, const char *valu
         memcpy(e_ctype, value, vlen);
         e_ctype[vlen] = '\0';
     }
-    return true;
+    return PROTO_TRUE;
 }
 
 void test_request_dispatch_and_response()
@@ -115,7 +115,7 @@ void test_request_dispatch_and_response()
     size_t rp = pc_h3_build_headers(req, sizeof(req), block, bp);
 
     // Deliver it on request stream 0 with FIN through the QUIC callback seam.
-    qc.cb.on_stream_data(qc.cb.app, &qc, 0, req, rp, true);
+    qc.cb.on_stream_data(qc.cb.app, &qc, 0, req, rp, PROTO_TRUE);
     TEST_ASSERT_EQUAL_INT(1, g_requests);
     TEST_ASSERT_EQUAL_STRING("GET", g_method);
     TEST_ASSERT_EQUAL_STRING("/index.html", g_path);
@@ -128,7 +128,7 @@ void test_request_dispatch_and_response()
     TEST_ASSERT_NOT_NULL(st);
     // Walk the response frames: HEADERS then DATA.
     size_t off = 0;
-    bool saw_headers = false, saw_data = false;
+    proto_bool saw_headers = PROTO_FALSE, saw_data = PROTO_FALSE;
     char scratch[128];
     e_status[0] = e_ctype[0] = '\0';
     while (off < st->tx_have)
@@ -139,13 +139,13 @@ void test_request_dispatch_and_response()
         if (fr.type == H3_HEADERS)
         {
             pc_qpack_decode(fp, (size_t)fr.length, scratch, sizeof(scratch), pc_resp_emit, NULL);
-            saw_headers = true;
+            saw_headers = PROTO_TRUE;
         }
         else if (fr.type == H3_DATA)
         {
             TEST_ASSERT_EQUAL_UINT(5, (size_t)fr.length);
             TEST_ASSERT_EQUAL_UINT8_ARRAY("hello", fp, 5);
-            saw_data = true;
+            saw_data = PROTO_TRUE;
         }
         off += fr.header_len + (size_t)fr.length;
     }
@@ -171,7 +171,7 @@ void test_post_with_body()
     size_t rp = pc_h3_build_headers(req, sizeof(req), block, bp);
     rp += pc_h3_build_data(req + rp, sizeof(req) - rp, (const uint8_t *)"name=x", 6);
 
-    qc.cb.on_stream_data(qc.cb.app, &qc, 4, req, rp, true);
+    qc.cb.on_stream_data(qc.cb.app, &qc, 4, req, rp, PROTO_TRUE);
     TEST_ASSERT_EQUAL_INT(1, g_requests);
     TEST_ASSERT_EQUAL_STRING("POST", g_method);
     TEST_ASSERT_EQUAL_STRING("/submit", g_path);
@@ -217,7 +217,7 @@ void test_client_control_stream_settings()
     const uint64_t ids[] = {H3_SETTINGS_MAX_FIELD_SECTION_SIZE};
     const uint64_t vals[] = {12345};
     sp += pc_h3_build_settings(s + sp, sizeof(s) - sp, ids, vals, 1);
-    qc.cb.on_stream_data(qc.cb.app, &qc, 2, s, sp, false); // client-initiated uni stream (id 2)
+    qc.cb.on_stream_data(qc.cb.app, &qc, 2, s, sp, PROTO_FALSE); // client-initiated uni stream (id 2)
 
     H3Stream *st = find_h3(&h3, 2);
     TEST_ASSERT_NOT_NULL(st);
@@ -236,11 +236,11 @@ void test_client_uni_stream_types()
 
     uint8_t t;
     size_t n = pc_quic_varint_encode(&t, 1, 0x02);
-    qc.cb.on_stream_data(qc.cb.app, &qc, 6, &t, n, false);
+    qc.cb.on_stream_data(qc.cb.app, &qc, 6, &t, n, PROTO_FALSE);
     n = pc_quic_varint_encode(&t, 1, 0x03);
-    qc.cb.on_stream_data(qc.cb.app, &qc, 10, &t, n, false);
+    qc.cb.on_stream_data(qc.cb.app, &qc, 10, &t, n, PROTO_FALSE);
     n = pc_quic_varint_encode(&t, 1, 0x1f); // an unknown stream type
-    qc.cb.on_stream_data(qc.cb.app, &qc, 14, &t, n, false);
+    qc.cb.on_stream_data(qc.cb.app, &qc, 14, &t, n, PROTO_FALSE);
 
     TEST_ASSERT_EQUAL_UINT8(H3_ROLE_QPACK_ENC, find_h3(&h3, 6)->role);
     TEST_ASSERT_EQUAL_UINT8(H3_ROLE_QPACK_DEC, find_h3(&h3, 10)->role);
@@ -275,12 +275,12 @@ void test_malformed_request_frame()
     // A HEADERS frame that declares length 9999 but has no payload -> incomplete -> not dispatched.
     uint8_t hdr[8];
     size_t hp = pc_h3_frame_write_header(hdr, sizeof(hdr), H3_HEADERS, 9999);
-    qc.cb.on_stream_data(qc.cb.app, &qc, 0, hdr, hp, true);
+    qc.cb.on_stream_data(qc.cb.app, &qc, 0, hdr, hp, PROTO_TRUE);
     TEST_ASSERT_EQUAL_INT(0, g_requests);
 
     // A truncated frame-header varint -> parse fails -> not dispatched.
     uint8_t junk[1] = {0xC0}; // first byte of an 8-byte varint, nothing after it
-    qc.cb.on_stream_data(qc.cb.app, &qc, 4, junk, sizeof(junk), true);
+    qc.cb.on_stream_data(qc.cb.app, &qc, 4, junk, sizeof(junk), PROTO_TRUE);
     TEST_ASSERT_EQUAL_INT(0, g_requests);
 }
 
@@ -308,7 +308,7 @@ void test_stream_pool_full()
     uint8_t b = 0x00;
     for (uint64_t i = 0; i < PC_H3_MAX_STREAMS; i++)
     {
-        qc.cb.on_stream_data(qc.cb.app, &qc, i * 4, &b, 1, false); // partial request streams, no FIN
+        qc.cb.on_stream_data(qc.cb.app, &qc, i * 4, &b, 1, PROTO_FALSE); // partial request streams, no FIN
     }
 
     // One more distinct request stream cannot allocate a slot -> silently ignored.
@@ -318,7 +318,7 @@ void test_stream_pool_full()
     bp += pc_qpack_encode_header(block + bp, sizeof(block) - bp, ":path", 5, "/x", 2);
     uint8_t req[128];
     size_t rp = pc_h3_build_headers(req, sizeof(req), block, bp);
-    qc.cb.on_stream_data(qc.cb.app, &qc, (uint64_t)PC_H3_MAX_STREAMS * 4, req, rp, true);
+    qc.cb.on_stream_data(qc.cb.app, &qc, (uint64_t)PC_H3_MAX_STREAMS * 4, req, rp, PROTO_TRUE);
     TEST_ASSERT_EQUAL_INT(0, g_requests);
 }
 
@@ -332,10 +332,10 @@ void test_uni_stream_partial_type()
     pc_h3_conn_init(&h3, &qc, on_request, NULL);
 
     uint8_t b0 = 0x40; // first byte of a 2-byte varint - incomplete on its own
-    qc.cb.on_stream_data(qc.cb.app, &qc, 2, &b0, 1, false);
+    qc.cb.on_stream_data(qc.cb.app, &qc, 2, &b0, 1, PROTO_FALSE);
     TEST_ASSERT_FALSE(find_h3(&h3, 2)->type_read); // needs more bytes; not yet classified
     uint8_t b1 = 0x00;                             // completes the varint 0x4000 -> value 0 -> control stream
-    qc.cb.on_stream_data(qc.cb.app, &qc, 2, &b1, 1, false);
+    qc.cb.on_stream_data(qc.cb.app, &qc, 2, &b1, 1, PROTO_FALSE);
     TEST_ASSERT_TRUE(find_h3(&h3, 2)->type_read);
     TEST_ASSERT_EQUAL_UINT8(H3_ROLE_CONTROL, find_h3(&h3, 2)->role);
 }
@@ -356,7 +356,7 @@ void test_overlong_field_truncated()
     bp += pc_qpack_encode_header(block + bp, sizeof(block) - bp, ":path", 5, "/", 1);
     uint8_t req[256];
     size_t rp = pc_h3_build_headers(req, sizeof(req), block, bp);
-    qc.cb.on_stream_data(qc.cb.app, &qc, 0, req, rp, true);
+    qc.cb.on_stream_data(qc.cb.app, &qc, 0, req, rp, PROTO_TRUE);
 
     TEST_ASSERT_EQUAL_INT(1, g_requests);
     TEST_ASSERT_EQUAL_UINT(PC_H3_METHOD_LEN - 1, strlen(g_method)); // truncated to fit
@@ -385,7 +385,7 @@ void test_h3_pseudo_header_name_variants()
     size_t rp = pc_h3_build_headers(req, sizeof(req), block, bp);
 
     strcpy(g_auth, "unset");
-    qc.cb.on_stream_data(qc.cb.app, &qc, 0, req, rp, true);
+    qc.cb.on_stream_data(qc.cb.app, &qc, 0, req, rp, PROTO_TRUE);
     TEST_ASSERT_EQUAL_INT(1, g_requests);
     TEST_ASSERT_EQUAL_STRING("GET", g_method); // ":scheme" did not overwrite :method
     TEST_ASSERT_EQUAL_STRING("/ok", g_path);   // "hello" did not overwrite :path
@@ -416,7 +416,7 @@ void test_h3_request_unknown_frame_and_empty_data()
     rp += pc_h3_build_data(req + rp, sizeof(req) - rp, NULL, 0); // empty DATA
     rp += pc_h3_build_data(req + rp, sizeof(req) - rp, (const uint8_t *)"body", 4);
 
-    qc.cb.on_stream_data(qc.cb.app, &qc, 0, req, rp, true);
+    qc.cb.on_stream_data(qc.cb.app, &qc, 0, req, rp, PROTO_TRUE);
     TEST_ASSERT_EQUAL_INT(1, g_requests);
     TEST_ASSERT_EQUAL_STRING("POST", g_method);
     TEST_ASSERT_EQUAL_UINT(4, g_body_len);
@@ -440,7 +440,7 @@ void test_h3_no_request_callback()
     uint8_t req[256];
     size_t rp = pc_h3_build_headers(req, sizeof(req), block, bp);
 
-    qc.cb.on_stream_data(qc.cb.app, &qc, 0, req, rp, true);
+    qc.cb.on_stream_data(qc.cb.app, &qc, 0, req, rp, PROTO_TRUE);
     TEST_ASSERT_EQUAL_INT(0, g_requests); // no callback -> nothing dispatched
     H3Stream *st = find_h3(&h3, 0);
     TEST_ASSERT_NOT_NULL(st);
@@ -459,7 +459,7 @@ void test_h3_stream_buffer_overflow_clamped()
 
     static uint8_t big[PC_H3_STREAM_BUF + 64];
     memset(big, 0x00, sizeof(big)); // PADDING-like filler; no complete frame is formed
-    qc.cb.on_stream_data(qc.cb.app, &qc, 0, big, sizeof(big), false);
+    qc.cb.on_stream_data(qc.cb.app, &qc, 0, big, sizeof(big), PROTO_FALSE);
 
     H3Stream *st = find_h3(&h3, 0);
     TEST_ASSERT_NOT_NULL(st);
@@ -481,7 +481,7 @@ void test_h3_control_stream_frame_guards()
     uint8_t s[64];
     size_t sp = pc_quic_varint_encode(s, sizeof(s), 0x00);
     s[sp++] = 0xC0;
-    qc.cb.on_stream_data(qc.cb.app, &qc, 2, s, sp, false);
+    qc.cb.on_stream_data(qc.cb.app, &qc, 2, s, sp, PROTO_FALSE);
     H3Stream *st = find_h3(&h3, 2);
     TEST_ASSERT_NOT_NULL(st);
     TEST_ASSERT_EQUAL_UINT8(H3_ROLE_CONTROL, st->role);
@@ -495,7 +495,7 @@ void test_h3_control_stream_frame_guards()
     uint8_t s2[64];
     size_t sp2 = pc_quic_varint_encode(s2, sizeof(s2), 0x00);
     sp2 += pc_h3_frame_write_header(s2 + sp2, sizeof(s2) - sp2, H3_SETTINGS, 40);
-    qc2.cb.on_stream_data(qc2.cb.app, &qc2, 2, s2, sp2, false);
+    qc2.cb.on_stream_data(qc2.cb.app, &qc2, 2, s2, sp2, PROTO_FALSE);
     TEST_ASSERT_EQUAL_UINT64(defaults.max_field_section_size, h3b.peer_settings.max_field_section_size);
 
     // A complete control frame that is not SETTINGS is consumed and ignored.
@@ -507,7 +507,7 @@ void test_h3_control_stream_frame_guards()
     size_t sp3 = pc_quic_varint_encode(s3, sizeof(s3), 0x00);
     sp3 += pc_h3_frame_write_header(s3 + sp3, sizeof(s3) - sp3, 0x07 /*GOAWAY*/, 1);
     s3[sp3++] = 0x00;
-    qc3.cb.on_stream_data(qc3.cb.app, &qc3, 2, s3, sp3, false);
+    qc3.cb.on_stream_data(qc3.cb.app, &qc3, 2, s3, sp3, PROTO_FALSE);
     H3Stream *sc = find_h3(&h3c, 2);
     TEST_ASSERT_NOT_NULL(sc);
     TEST_ASSERT_EQUAL_UINT(0, sc->buf_len); // fully consumed
@@ -525,7 +525,7 @@ void test_h3_uni_stream_empty_and_repeat_delivery()
 
     // Zero-length delivery on a fresh uni stream: nothing buffered, nothing classified.
     uint8_t none = 0;
-    qc.cb.on_stream_data(qc.cb.app, &qc, 2, &none, 0, false);
+    qc.cb.on_stream_data(qc.cb.app, &qc, 2, &none, 0, PROTO_FALSE);
     H3Stream *st = find_h3(&h3, 2);
     TEST_ASSERT_NOT_NULL(st);
     TEST_ASSERT_FALSE(st->type_read);
@@ -534,7 +534,7 @@ void test_h3_uni_stream_empty_and_repeat_delivery()
     // The type varint arrives and classifies it as the control stream.
     uint8_t t[16];
     size_t tn = pc_quic_varint_encode(t, sizeof(t), 0x00);
-    qc.cb.on_stream_data(qc.cb.app, &qc, 2, t, tn, false);
+    qc.cb.on_stream_data(qc.cb.app, &qc, 2, t, tn, PROTO_FALSE);
     TEST_ASSERT_TRUE(st->type_read);
     TEST_ASSERT_EQUAL_UINT8(H3_ROLE_CONTROL, st->role);
 
@@ -544,7 +544,7 @@ void test_h3_uni_stream_empty_and_repeat_delivery()
     const uint64_t ids[] = {H3_SETTINGS_MAX_FIELD_SECTION_SIZE};
     const uint64_t vals[] = {4321};
     size_t sp = pc_h3_build_settings(s, sizeof(s), ids, vals, 1);
-    qc.cb.on_stream_data(qc.cb.app, &qc, 2, s, sp, false);
+    qc.cb.on_stream_data(qc.cb.app, &qc, 2, s, sp, PROTO_FALSE);
     TEST_ASSERT_EQUAL_UINT64(4321, h3.peer_settings.max_field_section_size);
 }
 
@@ -570,8 +570,7 @@ void test_h3_respond_no_content_type_empty_body()
         H3Frame fr;
         TEST_ASSERT_TRUE(pc_h3_frame_parse(st->tx + off, st->tx_have - off, &fr));
         TEST_ASSERT_EQUAL_UINT64(H3_HEADERS, fr.type); // no DATA frame follows
-        pc_qpack_decode(st->tx + off + fr.header_len, (size_t)fr.length, scratch, sizeof(scratch), pc_resp_emit,
-                        NULL);
+        pc_qpack_decode(st->tx + off + fr.header_len, (size_t)fr.length, scratch, sizeof(scratch), pc_resp_emit, NULL);
         off += fr.header_len + (size_t)fr.length;
         frames++;
     }

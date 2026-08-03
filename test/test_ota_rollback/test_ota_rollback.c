@@ -17,37 +17,30 @@ void tearDown()
 void test_not_pending_waits()
 {
     // A normally-booted (valid/undefined) image never rolls back.
-    TEST_ASSERT_EQUAL_INT(PC_OTA_WAIT,
-                          pc_ota_decide(PC_OTA_IMG_VALID, false, 999999, 30000));
-    TEST_ASSERT_EQUAL_INT(PC_OTA_WAIT,
-                          pc_ota_decide(PC_OTA_IMG_UNDEFINED, false, 999999, 30000));
+    TEST_ASSERT_EQUAL_INT(PC_OTA_WAIT, pc_ota_decide(PC_OTA_IMG_VALID, PROTO_FALSE, 999999, 30000));
+    TEST_ASSERT_EQUAL_INT(PC_OTA_WAIT, pc_ota_decide(PC_OTA_IMG_UNDEFINED, PROTO_FALSE, 999999, 30000));
 }
 
 void test_pending_self_test_ok_commits()
 {
-    TEST_ASSERT_EQUAL_INT(PC_OTA_COMMIT,
-                          pc_ota_decide(PC_OTA_IMG_PENDING_VERIFY, true, 1000, 30000));
+    TEST_ASSERT_EQUAL_INT(PC_OTA_COMMIT, pc_ota_decide(PC_OTA_IMG_PENDING_VERIFY, PROTO_TRUE, 1000, 30000));
 }
 
 void test_pending_within_window_waits()
 {
-    TEST_ASSERT_EQUAL_INT(PC_OTA_WAIT,
-                          pc_ota_decide(PC_OTA_IMG_PENDING_VERIFY, false, 5000, 30000));
+    TEST_ASSERT_EQUAL_INT(PC_OTA_WAIT, pc_ota_decide(PC_OTA_IMG_PENDING_VERIFY, PROTO_FALSE, 5000, 30000));
 }
 
 void test_pending_window_elapsed_rolls_back()
 {
-    TEST_ASSERT_EQUAL_INT(PC_OTA_ROLLBACK,
-                          pc_ota_decide(PC_OTA_IMG_PENDING_VERIFY, false, 30000, 30000));
-    TEST_ASSERT_EQUAL_INT(PC_OTA_ROLLBACK,
-                          pc_ota_decide(PC_OTA_IMG_PENDING_VERIFY, false, 40000, 30000));
+    TEST_ASSERT_EQUAL_INT(PC_OTA_ROLLBACK, pc_ota_decide(PC_OTA_IMG_PENDING_VERIFY, PROTO_FALSE, 30000, 30000));
+    TEST_ASSERT_EQUAL_INT(PC_OTA_ROLLBACK, pc_ota_decide(PC_OTA_IMG_PENDING_VERIFY, PROTO_FALSE, 40000, 30000));
 }
 
 void test_self_test_ok_beats_window()
 {
     // A passing self-test commits even past the window.
-    TEST_ASSERT_EQUAL_INT(PC_OTA_COMMIT,
-                          pc_ota_decide(PC_OTA_IMG_PENDING_VERIFY, true, 99999, 30000));
+    TEST_ASSERT_EQUAL_INT(PC_OTA_COMMIT, pc_ota_decide(PC_OTA_IMG_PENDING_VERIFY, PROTO_TRUE, 99999, 30000));
 }
 
 void test_host_platform_hooks_are_safe_noops()
@@ -58,8 +51,8 @@ void test_host_platform_hooks_are_safe_noops()
     TEST_ASSERT_EQUAL_INT(PC_OTA_IMG_UNDEFINED, pc_ota_img_state());
     pc_ota_commit();
     pc_ota_rollback();
-    TEST_ASSERT_EQUAL_INT(PC_OTA_WAIT, pc_ota_rollback_tick(true));
-    TEST_ASSERT_EQUAL_INT(PC_OTA_WAIT, pc_ota_rollback_tick(false));
+    TEST_ASSERT_EQUAL_INT(PC_OTA_WAIT, pc_ota_rollback_tick(PROTO_TRUE));
+    TEST_ASSERT_EQUAL_INT(PC_OTA_WAIT, pc_ota_rollback_tick(PROTO_FALSE));
 }
 
 int main()

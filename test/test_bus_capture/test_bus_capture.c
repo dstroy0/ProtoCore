@@ -21,8 +21,8 @@ void test_standard_data_frame()
     CanFrame f;
     memset(&f, 0, sizeof(f));
     f.id = 0x123;
-    f.extended = false;
-    f.rtr = false;
+    f.extended = PROTO_FALSE;
+    f.rtr = PROTO_FALSE;
     f.dlc = 8;
     for (int i = 0; i < 8; i++)
     {
@@ -46,7 +46,7 @@ void test_extended_id_sets_eff()
     CanFrame f;
     memset(&f, 0, sizeof(f));
     f.id = 0x18FEF100; // a J1939-style 29-bit id
-    f.extended = true;
+    f.extended = PROTO_TRUE;
     f.dlc = 2;
     f.data[0] = 0xAA;
     f.data[1] = 0xBB;
@@ -69,7 +69,7 @@ void test_rtr_flag_and_no_data()
     CanFrame f;
     memset(&f, 0, sizeof(f));
     f.id = 0x7FF;
-    f.rtr = true;
+    f.rtr = PROTO_TRUE;
     f.dlc = 4;
     f.data[0] = 0xFF; // must not appear (RTR frames carry no data)
 
@@ -89,7 +89,7 @@ void test_masks_and_bounds()
     CanFrame f;
     memset(&f, 0, sizeof(f));
     f.id = 0xFFFFFFFF; // over-wide; a standard frame must mask to 11 bits
-    f.extended = false;
+    f.extended = PROTO_FALSE;
     f.dlc = 20; // over-long; must clamp to 8
     uint8_t out[PC_SOCKETCAN_FRAME_LEN];
     can_to_socketcan(&f, out, sizeof(out));
@@ -123,7 +123,7 @@ void test_pcap_record_header_bounds()
 {
     uint8_t r[PC_PCAP_REC_HDR_LEN];
     TEST_ASSERT_EQUAL_UINT(PC_PCAP_REC_HDR_LEN, pc_pcap_record_header(r, sizeof(r), 1, 2, 3, 4)); // valid
-    TEST_ASSERT_EQUAL_UINT(0, pc_pcap_record_header(NULL, sizeof(r), 1, 2, 3, 4));             // null out
+    TEST_ASSERT_EQUAL_UINT(0, pc_pcap_record_header(NULL, sizeof(r), 1, 2, 3, 4));                // null out
     uint8_t tiny[8];
     TEST_ASSERT_EQUAL_UINT(0, pc_pcap_record_header(tiny, sizeof(tiny), 1, 2, 3, 4)); // too small
 }

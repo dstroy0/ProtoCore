@@ -41,10 +41,10 @@ static const uint8_t CLIENT_SCID[4] = {0xc1, 0xc2, 0xc3, 0xc4};
 
 // The route handler under test: it answers on the reserved HTTP/3 dispatch slot exactly as it would
 // for HTTP/1.1 or HTTP/2 - send() routes the response to the right transport.
-static bool g_handler_ran = false;
+static proto_bool g_handler_ran = PROTO_FALSE;
 static void h_hello(uint8_t slot, HttpReq *req)
 {
-    g_handler_ran = true;
+    g_handler_ran = PROTO_TRUE;
     TEST_ASSERT_EQUAL_STRING("/hello", req->path);
     send_text(slot, 200, "text/plain", "bridged h3");
 }
@@ -70,7 +70,7 @@ static void fill()
         SERVER_SEED[i] = (uint8_t)(0x80 + i);
         CLIENT_PRIV[i] = (uint8_t)(0x01 + i);
     }
-    g_handler_ran = false;
+    g_handler_ran = PROTO_FALSE;
     g_out_n = 0;
 }
 
@@ -96,7 +96,7 @@ static size_t build_long(uint8_t *out, size_t cap, uint8_t type, const uint8_t *
     wr_pn(out + p, pn, pn_len);
     p += pn_len;
     memcpy(out + p, frames, frame_len);
-    return pc_quic_packet_protect(out, cap, pn_off, pn_len, pn, frame_len, keys, true);
+    return pc_quic_packet_protect(out, cap, pn_off, pn_len, pn, frame_len, keys, PROTO_TRUE);
 }
 static size_t build_short(uint8_t *out, size_t cap, const uint8_t *dcid, uint8_t dcl, uint64_t pn,
                           const QuicPacketKeys *keys, const uint8_t *frames, size_t frame_len)
@@ -107,7 +107,7 @@ static size_t build_short(uint8_t *out, size_t cap, const uint8_t *dcid, uint8_t
     size_t pn_off = 1 + dcl;
     wr_pn(out + pn_off, pn, pn_len);
     memcpy(out + pn_off + pn_len, frames, frame_len);
-    return pc_quic_packet_protect(out, cap, pn_off, pn_len, pn, frame_len, keys, false);
+    return pc_quic_packet_protect(out, cap, pn_off, pn_len, pn, frame_len, keys, PROTO_FALSE);
 }
 static size_t open_long(const uint8_t *dg, size_t len, const QuicPacketKeys *keys, uint8_t *plain, size_t *wire,
                         uint8_t *type)
@@ -131,14 +131,14 @@ static size_t open_long(const uint8_t *dg, size_t len, const QuicPacketKeys *key
     static uint8_t work[2048];
     memcpy(work, dg, *wire);
     uint64_t pn = 0;
-    return pc_quic_packet_unprotect(work, off, (size_t)length, 0, keys, true, plain, &pn);
+    return pc_quic_packet_unprotect(work, off, (size_t)length, 0, keys, PROTO_TRUE, plain, &pn);
 }
 static size_t open_short(const uint8_t *dg, size_t len, uint8_t dcl, const QuicPacketKeys *keys, uint8_t *plain)
 {
     static uint8_t work[2048];
     memcpy(work, dg, len);
     uint64_t pn = 0;
-    return pc_quic_packet_unprotect(work, 1 + dcl, len - (1 + dcl), 0, keys, false, plain, &pn);
+    return pc_quic_packet_unprotect(work, 1 + dcl, len - (1 + dcl), 0, keys, PROTO_FALSE, plain, &pn);
 }
 static size_t extract_crypto(const uint8_t *p, size_t len, uint8_t *out)
 {
@@ -167,17 +167,17 @@ static size_t extract_crypto(const uint8_t *p, size_t len, uint8_t *out)
 }
 // The server's ephemeral X25519 public key is the key_share in its ServerHello: scan for the x25519
 // group id (0x001d) + key length (0x0020) and take the 32 bytes that follow.
-static bool server_pub_from_sh(const uint8_t *sh, size_t shl, uint8_t out[32])
+static proto_bool server_pub_from_sh(const uint8_t *sh, size_t shl, uint8_t out[32])
 {
     for (size_t i = 0; i + 4 + 32 <= shl; i++)
     {
         if (sh[i] == 0x00 && sh[i + 1] == 0x1d && sh[i + 2] == 0x00 && sh[i + 3] == 0x20)
         {
             memcpy(out, sh + i + 4, 32);
-            return true;
+            return PROTO_TRUE;
         }
     }
-    return false;
+    return PROTO_FALSE;
 }
 static size_t build_client_hello(uint8_t *out, const uint8_t client_pub[32], const uint8_t *tp, size_t tp_len)
 {
@@ -234,7 +234,7 @@ static size_t build_client_hello(uint8_t *out, const uint8_t client_pub[32], con
 }
 
 // Scan captured datagrams for the 1-RTT stream-0 response HEADERS(:status 200) + DATA("bridged h3").
-static bool response_ok(const QuicPacketKeys *ap_s)
+static proto_bool response_ok(const QuicPacketKeys *ap_s)
 {
     uint8_t plain[2048];
     for (int d = 0; d < g_out_n; d++)
@@ -263,15 +263,14 @@ static bool response_ok(const QuicPacketKeys *ap_s)
                 break;
             }
             fo += n;
-            if (!(f.type >= QUIC_FT_STREAM && f.type <= QUIC_FT_STREAM + 7 &&
-                  f.stream.id == 0))
+            if (!(f.type >= QUIC_FT_STREAM && f.type <= QUIC_FT_STREAM + 7 && f.stream.id == 0))
             {
                 continue;
             }
             const uint8_t *sp = f.stream.data;
             size_t so = 0, sn = (size_t)f.stream.length;
             char status[8] = {0};
-            bool data_ok = false;
+            proto_bool data_ok = PROTO_FALSE;
             while (so < sn)
             {
                 H3Frame hf;
@@ -289,13 +288,13 @@ static bool response_ok(const QuicPacketKeys *ap_s)
                     } e = {status};
                     pc_qpack_decode(
                         hp, (size_t)hf.length, sc, sizeof(sc),
-                        [](void *c, const char *nm, size_t nl, const char *v, size_t vl) -> bool {
+                        [](void *c, const char *nm, size_t nl, const char *v, size_t vl) -> proto_bool {
                             if (nl == 7 && memcmp(nm, ":status", 7) == 0)
                             {
                                 memcpy(((E *)c)->s, v, vl);
                                 ((E *)c)->s[vl] = 0;
                             }
-                            return true;
+                            return PROTO_TRUE;
                         },
                         &e);
                 }
@@ -303,18 +302,18 @@ static bool response_ok(const QuicPacketKeys *ap_s)
                 {
                     if (hf.length == 10 && memcmp(hp, "bridged h3", 10) == 0)
                     {
-                        data_ok = true;
+                        data_ok = PROTO_TRUE;
                     }
                 }
                 so += hf.header_len + (size_t)hf.length;
             }
             if (strcmp(status, "200") == 0 && data_ok)
             {
-                return true;
+                return PROTO_TRUE;
             }
         }
     }
-    return false;
+    return PROTO_FALSE;
 }
 
 void test_h3_request_served_by_route()
@@ -346,8 +345,8 @@ void test_h3_request_served_by_route()
     memset(frames + fl, 0, 1100 - fl);
     fl = 1100;
     uint8_t dg[1500];
-    size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID,
-                           sizeof(CLIENT_SCID), 0, &init.client, frames, fl);
+    size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
+                           &init.client, frames, fl);
     g_out_n = 0;
     TEST_ASSERT_TRUE(pc_quic_server_ingest(dg, dl, "192.0.2.10", 40000));
     service_once(); // -> pc_quic_server_poll(): opens the connection, emits the flight
@@ -398,15 +397,15 @@ void test_h3_request_served_by_route()
     uint8_t ifr[64];
     size_t ifl = pc_quic_build_ack(ifr, sizeof(ifr), 0, 0, 0);
     uint8_t idg[256];
-    size_t idl = build_long(idg, sizeof(idg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID,
-                            sizeof(CLIENT_SCID), 1, &init.client, ifr, ifl);
+    size_t idl = build_long(idg, sizeof(idg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID),
+                            1, &init.client, ifr, ifl);
     uint8_t cfin[36] = {TLS_HS_FINISHED, 0x00, 0x00, 0x20};
     pc_tls13_finished_mac(&TLS13_KDF, cks.client_hs_traffic, chsf, cfin + 4);
     uint8_t hfr[64];
     size_t hfl = pc_quic_build_ack(hfr, sizeof(hfr), 0, 0, 0);
     hfl += pc_quic_build_crypto(hfr + hfl, sizeof(hfr) - hfl, 0, cfin, sizeof(cfin));
-    size_t hdl = build_long(idg + idl, sizeof(idg) - idl, QUIC_LP_HANDSHAKE, ODCID, sizeof(ODCID),
-                            CLIENT_SCID, sizeof(CLIENT_SCID), 0, &hs_c, hfr, hfl);
+    size_t hdl = build_long(idg + idl, sizeof(idg) - idl, QUIC_LP_HANDSHAKE, ODCID, sizeof(ODCID), CLIENT_SCID,
+                            sizeof(CLIENT_SCID), 0, &hs_c, hfr, hfl);
     g_out_n = 0;
     TEST_ASSERT_TRUE(pc_quic_server_ingest(idg, idl + hdl, "192.0.2.10", 40000));
     service_once();
@@ -420,7 +419,7 @@ void test_h3_request_served_by_route()
     uint8_t h3req[256];
     size_t h3l = pc_h3_build_headers(h3req, sizeof(h3req), block, bp);
     uint8_t sfr[300];
-    size_t sfrl = pc_quic_build_stream(sfr, sizeof(sfr), 0, 0, h3req, h3l, true);
+    size_t sfrl = pc_quic_build_stream(sfr, sizeof(sfr), 0, 0, h3req, h3l, PROTO_TRUE);
     uint8_t s1[512];
     size_t s1l = build_short(s1, sizeof(s1), server_scid, server_scid_len, 0, &ap_c, sfr, sfrl);
 
@@ -454,10 +453,10 @@ void test_h3_begin_edges()
 }
 
 // A route whose handler answers with a no-body response, exercising send_empty()'s HTTP/3 sink path.
-static bool g_empty_ran = false;
+static proto_bool g_empty_ran = PROTO_FALSE;
 static void h_empty(uint8_t slot, HttpReq *)
 {
-    g_empty_ran = true;
+    g_empty_ran = PROTO_TRUE;
     send_empty(slot, 204); // -> conn->pc_resp_sink -> pc_quic_server_respond (send_empty sink branch)
 }
 
@@ -486,7 +485,7 @@ void test_h3_dispatch_edges()
     dispatch_h3_request(CID, 0, long_method, "/hello", "h3.test", NULL, 0);
 
     // Path carrying a short query string: '?' split + query copied (short, no truncation).
-    g_handler_ran = false;
+    g_handler_ran = PROTO_FALSE;
     dispatch_h3_request(CID, 0, "GET", "/hello?a=1&b=2", "h3.test", NULL, 0);
     TEST_ASSERT_TRUE(g_handler_ran); // route still matched on the query-stripped path
 
@@ -522,7 +521,7 @@ void test_h3_dispatch_edges()
     dispatch_h3_request(CID, 0, "GET", "/hello", "h3.test", BODY, 0);
 
     // A handler that calls send_empty() -> exercises send_empty()'s pc_resp_sink branch.
-    g_empty_ran = false;
+    g_empty_ran = PROTO_FALSE;
     dispatch_h3_request(CID, 0, "GET", "/empty", "h3.test", NULL, 0);
     TEST_ASSERT_TRUE(g_empty_ran);
 

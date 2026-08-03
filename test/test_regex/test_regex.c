@@ -8,7 +8,7 @@
 #include <string.h>
 #include <unity.h>
 
-static bool g_called;
+static proto_bool g_called;
 
 static void push_str(uint8_t slot, const char *s)
 {
@@ -24,7 +24,7 @@ static void push_str(uint8_t slot, const char *s)
 static void h_ok(uint8_t slot, HttpReq *req)
 {
     (void)req;
-    g_called = true;
+    g_called = PROTO_TRUE;
     send_text(slot, 200, "text/plain", "ok");
 }
 
@@ -43,7 +43,7 @@ void setUp()
     ws_init();
     pc_sse_init();
     tcp_capture_reset();
-    g_called = false;
+    g_called = PROTO_FALSE;
 }
 
 void tearDown()
@@ -52,7 +52,7 @@ void tearDown()
 }
 
 // Dispatch one request on a freshly armed slot 0; return whether the handler ran.
-static bool hit(const char *method, const char *path)
+static proto_bool hit(const char *method, const char *path)
 {
     conn_pool[0] = {};
     conn_pool[0].id = 0;
@@ -61,7 +61,7 @@ static bool hit(const char *method, const char *path)
     conn_pool[0].pcb = &_mock_pcb;
     http_reset(0);
     tcp_capture_reset();
-    g_called = false;
+    g_called = PROTO_FALSE;
     char req[160];
     snprintf(req, sizeof(req), "%s %s HTTP/1.1\r\n\r\n", method, path);
     push_str(0, req);

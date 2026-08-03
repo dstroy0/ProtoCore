@@ -306,13 +306,14 @@ void test_null_guards(void)
 // width 8, > 32 as width 32. Exercises both clamp arms of pc_crc_detail::clamp_width.
 void test_out_of_range_width_is_clamped(void)
 {
-    const pc_crc_params lo4 = {4, 0x07u, 0x00u, false, false, 0x00u}; // < 8 -> clamps to 8
-    const pc_crc_params lo8 = {8, 0x07u, 0x00u, false, false, 0x00u}; // width 8
+    const pc_crc_params lo4 = {4, 0x07u, 0x00u, PROTO_FALSE, PROTO_FALSE, 0x00u}; // < 8 -> clamps to 8
+    const pc_crc_params lo8 = {8, 0x07u, 0x00u, PROTO_FALSE, PROTO_FALSE, 0x00u}; // width 8
     TEST_ASSERT_EQUAL_HEX32(pc_crc(&lo8, CHECK_INPUT, sizeof(CHECK_INPUT)),
                             pc_crc(&lo4, CHECK_INPUT, sizeof(CHECK_INPUT)));
 
-    const pc_crc_params hi40 = {40, 0x04C11DB7u, 0xFFFFFFFFu, true, true, 0xFFFFFFFFu}; // > 32 -> clamps to 32
-    const pc_crc_params hi32 = {32, 0x04C11DB7u, 0xFFFFFFFFu, true, true, 0xFFFFFFFFu}; // width 32
+    const pc_crc_params hi40 = {40,         0x04C11DB7u, 0xFFFFFFFFu,
+                                PROTO_TRUE, PROTO_TRUE,  0xFFFFFFFFu}; // > 32 -> clamps to 32
+    const pc_crc_params hi32 = {32, 0x04C11DB7u, 0xFFFFFFFFu, PROTO_TRUE, PROTO_TRUE, 0xFFFFFFFFu}; // width 32
     TEST_ASSERT_EQUAL_HEX32(pc_crc(&hi32, CHECK_INPUT, sizeof(CHECK_INPUT)),
                             pc_crc(&hi40, CHECK_INPUT, sizeof(CHECK_INPUT)));
 }

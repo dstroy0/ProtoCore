@@ -404,7 +404,7 @@ void test_forwarded_rfc7239()
 {
     feed_request(0, "GET / HTTP/1.1\r\nForwarded: for=192.0.2.60;proto=https;by=203.0.113.1\r\n\r\n");
     char ip[24];
-    bool https = false;
+    proto_bool https = PROTO_FALSE;
     TEST_ASSERT_TRUE(http_forwarded_client(&http_pool[0], ip, sizeof(ip), &https));
     TEST_ASSERT_EQUAL_STRING("192.0.2.60", ip);
     TEST_ASSERT_TRUE(https);
@@ -420,7 +420,7 @@ void test_forwarded_leftmost_client()
 
     feed_request(1, "GET / HTTP/1.1\r\nX-Forwarded-For: 198.51.100.23, 10.0.0.1, 10.0.0.2\r\n"
                     "X-Forwarded-Proto: https\r\n\r\n");
-    bool https = false;
+    proto_bool https = PROTO_FALSE;
     TEST_ASSERT_TRUE(http_forwarded_client(&http_pool[1], ip, sizeof(ip), &https));
     TEST_ASSERT_EQUAL_STRING("198.51.100.23", ip);
     TEST_ASSERT_TRUE(https);
@@ -1029,7 +1029,7 @@ void test_accessor_null_guards()
 {
     feed_request(0, "GET /?a=1 HTTP/1.1\r\nCookie: a=1\r\n\r\n");
     char v[16];
-    bool https = false;
+    proto_bool https = PROTO_FALSE;
     TEST_ASSERT_FALSE(http_get_cookie(&http_pool[0], "a", NULL, sizeof(v)));
     TEST_ASSERT_FALSE(http_get_cookie(&http_pool[0], "a", v, 0));
     TEST_ASSERT_FALSE(http_get_cookie(NULL, "a", v, sizeof(v)));
@@ -1291,10 +1291,10 @@ void test_forwarded_bare_colon_port_edge_cases()
 
 void test_forwarded_proto_missing_or_in_later_element()
 {
-    bool https;
+    proto_bool https;
 
     // No "proto=" substring anywhere in the header.
-    https = false;
+    https = PROTO_FALSE;
     feed_request(0, "GET / HTTP/1.1\r\nForwarded: for=9.9.9.9\r\n\r\n");
     char ip[24];
     TEST_ASSERT_TRUE(http_forwarded_client(&http_pool[0], ip, sizeof(ip), &https));
@@ -1302,13 +1302,13 @@ void test_forwarded_proto_missing_or_in_later_element()
 
     // "proto=" present, but only in the second (comma-separated) element, and "for=" present
     // only in the first - so proto= is out of range and must not be picked up.
-    https = false;
+    https = PROTO_FALSE;
     feed_request(1, "GET / HTTP/1.1\r\nForwarded: for=9.9.9.9, for=1.1.1.1;proto=https\r\n\r\n");
     TEST_ASSERT_TRUE(http_forwarded_client(&http_pool[1], ip, sizeof(ip), &https));
     TEST_ASSERT_FALSE(https);
 
     // "proto=" in the first element, but "for=" only in the second - for= is out of range.
-    https = false;
+    https = PROTO_FALSE;
     feed_request(2, "GET / HTTP/1.1\r\nForwarded: proto=https, for=9.9.9.9\r\n\r\n");
     TEST_ASSERT_FALSE(http_forwarded_client(&http_pool[2], ip, sizeof(ip), &https));
     TEST_ASSERT_TRUE(https); // the first element's proto= still applies
@@ -1335,16 +1335,16 @@ void test_forwarded_empty_for_token_rejected()
 void test_xff_proto_missing_or_mismatched()
 {
     char ip[24];
-    bool https;
+    proto_bool https;
 
     // X-Forwarded-For present, no X-Forwarded-Proto header at all.
-    https = false;
+    https = PROTO_FALSE;
     feed_request(0, "GET / HTTP/1.1\r\nX-Forwarded-For: 1.2.3.4\r\n\r\n");
     TEST_ASSERT_TRUE(http_forwarded_client(&http_pool[0], ip, sizeof(ip), &https));
     TEST_ASSERT_FALSE(https);
 
     // X-Forwarded-Proto present but not "https".
-    https = false;
+    https = PROTO_FALSE;
     feed_request(1, "GET / HTTP/1.1\r\nX-Forwarded-For: 1.2.3.4\r\nX-Forwarded-Proto: http\r\n\r\n");
     TEST_ASSERT_TRUE(http_forwarded_client(&http_pool[1], ip, sizeof(ip), &https));
     TEST_ASSERT_FALSE(https);

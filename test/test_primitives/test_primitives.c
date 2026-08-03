@@ -25,7 +25,7 @@ void tearDown()
 void test_sb_u32()
 {
     char buf[32];
-    pc_sb b = {buf, sizeof(buf), 0, true};
+    pc_sb b = {buf, sizeof(buf), 0, PROTO_TRUE};
     pc_sb_u32(&b, 0);
     pc_sb_put(&b, ",");
     pc_sb_u32(&b, 7);
@@ -44,12 +44,12 @@ void test_sb_u32_boundaries()
     for (unsigned i = 0; i < 5; i++)
     {
         char tight[16];
-        pc_sb fit = {tight, widths[i] + 1, 0, true};
+        pc_sb fit = {tight, widths[i] + 1, 0, PROTO_TRUE};
         pc_sb_u32(&fit, vals[i]);
         TEST_ASSERT_TRUE_MESSAGE(fit.ok, "exact fit must succeed");
         TEST_ASSERT_EQUAL_size_t(widths[i], pc_sb_finish(&fit));
 
-        pc_sb tooSmall = {tight, widths[i], 0, true};
+        pc_sb tooSmall = {tight, widths[i], 0, PROTO_TRUE};
         pc_sb_u32(&tooSmall, vals[i]);
         TEST_ASSERT_FALSE_MESSAGE(tooSmall.ok, "one byte short must fail closed");
         TEST_ASSERT_EQUAL_size_t(0, tooSmall.len);
@@ -62,7 +62,7 @@ void test_sb_overflow_latches()
     // Once ok latches false every later append is a no-op, so callers test one flag at the end
     // instead of checking each call - and a truncated frame never reports a length.
     char buf[8];
-    pc_sb b = {buf, sizeof(buf), 0, true};
+    pc_sb b = {buf, sizeof(buf), 0, PROTO_TRUE};
     pc_sb_put(&b, "abcdef"); // fits (6 + NUL)
     TEST_ASSERT_TRUE(b.ok);
     pc_sb_u32(&b, 12345); // does not
@@ -77,7 +77,7 @@ void test_sb_overflow_latches()
 void test_sb_widths_and_bases()
 {
     char buf[64];
-    pc_sb b = {buf, sizeof(buf), 0, true};
+    pc_sb b = {buf, sizeof(buf), 0, PROTO_TRUE};
     pc_sb_hex(&b, 0xdeadbeefu, 8); // %08lx
     pc_sb_ch(&b, '|');
     pc_sb_hex(&b, 0x5u, 4); // %04x
@@ -89,7 +89,7 @@ void test_sb_widths_and_bases()
     TEST_ASSERT_EQUAL_STRING("deadbeef|0005|abc|07", buf);
 
     // a value wider than its min_digits is never truncated to the width
-    pc_sb w = {buf, sizeof(buf), 0, true};
+    pc_sb w = {buf, sizeof(buf), 0, PROTO_TRUE};
     pc_sb_u32w(&w, 12345, 2);
     pc_sb_finish(&w);
     TEST_ASSERT_EQUAL_STRING("12345", buf);
@@ -98,12 +98,12 @@ void test_sb_widths_and_bases()
 void test_sb_64bit()
 {
     char buf[64];
-    pc_sb b = {buf, sizeof(buf), 0, true};
+    pc_sb b = {buf, sizeof(buf), 0, PROTO_TRUE};
     pc_sb_u64(&b, 18446744073709551615ull); // UINT64_MAX, 20 digits
     TEST_ASSERT_EQUAL_size_t(20, pc_sb_finish(&b));
     TEST_ASSERT_EQUAL_STRING("18446744073709551615", buf);
 
-    pc_sb s = {buf, sizeof(buf), 0, true};
+    pc_sb s = {buf, sizeof(buf), 0, PROTO_TRUE};
     pc_sb_i64(&s, -4096);
     pc_sb_ch(&s, ',');
     // INT64_MIN: taking the magnitude by negating the signed value would overflow, so this is
@@ -146,7 +146,7 @@ void test_sb_g_matches_libc()
         for (unsigned si = 0; si < 4; si++)
         {
             char mine[64], theirs[64], fmt[16];
-            pc_sb b = {mine, sizeof(mine), 0, true};
+            pc_sb b = {mine, sizeof(mine), 0, PROTO_TRUE};
             pc_sb_g(&b, vals[vi], sigs[si]);
             pc_sb_finish(&b);
             snprintf(fmt, sizeof(fmt), "%%.%ug", sigs[si]);
@@ -164,7 +164,7 @@ void test_sb_fixed_matches_libc()
         for (unsigned d = 0; d <= 4; d++)
         {
             char mine[64], theirs[64];
-            pc_sb b = {mine, sizeof(mine), 0, true};
+            pc_sb b = {mine, sizeof(mine), 0, PROTO_TRUE};
             pc_sb_fixed(&b, vals[vi], d);
             pc_sb_finish(&b);
             snprintf(theirs, sizeof(theirs), "%.*f", (int)d, vals[vi]);
@@ -176,14 +176,14 @@ void test_sb_fixed_matches_libc()
 void test_sb_json_escapes()
 {
     char buf[32];
-    pc_sb b = {buf, sizeof(buf), 0, true};
+    pc_sb b = {buf, sizeof(buf), 0, PROTO_TRUE};
     pc_sb_json(&b, "a\"b\\c");
     TEST_ASSERT_EQUAL_size_t(9, pc_sb_finish(&b));
     TEST_ASSERT_EQUAL_STRING("\"a\\\"b\\\\c\"", buf);
 
     // an escape that would straddle the end must fail closed, not write one half of the pair
     char tight[6];
-    pc_sb t = {tight, sizeof(tight), 0, true};
+    pc_sb t = {tight, sizeof(tight), 0, PROTO_TRUE};
     pc_sb_json(&t, "ab\"");
     TEST_ASSERT_FALSE(t.ok);
     TEST_ASSERT_EQUAL_size_t(0, pc_sb_finish(&t));

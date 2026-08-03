@@ -96,13 +96,13 @@ void test_iso_even_parity()
 // ISO block framing: the characters pass through, terminated by LF (or CR LF).
 void test_encode_block_iso()
 {
-    DncCfg cfg = {DNC_CODE_ISO, false, false, 0};
+    DncCfg cfg = {DNC_CODE_ISO, PROTO_FALSE, PROTO_FALSE, 0};
     uint8_t out[32];
     size_t n = pc_dnc_encode_block(&cfg, "G01X10", 6, out, sizeof(out));
     TEST_ASSERT_EQUAL_size_t(7, n);
     TEST_ASSERT_EQUAL_MEMORY("G01X10\n", out, 7);
 
-    cfg.crlf = true;
+    cfg.crlf = PROTO_TRUE;
     n = pc_dnc_encode_block(&cfg, "G01X10", 6, out, sizeof(out));
     TEST_ASSERT_EQUAL_size_t(8, n);
     TEST_ASSERT_EQUAL_MEMORY("G01X10\r\n", out, 8);
@@ -111,7 +111,7 @@ void test_encode_block_iso()
 // EIA block framing: each character is translated, then the 0x80 End-of-Block.
 void test_encode_block_eia()
 {
-    DncCfg cfg = {DNC_CODE_EIA, false, false, 0};
+    DncCfg cfg = {DNC_CODE_EIA, PROTO_FALSE, PROTO_FALSE, 0};
     uint8_t out[32];
     size_t n = pc_dnc_encode_block(&cfg, "G01", 3, out, sizeof(out));
     TEST_ASSERT_EQUAL_size_t(4, n);
@@ -124,7 +124,7 @@ void test_encode_block_eia()
 // A non-representable EIA character or a too-small buffer fails closed (returns 0).
 void test_encode_block_fail_closed()
 {
-    DncCfg cfg = {DNC_CODE_EIA, false, false, 0};
+    DncCfg cfg = {DNC_CODE_EIA, PROTO_FALSE, PROTO_FALSE, 0};
     uint8_t out[32];
     TEST_ASSERT_EQUAL_size_t(0, pc_dnc_encode_block(&cfg, "g01", 3, out, sizeof(out)));   // lowercase
     TEST_ASSERT_EQUAL_size_t(0, pc_dnc_encode_block(&cfg, "(cmt)", 5, out, sizeof(out))); // '(' not in EIA
@@ -135,13 +135,13 @@ void test_encode_block_fail_closed()
 // The '%' program marker: ISO '%' + LF, EIA End-of-Record + EOB.
 void test_encode_marker()
 {
-    DncCfg iso = {DNC_CODE_ISO, false, false, 0};
+    DncCfg iso = {DNC_CODE_ISO, PROTO_FALSE, PROTO_FALSE, 0};
     uint8_t out[8];
     size_t n = pc_dnc_encode_marker(&iso, out, sizeof(out));
     TEST_ASSERT_EQUAL_size_t(2, n);
     TEST_ASSERT_EQUAL_MEMORY("%\n", out, 2);
 
-    DncCfg eia = {DNC_CODE_EIA, false, false, 0};
+    DncCfg eia = {DNC_CODE_EIA, PROTO_FALSE, PROTO_FALSE, 0};
     n = pc_dnc_encode_marker(&eia, out, sizeof(out));
     TEST_ASSERT_EQUAL_size_t(2, n);
     TEST_ASSERT_EQUAL_HEX8(0x0B, out[0]); // EOR
@@ -151,7 +151,7 @@ void test_encode_marker()
 // Leader is N NUL runout bytes; too-small buffer fails closed.
 void test_encode_leader()
 {
-    DncCfg cfg = {DNC_CODE_ISO, false, false, 5};
+    DncCfg cfg = {DNC_CODE_ISO, PROTO_FALSE, PROTO_FALSE, 5};
     uint8_t out[8];
     size_t n = pc_dnc_encode_leader(&cfg, out, sizeof(out));
     TEST_ASSERT_EQUAL_size_t(5, n);
@@ -171,11 +171,11 @@ void test_flow_control()
     TEST_ASSERT_TRUE(pc_dnc_flow_can_send(&f));
 
     TEST_ASSERT_TRUE(pc_dnc_flow_feed(&f, (uint8_t)DNC_XOFF)); // consumed
-    TEST_ASSERT_FALSE(pc_dnc_flow_can_send(&f));                            // paused
-    TEST_ASSERT_FALSE(pc_dnc_flow_feed(&f, 'G'));                           // ordinary byte, not consumed
-    TEST_ASSERT_FALSE(pc_dnc_flow_can_send(&f));                            // still paused
+    TEST_ASSERT_FALSE(pc_dnc_flow_can_send(&f));               // paused
+    TEST_ASSERT_FALSE(pc_dnc_flow_feed(&f, 'G'));              // ordinary byte, not consumed
+    TEST_ASSERT_FALSE(pc_dnc_flow_can_send(&f));               // still paused
     TEST_ASSERT_TRUE(pc_dnc_flow_feed(&f, (uint8_t)DNC_XON));  // consumed
-    TEST_ASSERT_TRUE(pc_dnc_flow_can_send(&f));                             // resumed
+    TEST_ASSERT_TRUE(pc_dnc_flow_can_send(&f));                // resumed
 }
 
 // Helper: feed a whole buffer through the decoder, collecting lines and the marker sequence.
@@ -323,9 +323,9 @@ void test_decode_eia_three_is_not_xoff()
 void test_encode_overflow_paths()
 {
     uint8_t o[8];
-    DncCfg eia = {DNC_CODE_EIA, false, false, 0};
+    DncCfg eia = {DNC_CODE_EIA, PROTO_FALSE, PROTO_FALSE, 0};
     TEST_ASSERT_EQUAL_size_t(0, pc_dnc_encode_block(&eia, "G01", 3, o, 3)); // chars fill cap, EOB overflows
-    DncCfg iso = {DNC_CODE_ISO, false, true, 0};                   // crlf
+    DncCfg iso = {DNC_CODE_ISO, PROTO_FALSE, PROTO_TRUE, 0};                // crlf
     TEST_ASSERT_EQUAL_size_t(0, pc_dnc_encode_block(&iso, "G", 1, o, 1));   // CR overflows
     TEST_ASSERT_EQUAL_size_t(0, pc_dnc_encode_block(&iso, "G", 1, o, 2));   // CR fits, LF overflows
     TEST_ASSERT_EQUAL_size_t(0, pc_dnc_encode_marker(&eia, o, 0));          // EIA EOR has no room

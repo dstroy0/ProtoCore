@@ -332,43 +332,43 @@ static long stall_size(const char *path)
     (void)path;
     return 8;
 }
-static bool stall_true(const char *path)
+static proto_bool stall_true(const char *path)
 {
     (void)path;
-    return true;
+    return PROTO_TRUE;
 }
-static bool stall_rename(const char *from, const char *to)
+static proto_bool stall_rename(const char *from, const char *to)
 {
     (void)from;
     (void)to;
-    return true;
+    return PROTO_TRUE;
 }
-static bool stall_seek(int handle, uint64_t off)
+static proto_bool stall_seek(int handle, uint64_t off)
 {
     (void)handle;
     (void)off;
-    return true;
+    return PROTO_TRUE;
 }
-static bool stall_stat(const char *path, pc_mnt_stat *out)
+static proto_bool stall_stat(const char *path, pc_mnt_stat *out)
 {
     (void)path;
-    out->is_dir = false;
+    out->is_dir = PROTO_FALSE;
     out->size = 8;
     out->mtime = 0;
-    return true;
+    return PROTO_TRUE;
 }
 static int stall_opendir(const char *path)
 {
     (void)path;
     return 0;
 }
-static bool stall_readdir(int handle, pc_mnt_stat *out, char *name, size_t name_cap)
+static proto_bool stall_readdir(int handle, pc_mnt_stat *out, char *name, size_t name_cap)
 {
     (void)handle;
     (void)out;
     (void)name;
     (void)name_cap;
-    return false;
+    return PROTO_FALSE;
 }
 static const pc_mnt_backend s_stall_backend = {stall_open, stall_read, stall_write,   stall_close,  stall_seek,
                                                stall_size, stall_true, stall_true,    stall_rename, stall_true,

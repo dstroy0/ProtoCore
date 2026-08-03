@@ -18,7 +18,7 @@ void tearDown()
 {
 }
 
-static bool near_f(float a, float b)
+static proto_bool near_f(float a, float b)
 {
     return fabsf(a - b) < 1e-4f;
 }
@@ -269,18 +269,18 @@ void test_pid_log_header_bytes()
 void test_pid_log_record_bytes()
 {
     uint8_t buf[PID_LOG_RECORD_LEN];
-    size_t n = pid_log_record(buf, sizeof(buf), 3.0f, 2.0f, 4.5f, true);
+    size_t n = pid_log_record(buf, sizeof(buf), 3.0f, 2.0f, 4.5f, PROTO_TRUE);
     TEST_ASSERT_EQUAL_size_t(PID_LOG_RECORD_LEN, n);
     TEST_ASSERT_TRUE(near_f(rd_f32le(buf + 0), 3.0f)); // setpoint
     TEST_ASSERT_TRUE(near_f(rd_f32le(buf + 4), 2.0f)); // measurement
     TEST_ASSERT_TRUE(near_f(rd_f32le(buf + 8), 4.5f)); // output
     TEST_ASSERT_EQUAL_HEX32(PID_LOG_STATUS_SATURATED, rd_u32le(buf + 12));
-    n = pid_log_record(buf, sizeof(buf), 0.0f, 0.0f, 0.0f, false);
+    n = pid_log_record(buf, sizeof(buf), 0.0f, 0.0f, 0.0f, PROTO_FALSE);
     TEST_ASSERT_EQUAL_size_t(PID_LOG_RECORD_LEN, n);
     TEST_ASSERT_EQUAL_HEX32(0u, rd_u32le(buf + 12)); // status clear when not saturated
     // guards: null buf, capacity too small -> 0.
-    TEST_ASSERT_EQUAL_size_t(0, pid_log_record(NULL, sizeof(buf), 0.0f, 0.0f, 0.0f, false));
-    TEST_ASSERT_EQUAL_size_t(0, pid_log_record(buf, PID_LOG_RECORD_LEN - 1, 0.0f, 0.0f, 0.0f, false));
+    TEST_ASSERT_EQUAL_size_t(0, pid_log_record(NULL, sizeof(buf), 0.0f, 0.0f, 0.0f, PROTO_FALSE));
+    TEST_ASSERT_EQUAL_size_t(0, pid_log_record(buf, PID_LOG_RECORD_LEN - 1, 0.0f, 0.0f, 0.0f, PROTO_FALSE));
 }
 
 // control_slew clamps a falling step too, not just a rising one, and pid_update_fixed rejects a

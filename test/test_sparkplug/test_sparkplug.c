@@ -127,11 +127,11 @@ void test_metric_int_and_string()
 void test_metric_alias()
 {
     SpbMetric m = {};
-    m.has_alias = true;
+    m.has_alias = PROTO_TRUE;
     m.alias = 7;
     m.datatype = SPB_DT_BOOLEAN;
     m.kind = SPB_M_BOOL;
-    m.bool_value = true;
+    m.bool_value = PROTO_TRUE;
     uint8_t buf[32];
     size_t n = pc_spb_build_metric(buf, sizeof(buf), &m);
     size_t pos = 0;
@@ -168,7 +168,7 @@ void test_spb_error_and_kind_paths()
 
     SpbMetric ml = {};
     ml.name = "lng";
-    ml.has_timestamp = true;
+    ml.has_timestamp = PROTO_TRUE;
     ml.timestamp = 123;
     ml.datatype = SPB_DT_INT32;
     ml.kind = SPB_M_LONG;
@@ -259,13 +259,13 @@ void test_decode_payload_and_metrics()
 {
     SpbMetric m[2] = {};
     m[0].name = "temperature";
-    m[0].has_timestamp = true;
+    m[0].has_timestamp = PROTO_TRUE;
     m[0].timestamp = 12345;
     m[0].datatype = SPB_DT_DOUBLE;
     m[0].kind = SPB_M_DOUBLE;
     m[0].double_value = 23.5;
     m[1].name = "status";
-    m[1].has_alias = true;
+    m[1].has_alias = PROTO_TRUE;
     m[1].alias = 7;
     m[1].datatype = SPB_DT_STRING;
     m[1].kind = SPB_M_STRING;

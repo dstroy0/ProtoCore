@@ -39,7 +39,7 @@ static size_t put_string(uint8_t *p, const char *s)
     return 4 + n;
 }
 
-static bool check_uv(const char *u, const char *p)
+static proto_bool check_uv(const char *u, const char *p)
 {
     return strcmp(u, "alice") == 0 && strcmp(p, "s3cret") == 0;
 }
@@ -175,7 +175,7 @@ void test_methods_list_advertises_kbdint()
 {
     uint8_t out[128];
     size_t olen = 0;
-    TEST_ASSERT_EQUAL_INT(0, pc_ssh_auth_build_failure(out, &olen, sizeof(out), false));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_auth_build_failure(out, &olen, sizeof(out), PROTO_FALSE));
     uint32_t ml = ((uint32_t)out[1] << 24) | ((uint32_t)out[2] << 16) | ((uint32_t)out[3] << 8) | out[4];
     char list[128];
     memcpy(list, out + 5, ml);
@@ -363,7 +363,7 @@ static size_t put_mpint(uint8_t *p, const uint8_t *be, size_t len)
     {
         off++;
     }
-    bool pad = (off < len) && (be[off] & 0x80u);
+    proto_bool pad = (off < len) && (be[off] & 0x80u);
     size_t mlen = (len - off) + (pad ? 1 : 0);
     wr_u32(p, (uint32_t)mlen);
     size_t o = 4;
@@ -399,7 +399,7 @@ static size_t build_kexinit_ext(uint8_t *out)
     }
     return o;
 }
-static bool dsp_pw_cb(const char *u, const char *p)
+static proto_bool dsp_pw_cb(const char *u, const char *p)
 {
     return strcmp(u, "alice") == 0 && strcmp(p, "s3cret") == 0;
 }
@@ -604,7 +604,7 @@ void test_dispatch_guard_and_error_arms()
 
     // A wrong password below the limit -> FAILURE, connection stays open (limit not tripped).
     s->phase = SSH_PHASE_AUTH;
-    s->authed = false;
+    s->authed = PROTO_FALSE;
     s->auth_failures = 0;
     uint8_t pw[128];
     size_t pn = 0;
@@ -624,7 +624,7 @@ void test_dispatch_guard_and_error_arms()
     TEST_ASSERT_EQUAL(SSH_MSG_DISCONNECT, dsp_type[dsp_n - 1]);
 
     // Every post-auth connection message is rejected while unauthenticated.
-    s->authed = false;
+    s->authed = PROTO_FALSE;
     const uint8_t authed_arms[] = {SSH_MSG_GLOBAL_REQUEST,       SSH_MSG_CHANNEL_OPEN,    SSH_MSG_CHANNEL_OPEN_CONFIRM,
                                    SSH_MSG_CHANNEL_OPEN_FAILURE, SSH_MSG_CHANNEL_REQUEST, SSH_MSG_CHANNEL_DATA};
     for (size_t j = 0; j < sizeof(authed_arms) / sizeof(authed_arms[0]); j++)
@@ -634,7 +634,7 @@ void test_dispatch_guard_and_error_arms()
     }
 
     // Authenticated but malformed -> the arm's handler fails.
-    s->authed = true;
+    s->authed = PROTO_TRUE;
     const uint8_t handler_arms[] = {SSH_MSG_GLOBAL_REQUEST, SSH_MSG_CHANNEL_OPEN, SSH_MSG_CHANNEL_REQUEST,
                                     SSH_MSG_CHANNEL_DATA};
     for (size_t j = 0; j < sizeof(handler_arms) / sizeof(handler_arms[0]); j++)

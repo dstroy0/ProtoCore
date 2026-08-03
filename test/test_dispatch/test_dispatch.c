@@ -13,7 +13,7 @@
 #include "services/security/csrf/csrf.h" // supply a valid token so an unsafe method reaches method dispatch
 #endif
 
-static bool handler_called = false;
+static proto_bool handler_called = PROTO_FALSE;
 
 static void push_str(uint8_t slot, const char *s)
 {
@@ -28,14 +28,14 @@ static void push_str(uint8_t slot, const char *s)
 static void handle_ok(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    handler_called = true;
+    handler_called = PROTO_TRUE;
     send_text(slot_id, 200, "text/plain", "OK");
 }
 
 void setUp()
 {
     pc_server_reset();
-    handler_called = false;
+    handler_called = PROTO_FALSE;
     for (int i = 0; i < MAX_CONNS; i++)
     {
         conn_pool[i] = {};
@@ -253,9 +253,9 @@ void test_incomplete_request_survives_before_deadline()
     conn_pool[0].last_activity_ms = PC_REQUEST_TIMEOUT_MS; // fresh idle timer (trickle), so idle sweep is out
     handle();
 
-    TEST_ASSERT_NULL(strstr(tcp_captured(), "408"));                          // not yet reaped
+    TEST_ASSERT_NULL(strstr(tcp_captured(), "408"));               // not yet reaped
     TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)conn_pool[0].state); // still active
-    TEST_ASSERT_NOT_EQUAL(0, (int)conn_pool[0].req_start_ms);                 // still armed
+    TEST_ASSERT_NOT_EQUAL(0, (int)conn_pool[0].req_start_ms);      // still armed
 }
 
 void test_completed_slow_request_not_reaped()
@@ -288,7 +288,7 @@ void test_streaming_body_upload_not_reaped_past_deadline()
     conn_pool[0].last_activity_ms = 1 + PC_REQUEST_TIMEOUT_MS + 5000; // body bytes keep the idle timer fresh
     handle();
 
-    TEST_ASSERT_NULL(strstr(tcp_captured(), "408"));                          // header-scoped: body is not reaped
+    TEST_ASSERT_NULL(strstr(tcp_captured(), "408"));               // header-scoped: body is not reaped
     TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)conn_pool[0].state); // upload continues
 }
 #endif // PC_REQUEST_TIMEOUT_MS > 0

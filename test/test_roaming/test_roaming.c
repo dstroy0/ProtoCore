@@ -64,9 +64,9 @@ void test_btm_imminent_forces_roam()
     memcpy(nb[1].bssid, AP_B, 6);
     pc_roam_btm btm;
     memset(&btm, 0, sizeof(btm));
-    btm.present = true;
-    btm.disassoc_imminent = true;
-    btm.has_preferred = true;
+    btm.present = PROTO_TRUE;
+    btm.disassoc_imminent = PROTO_TRUE;
+    btm.has_preferred = PROTO_TRUE;
     memcpy(btm.preferred_bssid, AP_A, 6); // network names AP_A even though AP_B is stronger
 
     // A strong current link (-45) would normally stay, but disassoc-imminent forces the roam to the
@@ -78,7 +78,7 @@ void test_btm_imminent_forces_roam()
     TEST_ASSERT_EQUAL_HEX8_ARRAY(AP_A, d.target_bssid, 6);
 
     // No preferred -> roam to the strongest candidate (AP_B).
-    btm.has_preferred = false;
+    btm.has_preferred = PROTO_FALSE;
     pc_roam_decide(CUR, -45, nb, 2, &btm, &POLICY, &d);
     TEST_ASSERT_TRUE(d.roam);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(AP_B, d.target_bssid, 6);
@@ -90,8 +90,8 @@ void test_btm_suggested_honoured_only_if_not_weaker()
     memcpy(nb[0].bssid, AP_B, 6);
     pc_roam_btm btm;
     memset(&btm, 0, sizeof(btm));
-    btm.present = true;
-    btm.has_preferred = true;
+    btm.present = PROTO_TRUE;
+    btm.has_preferred = PROTO_TRUE;
     memcpy(btm.preferred_bssid, AP_B, 6);
 
     // Current link -50 (strong), suggested AP_B is -55 (weaker): do NOT chase into a worse AP.

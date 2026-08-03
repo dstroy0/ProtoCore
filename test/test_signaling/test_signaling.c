@@ -133,7 +133,7 @@ void test_know_is_a_copy_not_a_window(void)
 void test_know_null_is_safe(void)
 {
     pc_signal_know(NULL); // must not fault
-    TEST_ASSERT_TRUE(true);
+    TEST_ASSERT_TRUE(PROTO_TRUE);
 }
 
 // Kill is a forward: the transport gets the slot, once, unchanged.

@@ -67,22 +67,22 @@ static size_t put_mpint(uint8_t *p, const uint8_t *be, size_t n)
     memcpy(p + o, be + off, n - off);
     return o + (n - off);
 }
-static bool rd_string(const uint8_t *b, size_t len, size_t *off, const uint8_t **d, uint32_t *dl)
+static proto_bool rd_string(const uint8_t *b, size_t len, size_t *off, const uint8_t **d, uint32_t *dl)
 {
     if (*off + 4 > len)
     {
-        return false;
+        return PROTO_FALSE;
     }
     uint32_t n = ((uint32_t)b[*off] << 24) | ((uint32_t)b[*off + 1] << 16) | ((uint32_t)b[*off + 2] << 8) | b[*off + 3];
     *off += 4;
     if (*off + n > len)
     {
-        return false;
+        return PROTO_FALSE;
     }
     *d = b + *off;
     *dl = n;
     *off += n;
-    return true;
+    return PROTO_TRUE;
 }
 static size_t put_namelist(uint8_t *p, const char *s)
 {
@@ -316,9 +316,8 @@ static void prepare_session(SshKexAlg alg)
 // X25519-based ones derive an X25519 public, the two others do not.
 void test_kex_generate_per_method()
 {
-    const SshKexAlg algs[5] = {SSH_KEX_CURVE25519, SSH_KEX_MLKEM768_X25519,
-                               SSH_KEX_SNTRUP761_X25519, SSH_KEX_ECDH_NISTP256,
-                               SSH_KEX_DH_GROUP14};
+    const SshKexAlg algs[5] = {SSH_KEX_CURVE25519, SSH_KEX_MLKEM768_X25519, SSH_KEX_SNTRUP761_X25519,
+                               SSH_KEX_ECDH_NISTP256, SSH_KEX_DH_GROUP14};
     for (int a = 0; a < 5; a++)
     {
         ssh_transport_init(0);

@@ -59,7 +59,7 @@ void setUp(void)
     g_imm.info.software_revision = "3.4.0";
     g_imm.info.device_revision = "D2";
     g_imm.info.manufacturer_uri = "urn:acme:plastics";
-    g_imm.status.is_present = true;
+    g_imm.status.is_present = PROTO_TRUE;
     g_imm.status.machine_mode = EM_MODE_AUTOMATIC;
     g_imm.active_job.job_name = "JOB-A";
     g_imm.active_job.job_description = "widget run";

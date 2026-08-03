@@ -192,20 +192,20 @@ void test_parse_frame_null_guards()
 // --- transport function (IEEE 1815 §8.2) ---
 void test_transport_header_and_build()
 {
-    TEST_ASSERT_EQUAL_HEX8(0xC5, pc_dnp3_transport_header(true, true, 5)); // FIR+FIN+seq5
-    TEST_ASSERT_EQUAL_HEX8(0x40, pc_dnp3_transport_header(true, false, 0));
-    TEST_ASSERT_EQUAL_HEX8(0x80, pc_dnp3_transport_header(false, true, 0));
+    TEST_ASSERT_EQUAL_HEX8(0xC5, pc_dnp3_transport_header(PROTO_TRUE, PROTO_TRUE, 5)); // FIR+FIN+seq5
+    TEST_ASSERT_EQUAL_HEX8(0x40, pc_dnp3_transport_header(PROTO_TRUE, PROTO_FALSE, 0));
+    TEST_ASSERT_EQUAL_HEX8(0x80, pc_dnp3_transport_header(PROTO_FALSE, PROTO_TRUE, 0));
 
     const uint8_t app[3] = {0xC1, 0x01, 0x3C}; // e.g. an app-layer READ request head
     uint8_t seg[8];
-    size_t n = pc_dnp3_build_transport_segment(seg, sizeof(seg), true, true, 5, app, 3);
+    size_t n = pc_dnp3_build_transport_segment(seg, sizeof(seg), PROTO_TRUE, PROTO_TRUE, 5, app, 3);
     TEST_ASSERT_EQUAL_size_t(4, n);
     TEST_ASSERT_EQUAL_HEX8(0xC5, seg[0]);
     TEST_ASSERT_EQUAL_MEMORY(app, seg + 1, 3);
     // Guards: buffer too small, and app data past the 249-octet segment limit.
-    TEST_ASSERT_EQUAL_size_t(0, pc_dnp3_build_transport_segment(seg, 2, true, true, 0, app, 3));
+    TEST_ASSERT_EQUAL_size_t(0, pc_dnp3_build_transport_segment(seg, 2, PROTO_TRUE, PROTO_TRUE, 0, app, 3));
     uint8_t big[300];
-    TEST_ASSERT_EQUAL_size_t(0, pc_dnp3_build_transport_segment(big, sizeof(big), true, true, 0, big, 250));
+    TEST_ASSERT_EQUAL_size_t(0, pc_dnp3_build_transport_segment(big, sizeof(big), PROTO_TRUE, PROTO_TRUE, 0, big, 250));
 }
 
 void test_transport_single_and_multi()
@@ -265,7 +265,7 @@ void test_transport_errors()
 void test_app_request_roundtrip()
 {
     // A READ request: AC = FIR|FIN, seq 3; FC READ; a small object header (group 1, var 0, qualifier 0x06).
-    uint8_t ac = pc_dnp3_app_control(true, true, false, false, 3);
+    uint8_t ac = pc_dnp3_app_control(PROTO_TRUE, PROTO_TRUE, PROTO_FALSE, PROTO_FALSE, 3);
     TEST_ASSERT_EQUAL_HEX8(0xC3, ac); // FIR|FIN|seq3
     const uint8_t obj[3] = {0x01, 0x00, 0x06};
     uint8_t buf[16];
@@ -297,9 +297,9 @@ void test_app_request_roundtrip()
 
 void test_app_response_roundtrip()
 {
-    uint8_t ac = pc_dnp3_app_control(true, true, true, false, 5);    // FIR|FIN|CON seq5
-    uint16_t iin = DNP3_IIN_DEVICE_RESTART | DNP3_IIN_CLASS1_EVENTS; // 0x0082
-    const uint8_t obj[2] = {0x3C, 0x01};                             // class-0 object header stub
+    uint8_t ac = pc_dnp3_app_control(PROTO_TRUE, PROTO_TRUE, PROTO_TRUE, PROTO_FALSE, 5); // FIR|FIN|CON seq5
+    uint16_t iin = DNP3_IIN_DEVICE_RESTART | DNP3_IIN_CLASS1_EVENTS;                      // 0x0082
+    const uint8_t obj[2] = {0x3C, 0x01};                                                  // class-0 object header stub
     uint8_t buf[16];
     size_t n = pc_dnp3_build_app_response(buf, sizeof(buf), ac, DNP3_FC_RESPONSE, iin, obj, sizeof(obj));
     TEST_ASSERT_EQUAL_UINT(6, n);         // AC + FC + 2 IIN + 2 object octets
@@ -462,25 +462,25 @@ void test_build_crob()
     uint8_t buf[16];
 
     // LATCH_ON, no trip/close, count 1, on/off time 0: control code = 0x03.
-    size_t n = pc_dnp3_build_crob(buf, sizeof(buf), DNP3_CROB_OP_LATCH_ON, DNP3_CROB_TCC_NUL, false, 1, 0, 0);
+    size_t n = pc_dnp3_build_crob(buf, sizeof(buf), DNP3_CROB_OP_LATCH_ON, DNP3_CROB_TCC_NUL, PROTO_FALSE, 1, 0, 0);
     TEST_ASSERT_EQUAL_size_t(DNP3_CROB_LEN, n);
     const uint8_t latch[] = {0x03, 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     TEST_ASSERT_EQUAL_HEX8_ARRAY(latch, buf, n);
 
     // PULSE_ON + CLOSE, count 2, on-time 100 ms (0x64), off-time 500 ms (0x1F4): control = 0x01 | (1<<6) = 0x41.
-    n = pc_dnp3_build_crob(buf, sizeof(buf), DNP3_CROB_OP_PULSE_ON, DNP3_CROB_TCC_CLOSE, false, 2, 100, 500);
+    n = pc_dnp3_build_crob(buf, sizeof(buf), DNP3_CROB_OP_PULSE_ON, DNP3_CROB_TCC_CLOSE, PROTO_FALSE, 2, 100, 500);
     const uint8_t pulse[] = {0x41, 0x02, 0x64, 0x00, 0x00, 0x00, 0xF4, 0x01, 0x00, 0x00, 0x00};
     TEST_ASSERT_EQUAL_HEX8_ARRAY(pulse, buf, n);
 
     // The clear bit sets 0x20; a TRIP with LATCH_OFF gives op 4 | clear | (2<<6) = 0x04 | 0x20 | 0x80 = 0xA4.
-    n = pc_dnp3_build_crob(buf, sizeof(buf), DNP3_CROB_OP_LATCH_OFF, DNP3_CROB_TCC_TRIP, true, 1, 0, 0);
+    n = pc_dnp3_build_crob(buf, sizeof(buf), DNP3_CROB_OP_LATCH_OFF, DNP3_CROB_TCC_TRIP, PROTO_TRUE, 1, 0, 0);
     TEST_ASSERT_EQUAL_HEX8(0xA4, buf[0]);
 
     // Guards: an op type / trip-close code beyond their fields, a null buffer, and a too-small buffer.
-    TEST_ASSERT_EQUAL_size_t(0, pc_dnp3_build_crob(buf, sizeof(buf), 0x10, 0, false, 1, 0, 0)); // op > 0x0F
-    TEST_ASSERT_EQUAL_size_t(0, pc_dnp3_build_crob(buf, sizeof(buf), 1, 0x04, false, 1, 0, 0)); // tcc > 3
-    TEST_ASSERT_EQUAL_size_t(0, pc_dnp3_build_crob(NULL, sizeof(buf), 1, 1, false, 1, 0, 0));
-    TEST_ASSERT_EQUAL_size_t(0, pc_dnp3_build_crob(buf, 10, 1, 1, false, 1, 0, 0)); // needs 11
+    TEST_ASSERT_EQUAL_size_t(0, pc_dnp3_build_crob(buf, sizeof(buf), 0x10, 0, PROTO_FALSE, 1, 0, 0)); // op > 0x0F
+    TEST_ASSERT_EQUAL_size_t(0, pc_dnp3_build_crob(buf, sizeof(buf), 1, 0x04, PROTO_FALSE, 1, 0, 0)); // tcc > 3
+    TEST_ASSERT_EQUAL_size_t(0, pc_dnp3_build_crob(NULL, sizeof(buf), 1, 1, PROTO_FALSE, 1, 0, 0));
+    TEST_ASSERT_EQUAL_size_t(0, pc_dnp3_build_crob(buf, 10, 1, 1, PROTO_FALSE, 1, 0, 0)); // needs 11
 }
 
 void test_build_aob()

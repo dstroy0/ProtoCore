@@ -82,8 +82,7 @@ void test_engine_suspend_unsuspend()
 
 void test_engine_stop_from_many_states()
 {
-    const PackMlState from[] = {IDLE,      EXECUTE,  HELD,
-                                SUSPENDED, COMPLETE, RESETTING};
+    const PackMlState from[] = {IDLE, EXECUTE, HELD, SUSPENDED, COMPLETE, RESETTING};
     for (unsigned i = 0; i < sizeof(from) / sizeof(from[0]); i++)
     {
         TEST_ASSERT_EQUAL(STOPPING, pc_packml_command(from[i], STOP));
@@ -258,9 +257,9 @@ void test_svc_full_run_with_counts()
     pc_packml_svc_state_complete(); // -> Execute
     TEST_ASSERT_EQUAL(EXECUTE, pc_packml_svc_state());
 
-    pc_packml_svc_count(false);
-    pc_packml_svc_count(false);
-    pc_packml_svc_count(true); // one defective
+    pc_packml_svc_count(PROTO_FALSE);
+    pc_packml_svc_count(PROTO_FALSE);
+    pc_packml_svc_count(PROTO_TRUE); // one defective
     PackMlStatus st;
     pc_packml_svc_status(&st);
     TEST_ASSERT_EQUAL_UINT32(3, st.prod_processed);
@@ -274,7 +273,7 @@ void test_svc_full_run_with_counts()
 void test_svc_count_only_in_execute()
 {
     // Not executing (Stopped) -> counts are ignored.
-    pc_packml_svc_count(false);
+    pc_packml_svc_count(PROTO_FALSE);
     PackMlStatus st;
     pc_packml_svc_status(&st);
     TEST_ASSERT_EQUAL_UINT32(0, st.prod_processed);
@@ -348,7 +347,7 @@ void test_svc_abort_and_clear_cycle()
     TEST_ASSERT_EQUAL(ABORTING, pc_packml_svc_state());
     TEST_ASSERT_EQUAL(ABORTED, pc_packml_svc_state_complete());
     // Counting stops the moment production does.
-    pc_packml_svc_count(false);
+    pc_packml_svc_count(PROTO_FALSE);
     PackMlStatus st;
     pc_packml_svc_status(&st);
     TEST_ASSERT_EQUAL_UINT32(0, st.prod_processed);

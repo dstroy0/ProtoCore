@@ -116,11 +116,11 @@ void test_build_overflow_fails_closed()
 
 // A complete (CRLF-terminated) v1 header whose 5-tuple is malformed: the header parses, but
 // the bad field leaves has_addr false (the address is only set when every field is valid).
-static bool no_addr(const char *line)
+static proto_bool no_addr(const char *line)
 {
     ProxyInfo info;
     size_t consumed = 0;
-    bool ok = proxy_parse((const uint8_t *)line, strlen(line), &info, &consumed);
+    proto_bool ok = proxy_parse((const uint8_t *)line, strlen(line), &info, &consumed);
     return ok && !info.has_addr;
 }
 

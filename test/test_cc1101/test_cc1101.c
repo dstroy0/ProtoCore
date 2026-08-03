@@ -27,8 +27,8 @@ static MockCC g;
 static void mock_spi(const uint8_t *tx, uint8_t *rx, uint8_t len, void *)
 {
     uint8_t hdr = tx[0];
-    bool read = (hdr & 0x80) != 0;
-    bool burst = (hdr & 0x40) != 0;
+    proto_bool read = (hdr & 0x80) != 0;
+    proto_bool burst = (hdr & 0x40) != 0;
     uint8_t addr = hdr & 0x3F;
     rx[0] = (uint8_t)((g.state << 4) | (g.rxcount & 0x0F)); // chip status byte
 
@@ -247,11 +247,11 @@ void test_rssi_decode(void)
 void test_send_guard_subconditions()
 {
     uint8_t data[8] = {0};
-    TEST_ASSERT_FALSE(pc_cc1101_send(NULL, data, 8));   // null bus
-    TEST_ASSERT_FALSE(pc_cc1101_send(&g_bus, NULL, 8)); // null data
-    TEST_ASSERT_FALSE(pc_cc1101_send(&g_bus, data, 0));    // zero len
-    TEST_ASSERT_FALSE(pc_cc1101_send(&g_bus, data, 64));   // len > 63
-    TEST_ASSERT_TRUE(pc_cc1101_send(&g_bus, data, 8));     // valid FIFO burst
+    TEST_ASSERT_FALSE(pc_cc1101_send(NULL, data, 8));    // null bus
+    TEST_ASSERT_FALSE(pc_cc1101_send(&g_bus, NULL, 8));  // null data
+    TEST_ASSERT_FALSE(pc_cc1101_send(&g_bus, data, 0));  // zero len
+    TEST_ASSERT_FALSE(pc_cc1101_send(&g_bus, data, 64)); // len > 63
+    TEST_ASSERT_TRUE(pc_cc1101_send(&g_bus, data, 8));   // valid FIFO burst
 }
 
 // init guards each argument: a null bus, a bus with no transfer callback, and a null config.
@@ -268,7 +268,7 @@ void test_init_no_regs(void)
 {
     pc_cc1101_config c = {};
     c.regs = NULL; // no table
-    c.nregs = 2;      // nregs non-zero, but regs null -> loop body never runs
+    c.nregs = 2;   // nregs non-zero, but regs null -> loop body never runs
     c.channel = 7;
     TEST_ASSERT_TRUE(pc_cc1101_init(&g_bus, &c));
     TEST_ASSERT_EQUAL_UINT8(7, g.reg[0x0A]); // CHANNR still applied

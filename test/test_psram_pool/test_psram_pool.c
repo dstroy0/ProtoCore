@@ -16,42 +16,42 @@ void tearDown(void)
 void test_place_large_prefers_psram(void)
 {
     // 64KB asset, threshold 4KB, plenty of both heaps, 32KB DRAM reserve.
-    TEST_ASSERT_EQUAL_INT(PLACE_PSRAM, pc_psram_place(65536, false, 120000, 2000000, 4096, 32768));
+    TEST_ASSERT_EQUAL_INT(PLACE_PSRAM, pc_psram_place(65536, PROTO_FALSE, 120000, 2000000, 4096, 32768));
     // No PSRAM available -> falls back to DRAM (fits with reserve).
-    TEST_ASSERT_EQUAL_INT(PLACE_DRAM, pc_psram_place(65536, false, 120000, 0, 4096, 32768));
+    TEST_ASSERT_EQUAL_INT(PLACE_DRAM, pc_psram_place(65536, PROTO_FALSE, 120000, 0, 4096, 32768));
     // No PSRAM and DRAM can't hold it while keeping the reserve -> FAIL.
-    TEST_ASSERT_EQUAL_INT(PLACE_FAIL, pc_psram_place(65536, false, 80000, 0, 4096, 32768));
+    TEST_ASSERT_EQUAL_INT(PLACE_FAIL, pc_psram_place(65536, PROTO_FALSE, 80000, 0, 4096, 32768));
 }
 
 void test_place_small_prefers_dram(void)
 {
     // 512B hot buffer, threshold 4KB -> DRAM.
-    TEST_ASSERT_EQUAL_INT(PLACE_DRAM, pc_psram_place(512, false, 120000, 2000000, 4096, 32768));
+    TEST_ASSERT_EQUAL_INT(PLACE_DRAM, pc_psram_place(512, PROTO_FALSE, 120000, 2000000, 4096, 32768));
     // DRAM too tight (reserve dominates) -> PSRAM fallback.
-    TEST_ASSERT_EQUAL_INT(PLACE_PSRAM, pc_psram_place(512, false, 33000, 2000000, 4096, 32768));
+    TEST_ASSERT_EQUAL_INT(PLACE_PSRAM, pc_psram_place(512, PROTO_FALSE, 33000, 2000000, 4096, 32768));
 }
 
 void test_place_dma_forces_dram(void)
 {
     // DMA-required buffer must be DRAM even if large.
-    TEST_ASSERT_EQUAL_INT(PLACE_DRAM, pc_psram_place(8192, true, 120000, 2000000, 4096, 32768));
+    TEST_ASSERT_EQUAL_INT(PLACE_DRAM, pc_psram_place(8192, PROTO_TRUE, 120000, 2000000, 4096, 32768));
     // DMA required but DRAM can't fit with reserve -> FAIL (PSRAM is not DMA-capable).
-    TEST_ASSERT_EQUAL_INT(PLACE_FAIL, pc_psram_place(8192, true, 40000, 2000000, 4096, 32768));
+    TEST_ASSERT_EQUAL_INT(PLACE_FAIL, pc_psram_place(8192, PROTO_TRUE, 40000, 2000000, 4096, 32768));
 }
 
 void test_place_edges(void)
 {
-    TEST_ASSERT_EQUAL_INT(PLACE_FAIL, pc_psram_place(0, false, 120000, 2000000, 4096, 32768));
+    TEST_ASSERT_EQUAL_INT(PLACE_FAIL, pc_psram_place(0, PROTO_FALSE, 120000, 2000000, 4096, 32768));
     // At exactly the threshold -> treated as large (>=), prefers PSRAM.
-    TEST_ASSERT_EQUAL_INT(PLACE_PSRAM, pc_psram_place(4096, false, 120000, 2000000, 4096, 0));
+    TEST_ASSERT_EQUAL_INT(PLACE_PSRAM, pc_psram_place(4096, PROTO_FALSE, 120000, 2000000, 4096, 0));
     // Exact DRAM fit: size + reserve == free_dram is allowed.
-    TEST_ASSERT_EQUAL_INT(PLACE_DRAM, pc_psram_place(100, false, 1100, 0, 4096, 1000));
+    TEST_ASSERT_EQUAL_INT(PLACE_DRAM, pc_psram_place(100, PROTO_FALSE, 1100, 0, 4096, 1000));
 }
 
 void test_place_small_neither_fits(void)
 {
     // small / hot buffer: DRAM too tight (reserve dominates) AND PSRAM too small -> FAIL.
-    TEST_ASSERT_EQUAL_INT(PLACE_FAIL, pc_psram_place(512, false, 33000, 100, 4096, 32768));
+    TEST_ASSERT_EQUAL_INT(PLACE_FAIL, pc_psram_place(512, PROTO_FALSE, 33000, 100, 4096, 32768));
 }
 
 void test_pingpong(void)

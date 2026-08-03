@@ -104,7 +104,7 @@ void test_str_record_format()
     m.generator = "PC";
     m.lat_deg = 37.77;
     m.lon_deg = -122.42;
-    m.nmea_required = false;
+    m.nmea_required = PROTO_FALSE;
 
     char rec[192];
     size_t n = pc_ntrip_build_str_record(rec, sizeof(rec), &m);
@@ -361,7 +361,7 @@ void test_str_record_nmea_required_flag()
     NtripMount m;
     memset(&m, 0, sizeof(m));
     m.mountpoint = "VRS";
-    m.nmea_required = true;
+    m.nmea_required = PROTO_TRUE;
     char rec[192];
     size_t n = pc_ntrip_build_str_record(rec, sizeof(rec), &m);
     TEST_ASSERT_TRUE(n > 0);

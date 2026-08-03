@@ -122,7 +122,7 @@ void test_mlkem768_encaps_kat()
 {
     uint8_t ct[MLKEM768_CT_BYTES];
     uint8_t ss[MLKEM768_SS_BYTES];
-    bool ok = pc_mlkem768_encaps(kat_ek, kat_m, ct, ss);
+    proto_bool ok = pc_mlkem768_encaps(kat_ek, kat_m, ct, ss);
     TEST_ASSERT_TRUE(ok);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(kat_ct, ct, MLKEM768_CT_BYTES);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(kat_ss, ss, MLKEM768_SS_BYTES);
