@@ -242,6 +242,23 @@ static size_t build_client_hello(uint8_t *out, const uint8_t client_pub[32], con
     return p;
 }
 
+// Where capture_status() copies the :status value it finds.
+typedef struct
+{
+    char *s;
+} StatusCapture;
+
+// QpackEmitFn: keep the :status value, ignore every other header.
+static proto_bool capture_status(void *c, const char *nm, size_t nl, const char *v, size_t vl)
+{
+    if (nl == 7 && memcmp(nm, ":status", 7) == 0)
+    {
+        memcpy(((StatusCapture *)c)->s, v, vl);
+        ((StatusCapture *)c)->s[vl] = 0;
+    }
+    return PROTO_TRUE;
+}
+
 // Scan every captured datagram for a 1-RTT STREAM frame on stream 0 carrying HTTP/3
 // HEADERS(:status 200) + DATA("hello h3"); returns true if found.
 static proto_bool response_ok(QuicPacketKeys *ap_s)
@@ -294,21 +311,8 @@ static proto_bool response_ok(QuicPacketKeys *ap_s)
                 if (hf.type == H3_HEADERS)
                 {
                     char sc[128];
-                    struct E
-                    {
-                        char *s;
-                    } e = {status};
-                    pc_qpack_decode(
-                        hp, (size_t)hf.length, sc, sizeof(sc),
-                        [](void *c, const char *nm, size_t nl, const char *v, size_t vl) -> proto_bool {
-                            if (nl == 7 && memcmp(nm, ":status", 7) == 0)
-                            {
-                                memcpy(((E *)c)->s, v, vl);
-                                ((E *)c)->s[vl] = 0;
-                            }
-                            return PROTO_TRUE;
-                        },
-                        &e);
+                    StatusCapture e = {status};
+                    (void)pc_qpack_decode(hp, (size_t)hf.length, sc, sizeof(sc), capture_status, &e);
                 }
                 else if (hf.type == H3_DATA)
                 {

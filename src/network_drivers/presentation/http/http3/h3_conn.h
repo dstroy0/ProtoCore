@@ -50,7 +50,7 @@ struct H3Conn;
  * @brief A completed request delivered to the application.
  * @param body / body_len  the request body (may be empty); valid only during the call.
  */
-typedef void (*H3RequestFn)(void *app, H3Conn *h3, uint64_t stream_id, const char *method, const char *path,
+typedef void (*H3RequestFn)(void *app, struct H3Conn *h3, uint64_t stream_id, const char *method, const char *path,
                             const char *authority, const uint8_t *body, size_t body_len);
 
 /** @brief HTTP/3 stream roles (a mutually-exclusive internal role, not a wire value). */
