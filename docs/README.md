@@ -188,7 +188,7 @@ src/
 │   │   │   └── mock_platform.c
 │   │   └── portable/
 │   │       ├── portable_aes128gcm.c
-│   │       ├── portable_aesgcm.cpp
+│   │       ├── portable_aesgcm.c
 │   │       ├── portable_bignum.c
 │   │       └── portable_platform.c
 │   └── physical/
@@ -396,7 +396,7 @@ src/
 │   │   │   │   ├── ssh_client.h
 │   │   │   │   ├── ssh_conn.cpp
 │   │   │   │   ├── ssh_conn.h
-│   │   │   │   ├── ssh_flow_control.cpp
+│   │   │   │   ├── ssh_flow_control.c
 │   │   │   │   ├── ssh_flow_control.h
 │   │   │   │   ├── ssh_forward.c
 │   │   │   │   ├── ssh_forward.h
@@ -475,7 +475,7 @@ src/
 │   ├── update/
 │   │   ├── ota_rollback.c
 │   │   ├── ota_rollback.h
-│   │   ├── ota_service.cpp
+│   │   ├── ota_service.c
 │   │   └── ota_service.h
 │   ├── exc_coredump.c
 │   ├── exc_decoder.c
@@ -655,14 +655,14 @@ src/
 │   │   ├── ina219/  (ina219.h, ina219.cpp)
 │   │   ├── ld2410/  (ld2410.h, ld2410.cpp)
 │   │   ├── ldc1614/  (ldc1614.h, ldc1614.cpp)
-│   │   ├── mpr121/  (mpr121.h, mpr121.cpp)
-│   │   ├── pca9685/  (pca9685.h, pca9685.cpp)
+│   │   ├── mpr121/  (mpr121.h, mpr121.c)
+│   │   ├── pca9685/  (pca9685.h, pca9685.c)
 │   │   ├── pn532/  (pn532.h, pn532.c)
 │   │   ├── rcwl0516/  (rcwl0516.h, rcwl0516.c)
 │   │   ├── rtc/  (rtc.h, rtc.cpp)
 │   │   ├── sdi12/  (sdi12.h, sdi12.c)
 │   │   ├── sen0192/  (sen0192.h, sen0192.c)
-│   │   ├── sht3x/  (sht3x.h, sht3x.cpp)
+│   │   ├── sht3x/  (sht3x.h, sht3x.c)
 │   │   ├── vl53l0x/  (vl53l0x.h, vl53l0x.cpp)
 │   │   └── i2c.h
 │   ├── radio/
@@ -721,7 +721,7 @@ src/
 │   │   │   ├── esp.h
 │   │   │   ├── ipsec_db.c
 │   │   │   └── ipsec_db.h
-│   │   └── provisioning_service/  (provisioning_service.h, provisioning_service.cpp)
+│   │   └── provisioning_service/  (provisioning_service.h, provisioning_service.c)
 │   ├── timing_position/
 │   │   ├── gnss/
 │   │   │   ├── gnss_survey.c
@@ -734,7 +734,7 @@ src/
 │   │   │   └── rtcm3.h
 │   │   ├── nmea0183/  (nmea0183.h, nmea0183.c)
 │   │   ├── nmea2000/  (nmea2000.h, nmea2000.c)
-│   │   ├── time_source/  (time_source.h, time_source.cpp)
+│   │   ├── time_source/  (time_source.h, time_source.c)
 │   │   └── ubx/  (ubx.h, ubx.c)
 │   ├── transportation/
 │   │   ├── j2735/  (j2735.h, j2735.c)
