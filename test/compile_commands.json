@@ -486,10 +486,10 @@
     "output": ".pio/build/native_swar/src/network_drivers/presentation/codec/deflate/deflate.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_ssh_comp/src/network_drivers/presentation/codec/inflate/inflate.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_ENABLE_SSH=1 -DPC_ENABLE_SSH_ZLIB=1 -DPC_ENABLE_WS_DEFLATE=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/codec/inflate/inflate.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/network_drivers/presentation/codec/inflate/inflate.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/codec/inflate/inflate.c",
     "directory": "@ROOT@",
     "file": "src/network_drivers/presentation/codec/inflate/inflate.c",
-    "output": ".pio/build/native_ssh_comp/src/network_drivers/presentation/codec/inflate/inflate.o"
+    "output": ".pio/build/native_swar/src/network_drivers/presentation/codec/inflate/inflate.o"
   },
   {
     "command": "/usr/bin/gcc -o .pio/build/native_swar/src/server/signaling/device_id.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/server/signaling/device_id.c",
@@ -1116,16 +1116,16 @@
     "output": ".pio/build/native_swar/src/server/filesystem/mnt.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_modbus/src/services/fieldbus/modbus/modbus.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_ENABLE_MODBUS=1 -DPC_ENABLE_MODBUS_RTU=1 -Itest/mocks -Itest/support -Isrc src/services/fieldbus/modbus/modbus.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/services/fieldbus/modbus/modbus.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/services/fieldbus/modbus/modbus.c",
     "directory": "@ROOT@",
     "file": "src/services/fieldbus/modbus/modbus.c",
-    "output": ".pio/build/native_modbus/src/services/fieldbus/modbus/modbus.o"
+    "output": ".pio/build/native_swar/src/services/fieldbus/modbus/modbus.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_modbus_master/src/services/fieldbus/modbus/modbus_master.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_ENABLE_MODBUS=1 -DPC_ENABLE_MODBUS_MASTER=1 -Itest/mocks -Itest/support -Isrc src/services/fieldbus/modbus/modbus_master.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/services/fieldbus/modbus/modbus_master.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/services/fieldbus/modbus/modbus_master.c",
     "directory": "@ROOT@",
     "file": "src/services/fieldbus/modbus/modbus_master.c",
-    "output": ".pio/build/native_modbus_master/src/services/fieldbus/modbus/modbus_master.o"
+    "output": ".pio/build/native_swar/src/services/fieldbus/modbus/modbus_master.o"
   },
   {
     "command": "/usr/bin/g++ -o .pio/build/native_swar/src/services/peripherals/mpr121/mpr121.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/services/peripherals/mpr121/mpr121.cpp",
@@ -1518,16 +1518,16 @@
     "output": ".pio/build/native_swar/src/services/machine_tool/safety_scl/safety_scl.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_sb_modbus/src/services/net/southbound/sb_modbus.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_ENABLE_SOUTHBOUND=1 -DPC_ENABLE_MODBUS=1 -DPC_ENABLE_MODBUS_MASTER=1 -Itest/mocks -Itest/support -Isrc src/services/net/southbound/sb_modbus.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/services/net/southbound/sb_modbus.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/services/net/southbound/sb_modbus.c",
     "directory": "@ROOT@",
     "file": "src/services/net/southbound/sb_modbus.c",
-    "output": ".pio/build/native_sb_modbus/src/services/net/southbound/sb_modbus.o"
+    "output": ".pio/build/native_swar/src/services/net/southbound/sb_modbus.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_sb_modbus/src/services/net/southbound/southbound.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_ENABLE_SOUTHBOUND=1 -DPC_ENABLE_MODBUS=1 -DPC_ENABLE_MODBUS_MASTER=1 -Itest/mocks -Itest/support -Isrc src/services/net/southbound/southbound.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/services/net/southbound/southbound.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/services/net/southbound/southbound.c",
     "directory": "@ROOT@",
     "file": "src/services/net/southbound/southbound.c",
-    "output": ".pio/build/native_sb_modbus/src/services/net/southbound/southbound.o"
+    "output": ".pio/build/native_swar/src/services/net/southbound/southbound.o"
   },
   {
     "command": "/usr/bin/gcc -o .pio/build/native_swar/src/network_drivers/application/scp/scp.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/application/scp/scp.c",
@@ -1716,22 +1716,22 @@
     "output": ".pio/build/native_ssh/src/network_drivers/presentation/ssh/transport/ssh_transport.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_ssh_comp/src/network_drivers/presentation/ssh/transport/ssh_comp.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_ENABLE_SSH=1 -DPC_ENABLE_SSH_ZLIB=1 -DPC_ENABLE_WS_DEFLATE=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/ssh/transport/ssh_comp.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/network_drivers/presentation/ssh/transport/ssh_comp.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/ssh/transport/ssh_comp.c",
     "directory": "@ROOT@",
     "file": "src/network_drivers/presentation/ssh/transport/ssh_comp.c",
-    "output": ".pio/build/native_ssh_comp/src/network_drivers/presentation/ssh/transport/ssh_comp.o"
+    "output": ".pio/build/native_swar/src/network_drivers/presentation/ssh/transport/ssh_comp.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_ssh_comp/src/network_drivers/presentation/ssh/transport/ssh_inflate.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_ENABLE_SSH=1 -DPC_ENABLE_SSH_ZLIB=1 -DPC_ENABLE_WS_DEFLATE=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/ssh/transport/ssh_inflate.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/network_drivers/presentation/ssh/transport/ssh_inflate.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/ssh/transport/ssh_inflate.c",
     "directory": "@ROOT@",
     "file": "src/network_drivers/presentation/ssh/transport/ssh_inflate.c",
-    "output": ".pio/build/native_ssh_comp/src/network_drivers/presentation/ssh/transport/ssh_inflate.o"
+    "output": ".pio/build/native_swar/src/network_drivers/presentation/ssh/transport/ssh_inflate.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_ssh_comp/src/network_drivers/presentation/ssh/transport/ssh_zlib.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_ENABLE_SSH=1 -DPC_ENABLE_SSH_ZLIB=1 -DPC_ENABLE_WS_DEFLATE=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/ssh/transport/ssh_zlib.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/network_drivers/presentation/ssh/transport/ssh_zlib.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/ssh/transport/ssh_zlib.c",
     "directory": "@ROOT@",
     "file": "src/network_drivers/presentation/ssh/transport/ssh_zlib.c",
-    "output": ".pio/build/native_ssh_comp/src/network_drivers/presentation/ssh/transport/ssh_zlib.o"
+    "output": ".pio/build/native_swar/src/network_drivers/presentation/ssh/transport/ssh_zlib.o"
   },
   {
     "command": "/usr/bin/g++ -o .pio/build/native_ssh_conn/src/network_drivers/presentation/ssh/connection/ssh_conn.o -c -std=c++14 -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_ENABLE_SSH=1 -Itest/mocks -Itest/support -Isrc src/network_drivers/presentation/ssh/connection/ssh_conn.cpp",
