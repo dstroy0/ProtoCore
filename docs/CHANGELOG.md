@@ -55,6 +55,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update test report + coverage [skip ci] ([`2766b6f`](https://github.com/dstroy0/ProtoCore/commit/2766b6f2757f09e05493fe27b2d52c41a8e64447))
+- update CHANGELOG.md [skip ci] ([`ada0f6e`](https://github.com/dstroy0/ProtoCore/commit/ada0f6e80b9a1cc737d198c13a9ded6d55fc9b6e))
 - update CHANGELOG.md [skip ci] ([`e9edadf`](https://github.com/dstroy0/ProtoCore/commit/e9edadf9aaca29318f2e95107ce23bdf4aa77740))
 - update CHANGELOG.md [skip ci] ([`9ef71bb`](https://github.com/dstroy0/ProtoCore/commit/9ef71bb4d467804d361fc40502fcf43ffa45178d))
 - update CHANGELOG.md [skip ci] ([`899bd9c`](https://github.com/dstroy0/ProtoCore/commit/899bd9ca85a2055f99c32498fe33efbfbdcbf6d1))
@@ -396,6 +398,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- name the hex-nibble lambdas, five more suites to C ([`45046ce`](https://github.com/dstroy0/ProtoCore/commit/45046ce30ccd636f7de8a6a0a83c8b33180b804f))
 - call proto_tcp_conn_timeout_ms instead of comparing its address ([`569d2c7`](https://github.com/dstroy0/ProtoCore/commit/569d2c79d37b948cbe1a84ed65d381afd9845898))
 - the transport helpers the qualifier strip left bare ([`6a3dbe6`](https://github.com/dstroy0/ProtoCore/commit/6a3dbe68dde65896e6558ab5f7ef1d0058875098))
 - the host seam grows the one-shot failure hooks the transport suite drives ([`9ebb0c2`](https://github.com/dstroy0/ProtoCore/commit/9ebb0c28a52b45ca4dddf3eb6da2db5a6865d7d6))
