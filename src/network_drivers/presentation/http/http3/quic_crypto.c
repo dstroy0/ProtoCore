@@ -43,15 +43,15 @@ void pc_quic_keys_from_secret(const uint8_t secret[PC_HKDF_HASH_LEN], QuicPacket
     // The pool cannot come up short here: PC_SECURE_ARENA_SIZE is the SUM of every PC_WORK_*, a
     // strict upper bound rather than a deepest-nest estimate, so a borrow inside that budget always
     // succeeds. The borrow also wipes on release, on every exit path.
-    SecureBorrow kb(PC_AES128GCM_KEY_LEN, 8);
-    uint8_t *k = kb.span().buf;
-    pc_hkdf_expand_label(secret, "quic key", k, PC_AES128GCM_KEY_LEN);
-    pc_aes128gcm_key_init(out->gcm, k);
-    pc_hkdf_expand_label(secret, "quic iv", out->iv, sizeof(out->iv));
-    SecureBorrow hpb(PC_AES128GCM_KEY_LEN, 8);
-    uint8_t *hpk = hpb.span().buf;
-    pc_hkdf_expand_label(secret, "quic hp", hpk, PC_AES128GCM_KEY_LEN);
-    pc_aes128_init((pc_aes128 *)(out->hp), hpk);
+    size_t mark = pc_secure_mark();
+    uint8_t *k = pc_secure_alloc(PC_AES128GCM_KEY_LEN, 8);
+    pc_hkdf_expand_label(secret, "quic key", k, PC_AES128GCM_KEY_LEN, PC_HKDF_LABEL_PREFIX);
+    (void)pc_aes128gcm_key_init(out->gcm, k);
+    pc_hkdf_expand_label(secret, "quic iv", out->iv, sizeof(out->iv), PC_HKDF_LABEL_PREFIX);
+    uint8_t *hpk = pc_secure_alloc(PC_AES128GCM_KEY_LEN, 8);
+    pc_hkdf_expand_label(secret, "quic hp", hpk, PC_AES128GCM_KEY_LEN, PC_HKDF_LABEL_PREFIX);
+    pc_aes128_init((struct pc_aes128 *)(out->hp), hpk);
+    pc_secure_release(mark);
 }
 
 void pc_quic_derive_initial_secrets(const uint8_t *dcid, size_t dcid_len, QuicInitialSecrets *out)
@@ -61,8 +61,8 @@ void pc_quic_derive_initial_secrets(const uint8_t *dcid, size_t dcid_len, QuicIn
 
     uint8_t client_secret[PC_HKDF_HASH_LEN];
     uint8_t server_secret[PC_HKDF_HASH_LEN];
-    pc_hkdf_expand_label(initial_secret, "client in", client_secret, sizeof(client_secret));
-    pc_hkdf_expand_label(initial_secret, "server in", server_secret, sizeof(server_secret));
+    pc_hkdf_expand_label(initial_secret, "client in", client_secret, sizeof(client_secret), PC_HKDF_LABEL_PREFIX);
+    pc_hkdf_expand_label(initial_secret, "server in", server_secret, sizeof(server_secret), PC_HKDF_LABEL_PREFIX);
 
     pc_quic_keys_from_secret(client_secret, &out->client);
     pc_quic_keys_from_secret(server_secret, &out->server);
@@ -85,8 +85,8 @@ size_t pc_quic_packet_protect(uint8_t *pkt, size_t cap, size_t pn_offset, uint8_
     // AEAD-seal the payload in place; associated data is the unprotected header.
     uint8_t nonce[12];
     build_nonce(keys->iv, full_pn, nonce);
-    pc_aes128gcm_seal((pc_aes128gcm_key *)(keys->gcm), nonce, pkt, hdr_len, pkt + hdr_len, payload_len, pkt + hdr_len,
-                      pkt + hdr_len + payload_len);
+    (void)pc_aes128gcm_seal((struct pc_aes128gcm_key *)(keys->gcm), nonce, pkt, hdr_len, pkt + hdr_len, payload_len,
+                            pkt + hdr_len, pkt + hdr_len + payload_len);
 
     // Header protection (RFC 9001 sec 5.4): sample 16 bytes at pn_offset + 4 (always inside the
     // ciphertext because pn_len <= 4), AES-ECB it under hp, mask the low first-byte bits and the PN.
@@ -94,7 +94,7 @@ size_t pc_quic_packet_protect(uint8_t *pkt, size_t cap, size_t pn_offset, uint8_
     // costs ~556 cycles per packet plus a pool borrow and wipe. (The ECB block itself is ~7,842 - a
     // single HW-AES operation is expensive on this die, and that is the bigger target.)
     uint8_t mask[16];
-    pc_aes128_encrypt_block((pc_aes128 *)(keys->hp), pkt + pn_offset + 4, mask);
+    pc_aes128_encrypt_block((struct pc_aes128 *)(keys->hp), pkt + pn_offset + 4, mask);
 
     pkt[0] ^= mask[0] & (is_long ? 0x0f : 0x1f);
     for (uint8_t i = 0; i < pn_len; i++)
@@ -118,7 +118,7 @@ size_t pc_quic_packet_unprotect(uint8_t *pkt, size_t pn_offset, size_t length, u
     // The header-protection context is already keyed and lives in the key material; building one here
     // would cost ~8,400 cycles to encrypt sixteen bytes.
     uint8_t mask[16];
-    pc_aes128_encrypt_block((pc_aes128 *)(keys->hp), pkt + pn_offset + 4, mask);
+    pc_aes128_encrypt_block((struct pc_aes128 *)(keys->hp), pkt + pn_offset + 4, mask);
 
     pkt[0] ^= mask[0] & (is_long ? 0x0f : 0x1f);
     uint8_t pn_len = (uint8_t)((pkt[0] & 0x03) + 1);
@@ -148,7 +148,7 @@ size_t pc_quic_packet_unprotect(uint8_t *pkt, size_t pn_offset, size_t length, u
     uint8_t nonce[12];
     build_nonce(keys->iv, full_pn, nonce);
     const size_t pt_len = ct_len - PC_AES128GCM_TAG_LEN;
-    if (!pc_aes128gcm_open((pc_aes128gcm_key *)(keys->gcm), nonce, pkt, hdr_len, pkt + hdr_len, pt_len,
+    if (!pc_aes128gcm_open((struct pc_aes128gcm_key *)(keys->gcm), nonce, pkt, hdr_len, pkt + hdr_len, pt_len,
                            pkt + hdr_len + pt_len, out))
     {
         return (size_t)-1;
@@ -177,10 +177,11 @@ void pc_quic_retry_integrity_tag(const uint8_t *odcid, size_t odcid_len, const u
 
     // Empty plaintext: seal writes only the 16-byte tag.
     { // fixed RFC 9001 key, once per Retry packet - not worth a resident context
-        SecureBorrow rk_b(PC_WORK_AES128GCM, 8);
-        pc_aes128gcm_key *rk = pc_aes128gcm_key_init(rk_b.span().buf, RETRY_KEY);
-        pc_aes128gcm_seal(rk, RETRY_NONCE, aad, p, NULL, 0, tag, tag);
+        size_t mark = pc_secure_mark();
+        struct pc_aes128gcm_key *rk = pc_aes128gcm_key_init(pc_secure_alloc(PC_WORK_AES128GCM, 8), RETRY_KEY);
+        (void)pc_aes128gcm_seal(rk, RETRY_NONCE, aad, p, NULL, 0, tag, tag);
         pc_aes128gcm_key_wipe(rk);
+        pc_secure_release(mark);
     }
 }
 
