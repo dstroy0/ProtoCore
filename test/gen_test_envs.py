@@ -80,9 +80,14 @@ NATIVE_BASE = """; Shared flags for all native environments
 [native_base]
 platform = native
 build_flags =
-    ; src/ is C11 (docs/SRC_LAW.md section 0). gcc only warns that this is not the language of a
-    ; .cpp test suite, so the ones still awaiting conversion take g++'s own default.
+    ; src/ is C11 (docs/SRC_LAW.md section 0).
     -std=c11
+    ; strnlen is POSIX 2008, not ISO C11, and -std=c11 asks glibc for ISO C alone - so <string.h>
+    ; declares strlen and not strnlen. Ban #1 (docs/SRCBANNED.md) requires strnlen everywhere, so
+    ; without this the whole tree compiles it as an implicit declaration returning int, and every
+    ; `size_t n = strnlen(...)` truncates through 32 bits with nothing but a warning. Naming the
+    ; POSIX level is what makes the bounded string functions visible; the language stays C11.
+    -D_POSIX_C_SOURCE=200809L
     ; src/ contains no throw / try / catch (no-heap, no-stdlib, deterministic - and the ESP32
     ; target builds without exceptions anyway), so this only strips what the host toolchain would
     ; add on its own. It matters for coverage: with exceptions on, g++ emits an unwind edge at
