@@ -54,6 +54,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`55a1149`](https://github.com/dstroy0/ProtoCore/commit/55a1149162734ad632f778781fcf499c041aef01))
 - update CHANGELOG.md [skip ci] ([`66db608`](https://github.com/dstroy0/ProtoCore/commit/66db608a0c80cc820346ded35f6aa6f62cfd3794))
 - update CHANGELOG.md [skip ci] ([`d5fd6f5`](https://github.com/dstroy0/ProtoCore/commit/d5fd6f5c5892ce8dab75398807b5820f7d99da32))
 - update CHANGELOG.md [skip ci] ([`e98383f`](https://github.com/dstroy0/ProtoCore/commit/e98383f6f20f7abfef52870e63050a54851b45eb))
@@ -361,6 +362,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- restore the DtlsCipher member prefix and the explicit AEAD tag argument ([`ba56fd8`](https://github.com/dstroy0/ProtoCore/commit/ba56fd8a8fead8362e579d03e574175c2afd09b9))
 - enable SSE in native_sse, drop the lwIP mock from two host suites ([`a22dd37`](https://github.com/dstroy0/ProtoCore/commit/a22dd37a4e717d3b321418a91b27ffb3762c86c8))
 - stop tcp_capture_disable() from wiping the capture, build arena.c for native_workers ([`227973e`](https://github.com/dstroy0/ProtoCore/commit/227973e458c65403fd56c0501f71f7b86d90b499))
 - give the host seam the write-failure hook the lwIP mock owned ([`b763ab2`](https://github.com/dstroy0/ProtoCore/commit/b763ab20740765865c0e261cf53102fdeb92b3eb))
