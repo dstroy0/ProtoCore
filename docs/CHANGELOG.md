@@ -48,6 +48,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`cbdb3fc`](https://github.com/dstroy0/ProtoCore/commit/cbdb3fc9e1c636ec8da56eec461342428ab6662f))
 - update CHANGELOG.md [skip ci] ([`fba71e5`](https://github.com/dstroy0/ProtoCore/commit/fba71e59277d1e615d335390138d3874e03048b0))
 - update CHANGELOG.md [skip ci] ([`dd0cf87`](https://github.com/dstroy0/ProtoCore/commit/dd0cf87d1ecdd9a941f0a5f6430f5716a05ed212))
 - update CHANGELOG.md [skip ci] ([`fc6720f`](https://github.com/dstroy0/ProtoCore/commit/fc6720f5570454879c2e16b5671ab2c88eb38686))
@@ -312,6 +313,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- leave headroom so the 507 case fails on the write, not the open ([`db8fbe1`](https://github.com/dstroy0/ProtoCore/commit/db8fbe1c19f25bfb25717c3be6504c29f95dd7c5))
 - express the WebDAV storage-failure cases as real conditions ([`11eb59a`](https://github.com/dstroy0/ProtoCore/commit/11eb59a5bec6cafa84e3cbb46ad17eaca1789cd2))
 - create the WebDAV mount root before serving from it ([`8735ff7`](https://github.com/dstroy0/ProtoCore/commit/8735ff7cd3ce59ac0b54858568473529103ea9db))
 - force the WebDAV failure paths by causing them, not flagging them ([`6d0cbf0`](https://github.com/dstroy0/ProtoCore/commit/6d0cbf046afca4414ad65000775391a0ee679f35))
