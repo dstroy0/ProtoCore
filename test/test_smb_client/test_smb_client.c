@@ -213,7 +213,7 @@ static proto_bool mock_derive_key(const uint8_t *msg, size_t mlen, const SmbConf
 // Sign / verify a message with the mock's in-force algorithm (HMAC-SHA256 for SMB 2.x, AES-CMAC for 3.1.1).
 static void mock_sign(const Mock *m, uint8_t *msg, size_t len)
 {
-    if (m->sign_algo == AES_CMAC)
+    if (m->sign_algo == SMB2_SIGN_ALGO_AES_CMAC)
     {
         pc_smb2_sign_cmac(m->sign_key, msg, len);
     }
@@ -224,8 +224,8 @@ static void mock_sign(const Mock *m, uint8_t *msg, size_t len)
 }
 static proto_bool mock_verify(const Mock *m, uint8_t *msg, size_t len)
 {
-    return m->sign_algo == AES_CMAC ? pc_smb2_verify_cmac(m->sign_key, msg, len)
-                                    : pc_smb2_verify(m->sign_key, msg, len);
+    return m->sign_algo == SMB2_SIGN_ALGO_AES_CMAC ? pc_smb2_verify_cmac(m->sign_key, msg, len)
+                                                   : pc_smb2_verify(m->sign_key, msg, len);
 }
 
 // Build the SMB 3.1.1 NEGOTIATE response body (dialect 0x0311 + SIGNING_REQUIRED + a preauth-integrity
@@ -408,7 +408,7 @@ static int mock_send(void *c, const uint8_t *d, size_t n)
                 if (m->require_311)
                 {
                     pc_smb3_derive_signing_key(base_key, (uint16_t)SMB2_DIALECT_0311, m->preauth.hash, m->sign_key);
-                    m->sign_algo = AES_CMAC;
+                    m->sign_algo = SMB2_SIGN_ALGO_AES_CMAC;
                     m->signing = PROTO_TRUE;
                     if (m->require_encrypt || m->encrypt_share_only)
                     {
@@ -1732,9 +1732,9 @@ void test_open_signed_311_roundtrip()
     memset(&h, 0, sizeof(h));
     TEST_ASSERT_EQUAL_INT(SMB_OK, smb_open(&cfg, &h, mock_send, mock_recv, &m));
     TEST_ASSERT_TRUE(h.signing_active);
-    TEST_ASSERT_EQUAL_INT(AES_CMAC, h.signing_algo); // 3.1.1 signs with AES-CMAC
+    TEST_ASSERT_EQUAL_INT(SMB2_SIGN_ALGO_AES_CMAC, h.signing_algo); // 3.1.1 signs with AES-CMAC
     TEST_ASSERT_TRUE(m.signing);
-    TEST_ASSERT_EQUAL_INT(AES_CMAC, m.sign_algo); // the mock derived the same CMAC key
+    TEST_ASSERT_EQUAL_INT(SMB2_SIGN_ALGO_AES_CMAC, m.sign_algo); // the mock derived the same CMAC key
 
     uint8_t buf[1400];
     size_t got = 0; // spans two CMAC-signed READ round trips (chunk_max < 1400)
@@ -1773,7 +1773,7 @@ void test_signed_311_response_tampered()
     SmbHandle h;
     memset(&h, 0, sizeof(h));
     TEST_ASSERT_EQUAL_INT(SMB_OK, smb_open(&cfg, &h, mock_send, mock_recv, &m));
-    TEST_ASSERT_EQUAL_INT(AES_CMAC, h.signing_algo);
+    TEST_ASSERT_EQUAL_INT(SMB2_SIGN_ALGO_AES_CMAC, h.signing_algo);
     uint8_t buf[64];
     size_t got = 0;
     TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, smb_read(&h, 0, buf, sizeof(buf), &got, mock_send, mock_recv, &m));

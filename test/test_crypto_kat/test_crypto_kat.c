@@ -30,7 +30,7 @@
 #include <unity.h>
 
 // --- Vector table row layouts (kat_data.inc initializes these) --------------
-struct KatMac
+typedef struct
 {
     int tc;
     const char *key;
@@ -38,8 +38,8 @@ struct KatMac
     const char *tag;
     int tag_bits;
     int valid;
-};
-struct KatAead
+} KatMac;
+typedef struct
 {
     int tc;
     const char *key;
@@ -49,52 +49,52 @@ struct KatAead
     const char *ct;
     const char *tag;
     int valid;
-};
-struct KatX25519
+} KatAead;
+typedef struct
 {
     int tc;
     const char *pub;
     const char *priv;
     const char *shared;
-};
-struct KatEd25519
+} KatX25519;
+typedef struct
 {
     int tc;
     const char *pub;
     const char *msg;
     const char *sig;
     int valid;
-};
-struct KatEd25519Sign
+} KatEd25519;
+typedef struct
 {
     int tc;
     const char *seed;
     const char *pub;
     const char *msg;
     const char *sig;
-};
-struct KatHkdf
+} KatEd25519Sign;
+typedef struct
 {
     int tc;
     const char *salt;
     const char *ikm;
     const char *prk;
-};
-struct KatChacha
+} KatHkdf;
+typedef struct
 {
     int tc;
     const char *key;
     uint32_t counter;
     const char *nonce;
     const char *keystream;
-};
-struct KatPoly
+} KatChacha;
+typedef struct
 {
     int tc;
     const char *key;
     const char *msg;
     const char *tag;
-};
+} KatPoly;
 
 #include "kat_data.inc"
 
