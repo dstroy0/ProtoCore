@@ -47,6 +47,18 @@
 ".pio/libdeps/native_telnet/littlefs/src/lfs_util.c": [
 "native_telnet"
 ],
+".pio/libdeps/native_transport/littlefs/include/lfs.h": [
+"native_transport"
+],
+".pio/libdeps/native_transport/littlefs/include/lfs_util.h": [
+"native_transport"
+],
+".pio/libdeps/native_transport/littlefs/src/lfs.c": [
+"native_transport"
+],
+".pio/libdeps/native_transport/littlefs/src/lfs_util.c": [
+"native_transport"
+],
 "src/board_drivers/board_profiles/board_profile.h": [
 "native_accept_gate",
 "native_ad9238",
@@ -3027,6 +3039,7 @@
 "native_sse",
 "native_ssh_conn",
 "native_swar",
+"native_transport",
 "native_upload"
 ],
 "src/network_drivers/presentation/codec/multipart/multipart.cpp": [
@@ -3036,7 +3049,6 @@
 "native_presentation",
 "native_session",
 "native_stack_l46",
-"native_transport",
 "native_websocket"
 ],
 "src/network_drivers/presentation/codec/multipart/multipart.h": [
@@ -3308,6 +3320,7 @@
 "native_sse",
 "native_ssh_conn",
 "native_swar",
+"native_transport",
 "native_upload"
 ],
 "src/network_drivers/presentation/http/http_parser/http_parser.cpp": [
@@ -3320,7 +3333,6 @@
 "native_presentation",
 "native_session",
 "native_stack_l46",
-"native_transport",
 "native_websocket"
 ],
 "src/network_drivers/presentation/http/http_parser/http_parser.h": [
@@ -3348,6 +3360,7 @@
 "native_sse",
 "native_ssh_conn",
 "native_swar",
+"native_transport",
 "native_upload"
 ],
 "src/network_drivers/presentation/http/sse/sse.cpp": [
@@ -3357,7 +3370,6 @@
 "native_presentation",
 "native_session",
 "native_stack_l46",
-"native_transport",
 "native_websocket"
 ],
 "src/network_drivers/presentation/http/sse/sse.h": [
@@ -3382,6 +3394,7 @@
 "native_sse",
 "native_ssh_conn",
 "native_swar",
+"native_transport",
 "native_upload"
 ],
 "src/network_drivers/presentation/http/websocket/websocket.cpp": [
@@ -3391,7 +3404,6 @@
 "native_presentation",
 "native_session",
 "native_stack_l46",
-"native_transport",
 "native_websocket"
 ],
 "src/network_drivers/presentation/http/websocket/websocket.h": [
@@ -3416,6 +3428,7 @@
 "native_sse",
 "native_ssh_conn",
 "native_swar",
+"native_transport",
 "native_upload"
 ],
 "src/network_drivers/presentation/presentation.cpp": [
@@ -3425,7 +3438,6 @@
 "native_presentation",
 "native_session",
 "native_stack_l46",
-"native_transport",
 "native_websocket"
 ],
 "src/network_drivers/presentation/presentation.h": [
@@ -3702,6 +3714,7 @@
 "native_sse",
 "native_ssh_conn",
 "native_swar",
+"native_transport",
 "native_upload"
 ],
 "src/network_drivers/session/session.cpp": [
@@ -3711,7 +3724,6 @@
 "native_presentation",
 "native_session",
 "native_stack_l46",
-"native_transport",
 "native_websocket"
 ],
 "src/network_drivers/session/session.h": [
@@ -4352,6 +4364,7 @@
 "native_ssh_pqc",
 "native_swar",
 "native_telnet",
+"native_transport",
 "native_upload"
 ],
 "src/server/clock/clock.h": [
@@ -7623,6 +7636,7 @@
 "native_ssh_pqc",
 "native_swar",
 "native_telnet",
+"native_transport",
 "native_upload"
 ],
 "test/mocks/pc_net_host.h": [
