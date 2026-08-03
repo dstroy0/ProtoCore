@@ -55,6 +55,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`899bd9c`](https://github.com/dstroy0/ProtoCore/commit/899bd9ca85a2055f99c32498fe33efbfbdcbf6d1))
 - update CHANGELOG.md [skip ci] ([`2290f20`](https://github.com/dstroy0/ProtoCore/commit/2290f20fc69ad7ef44ccb61d004e88681880f6c3))
 - update CHANGELOG.md [skip ci] ([`7d69553`](https://github.com/dstroy0/ProtoCore/commit/7d69553b1cb9e620868b433a8f0b46fce5cdd5c8))
 - update CHANGELOG.md [skip ci] ([`1070f26`](https://github.com/dstroy0/ProtoCore/commit/1070f267c51b202f0dd3ac8a50f08cadb77fb24e))
@@ -392,6 +393,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- transport reads the host seam's control-block and error types ([`28caacf`](https://github.com/dstroy0/ProtoCore/commit/28caacf194e170e3359045051bf3ca48362ffbe4))
+- restore the std:: qualifiers the sweep wrongly stripped, convert statsd + spa_router ([`8c43357`](https://github.com/dstroy0/ProtoCore/commit/8c43357c7a1052a00d831491dc6bbcea3a0fedb4))
 - drop the STL includes the C suites no longer need ([`710f311`](https://github.com/dstroy0/ProtoCore/commit/710f31109713796de41810e7f45bc28138a2108f))
 - four more suites to C (coap, transport, spa_router, statsd) ([`e681d79`](https://github.com/dstroy0/ProtoCore/commit/e681d79b6b09730139edb99ebac8a1b05496636a))
 - enable keep-alive in native_range ([`1267ccf`](https://github.com/dstroy0/ProtoCore/commit/1267ccf0daa8232d9c7050fd0afc0ea42146526f))
