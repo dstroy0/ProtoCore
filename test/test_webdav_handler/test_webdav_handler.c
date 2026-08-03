@@ -801,6 +801,7 @@ void test_webdav_copy_dest_joins_to_root()
     dav("/z", davfs, "");
     tree_put("/src.txt", "s");
     feed_and_handle(0, "COPY /z/src.txt HTTP/1.1\r\nHost: x\r\nDestination: /z\r\n\r\n");
+    TEST_MESSAGE(tcp_captured()); // TEMPORARY: read what the handler actually answers
     TEST_ASSERT_TRUE(pc_resp_status(201));
     TEST_ASSERT_TRUE(tree_has("/"));
 }
