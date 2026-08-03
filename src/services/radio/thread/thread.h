@@ -114,17 +114,17 @@
 // --- Header byte (bit7 = flag, bits6-4 = interface id, bits3-0 = transaction id) --------
 
 /** @brief Build a spinel header byte for interface @p iid and transaction @p tid (tid 0 = no response wanted). */
-inline uint8_t pc_spinel_header(uint8_t iid, uint8_t tid)
+static inline uint8_t pc_spinel_header(uint8_t iid, uint8_t tid)
 {
     return (uint8_t)(0x80 | ((iid & 0x03) << 4) | (tid & 0x0F));
 }
 /** @brief The transaction id carried in header byte @p h. */
-inline uint8_t pc_spinel_header_tid(uint8_t h)
+static inline uint8_t pc_spinel_header_tid(uint8_t h)
 {
     return (uint8_t)(h & 0x0F);
 }
 /** @brief The interface id carried in header byte @p h. */
-inline uint8_t pc_spinel_header_iid(uint8_t h)
+static inline uint8_t pc_spinel_header_iid(uint8_t h)
 {
     return (uint8_t)((h >> 4) & 0x03);
 }

@@ -160,7 +160,7 @@ typedef struct
 
 /** @brief AES key length in bytes for an SMB2 cipher id: 16 for the -128 ciphers, 32 for the -256 ciphers,
  *         0 if @p cipher is not a recognized cipher id. */
-inline size_t pc_smb2_cipher_key_len(uint16_t cipher)
+static inline size_t pc_smb2_cipher_key_len(uint16_t cipher)
 {
     switch (cipher)
     {
@@ -178,7 +178,7 @@ inline size_t pc_smb2_cipher_key_len(uint16_t cipher)
 /** @brief AEAD nonce length in bytes for an SMB2 cipher id: 12 for the GCM ciphers, 11 for the CCM ciphers
  *         (MS-SMB2 §3.1.4.3), 0 if unrecognized. Both are written into the 16-byte TRANSFORM_HEADER Nonce
  *         field with the remaining bytes zero. */
-inline size_t pc_smb2_cipher_nonce_len(uint16_t cipher)
+static inline size_t pc_smb2_cipher_nonce_len(uint16_t cipher)
 {
     switch (cipher)
     {
