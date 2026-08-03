@@ -82,7 +82,7 @@ Coverage is measured over `src/`, excluding `src/network_drivers/tls/**` (vendor
 
 <!-- prettier-ignore-start -->
 
-> Generated from the public API, `proto_builtins.cpp`, and `presentation/` by `ci_tooling/generate/gen_api_flow.py` - do not edit by hand. The picture is an SVG (native text labels, so it stays sharp at any zoom and the type is selectable); its mermaid source is [`docs/diagrams/api_flow.mmd`](docs/diagrams/api_flow.mmd).
+> Generated from the public API, `proto_builtins.c`, and `presentation/` by `ci_tooling/generate/gen_api_flow.py` - do not edit by hand. The picture is an SVG (native text labels, so it stays sharp at any zoom and the type is selectable); its mermaid source is [`docs/diagrams/api_flow.mmd`](docs/diagrams/api_flow.mmd).
 
 **How to read it:** follow the arrows. A **request comes in** at the top from a client, travels **down** through the four OSI layers - L4 wire bytes, L5 protocol pick, L6 decode into a request, L7 your routes - your handler runs, and the **response goes back out** along the **green** arrows. Each box shows a plain-English step with the exact function underneath. You only write the two **amber** parts: register your routes (top) and your handler (middle).
 

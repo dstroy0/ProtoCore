@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file codec.cpp
+ * @file codec.c
  * @brief The wire-encoding tables, one per format, each behind its own feature flag.
  *
  * Every table lives here rather than beside its format, so the set of encodings a build carries is

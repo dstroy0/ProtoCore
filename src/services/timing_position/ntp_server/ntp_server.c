@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_ntp_server.cpp
- * @brief NTP server (RFC 5905 server mode) - implementation. See pc_ntp_server.h.
+ * @file ntp_server.c
+ * @brief NTP server (RFC 5905 server mode) - implementation. See ntp_server.h.
  */
 
 #include "services/timing_position/ntp_server/ntp_server.h"
@@ -22,7 +22,7 @@
 size_t pc_ntp_server_build_response(const uint8_t *req, size_t req_len, uint8_t stratum, uint32_t refid,
                                     uint32_t pc_ntp_secs, uint32_t pc_ntp_frac, uint8_t *out, size_t out_cap)
 {
-    if (!req || !out || req_len < NTP_PACKET_LEN || out_cap < NTP_PACKET_LEN)
+    if (req == NULL || out == NULL || req_len < NTP_PACKET_LEN || out_cap < NTP_PACKET_LEN)
     {
         return 0;
     }
@@ -53,10 +53,10 @@ size_t pc_ntp_server_build_response(const uint8_t *req, size_t req_len, uint8_t 
 // stratum and reference id, grouped so it is one named owner, unreachable cross-TU.
 typedef struct
 {
-    uint8_t stratum = PC_NTP_SERVER_STRATUM;
-    uint32_t refid = NTP_REFID_LOCL;
+    uint8_t stratum;
+    uint32_t refid;
 } NtpServerCtx;
-static NtpServerCtx s_ntp;
+static NtpServerCtx s_ntp = {PC_NTP_SERVER_STRATUM, NTP_REFID_LOCL};
 
 // UDP handler: answer each request from the current time (silent if we have none).
 static void pc_ntp_server_udp_handler(const uint8_t *data, size_t len, const struct pc_udp_peer *peer, void *ctx)
@@ -89,8 +89,10 @@ proto_bool pc_ntp_server_begin(uint8_t stratum, uint32_t refid)
 
 #else // host build: no lwIP. The codec above is host-tested; the binding is a stub.
 
-proto_bool pc_ntp_server_begin(uint8_t, uint32_t)
+proto_bool pc_ntp_server_begin(uint8_t stratum, uint32_t refid)
 {
+    (void)stratum;
+    (void)refid;
     return PROTO_FALSE;
 }
 

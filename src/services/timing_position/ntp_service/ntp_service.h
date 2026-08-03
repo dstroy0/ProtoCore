@@ -20,6 +20,8 @@
 #include "protocore_config.h"
 #include <time.h>
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_NTP
 
 /** @brief Server this asks when the caller names none. */
@@ -87,5 +89,7 @@ void pc_ntp_set_test_epoch(time_t epoch);
 #endif // PROTOCORE_HOST
 
 #endif // PC_ENABLE_NTP
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_NTP_SERVICE_H

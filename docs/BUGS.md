@@ -8,6 +8,36 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ---
 
+## 51 helpers became global symbols when the C conversion deleted their anonymous namespace
+
+- **Status:** FIXED (2026-08-02), pending a target build. Found by diffing `src/` against v0.0.1
+  after `check_owned_context` reported four contexts with external linkage.
+- **Symptom:** no diagnostic anywhere. Unprefixed names - `resolve`, `service`, `intern`, `peek`,
+  `new_node`, `find_port`, `teardown`, `do_dns` - sat at global scope, and two of them collided
+  outright: `s_ctx` was defined non-static in both `relay_listener.c` (`RelayListenerCtx`) and
+  `iface_bridge_hw.c` (`BridgeGlueCtx`). Two external definitions of one name with different types
+  is a duplicate symbol; a C tentative definition can also merge them, giving two unrelated
+  subsystems one object sized to the larger and letting each scribble on the other's state.
+- **Root cause:** v0.0.1 wrapped these in `namespace { ... }`, which is internal linkage. C has no
+  anonymous namespace, so the conversion deleted the wrapper. Where it did not substitute `static`,
+  the guarantee left with the construct. 156 files in 0.0.1 had an anonymous namespace; 8 still
+  carried a symbol that lost its linkage, 51 symbols in total. `graphql.c`, `relay_listener.c` and
+  `iface_bridge_hw.c` lost every symbol theirs held.
+- **Why nothing caught it:** `check_owned_context` globbed `*.cpp` only, so after the conversion it
+  read 51 of 351 implementation files and never saw any of these. Even once widened it reports the
+  three contexts and not the 48 functions, because it checks file-scope mutables rather than
+  linkage in general. `check_duplicate_symbols` misses `s_ctx` because it only reports a duplicate
+  that some header also declares `extern`, and neither does. Nothing else reads linkage at all.
+- **Fix:** `static` on all 51, verified against the diff as exactly 51 lines each unchanged except
+  for a prepended `static`. This is the same defect a previous session fixed by hand in
+  `crypto/pqc/sntrup761.c` using `nm` on the object file, which is the authoritative check and the
+  one to repeat once the tree compiles.
+- **Not affected:** the public API. `pc_gql_arg_*`, `pc_espnow_*` and their kind were declared
+  outside the namespace in 0.0.1 and are correctly external.
+- **Separately:** `check_owned_context` matched only the C++ spelling `thread_local`, so
+  `static _Thread_local int t_worker_id` in `mmgr/arena.c` read as a loose global. The C11 spelling
+  is now matched too; the variable was always correct.
+
 ## The theme-blob generator kept emitting C++, so CI resurrects a dead `binary_asset_blobs.cpp` on every run
 
 - **Status:** OPEN (2026-08-02). Found by widening `check_duplicate_symbols` to `.c`, which it had

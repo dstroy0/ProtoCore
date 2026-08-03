@@ -20,6 +20,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_MDNS
 
 /**
@@ -57,5 +59,7 @@ proto_bool pc_mdns_txt(const char *key, const char *value);
 proto_bool pc_mdns_add_service(const char *service_type, const char *proto, uint16_t port);
 
 #endif // PC_ENABLE_MDNS
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_MDNS_SERVICE_H

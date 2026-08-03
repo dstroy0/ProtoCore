@@ -280,7 +280,7 @@
         "+<network_drivers/transport/tcp.c>",
         "+<network_drivers/presentation/presentation.cpp>",
         "+<network_drivers/session/session.cpp>",
-        "+<network_drivers/session/proto_builtins.cpp>",
+        "+<server/proto_builtins.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
         "+<network_drivers/session/worker.c>",
@@ -376,7 +376,7 @@
         "+<network_drivers/transport/tcp.c>",
         "+<network_drivers/presentation/presentation.cpp>",
         "+<network_drivers/session/session.cpp>",
-        "+<network_drivers/session/proto_builtins.cpp>",
+        "+<server/proto_builtins.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
         "+<network_drivers/session/worker.c>",
@@ -427,7 +427,7 @@
         "+<crypto/asymmetric/ecdsa.c>",
         "+<crypto/asymmetric/bignum.c>",
         "+<board_drivers/hal/portable/portable_bignum.cpp>",
-        "+<network_drivers/presentation/ssh/transport/ssh_keymat.cpp>",
+        "+<network_drivers/presentation/ssh/transport/ssh_keymat.c>",
         "+<network_drivers/presentation/ssh/transport/ssh_dh.cpp>",
         "+<crypto/asymmetric/rsa.c>",
         "+<network_drivers/tls/ssh_rsa.cpp>",
@@ -470,7 +470,7 @@
         "+<crypto/asymmetric/ecdsa.c>",
         "+<crypto/asymmetric/bignum.c>",
         "+<board_drivers/hal/portable/portable_bignum.cpp>",
-        "+<network_drivers/presentation/ssh/transport/ssh_keymat.cpp>",
+        "+<network_drivers/presentation/ssh/transport/ssh_keymat.c>",
         "+<network_drivers/presentation/ssh/transport/ssh_dh.cpp>",
         "+<crypto/asymmetric/rsa.c>",
         "+<network_drivers/tls/ssh_rsa.cpp>",
@@ -507,7 +507,7 @@
         "+<crypto/asymmetric/ecdsa.c>",
         "+<crypto/asymmetric/bignum.c>",
         "+<board_drivers/hal/portable/portable_bignum.cpp>",
-        "+<network_drivers/presentation/ssh/transport/ssh_keymat.cpp>",
+        "+<network_drivers/presentation/ssh/transport/ssh_keymat.c>",
         "+<network_drivers/presentation/ssh/transport/ssh_dh.cpp>",
         "+<crypto/asymmetric/rsa.c>",
         "+<network_drivers/tls/ssh_rsa.cpp>",
@@ -547,7 +547,7 @@
         "+<crypto/asymmetric/ecdsa.c>",
         "+<crypto/asymmetric/bignum.c>",
         "+<board_drivers/hal/portable/portable_bignum.cpp>",
-        "+<network_drivers/presentation/ssh/transport/ssh_keymat.cpp>",
+        "+<network_drivers/presentation/ssh/transport/ssh_keymat.c>",
         "+<network_drivers/presentation/ssh/transport/ssh_dh.cpp>",
         "+<crypto/asymmetric/rsa.c>",
         "+<network_drivers/tls/ssh_rsa.cpp>",
@@ -578,7 +578,7 @@
         "+<network_drivers/transport/tcp.c>",
         "+<network_drivers/presentation/presentation.cpp>",
         "+<network_drivers/session/session.cpp>",
-        "+<network_drivers/session/proto_builtins.cpp>",
+        "+<server/proto_builtins.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
         "+<network_drivers/session/worker.c>",
@@ -599,7 +599,7 @@
         "+<crypto/asymmetric/ecdsa.c>",
         "+<crypto/asymmetric/bignum.c>",
         "+<board_drivers/hal/portable/portable_bignum.cpp>",
-        "+<network_drivers/presentation/ssh/transport/ssh_keymat.cpp>",
+        "+<network_drivers/presentation/ssh/transport/ssh_keymat.c>",
         "+<network_drivers/presentation/ssh/transport/ssh_dh.cpp>",
         "+<crypto/asymmetric/rsa.c>",
         "+<network_drivers/tls/ssh_rsa.cpp>",
@@ -666,7 +666,7 @@
         "+<network_drivers/transport/tcp.c>",
         "+<network_drivers/presentation/presentation.cpp>",
         "+<network_drivers/session/session.cpp>",
-        "+<network_drivers/session/proto_builtins.cpp>",
+        "+<server/proto_builtins.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
         "+<network_drivers/session/worker.c>",
@@ -688,7 +688,7 @@
         "+<network_drivers/presentation/codec/json/json.c>",
         "+<network_drivers/application/web_assets.c>",
         "+<services/web/web_terminal/web_terminal.cpp>",
-        "+<services/timing_position/ntp_service/ntp_service.cpp>",
+        "+<services/timing_position/ntp_service/ntp_service.c>",
         "+<board_drivers/hal/portable/portable_platform.c>",
         "+<mmgr/frame.c>"
       ],
@@ -800,7 +800,7 @@
         "+<network_drivers/transport/tcp.c>",
         "+<network_drivers/presentation/presentation.cpp>",
         "+<network_drivers/session/session.cpp>",
-        "+<network_drivers/session/proto_builtins.cpp>",
+        "+<server/proto_builtins.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
         "+<network_drivers/session/worker.c>",
@@ -1231,7 +1231,7 @@
         "+<services/iot/senml/senml.cpp>",
         "+<network_drivers/presentation/codec/json/json.c>",
         "+<network_drivers/presentation/codec/cbor/cbor.cpp>",
-        "+<network_drivers/presentation/codec/codec.cpp>"
+        "+<network_drivers/presentation/codec/codec.c>"
       ],
       "tests": ["test_senml"]
     },
@@ -1607,7 +1607,7 @@
         "+<mmgr/plaintext.c>",
         "+<network_drivers/session/worker.c>",
         "+<board_drivers/hal/portable/portable_platform.c>",
-        "+<network_drivers/presentation/codec/codec.cpp>"
+        "+<network_drivers/presentation/codec/codec.c>"
       ],
       "tests": ["test_pentest"]
     },
@@ -1625,7 +1625,7 @@
         "+<network_drivers/transport/tcp.c>",
         "+<network_drivers/presentation/presentation.cpp>",
         "+<network_drivers/session/session.cpp>",
-        "+<network_drivers/session/proto_builtins.cpp>",
+        "+<server/proto_builtins.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
         "+<network_drivers/session/worker.c>",
@@ -1659,7 +1659,7 @@
         "+<network_drivers/transport/tcp.c>",
         "+<network_drivers/presentation/presentation.cpp>",
         "+<network_drivers/session/session.cpp>",
-        "+<network_drivers/session/proto_builtins.cpp>",
+        "+<server/proto_builtins.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
         "+<network_drivers/session/worker.c>",
@@ -1738,7 +1738,7 @@
     "native_ntp_server": {
       "desc": "NTP/SNTP server (RFC 5905 server mode) response codec (ntp_server_build_response):\nversion echo, mode/LI/stratum, origin-timestamp copy, reference/receive/transmit\nstamps, big-endian encoding, and the length guards. Pure - host-tested, no lwIP.",
       "flags": ["-DPC_ENABLE_NTP_SERVER=1"],
-      "src": ["+<services/timing_position/ntp_server/ntp_server.cpp>"],
+      "src": ["+<services/timing_position/ntp_server/ntp_server.c>"],
       "tests": ["test_ntp_server"]
     },
     "native_dns_server": {
@@ -1890,7 +1890,7 @@
         "+<network_drivers/transport/tcp.c>",
         "+<network_drivers/presentation/presentation.cpp>",
         "+<network_drivers/session/session.cpp>",
-        "+<network_drivers/session/proto_builtins.cpp>",
+        "+<server/proto_builtins.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
         "+<network_drivers/session/worker.c>",
@@ -2009,7 +2009,7 @@
         "+<crypto/asymmetric/ecdsa.c>",
         "+<crypto/asymmetric/bignum.c>",
         "+<board_drivers/hal/portable/portable_bignum.cpp>",
-        "+<network_drivers/presentation/ssh/transport/ssh_keymat.cpp>",
+        "+<network_drivers/presentation/ssh/transport/ssh_keymat.c>",
         "+<network_drivers/presentation/ssh/transport/ssh_dh.cpp>",
         "+<crypto/asymmetric/rsa.c>",
         "+<network_drivers/tls/ssh_rsa.cpp>",
@@ -2044,7 +2044,7 @@
         "+<network_drivers/transport/tcp.c>",
         "+<network_drivers/presentation/presentation.cpp>",
         "+<network_drivers/session/session.cpp>",
-        "+<network_drivers/session/proto_builtins.cpp>",
+        "+<server/proto_builtins.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
         "+<network_drivers/session/worker.c>",
@@ -2150,7 +2150,7 @@
       "flags": ["-DPC_ENABLE_CBOR=1"],
       "src": [
         "+<network_drivers/presentation/codec/cbor/cbor.cpp>",
-        "+<network_drivers/presentation/codec/codec.cpp>"
+        "+<network_drivers/presentation/codec/codec.c>"
       ],
       "tests": ["test_cbor"]
     },
@@ -2159,7 +2159,7 @@
       "flags": ["-DPC_ENABLE_MSGPACK=1"],
       "src": [
         "+<network_drivers/presentation/codec/msgpack/msgpack.cpp>",
-        "+<network_drivers/presentation/codec/codec.cpp>"
+        "+<network_drivers/presentation/codec/codec.c>"
       ],
       "tests": ["test_msgpack"]
     },
@@ -2770,7 +2770,7 @@
         "+<network_drivers/session/worker.c>",
         "+<board_drivers/hal/portable/portable_platform.c>",
         "+<mmgr/frame.c>",
-        "+<network_drivers/presentation/codec/codec.cpp>"
+        "+<network_drivers/presentation/codec/codec.c>"
       ],
       "tests": ["test_dispatch"]
     },

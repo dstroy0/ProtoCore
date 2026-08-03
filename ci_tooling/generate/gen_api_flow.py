@@ -8,7 +8,7 @@ The variable parts are read straight from the code so the picture cannot drift:
   - the public `PC` API methods, from src/protocore.h
     (access-specifier aware), bucketed into Register / Configure / Run / Respond;
   - the built-in application protocols, from the session registry
-    src/network_drivers/session/proto_builtins.cpp (each `register_if(PROTO_x, ...)`);
+    src/server/proto_builtins.c (each `register_if(PROTO_x, ...)`);
   - the Layer-6 modules present on disk, from src/network_drivers/presentation/.
 
 Those are placed into the fixed OSI request-lifecycle skeleton (transport L4 -> session L5
@@ -30,7 +30,7 @@ import doc_region as dr  # noqa: E402  (path set above)
 
 ROOT = dr.repo_root(__file__)
 API_H = os.path.join(ROOT, "src", "protocore.h")
-PROTO_CPP = os.path.join(ROOT, "src", "network_drivers", "session", "proto_builtins.cpp")
+PROTO_CPP = os.path.join(ROOT, "src", "server", "proto_builtins.c")
 PRESENTATION = os.path.join(ROOT, "src", "network_drivers", "presentation")
 README = os.path.join(ROOT, "README.md")
 ARCH = os.path.join(ROOT, "docs", "ARCHITECTURE.md")
@@ -200,7 +200,7 @@ def mermaid(detailed=False):
         "'useMaxWidth':true,'htmlLabels':false}}}%%"
     )
     out = [init, "flowchart TB"]
-    out.append("  %% Auto-generated from the public API, proto_builtins.cpp, and presentation/ on disk.")
+    out.append("  %% Auto-generated from the public API, proto_builtins.c, and presentation/ on disk.")
     # A single top-to-bottom spine: request flows down to your handler, response flows back to the client.
     # No per-layer boxes (they stretch to enclose both the incoming and outgoing node of a layer, which
     # is what made this sprawl) - the layer is shown by color instead, per the key above the diagram.
@@ -336,7 +336,7 @@ def build_block():
     write_mmd("api_flow", mermaid())
     return "\n".join(
         [
-            "> Generated from the public API, `proto_builtins.cpp`, and `presentation/` by"
+            "> Generated from the public API, `proto_builtins.c`, and `presentation/` by"
             " `ci_tooling/generate/gen_api_flow.py` - do not edit by hand. The picture is an SVG"
             " (native text labels, so it stays sharp at any zoom and the type is selectable); its mermaid source is"
             " [`docs/diagrams/api_flow.mmd`](docs/diagrams/api_flow.mmd).",
@@ -374,7 +374,7 @@ def build_detail_block():
     write_mmd("api_flow_detail", mermaid(detailed=True))
     return "\n".join(
         [
-            "> Generated from the public API, `proto_builtins.cpp`, and `presentation/` by"
+            "> Generated from the public API, `proto_builtins.c`, and `presentation/` by"
             " `ci_tooling/generate/gen_api_flow.py` - do not edit by hand. This is the fully expanded twin of the"
             " simplified request-lifecycle chart in the [README](../README.md): the same top-to-bottom"
             " waterfall, but every public method, every registered protocol, and every Layer-6 module on disk"

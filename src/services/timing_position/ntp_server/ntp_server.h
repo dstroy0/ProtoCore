@@ -26,6 +26,8 @@
 
 #include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_NTP_SERVER
 
 /** @brief One NTP packet on the wire is exactly 48 octets (no extension/auth fields). */
@@ -74,5 +76,7 @@ size_t pc_ntp_server_build_response(const uint8_t *req, size_t req_len, uint8_t 
 proto_bool pc_ntp_server_begin(uint8_t stratum, uint32_t refid);
 
 #endif // PC_ENABLE_NTP_SERVER
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_NTP_SERVER_H

@@ -119,7 +119,7 @@ typedef enum PROTO_ENUM_PACKED
     RESOLVE_RESULT_R_DENY,
     RESOLVE_RESULT_R_ALLOW,
 } resolve_result;
-resolve_result resolve(const ForwardCtx &f, uint8_t src, uint8_t dst, int *allow_idx)
+static resolve_result resolve(const ForwardCtx &f, uint8_t src, uint8_t dst, int *allow_idx)
 {
     int allow = -1;
     proto_bool deny = PROTO_FALSE;

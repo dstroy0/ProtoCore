@@ -46,9 +46,9 @@ typedef struct
     RelayBridge bridges[PC_RELAY_MAX_CONNS];
     proto_bool registered;
 } RelayListenerCtx;
-RelayListenerCtx s_ctx;
+static RelayListenerCtx s_ctx;
 
-RelayBind *bind_by_listener(uint8_t lid)
+static RelayBind *bind_by_listener(uint8_t lid)
 {
     for (int i = 0; i < PC_RELAY_MAX_PUBLISH; i++)
     {
@@ -60,7 +60,7 @@ RelayBind *bind_by_listener(uint8_t lid)
     return NULL;
 }
 
-RelayBridge *bridge_by_conn(uint8_t slot)
+static RelayBridge *bridge_by_conn(uint8_t slot)
 {
     for (int i = 0; i < PC_RELAY_MAX_CONNS; i++)
     {
@@ -72,7 +72,7 @@ RelayBridge *bridge_by_conn(uint8_t slot)
     return NULL;
 }
 
-int bridge_find_free()
+static int bridge_find_free()
 {
     for (int i = 0; i < PC_RELAY_MAX_CONNS; i++)
     {
@@ -86,7 +86,7 @@ int bridge_find_free()
 
 // --- Relay seams (ctx = the RelayBridge). ---
 // Inbound (a) = the accepted server connection; its EOF arrives out of band via relay_on_close.
-int a_recv(void *c, uint8_t *buf, size_t cap)
+static int a_recv(void *c, uint8_t *buf, size_t cap)
 {
     RelayBridge *br = (RelayBridge *)c;
     if (pc_conn_available(br->conn_slot))
@@ -95,7 +95,7 @@ int a_recv(void *c, uint8_t *buf, size_t cap)
     }
     return 0;
 }
-int a_send(void *c, const uint8_t *buf, size_t len)
+static int a_send(void *c, const uint8_t *buf, size_t len)
 {
     RelayBridge *br = (RelayBridge *)c;
     // Send as much as the inbound TCP send window currently allows (partial), not all-or-nothing: a
@@ -110,7 +110,7 @@ int a_send(void *c, const uint8_t *buf, size_t len)
     return pc_conn_send(br->conn_slot, buf, n) ? (int)n : 0;
 }
 // Origin (b) = the outbound pc_client; it reports EOF through the recv seam.
-int b_recv(void *c, uint8_t *buf, size_t cap)
+static int b_recv(void *c, uint8_t *buf, size_t cap)
 {
     RelayBridge *br = (RelayBridge *)c;
     size_t n = pc_client_read(br->origin_cid, buf, cap);
@@ -120,7 +120,7 @@ int b_recv(void *c, uint8_t *buf, size_t cap)
     }
     return pc_client_is_closed(br->origin_cid) ? -1 : 0;
 }
-int b_send(void *c, const uint8_t *buf, size_t len)
+static int b_send(void *c, const uint8_t *buf, size_t len)
 {
     RelayBridge *br = (RelayBridge *)c;
     return pc_client_send(br->origin_cid, buf, len) ? (int)len : 0;
@@ -128,7 +128,7 @@ int b_send(void *c, const uint8_t *buf, size_t len)
 
 // Close the origin (and optionally the inbound) and free the bridge. active=false first so a
 // re-entrant close callback is a no-op.
-void teardown(RelayBridge *br, proto_bool close_inbound)
+static void teardown(RelayBridge *br, proto_bool close_inbound)
 {
     br->active = PROTO_FALSE;
 #if PC_ENABLE_RADIO_POWER
@@ -142,7 +142,7 @@ void teardown(RelayBridge *br, proto_bool close_inbound)
 }
 
 // Pump the bridge one pass and tear it down if the origin ended or the pump errored.
-void service(uint8_t slot)
+static void service(uint8_t slot)
 {
     RelayBridge *br = bridge_by_conn(slot);
     if (!br)
@@ -174,7 +174,7 @@ void service(uint8_t slot)
     }
 }
 
-void relay_on_accept(uint8_t slot)
+static void relay_on_accept(uint8_t slot)
 {
     RelayBind *bd = bind_by_listener(pc_conn_listener_id(slot));
     if (!bd)
@@ -206,12 +206,12 @@ void relay_on_accept(uint8_t slot)
 #endif
 }
 
-void relay_on_data(uint8_t slot)
+static void relay_on_data(uint8_t slot)
 {
     service(slot);
 }
 
-void relay_on_poll(uint8_t slot)
+static void relay_on_poll(uint8_t slot)
 {
     if (!pc_conn_active(slot))
     {
@@ -220,7 +220,7 @@ void relay_on_poll(uint8_t slot)
     service(slot);
 }
 
-void relay_on_close(uint8_t slot)
+static void relay_on_close(uint8_t slot)
 {
     RelayBridge *br = bridge_by_conn(slot);
     if (br)
@@ -229,7 +229,7 @@ void relay_on_close(uint8_t slot)
     }
 }
 
-const ProtoHandler s_relay_handler = {relay_on_accept, relay_on_data, relay_on_close, relay_on_poll};
+static const ProtoHandler s_relay_handler = {relay_on_accept, relay_on_data, relay_on_close, relay_on_poll};
 
 proto_bool pc_relay_publish(uint8_t listener_id, const char *origin_host, uint16_t origin_port)
 {

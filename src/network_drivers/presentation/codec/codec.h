@@ -32,6 +32,8 @@
 #include "protocore_config.h" // PC_NEED_CBOR / PC_ENABLE_MSGPACK gate the instances below
 #include "shared_primitives/span.h"
 
+PROTO_BEGIN_DECLS
+
 /**
  * @brief The next item's type, reported by pc_codec::peek without consuming it.
  *
@@ -99,7 +101,7 @@ typedef struct
 
 // --- the formats, as instances ---
 //
-// Storage is opaque: each table is internal linkage in codec.cpp and reached only through its
+// Storage is opaque: each table is internal linkage in codec.c and reached only through its
 // accessor, so no caller can name it, copy it, or keep a second one. Guarded so a build that
 // compiles a format out has no accessor to call and no table to link.
 
@@ -112,5 +114,7 @@ const pc_codec *pc_codec_cbor(void);
 /** @brief MessagePack as an instance of the codec interface. */
 const pc_codec *pc_codec_msgpack(void);
 #endif
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_CODEC_H

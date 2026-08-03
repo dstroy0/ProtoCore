@@ -1,6 +1,6 @@
 %%{init: {'htmlLabels':false,'themeVariables':{'fontFamily':'sans-serif','fontSize':'13px','lineColor':'#94a3b8'},'flowchart':{'curve':'basis','nodeSpacing':42,'rankSpacing':50,'padding':10,'useMaxWidth':true,'htmlLabels':false}}}%%
 flowchart TB
-  %% Auto-generated from the public API, proto_builtins.cpp, and presentation/ on disk.
+  %% Auto-generated from the public API, proto_builtins.c, and presentation/ on disk.
   subgraph SETUP["First, set up your server (once, at boot)"]
     direction LR
     reg["1 Register routes<br/>on_http() / on_http_iface()<br/>+8 more"]
@@ -12,7 +12,7 @@ flowchart TB
   listen["Accept a connection<br/>listener_accept_cb"]
   ring[("Hold the bytes<br/>conn_pool + rx ring")]
   udprx["Receive a datagram<br/>pc_udp"]
-  seam{{"Which protocol?<br/>ProtoHandler seam<br/>"}}
+  seam{{"Which protocol?<br/>ProtoHandler seam<br/>HTTP / TELNET / SSH / +2"}}
   tls["Decrypt + choose version<br/>pc_tls + ALPN"]
   parser["Read HTTP/1.1<br/>http_parser"]
   h2["Decode HTTP/2<br/>h2_conn"]

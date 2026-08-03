@@ -196,8 +196,8 @@ typedef struct
     // less than CTR mode keeps. The context stays for the life of the key because standing one up costs
     // ~9,200 cycles on an ESP32-S3, a fixed price per packet that dominates small interactive traffic
     // (see aesgcm.h). Wiped on rekey and by ssh_keymat_wipe() on close.
-    alignas(8) uint8_t gcm_ctx_c2s[PC_WORK_AESGCM]; ///< keyed GCM context C→S (server opens inbound).
-    alignas(8) uint8_t gcm_ctx_s2c[PC_WORK_AESGCM]; ///< keyed GCM context S→C (server seals outbound).
+    _Alignas(8) uint8_t gcm_ctx_c2s[PC_WORK_AESGCM]; ///< keyed GCM context C→S (server opens inbound).
+    _Alignas(8) uint8_t gcm_ctx_s2c[PC_WORK_AESGCM]; ///< keyed GCM context S→C (server seals outbound).
 
     proto_bool active; ///< True once keys are installed after successful KEX.
 } SshKeyMat;

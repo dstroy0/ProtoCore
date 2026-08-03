@@ -105,7 +105,7 @@ static void dns_cb(const char *name, const ip_addr_t *addr, void *arg)
     s_dr.done = PROTO_TRUE;
 }
 
-err_t do_dns(struct tcpip_api_call_data *c)
+static err_t do_dns(struct tcpip_api_call_data *c)
 {
     const char *host = ((DnsCall *)c)->host;
     err_t e = dns_gethostbyname(host, &s_dr.addr, dns_cb, NULL);

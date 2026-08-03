@@ -228,7 +228,7 @@ uint8_t pc_net_channel(void)
  * power-save vocabulary, and a plain frame pointer.
  */
 
-wifi_ps_type_t to_esp_ps(pc_phy_ps mode)
+static wifi_ps_type_t to_esp_ps(pc_phy_ps mode)
 {
     if (mode == pc_phy_ps::PC_PHY_PS_MIN_MODEM)
     {

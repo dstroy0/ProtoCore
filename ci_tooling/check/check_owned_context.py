@@ -133,7 +133,10 @@ def classify(name: str, type_str: str, in_anon_ns: bool) -> bool:
         return True
     if "::" in type_str:  # an out-of-line CLASS static-member definition - the class owns it
         return True
-    if re.search(r"\b(const|constexpr|thread_local)\b", type_str):  # immutable / per-thread, not ambient
+    # immutable / per-thread, not ambient. _Thread_local is the C11 spelling of thread_local; the
+    # tree uses it since the C conversion, and matching only the C++ one reads a per-task slot as a
+    # loose global.
+    if re.search(r"\b(const|constexpr|thread_local|_Thread_local)\b", type_str):
         return True
     # The single rooted owner: its type ends in `_ctx` (pc_coap_ctx, pc_client_ctx, ...).
     # `Ctx` is also accepted so a stray PascalCase holdout still passes rather than

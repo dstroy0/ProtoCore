@@ -63,7 +63,7 @@ static uint32_t gw_now()
 #endif
 
 // Returns a mutable port (callers mutate it), so it takes the owner by non-const reference.
-port *find_port(GatewayCtx &g, uint8_t id)
+static port *find_port(GatewayCtx &g, uint8_t id)
 {
     for (uint8_t i = 0; i < PC_GW_MAX_PORTS; i++)
     {

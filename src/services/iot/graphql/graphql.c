@@ -62,9 +62,9 @@ typedef struct
     pc_gql_resolver_fn resolver;
     char path[PC_GQL_PATH_MAX];
 } GqlCtx;
-GqlCtx s_gql;
+static GqlCtx s_gql;
 
-int new_node()
+static int new_node()
 {
     if (s_gql.nnodes >= PC_GQL_MAX_NODES)
     {
@@ -87,7 +87,7 @@ typedef struct
     const char *e;
 } Lex;
 
-void skipws(Lex &L)
+static void skipws(Lex &L)
 {
     while (L.p < L.e)
     {
@@ -110,14 +110,14 @@ void skipws(Lex &L)
     }
 }
 
-char peek(Lex &L)
+static char peek(Lex &L)
 {
     skipws(L);
     return L.p < L.e ? *L.p : '\0';
 }
 
 // Record a generic parse error, preserving any more specific error already set.
-void gql_flag_parse_err()
+static void gql_flag_parse_err()
 {
     if (s_gql.err == PC_GQL_OK)
     {
@@ -125,11 +125,11 @@ void gql_flag_parse_err()
     }
 }
 
-proto_bool is_name_start(char c)
+static proto_bool is_name_start(char c)
 {
     return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || c == '_';
 }
-proto_bool is_name(char c)
+static proto_bool is_name(char c)
 {
     return is_name_start(c) || (c >= '0' && c <= '9');
 }
@@ -139,7 +139,7 @@ proto_bool is_name(char c)
 // "true"/"false"/"null", and bounding solely by the global maximum let a longer bareword in an
 // argument position - e.g. `{ f(a: LONGENUMVALUE) }`, straight from untrusted query text - write
 // past the end of it. Names still cannot exceed PC_GQL_NAME_MAX; whichever limit is tighter wins.
-proto_bool parse_name(Lex &L, char *out, size_t cap)
+static proto_bool parse_name(Lex &L, char *out, size_t cap)
 {
     skipws(L);
     if (L.p >= L.e || !is_name_start(*L.p))
@@ -165,7 +165,7 @@ proto_bool parse_name(Lex &L, char *out, size_t cap)
 }
 
 // Copy a decoded string into the strbuf pool; returns pointer or nullptr.
-const char *intern(const char *s, int len)
+static const char *intern(const char *s, int len)
 {
     if (s_gql.str_len + len + 1 > PC_GQL_STRBUF)
     {
@@ -179,7 +179,7 @@ const char *intern(const char *s, int len)
     return dst;
 }
 
-proto_bool parse_value(Lex &L, pc_gql_value *v)
+static proto_bool parse_value(Lex &L, pc_gql_value *v)
 {
     char c = peek(L);
     if (c == '"')
@@ -342,9 +342,9 @@ proto_bool parse_value(Lex &L, pc_gql_value *v)
     return PROTO_FALSE;
 }
 
-int parse_selection(Lex &L, int depth);
+static int parse_selection(Lex &L, int depth);
 
-int parse_field(Lex &L, int depth)
+static int parse_field(Lex &L, int depth)
 {
     int idx = new_node();
     if (idx < 0)
@@ -445,7 +445,7 @@ int parse_selection(Lex &L, int depth)
     return first;
 }
 
-proto_bool parse_document(Lex &L)
+static proto_bool parse_document(Lex &L)
 {
     char c = peek(L);
     if (c != '{')
@@ -487,7 +487,7 @@ typedef struct
     size_t n;
     proto_bool ovf;
 } Writer;
-void w_raw(Writer &w, const char *s, size_t len)
+static void w_raw(Writer &w, const char *s, size_t len)
 {
     if (w.ovf)
     {
@@ -501,11 +501,11 @@ void w_raw(Writer &w, const char *s, size_t len)
     memcpy(w.o + w.n, s, len);
     w.n += len;
 }
-void w_str(Writer &w, const char *s)
+static void w_str(Writer &w, const char *s)
 {
     w_raw(w, s, strnlen(s, w.cap + 1));
 }
-void w_json_str(Writer &w, const char *s)
+static void w_json_str(Writer &w, const char *s)
 {
     w_raw(w, "\"", 1);
     for (const char *p = s; *p; p++)
@@ -550,7 +550,7 @@ void w_json_str(Writer &w, const char *s)
     }
     w_raw(w, "\"", 1);
 }
-void w_scalar(Writer &w, const pc_gql_value *v)
+static void w_scalar(Writer &w, const pc_gql_value *v)
 {
     char b[40];
     switch (v->type)
@@ -587,7 +587,7 @@ void w_scalar(Writer &w, const pc_gql_value *v)
     }
 }
 
-void emit_field(Writer &w, int idx, int path_len)
+static void emit_field(Writer &w, int idx, int path_len)
 {
     Node *node = &s_gql.nodes[idx];
 

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file ntp_service.cpp
+ * @file ntp_service.c
  * @brief SNTP wall-clock time sync implementation (PC_ENABLE_NTP).
  */
 
@@ -20,16 +20,17 @@ proto_bool pc_ntp_begin(const char *tz, const char *server1, const char *server2
 {
     // configTzTime applies the POSIX TZ and starts the SNTP client (async). NULL means the
     // documented default, so a caller with no opinion does not restate the string.
-    configTzTime(tz ? tz : "UTC0", server1 ? server1 : PC_NTP_SERVER1, server2 ? server2 : PC_NTP_SERVER2);
+    configTzTime(tz != NULL ? tz : "UTC0", server1 != NULL ? server1 : PC_NTP_SERVER1,
+                 server2 != NULL ? server2 : PC_NTP_SERVER2);
     return PROTO_TRUE;
 }
 
-proto_bool pc_ntp_synced()
+proto_bool pc_ntp_synced(void)
 {
     return time(NULL) > PC_NTP_PLAUSIBLE_EPOCH;
 }
 
-time_t pc_ntp_epoch()
+time_t pc_ntp_epoch(void)
 {
     time_t now = time(NULL);
     return (now > PC_NTP_PLAUSIBLE_EPOCH) ? now : 0;
@@ -48,9 +49,9 @@ size_t pc_ntp_http_date(char *out, size_t out_cap)
 // wall-clock epoch, so it is one named owner, unreachable from any other translation unit.
 typedef struct
 {
-    time_t host_test_epoch = 0;
+    time_t host_test_epoch;
 } NtpSvcCtx;
-static NtpSvcCtx s_ntp_svc;
+static NtpSvcCtx s_ntp_svc = {0};
 void pc_ntp_set_test_epoch(time_t epoch)
 {
     s_ntp_svc.host_test_epoch = epoch;
@@ -63,11 +64,11 @@ proto_bool pc_ntp_begin(const char *tz, const char *server1, const char *server2
     (void)server2;
     return PROTO_FALSE;
 }
-proto_bool pc_ntp_synced()
+proto_bool pc_ntp_synced(void)
 {
     return s_ntp_svc.host_test_epoch != 0;
 }
-time_t pc_ntp_epoch()
+time_t pc_ntp_epoch(void)
 {
     return s_ntp_svc.host_test_epoch;
 }

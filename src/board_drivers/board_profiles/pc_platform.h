@@ -275,6 +275,16 @@ PC_INLINE uint32_t pc_platform_uart_available(uint8_t unit)
 int pc_platform_spi_begin(int mosi, int miso, int sclk);
 int pc_platform_spi_txn(uint32_t hz, uint8_t bit_order, uint8_t mode, const uint8_t *tx, uint8_t *rx, uint32_t len);
 
+// I2C, on the same terms: install the port once on the caller's pins, then address a device on it.
+// Each call carries its own timeout in milliseconds, so a wedged device stops one transfer rather
+// than the loop (SRC_LAW rule 5). write_read is one transaction with a repeated start, which is
+// what a register read is: name the register, then turn the bus around without releasing it.
+// A byte count of 0 or a null buffer is refused rather than issued as an address-only cycle.
+int pc_platform_i2c_begin(int sda, int scl, uint32_t hz);
+int pc_platform_i2c_write(uint8_t addr, const uint8_t *buf, uint32_t len, uint32_t ms);
+int pc_platform_i2c_read(uint8_t addr, uint8_t *buf, uint32_t len, uint32_t ms);
+int pc_platform_i2c_write_read(uint8_t addr, const uint8_t *w, uint32_t wlen, uint8_t *r, uint32_t rlen, uint32_t ms);
+
 // Entropy. The ESP32 RNG is a true hardware source: it samples thermal / RF analog noise rather
 // than running a deterministic generator, so this is the one the key material is drawn from.
 // esp_random() is the IDF entry point Arduino random() is built over.

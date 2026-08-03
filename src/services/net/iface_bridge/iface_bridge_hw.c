@@ -42,9 +42,9 @@ typedef struct
     proto_bool registered; ///< the PROTO_BRIDGE handler is installed
     proto_bool spi_begun;  ///< SPI.begin() has run (once, shared bus)
 } BridgeGlueCtx;
-BridgeGlueCtx s_ctx;
+static BridgeGlueCtx s_ctx;
 
-const BridgeRule *rule_for_slot(uint8_t slot)
+static const BridgeRule *rule_for_slot(uint8_t slot)
 {
     uint8_t lid = pc_conn_listener_id(slot);
     for (int i = 0; i < PC_BRIDGE_MAX_RULES; i++)
@@ -65,7 +65,7 @@ const BridgeRule *rule_for_slot(uint8_t slot)
 
 // unit -> the matching HardwareSerial, or nullptr if this SoC has no such UART. SOC_UART_NUM mirrors the
 // core's own guards on Serial1 / Serial2 (an S3 has fewer UARTs than a classic ESP32).
-HardwareSerial *uart_for(uint8_t unit)
+static HardwareSerial *uart_for(uint8_t unit)
 {
     switch (unit)
     {
@@ -93,7 +93,7 @@ HardwareSerial *uart_for(uint8_t unit)
 
 // Bring the target's bus up once at publish. UART begins at its baud; SPI drives the CS gpio high (idle)
 // and starts the shared SPI bus once; I2C uses the shared bus owner.
-void bus_begin(const BridgeTarget *t)
+static void bus_begin(const BridgeTarget *t)
 {
     switch (t->bus)
     {
@@ -122,7 +122,7 @@ void bus_begin(const BridgeTarget *t)
 
 // One write-then-read transaction against the target's bus. Clocks @p wlen bytes out, reads @p rlen bytes
 // back into @p rbuf (short reads are zero-padded). Returns false only on a bus-level failure.
-proto_bool bus_txn(const BridgeTarget *t, const uint8_t *wbuf, uint16_t wlen, uint8_t *rbuf, uint16_t rlen)
+static proto_bool bus_txn(const BridgeTarget *t, const uint8_t *wbuf, uint16_t wlen, uint8_t *rbuf, uint16_t rlen)
 {
     switch (t->bus)
     {
@@ -194,7 +194,7 @@ proto_bool bus_txn(const BridgeTarget *t, const uint8_t *wbuf, uint16_t wlen, ui
 }
 
 // STREAM: pipe socket RX -> UART (called from on_data).
-void stream_sock_to_uart(uint8_t slot, const BridgeTarget *t)
+static void stream_sock_to_uart(uint8_t slot, const BridgeTarget *t)
 {
     HardwareSerial *s = uart_for(t->unit);
     if (!s)
@@ -210,7 +210,7 @@ void stream_sock_to_uart(uint8_t slot, const BridgeTarget *t)
 }
 
 // STREAM: pipe UART RX -> socket (called from on_poll).
-void stream_uart_to_sock(uint8_t slot, const BridgeTarget *t)
+static void stream_uart_to_sock(uint8_t slot, const BridgeTarget *t)
 {
     HardwareSerial *s = uart_for(t->unit);
     if (!s)
@@ -253,7 +253,7 @@ void stream_uart_to_sock(uint8_t, const BridgeTarget *)
 // TRANSACTION: drain complete write-then-read frames out of the slot's RX ring, run each against the bus,
 // and send the read bytes back. Peeks a whole frame into a linear scratch so the pure codec stays the one
 // owner of the frame format; consumes only once a frame is fully buffered (partial frames wait for more).
-void service_txn(uint8_t slot, const BridgeTarget *t)
+static void service_txn(uint8_t slot, const BridgeTarget *t)
 {
     uint8_t frame[PC_BRIDGE_TXN_HDR + PC_BRIDGE_TXN_MAX];
     uint8_t rbuf[PC_BRIDGE_TXN_MAX];
@@ -304,7 +304,7 @@ void service_txn(uint8_t slot, const BridgeTarget *t)
 // PROTO_BRIDGE connection handler.
 // ---------------------------------------------------------------------------------------------
 
-void bridge_on_accept(uint8_t slot)
+static void bridge_on_accept(uint8_t slot)
 {
     if (!rule_for_slot(slot))
     {
@@ -312,7 +312,7 @@ void bridge_on_accept(uint8_t slot)
     }
 }
 
-void bridge_on_data(uint8_t slot)
+static void bridge_on_data(uint8_t slot)
 {
     const BridgeRule *r = rule_for_slot(slot);
     if (!r)
@@ -330,7 +330,7 @@ void bridge_on_data(uint8_t slot)
     }
 }
 
-void bridge_on_poll(uint8_t slot)
+static void bridge_on_poll(uint8_t slot)
 {
     if (!pc_conn_active(slot))
     {
@@ -344,13 +344,13 @@ void bridge_on_poll(uint8_t slot)
     stream_uart_to_sock(slot, &r->target);
 }
 
-void bridge_on_close(uint8_t)
+static void bridge_on_close(uint8_t)
 {
     // Per-connection is stateless (the rule is re-derived from the listener id each callback), so there is
     // nothing to free; the transport owns the closing slot.
 }
 
-const ProtoHandler s_bridge_handler = {bridge_on_accept, bridge_on_data, bridge_on_close, bridge_on_poll};
+static const ProtoHandler s_bridge_handler = {bridge_on_accept, bridge_on_data, bridge_on_close, bridge_on_poll};
 
 proto_bool pc_iface_bridge_publish(uint8_t listener_id, uint16_t port, BridgeProto proto, const BridgeTarget *target)
 {

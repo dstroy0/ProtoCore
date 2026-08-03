@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file mdns_service.cpp
+ * @file mdns_service.c
  * @brief mDNS / DNS-SD advertisement implementation (PC_ENABLE_MDNS).
  *
  * Uses the ESP-IDF `mdns` component directly (not the Arduino ESPmDNS wrapper)
@@ -17,7 +17,7 @@
 
 proto_bool pc_mdns_begin(const char *hostname, uint16_t http_port)
 {
-    if (!hostname || hostname[0] == '\0')
+    if (hostname == NULL || hostname[0] == '\0')
     {
         return PROTO_FALSE;
     }
@@ -36,7 +36,7 @@ proto_bool pc_mdns_begin(const char *hostname, uint16_t http_port)
 
 proto_bool pc_mdns_txt(const char *key, const char *value)
 {
-    if (!key || !value)
+    if (key == NULL || value == NULL)
     {
         return PROTO_FALSE;
     }
@@ -46,7 +46,7 @@ proto_bool pc_mdns_txt(const char *key, const char *value)
 
 proto_bool pc_mdns_add_service(const char *service_type, const char *proto, uint16_t port)
 {
-    if (!service_type || !proto)
+    if (service_type == NULL || proto == NULL)
     {
         return PROTO_FALSE;
     }
@@ -56,11 +56,30 @@ proto_bool pc_mdns_add_service(const char *service_type, const char *proto, uint
 
 #else
 
+// The header declares all three whenever PC_ENABLE_MDNS is set, so all three are defined here.
+// mdns_adaptive and the mDNS examples call pc_mdns_txt and pc_mdns_add_service, which a build with
+// the flag on and no responder resolves to these.
+
 proto_bool pc_mdns_begin(const char *hostname, uint16_t http_port)
 {
     (void)hostname;
     (void)http_port;
     return PROTO_FALSE; // mDNS disabled at compile time (or non-Arduino build)
+}
+
+proto_bool pc_mdns_txt(const char *key, const char *value)
+{
+    (void)key;
+    (void)value;
+    return PROTO_FALSE;
+}
+
+proto_bool pc_mdns_add_service(const char *service_type, const char *proto, uint16_t port)
+{
+    (void)service_type;
+    (void)proto;
+    (void)port;
+    return PROTO_FALSE;
 }
 
 #endif // PC_ENABLE_MDNS && PROTOCORE_HOT

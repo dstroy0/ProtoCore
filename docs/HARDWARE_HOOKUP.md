@@ -863,10 +863,16 @@ I2C breakout's SDA to 21 and SCL to 22 (they all share the pair), give each `3V3
 already include the small pull-up resistors I2C needs. If two boards share an address
 (the PCA9685 and INA219 both default to 0x40), change one with its address solder pads.
 
-All the I2C drivers bring the bus up through one shared helper (`pc_i2c_begin()` in
-`services/i2c.h`), so there is a single place to move the pins:
+All the I2C drivers bring the bus up and address it through one shared owner
+(`services/peripherals/i2c.h`), so there is a single place to move the pins:
 **`PC_I2C_SDA_PIN` / `PC_I2C_SCL_PIN`** (default `-1` = the platform default 21 /
 22). Set both to free GPIOs to relocate the whole bus.
+
+Two more knobs live with them. **`PC_I2C_HZ`** (default `100000`) is the bus clock;
+100 kHz standard mode is what every driver here is rated for, and a device that
+supports 400 kHz fast mode will take it if the wiring is short and well pulled up.
+**`PC_I2C_TIMEOUT_MS`** (default `50`) bounds one transfer, so a device that stops
+clocking stalls that read instead of the main loop.
 
 > **Running alongside wired Ethernet.** Only the **classic ESP32 (WROOM/WROVER)** and
 > the **ESP32-P4** have the built-in RMII Ethernet MAC that a **LAN8720** PHY needs;

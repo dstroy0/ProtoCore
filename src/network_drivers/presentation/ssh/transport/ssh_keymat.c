@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file ssh_keymat.cpp
+ * @file ssh_keymat.c
  * @brief BSS definitions for SSH session key and DH state pools.
  *
  * Declared extern in ssh_keymat.h; defined here as separate linker symbols

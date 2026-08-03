@@ -32,7 +32,7 @@ const char *pc_radio_ps_name(uint8_t mode)
 #if PROTOCORE_HOT
 
 // Service vocabulary -> L1 vocabulary. Both are ours; neither is the vendor's.
-pc_phy_ps to_phy_ps(uint8_t mode)
+static pc_phy_ps to_phy_ps(uint8_t mode)
 {
     if (mode == pc_radio_ps::PC_PS_MIN_MODEM)
     {
