@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file multipart.cpp
+ * @file multipart.c
  * @brief In-place multipart/form-data parser implementation.
  */
 
@@ -29,7 +29,7 @@ static char *mem_find(char *hay, size_t hlen, const char *needle, size_t nlen)
 
 // Extract parameter value: search for `key="<value>"` inside `src`.
 // If found, null-terminates in-place and returns pointer to the value.
-// Returns nullptr if not found.
+// Returns NULL if not found.
 static char *extract_quoted_param(char *src, const char *key)
 {
     char *p = strstr(src, key);
