@@ -255,7 +255,7 @@ layer built first, then the store codecs on top. Substrate before stores.
       win: `snprintf("%x")` on the per-chunk size line cost ~4.0 us/chunk on-device, replaced by a
       hand-written `pc_hex_u32` (`shared_primitives/hex.h`) for an **~18x** framing speedup (v7.173.0), and
       the **SSH KEX handshake wall-clock** (`docs/FEATURE_PERFORMANCE.md` "SSH KEX handshake wall-clock":
-      a guarded `PC_SSH_KEX_BENCH` probe in `ssh_transport.cpp` + `performance_benching/ssh/ssh_kex_time.py` driving a live
+      a guarded `PC_SSH_KEX_BENCH` probe in `ssh_transport.c` + `performance_benching/ssh/ssh_kex_time.py` driving a live
       OpenSSH client, HW-measured on the S3) - **67.9 ms of device compute per `curve25519-sha256` KEX**
       (2 X25519 + one comb ed25519 sign; ~97% crypto, ~2.3 ms machinery), a ~93 ms client-observed floor;
       the measurement also reconciled the section's stale pre-comb "~0.13 s"/85.6 ms-sign figures. The

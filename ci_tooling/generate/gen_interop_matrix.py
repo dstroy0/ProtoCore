@@ -12,7 +12,7 @@ Counted from:
   interop peers  test/servers/peers/*_peer.py
   benches        performance_benching/**/platformio.ini  (one per benchable unit)
   attacks        @attack(...) decorators in penetration_testing/pc_pentest.py
-  fuzz           RUN_TEST count in test/test_pentest/test_pentest.cpp
+  fuzz           RUN_TEST count in test/test_pentest/test_pentest.c
   services       src/services/<group>/<module>/
 
 Usage:  python ci_tooling/generate/gen_interop_matrix.py [--check]
@@ -54,7 +54,7 @@ def main() -> int:
         attacks = len(re.findall(
             r"^@attack\(", open(pentest, encoding="utf-8", errors="replace").read(), re.M))
 
-    fuzzer = os.path.join(ROOT, "test/test_pentest/test_pentest.cpp")
+    fuzzer = os.path.join(ROOT, "test/test_pentest/test_pentest.c")
     fuzz = 0
     if os.path.exists(fuzzer):
         fuzz = len(re.findall(

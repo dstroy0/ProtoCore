@@ -3733,7 +3733,7 @@
 "native_ssh_pqc",
 "native_swar"
 ],
-"src/network_drivers/presentation/ssh/transport/ssh_transport.cpp": [
+"src/network_drivers/presentation/ssh/transport/ssh_transport.c": [
 "native_ssh",
 "native_ssh_conn",
 "native_ssh_hardened",

@@ -206,6 +206,23 @@ static inline proto_bool lfsm_write_text(const char *path, const char *text)
     return lfsm_write_file(path, text, strlen(text));
 }
 
+// littlefs keeps no clock, so a timestamp is an attribute the app writes beside the record and
+// reads back through stat. That is the device's own arrangement, not a fixture: the same setattr
+// the firmware calls after a write is the one a test calls to date a file.
+#define LFSM_ATTR_MTIME 'm'
+
+/** @brief Set a file's modification time. */
+static inline proto_bool lfsm_set_mtime(const char *path, uint32_t secs)
+{
+    return lfs_setattr(&g_lfsm.lfs, path, LFSM_ATTR_MTIME, &secs, sizeof secs) == 0 ? PROTO_TRUE : PROTO_FALSE;
+}
+
+/** @brief Write a whole file and date it in one call. */
+static inline proto_bool lfsm_write_text_at(const char *path, const char *text, uint32_t secs)
+{
+    return lfsm_write_text(path, text) && lfsm_set_mtime(path, secs);
+}
+
 static inline proto_bool lfsm_mkdir(const char *path)
 {
     lfsm_mkdir_parents(path);
@@ -468,7 +485,9 @@ static inline proto_bool lfsm_stat(const char *path, pc_mnt_stat *out)
     }
     out->is_dir = (info.type == LFS_TYPE_DIR) ? PROTO_TRUE : PROTO_FALSE;
     out->size = (info.type == LFS_TYPE_DIR) ? 0u : info.size;
-    out->mtime = 0; // littlefs keeps no clock of its own; a timestamp is an attribute the app sets
+    uint32_t secs = 0; // absent attribute reads back as no clock, which is 0
+    out->mtime =
+        (lfs_getattr(&g_lfsm.lfs, path, LFSM_ATTR_MTIME, &secs, sizeof secs) == (lfs_ssize_t)sizeof secs) ? secs : 0;
     return PROTO_TRUE;
 }
 

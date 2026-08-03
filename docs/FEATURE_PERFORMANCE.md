@@ -511,7 +511,7 @@ The per-op table above is the crypto cost; this is the **whole `curve25519-sha25
 to end** - the one-time connection-setup latency a client actually waits through. Two numbers matter: the
 **device compute** (deterministic, the viability figure) and the **client-observed wall-clock** (device +
 network). Device spans come from a guarded probe (`PC_SSH_KEX_BENCH`) that brackets the two halves of the KEX
-in [`ssh_transport.cpp`](../src/network_drivers/presentation/ssh/transport/ssh_transport.cpp) with
+in [`ssh_transport.c`](../src/network_drivers/presentation/ssh/transport/ssh_transport.c) with
 `esp_timer_get_time()`: `ssh_kex_generate` (the ephemeral X25519 base multiply, done while handling the client
 KEXINIT) and `ssh_kexdh_handle` (the reply: shared-secret X25519 + the `ssh-ed25519` signature over the
 exchange hash + the SHA-256 exchange hash + the six-key KDF + reply assembly). The rig prints them; a real

@@ -3,7 +3,7 @@
   "src/board_drivers/physical/esp/physical_esp.c|s_phy_monitor#1",
   "src/network_drivers/presentation/http/http3/quic_server.c|s_qpool#1",
   "src/network_drivers/presentation/http/http3/quic_server.c|s_quic#1",
-  "src/network_drivers/presentation/ssh/transport/ssh_transport.cpp|pc_ssh_kex_bench#1",
+  "src/network_drivers/presentation/ssh/transport/ssh_transport.c|pc_ssh_kex_bench#1",
   "src/network_drivers/presentation/ssh/transport/ssh_transport.h|pc_ssh_kex_bench#1",
   "src/network_drivers/session/worker.c|s_defer#1",
   "src/network_drivers/session/worker.c|s_defer_store#1",

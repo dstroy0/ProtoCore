@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Exact CycloneSSH v2.6.4 client KEXINIT + KEX_ECDH_INIT payloads (SSH framing stripped) captured on the
 // wire against our ESP32-P4 SSH server. Regression fixture for the RFC 4253 §7.1 client-preference fix -
-// see test_cyclonessh_kex_repro in test_ssh_transport.cpp.
+// see test_cyclonessh_kex_repro in test_ssh_transport.c.
 #ifndef PC_TEST_CYCLONE_KEX_BYTES_H
 #define PC_TEST_CYCLONE_KEX_BYTES_H
 static const unsigned char CYCLONE_KEXINIT[588] = {

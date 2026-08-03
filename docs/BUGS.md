@@ -467,7 +467,7 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
   a 32-byte curve25519 `KEX_ECDH_INIT`, and got a TCP RST with no `KEX_ECDH_REPLY`. Captured on the wire and
   reproduced deterministically by feeding the exact KEXINIT + init bytes through `ssh_kexinit_parse` →
   `ssh_kex_generate` → `ssh_kexdh_handle` in a host test (`ssh_kexdh_handle` returned -1).
-- **Root cause:** `negotiate_alg` (ssh_transport.cpp) iterated the SERVER's candidate list and picked the first
+- **Root cause:** `negotiate_alg` (ssh_transport.c) iterated the SERVER's candidate list and picked the first
   name the client also offered - **server preference**. RFC 4253 §7.1 mandates **client preference**: "iterate
   over the client's algorithms ... choose the first the server also supports." When the server holds an RSA
   host key, its `prefer_rsa` ordering ranks ecdh-sha2-nistp256 + rsa-sha2-512 above curve25519 + ssh-ed25519,
@@ -551,7 +551,7 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
     - the last entry `rsa-sha2-256` cut to `rs`. `rsa-sha2-512` (one earlier) still worked, which is what made
       it look key-specific rather than a buffer overrun.
 - **Root cause:** `ssh_kexinit_build()` assembled the host-key name-list into a **48-byte** stack buffer
-  (`ssh_transport.cpp` `char hklist[48]`). The full four-algorithm list
+  (`ssh_transport.c` `char hklist[48]`). The full four-algorithm list
   `ssh-ed25519,ecdsa-sha2-nistp256,rsa-sha2-512,rsa-sha2-256` is **57 chars + NUL = 58 bytes**, so the
   bounded `snprintf` in `build_hostkey_list()` stopped after `...rsa-sha2-512,rs`. It only bites when all
   three key types are held at once - the SSH example loads just RSA and the pentest rig just ed25519, so the

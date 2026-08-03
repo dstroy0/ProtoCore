@@ -52,7 +52,7 @@ SHARED_SUBSTRATE = {
     "ssh_keys",  # ssh_keymat.cpp   - per-conn key material
     "ssh_dh",  # ssh_keymat.cpp   - per-conn DH state
     "ssh_pkt",  # ssh_packet_state.cpp - per-conn packet state
-    "ssh_sess",  # ssh_transport.cpp- per-conn session state
+    "ssh_sess",  # ssh_transport.c- per-conn session state
     "ssh_host_pubkey",  # ssh_rsa.cpp      - the loaded RSA host public key
     "crypto_work",  # ssh_bignum.cpp   - shared SSH bignum scratch
     "pc_ap_ip",  # tcp.cpp    - the softAP IP (extern)

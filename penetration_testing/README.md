@@ -278,5 +278,5 @@ are all available to it.
 
 - [docs/PENTEST.md](../docs/PENTEST.md) - the full pentesting guide, including the
   host-side parser fuzzer (`env:native_pentest`) and sanitizer runs.
-- [test/test_pentest/test_pentest.cpp](../test/test_pentest/test_pentest.cpp) - the
+- [test/test_pentest/test_pentest.c](../test/test_pentest/test_pentest.c) - the
   off-device fuzz harness this tool complements.

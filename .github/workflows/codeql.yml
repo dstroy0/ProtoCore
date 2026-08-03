@@ -1,6 +1,10 @@
 name: CodeQL
 
-# Static analysis of the C/C++ sources with CodeQL. Uses the "advanced" setup
+# Static analysis of the C sources with CodeQL. c-cpp is the one extractor CodeQL has for
+# both languages (the CLI still spells it `cpp`); what it records is whatever the traced
+# compiler did, so a tree of .c files is extracted as C.
+#
+# Uses the "advanced" setup
 # (not GitHub default setup) because the database must be built by tracing a real
 # compile - here a host/native PlatformIO build of the security-critical cores
 # (HTTP parser, WebSocket, multipart, base64/JSON, SSH crypto, SNMP, the codecs).
@@ -27,7 +31,7 @@ concurrency:
 
 jobs:
   analyze:
-    name: Analyze (cpp)
+    name: Analyze (c-cpp)
     runs-on: ubuntu-latest
     permissions:
       security-events: write # upload SARIF / publish the CodeQL check
@@ -48,7 +52,7 @@ jobs:
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4.37.4
         with:
-          languages: cpp
+          languages: c-cpp
           queries: security-and-quality
           config-file: ./.github/codeql/codeql-config.yml
 
@@ -68,4 +72,4 @@ jobs:
       - name: Perform CodeQL analysis
         uses: github/codeql-action/analyze@v4.37.4
         with:
-          category: "/language:cpp"
+          category: "/language:c-cpp"

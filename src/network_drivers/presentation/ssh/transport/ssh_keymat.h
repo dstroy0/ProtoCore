@@ -103,13 +103,9 @@
 #include "protocore_config.h"
 #include <string.h>
 
-// These two intentionally stay anonymous *plain* enums - not enum class, not a namespacing struct.
-// The KEX negotiator templates AlgCand<E> / negotiate_alg<E> on decltype(SSH_CIPHER_AES256CTR), so it
-// needs a distinct type per family (cipher vs MAC) for type-safe candidate lists; yet the negotiated
-// value also flows through many uint8_t params/fields (ssh_dh_derive_keys_sid, ssh_mac_is_etm,
-// ssh_mac_len, cipher_alg / mac_mode). A plain enum uniquely gives BOTH - a distinct decltype type and
-// an implicit uint8_t conversion - so it is cast-free. enum class would force a cast at every uint8_t
-// boundary; a struct of static constexpr would collapse decltype to uint8_t and lose the distinction.
+// These two are anonymous enums: the constants are what the code names, and the negotiated value
+// travels as a uint8_t through ssh_dh_derive_keys_sid, ssh_mac_is_etm, ssh_mac_len, and the
+// cipher_alg / mac_mode session fields.
 
 /** @brief Negotiated bulk cipher for a session. */
 enum

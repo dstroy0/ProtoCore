@@ -9,24 +9,45 @@
 
 #include "network_drivers/presentation/http/http3/qpack.h"
 #include <string.h>
-#include <string>
 #include <unity.h>
-#include <utility>
-#include <vector>
 
-struct Sink
+// Fixed collection of the emitted field lines: the decoder hands each field back as a pointer +
+// length, so each one is copied into its own bounded slot and NUL-terminated.
+#define COLLECT_MAX 8
+#define COLLECT_LEN 128
+typedef struct
 {
-    std::vector<std::pair<string, string>> hdrs;
-};
+    char name[COLLECT_LEN];
+    char value[COLLECT_LEN];
+} CollectedField;
+typedef struct
+{
+    CollectedField f[COLLECT_MAX];
+    size_t n;
+} Sink;
 
-static proto_bool fail_emit(void *, const char *, size_t, const char *, size_t)
+static proto_bool fail_emit(void *ctx, const char *n, size_t nl, const char *v, size_t vl)
 {
+    (void)ctx;
+    (void)n;
+    (void)nl;
+    (void)v;
+    (void)vl;
     return PROTO_FALSE;
 }
 
 static proto_bool sink_emit(void *ctx, const char *n, size_t nl, const char *v, size_t vl)
 {
-    ((Sink *)ctx)->hdrs.push_back({string(n, nl), string(v, vl)});
+    Sink *s = (Sink *)ctx;
+    if (s->n >= COLLECT_MAX || nl >= COLLECT_LEN || vl >= COLLECT_LEN)
+    {
+        return PROTO_FALSE;
+    }
+    memcpy(s->f[s->n].name, n, nl);
+    s->f[s->n].name[nl] = 0;
+    memcpy(s->f[s->n].value, v, vl);
+    s->f[s->n].value[vl] = 0;
+    s->n++;
     return PROTO_TRUE;
 }
 
@@ -36,40 +57,40 @@ static proto_bool decode_all(const uint8_t *block, size_t len, Sink *s)
     return pc_qpack_decode(block, len, scratch, sizeof scratch, sink_emit, s);
 }
 
-void setUp()
+void setUp(void)
 {
 }
-void tearDown()
+void tearDown(void)
 {
 }
 
 // RFC 9204 Appendix B.1: 0000 51 0b /index.html -> :path=/index.html (static name index 1).
-void test_appendix_b1_decode()
+void test_appendix_b1_decode(void)
 {
     const uint8_t block[] = {0x00, 0x00, 0x51, 0x0b, '/', 'i', 'n', 'd', 'e', 'x', '.', 'h', 't', 'm', 'l'};
-    Sink s;
+    Sink s = {0};
     TEST_ASSERT_TRUE(decode_all(block, sizeof block, &s));
-    TEST_ASSERT_EQUAL_UINT(1, (unsigned)s.hdrs.size());
-    TEST_ASSERT_EQUAL_STRING(":path", s.hdrs[0].first.c_str());
-    TEST_ASSERT_EQUAL_STRING("/index.html", s.hdrs[0].second.c_str());
+    TEST_ASSERT_EQUAL_UINT(1, (unsigned)s.n);
+    TEST_ASSERT_EQUAL_STRING(":path", s.f[0].name);
+    TEST_ASSERT_EQUAL_STRING("/index.html", s.f[0].value);
 }
 
 // Full static match -> Indexed Field Line. :status=200 is static index 25 -> 0xC0|25 = 0xD9.
-void test_encode_indexed()
+void test_encode_indexed(void)
 {
     uint8_t out[8];
     size_t n = pc_qpack_encode_header(out, sizeof out, ":status", 7, "200", 3);
     TEST_ASSERT_EQUAL_INT(1, (int)n);
     TEST_ASSERT_EQUAL_HEX8(0xD9, out[0]);
-    Sink s;
+    Sink s = {0};
     const uint8_t block[3] = {0x00, 0x00, out[0]};
     TEST_ASSERT_TRUE(decode_all(block, 3, &s));
-    TEST_ASSERT_EQUAL_STRING(":status", s.hdrs[0].first.c_str());
-    TEST_ASSERT_EQUAL_STRING("200", s.hdrs[0].second.c_str());
+    TEST_ASSERT_EQUAL_STRING(":status", s.f[0].name);
+    TEST_ASSERT_EQUAL_STRING("200", s.f[0].value);
 }
 
 // Name-only static match -> Literal Field Line with Name Reference (static index 1 = :path -> 0x51).
-void test_encode_nameref_roundtrip()
+void test_encode_nameref_roundtrip(void)
 {
     uint8_t out[32];
     size_t n = pc_qpack_encode_header(out, sizeof out, ":path", 5, "/index.html", 11);
@@ -78,14 +99,14 @@ void test_encode_nameref_roundtrip()
 
     uint8_t block[34] = {0x00, 0x00};
     memcpy(block + 2, out, n);
-    Sink s;
+    Sink s = {0};
     TEST_ASSERT_TRUE(decode_all(block, n + 2, &s));
-    TEST_ASSERT_EQUAL_STRING(":path", s.hdrs[0].first.c_str());
-    TEST_ASSERT_EQUAL_STRING("/index.html", s.hdrs[0].second.c_str());
+    TEST_ASSERT_EQUAL_STRING(":path", s.f[0].name);
+    TEST_ASSERT_EQUAL_STRING("/index.html", s.f[0].value);
 }
 
 // No static match -> Literal Field Line with Literal Name; plus a hand-built raw (H=0) name path.
-void test_literal_name()
+void test_literal_name(void)
 {
     uint8_t out[32];
     size_t n = pc_qpack_encode_header(out, sizeof out, "x-test", 6, "hi", 2);
@@ -93,21 +114,21 @@ void test_literal_name()
     TEST_ASSERT_EQUAL_HEX8(0x20, out[0] & 0xE0); // 001 pattern
     uint8_t block[34] = {0x00, 0x00};
     memcpy(block + 2, out, n);
-    Sink s;
+    Sink s = {0};
     TEST_ASSERT_TRUE(decode_all(block, n + 2, &s));
-    TEST_ASSERT_EQUAL_STRING("x-test", s.hdrs[0].first.c_str());
-    TEST_ASSERT_EQUAL_STRING("hi", s.hdrs[0].second.c_str());
+    TEST_ASSERT_EQUAL_STRING("x-test", s.f[0].name);
+    TEST_ASSERT_EQUAL_STRING("hi", s.f[0].value);
 
     // Hand-built raw literal name (H=0, name len 6) + raw value "hi" (H=0, len 2).
     const uint8_t raw[] = {0x00, 0x00, 0x26, 'x', '-', 't', 'e', 's', 't', 0x02, 'h', 'i'};
-    Sink s2;
+    Sink s2 = {0};
     TEST_ASSERT_TRUE(decode_all(raw, sizeof raw, &s2));
-    TEST_ASSERT_EQUAL_STRING("x-test", s2.hdrs[0].first.c_str());
-    TEST_ASSERT_EQUAL_STRING("hi", s2.hdrs[0].second.c_str());
+    TEST_ASSERT_EQUAL_STRING("x-test", s2.f[0].name);
+    TEST_ASSERT_EQUAL_STRING("hi", s2.f[0].value);
 }
 
 // A whole field section: prefix + several fields of each representation kind.
-void test_full_section()
+void test_full_section(void)
 {
     uint8_t out[128];
     size_t o = pc_qpack_encode_prefix(out, sizeof out);
@@ -117,21 +138,21 @@ void test_full_section()
     o += pc_qpack_encode_header(out + o, sizeof out - o, ":status", 7, "200", 3);       // indexed
     o += pc_qpack_encode_header(out + o, sizeof out - o, "content-type", 12, "x/y", 3); // name ref
     o += pc_qpack_encode_header(out + o, sizeof out - o, "x-test", 6, "hello", 5);      // literal name
-    Sink s;
+    Sink s = {0};
     TEST_ASSERT_TRUE(decode_all(out, o, &s));
-    TEST_ASSERT_EQUAL_UINT(3, (unsigned)s.hdrs.size());
-    TEST_ASSERT_EQUAL_STRING(":status", s.hdrs[0].first.c_str());
-    TEST_ASSERT_EQUAL_STRING("200", s.hdrs[0].second.c_str());
-    TEST_ASSERT_EQUAL_STRING("content-type", s.hdrs[1].first.c_str());
-    TEST_ASSERT_EQUAL_STRING("x/y", s.hdrs[1].second.c_str());
-    TEST_ASSERT_EQUAL_STRING("x-test", s.hdrs[2].first.c_str());
-    TEST_ASSERT_EQUAL_STRING("hello", s.hdrs[2].second.c_str());
+    TEST_ASSERT_EQUAL_UINT(3, (unsigned)s.n);
+    TEST_ASSERT_EQUAL_STRING(":status", s.f[0].name);
+    TEST_ASSERT_EQUAL_STRING("200", s.f[0].value);
+    TEST_ASSERT_EQUAL_STRING("content-type", s.f[1].name);
+    TEST_ASSERT_EQUAL_STRING("x/y", s.f[1].value);
+    TEST_ASSERT_EQUAL_STRING("x-test", s.f[2].name);
+    TEST_ASSERT_EQUAL_STRING("hello", s.f[2].value);
 }
 
 // Any dynamic-table reference or non-zero Required Insert Count is a decode error for us.
-void test_reject_dynamic()
+void test_reject_dynamic(void)
 {
-    Sink s;
+    Sink s = {0};
     const uint8_t ric_nonzero[] = {0x01, 0x00}; // Required Insert Count = 1
     TEST_ASSERT_FALSE(decode_all(ric_nonzero, 2, &s));
     const uint8_t indexed_dyn[] = {0x00, 0x00, 0x80}; // Indexed Field Line, T=0 (dynamic)
@@ -143,7 +164,7 @@ void test_reject_dynamic()
 }
 
 // Encoder overflow on each representation, and the Huffman literal-name path.
-void test_encode_edges()
+void test_encode_edges(void)
 {
     uint8_t out[64];
     TEST_ASSERT_EQUAL_INT(0, (int)pc_qpack_encode_prefix(out, 1));                         // prefix needs 2
@@ -157,16 +178,16 @@ void test_encode_edges()
     TEST_ASSERT_TRUE((out[0] & 0xE0) == 0x20 && (out[0] & 0x08)); // literal literal name, H set
     uint8_t blk[66] = {0x00, 0x00};
     memcpy(blk + 2, out, n);
-    Sink s;
+    Sink s = {0};
     TEST_ASSERT_TRUE(decode_all(blk, n + 2, &s));
-    TEST_ASSERT_EQUAL_STRING("aaaaaaaa", s.hdrs[0].first.c_str());
-    TEST_ASSERT_EQUAL_STRING("v", s.hdrs[0].second.c_str());
+    TEST_ASSERT_EQUAL_STRING("aaaaaaaa", s.f[0].name);
+    TEST_ASSERT_EQUAL_STRING("v", s.f[0].value);
 }
 
 // Decoder error paths: truncated value, out-of-range static index, scratch overflow.
-void test_decode_errors()
+void test_decode_errors(void)
 {
-    Sink s;
+    Sink s = {0};
     const uint8_t novalue[3] = {0x00, 0x00, 0x51}; // name ref, no value string
     TEST_ASSERT_FALSE(decode_all(novalue, 3, &s));
     const uint8_t badidx[4] = {0x00, 0x00, 0xFF, 0x25}; // indexed static index 100 (>= 99)
@@ -185,9 +206,9 @@ void test_decode_errors()
 }
 
 // The value-string (str7) decode paths off a name-reference: bad Huffman, truncation, overflow.
-void test_value_string_paths()
+void test_value_string_paths(void)
 {
-    Sink s;
+    Sink s = {0};
     // Value marked Huffman (0x81 = H, len 1) but 0xFF is not a valid single-byte code.
     const uint8_t bad_huff[5] = {0x00, 0x00, 0x51, 0x81, 0xFF};
     TEST_ASSERT_FALSE(decode_all(bad_huff, 5, &s));
@@ -204,13 +225,13 @@ void test_value_string_paths()
     uint8_t blk[18] = {0x00, 0x00};
     memcpy(blk + 2, enc, n);
     TEST_ASSERT_TRUE(decode_all(blk, n + 2, &s));
-    TEST_ASSERT_EQUAL_STRING("aaaaaaaa", s.hdrs[s.hdrs.size() - 1].second.c_str());
+    TEST_ASSERT_EQUAL_STRING("aaaaaaaa", s.f[s.n - 1].value);
 }
 
-void test_qpack_more_encode_decode_paths()
+void test_qpack_more_encode_decode_paths(void)
 {
     uint8_t out[64];
-    Sink s;
+    Sink s = {0};
     // A short literal name that does not Huffman-compress takes the raw memcpy path.
     size_t n = pc_qpack_encode_header(out, sizeof out, "q", 1, "v", 1);
     TEST_ASSERT_TRUE(n > 0);
@@ -255,22 +276,22 @@ void test_qpack_more_encode_decode_paths()
     }
 }
 
-void test_qpack_emit_fail_and_namelen_past()
+void test_qpack_emit_fail_and_namelen_past(void)
 {
     char sc[128];
     // Literal Field Line with Name Reference + a valid value, but the emit callback rejects it.
     const uint8_t nameref[5] = {0x00, 0x00, 0x51, 0x01, 'v'}; // :path name-ref, value "v"
     TEST_ASSERT_FALSE(pc_qpack_decode(nameref, 5, sc, sizeof sc, fail_emit, NULL));
     // Literal Field Line with Literal Name whose NameLen (6, not the 3-bit escape 7) runs past the block.
-    Sink s;
+    Sink s = {0};
     const uint8_t namelen_past[3] = {0x00, 0x00, 0x26}; // NameLen 6, no name octets follow
     TEST_ASSERT_FALSE(decode_all(namelen_past, 3, &s));
 }
 
 // Field-line integer decode failures that the || guards must catch, not just the range checks.
-void test_qpack_field_int_truncation()
+void test_qpack_field_int_truncation(void)
 {
-    Sink s;
+    Sink s = {0};
     // Indexed Field Line (T=1 static), prefix-6 integer 63 (all-ones) with no continuation byte:
     // pc_hpack_decode_int fails, so line 220's first || arm rejects it (before the idx >= 99 check).
     const uint8_t idx_trunc[3] = {0x00, 0x00, 0xFF}; // 1 1 111111 = indexed, static, prefix 63, truncated
@@ -285,7 +306,7 @@ void test_qpack_field_int_truncation()
     TEST_ASSERT_FALSE(decode_all(nameref_badidx, 4, &s));
 }
 
-int main()
+int main(void)
 {
     UNITY_BEGIN();
     RUN_TEST(test_qpack_field_int_truncation);
