@@ -671,7 +671,8 @@
         "-DPC_ENABLE_METRICS=1",
         "-DPC_ENABLE_ETAG=1",
         "-DPC_ENABLE_WEB_TERMINAL=1",
-        "-DPC_HTTP_EMIT_DATE=1"
+        "-DPC_HTTP_EMIT_DATE=1",
+        "-DPC_ENABLE_WEBSOCKET=1"
       ],
       "src": [
         "+<network_drivers/network/ip.c>",
@@ -807,7 +808,8 @@
         "-DPC_ENFORCE_HOST_HEADER=0",
         "-DPC_ENABLE_WEBDAV=1",
         "-DPC_ENABLE_FILE_SERVING=1",
-        "-DPC_ENABLE_WEB_TERMINAL=1"
+        "-DPC_ENABLE_WEB_TERMINAL=1",
+        "-DPC_ENABLE_WEBSOCKET=1"
       ],
       "src": [
         "+<network_drivers/network/ip.c>",
@@ -934,7 +936,7 @@
     },
     "native_webdav": {
       "desc": "WebDAV server core (RFC 4918): method classification, header parsing, XML\nescaping, and the 207 Multi-Status builder. Pure core - no FS/sockets - so it\nunit-tests on the host. The FS-backed handling is HW-tested on a real LittleFS.",
-      "flags": ["-DPC_ENABLE_WEBDAV=1"],
+      "flags": ["-DPC_ENABLE_WEBDAV=1", "-DPC_ENABLE_FILE_SERVING=1"],
       "src": ["+<network_drivers/application/webdav/webdav.c>"],
       "tests": ["test_webdav"]
     },
@@ -1572,7 +1574,8 @@
         "-DPC_ENABLE_DDS=1",
         "-DPC_ENABLE_WEBDAV=1",
         "-DPC_ENABLE_HTTP2=1",
-        "-DPC_ENABLE_HTTP3=1"
+        "-DPC_ENABLE_HTTP3=1",
+        "-DPC_ENABLE_FILE_SERVING=1"
       ],
       "src": [
         "+<network_drivers/network/ip.c>",
@@ -2020,13 +2023,13 @@
     },
     "native_inflate": {
       "desc": "RFC 1951 INFLATE core (the WebSocket permessage-deflate decompressor). Pure\ncodec - no sockets - so it unit-tests on the host against zlib-generated\nvectors (scratchpad/gen_vectors.py).",
-      "flags": ["-DPC_ENABLE_WS_DEFLATE=1"],
+      "flags": ["-DPC_ENABLE_WS_DEFLATE=1", "-DPC_ENABLE_WEBSOCKET=1"],
       "src": ["+<network_drivers/presentation/codec/inflate/inflate.c>"],
       "tests": ["test_inflate"]
     },
     "native_deflate": {
       "desc": "RFC 1951 DEFLATE core (the WebSocket permessage-deflate compressor). Pure codec\n- no sockets - so it unit-tests on the host by round-tripping through INFLATE\n(which test_inflate validates against zlib), proving the emitted streams are\nvalid RFC 1951.",
-      "flags": ["-DPC_ENABLE_WS_DEFLATE=1"],
+      "flags": ["-DPC_ENABLE_WS_DEFLATE=1", "-DPC_ENABLE_WEBSOCKET=1"],
       "src": [
         "+<network_drivers/presentation/codec/deflate/deflate.c>",
         "+<network_drivers/presentation/codec/inflate/inflate.c>"
@@ -2038,7 +2041,8 @@
       "flags": [
         "-DPC_ENABLE_SSH=1",
         "-DPC_ENABLE_SSH_ZLIB=1",
-        "-DPC_ENABLE_WS_DEFLATE=1"
+        "-DPC_ENABLE_WS_DEFLATE=1",
+        "-DPC_ENABLE_WEBSOCKET=1"
       ],
       "src": [
         "+<network_drivers/presentation/ssh/transport/ssh_zlib.c>",
@@ -2051,7 +2055,8 @@
       "flags": [
         "-DPC_ENABLE_SSH=1",
         "-DPC_ENABLE_SSH_ZLIB=1",
-        "-DPC_ENABLE_WS_DEFLATE=1"
+        "-DPC_ENABLE_WS_DEFLATE=1",
+        "-DPC_ENABLE_WEBSOCKET=1"
       ],
       "src": [
         "+<crypto/hash/sha256.c>",
@@ -2094,7 +2099,11 @@
     },
     "native_ws_deflate": {
       "desc": "WebSocket permessage-deflate (RFC 7692) inbound path wired through the real WS\nstack: handshake negotiation, the RSV1 frame path, and INFLATE delivery (with\nthe table scratch borrowed from the shared arena). Runs test_websocket with the\nfeature on (the deflate cases are #if-gated).",
-      "flags": ["-DPC_ENFORCE_HOST_HEADER=0", "-DPC_ENABLE_WS_DEFLATE=1"],
+      "flags": [
+        "-DPC_ENFORCE_HOST_HEADER=0",
+        "-DPC_ENABLE_WS_DEFLATE=1",
+        "-DPC_ENABLE_WEBSOCKET=1"
+      ],
       "src": [
         "+<network_drivers/network/ip.c>",
         "+<network_drivers/presentation/http/http_parser/http_parser.c>",
@@ -2181,7 +2190,7 @@
     },
     "native_dashboard": {
       "desc": "Dashboard widget-table JSON serializers (services/web/dashboard core). Pure logic;\nthe route/SSE wiring (dashboard_routes.cpp) is excluded so this tests on the\nhost without the server.",
-      "flags": ["-DPC_ENABLE_DASHBOARD=1"],
+      "flags": ["-DPC_ENABLE_DASHBOARD=1", "-DPC_ENABLE_SSE=1"],
       "src": ["+<services/web/dashboard/dashboard.c>", "+<mmgr/frame.c>"],
       "tests": ["test_dashboard"]
     },
@@ -2745,7 +2754,9 @@
         "-DPC_ENABLE_ESPNOW=1",
         "-DPC_ENABLE_OAUTH2=1",
         "-DPC_ENABLE_OPCUA=1",
-        "-DPC_ENABLE_OPCUA_CLIENT=1"
+        "-DPC_ENABLE_OPCUA_CLIENT=1",
+        "-DPC_ENABLE_WEBSOCKET=1",
+        "-DPC_ENABLE_SSE=1"
       ],
       "src": [
         "+<network_drivers/network/ip.c>",
