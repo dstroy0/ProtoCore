@@ -4194,6 +4194,7 @@
 ],
 "src/server/clock/clock.c": [
 "native_clock",
+"native_forward",
 "native_swar"
 ],
 "src/server/clock/clock.h": [
@@ -4212,6 +4213,7 @@
 "native_edge_cache_sd",
 "native_edge_mesh",
 "native_failsafe",
+"native_forward",
 "native_gpio_map",
 "native_hotswap",
 "native_http_client",
@@ -7206,6 +7208,7 @@
 ],
 "test/mocks/Arduino.h": [
 "native_clock",
+"native_forward",
 "native_ssh",
 "native_ssh_conn",
 "native_ssh_hardened",

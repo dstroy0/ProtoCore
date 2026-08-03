@@ -702,10 +702,10 @@
     "output": ".pio/build/native_swar/src/services/machine_tool/focas/focas.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/services/net/forward/forward.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/services/net/forward/forward.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_forward/src/services/net/forward/forward.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_ENABLE_FORWARD=1 -DPC_FWD_MAX_IFACES=4 -DPC_FWD_MAX_RULES=4 -DPC_FWD_MAX_ACL=4 -DPC_FWD_MAX_ROUTES=4 -DPC_FWD_INSPECT=1 -Itest/mocks -Itest/support -Isrc src/services/net/forward/forward.c",
     "directory": "@ROOT@",
     "file": "src/services/net/forward/forward.c",
-    "output": ".pio/build/native_swar/src/services/net/forward/forward.o"
+    "output": ".pio/build/native_forward/src/services/net/forward/forward.o"
   },
   {
     "command": "/usr/bin/gcc -o .pio/build/native_swar/src/services/security/forwarded_trust/forwarded_trust.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/services/security/forwarded_trust/forwarded_trust.c",
@@ -1896,10 +1896,10 @@
     "output": ".pio/build/native_swar/src/network_drivers/tls/tls.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_clock/src/server/clock/clock.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/server/clock/clock.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_forward/src/server/clock/clock.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -DPC_ENABLE_FORWARD=1 -DPC_FWD_MAX_IFACES=4 -DPC_FWD_MAX_RULES=4 -DPC_FWD_MAX_ACL=4 -DPC_FWD_MAX_ROUTES=4 -DPC_FWD_INSPECT=1 -Itest/mocks -Itest/support -Isrc src/server/clock/clock.c",
     "directory": "@ROOT@",
     "file": "src/server/clock/clock.c",
-    "output": ".pio/build/native_clock/src/server/clock/clock.o"
+    "output": ".pio/build/native_forward/src/server/clock/clock.o"
   },
   {
     "command": "/usr/bin/gcc -o .pio/build/native_swar/src/server/exc_coredump.o -c -fno-exceptions -DPLATFORMIO=60119 -DPROTOCORE_HOST=1 -Itest/mocks -Itest/support -Isrc src/server/exc_coredump.c",
