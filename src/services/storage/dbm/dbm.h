@@ -56,42 +56,42 @@ typedef struct pc_dbm
  * @brief Bind @p db to a mounted @p wal and rebuild the index by replaying the log.
  * @return false if the log holds more distinct live keys than ::PC_DBM_SLOTS (index would overflow).
  */
-proto_bool pc_dbm_open(pc_dbm *db, WalStore *wal);
+proto_bool pc_dbm_open(struct pc_dbm *db, WalStore *wal);
 
 /**
  * @brief Insert or overwrite @p key -> @p val. Appends a WAL record and updates the index (not synced).
  * @return false if @p key_len > ::PC_DBM_KEY_MAX, @p val_len > ::PC_DBM_VAL_MAX, the index is full
  * (a new key with no free slot), or the WAL is full.
  */
-proto_bool pc_dbm_put(pc_dbm *db, const char *key, uint16_t key_len, const uint8_t *val, uint32_t val_len);
+proto_bool pc_dbm_put(struct pc_dbm *db, const char *key, uint16_t key_len, const uint8_t *val, uint32_t val_len);
 
 /**
  * @brief Fetch @p key's value into @p buf (up to @p cap).
  * @return the value length on success, or -1 if the key is absent or the value is larger than @p cap.
  */
-long pc_dbm_get(pc_dbm *db, const char *key, uint16_t key_len, uint8_t *buf, size_t cap);
+long pc_dbm_get(struct pc_dbm *db, const char *key, uint16_t key_len, uint8_t *buf, size_t cap);
 
 /**
  * @brief Delete @p key (appends a tombstone record and drops it from the index).
  * @return true if the key existed (and the tombstone was appended); false if absent or the WAL is full.
  */
-proto_bool pc_dbm_del(pc_dbm *db, const char *key, uint16_t key_len);
+proto_bool pc_dbm_del(struct pc_dbm *db, const char *key, uint16_t key_len);
 
 /** @brief @return true if @p key is live. */
-proto_bool pc_dbm_contains(const pc_dbm *db, const char *key, uint16_t key_len);
+proto_bool pc_dbm_contains(const struct pc_dbm *db, const char *key, uint16_t key_len);
 
 /** @brief @return the number of live keys. */
-uint32_t pc_dbm_count(const pc_dbm *db);
+uint32_t pc_dbm_count(const struct pc_dbm *db);
 
 /** @brief Make all writes since the last sync durable (checkpoints the WAL). @return false on I/O failure. */
-proto_bool pc_dbm_sync(pc_dbm *db);
+proto_bool pc_dbm_sync(struct pc_dbm *db);
 
 /** @brief Per-key callback for ::pc_dbm_iterate; return false to stop early. The key bytes are not
  * NUL-terminated. Do not put/delete during iteration (it mutates the index). */
 typedef proto_bool (*pc_dbm_iter_cb)(const char *key, uint16_t key_len, void *ctx);
 
 /** @brief Visit every live key (unordered). @return the number of keys visited. */
-uint32_t pc_dbm_iterate(const pc_dbm *db, pc_dbm_iter_cb cb, void *ctx);
+uint32_t pc_dbm_iterate(const struct pc_dbm *db, pc_dbm_iter_cb cb, void *ctx);
 
 /**
  * @brief Bytes the live keys would occupy after a compaction (the summed framed size of one WAL record per
@@ -99,7 +99,7 @@ uint32_t pc_dbm_iterate(const pc_dbm *db, pc_dbm_iter_cb cb, void *ctx);
  * difference is reclaimable dead space from overwritten and deleted keys. Pair the two to decide when the
  * dead fraction is worth a ::pc_dbm_compact.
  */
-uint64_t pc_dbm_live_bytes(const pc_dbm *db);
+uint64_t pc_dbm_live_bytes(const struct pc_dbm *db);
 
 /**
  * @brief Compact the store: copy only the live keys (the latest value each, no tombstones) into a freshly
@@ -112,7 +112,7 @@ uint64_t pc_dbm_live_bytes(const pc_dbm *db);
  * caller can retry or keep using the old store.
  * @return true when every live key was copied, the destination checkpointed, and the index rebuilt.
  */
-proto_bool pc_dbm_compact(pc_dbm *db, WalStore *dst);
+proto_bool pc_dbm_compact(struct pc_dbm *db, WalStore *dst);
 
 #endif // PC_ENABLE_DBM
 #endif // PROTOCORE_DBM_H

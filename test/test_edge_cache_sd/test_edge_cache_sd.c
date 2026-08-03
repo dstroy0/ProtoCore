@@ -276,7 +276,7 @@ static uint32_t g_spills = 0;
 static void spill_cb(void *ctx, const EdgeEntry *v)
 {
     (void)ctx;
-    if (edge_sd_put((pc_dbm *)ctx, v, g_scratch, sizeof(g_scratch)))
+    if (edge_sd_put((struct pc_dbm *)ctx, v, g_scratch, sizeof(g_scratch)))
     {
         g_spills++;
     }

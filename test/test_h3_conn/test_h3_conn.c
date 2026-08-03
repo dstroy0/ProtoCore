@@ -41,7 +41,7 @@ static void on_request(void *, H3Conn *, uint64_t sid, const char *method, const
     g_requests++;
 }
 
-static void minimal_qc(QuicConn *qc)
+static void minimal_qc(struct QuicConn *qc)
 {
     memset(qc, 0, sizeof(*qc));
     for (int i = 0; i < 3; i++)
@@ -54,7 +54,7 @@ static void minimal_qc(QuicConn *qc)
     }
 }
 
-static QuicStream *find_stream(QuicConn *qc, uint64_t id)
+static QuicStream *find_stream(struct QuicConn *qc, uint64_t id)
 {
     for (size_t i = 0; i < PC_QUIC_MAX_STREAMS; i++)
     {

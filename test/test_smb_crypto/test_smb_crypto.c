@@ -157,7 +157,7 @@ void test_streaming_equals_oneshot()
     uint8_t one[16], strm[16];
     md5((const uint8_t *)s, n, one);
     SecureScope scope;
-    MdCtx *c = pc_md_wants(); // the owner of the opaque type supplies the storage
+    struct MdCtx *c = pc_md_wants(); // the owner of the opaque type supplies the storage
     TEST_ASSERT_NOT_NULL(c);
     pc_md5_init(c);
     pc_md5_update(c, (const uint8_t *)s, 10);
@@ -390,8 +390,7 @@ void test_smb3_derive_signing_key()
 
     // fail-closed: null pointers, and a 3.1.1 request with no preauth hash.
     TEST_ASSERT_FALSE(pc_smb3_derive_signing_key(NULL, (uint16_t)SMB2_DIALECT_0300, NULL, out));
-    TEST_ASSERT_FALSE(
-        pc_smb3_derive_signing_key(session_key, (uint16_t)SMB2_DIALECT_0300, NULL, NULL));
+    TEST_ASSERT_FALSE(pc_smb3_derive_signing_key(session_key, (uint16_t)SMB2_DIALECT_0300, NULL, NULL));
     TEST_ASSERT_FALSE(pc_smb3_derive_signing_key(session_key, (uint16_t)SMB2_DIALECT_0311, NULL, out));
 }
 

@@ -41,7 +41,7 @@
 // ---------------------------------------------------------------------------
 
 // Opaque: the definition is private to the backend under board_drivers/ that this build selected -
-// consumers know only the symbol and hold it via pc_aes128*. No vendor type is named here.
+// consumers know only the symbol and hold it via struct pc_aes128*. No vendor type is named here.
 struct pc_aes128;
 
 /**

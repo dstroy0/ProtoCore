@@ -171,23 +171,24 @@ static void gcm_tag(GcmWork *w, const uint8_t *aad, size_t aad_len, const uint8_
 // Public API (keyed)
 // ===========================================================================
 
-pc_aesgcm_key *pc_aesgcm_key_init(void *storage, const uint8_t key[PC_AESGCM_KEY_LEN])
+struct pc_aesgcm_key *pc_aesgcm_key_init(void *storage, const uint8_t key[PC_AESGCM_KEY_LEN])
 {
     GcmWork *w = (GcmWork *)(storage);
     aes256_load_key(w, key);
     gcm_key_setup(w);
-    return (pc_aesgcm_key *)(w);
+    return (struct pc_aesgcm_key *)(w);
 }
 
-void pc_aesgcm_key_wipe(pc_aesgcm_key *k)
+void pc_aesgcm_key_wipe(struct pc_aesgcm_key *k)
 {
     GcmWork *w = (GcmWork *)(k);
     aes256_free_key(w);
     pc_secure_wipe((uint8_t *)(w), sizeof(GcmWork));
 }
 
-pc_cspan pc_aesgcm_seal(pc_aesgcm_key *k, const uint8_t nonce[PC_AESGCM_IV_LEN], const uint8_t *aad, size_t aad_len,
-                        const uint8_t *pt, size_t pt_len, uint8_t *ct_out, uint8_t tag_out[PC_AESGCM_TAG_LEN])
+pc_cspan pc_aesgcm_seal(struct pc_aesgcm_key *k, const uint8_t nonce[PC_AESGCM_IV_LEN], const uint8_t *aad,
+                        size_t aad_len, const uint8_t *pt, size_t pt_len, uint8_t *ct_out,
+                        uint8_t tag_out[PC_AESGCM_TAG_LEN])
 {
     GcmWork *w = (GcmWork *)(k);
     gcm_set_nonce(w, nonce);
@@ -199,8 +200,9 @@ pc_cspan pc_aesgcm_seal(pc_aesgcm_key *k, const uint8_t nonce[PC_AESGCM_IV_LEN],
     return pc_cspan_from(ct_out, pt_len); // the tag rides in tag_out, not in this span
 }
 
-proto_bool pc_aesgcm_open(pc_aesgcm_key *k, const uint8_t nonce[PC_AESGCM_IV_LEN], const uint8_t *aad, size_t aad_len,
-                          const uint8_t *ct, size_t ct_len, const uint8_t tag[PC_AESGCM_TAG_LEN], uint8_t *out)
+proto_bool pc_aesgcm_open(struct pc_aesgcm_key *k, const uint8_t nonce[PC_AESGCM_IV_LEN], const uint8_t *aad,
+                          size_t aad_len, const uint8_t *ct, size_t ct_len, const uint8_t tag[PC_AESGCM_TAG_LEN],
+                          uint8_t *out)
 {
     GcmWork *w = (GcmWork *)(k);
     gcm_set_nonce(w, nonce);

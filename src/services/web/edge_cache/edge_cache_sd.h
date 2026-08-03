@@ -72,25 +72,25 @@ proto_bool edge_sd_deserialize(const uint8_t *buf, size_t len, EdgeEntry *e);
  * @return true if it was spilled; false if @p e carries no validator, or its serialization does not fit
  *         @p scratch / PC_DBM_VAL_MAX, or the dbm write fails (the entry simply stays L1-only).
  */
-proto_bool edge_sd_put(pc_dbm *db, const EdgeEntry *e, uint8_t *scratch, size_t scratch_cap);
+proto_bool edge_sd_put(struct pc_dbm *db, const EdgeEntry *e, uint8_t *scratch, size_t scratch_cap);
 
 /**
  * @brief Promote the entry stored under @p digest from L2 into @p e (via @p scratch).
  * @return true on a hit that deserialized cleanly; false on an L2 miss or a corrupt value.
  */
-proto_bool edge_sd_get(pc_dbm *db, const uint8_t digest[32], EdgeEntry *e, uint8_t *scratch, size_t scratch_cap);
+proto_bool edge_sd_get(struct pc_dbm *db, const uint8_t digest[32], EdgeEntry *e, uint8_t *scratch, size_t scratch_cap);
 
 /** @brief Drop the L2 entry stored under @p digest. @return true if one existed. */
-proto_bool edge_sd_del(pc_dbm *db, const uint8_t digest[32]);
+proto_bool edge_sd_del(struct pc_dbm *db, const uint8_t digest[32]);
 
 /**
  * @brief Drop every L2 entry whose stored request path begins with @p prefix (via @p scratch to read each
  *        value's canonical key). @return the number purged.
  */
-uint32_t edge_sd_purge_prefix(pc_dbm *db, const char *path_prefix, uint8_t *scratch, size_t scratch_cap);
+uint32_t edge_sd_purge_prefix(struct pc_dbm *db, const char *path_prefix, uint8_t *scratch, size_t scratch_cap);
 
 /** @brief Drop every L2 entry. @return the number purged. */
-uint32_t edge_sd_purge_all(pc_dbm *db);
+uint32_t edge_sd_purge_all(struct pc_dbm *db);
 
 #endif // PC_ENABLE_DBM
 

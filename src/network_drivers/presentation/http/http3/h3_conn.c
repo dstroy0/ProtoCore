@@ -203,7 +203,8 @@ static void pc_h3_consume_control(H3Conn *h3, H3Stream *st)
     st->buf_len -= off;
 }
 
-static void on_stream_data(void *app, QuicConn *, uint64_t stream_id, const uint8_t *data, size_t len, proto_bool fin)
+static void on_stream_data(void *app, struct QuicConn *, uint64_t stream_id, const uint8_t *data, size_t len,
+                           proto_bool fin)
 {
     H3Conn *h3 = (H3Conn *)app;
     H3Stream *st = pc_h3_stream_get(h3, stream_id, PROTO_TRUE);
@@ -242,7 +243,7 @@ static void on_stream_data(void *app, QuicConn *, uint64_t stream_id, const uint
     }
 }
 
-static void on_handshake_done(void *app, QuicConn *qc)
+static void on_handshake_done(void *app, struct QuicConn *qc)
 {
     H3Conn *h3 = (H3Conn *)app;
     if (h3->control_opened)
@@ -268,7 +269,7 @@ static void on_handshake_done(void *app, QuicConn *qc)
     h3->next_uni_id = 15;
 }
 
-void pc_h3_conn_init(H3Conn *h3, QuicConn *qc, H3RequestFn on_request, void *app)
+void pc_h3_conn_init(H3Conn *h3, struct QuicConn *qc, H3RequestFn on_request, void *app)
 {
     memset(h3, 0, sizeof(*h3));
     h3->qc = qc;

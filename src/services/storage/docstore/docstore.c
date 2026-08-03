@@ -13,7 +13,7 @@
 #include "network_drivers/presentation/codec/json/json.h"
 #include <string.h>
 
-void pc_docstore_open(pc_doc_store *ds, pc_dbm *db)
+void pc_docstore_open(pc_doc_store *ds, struct pc_dbm *db)
 {
     ds->db = db;
 }
@@ -59,7 +59,7 @@ typedef enum PROTO_ENUM_PACKED
 // for the reader); `fieldtmp` extracts a string field for comparison. Both are bounded (no heap).
 typedef struct
 {
-    pc_dbm *db;
+    struct pc_dbm *db;
     const char *field;
     FindKind kind;
     const char *sval;

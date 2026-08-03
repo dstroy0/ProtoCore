@@ -51,11 +51,11 @@ static size_t g_stream_len;
 static uint64_t g_stream_id;
 static proto_bool g_stream_fin;
 
-static void on_hs_done(void *, QuicConn *)
+static void on_hs_done(void *, struct QuicConn *)
 {
     g_hs_done = PROTO_TRUE;
 }
-static void on_stream_data(void *, QuicConn *, uint64_t id, const uint8_t *data, size_t len, proto_bool fin)
+static void on_stream_data(void *, struct QuicConn *, uint64_t id, const uint8_t *data, size_t len, proto_bool fin)
 {
     g_stream_id = id;
     if (len && g_stream_len + len <= sizeof(g_stream_data))
@@ -573,7 +573,7 @@ void test_pto_retransmits_flight()
 
 // Init a server conn and feed it a padded client Initial (ClientHello); the server flight is left
 // pending. Returns the client's Initial secrets and the ClientHello bytes (for deriving later keys).
-static void feed_client_initial(QuicConn *qc, QuicConnCallbacks *cb, QuicInitialSecrets *init, uint8_t *ch,
+static void feed_client_initial(struct QuicConn *qc, QuicConnCallbacks *cb, QuicInitialSecrets *init, uint8_t *ch,
                                 size_t *ch_len)
 {
     QuicTlsConfig cfg;
@@ -699,7 +699,7 @@ void test_connection_close_on_malformed_frame()
 
 // Init a bare server conn (Initial keys ready, handshake not started). cb is owned
 // by the caller (pc_quic_conn_init keeps the pointer).
-static void init_conn(QuicConn *qc, QuicConnCallbacks *cb)
+static void init_conn(struct QuicConn *qc, QuicConnCallbacks *cb)
 {
     QuicTlsConfig cfg;
     make_cfg(&cfg);
@@ -1129,8 +1129,8 @@ void test_quic_conn_send_tiny_cap()
 // Initial space discarded, and returns the client's Initial secrets + the 1-RTT keys. @p peer_scid_len
 // is the client's Source Connection ID length, i.e. the DCID the server puts in its 1-RTT short
 // headers; 0 is legal (RFC 9000 sec 5.1) and leaves the most room for the 1-RTT payload.
-static void complete_handshake(QuicConn *qc, QuicConnCallbacks *cb, QuicInitialSecrets *init, QuicPacketKeys *ap_client,
-                               QuicPacketKeys *ap_server, uint8_t peer_scid_len)
+static void complete_handshake(struct QuicConn *qc, QuicConnCallbacks *cb, QuicInitialSecrets *init,
+                               QuicPacketKeys *ap_client, QuicPacketKeys *ap_server, uint8_t peer_scid_len)
 {
     QuicTlsConfig cfg;
     make_cfg(&cfg);

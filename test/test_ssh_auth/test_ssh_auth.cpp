@@ -21,11 +21,11 @@
 // context (ESP's mbedtls does) does not leak one per vector.
 static uint8_t g_gcm_ws[PC_WORK_AESGCM] __attribute__((aligned(8)));
 static bool g_gcm_live = false;
-static pc_aesgcm_key *gcm_key(const uint8_t *key)
+static struct pc_aesgcm_key *gcm_key(const uint8_t *key)
 {
     if (g_gcm_live)
     {
-        pc_aesgcm_key_wipe(reinterpret_cast<pc_aesgcm_key *>(g_gcm_ws));
+        pc_aesgcm_key_wipe(reinterpret_cast<struct pc_aesgcm_key *>(g_gcm_ws));
     }
     g_gcm_live = true;
     return pc_aesgcm_key_init(g_gcm_ws, key);

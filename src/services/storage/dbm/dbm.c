@@ -49,7 +49,7 @@ static uint64_t key_hash(const char *key, uint16_t len)
 }
 
 // Find a live slot for (hash,key). Linear probe, stopping at the first empty. -1 if absent.
-static int find_live(const pc_dbm *db, uint64_t hash, const char *key, uint16_t key_len)
+static int find_live(const struct pc_dbm *db, uint64_t hash, const char *key, uint16_t key_len)
 {
     const size_t n = PC_DBM_SLOTS;
     size_t start = (size_t)(hash % n);
@@ -71,7 +71,7 @@ static int find_live(const pc_dbm *db, uint64_t hash, const char *key, uint16_t 
 
 // Find the slot to write (hash,key): an existing live match, or the first reusable slot (tombstone/empty).
 // Sets *is_new when the returned slot is not already this key. -1 if the table has no room for a new key.
-static int reserve(const pc_dbm *db, uint64_t hash, const char *key, uint16_t key_len, proto_bool *is_new)
+static int reserve(const struct pc_dbm *db, uint64_t hash, const char *key, uint16_t key_len, proto_bool *is_new)
 {
     const size_t n = PC_DBM_SLOTS;
     size_t start = (size_t)(hash % n);
@@ -108,7 +108,7 @@ static int reserve(const pc_dbm *db, uint64_t hash, const char *key, uint16_t ke
 
 typedef struct
 {
-    pc_dbm *db;
+    struct pc_dbm *db;
     proto_bool overflow;
 } ReplayCtx;
 
@@ -116,7 +116,7 @@ static void replay_cb(uint64_t seq, uint64_t data_off, const uint8_t *payload, u
 {
     (void)seq;
     ReplayCtx *rc = (ReplayCtx *)ctx;
-    pc_dbm *db = rc->db;
+    struct pc_dbm *db = rc->db;
     if (len < DBM_HDR)
     {
         return;
@@ -166,7 +166,7 @@ static void replay_cb(uint64_t seq, uint64_t data_off, const uint8_t *payload, u
     }
 }
 
-proto_bool pc_dbm_open(pc_dbm *db, WalStore *wal)
+proto_bool pc_dbm_open(struct pc_dbm *db, WalStore *wal)
 {
     memset(db, 0, sizeof(*db));
     db->wal = wal;
@@ -176,7 +176,7 @@ proto_bool pc_dbm_open(pc_dbm *db, WalStore *wal)
     return !rc.overflow;
 }
 
-proto_bool pc_dbm_put(pc_dbm *db, const char *key, uint16_t key_len, const uint8_t *val, uint32_t val_len)
+proto_bool pc_dbm_put(struct pc_dbm *db, const char *key, uint16_t key_len, const uint8_t *val, uint32_t val_len)
 {
     if (key_len == 0 || key_len > PC_DBM_KEY_MAX || val_len > PC_DBM_VAL_MAX)
     {
@@ -219,7 +219,7 @@ proto_bool pc_dbm_put(pc_dbm *db, const char *key, uint16_t key_len, const uint8
     return PROTO_TRUE;
 }
 
-long pc_dbm_get(pc_dbm *db, const char *key, uint16_t key_len, uint8_t *buf, size_t cap)
+long pc_dbm_get(struct pc_dbm *db, const char *key, uint16_t key_len, uint8_t *buf, size_t cap)
 {
     uint64_t h = key_hash(key, key_len);
     int slot = find_live(db, h, key, key_len);
@@ -239,7 +239,7 @@ long pc_dbm_get(pc_dbm *db, const char *key, uint16_t key_len, uint8_t *buf, siz
     return (long)s->val_len;
 }
 
-proto_bool pc_dbm_del(pc_dbm *db, const char *key, uint16_t key_len)
+proto_bool pc_dbm_del(struct pc_dbm *db, const char *key, uint16_t key_len)
 {
     uint64_t h = key_hash(key, key_len);
     int slot = find_live(db, h, key, key_len);
@@ -261,22 +261,22 @@ proto_bool pc_dbm_del(pc_dbm *db, const char *key, uint16_t key_len)
     return PROTO_TRUE;
 }
 
-proto_bool pc_dbm_contains(const pc_dbm *db, const char *key, uint16_t key_len)
+proto_bool pc_dbm_contains(const struct pc_dbm *db, const char *key, uint16_t key_len)
 {
     return find_live(db, key_hash(key, key_len), key, key_len) >= 0;
 }
 
-uint32_t pc_dbm_count(const pc_dbm *db)
+uint32_t pc_dbm_count(const struct pc_dbm *db)
 {
     return db->count;
 }
 
-proto_bool pc_dbm_sync(pc_dbm *db)
+proto_bool pc_dbm_sync(struct pc_dbm *db)
 {
     return pc_wal_store_checkpoint(db->wal);
 }
 
-uint32_t pc_dbm_iterate(const pc_dbm *db, pc_dbm_iter_cb cb, void *ctx)
+uint32_t pc_dbm_iterate(const struct pc_dbm *db, pc_dbm_iter_cb cb, void *ctx)
 {
     uint32_t visited = 0;
     for (uint32_t i = 0; i < PC_DBM_SLOTS; i++)
@@ -295,7 +295,7 @@ uint32_t pc_dbm_iterate(const pc_dbm *db, pc_dbm_iter_cb cb, void *ctx)
     return visited;
 }
 
-uint64_t pc_dbm_live_bytes(const pc_dbm *db)
+uint64_t pc_dbm_live_bytes(const struct pc_dbm *db)
 {
     uint64_t bytes = 0;
     for (uint32_t i = 0; i < PC_DBM_SLOTS; i++)
@@ -309,7 +309,7 @@ uint64_t pc_dbm_live_bytes(const pc_dbm *db)
     return bytes;
 }
 
-proto_bool pc_dbm_compact(pc_dbm *db, WalStore *dst)
+proto_bool pc_dbm_compact(struct pc_dbm *db, WalStore *dst)
 {
     // Copy each live key (latest value, no tombstones) into the fresh destination. Read the value straight
     // from the old log so this needs no per-key RAM beyond one record buffer, the same the put path uses.

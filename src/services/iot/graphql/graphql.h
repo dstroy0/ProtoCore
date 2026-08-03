@@ -62,11 +62,11 @@ typedef struct
 struct pc_gql_args;
 
 /** @brief Read an int argument @p name; false if absent / not an int. */
-proto_bool pc_gql_arg_int(const pc_gql_args *args, const char *name, long long *out);
+proto_bool pc_gql_arg_int(const struct pc_gql_args *args, const char *name, long long *out);
 /** @brief Read a string argument @p name; false if absent / not a string. */
-proto_bool pc_gql_arg_str(const pc_gql_args *args, const char *name, const char **out);
+proto_bool pc_gql_arg_str(const struct pc_gql_args *args, const char *name, const char **out);
 /** @brief Read a bool argument @p name; false if absent / not a bool. */
-proto_bool pc_gql_arg_bool(const pc_gql_args *args, const char *name, proto_bool *out);
+proto_bool pc_gql_arg_bool(const struct pc_gql_args *args, const char *name, proto_bool *out);
 
 /**
  * @brief Resolve the scalar leaf at dotted @p path (e.g. "device.uptime").
@@ -74,7 +74,7 @@ proto_bool pc_gql_arg_bool(const pc_gql_args *args, const char *name, proto_bool
  * Fill @p out with the value and return true; return false to emit JSON null.
  * @p args exposes every argument in scope along the path.
  */
-typedef proto_bool (*pc_gql_resolver_fn)(const char *path, const pc_gql_args *args, pc_gql_value *out);
+typedef proto_bool (*pc_gql_resolver_fn)(const char *path, const struct pc_gql_args *args, pc_gql_value *out);
 
 /** @brief pc_graphql_execute() result codes. */
 typedef enum PROTO_ENUM_PACKED

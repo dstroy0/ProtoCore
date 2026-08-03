@@ -664,7 +664,7 @@ static void emit_field(Writer &w, int idx, int path_len)
 }
 } // namespace
 
-proto_bool pc_gql_arg_int(const pc_gql_args *args, const char *name, long long *out)
+proto_bool pc_gql_arg_int(const struct pc_gql_args *args, const char *name, long long *out)
 {
     if (!args)
     {
@@ -681,7 +681,7 @@ proto_bool pc_gql_arg_int(const pc_gql_args *args, const char *name, long long *
     }
     return PROTO_FALSE;
 }
-proto_bool pc_gql_arg_str(const pc_gql_args *args, const char *name, const char **out)
+proto_bool pc_gql_arg_str(const struct pc_gql_args *args, const char *name, const char **out)
 {
     if (!args)
     {
@@ -698,7 +698,7 @@ proto_bool pc_gql_arg_str(const pc_gql_args *args, const char *name, const char 
     }
     return PROTO_FALSE;
 }
-proto_bool pc_gql_arg_bool(const pc_gql_args *args, const char *name, proto_bool *out)
+proto_bool pc_gql_arg_bool(const struct pc_gql_args *args, const char *name, proto_bool *out)
 {
     if (!args)
     {

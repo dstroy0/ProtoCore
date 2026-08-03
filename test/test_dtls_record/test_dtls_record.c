@@ -47,10 +47,10 @@ static void test_dtls_record_keys_derive_kat(void)
     // context built from the expected key must seal identically to the derived one. That is the same
     // assertion plus proof the context was actually built, rather than that two byte arrays matched.
     static uint8_t ref_ws[PC_WORK_AES128GCM] __attribute__((aligned(8)));
-    pc_aes128gcm_key *ref = pc_aes128gcm_key_init(ref_ws, KAT_KEY);
+    struct pc_aes128gcm_key *ref = pc_aes128gcm_key_init(ref_ws, KAT_KEY);
     uint8_t n12[12] = {0}, zpt[16] = {0}, c1[16], t1[16], c2[16], t2[16];
     pc_aes128gcm_seal(ref, n12, NULL, 0, zpt, sizeof(zpt), c1, t1);
-    pc_aes128gcm_seal(reinterpret_cast<pc_aes128gcm_key *>(k.gcm), n12, NULL, 0, zpt, sizeof(zpt), c2, t2);
+    pc_aes128gcm_seal(reinterpret_cast<struct pc_aes128gcm_key *>(k.gcm), n12, NULL, 0, zpt, sizeof(zpt), c2, t2);
     TEST_ASSERT_EQUAL_MEMORY(c1, c2, sizeof(c1));
     TEST_ASSERT_EQUAL_MEMORY(t1, t2, sizeof(t1));
     pc_aes128gcm_key_wipe(ref);
@@ -59,11 +59,11 @@ static void test_dtls_record_keys_derive_kat(void)
     // context built from the expected key.
     static uint8_t sn_ref[PC_WORK_AES128] __attribute__((aligned(8)));
     uint8_t blk[16] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}, s1[16], s2[16];
-    pc_aes128_init(reinterpret_cast<pc_aes128 *>(sn_ref), KAT_SN);
-    pc_aes128_encrypt_block(reinterpret_cast<pc_aes128 *>(sn_ref), blk, s1);
-    pc_aes128_encrypt_block(reinterpret_cast<pc_aes128 *>(k.sn_key), blk, s2);
+    pc_aes128_init(reinterpret_cast<struct pc_aes128 *>(sn_ref), KAT_SN);
+    pc_aes128_encrypt_block(reinterpret_cast<struct pc_aes128 *>(sn_ref), blk, s1);
+    pc_aes128_encrypt_block(reinterpret_cast<struct pc_aes128 *>(k.sn_key), blk, s2);
     TEST_ASSERT_EQUAL_MEMORY(s1, s2, 16);
-    pc_aes128_wipe(reinterpret_cast<pc_aes128 *>(sn_ref));
+    pc_aes128_wipe(reinterpret_cast<struct pc_aes128 *>(sn_ref));
     TEST_ASSERT_EQUAL_UINT16(KAT_EPOCH, k.epoch);
 }
 

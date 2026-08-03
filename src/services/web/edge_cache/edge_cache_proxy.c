@@ -133,7 +133,7 @@ typedef struct
     char range_hdr[MAX_CONNS][48];
 #endif
 #if PC_ENABLE_DBM
-    pc_dbm *l2;                           // the persistent L2 tier (nullptr = L1-only)
+    struct pc_dbm *l2;                    // the persistent L2 tier (nullptr = L1-only)
     uint8_t sd_buf[PC_EDGE_SD_VALUE_MAX]; // serialize/deserialize scratch for one L2 value
 #endif
 #if PC_ENABLE_EDGE_MESH
@@ -1244,7 +1244,7 @@ void pc_edge_cache_enable(void)
 }
 
 #if PC_ENABLE_DBM
-void pc_edge_cache_bind_sd(pc_dbm *dbm)
+void pc_edge_cache_bind_sd(struct pc_dbm *dbm)
 {
     s_ctx.l2 = dbm;
     s_ctx.store.on_evict = dbm ? edge_on_evict : NULL;

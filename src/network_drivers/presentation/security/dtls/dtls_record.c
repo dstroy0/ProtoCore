@@ -78,7 +78,7 @@ void pc_dtls_record_keys_derive(DtlsRecordKeys *out, DtlsCipher cipher, uint16_t
     pc_tls13_kdf_expand_label(&DTLS13_KDF, secret, "iv", out->iv, sizeof(out->iv));
     uint8_t *snk = pc_secure_span(PC_AES128GCM_KEY_LEN, 8).buf;
     pc_tls13_kdf_expand_label(&DTLS13_KDF, secret, "sn", snk, PC_AES128GCM_KEY_LEN);
-    pc_aes128_init((pc_aes128 *)(out->sn_key), snk);
+    pc_aes128_init((struct pc_aes128 *)(out->sn_key), snk);
     pc_secure_release(mark);
 }
 
@@ -188,15 +188,15 @@ size_t pc_dtls_ciphertext_protect(DtlsRecordKeys *keys, uint64_t seq, uint8_t co
     build_nonce(keys->iv, seq, nonce);
     // AAD = the whole unified header (including any connection id) carrying the plaintext sequence
     // number (before §4.2.3 encryption).
-    pc_aes128gcm_seal((pc_aes128gcm_key *)(keys->gcm), nonce, out, hdr_len, out + hdr_len, inner_len, out + hdr_len,
-                      out + hdr_len + inner_len);
+    pc_aes128gcm_seal((struct pc_aes128gcm_key *)(keys->gcm), nonce, out, hdr_len, out + hdr_len, inner_len,
+                      out + hdr_len, out + hdr_len + inner_len);
 
     // Encrypt the sequence number (RFC 9147 §4.2.3): mask = AES-ECB(sn_key, ciphertext[0..15]).
     // enc_len = inner_len + 16 >= 17, so the 16-byte sample is always available.
     // The sequence-number context is already keyed and lives in the key material; rebuilding it here
     // costs ~556 cycles per record plus a pool borrow and wipe, independent of record size.
     uint8_t mask[16];
-    pc_aes128_encrypt_block((pc_aes128 *)(keys->sn_key), out + hdr_len, mask);
+    pc_aes128_encrypt_block((struct pc_aes128 *)(keys->sn_key), out + hdr_len, mask);
     out[seq_off] ^= mask[0];
     out[seq_off + 1] ^= mask[1];
     return total;
@@ -279,7 +279,7 @@ proto_bool pc_dtls_ciphertext_unprotect(DtlsRecordKeys *keys, uint64_t next_seq,
     // The sequence-number context is already keyed and lives in the key material; rebuilding it here
     // costs ~556 cycles per record plus a pool borrow and wipe, independent of record size.
     uint8_t mask[16];
-    pc_aes128_encrypt_block((pc_aes128 *)(keys->sn_key), enc, mask);
+    pc_aes128_encrypt_block((struct pc_aes128 *)(keys->sn_key), enc, mask);
     uint64_t trunc = 0;
     for (size_t i = 0; i < seq_len; i++)
     {
@@ -305,7 +305,7 @@ proto_bool pc_dtls_ciphertext_unprotect(DtlsRecordKeys *keys, uint64_t next_seq,
     uint8_t nonce[12];
     build_nonce(keys->iv, full_seq, nonce);
     const size_t pt_len = inner_len;
-    if (!pc_aes128gcm_open((pc_aes128gcm_key *)(keys->gcm), nonce, hdr, hdr_len, enc, pt_len, enc + pt_len, out))
+    if (!pc_aes128gcm_open((struct pc_aes128gcm_key *)(keys->gcm), nonce, hdr, hdr_len, enc, pt_len, enc + pt_len, out))
     {
         return PROTO_FALSE;
     }

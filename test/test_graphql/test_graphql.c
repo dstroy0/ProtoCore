@@ -13,7 +13,7 @@
 
 // Demo schema: a flat handful of fields + a nested `device` object and an
 // argument-driven `sensor`/`greet`.
-static proto_bool resolver(const char *path, const pc_gql_args *args, pc_gql_value *out)
+static proto_bool resolver(const char *path, const struct pc_gql_args *args, pc_gql_value *out)
 {
     if (!strcmp(path, "name"))
     {

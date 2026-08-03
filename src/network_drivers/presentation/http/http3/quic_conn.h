@@ -154,7 +154,7 @@ typedef struct QuicConn
  * @param our_scid_len its length.
  * @param cb         stream / handshake callbacks (may be all NULL).
  */
-void pc_quic_conn_init(QuicConn *qc, const QuicTlsConfig *cfg, const uint8_t *odcid, uint8_t odcid_len,
+void pc_quic_conn_init(struct QuicConn *qc, const QuicTlsConfig *cfg, const uint8_t *odcid, uint8_t odcid_len,
                        const uint8_t *peer_scid, uint8_t peer_scid_len, const uint8_t *our_scid, uint8_t our_scid_len,
                        const QuicConnCallbacks *cb);
 
@@ -163,14 +163,14 @@ void pc_quic_conn_init(QuicConn *qc, const QuicTlsConfig *cfg, const uint8_t *od
  * @return true if the datagram was processed (even partially); false if it was undecryptable /
  * malformed enough to drop entirely. Frames drive the handshake, ACK state, and stream callbacks.
  */
-proto_bool pc_quic_conn_recv(QuicConn *qc, const uint8_t *datagram, size_t len);
+proto_bool pc_quic_conn_recv(struct QuicConn *qc, const uint8_t *datagram, size_t len);
 
 /**
  * @brief Build the next outbound datagram (coalesced Initial / Handshake / 1-RTT packets).
  * @return its length, or 0 when there is nothing to send right now. Call repeatedly until it
  * returns 0. Honors the pre-validation 3x anti-amplification limit.
  */
-size_t pc_quic_conn_send(QuicConn *qc, uint8_t *out, size_t cap);
+size_t pc_quic_conn_send(struct QuicConn *qc, uint8_t *out, size_t cap);
 
 /**
  * @brief Drive loss recovery: if the server's handshake CRYPTO flight is outstanding (built but not
@@ -179,13 +179,14 @@ size_t pc_quic_conn_send(QuicConn *qc, uint8_t *out, size_t cap);
  * caller's monotonic millisecond clock (pc_quic_conn stays clock-free). A no-op once the flight is
  * acknowledged or the handshake completes. Call once per poll before pc_quic_conn_send().
  */
-void pc_quic_conn_on_timeout(QuicConn *qc, uint32_t now_ms);
+void pc_quic_conn_on_timeout(struct QuicConn *qc, uint32_t now_ms);
 
 /**
  * @brief Queue @p len bytes (with optional @p fin) to send on @p stream_id.
  * @return bytes accepted into the stream's send buffer (may be < len if it is full).
  */
-size_t pc_quic_conn_stream_send(QuicConn *qc, uint64_t stream_id, const uint8_t *data, size_t len, proto_bool fin);
+size_t pc_quic_conn_stream_send(struct QuicConn *qc, uint64_t stream_id, const uint8_t *data, size_t len,
+                                proto_bool fin);
 
 /**
  * @brief Initiate an immediate close: queue a transport CONNECTION_CLOSE (RFC 9000 sec 19.19) with
@@ -193,13 +194,13 @@ size_t pc_quic_conn_stream_send(QuicConn *qc, uint64_t stream_id, const uint8_t 
  * time out. A no-op if the connection is already closing. The engine also calls this itself on a fatal
  * handshake / frame error (CRYPTO_ERROR / FRAME_ENCODING_ERROR).
  */
-void pc_quic_conn_close(QuicConn *qc, uint64_t error_code);
+void pc_quic_conn_close(struct QuicConn *qc, uint64_t error_code);
 
 /** @brief True once the TLS handshake has completed (client Finished verified). */
-proto_bool pc_quic_conn_established(const QuicConn *qc);
+proto_bool pc_quic_conn_established(const struct QuicConn *qc);
 
 /** @brief True if the connection is closed or draining. */
-proto_bool pc_quic_conn_is_closed(const QuicConn *qc);
+proto_bool pc_quic_conn_is_closed(const struct QuicConn *qc);
 
 #endif // PC_ENABLE_HTTP3
 #endif // PROTOCORE_QUIC_CONN_H

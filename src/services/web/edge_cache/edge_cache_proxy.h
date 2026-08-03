@@ -63,7 +63,7 @@ struct pc_dbm;
  * Only entries carrying a validator are spilled (a promoted entry is force-revalidated, since the
  * monotonic clock resets across a reboot). The dbm should be dedicated to the cache.
  */
-void pc_edge_cache_bind_sd(pc_dbm *dbm);
+void pc_edge_cache_bind_sd(struct pc_dbm *dbm);
 #endif
 
 #if PC_ENABLE_EDGE_MESH

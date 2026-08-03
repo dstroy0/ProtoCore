@@ -36,23 +36,23 @@ typedef struct pc_aes128
 
 static_assert(sizeof(pc_aes128) <= PC_WORK_AES128, "pc_aes128 outgrew PC_WORK_AES128 - raise it in protocore_config.h");
 
-pc_aes128 *pc_aes128_wants(void)
+struct pc_aes128 *pc_aes128_wants(void)
 {
     pc_span ws = pc_secure_span(sizeof(pc_aes128), _Alignof(pc_aes128));
-    return pc_span_ok(ws) ? (pc_aes128 *)(ws.buf) : NULL;
+    return pc_span_ok(ws) ? (struct pc_aes128 *)(ws.buf) : NULL;
 }
 
-void pc_aes128_init(pc_aes128 *ctx, const uint8_t key[16])
+void pc_aes128_init(struct pc_aes128 *ctx, const uint8_t key[16])
 {
     pc_aes_key_expand(key, 4, ctx->rk);
 }
 
-void pc_aes128_encrypt_block(pc_aes128 *ctx, const uint8_t in[16], uint8_t out[16])
+void pc_aes128_encrypt_block(struct pc_aes128 *ctx, const uint8_t in[16], uint8_t out[16])
 {
     pc_aes_encrypt_block(ctx->rk, 10, in, out);
 }
 
-void pc_aes128_wipe(pc_aes128 *ctx)
+void pc_aes128_wipe(struct pc_aes128 *ctx)
 {
     pc_secure_wipe(ctx, sizeof(pc_aes128));
 }

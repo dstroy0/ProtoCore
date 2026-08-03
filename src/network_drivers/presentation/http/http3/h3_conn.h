@@ -83,7 +83,7 @@ typedef struct
 /** @brief One HTTP/3 connection (wraps a QuicConn). */
 typedef struct H3Conn
 {
-    QuicConn *qc;
+    struct QuicConn *qc;
     H3RequestFn on_request;
     void *app;
     H3Settings peer_settings;
@@ -99,7 +99,7 @@ typedef struct H3Conn
  * engine's hooks; pass the app callback here instead). @p on_request is invoked for each completed
  * request.
  */
-void pc_h3_conn_init(H3Conn *h3, QuicConn *qc, H3RequestFn on_request, void *app);
+void pc_h3_conn_init(H3Conn *h3, struct QuicConn *qc, H3RequestFn on_request, void *app);
 
 /**
  * @brief Serialize and send a response on @p stream_id: a HEADERS field section (QPACK) with

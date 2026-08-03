@@ -34,7 +34,7 @@ static_assert(PC_QUIC_MAX_DATAGRAM >= 1200,
 
 // The open (decrypt) keys for an encryption level: Initial keys come from the DCID, Handshake and
 // 1-RTT keys from the TLS handshake. Returns NULL if that level's keys are not available yet.
-static QuicPacketKeys *open_keys(QuicConn *qc, int level)
+static QuicPacketKeys *open_keys(struct QuicConn *qc, int level)
 {
     if (level == QUIC_ENC_INITIAL)
     {
@@ -42,7 +42,7 @@ static QuicPacketKeys *open_keys(QuicConn *qc, int level)
     }
     return pc_quic_tls_keys(&qc->tls, level, /*is_server=*/PROTO_FALSE);
 }
-static QuicPacketKeys *seal_keys(QuicConn *qc, int level)
+static QuicPacketKeys *seal_keys(struct QuicConn *qc, int level)
 {
     if (level == QUIC_ENC_INITIAL)
     {
@@ -52,7 +52,7 @@ static QuicPacketKeys *seal_keys(QuicConn *qc, int level)
 }
 
 // Find a stream slot by id, or allocate one; NULL if the table is full.
-static QuicStream *stream_get(QuicConn *qc, uint64_t id, proto_bool create)
+static QuicStream *stream_get(struct QuicConn *qc, uint64_t id, proto_bool create)
 {
     QuicStream *free_slot = NULL;
     for (size_t i = 0; i < PC_QUIC_MAX_STREAMS; i++)
@@ -75,7 +75,7 @@ static QuicStream *stream_get(QuicConn *qc, uint64_t id, proto_bool create)
     return free_slot;
 }
 
-void pc_quic_conn_init(QuicConn *qc, const QuicTlsConfig *cfg, const uint8_t *odcid, uint8_t odcid_len,
+void pc_quic_conn_init(struct QuicConn *qc, const QuicTlsConfig *cfg, const uint8_t *odcid, uint8_t odcid_len,
                        const uint8_t *peer_scid, uint8_t peer_scid_len, const uint8_t *our_scid, uint8_t our_scid_len,
                        const QuicConnCallbacks *cb)
 {
@@ -117,7 +117,7 @@ void pc_quic_conn_init(QuicConn *qc, const QuicTlsConfig *cfg, const uint8_t *od
 // --- Frame handling --------------------------------------------------------------------------
 // Queue a transport CONNECTION_CLOSE for a fatal error at @p level; the first error wins (RFC 9000 sec
 // 10.2.3). Sending at the level the error was seen on guarantees the peer holds keys to read it.
-static void queue_close(QuicConn *qc, uint64_t error_code, uint64_t frame_type, int level)
+static void queue_close(struct QuicConn *qc, uint64_t error_code, uint64_t frame_type, int level)
 {
     if (qc->close_queued || qc->closed)
     {
@@ -129,7 +129,7 @@ static void queue_close(QuicConn *qc, uint64_t error_code, uint64_t frame_type, 
     qc->close_level = (uint8_t)level;
 }
 
-static void handle_crypto(QuicConn *qc, int level, const QuicFrame *f)
+static void handle_crypto(struct QuicConn *qc, int level, const QuicFrame *f)
 {
     QuicPnSpace *s = &qc->space[level];
     uint64_t want = s->crypto_rx_off;
@@ -179,7 +179,7 @@ static void handle_crypto(QuicConn *qc, int level, const QuicFrame *f)
     }
 }
 
-static void handle_stream(QuicConn *qc, const QuicFrame *f)
+static void handle_stream(struct QuicConn *qc, const QuicFrame *f)
 {
     QuicStream *st = stream_get(qc, f->stream.id, PROTO_TRUE);
     if (!st)
@@ -223,7 +223,8 @@ static void handle_stream(QuicConn *qc, const QuicFrame *f)
 }
 
 // Process the frames in one decrypted packet. Returns false on a fatal connection error.
-static proto_bool process_frames(QuicConn *qc, int level, const uint8_t *p, size_t len, proto_bool *ack_eliciting)
+static proto_bool process_frames(struct QuicConn *qc, int level, const uint8_t *p, size_t len,
+                                 proto_bool *ack_eliciting)
 {
     size_t off = 0;
     while (off < len)
@@ -300,8 +301,8 @@ static proto_bool skip_initial_token(const uint8_t *dg, size_t len, size_t *off)
 
 // Parse one packet's (long or short) header, filling the fields needed to locate + unprotect it.
 // Returns false on a malformed header or an unsupported type/version (drop the packet).
-static proto_bool parse_packet_header(const QuicConn *qc, const uint8_t *dg, size_t len, proto_bool is_long, int *level,
-                                      size_t *pn_offset, size_t *pkt_len, uint64_t *payload_length)
+static proto_bool parse_packet_header(const struct QuicConn *qc, const uint8_t *dg, size_t len, proto_bool is_long,
+                                      int *level, size_t *pn_offset, size_t *pkt_len, uint64_t *payload_length)
 {
     if (!is_long)
     {
@@ -356,7 +357,7 @@ static proto_bool parse_packet_header(const QuicConn *qc, const uint8_t *dg, siz
 }
 
 // Decrypt and process one packet at datagram offset; returns bytes consumed (0 to stop the datagram).
-static size_t recv_packet(QuicConn *qc, const uint8_t *dg, size_t len)
+static size_t recv_packet(struct QuicConn *qc, const uint8_t *dg, size_t len)
 {
     if (len < 1) // GCOVR_EXCL_LINE  pc_quic_conn_recv's loop only calls this with off<len, so len-off>=1
     {
@@ -419,7 +420,7 @@ static size_t recv_packet(QuicConn *qc, const uint8_t *dg, size_t len)
     return pkt_len;
 }
 
-proto_bool pc_quic_conn_recv(QuicConn *qc, const uint8_t *datagram, size_t len)
+proto_bool pc_quic_conn_recv(struct QuicConn *qc, const uint8_t *datagram, size_t len)
 {
     if (qc->closed)
     {
@@ -460,7 +461,7 @@ static size_t build_ack_frame(QuicPnSpace *s, uint8_t *buf, size_t cap)
 
 // Append the CRYPTO flight for INITIAL/HANDSHAKE (ServerHello / EE..Finished); returns bytes written,
 // sets *ae when it emits an ack-eliciting CRYPTO frame.
-static size_t build_crypto_frame(const QuicConn *qc, int level, QuicPnSpace *s, uint8_t *buf, size_t cap,
+static size_t build_crypto_frame(const struct QuicConn *qc, int level, QuicPnSpace *s, uint8_t *buf, size_t cap,
                                  proto_bool *ae)
 {
     if (level != QUIC_ENC_INITIAL && level != QUIC_ENC_HANDSHAKE)
@@ -491,7 +492,7 @@ static size_t build_crypto_frame(const QuicConn *qc, int level, QuicPnSpace *s, 
 }
 
 // Append 1-RTT extras (HANDSHAKE_DONE + stream data) at APP level; returns bytes written, sets *ae.
-static size_t build_app_frames(QuicConn *qc, int level, uint8_t *buf, size_t cap, proto_bool *ae)
+static size_t build_app_frames(struct QuicConn *qc, int level, uint8_t *buf, size_t cap, proto_bool *ae)
 {
     if (level != QUIC_ENC_APP)
     {
@@ -543,7 +544,7 @@ static size_t build_app_frames(QuicConn *qc, int level, uint8_t *buf, size_t cap
 // Build the frame payload for one encryption level into buf; returns its length (0 = nothing to send).
 // @p ae is set true if the payload carries an ack-eliciting frame (CRYPTO / STREAM / HANDSHAKE_DONE),
 // which arms loss recovery for this space.
-static size_t build_frames(QuicConn *qc, int level, uint8_t *buf, size_t cap, proto_bool *ae)
+static size_t build_frames(struct QuicConn *qc, int level, uint8_t *buf, size_t cap, proto_bool *ae)
 {
     QuicPnSpace *s = &qc->space[level];
     size_t p = 0;
@@ -570,7 +571,7 @@ static uint8_t level_lp_type(int level)
 }
 
 // Bytes a protected packet needs on top of its payload: AEAD tag + packet number, plus the header.
-static size_t packet_overhead(const QuicConn *qc, proto_bool is_long, uint8_t pn_len)
+static size_t packet_overhead(const struct QuicConn *qc, proto_bool is_long, uint8_t pn_len)
 {
     size_t overhead = (size_t)PC_AES128GCM_TAG_LEN + pn_len;
     if (is_long)
@@ -587,7 +588,7 @@ static size_t packet_overhead(const QuicConn *qc, proto_bool is_long, uint8_t pn
 }
 
 // Build one protected packet for a level into out; returns its length (0 = nothing to send).
-static size_t build_packet(QuicConn *qc, int level, uint8_t *out, size_t cap)
+static size_t build_packet(struct QuicConn *qc, int level, uint8_t *out, size_t cap)
 {
     QuicPnSpace *s = &qc->space[level];
     if (s->discarded)
@@ -724,7 +725,7 @@ static size_t build_packet(QuicConn *qc, int level, uint8_t *out, size_t cap)
 
 // Highest encryption level (INITIAL..APP) we still hold seal keys for and haven't discarded - the
 // level at which a CONNECTION_CLOSE can still be decrypted by the peer. Falls back to INITIAL.
-static int pc_quic_highest_sealed_level(QuicConn *qc)
+static int pc_quic_highest_sealed_level(struct QuicConn *qc)
 {
     for (int l = QUIC_ENC_APP; l >= QUIC_ENC_INITIAL; l--)
     {
@@ -736,7 +737,7 @@ static int pc_quic_highest_sealed_level(QuicConn *qc)
     return QUIC_ENC_INITIAL;
 }
 
-size_t pc_quic_conn_send(QuicConn *qc, uint8_t *out, size_t cap)
+size_t pc_quic_conn_send(struct QuicConn *qc, uint8_t *out, size_t cap)
 {
     if (qc->closed && !qc->draining)
     {
@@ -812,7 +813,7 @@ static proto_bool space_outstanding(const QuicPnSpace *s)
     return !s->discarded && s->last_ae_pn >= 0 && s->largest_acked < s->last_ae_pn;
 }
 
-void pc_quic_conn_on_timeout(QuicConn *qc, uint32_t now_ms)
+void pc_quic_conn_on_timeout(struct QuicConn *qc, uint32_t now_ms)
 {
     if (qc->closed)
     {
@@ -879,7 +880,8 @@ void pc_quic_conn_on_timeout(QuicConn *qc, uint32_t now_ms)
     qc->pto_deadline_ms = now_ms + pto_period(qc->pto_count);
 }
 
-size_t pc_quic_conn_stream_send(QuicConn *qc, uint64_t stream_id, const uint8_t *data, size_t len, proto_bool fin)
+size_t pc_quic_conn_stream_send(struct QuicConn *qc, uint64_t stream_id, const uint8_t *data, size_t len,
+                                proto_bool fin)
 {
     QuicStream *st = stream_get(qc, stream_id, PROTO_TRUE);
     if (!st)
@@ -897,19 +899,19 @@ size_t pc_quic_conn_stream_send(QuicConn *qc, uint64_t stream_id, const uint8_t 
     return take;
 }
 
-void pc_quic_conn_close(QuicConn *qc, uint64_t error_code)
+void pc_quic_conn_close(struct QuicConn *qc, uint64_t error_code)
 {
     // Application-initiated close: send at the highest level we still hold keys for.
     int level = pc_quic_highest_sealed_level(qc);
     queue_close(qc, error_code, 0, level);
 }
 
-proto_bool pc_quic_conn_established(const QuicConn *qc)
+proto_bool pc_quic_conn_established(const struct QuicConn *qc)
 {
     return qc->tls.state == QTLS_DONE;
 }
 
-proto_bool pc_quic_conn_is_closed(const QuicConn *qc)
+proto_bool pc_quic_conn_is_closed(const struct QuicConn *qc)
 {
     return qc->closed || qc->draining;
 }

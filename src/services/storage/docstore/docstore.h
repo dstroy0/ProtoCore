@@ -28,11 +28,11 @@
 /** @brief A document store bound to a mounted ::pc_dbm. */
 typedef struct
 {
-    pc_dbm *db;
+    struct pc_dbm *db;
 } pc_doc_store;
 
 /** @brief Bind @p ds to an open @p db. */
-void pc_docstore_open(pc_doc_store *ds, pc_dbm *db);
+void pc_docstore_open(pc_doc_store *ds, struct pc_dbm *db);
 
 /**
  * @brief Insert or replace the document @p id with JSON body @p json. Not synced (batched).

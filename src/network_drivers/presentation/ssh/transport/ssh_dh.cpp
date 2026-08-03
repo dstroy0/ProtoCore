@@ -178,8 +178,8 @@ void ssh_dh_derive_keys_sid(uint8_t i, const uint8_t K_be[256], const uint8_t *H
     // overwritten, after which the outgoing mode is no longer knowable.
     if (km->active && km->cipher_mode == SSH_CIPHER_AES256GCM)
     {
-        pc_aesgcm_key_wipe((pc_aesgcm_key *)(km->gcm_ctx_c2s));
-        pc_aesgcm_key_wipe((pc_aesgcm_key *)(km->gcm_ctx_s2c));
+        pc_aesgcm_key_wipe((struct pc_aesgcm_key *)(km->gcm_ctx_c2s));
+        pc_aesgcm_key_wipe((struct pc_aesgcm_key *)(km->gcm_ctx_s2c));
     }
     km->cipher_mode = cipher_alg;
     km->mac_mode = mac_alg;
