@@ -44,6 +44,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- bump github/codeql-action from 4 to 4.37.4 ([`5098e9b`](https://github.com/dstroy0/ProtoCore/commit/5098e9b02554f105b77a1fb574ca19f84a54bc96))
+- update CHANGELOG.md [skip ci] ([`30ee2b8`](https://github.com/dstroy0/ProtoCore/commit/30ee2b8c0568fe5b26278665e989866c2d756c81))
 - update CHANGELOG.md [skip ci] ([`1c2ad03`](https://github.com/dstroy0/ProtoCore/commit/1c2ad03e5ddc5e89a2e6de07c5d009ec0cdd0b65))
 - update CHANGELOG.md [skip ci] ([`2974b57`](https://github.com/dstroy0/ProtoCore/commit/2974b57a3dc8a9c4f680fb762c3851c25d8adf3d))
 - update CHANGELOG.md [skip ci] ([`ddbe826`](https://github.com/dstroy0/ProtoCore/commit/ddbe826b5788df15315993ee1e9f299ee22ea810))
@@ -157,6 +159,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- Merge Dependabot #21: build(deps): bump github/codeql-action from 4 to 4.37.4 ([`e587e2a`](https://github.com/dstroy0/ProtoCore/commit/e587e2a935c429d3163a536015960c6e5da06a76))
 - clang-format the two benches the layer move left unformatted ([`2db2997`](https://github.com/dstroy0/ProtoCore/commit/2db299722f2a5d330b198a71e4cc7fd18702b47f))
 - Bump version: 0.0.6 → 0.0.7 ([`4a6ac90`](https://github.com/dstroy0/ProtoCore/commit/4a6ac90370aaad684ff0656dacefe860615f667d))
 - Bump version: 0.0.5 → 0.0.6 ([`0b8de8e`](https://github.com/dstroy0/ProtoCore/commit/0b8de8e038484f35d0864a0595895ae7c966d014))
@@ -260,6 +263,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- move the JSON suite onto the C writer API ([`5e95259`](https://github.com/dstroy0/ProtoCore/commit/5e95259d88120cffb5a277be8c13c1fb03ff1adc))
 - give the host seam the send-capture accessors, and build route + signaling ([`25435d5`](https://github.com/dstroy0/ProtoCore/commit/25435d52b992c3f2478acb0d581b699335d03eed))
 - bind slots through the host seam and fix the value-init assignments ([`fa14afe`](https://github.com/dstroy0/ProtoCore/commit/fa14afe4ef97d3cab6f198ba86bddcbceb0148c9))
 - enable the dependencies the feature gates require ([`c7e7725`](https://github.com/dstroy0/ProtoCore/commit/c7e77251b877096ebfc4c22ecb47bd2171f84697))
