@@ -10,7 +10,7 @@
 //   - missing Content-Type returns false
 //   - missing boundary in Content-Type returns false
 //   - malformed body (no delimiter found) returns false
-//   - pc_multipart_get_field() returns correct value or nullptr
+//   - pc_multipart_get_field() returns correct value or NULL
 //   - part_count is accurate
 //   - data_len is accurate
 //   - boundary extraction: quoted, unquoted, with extra params
@@ -374,7 +374,7 @@ void test_max_parts_captured()
 {
     // Build exactly MAX_MULTIPART_PARTS + 1 parts; only MAX_MULTIPART_PARTS
     // should be captured (the extra is silently ignored).
-    char body[2048] = {};
+    char body[2048] = {0};
     char *p = body;
     for (int i = 0; i <= MAX_MULTIPART_PARTS; i++)
     {

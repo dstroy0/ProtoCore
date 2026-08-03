@@ -125,7 +125,7 @@ void test_ntowfv2_upper_high_char()
 void test_v2_response_null_out()
 {
     uint8_t owf[16] = {0}, srv[8] = {0}, cli[8] = {0}, time[8] = {0}, ti[4] = {0}, skey[16];
-    TEST_ASSERT_EQUAL_size_t(0, pc_ntlm_v2_response(owf, srv, cli, time, ti, sizeof(ti), nullptr, 100, skey));
+    TEST_ASSERT_EQUAL_size_t(0, pc_ntlm_v2_response(owf, srv, cli, time, ti, sizeof(ti), NULL, 100, skey));
 }
 
 // A null session_key skips the SessionBaseKey derivation (ntlm.cpp:109 false side); the returned
@@ -143,7 +143,7 @@ void test_v2_response_null_skey()
     size_t ti_len = unhex("02000c0044006f006d00610069006e0001000c0053006500720076006500720000000000", ti);
 
     uint8_t out[256];
-    size_t n = pc_ntlm_v2_response(owf, srv, cli, time, ti, ti_len, out, sizeof(out), nullptr);
+    size_t n = pc_ntlm_v2_response(owf, srv, cli, time, ti, ti_len, out, sizeof(out), NULL);
     TEST_ASSERT_EQUAL_size_t(48 + ti_len, n);
     char hex[513];
     to_hex(out, 16, hex);
@@ -180,7 +180,7 @@ void test_set_mic_flag()
     TEST_ASSERT_EQUAL_HEX8_ARRAY(exp_c, out, (int)n);
 
     // fail-closed: null args and a too-small output buffer.
-    TEST_ASSERT_EQUAL_size_t(0, pc_ntlm_set_mic_flag(nullptr, 4, out, sizeof(out)));
+    TEST_ASSERT_EQUAL_size_t(0, pc_ntlm_set_mic_flag(NULL, 4, out, sizeof(out)));
     TEST_ASSERT_EQUAL_size_t(0, pc_ntlm_set_mic_flag(ti_ts, sizeof(ti_ts), out, 4));
 }
 
