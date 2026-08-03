@@ -9,7 +9,7 @@ serve or switch a theme at runtime (e.g. a `/themes/<name>.css` route, or a pick
 user's choice). The whole subsystem is behind `PC_ENABLE_THEMES`, so a build that does not want
 runtime theming links none of it; enabling it embeds the set (each theme is ~1 KB of DROM/flash).
 
-Output: src/network_drivers/application/binary_asset_blobs.{h,cpp} (generated + committed, so the
+Output: src/network_drivers/application/binary_asset_blobs.{h,c} (generated + committed, so the
 Arduino-IDE users who never run Python still get it). Re-run after adding/editing a theme.
 
     python web_assets/wizard/gen_theme_blobs.py            # regenerate
@@ -188,11 +188,17 @@ def render_source(themes):
     lines.append("const char *pc_theme_css(const char *name)")
     lines.append("{")
     lines.append("    if (!name)")
-    lines.append("        return nullptr;")
+    lines.append("    {")
+    lines.append("        return NULL;")
+    lines.append("    }")
     lines.append("    for (size_t i = 0; i < PC_THEME_BLOB_COUNT; i++)")
+    lines.append("    {")
     lines.append("        if (strcmp(PC_THEME_BLOBS[i].name, name) == 0)")
+    lines.append("        {")
     lines.append("            return PC_THEME_BLOBS[i].css;")
-    lines.append("    return nullptr;")
+    lines.append("        }")
+    lines.append("    }")
+    lines.append("    return NULL;")
     lines.append("}")
     lines.append("")
     lines.append("#endif // PC_ENABLE_THEMES")
@@ -203,7 +209,7 @@ def generate(write=True):
     themes = load_themes()
     files = {
         os.path.join(OUT_DIR, BASENAME + ".h"): render_header(themes),
-        os.path.join(OUT_DIR, BASENAME + ".cpp"): render_source(themes),
+        os.path.join(OUT_DIR, BASENAME + ".c"): render_source(themes),
     }
     stale = []
     for path, content in files.items():

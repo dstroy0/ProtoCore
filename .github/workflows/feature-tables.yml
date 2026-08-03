@@ -136,7 +136,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add README.md docs/README.md docs/ARCHITECTURE.md docs/configurator.html docs/EXAMPLES.md docs/THEMES.md docs/FAVICONS.md \
             test/README.md docs/diagrams web_assets/themes/generated web_assets/favicons \
-            src/network_drivers/application/binary_asset_blobs.cpp src/network_drivers/application/binary_asset_blobs.h \
+            src/network_drivers/application/binary_asset_blobs.c src/network_drivers/application/binary_asset_blobs.h \
             examples/*/*/build_opt.h
           if git diff --cached --quiet; then
             echo "no regenerated files changed"

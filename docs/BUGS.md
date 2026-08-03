@@ -8,6 +8,64 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ---
 
+## The theme-blob generator kept emitting C++, so CI resurrects a dead `binary_asset_blobs.cpp` on every run
+
+- **Status:** OPEN (2026-08-02). Found by widening `check_duplicate_symbols` to `.c`, which it had
+  stopped reading.
+- **Symptom:** `PC_THEME_BLOBS` and `PC_THEME_BLOB_COUNT` are each defined in two tracked files,
+  `binary_asset_blobs.c` and `binary_asset_blobs.cpp`. Any build that compiles the whole tree -
+  Arduino, and the ESP-IDF component, whose `CMakeLists.txt` globs `src/*.c` and `src/*.cpp` -
+  gets two definitions of both and fails to link. The native envs name their sources explicitly
+  and reference neither file, so nothing in the test matrix sees it.
+- **Root cause:** `web_assets/wizard/gen_theme_blobs.py` writes `BASENAME + ".cpp"` and renders
+  `return nullptr;` with unbraced bodies. The C conversion produced the `.c` by hand-editing that
+  generated output (`nullptr` -> `NULL`, braces added) and left the `.cpp` tracked. The generator
+  was never converted with the tree, so `feature-tables.yml` re-runs it and `git add`s
+  `binary_asset_blobs.cpp` explicitly - deleting the file by hand is undone by the next CI run.
+  The `.cpp` is byte-identical to what the generator emits today, which is what identifies it as
+  the live output and the `.c` as the hand-edited copy.
+- **Why nothing caught it:** `check_duplicate_symbols` globbed `*.cpp` only, so after the
+  conversion it compared 51 files out of 351 and could not see a `.c`/`.cpp` pair. It reported OK
+  throughout. No native env compiles either file, and no target build runs in CI.
+- **Fix:** the generator emits `.c` and emits C (`NULL`, braced bodies); `--check` now reproduces
+  the committed `.c` byte for byte. `feature-tables.yml` and `.clang-format-ignore` follow the
+  rename. The dead `binary_asset_blobs.cpp` still has to be deleted - pending, because deleting it
+  before the generator fix landed would only have brought it back.
+
+## `webdav.c` and `webdav.cpp` are two different modules sharing one name in one directory
+
+- **Status:** OPEN (2026-08-02). Found alongside the `binary_asset_blobs` pair.
+- **Symptom:** `src/network_drivers/application/webdav/` holds both `webdav.c` (the
+  filesystem-backed half: PROPFIND/PUT/COPY/MOVE over a mounted subtree) and `webdav.cpp` (the
+  pure core: method classification, header parsing, the 207 Multi-Status XML builder). They define
+  different symbols, so this does not break the link, and both are live - the test matrix builds
+  `webdav.c` in five envs and `webdav.cpp` in three, and one env builds both.
+- **Root cause:** `bddf3f4a3` ("move each module under the layer that owns it") moved the
+  filesystem half into the directory that already held the pure core. `webdav.c`'s own file
+  comment still says the pure core "lives in network_drivers/application/webdav/", which is now
+  the directory it is sitting in, so the comment reads as self-referential.
+- **Why nothing caught it:** nothing checks for a basename collision across extensions, and the
+  two files carry no duplicate symbol for `check_duplicate_symbols` to catch. Both compile.
+- **Fix:** not yet decided. One of the two needs a name that says which half it is.
+
+## `check_docs` stopped reading `src/*.c`, so 78 flags and 63 functions became invisible to it
+
+- **Status:** FIXED (2026-08-02). Found while clearing the checker's one live finding, the stale
+  `PC_DIAG_JSON` citation.
+- **Symptom:** none yet. The next doc to cite a symbol that lives only in a `.c` file gets reported
+  as a stale citation and fails CI, with the symbol sitting in the tree the whole time.
+- **Root cause:** the checker builds its authority set - "does this symbol exist" - from
+  `git ls-files src/*.h src/*.cpp test/*.h test/*.cpp pentesting/*.h pentesting/*.cpp`. That list
+  was written when every implementation file was a `.cpp`. The C conversion left 576 `.c` files
+  outside it, and with them 78 `PC_*` names and 63 `pc_*` functions that no longer appear anywhere
+  the checker looks.
+- **Why nothing caught it:** the gap only produces false positives, and only for a doc citing one
+  of those 141 symbols in backticks. No current doc does, so the checker kept reporting OK while
+  its authority set was a third of what it should be. A checker that is too strict fails visibly
+  when it finally fires, but until then it looks identical to a correct one.
+- **Fix:** add `*.c` to each of the three globs. The set is meant to answer whether a symbol exists
+  in the tree, so it follows the file extensions the tree actually uses.
+
 ## Six `network_drivers` enums lost their declared width in the C conversion, growing every struct that holds one
 
 - **Status:** FIXED (2026-08-02), pending a target build. Found by diffing `network_drivers/`
