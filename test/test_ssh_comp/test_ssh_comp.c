@@ -569,7 +569,8 @@ void test_dh_derive_keys_default_wrapper_and_slot_guard(void)
     ssh_keymat_wipe(0);
 
     // Out-of-range slot: must not crash and must not touch any real slot's state.
-    ssh_dh_derive_keys_sid(MAX_SSH_CONNS, K, H, H, SSH_CIPHER_AES256CTR, SSH_MAC_HMAC_SHA256);
+    ssh_dh_derive_keys_sid(MAX_SSH_CONNS, K, H, H, SSH_CIPHER_AES256CTR, SSH_MAC_HMAC_SHA256, PROTO_FALSE,
+                           PC_SHA256_DIGEST_LEN, PC_SHA256_DIGEST_LEN, PROTO_FALSE);
 }
 
 // The cipher_alg dispatch inside ssh_dh_derive_keys_sid(): chacha20-poly1305 installs two 512-bit keys
@@ -589,12 +590,14 @@ void test_dh_derive_keys_chachapoly_and_gcm_branches(void)
     }
 
     ssh_keymat_wipe(0);
-    ssh_dh_derive_keys_sid(0, K, H, sid, SSH_CIPHER_CHACHA20POLY1305, SSH_MAC_HMAC_SHA256);
+    ssh_dh_derive_keys_sid(0, K, H, sid, SSH_CIPHER_CHACHA20POLY1305, SSH_MAC_HMAC_SHA256, PROTO_FALSE,
+                           PC_SHA256_DIGEST_LEN, PC_SHA256_DIGEST_LEN, PROTO_FALSE);
     TEST_ASSERT_TRUE(ssh_keys[0].active);
     TEST_ASSERT_EQUAL_UINT8(SSH_CIPHER_CHACHA20POLY1305, ssh_keys[0].cipher_mode);
 
     ssh_keymat_wipe(0);
-    ssh_dh_derive_keys_sid(0, K, H, sid, SSH_CIPHER_AES256GCM, SSH_MAC_HMAC_SHA256);
+    ssh_dh_derive_keys_sid(0, K, H, sid, SSH_CIPHER_AES256GCM, SSH_MAC_HMAC_SHA256, PROTO_FALSE, PC_SHA256_DIGEST_LEN,
+                           PC_SHA256_DIGEST_LEN, PROTO_FALSE);
     TEST_ASSERT_TRUE(ssh_keys[0].active);
     TEST_ASSERT_EQUAL_UINT8(SSH_CIPHER_AES256GCM, ssh_keys[0].cipher_mode);
     ssh_keymat_wipe(0);
@@ -653,7 +656,8 @@ void test_kdf_mpint_k_edge_encodings(void)
     uint8_t K_zero[256];
     memset(K_zero, 0, sizeof(K_zero));
     uint8_t out_zero[PC_SHA256_DIGEST_LEN], expected_zero[PC_SHA256_DIGEST_LEN];
-    ssh_kdf_derive(K_zero, H, H, 'A', out_zero, PC_SHA256_DIGEST_LEN);
+    ssh_kdf_derive(K_zero, H, H, 'A', out_zero, PC_SHA256_DIGEST_LEN, PROTO_FALSE, PC_SHA256_DIGEST_LEN,
+                   PC_SHA256_DIGEST_LEN, PROTO_FALSE);
     expected_kdf_k1(K_zero, H, 'A', H, PC_SHA256_DIGEST_LEN, expected_zero);
     TEST_ASSERT_EQUAL_MEMORY(expected_zero, out_zero, PC_SHA256_DIGEST_LEN);
 
@@ -664,7 +668,8 @@ void test_kdf_mpint_k_edge_encodings(void)
         K_lead_zero[j] = (uint8_t)(j & 0x7F); // K_lead_zero[2] != 0 and its MSB is clear -> no pad
     }
     uint8_t out_lz[PC_SHA256_DIGEST_LEN], expected_lz[PC_SHA256_DIGEST_LEN];
-    ssh_kdf_derive(K_lead_zero, H, H, 'B', out_lz, PC_SHA256_DIGEST_LEN);
+    ssh_kdf_derive(K_lead_zero, H, H, 'B', out_lz, PC_SHA256_DIGEST_LEN, PROTO_FALSE, PC_SHA256_DIGEST_LEN,
+                   PC_SHA256_DIGEST_LEN, PROTO_FALSE);
     expected_kdf_k1(K_lead_zero, H, 'B', H, PC_SHA256_DIGEST_LEN, expected_lz);
     TEST_ASSERT_EQUAL_MEMORY(expected_lz, out_lz, PC_SHA256_DIGEST_LEN);
 
@@ -672,7 +677,8 @@ void test_kdf_mpint_k_edge_encodings(void)
     memset(K_msb, 0, sizeof(K_msb));
     K_msb[0] = 0x91; // MSB set on the very first byte -> pad byte required
     uint8_t out_msb[PC_SHA256_DIGEST_LEN], expected_msb[PC_SHA256_DIGEST_LEN];
-    ssh_kdf_derive(K_msb, H, H, 'C', out_msb, PC_SHA256_DIGEST_LEN);
+    ssh_kdf_derive(K_msb, H, H, 'C', out_msb, PC_SHA256_DIGEST_LEN, PROTO_FALSE, PC_SHA256_DIGEST_LEN,
+                   PC_SHA256_DIGEST_LEN, PROTO_FALSE);
     expected_kdf_k1(K_msb, H, 'C', H, PC_SHA256_DIGEST_LEN, expected_msb);
     TEST_ASSERT_EQUAL_MEMORY(expected_msb, out_msb, PC_SHA256_DIGEST_LEN);
 }
@@ -693,7 +699,8 @@ void test_kdf_string_k_hybrid_branch(void)
     }
 
     uint8_t got_string[PC_SHA256_DIGEST_LEN];
-    ssh_kdf_derive(K, H, H, 'C', got_string, PC_SHA256_DIGEST_LEN, PROTO_TRUE);
+    ssh_kdf_derive(K, H, H, 'C', got_string, PC_SHA256_DIGEST_LEN, PROTO_TRUE, PC_SHA256_DIGEST_LEN,
+                   PC_SHA256_DIGEST_LEN, PROTO_FALSE);
 
     uint8_t len_be[4] = {0, 0, 0, 32};
     pc_sha256_ctx c;
@@ -709,7 +716,8 @@ void test_kdf_string_k_hybrid_branch(void)
     TEST_ASSERT_EQUAL_MEMORY(expected, got_string, PC_SHA256_DIGEST_LEN);
 
     uint8_t got_mpint[PC_SHA256_DIGEST_LEN];
-    ssh_kdf_derive(K, H, H, 'C', got_mpint, PC_SHA256_DIGEST_LEN, PROTO_FALSE);
+    ssh_kdf_derive(K, H, H, 'C', got_mpint, PC_SHA256_DIGEST_LEN, PROTO_FALSE, PC_SHA256_DIGEST_LEN,
+                   PC_SHA256_DIGEST_LEN, PROTO_FALSE);
     TEST_ASSERT_NOT_EQUAL(0, memcmp(got_string, got_mpint, PC_SHA256_DIGEST_LEN));
 }
 
@@ -730,10 +738,12 @@ void test_kdf_out_len_clamp_matches_exact_max(void)
     }
 
     uint8_t clamped[SSH_KDF_MAX];
-    ssh_kdf_derive(K, H, H, 'X', clamped, SSH_KDF_MAX + 64); // over SSH_KDF_MAX -> clamps
+    ssh_kdf_derive(K, H, H, 'X', clamped, SSH_KDF_MAX + 64, PROTO_FALSE, PC_SHA256_DIGEST_LEN, PC_SHA256_DIGEST_LEN,
+                   PROTO_FALSE); // over SSH_KDF_MAX -> clamps
 
     uint8_t exact[SSH_KDF_MAX];
-    ssh_kdf_derive(K, H, H, 'X', exact, SSH_KDF_MAX); // already at the max -> no clamp needed
+    ssh_kdf_derive(K, H, H, 'X', exact, SSH_KDF_MAX, PROTO_FALSE, PC_SHA256_DIGEST_LEN, PC_SHA256_DIGEST_LEN,
+                   PROTO_FALSE); // already at the max -> no clamp needed
     TEST_ASSERT_EQUAL_MEMORY(exact, clamped, SSH_KDF_MAX);
 
     // K1 (the first 32 bytes of the chain) is a direct, independently-computed hash.

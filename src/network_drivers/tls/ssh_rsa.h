@@ -51,10 +51,10 @@
 #define SSH_RSA_PUBKEY_ALG_LEN 7
 
 /** @brief Signature algorithm name for SHA-256 (RFC 8332). Used in the signature blob. */
-static constexpr char SSH_RSA_SIG_ALG_SHA256[] = "rsa-sha2-256";
+#define SSH_RSA_SIG_ALG_SHA256 "rsa-sha2-256"
 
 /** @brief Signature algorithm name for SHA-512 (RFC 8332). Used in the signature blob. */
-static constexpr char SSH_RSA_SIG_ALG_SHA512[] = "rsa-sha2-512";
+#define SSH_RSA_SIG_ALG_SHA512 "rsa-sha2-512"
 
 // ---------------------------------------------------------------------------
 // RSA public key (safe to keep in static/flash - no secret material)

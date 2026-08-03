@@ -1301,7 +1301,8 @@ static void test_ssh_kdf_extension_chain(void)
     }
 
     uint8_t out[2 * PC_SHA256_DIGEST_LEN];
-    ssh_kdf_derive(K_be, H, sid, 'C', out, sizeof(out));
+    ssh_kdf_derive(K_be, H, sid, 'C', out, sizeof(out), PROTO_FALSE, PC_SHA256_DIGEST_LEN, PC_SHA256_DIGEST_LEN,
+                   PROTO_FALSE);
 
     // K1 = HASH(mpint(K) || H || 'C' || sid) - same as a single-block derive.
     uint8_t k1[PC_SHA256_DIGEST_LEN];

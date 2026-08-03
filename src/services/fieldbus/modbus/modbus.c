@@ -30,7 +30,7 @@ typedef struct
     uint8_t discrete[(PC_MODBUS_DISCRETE_INPUTS + 7) / 8];
     uint16_t holding[PC_MODBUS_HOLDING_REGS];
     uint16_t input[PC_MODBUS_INPUT_REGS];
-    ModbusWriteCb write_cb = NULL;
+    ModbusWriteCb write_cb;
 } ModbusCtx;
 static ModbusCtx s_modbus;
 

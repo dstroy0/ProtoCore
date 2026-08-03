@@ -259,5 +259,6 @@ void ssh_dh_derive_keys(uint8_t i, const uint8_t K_be[256], const uint8_t H[PC_S
 {
     // First-KEX convenience: session id equals H; aes256-ctr + hmac-sha2-256 (pre-negotiation defaults),
     // SHA-256 exchange hash (h_len / sid_len / is512 default).
-    ssh_dh_derive_keys_sid(i, K_be, H, H, SSH_CIPHER_AES256CTR, SSH_MAC_HMAC_SHA256);
+    ssh_dh_derive_keys_sid(i, K_be, H, H, SSH_CIPHER_AES256CTR, SSH_MAC_HMAC_SHA256, PROTO_FALSE, PC_SHA256_DIGEST_LEN,
+                           PC_SHA256_DIGEST_LEN, PROTO_FALSE);
 }
