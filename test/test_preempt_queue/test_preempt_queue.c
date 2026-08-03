@@ -6,7 +6,7 @@
 // and the drain/handler dispatch. The ARDUINO FreeRTOS task + ISR post + preempt
 // latency are HW-verified separately (the host has no tasks/ISRs).
 
-#include "services/system/preempt_queue/preempt_queue.h"
+#include "network_drivers/session/preempt_queue.h"
 #include <string.h> // memcpy
 #include <unity.h>
 

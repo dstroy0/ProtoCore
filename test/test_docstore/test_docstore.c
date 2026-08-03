@@ -217,6 +217,21 @@ void test_persist_and_query_across_reboot(void)
     TEST_ASSERT_TRUE(has_id(&c, "u3"));
 }
 
+// Counts one match then stops, so the early-out path is what the caller observes.
+typedef struct
+{
+    int seen;
+} Once;
+static proto_bool stop_after_one(const char *name, uint16_t nlen, const uint8_t *doc, uint32_t len, void *ctx)
+{
+    (void)name;
+    (void)nlen;
+    (void)doc;
+    (void)len;
+    ((Once *)ctx)->seen++;
+    return PROTO_FALSE;
+}
+
 // find matches only the queried field, and a stop request halts the scan.
 void test_find_early_stop(void)
 {
@@ -229,19 +244,8 @@ void test_find_early_stop(void)
         put_doc(id, doc);
     }
     // A callback that stops after the first match sees exactly one.
-    struct Once
-    {
-        int seen;
-    } once = {0};
-    struct L
-    {
-        static proto_bool cb(const char *, uint16_t, const uint8_t *, uint32_t, void *ctx)
-        {
-            ((Once *)ctx)->seen++;
-            return PROTO_FALSE; // stop immediately
-        }
-    };
-    uint32_t m = pc_docstore_find_str(&g_ds, "grp", "x", cb, &once);
+    Once once = {0};
+    uint32_t m = pc_docstore_find_str(&g_ds, "grp", "x", stop_after_one, &once);
     TEST_ASSERT_EQUAL_UINT32(1, m);
     TEST_ASSERT_EQUAL_INT(1, once.seen);
 }

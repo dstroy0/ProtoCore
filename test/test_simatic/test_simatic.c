@@ -27,7 +27,8 @@ static void cap_tx(void *user, uint8_t b)
 static void cap_rx(void *user, const uint8_t *d, size_t n)
 {
     (void)user;
-    g_rx.assign(d, d + n);
+    g_rx_n = n < sizeof(g_rx) ? n : sizeof(g_rx);
+    memcpy(g_rx, d, g_rx_n);
 }
 
 void setUp()
@@ -531,22 +532,22 @@ void test_rk512_build_send_field_order()
 {
     const uint16_t words[] = {0x1234, 0xABCD};
     uint8_t buf[32];
-    size_t n = pc_rk512_build_send(buf, sizeof(buf), DB, 5, 0x0010, words, 2);
+    size_t n = pc_rk512_build_send(buf, sizeof(buf), RK512_AREA_DB, 5, 0x0010, words, 2);
     TEST_ASSERT_EQUAL_size_t(8 + 4, n);
     // [SEND, coord=0, area=DB, dbnr=5, addr BE, count BE, words BE]
-    const uint8_t want[] = {0x00, 0x00, (uint8_t)DB, 0x05, 0x00, 0x10, 0x00, 0x02, 0x12, 0x34, 0xAB, 0xCD};
+    const uint8_t want[] = {0x00, 0x00, (uint8_t)RK512_AREA_DB, 0x05, 0x00, 0x10, 0x00, 0x02, 0x12, 0x34, 0xAB, 0xCD};
     TEST_ASSERT_EQUAL_HEX8_ARRAY(want, buf, n);
 }
 
 void test_rk512_build_fetch_and_parse()
 {
     uint8_t buf[16];
-    size_t n = pc_rk512_build_fetch(buf, sizeof(buf), MB, 0, 0x0100, 4);
+    size_t n = pc_rk512_build_fetch(buf, sizeof(buf), RK512_AREA_MB, 0, 0x0100, 4);
     TEST_ASSERT_EQUAL_size_t(8, n);
     Rk512Header h;
     TEST_ASSERT_TRUE(pc_rk512_parse_header(buf, n, &h));
-    TEST_ASSERT_EQUAL(FETCH, h.cmd);
-    TEST_ASSERT_EQUAL(MB, h.area);
+    TEST_ASSERT_EQUAL(RK512_CMD_FETCH, h.cmd);
+    TEST_ASSERT_EQUAL(RK512_AREA_MB, h.area);
     TEST_ASSERT_EQUAL_UINT16(0x0100, h.addr);
     TEST_ASSERT_EQUAL_UINT16(4, h.count);
 }
@@ -578,7 +579,7 @@ void test_rk512_parse_rejects()
     // overflow guards
     uint8_t tiny[4];
     const uint16_t w[] = {1};
-    TEST_ASSERT_EQUAL_size_t(0, pc_rk512_build_send(tiny, sizeof(tiny), DB, 0, 0, w, 1));
+    TEST_ASSERT_EQUAL_size_t(0, pc_rk512_build_send(tiny, sizeof(tiny), RK512_AREA_DB, 0, 0, w, 1));
 }
 
 void test_rk512_build_guards()
@@ -586,12 +587,12 @@ void test_rk512_build_guards()
     // Every builder fails closed on a null destination or a destination too small for its telegram.
     uint8_t buf[32];
     const uint16_t w[] = {0x0001};
-    TEST_ASSERT_EQUAL_size_t(0, pc_rk512_build_send(NULL, sizeof(buf), DB, 0, 0, w, 1));
-    TEST_ASSERT_EQUAL_size_t(0, pc_rk512_build_send(buf, sizeof(buf), DB, 0, 0, NULL, 1));
+    TEST_ASSERT_EQUAL_size_t(0, pc_rk512_build_send(NULL, sizeof(buf), RK512_AREA_DB, 0, 0, w, 1));
+    TEST_ASSERT_EQUAL_size_t(0, pc_rk512_build_send(buf, sizeof(buf), RK512_AREA_DB, 0, 0, NULL, 1));
     // a null word array with count 0 is the legal header-only SEND
-    TEST_ASSERT_EQUAL_size_t(8, pc_rk512_build_send(buf, sizeof(buf), DB, 0, 0, NULL, 0));
-    TEST_ASSERT_EQUAL_size_t(0, pc_rk512_build_fetch(NULL, sizeof(buf), DB, 0, 0, 1));
-    TEST_ASSERT_EQUAL_size_t(0, pc_rk512_build_fetch(buf, 7, DB, 0, 0, 1)); // < header
+    TEST_ASSERT_EQUAL_size_t(8, pc_rk512_build_send(buf, sizeof(buf), RK512_AREA_DB, 0, 0, NULL, 0));
+    TEST_ASSERT_EQUAL_size_t(0, pc_rk512_build_fetch(NULL, sizeof(buf), RK512_AREA_DB, 0, 0, 1));
+    TEST_ASSERT_EQUAL_size_t(0, pc_rk512_build_fetch(buf, 7, RK512_AREA_DB, 0, 0, 1)); // < header
     TEST_ASSERT_EQUAL_size_t(0, pc_rk512_build_reaction(NULL, sizeof(buf), 0));
     TEST_ASSERT_EQUAL_size_t(0, pc_rk512_build_reaction(buf, 2, 0)); // < 3
 }
@@ -601,7 +602,7 @@ void test_rk512_parse_header_guards()
     // Null arguments, an area code under the valid range, and a REACTION command byte are all
     // rejected as request headers.
     Rk512Header h;
-    const uint8_t ok[] = {0x00, 0x00, (uint8_t)DB, 0x01, 0x00, 0x00, 0x00, 0x01};
+    const uint8_t ok[] = {0x00, 0x00, (uint8_t)RK512_AREA_DB, 0x01, 0x00, 0x00, 0x00, 0x01};
     TEST_ASSERT_FALSE(pc_rk512_parse_header(NULL, sizeof(ok), &h));
     TEST_ASSERT_FALSE(pc_rk512_parse_header(ok, sizeof(ok), NULL));
     uint8_t lowarea[8];
@@ -610,10 +611,10 @@ void test_rk512_parse_header_guards()
     TEST_ASSERT_FALSE(pc_rk512_parse_header(lowarea, sizeof(lowarea), &h));
     uint8_t reaction[8];
     memcpy(reaction, ok, sizeof(ok));
-    reaction[0] = (uint8_t)REACTION;
+    reaction[0] = (uint8_t)RK512_CMD_REACTION;
     TEST_ASSERT_FALSE(pc_rk512_parse_header(reaction, sizeof(reaction), &h));
     TEST_ASSERT_TRUE(pc_rk512_parse_header(ok, sizeof(ok), &h)); // the control case still parses
-    TEST_ASSERT_EQUAL(SEND, h.cmd);
+    TEST_ASSERT_EQUAL(RK512_CMD_SEND, h.cmd);
     TEST_ASSERT_EQUAL_UINT8(1, h.dbnr);
 }
 
@@ -627,7 +628,7 @@ void test_rk512_parse_reaction_guards_and_data()
     TEST_ASSERT_FALSE(pc_rk512_parse_reaction(NULL, 3, &status, NULL, NULL));
     TEST_ASSERT_FALSE(pc_rk512_parse_reaction(buf, 3, NULL, NULL, NULL));
     TEST_ASSERT_FALSE(pc_rk512_parse_reaction(buf, 2, &status, NULL, NULL));
-    const uint8_t notreaction[3] = {(uint8_t)FETCH, 0x00, 0x00};
+    const uint8_t notreaction[3] = {(uint8_t)RK512_CMD_FETCH, 0x00, 0x00};
     TEST_ASSERT_FALSE(pc_rk512_parse_reaction(notreaction, sizeof(notreaction), &status, NULL, NULL));
     buf[3] = 0x12; // two data words appended by a FETCH responder
     buf[4] = 0x34;

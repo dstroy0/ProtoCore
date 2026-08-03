@@ -200,10 +200,10 @@ void test_backpressure_counts_when_ring_full()
     conn_pool[0].pcb = NULL;
     conn_pool[0].rx_head = 0;
     conn_pool[0].rx_tail = 0;
-    struct pbuf p;
+    pc_pbuf p;
     memset(&p, 0, sizeof(p));
     p.tot_len = RX_BUF_SIZE * 2; // larger than the whole ring -> refused
-    err_t rc = lowlevel_recv_cb(&conn_pool[0], NULL, &p, PC_NET_OK);
+    pc_net_err rc = lowlevel_recv_cb(&conn_pool[0], NULL, &p, PC_NET_OK);
     TEST_ASSERT_EQUAL(PC_NET_ERR_MEM, rc);
     TEST_ASSERT_EQUAL_UINT32(1, pc_conn_counters_get().backpressure);
     TEST_ASSERT_EQUAL(PC_CONN_R_BACKPRESSURE, g_reason);
@@ -333,7 +333,7 @@ void test_enqueue_failure_from_recv_cb_counts_defer_drop()
     listener_pool[1].active = PROTO_FALSE; // -> listener_enqueue() reports failure
 
     uint8_t byte = 'x';
-    struct pbuf p;
+    pc_pbuf p;
     memset(&p, 0, sizeof(p));
     p.payload = &byte;
     p.len = 1;
@@ -378,10 +378,10 @@ void test_recv_during_closing_is_drained_not_processed()
     TEST_ASSERT_EQUAL(CONN_CLOSING, (ConnState)conn_pool[0].state);
 
     // Late inbound data while closing: acked + dropped, slot stays CLOSING.
-    struct pbuf p;
+    pc_pbuf p;
     memset(&p, 0, sizeof(p));
     p.tot_len = 8;
-    err_t rc = lowlevel_recv_cb(&conn_pool[0], &pcb, &p, PC_NET_OK);
+    pc_net_err rc = lowlevel_recv_cb(&conn_pool[0], &pcb, &p, PC_NET_OK);
     TEST_ASSERT_EQUAL(PC_NET_OK, rc);
     TEST_ASSERT_EQUAL(CONN_CLOSING, (ConnState)conn_pool[0].state);
 }

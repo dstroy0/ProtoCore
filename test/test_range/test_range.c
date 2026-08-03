@@ -255,14 +255,14 @@ void test_file_send_backpressure_resumes_across_polls()
 // file bytes, none lost or duplicated by the seek-back.
 void test_file_send_write_fails_then_retries()
 {
-    mock_send_fail_after() = 1; // header write succeeds; the next (first body) write fails
+    mock_send_fail_after(1); // header write succeeds; the next (first body) write fails
     request(NULL);
     const char *r = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(r, "200 OK"));
     TEST_ASSERT_NOT_NULL(strstr(r, "Content-Length: 20")); // header queued
     TEST_ASSERT_EQUAL_UINT(0, body_len());                 // body write failed: nothing after the header
 
-    mock_send_fail_after() = -1; // send buffer recovers
+    mock_send_fail_after(-1); // send buffer recovers
     handle();                    // worker poll retries the in-flight file response
     TEST_ASSERT_EQUAL_UINT(20, body_len());
     TEST_ASSERT_EQUAL_MEMORY(FILE_DATA, body_ptr(), 20); // exactly the file, no dup/loss
