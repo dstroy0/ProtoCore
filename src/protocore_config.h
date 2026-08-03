@@ -3474,7 +3474,7 @@ from halves and is slower than the width it decomposes into"
  * @brief Opt-in SoC power governor (PC_ENABLE_POWER_MGMT).
  *
  * network_drivers/physical/radio_power owns the radio and server/sleep_sched decides how long to sleep; neither
- * owns the SoC. When set, services/system/power_mgmt decides the CPU clock from load, die temperature and
+ * owns the SoC. When set, server/power_mgmt decides the CPU clock from load, die temperature and
  * the reset reason: idle work runs at the floor instead of spinning a 240 MHz core, a hot die clocks
  * down (with a lower restore threshold, so a part sitting at the limit does not oscillate), and a
  * board that just browned out comes back up at the floor for a settle window rather than slamming
@@ -4512,7 +4512,7 @@ from halves and is slower than the width it decomposes into"
 /**
  * @brief Opt-in ESP32 panic / exception decoder for a live diagnostics panel (PC_ENABLE_EXC_DECODER).
  *
- * When set, services/system/exc_decoder parses a captured Guru Meditation panic dump (the cause, the register
+ * When set, server/exc_decoder parses a captured Guru Meditation panic dump (the cause, the register
  * PC + EXCVADDR, and the backtrace PC:SP frames) into a structured ExcInfo and serializes it as JSON for
  * a "/exception" panel; the browser or a build server resolves the PCs to file:line against the firmware
  * ELF (addr2line lives off-device). Pure, no heap/stdlib. Default off.

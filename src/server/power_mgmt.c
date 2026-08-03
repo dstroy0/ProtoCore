@@ -6,7 +6,7 @@
  * @brief The power governor's decision + its device binding (see power_mgmt.h).
  */
 
-#include "services/system/power_mgmt/power_mgmt.h"
+#include "server/power_mgmt.h"
 #include "mmgr/membuild.h" // pc_sb frame builder
 
 #if PC_ENABLE_POWER_MGMT

@@ -32,7 +32,7 @@
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
 #include "services/file_transfer/ftp/ftp_session.h"
-#include "services/system/exc_decoder/exc_decoder.h"
+#include "server/exc_decoder.h"
 #include "shared_primitives/log.h"
 #include "shared_primitives/mime.h"
 #include <SD_MMC.h>

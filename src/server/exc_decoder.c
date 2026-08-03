@@ -6,7 +6,7 @@
  * @brief ESP32 panic / exception decoder (see exc_decoder.h).
  */
 
-#include "services/system/exc_decoder/exc_decoder.h"
+#include "server/exc_decoder.h"
 #include "mmgr/membuild.h" // pc_sb frame builder
 
 #if PC_ENABLE_EXC_DECODER

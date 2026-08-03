@@ -13,7 +13,7 @@
  * panic stays pure in exc_decoder.cpp.
  */
 
-#include "services/system/exc_decoder/exc_decoder.h"
+#include "server/exc_decoder.h"
 
 #if PC_ENABLE_EXC_DECODER && PROTOCORE_HOT
 

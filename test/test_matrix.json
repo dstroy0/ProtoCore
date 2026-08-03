@@ -2430,9 +2430,9 @@
       "tests": ["test_sb_modbus"]
     },
     "native_exc_decoder": {
-      "desc": "ESP32 panic / exception decoder (services/system/exc_decoder): parse a captured Guru Meditation\ndump (cause, register PC + EXCVADDR, backtrace PC:SP frames) into a structured ExcInfo and serialize it\nas JSON for a live /exception panel; tolerates missing fields + a trailing corruption marker. Pure host tests.",
+      "desc": "ESP32 panic / exception decoder (server/exc_decoder): parse a captured Guru Meditation\ndump (cause, register PC + EXCVADDR, backtrace PC:SP frames) into a structured ExcInfo and serialize it\nas JSON for a live /exception panel; tolerates missing fields + a trailing corruption marker. Pure host tests.",
       "flags": ["-DPC_ENABLE_EXC_DECODER=1"],
-      "src": ["+<services/system/exc_decoder/exc_decoder.c>"],
+      "src": ["+<server/exc_decoder.c>"],
       "tests": ["test_exc_decoder"]
     },
     "native_http_delivery": {
@@ -2544,9 +2544,9 @@
       "tests": ["test_logbuf"]
     },
     "native_power_mgmt": {
-      "desc": "SoC power governor (services/system/power_mgmt): the pure clock decision from load, die\ntemperature and reset reason - load-based scaling, the thermal hysteresis that stops a part parked at\nthe limit from oscillating (asserted by feeding the plan's own output back for 20 ticks and counting\none transition), post-brownout recovery holding the floor even when busy and cool, the precedence\nbetween the three, and INT16_MIN meaning no sensor rather than ice-cold.",
+      "desc": "SoC power governor (server/power_mgmt): the pure clock decision from load, die\ntemperature and reset reason - load-based scaling, the thermal hysteresis that stops a part parked at\nthe limit from oscillating (asserted by feeding the plan's own output back for 20 ticks and counting\none transition), post-brownout recovery holding the floor even when busy and cool, the precedence\nbetween the three, and INT16_MIN meaning no sensor rather than ice-cold.",
       "flags": ["-DPC_ENABLE_POWER_MGMT=1"],
-      "src": ["+<services/system/power_mgmt/power_mgmt.c>"],
+      "src": ["+<server/power_mgmt.c>"],
       "tests": ["test_power_mgmt"]
     },
     "native_hotswap": {
@@ -2742,7 +2742,7 @@
         "+<services/transportation/ocit/ocit.c>",
         "+<services/machine_tool/atc/atc.c>",
         "+<services/net/southbound/southbound.c>",
-        "+<services/system/exc_decoder/exc_decoder.c>",
+        "+<server/exc_decoder.c>",
         "+<services/file_transfer/http_delivery/http_delivery.c>",
         "+<server/signaling/hw_health.c>",
         "+<services/net/mdns_adaptive/mdns_adaptive.c>",

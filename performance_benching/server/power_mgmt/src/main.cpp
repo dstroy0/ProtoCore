@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for the SoC power governor (services/system/power_mgmt): the pure clock
+// On-device CCOUNT microbenchmark for the SoC power governor (server/power_mgmt): the pure clock
 // decision pc_power_plan() - load-based scaling, the thermal hysteresis that keeps a part parked at
 // the limit from oscillating, and post-brownout recovery - plus pc_power_json() which serializes a
 // plan. All of these take every input explicitly and touch no hardware, so each call here exercises
@@ -18,7 +18,7 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "services/system/power_mgmt/power_mgmt.h"
+#include "server/power_mgmt.h"
 #include <Arduino.h>
 
 static void power_mgmt_bench_task(void *)

@@ -1,11 +1,11 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the SoC power governor (services/system/power_mgmt): load-based scaling, the thermal
+// Unit tests for the SoC power governor (server/power_mgmt): load-based scaling, the thermal
 // hysteresis that stops a part at the limit oscillating, post-brownout recovery, the precedence
 // between the three, and the no-sensor case.
 
-#include "services/system/power_mgmt/power_mgmt.h"
+#include "server/power_mgmt.h"
 #include <stdio.h>
 #include <string.h>
 #include <unity.h>

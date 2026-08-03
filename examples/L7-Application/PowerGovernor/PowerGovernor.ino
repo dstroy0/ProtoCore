@@ -23,7 +23,7 @@
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
 #include "server/clock/clock.h" // pc_millis - the library's monotonic source
-#include "services/system/power_mgmt/power_mgmt.h"
+#include "server/power_mgmt.h"
 #include "shared_primitives/mime.h"
 
 static const char *WIFI_SSID = "your-ssid";

@@ -1293,7 +1293,7 @@
   "namespace|src/board_drivers/hal/esp/esp_mnt_fs.h|named namespace `fs`; the library is one flat pc_ scope",
   "namespace|src/crypto/mac/ghash.h|named namespace `pc_ghash_detail`; the library is one flat pc_ scope",
   "namespace|src/services/storage/wal/wal_fs.h|named namespace `pc_wal_fs_detail`; the library is one flat pc_ scope",
-  "namespace|src/services/system/exc_decoder/exc_decoder.h|named namespace `fs`; the library is one flat pc_ scope",
+  "namespace|src/server/exc_decoder.h|named namespace `fs`; the library is one flat pc_ scope",
   "namespace|src/shared_primitives/crc.h|named namespace `pc_crc_detail`; the library is one flat pc_ scope",
   "namespace|src/shared_primitives/pcap.h|named namespace `pc_pcap_detail`; the library is one flat pc_ scope"
 ]

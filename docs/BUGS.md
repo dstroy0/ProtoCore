@@ -1318,7 +1318,7 @@ PC_ENABLE_DNC` to the `PC_NEED_DET_CLIENT` derivation (which also force-enables 
       (`if (ex < 400)` - 10^400 saturates the double to inf anyway), fixing UB + DoS. GraphQL's integer
       literal (`long long ipart`) also overflowed - now unsigned-accumulate.
     - `services/security/jwt/jwt.cpp` `jwt_claim_int` (untrusted numeric claim) and
-      `services/system/exc_decoder/exc_decoder.cpp` (crash-dump core id): the same signed `v*10` - fixed by
+      `server/exc_decoder.c` (crash-dump core id): the same signed `v*10` - fixed by
       unsigned-accumulate + reinterpret (jwt) / clamp (exc_decoder).
 - **Not a bug:** `network_drivers/network/ip.cpp:54` matched the grep but is bounded - the
   `if (digits >= 3) return false` guard caps the octet at 3 digits (<= 999), so `val*10` never
