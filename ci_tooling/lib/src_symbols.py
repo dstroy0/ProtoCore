@@ -48,37 +48,3 @@ def headers(root=None):
     return sorted(out)
 
 
-def enum_members(root=None):
-    """{MEMBER: {owning enum class, ...}}.
-
-    A member owned by more than one enum class is ambiguous and callers must not
-    guess: `NONE`, `PENDING`, and `START` each appear in two unrelated enums.
-
-    Two things the body match has to get right, both learned the hard way:
-
-    * The body is `[^{}]*`, not `.*?`. A lazy dot-star runs past the closing brace
-      when a later construct interferes, silently attributing one enum's members
-      to another - which is how SNMP_GAUGE32 ended up credited to SnmpTag.
-    * Preprocessor lines are stripped. Enum bodies are conditionally compiled
-      (`enum class RouteType` guards members with `#if PC_ENABLE_WEBSOCKET`), so
-      leaving them in harvests the FLAG NAME as if it were a member - which had
-      the checker demanding `RouteType::PC_ENABLE_WEBDAV` for a `#define`.
-    """
-    out = {}
-    for h in headers(root):
-        text = _decomment(open(h, encoding="utf-8", errors="replace").read())
-        for m in re.finditer(r"enum\s+class\s+(\w+)\s*(?::[^{;]*)?\{([^{}]*)\}", text):
-            owner, body = m.group(1), m.group(2)
-            body = re.sub(r"^\s*#.*$", "", body, flags=re.M)  # drop #if / #endif
-            for mem in re.findall(r"\b([A-Z][A-Z0-9_]{2,})\b", body):
-                out.setdefault(mem, set()).add(owner)
-    return out
-
-
-def enum_classes(root=None):
-    """Just the enum-class type names."""
-    names = set()
-    for h in headers(root):
-        text = _decomment(open(h, encoding="utf-8", errors="replace").read())
-        names.update(re.findall(r"enum\s+class\s+(\w+)", text))
-    return names

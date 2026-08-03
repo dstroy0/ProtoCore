@@ -12,7 +12,7 @@
 #include "services/net/smtp/smtp.h"
 #include "mmgr/membuild.h" // pc_sb frame builder
 #include "protocore_config.h"
-#include "services/system/clock.h" // pcdelay
+#include "server/clock/clock.h" // pcdelay
 
 #if PC_ENABLE_SMTP
 
@@ -495,24 +495,20 @@ SmtpResult smtp_run(const SmtpConfig *cfg, const SmtpMessage *msg, SmtpSendFn se
 
 #if PROTOCORE_HOT
 
-static struct SmtpXport;
+/** @brief One SMTP connection: its pc_client id, its deadline, and its TLS state. */
+typedef struct
+{
+    int cid;
+    uint32_t deadline;
+    const char *host;      ///< TLS SNI name, used when the upgrade happens mid-dialogue
+    proto_bool tls_active; ///< set once a STARTTLS upgrade has completed on this connection
+} SmtpXport;
 
-/** @brief Owned state: which transport the TLS BIO callbacks act on.
- *
- * pc_tls_client_session_begin() carries no context pointer, so mbedtls calls the BIO with a ctx
- * that is not ours. The active transport is parked here for the life of the session instead. */
+/** @brief Owned state: the transport the TLS BIO callbacks read and write. */
 typedef struct
 {
     SmtpXport *xport;
 } SmtpTlsCtx;
-
-typedef struct SmtpXport
-{
-    int cid;
-    uint32_t deadline;
-    const char *host;      ///< TLS SNI name, needed when the upgrade happens mid-dialogue
-    proto_bool tls_active; ///< set once a STARTTLS upgrade has completed on this connection
-} SmtpXport;
 
 static SmtpTlsCtx s_smtp_tls = {NULL};
 

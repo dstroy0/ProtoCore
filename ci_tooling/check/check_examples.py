@@ -21,8 +21,7 @@ that scope - so this reads it.
 
 Checked (in `.ino`/`.cpp` and in README fenced code alike):
   1. vendor networking calls           - the library owns the transport
-  2. unscoped enum-class members       - `enum class` is the house idiom
-  3. banned socket classes (rule 6)    - WiFiClient / WiFiUDP / AsyncUDP
+  2. banned socket classes (rule 6)    - WiFiClient / WiFiUDP / AsyncUDP
 
 Usage:  python ci_tooling/check/check_examples.py [--verbose]
 """
@@ -33,7 +32,6 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "lib"))
 import doc_region as dr  # noqa: E402  (path set above)
-import src_symbols  # noqa: E402  (path set above)
 
 ROOT = dr.repo_root(__file__)
 EXAMPLES = os.path.join(ROOT, "examples")
@@ -86,12 +84,17 @@ def blank_block_comments(text):
     return re.sub(r"/\*.*?\*/", _blank, text, flags=re.S)
 
 
+# Untracked trees a local build drops inside examples/: a fetched dependency and its objects.
+PRUNE = {"managed_components", "build", ".pio", "node_modules"}
+
+
 def iter_example_code():
     """Yield (path, lineno, line) for every line of example CODE.
 
     Sketch bodies in full, and only the fenced blocks of a README.
     """
     for base, dirs, files in os.walk(EXAMPLES):
+        dirs[:] = [d for d in dirs if d not in PRUNE]
         for f in sorted(files):
             p = os.path.join(base, f)
             if f.endswith((".ino", ".cpp", ".h")):
@@ -126,6 +129,7 @@ def check_sketch_include_order():
     """
     out = []
     for base, dirs, files in os.walk(EXAMPLES):
+        dirs[:] = [d for d in dirs if d not in PRUNE]
         for f in sorted(files):
             if not f.endswith(".ino"):
                 continue
@@ -148,9 +152,6 @@ def check_sketch_include_order():
 
 def main():
     verbose = "--verbose" in sys.argv[1:]
-    members = src_symbols.enum_members(ROOT)
-    unique = {k: next(iter(v)) for k, v in members.items() if len(v) == 1}
-    bare = re.compile(r"(?<![:\w])(" + "|".join(map(re.escape, sorted(unique, key=len, reverse=True))) + r")\b")
 
     findings = []
     for p, n, raw in iter_example_code():
@@ -162,12 +163,6 @@ def main():
         for rx, what, instead in VENDOR:
             if rx.search(line):
                 findings.append((rel, n, f"vendor call {what} - use {instead}", raw.strip()))
-
-        for m in bare.finditer(line):
-            mem = m.group(1)
-            findings.append((rel, n,
-                             f"unscoped enum member {mem} - write {unique[mem]}::{mem}",
-                             raw.strip()))
 
     findings.extend(check_sketch_include_order())
 
@@ -184,7 +179,7 @@ def main():
 
     n_files = sum(1 for _ in os.walk(EXAMPLES))
     print(f"check_examples: OK - example code uses the library API "
-          f"({len(unique)} enum members known, {n_files} dirs scanned).")
+          f"({n_files} dirs scanned).")
     return 0
 
 

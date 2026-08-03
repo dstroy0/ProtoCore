@@ -95,5 +95,6 @@ solves it with a lock:
   suite added to `test/test_matrix.json` (regen with `test/gen_test_envs.py`).
 - **Implement protocols faithfully** in spec field order; verify against the live standard **and** a
   real third-party implementation; byte-exact golden vectors.
-- **snake_case, terse names**, `const char *` (pointer binds to the type), minimal WHY-only comments
-  that read like the author wrote them.
+- **snake_case, terse names**, `const char *` (pointer binds to the type), and comments that state
+  what the code does and how it does it, in plain language. Code is math; the comment is its
+  description. Nothing else goes in one.
