@@ -1,8 +1,8 @@
 # Test Report
 
-**Generated:** 2026-08-03 05:22:54
+**Generated:** 2026-08-03 05:37:07
 **Command:** `pio test` over 304 auto-discovered native envs (excludes native_pentest, native_codeql)
-**Result:** ✅ 13 passed - 49s
+**Result:** ✅ 13 passed - 58s
 
 ---
 
@@ -66,6 +66,7 @@
 | `test_ssh_chachapoly` | `native_ssh_chachapoly` |     0 |   ✅   | 00:00:00.979 |
 | `test_frame`          | `native_frame`          |     0 |   ✅   | 00:00:00.807 |
 | `test_span`           | `native_span`           |     0 |   ✅   | 00:00:00.795 |
+| `test_dtls_tls13`     | `native_dtls_tls13`     |     0 |   ✅   | 00:00:09.084 |
 
 ---
 
