@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- dma.c's byte_ring becomes free functions over a pointer ([`1306696`](https://github.com/dstroy0/ProtoCore/commit/1306696793cebae80b39df6d28ddd2259b2bd6bc))
 - static inline in the C headers ([`52c571e`](https://github.com/dstroy0/ProtoCore/commit/52c571ed8dcf918bc88895cb51807c0a6e8e94de))
 - hand the listen pcb back to the stack on listener_stop ([`b70bb7e`](https://github.com/dstroy0/ProtoCore/commit/b70bb7eb79f1881eccd816baec890d2cce10d045))
 - restore the SNMP_TAG_ prefix, WAL pointer params, and the BerEnc forward typedef ([`88efecc`](https://github.com/dstroy0/ProtoCore/commit/88efecc73952d060f17b5378a5058094bb6b0557))
@@ -56,6 +57,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`e55865a`](https://github.com/dstroy0/ProtoCore/commit/e55865a97e01e6375fd0095cf8c1574a915d97f2))
 - update CHANGELOG.md [skip ci] ([`2f86534`](https://github.com/dstroy0/ProtoCore/commit/2f86534c918c0c245fc8788fd1e634b65476e6cb))
 - update test report + coverage [skip ci] ([`3b4d006`](https://github.com/dstroy0/ProtoCore/commit/3b4d006c4deb528472de654b74805f67d1e99166))
 - update CHANGELOG.md [skip ci] ([`99dafc8`](https://github.com/dstroy0/ProtoCore/commit/99dafc82633e1f9be44c1d1f63de39875059a4dd))
@@ -403,6 +405,12 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- gateway and trace_capture record into fixed tables ([`1c0133e`](https://github.com/dstroy0/ProtoCore/commit/1c0133e79af98df388fcadc2cbc67327a371d809))
+- read the dma record payload directly ([`30c79d2`](https://github.com/dstroy0/ProtoCore/commit/30c79d234a154f7186a0e47bad919cab2b6e103e))
+- dma records completions into a fixed table ([`b012d3c`](https://github.com/dstroy0/ProtoCore/commit/b012d3c7d89ba7272de18e6613088fa92a1c1128))
+- the last ikev2 element assignment as a compound literal ([`60e8a41`](https://github.com/dstroy0/ProtoCore/commit/60e8a418765fbfb7df10520076396de9b479582e))
+- ikev2's sized vectors become fixed arrays ([`28e7aed`](https://github.com/dstroy0/ProtoCore/commit/28e7aed7ee83b4e78b1b155ee1d270b770814b16))
+- the KAT suite uses the keyed GCM handle and the explicit tag output ([`53c3d6d`](https://github.com/dstroy0/ProtoCore/commit/53c3d6d4c48b10ed61143490eb81b3c4b28da391))
 - typedef the KAT structs, name ntlm's nibble lambda, restore SMB2_SIGN_ALGO_AES_CMAC ([`a06f4da`](https://github.com/dstroy0/ProtoCore/commit/a06f4dafac8ee69ceb81adf2cb65b11b432cffa2))
 - name the hex-nibble lambdas, five more suites to C ([`45046ce`](https://github.com/dstroy0/ProtoCore/commit/45046ce30ccd636f7de8a6a0a83c8b33180b804f))
 - call proto_tcp_conn_timeout_ms instead of comparing its address ([`569d2c7`](https://github.com/dstroy0/ProtoCore/commit/569d2c79d37b948cbe1a84ed65d381afd9845898))
