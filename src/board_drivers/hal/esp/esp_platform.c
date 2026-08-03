@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file esp_platform.cpp
+ * @file esp_platform.c
  * @brief Espressif answers to the platform questions the core asks.
  *
  * The core cannot name FreeRTOS, so it asks pc_platform_context_id() and this supplies it. Only ever

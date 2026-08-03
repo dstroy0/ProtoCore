@@ -70,6 +70,11 @@
 #define PC_VENDOR_RP 1
 #elif defined(__TI_COMPILER_VERSION__) || defined(PC_VENDOR_TI_FORCE)
 #define PC_VENDOR_TI 1
+#elif defined(PROTOCORE_HOT_FORCE)
+// No silicon, but the hot path is the thing under test. A mock vendor with real backends under
+// board_drivers/*/mock/ puts PROTOCORE_HOT on a machine that can run the suite, so the target path
+// is exercised by tests rather than only by a flash. Last in the chain: a genuine vendor above wins.
+#define PC_VENDOR_MOCK 1
 #else
 #define PROTOCORE_HOST 1
 #endif
@@ -86,6 +91,9 @@
 #endif
 #ifndef PC_VENDOR_TI
 #define PC_VENDOR_TI 0
+#endif
+#ifndef PC_VENDOR_MOCK
+#define PC_VENDOR_MOCK 0
 #endif
 #ifndef PROTOCORE_HOST
 #define PROTOCORE_HOST 0
@@ -122,6 +130,8 @@
 #define PC_HAS_HW_AESGCM 1
 #elif PROTOCORE_HOST
 #define PC_HAS_HW_AESGCM 0 // a unit-test build has no silicon by definition
+#elif PC_VENDOR_MOCK
+#define PC_HAS_HW_AESGCM 0 // the mock vendor has no silicon either: it exists to compile the hot path
 #else
 #error                                                                                                                 \
     "ProtoCore: this vendor must state PC_HAS_HW_AESGCM (1 = accelerated AEAD in board_drivers/hal/<vendor>, 0 = portable software AES + table GHASH, ~7.6x slower where measured). Choosing software is fine; defaulting into it is not."
@@ -136,6 +146,8 @@
 #define PC_HAS_HW_BIGNUM 1
 #elif PROTOCORE_HOST
 #define PC_HAS_HW_BIGNUM 0 // a unit-test build has no silicon by definition
+#elif PC_VENDOR_MOCK
+#define PC_HAS_HW_BIGNUM 0 // the mock vendor has no silicon either: it exists to compile the hot path
 #else
 #error                                                                                                                 \
     "ProtoCore: this vendor must state PC_HAS_HW_BIGNUM (1 = accelerated backend in board_drivers/hal/<vendor>, 0 = portable software Montgomery, which is not constant time). Choosing software crypto is fine; defaulting into it is not."
@@ -360,12 +372,15 @@ typedef ip_addr_t pc_net_ip;
 #define pc_net_igmp_join igmp_joingroup
 #define pc_net_igmp_leave igmp_leavegroup
 
-#elif PROTOCORE_HOST
+#elif PROTOCORE_HOST || PC_VENDOR_MOCK
 
 // The test build has no vendor stack, so the same surface comes from a host driver the test
 // environment puts on the include path (test/mocks/pc_net_host.h), exactly the way it supplies
 // <Arduino.h>. Guarded on presence so a host build without that path is unchanged: it simply has
 // no transport, which is what it had before this arm existed.
+//
+// The mock vendor shares this arm rather than owning a second copy. It is hot, but it has no more
+// silicon than the test build does, and a stack surface duplicated per path is one that drifts.
 #if defined(__has_include)
 #if __has_include("pc_net_host.h")
 #include "pc_net_host.h" // PC_ALLOW_LATE_INCLUDE: ordered - the host driver for the block above

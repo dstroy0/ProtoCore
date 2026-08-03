@@ -25,10 +25,11 @@
 #include "protocore_config.h" // pc_iface
 
 // Does the selected vendor ship a physical (L1) backend? The real bring-up (radio / Ethernet PHY /
-// lwIP netif access) lives in a per-vendor subdir - physical/esp/ today; add physical/stm/,
-// physical/rp/ as they land, and OR their vendor here. When 0 (host/native, or a vendor whose PHY
-// driver is not written), physical.c supplies no-op stubs so the target still builds headless.
-#if PC_VENDOR_ESP
+// lwIP netif access) lives in a per-vendor subdir - physical/esp/ and physical/mock/ today; add
+// physical/stm/, physical/rp/ as they land, and OR their vendor here. When 0 (host/native, or a
+// vendor whose PHY driver is not written), physical.c supplies no-op stubs so the target still
+// builds headless.
+#if PC_VENDOR_ESP || PC_VENDOR_MOCK
 #define PC_PHYSICAL_HAS_BACKEND 1
 #else
 #define PC_PHYSICAL_HAS_BACKEND 0
@@ -182,7 +183,7 @@ pc_iface pc_net_classify_ip(uint32_t egress_ip, uint32_t sta_ip, uint32_t ap_ip)
  * ------------------------------------------------------------------------------------------ */
 
 /** @brief Radio power-save mode, in the library's own vocabulary. */
-typedef enum
+typedef enum PROTO_ENUM_PACKED
 {
     PC_PHY_PS_NONE = 0,      ///< Radio always on: lowest latency, highest average draw.
     PC_PHY_PS_MIN_MODEM = 1, ///< Wake on every DTIM beacon.
