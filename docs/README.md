@@ -388,19 +388,19 @@ src/
 │   │   │       ├── dtls_record.c
 │   │   │       └── dtls_record.h
 │   │   ├── ssh/
-│   │   │   ├── auth/  (ssh_auth.h, ssh_auth.cpp)
+│   │   │   ├── auth/  (ssh_auth.h, ssh_auth.c)
 │   │   │   ├── connection/
-│   │   │   │   ├── ssh_channel.cpp
+│   │   │   │   ├── ssh_channel.c
 │   │   │   │   ├── ssh_channel.h
 │   │   │   │   ├── ssh_client.c
 │   │   │   │   ├── ssh_client.h
-│   │   │   │   ├── ssh_conn.cpp
+│   │   │   │   ├── ssh_conn.c
 │   │   │   │   ├── ssh_conn.h
 │   │   │   │   ├── ssh_flow_control.c
 │   │   │   │   ├── ssh_flow_control.h
 │   │   │   │   ├── ssh_forward.c
 │   │   │   │   ├── ssh_forward.h
-│   │   │   │   ├── ssh_server.cpp
+│   │   │   │   ├── ssh_server.c
 │   │   │   │   └── ssh_server.h
 │   │   │   └── transport/
 │   │   │       ├── ssh_comp.c
@@ -432,7 +432,7 @@ src/
 │   │   ├── ssh_kexhash.h
 │   │   ├── ssh_rsa.c
 │   │   ├── ssh_rsa.h
-│   │   ├── tls.cpp
+│   │   ├── tls.c
 │   │   ├── tls.h
 │   │   ├── tls13_kdf.c
 │   │   └── tls13_kdf.h
@@ -580,9 +580,9 @@ src/
 │   │   ├── nats/  (nats.h, nats.c)
 │   │   ├── protobuf/  (protobuf.h, protobuf.c)
 │   │   ├── redis_resp/  (redis_resp.h, redis_resp.c)
-│   │   ├── senml/  (senml.h, senml.cpp)
+│   │   ├── senml/  (senml.h, senml.c)
 │   │   ├── sparkplug/  (sparkplug.h, sparkplug.c)
-│   │   ├── statsd/  (statsd.h, statsd.cpp)
+│   │   ├── statsd/  (statsd.h, statsd.c)
 │   │   ├── stomp/  (stomp.h, stomp.c)
 │   │   ├── telemetry/  (telemetry.h, telemetry.c)
 │   │   ├── udp_telemetry/  (udp_telemetry.h, udp_telemetry.c)
@@ -624,7 +624,7 @@ src/
 │   │   │   ├── relay.h
 │   │   │   ├── relay_listener.c
 │   │   │   └── relay_listener.h
-│   │   ├── smtp/  (smtp.h, smtp.cpp)
+│   │   ├── smtp/  (smtp.h, smtp.c)
 │   │   ├── snmp/
 │   │   │   ├── snmp_agent.c
 │   │   │   ├── snmp_agent.h
@@ -681,7 +681,7 @@ src/
 │   │   ├── zigbee/  (zigbee.h, zigbee.c)
 │   │   └── zwave/  (zwave.h, zwave.c)
 │   ├── security/
-│   │   ├── audit_log/  (audit_log.h, audit_log.cpp)
+│   │   ├── audit_log/  (audit_log.h, audit_log.c)
 │   │   ├── auth_lockout/  (auth_lockout.h, auth_lockout.c)
 │   │   ├── csrf/  (csrf.h, csrf.c)
 │   │   ├── forwarded_trust/  (forwarded_trust.h, forwarded_trust.c)
@@ -692,7 +692,7 @@ src/
 │   │   │   ├── ikev2_natt.c
 │   │   │   └── ikev2_natt.h
 │   │   ├── jwt/  (jwt.h, jwt.c)
-│   │   ├── oauth2/  (oauth2.h, oauth2.cpp)
+│   │   ├── oauth2/  (oauth2.h, oauth2.c)
 │   │   ├── oidc/  (oidc.h, oidc.c)
 │   │   ├── tls_policy/  (tls_policy.h, tls_policy.c)
 │   │   └── totp/  (totp.h, totp.c)
