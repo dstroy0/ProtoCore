@@ -94,7 +94,7 @@ void loop()
             drop_front(1); // junk: resync
             continue;
         }
-        uint8_t ack = Zwave::ZWAVE_ACK;
+        uint8_t ack = ZWAVE_ACK;
         Serial2.write(&ack, 1); // acknowledge the data frame
         // ApplicationCommandHandler payload: rxStatus | sourceNode | cmdLen | ZW cmd...
         if (cmd == FUNC_APP_CMD_HANDLER && pdlen >= 3)

@@ -55,7 +55,7 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    on_http("/whoami", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *req) {
+    on_http("/whoami", HTTP_GET, [](uint8_t id, HttpReq *req) {
         // req->authorization holds the FULL Authorization header (ID tokens exceed
         // the normal header value cap). Step past the "Bearer " scheme.
         const char *hdr = req->authorization;

@@ -110,8 +110,8 @@ void pc_dashboard_begin(const char *path, const pc_widget *widgets, uint8_t coun
         s_dashr.stream_path[0] = '\0';
     }
 
-    on_http(path, HttpMethod::HTTP_GET, dash_page_handler);
-    on_http(layout_path, HttpMethod::HTTP_GET, dash_layout_handler);
+    on_http(path, HTTP_GET, dash_page_handler);
+    on_http(layout_path, HTTP_GET, dash_layout_handler);
     on_sse(s_dashr.stream_path, dash_sse_connect);
 #if PC_ENABLE_WEBSOCKET
     pc_sb sb_ws_path = {s_dashr.ws_path, sizeof(s_dashr.ws_path), 0, PROTO_TRUE};

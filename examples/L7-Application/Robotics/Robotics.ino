@@ -79,10 +79,10 @@ void setup()
     mds.safety.protective_stop = false;
 
     pc_robotics_install(&mds); // bind + register the OPC UA Browse/Read resolvers
-    on_http("/", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
+    on_http("/", HTTP_GET, [](uint8_t id, HttpReq *) {
         send_text(id, 200, "text/plain", "OPC UA for Robotics MotionDeviceSystem on :4840");
     });
-    listen(4840, ConnProto::PROTO_OPCUA); // OPC UA / robotics endpoint - before begin()
+    listen(4840, PROTO_OPCUA); // OPC UA / robotics endpoint - before begin()
     begin_http(80);
     Serial.println("OPC UA for Robotics: opc.tcp://<ip>:4840  - browse MotionDeviceSystem, read live axis values");
 }

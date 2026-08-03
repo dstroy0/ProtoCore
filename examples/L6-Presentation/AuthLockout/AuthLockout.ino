@@ -44,14 +44,14 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    on_http("/", HttpMethod::HTTP_GET,
+    on_http("/", HTTP_GET,
               [](uint8_t id, HttpReq *) { send_text(id, 200, "text/plain", "public page"); });
 
     // Protected route. Repeated wrong passwords from one IP trip the lockout
     // (429) with exponential backoff; the tuning lives in protocore_config.h
     // (PC_AUTH_LOCKOUT_THRESHOLD / _BASE_MS / _MAX_MS).
     on_http(
-        "/secret", HttpMethod::HTTP_GET,
+        "/secret", HTTP_GET,
         [](uint8_t id, HttpReq *) { send_text(id, 200, "text/plain", "authenticated!"); }, "Restricted", "admin",
         "s3cret");
 

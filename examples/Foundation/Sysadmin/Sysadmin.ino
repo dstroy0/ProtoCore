@@ -360,9 +360,9 @@ void setup()
 
     set_cors("*");
 
-    on_http("/", HttpMethod::HTTP_GET, handle_serve_dashboard);
-    on_http("/api/sysinfo", HttpMethod::HTTP_GET, handle_get_sysinfo);
-    on_http("/api/restart", HttpMethod::HTTP_POST, handle_post_restart);
+    on_http("/", HTTP_GET, handle_serve_dashboard);
+    on_http("/api/sysinfo", HTTP_GET, handle_get_sysinfo);
+    on_http("/api/restart", HTTP_POST, handle_post_restart);
 
     int32_t result = begin_http(80);
     if (result < 0)

@@ -56,8 +56,8 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // Register the more specific route first; routes match in registration order.
-    on_http("/users/:id/posts/:slug", HttpMethod::HTTP_GET, handle_user_post);
-    on_http("/users/:id", HttpMethod::HTTP_GET, handle_user);
+    on_http("/users/:id/posts/:slug", HTTP_GET, handle_user_post);
+    on_http("/users/:id", HTTP_GET, handle_user);
 
     int32_t result = begin_http(80);
     if (result < 0)

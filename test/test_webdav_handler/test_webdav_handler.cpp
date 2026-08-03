@@ -41,7 +41,7 @@ static void rearm()
     conn_pool[0] = {};
     conn_pool[0].id = 0;
     conn_pool[0].state = ConnState::CONN_ACTIVE;
-    conn_pool[0].proto = ConnProto::PROTO_HTTP;
+    conn_pool[0].proto = PROTO_HTTP;
     conn_pool[0].pcb = &_mock_pcb;
     http_reset(0);
     tcp_capture_reset();
@@ -98,7 +98,7 @@ void setUp()
         conn_pool[i] = {};
         conn_pool[i].id = (uint8_t)i;
         conn_pool[i].state = ConnState::CONN_ACTIVE;
-        conn_pool[i].proto = ConnProto::PROTO_HTTP;
+        conn_pool[i].proto = PROTO_HTTP;
         conn_pool[i].pcb = &_mock_pcb;
         http_reset(i);
     }
@@ -846,7 +846,7 @@ static void h_plain(uint8_t slot_id, HttpReq *req)
 
 void test_webdav_route_scan_skips_non_dav_routes()
 {
-    on_http("/plain", HttpMethod::HTTP_GET, h_plain);
+    on_http("/plain", HTTP_GET, h_plain);
     feed_and_handle(0, "GET /plain HTTP/1.1\r\nHost: x\r\n\r\n");
     TEST_ASSERT_TRUE(pc_resp_status(200));
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "plain"));

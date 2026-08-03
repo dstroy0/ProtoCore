@@ -128,7 +128,7 @@ void setup()
     mount.generator = "PC";
     mount.nmea_required = false;
 
-    int32_t li = listen(CASTER_PORT, ConnProto::PROTO_NTRIP_CASTER);
+    int32_t li = listen(CASTER_PORT, PROTO_NTRIP_CASTER);
     if (li < 0 || !pc_ntrip_caster_add_mount((uint8_t)li, &mount, nullptr /*open access*/))
     {
         Serial.println("caster add_mount failed");

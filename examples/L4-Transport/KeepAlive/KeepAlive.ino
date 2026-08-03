@@ -58,10 +58,10 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    on_http("/", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) { send_text(id, 200, "text/html", PAGE); });
+    on_http("/", HTTP_GET, [](uint8_t id, HttpReq *) { send_text(id, 200, "text/html", PAGE); });
 
     // A tiny endpoint a client can poll repeatedly over the same socket.
-    on_http("/time", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
+    on_http("/time", HTTP_GET, [](uint8_t id, HttpReq *) {
         char buf[32];
         snprintf(buf, sizeof(buf), "uptime_ms=%lu", (unsigned long)millis());
         send_text(id, 200, "text/plain", buf);

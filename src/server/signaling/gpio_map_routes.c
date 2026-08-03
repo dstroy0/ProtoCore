@@ -64,8 +64,8 @@ void pc_gpio_map_begin(const char *path, pc_gpio_pin *pins, uint8_t count)
     s_gpior.count = count;
     pc_gpio_begin_pins(pins, count);
     const char *p = (path && path[0]) ? path : "/gpio";
-    on_http(p, HttpMethod::HTTP_GET, gpio_get_handler);
-    on_http(p, HttpMethod::HTTP_POST, gpio_post_handler);
+    on_http(p, HTTP_GET, gpio_get_handler);
+    on_http(p, HTTP_POST, gpio_post_handler);
 }
 
 #endif // PC_ENABLE_GPIO_MAP

@@ -83,8 +83,8 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    on_http("/", HttpMethod::HTTP_GET, handle_root);
-    on_http("/status", HttpMethod::HTTP_GET, handle_status);
+    on_http("/", HTTP_GET, handle_root);
+    on_http("/status", HTTP_GET, handle_status);
 
     // Load cert/key into the static-pool TLS engine and listen on 443.
     int32_t result =

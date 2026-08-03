@@ -65,8 +65,8 @@ void setup()
     // Keep the radio responsive (the Arduino default modem sleep delays the
     // first packet after an idle gap).
 
-    on_http("/headers", HttpMethod::HTTP_GET, handle_headers);
-    on_http("/cleared", HttpMethod::HTTP_GET, handle_cleared);
+    on_http("/headers", HTTP_GET, handle_headers);
+    on_http("/cleared", HTTP_GET, handle_cleared);
 
     int32_t result = begin_http(80);
     if (result < 0)

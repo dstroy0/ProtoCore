@@ -69,7 +69,7 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    on_http("/form", HttpMethod::HTTP_POST, handle_form);
+    on_http("/form", HTTP_POST, handle_form);
 
     int32_t result = begin_http(80);
     if (result < 0)

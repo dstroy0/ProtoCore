@@ -78,7 +78,7 @@ void setup()
     }
     pc_ssh_auth_set_password_cb(ssh_password_auth);
 
-    listen(22, ConnProto::PROTO_SSH);
+    listen(22, PROTO_SSH);
     if (begin() < 0)
     {
         Serial.println("begin() failed");

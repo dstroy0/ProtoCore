@@ -125,9 +125,9 @@ void setup()
         delay(250);
     }
 
-    on_http("/storage", HttpMethod::HTTP_GET, storage_handler);
-    on_http("/write", HttpMethod::HTTP_GET, write_handler);
-    on_http("/yank", HttpMethod::HTTP_GET, yank_handler);
+    on_http("/storage", HTTP_GET, storage_handler);
+    on_http("/write", HTTP_GET, write_handler);
+    on_http("/yank", HTTP_GET, yank_handler);
     begin_http(80);
 
     uint32_t ip = pc_net_egress_ip();

@@ -62,7 +62,7 @@ size_t pc_iccp_state_q(uint8_t state, uint8_t flags, const uint8_t time[4], uint
     // Inner: stateAndQuality byte [85], optional time [17].
     uint8_t inner[16];
     size_t n = 0;
-    uint8_t sq = (uint8_t)(((state & 0x3) << 6) | (flags & Iccp::ICCP_QUAL_MASK)); // state in high bits + quality
+    uint8_t sq = (uint8_t)(((state & 0x3) << 6) | (flags & ICCP_QUAL_MASK)); // state in high bits + quality
     size_t r = tlv(0x85, &sq, 1, inner + n, sizeof(inner) - n);
     if (!r) // GCOVR_EXCL_LINE  unreachable: inner is a fixed 16 bytes and this is the first
     {
@@ -98,7 +98,7 @@ size_t pc_iccp_real_q(int32_t milli, uint8_t flags, const uint8_t time[4], uint8
         return 0; // GCOVR_EXCL_LINE  (n==0), and il (int_content's result) is always <=4; tlv() can't fail.
     }
     n += r;
-    uint8_t q = (uint8_t)(flags & Iccp::ICCP_QUAL_MASK);
+    uint8_t q = (uint8_t)(flags & ICCP_QUAL_MASK);
     r = tlv(0x85, &q, 1, inner + n, sizeof(inner) - n); // quality
     if (!r) // GCOVR_EXCL_LINE  unreachable: n is at most 6 here, leaving >=18 of inner's 24
     {

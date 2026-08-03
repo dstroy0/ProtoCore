@@ -116,12 +116,12 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    on_http("/", HttpMethod::HTTP_GET,
+    on_http("/", HTTP_GET,
               [](uint8_t id, HttpReq *) { send_text(id, 200, "text/plain", "OPC UA on :4840"); });
     pc_opcua_set_read_handler(pc_opcua_read);     // serve Reads for ns=1;i=1..3,10
     pc_opcua_set_write_handler(pc_opcua_write);   // accept Writes to ns=1;i=10 (the setpoint)
     pc_opcua_set_browse_handler(pc_opcua_browse); // list those under the Objects folder
-    listen(4840, ConnProto::PROTO_OPCUA);  // OPC UA Binary endpoint - before begin() (it activates listeners)
+    listen(4840, PROTO_OPCUA);  // OPC UA Binary endpoint - before begin() (it activates listeners)
     begin_http(80);
     Serial.println("OPC UA endpoint: opc.tcp://<ip>:4840 (handshake + SecureChannel + Session + Read/Write + Browse)");
 }

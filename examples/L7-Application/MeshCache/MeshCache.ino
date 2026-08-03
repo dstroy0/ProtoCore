@@ -93,7 +93,7 @@ void setup()
     pc_edge_cache_enable(server);
 
     // Mesh: open the sibling port, answer peers from the local cache, and list the other node as a peer.
-    int32_t li = listen(MESH_PORT, ConnProto::PROTO_MESH);
+    int32_t li = listen(MESH_PORT, PROTO_MESH);
     if (li < 0)
     {
         Serial.println("mesh: could not open the sibling listener");
@@ -101,8 +101,8 @@ void setup()
     pc_edge_cache_mesh_serve();
     pc_edge_cache_add_peer(PEER_IP, MESH_PORT);
 
-    on_http("/cache/stats", HttpMethod::HTTP_GET, handle_stats);
-    on_http("/cache/purge", HttpMethod::HTTP_POST, handle_purge);
+    on_http("/cache/stats", HTTP_GET, handle_stats);
+    on_http("/cache/purge", HTTP_POST, handle_purge);
     begin_http(80); // serve HTTP on port 80
 
     Serial.printf("mesh edge cache in front of %s (peer %s:%u)\n", ORIGIN, PEER_IP, MESH_PORT);

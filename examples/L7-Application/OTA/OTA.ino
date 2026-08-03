@@ -45,7 +45,7 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    on_http("/", HttpMethod::HTTP_GET, handle_root);
+    on_http("/", HTTP_GET, handle_root);
     if (begin_http(80) < 0)
     {
         Serial.println("begin() failed");

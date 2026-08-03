@@ -359,11 +359,11 @@ void setup()
 
     set_cors("*");
 
-    on_http("/api/sensors", HttpMethod::HTTP_GET, handle_get_sensors);
-    on_http("/api/sensors/*", HttpMethod::HTTP_GET, handle_get_sensor_by_id);
-    on_http("/api/sensors", HttpMethod::HTTP_POST, handle_create_sensor);
-    on_http("/api/sensors/*", HttpMethod::HTTP_PATCH, handle_patch_sensor);
-    on_http("/api/sensors/*", HttpMethod::HTTP_DELETE, handle_delete_sensor);
+    on_http("/api/sensors", HTTP_GET, handle_get_sensors);
+    on_http("/api/sensors/*", HTTP_GET, handle_get_sensor_by_id);
+    on_http("/api/sensors", HTTP_POST, handle_create_sensor);
+    on_http("/api/sensors/*", HTTP_PATCH, handle_patch_sensor);
+    on_http("/api/sensors/*", HTTP_DELETE, handle_delete_sensor);
 
     int32_t result = begin_http(80);
     if (result < 0)

@@ -46,10 +46,10 @@ void setup()
     pc_modbus_set_holding_reg(0, 1234);
     pc_modbus_set_holding_reg(1, 5678);
     pc_modbus_set_holding_reg(2, 4095);
-    listen(502, ConnProto::PROTO_MODBUS); // real Modbus TCP slave on :502
+    listen(502, PROTO_MODBUS); // real Modbus TCP slave on :502
 
     // /scan: read holding registers 0..3 via the master codec (self-scan).
-    on_http("/scan", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
+    on_http("/scan", HTTP_GET, [](uint8_t id, HttpReq *) {
         uint8_t req[16], resp[MODBUS_ADU_MAX];
         size_t rn =
             pc_modbus_build_read((uint8_t)ModbusFunction::MODBUS_FC_READ_HOLDING_REGS, 1, 1, 0, 3, req, sizeof(req));

@@ -49,7 +49,7 @@ const ProtoHandler *proto_get(ConnProto proto)
     // harness drives server_tick() directly). The list itself lives in proto_builtins.cpp -
     // this dispatcher names no protocol; it just knows ConnProto::PROTO_HTTP is always registered, and
     // uses that as the "already bootstrapped" sentinel.
-    if (!s_session.proto_handlers[(unsigned)ConnProto::PROTO_HTTP])
+    if (!s_session.proto_handlers[(unsigned)PROTO_HTTP])
     {
         proto_register_builtins();
     }

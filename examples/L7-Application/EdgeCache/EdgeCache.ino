@@ -130,8 +130,8 @@ void setup()
 #if PC_ENABLE_DBM
     Serial.println(setup_l2() ? "L2 SD tier: mounted (cache survives reboot)" : "L2 SD tier: unavailable (no SD?)");
 #endif
-    on_http("/cache/stats", HttpMethod::HTTP_GET, handle_stats);
-    on_http("/cache/purge", HttpMethod::HTTP_POST, handle_purge);
+    on_http("/cache/stats", HTTP_GET, handle_stats);
+    on_http("/cache/purge", HTTP_POST, handle_purge);
     begin_http(80); // serve HTTP on port 80 (begin() with no port opens no listener)
 
     Serial.printf("edge cache in front of %s\n", ORIGIN);

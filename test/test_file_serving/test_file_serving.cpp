@@ -65,7 +65,7 @@ void setUp()
         conn_pool[i] = {};
         conn_pool[i].id = (uint8_t)i;
         conn_pool[i].state = ConnState::CONN_ACTIVE;
-        conn_pool[i].proto = ConnProto::PROTO_HTTP; // dispatch requires an explicit protocol
+        conn_pool[i].proto = PROTO_HTTP; // dispatch requires an explicit protocol
         conn_pool[i].pcb = &_mock_pcb;
         http_reset(i);
     }
@@ -98,7 +98,7 @@ static void feed_and_handle(uint8_t slot, const char *req_str)
 
 void test_missing_file_returns_404()
 {
-    on_http("/page", HttpMethod::HTTP_GET, handle_missing);
+    on_http("/page", HTTP_GET, handle_missing);
     fs::mock_fs_clear(); // no file set
     feed_and_handle(0, "GET /page HTTP/1.1\r\n\r\n");
     TEST_ASSERT_TRUE(handler_called);
@@ -107,7 +107,7 @@ void test_missing_file_returns_404()
 
 void test_existing_file_returns_200()
 {
-    on_http("/page", HttpMethod::HTTP_GET, handle_html);
+    on_http("/page", HTTP_GET, handle_html);
     fs::mock_fs_set("<html><body>Hello</body></html>");
     feed_and_handle(0, "GET /page HTTP/1.1\r\n\r\n");
     TEST_ASSERT_TRUE(handler_called);
@@ -116,7 +116,7 @@ void test_existing_file_returns_200()
 
 void test_response_includes_content_type_html()
 {
-    on_http("/page", HttpMethod::HTTP_GET, handle_html);
+    on_http("/page", HTTP_GET, handle_html);
     fs::mock_fs_set("<html></html>");
     feed_and_handle(0, "GET /page HTTP/1.1\r\n\r\n");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "Content-Type: text/html"));
@@ -124,7 +124,7 @@ void test_response_includes_content_type_html()
 
 void test_response_includes_content_type_js()
 {
-    on_http("/app", HttpMethod::HTTP_GET, handle_js);
+    on_http("/app", HTTP_GET, handle_js);
     fs::mock_fs_set("console.log('hello');");
     feed_and_handle(0, "GET /app HTTP/1.1\r\n\r\n");
     TEST_ASSERT_TRUE(handler_called);
@@ -133,7 +133,7 @@ void test_response_includes_content_type_js()
 
 void test_content_length_matches_file_size()
 {
-    on_http("/page", HttpMethod::HTTP_GET, handle_html);
+    on_http("/page", HTTP_GET, handle_html);
     const char *body = "Hello, World!";
     fs::mock_fs_set(body);
     size_t expected_len = strlen(body);
@@ -147,7 +147,7 @@ void test_content_length_matches_file_size()
 
 void test_file_body_is_sent()
 {
-    on_http("/page", HttpMethod::HTTP_GET, handle_html);
+    on_http("/page", HTTP_GET, handle_html);
     const char *body = "<h1>Test Page</h1>";
     fs::mock_fs_set(body);
     feed_and_handle(0, "GET /page HTTP/1.1\r\n\r\n");
@@ -156,7 +156,7 @@ void test_file_body_is_sent()
 
 void test_empty_file_returns_200_with_zero_length()
 {
-    on_http("/empty", HttpMethod::HTTP_GET, [](uint8_t slot_id, HttpReq *req) {
+    on_http("/empty", HTTP_GET, [](uint8_t slot_id, HttpReq *req) {
         (void)req;
         fs::FS fs;
         serve_file(slot_id, fs, "/empty.txt", "text/plain");
@@ -182,7 +182,7 @@ void test_large_file_body_fully_sent()
         big[i] = (uint8_t)('A' + (i % 26)); // printable, no NUL, position-dependent
     }
 
-    on_http("/big", HttpMethod::HTTP_GET, [](uint8_t slot_id, HttpReq *req) {
+    on_http("/big", HTTP_GET, [](uint8_t slot_id, HttpReq *req) {
         (void)req;
         fs::FS fs;
         serve_file(slot_id, fs, "/big.bin", "application/octet-stream");
@@ -212,12 +212,12 @@ void test_large_file_body_fully_sent()
 void test_serve_file_does_not_affect_other_routes()
 {
     static bool other_called = false;
-    on_http("/other", HttpMethod::HTTP_GET, [](uint8_t slot_id, HttpReq *req) {
+    on_http("/other", HTTP_GET, [](uint8_t slot_id, HttpReq *req) {
         (void)req;
         other_called = true;
         send_text(slot_id, 200, "text/plain", "other");
     });
-    on_http("/file", HttpMethod::HTTP_GET, handle_html);
+    on_http("/file", HTTP_GET, handle_html);
 
     fs::mock_fs_set("<html/>");
     feed_and_handle(0, "GET /other HTTP/1.1\r\n\r\n");
@@ -251,12 +251,12 @@ void test_multiple_content_types()
         conn_pool[0] = {};
         conn_pool[0].id = 0;
         conn_pool[0].state = ConnState::CONN_ACTIVE;
-        conn_pool[0].proto = ConnProto::PROTO_HTTP; // dispatch requires an explicit protocol
+        conn_pool[0].proto = PROTO_HTTP; // dispatch requires an explicit protocol
         conn_pool[0].pcb = &_mock_pcb;
         http_reset(0);
         tcp_capture_reset();
 
-        on_http(cur_path, HttpMethod::HTTP_GET, [](uint8_t slot_id, HttpReq *req) {
+        on_http(cur_path, HTTP_GET, [](uint8_t slot_id, HttpReq *req) {
             (void)req;
             fs::FS fs;
             serve_file(slot_id, fs, cur_path, cur_ctype);
@@ -282,7 +282,7 @@ static void rearm(uint8_t slot)
     conn_pool[slot] = {};
     conn_pool[slot].id = slot;
     conn_pool[slot].state = ConnState::CONN_ACTIVE;
-    conn_pool[slot].proto = ConnProto::PROTO_HTTP;
+    conn_pool[slot].proto = PROTO_HTTP;
     conn_pool[slot].pcb = &_mock_pcb;
     http_reset(slot);
     tcp_capture_reset();
@@ -475,7 +475,7 @@ void stress_serve_file_50_requests()
 {
     const char *body = "stress body";
     fs::mock_fs_set(body);
-    on_http("/f", HttpMethod::HTTP_GET, handle_html);
+    on_http("/f", HTTP_GET, handle_html);
 
     for (int i = 0; i < 50; i++)
     {
@@ -483,7 +483,7 @@ void stress_serve_file_50_requests()
         conn_pool[slot] = {};
         conn_pool[slot].id = slot;
         conn_pool[slot].state = ConnState::CONN_ACTIVE;
-        conn_pool[slot].proto = ConnProto::PROTO_HTTP; // dispatch requires an explicit protocol
+        conn_pool[slot].proto = PROTO_HTTP; // dispatch requires an explicit protocol
         conn_pool[slot].pcb = &_mock_pcb;
         http_reset(slot);
         tcp_capture_reset();
@@ -501,7 +501,7 @@ void stress_serve_file_50_requests()
 
 void stress_alternate_missing_and_found()
 {
-    on_http("/f", HttpMethod::HTTP_GET, [](uint8_t slot_id, HttpReq *req) {
+    on_http("/f", HTTP_GET, [](uint8_t slot_id, HttpReq *req) {
         (void)req;
         fs::FS fs;
         serve_file(slot_id, fs, "/f.txt", "text/plain");
@@ -513,7 +513,7 @@ void stress_alternate_missing_and_found()
         conn_pool[slot] = {};
         conn_pool[slot].id = slot;
         conn_pool[slot].state = ConnState::CONN_ACTIVE;
-        conn_pool[slot].proto = ConnProto::PROTO_HTTP; // dispatch requires an explicit protocol
+        conn_pool[slot].proto = PROTO_HTTP; // dispatch requires an explicit protocol
         conn_pool[slot].pcb = &_mock_pcb;
         http_reset(slot);
         tcp_capture_reset();

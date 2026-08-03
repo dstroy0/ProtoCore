@@ -23,7 +23,7 @@ uint16_t pc_mbplus_crc(const uint8_t *bytes, size_t len)
 size_t pc_mbplus_build(uint8_t address, uint8_t control, const uint8_t *payload, size_t payload_len, uint8_t *out,
                        size_t cap)
 {
-    if (!out || (payload_len && !payload) || address < 1 || address > Mbplus::MBPLUS_MAX_STATION)
+    if (!out || (payload_len && !payload) || address < 1 || address > MBPLUS_MAX_STATION)
     {
         return 0;
     }
@@ -33,7 +33,7 @@ size_t pc_mbplus_build(uint8_t address, uint8_t control, const uint8_t *payload,
         return 0;
     }
     size_t i = 0;
-    out[i++] = Mbplus::MBPLUS_FLAG;
+    out[i++] = MBPLUS_FLAG;
     size_t body = i;
     out[i++] = address;
     out[i++] = control;
@@ -45,7 +45,7 @@ size_t pc_mbplus_build(uint8_t address, uint8_t control, const uint8_t *payload,
     uint16_t crc = pc_mbplus_crc(out + body, (i - body)); // over addr..last payload
     out[i++] = (uint8_t)crc;                              // CRC low byte first
     out[i++] = (uint8_t)(crc >> 8);
-    out[i++] = Mbplus::MBPLUS_FLAG;
+    out[i++] = MBPLUS_FLAG;
     return i;
 }
 
@@ -56,7 +56,7 @@ proto_bool pc_mbplus_parse(const uint8_t *frame, size_t len, MbPlusFrame *out)
     {
         return PROTO_FALSE;
     }
-    if (frame[0] != Mbplus::MBPLUS_FLAG || frame[len - 1] != Mbplus::MBPLUS_FLAG)
+    if (frame[0] != MBPLUS_FLAG || frame[len - 1] != MBPLUS_FLAG)
     {
         return PROTO_FALSE;
     }

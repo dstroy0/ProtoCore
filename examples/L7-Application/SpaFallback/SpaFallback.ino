@@ -179,12 +179,12 @@ void setup()
         delay(250);
     }
 
-    on_http("/", HttpMethod::HTTP_GET, ui_handler);
-    on_http("/dashboard", HttpMethod::HTTP_GET, ui_handler);
-    on_http("/api/state", HttpMethod::HTTP_GET, state_handler);
-    on_http("/api/stop", HttpMethod::HTTP_GET, stop_handler);
-    on_http("/degrade", HttpMethod::HTTP_GET, degrade_handler);
-    on_http("/shell", HttpMethod::HTTP_GET, shell_handler);
+    on_http("/", HTTP_GET, ui_handler);
+    on_http("/dashboard", HTTP_GET, ui_handler);
+    on_http("/api/state", HTTP_GET, state_handler);
+    on_http("/api/stop", HTTP_GET, stop_handler);
+    on_http("/degrade", HTTP_GET, degrade_handler);
+    on_http("/shell", HTTP_GET, shell_handler);
     begin_http(80);
 
     uint32_t ip = pc_net_egress_ip();

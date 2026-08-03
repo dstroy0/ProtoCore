@@ -110,7 +110,7 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // Identify the verified client to the handler.
-    on_http("/whoami", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
+    on_http("/whoami", HTTP_GET, [](uint8_t id, HttpReq *) {
         char subject[PC_MTLS_SUBJECT_MAX];
         if (tls_client_subject(id, subject, sizeof(subject)) > 0)
         {

@@ -818,22 +818,22 @@ static MwResult edge_cache_mw(uint8_t slot, HttpReq *req)
     // pointer it was AND-ed with was set by the same call that set it.
     if (!s_ctx.registered || slot >= MAX_CONNS)
     {
-        return MwResult::MW_NEXT;
+        return MW_NEXT;
     }
     proto_bool is_get = strcmp(req->method, "GET") == 0;
     proto_bool is_head = strcmp(req->method, "HEAD") == 0;
     if (!is_get && !is_head)
     {
-        return MwResult::MW_NEXT; // only cache safe methods
+        return MW_NEXT; // only cache safe methods
     }
     if (http_get_header(req, "Authorization"))
     {
-        return MwResult::MW_NEXT; // never cache authorized/private requests
+        return MW_NEXT; // never cache authorized/private requests
     }
     EdgeRouteMap *m = map_match(req->path);
     if (!m)
     {
-        return MwResult::MW_NEXT; // not a mapped origin
+        return MW_NEXT; // not a mapped origin
     }
 
     const char *host = http_get_header(req, "Host");
@@ -844,7 +844,7 @@ static MwResult edge_cache_mw(uint8_t slot, HttpReq *req)
     char canon[PC_EDGE_KEY_MAX];
     if (edge_key_canon("GET", host, req->path, req->query, /*include_query=*/PROTO_TRUE, canon, sizeof(canon)) == 0)
     {
-        return MwResult::MW_NEXT; // key too long -> uncacheable, fail open
+        return MW_NEXT; // key too long -> uncacheable, fail open
     }
 
 #if PC_ENABLE_RANGE
@@ -861,7 +861,7 @@ static MwResult edge_cache_mw(uint8_t slot, HttpReq *req)
     {
         s_ctx.store.stats.hits++;
         serve_hit(slot, e, now, "HIT");
-        return MwResult::MW_HALT;
+        return MW_HALT;
     }
 #if PC_ENABLE_DBM
     if (!e && s_ctx.l2) // L1 miss: try promoting a reboot-surviving entry from L2 (force-stale -> revalidate)
@@ -873,9 +873,9 @@ static MwResult edge_cache_mw(uint8_t slot, HttpReq *req)
     EdgeEntry *reval = (e && edge_entry_has_validator(e)) ? e : NULL;
     if (!start_fetch(slot, req, m, canon, reval, now))
     {
-        return MwResult::MW_NEXT; // no fetch slot / origin open failed -> fail open to normal dispatch
+        return MW_NEXT; // no fetch slot / origin open failed -> fail open to normal dispatch
     }
-    return MwResult::MW_HALT; // client request suspended until the fetch completes
+    return MW_HALT; // client request suspended until the fetch completes
 }
 
 // Per-slot poll hook: drive an in-flight sibling query then origin fetch, then serve. Returns true while it
@@ -1334,7 +1334,7 @@ void pc_edge_cache_mesh_serve(void)
 {
     if (!s_ctx.mesh_registered)
     {
-        proto_register(ConnProto::PROTO_MESH, &s_mesh_handler);
+        proto_register(PROTO_MESH, &s_mesh_handler);
         s_ctx.mesh_registered = PROTO_TRUE;
     }
 }

@@ -37,7 +37,7 @@ uint16_t pc_zwave_build_frame(pc_zwave_type type, uint8_t cmd, const uint8_t *da
     {
         return 0;
     }
-    out[0] = Zwave::ZWAVE_SOF;
+    out[0] = ZWAVE_SOF;
     out[1] = frame_len;
     out[2] = (uint8_t)type;
     out[3] = cmd;
@@ -57,7 +57,7 @@ int pc_zwave_parse_frame(const uint8_t *raw, uint16_t len, uint8_t *type, uint8_
     {
         return 0;
     }
-    if (raw[0] != Zwave::ZWAVE_SOF)
+    if (raw[0] != ZWAVE_SOF)
     {
         return -1; // not a data frame (could be a control byte - test those first)
     }
@@ -100,15 +100,15 @@ int pc_zwave_parse_frame(const uint8_t *raw, uint16_t len, uint8_t *type, uint8_
 
 proto_bool pc_zwave_is_ack(uint8_t b)
 {
-    return b == Zwave::ZWAVE_ACK;
+    return b == ZWAVE_ACK;
 }
 proto_bool pc_zwave_is_nak(uint8_t b)
 {
-    return b == Zwave::ZWAVE_NAK;
+    return b == ZWAVE_NAK;
 }
 proto_bool pc_zwave_is_can(uint8_t b)
 {
-    return b == Zwave::ZWAVE_CAN;
+    return b == ZWAVE_CAN;
 }
 
 uint16_t pc_zwave_build_ack(uint8_t *out, uint16_t cap)
@@ -117,7 +117,7 @@ uint16_t pc_zwave_build_ack(uint8_t *out, uint16_t cap)
     {
         return 0;
     }
-    out[0] = Zwave::ZWAVE_ACK;
+    out[0] = ZWAVE_ACK;
     return 1;
 }
 

@@ -75,7 +75,7 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    listen(23, ConnProto::PROTO_TELNET); // open the Telnet port
+    listen(23, PROTO_TELNET); // open the Telnet port
     pc_telnet_on_command(on_command);
 
     begin_http(80); // also start HTTP (begin() activates all listeners)

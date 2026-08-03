@@ -238,8 +238,8 @@ void pc_provisioning_begin(const char *ap_ssid)
     // Catch-all DNS on UDP/53 via the transport-layer UDP service (callback-driven).
     pc_udp_listen(53, prov_dns_recv, NULL);
 
-    on_http("/save", HttpMethod::HTTP_POST, prov_save_handler);
-    on_http("/*", HttpMethod::HTTP_GET, prov_form_handler); // any other path -> the form
+    on_http("/save", HTTP_POST, prov_save_handler);
+    on_http("/*", HTTP_GET, prov_form_handler); // any other path -> the form
 }
 
 #else // disabled / non-Arduino: stubs (form-field parser above stays available)

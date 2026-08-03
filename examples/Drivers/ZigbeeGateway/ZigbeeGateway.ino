@@ -57,7 +57,7 @@ void setup()
     pc_gateway_set_topic_prefix("zigbee");
 
     uint8_t rst[8];
-    uint16_t n = pc_ash_frame_encode(Ash::ASH_RST, nullptr, 0, rst, sizeof(rst)); // reset the NCP
+    uint16_t n = pc_ash_frame_encode(ASH_RST, nullptr, 0, rst, sizeof(rst)); // reset the NCP
     Serial2.write(rst, n);
     Serial.println("Zigbee gateway: EZSP/ASH -> codec -> publish (zigbee/0/<node>)");
 }

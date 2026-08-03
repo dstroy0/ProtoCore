@@ -138,17 +138,17 @@ void setup()
     pc_packml_svc_init(PackMlMode::PRODUCING);
     pc_packml_svc_set_speed(120.0f); // 120 units/min commanded
 
-    on_http("/packml", HttpMethod::HTTP_GET, handle_status);
-    on_http("/packml/reset", HttpMethod::HTTP_GET, h_reset);
-    on_http("/packml/start", HttpMethod::HTTP_GET, h_start);
-    on_http("/packml/stop", HttpMethod::HTTP_GET, h_stop);
-    on_http("/packml/hold", HttpMethod::HTTP_GET, h_hold);
-    on_http("/packml/unhold", HttpMethod::HTTP_GET, h_unhold);
-    on_http("/packml/suspend", HttpMethod::HTTP_GET, h_suspend);
-    on_http("/packml/unsuspend", HttpMethod::HTTP_GET, h_unsuspend);
-    on_http("/packml/abort", HttpMethod::HTTP_GET, h_abort);
-    on_http("/packml/clear", HttpMethod::HTTP_GET, h_clear);
-    on_http("/packml/complete", HttpMethod::HTTP_GET, h_complete);
+    on_http("/packml", HTTP_GET, handle_status);
+    on_http("/packml/reset", HTTP_GET, h_reset);
+    on_http("/packml/start", HTTP_GET, h_start);
+    on_http("/packml/stop", HTTP_GET, h_stop);
+    on_http("/packml/hold", HTTP_GET, h_hold);
+    on_http("/packml/unhold", HTTP_GET, h_unhold);
+    on_http("/packml/suspend", HTTP_GET, h_suspend);
+    on_http("/packml/unsuspend", HTTP_GET, h_unsuspend);
+    on_http("/packml/abort", HTTP_GET, h_abort);
+    on_http("/packml/clear", HTTP_GET, h_clear);
+    on_http("/packml/complete", HTTP_GET, h_complete);
     begin_http(80);
 }
 

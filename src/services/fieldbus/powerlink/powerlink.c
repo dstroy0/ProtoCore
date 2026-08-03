@@ -36,27 +36,27 @@ size_t pc_epl_build(uint8_t msg_type, uint8_t dest, uint8_t source, const uint8_
 
 size_t pc_epl_soc(uint8_t source, uint8_t *out, size_t cap)
 {
-    return pc_epl_build(Epl::EPL_MSG_SOC, Epl::EPL_NODE_BROADCAST, source, NULL, 0, out, cap);
+    return pc_epl_build(EPL_MSG_SOC, EPL_NODE_BROADCAST, source, NULL, 0, out, cap);
 }
 
 size_t pc_epl_preq(uint8_t dest_cn, uint8_t source, const uint8_t *pdo, size_t pdo_len, uint8_t *out, size_t cap)
 {
-    return pc_epl_build(Epl::EPL_MSG_PREQ, dest_cn, source, pdo, pdo_len, out, cap);
+    return pc_epl_build(EPL_MSG_PREQ, dest_cn, source, pdo, pdo_len, out, cap);
 }
 
 size_t pc_epl_pres(uint8_t source_cn, const uint8_t *pdo, size_t pdo_len, uint8_t *out, size_t cap)
 {
-    return pc_epl_build(Epl::EPL_MSG_PRES, Epl::EPL_NODE_BROADCAST, source_cn, pdo, pdo_len, out, cap);
+    return pc_epl_build(EPL_MSG_PRES, EPL_NODE_BROADCAST, source_cn, pdo, pdo_len, out, cap);
 }
 
 size_t pc_epl_soa(uint8_t source, const uint8_t *payload, size_t payload_len, uint8_t *out, size_t cap)
 {
-    return pc_epl_build(Epl::EPL_MSG_SOA, Epl::EPL_NODE_BROADCAST, source, payload, payload_len, out, cap);
+    return pc_epl_build(EPL_MSG_SOA, EPL_NODE_BROADCAST, source, payload, payload_len, out, cap);
 }
 
 size_t pc_epl_asnd(uint8_t dest, uint8_t source, const uint8_t *payload, size_t payload_len, uint8_t *out, size_t cap)
 {
-    return pc_epl_build(Epl::EPL_MSG_ASND, dest, source, payload, payload_len, out, cap);
+    return pc_epl_build(EPL_MSG_ASND, dest, source, payload, payload_len, out, cap);
 }
 
 proto_bool pc_epl_parse(const uint8_t *frame, size_t len, EplFrame *out)
@@ -66,8 +66,7 @@ proto_bool pc_epl_parse(const uint8_t *frame, size_t len, EplFrame *out)
         return PROTO_FALSE;
     }
     uint8_t mt = frame[0];
-    if (mt != Epl::EPL_MSG_SOC && mt != Epl::EPL_MSG_PREQ && mt != Epl::EPL_MSG_PRES && mt != Epl::EPL_MSG_SOA &&
-        mt != Epl::EPL_MSG_ASND)
+    if (mt != EPL_MSG_SOC && mt != EPL_MSG_PREQ && mt != EPL_MSG_PRES && mt != EPL_MSG_SOA && mt != EPL_MSG_ASND)
     {
         return PROTO_FALSE;
     }

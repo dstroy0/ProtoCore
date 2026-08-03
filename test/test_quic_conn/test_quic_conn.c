@@ -337,7 +337,7 @@ void test_full_handshake_and_stream()
     }
     Tls13KeySchedule cks;
     pc_tls13_ks_early(&TLS13_KDF, &cks);
-    pc_tls13_ks_handshake(&cks, ecdhe, ch_sh);
+    pc_tls13_ks_handshake(&cks, ecdhe, ch_sh, sizeof(ecdhe));
     QuicPacketKeys hs_server_keys, hs_client_keys;
     pc_quic_keys_from_secret(cks.server_hs_traffic, &hs_server_keys);
     pc_quic_keys_from_secret(cks.client_hs_traffic, &hs_client_keys);
@@ -649,7 +649,7 @@ void test_connection_close_on_malformed_frame()
     pc_sha256_final(&tctx, ch_sh);
     Tls13KeySchedule cks;
     pc_tls13_ks_early(&TLS13_KDF, &cks);
-    pc_tls13_ks_handshake(&cks, ecdhe, ch_sh);
+    pc_tls13_ks_handshake(&cks, ecdhe, ch_sh, sizeof(ecdhe));
     QuicPacketKeys hs_server_keys, hs_client_keys;
     pc_quic_keys_from_secret(cks.server_hs_traffic, &hs_server_keys);
     pc_quic_keys_from_secret(cks.client_hs_traffic, &hs_client_keys);
@@ -1130,7 +1130,7 @@ void test_quic_conn_send_tiny_cap()
 // is the client's Source Connection ID length, i.e. the DCID the server puts in its 1-RTT short
 // headers; 0 is legal (RFC 9000 sec 5.1) and leaves the most room for the 1-RTT payload.
 static void complete_handshake(QuicConn *qc, QuicConnCallbacks *cb, QuicInitialSecrets *init, QuicPacketKeys *ap_client,
-                               QuicPacketKeys *ap_server, uint8_t peer_scid_len = sizeof(CLIENT_SCID))
+                               QuicPacketKeys *ap_server, uint8_t peer_scid_len)
 {
     QuicTlsConfig cfg;
     make_cfg(&cfg);
@@ -1178,7 +1178,7 @@ static void complete_handshake(QuicConn *qc, QuicConnCallbacks *cb, QuicInitialS
     }
     Tls13KeySchedule cks;
     pc_tls13_ks_early(&TLS13_KDF, &cks);
-    pc_tls13_ks_handshake(&cks, ecdhe, ch_sh);
+    pc_tls13_ks_handshake(&cks, ecdhe, ch_sh, sizeof(ecdhe));
     QuicPacketKeys hs_server_keys, hs_client_keys;
     pc_quic_keys_from_secret(cks.server_hs_traffic, &hs_server_keys);
     pc_quic_keys_from_secret(cks.client_hs_traffic, &hs_client_keys);
@@ -1216,7 +1216,7 @@ void test_quic_conn_stream_nothing_to_send()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     QuicInitialSecrets init;
     QuicPacketKeys apc, aps;
-    complete_handshake(&qc, &cb, &init, &apc, &aps);
+    complete_handshake(&qc, &cb, &init, &apc, &aps, sizeof(CLIENT_SCID));
     uint8_t out[512];
     TEST_ASSERT_EQUAL_UINT(2, pc_quic_conn_stream_send(&qc, 0, (const uint8_t *)"OK", 2, PROTO_TRUE));
     TEST_ASSERT_TRUE(pc_quic_conn_send(&qc, out, sizeof out) > 0); // drains the stream
@@ -1232,7 +1232,7 @@ void test_quic_conn_short_header_tiny_cap()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     QuicInitialSecrets init;
     QuicPacketKeys apc, aps;
-    complete_handshake(&qc, &cb, &init, &apc, &aps);
+    complete_handshake(&qc, &cb, &init, &apc, &aps, sizeof(CLIENT_SCID));
     pc_quic_conn_stream_send(&qc, 0, (const uint8_t *)"DATA", 4, PROTO_FALSE);
     uint8_t out[8];
     (void)pc_quic_conn_send(&qc, out, 4); // 1 + dcid_len(4) > cap(4) at the 1-RTT short header
@@ -1247,7 +1247,7 @@ void test_quic_conn_close_level_fallback()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     QuicInitialSecrets init;
     QuicPacketKeys apc, aps;
-    complete_handshake(&qc, &cb, &init, &apc, &aps);
+    complete_handshake(&qc, &cb, &init, &apc, &aps, sizeof(CLIENT_SCID));
     // A malformed frame in an Initial packet (Initial is discarded post-handshake) queues a close at
     // the Initial level; the send path must then fall back to a level whose keys are still live.
     uint8_t bad[20] = {0x06, 0x00, 0x44, 0x00}; // CRYPTO frame declaring 1024 octets that are not present
@@ -1292,7 +1292,7 @@ void test_quic_conn_null_callbacks()
     QuicConn qc2;
     QuicPacketKeys apc, aps;
     QuicInitialSecrets init2;
-    complete_handshake(&qc2, NULL, &init2, &apc, &aps);
+    complete_handshake(&qc2, NULL, &init2, &apc, &aps, sizeof(CLIENT_SCID));
     TEST_ASSERT_TRUE(pc_quic_conn_established(&qc2));
     TEST_ASSERT_FALSE(g_hs_done); // no hook ran
 }
@@ -1448,7 +1448,7 @@ void test_quic_recv_short_header_decrypt_failure()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     QuicInitialSecrets init;
     QuicPacketKeys apc, aps;
-    complete_handshake(&qc, &cb, &init, &apc, &aps);
+    complete_handshake(&qc, &cb, &init, &apc, &aps, sizeof(CLIENT_SCID));
 
     uint8_t fr[32];
     size_t fl = pc_quic_build_ping(fr, sizeof fr);
@@ -1470,7 +1470,7 @@ void test_quic_conn_crypto_after_handshake_done()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     QuicInitialSecrets init;
     QuicPacketKeys apc, aps;
-    complete_handshake(&qc, &cb, &init, &apc, &aps);
+    complete_handshake(&qc, &cb, &init, &apc, &aps, sizeof(CLIENT_SCID));
     TEST_ASSERT_TRUE(qc.handshake_done_sent); // complete_handshake drained it
     TEST_ASSERT_FALSE(qc.handshake_done_queued);
 
@@ -1714,7 +1714,7 @@ void test_quic_conn_stream_tx_partitioning()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     QuicInitialSecrets init;
     QuicPacketKeys apc, aps;
-    complete_handshake(&qc, &cb, &init, &apc, &aps);
+    complete_handshake(&qc, &cb, &init, &apc, &aps, sizeof(CLIENT_SCID));
 
     // A client STREAM frame creates an inbound stream with nothing queued to send: the loop must
     // skip it (no data, no pending FIN).
@@ -1771,7 +1771,7 @@ void test_quic_conn_stream_fin_only()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     QuicInitialSecrets init;
     QuicPacketKeys apc, aps;
-    complete_handshake(&qc, &cb, &init, &apc, &aps);
+    complete_handshake(&qc, &cb, &init, &apc, &aps, sizeof(CLIENT_SCID));
 
     uint8_t out[PC_QUIC_MAX_DATAGRAM];
     TEST_ASSERT_EQUAL_UINT(4, pc_quic_conn_stream_send(&qc, 0, (const uint8_t *)"BODY", 4, PROTO_FALSE));
@@ -1820,7 +1820,7 @@ void test_quic_conn_stream_tx_datagram_full()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     QuicInitialSecrets init;
     QuicPacketKeys apc, aps;
-    complete_handshake(&qc, &cb, &init, &apc, &aps);
+    complete_handshake(&qc, &cb, &init, &apc, &aps, sizeof(CLIENT_SCID));
 
     // Large stream ids force 8-byte varints, so a frame header alone needs more room than the tail
     // of a full datagram has left.
@@ -1915,7 +1915,7 @@ void test_quic_conn_stream_send_sentinel_id()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     QuicInitialSecrets init;
     QuicPacketKeys apc, aps;
-    complete_handshake(&qc, &cb, &init, &apc, &aps);
+    complete_handshake(&qc, &cb, &init, &apc, &aps, sizeof(CLIENT_SCID));
 
     TEST_ASSERT_EQUAL_UINT(2, pc_quic_conn_stream_send(&qc, UINT64_MAX, (const uint8_t *)"hi", 2, PROTO_TRUE));
     for (size_t i = 0; i < PC_QUIC_MAX_STREAMS; i++)
@@ -1970,7 +1970,7 @@ void test_quic_conn_ack_owed_without_rx()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     QuicInitialSecrets init;
     QuicPacketKeys apc, aps;
-    complete_handshake(&qc, &cb, &init, &apc, &aps);
+    complete_handshake(&qc, &cb, &init, &apc, &aps, sizeof(CLIENT_SCID));
     uint8_t out[PC_QUIC_MAX_DATAGRAM];
     TEST_ASSERT_EQUAL_UINT(0, pc_quic_conn_send(&qc, out, sizeof out)); // baseline: nothing queued
 
@@ -2083,7 +2083,7 @@ void test_quic_conn_pto_disarms_when_all_acked()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     QuicInitialSecrets init;
     QuicPacketKeys apc, aps;
-    complete_handshake(&qc, &cb, &init, &apc, &aps);
+    complete_handshake(&qc, &cb, &init, &apc, &aps, sizeof(CLIENT_SCID));
 
     // The 1-RTT HANDSHAKE_DONE packet is still unacknowledged, so the PTO arms.
     pc_quic_conn_on_timeout(&qc, 1000);
@@ -2113,7 +2113,7 @@ void test_quic_conn_pto_requeues_handshake_done_once()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     QuicInitialSecrets init;
     QuicPacketKeys apc, aps;
-    complete_handshake(&qc, &cb, &init, &apc, &aps);
+    complete_handshake(&qc, &cb, &init, &apc, &aps, sizeof(CLIENT_SCID));
     TEST_ASSERT_TRUE(qc.handshake_done_sent);
 
     // The client never acknowledged the 1-RTT packet, so the APP space is still outstanding.

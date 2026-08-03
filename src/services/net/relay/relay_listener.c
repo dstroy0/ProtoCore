@@ -261,7 +261,7 @@ proto_bool pc_relay_publish(uint8_t listener_id, const char *origin_host, uint16
     s_ctx.binds[idx].port = origin_port;
     if (!s_ctx.registered)
     {
-        proto_register(ConnProto::PROTO_RELAY, &s_relay_handler);
+        proto_register(PROTO_RELAY, &s_relay_handler);
         s_ctx.registered = PROTO_TRUE;
     }
     return PROTO_TRUE;

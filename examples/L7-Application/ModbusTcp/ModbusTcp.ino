@@ -59,7 +59,7 @@ void setup()
     pc_modbus_set_input_reg(0, 0);        // application-published (read-only to client)
     pc_modbus_on_write(on_write);
 
-    listen(502, ConnProto::PROTO_MODBUS);
+    listen(502, PROTO_MODBUS);
     begin();
     Serial.println("Modbus TCP slave on :502");
 }

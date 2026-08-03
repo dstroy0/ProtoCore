@@ -284,7 +284,7 @@ static QuicSlot *route(const uint8_t *dg, size_t len, proto_bool *is_initial, Qu
                 return s;
             }
         }
-        if (lh_out->version == QUIC_VERSION_1 && lh_out->type == QuicLongPacket::QUIC_LP_INITIAL)
+        if (lh_out->version == QUIC_VERSION_1 && lh_out->type == QUIC_LP_INITIAL)
         {
             *is_initial = PROTO_TRUE;
         }

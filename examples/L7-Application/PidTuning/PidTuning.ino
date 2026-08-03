@@ -145,9 +145,9 @@ void setup()
     pid_set_output_limits(&pid, OUT_MIN, OUT_MAX);
     pid_set_rate(&pid, PERIOD_MS * 0.001f); // fixed rate -> pid_update_fixed() skips the /dt divide
 
-    on_http("/", HttpMethod::HTTP_GET, handle_root);
-    on_http("/log.csv", HttpMethod::HTTP_GET, handle_log);
-    on_http("/reset", HttpMethod::HTTP_GET, handle_reset);
+    on_http("/", HTTP_GET, handle_root);
+    on_http("/log.csv", HTTP_GET, handle_log);
+    on_http("/reset", HTTP_GET, handle_reset);
     begin_http(80);
     Serial.println("GET /log.csv to capture the run for tools/pid_tune.py");
 }

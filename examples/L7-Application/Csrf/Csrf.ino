@@ -46,13 +46,13 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // Safe method: never requires a token. GET /csrf (built-in) hands one out.
-    on_http("/", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
+    on_http("/", HTTP_GET, [](uint8_t id, HttpReq *) {
         send_text(id, 200, "text/plain", "GET /csrf for a token, then POST /submit");
     });
 
     // State-changing route: the library rejects it with 403 unless the request
     // carries a valid X-CSRF-Token (no per-route code needed - it is global).
-    on_http("/submit", HttpMethod::HTTP_POST,
+    on_http("/submit", HTTP_POST,
               [](uint8_t id, HttpReq *) { send_text(id, 200, "text/plain", "accepted"); });
 
     begin_http(80);

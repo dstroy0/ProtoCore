@@ -65,7 +65,7 @@ void setup()
     pc_audit_set_sink(audit_sink);
     pc_audit_append(pc_audit_cat::PC_AUDIT_SYSTEM, "boot");
 
-    on_http("/login", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *req) {
+    on_http("/login", HTTP_GET, [](uint8_t id, HttpReq *req) {
         const char *user = http_get_query(req, "user");
         const char *pass = http_get_query(req, "pass");
         char msg[PC_AUDIT_MSG_LEN];
@@ -75,7 +75,7 @@ void setup()
         send_text(id, ok ? 200 : 401, "application/json", ok ? "{\"ok\":true}" : "{\"ok\":false}");
     });
 
-    on_http("/config", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *req) {
+    on_http("/config", HTTP_GET, [](uint8_t id, HttpReq *req) {
         const char *port = http_get_query(req, "http_port");
         char msg[PC_AUDIT_MSG_LEN];
         snprintf(msg, sizeof(msg), "set http_port=%s", port ? port : "?");
@@ -83,7 +83,7 @@ void setup()
         send_text(id, 200, "application/json", "{\"ok\":true}");
     });
 
-    on_http("/audit", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
+    on_http("/audit", HTTP_GET, [](uint8_t id, HttpReq *) {
         char doc[2048];
         if (pc_audit_dump_json(doc, sizeof(doc)) > 0)
         {

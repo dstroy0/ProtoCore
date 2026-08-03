@@ -39,7 +39,7 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    on_http("/resolve", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *req) {
+    on_http("/resolve", HTTP_GET, [](uint8_t id, HttpReq *req) {
         const char *host = http_get_query(req, "host");
         if (!host)
         {

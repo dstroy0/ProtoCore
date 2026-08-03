@@ -78,34 +78,34 @@ proto_bool pc_h2_parse_settings(const uint8_t *payload, size_t len, H2Settings *
         uint32_t val = rd32(payload + i + 2);
         switch (id)
         {
-        case H2Setting::H2_SETTINGS_HEADER_TABLE_SIZE:
+        case H2_SETTINGS_HEADER_TABLE_SIZE:
             s->header_table_size = val;
             break;
-        case H2Setting::H2_SETTINGS_ENABLE_PUSH:
+        case H2_SETTINGS_ENABLE_PUSH:
             if (val > 1)
             {
                 return PROTO_FALSE; // RFC 9113 sec 6.5.2: must be 0 or 1
             }
             s->enable_push = val;
             break;
-        case H2Setting::H2_SETTINGS_MAX_CONCURRENT_STREAMS:
+        case H2_SETTINGS_MAX_CONCURRENT_STREAMS:
             s->max_concurrent_streams = val;
             break;
-        case H2Setting::H2_SETTINGS_INITIAL_WINDOW_SIZE:
+        case H2_SETTINGS_INITIAL_WINDOW_SIZE:
             if (val > 0x7FFFFFFF)
             {
                 return PROTO_FALSE; // must not exceed 2^31-1
             }
             s->initial_window_size = val;
             break;
-        case H2Setting::H2_SETTINGS_MAX_FRAME_SIZE:
+        case H2_SETTINGS_MAX_FRAME_SIZE:
             if (val < 16384 || val > 16777215)
             {
                 return PROTO_FALSE; // must be in [2^14, 2^24-1]
             }
             s->max_frame_size = val;
             break;
-        case H2Setting::H2_SETTINGS_MAX_HEADER_LIST_SIZE:
+        case H2_SETTINGS_MAX_HEADER_LIST_SIZE:
             s->max_header_list_size = val;
             break;
         default:
@@ -122,7 +122,7 @@ size_t pc_h2_build_settings(uint8_t *out, size_t cap, const uint16_t *ids, const
     {
         return 0;
     }
-    pc_h2_write_header(out, cap, (uint32_t)payload, H2FrameType::H2_SETTINGS, 0, 0);
+    pc_h2_write_header(out, cap, (uint32_t)payload, H2_SETTINGS, 0, 0);
     uint8_t *p = out + H2_FRAME_HEADER_LEN;
     for (size_t i = 0; i < n; i++)
     {
@@ -136,7 +136,7 @@ size_t pc_h2_build_settings(uint8_t *out, size_t cap, const uint16_t *ids, const
 
 size_t pc_h2_build_settings_ack(uint8_t *out, size_t cap)
 {
-    return pc_h2_write_header(out, cap, 0, H2FrameType::H2_SETTINGS, H2_FLAG_ACK, 0);
+    return pc_h2_write_header(out, cap, 0, H2_SETTINGS, H2_FLAG_ACK, 0);
 }
 
 size_t pc_h2_build_window_update(uint8_t *out, size_t cap, uint32_t stream_id, uint32_t increment)
@@ -145,7 +145,7 @@ size_t pc_h2_build_window_update(uint8_t *out, size_t cap, uint32_t stream_id, u
     {
         return 0;
     }
-    pc_h2_write_header(out, cap, 4, H2FrameType::H2_WINDOW_UPDATE, 0, stream_id);
+    pc_h2_write_header(out, cap, 4, H2_WINDOW_UPDATE, 0, stream_id);
     wr32(out + H2_FRAME_HEADER_LEN, increment & 0x7FFFFFFF); // 31-bit, reserved bit 0
     return H2_FRAME_HEADER_LEN + 4;
 }
@@ -156,7 +156,7 @@ size_t pc_h2_build_rst_stream(uint8_t *out, size_t cap, uint32_t stream_id, uint
     {
         return 0;
     }
-    pc_h2_write_header(out, cap, 4, H2FrameType::H2_RST_STREAM, 0, stream_id);
+    pc_h2_write_header(out, cap, 4, H2_RST_STREAM, 0, stream_id);
     wr32(out + H2_FRAME_HEADER_LEN, error);
     return H2_FRAME_HEADER_LEN + 4;
 }
@@ -167,7 +167,7 @@ size_t pc_h2_build_goaway(uint8_t *out, size_t cap, uint32_t last_stream_id, uin
     {
         return 0;
     }
-    pc_h2_write_header(out, cap, 8, H2FrameType::H2_GOAWAY, 0, 0);
+    pc_h2_write_header(out, cap, 8, H2_GOAWAY, 0, 0);
     wr32(out + H2_FRAME_HEADER_LEN, last_stream_id & 0x7FFFFFFF);
     wr32(out + H2_FRAME_HEADER_LEN + 4, error);
     return H2_FRAME_HEADER_LEN + 8;
@@ -179,7 +179,7 @@ size_t pc_h2_build_ping_ack(uint8_t *out, size_t cap, const uint8_t opaque[8])
     {
         return 0;
     }
-    pc_h2_write_header(out, cap, 8, H2FrameType::H2_PING, H2_FLAG_ACK, 0);
+    pc_h2_write_header(out, cap, 8, H2_PING, H2_FLAG_ACK, 0);
     memcpy(out + H2_FRAME_HEADER_LEN, opaque, 8);
     return H2_FRAME_HEADER_LEN + 8;
 }
@@ -192,7 +192,7 @@ size_t pc_h2_build_headers(uint8_t *out, size_t cap, uint32_t stream_id, const u
         return 0;
     }
     uint8_t flags = H2_FLAG_END_HEADERS | (end_stream ? H2_FLAG_END_STREAM : 0);
-    pc_h2_write_header(out, cap, (uint32_t)block_len, H2FrameType::H2_HEADERS, flags, stream_id);
+    pc_h2_write_header(out, cap, (uint32_t)block_len, H2_HEADERS, flags, stream_id);
     memcpy(out + H2_FRAME_HEADER_LEN, block, block_len);
     return H2_FRAME_HEADER_LEN + block_len;
 }
@@ -204,8 +204,7 @@ size_t pc_h2_build_data(uint8_t *out, size_t cap, uint32_t stream_id, const uint
     {
         return 0;
     }
-    pc_h2_write_header(out, cap, (uint32_t)data_len, H2FrameType::H2_DATA, end_stream ? H2_FLAG_END_STREAM : 0,
-                       stream_id);
+    pc_h2_write_header(out, cap, (uint32_t)data_len, H2_DATA, end_stream ? H2_FLAG_END_STREAM : 0, stream_id);
     if (data_len)
     {
         memcpy(out + H2_FRAME_HEADER_LEN, data, data_len);

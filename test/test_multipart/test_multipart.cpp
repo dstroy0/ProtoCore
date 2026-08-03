@@ -33,7 +33,7 @@ static void reset_slot(uint8_t slot)
     conn_pool[slot] = {};
     conn_pool[slot].id = slot;
     conn_pool[slot].state = ConnState::CONN_ACTIVE;
-    conn_pool[slot].proto = ConnProto::PROTO_HTTP; // dispatch requires an explicit protocol
+    conn_pool[slot].proto = PROTO_HTTP; // dispatch requires an explicit protocol
     conn_pool[slot].pcb = &_mock_pcb;
     http_reset(slot);
 }

@@ -89,7 +89,7 @@ void setup()
         Serial.println("\nNo global IPv6 yet (the network may not advertise a prefix); link-local still works.");
     }
 
-    on_http("/", HttpMethod::HTTP_GET, handle_root);
+    on_http("/", HTTP_GET, handle_root);
 
     int32_t result = begin_http(80);
     if (result < 0)

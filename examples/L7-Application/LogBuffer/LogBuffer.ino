@@ -46,7 +46,7 @@ void setup()
     pc_log_set_trap(pc_log_level::PC_LOG_WARN, on_trap); // trap on WARN and ERROR
     pc_log(pc_log_level::PC_LOG_INFO, "boot complete");
 
-    on_http("/logs", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
+    on_http("/logs", HTTP_GET, [](uint8_t id, HttpReq *) {
         char buf[PC_LOG_LINES * PC_LOG_LINE_LEN];
         pc_log_dump(buf, sizeof(buf));
         send_text(id, 200, "text/plain", buf);

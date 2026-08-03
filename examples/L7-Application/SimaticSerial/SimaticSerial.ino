@@ -142,7 +142,7 @@ void setup()
     pc_3964r_init(&sta_a, /*high_priority=*/true, /*with_bcc=*/true, a_tx, a_on_rx, nullptr);
     pc_3964r_init(&sta_b, /*high_priority=*/false, /*with_bcc=*/true, b_tx, b_on_rx, nullptr);
 
-    on_http("/simatic", HttpMethod::HTTP_GET, handle_status);
+    on_http("/simatic", HTTP_GET, handle_status);
     begin_http(80);
 }
 

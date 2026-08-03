@@ -40,7 +40,7 @@ void setup()
     pc_device_uuid(g_uuid); // stable per-chip UUID
     Serial.printf("device UUID: %s\n", g_uuid);
 
-    on_http("/id", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
+    on_http("/id", HTTP_GET, [](uint8_t id, HttpReq *) {
         char body[64];
         snprintf(body, sizeof(body), "{\"uuid\":\"%s\"}", g_uuid);
         send_text(id, 200, "application/json", body);

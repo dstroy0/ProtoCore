@@ -29,7 +29,7 @@ static proto_bool put_stuffed(uint8_t *out, uint16_t *p, uint16_t cap, uint8_t b
         {
             return PROTO_FALSE;
         }
-        out[(*p)++] = Ash::ASH_ESCAPE;
+        out[(*p)++] = ASH_ESCAPE;
         out[(*p)++] = (uint8_t)(b ^ 0x20);
     }
     else
@@ -84,7 +84,7 @@ uint16_t pc_ash_frame_encode(uint8_t control, const uint8_t *payload, uint16_t l
     {
         return 0;
     }
-    out[p++] = Ash::ASH_FLAG; // the delimiter is never stuffed
+    out[p++] = ASH_FLAG; // the delimiter is never stuffed
     return p;
 }
 
@@ -97,7 +97,7 @@ int pc_ash_frame_decode(const uint8_t *raw, uint16_t len, uint8_t *control, uint
     }
     // Find the frame delimiter.
     uint16_t flag = 0;
-    while (flag < len && raw[flag] != Ash::ASH_FLAG)
+    while (flag < len && raw[flag] != ASH_FLAG)
     {
         flag++;
     }
@@ -112,7 +112,7 @@ int pc_ash_frame_decode(const uint8_t *raw, uint16_t len, uint8_t *control, uint
     for (uint16_t i = 0; i < flag; i++)
     {
         uint8_t b = raw[i];
-        if (b == Ash::ASH_ESCAPE)
+        if (b == ASH_ESCAPE)
         {
             if (++i >= flag)
             {

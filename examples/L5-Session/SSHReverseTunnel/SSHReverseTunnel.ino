@@ -102,7 +102,7 @@ void setup()
     }
     Serial.println();
 
-    on_http("/", HttpMethod::HTTP_GET, root);
+    on_http("/", HTTP_GET, root);
     begin_http(80);
 
     // 20 KB stack covers the ML-KEM hybrid handshake; pin to core 0 (off the loop).

@@ -162,7 +162,7 @@ static void handle_crypto(QuicConn *qc, int level, const QuicFrame *f)
     // to the client with the TLS alert in the low byte (RFC 9001 sec 4.8) instead of stalling.
     if (qc->tls.state == QTLS_FAILED)
     {
-        queue_close(qc, QuicErr::QUIC_ERR_CRYPTO_BASE + qc->tls.alert, QuicFrameType::QUIC_FT_CRYPTO, level);
+        queue_close(qc, QUIC_ERR_CRYPTO_BASE + qc->tls.alert, QUIC_FT_CRYPTO, level);
         return;
     }
     // Completing the handshake opens 1-RTT and lets us send HANDSHAKE_DONE. We keep the Handshake
@@ -228,7 +228,7 @@ static proto_bool process_frames(QuicConn *qc, int level, const uint8_t *p, size
     size_t off = 0;
     while (off < len)
     {
-        if (p[off] == QuicFrameType::QUIC_FT_PADDING)
+        if (p[off] == QUIC_FT_PADDING)
         {
             off++;
             continue;
@@ -238,24 +238,24 @@ static proto_bool process_frames(QuicConn *qc, int level, const uint8_t *p, size
         if (!n)
         {
             // Undecodable frame: a transport FRAME_ENCODING_ERROR (RFC 9000 sec 20.1). Report it.
-            queue_close(qc, QuicErr::QUIC_ERR_FRAME_ENCODING, 0, level);
+            queue_close(qc, QUIC_ERR_FRAME_ENCODING, 0, level);
             return PROTO_FALSE;
         }
         off += n;
 
-        if (f.type != QuicFrameType::QUIC_FT_ACK && f.type != QuicFrameType::QUIC_FT_ACK_ECN &&
-            f.type != QuicFrameType::QUIC_FT_CONNECTION_CLOSE && f.type != QuicFrameType::QUIC_FT_CONNECTION_CLOSE_APP)
+        if (f.type != QUIC_FT_ACK && f.type != QUIC_FT_ACK_ECN && f.type != QUIC_FT_CONNECTION_CLOSE &&
+            f.type != QUIC_FT_CONNECTION_CLOSE_APP)
         {
             *ack_eliciting = PROTO_TRUE;
         }
 
         switch (f.type)
         {
-        case QuicFrameType::QUIC_FT_CRYPTO:
+        case QUIC_FT_CRYPTO:
             handle_crypto(qc, level, &f);
             break;
-        case QuicFrameType::QUIC_FT_ACK:
-        case QuicFrameType::QUIC_FT_ACK_ECN:
+        case QUIC_FT_ACK:
+        case QUIC_FT_ACK_ECN:
             if ((int64_t)f.ack.largest > qc->space[level].largest_acked)
             {
                 qc->space[level].largest_acked = (int64_t)f.ack.largest;
@@ -264,18 +264,18 @@ static proto_bool process_frames(QuicConn *qc, int level, const uint8_t *p, size
                 qc->pto_armed = PROTO_FALSE;
             }
             break;
-        case QuicFrameType::QUIC_FT_CONNECTION_CLOSE:
-        case QuicFrameType::QUIC_FT_CONNECTION_CLOSE_APP:
+        case QUIC_FT_CONNECTION_CLOSE:
+        case QUIC_FT_CONNECTION_CLOSE_APP:
             qc->draining = PROTO_TRUE;
             qc->closed = PROTO_TRUE;
             break;
-        case QuicFrameType::QUIC_FT_HANDSHAKE_DONE:
+        case QUIC_FT_HANDSHAKE_DONE:
             break; // server-only frame; ignore if a peer sends it
-        case QuicFrameType::QUIC_FT_MAX_DATA:
-        case QuicFrameType::QUIC_FT_PING:
+        case QUIC_FT_MAX_DATA:
+        case QUIC_FT_PING:
             break; // no per-frame state to keep for a minimal server
         default:
-            if (f.type >= QuicFrameType::QUIC_FT_STREAM && f.type <= QuicFrameType::QUIC_FT_STREAM + 7)
+            if (f.type >= QUIC_FT_STREAM && f.type <= QUIC_FT_STREAM + 7)
             {
                 handle_stream(qc, &f);
             }
@@ -326,11 +326,11 @@ static proto_bool parse_packet_header(const QuicConn *qc, const uint8_t *dg, siz
     {
         return PROTO_FALSE; // Version Negotiation is a client concern; unknown versions are dropped
     }
-    if (h.type == QuicLongPacket::QUIC_LP_INITIAL)
+    if (h.type == QUIC_LP_INITIAL)
     {
         *level = QUIC_ENC_INITIAL;
     }
-    else if (h.type == QuicLongPacket::QUIC_LP_HANDSHAKE)
+    else if (h.type == QUIC_LP_HANDSHAKE)
     {
         *level = QUIC_ENC_HANDSHAKE;
     }
@@ -566,7 +566,7 @@ static size_t build_frames(QuicConn *qc, int level, uint8_t *buf, size_t cap, pr
 // Long-header packet type for an encryption level.
 static uint8_t level_lp_type(int level)
 {
-    return level == QUIC_ENC_INITIAL ? QuicLongPacket::QUIC_LP_INITIAL : QuicLongPacket::QUIC_LP_HANDSHAKE;
+    return level == QUIC_ENC_INITIAL ? QUIC_LP_INITIAL : QUIC_LP_HANDSHAKE;
 }
 
 // Bytes a protected packet needs on top of its payload: AEAD tag + packet number, plus the header.

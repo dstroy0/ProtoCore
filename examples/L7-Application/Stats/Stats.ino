@@ -41,7 +41,7 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    on_http("/stats", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) { stats(id); });
+    on_http("/stats", HTTP_GET, [](uint8_t id, HttpReq *) { stats(id); });
     begin_http(80);
 }
 

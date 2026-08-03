@@ -50,7 +50,7 @@ void setup()
     listener_ip_allow_add_cidr("10.0.0.5");       // one trusted host (bare address -> /32)
     listener_ip_allow_add_cidr("2001:db8::/32");  // an IPv6 prefix
 
-    on_http("/", HttpMethod::HTTP_GET,
+    on_http("/", HTTP_GET,
               [](uint8_t id, HttpReq *) { send_text(id, 200, "text/plain", "hello from an allowed address"); });
     begin_http(80);
 }

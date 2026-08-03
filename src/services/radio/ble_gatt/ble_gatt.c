@@ -19,7 +19,7 @@ size_t att_read_req(uint16_t handle, uint8_t *out, size_t cap)
     {
         return 0;
     }
-    out[0] = AttOp::ATT_OP_READ_REQ;
+    out[0] = ATT_OP_READ_REQ;
     out[1] = (uint8_t)handle;
     out[2] = (uint8_t)(handle >> 8);
     return 3;
@@ -31,7 +31,7 @@ size_t att_read_rsp(const uint8_t *val, size_t vlen, uint8_t *out, size_t cap)
     {
         return 0;
     }
-    out[0] = AttOp::ATT_OP_READ_RSP;
+    out[0] = ATT_OP_READ_RSP;
     if (vlen)
     {
         memcpy(out + 1, val, vlen);
@@ -57,12 +57,12 @@ static size_t att_handle_value(uint8_t op, uint16_t handle, const uint8_t *val, 
 
 size_t att_write_req(uint16_t handle, const uint8_t *val, size_t vlen, uint8_t *out, size_t cap)
 {
-    return att_handle_value(AttOp::ATT_OP_WRITE_REQ, handle, val, vlen, out, cap);
+    return att_handle_value(ATT_OP_WRITE_REQ, handle, val, vlen, out, cap);
 }
 
 size_t att_notify(uint16_t handle, const uint8_t *val, size_t vlen, uint8_t *out, size_t cap)
 {
-    return att_handle_value(AttOp::ATT_OP_HANDLE_VALUE_NTF, handle, val, vlen, out, cap);
+    return att_handle_value(ATT_OP_HANDLE_VALUE_NTF, handle, val, vlen, out, cap);
 }
 
 size_t att_error_rsp(uint8_t req_op, uint16_t handle, uint8_t error, uint8_t *out, size_t cap)
@@ -71,7 +71,7 @@ size_t att_error_rsp(uint8_t req_op, uint16_t handle, uint8_t error, uint8_t *ou
     {
         return 0;
     }
-    out[0] = AttOp::ATT_OP_ERROR_RSP;
+    out[0] = ATT_OP_ERROR_RSP;
     out[1] = req_op;
     out[2] = (uint8_t)handle;
     out[3] = (uint8_t)(handle >> 8);
@@ -94,7 +94,7 @@ proto_bool att_parse(const uint8_t *pdu, size_t len, AttPdu *out)
 
     switch (pdu[0])
     {
-    case AttOp::ATT_OP_ERROR_RSP:
+    case ATT_OP_ERROR_RSP:
         if (len < 5)
         {
             return PROTO_FALSE;
@@ -103,22 +103,22 @@ proto_bool att_parse(const uint8_t *pdu, size_t len, AttPdu *out)
         out->handle = (uint16_t)(pdu[2] | (pdu[3] << 8));
         out->error = pdu[4];
         return PROTO_TRUE;
-    case AttOp::ATT_OP_READ_REQ:
+    case ATT_OP_READ_REQ:
         if (len < 3)
         {
             return PROTO_FALSE;
         }
         out->handle = (uint16_t)(pdu[1] | (pdu[2] << 8));
         return PROTO_TRUE;
-    case AttOp::ATT_OP_READ_RSP:
+    case ATT_OP_READ_RSP:
         if (len > 1)
         {
             out->value = pdu + 1;
             out->value_len = len - 1;
         }
         return PROTO_TRUE;
-    case AttOp::ATT_OP_WRITE_REQ:
-    case AttOp::ATT_OP_HANDLE_VALUE_NTF:
+    case ATT_OP_WRITE_REQ:
+    case ATT_OP_HANDLE_VALUE_NTF:
         if (len < 3)
         {
             return PROTO_FALSE;
@@ -130,7 +130,7 @@ proto_bool att_parse(const uint8_t *pdu, size_t len, AttPdu *out)
             out->value_len = len - 3;
         }
         return PROTO_TRUE;
-    case AttOp::ATT_OP_WRITE_RSP:
+    case ATT_OP_WRITE_RSP:
         return PROTO_TRUE;
     default:
         return PROTO_TRUE; // unknown opcode: still report it, no fixed fields

@@ -62,8 +62,8 @@ void setup()
     pc_set_default_dscp(PC_DSCP_EF);
     pc_udp_set_dscp(PC_DSCP_EF);
 
-    on_http("/", HttpMethod::HTTP_GET, handle_root);
-    on_http("/tag", HttpMethod::HTTP_GET, handle_tag);
+    on_http("/", HTTP_GET, handle_root);
+    on_http("/tag", HTTP_GET, handle_tag);
     begin_http(80);
     Serial.println("DiffServ server on :80 (default EF; /tag -> CS6)");
 }

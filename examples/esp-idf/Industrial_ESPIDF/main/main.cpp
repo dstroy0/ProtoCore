@@ -102,7 +102,7 @@ void setup()
     pc_modbus_set_holding_reg(MB_SETPOINT_HOLD_REG, 0); // client-writable setpoint
     pc_modbus_set_input_reg(MB_UPTIME_INPUT_REG, 0);    // application-published uptime (read-only)
     pc_modbus_on_write(on_modbus_write);
-    server.listen(502, ConnProto::PROTO_MODBUS);
+    server.listen(502, PROTO_MODBUS);
 
     // --- Management: SNMP v1/v2c agent on UDP:161 ---
     pc_snmp_agent_init("public");
@@ -111,7 +111,7 @@ void setup()
     pc_snmp_agent_begin_udp(161);
 
     // --- Web dashboard + start the TCP server (HTTP/80 + the Modbus listener) ---
-    server.on("/", HttpMethod::HTTP_GET, handle_root);
+    server.on("/", HTTP_GET, handle_root);
     int32_t rc = server.begin(80);
     if (rc < 0)
     {

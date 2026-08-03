@@ -77,7 +77,7 @@ void setup()
     // GET /gpio (JSON) + POST /gpio (drive an output); pinMode is applied here.
     pc_gpio_map_begin("/gpio", gpio_pins, gpio_count);
 
-    on_http("/", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) { send_text(id, 200, "text/html", DIAG_PAGE); });
+    on_http("/", HTTP_GET, [](uint8_t id, HttpReq *) { send_text(id, 200, "text/html", DIAG_PAGE); });
     begin_http(80);
 }
 

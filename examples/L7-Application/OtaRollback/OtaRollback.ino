@@ -46,7 +46,7 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    on_http("/ota-state", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
+    on_http("/ota-state", HTTP_GET, [](uint8_t id, HttpReq *) {
         char b[48];
         snprintf(b, sizeof(b), "{\"img_state\":%u}", pc_ota_img_state());
         send_text(id, 200, "application/json", b);

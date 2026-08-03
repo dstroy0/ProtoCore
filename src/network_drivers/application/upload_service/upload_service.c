@@ -124,7 +124,7 @@ void pc_upload_begin(const char *path, fs::FS &fs, const char *dest_path)
     s_upl.dest = dest_path;
 
     http_parser_set_stream_hooks(upload_stream_begin, upload_stream_data);
-    on_http(path, HttpMethod::HTTP_POST, upload_handle);
+    on_http(path, HTTP_POST, upload_handle);
 }
 
 #endif // PC_ENABLE_UPLOAD

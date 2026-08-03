@@ -50,7 +50,7 @@ void setup()
     pc_rate_init(&g_rate);
     pc_totalizer_init(&g_total);
 
-    on_http("/telemetry", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
+    on_http("/telemetry", HTTP_GET, [](uint8_t id, HttpReq *) {
         char body[192];
         snprintf(body, sizeof(body),
                  "{\"samples\":%u,\"mean\":%.3f,\"stddev\":%.3f,\"min\":%.3f,\"max\":%.3f,"

@@ -63,7 +63,7 @@ void setup()
     pc_time_source_add("ntp", 0, src_ntp); // preferred
     pc_time_source_add("rtc", 1, src_rtc); // fallback
 
-    on_http("/time", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
+    on_http("/time", HTTP_GET, [](uint8_t id, HttpReq *) {
         char body[96];
         uint32_t epoch = pc_time_now();
         const char *src = pc_time_source_active();

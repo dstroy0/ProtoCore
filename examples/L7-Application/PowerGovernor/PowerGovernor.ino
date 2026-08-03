@@ -88,8 +88,8 @@ void setup()
         delay(250);
     }
 
-    on_http("/power", HttpMethod::HTTP_GET, power_handler);
-    on_http("/busy", HttpMethod::HTTP_GET, busy_handler);
+    on_http("/power", HTTP_GET, power_handler);
+    on_http("/busy", HTTP_GET, busy_handler);
     begin_http(80);
 
     uint32_t ip = pc_net_egress_ip();

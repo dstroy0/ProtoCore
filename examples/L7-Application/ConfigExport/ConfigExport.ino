@@ -53,12 +53,12 @@ void setup()
     pc_config_set_u32("http_port", 80);
     pc_config_set_str("location", "lab");
 
-    on_http("/config", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
+    on_http("/config", HTTP_GET, [](uint8_t id, HttpReq *) {
         char buf[512];
         pc_config_export("app", SCHEMA, SCHEMA_N, buf, sizeof(buf));
         send_text(id, 200, "text/plain", buf);
     });
-    on_http("/config", HttpMethod::HTTP_POST, [](uint8_t id, HttpReq *req) {
+    on_http("/config", HTTP_POST, [](uint8_t id, HttpReq *req) {
         int n = pc_config_import("app", SCHEMA, SCHEMA_N, (const char *)req->body, req->body_len);
         char msg[48];
         snprintf(msg, sizeof(msg), "imported %d field(s)\n", n);

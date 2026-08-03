@@ -185,7 +185,7 @@ size_t pc_mms_read_request(uint32_t invoke_id, const char *item_name, uint8_t *o
         return 0; // GCOVR_EXCL_LINE
     }
     // A4 read [4]
-    n = tlv(Mms::MMS_SERVICE_READ, scratch, n, a0, sizeof(a0));
+    n = tlv(MMS_SERVICE_READ, scratch, n, a0, sizeof(a0));
     if (!n) // GCOVR_EXCL_LINE
     {
         return 0; // GCOVR_EXCL_LINE
@@ -195,7 +195,7 @@ size_t pc_mms_read_request(uint32_t invoke_id, const char *item_name, uint8_t *o
     uint8_t idc[5];
     size_t idlen = int_content(invoke_id, idc);
     uint8_t body[256];
-    size_t bn = tlv(Mms::MMS_TAG_INVOKE_ID, idc, idlen, body, sizeof(body));
+    size_t bn = tlv(MMS_TAG_INVOKE_ID, idc, idlen, body, sizeof(body));
     // GCOVR_EXCL_LINE  neither half can fire here: bn is 2+idlen (2..7, never 0) and bn+n maxes ~152 << 256
     // because name_len is capped at 128 above. Unreachable, kept defensively.
     if (!bn || bn + n > sizeof(body)) // GCOVR_EXCL_LINE
@@ -204,7 +204,7 @@ size_t pc_mms_read_request(uint32_t invoke_id, const char *item_name, uint8_t *o
     }
     memcpy(body + bn, a0, n); // append the A4 read
     bn += n;
-    return tlv(Mms::MMS_PDU_CONFIRMED_REQUEST, body, bn, out, cap);
+    return tlv(MMS_PDU_CONFIRMED_REQUEST, body, bn, out, cap);
 }
 
 size_t pc_mms_read_response(uint32_t invoke_id, const uint8_t *data, size_t data_len, uint8_t *out, size_t cap)
@@ -222,7 +222,7 @@ size_t pc_mms_read_response(uint32_t invoke_id, const uint8_t *data, size_t data
     }
     // A4 read response [4]
     uint8_t svc[256];
-    n = tlv(Mms::MMS_SERVICE_READ, scratch, n, svc, sizeof(svc));
+    n = tlv(MMS_SERVICE_READ, scratch, n, svc, sizeof(svc));
     if (!n)
     {
         return 0;
@@ -231,7 +231,7 @@ size_t pc_mms_read_response(uint32_t invoke_id, const uint8_t *data, size_t data
     uint8_t idc[5];
     size_t idlen = int_content(invoke_id, idc);
     uint8_t body[256];
-    size_t bn = tlv(Mms::MMS_TAG_INVOKE_ID, idc, idlen, body, sizeof(body));
+    size_t bn = tlv(MMS_TAG_INVOKE_ID, idc, idlen, body, sizeof(body));
     // The bn+n overflow half IS reachable (a large caller data_len trips it) and is covered by a test, but
     // !bn is not: int_content always yields idlen 1..5, so this tlv always writes 2+idlen (2..7) octets into
     // a 256-byte buffer and can never return 0. gcovr cannot exclude one operand, so the line is excluded.
@@ -241,7 +241,7 @@ size_t pc_mms_read_response(uint32_t invoke_id, const uint8_t *data, size_t data
     }
     memcpy(body + bn, svc, n);
     bn += n;
-    return tlv(Mms::MMS_PDU_CONFIRMED_RESPONSE, body, bn, out, cap);
+    return tlv(MMS_PDU_CONFIRMED_RESPONSE, body, bn, out, cap);
 }
 
 proto_bool pc_mms_parse(const uint8_t *pdu, size_t len, MmsPdu *out)
@@ -251,8 +251,8 @@ proto_bool pc_mms_parse(const uint8_t *pdu, size_t len, MmsPdu *out)
         return PROTO_FALSE;
     }
     out->pdu_tag = pdu[0];
-    if (out->pdu_tag != Mms::MMS_PDU_CONFIRMED_REQUEST && out->pdu_tag != Mms::MMS_PDU_CONFIRMED_RESPONSE &&
-        out->pdu_tag != Mms::MMS_PDU_CONFIRMED_ERROR)
+    if (out->pdu_tag != MMS_PDU_CONFIRMED_REQUEST && out->pdu_tag != MMS_PDU_CONFIRMED_RESPONSE &&
+        out->pdu_tag != MMS_PDU_CONFIRMED_ERROR)
     {
         return PROTO_FALSE;
     }
@@ -271,7 +271,7 @@ proto_bool pc_mms_parse(const uint8_t *pdu, size_t len, MmsPdu *out)
     }
 
     // First inner element must be the invokeID INTEGER.
-    if (off + 2 > len || pdu[off] != Mms::MMS_TAG_INVOKE_ID)
+    if (off + 2 > len || pdu[off] != MMS_TAG_INVOKE_ID)
     {
         return PROTO_FALSE;
     }

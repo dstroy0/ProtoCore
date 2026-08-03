@@ -55,7 +55,7 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // Open the front port for the relay, then bind it to the origin.
-    int32_t li = listen(FRONT_PORT, ConnProto::PROTO_RELAY);
+    int32_t li = listen(FRONT_PORT, PROTO_RELAY);
     if (li < 0 || !pc_relay_publish((uint8_t)li, ORIGIN_HOST, ORIGIN_PORT))
     {
         Serial.println("relay publish failed - check the front port and origin");

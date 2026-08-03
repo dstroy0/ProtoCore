@@ -304,7 +304,7 @@ static int on_rforward_open(uint8_t ssh_slot, const char *addr, size_t addr_len,
         return -1; // no listener capacity
     }
     // Dynamic (tcpip_thread-marshaled) create: this runs in the SSH worker task.
-    if (listener_add_dynamic((uint8_t)li, bind_port, ConnProto::PROTO_SSH_RFWD) != 1)
+    if (listener_add_dynamic((uint8_t)li, bind_port, PROTO_SSH_RFWD) != 1)
     {
         return -1; // bind failed (port already in use, etc.)
     }
@@ -466,7 +466,7 @@ void pc_ssh_forward_begin()
     pc_ssh_channel_set_rforward_open_cb(on_rforward_open);
     pc_ssh_channel_set_rforward_cancel_cb(on_rforward_cancel);
     pc_ssh_channel_set_forward_confirm_cb(on_forward_confirm);
-    proto_register(ConnProto::PROTO_SSH_RFWD, &s_rfwd_handler);
+    proto_register(PROTO_SSH_RFWD, &s_rfwd_handler);
 }
 
 void pc_ssh_forward_pump(uint8_t ssh_slot)

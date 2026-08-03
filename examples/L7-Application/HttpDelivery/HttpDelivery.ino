@@ -65,7 +65,7 @@ void setup()
     // another 300 s. Built by the RFC 5861 core so header and decision cannot drift apart.
     set_cache_control_swr(60, 300);
 
-    on_http("/", HttpMethod::HTTP_GET, root_handler);
+    on_http("/", HTTP_GET, root_handler);
     // Serves /sw.js + /precache.json.
     if (!pc_delivery_serve_sw(server, SHELL, sizeof(SHELL) / sizeof(SHELL[0]), SHELL_VERSION))
     {

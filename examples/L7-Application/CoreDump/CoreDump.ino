@@ -145,8 +145,8 @@ void setup()
         Serial.println("no offload succeeded - leaving the dump in flash for the next attempt");
     }
 
-    on_http("/exception", HttpMethod::HTTP_GET, exception_handler);
-    on_http("/crash", HttpMethod::HTTP_GET, crash_handler);
+    on_http("/exception", HTTP_GET, exception_handler);
+    on_http("/crash", HTTP_GET, crash_handler);
     if (sd)
     {
         serve_static("/files/", SD_MMC, "/"); // download the saved dump

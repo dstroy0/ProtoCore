@@ -88,7 +88,7 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    on_http("/graphql", HttpMethod::HTTP_POST, [](uint8_t id, HttpReq *req) {
+    on_http("/graphql", HTTP_POST, [](uint8_t id, HttpReq *req) {
         char body[512];
         pc_gql_result rc = pc_graphql_execute((const char *)req->body, req->body_len, resolver, body, sizeof(body));
         // The engine writes {"data":...} on success or {"errors":...} on a parse

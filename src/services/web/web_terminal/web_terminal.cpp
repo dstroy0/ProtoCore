@@ -98,7 +98,7 @@ void pc_web_terminal_begin(const char *path)
         s_term.ws_path[0] = '\0';
     }
 
-    on_http(path, HttpMethod::HTTP_GET, term_page_handler);
+    on_http(path, HTTP_GET, term_page_handler);
     on_ws(s_term.ws_path, term_ws_connect, term_ws_message, term_ws_close);
 }
 

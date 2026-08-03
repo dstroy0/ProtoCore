@@ -118,7 +118,7 @@ void setup()
     pc_ssh_channel_set_data_cb(ssh_on_data);
 
     // Listen for SSH on port 22 (and, optionally, HTTP on 80 alongside it).
-    listen(22, ConnProto::PROTO_SSH);
+    listen(22, PROTO_SSH);
     int32_t result = begin();
     if (result < 0)
     {

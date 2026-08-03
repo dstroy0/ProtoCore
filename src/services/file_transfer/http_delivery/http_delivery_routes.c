@@ -60,8 +60,8 @@ proto_bool pc_delivery_serve_sw(const char *const *paths, size_t n, const char *
     s_delr.version = version;
     // The worker's scope is the path it is served from, so it must sit at the root to control the
     // whole origin - "/sw.js", not "/assets/sw.js".
-    on_http("/sw.js", HttpMethod::HTTP_GET, sw_script_handler);
-    on_http("/precache.json", HttpMethod::HTTP_GET, sw_manifest_handler);
+    on_http("/sw.js", HTTP_GET, sw_script_handler);
+    on_http("/precache.json", HTTP_GET, sw_manifest_handler);
     return PROTO_TRUE;
 }
 

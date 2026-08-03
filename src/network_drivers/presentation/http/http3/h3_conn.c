@@ -101,13 +101,13 @@ static void dispatch_request(H3Conn *h3, H3Stream *st)
             break; // incomplete frame
         }
         const uint8_t *fp = st->buf + payload;
-        if (fr.type == H3FrameType::H3_HEADERS)
+        if (fr.type == H3_HEADERS)
         {
             ReqEmit e = {st};
             pc_qpack_decode(fp, (size_t)fr.length, scratch, sizeof(scratch), req_emit, &e);
             st->have_headers = PROTO_TRUE;
         }
-        else if (fr.type == H3FrameType::H3_DATA)
+        else if (fr.type == H3_DATA)
         {
             // Copy only while there is room left in body. room is 0 once body is full (no underflow),
             // and take is clamped to it, so body_len + take <= sizeof(body). Both arms of both guards
@@ -192,7 +192,7 @@ static void pc_h3_consume_control(H3Conn *h3, H3Stream *st)
         {
             break;
         }
-        if (fr.type == H3FrameType::H3_SETTINGS)
+        if (fr.type == H3_SETTINGS)
         {
             pc_h3_settings_defaults(&h3->peer_settings);
             pc_h3_parse_settings(st->buf + off + fr.header_len, (size_t)fr.length, &h3->peer_settings);
@@ -254,8 +254,7 @@ static void on_handshake_done(void *app, QuicConn *qc)
     // Server control stream (id 3): stream type 0x00 + SETTINGS.
     uint8_t buf[64];
     size_t p = pc_quic_varint_encode(buf, sizeof(buf), 0x00);
-    static const uint64_t ids[] = {H3Setting::H3_SETTINGS_QPACK_MAX_TABLE_CAPACITY,
-                                   H3Setting::H3_SETTINGS_QPACK_BLOCKED_STREAMS};
+    static const uint64_t ids[] = {H3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, H3_SETTINGS_QPACK_BLOCKED_STREAMS};
     static const uint64_t vals[] = {0, 0};
     p += pc_h3_build_settings(buf + p, sizeof(buf) - p, ids, vals, 2);
     pc_quic_conn_stream_send(qc, 3, buf, p, PROTO_FALSE);

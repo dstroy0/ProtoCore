@@ -57,13 +57,13 @@ void setup()
     // proxy's address / subnet; the RFC 5737 documentation range below is a placeholder.
     pc_forwarded_trust_add_cidr("192.0.2.0/24");
 
-    on_http("/", HttpMethod::HTTP_GET,
+    on_http("/", HTTP_GET,
               [](uint8_t id, HttpReq *) { send_text(id, 200, "text/plain", "public page"); });
 
     // Protected route. Behind a trusted proxy the lockout counts failures per ORIGINAL client, so one
     // abuser does not lock out everyone sharing the proxy's address.
     on_http(
-        "/secret", HttpMethod::HTTP_GET,
+        "/secret", HTTP_GET,
         [](uint8_t id, HttpReq *) { send_text(id, 200, "text/plain", "authenticated!"); }, "Restricted", "admin",
         "s3cret");
 

@@ -57,7 +57,7 @@ void setup()
     pc_mnt_mount(pc_mnt_fs(&LittleFS));
     pc_fs_begin("/"); // every name below is resolved against this root
 
-    on_http("/save", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *req) {
+    on_http("/save", HTTP_GET, [](uint8_t id, HttpReq *req) {
         const char *name = http_get_query(req, "name");
         const char *data = http_get_query(req, "data");
         if (!name || !*name || !data)
@@ -69,7 +69,7 @@ void setup()
         send_text(id, ok ? 200 : 500, "application/json", ok ? "{\"ok\":true}" : "{\"ok\":false}");
     });
 
-    on_http("/load", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *req) {
+    on_http("/load", HTTP_GET, [](uint8_t id, HttpReq *req) {
         const char *name = http_get_query(req, "name");
         if (!name || !*name)
         {
@@ -87,7 +87,7 @@ void setup()
         send_text(id, 200, "text/plain", buf);
     });
 
-    on_http("/size", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *req) {
+    on_http("/size", HTTP_GET, [](uint8_t id, HttpReq *req) {
         const char *name = http_get_query(req, "name");
         long n = (name && *name) ? pc_fs_size(name, "") : -1;
         char b[24];
@@ -95,7 +95,7 @@ void setup()
         send_text(id, 200, "text/plain", b);
     });
 
-    on_http("/rm", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *req) {
+    on_http("/rm", HTTP_GET, [](uint8_t id, HttpReq *req) {
         const char *name = http_get_query(req, "name");
         bool ok = (name && *name) && pc_fs_remove(name, "");
         send_text(id, ok ? 200 : 404, "application/json", ok ? "{\"ok\":true}" : "{\"ok\":false}");

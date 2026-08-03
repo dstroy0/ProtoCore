@@ -286,7 +286,7 @@ proto_bool pc_ntrip_caster_add_mount(uint8_t listener_id, const NtripMount *moun
     m->auth_b64 = auth_b64;
     if (!s_ctx.registered)
     {
-        proto_register(ConnProto::PROTO_NTRIP_CASTER, &s_caster_handler);
+        proto_register(PROTO_NTRIP_CASTER, &s_caster_handler);
         s_ctx.registered = PROTO_TRUE;
     }
     return PROTO_TRUE;

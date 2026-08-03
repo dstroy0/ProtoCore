@@ -53,8 +53,8 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    on_regex("/sensor/[0-9]+", HttpMethod::HTTP_GET, handle_sensor); // only numeric ids
-    on_regex("/img/.+\\.png", HttpMethod::HTTP_GET, handle_png);     // only *.png paths
+    on_regex("/sensor/[0-9]+", HTTP_GET, handle_sensor); // only numeric ids
+    on_regex("/img/.+\\.png", HTTP_GET, handle_png);     // only *.png paths
 
     int32_t result = begin_http(80);
     if (result < 0)

@@ -48,7 +48,7 @@ void setup()
 
     pc_guardrails_begin(on_breach);
 
-    on_http("/health", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
+    on_http("/health", HTTP_GET, [](uint8_t id, HttpReq *) {
         pc_health h;
         pc_guardrails_sample(&h);
         char buf[128];

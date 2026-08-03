@@ -84,8 +84,8 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    on_http("/api/info", HttpMethod::HTTP_GET, handle_info);
-    on_http("/api/echo", HttpMethod::HTTP_POST, handle_echo);
+    on_http("/api/info", HTTP_GET, handle_info);
+    on_http("/api/echo", HTTP_POST, handle_echo);
 
     int32_t result = begin_http(80);
     if (result < 0)

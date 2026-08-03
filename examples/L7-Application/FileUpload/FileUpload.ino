@@ -63,7 +63,7 @@ void setup()
     pc_upload_begin("/upload", LittleFS, DEST);
 
     // GET /file -> serve the stored file back.
-    on_http("/file", HttpMethod::HTTP_GET,
+    on_http("/file", HTTP_GET,
               [](uint8_t id, HttpReq *) { serve_file(id, LittleFS, DEST, "application/octet-stream"); });
 
     int32_t result = begin_http(80);

@@ -322,10 +322,10 @@ static void media_begin()
     g_clip = (uint8_t *)heap_caps_malloc(44 + CLIP_DATA, MALLOC_CAP_SPIRAM);
     g_mic = I2S.begin(I2S_MODE_PDM_RX, AUDIO_RATE, I2S_DATA_BIT_WIDTH_16BIT, I2S_SLOT_MODE_MONO) && g_clip;
     Serial.printf("camera %s, mic %s\n", g_cam ? "OK" : "FAILED", g_mic ? "OK" : "FAILED");
-    on_http("/video", HttpMethod::HTTP_GET, handle_video);
-    on_http("/photo.jpg", HttpMethod::HTTP_GET, handle_photo);
-    on_http("/audio.wav", HttpMethod::HTTP_GET, handle_audio);
-    on_http("/clip.wav", HttpMethod::HTTP_GET, handle_clip);
+    on_http("/video", HTTP_GET, handle_video);
+    on_http("/photo.jpg", HTTP_GET, handle_photo);
+    on_http("/audio.wav", HTTP_GET, handle_audio);
+    on_http("/clip.wav", HTTP_GET, handle_clip);
 }
 
 #endif // MEDIA_SUPPORTED
@@ -368,7 +368,7 @@ void setup()
     uint32_t ip = pc_net_egress_ip();
     Serial.printf("\nOpen http://%u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
-    on_http("/", HttpMethod::HTTP_GET, handle_root);
+    on_http("/", HTTP_GET, handle_root);
 #if MEDIA_SUPPORTED
     media_begin();
 #endif

@@ -43,13 +43,13 @@ static void serve_data_conn_gone(uint8_t slot_id, HttpReq *req)
 void setUp()
 {
     pc_server_reset();
-    on_http("/data", HttpMethod::HTTP_GET, serve_data);
+    on_http("/data", HTTP_GET, serve_data);
     for (int i = 0; i < MAX_CONNS; i++)
     {
         conn_pool[i] = {};
         conn_pool[i].id = (uint8_t)i;
         conn_pool[i].state = ConnState::CONN_ACTIVE;
-        conn_pool[i].proto = ConnProto::PROTO_HTTP; // dispatch requires an explicit protocol
+        conn_pool[i].proto = PROTO_HTTP; // dispatch requires an explicit protocol
         conn_pool[i].pcb = &_mock_pcb;
         http_reset(i);
     }
@@ -320,7 +320,7 @@ void test_range_suffix_on_empty_file()
 // nothing (no partial/garbage response to a gone peer).
 void test_serve_file_connection_gone()
 {
-    on_http("/gone", HttpMethod::HTTP_GET, serve_data_conn_gone);
+    on_http("/gone", HTTP_GET, serve_data_conn_gone);
     push_str(0, "GET /gone HTTP/1.1\r\n\r\n");
     http_parse(0);
     handle();

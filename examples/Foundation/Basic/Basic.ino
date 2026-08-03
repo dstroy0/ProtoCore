@@ -51,7 +51,7 @@ void setup()
     Serial.printf("IP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    on_http("/", HttpMethod::HTTP_GET, handle_root);
+    on_http("/", HTTP_GET, handle_root);
 
     // begin() returns 1 on success and a negative value on failure (listener
     // pool full or lwIP error). -1 is truthy, so test for "< 0", not "!result".

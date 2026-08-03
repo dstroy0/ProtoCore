@@ -132,7 +132,7 @@ void setup()
     pc_ssh_auth_set_password_cb(ssh_password_auth);
     pc_ssh_channel_set_data_cb(ssh_on_data);
 
-    listen(22, ConnProto::PROTO_SSH);
+    listen(22, PROTO_SSH);
     int32_t result = begin();
     if (result < 0)
     {

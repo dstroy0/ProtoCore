@@ -106,7 +106,7 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    on_http("/telemetry.msgpack", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
+    on_http("/telemetry.msgpack", HTTP_GET, [](uint8_t id, HttpReq *) {
         static MpCtx ctx; // static: must outlive send_chunked
         pc_span w;
         w = pc_span_from(ctx.buf, sizeof(ctx.buf));
@@ -121,7 +121,7 @@ void setup()
         ctx.off = 0;
         send_chunked(id, 200, "application/msgpack", pc_msgpack_source, &ctx);
     });
-    on_http("/decode", HttpMethod::HTTP_POST, on_decode);
+    on_http("/decode", HTTP_POST, on_decode);
     begin_http(80);
 }
 

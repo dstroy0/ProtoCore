@@ -36,7 +36,7 @@ static void partition_handler(uint8_t slot_id, HttpReq *req)
 
 void pc_partition_monitor_begin(const char *path)
 {
-    on_http((path && path[0]) ? path : "/partitions", HttpMethod::HTTP_GET, partition_handler);
+    on_http((path && path[0]) ? path : "/partitions", HTTP_GET, partition_handler);
 }
 
 #endif // PC_ENABLE_PARTITION_MONITOR

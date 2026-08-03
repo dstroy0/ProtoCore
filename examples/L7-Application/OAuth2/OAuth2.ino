@@ -50,7 +50,7 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    on_http("/callback", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *req) {
+    on_http("/callback", HTTP_GET, [](uint8_t id, HttpReq *req) {
         const char *code = http_get_query(req, "code");
         if (!code)
         {

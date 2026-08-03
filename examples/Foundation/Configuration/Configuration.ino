@@ -196,12 +196,12 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    on_http("/config", HttpMethod::HTTP_GET, handle_config);
-    on_http("/echo", HttpMethod::HTTP_POST, handle_echo);
-    on_http("/search", HttpMethod::HTTP_GET, handle_search);
+    on_http("/config", HTTP_GET, handle_config);
+    on_http("/echo", HTTP_POST, handle_echo);
+    on_http("/search", HTTP_GET, handle_search);
 
     // Diagnostic route (PC_ENABLE_DIAG=1): remove or protect in production.
-    on_http("/diag", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) { diag(id); });
+    on_http("/diag", HTTP_GET, [](uint8_t id, HttpReq *) { diag(id); });
 
     // Pass a runtime config to override the idle timeout without a rebuild.
     WebServerConfig cfg = {.conn_timeout_ms = CONN_TIMEOUT_MS};

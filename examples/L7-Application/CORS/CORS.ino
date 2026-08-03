@@ -36,7 +36,7 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     set_cors("*"); // allow any origin (tighten to your web app's origin in production)
-    on_http("/api", HttpMethod::HTTP_GET,
+    on_http("/api", HTTP_GET,
               [](uint8_t id, HttpReq *) { send_text(id, 200, "application/json", "{\"ok\":true}"); });
     begin_http(80);
 }

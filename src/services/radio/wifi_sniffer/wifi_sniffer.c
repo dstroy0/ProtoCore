@@ -68,13 +68,13 @@ void pc_wifi_stats_add(WifiStats *s, const WifiFrame *f)
     }
     switch (f->type)
     {
-    case WifiType::WIFI_TYPE_MGMT:
+    case WIFI_TYPE_MGMT:
         s->mgmt++;
         break;
-    case WifiType::WIFI_TYPE_CTRL:
+    case WIFI_TYPE_CTRL:
         s->ctrl++;
         break;
-    case WifiType::WIFI_TYPE_DATA:
+    case WIFI_TYPE_DATA:
         s->data++;
         break;
     default:

@@ -76,9 +76,9 @@ void setup()
     imm.active_job_values.job_status = EmJobStatus::EM_JOB_IN_PRODUCTION;
 
     pc_em77_install(&imm); // bind + register the OPC UA Browse/Read resolvers
-    on_http("/", HttpMethod::HTTP_GET,
+    on_http("/", HTTP_GET,
               [](uint8_t id, HttpReq *) { send_text(id, 200, "text/plain", "EUROMAP 77 IMM on :4840"); });
-    listen(4840, ConnProto::PROTO_OPCUA); // OPC UA / EUROMAP endpoint - before begin()
+    listen(4840, PROTO_OPCUA); // OPC UA / EUROMAP endpoint - before begin()
     begin_http(80);
     Serial.println("EUROMAP 77 (OPC UA for IMM): opc.tcp://<ip>:4840  - browse IMM_MES_Interface, read live counters");
 }

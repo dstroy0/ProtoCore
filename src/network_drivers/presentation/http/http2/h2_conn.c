@@ -56,8 +56,8 @@ static H2Stream *alloc_stream(H2Conn *c, uint32_t id)
 
 static void send_our_settings(H2Conn *c)
 {
-    static const uint16_t ids[4] = {H2Setting::H2_SETTINGS_ENABLE_PUSH, H2Setting::H2_SETTINGS_MAX_CONCURRENT_STREAMS,
-                                    H2Setting::H2_SETTINGS_INITIAL_WINDOW_SIZE, H2Setting::H2_SETTINGS_MAX_FRAME_SIZE};
+    static const uint16_t ids[4] = {H2_SETTINGS_ENABLE_PUSH, H2_SETTINGS_MAX_CONCURRENT_STREAMS,
+                                    H2_SETTINGS_INITIAL_WINDOW_SIZE, H2_SETTINGS_MAX_FRAME_SIZE};
     static const uint32_t vals[4] = {0, PC_H2_MAX_STREAMS, 65535, PC_H2_MAX_FRAME};
     uint8_t buf[H2_FRAME_HEADER_LEN + 4 * 6];
     size_t n = pc_h2_build_settings(buf, sizeof buf, ids, vals, 4);
@@ -249,14 +249,14 @@ static proto_bool process_frame(H2Conn *c)
     const uint8_t *payload = c->fbuf + H2_FRAME_HEADER_LEN;
 
     // A header block must be continued only by CONTINUATION on the same stream (sec 6.10).
-    if (c->in_header_block && h.type != H2FrameType::H2_CONTINUATION)
+    if (c->in_header_block && h.type != H2_CONTINUATION)
     {
         return PROTO_FALSE;
     }
 
     switch (h.type)
     {
-    case H2FrameType::H2_SETTINGS:
+    case H2_SETTINGS:
         if (h.flags & H2_FLAG_ACK)
         {
             return h.length == 0; // ACK of our settings
@@ -267,7 +267,7 @@ static proto_bool process_frame(H2Conn *c)
         }
         send_control(c, pc_h2_build_settings_ack);
         return PROTO_TRUE;
-    case H2FrameType::H2_PING:
+    case H2_PING:
         if (h.flags & H2_FLAG_ACK)
         {
             return PROTO_TRUE;
@@ -282,7 +282,7 @@ static proto_bool process_frame(H2Conn *c)
             wr(c, pg, n);
         }
         return PROTO_TRUE;
-    case H2FrameType::H2_WINDOW_UPDATE: {
+    case H2_WINDOW_UPDATE: {
         if (h.length != 4)
         {
             return PROTO_FALSE;
@@ -302,13 +302,13 @@ static proto_bool process_frame(H2Conn *c)
         }
         return PROTO_TRUE;
     }
-    case H2FrameType::H2_HEADERS:
+    case H2_HEADERS:
         return handle_headers(c, &h, payload);
-    case H2FrameType::H2_CONTINUATION:
+    case H2_CONTINUATION:
         return handle_continuation(c, &h, payload);
-    case H2FrameType::H2_DATA:
+    case H2_DATA:
         return handle_data(c, &h, payload);
-    case H2FrameType::H2_RST_STREAM: {
+    case H2_RST_STREAM: {
         H2Stream *s = find_stream(c, h.stream_id);
         if (s)
         {
@@ -316,12 +316,12 @@ static proto_bool process_frame(H2Conn *c)
         }
         return PROTO_TRUE;
     }
-    case H2FrameType::H2_PRIORITY:
+    case H2_PRIORITY:
         return PROTO_TRUE; // accepted, ignored
-    case H2FrameType::H2_GOAWAY:
+    case H2_GOAWAY:
         c->phase = 2;
         return PROTO_TRUE;
-    case H2FrameType::H2_PUSH_PROMISE:
+    case H2_PUSH_PROMISE:
         return PROTO_FALSE; // a server never receives PUSH_PROMISE (sec 8.4)
     default:
         return PROTO_TRUE; // unknown frame types are ignored (sec 4.1)
@@ -479,8 +479,8 @@ proto_bool pc_h2_conn_respond(H2Conn *c, uint32_t stream_id, int status, const c
         }
         proto_bool last = (sent + chunk == body_len);
         uint8_t dh[H2_FRAME_HEADER_LEN];
-        size_t hn = pc_h2_write_header(dh, sizeof dh, (uint32_t)chunk, H2FrameType::H2_DATA,
-                                       last ? H2_FLAG_END_STREAM : 0, stream_id);
+        size_t hn =
+            pc_h2_write_header(dh, sizeof dh, (uint32_t)chunk, H2_DATA, last ? H2_FLAG_END_STREAM : 0, stream_id);
         // GCOVR_EXCL_START  dh is exactly H2_FRAME_HEADER_LEN; a 9-byte frame header always fits
         if (!hn)
         {

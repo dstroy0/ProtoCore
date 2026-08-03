@@ -84,7 +84,7 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // serve_file() honors Range automatically when PC_ENABLE_RANGE is set.
-    on_http("/data.bin", HttpMethod::HTTP_GET,
+    on_http("/data.bin", HTTP_GET,
               [](uint8_t id, HttpReq *) { serve_file(id, LittleFS, "/data.bin", "application/octet-stream"); });
 
     int32_t result = begin_http(80);

@@ -55,7 +55,7 @@ void setup()
         delay(250);
     }
 
-    on_http("/mdns", HttpMethod::HTTP_GET, mdns_handler);
+    on_http("/mdns", HTTP_GET, mdns_handler);
     begin_http(80);
 
     // Bring up the responder and seed the TXT record the refresher re-applies.

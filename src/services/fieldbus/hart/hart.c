@@ -62,7 +62,7 @@ proto_bool pc_hart_parse(const uint8_t *frame, size_t len, HartFrame *out)
     {
         return PROTO_FALSE;
     }
-    size_t addr_len = (frame[0] & HartDelim::HART_DELIM_LONG_ADDR) ? 5 : 1;
+    size_t addr_len = (frame[0] & HART_DELIM_LONG_ADDR) ? 5 : 1;
     // delimiter + addr + command + byte-count + checksum = minimum with no data
     size_t min = 1 + addr_len + 1 + 1 + 1;
     if (len < min)
@@ -97,7 +97,7 @@ proto_bool pc_hart_parse(const uint8_t *frame, size_t len, HartFrame *out)
 size_t pc_hartip_build_header(uint8_t msg_type, uint8_t msg_id, uint8_t status, uint16_t seq, uint16_t total_len,
                               uint8_t *out, size_t cap)
 {
-    if (cap < HartIp::HARTIP_HEADER_LEN || !out)
+    if (cap < HARTIP_HEADER_LEN || !out)
     {
         return 0;
     }
@@ -109,17 +109,17 @@ size_t pc_hartip_build_header(uint8_t msg_type, uint8_t msg_id, uint8_t status, 
     out[5] = (uint8_t)seq;
     out[6] = (uint8_t)(total_len >> 8);
     out[7] = (uint8_t)total_len;
-    return HartIp::HARTIP_HEADER_LEN;
+    return HARTIP_HEADER_LEN;
 }
 
 proto_bool pc_hartip_parse_header(const uint8_t *buf, size_t len, HartIpHeader *out)
 {
-    if (!buf || !out || len < HartIp::HARTIP_HEADER_LEN)
+    if (!buf || !out || len < HARTIP_HEADER_LEN)
     {
         return PROTO_FALSE;
     }
     uint16_t total = (uint16_t)((buf[6] << 8) | buf[7]);
-    if (total < HartIp::HARTIP_HEADER_LEN || total > len) // the byte count must include the header and be present
+    if (total < HARTIP_HEADER_LEN || total > len) // the byte count must include the header and be present
     {
         return PROTO_FALSE;
     }
@@ -129,8 +129,8 @@ proto_bool pc_hartip_parse_header(const uint8_t *buf, size_t len, HartIpHeader *
     out->status = buf[3];
     out->seq = (uint16_t)((buf[4] << 8) | buf[5]);
     out->total_len = total;
-    out->payload_len = (size_t)(total - HartIp::HARTIP_HEADER_LEN);
-    out->payload = out->payload_len ? buf + HartIp::HARTIP_HEADER_LEN : NULL;
+    out->payload_len = (size_t)(total - HARTIP_HEADER_LEN);
+    out->payload = out->payload_len ? buf + HARTIP_HEADER_LEN : NULL;
     return PROTO_TRUE;
 }
 

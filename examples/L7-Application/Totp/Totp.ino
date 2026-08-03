@@ -55,13 +55,13 @@ void setup()
     int n = pc_base32_decode(SECRET_B32, g_secret, sizeof(g_secret));
     g_secret_len = (n > 0) ? (size_t)n : 0;
 
-    on_http("/totp", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
+    on_http("/totp", HTTP_GET, [](uint8_t id, HttpReq *) {
         uint32_t code = pc_totp(g_secret, g_secret_len, now_unix(), 30, 6);
         char b[16];
         snprintf(b, sizeof(b), "%06u", code); // zero-pad to 6 digits
         send_text(id, 200, "text/plain", b);
     });
-    on_http("/totp/verify", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *req) {
+    on_http("/totp/verify", HTTP_GET, [](uint8_t id, HttpReq *req) {
         const char *code_s = http_get_query(req, "code");
         uint32_t code = code_s ? (uint32_t)strtoul(code_s, nullptr, 10) : 0;
         bool ok = pc_totp_verify(g_secret, g_secret_len, now_unix(), code, 30, 6, 1);

@@ -109,7 +109,7 @@ size_t pc_wsmp_build(uint32_t psid, const uint8_t *payload, size_t payload_len, 
         return 0;
     }
     size_t i = 0;
-    out[i++] = Wave::WSMP_VERSION; // version/subtype (low nibble = version)
+    out[i++] = WSMP_VERSION; // version/subtype (low nibble = version)
     size_t p = pc_wave_encode_psid(psid, out + i, cap - i);
     if (!p)
     {
@@ -135,7 +135,7 @@ proto_bool pc_wsmp_parse(const uint8_t *frame, size_t len, WsmpFrame *out)
     {
         return PROTO_FALSE;
     }
-    if ((frame[0] & 0x0F) != Wave::WSMP_VERSION)
+    if ((frame[0] & 0x0F) != WSMP_VERSION)
     {
         return PROTO_FALSE;
     }
@@ -172,7 +172,7 @@ size_t pc_wave_1609dot2_wrap(uint8_t content_type, const uint8_t *payload, size_
     {
         return 0;
     }
-    out[0] = Wave::WAVE_16092_VERSION;
+    out[0] = WAVE_16092_VERSION;
     out[1] = content_type;
     if (payload_len)
     {

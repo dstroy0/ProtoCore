@@ -36,7 +36,7 @@ static MwResult mw_log(uint8_t slot_id, HttpReq *req)
     (void)slot_id;
     request_count++;
     Serial.printf("[req %lu] %s %s\n", request_count, req->method, req->path);
-    return MwResult::MW_NEXT;
+    return MW_NEXT;
 }
 
 // Header-stamp middleware: queue a header onto every response.
@@ -44,7 +44,7 @@ static MwResult mw_brand(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
     proto_add_response_header(slot_id, "X-Powered-By", "ProtoCore");
-    return MwResult::MW_NEXT;
+    return MW_NEXT;
 }
 
 // Gate middleware: block a path outright, demonstrating MwResult::MW_HALT.
@@ -53,9 +53,9 @@ static MwResult mw_block_admin(uint8_t slot_id, HttpReq *req)
     if (strcmp(req->path, "/admin") == 0)
     {
         send_text(slot_id, 403, "text/plain", "blocked by middleware");
-        return MwResult::MW_HALT; // handler is never reached
+        return MW_HALT; // handler is never reached
     }
-    return MwResult::MW_NEXT;
+    return MW_NEXT;
 }
 
 void handle_root(uint8_t slot_id, HttpReq *req)
@@ -97,9 +97,9 @@ void setup()
     use(mw_block_admin);
     enable_rate_limit(5, 10000); // 5 requests / 10 s window
 
-    on_http("/", HttpMethod::HTTP_GET, handle_root);
-    on_http("/ping", HttpMethod::HTTP_GET, handle_ping);
-    on_http("/admin", HttpMethod::HTTP_GET, handle_admin);
+    on_http("/", HTTP_GET, handle_root);
+    on_http("/ping", HTTP_GET, handle_ping);
+    on_http("/admin", HTTP_GET, handle_admin);
 
     int32_t result = begin_http(80);
     if (result < 0)

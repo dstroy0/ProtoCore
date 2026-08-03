@@ -15,7 +15,7 @@
 size_t pc_pn_dcp_header(uint16_t frame_id, uint8_t service_id, uint8_t service_type, uint32_t xid, uint16_t data_length,
                         uint8_t *out, size_t cap)
 {
-    if (!out || cap < Pn::PN_DCP_HDR_LEN)
+    if (!out || cap < PN_DCP_HDR_LEN)
     {
         return 0;
     }
@@ -30,7 +30,7 @@ size_t pc_pn_dcp_header(uint16_t frame_id, uint8_t service_id, uint8_t service_t
     // octets 8..9 carry dataLength (the responseDelay of an Identify request shares this field slot).
     out[8] = (uint8_t)(data_length >> 8);
     out[9] = (uint8_t)data_length;
-    return Pn::PN_DCP_HDR_LEN;
+    return PN_DCP_HDR_LEN;
 }
 
 size_t pc_pn_dcp_block(uint8_t option, uint8_t suboption, const uint8_t *value, size_t value_len, uint8_t *out,
@@ -63,7 +63,7 @@ size_t pc_pn_dcp_block(uint8_t option, uint8_t suboption, const uint8_t *value, 
 
 proto_bool pc_pn_dcp_parse_header(const uint8_t *frame, size_t len, PnDcpHeader *out)
 {
-    if (!frame || !out || len < Pn::PN_DCP_HDR_LEN)
+    if (!frame || !out || len < PN_DCP_HDR_LEN)
     {
         return PROTO_FALSE;
     }

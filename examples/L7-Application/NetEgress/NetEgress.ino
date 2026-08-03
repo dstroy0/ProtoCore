@@ -52,7 +52,7 @@ void setup()
 
     Serial.printf("egress interface: %s\n", iface_name(pc_net_egress()));
 
-    on_http("/net", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
+    on_http("/net", HTTP_GET, [](uint8_t id, HttpReq *) {
         uint32_t ip = pc_net_egress_ip(); // network byte order
         char body[96];
         snprintf(body, sizeof(body), "{\"egress\":\"%s\",\"ip\":\"%u.%u.%u.%u\"}", iface_name(pc_net_egress()),

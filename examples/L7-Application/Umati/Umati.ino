@@ -70,9 +70,9 @@ void setup()
     mt.message_severity = 0;
 
     pc_umati_install(&mt); // bind + register the OPC UA Browse/Read resolvers
-    on_http("/", HttpMethod::HTTP_GET,
+    on_http("/", HTTP_GET,
               [](uint8_t id, HttpReq *) { send_text(id, 200, "text/plain", "umati MachineTool on :4840"); });
-    listen(4840, ConnProto::PROTO_OPCUA); // OPC UA / umati endpoint - before begin()
+    listen(4840, PROTO_OPCUA); // OPC UA / umati endpoint - before begin()
     begin_http(80);
     Serial.println("umati (OPC UA for Machine Tools): opc.tcp://<ip>:4840  - browse MachineTool, read live values");
 }

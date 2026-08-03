@@ -62,8 +62,8 @@ void setup()
     Serial.printf("\nETH_IP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    on_http("/", HttpMethod::HTTP_GET, handle_root);
-    on_http("/api/status", HttpMethod::HTTP_GET, handle_status);
+    on_http("/", HTTP_GET, handle_root);
+    on_http("/api/status", HTTP_GET, handle_status);
 
     int32_t result = begin_http(80);
     if (result < 0)
