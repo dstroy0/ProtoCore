@@ -549,14 +549,10 @@ void serve_static(const char *url_prefix, const pc_mnt_backend *file_sys, const 
 
 void serve_static_request(uint8_t slot_id, HttpReq *req, const Route *r)
 {
-    // GCOVR_EXCL_START  a ROUTE_STATIC route always carries static_fs: serve_static() takes
-    // the filesystem by reference and stores its address, so this null-guard cannot fire.
-    if (!r->static_fs)
-    {
-        send_text(slot_id, 404, PC_MIME_TEXT_PLAIN, "Not Found");
-        return;
-    }
-    // GCOVR_EXCL_STOP
+    // No null-check on static_fs: storage is reached by layer, through the accessor, so the field
+    // names a preference and never the path. A null one is what serve_static() documents as legal
+    // and means "whatever is mounted"; 404-ing on it refused every request a caller made without
+    // naming a backend it had no way to choose anyway.
 
     // Request path beyond the mount prefix (route path minus its trailing '*'). plen == 0 is
     // unreachable: serve_static() always stores at least "*" (it appends the wildcard when the
