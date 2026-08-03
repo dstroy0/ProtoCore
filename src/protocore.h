@@ -1525,9 +1525,13 @@ proto_bool pc_resp_holds_slot(uint8_t slot);
  *         pc_server_reset(), which is what callers use. */
 void pc_resp_reset(void);
 
+/** @brief Drop the middleware chain and the rate-limit window. See pc_server_reset(), which is
+ *         what callers use. */
+void pc_middleware_reset(void);
+
 /**
  * @brief Return the server to its start-of-run state: routes, dispatch hooks, registered listeners,
- *        and response configuration.
+ *        response configuration, and the middleware chain.
  *
  * Firmware has no use for this - a device configures itself once and runs - but a test case
  * registers its own routes and handlers, and without a way back to the start each case would

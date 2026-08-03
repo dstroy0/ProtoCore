@@ -294,6 +294,7 @@ void pc_server_reset(void)
     s_inst = blank;
     pc_route_reset();
     pc_resp_reset();
+    pc_middleware_reset();
 }
 
 void on_request_log(RequestLogCb cb)

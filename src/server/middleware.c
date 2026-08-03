@@ -39,6 +39,13 @@ typedef struct
 } MiddlewareCtx;
 static MiddlewareCtx s_mw;
 
+void pc_middleware_reset(void)
+{
+    // The chain and the rate-limit window are both per-run configuration, and a test case starts
+    // with neither. One store: the zero state is the initial state (empty chain, limiter off).
+    s_mw = (MiddlewareCtx){0};
+}
+
 void use(Middleware mw)
 {
     if (mw == NULL || s_mw.middleware_count >= MAX_MIDDLEWARE)
