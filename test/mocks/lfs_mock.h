@@ -26,7 +26,7 @@
 #define LFSM_READ_SIZE 16
 #define LFSM_PROG_SIZE 16
 #define LFSM_BLOCK_SIZE 512
-#define LFSM_BLOCK_COUNT 64 ///< 32 KB volume - enough for a tree, small enough to stay in BSS
+#define LFSM_BLOCK_COUNT 256 ///< 128 KB: room for littlefs to still split metadata at exhaustion
 #define LFSM_CACHE_SIZE 64
 #define LFSM_LOOKAHEAD 16
 #define LFSM_HANDLES 8
@@ -303,19 +303,10 @@ static inline void lfsm_fill_volume_leaving(int spare)
     }
 }
 
-/**
- * @brief Fill until nothing can be created, then remount.
- *
- * Filling to the last block leaves littlefs mid-recovery: it could not split its metadata, so a
- * cache still holds a block it never committed and the next program trips an internal assertion.
- * Remounting is what a device does after a power cycle - it starts from what reached the medium,
- * with clean caches - and the volume is just as full on the other side.
- */
+/** @brief Write until the volume refuses, so the next write is a real ENOSPC. */
 static inline void lfsm_fill_volume(void)
 {
     lfsm_fill_volume_leaving(0);
-    lfs_unmount(&g_lfsm.lfs);
-    g_lfsm.mounted = (lfs_mount(&g_lfsm.lfs, &g_lfsm.cfg) == 0) ? PROTO_TRUE : PROTO_FALSE;
 }
 
 // --- the backend --------------------------------------------------------------
