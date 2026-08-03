@@ -91,8 +91,26 @@ static inline int lfsm_bd_sync(const struct lfs_config *c)
 /** @brief Format and mount an empty volume. Call in setUp(); it is the whole of the reset. */
 static inline void lfsm_format(void)
 {
+    // Close what is really open BEFORE unmounting: littlefs asserts if a file outlives its
+    // filesystem, and a test that ends mid-request leaves the handler's handle behind. Clearing
+    // our own flags is not closing - the object is littlefs's, and it has to be told.
     if (g_lfsm.mounted)
     {
+        for (int i = 0; i < LFSM_HANDLES; i++)
+        {
+            if (!g_lfsm.h[i].open || g_lfsm.h[i].held)
+            {
+                continue;
+            }
+            if (g_lfsm.h[i].is_dir)
+            {
+                lfs_dir_close(&g_lfsm.lfs, &g_lfsm.h[i].dir);
+            }
+            else
+            {
+                lfs_file_close(&g_lfsm.lfs, &g_lfsm.h[i].file);
+            }
+        }
         lfs_unmount(&g_lfsm.lfs);
         g_lfsm.mounted = PROTO_FALSE;
     }
