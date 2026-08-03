@@ -996,6 +996,17 @@ Built-in radio:
   host-tested. _Remaining:_ the `AEAD_AES_SIV_CMAC_256` (RFC 5297) authenticator protect/verify + the
   anti-replay unique-id echo + cookie rotation, then feed the validated offset to `pc_clock`.
 
+## Last - do these after everything above
+
+- [ ] **Pass the reference down instead of re-deriving it** (M) - `protocore` already holds the object
+      a call is about, so it passes that reference down through its own functions rather than having
+      each one look the object up again. Where the library only aliases a vendor call, the alias stays
+      a pass-through: nothing is copied, validated or wrapped on the way past. The reference is only
+      spent when the object reaches logic that actually reads it, so a path that just hands bytes to
+      the vendor costs the same as calling the vendor directly. Do this after the C11 conversion is
+      finished, because it touches call signatures across every layer and a half-converted tree would
+      make it two passes.
+
 ## Decision records
 
 Settled questions, kept so they are not re-litigated.
