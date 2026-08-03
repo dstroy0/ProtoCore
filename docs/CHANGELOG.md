@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- strip 772 verified scope qualifiers from test/ and examples/ ([`eb59261`](https://github.com/dstroy0/ProtoCore/commit/eb59261d7287fa8064e5b8cb1c1ccec5cf9005f3))
 - finish the C to C++ residue in the CoAP server ([`bb25d76`](https://github.com/dstroy0/ProtoCore/commit/bb25d764c8a89de9278f5029588a42d40a0490f0))
 - drop the in-class initializers from OpcuaCtx and hoist proto_handler.h ([`e398dfb`](https://github.com/dstroy0/ProtoCore/commit/e398dfb72c88b3bc9c22966c77e984abcb0ebd72))
 - replace the pc_atomic template and in-class initializers in two servers ([`fd1a387`](https://github.com/dstroy0/ProtoCore/commit/fd1a387ae52b3568a70ad041ba17da7a2cc4006b))
@@ -34,6 +35,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update test report + coverage [skip ci] ([`485fd95`](https://github.com/dstroy0/ProtoCore/commit/485fd952e211d2768aab4a4055e5cff938b441ec))
+- update CHANGELOG.md [skip ci] ([`ffc765c`](https://github.com/dstroy0/ProtoCore/commit/ffc765c112a12f24080b74068cb113598343fc3f))
 - update test report + coverage [skip ci] ([`22587e5`](https://github.com/dstroy0/ProtoCore/commit/22587e5b95d2dfa5c71149070b5fac24499dd573))
 - update CHANGELOG.md [skip ci] ([`e41f977`](https://github.com/dstroy0/ProtoCore/commit/e41f97757fc2d294616cd743ddbba46d860f95c5))
 - update CHANGELOG.md [skip ci] ([`f1f7376`](https://github.com/dstroy0/ProtoCore/commit/f1f73762f82c0339c729045bbe94bdc7e4676d77))
