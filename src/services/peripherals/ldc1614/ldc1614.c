@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file ldc1614.cpp
+ * @file ldc1614.c
  * @brief LDC1614 inductance-to-digital codec + ESP32 binding (see ldc1614.h).
  */
 

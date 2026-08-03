@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file ssh_dh.cpp
+ * @file ssh_dh.c
  * @brief DH-group14-SHA256 key exchange implementation.
  */
 

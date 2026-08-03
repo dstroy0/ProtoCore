@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file mqtt.cpp
+ * @file mqtt.c
  * @brief MQTT 3.1.1 packet codec (host-testable) + the raw-lwIP / mbedTLS
  *        persistent client transport (ESP32 only).
  */

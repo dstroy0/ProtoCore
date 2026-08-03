@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file cbor.cpp
+ * @file cbor.c
  * @brief Zero-heap CBOR (RFC 8949) encoder implementation.
  */
 

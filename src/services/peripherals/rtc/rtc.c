@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file rtc.cpp
+ * @file rtc.c
  * @brief DS1307/DS3231 RTC driver - implementation. See rtc.h.
  *
  * The date math is H. Hinnant's proleptic-Gregorian days<->civil algorithms, so it is exact

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file ina219.cpp
+ * @file ina219.c
  * @brief TI INA219 current / power monitor codec - implementation. See ina219.h.
  */
 

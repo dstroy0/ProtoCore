@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file fdc2214.cpp
+ * @file fdc2214.c
  * @brief FDC2114/2214 capacitance-to-digital codec + ESP32 binding (see fdc2214.h).
  */
 

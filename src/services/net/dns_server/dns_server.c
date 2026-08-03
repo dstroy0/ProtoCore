@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file dns_server.cpp
+ * @file dns_server.c
  * @brief Authoritative DNS server - implementation. See dns_server.h.
  */
 

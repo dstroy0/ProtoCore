@@ -437,10 +437,10 @@
         "+<crypto/asymmetric/bignum.c>",
         "+<board_drivers/hal/portable/portable_bignum.c>",
         "+<network_drivers/presentation/ssh/transport/ssh_keymat.c>",
-        "+<network_drivers/presentation/ssh/transport/ssh_dh.cpp>",
+        "+<network_drivers/presentation/ssh/transport/ssh_dh.c>",
         "+<crypto/asymmetric/rsa.c>",
-        "+<network_drivers/tls/ssh_rsa.cpp>",
-        "+<network_drivers/presentation/ssh/transport/ssh_packet.cpp>",
+        "+<network_drivers/tls/ssh_rsa.c>",
+        "+<network_drivers/presentation/ssh/transport/ssh_packet.c>",
         "+<crypto/hash/sha512.c>",
         "+<crypto/asymmetric/curve25519.c>",
         "+<crypto/asymmetric/ed25519.c>",
@@ -481,10 +481,10 @@
         "+<crypto/asymmetric/bignum.c>",
         "+<board_drivers/hal/portable/portable_bignum.c>",
         "+<network_drivers/presentation/ssh/transport/ssh_keymat.c>",
-        "+<network_drivers/presentation/ssh/transport/ssh_dh.cpp>",
+        "+<network_drivers/presentation/ssh/transport/ssh_dh.c>",
         "+<crypto/asymmetric/rsa.c>",
-        "+<network_drivers/tls/ssh_rsa.cpp>",
-        "+<network_drivers/presentation/ssh/transport/ssh_packet.cpp>",
+        "+<network_drivers/tls/ssh_rsa.c>",
+        "+<network_drivers/presentation/ssh/transport/ssh_packet.c>",
         "+<crypto/hash/sha512.c>",
         "+<crypto/asymmetric/curve25519.c>",
         "+<crypto/asymmetric/ed25519.c>",
@@ -519,10 +519,10 @@
         "+<crypto/asymmetric/bignum.c>",
         "+<board_drivers/hal/portable/portable_bignum.c>",
         "+<network_drivers/presentation/ssh/transport/ssh_keymat.c>",
-        "+<network_drivers/presentation/ssh/transport/ssh_dh.cpp>",
+        "+<network_drivers/presentation/ssh/transport/ssh_dh.c>",
         "+<crypto/asymmetric/rsa.c>",
-        "+<network_drivers/tls/ssh_rsa.cpp>",
-        "+<network_drivers/presentation/ssh/transport/ssh_packet.cpp>",
+        "+<network_drivers/tls/ssh_rsa.c>",
+        "+<network_drivers/presentation/ssh/transport/ssh_packet.c>",
         "+<crypto/hash/sha512.c>",
         "+<crypto/asymmetric/curve25519.c>",
         "+<crypto/asymmetric/ed25519.c>",
@@ -560,10 +560,10 @@
         "+<crypto/asymmetric/bignum.c>",
         "+<board_drivers/hal/portable/portable_bignum.c>",
         "+<network_drivers/presentation/ssh/transport/ssh_keymat.c>",
-        "+<network_drivers/presentation/ssh/transport/ssh_dh.cpp>",
+        "+<network_drivers/presentation/ssh/transport/ssh_dh.c>",
         "+<crypto/asymmetric/rsa.c>",
-        "+<network_drivers/tls/ssh_rsa.cpp>",
-        "+<network_drivers/presentation/ssh/transport/ssh_packet.cpp>",
+        "+<network_drivers/tls/ssh_rsa.c>",
+        "+<network_drivers/presentation/ssh/transport/ssh_packet.c>",
         "+<crypto/hash/sha512.c>",
         "+<crypto/asymmetric/curve25519.c>",
         "+<crypto/asymmetric/ed25519.c>",
@@ -613,10 +613,10 @@
         "+<crypto/asymmetric/bignum.c>",
         "+<board_drivers/hal/portable/portable_bignum.c>",
         "+<network_drivers/presentation/ssh/transport/ssh_keymat.c>",
-        "+<network_drivers/presentation/ssh/transport/ssh_dh.cpp>",
+        "+<network_drivers/presentation/ssh/transport/ssh_dh.c>",
         "+<crypto/asymmetric/rsa.c>",
-        "+<network_drivers/tls/ssh_rsa.cpp>",
-        "+<network_drivers/presentation/ssh/transport/ssh_packet.cpp>",
+        "+<network_drivers/tls/ssh_rsa.c>",
+        "+<network_drivers/presentation/ssh/transport/ssh_packet.c>",
         "+<crypto/hash/sha512.c>",
         "+<crypto/asymmetric/curve25519.c>",
         "+<crypto/asymmetric/ed25519.c>",
@@ -1221,7 +1221,7 @@
         "+<crypto/asymmetric/bignum.c>",
         "+<board_drivers/hal/portable/portable_bignum.c>",
         "+<crypto/asymmetric/rsa.c>",
-        "+<network_drivers/tls/ssh_rsa.cpp>",
+        "+<network_drivers/tls/ssh_rsa.c>",
         "+<crypto/hash/sha512.c>",
         "+<mmgr/arena.c>",
         "+<mmgr/secure.c>",
@@ -1268,7 +1268,7 @@
       "src": [
         "+<services/iot/senml/senml.cpp>",
         "+<network_drivers/presentation/codec/json/json.c>",
-        "+<network_drivers/presentation/codec/cbor/cbor.cpp>",
+        "+<network_drivers/presentation/codec/cbor/cbor.c>",
         "+<network_drivers/presentation/codec/codec.c>"
       ],
       "tests": ["test_senml"]
@@ -1470,7 +1470,7 @@
         "+<services/security/oidc/oidc.c>",
         "+<network_drivers/presentation/codec/base64/base64.c>",
         "+<crypto/asymmetric/rsa.c>",
-        "+<network_drivers/tls/ssh_rsa.cpp>",
+        "+<network_drivers/tls/ssh_rsa.c>",
         "+<crypto/asymmetric/bignum.c>",
         "+<board_drivers/hal/portable/portable_bignum.c>",
         "+<crypto/hash/sha256.c>",
@@ -1596,8 +1596,8 @@
         "+<network_drivers/presentation/http/http_parser/http_parser.c>",
         "+<network_drivers/presentation/codec/multipart/multipart.c>",
         "+<network_drivers/presentation/codec/json/json.c>",
-        "+<network_drivers/presentation/codec/cbor/cbor.cpp>",
-        "+<network_drivers/presentation/codec/msgpack/msgpack.cpp>",
+        "+<network_drivers/presentation/codec/cbor/cbor.c>",
+        "+<network_drivers/presentation/codec/msgpack/msgpack.c>",
         "+<network_drivers/presentation/codec/base64/base64.c>",
         "+<services/fieldbus/modbus/modbus.c>",
         "+<services/fieldbus/modbus/modbus_master.c>",
@@ -1611,7 +1611,7 @@
         "+<services/iot/redis_resp/redis_resp.c>",
         "+<services/fieldbus/opcua/opcua.c>",
         "+<services/iot/graphql/graphql.c>",
-        "+<services/net/dns_server/dns_server.cpp>",
+        "+<services/net/dns_server/dns_server.c>",
         "+<services/energy/dnp3/dnp3.c>",
         "+<services/iot/stomp/stomp.c>",
         "+<network_drivers/application/smb/smb2.c>",
@@ -1794,13 +1794,13 @@
     "native_dns_server": {
       "desc": "Authoritative DNS server (services/net/dns_server): the pure A-record response builder\n(QNAME parse, compressed A answer, NXDOMAIN, non-A query, header flags, malformed\nguards) and the built-in name->IP table (add / case-insensitive lookup / clear). No lwIP.",
       "flags": ["-DPC_ENABLE_DNS_SERVER=1"],
-      "src": ["+<services/net/dns_server/dns_server.cpp>"],
+      "src": ["+<services/net/dns_server/dns_server.c>"],
       "tests": ["test_dns_server"]
     },
     "native_rtc": {
       "desc": "DS1307/DS3231 RTC conversions (services/peripherals/rtc): BCD time registers <-> Unix epoch in\n24- and 12-hour encodings, leap years, clock-halt/century bit masks, range validation,\nand a round-trip over the 2000-2099 range. Pure - the I2C read/write is ESP32-only.",
       "flags": ["-DPC_ENABLE_RTC=1"],
-      "src": ["+<services/peripherals/rtc/rtc.cpp>"],
+      "src": ["+<services/peripherals/rtc/rtc.c>"],
       "tests": ["test_rtc"]
     },
     "native_relay": {
@@ -1812,7 +1812,7 @@
     "native_ld2410": {
       "desc": "LD2410 mmWave radar codec (services/peripherals/ld2410): decoding a basic and an engineering-mode\nreport frame, rejecting malformed frames, the byte-by-byte stream reassembler (resync past\nnoise, split feeds, absurd-length drop), the presence/distance helpers, and the exact bytes\nof the config-command encoders. Pure - the UART pump is ESP32-only.",
       "flags": ["-DPC_ENABLE_LD2410=1"],
-      "src": ["+<services/peripherals/ld2410/ld2410.cpp>"],
+      "src": ["+<services/peripherals/ld2410/ld2410.c>"],
       "tests": ["test_ld2410"]
     },
     "native_safety_scl": {
@@ -1873,7 +1873,7 @@
       "desc": "ADS1115 16-bit ADC codec (services/peripherals/ads1115): building the 16-bit config word for a\nsingle-shot single-ended reading (channel MUX, gain, data rate, start/mode/comparator bits,\nwith out-of-range fallbacks), and converting a signed 16-bit sample to microvolts across the\ngain's full-scale range. Pure - the I2C transfer is ESP32-only.",
       "flags": ["-DPC_ENABLE_ADS1115=1"],
       "src": [
-        "+<services/peripherals/ads1115/ads1115.cpp>",
+        "+<services/peripherals/ads1115/ads1115.c>",
         "+<server/clock/clock.c>"
       ],
       "tests": ["test_ads1115"]
@@ -1881,7 +1881,7 @@
     "native_ina219": {
       "desc": "INA219 current/power codec (services/peripherals/ina219): decoding the bus-voltage register (bits\n[15:3], LSB 4 mV, status bits ignored) and the shunt-voltage register (signed, LSB 10 uV),\ncomputing the calibration register from the current LSB and shunt resistance, and scaling the\nraw current / power registers. Pure - the I2C transfer is ESP32-only.",
       "flags": ["-DPC_ENABLE_INA219=1"],
-      "src": ["+<services/peripherals/ina219/ina219.cpp>"],
+      "src": ["+<services/peripherals/ina219/ina219.c>"],
       "tests": ["test_ina219"]
     },
     "native_hpack": {
@@ -2003,13 +2003,13 @@
     },
     "native_mqtt": {
       "flags": ["-DPC_ENABLE_MQTT=1"],
-      "src": ["+<services/iot/mqtt/mqtt.cpp>", "+<server/clock/clock.c>"],
+      "src": ["+<services/iot/mqtt/mqtt.c>", "+<server/clock/clock.c>"],
       "tests": ["test_mqtt"]
     },
     "native_ws_client": {
       "flags": ["-DPC_ENABLE_WS_CLIENT=1"],
       "src": [
-        "+<services/net/ws_client/ws_client.cpp>",
+        "+<services/net/ws_client/ws_client.c>",
         "+<crypto/hash/sha1.c>",
         "+<network_drivers/presentation/codec/base64/base64.c>",
         "+<server/clock/clock.c>"
@@ -2086,10 +2086,10 @@
         "+<crypto/asymmetric/bignum.c>",
         "+<board_drivers/hal/portable/portable_bignum.c>",
         "+<network_drivers/presentation/ssh/transport/ssh_keymat.c>",
-        "+<network_drivers/presentation/ssh/transport/ssh_dh.cpp>",
+        "+<network_drivers/presentation/ssh/transport/ssh_dh.c>",
         "+<crypto/asymmetric/rsa.c>",
-        "+<network_drivers/tls/ssh_rsa.cpp>",
-        "+<network_drivers/presentation/ssh/transport/ssh_packet.cpp>",
+        "+<network_drivers/tls/ssh_rsa.c>",
+        "+<network_drivers/presentation/ssh/transport/ssh_packet.c>",
         "+<network_drivers/presentation/ssh/transport/ssh_comp.c>",
         "+<network_drivers/presentation/ssh/transport/ssh_zlib.c>",
         "+<network_drivers/presentation/ssh/transport/ssh_inflate.c>",
@@ -2234,7 +2234,7 @@
       "desc": "CBOR (RFC 8949) encoder (network_drivers/presentation/codec/cbor): a pure byte-output\ncodec, host-tested against the RFC 8949 Appendix A vectors.",
       "flags": ["-DPC_ENABLE_CBOR=1"],
       "src": [
-        "+<network_drivers/presentation/codec/cbor/cbor.cpp>",
+        "+<network_drivers/presentation/codec/cbor/cbor.c>",
         "+<network_drivers/presentation/codec/codec.c>"
       ],
       "tests": ["test_cbor"]
@@ -2243,7 +2243,7 @@
       "desc": "MessagePack encoder (network_drivers/presentation/codec/msgpack): a pure byte-output\ncodec, host-tested against the spec encodings.",
       "flags": ["-DPC_ENABLE_MSGPACK=1"],
       "src": [
-        "+<network_drivers/presentation/codec/msgpack/msgpack.cpp>",
+        "+<network_drivers/presentation/codec/msgpack/msgpack.c>",
         "+<network_drivers/presentation/codec/codec.c>"
       ],
       "tests": ["test_msgpack"]
@@ -2590,19 +2590,19 @@
     "native_fdc2214": {
       "desc": "FDC2114/2214 capacitance-to-digital field sensor (services/peripherals/fdc2214): the 28-bit data\ncombine + error flags, the frequency scale (data/2^28 * fref), and the single-channel config-sequence\nbuilder. Pure codec host tests (the I2C binding is ESP32-only).",
       "flags": ["-DPC_ENABLE_FDC2214=1"],
-      "src": ["+<services/peripherals/fdc2214/fdc2214.cpp>"],
+      "src": ["+<services/peripherals/fdc2214/fdc2214.c>"],
       "tests": ["test_fdc2214"]
     },
     "native_ldc1614": {
       "desc": "LDC1614 inductance-to-digital field sensor (services/peripherals/ldc1614): the 28-bit data combine +\nerror flags, the frequency scale (data/2^28 * fref), and the single-channel config-sequence builder.\nPure codec host tests (the I2C binding is ESP32-only).",
       "flags": ["-DPC_ENABLE_LDC1614=1"],
-      "src": ["+<services/peripherals/ldc1614/ldc1614.cpp>"],
+      "src": ["+<services/peripherals/ldc1614/ldc1614.c>"],
       "tests": ["test_ldc1614"]
     },
     "native_vl53l0x": {
       "desc": "VL53L0X time-of-flight ranging codec (services/peripherals/vl53l0x): the range byte-pair combine to\nmillimeters, the interrupt-status data-ready decode, and the device range-status validity check. Pure\ncodec host tests (the I2C ranging binding is ESP32-only).",
       "flags": ["-DPC_ENABLE_VL53L0X=1"],
-      "src": ["+<services/peripherals/vl53l0x/vl53l0x.cpp>"],
+      "src": ["+<services/peripherals/vl53l0x/vl53l0x.c>"],
       "tests": ["test_vl53l0x"]
     },
     "native_radio_sniff": {
@@ -2785,7 +2785,7 @@
         "+<services/fieldbus/opcua/opcua.c>",
         "+<services/fieldbus/opcua_client/opcua_client.c>",
         "+<crypto/asymmetric/rsa.c>",
-        "+<network_drivers/tls/ssh_rsa.cpp>",
+        "+<network_drivers/tls/ssh_rsa.c>",
         "+<crypto/asymmetric/bignum.c>",
         "+<board_drivers/hal/portable/portable_bignum.c>",
         "+<crypto/hash/sha512.c>",
@@ -2803,8 +2803,8 @@
         "+<services/web/dashboard/dashboard_routes.c>",
         "+<services/storage/partition_monitor/partition_monitor.c>",
         "+<services/storage/partition_monitor/partition_monitor_routes.c>",
-        "+<network_drivers/presentation/codec/cbor/cbor.cpp>",
-        "+<network_drivers/presentation/codec/msgpack/msgpack.cpp>",
+        "+<network_drivers/presentation/codec/cbor/cbor.c>",
+        "+<network_drivers/presentation/codec/msgpack/msgpack.c>",
         "+<server/signaling/gpio_map.c>",
         "+<server/signaling/gpio_map_routes.c>",
         "+<services/iot/udp_telemetry/udp_telemetry.c>",
@@ -2854,9 +2854,9 @@
         "+<services/radio/wifi_sniffer/wifi_sniffer.c>",
         "+<server/signaling/link_manager.c>",
         "+<services/radio/cc1101/cc1101.c>",
-        "+<services/peripherals/fdc2214/fdc2214.cpp>",
-        "+<services/peripherals/ldc1614/ldc1614.cpp>",
-        "+<services/peripherals/vl53l0x/vl53l0x.cpp>",
+        "+<services/peripherals/fdc2214/fdc2214.c>",
+        "+<services/peripherals/ldc1614/ldc1614.c>",
+        "+<services/peripherals/vl53l0x/vl53l0x.c>",
         "+<services/radio/radio_sniff/radio_sniff.c>",
         "+<services/radio/ble_gatt/ble_gatt.c>",
         "+<services/security/tls_policy/tls_policy.c>",

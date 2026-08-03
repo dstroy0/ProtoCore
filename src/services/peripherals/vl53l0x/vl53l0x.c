@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file vl53l0x.cpp
+ * @file vl53l0x.c
  * @brief VL53L0X time-of-flight ranging codec + ESP32 binding (see vl53l0x.h).
  */
 

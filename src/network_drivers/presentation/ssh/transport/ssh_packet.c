@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file ssh_packet.cpp
+ * @file ssh_packet.c
  * @brief SSH binary packet framing, encryption, MAC, and receive reassembly.
  */
 

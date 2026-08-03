@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file ld2410.cpp
+ * @file ld2410.c
  * @brief HLK-LD2410 mmWave radar codec - implementation. See ld2410.h.
  *
  * Frame layout (little-endian lengths / distances), per the Hi-Link serial protocol:

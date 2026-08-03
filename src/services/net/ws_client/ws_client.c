@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file ws_client.cpp
+ * @file ws_client.c
  * @brief WebSocket (RFC 6455) client codec (host-testable) + the raw-lwIP /
  *        mbedTLS persistent transport (ESP32 only).
  */

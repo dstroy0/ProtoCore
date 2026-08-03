@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file ads1115.cpp
+ * @file ads1115.c
  * @brief TI ADS1115 16-bit ADC codec - implementation. See ads1115.h.
  */
 

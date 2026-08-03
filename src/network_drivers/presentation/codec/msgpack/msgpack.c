@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file msgpack.cpp
+ * @file msgpack.c
  * @brief Zero-heap MessagePack encoder and decoder implementation.
  */
 
