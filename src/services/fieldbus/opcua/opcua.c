@@ -17,13 +17,15 @@
 
 #if PC_ENABLE_OPCUA
 
+// ProtoHandler is named by pc_opcua_proto_handler() in BOTH build arms, so it cannot sit behind
+// the PROTOCORE_HOT guard below.
+#include "network_drivers/session/proto_handler.h"
 #include <string.h>
 
 // ---------------------------------------------------------------------------
 // Built-in type codec
 // ---------------------------------------------------------------------------
 #if PROTOCORE_HOT
-#include "network_drivers/session/proto_handler.h"
 #include "network_drivers/transport/tcp.h"
 #include <time.h>
 #endif
@@ -661,21 +663,25 @@ static const char OPCUA_TRANSPORT_URI[] =
 // time). Grouped so it is one named owner, unreachable from any other translation unit.
 typedef struct
 {
-    OpcUaServerInfo server_info = {PC_OPCUA_DEFAULT_ENDPOINT, PC_OPCUA_DEFAULT_APP_URI, PC_OPCUA_DEFAULT_APP_NAME};
-    OpcUaReadHandler read_handler = NULL;
-    OpcUaWriteHandler write_handler = NULL;
-    OpcUaBrowseHandler browse_handler = NULL;
+    OpcUaServerInfo server_info;
+    OpcUaReadHandler read_handler;
+    OpcUaWriteHandler write_handler;
+    OpcUaBrowseHandler browse_handler;
 #if PROTOCORE_HOT
     uint8_t msg[PC_OPCUA_BUF]; // single-accessor reassembly buffer
     uint8_t resp[2048];        // single-accessor response buffer (ACK / OPN / MSG response)
-    uint32_t channel_id = 0;
-    uint32_t token_id = 0;
-    uint32_t seq = 0;
-    uint32_t session_id = 0;
-    uint32_t auth_token = 0;
+    uint32_t channel_id;
+    uint32_t token_id;
+    uint32_t seq;
+    uint32_t session_id;
+    uint32_t auth_token;
 #endif
 } OpcuaCtx;
-static OpcuaCtx s_opcua;
+// server_info carries the only non-zero default: the response builders read it directly, so it is
+// set here rather than left to the zero fill. Every other member starts at 0 / NULL.
+static OpcuaCtx s_opcua = {
+    .server_info = {PC_OPCUA_DEFAULT_ENDPOINT, PC_OPCUA_DEFAULT_APP_URI, PC_OPCUA_DEFAULT_APP_NAME},
+};
 
 void pc_opcua_set_endpoint_url(const char *url)
 {
