@@ -106,7 +106,7 @@ def sources():
     for base, dirs, files in os.walk(SRC):
         dirs[:] = [d for d in dirs if not d.startswith(".")]
         for f in sorted(files):
-            if f.endswith((".h", ".cpp")):
+            if f.endswith((".h", ".c", ".cpp")):
                 yield os.path.join(base, f)
 
 
@@ -126,7 +126,7 @@ def check():
 
         # 7. file / directory naming
         base = os.path.basename(rel)
-        if not re.fullmatch(r"[a-z0-9_]+\.(h|cpp)", base):
+        if not re.fullmatch(r"[a-z0-9_]+\.(h|c|cpp)", base):
             add("file-name", rel, 1, f"file name is not snake_case: {base}")
         for part in os.path.dirname(rel).split("/"):
             if part and not re.fullmatch(r"[a-z0-9_]+", part):

@@ -100,13 +100,13 @@ COLLAPSE_DIRS = {"favicons", "generated", "themes"}
 
 
 def _child_pair(d):
-    """If dir `d` holds exactly one .h + one .cpp and nothing else, return (h, cpp);
+    """If dir `d` holds exactly one .h + one .c/.cpp and nothing else, return (h, src);
     else None. These one-file-pair service folders collapse to the service name."""
     entries = [e for e in os.listdir(d) if not e.startswith(".")]
     if any(os.path.isdir(os.path.join(d, e)) for e in entries):
         return None
     hs = [e for e in entries if e.endswith(".h")]
-    cs = [e for e in entries if e.endswith(".cpp")]
+    cs = [e for e in entries if e.endswith((".c", ".cpp"))]
     if len(entries) == 2 and len(hs) == 1 and len(cs) == 1:
         return hs[0], cs[0]
     return None

@@ -26,7 +26,7 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 TREES = ("src", "examples", "pentesting", "test")
-EXTS = (".h", ".cpp", ".ino")
+EXTS = (".h", ".c", ".cpp", ".ino")
 
 # {PC_FK_LIT, <width>, <len>, "text"} - the literal may be several adjacent string tokens, which C
 # concatenates, so the whole run is captured and measured together.

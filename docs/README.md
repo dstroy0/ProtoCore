@@ -274,9 +274,7 @@ src/
 │   ├── application/
 │   │   ├── auth/
 │   │   │   └── auth.c
-│   │   ├── file_serving/
-│   │   │   ├── file_serving.c
-│   │   │   └── file_serving.h
+│   │   ├── file_serving/  (file_serving.h, file_serving.c)
 │   │   ├── scp/
 │   │   │   ├── scp.c
 │   │   │   ├── scp.h
@@ -298,15 +296,9 @@ src/
 │   │   │   ├── smb_client.h
 │   │   │   ├── spnego.c
 │   │   │   └── spnego.h
-│   │   ├── upload_service/
-│   │   │   ├── upload_service.c
-│   │   │   └── upload_service.h
-│   │   ├── webdav/
-│   │   │   ├── webdav.c
-│   │   │   ├── webdav.cpp
-│   │   │   └── webdav.h
+│   │   ├── upload_service/  (upload_service.h, upload_service.c)
+│   │   ├── webdav/  (webdav.h, webdav.c)
 │   │   ├── binary_asset_blobs.c
-│   │   ├── binary_asset_blobs.cpp
 │   │   ├── binary_asset_blobs.h
 │   │   ├── http_range.c
 │   │   ├── http_range.h
@@ -333,22 +325,12 @@ src/
 │   │   └── radio_power.h
 │   ├── presentation/
 │   │   ├── codec/
-│   │   │   ├── base64/
-│   │   │   │   ├── base64.c
-│   │   │   │   └── base64.h
+│   │   │   ├── base64/  (base64.h, base64.c)
 │   │   │   ├── cbor/  (cbor.h, cbor.cpp)
-│   │   │   ├── deflate/
-│   │   │   │   ├── deflate.c
-│   │   │   │   └── deflate.h
-│   │   │   ├── hpack_prim/
-│   │   │   │   ├── hpack_prim.c
-│   │   │   │   └── hpack_prim.h
-│   │   │   ├── inflate/
-│   │   │   │   ├── inflate.c
-│   │   │   │   └── inflate.h
-│   │   │   ├── json/
-│   │   │   │   ├── json.c
-│   │   │   │   └── json.h
+│   │   │   ├── deflate/  (deflate.h, deflate.c)
+│   │   │   ├── hpack_prim/  (hpack_prim.h, hpack_prim.c)
+│   │   │   ├── inflate/  (inflate.h, inflate.c)
+│   │   │   ├── json/  (json.h, json.c)
 │   │   │   ├── msgpack/  (msgpack.h, msgpack.cpp)
 │   │   │   ├── multipart/  (multipart.h, multipart.cpp)
 │   │   │   ├── codec.cpp
@@ -429,9 +411,7 @@ src/
 │   │   │       ├── ssh_transport.h
 │   │   │       ├── ssh_zlib.c
 │   │   │       └── ssh_zlib.h
-│   │   ├── telnet/
-│   │   │   ├── telnet.c
-│   │   │   └── telnet.h
+│   │   ├── telnet/  (telnet.h, telnet.c)
 │   │   ├── presentation.cpp
 │   │   └── presentation.h
 │   ├── session/
@@ -463,9 +443,7 @@ src/
 │       ├── udp.c
 │       └── udp.h
 ├── server/
-│   ├── clock/
-│   │   ├── clock.c
-│   │   └── clock.h
+│   ├── clock/  (clock.h, clock.c)
 │   ├── filesystem/
 │   │   ├── filesystem.c
 │   │   ├── filesystem.h
@@ -508,135 +486,57 @@ src/
 │   ├── response.c
 │   ├── sleep_sched.c
 │   ├── sleep_sched.h
+│   ├── webdav_handler.c
+│   ├── webdav_handler.h
 │   └── websocket_sse.c
 ├── services/
 │   ├── energy/
-│   │   ├── c37118/
-│   │   │   ├── c37118.c
-│   │   │   └── c37118.h
-│   │   ├── dnp3/
-│   │   │   ├── dnp3.c
-│   │   │   └── dnp3.h
-│   │   ├── goose/
-│   │   │   ├── goose.c
-│   │   │   └── goose.h
-│   │   ├── iccp/
-│   │   │   ├── iccp.c
-│   │   │   └── iccp.h
-│   │   ├── iec60870/
-│   │   │   ├── iec60870.c
-│   │   │   └── iec60870.h
-│   │   ├── mms/
-│   │   │   ├── mms.c
-│   │   │   └── mms.h
-│   │   ├── openadr/
-│   │   │   ├── openadr.c
-│   │   │   └── openadr.h
-│   │   ├── sep2/
-│   │   │   ├── sep2.c
-│   │   │   └── sep2.h
-│   │   └── sunspec/
-│   │       ├── sunspec.c
-│   │       └── sunspec.h
+│   │   ├── c37118/  (c37118.h, c37118.c)
+│   │   ├── dnp3/  (dnp3.h, dnp3.c)
+│   │   ├── goose/  (goose.h, goose.c)
+│   │   ├── iccp/  (iccp.h, iccp.c)
+│   │   ├── iec60870/  (iec60870.h, iec60870.c)
+│   │   ├── mms/  (mms.h, mms.c)
+│   │   ├── openadr/  (openadr.h, openadr.c)
+│   │   ├── sep2/  (sep2.h, sep2.c)
+│   │   └── sunspec/  (sunspec.h, sunspec.c)
 │   ├── fieldbus/
-│   │   ├── ads/
-│   │   │   ├── ads.c
-│   │   │   └── ads.h
-│   │   ├── bacnet/
-│   │   │   ├── bacnet.c
-│   │   │   └── bacnet.h
-│   │   ├── canopen/
-│   │   │   ├── canopen.c
-│   │   │   └── canopen.h
-│   │   ├── cclink/
-│   │   │   ├── cclink.c
-│   │   │   └── cclink.h
-│   │   ├── cia402/
-│   │   │   ├── cia402.c
-│   │   │   └── cia402.h
-│   │   ├── cip/
-│   │   │   ├── cip.c
-│   │   │   └── cip.h
-│   │   ├── cotp/
-│   │   │   ├── cotp.c
-│   │   │   └── cotp.h
-│   │   ├── devicenet/
-│   │   │   ├── devicenet.c
-│   │   │   └── devicenet.h
-│   │   ├── df1/
-│   │   │   ├── df1.c
-│   │   │   └── df1.h
-│   │   ├── directnet/
-│   │   │   ├── directnet.c
-│   │   │   └── directnet.h
-│   │   ├── enip/
-│   │   │   ├── enip.c
-│   │   │   └── enip.h
-│   │   ├── fins/
-│   │   │   ├── fins.c
-│   │   │   └── fins.h
-│   │   ├── hart/
-│   │   │   ├── hart.c
-│   │   │   └── hart.h
-│   │   ├── hostlink/
-│   │   │   ├── hostlink.c
-│   │   │   └── hostlink.h
-│   │   ├── interbus/
-│   │   │   ├── interbus.c
-│   │   │   └── interbus.h
-│   │   ├── iolink/
-│   │   │   ├── iolink.c
-│   │   │   └── iolink.h
-│   │   ├── j1939/
-│   │   │   ├── j1939.c
-│   │   │   └── j1939.h
-│   │   ├── lonworks/
-│   │   │   ├── lonworks.c
-│   │   │   └── lonworks.h
-│   │   ├── mbplus/
-│   │   │   ├── mbplus.c
-│   │   │   └── mbplus.h
-│   │   ├── mbus/
-│   │   │   ├── mbus.c
-│   │   │   └── mbus.h
-│   │   ├── melsec/
-│   │   │   ├── melsec.c
-│   │   │   └── melsec.h
+│   │   ├── ads/  (ads.h, ads.c)
+│   │   ├── bacnet/  (bacnet.h, bacnet.c)
+│   │   ├── canopen/  (canopen.h, canopen.c)
+│   │   ├── cclink/  (cclink.h, cclink.c)
+│   │   ├── cia402/  (cia402.h, cia402.c)
+│   │   ├── cip/  (cip.h, cip.c)
+│   │   ├── cotp/  (cotp.h, cotp.c)
+│   │   ├── devicenet/  (devicenet.h, devicenet.c)
+│   │   ├── df1/  (df1.h, df1.c)
+│   │   ├── directnet/  (directnet.h, directnet.c)
+│   │   ├── enip/  (enip.h, enip.c)
+│   │   ├── fins/  (fins.h, fins.c)
+│   │   ├── hart/  (hart.h, hart.c)
+│   │   ├── hostlink/  (hostlink.h, hostlink.c)
+│   │   ├── interbus/  (interbus.h, interbus.c)
+│   │   ├── iolink/  (iolink.h, iolink.c)
+│   │   ├── j1939/  (j1939.h, j1939.c)
+│   │   ├── lonworks/  (lonworks.h, lonworks.c)
+│   │   ├── mbplus/  (mbplus.h, mbplus.c)
+│   │   ├── mbus/  (mbus.h, mbus.c)
+│   │   ├── melsec/  (melsec.h, melsec.c)
 │   │   ├── modbus/
 │   │   │   ├── modbus.c
 │   │   │   ├── modbus.h
 │   │   │   ├── modbus_master.c
 │   │   │   └── modbus_master.h
-│   │   ├── opcua/
-│   │   │   ├── opcua.c
-│   │   │   └── opcua.h
-│   │   ├── opcua_client/
-│   │   │   ├── opcua_client.c
-│   │   │   └── opcua_client.h
-│   │   ├── powerlink/
-│   │   │   ├── powerlink.c
-│   │   │   └── powerlink.h
-│   │   ├── profibus/
-│   │   │   ├── profibus.c
-│   │   │   └── profibus.h
-│   │   ├── profinet/
-│   │   │   ├── profinet.c
-│   │   │   └── profinet.h
-│   │   ├── rawl2/
-│   │   │   ├── rawl2.c
-│   │   │   └── rawl2.h
-│   │   ├── s7comm/
-│   │   │   ├── s7comm.c
-│   │   │   └── s7comm.h
-│   │   ├── sercos/
-│   │   │   ├── sercos.c
-│   │   │   └── sercos.h
-│   │   ├── simatic/
-│   │   │   ├── simatic.c
-│   │   │   └── simatic.h
-│   │   └── snp/
-│   │       ├── snp.c
-│   │       └── snp.h
+│   │   ├── opcua/  (opcua.h, opcua.c)
+│   │   ├── opcua_client/  (opcua_client.h, opcua_client.c)
+│   │   ├── powerlink/  (powerlink.h, powerlink.c)
+│   │   ├── profibus/  (profibus.h, profibus.c)
+│   │   ├── profinet/  (profinet.h, profinet.c)
+│   │   ├── rawl2/  (rawl2.h, rawl2.c)
+│   │   ├── s7comm/  (s7comm.h, s7comm.c)
+│   │   ├── sercos/  (sercos.h, sercos.c)
+│   │   ├── simatic/  (simatic.h, simatic.c)
+│   │   └── snp/  (snp.h, snp.c)
 │   ├── file_transfer/
 │   │   ├── ftp/
 │   │   │   ├── ftp.c
@@ -648,25 +548,13 @@ src/
 │   │       ├── http_delivery.h
 │   │       └── http_delivery_routes.c
 │   ├── instrumentation/
-│   │   ├── gpib/
-│   │   │   ├── gpib.c
-│   │   │   └── gpib.h
-│   │   ├── hislip/
-│   │   │   ├── hislip.c
-│   │   │   └── hislip.h
-│   │   ├── scpi/
-│   │   │   ├── scpi.c
-│   │   │   └── scpi.h
-│   │   └── vxi11/
-│   │       ├── vxi11.c
-│   │       └── vxi11.h
+│   │   ├── gpib/  (gpib.h, gpib.c)
+│   │   ├── hislip/  (hislip.h, hislip.c)
+│   │   ├── scpi/  (scpi.h, scpi.c)
+│   │   └── vxi11/  (vxi11.h, vxi11.c)
 │   ├── iot/
-│   │   ├── amqp/
-│   │   │   ├── amqp.c
-│   │   │   └── amqp.h
-│   │   ├── cloudevents/
-│   │   │   ├── cloudevents.c
-│   │   │   └── cloudevents.h
+│   │   ├── amqp/  (amqp.h, amqp.c)
+│   │   ├── cloudevents/  (cloudevents.h, cloudevents.c)
 │   │   ├── coap/
 │   │   │   ├── coap.c
 │   │   │   ├── coap.h
@@ -674,121 +562,59 @@ src/
 │   │   │   ├── coaps.h
 │   │   │   ├── coaps_server.c
 │   │   │   └── coaps_server.h
-│   │   ├── dds/
-│   │   │   ├── dds.c
-│   │   │   └── dds.h
-│   │   ├── graphql/
-│   │   │   ├── graphql.c
-│   │   │   └── graphql.h
-│   │   ├── grpcweb/
-│   │   │   ├── grpcweb.c
-│   │   │   └── grpcweb.h
-│   │   ├── lwm2m/
-│   │   │   ├── lwm2m_tlv.c
-│   │   │   └── lwm2m_tlv.h
+│   │   ├── dds/  (dds.h, dds.c)
+│   │   ├── graphql/  (graphql.h, graphql.c)
+│   │   ├── grpcweb/  (grpcweb.h, grpcweb.c)
+│   │   ├── lwm2m/  (lwm2m_tlv.h, lwm2m_tlv.c)
 │   │   ├── mqtt/
 │   │   │   ├── mqtt.cpp
 │   │   │   ├── mqtt.h
 │   │   │   ├── mqtt_sn.c
 │   │   │   └── mqtt_sn.h
-│   │   ├── nats/
-│   │   │   ├── nats.c
-│   │   │   └── nats.h
-│   │   ├── protobuf/
-│   │   │   ├── protobuf.c
-│   │   │   └── protobuf.h
-│   │   ├── redis_resp/
-│   │   │   ├── redis_resp.c
-│   │   │   └── redis_resp.h
+│   │   ├── nats/  (nats.h, nats.c)
+│   │   ├── protobuf/  (protobuf.h, protobuf.c)
+│   │   ├── redis_resp/  (redis_resp.h, redis_resp.c)
 │   │   ├── senml/  (senml.h, senml.cpp)
-│   │   ├── sparkplug/
-│   │   │   ├── sparkplug.c
-│   │   │   └── sparkplug.h
+│   │   ├── sparkplug/  (sparkplug.h, sparkplug.c)
 │   │   ├── statsd/  (statsd.h, statsd.cpp)
-│   │   ├── stomp/
-│   │   │   ├── stomp.c
-│   │   │   └── stomp.h
-│   │   ├── telemetry/
-│   │   │   ├── telemetry.c
-│   │   │   └── telemetry.h
-│   │   ├── udp_telemetry/
-│   │   │   ├── udp_telemetry.c
-│   │   │   └── udp_telemetry.h
-│   │   ├── wamp/
-│   │   │   ├── wamp.c
-│   │   │   └── wamp.h
-│   │   └── xmpp/
-│   │       ├── xmpp.c
-│   │       └── xmpp.h
+│   │   ├── stomp/  (stomp.h, stomp.c)
+│   │   ├── telemetry/  (telemetry.h, telemetry.c)
+│   │   ├── udp_telemetry/  (udp_telemetry.h, udp_telemetry.c)
+│   │   ├── wamp/  (wamp.h, wamp.c)
+│   │   └── xmpp/  (xmpp.h, xmpp.c)
 │   ├── machine_tool/
-│   │   ├── atc/
-│   │   │   ├── atc.c
-│   │   │   └── atc.h
+│   │   ├── atc/  (atc.h, atc.c)
 │   │   ├── dnc/
 │   │   │   ├── dnc.c
 │   │   │   ├── dnc.h
 │   │   │   ├── dnc_stream.c
 │   │   │   └── dnc_stream.h
-│   │   ├── euromap77/
-│   │   │   ├── euromap77.c
-│   │   │   └── euromap77.h
-│   │   ├── fanuc_j519/
-│   │   │   ├── fanuc_j519.c
-│   │   │   └── fanuc_j519.h
-│   │   ├── focas/
-│   │   │   ├── focas.c
-│   │   │   └── focas.h
-│   │   ├── haas_mdc/
-│   │   │   ├── haas_mdc.c
-│   │   │   └── haas_mdc.h
-│   │   ├── lsv2/
-│   │   │   ├── lsv2.c
-│   │   │   └── lsv2.h
-│   │   ├── mtconnect/
-│   │   │   ├── mtconnect.c
-│   │   │   └── mtconnect.h
-│   │   ├── packml/
-│   │   │   ├── packml.c
-│   │   │   └── packml.h
-│   │   ├── robotics/
-│   │   │   ├── robotics.c
-│   │   │   └── robotics.h
-│   │   ├── safety_scl/
-│   │   │   ├── safety_scl.c
-│   │   │   └── safety_scl.h
-│   │   └── umati/
-│   │       ├── umati.c
-│   │       └── umati.h
+│   │   ├── euromap77/  (euromap77.h, euromap77.c)
+│   │   ├── fanuc_j519/  (fanuc_j519.h, fanuc_j519.c)
+│   │   ├── focas/  (focas.h, focas.c)
+│   │   ├── haas_mdc/  (haas_mdc.h, haas_mdc.c)
+│   │   ├── lsv2/  (lsv2.h, lsv2.c)
+│   │   ├── mtconnect/  (mtconnect.h, mtconnect.c)
+│   │   ├── packml/  (packml.h, packml.c)
+│   │   ├── robotics/  (robotics.h, robotics.c)
+│   │   ├── safety_scl/  (safety_scl.h, safety_scl.c)
+│   │   └── umati/  (umati.h, umati.c)
 │   ├── net/
 │   │   ├── dns_server/  (dns_server.h, dns_server.cpp)
-│   │   ├── flow_export/
-│   │   │   ├── flow_export.c
-│   │   │   └── flow_export.h
-│   │   ├── forward/
-│   │   │   ├── forward.c
-│   │   │   └── forward.h
-│   │   ├── gateway/
-│   │   │   ├── gateway.c
-│   │   │   └── gateway.h
-│   │   ├── happy_eyeballs/
-│   │   │   ├── happy_eyeballs.c
-│   │   │   └── happy_eyeballs.h
+│   │   ├── flow_export/  (flow_export.h, flow_export.c)
+│   │   ├── forward/  (forward.h, forward.c)
+│   │   ├── gateway/  (gateway.h, gateway.c)
+│   │   ├── happy_eyeballs/  (happy_eyeballs.h, happy_eyeballs.c)
 │   │   ├── http_client/  (http_client.h, http_client.cpp)
 │   │   ├── iface_bridge/
 │   │   │   ├── iface_bridge.c
 │   │   │   ├── iface_bridge.h
 │   │   │   ├── iface_bridge_hw.c
 │   │   │   └── iface_bridge_hw.h
-│   │   ├── mdns_adaptive/
-│   │   │   ├── mdns_adaptive.c
-│   │   │   └── mdns_adaptive.h
+│   │   ├── mdns_adaptive/  (mdns_adaptive.h, mdns_adaptive.c)
 │   │   ├── mdns_service/  (mdns_service.h, mdns_service.cpp)
-│   │   ├── netadapt/
-│   │   │   ├── netadapt.c
-│   │   │   └── netadapt.h
-│   │   ├── proxy_protocol/
-│   │   │   ├── proxy_protocol.c
-│   │   │   └── proxy_protocol.h
+│   │   ├── netadapt/  (netadapt.h, netadapt.c)
+│   │   ├── proxy_protocol/  (proxy_protocol.h, proxy_protocol.c)
 │   │   ├── relay/
 │   │   │   ├── relay.c
 │   │   │   ├── relay.h
@@ -806,158 +632,78 @@ src/
 │   │   │   ├── snmp_notify.h
 │   │   │   ├── snmp_v3.c
 │   │   │   └── snmp_v3.h
-│   │   ├── sockpool/
-│   │   │   ├── sockpool.c
-│   │   │   └── sockpool.h
+│   │   ├── sockpool/  (sockpool.h, sockpool.c)
 │   │   ├── southbound/
 │   │   │   ├── sb_modbus.c
 │   │   │   ├── sb_modbus.h
 │   │   │   ├── southbound.c
 │   │   │   └── southbound.h
-│   │   ├── syslog/
-│   │   │   ├── syslog.c
-│   │   │   └── syslog.h
-│   │   ├── webhook/
-│   │   │   ├── webhook.c
-│   │   │   └── webhook.h
+│   │   ├── syslog/  (syslog.h, syslog.c)
+│   │   ├── webhook/  (webhook.h, webhook.c)
 │   │   └── ws_client/  (ws_client.h, ws_client.cpp)
 │   ├── peripherals/
-│   │   ├── ad9238/
-│   │   │   ├── ad9238.c
-│   │   │   └── ad9238.h
+│   │   ├── ad9238/  (ad9238.h, ad9238.c)
 │   │   ├── ads1115/  (ads1115.h, ads1115.cpp)
-│   │   ├── dmx/
-│   │   │   ├── dmx.c
-│   │   │   └── dmx.h
-│   │   ├── dshot/
-│   │   │   ├── dshot.c
-│   │   │   └── dshot.h
+│   │   ├── dmx/  (dmx.h, dmx.c)
+│   │   ├── dshot/  (dshot.h, dshot.c)
 │   │   ├── fdc2214/  (fdc2214.h, fdc2214.cpp)
-│   │   ├── hmmd/
-│   │   │   ├── hmmd.c
-│   │   │   └── hmmd.h
+│   │   ├── hmmd/  (hmmd.h, hmmd.c)
 │   │   ├── ina219/  (ina219.h, ina219.cpp)
 │   │   ├── ld2410/  (ld2410.h, ld2410.cpp)
 │   │   ├── ldc1614/  (ldc1614.h, ldc1614.cpp)
 │   │   ├── mpr121/  (mpr121.h, mpr121.cpp)
 │   │   ├── pca9685/  (pca9685.h, pca9685.cpp)
-│   │   ├── pn532/
-│   │   │   ├── pn532.c
-│   │   │   └── pn532.h
-│   │   ├── rcwl0516/
-│   │   │   ├── rcwl0516.c
-│   │   │   └── rcwl0516.h
+│   │   ├── pn532/  (pn532.h, pn532.c)
+│   │   ├── rcwl0516/  (rcwl0516.h, rcwl0516.c)
 │   │   ├── rtc/  (rtc.h, rtc.cpp)
-│   │   ├── sdi12/
-│   │   │   ├── sdi12.c
-│   │   │   └── sdi12.h
-│   │   ├── sen0192/
-│   │   │   ├── sen0192.c
-│   │   │   └── sen0192.h
+│   │   ├── sdi12/  (sdi12.h, sdi12.c)
+│   │   ├── sen0192/  (sen0192.h, sen0192.c)
 │   │   ├── sht3x/  (sht3x.h, sht3x.cpp)
 │   │   ├── vl53l0x/  (vl53l0x.h, vl53l0x.cpp)
 │   │   └── i2c.h
 │   ├── radio/
-│   │   ├── ble_gatt/
-│   │   │   ├── ble_gatt.c
-│   │   │   └── ble_gatt.h
-│   │   ├── cc1101/
-│   │   │   ├── cc1101.c
-│   │   │   └── cc1101.h
-│   │   ├── enocean/
-│   │   │   ├── enocean.c
-│   │   │   └── enocean.h
-│   │   ├── espnow/
-│   │   │   ├── espnow.c
-│   │   │   └── espnow.h
-│   │   ├── lora/
-│   │   │   ├── lora.c
-│   │   │   └── lora.h
-│   │   ├── nrf24/
-│   │   │   ├── nrf24.c
-│   │   │   └── nrf24.h
-│   │   ├── promisc/
-│   │   │   ├── promisc.c
-│   │   │   └── promisc.h
-│   │   ├── radio_sniff/
-│   │   │   ├── radio_sniff.c
-│   │   │   └── radio_sniff.h
-│   │   ├── sigfox/
-│   │   │   ├── sigfox.c
-│   │   │   └── sigfox.h
-│   │   ├── thread/
-│   │   │   ├── thread.c
-│   │   │   └── thread.h
-│   │   ├── wifi_sniffer/
-│   │   │   ├── wifi_sniffer.c
-│   │   │   └── wifi_sniffer.h
-│   │   ├── wisun/
-│   │   │   ├── wisun.c
-│   │   │   └── wisun.h
-│   │   ├── zigbee/
-│   │   │   ├── zigbee.c
-│   │   │   └── zigbee.h
-│   │   └── zwave/
-│   │       ├── zwave.c
-│   │       └── zwave.h
+│   │   ├── ble_gatt/  (ble_gatt.h, ble_gatt.c)
+│   │   ├── cc1101/  (cc1101.h, cc1101.c)
+│   │   ├── enocean/  (enocean.h, enocean.c)
+│   │   ├── espnow/  (espnow.h, espnow.c)
+│   │   ├── lora/  (lora.h, lora.c)
+│   │   ├── nrf24/  (nrf24.h, nrf24.c)
+│   │   ├── promisc/  (promisc.h, promisc.c)
+│   │   ├── radio_sniff/  (radio_sniff.h, radio_sniff.c)
+│   │   ├── sigfox/  (sigfox.h, sigfox.c)
+│   │   ├── thread/  (thread.h, thread.c)
+│   │   ├── wifi_sniffer/  (wifi_sniffer.h, wifi_sniffer.c)
+│   │   ├── wisun/  (wisun.h, wisun.c)
+│   │   ├── zigbee/  (zigbee.h, zigbee.c)
+│   │   └── zwave/  (zwave.h, zwave.c)
 │   ├── security/
 │   │   ├── audit_log/  (audit_log.h, audit_log.cpp)
-│   │   ├── auth_lockout/
-│   │   │   ├── auth_lockout.c
-│   │   │   └── auth_lockout.h
-│   │   ├── csrf/
-│   │   │   ├── csrf.c
-│   │   │   └── csrf.h
-│   │   ├── forwarded_trust/
-│   │   │   ├── forwarded_trust.c
-│   │   │   └── forwarded_trust.h
-│   │   ├── guardrails/
-│   │   │   ├── guardrails.c
-│   │   │   └── guardrails.h
+│   │   ├── auth_lockout/  (auth_lockout.h, auth_lockout.c)
+│   │   ├── csrf/  (csrf.h, csrf.c)
+│   │   ├── forwarded_trust/  (forwarded_trust.h, forwarded_trust.c)
+│   │   ├── guardrails/  (guardrails.h, guardrails.c)
 │   │   ├── ikev2/
 │   │   │   ├── ikev2.c
 │   │   │   ├── ikev2.h
 │   │   │   ├── ikev2_natt.c
 │   │   │   └── ikev2_natt.h
-│   │   ├── jwt/
-│   │   │   ├── jwt.c
-│   │   │   └── jwt.h
+│   │   ├── jwt/  (jwt.h, jwt.c)
 │   │   ├── oauth2/  (oauth2.h, oauth2.cpp)
-│   │   ├── oidc/
-│   │   │   ├── oidc.c
-│   │   │   └── oidc.h
-│   │   ├── tls_policy/
-│   │   │   ├── tls_policy.c
-│   │   │   └── tls_policy.h
-│   │   └── totp/
-│   │       ├── totp.c
-│   │       └── totp.h
+│   │   ├── oidc/  (oidc.h, oidc.c)
+│   │   ├── tls_policy/  (tls_policy.h, tls_policy.c)
+│   │   └── totp/  (totp.h, totp.c)
 │   ├── storage/
-│   │   ├── config_io/
-│   │   │   ├── config_io.c
-│   │   │   └── config_io.h
-│   │   ├── config_store/
-│   │   │   ├── config_store.c
-│   │   │   └── config_store.h
-│   │   ├── dbm/
-│   │   │   ├── dbm.c
-│   │   │   └── dbm.h
-│   │   ├── docstore/
-│   │   │   ├── docstore.c
-│   │   │   └── docstore.h
-│   │   ├── hotswap/
-│   │   │   ├── hotswap.c
-│   │   │   └── hotswap.h
+│   │   ├── config_io/  (config_io.h, config_io.c)
+│   │   ├── config_store/  (config_store.h, config_store.c)
+│   │   ├── dbm/  (dbm.h, dbm.c)
+│   │   ├── docstore/  (docstore.h, docstore.c)
+│   │   ├── hotswap/  (hotswap.h, hotswap.c)
 │   │   ├── partition_monitor/
 │   │   │   ├── partition_monitor.c
 │   │   │   ├── partition_monitor.h
 │   │   │   └── partition_monitor_routes.c
-│   │   ├── psram_pool/
-│   │   │   ├── psram_pool.c
-│   │   │   └── psram_pool.h
-│   │   ├── sqlite/
-│   │   │   ├── sqlite_format.c
-│   │   │   └── sqlite_format.h
+│   │   ├── psram_pool/  (psram_pool.h, psram_pool.c)
+│   │   ├── sqlite/  (sqlite_format.h, sqlite_format.c)
 │   │   └── wal/
 │   │       ├── wal.c
 │   │       ├── wal.h
@@ -965,9 +711,7 @@ src/
 │   │       ├── wal_store.c
 │   │       └── wal_store.h
 │   ├── system/
-│   │   ├── control/
-│   │   │   ├── control.c
-│   │   │   └── control.h
+│   │   ├── control/  (control.h, control.c)
 │   │   ├── esp/
 │   │   │   ├── esp.c
 │   │   │   ├── esp.h
@@ -984,43 +728,21 @@ src/
 │   │   │   ├── ntrip_caster_listener.h
 │   │   │   ├── rtcm3.c
 │   │   │   └── rtcm3.h
-│   │   ├── nmea0183/
-│   │   │   ├── nmea0183.c
-│   │   │   └── nmea0183.h
-│   │   ├── nmea2000/
-│   │   │   ├── nmea2000.c
-│   │   │   └── nmea2000.h
+│   │   ├── nmea0183/  (nmea0183.h, nmea0183.c)
+│   │   ├── nmea2000/  (nmea2000.h, nmea2000.c)
 │   │   ├── ntp_server/  (ntp_server.h, ntp_server.cpp)
 │   │   ├── ntp_service/  (ntp_service.h, ntp_service.cpp)
-│   │   ├── nts/
-│   │   │   ├── nts.c
-│   │   │   └── nts.h
-│   │   ├── ptp/
-│   │   │   ├── ptp.c
-│   │   │   └── ptp.h
+│   │   ├── nts/  (nts.h, nts.c)
+│   │   ├── ptp/  (ptp.h, ptp.c)
 │   │   ├── time_source/  (time_source.h, time_source.cpp)
-│   │   └── ubx/
-│   │       ├── ubx.c
-│   │       └── ubx.h
+│   │   └── ubx/  (ubx.h, ubx.c)
 │   ├── transportation/
-│   │   ├── j2735/
-│   │   │   ├── j2735.c
-│   │   │   └── j2735.h
-│   │   ├── nema_ts2/
-│   │   │   ├── nema_ts2.c
-│   │   │   └── nema_ts2.h
-│   │   ├── ntcip/
-│   │   │   ├── ntcip.c
-│   │   │   └── ntcip.h
-│   │   ├── ocit/
-│   │   │   ├── ocit.c
-│   │   │   └── ocit.h
-│   │   ├── utmc/
-│   │   │   ├── utmc.c
-│   │   │   └── utmc.h
-│   │   └── wave/
-│   │       ├── wave.c
-│   │       └── wave.h
+│   │   ├── j2735/  (j2735.h, j2735.c)
+│   │   ├── nema_ts2/  (nema_ts2.h, nema_ts2.c)
+│   │   ├── ntcip/  (ntcip.h, ntcip.c)
+│   │   ├── ocit/  (ocit.h, ocit.c)
+│   │   ├── utmc/  (utmc.h, utmc.c)
+│   │   └── wave/  (wave.h, wave.c)
 │   └── web/
 │       ├── dashboard/
 │       │   ├── dashboard.c
@@ -1037,12 +759,8 @@ src/
 │       │   ├── edge_fetch.h
 │       │   ├── edge_mesh.c
 │       │   └── edge_mesh.h
-│       ├── httpcache/
-│       │   ├── httpcache.c
-│       │   └── httpcache.h
-│       ├── spa_router/
-│       │   ├── spa_router.c
-│       │   └── spa_router.h
+│       ├── httpcache/  (httpcache.h, httpcache.c)
+│       ├── spa_router/  (spa_router.h, spa_router.c)
 │       └── web_terminal/  (web_terminal.h, web_terminal.cpp)
 ├── shared_primitives/
 │   ├── bitio.h

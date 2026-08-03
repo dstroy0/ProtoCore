@@ -66,7 +66,7 @@ def externs(root=SRC):
 def scan(root=SRC):
     """Return {symbol: [(path, line, is_const), ...]} for every file-scope definition."""
     seen = collections.defaultdict(list)
-    for path in sorted(root.rglob("*.cpp")):
+    for path in sorted(p for p in root.rglob("*") if p.suffix in (".c", ".cpp")):
         clean = _STRIP.sub(_blank, path.read_text(encoding="utf-8", errors="replace"))
         for m in _DEF.finditer(clean):
             line_no = clean.count("\n", 0, m.start()) + 1
