@@ -121,6 +121,9 @@ void setUp()
     lfsm_format();
     davfs = lfsm();
     pc_mnt_mount(davfs);
+    // The mount's own root has to exist before anything can be created under it. The flat mock
+    // stored paths, so /dav was never a directory and never needed to be one.
+    lfsm_mkdir("/dav");
     dav("/dav", davfs, "/dav");
 }
 
