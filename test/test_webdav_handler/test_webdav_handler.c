@@ -560,7 +560,7 @@ void test_webdav_copy_fs_table_full()
 {
     tree_put("/dav/f.txt", "data");
     tree_mkdir("/dav/d");
-    lfsm_fail_prog_after(1); // the medium refuses the first write, so nothing is created
+    lfsm_fail_prog_always(); // the medium refuses every write: neither the file nor the collection lands
     feed_and_handle(0, "COPY /dav/f.txt HTTP/1.1\r\nHost: x\r\nDestination: /dav/fc\r\n\r\n"); // dst open("w") fails
     TEST_ASSERT_TRUE(pc_resp_status(409));
 

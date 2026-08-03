@@ -54,7 +54,7 @@ typedef struct
     // Medium failure, counted down in prog calls. littlefs treats an error from the block device
     // as exactly that - a bad write - and unwinds through its normal error path, which is a far
     // better way to refuse a caller than driving the volume to exhaustion and hoping.
-    int prog_fail_in; ///< 0 = never; N = the Nth prog from now returns an I/O error
+    int prog_fail_in; ///< 0 = never; N = the Nth prog from now fails; -1 = every prog fails
 
     LfsmHandle h[LFSM_HANDLES];
 } LfsmCtx;
@@ -76,7 +76,7 @@ static inline int lfsm_bd_prog(const struct lfs_config *c, lfs_block_t block, lf
                                lfs_size_t size)
 {
     (void)c;
-    if (g_lfsm.prog_fail_in > 0 && --g_lfsm.prog_fail_in == 0)
+    if (g_lfsm.prog_fail_in < 0 || (g_lfsm.prog_fail_in > 0 && --g_lfsm.prog_fail_in == 0))
     {
         return LFS_ERR_IO; // the medium refused this write
     }
@@ -219,6 +219,12 @@ static inline proto_bool lfsm_mkdir(const char *path)
 static inline void lfsm_fail_prog_after(int n)
 {
     g_lfsm.prog_fail_in = n;
+}
+
+/** @brief Refuse every write from now, the way a medium that has gone read-only does. */
+static inline void lfsm_fail_prog_always(void)
+{
+    g_lfsm.prog_fail_in = -1;
 }
 
 /** @brief Stop failing programs. */
