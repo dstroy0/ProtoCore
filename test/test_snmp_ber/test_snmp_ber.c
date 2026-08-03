@@ -97,7 +97,7 @@ void test_counter32_keeps_unsigned()
     uint8_t buf[16];
     BerEnc e;
     pc_ber_enc_init(&e, buf, sizeof(buf));
-    pc_ber_put_uint(&e, (uint8_t)SNMP_COUNTER32, 0x80000000u);
+    pc_ber_put_uint(&e, (uint8_t)SNMP_TAG_SNMP_COUNTER32, 0x80000000u);
     const uint8_t exp[] = {0x41, 0x05, 0x00, 0x80, 0x00, 0x00, 0x00};
     TEST_ASSERT_TRUE(e.ok);
     TEST_ASSERT_EQUAL_UINT(sizeof(exp), e.len);

@@ -131,7 +131,7 @@ static size_t build_get(uint8_t *out, size_t cap, proto_bool auth, proto_bool pr
     uint8_t pdu[256];
     BerEnc pe;
     pc_ber_enc_init(&pe, pdu, sizeof(pdu));
-    size_t pp = pc_ber_seq_begin(&pe, (uint8_t)SNMP_PDU_GET);
+    size_t pp = pc_ber_seq_begin(&pe, (uint8_t)SNMP_TAG_SNMP_PDU_GET);
     pc_ber_put_integer(&pe, req_id);
     pc_ber_put_integer(&pe, 0);
     pc_ber_put_integer(&pe, 0);
@@ -412,7 +412,7 @@ void test_discovery_reports_engine_id()
 {
     V3View v;
     discover(&v);
-    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_PDU_REPORT, v.pdu_tag);
+    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_SNMP_PDU_REPORT, v.pdu_tag);
     TEST_ASSERT_TRUE(v.engine_id_len >= 5); // a real authoritative engine ID
     // usmStatsUnknownEngineIDs = 1.3.6.1.6.3.15.1.1.4.0
     TEST_ASSERT_EQUAL_UINT(11, v.oid_len);
@@ -435,7 +435,7 @@ void test_authnopriv_get()
 
     V3View v;
     TEST_ASSERT_TRUE(parse_v3(resp, n, NULL, &v));
-    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_PDU_RESPONSE, v.pdu_tag);
+    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_SNMP_PDU_RESPONSE, v.pdu_tag);
     TEST_ASSERT_EQUAL_INT(42, v.request_id);
     TEST_ASSERT_EQUAL_INT((int)SNMP_ERR_NO_ERROR, v.err_status);
     TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_BER_OCTET_STRING, v.val_tag);
@@ -459,7 +459,7 @@ void test_authpriv_get()
 
     V3View v;
     TEST_ASSERT_TRUE(parse_v3(resp, n, privkey, &v));
-    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_PDU_RESPONSE, v.pdu_tag);
+    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_SNMP_PDU_RESPONSE, v.pdu_tag);
     TEST_ASSERT_EQUAL_INT(77, v.request_id);
     TEST_ASSERT_EQUAL_STRING(SYSDESCR_VAL, v.str);
     TEST_ASSERT_EQUAL_UINT8(0x03, v.flags & 0x03); // response is authPriv
@@ -480,7 +480,7 @@ void test_wrong_auth_password_reports_wrong_digest()
 
     V3View v;
     TEST_ASSERT_TRUE(parse_v3(resp, n, NULL, &v));
-    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_PDU_REPORT, v.pdu_tag);
+    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_SNMP_PDU_REPORT, v.pdu_tag);
     // usmStatsWrongDigests = ...15.1.1.5.0
     TEST_ASSERT_EQUAL_UINT32(5u, v.oid[9]);
 }
@@ -500,7 +500,7 @@ void test_unknown_user_reports()
 
     V3View v;
     TEST_ASSERT_TRUE(parse_v3(resp, n, NULL, &v));
-    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_PDU_REPORT, v.pdu_tag);
+    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_SNMP_PDU_REPORT, v.pdu_tag);
     TEST_ASSERT_EQUAL_UINT32(3u, v.oid[9]); // usmStatsUnknownUserNames
 }
 
@@ -520,7 +520,7 @@ void test_not_in_time_window_reports()
 
     V3View v;
     TEST_ASSERT_TRUE(parse_v3(resp, n, NULL, &v));
-    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_PDU_REPORT, v.pdu_tag);
+    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_SNMP_PDU_REPORT, v.pdu_tag);
     TEST_ASSERT_EQUAL_UINT32(2u, v.oid[9]);        // usmStatsNotInTimeWindows
     TEST_ASSERT_EQUAL_UINT8(0x01, v.flags & 0x03); // time reports are authenticated
 }
@@ -673,7 +673,7 @@ void test_v3_priv_not_configured()
     TEST_ASSERT_TRUE(n > 0);
     V3View r;
     TEST_ASSERT_TRUE(parse_v3(resp, n, NULL, &r));
-    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_PDU_REPORT, r.pdu_tag);
+    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_SNMP_PDU_REPORT, r.pdu_tag);
     pc_snmp_v3_set_user("myuser", "authpass12", "privpass12"); // restore
 }
 
@@ -913,7 +913,7 @@ void test_v3_auth_edge_rejections(void)
     TEST_ASSERT_TRUE(n > 0);
     V3View r;
     TEST_ASSERT_TRUE(parse_v3(resp, n, NULL, &r));
-    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_PDU_REPORT, r.pdu_tag);
+    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_SNMP_PDU_REPORT, r.pdu_tag);
     TEST_ASSERT_EQUAL_UINT32(5u, r.oid[9]); // usmStatsWrongDigests
 
     // authPriv with a valid digest but msgData that is not an OCTET STRING -> dropped (0).
@@ -1182,7 +1182,7 @@ void test_v3_same_length_wrong_engine_id()
     TEST_ASSERT_TRUE(n > 0);
     V3View r;
     TEST_ASSERT_TRUE(parse_v3(resp, n, NULL, &r));
-    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_PDU_REPORT, r.pdu_tag);
+    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_SNMP_PDU_REPORT, r.pdu_tag);
     TEST_ASSERT_EQUAL_UINT32(4u, r.oid[9]); // usmStatsUnknownEngineIDs
 }
 
@@ -1216,7 +1216,7 @@ void test_v3_unknown_user_variants()
         size_t n = pc_snmp_v3_process(req, rl, resp, sizeof(resp));
         TEST_ASSERT_TRUE(n > 0);
         TEST_ASSERT_TRUE(parse_v3(resp, n, NULL, &r));
-        TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_PDU_REPORT, r.pdu_tag);
+        TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_SNMP_PDU_REPORT, r.pdu_tag);
         TEST_ASSERT_EQUAL_UINT32(3u, r.oid[9]); // usmStatsUnknownUserNames
     }
 }
@@ -1242,7 +1242,7 @@ void test_v3_oversized_message_is_wrong_digest()
     TEST_ASSERT_TRUE(n > 0);
     V3View r;
     TEST_ASSERT_TRUE(parse_v3(resp, n, NULL, &r));
-    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_PDU_REPORT, r.pdu_tag);
+    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_SNMP_PDU_REPORT, r.pdu_tag);
     TEST_ASSERT_EQUAL_UINT32(5u, r.oid[9]); // usmStatsWrongDigests
 }
 
@@ -1262,7 +1262,7 @@ void test_v3_boots_mismatch_not_in_time()
     TEST_ASSERT_TRUE(n > 0);
     V3View r;
     TEST_ASSERT_TRUE(parse_v3(resp, n, NULL, &r));
-    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_PDU_REPORT, r.pdu_tag);
+    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_SNMP_PDU_REPORT, r.pdu_tag);
     TEST_ASSERT_EQUAL_UINT32(2u, r.oid[9]);        // usmStatsNotInTimeWindows
     TEST_ASSERT_EQUAL_UINT8(0x01, r.flags & 0x03); // and it is authenticated
 }
@@ -1287,7 +1287,7 @@ void test_v3_privacy_parameter_edges()
     TEST_ASSERT_TRUE(n > 0);
     V3View r;
     TEST_ASSERT_TRUE(parse_v3(resp, n, NULL, &r));
-    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_PDU_REPORT, r.pdu_tag);
+    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_SNMP_PDU_REPORT, r.pdu_tag);
     TEST_ASSERT_EQUAL_UINT32(6u, r.oid[9]); // usmStatsDecryptionErrors
 
     const uint8_t stub[] = {0x04}; // OCTET STRING tag with no length octet
@@ -1331,7 +1331,7 @@ void test_v3_init_length_guards_and_null_user()
     TEST_ASSERT_TRUE(n > 0);
     V3View r;
     TEST_ASSERT_TRUE(parse_v3(resp, n, NULL, &r));
-    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_PDU_REPORT, r.pdu_tag);
+    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_SNMP_PDU_REPORT, r.pdu_tag);
     TEST_ASSERT_EQUAL_UINT32(3u, r.oid[9]);
 }
 

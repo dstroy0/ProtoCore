@@ -43,7 +43,7 @@ void test_trap_v2c_structure()
     vb.ival = 42;
 
     uint8_t buf[256];
-    size_t len = pc_snmp_notify_build_v2c(buf, sizeof(buf), "public", (uint8_t)SNMP_PDU_TRAPV2, 7, TRAP_OID,
+    size_t len = pc_snmp_notify_build_v2c(buf, sizeof(buf), "public", (uint8_t)SNMP_TAG_SNMP_PDU_TRAPV2, 7, TRAP_OID,
                                           sizeof(TRAP_OID) / sizeof(uint32_t), 12345, &vb, 1);
     TEST_ASSERT_GREATER_THAN(0, len);
     TEST_ASSERT_EQUAL_HEX8(0x30, buf[0]);
@@ -62,7 +62,7 @@ void test_trap_v2c_structure()
     TEST_ASSERT_EQUAL_MEMORY("public", buf + d.pos, 6);
     pc_ber_skip(&d, l);
     TEST_ASSERT_TRUE(pc_ber_read_header(&d, &tag, &l)); // PDU
-    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_PDU_TRAPV2, tag);
+    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_SNMP_PDU_TRAPV2, tag);
     TEST_ASSERT_TRUE(pc_ber_read_integer(&d, &v)); // request-id
     TEST_ASSERT_EQUAL(7, v);
     TEST_ASSERT_TRUE(pc_ber_read_integer(&d, &v)); // error-status
@@ -77,7 +77,7 @@ void test_trap_v2c_structure()
     TEST_ASSERT_EQUAL_HEX8(0x30, tag);
     assert_oid(&d, SYSUPTIME0, sizeof(SYSUPTIME0) / sizeof(uint32_t));
     TEST_ASSERT_TRUE(pc_ber_read_header(&d, &tag, &l));
-    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TIMETICKS, tag);
+    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_SNMP_TIMETICKS, tag);
     pc_ber_skip(&d, l);
 
     // vb2: snmpTrapOID.0 = OID(trap_oid)
@@ -91,7 +91,7 @@ void test_trap_v2c_structure()
     TEST_ASSERT_EQUAL_HEX8(0x30, tag);
     assert_oid(&d, vboid, sizeof(vboid) / sizeof(uint32_t));
     TEST_ASSERT_TRUE(pc_ber_read_header(&d, &tag, &l));
-    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_GAUGE32, tag);
+    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_SNMP_GAUGE32, tag);
 }
 
 void test_inform_tag()
@@ -116,7 +116,7 @@ void test_inform_tag()
 void test_buffer_too_small()
 {
     uint8_t buf[8];
-    size_t len = pc_snmp_notify_build_v2c(buf, sizeof(buf), "public", (uint8_t)SNMP_PDU_TRAPV2, 1, TRAP_OID,
+    size_t len = pc_snmp_notify_build_v2c(buf, sizeof(buf), "public", (uint8_t)SNMP_TAG_SNMP_PDU_TRAPV2, 1, TRAP_OID,
                                           sizeof(TRAP_OID) / sizeof(uint32_t), 1, NULL, 0);
     TEST_ASSERT_EQUAL_size_t(0, len);
 }
@@ -151,7 +151,7 @@ void test_all_varbind_types()
     vbs[5].blen = 4;
 
     uint8_t buf[512];
-    size_t len = pc_snmp_notify_build_v2c(buf, sizeof(buf), "public", (uint8_t)SNMP_PDU_TRAPV2, 1, TRAP_OID,
+    size_t len = pc_snmp_notify_build_v2c(buf, sizeof(buf), "public", (uint8_t)SNMP_TAG_SNMP_PDU_TRAPV2, 1, TRAP_OID,
                                           sizeof(TRAP_OID) / sizeof(uint32_t), 1, vbs, 6);
     TEST_ASSERT_GREATER_THAN(0, len);
 
@@ -177,9 +177,9 @@ void test_all_varbind_types()
     const uint8_t expect[6] = {0x02,
                                0x04,
                                0x06,
-                               (uint8_t)SNMP_COUNTER32,
-                               (uint8_t)SNMP_TIMETICKS,
-                               (uint8_t)SNMP_IPADDRESS};
+                               (uint8_t)SNMP_TAG_SNMP_COUNTER32,
+                               (uint8_t)SNMP_TAG_SNMP_TIMETICKS,
+                               (uint8_t)SNMP_TAG_SNMP_IPADDRESS};
     for (int i = 0; i < 6; i++)
     {
         TEST_ASSERT_TRUE(pc_ber_read_header(&d, &tag, &l)); // varbind SEQUENCE
@@ -203,7 +203,7 @@ void test_invalid_varbind_type()
     vb.oid_len = 4;
     vb.type = 99; // not a defined type
     uint8_t buf[128];
-    TEST_ASSERT_EQUAL_size_t(0, pc_snmp_notify_build_v2c(buf, sizeof(buf), "public", (uint8_t)SNMP_PDU_TRAPV2,
+    TEST_ASSERT_EQUAL_size_t(0, pc_snmp_notify_build_v2c(buf, sizeof(buf), "public", (uint8_t)SNMP_TAG_SNMP_PDU_TRAPV2,
                                                          1, TRAP_OID, sizeof(TRAP_OID) / sizeof(uint32_t), 1, &vb, 1));
 }
 
@@ -211,11 +211,11 @@ void test_build_v2c_null_args()
 {
     uint8_t buf[128];
     const size_t tn = sizeof(TRAP_OID) / sizeof(uint32_t);
-    TEST_ASSERT_EQUAL_size_t(0, pc_snmp_notify_build_v2c(NULL, 128, "public", (uint8_t)SNMP_PDU_TRAPV2, 1,
+    TEST_ASSERT_EQUAL_size_t(0, pc_snmp_notify_build_v2c(NULL, 128, "public", (uint8_t)SNMP_TAG_SNMP_PDU_TRAPV2, 1,
                                                          TRAP_OID, tn, 1, NULL, 0));
-    TEST_ASSERT_EQUAL_size_t(0, pc_snmp_notify_build_v2c(buf, sizeof(buf), NULL, (uint8_t)SNMP_PDU_TRAPV2,
-                                                         1, TRAP_OID, tn, 1, NULL, 0));
-    TEST_ASSERT_EQUAL_size_t(0, pc_snmp_notify_build_v2c(buf, sizeof(buf), "public", (uint8_t)SNMP_PDU_TRAPV2,
+    TEST_ASSERT_EQUAL_size_t(0, pc_snmp_notify_build_v2c(buf, sizeof(buf), NULL, (uint8_t)SNMP_TAG_SNMP_PDU_TRAPV2, 1,
+                                                         TRAP_OID, tn, 1, NULL, 0));
+    TEST_ASSERT_EQUAL_size_t(0, pc_snmp_notify_build_v2c(buf, sizeof(buf), "public", (uint8_t)SNMP_TAG_SNMP_PDU_TRAPV2,
                                                          1, NULL, 0, 1, NULL, 0));
 }
 
