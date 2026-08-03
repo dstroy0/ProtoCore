@@ -1974,7 +1974,8 @@
         "+<mmgr/frame.c>",
         "+<server/clock/clock.c>",
         "+<network_drivers/network/route.c>",
-        "+<server/filesystem/mnt.c>"
+        "+<server/filesystem/mnt.c>",
+        "+<server/signaling/signaling.c>"
       ],
       "tests": ["test_upload"]
     },
