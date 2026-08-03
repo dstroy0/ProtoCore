@@ -9,7 +9,6 @@
 
 #include "network_drivers/network/ip.h"
 #include "services/security/forwarded_trust/forwarded_trust.h"
-#include <cstdio>
 #include <unity.h>
 
 static pc_ip v4(uint8_t a, uint8_t b, uint8_t c, uint8_t d)

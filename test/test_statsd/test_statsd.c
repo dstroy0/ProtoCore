@@ -8,7 +8,6 @@
 
 #include "network_drivers/transport/udp.h" // pc_udp_capture_* (host seam)
 #include "services/iot/statsd/statsd.h"
-#include <string>
 #include <unity.h>
 
 static string captured()
