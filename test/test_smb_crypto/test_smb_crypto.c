@@ -156,7 +156,7 @@ void test_streaming_equals_oneshot()
     size_t n = strlen(s);
     uint8_t one[16], strm[16];
     md5((const uint8_t *)s, n, one);
-    SecureScope scope;
+    size_t mark = pc_secure_mark();
     struct MdCtx *c = pc_md_wants(); // the owner of the opaque type supplies the storage
     TEST_ASSERT_NOT_NULL(c);
     pc_md5_init(c);
@@ -165,6 +165,7 @@ void test_streaming_equals_oneshot()
     pc_md5_update(c, (const uint8_t *)s + 11, n - 11);
     pc_md5_final(c, strm);
     TEST_ASSERT_EQUAL_MEMORY(one, strm, 16);
+    pc_secure_release(mark);
 }
 
 // The NT hash: MD4 of the UTF-16LE password (MS-NLMP). Spot-check "password".

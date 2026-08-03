@@ -103,6 +103,20 @@ typedef struct
 
 // Decode a lowercase-hex C-string into @p out; returns the byte length.
 // One hex digit to its value.
+// A keyed AES-128-GCM context over one reusable work region. The context owns vendor resources on
+// some backends, so the previous one is released before the next is built.
+static uint8_t g_gcm128_ws[PC_WORK_AES128GCM] __attribute__((aligned(8)));
+static proto_bool g_gcm128_live = PROTO_FALSE;
+static struct pc_aes128gcm_key *gcm128(const uint8_t *key)
+{
+    if (g_gcm128_live)
+    {
+        pc_aes128gcm_key_wipe((struct pc_aes128gcm_key *)g_gcm128_ws);
+    }
+    g_gcm128_live = PROTO_TRUE;
+    return pc_aes128gcm_key_init(g_gcm128_ws, key);
+}
+
 static int nib(char c)
 {
     if (c >= '0' && c <= '9')
@@ -196,7 +210,7 @@ static void test_aes128gcm(void)
         snprintf(m, sizeof(m), "AES128GCM tcId=%d", v->tc);
 
         // seal: out == ciphertext || tag (ciphertext is empty when plaintext is)
-        pc_aes128gcm_seal(key, iv, alen ? aad : NULL, alen, plen ? pt : NULL, plen, sealed);
+        pc_aes128gcm_seal(gcm128(key), iv, alen ? aad : NULL, alen, plen ? pt : NULL, plen, sealed, sealed + plen);
         if (clen)
         {
             TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(ct, sealed, clen, m);
@@ -204,7 +218,8 @@ static void test_aes128gcm(void)
         TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(tag, sealed + plen, 16, m);
 
         // open: recovers the plaintext and authenticates
-        proto_bool ok = pc_aes128gcm_open(key, iv, alen ? aad : NULL, alen, sealed, plen + 16, NULL, opened);
+        proto_bool ok =
+            pc_aes128gcm_open(gcm128(key), iv, alen ? aad : NULL, alen, sealed, plen, sealed + plen, opened);
         TEST_ASSERT_TRUE_MESSAGE(ok, m);
         if (plen)
         {
@@ -213,8 +228,8 @@ static void test_aes128gcm(void)
 
         // negative: a flipped tag byte must fail authentication
         sealed[plen + 15] ^= 0x80;
-        TEST_ASSERT_FALSE_MESSAGE(pc_aes128gcm_open(key, iv, alen ? aad : NULL, alen, sealed, plen + 16, NULL, opened),
-                                  m);
+        TEST_ASSERT_FALSE_MESSAGE(
+            pc_aes128gcm_open(gcm128(key), iv, alen ? aad : NULL, alen, sealed, plen, sealed + plen, opened), m);
     }
 }
 
@@ -240,14 +255,16 @@ static void test_aes128gcm_ctr_carry(void)
         pt[i] = (uint8_t)(i * 131u + 7u);
     }
 
-    pc_aes128gcm_seal(key, iv, NULL, 0, pt, CTR_CARRY_PT_LEN, sealed);
-    proto_bool ok = pc_aes128gcm_open(key, iv, NULL, 0, sealed, CTR_CARRY_PT_LEN + 16, NULL, opened);
+    pc_aes128gcm_seal(gcm128(key), iv, NULL, 0, pt, CTR_CARRY_PT_LEN, sealed, sealed + CTR_CARRY_PT_LEN);
+    proto_bool ok =
+        pc_aes128gcm_open(gcm128(key), iv, NULL, 0, sealed, CTR_CARRY_PT_LEN, sealed + CTR_CARRY_PT_LEN, opened);
     TEST_ASSERT_TRUE(ok);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(pt, opened, CTR_CARRY_PT_LEN);
 
     // negative: a flipped tag byte must still fail authentication past the carry boundary
     sealed[CTR_CARRY_PT_LEN + 15] ^= 0x80;
-    TEST_ASSERT_FALSE(pc_aes128gcm_open(key, iv, NULL, 0, sealed, CTR_CARRY_PT_LEN + 16, NULL, opened));
+    TEST_ASSERT_FALSE(
+        pc_aes128gcm_open(gcm128(key), iv, NULL, 0, sealed, CTR_CARRY_PT_LEN, sealed + CTR_CARRY_PT_LEN, opened));
 }
 
 // ====================================================================
