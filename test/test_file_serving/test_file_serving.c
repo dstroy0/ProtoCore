@@ -154,6 +154,11 @@ void test_file_body_is_sent()
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), body));
 }
 
+// Read by the hoisted handlers below, which a lambda used to close over.
+static proto_bool other_called = PROTO_FALSE;
+static const char *cur_ctype = NULL;
+static const char *cur_path = NULL;
+
 static void h_empty(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
@@ -238,7 +243,6 @@ void test_large_file_body_fully_sent()
 
 void test_serve_file_does_not_affect_other_routes()
 {
-    static proto_bool other_called = PROTO_FALSE;
     on_http("/other", HTTP_GET, h_other);
     on_http("/file", HTTP_GET, handle_html);
 
@@ -261,9 +265,6 @@ void test_multiple_content_types()
         {"/data.json", "application/json", "{}"},
         {"/app.js", "text/javascript", "var x=1;"},
     };
-
-    static const char *cur_ctype = NULL;
-    static const char *cur_path = NULL;
 
     for (size_t i = 0; i < 4; i++)
     {
@@ -314,9 +315,9 @@ static void rearm(uint8_t slot)
 void test_serve_static_root_join_variants()
 {
     mock_mnt_reset();
-    mock_mnt_add_text("/www/a.txt", "AAA");
-    mock_mnt_add_text("/b.txt", "BBB");
-    mock_mnt_add_text("/www/c.txt", "CCC");
+    mock_mnt_add_text("/www/a.txt", "AAA", 0);
+    mock_mnt_add_text("/b.txt", "BBB", 0);
+    mock_mnt_add_text("/www/c.txt", "CCC", 0);
 
     serve_static("/ts", g_fs, "/www/"); // root ends in '/'
     feed_and_handle(0, "GET /ts/a.txt HTTP/1.1\r\nHost: x\r\n\r\n");
@@ -343,7 +344,7 @@ void test_serve_static_root_join_variants()
 void test_serve_static_empty_prefix_mount()
 {
     mock_mnt_reset();
-    mock_mnt_add_text("/www/any.txt", "anything");
+    mock_mnt_add_text("/www/any.txt", "anything", 0);
     serve_static("", g_fs, "/www");
     feed_and_handle(0, "GET /any.txt HTTP/1.1\r\nHost: x\r\n\r\n");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "200 OK"));
@@ -357,7 +358,7 @@ void test_serve_static_empty_prefix_mount()
 void test_serve_static_directory_and_overlong_path()
 {
     mock_mnt_reset();
-    mock_mnt_add_text("/www/docs/index.html", "<i>docs</i>");
+    mock_mnt_add_text("/www/docs/index.html", "<i>docs</i>", 0);
     serve_static("/", g_fs, "/www");
     feed_and_handle(0, "GET /docs/ HTTP/1.1\r\nHost: x\r\n\r\n");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "200 OK"));
@@ -379,9 +380,9 @@ void test_serve_static_directory_and_overlong_path()
 void test_serve_static_gzip_negotiation_misses()
 {
     mock_mnt_reset();
-    mock_mnt_add_text("/www/app.js", "console.log(2)");
-    mock_mnt_add_text("/www/app.js.gz", "GZ");
-    mock_mnt_add_text("/www/plain.txt", "plain body");
+    mock_mnt_add_text("/www/app.js", "console.log(2)", 0);
+    mock_mnt_add_text("/www/app.js.gz", "GZ", 0);
+    mock_mnt_add_text("/www/plain.txt", "plain body", 0);
     serve_static("/", g_fs, "/www");
 
     feed_and_handle(0, "GET /app.js HTTP/1.1\r\nHost: x\r\nAccept-Encoding: deflate, br\r\n\r\n");
@@ -400,7 +401,7 @@ void test_serve_static_gzip_negotiation_misses()
 void test_serve_static_head_and_cors_headers()
 {
     mock_mnt_reset();
-    mock_mnt_add_text("/www/page.html", "<html>body</html>"); // 17 bytes
+    mock_mnt_add_text("/www/page.html", "<html>body</html>", 0); // 17 bytes
     set_cors("*");
     serve_static("/", g_fs, "/www");
 
@@ -633,7 +634,7 @@ void test_conditional_304_carries_cors_block()
 void test_serve_static_overlong_prefix_registers_nothing()
 {
     mock_mnt_reset();
-    mock_mnt_add_text("/www/index.html", "<i>root</i>");
+    mock_mnt_add_text("/www/index.html", "<i>root</i>", 0);
 
     char prefix[MAX_PATH_LEN + 8];
     prefix[0] = '/';
@@ -659,7 +660,7 @@ void test_serve_static_overlong_prefix_registers_nothing()
 void test_serve_static_param_mount_shorter_than_pattern()
 {
     mock_mnt_reset();
-    mock_mnt_add_text("/www/index.html", "<i>idx</i>");
+    mock_mnt_add_text("/www/index.html", "<i>idx</i>", 0);
     serve_static("/a/:b", g_fs, "/www");                        // pattern "/a/:b*" - 5 chars before the '*'
     feed_and_handle(0, "GET /a/x HTTP/1.1\r\nHost: x\r\n\r\n"); // 4 chars: shorter than the prefix
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "200 OK"));
@@ -672,7 +673,7 @@ void test_serve_static_param_mount_shorter_than_pattern()
 void test_serve_static_trailing_slash_root_bare_prefix()
 {
     mock_mnt_reset();
-    mock_mnt_add_text("/root/index.html", "<i>bare</i>");
+    mock_mnt_add_text("/root/index.html", "<i>bare</i>", 0);
     serve_static("/s", g_fs, "/root/");
     feed_and_handle(0, "GET /s HTTP/1.1\r\nHost: x\r\n\r\n"); // sub-path is empty
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "200 OK"));
