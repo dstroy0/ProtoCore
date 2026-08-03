@@ -39,6 +39,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`87ca7bd`](https://github.com/dstroy0/ProtoCore/commit/87ca7bd4ce21ecc55f38afab86179c8af6cec1a7))
 - update test report + coverage [skip ci] ([`60644ab`](https://github.com/dstroy0/ProtoCore/commit/60644abfe8e373451abceb72d24d0d00113b623b))
 - update CHANGELOG.md [skip ci] ([`1cc1ae7`](https://github.com/dstroy0/ProtoCore/commit/1cc1ae739bd82d4a9cd4ff42eee50c8af5c12e3e))
 - update CHANGELOG.md [skip ci] ([`de620ec`](https://github.com/dstroy0/ProtoCore/commit/de620ece45ec719c4248e4a16627b0c3391a1f2a))
@@ -154,6 +155,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- add pass-the-reference-down to the end of the roadmap ([`fe124e7`](https://github.com/dstroy0/ProtoCore/commit/fe124e786f6c7ac407d5c260f8f2198c8b0ac776))
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`f50be82`](https://github.com/dstroy0/ProtoCore/commit/f50be824906686817bbec97bf82bbce289203be6))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`ec1fbd1`](https://github.com/dstroy0/ProtoCore/commit/ec1fbd1e3051b887a499fa71db1eae8aa30b3354))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`f48be9f`](https://github.com/dstroy0/ProtoCore/commit/f48be9f74fc73d163374b5de90f882460162be90))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`c25ce38`](https://github.com/dstroy0/ProtoCore/commit/c25ce38d988f90b311ad1a5d98bb169598a5aa4f))
