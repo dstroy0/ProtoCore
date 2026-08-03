@@ -995,9 +995,10 @@ static inline void tcp_capture_reset(void)
     pc_net_host_write_fail_after = -1; // clear a send failure a prior test armed
 }
 
+// The host always captures, so there is no capture to switch off. What a caller wants here is to
+// stop collecting and then read what was collected, so the buffer is left intact.
 static inline void tcp_capture_disable(void)
 {
-    tcp_capture_reset();
 }
 
 static inline const char *tcp_captured(void)
