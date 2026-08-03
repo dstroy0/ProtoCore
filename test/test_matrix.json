@@ -1696,7 +1696,11 @@
     },
     "native_range": {
       "desc": "HTTP Range requests / 206 Partial Content (RFC 7233): full server built with\nPC_ENABLE_RANGE=1, exercising serve_file() against the mock FS (now with\nseek()) via the tcp_write capture mock.",
-      "flags": ["-DPC_ENFORCE_HOST_HEADER=0", "-DPC_ENABLE_RANGE=1"],
+      "flags": [
+        "-DPC_ENFORCE_HOST_HEADER=0",
+        "-DPC_ENABLE_RANGE=1",
+        "-DPC_ENABLE_FILE_SERVING=1"
+      ],
       "src": [
         "+<network_drivers/network/ip.c>",
         "+<network_drivers/presentation/http/http_parser/http_parser.c>",
@@ -1715,6 +1719,7 @@
         "+<network_drivers/presentation/codec/multipart/multipart.c>",
         "+<crypto/hash/sha256.c>",
         "+<protocore.c>",
+        "+<server/filesystem/mnt.c>",
         "+<network_drivers/application/file_serving/file_serving.c>",
         "+<network_drivers/application/http_range.c>",
         "+<network_drivers/application/auth/auth.c>",

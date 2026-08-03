@@ -56,6 +56,11 @@ typedef struct
     // better way to refuse a caller than driving the volume to exhaustion and hoping.
     int prog_fail_in; ///< 0 = never; N = the Nth prog from now fails; -1 = every prog fails
 
+    // The same refusal on the read side, counted in bytes rather than calls: a file that yields
+    // some of its bytes and then reports an error is what a bad sector or a truncated medium looks
+    // like to a reader, and it is the case a send pump has to stop on rather than pad.
+    size_t read_budget; ///< SIZE_MAX = unlimited; otherwise bytes left before reads fail
+
     LfsmHandle h[LFSM_HANDLES];
 } LfsmCtx;
 
@@ -129,6 +134,7 @@ static inline void lfsm_format(void)
         g_lfsm.h[i].held = PROTO_FALSE;
     }
     g_lfsm.prog_fail_in = 0;
+    g_lfsm.read_budget = (size_t)-1;
 
     memset(&g_lfsm.cfg, 0, sizeof(g_lfsm.cfg));
     g_lfsm.cfg.read = lfsm_bd_read;
@@ -225,6 +231,18 @@ static inline void lfsm_fail_prog_after(int n)
 static inline void lfsm_fail_prog_always(void)
 {
     g_lfsm.prog_fail_in = -1;
+}
+
+/** @brief Yield @p bytes more and then refuse every read, the way a truncated medium does. */
+static inline void lfsm_read_budget(size_t bytes)
+{
+    g_lfsm.read_budget = bytes;
+}
+
+/** @brief Stop failing reads. */
+static inline void lfsm_no_read_failure(void)
+{
+    g_lfsm.read_budget = (size_t)-1;
 }
 
 /** @brief Stop failing programs. */
@@ -383,7 +401,20 @@ static inline int lfsm_read(int handle, void *buf, size_t n)
     {
         return -1;
     }
-    return (int)lfs_file_read(&g_lfsm.lfs, &g_lfsm.h[handle].file, buf, (lfs_size_t)n);
+    if (g_lfsm.read_budget == 0)
+    {
+        return 0; // the medium has no more to give, with bytes still left in the file
+    }
+    if (n > g_lfsm.read_budget)
+    {
+        n = g_lfsm.read_budget;
+    }
+    int got = (int)lfs_file_read(&g_lfsm.lfs, &g_lfsm.h[handle].file, buf, (lfs_size_t)n);
+    if (got > 0 && g_lfsm.read_budget != (size_t)-1)
+    {
+        g_lfsm.read_budget -= (size_t)got;
+    }
+    return got;
 }
 
 static inline int lfsm_write(int handle, const void *buf, size_t n)

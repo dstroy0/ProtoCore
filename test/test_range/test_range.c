@@ -6,7 +6,7 @@
 // the status line, Content-Range / Content-Length headers, and the exact bytes
 // returned (via the tcp_write capture mock).
 
-#include "FS.h"
+#include "lfs_mock.h"
 #include "protocore.h"
 #include <string.h>
 #include <unity.h>
@@ -26,8 +26,7 @@ static void push_str(uint8_t slot, const char *s)
 static void serve_data(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    fs::FS fs;
-    serve_file(slot_id, fs, "/data.bin", "application/octet-stream");
+    serve_file(slot_id, lfsm(), "/data.bin", "application/octet-stream");
 }
 
 // Nulls the slot's pcb before serving, simulating a peer that vanished between accept
@@ -36,8 +35,7 @@ static void serve_data_conn_gone(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
     conn_pool[slot_id].pcb = NULL;
-    fs::FS fs;
-    serve_file(slot_id, fs, "/data.bin", "application/octet-stream");
+    serve_file(slot_id, lfsm(), "/data.bin", "application/octet-stream");
 }
 
 void setUp()
@@ -55,10 +53,10 @@ void setUp()
     }
     ws_init();
     pc_sse_init();
-    fs::mock_fs_reset();
-    fs::mock_fs_set(FILE_DATA); // 20-byte file at any path
+    lfsm_format();
+    TEST_ASSERT_TRUE(lfsm_write_text("/data.bin", FILE_DATA)); // the 20 bytes every test serves
     tcp_capture_reset();
-    mock_sndbuf() = MOCK_SNDBUF_DEFAULT; // reopen the window a backpressure test may have shrunk
+    mock_sndbuf_set(MOCK_SNDBUF_DEFAULT); // reopen the window a backpressure test may have shrunk
 }
 
 void tearDown()
@@ -238,15 +236,15 @@ void test_head_with_range_no_body()
 // paging-across-loops path a real file transfer under flow control relies on.
 void test_file_send_backpressure_resumes_across_polls()
 {
-    mock_sndbuf() = 0; // window shut: no room to page any body this loop
+    mock_sndbuf_set(0); // window shut: no room to page any body this loop
     request(NULL);
     const char *r = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(r, "200 OK"));
     TEST_ASSERT_NOT_NULL(strstr(r, "Content-Length: 20")); // headers went out
     TEST_ASSERT_EQUAL_UINT(0, body_len());                 // body deferred: nothing after the header terminator
 
-    mock_sndbuf() = 8; // window reopens, but narrower than the remaining 20 bytes
-    handle();          // worker poll resumes and pages the body in 8-byte-capped reads
+    mock_sndbuf_set(8); // window reopens, but narrower than the remaining 20 bytes
+    handle();           // worker poll resumes and pages the body in 8-byte-capped reads
     TEST_ASSERT_EQUAL_UINT(20, body_len());
     TEST_ASSERT_EQUAL_MEMORY(FILE_DATA, body_ptr(), 20); // full body, no truncation
 }
@@ -275,7 +273,7 @@ void test_file_send_write_fails_then_retries()
 // finishes the response - it must not spin on the zero-length read.
 void test_file_send_short_read_stops()
 {
-    fs::_mock_read_limit() = 8; // the underlying file yields only 8 of its 20 bytes
+    lfsm_read_budget(8); // the medium yields only 8 of the file's 20 bytes
     request(NULL);
     const char *r = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(r, "200 OK"));
@@ -308,8 +306,7 @@ void test_range_start_after_end_unsatisfiable()
 // window from size - end underflow).
 void test_range_suffix_on_empty_file()
 {
-    fs::mock_fs_clear();
-    fs::mock_fs_set(""); // 0-byte file at any path
+    TEST_ASSERT_TRUE(lfsm_write_text("/data.bin", "")); // truncate to 0 bytes
     request("bytes=-4");
     const char *r = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(r, "416 Range Not Satisfiable"));

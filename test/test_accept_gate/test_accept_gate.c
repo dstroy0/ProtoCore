@@ -287,10 +287,10 @@ void test_accept_cb_global_throttle_rejects_over_budget()
 
     for (int i = 0; i < PC_ACCEPT_THROTTLE_MAX; i++)
     {
-        struct tcp_pcb pcb = {0};
+        pc_pcb pcb = {0};
         TEST_ASSERT_EQUAL_INT(PC_NET_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb, PC_NET_OK));
     }
-    struct tcp_pcb over_budget = {0};
+    pc_pcb over_budget = {0};
     int before_aborts = mock_abort_call_count();
     TEST_ASSERT_EQUAL_INT(PC_NET_ERR_ABRT, listener_accept_cb((void *)(uintptr_t)0, &over_budget, PC_NET_OK));
     TEST_ASSERT_EQUAL_INT(before_aborts + 1, mock_abort_call_count());
@@ -305,7 +305,7 @@ void test_accept_cb_ip_allowlist_allows_when_empty()
     listener_ip_allowlist_reset();
     set_millis(0);
 
-    struct tcp_pcb pcb = {0};
+    pc_pcb pcb = {0};
     TEST_ASSERT_EQUAL_INT(PC_NET_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb, PC_NET_OK));
     TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)conn_pool[0].state);
 }
@@ -325,7 +325,7 @@ void test_accept_cb_ip_allowlist_rejects_once_a_rule_exists()
     pc_ip rule_net = v4(192, 168, 1, 0);
     TEST_ASSERT_TRUE(listener_ip_allow_add(&rule_net, 24));
 
-    struct tcp_pcb pcb = {0};
+    pc_pcb pcb = {0};
     int before_aborts = mock_abort_call_count();
     TEST_ASSERT_EQUAL_INT(PC_NET_ERR_ABRT, listener_accept_cb((void *)(uintptr_t)0, &pcb, PC_NET_OK));
     TEST_ASSERT_EQUAL_INT(before_aborts + 1, mock_abort_call_count());

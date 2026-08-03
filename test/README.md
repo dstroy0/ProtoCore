@@ -284,7 +284,7 @@ The native test matrix has **307 environments**, one per feature, generated from
 | `native_quic_varint` | `PC_ENABLE_HTTP3=1` | `test_quic_varint` | QUIC variable-length integer codec (network_drivers/presentation/http/http3/quic_varint, RFC 9000 sec 16) - the foundational HTTP/3 primitive: the Appendix A.1 worked examples (1/2/4/8 byte encodings)... |
 | `native_radio_power` | `PC_ENABLE_RADIO_POWER=1` | `test_radio_power` | WiFi radio power controls (network_drivers/physical/radio_power): modem-sleep mode names host-tested; the apply/readback are ESP32-only (esp_wifi). |
 | `native_radio_sniff` | `PC_ENABLE_RADIO_SNIFF=1` | `test_radio_sniff` | Receive-only radio channel sniffer -> pcap (services/radio/radio_sniff): the int->float32 RSSI encode, the pcap global header (DLT 802.15.4 TAP), and the per-frame TAP record (RSSI + channel TLVs + MA... |
-| `native_range` | `PC_ENFORCE_HOST_HEADER=0`, `PC_ENABLE_RANGE=1` | `test_range` | HTTP Range requests / 206 Partial Content (RFC 7233): full server built with PC_ENABLE_RANGE=1, exercising serve_file() against the mock FS (now with seek()) via the tcp_write capture mock. |
+| `native_range` | `PC_ENFORCE_HOST_HEADER=0`, `PC_ENABLE_RANGE=1`, `PC_ENABLE_FILE_SERVING=1` | `test_range` | HTTP Range requests / 206 Partial Content (RFC 7233): full server built with PC_ENABLE_RANGE=1, exercising serve_file() against the mock FS (now with seek()) via the tcp_write capture mock. |
 | `native_rawl2` | `PC_ENABLE_RAWL2=1` | `test_rawl2` | Raw L2 Ethernet frame codec (services/fieldbus/rawl2): Ethernet II + 802.1Q VLAN build/parse and the 802.3 FCS (CRC-32). |
 | `native_rcwl0516` | `PC_ENABLE_RCWL0516=1` | `test_rcwl0516` | RCWL-0516 Doppler presence sensor + the shared one-GPIO presence facade (services/peripherals/rcwl0516): the debounce that swallows comparator chatter, the hold that bridges the module's ~2s retrigger... |
 | `native_redis` | `PC_ENABLE_REDIS=1` | `test_redis_resp` | Redis RESP2/RESP3 codec (services/iot/redis_resp): the zero-heap command encoder + the cursor reply parser (RESP2 simple/error/integer/bulk/array/nil plus RESP3 null/boolean/double/big number/bulk err... |
@@ -597,218 +597,7 @@ We test session and socket race conditions by interleaved function calling:
 
 <!-- BEGIN GENERATED test-directory (run test/gen_test_readme.py) -->
 
-A thorough directory of all **747 test cases** across **24 suites**. Expand a suite to see its test cases, and a test case to see its objective and assertions.
-
-<details>
-<summary><b>test_accept_gate (19 tests)</b></summary>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_accept_throttle_window</b> &mdash; <i>A timestamp a full window later opens a fresh budget.</i></summary>
-
-    * **Objective**: A timestamp a full window later opens a fresh budget.
-    * **Assertions**:
-      * <code>Assert true (listener_accept_allowed(0))</code>
-      * <code>Assert true (listener_accept_allowed(10))</code>
-      * <code>Assert true (listener_accept_allowed(20))</code>
-      * <code>Assert false (listener_accept_allowed(30))</code>
-      * <code>Assert true (listener_accept_allowed(1000))</code>
-      * <code>Assert true (listener_accept_allowed(1100))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_accept_throttle_rollover</b> &mdash; <i>Accept throttle rollover</i></summary>
-
-    * **Objective**: Accept throttle rollover
-    * **Assertions**:
-      * <code>Assert true (listener_accept_allowed(base))</code>
-      * <code>Assert true (listener_accept_allowed(base + 100))</code>
-      * <code>Assert true (listener_accept_allowed(5))</code>
-      * <code>Assert false (listener_accept_allowed(10))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_per_ip_independent_budgets</b> &mdash; <i>Per ip independent budgets</i></summary>
-
-    * **Objective**: Per ip independent budgets
-    * **Assertions**:
-      * <code>Assert true (listener_accept_allowed_ip(&a, 0))</code>
-      * <code>Assert true (listener_accept_allowed_ip(&a, 1))</code>
-      * <code>Assert false (listener_accept_allowed_ip(&a, 2))</code>
-      * <code>Assert true (listener_accept_allowed_ip(&b, 2))</code>
-      * <code>Assert true (listener_accept_allowed_ip(&b, 3))</code>
-      * <code>Assert false (listener_accept_allowed_ip(&b, 4))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_per_ip_v6_distinct_buckets</b> &mdash; <i>Per ip v6 distinct buckets</i></summary>
-
-    * **Objective**: Per ip v6 distinct buckets
-    * **Assertions**:
-      * <code>Assert true (listener_accept_allowed_ip(&a, 0))</code>
-      * <code>Assert true (listener_accept_allowed_ip(&a, 1))</code>
-      * <code>Assert false (listener_accept_allowed_ip(&a, 2))</code>
-      * <code>Assert true (listener_accept_allowed_ip(&b, 2))</code>
-      * <code>Assert true (listener_accept_allowed_ip(&b, 3))</code>
-      * <code>Assert false (listener_accept_allowed_ip(&b, 4))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_per_ip_window_rollover</b> &mdash; <i>Per ip window rollover</i></summary>
-
-    * **Objective**: Per ip window rollover
-    * **Assertions**:
-      * <code>Assert true (listener_accept_allowed_ip(&a, 0))</code>
-      * <code>Assert true (listener_accept_allowed_ip(&a, 10))</code>
-      * <code>Assert false (listener_accept_allowed_ip(&a, 20))</code>
-      * <code>Assert true (listener_accept_allowed_ip(&a, 1000))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_per_ip_unspecified_defers</b> &mdash; <i>Per ip unspecified defers</i></summary>
-
-    * **Objective**: Per ip unspecified defers
-    * **Assertions**:
-      * <code>Assert true (listener_accept_allowed_ip(&none, i))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_per_ip_eviction_bounded</b> &mdash; <i>Fill all 4 buckets at staggered start times, none yet expired at now=500.</i></summary>
-
-    * **Objective**: Fill all 4 buckets at staggered start times, none yet expired at now=500.
-    * **Assertions**:
-      * <code>Assert true (listener_accept_allowed_ip(&ip, i * 100))</code>
-      * <code>Assert true (listener_accept_allowed_ip(&fresh, 500))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_ip_allowlist_empty_allows_all</b> &mdash; <i>Ip allowlist empty allows all</i></summary>
-
-    * **Objective**: Ip allowlist empty allows all
-    * **Assertions**:
-      * <code>Assert true (listener_ip_allowed(&any))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_ip_allowlist_cidr</b> &mdash; <i>Ip allowlist cidr</i></summary>
-
-    * **Objective**: Ip allowlist cidr
-    * **Assertions**:
-      * <code>Assert true (listener_ip_allow_add(&net, 24))</code>
-      * <code>Assert true (listener_ip_allowed(&in))</code>
-      * <code>Assert false (listener_ip_allowed(&out))</code>
-      * <code>Assert true (listener_ip_allow_add(&net8, 8))</code>
-      * <code>Assert true (listener_ip_allowed(&in8))</code>
-      * <code>Assert false (listener_ip_allowed(&out8))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_ip_allowlist_cidr_string</b> &mdash; <i>Malformed input fails closed.</i></summary>
-
-    * **Objective**: Malformed input fails closed.
-    * **Assertions**:
-      * <code>Assert true (listener_ip_allow_add_cidr("192.168.1.0/24"))</code>
-      * <code>Assert true (listener_ip_allow_add_cidr("2001:db8::/32"))</code>
-      * <code>Assert true (listener_ip_allow_add_cidr("10.0.0.5"))</code>
-      * <code>Assert true (listener_ip_allowed(&v4in))</code>
-      * <code>Assert true (listener_ip_allowed(&v4host))</code>
-      * <code>Assert false (listener_ip_allowed(&v4no))</code>
-      * <code>Assert true (listener_ip_allowed(&v6in))</code>
-      * <code>Assert false (listener_ip_allowed(&v6no)); // v6 peer outside every v6 rule (and v4 rules never match)</code>
-      * <code>Assert false (listener_ip_allow_add_cidr("not-an-ip"))</code>
-      * <code>Assert false (listener_ip_allow_add_cidr("192.168.1.0/33"))</code>
-      * <code>Assert false (listener_ip_allow_add_cidr("2001:db8::/129"))</code>
-      * <code>Assert false (listener_ip_allow_add_cidr("192.168.1.0/"))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_ip_allowlist_family_isolation</b> &mdash; <i>Ip allowlist family isolation</i></summary>
-
-    * **Objective**: Ip allowlist family isolation
-    * **Assertions**:
-      * <code>Assert true (listener_ip_allow_add(&v4net, 24))</code>
-      * <code>Assert false (listener_ip_allowed(&v6peer))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_ip_allowlist_host_and_zero_prefix</b> &mdash; <i>Ip allowlist host and zero prefix</i></summary>
-
-    * **Objective**: Ip allowlist host and zero prefix
-    * **Assertions**:
-      * <code>Assert true (listener_ip_allow_add(&host, 32))</code>
-      * <code>Assert true (listener_ip_allowed(&host))</code>
-      * <code>Assert false (listener_ip_allowed(&other))</code>
-      * <code>Assert true (listener_ip_allow_add(&z, 0))</code>
-      * <code>Assert true (listener_ip_allowed(&anyone))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_ip_allowlist_rejects_bad_and_full</b> &mdash; <i>Ip allowlist rejects bad and full</i></summary>
-
-    * **Objective**: Ip allowlist rejects bad and full
-    * **Assertions**:
-      * <code>Assert false (listener_ip_allow_add(&bad, 33))</code>
-      * <code>Assert true (listener_ip_allow_add(&r, 32))</code>
-      * <code>Assert false (listener_ip_allow_add(&overflow, 32))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_proto_register_builtins_installs_http</b> &mdash; <i>Proto register builtins installs http</i></summary>
-
-    * **Objective**: Proto register builtins installs http
-    * **Assertions**:
-      * <code>Assert not null (proto_get(PROTO_HTTP))</code>
-      * <code>Assert null (proto_get(PROTO_TELNET))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_clock_default_is_platform_millis</b> &mdash; <i>Clock default is platform millis</i></summary>
-
-    * **Objective**: Clock default is platform millis
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_UINT32(4242, pc_millis());</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_clock_custom_and_revert</b> &mdash; <i>Clock custom and revert</i></summary>
-
-    * **Objective**: Clock custom and revert
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_UINT32(1000, pc_millis());</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(2000, pc_millis());</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(777, pc_millis());</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_accept_cb_global_throttle_rejects_over_budget</b> &mdash; <i>Accept cb global throttle rejects over budget</i></summary>
-
-    * **Objective**: Accept cb global throttle rejects over budget
-    * **Assertions**:
-      * <code>Assert equal int (PC_NET_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb, PC_NET_OK))</code>
-      * <code>Assert equal int (PC_NET_ERR_ABRT, listener_accept_cb((void *)(uintptr_t)0, &over_budget, PC_NET_OK))</code>
-      * <code>Assert equal int (before_aborts + 1, mock_abort_call_count())</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_accept_cb_ip_allowlist_allows_when_empty</b> &mdash; <i>Accept cb ip allowlist allows when empty</i></summary>
-
-    * **Objective**: Accept cb ip allowlist allows when empty
-    * **Assertions**:
-      * <code>Assert equal int (PC_NET_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb, PC_NET_OK))</code>
-      * <code>Assert equal (CONN_ACTIVE, (ConnState)conn_pool[0].state)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_accept_cb_ip_allowlist_rejects_once_a_rule_exists</b> &mdash; <i>Accept cb ip allowlist rejects once a rule exists</i></summary>
-
-    * **Objective**: Accept cb ip allowlist rejects once a rule exists
-    * **Assertions**:
-      * <code>Assert true (listener_ip_allow_add(&rule_net, 24))</code>
-      * <code>Assert equal int (PC_NET_ERR_ABRT, listener_accept_cb((void *)(uintptr_t)0, &pcb, PC_NET_OK))</code>
-      * <code>Assert equal int (before_aborts + 1, mock_abort_call_count())</code>
-      * <code>Assert equal (CONN_FREE, (ConnState)conn_pool[0].state)</code>
-  </details>
-
-</details>
+A thorough directory of all **625 test cases** across **18 suites**. Expand a suite to see its test cases, and a test case to see its objective and assertions.
 
 <details>
 <summary><b>test_application (100 tests)</b></summary>
@@ -1217,16 +1006,16 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Unknown / missing extension and dotfiles fall back.
     * **Assertions**:
-      * <code>Assert equal string ("text/html", PC::mime_type("/index.html"))</code>
-      * <code>Assert equal string ("text/css", PC::mime_type("/css/site.css"))</code>
-      * <code>Assert equal string ("application/javascript", PC::mime_type("/app.JS"))</code>
-      * <code>Assert equal string ("application/json", PC::mime_type("/api/data.json"))</code>
-      * <code>Assert equal string ("image/svg+xml", PC::mime_type("logo.svg"))</code>
-      * <code>Assert equal string ("image/png", PC::mime_type("a.b.c.png"))</code>
-      * <code>Assert equal string ("application/octet-stream", PC::mime_type("/file.unknownext"))</code>
-      * <code>Assert equal string ("application/octet-stream", PC::mime_type("/noext"))</code>
-      * <code>Assert equal string ("application/octet-stream", PC::mime_type("/dir.with.dot/file"))</code>
-      * <code>Assert equal string ("application/octet-stream", PC::mime_type(nullptr))</code>
+      * <code>Assert equal string ("text/html", mime_type("/index.html"))</code>
+      * <code>Assert equal string ("text/css", mime_type("/css/site.css"))</code>
+      * <code>Assert equal string ("application/javascript", mime_type("/app.JS"))</code>
+      * <code>Assert equal string ("application/json", mime_type("/api/data.json"))</code>
+      * <code>Assert equal string ("image/svg+xml", mime_type("logo.svg"))</code>
+      * <code>Assert equal string ("image/png", mime_type("a.b.c.png"))</code>
+      * <code>Assert equal string ("application/octet-stream", mime_type("/file.unknownext"))</code>
+      * <code>Assert equal string ("application/octet-stream", mime_type("/noext"))</code>
+      * <code>Assert equal string ("application/octet-stream", mime_type("/dir.with.dot/file"))</code>
+      * <code>Assert equal string ("application/octet-stream", mime_type(NULL))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -1713,11 +1502,11 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Mime type extension edges
     * **Assertions**:
-      * <code>Assert equal string ("application/octet-stream", PC::mime_type("/file."))</code>
-      * <code>Assert equal string ("application/octet-stream", PC::mime_type("/a.7z"))</code>
-      * <code>Assert equal string ("application/octet-stream", PC::mime_type("/a.jsx"))</code>
-      * <code>Assert equal string ("application/octet-stream", PC::mime_type("/a.h"))</code>
-      * <code>Assert equal string ("font/woff2", PC::mime_type("/a.WOFF2"))</code>
+      * <code>Assert equal string ("application/octet-stream", mime_type("/file."))</code>
+      * <code>Assert equal string ("application/octet-stream", mime_type("/a.7z"))</code>
+      * <code>Assert equal string ("application/octet-stream", mime_type("/a.jsx"))</code>
+      * <code>Assert equal string ("application/octet-stream", mime_type("/a.h"))</code>
+      * <code>Assert equal string ("font/woff2", mime_type("/a.WOFF2"))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -1767,9 +1556,9 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
     * **Assertions**:
       * <code>TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len());</code>
       * <code>Assert equal (PARSE_METHOD, http_pool[0].parse_state)</code>
-      * <code>Assert false (ws_do_upgrade(0, &http_pool[0], nullptr))</code>
+      * <code>Assert false (ws_do_upgrade(0, &http_pool[0], NULL))</code>
       * <code>TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len());</code>
-      * <code>Assert false (pc_sse_do_upgrade(0, &http_pool[0], nullptr))</code>
+      * <code>Assert false (pc_sse_do_upgrade(0, &http_pool[0], NULL))</code>
       * <code>TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len());</code>
   </details>
 
@@ -2008,8 +1797,8 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Add resource limits
     * **Assertions**:
-      * <code>Assert false (pc_coap_server_add_resource(nullptr, COAP_ALLOW_GET, h_resource))</code>
-      * <code>Assert false (pc_coap_server_add_resource("/x", COAP_ALLOW_GET, nullptr))</code>
+      * <code>Assert false (pc_coap_server_add_resource(NULL, COAP_ALLOW_GET, h_resource))</code>
+      * <code>Assert false (pc_coap_server_add_resource("/x", COAP_ALLOW_GET, NULL))</code>
       * <code>Assert less than (64, added)</code>
       * <code>Assert false (pc_coap_server_add_resource("/nope", COAP_ALLOW_GET, h_resource))</code>
   </details>
@@ -2553,11 +2342,11 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Open validates
     * **Assertions**:
-      * <code>Assert false (pc_dma_open(nullptr))</code>
+      * <code>Assert false (pc_dma_open(NULL))</code>
       * <code>Assert false (pc_dma_open(&c))</code>
       * <code>Assert false (pc_dma_open(&c))</code>
-      * <code>Assert true (open_ch(0, false))</code>
-      * <code>Assert false (open_ch(0, false))</code>
+      * <code>Assert true (open_ch(0, PROTO_FALSE))</code>
+      * <code>Assert false (open_ch(0, PROTO_FALSE))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -2565,7 +2354,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Ingress emits rx event
     * **Assertions**:
-      * <code>Assert true (open_ch(0, false))</code>
+      * <code>Assert true (open_ch(0, PROTO_FALSE))</code>
       * <code>Assert true (pc_dma_sim_feed(0, msg, sizeof(msg)))</code>
       * <code>TEST_ASSERT_EQUAL_size_t(0, g_ev.size()); // nothing until we pump the engine</code>
       * <code>TEST_ASSERT_EQUAL_size_t(1, count_dir(pc_dma_dir::PC_DMA_RX));</code>
@@ -2579,7 +2368,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: one full-buffer completion + one partial idle-line flush
     * **Assertions**:
-      * <code>Assert true (open_ch(0, false))</code>
+      * <code>Assert true (open_ch(0, PROTO_FALSE))</code>
       * <code>Assert true (pc_dma_sim_feed(0, msg, sizeof(msg)))</code>
       * <code>TEST_ASSERT_EQUAL_size_t(2, count_dir(pc_dma_dir::PC_DMA_RX));</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(PC_DMA_BUF_SIZE, g_ev[0].len);</code>
@@ -2593,7 +2382,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: consecutive completions use different buffers (the engine flipped, not reused)
     * **Assertions**:
-      * <code>Assert true (open_ch(0, false))</code>
+      * <code>Assert true (open_ch(0, PROTO_FALSE))</code>
       * <code>Assert true (pc_dma_sim_feed(0, msg, sizeof(msg)))</code>
       * <code>TEST_ASSERT_EQUAL_size_t(2, count_dir(pc_dma_dir::PC_DMA_RX));</code>
       * <code>Assert not equal (g_ev[0].ptr, g_ev[1].ptr)</code>
@@ -2607,7 +2396,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Egress captures tx
     * **Assertions**:
-      * <code>Assert true (open_ch(0, false))</code>
+      * <code>Assert true (open_ch(0, PROTO_FALSE))</code>
       * <code>Assert true (pc_dma_tx_submit(0, out, sizeof(out)))</code>
       * <code>TEST_ASSERT_EQUAL_size_t(1, count_dir(pc_dma_dir::PC_DMA_TX));</code>
       * <code>TEST_ASSERT_EQUAL_size_t(0, count_dir(pc_dma_dir::PC_DMA_RX)); // no loopback -&gt; no RX</code>
@@ -2622,7 +2411,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Tx one in flight fail closed
     * **Assertions**:
-      * <code>Assert true (open_ch(0, false))</code>
+      * <code>Assert true (open_ch(0, PROTO_FALSE))</code>
       * <code>Assert true (pc_dma_tx_submit(0, a, sizeof(a)))</code>
       * <code>Assert false (pc_dma_tx_submit(0, b, sizeof(b)))</code>
       * <code>Assert true (pc_dma_tx_submit(0, b, sizeof(b)))</code>
@@ -2634,10 +2423,10 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Tx rejects bad len
     * **Assertions**:
-      * <code>Assert true (open_ch(0, false))</code>
+      * <code>Assert true (open_ch(0, PROTO_FALSE))</code>
       * <code>Assert false (pc_dma_tx_submit(0, x, 0))</code>
       * <code>Assert false (pc_dma_tx_submit(0, big, PC_DMA_BUF_SIZE + 1))</code>
-      * <code>Assert false (pc_dma_tx_submit(0, nullptr, 4))</code>
+      * <code>Assert false (pc_dma_tx_submit(0, NULL, 4))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -2645,7 +2434,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Loopback round trip
     * **Assertions**:
-      * <code>Assert true (open_ch(0, true))</code>
+      * <code>Assert true (open_ch(0, PROTO_TRUE))</code>
       * <code>Assert true (pc_dma_tx_submit(0, ping, sizeof(ping)))</code>
       * <code>TEST_ASSERT_EQUAL_size_t(1, count_dir(pc_dma_dir::PC_DMA_TX));</code>
       * <code>TEST_ASSERT_EQUAL_size_t(1, count_dir(pc_dma_dir::PC_DMA_RX));</code>
@@ -2658,7 +2447,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Feed fail closed when full
     * **Assertions**:
-      * <code>Assert true (open_ch(0, false))</code>
+      * <code>Assert true (open_ch(0, PROTO_FALSE))</code>
       * <code>Assert false (pc_dma_sim_feed(0, big, sizeof(big)))</code>
       * <code>Assert true (pc_dma_sim_feed(0, ok, sizeof(ok)))</code>
   </details>
@@ -2671,7 +2460,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
       * <code>Assert false (pc_dma_sim_feed(0, x, sizeof(x)))</code>
       * <code>Assert false (pc_dma_tx_submit(0, x, sizeof(x)))</code>
       * <code>TEST_ASSERT_EQUAL_size_t(0, g_ev.size());</code>
-      * <code>Assert true (open_ch(0, false))</code>
+      * <code>Assert true (open_ch(0, PROTO_FALSE))</code>
       * <code>Assert false (pc_dma_sim_feed(0, x, sizeof(x)))</code>
   </details>
 
@@ -2680,8 +2469,8 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Two channels independent
     * **Assertions**:
-      * <code>Assert true (open_ch(0, false))</code>
-      * <code>Assert true (open_ch(1, false))</code>
+      * <code>Assert true (open_ch(0, PROTO_FALSE))</code>
+      * <code>Assert true (open_ch(1, PROTO_FALSE))</code>
       * <code>Assert true (pc_dma_sim_feed(0, a, sizeof(a)))</code>
       * <code>Assert true (pc_dma_sim_feed(1, b, sizeof(b)))</code>
       * <code>Assert equal memory (a, g_ev[i].data.data(), sizeof(a))</code>
@@ -2699,113 +2488,9 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
       * <code>TEST_ASSERT_EQUAL_UINT16(0, pc_dma_sim_capture(0, b, 4));   // channel not open</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(0, pc_dma_sim_capture(255, b, 4)); // bad channel</code>
       * <code>Assert false (pc_dma_sim_feed(PC_DMA_CHANNELS, b, sizeof(b)))</code>
-      * <code>Assert false (pc_dma_sim_feed(0, nullptr, sizeof(b)))</code>
+      * <code>Assert false (pc_dma_sim_feed(0, NULL, sizeof(b)))</code>
       * <code>Assert false (pc_dma_tx_submit(PC_DMA_CHANNELS, b, sizeof(b)))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT16(0, pc_dma_sim_capture(0, nullptr, 4));     // null out, valid channel</code>
-  </details>
-
-</details>
-
-<details>
-<summary><b>test_docstore (8 tests)</b></summary>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_put_get_del</b> &mdash; <i>Replace u1's document.</i></summary>
-
-    * **Objective**: Replace u1's document.
-    * **Assertions**:
-      * <code>Assert true (put_doc("u1", "{\\"name\\":\\"alice\\",\\"age\\":30,\\"admin\\":true}"))</code>
-      * <code>Assert true (put_doc("u2", "{\\"name\\":\\"bob\\",\\"age\\":25,\\"admin\\":false}"))</code>
-      * <code>Assert true (get_eq("u1", "{\\"name\\":\\"alice\\",\\"age\\":30,\\"admin\\":true}"))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(2, pc_docstore_count(&g_ds));</code>
-      * <code>Assert true (pc_docstore_del(&g_ds, "u2", 2))</code>
-      * <code>Assert false (pc_docstore_contains(&g_ds, "u2", 2))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(1, pc_docstore_count(&g_ds));</code>
-      * <code>Assert true (put_doc("u1", "{\\"name\\":\\"alice2\\",\\"age\\":31}"))</code>
-      * <code>Assert true (get_eq("u1", "{\\"name\\":\\"alice2\\",\\"age\\":31}"))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_find_by_field</b> &mdash; <i>String field.</i></summary>
-
-    * **Objective**: String field.
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_UINT32(2, m);</code>
-      * <code>Assert equal int (2, c.n)</code>
-      * <code>Assert true (has_id(&c, "u1"))</code>
-      * <code>Assert true (has_id(&c, "u2"))</code>
-      * <code>Assert false (has_id(&c, "u3"))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(2, m);</code>
-      * <code>Assert true (has_id(&c2, "u1"))</code>
-      * <code>Assert true (has_id(&c2, "u2"))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(0, m);</code>
-      * <code>Assert equal int (0, c3.n)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_find_bool</b> &mdash; <i>Find bool</i></summary>
-
-    * **Objective**: Find bool
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_UINT32(2, m);</code>
-      * <code>Assert true (has_id(&c, "a"))</code>
-      * <code>Assert true (has_id(&c, "c"))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_persist_and_query_across_reboot</b> &mdash; <i>The field index (JSON scan) works after a remount too.</i></summary>
-
-    * **Objective**: The field index (JSON scan) works after a remount too.
-    * **Assertions**:
-      * <code>Assert true (pc_docstore_sync(&g_ds))</code>
-      * <code>Assert true (reboot())</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(3, pc_docstore_count(&g_ds));</code>
-      * <code>Assert true (get_eq("u2", "{\\"name\\":\\"bob\\",\\"role\\":\\"user\\"}"))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(2, m);</code>
-      * <code>Assert true (has_id(&c, "u1"))</code>
-      * <code>Assert true (has_id(&c, "u3"))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_find_early_stop</b> &mdash; <i>A callback that stops after the first match sees exactly one.</i></summary>
-
-    * **Objective**: A callback that stops after the first match sees exactly one.
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_UINT32(1, m);</code>
-      * <code>Assert equal int (1, once.seen)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_find_field_absent</b> &mdash; <i>Find field absent</i></summary>
-
-    * **Objective**: Find field absent
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_UINT32(1, pc_docstore_find_str(&g_ds, "name", "x", collect, &cs)); // "b" has no name</code>
-      * <code>Assert true (has_id(&cs, "a"))</code>
-      * <code>Assert false (has_id(&cs, "b"))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(1, pc_docstore_find_int(&g_ds, "age", 5, collect, &ci)); // "b" has no age</code>
-      * <code>Assert true (has_id(&ci, "a"))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(1, pc_docstore_find_bool(&g_ds, "on", true, collect, &cb)); // "b" has no on</code>
-      * <code>Assert true (has_id(&cb, "a"))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_find_count_only_null_cb</b> &mdash; <i>Find count only null cb</i></summary>
-
-    * **Objective**: Find count only null cb
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_UINT32(2, pc_docstore_find_str(&g_ds, "grp", "x", NULL, NULL));</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(1, pc_docstore_find_str(&g_ds, "grp", "y", NULL, NULL));</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(0, pc_docstore_find_str(&g_ds, "grp", "z", NULL, NULL));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_find_skips_unreadable_document</b> &mdash; <i>Truncate the backing device out from under the store: any value pread now reads short and fails,</i></summary>
-
-    * **Objective**: Truncate the backing device out from under the store: any value pread now reads short and fails,
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_UINT32(0, m);</code>
-      * <code>Assert equal int (0, c.n)</code>
+      * <code>TEST_ASSERT_EQUAL_UINT16(0, pc_dma_sim_capture(0, NULL, 4));        // null out, valid channel</code>
   </details>
 
 </details>
@@ -2818,7 +2503,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Uplink envelopes and publishes
     * **Assertions**:
-      * <code>Assert true (add_port(0, pc_gateway_kind::PC_GW_LORA, 0, false))</code>
+      * <code>Assert true (add_port(0, pc_gateway_kind::PC_GW_LORA, 0, PROTO_FALSE))</code>
       * <code>Assert true (pc_gateway_uplink(0, 0x42, hi, 2, -50))</code>
       * <code>TEST_ASSERT_EQUAL_size_t(1, g_up.size());</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(0x42, g_up[0].src_addr);</code>
@@ -2916,8 +2601,8 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
       * <code>TEST_ASSERT_EQUAL_UINT16(7, n);</code>
       * <code>Assert equal string ("lora/2/66", buf)</code>
       * <code>Assert equal string ("gw/2/66", buf)</code>
-      * <code>TEST_ASSERT_EQUAL_UINT16(0, pc_gateway_topic(&m, tiny, sizeof(tiny)));   // too small -&gt; 0</code>
-      * <code>TEST_ASSERT_EQUAL_UINT16(0, pc_gateway_topic(&m, nullptr, sizeof(buf))); // null buf -&gt; 0</code>
+      * <code>TEST_ASSERT_EQUAL_UINT16(0, pc_gateway_topic(&m, tiny, sizeof(tiny))); // too small -&gt; 0</code>
+      * <code>TEST_ASSERT_EQUAL_UINT16(0, pc_gateway_topic(&m, NULL, sizeof(buf)));  // null buf -&gt; 0</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -2925,13 +2610,13 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Add port validation and table full
     * **Assertions**:
-      * <code>Assert false (pc_gateway_add_port(nullptr))</code>
-      * <code>Assert true (add_port(0, pc_gateway_kind::PC_GW_LORA, 0, false))</code>
-      * <code>Assert false (add_port(0, pc_gateway_kind::PC_GW_LORA, 0, false))</code>
-      * <code>Assert true (add_port(1, pc_gateway_kind::PC_GW_NRF24, 0, false))</code>
-      * <code>Assert true (add_port(2, pc_gateway_kind::PC_GW_ZIGBEE, 0, false))</code>
-      * <code>Assert true (add_port(3, pc_gateway_kind::PC_GW_BLE, 0, false))</code>
-      * <code>Assert false (add_port(4, pc_gateway_kind::PC_GW_LORA, 0, false)); // table full (PC_GW_MAX_PORTS = 4)</code>
+      * <code>Assert false (pc_gateway_add_port(NULL))</code>
+      * <code>Assert true (add_port(0, pc_gateway_kind::PC_GW_LORA, 0, PROTO_FALSE))</code>
+      * <code>Assert false (add_port(0, pc_gateway_kind::PC_GW_LORA, 0, PROTO_FALSE))</code>
+      * <code>Assert true (add_port(1, pc_gateway_kind::PC_GW_NRF24, 0, PROTO_FALSE))</code>
+      * <code>Assert true (add_port(2, pc_gateway_kind::PC_GW_ZIGBEE, 0, PROTO_FALSE))</code>
+      * <code>Assert true (add_port(3, pc_gateway_kind::PC_GW_BLE, 0, PROTO_FALSE))</code>
+      * <code>Assert false (add_port(4, pc_gateway_kind::PC_GW_LORA, 0, PROTO_FALSE)); // table full (PC_GW_MAX_PORTS = 4)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -2950,8 +2635,8 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
     * **Objective**: Topic zero and overflow steps
     * **Assertions**:
       * <code>Assert true (pc_gateway_topic(&m, buf, sizeof(buf)) &gt; 0)</code>
-      * <code>TEST_ASSERT_EQUAL_UINT16(0, pc_gateway_topic(nullptr, buf, sizeof(buf))); // null msg</code>
-      * <code>TEST_ASSERT_EQUAL_UINT16(0, pc_gateway_topic(&m, buf, 0));                // zero buflen</code>
+      * <code>TEST_ASSERT_EQUAL_UINT16(0, pc_gateway_topic(NULL, buf, sizeof(buf))); // null msg</code>
+      * <code>TEST_ASSERT_EQUAL_UINT16(0, pc_gateway_topic(&m, buf, 0));             // zero buflen</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(0, pc_gateway_topic(&m, buf, cap)); // prefix, both '/'s, both digits</code>
   </details>
 
@@ -3052,8 +2737,8 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: H2 stream id must increase
     * **Assertions**:
-      * <code>Assert true (pc_h2_conn_recv(&c, hf, pc_h2_build_headers(hf, sizeof hf, 3, block, blen, true)))</code>
-      * <code>Assert false (pc_h2_conn_recv(&c, hf, pc_h2_build_headers(hf, sizeof hf, 1, block, blen, true)))</code>
+      * <code>Assert true (pc_h2_conn_recv(&c, hf, pc_h2_build_headers(hf, sizeof hf, 3, block, blen, PROTO_TRUE)))</code>
+      * <code>Assert false (pc_h2_conn_recv(&c, hf, pc_h2_build_headers(hf, sizeof hf, 1, block, blen, PROTO_TRUE)))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -3061,7 +2746,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: H2 headers bad stream id
     * **Assertions**:
-      * <code>Assert false (pc_h2_conn_recv(&c, hf, pc_h2_build_headers(hf, sizeof hf, 2, block, blen, true)))</code>
+      * <code>Assert false (pc_h2_conn_recv(&c, hf, pc_h2_build_headers(hf, sizeof hf, 2, block, blen, PROTO_TRUE)))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -3144,7 +2829,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: H2 settings ack and bad
     * **Assertions**:
-      * <code>Assert true (feed_frame(c, H2_SETTINGS, H2_FLAG_ACK, 0, nullptr, 0))</code>
+      * <code>Assert true (feed_frame(c, H2_SETTINGS, H2_FLAG_ACK, 0, NULL, 0))</code>
       * <code>Assert false (feed_frame(c, H2_SETTINGS, 0, 0, bad, 3))</code>
   </details>
 
@@ -3171,7 +2856,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
     * **Objective**: H2 respond paths and goaway
     * **Assertions**:
       * <code>Assert false (pc_h2_conn_respond(&c, 99, 200, "text/plain", "x", 1))</code>
-      * <code>Assert true (pc_h2_conn_respond(&c, 1, 200, nullptr, "0123456789", 10))</code>
+      * <code>Assert true (pc_h2_conn_respond(&c, 1, 200, NULL, "0123456789", 10))</code>
       * <code>Assert true (count_frames(cap.out, H2_DATA) &gt;= 3)</code>
       * <code>Assert equal int (1, count_frames(cap.out, H2_GOAWAY))</code>
   </details>
@@ -3181,11 +2866,11 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: H2 more guards
     * **Assertions**:
-      * <code>Assert false (fresh_feed(H2_HEADERS, H2_FLAG_PADDED | H2_FLAG_END_HEADERS, 1, nullptr, 0))</code>
+      * <code>Assert false (fresh_feed(H2_HEADERS, H2_FLAG_PADDED | H2_FLAG_END_HEADERS, 1, NULL, 0))</code>
       * <code>Assert false (fresh_feed(H2_HEADERS, H2_FLAG_PRIORITY | H2_FLAG_END_HEADERS, 1, p3, 3))</code>
       * <code>Assert false (fresh_feed(H2_HEADERS, H2_FLAG_END_HEADERS, 1, bad_hpack, 4))</code>
       * <code>Assert false (fresh_feed(H2_HEADERS, 0, 1, huge.data(), huge.size()))</code>
-      * <code>Assert false (fresh_feed(H2_DATA, H2_FLAG_PADDED, 1, nullptr, 0))</code>
+      * <code>Assert false (fresh_feed(H2_DATA, H2_FLAG_PADDED, 1, NULL, 0))</code>
       * <code>Assert false (fresh_feed(H2_DATA, H2_FLAG_PADDED, 1, dpad, 2))</code>
       * <code>Assert true (fresh_feed(0x2A, 0, 1, x, 1))</code>
   </details>
@@ -3226,7 +2911,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: H2 headers stream zero
     * **Assertions**:
-      * <code>Assert false (pc_h2_conn_recv(&c, hf, pc_h2_build_headers(hf, sizeof hf, 0, block, blen, true)))</code>
+      * <code>Assert false (pc_h2_conn_recv(&c, hf, pc_h2_build_headers(hf, sizeof hf, 0, block, blen, PROTO_TRUE)))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -3253,7 +2938,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: DATA with END_STREAM on an id with no stream slot: delivered, no state to update.
     * **Assertions**:
-      * <code>Assert true (feed_frame(c, H2_DATA, 0, 1, nullptr, 0))</code>
+      * <code>Assert true (feed_frame(c, H2_DATA, 0, 1, NULL, 0))</code>
       * <code>Assert equal int (0, count_frames(cap.out, H2_WINDOW_UPDATE))</code>
       * <code>Assert equal string ("", cap.body.c_str())</code>
       * <code>Assert true (feed_frame(c, H2_DATA, H2_FLAG_END_STREAM, 5, d, 2))</code>
@@ -3267,7 +2952,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
     * **Objective**: H2 continuation after stream freed
     * **Assertions**:
       * <code>Assert true (feed_frame(c, H2_HEADERS, 0, 1, block, half))</code>
-      * <code>Assert true (pc_h2_conn_respond(&c, 1, 200, nullptr, "x", 1))</code>
+      * <code>Assert true (pc_h2_conn_respond(&c, 1, 200, NULL, "x", 1))</code>
       * <code>Assert true (feed_frame(c, H2_CONTINUATION, H2_FLAG_END_HEADERS, 1, block + half, blen - half))</code>
       * <code>Assert equal int (4, (int)cap.req_headers.size())</code>
   </details>
@@ -3277,7 +2962,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: H2 respond default chunk size
     * **Assertions**:
-      * <code>Assert true (pc_h2_conn_respond(&c, 1, 200, nullptr, body.data(), body.size()))</code>
+      * <code>Assert true (pc_h2_conn_respond(&c, 1, 200, NULL, body.data(), body.size()))</code>
       * <code>Assert equal int (1, count_frames(cap.out, H2_DATA))</code>
   </details>
 
@@ -3528,13 +3213,13 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: a null buffer still clears the out struct before it fails
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_hdr_build(nullptr, sizeof(buf), &h));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_hdr_build(buf, sizeof(buf), nullptr));</code>
-      * <code>Assert false (pc_ike_hdr_parse(GV_HDR, sizeof(GV_HDR), nullptr))</code>
-      * <code>Assert false (pc_ike_hdr_parse(nullptr, 64, &r))</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_hdr_build(NULL, sizeof(buf), &h));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_hdr_build(buf, sizeof(buf), NULL));</code>
+      * <code>Assert false (pc_ike_hdr_parse(GV_HDR, sizeof(GV_HDR), NULL))</code>
+      * <code>Assert false (pc_ike_hdr_parse(NULL, 64, &r))</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(0, r.length);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(0, r.init_spi[0]);</code>
-      * <code>Assert false (pc_ike_set_length(nullptr, 64, 92))</code>
+      * <code>Assert false (pc_ike_set_length(NULL, 64, 92))</code>
       * <code>Assert false (pc_ike_set_length(buf, PC_IKE_HDR_LEN - 1, 92))</code>
   </details>
 
@@ -3543,8 +3228,8 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: a null iterator: the out payload is cleared first
     * **Assertions**:
-      * <code>Assert false (pc_ike_payload_next(&it, nullptr))</code>
-      * <code>Assert false (pc_ike_payload_next(nullptr, &pl))</code>
+      * <code>Assert false (pc_ike_payload_next(&it, NULL))</code>
+      * <code>Assert false (pc_ike_payload_next(NULL, &pl))</code>
       * <code>Assert null (pl.body)</code>
       * <code>TEST_ASSERT_EQUAL_size_t(0, pl.body_len);</code>
       * <code>Assert false (pl.critical)</code>
@@ -3567,9 +3252,9 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
       * <code>TEST_ASSERT_EQUAL_UINT8(PC_IKE_CRITICAL, buf[1]);</code>
       * <code>TEST_ASSERT_EQUAL_size_t(4, n);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(0x04, buf[3]);</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_payload_build(nullptr, sizeof(buf), IKE_PL_NONE, false, body, sizeof(body)));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_payload_build(buf, sizeof(buf), IKE_PL_NONE, false, nullptr, 4));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_payload_build(buf, 7, IKE_PL_NONE, false, body, sizeof(body)));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_payload_build(NULL, sizeof(buf), IKE_PL_NONE, PROTO_FALSE, body, sizeof(body)));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_payload_build(buf, sizeof(buf), IKE_PL_NONE, PROTO_FALSE, NULL, 4));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_payload_build(buf, 7, IKE_PL_NONE, PROTO_FALSE, body, sizeof(body)));</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -3589,28 +3274,28 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: null destination
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(0,</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_nonce_build(nullptr, sizeof(buf), IKE_PL_NONE, data, sizeof(data)));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_id_build(nullptr, sizeof(buf), IKE_PL_NONE, IKE_ID_FQDN, data, sizeof(data)));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_auth_build(nullptr, sizeof(buf), IKE_PL_NONE, IKE_AUTH_PSK, data, sizeof(data)));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_cert_build(nullptr, sizeof(buf), IKE_PL_NONE, 4, data, sizeof(data)));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_notify_build(nullptr, sizeof(buf), IKE_PL_NONE, IKE_PROTO_IKE, nullptr, 0, 16388,</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_delete_build(nullptr, sizeof(buf), IKE_PL_NONE, IKE_PROTO_IKE, 0, nullptr, 0));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_ke_build(buf, sizeof(buf), IKE_PL_NONE, IKE_DH_MODP2048, nullptr, 4));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_nonce_build(buf, sizeof(buf), IKE_PL_NONE, nullptr, 4));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_id_build(buf, sizeof(buf), IKE_PL_NONE, IKE_ID_FQDN, nullptr, 4));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_auth_build(buf, sizeof(buf), IKE_PL_NONE, IKE_AUTH_PSK, nullptr, 4));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_cert_build(buf, sizeof(buf), IKE_PL_NONE, 4, nullptr, 4));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_ke_build(NULL, sizeof(buf), IKE_PL_NONE, IKE_DH_MODP2048, data, sizeof(data)));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_nonce_build(NULL, sizeof(buf), IKE_PL_NONE, data, sizeof(data)));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_id_build(NULL, sizeof(buf), IKE_PL_NONE, IKE_ID_FQDN, data, sizeof(data)));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_auth_build(NULL, sizeof(buf), IKE_PL_NONE, IKE_AUTH_PSK, data, sizeof(data)));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_cert_build(NULL, sizeof(buf), IKE_PL_NONE, 4, data, sizeof(data)));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_delete_build(NULL, sizeof(buf), IKE_PL_NONE, IKE_PROTO_IKE, 0, NULL, 0));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_ke_build(buf, sizeof(buf), IKE_PL_NONE, IKE_DH_MODP2048, NULL, 4));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_nonce_build(buf, sizeof(buf), IKE_PL_NONE, NULL, 4));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_id_build(buf, sizeof(buf), IKE_PL_NONE, IKE_ID_FQDN, NULL, 4));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_auth_build(buf, sizeof(buf), IKE_PL_NONE, IKE_AUTH_PSK, NULL, 4));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_cert_build(buf, sizeof(buf), IKE_PL_NONE, 4, NULL, 4));</code>
       * <code>TEST_ASSERT_EQUAL_size_t(</code>
       * <code>TEST_ASSERT_EQUAL_size_t(</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_delete_build(buf, sizeof(buf), IKE_PL_NONE, IKE_PROTO_ESP, 4, nullptr, 2));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_delete_build(buf, sizeof(buf), IKE_PL_NONE, IKE_PROTO_ESP, 4, NULL, 2));</code>
       * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_ke_build(buf, 11, IKE_PL_NONE, IKE_DH_MODP2048, data, sizeof(data)));</code>
       * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_nonce_build(buf, 7, IKE_PL_NONE, data, sizeof(data)));</code>
       * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_id_build(buf, 11, IKE_PL_NONE, IKE_ID_FQDN, data, sizeof(data)));</code>
       * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_auth_build(buf, 11, IKE_PL_NONE, IKE_AUTH_PSK, data, sizeof(data)));</code>
       * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_cert_build(buf, 8, IKE_PL_NONE, 4, data, sizeof(data)));</code>
       * <code>TEST_ASSERT_EQUAL_size_t(</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_delete_build(buf, 7, IKE_PL_NONE, IKE_PROTO_IKE, 0, nullptr, 0));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_delete_build(buf, 7, IKE_PL_NONE, IKE_PROTO_IKE, 0, NULL, 0));</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -3618,16 +3303,16 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: every variable-length builder frames an empty body
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(8, pc_ike_ke_build(buf, sizeof(buf), IKE_PL_NONE, IKE_DH_CURVE25519, nullptr, 0));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(8, pc_ike_ke_build(buf, sizeof(buf), IKE_PL_NONE, IKE_DH_CURVE25519, NULL, 0));</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(0x00, buf[4]);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(0x1f, buf[5]); // group 31</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(4, pc_ike_nonce_build(buf, sizeof(buf), IKE_PL_NONE, nullptr, 0));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(4, pc_ike_nonce_build(buf, sizeof(buf), IKE_PL_NONE, NULL, 0));</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(0x04, buf[3]);</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(8, pc_ike_id_build(buf, sizeof(buf), IKE_PL_NONE, IKE_ID_IPV4_ADDR, nullptr, 0));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(8, pc_ike_id_build(buf, sizeof(buf), IKE_PL_NONE, IKE_ID_IPV4_ADDR, NULL, 0));</code>
       * <code>TEST_ASSERT_EQUAL_UINT8((uint8_t)IKE_ID_IPV4_ADDR, buf[4]);</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(8, pc_ike_auth_build(buf, sizeof(buf), IKE_PL_NONE, IKE_AUTH_DIGITAL_SIG, nullptr, 0));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(8, pc_ike_auth_build(buf, sizeof(buf), IKE_PL_NONE, IKE_AUTH_DIGITAL_SIG, NULL, 0));</code>
       * <code>TEST_ASSERT_EQUAL_UINT8((uint8_t)IKE_AUTH_DIGITAL_SIG, buf[4]);</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(5, pc_ike_cert_build(buf, sizeof(buf), IKE_PL_NONE, 4, nullptr, 0));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(5, pc_ike_cert_build(buf, sizeof(buf), IKE_PL_NONE, 4, NULL, 0));</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(0x05, buf[3]);</code>
   </details>
 
@@ -3688,10 +3373,10 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
     * **Assertions**:
       * <code>TEST_ASSERT_EQUAL_size_t(4, n);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(0x04, buf[3]);</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_sk_build(nullptr, sizeof(buf), IKE_PL_IDI, blob, 4, blob, 4, blob, 4));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_sk_build(buf, sizeof(buf), IKE_PL_IDI, nullptr, 4, nullptr, 0, nullptr, 0));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_sk_build(buf, sizeof(buf), IKE_PL_IDI, blob, 4, nullptr, 4, nullptr, 0));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_sk_build(buf, sizeof(buf), IKE_PL_IDI, blob, 4, blob, 4, nullptr, 4));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_sk_build(NULL, sizeof(buf), IKE_PL_IDI, blob, 4, blob, 4, blob, 4));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_sk_build(buf, sizeof(buf), IKE_PL_IDI, NULL, 4, NULL, 0, NULL, 0));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_sk_build(buf, sizeof(buf), IKE_PL_IDI, blob, 4, NULL, 4, NULL, 0));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_sk_build(buf, sizeof(buf), IKE_PL_IDI, blob, 4, blob, 4, NULL, 4));</code>
       * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_sk_build(buf, 15, IKE_PL_IDI, blob, 4, blob, 4, blob, 4));</code>
   </details>
 
@@ -3700,12 +3385,12 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: an SPI size with no SPI
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(0,</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0,</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_sa_build(buf, sizeof(buf), IKE_PL_NONE, 1, IKE_PROTO_ESP, nullptr, 0, tr, 0));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_sa_build(buf, sizeof(buf), IKE_PL_NONE, 1, IKE_PROTO_ESP, nullptr, 4, tr, 1));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_sa_build(buf, 11, IKE_PL_NONE, 1, IKE_PROTO_ESP, nullptr, 0, tr, 1));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_sa_build(buf, 12, IKE_PL_NONE, 1, IKE_PROTO_ESP, nullptr, 0, tr, 1));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_sa_build(NULL, sizeof(buf), IKE_PL_NONE, 1, IKE_PROTO_ESP, NULL, 0, tr, 1));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_sa_build(buf, sizeof(buf), IKE_PL_NONE, 1, IKE_PROTO_ESP, NULL, 0, NULL, 1));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_sa_build(buf, sizeof(buf), IKE_PL_NONE, 1, IKE_PROTO_ESP, NULL, 0, tr, 0));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_sa_build(buf, sizeof(buf), IKE_PL_NONE, 1, IKE_PROTO_ESP, NULL, 4, tr, 1));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_sa_build(buf, 11, IKE_PL_NONE, 1, IKE_PROTO_ESP, NULL, 0, tr, 1));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_sa_build(buf, 12, IKE_PL_NONE, 1, IKE_PROTO_ESP, NULL, 0, tr, 1));</code>
       * <code>TEST_ASSERT_EQUAL_size_t(4 + 8 + 4 + 12, n); // generic + proposal hdr + spi + one keyed transform</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(4, buf[10]);         // spi size in the proposal header</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(1, buf[11]);         // one transform</code>
@@ -3727,8 +3412,8 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: capacity below the generic + count headers, then below the first selector
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_ts_build(nullptr, sizeof(buf), IKE_PL_NONE, &sel, 1));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_ts_build(buf, sizeof(buf), IKE_PL_NONE, nullptr, 1));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_ts_build(NULL, sizeof(buf), IKE_PL_NONE, &sel, 1));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_ts_build(buf, sizeof(buf), IKE_PL_NONE, NULL, 1));</code>
       * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_ts_build(buf, sizeof(buf), IKE_PL_NONE, &sel, 0));</code>
       * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_ts_build(buf, 7, IKE_PL_NONE, &sel, 1));</code>
       * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_ts_build(buf, 23, IKE_PL_NONE, &sel, 1));</code>
@@ -3750,28 +3435,28 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: every out-param is optional, and a short body clears the ones that were supplied
     * **Assertions**:
-      * <code>Assert true (pc_ike_ke_parse(ke_body, sizeof(ke_body), nullptr, nullptr, nullptr))</code>
-      * <code>Assert false (pc_ike_ke_parse(nullptr, sizeof(ke_body), nullptr, nullptr, nullptr))</code>
+      * <code>Assert true (pc_ike_ke_parse(ke_body, sizeof(ke_body), NULL, NULL, NULL))</code>
+      * <code>Assert false (pc_ike_ke_parse(NULL, sizeof(ke_body), NULL, NULL, NULL))</code>
       * <code>Assert false (pc_ike_ke_parse(ke_body, 3, &group, &d, &dl))</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(0, group);</code>
       * <code>Assert null (d)</code>
       * <code>TEST_ASSERT_EQUAL_size_t(0, dl);</code>
-      * <code>Assert true (pc_ike_id_parse(id_body, sizeof(id_body), nullptr, nullptr, nullptr))</code>
-      * <code>Assert false (pc_ike_id_parse(nullptr, sizeof(id_body), nullptr, nullptr, nullptr))</code>
+      * <code>Assert true (pc_ike_id_parse(id_body, sizeof(id_body), NULL, NULL, NULL))</code>
+      * <code>Assert false (pc_ike_id_parse(NULL, sizeof(id_body), NULL, NULL, NULL))</code>
       * <code>Assert false (pc_ike_id_parse(id_body, 3, &id_type, &d, &dl))</code>
       * <code>TEST_ASSERT_EQUAL_UINT8((uint8_t)IKE_ID_RESERVED, (uint8_t)id_type);</code>
       * <code>Assert null (d)</code>
       * <code>TEST_ASSERT_EQUAL_size_t(0, dl);</code>
-      * <code>Assert true (pc_ike_auth_parse(auth_body, sizeof(auth_body), nullptr, nullptr, nullptr))</code>
-      * <code>Assert false (pc_ike_auth_parse(nullptr, sizeof(auth_body), nullptr, nullptr, nullptr))</code>
+      * <code>Assert true (pc_ike_auth_parse(auth_body, sizeof(auth_body), NULL, NULL, NULL))</code>
+      * <code>Assert false (pc_ike_auth_parse(NULL, sizeof(auth_body), NULL, NULL, NULL))</code>
       * <code>Assert false (pc_ike_auth_parse(auth_body, 3, &method, &d, &dl))</code>
       * <code>TEST_ASSERT_EQUAL_UINT8((uint8_t)IKE_AUTH_RESERVED, (uint8_t)method);</code>
       * <code>Assert null (d)</code>
       * <code>TEST_ASSERT_EQUAL_size_t(0, dl);</code>
-      * <code>TEST_ASSERT_TRUE(</code>
-      * <code>TEST_ASSERT_FALSE(</code>
-      * <code>Assert true (pc_ike_delete_parse(delete_body, sizeof(delete_body), nullptr, nullptr, nullptr, nullptr))</code>
-      * <code>Assert false (pc_ike_delete_parse(nullptr, sizeof(delete_body), nullptr, nullptr, nullptr, nullptr))</code>
+      * <code>Assert true (pc_ike_notify_parse(notify_body, sizeof(notify_body), NULL, NULL, NULL, NULL, NULL, NULL))</code>
+      * <code>Assert false (pc_ike_notify_parse(NULL, sizeof(notify_body), NULL, NULL, NULL, NULL, NULL, NULL))</code>
+      * <code>Assert true (pc_ike_delete_parse(delete_body, sizeof(delete_body), NULL, NULL, NULL, NULL))</code>
+      * <code>Assert false (pc_ike_delete_parse(NULL, sizeof(delete_body), NULL, NULL, NULL, NULL))</code>
       * <code>Assert false (pc_ike_delete_parse(delete_body, 3, &proto, &ss, &num, &spis))</code>
       * <code>TEST_ASSERT_EQUAL_UINT8((uint8_t)IKE_PROTO_NONE, (uint8_t)proto);</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(0, ss);</code>
@@ -3820,8 +3505,8 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
       * <code>Assert equal ptr (body, ct)</code>
       * <code>TEST_ASSERT_EQUAL_size_t(4, ctl);</code>
       * <code>Assert null (icv)</code>
-      * <code>Assert true (pc_ike_sk_parse(body, sizeof(body), 0, 0, nullptr, nullptr, nullptr, nullptr))</code>
-      * <code>Assert false (pc_ike_sk_parse(nullptr, 16, 0, 0, &iv, &ct, &ctl, &icv))</code>
+      * <code>Assert true (pc_ike_sk_parse(body, sizeof(body), 0, 0, NULL, NULL, NULL, NULL))</code>
+      * <code>Assert false (pc_ike_sk_parse(NULL, 16, 0, 0, &iv, &ct, &ctl, &icv))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -3829,8 +3514,8 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: a proposal length below the fixed 8-byte proposal header
     * **Assertions**:
-      * <code>Assert false (pc_ike_sa_first_proposal(GV_SA + 4, sizeof(GV_SA) - 4, nullptr))</code>
-      * <code>Assert false (pc_ike_sa_first_proposal(nullptr, 24, &prop))</code>
+      * <code>Assert false (pc_ike_sa_first_proposal(GV_SA + 4, sizeof(GV_SA) - 4, NULL))</code>
+      * <code>Assert false (pc_ike_sa_first_proposal(NULL, 24, &prop))</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(0, prop.num_transforms); // out is zeroed before the body is inspected</code>
       * <code>Assert null (prop.transforms)</code>
       * <code>Assert false (pc_ike_sa_first_proposal(GV_SA + 4, 7, &prop))</code>
@@ -3849,9 +3534,9 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
       * <code>Assert false (pc_ike_transform_next(&it, &t))</code>
       * <code>TEST_ASSERT_EQUAL_INT32(-1, t.key_length); // out is reset before the iterator is inspected</code>
       * <code>Assert true (t.last)</code>
-      * <code>Assert false (pc_ike_transform_next(nullptr, &t))</code>
+      * <code>Assert false (pc_ike_transform_next(NULL, &t))</code>
       * <code>Assert true (pc_ike_sa_first_proposal(GV_SA + 4, sizeof(GV_SA) - 4, &prop))</code>
-      * <code>Assert false (pc_ike_transform_next(&it, nullptr))</code>
+      * <code>Assert false (pc_ike_transform_next(&it, NULL))</code>
       * <code>Assert false (pc_ike_transform_next(&it, &t))</code>
       * <code>Assert false (pc_ike_transform_next(&it, &t))</code>
   </details>
@@ -3879,10 +3564,10 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: a selector header past the end of the body
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_UINT8(0, pc_ike_ts_count(nullptr, 8));</code>
+      * <code>TEST_ASSERT_EQUAL_UINT8(0, pc_ike_ts_count(NULL, 8));</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(0, pc_ike_ts_count(tiny, sizeof(tiny)));</code>
-      * <code>Assert false (pc_ike_ts_get(tiny, sizeof(tiny), 0, nullptr))</code>
-      * <code>Assert false (pc_ike_ts_get(nullptr, 8, 0, &got))</code>
+      * <code>Assert false (pc_ike_ts_get(tiny, sizeof(tiny), 0, NULL))</code>
+      * <code>Assert false (pc_ike_ts_get(NULL, 8, 0, &got))</code>
       * <code>Assert null (got.start_addr)</code>
       * <code>Assert false (pc_ike_ts_get(tiny, sizeof(tiny), 0, &got))</code>
       * <code>Assert false (pc_ike_ts_get(cut, sizeof(cut), 0, &got))</code>
@@ -3957,7 +3642,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: out_len over 255 blocks fails closed (the 1-byte prf+ counter caps the chain).
     * **Assertions**:
-      * <code>Assert false (pc_ike_prf_plus(nullptr, 1, out, 1, out, 1))</code>
+      * <code>Assert false (pc_ike_prf_plus(NULL, 1, out, 1, out, 1))</code>
       * <code>Assert false (pc_ike_prf_plus(out, 1, out, 1, out, 0))</code>
       * <code>Assert false (pc_ike_prf_plus(out, 1, out, 1, huge, sizeof(huge)))</code>
   </details>
@@ -3998,7 +3683,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Derive keys guards
     * **Assertions**:
-      * <code>Assert false (pc_ike_derive_keys(nullptr, 32, buf, 16, buf, 16, spi, spi, &lens, &km))</code>
+      * <code>Assert false (pc_ike_derive_keys(NULL, 32, buf, 16, buf, 16, spi, spi, &lens, &km))</code>
       * <code>Assert false (pc_ike_derive_keys(buf, 32, buf, 0, buf, 16, spi, spi, &lens, &km))</code>
       * <code>Assert false (pc_ike_derive_keys(buf, 32, buf, 16, buf, 16, spi, spi, &toobig, &km))</code>
       * <code>Assert false (pc_ike_derive_keys(buf, 32, buf, 16, buf, 16, spi, spi, &zero, &km))</code>
@@ -4034,8 +3719,8 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
       * <code>Assert equal memory (kat_aead_ct, buf, sizeof(kat_aead_ct))</code>
       * <code>Assert true (pc_ike_sk_aead_open(kat_aead_key, kat_aead_salt, kat_aead_iv, kat_aead_aad, sizeof(kat_aead_aad)</code>
       * <code>Assert equal memory (kat_aead_pt, buf, sizeof(kat_aead_pt))</code>
-      * <code>Assert false (pc_ike_sk_aead_seal(nullptr, kat_aead_salt, kat_aead_iv, nullptr, 0, nullptr, 0, o))</code>
-      * <code>TEST_ASSERT_FALSE(</code>
+      * <code>Assert false (pc_ike_sk_aead_seal(NULL, kat_aead_salt, kat_aead_iv, NULL, 0, NULL, 0, o))</code>
+      * <code>Assert false (pc_ike_sk_aead_open(kat_aead_key, kat_aead_salt, kat_aead_iv, NULL, 0, NULL, 0, NULL, o))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -4071,7 +3756,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
       * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_dh_public(IKE_DH_ECP256, kat_alice_priv, 32, out, 32));</code>
       * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_dh_compute(IKE_DH_CURVE25519, kat_alice_priv, 31, kat_bob_pub, 32, out, 32));</code>
       * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_dh_compute(IKE_DH_CURVE25519, kat_alice_priv, 32, kat_bob_pub, 32, out, 31));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_dh_public(IKE_DH_CURVE25519, nullptr, 32, out, 32));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ike_dh_public(IKE_DH_CURVE25519, NULL, 32, out, 32));</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -4090,9 +3775,9 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Auth psk guards
     * **Assertions**:
-      * <code>Assert false (pc_ike_auth_psk(nullptr, 1, b, 8, b, 8, b, 8, b, 8, out))</code>
-      * <code>Assert false (pc_ike_auth_psk(b, 8, b, 8, b, 8, b, 8, b, 8, nullptr))</code>
-      * <code>Assert false (pc_ike_auth_psk(b, 8, nullptr, 8, b, 8, b, 8, b, 8, out))</code>
+      * <code>Assert false (pc_ike_auth_psk(NULL, 1, b, 8, b, 8, b, 8, b, 8, out))</code>
+      * <code>Assert false (pc_ike_auth_psk(b, 8, b, 8, b, 8, b, 8, b, 8, NULL))</code>
+      * <code>Assert false (pc_ike_auth_psk(b, 8, NULL, 8, b, 8, b, 8, b, 8, out))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -4371,12 +4056,12 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: No PFS: KEYMAT = prf+(SK_d, Ni \| Nr).
     * **Assertions**:
-      * <code>Assert true (pc_ike_child_keymat(ck_skd, 32, nullptr, 0, ck_ni, 16, ck_nr, 16, out, 72))</code>
+      * <code>Assert true (pc_ike_child_keymat(ck_skd, 32, NULL, 0, ck_ni, 16, ck_nr, 16, out, 72))</code>
       * <code>Assert equal memory (ck_keymat, out, 72)</code>
       * <code>Assert true (pc_ike_child_keymat(ck_skd, 32, ck_dh, 32, ck_ni, 16, ck_nr, 16, out, 72))</code>
       * <code>Assert equal memory (ck_keymat_pfs, out, 72)</code>
-      * <code>Assert false (pc_ike_child_keymat(nullptr, 32, nullptr, 0, ck_ni, 16, ck_nr, 16, out, 72))</code>
-      * <code>Assert false (pc_ike_child_keymat(ck_skd, 32, nullptr, 0, ck_ni, 16, ck_nr, 16, out, 0))</code>
+      * <code>Assert false (pc_ike_child_keymat(NULL, 32, NULL, 0, ck_ni, 16, ck_nr, 16, out, 72))</code>
+      * <code>Assert false (pc_ike_child_keymat(ck_skd, 32, NULL, 0, ck_ni, 16, ck_nr, 16, out, 0))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -4401,7 +4086,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
       * <code>Assert true (pc_ike_auth_verify_rsa_sha256(rsa_n, rsa_e, rsa_sig, 256, scratch, sizeof(scratch)</code>
       * <code>Assert false (pc_ike_auth_verify_rsa_sha256(rsa_n, rsa_e, rsa_sig, 256, scratch, sizeof(scratch)</code>
       * <code>Assert false (pc_ike_auth_verify_rsa_sha256(rsa_n, rsa_e, bad_sig, 256, scratch, sizeof(scratch)</code>
-      * <code>Assert false (pc_ike_auth_verify_rsa_sha256(nullptr, rsa_e, rsa_sig, 256, scratch, sizeof(scratch)</code>
+      * <code>Assert false (pc_ike_auth_verify_rsa_sha256(NULL, rsa_e, rsa_sig, 256, scratch, sizeof(scratch)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -4603,7 +4288,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
       * <code>Assert equal memory (nt, buf + nt_field_off, 48)</code>
       * <code>TEST_ASSERT_EQUAL_UINT16(8, u_len);</code>
       * <code>Assert equal memory (user16, buf + u_off, 8)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ntlmssp_build_authenticate(buf, 80, nullptr, 0, nt, sizeof(nt), "Domain", "User",</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ntlmssp_build_authenticate(buf, 80, NULL, 0, nt, sizeof(nt), "Domain", "User", NULL,</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -4622,7 +4307,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Build negotiate null buf
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ntlmssp_build_negotiate(nullptr, 64, NTLMSSP_CLIENT_DEFAULT_FLAGS));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_ntlmssp_build_negotiate(NULL, 64, NTLMSSP_CLIENT_DEFAULT_FLAGS));</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -4630,8 +4315,8 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Parse challenge null args
     * **Assertions**:
-      * <code>Assert false (pc_ntlmssp_parse_challenge(nullptr, n, &ch))</code>
-      * <code>Assert false (pc_ntlmssp_parse_challenge(m, n, nullptr))</code>
+      * <code>Assert false (pc_ntlmssp_parse_challenge(NULL, n, &ch))</code>
+      * <code>Assert false (pc_ntlmssp_parse_challenge(m, n, NULL))</code>
       * <code>Assert true (pc_ntlmssp_parse_challenge(m, n, &ch))</code>
   </details>
 
@@ -4700,254 +4385,6 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
       * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(zero_mic, buf + PC_NTLMSSP_MIC_OFFSET, 16);</code>
       * <code>TEST_ASSERT_GREATER_OR_EQUAL_UINT32(88, nt_off);</code>
       * <code>Assert equal memory (nt, buf + nt_off, 48)</code>
-  </details>
-
-</details>
-
-<details>
-<summary><b>test_observability (23 tests)</b></summary>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_transition_fires_hook_with_args</b> &mdash; <i>Transition fires hook with args</i></summary>
-
-    * **Objective**: Transition fires hook with args
-    * **Assertions**:
-      * <code>Assert equal (1, g_calls)</code>
-      * <code>Assert equal (2, g_slot)</code>
-      * <code>Assert equal (CONN_FREE, g_old)</code>
-      * <code>Assert equal (CONN_ACTIVE, g_new)</code>
-      * <code>Assert equal (PC_CONN_R_ACCEPT, g_reason)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_each_reason_bumps_its_counter</b> &mdash; <i>Each reason bumps its counter</i></summary>
-
-    * **Objective**: Each reason bumps its counter
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_UINT32(1, c.accepts);</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(1, c.closes_remote);</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(1, c.closes_local);</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(1, c.closes_error);</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(1, c.closes_timeout);</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(1, c.closes_abort);</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(1, c.backpressure);</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(1, c.defer_drops);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_closing_gauge_is_derived_from_pool</b> &mdash; <i>DRAINED is gauge-only: it must not inflate any cumulative close counter.</i></summary>
-
-    * **Objective**: DRAINED is gauge-only: it must not inflate any cumulative close counter.
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_UINT32(0, pc_conn_counters_get().closing_gauge);</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(1, pc_conn_counters_get().closing_gauge);</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(2, pc_conn_counters_get().closing_gauge);</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(0, pc_conn_counters_get().closing_gauge);</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(0, c.closes_local);</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(0, c.closes_remote);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_reset_clears_cumulative_not_derived_gauge</b> &mdash; <i>Reset clears cumulative not derived gauge</i></summary>
-
-    * **Objective**: Reset clears cumulative not derived gauge
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_UINT32(0, c.accepts);       // cumulative cleared</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(1, c.closing_gauge); // derived from the pool, not by reset</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_no_hook_after_unregister</b> &mdash; <i>No hook after unregister</i></summary>
-
-    * **Objective**: No hook after unregister
-    * **Assertions**:
-      * <code>Assert equal (0, g_calls)</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(1, pc_conn_counters_get().accepts); // counters still move</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_notice_without_hook_still_counts</b> &mdash; <i>Notice without hook still counts</i></summary>
-
-    * **Objective**: Notice without hook still counts
-    * **Assertions**:
-      * <code>Assert equal (0, g_calls)</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(1, pc_conn_counters_get().backpressure);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_recv_fin_counts_remote_close</b> &mdash; <i>Recv fin counts remote close</i></summary>
-
-    * **Objective**: Recv fin counts remote close
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_UINT32(1, pc_conn_counters_get().closes_remote);</code>
-      * <code>Assert equal (PC_CONN_R_CLOSE_REMOTE, g_reason)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_err_cb_counts_error_close</b> &mdash; <i>Err cb counts error close</i></summary>
-
-    * **Objective**: Err cb counts error close
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_UINT32(1, pc_conn_counters_get().closes_error);</code>
-      * <code>Assert equal (PC_CONN_R_ERROR, g_reason)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_timeout_sweep_counts_timeout</b> &mdash; <i>Timeout sweep counts timeout</i></summary>
-
-    * **Objective**: Timeout sweep counts timeout
-    * **Assertions**:
-      * <code>Assert equal (CONN_FREE, (ConnState)conn_pool[0].state)</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(1, pc_conn_counters_get().closes_timeout);</code>
-      * <code>Assert equal (PC_CONN_R_TIMEOUT, g_reason)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_local_close_counts_local</b> &mdash; <i>pc_conn_close(slot) reads the slot's pcb, frees the slot, and counts a</i></summary>
-
-    * **Objective**: pc_conn_close(slot) reads the slot's pcb, frees the slot, and counts a
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_UINT32(1, pc_conn_counters_get().closes_local);</code>
-      * <code>Assert equal (PC_CONN_R_CLOSE_LOCAL, g_reason)</code>
-      * <code>Assert equal (CONN_FREE, (ConnState)conn_pool[0].state)</code>
-      * <code>Assert null (conn_pool[0].pcb)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_abort_slot_counts_abort_and_frees</b> &mdash; <i>Abort slot counts abort and frees</i></summary>
-
-    * **Objective**: Abort slot counts abort and frees
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_UINT32(1, pc_conn_counters_get().closes_abort);</code>
-      * <code>Assert equal (PC_CONN_R_ABORT, g_reason)</code>
-      * <code>Assert equal (CONN_FREE, (ConnState)conn_pool[0].state)</code>
-      * <code>Assert null (conn_pool[0].pcb)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_abort_slot_noop_on_free_slot</b> &mdash; <i>Abort slot noop on free slot</i></summary>
-
-    * **Objective**: Abort slot noop on free slot
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_UINT32(0, pc_conn_counters_get().closes_abort);</code>
-      * <code>Assert equal (0, g_calls)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_backpressure_counts_when_ring_full</b> &mdash; <i>Backpressure counts when ring full</i></summary>
-
-    * **Objective**: Backpressure counts when ring full
-    * **Assertions**:
-      * <code>Assert equal (PC_NET_ERR_MEM, rc)</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(1, pc_conn_counters_get().backpressure);</code>
-      * <code>Assert equal (PC_CONN_R_BACKPRESSURE, g_reason)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_begin_close_dwells_then_drains_on_ack</b> &mdash; <i>Peer ACKs the whole response -> the sent callback finalizes the close.</i></summary>
-
-    * **Objective**: Peer ACKs the whole response -> the sent callback finalizes the close.
-    * **Assertions**:
-      * <code>Assert equal (CONN_CLOSING, (ConnState)conn_pool[0].state)</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(1, c.closes_local);</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(1, c.closing_gauge);</code>
-      * <code>Assert equal (PC_CONN_R_CLOSE_LOCAL, g_reason)</code>
-      * <code>Assert equal (CONN_FREE, (ConnState)conn_pool[0].state)</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(0, c.closing_gauge);</code>
-      * <code>Assert equal (PC_CONN_R_DRAINED, g_reason)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_begin_close_finalizes_immediately_when_already_drained</b> &mdash; <i>Begin close finalizes immediately when already drained</i></summary>
-
-    * **Objective**: Begin close finalizes immediately when already drained
-    * **Assertions**:
-      * <code>Assert equal (CONN_FREE, (ConnState)conn_pool[0].state)</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(1, c.closes_local);</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(0, c.closing_gauge);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_begin_close_noop_if_not_active</b> &mdash; <i>Begin close noop if not active</i></summary>
-
-    * **Objective**: Begin close noop if not active
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_UINT32(0, pc_conn_counters_get().closes_local);</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(0, pc_conn_counters_get().closing_gauge);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_closing_timeout_reaps_stuck_slot</b> &mdash; <i>Before the bound: not reaped.</i></summary>
-
-    * **Objective**: Before the bound: not reaped.
-    * **Assertions**:
-      * <code>Assert equal (CONN_CLOSING, (ConnState)conn_pool[0].state)</code>
-      * <code>Assert equal (CONN_CLOSING, (ConnState)conn_pool[0].state)</code>
-      * <code>Assert equal (CONN_FREE, (ConnState)conn_pool[0].state)</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(0, pc_conn_counters_get().closing_gauge);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_recv_during_closing_is_drained_not_processed</b> &mdash; <i>Late inbound data while closing: acked + dropped, slot stays CLOSING.</i></summary>
-
-    * **Objective**: Late inbound data while closing: acked + dropped, slot stays CLOSING.
-    * **Assertions**:
-      * <code>Assert equal (CONN_CLOSING, (ConnState)conn_pool[0].state)</code>
-      * <code>Assert equal (PC_NET_OK, rc)</code>
-      * <code>Assert equal (CONN_CLOSING, (ConnState)conn_pool[0].state)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_stop_posts_abort_transition_for_each_live_slot</b> &mdash; <i>Stop posts abort transition for each live slot</i></summary>
-
-    * **Objective**: Stop posts abort transition for each live slot
-    * **Assertions**:
-      * <code>Assert equal (PC_CONN_R_ABORT, g_reason)</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(1, pc_conn_counters_get().closes_abort);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_err_cb_during_closing_counts_drained_not_error</b> &mdash; <i>Err cb during closing counts drained not error</i></summary>
-
-    * **Objective**: Err cb during closing counts drained not error
-    * **Assertions**:
-      * <code>Assert equal (CONN_CLOSING, (ConnState)conn_pool[0].state)</code>
-      * <code>Assert equal (CONN_FREE, (ConnState)conn_pool[0].state)</code>
-      * <code>Assert null (conn_pool[0].pcb)</code>
-      * <code>Assert equal (PC_CONN_R_DRAINED, g_reason)</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(0, c.closes_error); // not counted as an error close</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(0, c.closing_gauge);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_enqueue_failure_from_recv_cb_counts_defer_drop</b> &mdash; <i>Enqueue failure from recv cb counts defer drop</i></summary>
-
-    * **Objective**: Enqueue failure from recv cb counts defer drop
-    * **Assertions**:
-      * <code>Assert equal int (PC_NET_OK, lowlevel_recv_cb(&conn_pool[0], &pcb, &p, PC_NET_OK))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(1, pc_conn_counters_get().defer_drops);</code>
-      * <code>Assert equal (PC_CONN_R_DEFER_DROP, g_reason)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_accept_cb_posts_accept_transition</b> &mdash; <i>Accept cb posts accept transition</i></summary>
-
-    * **Objective**: Accept cb posts accept transition
-    * **Assertions**:
-      * <code>Assert equal int (PC_NET_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb, PC_NET_OK))</code>
-      * <code>Assert equal (PC_CONN_R_ACCEPT, g_reason)</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(1, pc_conn_counters_get().accepts);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_accept_cb_enqueue_failure_posts_defer_drop</b> &mdash; <i>Accept cb enqueue failure posts defer drop</i></summary>
-
-    * **Objective**: Accept cb enqueue failure posts defer drop
-    * **Assertions**:
-      * <code>Assert equal int (PC_NET_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb, PC_NET_OK))</code>
-      * <code>Assert equal (PC_CONN_R_DEFER_DROP, g_reason)</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(1, pc_conn_counters_get().defer_drops);</code>
-      * <code>Assert equal (CONN_ACTIVE, (ConnState)conn_pool[0].state)</code>
   </details>
 
 </details>
@@ -5124,7 +4561,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: ---------------------------------------------------------------------------
     * **Assertions**:
-      * <code>Assert true (true)</code>
+      * <code>Assert true (PROTO_TRUE)</code>
       * <code>Assert true (r &lt;= sizeof(out))</code>
       * <code>Assert true (r &lt;= (int)sizeof(out))</code>
       * <code>Assert true (bh.header_size == 8 || bh.header_size == 12)</code>
@@ -5133,8 +4570,8 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
       * <code>Assert true (v + vl &lt;= leaf + 512)</code>
       * <code>Assert true (cell.payload_len &lt;= sizeof(out))</code>
       * <code>Assert true (v + vl &lt;= leaf + 512)</code>
-      * <code>TEST_ASSERT_EQUAL_INT64(0, pc_sqlite_column_int(8, nullptr, 0));</code>
-      * <code>TEST_ASSERT_EQUAL_INT64(1, pc_sqlite_column_int(9, nullptr, 0));</code>
+      * <code>TEST_ASSERT_EQUAL_INT64(0, pc_sqlite_column_int(8, NULL, 0));</code>
+      * <code>TEST_ASSERT_EQUAL_INT64(1, pc_sqlite_column_int(9, NULL, 0));</code>
       * <code>TEST_ASSERT_EQUAL_INT64(0, pc_sqlite_column_int(0, any, 8));</code>
       * <code>TEST_ASSERT_EQUAL_INT64(0, pc_sqlite_column_int(10, any, 8));</code>
       * <code>TEST_ASSERT_EQUAL_INT64(0, pc_sqlite_column_int(11, any, 8));</code>
@@ -5177,8 +4614,8 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
       * <code>TEST_ASSERT_EQUAL_UINT32(0, pc_sqlite_build_table_db(100000, "t", "CREATE TABLE t(a)", &row, 1, out, sizeof(out)));</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(0, pc_sqlite_build_table_db(600, "t", "CREATE TABLE t(a)", &row, 1, out, sizeof(out)));</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(0, pc_sqlite_build_table_db(512, nullptr, "CREATE TABLE t(a)", &row, 1, out, sizeof(out)));</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(0, pc_sqlite_build_table_db(512, "t", nullptr, &row, 1, out, sizeof(out)));</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(0, pc_sqlite_build_table_db(512, NULL, "CREATE TABLE t(a)", &row, 1, out, sizeof(out)));</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(0, pc_sqlite_build_table_db(512, "t", NULL, &row, 1, out, sizeof(out)));</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(0, pc_sqlite_build_table_db(512, "t", huge_sql, &row, 1, out, sizeof(out)));</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(0, pc_sqlite_build_table_db(512, "t", "CREATE TABLE t(a)", &brow, 1, out, sizeof(out)));</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(0, pc_sqlite_build_table_db(512, "t", "CREATE TABLE t(a)", many, 200, out, sizeof(out)));</code>
@@ -5199,43 +4636,43 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
       * <code>TEST_ASSERT_EQUAL_UINT32(0, pc_sqlite_cell_pointer(page, sizeof(page), &bh, 0, 2));</code>
       * <code>Assert false (pc_sqlite_parse_table_leaf_cell(page, 32, 512, 0, 31, &cell))</code>
       * <code>Assert false (pc_sqlite_parse_table_leaf_cell(page, 32, 512, 0, 31, &cell))</code>
-      * <code>Assert false (pc_sqlite_read_payload(garbage_page, nullptr, 512, 0, leaf, &cell, out, sizeof(out), work))</code>
-      * <code>Assert false (pc_sqlite_read_payload(garbage_page, nullptr, 512, 0, leaf, &cell, out, sizeof(out), work))</code>
-      * <code>Assert false (pc_sqlite_read_payload(garbage_page, nullptr, 10, 6, leaf, &cell, out, sizeof(out), work))</code>
+      * <code>Assert false (pc_sqlite_read_payload(garbage_page, NULL, 512, 0, leaf, &cell, out, sizeof(out), work))</code>
+      * <code>Assert false (pc_sqlite_read_payload(garbage_page, NULL, 512, 0, leaf, &cell, out, sizeof(out), work))</code>
+      * <code>Assert false (pc_sqlite_read_payload(garbage_page, NULL, 10, 6, leaf, &cell, out, sizeof(out), work))</code>
       * <code>TEST_ASSERT_FALSE(</code>
       * <code>Assert true (make_leaf_page(g_ml_pages[3], 512, leaf1_rows, 2))</code>
       * <code>Assert true (make_leaf_page(g_ml_pages[4], 512, leaf2_rows, 2))</code>
-      * <code>Assert true (pc_sqlite_table_cursor_begin(&c, multilevel_reader, nullptr, 512, 0, 2, leaf, work))</code>
+      * <code>Assert true (pc_sqlite_table_cursor_begin(&c, multilevel_reader, NULL, 512, 0, 2, leaf, work))</code>
       * <code>Assert equal int (4, n)</code>
       * <code>TEST_ASSERT_EQUAL_UINT64(1, seen[0]);</code>
       * <code>TEST_ASSERT_EQUAL_UINT64(2, seen[1]);</code>
       * <code>TEST_ASSERT_EQUAL_UINT64(3, seen[2]);</code>
       * <code>TEST_ASSERT_EQUAL_UINT64(4, seen[3]);</code>
-      * <code>Assert false (pc_sqlite_table_cursor_begin(&c, chain_interior_page, nullptr, 512, 0, 2, leaf, work))</code>
+      * <code>Assert false (pc_sqlite_table_cursor_begin(&c, chain_interior_page, NULL, 512, 0, 2, leaf, work))</code>
       * <code>Assert true (make_leaf_page(g_ml_pages[3], 512, leaf1_rows, 1))</code>
-      * <code>Assert true (pc_sqlite_table_cursor_begin(&c, reread_fail_reader, nullptr, 512, 0, 2, leaf, work))</code>
+      * <code>Assert true (pc_sqlite_table_cursor_begin(&c, reread_fail_reader, NULL, 512, 0, 2, leaf, work))</code>
       * <code>Assert true (pc_sqlite_table_cursor_next(&c, &rid, &rc))</code>
       * <code>Assert false (pc_sqlite_table_cursor_next(&c, &rid, &rc))</code>
-      * <code>Assert true (pc_sqlite_table_cursor_begin(&c, ovf_reader, nullptr, 512, 0, 5, leaf, work))</code>
+      * <code>Assert true (pc_sqlite_table_cursor_begin(&c, ovf_reader, NULL, 512, 0, 5, leaf, work))</code>
       * <code>Assert true (pc_sqlite_table_cursor_next(&c, &rid, &rc))</code>
       * <code>TEST_ASSERT_EQUAL_UINT64(1, rid);</code>
       * <code>Assert true (v &gt;= ovf_buf && v + vl &lt;= ovf_buf + sizeof(ovf_buf))</code>
-      * <code>Assert true (pc_sqlite_table_cursor_begin(&c, ovf_reader, nullptr, 512, 0, 5, leaf, work))</code>
+      * <code>Assert true (pc_sqlite_table_cursor_begin(&c, ovf_reader, NULL, 512, 0, 5, leaf, work))</code>
       * <code>Assert true (pc_sqlite_table_cursor_next(&c, &rid, &rc))</code>
       * <code>TEST_ASSERT_EQUAL_UINT64(1, rid);</code>
-      * <code>Assert true (pc_sqlite_table_cursor_begin(&c, ovf_reader, nullptr, 512, 0, 5, leaf, work))</code>
+      * <code>Assert true (pc_sqlite_table_cursor_begin(&c, ovf_reader, NULL, 512, 0, 5, leaf, work))</code>
       * <code>Assert false (pc_sqlite_table_cursor_next(&c, &rid, &rc))</code>
-      * <code>Assert false (pc_sqlite_table_cursor_begin(&c, always_fail_reader, nullptr, 512, 0, 1, leaf, work))</code>
+      * <code>Assert false (pc_sqlite_table_cursor_begin(&c, always_fail_reader, NULL, 512, 0, 1, leaf, work))</code>
       * <code>Assert true (make_leaf_page(g_ml_pages[3], 512, leaf1_rows, 1))</code>
-      * <code>Assert true (pc_sqlite_table_cursor_begin(&c, multilevel_reader, nullptr, 512, 0, 2, leaf, work))</code>
+      * <code>Assert true (pc_sqlite_table_cursor_begin(&c, multilevel_reader, NULL, 512, 0, 2, leaf, work))</code>
       * <code>Assert true (pc_sqlite_table_cursor_next(&c, &rid, &rc))</code>
       * <code>Assert false (pc_sqlite_table_cursor_next(&c, &rid, &rc))</code>
       * <code>Assert true (make_leaf_page(g_ml_pages[3], 512, leaf1_rows, 1))</code>
-      * <code>Assert true (pc_sqlite_table_cursor_begin(&c, multilevel_reader, nullptr, 512, 0, 2, leaf, work))</code>
+      * <code>Assert true (pc_sqlite_table_cursor_begin(&c, multilevel_reader, NULL, 512, 0, 2, leaf, work))</code>
       * <code>Assert true (pc_sqlite_table_cursor_next(&c, &rid, &rc))</code>
       * <code>Assert false (pc_sqlite_table_cursor_next(&c, &rid, &rc)); // cursor_descend(4)</code>
       * <code>Assert true (make_leaf_page(g_ml_pages[3], 512, leaf1_rows, 1))</code>
-      * <code>Assert true (pc_sqlite_table_cursor_begin(&c, reread_garbage_reader, nullptr, 512, 0, 2, leaf, work))</code>
+      * <code>Assert true (pc_sqlite_table_cursor_begin(&c, reread_garbage_reader, NULL, 512, 0, 2, leaf, work))</code>
       * <code>Assert true (pc_sqlite_table_cursor_next(&c, &rid, &rc))</code>
       * <code>Assert false (pc_sqlite_table_cursor_next(&c, &rid, &rc))</code>
       * <code>Assert true (rl &gt; 0)</code>
@@ -5305,7 +4742,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
       * <code>Assert true (len &lt;= dcap)</code>
       * <code>Assert true (len &lt;= dcap)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(0xAA, (uint8_t)doc[i]);</code>
-      * <code>Assert true (m &lt;= WebDavMethod::DAV_M_UNSUPPORTED)</code>
+      * <code>Assert true (m &lt;= DAV_M_UNSUPPORTED)</code>
       * <code>Assert true (d == 0 || d == 1 || d == PC_DAV_DEPTH_INFINITY || d == -7)</code>
   </details>
 
@@ -5364,8 +4801,8 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: The two 0-byte constants never touch `val`.
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_INT64(0, pc_sqlite_column_int(8, nullptr, 0));</code>
-      * <code>TEST_ASSERT_EQUAL_INT64(1, pc_sqlite_column_int(9, nullptr, 0));</code>
+      * <code>TEST_ASSERT_EQUAL_INT64(0, pc_sqlite_column_int(8, NULL, 0));</code>
+      * <code>TEST_ASSERT_EQUAL_INT64(1, pc_sqlite_column_int(9, NULL, 0));</code>
       * <code>TEST_ASSERT_EQUAL_INT64(0, pc_sqlite_column_int(0, any, 8));</code>
       * <code>TEST_ASSERT_EQUAL_INT64(0, pc_sqlite_column_int(10, any, 8));</code>
       * <code>TEST_ASSERT_EQUAL_INT64(0, pc_sqlite_column_int(11, any, 8));</code>
@@ -5443,8 +4880,8 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
       * <code>TEST_ASSERT_EQUAL_UINT32(0, pc_sqlite_build_table_db(100000, "t", "CREATE TABLE t(a)", &row, 1, out, sizeof(out)));</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(0, pc_sqlite_build_table_db(600, "t", "CREATE TABLE t(a)", &row, 1, out, sizeof(out)));</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(0, pc_sqlite_build_table_db(512, nullptr, "CREATE TABLE t(a)", &row, 1, out, sizeof(out)));</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(0, pc_sqlite_build_table_db(512, "t", nullptr, &row, 1, out, sizeof(out)));</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(0, pc_sqlite_build_table_db(512, NULL, "CREATE TABLE t(a)", &row, 1, out, sizeof(out)));</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(0, pc_sqlite_build_table_db(512, "t", NULL, &row, 1, out, sizeof(out)));</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -5514,9 +4951,9 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: (a) The claimed local extent runs past the page.
     * **Assertions**:
-      * <code>Assert false (pc_sqlite_read_payload(garbage_page, nullptr, 512, 0, leaf, &cell, out, sizeof(out), work))</code>
-      * <code>Assert false (pc_sqlite_read_payload(garbage_page, nullptr, 512, 0, leaf, &cell, out, sizeof(out), work))</code>
-      * <code>Assert false (pc_sqlite_read_payload(garbage_page, nullptr, 10, 6, leaf, &cell, out, sizeof(out), work))</code>
+      * <code>Assert false (pc_sqlite_read_payload(garbage_page, NULL, 512, 0, leaf, &cell, out, sizeof(out), work))</code>
+      * <code>Assert false (pc_sqlite_read_payload(garbage_page, NULL, 512, 0, leaf, &cell, out, sizeof(out), work))</code>
+      * <code>Assert false (pc_sqlite_read_payload(garbage_page, NULL, 10, 6, leaf, &cell, out, sizeof(out), work))</code>
       * <code>TEST_ASSERT_FALSE(</code>
   </details>
 
@@ -5527,7 +4964,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
     * **Assertions**:
       * <code>Assert true (make_leaf_page(g_ml_pages[3], 512, leaf1_rows, 2))</code>
       * <code>Assert true (make_leaf_page(g_ml_pages[4], 512, leaf2_rows, 2))</code>
-      * <code>Assert true (pc_sqlite_table_cursor_begin(&c, multilevel_reader, nullptr, 512, 0, 2, leaf, work))</code>
+      * <code>Assert true (pc_sqlite_table_cursor_begin(&c, multilevel_reader, NULL, 512, 0, 2, leaf, work))</code>
       * <code>Assert equal int (4, n)</code>
       * <code>TEST_ASSERT_EQUAL_UINT64(1, seen[0]);</code>
       * <code>TEST_ASSERT_EQUAL_UINT64(2, seen[1]);</code>
@@ -5540,7 +4977,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: An interior chain that never bottoms out in a leaf must fail closed at the bounded descent
     * **Assertions**:
-      * <code>Assert false (pc_sqlite_table_cursor_begin(&c, chain_interior_page, nullptr, 512, 0, 2, leaf, work))</code>
+      * <code>Assert false (pc_sqlite_table_cursor_begin(&c, chain_interior_page, NULL, 512, 0, 2, leaf, work))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -5549,7 +4986,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
     * **Objective**: Leaf 3 is now exhausted; advancing must re-read the interior root (page 2) to reach its
     * **Assertions**:
       * <code>Assert true (make_leaf_page(g_ml_pages[3], 512, leaf1_rows, 1))</code>
-      * <code>Assert true (pc_sqlite_table_cursor_begin(&c, reread_fail_reader, nullptr, 512, 0, 2, leaf, work))</code>
+      * <code>Assert true (pc_sqlite_table_cursor_begin(&c, reread_fail_reader, NULL, 512, 0, 2, leaf, work))</code>
       * <code>Assert true (pc_sqlite_table_cursor_next(&c, &rid, &rc))</code>
       * <code>Assert false (pc_sqlite_table_cursor_next(&c, &rid, &rc))</code>
   </details>
@@ -5559,7 +4996,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: A 600-byte record payload (a valid 1-byte record header declaring zero columns, then filler),
     * **Assertions**:
-      * <code>Assert true (pc_sqlite_table_cursor_begin(&c, ovf_reader, nullptr, 512, 0, 5, leaf, work))</code>
+      * <code>Assert true (pc_sqlite_table_cursor_begin(&c, ovf_reader, NULL, 512, 0, 5, leaf, work))</code>
       * <code>Assert true (pc_sqlite_table_cursor_next(&c, &rid, &rc))</code>
       * <code>TEST_ASSERT_EQUAL_UINT64(1, rid);</code>
       * <code>Assert true (v &gt;= ovf_buf && v + vl &lt;= ovf_buf + sizeof(ovf_buf))</code>
@@ -5570,7 +5007,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Same overflowing-cell layout as test_sqlite_cursor_overflow_reassembly, but this time no
     * **Assertions**:
-      * <code>Assert true (pc_sqlite_table_cursor_begin(&c, ovf_reader, nullptr, 512, 0, 5, leaf, work))</code>
+      * <code>Assert true (pc_sqlite_table_cursor_begin(&c, ovf_reader, NULL, 512, 0, 5, leaf, work))</code>
       * <code>Assert true (pc_sqlite_table_cursor_next(&c, &rid, &rc))</code>
       * <code>TEST_ASSERT_EQUAL_UINT64(1, rid);</code>
   </details>
@@ -5580,7 +5017,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Same layout as test_sqlite_cursor_overflow_reassembly (a 600-byte payload, 92 bytes local + a
     * **Assertions**:
-      * <code>Assert true (pc_sqlite_table_cursor_begin(&c, ovf_reader, nullptr, 512, 0, 5, leaf, work))</code>
+      * <code>Assert true (pc_sqlite_table_cursor_begin(&c, ovf_reader, NULL, 512, 0, 5, leaf, work))</code>
       * <code>Assert false (pc_sqlite_table_cursor_next(&c, &rid, &rc))</code>
   </details>
 
@@ -5589,7 +5026,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: The very first page read (the root, during descent) fails - table_cursor_begin must fail closed.
     * **Assertions**:
-      * <code>Assert false (pc_sqlite_table_cursor_begin(&c, always_fail_reader, nullptr, 512, 0, 1, leaf, work))</code>
+      * <code>Assert false (pc_sqlite_table_cursor_begin(&c, always_fail_reader, NULL, 512, 0, 1, leaf, work))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -5598,15 +5035,15 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
     * **Objective**: (1) The interior root's right-most pointer is 0 ("no child") - the stack-pop advance must fail
     * **Assertions**:
       * <code>Assert true (make_leaf_page(g_ml_pages[3], 512, leaf1_rows, 1))</code>
-      * <code>Assert true (pc_sqlite_table_cursor_begin(&c, multilevel_reader, nullptr, 512, 0, 2, leaf, work))</code>
+      * <code>Assert true (pc_sqlite_table_cursor_begin(&c, multilevel_reader, NULL, 512, 0, 2, leaf, work))</code>
       * <code>Assert true (pc_sqlite_table_cursor_next(&c, &rid, &rc))</code>
       * <code>Assert false (pc_sqlite_table_cursor_next(&c, &rid, &rc))</code>
       * <code>Assert true (make_leaf_page(g_ml_pages[3], 512, leaf1_rows, 1))</code>
-      * <code>Assert true (pc_sqlite_table_cursor_begin(&c, multilevel_reader, nullptr, 512, 0, 2, leaf, work))</code>
+      * <code>Assert true (pc_sqlite_table_cursor_begin(&c, multilevel_reader, NULL, 512, 0, 2, leaf, work))</code>
       * <code>Assert true (pc_sqlite_table_cursor_next(&c, &rid, &rc))</code>
       * <code>Assert false (pc_sqlite_table_cursor_next(&c, &rid, &rc)); // cursor_descend(4)</code>
       * <code>Assert true (make_leaf_page(g_ml_pages[3], 512, leaf1_rows, 1))</code>
-      * <code>Assert true (pc_sqlite_table_cursor_begin(&c, reread_garbage_reader, nullptr, 512, 0, 2, leaf, work))</code>
+      * <code>Assert true (pc_sqlite_table_cursor_begin(&c, reread_garbage_reader, NULL, 512, 0, 2, leaf, work))</code>
       * <code>Assert true (pc_sqlite_table_cursor_next(&c, &rid, &rc))</code>
       * <code>Assert false (pc_sqlite_table_cursor_next(&c, &rid, &rc))</code>
   </details>
@@ -5823,7 +5260,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
       * <code>Assert true (len &lt;= dcap)</code>
       * <code>Assert true (len &lt;= dcap)</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(0xAA, (uint8_t)doc[i]);</code>
-      * <code>Assert true (m &lt;= WebDavMethod::DAV_M_UNSUPPORTED)</code>
+      * <code>Assert true (m &lt;= DAV_M_UNSUPPORTED)</code>
       * <code>Assert true (d == 0 || d == 1 || d == PC_DAV_DEPTH_INFINITY || d == -7)</code>
   </details>
 
@@ -5849,186 +5286,6 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
     <summary><b>test_qpack_structured_fuzz</b> &mdash; <i>Qpack structured fuzz</i></summary>
 
     * **Objective**: Qpack structured fuzz
-  </details>
-
-</details>
-
-<details>
-<summary><b>test_preempt_queue (15 tests)</b></summary>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_start_validates_and_runs</b> &mdash; <i>Start validates and runs</i></summary>
-
-    * **Objective**: Start validates and runs
-    * **Assertions**:
-      * <code>Assert false (pc_pq_start(nullptr))</code>
-      * <code>Assert false (pc_pq_start(&bad))</code>
-      * <code>Assert true (pc_pq_start(&ok))</code>
-      * <code>Assert true (pc_pq_running())</code>
-      * <code>Assert false (pc_pq_start(&ok))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_fifo_order</b> &mdash; <i>Fifo order</i></summary>
-
-    * **Objective**: Fifo order
-    * **Assertions**:
-      * <code>Assert true (post_u32(10))</code>
-      * <code>Assert true (post_u32(20))</code>
-      * <code>Assert true (post_u32(30))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(3, g_seen.size());</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(10, g_seen[0]);</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(20, g_seen[1]);</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(30, g_seen[2]);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_urgent_goes_to_front</b> &mdash; <i>Urgent goes to front</i></summary>
-
-    * **Objective**: Urgent goes to front
-    * **Assertions**:
-      * <code>Assert true (pc_pq_post_urgent(&u, 0))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(3, g_seen.size());</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(99, g_seen[0]); // urgent first</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(1, g_seen[1]);</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(2, g_seen[2]);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_fail_closed_when_full</b> &mdash; <i>The test env sizes PC_PQ_DEPTH = 4.</i></summary>
-
-    * **Objective**: The test env sizes PC_PQ_DEPTH = 4.
-    * **Assertions**:
-      * <code>Assert true (post_u32(i))</code>
-      * <code>Assert false (post_u32(999))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(PC_PQ_DEPTH, g_seen.size());</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_high_water_tracks_peak</b> &mdash; <i>peak persists after draining</i></summary>
-
-    * **Objective**: peak persists after draining
-    * **Assertions**:
-      * <code>TEST_ASSERT_GREATER_OR_EQUAL_size_t(3, pc_pq_high_water());</code>
-      * <code>TEST_ASSERT_GREATER_OR_EQUAL_size_t(3, pc_pq_high_water());</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_from_isr_enqueues</b> &mdash; <i>From isr enqueues</i></summary>
-
-    * **Objective**: From isr enqueues
-    * **Assertions**:
-      * <code>Assert true (pc_pq_post_from_isr(&v))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(1, g_seen.size());</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(7, g_seen[0]);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_drain_empties_and_reuses</b> &mdash; <i>ring wraps cleanly after a drain</i></summary>
-
-    * **Objective**: ring wraps cleanly after a drain
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(0, g_seen.size());</code>
-      * <code>Assert true (post_u32(100 + i))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(PC_PQ_DEPTH, g_seen.size());</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(100, g_seen[0]);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_internal_lanes_outrank_user</b> &mdash; <i>DMA highest, then forward, then device, all above the user lane.</i></summary>
-
-    * **Objective**: DMA highest, then forward, then device, all above the user lane.
-    * **Assertions**:
-      * <code>TEST_ASSERT_GREATER_THAN_UINT8(pc_pq_lane_priority(pc_pq_lane::PC_PQ_LANE_FORWARD),</code>
-      * <code>TEST_ASSERT_GREATER_THAN_UINT8(pc_pq_lane_priority(pc_pq_lane::PC_PQ_LANE_DEVICE),</code>
-      * <code>TEST_ASSERT_GREATER_THAN_UINT8(pc_pq_lane_priority(pc_pq_lane::PC_PQ_LANE_USER),</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_lanes_are_isolated</b> &mdash; <i>The USER lane is already started by setUp; start the internal DMA lane too.</i></summary>
-
-    * **Objective**: The USER lane is already started by setUp; start the internal DMA lane too.
-    * **Assertions**:
-      * <code>Assert true (pc_pq_start_lane(pc_pq_lane::PC_PQ_LANE_DMA, &dma))</code>
-      * <code>Assert true (pc_pq_post(&u, 0))</code>
-      * <code>Assert true (pc_pq_post_lane(pc_pq_lane::PC_PQ_LANE_DMA, &d, 0))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, g_seen.size());</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(1, g_seen_dma.size());</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(22, g_seen_dma[0]);</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(1, g_seen.size());</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(11, g_seen[0]);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_lane_start_stop_running_independent</b> &mdash; <i>Lane start stop running independent</i></summary>
-
-    * **Objective**: Lane start stop running independent
-    * **Assertions**:
-      * <code>Assert true (pc_pq_running_lane(pc_pq_lane::PC_PQ_LANE_USER))</code>
-      * <code>Assert false (pc_pq_running_lane(pc_pq_lane::PC_PQ_LANE_DMA))</code>
-      * <code>Assert true (pc_pq_start_lane(pc_pq_lane::PC_PQ_LANE_DMA, &dma))</code>
-      * <code>Assert true (pc_pq_running_lane(pc_pq_lane::PC_PQ_LANE_DMA))</code>
-      * <code>Assert false (pc_pq_start_lane(pc_pq_lane::PC_PQ_LANE_DMA, &dma))</code>
-      * <code>Assert false (pc_pq_running_lane(pc_pq_lane::PC_PQ_LANE_DMA))</code>
-      * <code>Assert true (pc_pq_running_lane(pc_pq_lane::PC_PQ_LANE_USER))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_lane_high_water_is_per_lane</b> &mdash; <i>Lane high water is per lane</i></summary>
-
-    * **Objective**: Lane high water is per lane
-    * **Assertions**:
-      * <code>Assert true (pc_pq_start_lane(pc_pq_lane::PC_PQ_LANE_DMA, &dma))</code>
-      * <code>TEST_ASSERT_GREATER_OR_EQUAL_size_t(2, pc_pq_high_water_lane(pc_pq_lane::PC_PQ_LANE_DMA));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_pq_high_water_lane(pc_pq_lane::PC_PQ_LANE_DEVICE)); // untouched lane</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_lane_api_urgent_and_drain</b> &mdash; <i>Guards: urgent-post to a bad lane / with a null item fails closed; drain of a bad lane is a no-op.</i></summary>
-
-    * **Objective**: Guards: urgent-post to a bad lane / with a null item fails closed; drain of a bad lane is a no-op.
-    * **Assertions**:
-      * <code>Assert true (pc_pq_start_lane(pc_pq_lane::PC_PQ_LANE_DMA, &cfg))</code>
-      * <code>Assert true (pc_pq_post_lane(pc_pq_lane::PC_PQ_LANE_DMA, &a, 0))</code>
-      * <code>Assert true (pc_pq_post_lane_urgent(pc_pq_lane::PC_PQ_LANE_DMA, &b, 0))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(2u, (uint32_t)g_seen_dma.size());</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(20u, g_seen_dma[0]); // urgent item first</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(10u, g_seen_dma[1]);</code>
-      * <code>Assert false (pc_pq_post_lane_urgent((pc_pq_lane)pc_pq_lane::PC_PQ_LANE_COUNT, &a, 0))</code>
-      * <code>Assert false (pc_pq_post_lane_urgent(pc_pq_lane::PC_PQ_LANE_DMA, nullptr, 0))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_lane_guards_reject_bad_lane_and_null_item</b> &mdash; <i>A bad lane (>= PC_PQ_LANE_COUNT) must fail closed / return safe defaults on every</i></summary>
-
-    * **Objective**: A bad lane (>= PC_PQ_LANE_COUNT) must fail closed / return safe defaults on every
-    * **Assertions**:
-      * <code>Assert false (pc_pq_start_lane(bad, &cfg))</code>
-      * <code>Assert false (pc_pq_post_lane(bad, &v, 0))</code>
-      * <code>Assert false (pc_pq_running_lane(bad))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_pq_high_water_lane(bad));</code>
-      * <code>Assert false (pc_pq_post_lane(pc_pq_lane::PC_PQ_LANE_FORWARD, nullptr, 0))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_post_lane_urgent_fails_closed_when_full</b> &mdash; <i>Post lane urgent fails closed when full</i></summary>
-
-    * **Objective**: Post lane urgent fails closed when full
-    * **Assertions**:
-      * <code>Assert true (pc_pq_start_lane(pc_pq_lane::PC_PQ_LANE_DMA, &cfg))</code>
-      * <code>Assert true (pc_pq_post_lane(pc_pq_lane::PC_PQ_LANE_DMA, &i, 0))</code>
-      * <code>Assert false (pc_pq_post_lane_urgent(pc_pq_lane::PC_PQ_LANE_DMA, &urgent, 0))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(PC_PQ_DEPTH, g_seen_dma.size());</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_drain_lane_without_handler_skips_call_safely</b> &mdash; <i>FORWARD is never started elsewhere in this suite, so its handler stays null. The host</i></summary>
-
-    * **Objective**: FORWARD is never started elsewhere in this suite, so its handler stays null. The host
-    * **Assertions**:
-      * <code>Assert true (pc_pq_post_lane(pc_pq_lane::PC_PQ_LANE_FORWARD, &v, 0))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, g_seen.size());</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, g_seen_dma.size());</code>
   </details>
 
 </details>
@@ -6117,10 +5374,10 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Any null argument (or zero cap) fails closed and leaves a writable out empty.
     * **Assertions**:
-      * <code>Assert false (pc_prov_form_field(nullptr, "ssid", v, sizeof(v)))</code>
+      * <code>Assert false (pc_prov_form_field(NULL, "ssid", v, sizeof(v)))</code>
       * <code>Assert equal string ("", v)</code>
-      * <code>Assert false (pc_prov_form_field("ssid=x", nullptr, v, sizeof(v)))</code>
-      * <code>Assert false (pc_prov_form_field("ssid=x", "ssid", nullptr, sizeof(v)))</code>
+      * <code>Assert false (pc_prov_form_field("ssid=x", NULL, v, sizeof(v)))</code>
+      * <code>Assert false (pc_prov_form_field("ssid=x", "ssid", NULL, sizeof(v)))</code>
       * <code>Assert false (pc_prov_form_field("ssid=x", "ssid", v, 0))</code>
   </details>
 
@@ -6139,9 +5396,9 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Provisioning load partial null or zero cap
     * **Assertions**:
-      * <code>Assert false (pc_provisioning_load(nullptr, 8, psk, 0))</code>
+      * <code>Assert false (pc_provisioning_load(NULL, 8, psk, 0))</code>
       * <code>Assert equal string ("y", psk)</code>
-      * <code>Assert false (pc_provisioning_load(ssid, 0, nullptr, 8))</code>
+      * <code>Assert false (pc_provisioning_load(ssid, 0, NULL, 8))</code>
       * <code>Assert equal string ("z", ssid)</code>
   </details>
 
@@ -6302,8 +5559,8 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
       * <code>Assert false (decode_all(litname_badhuff, 5, &s))</code>
       * <code>Assert false (decode_all(litname_novalue, 4, &s))</code>
       * <code>Assert false (decode_all(nameref_badvlen, 4, &s))</code>
-      * <code>Assert false (pc_qpack_decode(indexed, 3, sc, sizeof sc, fail_emit, nullptr))</code>
-      * <code>Assert false (pc_qpack_decode(litname, 6, sc, sizeof sc, fail_emit, nullptr))</code>
+      * <code>Assert false (pc_qpack_decode(indexed, 3, sc, sizeof sc, fail_emit, NULL))</code>
+      * <code>Assert false (pc_qpack_decode(litname, 6, sc, sizeof sc, fail_emit, NULL))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -6311,622 +5568,8 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Literal Field Line with Name Reference + a valid value, but the emit callback rejects it.
     * **Assertions**:
-      * <code>Assert false (pc_qpack_decode(nameref, 5, sc, sizeof sc, fail_emit, nullptr))</code>
+      * <code>Assert false (pc_qpack_decode(nameref, 5, sc, sizeof sc, fail_emit, NULL))</code>
       * <code>Assert false (decode_all(namelen_past, 3, &s))</code>
-  </details>
-
-</details>
-
-<details>
-<summary><b>test_range (21 tests)</b></summary>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_unsatisfiable_range_416_carries_cors</b> &mdash; <i>Unsatisfiable range 416 carries cors</i></summary>
-
-    * **Objective**: Unsatisfiable range 416 carries cors
-    * **Assertions**:
-      * <code>Assert not null (strstr(out, "416 Range Not Satisfiable"))</code>
-      * <code>Assert not null (strstr(out, "Content-Range: bytes */20\\r\\n"))</code>
-      * <code>Assert not null (strstr(out, "Access-Control-Allow-Origin: *\\r\\n"))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_file_send_backpressure_resumes_across_polls</b> &mdash; <i>File send backpressure resumes across polls</i></summary>
-
-    * **Objective**: File send backpressure resumes across polls
-    * **Assertions**:
-      * <code>Assert not null (strstr(r, "200 OK"))</code>
-      * <code>Assert not null (strstr(r, "Content-Length: 20"))</code>
-      * <code>Assert equal uint (0, body_len())</code>
-      * <code>Assert equal uint (20, body_len())</code>
-      * <code>Assert equal memory (FILE_DATA, body_ptr(), 20)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_file_send_write_fails_then_retries</b> &mdash; <i>File send write fails then retries</i></summary>
-
-    * **Objective**: File send write fails then retries
-    * **Assertions**:
-      * <code>Assert not null (strstr(r, "200 OK"))</code>
-      * <code>Assert not null (strstr(r, "Content-Length: 20"))</code>
-      * <code>Assert equal uint (0, body_len())</code>
-      * <code>Assert equal uint (20, body_len())</code>
-      * <code>Assert equal memory (FILE_DATA, body_ptr(), 20)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_file_send_short_read_stops</b> &mdash; <i>File send short read stops</i></summary>
-
-    * **Objective**: File send short read stops
-    * **Assertions**:
-      * <code>Assert not null (strstr(r, "200 OK"))</code>
-      * <code>Assert not null (strstr(r, "Content-Length: 20"))</code>
-      * <code>Assert equal uint (8, body_len())</code>
-      * <code>Assert equal memory (FILE_DATA, body_ptr(), 8)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_range_trailing_garbage_ignored</b> &mdash; <i>Range trailing garbage ignored</i></summary>
-
-    * **Objective**: Range trailing garbage ignored
-    * **Assertions**:
-      * <code>Assert not null (strstr(r, "200 OK"))</code>
-      * <code>Assert null (strstr(r, "206"))</code>
-      * <code>Assert equal uint (20, body_len())</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_range_start_after_end_unsatisfiable</b> &mdash; <i>Range start after end unsatisfiable</i></summary>
-
-    * **Objective**: Range start after end unsatisfiable
-    * **Assertions**:
-      * <code>Assert not null (strstr(r, "416 Range Not Satisfiable"))</code>
-      * <code>Assert null (strstr(r, "206"))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_range_suffix_on_empty_file</b> &mdash; <i>Range suffix on empty file</i></summary>
-
-    * **Objective**: Range suffix on empty file
-    * **Assertions**:
-      * <code>Assert not null (strstr(r, "416 Range Not Satisfiable"))</code>
-      * <code>Assert null (strstr(r, "206"))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_serve_file_connection_gone</b> &mdash; <i>Serve file connection gone</i></summary>
-
-    * **Objective**: Serve file connection gone
-    * **Assertions**:
-      * <code>Assert equal uint (0, tcp_captured_len())</code>
-      * <code>Assert null (strstr(tcp_captured(), "200 OK"))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_no_range_full_200</b> &mdash; <i>No range full 200</i></summary>
-
-    * **Objective**: No range full 200
-    * **Assertions**:
-      * <code>Assert not null (strstr(r, "200 OK"))</code>
-      * <code>Assert not null (strstr(r, "Accept-Ranges: bytes"))</code>
-      * <code>Assert not null (strstr(r, "Content-Length: 20"))</code>
-      * <code>Assert not null (strstr(r, "Connection: keep-alive")); // HTTP/1.1 default is now persistent (keep-alive on)</code>
-      * <code>Assert null (strstr(r, "Content-Range"))</code>
-      * <code>Assert equal uint (20, body_len())</code>
-      * <code>Assert equal memory (FILE_DATA, body_ptr(), 20)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_range_prefix</b> &mdash; <i>Range prefix</i></summary>
-
-    * **Objective**: Range prefix
-    * **Assertions**:
-      * <code>Assert not null (strstr(r, "206 Partial Content"))</code>
-      * <code>Assert not null (strstr(r, "Content-Range: bytes 0-3/20"))</code>
-      * <code>Assert not null (strstr(r, "Content-Length: 4"))</code>
-      * <code>Assert equal uint (4, body_len())</code>
-      * <code>Assert equal memory ("0123", body_ptr(), 4)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_range_open_ended</b> &mdash; <i>Range open ended</i></summary>
-
-    * **Objective**: Range open ended
-    * **Assertions**:
-      * <code>Assert not null (strstr(r, "206 Partial Content"))</code>
-      * <code>Assert not null (strstr(r, "Content-Range: bytes 5-19/20"))</code>
-      * <code>Assert not null (strstr(r, "Content-Length: 15"))</code>
-      * <code>Assert equal uint (15, body_len())</code>
-      * <code>Assert equal memory ("56789ABCDEFGHIJ", body_ptr(), 15)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_range_suffix</b> &mdash; <i>Range suffix</i></summary>
-
-    * **Objective**: Range suffix
-    * **Assertions**:
-      * <code>Assert not null (strstr(r, "206 Partial Content"))</code>
-      * <code>Assert not null (strstr(r, "Content-Range: bytes 16-19/20"))</code>
-      * <code>Assert equal uint (4, body_len())</code>
-      * <code>Assert equal memory ("GHIJ", body_ptr(), 4)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_range_single_byte</b> &mdash; <i>Range single byte</i></summary>
-
-    * **Objective**: Range single byte
-    * **Assertions**:
-      * <code>Assert not null (strstr(tcp_captured(), "Content-Range: bytes 2-2/20"))</code>
-      * <code>Assert equal uint (1, body_len())</code>
-      * <code>Assert equal memory ("2", body_ptr(), 1)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_range_clamped_to_eof</b> &mdash; <i>Range clamped to eof</i></summary>
-
-    * **Objective**: Range clamped to eof
-    * **Assertions**:
-      * <code>Assert not null (strstr(tcp_captured(), "206 Partial Content"))</code>
-      * <code>Assert not null (strstr(tcp_captured(), "Content-Range: bytes 10-19/20"))</code>
-      * <code>Assert equal uint (10, body_len())</code>
-      * <code>Assert equal memory ("ABCDEFGHIJ", body_ptr(), 10)</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_range_unsatisfiable_416</b> &mdash; <i>Range unsatisfiable 416</i></summary>
-
-    * **Objective**: Range unsatisfiable 416
-    * **Assertions**:
-      * <code>Assert not null (strstr(r, "416 Range Not Satisfiable"))</code>
-      * <code>Assert not null (strstr(r, "Content-Range: bytes */20"))</code>
-      * <code>Assert null (strstr(r, "206"))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_malformed_range_ignored</b> &mdash; <i>Malformed range ignored</i></summary>
-
-    * **Objective**: Malformed range ignored
-    * **Assertions**:
-      * <code>Assert not null (strstr(r, "200 OK"))</code>
-      * <code>Assert equal uint (20, body_len())</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_range_overflow_start_unsatisfiable</b> &mdash; <i>Range overflow start unsatisfiable</i></summary>
-
-    * **Objective**: Range overflow start unsatisfiable
-    * **Assertions**:
-      * <code>Assert not null (strstr(r, "416 Range Not Satisfiable"))</code>
-      * <code>Assert null (strstr(r, "206"))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_range_overflow_end_clamps</b> &mdash; <i>Range overflow end clamps</i></summary>
-
-    * **Objective**: Range overflow end clamps
-    * **Assertions**:
-      * <code>Assert not null (strstr(r, "206 Partial Content"))</code>
-      * <code>Assert not null (strstr(r, "Content-Range: bytes 0-19/20"))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_range_suffix_zero_unsatisfiable</b> &mdash; <i>Range suffix zero unsatisfiable</i></summary>
-
-    * **Objective**: Range suffix zero unsatisfiable
-    * **Assertions**:
-      * <code>Assert not null (strstr(r, "416 Range Not Satisfiable"))</code>
-      * <code>Assert null (strstr(r, "206"))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_multirange_falls_back_to_200</b> &mdash; <i>Multirange falls back to 200</i></summary>
-
-    * **Objective**: Multirange falls back to 200
-    * **Assertions**:
-      * <code>Assert not null (strstr(r, "200 OK"))</code>
-      * <code>Assert null (strstr(r, "206"))</code>
-      * <code>Assert equal uint (20, body_len())</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_head_with_range_no_body</b> &mdash; <i>Head with range no body</i></summary>
-
-    * **Objective**: Head with range no body
-    * **Assertions**:
-      * <code>Assert not null (strstr(r, "206 Partial Content"))</code>
-      * <code>Assert not null (strstr(r, "Content-Range: bytes 0-3/20"))</code>
-      * <code>Assert not null (strstr(r, "Content-Length: 4"))</code>
-      * <code>Assert equal uint (0, body_len())</code>
-  </details>
-
-</details>
-
-<details>
-<summary><b>test_simatic (36 tests)</b></summary>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_bcc_is_xor</b> &mdash; <i>a doubled DLE pair cancels in the XOR (0x10 ^ 0x10 = 0)</i></summary>
-
-    * **Objective**: a doubled DLE pair cancels in the XOR (0x10 ^ 0x10 = 0)
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX8(0x11 ^ 0x22 ^ 0x33, pc_3964r_bcc(d, sizeof(d)));</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(0, pc_3964r_bcc(pair, sizeof(pair)));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_build_block_stuffs_dle_and_terminates</b> &mdash; <i>0x41, DLE, DLE (doubled), 0x42, DLE, ETX, BCC</i></summary>
-
-    * **Objective**: 0x41, DLE, DLE (doubled), 0x42, DLE, ETX, BCC
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(7, n);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(want, buf, 6);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(pc_3964r_bcc(buf, 6), buf[6]); // BCC over stuffed data + DLE ETX</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_block_round_trip_with_embedded_dle</b> &mdash; <i>Block round trip with embedded dle</i></summary>
-
-    * **Objective**: Block round trip with embedded dle
-    * **Assertions**:
-      * <code>TEST_ASSERT_GREATER_THAN_size_t(0, n);</code>
-      * <code>Assert true (pc_3964r_parse_block(blk, n, true, out, sizeof(out), &olen))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(sizeof(data), olen);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(data, out, olen);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_block_round_trip_no_bcc</b> &mdash; <i>Block round trip no bcc</i></summary>
-
-    * **Objective**: Block round trip no bcc
-    * **Assertions**:
-      * <code>Assert true (pc_3964r_parse_block(blk, n, false, out, sizeof(out), &olen))</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(data, out, olen);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_parse_rejects_bad</b> &mdash; <i>bad BCC</i></summary>
-
-    * **Objective**: bad BCC
-    * **Assertions**:
-      * <code>Assert false (pc_3964r_parse_block(blk, n, true, out, sizeof(out), &olen))</code>
-      * <code>Assert false (pc_3964r_parse_block(noterm, sizeof(noterm), false, out, sizeof(out), &olen))</code>
-      * <code>Assert false (pc_3964r_parse_block(dangle, sizeof(dangle), false, out, sizeof(out), &olen))</code>
-      * <code>Assert false (pc_3964r_parse_block(badctl, sizeof(badctl), false, out, sizeof(out), &olen))</code>
-      * <code>Assert false (pc_3964r_parse_block(bigblk, bn, false, tiny, sizeof(tiny), &olen))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_build_block_rejects_bad_args</b> &mdash; <i>A null destination, and a null payload pointer with a non-zero length, are refused; a null</i></summary>
-
-    * **Objective**: A null destination, and a null payload pointer with a non-zero length, are refused; a null
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_3964r_build_block(nullptr, sizeof(buf), d, 1, false));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_3964r_build_block(buf, sizeof(buf), nullptr, 1, false));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(2, n);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(SIMATIC_DLE, buf[0]);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(SIMATIC_ETX, buf[1]);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_build_block_overflow_at_each_stage</b> &mdash; <i>Every write stage is capacity-checked independently: payload byte, the doubled DLE, the</i></summary>
-
-    * **Objective**: Every write stage is capacity-checked independently: payload byte, the doubled DLE, the
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_3964r_build_block(buf, 0, d, 1, false));   // no room at all</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_3964r_build_block(buf, 1, dle, 1, false)); // room for DLE, not its double</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_3964r_build_block(buf, 2, d, 1, false));   // no room for DLE ETX</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_3964r_build_block(buf, 3, d, 1, true));    // no room for the BCC</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(3, pc_3964r_build_block(buf, 3, d, 1, false));   // same block fits without one</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_parse_block_rejects_null_args</b> &mdash; <i>All three pointers are mandatory; a missing one fails closed rather than writing anywhere.</i></summary>
-
-    * **Objective**: All three pointers are mandatory; a missing one fails closed rather than writing anywhere.
-    * **Assertions**:
-      * <code>Assert false (pc_3964r_parse_block(nullptr, sizeof(blk), false, out, sizeof(out), &olen))</code>
-      * <code>Assert false (pc_3964r_parse_block(blk, sizeof(blk), false, nullptr, sizeof(out), &olen))</code>
-      * <code>Assert false (pc_3964r_parse_block(blk, sizeof(blk), false, out, sizeof(out), nullptr))</code>
-      * <code>Assert true (pc_3964r_parse_block(blk, sizeof(blk), false, out, sizeof(out), &olen))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(1, olen);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_parse_block_missing_bcc_and_doubled_dle_overflow</b> &mdash; <i>R variant whose trailing BCC was truncated away: the terminator alone is not enough</i></summary>
-
-    * **Objective**: R variant whose trailing BCC was truncated away: the terminator alone is not enough
-    * **Assertions**:
-      * <code>Assert false (pc_3964r_parse_block(nobcc, sizeof(nobcc), true, out, sizeof(out), &olen))</code>
-      * <code>Assert false (pc_3964r_parse_block(doubled, sizeof(doubled), false, out, 0, &olen))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_sm_send_happy_path</b> &mdash; <i>first tx is STX; awaiting connect</i></summary>
-
-    * **Objective**: first tx is STX; awaiting connect
-    * **Assertions**:
-      * <code>Assert true (pc_3964r_send(&c, msg, sizeof(msg), 0))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(1, g_tx.size());</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(SIMATIC_STX, g_tx[0]);</code>
-      * <code>TEST_ASSERT_GREATER_THAN_size_t(1, g_tx.size());            // block bytes emitted</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(SIMATIC_ETX, g_tx[g_tx.size() - 2]); // ... DLE ETX BCC tail</code>
-      * <code>Assert true (pc_3964r_idle(&c))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_sm_receive_path_delivers</b> &mdash; <i>build a block the "partner" sends us</i></summary>
-
-    * **Objective**: build a block the "partner" sends us
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(1, g_tx.size());</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(SIMATIC_DLE, g_tx[0]);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(SIMATIC_DLE, g_tx.back());</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(sizeof(payload), g_rx.size());</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(payload, g_rx.data(), g_rx.size());</code>
-      * <code>Assert true (pc_3964r_idle(&c))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_sm_block_nak_retries</b> &mdash; <i>Sm block nak retries</i></summary>
-
-    * **Objective**: Sm block nak retries
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX8(SIMATIC_STX, g_tx.back());</code>
-      * <code>TEST_ASSERT_GREATER_THAN_size_t(before, g_tx.size());</code>
-      * <code>Assert false (pc_3964r_idle(&c))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_sm_qvz_timeout_then_abort</b> &mdash; <i>never ack; tick past the deadline repeatedly -> connection retries then abort</i></summary>
-
-    * **Objective**: never ack; tick past the deadline repeatedly -> connection retries then abort
-    * **Assertions**:
-      * <code>Assert true (pc_3964r_idle(&c))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_sm_priority_arbitration</b> &mdash; <i>Low-priority station, mid-send, sees a partner STX -> yields to receive.</i></summary>
-
-    * **Objective**: Low-priority station, mid-send, sees a partner STX -> yields to receive.
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX8(SIMATIC_DLE, g_tx[0]); // yielded: replied DLE (now receiving)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, g_tx.size()); // ignored; still awaiting its own connect DLE</code>
-      * <code>Assert false (pc_3964r_idle(&hi))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_sm_reply_from_rx_callback</b> &mdash; <i>the block was acked (DLE) then the reply's STX was emitted -> the link is now sending the reply</i></summary>
-
-    * **Objective**: the block was acked (DLE) then the reply's STX was emitted -> the link is now sending the reply
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX8(SIMATIC_STX, g_tx.back());</code>
-      * <code>Assert false (pc_3964r_idle(&c))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_sm_send_rejects_when_busy_or_unframeable</b> &mdash; <i>One job in flight at a time, and a payload that cannot be framed inside the block buffer is</i></summary>
-
-    * **Objective**: One job in flight at a time, and a payload that cannot be framed inside the block buffer is
-    * **Assertions**:
-      * <code>Assert true (pc_3964r_send(&c, msg, sizeof(msg), 0))</code>
-      * <code>Assert false (pc_3964r_send(&c, msg, sizeof(msg), 0))</code>
-      * <code>Assert false (pc_3964r_send(&d, big, sizeof(big), 0))</code>
-      * <code>Assert true (pc_3964r_idle(&d))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_sm_null_callbacks_are_safe</b> &mdash; <i>tx/rx are optional: the link still runs the handshake and accepts a block, it just has</i></summary>
-
-    * **Objective**: tx/rx are optional: the link still runs the handshake and accepts a block, it just has
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(0, g_tx.size()); // no sink -&gt; nothing emitted</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, g_rx.size()); // no delivery callback</code>
-      * <code>Assert true (pc_3964r_idle(&c))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_sm_receive_bad_bcc_naks</b> &mdash; <i>A check-invalid block is NAKed and never delivered.</i></summary>
-
-    * **Objective**: A check-invalid block is NAKed and never delivered.
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX8(SIMATIC_NAK, g_tx.back());</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, g_rx.size());</code>
-      * <code>Assert true (pc_3964r_idle(&c))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_sm_receive_no_bcc_variant_delivers</b> &mdash; <i>Plain 3964 (no BCC): DLE ETX finalizes the block immediately, no trailing check byte.</i></summary>
-
-    * **Objective**: Plain 3964 (no BCC): DLE ETX finalizes the block immediately, no trailing check byte.
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX8(SIMATIC_DLE, g_tx.back()); // acked</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(sizeof(payload), g_rx.size());</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(payload, g_rx.data(), g_rx.size());</code>
-      * <code>Assert true (pc_3964r_idle(&c))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_sm_receive_illegal_control_naks</b> &mdash; <i>DLE followed by something that is neither DLE nor ETX is a framing error mid-collect.</i></summary>
-
-    * **Objective**: DLE followed by something that is neither DLE nor ETX is a framing error mid-collect.
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX8(SIMATIC_NAK, g_tx.back());</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, g_rx.size());</code>
-      * <code>Assert true (pc_3964r_idle(&c))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_sm_receive_overflow_naks</b> &mdash; <i>A partner that never terminates the block fills rxbuf; the next byte is rejected.</i></summary>
-
-    * **Objective**: A partner that never terminates the block fills rxbuf; the next byte is rejected.
-    * **Assertions**:
-      * <code>Assert false (pc_3964r_idle(&c))</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8(SIMATIC_NAK, g_tx.back());</code>
-      * <code>Assert true (pc_3964r_idle(&c))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_sm_idle_ignores_non_stx</b> &mdash; <i>Line noise while idle must not open a receive.</i></summary>
-
-    * **Objective**: Line noise while idle must not open a receive.
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(0, g_tx.size());</code>
-      * <code>Assert true (pc_3964r_idle(&c))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_sm_conn_nak_retries_then_gives_up</b> &mdash; <i>A partner that NAKs the connect gets MAX_CONN_RETRY fresh STXs, then the job is abandoned.</i></summary>
-
-    * **Objective**: A partner that NAKs the connect gets MAX_CONN_RETRY fresh STXs, then the job is abandoned.
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX8(SIMATIC_STX, g_tx.back());</code>
-      * <code>Assert false (pc_3964r_idle(&c))</code>
-      * <code>Assert true (pc_3964r_idle(&c))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_sm_await_conn_ignores_other_bytes</b> &mdash; <i>Neither DLE, STX nor NAK: nothing happens, we keep waiting for the connect.</i></summary>
-
-    * **Objective**: Neither DLE, STX nor NAK: nothing happens, we keep waiting for the connect.
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(0, g_tx.size());</code>
-      * <code>Assert false (pc_3964r_idle(&c))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_sm_await_end_ignores_noise_then_gives_up</b> &mdash; <i>In TX_AWAIT_END only DLE (done) and NAK (repeat) mean anything; MAX_BLOCK_RETRY rejections</i></summary>
-
-    * **Objective**: In TX_AWAIT_END only DLE (done) and NAK (repeat) mean anything; MAX_BLOCK_RETRY rejections
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(0, g_tx.size());</code>
-      * <code>Assert false (pc_3964r_idle(&c))</code>
-      * <code>Assert false (pc_3964r_idle(&c))</code>
-      * <code>Assert true (pc_3964r_idle(&c))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_sm_tick_before_deadline_is_a_noop</b> &mdash; <i>The QVZ timer must not fire early.</i></summary>
-
-    * **Objective**: The QVZ timer must not fire early.
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(0, g_tx.size());</code>
-      * <code>Assert false (pc_3964r_idle(&c))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_sm_tick_block_timeout_retries_then_gives_up</b> &mdash; <i>No end DLE within QVZ repeats the block from STX, up to MAX_BLOCK_RETRY times.</i></summary>
-
-    * **Objective**: No end DLE within QVZ repeats the block from STX, up to MAX_BLOCK_RETRY times.
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX8(SIMATIC_STX, g_tx.back());</code>
-      * <code>Assert false (pc_3964r_idle(&c))</code>
-      * <code>Assert true (pc_3964r_idle(&c))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_sm_tick_zvz_aborts_receive</b> &mdash; <i>A partner that stops mid-block trips the ZVZ inter-character timeout -> NAK, link freed.</i></summary>
-
-    * **Objective**: A partner that stops mid-block trips the ZVZ inter-character timeout -> NAK, link freed.
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_HEX8(SIMATIC_NAK, g_tx.back());</code>
-      * <code>Assert true (pc_3964r_idle(&c))</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_sm_unknown_state_is_inert</b> &mdash; <i>Defensive: a state byte outside the four defined states (a corrupted context) makes both</i></summary>
-
-    * **Objective**: Defensive: a state byte outside the four defined states (a corrupted context) makes both
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(0, g_tx.size());</code>
-      * <code>Assert false (pc_3964r_idle(&c))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8(0x7F, (uint8_t)c.state);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_rk512_build_send_field_order</b> &mdash; <i>[SEND, coord=0, area=DB, dbnr=5, addr BE, count BE, words BE]</i></summary>
-
-    * **Objective**: [SEND, coord=0, area=DB, dbnr=5, addr BE, count BE, words BE]
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(8 + 4, n);</code>
-      * <code>TEST_ASSERT_EQUAL_HEX8_ARRAY(want, buf, n);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_rk512_build_fetch_and_parse</b> &mdash; <i>Rk512 build fetch and parse</i></summary>
-
-    * **Objective**: Rk512 build fetch and parse
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(8, n);</code>
-      * <code>Assert true (pc_rk512_parse_header(buf, n, &h))</code>
-      * <code>Assert equal (Rk512Cmd::FETCH, h.cmd)</code>
-      * <code>Assert equal (Rk512Area::MB, h.area)</code>
-      * <code>TEST_ASSERT_EQUAL_UINT16(0x0100, h.addr);</code>
-      * <code>TEST_ASSERT_EQUAL_UINT16(4, h.count);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_rk512_reaction_round_trip</b> &mdash; <i>a non-zero error status</i></summary>
-
-    * **Objective**: a non-zero error status
-    * **Assertions**:
-      * <code>Assert true (pc_rk512_parse_reaction(buf, n, &status, &data, &dlen))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT16(0, status);</code>
-      * <code>Assert null (data)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, dlen);</code>
-      * <code>TEST_ASSERT_EQUAL_UINT16(0x8001, status);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_rk512_parse_rejects</b> &mdash; <i>overflow guards</i></summary>
-
-    * **Objective**: overflow guards
-    * **Assertions**:
-      * <code>Assert false (pc_rk512_parse_header(shortbuf, sizeof(shortbuf), &h))</code>
-      * <code>Assert false (pc_rk512_parse_header(badarea, sizeof(badarea), &h))</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_rk512_build_send(tiny, sizeof(tiny), Rk512Area::DB, 0, 0, w, 1));</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_rk512_build_guards</b> &mdash; <i>Every builder fails closed on a null destination or a destination too small for its telegram.</i></summary>
-
-    * **Objective**: Every builder fails closed on a null destination or a destination too small for its telegram.
-    * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_rk512_build_send(nullptr, sizeof(buf), Rk512Area::DB, 0, 0, w, 1));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_rk512_build_send(buf, sizeof(buf), Rk512Area::DB, 0, 0, nullptr, 1));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(8, pc_rk512_build_send(buf, sizeof(buf), Rk512Area::DB, 0, 0, nullptr, 0));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_rk512_build_fetch(nullptr, sizeof(buf), Rk512Area::DB, 0, 0, 1));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_rk512_build_fetch(buf, 7, Rk512Area::DB, 0, 0, 1)); // &lt; header</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_rk512_build_reaction(nullptr, sizeof(buf), 0));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_rk512_build_reaction(buf, 2, 0)); // &lt; 3</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_rk512_parse_header_guards</b> &mdash; <i>Null arguments, an area code under the valid range, and a REACTION command byte are all</i></summary>
-
-    * **Objective**: Null arguments, an area code under the valid range, and a REACTION command byte are all
-    * **Assertions**:
-      * <code>Assert false (pc_rk512_parse_header(nullptr, sizeof(ok), &h))</code>
-      * <code>Assert false (pc_rk512_parse_header(ok, sizeof(ok), nullptr))</code>
-      * <code>Assert false (pc_rk512_parse_header(lowarea, sizeof(lowarea), &h))</code>
-      * <code>Assert false (pc_rk512_parse_header(reaction, sizeof(reaction), &h))</code>
-      * <code>Assert true (pc_rk512_parse_header(ok, sizeof(ok), &h))</code>
-      * <code>Assert equal (Rk512Cmd::SEND, h.cmd)</code>
-      * <code>TEST_ASSERT_EQUAL_UINT8(1, h.dbnr);</code>
-  </details>
-
-  <details style="margin-left: 20px;">
-    <summary><b>test_rk512_parse_reaction_guards_and_data</b> &mdash; <i>Null arguments / a short buffer / a non-REACTION command byte are refused; a FETCH response</i></summary>
-
-    * **Objective**: Null arguments / a short buffer / a non-REACTION command byte are refused; a FETCH response
-    * **Assertions**:
-      * <code>Assert false (pc_rk512_parse_reaction(nullptr, 3, &status, nullptr, nullptr))</code>
-      * <code>Assert false (pc_rk512_parse_reaction(buf, 3, nullptr, nullptr, nullptr))</code>
-      * <code>Assert false (pc_rk512_parse_reaction(buf, 2, &status, nullptr, nullptr))</code>
-      * <code>Assert false (pc_rk512_parse_reaction(notreaction, sizeof(notreaction), &status, nullptr, nullptr))</code>
-      * <code>Assert true (pc_rk512_parse_reaction(buf, 5, &status, &data, &dlen))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT16(0x0102, status);</code>
-      * <code>Assert equal ptr (buf + 3, data)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(2, dlen);</code>
   </details>
 
 </details>
@@ -6939,7 +5582,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Reply parser skips malformed lines
     * **Assertions**:
-      * <code>Assert equal int (SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m))</code>
+      * <code>Assert equal int (SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, NULL, &m))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -6947,7 +5590,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Reply bare three digit line is final
     * **Assertions**:
-      * <code>Assert equal int (SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m))</code>
+      * <code>Assert equal int (SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, NULL, &m))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -6964,7 +5607,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Null optional fields
     * **Assertions**:
-      * <code>Assert equal int (SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m))</code>
+      * <code>Assert equal int (SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, NULL, &m))</code>
       * <code>Assert true (m.sent.find("EHLO esp32\\r\\n") != std::string::npos)</code>
       * <code>Assert true (m.sent.find("Subject: \\r\\n") != std::string::npos); // empty, not "(null)</code>
       * <code>Assert true (m.sent.find("\\r\\n\\r\\n.\\r\\n") != std::string::npos)</code>
@@ -6975,7 +5618,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Null password sends empty secret
     * **Assertions**:
-      * <code>Assert equal int (SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m))</code>
+      * <code>Assert equal int (SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, NULL, &m))</code>
       * <code>Assert true (m.sent.find("dXNlcg==\\r\\n") != std::string::npos); // base64("user")</code>
       * <code>Assert true (m.sent.find("AUTH LOGIN\\r\\n\\r\\n") == std::string::npos)</code>
   </details>
@@ -6985,7 +5628,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Empty user skips auth
     * **Assertions**:
-      * <code>Assert equal int (SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m))</code>
+      * <code>Assert equal int (SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, NULL, &m))</code>
       * <code>Assert true (m.sent.find("AUTH") == std::string::npos)</code>
   </details>
 
@@ -6994,14 +5637,14 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Arg validation rejects each missing field
     * **Assertions**:
-      * <code>Assert equal int (SMTP_ERR_ARG, smtp_run(nullptr, &msg, mock_send, mock_recv, nullptr, &m))</code>
-      * <code>Assert equal int (SMTP_ERR_ARG, smtp_run(&c, nullptr, mock_send, mock_recv, nullptr, &m))</code>
-      * <code>Assert equal int (SMTP_ERR_ARG, smtp_run(&c, &msg, nullptr, mock_recv, nullptr, &m))</code>
-      * <code>Assert equal int (SMTP_ERR_ARG, smtp_run(&c, &msg, mock_send, nullptr, nullptr, &m))</code>
-      * <code>Assert equal int (SMTP_ERR_ARG, smtp_run(&nohost, &msg, mock_send, mock_recv, nullptr, &m))</code>
-      * <code>Assert equal int (SMTP_ERR_ARG, smtp_run(&nofrom, &msg, mock_send, mock_recv, nullptr, &m))</code>
-      * <code>Assert equal int (SMTP_ERR_ARG, smtp_run(&c, &noto, mock_send, mock_recv, nullptr, &m))</code>
-      * <code>Assert equal int (SMTP_ERR_ARG, smtp_run(&c, &emptyto, mock_send, mock_recv, nullptr, &m))</code>
+      * <code>Assert equal int (SMTP_ERR_ARG, smtp_run(NULL, &msg, mock_send, mock_recv, NULL, &m))</code>
+      * <code>Assert equal int (SMTP_ERR_ARG, smtp_run(&c, NULL, mock_send, mock_recv, NULL, &m))</code>
+      * <code>Assert equal int (SMTP_ERR_ARG, smtp_run(&c, &msg, NULL, mock_recv, NULL, &m))</code>
+      * <code>Assert equal int (SMTP_ERR_ARG, smtp_run(&c, &msg, mock_send, NULL, NULL, &m))</code>
+      * <code>Assert equal int (SMTP_ERR_ARG, smtp_run(&nohost, &msg, mock_send, mock_recv, NULL, &m))</code>
+      * <code>Assert equal int (SMTP_ERR_ARG, smtp_run(&nofrom, &msg, mock_send, mock_recv, NULL, &m))</code>
+      * <code>Assert equal int (SMTP_ERR_ARG, smtp_run(&c, &noto, mock_send, mock_recv, NULL, &m))</code>
+      * <code>Assert equal int (SMTP_ERR_ARG, smtp_run(&c, &emptyto, mock_send, mock_recv, NULL, &m))</code>
       * <code>Assert true (m.sent.empty())</code>
   </details>
 
@@ -7010,7 +5653,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Rcpt 251 is accepted
     * **Assertions**:
-      * <code>Assert equal int (SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m))</code>
+      * <code>Assert equal int (SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, NULL, &m))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -7018,7 +5661,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Command helper send failure
     * **Assertions**:
-      * <code>Assert equal int (SMTP_ERR_IO, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m))</code>
+      * <code>Assert equal int (SMTP_ERR_IO, smtp_run(&c, &msg, mock_send, mock_recv, NULL, &m))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -7026,7 +5669,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Commands, in order.
     * **Assertions**:
-      * <code>Assert equal int (SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m))</code>
+      * <code>Assert equal int (SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, NULL, &m))</code>
       * <code>Assert true (m.sent.find("EHLO esp32\\r\\n") != std::string::npos)</code>
       * <code>Assert true (m.sent.find("MAIL FROM:&lt;device@example.net&gt;\\r\\n") != std::string::npos)</code>
       * <code>Assert true (m.sent.find("RCPT TO:&lt;ops@example.net&gt;\\r\\n") != std::string::npos)</code>
@@ -7044,7 +5687,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Auth login
     * **Assertions**:
-      * <code>Assert equal int (SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m))</code>
+      * <code>Assert equal int (SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, NULL, &m))</code>
       * <code>Assert true (m.sent.find("AUTH LOGIN\\r\\n") != std::string::npos)</code>
       * <code>Assert true (m.sent.find("dXNlcg==\\r\\n") != std::string::npos); // base64("user")</code>
       * <code>Assert true (m.sent.find("cGFzcw==\\r\\n") != std::string::npos); // base64("pass")</code>
@@ -7055,7 +5698,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Auth rejected
     * **Assertions**:
-      * <code>Assert equal int (SMTP_ERR_AUTH, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m))</code>
+      * <code>Assert equal int (SMTP_ERR_AUTH, smtp_run(&c, &msg, mock_send, mock_recv, NULL, &m))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -7063,7 +5706,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Greeting not ready
     * **Assertions**:
-      * <code>Assert equal int (SMTP_ERR_PROTOCOL, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m))</code>
+      * <code>Assert equal int (SMTP_ERR_PROTOCOL, smtp_run(&c, &msg, mock_send, mock_recv, NULL, &m))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -7071,7 +5714,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Rcpt rejected
     * **Assertions**:
-      * <code>Assert equal int (SMTP_ERR_PROTOCOL, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m))</code>
+      * <code>Assert equal int (SMTP_ERR_PROTOCOL, smtp_run(&c, &msg, mock_send, mock_recv, NULL, &m))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -7079,7 +5722,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Data refused
     * **Assertions**:
-      * <code>Assert equal int (SMTP_ERR_PROTOCOL, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m))</code>
+      * <code>Assert equal int (SMTP_ERR_PROTOCOL, smtp_run(&c, &msg, mock_send, mock_recv, NULL, &m))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -7087,7 +5730,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Dot stuffing
     * **Assertions**:
-      * <code>Assert equal int (SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m))</code>
+      * <code>Assert equal int (SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, NULL, &m))</code>
       * <code>Assert true (m.sent.find("..hidden\\r\\n") != std::string::npos)</code>
       * <code>Assert true (m.sent.find("...two dots\\r\\n") != std::string::npos)</code>
       * <code>Assert true (m.sent.find("last\\r\\n.\\r\\n") != std::string::npos)</code>
@@ -7098,7 +5741,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Multiline reply and lf body
     * **Assertions**:
-      * <code>Assert equal int (SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m))</code>
+      * <code>Assert equal int (SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, NULL, &m))</code>
       * <code>Assert true (m.sent.find("a\\r\\nb\\r\\n") != std::string::npos)</code>
   </details>
 
@@ -7107,7 +5750,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Partial reads dribble
     * **Assertions**:
-      * <code>Assert equal int (SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m))</code>
+      * <code>Assert equal int (SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, NULL, &m))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -7115,7 +5758,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Missing required arg
     * **Assertions**:
-      * <code>Assert equal int (SMTP_ERR_ARG, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m))</code>
+      * <code>Assert equal int (SMTP_ERR_ARG, smtp_run(&c, &msg, mock_send, mock_recv, NULL, &m))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -7123,7 +5766,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Io error when server hangs
     * **Assertions**:
-      * <code>Assert equal int (SMTP_ERR_IO, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m))</code>
+      * <code>Assert equal int (SMTP_ERR_IO, smtp_run(&c, &msg, mock_send, mock_recv, NULL, &m))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -7139,7 +5782,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Command send fails
     * **Assertions**:
-      * <code>Assert equal int (SMTP_ERR_IO, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m))</code>
+      * <code>Assert equal int (SMTP_ERR_IO, smtp_run(&c, &msg, mock_send, mock_recv, NULL, &m))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -7147,7 +5790,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Body send fails
     * **Assertions**:
-      * <code>Assert equal int (SMTP_ERR_IO, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m))</code>
+      * <code>Assert equal int (SMTP_ERR_IO, smtp_run(&c, &msg, mock_send, mock_recv, NULL, &m))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -7207,7 +5850,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Cr in body dropped
     * **Assertions**:
-      * <code>Assert equal int (SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m))</code>
+      * <code>Assert equal int (SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, NULL, &m))</code>
       * <code>Assert true (m.sent.find("x\\r\\ny\\r\\n") != std::string::npos)</code>
   </details>
 
@@ -7294,7 +5937,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Starttls without an upgrade callback is an arg error
     * **Assertions**:
-      * <code>Assert equal int (SMTP_ERR_ARG, smtp_run(&c, &msg, mock_send, mock_recv, nullptr, &m))</code>
+      * <code>Assert equal int (SMTP_ERR_ARG, smtp_run(&c, &msg, mock_send, mock_recv, NULL, &m))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -7325,7 +5968,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
       * <code>Assert false (pc_spa_has_extension("/"))</code>
       * <code>Assert false (pc_spa_has_extension("/a.b/c"))</code>
       * <code>Assert false (pc_spa_has_extension("/weird."))</code>
-      * <code>Assert false (pc_spa_has_extension(nullptr))</code>
+      * <code>Assert false (pc_spa_has_extension(NULL))</code>
       * <code>Assert true (pc_spa_has_extension("file.txt"))</code>
       * <code>Assert false (pc_spa_has_extension("/.hidden"))</code>
   </details>
@@ -7343,8 +5986,8 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
       * <code>Assert equal int (pc_spa_action::PC_SPA_SERVE_FILE, pc_spa_route("/assets/logo.svg", "/api/"))</code>
       * <code>Assert equal int (pc_spa_action::PC_SPA_PASSTHROUGH, pc_spa_route("/api/state", "/api/"))</code>
       * <code>Assert equal int (pc_spa_action::PC_SPA_PASSTHROUGH, pc_spa_route("/api/devices/42", "/api/"))</code>
-      * <code>Assert equal int (pc_spa_action::PC_SPA_SERVE_SHELL, pc_spa_route("/api/state", nullptr))</code>
-      * <code>Assert equal int (pc_spa_action::PC_SPA_SERVE_SHELL, pc_spa_route(nullptr, "/api/"))</code>
+      * <code>Assert equal int (pc_spa_action::PC_SPA_SERVE_SHELL, pc_spa_route("/api/state", NULL))</code>
+      * <code>Assert equal int (pc_spa_action::PC_SPA_SERVE_SHELL, pc_spa_route(NULL, "/api/"))</code>
       * <code>Assert equal int (pc_spa_action::PC_SPA_SERVE_FILE, pc_spa_route("relative.txt", "/api/"))</code>
       * <code>Assert equal int (pc_spa_action::PC_SPA_SERVE_SHELL, pc_spa_route("/dashboard", ""))</code>
   </details>
@@ -7406,7 +6049,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Route ex null ctx degrades to the plain router
     * **Assertions**:
-      * <code>Assert equal int (pc_spa_action::PC_SPA_SERVE_SHELL, pc_spa_route_ex("/dashboard", nullptr))</code>
+      * <code>Assert equal int (pc_spa_action::PC_SPA_SERVE_SHELL, pc_spa_route_ex("/dashboard", NULL))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -7466,10 +6109,10 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Stream bad args do not crash
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_UINT32(0, pc_ui_stream_next(nullptr, buf, sizeof(buf)));</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(0, pc_ui_stream_next(&s, nullptr, 8));</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(0, pc_ui_stream_next(NULL, buf, sizeof(buf)));</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(0, pc_ui_stream_next(&s, NULL, 8));</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(0, pc_ui_stream_next(&s, buf, 0));</code>
-      * <code>Assert true (pc_ui_stream_done(nullptr))</code>
+      * <code>Assert true (pc_ui_stream_done(NULL))</code>
       * <code>Assert true (pc_ui_stream_done(&n))</code>
   </details>
 
@@ -7554,8 +6197,8 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Wrap negotiate guards
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_spnego_wrap_negotiate(nullptr, sizeof(tok), out, sizeof(out)));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_spnego_wrap_negotiate(tok, sizeof(tok), nullptr, sizeof(out)));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_spnego_wrap_negotiate(NULL, sizeof(tok), out, sizeof(out)));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_spnego_wrap_negotiate(tok, sizeof(tok), NULL, sizeof(out)));</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -7563,9 +6206,9 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Wrap authenticate guards
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_spnego_wrap_authenticate(nullptr, sizeof(tok), out, sizeof(out)));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_spnego_wrap_authenticate(NULL, sizeof(tok), out, sizeof(out)));</code>
       * <code>TEST_ASSERT_EQUAL_size_t(0, pc_spnego_wrap_authenticate(tok, sizeof(tok), out, 20));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_spnego_wrap_authenticate(tok, sizeof(tok), nullptr, sizeof(out)));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_spnego_wrap_authenticate(tok, sizeof(tok), NULL, sizeof(out)));</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -7573,9 +6216,9 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Parse null args
     * **Assertions**:
-      * <code>Assert false (pc_spnego_parse_response(nullptr, sizeof(blob), &rt, &rl))</code>
-      * <code>Assert false (pc_spnego_parse_response(blob, sizeof(blob), nullptr, &rl))</code>
-      * <code>Assert false (pc_spnego_parse_response(blob, sizeof(blob), &rt, nullptr))</code>
+      * <code>Assert false (pc_spnego_parse_response(NULL, sizeof(blob), &rt, &rl))</code>
+      * <code>Assert false (pc_spnego_parse_response(blob, sizeof(blob), NULL, &rl))</code>
+      * <code>Assert false (pc_spnego_parse_response(blob, sizeof(blob), &rt, NULL))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -7659,7 +6302,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: build_pk_ok via a pubkey probe with a tiny output buffer.
     * **Assertions**:
-      * <code>Assert equal int (-1, pc_ssh_auth_build_failure(out, &olen, 2, false))</code>
+      * <code>Assert equal int (-1, pc_ssh_auth_build_failure(out, &olen, 2, PROTO_FALSE))</code>
       * <code>Assert equal int (-1, pc_ssh_auth_build_success(out, &olen, 0))</code>
       * <code>Assert equal int (-1, pc_ssh_auth_handle_request(0, pkt, pn, out, &olen, 4))</code>
   </details>
@@ -7795,10 +6438,10 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Build failure partial success flag
     * **Assertions**:
-      * <code>Assert equal int (0, pc_ssh_auth_build_failure(out, &olen, sizeof(out), true))</code>
+      * <code>Assert equal int (0, pc_ssh_auth_build_failure(out, &olen, sizeof(out), PROTO_TRUE))</code>
       * <code>Assert equal (SSH_MSG_USERAUTH_FAILURE, out[0])</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(1, out[olen - 1]);</code>
-      * <code>Assert equal int (0, pc_ssh_auth_build_failure(out, &olen, sizeof(out), false))</code>
+      * <code>Assert equal int (0, pc_ssh_auth_build_failure(out, &olen, sizeof(out), PROTO_FALSE))</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(0, out[olen - 1]);</code>
   </details>
 
@@ -7852,7 +6495,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
       * <code>Assert equal int (0, pc_ssh_auth_handle_request(0, pkt, n, out, &olen, sizeof(out)))</code>
       * <code>Assert equal (SSH_MSG_USERAUTH_SUCCESS, out[0])</code>
       * <code>Assert true (ssh_sess[0].authed)</code>
-      * <code>Assert equal (SshPhase::SSH_PHASE_OPEN, ssh_sess[0].phase)</code>
+      * <code>Assert equal (SSH_PHASE_OPEN, ssh_sess[0].phase)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -7903,7 +6546,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
       * <code>Assert equal int (0, pc_ssh_auth_handle_request(0, pkt, n, out, &olen, sizeof(out)))</code>
       * <code>Assert equal (SSH_MSG_USERAUTH_SUCCESS, out[0])</code>
       * <code>Assert true (ssh_sess[0].authed)</code>
-      * <code>Assert equal (SshPhase::SSH_PHASE_OPEN, ssh_sess[0].phase)</code>
+      * <code>Assert equal (SSH_PHASE_OPEN, ssh_sess[0].phase)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -7980,7 +6623,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Format types
     * **Assertions**:
-      * <code>Assert true (pc_statsd_format(out, sizeof(out), "api.hits", "1", STATSD_COUNTER, 1.0f, nullptr))</code>
+      * <code>Assert true (pc_statsd_format(out, sizeof(out), "api.hits", "1", STATSD_COUNTER, 1.0f, NULL))</code>
       * <code>Assert equal string ("api.hits:1|c", out)</code>
       * <code>Assert equal string ("temp:42|g", out)</code>
       * <code>Assert equal string ("req.latency:120|ms", out)</code>
@@ -8012,11 +6655,11 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Format guards
     * **Assertions**:
-      * <code>Assert equal uint (0, pc_statsd_format(out, sizeof(out), "x", "1", (StatsdType)'z', 1.0f, nullptr))</code>
-      * <code>Assert equal uint (0, pc_statsd_format(out, sizeof(out), nullptr, "1", STATSD_COUNTER, 1.0f, nullptr))</code>
-      * <code>Assert equal uint (0, pc_statsd_format(out, sizeof(out), "", "1", STATSD_COUNTER, 1.0f, nullptr))</code>
-      * <code>Assert equal uint (0, pc_statsd_format(out, sizeof(out), "x", nullptr, STATSD_COUNTER, 1.0f, nullptr))</code>
-      * <code>Assert equal uint (0, pc_statsd_format(out, 5, "toolongname", "1", STATSD_COUNTER, 1.0f, nullptr))</code>
+      * <code>Assert equal uint (0, pc_statsd_format(out, sizeof(out), "x", "1", (StatsdType)'z', 1.0f, NULL))</code>
+      * <code>Assert equal uint (0, pc_statsd_format(out, sizeof(out), NULL, "1", STATSD_COUNTER, 1.0f, NULL))</code>
+      * <code>Assert equal uint (0, pc_statsd_format(out, sizeof(out), "", "1", STATSD_COUNTER, 1.0f, NULL))</code>
+      * <code>Assert equal uint (0, pc_statsd_format(out, sizeof(out), "x", NULL, STATSD_COUNTER, 1.0f, NULL))</code>
+      * <code>Assert equal uint (0, pc_statsd_format(out, 5, "toolongname", "1", STATSD_COUNTER, 1.0f, NULL))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -8069,11 +6712,11 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: A rate rounding below one thousandth clamps up to 1; a rate near 1 clamps down to 999.
     * **Assertions**:
-      * <code>Assert true (pc_statsd_format(out, sizeof(out), "m", "1", STATSD_COUNTER, 0.0001f, nullptr) &gt; 0)</code>
-      * <code>Assert true (pc_statsd_format(out, sizeof(out), "m", "1", STATSD_COUNTER, 0.9999f, nullptr) &gt; 0)</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_statsd_format(out, 2, "metric", "1", STATSD_COUNTER, 1.0f, nullptr));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_statsd_format(out, 4, "m", "1", STATSD_TIMING, 1.0f, nullptr));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_statsd_format(out, 6, "m", "1", STATSD_COUNTER, 0.5f, nullptr));</code>
+      * <code>Assert true (pc_statsd_format(out, sizeof(out), "m", "1", STATSD_COUNTER, 0.0001f, NULL) &gt; 0)</code>
+      * <code>Assert true (pc_statsd_format(out, sizeof(out), "m", "1", STATSD_COUNTER, 0.9999f, NULL) &gt; 0)</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_statsd_format(out, 2, "metric", "1", STATSD_COUNTER, 1.0f, NULL));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_statsd_format(out, 4, "m", "1", STATSD_TIMING, 1.0f, NULL));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_statsd_format(out, 6, "m", "1", STATSD_COUNTER, 0.5f, NULL));</code>
       * <code>TEST_ASSERT_EQUAL_size_t(0, pc_statsd_format(out, 7, "m", "1", STATSD_COUNTER, 1.0f, "#tag:x"));</code>
   </details>
 
@@ -8082,8 +6725,8 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Format guard null out and zero cap
     * **Assertions**:
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_statsd_format(nullptr, sizeof(out), "a", "1", STATSD_COUNTER, 1.0f, nullptr));</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_statsd_format(out, 0, "a", "1", STATSD_COUNTER, 1.0f, nullptr));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_statsd_format(NULL, sizeof(out), "a", "1", STATSD_COUNTER, 1.0f, NULL));</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_statsd_format(out, 0, "a", "1", STATSD_COUNTER, 1.0f, NULL));</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -8091,10 +6734,10 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Format append chain overflow points
     * **Assertions**:
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_statsd_format(out, 2, "a", "1", STATSD_COUNTER, 1.0f, NULL)); // fails appending ":"</code>
       * <code>TEST_ASSERT_EQUAL_size_t(0,</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(</code>
       * <code>TEST_ASSERT_EQUAL_size_t(0, pc_statsd_format(out, 5, "a", "1", STATSD_COUNTER, 1.0f,</code>
-      * <code>TEST_ASSERT_EQUAL_size_t(0,</code>
+      * <code>TEST_ASSERT_EQUAL_size_t(0, pc_statsd_format(out, 6, "a", "1", STATSD_TIMING, 1.0f, NULL)); // fails appending "ms"</code>
       * <code>TEST_ASSERT_EQUAL_size_t(0, pc_statsd_format(out, 8, "a", "1", STATSD_COUNTER, 0.5f,</code>
       * <code>TEST_ASSERT_EQUAL_size_t(0, pc_statsd_format(out, 8, "a", "1", STATSD_COUNTER, 1.0f,</code>
   </details>
@@ -8135,7 +6778,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
 
     * **Objective**: Begin validates
     * **Assertions**:
-      * <code>Assert false (pc_tc_begin(nullptr))</code>
+      * <code>Assert false (pc_tc_begin(NULL))</code>
       * <code>Assert false (pc_tc_begin(&cfg))</code>
       * <code>Assert false (pc_tc_begin(&cfg))</code>
       * <code>Assert false (pc_tc_begin(&cfg))</code>
@@ -8220,7 +6863,7 @@ A thorough directory of all **747 test cases** across **24 suites**. Expand a su
     * **Objective**: line 76: configured is true, so `!s_tc.configured` is false and the OR
     * **Assertions**:
       * <code>Assert true (begin(2, 2))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT16(0, pc_tc_feed(nullptr, 5));</code>
+      * <code>TEST_ASSERT_EQUAL_UINT16(0, pc_tc_feed(NULL, 5));</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(5, st.samples_dropped);</code>
   </details>
 

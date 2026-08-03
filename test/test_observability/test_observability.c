@@ -127,7 +127,7 @@ void test_notice_without_hook_still_counts()
 
 void test_recv_fin_counts_remote_close()
 {
-    struct tcp_pcb pcb;
+    pc_pcb pcb;
     conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].pcb = &pcb;
     lowlevel_recv_cb(&conn_pool[0], &pcb, NULL, PC_NET_OK); // null pbuf = FIN
@@ -161,7 +161,7 @@ void test_local_close_counts_local()
 {
     // pc_conn_close(slot) reads the slot's pcb, frees the slot, and counts a
     // local close. The transport owns the teardown: the slot ends FREE/null.
-    struct tcp_pcb pcb;
+    pc_pcb pcb;
     conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].pcb = &pcb;
     pc_conn_close(0);
@@ -175,7 +175,7 @@ void test_local_close_counts_local()
 // counts an abort. A no-op (no count, no hook) when the slot has no live pcb.
 void test_abort_slot_counts_abort_and_frees()
 {
-    struct tcp_pcb pcb;
+    pc_pcb pcb;
     conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].pcb = &pcb;
     pc_conn_abort_slot(0);
@@ -213,7 +213,7 @@ void test_backpressure_counts_when_ring_full()
 
 void test_begin_close_dwells_then_drains_on_ack()
 {
-    struct tcp_pcb pcb;
+    pc_pcb pcb;
     pcb.snd_queuelen = 1; // response still in flight -> must dwell
     conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].pcb = &pcb;
@@ -236,7 +236,7 @@ void test_begin_close_dwells_then_drains_on_ack()
 
 void test_begin_close_finalizes_immediately_when_already_drained()
 {
-    struct tcp_pcb pcb;
+    pc_pcb pcb;
     pcb.snd_queuelen = 0; // nothing pending -> close now, no dwell
     conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].pcb = &pcb;
@@ -258,7 +258,7 @@ void test_begin_close_noop_if_not_active()
 
 void test_closing_timeout_reaps_stuck_slot()
 {
-    struct tcp_pcb pcb;
+    pc_pcb pcb;
     pcb.snd_queuelen = 1; // peer never ACKs -> would dwell forever
     conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].pcb = &pcb;
@@ -285,7 +285,7 @@ void test_closing_timeout_reaps_stuck_slot()
 // pc_obs_transition() call test_each_reason_bumps_its_counter already drives).
 void test_stop_posts_abort_transition_for_each_live_slot()
 {
-    struct tcp_pcb pcb;
+    pc_pcb pcb;
     conn_pool[0].id = 0;
     conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].pcb = &pcb;
@@ -301,7 +301,7 @@ void test_stop_posts_abort_transition_for_each_live_slot()
 // not the direct pc_obs_transition() call test_closing_gauge_is_derived_from_pool drives.
 void test_err_cb_during_closing_counts_drained_not_error()
 {
-    struct tcp_pcb pcb;
+    pc_pcb pcb;
     pcb.snd_queuelen = 1; // dwell, don't finalize immediately
     conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].pcb = &pcb;
@@ -323,7 +323,7 @@ void test_err_cb_during_closing_counts_drained_not_error()
 // - is observed as a defer-drop notice rather than silently losing the event.
 void test_enqueue_failure_from_recv_cb_counts_defer_drop()
 {
-    struct tcp_pcb pcb;
+    pc_pcb pcb;
     conn_pool[0].id = 0;
     conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].pcb = &pcb;
@@ -349,7 +349,7 @@ void test_enqueue_failure_from_recv_cb_counts_defer_drop()
 // listener.cpp / listener.h.)
 void test_accept_cb_posts_accept_transition()
 {
-    struct tcp_pcb pcb = {0};
+    pc_pcb pcb = {0};
     TEST_ASSERT_EQUAL_INT(PC_NET_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb, PC_NET_OK));
     TEST_ASSERT_EQUAL(PC_CONN_R_ACCEPT, g_reason);
     TEST_ASSERT_EQUAL_UINT32(1, pc_conn_counters_get().accepts);
@@ -361,7 +361,7 @@ void test_accept_cb_posts_accept_transition()
 void test_accept_cb_enqueue_failure_posts_defer_drop()
 {
     listener_pool[0].active = PROTO_FALSE;
-    struct tcp_pcb pcb = {0};
+    pc_pcb pcb = {0};
     TEST_ASSERT_EQUAL_INT(PC_NET_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb, PC_NET_OK));
     TEST_ASSERT_EQUAL(PC_CONN_R_DEFER_DROP, g_reason);
     TEST_ASSERT_EQUAL_UINT32(1, pc_conn_counters_get().defer_drops);
@@ -370,7 +370,7 @@ void test_accept_cb_enqueue_failure_posts_defer_drop()
 
 void test_recv_during_closing_is_drained_not_processed()
 {
-    struct tcp_pcb pcb;
+    pc_pcb pcb;
     pcb.snd_queuelen = 1;
     conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].pcb = &pcb;

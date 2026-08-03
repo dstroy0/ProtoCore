@@ -107,11 +107,11 @@ static proto_bool get_eq(const char *id, const char *expect)
 }
 
 // Match callback: collect matched ids into a small set.
-struct Collected
+typedef struct
 {
     int n;
     char ids[8][16];
-};
+} Collected;
 static proto_bool collect(const char *id, uint16_t id_len, const uint8_t *json, uint32_t json_len, void *ctx)
 {
     (void)json;
