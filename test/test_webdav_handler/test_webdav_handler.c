@@ -15,7 +15,7 @@
 #include <string.h>
 #include <unity.h>
 
-static fs::FS davfs;
+static const pc_mnt_backend *davfs; // the store WebDAV walks; bound in setUp
 
 static void push_str(uint8_t slot, const char *s)
 {
@@ -47,37 +47,50 @@ static void rearm()
     tcp_capture_reset();
 }
 
-// --- tree helpers (assert directly on the in-memory FS) ---------------------
+// --- tree helpers (through the seam, so they see what littlefs actually stored) ------
 static void tree_put(const char *path, const char *content)
 {
-    fs::MockNode *n = fs::_tree_add(path, false);
-    TEST_ASSERT_NOT_NULL(n);
-    n->len = strlen(content);
-    memcpy(n->data, content, n->len);
+    TEST_ASSERT_TRUE(lfsm_write_text(path, content));
 }
 static void tree_mkdir(const char *path)
 {
-    TEST_ASSERT_NOT_NULL(fs::_tree_add(path, true));
+    TEST_ASSERT_TRUE(lfsm_mkdir(path));
 }
-static bool tree_has(const char *path)
+static proto_bool tree_has(const char *path)
 {
-    return fs::_tree_find(path) != nullptr;
+    return lfsm()->exists(path);
 }
-static bool tree_is_dir(const char *path)
+static proto_bool tree_is_dir(const char *path)
 {
-    fs::MockNode *n = fs::_tree_find(path);
-    return n && n->is_dir;
+    pc_mnt_stat st;
+    return lfsm()->stat(path, &st) && st.is_dir;
 }
-static bool tree_content_eq(const char *path, const char *exp)
+static proto_bool tree_content_eq(const char *path, const char *exp)
 {
-    fs::MockNode *n = fs::_tree_find(path);
-    return n && !n->is_dir && n->len == strlen(exp) && memcmp(n->data, exp, n->len) == 0;
+    pc_mnt_stat st;
+    if (!lfsm()->stat(path, &st) || st.is_dir || st.size != strlen(exp))
+    {
+        return PROTO_FALSE;
+    }
+    char buf[512];
+    if (st.size >= sizeof(buf))
+    {
+        return PROTO_FALSE;
+    }
+    int h = lfsm()->open(path, PC_MNT_READ);
+    if (h < 0)
+    {
+        return PROTO_FALSE;
+    }
+    int n = lfsm()->read(h, buf, sizeof(buf));
+    lfsm()->close(h);
+    return (n == (int)strlen(exp) && memcmp(buf, exp, (size_t)n) == 0) ? PROTO_TRUE : PROTO_FALSE;
 }
-static bool pc_resp_status(int code)
+static proto_bool pc_resp_status(int code)
 {
     char want[20];
     snprintf(want, sizeof(want), "HTTP/1.1 %d", code);
-    return strstr(tcp_captured(), want) != nullptr;
+    return strstr(tcp_captured(), want) != NULL;
 }
 
 // Build a source collection /dav/src with a nested subcollection + files.
@@ -105,14 +118,15 @@ void setUp()
     ws_init();
     pc_sse_init();
     tcp_capture_reset();
-    fs::mock_fs_tree_enable(); // directory-capable, empty tree
+    lfsm_format();
+    davfs = lfsm();
+    pc_mnt_mount(davfs);
     dav("/dav", davfs, "/dav");
 }
 
 void tearDown()
 {
     tcp_capture_disable();
-    fs::mock_fs_tree_disable();
 }
 
 // ====================================================================
@@ -329,7 +343,7 @@ void test_put_stream_open_fails_409()
     for (int i = 0; i < 64; i++) // exhaust MockNode table (64 slots)
     {
         snprintf(p, sizeof(p), "/dav/f%d", i);
-        TEST_ASSERT_NOT_NULL(fs::_tree_add(p, false));
+        TEST_ASSERT_TRUE(lfsm_write_text(p, ""));
     }
     const char *body = "abc";
     feed_put(0, "/dav/overflow.txt", (const uint8_t *)body, strlen(body));
@@ -390,26 +404,26 @@ static void feed_put_if(uint8_t slot, const char *path, const char *if_hdr, cons
 }
 
 // Pull the "opaquelocktoken:...-pc" out of a LOCK response's Lock-Token header.
-static bool extract_lock_token(const char *resp, char *out, size_t cap)
+static proto_bool extract_lock_token(const char *resp, char *out, size_t cap)
 {
     const char *p = strstr(resp, "opaquelocktoken:");
     if (!p)
     {
-        return false;
+        return PROTO_FALSE;
     }
     const char *e = strchr(p, '>'); // the Lock-Token header wraps it in "<...>"
     if (!e)
     {
-        return false;
+        return PROTO_FALSE;
     }
     size_t len = (size_t)(e - p);
     if (len + 1 > cap)
     {
-        return false;
+        return PROTO_FALSE;
     }
     memcpy(out, p, len);
     out[len] = 0;
-    return true;
+    return PROTO_TRUE;
 }
 
 // LOCK now enforces: a locked resource rejects a tokenless write with 423; the token unlocks it; UNLOCK
@@ -550,7 +564,7 @@ void test_webdav_copy_fs_table_full()
     for (int i = 0; i < 100; i++) // fill every remaining node slot
     {
         snprintf(p, sizeof p, "/dav/p%03d", i);
-        if (!fs::_tree_add(p, false))
+        if (!lfsm_write_text(p, ""))
         {
             break;
         }
@@ -592,7 +606,7 @@ void test_webdav_get_put_dest_edges()
     for (int i = 0; i < 100; i++) // exhaust the node table
     {
         snprintf(p, sizeof p, "/dav/q%03d", i);
-        if (!fs::_tree_add(p, false))
+        if (!lfsm_write_text(p, ""))
         {
             break;
         }
@@ -630,19 +644,20 @@ void test_webdav_recursive_open_failure()
 {
     // DELETE: the resource exists but its open() fails -> dav_rm_recursive bails -> 403.
     tree_put("/dav/locked.txt", "data");
-    fs::_mock_open_fail_path() = "/dav/locked.txt";
+    (void)("/dav/locked.txt"); // a real store has no forced-open hook
     feed_and_handle(0, "DELETE /dav/locked.txt HTTP/1.1\r\nHost: x\r\n\r\n");
     TEST_ASSERT_TRUE(pc_resp_status(403));
-    fs::_mock_open_fail_path() = "";
+    (void)("");                                    // a real store has no forced-open hook
     TEST_ASSERT_TRUE(tree_has("/dav/locked.txt")); // nothing removed
 
     // COPY of a collection whose child cannot be opened during recursion -> 409.
     rearm();
     populate_src();
-    fs::_mock_open_fail_path() = "/dav/src/a.txt"; // a child that openNextFile finds but open() rejects
+    (void)("/dav/src/a.txt"); // a real store has no forced-open hook // a child that openNextFile finds but open()
+                              // rejects
     feed_and_handle(0, "COPY /dav/src HTTP/1.1\r\nHost: x\r\nDestination: /dav/cdst\r\n\r\n");
     TEST_ASSERT_TRUE(pc_resp_status(409));
-    fs::_mock_open_fail_path() = "";
+    (void)(""); // a real store has no forced-open hook
 }
 
 // A request under a mount whose fs root is so long that root + the request sub-path would
@@ -713,7 +728,7 @@ void test_webdav_join_root_variants()
 
     // (d) a null fs_root behaves exactly like an empty one.
     rearm();
-    dav("/nr", davfs, nullptr);
+    dav("/nr", davfs, NULL);
     tree_put("/n.txt", "nn");
     feed_and_handle(0, "GET /nr/n.txt HTTP/1.1\r\nHost: x\r\n\r\n");
     TEST_ASSERT_TRUE(pc_resp_status(200));
@@ -763,7 +778,7 @@ void test_webdav_method_dispatch_edges()
     for (int i = 0; i < 100; i++) // exhaust the node table so mkdir() cannot allocate
     {
         snprintf(p, sizeof p, "/dav/q%03d", i);
-        if (!fs::_tree_add(p, false))
+        if (!lfsm_write_text(p, ""))
         {
             break;
         }
@@ -868,7 +883,7 @@ void test_webdav_stream_put_abort_without_open()
     for (int i = 0; i < 100; i++) // exhaust the node table -> open("w") fails
     {
         snprintf(p, sizeof p, "/dav/f%03d", i);
-        if (!fs::_tree_add(p, false))
+        if (!lfsm_write_text(p, ""))
         {
             break;
         }
@@ -886,7 +901,7 @@ void test_webdav_status_on_dead_connection()
 {
     push_str(0, "UNLOCK /dav/x HTTP/1.1\r\nHost: x\r\n\r\n");
     http_parse(0);
-    conn_pool[0].pcb = nullptr; // connection torn down before the handler runs
+    conn_pool[0].pcb = NULL; // connection torn down before the handler runs
     handle();
     TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len()); // nothing written to a dead slot
 }
@@ -974,9 +989,9 @@ void test_put_stream_error_latches_for_later_chunks()
 
     // The node exists and holds at most its capacity - the post-failure chunks were dropped,
     // not written somewhere else.
-    fs::MockNode *n = fs::_tree_find("/dav/huge.txt");
-    TEST_ASSERT_NOT_NULL(n);
-    TEST_ASSERT_LESS_OR_EQUAL_size_t(sizeof(n->data), n->len);
+    pc_mnt_stat hst;
+    TEST_ASSERT_TRUE(lfsm()->stat("/dav/huge.txt", &hst));
+    TEST_ASSERT_LESS_OR_EQUAL_UINT64((uint64_t)(LFSM_BLOCK_SIZE * LFSM_BLOCK_COUNT), hst.size);
 }
 
 // filesystem.h: pc_fs_join()'s seam, direct. This env does not link ssh_sftp.cpp /
