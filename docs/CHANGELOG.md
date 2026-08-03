@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- link the clock TU into every native env that reads it ([`183e693`](https://github.com/dstroy0/ProtoCore/commit/183e693528cb219327c7a123679eadce290c8422))
 - convert four more owned-context structs out of C++ ([`586cfd4`](https://github.com/dstroy0/ProtoCore/commit/586cfd4603660e8073792292404649932949a03e))
 - strip 772 verified scope qualifiers from test/ and examples/ ([`eb59261`](https://github.com/dstroy0/ProtoCore/commit/eb59261d7287fa8064e5b8cb1c1ccec5cf9005f3))
 - finish the C to C++ residue in the CoAP server ([`bb25d76`](https://github.com/dstroy0/ProtoCore/commit/bb25d764c8a89de9278f5029588a42d40a0490f0))
@@ -36,6 +37,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update test report + coverage [skip ci] ([`89de4e0`](https://github.com/dstroy0/ProtoCore/commit/89de4e0921db8c7a5198ba87c03338c52785140f))
+- update CHANGELOG.md [skip ci] ([`6584c65`](https://github.com/dstroy0/ProtoCore/commit/6584c65bcb36f3d674b93ad6b514ed2cd8b801b7))
 - update test report + coverage [skip ci] ([`19b5080`](https://github.com/dstroy0/ProtoCore/commit/19b50803aa9b8f081199d11f62af819d3379701a))
 - update CHANGELOG.md [skip ci] ([`3227657`](https://github.com/dstroy0/ProtoCore/commit/3227657a08fc51bba13cc90b5005c4da5ddf2bea))
 - update test report + coverage [skip ci] ([`3ca3f75`](https://github.com/dstroy0/ProtoCore/commit/3ca3f75b4b8ea37d81879cb458fa05bed4639bdd))
