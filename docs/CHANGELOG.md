@@ -43,6 +43,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`c1f81dc`](https://github.com/dstroy0/ProtoCore/commit/c1f81dc4949462a66b8ebe05795c1248ffb94d02))
 - update CHANGELOG.md [skip ci] ([`b14719d`](https://github.com/dstroy0/ProtoCore/commit/b14719d1aa2e66f326991b0e0b26c86f5618237d))
 - update CHANGELOG.md [skip ci] ([`f136ce3`](https://github.com/dstroy0/ProtoCore/commit/f136ce35bca290840f132ea93a2777a5fa0c7018))
 - update CHANGELOG.md [skip ci] ([`d55e811`](https://github.com/dstroy0/ProtoCore/commit/d55e811f43a34ecf97cfc0a0f369b048aaff7b82))
@@ -251,6 +252,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- enable the dependencies the feature gates require ([`c7e7725`](https://github.com/dstroy0/ProtoCore/commit/c7e77251b877096ebfc4c22ecb47bd2171f84697))
 - pass the tls flag listener_add no longer defaults ([`d8048bc`](https://github.com/dstroy0/ProtoCore/commit/d8048bcc63166e41d550c397146de2aa9a0b1620))
 - convert test_session to C ([`6d760e4`](https://github.com/dstroy0/ProtoCore/commit/6d760e4f8d148680faf649b7b873850ae8852bab))
 - convert test_forward to C ([`cd51377`](https://github.com/dstroy0/ProtoCore/commit/cd5137768304755897491ed960dfa40bb7306294))
