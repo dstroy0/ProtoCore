@@ -55,6 +55,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`9ef71bb`](https://github.com/dstroy0/ProtoCore/commit/9ef71bb4d467804d361fc40502fcf43ffa45178d))
 - update CHANGELOG.md [skip ci] ([`899bd9c`](https://github.com/dstroy0/ProtoCore/commit/899bd9ca85a2055f99c32498fe33efbfbdcbf6d1))
 - update CHANGELOG.md [skip ci] ([`2290f20`](https://github.com/dstroy0/ProtoCore/commit/2290f20fc69ad7ef44ccb61d004e88681880f6c3))
 - update CHANGELOG.md [skip ci] ([`7d69553`](https://github.com/dstroy0/ProtoCore/commit/7d69553b1cb9e620868b433a8f0b46fce5cdd5c8))
@@ -282,6 +283,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`b193396`](https://github.com/dstroy0/ProtoCore/commit/b1933961007eaecd77b9b7f2524689ca9900e442))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`a3760f2`](https://github.com/dstroy0/ProtoCore/commit/a3760f23ae4ea7ca8bc9a445abafbe22d20504ac))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`0331ff5`](https://github.com/dstroy0/ProtoCore/commit/0331ff5282b4ae427a18a405f6dbe4f3a28a0e30))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`823cc89`](https://github.com/dstroy0/ProtoCore/commit/823cc898d0f2c1e07223dd4e0280cd83d728c9ae))
@@ -393,6 +395,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- the host seam grows the one-shot failure hooks the transport suite drives ([`9ebb0c2`](https://github.com/dstroy0/ProtoCore/commit/9ebb0c28a52b45ca4dddf3eb6da2db5a6865d7d6))
+- give the host seam the one-shot close failure, pass the worker id to the sweep ([`9d9d8be`](https://github.com/dstroy0/ProtoCore/commit/9d9d8bee9e43bddec1149291c9c2346403603483))
 - transport reads the host seam's control-block and error types ([`28caacf`](https://github.com/dstroy0/ProtoCore/commit/28caacf194e170e3359045051bf3ca48362ffbe4))
 - restore the std:: qualifiers the sweep wrongly stripped, convert statsd + spa_router ([`8c43357`](https://github.com/dstroy0/ProtoCore/commit/8c43357c7a1052a00d831491dc6bbcea3a0fedb4))
 - drop the STL includes the C suites no longer need ([`710f311`](https://github.com/dstroy0/ProtoCore/commit/710f31109713796de41810e7f45bc28138a2108f))
