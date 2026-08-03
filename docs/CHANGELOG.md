@@ -54,6 +54,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`e26b53f`](https://github.com/dstroy0/ProtoCore/commit/e26b53f7824a4f5417547140febc5673319f05d7))
 - update CHANGELOG.md [skip ci] ([`ef845a4`](https://github.com/dstroy0/ProtoCore/commit/ef845a4b3f4c3279afdfae78bd21d193016267b5))
 - update CHANGELOG.md [skip ci] ([`07e151d`](https://github.com/dstroy0/ProtoCore/commit/07e151d54a63e2894a9ba8e56959430344364611))
 - update CHANGELOG.md [skip ci] ([`2877f9f`](https://github.com/dstroy0/ProtoCore/commit/2877f9f911990d199c86e9a4a04e9ce11d8a1fc7))
@@ -341,6 +342,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- restore the SnmpTag member prefix across the snmp suites ([`3a3decc`](https://github.com/dstroy0/ProtoCore/commit/3a3decc4aeed188ae130be8d31a73c25be5ec3af))
 - typedef the struct tags the scope strip left bare ([`2b43c6e`](https://github.com/dstroy0/ProtoCore/commit/2b43c6e9f7d8479558f30bf4a14516eae8b95854))
 - latch the PUT error on a real mid-stream refusal ([`79215a3`](https://github.com/dstroy0/ProtoCore/commit/79215a3ce2076ab54bb749e11ffc9516642a34c9))
 - refuse the abort-path PUT through the store, not a node table ([`098343d`](https://github.com/dstroy0/ProtoCore/commit/098343d7fbabad95aa9c1299ed45496f71b4df9f))
