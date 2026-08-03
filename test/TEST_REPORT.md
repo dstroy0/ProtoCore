@@ -1,8 +1,8 @@
 # Test Report
 
-**Generated:** 2026-08-03 04:49:15
+**Generated:** 2026-08-03 05:22:54
 **Command:** `pio test` over 304 auto-discovered native envs (excludes native_pentest, native_codeql)
-**Result:** ❌ 656 passed, 893 failed - 1607s
+**Result:** ✅ 13 passed - 49s
 
 ---
 
