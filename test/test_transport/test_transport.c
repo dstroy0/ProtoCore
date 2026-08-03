@@ -210,10 +210,10 @@ void test_active_send_not_reaped()
 // proto_tcp_pool_init() with a real config uses its conn_timeout_ms instead of the compile-time default.
 void test_pool_init_applies_custom_config()
 {
-    WebServerConfig cfg;
+    WebServerConfig cfg = {0};
     cfg.conn_timeout_ms = 12345;
     proto_tcp_pool_init(&cfg);
-    TEST_ASSERT_EQUAL_UINT32(12345, proto_tcp_conn_timeout_ms);
+    TEST_ASSERT_EQUAL_UINT32(12345, proto_tcp_conn_timeout_ms());
     proto_tcp_pool_init(NULL); // restore the default for the rest of this test file
 }
 
