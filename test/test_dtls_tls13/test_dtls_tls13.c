@@ -325,12 +325,12 @@ static void test_quic_encrypted_extensions_rpk(void)
 // walked in the RawPublicKey build (which has one more arm than the non-RPK one).
 static void test_parse_every_extension_arm(void)
 {
-    struct Ext
+    typedef struct
     {
         uint16_t type;
         uint8_t body[12];
         uint16_t len;
-    };
+    } Ext;
     static const Ext exts[] = {
         {0x002b, {0x02, 0x03, 0x04}, 3},                            // supported_versions
         {0x000a, {0x00, 0x02, 0x00, 0x1d}, 4},                      // supported_groups

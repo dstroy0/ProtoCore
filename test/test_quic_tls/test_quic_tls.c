@@ -218,7 +218,7 @@ void test_full_handshake_roundtrip()
 
     Tls13KeySchedule cks;
     pc_tls13_ks_early(&TLS13_KDF, &cks);
-    pc_tls13_ks_handshake(&cks, ecdhe, ch_sh);
+    pc_tls13_ks_handshake(&cks, ecdhe, ch_sh, sizeof(ecdhe));
     pc_tls13_ks_master(&cks, ch_sf);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(qt.ks.handshake_secret, cks.handshake_secret, 32);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(qt.ks.client_hs_traffic, cks.client_hs_traffic, 32);
