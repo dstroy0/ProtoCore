@@ -152,20 +152,21 @@ void test_encode_static()
 
 void test_encode_decode_roundtrip()
 {
-    struct KV
+    typedef struct
     {
         const char *n;
         const char *v;
-    };
+    } KV;
     KV hs[] = {{":status", "200"},
                {"content-type", "text/html"},      // static name, literal value
                {"x-custom-header", "hello world"}, // fully literal
                {"server", "det/1"}};
     uint8_t block[512];
     size_t bo = 0;
-    for (auto &kv : hs)
+    for (size_t k = 0; k < sizeof(hs) / sizeof(hs[0]); k++)
     {
-        size_t w = pc_hpack_encode_header(block + bo, sizeof block - bo, kv.n, strlen(kv.n), kv.v, strlen(kv.v));
+        const KV *kv = &hs[k];
+        size_t w = pc_hpack_encode_header(block + bo, sizeof block - bo, kv->n, strlen(kv->n), kv->v, strlen(kv->v));
         TEST_ASSERT_TRUE(w > 0);
         bo += w;
     }
