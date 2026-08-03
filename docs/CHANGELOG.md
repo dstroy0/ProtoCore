@@ -54,6 +54,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update test report + coverage [skip ci] ([`ca2dfc7`](https://github.com/dstroy0/ProtoCore/commit/ca2dfc722ad6ed164289757c0bbfc2d1d9bc7c0f))
+- update CHANGELOG.md [skip ci] ([`063cd9c`](https://github.com/dstroy0/ProtoCore/commit/063cd9cb98ef9df9e3996457090642f28d2810d0))
 - update CHANGELOG.md [skip ci] ([`e396f68`](https://github.com/dstroy0/ProtoCore/commit/e396f68dd0eb3f737587257cbf33754f4f700146))
 - update CHANGELOG.md [skip ci] ([`9592949`](https://github.com/dstroy0/ProtoCore/commit/95929499fad7942466f3746074e6204f2b2c9923))
 - update CHANGELOG.md [skip ci] ([`eab059e`](https://github.com/dstroy0/ProtoCore/commit/eab059e23e8ff97b50c50956504a48237855682a))
@@ -314,6 +316,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Refactor
 
+- replace the SecureBorrow RAII holder with the mark/span/release shape ([`8d94018`](https://github.com/dstroy0/ProtoCore/commit/8d94018e564f3a3163197bd6e3e6ca623a6221db))
 - convert the HTTP client to C and unblock the edge-cache suites ([`01858c0`](https://github.com/dstroy0/ProtoCore/commit/01858c0792548477d91736b76df8048caafb4648))
 - pass the config-store owner by pointer ([`640069f`](https://github.com/dstroy0/ProtoCore/commit/640069fe39d86a75bb2086ce37e81969caccd932))
 - convert the web terminal to C ([`4d6f64f`](https://github.com/dstroy0/ProtoCore/commit/4d6f64ff8deedf87173471016bce5ab3a8b80b41))
