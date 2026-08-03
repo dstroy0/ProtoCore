@@ -23,6 +23,124 @@ original single-pipeline behavior. The lwIP callbacks that run on the tcpip thre
 (shared with WiFi on Core 0) are kept minimal: a received segment is bulk-copied
 into the slot's ring with a single SPSC publish, then one event is posted.
 
+## The memory model
+
+Every byte the library owns is BSS: allocated at link time, zero-initialized by the
+C runtime, never heap-allocated after `begin()`.
+
+**Everything is bound in two places: at ingestion, and by mmgr.** A length is bound
+where bytes enter the library - the receive path refuses a segment that will not fit
+the ring rather than truncating it, and every parser downstream carries an explicit
+run length instead of scanning for a terminator (which is why `strlen` is banned in
+`src/`). Working memory is bound by the two pools below. Nothing between those two
+points re-derives a bound, and that is what makes the footprint a number you can
+compute before flashing rather than a property you measure afterwards.
+
+Working memory is therefore not per-feature buffers but two **pools**, both the same
+mechanism (`pc_arena`, `mmgr/arena.h`) instantiated twice, with one arena per slot -
+one per worker, plus the ghost, which is the library's own.
+
+| Pool                           | Holds                                                    | Reclaim                                                           |
+| ------------------------------ | -------------------------------------------------------- | ----------------------------------------------------------------- |
+| plaintext (`mmgr/plaintext.h`) | transient bytes that are not secret                      | `pc_plaintext_reset()` per dispatch; `pc_plaintext_release(mark)` |
+| secure (`mmgr/secure.h`)       | key material: shared secrets, private scalars, schedules | same, and **the release wipes** before the position moves         |
+
+The two differ in exactly one thing: reclaiming the secure pool zeroes the region
+before it becomes available again, so a secret cannot outlive its borrow. That makes
+the rule structural instead of a discipline every caller has to remember on every
+return path. The regions are also disjoint, so `pc_secure_owns()` and
+`pc_plaintext_owns()` are mutually exclusive by construction - a secure borrow can
+never be accepted where a plaintext one is expected, with no tagging and no
+per-allocation metadata.
+
+Lifetime is not what picks the pool. Both carry long-lived and ephemeral borrows; the
+only question is whether the bytes are secret.
+
+### Borrowing
+
+```c
+size_t mark = pc_secure_mark();
+uint8_t *k  = pc_secure_alloc(PC_AES128GCM_KEY_LEN, 8);
+/* ... use k ... */
+pc_secure_release(mark);          /* wipes, then reclaims */
+```
+
+The caller asks for RAM and gets a pointer, and **the RAM is guaranteed to be there**.
+There is no fail-closed branch to write at a call site, because the size was settled
+before the compiler ran. `mark` / `release` are there for lifetime and, on the secure
+side, for the wipe - not for handling a failure that cannot happen.
+
+The second argument is the alignment, and it is a **condition the core sets**, not a
+favor it does. The core publishes what it provides - storage of a declared span, at a
+declared alignment, for a declared lifetime - and a vendor backend meets those
+conditions or it does not ship. The obligation runs that way round, and it is settled
+in `board_drivers/`, the only place a vendor type is named at all: the backend
+`static_assert`s that its context fits the span and satisfies the alignment, so a
+vendor header that changes underneath us fails the build there, named, instead of
+becoming a run-time surprise in the core.
+
+Because they meet those conditions, **the core behaves as advertised**: the pointer is
+guaranteed, the footprint is a number you computed before flashing, and no call site
+has a check to write. A consumer writes `pc_secure_alloc(PC_WORK_AES128GCM, 8)` and is
+done - the macro settles the size, the backend has already satisfied the requirement,
+and neither is restated at the point of use.
+
+The arena's own base is the same argument one level down. The pool aligns allocation
+offsets, so the base must already satisfy the strictest alignment any caller can
+request; left an ordinary struct member it would inherit only 8, so it is declared
+`_Alignas(32)` where the storage lives - stated once, rather than every borrow hoping
+the base was good enough.
+
+The one thing C does not do for you: on the secure side **every** return path must
+reach `pc_secure_release()`, including the early ones taken when a peer sends
+something malformed. That is where the wipe happens.
+
+### Every TU precomputes, and mmgr knows
+
+The pool sizes are not chosen numbers. Each translation unit precomputes its span -
+the worst-case bytes it borrows in a single call - and declares it as a
+`PC_WORK_<MODULE>` constant in [`protocore_config.h`](../src/protocore_config.h),
+the one place that can see them all, since every module header includes it.
+
+**mmgr therefore has preknowledge of every TU's span before the build runs.** It is
+not handed a request at run time and asked whether it fits; the set of spans it will
+ever be asked for is an input to how it was sized. That is why the pointer is
+guaranteed and there is nothing to check.
+
+**And every address is preknown too.** A module declares a span and never an offset,
+so nothing couples one module to another - but mmgr resolves that set of spans into a
+layout at compile time, which makes each TU's base a constant rather than whatever a
+run-time bump happened to return. Two TUs that the time domain proves are never live
+together resolve to the _same_ base: that overlap is precisely why the peak-concurrent
+figure is smaller than the sum, and it costs nothing, because the exclusivity was
+already known.
+
+So a borrow resolves to a known address in known storage. There is no search, no free
+list, no fragmentation, and no layout decision left to make while the device is
+running.
+
+Each span is **proved where the struct lives**, by a
+`static_assert(sizeof(X) <= PC_WORK_X)` in the module that owns it, so a working set
+that grows past its declaration fails the build naming itself rather than exhausting a
+pool at run time. The declaration and the truth cannot drift apart.
+
+These are sizes, not offsets. Nothing couples one module to another: each is a term,
+order is irrelevant, and adding a module shifts no one - the difference from the
+`crypto_work` region map they replaced.
+
+The two pools then resolve those terms differently, because their time domains differ:
+
+- **Secure: the sum.** A strict upper bound, correct however those working sets nest
+  under one another, where a nest depth is only correct while the call graph stays as
+  it is. It buys certainty with a little slack.
+- **Plaintext: the peak concurrent.** A worker runs one event to completion before the
+  next and owns a disjoint partition of slots, so a dispatch is doing HTTP _or_
+  WebSocket _or_ SSH - never two at once. The time domain is known, so the maximum is
+  a stated fact rather than an estimate, and overlapping those buffers in one arena
+  cuts peak RAM without weakening the guarantee.
+
+Both are feature-gated, so a build pays only for the code it compiled.
+
 ## Knobs
 
 | Macro                     | Default              | What it does                                                                                                                                                                                                                                                                            |
