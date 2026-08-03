@@ -1,8 +1,8 @@
 # Test Report
 
-**Generated:** 2026-08-03 07:15:51
+**Generated:** 2026-08-03 16:10:08
 **Command:** `pio test` over 304 auto-discovered native envs (excludes native_pentest, native_codeql)
-**Result:** ❌ 1703 passed, 821 failed - 1750s
+**Result:** ✅ 13 passed - 120s
 
 ---
 
@@ -138,6 +138,8 @@
 | `test_frame`             | `native_frame`          |     0 |   ✅   | 00:00:00.786 |
 | `test_span`              | `native_span`           |     0 |   ✅   | 00:00:00.791 |
 | `test_mnt`               | `native_mnt`            |     0 |   ✅   | 00:00:00.919 |
+| `test_logbuf`            | `native_logbuf`         |     0 |   ✅   | 00:00:01.385 |
+| `test_syslog`            | `native_syslog`         |     0 |   ✅   | 00:00:00.850 |
 
 ---
 
