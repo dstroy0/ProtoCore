@@ -19,7 +19,7 @@ static void inc(void *arg)
 
 void setUp()
 {
-    DeterministicAsyncTCP::pool_init();
+    proto_tcp_pool_init(NULL);
     g_ran = 0;
 }
 void tearDown()
