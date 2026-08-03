@@ -189,7 +189,7 @@ src/
 │   │   └── portable/
 │   │       ├── portable_aes128gcm.c
 │   │       ├── portable_aesgcm.cpp
-│   │       ├── portable_bignum.cpp
+│   │       ├── portable_bignum.c
 │   │       └── portable_platform.c
 │   └── physical/
 │       ├── esp/
