@@ -3780,7 +3780,7 @@ A thorough directory of all **1047 test cases** across **38 suites**. Expand a s
 
     * **Objective**: Assemble: preface + empty client SETTINGS + HEADERS(stream 1, END_HEADERS\|END_STREAM).
     * **Assertions**:
-      * <code>Assert equal int (1, count_frames(cap.out, H2FrameType::H2_SETTINGS, &acks))</code>
+      * <code>Assert equal int (1, count_frames(cap.out, H2_SETTINGS, &acks))</code>
       * <code>Assert equal int (0, acks)</code>
       * <code>Assert true (pc_h2_conn_recv(&c, in.data(), in.size()))</code>
       * <code>Assert equal int (4, (int)cap.req_headers.size())</code>
@@ -3803,8 +3803,8 @@ A thorough directory of all **1047 test cases** across **38 suites**. Expand a s
     * **Assertions**:
       * <code>Assert true (pc_h2_conn_recv(&c, in.data(), in.size()))</code>
       * <code>Assert true (pc_h2_conn_respond(&c, 1, 200, "text/plain", "hi", 2))</code>
-      * <code>Assert equal int (1, count_frames(cap.out, H2FrameType::H2_HEADERS))</code>
-      * <code>Assert equal int (1, count_frames(cap.out, H2FrameType::H2_DATA))</code>
+      * <code>Assert equal int (1, count_frames(cap.out, H2_HEADERS))</code>
+      * <code>Assert equal int (1, count_frames(cap.out, H2_DATA))</code>
       * <code>Assert equal int (3, (int)rh.size())</code>
       * <code>Assert equal string (":status", rh[0].first.c_str())</code>
       * <code>Assert equal string ("200", rh[0].second.c_str())</code>
@@ -3822,7 +3822,7 @@ A thorough directory of all **1047 test cases** across **38 suites**. Expand a s
     * **Objective**: Preface, then a PING frame, fed one byte at a time (exercises reassembly).
     * **Assertions**:
       * <code>Assert true (pc_h2_conn_recv(&c, &in[k], 1))</code>
-      * <code>Assert equal int (1, count_frames(cap.out, H2FrameType::H2_PING, &acks))</code>
+      * <code>Assert equal int (1, count_frames(cap.out, H2_PING, &acks))</code>
       * <code>Assert equal int (1, acks)</code>
       * <code>Assert equal memory (op, &cap.out[i + 9], 8)</code>
       * <code>Assert true (found)</code>
@@ -3841,7 +3841,7 @@ A thorough directory of all **1047 test cases** across **38 suites**. Expand a s
 
     * **Objective**: H2 headers padded priority
     * **Assertions**:
-      * <code>Assert true (feed_frame(c, H2FrameType::H2_HEADERS, flags, 1, pl.data(), pl.size()))</code>
+      * <code>Assert true (feed_frame(c, H2_HEADERS, flags, 1, pl.data(), pl.size()))</code>
       * <code>Assert equal int (4, (int)cap.req_headers.size())</code>
       * <code>Assert true (cap.last_end_stream)</code>
   </details>
@@ -3851,7 +3851,7 @@ A thorough directory of all **1047 test cases** across **38 suites**. Expand a s
 
     * **Objective**: H2 headers pad overflow
     * **Assertions**:
-      * <code>Assert false (feed_frame(c, H2FrameType::H2_HEADERS, H2_FLAG_PADDED | H2_FLAG_END_HEADERS, 1, pl, sizeof pl))</code>
+      * <code>Assert false (feed_frame(c, H2_HEADERS, H2_FLAG_PADDED | H2_FLAG_END_HEADERS, 1, pl, sizeof pl))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -3878,7 +3878,7 @@ A thorough directory of all **1047 test cases** across **38 suites**. Expand a s
     * **Assertions**:
       * <code>Assert true (pc_h2_conn_recv(&c, hf, hn))</code>
       * <code>Assert true (pc_h2_conn_recv(&c, hf, hn))</code>
-      * <code>Assert true (count_frames(cap.out, H2FrameType::H2_RST_STREAM) &gt;= 1)</code>
+      * <code>Assert true (count_frames(cap.out, H2_RST_STREAM) &gt;= 1)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -3886,8 +3886,8 @@ A thorough directory of all **1047 test cases** across **38 suites**. Expand a s
 
     * **Objective**: H2 continuation
     * **Assertions**:
-      * <code>Assert true (feed_frame(c, H2FrameType::H2_HEADERS, 0, 1, block, half))</code>
-      * <code>Assert true (feed_frame(c, H2FrameType::H2_CONTINUATION, H2_FLAG_END_HEADERS, 1, block + half, blen - half))</code>
+      * <code>Assert true (feed_frame(c, H2_HEADERS, 0, 1, block, half))</code>
+      * <code>Assert true (feed_frame(c, H2_CONTINUATION, H2_FLAG_END_HEADERS, 1, block + half, blen - half))</code>
       * <code>Assert equal int (4, (int)cap.req_headers.size())</code>
   </details>
 
@@ -3896,10 +3896,10 @@ A thorough directory of all **1047 test cases** across **38 suites**. Expand a s
 
     * **Objective**: H2 continuation guards
     * **Assertions**:
-      * <code>Assert true (feed_frame(c, H2FrameType::H2_HEADERS, 0, 1, block, blen / 2))</code>
-      * <code>Assert false (feed_frame(c, H2FrameType::H2_CONTINUATION, H2_FLAG_END_HEADERS, 3, x, 4))</code>
-      * <code>Assert true (feed_frame(c, H2FrameType::H2_HEADERS, 0, 1, block, blen / 2))</code>
-      * <code>Assert false (feed_frame(c, H2FrameType::H2_DATA, 0, 1, d, 1))</code>
+      * <code>Assert true (feed_frame(c, H2_HEADERS, 0, 1, block, blen / 2))</code>
+      * <code>Assert false (feed_frame(c, H2_CONTINUATION, H2_FLAG_END_HEADERS, 3, x, 4))</code>
+      * <code>Assert true (feed_frame(c, H2_HEADERS, 0, 1, block, blen / 2))</code>
+      * <code>Assert false (feed_frame(c, H2_DATA, 0, 1, d, 1))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -3907,14 +3907,14 @@ A thorough directory of all **1047 test cases** across **38 suites**. Expand a s
 
     * **Objective**: Padded DATA: [pad=2][body][2 pad].
     * **Assertions**:
-      * <code>Assert true (feed_frame(c, H2FrameType::H2_DATA, H2_FLAG_END_STREAM, 1, body, 5))</code>
+      * <code>Assert true (feed_frame(c, H2_DATA, H2_FLAG_END_STREAM, 1, body, 5))</code>
       * <code>Assert equal string ("hello", cap.body.c_str())</code>
       * <code>Assert true (cap.data_end)</code>
-      * <code>Assert equal int (2, count_frames(cap.out, H2FrameType::H2_WINDOW_UPDATE))</code>
-      * <code>Assert true (feed_frame(c, H2FrameType::H2_DATA, H2_FLAG_PADDED, 3, pl.data(), pl.size()))</code>
+      * <code>Assert equal int (2, count_frames(cap.out, H2_WINDOW_UPDATE))</code>
+      * <code>Assert true (feed_frame(c, H2_DATA, H2_FLAG_PADDED, 3, pl.data(), pl.size()))</code>
       * <code>Assert equal string ("xy", cap.body.c_str())</code>
-      * <code>Assert false (feed_frame(c2, H2FrameType::H2_DATA, 0, 0, d, 1))</code>
-      * <code>Assert false (feed_frame(c2, H2FrameType::H2_DATA, H2_FLAG_PADDED, 1, bad, 2))</code>
+      * <code>Assert false (feed_frame(c2, H2_DATA, 0, 0, d, 1))</code>
+      * <code>Assert false (feed_frame(c2, H2_DATA, H2_FLAG_PADDED, 1, bad, 2))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -3922,9 +3922,9 @@ A thorough directory of all **1047 test cases** across **38 suites**. Expand a s
 
     * **Objective**: H2 window update
     * **Assertions**:
-      * <code>Assert true (feed_frame(c, H2FrameType::H2_WINDOW_UPDATE, 0, 0, inc, 4))</code>
-      * <code>Assert true (feed_frame(c, H2FrameType::H2_WINDOW_UPDATE, 0, 1, inc, 4))</code>
-      * <code>Assert false (feed_frame(c, H2FrameType::H2_WINDOW_UPDATE, 0, 0, bad, 3))</code>
+      * <code>Assert true (feed_frame(c, H2_WINDOW_UPDATE, 0, 0, inc, 4))</code>
+      * <code>Assert true (feed_frame(c, H2_WINDOW_UPDATE, 0, 1, inc, 4))</code>
+      * <code>Assert false (feed_frame(c, H2_WINDOW_UPDATE, 0, 0, bad, 3))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -3932,9 +3932,9 @@ A thorough directory of all **1047 test cases** across **38 suites**. Expand a s
 
     * **Objective**: H2 rst priority push
     * **Assertions**:
-      * <code>Assert true (feed_frame(c, H2FrameType::H2_RST_STREAM, 0, 1, err, 4))</code>
-      * <code>Assert true (feed_frame(c, H2FrameType::H2_PRIORITY, 0, 3, prio, 5))</code>
-      * <code>Assert false (feed_frame(c, H2FrameType::H2_PUSH_PROMISE, H2_FLAG_END_HEADERS, 1, pp, 4))</code>
+      * <code>Assert true (feed_frame(c, H2_RST_STREAM, 0, 1, err, 4))</code>
+      * <code>Assert true (feed_frame(c, H2_PRIORITY, 0, 3, prio, 5))</code>
+      * <code>Assert false (feed_frame(c, H2_PUSH_PROMISE, H2_FLAG_END_HEADERS, 1, pp, 4))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -3942,7 +3942,7 @@ A thorough directory of all **1047 test cases** across **38 suites**. Expand a s
 
     * **Objective**: H2 goaway then ignore
     * **Assertions**:
-      * <code>Assert true (feed_frame(c, H2FrameType::H2_GOAWAY, 0, 0, ga, 8))</code>
+      * <code>Assert true (feed_frame(c, H2_GOAWAY, 0, 0, ga, 8))</code>
       * <code>Assert true (pc_h2_conn_recv(&c, junk, sizeof junk))</code>
   </details>
 
@@ -3951,8 +3951,8 @@ A thorough directory of all **1047 test cases** across **38 suites**. Expand a s
 
     * **Objective**: H2 settings ack and bad
     * **Assertions**:
-      * <code>Assert true (feed_frame(c, H2FrameType::H2_SETTINGS, H2_FLAG_ACK, 0, nullptr, 0))</code>
-      * <code>Assert false (feed_frame(c, H2FrameType::H2_SETTINGS, 0, 0, bad, 3))</code>
+      * <code>Assert true (feed_frame(c, H2_SETTINGS, H2_FLAG_ACK, 0, nullptr, 0))</code>
+      * <code>Assert false (feed_frame(c, H2_SETTINGS, 0, 0, bad, 3))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -3960,8 +3960,8 @@ A thorough directory of all **1047 test cases** across **38 suites**. Expand a s
 
     * **Objective**: H2 ping bad
     * **Assertions**:
-      * <code>Assert true (feed_frame(c, H2FrameType::H2_PING, H2_FLAG_ACK, 0, p8, 8))</code>
-      * <code>Assert false (feed_frame(c, H2FrameType::H2_PING, 0, 0, p4, 4))</code>
+      * <code>Assert true (feed_frame(c, H2_PING, H2_FLAG_ACK, 0, p8, 8))</code>
+      * <code>Assert false (feed_frame(c, H2_PING, 0, 0, p4, 4))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -3979,8 +3979,8 @@ A thorough directory of all **1047 test cases** across **38 suites**. Expand a s
     * **Assertions**:
       * <code>Assert false (pc_h2_conn_respond(&c, 99, 200, "text/plain", "x", 1))</code>
       * <code>Assert true (pc_h2_conn_respond(&c, 1, 200, nullptr, "0123456789", 10))</code>
-      * <code>Assert true (count_frames(cap.out, H2FrameType::H2_DATA) &gt;= 3)</code>
-      * <code>Assert equal int (1, count_frames(cap.out, H2FrameType::H2_GOAWAY))</code>
+      * <code>Assert true (count_frames(cap.out, H2_DATA) &gt;= 3)</code>
+      * <code>Assert equal int (1, count_frames(cap.out, H2_GOAWAY))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -3988,12 +3988,12 @@ A thorough directory of all **1047 test cases** across **38 suites**. Expand a s
 
     * **Objective**: H2 more guards
     * **Assertions**:
-      * <code>TEST_ASSERT_FALSE(</code>
-      * <code>TEST_ASSERT_FALSE(</code>
-      * <code>Assert false (fresh_feed(H2FrameType::H2_HEADERS, H2_FLAG_END_HEADERS, 1, bad_hpack, 4))</code>
-      * <code>Assert false (fresh_feed(H2FrameType::H2_HEADERS, 0, 1, huge.data(), huge.size()))</code>
-      * <code>Assert false (fresh_feed(H2FrameType::H2_DATA, H2_FLAG_PADDED, 1, nullptr, 0))</code>
-      * <code>Assert false (fresh_feed(H2FrameType::H2_DATA, H2_FLAG_PADDED, 1, dpad, 2))</code>
+      * <code>Assert false (fresh_feed(H2_HEADERS, H2_FLAG_PADDED | H2_FLAG_END_HEADERS, 1, nullptr, 0))</code>
+      * <code>Assert false (fresh_feed(H2_HEADERS, H2_FLAG_PRIORITY | H2_FLAG_END_HEADERS, 1, p3, 3))</code>
+      * <code>Assert false (fresh_feed(H2_HEADERS, H2_FLAG_END_HEADERS, 1, bad_hpack, 4))</code>
+      * <code>Assert false (fresh_feed(H2_HEADERS, 0, 1, huge.data(), huge.size()))</code>
+      * <code>Assert false (fresh_feed(H2_DATA, H2_FLAG_PADDED, 1, nullptr, 0))</code>
+      * <code>Assert false (fresh_feed(H2_DATA, H2_FLAG_PADDED, 1, dpad, 2))</code>
       * <code>Assert true (fresh_feed(0x2A, 0, 1, x, 1))</code>
   </details>
 
@@ -4002,12 +4002,12 @@ A thorough directory of all **1047 test cases** across **38 suites**. Expand a s
 
     * **Objective**: H2 continuation more
     * **Assertions**:
-      * <code>Assert true (feed_frame(c, H2FrameType::H2_HEADERS, 0, 1, block, t))</code>
-      * <code>Assert true (feed_frame(c, H2FrameType::H2_CONTINUATION, 0, 1, block + t, t))</code>
-      * <code>TEST_ASSERT_TRUE(</code>
+      * <code>Assert true (feed_frame(c, H2_HEADERS, 0, 1, block, t))</code>
+      * <code>Assert true (feed_frame(c, H2_CONTINUATION, 0, 1, block + t, t))</code>
+      * <code>Assert true (feed_frame(c, H2_CONTINUATION, H2_FLAG_END_HEADERS, 1, block + 2 * t, blen - 2 * t))</code>
       * <code>Assert equal int (4, (int)cap.req_headers.size())</code>
-      * <code>Assert true (feed_frame(c, H2FrameType::H2_HEADERS, 0, 1, frag.data(), frag.size())); // buffered (&lt; hblock)</code>
-      * <code>Assert false (feed_frame(c, H2FrameType::H2_CONTINUATION, 0, 1, more.data(), more.size()))</code>
+      * <code>Assert true (feed_frame(c, H2_HEADERS, 0, 1, frag.data(), frag.size())); // buffered (&lt; hblock)</code>
+      * <code>Assert false (feed_frame(c, H2_CONTINUATION, 0, 1, more.data(), more.size()))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -4025,7 +4025,7 @@ A thorough directory of all **1047 test cases** across **38 suites**. Expand a s
     * **Assertions**:
       * <code>Assert true (pc_h2_conn_recv(&c, in.data(), in.size()))</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(1, c.last_peer_stream);</code>
-      * <code>Assert true (feed_frame(c, H2FrameType::H2_DATA, H2_FLAG_END_STREAM, 1, body, 3))</code>
+      * <code>Assert true (feed_frame(c, H2_DATA, H2_FLAG_END_STREAM, 1, body, 3))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -4041,7 +4041,7 @@ A thorough directory of all **1047 test cases** across **38 suites**. Expand a s
 
     * **Objective**: H2 continuation without headers
     * **Assertions**:
-      * <code>Assert false (feed_frame(c, H2FrameType::H2_CONTINUATION, H2_FLAG_END_HEADERS, 1, x, 4))</code>
+      * <code>Assert false (feed_frame(c, H2_CONTINUATION, H2_FLAG_END_HEADERS, 1, x, 4))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -4049,9 +4049,9 @@ A thorough directory of all **1047 test cases** across **38 suites**. Expand a s
 
     * **Objective**: RST_STREAM on stream 0: find_stream must not match an empty (id == 0) slot.
     * **Assertions**:
-      * <code>Assert true (feed_frame(c, H2FrameType::H2_RST_STREAM, 0, 0, err, 4))</code>
-      * <code>Assert true (feed_frame(c, H2FrameType::H2_RST_STREAM, 0, 7, err, 4))</code>
-      * <code>Assert true (feed_frame(c, H2FrameType::H2_WINDOW_UPDATE, 0, 9, inc, 4))</code>
+      * <code>Assert true (feed_frame(c, H2_RST_STREAM, 0, 0, err, 4))</code>
+      * <code>Assert true (feed_frame(c, H2_RST_STREAM, 0, 7, err, 4))</code>
+      * <code>Assert true (feed_frame(c, H2_WINDOW_UPDATE, 0, 9, inc, 4))</code>
       * <code>TEST_ASSERT_EQUAL_INT32(before, c.conn_send_window);</code>
   </details>
 
@@ -4060,10 +4060,10 @@ A thorough directory of all **1047 test cases** across **38 suites**. Expand a s
 
     * **Objective**: DATA with END_STREAM on an id with no stream slot: delivered, no state to update.
     * **Assertions**:
-      * <code>Assert true (feed_frame(c, H2FrameType::H2_DATA, 0, 1, nullptr, 0))</code>
-      * <code>Assert equal int (0, count_frames(cap.out, H2FrameType::H2_WINDOW_UPDATE))</code>
+      * <code>Assert true (feed_frame(c, H2_DATA, 0, 1, nullptr, 0))</code>
+      * <code>Assert equal int (0, count_frames(cap.out, H2_WINDOW_UPDATE))</code>
       * <code>Assert equal string ("", cap.body.c_str())</code>
-      * <code>Assert true (feed_frame(c, H2FrameType::H2_DATA, H2_FLAG_END_STREAM, 5, d, 2))</code>
+      * <code>Assert true (feed_frame(c, H2_DATA, H2_FLAG_END_STREAM, 5, d, 2))</code>
       * <code>Assert equal string ("ok", cap.body.c_str())</code>
       * <code>Assert true (cap.data_end)</code>
   </details>
@@ -4073,9 +4073,9 @@ A thorough directory of all **1047 test cases** across **38 suites**. Expand a s
 
     * **Objective**: H2 continuation after stream freed
     * **Assertions**:
-      * <code>Assert true (feed_frame(c, H2FrameType::H2_HEADERS, 0, 1, block, half))</code>
+      * <code>Assert true (feed_frame(c, H2_HEADERS, 0, 1, block, half))</code>
       * <code>Assert true (pc_h2_conn_respond(&c, 1, 200, nullptr, "x", 1))</code>
-      * <code>Assert true (feed_frame(c, H2FrameType::H2_CONTINUATION, H2_FLAG_END_HEADERS, 1, block + half, blen - half))</code>
+      * <code>Assert true (feed_frame(c, H2_CONTINUATION, H2_FLAG_END_HEADERS, 1, block + half, blen - half))</code>
       * <code>Assert equal int (4, (int)cap.req_headers.size())</code>
   </details>
 
@@ -4085,7 +4085,7 @@ A thorough directory of all **1047 test cases** across **38 suites**. Expand a s
     * **Objective**: H2 respond default chunk size
     * **Assertions**:
       * <code>Assert true (pc_h2_conn_respond(&c, 1, 200, nullptr, body.data(), body.size()))</code>
-      * <code>Assert equal int (1, count_frames(cap.out, H2FrameType::H2_DATA))</code>
+      * <code>Assert equal int (1, count_frames(cap.out, H2_DATA))</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -4094,9 +4094,9 @@ A thorough directory of all **1047 test cases** across **38 suites**. Expand a s
     * **Objective**: '&' has an 8-bit Huffman code, so the value is stored literally and its encoded size is
     * **Assertions**:
       * <code>Assert false (pc_h2_conn_respond(&c, 1, 200, ct.c_str(), "hi", 2))</code>
-      * <code>Assert equal int (0, count_frames(cap.out, H2FrameType::H2_HEADERS))</code>
+      * <code>Assert equal int (0, count_frames(cap.out, H2_HEADERS))</code>
       * <code>Assert true (pc_h2_conn_respond(&c, 1, 200, "text/plain", "hi", 2))</code>
-      * <code>Assert equal int (1, count_frames(cap.out, H2FrameType::H2_HEADERS))</code>
+      * <code>Assert equal int (1, count_frames(cap.out, H2_HEADERS))</code>
   </details>
 
 </details>
