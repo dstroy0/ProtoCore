@@ -36,6 +36,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update test report + coverage [skip ci] ([`3ca3f75`](https://github.com/dstroy0/ProtoCore/commit/3ca3f75b4b8ea37d81879cb458fa05bed4639bdd))
+- update CHANGELOG.md [skip ci] ([`a1af822`](https://github.com/dstroy0/ProtoCore/commit/a1af822e0fde44ba653b3f091f83040c5ebc6b0e))
 - update test report + coverage [skip ci] ([`b2b1226`](https://github.com/dstroy0/ProtoCore/commit/b2b1226a2919349f3260a7b4f39c65245ff16021))
 - update CHANGELOG.md [skip ci] ([`a7621df`](https://github.com/dstroy0/ProtoCore/commit/a7621df589dd738b977d8ec01716f8357b85ab6c))
 - update test report + coverage [skip ci] ([`485fd95`](https://github.com/dstroy0/ProtoCore/commit/485fd952e211d2768aab4a4055e5cff938b441ec))
@@ -175,6 +177,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Refactor
 
+- move the upload service onto the mnt storage seam ([`9a2bbaa`](https://github.com/dstroy0/ProtoCore/commit/9a2bbaa03e88b3a89c9797b89d1c38c77d784883))
 - move mDNS, NTP, NTS and PTP into the L7 application layer ([`bcf041b`](https://github.com/dstroy0/ProtoCore/commit/bcf041b7358b324f34ddccceeae40be286a24161))
 - restore internal linkage, bridge I2C, convert six files to C11 ([`ef26ac7`](https://github.com/dstroy0/ProtoCore/commit/ef26ac7ba100e631e7543645961de3865aca4785))
 - split WebDAV into the L7 wire codec and the server handler ([`593e45a`](https://github.com/dstroy0/ProtoCore/commit/593e45a25d14a01599aa08017898d05c80acd7dc))
