@@ -303,10 +303,17 @@ static inline void lfsm_fill_volume_leaving(int spare)
     }
 }
 
-/** @brief Write until the volume refuses, so the next write is a real ENOSPC. */
+/**
+ * @brief Fill until the store refuses to create anything, but leave it operable.
+ *
+ * Not spare == 0: driven to the last block littlefs cannot split its own metadata, and a commit
+ * that fails that way leaves the program cache dirty - the next program then trips an internal
+ * assertion. One block back is still "nothing can be created" for every caller, and the
+ * filesystem keeps answering, which is what a device out of space actually does.
+ */
 static inline void lfsm_fill_volume(void)
 {
-    lfsm_fill_volume_leaving(0);
+    lfsm_fill_volume_leaving(1);
 }
 
 // --- the backend --------------------------------------------------------------
