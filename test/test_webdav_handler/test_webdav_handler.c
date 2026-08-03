@@ -332,7 +332,7 @@ void test_put_empty_buffered()
 // 507 Insufficient Storage. The volume is filled first, so the refusal is a real ENOSPC.
 void test_put_stream_write_fails_507()
 {
-    lfsm_fill_volume_leaving(2); // room for the new file, none for its body
+    lfsm_fail_prog_after(3); // the file is created, then the medium refuses its body
     static uint8_t big[2100];
     memset(big, 'A', sizeof(big));
     feed_put(0, "/dav/big.txt", big, sizeof(big));
@@ -560,7 +560,7 @@ void test_webdav_copy_fs_table_full()
 {
     tree_put("/dav/f.txt", "data");
     tree_mkdir("/dav/d");
-    lfsm_fill_volume(); // no room left to create anything: both a file and a collection are refused
+    lfsm_fail_prog_after(1); // the medium refuses the first write, so nothing is created
     feed_and_handle(0, "COPY /dav/f.txt HTTP/1.1\r\nHost: x\r\nDestination: /dav/fc\r\n\r\n"); // dst open("w") fails
     TEST_ASSERT_TRUE(pc_resp_status(409));
 
@@ -594,7 +594,7 @@ void test_webdav_get_put_dest_edges()
     TEST_ASSERT_TRUE(tree_has("/dav/g.txt")); // no trailing-slash node
 
     rearm();
-    lfsm_fill_volume(); // nothing can be created, so the open fails
+    lfsm_fail_prog_after(1); // the medium refuses the write that would create it
     feed_and_handle(0, "PUT /dav/newfile.txt HTTP/1.1\r\nHost: x\r\nContent-Length: 0\r\n\r\n"); // open("w") fails
     TEST_ASSERT_TRUE(pc_resp_status(409));
 }
@@ -757,7 +757,7 @@ void test_webdav_method_dispatch_edges()
     TEST_ASSERT_FALSE(tree_has("/dav/mv"));
 
     rearm();
-    lfsm_fill_volume(); // nothing can be created, so mkdir fails
+    lfsm_fail_prog_after(1); // the medium refuses the write that would create the collection
     feed_and_handle(0, "MKCOL /dav/newcol HTTP/1.1\r\nHost: x\r\n\r\n");
     TEST_ASSERT_TRUE(pc_resp_status(409)); // does not exist, but mkdir failed
 }
