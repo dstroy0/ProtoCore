@@ -123,9 +123,38 @@ static inline void lfsm_format(void)
     }
 }
 
-/** @brief Write a whole file, creating parents' worth of path the caller already made. */
+/**
+ * @brief Create every directory above @p path, the way `mkdir -p` would.
+ *
+ * A real filesystem refuses to create a file under a directory that is not there, which the
+ * flat mocks never did - they stored a path string and called it a file. A test that says
+ * "there is a file at /dav/sub/x.txt" means the collection too, so the fixture makes it.
+ */
+static inline void lfsm_mkdir_parents(const char *path)
+{
+    char buf[LFS_NAME_MAX * 2];
+    size_t n = strlen(path);
+    if (n >= sizeof(buf))
+    {
+        return;
+    }
+    memcpy(buf, path, n + 1);
+    for (size_t i = 1; i < n; i++)
+    {
+        if (buf[i] != '/')
+        {
+            continue;
+        }
+        buf[i] = '\0';
+        lfs_mkdir(&g_lfsm.lfs, buf); // already-there is not an error worth reporting here
+        buf[i] = '/';
+    }
+}
+
+/** @brief Write a whole file, creating the collections above it first. */
 static inline proto_bool lfsm_write_file(const char *path, const void *data, size_t len)
 {
+    lfsm_mkdir_parents(path);
     lfs_file_t f;
     if (lfs_file_open(&g_lfsm.lfs, &f, path, LFS_O_WRONLY | LFS_O_CREAT | LFS_O_TRUNC) < 0)
     {
@@ -143,7 +172,9 @@ static inline proto_bool lfsm_write_text(const char *path, const char *text)
 
 static inline proto_bool lfsm_mkdir(const char *path)
 {
-    return lfs_mkdir(&g_lfsm.lfs, path) == 0 ? PROTO_TRUE : PROTO_FALSE;
+    lfsm_mkdir_parents(path);
+    int rc = lfs_mkdir(&g_lfsm.lfs, path);
+    return (rc == 0 || rc == LFS_ERR_EXIST) ? PROTO_TRUE : PROTO_FALSE;
 }
 
 // --- the backend --------------------------------------------------------------
