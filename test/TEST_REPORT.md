@@ -1,8 +1,8 @@
 # Test Report
 
-**Generated:** 2026-08-03 23:41:54
+**Generated:** 2026-08-04 00:35:06
 **Command:** `pio test` over 304 auto-discovered native envs (excludes native_pentest, native_codeql)
-**Result:** ✅ 13 passed - 180s
+**Result:** ✅ 13 passed - 201s
 
 ---
 
@@ -142,7 +142,7 @@
 | `test_syslog`            | `native_syslog`         |     0 |   ✅   | 00:00:00.850 |
 | `test_clock`             | `native_clock`          |     0 |   ✅   | 00:00:03.860 |
 | `test_forward`           | `native_forward`        |     0 |   ✅   | 00:00:10.158 |
-| `test_json`              | `native_json`           |     0 |   ✅   | 00:00:04.575 |
+| `test_json`              | `native_json`           |     0 |   ✅   | 00:00:02.529 |
 | `test_edge_cache`        | `native_edge_cache`     |     0 |   ✅   | 00:00:03.641 |
 | `test_edge_fetch`        | `native_edge_cache`     |     0 |   ✅   | 00:00:00.592 |
 | `test_http_client`       | `native_http_client`    |     0 |   ✅   | 00:00:00.835 |
@@ -152,6 +152,17 @@
 | `test_transport`         | `native_transport`      |     0 |   ✅   | 00:00:09.465 |
 | `test_provisioning`      | `native_prov`           |     0 |   ✅   | 00:00:01.420 |
 | `test_trace_capture`     | `native_trace_capture`  |     0 |   ✅   | 00:00:10.255 |
+| `test_ads`               | `native_ads`            |     0 |   ✅   | 00:00:10.300 |
+| `test_canopen`           | `native_canopen`        |     0 |   ✅   | 00:00:01.085 |
+| `test_cia402`            | `native_cia402`         |     0 |   ✅   | 00:00:01.086 |
+| `test_cloudevents`       | `native_cloudevents`    |     0 |   ✅   | 00:00:01.182 |
+| `test_docstore`          | `native_docstore`       |     0 |   ✅   | 00:00:01.191 |
+| `test_edge_mesh`         | `native_edge_mesh`      |     0 |   ✅   | 00:00:01.294 |
+| `test_euromap77`         | `native_euromap77`      |     0 |   ✅   | 00:00:01.109 |
+| `test_failsafe`          | `native_failsafe`       |     0 |   ✅   | 00:00:01.085 |
+| `test_focas`             | `native_focas`          |     0 |   ✅   | 00:00:01.050 |
+| `test_gpio_map`          | `native_gpio_map`       |     0 |   ✅   | 00:00:01.135 |
+| `test_upload`            | `native_upload`         |     0 |   ✅   | 00:00:02.404 |
 
 ---
 

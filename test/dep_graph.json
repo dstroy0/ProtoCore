@@ -1,4 +1,88 @@
 {
+".pio/libdeps/native_ads/littlefs/include/lfs.h": [
+"native_ads"
+],
+".pio/libdeps/native_ads/littlefs/include/lfs_util.h": [
+"native_ads"
+],
+".pio/libdeps/native_ads/littlefs/src/lfs.c": [
+"native_ads"
+],
+".pio/libdeps/native_ads/littlefs/src/lfs_util.c": [
+"native_ads"
+],
+".pio/libdeps/native_application/littlefs/include/lfs.h": [
+"native_application"
+],
+".pio/libdeps/native_application/littlefs/include/lfs_util.h": [
+"native_application"
+],
+".pio/libdeps/native_application/littlefs/src/lfs.c": [
+"native_application"
+],
+".pio/libdeps/native_application/littlefs/src/lfs_util.c": [
+"native_application"
+],
+".pio/libdeps/native_canopen/littlefs/include/lfs.h": [
+"native_canopen"
+],
+".pio/libdeps/native_canopen/littlefs/include/lfs_util.h": [
+"native_canopen"
+],
+".pio/libdeps/native_canopen/littlefs/src/lfs.c": [
+"native_canopen"
+],
+".pio/libdeps/native_canopen/littlefs/src/lfs_util.c": [
+"native_canopen"
+],
+".pio/libdeps/native_cia402/littlefs/include/lfs.h": [
+"native_cia402"
+],
+".pio/libdeps/native_cia402/littlefs/include/lfs_util.h": [
+"native_cia402"
+],
+".pio/libdeps/native_cia402/littlefs/src/lfs.c": [
+"native_cia402"
+],
+".pio/libdeps/native_cia402/littlefs/src/lfs_util.c": [
+"native_cia402"
+],
+".pio/libdeps/native_cloudevents/littlefs/include/lfs.h": [
+"native_cloudevents"
+],
+".pio/libdeps/native_cloudevents/littlefs/include/lfs_util.h": [
+"native_cloudevents"
+],
+".pio/libdeps/native_cloudevents/littlefs/src/lfs.c": [
+"native_cloudevents"
+],
+".pio/libdeps/native_cloudevents/littlefs/src/lfs_util.c": [
+"native_cloudevents"
+],
+".pio/libdeps/native_coap/littlefs/include/lfs.h": [
+"native_coap"
+],
+".pio/libdeps/native_coap/littlefs/include/lfs_util.h": [
+"native_coap"
+],
+".pio/libdeps/native_coap/littlefs/src/lfs.c": [
+"native_coap"
+],
+".pio/libdeps/native_coap/littlefs/src/lfs_util.c": [
+"native_coap"
+],
+".pio/libdeps/native_coap_observe/littlefs/include/lfs.h": [
+"native_coap_observe"
+],
+".pio/libdeps/native_coap_observe/littlefs/include/lfs_util.h": [
+"native_coap_observe"
+],
+".pio/libdeps/native_coap_observe/littlefs/src/lfs.c": [
+"native_coap_observe"
+],
+".pio/libdeps/native_coap_observe/littlefs/src/lfs_util.c": [
+"native_coap_observe"
+],
 ".pio/libdeps/native_crypto_kat/littlefs/include/lfs.h": [
 "native_crypto_kat"
 ],
@@ -10,6 +94,90 @@
 ],
 ".pio/libdeps/native_crypto_kat/littlefs/src/lfs_util.c": [
 "native_crypto_kat"
+],
+".pio/libdeps/native_docstore/littlefs/include/lfs.h": [
+"native_docstore"
+],
+".pio/libdeps/native_docstore/littlefs/include/lfs_util.h": [
+"native_docstore"
+],
+".pio/libdeps/native_docstore/littlefs/src/lfs.c": [
+"native_docstore"
+],
+".pio/libdeps/native_docstore/littlefs/src/lfs_util.c": [
+"native_docstore"
+],
+".pio/libdeps/native_edge_mesh/littlefs/include/lfs.h": [
+"native_edge_mesh"
+],
+".pio/libdeps/native_edge_mesh/littlefs/include/lfs_util.h": [
+"native_edge_mesh"
+],
+".pio/libdeps/native_edge_mesh/littlefs/src/lfs.c": [
+"native_edge_mesh"
+],
+".pio/libdeps/native_edge_mesh/littlefs/src/lfs_util.c": [
+"native_edge_mesh"
+],
+".pio/libdeps/native_euromap77/littlefs/include/lfs.h": [
+"native_euromap77"
+],
+".pio/libdeps/native_euromap77/littlefs/include/lfs_util.h": [
+"native_euromap77"
+],
+".pio/libdeps/native_euromap77/littlefs/src/lfs.c": [
+"native_euromap77"
+],
+".pio/libdeps/native_euromap77/littlefs/src/lfs_util.c": [
+"native_euromap77"
+],
+".pio/libdeps/native_failsafe/littlefs/include/lfs.h": [
+"native_failsafe"
+],
+".pio/libdeps/native_failsafe/littlefs/include/lfs_util.h": [
+"native_failsafe"
+],
+".pio/libdeps/native_failsafe/littlefs/src/lfs.c": [
+"native_failsafe"
+],
+".pio/libdeps/native_failsafe/littlefs/src/lfs_util.c": [
+"native_failsafe"
+],
+".pio/libdeps/native_fins/littlefs/include/lfs.h": [
+"native_fins"
+],
+".pio/libdeps/native_fins/littlefs/include/lfs_util.h": [
+"native_fins"
+],
+".pio/libdeps/native_fins/littlefs/src/lfs.c": [
+"native_fins"
+],
+".pio/libdeps/native_fins/littlefs/src/lfs_util.c": [
+"native_fins"
+],
+".pio/libdeps/native_focas/littlefs/include/lfs.h": [
+"native_focas"
+],
+".pio/libdeps/native_focas/littlefs/include/lfs_util.h": [
+"native_focas"
+],
+".pio/libdeps/native_focas/littlefs/src/lfs.c": [
+"native_focas"
+],
+".pio/libdeps/native_focas/littlefs/src/lfs_util.c": [
+"native_focas"
+],
+".pio/libdeps/native_gpio_map/littlefs/include/lfs.h": [
+"native_gpio_map"
+],
+".pio/libdeps/native_gpio_map/littlefs/include/lfs_util.h": [
+"native_gpio_map"
+],
+".pio/libdeps/native_gpio_map/littlefs/src/lfs.c": [
+"native_gpio_map"
+],
+".pio/libdeps/native_gpio_map/littlefs/src/lfs_util.c": [
+"native_gpio_map"
 ],
 ".pio/libdeps/native_hpack/littlefs/include/lfs.h": [
 "native_hpack"
@@ -23,6 +191,42 @@
 ".pio/libdeps/native_hpack/littlefs/src/lfs_util.c": [
 "native_hpack"
 ],
+".pio/libdeps/native_json/littlefs/include/lfs.h": [
+"native_json"
+],
+".pio/libdeps/native_json/littlefs/include/lfs_util.h": [
+"native_json"
+],
+".pio/libdeps/native_json/littlefs/src/lfs.c": [
+"native_json"
+],
+".pio/libdeps/native_json/littlefs/src/lfs_util.c": [
+"native_json"
+],
+".pio/libdeps/native_keepalive/littlefs/include/lfs.h": [
+"native_keepalive"
+],
+".pio/libdeps/native_keepalive/littlefs/include/lfs_util.h": [
+"native_keepalive"
+],
+".pio/libdeps/native_keepalive/littlefs/src/lfs.c": [
+"native_keepalive"
+],
+".pio/libdeps/native_keepalive/littlefs/src/lfs_util.c": [
+"native_keepalive"
+],
+".pio/libdeps/native_oauth2/littlefs/include/lfs.h": [
+"native_oauth2"
+],
+".pio/libdeps/native_oauth2/littlefs/include/lfs_util.h": [
+"native_oauth2"
+],
+".pio/libdeps/native_oauth2/littlefs/src/lfs.c": [
+"native_oauth2"
+],
+".pio/libdeps/native_oauth2/littlefs/src/lfs_util.c": [
+"native_oauth2"
+],
 ".pio/libdeps/native_prov/littlefs/include/lfs.h": [
 "native_prov"
 ],
@@ -34,6 +238,18 @@
 ],
 ".pio/libdeps/native_prov/littlefs/src/lfs_util.c": [
 "native_prov"
+],
+".pio/libdeps/native_senml/littlefs/include/lfs.h": [
+"native_senml"
+],
+".pio/libdeps/native_senml/littlefs/include/lfs_util.h": [
+"native_senml"
+],
+".pio/libdeps/native_senml/littlefs/src/lfs.c": [
+"native_senml"
+],
+".pio/libdeps/native_senml/littlefs/src/lfs_util.c": [
+"native_senml"
 ],
 ".pio/libdeps/native_smb/littlefs/include/lfs.h": [
 "native_smb"
@@ -95,6 +311,18 @@
 ".pio/libdeps/native_ssh_kbdint/littlefs/src/lfs_util.c": [
 "native_ssh_kbdint"
 ],
+".pio/libdeps/native_swar/littlefs/include/lfs.h": [
+"native_swar"
+],
+".pio/libdeps/native_swar/littlefs/include/lfs_util.h": [
+"native_swar"
+],
+".pio/libdeps/native_swar/littlefs/src/lfs.c": [
+"native_swar"
+],
+".pio/libdeps/native_swar/littlefs/src/lfs_util.c": [
+"native_swar"
+],
 ".pio/libdeps/native_telnet/littlefs/include/lfs.h": [
 "native_telnet"
 ],
@@ -131,12 +359,37 @@
 ".pio/libdeps/native_transport/littlefs/src/lfs_util.c": [
 "native_transport"
 ],
+".pio/libdeps/native_upload/littlefs/include/lfs.h": [
+"native_upload"
+],
+".pio/libdeps/native_upload/littlefs/include/lfs_util.h": [
+"native_upload"
+],
+".pio/libdeps/native_upload/littlefs/src/lfs.c": [
+"native_upload"
+],
+".pio/libdeps/native_upload/littlefs/src/lfs_util.c": [
+"native_upload"
+],
+".pio/libdeps/native_wamp/littlefs/include/lfs.h": [
+"native_wamp"
+],
+".pio/libdeps/native_wamp/littlefs/include/lfs_util.h": [
+"native_wamp"
+],
+".pio/libdeps/native_wamp/littlefs/src/lfs.c": [
+"native_wamp"
+],
+".pio/libdeps/native_wamp/littlefs/src/lfs_util.c": [
+"native_wamp"
+],
 "src/board_drivers/board_profiles/board_profile.h": [
 "native_accept_gate",
 "native_ad9238",
 "native_ads",
 "native_ads1115",
 "native_amqp",
+"native_application",
 "native_arena",
 "native_atc",
 "native_audit_log",
@@ -410,6 +663,7 @@
 "native_ads",
 "native_ads1115",
 "native_amqp",
+"native_application",
 "native_arena",
 "native_atc",
 "native_audit_log",
@@ -683,6 +937,7 @@
 "native_ads",
 "native_ads1115",
 "native_amqp",
+"native_application",
 "native_arena",
 "native_atc",
 "native_audit_log",
@@ -1316,7 +1571,8 @@
 "src/board_drivers/hal/portable/portable_aesgcm.c": [
 "native_smb",
 "native_ssh",
-"native_ssh_kbdint"
+"native_ssh_kbdint",
+"native_swar"
 ],
 "src/board_drivers/hal/portable/portable_aesgcm.cpp": [
 "native_esp",
@@ -1325,20 +1581,19 @@
 "native_ssh_aesgcm",
 "native_ssh_conn",
 "native_ssh_hardened",
-"native_ssh_pqc",
-"native_swar"
+"native_ssh_pqc"
 ],
 "src/board_drivers/hal/portable/portable_bignum.c": [
 "native_ssh",
-"native_ssh_kbdint"
+"native_ssh_kbdint",
+"native_swar"
 ],
 "src/board_drivers/hal/portable/portable_bignum.cpp": [
 "native_ikev2",
 "native_oidc",
 "native_ssh_conn",
 "native_ssh_hardened",
-"native_ssh_pqc",
-"native_swar"
+"native_ssh_pqc"
 ],
 "src/board_drivers/hal/portable/portable_platform.c": [
 "native_accept_gate",
@@ -1667,6 +1922,7 @@
 "native_swar"
 ],
 "src/crypto/cipher/aes256ctr.h": [
+"native_application",
 "native_ikev2",
 "native_json",
 "native_keepalive",
@@ -1752,6 +2008,7 @@
 ],
 "src/crypto/crypto_opt.h": [
 "native_accept_gate",
+"native_application",
 "native_audit_log",
 "native_base64",
 "native_coaps",
@@ -1808,6 +2065,7 @@
 "native_ws_client"
 ],
 "src/crypto/ct_eq.h": [
+"native_application",
 "native_coaps",
 "native_coaps_server",
 "native_crypto_kat",
@@ -1852,6 +2110,7 @@
 ],
 "src/crypto/hash/sha1.c": [
 "native_accept_gate",
+"native_application",
 "native_base64",
 "native_device_id",
 "native_http_parser",
@@ -1872,6 +2131,7 @@
 ],
 "src/crypto/hash/sha1.h": [
 "native_accept_gate",
+"native_application",
 "native_base64",
 "native_device_id",
 "native_http_parser",
@@ -1891,6 +2151,7 @@
 "native_ws_client"
 ],
 "src/crypto/hash/sha256.c": [
+"native_application",
 "native_audit_log",
 "native_coaps",
 "native_coaps_server",
@@ -1927,6 +2188,7 @@
 "native_upload"
 ],
 "src/crypto/hash/sha256.h": [
+"native_application",
 "native_audit_log",
 "native_coaps",
 "native_coaps_server",
@@ -2127,6 +2389,7 @@
 "native_tls13_kdf"
 ],
 "src/crypto/mac/hmac_sha256.h": [
+"native_application",
 "native_coaps",
 "native_coaps_server",
 "native_crypto_kat",
@@ -2221,6 +2484,7 @@
 ],
 "src/mmgr/arena.c": [
 "native_accept_gate",
+"native_application",
 "native_arena",
 "native_base64",
 "native_coaps",
@@ -2270,6 +2534,7 @@
 ],
 "src/mmgr/arena.h": [
 "native_accept_gate",
+"native_application",
 "native_arena",
 "native_base64",
 "native_coaps",
@@ -2322,6 +2587,7 @@
 "native_swar"
 ],
 "src/mmgr/dma.h": [
+"native_application",
 "native_dma",
 "native_json",
 "native_keepalive",
@@ -2329,6 +2595,7 @@
 "native_upload"
 ],
 "src/mmgr/frame.c": [
+"native_application",
 "native_config_io",
 "native_frame",
 "native_gpio_map",
@@ -2346,6 +2613,7 @@
 "native_upload"
 ],
 "src/mmgr/frame.h": [
+"native_application",
 "native_config_io",
 "native_csrf",
 "native_frame",
@@ -2364,6 +2632,7 @@
 "native_upload"
 ],
 "src/mmgr/membuild.h": [
+"native_application",
 "native_atc",
 "native_audit_log",
 "native_ble_gatt",
@@ -2422,6 +2691,7 @@
 ],
 "src/mmgr/plaintext.c": [
 "native_accept_gate",
+"native_application",
 "native_base64",
 "native_coaps",
 "native_coaps_server",
@@ -2470,6 +2740,7 @@
 ],
 "src/mmgr/plaintext.h": [
 "native_accept_gate",
+"native_application",
 "native_base64",
 "native_coaps",
 "native_coaps_server",
@@ -2552,6 +2823,7 @@
 "native_tls13_kdf"
 ],
 "src/mmgr/secure.h": [
+"native_application",
 "native_coaps",
 "native_coaps_server",
 "native_crypto_kat",
@@ -2590,6 +2862,7 @@
 "native_upload"
 ],
 "src/network_drivers/application/auth/auth.c": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
@@ -2602,18 +2875,21 @@
 "native_swar"
 ],
 "src/network_drivers/application/file_serving/file_serving.c": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
 "native_upload"
 ],
 "src/network_drivers/application/file_serving/file_serving.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
 "native_upload"
 ],
 "src/network_drivers/application/http_range.c": [
+"native_application",
 "native_edge_cache",
 "native_json",
 "native_keepalive",
@@ -2621,6 +2897,7 @@
 "native_upload"
 ],
 "src/network_drivers/application/http_range.h": [
+"native_application",
 "native_edge_cache",
 "native_json",
 "native_keepalive",
@@ -2632,6 +2909,7 @@
 "native_swar"
 ],
 "src/network_drivers/application/mdns_adaptive/mdns_adaptive.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_mdns_adaptive",
@@ -2642,6 +2920,7 @@
 "native_swar"
 ],
 "src/network_drivers/application/mdns_service/mdns_service.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
@@ -2652,6 +2931,7 @@
 "native_swar"
 ],
 "src/network_drivers/application/ntp_server/ntp_server.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_ntp_server",
@@ -2659,10 +2939,12 @@
 "native_upload"
 ],
 "src/network_drivers/application/ntp_service/ntp_service.c": [
+"native_application",
 "native_json",
 "native_swar"
 ],
 "src/network_drivers/application/ntp_service/ntp_service.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
@@ -2673,6 +2955,7 @@
 "native_swar"
 ],
 "src/network_drivers/application/nts/nts.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_nts",
@@ -2684,6 +2967,7 @@
 "native_swar"
 ],
 "src/network_drivers/application/ptp/ptp.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_ptp",
@@ -2695,6 +2979,7 @@
 "native_swar"
 ],
 "src/network_drivers/application/scp/scp.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_scp",
@@ -2705,6 +2990,7 @@
 "native_swar"
 ],
 "src/network_drivers/application/scp/ssh_scp.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
@@ -2715,6 +3001,7 @@
 "native_swar"
 ],
 "src/network_drivers/application/sftp/sftp.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_ssh_sftp",
@@ -2725,6 +3012,7 @@
 "native_swar"
 ],
 "src/network_drivers/application/sftp/ssh_sftp.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
@@ -2735,6 +3023,7 @@
 "native_swar"
 ],
 "src/network_drivers/application/smb/ntlm.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_smb",
@@ -2746,6 +3035,7 @@
 "native_swar"
 ],
 "src/network_drivers/application/smb/ntlmssp.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_smb",
@@ -2757,6 +3047,7 @@
 "native_swar"
 ],
 "src/network_drivers/application/smb/smb2.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_smb",
@@ -2768,6 +3059,7 @@
 "native_swar"
 ],
 "src/network_drivers/application/smb/smb_client.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_smb",
@@ -2779,6 +3071,7 @@
 "native_swar"
 ],
 "src/network_drivers/application/smb/spnego.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_smb",
@@ -2790,6 +3083,7 @@
 "native_upload"
 ],
 "src/network_drivers/application/upload_service/upload_service.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
@@ -2849,6 +3143,7 @@
 "native_swar"
 ],
 "src/network_drivers/application/webdav/webdav.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
@@ -2865,6 +3160,7 @@
 "native_swar"
 ],
 "src/network_drivers/datalink/roaming.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_roaming",
@@ -2876,6 +3172,7 @@
 "native_swar"
 ],
 "src/network_drivers/network/dns_resolver.h": [
+"native_application",
 "native_dns_resolver",
 "native_json",
 "native_keepalive",
@@ -2884,6 +3181,7 @@
 ],
 "src/network_drivers/network/ip.c": [
 "native_accept_gate",
+"native_application",
 "native_auth_lockout",
 "native_base64",
 "native_cloudevents",
@@ -2913,6 +3211,7 @@
 ],
 "src/network_drivers/network/ip.h": [
 "native_accept_gate",
+"native_application",
 "native_auth_lockout",
 "native_base64",
 "native_cloudevents",
@@ -2951,10 +3250,13 @@
 "native_swar"
 ],
 "src/network_drivers/network/route.c": [
+"native_application",
 "native_json",
-"native_swar"
+"native_swar",
+"native_upload"
 ],
 "src/network_drivers/network/route.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
@@ -2965,6 +3267,7 @@
 "native_swar"
 ],
 "src/network_drivers/physical/physical.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_net_egress",
@@ -2978,6 +3281,7 @@
 "native_swar"
 ],
 "src/network_drivers/physical/radio_power.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_radio_power",
@@ -2986,6 +3290,7 @@
 ],
 "src/network_drivers/presentation/codec/base64/base64.c": [
 "native_accept_gate",
+"native_application",
 "native_base64",
 "native_base64_scalar",
 "native_http_parser",
@@ -3007,6 +3312,7 @@
 ],
 "src/network_drivers/presentation/codec/base64/base64.h": [
 "native_accept_gate",
+"native_application",
 "native_base64",
 "native_base64_scalar",
 "native_http_parser",
@@ -3026,10 +3332,12 @@
 "native_websocket",
 "native_ws_client"
 ],
-"src/network_drivers/presentation/codec/cbor/cbor.cpp": [
-"native_cbor",
+"src/network_drivers/presentation/codec/cbor/cbor.c": [
 "native_senml",
 "native_swar"
+],
+"src/network_drivers/presentation/codec/cbor/cbor.cpp": [
+"native_cbor"
 ],
 "src/network_drivers/presentation/codec/cbor/cbor.h": [
 "native_cbor",
@@ -3043,6 +3351,7 @@
 "native_swar"
 ],
 "src/network_drivers/presentation/codec/codec.h": [
+"native_application",
 "native_cbor",
 "native_json",
 "native_keepalive",
@@ -3082,6 +3391,7 @@
 "native_swar"
 ],
 "src/network_drivers/presentation/codec/json/json.c": [
+"native_application",
 "native_cloudevents",
 "native_docstore",
 "native_json",
@@ -3091,6 +3401,7 @@
 "native_wamp"
 ],
 "src/network_drivers/presentation/codec/json/json.h": [
+"native_application",
 "native_cloudevents",
 "native_docstore",
 "native_json",
@@ -3101,15 +3412,18 @@
 "native_upload",
 "native_wamp"
 ],
-"src/network_drivers/presentation/codec/msgpack/msgpack.cpp": [
-"native_msgpack",
+"src/network_drivers/presentation/codec/msgpack/msgpack.c": [
 "native_swar"
+],
+"src/network_drivers/presentation/codec/msgpack/msgpack.cpp": [
+"native_msgpack"
 ],
 "src/network_drivers/presentation/codec/msgpack/msgpack.h": [
 "native_msgpack",
 "native_swar"
 ],
 "src/network_drivers/presentation/codec/multipart/multipart.c": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_sse",
@@ -3129,6 +3443,7 @@
 ],
 "src/network_drivers/presentation/codec/multipart/multipart.h": [
 "native_accept_gate",
+"native_application",
 "native_base64",
 "native_http_parser",
 "native_json",
@@ -3391,6 +3706,8 @@
 "native_tls13_msg"
 ],
 "src/network_drivers/presentation/http/http_parser/http_parser.c": [
+"native_application",
+"native_cloudevents",
 "native_json",
 "native_keepalive",
 "native_sse",
@@ -3402,7 +3719,6 @@
 "src/network_drivers/presentation/http/http_parser/http_parser.cpp": [
 "native_accept_gate",
 "native_base64",
-"native_cloudevents",
 "native_compliance",
 "native_http_parser",
 "native_ota",
@@ -3413,6 +3729,7 @@
 ],
 "src/network_drivers/presentation/http/http_parser/http_parser.h": [
 "native_accept_gate",
+"native_application",
 "native_base64",
 "native_cloudevents",
 "native_compliance",
@@ -3431,6 +3748,7 @@
 "native_websocket"
 ],
 "src/network_drivers/presentation/http/sse/sse.c": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_sse",
@@ -3450,6 +3768,7 @@
 ],
 "src/network_drivers/presentation/http/sse/sse.h": [
 "native_accept_gate",
+"native_application",
 "native_base64",
 "native_http_parser",
 "native_json",
@@ -3465,6 +3784,7 @@
 "native_websocket"
 ],
 "src/network_drivers/presentation/http/websocket/websocket.c": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_sse",
@@ -3484,6 +3804,7 @@
 ],
 "src/network_drivers/presentation/http/websocket/websocket.h": [
 "native_accept_gate",
+"native_application",
 "native_base64",
 "native_http_parser",
 "native_json",
@@ -3499,6 +3820,7 @@
 "native_websocket"
 ],
 "src/network_drivers/presentation/presentation.c": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_sse",
@@ -3518,6 +3840,7 @@
 ],
 "src/network_drivers/presentation/presentation.h": [
 "native_accept_gate",
+"native_application",
 "native_base64",
 "native_http_parser",
 "native_json",
@@ -3574,13 +3897,13 @@
 ],
 "src/network_drivers/presentation/ssh/auth/ssh_auth.c": [
 "native_ssh",
-"native_ssh_kbdint"
+"native_ssh_kbdint",
+"native_swar"
 ],
 "src/network_drivers/presentation/ssh/auth/ssh_auth.cpp": [
 "native_ssh_conn",
 "native_ssh_hardened",
-"native_ssh_pqc",
-"native_swar"
+"native_ssh_pqc"
 ],
 "src/network_drivers/presentation/ssh/auth/ssh_auth.h": [
 "native_ssh",
@@ -3592,13 +3915,13 @@
 ],
 "src/network_drivers/presentation/ssh/connection/ssh_channel.c": [
 "native_ssh",
-"native_ssh_kbdint"
+"native_ssh_kbdint",
+"native_swar"
 ],
 "src/network_drivers/presentation/ssh/connection/ssh_channel.cpp": [
 "native_ssh_conn",
 "native_ssh_hardened",
-"native_ssh_pqc",
-"native_swar"
+"native_ssh_pqc"
 ],
 "src/network_drivers/presentation/ssh/connection/ssh_channel.h": [
 "native_ssh",
@@ -3614,9 +3937,11 @@
 "src/network_drivers/presentation/ssh/connection/ssh_client.h": [
 "native_swar"
 ],
-"src/network_drivers/presentation/ssh/connection/ssh_conn.cpp": [
-"native_ssh_conn",
+"src/network_drivers/presentation/ssh/connection/ssh_conn.c": [
 "native_swar"
+],
+"src/network_drivers/presentation/ssh/connection/ssh_conn.cpp": [
+"native_ssh_conn"
 ],
 "src/network_drivers/presentation/ssh/connection/ssh_conn.h": [
 "native_ssh_conn",
@@ -3624,13 +3949,13 @@
 ],
 "src/network_drivers/presentation/ssh/connection/ssh_flow_control.c": [
 "native_ssh",
-"native_ssh_kbdint"
+"native_ssh_kbdint",
+"native_swar"
 ],
 "src/network_drivers/presentation/ssh/connection/ssh_flow_control.cpp": [
 "native_ssh_conn",
 "native_ssh_hardened",
-"native_ssh_pqc",
-"native_swar"
+"native_ssh_pqc"
 ],
 "src/network_drivers/presentation/ssh/connection/ssh_flow_control.h": [
 "native_ssh",
@@ -3649,13 +3974,13 @@
 ],
 "src/network_drivers/presentation/ssh/connection/ssh_server.c": [
 "native_ssh",
-"native_ssh_kbdint"
+"native_ssh_kbdint",
+"native_swar"
 ],
 "src/network_drivers/presentation/ssh/connection/ssh_server.cpp": [
 "native_ssh_conn",
 "native_ssh_hardened",
-"native_ssh_pqc",
-"native_swar"
+"native_ssh_pqc"
 ],
 "src/network_drivers/presentation/ssh/connection/ssh_server.h": [
 "native_ssh",
@@ -3673,13 +3998,13 @@
 ],
 "src/network_drivers/presentation/ssh/transport/ssh_dh.c": [
 "native_ssh",
-"native_ssh_kbdint"
+"native_ssh_kbdint",
+"native_swar"
 ],
 "src/network_drivers/presentation/ssh/transport/ssh_dh.cpp": [
 "native_ssh_conn",
 "native_ssh_hardened",
-"native_ssh_pqc",
-"native_swar"
+"native_ssh_pqc"
 ],
 "src/network_drivers/presentation/ssh/transport/ssh_dh.h": [
 "native_ssh",
@@ -3717,13 +4042,13 @@
 ],
 "src/network_drivers/presentation/ssh/transport/ssh_packet.c": [
 "native_ssh",
-"native_ssh_kbdint"
+"native_ssh_kbdint",
+"native_swar"
 ],
 "src/network_drivers/presentation/ssh/transport/ssh_packet.cpp": [
 "native_ssh_conn",
 "native_ssh_hardened",
-"native_ssh_pqc",
-"native_swar"
+"native_ssh_pqc"
 ],
 "src/network_drivers/presentation/ssh/transport/ssh_packet.h": [
 "native_ssh",
@@ -3768,6 +4093,7 @@
 "native_swar"
 ],
 "src/network_drivers/session/preempt_queue.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_preempt_queue",
@@ -3776,6 +4102,7 @@
 ],
 "src/network_drivers/session/proto_handler.h": [
 "native_accept_gate",
+"native_application",
 "native_base64",
 "native_euromap77",
 "native_http_parser",
@@ -3797,6 +4124,7 @@
 "native_websocket"
 ],
 "src/network_drivers/session/session.c": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_sse",
@@ -3816,6 +4144,7 @@
 ],
 "src/network_drivers/session/session.h": [
 "native_accept_gate",
+"native_application",
 "native_base64",
 "native_http_parser",
 "native_json",
@@ -3832,6 +4161,7 @@
 ],
 "src/network_drivers/session/worker.c": [
 "native_accept_gate",
+"native_application",
 "native_base64",
 "native_coaps",
 "native_coaps_server",
@@ -3881,6 +4211,7 @@
 ],
 "src/network_drivers/session/worker.h": [
 "native_accept_gate",
+"native_application",
 "native_base64",
 "native_coaps",
 "native_coaps_server",
@@ -3938,15 +4269,15 @@
 ],
 "src/network_drivers/tls/ssh_rsa.c": [
 "native_ssh",
-"native_ssh_kbdint"
+"native_ssh_kbdint",
+"native_swar"
 ],
 "src/network_drivers/tls/ssh_rsa.cpp": [
 "native_ikev2",
 "native_oidc",
 "native_ssh_conn",
 "native_ssh_hardened",
-"native_ssh_pqc",
-"native_swar"
+"native_ssh_pqc"
 ],
 "src/network_drivers/tls/ssh_rsa.h": [
 "native_ikev2",
@@ -3958,11 +4289,12 @@
 "native_ssh_pqc",
 "native_swar"
 ],
-"src/network_drivers/tls/tls.cpp": [
+"src/network_drivers/tls/tls.c": [
 "native_swar"
 ],
 "src/network_drivers/tls/tls.h": [
 "native_accept_gate",
+"native_application",
 "native_base64",
 "native_diffserv",
 "native_http_parser",
@@ -4014,6 +4346,7 @@
 "native_swar"
 ],
 "src/network_drivers/transport/client.h": [
+"native_application",
 "native_client",
 "native_json",
 "native_keepalive",
@@ -4026,6 +4359,7 @@
 ],
 "src/network_drivers/transport/diffserv.h": [
 "native_accept_gate",
+"native_application",
 "native_base64",
 "native_diffserv",
 "native_http_parser",
@@ -4046,6 +4380,7 @@
 ],
 "src/network_drivers/transport/listener.c": [
 "native_accept_gate",
+"native_application",
 "native_base64",
 "native_diffserv",
 "native_http_parser",
@@ -4066,6 +4401,7 @@
 ],
 "src/network_drivers/transport/listener.h": [
 "native_accept_gate",
+"native_application",
 "native_base64",
 "native_diffserv",
 "native_http_parser",
@@ -4086,6 +4422,7 @@
 ],
 "src/network_drivers/transport/tcp.c": [
 "native_accept_gate",
+"native_application",
 "native_base64",
 "native_diffserv",
 "native_http_parser",
@@ -4106,6 +4443,7 @@
 ],
 "src/network_drivers/transport/tcp.h": [
 "native_accept_gate",
+"native_application",
 "native_base64",
 "native_diffserv",
 "native_http_parser",
@@ -4138,6 +4476,7 @@
 "native_udp_transport"
 ],
 "src/network_drivers/transport/udp.h": [
+"native_application",
 "native_coap",
 "native_coap_observe",
 "native_coaps",
@@ -4153,12 +4492,14 @@
 "native_upload"
 ],
 "src/protocore.c": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
 "native_upload"
 ],
 "src/protocore.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
@@ -4170,6 +4511,7 @@
 "native_ads",
 "native_ads1115",
 "native_amqp",
+"native_application",
 "native_arena",
 "native_atc",
 "native_audit_log",
@@ -4438,11 +4780,16 @@
 "native_zwave"
 ],
 "src/server/clock/clock.c": [
+"native_application",
 "native_clock",
+"native_coap",
+"native_coap_observe",
 "native_edge_cache",
 "native_edge_cache_sd",
 "native_edge_mesh",
+"native_failsafe",
 "native_forward",
+"native_gpio_map",
 "native_http_client",
 "native_json",
 "native_keepalive",
@@ -4462,6 +4809,7 @@
 "src/server/clock/clock.h": [
 "native_accept_gate",
 "native_ads1115",
+"native_application",
 "native_audit_log",
 "native_base64",
 "native_clock",
@@ -4516,6 +4864,7 @@
 "native_swar"
 ],
 "src/server/exc_decoder.h": [
+"native_application",
 "native_exc_decoder",
 "native_json",
 "native_keepalive",
@@ -4527,6 +4876,7 @@
 "native_swar"
 ],
 "src/server/failsafe.h": [
+"native_application",
 "native_failsafe",
 "native_json",
 "native_keepalive",
@@ -4534,12 +4884,15 @@
 "native_upload"
 ],
 "src/server/filesystem/filesystem.c": [
+"native_application",
+"native_json",
 "native_mnt",
 "native_scp",
 "native_ssh_sftp",
 "native_swar"
 ],
 "src/server/filesystem/filesystem.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_mnt",
@@ -4549,12 +4902,16 @@
 "native_upload"
 ],
 "src/server/filesystem/mnt.c": [
+"native_application",
+"native_json",
 "native_mnt",
 "native_scp",
 "native_ssh_sftp",
-"native_swar"
+"native_swar",
+"native_upload"
 ],
 "src/server/filesystem/mnt.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_mnt",
@@ -4568,6 +4925,7 @@
 "native_wearlevel"
 ],
 "src/server/filesystem/wearlevel.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
@@ -4580,6 +4938,7 @@
 "native_swar"
 ],
 "src/server/logbuf.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_log",
@@ -4588,6 +4947,7 @@
 "native_upload"
 ],
 "src/server/middleware.c": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
@@ -4598,6 +4958,7 @@
 "native_swar"
 ],
 "src/server/power_mgmt.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_power_mgmt",
@@ -4606,6 +4967,7 @@
 ],
 "src/server/proto_builtins.c": [
 "native_accept_gate",
+"native_application",
 "native_base64",
 "native_http_parser",
 "native_json",
@@ -4621,12 +4983,14 @@
 "native_websocket"
 ],
 "src/server/regex.c": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
 "native_upload"
 ],
 "src/server/response.c": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
@@ -4637,6 +5001,7 @@
 "native_swar"
 ],
 "src/server/signaling/bus_capture.h": [
+"native_application",
 "native_bus_capture",
 "native_json",
 "native_keepalive",
@@ -4648,6 +5013,7 @@
 "native_swar"
 ],
 "src/server/signaling/device_id.h": [
+"native_application",
 "native_device_id",
 "native_json",
 "native_keepalive",
@@ -4659,6 +5025,7 @@
 "native_swar"
 ],
 "src/server/signaling/gpio_map.h": [
+"native_application",
 "native_gpio_map",
 "native_json",
 "native_keepalive",
@@ -4673,6 +5040,7 @@
 "native_swar"
 ],
 "src/server/signaling/hw_health.h": [
+"native_application",
 "native_hw_health",
 "native_json",
 "native_keepalive",
@@ -4684,6 +5052,7 @@
 "native_swar"
 ],
 "src/server/signaling/link_manager.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_link_manager",
@@ -4691,11 +5060,14 @@
 "native_upload"
 ],
 "src/server/signaling/signaling.c": [
+"native_application",
 "native_json",
 "native_signaling",
-"native_swar"
+"native_swar",
+"native_upload"
 ],
 "src/server/signaling/signaling.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_signaling",
@@ -4707,6 +5079,7 @@
 "native_trace_capture"
 ],
 "src/server/signaling/trace_capture.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
@@ -4718,6 +5091,7 @@
 "native_swar"
 ],
 "src/server/sleep_sched.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_sleep_sched",
@@ -4729,34 +5103,39 @@
 "native_swar"
 ],
 "src/server/update/ota_rollback.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_ota_rollback",
 "native_swar",
 "native_upload"
 ],
-"src/server/update/ota_service.cpp": [
+"src/server/update/ota_service.c": [
 "native_swar"
 ],
 "src/server/update/ota_service.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
 "native_upload"
 ],
 "src/server/webdav_handler.c": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
 "native_upload"
 ],
 "src/server/webdav_handler.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
 "native_upload"
 ],
 "src/server/websocket_sse.c": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
@@ -4767,6 +5146,7 @@
 "native_swar"
 ],
 "src/services/energy/c37118/c37118.h": [
+"native_application",
 "native_c37118",
 "native_json",
 "native_keepalive",
@@ -4778,6 +5158,7 @@
 "native_swar"
 ],
 "src/services/energy/dnp3/dnp3.h": [
+"native_application",
 "native_dnp3",
 "native_json",
 "native_keepalive",
@@ -4789,6 +5170,7 @@
 "native_swar"
 ],
 "src/services/energy/goose/goose.h": [
+"native_application",
 "native_goose",
 "native_json",
 "native_keepalive",
@@ -4800,6 +5182,7 @@
 "native_swar"
 ],
 "src/services/energy/iccp/iccp.h": [
+"native_application",
 "native_iccp",
 "native_json",
 "native_keepalive",
@@ -4811,6 +5194,7 @@
 "native_swar"
 ],
 "src/services/energy/iec60870/iec60870.h": [
+"native_application",
 "native_iec60870",
 "native_json",
 "native_keepalive",
@@ -4822,6 +5206,7 @@
 "native_swar"
 ],
 "src/services/energy/mms/mms.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_mms",
@@ -4833,6 +5218,7 @@
 "native_swar"
 ],
 "src/services/energy/openadr/openadr.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_openadr",
@@ -4844,6 +5230,7 @@
 "native_swar"
 ],
 "src/services/energy/sep2/sep2.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_sep2",
@@ -4855,6 +5242,7 @@
 "native_swar"
 ],
 "src/services/energy/sunspec/sunspec.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_sunspec",
@@ -4867,6 +5255,7 @@
 ],
 "src/services/fieldbus/ads/ads.h": [
 "native_ads",
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
@@ -4877,6 +5266,7 @@
 "native_swar"
 ],
 "src/services/fieldbus/bacnet/bacnet.h": [
+"native_application",
 "native_bacnet",
 "native_json",
 "native_keepalive",
@@ -4889,6 +5279,7 @@
 "native_swar"
 ],
 "src/services/fieldbus/canopen/canopen.h": [
+"native_application",
 "native_canopen",
 "native_cia402",
 "native_json",
@@ -4901,6 +5292,7 @@
 "native_swar"
 ],
 "src/services/fieldbus/cclink/cclink.h": [
+"native_application",
 "native_cclink",
 "native_json",
 "native_keepalive",
@@ -4912,6 +5304,7 @@
 "native_swar"
 ],
 "src/services/fieldbus/cia402/cia402.h": [
+"native_application",
 "native_cia402",
 "native_json",
 "native_keepalive",
@@ -4923,6 +5316,7 @@
 "native_swar"
 ],
 "src/services/fieldbus/cip/cip.h": [
+"native_application",
 "native_cip",
 "native_json",
 "native_keepalive",
@@ -4934,6 +5328,7 @@
 "native_swar"
 ],
 "src/services/fieldbus/cotp/cotp.h": [
+"native_application",
 "native_cotp",
 "native_json",
 "native_keepalive",
@@ -4945,6 +5340,7 @@
 "native_swar"
 ],
 "src/services/fieldbus/devicenet/devicenet.h": [
+"native_application",
 "native_devicenet",
 "native_json",
 "native_keepalive",
@@ -4956,6 +5352,7 @@
 "native_swar"
 ],
 "src/services/fieldbus/df1/df1.h": [
+"native_application",
 "native_df1",
 "native_json",
 "native_keepalive",
@@ -4967,6 +5364,7 @@
 "native_swar"
 ],
 "src/services/fieldbus/directnet/directnet.h": [
+"native_application",
 "native_directnet",
 "native_json",
 "native_keepalive",
@@ -4978,6 +5376,7 @@
 "native_swar"
 ],
 "src/services/fieldbus/enip/enip.h": [
+"native_application",
 "native_enip",
 "native_json",
 "native_keepalive",
@@ -4989,6 +5388,7 @@
 "native_swar"
 ],
 "src/services/fieldbus/fins/fins.h": [
+"native_application",
 "native_fins",
 "native_json",
 "native_keepalive",
@@ -5000,6 +5400,7 @@
 "native_swar"
 ],
 "src/services/fieldbus/hart/hart.h": [
+"native_application",
 "native_hart",
 "native_json",
 "native_keepalive",
@@ -5011,6 +5412,7 @@
 "native_swar"
 ],
 "src/services/fieldbus/hostlink/hostlink.h": [
+"native_application",
 "native_hostlink",
 "native_json",
 "native_keepalive",
@@ -5022,6 +5424,7 @@
 "native_swar"
 ],
 "src/services/fieldbus/interbus/interbus.h": [
+"native_application",
 "native_interbus",
 "native_json",
 "native_keepalive",
@@ -5033,6 +5436,7 @@
 "native_swar"
 ],
 "src/services/fieldbus/iolink/iolink.h": [
+"native_application",
 "native_iolink",
 "native_json",
 "native_keepalive",
@@ -5045,6 +5449,7 @@
 "native_swar"
 ],
 "src/services/fieldbus/j1939/j1939.h": [
+"native_application",
 "native_j1939",
 "native_json",
 "native_keepalive",
@@ -5057,6 +5462,7 @@
 "native_swar"
 ],
 "src/services/fieldbus/lonworks/lonworks.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_lonworks",
@@ -5068,6 +5474,7 @@
 "native_swar"
 ],
 "src/services/fieldbus/mbplus/mbplus.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_mbplus",
@@ -5079,6 +5486,7 @@
 "native_swar"
 ],
 "src/services/fieldbus/mbus/mbus.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_mbus",
@@ -5090,6 +5498,7 @@
 "native_swar"
 ],
 "src/services/fieldbus/melsec/melsec.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_melsec",
@@ -5103,6 +5512,7 @@
 "native_swar"
 ],
 "src/services/fieldbus/modbus/modbus.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_modbus",
@@ -5117,6 +5527,7 @@
 "native_swar"
 ],
 "src/services/fieldbus/modbus/modbus_master.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_modbus_master",
@@ -5133,6 +5544,7 @@
 "native_umati"
 ],
 "src/services/fieldbus/opcua/opcua.h": [
+"native_application",
 "native_euromap77",
 "native_json",
 "native_keepalive",
@@ -5148,6 +5560,7 @@
 "native_swar"
 ],
 "src/services/fieldbus/opcua_client/opcua_client.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_opcua_client",
@@ -5159,6 +5572,7 @@
 "native_swar"
 ],
 "src/services/fieldbus/powerlink/powerlink.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_powerlink",
@@ -5170,6 +5584,7 @@
 "native_swar"
 ],
 "src/services/fieldbus/profibus/profibus.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_profibus",
@@ -5181,6 +5596,7 @@
 "native_swar"
 ],
 "src/services/fieldbus/profinet/profinet.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_profinet",
@@ -5192,6 +5608,7 @@
 "native_swar"
 ],
 "src/services/fieldbus/rawl2/rawl2.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_rawl2",
@@ -5203,6 +5620,7 @@
 "native_swar"
 ],
 "src/services/fieldbus/s7comm/s7comm.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_s7comm",
@@ -5214,6 +5632,7 @@
 "native_swar"
 ],
 "src/services/fieldbus/sercos/sercos.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_sercos",
@@ -5225,6 +5644,7 @@
 "native_swar"
 ],
 "src/services/fieldbus/simatic/simatic.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_simatic",
@@ -5236,6 +5656,7 @@
 "native_swar"
 ],
 "src/services/fieldbus/snp/snp.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_snp",
@@ -5247,6 +5668,7 @@
 "native_swar"
 ],
 "src/services/file_transfer/ftp/ftp.h": [
+"native_application",
 "native_ftp",
 "native_json",
 "native_keepalive",
@@ -5257,6 +5679,7 @@
 "native_swar"
 ],
 "src/services/file_transfer/ftp/ftp_session.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
@@ -5267,6 +5690,7 @@
 "native_swar"
 ],
 "src/services/file_transfer/http_delivery/http_delivery.h": [
+"native_application",
 "native_http_delivery",
 "native_json",
 "native_keepalive",
@@ -5281,6 +5705,7 @@
 "native_swar"
 ],
 "src/services/instrumentation/gpib/gpib.h": [
+"native_application",
 "native_gpib",
 "native_json",
 "native_keepalive",
@@ -5292,6 +5717,7 @@
 "native_swar"
 ],
 "src/services/instrumentation/hislip/hislip.h": [
+"native_application",
 "native_hislip",
 "native_json",
 "native_keepalive",
@@ -5303,6 +5729,7 @@
 "native_swar"
 ],
 "src/services/instrumentation/scpi/scpi.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_scpi",
@@ -5314,6 +5741,7 @@
 "native_vxi11"
 ],
 "src/services/instrumentation/vxi11/vxi11.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
@@ -5326,6 +5754,7 @@
 ],
 "src/services/iot/amqp/amqp.h": [
 "native_amqp",
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
@@ -5336,6 +5765,7 @@
 "native_swar"
 ],
 "src/services/iot/cloudevents/cloudevents.h": [
+"native_application",
 "native_cloudevents",
 "native_json",
 "native_keepalive",
@@ -5350,6 +5780,7 @@
 "native_swar"
 ],
 "src/services/iot/coap/coap.h": [
+"native_application",
 "native_coap",
 "native_coap_observe",
 "native_coaps",
@@ -5365,6 +5796,7 @@
 "native_swar"
 ],
 "src/services/iot/coap/coaps.h": [
+"native_application",
 "native_coaps",
 "native_coaps_server",
 "native_json",
@@ -5377,6 +5809,7 @@
 "native_swar"
 ],
 "src/services/iot/coap/coaps_server.h": [
+"native_application",
 "native_coaps_server",
 "native_json",
 "native_keepalive",
@@ -5388,6 +5821,7 @@
 "native_swar"
 ],
 "src/services/iot/dds/dds.h": [
+"native_application",
 "native_dds",
 "native_json",
 "native_keepalive",
@@ -5399,6 +5833,7 @@
 "native_swar"
 ],
 "src/services/iot/graphql/graphql.h": [
+"native_application",
 "native_graphql",
 "native_json",
 "native_keepalive",
@@ -5410,6 +5845,7 @@
 "native_swar"
 ],
 "src/services/iot/grpcweb/grpcweb.h": [
+"native_application",
 "native_grpcweb",
 "native_json",
 "native_keepalive",
@@ -5421,17 +5857,21 @@
 "native_swar"
 ],
 "src/services/iot/lwm2m/lwm2m_tlv.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_lwm2m_tlv",
 "native_swar",
 "native_upload"
 ],
-"src/services/iot/mqtt/mqtt.cpp": [
-"native_mqtt",
+"src/services/iot/mqtt/mqtt.c": [
 "native_swar"
 ],
+"src/services/iot/mqtt/mqtt.cpp": [
+"native_mqtt"
+],
 "src/services/iot/mqtt/mqtt.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_mqtt",
@@ -5443,6 +5883,7 @@
 "native_swar"
 ],
 "src/services/iot/mqtt/mqtt_sn.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_mqtt_sn",
@@ -5454,6 +5895,7 @@
 "native_swar"
 ],
 "src/services/iot/nats/nats.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_nats",
@@ -5466,6 +5908,7 @@
 "native_swar"
 ],
 "src/services/iot/protobuf/protobuf.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_protobuf",
@@ -5478,17 +5921,19 @@
 "native_swar"
 ],
 "src/services/iot/redis_resp/redis_resp.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_redis",
 "native_swar",
 "native_upload"
 ],
-"src/services/iot/senml/senml.cpp": [
+"src/services/iot/senml/senml.c": [
 "native_senml",
 "native_swar"
 ],
 "src/services/iot/senml/senml.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_senml",
@@ -5500,17 +5945,21 @@
 "native_swar"
 ],
 "src/services/iot/sparkplug/sparkplug.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_sparkplug",
 "native_swar",
 "native_upload"
 ],
-"src/services/iot/statsd/statsd.cpp": [
-"native_statsd",
+"src/services/iot/statsd/statsd.c": [
 "native_swar"
 ],
+"src/services/iot/statsd/statsd.cpp": [
+"native_statsd"
+],
 "src/services/iot/statsd/statsd.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_statsd",
@@ -5522,6 +5971,7 @@
 "native_swar"
 ],
 "src/services/iot/stomp/stomp.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_stomp",
@@ -5533,6 +5983,7 @@
 "native_telemetry"
 ],
 "src/services/iot/telemetry/telemetry.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
@@ -5544,6 +5995,7 @@
 "native_udp_telemetry"
 ],
 "src/services/iot/udp_telemetry/udp_telemetry.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
@@ -5555,6 +6007,7 @@
 "native_wamp"
 ],
 "src/services/iot/wamp/wamp.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
@@ -5566,6 +6019,7 @@
 "native_xmpp"
 ],
 "src/services/iot/xmpp/xmpp.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
@@ -5577,6 +6031,7 @@
 "native_swar"
 ],
 "src/services/machine_tool/atc/atc.h": [
+"native_application",
 "native_atc",
 "native_json",
 "native_keepalive",
@@ -5588,6 +6043,7 @@
 "native_swar"
 ],
 "src/services/machine_tool/dnc/dnc.h": [
+"native_application",
 "native_dnc",
 "native_json",
 "native_keepalive",
@@ -5599,6 +6055,7 @@
 "native_swar"
 ],
 "src/services/machine_tool/dnc/dnc_stream.h": [
+"native_application",
 "native_dnc",
 "native_json",
 "native_keepalive",
@@ -5610,6 +6067,7 @@
 "native_swar"
 ],
 "src/services/machine_tool/euromap77/euromap77.h": [
+"native_application",
 "native_euromap77",
 "native_json",
 "native_keepalive",
@@ -5621,6 +6079,7 @@
 "native_swar"
 ],
 "src/services/machine_tool/fanuc_j519/fanuc_j519.h": [
+"native_application",
 "native_fanuc_j519",
 "native_json",
 "native_keepalive",
@@ -5632,6 +6091,7 @@
 "native_swar"
 ],
 "src/services/machine_tool/focas/focas.h": [
+"native_application",
 "native_focas",
 "native_json",
 "native_keepalive",
@@ -5643,6 +6103,7 @@
 "native_swar"
 ],
 "src/services/machine_tool/haas_mdc/haas_mdc.h": [
+"native_application",
 "native_haas_mdc",
 "native_json",
 "native_keepalive",
@@ -5654,6 +6115,7 @@
 "native_swar"
 ],
 "src/services/machine_tool/lsv2/lsv2.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_lsv2",
@@ -5665,6 +6127,7 @@
 "native_swar"
 ],
 "src/services/machine_tool/mtconnect/mtconnect.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_mtconnect",
@@ -5676,6 +6139,7 @@
 "native_swar"
 ],
 "src/services/machine_tool/packml/packml.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_packml",
@@ -5687,6 +6151,7 @@
 "native_swar"
 ],
 "src/services/machine_tool/robotics/robotics.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_robotics",
@@ -5698,6 +6163,7 @@
 "native_swar"
 ],
 "src/services/machine_tool/safety_scl/safety_scl.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_safety_scl",
@@ -5709,17 +6175,21 @@
 "native_umati"
 ],
 "src/services/machine_tool/umati/umati.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
 "native_umati",
 "native_upload"
 ],
-"src/services/net/dns_server/dns_server.cpp": [
-"native_dns_server",
+"src/services/net/dns_server/dns_server.c": [
 "native_swar"
 ],
+"src/services/net/dns_server/dns_server.cpp": [
+"native_dns_server"
+],
 "src/services/net/dns_server/dns_server.h": [
+"native_application",
 "native_dns_server",
 "native_json",
 "native_keepalive",
@@ -5731,6 +6201,7 @@
 "native_swar"
 ],
 "src/services/net/flow_export/flow_export.h": [
+"native_application",
 "native_flow_export",
 "native_json",
 "native_keepalive",
@@ -5742,6 +6213,7 @@
 "native_swar"
 ],
 "src/services/net/forward/forward.h": [
+"native_application",
 "native_forward",
 "native_json",
 "native_keepalive",
@@ -5753,6 +6225,7 @@
 "native_swar"
 ],
 "src/services/net/gateway/gateway.h": [
+"native_application",
 "native_gateway",
 "native_json",
 "native_keepalive",
@@ -5764,6 +6237,7 @@
 "native_swar"
 ],
 "src/services/net/happy_eyeballs/happy_eyeballs.h": [
+"native_application",
 "native_happy_eyeballs",
 "native_json",
 "native_keepalive",
@@ -5774,12 +6248,11 @@
 "native_edge_cache",
 "native_edge_cache_sd",
 "native_edge_mesh",
-"native_http_client"
-],
-"src/services/net/http_client/http_client.cpp": [
+"native_http_client",
 "native_swar"
 ],
 "src/services/net/http_client/http_client.h": [
+"native_application",
 "native_edge_cache",
 "native_edge_cache_sd",
 "native_edge_mesh",
@@ -5794,6 +6267,7 @@
 "native_swar"
 ],
 "src/services/net/iface_bridge/iface_bridge.h": [
+"native_application",
 "native_iface_bridge",
 "native_json",
 "native_keepalive",
@@ -5804,6 +6278,7 @@
 "native_swar"
 ],
 "src/services/net/iface_bridge/iface_bridge_hw.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
@@ -5814,6 +6289,7 @@
 "native_swar"
 ],
 "src/services/net/netadapt/netadapt.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_netadapt",
@@ -5825,6 +6301,7 @@
 "native_swar"
 ],
 "src/services/net/proxy_protocol/proxy_protocol.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_proxy_protocol",
@@ -5836,6 +6313,7 @@
 "native_swar"
 ],
 "src/services/net/relay/relay.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_relay",
@@ -5846,16 +6324,20 @@
 "native_swar"
 ],
 "src/services/net/relay/relay_listener.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
 "native_upload"
 ],
-"src/services/net/smtp/smtp.cpp": [
-"native_smtp",
+"src/services/net/smtp/smtp.c": [
 "native_swar"
 ],
+"src/services/net/smtp/smtp.cpp": [
+"native_smtp"
+],
 "src/services/net/smtp/smtp.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_smtp",
@@ -5868,6 +6350,7 @@
 "native_swar"
 ],
 "src/services/net/snmp/snmp_agent.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_snmp",
@@ -5882,6 +6365,7 @@
 "native_swar"
 ],
 "src/services/net/snmp/snmp_ber.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_snmp",
@@ -5895,6 +6379,7 @@
 "native_swar"
 ],
 "src/services/net/snmp/snmp_crypto.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_snmp_v3",
@@ -5907,6 +6392,7 @@
 "native_swar"
 ],
 "src/services/net/snmp/snmp_notify.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_snmp_trap",
@@ -5919,6 +6405,7 @@
 "native_swar"
 ],
 "src/services/net/snmp/snmp_v3.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_snmp_v3",
@@ -5930,6 +6417,7 @@
 "native_swar"
 ],
 "src/services/net/sockpool/sockpool.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_sockpool",
@@ -5941,6 +6429,7 @@
 "native_swar"
 ],
 "src/services/net/southbound/sb_modbus.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_sb_modbus",
@@ -5953,6 +6442,7 @@
 "native_swar"
 ],
 "src/services/net/southbound/southbound.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_sb_modbus",
@@ -5965,6 +6455,7 @@
 "native_syslog"
 ],
 "src/services/net/syslog/syslog.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
@@ -5976,17 +6467,21 @@
 "native_webhook"
 ],
 "src/services/net/webhook/webhook.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
 "native_upload",
 "native_webhook"
 ],
+"src/services/net/ws_client/ws_client.c": [
+"native_swar"
+],
 "src/services/net/ws_client/ws_client.cpp": [
-"native_swar",
 "native_ws_client"
 ],
 "src/services/net/ws_client/ws_client.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
@@ -5999,17 +6494,21 @@
 ],
 "src/services/peripherals/ad9238/ad9238.h": [
 "native_ad9238",
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
 "native_upload"
 ],
-"src/services/peripherals/ads1115/ads1115.cpp": [
-"native_ads1115",
+"src/services/peripherals/ads1115/ads1115.c": [
 "native_swar"
+],
+"src/services/peripherals/ads1115/ads1115.cpp": [
+"native_ads1115"
 ],
 "src/services/peripherals/ads1115/ads1115.h": [
 "native_ads1115",
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
@@ -6020,6 +6519,7 @@
 "native_swar"
 ],
 "src/services/peripherals/dmx/dmx.h": [
+"native_application",
 "native_dmx",
 "native_json",
 "native_keepalive",
@@ -6031,17 +6531,21 @@
 "native_swar"
 ],
 "src/services/peripherals/dshot/dshot.h": [
+"native_application",
 "native_dshot",
 "native_json",
 "native_keepalive",
 "native_swar",
 "native_upload"
 ],
-"src/services/peripherals/fdc2214/fdc2214.cpp": [
-"native_fdc2214",
+"src/services/peripherals/fdc2214/fdc2214.c": [
 "native_swar"
 ],
+"src/services/peripherals/fdc2214/fdc2214.cpp": [
+"native_fdc2214"
+],
 "src/services/peripherals/fdc2214/fdc2214.h": [
+"native_application",
 "native_fdc2214",
 "native_json",
 "native_keepalive",
@@ -6053,6 +6557,7 @@
 "native_swar"
 ],
 "src/services/peripherals/hmmd/hmmd.h": [
+"native_application",
 "native_hmmd",
 "native_json",
 "native_keepalive",
@@ -6060,60 +6565,76 @@
 "native_upload"
 ],
 "src/services/peripherals/i2c.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
 "native_upload"
+],
+"src/services/peripherals/ina219/ina219.c": [
+"native_swar"
 ],
 "src/services/peripherals/ina219/ina219.cpp": [
-"native_ina219",
-"native_swar"
+"native_ina219"
 ],
 "src/services/peripherals/ina219/ina219.h": [
+"native_application",
 "native_ina219",
 "native_json",
 "native_keepalive",
 "native_swar",
 "native_upload"
 ],
-"src/services/peripherals/ld2410/ld2410.cpp": [
-"native_ld2410",
+"src/services/peripherals/ld2410/ld2410.c": [
 "native_swar"
+],
+"src/services/peripherals/ld2410/ld2410.cpp": [
+"native_ld2410"
 ],
 "src/services/peripherals/ld2410/ld2410.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_ld2410",
 "native_swar",
 "native_upload"
 ],
-"src/services/peripherals/ldc1614/ldc1614.cpp": [
-"native_ldc1614",
+"src/services/peripherals/ldc1614/ldc1614.c": [
 "native_swar"
+],
+"src/services/peripherals/ldc1614/ldc1614.cpp": [
+"native_ldc1614"
 ],
 "src/services/peripherals/ldc1614/ldc1614.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_ldc1614",
 "native_swar",
 "native_upload"
 ],
-"src/services/peripherals/mpr121/mpr121.cpp": [
-"native_mpr121",
+"src/services/peripherals/mpr121/mpr121.c": [
 "native_swar"
 ],
+"src/services/peripherals/mpr121/mpr121.cpp": [
+"native_mpr121"
+],
 "src/services/peripherals/mpr121/mpr121.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_mpr121",
 "native_swar",
 "native_upload"
 ],
-"src/services/peripherals/pca9685/pca9685.cpp": [
-"native_pca9685",
+"src/services/peripherals/pca9685/pca9685.c": [
 "native_swar"
 ],
+"src/services/peripherals/pca9685/pca9685.cpp": [
+"native_pca9685"
+],
 "src/services/peripherals/pca9685/pca9685.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_pca9685",
@@ -6125,6 +6646,7 @@
 "native_swar"
 ],
 "src/services/peripherals/pn532/pn532.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_pn532",
@@ -6136,17 +6658,21 @@
 "native_swar"
 ],
 "src/services/peripherals/rcwl0516/rcwl0516.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_rcwl0516",
 "native_swar",
 "native_upload"
 ],
-"src/services/peripherals/rtc/rtc.cpp": [
-"native_rtc",
+"src/services/peripherals/rtc/rtc.c": [
 "native_swar"
 ],
+"src/services/peripherals/rtc/rtc.cpp": [
+"native_rtc"
+],
 "src/services/peripherals/rtc/rtc.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_rtc",
@@ -6158,6 +6684,7 @@
 "native_swar"
 ],
 "src/services/peripherals/sdi12/sdi12.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_sdi12",
@@ -6169,28 +6696,35 @@
 "native_swar"
 ],
 "src/services/peripherals/sen0192/sen0192.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_sen0192",
 "native_swar",
 "native_upload"
 ],
-"src/services/peripherals/sht3x/sht3x.cpp": [
-"native_sht3x",
+"src/services/peripherals/sht3x/sht3x.c": [
 "native_swar"
 ],
+"src/services/peripherals/sht3x/sht3x.cpp": [
+"native_sht3x"
+],
 "src/services/peripherals/sht3x/sht3x.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_sht3x",
 "native_swar",
 "native_upload"
 ],
+"src/services/peripherals/vl53l0x/vl53l0x.c": [
+"native_swar"
+],
 "src/services/peripherals/vl53l0x/vl53l0x.cpp": [
-"native_swar",
 "native_vl53l0x"
 ],
 "src/services/peripherals/vl53l0x/vl53l0x.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
@@ -6202,6 +6736,7 @@
 "native_swar"
 ],
 "src/services/radio/ble_gatt/ble_gatt.h": [
+"native_application",
 "native_ble_gatt",
 "native_json",
 "native_keepalive",
@@ -6213,6 +6748,7 @@
 "native_swar"
 ],
 "src/services/radio/cc1101/cc1101.h": [
+"native_application",
 "native_cc1101",
 "native_json",
 "native_keepalive",
@@ -6224,6 +6760,7 @@
 "native_swar"
 ],
 "src/services/radio/enocean/enocean.h": [
+"native_application",
 "native_enocean",
 "native_json",
 "native_keepalive",
@@ -6235,6 +6772,7 @@
 "native_swar"
 ],
 "src/services/radio/espnow/espnow.h": [
+"native_application",
 "native_espnow",
 "native_json",
 "native_keepalive",
@@ -6246,6 +6784,7 @@
 "native_swar"
 ],
 "src/services/radio/lora/lora.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_lora",
@@ -6257,6 +6796,7 @@
 "native_swar"
 ],
 "src/services/radio/nrf24/nrf24.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_nrf24",
@@ -6268,6 +6808,7 @@
 "native_swar"
 ],
 "src/services/radio/promisc/promisc.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_promisc",
@@ -6279,6 +6820,7 @@
 "native_swar"
 ],
 "src/services/radio/radio_sniff/radio_sniff.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_radio_sniff",
@@ -6290,6 +6832,7 @@
 "native_swar"
 ],
 "src/services/radio/sigfox/sigfox.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_sigfox",
@@ -6301,6 +6844,7 @@
 "native_thread"
 ],
 "src/services/radio/thread/thread.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
@@ -6312,6 +6856,7 @@
 "native_wifi_sniffer"
 ],
 "src/services/radio/wifi_sniffer/wifi_sniffer.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
@@ -6323,6 +6868,7 @@
 "native_wisun"
 ],
 "src/services/radio/wisun/wisun.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
@@ -6334,6 +6880,7 @@
 "native_zigbee"
 ],
 "src/services/radio/zigbee/zigbee.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
@@ -6345,17 +6892,21 @@
 "native_zwave"
 ],
 "src/services/radio/zwave/zwave.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
 "native_upload",
 "native_zwave"
 ],
-"src/services/security/audit_log/audit_log.cpp": [
-"native_audit_log",
+"src/services/security/audit_log/audit_log.c": [
 "native_swar"
 ],
+"src/services/security/audit_log/audit_log.cpp": [
+"native_audit_log"
+],
 "src/services/security/audit_log/audit_log.h": [
+"native_application",
 "native_audit_log",
 "native_json",
 "native_keepalive",
@@ -6367,6 +6918,7 @@
 "native_swar"
 ],
 "src/services/security/auth_lockout/auth_lockout.h": [
+"native_application",
 "native_auth_lockout",
 "native_json",
 "native_keepalive",
@@ -6378,6 +6930,7 @@
 "native_swar"
 ],
 "src/services/security/csrf/csrf.h": [
+"native_application",
 "native_csrf",
 "native_json",
 "native_keepalive",
@@ -6389,6 +6942,7 @@
 "native_swar"
 ],
 "src/services/security/forwarded_trust/forwarded_trust.h": [
+"native_application",
 "native_forwarded_trust",
 "native_json",
 "native_keepalive",
@@ -6400,6 +6954,7 @@
 "native_swar"
 ],
 "src/services/security/guardrails/guardrails.h": [
+"native_application",
 "native_guardrails",
 "native_json",
 "native_keepalive",
@@ -6411,6 +6966,7 @@
 "native_swar"
 ],
 "src/services/security/ikev2/ikev2.h": [
+"native_application",
 "native_ikev2",
 "native_ipsec_db",
 "native_json",
@@ -6423,6 +6979,7 @@
 "native_swar"
 ],
 "src/services/security/ikev2/ikev2_natt.h": [
+"native_application",
 "native_ikev2",
 "native_json",
 "native_keepalive",
@@ -6434,17 +6991,19 @@
 "native_swar"
 ],
 "src/services/security/jwt/jwt.h": [
+"native_application",
 "native_json",
 "native_jwt",
 "native_keepalive",
 "native_swar",
 "native_upload"
 ],
-"src/services/security/oauth2/oauth2.cpp": [
+"src/services/security/oauth2/oauth2.c": [
 "native_oauth2",
 "native_swar"
 ],
 "src/services/security/oauth2/oauth2.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_oauth2",
@@ -6456,6 +7015,7 @@
 "native_swar"
 ],
 "src/services/security/oidc/oidc.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_oidc",
@@ -6467,6 +7027,7 @@
 "native_tls_policy"
 ],
 "src/services/security/tls_policy/tls_policy.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
@@ -6478,6 +7039,7 @@
 "native_totp"
 ],
 "src/services/security/totp/totp.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
@@ -6489,6 +7051,7 @@
 "native_swar"
 ],
 "src/services/storage/config_io/config_io.h": [
+"native_application",
 "native_config_io",
 "native_json",
 "native_keepalive",
@@ -6501,6 +7064,7 @@
 "native_swar"
 ],
 "src/services/storage/config_store/config_store.h": [
+"native_application",
 "native_config_io",
 "native_config_store",
 "native_json",
@@ -6515,6 +7079,7 @@
 "native_swar"
 ],
 "src/services/storage/dbm/dbm.h": [
+"native_application",
 "native_dbm",
 "native_docstore",
 "native_edge_cache_sd",
@@ -6528,6 +7093,7 @@
 "native_swar"
 ],
 "src/services/storage/docstore/docstore.h": [
+"native_application",
 "native_docstore",
 "native_json",
 "native_keepalive",
@@ -6539,6 +7105,7 @@
 "native_swar"
 ],
 "src/services/storage/hotswap/hotswap.h": [
+"native_application",
 "native_hotswap",
 "native_json",
 "native_keepalive",
@@ -6550,6 +7117,7 @@
 "native_swar"
 ],
 "src/services/storage/partition_monitor/partition_monitor.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_partition",
@@ -6564,6 +7132,7 @@
 "native_swar"
 ],
 "src/services/storage/psram_pool/psram_pool.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_psram_pool",
@@ -6575,6 +7144,7 @@
 "native_swar"
 ],
 "src/services/storage/sqlite/sqlite_format.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_sqlite",
@@ -6589,6 +7159,7 @@
 "native_wal"
 ],
 "src/services/storage/wal/wal.h": [
+"native_application",
 "native_dbm",
 "native_docstore",
 "native_edge_cache_sd",
@@ -6599,6 +7170,7 @@
 "native_wal"
 ],
 "src/services/storage/wal/wal_fs.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
@@ -6612,6 +7184,7 @@
 "native_wal"
 ],
 "src/services/storage/wal/wal_store.h": [
+"native_application",
 "native_dbm",
 "native_docstore",
 "native_edge_cache_sd",
@@ -6626,6 +7199,7 @@
 "native_swar"
 ],
 "src/services/system/control/control.h": [
+"native_application",
 "native_control",
 "native_json",
 "native_keepalive",
@@ -6638,6 +7212,7 @@
 "native_swar"
 ],
 "src/services/system/esp/esp.h": [
+"native_application",
 "native_esp",
 "native_ipsec_db",
 "native_json",
@@ -6650,6 +7225,7 @@
 "native_swar"
 ],
 "src/services/system/esp/ipsec_db.h": [
+"native_application",
 "native_ipsec_db",
 "native_json",
 "native_keepalive",
@@ -6657,12 +7233,11 @@
 "native_upload"
 ],
 "src/services/system/provisioning_service/provisioning_service.c": [
-"native_prov"
-],
-"src/services/system/provisioning_service/provisioning_service.cpp": [
+"native_prov",
 "native_swar"
 ],
 "src/services/system/provisioning_service/provisioning_service.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_prov",
@@ -6674,6 +7249,7 @@
 "native_swar"
 ],
 "src/services/timing_position/gnss/gnss_survey.h": [
+"native_application",
 "native_gnss_survey",
 "native_json",
 "native_keepalive",
@@ -6685,6 +7261,7 @@
 "native_swar"
 ],
 "src/services/timing_position/gnss/ntrip_caster.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_ntrip_caster",
@@ -6695,6 +7272,7 @@
 "native_swar"
 ],
 "src/services/timing_position/gnss/ntrip_caster_listener.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
@@ -6705,6 +7283,7 @@
 "native_swar"
 ],
 "src/services/timing_position/gnss/rtcm3.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_rtcm3",
@@ -6717,6 +7296,7 @@
 "native_swar"
 ],
 "src/services/timing_position/nmea0183/nmea0183.h": [
+"native_application",
 "native_gnss_survey",
 "native_json",
 "native_keepalive",
@@ -6729,17 +7309,21 @@
 "native_swar"
 ],
 "src/services/timing_position/nmea2000/nmea2000.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_nmea2000",
 "native_swar",
 "native_upload"
 ],
+"src/services/timing_position/time_source/time_source.c": [
+"native_swar"
+],
 "src/services/timing_position/time_source/time_source.cpp": [
-"native_swar",
 "native_time_source"
 ],
 "src/services/timing_position/time_source/time_source.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
@@ -6751,6 +7335,7 @@
 "native_ubx"
 ],
 "src/services/timing_position/ubx/ubx.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
@@ -6762,6 +7347,7 @@
 "native_swar"
 ],
 "src/services/transportation/j2735/j2735.h": [
+"native_application",
 "native_j2735",
 "native_json",
 "native_keepalive",
@@ -6773,6 +7359,7 @@
 "native_swar"
 ],
 "src/services/transportation/nema_ts2/nema_ts2.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_nema_ts2",
@@ -6784,6 +7371,7 @@
 "native_swar"
 ],
 "src/services/transportation/ntcip/ntcip.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_ntcip",
@@ -6795,6 +7383,7 @@
 "native_swar"
 ],
 "src/services/transportation/ocit/ocit.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_ocit",
@@ -6806,6 +7395,7 @@
 "native_utmc"
 ],
 "src/services/transportation/utmc/utmc.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
@@ -6817,6 +7407,7 @@
 "native_wave"
 ],
 "src/services/transportation/wave/wave.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
@@ -6827,6 +7418,7 @@
 "native_swar"
 ],
 "src/services/web/dashboard/dashboard.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
@@ -6842,6 +7434,7 @@
 "native_swar"
 ],
 "src/services/web/edge_cache/edge_cache.h": [
+"native_application",
 "native_edge_cache",
 "native_edge_cache_sd",
 "native_edge_mesh",
@@ -6854,6 +7447,7 @@
 "native_swar"
 ],
 "src/services/web/edge_cache/edge_cache_proxy.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
@@ -6865,6 +7459,7 @@
 "native_swar"
 ],
 "src/services/web/edge_cache/edge_cache_sd.h": [
+"native_application",
 "native_edge_cache_sd",
 "native_edge_mesh",
 "native_json",
@@ -6877,6 +7472,7 @@
 "native_swar"
 ],
 "src/services/web/edge_cache/edge_fetch.h": [
+"native_application",
 "native_edge_cache",
 "native_edge_mesh",
 "native_json",
@@ -6889,6 +7485,7 @@
 "native_swar"
 ],
 "src/services/web/edge_cache/edge_mesh.h": [
+"native_application",
 "native_edge_mesh",
 "native_json",
 "native_keepalive",
@@ -6903,6 +7500,7 @@
 "native_swar"
 ],
 "src/services/web/httpcache/httpcache.h": [
+"native_application",
 "native_edge_cache",
 "native_edge_cache_sd",
 "native_edge_mesh",
@@ -6917,6 +7515,7 @@
 "native_swar"
 ],
 "src/services/web/spa_router/spa_router.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_spa_router",
@@ -6924,10 +7523,12 @@
 "native_upload"
 ],
 "src/services/web/web_terminal/web_terminal.c": [
+"native_application",
 "native_json",
 "native_swar"
 ],
 "src/services/web/web_terminal/web_terminal.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_swar",
@@ -6974,6 +7575,7 @@
 "native_accept_gate",
 "native_ads",
 "native_amqp",
+"native_application",
 "native_audit_log",
 "native_base64",
 "native_bus_capture",
@@ -7046,6 +7648,7 @@
 "native_ws_client"
 ],
 "src/shared_primitives/hex.h": [
+"native_application",
 "native_audit_log",
 "native_csrf",
 "native_device_id",
@@ -7057,6 +7660,7 @@
 "native_upload"
 ],
 "src/shared_primitives/http_date.h": [
+"native_application",
 "native_edge_cache",
 "native_edge_cache_sd",
 "native_edge_mesh",
@@ -7069,6 +7673,7 @@
 "native_swar"
 ],
 "src/shared_primitives/log.h": [
+"native_application",
 "native_json",
 "native_keepalive",
 "native_log",
@@ -7076,6 +7681,7 @@
 "native_upload"
 ],
 "src/shared_primitives/mime.h": [
+"native_application",
 "native_edge_cache",
 "native_edge_cache_sd",
 "native_edge_mesh",
@@ -7088,6 +7694,7 @@
 "native_webhook"
 ],
 "src/shared_primitives/numparse.h": [
+"native_application",
 "native_cloudevents",
 "native_config_io",
 "native_docstore",
@@ -7105,6 +7712,7 @@
 "native_wamp"
 ],
 "src/shared_primitives/pcap.h": [
+"native_application",
 "native_bus_capture",
 "native_json",
 "native_keepalive",
@@ -7115,6 +7723,7 @@
 ],
 "src/shared_primitives/rawmemcpy.h": [
 "native_accept_gate",
+"native_application",
 "native_atc",
 "native_audit_log",
 "native_base64",
@@ -7190,6 +7799,7 @@
 ],
 "src/shared_primitives/ring.h": [
 "native_accept_gate",
+"native_application",
 "native_base64",
 "native_coaps_server",
 "native_diffserv",
@@ -7212,6 +7822,7 @@
 "native_workers"
 ],
 "src/shared_primitives/runops.h": [
+"native_application",
 "native_atc",
 "native_audit_log",
 "native_ble_gatt",
@@ -7270,6 +7881,7 @@
 ],
 "src/shared_primitives/span.h": [
 "native_accept_gate",
+"native_application",
 "native_base64",
 "native_cbor",
 "native_coaps",
@@ -7320,6 +7932,7 @@
 "native_websocket"
 ],
 "src/shared_primitives/speed_opt.h": [
+"native_application",
 "native_config_io",
 "native_frame",
 "native_gpio_map",
@@ -7338,6 +7951,7 @@
 ],
 "src/shared_primitives/swar.h": [
 "native_accept_gate",
+"native_application",
 "native_atc",
 "native_audit_log",
 "native_base64",
@@ -7406,6 +8020,7 @@
 "native_ws_client"
 ],
 "src/shared_primitives/time_compat.h": [
+"native_application",
 "native_edge_cache",
 "native_edge_cache_sd",
 "native_edge_mesh",
@@ -7422,6 +8037,7 @@
 "native_ads",
 "native_ads1115",
 "native_amqp",
+"native_application",
 "native_arena",
 "native_atc",
 "native_audit_log",
@@ -7691,6 +8307,7 @@
 ],
 "src/shared_primitives/utf8.h": [
 "native_accept_gate",
+"native_application",
 "native_base64",
 "native_http_parser",
 "native_json",
@@ -7707,12 +8324,25 @@
 "native_websocket"
 ],
 "test/mocks/Arduino.h": [
+"native_ads",
+"native_application",
+"native_canopen",
+"native_cia402",
 "native_clock",
+"native_cloudevents",
+"native_coap",
+"native_coap_observe",
 "native_crypto_kat",
+"native_docstore",
 "native_edge_cache",
 "native_edge_cache_sd",
 "native_edge_mesh",
+"native_euromap77",
+"native_failsafe",
+"native_fins",
+"native_focas",
 "native_forward",
+"native_gpio_map",
 "native_hpack",
 "native_http_client",
 "native_ikev2",
@@ -7720,9 +8350,11 @@
 "native_keepalive",
 "native_modbus",
 "native_modbus_master",
+"native_oauth2",
 "native_oidc",
 "native_prov",
 "native_sb_modbus",
+"native_senml",
 "native_smb",
 "native_sse",
 "native_ssh",
@@ -7735,7 +8367,8 @@
 "native_telnet",
 "native_trace_capture",
 "native_transport",
-"native_upload"
+"native_upload",
+"native_wamp"
 ],
 "test/mocks/pc_net_host.h": [
 "native_accept_gate",
