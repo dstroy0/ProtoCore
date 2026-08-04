@@ -108,18 +108,25 @@ void pc_set_micros_clock(pc_clock_fn fn, uint32_t ticks_per_second);
 uint32_t pc_micros(void);
 
 /**
- * @brief Block for at least @p us microseconds - the sub-millisecond wait.
+ * @brief Block for at least @p us microseconds of REAL time - a hardware settle.
  *
  * ::pcdelay sleeps the task one RTOS tick at a time and a tick is a millisecond, so it cannot
- * express a shorter wait: asking it for 500 us waits 1 ms. This spins on ::pc_micros instead, which
- * a hardware settle time needs. The subtraction is unsigned, so the counter's 71-minute wrap is
- * safe. Spinning does not yield, so a wait of a millisecond or more belongs in ::pcdelay, which
- * sleeps the task and feeds the watchdog.
+ * express a shorter wait: asking it for 500 us waits 1 ms.
+ *
+ * This reads ::pc_platform_micros, the raw counter, and NOT ::pc_micros. The library clock is
+ * pluggable: an application can install one that runs at its own rate, and a test can install one
+ * it steps by hand. A part that needs 500 us to settle needs 500 us of real time, so a clock the
+ * application controls cannot be what decides when the wait ends - against a stepped clock this
+ * returns at once or never returns. The subtraction is unsigned, so the counter's wrap is safe.
+ *
+ * This SPINS: it does not yield, and nothing else on the core runs while it does. That holds only
+ * where the wait is part of bringing a device up. On the request path it stalls handle() for its
+ * whole duration, which the pump's latency budget then records.
  */
 PC_INLINE void pc_delay_us(uint32_t us)
 {
-    uint32_t start = pc_micros();
-    while (pc_micros() - start < us)
+    uint32_t start = pc_platform_micros();
+    while (pc_platform_micros() - start < us)
     {
     }
 }
