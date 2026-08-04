@@ -38,7 +38,7 @@
 #ifndef PROTOCORE_ESP_CRYPTO_HAL_H
 #define PROTOCORE_ESP_CRYPTO_HAL_H
 
-#include <stdint.h>
+#include "protocore_config.h" // the entry point: proto_bool and the widths this HAL is written in
 
 #ifdef ARDUINO
 #include "sdkconfig.h" // CONFIG_IDF_TARGET_* : which die we build for (the build target, not a register header)
