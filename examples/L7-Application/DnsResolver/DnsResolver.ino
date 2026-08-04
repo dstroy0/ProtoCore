@@ -21,7 +21,7 @@
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
-#include "services/net/dns_resolver/dns_resolver.h"
+#include "network_drivers/network/dns_resolver.h"
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
