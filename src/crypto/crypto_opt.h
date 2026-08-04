@@ -59,7 +59,7 @@
 #ifndef PROTOCORE_CRYPTO_OPT_H
 #define PROTOCORE_CRYPTO_OPT_H
 
-#include "board_drivers/board_profiles/pc_platform.h" // PROTOCORE_HOT, tested below
+#include "protocore_config.h" // the entry point; PROTOCORE_HOT is tested below
 
 #if defined(__GNUC__) && !defined(__clang__)
 #if PROTOCORE_HOT

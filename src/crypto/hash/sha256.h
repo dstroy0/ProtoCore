@@ -18,9 +18,7 @@
 #ifndef PROTOCORE_SHA256_H
 #define PROTOCORE_SHA256_H
 
-#include "board_drivers/board_profiles/pc_platform.h" // PROTOCORE_HOT: which of the two contexts below is built
-#include <stddef.h>
-#include <stdint.h>
+#include "protocore_config.h" // the entry point: types.h for the widths, PROTOCORE_HOT for the context below
 
 /** @brief SHA-256 digest length in bytes. */
 #define PC_SHA256_DIGEST_LEN 32
