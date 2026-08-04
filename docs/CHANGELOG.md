@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- the GPIO direction enum a board profile's macro was rewriting ([`6e9d561`](https://github.com/dstroy0/ProtoCore/commit/6e9d5613337c636dc6414aa52fc191107ced9bae))
 - the RAII scope guards and member initializers left in .c files ([`6652612`](https://github.com/dstroy0/ProtoCore/commit/6652612dfb2c0cbbffad2a85c2fa0aa704fbc025))
 - the C++ residue the .c rename hid, and the API drift under it ([`49543ac`](https://github.com/dstroy0/ProtoCore/commit/49543ac019853c0f783be73f268531654576776e))
 - -std=c11 hid strnlen from every native build ([`262ab91`](https://github.com/dstroy0/ProtoCore/commit/262ab9117328b0d44e8bbfbccfe55d04df65aefe))
@@ -60,6 +61,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`dd4a2b9`](https://github.com/dstroy0/ProtoCore/commit/dd4a2b94d1f700890bea3f76abac8fc6f817dc77))
 - update CHANGELOG.md [skip ci] ([`45ceb02`](https://github.com/dstroy0/ProtoCore/commit/45ceb02b1803f685e50d24d7de0f707b1ab66860))
 - update CHANGELOG.md [skip ci] ([`f22959e`](https://github.com/dstroy0/ProtoCore/commit/f22959e11c424e2a2fa0d7e927fb59ef1cb5ff01))
 - update CHANGELOG.md [skip ci] ([`79e0f5e`](https://github.com/dstroy0/ProtoCore/commit/79e0f5e5749cabb985fc0fbd306ffd2df4ecda43))
