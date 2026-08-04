@@ -9,7 +9,6 @@
 #include "server/clock/clock.h"            // pc_set_clock() to drive dedup freshness in tests
 #include "services/iot/coap/coap.h"
 #include <string.h>
-#include <string> // std::string (test code may use the full STL; only src/ is constrained)
 #include <unity.h>
 
 // ---------------------------------------------------------------------------
@@ -874,10 +873,13 @@ void test_well_known_core_discovery()
     TEST_ASSERT_EQUAL_UINT((uint16_t)COAP_CF_LINK, d.content_format);
     TEST_ASSERT_FALSE(g_called); // discovery is synthesized, not dispatched to a handler
     // The body must list the registered resources in Link Format.
-    std::string body((const char *)d.payload, d.payload_len);
-    TEST_ASSERT_TRUE(body.find("</temp>") != std::string::npos);
-    TEST_ASSERT_TRUE(body.find("</ro>") != std::string::npos);
-    TEST_ASSERT_TRUE(body.find("</a/b>") != std::string::npos);
+    char body[512];
+    TEST_ASSERT_TRUE(d.payload_len < sizeof(body));
+    memcpy(body, d.payload, d.payload_len);
+    body[d.payload_len] = '\0';
+    TEST_ASSERT_NOT_NULL(strstr(body, "</temp>"));
+    TEST_ASSERT_NOT_NULL(strstr(body, "</ro>"));
+    TEST_ASSERT_NOT_NULL(strstr(body, "</a/b>"));
 }
 
 // A non-GET to /.well-known/core is 4.05 Method Not Allowed (discovery is read-only).

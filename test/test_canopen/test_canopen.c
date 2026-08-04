@@ -300,13 +300,13 @@ void test_parse_all_function_codes()
     memset(&f, 0, sizeof(f));
     CanopenMsg m;
 
-    struct Case
+    typedef struct
     {
         uint32_t id;
         CanopenType type;
         uint8_t node;
         uint8_t pdo;
-    };
+    } Case;
     const Case cases[] = {
         {0x000, CANOPEN_T_NMT, 0, 0},    {0x100, CANOPEN_T_TIME, 0, 0},       {0x087, CANOPEN_T_EMCY, 7, 0},
         {0x181, CANOPEN_T_TPDO, 1, 1},   {0x201, CANOPEN_T_RPDO, 1, 1},       {0x282, CANOPEN_T_TPDO, 2, 2},

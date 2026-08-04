@@ -37,45 +37,45 @@ static CanFrame make_sdo_tx(uint8_t node, uint8_t cmd, uint16_t index, uint32_t 
 
 void test_state_decode()
 {
-    TEST_ASSERT_TRUE(pc_cia402_state(0x0000) == not_ready_to_switch_on);
-    TEST_ASSERT_TRUE(pc_cia402_state(0x0040) == switch_on_disabled);
-    TEST_ASSERT_TRUE(pc_cia402_state(0x0021) == ready_to_switch_on);
-    TEST_ASSERT_TRUE(pc_cia402_state(0x0023) == switched_on);
-    TEST_ASSERT_TRUE(pc_cia402_state(0x0027) == operation_enabled);
-    TEST_ASSERT_TRUE(pc_cia402_state(0x0007) == quick_stop_active);
-    TEST_ASSERT_TRUE(pc_cia402_state(0x000F) == fault_reaction_active);
-    TEST_ASSERT_TRUE(pc_cia402_state(0x0008) == fault);
+    TEST_ASSERT_TRUE(pc_cia402_state(0x0000) == CIA402_STATE_NOT_READY_TO_SWITCH_ON);
+    TEST_ASSERT_TRUE(pc_cia402_state(0x0040) == CIA402_STATE_SWITCH_ON_DISABLED);
+    TEST_ASSERT_TRUE(pc_cia402_state(0x0021) == CIA402_STATE_READY_TO_SWITCH_ON);
+    TEST_ASSERT_TRUE(pc_cia402_state(0x0023) == CIA402_STATE_SWITCHED_ON);
+    TEST_ASSERT_TRUE(pc_cia402_state(0x0027) == CIA402_STATE_OPERATION_ENABLED);
+    TEST_ASSERT_TRUE(pc_cia402_state(0x0007) == CIA402_STATE_QUICK_STOP_ACTIVE);
+    TEST_ASSERT_TRUE(pc_cia402_state(0x000F) == CIA402_STATE_FAULT_REACTION_ACTIVE);
+    TEST_ASSERT_TRUE(pc_cia402_state(0x0008) == CIA402_STATE_FAULT);
 }
 
 void test_state_decode_ignores_high_bits()
 {
     // The upper Statusword bits (voltage, remote, target reached, warning, ...) must not change
     // the decoded power state - only the masked bits do.
-    TEST_ASSERT_TRUE(pc_cia402_state(0x0637) == operation_enabled); // 0x27 + remote + target
-    TEST_ASSERT_TRUE(pc_cia402_state(0x1237) == operation_enabled);
-    TEST_ASSERT_TRUE(pc_cia402_state(0x0233) == switched_on);
+    TEST_ASSERT_TRUE(pc_cia402_state(0x0637) == CIA402_STATE_OPERATION_ENABLED); // 0x27 + remote + target
+    TEST_ASSERT_TRUE(pc_cia402_state(0x1237) == CIA402_STATE_OPERATION_ENABLED);
+    TEST_ASSERT_TRUE(pc_cia402_state(0x0233) == CIA402_STATE_SWITCHED_ON);
 }
 
 void test_controlword_commands()
 {
-    TEST_ASSERT_EQUAL_HEX16(0x0006, pc_cia402_controlword(shutdown));
-    TEST_ASSERT_EQUAL_HEX16(0x0007, pc_cia402_controlword(switch_on));
-    TEST_ASSERT_EQUAL_HEX16(0x0007, pc_cia402_controlword(disable_operation));
-    TEST_ASSERT_EQUAL_HEX16(0x000F, pc_cia402_controlword(enable_operation));
-    TEST_ASSERT_EQUAL_HEX16(0x0000, pc_cia402_controlword(disable_voltage));
-    TEST_ASSERT_EQUAL_HEX16(0x0002, pc_cia402_controlword(quick_stop));
-    TEST_ASSERT_EQUAL_HEX16(0x0080, pc_cia402_controlword(fault_reset));
+    TEST_ASSERT_EQUAL_HEX16(0x0006, pc_cia402_controlword(CIA402_COMMAND_SHUTDOWN));
+    TEST_ASSERT_EQUAL_HEX16(0x0007, pc_cia402_controlword(CIA402_COMMAND_SWITCH_ON));
+    TEST_ASSERT_EQUAL_HEX16(0x0007, pc_cia402_controlword(CIA402_COMMAND_DISABLE_OPERATION));
+    TEST_ASSERT_EQUAL_HEX16(0x000F, pc_cia402_controlword(CIA402_COMMAND_ENABLE_OPERATION));
+    TEST_ASSERT_EQUAL_HEX16(0x0000, pc_cia402_controlword(CIA402_COMMAND_DISABLE_VOLTAGE));
+    TEST_ASSERT_EQUAL_HEX16(0x0002, pc_cia402_controlword(CIA402_COMMAND_QUICK_STOP));
+    TEST_ASSERT_EQUAL_HEX16(0x0080, pc_cia402_controlword(CIA402_COMMAND_FAULT_RESET));
 }
 
 void test_enable_sequence()
 {
-    TEST_ASSERT_EQUAL_HEX16(0x0080, pc_cia402_enable_sequence(fault));
-    TEST_ASSERT_EQUAL_HEX16(0x0080, pc_cia402_enable_sequence(fault_reaction_active));
-    TEST_ASSERT_EQUAL_HEX16(0x0006, pc_cia402_enable_sequence(switch_on_disabled));
-    TEST_ASSERT_EQUAL_HEX16(0x0007, pc_cia402_enable_sequence(ready_to_switch_on));
-    TEST_ASSERT_EQUAL_HEX16(0x000F, pc_cia402_enable_sequence(switched_on));
-    TEST_ASSERT_EQUAL_HEX16(0x000F, pc_cia402_enable_sequence(operation_enabled));
-    TEST_ASSERT_EQUAL_HEX16(0x0000, pc_cia402_enable_sequence(not_ready_to_switch_on));
+    TEST_ASSERT_EQUAL_HEX16(0x0080, pc_cia402_enable_sequence(CIA402_STATE_FAULT));
+    TEST_ASSERT_EQUAL_HEX16(0x0080, pc_cia402_enable_sequence(CIA402_STATE_FAULT_REACTION_ACTIVE));
+    TEST_ASSERT_EQUAL_HEX16(0x0006, pc_cia402_enable_sequence(CIA402_STATE_SWITCH_ON_DISABLED));
+    TEST_ASSERT_EQUAL_HEX16(0x0007, pc_cia402_enable_sequence(CIA402_STATE_READY_TO_SWITCH_ON));
+    TEST_ASSERT_EQUAL_HEX16(0x000F, pc_cia402_enable_sequence(CIA402_STATE_SWITCHED_ON));
+    TEST_ASSERT_EQUAL_HEX16(0x000F, pc_cia402_enable_sequence(CIA402_STATE_OPERATION_ENABLED));
+    TEST_ASSERT_EQUAL_HEX16(0x0000, pc_cia402_enable_sequence(CIA402_STATE_NOT_READY_TO_SWITCH_ON));
 }
 
 void test_statusword_flags()
@@ -113,7 +113,7 @@ void test_sdo_set_targets()
     TEST_ASSERT_EQUAL_HEX8(0x02, f.data[6]);
     TEST_ASSERT_EQUAL_HEX8(0x01, f.data[7]);
 
-    TEST_ASSERT_TRUE(pc_cia402_sdo_set_mode(&f, 3, cyclic_sync_position));
+    TEST_ASSERT_TRUE(pc_cia402_sdo_set_mode(&f, 3, CIA402_MODE_CYCLIC_SYNC_POSITION));
     TEST_ASSERT_EQUAL_HEX8(0x60, f.data[1]); // 0x6060 LE
     TEST_ASSERT_EQUAL_HEX8(0x60, f.data[2]);
     TEST_ASSERT_EQUAL_HEX8(8, f.data[4]); // CSP = 8
@@ -142,7 +142,7 @@ void test_sdo_get_roundtrip()
     uint16_t sw = 0;
     TEST_ASSERT_TRUE(pc_cia402_sdo_get_u16(&resp, CIA402_OD_STATUSWORD, &sw));
     TEST_ASSERT_EQUAL_HEX16(0x0637, sw);
-    TEST_ASSERT_TRUE(pc_cia402_state(sw) == operation_enabled);
+    TEST_ASSERT_TRUE(pc_cia402_state(sw) == CIA402_STATE_OPERATION_ENABLED);
 
     // wrong-index guard
     uint16_t v = 0;
@@ -172,7 +172,7 @@ void test_pdo_pack_unpack()
 // the fault mask). 0x0001 hits none of the eight defined states.
 void test_state_decode_unknown()
 {
-    TEST_ASSERT_TRUE(pc_cia402_state(0x0001) == unknown);
+    TEST_ASSERT_TRUE(pc_cia402_state(0x0001) == CIA402_STATE_UNKNOWN);
 }
 
 // An out-of-range command value hits the Controlword switch default and returns a safe 0x0000.
@@ -205,7 +205,7 @@ void test_sdo_set_velocity_torque()
 
     // null out frame -> false, for every SDO setter (each forwards pc_canopen_build_sdo_write's false).
     TEST_ASSERT_FALSE(pc_cia402_sdo_set_controlword(NULL, 5, 0x000F));
-    TEST_ASSERT_FALSE(pc_cia402_sdo_set_mode(NULL, 3, cyclic_sync_position));
+    TEST_ASSERT_FALSE(pc_cia402_sdo_set_mode(NULL, 3, CIA402_MODE_CYCLIC_SYNC_POSITION));
     TEST_ASSERT_FALSE(pc_cia402_sdo_set_target_position(NULL, 1, 0));
     TEST_ASSERT_FALSE(pc_cia402_sdo_set_target_velocity(NULL, 2, 0));
     TEST_ASSERT_FALSE(pc_cia402_sdo_set_target_torque(NULL, 4, 0));

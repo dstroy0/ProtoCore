@@ -23,13 +23,23 @@
 
 #if PC_ENABLE_GPIO_MAP
 
-/** @brief Configured direction of a mapped pin (how the panel renders / drives it). */
+/**
+ * @brief Configured direction of a mapped pin (how the panel renders / drives it).
+ *
+ * The members carry the type's own name, `PC_GPIO_DIR_`, and not a bare `PC_GPIO_`. The board
+ * profiles spell their pin-mode argument `PC_GPIO_IN` / `PC_GPIO_OUT` as `#define`s, and a macro
+ * rewrites a token before the compiler sees a declaration at all (docs/SYMBOLS.md section 2), so a
+ * member sharing one of those names is replaced by its number wherever both headers reach one
+ * translation unit. The two encodings are also different numbers, which is what made the collision
+ * silent: the profile numbers a direction 0/1/2/3 as IN/OUT/PULLUP/PULLDOWN, this enum in
+ * declaration order.
+ */
 typedef enum PROTO_ENUM_PACKED
 {
-    PC_GPIO_IN = 0,      ///< read-only input.
-    PC_GPIO_IN_PULLUP,   ///< input with internal pull-up.
-    PC_GPIO_IN_PULLDOWN, ///< input with internal pull-down.
-    PC_GPIO_OUT,         ///< output (drivable from the panel).
+    PC_GPIO_DIR_IN = 0,      ///< read-only input.
+    PC_GPIO_DIR_IN_PULLUP,   ///< input with internal pull-up.
+    PC_GPIO_DIR_IN_PULLDOWN, ///< input with internal pull-down.
+    PC_GPIO_DIR_OUT,         ///< output (drivable from the panel).
 } pc_gpio_dir;
 
 /** @brief One mapped GPIO pin. */
@@ -78,7 +88,7 @@ void pc_gpio_write(uint8_t pin, uint8_t level);
 
 /**
  * @brief Serve the GPIO map at @p path: GET returns the JSON, POST drives an
- *        output (body `pin=<n>&level=<0|1>`, only pins marked PC_GPIO_OUT).
+ *        output (body `pin=<n>&level=<0|1>`, only pins marked PC_GPIO_DIR_OUT).
  *        The pin table is caller-owned and must outlive the server.
  */
 void pc_gpio_map_begin(const char *path, pc_gpio_pin *pins, uint8_t count);

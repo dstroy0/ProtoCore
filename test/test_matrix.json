@@ -739,7 +739,8 @@
     "native_application": {
       "desc": "test_application against the native_stack_http stack.",
       "base": "env:native_stack_http",
-      "tests": ["test_application"]
+      "tests": ["test_application"],
+      "flags": ["-DPC_ENABLE_FILE_SERVING=1"]
     },
     "native_response_headers": {
       "desc": "test_response_headers against the native_stack_http stack.",
@@ -2700,6 +2701,7 @@
       "base": "env:native_stack_http",
       "flags": [
         "-DPC_ENABLE_CSRF=1",
+        "-DPC_ENABLE_AUTH=1",
         "-DPC_ENABLE_AUTH_LOCKOUT=1",
         "-DPC_ENABLE_IP_ALLOWLIST=1",
         "-DPC_ENABLE_WS_DEFLATE=1",

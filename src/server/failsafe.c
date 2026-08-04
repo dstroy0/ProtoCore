@@ -12,7 +12,7 @@
 
 #include "server/clock/clock.h" // pc_millis() - the pluggable monotonic clock
 
-// All failsafe state, owned by one instance (internal linkage via the anon namespace):
+// All failsafe state, owned by one instance and static, so it has internal linkage:
 // grouped for auditability, unreachable from any other translation unit.
 typedef struct
 {
@@ -41,9 +41,10 @@ static size_t u32_dec(uint32_t v, char *out)
 
 void pc_failsafe_reset(void)
 {
+    const pc_lifeline blank = {0};
     for (int i = 0; i < PC_FAILSAFE_MAX_LIFELINES; i++)
     {
-        s_fs.lines[i] = pc_lifeline{};
+        s_fs.lines[i] = blank;
     }
     s_fs.cb = NULL;
     s_fs.cb_arg = NULL;
@@ -98,24 +99,24 @@ uint32_t pc_failsafe_check_at(uint32_t now)
     uint32_t mask = 0;
     for (int i = 0; i < PC_FAILSAFE_MAX_LIFELINES; i++)
     {
-        pc_lifeline &l = s_fs.lines[i];
-        if (!l.armed)
+        pc_lifeline *l = &s_fs.lines[i];
+        if (!l->armed)
         {
             continue;
         }
-        if (!pc_lifeline_overdue(now, l.last_feed_ms, l.deadline_ms))
+        if (!pc_lifeline_overdue(now, l->last_feed_ms, l->deadline_ms))
         {
             continue;
         }
         mask |= (1u << i);
-        if (l.breached) // fire once per stuck episode
+        if (l->breached) // fire once per stuck episode
         {
             continue;
         }
-        l.breached = PROTO_TRUE;
+        l->breached = PROTO_TRUE;
         if (s_fs.cb)
         {
-            s_fs.cb(i, l.name, s_fs.cb_arg);
+            s_fs.cb(i, l->name, s_fs.cb_arg);
         }
     }
     return mask;
@@ -157,8 +158,8 @@ int pc_failsafe_json_at(uint32_t now, char *out, size_t cap)
     proto_bool first = PROTO_TRUE;
     for (int i = 0; i < PC_FAILSAFE_MAX_LIFELINES; i++)
     {
-        const pc_lifeline &l = s_fs.lines[i];
-        if (!l.armed)
+        const pc_lifeline *l = &s_fs.lines[i];
+        if (!l->armed)
         {
             continue;
         }
@@ -168,13 +169,13 @@ int pc_failsafe_json_at(uint32_t now, char *out, size_t cap)
         }
         first = PROTO_FALSE;
         fs_put(out, cap, &n, "{\"name\":\"");
-        fs_put(out, cap, &n, l.name ? l.name : "");
+        fs_put(out, cap, &n, l->name ? l->name : "");
         fs_put(out, cap, &n, "\",\"overdue\":");
-        fs_put(out, cap, &n, pc_lifeline_overdue(now, l.last_feed_ms, l.deadline_ms) ? "true" : "false");
+        fs_put(out, cap, &n, pc_lifeline_overdue(now, l->last_feed_ms, l->deadline_ms) ? "true" : "false");
         fs_put(out, cap, &n, ",\"age_ms\":");
-        fs_put_u32(out, cap, &n, now - l.last_feed_ms);
+        fs_put_u32(out, cap, &n, now - l->last_feed_ms);
         fs_put(out, cap, &n, ",\"deadline_ms\":");
-        fs_put_u32(out, cap, &n, l.deadline_ms);
+        fs_put_u32(out, cap, &n, l->deadline_ms);
         fs_put(out, cap, &n, "}");
     }
     fs_put(out, cap, &n, "]}");

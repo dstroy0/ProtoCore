@@ -36,7 +36,7 @@ void test_build_read_bytes()
 {
     AdsRequest r = make_req();
     uint8_t buf[64];
-    size_t n = pc_ads_build_read(buf, sizeof(buf), &r, plc_rw_m, 0, 4);
+    size_t n = pc_ads_build_read(buf, sizeof(buf), &r, ADS_IGRP_PLC_RW_M, 0, 4);
     const uint8_t expect[] = {
         0x00, 0x00,                         // AMS/TCP reserved
         0x2C, 0x00, 0x00, 0x00,             // AMS/TCP length = 32 + 12 = 44
@@ -76,8 +76,8 @@ void test_parse_read_response()
     };
     AdsAmsHeader h;
     TEST_ASSERT_TRUE(pc_ads_parse_ams_header(resp, sizeof(resp), &h));
-    TEST_ASSERT_TRUE(h.cmd == read);
-    TEST_ASSERT_EQUAL_HEX16(reply, h.state_flags);
+    TEST_ASSERT_TRUE(h.cmd == ADS_COMMAND_READ);
+    TEST_ASSERT_EQUAL_HEX16(ADS_STATE_REPLY, h.state_flags);
     TEST_ASSERT_EQUAL_UINT32(42, h.invoke_id);
     TEST_ASSERT_EQUAL_UINT32(0, h.error_code);
     TEST_ASSERT_EQUAL_UINT32(12, h.data_len);
@@ -96,7 +96,7 @@ void test_build_write()
     AdsRequest r = make_req();
     uint8_t buf[64];
     const uint8_t val[] = {0x01, 0x00, 0x00, 0x00};
-    size_t n = pc_ads_build_write(buf, sizeof(buf), &r, plc_rw_m, 8, val, sizeof(val));
+    size_t n = pc_ads_build_write(buf, sizeof(buf), &r, ADS_IGRP_PLC_RW_M, 8, val, sizeof(val));
     TEST_ASSERT_EQUAL_size_t(6 + 32 + 12 + 4, n);
     // cbData at AMS-header offset 20 (buf offset 26) = 16.
     TEST_ASSERT_EQUAL_HEX8(0x10, buf[26]);
@@ -116,8 +116,8 @@ void test_build_read_write_symbol()
     uint8_t buf[80];
     const char *name = "MAIN.counter"; // 12 chars
     size_t nl = strlen(name);
-    size_t n = pc_ads_build_read_write(buf, sizeof(buf), &r, sym_hnd_by_name, 0, 4,
-                                       (const uint8_t *)name, (uint32_t)nl);
+    size_t n = pc_ads_build_read_write(buf, sizeof(buf), &r, ADS_IGRP_SYM_HND_BY_NAME, 0, 4, (const uint8_t *)name,
+                                       (uint32_t)nl);
     TEST_ASSERT_EQUAL_size_t(6 + 32 + 16 + 12, n);
     // cmd id = 9 (ReadWrite).
     TEST_ASSERT_EQUAL_HEX8(0x09, buf[22]);
@@ -156,7 +156,7 @@ void test_read_state_roundtrip()
     AdsReadStateResult st;
     TEST_ASSERT_TRUE(pc_ads_parse_read_state(h.data, h.data_len, &st));
     TEST_ASSERT_EQUAL_UINT32(0, st.result);
-    TEST_ASSERT_EQUAL_UINT16((uint16_t)run, st.pc_ads_state);
+    TEST_ASSERT_EQUAL_UINT16((uint16_t)ADS_STATE_RUN, st.pc_ads_state);
     TEST_ASSERT_EQUAL_UINT16(0, st.device_state);
 }
 
@@ -190,7 +190,7 @@ void test_write_control_and_result()
 {
     AdsRequest r = make_req();
     uint8_t buf[64];
-    size_t n = pc_ads_build_write_control(buf, sizeof(buf), &r, (uint16_t)run, 0, NULL, 0);
+    size_t n = pc_ads_build_write_control(buf, sizeof(buf), &r, (uint16_t)ADS_STATE_RUN, 0, NULL, 0);
     TEST_ASSERT_EQUAL_size_t(ADS_HDR_LEN + 8, n);
     TEST_ASSERT_EQUAL_HEX8(0x05, buf[22]);              // cmd 5 (WriteControl)
     TEST_ASSERT_EQUAL_HEX8(0x08, buf[26]);              // cbData 8
@@ -207,8 +207,8 @@ void test_add_notification()
 {
     AdsRequest r = make_req();
     uint8_t buf[80];
-    size_t n = pc_ads_build_add_notification(buf, sizeof(buf), &r, sym_val_by_handle, 0x1234, 2,
-                                             server_on_change, 0, 10000);
+    size_t n = pc_ads_build_add_notification(buf, sizeof(buf), &r, ADS_IGRP_SYM_VAL_BY_HANDLE, 0x1234, 2,
+                                             ADS_TRANS_MODE_SERVER_ON_CHANGE, 0, 10000);
     TEST_ASSERT_EQUAL_size_t(ADS_HDR_LEN + 40, n);
     TEST_ASSERT_EQUAL_HEX8(0x06, buf[22]);               // cmd 6 (AddNotification)
     TEST_ASSERT_EQUAL_HEX8(0x28, buf[26]);               // cbData 40
@@ -342,7 +342,7 @@ void test_build_null_and_small_buffer_guards()
 
     // AddNotification into a buffer too small for its 40-octet payload (needs 78).
     TEST_ASSERT_EQUAL_size_t(
-        0, pc_ads_build_add_notification(buf, sizeof(buf), &r, 0xF005, 0, 2, server_on_change, 0, 0));
+        0, pc_ads_build_add_notification(buf, sizeof(buf), &r, 0xF005, 0, 2, ADS_TRANS_MODE_SERVER_ON_CHANGE, 0, 0));
 }
 
 // WriteControl with an actual data payload (the len>0 copy branch) plus its null-data and
@@ -352,7 +352,7 @@ void test_build_write_control_variants()
     AdsRequest r = make_req();
     uint8_t buf[64];
     const uint8_t payload[] = {0xAA, 0xBB};
-    size_t n = pc_ads_build_write_control(buf, sizeof(buf), &r, (uint16_t)stop, 7, payload, sizeof(payload));
+    size_t n = pc_ads_build_write_control(buf, sizeof(buf), &r, (uint16_t)ADS_STATE_STOP, 7, payload, sizeof(payload));
     TEST_ASSERT_EQUAL_size_t(ADS_HDR_LEN + 8 + 2, n);
     TEST_ASSERT_EQUAL_HEX8(0x06, buf[ADS_HDR_LEN]);     // ADS state = stop (6) LE
     TEST_ASSERT_EQUAL_HEX8(0x07, buf[ADS_HDR_LEN + 2]); // device state 7
@@ -397,28 +397,28 @@ void test_parse_payload_guards()
     AdsReadResult rr;
     TEST_ASSERT_FALSE(pc_ads_parse_read(NULL, 8, &rr));  // !data
     TEST_ASSERT_FALSE(pc_ads_parse_read(data, 8, NULL)); // !out
-    TEST_ASSERT_FALSE(pc_ads_parse_read(data, 4, &rr));     // data_len < 8
+    TEST_ASSERT_FALSE(pc_ads_parse_read(data, 4, &rr));  // data_len < 8
 
     uint32_t res = 0;
     TEST_ASSERT_FALSE(pc_ads_parse_result(NULL, 4, &res)); // !data
     TEST_ASSERT_FALSE(pc_ads_parse_result(data, 4, NULL)); // !result
-    TEST_ASSERT_FALSE(pc_ads_parse_result(data, 2, &res));    // data_len < 4
+    TEST_ASSERT_FALSE(pc_ads_parse_result(data, 2, &res)); // data_len < 4
 
     AdsReadStateResult st;
     TEST_ASSERT_FALSE(pc_ads_parse_read_state(NULL, 8, &st));  // !data
     TEST_ASSERT_FALSE(pc_ads_parse_read_state(data, 8, NULL)); // !out
-    TEST_ASSERT_FALSE(pc_ads_parse_read_state(data, 4, &st));     // data_len < 8
+    TEST_ASSERT_FALSE(pc_ads_parse_read_state(data, 4, &st));  // data_len < 8
 
     AdsDeviceInfo di;
     TEST_ASSERT_FALSE(pc_ads_parse_read_device_info(NULL, 24, &di));  // !data
     TEST_ASSERT_FALSE(pc_ads_parse_read_device_info(data, 24, NULL)); // !out
-    TEST_ASSERT_FALSE(pc_ads_parse_read_device_info(data, 20, &di));     // data_len < 24
+    TEST_ASSERT_FALSE(pc_ads_parse_read_device_info(data, 20, &di));  // data_len < 24
 
     uint32_t result = 0, handle = 0;
     TEST_ASSERT_FALSE(pc_ads_parse_add_notification(NULL, 8, &result, &handle)); // !data
     TEST_ASSERT_FALSE(pc_ads_parse_add_notification(data, 8, NULL, &handle));    // !result
     TEST_ASSERT_FALSE(pc_ads_parse_add_notification(data, 8, &result, NULL));    // !handle
-    TEST_ASSERT_FALSE(pc_ads_parse_add_notification(data, 4, &result, &handle));    // data_len < 8
+    TEST_ASSERT_FALSE(pc_ads_parse_add_notification(data, 4, &result, &handle)); // data_len < 8
 }
 
 // The DeviceNotification walk's truncation rejects: header guards, an over-long Length, and a
@@ -428,7 +428,7 @@ void test_parse_notification_guards()
     const uint8_t data[8] = {0};
     TEST_ASSERT_FALSE(pc_ads_parse_notification(NULL, 8, on_sample, NULL)); // !data
     TEST_ASSERT_FALSE(pc_ads_parse_notification(data, 8, NULL, NULL));      // !on_sample
-    TEST_ASSERT_FALSE(pc_ads_parse_notification(data, 4, on_sample, NULL));    // data_len < 8
+    TEST_ASSERT_FALSE(pc_ads_parse_notification(data, 4, on_sample, NULL)); // data_len < 8
 
     const uint8_t bad_length[8] = {0x64, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}; // Length = 100 > buffer
     TEST_ASSERT_FALSE(pc_ads_parse_notification(bad_length, sizeof(bad_length), on_sample, NULL));

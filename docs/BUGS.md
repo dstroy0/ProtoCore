@@ -8,6 +8,35 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ---
 
+## A board profile's PC_GPIO_OUT macro rewrote the pc_gpio_dir enum member of the same name
+
+- **Status:** FIXED (2026-08-03), pending a target build. Found by the full-tree compile sweep: an
+  env that pulls in both the host net mock and `gpio_map.h` failed with
+  `test/mocks/pc_net_host.h:214:20: error: expected identifier before numeric constant`.
+- **Symptom:** two encodings of a pin direction shared four names. `pc_gpio_dir` declared
+  `PC_GPIO_IN`, `PC_GPIO_IN_PULLUP`, `PC_GPIO_IN_PULLDOWN`, `PC_GPIO_OUT` as enum members numbered
+  0/1/2/3 in that order; `board_profiles/pc_platform.h` (and the host mock beside it) `#define` the
+  same four names as the pin-mode argument, numbered IN=0, OUT=1, PULLUP=2, PULLDOWN=3. Where both
+  headers reach one translation unit the macro wins, because substitution happens before the
+  compiler sees the declaration.
+- **What it did on a target:** in `pc_gpio_begin_pins`, `case PC_GPIO_OUT:` became `case 1:`, which
+  is the enum's `IN_PULLUP`. A pin mapped as an output has `dir == 3`, matches no case, and falls to
+  the default arm, so it was configured as an **input**: a mapped LED or relay never drives. A pin
+  mapped `IN_PULLUP` (`dir == 1`) took the OUT arm and was configured as an **output**, so the panel
+  drove a pin wired to a button. `pc_gpio_is_output()` compared against the same rewritten constant,
+  so the write route agreed with the wrong table.
+- **Root cause:** exactly the failure docs/SYMBOLS.md section 2 describes. The enum member carried
+  the bare subsystem prefix rather than its own type's, leaving it in the same token space as a macro
+  the board layer had every right to define.
+- **Why nothing caught it:** the two headers only meet in a host env that mocks the platform, and
+  `native_gpio_map` was not one of them, so the enum was never parsed with the macro already
+  defined. Where they did not meet, the enum spelled itself and every test passed. On a target the
+  numbers silently disagree and nothing is diagnosed, because both sides are valid integers.
+- **Fix:** the members take the type's own prefix: `PC_GPIO_DIR_IN`, `PC_GPIO_DIR_IN_PULLUP`,
+  `PC_GPIO_DIR_IN_PULLDOWN`, `PC_GPIO_DIR_OUT` (`gpio_map.h`), so the case labels are the enum and
+  the arguments to `pc_platform_gpio_mode()` stay the board profile's numbers. Call sites updated in
+  `gpio_map.c`, `test_gpio_map.c` and the `GpioMap` example.
+
 ## HTTP/2 refuses an over-limit stream with a RST_STREAM naming stream 0
 
 - **Status:** OPEN (2026-08-03). Found while converting `h2_conn`'s last lambda to a named function,

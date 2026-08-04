@@ -49,8 +49,8 @@
 /** @brief The operating mode requested by a RUN (0401) command. */
 typedef enum PROTO_ENUM_PACKED
 {
-    FINS_RUN_MODE_MONITOR = 0x02, ///< FINS_RUN_MODE_MONITOR mode (program runs, online edits allowed)
-    FINS_RUN_MODE_RUN = 0x04,     ///< FINS_RUN_MODE_RUN mode (program runs, no online edits)
+    FINS_RUN_MODE_MONITOR = 0x02, ///< MONITOR mode (program runs, online edits allowed)
+    FINS_RUN_MODE_RUN = 0x04,     ///< RUN mode (program runs, no online edits)
 } FinsRunMode;
 
 /** @brief The 10-octet FINS routing header. */

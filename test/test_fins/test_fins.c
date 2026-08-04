@@ -102,7 +102,7 @@ void test_run_and_stop()
     uint8_t buf[32];
 
     // RUN into MONITOR mode.
-    size_t n = pc_fins_build_run(buf, sizeof(buf), &h, MONITOR);
+    size_t n = pc_fins_build_run(buf, sizeof(buf), &h, FINS_RUN_MODE_MONITOR);
     TEST_ASSERT_EQUAL_size_t(FINS_HEADER_SIZE + 2 + 3, n);
     TEST_ASSERT_EQUAL_HEX8(FINS_MRC_OPERATING_MODE, buf[10]); // MRC 0x04
     TEST_ASSERT_EQUAL_HEX8(FINS_SRC_RUN, buf[11]);            // SRC 0x01
@@ -111,7 +111,7 @@ void test_run_and_stop()
     TEST_ASSERT_EQUAL_HEX8(0x02, buf[14]); // MONITOR mode
 
     // RUN into RUN mode carries mode byte 0x04.
-    n = pc_fins_build_run(buf, sizeof(buf), &h, RUN);
+    n = pc_fins_build_run(buf, sizeof(buf), &h, FINS_RUN_MODE_RUN);
     TEST_ASSERT_EQUAL_size_t(FINS_HEADER_SIZE + 2 + 3, n);
     TEST_ASSERT_EQUAL_HEX8(0x04, buf[14]); // RUN mode
 

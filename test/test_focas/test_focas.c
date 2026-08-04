@@ -63,7 +63,7 @@ void test_build_sysinfo()
 void test_build_read_position()
 {
     uint8_t buf[64];
-    size_t n = pc_focas_build_read_position(buf, sizeof(buf), absolute, 0);
+    size_t n = pc_focas_build_read_position(buf, sizeof(buf), FOCAS_POS_ABSOLUTE, 0);
     TEST_ASSERT_EQUAL_size_t(36, n);
     TEST_ASSERT_EQUAL_HEX8(0x21, buf[6]);  // command frame
     TEST_ASSERT_EQUAL_HEX8(0x26, buf[15]); // c3 = 0x26
@@ -98,7 +98,7 @@ void test_build_request_extra()
 {
     uint8_t buf[64];
     const uint8_t extra[] = {0xAA, 0xBB, 0xCC};
-    size_t n = pc_focas_build_request(buf, sizeof(buf), set_macro, 500, 0, 0, 0, 0, extra, sizeof(extra));
+    size_t n = pc_focas_build_request(buf, sizeof(buf), FOCAS_CMD_SET_MACRO, 500, 0, 0, 0, 0, extra, sizeof(extra));
     TEST_ASSERT_EQUAL_size_t(10 + 26 + 3, n);
     // payload length field = 26 + 3 = 29.
     TEST_ASSERT_EQUAL_HEX8(0x00, buf[8]);
@@ -221,7 +221,7 @@ void test_parse_guards()
     uint8_t openresp[] = {0xA0, 0xA0, 0xA0, 0xA0, 0x00, 0x01, 0x01, 0x02, 0x00, 0x00};
     FocasResponse r;
     TEST_ASSERT_TRUE(pc_focas_parse_frame(openresp, sizeof(openresp), &f));
-    TEST_ASSERT_TRUE(f.type == open_resp);
+    TEST_ASSERT_TRUE(f.type == FOCAS_FRAME_TYPE_OPEN_RESP);
     TEST_ASSERT_FALSE(pc_focas_parse_command_frame(openresp, sizeof(openresp), &r));
 
     // Response claims more data than the payload carries.
@@ -255,10 +255,9 @@ void test_build_request_guards()
     uint8_t buf[64];
     const uint8_t extra[] = {0xAA};
     // a declared extra length with no extra pointer
-    TEST_ASSERT_EQUAL_size_t(
-        0, pc_focas_build_request(buf, sizeof(buf), set_macro, 0, 0, 0, 0, 0, NULL, 1));
+    TEST_ASSERT_EQUAL_size_t(0, pc_focas_build_request(buf, sizeof(buf), FOCAS_CMD_SET_MACRO, 0, 0, 0, 0, 0, NULL, 1));
     // extra so long that the 16-bit payload-length field could not hold body + extra
-    TEST_ASSERT_EQUAL_size_t(0, pc_focas_build_request(buf, sizeof(buf), set_macro, 0, 0, 0, 0, 0, extra,
+    TEST_ASSERT_EQUAL_size_t(0, pc_focas_build_request(buf, sizeof(buf), FOCAS_CMD_SET_MACRO, 0, 0, 0, 0, 0, extra,
                                                        (size_t)0xFFFF - FOCAS_REQ_BODY_LEN + 1));
     // null destination
     TEST_ASSERT_EQUAL_size_t(0, pc_focas_build_open(NULL, 32));

@@ -35,39 +35,41 @@ size_t pc_cloudevents_build_json(char *buf, size_t cap, const CloudEvent *ce)
         return 0;
     }
 
-    JsonWriter w(buf, cap);
-    w.begin_object();
-    w.kv_str("specversion", "1.0");
-    w.kv_str("id", ce->id);
-    w.kv_str("source", ce->source);
-    w.kv_str("type", ce->type);
+    pc_json_writer w = {0};
+    pc_json_init(&w, buf, cap);
+    pc_json_begin_object(&w);
+    pc_json_kv_str(&w, "specversion", "1.0");
+    pc_json_kv_str(&w, "id", ce->id);
+    pc_json_kv_str(&w, "source", ce->source);
+    pc_json_kv_str(&w, "type", ce->type);
     if (ce_present(ce->subject))
     {
-        w.kv_str("subject", ce->subject);
+        pc_json_kv_str(&w, "subject", ce->subject);
     }
 
     // data: a pre-formatted JSON value (verbatim) or a plain string (escaped).
     if (ce->data_json && ce->data_json[0] != '\0')
     {
-        w.kv_str(CE_KEY_DATACONTENTTYPE, ce_present(ce->datacontenttype) ? ce->datacontenttype : "application/json");
-        w.key(CE_KEY_DATA);
-        w.raw(ce->data_json);
+        pc_json_kv_str(&w, CE_KEY_DATACONTENTTYPE,
+                       ce_present(ce->datacontenttype) ? ce->datacontenttype : "application/json");
+        pc_json_key(&w, CE_KEY_DATA);
+        pc_json_raw(&w, ce->data_json);
     }
     else if (ce->data_str)
     {
         if (ce_present(ce->datacontenttype))
         {
-            w.kv_str(CE_KEY_DATACONTENTTYPE, ce->datacontenttype);
+            pc_json_kv_str(&w, CE_KEY_DATACONTENTTYPE, ce->datacontenttype);
         }
-        w.kv_str(CE_KEY_DATA, ce->data_str);
+        pc_json_kv_str(&w, CE_KEY_DATA, ce->data_str);
     }
     else if (ce_present(ce->datacontenttype))
     {
-        w.kv_str(CE_KEY_DATACONTENTTYPE, ce->datacontenttype);
+        pc_json_kv_str(&w, CE_KEY_DATACONTENTTYPE, ce->datacontenttype);
     }
 
-    w.end_object();
-    return w.ok() ? strnlen(buf, cap) : 0;
+    pc_json_end_object(&w);
+    return pc_json_ok(&w) ? strnlen(buf, cap) : 0;
 }
 
 proto_bool pc_cloudevents_from_headers(const HttpReq *req, CloudEvent *out)

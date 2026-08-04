@@ -29,12 +29,12 @@ static const char *PASSWORD = "YOUR_PASSWORD";
 
 
 // The pins to expose. Caller-owned and must outlive the server. Mark a pin
-// pc_gpio_dir::PC_GPIO_OUT to make it drivable from the panel.
+// PC_GPIO_DIR_OUT to make it drivable from the panel.
 static pc_gpio_pin gpio_pins[] = {
-    {2, "Onboard LED", pc_gpio_dir::PC_GPIO_OUT, 0},
-    {0, "BOOT button", pc_gpio_dir::PC_GPIO_IN_PULLUP, 0},
-    {4, "Relay", pc_gpio_dir::PC_GPIO_OUT, 0},
-    {34, "ADC sense", pc_gpio_dir::PC_GPIO_IN, 0},
+    {2, "Onboard LED", PC_GPIO_DIR_OUT, 0},
+    {0, "BOOT button", PC_GPIO_DIR_IN_PULLUP, 0},
+    {4, "Relay", PC_GPIO_DIR_OUT, 0},
+    {34, "ADC sense", PC_GPIO_DIR_IN, 0},
 };
 static const uint8_t gpio_count = sizeof(gpio_pins) / sizeof(gpio_pins[0]);
 

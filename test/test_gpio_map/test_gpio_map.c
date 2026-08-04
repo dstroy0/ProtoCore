@@ -18,18 +18,18 @@ void tearDown()
 
 void test_dir_name()
 {
-    TEST_ASSERT_EQUAL_STRING("in", pc_gpio_dir_name(PC_GPIO_IN));
-    TEST_ASSERT_EQUAL_STRING("in_pullup", pc_gpio_dir_name(PC_GPIO_IN_PULLUP));
-    TEST_ASSERT_EQUAL_STRING("in_pulldown", pc_gpio_dir_name(PC_GPIO_IN_PULLDOWN));
-    TEST_ASSERT_EQUAL_STRING("out", pc_gpio_dir_name(PC_GPIO_OUT));
+    TEST_ASSERT_EQUAL_STRING("in", pc_gpio_dir_name(PC_GPIO_DIR_IN));
+    TEST_ASSERT_EQUAL_STRING("in_pullup", pc_gpio_dir_name(PC_GPIO_DIR_IN_PULLUP));
+    TEST_ASSERT_EQUAL_STRING("in_pulldown", pc_gpio_dir_name(PC_GPIO_DIR_IN_PULLDOWN));
+    TEST_ASSERT_EQUAL_STRING("out", pc_gpio_dir_name(PC_GPIO_DIR_OUT));
     TEST_ASSERT_EQUAL_STRING("in", pc_gpio_dir_name((pc_gpio_dir)99)); // unknown -> in
 }
 
 void test_json()
 {
     pc_gpio_pin pins[2] = {
-        {2, "LED", PC_GPIO_OUT, 1},
-        {0, "BOOT", PC_GPIO_IN_PULLUP, 0},
+        {2, "LED", PC_GPIO_DIR_OUT, 1},
+        {0, "BOOT", PC_GPIO_DIR_IN_PULLUP, 0},
     };
     char buf[256];
     int n = pc_gpio_json(pins, 2, buf, sizeof(buf));
@@ -48,7 +48,7 @@ void test_json_empty()
 
 void test_json_small_buffer_fails_closed()
 {
-    pc_gpio_pin pins[1] = {{2, "LED", PC_GPIO_OUT, 1}};
+    pc_gpio_pin pins[1] = {{2, "LED", PC_GPIO_DIR_OUT, 1}};
     char buf[8];
     TEST_ASSERT_EQUAL_INT(0, pc_gpio_json(pins, 1, buf, sizeof(buf)));
 }
@@ -93,8 +93,8 @@ void test_parse_set_no_prefix_match()
 void test_is_output()
 {
     pc_gpio_pin pins[2] = {
-        {2, "LED", PC_GPIO_OUT, 0},
-        {0, "BOOT", PC_GPIO_IN_PULLUP, 0},
+        {2, "LED", PC_GPIO_DIR_OUT, 0},
+        {0, "BOOT", PC_GPIO_DIR_IN_PULLUP, 0},
     };
     TEST_ASSERT_TRUE(pc_gpio_is_output(pins, 2, 2));
     TEST_ASSERT_FALSE(pc_gpio_is_output(pins, 2, 0));  // input pin
@@ -114,7 +114,7 @@ void test_host_gpio_stubs()
 // The serializer's own output guards: no buffer at all, and a zero capacity.
 void test_json_null_and_zero_cap()
 {
-    pc_gpio_pin pins[1] = {{2, "LED", PC_GPIO_OUT, 1}};
+    pc_gpio_pin pins[1] = {{2, "LED", PC_GPIO_DIR_OUT, 1}};
     char buf[64];
     TEST_ASSERT_EQUAL_INT(0, pc_gpio_json(pins, 1, NULL, sizeof(buf)));
     TEST_ASSERT_EQUAL_INT(0, pc_gpio_json(pins, 1, buf, 0));
@@ -123,7 +123,7 @@ void test_json_null_and_zero_cap()
 // A pin with no label serializes as an empty label rather than dereferencing null.
 void test_json_null_label()
 {
-    pc_gpio_pin pins[1] = {{5, NULL, PC_GPIO_IN, 0}};
+    pc_gpio_pin pins[1] = {{5, NULL, PC_GPIO_DIR_IN, 0}};
     char buf[128];
     int n = pc_gpio_json(pins, 1, buf, sizeof(buf));
     TEST_ASSERT_TRUE(n > 0);
@@ -135,7 +135,7 @@ void test_json_null_label()
 // them writes past the capacity it was given.
 void test_json_every_short_buffer_fails_closed()
 {
-    pc_gpio_pin pins[1] = {{2, "L", PC_GPIO_OUT, 1}};
+    pc_gpio_pin pins[1] = {{2, "L", PC_GPIO_DIR_OUT, 1}};
     char full[128];
     int n = pc_gpio_json(pins, 1, full, sizeof(full));
     TEST_ASSERT_TRUE(n > 0);

@@ -107,7 +107,7 @@ static void set_bool(OpcUaVariant *o, proto_bool v)
 // Append one ReferenceDescription (bounded by @p max). BrowseName + DisplayName share @p name; every
 // reference is a forward HasComponent (containment) unless @p organizes (the Objects->IMM link).
 static int32_t add_ref(OpcUaReference *out, int32_t n, uint32_t max, uint32_t target_id, const char *name,
-                       uint32_t node_class, proto_bool organizes = PROTO_FALSE)
+                       uint32_t node_class, proto_bool organizes)
 {
     if ((uint32_t)n >= max)
     {
@@ -128,11 +128,11 @@ static int32_t add_ref(OpcUaReference *out, int32_t n, uint32_t max, uint32_t ta
 }
 static int32_t add_obj(OpcUaReference *out, int32_t n, uint32_t max, uint32_t id, const char *name)
 {
-    return add_ref(out, n, max, id, name, OPCUA_NODECLASS_OBJECT);
+    return add_ref(out, n, max, id, name, OPCUA_NODECLASS_OBJECT, PROTO_FALSE);
 }
 static int32_t add_var(OpcUaReference *out, int32_t n, uint32_t max, uint32_t id, const char *name)
 {
-    return add_ref(out, n, max, id, name, OPCUA_NODECLASS_VARIABLE);
+    return add_ref(out, n, max, id, name, OPCUA_NODECLASS_VARIABLE, PROTO_FALSE);
 }
 
 // ---------------------------------------------------------------------------

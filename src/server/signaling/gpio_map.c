@@ -7,8 +7,8 @@
  *        the ESP32 digital read / write helpers.
  *
  * The serializer and the `pin=&level=` parser are pure (host-tested); the digital
- * I/O uses the Arduino API on ESP32 and is a no-op on host builds. No server
- * dependency lives here - the route is in gpio_map_routes.cpp.
+ * I/O goes through the board profile's pc_platform_gpio_* on a target and is a
+ * no-op on host builds. No server dependency lives here.
  */
 
 #include "server/signaling/gpio_map.h"
@@ -20,19 +20,17 @@
 
 #include "mmgr/frame.h"
 
-#if PROTOCORE_HOT
-#endif
 const char *pc_gpio_dir_name(pc_gpio_dir dir)
 {
     switch (dir)
     {
-    case PC_GPIO_IN:
+    case PC_GPIO_DIR_IN:
         return "in";
-    case PC_GPIO_IN_PULLUP:
+    case PC_GPIO_DIR_IN_PULLUP:
         return "in_pullup";
-    case PC_GPIO_IN_PULLDOWN:
+    case PC_GPIO_DIR_IN_PULLDOWN:
         return "in_pulldown";
-    case PC_GPIO_OUT:
+    case PC_GPIO_DIR_OUT:
         return "out";
     default:
         return "in";
@@ -137,7 +135,7 @@ proto_bool pc_gpio_is_output(const pc_gpio_pin *pins, uint8_t count, uint8_t pin
     }
     for (uint8_t i = 0; i < count; i++)
     {
-        if (pins[i].pin == pin && pins[i].dir == PC_GPIO_OUT)
+        if (pins[i].pin == pin && pins[i].dir == PC_GPIO_DIR_OUT)
         {
             return PROTO_TRUE;
         }
@@ -155,15 +153,16 @@ void pc_gpio_begin_pins(const pc_gpio_pin *pins, uint8_t count)
     }
     for (uint8_t i = 0; i < count; i++)
     {
+        // The case label is this enum; the argument is the board profile's own pin-mode number.
         switch (pins[i].dir)
         {
-        case PC_GPIO_OUT:
+        case PC_GPIO_DIR_OUT:
             pc_platform_gpio_mode((uint8_t)(pins[i].pin), PC_GPIO_OUT);
             break;
-        case PC_GPIO_IN_PULLUP:
+        case PC_GPIO_DIR_IN_PULLUP:
             pc_platform_gpio_mode((uint8_t)(pins[i].pin), PC_GPIO_IN_PULLUP);
             break;
-        case PC_GPIO_IN_PULLDOWN:
+        case PC_GPIO_DIR_IN_PULLDOWN:
             pc_platform_gpio_mode((uint8_t)(pins[i].pin), PC_GPIO_IN_PULLDOWN);
             break;
         default:
@@ -187,21 +186,27 @@ void pc_gpio_read(pc_gpio_pin *pins, uint8_t count)
 
 void pc_gpio_write(uint8_t pin, uint8_t level)
 {
-    pc_platform_gpio_write((uint8_t)(pin), level ? HIGH : LOW);
+    pc_platform_gpio_write((uint8_t)(pin), level ? PC_GPIO_HIGH : PC_GPIO_LOW);
 }
 
 #else // host build - no GPIO
 
-void pc_gpio_begin_pins(const pc_gpio_pin *, uint8_t)
+void pc_gpio_begin_pins(const pc_gpio_pin *pins, uint8_t count)
 {
+    (void)pins;
+    (void)count;
 }
 
-void pc_gpio_read(pc_gpio_pin *, uint8_t)
+void pc_gpio_read(pc_gpio_pin *pins, uint8_t count)
 {
+    (void)pins;
+    (void)count;
 }
 
-void pc_gpio_write(uint8_t, uint8_t)
+void pc_gpio_write(uint8_t pin, uint8_t level)
 {
+    (void)pin;
+    (void)level;
 }
 
 #endif // PROTOCORE_HOT
