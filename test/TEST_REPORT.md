@@ -1,8 +1,8 @@
 # Test Report
 
-**Generated:** 2026-08-04 00:35:06
+**Generated:** 2026-08-04 01:19:39
 **Command:** `pio test` over 304 auto-discovered native envs (excludes native_pentest, native_codeql)
-**Result:** ✅ 13 passed - 201s
+**Result:** ✅ 13 passed - 212s
 
 ---
 
@@ -163,6 +163,14 @@
 | `test_focas`             | `native_focas`          |     0 |   ✅   | 00:00:01.050 |
 | `test_gpio_map`          | `native_gpio_map`       |     0 |   ✅   | 00:00:01.135 |
 | `test_upload`            | `native_upload`         |     0 |   ✅   | 00:00:02.404 |
+| `test_gpib`              | `native_gpib`           |     0 |   ✅   | 00:00:03.772 |
+| `test_hislip`            | `native_hislip`         |     0 |   ✅   | 00:00:01.049 |
+| `test_iface_bridge`      | `native_iface_bridge`   |     0 |   ✅   | 00:00:01.064 |
+| `test_ipsec_db`          | `native_ipsec_db`       |     0 |   ✅   | 00:00:01.315 |
+| `test_log`               | `native_log`            |     0 |   ✅   | 00:00:01.141 |
+| `test_plaintext`         | `native_plaintext`      |     0 |   ✅   | 00:00:01.134 |
+| `test_plaintext`         | `native_pool_workers`   |     0 |   ✅   | 00:00:00.615 |
+| `test_safety_scl`        | `native_safety_scl`     |     0 |   ✅   | 00:00:01.066 |
 
 ---
 

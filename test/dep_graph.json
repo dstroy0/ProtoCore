@@ -167,6 +167,18 @@
 ".pio/libdeps/native_focas/littlefs/src/lfs_util.c": [
 "native_focas"
 ],
+".pio/libdeps/native_gpib/littlefs/include/lfs.h": [
+"native_gpib"
+],
+".pio/libdeps/native_gpib/littlefs/include/lfs_util.h": [
+"native_gpib"
+],
+".pio/libdeps/native_gpib/littlefs/src/lfs.c": [
+"native_gpib"
+],
+".pio/libdeps/native_gpib/littlefs/src/lfs_util.c": [
+"native_gpib"
+],
 ".pio/libdeps/native_gpio_map/littlefs/include/lfs.h": [
 "native_gpio_map"
 ],
@@ -179,6 +191,18 @@
 ".pio/libdeps/native_gpio_map/littlefs/src/lfs_util.c": [
 "native_gpio_map"
 ],
+".pio/libdeps/native_hislip/littlefs/include/lfs.h": [
+"native_hislip"
+],
+".pio/libdeps/native_hislip/littlefs/include/lfs_util.h": [
+"native_hislip"
+],
+".pio/libdeps/native_hislip/littlefs/src/lfs.c": [
+"native_hislip"
+],
+".pio/libdeps/native_hislip/littlefs/src/lfs_util.c": [
+"native_hislip"
+],
 ".pio/libdeps/native_hpack/littlefs/include/lfs.h": [
 "native_hpack"
 ],
@@ -190,6 +214,30 @@
 ],
 ".pio/libdeps/native_hpack/littlefs/src/lfs_util.c": [
 "native_hpack"
+],
+".pio/libdeps/native_iface_bridge/littlefs/include/lfs.h": [
+"native_iface_bridge"
+],
+".pio/libdeps/native_iface_bridge/littlefs/include/lfs_util.h": [
+"native_iface_bridge"
+],
+".pio/libdeps/native_iface_bridge/littlefs/src/lfs.c": [
+"native_iface_bridge"
+],
+".pio/libdeps/native_iface_bridge/littlefs/src/lfs_util.c": [
+"native_iface_bridge"
+],
+".pio/libdeps/native_ipsec_db/littlefs/include/lfs.h": [
+"native_ipsec_db"
+],
+".pio/libdeps/native_ipsec_db/littlefs/include/lfs_util.h": [
+"native_ipsec_db"
+],
+".pio/libdeps/native_ipsec_db/littlefs/src/lfs.c": [
+"native_ipsec_db"
+],
+".pio/libdeps/native_ipsec_db/littlefs/src/lfs_util.c": [
+"native_ipsec_db"
 ],
 ".pio/libdeps/native_json/littlefs/include/lfs.h": [
 "native_json"
@@ -215,6 +263,18 @@
 ".pio/libdeps/native_keepalive/littlefs/src/lfs_util.c": [
 "native_keepalive"
 ],
+".pio/libdeps/native_log/littlefs/include/lfs.h": [
+"native_log"
+],
+".pio/libdeps/native_log/littlefs/include/lfs_util.h": [
+"native_log"
+],
+".pio/libdeps/native_log/littlefs/src/lfs.c": [
+"native_log"
+],
+".pio/libdeps/native_log/littlefs/src/lfs_util.c": [
+"native_log"
+],
 ".pio/libdeps/native_oauth2/littlefs/include/lfs.h": [
 "native_oauth2"
 ],
@@ -227,6 +287,42 @@
 ".pio/libdeps/native_oauth2/littlefs/src/lfs_util.c": [
 "native_oauth2"
 ],
+".pio/libdeps/native_oidc/littlefs/include/lfs.h": [
+"native_oidc"
+],
+".pio/libdeps/native_oidc/littlefs/include/lfs_util.h": [
+"native_oidc"
+],
+".pio/libdeps/native_oidc/littlefs/src/lfs.c": [
+"native_oidc"
+],
+".pio/libdeps/native_oidc/littlefs/src/lfs_util.c": [
+"native_oidc"
+],
+".pio/libdeps/native_plaintext/littlefs/include/lfs.h": [
+"native_plaintext"
+],
+".pio/libdeps/native_plaintext/littlefs/include/lfs_util.h": [
+"native_plaintext"
+],
+".pio/libdeps/native_plaintext/littlefs/src/lfs.c": [
+"native_plaintext"
+],
+".pio/libdeps/native_plaintext/littlefs/src/lfs_util.c": [
+"native_plaintext"
+],
+".pio/libdeps/native_pool_workers/littlefs/include/lfs.h": [
+"native_pool_workers"
+],
+".pio/libdeps/native_pool_workers/littlefs/include/lfs_util.h": [
+"native_pool_workers"
+],
+".pio/libdeps/native_pool_workers/littlefs/src/lfs.c": [
+"native_pool_workers"
+],
+".pio/libdeps/native_pool_workers/littlefs/src/lfs_util.c": [
+"native_pool_workers"
+],
 ".pio/libdeps/native_prov/littlefs/include/lfs.h": [
 "native_prov"
 ],
@@ -238,6 +334,30 @@
 ],
 ".pio/libdeps/native_prov/littlefs/src/lfs_util.c": [
 "native_prov"
+],
+".pio/libdeps/native_safety_scl/littlefs/include/lfs.h": [
+"native_safety_scl"
+],
+".pio/libdeps/native_safety_scl/littlefs/include/lfs_util.h": [
+"native_safety_scl"
+],
+".pio/libdeps/native_safety_scl/littlefs/src/lfs.c": [
+"native_safety_scl"
+],
+".pio/libdeps/native_safety_scl/littlefs/src/lfs_util.c": [
+"native_safety_scl"
+],
+".pio/libdeps/native_secure_pool/littlefs/include/lfs.h": [
+"native_secure_pool"
+],
+".pio/libdeps/native_secure_pool/littlefs/include/lfs_util.h": [
+"native_secure_pool"
+],
+".pio/libdeps/native_secure_pool/littlefs/src/lfs.c": [
+"native_secure_pool"
+],
+".pio/libdeps/native_secure_pool/littlefs/src/lfs_util.c": [
+"native_secure_pool"
 ],
 ".pio/libdeps/native_senml/littlefs/include/lfs.h": [
 "native_senml"
@@ -1569,6 +1689,7 @@
 "native_swar"
 ],
 "src/board_drivers/hal/portable/portable_aesgcm.c": [
+"native_ipsec_db",
 "native_smb",
 "native_ssh",
 "native_ssh_kbdint",
@@ -1577,20 +1698,19 @@
 "src/board_drivers/hal/portable/portable_aesgcm.cpp": [
 "native_esp",
 "native_ikev2",
-"native_ipsec_db",
 "native_ssh_aesgcm",
 "native_ssh_conn",
 "native_ssh_hardened",
 "native_ssh_pqc"
 ],
 "src/board_drivers/hal/portable/portable_bignum.c": [
+"native_oidc",
 "native_ssh",
 "native_ssh_kbdint",
 "native_swar"
 ],
 "src/board_drivers/hal/portable/portable_bignum.cpp": [
 "native_ikev2",
-"native_oidc",
 "native_ssh_conn",
 "native_ssh_hardened",
 "native_ssh_pqc"
@@ -4268,13 +4388,13 @@
 "native_swar"
 ],
 "src/network_drivers/tls/ssh_rsa.c": [
+"native_oidc",
 "native_ssh",
 "native_ssh_kbdint",
 "native_swar"
 ],
 "src/network_drivers/tls/ssh_rsa.cpp": [
 "native_ikev2",
-"native_oidc",
 "native_ssh_conn",
 "native_ssh_hardened",
 "native_ssh_pqc"
@@ -8342,18 +8462,27 @@
 "native_fins",
 "native_focas",
 "native_forward",
+"native_gpib",
 "native_gpio_map",
+"native_hislip",
 "native_hpack",
 "native_http_client",
+"native_iface_bridge",
 "native_ikev2",
+"native_ipsec_db",
 "native_json",
 "native_keepalive",
+"native_log",
 "native_modbus",
 "native_modbus_master",
 "native_oauth2",
 "native_oidc",
+"native_plaintext",
+"native_pool_workers",
 "native_prov",
+"native_safety_scl",
 "native_sb_modbus",
+"native_secure_pool",
 "native_senml",
 "native_smb",
 "native_sse",
