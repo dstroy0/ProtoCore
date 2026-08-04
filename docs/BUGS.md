@@ -8,6 +8,26 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ---
 
+## HTTP/2 refuses an over-limit stream with a RST_STREAM naming stream 0
+
+- **Status:** OPEN (2026-08-03). Found while converting `h2_conn`'s last lambda to a named function,
+  which put the builder's arguments on their own line.
+- **Symptom:** when the stream table is full, `handle_headers()` answers the new HEADERS with
+  `pc_h2_build_rst_stream(b, cap, 0, 0)` - stream id 0, error code 0 - and keeps the connection.
+  RFC 9113 sec 6.4 says a RST_STREAM with a stream identifier of 0x00 is a connection error of type
+  PROTOCOL_ERROR, so a conforming peer must respond with GOAWAY and close. The refusal that was
+  meant to shed one stream takes the whole connection down instead, and the error code says
+  NO_ERROR rather than REFUSED_STREAM (0x07), which is what tells a client the request was not
+  processed and is safe to retry elsewhere.
+- **Root cause:** `send_control()` takes a `size_t (*)(uint8_t *, size_t)`, which carries no room
+  for the stream id, so the call site passed the two constants the signature allowed.
+- **Why nothing caught it:** `test_h2_stream_table_full_rst` asserts only that at least one
+  RST_STREAM frame goes out, never which stream it names. No interop test drives the table to its
+  limit.
+- **Fix:** not yet applied - the refusal needs the stream id, so `send_control`'s builder signature
+  has to carry it (or the refusal path builds its frame directly). Deliberately left alone during
+  the C conversion, whose contract was to change no behavior.
+
 ## 51 helpers became global symbols when the C conversion deleted their anonymous namespace
 
 - **Status:** FIXED (2026-08-02), pending a target build. Found by diffing `src/` against v0.0.1
