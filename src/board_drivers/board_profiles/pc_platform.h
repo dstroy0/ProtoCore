@@ -182,6 +182,7 @@ uintptr_t pc_platform_context_id(void);
 #include "driver/gpio.h"          // PC_ALLOW_LATE_INCLUDE: ordered - see above
 #include "driver/uart.h"          // PC_ALLOW_LATE_INCLUDE: ordered - see above
 #include "esp_cpu.h"              // PC_ALLOW_LATE_INCLUDE: ordered - see above
+#include "esp_idf_version.h"      // PC_ALLOW_LATE_INCLUDE: ordered - names the IDF the driver headers came from
 #include "esp_random.h"           // PC_ALLOW_LATE_INCLUDE: ordered - see above
 #include "esp_timer.h"            // PC_ALLOW_LATE_INCLUDE: ordered - see above
 #include "freertos/FreeRTOS.h"    // PC_ALLOW_LATE_INCLUDE: ordered - only exists once the vendor above resolved to ESP
@@ -248,7 +249,12 @@ PC_INLINE int pc_platform_uart_begin(uint8_t unit, uint32_t baud)
     c.parity = UART_PARITY_DISABLE;
     c.stop_bits = UART_STOP_BITS_1;
     c.flow_ctrl = UART_HW_FLOWCTRL_DISABLE;
+    // IDF 5 names the default source clock UART_SCLK_DEFAULT; IDF 4 names the same one UART_SCLK_APB.
+#if ESP_IDF_VERSION_MAJOR >= 5
     c.source_clk = UART_SCLK_DEFAULT;
+#else
+    c.source_clk = UART_SCLK_APB;
+#endif
     if (uart_param_config((uart_port_t)unit, &c) != ESP_OK)
     {
         return 0;
