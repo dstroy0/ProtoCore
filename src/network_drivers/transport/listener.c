@@ -21,6 +21,7 @@
 #include "board_drivers/board_profiles/pc_platform.h" // the target's queues, under our names
 #include "diffserv.h"                // DiffServ DSCP marking for accepted connections (compiles out when off)
 #include "network_drivers/tls/tls.h" // TLS handshake begin (self-stubbing)
+#include "tcp.h"                     // TcpConn, conn_pool: the slots an accept claims
 #if PROTOCORE_HOT
 #include "network_drivers/session/worker.h" // pc_worker_wake() - nudge the owning worker task
 #endif
