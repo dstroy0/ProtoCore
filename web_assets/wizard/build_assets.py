@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 ##
 # @file build_assets.py
-# @brief Deterministic web-asset generator: web_assets/input/* -> src/network_drivers/application/<type>.{h,cpp}.
+# @brief Deterministic web-asset generator: web_assets/input/* -> src/network_drivers/application/<type>.{h,c}.
 # @details Each file under web_assets/input is an editable source document (HTML, CSS,
 #          JSON, XML, SVG, JS). Its base name is the C identifier it backs (e.g.
 #          PC_PROV_FORM.html -> `extern const char PC_PROV_FORM[];`) and its
@@ -413,7 +413,7 @@ def generate(write=True):
 
     files = {
         os.path.join(OUT_DIR, ASSET_BASENAME + ".h"): render_header(assets),
-        os.path.join(OUT_DIR, ASSET_BASENAME + ".cpp"): render_source(assets),
+        os.path.join(OUT_DIR, ASSET_BASENAME + ".c"): render_source(assets),
     }
 
     stale = []
@@ -454,7 +454,7 @@ def cmd_check(_):
 
 
 def cmd_hash(args):
-    """Print NAME <sha256-of-served-bytes> for each symbol in a .cpp (faithfulness check)."""
+    """Print NAME <sha256-of-served-bytes> for each symbol in a .c (faithfulness check)."""
     with open(args.file, "r", encoding="utf-8") as f:
         src = f.read()
     for name, body in iter_char_arrays(src):
@@ -464,7 +464,7 @@ def cmd_hash(args):
 
 
 def cmd_migrate(args):
-    """Extract const char arrays from a .cpp into editable web_assets/input/<NAME>.<ext> files."""
+    """Extract const char arrays from a .c into editable web_assets/input/<NAME>.<ext> files."""
     with open(args.file, "r", encoding="utf-8") as f:
         src = f.read()
     os.makedirs(INPUT_DIR, exist_ok=True)

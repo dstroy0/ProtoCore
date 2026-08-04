@@ -674,7 +674,7 @@ ed25519_sign 84.6 vs 85.6 ms, `fe_mul` 1377 vs 1386 cyc), which cross-validates 
   `ssh_rsa_sign` used to re-read and re-parse the NVS key on every call, and re-parsing threw away mbedTLS's
   per-context blinding state so it re-ran the ~167 ms first-use blinding init (`r^-1 mod n`) every sign. On a
   device-CCOUNT breakdown the 440 ms split as ~3 ms NVS read + 0.2 ms parse + 270 ms CRT modexp + **167 ms
-  wasted blinding re-init**. Parsing the key once at startup and reusing the context ([`ssh_rsa.cpp`](../src/network_drivers/tls/ssh_rsa.cpp),
+  wasted blinding re-init**. Parsing the key once at startup and reusing the context ([`ssh_rsa.c`](../src/network_drivers/tls/ssh_rsa.c),
   `SshRsaCtx`, mutex-guarded) drops the sign to **270 ms** with blinding fully preserved. The residual 270 ms
   is already CRT (two 1024-bit half-exponentiations) on the RSA/MPI hardware accelerator (Montgomery in
   silicon), so it is not reducible in software - the modexp is not the software big-integer multiply that
@@ -995,7 +995,7 @@ median 498 ms** over 8 handshakes - matching the numbers below.
 #### Device-CPU breakdown + the ESP32-P4 (HW ECC)
 
 The wall-clock above is the client's view; a guarded server-side probe (`PC_TLS_HS_BENCH`, in
-[`tls.cpp`](../src/network_drivers/tls/tls.cpp)) times the actual handshake **on the device** - it sums the
+[`tls.c`](../src/network_drivers/tls/tls.c)) times the actual handshake **on the device** - it sums the
 CPU spent inside the pumped `mbedtls_ssl_handshake` calls (network waits fall between pumps) and the wall
 time. Measured on the two S3 rigs and a wired **ESP32-P4** (`rig_s3_tls` twin, [`penetration_testing/rig_firmware/p4`](../penetration_testing/rig_firmware/p4);
 `performance_benching/tls/tls_hs_time.py` + `s3_hs_investigate.py`):
@@ -1031,7 +1031,7 @@ time. Measured on the two S3 rigs and a wired **ESP32-P4** (`rig_s3_tls` twin, [
   5.4x win** (`Server Temp Key: ECDH, prime256v1` confirmed, no client curve forcing), while the **S3 is
   unchanged at ~498 ms x25519**. Getting there also fixed a latent bug: `board_drivers/board_profiles/board_profile.h` keyed
   the chip select off `CONFIG_IDF_TARGET_*` but did not pull in `sdkconfig.h`, so any TU that included
-  `protocore_config.h` before an esp header (e.g. `tls.cpp`) saw the macros undefined and **every board silently
+  `protocore_config.h` before an esp header (e.g. `tls.c`) saw the macros undefined and **every board silently
   fell through to the classic profile** (`PC_HW_ECC 0`) - the P-256 preference never engaged until the header
   pulled `sdkconfig.h` in itself. (A P-256 ECDSA leaf also constrains the client's TLS 1.2 `supported_groups` -
   the group list gates the cert curve too - so a client offering no P-256 fails against this rig outright.)
