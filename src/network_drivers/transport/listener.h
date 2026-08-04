@@ -34,7 +34,7 @@
 
 #include "board_drivers/board_profiles/pc_platform.h" // the target's queues and TCP, under our names
 #include "protocore_config.h"
-#include "tcp.h"
+#include "tcp_evt.h" // TcpEvt: what a listener's queue holds. The slots themselves are tcp.h's.
 
 // ---------------------------------------------------------------------------
 // Listener pool entry

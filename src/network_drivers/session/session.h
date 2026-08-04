@@ -18,7 +18,7 @@
 #ifndef PROTOCORE_SESSION_H
 #define PROTOCORE_SESSION_H
 
-#include "../transport/tcp.h"
+#include "../transport/tcp_evt.h" // EvtType, TcpEvt: the events this layer drains
 
 /**
  * @brief Drive the session layer for one Arduino loop iteration.
