@@ -129,9 +129,9 @@ void test_encode_guard_subconditions()
     const char *argv[] = {"GET", "k"};
     size_t alen[] = {3, 1};
     TEST_ASSERT_EQUAL_size_t(0, pc_resp_encode_command(NULL, sizeof(buf), argv, alen, 2)); // null buf
-    TEST_ASSERT_EQUAL_size_t(0, pc_resp_encode_command(buf, 0, argv, alen, 2));               // zero cap
+    TEST_ASSERT_EQUAL_size_t(0, pc_resp_encode_command(buf, 0, argv, alen, 2));            // zero cap
     TEST_ASSERT_EQUAL_size_t(0, pc_resp_encode_command(buf, sizeof(buf), NULL, alen, 2));  // null args
-    TEST_ASSERT_EQUAL_size_t(0, pc_resp_encode_command(buf, sizeof(buf), argv, alen, 0));     // zero argc
+    TEST_ASSERT_EQUAL_size_t(0, pc_resp_encode_command(buf, sizeof(buf), argv, alen, 0));  // zero argc
     const char *withnull[] = {"GET", NULL};
     TEST_ASSERT_EQUAL_size_t(0, pc_resp_encode_command(buf, sizeof(buf), withnull, NULL, 2)); // null arg elem
     TEST_ASSERT_EQUAL_size_t(0, pc_resp_encode_command(buf, 8, argv, alen, 2)); // header fits, arg overflows
@@ -142,10 +142,10 @@ void test_parse_guard_subconditions_and_edges()
 {
     RespReply r;
     size_t c;
-    TEST_ASSERT_FALSE(pc_resp_parse(NULL, 5, &r, &c));                           // null buf
+    TEST_ASSERT_FALSE(pc_resp_parse(NULL, 5, &r, &c));                              // null buf
     TEST_ASSERT_FALSE(pc_resp_parse((const uint8_t *)"+\r", 2, &r, &c));            // len < 3
-    TEST_ASSERT_FALSE(pc_resp_parse((const uint8_t *)"+OK\r\n", 5, NULL, &c));   // null out
-    TEST_ASSERT_FALSE(pc_resp_parse((const uint8_t *)"+OK\r\n", 5, &r, NULL));   // null consumed
+    TEST_ASSERT_FALSE(pc_resp_parse((const uint8_t *)"+OK\r\n", 5, NULL, &c));      // null out
+    TEST_ASSERT_FALSE(pc_resp_parse((const uint8_t *)"+OK\r\n", 5, &r, NULL));      // null consumed
     TEST_ASSERT_FALSE(pc_resp_parse((const uint8_t *)":\r\n", 3, &r, &c));          // empty integer
     TEST_ASSERT_FALSE(pc_resp_parse((const uint8_t *)":-\r\n", 4, &r, &c));         // '-' then no digit
     TEST_ASSERT_FALSE(pc_resp_parse((const uint8_t *)"$5\r\nhelloAB", 11, &r, &c)); // bulk with wrong terminator
@@ -275,11 +275,11 @@ void test_parse_resp3_double_forms()
 {
     RespReply r;
     size_t c;
-    struct DblCase
+    typedef struct
     {
         const char *wire;
         double want;
-    };
+    } DblCase;
     const DblCase good[] = {
         {",-2.5\r\n", -2.5},  {",+2.5\r\n", 2.5}, {",1.5e-3\r\n", 0.0015}, {",1.5E2\r\n", 150.0},
         {",1e+2\r\n", 100.0}, {",12\r\n", 12.0},  {",.5\r\n", 0.5},        {",1.\r\n", 1.0},

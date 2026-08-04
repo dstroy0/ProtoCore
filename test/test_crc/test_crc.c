@@ -23,77 +23,77 @@ void tearDown(void)
 
 static const uint8_t CHECK_INPUT[9] = {'1', '2', '3', '4', '5', '6', '7', '8', '9'};
 
-static uint32_t check_of(const pc_crc_params &p)
+static uint32_t check_of(const pc_crc_params *p)
 {
-    return pc_crc(&p, CHECK_INPUT, sizeof(CHECK_INPUT));
+    return pc_crc(p, CHECK_INPUT, sizeof(CHECK_INPUT));
 }
 
 // The cataloge check value for each preset. A parameter typo cannot survive this.
 void test_cataloge_check_values(void)
 {
-    TEST_ASSERT_EQUAL_HEX32(0xF4u, check_of(PC_CRC8_SMBUS));
-    TEST_ASSERT_EQUAL_HEX32(0xA1u, check_of(PC_CRC8_MAXIM_DOW));
-    TEST_ASSERT_EQUAL_HEX32(0xF7u, check_of(PC_CRC8_NRSC5));
-    TEST_ASSERT_EQUAL_HEX32(0xBB3Du, check_of(PC_CRC16_ARC));
-    TEST_ASSERT_EQUAL_HEX32(0x4B37u, check_of(PC_CRC16_MODBUS));
-    TEST_ASSERT_EQUAL_HEX32(0x29B1u, check_of(PC_CRC16_IBM_3740));
-    TEST_ASSERT_EQUAL_HEX32(0x31C3u, check_of(PC_CRC16_XMODEM));
-    TEST_ASSERT_EQUAL_HEX32(0x2189u, check_of(PC_CRC16_KERMIT));
-    TEST_ASSERT_EQUAL_HEX32(0x906Eu, check_of(PC_CRC16_X25));
-    TEST_ASSERT_EQUAL_HEX32(0xEA82u, check_of(PC_CRC16_DNP));
-    TEST_ASSERT_EQUAL_HEX32(0x21CF02u, check_of(PC_CRC24_OPENPGP));
-    TEST_ASSERT_EQUAL_HEX32(0xCBF43926u, check_of(PC_CRC32_ISO_HDLC));
-    TEST_ASSERT_EQUAL_HEX32(0xFC891918u, check_of(PC_CRC32_BZIP2));
+    TEST_ASSERT_EQUAL_HEX32(0xF4u, check_of(&PC_CRC8_SMBUS));
+    TEST_ASSERT_EQUAL_HEX32(0xA1u, check_of(&PC_CRC8_MAXIM_DOW));
+    TEST_ASSERT_EQUAL_HEX32(0xF7u, check_of(&PC_CRC8_NRSC5));
+    TEST_ASSERT_EQUAL_HEX32(0xBB3Du, check_of(&PC_CRC16_ARC));
+    TEST_ASSERT_EQUAL_HEX32(0x4B37u, check_of(&PC_CRC16_MODBUS));
+    TEST_ASSERT_EQUAL_HEX32(0x29B1u, check_of(&PC_CRC16_IBM_3740));
+    TEST_ASSERT_EQUAL_HEX32(0x31C3u, check_of(&PC_CRC16_XMODEM));
+    TEST_ASSERT_EQUAL_HEX32(0x2189u, check_of(&PC_CRC16_KERMIT));
+    TEST_ASSERT_EQUAL_HEX32(0x906Eu, check_of(&PC_CRC16_X25));
+    TEST_ASSERT_EQUAL_HEX32(0xEA82u, check_of(&PC_CRC16_DNP));
+    TEST_ASSERT_EQUAL_HEX32(0x21CF02u, check_of(&PC_CRC24_OPENPGP));
+    TEST_ASSERT_EQUAL_HEX32(0xCBF43926u, check_of(&PC_CRC32_ISO_HDLC));
+    TEST_ASSERT_EQUAL_HEX32(0xFC891918u, check_of(&PC_CRC32_BZIP2));
 }
 
 // Reflected and unreflected variants of one polynomial must NOT agree - proof the reflect flags are
 // actually wired through rather than ignored.
 void test_reflection_flags_actually_apply(void)
 {
-    TEST_ASSERT_NOT_EQUAL(check_of(PC_CRC16_XMODEM), check_of(PC_CRC16_KERMIT));
-    TEST_ASSERT_NOT_EQUAL(check_of(PC_CRC32_ISO_HDLC), check_of(PC_CRC32_BZIP2));
+    TEST_ASSERT_NOT_EQUAL(check_of(&PC_CRC16_XMODEM), check_of(&PC_CRC16_KERMIT));
+    TEST_ASSERT_NOT_EQUAL(check_of(&PC_CRC32_ISO_HDLC), check_of(&PC_CRC32_BZIP2));
     // ...and so must differing init values on otherwise identical parameters
-    TEST_ASSERT_NOT_EQUAL(check_of(PC_CRC16_ARC), check_of(PC_CRC16_MODBUS));
+    TEST_ASSERT_NOT_EQUAL(check_of(&PC_CRC16_ARC), check_of(&PC_CRC16_MODBUS));
 }
 
 // Streaming in pieces must equal the one-shot, or a caller cannot checksum a header and payload
 // that are not contiguous.
 void test_streaming_matches_one_shot(void)
 {
-    const pc_crc_params &p = PC_CRC32_ISO_HDLC;
+    const pc_crc_params *p = &PC_CRC32_ISO_HDLC;
     const uint32_t want = check_of(p);
 
     for (size_t split = 0; split <= sizeof(CHECK_INPUT); split++)
     {
-        uint32_t c = pc_crc_begin(&p);
-        c = pc_crc_update(&p, c, CHECK_INPUT, split);
-        c = pc_crc_update(&p, c, CHECK_INPUT + split, sizeof(CHECK_INPUT) - split);
-        TEST_ASSERT_EQUAL_HEX32(want, pc_crc_final(&p, c));
+        uint32_t c = pc_crc_begin(p);
+        c = pc_crc_update(p, c, CHECK_INPUT, split);
+        c = pc_crc_update(p, c, CHECK_INPUT + split, sizeof(CHECK_INPUT) - split);
+        TEST_ASSERT_EQUAL_HEX32(want, pc_crc_final(p, c));
     }
 
     // octet-at-a-time is the same thing taken to the limit
-    uint32_t c = pc_crc_begin(&p);
+    uint32_t c = pc_crc_begin(p);
     for (size_t i = 0; i < sizeof(CHECK_INPUT); i++)
     {
-        c = pc_crc_update(&p, c, CHECK_INPUT + i, 1);
+        c = pc_crc_update(p, c, CHECK_INPUT + i, 1);
     }
-    TEST_ASSERT_EQUAL_HEX32(want, pc_crc_final(&p, c));
+    TEST_ASSERT_EQUAL_HEX32(want, pc_crc_final(p, c));
 }
 
 // The property that makes a CRC worth computing.
 void test_single_bit_flip_changes_the_crc(void)
 {
-    const pc_crc_params &p = PC_CRC16_MODBUS;
+    const pc_crc_params *p = &PC_CRC16_MODBUS;
     uint8_t buf[9];
     memcpy(buf, CHECK_INPUT, sizeof(buf));
-    const uint32_t base = pc_crc(&p, buf, sizeof(buf));
+    const uint32_t base = pc_crc(p, buf, sizeof(buf));
 
     for (size_t byte = 0; byte < sizeof(buf); byte++)
     {
         for (int bit = 0; bit < 8; bit++)
         {
             buf[byte] ^= (uint8_t)(1u << bit);
-            TEST_ASSERT_NOT_EQUAL(base, pc_crc(&p, buf, sizeof(buf)));
+            TEST_ASSERT_NOT_EQUAL(base, pc_crc(p, buf, sizeof(buf)));
             buf[byte] ^= (uint8_t)(1u << bit); // restore
         }
     }
@@ -102,35 +102,35 @@ void test_single_bit_flip_changes_the_crc(void)
 // Byte order matters: a CRC that ignored ordering would miss reordered payloads.
 void test_order_sensitivity(void)
 {
-    const pc_crc_params &p = PC_CRC32_ISO_HDLC;
+    const pc_crc_params *p = &PC_CRC32_ISO_HDLC;
     const uint8_t a[3] = {0x01, 0x02, 0x03};
     const uint8_t b[3] = {0x03, 0x02, 0x01};
-    TEST_ASSERT_NOT_EQUAL(pc_crc(&p, a, 3), pc_crc(&p, b, 3));
+    TEST_ASSERT_NOT_EQUAL(pc_crc(p, a, 3), pc_crc(p, b, 3));
 }
 
 // Leading zero octets must change the result, or length-extension mistakes go undetected.
 void test_leading_zeros_are_significant(void)
 {
-    const pc_crc_params &p = PC_CRC16_MODBUS; // non-zero init, so zeros do fold in
+    const pc_crc_params *p = &PC_CRC16_MODBUS; // non-zero init, so zeros do fold in
     const uint8_t one[1] = {0x00};
     const uint8_t two[2] = {0x00, 0x00};
-    TEST_ASSERT_NOT_EQUAL(pc_crc(&p, one, 1), pc_crc(&p, two, 2));
+    TEST_ASSERT_NOT_EQUAL(pc_crc(p, one, 1), pc_crc(p, two, 2));
 }
 
 void test_empty_input_is_the_bare_init(void)
 {
     // With no octets folded in, the result is init through the output stage - not an error.
-    const pc_crc_params &p = PC_CRC32_ISO_HDLC;
-    TEST_ASSERT_EQUAL_HEX32(pc_crc_final(&p, pc_crc_begin(&p)), pc_crc(&p, CHECK_INPUT, 0));
+    const pc_crc_params *p = &PC_CRC32_ISO_HDLC;
+    TEST_ASSERT_EQUAL_HEX32(pc_crc_final(p, pc_crc_begin(p)), pc_crc(p, CHECK_INPUT, 0));
     TEST_ASSERT_EQUAL_HEX32(0x00000000u, pc_crc(&PC_CRC32_ISO_HDLC, NULL, 0));
 }
 
 void test_width_is_respected(void)
 {
     // Every result must fit its declared width - a leaked high bit would corrupt a packed frame.
-    TEST_ASSERT_EQUAL_HEX32(0u, check_of(PC_CRC8_SMBUS) & ~0xFFu);
-    TEST_ASSERT_EQUAL_HEX32(0u, check_of(PC_CRC16_ARC) & ~0xFFFFu);
-    TEST_ASSERT_EQUAL_HEX32(0u, check_of(PC_CRC24_OPENPGP) & ~0xFFFFFFu);
+    TEST_ASSERT_EQUAL_HEX32(0u, check_of(&PC_CRC8_SMBUS) & ~0xFFu);
+    TEST_ASSERT_EQUAL_HEX32(0u, check_of(&PC_CRC16_ARC) & ~0xFFFFu);
+    TEST_ASSERT_EQUAL_HEX32(0u, check_of(&PC_CRC24_OPENPGP) & ~0xFFFFFFu);
 }
 
 // --- Equivalence with the in-tree hand-rolled CRCs ----------------------------------------------
@@ -297,9 +297,9 @@ void test_null_guards(void)
     TEST_ASSERT_EQUAL_HEX32(0u, pc_crc_final(NULL, 0x1234u));
     TEST_ASSERT_EQUAL_HEX32(0u, pc_crc(NULL, CHECK_INPUT, sizeof(CHECK_INPUT)));
     // a null buffer with a non-zero length must be refused, not read
-    const pc_crc_params &p = PC_CRC32_ISO_HDLC;
-    const uint32_t start = pc_crc_begin(&p);
-    TEST_ASSERT_EQUAL_HEX32(start, pc_crc_update(&p, start, NULL, 4));
+    const pc_crc_params *p = &PC_CRC32_ISO_HDLC;
+    const uint32_t start = pc_crc_begin(p);
+    TEST_ASSERT_EQUAL_HEX32(start, pc_crc_update(p, start, NULL, 4));
 }
 
 // A width outside the supported 8..32 range is clamped (defensive input validation): < 8 behaves as

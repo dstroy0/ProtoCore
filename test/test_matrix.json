@@ -1691,7 +1691,9 @@
         "+<server/webdav_handler.c>",
         "+<board_drivers/hal/portable/portable_platform.c>",
         "+<mmgr/frame.c>",
-        "+<server/clock/clock.c>"
+        "+<server/clock/clock.c>",
+        "+<network_drivers/network/route.c>",
+        "+<server/signaling/signaling.c>"
       ],
       "tests": ["test_keepalive"]
     },
@@ -2195,6 +2197,7 @@
       "desc": "Stateless HMAC-signed CSRF token (services/security/csrf): issue/verify with a fixed\nsecret unit-tests on the host (PC_ENABLE_CSRF set). Pulls in the SSH\nHMAC-SHA256 + SHA-256 core.",
       "flags": ["-DPC_ENABLE_CSRF=1"],
       "src": [
+        "+<mmgr/frame.c>",
         "+<services/security/csrf/csrf.c>",
         "+<crypto/mac/hmac_sha256.c>",
         "+<crypto/hash/sha256.c>",

@@ -129,7 +129,7 @@ void test_run_and_stop()
     TEST_ASSERT_EQUAL_size_t(0, c.params_len);
 
     // Both fail closed when the buffer is too small.
-    TEST_ASSERT_EQUAL_size_t(0, pc_fins_build_run(buf, 11, &h, RUN));
+    TEST_ASSERT_EQUAL_size_t(0, pc_fins_build_run(buf, 11, &h, FINS_RUN_MODE_RUN));
     TEST_ASSERT_EQUAL_size_t(0, pc_fins_build_stop(buf, 11, &h));
 }
 

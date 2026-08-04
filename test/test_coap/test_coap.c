@@ -113,12 +113,12 @@ void tearDown()
 // Request encoder
 // ---------------------------------------------------------------------------
 
-struct CoapEnc
+typedef struct
 {
     uint8_t *buf;
     size_t len;
     uint32_t last_opt;
-};
+} CoapEnc;
 
 static void enc_init(CoapEnc *e, uint8_t *buf, uint8_t type, uint8_t code, const uint8_t *token, uint8_t tkl,
                      uint16_t mid)
@@ -232,7 +232,7 @@ static size_t build(uint8_t *buf, uint8_t type, uint8_t code, const uint8_t *tok
 // Response decoder
 // ---------------------------------------------------------------------------
 
-struct CoapDec
+typedef struct
 {
     uint8_t ver, type, tkl, code;
     uint16_t mid;
@@ -243,7 +243,7 @@ struct CoapDec
     int block2;  // Block2 option value, or -1 if absent
     const uint8_t *payload;
     size_t payload_len;
-};
+} CoapDec;
 
 // Block option field accessors (RFC 7959 §2.2: value = (NUM<<4)|(M<<3)|SZX).
 #define BLK_NUM(v) ((uint32_t)(v) >> 4)
@@ -946,12 +946,12 @@ void test_malformed_options_bad_request()
     uint8_t resp[64];
     const uint8_t hdr[4] = {0x40, (uint8_t)COAP_GET, 0xAB, 0xCD}; // ver1, CON, tkl0, GET
 
-    struct Case
+    typedef struct
     {
         const char *name;
         uint8_t opt[4];
         size_t olen;
-    };
+    } Case;
     const Case cases[] = {
         {"delta15_reserved", {0xF5}, 1},            // delta nibble 15 is reserved
         {"olen15_reserved", {0x0F}, 1},             // length nibble 15 is reserved
