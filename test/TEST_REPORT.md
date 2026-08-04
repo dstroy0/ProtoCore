@@ -1,8 +1,8 @@
 # Test Report
 
-**Generated:** 2026-08-04 01:19:39
+**Generated:** 2026-08-04 01:42:06
 **Command:** `pio test` over 304 auto-discovered native envs (excludes native_pentest, native_codeql)
-**Result:** ✅ 13 passed - 212s
+**Result:** ✅ 13 passed - 239s
 
 ---
 
@@ -171,6 +171,21 @@
 | `test_plaintext`         | `native_plaintext`      |     0 |   ✅   | 00:00:01.134 |
 | `test_plaintext`         | `native_pool_workers`   |     0 |   ✅   | 00:00:00.615 |
 | `test_safety_scl`        | `native_safety_scl`     |     0 |   ✅   | 00:00:01.066 |
+| `test_h3_e2e`            | `native_h3_e2e`         |     0 |   ✅   | 00:00:05.049 |
+| `test_h3_server`         | `native_h3_server`      |     0 |   ✅   | 00:00:02.824 |
+| `test_j2735`             | `native_j2735`          |     0 |   ✅   | 00:00:00.898 |
+| `test_link_manager`      | `native_link_manager`   |     0 |   ✅   | 00:00:01.039 |
+| `test_openadr`           | `native_openadr`        |     0 |   ✅   | 00:00:00.913 |
+| `test_quic_crypto`       | `native_quic_crypto`    |     0 |   ✅   | 00:00:01.327 |
+| `test_southbound`        | `native_southbound`     |     0 |   ✅   | 00:00:01.039 |
+| `test_sqlite`            | `native_sqlite`         |     0 |   ✅   | 00:00:01.027 |
+| `test_ssh_server`        | `native_ssh`            |     0 |   ✅   | 00:00:02.356 |
+| `test_ssh_transport`     | `native_ssh`            |     0 |   ✅   | 00:00:01.463 |
+| `test_ssh_auth`          | `native_ssh`            |     0 |   ✅   | 00:00:01.637 |
+| `test_ssh_channel`       | `native_ssh`            |     0 |   ✅   | 00:00:00.713 |
+| `test_ssh_crypto`        | `native_ssh`            |     0 |   ✅   | 00:00:02.366 |
+| `test_tls13_kdf`         | `native_tls13_kdf`      |     0 |   ✅   | 00:00:01.210 |
+| `test_web_terminal`      | `native_web_terminal`   |     0 |   ✅   | 00:00:02.274 |
 
 ---
 
