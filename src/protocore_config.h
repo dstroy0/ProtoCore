@@ -5844,6 +5844,19 @@ from halves and is slower than the width it decomposes into"
 #define SSH_MAX_AUTH_ATTEMPTS 6
 #endif
 
+/**
+ * @brief Where the SSH RSA host private key is stored: the NVS namespace and the item in it.
+ *
+ * The server reads a DER-encoded PKCS#1/PKCS#8 blob from here at startup. Provisioning writes it
+ * once per device (docs/SSH.md). Both names are within the 15-character NVS limit.
+ */
+#ifndef PC_SSH_HOST_KEY_NS
+#define PC_SSH_HOST_KEY_NS "ssh_host_key"
+#endif
+#ifndef PC_SSH_HOST_KEY_ITEM
+#define PC_SSH_HOST_KEY_ITEM "priv_der"
+#endif
+
 // ---------------------------------------------------------------------------
 // Listener pool
 // ---------------------------------------------------------------------------

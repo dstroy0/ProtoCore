@@ -184,9 +184,11 @@ uintptr_t pc_platform_context_id(void);
 #include "esp_cpu.h"              // PC_ALLOW_LATE_INCLUDE: ordered - see above
 #include "esp_idf_version.h"      // PC_ALLOW_LATE_INCLUDE: ordered - names the IDF the driver headers came from
 #include "esp_random.h"           // PC_ALLOW_LATE_INCLUDE: ordered - see above
+#include "esp_system.h"           // PC_ALLOW_LATE_INCLUDE: ordered - see above
 #include "esp_timer.h"            // PC_ALLOW_LATE_INCLUDE: ordered - see above
 #include "freertos/FreeRTOS.h"    // PC_ALLOW_LATE_INCLUDE: ordered - only exists once the vendor above resolved to ESP
 #include "freertos/queue.h"       // PC_ALLOW_LATE_INCLUDE: ordered - see above
+#include "freertos/semphr.h"      // PC_ALLOW_LATE_INCLUDE: ordered - see above
 #include "freertos/task.h"        // PC_ALLOW_LATE_INCLUDE: ordered - see above
 #include "lwip/igmp.h"            // PC_ALLOW_LATE_INCLUDE: ordered - see above
 #include "lwip/pbuf.h"            // PC_ALLOW_LATE_INCLUDE: ordered - see above
@@ -196,6 +198,8 @@ uintptr_t pc_platform_context_id(void);
 
 typedef QueueHandle_t pc_platform_queue;
 typedef StaticQueue_t pc_platform_queue_ctrl; ///< a caller-owned queue control block
+typedef SemaphoreHandle_t pc_platform_mutex;
+typedef StaticSemaphore_t pc_platform_mutex_ctrl; ///< a caller-owned mutex control block
 typedef TaskHandle_t pc_platform_task;
 typedef TaskFunction_t pc_platform_task_fn;
 typedef BaseType_t pc_platform_status;
@@ -220,6 +224,13 @@ typedef struct tcpip_api_call_data pc_net_call; ///< the marshal record for a st
 #define pc_platform_queue_waiting uxQueueMessagesWaiting
 #define pc_platform_queue_waiting_isr uxQueueMessagesWaitingFromISR
 #define pc_platform_queue_delete vQueueDelete
+
+// A mutex over a caller-owned control block, so the object is BSS and no allocator runs
+// (SRC_LAW rule 2). take blocks until the holder releases; a caller that cannot block passes its
+// own tick budget instead of PC_PLATFORM_WAIT_FOREVER.
+#define pc_platform_mutex_create xSemaphoreCreateMutexStatic
+#define pc_platform_mutex_take xSemaphoreTake
+#define pc_platform_mutex_give xSemaphoreGive
 
 #define pc_platform_task_start xTaskCreatePinnedToCore
 #define pc_platform_task_stop vTaskDelete
@@ -319,6 +330,10 @@ PC_INLINE void pc_platform_gpio_mode(uint8_t pin, uint8_t mode)
 
 // Time base. esp_timer/esp_cpu are the IDF primitives underneath Arduino millis()/micros(), so
 // these are the same counters by a name the core can call from C.
+// Reboot. esp_restart() is the IDF entry point Arduino's ESP.restart() calls, so the core asks for
+// a restart without naming a framework object. It does not return.
+#define pc_platform_restart() esp_restart()
+
 #define pc_platform_micros() ((uint32_t)esp_timer_get_time())
 #define pc_platform_millis() ((uint32_t)(esp_timer_get_time() / 1000))
 #define pc_platform_cycles() ((uint32_t)esp_cpu_get_cycle_count())
