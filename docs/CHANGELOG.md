@@ -6,10 +6,12 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- the scoped-enum residue in test/, resolved by the compiler not by guessing ([`a2d479a`](https://github.com/dstroy0/ProtoCore/commit/a2d479a075ef1cba7646687739e29a8d18758579))
 - the C++ the native suites could not see, and the WAL's missing barrier ([`f38924b`](https://github.com/dstroy0/ProtoCore/commit/f38924b1a8ab7cae0058f64f777937c446842ed7))
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`0130b4c`](https://github.com/dstroy0/ProtoCore/commit/0130b4c09e9fdddd91ff1063a07d0c1cfd2e617b))
 - update CHANGELOG.md [skip ci] ([`97d6381`](https://github.com/dstroy0/ProtoCore/commit/97d6381beba48fff2fb04d524b2858c789286e39))
 
 ### Changes
