@@ -101,7 +101,6 @@ size_t pc_cip_build_get_attr_single(uint8_t *buf, size_t cap, uint16_t class_id,
 {
     uint8_t epath[12];
     size_t elen = pc_cip_build_epath(epath, sizeof(epath), class_id, instance_id, attribute_id, PROTO_TRUE);
-    // write_segment() inside pc_cip_build_epath() never fails and elen is never 0.
     if (!elen)
     {
         return 0;
@@ -113,7 +112,6 @@ size_t pc_cip_build_get_attr_all(uint8_t *buf, size_t cap, uint16_t class_id, ui
 {
     uint8_t epath[8]; // class + instance logical segments only (no attribute), worst case 4B each
     size_t elen = pc_cip_build_epath(epath, sizeof(epath), class_id, instance_id, 0, PROTO_FALSE);
-    // never overflows and elen is never 0.
     if (!elen)
     {
         return 0;
@@ -126,7 +124,6 @@ size_t pc_cip_build_set_attr_single(uint8_t *buf, size_t cap, uint16_t class_id,
 {
     uint8_t epath[12];
     size_t elen = pc_cip_build_epath(epath, sizeof(epath), class_id, instance_id, attribute_id, PROTO_TRUE);
-    // write_segment() inside pc_cip_build_epath() never fails and elen is never 0.
     if (!elen)
     {
         return 0;

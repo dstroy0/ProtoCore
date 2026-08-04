@@ -215,7 +215,6 @@ static int send_hello_retry(DtlsConn *c, const Tls13ClientHello *ch, const uint8
     }
     pc_sha256_update(&c->transcript, c->msgbuf, n);
     flight_reset(c);
-    // is reachable, and it is covered by a too-small output buffer.
     if (!flight_add(c, 0, c->msgbuf, n) || !flight_transmit(c, out, out_cap, out_len))
     {
         return fail(c, ALERT_INTERNAL_ERROR);

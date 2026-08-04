@@ -626,9 +626,6 @@ int32_t proto_begin(const WebServerConfig *cfg)
 #endif
     for (uint8_t i = 0; i < s_inst.listener_count; i++)
     {
-        // (port already in use) or PCB/queue exhaustion. The host lwIP mock's tcp_new/tcp_bind/
-        // tcp_listen_with_backlog always succeed and it exposes no failure hook, so the error return
-        // has no host path; it is covered on hardware.
         if (listener_add(i, s_inst.listen_ports[i], s_inst.listen_protos[i], s_inst.listen_tls[i]) < 0)
         {
             return (int32_t)PC_ERR_LISTEN_FAILED;
@@ -1676,8 +1673,6 @@ static void send_too_many_requests(uint8_t slot_id, uint32_t retry_after_s)
 
 proto_bool route_admits(const Route *r, uint8_t slot_id, HttpReq *req)
 {
-    // which sets is_active, and nothing ever clears it - so the dispatcher never walks an inactive
-    // slot. Kept because is_active is what makes an unfilled table entry safe to skip.
     if (!r->is_active)
     {
         return PROTO_FALSE;

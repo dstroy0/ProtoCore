@@ -43,8 +43,6 @@ void proto_register_builtins(void)
     register_if(PROTO_TELNET, pc_telnet_proto_handler());
 #endif
 #if PC_ENABLE_SSH
-    // the SSH env tests the handler directly and the session/accept-gate envs keep SSH off (they reuse
-    // the SSH proto slot). Device-reachable on any SSH firmware via session init; same gap as line 40.
     register_if(PROTO_SSH, ssh_proto_handler());
 #endif
 #if PC_NEED_MODBUS

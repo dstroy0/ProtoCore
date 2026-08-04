@@ -228,8 +228,6 @@ proto_bool dav_stream_put_begin(HttpReq *req)
         {
             continue;
         }
-        // iface_filter is always PC_IFACE_ANY and this gate never rejects. Kept so a DAV mount picks
-        // up the per-route interface gate for free if that overload is ever added.
         if (r->iface_filter != PC_IFACE_ANY && r->iface_filter != pc_conn_iface(slot))
         {
             continue;
@@ -269,9 +267,6 @@ proto_bool dav_stream_put_begin(HttpReq *req)
 void dav_stream_put_data(HttpReq *req, const uint8_t *data, size_t len)
 {
     uint8_t slot = (uint8_t)(req - http_pool);
-    // MAX_CONNS is a real address - but it belongs to an internal dispatch slot (e.g. HTTP/3), and the
-    // streaming-body hooks this runs from are driven only by the HTTP/1.x byte parser, which never parses
-    // for those slots. s_davput.put[] is MAX_CONNS long, so the bound still has to be here.
     if (slot >= MAX_CONNS)
     {
         return;
@@ -377,8 +372,6 @@ proto_bool try_serve_dav(uint8_t slot_id, HttpReq *req)
         {
             continue;
         }
-        // iface_filter is always PC_IFACE_ANY and this gate never rejects. Kept so a DAV mount picks
-        // up the per-route interface gate for free if that overload is ever added.
         if (r->iface_filter != PC_IFACE_ANY && r->iface_filter != pc_conn_iface(slot_id))
         {
             continue;
@@ -789,9 +782,6 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const Route *r)
                 {
                     break;
                 }
-                // static_assert at the top of this file pins PC_WEBDAV_BUF_SIZE small enough that
-                // s_dav.buf cannot hold PC_WEBDAV_MAX_ENTRIES entries. Kept so the count is bounded
-                // whatever those two knobs are set to.
                 if (count >= PC_WEBDAV_MAX_ENTRIES)
                 {
                     break;
@@ -834,10 +824,6 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const Route *r)
         }
         size_t n =
             pc_webdav_proppatch_ms(s_dav.buf, sizeof(s_dav.buf), req->path, (const char *)req->body, req->body_len);
-        // output is the ~120-byte prologue, the escaped href (capped at 256 by the builder's own esc
-        // buffer), at most PC_WEBDAV_MAX_PROPS echoed tags whose bytes all come out of req->body
-        // (capped at BODY_BUF_SIZE), and the ~110-byte epilogue - about 1.2 KB against a 2 KB buffer.
-        // It IS reachable at the 256-byte floor protocore_config.h enforces, so the guard stays.
         if (!n)
         {
             dav_send_status(slot_id, 507, ""); // Insufficient Storage: response did not fit the buffer

@@ -524,7 +524,6 @@ proto_bool pc_spinel_put_uint(SpinelWriter *w, uint32_t v)
     }
     uint8_t tmp[5];
     uint8_t n = pc_spinel_pack_uint(v, tmp, sizeof(tmp));
-    // uint32 (needs at most ceil(32/7) = 5 bytes of 7-bit groups), so pack_uint can never return 0 here.
     if (n == 0)
     {
         w->err = PROTO_TRUE;

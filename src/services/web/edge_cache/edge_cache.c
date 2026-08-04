@@ -328,9 +328,6 @@ int64_t edge_parse_http_date(const char *s, size_t len)
         return -1;
     }
 
-    // outright when it does not match), so this guard is defensive. Kept because it is the one place
-    // that would otherwise let an out-of-range month reach days_from_civil(). The five range checks
-    // below ARE reachable and are pinned by tests, so they stay outside this exclusion.
     if (mon < 1 || mon > 12)
     {
         return -1;
@@ -441,8 +438,6 @@ static proto_bool vary_emit_one(const char **pp, EdgeHdrLookup lookup, void *ctx
     }
     name[nl] = '\0';
     *pp = p;
-    // before calling in, so *p is always a content byte here and the loop above has already taken at
-    // least one character (or returned false on '*'). nl is therefore never 0.
     if (nl == 0)
     {
         return PROTO_TRUE; // nothing to emit; caller advances

@@ -29,7 +29,6 @@ typedef struct
 } PqCtx;
 static PqCtx s_pq;
 
-// the coverage host never starts tasks, and this has internal linkage.
 static const char *lane_name(pc_pq_lane lane)
 {
     switch (lane)

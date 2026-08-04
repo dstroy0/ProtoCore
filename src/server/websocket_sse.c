@@ -49,9 +49,6 @@ static const char WS_MAGIC[] = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 static proto_bool ws_accept_key(const char *client_key, char *out)
 {
     size_t key_len = strnlen(client_key, WS_MAX_KEY_LEN + 1);
-    // is MAX_VAL_LEN (48) bytes, so key_len cannot exceed WS_MAX_KEY_LEN (64). A build that raises
-    // MAX_VAL_LEN past 64 does reach it, and the bound is what lets the concat buffer below be sized
-    // WS_MAX_KEY_LEN + sizeof(WS_MAGIC) - so the guard stays either way.
     if (key_len > WS_MAX_KEY_LEN)
     {
         out[0] = '\0';

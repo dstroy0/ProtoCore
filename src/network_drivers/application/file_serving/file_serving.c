@@ -448,8 +448,6 @@ void serve_file_internal(uint8_t slot_id, proto_bool head, const pc_mnt_backend 
 void file_send_pump(uint8_t slot_id)
 {
     FileSend *s = &s_file.send[slot_id];
-    // sets s->active immediately before its call, and the poll loop in protocore.c only pumps a slot
-    // whose s_file.send[i].active is set. Kept so the pump is safe to call unconditionally.
     if (!s->active)
     {
         return;

@@ -942,8 +942,6 @@ void pc_coap_notify(const char *path)
         s_coap.obs[i].seq = (s_coap.obs[i].seq + 1) & 0xFFFFFF;
         size_t n = emit_header(s_coap.tx, sizeof(s_coap.tx), COAP_TYPE_NON, cresp.code, mid, s_coap.obs[i].token,
                                s_coap.obs[i].tkl);
-        // PC_COAP_MSG_BUF_SIZE >= PC_COAP_MAX_PAYLOAD + 16 (>= 17), so emit_header() above always
-        // has room for the 4-byte header plus a token of at most 8 bytes and never returns 0.
         if (n)
         {
             n = emit_options_payload(s_coap.tx, sizeof(s_coap.tx), n, cresp.code, (int32_t)s_coap.obs[i].seq,

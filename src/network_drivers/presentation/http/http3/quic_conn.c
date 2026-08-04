@@ -764,7 +764,6 @@ size_t pc_quic_conn_send(struct QuicConn *qc, uint8_t *out, size_t cap)
         // Send at the level the error was seen on (the peer holds those keys); if that space has since
         // been discarded, fall back to the highest level we still hold keys for.
         int level = qc->close_level;
-        // arm of the range check below can never be taken; the other three arms are all tested.
         if (level < QUIC_ENC_INITIAL || level > QUIC_ENC_APP || qc->space[level].discarded || !seal_keys(qc, level))
         {
             level = pc_quic_highest_sealed_level(qc);

@@ -31,7 +31,6 @@ static proto_bool emit_option(uint8_t *out, size_t *o, size_t cap, uint16_t delt
     {
         dn = (uint8_t)delta;
     }
-    // pc_wisun_build_coap, so an option delta never reaches the 13/14 extended-encoding branches.
     else if (delta < 269)
     {
         dn = 13;

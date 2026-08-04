@@ -95,8 +95,6 @@ proto_bool pc_ber_put_integer(BerEnc *e, long v)
     {
         tmp[k++] = (uint8_t)(val & 0xFF);
         val >>= 8;
-        // so the top byte's sign bit is clear) or -1 (v < 0, sign bit set), and either way the first operand has
-        // already ended the loop. It is a defensive bound on the tmp[] write, not a reachable exit.
     } while (!((val == 0 && !(tmp[k - 1] & 0x80)) || (val == -1 && (tmp[k - 1] & 0x80))) && k < (int)sizeof(tmp));
 
     enc_byte(e, (uint8_t)SNMP_TAG_BER_INTEGER);

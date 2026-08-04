@@ -58,10 +58,8 @@ static void ssh_emit(uint8_t i, const uint8_t *payload, size_t len)
         return;
     }
     TcpConn *conn = &conn_pool[s_sshc.conn_for_ssh[i]];
-    // NOT defensive - this fires in practice. pc_ssh_conn_rx checks only the slot mapping, never
-    // liveness, so a socket that dies between the inbound read and the reply reaches here with a
-    // verified the conn is ACTIVE with a pcb"; that is not true of the rx path, and the exclusion
-    // was hiding a live branch. test_conn_emit_drops_reply_on_dead_socket now covers it.)
+    // pc_ssh_conn_rx checks the slot mapping, never liveness, so a socket that died between the
+    // inbound read and this reply arrives here mapped but dead. Drop the reply.
     if (!pc_conn_active(conn->id))
     {
         return;
@@ -173,7 +171,6 @@ int pc_ssh_conn_close_channel(uint8_t ssh_slot, uint32_t channel)
 
     uint8_t close_msgs[10];
     size_t clen = 0;
-    // bytes of CHANNEL_EOF + CHANNEL_CLOSE, so that half of the guard is unreachable.
     if (pc_ssh_channel_build_close(ssh_slot, channel, close_msgs, &clen, sizeof(close_msgs)) != 0 || clen != 10)
     {
         return -1;
@@ -276,7 +273,6 @@ void pc_ssh_conn_poll(uint8_t conn_slot)
         {
             uint8_t buf[SSH_PKT_BUF_SIZE];
             size_t n = 0;
-            // SSH_PKT_BUF_SIZE, and generating the new ephemeral is infallible for a valid slot.
             if (ssh_transport_begin_rekey(j, buf, &n, sizeof(buf)) == 0)
             {
                 ssh_emit(j, buf, n);
@@ -329,7 +325,6 @@ void pc_ssh_conn_accept(uint8_t conn_slot)
     // Send the server identification banner (raw, before any binary packet).
     uint8_t banner[64];
     size_t blen = 0;
-    // buffer, so only the liveness half of this guard is exercisable.
     if (ssh_transport_server_banner(banner, &blen, sizeof(banner)) == 0 && pc_conn_active(conn->id))
     {
         pc_conn_send(conn->id, banner, (proto_u16)blen);

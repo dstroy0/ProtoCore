@@ -194,7 +194,6 @@ DeviceNetFragResult pc_devicenet_frag_feed(DeviceNetFragRx *rx, const uint8_t *b
     if (!(body[0] & DEVICENET_HDR_FRAG)) // a complete, non-fragmented message in one frame
     {
         pc_devicenet_frag_reset(rx);
-        // so this appends at most 254 octets, which the static_assert above guarantees MSG_MAX can hold.
         if (body_len > 1 && !frag_append(rx, body + 1, (uint8_t)(body_len - 1)))
         {
             return DEVICENET_FRAG_ERR;
@@ -216,7 +215,6 @@ DeviceNetFragResult pc_devicenet_frag_feed(DeviceNetFragRx *rx, const uint8_t *b
         pc_devicenet_frag_reset(rx);
         rx->active = PROTO_TRUE;
         rx->next_count = (uint8_t)((count + 1u) & DEVICENET_FRAG_COUNT_MASK);
-        // body_len - 2) into an empty buffer, which the static_assert above guarantees MSG_MAX can hold.
         if (data_len && !frag_append(rx, data, data_len))
         {
             return DEVICENET_FRAG_ERR;

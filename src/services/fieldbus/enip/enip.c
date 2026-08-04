@@ -147,7 +147,6 @@ size_t pc_eip_build_send_rr_data(uint8_t *buf, size_t cap, uint32_t session_hand
     {
         memcpy(h.sender_context, sender_context, 8);
     }
-    // header-only build (data_len=0) can never fail here; the branch on the `if` itself is dead too.
     if (pc_eip_build(buf, cap, &h, NULL, 0) == 0) // writes only the 24-octet header, length 0
     {
         return 0;

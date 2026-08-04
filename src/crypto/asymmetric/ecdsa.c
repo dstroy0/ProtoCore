@@ -394,10 +394,6 @@ static void reduce_mod(uint32_t r[8], const uint32_t prod[16], const uint32_t m[
     for (int bit = 511; bit >= 0; bit--)
     {
         uint32_t carry = 0;
-        // this suite's existing native tests alone drive it past 7e9 hits; gcovr's sonarqube exporter
-        // treats any hit count >= 2^32 as "suspicious" (see --gcov-suspicious-hits-threshold, default
-        // 2^32) and zeroes it, even though raw `gcov -b -c` on this file's .gcda reports 100% line and
-        // branch execution here. This is a coverage-tool counter-threshold artifact, not an actual gap.
         for (int k = 0; k < 9; k++)
         {
             uint32_t nc = acc[k] >> 31;
@@ -847,7 +843,6 @@ static proto_bool ecdsa_sign_core(uint8_t sig[64], const uint8_t h1[32], const u
         {
             return PROTO_TRUE;
         }
-        // candidate, which does not happen in practice - see the comment above ecdsa_try_sign.
         uint8_t buf[33]; // retry: K = HMAC_K(V || 0x00); V = HMAC_K(V)
         memcpy(buf, V, 32);
         buf[32] = 0x00;

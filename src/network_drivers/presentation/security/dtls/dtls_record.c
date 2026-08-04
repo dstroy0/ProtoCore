@@ -38,8 +38,6 @@ static void build_nonce(const uint8_t iv[12], uint64_t seq, uint8_t nonce[12])
 // RFC 9000 Appendix A.3 packet-number decoding: the candidate closest to `expected`).
 static uint64_t seq_decode(uint64_t expected, uint64_t truncated, unsigned bits)
 {
-    // where seq_len is 1 or 2 (the unified header's S bit selects an 8- or 16-bit sequence number), so
-    // bits is always 8 or 16 - never 0 and never >= 64. Kept as a defensive guard against a future caller.
     if (bits == 0 || bits >= 64)
     {
         return truncated;

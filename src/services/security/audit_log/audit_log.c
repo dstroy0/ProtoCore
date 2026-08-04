@@ -358,9 +358,6 @@ int pc_audit_dump_json(char *out, size_t cap)
     {
         if (i > 0)
         {
-            // rendered successfully, and its own overflow check (pc_audit_format's or snprintf's)
-            // required strictly less than the cap it was given - so cap - pos is always >= 1 at this
-            // point, exactly the one byte this comma needs. The guard can never fire.
             if (pos + 1 > cap)
             {
                 return 0;

@@ -194,7 +194,6 @@ size_t pc_mms_read_request(uint32_t invoke_id, const char *item_name, uint8_t *o
     size_t idlen = int_content(invoke_id, idc);
     uint8_t body[256];
     size_t bn = tlv(MMS_TAG_INVOKE_ID, idc, idlen, body, sizeof(body));
-    // because name_len is capped at 128 above. Unreachable, kept defensively.
     if (!bn || bn + n > sizeof(body))
     {
         return 0;

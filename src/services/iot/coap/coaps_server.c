@@ -337,14 +337,6 @@ static void coaps_service_slot(CoapsSlot *s, uint32_t now, uint8_t *out, size_t 
         {
             server_send(s->peer_ip, s->peer_port, out, (size_t)n);
         }
-        // (not-awaiting-reply/failed/done, not-yet-due) recompute the exact same fields and clock this call's
-        // guard (timeout_ms(&s->conn) == 0) already evaluated true for, with no state change in between, so
-        // neither can fire. Past those it either abandons the handshake (-1, retransmit ceiling) or fails to
-        // build a record (-1), or returns flight_transmit's byte count, which is never 0: flight_arm (the only
-        // place that sets awaiting_reply) always runs right after at least one flight_add call (1 message for
-        // a HelloRetryRequest flight, 5 for the main flight), and nothing resets flight_count to 0 while
-        // awaiting_reply stays true - so flight_transmit's loop always contributes at least one record's worth
-        // of bytes when it succeeds.
         else if (n < 0)
         {
             s->used = PROTO_FALSE; // retransmission ceiling hit: abandon the handshake

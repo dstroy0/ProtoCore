@@ -705,7 +705,6 @@ size_t pc_tls13_build_cert_verify(uint8_t *out, size_t cap, const uint8_t transc
 {
     uint8_t content[64 + 33 + 1 + 32];
     size_t clen = pc_tls13_cert_verify_content(content, sizeof(content), transcript_hash, PROTO_TRUE);
-    // pc_tls13_cert_verify_content always succeeds here; the guard cannot fire.
     if (!clen)
     {
         return 0;

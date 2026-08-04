@@ -359,8 +359,6 @@ void send_chunked(uint8_t slot_id, int code, const char *content_type, ChunkSour
 void chunk_send_pump(uint8_t slot_id)
 {
     ChunkSend *s = &s_resp.chunk[slot_id];
-    // s->active immediately before its call, and the poll loop in protocore.c only pumps a slot whose
-    // s_resp.chunk[i].active is set. Kept so the pump is safe to call unconditionally.
     if (!s->active)
     {
         return;
