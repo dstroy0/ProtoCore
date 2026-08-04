@@ -252,13 +252,11 @@ int pc_ssh_conn_open_forwarded(uint8_t ssh_slot, const char *conn_addr, uint16_t
     pc_conn_flush(conn->id);
     pc_plaintext_release(mark);
     return ch;
-    pc_plaintext_release(mark);
 }
 
 void pc_ssh_conn_poll(uint8_t conn_slot)
 {
-    // The dispatch loop calls on_poll for every slot uniformly (no per-protocol gate); it used to poll
-    // only ACTIVE slots, so keep that here to preserve behavior.
+    // Skip a slot that is not ACTIVE.
     TcpConn *conn = &conn_pool[conn_slot];
     if (!pc_conn_active(conn_slot))
     {
