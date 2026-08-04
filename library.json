@@ -60,6 +60,8 @@
     ]
   },
   "build": {
-    "srcDir": "src"
+    "srcDir": "src",
+    "unflags": ["-std=gnu99"],
+    "flags": ["-std=gnu11"]
   }
 }
