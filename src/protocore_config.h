@@ -2916,6 +2916,22 @@ from halves and is slower than the width it decomposes into"
 #endif
 
 /**
+ * @brief Shared SPI bus pins for the peripheral drivers, the same way the I2C pins above are
+ * shared. The default -1 uses the platform's default pins for its VSPI/HSPI host. Set them when
+ * those pins are taken, most often by a W5500 SPI Ethernet on a part with no RMII MAC (the
+ * ESP32-S3 / C3), which drives this same bus.
+ */
+#ifndef PC_SPI_MOSI_PIN
+#define PC_SPI_MOSI_PIN -1
+#endif
+#ifndef PC_SPI_MISO_PIN
+#define PC_SPI_MISO_PIN -1
+#endif
+#ifndef PC_SPI_SCLK_PIN
+#define PC_SPI_SCLK_PIN -1
+#endif
+
+/**
  * @brief I2C real-time-clock driver (DS1307 / DS3231) - a battery-backed time source.
  *
  * Default off. services/peripherals/rtc reads and sets a DS1307/DS3231 RTC over I2C (Wire), so the device

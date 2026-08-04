@@ -270,6 +270,7 @@
 #include "services/peripherals/sdi12/sdi12.h"
 #include "services/peripherals/sen0192/sen0192.h"
 #include "services/peripherals/sht3x/sht3x.h"
+#include "services/peripherals/spi.h"
 #include "services/peripherals/vl53l0x/vl53l0x.h"
 #include "services/radio/ble_gatt/ble_gatt.h"
 #include "services/radio/cc1101/cc1101.h"
