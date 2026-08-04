@@ -62,9 +62,9 @@ void pc_ssh_auth_set_pubkey_cb(SshPubkeyCb cb)
 // which is what separates it from the by-reference reads below.
 static proto_bool read_string(const uint8_t *p, size_t len, size_t *off, char *out, size_t outcap)
 {
-    size_t start{*off};
-    const uint8_t *s{NULL};
-    uint32_t n{0};
+    size_t start = *off;
+    const uint8_t *s = NULL;
+    uint32_t n = 0;
     if (!pc_rd_str(p, len, off, &s, &n))
     {
         return PROTO_FALSE;

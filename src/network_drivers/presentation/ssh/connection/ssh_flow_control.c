@@ -52,7 +52,7 @@ proto_bool pc_ssh_flow_send_allows(const SshFlow *f, size_t len)
 
 uint32_t pc_ssh_flow_send_cap(const SshFlow *f, uint32_t want)
 {
-    uint32_t cap{want};
+    uint32_t cap = want;
     if (cap > f->peer_window)
     {
         cap = f->peer_window;
@@ -71,7 +71,7 @@ void pc_ssh_flow_send_take(SshFlow *f, uint32_t n)
 
 void pc_ssh_flow_peer_add(SshFlow *f, uint32_t add)
 {
-    uint32_t w{f->peer_window};
+    uint32_t w = f->peer_window;
     f->peer_window = (w + add < w) ? 0xFFFFFFFFu : (w + add);
 }
 

@@ -11,7 +11,7 @@
 
 #include "lfs_mock.h"
 #include "network_drivers/session/proto_handler.h" // proto_register/proto_get: the slot-poll dispatch table
-#include "network_drivers/transport/listener.h"    // listener_stop_all() for begin() test cleanup
+#include "network_drivers/transport/listener.h"    // listener_stop_all() for proto_begin(NULL) test cleanup
 #include "protocore.h"                             // ws/sse upgrade entry points, pc_resp_holds_slot
 #include <unity.h>
 
@@ -1457,7 +1457,7 @@ void test_send_binary_body_with_nul(void)
     http_reset(0);
     const uint8_t body[] = {0x00, 0x00, 0x00, 0x00, 0x05, 'h', 'e', 0x00, 'l', 'o'}; // NUL-laden, 10 octets
     tcp_capture_reset();
-    send_text(0, 200, "application/grpc-web+proto", body, sizeof(body));
+    send_bin(0, 200, "application/grpc-web+proto", body, sizeof(body));
     const char *out = tcp_captured();
     size_t out_len = tcp_captured_len();
     tcp_capture_disable();
@@ -1502,54 +1502,54 @@ void test_allow_header_lists_methods(void)
 }
 
 // listen() registers listener slots and rejects once the table (MAX_LISTENERS)
-// is full; begin() requires at least one listener, then brings up the pools and
+// is full; proto_begin() requires at least one listener, then brings up the pools and
 // listeners. Uses a local server so the global listener slots are the only
 // shared state (released with listener_stop_all()).
 void test_listen_and_begin(void)
 {
 
-    // begin() before any listen() -> no-listeners error, no side effects.
-    TEST_ASSERT_EQUAL_INT32(PC_ERR_NO_LISTENERS, begin());
+    // proto_begin() before any listen() -> no-listeners error, no side effects.
+    TEST_ASSERT_EQUAL_INT32(PC_ERR_NO_LISTENERS, proto_begin(NULL));
 
     // Fill the listener table, then the next listen() is rejected. listen() returns each
     // listener's id (its index), so the i-th call returns i.
     for (int i = 0; i < MAX_LISTENERS; i++)
     {
-        TEST_ASSERT_EQUAL_INT32(i, listen((uint16_t)(9100 + i)));
+        TEST_ASSERT_EQUAL_INT32(i, listen((uint16_t)(9100 + i), PROTO_HTTP));
     }
-    TEST_ASSERT_EQUAL_INT32(PC_ERR_LISTENER_FULL, listen(9999));
+    TEST_ASSERT_EQUAL_INT32(PC_ERR_LISTENER_FULL, listen(9999, PROTO_HTTP));
 
-    // begin() now brings the registered listeners up.
-    TEST_ASSERT_EQUAL_INT32(PC_OK, begin());
+    // proto_begin() now brings the registered listeners up.
+    TEST_ASSERT_EQUAL_INT32(PC_OK, proto_begin(NULL));
     listener_stop_all(); // release the global listener slots for later tests
 }
 
-// begin(port) is the one-call convenience: listen(port) then begin(). When the
+// begin(port) is the one-call convenience: listen(port) then proto_begin(). When the
 // listener table is already full its listen() fails and begin(port) forwards the
 // error without binding.
 void test_begin_port_convenience(void)
 {
-    TEST_ASSERT_EQUAL_INT32(PC_OK, begin_http((uint16_t)8080));
+    TEST_ASSERT_EQUAL_INT32(PC_OK, begin_http((uint16_t)8080, NULL));
     listener_stop_all();
 
     for (int i = 0; i < MAX_LISTENERS; i++)
     {
-        listen((uint16_t)(9300 + i));
+        listen((uint16_t)(9300 + i), PROTO_HTTP);
     }
-    TEST_ASSERT_EQUAL_INT32(PC_ERR_LISTENER_FULL, begin_http((uint16_t)9999));
+    TEST_ASSERT_EQUAL_INT32(PC_ERR_LISTENER_FULL, begin_http((uint16_t)9999, NULL));
 }
 
-// restart() = stop() + begin(): it forwards the no-listeners error before any listen(), and
+// restart() = stop() + proto_begin(): it forwards the no-listeners error before any listen(), and
 // otherwise cycles the listeners back up. stop() must be an idempotent teardown.
 void test_restart_and_stop(void)
 {
-    // Before any listener, restart() forwards the no-listeners error (no stop()/begin()).
-    TEST_ASSERT_EQUAL_INT32(PC_ERR_NO_LISTENERS, restart());
+    // Before any listener, restart() forwards the no-listeners error (no stop()/proto_begin()).
+    TEST_ASSERT_EQUAL_INT32(PC_ERR_NO_LISTENERS, restart(NULL));
 
     // Bring a listener up, then restart() tears down and re-binds it. The first listen() returns id 0.
-    TEST_ASSERT_EQUAL_INT32(0, listen((uint16_t)9500));
-    TEST_ASSERT_EQUAL_INT32(PC_OK, begin());
-    TEST_ASSERT_EQUAL_INT32(PC_OK, restart());
+    TEST_ASSERT_EQUAL_INT32(0, listen((uint16_t)9500, PROTO_HTTP));
+    TEST_ASSERT_EQUAL_INT32(PC_OK, proto_begin(NULL));
+    TEST_ASSERT_EQUAL_INT32(PC_OK, restart(NULL));
 
     // stop() tears everything down; a second stop() with nothing active is a safe no-op.
     stop();

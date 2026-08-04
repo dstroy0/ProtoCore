@@ -64,6 +64,12 @@ static void send_our_settings(H2Conn *c)
     wr(c, buf, n);
 }
 
+// Builds a RST_STREAM naming stream 0 with error code 0, in the shape send_control takes.
+static size_t build_rst_refuse(uint8_t *b, size_t cap)
+{
+    return pc_h2_build_rst_stream(b, cap, 0, 0);
+}
+
 static void send_control(H2Conn *c, size_t (*build)(uint8_t *, size_t))
 {
     uint8_t buf[H2_FRAME_HEADER_LEN + 16];
@@ -154,7 +160,7 @@ static proto_bool handle_headers(H2Conn *c, const H2FrameHeader *h, const uint8_
     c->last_peer_stream = h->stream_id;
     if (!alloc_stream(c, h->stream_id))
     {
-        send_control(c, [](uint8_t *b, size_t cap) { return pc_h2_build_rst_stream(b, cap, 0, 0); });
+        send_control(c, build_rst_refuse);
         return PROTO_TRUE; // refuse quietly is fine; keep the connection
     }
 

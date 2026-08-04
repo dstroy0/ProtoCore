@@ -16,33 +16,34 @@
 #ifndef PROTOCORE_TEST_THROWAWAY_KEY_H
 #define PROTOCORE_TEST_THROWAWAY_KEY_H
 
-#include <cstdint>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <random>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+// Value of one hex digit, or -1 if the character is not one.
+static inline int throwaway_nib(char c)
+{
+    if (c >= '0' && c <= '9')
+    {
+        return c - '0';
+    }
+    if (c >= 'a' && c <= 'f')
+    {
+        return c - 'a' + 10;
+    }
+    if (c >= 'A' && c <= 'F')
+    {
+        return c - 'A' + 10;
+    }
+    return -1;
+}
 
 // Fill out[32] with a throwaway Ed25519 seed. If PC_TEST_KEY_SEED holds 64 hex
 // chars it is used verbatim (reproduce a run); otherwise a fresh random seed is
 // drawn. Either way the seed is logged with the exact re-pin command.
 static inline void throwaway_ed25519_seed(uint8_t out[32])
 {
-    auto nib = [](char c) -> int {
-        if (c >= '0' && c <= '9')
-        {
-            return c - '0';
-        }
-        if (c >= 'a' && c <= 'f')
-        {
-            return c - 'a' + 10;
-        }
-        if (c >= 'A' && c <= 'F')
-        {
-            return c - 'A' + 10;
-        }
-        return -1;
-    };
-
     const char *pin = getenv("PC_TEST_KEY_SEED");
     proto_bool pinned = PROTO_FALSE;
     if (pin && strlen(pin) >= 64)
@@ -51,7 +52,7 @@ static inline void throwaway_ed25519_seed(uint8_t out[32])
         pinned = PROTO_TRUE;
         for (int i = 0; i < 32 && pinned; i++)
         {
-            int hi = nib(pin[2 * i]), lo = nib(pin[2 * i + 1]);
+            int hi = throwaway_nib(pin[2 * i]), lo = throwaway_nib(pin[2 * i + 1]);
             if (hi < 0 || lo < 0)
             {
                 pinned = PROTO_FALSE; // not valid hex -> fall back to random (out[] never saw pin bytes)
@@ -74,11 +75,19 @@ static inline void throwaway_ed25519_seed(uint8_t out[32])
         return;
     }
 
-    std::random_device rd; // OS entropy on the host
-    for (int i = 0; i < 32; i++)
+    // OS entropy on the host. A seed the kernel did not supply is not a throwaway key, so a read
+    // that comes up short aborts the run rather than handing back a partly-filled buffer.
+    FILE *urandom = fopen("/dev/urandom", "rb");
+    if (!urandom || fread(out, 1, 32, urandom) != 32)
     {
-        out[i] = (uint8_t)(rd() & 0xff);
+        printf("[throwaway-key] no OS entropy: /dev/urandom unreadable\n");
+        if (urandom)
+        {
+            fclose(urandom);
+        }
+        abort();
     }
+    fclose(urandom);
 
     char hex[65];
     static const char *H = "0123456789abcdef";

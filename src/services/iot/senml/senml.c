@@ -167,7 +167,7 @@ size_t pc_senml_build(const pc_codec *c, uint8_t *buf, size_t cap, const SenmlRe
     {
         return 0;
     }
-    pc_span w{pc_span_from(buf, cap)};
+    pc_span w = pc_span_from(buf, cap);
     c->put_array(&w, count);
     for (size_t i = 0; i < count; i++)
     {

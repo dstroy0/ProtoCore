@@ -19,7 +19,7 @@ void tearDown()
 // echoed object index (sub 0), and up to 4 expedited payload octets (little-endian).
 static CanFrame make_sdo_tx(uint8_t node, uint8_t cmd, uint16_t index, uint32_t payload)
 {
-    CanFrame f{};
+    CanFrame f = {0};
     f.id = 0x580u + node;
     f.extended = PROTO_FALSE;
     f.rtr = PROTO_FALSE;
@@ -185,7 +185,7 @@ void test_controlword_invalid_command()
 // null-frame reject (the false side of the pc_canopen_build_sdo_write return).
 void test_sdo_set_velocity_torque()
 {
-    CanFrame f{};
+    CanFrame f = {0};
     TEST_ASSERT_TRUE(pc_cia402_sdo_set_target_velocity(&f, 2, 0x0A0B0C0D));
     TEST_ASSERT_EQUAL_HEX32(0x602u, f.id);   // SDO_RX (0x600) + node 2
     TEST_ASSERT_EQUAL_HEX8(0xFF, f.data[1]); // index 0x60FF LE
