@@ -13,7 +13,7 @@
 
 #if PROTOCORE_HOT
 #include "services/peripherals/i2c.h"
-#include <Wire.h>
+#include "shared_primitives/endian.h" // pc_wr16be / pc_rd16be: the registers are big-endian
 #endif
 int32_t pc_ina219_bus_mv(uint16_t raw)
 {
@@ -53,39 +53,34 @@ int32_t pc_ina219_power_uw(int16_t raw, uint32_t current_lsb_ua)
 
 #if PROTOCORE_HOT
 
-// All INA219 I2C-binding state, owned by one instance (internal linkage): the device address
-// and the current LSB, grouped so it is one named owner, unreachable from any other TU.
+// All INA219 I2C-binding state, owned by one instance (internal linkage): the device address,
+// the current LSB, and the bus frame, grouped so it is one named owner, unreachable from any
+// other TU. The frame is a member rather than a local because a bus transfer is composed in
+// place: three bytes is the widest this part sends (a register byte plus a 16-bit value).
 typedef struct
 {
     uint8_t addr;
     uint32_t lsb_ua;
+    uint8_t frame[3];
 } Ina219Ctx;
 static Ina219Ctx s_ina = {.addr = PC_INA219_I2C_ADDR, .lsb_ua = PC_INA219_CURRENT_LSB_UA};
 
+// One transaction: the register byte then its value, big-endian.
 static proto_bool wr16(uint8_t reg, uint16_t v)
 {
-    Wire.beginTransmission(s_ina.addr);
-    Wire.write(reg);
-    Wire.write((uint8_t)(v >> 8)); // INA219 registers are big-endian
-    Wire.write((uint8_t)(v & 0xFF));
-    return Wire.endTransmission() == 0;
+    s_ina.frame[0] = reg;
+    (void)pc_wr16be(&s_ina.frame[1], v);
+    return pc_i2c_write(s_ina.addr, s_ina.frame, sizeof(s_ina.frame));
 }
 
+// Name the register, then turn the bus around without releasing it (repeated start).
 static proto_bool rd16(uint8_t reg, uint16_t *v)
 {
-    Wire.beginTransmission(s_ina.addr);
-    Wire.write(reg);
-    if (Wire.endTransmission(PROTO_FALSE) != 0)
+    if (!pc_i2c_write_read(s_ina.addr, &reg, 1, s_ina.frame, 2))
     {
         return PROTO_FALSE;
     }
-    if (Wire.requestFrom((int)s_ina.addr, 2) != 2)
-    {
-        return PROTO_FALSE;
-    }
-    uint8_t hi = (uint8_t)Wire.read();
-    uint8_t lo = (uint8_t)Wire.read();
-    *v = (uint16_t)(((uint16_t)hi << 8) | lo);
+    *v = pc_rd16be(s_ina.frame);
     return PROTO_TRUE;
 }
 
