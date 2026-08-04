@@ -242,20 +242,29 @@ proto_bool pc_espnow_broadcast(uint8_t type, const uint8_t *payload, size_t len)
 
 #else // host build - no radio
 
-proto_bool pc_espnow_begin(uint8_t, pc_espnow_recv_fn)
+proto_bool pc_espnow_begin(uint8_t channel, pc_espnow_recv_fn cb)
 {
+    (void)channel;
+    (void)cb;
     return PROTO_FALSE;
 }
 proto_bool pc_espnow_add_peer(const uint8_t mac[6])
 {
     return pc_espnow_peer_add(mac);
 }
-proto_bool pc_espnow_send(const uint8_t *, uint8_t, const uint8_t *, size_t)
+proto_bool pc_espnow_send(const uint8_t *mac, uint8_t type, const uint8_t *payload, size_t len)
 {
+    (void)mac;
+    (void)type;
+    (void)payload;
+    (void)len;
     return PROTO_FALSE;
 }
-proto_bool pc_espnow_broadcast(uint8_t, const uint8_t *, size_t)
+proto_bool pc_espnow_broadcast(uint8_t type, const uint8_t *payload, size_t len)
 {
+    (void)type;
+    (void)payload;
+    (void)len;
     return PROTO_FALSE;
 }
 

@@ -282,8 +282,10 @@ const HmmdReport *pc_hmmd_last()
 
 #else // host build: no UART
 
-proto_bool pc_hmmd_begin(int, int)
+proto_bool pc_hmmd_begin(int rx_pin, int tx_pin)
 {
+    (void)rx_pin;
+    (void)tx_pin;
     return PROTO_FALSE;
 }
 

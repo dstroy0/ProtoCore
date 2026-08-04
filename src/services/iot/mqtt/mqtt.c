@@ -1056,23 +1056,36 @@ void pc_mqtt_disconnect()
 
 #else // host build: transport is a stub
 
-void pc_mqtt_set_message_cb(MqttMessageCb)
+void pc_mqtt_set_message_cb(MqttMessageCb cb)
 {
+    (void)cb;
 }
-proto_bool pc_mqtt_connect(const char *, uint16_t, proto_bool, const MqttConnectOpts *)
+proto_bool pc_mqtt_connect(const char *host, uint16_t port, proto_bool use_tls, const MqttConnectOpts *opts)
 {
+    (void)host;
+    (void)port;
+    (void)use_tls;
+    (void)opts;
     return PROTO_FALSE;
 }
-proto_bool pc_mqtt_publish(const char *, const uint8_t *, size_t, uint8_t, proto_bool)
+proto_bool pc_mqtt_publish(const char *topic, const uint8_t *payload, size_t len, uint8_t qos, proto_bool retain)
 {
+    (void)topic;
+    (void)payload;
+    (void)len;
+    (void)qos;
+    (void)retain;
     return PROTO_FALSE;
 }
-proto_bool pc_mqtt_subscribe(const char *, uint8_t)
+proto_bool pc_mqtt_subscribe(const char *topic, uint8_t qos)
 {
+    (void)topic;
+    (void)qos;
     return PROTO_FALSE;
 }
-proto_bool pc_mqtt_unsubscribe(const char *)
+proto_bool pc_mqtt_unsubscribe(const char *topic)
 {
+    (void)topic;
     return PROTO_FALSE;
 }
 proto_bool pc_mqtt_loop()

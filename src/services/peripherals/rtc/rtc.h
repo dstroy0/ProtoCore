@@ -12,7 +12,7 @@
  * registers at address 0x68, so one driver serves both. Zero heap; gated by PC_ENABLE_RTC.
  *
  * The BCD <-> Unix-epoch conversion (12/24-hour, leap years, range validation) is pure and
- * host-tested; only the register read/write (Wire) touches hardware.
+ * host-tested; only the register read/write touches hardware, over the shared I2C bus owner.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -47,13 +47,13 @@ proto_bool pc_rtc_regs_to_epoch(const uint8_t regs[RTC_REG_COUNT], uint32_t *epo
 void pc_rtc_epoch_to_regs(uint32_t epoch, uint8_t regs[RTC_REG_COUNT]);
 
 /** @brief Initialize the I2C bus for the RTC. @return true on a host build (no-op) or on ESP32. */
-proto_bool pc_rtc_begin();
+proto_bool pc_rtc_begin(void);
 
 /**
  * @brief Read the current time from the RTC over I2C.
  * @return seconds since 1970-01-01 UTC, or 0 if the RTC is absent / holds an invalid time.
  */
-uint32_t pc_rtc_read_epoch();
+uint32_t pc_rtc_read_epoch(void);
 
 /** @brief Set the RTC to @p epoch over I2C. @return true if the write succeeded. */
 proto_bool pc_rtc_set_epoch(uint32_t epoch);
@@ -62,7 +62,7 @@ proto_bool pc_rtc_set_epoch(uint32_t epoch);
  * @brief A ::TimeSourceFn wrapper (returns pc_rtc_read_epoch()) to register with
  * pc_time_source_add(). @return the RTC time, or 0 when unavailable.
  */
-uint32_t pc_rtc_time_source();
+uint32_t pc_rtc_time_source(void);
 
 #endif // PC_ENABLE_RTC
 

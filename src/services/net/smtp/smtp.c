@@ -718,8 +718,10 @@ SmtpResult smtp_send(const SmtpConfig *cfg, const SmtpMessage *msg)
 
 #else // host build: no lwIP. smtp_run() above is host-testable; smtp_send() is a stub.
 
-SmtpResult smtp_send(const SmtpConfig *, const SmtpMessage *)
+SmtpResult smtp_send(const SmtpConfig *cfg, const SmtpMessage *msg)
 {
+    (void)cfg;
+    (void)msg;
     return SMTP_ERR_CONNECT;
 }
 

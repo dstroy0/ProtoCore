@@ -20,7 +20,6 @@
 
 #if PROTOCORE_HOT
 #include "services/peripherals/i2c.h"
-#include <Wire.h>
 #endif
 uint16_t pc_mpr121_touched(uint8_t status_lo, uint8_t status_hi)
 {
@@ -95,60 +94,49 @@ size_t pc_mpr121_build_init(uint8_t *buf, size_t cap, uint8_t n, uint8_t touch_t
 
 #if PROTOCORE_HOT
 
-// All MPR121 I2C-binding state, owned by one instance (internal linkage): the device address,
-// so it is one named owner, unreachable from any other translation unit.
+// All MPR121 I2C-binding state, owned by one instance (internal linkage): the device address, the
+// register-pair frame, and the bring-up sequence buffer, so it is one named owner, unreachable
+// from any other translation unit. Both buffers are members rather than locals because a transfer
+// is composed in place: a write is one register byte and its value, and the bring-up sequence is
+// the register/value pairs pc_mpr121_build_init lays down.
 typedef struct
 {
     uint8_t addr;
+    uint8_t frame[2];
+    uint8_t init[MPR121_INIT_MAX];
 } Mpr121Ctx;
-static Mpr121Ctx s_mpr = {.addr = PC_MPR121_I2C_ADDR};
+static Mpr121Ctx s_mpr = {.addr = PC_MPR121_I2C_ADDR, .frame = {0}, .init = {0}};
 
 static proto_bool wr(uint8_t reg, uint8_t val)
 {
-    Wire.beginTransmission(s_mpr.addr);
-    Wire.write(reg);
-    Wire.write(val);
-    return Wire.endTransmission() == 0;
+    s_mpr.frame[0] = reg;
+    s_mpr.frame[1] = val;
+    return pc_i2c_write(s_mpr.addr, s_mpr.frame, sizeof(s_mpr.frame));
 }
 
 static proto_bool rd(uint8_t reg, uint8_t *out, uint8_t n)
 {
-    Wire.beginTransmission(s_mpr.addr);
-    Wire.write(reg);
-    if (Wire.endTransmission(PROTO_FALSE) != 0)
-    {
-        return PROTO_FALSE;
-    }
-    if (Wire.requestFrom((int)s_mpr.addr, (int)n) != (int)n)
-    {
-        return PROTO_FALSE;
-    }
-    for (uint8_t i = 0; i < n; i++)
-    {
-        out[i] = (uint8_t)Wire.read();
-    }
-    return PROTO_TRUE;
+    return pc_i2c_write_read(s_mpr.addr, &reg, 1, out, n);
 }
 
 proto_bool pc_mpr121_begin(uint8_t addr)
 {
     s_mpr.addr = addr ? addr : (uint8_t)PC_MPR121_I2C_ADDR;
     pc_i2c_begin();
-    uint8_t seq[MPR121_INIT_MAX];
-    size_t n = pc_mpr121_build_init(seq, sizeof(seq), MPR121_ELECTRODES, PC_MPR121_TOUCH_THRESHOLD,
+    size_t n = pc_mpr121_build_init(s_mpr.init, sizeof(s_mpr.init), MPR121_ELECTRODES, PC_MPR121_TOUCH_THRESHOLD,
                                     PC_MPR121_RELEASE_THRESHOLD);
     if (n == 0)
     {
         return PROTO_FALSE;
     }
-    if (!wr(seq[0], seq[1])) // soft reset first; then let the chip settle
+    if (!wr(s_mpr.init[0], s_mpr.init[1])) // soft reset first; then let the chip settle
     {
         return PROTO_FALSE;
     }
     pcdelay(1);
     for (size_t i = 2; i + 1 < n; i += 2)
     {
-        if (!wr(seq[i], seq[i + 1]))
+        if (!wr(s_mpr.init[i], s_mpr.init[i + 1]))
         {
             return PROTO_FALSE;
         }
@@ -156,14 +144,13 @@ proto_bool pc_mpr121_begin(uint8_t addr)
     return PROTO_TRUE;
 }
 
-uint16_t pc_mpr121_read_touched()
+uint16_t pc_mpr121_read_touched(void)
 {
-    uint8_t s[2] = {0, 0};
-    if (!rd(0x00, s, 2))
+    if (!rd(0x00, s_mpr.frame, 2))
     {
         return 0;
     }
-    return pc_mpr121_touched(s[0], s[1]);
+    return pc_mpr121_touched(s_mpr.frame[0], s_mpr.frame[1]);
 }
 
 uint16_t pc_mpr121_read_filtered(uint8_t e)
@@ -172,26 +159,27 @@ uint16_t pc_mpr121_read_filtered(uint8_t e)
     {
         return 0;
     }
-    uint8_t d[2] = {0, 0};
-    if (!rd((uint8_t)(0x04 + 2 * e), d, 2))
+    if (!rd((uint8_t)(0x04 + 2 * e), s_mpr.frame, 2))
     {
         return 0;
     }
-    return pc_mpr121_word10(d[0], d[1]);
+    return pc_mpr121_word10(s_mpr.frame[0], s_mpr.frame[1]);
 }
 
 #else // host build: no I2C. The decode + init-sequence builder above are host-tested.
 
-proto_bool pc_mpr121_begin(uint8_t)
+proto_bool pc_mpr121_begin(uint8_t addr)
 {
+    (void)addr;
     return PROTO_FALSE;
 }
-uint16_t pc_mpr121_read_touched()
+uint16_t pc_mpr121_read_touched(void)
 {
     return 0;
 }
-uint16_t pc_mpr121_read_filtered(uint8_t)
+uint16_t pc_mpr121_read_filtered(uint8_t e)
 {
+    (void)e;
     return 0;
 }
 

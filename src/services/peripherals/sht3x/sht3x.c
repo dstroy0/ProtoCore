@@ -105,12 +105,15 @@ proto_bool pc_sht3x_read(int32_t *temp_mc, int32_t *rh_mpct)
 
 #else // host build: no I2C. The CRC + conversion above are host-tested.
 
-proto_bool pc_sht3x_begin(uint8_t)
+proto_bool pc_sht3x_begin(uint8_t addr)
 {
+    (void)addr;
     return PROTO_FALSE;
 }
-proto_bool pc_sht3x_read(int32_t *, int32_t *)
+proto_bool pc_sht3x_read(int32_t *temp_mc, int32_t *rh_mpct)
 {
+    (void)temp_mc;
+    (void)rh_mpct;
     return PROTO_FALSE;
 }
 

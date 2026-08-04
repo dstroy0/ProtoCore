@@ -154,24 +154,31 @@ proto_bool pc_ina219_read_power_uw(int32_t *microwatts)
 
 #else // host build: no I2C. The decode / calibration / scaling above are host-tested.
 
-proto_bool pc_ina219_begin(uint8_t, uint32_t, uint32_t)
+proto_bool pc_ina219_begin(uint8_t addr, uint32_t current_lsb_ua, uint32_t shunt_mohm)
 {
+    (void)addr;
+    (void)current_lsb_ua;
+    (void)shunt_mohm;
     return PROTO_FALSE;
 }
-proto_bool pc_ina219_read_bus_mv(int32_t *)
+proto_bool pc_ina219_read_bus_mv(int32_t *millivolts)
 {
+    (void)millivolts;
     return PROTO_FALSE;
 }
-proto_bool pc_ina219_read_shunt_uv(int32_t *)
+proto_bool pc_ina219_read_shunt_uv(int32_t *microvolts)
 {
+    (void)microvolts;
     return PROTO_FALSE;
 }
-proto_bool pc_ina219_read_current_ua(int32_t *)
+proto_bool pc_ina219_read_current_ua(int32_t *microamps)
 {
+    (void)microamps;
     return PROTO_FALSE;
 }
-proto_bool pc_ina219_read_power_uw(int32_t *)
+proto_bool pc_ina219_read_power_uw(int32_t *microwatts)
 {
+    (void)microwatts;
     return PROTO_FALSE;
 }
 

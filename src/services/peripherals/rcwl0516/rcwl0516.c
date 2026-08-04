@@ -143,8 +143,9 @@ proto_bool pc_rcwl0516_present()
 
 #else // host build: no GPIO
 
-proto_bool pc_rcwl0516_begin(int)
+proto_bool pc_rcwl0516_begin(int out_pin)
 {
+    (void)out_pin;
     return PROTO_FALSE;
 }
 

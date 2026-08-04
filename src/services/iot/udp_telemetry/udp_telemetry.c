@@ -211,12 +211,16 @@ proto_bool pc_udp_telemetry_send(const char *data, size_t len)
 
 #else // host build - no network
 
-void pc_udp_telemetry_begin(const char *, uint16_t)
+void pc_udp_telemetry_begin(const char *collector_ip, uint16_t port)
 {
+    (void)collector_ip;
+    (void)port;
 }
 
-proto_bool pc_udp_telemetry_send(const char *, size_t)
+proto_bool pc_udp_telemetry_send(const char *buf, size_t pos)
 {
+    (void)buf;
+    (void)pos;
     return PROTO_FALSE;
 }
 

@@ -14,7 +14,7 @@
 
 #if PROTOCORE_HOT
 #include "services/peripherals/i2c.h"
-#include <Wire.h>
+#include "shared_primitives/endian.h" // pc_wr16be / pc_rd16be: the registers are big-endian
 #endif
 // Config-register field values (per the ADS1115 datasheet).
 static const uint16_t OS_SINGLE = 0x8000;   // start a single conversion
@@ -68,38 +68,31 @@ int32_t pc_ads1115_raw_to_uv(int16_t raw, uint8_t gain)
 
 #if PROTOCORE_HOT
 
-// All ADS1115 I2C-binding state, owned by one instance (internal linkage): the device
-// address, so it is one named owner, unreachable from any other translation unit.
+// All ADS1115 I2C-binding state, owned by one instance (internal linkage): the device address and
+// the bus frame, so it is one named owner, unreachable from any other translation unit. The frame
+// is a member rather than a local because a transfer is composed in place, and three bytes is the
+// widest this part moves, a register byte plus a 16-bit register value.
 typedef struct
 {
     uint8_t addr;
+    uint8_t frame[3];
 } Ads1115Ctx;
-static Ads1115Ctx s_ads = {.addr = PC_ADS1115_I2C_ADDR};
+static Ads1115Ctx s_ads = {.addr = PC_ADS1115_I2C_ADDR, .frame = {0}};
 
 static proto_bool wr16(uint8_t reg, uint16_t v)
 {
-    Wire.beginTransmission(s_ads.addr);
-    Wire.write(reg);
-    Wire.write((uint8_t)(v >> 8)); // ADS1115 registers are big-endian
-    Wire.write((uint8_t)(v & 0xFF));
-    return Wire.endTransmission() == 0;
+    s_ads.frame[0] = reg;
+    (void)pc_wr16be(&s_ads.frame[1], v);
+    return pc_i2c_write(s_ads.addr, s_ads.frame, sizeof(s_ads.frame));
 }
 
 static proto_bool rd16(uint8_t reg, uint16_t *v)
 {
-    Wire.beginTransmission(s_ads.addr);
-    Wire.write(reg);
-    if (Wire.endTransmission(PROTO_FALSE) != 0)
+    if (!pc_i2c_write_read(s_ads.addr, &reg, 1, s_ads.frame, 2))
     {
         return PROTO_FALSE;
     }
-    if (Wire.requestFrom((int)s_ads.addr, 2) != 2)
-    {
-        return PROTO_FALSE;
-    }
-    uint8_t hi = (uint8_t)Wire.read();
-    uint8_t lo = (uint8_t)Wire.read();
-    *v = (uint16_t)(((uint16_t)hi << 8) | lo);
+    *v = pc_rd16be(s_ads.frame);
     return PROTO_TRUE;
 }
 
@@ -153,16 +146,23 @@ proto_bool pc_ads1115_read_uv(uint8_t channel, uint8_t gain, int32_t *microvolts
 
 #else // host build: no I2C. The config encoder + conversion above are host-tested.
 
-proto_bool pc_ads1115_begin(uint8_t)
+proto_bool pc_ads1115_begin(uint8_t addr)
 {
+    (void)addr;
     return PROTO_FALSE;
 }
-proto_bool pc_ads1115_read_raw(uint8_t, uint8_t, int16_t *)
+proto_bool pc_ads1115_read_raw(uint8_t channel, uint8_t gain, int16_t *raw)
 {
+    (void)channel;
+    (void)gain;
+    (void)raw;
     return PROTO_FALSE;
 }
-proto_bool pc_ads1115_read_uv(uint8_t, uint8_t, int32_t *)
+proto_bool pc_ads1115_read_uv(uint8_t channel, uint8_t gain, int32_t *microvolts)
 {
+    (void)channel;
+    (void)gain;
+    (void)microvolts;
     return PROTO_FALSE;
 }
 

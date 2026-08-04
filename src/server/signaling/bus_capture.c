@@ -152,8 +152,12 @@ void bus_capture_end(void)
 
 #else // host build - no TWAI controller
 
-proto_bool bus_capture_begin(int, int, uint32_t, bus_capture_sink_fn)
+proto_bool bus_capture_begin(int tx_pin, int rx_pin, uint32_t bitrate, bus_capture_sink_fn sink)
 {
+    (void)tx_pin;
+    (void)rx_pin;
+    (void)bitrate;
+    (void)sink;
     return PROTO_FALSE;
 }
 void bus_capture_poll(void)

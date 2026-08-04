@@ -145,12 +145,15 @@ void pc_promisc_end(void)
 
 #else // host build - no radio
 
-proto_bool pc_promisc_begin(uint8_t, pc_promisc_sink_fn)
+proto_bool pc_promisc_begin(uint8_t channel, pc_promisc_sink_fn sink)
 {
+    (void)channel;
+    (void)sink;
     return PROTO_FALSE;
 }
-void pc_promisc_set_channel(uint8_t)
+void pc_promisc_set_channel(uint8_t channel)
 {
+    (void)channel;
     // host build: no radio, no channel to set
 }
 void pc_promisc_end(void)

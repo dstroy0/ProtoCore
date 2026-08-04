@@ -334,8 +334,9 @@ static void flush_and_reap(uint32_t now_ms)
 }
 
 #if PROTOCORE_HOT
-static void udp_ingest_cb(const uint8_t *data, size_t len, const struct pc_udp_peer *peer, void * /*ctx*/)
+static void udp_ingest_cb(const uint8_t *data, size_t len, const struct pc_udp_peer *peer, void *ctx)
 {
+    (void)ctx;
     char ip[16];
     uint16_t port = 0;
     if (!pc_udp_peer_addr(peer, ip, sizeof ip, &port))

@@ -13,7 +13,7 @@
 
 #if PROTOCORE_HOT
 #include "services/peripherals/i2c.h"
-#include <Wire.h>
+#include "shared_primitives/endian.h" // pc_wr16be / pc_rd16be: the registers are big-endian
 #endif
 uint32_t pc_ldc1614_data(uint16_t msb_reg, uint16_t lsb_reg)
 {
@@ -57,39 +57,34 @@ size_t pc_ldc1614_build_config(uint8_t *buf, size_t cap, uint16_t rcount, uint16
 
 #if PROTOCORE_HOT
 
-// All LDC1614 I2C-binding state, owned by one instance (internal linkage): the device address,
-// so it is one named owner, unreachable from any other translation unit.
+// All LDC1614 I2C-binding state, owned by one instance (internal linkage): the device address, the
+// register frame, and the bring-up sequence buffer, so it is one named owner, unreachable from any
+// other translation unit. Both buffers are members rather than locals because a transfer is
+// composed in place: a write is a register byte and a 16-bit value, and the bring-up sequence is
+// the (register, msb, lsb) triples pc_ldc1614_build_config lays down.
 typedef struct
 {
     uint8_t addr;
+    uint8_t frame[3];
+    uint8_t config[LDC1614_CONFIG_MAX];
 } Ldc1614Ctx;
-static Ldc1614Ctx s_ldc = {.addr = 0x2A};
+static Ldc1614Ctx s_ldc = {.addr = 0x2A, .frame = {0}, .config = {0}};
 
 static proto_bool read16(uint8_t reg, uint16_t *out)
 {
-    Wire.beginTransmission(s_ldc.addr);
-    Wire.write(reg);
-    if (Wire.endTransmission(PROTO_FALSE) != 0)
+    if (!pc_i2c_write_read(s_ldc.addr, &reg, 1, s_ldc.frame, 2))
     {
         return PROTO_FALSE;
     }
-    if (Wire.requestFrom((int)s_ldc.addr, 2) != 2)
-    {
-        return PROTO_FALSE;
-    }
-    uint16_t hi = Wire.read();
-    uint16_t lo = Wire.read();
-    *out = (uint16_t)((hi << 8) | lo);
+    *out = pc_rd16be(s_ldc.frame);
     return PROTO_TRUE;
 }
 
 static proto_bool write16(uint8_t reg, uint16_t val)
 {
-    Wire.beginTransmission(s_ldc.addr);
-    Wire.write(reg);
-    Wire.write((uint8_t)(val >> 8));
-    Wire.write((uint8_t)val);
-    return Wire.endTransmission() == 0;
+    s_ldc.frame[0] = reg;
+    (void)pc_wr16be(&s_ldc.frame[1], val);
+    return pc_i2c_write(s_ldc.addr, s_ldc.frame, sizeof(s_ldc.frame));
 }
 
 proto_bool pc_ldc1614_begin(uint8_t addr, uint16_t rcount, uint16_t settlecount)
@@ -105,11 +100,10 @@ proto_bool pc_ldc1614_begin(uint8_t addr, uint16_t rcount, uint16_t settlecount)
     {
         return PROTO_FALSE;
     }
-    uint8_t seq[LDC1614_CONFIG_MAX];
-    size_t n = pc_ldc1614_build_config(seq, sizeof(seq), rcount, settlecount);
+    size_t n = pc_ldc1614_build_config(s_ldc.config, sizeof(s_ldc.config), rcount, settlecount);
     for (size_t i = 0; i + 3 <= n; i += 3)
     {
-        if (!write16(seq[i], (uint16_t)((seq[i + 1] << 8) | seq[i + 2])))
+        if (!write16(s_ldc.config[i], pc_rd16be(&s_ldc.config[i + 1])))
         {
             return PROTO_FALSE;
         }

@@ -72,8 +72,9 @@ static void cb_write(void *io, const uint8_t *data, size_t len)
     }
 }
 
-static void cb_header(void *app, uint32_t, const char *n, size_t nl, const char *v, size_t vl)
+static void cb_header(void *app, uint32_t stream_id, const char *n, size_t nl, const char *v, size_t vl)
 {
+    (void)stream_id;
     HttpReq *r = &http_pool[(uint8_t)(uintptr_t)app];
     if (nl == 7 && memcmp(n, ":method", 7) == 0)
     {
@@ -124,15 +125,18 @@ static void cb_header(void *app, uint32_t, const char *n, size_t nl, const char 
     }
 }
 
-static void cb_headers_end(void *app, uint32_t sid, proto_bool)
+static void cb_headers_end(void *app, uint32_t sid, proto_bool end_stream)
 {
+    (void)end_stream;
     uint8_t slot = (uint8_t)(uintptr_t)app;
     conn_pool[slot].pc_h2_stream = sid;
     http_pool[slot].parse_state = PARSE_COMPLETE; // the worker's handle() loop dispatches it
 }
 
-static void cb_data(void *app, uint32_t, const uint8_t *data, size_t len, proto_bool)
+static void cb_data(void *app, uint32_t stream_id, const uint8_t *data, size_t len, proto_bool end_stream)
 {
+    (void)stream_id;
+    (void)end_stream;
     HttpReq *r = &http_pool[(uint8_t)(uintptr_t)app];
     for (size_t i = 0; i < len && r->body_len < BODY_BUF_SIZE; i++)
     {

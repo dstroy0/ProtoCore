@@ -696,19 +696,27 @@ void ws_client_close()
 
 #else // host build: transport is a stub
 
-void ws_client_on_message(WsClientMessageCb)
+void ws_client_on_message(WsClientMessageCb cb)
 {
+    (void)cb;
 }
-proto_bool ws_client_connect(const char *, uint16_t, proto_bool, const char *)
+proto_bool ws_client_connect(const char *host, uint16_t port, proto_bool use_tls, const char *path)
 {
+    (void)host;
+    (void)port;
+    (void)use_tls;
+    (void)path;
     return PROTO_FALSE;
 }
-proto_bool ws_client_send_text(const char *)
+proto_bool ws_client_send_text(const char *text)
 {
+    (void)text;
     return PROTO_FALSE;
 }
-proto_bool ws_client_send_binary(const uint8_t *, size_t)
+proto_bool ws_client_send_binary(const uint8_t *data, size_t len)
 {
+    (void)data;
+    (void)len;
     return PROTO_FALSE;
 }
 proto_bool ws_client_loop()

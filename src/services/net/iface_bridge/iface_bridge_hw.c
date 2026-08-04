@@ -234,18 +234,28 @@ static void stream_uart_to_sock(uint8_t slot, const BridgeTarget *t)
 
 #else // host build: no Serial / SPI / Wire. The codec + rule table are host-tested elsewhere.
 
-void bus_begin(const BridgeTarget *)
+void bus_begin(const BridgeTarget *t)
 {
+    (void)t;
 }
-proto_bool bus_txn(const BridgeTarget *, const uint8_t *, uint16_t, uint8_t *, uint16_t)
+proto_bool bus_txn(const BridgeTarget *t, const uint8_t *wbuf, uint16_t wlen, uint8_t *rbuf, uint16_t rlen)
 {
+    (void)t;
+    (void)wbuf;
+    (void)wlen;
+    (void)rbuf;
+    (void)rlen;
     return PROTO_FALSE;
 }
-void stream_sock_to_uart(uint8_t, const BridgeTarget *)
+void stream_sock_to_uart(uint8_t slot, const BridgeTarget *t)
 {
+    (void)slot;
+    (void)t;
 }
-void stream_uart_to_sock(uint8_t, const BridgeTarget *)
+void stream_uart_to_sock(uint8_t slot, const BridgeTarget *t)
 {
+    (void)slot;
+    (void)t;
 }
 
 #endif // PROTOCORE_HOT
@@ -344,8 +354,9 @@ static void bridge_on_poll(uint8_t slot)
     stream_uart_to_sock(slot, &r->target);
 }
 
-static void bridge_on_close(uint8_t)
+static void bridge_on_close(uint8_t slot)
 {
+    (void)slot;
     // Per-connection is stateless (the rule is re-derived from the listener id each callback), so there is
     // nothing to free; the transport owns the closing slot.
 }

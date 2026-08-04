@@ -130,16 +130,23 @@ proto_bool pc_pca9685_set_servo_us(uint8_t channel, uint32_t microseconds)
 
 #else // host build: no I2C. The prescale / count math + encoder above are host-tested.
 
-proto_bool pc_pca9685_begin(uint8_t, uint32_t)
+proto_bool pc_pca9685_begin(uint8_t addr, uint32_t freq_hz)
 {
+    (void)addr;
+    (void)freq_hz;
     return PROTO_FALSE;
 }
-proto_bool pc_pca9685_set_pwm(uint8_t, uint16_t, uint16_t)
+proto_bool pc_pca9685_set_pwm(uint8_t channel, uint16_t on, uint16_t off)
 {
+    (void)channel;
+    (void)on;
+    (void)off;
     return PROTO_FALSE;
 }
-proto_bool pc_pca9685_set_servo_us(uint8_t, uint32_t)
+proto_bool pc_pca9685_set_servo_us(uint8_t channel, uint32_t microseconds)
 {
+    (void)channel;
+    (void)microseconds;
     return PROTO_FALSE;
 }
 

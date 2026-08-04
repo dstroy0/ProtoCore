@@ -397,8 +397,10 @@ proto_bool pc_ld2410_restart()
 
 #else // host build: no UART. The codec above is host-tested.
 
-proto_bool pc_ld2410_begin(int, int)
+proto_bool pc_ld2410_begin(int rx_pin, int tx_pin)
 {
+    (void)rx_pin;
+    (void)tx_pin;
     return PROTO_FALSE;
 }
 proto_bool pc_ld2410_poll()
@@ -409,8 +411,9 @@ const Ld2410Report *pc_ld2410_last()
 {
     return NULL;
 }
-proto_bool pc_ld2410_set_engineering(proto_bool)
+proto_bool pc_ld2410_set_engineering(proto_bool on)
 {
+    (void)on;
     return PROTO_FALSE;
 }
 proto_bool pc_ld2410_restart()

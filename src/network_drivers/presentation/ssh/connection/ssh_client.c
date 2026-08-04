@@ -1690,8 +1690,9 @@ proto_bool pc_ssh_tunnel_up(void)
 
 #else // !PROTOCORE_HOT - host builds have no lwIP client transport; the tunnel is device-only.
 
-proto_bool pc_ssh_tunnel_begin(const pc_ssh_tunnel_cfg *)
+proto_bool pc_ssh_tunnel_begin(const pc_ssh_tunnel_cfg *cfg)
 {
+    (void)cfg;
     return PROTO_FALSE;
 }
 void pc_ssh_tunnel_poll(void)

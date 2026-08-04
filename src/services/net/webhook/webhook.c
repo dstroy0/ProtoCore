@@ -140,8 +140,10 @@ int pc_webhook_post(const char *url, const char *json)
 
 #else // http_client not enabled in this build
 
-int pc_webhook_post(const char *, const char *)
+int pc_webhook_post(const char *url, const char *json)
 {
+    (void)url;
+    (void)json;
     return -1;
 }
 
