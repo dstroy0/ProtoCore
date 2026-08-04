@@ -60,6 +60,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`45ceb02`](https://github.com/dstroy0/ProtoCore/commit/45ceb02b1803f685e50d24d7de0f707b1ab66860))
 - update CHANGELOG.md [skip ci] ([`f22959e`](https://github.com/dstroy0/ProtoCore/commit/f22959e11c424e2a2fa0d7e927fb59ef1cb5ff01))
 - update CHANGELOG.md [skip ci] ([`79e0f5e`](https://github.com/dstroy0/ProtoCore/commit/79e0f5e5749cabb985fc0fbd306ffd2df4ecda43))
 - update CHANGELOG.md [skip ci] ([`c89b9bc`](https://github.com/dstroy0/ProtoCore/commit/c89b9bcf7d9d9ed86d27d36475a23e48c73f43d6))
@@ -300,6 +301,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- log the HTTP/2 refusal that RSTs stream 0 ([`58c2913`](https://github.com/dstroy0/ProtoCore/commit/58c29137dc02d6d9d1300bb5b63c232cee717f85))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`3d8b3c4`](https://github.com/dstroy0/ProtoCore/commit/3d8b3c4bdcae4e29bda2632596e245e4aaeba1e8))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`aaffcd0`](https://github.com/dstroy0/ProtoCore/commit/aaffcd03396e6da0343f1bb6a42e264df3af5946))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`b193396`](https://github.com/dstroy0/ProtoCore/commit/b1933961007eaecd77b9b7f2524689ca9900e442))
