@@ -23,42 +23,6 @@ import xml.etree.ElementTree as ET
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 INI = os.path.join(ROOT, "platformio.ini")
 DEFAULT_COV = os.path.join(ROOT, "test", "coverage.xml")
-SONAR_PROPS = os.path.join(ROOT, "sonar-project.properties")
-
-
-def sonar_excluded_globs() -> list[str]:
-    """sonar.coverage.exclusions + sonar.exclusions, as fnmatch globs.
-
-    These files are in the gcovr report but SonarCloud does not count them (raw lwIP transport,
-    WiFi/Ethernet physical, mbedTLS - no host execution path - plus generated assets). Counting
-    them locally would mean chasing ~180 uncovered lines that can never move the reported number.
-    """
-    pats: list[str] = []
-    try:
-        with open(SONAR_PROPS, encoding="utf-8") as fh:
-            for raw in fh:
-                line = raw.strip()
-                for key in ("sonar.coverage.exclusions=", "sonar.exclusions="):
-                    if line.startswith(key):
-                        pats += [p.strip() for p in line[len(key):].split(",") if p.strip()]
-    except OSError:
-        pass
-    return pats
-
-
-_EXCL = None
-
-
-def sonar_excluded(path: str) -> bool:
-    global _EXCL
-    if _EXCL is None:
-        _EXCL = sonar_excluded_globs()
-    for pat in _EXCL:
-        # Sonar's '**' spans directories; fnmatch's '*' already crosses '/', so the two forms
-        # collapse to the same test here.
-        if fnmatch.fnmatch(path, pat) or fnmatch.fnmatch(path, pat.replace("**/", "*").replace("**", "*")):
-            return True
-    return False
 
 
 def parse_envs() -> dict[str, dict]:
@@ -212,14 +176,12 @@ def main() -> int:
     p.add_argument("--cov", default=DEFAULT_COV)
     p.add_argument("--summary", action="store_true", help="per-file totals only")
     p.add_argument("--limit", type=int, default=0)
-    p.add_argument("--all", action="store_true", help="include files SonarCloud excludes from coverage")
 
     p = sub.add_parser("lines", help="uncovered LINES (a wholly untested function has no branch gap)")
     p.add_argument("paths", nargs="*")
     p.add_argument("--cov", default=DEFAULT_COV)
     p.add_argument("--summary", action="store_true")
     p.add_argument("--limit", type=int, default=0)
-    p.add_argument("--all", action="store_true", help="include files SonarCloud excludes from coverage")
 
     a = ap.parse_args()
     envs = parse_envs()
@@ -243,9 +205,7 @@ def main() -> int:
 
     if a.cmd == "lines":
         lines = load_lines(a.cov)
-        sel = [p.replace("\\", "/") for p in a.paths] or [
-            f for f in sorted(lines) if a.all or not sonar_excluded(f)
-        ]
+        sel = [p.replace("\\", "/") for p in a.paths] or sorted(lines)
         tot = cov_n = 0
         rows = []
         for pth in sel:
@@ -276,9 +236,7 @@ def main() -> int:
         return 0
 
     cov = load_cov(a.cov)
-    sel = [p.replace("\\", "/") for p in a.paths] or [
-        f for f in sorted(cov) if a.all or not sonar_excluded(f)
-    ]
+    sel = [p.replace("\\", "/") for p in a.paths] or sorted(cov)
     total_b = total_c = 0
     rows = []
     for pth in sel:
