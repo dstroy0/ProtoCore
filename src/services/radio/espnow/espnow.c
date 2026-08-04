@@ -162,16 +162,14 @@ int pc_espnow_peer_count(void)
 // ---------------------------------------------------------------------------
 #if PROTOCORE_HOT
 
-namespace
-{
 // The ESP-NOW receive callback signature changed in ESP-IDF 5.0 (Arduino-ESP32 3.x): the
 // source MAC moved into an esp_now_recv_info_t. Match whichever the compiled core expects.
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
-void on_recv(const esp_now_recv_info_t *info, const uint8_t *data, int len)
+static void on_recv(const esp_now_recv_info_t *info, const uint8_t *data, int len)
 {
-    const uint8_t *mac = info ? info->src_addr : NULL;
+    const uint8_t *mac = info != NULL ? info->src_addr : NULL;
 #else
-void on_recv(const uint8_t *mac, const uint8_t *data, int len)
+static void on_recv(const uint8_t *mac, const uint8_t *data, int len)
 {
 #endif
     if (!s_espnow.recv || len < 0 || !mac)
@@ -187,7 +185,7 @@ void on_recv(const uint8_t *mac, const uint8_t *data, int len)
     }
 }
 
-proto_bool radio_add_peer(const uint8_t mac[6], uint8_t channel)
+static proto_bool radio_add_peer(const uint8_t mac[6], uint8_t channel)
 {
     esp_now_peer_info_t p;
     memset(&p, 0, sizeof(p));
@@ -200,7 +198,6 @@ proto_bool radio_add_peer(const uint8_t mac[6], uint8_t channel)
     }
     return esp_now_add_peer(&p) == ESP_OK;
 }
-} // namespace
 
 proto_bool pc_espnow_begin(uint8_t channel, pc_espnow_recv_fn cb)
 {
