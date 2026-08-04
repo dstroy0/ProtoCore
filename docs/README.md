@@ -193,7 +193,7 @@ src/
 │   │       └── portable_platform.c
 │   └── physical/
 │       ├── esp/
-│       │   └── physical_esp.c
+│       │   └── physical_esp.cpp
 │       └── mock/
 │           └── physical_mock.c
 ├── crypto/
