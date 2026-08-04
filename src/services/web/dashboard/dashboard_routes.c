@@ -62,7 +62,7 @@ static void dash_sse_connect(uint8_t pc_sse_id)
     char buf[PC_DASHBOARD_JSON_BUF];
     if (pc_dashboard_values_json(buf, sizeof(buf)) > 0)
     {
-        pc_sse_send(pc_sse_id, buf); // seed the new client with the latest values
+        pc_sse_send(pc_sse_id, buf, NULL, NULL); // seed the new client with the latest values
     }
 }
 
@@ -135,7 +135,7 @@ void pc_dashboard_publish()
     char buf[PC_DASHBOARD_JSON_BUF];
     if (pc_dashboard_values_json(buf, sizeof(buf)) > 0)
     {
-        pc_sse_broadcast(s_dashr.stream_path, buf);
+        pc_sse_broadcast(s_dashr.stream_path, buf, NULL, NULL);
     }
 }
 

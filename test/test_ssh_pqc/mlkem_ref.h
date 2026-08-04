@@ -17,8 +17,6 @@
 #include <stdint.h>
 #include <string.h>
 
-namespace mlkem_ref_detail
-{
 static const int Q = 3329;
 static const int NREF = 256;
 static const int KREF = 3;
@@ -168,12 +166,10 @@ static inline void poly_tomsg(uint8_t msg[32], const int16_t a[256])
         }
     }
 }
-} // namespace mlkem_ref_detail
 
 // Recover the 32-octet shared secret from a decapsulation key (2400 B) and a genuine ciphertext.
 static inline void pc_mlkem768_decaps_ref(const uint8_t dk[2400], const uint8_t ct[1088], uint8_t ss[32])
 {
-    using namespace mlkem_ref_detail;
     // dk = dk_pke(1152) || ek(1184) || H(ek)(32) || z(32); s_hat is stored in NTT domain.
     int16_t shat[3][256];
     for (unsigned i = 0; i < 3; i++)

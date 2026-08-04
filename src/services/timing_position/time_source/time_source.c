@@ -96,17 +96,21 @@ const char *pc_time_source_active(void)
 
 void pc_time_source_reset(void)
 {
+    const Src blank = {0};
     for (int i = 0; i < PC_TIME_SOURCE_MAX; i++)
     {
-        s_ts.sources[i] = (Src){};
+        s_ts.sources[i] = blank;
     }
     s_ts.active = NULL;
 }
 
 #else // PC_ENABLE_TIME_SOURCE == 0 -> no-op stubs
 
-proto_bool pc_time_source_add(const char *, uint8_t, TimeSourceFn)
+proto_bool pc_time_source_add(const char *name, uint8_t priority, TimeSourceFn fn)
 {
+    (void)name;
+    (void)priority;
+    (void)fn;
     return PROTO_FALSE;
 }
 uint32_t pc_time_now(void)

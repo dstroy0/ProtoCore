@@ -76,7 +76,7 @@ void ws_close(uint8_t ws_id)
 
 void pc_sse_connect(uint8_t pc_sse_id)
 {
-    pc_sse_send(pc_sse_id, "subscribed", "tick");
+    pc_sse_send(pc_sse_id, "subscribed", "tick", NULL);
 }
 
 void setup()
@@ -121,6 +121,6 @@ void loop()
         last = millis();
         char buf[24];
         snprintf(buf, sizeof(buf), "%lu", (unsigned long)n++);
-        pc_sse_broadcast("/events", buf, "tick");
+        pc_sse_broadcast("/events", buf, "tick", NULL);
     }
 }

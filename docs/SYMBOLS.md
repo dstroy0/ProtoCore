@@ -293,6 +293,21 @@ extension is also the one part a checker can decide without parsing, so it is th
 catch a file that was moved into `src/` from somewhere less constrained. `examples/` keeps `.ino`
 and `performance_benching/` keeps `.cpp`; neither is governed by this document.
 
+**One exception, and it is the same boundary section 1 already draws.** A `board_drivers/` adapter
+whose entire job is to wrap a C++ vendor API keeps `.cpp`, because the extension is what selects the
+compiler and the vendor type cannot be named from C at all. Today that is
+`board_drivers/hal/esp/esp_mnt_fs.cpp`, which turns an Arduino `fs::FS` into a `pc_mnt_backend`.
+
+The exception is narrow in exactly the way section 1's is. It covers what a driver must _consume_,
+never what it publishes: `pc_mnt_fs()` hands back a `pc_mnt_backend *`, so every caller above the
+board layer is C speaking to C, and the C++ stops at the file that needs it. A `.cpp` anywhere else
+under `src/`, or one that exports a C++ type, is a violation rather than an instance of this.
+
+The reason it is written down here rather than left to judgment: the C11 conversion renamed this
+file to `.c` without converting its contents, and because no native env had reached it, nothing
+failed until a full-tree compile sweep did. A rule with an unrecorded exception is a rule that gets
+"fixed" by the next mechanical pass.
+
 Markdown is the documented exception: docs use `UPPER_SNAKE` (`README.md`, `FEATURES.md`,
 `SRCBANNED.md`, and this file), including the per-die register references under
 `board_drivers/hal/esp/` such as `P4_MIPI_HELPERS.md`. The case-sensitivity argument is about

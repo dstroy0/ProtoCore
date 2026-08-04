@@ -4,10 +4,11 @@
 // Unit tests for the lane math (shared_primitives/swar.h).
 //
 // These answer a question about four bytes with two arithmetic operations and no branches, which is
-// only worth doing if the answer is right at every boundary. pc_swar_scan_nul is diffed against
+// only worth doing if the answer is right at every boundary. proto_scan_nul is diffed against
 // strnlen over every length and every NUL position within a window, including the offsets where the
 // word loop hands over to the byte tail - that handover is where a hand-rolled scan gets it wrong.
 
+#include "shared_primitives/runops.h" // proto_scan_nul - the bounded scan moved here with the split
 #include "shared_primitives/swar.h"
 #include <string.h>
 #include <unity.h>
@@ -43,7 +44,7 @@ void test_scan_nul_matches_strnlen()
         buf[nul_at] = '\0';
         for (size_t cap = 0; cap < 32; cap++)
         {
-            TEST_ASSERT_EQUAL_UINT32(strnlen(buf, cap), pc_swar_scan_nul(buf, cap));
+            TEST_ASSERT_EQUAL_UINT32(strnlen(buf, cap), proto_scan_nul(buf, cap));
         }
     }
 }
@@ -55,7 +56,7 @@ void test_scan_nul_absent_returns_cap()
     memset(buf, 'a', sizeof(buf));
     for (size_t cap = 0; cap <= sizeof(buf); cap++)
     {
-        TEST_ASSERT_EQUAL_UINT32(cap, pc_swar_scan_nul(buf, cap));
+        TEST_ASSERT_EQUAL_UINT32(cap, proto_scan_nul(buf, cap));
     }
 }
 
@@ -63,7 +64,7 @@ void test_scan_nul_absent_returns_cap()
 void test_scan_nul_ignores_high_bytes()
 {
     const char buf[] = {(char)0x80, (char)0xFF, (char)0x7F, (char)0x80, (char)0xFE, '\0'};
-    TEST_ASSERT_EQUAL_UINT32(5, pc_swar_scan_nul(buf, sizeof(buf)));
+    TEST_ASSERT_EQUAL_UINT32(5, proto_scan_nul(buf, sizeof(buf)));
 }
 
 // The scan is called on unaligned addresses constantly (a string mid-buffer); every offset must agree.
@@ -74,7 +75,7 @@ void test_scan_nul_unaligned()
     {
         memset(buf, 'q', sizeof(buf));
         buf[off + 9] = '\0';
-        TEST_ASSERT_EQUAL_UINT32(9, pc_swar_scan_nul(buf + off, sizeof(buf) - off));
+        TEST_ASSERT_EQUAL_UINT32(9, proto_scan_nul(buf + off, sizeof(buf) - off));
     }
 }
 

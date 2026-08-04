@@ -24,7 +24,7 @@ static const char PAGE[] = "<!doctype html><meta charset=utf-8><title>SSE</title
 
 void pc_sse_connect(uint8_t pc_sse_id)
 {
-    pc_sse_send(pc_sse_id, "subscribed", "tick");
+    pc_sse_send(pc_sse_id, "subscribed", "tick", NULL);
 }
 
 void setup()
@@ -57,6 +57,6 @@ void loop()
         last = millis();
         char buf[24];
         snprintf(buf, sizeof(buf), "%lu", n++);
-        pc_sse_broadcast("/events", buf, "tick");
+        pc_sse_broadcast("/events", buf, "tick", NULL);
     }
 }

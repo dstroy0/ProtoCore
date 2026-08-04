@@ -27,13 +27,16 @@
 
 #include "protocore_config.h"
 
-#if PC_ENABLE_TIME_SOURCE
-
 /**
  * @brief A time source: returns the current Unix epoch seconds for this source,
  *        or 0 if it currently has no valid time.
+ *
+ * Sits outside the feature gate: the disabled build still defines the no-op registry entry points,
+ * so it has to be able to spell their argument type.
  */
 typedef uint32_t (*TimeSourceFn)(void);
+
+#if PC_ENABLE_TIME_SOURCE
 
 /**
  * @brief Register a time source.
