@@ -17,7 +17,7 @@
 
 #if PC_ENABLE_DMA
 
-#include <string.h> // memcpy
+#include "shared_primitives/rawmemcpy.h" // proto_raw_read: the submitted span into the TX buffer
 
 #if PROTOCORE_HOT
 #include "server/clock/clock.h" // pc_millis(), pc_micros()
@@ -214,7 +214,7 @@ proto_bool pc_dma_tx_submit(uint8_t ch, const uint8_t *buf, uint16_t len)
     {
         return PROTO_FALSE;
     }
-    memcpy(c->tx_buf, buf, len);
+    proto_raw_read(c->tx_buf, buf, len);
     c->tx_len = len;
     c->tx_busy = PROTO_TRUE;
     return PROTO_TRUE;
