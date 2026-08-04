@@ -30,6 +30,23 @@ void tearDown()
 {
 }
 
+// Where the QPACK emit callback puts the ":status" it finds. The callback captures nothing, so it
+// is a plain function and the buffer travels in the ctx pointer the decoder already carries.
+typedef struct
+{
+    char *s;
+} H3StatusCtx;
+
+static proto_bool h3_take_status(void *c, const char *nm, size_t nl, const char *v, size_t vl)
+{
+    if (nl == 7 && memcmp(nm, ":status", 7) == 0)
+    {
+        memcpy(((H3StatusCtx *)c)->s, v, vl);
+        ((H3StatusCtx *)c)->s[vl] = 0;
+    }
+    return PROTO_TRUE;
+}
+
 static const uint8_t CERT[48] = {0x30, 0x2e, 0x02, 0x01, 0x02};
 static uint8_t SERVER_PRIV[32], SERVER_SEED[32], SERVER_RANDOM[32], CLIENT_PRIV[32];
 static const uint8_t ODCID[8] = {0xd1, 0xd2, 0xd3, 0xd4, 0xd5, 0xd6, 0xd7, 0xd8};
@@ -270,7 +287,7 @@ void test_http3_get_end_to_end()
     }
     Tls13KeySchedule cks;
     pc_tls13_ks_early(&TLS13_KDF, &cks);
-    pc_tls13_ks_handshake(&cks, ecdhe, chsh);
+    pc_tls13_ks_handshake(&cks, ecdhe, chsh, 32);
     QuicPacketKeys hs_s, hs_c, ap_s, ap_c;
     pc_quic_keys_from_secret(cks.server_hs_traffic, &hs_s);
     pc_quic_keys_from_secret(cks.client_hs_traffic, &hs_c);
@@ -375,21 +392,8 @@ void test_http3_get_end_to_end()
                         if (hf.type == H3_HEADERS)
                         {
                             char sc[128];
-                            struct E
-                            {
-                                char *s;
-                            } e = {status};
-                            pc_qpack_decode(
-                                hp, (size_t)hf.length, sc, sizeof(sc),
-                                [](void *c, const char *nm, size_t nl, const char *v, size_t vl) -> proto_bool {
-                                    if (nl == 7 && memcmp(nm, ":status", 7) == 0)
-                                    {
-                                        memcpy(((E *)c)->s, v, vl);
-                                        ((E *)c)->s[vl] = 0;
-                                    }
-                                    return PROTO_TRUE;
-                                },
-                                &e);
+                            H3StatusCtx e = {status};
+                            pc_qpack_decode(hp, (size_t)hf.length, sc, sizeof(sc), h3_take_status, &e);
                         }
                         else if (hf.type == H3_DATA)
                         {

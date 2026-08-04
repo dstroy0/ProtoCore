@@ -5,6 +5,8 @@
 // page serving, the WS upgrade + connect tracking, browser->device commands, and
 // device->browser broadcast.
 
+#include "network_drivers/transport/tcp.h" // TcpConn, conn_pool - the slot a test arms by hand
+#include "protocore.h"                     // PROTO_HTTP, the ws/sse entry points
 #include "services/web/web_terminal/web_terminal.h"
 #include <stdio.h>
 #include <string.h>
@@ -85,7 +87,7 @@ void setUp()
     {
         return;
     }
-    pc_web_terminal_begin(server, "/terminal");
+    pc_web_terminal_begin("/terminal");
     pc_web_terminal_on_command(on_cmd);
 }
 
@@ -264,12 +266,12 @@ void test_print_null_is_ignored()
 void test_begin_defaults_path_when_missing()
 {
     pc_server_reset();
-    pc_web_terminal_begin(server, NULL);
+    pc_web_terminal_begin(NULL);
     tcp_capture_reset();
     TEST_ASSERT_NOT_NULL(strstr(get_path(0, "/terminal"), "PC Terminal"));
 
     pc_server_reset();
-    pc_web_terminal_begin(server, "");
+    pc_web_terminal_begin("");
     tcp_capture_reset();
     TEST_ASSERT_NOT_NULL(strstr(get_path(1, "/terminal"), "PC Terminal"));
 }

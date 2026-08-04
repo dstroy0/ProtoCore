@@ -197,7 +197,7 @@ void test_server_initial_a3()
     TEST_ASSERT_EQUAL_INT(99, (int)plen);
 
     size_t total = pc_quic_packet_protect(pkt, sizeof pkt, /*pn_offset*/ 18, /*pn_len*/ 2, /*full_pn*/ 1,
-                                          /*payload_len*/ 99, s.server, /*is_long*/ PROTO_TRUE);
+                                          /*payload_len*/ 99, &s.server, /*is_long*/ PROTO_TRUE);
     uint8_t exp[256];
     size_t elen = hx("cf000000010008f067a5502a4262b5004075c0d95a482cd0991cd25b0aac406a"
                      "5816b6394100f37a1c69797554780bb38cc5a99f5ede4cf73c3ec2493a1839b3"
@@ -212,7 +212,7 @@ void test_server_initial_a3()
     // Round-trip: unprotect the wire bytes back to pn=1 and the original payload.
     uint8_t out[128];
     uint64_t pn = 0;
-    size_t got = pc_quic_packet_unprotect(exp, /*pn_offset*/ 18, /*length*/ 117, /*largest_pn*/ 0, s.server,
+    size_t got = pc_quic_packet_unprotect(exp, /*pn_offset*/ 18, /*length*/ 117, /*largest_pn*/ 0, &s.server,
                                           /*is_long*/ PROTO_TRUE, out, &pn);
     TEST_ASSERT_EQUAL_INT(99, (int)got);
     TEST_ASSERT_EQUAL_UINT64(1, pn);
@@ -253,7 +253,7 @@ void test_client_initial_a2()
     const size_t payload_len = 1162; // CRYPTO frame + zero PADDING to the mandated size
 
     size_t total = pc_quic_packet_protect(pkt, sizeof pkt, /*pn_offset*/ 18, /*pn_len*/ 4, /*full_pn*/ 2, payload_len,
-                                          s.client, /*is_long*/ PROTO_TRUE);
+                                          &s.client, /*is_long*/ PROTO_TRUE);
     TEST_ASSERT_EQUAL_INT((int)(22 + payload_len + 16), (int)total);
 
     // The protected header and the first ciphertext block (== the header-protection sample) are the
@@ -267,7 +267,7 @@ void test_client_initial_a2()
     // Round-trip unprotect recovers pn=2 and the padded payload.
     static uint8_t out[1200];
     uint64_t pn = 0;
-    size_t got = pc_quic_packet_unprotect(pkt, /*pn_offset*/ 18, /*length*/ 1182, /*largest_pn*/ 0, s.client,
+    size_t got = pc_quic_packet_unprotect(pkt, /*pn_offset*/ 18, /*length*/ 1182, /*largest_pn*/ 0, &s.client,
                                           /*is_long*/ PROTO_TRUE, out, &pn);
     TEST_ASSERT_EQUAL_INT((int)payload_len, (int)got);
     TEST_ASSERT_EQUAL_UINT64(2, pn);
@@ -318,7 +318,7 @@ void test_gcm_open_rejects_short()
     memset(pkt, 0, sizeof pkt);
     // length (8) - pn_len (1) = 7 bytes of "ciphertext + tag", i.e. less than one 16-byte tag.
     TEST_ASSERT_EQUAL_UINT64((uint64_t)(size_t)-1, (uint64_t)pc_quic_packet_unprotect(
-                                                       pkt, /*pn_offset*/ 4, /*length*/ 8, /*largest_pn*/ 0, keys,
+                                                       pkt, /*pn_offset*/ 4, /*length*/ 8, /*largest_pn*/ 0, &keys,
                                                        /*is_long*/ PROTO_TRUE, pkt, NULL));
 }
 
@@ -332,9 +332,9 @@ void test_protect_rejects_bad_pn_len()
     uint8_t pkt[64];
     memset(pkt, 0, sizeof pkt);
     TEST_ASSERT_EQUAL_INT(0, (int)pc_quic_packet_protect(pkt, sizeof pkt, /*pn_offset*/ 4, /*pn_len*/ 0, /*full_pn*/ 1,
-                                                         /*payload_len*/ 8, keys, /*is_long*/ PROTO_TRUE));
+                                                         /*payload_len*/ 8, &keys, /*is_long*/ PROTO_TRUE));
     TEST_ASSERT_EQUAL_INT(0, (int)pc_quic_packet_protect(pkt, sizeof pkt, /*pn_offset*/ 4, /*pn_len*/ 5, /*full_pn*/ 1,
-                                                         /*payload_len*/ 8, keys, /*is_long*/ PROTO_TRUE));
+                                                         /*payload_len*/ 8, &keys, /*is_long*/ PROTO_TRUE));
 }
 
 // header + payload + 16-byte tag must fit the buffer, else 0 (before any crypto runs).
@@ -346,7 +346,7 @@ void test_protect_rejects_small_cap()
     memset(pkt, 0, sizeof pkt);
     // hdr(pn_offset 4 + pn_len 2 = 6) + payload(100) + tag(16) = 122 > cap 8.
     TEST_ASSERT_EQUAL_INT(0, (int)pc_quic_packet_protect(pkt, sizeof pkt, /*pn_offset*/ 4, /*pn_len*/ 2, /*full_pn*/ 1,
-                                                         /*payload_len*/ 100, keys, /*is_long*/ PROTO_TRUE));
+                                                         /*payload_len*/ 100, &keys, /*is_long*/ PROTO_TRUE));
 }
 
 // --- pc_quic_packet_unprotect reject paths -----------------------------------------------------
@@ -360,7 +360,7 @@ void test_unprotect_rejects_short()
     memset(pkt, 0, sizeof pkt);
     uint8_t out[32];
     uint64_t pn = 0;
-    size_t got = pc_quic_packet_unprotect(pkt, /*pn_offset*/ 0, /*length*/ 19, /*largest_pn*/ 0, keys,
+    size_t got = pc_quic_packet_unprotect(pkt, /*pn_offset*/ 0, /*length*/ 19, /*largest_pn*/ 0, &keys,
                                           /*is_long*/ PROTO_TRUE, out, &pn);
     TEST_ASSERT_TRUE(got == (size_t)-1);
 }
@@ -387,7 +387,7 @@ void test_unprotect_rejects_tampered()
 
     uint8_t out[128];
     uint64_t pn = 0;
-    size_t got = pc_quic_packet_unprotect(pkt, /*pn_offset*/ 18, /*length*/ 117, /*largest_pn*/ 0, s.server,
+    size_t got = pc_quic_packet_unprotect(pkt, /*pn_offset*/ 18, /*length*/ 117, /*largest_pn*/ 0, &s.server,
                                           /*is_long*/ PROTO_TRUE, out, &pn);
     TEST_ASSERT_TRUE(got == (size_t)-1);
 }
@@ -418,12 +418,12 @@ void test_short_header_roundtrip_null_out_pn()
     pkt[pn_offset + 1] = 0x07; // truncated packet number for full_pn = 7
     memcpy(pkt + pn_offset + pn_len, payload, sizeof payload);
 
-    size_t total = pc_quic_packet_protect(pkt, sizeof pkt, pn_offset, pn_len, /*full_pn*/ 7, sizeof payload, s.client,
+    size_t total = pc_quic_packet_protect(pkt, sizeof pkt, pn_offset, pn_len, /*full_pn*/ 7, sizeof payload, &s.client,
                                           /*is_long*/ PROTO_FALSE);
     TEST_ASSERT_EQUAL_INT((int)(pn_offset + pn_len + sizeof payload + PC_AES128GCM_TAG_LEN), (int)total);
 
     uint8_t out[8];
-    size_t got = pc_quic_packet_unprotect(pkt, pn_offset, total - pn_offset, /*largest_pn*/ 0, s.client,
+    size_t got = pc_quic_packet_unprotect(pkt, pn_offset, total - pn_offset, /*largest_pn*/ 0, &s.client,
                                           /*is_long*/ PROTO_FALSE, out, /*out_pn*/ NULL);
     TEST_ASSERT_EQUAL_INT((int)sizeof payload, (int)got);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(payload, out, sizeof payload);
@@ -510,7 +510,7 @@ void test_hkdf_expand_label_multiblock()
     }
 
     uint8_t got[48], exp[48];
-    pc_hkdf_expand_label(secret, "test label", got, sizeof got);
+    pc_hkdf_expand_label(secret, "test label", got, sizeof got, PC_HKDF_LABEL_PREFIX);
     expand_label_ref(secret, "test label", exp, sizeof exp);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(exp, got, sizeof got);
 }

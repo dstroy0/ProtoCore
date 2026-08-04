@@ -105,9 +105,9 @@ void test_bsm_core_bit_length(void)
 void test_spat_roundtrip(void)
 {
     J2735MovementState st[3];
-    st[0] = {1, (uint8_t)J2735_PHASE_PROTECTED_MOVEMENT_ALLOWED, 100, 250};
-    st[1] = {2, (uint8_t)J2735_PHASE_STOP_AND_REMAIN, 0, 36000};
-    st[2] = {17, (uint8_t)J2735_PHASE_PERMISSIVE_CLEARANCE, 300, 320};
+    st[0] = (J2735MovementState){1, (uint8_t)J2735_PHASE_PROTECTED_MOVEMENT_ALLOWED, 100, 250};
+    st[1] = (J2735MovementState){2, (uint8_t)J2735_PHASE_STOP_AND_REMAIN, 0, 36000};
+    st[2] = (J2735MovementState){17, (uint8_t)J2735_PHASE_PERMISSIVE_CLEARANCE, 300, 320};
     uint8_t buf[64];
     size_t n = pc_j2735_spat_encode(st, 3, buf, sizeof(buf));
     TEST_ASSERT_TRUE(n > 0);
@@ -139,9 +139,9 @@ void test_map_roundtrip(void)
 {
     J2735MapIntersection isect = {12345, 40000, 55000};
     J2735Lane lanes[3];
-    lanes[0] = {1, PROTO_TRUE, -100, 200};
-    lanes[1] = {2, PROTO_FALSE, 2047, -2048};
-    lanes[2] = {9, PROTO_TRUE, 0, 0};
+    lanes[0] = (J2735Lane){1, PROTO_TRUE, -100, 200};
+    lanes[1] = (J2735Lane){2, PROTO_FALSE, 2047, -2048};
+    lanes[2] = (J2735Lane){9, PROTO_TRUE, 0, 0};
     uint8_t buf[64];
     size_t n = pc_j2735_map_encode(&isect, lanes, 3, buf, sizeof(buf));
     TEST_ASSERT_TRUE(n > 0);

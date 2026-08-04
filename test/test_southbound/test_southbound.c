@@ -158,7 +158,7 @@ void test_registry_full(void)
         names[i][0] = 'd';
         names[i][1] = (char)('0' + i);
         names[i][2] = '\0';
-        drv[i] = {names[i], fake_read, NULL, NULL, NULL, &g_ctx};
+        drv[i] = (SouthboundDriver){names[i], fake_read, NULL, NULL, NULL, &g_ctx};
         if (pc_southbound_register(&drv[i]) == SB_OK)
         {
             registered++;

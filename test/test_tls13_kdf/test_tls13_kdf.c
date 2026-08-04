@@ -94,7 +94,7 @@ void test_handshake_secrets()
     hx(CH_SH_HASH, ch_sh, 32);
     Tls13KeySchedule ks;
     pc_tls13_ks_early(&TLS13_KDF, &ks);
-    pc_tls13_ks_handshake(&ks, ecdhe, ch_sh);
+    pc_tls13_ks_handshake(&ks, ecdhe, ch_sh, 32);
 
     uint8_t exp[32];
     hx(HANDSHAKE, exp, 32);
@@ -113,7 +113,7 @@ void test_master_secrets()
     hx(CH_SFIN_HASH, ch_sfin, 32);
     Tls13KeySchedule ks;
     pc_tls13_ks_early(&TLS13_KDF, &ks);
-    pc_tls13_ks_handshake(&ks, ecdhe, ch_sh);
+    pc_tls13_ks_handshake(&ks, ecdhe, ch_sh, 32);
     pc_tls13_ks_master(&ks, ch_sfin);
 
     uint8_t exp[32];
@@ -132,8 +132,8 @@ void test_server_hs_write_keys()
     uint8_t s_hs[32];
     hx(S_HS, s_hs, 32);
     uint8_t key[16], iv[12], exp_key[16], exp_iv[12];
-    pc_hkdf_expand_label(s_hs, "key", key, sizeof(key));
-    pc_hkdf_expand_label(s_hs, "iv", iv, sizeof(iv));
+    pc_hkdf_expand_label(s_hs, "key", key, sizeof(key), PC_HKDF_LABEL_PREFIX);
+    pc_hkdf_expand_label(s_hs, "iv", iv, sizeof(iv), PC_HKDF_LABEL_PREFIX);
     hx("3fce516009c21727d0f2e4e86ee403bc", exp_key, 16);
     hx("5d313eb2671276ee13000b30", exp_iv, 12);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(exp_key, key, 16);
@@ -226,7 +226,7 @@ void test_kdf_expand_label_wrapper()
     TEST_ASSERT_EQUAL_UINT8_ARRAY(exp_key, key, 16);
 
     uint8_t via_quic[16];
-    pc_hkdf_expand_label(s_hs, "key", via_quic, sizeof(via_quic));
+    pc_hkdf_expand_label(s_hs, "key", via_quic, sizeof(via_quic), PC_HKDF_LABEL_PREFIX);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(via_quic, key, 16);
 }
 

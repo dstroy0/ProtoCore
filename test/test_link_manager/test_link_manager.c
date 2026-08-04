@@ -12,9 +12,9 @@ static LinkManager g_m;
 
 void setUp(void)
 {
-    g_ifaces[0] = {LINK_KIND_ETH, 20, PROTO_FALSE};
-    g_ifaces[1] = {LINK_KIND_WIFI_STA, 10, PROTO_FALSE};
-    g_ifaces[2] = {LINK_KIND_WIFI_AP, 5, PROTO_FALSE};
+    g_ifaces[0] = (LinkIface){LINK_KIND_ETH, 20, PROTO_FALSE};
+    g_ifaces[1] = (LinkIface){LINK_KIND_WIFI_STA, 10, PROTO_FALSE};
+    g_ifaces[2] = (LinkIface){LINK_KIND_WIFI_AP, 5, PROTO_FALSE};
     pc_link_init(&g_m, g_ifaces, 3);
 }
 void tearDown(void)

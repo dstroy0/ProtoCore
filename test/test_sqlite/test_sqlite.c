@@ -544,11 +544,11 @@ void test_encode_record_roundtrip(void)
 {
     // A row of (INT, TEXT, FLOAT, NULL, INT=0) round-trips through the record reader.
     SqliteValue cols[5];
-    cols[0] = {SQLITE_COL_INT, -12345, 0, NULL, 0};
-    cols[1] = {SQLITE_COL_TEXT, 0, 0, (const uint8_t *)"hello", 5};
-    cols[2] = {SQLITE_COL_FLOAT, 0, 3.14159, NULL, 0};
-    cols[3] = {SQLITE_COL_NULL, 0, 0, NULL, 0};
-    cols[4] = {SQLITE_COL_INT, 0, 0, NULL, 0}; // the constant 0 (serial type 8, 0 bytes)
+    cols[0] = (SqliteValue){SQLITE_COL_INT, -12345, 0, NULL, 0};
+    cols[1] = (SqliteValue){SQLITE_COL_TEXT, 0, 0, (const uint8_t *)"hello", 5};
+    cols[2] = (SqliteValue){SQLITE_COL_FLOAT, 0, 3.14159, NULL, 0};
+    cols[3] = (SqliteValue){SQLITE_COL_NULL, 0, 0, NULL, 0};
+    cols[4] = (SqliteValue){SQLITE_COL_INT, 0, 0, NULL, 0}; // the constant 0 (serial type 8, 0 bytes)
 
     uint8_t rec[128];
     uint32_t rl = pc_sqlite_encode_record(cols, 5, rec, sizeof(rec));
@@ -595,9 +595,9 @@ void test_build_table_db_roundtrip(void)
     SqliteRow rows[3];
     for (int r = 0; r < 3; r++)
     {
-        rowvals[r][0] = {SQLITE_COL_INT, spec[r].a, 0, NULL, 0};
-        rowvals[r][1] = {SQLITE_COL_TEXT, 0, 0, (const uint8_t *)spec[r].b, (uint32_t)strlen(spec[r].b)};
-        rows[r] = {(uint64_t)(r + 1), rowvals[r], 2};
+        rowvals[r][0] = (SqliteValue){SQLITE_COL_INT, spec[r].a, 0, NULL, 0};
+        rowvals[r][1] = (SqliteValue){SQLITE_COL_TEXT, 0, 0, (const uint8_t *)spec[r].b, (uint32_t)strlen(spec[r].b)};
+        rows[r] = (SqliteRow){(uint64_t)(r + 1), rowvals[r], 2};
     }
 
     static uint8_t img[1024]; // 2 * 512
@@ -726,8 +726,8 @@ void test_build_table_db_page_overflow_fails_closed(void)
     static SqliteRow rows[60];
     for (int r = 0; r < 60; r++)
     {
-        rowvals[r][0] = {SQLITE_COL_INT, 1000000 + r, 0, NULL, 0}; // ~4-byte int + framing each
-        rows[r] = {(uint64_t)(r + 1), rowvals[r], 1};
+        rowvals[r][0] = (SqliteValue){SQLITE_COL_INT, 1000000 + r, 0, NULL, 0}; // ~4-byte int + framing each
+        rows[r] = (SqliteRow){(uint64_t)(r + 1), rowvals[r], 1};
     }
     static uint8_t img[1024];
     TEST_ASSERT_EQUAL_UINT32(0, pc_sqlite_build_table_db(512, "t", "CREATE TABLE t(a)", rows, 60, img, sizeof(img)));
@@ -1255,8 +1255,8 @@ void test_encode_record_empty_text_and_out_cap(void)
 {
     // Zero-length TEXT and BLOB columns contribute a serial type but no value bytes.
     SqliteValue cols[2];
-    cols[0] = {SQLITE_COL_TEXT, 0, 0, (const uint8_t *)"", 0};
-    cols[1] = {SQLITE_COL_BLOB, 0, 0, (const uint8_t *)"", 0};
+    cols[0] = (SqliteValue){SQLITE_COL_TEXT, 0, 0, (const uint8_t *)"", 0};
+    cols[1] = (SqliteValue){SQLITE_COL_BLOB, 0, 0, (const uint8_t *)"", 0};
     uint8_t rec[16];
     uint32_t rl = pc_sqlite_encode_record(cols, 2, rec, sizeof(rec));
     TEST_ASSERT_EQUAL_UINT32(3, rl); // header-size varint + two serial-type varints
@@ -1284,7 +1284,7 @@ void test_encode_record_multibyte_header_size(void)
     static SqliteValue cols[127];
     for (int i = 0; i < 127; i++)
     {
-        cols[i] = {SQLITE_COL_NULL, 0, 0, NULL, 0};
+        cols[i] = (SqliteValue){SQLITE_COL_NULL, 0, 0, NULL, 0};
     }
     static uint8_t rec[256];
     uint32_t rl = pc_sqlite_encode_record(cols, 127, rec, sizeof(rec));

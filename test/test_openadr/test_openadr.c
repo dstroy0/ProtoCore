@@ -22,8 +22,8 @@ static proto_bool has(const char *hay, const char *needle)
 void test_event(void)
 {
     OpenAdrInterval iv[2];
-    iv[0] = {1720000000u, 3600, "SIMPLE", 1.0};
-    iv[1] = {1720003600u, 3600, "PRICE", 0.125};
+    iv[0] = (OpenAdrInterval){1720000000u, 3600, "SIMPLE", 1.0};
+    iv[1] = (OpenAdrInterval){1720003600u, 3600, "PRICE", 0.125};
     char buf[1024];
     size_t n = pc_openadr_event("program-1", "peak", iv, 2, buf, sizeof(buf));
     TEST_ASSERT_TRUE(n > 0);

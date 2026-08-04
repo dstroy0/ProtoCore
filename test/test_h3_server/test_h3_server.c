@@ -39,6 +39,23 @@ static uint8_t SERVER_SEED[32], CLIENT_PRIV[32];
 static const uint8_t ODCID[8] = {0xd1, 0xd2, 0xd3, 0xd4, 0xd5, 0xd6, 0xd7, 0xd8};
 static const uint8_t CLIENT_SCID[4] = {0xc1, 0xc2, 0xc3, 0xc4};
 
+// Where the QPACK emit callback puts the ":status" it finds. The callback captures nothing, so it
+// is a plain function and the buffer travels in the ctx pointer the decoder already carries.
+typedef struct
+{
+    char *s;
+} H3StatusCtx;
+
+static proto_bool h3_take_status(void *c, const char *nm, size_t nl, const char *v, size_t vl)
+{
+    if (nl == 7 && memcmp(nm, ":status", 7) == 0)
+    {
+        memcpy(((H3StatusCtx *)c)->s, v, vl);
+        ((H3StatusCtx *)c)->s[vl] = 0;
+    }
+    return PROTO_TRUE;
+}
+
 // The route handler under test: it answers on the reserved HTTP/3 dispatch slot exactly as it would
 // for HTTP/1.1 or HTTP/2 - send() routes the response to the right transport.
 static proto_bool g_handler_ran = PROTO_FALSE;
@@ -282,21 +299,8 @@ static proto_bool response_ok(const QuicPacketKeys *ap_s)
                 if (hf.type == H3_HEADERS)
                 {
                     char sc[128];
-                    struct E
-                    {
-                        char *s;
-                    } e = {status};
-                    pc_qpack_decode(
-                        hp, (size_t)hf.length, sc, sizeof(sc),
-                        [](void *c, const char *nm, size_t nl, const char *v, size_t vl) -> proto_bool {
-                            if (nl == 7 && memcmp(nm, ":status", 7) == 0)
-                            {
-                                memcpy(((E *)c)->s, v, vl);
-                                ((E *)c)->s[vl] = 0;
-                            }
-                            return PROTO_TRUE;
-                        },
-                        &e);
+                    H3StatusCtx e = {status};
+                    pc_qpack_decode(hp, (size_t)hf.length, sc, sizeof(sc), h3_take_status, &e);
                 }
                 else if (hf.type == H3_DATA)
                 {
@@ -323,7 +327,7 @@ void test_h3_request_served_by_route()
     // Bring up an HTTP/3-only PC with one route.
     on_http("/hello", HTTP_GET, h_hello);
     TEST_ASSERT_TRUE(pc_h3_cert(CERT, sizeof(CERT), SERVER_SEED, 443));
-    TEST_ASSERT_EQUAL_INT32(PC_OK, begin());
+    TEST_ASSERT_EQUAL_INT32(PC_OK, proto_begin(NULL));
     pc_quic_server_set_out_sink_cb(out_sink, NULL);
 
     QuicInitialSecrets init;
@@ -349,7 +353,7 @@ void test_h3_request_served_by_route()
                            &init.client, frames, fl);
     g_out_n = 0;
     TEST_ASSERT_TRUE(pc_quic_server_ingest(dg, dl, "192.0.2.10", 40000));
-    service_once(); // -> pc_quic_server_poll(): opens the connection, emits the flight
+    service_once(0); // -> pc_quic_server_poll(): opens the connection, emits the flight
     TEST_ASSERT_GREATER_THAN(0, g_out_n);
 
     // Learn the server's chosen SCID (for the 1-RTT short header) from the flight's long header.
@@ -379,7 +383,7 @@ void test_h3_request_served_by_route()
     }
     Tls13KeySchedule cks;
     pc_tls13_ks_early(&TLS13_KDF, &cks);
-    pc_tls13_ks_handshake(&cks, ecdhe, chsh);
+    pc_tls13_ks_handshake(&cks, ecdhe, chsh, 32);
     QuicPacketKeys hs_s, hs_c, ap_s, ap_c;
     pc_quic_keys_from_secret(cks.server_hs_traffic, &hs_s);
     pc_quic_keys_from_secret(cks.client_hs_traffic, &hs_c);
@@ -408,7 +412,7 @@ void test_h3_request_served_by_route()
                             sizeof(CLIENT_SCID), 0, &hs_c, hfr, hfl);
     g_out_n = 0;
     TEST_ASSERT_TRUE(pc_quic_server_ingest(idg, idl + hdl, "192.0.2.10", 40000));
-    service_once();
+    service_once(0);
 
     // Client HTTP/3 GET on request stream 0 (1-RTT); DCID is the server's SCID.
     uint8_t block[128];
@@ -425,7 +429,7 @@ void test_h3_request_served_by_route()
 
     g_out_n = 0;
     TEST_ASSERT_TRUE(pc_quic_server_ingest(s1, s1l, "192.0.2.10", 40000));
-    service_once(); // -> pc_quic_server_poll -> dispatch_h3_request -> h_hello -> send -> respond
+    service_once(0); // -> pc_quic_server_poll -> dispatch_h3_request -> h_hello -> send -> respond
 
     TEST_ASSERT_TRUE(g_handler_ran);                               // the registered route actually ran
     TEST_ASSERT_TRUE(response_ok(&ap_s));                          // its 200 + body came back on the request stream
@@ -434,17 +438,17 @@ void test_h3_request_served_by_route()
     pc_quic_server_stop();
 }
 
-// begin() shape-checks that the HTTP/3 end-to-end path never takes: a server with no listeners and no
+// proto_begin(NULL) shape-checks that the HTTP/3 end-to-end path never takes: a server with no listeners and no
 // HTTP/3 is rejected; a plain TCP server (a listener, no HTTP/3) is accepted and its service_once() gate
 // runs with pc_h3_running still false. Must run BEFORE the h3 test, which sets pc_h3_running true for
 // the rest of the process. Separate instances so the global h3 server the other tests use is untouched.
 void test_h3_begin_edges()
 {
     // No listeners, no HTTP/3 -> rejected (listener_count==0 && !_h3_enabled true side).
-    TEST_ASSERT_EQUAL_INT32((int32_t)PC_ERR_NO_LISTENERS, begin());
+    TEST_ASSERT_EQUAL_INT32((int32_t)PC_ERR_NO_LISTENERS, proto_begin(NULL));
 
     // A TCP listener, no HTTP/3 -> accepted (listener_count!=0) and the h3 bind is skipped (_h3_enabled false).
-    TEST_ASSERT_EQUAL_INT32((int32_t)PC_OK, begin(8080));
+    TEST_ASSERT_EQUAL_INT32((int32_t)PC_OK, begin_http(8080, NULL));
 
     // Pump the gate with h3 not running (pc_h3_running still false here) and on a non-zero worker id ->
     // the otherwise-untaken sides of `worker_id == 0 && s_inst.pc_h3_running` in service_once().
