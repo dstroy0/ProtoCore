@@ -137,39 +137,44 @@ void test_release_allows_reuse_of_same_region()
 
 void test_plaintext_scope_releases_on_scope_exit()
 {
-    size_t ss = pc_plaintext_mark();
     pc_plaintext_alloc(100, 1);
     const size_t outside = pc_plaintext_used();
     {
+        size_t inner = pc_plaintext_mark();
         pc_plaintext_alloc(500, 1);
         TEST_ASSERT_TRUE(pc_plaintext_used() >= outside + 500);
-    } // ss destructs -> release
+        pc_plaintext_release(inner);
+    }
     TEST_ASSERT_EQUAL_size_t(outside, pc_plaintext_used());
 }
 
 void test_nested_scopes_reclaim_lifo()
 {
     size_t outer = pc_plaintext_mark();
-    PlaintextScope outer;
     pc_plaintext_alloc(100, 1);
     const size_t after_outer = pc_plaintext_used();
     {
+        size_t inner = pc_plaintext_mark();
         pc_plaintext_alloc(100, 1);
         TEST_ASSERT_TRUE(pc_plaintext_used() > after_outer);
+        pc_plaintext_release(inner);
     }
-    TEST_ASSERT_EQUAL_size_t(after_outer, pc_plaintext_used());
+    TEST_ASSERT_EQUAL_size_t(after_outer, pc_plaintext_used()); // inner reclaimed, outer intact
+    pc_plaintext_release(outer);
+    TEST_ASSERT_EQUAL_size_t(0, pc_plaintext_used());
 }
 
 void test_sequential_scopes_do_not_accumulate()
 {
-    size_t ss = pc_plaintext_mark();
     // Mirrors ssh_pkt_recv's multi-packet loop: each iteration borrows then
     // releases, so the peak stays at one borrow regardless of iteration count -
     // the property that keeps a busy connection from exhausting the arena.
     for (int k = 0; k < 100; k++)
     {
+        size_t it = pc_plaintext_mark();
         void *p = pc_plaintext_alloc(2048, 16);
         TEST_ASSERT_NOT_NULL(p);
+        pc_plaintext_release(it);
     }
     TEST_ASSERT_EQUAL_size_t(0, pc_plaintext_used());
 }

@@ -105,22 +105,22 @@ void test_spd_first_match_wins()
     pc_ipsec_spd_init(&spd);
     IpsecSelector https = make_sel(6, 443, 443);
     IpsecSelector all = make_sel(0, 0, 65535);
-    TEST_ASSERT_TRUE(pc_ipsec_spd_add(&spd, &https, PROTECT, 0xABCD));
-    TEST_ASSERT_TRUE(pc_ipsec_spd_add(&spd, &all, BYPASS, 0));
+    TEST_ASSERT_TRUE(pc_ipsec_spd_add(&spd, &https, IPSEC_ACTION_PROTECT, 0xABCD));
+    TEST_ASSERT_TRUE(pc_ipsec_spd_add(&spd, &all, IPSEC_ACTION_BYPASS, 0));
 
     const uint8_t s[4] = {192, 168, 1, 10};
     const uint8_t d[4] = {10, 0, 0, 5};
     IpsecFlow https_flow = make_flow(s, d, 6, 51000, 443);
     const IpsecPolicy *p = pc_ipsec_spd_lookup(&spd, &https_flow);
     TEST_ASSERT_NOT_NULL(p);
-    TEST_ASSERT_EQUAL(PROTECT, p->action);
+    TEST_ASSERT_EQUAL(IPSEC_ACTION_PROTECT, p->action);
     TEST_ASSERT_EQUAL_HEX32(0xABCD, p->sa_spi);
 
     // A non-443 flow falls through to the BYPASS.
     IpsecFlow http_flow = make_flow(s, d, 6, 51000, 80);
     p = pc_ipsec_spd_lookup(&spd, &http_flow);
     TEST_ASSERT_NOT_NULL(p);
-    TEST_ASSERT_EQUAL(BYPASS, p->action);
+    TEST_ASSERT_EQUAL(IPSEC_ACTION_BYPASS, p->action);
 
     // A flow outside all selectors gets no policy (default deny).
     const uint8_t s_far[4] = {8, 8, 8, 8};
@@ -135,22 +135,22 @@ void test_spd_order_matters_and_bounds()
     pc_ipsec_spd_init(&spd);
     IpsecSelector https = make_sel(6, 443, 443);
     IpsecSelector all = make_sel(0, 0, 65535);
-    pc_ipsec_spd_add(&spd, &all, BYPASS, 0);
-    pc_ipsec_spd_add(&spd, &https, PROTECT, 0xABCD);
+    pc_ipsec_spd_add(&spd, &all, IPSEC_ACTION_BYPASS, 0);
+    pc_ipsec_spd_add(&spd, &https, IPSEC_ACTION_PROTECT, 0xABCD);
     const uint8_t s[4] = {192, 168, 1, 10};
     const uint8_t d[4] = {10, 0, 0, 5};
     IpsecFlow f = make_flow(s, d, 6, 51000, 443);
     const IpsecPolicy *p = pc_ipsec_spd_lookup(&spd, &f);
     TEST_ASSERT_NOT_NULL(p);
-    TEST_ASSERT_EQUAL(BYPASS, p->action); // the broad rule won
+    TEST_ASSERT_EQUAL(IPSEC_ACTION_BYPASS, p->action); // the broad rule won
 
     // The SPD fills at PC_IPSEC_SPD_MAX and then refuses more.
     pc_ipsec_spd_init(&spd);
     for (int i = 0; i < PC_IPSEC_SPD_MAX; i++)
     {
-        TEST_ASSERT_TRUE(pc_ipsec_spd_add(&spd, &all, DISCARD, 0));
+        TEST_ASSERT_TRUE(pc_ipsec_spd_add(&spd, &all, IPSEC_ACTION_DISCARD, 0));
     }
-    TEST_ASSERT_FALSE(pc_ipsec_spd_add(&spd, &all, DISCARD, 0));
+    TEST_ASSERT_FALSE(pc_ipsec_spd_add(&spd, &all, IPSEC_ACTION_DISCARD, 0));
     // A non-PROTECT action does not carry an SPI.
     TEST_ASSERT_EQUAL_HEX32(0, spd.entries[0].sa_spi);
 }

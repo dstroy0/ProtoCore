@@ -64,11 +64,11 @@ void test_spoll_and_eos()
     TEST_ASSERT_EQUAL_STRING("++spoll 9 96\n", buf);
 
     // the eos numeric mapping (a common source of bugs): 0=CR+LF, 1=CR, 2=LF, 3=None
-    pc_gpib_eos(buf, sizeof(buf), CRLF);
+    pc_gpib_eos(buf, sizeof(buf), GPIB_EOS_CRLF);
     TEST_ASSERT_EQUAL_STRING("++eos 0\n", buf);
-    pc_gpib_eos(buf, sizeof(buf), LF);
+    pc_gpib_eos(buf, sizeof(buf), GPIB_EOS_LF);
     TEST_ASSERT_EQUAL_STRING("++eos 2\n", buf);
-    pc_gpib_eos(buf, sizeof(buf), PC_NONE);
+    pc_gpib_eos(buf, sizeof(buf), GPIB_EOS_PC_NONE);
     TEST_ASSERT_EQUAL_STRING("++eos 3\n", buf);
 }
 
@@ -171,8 +171,8 @@ void test_builders_reject_null_buffer_and_zero_cap()
     TEST_ASSERT_EQUAL_size_t(0, pc_gpib_read(buf, 0, UNTIL_EOI, 0));
     TEST_ASSERT_EQUAL_size_t(0, pc_gpib_spoll(NULL, sizeof(buf), -1, -1));
     TEST_ASSERT_EQUAL_size_t(0, pc_gpib_spoll(buf, 0, -1, -1));
-    TEST_ASSERT_EQUAL_size_t(0, pc_gpib_eos(NULL, sizeof(buf), LF));
-    TEST_ASSERT_EQUAL_size_t(0, pc_gpib_eos(buf, 0, LF));
+    TEST_ASSERT_EQUAL_size_t(0, pc_gpib_eos(NULL, sizeof(buf), GPIB_EOS_LF));
+    TEST_ASSERT_EQUAL_size_t(0, pc_gpib_eos(buf, 0, GPIB_EOS_LF));
 }
 
 void test_build_data_guards_and_empty()
@@ -201,9 +201,9 @@ void test_parse_decimal_edges()
     // A null input, a digit below '0', and an optional out pointer.
     uint32_t v = 0;
     TEST_ASSERT_FALSE(pc_gpib_parse_decimal(NULL, 3, &v));
-    TEST_ASSERT_FALSE(pc_gpib_parse_decimal("12-", 3, &v));   // '-' sorts below '0'
-    TEST_ASSERT_FALSE(pc_gpib_parse_decimal("   ", 3, &v));   // trims to nothing
-    TEST_ASSERT_TRUE(pc_gpib_parse_decimal("7", 1, NULL)); // out is optional
+    TEST_ASSERT_FALSE(pc_gpib_parse_decimal("12-", 3, &v)); // '-' sorts below '0'
+    TEST_ASSERT_FALSE(pc_gpib_parse_decimal("   ", 3, &v)); // trims to nothing
+    TEST_ASSERT_TRUE(pc_gpib_parse_decimal("7", 1, NULL));  // out is optional
 }
 
 void test_parse_addr_edges()

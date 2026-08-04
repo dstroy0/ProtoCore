@@ -22,8 +22,8 @@ static BridgeTarget uart_target()
 {
     BridgeTarget t;
     memset(&t, 0, sizeof(t));
-    t.bus = uart;
-    t.mode = stream;
+    t.bus = BRIDGE_BUS_UART;
+    t.mode = BRIDGE_MODE_STREAM;
     t.unit = 1;
     t.rate = 115200;
     return t;
@@ -33,8 +33,8 @@ static BridgeTarget i2c_target(uint16_t addr)
 {
     BridgeTarget t;
     memset(&t, 0, sizeof(t));
-    t.bus = i2c;
-    t.mode = transaction;
+    t.bus = BRIDGE_BUS_I2C;
+    t.mode = BRIDGE_MODE_TRANSACTION;
     t.unit = 0;
     t.addr_cs = addr;
     t.rate = 400000;
@@ -44,42 +44,42 @@ static BridgeTarget i2c_target(uint16_t addr)
 void test_map_and_find()
 {
     BridgeTarget u = uart_target();
-    TEST_ASSERT_TRUE(pc_iface_bridge_map("192.168.1.50", 4001, tcp, &u));
+    TEST_ASSERT_TRUE(pc_iface_bridge_map("192.168.1.50", 4001, BRIDGE_PROTO_TCP, &u));
     TEST_ASSERT_EQUAL_UINT8(1, pc_iface_bridge_count());
 
-    const BridgeRule *r = pc_iface_bridge_find(4001, tcp);
+    const BridgeRule *r = pc_iface_bridge_find(4001, BRIDGE_PROTO_TCP);
     TEST_ASSERT_NOT_NULL(r);
-    TEST_ASSERT_EQUAL(uart, r->target.bus);
+    TEST_ASSERT_EQUAL(BRIDGE_BUS_UART, r->target.bus);
     TEST_ASSERT_EQUAL_UINT16(4001, r->listen_port);
     TEST_ASSERT_EQUAL(PC_IP_V4, r->listen_ip.family); // full bind address preserved
     TEST_ASSERT_EQUAL_UINT8(192, r->listen_ip.bytes[0]);
     TEST_ASSERT_EQUAL_UINT8(50, r->listen_ip.bytes[3]);
 
-    TEST_ASSERT_NULL(pc_iface_bridge_find(4001, udp)); // proto must match
-    TEST_ASSERT_NULL(pc_iface_bridge_find(4002, tcp)); // port must match
+    TEST_ASSERT_NULL(pc_iface_bridge_find(4001, BRIDGE_PROTO_UDP)); // proto must match
+    TEST_ASSERT_NULL(pc_iface_bridge_find(4002, BRIDGE_PROTO_TCP)); // port must match
 }
 
 void test_any_interface_and_dedup()
 {
     BridgeTarget i = i2c_target(0x40);
-    TEST_ASSERT_TRUE(pc_iface_bridge_map(NULL, 5000, tcp, &i)); // any interface
-    const BridgeRule *r = pc_iface_bridge_find(5000, tcp);
+    TEST_ASSERT_TRUE(pc_iface_bridge_map(NULL, 5000, BRIDGE_PROTO_TCP, &i)); // any interface
+    const BridgeRule *r = pc_iface_bridge_find(5000, BRIDGE_PROTO_TCP);
     TEST_ASSERT_NOT_NULL(r);
     TEST_ASSERT_EQUAL(PC_IP_NONE, r->listen_ip.family);
     TEST_ASSERT_EQUAL_UINT16(0x40, r->target.addr_cs);
 
     // Same port+proto is a duplicate -> rejected.
     BridgeTarget u = uart_target();
-    TEST_ASSERT_FALSE(pc_iface_bridge_map("10.0.0.1", 5000, tcp, &u));
+    TEST_ASSERT_FALSE(pc_iface_bridge_map("10.0.0.1", 5000, BRIDGE_PROTO_TCP, &u));
     // Same port on the other transport is fine.
-    TEST_ASSERT_TRUE(pc_iface_bridge_map(NULL, 5000, udp, &i));
+    TEST_ASSERT_TRUE(pc_iface_bridge_map(NULL, 5000, BRIDGE_PROTO_UDP, &i));
     TEST_ASSERT_EQUAL_UINT8(2, pc_iface_bridge_count());
 }
 
 void test_bad_address_rejected()
 {
     BridgeTarget u = uart_target();
-    TEST_ASSERT_FALSE(pc_iface_bridge_map("not.an.ip", 6000, tcp, &u));
+    TEST_ASSERT_FALSE(pc_iface_bridge_map("not.an.ip", 6000, BRIDGE_PROTO_TCP, &u));
     TEST_ASSERT_EQUAL_UINT8(0, pc_iface_bridge_count());
 }
 
@@ -88,10 +88,10 @@ void test_table_full()
     BridgeTarget u = uart_target();
     for (uint16_t p = 0; p < PC_BRIDGE_MAX_RULES; p++)
     {
-        TEST_ASSERT_TRUE(pc_iface_bridge_map(NULL, (uint16_t)(7000 + p), tcp, &u));
+        TEST_ASSERT_TRUE(pc_iface_bridge_map(NULL, (uint16_t)(7000 + p), BRIDGE_PROTO_TCP, &u));
     }
     TEST_ASSERT_EQUAL_UINT8(PC_BRIDGE_MAX_RULES, pc_iface_bridge_count());
-    TEST_ASSERT_FALSE(pc_iface_bridge_map(NULL, 9999, tcp, &u)); // full
+    TEST_ASSERT_FALSE(pc_iface_bridge_map(NULL, 9999, BRIDGE_PROTO_TCP, &u)); // full
     pc_iface_bridge_clear();
     TEST_ASSERT_EQUAL_UINT8(0, pc_iface_bridge_count());
 }
@@ -150,7 +150,7 @@ void test_null_arg_guards()
     TEST_ASSERT_EQUAL_UINT8(0, pc_iface_bridge_count());
 
     // map() with a NULL target fails closed and touches nothing.
-    TEST_ASSERT_FALSE(pc_iface_bridge_map("10.0.0.1", 7600, tcp, NULL));
+    TEST_ASSERT_FALSE(pc_iface_bridge_map("10.0.0.1", 7600, BRIDGE_PROTO_TCP, NULL));
     TEST_ASSERT_EQUAL_UINT8(0, pc_iface_bridge_count());
 }
 
@@ -158,8 +158,8 @@ void test_map_empty_ip_is_any_interface()
 {
     // A non-NULL but empty ip string is treated the same as NULL: "any interface".
     BridgeTarget u = uart_target();
-    TEST_ASSERT_TRUE(pc_iface_bridge_map("", 5200, tcp, &u));
-    const BridgeRule *r = pc_iface_bridge_find(5200, tcp);
+    TEST_ASSERT_TRUE(pc_iface_bridge_map("", 5200, BRIDGE_PROTO_TCP, &u));
+    const BridgeRule *r = pc_iface_bridge_find(5200, BRIDGE_PROTO_TCP);
     TEST_ASSERT_NOT_NULL(r);
     TEST_ASSERT_EQUAL(PC_IP_NONE, r->listen_ip.family);
 }

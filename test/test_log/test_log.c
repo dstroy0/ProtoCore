@@ -177,98 +177,78 @@ void test_empty_message_is_still_a_line()
 // own, so it is exercised directly here rather than through a transport.
 // ---------------------------------------------------------------------------
 
-// The pc_atomic wrapper must behave as a plain value through all four of its
-// conversion/assignment paths.
-void test_ring_atomic_wrapper_round_trips()
-{
-    pc_atomic<size_t> a;
-    TEST_ASSERT_EQUAL_size_t(0, (size_t)a); // default-constructed is zero
-    a = (size_t)7;                          // operator=(T): release store
-    TEST_ASSERT_EQUAL_size_t(7, (size_t)a); // operator T(): acquire load
-
-    pc_atomic<size_t> copied(a); // copy construction
-    TEST_ASSERT_EQUAL_size_t(7, (size_t)copied);
-
-    pc_atomic<size_t> assigned;
-    assigned = copied; // copy assignment
-    TEST_ASSERT_EQUAL_size_t(7, (size_t)assigned);
-
-    pc_atomic<size_t> seeded((size_t)3); // value construction
-    TEST_ASSERT_EQUAL_size_t(3, (size_t)seeded);
-}
-
 // Single-byte pops report emptiness rather than running past the head.
 void test_ring_read_byte_and_available()
 {
     uint8_t buf[8] = {'a', 'b', 'c', 0, 0, 0, 0, 0};
-    pc_atomic<size_t> head((size_t)3);
-    pc_atomic<size_t> tail((size_t)0);
-    TEST_ASSERT_EQUAL_size_t(3, pc_ring_available(head, tail, sizeof(buf)));
+    _Atomic size_t head = 3;
+    _Atomic size_t tail = 0;
+    TEST_ASSERT_EQUAL_size_t(3, pc_ring_available(&head, &tail, sizeof(buf)));
 
     uint8_t out = 0;
-    TEST_ASSERT_TRUE(pc_ring_read_byte(buf, sizeof(buf), head, tail, &out));
+    TEST_ASSERT_TRUE(pc_ring_read_byte(buf, sizeof(buf), &head, &tail, &out));
     TEST_ASSERT_EQUAL_HEX8('a', out);
-    TEST_ASSERT_EQUAL_size_t(2, pc_ring_available(head, tail, sizeof(buf)));
-    TEST_ASSERT_TRUE(pc_ring_read_byte(buf, sizeof(buf), head, tail, &out));
+    TEST_ASSERT_EQUAL_size_t(2, pc_ring_available(&head, &tail, sizeof(buf)));
+    TEST_ASSERT_TRUE(pc_ring_read_byte(buf, sizeof(buf), &head, &tail, &out));
     TEST_ASSERT_EQUAL_HEX8('b', out);
-    TEST_ASSERT_TRUE(pc_ring_read_byte(buf, sizeof(buf), head, tail, &out));
+    TEST_ASSERT_TRUE(pc_ring_read_byte(buf, sizeof(buf), &head, &tail, &out));
     TEST_ASSERT_EQUAL_HEX8('c', out);
     // Tail has caught the head: empty.
-    TEST_ASSERT_FALSE(pc_ring_read_byte(buf, sizeof(buf), head, tail, &out));
-    TEST_ASSERT_EQUAL_size_t(0, pc_ring_available(head, tail, sizeof(buf)));
+    TEST_ASSERT_FALSE(pc_ring_read_byte(buf, sizeof(buf), &head, &tail, &out));
+    TEST_ASSERT_EQUAL_size_t(0, pc_ring_available(&head, &tail, sizeof(buf)));
 }
 
 // A bulk read stops at whichever comes first: the caller's limit or the head.
 void test_ring_read_bulk_stops_at_head_and_maxn()
 {
     uint8_t buf[8] = {'0', '1', '2', '3', '4', 0, 0, 0};
-    pc_atomic<size_t> head((size_t)5);
-    pc_atomic<size_t> tail((size_t)0);
+    _Atomic size_t head = 5;
+    _Atomic size_t tail = 0;
     uint8_t dst[8] = {0};
 
-    TEST_ASSERT_EQUAL_size_t(2, pc_ring_read(buf, sizeof(buf), head, tail, dst, 2)); // limited by maxn
+    TEST_ASSERT_EQUAL_size_t(2, pc_ring_read(buf, sizeof(buf), &head, &tail, dst, 2)); // limited by maxn
     TEST_ASSERT_EQUAL_HEX8('0', dst[0]);
     TEST_ASSERT_EQUAL_HEX8('1', dst[1]);
 
-    TEST_ASSERT_EQUAL_size_t(3, pc_ring_read(buf, sizeof(buf), head, tail, dst, sizeof(dst))); // limited by head
+    TEST_ASSERT_EQUAL_size_t(3, pc_ring_read(buf, sizeof(buf), &head, &tail, dst, sizeof(dst))); // limited by head
     TEST_ASSERT_EQUAL_HEX8('2', dst[0]);
     TEST_ASSERT_EQUAL_HEX8('4', dst[2]);
 
-    TEST_ASSERT_EQUAL_size_t(0, pc_ring_read(buf, sizeof(buf), head, tail, dst, sizeof(dst))); // now empty
+    TEST_ASSERT_EQUAL_size_t(0, pc_ring_read(buf, sizeof(buf), &head, &tail, dst, sizeof(dst))); // now empty
 }
 
 // Peek is wrap-aware and non-destructive; consume advances the tail modulo cap.
 void test_ring_peek_and_consume_wrap()
 {
     uint8_t buf[8] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'};
-    pc_atomic<size_t> tail((size_t)6);
+    _Atomic size_t tail = 6;
     uint8_t dst[4] = {0};
 
-    pc_ring_peek(buf, sizeof(buf), tail, 0, dst, 4); // 6, 7, then wraps to 0, 1
+    pc_ring_peek(buf, sizeof(buf), &tail, 0, dst, 4); // 6, 7, then wraps to 0, 1
     TEST_ASSERT_EQUAL_HEX8('G', dst[0]);
     TEST_ASSERT_EQUAL_HEX8('H', dst[1]);
     TEST_ASSERT_EQUAL_HEX8('A', dst[2]);
     TEST_ASSERT_EQUAL_HEX8('B', dst[3]);
     TEST_ASSERT_EQUAL_size_t(6, (size_t)tail); // peeking consumed nothing
 
-    pc_ring_peek(buf, sizeof(buf), tail, 2, dst, 2); // offset lands past the wrap
+    pc_ring_peek(buf, sizeof(buf), &tail, 2, dst, 2); // offset lands past the wrap
     TEST_ASSERT_EQUAL_HEX8('A', dst[0]);
     TEST_ASSERT_EQUAL_HEX8('B', dst[1]);
 
-    pc_ring_consume(tail, sizeof(buf), 4);
+    pc_ring_consume(&tail, sizeof(buf), 4);
     TEST_ASSERT_EQUAL_size_t(2, (size_t)tail); // (6 + 4) % 8
 }
 
 // Free space always reserves one slot so full is distinguishable from empty.
 void test_ring_free_reserves_one_slot()
 {
-    pc_atomic<size_t> head((size_t)0);
-    pc_atomic<size_t> tail((size_t)0);
-    TEST_ASSERT_EQUAL_size_t(7, pc_ring_free(head, tail, 8)); // empty -> cap - 1
+    _Atomic size_t head = 0;
+    _Atomic size_t tail = 0;
+    TEST_ASSERT_EQUAL_size_t(7, pc_ring_free(&head, &tail, 8)); // empty -> cap - 1
     head = (size_t)5;
-    TEST_ASSERT_EQUAL_size_t(2, pc_ring_free(head, tail, 8));
+    TEST_ASSERT_EQUAL_size_t(2, pc_ring_free(&head, &tail, 8));
     head = (size_t)7;
-    TEST_ASSERT_EQUAL_size_t(0, pc_ring_free(head, tail, 8)); // full
+    TEST_ASSERT_EQUAL_size_t(0, pc_ring_free(&head, &tail, 8)); // full
 }
 
 // The producer span copy clamps to the wrap point and resumes at the buffer start.
@@ -307,7 +287,6 @@ int main(int, char **)
     RUN_TEST(test_line_that_does_not_fit_is_refused);
     RUN_TEST(test_null_spec_is_ignored);
     RUN_TEST(test_empty_message_is_still_a_line);
-    RUN_TEST(test_ring_atomic_wrapper_round_trips);
     RUN_TEST(test_ring_read_byte_and_available);
     RUN_TEST(test_ring_read_bulk_stops_at_head_and_maxn);
     RUN_TEST(test_ring_peek_and_consume_wrap);

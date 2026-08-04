@@ -22,7 +22,7 @@ void test_header_roundtrip()
 {
     uint8_t buf[16];
     TEST_ASSERT_EQUAL_size_t(
-        16, pc_hislip_build_header(buf, sizeof(buf), DATA_END, 0x01, 0xDEADBEEF, 0x0102030405060708ULL));
+        16, pc_hislip_build_header(buf, sizeof(buf), HISLIP_MSG_DATA_END, 0x01, 0xDEADBEEF, 0x0102030405060708ULL));
     // prologue + fields on the wire
     TEST_ASSERT_EQUAL_HEX8('H', buf[0]);
     TEST_ASSERT_EQUAL_HEX8('S', buf[1]);
@@ -35,7 +35,7 @@ void test_header_roundtrip()
 
     HislipHeader h;
     TEST_ASSERT_TRUE(pc_hislip_parse_header(buf, sizeof(buf), &h));
-    TEST_ASSERT_EQUAL_UINT8((uint8_t)DATA_END, (uint8_t)h.type);
+    TEST_ASSERT_EQUAL_UINT8((uint8_t)HISLIP_MSG_DATA_END, (uint8_t)h.type);
     TEST_ASSERT_EQUAL_HEX8(0x01, h.control);
     TEST_ASSERT_EQUAL_HEX32(0xDEADBEEF, h.parameter);
     TEST_ASSERT_EQUAL_HEX64(0x0102030405060708ULL, h.payload_len);
@@ -53,13 +53,13 @@ void test_header_rejects()
     TEST_ASSERT_FALSE(pc_hislip_parse_header(bad, 16, &h));
     // build fails closed on a too-small buffer
     uint8_t small[15];
-    TEST_ASSERT_EQUAL_size_t(0, pc_hislip_build_header(small, sizeof(small), DATA, 0, 0, 0));
+    TEST_ASSERT_EQUAL_size_t(0, pc_hislip_build_header(small, sizeof(small), HISLIP_MSG_DATA, 0, 0, 0));
 }
 
 void test_header_null_args()
 {
     // build_header fails closed on a null buffer
-    TEST_ASSERT_EQUAL_size_t(0, pc_hislip_build_header(NULL, 16, DATA, 0, 0, 0));
+    TEST_ASSERT_EQUAL_size_t(0, pc_hislip_build_header(NULL, 16, HISLIP_MSG_DATA, 0, 0, 0));
 
     HislipHeader h;
     const uint8_t good[16] = {'H', 'S', 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
@@ -76,16 +76,16 @@ void test_header_null_args()
 
 void test_message_type_codes()
 {
-    TEST_ASSERT_EQUAL_UINT8(0, (uint8_t)INITIALIZE);
-    TEST_ASSERT_EQUAL_UINT8(1, (uint8_t)INITIALIZE_RESPONSE);
-    TEST_ASSERT_EQUAL_UINT8(6, (uint8_t)DATA);
-    TEST_ASSERT_EQUAL_UINT8(7, (uint8_t)DATA_END);
-    TEST_ASSERT_EQUAL_UINT8(12, (uint8_t)TRIGGER);
-    TEST_ASSERT_EQUAL_UINT8(17, (uint8_t)ASYNC_INITIALIZE);
-    TEST_ASSERT_EQUAL_UINT8(18, (uint8_t)ASYNC_INITIALIZE_RESPONSE);
-    TEST_ASSERT_EQUAL_UINT8(23, (uint8_t)ASYNC_DEVICE_CLEAR_ACKNOWLEDGE);
-    TEST_ASSERT_EQUAL_UINT8(24, (uint8_t)ASYNC_LOCK_INFO);
-    TEST_ASSERT_EQUAL_UINT8(38, (uint8_t)AUTHENTICATION_RESULT);
+    TEST_ASSERT_EQUAL_UINT8(0, (uint8_t)HISLIP_MSG_INITIALIZE);
+    TEST_ASSERT_EQUAL_UINT8(1, (uint8_t)HISLIP_MSG_INITIALIZE_RESPONSE);
+    TEST_ASSERT_EQUAL_UINT8(6, (uint8_t)HISLIP_MSG_DATA);
+    TEST_ASSERT_EQUAL_UINT8(7, (uint8_t)HISLIP_MSG_DATA_END);
+    TEST_ASSERT_EQUAL_UINT8(12, (uint8_t)HISLIP_MSG_TRIGGER);
+    TEST_ASSERT_EQUAL_UINT8(17, (uint8_t)HISLIP_MSG_ASYNC_INITIALIZE);
+    TEST_ASSERT_EQUAL_UINT8(18, (uint8_t)HISLIP_MSG_ASYNC_INITIALIZE_RESPONSE);
+    TEST_ASSERT_EQUAL_UINT8(23, (uint8_t)HISLIP_MSG_ASYNC_DEVICE_CLEAR_ACKNOWLEDGE);
+    TEST_ASSERT_EQUAL_UINT8(24, (uint8_t)HISLIP_MSG_ASYNC_LOCK_INFO);
+    TEST_ASSERT_EQUAL_UINT8(38, (uint8_t)HISLIP_MSG_AUTHENTICATION_RESULT);
 }
 
 // ── Initialize (byte-exact IVI-6.1 worked example) ──────────────────────────────────────────────
@@ -174,14 +174,14 @@ void test_async_initialize()
     TEST_ASSERT_EQUAL_size_t(16, pc_hislip_build_async_initialize(buf, sizeof(buf), 0x0042));
     HislipHeader h;
     TEST_ASSERT_TRUE(pc_hislip_parse_header(buf, 16, &h));
-    TEST_ASSERT_EQUAL_UINT8((uint8_t)ASYNC_INITIALIZE, (uint8_t)h.type);
+    TEST_ASSERT_EQUAL_UINT8((uint8_t)HISLIP_MSG_ASYNC_INITIALIZE, (uint8_t)h.type);
     TEST_ASSERT_EQUAL_HEX32(0x0042, h.parameter); // session id in the low 16 bits
     TEST_ASSERT_EQUAL_HEX64(0, h.payload_len);
 
     // AsyncInitializeResponse carries the server vendor id
     TEST_ASSERT_EQUAL_size_t(16, pc_hislip_build_async_initialize_response(buf, sizeof(buf), 0x01, 0x5859));
     TEST_ASSERT_TRUE(pc_hislip_parse_header(buf, 16, &h));
-    TEST_ASSERT_EQUAL_UINT8((uint8_t)ASYNC_INITIALIZE_RESPONSE, (uint8_t)h.type);
+    TEST_ASSERT_EQUAL_UINT8((uint8_t)HISLIP_MSG_ASYNC_INITIALIZE_RESPONSE, (uint8_t)h.type);
     TEST_ASSERT_EQUAL_HEX32(0x5859, h.parameter);
     TEST_ASSERT_EQUAL_HEX8(0x01, h.control);
 }
@@ -209,7 +209,7 @@ void test_data_roundtrip()
     TEST_ASSERT_EQUAL_size_t(16 + sizeof(payload), n);
     HislipHeader h;
     TEST_ASSERT_TRUE(pc_hislip_parse_header(buf, n, &h));
-    TEST_ASSERT_EQUAL_UINT8((uint8_t)DATA, (uint8_t)h.type); // not END
+    TEST_ASSERT_EQUAL_UINT8((uint8_t)HISLIP_MSG_DATA, (uint8_t)h.type); // not END
     TEST_ASSERT_EQUAL_HEX32(0x00001000, h.parameter);
     TEST_ASSERT_EQUAL_HEX64(sizeof(payload), h.payload_len);
     TEST_ASSERT_EQUAL_MEMORY(payload, buf + 16, sizeof(payload));
@@ -248,7 +248,7 @@ void test_build_with_payload_edge_cases()
     TEST_ASSERT_EQUAL_size_t(PC_HISLIP_HEADER_LEN, n);
     HislipHeader h;
     TEST_ASSERT_TRUE(pc_hislip_parse_header(buf, n, &h));
-    TEST_ASSERT_EQUAL_UINT8((uint8_t)INITIALIZE, (uint8_t)h.type);
+    TEST_ASSERT_EQUAL_UINT8((uint8_t)HISLIP_MSG_INITIALIZE, (uint8_t)h.type);
     TEST_ASSERT_EQUAL_HEX64(0, h.payload_len);
 }
 

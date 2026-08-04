@@ -115,17 +115,19 @@ static void test_scope_guard_wipes_on_every_exit(void)
 static void test_nested_scopes_release_lifo(void)
 {
     size_t outer = pc_secure_mark();
-    SecureScope outer;
     pc_span a = pc_secure_span(32, 8);
     TEST_ASSERT_TRUE(pc_span_ok(a));
     size_t after_a = pc_secure_used();
     {
+        size_t inner = pc_secure_mark();
         pc_span b = pc_secure_span(32, 8);
         TEST_ASSERT_TRUE(pc_span_ok(b));
         TEST_ASSERT_TRUE(pc_secure_used() > after_a);
+        pc_secure_release(inner);
     }
     TEST_ASSERT_EQUAL_size_t(after_a, pc_secure_used()); // inner reclaimed, outer intact
     TEST_ASSERT_TRUE(pc_span_ok(a));
+    pc_secure_release(outer);
 }
 
 // --- the other half of the control: the pools are disjoint regions ---
