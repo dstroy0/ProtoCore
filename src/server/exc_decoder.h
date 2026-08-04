@@ -21,6 +21,7 @@
 #define PROTOCORE_EXC_DECODER_H
 
 #include "protocore_config.h"
+#include "server/filesystem/mnt.h" // pc_mnt_backend - the store a dump is offloaded to
 
 #if PC_ENABLE_EXC_DECODER
 
@@ -73,11 +74,6 @@ size_t pc_exc_json(const ExcInfo *info, char *out, size_t cap);
 //
 // Requires a `coredump` partition in the partition table (the default Arduino tables have one).
 
-namespace fs
-{
-class FS;
-}
-
 /** @brief Where the stored core dump lives, and how big it is. */
 typedef struct
 {
@@ -122,10 +118,13 @@ proto_bool pc_exc_coredump_summary(ExcInfo *out);
 proto_bool pc_exc_coredump_read(size_t offset, void *buf, size_t len);
 
 /**
- * @brief Copy the raw core-dump image out of flash into a file (SD, LittleFS, ...).
+ * @brief Copy the raw core-dump image out of flash into a file on @p file_sys.
  *
  * Streams in PC_EXC_COREDUMP_CHUNK-sized pieces, so it costs no heap and a large dump does not
  * need to fit RAM.
+ *
+ * @param file_sys the store to write into: any pc_mnt_backend, so pc_mnt_active(), the RAM disk, or
+ *        a board adapter over SD / LittleFS all work and this file names no vendor type.
  *
  * The written file is the **raw core-dump image** in ESP-IDF's flash format, not a bare ELF: a
  * 24-byte header (the first word is the total image size) followed by an `ET_CORE` ELF at offset 24
@@ -135,7 +134,7 @@ proto_bool pc_exc_coredump_read(size_t offset, void *buf, size_t len);
  *
  * @return true if the whole image was written.
  */
-proto_bool pc_exc_coredump_save(fs::FS &file_sys, const char *path);
+proto_bool pc_exc_coredump_save(const pc_mnt_backend *file_sys, const char *path);
 
 /**
  * @brief Erase the stored dump so the next boot does not re-offload the same crash.

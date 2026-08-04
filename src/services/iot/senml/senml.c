@@ -34,7 +34,7 @@ static proto_bool is_integral(double d)
 
 // Emit a SenML number into a JSON value position: an integer when integral (keeps timestamp
 // precision), otherwise a %g float.
-static void json_num(JsonWriter *w, double d)
+static void json_num(pc_json_writer *w, double d)
 {
     char tmp[32];
     if (is_integral(d))
@@ -55,7 +55,7 @@ static void json_num(JsonWriter *w, double d)
             tmp[0] = '\0';
         }
     }
-    w->raw(tmp);
+    pc_json_raw(w, tmp);
 }
 
 size_t pc_senml_json_build(char *buf, size_t cap, const SenmlRecord *records, size_t count)
@@ -64,58 +64,59 @@ size_t pc_senml_json_build(char *buf, size_t cap, const SenmlRecord *records, si
     {
         return 0;
     }
-    JsonWriter w(buf, cap);
-    w.begin_array();
+    pc_json_writer w = {0};
+    pc_json_init(&w, buf, cap);
+    pc_json_begin_array(&w);
     for (size_t i = 0; i < count; i++)
     {
         const SenmlRecord *r = &records[i];
-        w.begin_object();
+        pc_json_begin_object(&w);
         if (r->base_name)
         {
-            w.kv_str("bn", r->base_name);
+            pc_json_kv_str(&w, "bn", r->base_name);
         }
         if (r->has_base_time)
         {
-            w.key("bt");
+            pc_json_key(&w, "bt");
             json_num(&w, r->base_time);
         }
         if (r->name)
         {
-            w.kv_str("n", r->name);
+            pc_json_kv_str(&w, "n", r->name);
         }
         if (r->unit)
         {
-            w.kv_str("u", r->unit);
+            pc_json_kv_str(&w, "u", r->unit);
         }
         // Every SenmlValueKind enumerator has a case below, so the default edge the compiler
         // emits for the uint8_t-backed enum is unreachable for any value the API admits.
         switch (r->value_kind) // GCOVR_EXCL_LINE  exhaustive enum switch; the default edge is dead
         {
         case SENML_V_FLOAT:
-            w.key("v");
+            pc_json_key(&w, "v");
             json_num(&w, r->value);
             break;
         case SENML_V_STRING:
             if (r->value_str)
             {
-                w.kv_str("vs", r->value_str);
+                pc_json_kv_str(&w, "vs", r->value_str);
             }
             break;
         case SENML_V_BOOL:
-            w.kv_bool("vb", r->value_bool);
+            pc_json_kv_bool(&w, "vb", r->value_bool);
             break;
         case SENML_V_NONE:
             break;
         }
         if (r->has_time)
         {
-            w.key("t");
+            pc_json_key(&w, "t");
             json_num(&w, r->time);
         }
-        w.end_object();
+        pc_json_end_object(&w);
     }
-    w.end_array();
-    return w.ok() ? w.length() : 0;
+    pc_json_end_array(&w);
+    return pc_json_ok(&w) ? pc_json_length(&w) : 0;
 }
 
 // Emit a SenML number: an integer when integral (keeps timestamp precision), else a float.

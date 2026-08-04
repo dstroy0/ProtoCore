@@ -205,25 +205,26 @@ static void build_hostkey_list(char *out, size_t cap)
     const proto_bool rsa = hostkey_rsa_available();
     const proto_bool ed = pc_ssh_hostkey_ed25519_available();
     const proto_bool ec = pc_ssh_hostkey_ecdsa_available();
-    struct HostkeyCand
+    // A host key we can offer: the wire name and whether the key is on the device.
+    typedef struct
     {
         const char *name;
         proto_bool ok;
-    };
-    HostkeyCand cand[4];
+    } HostkeyCand;
+    HostkeyCand cand[4] = {{0, PROTO_FALSE}, {0, PROTO_FALSE}, {0, PROTO_FALSE}, {0, PROTO_FALSE}};
     if (s_sshtr.prefer_rsa)
     {
-        cand[0] = {HOSTKEY_RSA_SHA512, rsa};
-        cand[1] = {HOSTKEY_RSA_SHA256, rsa};
-        cand[2] = {HOSTKEY_ECDSA, ec};
-        cand[3] = {HOSTKEY_ED, ed};
+        cand[0] = (HostkeyCand){HOSTKEY_RSA_SHA512, rsa};
+        cand[1] = (HostkeyCand){HOSTKEY_RSA_SHA256, rsa};
+        cand[2] = (HostkeyCand){HOSTKEY_ECDSA, ec};
+        cand[3] = (HostkeyCand){HOSTKEY_ED, ed};
     }
     else
     {
-        cand[0] = {HOSTKEY_ED, ed};
-        cand[1] = {HOSTKEY_ECDSA, ec};
-        cand[2] = {HOSTKEY_RSA_SHA512, rsa};
-        cand[3] = {HOSTKEY_RSA_SHA256, rsa};
+        cand[0] = (HostkeyCand){HOSTKEY_ED, ed};
+        cand[1] = (HostkeyCand){HOSTKEY_ECDSA, ec};
+        cand[2] = (HostkeyCand){HOSTKEY_RSA_SHA512, rsa};
+        cand[3] = (HostkeyCand){HOSTKEY_RSA_SHA256, rsa};
     }
     out[0] = '\0';
     for (int k = 0; k < 4; k++)

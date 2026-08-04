@@ -25,8 +25,6 @@ typedef struct pc_gql_args
     int count;
 } pc_gql_args;
 
-namespace
-{
 typedef struct
 {
     char name[PC_GQL_NAME_MAX];
@@ -87,20 +85,20 @@ typedef struct
     const char *e;
 } Lex;
 
-static void skipws(Lex &L)
+static void skipws(Lex *L)
 {
-    while (L.p < L.e)
+    while (L->p < L->e)
     {
-        char c = *L.p;
+        char c = *L->p;
         if (c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == ',')
         {
-            L.p++;
+            L->p++;
         }
         else if (c == '#')
         {
-            while (L.p < L.e && *L.p != '\n')
+            while (L->p < L->e && *L->p != '\n')
             {
-                L.p++;
+                L->p++;
             }
         }
         else
@@ -110,10 +108,10 @@ static void skipws(Lex &L)
     }
 }
 
-static char peek(Lex &L)
+static char peek(Lex *L)
 {
     skipws(L);
-    return L.p < L.e ? *L.p : '\0';
+    return L->p < L->e ? *L->p : '\0';
 }
 
 // Record a generic parse error, preserving any more specific error already set.
@@ -139,16 +137,16 @@ static proto_bool is_name(char c)
 // "true"/"false"/"null", and bounding solely by the global maximum let a longer bareword in an
 // argument position - e.g. `{ f(a: LONGENUMVALUE) }`, straight from untrusted query text - write
 // past the end of it. Names still cannot exceed PC_GQL_NAME_MAX; whichever limit is tighter wins.
-static proto_bool parse_name(Lex &L, char *out, size_t cap)
+static proto_bool parse_name(Lex *L, char *out, size_t cap)
 {
     skipws(L);
-    if (L.p >= L.e || !is_name_start(*L.p))
+    if (L->p >= L->e || !is_name_start(*L->p))
     {
         return PROTO_FALSE;
     }
     const size_t limit = cap < (size_t)PC_GQL_NAME_MAX ? cap : (size_t)PC_GQL_NAME_MAX;
     size_t i = 0;
-    while (L.p < L.e && is_name(*L.p))
+    while (L->p < L->e && is_name(*L->p))
     {
         // `i + 1 >= limit`, not `i >= limit - 1`: equivalent for every limit >= 1, but it also
         // stays correct if a caller ever passes cap == 0, where `limit - 1` would wrap to SIZE_MAX
@@ -158,7 +156,7 @@ static proto_bool parse_name(Lex &L, char *out, size_t cap)
             s_gql.err = PC_GQL_ERR_LIMIT;
             return PROTO_FALSE;
         }
-        out[i++] = *L.p++;
+        out[i++] = *L->p++;
     }
     out[i] = '\0';
     return PROTO_TRUE;
@@ -179,20 +177,20 @@ static const char *intern(const char *s, int len)
     return dst;
 }
 
-static proto_bool parse_value(Lex &L, pc_gql_value *v)
+static proto_bool parse_value(Lex *L, pc_gql_value *v)
 {
     char c = peek(L);
     if (c == '"')
     {
-        L.p++; // opening quote
+        L->p++; // opening quote
         char tmp[PC_GQL_STRBUF];
         int n = 0;
-        while (L.p < L.e && *L.p != '"')
+        while (L->p < L->e && *L->p != '"')
         {
-            char ch = *L.p++;
-            if (ch == '\\' && L.p < L.e)
+            char ch = *L->p++;
+            if (ch == '\\' && L->p < L->e)
             {
-                char esc = *L.p++;
+                char esc = *L->p++;
                 switch (esc)
                 {
                 case 'n':
@@ -225,12 +223,12 @@ static proto_bool parse_value(Lex &L, pc_gql_value *v)
             }
             tmp[n++] = ch;
         }
-        if (L.p >= L.e)
+        if (L->p >= L->e)
         {
             s_gql.err = PC_GQL_ERR_PARSE;
             return PROTO_FALSE;
         }
-        L.p++; // closing quote
+        L->p++; // closing quote
         const char *s = intern(tmp, n);
         if (!s)
         {
@@ -245,50 +243,50 @@ static proto_bool parse_value(Lex &L, pc_gql_value *v)
         // Manual number parse (no stdlib): integer, optional fraction, optional
         // exponent. Builds an int64 for plain integers and a double otherwise.
         proto_bool neg = PROTO_FALSE;
-        if (*L.p == '-')
+        if (*L->p == '-')
         {
             neg = PROTO_TRUE;
-            L.p++;
+            L->p++;
         }
         proto_bool any = PROTO_FALSE;
         proto_bool is_float = PROTO_FALSE;
         unsigned long long ipart = 0; // accumulate unsigned: signed overflow on a huge literal is UB
         double fval = 0.0;
-        while (L.p < L.e && *L.p >= '0' && *L.p <= '9')
+        while (L->p < L->e && *L->p >= '0' && *L->p <= '9')
         {
-            ipart = ipart * 10ULL + (unsigned)(*L.p - '0');
-            L.p++;
+            ipart = ipart * 10ULL + (unsigned)(*L->p - '0');
+            L->p++;
             any = PROTO_TRUE;
         }
         fval = (double)ipart;
-        if (L.p < L.e && *L.p == '.')
+        if (L->p < L->e && *L->p == '.')
         {
             is_float = PROTO_TRUE;
-            L.p++;
+            L->p++;
             double scale = 1.0;
-            while (L.p < L.e && *L.p >= '0' && *L.p <= '9')
+            while (L->p < L->e && *L->p >= '0' && *L->p <= '9')
             {
                 scale *= 10.0;
-                fval += (double)(*L.p - '0') / scale;
-                L.p++;
+                fval += (double)(*L->p - '0') / scale;
+                L->p++;
                 any = PROTO_TRUE;
             }
         }
-        if (L.p < L.e && (*L.p == 'e' || *L.p == 'E'))
+        if (L->p < L->e && (*L->p == 'e' || *L->p == 'E'))
         {
             is_float = PROTO_TRUE;
-            L.p++;
+            L->p++;
             proto_bool eneg = PROTO_FALSE;
-            if (L.p < L.e && (*L.p == '+' || *L.p == '-'))
+            if (L->p < L->e && (*L->p == '+' || *L->p == '-'))
             {
-                eneg = (*L.p++ == '-');
+                eneg = (*L->p++ == '-');
             }
             int ex = 0;
-            while (L.p < L.e && *L.p >= '0' && *L.p <= '9')
+            while (L->p < L->e && *L->p >= '0' && *L->p <= '9')
             {
                 // clamp: 10^400 overflows the double to inf, and bounds the exponent below
-                ex = (ex < 400) ? ex * 10 + (*L.p - '0') : ex;
-                L.p++;
+                ex = (ex < 400) ? ex * 10 + (*L->p - '0') : ex;
+                L->p++;
             }
             double m = 1.0;
             for (int k = 0; k < ex; k++)
@@ -342,9 +340,9 @@ static proto_bool parse_value(Lex &L, pc_gql_value *v)
     return PROTO_FALSE;
 }
 
-static int parse_selection(Lex &L, int depth);
+static int parse_selection(Lex *L, int depth);
 
-static int parse_field(Lex &L, int depth)
+static int parse_field(Lex *L, int depth)
 {
     int idx = new_node();
     if (idx < 0)
@@ -359,7 +357,7 @@ static int parse_field(Lex &L, int depth)
     // arguments
     if (peek(L) == '(')
     {
-        L.p++; // '('
+        L->p++; // '('
         int first = -1;
         int count = 0;
         while (peek(L) != ')')
@@ -380,7 +378,7 @@ static int parse_field(Lex &L, int depth)
                 s_gql.err = PC_GQL_ERR_PARSE;
                 return -1;
             }
-            L.p++; // ':'
+            L->p++; // ':'
             if (!parse_value(L, &a->val))
             {
                 return -1;
@@ -392,7 +390,7 @@ static int parse_field(Lex &L, int depth)
             count++;
             s_gql.nargs++;
         }
-        L.p++; // ')'
+        L->p++; // ')'
         s_gql.nodes[idx].first_arg = first;
         s_gql.nodes[idx].n_args = count;
     }
@@ -404,7 +402,7 @@ static int parse_field(Lex &L, int depth)
     return s_gql.err != PC_GQL_OK ? -1 : idx;
 }
 
-int parse_selection(Lex &L, int depth)
+static int parse_selection(Lex *L, int depth)
 {
     if (depth > PC_GQL_MAX_DEPTH)
     {
@@ -416,12 +414,12 @@ int parse_selection(Lex &L, int depth)
         s_gql.err = PC_GQL_ERR_PARSE;
         return -1;
     }
-    L.p++; // '{'
+    L->p++; // '{'
     int first = -1;
     int prev = -1;
     while (peek(L) != '}')
     {
-        if (L.p >= L.e)
+        if (L->p >= L->e)
         {
             s_gql.err = PC_GQL_ERR_PARSE;
             return -1;
@@ -441,11 +439,11 @@ int parse_selection(Lex &L, int depth)
         }
         prev = f;
     }
-    L.p++; // '}'
+    L->p++; // '}'
     return first;
 }
 
-static proto_bool parse_document(Lex &L)
+static proto_bool parse_document(Lex *L)
 {
     char c = peek(L);
     if (c != '{')
@@ -662,7 +660,6 @@ static void emit_field(Writer *w, int idx, int path_len)
     s_gql.scope_n -= pushed; // pop
     s_gql.path[path_len] = '\0';
 }
-} // namespace
 
 proto_bool pc_gql_arg_int(const struct pc_gql_args *args, const char *name, long long *out)
 {
@@ -733,7 +730,7 @@ pc_gql_result pc_graphql_execute(const char *query, size_t len, pc_gql_resolver_
         return PC_GQL_ERR_PARSE;
     }
 
-    if (!parse_document(L))
+    if (!parse_document(&L))
     {
         const char *msg = (s_gql.err == PC_GQL_ERR_LIMIT) ? "query exceeds a configured limit" : "syntax error";
         Writer w = {out, cap, 0, PROTO_FALSE};

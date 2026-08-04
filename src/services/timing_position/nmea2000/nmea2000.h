@@ -202,8 +202,8 @@ typedef struct
 
 /** @brief Decoded Engine Parameters, Dynamic (PGN 127489): the full engine-monitoring picture. Each measured
  *  field clears its validity flag for a not-available raw; the two discrete-status words are raw bitfields. */
-struct N2kEngineDynamic // NOSONAR(cpp:S1820): one decoded PGN is one logical message; the field count mirrors the
-                        // protocol's signals, so splitting the struct would be artificial, not clearer
+typedef struct // NOSONAR(cpp:S1820): one decoded PGN is one logical message; the field count mirrors the
+               // protocol's signals, so splitting the struct would be artificial, not clearer
 {
     uint8_t instance; ///< engine instance
     proto_bool oil_pressure_valid;
@@ -228,7 +228,7 @@ struct N2kEngineDynamic // NOSONAR(cpp:S1820): one decoded PGN is one logical me
     int8_t load_pct; ///< percent engine load (%, 1 %/bit, signed)
     proto_bool torque_valid;
     int8_t torque_pct; ///< percent engine torque (%, 1 %/bit, signed)
-};
+} N2kEngineDynamic;
 
 /** @brief Decoded Wind Data (PGN 130306). */
 typedef struct

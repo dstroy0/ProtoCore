@@ -94,8 +94,8 @@ enum pc_ubx_fix_type
 };
 
 /** @brief Decoded UBX-NAV-PVT payload (the fields an application usually needs; native integer scales). */
-struct pc_ubx_nav_pvt // NOSONAR(cpp:S1820): UBX-NAV-PVT is one fixed protocol message; its ~30 fields mirror the
-                      // wire layout, so splitting the struct would be artificial, not clearer
+typedef struct // NOSONAR(cpp:S1820): UBX-NAV-PVT is one fixed protocol message; its ~30 fields mirror the
+               // wire layout, so splitting the struct would be artificial, not clearer
 {
     uint32_t itow_ms;      ///< GPS time of week of the solution (ms)
     uint16_t year;         ///< UTC year
@@ -124,7 +124,7 @@ struct pc_ubx_nav_pvt // NOSONAR(cpp:S1820): UBX-NAV-PVT is one fixed protocol m
     uint32_t s_acc_mm_s;   ///< speed accuracy estimate (mm/s)
     uint32_t head_acc_1e5; ///< heading accuracy estimate (1e-5 deg)
     uint16_t pdop_1e2;     ///< position DOP (0.01)
-};
+} pc_ubx_nav_pvt;
 
 /**
  * @brief Decode a UBX-NAV-PVT frame into @p out (per the u-blox interface description).

@@ -48,13 +48,13 @@ typedef struct
 } pc_roam_policy;
 
 /** @brief Why the decision was made. */
-enum pc_roam_reason
+typedef enum
 {
     PC_ROAM_NONE = 0,      ///< stay on the current AP
     PC_ROAM_BTM_IMMINENT,  ///< forced off by a disassociation-imminent BTM request
     PC_ROAM_BTM_SUGGESTED, ///< the network steered us (BTM) to a preferred, no-weaker AP
     PC_ROAM_LOW_RSSI,      ///< the link is weak and a candidate is clearly stronger
-};
+} pc_roam_reason;
 
 /** @brief The roaming decision. */
 typedef struct

@@ -2,123 +2,161 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file pc_wal_fs.h
- * @brief Bind the WAL store's ::WalDev block-device seam to a real fs::FS file (PC_ENABLE_WAL, ESP32 only).
+ * @file wal_fs.h
+ * @brief Bind the WAL store's ::WalDev block-device seam to a file on a mounted store (PC_ENABLE_WAL).
  *
- * The store in pc_wal_store.h does all I/O through three function pointers so its logic stays pure and
- * host-testable; this header is the thin, device-only adapter that points those pointers at a preallocated
- * fs::File on any Arduino filesystem - an SD card or LittleFS. Random access uses `File::seek`, and the
- * durability barrier is `File::flush`.
+ * The store in wal_store.h does all I/O through three function pointers so its logic stays pure and
+ * host-testable; this header is the thin adapter that points those pointers at a preallocated file on any
+ * ::pc_mnt_backend. Random access is the backend's `seek`, and the durability barrier is its `sync`.
  *
  * Usage:
  * @code
- *   pc_wal_fs_prealloc(SD, "/wal.bin", 256 * 1024);       // once: fixed-size, zero-filled backing file
- *   fs::File f = SD.open("/wal.bin", "r+");             // random read+write, no truncation
- *   WalDev dev = pc_wal_fs_dev(&f, 256 * 1024);
- *   WalStore s;
- *   pc_wal_store_mount(&s, &dev) || pc_wal_store_format(&s, &dev);   // recover, or initialize a fresh file
+ *   const pc_mnt_backend *store = pc_mnt_active();
+ *   pc_wal_fs_prealloc(store, "/wal.bin", 256 * 1024);   // once: fixed-size, zero-filled backing file
+ *   pc_wal_fs_ctx c;
+ *   WalDev dev;
+ *   if (pc_wal_fs_open(&c, &dev, store, "/wal.bin", 256 * 1024))
+ *   {
+ *       WalStore s;
+ *       pc_wal_store_mount(&s, &dev) || pc_wal_store_format(&s, &dev);  // recover, or initialize
+ *   }
  * @endcode
  *
- * The backing file is preallocated to a fixed size so every store offset lands inside it and `seek`+`write`
- * overwrites in place (no sparse-file / past-EOF behavior differences between FAT and LittleFS). The fs::File
- * must outlive any ::WalDev bound to it.
+ * The backing file is preallocated to a fixed size so every store offset lands inside it and seek+write
+ * overwrites in place, rather than depending on past-EOF behavior that differs between FAT and littlefs.
+ * The ::pc_wal_fs_ctx must outlive any ::WalDev bound to it.
+ *
+ * A backend with no `sync` is refused at open. The WAL's checkpoint is an ordering guarantee built on that
+ * barrier, so a store that cannot promise it cannot carry a power-loss-safe log, and saying so at mount is
+ * the only honest answer: a barrier that returns true having done nothing makes an unsafe store look safe.
  */
 
 #ifndef PROTOCORE_WAL_FS_H
 #define PROTOCORE_WAL_FS_H
 
 #include "protocore_config.h"
-
-#if PC_ENABLE_WAL && PROTOCORE_HOT
-
+#include "server/filesystem/mnt.h" // pc_mnt_backend - the store the log lives on
 #include "services/storage/wal/wal_store.h"
-#include <FS.h>
 #include <string.h>
 
-namespace pc_wal_fs_detail
+#if PC_ENABLE_WAL
+
+/** @brief What the adapter needs to reach one open file: the store and the handle it returned. */
+typedef struct
 {
-inline size_t fs_read(void *ctx, uint64_t off, uint8_t *buf, size_t len)
+    const pc_mnt_backend *fs;
+    int handle;
+} pc_wal_fs_ctx;
+
+PC_INLINE size_t pc_wal_fs_read(void *ctx, uint64_t off, uint8_t *buf, size_t len)
 {
-    fs::File *f = (fs::File *)ctx;
-    if (!f->seek((uint32_t)off))
+    pc_wal_fs_ctx *c = (pc_wal_fs_ctx *)ctx;
+    if (!c->fs->seek(c->handle, off))
     {
         return 0;
     }
-    return f->read(buf, len);
+    int n = c->fs->read(c->handle, buf, len);
+    return n < 0 ? 0 : (size_t)n;
 }
-inline size_t fs_write(void *ctx, uint64_t off, const uint8_t *buf, size_t len)
+
+PC_INLINE size_t pc_wal_fs_write(void *ctx, uint64_t off, const uint8_t *buf, size_t len)
 {
-    fs::File *f = (fs::File *)ctx;
-    if (!f->seek((uint32_t)off))
+    pc_wal_fs_ctx *c = (pc_wal_fs_ctx *)ctx;
+    if (!c->fs->seek(c->handle, off))
     {
         return 0;
     }
-    return f->write(buf, len);
+    int n = c->fs->write(c->handle, buf, len);
+    return n < 0 ? 0 : (size_t)n;
 }
-inline proto_bool fs_sync(void *ctx)
+
+PC_INLINE proto_bool pc_wal_fs_sync(void *ctx)
 {
-    ((fs::File *)ctx)->flush();
-    return PROTO_TRUE;
+    pc_wal_fs_ctx *c = (pc_wal_fs_ctx *)ctx;
+    return c->fs->sync(c->handle);
 }
-} // namespace pc_wal_fs_detail
 
 /**
- * @brief Ensure @p path on @p fsys exists and is at least @p size bytes (created zero-filled if missing/short).
+ * @brief Ensure @p path on @p fs exists and is at least @p size bytes (created zero-filled if missing/short).
  * @return true on success. Call once before opening the file for the store.
  */
-inline proto_bool pc_wal_fs_prealloc(fs::FS &fsys, const char *path, uint64_t size)
+PC_INLINE proto_bool pc_wal_fs_prealloc(const pc_mnt_backend *fs, const char *path, uint64_t size)
 {
-    if (fsys.exists(path))
+    if (!fs || !path)
     {
-        fs::File ex = fsys.open(path, "r");
-        uint64_t have = ex ? (uint64_t)ex.size() : 0;
-        if (ex)
-        {
-            ex.close();
-        }
-        if (have >= size)
-        {
-            return PROTO_TRUE;
-        }
+        return PROTO_FALSE;
     }
-    fs::File f = fsys.open(path, "w"); // create / truncate
-    if (!f)
+    if (fs->exists(path) && fs->size(path) >= 0 && (uint64_t)fs->size(path) >= size)
+    {
+        return PROTO_TRUE;
+    }
+    int h = fs->open(path, PC_MNT_WRITE); // create / truncate
+    if (h < 0)
     {
         return PROTO_FALSE;
     }
     uint8_t z[256];
-    memset(z, 0, sizeof(z));
+    memset(z, 0, sizeof z);
     uint64_t left = size;
     proto_bool ok = PROTO_TRUE;
     while (left)
     {
-        size_t n = left < sizeof(z) ? (size_t)left : sizeof(z);
-        if (f.write(z, n) != n)
+        size_t n = left < sizeof z ? (size_t)left : sizeof z;
+        if (fs->write(h, z, n) != (int)n)
         {
             ok = PROTO_FALSE;
             break;
         }
         left -= n;
     }
-    f.flush();
-    f.close();
+    if (ok && fs->sync)
+    {
+        ok = fs->sync(h);
+    }
+    fs->close(h);
     return ok;
 }
 
 /**
- * @brief Build a ::WalDev that reads/writes @p f (an open "r+" file) as a @p size-byte block device.
- * @note @p f must stay open for as long as the returned ::WalDev (and any ::WalStore mounted on it) is used.
+ * @brief Open @p path on @p fs and build a ::WalDev over it as a @p size-byte block device.
+ *
+ * @param c    filled with the store and handle; must outlive @p dev and any ::WalStore mounted on it.
+ * @param dev  filled with the three function pointers and @p size.
+ * @return false if @p fs has no durability barrier, or the file will not open. On false, nothing is
+ *         left open and @p dev is not usable.
  */
-inline WalDev pc_wal_fs_dev(fs::File *f, uint64_t size)
+PC_INLINE proto_bool pc_wal_fs_open(pc_wal_fs_ctx *c, WalDev *dev, const pc_mnt_backend *fs, const char *path,
+                                    uint64_t size)
 {
-    WalDev d;
-    d.read = fs_read;
-    d.write = fs_write;
-    d.sync = fs_sync;
-    d.ctx = f;
-    d.size = size;
-    return d;
+    if (!c || !dev || !fs || !path || !fs->sync)
+    {
+        return PROTO_FALSE;
+    }
+    int h = fs->open(path, PC_MNT_RDWR); // random read+write over the preallocated extent, no truncation
+    if (h < 0)
+    {
+        return PROTO_FALSE;
+    }
+    c->fs = fs;
+    c->handle = h;
+    dev->read = pc_wal_fs_read;
+    dev->write = pc_wal_fs_write;
+    dev->sync = pc_wal_fs_sync;
+    dev->ctx = c;
+    dev->size = size;
+    return PROTO_TRUE;
 }
 
-#endif // PC_ENABLE_WAL && PROTOCORE_HOT
+/** @brief Close the file a ::pc_wal_fs_ctx holds. The ::WalDev built over it is dead after this. */
+PC_INLINE void pc_wal_fs_close(pc_wal_fs_ctx *c)
+{
+    if (c && c->fs)
+    {
+        c->fs->close(c->handle);
+        c->fs = NULL;
+        c->handle = -1;
+    }
+}
+
+#endif // PC_ENABLE_WAL
 #endif // PROTOCORE_WAL_FS_H

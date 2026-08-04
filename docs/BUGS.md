@@ -8,6 +8,31 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ---
 
+## The C11 conversion never covered the PROTOCORE_HOT path, and pc_mnt_backend has no sync
+
+- **Status:** OPEN (2026-08-03). Found by grepping `src/` for C++ constructs after the native compile
+  sweep came back clean on the files it can reach.
+- **Symptom:** `src/` is C11 only on the paths a native env compiles. Everything behind
+  `#if PROTOCORE_HOT` is still C++, and no native env compiles it, so 307 envs of compile sweep
+  cannot see any of it. Found: `namespace fs { class FS; }` plus `fs::FS &` parameters in
+  `server/exc_decoder.h` / `server/exc_coredump.c`, `namespace fs` and `fs::FS *` / `fs::File &` in
+  `board_drivers/hal/esp/esp_mnt_fs.{h,c}`, and a whole `namespace pc_wal_fs_detail` over `fs::File`
+  in `services/storage/wal/wal_fs.h`. A target build of any of them is a hard C error.
+- **Root cause:** the conversion was driven by the native suites, which are the only thing that
+  compiles during it. `PROTOCORE_HOT` is false on the host, so those regions were never parsed.
+- **Fixed here:** `pc_exc_coredump_save` now takes `const pc_mnt_backend *` and goes through the
+  vtable, so `server/` names no vendor type; `exc_decoder.h` drops the `namespace fs` forward
+  declaration.
+- **Still open, and why:** `wal_fs.h` cannot be retargeted onto the seam as it stands. Its durability
+  barrier is `File::flush()`, and **`pc_mnt_backend` has no sync/flush entry**. Translating it
+  without one would leave `WalDev::sync` returning true having done nothing, which turns a
+  power-loss-safe log into one that only looks safe. Adding `sync` to the vtable touches every
+  backend (RAM disk, the ESP adapter, the lfs mock), so it is an owner decision rather than a
+  mechanical fix.
+- **Also open:** `esp_mnt_fs.{h,c}` legitimately names Arduino's `fs::FS` because wrapping it is the
+  adapter's whole job. Resolved by compiling `board_drivers/hal/esp/` as C++ (owner decision), which
+  needs the build rule and a SYMBOLS.md amendment recording the exemption.
+
 ## A board profile's PC_GPIO_OUT macro rewrote the pc_gpio_dir enum member of the same name
 
 - **Status:** FIXED (2026-08-03), pending a target build. Found by the full-tree compile sweep: an

@@ -175,11 +175,11 @@ static int ram_open(const char *path, int mode)
     {
         return -1; // a directory is opened with opendir
     }
-    if (m == PC_MNT_READ)
+    if (m == PC_MNT_READ || m == PC_MNT_RDWR)
     {
         if (f < 0)
         {
-            return -1;
+            return -1; // both open an existing file; neither creates one
         }
     }
     else
@@ -421,9 +421,11 @@ static proto_bool ram_readdir(int h, pc_mnt_stat *out, char *name, size_t name_c
     return PROTO_FALSE;
 }
 
-static const pc_mnt_backend s_ram_backend = {ram_open,  ram_read,   ram_write,   ram_close,  ram_seek,
-                                             ram_size,  ram_exists, ram_remove,  ram_rename, ram_mkdir,
-                                             ram_rmdir, ram_stat,   ram_opendir, ram_readdir};
+// sync is NULL: the RAM disk has no medium to push bytes to, so it cannot promise durability and
+// says so rather than reporting a barrier it did not perform.
+static const pc_mnt_backend s_ram_backend = {ram_open,  ram_read,   ram_write,   ram_close,   ram_seek,
+                                             ram_size,  ram_exists, ram_remove,  ram_rename,  ram_mkdir,
+                                             ram_rmdir, ram_stat,   ram_opendir, ram_readdir, NULL};
 
 const pc_mnt_backend *pc_mnt_ram(void)
 {

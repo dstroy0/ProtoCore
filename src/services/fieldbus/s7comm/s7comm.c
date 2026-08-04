@@ -76,15 +76,15 @@ size_t pc_s7_build_read_request(uint8_t *buf, size_t cap, uint16_t pdu_ref, cons
     buf[p++] = (uint8_t)n;
     for (size_t i = 0; i < n; i++)
     {
-        const S7ReadItem &it = items[i];
+        const S7ReadItem *it = &items[i];
         buf[p++] = 0x12;            // variable specification
         buf[p++] = 0x0A;            // length of the address spec that follows
         buf[p++] = S7_SYNTAX_S7ANY; // syntax id
-        buf[p++] = it.transport_size;
-        p += put16(buf + p, it.count);
-        p += put16(buf + p, it.db_number);
-        buf[p++] = it.area;
-        uint32_t addr = it.byte_address << 3; // bit address = byte * 8 (bit offset 0)
+        buf[p++] = it->transport_size;
+        p += put16(buf + p, it->count);
+        p += put16(buf + p, it->db_number);
+        buf[p++] = it->area;
+        uint32_t addr = it->byte_address << 3; // bit address = byte * 8 (bit offset 0)
         buf[p++] = (uint8_t)(addr >> 16);
         buf[p++] = (uint8_t)(addr >> 8);
         buf[p++] = (uint8_t)(addr & 0xFF);
@@ -140,31 +140,31 @@ size_t pc_s7_build_write_request(uint8_t *buf, size_t cap, uint16_t pdu_ref, con
     buf[p++] = (uint8_t)n;
     for (size_t i = 0; i < n; i++) // parameter: one S7-ANY item spec per item (identical layout to a read)
     {
-        const S7WriteItem &it = items[i];
+        const S7WriteItem *it = &items[i];
         buf[p++] = 0x12;
         buf[p++] = 0x0A;
         buf[p++] = S7_SYNTAX_S7ANY;
-        buf[p++] = it.transport_size;
-        p += put16(buf + p, it.count);
-        p += put16(buf + p, it.db_number);
-        buf[p++] = it.area;
-        uint32_t addr = it.byte_address << 3; // bit address = byte * 8 (bit offset 0)
+        buf[p++] = it->transport_size;
+        p += put16(buf + p, it->count);
+        p += put16(buf + p, it->db_number);
+        buf[p++] = it->area;
+        uint32_t addr = it->byte_address << 3; // bit address = byte * 8 (bit offset 0)
         buf[p++] = (uint8_t)(addr >> 16);
         buf[p++] = (uint8_t)(addr >> 8);
         buf[p++] = (uint8_t)(addr & 0xFF);
     }
     for (size_t i = 0; i < n; i++) // data: one data item per item
     {
-        const S7WriteItem &it = items[i];
+        const S7WriteItem *it = &items[i];
         buf[p++] = 0x00; // return code (reserved in a request)
-        buf[p++] = it.data_transport_size;
-        p += put16(buf + p, s7_data_wire_len(it.data_transport_size, it.data_len));
-        if (it.data_len)
+        buf[p++] = it->data_transport_size;
+        p += put16(buf + p, s7_data_wire_len(it->data_transport_size, it->data_len));
+        if (it->data_len)
         {
-            memcpy(buf + p, it.data, it.data_len);
-            p += it.data_len;
+            memcpy(buf + p, it->data, it->data_len);
+            p += it->data_len;
         }
-        if (i + 1 < n && (it.data_len & 1)) // even-pad all but the last
+        if (i + 1 < n && (it->data_len & 1)) // even-pad all but the last
         {
             buf[p++] = 0x00;
         }

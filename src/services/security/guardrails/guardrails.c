@@ -119,11 +119,13 @@ void pc_guardrails_sample(pc_health *h)
 {
     if (h)
     {
-        *h = pc_health{};
+        const pc_health blank = {0};
+        *h = blank;
     }
 }
-void pc_guardrails_begin(pc_breach_fn)
+void pc_guardrails_begin(pc_breach_fn cb)
 {
+    (void)cb;
 }
 uint8_t pc_guardrails_check(void)
 {

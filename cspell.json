@@ -1135,6 +1135,7 @@
     "reqpath",
     "resourcetype",
     "RESP_HDR_BUF_SIZE",
+    "retargeted",
     "RETR",
     "retransmittable",
     "retval",

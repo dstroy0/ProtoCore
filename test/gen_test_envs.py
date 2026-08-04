@@ -102,6 +102,11 @@ build_flags =
     -I test/support
     -I src
     -DPROTOCORE_HOST=1
+    ; libm is a separate library to the C driver. g++ pulled it in behind libstdc++, so nothing here
+    ; ever named it; gcc does not, and every env whose sources call sin / cos / sqrt / atan2 / fabs
+    ; fails at the link with an undefined reference instead. It sits in the shared block because
+    ; which envs reach a math call is a property of their sources, not of their configuration.
+    -lm
 ; The filesystem the device actually runs, so a host test asserts against real directory
 ; semantics rather than a hand-rolled tree that agrees with itself. Only the envs whose sources
 ; include lfs.h build it - the dependency finder does not compile what nothing reaches for.

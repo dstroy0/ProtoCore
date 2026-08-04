@@ -26,6 +26,7 @@
 #define PROTOCORE_GNSS_SURVEY_H
 
 #include "protocore_config.h"
+#include "services/timing_position/nmea0183/nmea0183.h" // Nmea0183 - the sentence a fix is read out of
 
 #if PC_ENABLE_NTRIP_CASTER
 

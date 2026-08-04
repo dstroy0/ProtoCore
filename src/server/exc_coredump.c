@@ -10,14 +10,13 @@
  * bytes for a durable copy - then erases it so the next crash gets the space.
  *
  * Device-only: the summary structs and partition API are ESP-IDF's. The decoding/serialization of a
- * panic stays pure in exc_decoder.cpp.
+ * panic stays pure in exc_decoder.c.
  */
 
 #include "server/exc_decoder.h"
 
 #if PC_ENABLE_EXC_DECODER && PROTOCORE_HOT
 
-#include <FS.h>
 #include <esp_core_dump.h>
 #include <esp_partition.h>
 #include <string.h>
@@ -147,9 +146,9 @@ proto_bool pc_exc_coredump_read(size_t offset, void *buf, size_t len)
     return esp_partition_read(part, base + offset, buf, len) == ESP_OK;
 }
 
-proto_bool pc_exc_coredump_save(fs::FS &file_sys, const char *path)
+proto_bool pc_exc_coredump_save(const pc_mnt_backend *file_sys, const char *path)
 {
-    if (!path || path[0] == '\0')
+    if (!file_sys || !path || path[0] == '\0')
     {
         return PROTO_FALSE;
     }
@@ -162,8 +161,8 @@ proto_bool pc_exc_coredump_save(fs::FS &file_sys, const char *path)
         return PROTO_FALSE;
     }
 
-    fs::File f = file_sys.open(path, FILE_WRITE);
-    if (!f)
+    int fh = file_sys->open(path, PC_MNT_WRITE);
+    if (fh < 0)
     {
         return PROTO_FALSE;
     }
@@ -175,17 +174,17 @@ proto_bool pc_exc_coredump_save(fs::FS &file_sys, const char *path)
     while (off < size)
     {
         size_t n = (size - off < sizeof(buf)) ? size - off : sizeof(buf);
-        if (esp_partition_read(part, base + off, buf, n) != ESP_OK || f.write(buf, n) != n)
+        if (esp_partition_read(part, base + off, buf, n) != ESP_OK || file_sys->write(fh, buf, n) != (int)n)
         {
             ok = PROTO_FALSE;
             break;
         }
         off += n;
     }
-    f.close();
+    file_sys->close(fh);
     if (!ok)
     {
-        file_sys.remove(path); // never leave a half-written dump that looks complete
+        (void)file_sys->remove(path); // never leave a half-written dump that looks complete
     }
     return ok;
 }

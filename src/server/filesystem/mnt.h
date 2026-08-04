@@ -38,12 +38,19 @@
 
 #include "protocore_config.h"
 
-/** @brief Open modes. */
+/**
+ * @brief Open modes.
+ *
+ * PC_MNT_RDWR is the only one that admits a seek before a write. Under PC_MNT_APPEND a write lands
+ * at end-of-file whatever the position says, which is what O_APPEND means on a real filesystem, so a
+ * caller that overwrites in place has to ask for RDWR and a backend that cannot offer it answers -1.
+ */
 typedef enum PROTO_ENUM_PACKED
 {
     PC_MNT_READ = 0,   ///< Read existing file (fails if absent).
     PC_MNT_WRITE = 1,  ///< Create/truncate for writing.
     PC_MNT_APPEND = 2, ///< Create/open for appending at end.
+    PC_MNT_RDWR = 3,   ///< Open existing for random read+write, no truncation (fails if absent).
 } pc_mnt_mode;
 
 /**
@@ -92,6 +99,17 @@ typedef struct pc_mnt_backend
     int (*opendir)(const char *path);                       ///< -> directory handle (>=0) or -1.
     /** @brief Next entry: facts into @p out, name into @p name (NUL-terminated). False at end. */
     proto_bool (*readdir)(int handle, pc_mnt_stat *out, char *name, size_t name_cap);
+    /**
+     * @brief Push everything written to @p handle past the backend's own buffering, and report
+     *        whether it got there. May be NULL when the backend cannot promise it.
+     *
+     * This is the durability barrier, and it is the one call here whose absence is not the same as
+     * failure: a log that orders its writes around a barrier is only power-loss-safe if the barrier
+     * is real, so a backend that cannot make the promise says so with NULL and the caller refuses to
+     * mount rather than running as though it had one. Returning true without doing anything would
+     * make an unsafe store indistinguishable from a safe one.
+     */
+    proto_bool (*sync)(int handle);
 } pc_mnt_backend;
 
 // Everything above and the two calls below are the HAL: the shape of a store, and which one is
