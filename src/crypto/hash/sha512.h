@@ -17,6 +17,7 @@
 #ifndef PROTOCORE_SHA512_H
 #define PROTOCORE_SHA512_H
 
+#include "board_drivers/board_profiles/pc_platform.h" // PROTOCORE_HOT: which of the two contexts below is built
 #include <stddef.h>
 #include <stdint.h>
 

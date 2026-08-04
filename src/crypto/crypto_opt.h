@@ -59,6 +59,8 @@
 #ifndef PROTOCORE_CRYPTO_OPT_H
 #define PROTOCORE_CRYPTO_OPT_H
 
+#include "board_drivers/board_profiles/pc_platform.h" // PROTOCORE_HOT, tested below
+
 #if defined(__GNUC__) && !defined(__clang__)
 #if PROTOCORE_HOT
 #include "sdkconfig.h" // CONFIG_IDF_TARGET_* - the per-die default below + the single-transform die guards in the TUs
