@@ -13,6 +13,7 @@
 #include "network_drivers/session/worker.h"
 
 #include "board_drivers/board_profiles/pc_platform.h" // the target's queues and tasks, under our names
+#include "shared_primitives/ring.h"                   // PROTO_ATOMIC_LOAD/STORE: the run flag crosses tasks
 // Worker identity lives in mmgr/arena.c, with the pools it indexes.
 
 // ---------------------------------------------------------------------------
@@ -43,7 +44,7 @@ static void worker_task(void *arg)
 {
     int id = (int)(intptr_t)arg;
     pc_worker_set_self(id);
-    while (atomic_load_explicit(&s_worker.run, memory_order_acquire))
+    while (PROTO_ATOMIC_LOAD(&s_worker.run))
     {
         if (s_worker.pump)
         {
@@ -84,7 +85,7 @@ static DeferStorageCtx s_defer_store;
 
 void pc_workers_start(pc_worker_pump_fn pump)
 {
-    if (atomic_load_explicit(&s_worker.run, memory_order_acquire))
+    if (PROTO_ATOMIC_LOAD(&s_worker.run))
     {
         return; // already running
     }
@@ -97,7 +98,7 @@ void pc_workers_start(pc_worker_pump_fn pump)
                                                      s_defer_store.dq_storage[i], &s_defer_store.dq_struct[i]);
         }
     }
-    atomic_store_explicit(&s_worker.run, PROTO_TRUE, memory_order_release);
+    PROTO_ATOMIC_STORE(&s_worker.run, PROTO_TRUE);
     for (int i = 0; i < PC_WORKER_COUNT; i++)
     {
         int core = (PC_WORKER_CORE + i) % PC_PLATFORM_CORES;
@@ -156,11 +157,11 @@ void pc_worker_run_deferred(int worker_id)
 
 void pc_workers_stop(void)
 {
-    if (!atomic_load_explicit(&s_worker.run, memory_order_acquire))
+    if (!PROTO_ATOMIC_LOAD(&s_worker.run))
     {
         return;
     }
-    atomic_store_explicit(&s_worker.run, PROTO_FALSE, memory_order_release);
+    PROTO_ATOMIC_STORE(&s_worker.run, PROTO_FALSE);
     // Tasks self-delete on their next iteration; give them a few ticks to exit
     // before the caller tears down the slots they were servicing.
     pc_platform_task_delay(3);
@@ -168,7 +169,7 @@ void pc_workers_stop(void)
 
 proto_bool pc_workers_running(void)
 {
-    return atomic_load_explicit(&s_worker.run, memory_order_acquire);
+    return PROTO_ATOMIC_LOAD(&s_worker.run);
 }
 
 #else // host build - no tasks; handle()/tests drive the pipeline inline
