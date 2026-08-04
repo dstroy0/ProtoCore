@@ -71,7 +71,7 @@ void setup()
     on_http("/api/data", HTTP_GET, handle_api, pc_iface::PC_IFACE_STA); // station only
     on_http("/", HTTP_GET, handle_root);                                // any interface
 
-    int32_t result = begin_http(80);
+    int32_t result = begin_http(80, NULL);
     if (result < 0)
     {
         Serial.printf("begin() failed (error %d)\n", result);

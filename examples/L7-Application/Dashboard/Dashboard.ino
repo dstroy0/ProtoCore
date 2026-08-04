@@ -79,7 +79,7 @@ void setup()
 
     pc_dashboard_on_control(on_control);
     pc_dashboard_begin("/dashboard", WIDGETS, sizeof(WIDGETS) / sizeof(WIDGETS[0]));
-    begin_http(80);
+    begin_http(80, NULL);
 }
 
 void loop()

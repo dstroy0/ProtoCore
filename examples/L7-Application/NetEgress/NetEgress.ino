@@ -60,7 +60,7 @@ void setup()
                  (unsigned)((ip >> 24) & 0xFF));
         send_text(id, 200, "application/json", body);
     });
-    begin_http(80);
+    begin_http(80, NULL);
 }
 
 void loop()

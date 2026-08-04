@@ -13,11 +13,11 @@
  *   GET /size?name=greeting              -> byte count (-1 if absent)
  *   GET /rm?name=greeting                -> deletes it
  *
- * Note what the handlers do NOT do: they never build a path. pc_fs_begin() sets
- * the root once, and every call below passes the client's name straight through -
- * the accessor joins it onto the root and refuses any `..` before storage is
- * touched. A query of `name=../../secret` is rejected without this sketch
- * containing a single line about it.
+ * Note what the handlers do NOT do: they never build a path. pc_fs_begin() binds
+ * the root once and hands back a handle; every call below passes that handle, an
+ * empty dir, and the client's name straight through - the accessor joins the three
+ * and refuses any `..` before storage is touched. A query of `name=../../secret`
+ * is rejected without this sketch containing a single line about it.
  *
  * To run entirely in RAM instead (no flash, deterministic), mount the built-in
  * backend: `pc_mnt_mount(pc_mnt_ram());` - every endpoint below is unchanged.
@@ -40,6 +40,9 @@
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
+// The root pc_fs_begin() binds, at file scope because the handlers below are captureless lambdas.
+static int s_root = -1;
+
 
 void setup()
 {
@@ -55,7 +58,7 @@ void setup()
 
     LittleFS.begin(true); // format on first use
     pc_mnt_mount(pc_mnt_fs(&LittleFS));
-    pc_fs_begin("/"); // every name below is resolved against this root
+    s_root = pc_fs_begin("/"); // every name below is resolved against this root
 
     on_http("/save", HTTP_GET, [](uint8_t id, HttpReq *req) {
         const char *name = http_get_query(req, "name");
@@ -65,7 +68,7 @@ void setup()
             send_text(id, 400, "application/json", "{\"error\":\"name+data\"}");
             return;
         }
-        bool ok = pc_fs_write_file(name, "", data, strlen(data));
+        bool ok = pc_fs_write_file(s_root, "", name, data, strlen(data));
         send_text(id, ok ? 200 : 500, "application/json", ok ? "{\"ok\":true}" : "{\"ok\":false}");
     });
 
@@ -77,7 +80,7 @@ void setup()
             return;
         }
         char buf[512];
-        long n = pc_fs_read_file(name, "", buf, sizeof(buf) - 1);
+        long n = pc_fs_read_file(s_root, "", name, buf, sizeof(buf) - 1);
         if (n < 0)
         {
             send_text(id, 404, "text/plain", "not found");
@@ -89,7 +92,7 @@ void setup()
 
     on_http("/size", HTTP_GET, [](uint8_t id, HttpReq *req) {
         const char *name = http_get_query(req, "name");
-        long n = (name && *name) ? pc_fs_size(name, "") : -1;
+        long n = (name && *name) ? pc_fs_size(s_root, "", name) : -1;
         char b[24];
         snprintf(b, sizeof(b), "%ld", n);
         send_text(id, 200, "text/plain", b);
@@ -97,11 +100,11 @@ void setup()
 
     on_http("/rm", HTTP_GET, [](uint8_t id, HttpReq *req) {
         const char *name = http_get_query(req, "name");
-        bool ok = (name && *name) && pc_fs_remove(name, "");
+        bool ok = (name && *name) && pc_fs_remove(s_root, "", name);
         send_text(id, ok ? 200 : 404, "application/json", ok ? "{\"ok\":true}" : "{\"ok\":false}");
     });
 
-    begin_http(80);
+    begin_http(80, NULL);
 }
 
 void loop()

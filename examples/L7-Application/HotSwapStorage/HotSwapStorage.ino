@@ -128,7 +128,7 @@ void setup()
     on_http("/storage", HTTP_GET, storage_handler);
     on_http("/write", HTTP_GET, write_handler);
     on_http("/yank", HTTP_GET, yank_handler);
-    begin_http(80);
+    begin_http(80, NULL);
 
     uint32_t ip = pc_net_egress_ip();
     Serial.printf("http://%u.%u.%u.%u/storage\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),

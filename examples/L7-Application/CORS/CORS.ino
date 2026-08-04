@@ -38,7 +38,7 @@ void setup()
     set_cors("*"); // allow any origin (tighten to your web app's origin in production)
     on_http("/api", HTTP_GET,
               [](uint8_t id, HttpReq *) { send_text(id, 200, "application/json", "{\"ok\":true}"); });
-    begin_http(80);
+    begin_http(80, NULL);
 }
 
 void loop()

@@ -254,7 +254,7 @@ void setup()
     on_http("/", HTTP_GET,
               [](uint8_t id, HttpReq *) { send_text(id, 200, "text/plain", "OPC UA client demo"); });
     listen(4840, PROTO_OPCUA); // server endpoint, before begin()
-    begin_http(80);
+    begin_http(80, NULL);
 }
 
 void loop()

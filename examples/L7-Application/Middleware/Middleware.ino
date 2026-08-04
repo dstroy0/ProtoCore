@@ -101,7 +101,7 @@ void setup()
     on_http("/ping", HTTP_GET, handle_ping);
     on_http("/admin", HTTP_GET, handle_admin);
 
-    int32_t result = begin_http(80);
+    int32_t result = begin_http(80, NULL);
     if (result < 0)
     {
         Serial.printf("begin() failed (error %d)\n", result);

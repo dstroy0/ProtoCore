@@ -79,7 +79,7 @@ void setup()
     on_http("/", HTTP_GET,
               [](uint8_t id, HttpReq *) { send_text(id, 200, "text/plain", "EUROMAP 77 IMM on :4840"); });
     listen(4840, PROTO_OPCUA); // OPC UA / EUROMAP endpoint - before begin()
-    begin_http(80);
+    begin_http(80, NULL);
     Serial.println("EUROMAP 77 (OPC UA for IMM): opc.tcp://<ip>:4840  - browse IMM_MES_Interface, read live counters");
 }
 

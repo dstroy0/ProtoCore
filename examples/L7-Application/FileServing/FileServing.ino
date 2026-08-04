@@ -47,7 +47,7 @@ void setup()
     serve_static("/", LittleFS, "/www");
     // Cache assets for an hour; browsers still revalidate cheaply via the ETag.
     set_cache_control("max-age=3600");
-    begin_http(80);
+    begin_http(80, NULL);
 }
 
 void loop()

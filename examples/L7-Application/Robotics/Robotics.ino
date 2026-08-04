@@ -83,7 +83,7 @@ void setup()
         send_text(id, 200, "text/plain", "OPC UA for Robotics MotionDeviceSystem on :4840");
     });
     listen(4840, PROTO_OPCUA); // OPC UA / robotics endpoint - before begin()
-    begin_http(80);
+    begin_http(80, NULL);
     Serial.println("OPC UA for Robotics: opc.tcp://<ip>:4840  - browse MotionDeviceSystem, read live axis values");
 }
 

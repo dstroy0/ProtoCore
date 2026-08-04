@@ -103,7 +103,7 @@ void setup()
     Serial.println();
 
     on_http("/", HTTP_GET, root);
-    begin_http(80);
+    begin_http(80, NULL);
 
     // 20 KB stack covers the ML-KEM hybrid handshake; pin to core 0 (off the loop).
     xTaskCreatePinnedToCore(tunnel_task, "pc_ssh_tun", 20480, nullptr, 5, nullptr, 0);

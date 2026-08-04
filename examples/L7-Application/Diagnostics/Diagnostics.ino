@@ -42,7 +42,7 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     on_http("/diag", HTTP_GET, [](uint8_t id, HttpReq *) { diag(id); });
-    begin_http(80);
+    begin_http(80, NULL);
 }
 
 void loop()

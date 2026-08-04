@@ -67,7 +67,7 @@ void setup()
         bool ok = pc_totp_verify(g_secret, g_secret_len, now_unix(), code, 30, 6, 1);
         send_text(id, 200, "application/json", ok ? "{\"ok\":true}" : "{\"ok\":false}");
     });
-    begin_http(80);
+    begin_http(80, NULL);
 }
 
 void loop()

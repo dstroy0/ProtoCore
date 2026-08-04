@@ -70,7 +70,7 @@ void setup()
         snprintf(body, sizeof(body), "{\"epoch\":%u,\"source\":\"%s\"}", (unsigned)epoch, src ? src : "none");
         send_text(id, 200, "application/json", body);
     });
-    begin_http(80);
+    begin_http(80, NULL);
 }
 
 void loop()

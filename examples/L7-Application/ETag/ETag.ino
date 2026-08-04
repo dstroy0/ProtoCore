@@ -50,7 +50,7 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     serve_static("/", LittleFS, "/www"); // ETag + If-None-Match handled automatically
-    begin_http(80);
+    begin_http(80, NULL);
 }
 
 void loop()

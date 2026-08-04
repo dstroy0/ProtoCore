@@ -51,7 +51,7 @@ void setup()
         snprintf(b, sizeof(b), "{\"img_state\":%u}", pc_ota_img_state());
         send_text(id, 200, "application/json", b);
     });
-    begin_http(80);
+    begin_http(80, NULL);
 }
 
 void loop()

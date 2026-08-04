@@ -68,7 +68,7 @@ void setup()
     on_http("/headers", HTTP_GET, handle_headers);
     on_http("/cleared", HTTP_GET, handle_cleared);
 
-    int32_t result = begin_http(80);
+    int32_t result = begin_http(80, NULL);
     if (result < 0)
     {
         Serial.printf("begin() failed (error %d)\n", result);

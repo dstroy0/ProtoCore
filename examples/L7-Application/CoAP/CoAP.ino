@@ -118,7 +118,7 @@ void setup()
     pc_coap_server_begin(5683);
     Serial.println("CoAP server listening on UDP/5683 (try: coap-client -m get coap://<ip>/info)");
 
-    int32_t result = begin_http(80);
+    int32_t result = begin_http(80, NULL);
     if (result < 0)
     {
         Serial.printf("begin() failed (error %d)\n", result);

@@ -103,7 +103,7 @@ void setup()
     on_http("/stream", HTTP_GET, handle_stream);
     on_http("/count", HTTP_GET, handle_count);
 
-    int32_t result = begin_http(80);
+    int32_t result = begin_http(80, NULL);
     if (result < 0)
     {
         Serial.printf("begin() failed (error %d)\n", result);

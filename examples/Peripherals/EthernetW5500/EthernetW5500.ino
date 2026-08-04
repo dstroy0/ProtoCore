@@ -65,7 +65,7 @@ void setup()
     on_http("/", HTTP_GET, handle_root);
     on_http("/api/status", HTTP_GET, handle_status);
 
-    int32_t result = begin_http(80);
+    int32_t result = begin_http(80, NULL);
     if (result < 0)
     {
         Serial.printf("begin() failed (error %d)\n", result);

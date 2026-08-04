@@ -51,7 +51,7 @@ void setup()
         pc_log_dump(buf, sizeof(buf));
         send_text(id, 200, "text/plain", buf);
     });
-    begin_http(80);
+    begin_http(80, NULL);
 }
 
 void loop()

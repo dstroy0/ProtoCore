@@ -47,7 +47,7 @@ void setup()
         snprintf(b, sizeof(b), "{\"modem_sleep\":\"%s\"}", pc_radio_ps_name(pc_radio_ps_get()));
         send_text(id, 200, "application/json", b);
     });
-    begin_http(80);
+    begin_http(80, NULL);
 }
 
 void loop()

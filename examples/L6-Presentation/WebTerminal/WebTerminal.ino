@@ -93,7 +93,7 @@ void setup()
     pc_web_terminal_begin("/terminal");
     pc_web_terminal_on_command(on_command);
 
-    int32_t result = begin_http(80);
+    int32_t result = begin_http(80, NULL);
     if (result < 0)
     {
         Serial.printf("begin() failed (error %d)\n", result);

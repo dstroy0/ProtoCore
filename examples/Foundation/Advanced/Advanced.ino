@@ -365,7 +365,7 @@ void setup()
     on_http("/api/sensors/*", HTTP_PATCH, handle_patch_sensor);
     on_http("/api/sensors/*", HTTP_DELETE, handle_delete_sensor);
 
-    int32_t result = begin_http(80);
+    int32_t result = begin_http(80, NULL);
     if (result < 0)
     {
         Serial.printf("begin() failed (error %d)\n", result);

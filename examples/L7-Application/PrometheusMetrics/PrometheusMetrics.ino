@@ -54,7 +54,7 @@ void setup()
     // The Prometheus scrape endpoint.
     on_http("/metrics", HTTP_GET, [](uint8_t id, HttpReq *) { metrics(id); });
 
-    int32_t result = begin_http(80);
+    int32_t result = begin_http(80, NULL);
     if (result < 0)
     {
         Serial.printf("begin() failed (error %d)\n", result);

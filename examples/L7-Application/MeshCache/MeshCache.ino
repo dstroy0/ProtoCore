@@ -103,7 +103,7 @@ void setup()
 
     on_http("/cache/stats", HTTP_GET, handle_stats);
     on_http("/cache/purge", HTTP_POST, handle_purge);
-    begin_http(80); // serve HTTP on port 80
+    begin_http(80, NULL); // serve HTTP on port 80
 
     Serial.printf("mesh edge cache in front of %s (peer %s:%u)\n", ORIGIN, PEER_IP, MESH_PORT);
     Serial.printf("GET http://%u.%u.%u.%u/cdn/<path> - a cold miss pulls from the peer (X-Cache: MESH) before the "

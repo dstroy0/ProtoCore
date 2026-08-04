@@ -55,7 +55,7 @@ void setup()
         pc_health_json(&h, buf, sizeof(buf));
         send_text(id, 200, "application/json", buf);
     });
-    begin_http(80);
+    begin_http(80, NULL);
 }
 
 void loop()

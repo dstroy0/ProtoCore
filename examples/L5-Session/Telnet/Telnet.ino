@@ -78,7 +78,7 @@ void setup()
     listen(23, PROTO_TELNET); // open the Telnet port
     pc_telnet_on_command(on_command);
 
-    begin_http(80); // also start HTTP (begin() activates all listeners)
+    begin_http(80, NULL); // also start HTTP (begin() activates all listeners)
     Serial.println("Telnet on port 23 (try: telnet <ip>)");
 }
 
