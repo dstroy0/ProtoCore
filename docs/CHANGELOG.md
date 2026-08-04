@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- -std=c11 hid strnlen from every native build ([`262ab91`](https://github.com/dstroy0/ProtoCore/commit/262ab9117328b0d44e8bbfbccfe55d04df65aefe))
 - dma.c's byte_ring becomes free functions over a pointer ([`1306696`](https://github.com/dstroy0/ProtoCore/commit/1306696793cebae80b39df6d28ddd2259b2bd6bc))
 - static inline in the C headers ([`52c571e`](https://github.com/dstroy0/ProtoCore/commit/52c571ed8dcf918bc88895cb51807c0a6e8e94de))
 - hand the listen pcb back to the stack on listener_stop ([`b70bb7e`](https://github.com/dstroy0/ProtoCore/commit/b70bb7eb79f1881eccd816baec890d2cce10d045))
@@ -57,6 +58,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`c89b9bc`](https://github.com/dstroy0/ProtoCore/commit/c89b9bcf7d9d9ed86d27d36475a23e48c73f43d6))
 - update test report + coverage [skip ci] ([`a80ef6d`](https://github.com/dstroy0/ProtoCore/commit/a80ef6db2a0e97f9256a6c48eb880dd0bb16691f))
 - update CHANGELOG.md [skip ci] ([`4002687`](https://github.com/dstroy0/ProtoCore/commit/400268761975bd1f1a29ed627d3ccfe1d8cfc541))
 - update CHANGELOG.md [skip ci] ([`e55865a`](https://github.com/dstroy0/ProtoCore/commit/e55865a97e01e6375fd0095cf8c1574a915d97f2))
