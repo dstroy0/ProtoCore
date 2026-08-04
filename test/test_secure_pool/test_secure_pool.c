@@ -93,10 +93,10 @@ static void test_reset_wipes_everything_live(void)
 // hand-written wipe gets forgotten on.
 static void test_scope_guard_wipes_on_every_exit(void)
 {
+    size_t scope = pc_secure_mark();
     uint8_t *seen = NULL;
     for (int trip = 0; trip < 2; trip++)
     {
-        SecureScope scope;
         pc_span s = pc_secure_span(16, 8);
         TEST_ASSERT_TRUE(pc_span_ok(s));
         memset(s.buf, 0xEE, s.cap);
@@ -114,12 +114,12 @@ static void test_scope_guard_wipes_on_every_exit(void)
 
 static void test_nested_scopes_release_lifo(void)
 {
+    size_t outer = pc_secure_mark();
     SecureScope outer;
     pc_span a = pc_secure_span(32, 8);
     TEST_ASSERT_TRUE(pc_span_ok(a));
     size_t after_a = pc_secure_used();
     {
-        SecureScope inner;
         pc_span b = pc_secure_span(32, 8);
         TEST_ASSERT_TRUE(pc_span_ok(b));
         TEST_ASSERT_TRUE(pc_secure_used() > after_a);
@@ -140,7 +140,7 @@ static void test_a_secure_pointer_is_not_a_plaintext_one(void)
 
 static void test_a_plaintext_pointer_is_not_a_secure_one(void)
 {
-    PlaintextScope scope;
+    size_t scope = pc_plaintext_mark();
     pc_span s = pc_plaintext_span(32, 8);
     TEST_ASSERT_TRUE(pc_span_ok(s));
     TEST_ASSERT_TRUE(pc_plaintext_owns(s.buf));

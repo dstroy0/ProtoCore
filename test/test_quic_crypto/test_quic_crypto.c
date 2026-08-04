@@ -109,11 +109,11 @@ static size_t hx(const char *s, uint8_t *buf, size_t cap)
 // --- AES-128 block: FIPS 197 Appendix B (the worked example) --------------------------------
 void test_aes128_block_fips197()
 {
+    size_t scope = pc_secure_mark();
     uint8_t key[16], in[16], exp[16], out[16];
     hx("000102030405060708090a0b0c0d0e0f", key, 16);
     hx("00112233445566778899aabbccddeeff", in, 16);
     hx("69c4e0d86a7b0430d8cdb78070b4c55a", exp, 16);
-    SecureScope scope;
     struct pc_aes128 *aes = pc_aes128_wants(); // the owner of the opaque type supplies the storage
     TEST_ASSERT_NOT_NULL(aes);
     pc_aes128_init(aes, key);

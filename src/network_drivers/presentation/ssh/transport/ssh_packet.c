@@ -170,8 +170,10 @@ static inline const uint8_t *km_recv_mac(const SshKeyMat *km, proto_bool cli)
 
 int ssh_pkt_send(uint8_t i, const uint8_t *payload, size_t payload_len, uint8_t *out, size_t *out_len, size_t out_cap)
 {
+    size_t comp_scope = pc_plaintext_mark();
     if (i >= MAX_SSH_CONNS)
     {
+        pc_plaintext_release(comp_scope);
         return -1;
     }
     SshPacketState *s = &ssh_pkt[i];
@@ -180,6 +182,7 @@ int ssh_pkt_send(uint8_t i, const uint8_t *payload, size_t payload_len, uint8_t 
     // Sequence overflow guard.
     if (s->seq_no_send >= SSH_SEQ_CLOSE_THRESHOLD)
     {
+        pc_plaintext_release(comp_scope);
         return -1;
     }
 
@@ -188,7 +191,6 @@ int ssh_pkt_send(uint8_t i, const uint8_t *payload, size_t payload_len, uint8_t 
     // stream is active. The compressor is stateful (context takeover), so this call must be followed
     // by a full send - the same atomicity the stateful cipher below already requires. The wire buffer
     // is sized (SSH_WIRE_CAP) so the compressed payload can never overflow out_cap and desync.
-    PlaintextScope comp_scope;
     if (ssh_comp_s2c_active(i))
     {
         size_t bound = ssh_deflate_bound(payload_len);
@@ -196,6 +198,7 @@ int ssh_pkt_send(uint8_t i, const uint8_t *payload, size_t payload_len, uint8_t 
         size_t clen = 0;
         if (!cbuf || ssh_comp_s2c(i, payload, payload_len, cbuf, bound, &clen) != 0)
         {
+            pc_plaintext_release(comp_scope);
             return -1;
         }
         payload = cbuf;
@@ -254,6 +257,7 @@ int ssh_pkt_send(uint8_t i, const uint8_t *payload, size_t payload_len, uint8_t 
 
     if (wire_len > out_cap)
     {
+        pc_plaintext_release(comp_scope);
         return -1;
     }
 
@@ -296,6 +300,7 @@ int ssh_pkt_send(uint8_t i, const uint8_t *payload, size_t payload_len, uint8_t 
 
     *out_len = wire_len;
     s->seq_no_send++;
+    pc_plaintext_release(comp_scope);
     return 0;
 }
 
@@ -310,25 +315,29 @@ int ssh_pkt_send(uint8_t i, const uint8_t *payload, size_t payload_len, uint8_t 
 //         compressed stream / decompression overflow (the caller must wipe + disconnect).
 static int ssh_dispatch_payload(uint8_t i, const uint8_t *payload, size_t payload_len, ssh_msg_handler_t handler)
 {
+    size_t inflate_scope = pc_plaintext_mark();
 #if PC_ENABLE_SSH_ZLIB
     if (ssh_comp_c2s_active(i))
     {
-        PlaintextScope inflate_scope;
         uint8_t *dbuf = (uint8_t *)pc_plaintext_alloc(SSH_PKT_BUF_SIZE, 16);
         size_t dlen = 0;
         if (!dbuf || ssh_comp_c2s(i, payload, payload_len, dbuf, SSH_PKT_BUF_SIZE, &dlen) != 0)
         {
+            pc_plaintext_release(inflate_scope);
             return -1; // malformed stream, or a payload that decompresses beyond the uncompressed limit
         }
         if (dlen == 0)
         {
+            pc_plaintext_release(inflate_scope);
             return 0; // the packet carried only flush bits (no message); consume it and move on
         }
         handler(i, dbuf[0], dbuf, dlen);
+        pc_plaintext_release(inflate_scope);
         return 0;
     }
 #endif
     handler(i, payload[0], payload, payload_len);
+    pc_plaintext_release(inflate_scope);
     return 0;
 }
 
@@ -340,6 +349,7 @@ static int ssh_dispatch_payload(uint8_t i, const uint8_t *payload, size_t payloa
 
 static int ssh_recv_chachapoly(uint8_t i, SshPacketState *s, const SshKeyMat *km, ssh_msg_handler_t handler)
 {
+    size_t scratch_scope = pc_plaintext_mark();
     // chacha20-poly1305@openssh.com. Keyed by the sequence number, so decrypting the
     // length is stateless/repeatable - no cipher-state peek/restore is needed.
     const uint8_t *rk = km_recv_chacha(km, s->is_client); // recv: client s2c, server c2s
@@ -348,21 +358,23 @@ static int ssh_recv_chachapoly(uint8_t i, SshPacketState *s, const SshKeyMat *km
     {
         pc_secure_wipe(s->rx_buf, s->rx_len);
         s->rx_len = 0;
+        pc_plaintext_release(scratch_scope);
         return -1;
     }
     size_t wire_need = 4 + pkt_len + PC_CHACHAPOLY_TAG_LEN;
     if (s->rx_len < wire_need)
     {
+        pc_plaintext_release(scratch_scope);
         return 0; // incomplete packet
     }
 
     const size_t scratch_sz = 4 + pkt_len; // plaintext = length(4) || (pad_len||payload||pad)
-    PlaintextScope scratch_scope;
     uint8_t *scratch = (uint8_t *)pc_plaintext_alloc(scratch_sz, 16);
     if (!scratch)
     {
         pc_secure_wipe(s->rx_buf, s->rx_len);
         s->rx_len = 0;
+        pc_plaintext_release(scratch_scope);
         return -1;
     }
 
@@ -372,12 +384,14 @@ static int ssh_recv_chachapoly(uint8_t i, SshPacketState *s, const SshKeyMat *km
         pc_secure_wipe(scratch, scratch_sz);
         pc_secure_wipe(s->rx_buf, s->rx_len);
         s->rx_len = 0;
+        pc_plaintext_release(scratch_scope);
         return -1; // caller must close connection
     }
 
     if (s->seq_no_recv >= SSH_SEQ_CLOSE_THRESHOLD)
     {
         pc_secure_wipe(scratch, scratch_sz);
+        pc_plaintext_release(scratch_scope);
         return -1;
     }
     s->seq_no_recv++;
@@ -386,12 +400,14 @@ static int ssh_recv_chachapoly(uint8_t i, SshPacketState *s, const SshKeyMat *km
     if (pad_len_byte < 4 || pad_len_byte >= pkt_len)
     {
         pc_secure_wipe(scratch, scratch_sz);
+        pc_plaintext_release(scratch_scope);
         return -1;
     }
     size_t payload_len = pkt_len - 1 - pad_len_byte;
     if (ssh_dispatch_payload(i, scratch + 5, payload_len, handler) < 0)
     {
         pc_secure_wipe(scratch, scratch_sz);
+        pc_plaintext_release(scratch_scope);
         return -1;
     }
 
@@ -399,11 +415,13 @@ static int ssh_recv_chachapoly(uint8_t i, SshPacketState *s, const SshKeyMat *km
     memmove(s->rx_buf, s->rx_buf + consumed, s->rx_len - consumed);
     s->rx_len -= consumed;
     pc_secure_wipe(scratch, scratch_sz);
+    pc_plaintext_release(scratch_scope);
     return 1;
 }
 
 static int ssh_recv_aesgcm(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_msg_handler_t handler)
 {
+    size_t scratch_scope = pc_plaintext_mark();
     // aes256-gcm@openssh.com (RFC 5647): the 4-byte packet_length is sent in the clear and is
     // the AEAD's additional authenticated data; the 16-byte GCM tag is verified over
     // (length || ciphertext) BEFORE any plaintext is produced.
@@ -413,21 +431,23 @@ static int ssh_recv_aesgcm(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_msg_
     {
         pc_secure_wipe(s->rx_buf, s->rx_len);
         s->rx_len = 0;
+        pc_plaintext_release(scratch_scope);
         return -1;
     }
     size_t wire_need = 4 + pkt_len + PC_AESGCM_TAG_LEN;
     if (s->rx_len < wire_need)
     {
+        pc_plaintext_release(scratch_scope);
         return 0; // incomplete packet
     }
 
     const size_t scratch_sz = pkt_len; // plaintext = padding_length || payload || padding
-    PlaintextScope scratch_scope;
     uint8_t *scratch = (uint8_t *)pc_plaintext_alloc(scratch_sz, 16);
     if (!scratch)
     {
         pc_secure_wipe(s->rx_buf, s->rx_len);
         s->rx_len = 0;
+        pc_plaintext_release(scratch_scope);
         return -1;
     }
 
@@ -439,6 +459,7 @@ static int ssh_recv_aesgcm(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_msg_
         pc_secure_wipe(scratch, scratch_sz);
         pc_secure_wipe(s->rx_buf, s->rx_len);
         s->rx_len = 0;
+        pc_plaintext_release(scratch_scope);
         return -1; // caller must close connection
     }
     pc_aesgcm_iv_increment(iv); // tag verified: advance the RFC 5647 invocation counter (recv success)
@@ -446,6 +467,7 @@ static int ssh_recv_aesgcm(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_msg_
     if (s->seq_no_recv >= SSH_SEQ_CLOSE_THRESHOLD)
     {
         pc_secure_wipe(scratch, scratch_sz);
+        pc_plaintext_release(scratch_scope);
         return -1;
     }
     s->seq_no_recv++;
@@ -454,12 +476,14 @@ static int ssh_recv_aesgcm(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_msg_
     if (pad_len_byte < 4 || pad_len_byte >= pkt_len)
     {
         pc_secure_wipe(scratch, scratch_sz);
+        pc_plaintext_release(scratch_scope);
         return -1;
     }
     size_t payload_len = pkt_len - 1 - pad_len_byte;
     if (ssh_dispatch_payload(i, scratch + 1, payload_len, handler) < 0)
     {
         pc_secure_wipe(scratch, scratch_sz);
+        pc_plaintext_release(scratch_scope);
         return -1;
     }
 
@@ -467,11 +491,13 @@ static int ssh_recv_aesgcm(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_msg_
     memmove(s->rx_buf, s->rx_buf + consumed, s->rx_len - consumed);
     s->rx_len -= consumed;
     pc_secure_wipe(scratch, scratch_sz);
+    pc_plaintext_release(scratch_scope);
     return 1;
 }
 
 static int ssh_recv_ctr_etm(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_msg_handler_t handler)
 {
+    size_t scratch_scope = pc_plaintext_mark();
     // aes256-ctr + encrypt-then-MAC: the 4-byte packet_length is sent in the clear, and the
     // MAC is verified over (length || ciphertext) BEFORE anything is decrypted.
     uint32_t pkt_len = read_u32_be(s->rx_buf);
@@ -481,11 +507,13 @@ static int ssh_recv_ctr_etm(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_msg
     {
         pc_secure_wipe(s->rx_buf, s->rx_len);
         s->rx_len = 0;
+        pc_plaintext_release(scratch_scope);
         return -1;
     }
     size_t wire_need = 4 + pkt_len + mac_tag;
     if (s->rx_len < wire_need)
     {
+        pc_plaintext_release(scratch_scope);
         return 0; // incomplete packet
     }
 
@@ -496,24 +524,26 @@ static int ssh_recv_ctr_etm(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_msg
         pc_secure_wipe(expected_mac, sizeof(expected_mac));
         pc_secure_wipe(s->rx_buf, s->rx_len);
         s->rx_len = 0;
+        pc_plaintext_release(scratch_scope);
         return -1; // caller must close connection
     }
     pc_secure_wipe(expected_mac, sizeof(expected_mac));
 
     if (s->seq_no_recv >= SSH_SEQ_CLOSE_THRESHOLD)
     {
+        pc_plaintext_release(scratch_scope);
         return -1;
     }
     s->seq_no_recv++;
 
     // MAC verified -> decrypt the payload (advances c2s_ctx by exactly pkt_len/16 blocks).
     const size_t scratch_sz = SSH_PKT_BUF_SIZE;
-    PlaintextScope scratch_scope;
     uint8_t *scratch = (uint8_t *)pc_plaintext_alloc(scratch_sz, 16);
     if (!scratch)
     {
         pc_secure_wipe(s->rx_buf, s->rx_len);
         s->rx_len = 0;
+        pc_plaintext_release(scratch_scope);
         return -1;
     }
     memcpy(scratch, s->rx_buf + 4, pkt_len);
@@ -524,12 +554,14 @@ static int ssh_recv_ctr_etm(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_msg
     if (pad_len_byte < 4 || pad_len_byte >= pkt_len)
     {
         pc_secure_wipe(scratch, scratch_sz);
+        pc_plaintext_release(scratch_scope);
         return -1;
     }
     size_t payload_len = pkt_len - 1 - pad_len_byte;
     if (ssh_dispatch_payload(i, scratch + 1, payload_len, handler) < 0)
     {
         pc_secure_wipe(scratch, scratch_sz);
+        pc_plaintext_release(scratch_scope);
         return -1;
     }
 
@@ -537,14 +569,17 @@ static int ssh_recv_ctr_etm(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_msg
     memmove(s->rx_buf, s->rx_buf + consumed, s->rx_len - consumed);
     s->rx_len -= consumed;
     pc_secure_wipe(scratch, scratch_sz);
+    pc_plaintext_release(scratch_scope);
     return 1;
 }
 
 static int ssh_recv_ctr_emac(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_msg_handler_t handler)
 {
+    size_t scratch_scope = pc_plaintext_mark();
     // aes256-ctr + encrypt-and-MAC. We need the first cipher block (16 bytes) for the length.
     if (s->rx_len < 16)
     {
+        pc_plaintext_release(scratch_scope);
         return 0; // wait for more data
     }
 
@@ -562,6 +597,7 @@ static int ssh_recv_ctr_emac(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_ms
     {
         pc_secure_wipe(s->rx_buf, s->rx_len);
         s->rx_len = 0;
+        pc_plaintext_release(scratch_scope);
         return -1;
     }
 
@@ -569,6 +605,7 @@ static int ssh_recv_ctr_emac(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_ms
     size_t wire_need = enc_len + mac_tag;
     if (s->rx_len < wire_need)
     {
+        pc_plaintext_release(scratch_scope);
         return 0; // incomplete packet; cipher state already restored
     }
 
@@ -577,12 +614,12 @@ static int ssh_recv_ctr_emac(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_ms
     // one call reuse the same space instead of accumulating; an exhausted
     // arena fails closed (discard + disconnect).
     const size_t scratch_sz = SSH_PKT_BUF_SIZE + 64;
-    PlaintextScope scratch_scope;
     uint8_t *scratch = (uint8_t *)pc_plaintext_alloc(scratch_sz, 16);
     if (!scratch)
     {
         pc_secure_wipe(s->rx_buf, s->rx_len);
         s->rx_len = 0;
+        pc_plaintext_release(scratch_scope);
         return -1;
     }
 
@@ -604,6 +641,7 @@ static int ssh_recv_ctr_emac(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_ms
         pc_secure_wipe(expected_mac, sizeof(expected_mac));
         pc_secure_wipe(s->rx_buf, s->rx_len);
         s->rx_len = 0;
+        pc_plaintext_release(scratch_scope);
         return -1; // caller must close connection
     }
     pc_secure_wipe(expected_mac, sizeof(expected_mac));
@@ -612,6 +650,7 @@ static int ssh_recv_ctr_emac(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_ms
     if (s->seq_no_recv >= SSH_SEQ_CLOSE_THRESHOLD)
     {
         pc_secure_wipe(scratch, scratch_sz);
+        pc_plaintext_release(scratch_scope);
         return -1;
     }
     s->seq_no_recv++;
@@ -623,12 +662,14 @@ static int ssh_recv_ctr_emac(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_ms
     if (pad_len_byte < 4 || pad_len_byte >= pkt_len)
     {
         pc_secure_wipe(scratch, scratch_sz);
+        pc_plaintext_release(scratch_scope);
         return -1;
     }
     size_t payload_len = pkt_len - 1 - pad_len_byte;
     if (ssh_dispatch_payload(i, scratch + 5, payload_len, handler) < 0)
     {
         pc_secure_wipe(scratch, scratch_sz);
+        pc_plaintext_release(scratch_scope);
         return -1;
     }
 
@@ -637,6 +678,7 @@ static int ssh_recv_ctr_emac(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_ms
     memmove(s->rx_buf, s->rx_buf + consumed, s->rx_len - consumed);
     s->rx_len -= consumed;
     pc_secure_wipe(scratch, scratch_sz);
+    pc_plaintext_release(scratch_scope);
     return 1;
 }
 

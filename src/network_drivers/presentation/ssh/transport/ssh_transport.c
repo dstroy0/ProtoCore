@@ -90,15 +90,16 @@ static const char *const EXT_INFO_C = "ext-info-c";
 // unreachable.
 typedef struct
 {
-    proto_bool prefer_rsa = PROTO_TRUE;
+    proto_bool prefer_rsa;
     uint8_t ed_seed[32];
     uint8_t ed_pub[32];
-    proto_bool ed_have = PROTO_FALSE;
+    proto_bool ed_have;
     uint8_t ecdsa_priv[PC_ECDSA_P256_PRIV_LEN]; ///< P-256 host private scalar d.
     uint8_t ecdsa_pub[PC_ECDSA_P256_PUB_LEN];   ///< P-256 host public point (0x04||X||Y).
-    proto_bool ecdsa_have = PROTO_FALSE;
+    proto_bool ecdsa_have;
 } SshTransportCtx;
-static SshTransportCtx s_sshtr;
+// prefer_rsa starts set; every other field starts at the zero it would take anyway.
+static SshTransportCtx s_sshtr = {PROTO_TRUE, {0}, {0}, PROTO_FALSE, {0}, {0}, PROTO_FALSE};
 
 void ssh_kex_set_prefer_rsa(proto_bool prefer)
 {

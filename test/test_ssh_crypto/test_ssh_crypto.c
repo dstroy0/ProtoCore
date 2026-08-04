@@ -335,6 +335,7 @@ static void test_aes256ctr_multi_block(void)
 
 static void test_aes256ctr_scratch_wiped(void)
 {
+    size_t scope = pc_secure_mark();
     // Security model: the ephemeral AES key schedule lives in the shared crypto scratch and MUST be wiped
     // after every call, so no expanded key material lingers in the one region an attacker would target.
     uint8_t key[32], ctr[16], in[32] = {0}, out[32];
@@ -344,7 +345,6 @@ static void test_aes256ctr_scratch_wiped(void)
     // The schedule + keystream were borrowed and released, and the secure pool wipes on release. Observe
     // it the way any caller would: the next borrow of the same size must come back clean, so no expanded
     // key material survives into the next tenant.
-    SecureScope scope;
     pc_span reuse = pc_secure_span(256, 16);
     TEST_ASSERT_TRUE(pc_span_ok(reuse));
     uint8_t zeros[256] = {0};

@@ -590,8 +590,9 @@ const ProtoHandler *pc_modbus_proto_handler(void)
 
 #else // !PROTOCORE_HOT
 
-// Host builds test the pure ADU codec; there is no TCP transport handler.
-const ProtoHandler *pc_modbus_proto_handler(void)
+// Host builds test the pure ADU codec; there is no TCP transport handler. The seam's header is not
+// reached here, so the return type is spelled by the tag the accessor's own declaration uses.
+const struct ProtoHandler *pc_modbus_proto_handler(void)
 {
     return NULL;
 }

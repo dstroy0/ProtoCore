@@ -338,8 +338,10 @@ proto_bool pc_oidc_token_kid(const char *token, size_t token_len, char *kid_out,
 
 proto_bool pc_oidc_jwks_find(const char *jwks_json, const char *kid, pc_oidc_key *key)
 {
+    size_t scratch = pc_plaintext_mark();
     if (!jwks_json || !key)
     {
+        pc_plaintext_release(scratch);
         return PROTO_FALSE;
     }
     const char *all_end = jwks_json + strnlen(jwks_json, PC_OIDC_JWKS_MAX);
@@ -347,6 +349,7 @@ proto_bool pc_oidc_jwks_find(const char *jwks_json, const char *kid, pc_oidc_key
     p = p ? (const char *)memchr(p, '[', (size_t)(all_end - p)) : NULL;
     if (!p)
     {
+        pc_plaintext_release(scratch);
         return PROTO_FALSE;
     }
     p++;
@@ -379,10 +382,12 @@ proto_bool pc_oidc_jwks_find(const char *jwks_json, const char *kid, pc_oidc_key
 
         if (want && parse_rsa_jwk(obj, end, key))
         {
+            pc_plaintext_release(scratch);
             return PROTO_TRUE;
         }
         if (want && kid && *kid)
         {
+            pc_plaintext_release(scratch);
             return PROTO_FALSE; // kid matched but the key was unusable
         }
         p = end;
@@ -411,7 +416,6 @@ pc_oidc_result pc_oidc_verify_with_key(const char *token, size_t token_len, cons
     // PlaintextScope reclaims them on every return path. The four are live together,
     // so PC_PLAINTEXT_WORK_OIDC is their sum and the arena is sized to hold it.
     static_assert(PC_PLAINTEXT_WORK_OIDC <= PC_PLAINTEXT_ARENA_SIZE, "OIDC scratch exceeds the arena");
-    PlaintextScope scratch;
     uint8_t *hdr = (uint8_t *)pc_plaintext_alloc(PC_OIDC_HDR_LEN, 1);
     uint8_t *sig = (uint8_t *)pc_plaintext_alloc(PC_OIDC_RSA_BYTES, 1);
     uint8_t *pl = (uint8_t *)pc_plaintext_alloc(PC_OIDC_MAX_LEN, 1);
