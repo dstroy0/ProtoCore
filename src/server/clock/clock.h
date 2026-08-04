@@ -107,6 +107,23 @@ void pc_set_micros_clock(pc_clock_fn fn, uint32_t ticks_per_second);
  */
 uint32_t pc_micros(void);
 
+/**
+ * @brief Block for at least @p us microseconds - the sub-millisecond wait.
+ *
+ * ::pcdelay sleeps the task one RTOS tick at a time and a tick is a millisecond, so it cannot
+ * express a shorter wait: asking it for 500 us waits 1 ms. This spins on ::pc_micros instead, which
+ * a hardware settle time needs. The subtraction is unsigned, so the counter's 71-minute wrap is
+ * safe. Spinning does not yield, so a wait of a millisecond or more belongs in ::pcdelay, which
+ * sleeps the task and feeds the watchdog.
+ */
+PC_INLINE void pc_delay_us(uint32_t us)
+{
+    uint32_t start = pc_micros();
+    while (pc_micros() - start < us)
+    {
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Latency budgeting: measure an operation against a microsecond budget
 // ---------------------------------------------------------------------------

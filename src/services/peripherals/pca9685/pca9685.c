@@ -15,9 +15,8 @@
 #if PC_ENABLE_PCA9685
 
 #if PROTOCORE_HOT
+#include "server/clock/clock.h" // pc_delay_us: the oscillator settle in begin()
 #include "services/peripherals/i2c.h"
-#include <Arduino.h>
-#include <Wire.h>
 #endif
 static const uint32_t PCA9685_OSC_HZ = 25000000u;
 static const uint8_t PCA9685_PRESCALE_MIN = 3;
@@ -81,21 +80,23 @@ size_t pc_pca9685_set_pwm_bytes(uint8_t *buf, size_t cap, uint8_t channel, uint1
 
 #if PROTOCORE_HOT
 
-// All PCA9685 I2C-binding state, owned by one instance (internal linkage): the device address
-// and the configured PWM frequency, grouped so it is one named owner, unreachable cross-TU.
+// All PCA9685 I2C-binding state, owned by one instance (internal linkage): the device address,
+// the configured PWM frequency, and the bus frame, grouped so it is one named owner, unreachable
+// cross-TU. The frame is a member rather than a local because a transfer is composed in place:
+// five bytes is the widest this part takes, a register byte plus a channel's on and off counts.
 typedef struct
 {
     uint8_t addr;
     uint32_t freq;
+    uint8_t frame[5];
 } Pca9685Ctx;
 static Pca9685Ctx s_pca = {.addr = PC_PCA9685_I2C_ADDR, .freq = PC_PCA9685_FREQ};
 
 static proto_bool wr(uint8_t reg, uint8_t val)
 {
-    Wire.beginTransmission(s_pca.addr);
-    Wire.write(reg);
-    Wire.write(val);
-    return Wire.endTransmission() == 0;
+    s_pca.frame[0] = reg;
+    s_pca.frame[1] = val;
+    return pc_i2c_write(s_pca.addr, s_pca.frame, 2);
 }
 
 proto_bool pc_pca9685_begin(uint8_t addr, uint32_t freq_hz)
@@ -107,7 +108,7 @@ proto_bool pc_pca9685_begin(uint8_t addr, uint32_t freq_hz)
     ok &= wr(PCA9685_REG_MODE1, 0x10); // SLEEP (required before changing PRESCALE)
     ok &= wr(PCA9685_REG_PRESCALE, pc_pca9685_prescale(s_pca.freq));
     ok &= wr(PCA9685_REG_MODE1, 0x20); // wake, auto-increment (AI)
-    delayMicroseconds(500);            // oscillator settle
+    pc_delay_us(500);                  // the oscillator settles before RESTART
     ok &= wr(PCA9685_REG_MODE1, 0xA0); // AI + RESTART
     ok &= wr(PCA9685_REG_MODE2, 0x04); // OUTDRV: totem-pole outputs
     return ok;
@@ -115,14 +116,11 @@ proto_bool pc_pca9685_begin(uint8_t addr, uint32_t freq_hz)
 
 proto_bool pc_pca9685_set_pwm(uint8_t channel, uint16_t on, uint16_t off)
 {
-    uint8_t b[5];
-    if (pc_pca9685_set_pwm_bytes(b, sizeof(b), channel, on, off) != 5)
+    if (pc_pca9685_set_pwm_bytes(s_pca.frame, sizeof(s_pca.frame), channel, on, off) != 5)
     {
         return PROTO_FALSE;
     }
-    Wire.beginTransmission(s_pca.addr);
-    Wire.write(b, 5);
-    return Wire.endTransmission() == 0;
+    return pc_i2c_write(s_pca.addr, s_pca.frame, 5);
 }
 
 proto_bool pc_pca9685_set_servo_us(uint8_t channel, uint32_t microseconds)

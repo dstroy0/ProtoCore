@@ -15,7 +15,7 @@
 
 #if PROTOCORE_HOT
 #include "services/peripherals/i2c.h"
-#include <Wire.h>
+#include "shared_primitives/endian.h" // pc_wr16be: the commands and words are big-endian
 #endif
 uint8_t pc_sht3x_crc8(const uint8_t *data, size_t len)
 {
@@ -62,20 +62,22 @@ proto_bool pc_sht3x_parse(const uint8_t resp[6], int32_t *temp_mc, int32_t *rh_m
 
 #if PROTOCORE_HOT
 
-// All SHT3x I2C-binding state, owned by one instance (internal linkage): the device address,
-// so it is one named owner, unreachable from any other translation unit.
+// All SHT3x I2C-binding state, owned by one instance (internal linkage): the device address and
+// the bus frame, so it is one named owner, unreachable from any other translation unit. The frame
+// is a member rather than a local because a transfer is composed in place: six bytes is the widest
+// this part moves, three 16-bit words each followed by its CRC.
 typedef struct
 {
     uint8_t addr;
+    uint8_t frame[6];
 } Sht3xCtx;
 static Sht3xCtx s_sht = {.addr = PC_SHT3X_I2C_ADDR};
 
+// A command is a bare 16-bit word, big-endian, with no register byte in front of it.
 static proto_bool send_cmd(uint16_t cmd)
 {
-    Wire.beginTransmission(s_sht.addr);
-    Wire.write((uint8_t)(cmd >> 8));
-    Wire.write((uint8_t)(cmd & 0xFF));
-    return Wire.endTransmission() == 0;
+    (void)pc_wr16be(s_sht.frame, cmd);
+    return pc_i2c_write(s_sht.addr, s_sht.frame, 2);
 }
 
 proto_bool pc_sht3x_begin(uint8_t addr)
@@ -94,16 +96,11 @@ proto_bool pc_sht3x_read(int32_t *temp_mc, int32_t *rh_mpct)
         return PROTO_FALSE;
     }
     pcdelay(20); // a high-repeatability measurement completes in < 15 ms
-    if (Wire.requestFrom((int)s_sht.addr, 6) != 6)
+    if (!pc_i2c_read(s_sht.addr, s_sht.frame, sizeof(s_sht.frame)))
     {
         return PROTO_FALSE;
     }
-    uint8_t r[6];
-    for (int i = 0; i < 6; i++)
-    {
-        r[i] = (uint8_t)Wire.read();
-    }
-    return pc_sht3x_parse(r, temp_mc, rh_mpct);
+    return pc_sht3x_parse(s_sht.frame, temp_mc, rh_mpct);
 }
 
 #else // host build: no I2C. The CRC + conversion above are host-tested.
