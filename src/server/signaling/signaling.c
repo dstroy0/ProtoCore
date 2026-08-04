@@ -63,6 +63,14 @@ void pc_signal_know(pc_signal_snapshot *out)
     *out = s_sig.state;
 }
 
+void pc_signal_reset(void)
+{
+    // The tallies are per-run: a server that has started over has answered no requests. Zero is the
+    // bucket's initial state, so the reset is the same store the static initialization performs.
+    static const SignalingCtx blank = {0};
+    s_sig = blank;
+}
+
 void pc_signal_kill(uint8_t slot)
 {
     // A plain forward: no liveness test, no result. Transport owns the slot's lifetime and its idle

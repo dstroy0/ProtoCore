@@ -13,6 +13,7 @@
 #include "network_drivers/session/proto_handler.h" // proto_register/proto_get: the slot-poll dispatch table
 #include "network_drivers/transport/listener.h"    // listener_stop_all() for proto_begin(NULL) test cleanup
 #include "protocore.h"                             // ws/sse upgrade entry points, pc_resp_holds_slot
+#include "server/filesystem/mnt.h" // pc_mnt_mount - storage is reached through the seam, not the route field
 #include <unity.h>
 
 // All source layers compiled via native_app env - no stubs needed.
@@ -707,6 +708,7 @@ void test_mime_type_detection(void)
 void test_serve_static_file_and_mime(void)
 {
     lfsm_format();
+    pc_mnt_mount(lfsm());
     static const char css[] = "body{color:red}";
     TEST_ASSERT_TRUE(lfsm_write_text("/www/style.css", css));
     serve_static("/", lfsm(), "/www");
@@ -724,6 +726,7 @@ void test_serve_static_file_and_mime(void)
 void test_serve_static_cache_control(void)
 {
     lfsm_format();
+    pc_mnt_mount(lfsm());
     static const char css[] = "body{color:red}";
     TEST_ASSERT_TRUE(lfsm_write_text("/www/style.css", css));
     serve_static("/", lfsm(), "/www");
@@ -752,6 +755,7 @@ void test_serve_static_cache_control(void)
 void test_serve_static_index_fallback(void)
 {
     lfsm_format();
+    pc_mnt_mount(lfsm());
     static const char html[] = "<h1>home</h1>";
     TEST_ASSERT_TRUE(lfsm_write_text("/www/index.html", html));
     serve_static("/", lfsm(), "/www");
@@ -769,6 +773,7 @@ void test_serve_static_index_fallback(void)
 void test_serve_static_gzip_when_accepted(void)
 {
     lfsm_format();
+    pc_mnt_mount(lfsm());
     static const char gzbody[] = "\x1f\x8b"
                                  "FAKEGZIP"; // split avoids \x8bF hex-escape merge
     TEST_ASSERT_TRUE(lfsm_write_file("/www/app.js.gz", gzbody, sizeof(gzbody) - 1));
@@ -789,6 +794,7 @@ void test_serve_static_gzip_when_accepted(void)
 void test_serve_static_wildcard_and_route_full(void)
 {
     lfsm_format();
+    pc_mnt_mount(lfsm());
     static const char js[] = "x=1;";
     TEST_ASSERT_TRUE(lfsm_write_text("/www/app.js", js));
     serve_static("/assets*", lfsm(), "/www");
@@ -841,6 +847,7 @@ void test_response_header_cookie_guards(void)
 void test_serve_static_no_gzip_when_not_accepted(void)
 {
     lfsm_format();
+    pc_mnt_mount(lfsm());
     static const char js[] = "console.log(1)";
     TEST_ASSERT_TRUE(lfsm_write_text("/www/app.js", js));
     TEST_ASSERT_TRUE(lfsm_write_text("/www/app.js.gz", "GZIPPED"));
@@ -858,6 +865,7 @@ void test_serve_static_no_gzip_when_not_accepted(void)
 void test_serve_static_traversal_not_leaked(void)
 {
     lfsm_format();
+    pc_mnt_mount(lfsm());
     TEST_ASSERT_TRUE(lfsm_write_text("/secret", "topsecret"));
     serve_static("/", lfsm(), "/www");
     arm_slot(0, "GET /../secret HTTP/1.1\r\nHost: x\r\n\r\n");
@@ -872,6 +880,7 @@ void test_serve_static_traversal_not_leaked(void)
 void test_serve_static_missing_is_404(void)
 {
     lfsm_format();
+    pc_mnt_mount(lfsm());
     TEST_ASSERT_TRUE(lfsm_write_text("/www/exists.txt", "hi"));
     serve_static("/", lfsm(), "/www");
     arm_slot(0, "GET /nope.txt HTTP/1.1\r\nHost: x\r\n\r\n");
@@ -887,6 +896,7 @@ void test_serve_static_missing_is_404(void)
 void test_serve_static_etag_conditional_get(void)
 {
     lfsm_format();
+    pc_mnt_mount(lfsm());
     TEST_ASSERT_TRUE(lfsm_write_text_at("/www/page.html", "<html>hi</html>", 1000));
     serve_static("/", lfsm(), "/www");
 
@@ -929,6 +939,7 @@ void test_serve_static_etag_conditional_get(void)
 void test_serve_static_inm_star_list_weak(void)
 {
     lfsm_format();
+    pc_mnt_mount(lfsm());
     TEST_ASSERT_TRUE(lfsm_write_text_at("/www/page.html", "<html>hi</html>", 1000));
     serve_static("/", lfsm(), "/www");
 
@@ -1001,6 +1012,7 @@ void test_serve_static_inm_star_list_weak(void)
 void test_serve_static_last_modified_conditional_get(void)
 {
     lfsm_format();
+    pc_mnt_mount(lfsm());
     TEST_ASSERT_TRUE(lfsm_write_text_at("/www/page.html", "<html>hi</html>", 1000)); // 1970-01-01 00:16:40 GMT
     serve_static("/", lfsm(), "/www");
     const char *LM = "Thu, 01 Jan 1970 00:16:40 GMT";
@@ -1068,6 +1080,7 @@ void test_serve_static_last_modified_conditional_get(void)
 void test_serve_static_ims_field_comparisons(void)
 {
     lfsm_format();
+    pc_mnt_mount(lfsm());
     TEST_ASSERT_TRUE(lfsm_write_text_at("/www/page.html", "<html>hi</html>", 1000));
     serve_static("/", lfsm(), "/www");
     const char *ims[] = {
@@ -1107,6 +1120,7 @@ void test_serve_static_ims_field_comparisons(void)
 void test_serve_static_no_timestamp(void)
 {
     lfsm_format();
+    pc_mnt_mount(lfsm());
     TEST_ASSERT_TRUE(lfsm_write_text("/www/page.html", "<html>hi</html>")); // no timestamp attribute -> mtime 0
     serve_static("/", lfsm(), "/www");
 
@@ -1137,6 +1151,7 @@ void test_serve_static_no_timestamp(void)
 void test_serve_static_if_modified_since_malformed(void)
 {
     lfsm_format();
+    pc_mnt_mount(lfsm());
     TEST_ASSERT_TRUE(lfsm_write_text_at("/www/page.html", "<html>hi</html>", 1000)); // Jan 1970
     serve_static("/", lfsm(), "/www");
     const char *bad[] = {
@@ -1834,6 +1849,7 @@ void test_response_trailer_cors_block_and_null_disable(void)
 void test_cache_control_null_clears_header(void)
 {
     lfsm_format();
+    pc_mnt_mount(lfsm());
     static const char body[] = "x";
     TEST_ASSERT_TRUE(lfsm_write_text("/www/c.txt", body));
     serve_static("/", lfsm(), "/www");
@@ -1848,6 +1864,7 @@ void test_cache_control_null_clears_header(void)
     TEST_ASSERT_NULL(strstr(tcp_captured(), "Cache-Control"));
     tcp_capture_disable();
     lfsm_format();
+    pc_mnt_mount(lfsm());
 }
 
 // An empty route pattern is not a wildcard: is_wildcard is only set for a non-empty
@@ -2062,6 +2079,7 @@ void test_transfer_encoding_on_semantic_ingress_is_501(void)
 void test_static_mount_rejects_non_get_methods(void)
 {
     lfsm_format();
+    pc_mnt_mount(lfsm());
     static const char body[] = "hi";
     TEST_ASSERT_TRUE(lfsm_write_text("/www/a.txt", body));
     serve_static("/", lfsm(), "/www");
@@ -2074,6 +2092,7 @@ void test_static_mount_rejects_non_get_methods(void)
     TEST_ASSERT_NOT_NULL(strstr(out, "Allow: GET, HEAD\r\n"));
     tcp_capture_disable();
     lfsm_format();
+    pc_mnt_mount(lfsm());
 }
 
 // send()/send_empty() guard their public entry against an out-of-range slot (the

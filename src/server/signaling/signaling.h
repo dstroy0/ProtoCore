@@ -79,6 +79,9 @@ static_assert(MAX_LISTENERS <= 32, "pc_signal_snapshot::listeners_up is one 32-b
 /** @brief Hand back the bucket. No gathering: this is what the loop last deposited. */
 void pc_signal_know(pc_signal_snapshot *out);
 
+/** @brief Empty the bucket. See pc_server_reset(), which is what callers use. */
+void pc_signal_reset(void);
+
 /**
  * @brief Deposit a response, from the send path, at the point the status went out.
  *

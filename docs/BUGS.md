@@ -8,6 +8,37 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ---
 
+## Every OIDC token verification leaked four scratch borrows, and the arena never came back
+
+- **Status:** FIXED (2026-08-03). Found by running `native_oidc` for the first time: the suite had
+  not compiled since the C conversion, so nothing had executed `pc_oidc_verify_with_key` at all.
+- **Symptom:** every verify returned `PC_OIDC_ERR_FORMAT` (-1), including a valid, correctly-signed
+  token that should have returned 0. Twelve of the suite's tests failed with the same code whatever
+  they were actually testing, because the failure happened before any of their input was examined.
+- **Root cause:** `pc_oidc_verify_with_key` borrows four buffers from the plaintext arena (header,
+  signature, payload, issuer - about 2.6 KB together, hoisted off the worker stack). The C++ version
+  scoped them with a `PlaintextScope` whose destructor released on every return path. The conversion
+  deleted the guard and did not replace it with a `pc_plaintext_mark()` / `pc_plaintext_release()`
+  pair, so **every call leaked all four borrows**. The comment above the allocation still said
+  "PlaintextScope reclaims them on every return path", which is how it read as correct.
+- **What it does on a device:** the arena is a fixed per-worker pool reset per dispatch, so a single
+  verification inside one dispatch still fits. Across the test binary the borrows accumulate until
+  the arena cannot satisfy the next request, and from that point `!hdr || !sig || !pl || !iss` is
+  true and every token is rejected as malformed - a fail-closed authentication outage that no input
+  can clear. The same exhaustion is reachable on a target wherever more than one verify runs before
+  the arena is reset.
+- **Why nothing caught it:** the suite did not compile, so it never ran. `check_src_banned` does not
+  model borrow/release pairing, and the leak is invisible to a reader because the comment describes
+  the guard that used to be there.
+- **Fix:** `size_t scope = pc_plaintext_mark();` before the first borrow, and
+  `pc_plaintext_release(scope);` on each of the eleven returns after it. The two early returns above
+  the mark (null token, `split3` failure) borrow nothing and are unchanged. Comment rewritten to
+  describe what the code does now.
+- **Worth auditing:** this is the same shape as the 17 `PlaintextScope` / `SecureScope` guards
+  already converted by hand in `src/`, and the two in `test_plaintext` / `test_secure_pool` that had
+  lost their release. Any other site where a deleted guard left a borrow unpaired has the same
+  failure mode and the same invisibility.
+
 ## The C11 conversion never covered the PROTOCORE_HOT path, and pc_mnt_backend has no sync
 
 - **Status:** OPEN (2026-08-03). Found by grepping `src/` for C++ constructs after the native compile

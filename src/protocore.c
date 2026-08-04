@@ -295,6 +295,7 @@ void pc_server_reset(void)
     pc_route_reset();
     pc_resp_reset();
     pc_middleware_reset();
+    pc_signal_reset();
 }
 
 void on_request_log(RequestLogCb cb)

@@ -411,17 +411,19 @@ pc_oidc_result pc_oidc_verify_with_key(const char *token, size_t token_len, cons
         return PC_OIDC_ERR_FORMAT;
     }
 
-    // Borrow the large decode buffers from the per-dispatch scratch arena rather
-    // than the worker stack (was ~2.6 KB of stack frame: hdr + sig + pl + iss).
-    // PlaintextScope reclaims them on every return path. The four are live together,
-    // so PC_PLAINTEXT_WORK_OIDC is their sum and the arena is sized to hold it.
+    // Borrow the large decode buffers from the per-dispatch scratch arena rather than the worker
+    // stack. The mark below is released on every return path, so a verify gives back what it took
+    // whatever it decides. The four are live together, so PC_PLAINTEXT_WORK_OIDC is their sum and
+    // the arena is sized to hold it.
     static_assert(PC_PLAINTEXT_WORK_OIDC <= PC_PLAINTEXT_ARENA_SIZE, "OIDC scratch exceeds the arena");
+    size_t scope = pc_plaintext_mark();
     uint8_t *hdr = (uint8_t *)pc_plaintext_alloc(PC_OIDC_HDR_LEN, 1);
     uint8_t *sig = (uint8_t *)pc_plaintext_alloc(PC_OIDC_RSA_BYTES, 1);
     uint8_t *pl = (uint8_t *)pc_plaintext_alloc(PC_OIDC_MAX_LEN, 1);
     char *iss = (char *)pc_plaintext_alloc(PC_OIDC_ISS_LEN, 1);
     if (!hdr || !sig || !pl || !iss)
     {
+        pc_plaintext_release(scope);
         return PC_OIDC_ERR_FORMAT; // scratch exhausted: fail closed
     }
 
@@ -429,18 +431,21 @@ pc_oidc_result pc_oidc_verify_with_key(const char *token, size_t token_len, cons
     size_t hn = pc_base64url_decode(seg[0], seglen[0], hdr, PC_OIDC_HDR_LEN - 1);
     if (hn == 0)
     {
+        pc_plaintext_release(scope);
         return PC_OIDC_ERR_FORMAT;
     }
     hdr[hn] = '\0';
     char alg[16];
     if (!get_str((const char *)hdr, (const char *)hdr + hn, "alg", alg, sizeof(alg)) || strcmp(alg, "RS256") != 0)
     {
+        pc_plaintext_release(scope);
         return PC_OIDC_ERR_ALG;
     }
 
     // Signature: RSA-2048 -> exactly 256 bytes.
     if (pc_base64url_decode(seg[2], seglen[2], sig, PC_OIDC_RSA_BYTES) != PC_OIDC_RSA_BYTES)
     {
+        pc_plaintext_release(scope);
         return PC_OIDC_ERR_FORMAT;
     }
 
@@ -449,6 +454,7 @@ pc_oidc_result pc_oidc_verify_with_key(const char *token, size_t token_len, cons
     if (pc_rsa_verify(key->n, key->e, (const uint8_t *)token, signing_len, sig, PC_OIDC_RSA_BYTES,
                       PC_RSA_HASH_SHA256) != 0)
     {
+        pc_plaintext_release(scope);
         return PC_OIDC_ERR_SIGNATURE;
     }
 
@@ -456,6 +462,7 @@ pc_oidc_result pc_oidc_verify_with_key(const char *token, size_t token_len, cons
     size_t pn = pc_base64url_decode(seg[1], seglen[1], pl, PC_OIDC_MAX_LEN - 1);
     if (pn == 0)
     {
+        pc_plaintext_release(scope);
         return PC_OIDC_ERR_FORMAT;
     }
     pl[pn] = '\0';
@@ -466,6 +473,7 @@ pc_oidc_result pc_oidc_verify_with_key(const char *token, size_t token_len, cons
     {
         if (!get_str(ps, pe, "iss", iss, PC_OIDC_ISS_LEN) || strcmp(iss, expected_iss) != 0)
         {
+            pc_plaintext_release(scope);
             return PC_OIDC_ERR_ISS;
         }
     }
@@ -473,6 +481,7 @@ pc_oidc_result pc_oidc_verify_with_key(const char *token, size_t token_len, cons
     {
         if (!aud_contains(ps, pe, expected_aud))
         {
+            pc_plaintext_release(scope);
             return PC_OIDC_ERR_AUD;
         }
     }
@@ -480,11 +489,13 @@ pc_oidc_result pc_oidc_verify_with_key(const char *token, size_t token_len, cons
     int64_t exp = 0;
     if (!get_int64(ps, pe, "exp", &exp) || (int64_t)now_unix >= exp)
     {
+        pc_plaintext_release(scope);
         return PC_OIDC_ERR_EXPIRED;
     }
     int64_t nbf = 0;
     if (get_int64(ps, pe, "nbf", &nbf) && (int64_t)now_unix < nbf)
     {
+        pc_plaintext_release(scope);
         return PC_OIDC_ERR_NOT_YET;
     }
 
@@ -498,6 +509,7 @@ pc_oidc_result pc_oidc_verify_with_key(const char *token, size_t token_len, cons
         get_str(ps, pe, "email", claims->email, sizeof(claims->email));
         get_int64(ps, pe, "iat", &claims->iat);
     }
+    pc_plaintext_release(scope);
     return PC_OIDC_OK;
 }
 

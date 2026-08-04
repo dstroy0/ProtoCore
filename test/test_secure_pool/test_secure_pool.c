@@ -89,22 +89,25 @@ static void test_reset_wipes_everything_live(void)
     TEST_ASSERT_EQUAL_size_t(0, pc_secure_used());
 }
 
-// The scope guard exists because the wipe must happen on the early-return paths too - the ones a
-// hand-written wipe gets forgotten on.
+// Release wipes, and it has to happen on the early-exit paths too - the ones a hand-written wipe
+// gets forgotten on. Both trips borrow, scribble key-shaped bytes, and leave by a different route;
+// the region must read back zero either way.
 static void test_scope_guard_wipes_on_every_exit(void)
 {
-    size_t scope = pc_secure_mark();
     uint8_t *seen = NULL;
     for (int trip = 0; trip < 2; trip++)
     {
+        size_t scope = pc_secure_mark();
         pc_span s = pc_secure_span(16, 8);
         TEST_ASSERT_TRUE(pc_span_ok(s));
         memset(s.buf, 0xEE, s.cap);
         seen = s.buf;
         if (trip == 0)
         {
-            continue; // the "peer sent something malformed" shape
+            pc_secure_release(scope); // the "peer sent something malformed" shape
+            continue;
         }
+        pc_secure_release(scope);
     }
     for (size_t i = 0; i < 16; i++)
     {
