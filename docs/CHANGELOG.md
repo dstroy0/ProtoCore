@@ -4,6 +4,14 @@ All notable changes to ProtoCore are documented here.
 
 ## [Unreleased]
 
+### Bug Fixes
+
+- the C++ the native suites could not see, and the WAL's missing barrier ([`f38924b`](https://github.com/dstroy0/ProtoCore/commit/f38924b1a8ab7cae0058f64f777937c446842ed7))
+
+### CI / Build
+
+- update CHANGELOG.md [skip ci] ([`97d6381`](https://github.com/dstroy0/ProtoCore/commit/97d6381beba48fff2fb04d524b2858c789286e39))
+
 ### Changes
 
 - Merge branch 'main' of https://github.com/dstroy0/ProtoCore ([`b2f6458`](https://github.com/dstroy0/ProtoCore/commit/b2f6458969da5b8e64398737a0a2bcd7a055cb8b))
