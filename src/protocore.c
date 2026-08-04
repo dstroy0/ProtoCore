@@ -43,6 +43,7 @@
 #include "network_drivers/session/worker.h"
 #include "network_drivers/tls/tls.h"
 #include "network_drivers/transport/listener.h"
+#include "network_drivers/transport/tcp.h" // TcpConn, conn_pool, pc_ap_ip: the slots this drives
 #include "shared_primitives/hex.h"
 #include "shared_primitives/mime.h"
 #include "shared_primitives/rawmemcpy.h" // proto_raw_read: every move here is into our own buffer

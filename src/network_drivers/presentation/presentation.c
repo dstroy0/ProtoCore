@@ -19,6 +19,7 @@
 
 #include "presentation.h"
 #include "network_drivers/session/proto_handler.h" // ProtoHandler (the L5 dispatch seam this registers into)
+#include "network_drivers/transport/tcp.h"         // conn_pool: the slot a handler is dispatched on
 #if PC_ENABLE_WEBSOCKET
 #include "network_drivers/presentation/http/websocket/websocket.h" // ws_find()/ws_free(): a WS-upgraded slot must never be HTTP-parsed
 #endif
