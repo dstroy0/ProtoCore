@@ -6,6 +6,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- an OIDC arena leak that rejected every token, and two more lost scope guards ([`713d3a7`](https://github.com/dstroy0/ProtoCore/commit/713d3a7ad34e5de1109d509e06cab8b4bdb569c3))
 - the last of the test/ residue, and three envs that never linked their own deps ([`fc0a924`](https://github.com/dstroy0/ProtoCore/commit/fc0a92455f1caa10d72cb10d914da00e61baf4c9))
 - brace assignment, lambdas, and six more defaulted arguments in test/ ([`463ddae`](https://github.com/dstroy0/ProtoCore/commit/463ddaef3e2d5d2bfd6f1d2accb657ecaeaddb61))
 - restore the ESP mount adapter's extension, and three gaps behind it ([`8472e1b`](https://github.com/dstroy0/ProtoCore/commit/8472e1b62690f9834432a46ae5f0a5b92a128d55))
@@ -14,6 +15,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update test report + coverage [skip ci] ([`3620178`](https://github.com/dstroy0/ProtoCore/commit/3620178aec096b69e01fdf4a5036ff52fbdede74))
+- update CHANGELOG.md [skip ci] ([`3206307`](https://github.com/dstroy0/ProtoCore/commit/320630791cff9fa6a715da3698d163413e924879))
 - update test report + coverage [skip ci] ([`a112b07`](https://github.com/dstroy0/ProtoCore/commit/a112b071a235722428998020931c226afb9025a7))
 - update CHANGELOG.md [skip ci] ([`3c1873f`](https://github.com/dstroy0/ProtoCore/commit/3c1873f1afebddccd48c4e68b4ba20ba4e4359be))
 - update CHANGELOG.md [skip ci] ([`0d7ec3e`](https://github.com/dstroy0/ProtoCore/commit/0d7ec3efb968a8fc8b13d0163293e4a5ae18e169))
