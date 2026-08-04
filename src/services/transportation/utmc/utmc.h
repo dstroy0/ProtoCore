@@ -22,6 +22,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_UTMC
 
 /** @brief UTMC data-quality flags. */
@@ -53,4 +55,7 @@ size_t pc_utmc_response(const char *object_id, const char *value, uint8_t qualit
 size_t pc_utmc_parse_request(const char *xml, size_t len, char *out, size_t cap);
 
 #endif // PC_ENABLE_UTMC
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_UTMC_H

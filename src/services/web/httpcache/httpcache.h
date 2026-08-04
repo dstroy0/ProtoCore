@@ -30,6 +30,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_HTTP_CACHE
 
 /**
@@ -113,5 +115,7 @@ void cache_shared(pc_cache_control *cc, uint32_t max_age, uint32_t s_maxage);
 long cache_freshness_lifetime(const pc_cache_control *cc, proto_bool shared, long expires_minus_date);
 
 #endif // PC_ENABLE_HTTP_CACHE
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_HTTPCACHE_H

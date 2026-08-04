@@ -24,6 +24,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_PROVISIONING
 
 /**
@@ -64,5 +66,7 @@ void pc_provisioning_begin(const char *ap_ssid);
 void pc_provisioning_clear(void);
 
 #endif // PC_ENABLE_PROVISIONING
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_PROVISIONING_H

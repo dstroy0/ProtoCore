@@ -29,6 +29,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 // Shared by the HTTP/3 (QUIC) handshake and the DTLS 1.3 handshake: both carry the same TLS 1.3
 // messages, so this module compiles for either. The DTLS-specific additions (HelloRetryRequest, the
 // cookie extension, the sec 4.4.1 message_hash) are used by the DTLS handshake but are valid TLS 1.3.
@@ -217,4 +219,7 @@ size_t pc_tls13_build_encrypted_extensions_empty(uint8_t *out, size_t cap, proto
 size_t pc_tls13_build_message_hash(uint8_t *out, size_t cap, const uint8_t ch1_hash[32]);
 
 #endif // PC_ENABLE_HTTP3 || PC_ENABLE_DTLS
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_TLS13_MSG_H

@@ -35,6 +35,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_SIMATIC
 
 // 3964R control characters (wire bytes).
@@ -209,5 +211,7 @@ proto_bool pc_rk512_parse_reaction(const uint8_t *buf, size_t len, uint16_t *sta
                                    size_t *dlen);
 
 #endif // PC_ENABLE_SIMATIC
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_SIMATIC_H

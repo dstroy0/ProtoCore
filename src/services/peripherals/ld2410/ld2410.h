@@ -28,6 +28,8 @@
 
 #include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_LD2410
 
 /** @brief Range gates the LD2410 reports energy for in engineering mode (gate 0..8). */
@@ -180,5 +182,7 @@ proto_bool pc_ld2410_set_engineering(proto_bool on);
 proto_bool pc_ld2410_restart();
 
 #endif // PC_ENABLE_LD2410
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_LD2410_H

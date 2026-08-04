@@ -29,6 +29,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_RELAY
 
 /**
@@ -46,5 +48,7 @@ proto_bool pc_relay_publish(uint8_t listener_id, const char *origin_host, uint16
 void pc_relay_listener_reset(void);
 
 #endif // PC_ENABLE_RELAY
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_RELAY_LISTENER_H

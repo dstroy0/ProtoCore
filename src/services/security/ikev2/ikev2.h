@@ -43,6 +43,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_IKEV2
 
 /** @brief IKEv2 UDP port (IKE_SA_INIT / IKE_AUTH before NAT is detected). */
@@ -1063,5 +1065,7 @@ proto_bool pc_ike_auth_verify_rsa_sha256(const uint8_t *n_be, const uint8_t *e_b
                                          const uint8_t *id_body, size_t id_body_len);
 
 #endif // PC_ENABLE_IKEV2
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_IKEV2_H

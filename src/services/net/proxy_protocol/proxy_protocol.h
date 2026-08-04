@@ -27,6 +27,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_PROXY_PROTOCOL
 
 #define PROXY_V2_SIG_LEN 12         ///< v2 signature length
@@ -61,5 +63,7 @@ size_t proxy_v2_build(uint8_t *buf, size_t cap, uint32_t src_addr, uint32_t dst_
                       uint16_t dst_port);
 
 #endif // PC_ENABLE_PROXY_PROTOCOL
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_PROXY_PROTOCOL_H

@@ -21,6 +21,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_SMB
 
 /** @brief NTLMSSP NegotiateFlags (MS-NLMP §2.2.2.5), the subset a basic NTLMv2 client uses. */
@@ -90,5 +92,7 @@ size_t pc_ntlmssp_build_authenticate(uint8_t *buf, size_t cap, const uint8_t *lm
                                      const char *workstation, uint32_t flags, proto_bool with_mic);
 
 #endif // PC_ENABLE_SMB
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_NTLMSSP_H

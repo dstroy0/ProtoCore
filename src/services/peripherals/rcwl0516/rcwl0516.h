@@ -45,6 +45,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_RCWL0516
 
 /**
@@ -131,4 +133,7 @@ proto_bool pc_rcwl0516_poll();
 proto_bool pc_rcwl0516_present();
 
 #endif // PC_ENABLE_RCWL0516
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_RCWL0516_H

@@ -25,6 +25,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_DDS
 
 /** @brief RTPS submessage kinds (DDSI-RTPS 8.3.7) + the flag bit for little-endian. */
@@ -77,4 +79,7 @@ typedef void (*pc_rtps_cb)(uint8_t id, uint8_t flags, const uint8_t *body, size_
 proto_bool pc_rtps_parse(const uint8_t *msg, size_t len, pc_rtps_cb cb, void *arg);
 
 #endif // PC_ENABLE_DDS
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_DDS_H

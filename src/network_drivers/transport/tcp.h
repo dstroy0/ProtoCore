@@ -44,6 +44,8 @@
 #include "shared_primitives/ring.h" // PROTO_ATOMIC_LOAD/STORE + the shared SPSC ring drain primitive
 #include "tcp_evt.h"                // EvtType, TcpEvt: what this layer posts to a listener queue
 
+PROTO_BEGIN_DECLS
+
 // ---------------------------------------------------------------------------
 // Connection state
 // ---------------------------------------------------------------------------
@@ -538,5 +540,7 @@ void lowlevel_err_cb(void *arg, pc_net_err err);
  * inactive listener) - the transport observes drops as PC_CONN_R_DEFER_DROP.
  */
 proto_bool listener_enqueue(uint8_t listener_id, const TcpEvt *evt);
+
+PROTO_END_DECLS
 
 #endif

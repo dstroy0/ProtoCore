@@ -24,6 +24,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_GUARDRAILS
 
 /** @brief A health snapshot. */
@@ -75,4 +77,7 @@ void pc_guardrails_begin(pc_breach_fn cb);
 uint8_t pc_guardrails_check(void);
 
 #endif // PC_ENABLE_GUARDRAILS
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_GUARDRAILS_H

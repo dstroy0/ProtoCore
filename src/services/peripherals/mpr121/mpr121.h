@@ -28,6 +28,8 @@
 
 #include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_MPR121
 
 /** @brief Sense electrodes on the MPR121 (ELE0..ELE11). */
@@ -78,5 +80,7 @@ uint16_t pc_mpr121_read_touched();
 uint16_t pc_mpr121_read_filtered(uint8_t e);
 
 #endif // PC_ENABLE_MPR121
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_MPR121_H

@@ -50,6 +50,8 @@
 
 #include "protocore_config.h" // the entry point: types.h for proto_bool and the widths
 
+PROTO_BEGIN_DECLS
+
 /** @brief P-256 private key (scalar d) length. */
 #define PC_ECDSA_P256_PRIV_LEN 32
 /** @brief P-256 coordinate length (one of X, Y). */
@@ -109,5 +111,7 @@ proto_bool pc_ecdsa_p256_verify(const uint8_t pub[PC_ECDSA_P256_PUB_LEN], const 
  */
 proto_bool pc_ecdsa_p256_ecdh(uint8_t shared_x[PC_ECDSA_P256_COORD_LEN], const uint8_t peer_pub[PC_ECDSA_P256_PUB_LEN],
                               const uint8_t priv[PC_ECDSA_P256_PRIV_LEN]);
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_ECDSA_H

@@ -28,6 +28,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_SSH_SFTP
 
 /**
@@ -37,5 +39,7 @@
 void pc_ssh_sftp_begin(void);
 
 #endif // PC_ENABLE_SSH_SFTP
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_SSH_SFTP_H

@@ -56,6 +56,8 @@
 #include "network_drivers/presentation/ssh/transport/ssh_keymat.h"
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 // ---------------------------------------------------------------------------
 // RNG
 // ---------------------------------------------------------------------------
@@ -141,5 +143,7 @@ void ssh_dh_derive_keys_sid(uint8_t i, const uint8_t K_be[256], const uint8_t *H
  */
 void ssh_kdf_derive(const uint8_t K_be[256], const uint8_t *H, const uint8_t *session_id, char label, uint8_t *out,
                     size_t out_len, proto_bool k_is_string, size_t h_len, size_t sid_len, proto_bool is512);
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_SSH_DH_H

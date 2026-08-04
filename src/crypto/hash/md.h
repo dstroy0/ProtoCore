@@ -20,6 +20,8 @@
 
 #include "protocore_config.h" // the entry point: types.h for the widths
 
+PROTO_BEGIN_DECLS
+
 /**
  * @brief Opaque streaming digest context (MD4 / MD5). Forward-declared only: the definition is private to
  * md.cpp, so other translation units know the symbol but never its members - they hold it via `struct MdCtx *`,
@@ -54,5 +56,7 @@ void md4(const uint8_t *data, size_t len, uint8_t out[16]);
 
 /** @brief HMAC-MD5 (RFC 2104): the NTLMv2 MAC primitive. */
 void pc_hmac_md5(const uint8_t *key, size_t key_len, const uint8_t *msg, size_t msg_len, uint8_t out[16]);
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_MD_H

@@ -25,6 +25,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_HTTP3
 
 /** @brief Callback invoked for each decoded header; return false to abort the decode. */
@@ -57,4 +59,7 @@ proto_bool pc_qpack_decode(const uint8_t *block, size_t len, char *scratch, size
                            void *ctx);
 
 #endif // PC_ENABLE_HTTP3
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_QPACK_H

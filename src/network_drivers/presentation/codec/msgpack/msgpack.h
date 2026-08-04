@@ -32,6 +32,8 @@
 #include "protocore_config.h"
 #include "shared_primitives/span.h" // pc_span / pc_cspan - the region, bound with pc_span_from()
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_MSGPACK
 
 // The encoder writes into a pc_span and the decoder reads from a pc_cspan. Bind with
@@ -68,4 +70,7 @@ proto_bool pc_msgpack_read_array(pc_cspan *r, size_t *count); ///< array header 
 proto_bool pc_msgpack_read_map(pc_cspan *r, size_t *count);   ///< map header (key/value pair count)
 
 #endif // PC_ENABLE_MSGPACK
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_MSGPACK_H

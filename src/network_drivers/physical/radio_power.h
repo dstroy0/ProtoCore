@@ -19,6 +19,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_RADIO_POWER
 
 /** @brief Modem-sleep modes (match PC_RADIO_WIFI_PS). Config/compare values, so integer constants in
@@ -52,4 +54,7 @@ void pc_radio_busy_hold(void);
 void pc_radio_busy_release(void);
 
 #endif // PC_ENABLE_RADIO_POWER
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_RADIO_POWER_H

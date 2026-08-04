@@ -28,6 +28,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_NTS
 
 /** @brief NTS-KE record types (RFC 8915 sec 4). The critical bit is 0x8000. */
@@ -88,4 +90,7 @@ size_t pc_nts_ef_unique_id(const uint8_t *nonce, size_t nonce_len, uint8_t *out,
 size_t pc_nts_ef_cookie(const uint8_t *cookie, size_t cookie_len, uint8_t *out, size_t cap);
 
 #endif // PC_ENABLE_NTS
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_NTS_H

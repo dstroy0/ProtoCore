@@ -26,6 +26,8 @@
 
 #include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_DNS_SERVER
 
 /**
@@ -73,5 +75,7 @@ void pc_dns_server_clear();
 proto_bool pc_dns_server_begin();
 
 #endif // PC_ENABLE_DNS_SERVER
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_DNS_SERVER_H

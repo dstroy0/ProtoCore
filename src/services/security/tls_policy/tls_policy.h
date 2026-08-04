@@ -23,6 +23,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_TLS_POLICY
 
 /** @brief TLS protocol version wire words. */
@@ -52,4 +54,7 @@ uint16_t pc_tls_select_cipher(const uint16_t *client_offered, size_t n_client, c
 proto_bool pc_tls_is_aead(uint16_t suite);
 
 #endif // PC_ENABLE_TLS_POLICY
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_TLS_POLICY_H

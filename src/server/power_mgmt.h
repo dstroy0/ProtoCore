@@ -37,6 +37,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_POWER_MGMT
 
 /** @brief Governor limits. Temperatures in whole degrees C; frequencies in MHz. */
@@ -110,4 +112,7 @@ proto_bool pc_power_gate_bt(void);
 #endif // PROTOCORE_HOT
 
 #endif // PC_ENABLE_POWER_MGMT
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_POWER_MGMT_H

@@ -30,6 +30,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_FINS
 
 #define FINS_HEADER_SIZE 10
@@ -129,5 +131,7 @@ typedef struct
 proto_bool pc_fins_parse_response(const uint8_t *buf, size_t len, FinsResponse *out);
 
 #endif // PC_ENABLE_FINS
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_FINS_H

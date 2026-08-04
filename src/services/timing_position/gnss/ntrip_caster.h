@@ -29,6 +29,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_NTRIP_CASTER
 
 /** @brief NTRIP protocol revision detected in / used for a request or response. */
@@ -109,5 +111,7 @@ size_t pc_ntrip_build_sourcetable(char *out, size_t cap, NtripVersion version, c
                                   size_t mount_count);
 
 #endif // PC_ENABLE_NTRIP_CASTER
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_NTRIP_CASTER_H

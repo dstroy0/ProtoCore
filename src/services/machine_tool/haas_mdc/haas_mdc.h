@@ -34,6 +34,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_HAAS_MDC
 
 /** @brief Default Haas MDC TCP port (Setting 143 "Machine Data Collect"). */
@@ -157,5 +159,7 @@ proto_bool pc_haas_mdc_parse_macro(const HaasMdcResp *r, uint32_t *var, const ch
 proto_bool pc_haas_mdc_dprnt_line(const char *buf, size_t len, const char **text, size_t *text_len);
 
 #endif // PC_ENABLE_HAAS_MDC
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_HAAS_MDC_H

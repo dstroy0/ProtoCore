@@ -47,6 +47,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_SAFETY_SCL
 
 /** @brief Where a safety connection stands. */
@@ -153,4 +155,7 @@ SclFault pc_scl_fault(const SclConn *c);
 uint32_t pc_scl_next_counter(uint32_t counter, uint32_t counter_mod);
 
 #endif // PC_ENABLE_SAFETY_SCL
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_SAFETY_SCL_H

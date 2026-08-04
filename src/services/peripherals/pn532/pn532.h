@@ -29,6 +29,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_PN532
 
 /** @brief Frame identifier: host -> PN532. */
@@ -60,5 +62,7 @@ proto_bool pc_pn532_is_ack(const uint8_t *raw, uint16_t len);
 uint16_t pc_pn532_build_ack(uint8_t *out, uint16_t cap);
 
 #endif // PC_ENABLE_PN532
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_PN532_H

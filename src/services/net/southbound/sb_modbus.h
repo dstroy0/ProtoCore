@@ -31,6 +31,8 @@
 #include "services/fieldbus/modbus/modbus.h"    // ModbusFunction, MODBUS_ADU_MAX
 #include "services/net/southbound/southbound.h" // SouthboundDriver, Sb
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_SOUTHBOUND && PC_ENABLE_MODBUS_MASTER
 
 /**
@@ -85,4 +87,7 @@ int pc_sb_modbus_init(pc_sb_modbus_ctx *ctx, pc_sb_modbus_txn txn, void *io, Mod
 int pc_sb_modbus_driver(SouthboundDriver *drv_out, const char *name, pc_sb_modbus_ctx *ctx);
 
 #endif // PC_ENABLE_SOUTHBOUND && PC_ENABLE_MODBUS_MASTER
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_SB_MODBUS_H

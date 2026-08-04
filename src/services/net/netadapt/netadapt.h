@@ -24,6 +24,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_NETADAPT
 
 /**
@@ -52,4 +54,7 @@ proto_bool pc_netadapt_dhcp_fallback(uint32_t elapsed_ms, uint32_t attempts, uin
                                      uint32_t max_attempts);
 
 #endif // PC_ENABLE_NETADAPT
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_NETADAPT_H

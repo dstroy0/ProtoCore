@@ -29,6 +29,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_LWM2M
 
 // Identifier kinds (Type byte bits 7-6).
@@ -92,5 +94,7 @@ proto_bool pc_lwm2m_tlv_read(const uint8_t *buf, size_t len, size_t *pos, Lwm2mT
 proto_bool pc_lwm2m_tlv_value_int(const uint8_t *value, size_t len, int64_t *out);
 
 #endif // PC_ENABLE_LWM2M
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_LWM2M_TLV_H

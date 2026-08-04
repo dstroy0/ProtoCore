@@ -32,6 +32,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_LORA
 
 // --- Codec: the RadioHead RH_RF95 4-byte header ---------------------------------------
@@ -115,5 +117,7 @@ void pc_lora_set_rx(const pc_lora_bus *bus);
 int pc_lora_recv(const pc_lora_bus *bus, uint8_t *buf, uint8_t cap, int16_t *rssi);
 
 #endif // PC_ENABLE_LORA
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_LORA_H

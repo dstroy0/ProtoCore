@@ -31,6 +31,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_IOLINK
 
 #define IOL_CHECKSUM_SEED 0x52u ///< checksum seed XORed with the first octet (spec A.1.6)
@@ -97,4 +99,7 @@ uint8_t pc_iol_finalize(uint8_t *msg, size_t len, size_t check_idx);
 proto_bool pc_iol_verify(const uint8_t *msg, size_t len, size_t check_idx);
 
 #endif // PC_ENABLE_IOLINK
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_IOLINK_H

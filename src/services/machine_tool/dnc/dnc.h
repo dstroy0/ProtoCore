@@ -36,6 +36,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_DNC
 
 /** @brief Which punched-tape character code the wire stream uses. */
@@ -185,5 +187,7 @@ void pc_dnc_decode_init(DncDecoder *d, DncCode code);
 DncEvent pc_dnc_decode_feed(DncDecoder *d, uint8_t wire);
 
 #endif // PC_ENABLE_DNC
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_DNC_H

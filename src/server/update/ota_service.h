@@ -20,6 +20,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_OTA
 
 /**
@@ -41,5 +43,7 @@
 void pc_ota_begin(const char *path, const char *user, const char *pass);
 
 #endif // PC_ENABLE_OTA
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_OTA_SERVICE_H

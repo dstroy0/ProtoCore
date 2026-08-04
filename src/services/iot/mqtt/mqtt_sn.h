@@ -31,6 +31,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_MQTT_SN
 
 #define MQTTSN_LEN3_PREFIX 0x01 ///< a first Length octet of 0x01 signals the 3-octet length form
@@ -150,5 +152,7 @@ proto_bool pc_mqttsn_parse_register(const uint8_t *payload, size_t len, uint16_t
                                     const char **topic_name, size_t *topic_name_len);
 
 #endif // PC_ENABLE_MQTT_SN
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_MQTT_SN_H

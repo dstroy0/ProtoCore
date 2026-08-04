@@ -23,6 +23,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_WAVE
 
 // WSMP / 1609.2 versions + content types + PSIDs: wire values, so integer constants in a struct.
@@ -75,4 +77,7 @@ size_t pc_wave_1609dot2_wrap(uint8_t content_type, const uint8_t *payload, size_
                              size_t cap);
 
 #endif // PC_ENABLE_WAVE
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_WAVE_H

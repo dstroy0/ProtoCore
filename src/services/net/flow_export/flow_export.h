@@ -29,6 +29,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_FLOW_EXPORT
 
 // ---- NetFlow v5 (fixed legacy format) ----
@@ -126,5 +128,7 @@ proto_bool flow_export_data_end(FlowWriter *w);
 size_t flow_export_finish(FlowWriter *w);
 
 #endif // PC_ENABLE_FLOW_EXPORT
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_FLOW_EXPORT_H

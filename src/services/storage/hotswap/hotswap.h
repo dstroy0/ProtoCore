@@ -38,6 +38,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_HOTSWAP
 
 /** @brief Where a removable volume currently stands. */
@@ -148,4 +150,7 @@ const char *pc_hotswap_state_name(StorageState s);
 size_t pc_hotswap_json(char *out, size_t cap);
 
 #endif // PC_ENABLE_HOTSWAP
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_HOTSWAP_H

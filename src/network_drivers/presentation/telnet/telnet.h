@@ -28,6 +28,8 @@
 #include "mmgr/frame.h"
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_TELNET
 
 /** @brief Called with each completed input line (NUL-terminated, no CR/LF) and its client id. */
@@ -78,5 +80,7 @@ struct ProtoHandler;
 const struct ProtoHandler *pc_telnet_proto_handler(void);
 
 #endif // PC_ENABLE_TELNET
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_TELNET_H

@@ -23,6 +23,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_OCIT
 
 // OCIT message types: wire bytes compared/emitted, so integer constants in a namespacing struct.
@@ -73,4 +75,7 @@ proto_bool pc_ocit_parse(const uint8_t *msg, size_t len, OcitMsg *out);
 uint16_t pc_ocit_value_u16(const OcitMsg *m);
 
 #endif // PC_ENABLE_OCIT
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_OCIT_H

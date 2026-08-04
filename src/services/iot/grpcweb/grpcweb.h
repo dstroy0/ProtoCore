@@ -29,6 +29,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_GRPC_WEB
 
 #define GRPCWEB_FLAG_COMPRESSED 0x01
@@ -76,5 +78,7 @@ proto_bool pc_grpcweb_trailer_status(const uint8_t *body, size_t len, int *statu
 proto_bool pc_grpcweb_trailer_message(const uint8_t *body, size_t len, const char **msg, size_t *msg_len);
 
 #endif // PC_ENABLE_GRPC_WEB
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_GRPCWEB_H

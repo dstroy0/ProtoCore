@@ -38,6 +38,8 @@
 
 #include "protocore_config.h" // the entry point: PC_INLINE, types.h, and the platform time base
 
+PROTO_BEGIN_DECLS
+
 /** @brief User clock: returns a free-running monotonic tick count. */
 typedef uint32_t (*pc_clock_fn)(void);
 
@@ -202,5 +204,7 @@ PC_INLINE uint32_t pc_cycles_to_ns(uint32_t delta_cycles, uint32_t cpu_mhz)
 {
     return cpu_mhz ? (uint32_t)(((uint64_t)delta_cycles * 1000u) / cpu_mhz) : 0u;
 }
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_CLOCK_H

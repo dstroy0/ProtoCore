@@ -27,6 +27,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_WAMP
 
 // WAMP message type codes (basic + advanced profile).
@@ -104,5 +106,7 @@ proto_bool pc_wamp_get_uint(const char *msg, size_t index, uint64_t *out);
 proto_bool pc_wamp_get_uri(const char *msg, size_t index, char *out, size_t out_cap);
 
 #endif // PC_ENABLE_WAMP
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_WAMP_H

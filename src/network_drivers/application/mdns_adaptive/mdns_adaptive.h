@@ -26,6 +26,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_MDNS_ADAPTIVE
 
 /** @brief Adaptive beacon state. */
@@ -146,4 +148,7 @@ uint32_t pc_mdns_adaptive_announces(void);
 #endif // PROTOCORE_HOT && PC_ENABLE_MDNS && PC_ENABLE_PROMISC
 
 #endif // PC_ENABLE_MDNS_ADAPTIVE
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_MDNS_ADAPTIVE_H

@@ -23,6 +23,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_NTCIP
 
 /**
@@ -54,4 +56,7 @@ extern const size_t NTCIP_1203_DMS_MESSAGE_MULTI_LEN;
 size_t pc_ntcip_oid(const uint32_t *root, size_t root_len, uint32_t index, uint32_t *out, size_t out_cap);
 
 #endif // PC_ENABLE_NTCIP
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_NTCIP_H

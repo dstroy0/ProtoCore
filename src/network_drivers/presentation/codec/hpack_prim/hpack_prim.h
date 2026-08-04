@@ -21,6 +21,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_HTTP2 || PC_ENABLE_HTTP3
 
 /** @brief Encode a prefix-@p prefix_bits integer with the high @p flags bits set in byte 0. */
@@ -45,4 +47,7 @@ proto_bool pc_hpack_decode_str(const uint8_t *block, size_t len, size_t *pos, ch
 size_t pc_hpack_encode_str(uint8_t *out, size_t cap, const char *s, size_t n);
 
 #endif // PC_ENABLE_HTTP2 || PC_ENABLE_HTTP3
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_HPACK_PRIM_H

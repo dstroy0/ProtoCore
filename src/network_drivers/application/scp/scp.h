@@ -21,6 +21,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_SSH_SCP
 
 // rcp acknowledgement bytes (sent between records).
@@ -58,5 +60,7 @@ proto_bool pc_scp_parse_cline(const char *line, size_t len, uint32_t *mode_out, 
 size_t pc_scp_build_cline(uint32_t mode, uint64_t size, const char *name, char *out, size_t cap);
 
 #endif // PC_ENABLE_SSH_SCP
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_SCP_H

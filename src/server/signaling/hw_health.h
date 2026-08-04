@@ -26,6 +26,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_HW_HEALTH
 
 /** @brief Rail sample verdict (the sole return of pc_hwhealth_rail_sample). */
@@ -104,4 +106,7 @@ HwGpioVerdict pc_hwhealth_gpio_short(proto_bool driven_high, proto_bool read_hig
 HwCapVerdict pc_hwhealth_cap_leak(uint32_t measured_ms, uint32_t expected_ms, uint8_t tol_pct);
 
 #endif // PC_ENABLE_HW_HEALTH
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_HW_HEALTH_H

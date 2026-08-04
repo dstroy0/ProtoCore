@@ -28,6 +28,8 @@
 
 #include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_SHT3X
 
 // Single-shot measurement commands (16-bit, sent most-significant byte first).
@@ -67,5 +69,7 @@ proto_bool pc_sht3x_begin(uint8_t addr);
 proto_bool pc_sht3x_read(int32_t *temp_mc, int32_t *rh_mpct);
 
 #endif // PC_ENABLE_SHT3X
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_SHT3X_H

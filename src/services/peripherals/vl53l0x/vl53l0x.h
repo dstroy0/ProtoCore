@@ -23,6 +23,8 @@
 
 #include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_VL53L0X
 
 #define VL53L0X_REG_SYSRANGE_START 0x00
@@ -58,5 +60,7 @@ proto_bool pc_vl53l0x_begin(uint8_t addr);
 proto_bool pc_vl53l0x_read_mm(uint16_t *mm);
 
 #endif // PC_ENABLE_VL53L0X
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_VL53L0X_H

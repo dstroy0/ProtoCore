@@ -32,6 +32,8 @@
 #include "protocore_config.h"
 #include "services/fieldbus/opcua/opcua.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_OPCUA_CLIENT
 
 // Dependency (OPCUA_CLIENT requires OPCUA) is enforced centrally in protocore_config.h.
@@ -146,4 +148,7 @@ int32_t pc_opcua_client_on_browse(const uint8_t *msg, size_t len, OpcUaClientRef
 int32_t pc_opcua_client_on_write(const uint8_t *msg, size_t len, uint32_t *results, uint32_t max);
 
 #endif // PC_ENABLE_OPCUA_CLIENT
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_OPCUA_CLIENT_H

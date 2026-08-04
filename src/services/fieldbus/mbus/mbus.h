@@ -31,6 +31,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_MBUS
 
 #define MBUS_START_SHORT 0x10u ///< short-frame start octet
@@ -228,4 +230,7 @@ typedef struct
 proto_bool pc_mbus_parse_var_header(const uint8_t *body, size_t len, MbusVarHeader *out);
 
 #endif // PC_ENABLE_MBUS
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_MBUS_H

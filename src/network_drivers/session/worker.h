@@ -26,6 +26,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 // Worker identity (pc_worker_count / pc_worker_self / pc_worker_set_self) is declared in
 // mmgr/arena.h, with the pools it indexes. This header is scheduling: starting, waking, stopping
 // and deferring onto those workers.
@@ -91,5 +93,7 @@ proto_bool pc_defer(int worker_id, pc_deferred_fn fn, void *arg);
 
 /** @brief Drain and run worker @p worker_id's deferred callbacks (called by the worker). */
 void pc_worker_run_deferred(int worker_id);
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_WORKER_H

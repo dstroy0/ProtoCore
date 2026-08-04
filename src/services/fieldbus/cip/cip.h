@@ -29,6 +29,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_CIP
 
 // Common service codes.
@@ -93,5 +95,7 @@ typedef struct
 proto_bool pc_cip_parse_response(const uint8_t *buf, size_t len, CipResponse *out);
 
 #endif // PC_ENABLE_CIP
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_CIP_H

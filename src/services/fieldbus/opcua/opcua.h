@@ -53,6 +53,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_OPCUA
 
 // ---------------------------------------------------------------------------
@@ -566,4 +568,7 @@ struct ProtoHandler;
 const struct ProtoHandler *pc_opcua_proto_handler(void);
 
 #endif // PC_ENABLE_OPCUA
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_OPCUA_H

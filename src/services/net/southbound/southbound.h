@@ -26,6 +26,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_SOUTHBOUND
 
 // Southbound result codes. The API returns int (SB_OK / a count on success, or a negative code), so
@@ -85,4 +87,7 @@ int pc_southbound_read_block(const char *name, uint32_t first, int32_t *out, siz
 int pc_southbound_write_block(const char *name, uint32_t first, const int32_t *in, size_t n);
 
 #endif // PC_ENABLE_SOUTHBOUND
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_SOUTHBOUND_H

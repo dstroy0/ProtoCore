@@ -24,6 +24,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_SSH_SNTRUP761
 
 #define PC_SNTRUP761_PK_BYTES 1158 ///< public key (Rq-encoded h)
@@ -59,5 +61,7 @@ void pc_sntrup761_dec(const uint8_t sk[PC_SNTRUP761_SK_BYTES], const uint8_t ct[
                       uint8_t ss[PC_SNTRUP761_SS_BYTES]);
 
 #endif // PC_ENABLE_SSH_SNTRUP761
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_SNTRUP761_H

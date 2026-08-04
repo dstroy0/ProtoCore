@@ -34,6 +34,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_NEED_MODBUS
 
 /** @brief Modbus function codes (Modbus Application Protocol §6). */
@@ -136,5 +138,7 @@ struct ProtoHandler;
 const struct ProtoHandler *pc_modbus_proto_handler(void);
 
 #endif // PC_NEED_MODBUS
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_MODBUS_H

@@ -29,6 +29,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_NEED_PROTOBUF
 
 // Wire types.
@@ -98,5 +100,7 @@ float pc_pb_float_bits(uint32_t bits);
 double pc_pb_double_bits(uint64_t bits);
 
 #endif // PC_NEED_PROTOBUF
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_PROTOBUF_H

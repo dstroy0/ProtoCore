@@ -37,6 +37,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_MELSEC
 
 #define MELSEC_3E_REQ_SUBHEADER0 0x50 ///< request subheader (sent 0x50 then 0x00)
@@ -110,5 +112,7 @@ typedef struct
 proto_bool pc_melsec_parse_response(const uint8_t *buf, size_t len, MelsecResponse *out);
 
 #endif // PC_ENABLE_MELSEC
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_MELSEC_H

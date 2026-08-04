@@ -32,6 +32,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_DTLS
 
 /** @brief DTLS handshake header length: msg_type(1) + length(3) + message_seq(2) + fragment_offset(3)
@@ -204,4 +206,7 @@ proto_bool pc_dtls_cookie_verify(const uint8_t pc_hmac_key[32], uint64_t now, ui
                                  uint8_t *payload_out, size_t payload_cap, size_t *payload_len_out);
 
 #endif // PC_ENABLE_DTLS
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_DTLS_HANDSHAKE_H

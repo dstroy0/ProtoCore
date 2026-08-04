@@ -27,6 +27,8 @@
 
 #include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_SMTP
 
 /** @brief Result of an SMTP send. 0 is success; every failure is a distinct negative code. */
@@ -114,5 +116,7 @@ SmtpResult smtp_run(const SmtpConfig *cfg, const SmtpMessage *msg, SmtpSendFn se
 SmtpResult smtp_send(const SmtpConfig *cfg, const SmtpMessage *msg);
 
 #endif // PC_ENABLE_SMTP
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_SMTP_H

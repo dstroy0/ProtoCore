@@ -22,6 +22,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_PQC_KEX
 
 /// Sponge rates (block size in octets = 1600/8 - 2*capacity/8) for the modes we use.
@@ -61,5 +63,7 @@ void shake256(uint8_t *out, size_t outlen, const uint8_t *in, size_t inlen);
 void pc_shake128_absorb(KeccakCtx *c, const uint8_t *in, size_t inlen);
 
 #endif // PC_ENABLE_PQC_KEX
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_SHA3_H

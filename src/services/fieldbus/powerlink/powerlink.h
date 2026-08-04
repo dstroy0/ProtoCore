@@ -24,6 +24,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_POWERLINK
 
 /** @brief EPL message types (EPSG DS 301). */
@@ -74,4 +76,7 @@ typedef struct
 proto_bool pc_epl_parse(const uint8_t *frame, size_t len, EplFrame *out);
 
 #endif // PC_ENABLE_POWERLINK
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_POWERLINK_H

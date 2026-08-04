@@ -24,6 +24,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_J2735
 
 /** @brief A UPER bit writer over a caller buffer (MSB-first within each octet). */
@@ -165,4 +167,7 @@ proto_bool pc_j2735_map_decode(const uint8_t *in, size_t len, J2735MapIntersecti
                                size_t max_lanes, size_t *out_count);
 
 #endif // PC_ENABLE_J2735
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_J2735_H

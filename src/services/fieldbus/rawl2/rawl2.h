@@ -23,6 +23,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_RAWL2
 
 // Ethernet II framing sizes + ethertypes.
@@ -73,4 +75,7 @@ proto_bool pc_eth_parse(const uint8_t *frame, size_t len, EthFrame *out);
 uint32_t pc_eth_fcs(const uint8_t *bytes, size_t len);
 
 #endif // PC_ENABLE_RAWL2
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_RAWL2_H

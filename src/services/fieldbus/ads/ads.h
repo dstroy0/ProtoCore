@@ -41,6 +41,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_ADS
 
 #define ADS_TCP_PORT 48898     ///< AMS/TCP listening port (0xBF02)
@@ -250,5 +252,7 @@ proto_bool pc_ads_parse_notification(const uint8_t *data, size_t data_len, AdsNo
                                      void *user);
 
 #endif // PC_ENABLE_ADS
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_ADS_H

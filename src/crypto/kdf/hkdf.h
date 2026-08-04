@@ -23,6 +23,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 // Shared by the HTTP/3 (QUIC) key schedule and the DTLS 1.3 record layer.
 #if (PC_ENABLE_HTTP3 || PC_ENABLE_DTLS)
 
@@ -82,4 +84,7 @@ void pc_hkdf_expand_label_ctx(const uint8_t secret[PC_HKDF_HASH_LEN], const char
                               size_t context_len, uint8_t *out, size_t out_len, const char *label_prefix);
 
 #endif // PC_ENABLE_HTTP3 || PC_ENABLE_DTLS
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_HKDF_H

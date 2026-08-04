@@ -26,6 +26,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_WEBDAV
 
 /** @brief WebDAV request methods recognized by the server. */
@@ -204,5 +206,7 @@ proto_bool pc_dav_lock_can_write(const DavLockTable *t, const char *path, const 
 proto_bool pc_dav_if_token(const char *if_header, char *out, size_t cap);
 
 #endif // PC_ENABLE_WEBDAV
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_WEBDAV_H

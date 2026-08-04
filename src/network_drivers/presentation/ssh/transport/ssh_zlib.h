@@ -30,6 +30,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_SSH_ZLIB
 
 /** @brief Hash-table buckets for the LZ77 3-byte match search (2^bits). */
@@ -100,4 +102,7 @@ static inline size_t ssh_deflate_bound(size_t src_len)
 }
 
 #endif // PC_ENABLE_SSH_ZLIB
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_SSH_ZLIB_H

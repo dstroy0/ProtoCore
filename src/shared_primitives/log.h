@@ -30,6 +30,8 @@
 #include "mmgr/frame.h"
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 /** @brief Receives an emitted line, already formatted. @p level is a PC_LOG_LEVEL_* value. */
 typedef void (*pc_log_sink_fn)(uint8_t level, const char *line);
 
@@ -95,5 +97,7 @@ static inline void pc_log_set_sink(pc_log_sink_fn cb)
 #else
 #define PC_LOGE(...) PC_LOG_DISCARD(__VA_ARGS__)
 #endif
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_LOG_H

@@ -48,6 +48,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_HMMD
 
 /** @brief Range gates the HMMD reports energy for (gate 0..15). */
@@ -172,4 +174,7 @@ proto_bool pc_hmmd_poll();
 const HmmdReport *pc_hmmd_last();
 
 #endif // PC_ENABLE_HMMD
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_HMMD_H

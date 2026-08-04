@@ -28,6 +28,8 @@
 #include "protocore_config.h"
 #include "services/timing_position/nmea0183/nmea0183.h" // Nmea0183 - the sentence a fix is read out of
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_NTRIP_CASTER
 
 /** @brief A WGS84 geodetic position: latitude/longitude in degrees, ellipsoidal height in metres. */
@@ -119,5 +121,7 @@ proto_bool pc_gnss_survey_add_gga(GnssSurvey *s, const Nmea0183 *m);
 #endif
 
 #endif // PC_ENABLE_NTRIP_CASTER
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_GNSS_SURVEY_H

@@ -20,6 +20,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_WEBHOOK
 
 // ---------------------------------------------------------------------------
@@ -55,4 +57,7 @@ int pc_webhook_post(const char *url, const char *json);
 int pc_ifttt_trigger(const char *event, const char *key, const char *v1, const char *v2, const char *v3);
 
 #endif // PC_ENABLE_WEBHOOK
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_WEBHOOK_H

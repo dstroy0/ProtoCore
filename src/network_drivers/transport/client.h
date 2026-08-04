@@ -26,6 +26,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 /**
  * @brief Resolve @p host (dotted-quad fast path, else DNS) and connect to
  *        @p host : @p port, blocking up to @p timeout_ms.
@@ -51,5 +53,7 @@ size_t pc_client_read(int cid, uint8_t *buf, size_t cap);
 
 /** @brief Tear down the connection (marshaled) and return the slot to the pool. */
 void pc_client_close(int cid);
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_CLIENT_H

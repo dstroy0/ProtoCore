@@ -34,6 +34,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_GATEWAY
 
 /** @brief Southbound radio / bus kind a port bridges (informational + topic hint). */
@@ -150,5 +152,7 @@ void pc_gateway_test_set_now(uint32_t ms);
 #endif
 
 #endif // PC_ENABLE_GATEWAY
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_GATEWAY_H

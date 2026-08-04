@@ -41,6 +41,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_PREEMPT_QUEUE
 
 /**
@@ -162,5 +164,7 @@ PC_INLINE size_t pc_pq_high_water(void)
 }
 
 #endif // PC_ENABLE_PREEMPT_QUEUE
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_PREEMPT_QUEUE_H

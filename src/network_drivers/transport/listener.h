@@ -37,6 +37,8 @@
 #include "protocore_config.h"
 #include "tcp_evt.h" // TcpEvt: what a listener's queue holds. The slots themselves are tcp.h's.
 
+PROTO_BEGIN_DECLS
+
 // ---------------------------------------------------------------------------
 // Listener pool entry
 // ---------------------------------------------------------------------------
@@ -232,5 +234,7 @@ proto_bool listener_ip_allowed(const pc_ip *ip);
 
 /** @brief Clear all allowlist rules (the allowlist becomes empty = allow all). */
 void listener_ip_allowlist_reset(void);
+
+PROTO_END_DECLS
 
 #endif

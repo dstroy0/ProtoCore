@@ -34,6 +34,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_DTLS && PC_ENABLE_COAP
 
 #ifndef PC_COAPS_MAX_CONNS
@@ -109,4 +111,7 @@ proto_bool pc_coaps_server_ingest(const uint8_t *datagram, size_t len, const cha
 #endif
 
 #endif // PC_ENABLE_DTLS && PC_ENABLE_COAP
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_COAPS_SERVER_H

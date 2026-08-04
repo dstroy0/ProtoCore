@@ -34,6 +34,8 @@
 #include "protocore_config.h"
 #include "services/storage/wal/wal.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_WAL
 
 /** @brief Superblock magic ("WSB1", little-endian). */
@@ -137,4 +139,7 @@ static inline uint64_t pc_wal_store_capacity(const WalStore *s)
 }
 
 #endif // PC_ENABLE_WAL
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_WAL_STORE_H

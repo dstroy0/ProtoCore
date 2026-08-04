@@ -32,6 +32,8 @@
 
 #include "protocore_config.h" // PC_WORKER_COUNT - how many slots the pools are cut into
 
+PROTO_BEGIN_DECLS
+
 // ---------------------------------------------------------------------------
 // Slot identity - which arena is mine
 // ---------------------------------------------------------------------------
@@ -295,5 +297,7 @@ size_t pc_arena_set_persist_used(const pc_arena_set *s);
 
 /** @brief Scratch bytes allocated, summed over all regions. */
 size_t pc_arena_set_scratch_used(const pc_arena_set *s);
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_ARENA_H

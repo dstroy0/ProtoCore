@@ -23,6 +23,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_MODBUS_MASTER
 
 /**
@@ -181,4 +183,7 @@ int pc_modbus_parse_mask_write_response(const uint8_t *adu, size_t len, uint16_t
                                         uint16_t *or_out, uint8_t *exception_out);
 
 #endif // PC_ENABLE_MODBUS_MASTER
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_MODBUS_MASTER_H

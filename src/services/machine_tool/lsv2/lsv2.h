@@ -39,6 +39,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_LSV2
 
 /** @brief Default LSV/2-over-TCP port a Heidenhain control listens on. */
@@ -171,5 +173,7 @@ proto_bool pc_lsv2_is_error(const Lsv2Telegram *t);
 proto_bool pc_lsv2_error(const Lsv2Telegram *t, uint8_t *err_class, uint8_t *err_code);
 
 #endif // PC_ENABLE_LSV2
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_LSV2_H

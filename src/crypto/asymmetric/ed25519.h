@@ -22,6 +22,8 @@
 
 #include "protocore_config.h" // the entry point: types.h for proto_bool and the widths
 
+PROTO_BEGIN_DECLS
+
 /** @brief Ed25519 seed (private key) length. */
 #define PC_ED25519_SEED_LEN 32
 /** @brief Ed25519 public key length. */
@@ -45,5 +47,7 @@ void pc_ed25519_sign(uint8_t sig[PC_ED25519_SIG_LEN], const uint8_t *msg, size_t
  */
 proto_bool pc_ed25519_verify(const uint8_t pub[PC_ED25519_PUBKEY_LEN], const uint8_t *msg, size_t mlen,
                              const uint8_t sig[PC_ED25519_SIG_LEN]);
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_ED25519_H

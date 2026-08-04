@@ -32,6 +32,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_WAL
 
 /** @brief Bytes of fixed record header before the payload (magic + seq + len + crc). */
@@ -76,4 +78,7 @@ typedef void (*WalRecordCb)(uint64_t seq, const uint8_t *payload, uint32_t len, 
 size_t pc_wal_replay(const uint8_t *img, size_t len, WalRecordCb cb, void *ctx);
 
 #endif // PC_ENABLE_WAL
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_WAL_H

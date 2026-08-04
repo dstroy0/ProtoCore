@@ -21,6 +21,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_SNP
 
 /** @brief SNP control bytes (subset). */
@@ -52,4 +54,7 @@ typedef struct
 proto_bool pc_snp_parse(const uint8_t *frame, size_t len, SnpFrame *out);
 
 #endif // PC_ENABLE_SNP
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_SNP_H

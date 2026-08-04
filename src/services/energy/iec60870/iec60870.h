@@ -30,6 +30,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_IEC60870
 
 #define IEC_START_104 0x68u   ///< -104 APCI start octet (also the -101 variable-frame start)
@@ -279,4 +281,7 @@ typedef struct
 proto_bool pc_iec101_parse(const uint8_t *buf, size_t len, Iec101Frame *out, size_t *consumed);
 
 #endif // PC_ENABLE_IEC60870
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_IEC60870_H

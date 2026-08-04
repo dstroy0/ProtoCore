@@ -34,6 +34,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_TLS && PROTOCORE_HOT
 
 /**
@@ -365,5 +367,7 @@ static inline int pc_tls_client_run(const char *host, const uint8_t *req, size_t
 #endif // PC_ENABLE_HTTP_CLIENT_TLS
 
 #endif // PC_ENABLE_TLS && PROTOCORE_HOT
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_TLS_H

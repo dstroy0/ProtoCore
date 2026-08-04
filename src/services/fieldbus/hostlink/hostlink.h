@@ -28,6 +28,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_HOSTLINK
 
 /** @brief FCS: 8-bit XOR of [data, data+len). */
@@ -88,5 +90,7 @@ size_t pc_hostlink_build_write(char *buf, size_t cap, uint8_t node, uint16_t add
                                size_t word_count);
 
 #endif // PC_ENABLE_HOSTLINK
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_HOSTLINK_H

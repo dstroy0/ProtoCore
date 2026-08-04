@@ -11,6 +11,8 @@
 
 #include "protocore_config.h" // the entry point: MAX_ROUTES, and types.h for the widths
 
+PROTO_BEGIN_DECLS
+
 typedef struct Route Route;
 
 /**
@@ -32,5 +34,7 @@ Route *pc_route_at(uint8_t i);
  * For tests. A case that does not reset matches against every route the previous cases registered.
  */
 void pc_route_reset(void);
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_ROUTE_H

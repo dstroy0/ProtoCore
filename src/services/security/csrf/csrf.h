@@ -24,6 +24,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_CSRF
 
 /** @brief Nonce length in bytes (hex-encoded in the token). */
@@ -62,5 +64,7 @@ proto_bool pc_csrf_verify(const char *token);
 void pc_csrf_reset(void);
 
 #endif // PC_ENABLE_CSRF
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_CSRF_H

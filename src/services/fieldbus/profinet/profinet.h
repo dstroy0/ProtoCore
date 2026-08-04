@@ -23,6 +23,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_PROFINET
 
 #define PN_FRAMEID_DCP_HELLO 0xFEFC
@@ -83,4 +85,7 @@ typedef void (*pc_pn_dcp_block_cb)(uint8_t option, uint8_t suboption, const uint
 proto_bool pc_pn_dcp_walk(const uint8_t *blocks, size_t len, pc_pn_dcp_block_cb cb, void *arg);
 
 #endif // PC_ENABLE_PROFINET
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_PROFINET_H

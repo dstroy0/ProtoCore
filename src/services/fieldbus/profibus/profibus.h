@@ -24,6 +24,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_PROFIBUS
 
 // PROFIBUS telegram delimiters + Frame Control values.
@@ -76,4 +78,7 @@ typedef struct
 proto_bool pc_pb_parse(const uint8_t *frame, size_t len, PbTelegram *out);
 
 #endif // PC_ENABLE_PROFIBUS
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_PROFIBUS_H

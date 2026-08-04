@@ -27,6 +27,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_ENOCEAN
 
 /** @brief ESP3 sync byte that starts every telegram. */
@@ -117,5 +119,7 @@ uint16_t pc_erp1_build(uint8_t *out, uint16_t cap, uint8_t rorg, const uint8_t *
                        uint32_t sender_id, uint8_t status);
 
 #endif // PC_ENABLE_ENOCEAN
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_ENOCEAN_H

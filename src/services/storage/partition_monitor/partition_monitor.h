@@ -21,6 +21,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_PARTITION_MONITOR
 
 /** @brief One flash partition entry. */
@@ -61,4 +63,7 @@ uint8_t pc_partition_collect(pc_partition_info *out, uint8_t max);
 void pc_partition_monitor_begin(const char *path);
 
 #endif // PC_ENABLE_PARTITION_MONITOR
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_PARTITION_MONITOR_H

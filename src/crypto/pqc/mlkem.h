@@ -36,6 +36,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_PQC_KEX
 
 #define MLKEM768_EK_BYTES 1184 ///< encapsulation key (public key): 384*k + 32
@@ -91,5 +93,7 @@ void pc_mlkem768_decaps(const uint8_t dk[MLKEM768_DK_BYTES], const uint8_t ct[ML
                         uint8_t ss[MLKEM768_SS_BYTES]);
 
 #endif // PC_ENABLE_PQC_KEX
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_MLKEM_H

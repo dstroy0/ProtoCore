@@ -32,6 +32,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_PACKML
 
 /**
@@ -173,4 +175,7 @@ PackMlState pc_packml_svc_state(void);
 void pc_packml_svc_status(PackMlStatus *out);
 
 #endif // PC_ENABLE_PACKML
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_PACKML_H

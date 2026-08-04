@@ -28,6 +28,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_NRF24
 
 /** @brief Full-duplex SPI transfer of @p len bytes (chip-select toggled by the callback). */
@@ -79,5 +81,7 @@ void pc_nrf24_set_rx(const nrf_bus *bus);
 int pc_nrf24_recv(const nrf_bus *bus, uint8_t *buf, uint8_t cap, uint8_t *pipe);
 
 #endif // PC_ENABLE_NRF24
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_NRF24_H

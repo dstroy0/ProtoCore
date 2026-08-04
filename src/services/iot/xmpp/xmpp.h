@@ -20,6 +20,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_XMPP
 
 /**
@@ -62,4 +64,7 @@ size_t pc_xmpp_stanza_name(const char *xml, size_t len, char *out, size_t cap);
 size_t pc_xmpp_attr(const char *xml, size_t len, const char *attr, char *out, size_t cap);
 
 #endif // PC_ENABLE_XMPP
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_XMPP_H

@@ -27,6 +27,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_IKEV2
 
 /** @brief ESP header size: SPI(4) + Sequence Number(4). */
@@ -97,4 +99,7 @@ void pc_esp_replay_init(EspReplay *r);
 proto_bool pc_esp_replay_check(EspReplay *r, uint32_t seq);
 
 #endif // PC_ENABLE_IKEV2
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_ESP_H

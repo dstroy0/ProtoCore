@@ -20,6 +20,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_WIFI_SNIFFER
 
 /** @brief 802.11 frame type (Frame Control bits 2-3). */
@@ -181,4 +183,7 @@ const WifiScan *pc_wifi_sniffer_scan(void);
 #endif // PC_ENABLE_PROMISC
 
 #endif // PC_ENABLE_WIFI_SNIFFER
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_WIFI_SNIFFER_H

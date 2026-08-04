@@ -24,6 +24,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_SNMP_V3
 
 /** @brief usmHMAC192SHA256 authentication-parameter length (192-bit truncation). */
@@ -71,5 +73,7 @@ uint32_t pc_snmp_v3_get_boots();
 size_t pc_snmp_v3_process(const uint8_t *req, size_t req_len, uint8_t *resp, size_t pc_resp_cap);
 
 #endif // PC_ENABLE_SNMP_V3
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_SNMP_V3_H

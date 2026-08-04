@@ -38,6 +38,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 /**
  * @brief Open modes.
  *
@@ -143,4 +145,7 @@ const pc_mnt_backend *pc_mnt_ram(void);
 void pc_mnt_ram_format(void);
 
 #endif // PC_ENABLE_MNT
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_MNT_H

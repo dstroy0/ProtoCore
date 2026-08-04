@@ -23,6 +23,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_ICCP
 
 /** @brief TASE.2 quality flags (DataFlags, the common bits). */
@@ -60,4 +62,7 @@ size_t pc_iccp_state_q(uint8_t state, uint8_t flags, const uint8_t time[4], uint
 size_t pc_iccp_real_q(int32_t milli, uint8_t flags, const uint8_t time[4], uint8_t *out, size_t cap);
 
 #endif // PC_ENABLE_ICCP
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_ICCP_H

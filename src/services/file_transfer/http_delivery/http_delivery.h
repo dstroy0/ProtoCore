@@ -27,6 +27,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_HTTP_DELIVERY
 
 /** @brief Freshness verdict for a cached response. */
@@ -92,4 +94,7 @@ proto_bool pc_delivery_serve_sw(const char *const *paths, size_t n, const char *
 #endif // PROTOCORE_HOT
 
 #endif // PC_ENABLE_HTTP_DELIVERY
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_HTTP_DELIVERY_H

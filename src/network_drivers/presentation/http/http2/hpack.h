@@ -25,6 +25,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_HTTP2
 
 /** @brief One dynamic-table entry descriptor (its bytes live in the table's byte ring). */
@@ -76,4 +78,7 @@ size_t pc_hpack_encode_header(uint8_t *out, size_t cap, const char *name, size_t
 // The prefix-integer and Huffman primitives moved to pc_hpack_prim.h (shared with QPACK).
 
 #endif // PC_ENABLE_HTTP2
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_HPACK_H

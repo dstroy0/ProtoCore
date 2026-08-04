@@ -30,6 +30,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_REDIS
 
 /** @brief RESP2/RESP3 reply value types. */
@@ -85,5 +87,7 @@ size_t pc_resp_encode_command(char *buf, size_t cap, const char *const *args, co
 proto_bool pc_resp_parse(const uint8_t *buf, size_t len, RespReply *out, size_t *consumed);
 
 #endif // PC_ENABLE_REDIS
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_REDIS_RESP_H

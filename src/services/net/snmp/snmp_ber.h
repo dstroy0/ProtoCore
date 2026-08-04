@@ -18,6 +18,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_SNMP
 
 // ASN.1 / SNMP tags
@@ -99,5 +101,7 @@ proto_bool pc_ber_read_oid(BerDec *d, uint32_t *arcs, size_t max, size_t *n);
 proto_bool pc_ber_skip(BerDec *d, size_t length);
 
 #endif // PC_ENABLE_SNMP
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_SNMP_BER_H

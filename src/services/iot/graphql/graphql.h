@@ -36,6 +36,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_GRAPHQL
 
 /** @brief Scalar value kinds a resolver can return. */
@@ -100,4 +102,7 @@ typedef enum PROTO_ENUM_PACKED
 pc_gql_result pc_graphql_execute(const char *query, size_t len, pc_gql_resolver_fn resolver, char *out, size_t cap);
 
 #endif // PC_ENABLE_GRAPHQL
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_GRAPHQL_H

@@ -26,6 +26,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_FTP_SESSION
 
 /** @brief Where to connect and who to log in as. */
@@ -61,5 +63,7 @@ typedef size_t (*pc_ftp_source)(void *ctx, size_t offset, uint8_t *buf, size_t c
 proto_bool pc_ftp_store(const FtpTarget *target, const char *remote_path, size_t total, pc_ftp_source src, void *ctx);
 
 #endif // PC_ENABLE_FTP_SESSION
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_FTP_SESSION_H
