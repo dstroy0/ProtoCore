@@ -2160,9 +2160,12 @@
       "tests": ["test_time_source"]
     },
     "native_config_store": {
-      "desc": "Typed NVS config store (services/storage/config_store): string/u32/blob round-trips,\ndefaults, capacity, erase/clear - run against the host in-memory backend (the\nESP32 Preferences/NVS backend is compiled in only on-target).",
+      "desc": "Typed NVS config store (services/storage/config_store): string/u32/blob round-trips,\ndefaults, capacity, erase/clear - run against the host NVS backend that hal/nvs.h\nselects off-target (the ESP32 Preferences backend is compiled in only on-target).",
       "flags": ["-DPC_ENABLE_CONFIG_STORE=1"],
-      "src": ["+<services/storage/config_store/config_store.c>"],
+      "src": [
+        "+<services/storage/config_store/config_store.c>",
+        "+<board_drivers/hal/host/host_nvs.c>"
+      ],
       "tests": ["test_config_store"]
     },
     "native_device_id": {
