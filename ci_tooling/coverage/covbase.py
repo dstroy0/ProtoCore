@@ -70,10 +70,13 @@ def main() -> int:
     if failed:
         print(f"FAILED: {' '.join(failed)}")
 
-    # No --baseline: this IS the new baseline, so nothing stale is carried forward.
+    # Every env ran, so this is the whole measurement: gcovr unions the per-env tracefiles and
+    # emits the report in one pass. Nothing stale can be carried forward because nothing is
+    # carried forward.
     subprocess.run(
-        [covrun.gcovr_python(), "ci_tooling/coverage/merge_coverage.py", a.out,
-         os.path.join(a.reports_dir, "*.xml")],
+        [covrun.gcovr_python(), "-m", "gcovr",
+         "--add-tracefile", os.path.join(a.reports_dir, "*.json"),
+         "--sonarqube", a.out],
         cwd=ROOT, check=True,
     )
     print(f"wrote {a.out}")

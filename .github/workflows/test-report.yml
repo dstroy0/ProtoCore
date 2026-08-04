@@ -3,17 +3,15 @@ name: Test & Analyze
 # Runs the native Unity suite and gets both outputs from one instrumented pass: test/TEST_REPORT.md
 # (the human report) and test/coverage.xml (for the SonarCloud scan).
 #
-# Affected-only by default: most commits touch one feature's .cpp/.h + its test_x/ dir, so this maps the
-# diff - sources AND headers, via the compiler include graph in test/dep_graph.json - to just the envs
-# that changed (test/select_envs.py) and runs only those, then folds the results back into the committed
-# whole:
-#   * test/TEST_REPORT.md  - the touched (suite, env) rows/sections are replaced (merge_report.py),
-#                            every other suite kept verbatim, header totals recomputed;
-#   * test/coverage.xml    - the changed sources' fresh coverage overlays the committed baseline
-#                            (merge_coverage.py --baseline), so the report stays whole-project and
-#                            SonarCloud still sees full coverage.
+# Affected-only for a change that touches no library source: the diff maps - via the compiler include
+# graph in test/dep_graph.json - to just the envs it affects (test/select_envs.py), and only those run.
+# test/TEST_REPORT.md then has its touched (suite, env) rows/sections replaced (merge_report.py), every
+# other suite kept verbatim and header totals recomputed. test/coverage.xml is not written on that path.
 #
 # The whole matrix runs (and both artifacts are regenerated from scratch) when ANY of these hold:
+#   * the diff touches any src/ source or header. test/coverage.xml describes all of src/ and is only
+#     ever written whole, so re-measuring everything is what keeps the committed report describing the
+#     code that is actually there rather than the line numbers it used to have;
 #   * a change maps to FULL - a shared header the graph attributes to >=90% of envs, a config/tooling
 #     file, or a new file not yet in the graph (select_envs.py's safe default);
 #   * the commit message contains [ci full] (or [full ci]);
@@ -30,11 +28,9 @@ on:
   pull_request:
     branches: [main]
   schedule:
-    # Weekly from-scratch regeneration (Sunday 04:17 UTC). The affected-only path overlays the
-    # committed baseline, so any file it never re-measures in full keeps whatever that baseline
-    # last said. The per-file rules make that rare, but "rare" still accumulates over hundreds of
-    # pushes - and a stale coverage.xml is invisible (it looks like a normal report; it just
-    # describes code that has moved on). This is the backstop that bounds the drift at one week.
+    # Weekly from-scratch regeneration (Sunday 04:17 UTC). A source change already forces the whole
+    # matrix, so the committed report tracks src/ on its own; this catches what a diff cannot see -
+    # a toolchain, dependency or runner change that moves the measurement without touching a file.
     - cron: "17 4 * * 0"
   workflow_dispatch:
     inputs:
@@ -125,11 +121,14 @@ jobs:
           else
             git diff --name-only "$BASE" "$HEAD" > changed_all.txt
             SEL="$(python3 test/select_envs.py --base "$BASE" --head "$HEAD" < changed_all.txt)"
-            # Headers belong here too: inline/constexpr code in a .h carries branches and shows up
-            # in the coverage report under its own path (src/services/system/control/control.h has 36).
-            # Excluding them meant an edited header's baseline entries - now pointing at shifted
-            # line numbers - could only ever be unioned, never corrected.
+            # Headers belong here too: inline code in a .h carries branches and shows up in the
+            # coverage report under its own path (src/services/system/control/control.h has 36).
             grep -E '^src/.*\.(cpp|cc|c|h|hpp)$' changed_all.txt > changed_src.txt || true
+            # A source change re-measures everything. coverage.xml covers all of src/ and is written
+            # only by a whole-matrix run, so an affected-only run would leave the files that just
+            # changed described by their PREVIOUS line numbers - coverage silently mapped onto
+            # shifted lines. Running the matrix is what keeps the committed report true.
+            [ -s changed_src.txt ] && SEL="FULL"
           fi
 
           if [ "$SEL" = "FULL" ]; then MODE=full; ENVS="";
@@ -153,8 +152,8 @@ jobs:
           fi
 
       # Failing TESTS must not fail this job - the report exists to document them. A failure to
-      # PRODUCE coverage (exit 3) is different: committing then would freeze the affected files at
-      # whatever the baseline last said, invisibly. So tolerate every code but 3.
+      # PRODUCE coverage (exit 3) is different: committing then would publish a coverage report the
+      # run could not measure. So tolerate every code but 3.
       # FULL: regenerate test/TEST_REPORT.md + test/coverage.xml from the whole matrix.
       # The exit code is captured rather than discarded: the report + coverage commit below must still
       # run on a red matrix, but the job has to fail afterwards. See "Gate on test results".
@@ -167,23 +166,20 @@ jobs:
           echo "rc=$rc" >> "$GITHUB_OUTPUT"
           # rc 3 is specifically "coverage could not be produced" (a per-env gcovr failure), as
           # opposed to failing tests, which the gate step below reports without losing the report.
-          # Committing on 3 would freeze the affected files at the stale baseline, invisibly.
+          # Committing on 3 would publish a report this run could not measure.
           [ "$rc" = "3" ] && { echo "::error::coverage generation failed - not committing"; exit 1; }
           exit 0
 
-      # AFFECTED: run only the touched envs, then overlay onto the committed report + coverage baseline.
+      # AFFECTED: no src/ source changed, so only the touched envs run and the report is merged.
       - name: Run the affected suite and merge
         id: run_affected
         if: ${{ steps.sel.outputs.mode == 'affected' }}
         run: |
           rc=0
-          bash test/run_tests.sh --coverage \
-            --report-out partial_report.md \
-            --cov-baseline test/coverage.xml --cov-changed changed_src.txt \
-            ${{ steps.sel.outputs.envs }} || rc=$?
-          # See the note on the full run: rc 3 means coverage could not be produced, so stop before
-          # anything gets committed rather than silently freezing those files at the stale baseline.
-          [ "$rc" = "3" ] && { echo "::error::coverage generation failed - not committing"; exit 1; }
+          # No --coverage: this ran a subset of the envs, so it measures a subset of src/. Writing
+          # that over the committed report would replace a whole-project measurement with a partial
+          # one. coverage.xml is regenerated only by the full-matrix run below.
+          bash test/run_tests.sh --report-out partial_report.md ${{ steps.sel.outputs.envs }} || rc=$?
           python3 test/merge_report.py test/TEST_REPORT.md partial_report.md test/TEST_REPORT.md
           rm -f partial_report.md changed_all.txt changed_src.txt
           echo "rc=$rc" >> "$GITHUB_OUTPUT"

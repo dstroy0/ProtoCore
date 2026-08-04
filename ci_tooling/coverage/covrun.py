@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
-"""covrun.py - run selected native envs instrumented and refresh test/coverage.xml.
+"""covrun.py - run selected native envs instrumented and report their coverage gaps.
 
-The whole-suite loop (test/run_tests.sh --coverage, 260 envs) is far too slow to
-iterate against while writing tests. This runs only the envs that compile the
-sources you are working on, gcovr's each, and overlays the result onto the
-committed baseline via ci_tooling/coverage/merge_coverage.py - the same union/replace
-rules CI uses for an affected-only run.
+The whole-suite loop (test/run_tests.sh --coverage) is far too slow to iterate against while
+writing tests. This runs only the envs that compile the sources you are working on, gcovr's each,
+and unions those into a scratch report to measure against. It writes nothing shared, so several
+can run at once; test/coverage.xml is written only by covbase.py, over the whole matrix.
 
-  covrun.py --src src/services/system/control/control.cpp        # envs inferred
+  covrun.py --src src/services/system/control/control.c   # envs inferred
   covrun.py --env native_control native_coap              # explicit envs
-  covrun.py --src ... --no-merge                          # leave baseline alone
 
 Prints the remaining branch gaps for the touched sources when it is done.
 """
@@ -26,7 +24,6 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import covmap  # noqa: E402
 
 ROOT = covmap.ROOT
-BASELINE = os.path.join(ROOT, "test", "coverage.xml")
 
 # Set per-invocation by main(); parallel workers each pass their own so two concurrent runs never
 # share a PlatformIO build dir (they would clobber each other's .gcda) or a report dir.
@@ -97,7 +94,7 @@ def gcovr(env: str) -> None:
     os.makedirs(REPORTS, exist_ok=True)
     out = os.path.join(REPORTS, f"{env}.xml")
     # Also emit gcovr's JSON: it keeps the PER-BRANCH counts that the SonarQube generic format
-    # throws away, which is what lets merge_coverage.py union a condition whose branches are split
+    # throws away, which is what lets --add-tracefile union a condition whose branches are split
     # across envs instead of keeping only the best single env's aggregate.
     js = os.path.join(REPORTS, f"{env}.json")
     p = subprocess.run(
@@ -116,9 +113,6 @@ def main() -> int:
     ap.add_argument("--src", nargs="*", default=[])
     ap.add_argument("--env", nargs="*", default=[])
     ap.add_argument("--jobs", type=int, default=4)
-    ap.add_argument("--no-merge", action="store_true",
-                    help="report gaps from THIS run's reports only; leave test/coverage.xml alone "
-                         "(use this when several covrun.py run concurrently)")
     ap.add_argument("--keep-reports", action="store_true")
     ap.add_argument("--build-dir", default=".pio_cov")
     ap.add_argument("--reports-dir", default="coverage_reports")
@@ -156,33 +150,19 @@ def main() -> int:
         shutil.rmtree(REPORTS, ignore_errors=True)
         return 1
 
-    if a.no_merge:
-        # Standalone mode: union just this run's reports into a scratch xml and report the gaps
-        # against that. Nothing shared is written, so many of these can run at once.
-        scratch = os.path.join(REPORTS, "_union.xml")
-        subprocess.run(
-            [gcovr_python(), "ci_tooling/coverage/merge_coverage.py", scratch,
-             os.path.join(a.reports_dir, "*.xml"),
-             "--json-reports", os.path.join(a.reports_dir, "*.json")],
-            cwd=ROOT, check=True,
-        )
-        if srcs:
-            subprocess.run(
-                [gcovr_python(), "ci_tooling/coverage/covmap.py", "gaps", "--cov", scratch, *srcs], cwd=ROOT
-            )
-        return 0
-
-    changed = os.path.join(ROOT, ".cov_changed.txt")
-    with open(changed, "w", encoding="utf-8", newline="\n") as fh:
-        fh.write("\n".join(srcs))
+    # This ran a subset of the envs, so it measures a subset of src/. It reports the gaps in what
+    # it ran and writes nothing shared; test/coverage.xml is only ever written by a whole-matrix
+    # run (covbase.py), so the committed report always covers all of src/.
+    scratch = os.path.join(REPORTS, "_union.xml")
     subprocess.run(
-        [gcovr_python(), "ci_tooling/coverage/merge_coverage.py", "test/coverage.xml",
-         os.path.join(a.reports_dir, "*.xml"), "--baseline", BASELINE, "--changed", changed,
-         "--json-reports", os.path.join(a.reports_dir, "*.json")],
+        [gcovr_python(), "-m", "gcovr",
+         "--add-tracefile", os.path.join(a.reports_dir, "*.json"),
+         "--sonarqube", scratch],
         cwd=ROOT, check=True,
     )
-    os.unlink(changed)
-    print("merged into test/coverage.xml")
+    if srcs:
+        subprocess.run([gcovr_python(), "ci_tooling/coverage/covmap.py", "gaps", "--cov", scratch, *srcs], cwd=ROOT)
+    print(f"gaps reported against {scratch}; run covbase.py to refresh test/coverage.xml")
 
     if not a.keep_reports:
         shutil.rmtree(REPORTS, ignore_errors=True)

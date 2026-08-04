@@ -1419,6 +1419,7 @@
     "tpdo",
     "TPDU",
     "TPKT",
+    "tracefile",
     "tracert",
     "TRAPV",
     "traw",
