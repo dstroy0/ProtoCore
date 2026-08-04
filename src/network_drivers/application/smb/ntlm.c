@@ -88,7 +88,7 @@ static void pc_hmac_md5_2(const uint8_t key[16], const uint8_t *m1, size_t l1, c
     pc_md5_init(c);
     pc_md5_update(c, ipad, 64);
     pc_md5_update(c, m1, l1);
-    if (m2 && l2) // GCOVR_EXCL_LINE  the sole caller always passes temp: non-null and always >= 32 bytes
+    if (m2 && l2)
     {
         pc_md5_update(c, m2, l2);
     }

@@ -26,7 +26,7 @@ static proto_bool contains(const char *hay, uint16_t len, const char *needle)
     {
         nlen++;
     }
-    if (nlen == 0 || len < nlen) // GCOVR_EXCL_LINE  nlen==0 is unreachable: contains() is only ever called
+    if (nlen == 0 || len < nlen)
     {
         return PROTO_FALSE; // (internally, both call sites below) with the literal non-empty needles "ERROR"/"OK"
     }

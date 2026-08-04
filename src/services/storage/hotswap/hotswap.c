@@ -116,7 +116,7 @@ static void hs_notify(StorageState from, StorageState to)
 {
     // `from != to` has no false branch to reach: both call sites (poll_at, io) only invoke hs_notify
     // after pc_hotswap_core_probe / pc_hotswap_core_io reported an actual state change.
-    if (s_hs.event && from != to) // GCOVR_EXCL_LINE - see above
+    if (s_hs.event && from != to)
     {
         s_hs.event(from, to, s_hs.ctx);
     }
@@ -227,7 +227,7 @@ size_t pc_hotswap_json(char *out, size_t cap)
     int n = (int)pc_sb_finish(&sb_out);
     // `n < 0` has no true branch to reach: the format is a fixed literal with no encoding-dependent
     // conversion and cap == 0 was rejected above, so snprintf can only ever report truncation here.
-    if (!sb_out.ok) // GCOVR_EXCL_LINE - see above
+    if (!sb_out.ok)
     {
         out[0] = '\0';
         return 0; // fail closed rather than emit a truncated object

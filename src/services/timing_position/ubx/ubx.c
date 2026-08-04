@@ -408,10 +408,9 @@ int pc_ubx_stream_feed(pc_ubx_stream *st, uint8_t b, pc_ubx *out, uint8_t *passt
             return PC_UBX_OVERFLOW;
         }
         return PC_UBX_NONE;
-    default:                 // GCOVR_EXCL_START  state is always one of the enum above
+    default:
         st->state = S_SYNC1; //
         return PC_UBX_NONE;  //
-        // GCOVR_EXCL_STOP
     }
 }
 

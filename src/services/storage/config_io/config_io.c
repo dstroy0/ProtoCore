@@ -65,7 +65,7 @@ int pc_config_export(const char *ns, const pc_cfg_field *fields, size_t n, char 
         return 0;
     }
     out[0] = '\0';
-    if (!fields || !pc_config_begin(ns)) // GCOVR_EXCL_BR_LINE  the begin()-fails half is unreachable: the
+    if (!fields || !pc_config_begin(ns))
     {
         return 0; // host config_store backend's pc_config_begin always returns true
     }
@@ -115,7 +115,7 @@ static proto_bool config_apply_field(const pc_cfg_field *fields, size_t n, const
 
 int pc_config_import(const char *ns, const pc_cfg_field *fields, size_t n, const char *text, size_t len)
 {
-    if (!text || !fields || !pc_config_begin(ns)) // GCOVR_EXCL_BR_LINE  the begin()-fails half is unreachable:
+    if (!text || !fields || !pc_config_begin(ns))
     {
         return 0; // the host config_store backend's pc_config_begin always returns true
     }

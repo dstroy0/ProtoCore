@@ -79,14 +79,14 @@ proto_bool wifi_frame_parse(const uint8_t *frame, uint16_t len, WifiFrameInfo *o
         out->bssid = a3;
     }
     // !to_ds && !from_ds is unreachable below: the `if` above already caught that combination.
-    else if (!out->to_ds && out->from_ds) // from the AP // GCOVR_EXCL_BR_LINE
+    else if (!out->to_ds && out->from_ds)
     {
         out->dst = a1;
         out->bssid = a2;
         out->src = a3;
     }
     // to_ds == false is unreachable below: ruled out by the two branches above.
-    else if (out->to_ds && !out->from_ds) // to the AP // GCOVR_EXCL_BR_LINE
+    else if (out->to_ds && !out->from_ds)
     {
         out->bssid = a1;
         out->src = a2;

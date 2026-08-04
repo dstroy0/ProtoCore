@@ -333,7 +333,7 @@ static inline size_t pc_conn_read(uint8_t slot, uint8_t *buf, size_t cap)
 static inline proto_bool pc_conn_active(uint8_t slot)
 {
     const TcpConn *c = &conn_pool[slot];
-    return PROTO_ATOMIC_LOAD(&c->state) == CONN_ACTIVE && c->pcb != NULL; // GCOVR_EXCL_BR_LINE
+    return PROTO_ATOMIC_LOAD(&c->state) == CONN_ACTIVE && c->pcb != NULL;
 }
 
 /** @brief The network interface (STA / AP / ANY) @p slot's connection arrived on. */

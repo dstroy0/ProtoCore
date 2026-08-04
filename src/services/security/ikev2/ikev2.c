@@ -225,9 +225,9 @@ size_t pc_ike_sa_build(uint8_t *buf, size_t cap, IkePayloadType next_payload, ui
 
     size_t prop_len = prop_hdr + spi_size + (off - tstart);
     size_t sa_total = PC_IKE_PAYLOAD_HDR_LEN + prop_len;
-    if (prop_len > 0xFFFF || sa_total > 0xFFFF) // GCOVR_EXCL_LINE  unreachable: spi_size and num_transforms are both
+    if (prop_len > 0xFFFF || sa_total > 0xFFFF)
     {
-        return 0; // GCOVR_EXCL_LINE  uint8_t, so prop_len <= 8+255+255*12 = 3323 and sa_total <= 3327
+        return 0;
     }
 
     buf[0] = (uint8_t)next_payload;
@@ -443,9 +443,9 @@ size_t pc_ike_ts_build(uint8_t *buf, size_t cap, IkePayloadType next_payload, co
         memcpy(buf + off + 8 + s->addr_len, s->end_addr, s->addr_len);
         off += sel_len;
     }
-    if (off > 0xFFFF) // GCOVR_EXCL_LINE  unreachable: num is a uint8_t and addr_len is forced to 4 or 16 above, so
+    if (off > 0xFFFF)
     {
-        return 0; // GCOVR_EXCL_LINE  the widest payload is 8 + 255*(8+2*16) = 10208 bytes
+        return 0;
     }
     buf[0] = (uint8_t)next_payload;
     buf[1] = 0;
@@ -1152,7 +1152,7 @@ proto_bool pc_ike_ts_get(const uint8_t *body, size_t body_len, uint8_t index, Ik
     size_t off = 4;
     // the loop never runs to completion: index < num is enforced above, so iteration `index` either
     // rejects a malformed selector or returns the match
-    for (uint8_t i = 0; i < num; i++) // GCOVR_EXCL_LINE  loop-exhausted branch unreachable (see above)
+    for (uint8_t i = 0; i < num; i++)
     {
         if (off + 8 > body_len)
         {
@@ -1177,7 +1177,7 @@ proto_bool pc_ike_ts_get(const uint8_t *body, size_t body_len, uint8_t index, Ik
         }
         off += sel_len;
     }
-    return PROTO_FALSE; // GCOVR_EXCL_LINE  unreachable: the loop above always returns (see the note on the for)
+    return PROTO_FALSE;
 }
 
 proto_bool pc_ike_cp_parse(const uint8_t *body, size_t body_len, IkeCfgType *cfg_type, const uint8_t **attrs,

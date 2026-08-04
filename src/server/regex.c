@@ -125,7 +125,7 @@ static proto_bool re_match_class(const char *p, size_t len, char ch)
         // ends the class at the FIRST unescaped ']', so if q[1] is a ']' it IS the terminator - then
         // q + 1 == end and the preceding (q + 1) < end has already short-circuited. Confirmed by
         // exhaustive search over every class body of length <= 7 drawn from { [ ] ^ - \ a }.
-        if (q < end && *q == '-' && (q + 1) < end && q[1] != ']') // GCOVR_EXCL_LINE  see note above
+        if (q < end && *q == '-' && (q + 1) < end && q[1] != ']')
         {
             q++; // consume '-'
             char hi = re_read_atom(&q, end);

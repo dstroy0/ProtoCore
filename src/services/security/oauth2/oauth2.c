@@ -85,7 +85,7 @@ static void put_param(Buf *b, const char *key, const char *val)
 
 static int finish(Buf *b)
 {
-    if (!b->ok || b->n >= b->cap) // GCOVR_EXCL_BR_LINE  b->n>=b->cap while b->ok is true is unreachable: both
+    if (!b->ok || b->n >= b->cap)
     {
         return 0; // public builders reject cap==0 before constructing Buf, so b->n=0 < b->cap
                   // holds at construction, and every put_raw/put_enc write only commits

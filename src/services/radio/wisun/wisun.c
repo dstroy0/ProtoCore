@@ -27,11 +27,10 @@ static proto_bool emit_option(uint8_t *out, size_t *o, size_t cap, uint16_t delt
     uint8_t lext[2];
     int dexn = 0;
     int lexn = 0;
-    if (delta < 13) // GCOVR_EXCL_BR_LINE  false arm unreachable: see the delta note below
+    if (delta < 13)
     {
         dn = (uint8_t)delta;
     }
-    // GCOVR_EXCL_START  delta is always 11 (first Uri-Path option) or 0 (later ones) from the sole caller
     // pc_wisun_build_coap, so an option delta never reaches the 13/14 extended-encoding branches.
     else if (delta < 269)
     {
@@ -47,7 +46,6 @@ static proto_bool emit_option(uint8_t *out, size_t *o, size_t cap, uint16_t delt
         dext[1] = (uint8_t)x;
         dexn = 2;
     }
-    // GCOVR_EXCL_STOP
     if (vlen < 13)
     {
         ln = (uint8_t)vlen;
@@ -71,9 +69,9 @@ static proto_bool emit_option(uint8_t *out, size_t *o, size_t cap, uint16_t delt
         return PROTO_FALSE;
     }
     out[(*o)++] = (uint8_t)((dn << 4) | ln);
-    for (int i = 0; i < dexn; i++) // GCOVR_EXCL_BR_LINE  dexn is always 0 (see the delta note above); loop never enters
+    for (int i = 0; i < dexn; i++)
     {
-        out[(*o)++] = dext[i]; // GCOVR_EXCL_LINE  dexn is always 0 (see the delta note above)
+        out[(*o)++] = dext[i];
     }
     for (int i = 0; i < lexn; i++)
     {

@@ -63,13 +63,13 @@ static const uint8_t HUFF_LEN[257] = {
 
 // Canonical Huffman decode tables (index by code length 1..30).
 static const uint16_t DEC_COUNT[31] = {0, 0, 0, 0, 0, 10, 26, 32, 6,  0, 5,  3,  2,  6, 2, 3,
-                                0, 0, 0, 3, 8, 13, 26, 29, 12, 4, 15, 19, 29, 0, 4};
-static const uint32_t DEC_FIRSTCODE[31] = {0,        0,        0,        0,         0,         0,         20,        92,
-                                    248,      508,      1016,     2042,      4090,      8184,      16380,     32764,
-                                    65534,    131068,   262136,   524272,    1048550,   2097116,   4194258,   8388568,
-                                    16777194, 33554412, 67108832, 134217694, 268435426, 536870910, 1073741820};
+                                       0, 0, 0, 3, 8, 13, 26, 29, 12, 4, 15, 19, 29, 0, 4};
+static const uint32_t DEC_FIRSTCODE[31] = {
+    0,       0,       0,        0,        0,        0,         20,        92,        248,       508,     1016,
+    2042,    4090,    8184,     16380,    32764,    65534,     131068,    262136,    524272,    1048550, 2097116,
+    4194258, 8388568, 16777194, 33554412, 67108832, 134217694, 268435426, 536870910, 1073741820};
 static const uint16_t DEC_FIRSTSYM[31] = {0,  0,  0,  0,  0,  0,   10,  36,  68,  74,  74,  79,  82,  84,  90, 92,
-                                   95, 95, 95, 95, 98, 106, 119, 145, 174, 186, 190, 205, 224, 253, 253};
+                                          95, 95, 95, 95, 98, 106, 119, 145, 174, 186, 190, 205, 224, 253, 253};
 static const uint16_t DEC_SYM[257] = {
     48,  49,  50,  97,  99,  101, 105, 111, 115, 116, 32,  37,  45,  46,  47,  51,  52,  53,  54,  55,  56,  57,
     61,  65,  95,  98,  100, 102, 103, 104, 108, 109, 110, 112, 114, 117, 58,  66,  67,  68,  69,  70,  71,  72,
@@ -83,7 +83,6 @@ static const uint16_t DEC_SYM[257] = {
     218, 219, 238, 240, 242, 243, 255, 203, 204, 211, 212, 214, 221, 222, 223, 241, 244, 245, 246, 247, 248, 250,
     251, 252, 253, 254, 2,   3,   4,   5,   6,   7,   8,   11,  12,  14,  15,  16,  17,  18,  19,  20,  21,  23,
     24,  25,  26,  27,  28,  29,  30,  31,  127, 220, 249, 10,  13,  22,  256};
-
 
 size_t pc_hpack_encode_int(uint8_t *out, size_t cap, uint8_t prefix_bits, uint8_t flags, uint32_t value)
 {
@@ -204,9 +203,9 @@ proto_bool pc_hpack_huff_decode(const uint8_t *in, size_t n, char *out, size_t c
             len++;
             // RFC 7541 Huffman is a complete prefix code (Kraft sum 1, max length 30), so every bit
             // path matches a symbol by length 30 and len can never reach 31.
-            if (len > 30) // GCOVR_EXCL_BR_LINE  true branch unreachable (see above)
+            if (len > 30)
             {
-                return PROTO_FALSE; // GCOVR_EXCL_LINE unreachable: complete code always matches by len 30 (see above)
+                return PROTO_FALSE;
             }
             uint16_t cnt = DEC_COUNT[len];
             if (!cnt)
@@ -218,7 +217,7 @@ proto_bool pc_hpack_huff_decode(const uint8_t *in, size_t n, char *out, size_t c
             // next nonzero-count length), and code resets to 0/len to 0 after every match, so by
             // induction code is always >= first[len] at this point; "code < first" cannot fire for any
             // input and is kept only as a defensive bound.
-            if (code < first || code - first >= cnt) // GCOVR_EXCL_BR_LINE  code < first unreachable (see above)
+            if (code < first || code - first >= cnt)
             {
                 continue;
             }

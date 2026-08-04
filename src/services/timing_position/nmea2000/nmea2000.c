@@ -75,11 +75,11 @@ N2kFpResult pc_n2k_fastpacket_feed(N2kFastPacketRx *rx, const CanFrame *f)
         return N2K_FP_IGNORED;
     }
     J1939Id id;
-    if (!pc_j1939_decode_id(f->id, &id)) // GCOVR_EXCL_LINE  unreachable: pc_j1939_decode_id only fails on a null
-                                         // out, and &id is non-null
+    if (!pc_j1939_decode_id(f->id, &id))
+    // out, and &id is non-null
     {
-        return N2K_FP_IGNORED; // GCOVR_EXCL_LINE  unreachable: pc_j1939_decode_id only fails on a null
-                               // out, and &id is non-null
+        return N2K_FP_IGNORED;
+        // out, and &id is non-null
     }
 
     uint8_t seq = (uint8_t)(f->data[0] >> N2K_FP_SEQ_SHIFT);

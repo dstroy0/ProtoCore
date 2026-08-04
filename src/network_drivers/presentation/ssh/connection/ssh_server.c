@@ -109,16 +109,16 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
             pc_plaintext_release(mark);
             return -1;
         }
-        if (ssh_kexinit_build(i, reply.buf, &n, reply.cap) != 0) // GCOVR_EXCL_LINE  cannot fail: i is checked above and
+        if (ssh_kexinit_build(i, reply.buf, &n, reply.cap) != 0)
         {
             pc_plaintext_release(mark);
-            return -1; // GCOVR_EXCL_LINE  buf is SSH_PKT_BUF_SIZE
+            return -1;
         }
         emit(i, reply.buf, n);
-        if (ssh_kex_generate(i) != 0) // GCOVR_EXCL_LINE  cannot fail: i is checked above and every method's
+        if (ssh_kex_generate(i) != 0)
         {
             pc_plaintext_release(mark);
-            return -1; // GCOVR_EXCL_LINE  ephemeral generation is infallible for i < MAX_SSH_CONNS
+            return -1;
         }
         s->phase = SSH_PHASE_DH_INIT;
         pc_plaintext_release(mark);
@@ -150,7 +150,7 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         // we accept for pubkey userauth (server-sig-algs) so a modern client will
         // sign an RSA key - it otherwise reports "no mutual signature algorithm".
         // First encrypted message, before the client's SERVICE_REQUEST.
-        if (s->ext_info_c && ssh_extinfo_build(reply.buf, &n, reply.cap) == 0) // GCOVR_EXCL_LINE  the build half cannot
+        if (s->ext_info_c && ssh_extinfo_build(reply.buf, &n, reply.cap) == 0)
         {
             emit(i, reply.buf, n); // fail: EXT_INFO is ~90 bytes and buf is SSH_PKT_BUF_SIZE
         }
@@ -196,7 +196,7 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
 #if PC_ENABLE_SSH_ZLIB
         // zlib@openssh.com: the compression stream starts on the FIRST packet AFTER USERAUTH_SUCCESS
         // (which itself just went out uncompressed). Idempotent - a later re-auth cannot restart it.
-        if (n > 0 && reply.buf[0] == SSH_MSG_USERAUTH_SUCCESS) // GCOVR_EXCL_LINE  n > 0 always: every handler that
+        if (n > 0 && reply.buf[0] == SSH_MSG_USERAUTH_SUCCESS)
         {
             ssh_comp_on_auth_success(i); // returns 0 has written a reply
         }
@@ -204,7 +204,7 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         // Brute-force defense (RFC 4252 §4): bound failed attempts per connection. Only an actual
         // USERAUTH_FAILURE counts - a SUCCESS or the publickey PK_OK probe does not. Too many ->
         // DISCONNECT then close.
-        if (n > 0 && reply.buf[0] == SSH_MSG_USERAUTH_FAILURE) // GCOVR_EXCL_LINE  n > 0 always (see above)
+        if (n > 0 && reply.buf[0] == SSH_MSG_USERAUTH_FAILURE)
         {
             if (++s->auth_failures >= SSH_MAX_AUTH_ATTEMPTS)
             {
@@ -234,12 +234,12 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         }
         emit(i, reply.buf, n);
 #if PC_ENABLE_SSH_ZLIB
-        if (n > 0 && reply.buf[0] == SSH_MSG_USERAUTH_SUCCESS) // GCOVR_EXCL_LINE  n > 0 always (see above)
+        if (n > 0 && reply.buf[0] == SSH_MSG_USERAUTH_SUCCESS)
         {
             ssh_comp_on_auth_success(i);
         }
 #endif
-        if (n > 0 && reply.buf[0] == SSH_MSG_USERAUTH_FAILURE) // GCOVR_EXCL_LINE  n > 0 always (see above)
+        if (n > 0 && reply.buf[0] == SSH_MSG_USERAUTH_FAILURE)
         {
             if (++s->auth_failures >= SSH_MAX_AUTH_ATTEMPTS)
             {
@@ -354,14 +354,11 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         // message must travel in its own binary packet (RFC 4253 6): a strict peer
         // runs packet_check_eom() after every message and rejects two in one. Emit
         // the two halves as separate packets.
-        // GCOVR_EXCL_START  n == 10 cannot be false: handle_close only returns 0 after writing exactly the
-        // ten bytes of CHANNEL_EOF + CHANNEL_CLOSE, so that half of the guard is unreachable.
         if (pc_ssh_channel_handle_close(i, payload, len, reply.buf, &n, reply.cap) == 0 && n == 10)
         {
             emit(i, reply.buf, 5);     // CHANNEL_EOF
             emit(i, reply.buf + 5, 5); // CHANNEL_CLOSE
         }
-        // GCOVR_EXCL_STOP
         pc_plaintext_release(mark);
         return 0;
 

@@ -128,9 +128,9 @@ void http_parse(uint8_t slot_id)
         // ... guarantees it fits, so head can never overrun tail" - tcp.c). A
         // "drain" of the ring between the two calls would require a second consumer,
         // which the single-consumer-per-slot design does not have.
-        if (!pc_conn_read_byte(slot_id, &byte)) // GCOVR_EXCL_BR_LINE
+        if (!pc_conn_read_byte(slot_id, &byte))
         {
-            break; // GCOVR_EXCL_LINE
+            break;
         }
         http_parser_feed(req, byte);
     }

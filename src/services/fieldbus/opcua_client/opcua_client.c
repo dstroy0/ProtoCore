@@ -251,7 +251,7 @@ static void cr_skip(UaReader *r, size_t n)
 {
     // r->err is never already set on entry: both call sites only skip when a just-read length is > 0,
     // and a latched reader decodes every length as 0 - so that operand is excluded below.
-    if (r->err || r->off + n > r->len) // GCOVR_EXCL_LINE
+    if (r->err || r->off + n > r->len)
     {
         r->err = PROTO_TRUE;
         return;
@@ -284,7 +284,7 @@ static proto_bool cr_response_header(UaReader *r, uint32_t *service_result)
     (void)pc_ua_r_u64(r); // Timestamp
     (void)pc_ua_r_u32(r); // RequestHandle
     uint32_t svc = pc_ua_r_u32(r);
-    if (service_result) // GCOVR_EXCL_LINE  file-static; every call site passes the address of its own svc
+    if (service_result)
     {
         *service_result = svc;
     }

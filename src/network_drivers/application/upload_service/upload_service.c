@@ -46,7 +46,7 @@ static proto_bool upload_stream_begin(HttpReq *req)
     // which immediately hands that same pointer to on_http() -> fill_route_base(), whose
     // strncpy() would fault on a null path before any request could reach this hook. So by the
     // time this hook is installed, s_upl.path is always a live C string.
-    if (!s_upl.path || strcmp(req->path, s_upl.path) != 0) // GCOVR_EXCL_BR_LINE  null path unreachable (see above)
+    if (!s_upl.path || strcmp(req->path, s_upl.path) != 0)
     {
         return PROTO_FALSE;
     }

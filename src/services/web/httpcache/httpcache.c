@@ -335,8 +335,7 @@ static proto_bool cache_parse_one_directive(const char *s, size_t len, size_t *i
     // leading ',', ' ', and '\t', so s[start] is never one of those, which forces the "to the next
     // comma" loop to advance *i at least one past start - end is always >= start+1 on entry, and
     // since s[start] itself is never a space/tab, this trim can never step end back down to start.
-    while (end > start && // GCOVR_EXCL_BR_LINE  end==start unreachable (see above)
-           (s[end - 1] == ' ' || s[end - 1] == '\t'))
+    while (end > start && (s[end - 1] == ' ' || s[end - 1] == '\t'))
     {
         end--; // trim trailing OWS
     }

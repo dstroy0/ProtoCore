@@ -144,8 +144,7 @@ void ssh_kdf_derive(const uint8_t K_be[256], const uint8_t *H, const uint8_t *se
     // clamped to <= SSH_KDF_MAX above, and have only grows in whole increments of blk starting at blk -
     // so whenever have < out_len (<= SSH_KDF_MAX) it is at most SSH_KDF_MAX - blk, and this half is
     // always true.
-    while (have < out_len &&
-           have + blk <= SSH_KDF_MAX) // GCOVR_EXCL_BR_LINE  have+blk never exceeds SSH_KDF_MAX, see above
+    while (have < out_len && have + blk <= SSH_KDF_MAX)
     {
         ssh_kexhash_init(&h, is512);
         hash_K(&h, K_be, k_is_string, k_str_len);

@@ -179,7 +179,7 @@ size_t http_client_build_request(const char *method, const char *host, uint16_t 
     pc_sb_put(&sb_out2, "\r\nUser-Agent: PC\r\nConnection: close\r\n\r\n");
     n = (int)pc_sb_finish(&sb_out2);
     // n < 0 is unreachable here, for the same reason as the body-request snprintf above.
-    if (!sb_out2.ok) // GCOVR_EXCL_BR_LINE
+    if (!sb_out2.ok)
     {
         return 0;
     }

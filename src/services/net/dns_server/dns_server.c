@@ -46,12 +46,10 @@ static proto_bool ci_eq(const char *a, const char *b)
 static proto_bool parse_question(const uint8_t *q, size_t qlen, char *name, size_t name_cap, uint16_t *qtype,
                                  size_t *qend)
 {
-    // GCOVR_EXCL_START  the sole caller (pc_dns_server_build_response) already rejects qlen < 12
     if (qlen < 12)
     {
         return PROTO_FALSE;
     }
-    // GCOVR_EXCL_STOP
     size_t i = 12;
     size_t n = 0;
     for (;;)

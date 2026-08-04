@@ -226,14 +226,12 @@ static size_t tmpl_walk(uint8_t slot, const char *tmpl, TemplateVar resolver, pr
         }
         size_t rlen = (size_t)(p - run);
         total += rlen;
-        // GCOVR_EXCL_BR_START  rlen == 0 cannot fire: control only reaches here when p is NOT at a
         // "{{", so the scan loop above always advances p at least one byte and a literal run is
         // always >= 1. (The vlen test in tmpl_take_placeholder, which CAN be 0, is exercised.)
         if (emit && rlen)
         {
             pc_conn_send(slot, run, (proto_u16)rlen);
         }
-        // GCOVR_EXCL_BR_STOP
     }
     return total;
 }
@@ -361,14 +359,12 @@ void send_chunked(uint8_t slot_id, int code, const char *content_type, ChunkSour
 void chunk_send_pump(uint8_t slot_id)
 {
     ChunkSend *s = &s_resp.chunk[slot_id];
-    // GCOVR_EXCL_START  unreachable: both callers already established the state - send_chunked() sets
     // s->active immediately before its call, and the poll loop in protocore.c only pumps a slot whose
     // s_resp.chunk[i].active is set. Kept so the pump is safe to call unconditionally.
     if (!s->active)
     {
         return;
     }
-    // GCOVR_EXCL_STOP
 
     if (!pc_conn_active(slot_id))
     {
@@ -634,11 +630,11 @@ static const char *stats_var(const char *name)
     // The not-found tail is unreachable: stats_var is only ever invoked by stats() against
     // PC_STATS_JSON, and that asset's seven placeholders are exactly the seven names tested here,
     // so the last one always matches. Kept because the resolver has to answer an unknown name.
-    if (!strcmp(name, "free_heap")) // GCOVR_EXCL_BR_LINE  always matches (see above)
+    if (!strcmp(name, "free_heap"))
     {
         return s_stats.heap;
     }
-    return NULL; // GCOVR_EXCL_LINE  unreachable: every PC_STATS_JSON name resolves above
+    return NULL;
 }
 
 void stats(uint8_t slot_id)
@@ -739,11 +735,11 @@ static const char *metrics_var(const char *name)
     // assumption - test_metrics_emits_prometheus asserts every emitted sample line carries a
     // value, which fails the moment a placeholder stops resolving (as three of them silently did
     // until the resolver names were aligned with the template).
-    if (!strcmp(name, "max_alloc_heap")) // GCOVR_EXCL_BR_LINE - no placeholder falls past here
+    if (!strcmp(name, "max_alloc_heap"))
     {
         return s_metrics.maxalloc;
     }
-    return NULL; // GCOVR_EXCL_LINE - see above
+    return NULL;
 }
 
 void metrics(uint8_t slot_id)

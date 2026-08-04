@@ -290,9 +290,7 @@ static void coaps_route_datagram(const CoapsIngest *ig, uint32_t now, uint8_t *o
     // A DTLSCiphertext with the C bit (0b001C....) carries a connection id: route by it so a peer that
     // has roamed to a new address still reaches its connection (RFC 9146 / RFC 9147 §9). Otherwise route
     // by source address; a fresh peer's (plaintext) ClientHello opens a slot.
-    // GCOVR_EXCL_BR_LINE below: ig->len >= 1 is always true here - ring_push (the ring's only producer)
-    // rejects len == 0, so no entry ring_pop hands back can have a zero length.
-    proto_bool cid_rec = ig->len >= 1 && (ig->data[0] & 0xE0) == 0x20 && (ig->data[0] & 0x10); // GCOVR_EXCL_BR_LINE
+    proto_bool cid_rec = ig->len >= 1 && (ig->data[0] & 0xE0) == 0x20 && (ig->data[0] & 0x10);
     CoapsSlot *s = cid_rec ? slot_by_cid(ig->data + 1, ig->len - 1) : NULL;
     if (!s)
     {
@@ -339,7 +337,6 @@ static void coaps_service_slot(CoapsSlot *s, uint32_t now, uint8_t *out, size_t 
         {
             server_send(s->peer_ip, s->peer_port, out, (size_t)n);
         }
-        // GCOVR_EXCL_BR_LINE below: n is never 0 here. pc_dtls_conn_on_timeout's two early "return 0" guards
         // (not-awaiting-reply/failed/done, not-yet-due) recompute the exact same fields and clock this call's
         // guard (timeout_ms(&s->conn) == 0) already evaluated true for, with no state change in between, so
         // neither can fire. Past those it either abandons the handshake (-1, retransmit ceiling) or fails to
@@ -348,7 +345,7 @@ static void coaps_service_slot(CoapsSlot *s, uint32_t now, uint8_t *out, size_t 
         // a HelloRetryRequest flight, 5 for the main flight), and nothing resets flight_count to 0 while
         // awaiting_reply stays true - so flight_transmit's loop always contributes at least one record's worth
         // of bytes when it succeeds.
-        else if (n < 0) // GCOVR_EXCL_BR_LINE
+        else if (n < 0)
         {
             s->used = PROTO_FALSE; // retransmission ceiling hit: abandon the handshake
             return;

@@ -30,7 +30,7 @@
 // Registers @p h for @p proto when the module supplied one; modbus / opcua return NULL on host builds.
 static inline void register_if(ConnProto proto, const ProtoHandler *h)
 {
-    if (h != NULL) // GCOVR_EXCL_BR_LINE  null half needs modbus/opcua compiled in alongside this file; no env does
+    if (h != NULL)
     {
         proto_register(proto, h);
     }
@@ -43,11 +43,9 @@ void proto_register_builtins(void)
     register_if(PROTO_TELNET, pc_telnet_proto_handler());
 #endif
 #if PC_ENABLE_SSH
-    // GCOVR_EXCL_START  no coverage env combines PC_ENABLE_SSH with a proto_register_builtins() call:
     // the SSH env tests the handler directly and the session/accept-gate envs keep SSH off (they reuse
     // the SSH proto slot). Device-reachable on any SSH firmware via session init; same gap as line 40.
     register_if(PROTO_SSH, ssh_proto_handler());
-    // GCOVR_EXCL_STOP
 #endif
 #if PC_NEED_MODBUS
     register_if(PROTO_MODBUS, pc_modbus_proto_handler());

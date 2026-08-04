@@ -521,10 +521,9 @@ int ssh_kexinit_build(uint8_t i, uint8_t *payload, size_t *len, size_t cap)
     }
 
     // Retain a copy as I_S for the exchange hash.
-    if (w.len >
-        PC_SSH_KEXINIT_S_MAX) // GCOVR_EXCL_LINE  the server's fixed algorithm lists never exceed PC_SSH_KEXINIT_S_MAX
+    if (w.len > PC_SSH_KEXINIT_S_MAX)
     {
-        return -1; // GCOVR_EXCL_LINE
+        return -1;
     }
     memcpy(s->i_s, payload, w.len);
     s->i_s_len = (uint16_t)w.len;
@@ -970,9 +969,9 @@ static int encode_hostkey(uint8_t i, uint8_t *ks, size_t *ks_len, size_t cap)
         Writer w = {ks, cap, 0, PROTO_TRUE};
         w_string(&w, (const uint8_t *)HOSTKEY_ED, sizeof(HOSTKEY_ED) - 1);
         w_string(&w, s_sshtr.ed_pub, 32);
-        if (!w.ok) // GCOVR_EXCL_LINE  the ed25519 blob (~51B) always fits the RSA-sized ks buffer
+        if (!w.ok)
         {
-            return -1; // GCOVR_EXCL_LINE
+            return -1;
         }
         *ks_len = w.len;
         return 0;
@@ -983,9 +982,9 @@ static int encode_hostkey(uint8_t i, uint8_t *ks, size_t *ks_len, size_t cap)
         w_string(&w, (const uint8_t *)HOSTKEY_ECDSA, sizeof(HOSTKEY_ECDSA) - 1);
         w_string(&w, (const uint8_t *)"nistp256", 8); // RFC 5656 curve identifier
         w_string(&w, s_sshtr.ecdsa_pub, PC_ECDSA_P256_PUB_LEN);
-        if (!w.ok) // GCOVR_EXCL_LINE  the ecdsa blob (~104B) always fits the RSA-sized ks buffer
+        if (!w.ok)
         {
-            return -1; // GCOVR_EXCL_LINE
+            return -1;
         }
         *ks_len = w.len;
         return 0;
@@ -1000,9 +999,9 @@ static int sign_hash(uint8_t i, const uint8_t *H, size_t h_len, uint8_t *sig, si
 {
     if (ssh_sess[i].hostkey_alg == SSH_HOSTKEY_ED25519)
     {
-        if (sig_cap < 64) // GCOVR_EXCL_LINE  the caller's sig buffer is PC_RSA_SIG_BYTES (256) >= 64
+        if (sig_cap < 64)
         {
-            return -1; // GCOVR_EXCL_LINE
+            return -1;
         }
         pc_ed25519_sign(sig, H, h_len, s_sshtr.ed_seed);
         *sig_len = 64;
@@ -1014,15 +1013,15 @@ static int sign_hash(uint8_t i, const uint8_t *H, size_t h_len, uint8_t *sig, si
         uint8_t raw[PC_ECDSA_P256_SIG_LEN]; // r || s (32 + 32)
         if (!pc_ecdsa_p256_sign(raw, H, h_len, s_sshtr.ecdsa_priv))
         {
-            return -1; // GCOVR_EXCL_LINE  key is available (negotiated) and sign is infallible for a valid d
+            return -1;
         }
         // ECDSA signature blob is mpint(r) || mpint(s) (RFC 5656 §3.1.2).
         Writer w = {sig, sig_cap, 0, PROTO_TRUE};
         w_mpint(&w, raw, PC_ECDSA_P256_COORD_LEN);
         w_mpint(&w, raw + PC_ECDSA_P256_COORD_LEN, PC_ECDSA_P256_COORD_LEN);
-        if (!w.ok) // GCOVR_EXCL_LINE  the mpint blob (~74B) always fits the 256B sig buffer
+        if (!w.ok)
         {
-            return -1; // GCOVR_EXCL_LINE
+            return -1;
         }
         *sig_len = w.len;
         *sig_name = HOSTKEY_ECDSA; // "ecdsa-sha2-nistp256"
@@ -1032,10 +1031,9 @@ static int sign_hash(uint8_t i, const uint8_t *H, size_t h_len, uint8_t *sig, si
     // algorithm only chooses the signature hash (RFC 8332).
     const proto_bool sha512 = (ssh_sess[i].hostkey_alg == SSH_HOSTKEY_RSA_SHA512);
     const pc_rsa_hash rh = sha512 ? PC_RSA_HASH_SHA512 : PC_RSA_HASH_SHA256;
-    if (sig_cap < PC_RSA_SIG_BYTES ||         // GCOVR_EXCL_LINE  neither operand can be true: the caller's buffer is
-        ssh_rsa_sign(H, h_len, rh, sig) != 0) // GCOVR_EXCL_LINE  sig buffer is 256B and the negotiated
+    if (sig_cap < PC_RSA_SIG_BYTES || ssh_rsa_sign(H, h_len, rh, sig) != 0)
     {
-        return -1; // GCOVR_EXCL_LINE  RSA key is loaded (available), so neither the size nor the sign can fail
+        return -1;
     }
     *sig_len = PC_RSA_SIG_BYTES;
     *sig_name = sha512 ? HOSTKEY_RSA_SHA512 : HOSTKEY_RSA_SHA256;
@@ -1102,15 +1100,15 @@ int ssh_kex_generate(uint8_t i)
         // point Q_S = d*G is re-derived in ssh_kexdh_handle (avoids a curve-specific session field).
         // Re-draw on the negligible chance a raw 32-byte value is 0 or >= n (an invalid P-256 scalar).
         uint8_t qtmp[PC_ECDSA_P256_PUB_LEN];
-        for (int t = 0; t < 8; t++) // GCOVR_EXCL_LINE  the loop can only run past its first pass if the RNG
-        {                           // hands back an invalid P-256 scalar, which no host build can provoke
+        for (int t = 0; t < 8; t++)
+        { // hands back an invalid P-256 scalar, which no host build can provoke
             ssh_rng_fill(ssh_sess[i].ecdh_sk, 32);
-            if (pc_ecdsa_p256_pubkey(qtmp, ssh_sess[i].ecdh_sk)) // GCOVR_EXCL_LINE  a random 32-byte value is a
+            if (pc_ecdsa_p256_pubkey(qtmp, ssh_sess[i].ecdh_sk))
             {
                 return 0; // valid scalar with overwhelming probability
             }
         }
-        return -1; // GCOVR_EXCL_LINE  a random 32-byte scalar is a valid P-256 key with overwhelming probability
+        return -1;
     }
     return ssh_dh_generate(i);
 }
@@ -1366,10 +1364,10 @@ int ssh_kexdh_handle(uint8_t i, const uint8_t *payload, size_t len, uint8_t *rep
     // 2. Host-key blob K_S (per negotiated host-key algorithm).
     uint8_t ks[SSH_RSA_PUBKEY_BLOB_MAX];
     size_t ks_len = 0;
-    if (encode_hostkey(i, ks, &ks_len, sizeof(ks)) != 0) // GCOVR_EXCL_LINE  encode_hostkey cannot fail: ks is
-    {                                       // GCOVR_EXCL_LINE  SSH_RSA_PUBKEY_BLOB_MAX, sized for either blob
-        pc_secure_wipe(k_be, sizeof(k_be)); // GCOVR_EXCL_LINE
-        return -1;                          // GCOVR_EXCL_LINE
+    if (encode_hostkey(i, ks, &ks_len, sizeof(ks)) != 0)
+    {
+        pc_secure_wipe(k_be, sizeof(k_be));
+        return -1;
     }
 
     // 3. Exchange hash H (SHA-256 or SHA-512 per the KEX method); capture the session id on first KEX.
@@ -1389,10 +1387,10 @@ int ssh_kexdh_handle(uint8_t i, const uint8_t *payload, size_t len, uint8_t *rep
     uint8_t sig[PC_RSA_SIG_BYTES]; // 256 bytes: fits an RSA-2048 sig and a 64-byte ed25519 sig
     size_t sig_len = 0;
     const char *sig_name = NULL;
-    if (sign_hash(i, H, h_len, sig, &sig_len, sizeof(sig), &sig_name) != 0) // GCOVR_EXCL_LINE  cannot fail here:
-    {                                                                       // GCOVR_EXCL_LINE  256B sig + loaded key
-        pc_secure_wipe(k_be, sizeof(k_be));                                 // GCOVR_EXCL_LINE
-        return -1;                                                          // GCOVR_EXCL_LINE
+    if (sign_hash(i, H, h_len, sig, &sig_len, sizeof(sig), &sig_name) != 0)
+    {
+        pc_secure_wipe(k_be, sizeof(k_be));
+        return -1;
     }
 
     // 5. Assemble the reply, then derive the six session keys (id fixed at first KEX's H).
@@ -1480,9 +1478,9 @@ int ssh_transport_begin_rekey(uint8_t i, uint8_t *out, size_t *out_len, size_t c
     }
     // New ephemeral for forward secrecy across the re-key (re-generated for the finally
     // negotiated method once the peer's KEXINIT arrives; see the KEXINIT dispatch).
-    if (ssh_kex_generate(i) != 0) // GCOVR_EXCL_LINE  i < MAX_SSH_CONNS is checked above and ssh_kex_generate only
+    if (ssh_kex_generate(i) != 0)
     {
-        return -1; // GCOVR_EXCL_LINE  fails for i >= MAX_SSH_CONNS
+        return -1;
     }
     ssh_sess[i].phase = SSH_PHASE_KEXINIT;
     return 0;

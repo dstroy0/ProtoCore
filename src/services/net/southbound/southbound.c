@@ -73,7 +73,7 @@ const SouthboundDriver *pc_southbound_find(const char *name)
     // code; the exclusion below covers only the first arm's genuinely dead branch.
     for (size_t i = 0; i < s_sb.count; i++)
     {
-        if (s_sb.drivers[i] && s_sb.drivers[i]->name && strcmp(s_sb.drivers[i]->name, name) == 0) // GCOVR_EXCL_BR_LINE
+        if (s_sb.drivers[i] && s_sb.drivers[i]->name && strcmp(s_sb.drivers[i]->name, name) == 0)
         {
             return s_sb.drivers[i];
         }

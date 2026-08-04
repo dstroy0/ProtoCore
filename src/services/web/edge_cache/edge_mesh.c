@@ -84,9 +84,9 @@ size_t edge_mesh_build_request(const uint8_t digest[32], const char *canon, cons
     // which is within three orders of magnitude of the 16-bit wire limit, so neither arm can be
     // taken in any build this library is sized for. The guard is what keeps the u16 length prefixes
     // below honest if either cap is ever raised.
-    if (kl > 0xFFFFu || hl > 0xFFFFu) // GCOVR_EXCL_LINE - caps are far below 0xFFFF, see above
+    if (kl > 0xFFFFu || hl > 0xFFFFu)
     {
-        return 0; // GCOVR_EXCL_LINE - unreachable body of the guard above
+        return 0;
     }
     size_t need = 2 + 1 + 1 + 32 + 2 + kl + 2 + hl;
     if (need > cap)

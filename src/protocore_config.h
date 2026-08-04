@@ -1308,11 +1308,6 @@ from halves and is slower than the width it decomposes into"
 // of the name. The guard tests the symbol rather than restating the condition, so what is enforced
 // and what is declared are the same text.
 //
-// This list used to be drawn here by hand, and it drifted: it named 18 relationships while the
-// guards enforced 33 - CIA402, EDGE_CACHE, FORWARDED_TRUST, SSH_SFTP, SSH_SCP, SNMP_V3 and ten
-// others were enforced but undocumented. A dependency stated in three places is a dependency two
-// of whose statements are unverified.
-//
 // Optional integrations (these build fine on their own; the named feature is
 // simply inert or reduced until you also enable the other flag):
 //

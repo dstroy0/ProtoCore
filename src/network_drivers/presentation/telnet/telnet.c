@@ -68,10 +68,10 @@ static TelnetConn *find_conn(uint8_t slot)
 
 static void raw_send(uint8_t slot, const void *data, size_t n)
 {
-    if (!pc_conn_active(slot) || // GCOVR_EXCL_BR_LINE  n==0 is unreachable: every call site below passes a
-                                 // fixed nonzero literal length. (Marker must sit on this line: gcov attributes
-                                 // the whole multi-line condition's branches to the "if" line, not the operand's
-                                 // own line - a marker on the next line silently fails to exclude anything.)
+    if (!pc_conn_active(slot) ||
+        // fixed nonzero literal length. (Marker must sit on this line: gcov attributes
+        // the whole multi-line condition's branches to the "if" line, not the operand's
+        // own line - a marker on the next line silently fails to exclude anything.)
         n == 0)
     {
         return;
@@ -202,9 +202,9 @@ void pc_telnet_rx(uint8_t slot)
     uint8_t b;
     while (pc_conn_read_byte(slot, &b))
     {
-        switch (t->st) // GCOVR_EXCL_BR_LINE  t->st is a TelnetState enum class and every enumerator
-                       // (TN_NORMAL/TN_IAC/TN_OPT/TN_SB) has a case below; the compiler's defensive "no case matched"
-                       // branch can't be reached from any host input
+        switch (t->st)
+        // (TN_NORMAL/TN_IAC/TN_OPT/TN_SB) has a case below; the compiler's defensive "no case matched"
+        // branch can't be reached from any host input
         {
         case TN_NORMAL:
             if (b == T_IAC)

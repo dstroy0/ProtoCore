@@ -90,7 +90,7 @@ size_t pc_senml_json_build(char *buf, size_t cap, const SenmlRecord *records, si
         }
         // Every SenmlValueKind enumerator has a case below, so the default edge the compiler
         // emits for the uint8_t-backed enum is unreachable for any value the API admits.
-        switch (r->value_kind) // GCOVR_EXCL_LINE  exhaustive enum switch; the default edge is dead
+        switch (r->value_kind)
         {
         case SENML_V_FLOAT:
             pc_json_key(&w, "v");
@@ -197,7 +197,7 @@ size_t pc_senml_build(const pc_codec *c, uint8_t *buf, size_t cap, const SenmlRe
         // Exhaustive over SenmlValueKind, as in the JSON builder above: the compiler's default
         // edge for the uint8_t-backed enum is unreachable, and record_fields() above is written
         // against the same four kinds so the declared field count always matches what is emitted.
-        switch (r->value_kind) // GCOVR_EXCL_LINE  exhaustive enum switch; the default edge is dead
+        switch (r->value_kind)
         {
         case SENML_V_FLOAT:
             c->put_label(&w, "v", SENML_LBL_V);
@@ -260,7 +260,7 @@ size_t pc_senml_resolve(const SenmlRecord *in, size_t n, SenmlResolved *out, siz
         int w = (int)pc_sb_finish(&sb_name);
         if (!sb_name.ok)
         {
-            o->name[0] = '\0'; // GCOVR_EXCL_LINE  snprintf on "%s%s" cannot encode-error
+            o->name[0] = '\0';
         }
 
         // Resolved time = base time + record time (each defaults to 0); absent only if neither is present.

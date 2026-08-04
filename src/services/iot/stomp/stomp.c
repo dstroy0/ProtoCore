@@ -204,14 +204,14 @@ proto_bool pc_stomp_parse_frame(const char *buf, size_t len, StompFrame *out, si
     }
     out->command = buf + i;
     out->command_len = line_len(buf, i, nl);
-    if (out->command_len == 0) // GCOVR_EXCL_BR_LINE  the true arm is unreachable: the skip loop above
-                               // guarantees buf[i] is neither '\r' nor '\n', so the search for nl (the
-                               // next '\n' at or after i) always advances past i, giving nl>=i+1. If
-                               // line_len trims a trailing '\r' the trimmed length is only 0 when that
-                               // '\r' is buf[i] itself (nl==i+1), which cannot happen since buf[i]!='\r'
-                               // is already established => command_len>=1 in every case
+    if (out->command_len == 0)
+    // guarantees buf[i] is neither '\r' nor '\n', so the search for nl (the
+    // next '\n' at or after i) always advances past i, giving nl>=i+1. If
+    // line_len trims a trailing '\r' the trimmed length is only 0 when that
+    // '\r' is buf[i] itself (nl==i+1), which cannot happen since buf[i]!='\r'
+    // is already established => command_len>=1 in every case
     {
-        return PROTO_FALSE; // GCOVR_EXCL_LINE  unreachable for the same reason as the branch above
+        return PROTO_FALSE;
     }
     size_t cur = nl + 1;
 
@@ -266,10 +266,10 @@ proto_bool pc_stomp_parse_frame(const char *buf, size_t len, StompFrame *out, si
             }
         }
         cur = nl + 1;
-        if (cur > len) // GCOVR_EXCL_BR_LINE  the true arm is unreachable: the nl>=len check above guarantees
-                       // nl<len, so cur=nl+1<=len
+        if (cur > len)
+        // nl<len, so cur=nl+1<=len
         {
-            return PROTO_FALSE; // GCOVR_EXCL_LINE  unreachable for the same reason as the branch above
+            return PROTO_FALSE;
         }
     }
 

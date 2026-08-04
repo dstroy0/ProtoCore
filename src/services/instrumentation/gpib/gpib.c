@@ -227,9 +227,9 @@ proto_bool pc_gpib_parse_addr(const char *s, size_t len, uint8_t *pad, int *sad)
         }
         sad_val = (int)sa;
     }
-    if (i != len) // GCOVR_EXCL_LINE  unreachable: the space skip above stops at i==len or a non-space, and
+    if (i != len)
     {
-        return PROTO_FALSE; // GCOVR_EXCL_LINE  the secondary block only falls through when i==len - so i==len here
+        return PROTO_FALSE;
     }
     if (pad)
     {

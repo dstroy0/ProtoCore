@@ -23,13 +23,13 @@ typedef struct
 
 static void put_str(Buf *b, const char *s)
 {
-    if (!b->ok || !s) // GCOVR_EXCL_BR_LINE  the !s half is unreachable: every put_str arg is a literal or a
-                      // checked/guarded non-null string (see below)
+    if (!b->ok || !s)
+    // checked/guarded non-null string (see below)
     {
-        if (!s) // GCOVR_EXCL_BR_LINE  unreachable for the same reason as the condition above
+        if (!s)
         {
-            b->ok = PROTO_FALSE; // GCOVR_EXCL_LINE  unreachable: every put_str arg is a literal or a checked/guarded
-                                 // non-null string
+            b->ok = PROTO_FALSE;
+            // non-null string
         }
         return;
     }
@@ -240,11 +240,11 @@ static size_t find_crlf(const char *buf, size_t len)
 // Decimal parse of [s, s+n); false on a non-digit.
 static proto_bool parse_uint(const char *s, size_t n, size_t *out)
 {
-    if (n == 0) // GCOVR_EXCL_BR_LINE  unreachable: the sole caller passes a space-delimited MSG token, always
-                // length>=1 (see below)
+    if (n == 0)
+    // length>=1 (see below)
     {
-        return PROTO_FALSE; // GCOVR_EXCL_LINE  unreachable: the sole caller passes a space-delimited MSG token, always
-                            // length>=1
+        return PROTO_FALSE;
+        // length>=1
     }
     size_t v = 0;
     for (size_t i = 0; i < n; i++)

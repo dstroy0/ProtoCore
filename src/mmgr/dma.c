@@ -130,9 +130,9 @@ static void emit(dma_channel *c, uint8_t id, pc_dma_dir dir, const uint8_t *data
     ev.periph = c->periph;
     ev.dir = dir;
     ev._pad = 0;
-    if (c->cb) // GCOVR_EXCL_BR_LINE  cb is guaranteed non-null while a channel is open:
-               // pc_dma_open rejects a null on_complete, and emit() only runs via pump(),
-               // which pc_dma_poll() only calls for channels with open == true.
+    if (c->cb)
+    // pc_dma_open rejects a null on_complete, and emit() only runs via pump(),
+    // which pc_dma_poll() only calls for channels with open == true.
     {
         c->cb(&ev, c->ctx);
     }

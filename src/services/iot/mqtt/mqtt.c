@@ -49,7 +49,7 @@ static size_t put_field(uint8_t *p, const uint8_t *data, size_t len)
 }
 static inline size_t put_str(uint8_t *p, const char *s)
 {
-    return put_field(p, (const uint8_t *)s, // GCOVR_EXCL_BR_LINE  s is never null: every call site in this TU (the
+    return put_field(p, (const uint8_t *)s,
                      s ? strnlen(s, PC_MQTT_BUF_SIZE) // "MQTT" literal, or client_id/will_topic/user/pass already
                        : 0); // guarded non-null by pc_mqtt_build_connect before calling) is non-null
 }
@@ -111,10 +111,10 @@ static size_t compose(uint8_t *out, size_t cap, uint8_t byte0, const uint8_t *bo
     // the 2^28 remaining-length limit and pc_mqtt_encode_remlen never rejects here; the len > 256MB reject
     // is covered directly on the public pc_mqtt_encode_remlen.
     size_t rln = pc_mqtt_encode_remlen(rl, (uint32_t)blen);
-    if (rln == 0) // GCOVR_EXCL_BR_LINE  the true branch is unreachable: blen <= PC_MQTT_BUF_SIZE << 2^28 via compose's
-                  // bounded callers
+    if (rln == 0)
+    // bounded callers
     {
-        return 0; // GCOVR_EXCL_LINE  unreachable: blen <= PC_MQTT_BUF_SIZE << 2^28 via compose's bounded callers
+        return 0;
     }
     size_t total = 1 + rln + blen;
     if (total > cap)
@@ -123,8 +123,8 @@ static size_t compose(uint8_t *out, size_t cap, uint8_t byte0, const uint8_t *bo
     }
     out[0] = byte0;
     memcpy(out + 1, rl, rln);
-    if (blen) // GCOVR_EXCL_BR_LINE  blen is never 0: every compose() caller
-              // (build_connect/publish/subscribe/unsubscribe) always writes at least a 2-byte length-prefixed field
+    if (blen)
+    // (build_connect/publish/subscribe/unsubscribe) always writes at least a 2-byte length-prefixed field
     {
         memcpy(out + 1 + rln, body, blen);
     }

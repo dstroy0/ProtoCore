@@ -108,7 +108,7 @@ static void ring_read(const HpackDynTable *t, uint16_t pos, char *dst, size_t n)
 // branch in resolve_name/emit_indexed), so k>=1 always holds here.
 static const HpackEntry *dyn_entry(const HpackDynTable *t, uint32_t k)
 {
-    if (k < 1 || k > t->ecount) // GCOVR_EXCL_BR_LINE
+    if (k < 1 || k > t->ecount)
     {
         return NULL;
     }
@@ -119,9 +119,9 @@ static const HpackEntry *dyn_entry(const HpackDynTable *t, uint32_t k)
 // Unreachable: both call sites below only invoke this inside a `while (... && t->ecount > 0)` loop.
 static void dyn_evict_oldest(HpackDynTable *t)
 {
-    if (t->ecount == 0) // GCOVR_EXCL_LINE
+    if (t->ecount == 0)
     {
-        return; // GCOVR_EXCL_LINE
+        return;
     }
     uint16_t oi = (uint16_t)((t->ehead + HPACK_ENTS - t->ecount) % HPACK_ENTS);
     const HpackEntry *e = &t->ent[oi];
@@ -141,7 +141,7 @@ static void dyn_set_max(HpackDynTable *t, uint32_t new_max)
     t->max_size = new_max;
     // ecount>0 is dead here: ecount==0 implies used==0 (dyn_insert/dyn_evict_oldest keep that
     // invariant), so used>max_size can't be true while ecount==0.
-    while (t->used > t->max_size && t->ecount > 0) // GCOVR_EXCL_BR_LINE
+    while (t->used > t->max_size && t->ecount > 0)
     {
         dyn_evict_oldest(t);
     }
@@ -163,7 +163,7 @@ static void dyn_insert(HpackDynTable *t, const char *name, size_t nlen, const ch
     // t->max_size is already guaranteed above, and PC_HPACK_TABLE_BYTES / 32 == PC_HPACK_MAX_ENTRIES
     // exactly, so the byte-budget half always trips at or before the entry-count half could, and
     // ecount can't be 0 whenever either half of the || is true.
-    while ((t->used + entry_size > t->max_size || t->ecount >= HPACK_ENTS) && t->ecount > 0) // GCOVR_EXCL_BR_LINE
+    while ((t->used + entry_size > t->max_size || t->ecount >= HPACK_ENTS) && t->ecount > 0)
     {
         dyn_evict_oldest(t);
     }
@@ -185,7 +185,7 @@ static void dyn_insert(HpackDynTable *t, const char *name, size_t nlen, const ch
 // path and never calls resolve_name with it.
 static proto_bool resolve_name(const HpackDynTable *t, uint32_t idx, char *out, size_t cap, size_t *out_len)
 {
-    if (idx >= 1 && idx <= 61) // GCOVR_EXCL_BR_LINE
+    if (idx >= 1 && idx <= 61)
     {
         size_t nl = strnlen(STATIC[idx][0], cap + 1);
         if (nl > cap)
@@ -213,7 +213,7 @@ static proto_bool emit_indexed(HpackDynTable *t, uint32_t idx, char *scratch, si
 {
     size_t nl;
     size_t vl;
-    if (idx >= 1 && idx <= 61) // GCOVR_EXCL_BR_LINE
+    if (idx >= 1 && idx <= 61)
     {
         nl = strnlen(STATIC[idx][0], cap + 1);
         vl = strnlen(STATIC[idx][1], cap + 1);

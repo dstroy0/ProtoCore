@@ -89,15 +89,15 @@ proto_bool pc_dnp3_parse_frame(const uint8_t *buf, size_t len, Dnp3Frame *out, u
         return PROTO_FALSE;
     }
     size_t user_len = (size_t)length - DNP3_LEN_OVERHEAD;
-    if (user_len > DNP3_MAX_USER_DATA) // GCOVR_EXCL_BR_LINE  unreachable: the line-76 guard above already
-                                       // forced length into [DNP3_LEN_OVERHEAD, 255] (length is a uint8_t, so
-                                       // 255 is a hard ceiling, not just an untested one), so this unsigned
-                                       // subtraction cannot underflow and user_len = length-DNP3_LEN_OVERHEAD is
-                                       // confined to [0, 250] = [0, DNP3_MAX_USER_DATA]; the true arm has no
-                                       // reachable value of length to take it with
+    if (user_len > DNP3_MAX_USER_DATA)
+    // forced length into [DNP3_LEN_OVERHEAD, 255] (length is a uint8_t, so
+    // 255 is a hard ceiling, not just an untested one), so this unsigned
+    // subtraction cannot underflow and user_len = length-DNP3_LEN_OVERHEAD is
+    // confined to [0, 250] = [0, DNP3_MAX_USER_DATA]; the true arm has no
+    // reachable value of length to take it with
     {
-        return PROTO_FALSE; // GCOVR_EXCL_LINE  unreachable: see the branch comment above - user_len can never exceed
-                            // DNP3_MAX_USER_DATA given length's uint8_t domain plus the line-76 lower-bound guard
+        return PROTO_FALSE;
+        // DNP3_MAX_USER_DATA given length's uint8_t domain plus the line-76 lower-bound guard
     }
 
     uint16_t hcrc = pc_dnp3_crc(buf, DNP3_HEADER_LEN);

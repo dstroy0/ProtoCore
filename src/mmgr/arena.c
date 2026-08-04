@@ -131,7 +131,7 @@ void pc_arena_persist_free(pc_arena *a, void *p)
         b->used = 0;
         // The false half is unreachable: persist_used only ever accumulates this same block's
         // own size (at alloc time), so it can never be smaller than b->size while b->used was true.
-        if (a->persist_used >= b->size) // GCOVR_EXCL_BR_LINE
+        if (a->persist_used >= b->size)
         {
             a->persist_used -= b->size;
         }

@@ -436,7 +436,7 @@ const char *pc_resp_conn_hdr(uint8_t slot_id, proto_bool *keep_out)
 #endif
     // The null half cannot fire: every call site passes the address of its own local `keep`. Kept so
     // the signature keeps saying the report-back is optional.
-    if (keep_out) // GCOVR_EXCL_BR_LINE  keep_out is never null (see above)
+    if (keep_out)
     {
         *keep_out = keep;
     }
@@ -626,7 +626,6 @@ int32_t proto_begin(const WebServerConfig *cfg)
 #endif
     for (uint8_t i = 0; i < s_inst.listener_count; i++)
     {
-        // GCOVR_EXCL_START  listener_add() only fails on a real lwIP fault - a bind/listen refusal
         // (port already in use) or PCB/queue exhaustion. The host lwIP mock's tcp_new/tcp_bind/
         // tcp_listen_with_backlog always succeed and it exposes no failure hook, so the error return
         // has no host path; it is covered on hardware.
@@ -634,7 +633,6 @@ int32_t proto_begin(const WebServerConfig *cfg)
         {
             return (int32_t)PC_ERR_LISTEN_FAILED;
         }
-        // GCOVR_EXCL_STOP
     }
 #if PC_ENABLE_HTTP3
     // Bind the HTTP/3 QUIC server (UDP on device; on host it is fed via pc_quic_server_ingest). Requests
@@ -1603,7 +1601,6 @@ static void send_error_close(uint8_t slot_id, const char *status, const char *ex
 
     int blen = (int)proto_scan_nul(body, 0xFFFF);
     char header[RESP_HDR_BUF_SIZE];
-    // GCOVR_EXCL_BR_START  the null arm of the extra_hdr ternary is unreachable: both callers
     // (send_method_not_allowed, send_too_many_requests) build a non-null header string. Kept so the
     // parameter stays optional for a future caller with nothing extra to add.
     pc_sb sb_header = {header, sizeof(header), 0, PROTO_TRUE};
@@ -1617,12 +1614,9 @@ static void send_error_close(uint8_t slot_id, const char *status, const char *ex
     pc_sb_i64(&sb_header, (int64_t)(blen));
     pc_sb_put(&sb_header, "\r\nConnection: close\r\n\r\n");
     int hlen = (int)pc_sb_finish(&sb_header);
-    // GCOVR_EXCL_BR_STOP
 
     // The last write carries the flush: pc_conn_send_flush is write+tcp_output in one marshal, so
     // the response leaves in a single trip whether or not a body follows the header.
-    // GCOVR_EXCL_BR_START  the blen == 0 half is unreachable: both callers pass a fixed non-empty
-    // reason body ("Method Not Allowed" / "Too Many Requests"). The HEAD half is exercised.
     if (blen > 0 && !req_is_head(slot_id))
     {
         pc_conn_send(slot_id, header, (proto_u16)hlen);
@@ -1632,7 +1626,6 @@ static void send_error_close(uint8_t slot_id, const char *status, const char *ex
     {
         pc_conn_send_flush(slot_id, header, (proto_u16)hlen);
     }
-    // GCOVR_EXCL_BR_STOP
     pc_conn_begin_close(slot_id); // dwell in CONN_CLOSING until the response drains
     http_reset(slot_id);
 }
@@ -1683,14 +1676,12 @@ static void send_too_many_requests(uint8_t slot_id, uint32_t retry_after_s)
 
 proto_bool route_admits(const Route *r, uint8_t slot_id, HttpReq *req)
 {
-    // GCOVR_EXCL_START  unreachable: every entry below route_count was filled by fill_route_base,
     // which sets is_active, and nothing ever clears it - so the dispatcher never walks an inactive
     // slot. Kept because is_active is what makes an unfilled table entry safe to skip.
     if (!r->is_active)
     {
         return PROTO_FALSE;
     }
-    // GCOVR_EXCL_STOP
     proto_bool matched = r->is_regex   ? regex_match(r->path, req->path)
                          : r->is_param ? match_path_params(r->path, req->path, req)
                                        : path_matches(r->path, r->is_wildcard, req->path);

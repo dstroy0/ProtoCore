@@ -97,9 +97,9 @@ static void build_axis_names(RoboticsCtx *c)
         b[3] = 's';
         b[4] = '_';
         size_t o = 5;
-        if (idx >= 10) // GCOVR_EXCL_LINE  two-digit render; unreachable while PC_ROBOTICS_AXES (6) <= 9
+        if (idx >= 10)
         {
-            b[o++] = (char)('0' + (idx / 10)); // GCOVR_EXCL_LINE
+            b[o++] = (char)('0' + (idx / 10));
         }
         b[o++] = (char)('0' + (idx % 10));
         b[o] = '\0';
@@ -212,7 +212,7 @@ proto_bool pc_robotics_read(uint16_t ns, uint32_t id, uint32_t attribute, OpcUaV
         const RoboticsAxis *ax = &mds->device.axes[k - 1];
         // The guard above already pins sub to AXVAR_POSITION..AXVAR_PROFILE, so the default edge is
         // unreachable; gcov cannot drop a single switch edge, so the dispatch line is excluded whole.
-        switch (sub) // GCOVR_EXCL_LINE
+        switch (sub)
         {
         case AXVAR_POSITION:
             set_f64(out, ax->actual_position);
@@ -226,8 +226,8 @@ proto_bool pc_robotics_read(uint16_t ns, uint32_t id, uint32_t attribute, OpcUaV
         case AXVAR_PROFILE:
             set_i32(out, (int32_t)ax->motion_profile);
             return PROTO_TRUE;
-        default:                // GCOVR_EXCL_LINE  unreachable: sub is pinned to 1..4 by the guard above
-            return PROTO_FALSE; // GCOVR_EXCL_LINE
+        default:
+            return PROTO_FALSE;
         }
     }
 

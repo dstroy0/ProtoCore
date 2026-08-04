@@ -76,7 +76,7 @@ static void send_control(H2Conn *c, size_t (*build)(uint8_t *, size_t))
     size_t n = build(buf, sizeof buf);
     // Both builders passed here (SETTINGS ACK, 9 bytes; RST_STREAM, 13) fit this 25-byte buffer, so the
     // zero return is unreachable; kept so a future builder that can fail is not silently written short.
-    if (n) // GCOVR_EXCL_LINE
+    if (n)
     {
         wr(c, buf, n);
     }
@@ -431,12 +431,10 @@ proto_bool pc_h2_conn_respond(H2Conn *c, uint32_t stream_id, int status, const c
     pc_sb_i64(&sb_num, (int64_t)(status));
     int nl = (int)pc_sb_finish(&sb_num);
     size_t w = pc_hpack_encode_header(block + bo, sizeof block - bo, ":status", 7, num, (size_t)nl);
-    // GCOVR_EXCL_START  :status is a decimal int (<=11 chars) into a fresh 256B block; the encode cannot overflow
     if (!w)
     {
         return PROTO_FALSE;
     }
-    // GCOVR_EXCL_STOP
     bo += w;
     if (content_type)
     {
@@ -465,12 +463,10 @@ proto_bool pc_h2_conn_respond(H2Conn *c, uint32_t stream_id, int status, const c
 
     uint8_t frame[H2_FRAME_HEADER_LEN + sizeof block];
     size_t n = pc_h2_build_headers(frame, sizeof frame, stream_id, block, bo, body_len == 0);
-    // GCOVR_EXCL_START  frame is H2_FRAME_HEADER_LEN + sizeof block; 9 + bo (bo <= 256) always fits
     if (!n)
     {
         return PROTO_FALSE;
     }
-    // GCOVR_EXCL_STOP
     wr(c, frame, n);
 
     // Body as DATA frames, split to the peer's max frame size, END_STREAM on the last.
@@ -487,12 +483,10 @@ proto_bool pc_h2_conn_respond(H2Conn *c, uint32_t stream_id, int status, const c
         uint8_t dh[H2_FRAME_HEADER_LEN];
         size_t hn =
             pc_h2_write_header(dh, sizeof dh, (uint32_t)chunk, H2_DATA, last ? H2_FLAG_END_STREAM : 0, stream_id);
-        // GCOVR_EXCL_START  dh is exactly H2_FRAME_HEADER_LEN; a 9-byte frame header always fits
         if (!hn)
         {
             return PROTO_FALSE;
         }
-        // GCOVR_EXCL_STOP
         wr(c, dh, hn);
         wr(c, (const uint8_t *)(body + sent), chunk);
         c->conn_send_window -= (int32_t)chunk;

@@ -84,7 +84,7 @@ static proto_bool dav_join(const char *root, const char *sub, char *out, size_t 
     // wn <= 0 cannot fire: snprintf only returns negative on an encoding error, which "%s%s%s"
     // cannot raise, and sep is "/" whenever root and sub are both empty, so the shortest join is
     // one byte. The truncation half (wn >= cap) is exercised.
-    return wn > 0 && wn < (int)cap; // GCOVR_EXCL_BR_LINE  wn <= 0 unreachable (see above)
+    return wn > 0 && wn < (int)cap;
 }
 
 // Map a WebDAV request path to its on-disk path under the mount @p r. Strips the
@@ -97,16 +97,14 @@ static int dav_resolve_path(const Route *r, const char *reqpath, char *out, size
     size_t plen = strnlen(r->path, MAX_PATH_LEN);
     // plen == 0 is unreachable: dav() always stores at least "*" - it appends the wildcard when the
     // prefix lacks one, so even dav("") yields a one-character pattern.
-    if (plen > 0 && r->path[plen - 1] == '*') // GCOVR_EXCL_BR_LINE  plen == 0 unreachable (see above)
+    if (plen > 0 && r->path[plen - 1] == '*')
     {
         plen--;
     }
-    // GCOVR_EXCL_BR_START  the "" arm is unreachable: both callers reached here through
     // path_matches() against this same route, which already required reqpath to carry the mount
     // prefix, so the length test always holds. Kept so a future caller that resolves without
     // matching first still cannot index past the end of reqpath.
     const char *sub = (strnlen(reqpath, MAX_PATH_LEN) >= plen) ? reqpath + plen : "";
-    // GCOVR_EXCL_BR_STOP
     if (strstr(sub, ".."))
     {
         return 403;
@@ -200,7 +198,6 @@ void dav_put_abort_tramp(HttpReq *req)
     // The PUT was torn down before the handler ran: close the half-written file so
     // the handle is not leaked (a leak eventually exhausts LittleFS's open slots).
     uint8_t slot = (uint8_t)(req - http_pool);
-    // GCOVR_EXCL_BR_START  the slot >= MAX_CONNS half is unreachable: http_pool is CONN_POOL_SLOTS
     // long, but the streaming-body hooks are driven only by the HTTP/1.x byte parser, which never
     // parses for the internal dispatch slots at and above MAX_CONNS. s_davput.put[] is MAX_CONNS
     // long, so the bound still has to be tested here.
@@ -209,7 +206,6 @@ void dav_put_abort_tramp(HttpReq *req)
         pc_fs_close(s_davput.put[slot].fh);
         s_davput.put[slot].active = PROTO_FALSE;
     }
-    // GCOVR_EXCL_BR_STOP
 }
 
 proto_bool dav_stream_put_begin(HttpReq *req)
@@ -224,7 +220,7 @@ proto_bool dav_stream_put_begin(HttpReq *req)
         Route *r = pc_route_at(i);
         // The !is_active half cannot fire: every entry below route_count was filled by
         // fill_route_base, which sets is_active, and nothing ever clears it again.
-        if (!r->is_active || r->type != ROUTE_DAV) // GCOVR_EXCL_BR_LINE  see above
+        if (!r->is_active || r->type != ROUTE_DAV)
         {
             continue;
         }
@@ -232,14 +228,12 @@ proto_bool dav_stream_put_begin(HttpReq *req)
         {
             continue;
         }
-        // GCOVR_EXCL_START  dav() has no interface-filtered overload, so a ROUTE_DAV entry's
         // iface_filter is always PC_IFACE_ANY and this gate never rejects. Kept so a DAV mount picks
         // up the per-route interface gate for free if that overload is ever added.
         if (r->iface_filter != PC_IFACE_ANY && r->iface_filter != pc_conn_iface(slot))
         {
             continue;
         }
-        // GCOVR_EXCL_STOP
         char fs_path[256];
         if (dav_resolve_path(r, req->path, fs_path, sizeof(fs_path)) != 0)
         {
@@ -275,7 +269,6 @@ proto_bool dav_stream_put_begin(HttpReq *req)
 void dav_stream_put_data(HttpReq *req, const uint8_t *data, size_t len)
 {
     uint8_t slot = (uint8_t)(req - http_pool);
-    // GCOVR_EXCL_START  http_pool is CONN_POOL_SLOTS (MAX_CONNS + PC_INTERNAL_SLOTS) long, so an index >=
     // MAX_CONNS is a real address - but it belongs to an internal dispatch slot (e.g. HTTP/3), and the
     // streaming-body hooks this runs from are driven only by the HTTP/1.x byte parser, which never parses
     // for those slots. s_davput.put[] is MAX_CONNS long, so the bound still has to be here.
@@ -283,7 +276,6 @@ void dav_stream_put_data(HttpReq *req, const uint8_t *data, size_t len)
     {
         return;
     }
-    // GCOVR_EXCL_STOP
     DavPut *d = &s_davput.put[slot];
     if (d->active && !d->error)
     {
@@ -354,7 +346,6 @@ void dav_send_status(uint8_t slot_id, int code, const char *extra_headers)
     proto_bool keep;
     const char *cl = pc_resp_conn_hdr(slot_id, &keep);
     char header[RESP_HDR_BUF_SIZE];
-    // GCOVR_EXCL_BR_START  the null arm of the extra_headers ternary is unreachable: every call site
     // in this file passes either "" or a string literal. Kept so the parameter stays optional.
     pc_sb sb_header = {header, sizeof(header), 0, PROTO_TRUE};
     pc_sb_put(&sb_header, "HTTP/1.1 ");
@@ -367,7 +358,6 @@ void dav_send_status(uint8_t slot_id, int code, const char *extra_headers)
     pc_sb_put(&sb_header, cl);
     pc_sb_put(&sb_header, "\r\n");
     int hlen = (int)pc_sb_finish(&sb_header);
-    // GCOVR_EXCL_BR_STOP
     pc_conn_send(slot_id, header, (proto_u16)hlen);
     pc_resp_end(slot_id, code, 0, keep, /*pre_flushed=*/PROTO_FALSE);
 }
@@ -379,7 +369,7 @@ proto_bool try_serve_dav(uint8_t slot_id, HttpReq *req)
         Route *r = pc_route_at(i);
         // The !is_active half cannot fire: every entry below route_count was filled by
         // fill_route_base, which sets is_active, and nothing ever clears it again.
-        if (!r->is_active || r->type != ROUTE_DAV) // GCOVR_EXCL_BR_LINE  see above
+        if (!r->is_active || r->type != ROUTE_DAV)
         {
             continue;
         }
@@ -387,14 +377,12 @@ proto_bool try_serve_dav(uint8_t slot_id, HttpReq *req)
         {
             continue;
         }
-        // GCOVR_EXCL_START  dav() has no interface-filtered overload, so a ROUTE_DAV entry's
         // iface_filter is always PC_IFACE_ANY and this gate never rejects. Kept so a DAV mount picks
         // up the per-route interface gate for free if that overload is ever added.
         if (r->iface_filter != PC_IFACE_ANY && r->iface_filter != pc_conn_iface(slot_id))
         {
             continue;
         }
-        // GCOVR_EXCL_STOP
         serve_dav_request(slot_id, req, r);
         return PROTO_TRUE;
     }
@@ -414,7 +402,7 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const Route *r)
     // Mount-prefix length and FS root, used by COPY/MOVE to resolve the Destination. As in
     // dav_resolve_path, plen == 0 is unreachable: dav() always stores at least "*".
     size_t plen = strnlen(r->path, MAX_PATH_LEN);
-    if (plen > 0 && r->path[plen - 1] == '*') // GCOVR_EXCL_BR_LINE  plen == 0 unreachable (see above)
+    if (plen > 0 && r->path[plen - 1] == '*')
     {
         plen--;
     }
@@ -764,7 +752,6 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const Route *r)
             self_href[0] = '\0';
         }
         size_t sl = strnlen(self_href, sizeof(self_href));
-        // GCOVR_EXCL_BR_START  two halves here cannot fire, both for the same reason: req->path is
         // HttpReq::path[MAX_PATH_LEN] and the parser always leaves at least "/" in it, so sl is
         // between 1 and MAX_PATH_LEN-1. That makes `sl == 0` impossible, and makes the room test
         // below always true (self_href is MAX_PATH_LEN+2). Both are kept as bounds on an index.
@@ -776,7 +763,6 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const Route *r)
                 self_href[sl] = '\0';
             }
         }
-        // GCOVR_EXCL_BR_STOP
 
         size_t cap = sizeof(s_dav.buf);
         size_t len = 0;
@@ -803,7 +789,6 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const Route *r)
                 {
                     break;
                 }
-                // GCOVR_EXCL_START  the buffer-full break below always preempts this cap: the
                 // static_assert at the top of this file pins PC_WEBDAV_BUF_SIZE small enough that
                 // s_dav.buf cannot hold PC_WEBDAV_MAX_ENTRIES entries. Kept so the count is bounded
                 // whatever those two knobs are set to.
@@ -811,7 +796,6 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const Route *r)
                 {
                     break;
                 }
-                // GCOVR_EXCL_STOP
                 char chref[MAX_PATH_LEN + 80];
                 pc_sb sb_chref = {chref, sizeof(chref), 0, PROTO_TRUE};
                 pc_sb_put(&sb_chref, self_href);
@@ -850,7 +834,6 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const Route *r)
         }
         size_t n =
             pc_webdav_proppatch_ms(s_dav.buf, sizeof(s_dav.buf), req->path, (const char *)req->body, req->body_len);
-        // GCOVR_EXCL_START  the builder cannot run out of room at this env's PC_WEBDAV_BUF_SIZE: its
         // output is the ~120-byte prologue, the escaped href (capped at 256 by the builder's own esc
         // buffer), at most PC_WEBDAV_MAX_PROPS echoed tags whose bytes all come out of req->body
         // (capped at BODY_BUF_SIZE), and the ~110-byte epilogue - about 1.2 KB against a 2 KB buffer.
@@ -860,7 +843,6 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const Route *r)
             dav_send_status(slot_id, 507, ""); // Insufficient Storage: response did not fit the buffer
             return;
         }
-        // GCOVR_EXCL_STOP
         send_text(slot_id, 207, "application/xml; charset=utf-8", s_dav.buf);
         return;
     }

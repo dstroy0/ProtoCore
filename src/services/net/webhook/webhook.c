@@ -108,7 +108,7 @@ int pc_ifttt_payload(const char *v1, const char *v2, const char *v3, char *out, 
         // reach this iteration, and nothing between loop entry and this statement can clear it.
         if (!first)
         {
-            ok = ok && put(out, cap, &pos, ","); // GCOVR_EXCL_BR_LINE  ok-false half is unreachable (see above)
+            ok = ok && put(out, cap, &pos, ",");
         }
         first = PROTO_FALSE;
         ok = ok && put(out, cap, &pos, "\"");

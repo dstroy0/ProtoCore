@@ -100,8 +100,7 @@ static inline void inc32(uint8_t ctr[16])
     // A single-byte carry (ctr[15] 0xff -> 0x00 into ctr[14]) is cheap to reach and exercised by
     // test_aesgcm_gctr_counter_byte_carry; the full 2^32 wrap (~64 GiB in one call) is the only branch a
     // host test cannot reach.
-    for (int i = 15; i >= 12; // GCOVR_EXCL_BR_LINE  full 2^32 counter wrap (~64 GiB/call) unreachable
-         i--)
+    for (int i = 15; i >= 12; i--)
     {
         if (++ctr[i])
         {

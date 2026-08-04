@@ -102,7 +102,7 @@ static void bn_init(void)
         // the doubled 2048-bit value is already < p, so the cmp_raw() half of this OR is never
         // the deciding vote - it only ever agrees with an overflow that is already false.
         // Structurally unreachable (a mathematical constant of this trace), not merely untested.
-        if (overflow || bn_cmp_raw(s_g14.r2.d, group14_p.d, PC_BN_LIMBS) >= 0) // GCOVR_EXCL_BR_LINE
+        if (overflow || bn_cmp_raw(s_g14.r2.d, group14_p.d, PC_BN_LIMBS) >= 0)
         {
             bn_sub_inplace(s_g14.r2.d, group14_p.d, PC_BN_LIMBS);
         }

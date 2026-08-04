@@ -349,7 +349,7 @@ proto_bool pc_wamp_get_uint(const char *msg, size_t index, uint64_t *out)
     size_t n;
     // n == 0 is defensive only: scan_value() either fails (0, rejected inside pc_wamp_element) or
     // returns an index strictly past where it started, so a returned element is never empty.
-    if (!pc_wamp_element(msg, index, &s, &n) || n == 0) // GCOVR_EXCL_LINE  n==0 arm unreachable (see above)
+    if (!pc_wamp_element(msg, index, &s, &n) || n == 0)
     {
         return PROTO_FALSE;
     }
@@ -394,7 +394,7 @@ proto_bool pc_wamp_get_uri(const char *msg, size_t index, char *out, size_t out_
     // The trailing-quote arm is defensive only: an element that starts with '"' was scanned by
     // scan_string(), which returns the index just past the CLOSING quote or fails outright, so
     // s[n-1] is always '"' once s[0] is.
-    if (n < 2 || s[0] != '"' || s[n - 1] != '"') // GCOVR_EXCL_LINE  s[n-1] arm unreachable (see above)
+    if (n < 2 || s[0] != '"' || s[n - 1] != '"')
     {
         return PROTO_FALSE;
     }

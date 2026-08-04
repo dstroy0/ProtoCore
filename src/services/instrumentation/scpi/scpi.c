@@ -455,8 +455,8 @@ static uint8_t esr_bit_for(int16_t number)
 {
     if (number >= 0)
     {
-        return number == 0 ? 0 : SCPI_ESR_DDE; // GCOVR_EXCL_BR_LINE  ==0 arm unreachable: pc_scpi_push_error (only
-                                               // caller) already returns on number==0 before calling this
+        return number == 0 ? 0 : SCPI_ESR_DDE;
+        // caller) already returns on number==0 before calling this
     }
     if (number > -200)
     {
@@ -610,8 +610,7 @@ static proto_bool match_node(const char *i, size_t ilen, const char *p, size_t p
     // and both alpha ranges ('A'-'Z', 'a'-'z') satisfy >= 'A'; the branch data for a multi-line "&&" chain
     // lands on the line each sub-test's operator sits on, so the marker must sit on this line, not the
     // "<= 'Z'" continuation below, to actually take effect.
-    while (pshort < palpha && p[pshort] >= 'A' && // GCOVR_EXCL_BR_LINE
-           p[pshort] <= 'Z')
+    while (pshort < palpha && p[pshort] >= 'A' && p[pshort] <= 'Z')
     {
         pshort++;
     }

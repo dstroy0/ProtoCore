@@ -114,11 +114,11 @@ static void dispatch_request(H3Conn *h3, H3Stream *st)
             // are defensive: body and st->buf are the same PC_H3_STREAM_BUF size, and every DATA
             // payload counted into body_len sits behind a frame header inside st->buf, so the running
             // total is always strictly below sizeof(body) and take never exceeds room.
-            size_t room = (body_len < sizeof(body)) ? sizeof(body) - body_len : 0; // GCOVR_EXCL_LINE
+            size_t room = (body_len < sizeof(body)) ? sizeof(body) - body_len : 0;
             size_t take = (size_t)fr.length;
-            if (take > room) // GCOVR_EXCL_LINE
+            if (take > room)
             {
-                take = room; // GCOVR_EXCL_LINE
+                take = room;
             }
             if (take)
             {
@@ -334,10 +334,10 @@ proto_bool pc_h3_conn_respond(H3Conn *h3, uint64_t stream_id, int status, const 
     // HEADERS frame + DATA frame, sent on the request stream with FIN.
     uint8_t out[PC_H3_STREAM_BUF];
     size_t op = pc_h3_build_headers(out, sizeof(out), block, bp);
-    if (!op) // GCOVR_EXCL_LINE  block is a fixed 256 bytes and out is PC_H3_STREAM_BUF, whose floor the
+    if (!op)
     {
-        return PROTO_FALSE; // GCOVR_EXCL_LINE  static_assert at the top of this file pins: the HEADERS frame always
-                            // fits
+        return PROTO_FALSE;
+        // fits
     }
     if (body_len)
     {

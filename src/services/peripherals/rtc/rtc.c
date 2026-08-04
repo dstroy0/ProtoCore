@@ -31,9 +31,9 @@ static uint8_t int2bcd(int v)
 static long days_from_civil(int y, int m, int d)
 {
     y -= m <= 2;
-    long era = (y >= 0 ? y : y - 399) / 400; // GCOVR_EXCL_BR_LINE  y<0 unreachable: the only caller
-                                             // feeds year = 2000 + bcd2int(r[6]) (uint8_t, so
-                                             // bcd2int >= 0) minus at most 1 for m<=2, so y >= 1999
+    long era = (y >= 0 ? y : y - 399) / 400;
+    // feeds year = 2000 + bcd2int(r[6]) (uint8_t, so
+    // bcd2int >= 0) minus at most 1 for m<=2, so y >= 1999
     unsigned yoe = (unsigned)(y - era * 400);
     unsigned doy = (153u * (unsigned)(m + (m > 2 ? -3 : 9)) + 2u) / 5u + (unsigned)d - 1u;
     unsigned doe = yoe * 365u + yoe / 4u - yoe / 100u + doy;
@@ -42,9 +42,9 @@ static long days_from_civil(int y, int m, int d)
 static void civil_from_days(long z, int *y, int *m, int *d)
 {
     z += 719468;
-    long era = (z >= 0 ? z : z - 146096) / 146097; // GCOVR_EXCL_BR_LINE  z<0 unreachable: the only
-                                                   // caller passes days = epoch/86400u, and epoch
-                                                   // is uint32_t so days is always >= 0
+    long era = (z >= 0 ? z : z - 146096) / 146097;
+    // caller passes days = epoch/86400u, and epoch
+    // is uint32_t so days is always >= 0
     unsigned doe = (unsigned)(z - era * 146097);
     unsigned yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
     long yy = (long)yoe + era * 400;
@@ -87,9 +87,9 @@ proto_bool pc_rtc_regs_to_epoch(const uint8_t r[RTC_REG_COUNT], uint32_t *epoch)
     }
     // int64: days*86400 exceeds a 32-bit long (Windows host and ESP32 both) past ~2038.
     int64_t t = (int64_t)days_from_civil(year, month, date) * 86400 + hour * 3600 + min * 60 + sec;
-    if (t < 0 || t > 0xFFFFFFFFLL) // GCOVR_EXCL_BR_LINE  t<0 unreachable: year = 2000 + bcd2int(r[6])
-                                   // is always >= 2000, so days_from_civil (and t) is always positive;
-                                   // t > 0xFFFFFFFF (year rollover past 2106) is real and tested below
+    if (t < 0 || t > 0xFFFFFFFFLL)
+    // is always >= 2000, so days_from_civil (and t) is always positive;
+    // t > 0xFFFFFFFF (year rollover past 2106) is real and tested below
     {
         return PROTO_FALSE;
     }

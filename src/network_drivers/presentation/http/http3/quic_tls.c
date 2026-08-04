@@ -63,8 +63,8 @@ static proto_bool emit(QuicTls *qt, uint8_t *flight, size_t cap, size_t *plen, s
     // *plen <= cap is the invariant this append maintains, so cap - *plen never underflows; refuse a
     // write that would run past the flight buffer (each builder already caps to what it was told, so
     // this only fires if that contract is ever broken - it keeps flight+*plen in bounds regardless).
-    if (!written || written > cap - *plen) // GCOVR_EXCL_LINE  every caller passes the builder exactly cap - *plen
-    {                                      // as its own capacity, so a non-zero return can never exceed it
+    if (!written || written > cap - *plen)
+    { // as its own capacity, so a non-zero return can never exceed it
         fail(qt, TLS_ALERT_INTERNAL_ERROR);
         return PROTO_FALSE;
     }
@@ -90,10 +90,10 @@ static proto_bool send_hello_retry(QuicTls *qt, const uint8_t *msg, size_t msg_l
     pc_sha256_init(&qt->transcript);
     uint8_t mh[40];
     size_t mhn = pc_tls13_build_message_hash(mh, sizeof(mh), ch1_hash);
-    if (!mhn) // GCOVR_EXCL_LINE  mh[40] always fits the 36-byte hash
+    if (!mhn)
     {
-        fail(qt, TLS_ALERT_INTERNAL_ERROR); // GCOVR_EXCL_LINE
-        return PROTO_FALSE;                 // GCOVR_EXCL_LINE
+        fail(qt, TLS_ALERT_INTERNAL_ERROR);
+        return PROTO_FALSE;
     }
     pc_sha256_update(&qt->transcript, mh, mhn); // message_hash is transcript-only, never sent
 
@@ -101,9 +101,9 @@ static proto_bool send_hello_retry(QuicTls *qt, const uint8_t *msg, size_t msg_l
     size_t n = pc_tls13_build_hello_retry_request(qt->flight_initial, sizeof(qt->flight_initial), ch->session_id,
                                                   ch->session_id_len, TLS_GROUP_X25519MLKEM768, NULL, 0,
                                                   /*dtls=*/PROTO_FALSE);
-    if (!emit(qt, qt->flight_initial, sizeof(qt->flight_initial), &qt->flight_initial_len, n)) // GCOVR_EXCL_LINE
+    if (!emit(qt, qt->flight_initial, sizeof(qt->flight_initial), &qt->flight_initial_len, n))
     {
-        return PROTO_FALSE; // GCOVR_EXCL_LINE  the HRR (~50B) always fits flight_initial (>=256B)
+        return PROTO_FALSE;
     }
     qt->hrr_sent = PROTO_TRUE;
     return PROTO_TRUE; // stay in QTLS_START, awaiting ClientHello2 at the Initial level
@@ -129,9 +129,7 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
     use_hybrid = ch.has_hybrid_share && ch.offers_x25519mlkem768;
     // The client offered X25519MLKEM768 but sent only a classical key_share: ask it (once) to retry with
     // the hybrid share rather than silently downgrading to X25519 (RFC 8446 §4.1.4).
-    // GCOVR_EXCL_LINE below: !ch.has_hybrid_share is implied by the two operands before it - use_hybrid is
-    // has_hybrid_share && offers_x25519mlkem768, so reaching it with the share present is impossible.
-    if (!use_hybrid && ch.offers_x25519mlkem768 && !ch.has_hybrid_share && !qt->hrr_sent) // GCOVR_EXCL_LINE
+    if (!use_hybrid && ch.offers_x25519mlkem768 && !ch.has_hybrid_share && !qt->hrr_sent)
     {
         return send_hello_retry(qt, msg, msg_len, &ch);
     }
@@ -214,10 +212,10 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
                                            sizeof(qt->flight_initial) - qt->flight_initial_len, qt->cfg.random,
                                            ch.session_id, ch.session_id_len, server_share, share_len, group,
                                            /*dtls=*/PROTO_FALSE, /*conn_id=*/NULL, /*conn_id_len=*/0);
-    if (!emit(qt, qt->flight_initial, sizeof(qt->flight_initial), &qt->flight_initial_len, n)) // GCOVR_EXCL_LINE
+    if (!emit(qt, qt->flight_initial, sizeof(qt->flight_initial), &qt->flight_initial_len, n))
     {
-        return PROTO_FALSE; // GCOVR_EXCL_LINE  ServerHello always fits flight_initial (classical <=~160B; the
-                            // hybrid's ~1.2 KB share fits the PQC-sized 1400B buffer)
+        return PROTO_FALSE;
+        // hybrid's ~1.2 KB share fits the PQC-sized 1400B buffer)
     }
 
     // Handshake keys from Transcript-Hash(ClientHello..ServerHello).
@@ -237,10 +235,10 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
     n = pc_tls13_build_encrypted_extensions(qt->flight_hs + qt->flight_hs_len,
                                             sizeof(qt->flight_hs) - qt->flight_hs_len, tp_enc, tp_len,
                                             /*rpk_server_cert=*/PROTO_FALSE);
-    if (!emit(qt, qt->flight_hs, sizeof(qt->flight_hs), &qt->flight_hs_len, n)) // GCOVR_EXCL_LINE
+    if (!emit(qt, qt->flight_hs, sizeof(qt->flight_hs), &qt->flight_hs_len, n))
     {
-        return PROTO_FALSE; // GCOVR_EXCL_LINE  EncryptedExtensions is the first message written into flight_hs and
-                            // PC_H3_CRYPTO_BUF >= PC_QUIC_TLS_EE_MAX is pinned by the static_assert above
+        return PROTO_FALSE;
+        // PC_H3_CRYPTO_BUF >= PC_QUIC_TLS_EE_MAX is pinned by the static_assert above
     }
 
     n = pc_tls13_build_certificate(qt->flight_hs + qt->flight_hs_len, sizeof(qt->flight_hs) - qt->flight_hs_len,
@@ -283,8 +281,8 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
 
 static proto_bool process_client_finished(QuicTls *qt, const uint8_t *msg, size_t msg_len)
 {
-    if (msg[0] != TLS_HS_FINISHED || msg_len != 4 + 32) // GCOVR_EXCL_LINE  process_message only routes a
-    {                                                   // Finished here, so the type arm cannot be taken
+    if (msg[0] != TLS_HS_FINISHED || msg_len != 4 + 32)
+    { // Finished here, so the type arm cannot be taken
         fail(qt, TLS_ALERT_DECODE_ERROR);
         return PROTO_FALSE;
     }

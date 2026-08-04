@@ -201,7 +201,7 @@ proto_bool ws_send_frame(WsConn *ws, WsOpcode opcode, const uint8_t *payload, ui
             // (all-9-bit literals = 1.125*len, matches only shrink, +16 covers the fixed
             // header/EOB/stored-trailer/4-byte-marker overhead). The clen < len leg is
             // exercised both ways in test; only the rc-error leg is the dead branch below.
-            if (rc == DEFLATE_OK && clen < len) // GCOVR_EXCL_BR_LINE  dead rc-error leg (see above)
+            if (rc == DEFLATE_OK && clen < len)
             {
                 payload = cbuf;
                 len = (uint16_t)clen;
@@ -413,9 +413,9 @@ void ws_parse(WsConn *ws)
         // read_byte() succeeds - true on the host AND on-device (SPSC ring, single producer /
         // single consumer per slot); there is no interrupt-race window at this specific call
         // site to reproduce.
-        if (!pc_conn_read_byte(ws->slot_id, &byte)) // GCOVR_EXCL_BR_LINE  see above: cannot fail here by construction
+        if (!pc_conn_read_byte(ws->slot_id, &byte))
         {
-            break; // GCOVR_EXCL_LINE
+            break;
         }
         ws_feed_byte(ws, byte);
     }

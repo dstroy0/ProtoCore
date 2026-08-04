@@ -32,9 +32,9 @@ static proto_bool put_str(uint8_t *out, size_t cap, size_t *pos, const char *s)
     // reachable and tested - out of the branch measurement. sl is strnlen-capped to `cap`, the
     // caller's record buffer, which is orders of magnitude below the 16-bit prefix limit in every
     // build this library is sized for. The check guards the u16 cast if cap ever grows.
-    if (sl > 0xFFFFu) // GCOVR_EXCL_LINE - sl <= cap, far below 0xFFFF, see above
+    if (sl > 0xFFFFu)
     {
-        return PROTO_FALSE; // GCOVR_EXCL_LINE - unreachable body of the guard above
+        return PROTO_FALSE;
     }
     if (*pos + 2 + sl > cap)
     {

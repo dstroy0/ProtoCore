@@ -174,7 +174,7 @@ static void bn_mul_full(const uint32_t a[PC_BN_LIMBS], const uint32_t b[PC_BN_LI
         // a and b are both PC_BN_LIMBS (64) limbs, so their full product is bounded by 2*PC_BN_LIMBS
         // (128) limbs; carry propagation out of the top half can never still be pending when k reaches
         // 2*PC_BN_LIMBS. The "k < 2*PC_BN_LIMBS" half of this guard is defensive and provably unreachable.
-        while (carry && k < 2 * PC_BN_LIMBS) // GCOVR_EXCL_BR_LINE
+        while (carry && k < 2 * PC_BN_LIMBS)
         {
             uint64_t cur = (uint64_t)p[k] + carry;
             p[k] = (uint32_t)cur;
@@ -300,7 +300,7 @@ static void bn_modexp_full(const pc_bignum *base, const pc_bignum *exp, const pc
     int top_bit = 31;
     // exp->d[top_limb] != 0 by construction, so this scan finds a set bit before top_bit passes 0;
     // the "top_bit >= 0" half of the guard is defensive, not reachable.
-    while (top_bit >= 0 && !((exp->d[top_limb] >> top_bit) & 1u)) // GCOVR_EXCL_BR_LINE
+    while (top_bit >= 0 && !((exp->d[top_limb] >> top_bit) & 1u))
     {
         top_bit--;
     }
