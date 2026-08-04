@@ -6,12 +6,14 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- brace assignment, lambdas, and six more defaulted arguments in test/ ([`463ddae`](https://github.com/dstroy0/ProtoCore/commit/463ddaef3e2d5d2bfd6f1d2accb657ecaeaddb61))
 - restore the ESP mount adapter's extension, and three gaps behind it ([`8472e1b`](https://github.com/dstroy0/ProtoCore/commit/8472e1b62690f9834432a46ae5f0a5b92a128d55))
 - the scoped-enum residue in test/, resolved by the compiler not by guessing ([`a2d479a`](https://github.com/dstroy0/ProtoCore/commit/a2d479a075ef1cba7646687739e29a8d18758579))
 - the C++ the native suites could not see, and the WAL's missing barrier ([`f38924b`](https://github.com/dstroy0/ProtoCore/commit/f38924b1a8ab7cae0058f64f777937c446842ed7))
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`0d7ec3e`](https://github.com/dstroy0/ProtoCore/commit/0d7ec3efb968a8fc8b13d0163293e4a5ae18e169))
 - update test report + coverage [skip ci] ([`4f3f7c0`](https://github.com/dstroy0/ProtoCore/commit/4f3f7c0abca1f6e120965297912d4ff1fb4c8b2d))
 - update CHANGELOG.md [skip ci] ([`2febb1c`](https://github.com/dstroy0/ProtoCore/commit/2febb1cf05f89270358aa51072a3153441a652bf))
 - update CHANGELOG.md [skip ci] ([`0130b4c`](https://github.com/dstroy0/ProtoCore/commit/0130b4c09e9fdddd91ff1063a07d0c1cfd2e617b))
