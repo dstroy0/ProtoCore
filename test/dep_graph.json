@@ -95,6 +95,18 @@
 ".pio/libdeps/native_crypto_kat/littlefs/src/lfs_util.c": [
 "native_crypto_kat"
 ],
+".pio/libdeps/native_csrf/littlefs/include/lfs.h": [
+"native_csrf"
+],
+".pio/libdeps/native_csrf/littlefs/include/lfs_util.h": [
+"native_csrf"
+],
+".pio/libdeps/native_csrf/littlefs/src/lfs.c": [
+"native_csrf"
+],
+".pio/libdeps/native_csrf/littlefs/src/lfs_util.c": [
+"native_csrf"
+],
 ".pio/libdeps/native_docstore/littlefs/include/lfs.h": [
 "native_docstore"
 ],
@@ -383,6 +395,18 @@
 ".pio/libdeps/native_pool_workers/littlefs/src/lfs_util.c": [
 "native_pool_workers"
 ],
+".pio/libdeps/native_primitives/littlefs/include/lfs.h": [
+"native_primitives"
+],
+".pio/libdeps/native_primitives/littlefs/include/lfs_util.h": [
+"native_primitives"
+],
+".pio/libdeps/native_primitives/littlefs/src/lfs.c": [
+"native_primitives"
+],
+".pio/libdeps/native_primitives/littlefs/src/lfs_util.c": [
+"native_primitives"
+],
 ".pio/libdeps/native_prov/littlefs/include/lfs.h": [
 "native_prov"
 ],
@@ -406,6 +430,18 @@
 ],
 ".pio/libdeps/native_quic_crypto/littlefs/src/lfs_util.c": [
 "native_quic_crypto"
+],
+".pio/libdeps/native_redis/littlefs/include/lfs.h": [
+"native_redis"
+],
+".pio/libdeps/native_redis/littlefs/include/lfs_util.h": [
+"native_redis"
+],
+".pio/libdeps/native_redis/littlefs/src/lfs.c": [
+"native_redis"
+],
+".pio/libdeps/native_redis/littlefs/src/lfs_util.c": [
+"native_redis"
 ],
 ".pio/libdeps/native_safety_scl/littlefs/include/lfs.h": [
 "native_safety_scl"
@@ -2881,6 +2917,7 @@
 "src/mmgr/frame.c": [
 "native_application",
 "native_config_io",
+"native_csrf",
 "native_frame",
 "native_gpio_map",
 "native_h3_server",
@@ -3604,6 +3641,7 @@
 "native_application",
 "native_h3_server",
 "native_json",
+"native_keepalive",
 "native_swar",
 "native_upload",
 "native_web_terminal"
@@ -5554,6 +5592,7 @@
 "native_application",
 "native_h3_server",
 "native_json",
+"native_keepalive",
 "native_signaling",
 "native_swar",
 "native_upload",
@@ -8849,6 +8888,7 @@
 "src/shared_primitives/speed_opt.h": [
 "native_application",
 "native_config_io",
+"native_csrf",
 "native_frame",
 "native_gpio_map",
 "native_h3_server",
@@ -9258,6 +9298,7 @@
 "native_coap",
 "native_coap_observe",
 "native_crypto_kat",
+"native_csrf",
 "native_docstore",
 "native_edge_cache",
 "native_edge_cache_sd",
@@ -9291,6 +9332,7 @@
 "native_pool_workers",
 "native_prov",
 "native_quic_crypto",
+"native_redis",
 "native_safety_scl",
 "native_sb_modbus",
 "native_secure_pool",

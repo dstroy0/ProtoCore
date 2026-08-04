@@ -1,8 +1,8 @@
 # Test Report
 
-**Generated:** 2026-08-04 01:42:06
+**Generated:** 2026-08-04 01:51:24
 **Command:** `pio test` over 304 auto-discovered native envs (excludes native_pentest, native_codeql)
-**Result:** ✅ 13 passed - 239s
+**Result:** ✅ 13 passed - 249s
 
 ---
 
@@ -13,7 +13,7 @@
 | `test_control`           | `native_control`        |     0 |   ✅   | 00:00:09.919 |
 | `test_ftp`               | `native_ftp`            |     0 |   ✅   | 00:00:00.847 |
 | `test_httpcache`         | `native_httpcache`      |     0 |   ✅   | 00:00:00.844 |
-| `test_primitives`        | `native_primitives`     |     0 |   ✅   | 00:00:00.706 |
+| `test_primitives`        | `native_primitives`     |     0 |   ✅   | 00:00:00.728 |
 | `test_ip`                | `native_ip`             |     0 |   ✅   | 00:00:00.836 |
 | `test_arena`             | `native_arena`          |     0 |   ✅   | 00:00:00.837 |
 | `test_ssh_ed25519`       | `native_ssh_ed25519`    |     0 |   ✅   | 00:00:02.103 |
@@ -186,6 +186,13 @@
 | `test_ssh_crypto`        | `native_ssh`            |     0 |   ✅   | 00:00:02.366 |
 | `test_tls13_kdf`         | `native_tls13_kdf`      |     0 |   ✅   | 00:00:01.210 |
 | `test_web_terminal`      | `native_web_terminal`   |     0 |   ✅   | 00:00:02.274 |
+| `test_coap`              | `native_coap`           |     0 |   ✅   | 00:00:01.704 |
+| `test_coap`              | `native_coap_observe`   |     0 |   ✅   | 00:00:01.215 |
+| `test_csrf`              | `native_csrf`           |     0 |   ✅   | 00:00:01.367 |
+| `test_fins`              | `native_fins`           |     0 |   ✅   | 00:00:01.101 |
+| `test_keepalive`         | `native_keepalive`      |     0 |   ✅   | 00:00:02.401 |
+| `test_crc`               | `native_primitives`     |     0 |   ✅   | 00:00:01.155 |
+| `test_redis_resp`        | `native_redis`          |     0 |   ✅   | 00:00:01.115 |
 
 ---
 
