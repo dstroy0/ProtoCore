@@ -1535,8 +1535,8 @@ rate. Keep the front port off untrusted networks (the relay authenticates nothin
 ### Radio keep-awake during transfers (PC_ENABLE_RADIO_POWER)
 
 Modem sleep (the default `WIFI_PS_MIN_MODEM`) parks the radio between DTIM beacons to save power, which is
-exactly what dropped a byte mid-transfer on the first 200 MB run. `pc_radio_busy_hold()` /
-`pc_radio_busy_release()` are reference-counted: the first hold forces `WIFI_PS_NONE`, the last release
+exactly what dropped a byte mid-transfer on the first 200 MB run. `Radio.busy_hold()` /
+`Radio.busy_release()` are reference-counted: the first hold forces `WIFI_PS_NONE`, the last release
 restores the configured `PC_RADIO_WIFI_PS`. The relay holds one while any bridge is active, so a
 port-forward keeps the radio awake for the whole transfer and lets power saving resume when idle - no
 per-app tuning. **Practicality:** on a battery device you still get modem-sleep power savings at rest; you
