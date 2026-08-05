@@ -15,7 +15,7 @@ brings WiFi up, and the tables they dispatch through are shared per-core state.
 
 Reads section placement from the symbol table; no code is disassembled.
 
-Usage:  python tools/dev_env/blob_iram.py <repo-root>
+Usage:  python reverse_engineering/esp32_mac/blob_iram.py <repo-root>
 """
 import os
 import re
@@ -83,7 +83,7 @@ def main():
         "hardest class of failure to reproduce. It is also why the radio pins to one core: the ISRs",
         "are registered on the core that brings WiFi up.",
         "",
-        "Regenerate with `python tools/dev_env/blob_iram.py .`.",
+        "Regenerate with `python reverse_engineering/esp32_mac/blob_iram.py .`.",
         "",
         "| Target | Library | Functions | In IRAM | Share |",
         "| --- | --- | ---: | ---: | ---: |",
@@ -131,7 +131,7 @@ def main():
             doc += iram
             doc += ["```", ""]
 
-    dest = os.path.join(repo, "src", "board_drivers", "hal", "esp", "RADIO_BLOB_IRAM.md")
+    dest = os.path.join(repo, "reverse_engineering", "esp32_mac", "RADIO_BLOB_IRAM.md")
     with open(dest, "w", encoding="utf-8", newline="\n") as fh:
         fh.write("\n".join(doc) + "\n")
     print(f"\n{len(common)} IRAM-resident on every WiFi die -> {dest}")

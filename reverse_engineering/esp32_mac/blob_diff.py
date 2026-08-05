@@ -17,7 +17,7 @@ Three verdicts per function, in decreasing strength:
 Addresses are masked rather than compared because the whole point is that placement moves.
 Relocation targets are NOT masked: which symbol a call reaches is functional.
 
-Usage:  python tools/dev_env/blob_diff.py <repo-root> [--lib libphy.a] [--chip esp32] [--full]
+Usage:  python reverse_engineering/esp32_mac/blob_diff.py <repo-root> [--lib libphy.a] [--chip esp32] [--full]
 """
 import os
 import re
@@ -207,7 +207,7 @@ def main():
         "linked images. Here the real signal is identical against different.",
         "",
         "Read with `objdump -dr`; nothing is decompiled. Regenerate with",
-        "`python tools/dev_env/blob_diff.py .`.",
+        "`python reverse_engineering/esp32_mac/blob_diff.py .`.",
         "",
         "| Target | Library | Shared | Identical | Equivalent | Different | A only | I only |",
         "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |",
@@ -233,7 +233,7 @@ def main():
             doc.append(f"... {len(diff) - 60} more, rerun with --full")
         doc += ["```", ""]
 
-    dest = os.path.join(repo, "src", "board_drivers", "hal", "esp", "RADIO_BLOB_CODEDIFF.md")
+    dest = os.path.join(repo, "reverse_engineering", "esp32_mac", "RADIO_BLOB_CODEDIFF.md")
     with open(dest, "w", encoding="utf-8", newline="\n") as fh:
         fh.write("\n".join(doc) + "\n")
     print(f"\nshared {tot_sh}: identical {tot_sb}, equivalent {tot_eq}, different {tot_df} -> {dest}")

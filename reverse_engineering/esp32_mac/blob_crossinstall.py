@@ -12,7 +12,7 @@ both directions alongside the size difference that shows they are genuinely sepa
 
 Symbol tables only: this reads names, not code.
 
-Usage:  python tools/dev_env/blob_crossinstall.py <repo-root>
+Usage:  python reverse_engineering/esp32_mac/blob_crossinstall.py <repo-root>
 """
 import os
 import re
@@ -106,7 +106,7 @@ def main():
         "",
         f"Arduino SDK targets compared: {', '.join('`' + t + '`' for t in targets)}. ESP-IDF {ver}.",
         "",
-        "Regenerate with `python tools/dev_env/blob_crossinstall.py .`.",
+        "Regenerate with `python reverse_engineering/esp32_mac/blob_crossinstall.py .`.",
         "",
         "## Per library",
         "",
@@ -173,7 +173,7 @@ def main():
             if only_i:
                 doc += [f"{len(only_i)} only in the IDF build.", "", "```"] + only_i + ["```", ""]
 
-    dest = os.path.join(repo, "src", "board_drivers", "hal", "esp", "RADIO_BLOB_CROSSINSTALL.md")
+    dest = os.path.join(repo, "reverse_engineering", "esp32_mac", "RADIO_BLOB_CROSSINSTALL.md")
     with open(dest, "w", encoding="utf-8", newline="\n") as fh:
         fh.write("\n".join(doc) + "\n")
     print(f"\n{identical}/{rows} pairs identical -> {dest}")

@@ -18,7 +18,7 @@ Each differing function is put in one bucket, checked in this order:
 
 Reads the instruction streams `blob_diff.py` extracts, so the two agree by construction.
 
-Usage:  python tools/dev_env/blob_behavior.py <repo-root> [--lib libphy.a] [--chip esp32]
+Usage:  python reverse_engineering/esp32_mac/blob_behavior.py <repo-root> [--lib libphy.a] [--chip esp32]
 """
 import os
 import re
@@ -153,7 +153,7 @@ def main():
         "Only `registers`, `calls` and `structural` can change what the radio does. `reordered` and",
         "`values` are the tuning that moves between SDK releases.",
         "",
-        "Regenerate with `python tools/dev_env/blob_behavior.py .`.",
+        "Regenerate with `python reverse_engineering/esp32_mac/blob_behavior.py .`.",
         "",
         "| Target | Library | Differ | " + " | ".join(f"`{k}`" for k in ORDER) + " |",
         "| --- | --- | ---: | " + " | ".join("---:" for _ in ORDER) + " |",
@@ -176,7 +176,7 @@ def main():
             doc.append(f"{kind:11s} {f}")
         doc += ["```", ""]
 
-    dest = os.path.join(repo, "src", "board_drivers", "hal", "esp", "RADIO_BLOB_BEHAVIOR.md")
+    dest = os.path.join(repo, "reverse_engineering", "esp32_mac", "RADIO_BLOB_BEHAVIOR.md")
     with open(dest, "w", encoding="utf-8", newline="\n") as fh:
         fh.write("\n".join(doc) + "\n")
     print(f"\n{tot} differing: " + ", ".join(f"{k} {totals[k]}" for k in ORDER) + f" -> {dest}")

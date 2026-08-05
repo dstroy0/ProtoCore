@@ -8,7 +8,7 @@ toolchain does not cover them - and reports the parity.
 
 Symbol tables only: this reads names, not code.
 
-Usage:  python tools/dev_env/blob_parity.py <repo-root>
+Usage:  python reverse_engineering/esp32_mac/blob_parity.py <repo-root>
 """
 import os
 import re
@@ -148,7 +148,7 @@ def main():
         "per target. The Arduino SDK stops at esp32 / s2 / s3 / c3 and leaves out every die shipped",
         "since, so it cannot answer this question.",
         "",
-        "Regenerate with `python tools/dev_env/blob_parity.py .`.",
+        "Regenerate with `python reverse_engineering/esp32_mac/blob_parity.py .`.",
         "",
         "## Variants",
         "",
@@ -219,7 +219,7 @@ def main():
             doc += missing
             doc += ["```", ""]
 
-    dest = os.path.join(repo, "src", "board_drivers", "hal", "esp", "RADIO_BLOB_PARITY.md")
+    dest = os.path.join(repo, "reverse_engineering", "esp32_mac", "RADIO_BLOB_PARITY.md")
     with open(dest, "w", encoding="utf-8", newline="\n") as fh:
         fh.write("\n".join(doc) + "\n")
     print(f"\ncommon {len(common)} / union {len(union)} -> {dest}")

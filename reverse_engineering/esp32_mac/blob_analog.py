@@ -20,7 +20,7 @@ table dereference to the slot number, and emits one line per call.
 A slot is reported by its byte offset. The table is filled at runtime from ROM addresses, so no
 header names the slots; the offset plus the argument count is what identifies each one.
 
-Usage:  python tools/dev_env/blob_analog.py <repo-root>
+Usage:  python reverse_engineering/esp32_mac/blob_analog.py <repo-root>
 """
 import os
 import re
@@ -187,7 +187,7 @@ def main():
         "immediate, so the full programming sequence is recoverable from the instruction stream.",
         "",
         "Read out with `xtensa-esp32-elf-objdump -dr`; nothing here is decompiled. Regenerate with",
-        "`python tools/dev_env/blob_analog.py .`.",
+        "`python reverse_engineering/esp32_mac/blob_analog.py .`.",
         "",
         "A slot is given by its byte offset into the table. The table is filled at runtime from ROM",
         "addresses, so no header names the slots: the offset and the argument count identify one.",
@@ -276,7 +276,7 @@ def main():
         doc.append(f"| `0x{b & 0xFF:02X}` | {n} |")
     doc.append("")
 
-    dest = os.path.join(repo, "src", "board_drivers", "hal", "esp", "RADIO_BLOB_ANALOG.md")
+    dest = os.path.join(repo, "reverse_engineering", "esp32_mac", "RADIO_BLOB_ANALOG.md")
     with open(dest, "w", encoding="utf-8", newline="\n") as fh:
         fh.write("\n".join(doc) + "\n")
     print(f"\n{total} calls, {len(slots)} distinct slots, {len(blocks)} analog blocks -> {dest}")

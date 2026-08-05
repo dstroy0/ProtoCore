@@ -13,7 +13,7 @@ Take the dump with the board's built-in JTAG, which needs no flashing and no pan
 
 Attaching halts the cores, so resume (or `reset run`) afterwards or the board stays stopped.
 
-Usage:  python tools/dev_env/dram_scan.py <dump> [base-address-hex]
+Usage:  python reverse_engineering/esp32_mac/dram_scan.py <dump> [base-address-hex]
 """
 import struct
 import sys

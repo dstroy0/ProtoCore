@@ -3175,6 +3175,38 @@ from halves and is slower than the width it decomposes into"
 #endif
 
 /**
+ * @brief SMBus 3.1 transaction shapes over the shared I2C bus.
+ *
+ * Default off. services/peripherals/smbus adds the named transaction forms SMBus defines on top of
+ * I2C: quick command, send / receive byte, write / read byte and word, block write and read, and
+ * the two process calls. A part that speaks SMBus (a battery gauge, a fan controller, a power
+ * sequencer) answers this fixed set rather than a register layout its datasheet invents.
+ *
+ * The Packet Error Code is a CRC-8 over every byte of the transaction, the address bytes and their
+ * R/W bits included. It comes from the shared CRC engine (PC_CRC8_SMBUS) and is off until
+ * pc_smbus_set_pec() turns it on; a part that does not implement PEC NACKs the extra byte. The PEC
+ * computation is pure and host-tested; only the transfers touch I2C.
+ */
+#ifndef PC_ENABLE_SMBUS
+#define PC_ENABLE_SMBUS 0
+#endif
+
+/**
+ * @brief PMBus 1.3 power-management command set over SMBus.
+ *
+ * Default off. services/peripherals/pmbus adds the standard command codes and the two numeric
+ * encodings PMBus reports in: LINEAR11 for most telemetry (a 5-bit signed exponent and an 11-bit
+ * signed mantissa in one word) and LINEAR16 for output voltage (a 16-bit unsigned mantissa scaled
+ * by an exponent the part reports separately). Reading a digital point-of-load converter's input
+ * voltage, output current, temperature and fault status goes through these. Needs PC_ENABLE_SMBUS.
+ *
+ * The encodings are pure and host-tested; the commands ride the SMBus shapes.
+ */
+#ifndef PC_ENABLE_PMBUS
+#define PC_ENABLE_PMBUS 0
+#endif
+
+/**
  * @brief TI INA219 high-side current / power monitor (I2C).
  *
  * Default off. services/peripherals/ina219 decodes the bus-voltage register (LSB 4 mV) and the shunt-voltage
@@ -6896,6 +6928,11 @@ static_assert(sizeof(pc_iface) == 1, "pc_iface must stay one byte: it is a per-s
 #define PC_ENABLE_SNMP_TRAP_NEEDS_SNMP PC_ENABLE_SNMP
 #if PC_ENABLE_SNMP_TRAP && !PC_ENABLE_SNMP_TRAP_NEEDS_SNMP
 #error "ProtoCore: PC_ENABLE_SNMP_TRAP needs PC_ENABLE_SNMP"
+#endif
+
+#define PC_ENABLE_PMBUS_NEEDS_SMBUS PC_ENABLE_SMBUS
+#if PC_ENABLE_PMBUS && !PC_ENABLE_PMBUS_NEEDS_SMBUS
+#error "ProtoCore: PC_ENABLE_PMBUS needs PC_ENABLE_SMBUS"
 #endif
 
 #define PC_ENABLE_COAP_OBSERVE_NEEDS_COAP PC_ENABLE_COAP

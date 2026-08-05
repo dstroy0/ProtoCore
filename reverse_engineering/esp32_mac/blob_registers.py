@@ -12,7 +12,7 @@ function, the ordered list of registers it touches and the calls it makes betwee
 
 Nothing is decompiled: this reads the instruction stream objdump prints.
 
-Usage:  python tools/dev_env/blob_registers.py <repo-root> [--only <substring>]
+Usage:  python reverse_engineering/esp32_mac/blob_registers.py <repo-root> [--only <substring>]
 """
 import os
 import re
@@ -187,7 +187,7 @@ def main():
         "",
         "`wr` and `rd` carry the access width in bits.",
         "",
-        "Regenerate with `python tools/dev_env/blob_registers.py .`.",
+        "Regenerate with `python reverse_engineering/esp32_mac/blob_registers.py .`.",
         "",
     ]
     grand = {}
@@ -228,7 +228,7 @@ def main():
         doc.append(f"0x{addr:08X}  {n}")
     doc += ["```", ""]
 
-    dest = os.path.join(repo, "src", "board_drivers", "hal", "esp", "RADIO_BLOB_REGISTERS.md")
+    dest = os.path.join(repo, "reverse_engineering", "esp32_mac", "RADIO_BLOB_REGISTERS.md")
     with open(dest, "w", encoding="utf-8", newline="\n") as fh:
         fh.write("\n".join(doc) + "\n")
     print(f"\n{len(grand)} distinct registers -> {dest}")
