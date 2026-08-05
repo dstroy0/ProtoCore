@@ -12,6 +12,7 @@
  */
 
 #include "network_drivers/network/ip.h"
+#include "shared_primitives/hex.h" // PC_HEX_LOWER - the shared digit table
 #include <string.h>
 
 // -------------------------------------------------------------------------------------------
@@ -284,12 +285,12 @@ static size_t format_v4(const uint8_t *b, char *out, size_t cap)
 /** Append @p v as lower-case hex with no leading zeros at @p o. Returns the digit count (1-4). */
 static size_t put_hex16(uint16_t v, char *o)
 {
-    static const char H[] = "0123456789abcdef";
     char t[4];
     int n = 0;
     do
     {
-        t[n++] = H[v & 0xF];
+        t[n] = PC_HEX_LOWER[v & 0xF];
+        n++;
         v >>= 4;
     } while (v);
     for (int k = 0; k < n; k++) // reverse into place (we built it least-significant first)
