@@ -153,14 +153,20 @@ proto_bool pc_grpcweb_trailer_status(const uint8_t *body, size_t len, int *statu
             {
                 return PROTO_FALSE;
             }
-            int v = 0;
+            // Clamp on every digit: the accumulator stays at or below INT32_MAX, so the next
+            // multiply-add stays inside int64_t however long a digit run the trailer carries.
+            int64_t v = 0;
             for (; j < len && body[j] >= '0' && body[j] <= '9'; j++)
             {
                 v = v * 10 + (body[j] - '0');
+                if (v > INT32_MAX)
+                {
+                    v = INT32_MAX;
+                }
             }
-            if (status)
+            if (status != NULL)
             {
-                *status = v;
+                *status = (int)v;
             }
             return PROTO_TRUE;
         }

@@ -3925,6 +3925,11 @@ from halves and is slower than the width it decomposes into"
 #define PC_BRIDGE_STREAM_CHUNK 256
 #endif
 
+/** @brief Chunks a STREAM target moves per poll before yielding, bounding the UART drain loop. */
+#ifndef PC_BRIDGE_MAX_DRAIN
+#define PC_BRIDGE_MAX_DRAIN 8
+#endif
+
 /** @brief UART TRANSACTION read window (ms): how long a write-then-read waits for the read_len reply. */
 #ifndef PC_BRIDGE_UART_TXN_MS
 #define PC_BRIDGE_UART_TXN_MS 50

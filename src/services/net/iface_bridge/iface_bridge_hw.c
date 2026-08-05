@@ -152,7 +152,9 @@ static void stream_sock_to_uart(uint8_t slot, const BridgeTarget *t)
 // STREAM: pipe UART RX -> socket (called from on_poll).
 static void stream_uart_to_sock(uint8_t slot, const BridgeTarget *t)
 {
-    while (pc_uart_available(t->unit) > 0)
+    // The driver ISR refills the UART ring independently of this loop, so the chunk count is what ends
+    // the poll slice: at sustained line rate the available count never falls to zero on its own.
+    for (uint8_t i = 0; i < PC_BRIDGE_MAX_DRAIN && pc_uart_available(t->unit) > 0; i++)
     {
         size_t n = pc_uart_read(t->unit, s_ctx.stream, sizeof s_ctx.stream, 0);
         if (n == 0)
@@ -161,7 +163,7 @@ static void stream_uart_to_sock(uint8_t slot, const BridgeTarget *t)
         }
         if (pc_conn_active(slot))
         {
-            pc_conn_send(slot, s_ctx.stream, (proto_u16)n);
+            (void)pc_conn_send(slot, s_ctx.stream, (proto_u16)n);
         }
     }
 }
