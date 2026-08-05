@@ -385,8 +385,18 @@ void serve_file_internal(uint8_t slot_id, proto_bool head, const pc_mnt_backend 
         {
             range_line[0] = '\0';
         }
-        pc_fs_seek(fh, (uint64_t)r_start);
-        body_off = r_start;
+        // A backend that cannot seek serves the whole representation instead, which keeps the body
+        // matching the headers. RFC 9110 14.2 permits a server to ignore Range.
+        if (pc_fs_seek(fh, (uint64_t)r_start))
+        {
+            body_off = r_start;
+        }
+        else
+        {
+            status = 200;
+            body_len = file_size;
+            range_line[0] = '\0';
+        }
     }
 #endif
 
@@ -489,7 +499,14 @@ void file_send_pump(uint8_t slot_id)
         }
         if (!pc_conn_send(slot_id, chunk, (proto_u16)n))
         {
-            pc_fs_seek(s->fh, s->off); // un-read the bytes that did not go out; retry next loop
+            // Un-read the bytes that did not go out so the next loop resends them. A backend that
+            // cannot rewind would resume at the wrong offset, so the transfer ends there instead.
+            if (!pc_fs_seek(s->fh, s->off))
+            {
+                pc_fs_close(s->fh);
+                s->active = PROTO_FALSE;
+                s->remaining = 0;
+            }
             pc_conn_flush(slot_id);
             return;
         }

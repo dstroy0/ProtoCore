@@ -207,7 +207,7 @@ static void finish_write(SftpSession *s)
 // Serialize one directory entry (filename + longname + attrs) into the entry buffer; @return its length.
 static size_t build_entry(const pc_mnt_stat *st, const char *name, size_t name_len)
 {
-    SftpAttrs a;
+    SftpAttrs a = {0};
     attrs_from_stat(st, &a);
     // The formatter returns what it wrote, so the longname is not rescanned to find out how long the
     // call that just built it made it.
@@ -250,7 +250,7 @@ static void do_readdir(SftpSession *s, uint32_t id, SftpHandle *H)
     }
     while (!H->readdir_done)
     {
-        pc_mnt_stat st;
+        pc_mnt_stat st = {0};
         if (!pc_fs_readdir(H->fh, &st, s_sftp.nm, sizeof(s_sftp.nm)))
         {
             H->readdir_done = PROTO_TRUE;
@@ -333,8 +333,8 @@ static void handle_packet(SftpSession *s, const uint8_t *buf, size_t total)
             return;
         }
         uint32_t pflags = pc_sftp_rd_u32(&r);
-        SftpAttrs a;
-        pc_sftp_rd_attrs(&r, &a);
+        SftpAttrs a = {0};
+        (void)pc_sftp_rd_attrs(&r, &a); // read to advance the reader past the attrs; the open flags decide the mode
         const char *req = req_path(0, p, pl);
         if (req == NULL)
         {
@@ -354,7 +354,7 @@ static void handle_packet(SftpSession *s, const uint8_t *buf, size_t total)
         {
             // A backend refuses to open a directory as a file, so the distinction the client sees is
             // recovered from the record rather than from a second open.
-            pc_mnt_stat st;
+            pc_mnt_stat st = {0};
             proto_bool is_dir = pc_fs_stat(s_sftp.root, req, "", &st) && st.is_dir;
             // NO_SUCH_FILE only for a plain read that found nothing - that is the one case a client
             // acts on differently. A directory, or any failed write, is FAILURE.
@@ -374,7 +374,11 @@ static void handle_packet(SftpSession *s, const uint8_t *buf, size_t total)
     case PC_SSH_FXP_CLOSE: {
         const uint8_t *h = NULL;
         uint32_t hl = 0;
-        pc_sftp_rd_string(&r, &h, &hl);
+        if (!pc_sftp_rd_string(&r, &h, &hl))
+        {
+            send_status(s, id, PC_SSH_FX_BAD_MESSAGE, "");
+            return;
+        }
         int hi = handle_index(s, h, hl);
         if (hi < 0)
         {
@@ -388,7 +392,11 @@ static void handle_packet(SftpSession *s, const uint8_t *buf, size_t total)
     case PC_SSH_FXP_READ: {
         const uint8_t *h = NULL;
         uint32_t hl = 0;
-        pc_sftp_rd_string(&r, &h, &hl);
+        if (!pc_sftp_rd_string(&r, &h, &hl))
+        {
+            send_status(s, id, PC_SSH_FX_BAD_MESSAGE, "");
+            return;
+        }
         uint64_t off = pc_sftp_rd_u64(&r);
         uint32_t rlen = pc_sftp_rd_u32(&r);
         int hi = handle_index(s, h, hl);
@@ -397,7 +405,11 @@ static void handle_packet(SftpSession *s, const uint8_t *buf, size_t total)
             send_status(s, id, PC_SSH_FX_FAILURE, "bad handle");
             return;
         }
-        pc_fs_seek(s->handles[hi].fh, off);
+        if (!pc_fs_seek(s->handles[hi].fh, off))
+        {
+            send_status(s, id, PC_SSH_FX_FAILURE, "seek");
+            return;
+        }
         uint32_t want = rlen < PC_SFTP_MAX_READ ? rlen : PC_SFTP_MAX_READ;
         int got = pc_fs_read(s->handles[hi].fh, s_sftp.rbuf, want);
         if (got <= 0)
@@ -442,7 +454,11 @@ static void handle_packet(SftpSession *s, const uint8_t *buf, size_t total)
     case PC_SSH_FXP_READDIR: {
         const uint8_t *h = NULL;
         uint32_t hl = 0;
-        pc_sftp_rd_string(&r, &h, &hl);
+        if (!pc_sftp_rd_string(&r, &h, &hl))
+        {
+            send_status(s, id, PC_SSH_FX_BAD_MESSAGE, "");
+            return;
+        }
         int hi = handle_index(s, h, hl);
         if (hi < 0 || !s->handles[hi].is_dir)
         {
@@ -463,13 +479,13 @@ static void handle_packet(SftpSession *s, const uint8_t *buf, size_t total)
             send_status(s, id, PC_SSH_FX_PERMISSION_DENIED, "bad path");
             return;
         }
-        pc_mnt_stat st;
+        pc_mnt_stat st = {0};
         if (!pc_fs_stat(s_sftp.root, req, "", &st))
         {
             send_status(s, id, PC_SSH_FX_NO_SUCH_FILE, "");
             return;
         }
-        SftpAttrs a;
+        SftpAttrs a = {0};
         attrs_from_stat(&st, &a);
         send_resp(s, pc_sftp_build_attrs(id, &a, s_sftp.out, PC_SFTP_RESP_CAP));
         return;
@@ -477,15 +493,19 @@ static void handle_packet(SftpSession *s, const uint8_t *buf, size_t total)
     case PC_SSH_FXP_FSTAT: {
         const uint8_t *h = NULL;
         uint32_t hl = 0;
-        pc_sftp_rd_string(&r, &h, &hl);
+        if (!pc_sftp_rd_string(&r, &h, &hl))
+        {
+            send_status(s, id, PC_SSH_FX_BAD_MESSAGE, "");
+            return;
+        }
         int hi = handle_index(s, h, hl);
-        pc_mnt_stat st;
+        pc_mnt_stat st = {0};
         if (hi < 0 || !pc_fs_stat(s_sftp.root, s->handles[hi].req, "", &st))
         {
             send_status(s, id, PC_SSH_FX_FAILURE, "bad handle");
             return;
         }
-        SftpAttrs a;
+        SftpAttrs a = {0};
         attrs_from_stat(&st, &a);
         send_resp(s, pc_sftp_build_attrs(id, &a, s_sftp.out, PC_SFTP_RESP_CAP));
         return;
@@ -574,7 +594,7 @@ static void handle_packet(SftpSession *s, const uint8_t *buf, size_t total)
             send_status(s, id, PC_SSH_FX_FAILURE, "path too long");
             return;
         }
-        SftpAttrs a;
+        SftpAttrs a = {0};
         a.flags = PC_SSH_FILEXFER_ATTR_PERMS;
         a.permissions = PC_SFTP_S_IFDIR | 0755;
         a.size = 0;
