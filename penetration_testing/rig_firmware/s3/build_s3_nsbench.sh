@@ -38,7 +38,8 @@ echo ">> .text of the 24 leaves kept in each image"
 for f in 0 1; do
     elf="$SKETCH/build_form$f/S3NsBench.ino.elf"
     if [ -f "$elf" ]; then
-        n=$(xtensa-esp32s3-elf-nm --print-size --size-sort "$elf" 2>/dev/null | grep -c ' [tT] f[0-9][0-9]$' || true)
-        echo "   PC_NS_FORM=$f: $n of 24 leaves present"
+        NM=$(command -v xtensa-esp32s3-elf-nm || echo "$HOME/.arduino15/packages/esp32/tools/esp-x32/*/bin/xtensa-esp32s3-elf-nm")
+        n=$(eval "$NM" "$elf" 2>/dev/null | grep -cE ' [tT] f[0-9]{2}(\.[0-9]+)?$' || true)
+        echo "   PC_NS_FORM=$f: $n of 24 leaves present in .text"
     fi
 done

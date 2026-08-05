@@ -18,8 +18,10 @@
 volatile uint32_t sink = 0;
 
 // Each leaf is the same shape and distinct constant, so none folds into another and none is empty.
+// noinline keeps each one a real function with its own symbol: inlined leaves leave nothing for the
+// linker to strip, which measures the wrong thing.
 #define LEAF(n)                                                                                                        \
-    static void f##n(uint32_t v)                                                                                       \
+    static void __attribute__((noinline)) f##n(uint32_t v)                                                             \
     {                                                                                                                  \
         sink += (v ^ 0x##n##u) * 2654435761u;                                                                          \
         sink ^= sink >> 13;                                                                                            \
