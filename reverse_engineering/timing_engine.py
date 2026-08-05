@@ -154,8 +154,9 @@ def _measure_latencies(host: str, port: int, guesses, trials: int = DEFAULT_TRIA
     return out
 
 
-def position_latency_spread(host: str, port: int, known_prefix: bytes, secret_len: int,
-                             alphabet: bytes = ALPHABET, trials: int = DEFAULT_TRIALS) -> float:
+def position_latency_spread(
+    host: str, port: int, known_prefix: bytes, secret_len: int, alphabet: bytes = ALPHABET, trials: int = DEFAULT_TRIALS
+) -> float:
     """max-min latency across every candidate byte at the next position - large on a
     vulnerable server (the right candidate visibly runs longest), near the measurement noise
     floor on a constant-time one. A clean, single-number way to SEE the fix working."""
@@ -172,8 +173,9 @@ def _best_candidate(host, port, known: bytes, pad: int, alphabet: bytes, trials:
     return best_guess[len(known)]
 
 
-def recover_secret_via_timing(host: str, port: int, secret_len: int, alphabet: bytes = ALPHABET,
-                               trials: int = 4, rounds: int = 3) -> bytes:
+def recover_secret_via_timing(
+    host: str, port: int, secret_len: int, alphabet: bytes = ALPHABET, trials: int = 4, rounds: int = 3
+) -> bytes:
     """Byte-by-byte: at each position, whichever candidate makes the server take longest is
     the real byte (more prefix matched = more early-exit delay accumulated before it).
     Each position's decision is a MAJORITY VOTE across `rounds` independent full alphabet
@@ -214,10 +216,11 @@ if __name__ == "__main__":
     print(f"    latency spread at position 0: {hard_spread * 1000:.2f} ms")
 
     print("\n================ RESULTS ================")
-    print(f"Vulnerable server : secret recovered = {recovered == SECRET}, "
-          f"spread = {vuln_spread * 1000:.2f} ms")
-    print(f"Hardened server   : spread = {hard_spread * 1000:.2f} ms "
-          f"({vuln_spread / max(hard_spread, 1e-9):.0f}x smaller)")
+    print(f"Vulnerable server : secret recovered = {recovered == SECRET}, " f"spread = {vuln_spread * 1000:.2f} ms")
+    print(
+        f"Hardened server   : spread = {hard_spread * 1000:.2f} ms "
+        f"({vuln_spread / max(hard_spread, 1e-9):.0f}x smaller)"
+    )
     print("==========================================")
     assert vuln_spread > 3 * hard_spread, "constant-time server's spread should collapse toward the noise floor"
     print("[+] OK - the fix visibly removes the signal an attacker would need")

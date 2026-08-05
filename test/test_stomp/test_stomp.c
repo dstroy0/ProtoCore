@@ -201,9 +201,9 @@ void test_parse_more_edges()
 {
     StompFrame f;
     size_t c;
-    TEST_ASSERT_FALSE(pc_stomp_parse_frame(NULL, 5, &f, &c));          // null args
-    TEST_ASSERT_FALSE(pc_stomp_parse_frame("x", 1, NULL, &c));         // null out
-    TEST_ASSERT_FALSE(pc_stomp_parse_frame("x", 1, &f, NULL));         // null consumed
+    TEST_ASSERT_FALSE(pc_stomp_parse_frame(NULL, 5, &f, &c));             // null args
+    TEST_ASSERT_FALSE(pc_stomp_parse_frame("x", 1, NULL, &c));            // null out
+    TEST_ASSERT_FALSE(pc_stomp_parse_frame("x", 1, &f, NULL));            // null consumed
     TEST_ASSERT_FALSE(pc_stomp_parse_frame("SEND", 4, &f, &c));           // command line incomplete
     TEST_ASSERT_FALSE(pc_stomp_parse_frame("SEND\nfoo:bar", 12, &f, &c)); // header line incomplete
 

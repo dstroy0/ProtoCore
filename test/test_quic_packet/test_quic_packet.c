@@ -23,8 +23,7 @@ void test_long_header_roundtrip()
     const uint8_t dcid[5] = {0x01, 0x02, 0x03, 0x04, 0x05};
     const uint8_t scid[2] = {0xAA, 0xBB};
     uint8_t out[32];
-    size_t n = pc_quic_build_long_header(out, sizeof out, QUIC_LP_INITIAL, QUIC_VERSION_1, dcid, 5,
-                                         scid, 2, 1);
+    size_t n = pc_quic_build_long_header(out, sizeof out, QUIC_LP_INITIAL, QUIC_VERSION_1, dcid, 5, scid, 2, 1);
     const uint8_t exp[14] = {0xC0, 0x00, 0x00, 0x00, 0x01, 0x05, 0x01, 0x02, 0x03, 0x04, 0x05, 0x02, 0xAA, 0xBB};
     TEST_ASSERT_EQUAL_INT(14, (int)n);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(exp, out, 14);
@@ -159,19 +158,16 @@ void test_build_guards()
 {
     const uint8_t cid[2] = {0x01, 0x02};
     uint8_t out[32];
-    TEST_ASSERT_EQUAL_INT(
-        0, (int)pc_quic_build_long_header(out, sizeof out, QUIC_LP_INITIAL, 1, cid, 2, cid, 2, 0));
-    TEST_ASSERT_EQUAL_INT(
-        0, (int)pc_quic_build_long_header(out, sizeof out, QUIC_LP_INITIAL, 1, cid, 2, cid, 2, 5));
-    TEST_ASSERT_EQUAL_INT(
-        0, (int)pc_quic_build_long_header(out, sizeof out, QUIC_LP_INITIAL, 1, cid, 21, cid, 2, 1));
-    TEST_ASSERT_EQUAL_INT(
-        0, (int)pc_quic_build_long_header(out, 6, QUIC_LP_INITIAL, 1, cid, 2, cid, 2, 1)); // too small
-    TEST_ASSERT_EQUAL_INT(0, (int)pc_quic_build_version_negotiation(out, 4, cid, 2, cid, 2, 0, 0));        // too small
+    TEST_ASSERT_EQUAL_INT(0, (int)pc_quic_build_long_header(out, sizeof out, QUIC_LP_INITIAL, 1, cid, 2, cid, 2, 0));
+    TEST_ASSERT_EQUAL_INT(0, (int)pc_quic_build_long_header(out, sizeof out, QUIC_LP_INITIAL, 1, cid, 2, cid, 2, 5));
+    TEST_ASSERT_EQUAL_INT(0, (int)pc_quic_build_long_header(out, sizeof out, QUIC_LP_INITIAL, 1, cid, 21, cid, 2, 1));
+    TEST_ASSERT_EQUAL_INT(0,
+                          (int)pc_quic_build_long_header(out, 6, QUIC_LP_INITIAL, 1, cid, 2, cid, 2, 1)); // too small
+    TEST_ASSERT_EQUAL_INT(0, (int)pc_quic_build_version_negotiation(out, 4, cid, 2, cid, 2, 0, 0));       // too small
     TEST_ASSERT_EQUAL_INT(
         0, (int)pc_quic_build_version_negotiation(out, sizeof out, cid, 21, cid, 2, 0, 0)); // oversize DCID
-    TEST_ASSERT_EQUAL_INT(0, (int)pc_quic_build_long_header(out, sizeof out, QUIC_LP_INITIAL, 1, cid, 2,
-                                                            cid, 21, 1)); // oversize SCID
+    TEST_ASSERT_EQUAL_INT(
+        0, (int)pc_quic_build_long_header(out, sizeof out, QUIC_LP_INITIAL, 1, cid, 2, cid, 21, 1)); // oversize SCID
     TEST_ASSERT_EQUAL_INT(
         0, (int)pc_quic_build_version_negotiation(out, sizeof out, cid, 2, cid, 21, 0, 0)); // oversize SCID
 

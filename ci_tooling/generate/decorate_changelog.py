@@ -71,8 +71,7 @@ if __name__ == "__main__":
     # This had no check mode, so it could not be gated at all.
     if "--check" in sys.argv[1:]:
         if updated != content:
-            print(f"STALE: {changelog_path} is not decorated; rerun decorate_changelog.py",
-                  file=sys.stderr)
+            print(f"STALE: {changelog_path} is not decorated; rerun decorate_changelog.py", file=sys.stderr)
             sys.exit(1)
         print(f"{changelog_path}: decoration up to date")
         sys.exit(0)

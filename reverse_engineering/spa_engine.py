@@ -105,7 +105,7 @@ def estimate_period(envelope: np.ndarray, min_period: int, max_period: int) -> i
     centered = envelope - envelope.mean()
     full = np.correlate(centered, centered, mode="full")
     mid = len(full) // 2
-    window = full[mid + min_period: mid + max_period + 1]
+    window = full[mid + min_period : mid + max_period + 1]
     return min_period + int(np.argmax(window))
 
 
@@ -113,7 +113,7 @@ def decode_periodic_bursts(segments, period_samples: int, n_periods: int, start_
     """Count active-segment starts falling in each [start_sample + k*period, ...) window -
     the square-and-multiply structural decoder. Returns a list of n_periods burst counts."""
     counts = [0] * n_periods
-    for (s, e, active) in segments:
+    for s, e, active in segments:
         if not active:
             continue
         idx = (s - start_sample) // period_samples
@@ -160,9 +160,9 @@ if __name__ == "__main__":
     trace = rng.normal(0, NOISE_SIGMA, size=n_samples)
     for k, bit in enumerate(BITS):
         base = k * PERIOD
-        trace[base + SQUARE_OFFSET: base + SQUARE_OFFSET + SQUARE_WIDTH] += BURST_AMPLITUDE
+        trace[base + SQUARE_OFFSET : base + SQUARE_OFFSET + SQUARE_WIDTH] += BURST_AMPLITUDE
         if bit == 1:
-            trace[base + MULT_OFFSET: base + MULT_OFFSET + MULT_WIDTH] += BURST_AMPLITUDE * 0.9
+            trace[base + MULT_OFFSET : base + MULT_OFFSET + MULT_WIDTH] += BURST_AMPLITUDE * 0.9
 
     env = activity_envelope(trace, window=9)
     segments, threshold = segment_activity(env)
@@ -183,7 +183,7 @@ if __name__ == "__main__":
     zv_trace = trace.copy()
     zv_bit_index = 6  # a bit=1 period - its multiply burst becomes a "multiply by zero"
     zv_base = zv_bit_index * PERIOD
-    zv_trace[zv_base + MULT_OFFSET: zv_base + MULT_OFFSET + MULT_WIDTH] = rng.normal(0, NOISE_SIGMA, MULT_WIDTH)
+    zv_trace[zv_base + MULT_OFFSET : zv_base + MULT_OFFSET + MULT_WIDTH] = rng.normal(0, NOISE_SIGMA, MULT_WIDTH)
     zv_env = activity_envelope(zv_trace, window=9)
     zv_segments, _ = segment_activity(zv_env)
     flagged = zero_value_scan(zv_trace, zv_segments)

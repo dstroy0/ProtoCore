@@ -25,6 +25,7 @@ import sys
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
+
 # Repo root, located by marker rather than by counting `..` levels: these scripts
 # have moved once already (src/web/wizard -> web_assets/wizard) and level-counting
 # silently retargeted them outside the tree.

@@ -48,8 +48,8 @@ void test_build_long_address(void)
 {
     uint8_t addr[5] = {0x86, 0x01, 0x02, 0x03, 0x04}; // long addr, master bit set
     uint8_t out[24];
-    size_t n = pc_hart_build((uint8_t)(HART_DELIM_STX | HART_DELIM_LONG_ADDR), addr, 5, 0x03,
-                             NULL, 0, out, sizeof(out));
+    size_t n =
+        pc_hart_build((uint8_t)(HART_DELIM_STX | HART_DELIM_LONG_ADDR), addr, 5, 0x03, NULL, 0, out, sizeof(out));
     TEST_ASSERT_EQUAL_size_t(1 + 5 + 1 + 1 + 0 + 1, n); // delim+addr+cmd+bc+ck
     HartFrame f;
     TEST_ASSERT_TRUE(pc_hart_parse(out, n, &f));
@@ -78,8 +78,7 @@ void test_parse_roundtrip_and_bad_checksum(void)
 void test_hartip_header(void)
 {
     uint8_t out[8];
-    size_t n = pc_hartip_build_header(HARTIP_MSG_REQUEST, HARTIP_ID_TOKEN_PDU, 0, 0x1234, 13, out,
-                                      sizeof(out));
+    size_t n = pc_hartip_build_header(HARTIP_MSG_REQUEST, HARTIP_ID_TOKEN_PDU, 0, 0x1234, 13, out, sizeof(out));
     const uint8_t expect[] = {0x01, 0x00, 0x03, 0x00, 0x12, 0x34, 0x00, 0x0D};
     TEST_ASSERT_EQUAL_size_t(8, n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(expect, out, 8);
@@ -93,8 +92,7 @@ void test_hartip_parse(void)
 {
     uint8_t msg[32];
     // A HART-IP response carrying a 5-octet token PDU payload; total length = 8 + 5 = 13.
-    size_t hn = pc_hartip_build_header(HARTIP_MSG_RESPONSE, HARTIP_ID_TOKEN_PDU, 0x00, 0x0042, 13, msg,
-                                       sizeof(msg));
+    size_t hn = pc_hartip_build_header(HARTIP_MSG_RESPONSE, HARTIP_ID_TOKEN_PDU, 0x00, 0x0042, 13, msg, sizeof(msg));
     TEST_ASSERT_EQUAL_size_t(8, hn);
     const uint8_t payload[5] = {0xAA, 0xBB, 0xCC, 0xDD, 0xEE};
     memcpy(msg + 8, payload, sizeof(payload));
@@ -135,7 +133,7 @@ void test_build_and_parse_guards()
     uint8_t data[4] = {1, 2, 3, 4};
     TEST_ASSERT_EQUAL_size_t(0, pc_hart_build(0x82, addr, 2, 0, data, sizeof(data), out, sizeof(out))); // bad addr_len
     TEST_ASSERT_EQUAL_size_t(0, pc_hart_build(0x82, NULL, 5, 0, data, sizeof(data), out, sizeof(out))); // null addr
-    TEST_ASSERT_EQUAL_size_t(0, pc_hart_build(0x82, addr, 5, 0, data, sizeof(data), out, 4)); // cap too small
+    TEST_ASSERT_EQUAL_size_t(0, pc_hart_build(0x82, addr, 5, 0, data, sizeof(data), out, 4));           // cap too small
     // Valid addr, but data_len > 0 with a null data pointer -> 0.
     TEST_ASSERT_EQUAL_size_t(0, pc_hart_build(0x82, addr, 1, 0, NULL, 3, out, sizeof(out)));
     // data_len exceeds the 1-byte byte-count field (> 0xFF), even though it would otherwise fit -> 0.
@@ -156,8 +154,7 @@ void test_build_and_parse_guards()
     // len >= min (header readable) but < the byte-count-derived expected length -> truncated-data rejection.
     uint8_t data3[] = {0x01, 0x02, 0x03};
     uint8_t frame_full[16];
-    size_t fn =
-        pc_hart_build(HART_DELIM_STX, &addr1, 1, 0x00, data3, sizeof(data3), frame_full, sizeof(frame_full));
+    size_t fn = pc_hart_build(HART_DELIM_STX, &addr1, 1, 0x00, data3, sizeof(data3), frame_full, sizeof(frame_full));
     TEST_ASSERT_FALSE(pc_hart_parse(frame_full, fn - 1, &hf));
 }
 

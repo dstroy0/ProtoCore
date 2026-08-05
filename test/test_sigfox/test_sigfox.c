@@ -65,8 +65,7 @@ void test_parse_response_error()
 
 void test_parse_response_pending()
 {
-    TEST_ASSERT_EQUAL_INT(SIGFOX_PENDING,
-                          pc_sigfox_parse_response("AT$SF=AB12\r\n", 12)); // echo, no verdict yet
+    TEST_ASSERT_EQUAL_INT(SIGFOX_PENDING, pc_sigfox_parse_response("AT$SF=AB12\r\n", 12)); // echo, no verdict yet
     TEST_ASSERT_EQUAL_INT(SIGFOX_PENDING, pc_sigfox_parse_response("", 0));
 }
 

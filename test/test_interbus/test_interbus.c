@@ -78,13 +78,13 @@ void test_build_parse_guards()
     uint8_t out[64];
     uint16_t words[2] = {0x1234, 0x5678};
     TEST_ASSERT_EQUAL_size_t(0, pc_interbus_build(NULL, 2, out, sizeof(out))); // null words
-    TEST_ASSERT_EQUAL_size_t(0, pc_interbus_build(words, 2, out, 2));             // cap too small
+    TEST_ASSERT_EQUAL_size_t(0, pc_interbus_build(words, 2, out, 2));          // cap too small
     TEST_ASSERT_EQUAL_size_t(0, pc_interbus_build(words, 2, NULL, 64));        // null out buffer
     uint16_t ow[4];
     size_t oc = 0;
     TEST_ASSERT_FALSE(pc_interbus_parse(NULL, 10, ow, 4, &oc)); // null frame
     uint8_t tiny[2] = {0, 0};
-    TEST_ASSERT_FALSE(pc_interbus_parse(tiny, sizeof(tiny), ow, 4, &oc));      // too short
+    TEST_ASSERT_FALSE(pc_interbus_parse(tiny, sizeof(tiny), ow, 4, &oc));   // too short
     TEST_ASSERT_FALSE(pc_interbus_parse(tiny, sizeof(tiny), NULL, 4, &oc)); // null out_words
     TEST_ASSERT_FALSE(pc_interbus_parse(tiny, sizeof(tiny), ow, 4, NULL));  // null out_count
 }

@@ -73,8 +73,15 @@ class Client:
                     pr.check("NominalParts is UInt64", int(await aj["NominalParts"].read_value()) >= 0)
                 ajv = await _descs(c, jobs["ActiveJobValues"])
                 if structure:
-                    for v in ("JobCycleCounter", "MachineCycleCounter", "JobPartsCounter",
-                              "JobGoodPartsCounter", "JobBadPartsCounter", "LastCycleTime", "JobStatus"):
+                    for v in (
+                        "JobCycleCounter",
+                        "MachineCycleCounter",
+                        "JobPartsCounter",
+                        "JobGoodPartsCounter",
+                        "JobBadPartsCounter",
+                        "LastCycleTime",
+                        "JobStatus",
+                    ):
                         pr.check(f"ActiveJobValues.{v}", v in ajv, str(list(ajv)))
                 # the UInt64 counters (prove the new Variant type decodes on the wire)
                 r["cycle"] = int(await ajv["JobCycleCounter"].read_value())
@@ -87,12 +94,17 @@ class Client:
                 pr.check("JobCycleCounter is a non-negative UInt64", s1["cycle"] >= 0, str(s1["cycle"]))
                 await asyncio.sleep(2.5)  # > one sim cycle (2 s)
                 s2 = await snapshot(False)
-                pr.check("JobCycleCounter monotonic non-decreasing", s2["cycle"] >= s1["cycle"],
-                         f"{s1['cycle']} -> {s2['cycle']}")
-                pr.check("JobCycleCounter advanced (machine running)", s2["cycle"] > s1["cycle"],
-                         f"{s1['cycle']} -> {s2['cycle']}")
-                pr.check("JobPartsCounter tracks cycles", s2["parts"] >= s1["parts"],
-                         f"{s1['parts']} -> {s2['parts']}")
+                pr.check(
+                    "JobCycleCounter monotonic non-decreasing",
+                    s2["cycle"] >= s1["cycle"],
+                    f"{s1['cycle']} -> {s2['cycle']}",
+                )
+                pr.check(
+                    "JobCycleCounter advanced (machine running)",
+                    s2["cycle"] > s1["cycle"],
+                    f"{s1['cycle']} -> {s2['cycle']}",
+                )
+                pr.check("JobPartsCounter tracks cycles", s2["parts"] >= s1["parts"], f"{s1['parts']} -> {s2['parts']}")
             except Exception as exc:  # noqa: BLE001
                 pr.check("session completed", False, str(exc))
 

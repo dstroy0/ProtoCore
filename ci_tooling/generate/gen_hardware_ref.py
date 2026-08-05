@@ -76,9 +76,8 @@ def main() -> int:
         for feat in tax.parse_features():
             if feat.get("flag"):
                 flag_to_group[feat["flag"].strip("` ")] = tax.group_of(feat["name"])
-    except (OSError, AttributeError) as exc:      # taxonomy unavailable: fall back
-        print(f"  note: taxonomy unavailable ({exc}); grouping by directory",
-              file=sys.stderr)
+    except (OSError, AttributeError) as exc:  # taxonomy unavailable: fall back
+        print(f"  note: taxonomy unavailable ({exc}); grouping by directory", file=sys.stderr)
 
     rows = []
     unplaced = []
@@ -95,14 +94,15 @@ def main() -> int:
             # picked up call SITES with real arguments (pc_presence_core_init(c, ...))
             # and, for I2C parts, the shared pc_i2c_begin() bus call rather than the
             # module's own entry point.
-            hdrs = "".join(read(os.path.join(d, f)) for f in sorted(os.listdir(d))
-                           if f.endswith(".h"))
+            hdrs = "".join(read(os.path.join(d, f)) for f in sorted(os.listdir(d)) if f.endswith(".h"))
             # A bring-up call, not a frame builder: `pc_canopen_build_sdo_download_init`
             # ends in "init" but constructs a CAN frame, it does not open a link.
             NOT_BRINGUP = re.compile(r"_(build|encode|decode|parse|make)_")
             sig = ""
-            for pat in (r"\b(pc_" + re.escape(mod) + r"_[a-z0-9_]*(?:begin|init)\([^;)]*\))\s*;",
-                        r"\b(pc_[a-z0-9_]*(?:begin|init)\([^;)]*\))\s*;"):
+            for pat in (
+                r"\b(pc_" + re.escape(mod) + r"_[a-z0-9_]*(?:begin|init)\([^;)]*\))\s*;",
+                r"\b(pc_[a-z0-9_]*(?:begin|init)\([^;)]*\))\s*;",
+            ):
                 for m in re.finditer(pat, hdrs, re.S):
                     cand = m.group(1)
                     if NOT_BRINGUP.search(cand):
@@ -122,17 +122,18 @@ def main() -> int:
             # taxonomy knows, rather than assuming PC_ENABLE_<DIRNAME>.
             guess = f"PC_ENABLE_{mod.upper()}"
             used = sorted(set(re.findall(r"\bPC_ENABLE_[A-Z0-9_]+\b", text)))
-            cands = ([guess] if guess in flags else []) + \
-                    [f for f in used if f in flag_to_group] + \
-                    [f for f in used if f in flags]
+            cands = (
+                ([guess] if guess in flags else [])
+                + [f for f in used if f in flag_to_group]
+                + [f for f in used if f in flags]
+            )
             flag = cands[0] if cands else (guess if guess in flags else "")
             group = flag_to_group.get(flag)
             if group is None:
                 # FEATURES.md is the source of truth for the feature grid, so a module
                 # that cannot be placed means its entry there is absent or malformed.
                 # Report it rather than hiding it behind a directory-name fallback.
-                unplaced.append((f"src/services/{grp}/{mod}",
-                                 flag or f"(no PC_ENABLE_* found; expected {guess})"))
+                unplaced.append((f"src/services/{grp}/{mod}", flag or f"(no PC_ENABLE_* found; expected {guess})"))
                 group = grp.replace("_", " ")
             rows.append((group, mod, classify(text, sig), sig, flag))
 
@@ -142,12 +143,11 @@ def main() -> int:
             print(f"      {path}  ->  {why}", file=sys.stderr)
 
     out = []
-    out.append(f"**{len(rows)} modules** attach to something physical. Every one takes its wiring"
-               " **through the API** -")
-    out.append("an I2C address, explicit pins, or a caller-supplied bus struct - so the library"
-               " never dictates a")
-    out.append("pinout and none is documented here. Pure codecs have no bring-up call at all: you"
-               " own the link.")
+    out.append(
+        f"**{len(rows)} modules** attach to something physical. Every one takes its wiring" " **through the API** -"
+    )
+    out.append("an I2C address, explicit pins, or a caller-supplied bus struct - so the library" " never dictates a")
+    out.append("pinout and none is documented here. Pure codecs have no bring-up call at all: you" " own the link.")
     out.append("")
     # render in the taxonomy's own order, then any directory-fallback groups
     try:
@@ -173,8 +173,10 @@ def main() -> int:
     rc = dr.apply(DOC, {REGION: "\n".join(out)}, check="--check" in sys.argv)
     if rc == 0 and "--check" not in sys.argv:
         mapped = sum(1 for r in rows if r[0] in set(order) and r[0] in flag_to_group.values())
-        print(f"  {len(rows)} modules across {len({r[0] for r in rows})} groups "
-              f"({mapped} bridged to the feature taxonomy)")
+        print(
+            f"  {len(rows)} modules across {len({r[0] for r in rows})} groups "
+            f"({mapped} bridged to the feature taxonomy)"
+        )
     return rc
 
 

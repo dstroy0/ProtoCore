@@ -107,7 +107,7 @@ void test_nmea0183_error_paths()
     char buf[96];
     TEST_ASSERT_EQUAL_size_t(0, pc_nmea0183_build(NULL, sizeof(buf), "GPGGA")); // null buf
     TEST_ASSERT_EQUAL_size_t(0, pc_nmea0183_build(buf, sizeof(buf), NULL));     // null body
-    TEST_ASSERT_EQUAL_size_t(0, pc_nmea0183_build(buf, 4, "GPGGA"));               // cap too small
+    TEST_ASSERT_EQUAL_size_t(0, pc_nmea0183_build(buf, 4, "GPGGA"));            // cap too small
 
     Nmea0183 m;
     // A lowercase checksum still validates (hex_val a-f). "GPGGA,1" -> checksum 0x4B -> "4b".
@@ -125,7 +125,7 @@ void test_nmea0183_error_paths()
     TEST_ASSERT_FALSE(pc_nmea0183_field_float(&m, 3, &f)); // "N": non-empty but not a number
     long v;
     TEST_ASSERT_FALSE(pc_nmea0183_field_int(NULL, 0, &v)); // null message
-    TEST_ASSERT_FALSE(pc_nmea0183_field_int(&m, 13, &v));     // empty field
+    TEST_ASSERT_FALSE(pc_nmea0183_field_int(&m, 13, &v));  // empty field
 }
 
 // hex_val's low-end reject range (below '0') and lowercase-beyond-'f' reject range, plus the
@@ -144,7 +144,7 @@ void test_nmea0183_parse_guards()
     Nmea0183 m;
     TEST_ASSERT_FALSE(pc_nmea0183_parse(NULL, 10, &m));           // null s
     TEST_ASSERT_FALSE(pc_nmea0183_parse(GGA, strlen(GGA), NULL)); // null out
-    TEST_ASSERT_FALSE(pc_nmea0183_parse("ab", 2, &m));               // len < 4
+    TEST_ASSERT_FALSE(pc_nmea0183_parse("ab", 2, &m));            // len < 4
 
     char bang[96];
     strcpy(bang, GGA);
@@ -199,12 +199,12 @@ void test_nmea0183_field_helpers_more_guards()
     Nmea0183 m;
     TEST_ASSERT_TRUE(pc_nmea0183_parse(GGA, strlen(GGA), &m));
     float f;
-    TEST_ASSERT_FALSE(pc_nmea0183_field_float(NULL, 0, &f));        // null message
+    TEST_ASSERT_FALSE(pc_nmea0183_field_float(NULL, 0, &f));           // null message
     TEST_ASSERT_FALSE(pc_nmea0183_field_float(&m, m.field_count, &f)); // idx out of range
-    TEST_ASSERT_FALSE(pc_nmea0183_field_float(&m, 0, NULL));        // null out
+    TEST_ASSERT_FALSE(pc_nmea0183_field_float(&m, 0, NULL));           // null out
     long v;
     TEST_ASSERT_FALSE(pc_nmea0183_field_int(&m, m.field_count, &v)); // idx out of range
-    TEST_ASSERT_FALSE(pc_nmea0183_field_int(&m, 0, NULL));        // null out
+    TEST_ASSERT_FALSE(pc_nmea0183_field_int(&m, 0, NULL));           // null out
 }
 
 // The classic textbook RMC (23 Mar 1994, 22.4 kn, course 84.4).

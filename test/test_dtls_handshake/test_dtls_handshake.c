@@ -440,8 +440,7 @@ static void test_cookie_make_rejects(void)
 static void test_cookie_empty_payload_roundtrip(void)
 {
     uint8_t cookie[PC_DTLS_COOKIE_MAX];
-    size_t n =
-        pc_dtls_cookie_make(COOKIE_KEY, 4242, NULL, 0, COOKIE_ADDR, sizeof(COOKIE_ADDR), cookie, sizeof(cookie));
+    size_t n = pc_dtls_cookie_make(COOKIE_KEY, 4242, NULL, 0, COOKIE_ADDR, sizeof(COOKIE_ADDR), cookie, sizeof(cookie));
     TEST_ASSERT_EQUAL_size_t(1 + 8 + 2 + PC_HMAC_SHA256_LEN, n);
 
     uint8_t payload[4];

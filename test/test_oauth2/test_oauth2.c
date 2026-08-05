@@ -120,18 +120,17 @@ void test_build_code_request_individual_null_guards()
                                                           sizeof(buf))); // null redirect_uri
     TEST_ASSERT_EQUAL_INT(
         0, pc_oauth2_build_code_request("code", "uri", NULL, NULL, NULL, buf, sizeof(buf))); // null client_id
-    TEST_ASSERT_EQUAL_INT(
-        0, pc_oauth2_build_code_request("code", "uri", "id", NULL, NULL, NULL, sizeof(buf)));     // null out
-    TEST_ASSERT_EQUAL_INT(0, pc_oauth2_build_code_request("code", "uri", "id", NULL, NULL, buf, 0)); // cap == 0
+    TEST_ASSERT_EQUAL_INT(0,
+                          pc_oauth2_build_code_request("code", "uri", "id", NULL, NULL, NULL, sizeof(buf))); // null out
+    TEST_ASSERT_EQUAL_INT(0, pc_oauth2_build_code_request("code", "uri", "id", NULL, NULL, buf, 0));         // cap == 0
 }
 
 void test_build_refresh_request_individual_null_guards()
 {
     char buf[64];
-    TEST_ASSERT_EQUAL_INT(0,
-                          pc_oauth2_build_refresh_request("rt", NULL, NULL, buf, sizeof(buf))); // null client_id
+    TEST_ASSERT_EQUAL_INT(0, pc_oauth2_build_refresh_request("rt", NULL, NULL, buf, sizeof(buf)));  // null client_id
     TEST_ASSERT_EQUAL_INT(0, pc_oauth2_build_refresh_request("rt", "id", NULL, NULL, sizeof(buf))); // null out
-    TEST_ASSERT_EQUAL_INT(0, pc_oauth2_build_refresh_request("rt", "id", NULL, buf, 0));               // cap == 0
+    TEST_ASSERT_EQUAL_INT(0, pc_oauth2_build_refresh_request("rt", "id", NULL, buf, 0));            // cap == 0
 }
 
 void test_build_refresh_request_without_secret()

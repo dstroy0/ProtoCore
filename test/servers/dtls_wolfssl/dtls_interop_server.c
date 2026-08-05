@@ -69,7 +69,8 @@ int main(int argc, char **argv)
     cfg.server_random = srand;
     cfg.cookie_key = cookie_key;
     DtlsConn conn;
-    proto_bool inited = PROTO_FALSE; // the HRR cookie binds the peer address, so init once the first datagram reveals it
+    proto_bool inited =
+        PROTO_FALSE; // the HRR cookie binds the peer address, so init once the first datagram reveals it
 
     int fd = socket(AF_INET, SOCK_DGRAM, 0);
     int one = 1;

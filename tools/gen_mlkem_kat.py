@@ -11,6 +11,7 @@ ciphertext (round-trip) and, when liboqs is installed, against it too, before em
 
 Run once and commit the result; the C Encaps must reproduce it byte for byte.
 """
+
 import sys
 
 

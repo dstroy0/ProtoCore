@@ -26,6 +26,7 @@ def blank_comments(text):
     reported a namespace at line 73 that actually sat at 108. Blanking instead of
     deleting keeps offsets exact, and keeps comment text from matching code patterns.
     """
+
     def _blank(m):
         return re.sub(r"[^\n]", " ", m.group(0))
 
@@ -46,5 +47,3 @@ def headers(root=None):
             if f.endswith(".h"):
                 out.append(os.path.join(base, f))
     return sorted(out)
-
-

@@ -34,8 +34,7 @@ void test_build_subscribe_default_options()
 void test_build_publish_with_args()
 {
     char buf[160];
-    size_t n =
-        pc_wamp_build_publish(buf, sizeof(buf), 239714735, "com.myapp.temp", NULL, "[24.5]", "{\"unit\":\"C\"}");
+    size_t n = pc_wamp_build_publish(buf, sizeof(buf), 239714735, "com.myapp.temp", NULL, "[24.5]", "{\"unit\":\"C\"}");
     TEST_ASSERT_GREATER_THAN(0, (int)n);
     TEST_ASSERT_EQUAL_STRING("[16,239714735,{},\"com.myapp.temp\",[24.5],{\"unit\":\"C\"}]", buf);
 }
@@ -51,8 +50,8 @@ void test_build_publish_kwargs_only()
 void test_build_call_and_register_and_yield()
 {
     char buf[160];
-    TEST_ASSERT_GREATER_THAN(
-        0, (int)pc_wamp_build_call(buf, sizeof(buf), 7814135, "com.myapp.add", NULL, "[2,3]", NULL));
+    TEST_ASSERT_GREATER_THAN(0,
+                             (int)pc_wamp_build_call(buf, sizeof(buf), 7814135, "com.myapp.add", NULL, "[2,3]", NULL));
     TEST_ASSERT_EQUAL_STRING("[48,7814135,{},\"com.myapp.add\",[2,3]]", buf);
 
     TEST_ASSERT_GREATER_THAN(0, (int)pc_wamp_build_register(buf, sizeof(buf), 25349185, "com.myapp.add", NULL));
@@ -213,7 +212,7 @@ void test_parser_error_paths()
 {
     const char *s;
     size_t len;
-    TEST_ASSERT_FALSE(pc_wamp_element(NULL, 0, &s, &len));  // null message
+    TEST_ASSERT_FALSE(pc_wamp_element(NULL, 0, &s, &len));     // null message
     TEST_ASSERT_FALSE(pc_wamp_element("[]", 0, &s, &len));     // empty array
     TEST_ASSERT_FALSE(pc_wamp_element("[\"abc", 0, &s, &len)); // unterminated string
     TEST_ASSERT_FALSE(pc_wamp_element("[\"x\\", 0, &s, &len)); // escape at end of string
@@ -222,8 +221,8 @@ void test_parser_error_paths()
 
     char uri[16];
     TEST_ASSERT_FALSE(pc_wamp_get_uri("[2,\"abc\"]", 1, NULL, sizeof(uri))); // null out
-    TEST_ASSERT_FALSE(pc_wamp_get_uri("[2,\"abc\"]", 1, uri, 0));               // zero out_cap
-    TEST_ASSERT_FALSE(pc_wamp_get_uri("[2]", 5, uri, sizeof(uri)));             // element not present
+    TEST_ASSERT_FALSE(pc_wamp_get_uri("[2,\"abc\"]", 1, uri, 0));            // zero out_cap
+    TEST_ASSERT_FALSE(pc_wamp_get_uri("[2]", 5, uri, sizeof(uri)));          // element not present
 }
 
 // Every builder takes an optional details/options JSON object. The suite above always passes
@@ -325,8 +324,8 @@ void test_parser_optional_out_params()
     TEST_ASSERT_TRUE(pc_wamp_element("[1,2]", 0, &s, NULL)); // null len
     TEST_ASSERT_EQUAL_CHAR('1', s[0]);
     TEST_ASSERT_TRUE(pc_wamp_element("[1,2]", 0, NULL, NULL)); // both null
-    TEST_ASSERT_TRUE(pc_wamp_get_uint("[42,2]", 0, NULL));        // null out
-    TEST_ASSERT_TRUE(pc_wamp_get_type("[42,2]", NULL));           // null out
+    TEST_ASSERT_TRUE(pc_wamp_get_uint("[42,2]", 0, NULL));     // null out
+    TEST_ASSERT_TRUE(pc_wamp_get_type("[42,2]", NULL));        // null out
 }
 
 // get_uint accepts digits only: a character below '0' and one above '9' must each be rejected
@@ -337,7 +336,7 @@ void test_get_uint_rejects_non_digits()
     TEST_ASSERT_FALSE(pc_wamp_get_uint("[1-2,0]", 0, &v));   // '-' is below '0'
     TEST_ASSERT_FALSE(pc_wamp_get_uint("[1a,0]", 0, &v));    // 'a' is above '9'
     TEST_ASSERT_FALSE(pc_wamp_get_uint("[\"7\",0]", 0, &v)); // quoted, not a bare number
-    TEST_ASSERT_FALSE(pc_wamp_get_type("[\"x\"]", NULL)); // type element not numeric
+    TEST_ASSERT_FALSE(pc_wamp_get_type("[\"x\"]", NULL));    // type element not numeric
     TEST_ASSERT_TRUE(pc_wamp_get_uint("[1234567890,0]", 0, &v));
     TEST_ASSERT_EQUAL_UINT64(1234567890ull, v);
 }

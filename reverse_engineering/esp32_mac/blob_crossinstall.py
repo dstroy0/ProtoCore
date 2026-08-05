@@ -14,6 +14,7 @@ Symbol tables only: this reads names, not code.
 
 Usage:  python reverse_engineering/esp32_mac/blob_crossinstall.py <repo-root>
 """
+
 import os
 import re
 import subprocess
@@ -148,24 +149,38 @@ def main():
             doc.append(
                 f"| `{chip}` | `{lib}` | {os.path.getsize(a) // 1024} KB | {os.path.getsize(i) // 1024} KB "
                 f"| {len(ad)} | {len(ai)} | {len(only_a)} | {len(only_i)} | {moved} | "
-                f"{len(n_only_a)} | {len(n_only_i)} |")
+                f"{len(n_only_a)} | {len(n_only_i)} |"
+            )
             if n_only_a or n_only_i:
                 diffs.append((chip, lib, n_only_a, n_only_i))
-            print(f"  {chip:9s} {lib:18s} A={len(a_all):5d} I={len(i_all):5d} "
-                  f"only-A={len(only_a):4d} only-I={len(only_i):4d} moved={moved:3d} "
-                  f"real-A={len(n_only_a):4d} real-I={len(n_only_i):4d}")
+            print(
+                f"  {chip:9s} {lib:18s} A={len(a_all):5d} I={len(i_all):5d} "
+                f"only-A={len(only_a):4d} only-I={len(only_i):4d} moved={moved:3d} "
+                f"real-A={len(n_only_a):4d} real-I={len(n_only_i):4d}"
+            )
 
-    doc += ["", "## Verdict", "",
-            f"{identical} of {rows} library pairs match name for name.",
-            f"{same_after} of {rows} match once ROM/RAM placement is folded out.", ""]
+    doc += [
+        "",
+        "## Verdict",
+        "",
+        f"{identical} of {rows} library pairs match name for name.",
+        f"{same_after} of {rows} match once ROM/RAM placement is folded out.",
+        "",
+    ]
     if not diffs:
-        doc += ["Every pair matches, so the entry points are fixed across the two installs and an",
-                "analysis of one transfers to the other. Only addresses, sizes and code layout move.",
-                ""]
+        doc += [
+            "Every pair matches, so the entry points are fixed across the two installs and an",
+            "analysis of one transfers to the other. Only addresses, sizes and code layout move.",
+            "",
+        ]
     else:
-        doc += ["The pairs below still differ after folding, so those are real API changes and",
-                "anything read out of one install has to be checked against the other.", "",
-                "Names below are shown with the placement prefix folded to `@`.", ""]
+        doc += [
+            "The pairs below still differ after folding, so those are real API changes and",
+            "anything read out of one install has to be checked against the other.",
+            "",
+            "Names below are shown with the placement prefix folded to `@`.",
+            "",
+        ]
         for chip, lib, only_a, only_i in diffs:
             doc += [f"### `{chip}` / `{lib}`", ""]
             if only_a:

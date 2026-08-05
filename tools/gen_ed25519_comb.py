@@ -24,24 +24,33 @@ assert By & 0xFFFFFFFF == 0x66666658, hex(By & 0xFFFFFFFF)
 
 L = 2**252 + 27742317777372353535851937790883648493
 
+
 # ---- affine group (reference) ----
 def aff_add(P, Q):
-    if P is None: return Q
-    if Q is None: return P
-    x1, y1 = P; x2, y2 = Q
+    if P is None:
+        return Q
+    if Q is None:
+        return P
+    x1, y1 = P
+    x2, y2 = Q
     dd = (d * x1 * x2 * y1 * y2) % p
     x3 = ((x1 * y2 + x2 * y1) * pow((1 + dd) % p, -1, p)) % p
     y3 = ((y1 * y2 + x1 * x2) * pow((1 - dd) % p, -1, p)) % p
     return (x3, y3)
 
+
 def aff_mul(k, P):
     R = None
     while k:
-        if k & 1: R = aff_add(R, P)
-        P = aff_add(P, P); k >>= 1
+        if k & 1:
+            R = aff_add(R, P)
+        P = aff_add(P, P)
+        k >>= 1
     return R
 
+
 B = (Bx, By)
+
 
 # ---- recode a 32-byte LE scalar into 64 signed 4-bit digits (ref10) ----
 def recode(s):
@@ -57,43 +66,48 @@ def recode(s):
     e[63] += carry
     return e  # e[i] in [-8, 8]
 
+
 # ---- build table[i][j] = (j+1) * 256^i * B (affine) ----
 table = [[None] * 8 for _ in range(32)]
 Bi = B
 for i in range(32):
     acc = None
     for j in range(8):
-        acc = aff_add(acc, Bi)      # (j+1)*256^i*B
+        acc = aff_add(acc, Bi)  # (j+1)*256^i*B
         table[i][j] = acc
-    for _ in range(8):              # Bi *= 256
+    for _ in range(8):  # Bi *= 256
         Bi = aff_add(Bi, Bi)
+
 
 def comb_mul(s):
     # returns affine s*B via the comb, using table[] (mirror of the C algorithm)
     e = recode(s)
     R = None
-    for i in range(1, 64, 2):       # odd nibbles
+    for i in range(1, 64, 2):  # odd nibbles
         dgt = e[i]
         P = None if dgt == 0 else table[i >> 1][abs(dgt) - 1]
-        if dgt < 0 and P is not None: P = (( -P[0]) % p, P[1])
+        if dgt < 0 and P is not None:
+            P = ((-P[0]) % p, P[1])
         R = aff_add(R, P)
-    for _ in range(4):              # x16
+    for _ in range(4):  # x16
         R = aff_add(R, R)
-    for i in range(0, 64, 2):       # even nibbles
+    for i in range(0, 64, 2):  # even nibbles
         dgt = e[i]
         P = None if dgt == 0 else table[i >> 1][abs(dgt) - 1]
-        if dgt < 0 and P is not None: P = ((-P[0]) % p, P[1])
+        if dgt < 0 and P is not None:
+            P = ((-P[0]) % p, P[1])
         R = aff_add(R, P)
     return R
+
 
 # ---- verify comb vs affine over random scalars incl. clamped-a and r<L ranges ----
 random.seed(7)
 for _ in range(300):
     kind = random.random()
     if kind < 0.4:
-        s = random.randrange(0, L)                       # r-style (< L)
+        s = random.randrange(0, L)  # r-style (< L)
     elif kind < 0.8:
-        v = random.randrange(0, 1 << 256)                # clamped a-style
+        v = random.randrange(0, 1 << 256)  # clamped a-style
         s = (v & ~7) & ((1 << 255) - 1) | (1 << 254)
     else:
         s = random.randrange(0, 1 << 255)
@@ -101,9 +115,11 @@ for _ in range(300):
     assert comb_mul(sb) == aff_mul(s, B), f"comb mismatch s={s:x}"
 print("Ed25519 comb VERIFIED vs affine over 300 scalars (r<L, clamped-a, random-255).")
 
+
 # ---- emit the C table header (extended X, Y, T; Z=1 implicit) ----
 def words(v):
     return ", ".join("0x%08xu" % ((v >> (32 * k)) & 0xFFFFFFFF) for k in range(8))
+
 
 lines = []
 lines.append("// Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>")

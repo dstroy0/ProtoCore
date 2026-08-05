@@ -73,9 +73,8 @@ void test_parse(void)
 
 void test_char_json(void)
 {
-    GattChar chars[2] = {
-        {0x0025, 0x2A37, GATT_PROP_READ | GATT_PROP_NOTIFY}, // Heart Rate Measurement
-        {0x0031, 0x2A6E, GATT_PROP_READ}};                             // Temperature
+    GattChar chars[2] = {{0x0025, 0x2A37, GATT_PROP_READ | GATT_PROP_NOTIFY}, // Heart Rate Measurement
+                         {0x0031, 0x2A6E, GATT_PROP_READ}};                   // Temperature
     char buf[160];
     size_t n = pc_gatt_char_json(chars, 2, buf, sizeof(buf));
     TEST_ASSERT_EQUAL_size_t(strlen(buf), n);
@@ -98,16 +97,16 @@ void test_read_rsp_and_build_guards(void)
     TEST_ASSERT_EQUAL_size_t(4, n);
     TEST_ASSERT_EQUAL_HEX8(ATT_OP_READ_RSP, out[0]);
     TEST_ASSERT_EQUAL_MEMORY(val, out + 1, 3);
-    TEST_ASSERT_EQUAL_size_t(0, att_read_rsp(val, 3, NULL, sizeof(out)));        // null out
-    TEST_ASSERT_EQUAL_size_t(0, att_read_rsp(NULL, 3, out, sizeof(out)));        // len but null value
-    TEST_ASSERT_EQUAL_size_t(0, att_read_rsp(val, 3, out, 2));                      // cap < 1 + vlen
-    TEST_ASSERT_EQUAL_size_t(0, att_write_req(0x10, NULL, 3, out, sizeof(out))); // handle_value: null value
-    TEST_ASSERT_EQUAL_size_t(0, att_notify(0x10, val, 3, out, 5));                  // handle_value: cap < 3 + vlen
+    TEST_ASSERT_EQUAL_size_t(0, att_read_rsp(val, 3, NULL, sizeof(out)));            // null out
+    TEST_ASSERT_EQUAL_size_t(0, att_read_rsp(NULL, 3, out, sizeof(out)));            // len but null value
+    TEST_ASSERT_EQUAL_size_t(0, att_read_rsp(val, 3, out, 2));                       // cap < 1 + vlen
+    TEST_ASSERT_EQUAL_size_t(0, att_write_req(0x10, NULL, 3, out, sizeof(out)));     // handle_value: null value
+    TEST_ASSERT_EQUAL_size_t(0, att_notify(0x10, val, 3, out, 5));                   // handle_value: cap < 3 + vlen
     TEST_ASSERT_EQUAL_size_t(0, att_error_rsp(ATT_OP_READ_REQ, 0x10, 0x0A, out, 4)); // error_rsp: cap < 5
 
     // Null-`out` branches on the leading guards (never hit above: those calls all pass a real buffer).
-    TEST_ASSERT_EQUAL_size_t(0, att_read_req(0x0025, NULL, sizeof(out)));        // null out
-    TEST_ASSERT_EQUAL_size_t(0, att_write_req(0x10, val, 3, NULL, sizeof(out))); // handle_value: null out
+    TEST_ASSERT_EQUAL_size_t(0, att_read_req(0x0025, NULL, sizeof(out)));              // null out
+    TEST_ASSERT_EQUAL_size_t(0, att_write_req(0x10, val, 3, NULL, sizeof(out)));       // handle_value: null out
     TEST_ASSERT_EQUAL_size_t(0, att_error_rsp(ATT_OP_READ_REQ, 0x10, 0x0A, NULL, 16)); // error_rsp: null out
 
     // vlen == 0 paths: `vlen && !val` short-circuits false and the value copy is skipped.

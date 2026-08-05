@@ -12,6 +12,7 @@ the scroll-box list on the features page, and this points at it.
     python ci_tooling/generate/gen_features_tree.py
     bash ci_tooling/assets/render_diagrams.sh        # -> docs/diagrams/features_map.svg
 """
+
 import os
 import re
 import sys

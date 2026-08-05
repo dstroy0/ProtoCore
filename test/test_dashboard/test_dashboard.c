@@ -169,7 +169,7 @@ void test_null_widget_table_guards()
     pc_dashboard_configure(NULL, 0); // clear the table
     char buf[64];
     TEST_ASSERT_FALSE(pc_dashboard_set("temp", 1.0f));                    // !s_widgets
-    TEST_ASSERT_FALSE(pc_dashboard_set(NULL, 1.0f));                   // !key
+    TEST_ASSERT_FALSE(pc_dashboard_set(NULL, 1.0f));                      // !key
     TEST_ASSERT_EQUAL_INT(0, pc_dashboard_layout_json(buf, sizeof(buf))); // !s_widgets
     TEST_ASSERT_EQUAL_INT(0, pc_dashboard_values_json(buf, sizeof(buf))); // !s_widgets
     TEST_ASSERT_EQUAL_INT(0, pc_dashboard_layout_json(buf, 0));           // cap == 0

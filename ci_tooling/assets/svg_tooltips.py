@@ -11,6 +11,7 @@ the file opened on its own.
 
     python ci_tooling/assets/svg_tooltips.py docs/diagrams/foo.svg [more.svg ...]
 """
+
 import html
 import pathlib
 import re

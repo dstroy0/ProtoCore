@@ -83,9 +83,7 @@ def build_motion(
     rt, ri, rm = read_io
     wt, wi, wm, wv = write_io
     j = list(joints) + [0.0] * (AXES - len(joints))
-    return struct.pack(
-        F_MOTION, T_MOTION, version, seq, last_data, rt, ri, rm, style, wt, wi, wm, wv, 0, *j
-    )
+    return struct.pack(F_MOTION, T_MOTION, version, seq, last_data, rt, ri, rm, style, wt, wi, wm, wv, 0, *j)
 
 
 def build_status(
@@ -231,7 +229,10 @@ def selftest() -> bool:
         "status round-trips",
         got["seq"] == 7 and got["cart"][0] == 1.0 and got["joint"][0] == -2.5 and got["stamp"] == 0x99AABBCC,
     )
-    check("status blocks sit at 24 / 60 / 96", s[24:28] == bytes.fromhex("0000803f") and s[60:64] == bytes.fromhex("000020c0"))
+    check(
+        "status blocks sit at 24 / 60 / 96",
+        s[24:28] == bytes.fromhex("0000803f") and s[60:64] == bytes.fromhex("000020c0"),
+    )
     a = build_ack(6, 2, [float(i) for i in range(THRESHOLDS)], [float(1000 + i) for i in range(THRESHOLDS)])
     got = parse_ack(a)
     check("ack round-trips", got["axis"] == 6 and got["no_load"][1] == 1.0 and got["max_load"][0] == 1000.0)

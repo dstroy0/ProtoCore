@@ -50,8 +50,11 @@ def _blank(match):
     return re.sub(r"[^\n]", " ", match.group(0))
 
 
-_EXTERN_DECL = re.compile(r"^\s*extern\s+(?:const\s+|volatile\s+|unsigned\s+|signed\s+)*"
-                          r"[A-Za-z_]\w*(?:\s*::\s*\w+)*\s*\**\s*([A-Za-z_]\w*)\s*(?:\[[^\]]*\])*\s*;", re.M)
+_EXTERN_DECL = re.compile(
+    r"^\s*extern\s+(?:const\s+|volatile\s+|unsigned\s+|signed\s+)*"
+    r"[A-Za-z_]\w*(?:\s*::\s*\w+)*\s*\**\s*([A-Za-z_]\w*)\s*(?:\[[^\]]*\])*\s*;",
+    re.M,
+)
 
 
 def externs(root=SRC):
@@ -86,12 +89,9 @@ def main():
             continue
         dupes[name] = [(s[0], s[1]) for s in sites]
     if dupes:
-        print("check_duplicate_symbols: the same symbol is defined in more than one src/ file.",
-              file=sys.stderr)
-        print("A whole-tree build (Arduino compiles every .cpp under src/) fails to link on these;",
-              file=sys.stderr)
-        print("the native envs cannot see it, because they compile an explicit source list.",
-              file=sys.stderr)
+        print("check_duplicate_symbols: the same symbol is defined in more than one src/ file.", file=sys.stderr)
+        print("A whole-tree build (Arduino compiles every .cpp under src/) fails to link on these;", file=sys.stderr)
+        print("the native envs cannot see it, because they compile an explicit source list.", file=sys.stderr)
         for name, sites in sorted(dupes.items()):
             print(f"  {name}:", file=sys.stderr)
             for path, line_no in sites:

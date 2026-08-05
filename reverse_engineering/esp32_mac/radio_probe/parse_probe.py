@@ -7,6 +7,7 @@ address, so each slot resolves by lookup rather than by inference.
 
 Usage:  python parse_probe.py <serial-capture> <build.elf> [--nm <path>]
 """
+
 import os
 import re
 import subprocess
@@ -36,9 +37,14 @@ def rom_symbols(chip):
                     out.setdefault(int(m.group(2), 16), m.group(1))
     return out
 
+
 # ESP32-S3 windows, so a slot the ELF does not name still says where it points.
-RANGES = [("iram", 0x40370000, 0x403E0000), ("rom", 0x40000000, 0x40060000),
-          ("flash text", 0x42000000, 0x42800000), ("dram", 0x3FC80000, 0x3FD00000)]
+RANGES = [
+    ("iram", 0x40370000, 0x403E0000),
+    ("rom", 0x40000000, 0x40060000),
+    ("flash text", 0x42000000, 0x42800000),
+    ("dram", 0x3FC80000, 0x3FD00000),
+]
 
 
 def region(v):
@@ -52,8 +58,7 @@ def main():
     capture, elf = sys.argv[1], sys.argv[2]
     nm = sys.argv[sys.argv.index("--nm") + 1] if "--nm" in sys.argv else None
     if nm is None:
-        nm = os.path.expanduser(
-            "~/.platformio/packages/toolchain-xtensa-esp32s3/bin/xtensa-esp32s3-elf-nm.exe")
+        nm = os.path.expanduser("~/.platformio/packages/toolchain-xtensa-esp32s3/bin/xtensa-esp32s3-elf-nm.exe")
 
     syms = {}
     for line in subprocess.run([nm, elf], capture_output=True, text=True, errors="replace").stdout.split("\n"):
@@ -84,10 +89,11 @@ def main():
     live = [s for s in slots if s[2] not in (0, 0xFFFFFFFF)]
     from_elf = sum(1 for _, _, a in live if a in syms)
     from_rom = sum(1 for _, _, a in live if a not in syms and a in rom)
-    print(f"{len(syms)} ELF symbols, {len(rom)} ROM symbols, {len(slots)} slots, "
-          f"{len(live)} populated")
-    print(f"named: {from_elf} overridden in the image, {from_rom} straight from ROM, "
-          f"{len(live) - from_elf - from_rom} unresolved\n")
+    print(f"{len(syms)} ELF symbols, {len(rom)} ROM symbols, {len(slots)} slots, " f"{len(live)} populated")
+    print(
+        f"named: {from_elf} overridden in the image, {from_rom} straight from ROM, "
+        f"{len(live) - from_elf - from_rom} unresolved\n"
+    )
     print(f"{'slot':>4} {'off':>5}  {'target':<12} {'src':<4} name")
     for i, off, a in slots:
         if a in (0, 0xFFFFFFFF):

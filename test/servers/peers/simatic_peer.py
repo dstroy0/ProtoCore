@@ -13,6 +13,7 @@ STX, DLE, ETX, NAK = 0x02, 0x10, 0x03, 0x15
 
 # ---- 3964R block framing (independent) ------------------------------------
 
+
 def bcc(block: bytes) -> int:
     x = 0
     for b in block:

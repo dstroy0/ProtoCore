@@ -49,8 +49,8 @@ def repo_root(start=None):
         parent = os.path.dirname(d)
         if parent == d:
             raise SystemExit(
-                f"doc_region: no repo root above {start or __file__} "
-                f"(looking for {' + '.join(ROOT_MARKERS)})")
+                f"doc_region: no repo root above {start or __file__} " f"(looking for {' + '.join(ROOT_MARKERS)})"
+            )
         d = parent
 
 
@@ -84,8 +84,7 @@ def re_sub_once(text, pattern, repl, what, flags=0):
     """
     new, n = re.subn(pattern, repl, text, count=1, flags=flags)
     if n != 1:
-        raise SystemExit(f"doc_region: {what}: pattern {pattern!r} matched {n} times; "
-                         "refusing to write")
+        raise SystemExit(f"doc_region: {what}: pattern {pattern!r} matched {n} times; " "refusing to write")
     return new
 
 
@@ -99,7 +98,7 @@ def fenced_code(md, lang=None):
     for m in re.finditer(r"^([ \t]*)```([^\n`]*)\n(.*?)^\1```[ \t]*$", md, re.S | re.M):
         info = m.group(2).strip()
         if lang is None or info.split(":")[0].strip() == lang:
-            yield info, m.group(3), md[:m.start()].count("\n") + 1
+            yield info, m.group(3), md[: m.start()].count("\n") + 1
 
 
 class Region:
@@ -134,11 +133,9 @@ class Region:
 
     def replace_in(self, text, body):
         if self.begin not in text or self.end not in text:
-            raise SystemExit(f"doc_region: {self.doc}: missing markers for {self.key}\n"
-                             f"  expected: {self.begin}")
+            raise SystemExit(f"doc_region: {self.doc}: missing markers for {self.key}\n" f"  expected: {self.begin}")
         block = self.wrap(body)
-        return re.sub(re.escape(self.begin) + r".*?" + re.escape(self.end),
-                      lambda _m: block, text, flags=re.S)
+        return re.sub(re.escape(self.begin) + r".*?" + re.escape(self.end), lambda _m: block, text, flags=re.S)
 
 
 def apply(doc, bodies, check=False, label=None, transform=None):

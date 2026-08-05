@@ -18,8 +18,7 @@ void test_build_and_parse(void)
 {
     uint8_t value[4] = {0x00, 0x00, 0x12, 0x34};
     uint8_t out[16];
-    size_t n = pc_ocit_build(OCIT_MSG_SET, 0x0102, 0x0003, OCIT_TYPE_UINT32, value, 4, out,
-                             sizeof(out));
+    size_t n = pc_ocit_build(OCIT_MSG_SET, 0x0102, 0x0003, OCIT_TYPE_UINT32, value, 4, out, sizeof(out));
     // [02][01 02][00 03][04][00 00 12 34] = 10 bytes.
     const uint8_t expect[] = {0x02, 0x01, 0x02, 0x00, 0x03, 0x04, 0x00, 0x00, 0x12, 0x34};
     TEST_ASSERT_EQUAL_size_t(sizeof(expect), n);
@@ -49,8 +48,7 @@ void test_set_u16_helper(void)
 void test_get_no_value(void)
 {
     uint8_t out[8];
-    size_t n = pc_ocit_build(OCIT_MSG_GET, 0x0102, 0x0003, OCIT_TYPE_UINT16, NULL, 0, out,
-                             sizeof(out));
+    size_t n = pc_ocit_build(OCIT_MSG_GET, 0x0102, 0x0003, OCIT_TYPE_UINT16, NULL, 0, out, sizeof(out));
     TEST_ASSERT_EQUAL_size_t(6, n);
     OcitMsg m;
     TEST_ASSERT_TRUE(pc_ocit_parse(out, n, &m));
@@ -70,16 +68,14 @@ void test_parse_rejects_short(void)
 void test_build_rejects_null_out(void)
 {
     uint8_t value[2] = {0x00, 0x01};
-    size_t n =
-        pc_ocit_build(OCIT_MSG_SET, 0x0001, 0x0002, OCIT_TYPE_UINT16, value, 2, NULL, 16);
+    size_t n = pc_ocit_build(OCIT_MSG_SET, 0x0001, 0x0002, OCIT_TYPE_UINT16, value, 2, NULL, 16);
     TEST_ASSERT_EQUAL_size_t(0, n);
 }
 
 void test_build_rejects_null_value_with_len(void)
 {
     uint8_t out[16];
-    size_t n = pc_ocit_build(OCIT_MSG_SET, 0x0001, 0x0002, OCIT_TYPE_UINT16, NULL, 2, out,
-                             sizeof(out));
+    size_t n = pc_ocit_build(OCIT_MSG_SET, 0x0001, 0x0002, OCIT_TYPE_UINT16, NULL, 2, out, sizeof(out));
     TEST_ASSERT_EQUAL_size_t(0, n);
 }
 
@@ -87,8 +83,7 @@ void test_build_rejects_overflow(void)
 {
     uint8_t value[4] = {0x00, 0x00, 0x00, 0x01};
     uint8_t out[8]; // cap (8) < required 6 + value_len(4) = 10.
-    size_t n = pc_ocit_build(OCIT_MSG_SET, 0x0001, 0x0002, OCIT_TYPE_UINT32, value, 4, out,
-                             sizeof(out));
+    size_t n = pc_ocit_build(OCIT_MSG_SET, 0x0001, 0x0002, OCIT_TYPE_UINT32, value, 4, out, sizeof(out));
     TEST_ASSERT_EQUAL_size_t(0, n);
 }
 
@@ -113,8 +108,7 @@ void test_value_u16_rejects_wrong_type(void)
 {
     uint8_t out[16];
     uint8_t value[2] = {0x00, 0x01};
-    size_t n =
-        pc_ocit_build(OCIT_MSG_SET, 0x0001, 0x0002, OCIT_TYPE_BYTE, value, 2, out, sizeof(out));
+    size_t n = pc_ocit_build(OCIT_MSG_SET, 0x0001, 0x0002, OCIT_TYPE_BYTE, value, 2, out, sizeof(out));
     OcitMsg m;
     TEST_ASSERT_TRUE(pc_ocit_parse(out, n, &m));
     TEST_ASSERT_EQUAL_HEX16(0, pc_ocit_value_u16(&m));

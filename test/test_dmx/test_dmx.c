@@ -288,14 +288,14 @@ void test_dmx_rdm_error_paths()
     uint8_t buf[64];
     TEST_ASSERT_EQUAL_size_t(0, pc_rdm_build(NULL, sizeof(buf), &p, NULL, 0));  // null buf
     TEST_ASSERT_EQUAL_size_t(0, pc_rdm_build(buf, sizeof(buf), NULL, NULL, 0)); // null packet
-    TEST_ASSERT_EQUAL_size_t(0, pc_rdm_build(buf, sizeof(buf), &p, NULL, 2));      // pdl but null pdata
-    TEST_ASSERT_EQUAL_size_t(0, pc_rdm_build(buf, 8, &p, NULL, 0));                // cap too small
+    TEST_ASSERT_EQUAL_size_t(0, pc_rdm_build(buf, sizeof(buf), &p, NULL, 2));   // pdl but null pdata
+    TEST_ASSERT_EQUAL_size_t(0, pc_rdm_build(buf, 8, &p, NULL, 0));             // cap too small
 
     size_t n = pc_rdm_build(buf, sizeof(buf), &p, NULL, 0);
     RdmPacket g;
     size_t c;
     TEST_ASSERT_FALSE(pc_rdm_parse(NULL, n, &g, &c)); // null buf
-    TEST_ASSERT_FALSE(pc_rdm_parse(buf, 5, &g, &c));     // len < RDM_OVERHEAD
+    TEST_ASSERT_FALSE(pc_rdm_parse(buf, 5, &g, &c));  // len < RDM_OVERHEAD
 
     uint8_t bad_ml[64];
     memcpy(bad_ml, buf, n);
@@ -331,7 +331,7 @@ void test_dmx_build_get_channel_branches()
 
     TEST_ASSERT_EQUAL_size_t(0, pc_dmx_build(buf, sizeof(buf), DMX_SC_DIMMER, NULL, 4)); // n!=0, null channels
 
-    TEST_ASSERT_EQUAL_UINT8(0, pc_dmx_get_channel(NULL, sizeof(buf), 1));                // null buf
+    TEST_ASSERT_EQUAL_UINT8(0, pc_dmx_get_channel(NULL, sizeof(buf), 1));                   // null buf
     TEST_ASSERT_EQUAL_UINT8(0, pc_dmx_get_channel(buf, sizeof(buf), DMX_MAX_CHANNELS + 1)); // ch > max
 }
 

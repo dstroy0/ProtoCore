@@ -123,17 +123,17 @@ void test_guards(void)
     uint8_t out[16];
     uint8_t payload[4] = {'A', 'B', 'C', 'D'};
     TEST_ASSERT_EQUAL_size_t(0, pc_dnet_header(1, DNET_READ, 0x40, 2, NULL, sizeof(out))); // null out
-    TEST_ASSERT_EQUAL_size_t(0, pc_dnet_header(1, DNET_READ, 0x40, 2, out, 5));               // cap too small
-    TEST_ASSERT_EQUAL_size_t(0, pc_dnet_data(payload, 4, NULL, sizeof(out)));                        // null out
-    TEST_ASSERT_EQUAL_size_t(0, pc_dnet_data(NULL, 4, out, sizeof(out))); // len but null data
-    TEST_ASSERT_EQUAL_size_t(0, pc_dnet_data(payload, 4, out, 3));           // n > cap
+    TEST_ASSERT_EQUAL_size_t(0, pc_dnet_header(1, DNET_READ, 0x40, 2, out, 5));            // cap too small
+    TEST_ASSERT_EQUAL_size_t(0, pc_dnet_data(payload, 4, NULL, sizeof(out)));              // null out
+    TEST_ASSERT_EQUAL_size_t(0, pc_dnet_data(NULL, 4, out, sizeof(out)));                  // len but null data
+    TEST_ASSERT_EQUAL_size_t(0, pc_dnet_data(payload, 4, out, 3));                         // n > cap
 
     const uint8_t *d;
     size_t dl;
     TEST_ASSERT_FALSE(pc_dnet_data_parse(NULL, 5, &d, &dl)); // null frame
     uint8_t two[2] = {DNET_STX, DNET_ETX};
     TEST_ASSERT_FALSE(pc_dnet_data_parse(two, sizeof(two), &d, &dl)); // len < 3
-    uint8_t no_etx[4] = {DNET_STX, 0x11, 0x22, 0x33};       // octet before the LRC is not ETX
+    uint8_t no_etx[4] = {DNET_STX, 0x11, 0x22, 0x33};                 // octet before the LRC is not ETX
     TEST_ASSERT_FALSE(pc_dnet_data_parse(no_etx, sizeof(no_etx), &d, &dl));
 }
 

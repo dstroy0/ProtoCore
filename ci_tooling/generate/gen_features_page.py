@@ -11,6 +11,7 @@ scroll box so the page itself stays a page.
 
     python ci_tooling/generate/gen_features_page.py
 """
+
 import html
 import os
 import sys
@@ -283,9 +284,7 @@ def main():
             lead, rest = clamp(e["desc"])
             flag = e["flag"]
             flag_html = (
-                f'<code class="flag">{html.escape(flag)}</code>'
-                if flag
-                else '<code class="flag core">always on</code>'
+                f'<code class="flag">{html.escape(flag)}</code>' if flag else '<code class="flag core">always on</code>'
             )
             hay = html.escape(f"{e['name']} {flag or ''} {e['desc']}".lower(), quote=True)
             more = '<button class="more" type="button">more</button>' if rest else ""

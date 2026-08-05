@@ -85,10 +85,10 @@ void test_state_and_real_q_guards()
     uint8_t out[64];
     uint8_t t[4] = {0, 0, 0, 0};
     TEST_ASSERT_EQUAL_size_t(0, pc_iccp_state_q(1, 0, t, NULL, sizeof(out)));  // null out
-    TEST_ASSERT_EQUAL_size_t(0, pc_iccp_state_q(1, 0, t, out, 2));                // overflow
-    TEST_ASSERT_EQUAL_size_t(0, pc_iccp_real_q(100, 0, t, out, 2));               // overflow
+    TEST_ASSERT_EQUAL_size_t(0, pc_iccp_state_q(1, 0, t, out, 2));             // overflow
+    TEST_ASSERT_EQUAL_size_t(0, pc_iccp_real_q(100, 0, t, out, 2));            // overflow
     TEST_ASSERT_EQUAL_size_t(0, pc_iccp_real_q(100, 0, t, NULL, sizeof(out))); // null out
-    TEST_ASSERT_TRUE(pc_iccp_state_q(1, 0x40, t, out, sizeof(out)) > 0);          // valid (time-field tlv)
+    TEST_ASSERT_TRUE(pc_iccp_state_q(1, 0x40, t, out, sizeof(out)) > 0);       // valid (time-field tlv)
 }
 
 void test_real_q_positive_needs_pad_byte(void)

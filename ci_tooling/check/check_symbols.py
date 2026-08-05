@@ -57,6 +57,7 @@ MACRO_LIMIT = 31
 # PC-prefix sweep would have renamed PCA9685 and the PCR_* register block.
 FOREIGN = re.compile(r"^(PCB|PCA\d|PCF\d|PCR_|PCNT|PCIE|PC_?LCD)", re.I)
 
+
 def decomment(t):
     # line-preserving: deleting a block comment shifts every reported line number
     # after it (a namespace at 108 was reported at 73). One implementation, in the lib.
@@ -71,7 +72,7 @@ def decomment(t):
 # keep the two in step.
 GUARD_EXCEPTIONS = {
     "ntrip_caster_listener.h": "PROTOCORE_NTRIP_LISTENER_H",  # "caster" is implied by "ntrip"
-    "provisioning_service.h": "PROTOCORE_PROVISIONING_H",     # a _service header is a service
+    "provisioning_service.h": "PROTOCORE_PROVISIONING_H",  # a _service header is a service
 }
 
 
@@ -98,7 +99,8 @@ def guard_for(rel):
         raise SystemExit(
             f"check_symbols: {rel}: guard {guard} is {len(guard)} chars, over {MACRO_LIMIT}, "
             f"and has no entry in GUARD_EXCEPTIONS. Add one that conveys intent "
-            f"(elide a whole word) and mirror it in docs/SYMBOLS.md s4.")
+            f"(elide a whole word) and mirror it in docs/SYMBOLS.md s4."
+        )
     return guard
 
 
@@ -135,8 +137,12 @@ def check():
         # 3. #pragma once  (no capture group here, so offset from the whole match;
         # m.start(1) would raise IndexError the first time this ever fired)
         for m in re.finditer(r"^[ \t]*#[ \t]*pragma[ \t]+once", text, re.M):
-            add("pragma-once", rel, text[:m.start()].count("\n") + 1,
-                "#pragma once is not used; write the PROTOCORE_<FILE>_H guard")
+            add(
+                "pragma-once",
+                rel,
+                text[: m.start()].count("\n") + 1,
+                "#pragma once is not used; write the PROTOCORE_<FILE>_H guard",
+            )
 
         # 1 + 2. include guard
         if is_header:
@@ -145,25 +151,31 @@ def check():
             # Truncation can merge two guards, so uniqueness is checked on the FINAL
             # name rather than on the filename it was derived from.
             if want in guards_seen and guards_seen[want] != rel:
-                add("guard-collision", rel, 1,
-                    f"guard {want} is also produced by {guards_seen[want]}; "
-                    "rename one header")
+                add(
+                    "guard-collision",
+                    rel,
+                    1,
+                    f"guard {want} is also produced by {guards_seen[want]}; " "rename one header",
+                )
             guards_seen.setdefault(want, rel)
             if not g:
                 add("guard-missing", rel, 1, f"no include guard; expected {want}")
             else:
                 got = g.group(1)
-                ln = text[:g.start()].count("\n") + 1
+                ln = text[: g.start()].count("\n") + 1
                 if got != want:
                     add("guard-form", rel, ln, f"guard {got} should be {want}")
 
         # 6. named namespace / using namespace
         for m in re.finditer(r"^\s*namespace\s+(\w+)", text, re.M):
-            add("namespace", rel, text[:m.start(1)].count("\n") + 1,
-                f"named namespace `{m.group(1)}`; the library is one flat pc_ scope")
+            add(
+                "namespace",
+                rel,
+                text[: m.start(1)].count("\n") + 1,
+                f"named namespace `{m.group(1)}`; the library is one flat pc_ scope",
+            )
         for m in re.finditer(r"^\s*using\s+namespace\s+([\w:]+)", text, re.M):
-            add("using-namespace", rel, text[:m.start(1)].count("\n") + 1,
-                f"using namespace {m.group(1)}")
+            add("using-namespace", rel, text[: m.start(1)].count("\n") + 1, f"using namespace {m.group(1)}")
 
         # 4. macros (headers only: a .cpp macro is not exported)
         if is_header:
@@ -172,7 +184,7 @@ def check():
             own_guard = guard_for(rel)
             for m in re.finditer(r"^\s*#\s*define\s+([A-Za-z_]\w*)", text, re.M):
                 name = m.group(1)
-                ln = text[:m.start(1)].count("\n") + 1
+                ln = text[: m.start(1)].count("\n") + 1
                 if FOREIGN.match(name) or name == own_guard or name.startswith("PROTOCORE_"):
                     continue
                 if not name.startswith("PC_"):
@@ -180,8 +192,7 @@ def check():
                 elif not re.fullmatch(r"PC_[A-Z0-9_]+", name):
                     add("macro-case", rel, ln, f"macro {name} is not PC_UPPER_SNAKE")
                 if len(name) > MACRO_LIMIT:
-                    add("macro-length", rel, ln,
-                        f"macro {name} is {len(name)} chars, over {MACRO_LIMIT}")
+                    add("macro-length", rel, ln, f"macro {name} is {len(name)} chars, over {MACRO_LIMIT}")
 
         # 5. enum types
         #
@@ -205,7 +216,7 @@ def check():
                         if depth == 0:
                             break
                     i += 1
-                tail = re.match(r"\s*(\w+)\s*;", text[i + 1:]) if i < len(text) else None
+                tail = re.match(r"\s*(\w+)\s*;", text[i + 1 :]) if i < len(text) else None
                 if not tail:
                     continue  # an inline anonymous enum names no type
                 name, at = tail.group(1), i + 1 + tail.start(1)
@@ -223,9 +234,12 @@ def check():
 
     # 8. type/function collisions after case normalization
     for name in sorted(set(types_seen) & set(funcs_seen)):
-        add("collision", types_seen[name], 1,
-            f"type and function both normalize to `{name}` "
-            f"(function declared in {funcs_seen[name]})")
+        add(
+            "collision",
+            types_seen[name],
+            1,
+            f"type and function both normalize to `{name}` " f"(function declared in {funcs_seen[name]})",
+        )
 
     return findings
 
@@ -257,14 +271,15 @@ def main():
         known = set(json.load(open(BASELINE, encoding="utf-8")))
         new = [f for f in findings if key(f) not in known]
         if new:
-            print(f"check_symbols: {len(new)} NEW naming-law violation(s) "
-                  f"(see docs/SYMBOLS.md)", file=sys.stderr)
+            print(f"check_symbols: {len(new)} NEW naming-law violation(s) " f"(see docs/SYMBOLS.md)", file=sys.stderr)
             for f in new[:40]:
                 print(f"  {f['file']}:{f['line']}: [{f['kind']}] {f['msg']}", file=sys.stderr)
             return 1
         fixed = len(known) - (len(findings) - 0)
-        print(f"check_symbols: OK - no new violations "
-              f"({len(findings)} known remain{f', {fixed} fixed since baseline' if fixed > 0 else ''})")
+        print(
+            f"check_symbols: OK - no new violations "
+            f"({len(findings)} known remain{f', {fixed} fixed since baseline' if fixed > 0 else ''})"
+        )
         return 0
 
     print(f"check_symbols: {len(findings)} violations of docs/SYMBOLS.md\n")

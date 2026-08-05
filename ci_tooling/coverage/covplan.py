@@ -10,6 +10,7 @@ test suites outright.
     covplan.py                 # list every component with an uncovered branch
     covplan.py --json out.json # machine-readable, for dispatching workers
 """
+
 from __future__ import annotations
 
 import argparse
@@ -69,13 +70,15 @@ def build_units(cov_path: str):
         for e in g["envs"]:
             for t in envs[e]["tests"]:
                 suites.add(t)
-        units.append({
-            "missing": g["missing"],
-            "srcs": sorted(g["srcs"], key=lambda p: -missing[p]),
-            "envs": sorted(g["envs"]),
-            "suites": sorted(suites),
-            "per_src": {p: missing[p] for p in sorted(g["srcs"], key=lambda p: -missing[p])},
-        })
+        units.append(
+            {
+                "missing": g["missing"],
+                "srcs": sorted(g["srcs"], key=lambda p: -missing[p]),
+                "envs": sorted(g["envs"]),
+                "suites": sorted(suites),
+                "per_src": {p: missing[p] for p in sorted(g["srcs"], key=lambda p: -missing[p])},
+            }
+        )
     units.sort(key=lambda u: -u["missing"])
     return units
 
@@ -95,8 +98,7 @@ def main() -> int:
     print(f"{len(units)} independent units, {total} uncovered branches\n")
     for i, u in enumerate(units):
         noenv = " !! NO ENV" if not u["envs"] else ""
-        print(f"[{i:3d}] {u['missing']:5d} branches  {len(u['srcs']):3d} srcs  "
-              f"{len(u['envs']):3d} envs{noenv}")
+        print(f"[{i:3d}] {u['missing']:5d} branches  {len(u['srcs']):3d} srcs  " f"{len(u['envs']):3d} envs{noenv}")
         for p, m in list(u["per_src"].items())[:6]:
             print(f"        {m:5d}  {p}")
         if len(u["srcs"]) > 6:

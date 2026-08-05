@@ -18,14 +18,22 @@ N = int(sys.argv[2]) if len(sys.argv) > 2 else 6
 KEX = sys.argv[3] if len(sys.argv) > 3 else "curve25519-sha256"
 
 ARGS = [
-    "ssh", "-vv",
-    "-o", "KexAlgorithms=" + KEX,
-    "-o", "HostKeyAlgorithms=ssh-ed25519",
-    "-o", "StrictHostKeyChecking=no",
-    "-o", "UserKnownHostsFile=/dev/null",
-    "-o", "BatchMode=yes",
-    "-o", "ConnectTimeout=10",
-    "admin@" + HOST, "true",
+    "ssh",
+    "-vv",
+    "-o",
+    "KexAlgorithms=" + KEX,
+    "-o",
+    "HostKeyAlgorithms=ssh-ed25519",
+    "-o",
+    "StrictHostKeyChecking=no",
+    "-o",
+    "UserKnownHostsFile=/dev/null",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "ConnectTimeout=10",
+    "admin@" + HOST,
+    "true",
 ]
 
 MARKS = {
@@ -59,19 +67,28 @@ for it in range(N):
 
     row = {
         "tcp_to_newkeys_ms": d("tcp", "nk_recv"),
-        "kexinit_to_newkeys_ms": d("ki_sent", "nk_recv"),   # client-observed full KEX
+        "kexinit_to_newkeys_ms": d("ki_sent", "nk_recv"),  # client-observed full KEX
         "ecdh_reply_wait_ms": d("ecdh_init_sent", "nk_recv"),  # device reply compute + one WiFi round-trip
         "total_proc_ms": (t_end - t0) * 1000.0,
     }
     rows.append(row)
-    print("run %d: tcp->newkeys=%.1f  kexinit->newkeys=%.1f  ecdh_reply_wait=%.1f  proc=%.1f"
-          % (it + 1, row["tcp_to_newkeys_ms"], row["kexinit_to_newkeys_ms"],
-             row["ecdh_reply_wait_ms"], row["total_proc_ms"]))
+    print(
+        "run %d: tcp->newkeys=%.1f  kexinit->newkeys=%.1f  ecdh_reply_wait=%.1f  proc=%.1f"
+        % (
+            it + 1,
+            row["tcp_to_newkeys_ms"],
+            row["kexinit_to_newkeys_ms"],
+            row["ecdh_reply_wait_ms"],
+            row["total_proc_ms"],
+        )
+    )
     time.sleep(1.0)
 
 print("\n=== aggregate over %d runs (ms) ===" % N)
 for k in ("tcp_to_newkeys_ms", "kexinit_to_newkeys_ms", "ecdh_reply_wait_ms", "total_proc_ms"):
     vals = [r[k] for r in rows if r[k] == r[k]]  # drop nan
     if vals:
-        print("%-24s min=%.1f  median=%.1f  mean=%.1f  max=%.1f"
-              % (k, min(vals), statistics.median(vals), statistics.mean(vals), max(vals)))
+        print(
+            "%-24s min=%.1f  median=%.1f  mean=%.1f  max=%.1f"
+            % (k, min(vals), statistics.median(vals), statistics.mean(vals), max(vals))
+        )

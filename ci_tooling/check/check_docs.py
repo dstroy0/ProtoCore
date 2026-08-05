@@ -54,10 +54,22 @@ def main() -> int:
     # not "is it a macro".
     # test/ and penetration_testing/ define their own PC_ symbols (PC_SSH_BENCH,
     # PC_SSH_TEST_HOST_KEY_DER); a doc citing those is not stale.
-    src_blob = "".join(read(f) for f in sh(
-        "git", "ls-files", "src/*.h", "src/*.c", "src/*.cpp",
-        "test/*.h", "test/*.c", "test/*.cpp",
-        "penetration_testing/*.h", "penetration_testing/*.c", "penetration_testing/*.cpp").split())
+    src_blob = "".join(
+        read(f)
+        for f in sh(
+            "git",
+            "ls-files",
+            "src/*.h",
+            "src/*.c",
+            "src/*.cpp",
+            "test/*.h",
+            "test/*.c",
+            "test/*.cpp",
+            "penetration_testing/*.h",
+            "penetration_testing/*.c",
+            "penetration_testing/*.cpp",
+        ).split()
+    )
     known_flags = set(re.findall(r"\b(PC_[A-Z0-9_]+)\b", src_blob))
     known_funcs = set(re.findall(r"\b(pc_[a-z0-9_]+)\s*\(", src_blob))
 
@@ -76,20 +88,19 @@ def main() -> int:
     #
     # Dead LINKS are still checked everywhere: a broken link is broken regardless of tense.
     NOT_PRESENT_TENSE = {
-        "docs/ROADMAP.md",      # forward-looking
-        "docs/BUGS.md",         # historical
-        "docs/AUDIT.md",        # historical
-        "docs/CHANGELOG.md",    # historical, generated
-        "docs/DELIVERED.md",    # historical
-        "docs/SYMBOLS.md",      # illustrative
+        "docs/ROADMAP.md",  # forward-looking
+        "docs/BUGS.md",  # historical
+        "docs/AUDIT.md",  # historical
+        "docs/CHANGELOG.md",  # historical, generated
+        "docs/DELIVERED.md",  # historical
+        "docs/SYMBOLS.md",  # illustrative
         # historical: a sweep record's whole job is to say what a refactor renamed or deleted,
         # so it names the OLD symbol on purpose - "PC_ENABLE_VFS -> PC_ENABLE_MNT", "PC_POOL_SLOTS
         # used to be", "the rule that removed PC_LIT". Resolving those would erase the record.
         "SWEEP_NOTES.md",
     }
 
-    known_envs = set(re.findall(r"^\[env:(native[A-Za-z0-9_]*)\]",
-                                read("platformio.ini"), re.M))
+    known_envs = set(re.findall(r"^\[env:(native[A-Za-z0-9_]*)\]", read("platformio.ini"), re.M))
 
     bad = []
     for f in mds:
@@ -98,9 +109,8 @@ def main() -> int:
 
         for m in LINK.finditer(text):
             t = m.group(1).split("#")[0].strip()
-            if (not t or t.startswith(("http://", "https://", "mailto:", "#", "@"))
-                    or " " in t or "*" in t):
-                continue                      # url, doxygen @ref, or a C++ lambda
+            if not t or t.startswith(("http://", "https://", "mailto:", "#", "@")) or " " in t or "*" in t:
+                continue  # url, doxygen @ref, or a C++ lambda
             if not os.path.exists(os.path.join(ROOT, os.path.normpath(os.path.join(d, t)))):
                 bad.append((f, "dead link", t))
 
@@ -125,8 +135,7 @@ def main() -> int:
                 bad.append((f, "missing src path", p))
 
     if bad:
-        print("check_docs: documentation cites things the tree does not have:\n",
-              file=sys.stderr)
+        print("check_docs: documentation cites things the tree does not have:\n", file=sys.stderr)
         by_file = {}
         for f, kind, what in bad:
             by_file.setdefault(f, []).append((kind, what))

@@ -172,8 +172,8 @@ def scan_extern_ctx():
 
 
 def main(argv) -> int:
-    loose = []     # not a context at all - absolute, fails on sight
-    linkage = []   # a context, but external linkage - ratcheted
+    loose = []  # not a context at all - absolute, fails on sight
+    linkage = []  # a context, but external linkage - ratcheted
     for cpp in sorted(p for p in SRC.rglob("*") if p.suffix in (".c", ".cpp")):
         anon_depth = -1  # brace depth at which an anonymous namespace opened, or -1
         depth = 0

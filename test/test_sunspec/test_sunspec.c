@@ -143,7 +143,7 @@ void test_reader_guards_and_i32()
     char out[8];
     TEST_ASSERT_FALSE(pc_sunspec_string(NULL, 0, 1, out, sizeof(out)));  // null body
     TEST_ASSERT_FALSE(pc_sunspec_string(body, 0, 1, NULL, sizeof(out))); // null out
-    TEST_ASSERT_FALSE(pc_sunspec_string(body, 0, 1, out, 0));               // zero out_cap
+    TEST_ASSERT_FALSE(pc_sunspec_string(body, 0, 1, out, 0));            // zero out_cap
 }
 
 // The i32 writer, ss_put's error-flag short-circuit, and every pc_sunspec_write_string

@@ -244,7 +244,7 @@ def dot(hard, theme):
             tip += f" - enables {len(kids)}"
         url = f"{FEATURES_URL}#{n.lower().replace('_', '-')}"
         return (
-            f"  {n} [label={label}, fillcolor=\"{fill}\", color=\"{line}\","
+            f'  {n} [label={label}, fillcolor="{fill}", color="{line}",'
             f' URL="{url}", target="_blank", tooltip="{tip}"];'
         )
 
@@ -311,8 +311,7 @@ def build_block():
     _, extra = primary_tree({(p, c) for p, c in hard if p != "TLS"})
     if extra:
         notes = "; ".join(
-            f"**{', '.join('`PC_ENABLE_' + c + '`' for c in cs)}** also need `PC_ENABLE_{p}`"
-            for p, cs in extra.items()
+            f"**{', '.join('`PC_ENABLE_' + c + '`' for c in cs)}** also need `PC_ENABLE_{p}`" for p, cs in extra.items()
         )
         lines += [f"> Not drawn (so the forest stays uncrossed): {notes}.", ""]
     if derived:
@@ -344,5 +343,4 @@ def build_block():
 
 
 if __name__ == "__main__":
-    raise SystemExit(dr.apply(README, {REGION: build_block()},
-                              check="--check" in sys.argv[1:]))
+    raise SystemExit(dr.apply(README, {REGION: build_block()}, check="--check" in sys.argv[1:]))

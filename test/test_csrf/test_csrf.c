@@ -115,7 +115,7 @@ void test_reset_and_verify_guards()
     uint8_t secret[16] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
     pc_csrf_set_secret(secret, sizeof(secret));
     TEST_ASSERT_FALSE(pc_csrf_verify("not-a-valid-token")); // malformed token -> false
-    TEST_ASSERT_FALSE(pc_csrf_verify(NULL));             // null token -> false
+    TEST_ASSERT_FALSE(pc_csrf_verify(NULL));                // null token -> false
 }
 
 // A null secret pointer fails closed: secret_len is cleared, not just left alone.

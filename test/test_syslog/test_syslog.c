@@ -19,8 +19,7 @@ void tearDown()
 void test_pri_local0_info()
 {
     char buf[256];
-    size_t n = pc_syslog_format(buf, sizeof(buf), SYSLOG_FAC_LOCAL0, SYSLOG_INFO,
-                                "esp32", "app", "hello");
+    size_t n = pc_syslog_format(buf, sizeof(buf), SYSLOG_FAC_LOCAL0, SYSLOG_INFO, "esp32", "app", "hello");
     TEST_ASSERT_GREATER_THAN_UINT(0, n);
     // PRI = 16*8 + 6 = 134
     TEST_ASSERT_EQUAL_STRING("<134>1 - esp32 app - - - hello", buf);
@@ -40,8 +39,7 @@ void test_pri_computation_varies()
 void test_nilvalue_for_empty_fields()
 {
     char buf[256];
-    pc_syslog_format(buf, sizeof(buf), SYSLOG_FAC_USER, SYSLOG_DEBUG, NULL, "",
-                     "msg");
+    pc_syslog_format(buf, sizeof(buf), SYSLOG_FAC_USER, SYSLOG_DEBUG, NULL, "", "msg");
     // user(1)*8 + debug(7) = 15; empty hostname + appname -> "-"
     TEST_ASSERT_EQUAL_STRING("<15>1 - - - - - - msg", buf);
 }
@@ -49,8 +47,7 @@ void test_nilvalue_for_empty_fields()
 void test_empty_message_ok()
 {
     char buf[256];
-    size_t n = pc_syslog_format(buf, sizeof(buf), SYSLOG_FAC_LOCAL0, SYSLOG_NOTICE, "h",
-                                "a", NULL);
+    size_t n = pc_syslog_format(buf, sizeof(buf), SYSLOG_FAC_LOCAL0, SYSLOG_NOTICE, "h", "a", NULL);
     TEST_ASSERT_GREATER_THAN_UINT(0, n);
     // local0(16)*8 + notice(5) = 133; trailing MSG empty
     TEST_ASSERT_EQUAL_STRING("<133>1 - h a - - - ", buf);
@@ -59,16 +56,14 @@ void test_empty_message_ok()
 void test_overflow_returns_zero()
 {
     char buf[16]; // far too small for the header + message
-    size_t n = pc_syslog_format(buf, sizeof(buf), SYSLOG_FAC_LOCAL0, SYSLOG_INFO,
-                                "esp32", "app", "a long message");
+    size_t n = pc_syslog_format(buf, sizeof(buf), SYSLOG_FAC_LOCAL0, SYSLOG_INFO, "esp32", "app", "a long message");
     TEST_ASSERT_EQUAL_UINT(0, n);
 }
 
 void test_length_matches_strlen()
 {
     char buf[256];
-    size_t n = pc_syslog_format(buf, sizeof(buf), SYSLOG_FAC_LOCAL0, SYSLOG_INFO,
-                                "host", "app", "payload");
+    size_t n = pc_syslog_format(buf, sizeof(buf), SYSLOG_FAC_LOCAL0, SYSLOG_INFO, "host", "app", "payload");
     TEST_ASSERT_EQUAL_UINT(strlen(buf), n);
 }
 
@@ -99,8 +94,7 @@ void test_format_null_and_pri_clamp()
 {
     char buf[64];
     // Guard clauses return 0.
-    TEST_ASSERT_EQUAL_UINT(0,
-                           pc_syslog_format(NULL, sizeof(buf), (SyslogFacility)0, (SyslogSeverity)0, "h", "a", "m"));
+    TEST_ASSERT_EQUAL_UINT(0, pc_syslog_format(NULL, sizeof(buf), (SyslogFacility)0, (SyslogSeverity)0, "h", "a", "m"));
     TEST_ASSERT_EQUAL_UINT(0, pc_syslog_format(buf, 0, (SyslogFacility)0, (SyslogSeverity)0, "h", "a", "m"));
     // facility/severity are unsigned enums, so PRI is never negative; an over-range value cast in at the
     // boundary clamps to 191.
@@ -146,8 +140,7 @@ void test_init_empty_server_ip_not_ready()
 void test_format_hostname_empty_appname_null()
 {
     char buf[64];
-    size_t n = pc_syslog_format(buf, sizeof(buf), SYSLOG_FAC_USER, SYSLOG_WARNING, "",
-                                NULL, "msg2");
+    size_t n = pc_syslog_format(buf, sizeof(buf), SYSLOG_FAC_USER, SYSLOG_WARNING, "", NULL, "msg2");
     TEST_ASSERT_GREATER_THAN_UINT(0, n);
     // user(1)*8 + warning(4) = 12; empty hostname + null appname -> both NILVALUE "-"
     TEST_ASSERT_EQUAL_STRING("<12>1 - - - - - - msg2", buf);
@@ -164,8 +157,7 @@ void test_format_append_boundaries()
     static const size_t fail_caps[] = {1, 2, 7, 8, 9, 10, 17, 18};
     for (size_t i = 0; i < sizeof(fail_caps) / sizeof(fail_caps[0]); i++)
     {
-        size_t n = pc_syslog_format(buf, fail_caps[i], SYSLOG_FAC_USER, SYSLOG_EMERG,
-                                    "h", "a", "m");
+        size_t n = pc_syslog_format(buf, fail_caps[i], SYSLOG_FAC_USER, SYSLOG_EMERG, "h", "a", "m");
         TEST_ASSERT_EQUAL_UINT(0, n);
     }
     // One byte past the last boundary above: every span now fits exactly.

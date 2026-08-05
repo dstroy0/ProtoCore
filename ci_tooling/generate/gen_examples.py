@@ -52,8 +52,7 @@ GROUPS = [
         "Peripherals",
         "Peripherals",
         "HW",
-        "On-chip and add-on interface hardware - Ethernet (internal + W5500), CAN, Wi-Fi "
-        "capture, and DMA ingest:",
+        "On-chip and add-on interface hardware - Ethernet (internal + W5500), CAN, Wi-Fi " "capture, and DMA ingest:",
     ),
     (
         "Drivers",
@@ -131,8 +130,9 @@ def main():
     # patched with re.sub(count=1), which silently left the number stale if that
     # sentence was ever reworded; re_sub_once fails instead.
     def patch_count(text):
-        return dr.re_sub_once(text, r"ships \d+ runnable examples",
-                              f"ships {total} runnable examples", "example count in prose")
+        return dr.re_sub_once(
+            text, r"ships \d+ runnable examples", f"ships {total} runnable examples", "example count in prose"
+        )
 
     return dr.apply(EXAMPLES_MD, {REGION: body}, check=check, transform=patch_count)
 

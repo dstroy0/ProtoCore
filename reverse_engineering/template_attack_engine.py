@@ -121,7 +121,7 @@ if __name__ == "__main__":
     TIME_SAMPLES = 200
     LEAK_SAMPLE = 90
     PROFILE_KEY = 0x11  # the clone device's key - known during profiling
-    ATTACK_KEY = 0xD3   # the target device's key - unknown to the attack phase
+    ATTACK_KEY = 0xD3  # the target device's key - unknown to the attack phase
     NOISE_SIGMA = 0.35
 
     def make_traces(n, key, rng):
@@ -144,8 +144,10 @@ if __name__ == "__main__":
         attack_traces, attack_plaintexts, _ = make_traces(n_attack, ATTACK_KEY, rng)
         guess, scores = tmpl.attack_key_byte(attack_traces, attack_plaintexts, byte_index=0)
         margin = np.sort(scores)[-1] - np.sort(scores)[-2]
-        print(f"    {n_attack:>2} attack traces: recovered={hex(guess)} expected={hex(ATTACK_KEY)} "
-              f"margin={margin:.2f}")
+        print(
+            f"    {n_attack:>2} attack traces: recovered={hex(guess)} expected={hex(ATTACK_KEY)} "
+            f"margin={margin:.2f}"
+        )
 
     guess, _ = tmpl.attack_key_byte(*make_traces(20, ATTACK_KEY, rng)[:2], byte_index=0)
     print(f"\n================ RESULTS ================")

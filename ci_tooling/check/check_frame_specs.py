@@ -32,13 +32,13 @@ EXTS = (".h", ".c", ".cpp", ".ino")
 # concatenates, so the whole run is captured and measured together.
 FIELD = re.compile(
     r"\{\s*PC_FK_LIT\s*,\s*(?P<width>[0-9]+)\s*,\s*(?P<len>[0-9]+)\s*,\s*"
-    r"(?P<lit>\"(?:[^\"\\]|\\.)*\"(?:\s*\"(?:[^\"\\]|\\.)*\")*)\s*\}")
+    r"(?P<lit>\"(?:[^\"\\]|\\.)*\"(?:\s*\"(?:[^\"\\]|\\.)*\")*)\s*\}"
+)
 
 STRING_TOKEN = re.compile(r"\"((?:[^\"\\]|\\.)*)\"")
 
 # C escapes that stand for one byte. \xNN and \NNN are handled separately.
-SIMPLE_ESCAPES = {"n": 1, "t": 1, "r": 1, "0": 1, "\\": 1, "\"": 1, "'": 1,
-                  "a": 1, "b": 1, "f": 1, "v": 1, "?": 1}
+SIMPLE_ESCAPES = {"n": 1, "t": 1, "r": 1, "0": 1, "\\": 1, '"': 1, "'": 1, "a": 1, "b": 1, "f": 1, "v": 1, "?": 1}
 
 
 def literal_length(tok_run):

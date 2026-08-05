@@ -91,7 +91,7 @@ void test_control_bytes()
     uint8_t ack[1];
     TEST_ASSERT_EQUAL_UINT16(1, pc_zwave_build_ack(ack, sizeof(ack)));
     TEST_ASSERT_EQUAL_HEX8(ZWAVE_ACK, ack[0]);
-    TEST_ASSERT_EQUAL_UINT16(0, pc_zwave_build_ack(ack, 0));     // no room
+    TEST_ASSERT_EQUAL_UINT16(0, pc_zwave_build_ack(ack, 0));  // no room
     TEST_ASSERT_EQUAL_UINT16(0, pc_zwave_build_ack(NULL, 1)); // null out
 }
 
@@ -99,11 +99,9 @@ void test_build_bounds()
 {
     uint8_t data[8] = {0};
     uint8_t small[6];
-    TEST_ASSERT_EQUAL_UINT16(
-        0, pc_zwave_build_frame(ZWAVE_REQ, 0x13, data, 4, small, sizeof(small))); // 9 > 6
+    TEST_ASSERT_EQUAL_UINT16(0, pc_zwave_build_frame(ZWAVE_REQ, 0x13, data, 4, small, sizeof(small))); // 9 > 6
     uint8_t big[64];
-    TEST_ASSERT_EQUAL_UINT16(
-        0, pc_zwave_build_frame(ZWAVE_REQ, 0x13, big, 17, big, sizeof(big))); // 17 > MAX_DATA 16
+    TEST_ASSERT_EQUAL_UINT16(0, pc_zwave_build_frame(ZWAVE_REQ, 0x13, big, 17, big, sizeof(big))); // 17 > MAX_DATA 16
 }
 
 void test_build_rejects_null_out()

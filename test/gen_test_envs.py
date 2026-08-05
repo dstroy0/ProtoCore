@@ -117,8 +117,12 @@ test_build_src = yes"""
 
 def render_block(table):
     envs = table["envs"]
-    parts = [BEGIN, "; Single source of truth: test/test_matrix.json  (" + str(len(envs)) + " native envs)",
-             "", NATIVE_BASE]
+    parts = [
+        BEGIN,
+        "; Single source of truth: test/test_matrix.json  (" + str(len(envs)) + " native envs)",
+        "",
+        NATIVE_BASE,
+    ]
     for name, e in envs.items():
         parts.append("")
         parts.append(render_env(name, e))
