@@ -1878,10 +1878,7 @@
     "native_smbus": {
       "desc": "SMBus 3.1 Packet Error Code (services/peripherals/smbus): the address byte with its direction\nbit, the PEC over a write transaction and over a read transaction (which spans both halves and\nthe repeated-start address), and that the checksum depends on the address and the direction as\nwell as the payload. The PEC comes from the shared CRC engine, so each vector is checked against\npc_crc(&PC_CRC8_SMBUS) directly rather than against a second implementation.",
       "flags": ["-DPC_ENABLE_SMBUS=1"],
-      "src": [
-        "+<services/peripherals/smbus.c>",
-        "+<services/peripherals/bus_host.c>"
-      ],
+      "src": ["+<services/peripherals/smbus.c>"],
       "tests": ["test_smbus"]
     },
     "native_pmbus": {
@@ -1889,8 +1886,7 @@
       "flags": ["-DPC_ENABLE_SMBUS=1", "-DPC_ENABLE_PMBUS=1"],
       "src": [
         "+<services/peripherals/pmbus.c>",
-        "+<services/peripherals/smbus.c>",
-        "+<services/peripherals/bus_host.c>"
+        "+<services/peripherals/smbus.c>"
       ],
       "tests": ["test_pmbus"]
     },
@@ -1904,7 +1900,6 @@
         "-DPC_ENABLE_SMBUS=1"
       ],
       "src": [
-        "+<services/peripherals/bus_host.c>",
         "+<services/peripherals/sht3x/sht3x.c>",
         "+<services/peripherals/pca9685/pca9685.c>",
         "+<services/peripherals/ina219/ina219.c>",

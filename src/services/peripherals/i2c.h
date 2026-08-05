@@ -31,7 +31,6 @@
 
 #include "board_drivers/board_profiles/pc_platform.h"
 #include "protocore_config.h"
-#include "services/peripherals/bus_host.h" // host builds record the wire instead of driving it
 
 /** @brief Bus clock for the shared peripheral bus; 100 kHz standard mode. */
 #ifndef PC_I2C_HZ
@@ -62,7 +61,7 @@
 
 PROTO_BEGIN_DECLS
 
-#if PROTOCORE_HOT
+#if PROTOCORE_HOT || PC_PLATFORM_HAS_BUS
 
 /** @brief Bring up @p bus on @p sda / @p scl at @p hz (-1 on a pin = the platform default). */
 PC_INLINE proto_bool pc_i2c_begin_on(uint8_t bus, int sda, int scl, uint32_t hz)
@@ -186,7 +185,7 @@ PC_INLINE proto_bool pc_i2c_recover(void)
     return pc_i2c_recover_on((uint8_t)PC_I2C_BUS, (int)PC_I2C_SDA_PIN, (int)PC_I2C_SCL_PIN);
 }
 
-#else // host build: no controller, so the transfers are recorded for a test to assert
+#else // no bus seam on this build
 
 PC_INLINE proto_bool pc_i2c_begin_on(uint8_t bus, int sda, int scl, uint32_t hz)
 {
@@ -205,7 +204,10 @@ PC_INLINE proto_bool pc_i2c_begin(void)
 PC_INLINE proto_bool pc_i2c_write_on(uint8_t bus, uint16_t addr, const uint8_t *buf, size_t len)
 {
     (void)bus;
-    return pc_bus_host_write(PC_BUS_HOST_I2C, addr, buf, len) != 0;
+    (void)addr;
+    (void)buf;
+    (void)len;
+    return PROTO_FALSE;
 }
 
 PC_INLINE proto_bool pc_i2c_write(uint16_t addr, const uint8_t *buf, size_t len)
@@ -216,7 +218,10 @@ PC_INLINE proto_bool pc_i2c_write(uint16_t addr, const uint8_t *buf, size_t len)
 PC_INLINE proto_bool pc_i2c_read_on(uint8_t bus, uint16_t addr, uint8_t *buf, size_t len)
 {
     (void)bus;
-    return pc_bus_host_read(PC_BUS_HOST_I2C, addr, buf, len) != 0;
+    (void)addr;
+    (void)buf;
+    (void)len;
+    return PROTO_FALSE;
 }
 
 PC_INLINE proto_bool pc_i2c_read(uint16_t addr, uint8_t *buf, size_t len)
@@ -228,7 +233,12 @@ PC_INLINE proto_bool pc_i2c_write_read_on(uint8_t bus, uint16_t addr, const uint
                                           size_t rlen)
 {
     (void)bus;
-    return pc_bus_host_write_read(PC_BUS_HOST_I2C, addr, w, wlen, r, rlen) != 0;
+    (void)addr;
+    (void)w;
+    (void)wlen;
+    (void)r;
+    (void)rlen;
+    return PROTO_FALSE;
 }
 
 PC_INLINE proto_bool pc_i2c_write_read(uint16_t addr, const uint8_t *w, size_t wlen, uint8_t *r, size_t rlen)
@@ -249,11 +259,11 @@ PC_INLINE proto_bool pc_i2c_set_clock(uint32_t hz)
     return PROTO_TRUE;
 }
 
-// A probe is an address cycle with no payload, which the capture records as a zero-length write.
 PC_INLINE proto_bool pc_i2c_probe_on(uint8_t bus, uint16_t addr)
 {
     (void)bus;
-    return pc_bus_host_write(PC_BUS_HOST_I2C, addr, NULL, 0) != 0;
+    (void)addr;
+    return PROTO_FALSE;
 }
 
 PC_INLINE proto_bool pc_i2c_probe(uint16_t addr)

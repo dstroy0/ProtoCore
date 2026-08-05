@@ -463,6 +463,13 @@ typedef ip_addr_t pc_net_ip;
 
 #endif // PC_VENDOR_ESP
 
+// Whether a bus seam exists to call. Silicon has one; a host build has one only when the test
+// mock above supplied it, and the bus owners key their host arm off this so a driver's real
+// composition runs against the capture rather than being stubbed out at the owner.
+#ifndef PC_PLATFORM_HAS_BUS
+#define PC_PLATFORM_HAS_BUS 0
+#endif
+
 // A single "targets real silicon" convenience (any vendor backend, i.e. not the host software floor).
 #define PC_VENDOR_SILICON (PC_VENDOR_ESP || PC_VENDOR_STM || PC_VENDOR_RP || PC_VENDOR_TI)
 

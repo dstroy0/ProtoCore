@@ -25,7 +25,6 @@
 
 #include "board_drivers/board_profiles/pc_platform.h"
 #include "protocore_config.h"
-#include "services/peripherals/bus_host.h" // host builds record the wire instead of driving it
 
 /** @brief Read timeout in milliseconds, for a driver that takes whatever has arrived. */
 #ifndef PC_UART_TIMEOUT_MS
@@ -34,7 +33,7 @@
 
 PROTO_BEGIN_DECLS
 
-#if PROTOCORE_HOT
+#if PROTOCORE_HOT || PC_PLATFORM_HAS_BUS
 
 /** @brief Bring up @p unit at @p baud, 8N1, on @p rx_pin / @p tx_pin (-1 = the unit's default). */
 PC_INLINE proto_bool pc_uart_begin(uint8_t unit, uint32_t baud, int rx_pin, int tx_pin)
@@ -70,7 +69,7 @@ PC_INLINE proto_bool pc_uart_read_byte(uint8_t unit, uint8_t *out)
     return pc_uart_read(unit, out, 1, PC_UART_TIMEOUT_MS) == 1u;
 }
 
-#else // host build: no unit, so the traffic is recorded for a test to assert
+#else // no bus seam on this build
 
 PC_INLINE proto_bool pc_uart_begin(uint8_t unit, uint32_t baud, int rx_pin, int tx_pin)
 {
@@ -83,23 +82,25 @@ PC_INLINE proto_bool pc_uart_begin(uint8_t unit, uint32_t baud, int rx_pin, int 
 
 PC_INLINE proto_bool pc_uart_write(uint8_t unit, const uint8_t *buf, size_t len)
 {
-    return pc_bus_host_write(PC_BUS_HOST_UART, unit, buf, len) != 0;
+    (void)unit;
+    (void)buf;
+    (void)len;
+    return PROTO_FALSE;
 }
 
-// A read takes what the test queued, and reports the count rather than refusing, so a stream
-// driver's reassembly runs on real bytes.
 PC_INLINE size_t pc_uart_read(uint8_t unit, uint8_t *buf, size_t len, uint32_t ms)
 {
+    (void)unit;
+    (void)buf;
+    (void)len;
     (void)ms;
-    size_t avail = pc_bus_host_avail();
-    size_t n = len < avail ? len : avail;
-    return (n > 0 && pc_bus_host_read(PC_BUS_HOST_UART, unit, buf, n) != 0) ? n : 0u;
+    return 0u;
 }
 
 PC_INLINE size_t pc_uart_available(uint8_t unit)
 {
     (void)unit;
-    return pc_bus_host_avail();
+    return 0u;
 }
 
 PC_INLINE proto_bool pc_uart_read_byte(uint8_t unit, uint8_t *out)
