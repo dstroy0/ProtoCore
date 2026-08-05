@@ -215,7 +215,7 @@ static void crypto_bench_task(void *)
         {
             DtlsRecordKeys keys;
             uint8_t secret[32] = {0};
-            pc_dtls_record_keys_derive(&keys, DtlsCipher::AES_128_GCM_SHA256, 1, secret);
+            pc_dtls_record_keys_derive(&keys, DTLS_CIPHER_AES_128_GCM_SHA256, 1, secret);
             static uint8_t rec[BULK + 64];
             BENCH_BULK(
                 "dtls_record protect (DTLS1.3)", 300, BULK,
@@ -363,14 +363,14 @@ static void crypto_bench_task(void *)
         if (rsa_loaded)
         {
             uint8_t msg[32] = {0}, sig[256];
-            int sr = ssh_rsa_sign(msg, 32, pc_rsa_hash::SHA256, sig);
+            int sr = ssh_rsa_sign(msg, 32, PC_RSA_HASH_SHA256, sig);
             if (sr == 0)
             {
-                BENCH_OP("ssh_rsa_2048_sign (SHA256)", 4, ssh_rsa_sign(msg, 32, pc_rsa_hash::SHA256, sig));
+                BENCH_OP("ssh_rsa_2048_sign (SHA256)", 4, ssh_rsa_sign(msg, 32, PC_RSA_HASH_SHA256, sig));
                 volatile int vr = 0;
                 BENCH_OP("ssh_rsa_2048_verify (SHA256)", 8,
                          vr = pc_rsa_verify(ssh_host_pubkey.n, ssh_host_pubkey.e_bytes, msg, 32, sig, 256,
-                                            pc_rsa_hash::SHA256));
+                                            PC_RSA_HASH_SHA256));
                 (void)vr;
             }
             else
