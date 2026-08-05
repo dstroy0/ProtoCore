@@ -264,7 +264,12 @@
     "native_roaming": {
       "desc": "Wi-Fi roaming decision layer (network_drivers/network/roaming): the pure policy that fuses the current RSSI, a\ncandidate neighbour list, and an optional 802.11v BTM hint into a roam/stay decision (target BSSID +\nchannel + reason), with a hysteresis margin and a disassoc-imminent override. Pure host tests.",
       "flags": ["-DPC_ENABLE_ROAMING=1"],
-      "src": ["+<network_drivers/datalink/roaming.c>", "+<mmgr/protomem.c>"],
+      "src": [
+        "+<network_drivers/datalink/roaming.c>",
+        "+<mmgr/protomem.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/arena.c>"
+      ],
       "tests": ["test_roaming"]
     },
     "native_iolink": {
