@@ -872,6 +872,7 @@
     "NPDU",
     "nrefs",
     "NRSC",
+    "nsabi",
     "NSCOUNT",
     "nslookup",
     "ntauth",

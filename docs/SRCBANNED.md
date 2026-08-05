@@ -98,3 +98,37 @@ solves it with a lock:
 - **snake_case, terse names**, `const char *` (pointer binds to the type), and comments that state
   what the code does and how it does it, in plain language. Code is math; the comment is its
   description. Nothing else goes in one.
+- **A module publishes a namespace struct, not a list of names.** Its storage is the owned `<Name>Ctx`
+  from ban #12, declared in the header as an opaque tag and defined only in the owning `.c`, so the
+  layout never leaves the TU that carries its `static_assert` and its `PC_WORK_*` budget. **Every
+  storage pointer a header hands out is opaque**; a wire or message struct is the opposite case and
+  keeps its layout published, because there the layout is the contract.
+  The struct holds that context pointer plus the module's entry points, and the modules join into the
+  layer objects a caller actually uses:
+
+    ```c
+    typedef struct AuthCtx AuthCtx;  /* opaque: storage stays in auth.c */
+
+    typedef struct
+    {
+        AuthCtx *ctx;
+        proto_bool (*login)(const char *user, const char *pass);
+        void (*begin)(void);
+    } AuthNs;
+    ```
+
+    so a caller writes `Network.auth.login(user, pass)` and `Server.signaling.peek()`. The chain is
+    the layer, which is what makes a `begin` or an `on` say which one it is at the call site.
+
+    **The namespace struct is the public surface and the flat `pc_*` functions are internal.** The
+    flat function is the implementation and the struct is the interface, which is what a dispatch
+    table is in C; a module carrying both is not an alias kept for old callers (ban #13) because
+    there is no old caller to keep, and the flat name leaves the public header once the module is
+    converted.
+
+    It costs nothing. A `static const` table is const-propagated into a direct call and then dropped,
+    and `--gc-sections` strips every entry point nothing reached: measured on xtensa-esp32s3 at
+    **+13 bytes of `.text`**, with the tables absent from both images and the same 3 of 24 leaves
+    surviving either way (`penetration_testing/rig_firmware/s3/build_s3_nsabi.sh`). A layer object
+    names only the children whose `PC_ENABLE_*` gate is on, so it can never reference something the
+    image does not already contain.
