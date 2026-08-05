@@ -16,7 +16,7 @@
 [![CodeQL](https://github.com/dstroy0/ProtoCore/actions/workflows/codeql.yml/badge.svg)](https://github.com/dstroy0/ProtoCore/actions/workflows/codeql.yml)
 [![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=ProtoCore&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=ProtoCore)
 [![Pentest](https://github.com/dstroy0/ProtoCore/actions/workflows/pentest.yml/badge.svg)](https://github.com/dstroy0/ProtoCore/actions/workflows/pentest.yml)
-[![Code Formatting](https://github.com/dstroy0/ProtoCore/actions/workflows/clang-format.yml/badge.svg)](https://github.com/dstroy0/ProtoCore/actions/workflows/clang-format.yml)
+[![Format Code](https://github.com/dstroy0/ProtoCore/actions/workflows/format-code.yml/badge.svg)](https://github.com/dstroy0/ProtoCore/actions/workflows/format-code.yml)
 [![Markdown Formatting](https://github.com/dstroy0/ProtoCore/actions/workflows/markdown-format.yml/badge.svg)](https://github.com/dstroy0/ProtoCore/actions/workflows/markdown-format.yml)
 [![Spellcheck](https://github.com/dstroy0/ProtoCore/actions/workflows/spellcheck.yml/badge.svg)](https://github.com/dstroy0/ProtoCore/actions/workflows/spellcheck.yml)
 [![Docs](https://github.com/dstroy0/ProtoCore/actions/workflows/docs.yml/badge.svg)](https://github.com/dstroy0/ProtoCore/actions/workflows/docs.yml)

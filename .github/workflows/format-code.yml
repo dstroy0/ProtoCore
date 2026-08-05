@@ -1,4 +1,4 @@
-name: Code Formatting Check
+name: Format Code
 
 on:
   push:
@@ -7,7 +7,8 @@ on:
     branches: [main, master]
 
 jobs:
-  clang-format:
+  format-code:
+    name: Format Code
     runs-on: ubuntu-latest
 
     steps:
