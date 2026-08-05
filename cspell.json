@@ -1253,6 +1253,7 @@
     "SIEM",
     "SIGCONT",
     "Sigfox",
+    "SIGSEGV",
     "SIGSTOP",
     "SIMATIC",
     "sint",

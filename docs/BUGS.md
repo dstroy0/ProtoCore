@@ -8,6 +8,54 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ---
 
+## test_coaps segfaults after its last test passes
+
+- **Status:** OPEN (found 2026-08-05, by the first clean run of the whole native matrix).
+- **Symptom:** `native_coaps` reports all six tests PASSED and then dies with SIGSEGV, so the env
+  is recorded ERRORED and the suite's result is discarded. The crash is after
+  `test_coaps_forwards_handshake` returns, not inside any test body.
+- **What is known:** the tests themselves pass, so it is a teardown or exit-path fault rather than
+  a wrong assertion. `native_coaps_server` separately fails three tests
+  (`test_server_single_peer`, `test_two_peers_routing`, `test_cid_address_migration`), which may or
+  may not share a cause.
+- **Not yet attributed:** it appeared in the first full-matrix run that completed, and earlier runs
+  of that matrix were invalid (they defaulted to the `esp32dev` env and errored all 315 suites), so
+  there is no clean before-state to compare against. It has NOT been shown to predate the bus-owner
+  or toolchain work, and it has not been shown to be caused by it either.
+- **Next step:** run `native_coaps` under gdb or valgrind for the faulting frame, then bisect
+  against the merge-base if the frame does not name the cause.
+
+---
+
+## The peripheral drivers returned their host stub while the bus owners ran for real
+
+- **Status:** FIXED (2026-08-05). Found by the end-to-end wire suite: every driver call returned
+  false on host while the owners themselves worked.
+- **Root cause:** the bus owners (`i2c.h`, `spi.h`, `uart.h`) were changed to key their real arm off
+  `PC_PLATFORM_HAS_BUS` so a host build with the test seam drives the capture. The thirteen drivers
+  that sit on them still split on `#if PROTOCORE_HOT`, so each took its own refusing stub and never
+  composed a byte. The owner worked and the driver above it did not.
+- **What it hid:** the interesting half of every driver - which bytes it composes, in what order, to
+  which address - was unreachable on host, so it was asserted only by reading the code.
+- **Fix:** the same `PROTOCORE_HOT || PC_PLATFORM_HAS_BUS` condition on all thirteen drivers.
+
+---
+
+## pcdelay spun forever on a host clock nothing advanced
+
+- **Status:** FIXED (2026-08-05). Found while making the drivers' real body reachable on host.
+- **Symptom:** latent until then. `pcdelay`'s host arm spun on `pc_millis()`, and the host virtual
+  clock only moves when a test calls `set_millis`, so any wait with a non-zero argument never
+  terminated. Nothing had reached it because the host arm of every driver refused before delaying.
+- **Root cause:** the host arm was written as a bare spin on the assumption that only device code
+  paths call it. Making the drivers real broke that assumption - `pc_pca9685_begin` waits 500 us for
+  the oscillator and `pc_sht3x_read` waits 20 ms for a measurement.
+- **Fix:** the host arm makes the same one-tick `pc_platform_task_delay(1)` hand-off the RTOS arm
+  does, and the host mock advances its virtual clock there. The microsecond source also advances one
+  per read, so a sub-millisecond settle terminates and its elapsed time is deterministic.
+
+---
+
 ## Every OIDC token verification leaked four scratch borrows, and the arena never came back
 
 - **Status:** FIXED (2026-08-03). Found by running `native_oidc` for the first time: the suite had
