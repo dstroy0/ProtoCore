@@ -27,6 +27,27 @@
     "flash_bytes": 747025,
     "ram_bytes": 76820
   },
+  "AUTH": {
+    "example": "L6-Presentation/DigestAuth",
+    "flags": "-DPC_ENABLE_AUTH=1",
+    "board": "esp32dev",
+    "flash_bytes": 748585,
+    "ram_bytes": 78492
+  },
+  "AUTH+AUTH_LOCKOUT": {
+    "example": "L6-Presentation/AuthLockout",
+    "flags": "-DPC_ENABLE_AUTH=1 -DPC_ENABLE_AUTH_LOCKOUT=1",
+    "board": "esp32dev",
+    "flash_bytes": 749829,
+    "ram_bytes": 79068
+  },
+  "AUTH+AUTH_LOCKOUT+FORWARDED_TRUST": {
+    "example": "L6-Presentation/ForwardedTrust",
+    "flags": "-DPC_ENABLE_AUTH=1 -DPC_ENABLE_AUTH_LOCKOUT=1 -DPC_ENABLE_FORWARDED_TRUST=1",
+    "board": "esp32dev",
+    "flash_bytes": 752913,
+    "ram_bytes": 79108
+  },
   "AUTH_LOCKOUT": {
     "example": "L6-Presentation/AuthLockout",
     "flags": "-DPC_ENABLE_AUTH_LOCKOUT=1",
@@ -45,8 +66,8 @@
     "example": "Peripherals/CanCapture",
     "flags": "-DPC_ENABLE_BUS_CAPTURE=1 -DPC_ENABLE_FORWARD=1 -DPC_ENABLE_ETHERNET=1 -DETH_PHY_TYPE=ETH_PHY_LAN8720 -DETH_PHY_ADDR=1 -DETH_PHY_POWER=-1 -DETH_PHY_MDC=23 -DETH_PHY_MDIO=18 -DETH_CLK_MODE=ETH_CLOCK_GPIO0_IN",
     "board": "esp32dev",
-    "flash_bytes": 772165,
-    "ram_bytes": 45568
+    "flash_bytes": 772177,
+    "ram_bytes": 45576
   },
   "CBOR": {
     "example": "L6-Presentation/Cbor",
@@ -80,8 +101,8 @@
     "example": "L7-Application/CoapSecure",
     "flags": "-DPC_ENABLE_COAP=1 -DPC_ENABLE_DTLS=1",
     "board": "esp32dev",
-    "flash_bytes": 778341,
-    "ram_bytes": 102396
+    "flash_bytes": 773197,
+    "ram_bytes": 106268
   },
   "CONFIG_STORE+CONFIG_IO": {
     "example": "L7-Application/ConfigExport",
@@ -157,8 +178,8 @@
     "example": "L7-Application/EthernetDnc",
     "flags": "-DPC_ENABLE_DNC=1",
     "board": "esp32dev",
-    "flash_bytes": 734029,
-    "ram_bytes": 61124
+    "flash_bytes": 733649,
+    "ram_bytes": 61140
   },
   "DNS_RESOLVER": {
     "example": "L7-Application/DnsResolver",
@@ -332,7 +353,7 @@
     "example": "Foundation/IPv6",
     "flags": "-DPC_ENABLE_IPV6=1",
     "board": "esp32dev",
-    "flash_bytes": 746977,
+    "flash_bytes": 746949,
     "ram_bytes": 73828
   },
   "IP_ALLOWLIST": {
@@ -493,7 +514,7 @@
     "example": "L7-Application/OidcAuth",
     "flags": "-DPC_ENABLE_OIDC=1",
     "board": "esp32dev",
-    "flash_bytes": 757137,
+    "flash_bytes": 757189,
     "ram_bytes": 103188
   },
   "OPCUA": {
@@ -598,8 +619,8 @@
     "example": "Peripherals/WifiCapture",
     "flags": "-DPC_ENABLE_PROMISC=1 -DPC_ENABLE_FORWARD=1 -DPC_ENABLE_ETHERNET=1 -DETH_PHY_TYPE=ETH_PHY_LAN8720 -DETH_PHY_ADDR=1 -DETH_PHY_POWER=-1 -DETH_PHY_MDC=23 -DETH_PHY_MDIO=18 -DETH_CLK_MODE=ETH_CLOCK_GPIO0_IN",
     "board": "esp32dev",
-    "flash_bytes": 766213,
-    "ram_bytes": 47584
+    "flash_bytes": 766233,
+    "ram_bytes": 47592
   },
   "PROVISIONING": {
     "example": "L7-Application/Provisioning",
@@ -682,8 +703,8 @@
     "example": "L7-Application/SmbFileClient",
     "flags": "-DPC_ENABLE_SMB=1",
     "board": "esp32dev",
-    "flash_bytes": 768029,
-    "ram_bytes": 70276
+    "flash_bytes": 765545,
+    "ram_bytes": 70292
   },
   "SMTP": {
     "example": "L7-Application/SmtpAlert",
@@ -1004,8 +1025,8 @@
     "example": "L7-Application/InterfaceFilter",
     "flags": "",
     "board": "esp32dev",
-    "flash_bytes": 758049,
-    "ram_bytes": 81844
+    "flash_bytes": 746033,
+    "ram_bytes": 73828
   },
   "core/Json": {
     "example": "L6-Presentation/Json",
@@ -1067,7 +1088,7 @@
     "example": "L5-Session/SSHCryptoSelfTest",
     "flags": "",
     "board": "esp32dev",
-    "flash_bytes": 270121,
+    "flash_bytes": 269585,
     "ram_bytes": 24092
   },
   "core/ServerSentEvents": {

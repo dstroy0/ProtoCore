@@ -12,6 +12,9 @@ from each example's `pio ci` size report and aggregated into
 | `ADS`                                                                                                     | L7-Application/AdsClient             | 735.8 KB (57.5%) | 43.2 KB (13.5%)  |
 | `ADS1115`                                                                                                 | Drivers/Ads1115                      | 271.4 KB (21.2%) | 24.0 KB (7.5%)   |
 | `AUDIT_LOG`                                                                                               | L7-Application/AuditLog              | 729.5 KB (57.0%) | 75.0 KB (23.4%)  |
+| `AUTH`                                                                                                    | L6-Presentation/DigestAuth           | 731.0 KB (57.1%) | 76.7 KB (24.0%)  |
+| `AUTH+AUTH_LOCKOUT`                                                                                       | L6-Presentation/AuthLockout          | 732.3 KB (57.2%) | 77.2 KB (24.1%)  |
+| `AUTH+AUTH_LOCKOUT+FORWARDED_TRUST`                                                                       | L6-Presentation/ForwardedTrust       | 735.3 KB (57.4%) | 77.3 KB (24.1%)  |
 | `AUTH_LOCKOUT`                                                                                            | L6-Presentation/AuthLockout          | 739.6 KB (57.8%) | 80.5 KB (25.2%)  |
 | `AUTH_LOCKOUT+FORWARDED_TRUST`                                                                            | L6-Presentation/ForwardedTrust       | 742.6 KB (58.0%) | 80.5 KB (25.2%)  |
 | `BUS_CAPTURE+FORWARD+ETHERNET`                                                                            | Peripherals/CanCapture               | 754.1 KB (58.9%) | 44.5 KB (13.9%)  |
@@ -19,7 +22,7 @@ from each example's `pio ci` size report and aggregated into
 | `COAP`                                                                                                    | L7-Application/CoAP                  | 733.7 KB (57.3%) | 75.7 KB (23.7%)  |
 | `COAP+COAP_BLOCK+COAP_MAX_PAYLOAD`                                                                        | L7-Application/CoapBlock             | 711.6 KB (55.6%) | 48.4 KB (15.1%)  |
 | `COAP+COAP_OBSERVE`                                                                                       | L7-Application/CoapObserve           | 712.9 KB (55.7%) | 46.2 KB (14.4%)  |
-| `COAP+DTLS`                                                                                               | L7-Application/CoapSecure            | 760.1 KB (59.4%) | 100.0 KB (31.2%) |
+| `COAP+DTLS`                                                                                               | L7-Application/CoapSecure            | 755.1 KB (59.0%) | 103.8 KB (32.4%) |
 | `CONFIG_STORE+CONFIG_IO`                                                                                  | L7-Application/ConfigExport          | 732.1 KB (57.2%) | 72.2 KB (22.6%)  |
 | `CONTROL`                                                                                                 | L7-Application/PidTuning             | 729.0 KB (57.0%) | 80.0 KB (25.0%)  |
 | `CSRF`                                                                                                    | L7-Application/Csrf                  | 729.1 KB (57.0%) | 74.7 KB (23.4%)  |
@@ -30,7 +33,7 @@ from each example's `pio ci` size report and aggregated into
 | `DMA+PREEMPT_QUEUE+DMA_SIMULATE`                                                                          | Peripherals/DmaIngest                | 263.0 KB (20.5%) | 27.9 KB (8.7%)   |
 | `DMA+PREEMPT_QUEUE+FORWARD+DMA_SIMULATE`                                                                  | Foundation/InterfaceForward          | 264.6 KB (20.7%) | 28.4 KB (8.9%)   |
 | `DMA+PREEMPT_QUEUE+GATEWAY+DMA_SIMULATE`                                                                  | Drivers/RadioGateway                 | 264.0 KB (20.6%) | 28.1 KB (8.8%)   |
-| `DNC`                                                                                                     | L7-Application/EthernetDnc           | 716.8 KB (56.0%) | 59.7 KB (18.7%)  |
+| `DNC`                                                                                                     | L7-Application/EthernetDnc           | 716.5 KB (56.0%) | 59.7 KB (18.7%)  |
 | `DNS_RESOLVER`                                                                                            | L7-Application/DnsResolver           | 732.9 KB (57.3%) | 73.4 KB (22.9%)  |
 | `DNS_SERVER`                                                                                              | L7-Application/DnsServer             | 708.6 KB (55.4%) | 45.0 KB (14.1%)  |
 | `EDGE_CACHE+HTTP_CACHE+HTTP_CLIENT`                                                                       | L7-Application/EdgeCache             | 759.7 KB (59.4%) | 116.5 KB (36.4%) |
@@ -55,7 +58,7 @@ from each example's `pio ci` size report and aggregated into
 | `IFACE_BRIDGE`                                                                                            | L7-Application/InterfaceBridge       | 756.8 KB (59.1%) | 69.1 KB (21.6%)  |
 | `IKEV2`                                                                                                   | L5-Session/IKEv2                     | 709.2 KB (55.4%) | 42.9 KB (13.4%)  |
 | `INA219`                                                                                                  | Drivers/Ina219                       | 271.3 KB (21.2%) | 24.0 KB (7.5%)   |
-| `IPV6`                                                                                                    | Foundation/IPv6                      | 729.5 KB (57.0%) | 72.1 KB (22.5%)  |
+| `IPV6`                                                                                                    | Foundation/IPv6                      | 729.4 KB (57.0%) | 72.1 KB (22.5%)  |
 | `IP_ALLOWLIST`                                                                                            | L4-Transport/IpAllowlist             | 728.3 KB (56.9%) | 72.2 KB (22.6%)  |
 | `JWT`                                                                                                     | L6-Presentation/JWTAuth              | 730.0 KB (57.0%) | 78.8 KB (24.6%)  |
 | `KEEPALIVE`                                                                                               | L4-Transport/KeepAlive               | 727.9 KB (56.9%) | 72.1 KB (22.5%)  |
@@ -105,7 +108,7 @@ from each example's `pio ci` size report and aggregated into
 | `SHT3X`                                                                                                   | Drivers/Sht3x                        | 271.4 KB (21.2%) | 24.0 KB (7.5%)   |
 | `SIGFOX`                                                                                                  | Drivers/SigfoxUplink                 | 261.7 KB (20.4%) | 21.0 KB (6.6%)   |
 | `SIMATIC`                                                                                                 | L7-Application/SimaticSerial         | 740.7 KB (57.9%) | 81.4 KB (25.4%)  |
-| `SMB`                                                                                                     | L7-Application/SmbFileClient         | 750.0 KB (58.6%) | 68.6 KB (21.4%)  |
+| `SMB`                                                                                                     | L7-Application/SmbFileClient         | 747.6 KB (58.4%) | 68.6 KB (21.5%)  |
 | `SMTP`                                                                                                    | L7-Application/SmtpAlert             | 718.1 KB (56.1%) | 59.7 KB (18.7%)  |
 | `SNMP`                                                                                                    | L7-Application/SNMP                  | 738.2 KB (57.7%) | 80.5 KB (25.1%)  |
 | `SNMP+SNMP_TRAP`                                                                                          | L7-Application/SnmpTrap              | 711.1 KB (55.6%) | 43.9 KB (13.7%)  |
@@ -151,7 +154,7 @@ from each example's `pio ci` size report and aggregated into
 | `core/Expert`                                                                                             | Foundation/Expert                    | 732.0 KB (57.2%) | 68.3 KB (21.4%)  |
 | `core/FileServing`                                                                                        | L7-Application/FileServing           | 779.0 KB (60.9%) | 80.0 KB (25.0%)  |
 | `core/FormParams`                                                                                         | L6-Presentation/FormParams           | 727.8 KB (56.9%) | 72.1 KB (22.5%)  |
-| `core/InterfaceFilter`                                                                                    | L7-Application/InterfaceFilter       | 740.3 KB (57.8%) | 79.9 KB (25.0%)  |
+| `core/InterfaceFilter`                                                                                    | L7-Application/InterfaceFilter       | 728.5 KB (56.9%) | 72.1 KB (22.5%)  |
 | `core/Json`                                                                                               | L6-Presentation/Json                 | 733.3 KB (57.3%) | 68.3 KB (21.3%)  |
 | `core/MediaStreaming`                                                                                     | L7-Application/MediaStreaming        | 727.1 KB (56.8%) | 72.1 KB (22.5%)  |
 | `core/Middleware`                                                                                         | L7-Application/Middleware            | 727.4 KB (56.8%) | 72.1 KB (22.5%)  |
@@ -160,7 +163,7 @@ from each example's `pio ci` size report and aggregated into
 | `core/PathParams`                                                                                         | L7-Application/PathParams            | 727.2 KB (56.8%) | 72.1 KB (22.5%)  |
 | `core/RegexRoutes`                                                                                        | L7-Application/RegexRoutes           | 727.1 KB (56.8%) | 72.1 KB (22.5%)  |
 | `core/ResponseHeaders`                                                                                    | L7-Application/ResponseHeaders       | 727.4 KB (56.8%) | 72.1 KB (22.5%)  |
-| `core/SSHCryptoSelfTest`                                                                                  | L5-Session/SSHCryptoSelfTest         | 263.8 KB (20.6%) | 23.5 KB (7.4%)   |
+| `core/SSHCryptoSelfTest`                                                                                  | L5-Session/SSHCryptoSelfTest         | 263.3 KB (20.6%) | 23.5 KB (7.4%)   |
 | `core/ServerSentEvents`                                                                                   | L6-Presentation/ServerSentEvents     | 739.5 KB (57.8%) | 79.9 KB (25.0%)  |
 | `core/Sysadmin`                                                                                           | Foundation/Sysadmin                  | 740.7 KB (57.9%) | 72.1 KB (22.5%)  |
 | `core/Templating`                                                                                         | L7-Application/Templating            | 728.9 KB (56.9%) | 72.1 KB (22.5%)  |
