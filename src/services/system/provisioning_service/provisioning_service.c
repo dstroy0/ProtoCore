@@ -6,7 +6,7 @@
  * @brief First-boot WiFi provisioning / captive portal (PC_ENABLE_PROVISIONING).
  *
  * The catch-all DNS responder uses the transport-layer UDP service (no add-on library);
- * credentials persist to NVS via Preferences.
+ * credentials persist through hal/nvs.h.
  */
 
 #include "provisioning_service.h"
@@ -20,12 +20,11 @@
 // ---------------------------------------------------------------------------
 
 #if PC_ENABLE_PROVISIONING && PROTOCORE_HOT
+#include "board_drivers/hal/nvs.h" // the credentials outlive the reboot that applies them
 #include "network_drivers/application/web_assets.h"
 #include "network_drivers/physical/physical.h"
 #include "network_drivers/transport/udp.h"
 #include "protocore.h"
-#include <Arduino.h>
-#include <Preferences.h>
 #endif
 proto_bool pc_prov_form_field(const char *body, const char *key, char *out, size_t cap)
 {
@@ -169,33 +168,20 @@ proto_bool pc_provisioning_load(char *ssid, size_t ssid_cap, char *psk, size_t p
     {
         psk[0] = '\0';
     }
-    Preferences prefs;
-    if (!prefs.begin(PC_PROV_NVS_NAMESPACE, PROTO_TRUE))
+    if (!ssid || ssid_cap == 0 || pc_nvs_get_str(PC_PROV_NVS_NAMESPACE, PC_PROV_KEY_SSID, ssid, ssid_cap) == 0)
     {
         return PROTO_FALSE;
     }
-    String s = prefs.getString(PC_PROV_KEY_SSID, "");
-    String k = prefs.getString(PC_PROV_KEY_PSK, "");
-    prefs.end();
-    if (s.length() == 0)
+    if (psk && psk_cap)
     {
-        return PROTO_FALSE;
+        (void)pc_nvs_get_str(PC_PROV_NVS_NAMESPACE, PC_PROV_KEY_PSK, psk, psk_cap); // an open AP has none
     }
-    strncpy(ssid, s.c_str(), ssid_cap - 1);
-    ssid[ssid_cap - 1] = '\0';
-    strncpy(psk, k.c_str(), psk_cap - 1);
-    psk[psk_cap - 1] = '\0';
     return PROTO_TRUE;
 }
 
-void pc_provisioning_clear()
+void pc_provisioning_clear(void)
 {
-    Preferences prefs;
-    if (prefs.begin(PC_PROV_NVS_NAMESPACE, PROTO_FALSE))
-    {
-        prefs.clear();
-        prefs.end();
-    }
+    (void)pc_nvs_clear(PC_PROV_NVS_NAMESPACE);
 }
 
 static void prov_form_handler(uint8_t slot_id, HttpReq *req)
@@ -216,14 +202,11 @@ static void prov_save_handler(uint8_t slot_id, HttpReq *req)
         send_text(slot_id, 400, PC_MIME_TEXT_PLAIN, "SSID required");
         return;
     }
-    Preferences prefs;
-    prefs.begin(PC_PROV_NVS_NAMESPACE, PROTO_FALSE);
-    prefs.putString(PC_PROV_KEY_SSID, ssid);
-    prefs.putString(PC_PROV_KEY_PSK, psk);
-    prefs.end();
+    (void)pc_nvs_put_str(PC_PROV_NVS_NAMESPACE, PC_PROV_KEY_SSID, ssid);
+    (void)pc_nvs_put_str(PC_PROV_NVS_NAMESPACE, PC_PROV_KEY_PSK, psk);
     send_text(slot_id, 200, PC_MIME_TEXT_HTML, PC_PROV_SAVED_HTML);
     pcdelay(500);
-    ESP.restart();
+    pc_platform_restart();
 }
 
 void pc_provisioning_begin(const char *ap_ssid)

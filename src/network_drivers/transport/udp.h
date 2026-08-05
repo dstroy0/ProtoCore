@@ -27,6 +27,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 /**
  * @brief Opaque sender of a received datagram.
  *
@@ -154,5 +156,7 @@ void pc_udp_reset_listeners(void);                     ///< clear all bound list
 /** @brief The multicast group joined on @p port, or NULL if that port has no multicast listener. */
 const char *pc_udp_joined_group(uint16_t port);
 #endif
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_UDP_H

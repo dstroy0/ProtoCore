@@ -374,14 +374,14 @@ static void ecdsa_hw_off()
 // observed across this suite's 590M+ calls to this function. Not exercised by any host-reachable input.
 static proto_bool reduce_low8_ge(const uint32_t acc[8], const uint32_t m[8])
 {
-    for (int k = 7; k >= 0; k--) // GCOVR_EXCL_BR_LINE  see comment above
+    for (int k = 7; k >= 0; k--)
     {
-        if (acc[k] != m[k]) // GCOVR_EXCL_BR_LINE  see comment above
+        if (acc[k] != m[k])
         {
             return acc[k] > m[k];
         }
     }
-    return PROTO_TRUE; // GCOVR_EXCL_LINE  all limbs equal - unreachable, see comment above
+    return PROTO_TRUE;
 }
 // Reduce a 512-bit product mod m (bit-serial, MSB to LSB). Correct but slow; the native path is test-only.
 static void reduce_mod(uint32_t r[8], const uint32_t prod[16], const uint32_t m[8])
@@ -394,18 +394,12 @@ static void reduce_mod(uint32_t r[8], const uint32_t prod[16], const uint32_t m[
     for (int bit = 511; bit >= 0; bit--)
     {
         uint32_t carry = 0;
-        // GCOVR_EXCL_START  this innermost loop runs (bits-of-product * 9) times per fp_mul call, and
-        // this suite's existing native tests alone drive it past 7e9 hits; gcovr's sonarqube exporter
-        // treats any hit count >= 2^32 as "suspicious" (see --gcov-suspicious-hits-threshold, default
-        // 2^32) and zeroes it, even though raw `gcov -b -c` on this file's .gcda reports 100% line and
-        // branch execution here. This is a coverage-tool counter-threshold artifact, not an actual gap.
         for (int k = 0; k < 9; k++)
         {
             uint32_t nc = acc[k] >> 31;
             acc[k] = (acc[k] << 1) | carry;
             carry = nc;
         }
-        // GCOVR_EXCL_STOP
         acc[0] |= (prod[bit >> 5] >> (bit & 31)) & 1u;
         proto_bool ge = acc[8] != 0;
         if (!ge)
@@ -779,28 +773,27 @@ static void pc_hmac_cat(uint8_t out[32], const uint8_t key[32], const uint8_t *v
 // of distinct keys/messages), so the retry path in ecdsa_sign_core is dead for the same reason.
 static proto_bool ecdsa_try_sign(const uint32_t k[8], const uint32_t d[8], const uint32_t e[8], uint8_t sig[64])
 {
-    if (fp_is_zero(k) || // GCOVR_EXCL_BR_LINE  runs every call; only the k==0 trip is excluded, see comment above
-        fp_cmp(k, P256_N) >= 0) // GCOVR_EXCL_BR_LINE  runs every call; only the trip is excluded, see comment above
+    if (fp_is_zero(k) || fp_cmp(k, P256_N) >= 0)
     {
-        return PROTO_FALSE; // GCOVR_EXCL_LINE  see comment above
+        return PROTO_FALSE;
     }
     Pt R;
     pt_scalarmul(&R, k, &P256_G);
     // k is already range-checked to [1, n-1] above, and P-256 has cofactor 1 (its group order is the
     // prime n exactly), so every non-identity point - including G - has order exactly n: k*G can only be
     // the identity if n divides k, which is impossible for k in [1, n-1].
-    if (pt_is_infinity(&R)) // GCOVR_EXCL_BR_LINE  k in [1,n-1] and G has order n (cofactor 1) - never O
+    if (pt_is_infinity(&R))
     {
-        return PROTO_FALSE; // GCOVR_EXCL_LINE  unreachable, see comment above
+        return PROTO_FALSE;
     }
     uint32_t rx[8];
     uint32_t ry[8];
     pt_to_affine(rx, ry, &R);
     uint32_t r[8];
     fp_reduce_once(r, rx, P256_N); // r = Rx mod n (Rx < p < 2n -> one subtract)
-    if (fp_is_zero(r)) // GCOVR_EXCL_BR_LINE  runs every call; only r==0 is excluded, see comment above ecdsa_try_sign
+    if (fp_is_zero(r))
     {
-        return PROTO_FALSE; // GCOVR_EXCL_LINE  see comment above
+        return PROTO_FALSE;
     }
     uint32_t kinv[8];
     uint32_t s[8];
@@ -808,9 +801,9 @@ static proto_bool ecdsa_try_sign(const uint32_t k[8], const uint32_t d[8], const
     fp_mul(s, r, d, &FN);    // r*d
     fp_add(s, s, e, &FN);    // e + r*d
     fp_mul(s, kinv, s, &FN); // k^-1 (e + r*d)
-    if (fp_is_zero(s)) // GCOVR_EXCL_BR_LINE  runs every call; only s==0 is excluded, see comment above ecdsa_try_sign
+    if (fp_is_zero(s))
     {
-        return PROTO_FALSE; // GCOVR_EXCL_LINE  see comment above
+        return PROTO_FALSE;
     }
     store_be(sig, r);
     store_be(sig + 32, s);
@@ -839,27 +832,24 @@ static proto_bool ecdsa_sign_core(uint8_t sig[64], const uint8_t h1[32], const u
     pc_hmac_cat(K, K, V, 32, 0x01, x_oct, h_oct);
     pc_hmac_cat(V, K, V, 32, -1, NULL, NULL);
 
-    for (int guard = 0; guard < 64; guard++) // GCOVR_EXCL_BR_LINE  ecdsa_try_sign never rejects in
-                                             // practice (see its comment), so the first candidate
-                                             // always succeeds and the loop never reaches guard==64
+    for (int guard = 0; guard < 64; guard++)
+    // practice (see its comment), so the first candidate
+    // always succeeds and the loop never reaches guard==64
     {
         pc_hmac_cat(V, K, V, 32, -1, NULL, NULL); // T = HMAC_K(V), one block
         uint32_t k[8];
-        load_be(k, V);                    // bits2int(T)
-        if (ecdsa_try_sign(k, d, e, sig)) // GCOVR_EXCL_BR_LINE  always true, see comment above
+        load_be(k, V); // bits2int(T)
+        if (ecdsa_try_sign(k, d, e, sig))
         {
             return PROTO_TRUE;
         }
-        // GCOVR_EXCL_START  retry path (RFC 6979 step h.3): only reached if ecdsa_try_sign rejected a
-        // candidate, which does not happen in practice - see the comment above ecdsa_try_sign.
         uint8_t buf[33]; // retry: K = HMAC_K(V || 0x00); V = HMAC_K(V)
         memcpy(buf, V, 32);
         buf[32] = 0x00;
         pc_hmac_sha256(K, 32, buf, 33, K);
         pc_hmac_cat(V, K, V, 32, -1, NULL, NULL);
-        // GCOVR_EXCL_STOP
     }
-    return PROTO_FALSE; // GCOVR_EXCL_LINE  unreachable: the guard never exhausts 64 tries, see comment above
+    return PROTO_FALSE;
 }
 
 proto_bool pc_ecdsa_p256_pubkey(uint8_t pub[PC_ECDSA_P256_PUB_LEN], const uint8_t priv[PC_ECDSA_P256_PRIV_LEN])
@@ -877,7 +867,7 @@ proto_bool pc_ecdsa_p256_pubkey(uint8_t pub[PC_ECDSA_P256_PUB_LEN], const uint8_
     proto_bool ok = !pt_is_infinity(&Q);
     // d is already range-checked to [1, n-1] above, and P-256 has cofactor 1 (group order exactly n), so
     // d*G can only be the identity if n divides d - impossible here; ok is therefore always true.
-    if (ok) // GCOVR_EXCL_BR_LINE  d in [1,n-1], cofactor 1 -> d*G never the identity, see comment above
+    if (ok)
     {
         uint32_t qx[8];
         uint32_t qy[8];
@@ -1002,9 +992,9 @@ proto_bool pc_ecdsa_p256_ecdh(uint8_t shared_x[PC_ECDSA_P256_COORD_LEN], const u
         // Q already passed on_curve() above, and P-256 has cofactor 1, so every validated on-curve point
         // has order exactly n; d is already range-checked to [1, n-1] in this function, so d*Q can only
         // be the identity if n divides d - impossible here.
-        if (pt_is_infinity(&R)) // GCOVR_EXCL_BR_LINE  Q has order n (cofactor 1), d in [1,n-1], see above
+        if (pt_is_infinity(&R))
         {
-            ok = PROTO_FALSE; // GCOVR_EXCL_LINE  unreachable, see comment above
+            ok = PROTO_FALSE;
         }
         else
         {

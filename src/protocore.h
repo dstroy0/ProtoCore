@@ -270,6 +270,7 @@
 #include "services/peripherals/sdi12/sdi12.h"
 #include "services/peripherals/sen0192/sen0192.h"
 #include "services/peripherals/sht3x/sht3x.h"
+#include "services/peripherals/spi.h"
 #include "services/peripherals/vl53l0x/vl53l0x.h"
 #include "services/radio/ble_gatt/ble_gatt.h"
 #include "services/radio/cc1101/cc1101.h"
@@ -336,6 +337,12 @@
 #include "services/web/spa_router/spa_router.h"
 #include "services/web/web_terminal/web_terminal.h"
 #include "shared_primitives/span.h"
+
+// Everything below is C, and the sketches this API is written for are compiled as C++. Without
+// this the compiler names each function by its parameter types and the sketch asks the linker for
+// a symbol the library never defined. The includes stay outside: they reach system and vendor
+// headers, which give their own linkage.
+PROTO_BEGIN_DECLS
 
 /**
  * @brief A storage backend (server/filesystem/mnt.h), named here only as a pointer.
@@ -1568,4 +1575,7 @@ void ws_send_version_required(uint8_t slot_id);
 /** @brief Send the SSE 200 headers and promote the slot to server-sent-events mode. */
 proto_bool pc_sse_do_upgrade(uint8_t slot_id, HttpReq *req, SseConnectHandler on_connect);
 #endif
+
+PROTO_END_DECLS
+
 #endif

@@ -25,6 +25,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_HART
 
 /** @brief HART frame delimiter frame-type bits (low 3 bits) + long-address bit (bit 7). Wire values,
@@ -113,4 +115,7 @@ typedef struct
 proto_bool pc_hartip_parse_header(const uint8_t *buf, size_t len, HartIpHeader *out);
 
 #endif // PC_ENABLE_HART
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_HART_H

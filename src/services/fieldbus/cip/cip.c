@@ -101,13 +101,10 @@ size_t pc_cip_build_get_attr_single(uint8_t *buf, size_t cap, uint16_t class_id,
 {
     uint8_t epath[12];
     size_t elen = pc_cip_build_epath(epath, sizeof(epath), class_id, instance_id, attribute_id, PROTO_TRUE);
-    // GCOVR_EXCL_START  unreachable: epath[12] holds the worst-case 3x4B logical segments, so
-    // write_segment() inside pc_cip_build_epath() never fails and elen is never 0.
     if (!elen)
     {
         return 0;
     }
-    // GCOVR_EXCL_STOP
     return pc_cip_build_request(buf, cap, CIP_SC_GET_ATTR_SINGLE, epath, elen, NULL, 0);
 }
 
@@ -115,13 +112,10 @@ size_t pc_cip_build_get_attr_all(uint8_t *buf, size_t cap, uint16_t class_id, ui
 {
     uint8_t epath[8]; // class + instance logical segments only (no attribute), worst case 4B each
     size_t elen = pc_cip_build_epath(epath, sizeof(epath), class_id, instance_id, 0, PROTO_FALSE);
-    // GCOVR_EXCL_START  unreachable: epath[8] holds the worst-case 2x4B logical segments, so the epath build
-    // never overflows and elen is never 0.
     if (!elen)
     {
         return 0;
     }
-    // GCOVR_EXCL_STOP
     return pc_cip_build_request(buf, cap, CIP_SC_GET_ATTR_ALL, epath, elen, NULL, 0);
 }
 
@@ -130,13 +124,10 @@ size_t pc_cip_build_set_attr_single(uint8_t *buf, size_t cap, uint16_t class_id,
 {
     uint8_t epath[12];
     size_t elen = pc_cip_build_epath(epath, sizeof(epath), class_id, instance_id, attribute_id, PROTO_TRUE);
-    // GCOVR_EXCL_START  unreachable: epath[12] holds the worst-case 3x4B logical segments, so
-    // write_segment() inside pc_cip_build_epath() never fails and elen is never 0.
     if (!elen)
     {
         return 0;
     }
-    // GCOVR_EXCL_STOP
     return pc_cip_build_request(buf, cap, CIP_SC_SET_ATTR_SINGLE, epath, elen, value, value_len);
 }
 

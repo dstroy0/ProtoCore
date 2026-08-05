@@ -21,6 +21,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_ATC
 
 /** @brief One ATC field-I/O point. */
@@ -54,4 +56,7 @@ proto_bool pc_atc_set_output(AtcFieldIo *io, const char *name, uint8_t value);
 uint8_t pc_atc_get(const AtcFieldIo *io, const char *name, proto_bool *found);
 
 #endif // PC_ENABLE_ATC
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_ATC_H

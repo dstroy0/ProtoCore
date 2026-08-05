@@ -67,21 +67,124 @@ static inline uint32_t pc_bus_host_drain(uint8_t *buf, uint32_t len)
     return n;
 }
 
-static inline int pc_platform_uart_begin(uint8_t unit, uint32_t baud)
+// Per-transaction log. The concatenated write stream says what went out; this says where one
+// transfer ended and the next began, which bus ran it, and which device it addressed. A driver
+// that splits a frame across two transfers, or addresses the wrong part, is only visible here.
+
+#define PC_BUS_HOST_I2C 0
+#define PC_BUS_HOST_SPI 1
+#define PC_BUS_HOST_UART 2
+
+#ifndef PC_BUS_HOST_MAX_TXN
+#define PC_BUS_HOST_MAX_TXN 192
+#endif
+
+typedef struct
+{
+    uint8_t kind;    /**< PC_BUS_HOST_I2C / _SPI / _UART */
+    uint16_t target; /**< I2C address, SPI host, or UART unit */
+    uint32_t woff;   /**< where this transfer's bytes start in the write stream */
+    uint32_t wlen;
+    uint32_t rlen;
+    uint32_t t_us; /**< when it ran, so the gap to the next one is assertable */
+} pc_bus_host_rec;
+
+__attribute__((weak)) pc_bus_host_rec pc_bus_host_log[PC_BUS_HOST_MAX_TXN];
+__attribute__((weak)) uint32_t pc_bus_host_log_len;
+__attribute__((weak)) uint32_t pc_bus_host_fail;
+
+/* Defined with the time base further down; the log stamps every transfer with it. */
+static inline uint32_t pc_platform_micros(void);
+
+/** @brief Record one transfer and capture its write span. 0 when a test asked it to fail. */
+static inline int pc_bus_host_record(uint8_t kind, uint16_t target, const void *w, uint32_t wlen, uint32_t rlen)
+{
+    if (pc_bus_host_fail > 0)
+    {
+        pc_bus_host_fail--;
+        return 0;
+    }
+    if (pc_bus_host_log_len < PC_BUS_HOST_MAX_TXN)
+    {
+        pc_bus_host_rec *t = &pc_bus_host_log[pc_bus_host_log_len++];
+        t->kind = kind;
+        t->target = target;
+        t->woff = pc_bus_host_tx_len; /* before the capture below moves it */
+        t->wlen = wlen;
+        t->rlen = rlen;
+        t->t_us = pc_platform_micros();
+    }
+    if (w && wlen)
+    {
+        pc_bus_host_capture(w, wlen);
+    }
+    return 1;
+}
+
+/** @brief Microseconds between transfer @p a and transfer @p b, for a settle-time assertion. */
+static inline uint32_t pc_bus_host_gap_us(uint32_t a, uint32_t b)
+{
+    if (a >= pc_bus_host_log_len || b >= pc_bus_host_log_len)
+    {
+        return 0;
+    }
+    return pc_bus_host_log[b].t_us - pc_bus_host_log[a].t_us;
+}
+
+/** @brief How many transfers ran since the last reset. */
+static inline uint32_t pc_bus_host_count(void)
+{
+    return pc_bus_host_log_len;
+}
+
+/** @brief Transfer @p i, or NULL past the end. */
+static inline const pc_bus_host_rec *pc_bus_host_txn_at(uint32_t i)
+{
+    return (i < pc_bus_host_log_len) ? &pc_bus_host_log[i] : (const pc_bus_host_rec *)0;
+}
+
+/** @brief The bytes transfer @p i wrote, or NULL past the end. */
+static inline const uint8_t *pc_bus_host_txn_bytes(uint32_t i, uint32_t *len)
+{
+    if (i >= pc_bus_host_log_len)
+    {
+        return (const uint8_t *)0;
+    }
+    if (len)
+    {
+        *len = pc_bus_host_log[i].wlen;
+    }
+    return &pc_bus_host_tx[pc_bus_host_log[i].woff];
+}
+
+/** @brief Make the next @p n transfers fail, as a device that does not acknowledge would. */
+static inline void pc_bus_host_fail_next(uint32_t n)
+{
+    pc_bus_host_fail = n;
+}
+
+// Tells the bus owners a seam exists, so their host arm drives it and the capture below sees what
+// a driver actually composed rather than the owner refusing before the driver got that far.
+#define PC_PLATFORM_HAS_BUS 1
+
+static inline int pc_platform_uart_begin(uint8_t unit, uint32_t baud, int rx, int tx)
 {
     (void)baud;
+    (void)rx;
+    (void)tx;
     return (unit < PC_UART_UNITS) ? 1 : 0;
 }
 static inline int pc_platform_uart_write(uint8_t unit, const void *buf, uint32_t len)
 {
-    (void)unit;
-    pc_bus_host_capture(buf, len);
-    return (int)len;
+    return pc_bus_host_record(PC_BUS_HOST_UART, unit, buf, len, 0) ? (int)len : 0;
 }
 static inline int pc_platform_uart_read(uint8_t unit, void *buf, uint32_t len, uint32_t ms)
 {
-    (void)unit;
     (void)ms;
+    if (!pc_bus_host_record(PC_BUS_HOST_UART, unit, 0, 0, len))
+    {
+        return 0;
+    }
     return (int)pc_bus_host_drain((uint8_t *)buf, len);
 }
 static inline uint32_t pc_platform_uart_available(uint8_t unit)
@@ -93,19 +196,27 @@ static inline uint32_t pc_platform_uart_available(uint8_t unit)
 #define PC_SPI_MSBFIRST 0
 #define PC_SPI_LSBFIRST 1
 
+#define PC_SPI_LANES_1 1
+#define PC_SPI_LANES_2 2
+#define PC_SPI_LANES_4 4
+
 __attribute__((weak)) int pc_spi_host_up;
 
-static inline int pc_platform_spi_begin(int mosi, int miso, int sclk)
+static inline int pc_platform_spi_begin(uint8_t host, int mosi, int miso, int sclk, int quadwp, int quadhd)
 {
+    (void)host;
     (void)mosi;
     (void)miso;
     (void)sclk;
+    (void)quadwp;
+    (void)quadhd;
     pc_spi_host_up = 1;
     return 1;
 }
-static inline int pc_platform_spi_txn(uint32_t hz, uint8_t bit_order, uint8_t mode, const uint8_t *tx, uint8_t *rx,
-                                      uint32_t len)
+static inline int pc_platform_spi_txn(uint8_t host, uint32_t hz, uint8_t bit_order, uint8_t mode, const uint8_t *tx,
+                                      uint8_t *rx, uint32_t len)
 {
+    (void)host;
     (void)hz;
     (void)bit_order;
     (void)mode;
@@ -113,9 +224,9 @@ static inline int pc_platform_spi_txn(uint32_t hz, uint8_t bit_order, uint8_t mo
     {
         return 0;
     }
-    if (tx)
+    if (!pc_bus_host_record(PC_BUS_HOST_SPI, host, tx, tx ? len : 0u, rx ? len : 0u))
     {
-        pc_bus_host_capture(tx, len);
+        return 0;
     }
     if (rx)
     {
@@ -125,6 +236,100 @@ static inline int pc_platform_spi_txn(uint32_t hz, uint8_t bit_order, uint8_t mo
             rx[got++] = 0;
         }
     }
+    return 1;
+}
+static inline int pc_platform_spi_txn_ext(uint8_t host, uint32_t hz, uint8_t bit_order, uint8_t mode, uint16_t cmd,
+                                          uint8_t cmd_bits, uint32_t addr, uint8_t addr_bits, uint8_t dummy_bits,
+                                          uint8_t lanes, const uint8_t *tx, uint8_t *rx, uint32_t len)
+{
+    (void)cmd;
+    (void)cmd_bits;
+    (void)addr;
+    (void)addr_bits;
+    (void)dummy_bits;
+    (void)lanes;
+    return pc_platform_spi_txn(host, hz, bit_order, mode, tx, rx, len);
+}
+
+// I2C. The address a transfer went to is recorded ahead of its payload, so a suite can tell one
+// device's traffic from another's on a shared bus.
+#define PC_I2C_ADDR_10BIT 0x8000u
+#define PC_I2C_ADDR_MASK 0x03FFu
+#define PC_I2C_GENERAL_CALL 0x00u
+
+__attribute__((weak)) int pc_i2c_host_up;
+__attribute__((weak)) uint16_t pc_bus_host_last_addr;
+
+static inline int pc_platform_i2c_begin(uint8_t bus, int sda, int scl, uint32_t hz)
+{
+    (void)bus;
+    (void)sda;
+    (void)scl;
+    (void)hz;
+    pc_i2c_host_up = 1;
+    return 1;
+}
+static inline int pc_platform_i2c_write(uint8_t bus, uint16_t addr, const uint8_t *buf, uint32_t len, uint32_t ms)
+{
+    (void)bus;
+    (void)ms;
+    pc_bus_host_last_addr = addr;
+    return pc_bus_host_record(PC_BUS_HOST_I2C, addr, buf, len, 0);
+}
+static inline int pc_platform_i2c_read(uint8_t bus, uint16_t addr, uint8_t *buf, uint32_t len, uint32_t ms)
+{
+    (void)bus;
+    (void)ms;
+    pc_bus_host_last_addr = addr;
+    if (!pc_bus_host_record(PC_BUS_HOST_I2C, addr, 0, 0, len))
+    {
+        return 0;
+    }
+    uint32_t got = pc_bus_host_drain(buf, len);
+    while (got < len)
+    {
+        buf[got++] = 0;
+    }
+    return 1;
+}
+static inline int pc_platform_i2c_write_read(uint8_t bus, uint16_t addr, const uint8_t *w, uint32_t wlen, uint8_t *r,
+                                             uint32_t rlen, uint32_t ms)
+{
+    (void)bus;
+    (void)ms;
+    pc_bus_host_last_addr = addr;
+    if (!pc_bus_host_record(PC_BUS_HOST_I2C, addr, w, wlen, rlen))
+    {
+        return 0;
+    }
+    uint32_t got = pc_bus_host_drain(r, rlen);
+    while (got < rlen)
+    {
+        r[got++] = 0;
+    }
+    return 1;
+}
+static inline int pc_platform_i2c_set_clock(uint8_t bus, uint32_t hz)
+{
+    (void)bus;
+    (void)hz;
+    return 1;
+}
+// A probe is an address cycle with no payload. Nothing answers on the host, so a scan finds
+// nothing unless a suite drives the addresses itself.
+static inline int pc_platform_i2c_probe(uint8_t bus, uint16_t addr, uint32_t ms)
+{
+    (void)bus;
+    (void)ms;
+    pc_bus_host_last_addr = addr;
+    (void)pc_bus_host_record(PC_BUS_HOST_I2C, addr, 0, 0, 0);
+    return 0; /* nothing answers on a host bus */
+}
+static inline int pc_platform_i2c_recover(uint8_t bus, int sda, int scl)
+{
+    (void)bus;
+    (void)sda;
+    (void)scl;
     return 1;
 }
 
@@ -153,6 +358,8 @@ static inline void pc_bus_host_reset(void)
     pc_bus_host_tx_len = 0;
     pc_bus_host_rx_len = 0;
     pc_bus_host_rx_pos = 0;
+    pc_bus_host_log_len = 0;
+    pc_bus_host_fail = 0;
 }
 
 // ---------------------------------------------------------------------------
@@ -279,9 +486,17 @@ static inline uint32_t pc_platform_millis(void)
 {
     return millis();
 }
+
+// Microseconds advance one per read on top of the millisecond base. The host has no timer below a
+// millisecond, so a sub-millisecond spin (a part's settle time, pc_delay_us) would never see the
+// counter move and would not terminate. Advancing per read makes such a wait finish in bounded
+// time and makes the elapsed value deterministic, which is what a jitter assertion needs.
+__attribute__((weak)) uint32_t pc_host_us_tick;
+
 static inline uint32_t pc_platform_micros(void)
 {
-    return millis() * 1000u;
+    pc_host_us_tick++;
+    return millis() * 1000u + pc_host_us_tick;
 }
 // No cycle counter on the host; deltas only, so a micros-derived stand-in is honest enough.
 static inline uint32_t pc_platform_cycles(void)
@@ -461,9 +676,16 @@ static inline uint32_t pc_platform_task_wait(int clear, uint32_t ticks)
     (void)ticks;
     return 0;
 }
+// Advances the virtual clock by the tick count. The host has no tick timer, so a wait that hands
+// off here is what moves time forward; leaving this inert made any driver's pcdelay spin on a
+// millisecond count that never changed. A test that drives the clock itself with set_millis is
+// unaffected, since nothing calls this unless code under test is waiting.
 static inline void pc_platform_task_delay(uint32_t ticks)
 {
-    (void)ticks;
+    if (ticks)
+    {
+        set_millis(millis() + ticks);
+    }
 }
 static inline void pc_platform_task_yield_from_isr(int woke)
 {

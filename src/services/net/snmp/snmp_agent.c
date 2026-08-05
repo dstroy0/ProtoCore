@@ -431,7 +431,7 @@ static proto_bool community_eq(const char *stored, const char *p, size_t len)
     // The two call sites pass s_agent.ro (always non-empty: pc_snmp_agent_init() falls back to the
     // static_assert'd non-empty default) and s_agent.rw (only reached when rw_set, which
     // pc_snmp_agent_set_rw_community() sets only for a non-empty string), so stored is never empty.
-    return stored[0] != '\0' && strnlen(stored, len + 1) == len && memcmp(stored, p, len) == 0; // GCOVR_EXCL_LINE
+    return stored[0] != '\0' && strnlen(stored, len + 1) == len && memcmp(stored, p, len) == 0;
 }
 
 static size_t encode_pdu(long request_id, long err_status, long err_index, const OutVb *out, size_t nout, uint8_t *buf,
@@ -493,7 +493,7 @@ size_t pc_snmp_dispatch_pdu(const uint8_t *pdu, size_t pdu_len, proto_bool allow
     size_t nvb = 0;
     // Every read inside the loop that could clear d.ok returns 0 through its own guard first, so the
     // decoder is always ok on re-entry - same defense-in-depth rationale as the !d.ok check below.
-    while (d.pos < vbl_end && d.ok) // GCOVR_EXCL_LINE  d.ok is always true here (see above)
+    while (d.pos < vbl_end && d.ok)
     {
         if (nvb >= SNMP_MAX_VARBINDS)
         {
@@ -515,9 +515,9 @@ size_t pc_snmp_dispatch_pdu(const uint8_t *pdu, size_t pdu_len, proto_bool allow
         }
         nvb++;
     }
-    if (!d.ok) // GCOVR_EXCL_LINE  every failing read in the loop already returns 0 via its own guard,
+    if (!d.ok)
     {
-        return 0; // GCOVR_EXCL_LINE  so d.ok is always true here (defense in depth)
+        return 0;
     }
 
     long err_status = (int)SNMP_ERR_NO_ERROR;
@@ -594,9 +594,9 @@ size_t pc_snmp_dispatch_pdu(const uint8_t *pdu, size_t pdu_len, proto_bool allow
         // repeater loops below where several varbinds are appended per repetition.
         for (long i = 0; i < non_rep; i++)
         {
-            if (nout >= SNMP_MAX_VARBINDS) // GCOVR_EXCL_BR_LINE  nout cap unreachable (see above)
+            if (nout >= SNMP_MAX_VARBINDS)
             {
-                break; // GCOVR_EXCL_LINE
+                break;
             }
             const SnmpMibEntry *en = mib_find_next(&s_agent, s_req.in[i].oid, s_req.in[i].oid_len);
             if (en)

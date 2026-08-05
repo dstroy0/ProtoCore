@@ -28,6 +28,8 @@
 
 #include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_MPR121
 
 /** @brief Sense electrodes on the MPR121 (ELE0..ELE11). */
@@ -66,17 +68,19 @@ uint16_t pc_mpr121_word10(uint8_t lsb, uint8_t msb);
  */
 size_t pc_mpr121_build_init(uint8_t *buf, size_t cap, uint8_t n_electrodes, uint8_t touch_thr, uint8_t release_thr);
 
-// --- ESP32 binding (I2C via Wire; no-ops on a host build) ------------------------------------
+// --- ESP32 binding (the shared I2C bus owner; no-ops on a host build) -------------------------
 
 /** @brief Reset + configure the MPR121 at @p addr over I2C. @return true if it acknowledged. */
 proto_bool pc_mpr121_begin(uint8_t addr);
 
 /** @brief Read the current 12-electrode touch bitmask (0 if the device is absent). */
-uint16_t pc_mpr121_read_touched();
+uint16_t pc_mpr121_read_touched(void);
 
 /** @brief Read electrode @p e's 10-bit filtered capacitance value. */
 uint16_t pc_mpr121_read_filtered(uint8_t e);
 
 #endif // PC_ENABLE_MPR121
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_MPR121_H

@@ -31,6 +31,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_S7COMM
 
 #define S7_PROTOCOL_ID 0x32 ///< constant first octet of every S7comm PDU
@@ -150,5 +152,7 @@ typedef struct
 proto_bool pc_s7_read_next_item(const uint8_t *data, size_t data_len, size_t *offset, S7DataItem *out);
 
 #endif // PC_ENABLE_S7COMM
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_S7COMM_H

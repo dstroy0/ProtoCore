@@ -31,7 +31,7 @@ static const char *mem_find(const char *hs, const char *he, const char *needle)
     size_t nl = strnlen(needle, (size_t)(he - hs) + 1);
     // Both callers pass a quoted member name ("\"alg\"", "\"keys\"", ...), never the empty
     // string, and strnlen's limit is always >= 1, so nl >= 1 here.
-    if (nl == 0 || (size_t)(he - hs) < nl) // GCOVR_EXCL_LINE  nl == 0 unreachable (see above)
+    if (nl == 0 || (size_t)(he - hs) < nl)
     {
         return NULL;
     }
@@ -59,9 +59,9 @@ static proto_bool find_field(const char *s, const char *e, const char *name, con
     int nn = (int)pc_sb_finish(&sb_needle);
     // Every internal caller passes a short fixed field name (alg/iss/aud/exp/nbf/sub/email/n/e/kid), so the
     // 96-byte needle never overflows, and snprintf of one %s into memory cannot report an error.
-    if (nn <= 0 || nn >= (int)sizeof(needle)) // GCOVR_EXCL_LINE  unreachable: field names are short literals
+    if (nn <= 0 || nn >= (int)sizeof(needle))
     {
-        return PROTO_FALSE; // GCOVR_EXCL_LINE  (see above)
+        return PROTO_FALSE;
     }
     const char *p = mem_find(s, e, needle);
     if (!p)
@@ -155,7 +155,7 @@ static proto_bool get_str(const char *s, const char *e, const char *name, char *
         // the same pairwise escape skip and only stops at an UNescaped '"', so a backslash it
         // examined always had a following byte inside the value. A value can therefore never end
         // on a backslash that this loop reaches as a fresh iteration - the bound is defensive.
-        if (ch == '\\' && i + 1 < vl) // GCOVR_EXCL_LINE  i + 1 < vl cannot be false here (see above)
+        if (ch == '\\' && i + 1 < vl)
         {
             ch = v[++i];
         }
@@ -179,7 +179,7 @@ static proto_bool get_int64(const char *s, const char *e, const char *name, int6
     char t;
     // vl == 0 is unreachable for a type-'n' value: find_field only reports 'n' after consuming a
     // leading '-' or at least one digit, so the extent it hands back is always >= 1 byte.
-    if (!find_field(s, e, name, &v, &vl, &t) || t != 'n' || vl == 0) // GCOVR_EXCL_LINE  vl == 0 unreachable
+    if (!find_field(s, e, name, &v, &vl, &t) || t != 'n' || vl == 0)
     {
         return PROTO_FALSE;
     }
@@ -216,7 +216,7 @@ static proto_bool aud_contains(const char *s, const char *e, const char *want)
         // The loop always leaves via break or return, never via this condition: find_field sizes
         // vl to include the closing ']', so a quote found inside can be at most end - 2 and the
         // p = r + 1 step below therefore always lands strictly before end.
-        while (p < end) // GCOVR_EXCL_LINE  p < end cannot be false (see above)
+        while (p < end)
         {
             const char *q = (const char *)memchr(p, '"', (size_t)(end - p));
             const char *r = q ? (const char *)memchr(q + 1, '"', (size_t)(end - (q + 1))) : NULL;

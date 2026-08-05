@@ -49,7 +49,7 @@ void setup()
 
     on_http("/", HTTP_GET,
               [](uint8_t id, HttpReq *) { send_text(id, 200, "text/plain", "per-IP throttled"); });
-    begin_http(80); // per-IP throttle is active automatically when the flag is built in
+    begin_http(80, NULL); // per-IP throttle is active automatically when the flag is built in
 }
 
 void loop()

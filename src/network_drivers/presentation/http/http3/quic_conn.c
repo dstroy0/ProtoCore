@@ -66,7 +66,7 @@ static QuicStream *stream_get(struct QuicConn *qc, uint64_t id, proto_bool creat
             free_slot = &qc->streams[i];
         }
     }
-    if (!create || !free_slot) // GCOVR_EXCL_LINE  create is true at both call sites (handle_stream and
+    if (!create || !free_slot)
     {
         return NULL; // pc_quic_conn_stream_send), so the lookup-only arm is never taken
     }
@@ -196,9 +196,9 @@ static void handle_stream(struct QuicConn *qc, const QuicFrame *f)
         size_t skip = (size_t)(want - f->stream.offset);
         const uint8_t *nd = f->stream.data + skip;
         size_t nl = (size_t)(f->stream.length - skip);
-        if (nl > sizeof(st->rx)) // GCOVR_EXCL_LINE  one STREAM frame's length <= datagram (<=1350) < STREAM_RX(2048)
+        if (nl > sizeof(st->rx))
         {
-            nl = sizeof(st->rx); // GCOVR_EXCL_LINE  so nl never exceeds the per-stream reassembly buffer
+            nl = sizeof(st->rx);
         }
         // Deliver in place (we hand the callback the contiguous new bytes directly).
         st->rx_off += nl;
@@ -359,9 +359,9 @@ static proto_bool parse_packet_header(const struct QuicConn *qc, const uint8_t *
 // Decrypt and process one packet at datagram offset; returns bytes consumed (0 to stop the datagram).
 static size_t recv_packet(struct QuicConn *qc, const uint8_t *dg, size_t len)
 {
-    if (len < 1) // GCOVR_EXCL_LINE  pc_quic_conn_recv's loop only calls this with off<len, so len-off>=1
+    if (len < 1)
     {
-        return 0; // GCOVR_EXCL_LINE
+        return 0;
     }
     proto_bool is_long = pc_quic_is_long_header(dg[0]);
 
@@ -451,7 +451,7 @@ static size_t build_ack_frame(QuicPnSpace *s, uint8_t *buf, size_t cap)
         return 0;
     }
     size_t n = pc_quic_build_ack(buf, cap, s->largest_rx, 0, s->largest_rx);
-    if (n) // GCOVR_EXCL_LINE  build_frames hands this the whole PC_QUIC_MAX_DATAGRAM scratch (>=1200 by the
+    if (n)
     {
         s->ack_eliciting_rx =
             PROTO_FALSE; // static_assert above), and one ACK frame is at most ~20 bytes: it always fits
@@ -470,7 +470,7 @@ static size_t build_crypto_frame(const struct QuicConn *qc, int level, QuicPnSpa
     }
     size_t flen = 0;
     const uint8_t *flight = pc_quic_tls_flight(&qc->tls, level, &flen);
-    if (!flight || s->crypto_tx_off >= flen) // GCOVR_EXCL_LINE  pc_quic_tls_flight only returns NULL for a level
+    if (!flight || s->crypto_tx_off >= flen)
     {
         return 0; // other than INITIAL/HANDSHAKE, which the guard above already excluded
     }
@@ -478,12 +478,12 @@ static size_t build_crypto_frame(const struct QuicConn *qc, int level, QuicPnSpa
     // Leave room for the CRYPTO frame header (type + offset + length varints, <= 1+8+8).
     size_t room = (cap > 20) ? (cap - 20) : 0;
     size_t take = remain < room ? remain : room;
-    if (!take) // GCOVR_EXCL_LINE  remain>0 (checked above) and cap is the datagram scratch less at most one
+    if (!take)
     {
-        return 0; // GCOVR_EXCL_LINE  ACK, so it always exceeds 20 and room is never 0
+        return 0;
     }
     size_t n = pc_quic_build_crypto(buf, cap, s->crypto_tx_off, flight + s->crypto_tx_off, take);
-    if (n) // GCOVR_EXCL_LINE  take was clamped to cap-20 and the CRYPTO header is at most 17 bytes: it always fits
+    if (n)
     {
         s->crypto_tx_off += take;
         *ae = PROTO_TRUE;
@@ -502,8 +502,8 @@ static size_t build_app_frames(struct QuicConn *qc, int level, uint8_t *buf, siz
     if (qc->handshake_done_queued)
     {
         size_t n = pc_quic_build_handshake_done(buf + p, cap - p);
-        if (n) // GCOVR_EXCL_LINE  HANDSHAKE_DONE is one byte and this is the first frame written after the
-        {      // ACK/CRYPTO, so the datagram-sized scratch always has room for it
+        if (n)
+        { // ACK/CRYPTO, so the datagram-sized scratch always has room for it
 
             p += n;
             qc->handshake_done_queued = PROTO_FALSE;
@@ -624,9 +624,9 @@ static size_t build_packet(struct QuicConn *qc, int level, uint8_t *out, size_t 
     // Dead with every current caller - quic_server's datagram buffer is itself
     // PC_QUIC_MAX_DATAGRAM, so `cap - overhead` is always below `frames` - but kept as the bound
     // on the memcpy target if a caller ever hands us a larger buffer.
-    if (budget > sizeof(frames)) // GCOVR_EXCL_BR_LINE - see above
+    if (budget > sizeof(frames))
     {
-        budget = sizeof(frames); // GCOVR_EXCL_LINE
+        budget = sizeof(frames);
     }
     // Leave room for the PADDING the header-protection minimum may need (RFC 9001 sec 5.4.2).
     if (budget < 4)
@@ -657,34 +657,34 @@ static size_t build_packet(struct QuicConn *qc, int level, uint8_t *out, size_t 
         // Invariant header fields, then the type-specific token (Initial only) + Length + PN.
         size_t hn = pc_quic_build_long_header(out, cap, level_lp_type(level), QUIC_VERSION_1, qc->dcid, qc->dcid_len,
                                               qc->scid, qc->scid_len, pn_len);
-        if (!hn) // GCOVR_EXCL_BR_LINE - `overhead` above already reserved more than the header
+        if (!hn)
         {
-            return 0; // GCOVR_EXCL_LINE
+            return 0;
         }
         p = hn;
         if (level == QUIC_ENC_INITIAL)
         {
             size_t n = pc_quic_varint_encode(out + p, cap - p, 0); // empty token
-            if (!n)                                                // GCOVR_EXCL_BR_LINE - reserved in `overhead`
+            if (!n)
             {
-                return 0; // GCOVR_EXCL_LINE
+                return 0;
             }
             p += n;
         }
         uint64_t length = (uint64_t)pn_len + frame_len + PC_AES128GCM_TAG_LEN;
         size_t n = pc_quic_varint_encode(out + p, cap - p, length);
-        if (!n) // GCOVR_EXCL_BR_LINE - reserved in `overhead`
+        if (!n)
         {
-            return 0; // GCOVR_EXCL_LINE
+            return 0;
         }
         p += n;
     }
     else
     {
         // Short header: 0x40 fixed bit | pn_len-1; then the peer's DCID (no length on the wire).
-        if (1 + qc->dcid_len > cap) // GCOVR_EXCL_BR_LINE - reserved in `overhead`
+        if (1 + qc->dcid_len > cap)
         {
-            return 0; // GCOVR_EXCL_LINE
+            return 0;
         }
         out[0] = (uint8_t)(0x40 | (pn_len - 1));
         memcpy(out + 1, qc->dcid, qc->dcid_len);
@@ -697,9 +697,9 @@ static size_t build_packet(struct QuicConn *qc, int level, uint8_t *out, size_t 
     // writing it (avoids a size_t addition wrap in the bounds check, cpp:S3519).
     // Redundant since the payload is now budgeted against `overhead` up front, which is exactly
     // what makes the offsets build_frames() advanced safe to keep. Retained as defense in depth.
-    if (cap - p < (size_t)pn_len + frame_len + PC_AES128GCM_TAG_LEN) // GCOVR_EXCL_BR_LINE - see above
+    if (cap - p < (size_t)pn_len + frame_len + PC_AES128GCM_TAG_LEN)
     {
-        return 0; // GCOVR_EXCL_LINE
+        return 0;
     }
     // Write the (unprotected) truncated packet number.
     for (uint8_t i = 0; i < pn_len; i++)
@@ -711,9 +711,9 @@ static size_t build_packet(struct QuicConn *qc, int level, uint8_t *out, size_t 
     memcpy(out + p, frames, frame_len);
 
     size_t total = pc_quic_packet_protect(out, cap, pn_offset, pn_len, pn, frame_len, keys, is_long);
-    if (!total) // GCOVR_EXCL_LINE  the pn_offset bound above already guarantees protect has room, and with
+    if (!total)
     {
-        return 0; // GCOVR_EXCL_LINE  valid keys the AEAD seal cannot otherwise fail
+        return 0;
     }
     if (ae)
     {
@@ -764,13 +764,10 @@ size_t pc_quic_conn_send(struct QuicConn *qc, uint8_t *out, size_t cap)
         // Send at the level the error was seen on (the peer holds those keys); if that space has since
         // been discarded, fall back to the highest level we still hold keys for.
         int level = qc->close_level;
-        // GCOVR_EXCL_START  close_level is a uint8_t and QUIC_ENC_INITIAL is 0, so the underflow
-        // arm of the range check below can never be taken; the other three arms are all tested.
         if (level < QUIC_ENC_INITIAL || level > QUIC_ENC_APP || qc->space[level].discarded || !seal_keys(qc, level))
         {
             level = pc_quic_highest_sealed_level(qc);
         }
-        // GCOVR_EXCL_STOP
         size_t n = build_packet(qc, level, out, cap);
         if (n)
         {

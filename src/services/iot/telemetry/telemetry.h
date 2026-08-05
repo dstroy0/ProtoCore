@@ -27,6 +27,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_TELEMETRY
 
 // ---------------------------------------------------------------------------
@@ -130,4 +132,7 @@ double pc_totalizer_total(const pc_totalizer *t);
 void pc_totalizer_reset(pc_totalizer *t);
 
 #endif // PC_ENABLE_TELEMETRY
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_TELEMETRY_H

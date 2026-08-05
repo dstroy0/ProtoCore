@@ -22,6 +22,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_SNMP_TRAP
 
 /** @brief Variable-binding value types accepted in a notification. */
@@ -125,5 +127,7 @@ proto_bool pc_snmp_inform_v3(const char *dst_ip, uint16_t port, uint32_t request
 #endif
 
 #endif // PC_ENABLE_SNMP_TRAP
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_SNMP_NOTIFY_H

@@ -17,6 +17,7 @@
 
 #include "session.h"
 #include "../transport/listener.h"
+#include "../transport/tcp.h" // TcpConn, conn_pool: the slot an event names
 #include "mmgr/plaintext.h"
 #include "proto_handler.h"
 

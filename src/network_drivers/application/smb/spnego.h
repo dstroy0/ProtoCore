@@ -26,6 +26,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_SMB
 
 /**
@@ -51,5 +53,7 @@ proto_bool pc_spnego_parse_response(const uint8_t *blob, size_t len, const uint8
 size_t pc_spnego_wrap_authenticate(const uint8_t *ntlm, size_t pc_ntlm_len, uint8_t *out, size_t cap);
 
 #endif // PC_ENABLE_SMB
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_SPNEGO_H

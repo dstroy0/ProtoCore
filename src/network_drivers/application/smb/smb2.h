@@ -38,6 +38,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_SMB
 
 /** @brief SMB2 command codes (MS-SMB2 §2.2.1.2). */
@@ -605,5 +607,7 @@ size_t pc_smb2_decrypt(uint16_t cipher, const uint8_t *key, const uint8_t *in, s
                        size_t out_cap);
 
 #endif // PC_ENABLE_SMB
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_SMB2_H

@@ -67,7 +67,7 @@ void setup()
         [](uint8_t id, HttpReq *) { send_text(id, 200, "text/plain", "authenticated!"); }, "Restricted", "admin",
         "s3cret");
 
-    begin_http(80);
+    begin_http(80, NULL);
 }
 
 void loop()

@@ -24,6 +24,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_LONWORKS
 
 // LonTalk NV message codes + selector limit: wire values, so integer constants in a struct.
@@ -65,4 +67,7 @@ void pc_lon_snvt_switch_encode(double percent, uint8_t state, uint8_t out[2]);
 void pc_lon_snvt_switch_decode(const uint8_t in[2], double *percent, uint8_t *state);
 
 #endif // PC_ENABLE_LONWORKS
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_LONWORKS_H

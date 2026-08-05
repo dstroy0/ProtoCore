@@ -21,6 +21,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_BLE_GATT
 
 /** @brief ATT opcodes (subset). */
@@ -82,4 +84,7 @@ typedef struct
 size_t pc_gatt_char_json(const GattChar *chars, size_t n, char *out, size_t cap);
 
 #endif // PC_ENABLE_BLE_GATT
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_BLE_GATT_H

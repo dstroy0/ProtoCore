@@ -143,9 +143,7 @@ static proto_bool rd_string(const uint8_t *p, size_t len, size_t *off, const uin
 // The open channel @p id on connection @p i, or nullptr. local id == slot index.
 static SshChannel *chan_by_id(uint8_t i, uint32_t id)
 {
-    // GCOVR_EXCL_LINE below: i is always in range - every caller rejects i >= MAX_SSH_CONNS before
-    // looking a channel up, so only the id / open halves of this guard are exercisable.
-    if (i >= MAX_SSH_CONNS || id >= PC_SSH_MAX_CHANNELS || !ssh_chan[i][id].open) // GCOVR_EXCL_LINE
+    if (i >= MAX_SSH_CONNS || id >= PC_SSH_MAX_CHANNELS || !ssh_chan[i][id].open)
     {
         return NULL;
     }
@@ -156,8 +154,7 @@ static SshChannel *chan_by_id(uint8_t i, uint32_t id)
 // CONFIRMATION / FAILURE), or nullptr.
 static SshChannel *chan_pending_by_id(uint8_t i, uint32_t id)
 {
-    // GCOVR_EXCL_LINE below: i is always in range (same reason as chan_by_id above).
-    if (i >= MAX_SSH_CONNS || id >= PC_SSH_MAX_CHANNELS || !ssh_chan[i][id].pending) // GCOVR_EXCL_LINE
+    if (i >= MAX_SSH_CONNS || id >= PC_SSH_MAX_CHANNELS || !ssh_chan[i][id].pending)
     {
         return NULL;
     }

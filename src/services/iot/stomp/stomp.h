@@ -34,6 +34,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_STOMP
 
 /** @brief One parsed header line: key/value slices point INTO the source buffer (raw, still escaped). */
@@ -94,5 +96,7 @@ proto_bool pc_stomp_header(const StompFrame *f, const char *name, const char **v
 size_t pc_stomp_unescape(char *dst, size_t cap, const char *src, size_t src_len);
 
 #endif // PC_ENABLE_STOMP
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_STOMP_H

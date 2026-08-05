@@ -20,6 +20,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_TOTP
 
 /**
@@ -52,4 +54,7 @@ proto_bool pc_totp_verify(const uint8_t *key, size_t keylen, uint64_t unix_time,
 int pc_base32_decode(const char *b32, uint8_t *out, size_t cap);
 
 #endif // PC_ENABLE_TOTP
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_TOTP_H

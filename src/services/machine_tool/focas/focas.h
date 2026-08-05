@@ -45,6 +45,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_FOCAS
 
 #define FOCAS_TCP_PORT 8193    ///< FOCAS Ethernet listening port
@@ -213,5 +215,7 @@ proto_bool pc_focas_decode8(const uint8_t *chunk, size_t len, FocasValue *out);
 float pc_focas_value_f(const FocasValue *v);
 
 #endif // PC_ENABLE_FOCAS
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_FOCAS_H

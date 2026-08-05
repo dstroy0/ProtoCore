@@ -70,8 +70,8 @@ static void w_bytes(Writer *w, const uint8_t *b, size_t n)
     // Direct pre-copy bound: pos must be within cap AND n must fit in the remaining cap - pos. Written as
     // two explicit guards (no intermediate) so the copy runs only when pos + n <= cap - no underflow of
     // cap - pos (guarded by pos <= cap) and no pos + n wrap (never formed).
-    if (w->pos > w->cap || n > w->cap - w->pos) // GCOVR_EXCL_LINE  w_u8 refuses to advance past cap, so pos <= cap
-    {                                           // is an invariant and the first arm can never be taken
+    if (w->pos > w->cap || n > w->cap - w->pos)
+    { // is an invariant and the first arm can never be taken
         w->ok = PROTO_FALSE;
         return;
     }
@@ -674,12 +674,10 @@ size_t pc_tls13_ed25519_spki(uint8_t *out, size_t cap, const uint8_t pub[32])
 size_t pc_tls13_build_certificate_rpk(uint8_t *out, size_t cap, const uint8_t ed25519_pub[32])
 {
     uint8_t spki[PC_TLS13_ED25519_SPKI_LEN];
-    // GCOVR_EXCL_START  spki[] is exactly PC_TLS13_ED25519_SPKI_LEN, so the SPKI encode never overflows.
     if (!pc_tls13_ed25519_spki(spki, sizeof(spki), ed25519_pub))
     {
         return 0;
     }
-    // GCOVR_EXCL_STOP
     return pc_tls13_build_certificate(out, cap, spki, sizeof(spki));
 }
 #endif
@@ -707,13 +705,10 @@ size_t pc_tls13_build_cert_verify(uint8_t *out, size_t cap, const uint8_t transc
 {
     uint8_t content[64 + 33 + 1 + 32];
     size_t clen = pc_tls13_cert_verify_content(content, sizeof(content), transcript_hash, PROTO_TRUE);
-    // GCOVR_EXCL_START  content[] is sized to the exact maximum (64 + ctx 33 + 1 + hash 32), so
-    // pc_tls13_cert_verify_content always succeeds here; the guard cannot fire.
     if (!clen)
     {
         return 0;
     }
-    // GCOVR_EXCL_STOP
     uint8_t sig[PC_ED25519_SIG_LEN];
     pc_ed25519_sign(sig, content, clen, seed);
 

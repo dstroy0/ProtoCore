@@ -23,6 +23,8 @@
 #include "protocore_config.h"
 #include "server/filesystem/mnt.h" // pc_mnt_backend - the store a dump is offloaded to
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_EXC_DECODER
 
 #ifndef PC_EXC_MAX_FRAMES
@@ -144,4 +146,7 @@ proto_bool pc_exc_coredump_erase(void);
 #endif // PROTOCORE_HOT
 
 #endif // PC_ENABLE_EXC_DECODER
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_EXC_DECODER_H

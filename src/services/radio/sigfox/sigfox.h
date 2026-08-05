@@ -22,6 +22,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_SIGFOX
 
 /** @brief Classification of a Sigfox modem response line. */
@@ -48,5 +50,7 @@ uint16_t pc_sigfox_build_uplink(const uint8_t *payload, uint8_t len, char *out, 
 pc_sigfox_result pc_sigfox_parse_response(const char *buf, uint16_t len);
 
 #endif // PC_ENABLE_SIGFOX
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_SIGFOX_H

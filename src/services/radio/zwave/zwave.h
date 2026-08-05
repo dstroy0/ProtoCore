@@ -31,6 +31,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_ZWAVE
 
 /** @brief Z-Wave Serial API control bytes / frame markers. */
@@ -79,5 +81,7 @@ proto_bool pc_zwave_is_can(uint8_t b);
 uint16_t pc_zwave_build_ack(uint8_t *out, uint16_t cap);
 
 #endif // PC_ENABLE_ZWAVE
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_ZWAVE_H

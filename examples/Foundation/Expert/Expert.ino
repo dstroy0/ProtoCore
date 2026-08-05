@@ -222,7 +222,7 @@ void setup()
     on_http("/api/compute", HTTP_GET, handle_compute);
     on_not_found(handle_expert_not_found);
 
-    int32_t result = begin_http(80);
+    int32_t result = begin_http(80, NULL);
     if (result < 0)
     {
         Serial.printf("begin() failed (error %d)\n", result);

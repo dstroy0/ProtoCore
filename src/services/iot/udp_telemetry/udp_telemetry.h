@@ -22,6 +22,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_UDP_TELEMETRY
 
 // ---------------------------------------------------------------------------
@@ -85,4 +87,7 @@ proto_bool pc_udp_telemetry_send(const char *data, size_t len);
 proto_bool pc_udp_telemetry_cast(const pc_line *l);
 
 #endif // PC_ENABLE_UDP_TELEMETRY
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_UDP_TELEMETRY_H

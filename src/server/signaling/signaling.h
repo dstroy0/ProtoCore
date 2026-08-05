@@ -50,6 +50,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 /**
  * @brief The server's state, as the loop deposited it.
  *
@@ -107,5 +109,7 @@ void pc_signal_put_tick(uint32_t uptime_ms, uint32_t conns_active, uint32_t list
  * L4 dependency to carry it out. A remote reaches this on the slot its own request arrived on.
  */
 void pc_signal_kill(uint8_t slot);
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_SIGNALING_H

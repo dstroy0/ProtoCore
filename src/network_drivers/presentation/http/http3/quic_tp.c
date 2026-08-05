@@ -71,8 +71,7 @@ size_t pc_quic_tp_encode(const QuicTransportParams *tp, uint8_t *out, size_t cap
     {
         // This is the first assignment in the ok-chain (ok is still its line-64 default), so the
         // "ok already false" arm of this && can never fire.
-        ok = ok && put_param(out, cap, &p, QUIC_TP_ORIGINAL_DCID, tp->original_dcid, // GCOVR_EXCL_BR_LINE
-                             tp->original_dcid_len);
+        ok = ok && put_param(out, cap, &p, QUIC_TP_ORIGINAL_DCID, tp->original_dcid, tp->original_dcid_len);
     }
     if (tp->has_initial_scid)
     {

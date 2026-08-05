@@ -27,6 +27,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_BACNET
 
 #define BVLC_TYPE_BIP 0x81 ///< BVLC Type: BACnet/IP
@@ -181,5 +183,7 @@ size_t pc_apdu_build_read_property(uint8_t *buf, size_t cap, uint8_t invoke_id, 
                                    uint32_t object_instance, uint32_t property_id);
 
 #endif // PC_ENABLE_BACNET
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_BACNET_H

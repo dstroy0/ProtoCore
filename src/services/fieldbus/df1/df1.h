@@ -29,6 +29,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_DF1
 
 #define DF1_DLE 0x10
@@ -68,5 +70,7 @@ proto_bool pc_df1_parse_frame(const uint8_t *buf, size_t len, Df1Check check, ui
                               size_t *out_len);
 
 #endif // PC_ENABLE_DF1
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_DF1_H

@@ -11,9 +11,8 @@
 
 #if PC_ENABLE_VL53L0X
 
-#if PROTOCORE_HOT
+#if PROTOCORE_HOT || PC_PLATFORM_HAS_BUS
 #include "services/peripherals/i2c.h"
-#include <Wire.h>
 #endif
 uint16_t pc_vl53l0x_range_mm(uint8_t hi, uint8_t lo)
 {
@@ -35,57 +34,36 @@ proto_bool pc_vl53l0x_range_valid(uint8_t range_status_reg)
     return pc_vl53l0x_range_status(range_status_reg) == VL53L0X_RANGE_VALID;
 }
 
-#if PROTOCORE_HOT
+#if PROTOCORE_HOT || PC_PLATFORM_HAS_BUS
 
-// All VL53L0X I2C-binding state, owned by one instance (internal linkage): the device address,
-// so it is one named owner, unreachable from any other translation unit.
+// All VL53L0X I2C-binding state, owned by one instance (internal linkage): the device address, the
+// register-pair frame, and the result block, so it is one named owner, unreachable from any other
+// translation unit. Both buffers are members rather than locals because a transfer is composed in
+// place: a write is one register byte and its value, and a range read is the twelve result
+// registers from RESULT_RANGE_STATUS onward.
 typedef struct
 {
     uint8_t addr;
+    uint8_t frame[2];
+    uint8_t result[12];
 } Vl53l0xCtx;
-static Vl53l0xCtx s_vl = {.addr = 0x29};
+static Vl53l0xCtx s_vl = {.addr = 0x29, .frame = {0}, .result = {0}};
 
 static proto_bool w8(uint8_t reg, uint8_t val)
 {
-    Wire.beginTransmission(s_vl.addr);
-    Wire.write(reg);
-    Wire.write(val);
-    return Wire.endTransmission() == 0;
+    s_vl.frame[0] = reg;
+    s_vl.frame[1] = val;
+    return pc_i2c_write(s_vl.addr, s_vl.frame, sizeof(s_vl.frame));
 }
 
 static proto_bool r8(uint8_t reg, uint8_t *val)
 {
-    Wire.beginTransmission(s_vl.addr);
-    Wire.write(reg);
-    if (Wire.endTransmission(PROTO_FALSE) != 0)
-    {
-        return PROTO_FALSE;
-    }
-    if (Wire.requestFrom((int)s_vl.addr, 1) != 1)
-    {
-        return PROTO_FALSE;
-    }
-    *val = (uint8_t)Wire.read();
-    return PROTO_TRUE;
+    return pc_i2c_write_read(s_vl.addr, &reg, 1, val, 1);
 }
 
 static proto_bool rn(uint8_t reg, uint8_t *buf, uint8_t n)
 {
-    Wire.beginTransmission(s_vl.addr);
-    Wire.write(reg);
-    if (Wire.endTransmission(PROTO_FALSE) != 0)
-    {
-        return PROTO_FALSE;
-    }
-    if (Wire.requestFrom((int)s_vl.addr, (int)n) != n)
-    {
-        return PROTO_FALSE;
-    }
-    for (uint8_t i = 0; i < n; i++)
-    {
-        buf[i] = (uint8_t)Wire.read();
-    }
-    return PROTO_TRUE;
+    return pc_i2c_write_read(s_vl.addr, &reg, 1, buf, n);
 }
 
 proto_bool pc_vl53l0x_begin(uint8_t addr)
@@ -111,14 +89,13 @@ proto_bool pc_vl53l0x_read_mm(uint16_t *mm)
     {
         return PROTO_FALSE;
     }
-    uint8_t buf[12];
-    if (!rn(VL53L0X_REG_RESULT_RANGE_STATUS, buf, 12))
+    if (!rn(VL53L0X_REG_RESULT_RANGE_STATUS, s_vl.result, (uint8_t)sizeof(s_vl.result)))
     {
         return PROTO_FALSE;
     }
-    proto_bool valid = pc_vl53l0x_range_valid(buf[0]);
-    *mm = pc_vl53l0x_range_mm(buf[10], buf[11]); // distance at RESULT_RANGE_STATUS + 10/11
-    w8(VL53L0X_REG_SYSTEM_INTERRUPT_CLEAR, 0x01);
+    proto_bool valid = pc_vl53l0x_range_valid(s_vl.result[0]);
+    *mm = pc_vl53l0x_range_mm(s_vl.result[10], s_vl.result[11]); // distance at RESULT_RANGE_STATUS + 10/11
+    (void)w8(VL53L0X_REG_SYSTEM_INTERRUPT_CLEAR, 0x01);
     return valid;
 }
 

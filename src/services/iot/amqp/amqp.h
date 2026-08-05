@@ -28,6 +28,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_AMQP
 
 // Frame types (octet 0).
@@ -84,5 +86,7 @@ proto_bool pc_amqp_parse_method(const uint8_t *payload, size_t payload_len, uint
                                 const uint8_t **args, size_t *args_len);
 
 #endif // PC_ENABLE_AMQP
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_AMQP_H

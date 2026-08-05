@@ -48,6 +48,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_FORWARD
 
 /** @brief Interface kind (informational; the plane treats all interfaces the same). */
@@ -188,5 +190,7 @@ void pc_forward_test_set_now(uint32_t ms);
 #endif
 
 #endif // PC_ENABLE_FORWARD
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_FORWARD_H

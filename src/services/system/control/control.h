@@ -34,6 +34,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_CONTROL
 
 #define CONTROL_UNBOUNDED 1e30f ///< sentinel for "no clamp" (well outside any real actuator range)
@@ -231,5 +233,7 @@ size_t pid_log_header(uint8_t *buf, size_t cap, const Pid *p, float dt);
 size_t pid_log_record(uint8_t *buf, size_t cap, float setpoint, float measurement, float output, proto_bool saturated);
 
 #endif // PC_ENABLE_CONTROL
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_CONTROL_H

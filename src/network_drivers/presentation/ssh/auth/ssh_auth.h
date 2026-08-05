@@ -24,6 +24,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 /** @brief Parsed SSH_MSG_USERAUTH_REQUEST. */
 typedef struct
 {
@@ -111,5 +113,7 @@ int pc_ssh_auth_handle_request(uint8_t i, const uint8_t *payload, size_t len, ui
 int pc_ssh_auth_handle_info_response(uint8_t i, const uint8_t *payload, size_t len, uint8_t *out, size_t *out_len,
                                      size_t cap);
 #endif
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_SSH_AUTH_H

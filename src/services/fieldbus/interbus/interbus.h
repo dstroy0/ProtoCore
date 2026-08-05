@@ -24,6 +24,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_INTERBUS
 
 /** @brief the loopback word that opens a summation frame. */
@@ -57,4 +59,7 @@ proto_bool pc_interbus_parse(const uint8_t *frame, size_t len, uint16_t *out_wor
                              size_t *out_count);
 
 #endif // PC_ENABLE_INTERBUS
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_INTERBUS_H

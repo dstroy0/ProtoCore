@@ -1,7 +1,7 @@
 # DTLS 1.3 interop: pc_dtls_conn ⇄ wolfSSL
 
 Real-peer conformance test for the library's DTLS 1.3 server (`network_drivers/presentation/dtls`).
-[`dtls_interop_server.cpp`](dtls_interop_server.cpp) wraps the transport-neutral `pc_dtls_conn` state
+[`dtls_interop_server.c`](dtls_interop_server.c) wraps the transport-neutral `pc_dtls_conn` state
 machine in a tiny UDP server; the [wolfSSL](https://github.com/wolfSSL/wolfssl) DTLS 1.3 example
 client drives a full handshake **and** an application-data round trip against it.
 

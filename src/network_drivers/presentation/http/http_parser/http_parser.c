@@ -763,7 +763,7 @@ proto_bool http_forwarded_client(const HttpReq *req, char *ip_out, size_t ip_cap
             // fend[k]==',' is unreachable here: lim is derived from elen, which is itself the
             // offset of the first ',' (or end of string when there is none) - so k can never
             // walk far enough to land on a comma without k<lim failing first.
-            while (k < lim && fend[k] != ';' && fend[k] != ',') // GCOVR_EXCL_BR_LINE  see above: the ',' arm can't fire
+            while (k < lim && fend[k] != ';' && fend[k] != ',')
             {
                 k++;
             }
@@ -858,7 +858,7 @@ proto_bool http_get_form(const HttpReq *req, const char *key, char *out, size_t 
         // has no '=' check - so it too can only leave body[i]=='&' when i<len. The remaining
         // stop condition for both scans, i==len, is excluded by the i<len test itself. So
         // whenever i < len still holds at this point, body[i] can only be '&'.
-        if (i < len && body[i] == '&') // GCOVR_EXCL_BR_LINE  see above: the not-'&' arm can't fire
+        if (i < len && body[i] == '&')
         {
             i++;
         }

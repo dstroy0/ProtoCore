@@ -312,7 +312,8 @@ void test_ack_rejects_malformed()
 
 void test_host_binding_stubs()
 {
-    TEST_ASSERT_FALSE(pc_hmmd_begin(16, 17));
+    // begin() opens the unit; nothing has arrived yet so there is no report to hand back.
+    TEST_ASSERT_TRUE(pc_hmmd_begin(16, 17));
     TEST_ASSERT_FALSE(pc_hmmd_poll());
     TEST_ASSERT_NULL(pc_hmmd_last());
     pc_hmmd_stream_reset(NULL); // must not fault

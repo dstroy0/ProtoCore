@@ -114,7 +114,7 @@ void *pc_secure_alloc(size_t n, size_t align)
 {
     int w = cur_worker();
     assert_single_owner(w);
-    assert((align & (align - 1)) == 0 && "secure alignment must be a power of two"); // GCOVR_EXCL_BR_LINE
+    assert((align & (align - 1)) == 0 && "secure alignment must be a power of two");
     return pc_arena_scratch_alloc_aligned(bind(w), n, align);
 }
 

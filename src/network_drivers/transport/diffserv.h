@@ -27,6 +27,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_DIFFSERV
 
 // Common RFC 2474 / RFC 4594 code points for convenience; any 0-63 value is accepted.
@@ -81,4 +83,7 @@ proto_bool pc_conn_set_dscp(uint8_t slot, uint8_t dscp);
 proto_bool pc_listen_set_dscp(uint16_t port, uint8_t dscp);
 
 #endif // PC_ENABLE_DIFFSERV
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_DIFFSERV_H

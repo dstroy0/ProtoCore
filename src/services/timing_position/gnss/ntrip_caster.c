@@ -96,7 +96,7 @@ static void scan_headers(const char *buf, const char *end, NtripRequest *out)
         // find_header_end only ever reports a block that ends ON the terminating '\n' (hend = i+4 past
         // CRLFCRLF, or i+2 past LFLF), so end[-1] == '\n' and every line in [buf,end) is LF-terminated:
         // the scan always stops on a newline and the `le < end` bound has no true exit to reach.
-        while (le < end && *le != '\n') // GCOVR_EXCL_LINE  le < end cannot go false, see above
+        while (le < end && *le != '\n')
         {
             le++;
         }
@@ -159,7 +159,7 @@ proto_bool pc_ntrip_request_parse(const char *buf, size_t len, NtripRequest *out
     const char *target = p;
     // Same invariant as scan_headers: end[-1] is the '\n' that closed the header block, so the target
     // scan always stops on that newline at the latest and the `p < end` bound never fires.
-    while (p < end && *p != ' ' && *p != '\r' && *p != '\n' && *p != '?') // GCOVR_EXCL_LINE  see above
+    while (p < end && *p != ' ' && *p != '\r' && *p != '\n' && *p != '?')
     {
         p++;
     }
@@ -291,7 +291,7 @@ size_t pc_ntrip_build_str_record(char *out, size_t cap, const NtripMount *m)
     pc_sb_put(&sb_out8, gen);
     pc_sb_put(&sb_out8, ";none;N;N;9600;");
     int n = (int)pc_sb_finish(&sb_out8);
-    if (!sb_out8.ok) // GCOVR_EXCL_LINE  n<0 needs an snprintf encoding failure, see above
+    if (!sb_out8.ok)
     {
         return 0;
     }

@@ -74,7 +74,7 @@ void setup()
               [](uint8_t id, HttpReq *) { send_text(id, 200, "text/plain", "hello over resumable TLS\n"); });
 
     int32_t r =
-        begin_tls(443, (const uint8_t *)CERT_PEM, sizeof(CERT_PEM), (const uint8_t *)KEY_PEM, sizeof(KEY_PEM));
+        begin_tls(443, (const uint8_t *)CERT_PEM, sizeof(CERT_PEM), (const uint8_t *)KEY_PEM, sizeof(KEY_PEM), NULL);
     if (r < 0)
     {
         Serial.printf("begin_tls() failed (%d)\n", (int)r);

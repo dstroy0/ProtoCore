@@ -21,6 +21,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_OTA_ROLLBACK
 
 /** @brief OTA image states (mirror esp_ota_img_states_t so the core is host-pure). These arrive from
@@ -76,4 +78,7 @@ void pc_ota_rollback(void);
 pc_ota_action pc_ota_rollback_tick(proto_bool self_test_ok);
 
 #endif // PC_ENABLE_OTA_ROLLBACK
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_OTA_ROLLBACK_H

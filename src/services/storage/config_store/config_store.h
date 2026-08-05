@@ -30,6 +30,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_CONFIG_STORE
 
 /**
@@ -71,4 +73,7 @@ proto_bool pc_config_erase(const char *key);
 proto_bool pc_config_clear(void);
 
 #endif // PC_ENABLE_CONFIG_STORE
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_CONFIG_STORE_H

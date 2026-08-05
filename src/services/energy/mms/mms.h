@@ -24,6 +24,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_MMS
 
 /** @brief MMS PDU tags (context-specific) + the service tags used here. */
@@ -67,4 +69,7 @@ typedef struct
 proto_bool pc_mms_parse(const uint8_t *pdu, size_t len, MmsPdu *out);
 
 #endif // PC_ENABLE_MMS
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_MMS_H

@@ -55,7 +55,7 @@ void setup()
 
     // begin() returns 1 on success and a negative value on failure (listener
     // pool full or lwIP error). -1 is truthy, so test for "< 0", not "!result".
-    int32_t result = begin_http(80);
+    int32_t result = begin_http(80, NULL);
     if (result < 0)
     {
         Serial.printf("begin() failed (error %d)\n", result);

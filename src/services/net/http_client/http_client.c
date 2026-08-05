@@ -179,7 +179,7 @@ size_t http_client_build_request(const char *method, const char *host, uint16_t 
     pc_sb_put(&sb_out2, "\r\nUser-Agent: PC\r\nConnection: close\r\n\r\n");
     n = (int)pc_sb_finish(&sb_out2);
     // n < 0 is unreachable here, for the same reason as the body-request snprintf above.
-    if (!sb_out2.ok) // GCOVR_EXCL_BR_LINE
+    if (!sb_out2.ok)
     {
         return 0;
     }
@@ -424,7 +424,7 @@ static int http_request(const char *method, const char *url, const char *content
         return (int)HTTP_CLIENT_ERR_URL;
     }
 
-    uint32_t deadline = millis() + PC_HTTP_CLIENT_TIMEOUT_MS;
+    uint32_t deadline = pc_millis() + PC_HTTP_CLIENT_TIMEOUT_MS;
 
     // Open the connection (DNS + connect) via the shared client transport.
     s_http.cid = pc_client_open(host, port, PC_HTTP_CLIENT_TIMEOUT_MS);
@@ -466,7 +466,7 @@ static int http_request(const char *method, const char *url, const char *content
             s_http.cid = -1;
             return (int)HTTP_CLIENT_ERR_SEND;
         }
-        while ((int32_t)(deadline - millis()) > 0)
+        while ((int32_t)(deadline - pc_millis()) > 0)
         {
             size_t n = pc_client_read(s_http.cid, s_http.rx + pc_resp_len, sizeof(s_http.rx) - pc_resp_len);
             pc_resp_len += n;
@@ -545,19 +545,29 @@ void http_client_clear_verify()
 
 #else // host build: transport is a stub
 
-int http_get(const char *, HttpClientResult *)
+int http_get(const char *url, HttpClientResult *out)
 {
+    (void)url;
+    (void)out;
     return (int)HTTP_CLIENT_ERR_CONNECT;
 }
-int http_post(const char *, const char *, const uint8_t *, size_t, HttpClientResult *)
+int http_post(const char *url, const char *content_type, const uint8_t *body, size_t body_len, HttpClientResult *out)
 {
+    (void)url;
+    (void)content_type;
+    (void)body;
+    (void)body_len;
+    (void)out;
     return (int)HTTP_CLIENT_ERR_CONNECT;
 }
-void http_client_set_ca(const uint8_t *, size_t)
+void http_client_set_ca(const uint8_t *ca, size_t ca_len)
 {
+    (void)ca;
+    (void)ca_len;
 }
-void http_client_set_pin(const uint8_t *)
+void http_client_set_pin(const uint8_t *sha256)
 {
+    (void)sha256;
 }
 void http_client_clear_verify()
 {

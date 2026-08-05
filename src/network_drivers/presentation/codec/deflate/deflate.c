@@ -157,7 +157,7 @@ static void emit_match(pc_bit_writer *w, const Tables *t, int len, int dist)
     // di == 29 (loop exit via the left operand) is unreachable: dist is always <=
     // PC_WINDOW (512) here - the chain walk in deflate_raw() discards any candidate
     // farther away - and DIST_BASE[18] is 513, so di never advances past 17.
-    while (di < 29 && dist >= DIST_BASE[di + 1]) // GCOVR_EXCL_BR_LINE  di<29 never goes false, see above
+    while (di < 29 && dist >= DIST_BASE[di + 1])
     {
         di++;
     }

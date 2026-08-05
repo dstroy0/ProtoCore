@@ -55,7 +55,7 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     on_http("/time", HTTP_GET, handle_time);
-    begin_http(80);
+    begin_http(80, NULL);
 
     pc_ntp_begin("UTC0", NULL, NULL); // POSIX TZ string; set your zone for local time
 }

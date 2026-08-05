@@ -26,6 +26,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_SPARKPLUG
 
 // Sparkplug B data type codes (a subset; Tahu DataType enum).
@@ -137,5 +139,7 @@ typedef struct
 proto_bool pc_spb_parse_metric(const uint8_t *buf, size_t len, SpbMetricDecoded *out);
 
 #endif // PC_ENABLE_SPARKPLUG
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_SPARKPLUG_H

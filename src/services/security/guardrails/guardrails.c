@@ -66,7 +66,7 @@ int pc_health_json(const pc_health *h, char *out, size_t cap)
     int w = (int)pc_sb_finish(&sb_out);
     // w < 0 is unreachable: this format is all %u (unsigned) with literal text, no
     // multibyte/wide-character conversion, which is the only way snprintf goes negative.
-    if (!sb_out.ok) // GCOVR_EXCL_BR_LINE  w<0 half unreachable (see above)
+    if (!sb_out.ok)
     {
         out[0] = '\0';
         return 0;

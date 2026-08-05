@@ -33,6 +33,8 @@
 #include "protocore_config.h"
 #include "services/net/snmp/snmp_ber.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_SNMP
 
 // SNMP message versions (the on-wire INTEGER value).
@@ -165,5 +167,7 @@ size_t pc_snmp_dispatch_pdu(const uint8_t *pdu, size_t pdu_len, proto_bool allow
 void pc_snmp_agent_begin_udp(uint16_t port);
 
 #endif // PC_ENABLE_SNMP
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_SNMP_AGENT_H

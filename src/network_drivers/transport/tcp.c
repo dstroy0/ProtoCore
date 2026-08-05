@@ -85,7 +85,7 @@ pc_conn_counters pc_conn_counters_get(void)
     c.closing_gauge = 0;
     for (int i = 0; i < MAX_CONNS; i++)
     {
-        if (PROTO_ATOMIC_LOAD(&conn_pool[i].state) == CONN_CLOSING) // GCOVR_EXCL_BR_LINE
+        if (PROTO_ATOMIC_LOAD(&conn_pool[i].state) == CONN_CLOSING)
         {
             c.closing_gauge++;
         }
@@ -106,7 +106,7 @@ static void obs_bump(pc_conn_reason reason)
     int idx = -1;
     // Every pc_conn_reason enumerator has a case and there is no default label, so the compiler's
     // implicit-default arm is unreachable for any valid enum value.
-    switch (reason) // GCOVR_EXCL_BR_LINE
+    switch (reason)
     {
     case PC_CONN_R_ACCEPT:
         idx = 0;
@@ -465,20 +465,20 @@ void pc_conn_set_state(uint8_t slot, ConnState st)
     // no reserved slots exist (CONN_POOL_SLOTS == MAX_CONNS), where the test would be dead.
     if (slot >= MAX_CONNS)
     {
-        PROTO_ATOMIC_STORE(&conn_pool[slot].state, st); // GCOVR_EXCL_BR_LINE
+        PROTO_ATOMIC_STORE(&conn_pool[slot].state, st);
         return;
     }
 #endif
     const uint32_t bit = 1u << slot;
     if (st == CONN_FREE)
     {
-        PROTO_ATOMIC_STORE(&conn_pool[slot].state, st);                         // GCOVR_EXCL_BR_LINE
-        atomic_fetch_or_explicit(&s_pool.free_mask, bit, memory_order_release); // GCOVR_EXCL_BR_LINE
+        PROTO_ATOMIC_STORE(&conn_pool[slot].state, st);
+        atomic_fetch_or_explicit(&s_pool.free_mask, bit, memory_order_release);
     }
     else
     {
-        atomic_fetch_and_explicit(&s_pool.free_mask, ~bit, memory_order_release); // GCOVR_EXCL_BR_LINE
-        PROTO_ATOMIC_STORE(&conn_pool[slot].state, st);                           // GCOVR_EXCL_BR_LINE
+        atomic_fetch_and_explicit(&s_pool.free_mask, ~bit, memory_order_release);
+        PROTO_ATOMIC_STORE(&conn_pool[slot].state, st);
     }
 }
 
@@ -487,7 +487,7 @@ void pc_conn_set_state(uint8_t slot, ConnState st)
 int32_t pc_conn_alloc_free(void)
 {
     const uint32_t valid = (MAX_CONNS >= 32) ? 0xFFFFFFFFu : ((1u << MAX_CONNS) - 1u);
-    uint32_t m = atomic_load_explicit(&s_pool.free_mask, memory_order_acquire) & valid; // GCOVR_EXCL_BR_LINE
+    uint32_t m = atomic_load_explicit(&s_pool.free_mask, memory_order_acquire) & valid;
     return m ? (int32_t)__builtin_ctz(m) : -1;
 }
 
@@ -613,11 +613,11 @@ void pc_conn_ack_consumed(uint8_t slot)
     // Only the owning worker calls this, so rx_tail/rx_acked are read race-free
     // here; rx_head (producer) is not touched. Ack nothing for a slot that is not
     // actively receiving (the CONN_CLOSING discard path ACKs its own bytes).
-    if (PROTO_ATOMIC_LOAD(&c->state) != CONN_ACTIVE || c->pcb == NULL) // GCOVR_EXCL_BR_LINE
+    if (PROTO_ATOMIC_LOAD(&c->state) != CONN_ACTIVE || c->pcb == NULL)
     {
         return;
     }
-    size_t tail = PROTO_ATOMIC_LOAD(&c->rx_tail); // GCOVR_EXCL_BR_LINE
+    size_t tail = PROTO_ATOMIC_LOAD(&c->rx_tail);
     size_t consumed = (tail + RX_BUF_SIZE - c->rx_acked) % RX_BUF_SIZE;
     if (consumed == 0)
     {
@@ -776,10 +776,9 @@ static void closing_finalize(uint8_t slot, pc_pcb *pcb)
 // always a valid conn_pool index by construction). Both guarantee the condition is false.
 static void closing_check(uint8_t slot, pc_pcb *pcb)
 {
-    // GCOVR_EXCL_BR_LINE - see above
     if (slot >= MAX_CONNS || PROTO_ATOMIC_LOAD(&conn_pool[slot].state) != CONN_CLOSING)
     {
-        return; // GCOVR_EXCL_LINE - see above
+        return;
     }
     if (pcb == NULL || pcb->snd_queuelen == 0)
     {
@@ -851,7 +850,7 @@ void proto_tcp_stop(void)
     // the listener layer and must be cleaned up via listener_stop_all() first.
     for (int i = 0; i < MAX_CONNS; i++)
     {
-        ConnState st = PROTO_ATOMIC_LOAD(&conn_pool[i].state); // GCOVR_EXCL_BR_LINE
+        ConnState st = PROTO_ATOMIC_LOAD(&conn_pool[i].state);
         if ((st == CONN_ACTIVE || st == CONN_CLOSING) && conn_pool[i].pcb != NULL)
         {
             pc_pcb *pcb = conn_pool[i].pcb;
@@ -871,7 +870,7 @@ uint8_t pc_conn_active_count(void)
     uint8_t n = 0;
     for (uint8_t i = 0; i < MAX_CONNS; i++)
     {
-        if (PROTO_ATOMIC_LOAD(&conn_pool[i].state) == CONN_ACTIVE) // GCOVR_EXCL_BR_LINE
+        if (PROTO_ATOMIC_LOAD(&conn_pool[i].state) == CONN_ACTIVE)
         {
             n++;
         }
@@ -887,7 +886,7 @@ uint32_t pc_conn_remote_ip(uint8_t slot)
         return 0;
     }
     TcpConn *conn = &conn_pool[slot];
-    if (PROTO_ATOMIC_LOAD(&conn->state) == CONN_ACTIVE && conn->pcb != NULL) // GCOVR_EXCL_BR_LINE
+    if (PROTO_ATOMIC_LOAD(&conn->state) == CONN_ACTIVE && conn->pcb != NULL)
     {
         return pc_net_ip4_u32(pc_net_ip_as_v4(&conn->pcb->remote_ip));
     }
@@ -931,7 +930,7 @@ proto_bool pc_conn_remote_addr(uint8_t slot, pc_ip *out)
         return PROTO_FALSE;
     }
     TcpConn *conn = &conn_pool[slot];
-    if (PROTO_ATOMIC_LOAD(&conn->state) != CONN_ACTIVE || conn->pcb == NULL) // GCOVR_EXCL_BR_LINE
+    if (PROTO_ATOMIC_LOAD(&conn->state) != CONN_ACTIVE || conn->pcb == NULL)
     {
         return PROTO_FALSE;
     }
@@ -959,7 +958,7 @@ void pc_conn_touch_active(uint8_t slot_id)
         return;
     }
     TcpConn *c = &conn_pool[slot_id];
-    if (PROTO_ATOMIC_LOAD(&c->state) == CONN_ACTIVE) // GCOVR_EXCL_BR_LINE
+    if (PROTO_ATOMIC_LOAD(&c->state) == CONN_ACTIVE)
     {
         c->last_activity_ms = pc_millis();
     }
@@ -980,7 +979,7 @@ void proto_tcp_check_timeouts(int worker_id)
         // dwell forever. After PC_CLOSING_TIMEOUT_MS, force it free so the
         // fixed pool cannot leak. (The fast path is the sent callback finalizing
         // on ACK; this only catches a black-holed peer.)
-        if (PROTO_ATOMIC_LOAD(&slot->state) == CONN_CLOSING) // GCOVR_EXCL_BR_LINE
+        if (PROTO_ATOMIC_LOAD(&slot->state) == CONN_CLOSING)
         {
             if ((now - slot->last_activity_ms) < PC_CLOSING_TIMEOUT_MS)
             {
@@ -998,7 +997,7 @@ void proto_tcp_check_timeouts(int worker_id)
             continue;
         }
 
-        if (PROTO_ATOMIC_LOAD(&slot->state) != CONN_ACTIVE) // GCOVR_EXCL_BR_LINE
+        if (PROTO_ATOMIC_LOAD(&slot->state) != CONN_ACTIVE)
         {
             continue;
         }
@@ -1051,7 +1050,7 @@ pc_net_err lowlevel_recv_cb(void *arg, pc_pcb *tpcb, pc_pbuf *p, pc_net_err err)
     // are waiting for the ACK. Drain (and ACK) anything the peer still sends so
     // the window keeps moving, but do not process it. A peer FIN here just means
     // both sides are done - finalize on the next sent/timeout.
-    if (PROTO_ATOMIC_LOAD(&slot->state) == CONN_CLOSING) // GCOVR_EXCL_BR_LINE
+    if (PROTO_ATOMIC_LOAD(&slot->state) == CONN_CLOSING)
     {
         if (p != NULL)
         {
@@ -1061,7 +1060,7 @@ pc_net_err lowlevel_recv_cb(void *arg, pc_pcb *tpcb, pc_pbuf *p, pc_net_err err)
         return PC_NET_OK;
     }
 
-    if (PROTO_ATOMIC_LOAD(&slot->state) != CONN_ACTIVE) // GCOVR_EXCL_BR_LINE
+    if (PROTO_ATOMIC_LOAD(&slot->state) != CONN_ACTIVE)
     {
         return PC_NET_ERR_VAL;
     }
@@ -1158,7 +1157,7 @@ pc_net_err lowlevel_sent_cb(void *arg, pc_pcb *tpcb, proto_u16 len)
     if (slot != NULL)
     {
         slot->last_activity_ms = pc_millis();
-        if (PROTO_ATOMIC_LOAD(&slot->state) == CONN_CLOSING) // GCOVR_EXCL_BR_LINE
+        if (PROTO_ATOMIC_LOAD(&slot->state) == CONN_CLOSING)
         {
             closing_check(slot->id, tpcb); // drained? -> tear down + free the slot
         }
@@ -1195,7 +1194,7 @@ void lowlevel_err_cb(void *arg, pc_net_err err)
      * internally.  We must NOT close or abort here - just null
      * out our pointer to prevent any future access.
      */
-    ConnState old = PROTO_ATOMIC_LOAD(&slot->state); // GCOVR_EXCL_BR_LINE
+    ConnState old = PROTO_ATOMIC_LOAD(&slot->state);
     pc_conn_set_state(slot->id, CONN_FREE);
     slot->pcb = NULL;
 

@@ -32,6 +32,8 @@
 #include "network_drivers/transport/tcp.h"
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 // ---------------------------------------------------------------------------
 // Per-connection SSE state
 // ---------------------------------------------------------------------------
@@ -122,5 +124,7 @@ int pc_sse_format(char *buf, size_t n, const char *data, const char *event, cons
  * @return true on success, false if the TCP slot is not active.
  */
 proto_bool pc_sse_write(SseConn *sse, const char *data, const char *event, const char *id);
+
+PROTO_END_DECLS
 
 #endif

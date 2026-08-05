@@ -73,7 +73,7 @@ static proto_bool parse_u16(const char *s, size_t n, uint16_t *out)
 {
     // n == 0 is never true here: both call sites (below, in parse_v1) pass a token produced by
     // parse_v1's own space-delimited tokenizer, which only ever records tokens of length >= 1.
-    if (n == 0 || n > 5) // GCOVR_EXCL_BR_LINE
+    if (n == 0 || n > 5)
     {
         return PROTO_FALSE;
     }
@@ -237,7 +237,7 @@ size_t proxy_v1_build(char *buf, size_t cap, uint32_t src_addr, uint32_t dst_add
     int n = (int)pc_sb_finish(&sb_buf);
     // n < 0 is never true here: the format string uses only %u conversions (no wide/multibyte
     // specifiers), so snprintf can't fail with an encoding error for this call.
-    if (n < 0 || (size_t)n >= cap) // snprintf truncated (no room for the content + NUL) GCOVR_EXCL_BR_LINE
+    if (n < 0 || (size_t)n >= cap)
     {
         return 0;
     }

@@ -21,7 +21,7 @@
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
-#include "services/net/dns_resolver/dns_resolver.h"
+#include "network_drivers/network/dns_resolver.h"
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
@@ -58,7 +58,7 @@ void setup()
                  (ip >> 8) & 0xFF, ip & 0xFF, pc_dns_resolver_verify(ip) ? "true" : "false");
         send_text(id, 200, "application/json", b);
     });
-    begin_http(80);
+    begin_http(80, NULL);
 }
 
 void loop()

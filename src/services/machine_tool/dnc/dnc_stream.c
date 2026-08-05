@@ -91,9 +91,9 @@ DncStreamResult dnc_stream(const DncCfg *cfg, const char *program, size_t prog_l
     // PC_DNC_LINE_MAX + 8, so the encode has no failing arm to reach here; the check is what keeps
     // that true if the marker ever grows.
     size_t n = pc_dnc_encode_marker(cfg, buf, sizeof(buf));
-    if (n == 0) // GCOVR_EXCL_LINE  a 3-byte marker always fits buf, see above
+    if (n == 0)
     {
-        return DNC_STREAM_ERR_ENCODE; // GCOVR_EXCL_LINE  unreachable body of the guard above
+        return DNC_STREAM_ERR_ENCODE;
     }
     if (!emit(&flow, send, recv, ctx, buf, n))
     {

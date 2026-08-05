@@ -33,6 +33,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_NATS
 
 // ---- builders (return bytes written, or 0 on overflow / bad input) ----
@@ -102,5 +104,7 @@ typedef struct
 proto_bool pc_nats_parse(const char *buf, size_t len, NatsMsg *out, size_t *consumed);
 
 #endif // PC_ENABLE_NATS
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_NATS_H

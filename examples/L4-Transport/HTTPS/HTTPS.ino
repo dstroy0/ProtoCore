@@ -88,7 +88,7 @@ void setup()
 
     // Load cert/key into the static-pool TLS engine and listen on 443.
     int32_t result =
-        begin_tls(443, (const uint8_t *)CERT_PEM, sizeof(CERT_PEM), (const uint8_t *)KEY_PEM, sizeof(KEY_PEM));
+        begin_tls(443, (const uint8_t *)CERT_PEM, sizeof(CERT_PEM), (const uint8_t *)KEY_PEM, sizeof(KEY_PEM), NULL);
     if (result < 0)
     {
         Serial.printf("begin_tls() failed (error %d) - check the cert/key and arena size\n", result);

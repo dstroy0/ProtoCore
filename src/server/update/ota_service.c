@@ -129,7 +129,7 @@ static void ota_handle(uint8_t slot_id, HttpReq *req)
     }
     send_text(slot_id, 200, PC_MIME_TEXT_PLAIN, "OK - rebooting");
     pcdelay(150); // let the response flush before the reboot
-    ESP.restart();
+    pc_platform_restart();
 }
 
 void pc_ota_begin(const char *path, const char *user, const char *pass)

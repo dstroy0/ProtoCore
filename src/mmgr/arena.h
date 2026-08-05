@@ -32,6 +32,8 @@
 
 #include "protocore_config.h" // PC_WORKER_COUNT - how many slots the pools are cut into
 
+PROTO_BEGIN_DECLS
+
 // ---------------------------------------------------------------------------
 // Slot identity - which arena is mine
 // ---------------------------------------------------------------------------
@@ -156,7 +158,7 @@ PC_INLINE void *pc_arena_scratch_alloc_aligned(pc_arena *a, size_t n, size_t ali
     // The "nt > a->scratch_top" half is unreachable: the guard above already established
     // n <= a->scratch_top, so the subtraction cannot underflow, and masking off low bits can
     // only ever decrease the value further - nt <= a->scratch_top always holds.
-    if (nt < a->persist_end || nt > a->scratch_top) // GCOVR_EXCL_BR_LINE
+    if (nt < a->persist_end || nt > a->scratch_top)
     {
         return NULL; // would cross the persistent end (or underflow)
     }
@@ -295,5 +297,7 @@ size_t pc_arena_set_persist_used(const pc_arena_set *s);
 
 /** @brief Scratch bytes allocated, summed over all regions. */
 size_t pc_arena_set_scratch_used(const pc_arena_set *s);
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_ARENA_H

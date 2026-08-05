@@ -71,7 +71,7 @@ static const char *parse_hex(const char *p, uint32_t *out)
 static void put_json_str(pc_sb *b, const char *s)
 {
     pc_sb_put(b, "\"");
-    const char *src = s ? s : ""; // GCOVR_EXCL_LINE the only caller passes info->cause, a fixed-size array
+    const char *src = s ? s : "";
     for (const char *p = src; *p; p++)
     {
         if (*p == '"' || *p == '\\')
@@ -108,7 +108,7 @@ static void put_int(pc_sb *b, int v)
     char t[12];
     int n = 0;
     proto_bool neg = v < 0;
-    unsigned u = neg ? (unsigned)(-(long)v) : (unsigned)v; // GCOVR_EXCL_LINE neg is always false (core >= 0)
+    unsigned u = neg ? (unsigned)(-(long)v) : (unsigned)v;
     do
     {
         t[n++] = (char)('0' + u % 10);
@@ -116,12 +116,10 @@ static void put_int(pc_sb *b, int v)
     } while (u);
     char o[13];
     int k = 0;
-    // GCOVR_EXCL_START  pc_exc_json's only put_int call is guarded by core >= 0, so v is never negative
     if (neg)
     {
         o[k++] = '-';
     }
-    // GCOVR_EXCL_STOP
     for (int i = 0; i < n; i++)
     {
         o[k++] = t[n - 1 - i];

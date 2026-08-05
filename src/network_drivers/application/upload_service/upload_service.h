@@ -20,6 +20,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_UPLOAD
 
 /**
@@ -42,5 +44,7 @@ void pc_upload_begin(const char *path, const char *dest_path);
 size_t pc_upload_last_size();
 
 #endif // PC_ENABLE_UPLOAD
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_UPLOAD_SERVICE_H

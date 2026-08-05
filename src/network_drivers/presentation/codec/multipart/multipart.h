@@ -33,6 +33,8 @@
 #include "network_drivers/presentation/presentation.h" // for HttpReq, http_get_header
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 // ---------------------------------------------------------------------------
 // Data types
 // ---------------------------------------------------------------------------
@@ -88,5 +90,7 @@ proto_bool pc_multipart_parse(HttpReq *req, Multipart *mp);
  * @return Part data (null-terminated), or nullptr if not found.
  */
 const char *pc_multipart_get_field(const Multipart *mp, const char *field);
+
+PROTO_END_DECLS
 
 #endif

@@ -24,6 +24,8 @@
 
 #include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
 
+PROTO_BEGIN_DECLS
+
 /** @brief One channel's flow-control state (RFC 4254 sec 5.2). */
 typedef struct
 {
@@ -134,5 +136,7 @@ int32_t pc_ssh_sig_build_window_adjust(uint32_t peer_id, uint32_t add, uint8_t *
 
 /** @brief CHANNEL_EOF followed by CHANNEL_CLOSE, as one 10-byte pair. */
 int32_t pc_ssh_sig_build_close(uint32_t peer_id, uint8_t *out, size_t cap, size_t *out_len);
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_SSH_FLOW_CONTROL_H

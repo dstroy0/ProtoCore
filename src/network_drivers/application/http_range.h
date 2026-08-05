@@ -18,6 +18,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_RANGE
 
 /**
@@ -33,5 +35,7 @@
 int http_parse_byte_range(const char *hdr, size_t size, size_t *out_start, size_t *out_end);
 
 #endif // PC_ENABLE_RANGE
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_HTTP_RANGE_H

@@ -67,7 +67,7 @@ void setup()
         send_text(id, 200, "text/plain", buf);
     });
 
-    int32_t result = begin_http(80);
+    int32_t result = begin_http(80, NULL);
     if (result < 0)
     {
         Serial.printf("begin() failed (error %d)\n", result);

@@ -46,7 +46,7 @@ void setup()
 
     on_http("/", HTTP_GET,
               [](uint8_t id, HttpReq *) { send_text(id, 200, "text/plain", "throttled server"); });
-    begin_http(80); // accept throttle is active automatically when the flag is built in
+    begin_http(80, NULL); // accept throttle is active automatically when the flag is built in
 }
 
 void loop()

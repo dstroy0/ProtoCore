@@ -40,6 +40,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_AD9238
 
 /** @brief SPI register addresses (13-bit address field). Verify against your datasheet revision. */
@@ -125,5 +127,7 @@ size_t pc_ad9238_build_read(uint16_t reg_addr, uint8_t *out, size_t cap);
 size_t pc_ad9238_build_transfer(uint8_t *out, size_t cap);
 
 #endif // PC_ENABLE_AD9238
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_AD9238_H

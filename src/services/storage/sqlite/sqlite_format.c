@@ -25,7 +25,7 @@ static const char SQLITE_MAGIC[16] = {'S', 'Q', 'L', 'i', 't', 'e', ' ', 'f', 'o
 
 static proto_bool is_pow2(uint32_t v)
 {
-    return v && (v & (v - 1)) == 0; // GCOVR_EXCL_BR_LINE  the sole caller guards page_size>=512, so v==0 never reached
+    return v && (v & (v - 1)) == 0;
 }
 
 size_t pc_sqlite_varint_decode(const uint8_t *buf, size_t len, uint64_t *out)
@@ -82,8 +82,8 @@ uint64_t pc_sqlite_serial_type_size(uint64_t t)
         return 0; // reserved for internal use
     default:
         // >=12 even -> BLOB of (t-12)/2; >=13 odd -> TEXT of (t-13)/2. Floor division covers both.
-        return t >= 12 ? (t - 12) / 2 : 0; // GCOVR_EXCL_BR_LINE  t<12 here means serial type 10/11, SQLite-reserved and
-                                           // absent from any valid record
+        return t >= 12 ? (t - 12) / 2 : 0;
+        // absent from any valid record
     }
 }
 
@@ -97,9 +97,7 @@ proto_bool pc_sqlite_parse_db_header(const uint8_t *buf, size_t len, SqliteDbHea
     uint16_t raw_ps = be16(buf + 16);
     uint32_t page_size = (raw_ps == 1) ? 65536u : raw_ps;
     // A valid page size is a power of two in [512, 65536].
-    // GCOVR_EXCL_BR_LINE below: page_size <= 65536 always here (raw_ps is uint16, with 1 mapping to 65536),
-    // so the > 65536 arm is a dead upper bound; the < 512 and is_pow2 arms are exercised.
-    if (page_size < 512 || page_size > 65536 || !is_pow2(page_size)) // GCOVR_EXCL_BR_LINE
+    if (page_size < 512 || page_size > 65536 || !is_pow2(page_size))
     {
         return PROTO_FALSE;
     }
@@ -129,8 +127,7 @@ proto_bool pc_sqlite_parse_btree_header(const uint8_t *page, size_t page_len, si
     }
     const uint8_t *p = page + offset;
     uint8_t type = p[0];
-    proto_bool interior =
-        (type == SQLITE_BTREE_INTERIOR_INDEX || type == SQLITE_BTREE_INTERIOR_TABLE);
+    proto_bool interior = (type == SQLITE_BTREE_INTERIOR_INDEX || type == SQLITE_BTREE_INTERIOR_TABLE);
     proto_bool leaf = (type == SQLITE_BTREE_LEAF_INDEX || type == SQLITE_BTREE_LEAF_TABLE);
     if (!interior && !leaf)
     {
@@ -257,9 +254,9 @@ proto_bool pc_sqlite_read_payload(SqlitePageReader read, void *ctx, uint32_t pag
     {
         // Unreachable belt-and-suspenders: `got` grows by `content` every iteration, so it reaches
         // payload_len in fewer than max_pages steps - kept only as a guard against future logic changes.
-        if (pages >= max_pages) // GCOVR_EXCL_BR_LINE  broken / looping chain (provably not hit; see above)
+        if (pages >= max_pages)
         {
-            return PROTO_FALSE; // GCOVR_EXCL_LINE  broken / looping chain (provably not hit; see above)
+            return PROTO_FALSE;
         }
         if (!read(ctx, next, work_page, page_size))
         {
@@ -273,9 +270,9 @@ proto_bool pc_sqlite_read_payload(SqlitePageReader read, void *ctx, uint32_t pag
         }
         // Also unreachable: got < payload_len <= out_cap and chunk <= payload_len - got, so got + chunk
         // never exceeds out_cap - the entry check at the top already bounded the write.
-        if (got + chunk > out_cap) // GCOVR_EXCL_BR_LINE  bounded by the entry check (see above)
+        if (got + chunk > out_cap)
         {
-            return PROTO_FALSE; // GCOVR_EXCL_LINE
+            return PROTO_FALSE;
         }
         memcpy(out + got, work_page + 4, chunk);
         got += chunk;
@@ -735,9 +732,9 @@ static proto_bool write_leaf_page(uint8_t *page, uint32_t page_size, uint32_t hd
         uint32_t rl = record_len(rows[r].cols, rows[r].ncols);
         // record_len() >= 2 whenever ncols != 0 (st_len >= ncols >= 1, plus the >=1 header varint), so
         // rl == 0 implies ncols == 0; the guard is defense against future drift, not a reachable state.
-        if (rl == 0 && rows[r].ncols != 0) // GCOVR_EXCL_BR_LINE  unreachable: rl==0 implies ncols==0 (see above)
+        if (rl == 0 && rows[r].ncols != 0)
         {
-            return PROTO_FALSE; // GCOVR_EXCL_LINE  unreachable (see above)
+            return PROTO_FALSE;
         }
         if (rl > max_local)
         {
@@ -779,9 +776,9 @@ static proto_bool write_leaf_page(uint8_t *page, uint32_t page_size, uint32_t hd
         // record_len() used to compute `rl`, so their lengths sum to exactly `rl` - the same budget the
         // caller handed it. No internal capacity check can ever trip short for these args, so
         // pos == rl == w always. Kept only as a guard against future logic drift between the two.
-        if (w != rl) // GCOVR_EXCL_BR_LINE  internal invariant: capacity budget is exact (see above)
+        if (w != rl)
         {
-            return PROTO_FALSE; // GCOVR_EXCL_LINE  internal invariant: capacity budget is exact (see above)
+            return PROTO_FALSE;
         }
         wr_be16(page + hdr_off + 8 + 2 * r, (uint16_t)off); // cell pointer for row r
     }
@@ -818,9 +815,9 @@ uint32_t pc_sqlite_encode_record(const SqliteValue *cols, uint32_t n, uint8_t *o
 {
     uint32_t total = record_len(cols, n);
     // record_len() >= 2 whenever n != 0 (see pc_sqlite_encode_page), so total == 0 implies n == 0.
-    if (total == 0 && n != 0) // GCOVR_EXCL_BR_LINE  unreachable: total==0 implies n==0 (see above)
+    if (total == 0 && n != 0)
     {
-        return 0; // GCOVR_EXCL_LINE  unreachable (see above)
+        return 0;
     }
     if (total > out_cap)
     {

@@ -43,7 +43,7 @@ void setup()
 
     on_http("/", HTTP_GET, [](uint8_t id, HttpReq *) { send_text(id, 200, "text/html", PAGE); });
     on_sse("/events", pc_sse_connect);
-    begin_http(80);
+    begin_http(80, NULL);
 }
 
 void loop()

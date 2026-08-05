@@ -29,6 +29,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_MTCONNECT
 
 /** @brief The MTConnect DataItem category (which stream element wraps the value). */
@@ -200,4 +202,7 @@ size_t pc_mtc_sample_query(const pc_mtc_sample_buffer *b, char *buf, size_t cap,
                            const char *device_name, uint64_t from, uint32_t count);
 
 #endif // PC_ENABLE_MTCONNECT
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_MTCONNECT_H

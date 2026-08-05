@@ -29,8 +29,6 @@ typedef struct
 } PqCtx;
 static PqCtx s_pq;
 
-// GCOVR_EXCL_START  device-only: only used to name the lane's task in pc_pq_start_lane;
-// the coverage host never starts tasks, and this has internal linkage.
 static const char *lane_name(pc_pq_lane lane)
 {
     switch (lane)
@@ -45,7 +43,6 @@ static const char *lane_name(pc_pq_lane lane)
         return "pc_pq_user";
     }
 }
-// GCOVR_EXCL_STOP
 
 static proto_bool lane_ok(pc_pq_lane lane)
 {

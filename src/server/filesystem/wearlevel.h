@@ -21,6 +21,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_WEARLEVEL
 
 /**
@@ -47,4 +49,7 @@ void pc_wearlevel_mark(uint32_t *counts, size_t n, size_t idx);
 uint32_t pc_wearlevel_spread(const uint32_t *counts, size_t n);
 
 #endif // PC_ENABLE_WEARLEVEL
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_WEARLEVEL_H

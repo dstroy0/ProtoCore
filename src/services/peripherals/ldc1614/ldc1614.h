@@ -23,6 +23,8 @@
 
 #include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_LDC1614
 
 // Register map (channel 0).
@@ -72,5 +74,7 @@ proto_bool pc_ldc1614_begin(uint8_t addr, uint16_t rcount, uint16_t settlecount)
 proto_bool pc_ldc1614_read_ch0(uint32_t *out);
 
 #endif // PC_ENABLE_LDC1614
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_LDC1614_H

@@ -42,6 +42,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_TRACE_CAPTURE
 
 /** @brief One completed pre/post-trigger sample window, handed to the sink inline. */
@@ -109,5 +111,7 @@ proto_bool pc_tc_capturing(void);
 void pc_tc_end(void);
 
 #endif // PC_ENABLE_TRACE_CAPTURE
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_TRACE_CAPTURE_H

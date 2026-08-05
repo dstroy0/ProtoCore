@@ -80,8 +80,9 @@ void pc_ota_commit(void)
 void pc_ota_rollback(void)
 {
 }
-pc_ota_action pc_ota_rollback_tick(proto_bool)
+pc_ota_action pc_ota_rollback_tick(proto_bool self_test_ok)
 {
+    (void)self_test_ok;
     return PC_OTA_WAIT;
 }
 

@@ -21,6 +21,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_ROAMING
 
 /** @brief A candidate access point (from an 802.11k neighbor report or a scan). */
@@ -122,4 +124,7 @@ uint8_t pc_roam_parse_neighbor_report(const uint8_t *elems, size_t len, pc_roam_
 proto_bool pc_roam_parse_btm_request(const uint8_t *frame, size_t len, pc_roam_btm *out);
 
 #endif // PC_ENABLE_ROAMING
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_ROAMING_H

@@ -146,13 +146,13 @@ static proto_bool parse_pc_ed25519_blob(const uint8_t *blob, uint32_t blen, uint
     uint32_t type_len;
     // The caller only reaches here after matching the 15-byte string("ssh-ed25519") prefix on the blob,
     // so the type field is already proven present and correct.
-    if (!pc_rd_str(blob, blen, &off, &type, &type_len)) // GCOVR_EXCL_LINE  prefix match implies blen >= 15
+    if (!pc_rd_str(blob, blen, &off, &type, &type_len))
     {
-        return PROTO_FALSE; // GCOVR_EXCL_LINE
+        return PROTO_FALSE;
     }
-    if (type_len != 11 || memcmp(type, "ssh-ed25519", 11) != 0) // GCOVR_EXCL_LINE  prefix match implies this type
+    if (type_len != 11 || memcmp(type, "ssh-ed25519", 11) != 0)
     {
-        return PROTO_FALSE; // GCOVR_EXCL_LINE
+        return PROTO_FALSE;
     }
     const uint8_t *pk;
     uint32_t pk_len;
@@ -176,13 +176,13 @@ static proto_bool parse_pc_ecdsa_blob(const uint8_t *blob, uint32_t blen, uint8_
     const uint8_t *type;
     uint32_t type_len;
     // As above: the caller matched the 23-byte string("ecdsa-sha2-nistp256") prefix before calling in.
-    if (!pc_rd_str(blob, blen, &off, &type, &type_len)) // GCOVR_EXCL_LINE  prefix match implies blen >= 23
+    if (!pc_rd_str(blob, blen, &off, &type, &type_len))
     {
-        return PROTO_FALSE; // GCOVR_EXCL_LINE
+        return PROTO_FALSE;
     }
-    if (type_len != 19 || memcmp(type, "ecdsa-sha2-nistp256", 19) != 0) // GCOVR_EXCL_LINE  prefix implies this type
+    if (type_len != 19 || memcmp(type, "ecdsa-sha2-nistp256", 19) != 0)
     {
-        return PROTO_FALSE; // GCOVR_EXCL_LINE
+        return PROTO_FALSE;
     }
     const uint8_t *curve;
     uint32_t curve_len;
@@ -558,7 +558,6 @@ static int pc_ssh_auth_handle_pubkey(uint8_t i, const SshAuthReq *req, uint8_t *
     }
     pc_plaintext_release(mark);
     return pc_ssh_auth_build_failure(out, out_len, cap, PROTO_FALSE);
-    pc_plaintext_release(mark);
 }
 
 int pc_ssh_auth_handle_request(uint8_t i, const uint8_t *payload, size_t len, uint8_t *out, size_t *out_len, size_t cap)

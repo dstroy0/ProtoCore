@@ -22,6 +22,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_NEMA_TS2
 
 /** @brief Common TS 2 frame types (the third octet). */
@@ -58,4 +60,7 @@ typedef struct
 proto_bool pc_nema_ts2_parse(const uint8_t *frame, size_t len, NemaTs2Frame *out);
 
 #endif // PC_ENABLE_NEMA_TS2
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_NEMA_TS2_H

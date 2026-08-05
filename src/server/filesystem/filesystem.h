@@ -35,6 +35,8 @@
 #include "protocore_config.h"
 #include "server/filesystem/mnt.h"
 
+PROTO_BEGIN_DECLS
+
 // root, dir, name. A whole path is these three pieces, so it is ONE build: a caller that assembled
 // dir+name itself and handed the result over would frame the same bytes twice, into two buffers,
 // for the same result. A mount root ends with '/', and a dir that carries a name ends with '/', so
@@ -270,5 +272,7 @@ proto_bool pc_fs_readdir(int handle, pc_mnt_stat *out, char *name, size_t name_c
 long pc_fs_read_file(int root, const char *dir, const char *name, void *buf, size_t cap);
 /** @brief Create/truncate @p dir + @p name and write @p n bytes. @return true on success. */
 proto_bool pc_fs_write_file(int root, const char *dir, const char *name, const void *buf, size_t n);
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_FILESYSTEM_H

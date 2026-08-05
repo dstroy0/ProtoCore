@@ -59,7 +59,7 @@ void setup()
     on_http("/users/:id/posts/:slug", HTTP_GET, handle_user_post);
     on_http("/users/:id", HTTP_GET, handle_user);
 
-    int32_t result = begin_http(80);
+    int32_t result = begin_http(80, NULL);
     if (result < 0)
     {
         Serial.printf("begin() failed (error %d)\n", result);

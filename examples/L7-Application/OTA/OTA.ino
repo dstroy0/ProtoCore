@@ -46,7 +46,7 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     on_http("/", HTTP_GET, handle_root);
-    if (begin_http(80) < 0)
+    if (begin_http(80, NULL) < 0)
     {
         Serial.println("begin() failed");
         return;

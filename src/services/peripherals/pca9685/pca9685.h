@@ -27,6 +27,8 @@
 
 #include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_PCA9685
 
 #define PCA9685_CHANNELS 16     ///< PWM output channels
@@ -74,5 +76,7 @@ proto_bool pc_pca9685_set_pwm(uint8_t channel, uint16_t on, uint16_t off);
 proto_bool pc_pca9685_set_servo_us(uint8_t channel, uint32_t microseconds);
 
 #endif // PC_ENABLE_PCA9685
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_PCA9685_H

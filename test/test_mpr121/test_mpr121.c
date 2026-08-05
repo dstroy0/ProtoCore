@@ -96,12 +96,43 @@ void test_build_init_guards()
     TEST_ASSERT_EQUAL_INT(0, (int)pc_mpr121_build_init(NULL, sizeof(seq), 12, 12, 6)); // null buf
 }
 
-void test_host_i2c_stubs()
+// begin() replays the bring-up sequence as register/value pairs, soft reset first. The capture
+// shows every pair actually reached the bus in the order the builder laid them down.
+void test_begin_replays_the_init_sequence()
 {
-    // Host build: no I2C bus. begin() fails, register reads return 0.
-    TEST_ASSERT_FALSE(pc_mpr121_begin(0x5A));
-    TEST_ASSERT_EQUAL_UINT16(0, pc_mpr121_read_touched());
-    TEST_ASSERT_EQUAL_UINT16(0, pc_mpr121_read_filtered(0));
+    pc_bus_host_reset();
+    TEST_ASSERT_TRUE(pc_mpr121_begin(0x5A));
+
+    uint8_t want[MPR121_INIT_MAX];
+    size_t n = pc_mpr121_build_init(want, sizeof(want), MPR121_ELECTRODES, PC_MPR121_TOUCH_THRESHOLD,
+                                    PC_MPR121_RELEASE_THRESHOLD);
+    TEST_ASSERT_GREATER_THAN_size_t(0, n);
+
+    // One transfer per pair, and the concatenated stream is the sequence itself.
+    TEST_ASSERT_EQUAL_UINT32(n / 2, pc_bus_host_count());
+    uint32_t got = 0;
+    const uint8_t *tx = pc_bus_host_written(&got);
+    TEST_ASSERT_EQUAL_UINT32((uint32_t)n, got);
+    TEST_ASSERT_EQUAL_HEX8_ARRAY(want, tx, n);
+
+    // The soft reset is first, which is what lets the rest of the sequence take.
+    TEST_ASSERT_EQUAL_HEX8(0x80, tx[0]);
+    TEST_ASSERT_EQUAL_HEX8(0x63, tx[1]);
+}
+
+// A touch read addresses register 0 and decodes the two status bytes that come back.
+void test_read_touched_decodes_the_reply()
+{
+    pc_bus_host_reset();
+    const uint8_t status[2] = {0x05, 0x08}; // electrodes 0 and 2 touched, plus bit 11
+    pc_bus_host_preload(status, sizeof(status));
+
+    TEST_ASSERT_EQUAL_UINT16(pc_mpr121_touched(0x05, 0x08), pc_mpr121_read_touched());
+
+    uint32_t n = 0;
+    const uint8_t *w = pc_bus_host_txn_bytes(0, &n);
+    TEST_ASSERT_EQUAL_UINT32(1, n);
+    TEST_ASSERT_EQUAL_HEX8(0x00, w[0]); // the touch status register
 }
 
 int main()
@@ -112,6 +143,7 @@ int main()
     RUN_TEST(test_word10);
     RUN_TEST(test_build_init_bytes);
     RUN_TEST(test_build_init_guards);
-    RUN_TEST(test_host_i2c_stubs);
+    RUN_TEST(test_begin_replays_the_init_sequence);
+    RUN_TEST(test_read_touched_decodes_the_reply);
     return UNITY_END();
 }

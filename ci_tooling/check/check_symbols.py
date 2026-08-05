@@ -15,7 +15,7 @@ Checks:
   3. no `#pragma once` (s4: not standard, and the target list includes toolchains
      where its behavior across duplicated/symlinked headers is unspecified)
   4. exported macros are PC_UPPER_SNAKE and <= 31 characters (s2)
-  5. enum types are `enum class` and pc_snake_case (s3)
+  5. enum types are pc_snake_case (s3)
   6. no NAMED namespace and no `using namespace` (s1). Anonymous `namespace {` is
      explicitly fine - it is how file-local owner-context state is scoped, which is
      a different rule (check_owned_context.py) pulling in the same direction.
@@ -184,20 +184,32 @@ def check():
                         f"macro {name} is {len(name)} chars, over {MACRO_LIMIT}")
 
         # 5. enum types
-        for m in re.finditer(r"\benum\s+(class\s+)?(\w+)", text):
-            is_class, name = bool(m.group(1)), m.group(2)
-            # group 1 is the OPTIONAL `class` and is None for a plain enum, where
-            # m.start(1) returns -1 and text[:-1] counts nearly the whole file - both
-            # ubx enums reported as line 272. The name group is always present.
-            ln = text[:m.start(2)].count("\n") + 1
-            # A plain enum is occasionally the right call - an opcode enum whose VALUE is the
-            # wire byte would need a cast at every use as an enum class. Allow it only with the
-            # reason stated at the site, the same contract check_src_banned uses.
-            # Look in RAW, not text: the marker is a comment and text has been decommented. blank_comments
-            # blanks characters in place, so offsets line up between the two.
-            justified = "PC_ALLOW_UNSCOPED_ENUM:" in raw[max(0, m.start(2) - 400):m.start(2)]
-            if not is_class and not justified:
-                add("enum-unscoped", rel, ln, f"enum {name} is not an `enum class`")
+        #
+        # The declaration carries the packing attribute between `enum` and the name
+        # (`typedef enum PROTO_ENUM_PACKED { ... } pc_foo;`), so the attribute is stepped over
+        # rather than read as the tag. Every enum in the tree carries it, and reading it as the
+        # name reported one violation per enum against a macro no rename could fix.
+        #
+        # That form is also ANONYMOUS: the type's name is the typedef's trailing identifier, not a
+        # tag. When no tag is present the brace is matched to find it.
+        for m in re.finditer(r"\benum\s+(?:PROTO_ENUM_PACKED\s+)?(\w+|(?=\{))", text):
+            name = m.group(1)
+            at = m.start(1)
+            if not name:  # anonymous: the typedef name follows the closing brace
+                depth, i = 0, text.find("{", m.end())
+                while i < len(text):
+                    if text[i] == "{":
+                        depth += 1
+                    elif text[i] == "}":
+                        depth -= 1
+                        if depth == 0:
+                            break
+                    i += 1
+                tail = re.match(r"\s*(\w+)\s*;", text[i + 1:]) if i < len(text) else None
+                if not tail:
+                    continue  # an inline anonymous enum names no type
+                name, at = tail.group(1), i + 1 + tail.start(1)
+            ln = text[:at].count("\n") + 1
             if not re.fullmatch(r"pc_[a-z0-9_]+", name):
                 add("enum-name", rel, ln, f"enum type {name} is not pc_snake_case")
             types_seen.setdefault(name.lower(), rel)

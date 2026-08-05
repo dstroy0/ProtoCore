@@ -24,6 +24,8 @@
 
 #include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_FDC2214
 
 // Register map (channel 0; CH1..3 follow at +2 / +1 offsets).
@@ -74,5 +76,7 @@ proto_bool pc_fdc2214_begin(uint8_t addr, uint16_t rcount, uint16_t settlecount)
 proto_bool pc_fdc2214_read_ch0(uint32_t *out);
 
 #endif // PC_ENABLE_FDC2214
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_FDC2214_H

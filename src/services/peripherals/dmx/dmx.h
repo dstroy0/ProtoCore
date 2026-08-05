@@ -25,6 +25,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_DMX
 
 #define DMX_MAX_CHANNELS 512u ///< slots per DMX512 universe
@@ -161,4 +163,7 @@ size_t pc_rdm_build_device_info(uint8_t *pdata, size_t cap, const RdmDeviceInfo 
 proto_bool pc_rdm_parse_device_info(const uint8_t *pdata, uint8_t pdl, RdmDeviceInfo *out);
 
 #endif // PC_ENABLE_DMX
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_DMX_H

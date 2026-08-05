@@ -99,12 +99,10 @@ size_t pc_smb2_build_negotiate(uint8_t *buf, size_t cap, const uint8_t client_gu
         return 0;
     }
 
-    // GCOVR_EXCL_START  cap >= total (64 + 36 + 8) >= PC_SMB2_HEADER_SIZE was checked above, so this cannot fail
     if (pc_smb2_build_header(buf, cap, SMB2_NEGOTIATE, 1, 0, 0, 0) == 0)
     {
         return 0;
     }
-    // GCOVR_EXCL_STOP
 
     uint8_t *b = buf + PC_SMB2_HEADER_SIZE; // NEGOTIATE request body
     memset(b, 0, 36);
@@ -201,12 +199,10 @@ size_t pc_smb2_build_negotiate_311(uint8_t *buf, size_t cap, const uint8_t clien
         return 0;
     }
 
-    // GCOVR_EXCL_START  cap >= total >= PC_SMB2_HEADER_SIZE was checked above, so this cannot fail
     if (pc_smb2_build_header(buf, cap, SMB2_NEGOTIATE, 1, 0, 0, 0) == 0)
     {
         return 0;
     }
-    // GCOVR_EXCL_STOP
 
     uint8_t *b = buf + PC_SMB2_HEADER_SIZE;
     memset(b, 0, ctx_start - PC_SMB2_HEADER_SIZE); // fixed body + dialects + alignment pad
@@ -381,12 +377,10 @@ size_t pc_smb2_build_session_setup(uint8_t *buf, size_t cap, uint64_t message_id
     {
         return 0;
     }
-    // GCOVR_EXCL_START  cap >= total (64 + 24 + sec_len) >= PC_SMB2_HEADER_SIZE was checked above, so this cannot fail
     if (pc_smb2_build_header(buf, cap, SMB2_SESSION_SETUP, 1, message_id, 0, session_id) == 0)
     {
         return 0;
     }
-    // GCOVR_EXCL_STOP
 
     uint8_t *b = buf + PC_SMB2_HEADER_SIZE;
     memset(b, 0, body);
@@ -450,12 +444,10 @@ size_t pc_smb2_build_tree_connect(uint8_t *buf, size_t cap, uint64_t message_id,
     {
         return 0;
     }
-    // GCOVR_EXCL_START  cap >= total (64 + 8 + path_len) >= PC_SMB2_HEADER_SIZE was checked above, so this cannot fail
     if (pc_smb2_build_header(buf, cap, SMB2_TREE_CONNECT, 1, message_id, 0, session_id) == 0)
     {
         return 0;
     }
-    // GCOVR_EXCL_STOP
 
     uint8_t *b = buf + PC_SMB2_HEADER_SIZE;
     memset(b, 0, body);
@@ -504,12 +496,10 @@ size_t pc_smb2_build_create(uint8_t *buf, size_t cap, uint64_t message_id, uint6
     {
         return 0;
     }
-    // GCOVR_EXCL_START  cap >= total (64 + 56 + name_len) >= PC_SMB2_HEADER_SIZE was checked above, so this cannot fail
     if (pc_smb2_build_header(buf, cap, SMB2_CREATE, 1, message_id, tree_id, session_id) == 0)
     {
         return 0;
     }
-    // GCOVR_EXCL_STOP
 
     uint8_t *b = buf + PC_SMB2_HEADER_SIZE;
     memset(b, 0, body);
@@ -565,12 +555,10 @@ size_t pc_smb2_build_close(uint8_t *buf, size_t cap, uint64_t message_id, uint64
     {
         return 0;
     }
-    // GCOVR_EXCL_START  cap >= total (64 + 24) >= PC_SMB2_HEADER_SIZE was checked above, so this cannot fail
     if (pc_smb2_build_header(buf, cap, SMB2_CLOSE, 1, message_id, tree_id, session_id) == 0)
     {
         return 0;
     }
-    // GCOVR_EXCL_STOP
 
     uint8_t *b = buf + PC_SMB2_HEADER_SIZE;
     memset(b, 0, body);
@@ -614,12 +602,10 @@ size_t pc_smb2_build_read(uint8_t *buf, size_t cap, uint64_t message_id, uint64_
     {
         return 0;
     }
-    // GCOVR_EXCL_START  cap >= total (64 + 48 + 1) >= PC_SMB2_HEADER_SIZE was checked above, so this cannot fail
     if (pc_smb2_build_header(buf, cap, SMB2_READ, 1, message_id, tree_id, session_id) == 0)
     {
         return 0;
     }
-    // GCOVR_EXCL_STOP
 
     uint8_t *b = buf + PC_SMB2_HEADER_SIZE;
     memset(b, 0, body + 1);
@@ -683,12 +669,10 @@ size_t pc_smb2_build_write(uint8_t *buf, size_t cap, uint64_t message_id, uint64
     {
         return 0;
     }
-    // GCOVR_EXCL_START  cap >= total (64 + 48 + data_len) >= PC_SMB2_HEADER_SIZE was checked above, so this cannot fail
     if (pc_smb2_build_header(buf, cap, SMB2_WRITE, 1, message_id, tree_id, session_id) == 0)
     {
         return 0;
     }
-    // GCOVR_EXCL_STOP
 
     uint8_t *b = buf + PC_SMB2_HEADER_SIZE;
     memset(b, 0, body);

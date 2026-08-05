@@ -276,7 +276,7 @@ int pc_audit_format(const pc_audit_entry *e, char *out, size_t cap)
     // The (size_t)head>=cap arm IS reachable and tested (test_format_fails_closed_all_stages's cap
     // sweep); gcovr has no sub-line exclusion granularity, so silencing the dead head<0 arm means
     // excluding the whole line's branch data.
-    if (head < 0 || (size_t)head >= cap) // GCOVR_EXCL_BR_LINE
+    if (head < 0 || (size_t)head >= cap)
     {
         return 0;
     }
@@ -348,7 +348,7 @@ int pc_audit_dump_json(char *out, size_t cap)
     // arm IS reachable and tested (test_dump_fails_closed_all_stages's cap sweep); gcovr has no
     // sub-line exclusion granularity, so silencing the dead head<0 arm means excluding the whole
     // line's branch data.
-    if (head < 0 || (size_t)head >= cap) // GCOVR_EXCL_BR_LINE
+    if (head < 0 || (size_t)head >= cap)
     {
         return 0;
     }
@@ -358,15 +358,10 @@ int pc_audit_dump_json(char *out, size_t cap)
     {
         if (i > 0)
         {
-            // GCOVR_EXCL_START  unreachable: reaching here means entry i-1 (or the header, for i==1)
-            // rendered successfully, and its own overflow check (pc_audit_format's or snprintf's)
-            // required strictly less than the cap it was given - so cap - pos is always >= 1 at this
-            // point, exactly the one byte this comma needs. The guard can never fire.
             if (pos + 1 > cap)
             {
                 return 0;
             }
-            // GCOVR_EXCL_STOP
             out[pos++] = ',';
         }
         int n = pc_audit_format(&s_audit.ring[idx(&s_audit, i)], out + pos, cap - pos);

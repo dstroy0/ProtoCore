@@ -29,6 +29,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_SSH_ZLIB
 
 /** @brief Sliding-window bytes the inflate needs (the full zlib 32 KB window OpenSSH may reference). */
@@ -79,4 +81,7 @@ int ssh_inflate_packet(SshInflate *z, const uint8_t *src, size_t src_len, uint8_
                        size_t *out_len);
 
 #endif // PC_ENABLE_SSH_ZLIB
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_SSH_INFLATE_H

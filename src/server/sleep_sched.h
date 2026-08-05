@@ -23,6 +23,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_SLEEP_SCHED
 
 /** @brief Scheduler configuration (all times in ms). */
@@ -49,4 +51,7 @@ typedef struct
 uint32_t pc_sleep_next(uint32_t now, uint32_t last_active_ms, const pc_sleep_cfg *cfg);
 
 #endif // PC_ENABLE_SLEEP_SCHED
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_SLEEP_SCHED_H

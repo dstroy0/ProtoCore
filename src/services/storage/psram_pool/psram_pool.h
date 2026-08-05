@@ -22,6 +22,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_PSRAM_POOL
 
 /** @brief Placement verdict (the sole return of pc_psram_place). */
@@ -69,4 +71,7 @@ uint8_t pc_pingpong_drain_index(const PingPong *pp);
 uint8_t pc_pingpong_swap(PingPong *pp);
 
 #endif // PC_ENABLE_PSRAM_POOL
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_PSRAM_POOL_H

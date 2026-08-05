@@ -43,7 +43,7 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     pc_partition_monitor_begin("/partitions");
-    begin_http(80);
+    begin_http(80, NULL);
 }
 
 void loop()

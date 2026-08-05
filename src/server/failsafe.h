@@ -22,6 +22,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_FAILSAFE
 
 /** @brief One monitored lifeline. */
@@ -91,4 +93,7 @@ uint32_t pc_failsafe_check(void);
 int pc_failsafe_json_at(uint32_t now, char *out, size_t cap);
 
 #endif // PC_ENABLE_FAILSAFE
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_FAILSAFE_H

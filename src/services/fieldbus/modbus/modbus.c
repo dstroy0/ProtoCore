@@ -138,9 +138,9 @@ static size_t pc_modbus_process_pdu(const uint8_t *pdu, size_t pdu_len, uint8_t 
     // Both callers already guarantee at least one PDU byte, so this guard cannot fire: the TCP path
     // rejects len < 2 before computing pdu_len = len - 1, and the RTU path rejects req_len < 4 before
     // computing pdu_len = req_len - 3. Kept as defense in depth for any future caller.
-    if (pdu_len < 1) // GCOVR_EXCL_LINE
+    if (pdu_len < 1)
     {
-        return 0; // GCOVR_EXCL_LINE
+        return 0;
     }
     ModbusFunction fc = (ModbusFunction)(pdu[0]);
 

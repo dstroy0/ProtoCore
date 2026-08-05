@@ -83,7 +83,7 @@ void setup()
 
     on_http("/", HTTP_GET, handle_root);
 
-    int32_t result = begin_http(80);
+    int32_t result = begin_http(80, NULL);
     if (result < 0)
     {
         Serial.printf("begin() failed (error %d)\n", result);

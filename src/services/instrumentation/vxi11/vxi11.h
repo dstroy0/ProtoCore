@@ -28,6 +28,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_VXI11
 
 // ── ONC RPC / portmapper / VXI-11 program constants ─────────────────────────────────────────────
@@ -223,5 +225,7 @@ size_t pc_vxi11_build_destroy_link(uint8_t *buf, size_t cap, uint32_t xid, int32
 proto_bool pc_vxi11_parse_error_resp(const uint8_t *rpc, size_t len, int32_t *error);
 
 #endif // PC_ENABLE_VXI11
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_VXI11_H

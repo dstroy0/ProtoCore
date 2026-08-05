@@ -28,6 +28,8 @@
 
 #include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_ADS1115
 
 #define ADS1115_REG_CONVERSION 0x00 ///< conversion result register
@@ -74,5 +76,7 @@ proto_bool pc_ads1115_read_raw(uint8_t channel, uint8_t gain, int16_t *raw);
 proto_bool pc_ads1115_read_uv(uint8_t channel, uint8_t gain, int32_t *microvolts);
 
 #endif // PC_ENABLE_ADS1115
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_ADS1115_H

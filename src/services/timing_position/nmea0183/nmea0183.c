@@ -133,15 +133,15 @@ proto_bool pc_nmea0183_parse(const char *s, size_t len, Nmea0183 *out)
     // Derive talker / type from the address field (field 0).
     memset(out->talker, 0, sizeof(out->talker));
     memset(out->type, 0, sizeof(out->type));
-    if (fc > 0) // GCOVR_EXCL_BR_LINE  fc == 0 is unreachable: `found` (checked above, before this
-                // point) guarantees star >= 1 (it is only ever set inside the search loop, which
-                // starts at i = 1), so the split loop's `i <= star` bound guarantees an i == star
-                // iteration, whose `i == star || ...` test is true unconditionally. PC_NMEA0183_
-                // MAX_FIELDS is a positive compile-time constant (26, not overridden by any build
-                // in this tree), so the *first* field-boundary event the split loop reaches --
-                // whether an earlier comma or i == star itself -- always satisfies
-                // `fc < PC_NMEA0183_MAX_FIELDS` and increments fc from 0. Hence fc >= 1 whenever
-                // this line runs.
+    if (fc > 0)
+    // point) guarantees star >= 1 (it is only ever set inside the search loop, which
+    // starts at i = 1), so the split loop's `i <= star` bound guarantees an i == star
+    // iteration, whose `i == star || ...` test is true unconditionally. PC_NMEA0183_
+    // MAX_FIELDS is a positive compile-time constant (26, not overridden by any build
+    // in this tree), so the *first* field-boundary event the split loop reaches --
+    // whether an earlier comma or i == star itself -- always satisfies
+    // `fc < PC_NMEA0183_MAX_FIELDS` and increments fc from 0. Hence fc >= 1 whenever
+    // this line runs.
     {
         uint8_t al = out->field_len[0];
         const char *a = out->fields[0];

@@ -72,7 +72,7 @@ void setup()
         Serial.println("service-worker routes failed to register");
     }
 
-    begin_http(80);
+    begin_http(80, NULL);
 
     uint32_t ip = pc_net_egress_ip();
     Serial.printf("http://%u.%u.%u.%u/  (sw /sw.js, manifest /precache.json, files /files/...)\n",

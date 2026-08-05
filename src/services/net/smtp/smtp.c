@@ -34,7 +34,7 @@ static proto_bool send_str(SmtpSendFn send, void *ctx, const char *s)
     size_t n = strnlen(s, PC_SMTP_LINE_MAX + 1);
     // Every caller passes a CRLF-terminated command - a string literal, or a snprintf'd line with a
     // fixed non-empty prefix - so n is never 0; the check just keeps send_str total for any string.
-    return n == 0 || send(ctx, (const uint8_t *)s, n) == (int)n; // GCOVR_EXCL_LINE  n == 0 unreachable
+    return n == 0 || send(ctx, (const uint8_t *)s, n) == (int)n;
 }
 
 // Is buf[0..len) a complete SMTP reply? A reply is one or more CRLF lines that share a
@@ -79,7 +79,7 @@ static proto_bool ieq(const char *a, const char *b, size_t n)
         }
         // b is always the caller's `want`, and reply_has_cap's only call site passes the literal
         // "STARTTLS", so cb is always an upper-case letter here. Folding it keeps ieq symmetric.
-        if (cb >= 'A' && cb <= 'Z') // GCOVR_EXCL_LINE  cb is always 'A'..'Z' (see above)
+        if (cb >= 'A' && cb <= 'Z')
         {
             cb = (char)(cb - 'A' + 'a');
         }
@@ -131,7 +131,7 @@ static SmtpResult read_reply_cap(SmtpRecvFn recv, void *ctx, int *code, const ch
         {
             // The two call sites pass want and found together (read_reply passes neither,
             // greet_ehlo passes both), so the pair is never half-populated.
-            if (want && found) // GCOVR_EXCL_LINE  want and found are always both set or both null
+            if (want && found)
             {
                 *found = reply_has_cap(buf, len, want);
             }
@@ -183,12 +183,10 @@ static int auth_send_b64(SmtpSendFn send, SmtpRecvFn recv, void *ctx, const char
     pc_sb_put(&sb_line, b64);
     pc_sb_put(&sb_line, "\r\n");
     pc_sb_finish(&sb_line);
-    // GCOVR_EXCL_BR_START  cannot fire: b64+CRLF was checked to fit above and sizeof(b64) == sizeof(line)
     if (!sb_line.ok)
     {
         return (int)SMTP_ERR_OVERFLOW;
     }
-    // GCOVR_EXCL_BR_STOP
     return command(send, recv, ctx, line);
 }
 
@@ -207,7 +205,7 @@ static int build_message(char *out, size_t cap, const SmtpConfig *cfg, const Smt
     int hn = (int)pc_sb_finish(&sb_out);
     // hn < 0 is unreachable: snprintf only reports failure on an output/encoding error, which
     // formatting %s into a caller buffer cannot produce. The >= cap truncation check is live.
-    if (!sb_out.ok) // GCOVR_EXCL_LINE  hn < 0 unreachable (see above)
+    if (!sb_out.ok)
     {
         return (int)SMTP_ERR_OVERFLOW;
     }
@@ -252,7 +250,7 @@ static int build_message(char *out, size_t cap, const SmtpConfig *cfg, const Smt
     // fixed-header length, well over 2), and the only CR ever written to out is the one the
     // LF->CRLF rewrite emits immediately before its LF (a body CR is dropped above), so
     // out[n-2]=='\r' implies out[n-1]=='\n' - both are guards, not reachable states.
-    if (!(n >= 2 && out[n - 2] == '\r' && out[n - 1] == '\n')) // GCOVR_EXCL_LINE  see above
+    if (!(n >= 2 && out[n - 2] == '\r' && out[n - 1] == '\n'))
     {
         if (n + 2 > cap)
         {
@@ -304,7 +302,7 @@ static SmtpResult greet_ehlo(const SmtpConfig *cfg, SmtpSendFn send, SmtpRecvFn 
     pc_sb_put(&sb_line2, (cfg->helo && cfg->helo[0]) ? cfg->helo : "esp32");
     pc_sb_put(&sb_line2, "\r\n");
     int n = (int)pc_sb_finish(&sb_line2);
-    if (!sb_line2.ok) // GCOVR_EXCL_LINE  n < 0 unreachable: snprintf of %s into memory cannot fail
+    if (!sb_line2.ok)
     {
         return SMTP_ERR_OVERFLOW;
     }
@@ -381,7 +379,7 @@ static SmtpResult send_envelope(const SmtpConfig *cfg, const SmtpMessage *msg, S
     pc_sb_put(&sb_line3, cfg->from);
     pc_sb_put(&sb_line3, ">\r\n");
     int n = (int)pc_sb_finish(&sb_line3);
-    if (!sb_line3.ok) // GCOVR_EXCL_LINE  n < 0 unreachable: snprintf of %s into memory cannot fail
+    if (!sb_line3.ok)
     {
         return SMTP_ERR_OVERFLOW;
     }
@@ -396,7 +394,7 @@ static SmtpResult send_envelope(const SmtpConfig *cfg, const SmtpMessage *msg, S
     pc_sb_put(&sb_line4, msg->to);
     pc_sb_put(&sb_line4, ">\r\n");
     n = (int)pc_sb_finish(&sb_line4);
-    if (!sb_line4.ok) // GCOVR_EXCL_LINE  n < 0 unreachable: snprintf of %s into memory cannot fail
+    if (!sb_line4.ok)
     {
         return SMTP_ERR_OVERFLOW;
     }
@@ -535,7 +533,7 @@ static int cl_send(void *ctx, const uint8_t *data, size_t len)
 static int cl_recv(void *ctx, uint8_t *buf, size_t cap)
 {
     SmtpXport *x = (SmtpXport *)ctx;
-    while ((int32_t)(x->deadline - millis()) > 0)
+    while ((int32_t)(x->deadline - pc_millis()) > 0)
     {
         size_t n = pc_client_read(x->cid, buf, cap);
         if (n > 0)
@@ -587,7 +585,7 @@ static int tls_send(void *ctx, const uint8_t *data, size_t len)
 static int tls_recv(void *ctx, uint8_t *buf, size_t cap)
 {
     SmtpXport *x = (SmtpXport *)ctx;
-    while ((int32_t)(x->deadline - millis()) > 0)
+    while ((int32_t)(x->deadline - pc_millis()) > 0)
     {
         int n = pc_tls_client_session_read(buf, cap);
         if (n > 0)
@@ -640,9 +638,9 @@ static proto_bool xp_starttls(void *ctx)
     // Fresh budget: the deadline carried here was set at connect time and has already funded the
     // greeting, EHLO and STARTTLS round trips. Reusing whatever is left of it can abandon the
     // handshake before the ClientHello even goes out, which the server sees as a silent hang.
-    x->deadline = millis() + PC_SMTP_TIMEOUT_MS;
+    x->deadline = pc_millis() + PC_SMTP_TIMEOUT_MS;
     int h;
-    while ((h = pc_tls_client_session_handshake()) == 0 && (int32_t)(x->deadline - millis()) > 0)
+    while ((h = pc_tls_client_session_handshake()) == 0 && (int32_t)(x->deadline - pc_millis()) > 0)
     {
         pcdelay(5);
     }
@@ -672,7 +670,7 @@ SmtpResult smtp_send(const SmtpConfig *cfg, const SmtpMessage *msg)
     {
         return SMTP_ERR_CONNECT;
     }
-    x.deadline = millis() + PC_SMTP_TIMEOUT_MS;
+    x.deadline = pc_millis() + PC_SMTP_TIMEOUT_MS;
     x.host = cfg->host;
     x.tls_active = PROTO_FALSE;
 #if PC_ENABLE_SMTP_TLS
@@ -689,7 +687,7 @@ SmtpResult smtp_send(const SmtpConfig *cfg, const SmtpMessage *msg)
             return SMTP_ERR_TLS;
         }
         int h;
-        while ((h = pc_tls_client_session_handshake()) == 0 && (int32_t)(x.deadline - millis()) > 0)
+        while ((h = pc_tls_client_session_handshake()) == 0 && (int32_t)(x.deadline - pc_millis()) > 0)
         {
             pcdelay(5);
         }
@@ -720,8 +718,10 @@ SmtpResult smtp_send(const SmtpConfig *cfg, const SmtpMessage *msg)
 
 #else // host build: no lwIP. smtp_run() above is host-testable; smtp_send() is a stub.
 
-SmtpResult smtp_send(const SmtpConfig *, const SmtpMessage *)
+SmtpResult smtp_send(const SmtpConfig *cfg, const SmtpMessage *msg)
 {
+    (void)cfg;
+    (void)msg;
     return SMTP_ERR_CONNECT;
 }
 

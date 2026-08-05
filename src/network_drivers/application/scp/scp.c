@@ -71,7 +71,7 @@ ScpMode pc_scp_parse_cmd(const char *cmd, size_t cmd_len, char *path_out, size_t
     // only assigns last_tok/last_len after skipping spaces and confirming i < cmd_len, then advances
     // at least one byte before the token ends - so a recorded token is always >= 1 byte long. The
     // other three conditions here are covered.
-    if (mode == SCP_MODE_INVALID || !last_tok || last_len == 0 || last_len >= path_cap) // GCOVR_EXCL_LINE
+    if (mode == SCP_MODE_INVALID || !last_tok || last_len == 0 || last_len >= path_cap)
     {
         return SCP_MODE_INVALID;
     }
@@ -154,7 +154,7 @@ size_t pc_scp_build_cline(uint32_t mode, uint64_t size, const char *name, char *
     // it WOULD have written (never negative here - no encoding can fail on this format), and that
     // format always emits at least "C0000 0 \n". Only the truncation arm is reachable, and it is
     // covered. The guard stays as defense against a non-conforming libc.
-    if (n <= 0 || (size_t)n >= cap) // GCOVR_EXCL_LINE
+    if (n <= 0 || (size_t)n >= cap)
     {
         return 0;
     }

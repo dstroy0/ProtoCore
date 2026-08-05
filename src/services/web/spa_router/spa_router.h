@@ -38,6 +38,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_SPA_ROUTER
 
 /** @brief What to do with a request path. */
@@ -130,4 +132,7 @@ size_t pc_ui_stream_next(pc_ui_stream *s, char *out, size_t cap);
 proto_bool pc_ui_stream_done(const pc_ui_stream *s);
 
 #endif // PC_ENABLE_SPA_ROUTER
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_SPA_ROUTER_H

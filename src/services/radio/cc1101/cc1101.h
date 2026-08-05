@@ -26,6 +26,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_CC1101
 
 /** @brief Full-duplex SPI transfer of @p len bytes (chip-select toggled by the callback). */
@@ -82,5 +84,7 @@ int pc_cc1101_recv(const pc_cc1101_bus *bus, uint8_t *buf, uint8_t cap, int16_t 
 int16_t pc_cc1101_rssi_dbm(uint8_t raw);
 
 #endif // PC_ENABLE_CC1101
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_CC1101_H

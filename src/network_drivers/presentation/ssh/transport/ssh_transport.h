@@ -39,6 +39,8 @@
 #include "network_drivers/tls/ssh_kexhash.h"
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 // ---------------------------------------------------------------------------
 // Sizing
 // ---------------------------------------------------------------------------
@@ -405,5 +407,7 @@ proto_bool ssh_rekey_due(uint32_t seq_send, uint32_t seq_recv, uint32_t elapsed_
  * @return 0 on success, -1 on error.
  */
 int ssh_transport_begin_rekey(uint8_t i, uint8_t *out, size_t *out_len, size_t cap);
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_SSH_TRANSPORT_H

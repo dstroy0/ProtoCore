@@ -27,6 +27,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_FTP
 
 /**
@@ -99,5 +101,7 @@ static inline proto_bool pc_ftp_reply_ok(int code)
 }
 
 #endif // PC_ENABLE_FTP
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_FTP_H

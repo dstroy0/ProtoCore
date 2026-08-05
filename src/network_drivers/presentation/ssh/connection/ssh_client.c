@@ -403,6 +403,9 @@ static proto_bool cli_send(const uint8_t *payload, size_t len)
     return pc_client_send(s_cli.cid, s_cli.wire, wlen);
 }
 
+// The identification line RFC 4253 4.2 puts on the wire first: the version string, then CR LF.
+static const pc_field CLI_BANNER[] = {PC_STR, {PC_FK_LIT, 0, 2, "\r\n"}, PC_END};
+
 // Log frames: each message's shape is fixed here, so nothing is parsed when one is emitted.
 static const pc_field LOG_TUNNEL_FAIL[] = {{PC_FK_LIT, 0, 12, "ssh-tunnel: "}, PC_STR, PC_END};
 static const pc_field LOG_TUNNEL_NEGOTIATED[] = {{PC_FK_LIT, 0, 27, "ssh-tunnel: negotiated kex="},
@@ -1690,8 +1693,9 @@ proto_bool pc_ssh_tunnel_up(void)
 
 #else // !PROTOCORE_HOT - host builds have no lwIP client transport; the tunnel is device-only.
 
-proto_bool pc_ssh_tunnel_begin(const pc_ssh_tunnel_cfg *)
+proto_bool pc_ssh_tunnel_begin(const pc_ssh_tunnel_cfg *cfg)
 {
+    (void)cfg;
     return PROTO_FALSE;
 }
 void pc_ssh_tunnel_poll(void)

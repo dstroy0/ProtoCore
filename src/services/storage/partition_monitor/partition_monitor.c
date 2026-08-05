@@ -143,8 +143,10 @@ uint8_t pc_partition_collect(pc_partition_info *out, uint8_t max)
 
 #else // host build - no flash
 
-uint8_t pc_partition_collect(pc_partition_info *, uint8_t)
+uint8_t pc_partition_collect(pc_partition_info *out, uint8_t max)
 {
+    (void)out;
+    (void)max;
     return 0;
 }
 

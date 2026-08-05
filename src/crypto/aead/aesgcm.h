@@ -32,6 +32,8 @@
 #include "protocore_config.h"       // PC_WORK_AESGCM sizes a context
 #include "shared_primitives/span.h" // pc_cspan: what the seal produced (empty == it did not)
 
+PROTO_BEGIN_DECLS
+
 /** @brief AES-256-GCM key length (bytes). */
 #define PC_AESGCM_KEY_LEN 32
 /** @brief GCM nonce length (bytes) = fixed_field(4) || invocation_counter(8). */
@@ -82,5 +84,7 @@ proto_bool pc_aesgcm_open(struct pc_aesgcm_key *k, const uint8_t nonce[PC_AESGCM
  *        integer; the 4-byte fixed field never changes. SSH calls this after each sealed/opened packet.
  */
 void pc_aesgcm_iv_increment(uint8_t iv[PC_AESGCM_IV_LEN]);
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_AESGCM_H

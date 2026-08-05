@@ -159,12 +159,43 @@ void test_epoch_overflow_rejected()
     TEST_ASSERT_FALSE(pc_rtc_regs_to_epoch(r, &e));
 }
 
-void test_host_i2c_stubs()
+// A read points at register 0 and burst-reads the seven time registers in one transaction; a
+// write lays the pointer in front of them. The capture shows both on the wire.
+void test_read_and_set_drive_the_bus()
 {
-    // Host build: no I2C bus. begin() reports ready, reads yield 0, set fails, time source is 0.
+    pc_bus_host_reset();
     TEST_ASSERT_TRUE(pc_rtc_begin());
+
+    const uint8_t regs[7] = {0x05, 0x04, 0x03, 0x02, 0x02, 0x01, 0x24}; // 2024-01-02 03:04:05 BCD
+    pc_bus_host_preload(regs, sizeof(regs));
+
+    uint32_t want = 0;
+    TEST_ASSERT_TRUE(pc_rtc_regs_to_epoch(regs, &want));
+    TEST_ASSERT_EQUAL_UINT32(want, pc_rtc_read_epoch());
+
+    // One transaction: a one-byte write joined to a seven-byte read by a repeated start.
+    TEST_ASSERT_EQUAL_UINT32(1, pc_bus_host_count());
+    TEST_ASSERT_EQUAL_UINT32(1, pc_bus_host_txn_at(0)->wlen);
+    TEST_ASSERT_EQUAL_UINT32(7, pc_bus_host_txn_at(0)->rlen);
+
+    pc_bus_host_reset();
+    TEST_ASSERT_TRUE(pc_rtc_set_epoch(1730882977u));
+    uint8_t expect[8];
+    expect[0] = 0x00;
+    pc_rtc_epoch_to_regs(1730882977u, &expect[1]);
+    uint32_t n = 0;
+    const uint8_t *tx = pc_bus_host_written(&n);
+    TEST_ASSERT_EQUAL_UINT32(sizeof(expect), n);
+    TEST_ASSERT_EQUAL_HEX8_ARRAY(expect, tx, sizeof(expect));
+}
+
+// An absent RTC yields 0 rather than a stale or invented time, which is what the time-source
+// chain keys off to fall through to the next source.
+void test_absent_rtc_reports_zero()
+{
+    pc_bus_host_reset();
+    pc_bus_host_fail_next(2);
     TEST_ASSERT_EQUAL_UINT32(0, pc_rtc_read_epoch());
-    TEST_ASSERT_FALSE(pc_rtc_set_epoch(1730882977u));
     TEST_ASSERT_EQUAL_UINT32(0, pc_rtc_time_source());
 }
 
@@ -183,6 +214,7 @@ int main()
     RUN_TEST(test_invalid_guards_upper_bounds);
     RUN_TEST(test_12hour_invalid_h12);
     RUN_TEST(test_epoch_overflow_rejected);
-    RUN_TEST(test_host_i2c_stubs);
+    RUN_TEST(test_read_and_set_drive_the_bus);
+    RUN_TEST(test_absent_rtc_reports_zero);
     return UNITY_END();
 }

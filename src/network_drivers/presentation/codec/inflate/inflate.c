@@ -291,14 +291,10 @@ static InflateResult dynamic(State *s, Huffman *lencode, Huffman *distcode, shor
     {
         return INFLATE_ERR_MALFORMED;
     }
-    // GCOVR_EXCL_START  unreachable: HLIT/HDIST are 5-bit fields, so nlen = bits(s,5)+257 <= 288 ==
-    // PC_MAXLCODES and ndist = bits(s,5)+1 <= 32 == PC_MAXDCODES always; neither comparison can ever be true.
-    // Kept as the bound that would otherwise let a future encoding change overrun the tables.
     if (nlen > PC_MAXLCODES || ndist > PC_MAXDCODES)
     {
         return INFLATE_ERR_MALFORMED;
     }
-    // GCOVR_EXCL_STOP
 
     // Code-length code lengths, in the permuted order.
     int index;

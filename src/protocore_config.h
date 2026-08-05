@@ -1308,11 +1308,6 @@ from halves and is slower than the width it decomposes into"
 // of the name. The guard tests the symbol rather than restating the condition, so what is enforced
 // and what is declared are the same text.
 //
-// This list used to be drawn here by hand, and it drifted: it named 18 relationships while the
-// guards enforced 33 - CIA402, EDGE_CACHE, FORWARDED_TRUST, SSH_SFTP, SSH_SCP, SNMP_V3 and ten
-// others were enforced but undocumented. A dependency stated in three places is a dependency two
-// of whose statements are unverified.
-//
 // Optional integrations (these build fine on their own; the named feature is
 // simply inert or reduced until you also enable the other flag):
 //
@@ -2921,6 +2916,22 @@ from halves and is slower than the width it decomposes into"
 #endif
 
 /**
+ * @brief Shared SPI bus pins for the peripheral drivers, the same way the I2C pins above are
+ * shared. The default -1 uses the platform's default pins for its VSPI/HSPI host. Set them when
+ * those pins are taken, most often by a W5500 SPI Ethernet on a part with no RMII MAC (the
+ * ESP32-S3 / C3), which drives this same bus.
+ */
+#ifndef PC_SPI_MOSI_PIN
+#define PC_SPI_MOSI_PIN -1
+#endif
+#ifndef PC_SPI_MISO_PIN
+#define PC_SPI_MISO_PIN -1
+#endif
+#ifndef PC_SPI_SCLK_PIN
+#define PC_SPI_SCLK_PIN -1
+#endif
+
+/**
  * @brief I2C real-time-clock driver (DS1307 / DS3231) - a battery-backed time source.
  *
  * Default off. services/peripherals/rtc reads and sets a DS1307/DS3231 RTC over I2C (Wire), so the device
@@ -2999,6 +3010,11 @@ from halves and is slower than the width it decomposes into"
 #define PC_HMMD_BAUD 115200
 #endif
 
+/** @brief UART unit the HMMD is wired to. Unit 2 is the one free of the console on most boards. */
+#ifndef PC_HMMD_UART
+#define PC_HMMD_UART 2
+#endif
+
 /**
  * @brief IEC 61784-3 black-channel Safety Communication Layer primitives (`services/safety_scl`).
  *
@@ -3024,6 +3040,11 @@ from halves and is slower than the width it decomposes into"
 /** @brief LD2410 UART baud rate (the module's fixed factory default is 256000). */
 #ifndef PC_LD2410_BAUD
 #define PC_LD2410_BAUD 256000
+#endif
+
+/** @brief UART unit the LD2410 is wired to. Unit 2 is the one free of the console on most boards. */
+#ifndef PC_LD2410_UART
+#define PC_LD2410_UART 2
 #endif
 
 /**
@@ -3161,6 +3182,38 @@ from halves and is slower than the width it decomposes into"
  *         channel selects the pair: 0=AIN0-AIN1, 1=AIN0-AIN3, 2=AIN1-AIN3, 3=AIN2-AIN3. */
 #ifndef PC_ADS1115_DIFFERENTIAL
 #define PC_ADS1115_DIFFERENTIAL 0
+#endif
+
+/**
+ * @brief SMBus 3.1 transaction shapes over the shared I2C bus.
+ *
+ * Default off. services/peripherals/smbus adds the named transaction forms SMBus defines on top of
+ * I2C: quick command, send / receive byte, write / read byte and word, block write and read, and
+ * the two process calls. A part that speaks SMBus (a battery gauge, a fan controller, a power
+ * sequencer) answers this fixed set rather than a register layout its datasheet invents.
+ *
+ * The Packet Error Code is a CRC-8 over every byte of the transaction, the address bytes and their
+ * R/W bits included. It comes from the shared CRC engine (PC_CRC8_SMBUS) and is off until
+ * pc_smbus_set_pec() turns it on; a part that does not implement PEC NACKs the extra byte. The PEC
+ * computation is pure and host-tested; only the transfers touch I2C.
+ */
+#ifndef PC_ENABLE_SMBUS
+#define PC_ENABLE_SMBUS 0
+#endif
+
+/**
+ * @brief PMBus 1.3 power-management command set over SMBus.
+ *
+ * Default off. services/peripherals/pmbus adds the standard command codes and the two numeric
+ * encodings PMBus reports in: LINEAR11 for most telemetry (a 5-bit signed exponent and an 11-bit
+ * signed mantissa in one word) and LINEAR16 for output voltage (a 16-bit unsigned mantissa scaled
+ * by an exponent the part reports separately). Reading a digital point-of-load converter's input
+ * voltage, output current, temperature and fault status goes through these. Needs PC_ENABLE_SMBUS.
+ *
+ * The encodings are pure and host-tested; the commands ride the SMBus shapes.
+ */
+#ifndef PC_ENABLE_PMBUS
+#define PC_ENABLE_PMBUS 0
 #endif
 
 /**
@@ -5844,6 +5897,19 @@ from halves and is slower than the width it decomposes into"
 #define SSH_MAX_AUTH_ATTEMPTS 6
 #endif
 
+/**
+ * @brief Where the SSH RSA host private key is stored: the NVS namespace and the item in it.
+ *
+ * The server reads a DER-encoded PKCS#1/PKCS#8 blob from here at startup. Provisioning writes it
+ * once per device (docs/SSH.md). Both names are within the 15-character NVS limit.
+ */
+#ifndef PC_SSH_HOST_KEY_NS
+#define PC_SSH_HOST_KEY_NS "ssh_host_key"
+#endif
+#ifndef PC_SSH_HOST_KEY_ITEM
+#define PC_SSH_HOST_KEY_ITEM "priv_der"
+#endif
+
 // ---------------------------------------------------------------------------
 // Listener pool
 // ---------------------------------------------------------------------------
@@ -6872,6 +6938,11 @@ static_assert(sizeof(pc_iface) == 1, "pc_iface must stay one byte: it is a per-s
 #define PC_ENABLE_SNMP_TRAP_NEEDS_SNMP PC_ENABLE_SNMP
 #if PC_ENABLE_SNMP_TRAP && !PC_ENABLE_SNMP_TRAP_NEEDS_SNMP
 #error "ProtoCore: PC_ENABLE_SNMP_TRAP needs PC_ENABLE_SNMP"
+#endif
+
+#define PC_ENABLE_PMBUS_NEEDS_SMBUS PC_ENABLE_SMBUS
+#if PC_ENABLE_PMBUS && !PC_ENABLE_PMBUS_NEEDS_SMBUS
+#error "ProtoCore: PC_ENABLE_PMBUS needs PC_ENABLE_SMBUS"
 #endif
 
 #define PC_ENABLE_COAP_OBSERVE_NEEDS_COAP PC_ENABLE_COAP

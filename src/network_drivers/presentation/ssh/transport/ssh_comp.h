@@ -23,6 +23,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_SSH_ZLIB
 
 /** @brief Negotiated server-to-client compression algorithm. */
@@ -68,4 +70,7 @@ proto_bool ssh_comp_c2s_active(uint8_t i);
 int ssh_comp_c2s(uint8_t i, const uint8_t *src, size_t src_len, uint8_t *dst, size_t dst_cap, size_t *out_len);
 
 #endif // PC_ENABLE_SSH_ZLIB
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_SSH_COMP_H

@@ -74,6 +74,8 @@
 #include "network_drivers/presentation/ssh/transport/ssh_keymat.h"
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 // ---------------------------------------------------------------------------
 // Sequence number overflow threshold
 // ---------------------------------------------------------------------------
@@ -285,5 +287,7 @@ int ssh_pkt_recv(uint8_t i, const uint8_t *data, size_t len, ssh_msg_handler_t h
  * @return 0 on success, -1 on error.
  */
 int ssh_pkt_disconnect(uint8_t i, uint32_t reason_code, uint8_t *out, size_t *out_len, size_t out_cap);
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_SSH_PACKET_H

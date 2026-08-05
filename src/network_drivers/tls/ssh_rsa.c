@@ -18,9 +18,7 @@
 
 // Public host key (BSS - no secret material).
 #if PROTOCORE_HOT
-#include <Preferences.h> // ESP-IDF NVS wrapper
-#include <freertos/FreeRTOS.h>
-#include <freertos/semphr.h> // serialize signs on the shared cached key context
+#include "board_drivers/hal/nvs.h" // the host key is read from non-volatile storage
 #include <mbedtls/md.h>
 #include <mbedtls/pk.h>
 #include <mbedtls/rsa.h>
@@ -48,9 +46,10 @@ static int ssh_mbedtls_rng(void *ctx, unsigned char *buf, size_t len)
 // blinding values per operation. Loaded once at startup by pc_ssh_rsa_load_pubkey().
 typedef struct
 {
-    mbedtls_pk_context pk;  ///< parsed host key + cached blinding state
-    SemaphoreHandle_t lock; ///< serializes signs on the shared context
-    proto_bool ready;       ///< pk holds a valid parsed key
+    mbedtls_pk_context pk;             ///< parsed host key + cached blinding state
+    pc_platform_mutex lock;            ///< serializes signs on the shared context
+    pc_platform_mutex_ctrl lock_store; ///< the mutex object itself, in BSS
+    proto_bool ready;                  ///< pk holds a valid parsed key
 } SshRsaCtx;
 static SshRsaCtx s_rsa;
 
@@ -58,24 +57,15 @@ int pc_ssh_rsa_load_pubkey(void)
 {
     if (!s_rsa.lock)
     {
-        s_rsa.lock = xSemaphoreCreateMutex();
-    }
-
-    Preferences prefs;
-    if (!prefs.begin("ssh_host_key", PROTO_TRUE))
-    {
-        return -1;
+        s_rsa.lock = pc_platform_mutex_create(&s_rsa.lock_store);
     }
 
     uint8_t der[SSH_RSA_KEY_DER_MAX];
-    size_t der_len = prefs.getBytesLength("priv_der");
-    if (der_len == 0 || der_len > SSH_RSA_KEY_DER_MAX)
+    size_t der_len = pc_nvs_get_blob(PC_SSH_HOST_KEY_NS, PC_SSH_HOST_KEY_ITEM, der, sizeof(der));
+    if (der_len == 0)
     {
-        prefs.end();
         return -1;
     }
-    prefs.getBytes("priv_der", der, der_len);
-    prefs.end();
 
     // (Re)parse into the persistent context. Free any prior key first.
     if (s_rsa.ready)
@@ -148,7 +138,7 @@ int ssh_rsa_sign(const uint8_t *msg, size_t msg_len, pc_rsa_hash hash, uint8_t s
     // Serialize: mbedtls mutates the context's blinding state on each private op.
     if (s_rsa.lock)
     {
-        xSemaphoreTake(s_rsa.lock, portMAX_DELAY);
+        pc_platform_mutex_take(s_rsa.lock, PC_PLATFORM_WAIT_FOREVER);
     }
     size_t sig_len = 0;
 #if MBEDTLS_VERSION_MAJOR >= 3
@@ -158,7 +148,7 @@ int ssh_rsa_sign(const uint8_t *msg, size_t msg_len, pc_rsa_hash hash, uint8_t s
 #endif
     if (s_rsa.lock)
     {
-        xSemaphoreGive(s_rsa.lock);
+        pc_platform_mutex_give(s_rsa.lock);
     }
     pc_secure_wipe(digest, sizeof(digest));
 

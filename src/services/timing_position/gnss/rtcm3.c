@@ -196,9 +196,9 @@ static size_t build_arp(uint8_t *out, size_t cap, uint16_t msg, uint16_t station
     }
     // Every field width above is a constant; they total 152 bits (1005) or 168 (1006), and
     // sizeof(payload) * 8 is 168 - so the writer can never have failed by this point.
-    if (!w.ok) // GCOVR_EXCL_LINE
+    if (!w.ok)
     {
-        return 0; // GCOVR_EXCL_LINE
+        return 0;
     }
     return pc_rtcm3_frame_build(out, cap, payload, body_bytes);
 }

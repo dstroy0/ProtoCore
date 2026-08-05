@@ -38,6 +38,8 @@
 #include "protocore_config.h"
 #include "shared_primitives/span.h"
 
+PROTO_BEGIN_DECLS
+
 /**
  * @brief Slots in the secure pool.
  *
@@ -147,5 +149,7 @@ proto_bool pc_secure_owns(const void *p);
 
 /** @brief Which secure slot owns @p p, or -1 if @p p is not in the secure pool. */
 int pc_secure_slot_of(const void *p);
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_SECURE_H

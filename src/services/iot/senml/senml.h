@@ -32,6 +32,8 @@
 #include "network_drivers/presentation/codec/codec.h" // pc_codec - the encoding is a parameter
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_SENML
 
 /** @brief Which value field a record carries. */
@@ -103,5 +105,7 @@ typedef struct
 size_t pc_senml_resolve(const SenmlRecord *in, size_t n, SenmlResolved *out, size_t max);
 
 #endif // PC_ENABLE_SENML
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_SENML_H

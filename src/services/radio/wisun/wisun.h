@@ -24,6 +24,8 @@
 #include "network_drivers/network/ip.h"
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_WISUN
 
 /** @brief CoAP message type + method codes (RFC 7252) used by the connector. */
@@ -86,4 +88,7 @@ size_t pc_wisun_joined_count(const WisunFan *fan);
 size_t pc_wisun_nodes_json(const WisunFan *fan, char *out, size_t cap);
 
 #endif // PC_ENABLE_WISUN
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_WISUN_H

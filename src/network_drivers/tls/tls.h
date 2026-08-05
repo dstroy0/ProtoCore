@@ -34,6 +34,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_TLS && PROTOCORE_HOT
 
 /**
@@ -52,7 +54,7 @@
 proto_bool pc_tls_global_init(const uint8_t *cert, size_t cert_len, const uint8_t *key, size_t key_len);
 
 /** @brief True once pc_tls_global_init() has succeeded. */
-proto_bool pc_tls_ready();
+proto_bool pc_tls_ready(void);
 
 /**
  * @brief The ALPN protocol negotiated for @p slot ("h2" or "http/1.1"), or nullptr if the client
@@ -107,7 +109,7 @@ void pc_tls_conn_end(uint8_t slot);
 void pc_tls_conn_free(uint8_t slot);
 
 /** @brief Peak bytes ever used from the static arena (for sizing PC_TLS_ARENA_SIZE). */
-size_t pc_tls_arena_peak();
+size_t pc_tls_arena_peak(void);
 
 /**
  * @brief TLS BIO send/recv callbacks (mbedTLS signatures) - the transport
@@ -185,7 +187,7 @@ void pc_tls_client_set_ca(const uint8_t *ca, size_t ca_len);
 void pc_tls_client_set_pin(const uint8_t sha256[32]);
 
 /** @brief Clear any installed client CA and cert pin (back to encrypt-only). */
-void pc_tls_client_clear_verify();
+void pc_tls_client_clear_verify(void);
 
 // --- Persistent client TLS session (one outbound connection at a time) ---
 // For a long-lived encrypted client (MQTTS): handshake once, then read/write
@@ -198,10 +200,10 @@ proto_bool pc_tls_client_session_begin(const char *host, pc_tls_bio_send_fn send
 
 /** @brief True while a client TLS session is live (begun, not yet ended). The session is a singleton shared
  * across all client-TLS users, so a would-be caller checks this to avoid tearing down an active session. */
-proto_bool pc_tls_client_session_active();
+proto_bool pc_tls_client_session_active(void);
 
 /** @brief Advance the handshake. @return 1 established (CA/pin checked), 0 pending, <0 fatal. */
-int pc_tls_client_session_handshake();
+int pc_tls_client_session_handshake(void);
 
 /** @brief Read decrypted application data. @return >0 bytes, 0 none yet, <0 closed/error. */
 int pc_tls_client_session_read(uint8_t *buf, size_t len);
@@ -210,7 +212,7 @@ int pc_tls_client_session_read(uint8_t *buf, size_t len);
 int pc_tls_client_session_write(const uint8_t *data, size_t len);
 
 /** @brief Send close_notify and tear down the session. */
-void pc_tls_client_session_end();
+void pc_tls_client_session_end(void);
 
 /**
  * @brief Discard the saved TLS session so the next csess handshake is a full one.
@@ -220,57 +222,77 @@ void pc_tls_client_session_end();
  * this to force a fresh full handshake (e.g. after a credential change). A no-op
  * when resumption is disabled.
  */
-void pc_tls_client_session_forget_session();
+void pc_tls_client_session_forget_session(void);
 #endif // PC_ENABLE_CLIENT_TLS
 
 #else // stubs (TLS disabled or native build)
 
-static inline proto_bool pc_tls_global_init(const uint8_t *, size_t, const uint8_t *, size_t)
+static inline proto_bool pc_tls_global_init(const uint8_t *cert, size_t cert_len, const uint8_t *key, size_t key_len)
+{
+    (void)cert;
+    (void)cert_len;
+    (void)key;
+    (void)key_len;
+    return PROTO_FALSE;
+}
+static inline proto_bool pc_tls_ready(void)
 {
     return PROTO_FALSE;
 }
-static inline proto_bool pc_tls_ready()
+static inline proto_bool pc_tls_conn_begin(uint8_t slot)
 {
+    (void)slot;
     return PROTO_FALSE;
 }
-static inline proto_bool pc_tls_conn_begin(uint8_t)
+static inline int pc_tls_handshake(uint8_t slot)
 {
-    return PROTO_FALSE;
-}
-static inline int pc_tls_handshake(uint8_t)
-{
+    (void)slot;
     return -1;
 }
-static inline proto_bool pc_tls_established(uint8_t)
+static inline proto_bool pc_tls_established(uint8_t slot)
 {
+    (void)slot;
     return PROTO_FALSE;
 }
-static inline int pc_tls_read(uint8_t, uint8_t *, size_t)
+static inline int pc_tls_read(uint8_t slot, uint8_t *buf, size_t len)
 {
+    (void)slot;
+    (void)buf;
+    (void)len;
     return -1;
 }
-static inline int pc_tls_write(uint8_t, const void *, size_t)
+static inline int pc_tls_write(uint8_t slot, const void *data, size_t len)
 {
+    (void)slot;
+    (void)data;
+    (void)len;
     return -1;
 }
-static inline void pc_tls_conn_end(uint8_t)
+static inline void pc_tls_conn_end(uint8_t slot)
 {
+    (void)slot;
 }
-static inline void pc_tls_conn_free(uint8_t)
+static inline void pc_tls_conn_free(uint8_t slot)
 {
+    (void)slot;
 }
-static inline size_t pc_tls_arena_peak()
+static inline size_t pc_tls_arena_peak(void)
 {
     return 0;
 }
 
 #if PC_ENABLE_MTLS
-static inline proto_bool pc_tls_set_client_ca(const uint8_t *, size_t)
+static inline proto_bool pc_tls_set_client_ca(const uint8_t *ca, size_t ca_len)
 {
+    (void)ca;
+    (void)ca_len;
     return PROTO_FALSE;
 }
-static inline int pc_tls_peer_subject(uint8_t, char *, size_t)
+static inline int pc_tls_peer_subject(uint8_t slot, char *out, size_t out_len)
 {
+    (void)slot;
+    (void)out;
+    (void)out_len;
     return -1;
 }
 #endif // PC_ENABLE_MTLS
@@ -278,51 +300,74 @@ static inline int pc_tls_peer_subject(uint8_t, char *, size_t)
 #if PC_ENABLE_CLIENT_TLS
 typedef int (*pc_tls_bio_send_fn)(void *ctx, const unsigned char *buf, size_t len);
 typedef int (*pc_tls_bio_recv_fn)(void *ctx, unsigned char *buf, size_t len);
-static inline void pc_tls_client_set_ca(const uint8_t *, size_t)
+static inline void pc_tls_client_set_ca(const uint8_t *ca, size_t ca_len)
+{
+    (void)ca;
+    (void)ca_len;
+}
+static inline void pc_tls_client_set_pin(const uint8_t sha256[32])
+{
+    (void)sha256;
+}
+static inline void pc_tls_client_clear_verify(void)
 {
 }
-static inline void pc_tls_client_set_pin(const uint8_t *)
+static inline proto_bool pc_tls_client_session_begin(const char *host, pc_tls_bio_send_fn send_fn,
+                                                     pc_tls_bio_recv_fn recv_fn)
 {
+    (void)host;
+    (void)send_fn;
+    (void)recv_fn;
+    return PROTO_FALSE;
 }
-static inline void pc_tls_client_clear_verify()
-{
-}
-static inline proto_bool pc_tls_client_session_begin(const char *, pc_tls_bio_send_fn, pc_tls_bio_recv_fn)
+static inline proto_bool pc_tls_client_session_active(void)
 {
     return PROTO_FALSE;
 }
-static inline proto_bool pc_tls_client_session_active()
-{
-    return PROTO_FALSE;
-}
-static inline int pc_tls_client_session_handshake()
+static inline int pc_tls_client_session_handshake(void)
 {
     return -1;
 }
-static inline int pc_tls_client_session_read(uint8_t *, size_t)
+static inline int pc_tls_client_session_read(uint8_t *buf, size_t len)
 {
+    (void)buf;
+    (void)len;
     return -1;
 }
-static inline int pc_tls_client_session_write(const uint8_t *, size_t)
+static inline int pc_tls_client_session_write(const uint8_t *data, size_t len)
 {
+    (void)data;
+    (void)len;
     return -1;
 }
-static inline void pc_tls_client_session_end()
+static inline void pc_tls_client_session_end(void)
 {
 }
-static inline void pc_tls_client_session_forget_session()
+static inline void pc_tls_client_session_forget_session(void)
 {
 }
 #endif // PC_ENABLE_CLIENT_TLS
 
 #if PC_ENABLE_HTTP_CLIENT_TLS
-static inline int pc_tls_client_run(const char *, const uint8_t *, size_t, uint8_t *, size_t, size_t *,
-                                    pc_tls_bio_send_fn, pc_tls_bio_recv_fn, uint32_t)
+static inline int pc_tls_client_run(const char *host, const uint8_t *req, size_t reqlen, uint8_t *out, size_t out_cap,
+                                    size_t *out_len, pc_tls_bio_send_fn send_fn, pc_tls_bio_recv_fn recv_fn,
+                                    uint32_t deadline_ms)
 {
+    (void)host;
+    (void)req;
+    (void)reqlen;
+    (void)out;
+    (void)out_cap;
+    (void)out_len;
+    (void)send_fn;
+    (void)recv_fn;
+    (void)deadline_ms;
     return -1;
 }
 #endif // PC_ENABLE_HTTP_CLIENT_TLS
 
 #endif // PC_ENABLE_TLS && PROTOCORE_HOT
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_TLS_H

@@ -25,6 +25,8 @@
 #include "protocore_config.h"
 #include "shared_primitives/span.h" // pc_span / pc_cspan - the region, bound with pc_span_from()
 
+PROTO_BEGIN_DECLS
+
 #if PC_NEED_CBOR
 
 // The encoder writes into a pc_span and the decoder reads from a pc_cspan. There is no CBOR-specific
@@ -65,4 +67,7 @@ proto_bool pc_cbor_read_array(pc_cspan *r, size_t *count);                    //
 proto_bool pc_cbor_read_map(pc_cspan *r, size_t *count);                      ///< definite-length map header
 
 #endif // PC_NEED_CBOR
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_CBOR_H

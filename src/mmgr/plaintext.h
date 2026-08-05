@@ -55,6 +55,8 @@
 #include "protocore_config.h"
 #include "shared_primitives/span.h"
 
+PROTO_BEGIN_DECLS
+
 /**
  * @brief Slots in the plaintext pool.
  *
@@ -156,5 +158,7 @@ proto_bool pc_plaintext_owns(const void *p);
  * way the lock-free single-accessor invariant can be violated, and this makes it checkable.
  */
 int pc_plaintext_slot_of(const void *p);
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_PLAINTEXT_H

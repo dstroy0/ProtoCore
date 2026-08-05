@@ -28,6 +28,8 @@
 
 #include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_LD2410
 
 /** @brief Range gates the LD2410 reports energy for in engineering mode (gate 0..8). */
@@ -162,23 +164,25 @@ proto_bool pc_ld2410_ack_ok(const Ld2410Ack *ack);
  */
 proto_bool pc_ld2410_ack_mac(const Ld2410Ack *ack, uint8_t mac[6]);
 
-// --- ESP32 binding (Serial pump; no-ops on a host build) -------------------------------------
+// --- ESP32 binding (UART pump; no-ops on a host build) ---------------------------------------
 
-/** @brief Open UART2 at PC_LD2410_BAUD on @p rx_pin / @p tx_pin. @return true on ESP32. */
+/** @brief Open PC_LD2410_UART at PC_LD2410_BAUD on @p rx_pin / @p tx_pin. @return true on ESP32. */
 proto_bool pc_ld2410_begin(int rx_pin, int tx_pin);
 
 /** @brief Pump the UART through the stream. @return true if a fresh report was decoded. */
-proto_bool pc_ld2410_poll();
+proto_bool pc_ld2410_poll(void);
 
-/** @brief The most recently decoded report, or nullptr before the first one arrives. */
-const Ld2410Report *pc_ld2410_last();
+/** @brief The most recently decoded report, or NULL before the first one arrives. */
+const Ld2410Report *pc_ld2410_last(void);
 
 /** @brief Enable/disable engineering mode (brackets the command with enable/end). */
 proto_bool pc_ld2410_set_engineering(proto_bool on);
 
 /** @brief Restart the module (brackets the command with enable/end). */
-proto_bool pc_ld2410_restart();
+proto_bool pc_ld2410_restart(void);
 
 #endif // PC_ENABLE_LD2410
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_LD2410_H

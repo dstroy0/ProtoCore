@@ -29,6 +29,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_MQTT
 
 /** @brief MQTT control packet types (high nibble of byte 0), MQTT 3.1.1 §2.2.1. */
@@ -202,5 +204,7 @@ proto_bool pc_mqtt_connected();
 void pc_mqtt_disconnect();
 
 #endif // PC_ENABLE_MQTT
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_MQTT_H

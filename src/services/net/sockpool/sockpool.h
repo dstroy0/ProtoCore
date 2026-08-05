@@ -21,6 +21,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_SOCKPOOL
 
 /** @brief One connection slot. */
@@ -72,4 +74,7 @@ proto_bool pc_sockpool_find(const SockPool *p, uint32_t id, size_t *idx);
 size_t pc_sockpool_in_use(const SockPool *p);
 
 #endif // PC_ENABLE_SOCKPOOL
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_SOCKPOOL_H

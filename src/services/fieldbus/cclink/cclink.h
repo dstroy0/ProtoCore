@@ -22,6 +22,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_CCLINK
 
 // CC-Link command bytes: wire values compared/emitted, so integer constants in a namespacing struct.
@@ -67,4 +69,7 @@ void pc_cclink_set_bit(uint8_t *bits, size_t bit_len, size_t index, proto_bool v
 uint16_t pc_cclink_get_word(const uint8_t *words, size_t word_len, size_t index);
 
 #endif // PC_ENABLE_CCLINK
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_CCLINK_H

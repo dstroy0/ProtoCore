@@ -73,6 +73,8 @@
 #include "protocore_config.h"
 #include <string.h>
 
+PROTO_BEGIN_DECLS
+
 // ---------------------------------------------------------------------------
 // Fixed-width 2048-bit integer
 // ---------------------------------------------------------------------------
@@ -187,5 +189,7 @@ extern const pc_bignum group14_p;
 
 /** @brief Generator for group-14: g = 2. */
 extern const pc_bignum group14_g;
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_BIGNUM_H

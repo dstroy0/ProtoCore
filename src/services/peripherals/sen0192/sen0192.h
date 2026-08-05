@@ -25,6 +25,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_SEN0192
 
 /**
@@ -85,5 +87,7 @@ proto_bool pc_sen0192_present(void);
 uint32_t pc_sen0192_motion_count(void);
 
 #endif // PC_ENABLE_SEN0192
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_SEN0192_H

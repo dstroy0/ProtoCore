@@ -64,7 +64,7 @@ void setup()
 
     on_http("/", HTTP_GET, handle_root);
     on_http("/tag", HTTP_GET, handle_tag);
-    begin_http(80);
+    begin_http(80, NULL);
     Serial.println("DiffServ server on :80 (default EF; /tag -> CS6)");
 }
 

@@ -25,6 +25,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_SYSLOG
 
 /** @brief RFC 5424 §6.2.1 severity levels (numerically lower = more severe). */
@@ -79,5 +81,7 @@ size_t pc_syslog_format(char *out, size_t cap, SyslogFacility facility, SyslogSe
 proto_bool pc_syslog_log(SyslogSeverity severity, const char *msg);
 
 #endif // PC_ENABLE_SYSLOG
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_SYSLOG_H

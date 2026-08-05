@@ -32,6 +32,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_SUNSPEC
 
 #define SUNSPEC_MARKER 0x53756E53u ///< "SunS"
@@ -96,5 +98,7 @@ proto_bool pc_sunspec_write_end_model(SunSpecWriter *w);                        
 size_t pc_sunspec_writer_finish(SunSpecWriter *w);                                 ///< bytes written, or 0 on overflow
 
 #endif // PC_ENABLE_SUNSPEC
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_SUNSPEC_H

@@ -24,6 +24,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_SERCOS
 
 // SERCOS telegram types + header length: wire values, so integer constants in a struct.
@@ -68,4 +70,7 @@ typedef struct
 proto_bool pc_sercos_parse(const uint8_t *frame, size_t len, SercosTelegram *out);
 
 #endif // PC_ENABLE_SERCOS
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_SERCOS_H

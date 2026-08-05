@@ -28,6 +28,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_JWT
 
 /**
@@ -131,5 +133,7 @@ proto_bool pc_jwt_claim_str(const char *token, size_t token_len, const char *nam
 proto_bool pc_jwt_scope_allows(const char *scope_claim, const char *required);
 
 #endif // PC_ENABLE_JWT
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_JWT_H

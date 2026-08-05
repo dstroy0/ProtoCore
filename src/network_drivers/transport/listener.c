@@ -21,6 +21,7 @@
 #include "board_drivers/board_profiles/pc_platform.h" // the target's queues, under our names
 #include "diffserv.h"                // DiffServ DSCP marking for accepted connections (compiles out when off)
 #include "network_drivers/tls/tls.h" // TLS handshake begin (self-stubbing)
+#include "tcp.h"                     // TcpConn, conn_pool: the slots an accept claims
 #if PROTOCORE_HOT
 #include "network_drivers/session/worker.h" // pc_worker_wake() - nudge the owning worker task
 #endif
@@ -427,12 +428,10 @@ pc_net_err listener_accept_cb(void *arg, pc_pcb *newpcb, pc_net_err err)
     // The function's own reject path IS fully host-tested directly with a synthetic
     // pc_ip (test_per_ip_independent_budgets et al.); only ITS USE HERE, gated behind a
     // peer address this host build can never resolve, cannot be driven to the false case.
-    if (!listener_accept_allowed_ip(&remote, pc_millis())) // GCOVR_EXCL_BR_LINE - see above
+    if (!listener_accept_allowed_ip(&remote, pc_millis()))
     {
-        // GCOVR_EXCL_START - unreachable: see the comment above this `if`
         pc_net_abort(newpcb);
         return PC_NET_ERR_ABRT;
-        // GCOVR_EXCL_STOP
     }
 #endif
 

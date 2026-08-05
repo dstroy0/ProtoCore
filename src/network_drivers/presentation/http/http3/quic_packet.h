@@ -23,6 +23,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_HTTP3
 
 #define QUIC_VERSION_1 0x00000001u ///< RFC 9000
@@ -98,4 +100,7 @@ size_t pc_quic_pn_encode(uint8_t *out, size_t cap, uint64_t full_pn, int64_t lar
 uint64_t pc_quic_pn_decode(uint64_t largest_pn, uint64_t truncated_pn, uint8_t pn_nbits);
 
 #endif // PC_ENABLE_HTTP3
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_QUIC_PACKET_H

@@ -95,7 +95,7 @@ void setup()
         }
     });
 
-    begin_http(80);
+    begin_http(80, NULL);
 }
 
 void loop()

@@ -117,7 +117,7 @@ void *pc_plaintext_alloc(size_t n, size_t align)
     // The false half is a caller-contract violation (align documented as a power of two) and aborts
     // the process, so it cannot be exercised from an in-process host test without killing the whole
     // test binary mid-run.
-    assert((align & (align - 1)) == 0 && "plaintext alignment must be a power of two"); // GCOVR_EXCL_BR_LINE
+    assert((align & (align - 1)) == 0 && "plaintext alignment must be a power of two");
     return pc_arena_scratch_alloc_aligned(bind(w), n, align);
 }
 

@@ -60,6 +60,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_FANUC_J519
 
 /** @brief Default Stream Motion UDP port on the robot controller. */
@@ -244,4 +246,7 @@ proto_bool pc_j519_parse_status(const uint8_t *buf, size_t len, J519RobotStatus 
 proto_bool pc_j519_parse_ack(const uint8_t *buf, size_t len, J519Ack *out);
 
 #endif // PC_ENABLE_FANUC_J519
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_FANUC_J519_H

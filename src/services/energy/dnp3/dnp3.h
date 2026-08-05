@@ -31,6 +31,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_DNP3
 
 #define DNP3_START0 0x05
@@ -315,5 +317,7 @@ size_t pc_dnp3_build_aob32(uint8_t *buf, size_t cap, int32_t value);
 size_t pc_dnp3_build_aob_float(uint8_t *buf, size_t cap, float value);
 
 #endif // PC_ENABLE_DNP3
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_DNP3_H

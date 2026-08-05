@@ -147,7 +147,7 @@ static proto_bool parse_v6(const char *s, size_t len, uint8_t out[16])
     size_t i = 0;
     // len >= 1 is never false here: the only caller (pc_ip_parse) rejects an empty string before
     // calling parse_v6, and colon (which gates this call) requires at least one ':' character.
-    if (len >= 1 && s[0] == ':') // GCOVR_EXCL_BR_LINE  a leading "::" (the address opens in the zero gap)
+    if (len >= 1 && s[0] == ':')
     {
         if (len < 2 || s[1] != ':')
         {
@@ -504,7 +504,7 @@ size_t pc_ip_format(const pc_ip *ip, char *out, size_t cap)
         size_t tn = format_v4(ip->bytes + 12, tail, sizeof(tail));
         // tn == 0 is never true here: tail is a fixed 16 bytes, and the longest possible v4 text
         // ("255.255.255.255", 15 chars + NUL) always fits, so format_v4 can't fail on this call.
-        if (tn == 0 || 7 + tn + 1 > cap) // GCOVR_EXCL_BR_LINE
+        if (tn == 0 || 7 + tn + 1 > cap)
         {
             return 0;
         }

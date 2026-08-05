@@ -124,8 +124,7 @@ static inline void inc32(uint8_t ctr[16])
     // inc32(J0) with J0[12..15] fixed to 0,0,0,1 (96-bit-nonce J0, NIST SP 800-38D) - not
     // caller-controlled - so reaching that requires one seal()/open() call over ~2^32 contiguous
     // GCTR blocks (~64 GiB of plaintext in one call): infeasible in a host test.
-    for (int i = 15; i >= 12; // GCOVR_EXCL_BR_LINE  loop-exhausted-with-no-break needs the ~64GiB full wrap; see above
-         i--)
+    for (int i = 15; i >= 12; i--)
     {
         if (++ctr[i])
         {

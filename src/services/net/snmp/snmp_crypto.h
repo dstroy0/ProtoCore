@@ -23,6 +23,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_SNMP_V3
 
 /** @brief Localized-key length (SHA-256 digest size). */
@@ -63,5 +65,7 @@ void pc_snmp_aes128_cfb(const uint8_t key[16], const uint8_t iv[16], const uint8
                         proto_bool encrypt);
 
 #endif // PC_ENABLE_SNMP_V3
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_SNMP_CRYPTO_H

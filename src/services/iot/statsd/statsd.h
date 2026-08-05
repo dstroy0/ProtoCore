@@ -27,6 +27,8 @@
 
 #include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_STATSD
 
 /** @brief StatsD metric type codes (the token after the `|`). */
@@ -80,5 +82,7 @@ void pc_statsd_timing(const char *name, uint32_t ms);
 void pc_statsd_set(const char *name, const char *member);
 
 #endif // PC_ENABLE_STATSD
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_STATSD_H

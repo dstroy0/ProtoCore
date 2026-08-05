@@ -83,7 +83,7 @@ static int pump(pc_relay_end *src, pc_relay_end *dst, uint8_t *buf, uint16_t *le
         // direction. pc_relay_init() zero-fills the struct, so *dst_shut_sent starts false, and
         // nothing outside this block (and outside pc_relay_init's memset) ever writes it. So on
         // this - the only - entry, *dst_shut_sent cannot already be true.
-        if (dst->shutdown && !*dst_shut_sent) // GCOVR_EXCL_BR_LINE
+        if (dst->shutdown && !*dst_shut_sent)
         {
             dst->shutdown(dst->ctx); // propagate the half-close to the peer that stops receiving
             *dst_shut_sent = PROTO_TRUE;

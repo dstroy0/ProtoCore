@@ -98,7 +98,7 @@ void setup()
     on_sse("/events", pc_sse_connect);
 
     int32_t result = begin_tls(443, (const uint8_t *)SERVER_CERT_PEM, sizeof(SERVER_CERT_PEM),
-                                      (const uint8_t *)SERVER_KEY_PEM, sizeof(SERVER_KEY_PEM));
+                                      (const uint8_t *)SERVER_KEY_PEM, sizeof(SERVER_KEY_PEM), NULL);
     if (result < 0)
     {
         Serial.printf("begin_tls() failed (error %d)\n", result);

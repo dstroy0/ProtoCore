@@ -82,7 +82,7 @@ void setup()
         ctx.off = 0;
         send_chunked(id, 200, "application/cbor", pc_cbor_source, &ctx);
     });
-    begin_http(80);
+    begin_http(80, NULL);
 }
 
 void loop()

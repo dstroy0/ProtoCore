@@ -29,6 +29,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_RELAY
 
 /** @brief pc_relay_step() outcome. */
@@ -112,5 +114,7 @@ pc_relay_status pc_relay_step(pc_relay *r);
 void pc_relay_note_eof(pc_relay *r, proto_bool origin);
 
 #endif // PC_ENABLE_RELAY
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_RELAY_H

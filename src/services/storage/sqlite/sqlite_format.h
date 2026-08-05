@@ -22,6 +22,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_SQLITE
 
 /**
@@ -292,4 +294,7 @@ uint32_t pc_sqlite_build_table_db(uint32_t page_size, const char *table_name, co
                                   const SqliteRow *rows, uint32_t nrows, uint8_t *out, uint32_t out_cap);
 
 #endif // PC_ENABLE_SQLITE
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_SQLITE_FORMAT_H

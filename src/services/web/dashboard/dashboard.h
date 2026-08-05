@@ -26,6 +26,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_DASHBOARD
 
 /** @brief Widget rendering / interaction style. */
@@ -109,4 +111,7 @@ void pc_dashboard_begin(const char *path, const pc_widget *widgets, uint8_t coun
 void pc_dashboard_publish();
 
 #endif // PC_ENABLE_DASHBOARD
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_DASHBOARD_H

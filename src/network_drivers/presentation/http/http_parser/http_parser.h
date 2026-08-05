@@ -38,6 +38,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 // ---------------------------------------------------------------------------
 // Parser state enumeration
 // ---------------------------------------------------------------------------
@@ -289,5 +291,7 @@ proto_bool http_get_form(const HttpReq *req, const char *key, char *out, size_t 
  * @return Pointer to the null-terminated value, or `nullptr` if absent.
  */
 const char *http_get_param(const HttpReq *req, const char *key);
+
+PROTO_END_DECLS
 
 #endif

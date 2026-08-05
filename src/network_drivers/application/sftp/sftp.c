@@ -346,7 +346,7 @@ size_t pc_sftp_format_longname(proto_bool is_dir, uint32_t perms, uint64_t size,
     // mtime is a uint32_t, so t is always inside the range every gmtime implementation accepts and the
     // conversion yields tm_mon in [0,11] by definition; tmv is zeroed above, so even a failed conversion
     // leaves month 0. The range test is purely a bounds guard on the kMonths[] index below.
-    int mon = (tmv.tm_mon >= 0 && tmv.tm_mon < 12) ? tmv.tm_mon : 0; // GCOVR_EXCL_LINE  tm_mon is always 0..11
+    int mon = (tmv.tm_mon >= 0 && tmv.tm_mon < 12) ? tmv.tm_mon : 0;
 
     // Clipping appenders here, not the fail-closed ones. `longname` is the
     // draft-ietf-secsh-filexfer display field ("an expanded format for the file name, similar to

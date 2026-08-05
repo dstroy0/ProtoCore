@@ -189,7 +189,7 @@ proto_bool edge_header_value(const char *hdrs, size_t len, const char *name, cha
         // `lend > p` has no false arm to reach: a line starting with CR or LF is the blank line that
         // ends the header block and already broke out above, so p is always on a content byte and
         // the line is at least one byte long. The guard stays to keep lend[-1] in bounds.
-        if (lend > p && lend[-1] == '\r') // GCOVR_EXCL_LINE - lend > p always true here, see above
+        if (lend > p && lend[-1] == '\r')
         {
             lend--;
         }
@@ -328,15 +328,10 @@ int64_t edge_parse_http_date(const char *s, size_t len)
         return -1;
     }
 
-    // GCOVR_EXCL_START  unreachable: rd_month() only ever yields 1..12 (and both date parsers fail
-    // outright when it does not match), so this guard is defensive. Kept because it is the one place
-    // that would otherwise let an out-of-range month reach days_from_civil(). The five range checks
-    // below ARE reachable and are pinned by tests, so they stay outside this exclusion.
     if (mon < 1 || mon > 12)
     {
         return -1;
     }
-    // GCOVR_EXCL_STOP
     if (mday < 1 || mday > 31 || hh > 23 || mm > 59 || ss > 60)
     {
         return -1;
@@ -443,14 +438,10 @@ static proto_bool vary_emit_one(const char **pp, EdgeHdrLookup lookup, void *ctx
     }
     name[nl] = '\0';
     *pp = p;
-    // GCOVR_EXCL_START  unreachable: edge_vary_serialize() skips every separator and breaks on NUL
-    // before calling in, so *p is always a content byte here and the loop above has already taken at
-    // least one character (or returned false on '*'). nl is therefore never 0.
     if (nl == 0)
     {
         return PROTO_TRUE; // nothing to emit; caller advances
     }
-    // GCOVR_EXCL_STOP
     const char *val = lookup ? lookup(ctx, name) : NULL;
     if (!k_append(out, pos, out_cap, name, PROTO_FALSE) || !k_append(out, pos, out_cap, "\x1e", PROTO_FALSE))
     {

@@ -35,6 +35,8 @@
 #include "crypto/aead/aes128gcm.h" // pc_aes128gcm_key, PC_WORK_AES128GCM
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_DTLS
 
 /** @name Record content types (RFC 8446 §5 / RFC 9147 §4).
@@ -198,4 +200,7 @@ proto_bool pc_dtls_replay_check(const DtlsReplayWindow *w, uint64_t seq);
 void pc_dtls_replay_mark(DtlsReplayWindow *w, uint64_t seq);
 
 #endif // PC_ENABLE_DTLS
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_DTLS_RECORD_H

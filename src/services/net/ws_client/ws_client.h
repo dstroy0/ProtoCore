@@ -26,6 +26,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_WS_CLIENT
 
 /** @brief WebSocket opcodes (RFC 6455 §5.2). */
@@ -120,5 +122,7 @@ proto_bool ws_client_connected();
 void ws_client_close();
 
 #endif // PC_ENABLE_WS_CLIENT
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_WS_CLIENT_H

@@ -83,10 +83,41 @@ void test_parse_null_resp()
     TEST_ASSERT_FALSE(pc_sht3x_parse(NULL, &t, &h)); // null response buffer must be rejected
 }
 
-void test_host_i2c_stubs()
+// begin() soft-resets the part, and a read sends the measurement command and decodes the six
+// bytes that come back. The host capture makes both assertable end to end.
+void test_read_drives_the_bus()
 {
-    // Host build: no I2C. begin() fails and read() reports failure.
-    TEST_ASSERT_FALSE(pc_sht3x_begin(0x44));
+    pc_bus_host_reset();
+    TEST_ASSERT_TRUE(pc_sht3x_begin(0x44));
+
+    // The soft reset command goes out as a bare big-endian word, no register byte.
+    uint32_t n = 0;
+    const uint8_t *w = pc_bus_host_txn_bytes(0, &n);
+    TEST_ASSERT_EQUAL_UINT32(2, n);
+    TEST_ASSERT_EQUAL_HEX8((uint8_t)(SHT3X_CMD_SOFT_RESET >> 8), w[0]);
+    TEST_ASSERT_EQUAL_HEX8((uint8_t)(SHT3X_CMD_SOFT_RESET & 0xFF), w[1]);
+
+    uint8_t reply[6];
+    reply[0] = 0x66;
+    reply[1] = 0x66;
+    reply[2] = pc_sht3x_crc8(&reply[0], 2);
+    reply[3] = 0x80;
+    reply[4] = 0x00;
+    reply[5] = pc_sht3x_crc8(&reply[3], 2);
+    pc_bus_host_preload(reply, sizeof(reply));
+
+    int32_t t = 0, h = 0;
+    TEST_ASSERT_TRUE(pc_sht3x_read(&t, &h));
+    TEST_ASSERT_EQUAL_INT32(pc_sht3x_temp_mc(0x6666), t);
+    TEST_ASSERT_EQUAL_INT32(pc_sht3x_rh_mpct(0x8000), h);
+}
+
+// A reply whose CRC does not match is rejected rather than decoded.
+void test_read_rejects_a_bad_crc()
+{
+    pc_bus_host_reset();
+    const uint8_t reply[6] = {0x66, 0x66, 0x00, 0x80, 0x00, 0x00}; // both CRCs wrong
+    pc_bus_host_preload(reply, sizeof(reply));
     int32_t t = 0, h = 0;
     TEST_ASSERT_FALSE(pc_sht3x_read(&t, &h));
 }
@@ -100,6 +131,7 @@ int main()
     RUN_TEST(test_parse_bad_crc);
     RUN_TEST(test_parse_null_out);
     RUN_TEST(test_parse_null_resp);
-    RUN_TEST(test_host_i2c_stubs);
+    RUN_TEST(test_read_drives_the_bus);
+    RUN_TEST(test_read_rejects_a_bad_crc);
     return UNITY_END();
 }

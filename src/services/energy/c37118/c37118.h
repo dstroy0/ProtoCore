@@ -31,6 +31,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_C37118
 
 #define C37118_SYNC_LEADER 0xAA  ///< SYNC byte 0 (frame leader)
@@ -136,5 +138,7 @@ typedef struct
 proto_bool pc_c37118_decode_stat(const C37118Frame *f, C37118Stat *out);
 
 #endif // PC_ENABLE_C37118
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_C37118_H

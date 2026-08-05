@@ -30,6 +30,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_WS_DEFLATE
 
 /**
@@ -62,4 +64,7 @@ InflateResult inflate_raw(const uint8_t *src, size_t src_len, uint8_t *dst, size
                           void *scratch, size_t scratch_len);
 
 #endif // PC_ENABLE_WS_DEFLATE
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_INFLATE_H

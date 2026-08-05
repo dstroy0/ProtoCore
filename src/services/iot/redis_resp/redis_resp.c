@@ -138,11 +138,11 @@ static proto_bool slice_ieq(const uint8_t *buf, size_t from, size_t end, const c
             a = (uint8_t)(a + 32);
         }
         char b = *s;
-        if (b >= 'A' && b <= 'Z') // GCOVR_EXCL_BR_LINE  b is the pattern char; every caller (parse_double_special)
+        if (b >= 'A' && b <= 'Z')
         {
-            b = (char)(b + 32); // GCOVR_EXCL_LINE  passes a lowercase literal ("inf"/"+inf"/"-inf"/"nan"), so
-                                // this upper->lower fold of the pattern side never fires; slice_ieq is static
-                                // (file-local) with no other caller, so no host test can reach it either.
+            b = (char)(b + 32);
+            // this upper->lower fold of the pattern side never fires; slice_ieq is static
+            // (file-local) with no other caller, so no host test can reach it either.
         }
         if (a != (uint8_t)b)
         {

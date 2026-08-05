@@ -21,7 +21,7 @@ static void trip(SclConn *c, SclFault why)
 {
     // Both callers (pc_scl_on_frame, pc_scl_poll) already early-return when state == FAILSAFE, so
     // trip() is never entered in that state; the guard latches the first fault as belt-and-suspenders.
-    if (c->state != SCL_STATE_FAILSAFE) // GCOVR_EXCL_BR_LINE  false arm unreachable (see above)
+    if (c->state != SCL_STATE_FAILSAFE)
     {
         c->state = SCL_STATE_FAILSAFE;
         c->fault = why;

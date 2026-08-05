@@ -73,7 +73,6 @@ FORCE_FULL_EXACT = {
     "sonar-project.properties",
     "library.json",
     "library.properties",
-    "ci_tooling/coverage/merge_coverage.py",
 }
 FORCE_FULL_PREFIX = (
     "tools/",

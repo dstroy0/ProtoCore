@@ -49,6 +49,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_DMA
 
 /** @brief Peripheral a channel is bound to (informational; selects the real backend). */
@@ -155,5 +157,7 @@ uint16_t pc_dma_sim_capture(uint8_t ch, uint8_t *out, uint16_t max);
 #endif // PC_DMA_SIMULATE
 
 #endif // PC_ENABLE_DMA
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_DMA_H

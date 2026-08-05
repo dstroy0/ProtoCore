@@ -12,6 +12,7 @@
 
 #include "mmgr/frame.h" // the one frame engine
 #include "protocore.h"
+#include "server/clock/clock.h"     // pc_millis: the library clock, not the platform's
 #include "shared_primitives/mime.h" // PC_MIME_TEXT_PLAIN
 #include <stdio.h>
 
@@ -64,7 +65,7 @@ proto_bool run_middleware(uint8_t slot_id, HttpReq *req)
         // s_mw.middleware[i] is never null here: use() is the only writer, and it always stores a
         // non-null entry together with the count increment that admits index i - a slot below
         // s_mw.middleware_count can never regress to null.
-        if (s_mw.middleware[i] && s_mw.middleware[i](slot_id, req) == MW_HALT) // GCOVR_EXCL_BR_LINE
+        if (s_mw.middleware[i] && s_mw.middleware[i](slot_id, req) == MW_HALT)
         {
             return PROTO_TRUE;
         }
@@ -76,7 +77,7 @@ void enable_rate_limit(uint16_t max_requests, uint32_t window_ms)
 {
     s_mw.rl_max = max_requests;
     s_mw.rl_window_ms = window_ms;
-    s_mw.rl_window_start = millis();
+    s_mw.rl_window_start = pc_millis();
     s_mw.rl_count = 0;
 }
 
@@ -89,7 +90,7 @@ proto_bool rate_limit_check(uint8_t slot_id)
         return PROTO_FALSE; // disabled
     }
 
-    uint32_t now = millis();
+    uint32_t now = pc_millis();
     if ((uint32_t)(now - s_mw.rl_window_start) >= s_mw.rl_window_ms)
     {
         s_mw.rl_window_start = now; // new window
@@ -107,7 +108,7 @@ proto_bool rate_limit_check(uint8_t slot_id)
     // The ":0" arm is unreachable: the check above either just reset s_mw.rl_window_start to `now`
     // (elapsed == 0) or left it in place because elapsed was already < s_mw.rl_window_ms - either way
     // elapsed < s_mw.rl_window_ms always holds here, so the ">" arm always taken.
-    uint32_t remain_ms = (s_mw.rl_window_ms > elapsed) ? (s_mw.rl_window_ms - elapsed) : 0; // GCOVR_EXCL_BR_LINE
+    uint32_t remain_ms = (s_mw.rl_window_ms > elapsed) ? (s_mw.rl_window_ms - elapsed) : 0;
     char secs[12];
     // Fails closed to an empty string on its own, so there is no failure arm to write here.
     pc_frame_build(secs, sizeof(secs), RETRY_AFTER, (uint32_t)((remain_ms + 999) / 1000));

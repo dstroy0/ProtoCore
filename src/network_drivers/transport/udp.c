@@ -595,13 +595,13 @@ proto_bool pc_udp_listen_multicast(const char *group_ip, uint16_t port, pc_udp_h
     // free-slot, or evict-slot-0 all succeed unconditionally, with no failure path of its own - so
     // this guard, and the "not found" fallthrough below, only exist for the real ESP32
     // implementation (which can fail: no free pcb, a bind conflict). Neither is reachable on native.
-    if (!pc_udp_listen(port, handler, ctx)) // GCOVR_EXCL_BR_LINE - pc_udp_listen() host stub never fails
+    if (!pc_udp_listen(port, handler, ctx))
     {
-        return PROTO_FALSE; // GCOVR_EXCL_LINE - unreachable: see above
+        return PROTO_FALSE;
     }
-    for (int i = 0; i < PC_MAX_UDP_LISTENERS; i++) // GCOVR_EXCL_BR_LINE - loop always finds the slot pc_udp_listen()
-                                                   // just claimed (lowest-free-first, so every lower index is
-                                                   // already used); natural exhaustion is unreachable
+    for (int i = 0; i < PC_MAX_UDP_LISTENERS; i++)
+    // just claimed (lowest-free-first, so every lower index is
+    // already used); natural exhaustion is unreachable
     {
         if (s_udp.lst[i].used && s_udp.lst[i].port == port)
         {
@@ -610,7 +610,7 @@ proto_bool pc_udp_listen_multicast(const char *group_ip, uint16_t port, pc_udp_h
             return PROTO_TRUE;
         }
     }
-    return PROTO_FALSE; // GCOVR_EXCL_LINE - unreachable: the loop above always finds the just-bound slot
+    return PROTO_FALSE;
 }
 
 proto_bool pc_udp_leave_multicast(uint16_t port)

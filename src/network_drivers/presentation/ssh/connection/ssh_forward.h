@@ -24,6 +24,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_SSH_PORT_FORWARD
 
 /**
@@ -57,4 +59,7 @@ void pc_ssh_forward_pump(uint8_t ssh_slot);
 void pc_ssh_forward_reset(uint8_t ssh_slot);
 
 #endif // PC_SSH_PORT_FORWARD
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_SSH_FORWARD_H

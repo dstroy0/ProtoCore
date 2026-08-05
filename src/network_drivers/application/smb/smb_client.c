@@ -41,9 +41,9 @@ static size_t utf16le(const char *s, uint8_t *out, size_t cap)
     // Dead guard: utf16le is static with exactly two call sites (the share in smb_tree_connect and
     // the path in smb_create), both reached only through smb_open(), which rejects a null
     // cfg->share / cfg->path up front.
-    if (!s) // GCOVR_EXCL_LINE - both callers are guarded by smb_open, see above
+    if (!s)
     {
-        return 0; // GCOVR_EXCL_LINE - unreachable body of the guard above
+        return 0;
     }
     size_t n = 0;
     for (; s[n]; n++)
@@ -274,9 +274,9 @@ static SmbResult smb_negotiate(SmbSendFn send, SmbRecvFn recv, void *ctx, uint16
     pc_platform_rand_fill(salt, sizeof(salt));
     size_t mlen = pc_smb2_build_negotiate_311(s_smb.tx + 4, sizeof(s_smb.tx) - 4, guid, SMB2_NEGOTIATE_SIGNING_ENABLED,
                                               salt, sizeof(salt), offer_ciphers, offer_count);
-    if (!mlen) // GCOVR_EXCL_LINE - the static_assert at the top of this file makes this unreachable
+    if (!mlen)
     {
-        return SMB_ERR_OVERFLOW; // GCOVR_EXCL_LINE - unreachable body of the guard above
+        return SMB_ERR_OVERFLOW;
     }
 
     // Seed the preauth-integrity hash and fold the NEGOTIATE request (the bytes are final - NEGOTIATE is
@@ -332,9 +332,9 @@ static SmbResult smb_session_setup(const SmbConfig *cfg, const char *domain, pro
     size_t sp1_n = pc_spnego_wrap_negotiate(ntneg, ntneg_n, sp1, sizeof(sp1));
     size_t mlen = pc_smb2_build_session_setup(s_smb.tx + 4, sizeof(s_smb.tx) - 4, 1, 0, SMB2_NEGOTIATE_SIGNING_ENABLED,
                                               sp1, sp1_n);
-    if (!mlen) // GCOVR_EXCL_LINE - the static_assert at the top of this file makes this unreachable
+    if (!mlen)
     {
-        return SMB_ERR_OVERFLOW; // GCOVR_EXCL_LINE - unreachable body of the guard above
+        return SMB_ERR_OVERFLOW;
     }
     pc_smb_preauth_update(preauth, s_smb.tx + 4, mlen); // fold SESSION_SETUP request 1 (unsigned)
     SmbResult rt = SMB_ERR_IO;
@@ -414,9 +414,9 @@ static SmbResult smb_session_setup(const SmbConfig *cfg, const char *domain, pro
     // folded into the preauth chain (unsigned), whose final value derives the SMB 3.x signing key.
     mlen = pc_smb2_build_session_setup(s_smb.tx + 4, sizeof(s_smb.tx) - 4, 2, *session_id,
                                        SMB2_NEGOTIATE_SIGNING_ENABLED, s_smb.sp2, sp2_n);
-    if (!mlen) // GCOVR_EXCL_LINE - the static_assert at the top of this file makes this unreachable
+    if (!mlen)
     {
-        return SMB_ERR_OVERFLOW; // GCOVR_EXCL_LINE - unreachable body of the guard above
+        return SMB_ERR_OVERFLOW;
     }
     pc_smb_preauth_update(preauth, s_smb.tx + 4, mlen); // fold request 2 -> the key-derivation hash is now final
 
@@ -509,9 +509,9 @@ static SmbResult smb_tree_connect(const SmbConfig *cfg, uint64_t session_id, con
         return SMB_ERR_OVERFLOW;
     }
     size_t mlen = pc_smb2_build_tree_connect(s_smb.tx + 4, sizeof(s_smb.tx) - 4, 3, session_id, s_smb.utf16, utf16_n);
-    if (!mlen) // GCOVR_EXCL_LINE - the static_assert at the top of this file makes this unreachable
+    if (!mlen)
     {
-        return SMB_ERR_OVERFLOW; // GCOVR_EXCL_LINE - unreachable body of the guard above
+        return SMB_ERR_OVERFLOW;
     }
     SmbResult rt = SMB_ERR_IO;
     int rl = smb_round_trip(send, recv, ctx, mlen, sign, crypt, &rt);
@@ -551,9 +551,9 @@ static SmbResult smb_create(const SmbConfig *cfg, SmbHandle *h, uint64_t session
     size_t mlen = pc_smb2_build_create(s_smb.tx + 4, sizeof(s_smb.tx) - 4, 4, session_id, tree_id, cfg->desired_access,
                                        SMB2_FILE_SHARE_READ | SMB2_FILE_SHARE_WRITE, cfg->disposition,
                                        SMB2_FILE_NON_DIRECTORY_FILE, s_smb.utf16, utf16_n);
-    if (!mlen) // GCOVR_EXCL_LINE - the static_assert at the top of this file makes this unreachable
+    if (!mlen)
     {
-        return SMB_ERR_OVERFLOW; // GCOVR_EXCL_LINE - unreachable body of the guard above
+        return SMB_ERR_OVERFLOW;
     }
     SmbResult rt = SMB_ERR_IO;
     int rl = smb_round_trip(send, recv, ctx, mlen, sign, crypt, &rt);
@@ -660,9 +660,9 @@ SmbResult smb_close(SmbHandle *h, SmbSendFn send, SmbRecvFn recv, void *ctx)
     }
     size_t mlen = pc_smb2_build_close(s_smb.tx + 4, sizeof(s_smb.tx) - 4, h->next_message_id, h->session_id, h->tree_id,
                                       h->file_id);
-    if (!mlen) // GCOVR_EXCL_LINE - the static_assert at the top of this file makes this unreachable
+    if (!mlen)
     {
-        return SMB_ERR_OVERFLOW; // GCOVR_EXCL_LINE - unreachable body of the guard above
+        return SMB_ERR_OVERFLOW;
     }
     SmbSign sign = {h->signing_active, h->signing_algo, {0}};
     memcpy(sign.key, h->signing_key, sizeof(sign.key));
@@ -714,9 +714,9 @@ SmbResult smb_read(SmbHandle *h, uint64_t offset, uint8_t *out, size_t cap, size
         }
         size_t mlen = pc_smb2_build_read(s_smb.tx + 4, sizeof(s_smb.tx) - 4, h->next_message_id, h->session_id,
                                          h->tree_id, h->file_id, (uint32_t)want, offset + total);
-        if (!mlen) // GCOVR_EXCL_LINE - the static_assert at the top of this file makes this unreachable
+        if (!mlen)
         {
-            return SMB_ERR_OVERFLOW; // GCOVR_EXCL_LINE - unreachable body of the guard above
+            return SMB_ERR_OVERFLOW;
         }
         SmbResult rt = SMB_ERR_IO;
         int rl = smb_round_trip(send, recv, ctx, mlen, &sign, &crypt, &rt);
@@ -783,9 +783,9 @@ SmbResult smb_write(SmbHandle *h, uint64_t offset, const uint8_t *data, size_t l
         }
         size_t mlen = pc_smb2_build_write(s_smb.tx + 4, sizeof(s_smb.tx) - 4, h->next_message_id, h->session_id,
                                           h->tree_id, h->file_id, data + total, want, offset + total);
-        if (!mlen) // GCOVR_EXCL_LINE - the static_assert at the top of this file makes this unreachable
+        if (!mlen)
         {
-            return SMB_ERR_OVERFLOW; // GCOVR_EXCL_LINE - unreachable body of the guard above
+            return SMB_ERR_OVERFLOW;
         }
         SmbResult rt = SMB_ERR_IO;
         int rl = smb_round_trip(send, recv, ctx, mlen, &sign, &crypt, &rt);

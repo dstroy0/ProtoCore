@@ -149,7 +149,7 @@ static void emit_match(pc_bit_writer *w, const SshDeflate *z, int len, int dist)
     }
 
     int di = 0;
-    while (di < 29 && dist >= DIST_BASE[di + 1]) // GCOVR_EXCL_BR_LINE  di==29 exhaustion is unreachable:
+    while (di < 29 && dist >= DIST_BASE[di + 1])
     {
         di++; // zlib_chain_match caps dist to PC_WINDOW (8192) < DIST_BASE[26] (8193), so di never passes 25
     }

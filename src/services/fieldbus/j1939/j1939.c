@@ -97,11 +97,11 @@ proto_bool pc_j1939_build_request(CanFrame *out, uint8_t sa, uint8_t da, uint32_
         return PROTO_FALSE;
     }
     // Request PGN (priority 6): 3-octet little-endian requested PGN.
-    if (!ext_frame(out, 6, J1939_PGN_REQUEST, sa, da, 3)) // GCOVR_EXCL_LINE  unreachable: fixed priority 6 +
-                                                          // J1939_PGN_REQUEST (<=0x3FFFF), encode can't fail
+    if (!ext_frame(out, 6, J1939_PGN_REQUEST, sa, da, 3))
+    // J1939_PGN_REQUEST (<=0x3FFFF), encode can't fail
     {
-        return PROTO_FALSE; // GCOVR_EXCL_LINE  unreachable: fixed priority 6 + J1939_PGN_REQUEST (<=0x3FFFF), encode
-                            // can't fail
+        return PROTO_FALSE;
+        // can't fail
     }
     out->data[0] = (uint8_t)requested_pgn;
     out->data[1] = (uint8_t)(requested_pgn >> 8);
@@ -134,12 +134,12 @@ uint64_t pc_j1939_build_name(proto_bool arbitrary_address_capable, uint8_t indus
 proto_bool pc_j1939_build_address_claim(CanFrame *out, uint8_t sa, uint64_t name)
 {
     // Address Claimed (priority 6, broadcast): NAME as 8 octets, little-endian.
-    if (!ext_frame(out, 6, J1939_PGN_ADDRESS_CLAIM, sa, J1939_ADDR_GLOBAL, 8)) // GCOVR_EXCL_LINE  unreachable: fixed
-                                                                               // priority 6 + PGN_ADDRESS_CLAIM
-                                                                               // (<=0x3FFFF), encode can't fail
+    if (!ext_frame(out, 6, J1939_PGN_ADDRESS_CLAIM, sa, J1939_ADDR_GLOBAL, 8))
+    // priority 6 + PGN_ADDRESS_CLAIM
+    // (<=0x3FFFF), encode can't fail
     {
-        return PROTO_FALSE; // GCOVR_EXCL_LINE  unreachable: fixed priority 6 + J1939_PGN_ADDRESS_CLAIM (<=0x3FFFF),
-                            // encode can't fail
+        return PROTO_FALSE;
+        // encode can't fail
     }
     for (int i = 0; i < 8; i++)
     {
@@ -159,12 +159,12 @@ proto_bool pc_j1939_build_bam_cm(CanFrame *out, uint8_t sa, uint32_t pgn, uint16
     {
         return PROTO_FALSE; // BAM is for 9..1785 octet messages
     }
-    if (!ext_frame(out, 7, J1939_PGN_TP_CM, sa, J1939_ADDR_GLOBAL, 8)) // GCOVR_EXCL_LINE  unreachable: fixed priority
-                                                                       // 7 + J1939_PGN_TP_CM (<=0x3FFFF), encode
-                                                                       // can't fail
+    if (!ext_frame(out, 7, J1939_PGN_TP_CM, sa, J1939_ADDR_GLOBAL, 8))
+    // 7 + J1939_PGN_TP_CM (<=0x3FFFF), encode
+    // can't fail
     {
-        return PROTO_FALSE; // GCOVR_EXCL_LINE  unreachable: fixed priority 7 + J1939_PGN_TP_CM (<=0x3FFFF), encode
-                            // can't fail
+        return PROTO_FALSE;
+        // can't fail
     }
     out->data[0] = J1939_TP_CM_BAM;
     out->data[1] = (uint8_t)total_size; // message size, little-endian
@@ -184,11 +184,11 @@ proto_bool pc_j1939_build_tp_dt(CanFrame *out, uint8_t sa, uint8_t da, uint8_t s
     {
         return PROTO_FALSE;
     }
-    if (!ext_frame(out, 7, J1939_PGN_TP_DT, sa, da, 8)) // GCOVR_EXCL_LINE  unreachable: fixed priority 7 +
-                                                        // J1939_PGN_TP_DT (<=0x3FFFF), encode can't fail
+    if (!ext_frame(out, 7, J1939_PGN_TP_DT, sa, da, 8))
+    // J1939_PGN_TP_DT (<=0x3FFFF), encode can't fail
     {
-        return PROTO_FALSE; // GCOVR_EXCL_LINE  unreachable: fixed priority 7 + J1939_PGN_TP_DT (<=0x3FFFF), encode
-                            // can't fail
+        return PROTO_FALSE;
+        // can't fail
     }
     out->data[0] = seq;                      // sequence number, 1-based
     memcpy(out->data + 1, chunk, chunk_len); // remaining octets stay 0xFF padding
@@ -210,11 +210,11 @@ J1939TpResult pc_j1939_tp_feed(J1939TpRx *rx, const CanFrame *f)
         return J1939_TP_IGNORED;
     }
     J1939Id id;
-    if (!pc_j1939_decode_id(f->id, &id)) // GCOVR_EXCL_LINE  unreachable: decode_id only fails on a null out, and &id
-                                         // is non-null
+    if (!pc_j1939_decode_id(f->id, &id))
+    // is non-null
     {
-        return J1939_TP_IGNORED; // GCOVR_EXCL_LINE  unreachable: decode_id only fails on a null out, and
-                                 // &id is non-null
+        return J1939_TP_IGNORED;
+        // &id is non-null
     }
 
     if (id.pgn == J1939_PGN_TP_CM && f->dlc >= 8)

@@ -38,7 +38,7 @@ static HalRsaCtx s_rsa = {NULL, portMUX_INITIALIZER_UNLOCKED};
 
 // Is the accelerator already clocked (and, where applicable, powered)? Reads clock-domain registers only,
 // which are always accessible even when the RSA block itself is unclocked.
-static proto_bool rsa_is_up()
+static proto_bool rsa_is_up(void)
 {
     const proto_bool clocked = (PC_HW_REG(PC_RSA_CLK_REG) & PC_RSA_CLK_BIT) != 0u;
 #if PC_RSA_HAS_PD
@@ -53,7 +53,7 @@ static proto_bool rsa_is_up()
 // the sibling resets that would otherwise hold RSA in reset), power up the RSA memory (hw_ver1 only), then
 // spin until the memory-init completes. The clock/reset registers are RMW-shared with other peripherals, so
 // the caller holds s_rsa.hw_mux. Each RMW is an explicit read-modify-write of one bit.
-static void rsa_bring_up()
+static void rsa_bring_up(void)
 {
     uint32_t v = PC_HW_REG(PC_RSA_CLK_REG);
     v |= PC_RSA_CLK_BIT; // bus clock on

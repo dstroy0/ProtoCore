@@ -21,6 +21,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_DEVICE_ID
 
 /** @brief Length of a formatted UUID string including the null terminator. */
@@ -44,4 +46,7 @@ void pc_device_uuid(char out[PC_UUID_STR_LEN]);
 #endif
 
 #endif // PC_ENABLE_DEVICE_ID
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_DEVICE_ID_H

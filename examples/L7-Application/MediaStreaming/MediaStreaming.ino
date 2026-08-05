@@ -372,7 +372,7 @@ void setup()
 #if MEDIA_SUPPORTED
     media_begin();
 #endif
-    begin_http(80);
+    begin_http(80, NULL);
 }
 
 void loop()

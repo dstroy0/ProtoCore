@@ -16,7 +16,8 @@
 
 #include <string.h>
 
-#if PROTOCORE_HOT
+#if PROTOCORE_HOT || PC_PLATFORM_HAS_BUS
+#include "services/peripherals/uart.h" // the shared UART owner
 #endif
 static const uint8_t HDR[4] = {0xF4, 0xF3, 0xF2, 0xF1};
 static const uint8_t FTR[4] = {0xF8, 0xF7, 0xF6, 0xF5};
@@ -238,16 +239,22 @@ proto_bool pc_hmmd_ack_matches(const HmmdAck *ack, uint16_t word)
 // UART binding
 // ---------------------------------------------------------------------------
 
-#if PROTOCORE_HOT
+#if PROTOCORE_HOT || PC_PLATFORM_HAS_BUS
+
+// Bytes taken from the UART per poll. A report frame is far shorter, so one poll carries at least
+// a whole frame and the read stays bounded (SRC_LAW rule 5).
+#define HMMD_RX_CHUNK 64
 
 // All HMMD UART-binding state, owned by one instance (internal linkage): the frame reassembler, the
-// last decoded report, and the have-report flag, grouped so it is one named owner unreachable from
-// any other translation unit.
+// last decoded report, the have-report flag, and the receive chunk, grouped so it is one named
+// owner unreachable from any other translation unit. The chunk is a member rather than a local
+// because it is filled per poll on the request path.
 typedef struct
 {
     HmmdStream stream;
     HmmdReport last;
     proto_bool have;
+    uint8_t rx[HMMD_RX_CHUNK];
 } HmmdCtx;
 static HmmdCtx s_hmmd;
 
@@ -255,17 +262,17 @@ proto_bool pc_hmmd_begin(int rx_pin, int tx_pin)
 {
     pc_hmmd_stream_reset(&s_hmmd.stream);
     s_hmmd.have = PROTO_FALSE;
-    Serial2.begin(PC_HMMD_BAUD, SERIAL_8N1, rx_pin, tx_pin);
-    return PROTO_TRUE;
+    return pc_uart_begin((uint8_t)PC_HMMD_UART, PC_HMMD_BAUD, rx_pin, tx_pin);
 }
 
-proto_bool pc_hmmd_poll()
+proto_bool pc_hmmd_poll(void)
 {
     proto_bool fresh = PROTO_FALSE;
-    while (Serial2.available())
+    size_t n = pc_uart_read((uint8_t)PC_HMMD_UART, s_hmmd.rx, sizeof(s_hmmd.rx), 0);
+    for (size_t i = 0; i < n; i++)
     {
         HmmdReport r;
-        if (pc_hmmd_stream_push(&s_hmmd.stream, (uint8_t)Serial2.read(), &r))
+        if (pc_hmmd_stream_push(&s_hmmd.stream, s_hmmd.rx[i], &r))
         {
             s_hmmd.last = r;
             s_hmmd.have = PROTO_TRUE;
@@ -275,24 +282,26 @@ proto_bool pc_hmmd_poll()
     return fresh;
 }
 
-const HmmdReport *pc_hmmd_last()
+const HmmdReport *pc_hmmd_last(void)
 {
     return s_hmmd.have ? &s_hmmd.last : NULL;
 }
 
 #else // host build: no UART
 
-proto_bool pc_hmmd_begin(int, int)
+proto_bool pc_hmmd_begin(int rx_pin, int tx_pin)
+{
+    (void)rx_pin;
+    (void)tx_pin;
+    return PROTO_FALSE;
+}
+
+proto_bool pc_hmmd_poll(void)
 {
     return PROTO_FALSE;
 }
 
-proto_bool pc_hmmd_poll()
-{
-    return PROTO_FALSE;
-}
-
-const HmmdReport *pc_hmmd_last()
+const HmmdReport *pc_hmmd_last(void)
 {
     return NULL;
 }

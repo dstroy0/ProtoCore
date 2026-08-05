@@ -17,7 +17,7 @@
 
 #if PC_ENABLE_DMA
 
-#include <string.h> // memcpy
+#include "shared_primitives/rawmemcpy.h" // proto_raw_read: the submitted span into the TX buffer
 
 #if PROTOCORE_HOT
 #include "server/clock/clock.h" // pc_millis(), pc_micros()
@@ -130,9 +130,9 @@ static void emit(dma_channel *c, uint8_t id, pc_dma_dir dir, const uint8_t *data
     ev.periph = c->periph;
     ev.dir = dir;
     ev._pad = 0;
-    if (c->cb) // GCOVR_EXCL_BR_LINE  cb is guaranteed non-null while a channel is open:
-               // pc_dma_open rejects a null on_complete, and emit() only runs via pump(),
-               // which pc_dma_poll() only calls for channels with open == true.
+    if (c->cb)
+    // pc_dma_open rejects a null on_complete, and emit() only runs via pump(),
+    // which pc_dma_poll() only calls for channels with open == true.
     {
         c->cb(&ev, c->ctx);
     }
@@ -214,7 +214,7 @@ proto_bool pc_dma_tx_submit(uint8_t ch, const uint8_t *buf, uint16_t len)
     {
         return PROTO_FALSE;
     }
-    memcpy(c->tx_buf, buf, len);
+    proto_raw_read(c->tx_buf, buf, len);
     c->tx_len = len;
     c->tx_busy = PROTO_TRUE;
     return PROTO_TRUE;

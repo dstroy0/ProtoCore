@@ -308,7 +308,7 @@ static proto_bool r_request_header(UaReader *r, uint32_t *request_handle)
     pc_ua_r_nodeid(r, &auth);     // AuthenticationToken
     (void)pc_ua_r_u64(r);         // Timestamp (DateTime)
     uint32_t rh = pc_ua_r_u32(r); // RequestHandle
-    if (request_handle) // GCOVR_EXCL_LINE  file-static; all three call sites pass the address of a request-handle field
+    if (request_handle)
     {
         *request_handle = rh;
     }

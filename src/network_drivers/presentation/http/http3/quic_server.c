@@ -187,12 +187,12 @@ static QuicSlot *alloc_slot()
             memset(s, 0, sizeof *s);
             s->used = PROTO_TRUE;
             s->id = s_quic.next_id++;
-            if (s_quic.next_id == 0) // GCOVR_EXCL_BR_LINE  the check itself runs every alloc; only the
-                                     // true branch (wrap) is unreachable - it needs 2^32 allocations in
-                                     // one process lifetime (next_id is never reset except by begin()),
-                                     // which no host test can drive
+            if (s_quic.next_id == 0)
+            // true branch (wrap) is unreachable - it needs 2^32 allocations in
+            // one process lifetime (next_id is never reset except by begin()),
+            // which no host test can drive
             {
-                s_quic.next_id = 1; // GCOVR_EXCL_LINE  dead unless the wrap above is taken; never hand out id 0
+                s_quic.next_id = 1;
             }
             return s;
         }
@@ -258,12 +258,12 @@ static QuicSlot *open_conn(const QuicLongHeader *lh, const char *ip, uint16_t po
 static QuicSlot *route(const uint8_t *dg, size_t len, proto_bool *is_initial, QuicLongHeader *lh_out)
 {
     *is_initial = PROTO_FALSE;
-    if (len < 1) // GCOVR_EXCL_BR_LINE  the check itself runs on every route() call (poll's only caller);
-                 // only the true branch is unreachable - route()'s sole call site is
-                 // pc_quic_server_poll, fed by ring_pop() from a ring that ring_push() (both
-                 // ingest paths) already refuses to fill with len==0, so len>=1 always holds here
+    if (len < 1)
+    // only the true branch is unreachable - route()'s sole call site is
+    // pc_quic_server_poll, fed by ring_pop() from a ring that ring_push() (both
+    // ingest paths) already refuses to fill with len==0, so len>=1 always holds here
     {
-        return NULL; // GCOVR_EXCL_LINE  dead unless the len<1 branch above is taken
+        return NULL;
     }
     if (pc_quic_is_long_header(dg[0]))
     {
@@ -300,12 +300,10 @@ static QuicSlot *route(const uint8_t *dg, size_t len, proto_bool *is_initial, Qu
         QuicSlot *s = &s_qpool.pool[i];
         // scid_len is always PC_QUIC_SCID_LEN (only this server sets it, at conn init above), so its
         // != arm below is a defensive guard no host input can reach.
-        // GCOVR_EXCL_START
         if (s->used && s->qc.scid_len == PC_QUIC_SCID_LEN && memcmp(dg + 1, s->qc.scid, PC_QUIC_SCID_LEN) == 0)
         {
             return s;
         }
-        // GCOVR_EXCL_STOP
     }
     return NULL;
 }
@@ -336,8 +334,9 @@ static void flush_and_reap(uint32_t now_ms)
 }
 
 #if PROTOCORE_HOT
-static void udp_ingest_cb(const uint8_t *data, size_t len, const struct pc_udp_peer *peer, void * /*ctx*/)
+static void udp_ingest_cb(const uint8_t *data, size_t len, const struct pc_udp_peer *peer, void *ctx)
 {
+    (void)ctx;
     char ip[16];
     uint16_t port = 0;
     if (!pc_udp_peer_addr(peer, ip, sizeof ip, &port))

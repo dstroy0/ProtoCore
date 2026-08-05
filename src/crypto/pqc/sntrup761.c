@@ -153,13 +153,13 @@ static void sntrup761_decode(uint16_t *out, const uint8_t *S, const uint16_t *M,
         // 1608 and 3475 respectively for those two configurations: never <= 256. The M[0]==1 and
         // M[0]<=256 arms exist for other parameter sets this generic routine was written to support
         // upstream; unreachable from any host input given this file's two fixed call sites.
-        if (M[0] == 1) // GCOVR_EXCL_BR_LINE  see above: M[0] is never 1 for either fixed caller
+        if (M[0] == 1)
         {
-            out[0] = 0; // GCOVR_EXCL_LINE
+            out[0] = 0;
         }
-        else if (M[0] <= 256) // GCOVR_EXCL_BR_LINE  see above: M[0] is never <= 256 for either fixed caller
+        else if (M[0] <= 256)
         {
-            out[0] = uint32_mod_uint14(S[0], M[0]); // GCOVR_EXCL_LINE
+            out[0] = uint32_mod_uint14(S[0], M[0]);
         }
         else
         {
@@ -181,10 +181,10 @@ static void sntrup761_decode(uint16_t *out, const uint8_t *S, const uint16_t *M,
             S += 2;
             M2[i / 2] = (uint16_t)((((m + 255) >> 8) + 255) >> 8);
         }
-        else if (m >= 16384) // GCOVR_EXCL_BR_LINE  m = M[i]*M[i+1] is a function of the two fixed
-                             // caller moduli (Q or (Q+2)/3) and P = 761 alone, never of decoded data;
-                             // for both configurations m never drops below 16384 at any recursion
-                             // level, so the else below is unreachable from any host input.
+        else if (m >= 16384)
+        // caller moduli (Q or (Q+2)/3) and P = 761 alone, never of decoded data;
+        // for both configurations m never drops below 16384 at any recursion
+        // level, so the else below is unreachable from any host input.
         {
             bottomt[i / 2] = 256;
             bottomr[i / 2] = S[0];
@@ -193,9 +193,9 @@ static void sntrup761_decode(uint16_t *out, const uint8_t *S, const uint16_t *M,
         }
         else
         {
-            bottomt[i / 2] = 1;      // GCOVR_EXCL_LINE
-            bottomr[i / 2] = 0;      // GCOVR_EXCL_LINE
-            M2[i / 2] = (uint16_t)m; // GCOVR_EXCL_LINE
+            bottomt[i / 2] = 1;
+            bottomr[i / 2] = 0;
+            M2[i / 2] = (uint16_t)m;
         }
     }
     if (i < len)
@@ -274,9 +274,9 @@ static void crypto_sort_int32(int32_t *x, long long n)
     long long top, p, q, r, i, j;
     // The sole caller (crypto_sort_uint32, itself only called from Short_fromlist) always passes
     // n = P = 761, a fixed compile-time constant, so n < 2 can never hold for any host input.
-    if (n < 2) // GCOVR_EXCL_BR_LINE  see above: n is always 761
+    if (n < 2)
     {
-        return; // GCOVR_EXCL_LINE
+        return;
     }
     top = 1;
     while (top < n - top)
@@ -312,9 +312,9 @@ static void crypto_sort_int32(int32_t *x, long long n)
                     // confirmed by exhaustively tracing the (i,j,p,q) sequence for n = 761, where this
                     // arm is never taken. Verbatim upstream djbsort shape kept for other n (see file
                     // header); unreachable from any host input at this file's fixed P.
-                    if (j == n - q) // GCOVR_EXCL_BR_LINE  see above: never true for n = 761
+                    if (j == n - q)
                     {
-                        goto done; // GCOVR_EXCL_LINE
+                        goto done;
                     }
                     int32_t a = x[j + p];
                     for (r = q; r > p; r >>= 1)

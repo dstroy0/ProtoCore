@@ -185,7 +185,7 @@ void setup()
     on_http("/api/stop", HTTP_GET, stop_handler);
     on_http("/degrade", HTTP_GET, degrade_handler);
     on_http("/shell", HTTP_GET, shell_handler);
-    begin_http(80);
+    begin_http(80, NULL);
 
     uint32_t ip = pc_net_egress_ip();
     Serial.printf("http://%u.%u.%u.%u/\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),

@@ -48,13 +48,13 @@ void setup()
                       (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
         on_http("/", HTTP_GET, handle_root);
-        begin_http(80);
+        begin_http(80, NULL);
         Serial.println("Station mode; serving on port 80");
     }
     else
     {
         // No credentials: bring up the captive portal.
-        begin_http(80);
+        begin_http(80, NULL);
         pc_provisioning_begin("PC-Setup");
         Serial.println("Provisioning: join WiFi 'PC-Setup' and open any page");
     }

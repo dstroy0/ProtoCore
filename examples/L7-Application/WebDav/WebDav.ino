@@ -68,7 +68,7 @@ void setup()
     }
 
     dav("/dav", LittleFS, "/dav");
-    begin_http(80);
+    begin_http(80, NULL);
     Serial.println("WebDAV share at http://<ip>/dav");
 }
 

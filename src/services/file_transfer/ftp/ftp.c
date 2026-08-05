@@ -20,7 +20,7 @@ static size_t pc_ftp_emit(char *buf, size_t cap, size_t n, const char *s, size_t
     // Overflow-safe bound: n <= cap is invariant (every non-sentinel return is <= cap), but guard
     // n > cap explicitly so cap - n provably cannot underflow; written as subtraction so a huge
     // slen cannot wrap n + slen.
-    if (n == FTP_SENT || n > cap || slen > cap - n) // GCOVR_EXCL_BR_LINE  n > cap can't fire: every
+    if (n == FTP_SENT || n > cap || slen > cap - n)
     {
         return FTP_SENT; // caller passes n from 0 or a prior emit's return,
                          // which the invariant above keeps <= cap

@@ -56,7 +56,7 @@ void setup()
     }
 
     on_http("/mdns", HTTP_GET, mdns_handler);
-    begin_http(80);
+    begin_http(80, NULL);
 
     // Bring up the responder and seed the TXT record the refresher re-applies.
     if (pc_mdns_begin("adaptive", 80))

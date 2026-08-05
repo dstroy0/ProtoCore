@@ -28,6 +28,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_ESPNOW
 
 /** @brief Envelope header size (magic + type + length). */
@@ -99,4 +101,7 @@ proto_bool pc_espnow_send(const uint8_t mac[6], uint8_t type, const uint8_t *pay
 proto_bool pc_espnow_broadcast(uint8_t type, const uint8_t *payload, size_t len);
 
 #endif // PC_ENABLE_ESPNOW
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_ESPNOW_H

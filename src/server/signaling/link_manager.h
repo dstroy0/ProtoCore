@@ -21,6 +21,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_LINK_MANAGER
 
 /** @brief Interface kind (informational; selection is by priority). Stored in a uint8_t field and
@@ -64,4 +66,7 @@ int pc_link_active(const LinkManager *m);
 proto_bool pc_link_set(LinkManager *m, size_t idx, proto_bool up, int *from, int *to);
 
 #endif // PC_ENABLE_LINK_MANAGER
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_LINK_MANAGER_H

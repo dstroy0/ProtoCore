@@ -35,6 +35,10 @@
 #define PC_PHYSICAL_HAS_BACKEND 0
 #endif
 
+// The ESP backend is C++ (it calls the Arduino WiFi and ETH objects), so these names carry C
+// linkage and the C callers above this layer link against them unchanged.
+PROTO_BEGIN_DECLS
+
 /**
  * @brief Connect to a WiFi access point.
  *
@@ -224,5 +228,7 @@ void pc_phy_monitor_set_channel(uint8_t channel);
 
 /** @brief Leave monitor mode. */
 void pc_phy_monitor_end(void);
+
+PROTO_END_DECLS
 
 #endif

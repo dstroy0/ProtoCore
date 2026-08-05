@@ -112,7 +112,7 @@ void regen_digest_secret(void)
         memcpy(seed + i * 4, &r, 4);
     }
     uint32_t c = counter;
-    uint32_t t = (uint32_t)millis();
+    uint32_t t = (uint32_t)pc_millis();
     memcpy(seed + 16, &c, 4);
     memcpy(seed + 20, &t, 4);
     uint8_t d[PC_SHA256_DIGEST_LEN];
@@ -258,8 +258,9 @@ void send_unauth(uint8_t slot_id, const Route *r, proto_bool stale)
     pc_resp_end(slot_id, 401, (int)(sizeof(body) - 1), keep, /*pre_flushed=*/PROTO_TRUE);
 }
 
-proto_bool check_basic_auth(uint8_t /*slot_id*/, HttpReq *req, const Route *r)
+proto_bool check_basic_auth(uint8_t slot_id, HttpReq *req, const Route *r)
 {
+    (void)slot_id;
     const char *auth_hdr = http_get_header(req, "Authorization");
     if (!auth_hdr || strncmp(auth_hdr, "Basic ", 6) != 0)
     {
@@ -297,8 +298,9 @@ proto_bool check_basic_auth(uint8_t /*slot_id*/, HttpReq *req, const Route *r)
 // Validate an Authorization: Digest header (RFC 7616, SHA-256, qop=auth).
 // HA1 = SHA256(user:realm:pass), HA2 = SHA256(method:uri),
 // response = SHA256(HA1:nonce:nc:cnonce:qop:HA2).
-proto_bool check_digest_auth(uint8_t /*slot_id*/, HttpReq *req, const Route *r, proto_bool *stale)
+proto_bool check_digest_auth(uint8_t slot_id, HttpReq *req, const Route *r, proto_bool *stale)
 {
+    (void)slot_id;
     // Use the full-length Authorization capture (the scratch header value is
     // capped at MAX_VAL_LEN, far shorter than a Digest header).
     const char *hdr = req->authorization;

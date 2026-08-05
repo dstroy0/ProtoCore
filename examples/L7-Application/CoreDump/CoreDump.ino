@@ -151,7 +151,7 @@ void setup()
     {
         serve_static("/files/", SD_MMC, "/"); // download the saved dump
     }
-    begin_http(80);
+    begin_http(80, NULL);
 
     uint32_t ip = pc_net_egress_ip();
     Serial.printf("http://%u.%u.%u.%u/exception  (sd=%s ftp=%s)\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),

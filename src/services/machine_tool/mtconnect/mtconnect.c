@@ -15,11 +15,11 @@
 static void put(pc_mtc_streams *s, const char *text)
 {
     // null text is a no-op: harden the helper itself, not just every call site.
-    if (!s->ok || !text) // GCOVR_EXCL_BR_LINE  !text is unreachable: put() has internal linkage, so
-                         // every call site lives in this file; each passes a string literal, an
-                         // x ? x : "" ternary, or a local that can only ever hold a literal (wrap,
-                         // sub, mtc_cat_str()'s return) - never a raw possibly-null variable. Kept
-                         // as a defensive backstop only.
+    if (!s->ok || !text)
+    // every call site lives in this file; each passes a string literal, an
+    // x ? x : "" ternary, or a local that can only ever hold a literal (wrap,
+    // sub, mtc_cat_str()'s return) - never a raw possibly-null variable. Kept
+    // as a defensive backstop only.
     {
         return;
     }
@@ -36,11 +36,11 @@ static void put(pc_mtc_streams *s, const char *text)
 static void put_escaped(pc_mtc_streams *s, const char *text)
 {
     // null text is a no-op: harden the helper itself, not just every call site.
-    if (!s->ok || !text) // GCOVR_EXCL_BR_LINE  !text is unreachable: put_escaped() has internal
-                         // linkage, so every call site lives in this file; each passes an
-                         // x ? x : "" ternary, or is reached only inside an "if (x && x[0])" guard
-                         // (name/units/serialNumber/toolId/deviceUuid/timestamp/limit) that already
-                         // proved x non-null. Kept as a defensive backstop only.
+    if (!s->ok || !text)
+    // linkage, so every call site lives in this file; each passes an
+    // x ? x : "" ternary, or is reached only inside an "if (x && x[0])" guard
+    // (name/units/serialNumber/toolId/deviceUuid/timestamp/limit) that already
+    // proved x non-null. Kept as a defensive backstop only.
     {
         return;
     }
@@ -229,9 +229,9 @@ size_t pc_mtc_error(uint64_t instance_id, const char *error_code, const char *me
     put(&s, "</Error></Errors></MTConnectError>");
     // Null-check `out` directly (not just s.ok, which already implies it) so the NUL terminator
     // write is provably safe to the analyzer as well as at runtime.
-    if (!s.ok || out == NULL) // GCOVR_EXCL_BR_LINE  out==nullptr here is unreachable: s.ok already
-                              // encodes out!=nullptr (s.ok assignment above), so when s.ok is
-                              // true out cannot be null.
+    if (!s.ok || out == NULL)
+    // encodes out!=nullptr (s.ok assignment above), so when s.ok is
+    // true out cannot be null.
     {
         return 0;
     }
@@ -402,9 +402,9 @@ static void mtc_copy_str(char *dst, size_t cap, const char *src)
     // cap == 0 is unreachable: every call site passes sizeof() of a fixed pc_mtc_observation field
     // (PC_MTC_STR_MAX/TS_MAX/PC_VAL_MAX + 1, all compile-time non-zero constants in protocore_config.h),
     // never a literal 0. Kept as a defensive backstop against a future zero-sized field.
-    if (cap == 0) // GCOVR_EXCL_LINE
+    if (cap == 0)
     {
-        return; // GCOVR_EXCL_LINE
+        return;
     }
     size_t i = 0;
     if (src)

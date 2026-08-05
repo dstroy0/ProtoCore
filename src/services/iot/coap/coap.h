@@ -39,6 +39,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_COAP
 
 // CoAP message types (RFC 7252 §3, the 2-bit T field).
@@ -230,5 +232,7 @@ void pc_coap_notify(const char *path);
 #endif
 
 #endif // PC_ENABLE_COAP
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_COAP_H

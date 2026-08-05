@@ -17,8 +17,7 @@
 #ifndef PROTOCORE_SHA512_H
 #define PROTOCORE_SHA512_H
 
-#include <stddef.h>
-#include <stdint.h>
+#include "protocore_config.h" // the entry point: types.h for the widths, PROTOCORE_HOT for the context below
 
 /** @brief SHA-512 digest length in bytes. */
 #define PC_SHA512_DIGEST_LEN 64

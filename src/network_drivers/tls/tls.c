@@ -913,7 +913,7 @@ int pc_tls_client_run(const char *host, const uint8_t *req, size_t reqlen, uint8
             {
                 break;
             }
-            if ((int32_t)(deadline_ms - millis()) <= 0)
+            if ((int32_t)(deadline_ms - pc_millis()) <= 0)
             {
                 ret = -1;
                 break;
@@ -952,7 +952,7 @@ int pc_tls_client_run(const char *host, const uint8_t *req, size_t reqlen, uint8
             {
                 break;
             }
-            if ((int32_t)(deadline_ms - millis()) <= 0)
+            if ((int32_t)(deadline_ms - pc_millis()) <= 0)
             {
                 break;
             }
@@ -975,7 +975,7 @@ int pc_tls_client_run(const char *host, const uint8_t *req, size_t reqlen, uint8
             }
             if (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE)
             {
-                if ((int32_t)(deadline_ms - millis()) <= 0)
+                if ((int32_t)(deadline_ms - pc_millis()) <= 0)
                 {
                     break;
                 }

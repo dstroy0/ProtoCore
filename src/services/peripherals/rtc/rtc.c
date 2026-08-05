@@ -14,9 +14,8 @@
 
 #if PC_ENABLE_RTC
 
-#if PROTOCORE_HOT
+#if PROTOCORE_HOT || PC_PLATFORM_HAS_BUS
 #include "services/peripherals/i2c.h"
-#include <Wire.h>
 #endif
 static int bcd2int(uint8_t b)
 {
@@ -31,9 +30,9 @@ static uint8_t int2bcd(int v)
 static long days_from_civil(int y, int m, int d)
 {
     y -= m <= 2;
-    long era = (y >= 0 ? y : y - 399) / 400; // GCOVR_EXCL_BR_LINE  y<0 unreachable: the only caller
-                                             // feeds year = 2000 + bcd2int(r[6]) (uint8_t, so
-                                             // bcd2int >= 0) minus at most 1 for m<=2, so y >= 1999
+    long era = (y >= 0 ? y : y - 399) / 400;
+    // feeds year = 2000 + bcd2int(r[6]) (uint8_t, so
+    // bcd2int >= 0) minus at most 1 for m<=2, so y >= 1999
     unsigned yoe = (unsigned)(y - era * 400);
     unsigned doy = (153u * (unsigned)(m + (m > 2 ? -3 : 9)) + 2u) / 5u + (unsigned)d - 1u;
     unsigned doe = yoe * 365u + yoe / 4u - yoe / 100u + doy;
@@ -42,9 +41,9 @@ static long days_from_civil(int y, int m, int d)
 static void civil_from_days(long z, int *y, int *m, int *d)
 {
     z += 719468;
-    long era = (z >= 0 ? z : z - 146096) / 146097; // GCOVR_EXCL_BR_LINE  z<0 unreachable: the only
-                                                   // caller passes days = epoch/86400u, and epoch
-                                                   // is uint32_t so days is always >= 0
+    long era = (z >= 0 ? z : z - 146096) / 146097;
+    // caller passes days = epoch/86400u, and epoch
+    // is uint32_t so days is always >= 0
     unsigned doe = (unsigned)(z - era * 146097);
     unsigned yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
     long yy = (long)yoe + era * 400;
@@ -87,9 +86,9 @@ proto_bool pc_rtc_regs_to_epoch(const uint8_t r[RTC_REG_COUNT], uint32_t *epoch)
     }
     // int64: days*86400 exceeds a 32-bit long (Windows host and ESP32 both) past ~2038.
     int64_t t = (int64_t)days_from_civil(year, month, date) * 86400 + hour * 3600 + min * 60 + sec;
-    if (t < 0 || t > 0xFFFFFFFFLL) // GCOVR_EXCL_BR_LINE  t<0 unreachable: year = 2000 + bcd2int(r[6])
-                                   // is always >= 2000, so days_from_civil (and t) is always positive;
-                                   // t > 0xFFFFFFFF (year rollover past 2106) is real and tested below
+    if (t < 0 || t > 0xFFFFFFFFLL)
+    // is always >= 2000, so days_from_civil (and t) is always positive;
+    // t > 0xFFFFFFFF (year rollover past 2106) is real and tested below
     {
         return PROTO_FALSE;
     }
@@ -118,68 +117,62 @@ void pc_rtc_epoch_to_regs(uint32_t epoch, uint8_t r[RTC_REG_COUNT])
 // I2C binding
 // ---------------------------------------------------------------------------
 
-#if PROTOCORE_HOT
+#if PROTOCORE_HOT || PC_PLATFORM_HAS_BUS
 
-proto_bool pc_rtc_begin()
+// All RTC I2C-binding state, owned by one instance (internal linkage): the bus frame, which is a
+// register-pointer byte followed by the seven time registers. It is a member rather than a local
+// because a transfer is composed in place, and eight bytes is the widest this part moves.
+typedef struct
+{
+    uint8_t frame[1 + RTC_REG_COUNT];
+} RtcCtx;
+static RtcCtx s_rtc = {.frame = {0}};
+
+proto_bool pc_rtc_begin(void)
 {
     pc_i2c_begin();
     return PROTO_TRUE;
 }
 
-uint32_t pc_rtc_read_epoch()
+uint32_t pc_rtc_read_epoch(void)
 {
-    Wire.beginTransmission(PC_RTC_I2C_ADDR);
-    Wire.write((uint8_t)0x00); // point at register 0 (seconds)
-    if (Wire.endTransmission() != 0)
-    {
-        return 0; // no RTC on the bus
-    }
-    if (Wire.requestFrom((int)PC_RTC_I2C_ADDR, (int)RTC_REG_COUNT) != RTC_REG_COUNT)
+    uint8_t reg = 0x00; // register 0: seconds
+    if (!pc_i2c_write_read(PC_RTC_I2C_ADDR, &reg, 1, s_rtc.frame, RTC_REG_COUNT))
     {
         return 0;
     }
-    uint8_t r[RTC_REG_COUNT];
-    for (int i = 0; i < RTC_REG_COUNT; i++)
-    {
-        r[i] = (uint8_t)Wire.read();
-    }
     uint32_t e = 0;
-    return pc_rtc_regs_to_epoch(r, &e) ? e : 0;
+    return pc_rtc_regs_to_epoch(s_rtc.frame, &e) ? e : 0;
 }
 
 proto_bool pc_rtc_set_epoch(uint32_t epoch)
 {
-    uint8_t r[RTC_REG_COUNT];
-    pc_rtc_epoch_to_regs(epoch, r);
-    Wire.beginTransmission(PC_RTC_I2C_ADDR);
-    Wire.write((uint8_t)0x00);
-    for (int i = 0; i < RTC_REG_COUNT; i++)
-    {
-        Wire.write(r[i]);
-    }
-    return Wire.endTransmission() == 0;
+    s_rtc.frame[0] = 0x00; // point at register 0, then the seven registers follow it
+    pc_rtc_epoch_to_regs(epoch, &s_rtc.frame[1]);
+    return pc_i2c_write(PC_RTC_I2C_ADDR, s_rtc.frame, sizeof(s_rtc.frame));
 }
 
-uint32_t pc_rtc_time_source()
+uint32_t pc_rtc_time_source(void)
 {
     return pc_rtc_read_epoch();
 }
 
 #else // host build: no I2C. The BCD<->epoch conversions above are host-tested.
 
-proto_bool pc_rtc_begin()
+proto_bool pc_rtc_begin(void)
 {
     return PROTO_TRUE;
 }
-uint32_t pc_rtc_read_epoch()
+uint32_t pc_rtc_read_epoch(void)
 {
     return 0;
 }
-proto_bool pc_rtc_set_epoch(uint32_t)
+proto_bool pc_rtc_set_epoch(uint32_t epoch)
 {
+    (void)epoch;
     return PROTO_FALSE;
 }
-uint32_t pc_rtc_time_source()
+uint32_t pc_rtc_time_source(void)
 {
     return 0;
 }

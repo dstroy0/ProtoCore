@@ -27,6 +27,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_COTP
 
 #define TPKT_VERSION 0x03  ///< RFC 1006 TPKT version (always 3)
@@ -95,5 +97,7 @@ typedef struct
 proto_bool pc_cotp_parse(const uint8_t *buf, size_t len, CotpHeader *out);
 
 #endif // PC_ENABLE_COTP
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_COTP_H

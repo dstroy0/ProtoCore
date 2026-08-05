@@ -145,8 +145,16 @@ proto_bool pc_snmp_inform_v2c(const char *dst_ip, uint16_t port, const char *com
 
 #else // host build: transport is a stub
 
-proto_bool pc_snmp_trap_v2c(const char *, uint16_t, const char *, const uint32_t *, size_t, const SnmpVarbind *, size_t)
+proto_bool pc_snmp_trap_v2c(const char *dst_ip, uint16_t port, const char *community, const uint32_t *trap_oid,
+                            size_t trap_oid_len, const SnmpVarbind *vbs, size_t n)
 {
+    (void)dst_ip;
+    (void)port;
+    (void)community;
+    (void)trap_oid;
+    (void)trap_oid_len;
+    (void)vbs;
+    (void)n;
     return PROTO_FALSE;
 }
 proto_bool pc_snmp_inform_v2c(const char *, uint16_t, const char *, uint32_t, const uint32_t *, size_t,

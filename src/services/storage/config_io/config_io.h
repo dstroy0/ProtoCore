@@ -21,6 +21,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_CONFIG_IO
 
 /** @brief Type of a config field (selects the typed get/set used). */
@@ -53,4 +55,7 @@ int pc_config_export(const char *ns, const pc_cfg_field *fields, size_t n, char 
 int pc_config_import(const char *ns, const pc_cfg_field *fields, size_t n, const char *text, size_t len);
 
 #endif // PC_ENABLE_CONFIG_IO
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_CONFIG_IO_H

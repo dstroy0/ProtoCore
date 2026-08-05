@@ -21,6 +21,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_LOGBUF
 
 /** @brief Severity levels (ordered low -> high). Compared (level >= threshold) and passed through the
@@ -55,4 +57,7 @@ int pc_log_dump(char *out, size_t cap);
 void pc_log_set_trap(uint8_t threshold, pc_log_trap_fn cb);
 
 #endif // PC_ENABLE_LOGBUF
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_LOGBUF_H

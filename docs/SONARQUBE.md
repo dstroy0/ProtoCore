@@ -52,8 +52,7 @@ import, so without one it shows **0%**. [`ci_tooling/coverage/gen_coverage.sh`](
 builds + runs the native Unity test envs with gcov instrumentation
 (`-fprofile-arcs -ftest-coverage -lgcov`, into a dedicated `.pio_cov` build dir).
 
-It emits **one gcovr report per env** and then
-[`ci_tooling/coverage/merge_coverage.py`](../ci_tooling/coverage/merge_coverage.py) unions them
+It emits **one gcovr tracefile per env** and then unions them with `gcovr --add-tracefile`
 into `coverage.xml` (SonarQube generic-coverage format, `src/` only). The per-env
 split is required: gcov cannot merge the **same source compiled with different
 `-D` flags** across envs in a single pass - it raises a worker exception - so each

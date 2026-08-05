@@ -42,6 +42,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_SSH_CLIENT
 
 /** @brief How to reach the relay, who to log in as, and what to tunnel back. */
@@ -105,4 +107,7 @@ proto_bool pc_ssh_tunnel_up(void);
 void pc_ssh_tunnel_pubkey(const uint8_t seed[32], uint8_t pub[32]);
 
 #endif // PC_ENABLE_SSH_CLIENT
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_SSH_CLIENT_H

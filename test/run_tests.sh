@@ -16,15 +16,11 @@ set -uo pipefail
 # flag out of $@ so an explicit env list still works.
 COVERAGE=0
 REPORT_OUT=""      # --report-out PATH: write the report here instead of the default (partial runs)
-COV_BASELINE=""    # --cov-baseline coverage.xml: overlay this baseline under the fresh per-env coverage
-COV_CHANGED=""     # --cov-changed list.txt: changed paths to REPLACE (not union) in the baseline overlay
 _pos=()
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --coverage) COVERAGE=1; shift ;;
         --report-out) REPORT_OUT="$2"; shift 2 ;;
-        --cov-baseline) COV_BASELINE="$2"; shift 2 ;;
-        --cov-changed) COV_CHANGED="$2"; shift 2 ;;
         *) _pos+=("$1"); shift ;;
     esac
 done
@@ -253,15 +249,14 @@ for _i in "${!ENV_NAMES[@]}"; do
     # UNIONS, so an env that stops contributing does not lower the number - it freezes that
     # env's files at whatever the baseline last said, forever, with nothing in the log to say
     # so. Record the failure and fail the run at the end instead of warning into the void.
-    # --json alongside --sonarqube: the SonarQube generic format carries only a per-line
-    # (branchesToCover, coveredBranches) aggregate, so two envs that each cover a DIFFERENT
-    # subset of one condition's branches cannot be combined - the merge can only keep the better
-    # env, and the line reads as partially covered forever. gcovr's JSON keeps the per-branch
-    # counts, and merge_coverage.py --json-reports unions those properly.
-    if [[ $COVERAGE -eq 1 ]] && { ! gcovr --root . --filter 'src/.*' --gcov-ignore-parse-errors --sonarqube \
-        "coverage_reports/${_env}.xml" --json "coverage_reports/${_env}.json" \
+    # JSON, not the SonarQube format: that format carries only a per-line (branchesToCover,
+    # coveredBranches) aggregate, so two envs that each cover a DIFFERENT subset of one
+    # condition's branches cannot be combined - the union could only keep the better env and the
+    # line would read as partially covered forever. gcovr's JSON keeps the per-branch counts.
+    if [[ $COVERAGE -eq 1 ]] && { ! gcovr --root . --filter 'src/.*' --gcov-ignore-parse-errors \
+        --json "coverage_reports/${_env}.json" \
         "${PLATFORMIO_BUILD_DIR:-.pio_cov}/$_env" 2>/dev/null \
-        || [[ ! -s "coverage_reports/${_env}.xml" ]]; }; then
+        || [[ ! -s "coverage_reports/${_env}.json" ]]; }; then
         echo "ERROR: gcovr produced no coverage report for $_env" >&2
         COV_FAILED+=("$_env")
     fi
@@ -512,9 +507,7 @@ echo ""
 echo "Report written: $REPORT_PATH"
 
 if [[ $COVERAGE -eq 1 ]]; then
-    # Union every per-env report into one SonarQube coverage report (src/ only) for the scan. On an
-    # affected-only run, --cov-baseline overlays the committed coverage so the report stays whole-project
-    # (fresh per-file coverage for the changed sources, the baseline kept for everything not rerun).
+    # Union every per-env tracefile into one SonarQube coverage report (src/ only) for the scan.
     if [[ ${#COV_FAILED[@]} -gt 0 ]]; then
         echo "ERROR: no coverage report from ${#COV_FAILED[@]} env(s): ${COV_FAILED[*]}" >&2
         echo "Refusing to merge - a partial merge would silently freeze those files' coverage." >&2
@@ -524,16 +517,9 @@ if [[ $COVERAGE -eq 1 ]]; then
         exit 3
     fi
     _cov_out="${PROJECT_ROOT}/test/coverage.xml"
-    _cov_overlay=()
-    [[ -n "$COV_BASELINE" ]] && _cov_overlay+=(--baseline "$COV_BASELINE")
-    [[ -n "$COV_CHANGED" ]] && _cov_overlay+=(--changed "$COV_CHANGED")
-    # Tell the merge which envs actually ran, so it can replace (not just union) every file this
-    # run re-measured in full. Without it the overlay is union-only and stale lines never die.
-    if [[ -f "${PROJECT_ROOT}/test/dep_graph.json" ]]; then
-        _cov_overlay+=(--dep-graph "${PROJECT_ROOT}/test/dep_graph.json" --ran-envs "${ENV_NAMES[*]}")
-    fi
-    _cov_overlay+=(--json-reports "coverage_reports/*.json")
-    python3 ci_tooling/coverage/merge_coverage.py "$_cov_out" "coverage_reports/*.xml" "${_cov_overlay[@]}"
+    # gcovr unions the per-env tracefiles and emits the report. Every env ran (the guard above
+    # refuses anything less), so this measures all of src/ with nothing carried over.
+    gcovr --add-tracefile "coverage_reports/*.json" --sonarqube "$_cov_out"
     rm -rf coverage_reports
     echo "Coverage written: $_cov_out"
 fi

@@ -232,29 +232,21 @@ size_t pc_webdav_ms_entry(char *buf, size_t cap, size_t len, const char *href, p
     char esc[256];
 
     pc_webdav_xml_escape(esc, sizeof(esc), href);
-    // The href block is at most 27 + esc(<=255) + 66 == 348 bytes, and adding the collection
-    // marker + resourcetype close reaches <=381 - all well within tmp[512], so these three
-    // atomic-append guards cannot fire (esc is capped by its own 256-byte buffer above).
-    //
-    // GCOVR_EXCL_START  buffer-overflow guard, unreachable per the budget above. A block (not
-    // per-line markers) because gcov attributes this multi-line OR-condition's uncovered branch to
-    // the call-opening line of the third app() (the wrapped string-literal argument line), not to
-    // the line carrying the comment - a per-line marker on the wrong line leaves the branch
-    // reported as a real gap.
+    // Open the response element and write the escaped href. The block runs at most 27 + esc(<=255)
+    // + 66 == 348 bytes against tmp[512].
     if (!app(tmp, sizeof(tmp), &t, "  <D:response>\n    <D:href>") || !app(tmp, sizeof(tmp), &t, esc) ||
         !app(tmp, sizeof(tmp), &t, "</D:href>\n    <D:propstat>\n      <D:prop>\n        <D:resourcetype>"))
     {
         return len;
     }
-    // GCOVR_EXCL_STOP
 
-    if (is_collection && !app(tmp, sizeof(tmp), &t, "<D:collection/>")) // GCOVR_EXCL_BR_LINE app overflow unreachable
+    if (is_collection && !app(tmp, sizeof(tmp), &t, "<D:collection/>"))
     {
-        return len; // GCOVR_EXCL_LINE unreachable: <=363 < tmp[512] (see above)
+        return len;
     }
-    if (!app(tmp, sizeof(tmp), &t, "</D:resourcetype>\n")) // GCOVR_EXCL_LINE unreachable: <=381 < tmp[512] (see above)
+    if (!app(tmp, sizeof(tmp), &t, "</D:resourcetype>\n"))
     {
-        return len; // GCOVR_EXCL_LINE unreachable: <=381 < tmp[512] (see above)
+        return len;
     }
 
     if (!is_collection)
@@ -268,8 +260,8 @@ size_t pc_webdav_ms_entry(char *buf, size_t cap, size_t len, const char *href, p
         {
             rev[rn++] = (char)('0' + (int)(s % 10));
             s /= 10;
-        } while (s && rn < (int)sizeof(rev)); // GCOVR_EXCL_BR_LINE unreachable rn-bound: a uint32_t is <=10 digits, rn
-                                              // never reaches sizeof(rev)==24
+        } while (s && rn < (int)sizeof(rev));
+        // never reaches sizeof(rev)==24
         int ni = 0;
         while (rn > 0)
         {
@@ -281,23 +273,20 @@ size_t pc_webdav_ms_entry(char *buf, size_t cap, size_t len, const char *href, p
         // !is_collection so it's really <=366); this fixed getcontentlength markup + a
         // 10-digit uint32_t max add <=60 more, so the running total never nears tmp[512]
         // and these atomic-append guards cannot fire.
-        if (!app(tmp, sizeof(tmp), &t, "        <D:getcontentlength>") ||
-            !app(tmp, sizeof(tmp), &t, num) ||                     // GCOVR_EXCL_LINE unreachable: see comment above
-            !app(tmp, sizeof(tmp), &t, "</D:getcontentlength>\n")) // GCOVR_EXCL_LINE unreachable: see comment above
+        if (!app(tmp, sizeof(tmp), &t, "        <D:getcontentlength>") || !app(tmp, sizeof(tmp), &t, num) ||
+            !app(tmp, sizeof(tmp), &t, "</D:getcontentlength>\n"))
         {
-            return len; // GCOVR_EXCL_LINE unreachable: see comment above
+            return len;
         }
         // content_type block. The append-overflow arm is unreachable per the budget above (running
         // total <=~446 < tmp[512]); gcov lumps the multi-app OR onto one line, so the whole merged
         // guard is excluded from coverage rather than carrying a misplaced per-line branch marker.
-        // GCOVR_EXCL_START
         if (content_type && content_type[0] &&
             (!app(tmp, sizeof(tmp), &t, "        <D:getcontenttype>") || !app(tmp, sizeof(tmp), &t, content_type) ||
              !app(tmp, sizeof(tmp), &t, "</D:getcontenttype>\n")))
         {
             return len;
         }
-        // GCOVR_EXCL_STOP
     }
 
     if (rfc1123_mtime && rfc1123_mtime[0])
@@ -334,7 +323,7 @@ static proto_bool name_end_char(char c)
     // The only caller scans a name span bounded by the '>' index (its tag-end loop stops there),
     // so this helper never sees '>'; that leg is a defensive, host-unreachable arm. gcov attributes
     // every operand's branch to this one line, so BR_LINE also drops the (exercised) ws/'/' arms.
-    return c == ' ' || c == '\t' || c == '\r' || c == '\n' || c == '/' || c == '>'; // GCOVR_EXCL_BR_LINE
+    return c == ' ' || c == '\t' || c == '\r' || c == '\n' || c == '/' || c == '>';
 }
 
 size_t pc_webdav_proppatch_ms(char *buf, size_t cap, const char *href, const char *body, size_t body_len)

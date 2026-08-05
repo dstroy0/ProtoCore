@@ -56,15 +56,10 @@ proto_bool pc_pb_write_tag(PbWriter *w, uint32_t field, uint8_t wire_type)
 // Append @p n raw little-endian octets of @p v.
 static proto_bool pc_pb_write_le(PbWriter *w, uint64_t v, size_t n)
 {
-    // GCOVR_EXCL_START  unreachable: write_le's only callers (fixed32/fixed64) invoke it as the
-    // right operand of `pc_pb_write_tag(...) && pc_pb_write_le(...)`; write_tag returns true only
-    // when its inner write_varint succeeded, which itself guarantees w->error is still false at
-    // that point. So w->error can never already be true on entry here.
     if (w->error)
     {
         return PROTO_FALSE;
     }
-    // GCOVR_EXCL_STOP
     if (w->pos + n > w->cap)
     {
         w->error = PROTO_TRUE;
@@ -128,13 +123,10 @@ proto_bool pc_pb_bytes(PbWriter *w, uint32_t field, const uint8_t *data, size_t 
     {
         return PROTO_FALSE;
     }
-    // GCOVR_EXCL_START  unreachable: both write_tag and write_varint above just returned true,
-    // which (by the same argument as pc_pb_write_le) guarantees w->error is false here.
     if (w->error)
     {
         return PROTO_FALSE;
     }
-    // GCOVR_EXCL_STOP
     if (len == 0)
     {
         return PROTO_TRUE;

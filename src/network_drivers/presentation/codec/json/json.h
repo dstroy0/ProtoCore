@@ -41,6 +41,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 /**
  * @brief Builds a JSON document into a fixed caller buffer, no heap.
  *
@@ -136,5 +138,7 @@ proto_bool json_get_int(const char *json, const char *key, long *out);
  * @return true if the member exists and is a JSON boolean; false otherwise.
  */
 proto_bool json_get_bool(const char *json, const char *key, proto_bool *out);
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_JSON_H

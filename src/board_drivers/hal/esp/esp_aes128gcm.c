@@ -93,7 +93,7 @@ pc_cspan pc_aes128gcm_seal(struct pc_aes128gcm_key *k, const uint8_t nonce[PC_AE
     if (mbedtls_gcm_crypt_and_tag(g, MBEDTLS_GCM_ENCRYPT, pt_len, nonce, PC_AES128GCM_IV_LEN, aad, aad_len, pt, ct_out,
                                   PC_AES128GCM_TAG_LEN, tag_out) != 0)
     {
-        return {};
+        return pc_cspan_from(NULL, 0);
     }
     return pc_cspan_from(ct_out, pt_len); // the tag rides in tag_out, not in this span
 }

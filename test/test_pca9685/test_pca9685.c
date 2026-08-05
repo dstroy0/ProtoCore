@@ -74,14 +74,51 @@ void test_set_pwm_bytes()
     TEST_ASSERT_EQUAL_INT(0, (int)pc_pca9685_set_pwm_bytes(NULL, 5, 0, 0, 0)); // null buffer
 }
 
-void test_prescale_zero_and_host_stubs()
+void test_prescale_zero()
 {
     // Zero frequency takes the max-prescale early return.
     TEST_ASSERT_TRUE(pc_pca9685_prescale(0) > 0);
-    // Host build: the I2C bind functions all fail closed.
-    TEST_ASSERT_FALSE(pc_pca9685_begin(0x40, 50));
-    TEST_ASSERT_FALSE(pc_pca9685_set_pwm(0, 0, 2048));
-    TEST_ASSERT_FALSE(pc_pca9685_set_servo_us(0, 1500));
+}
+
+// begin() must sleep the oscillator before PRESCALE can be written, wake it, let it settle, then
+// RESTART. The order and the settle are both on the wire.
+void test_begin_sequence_on_the_wire()
+{
+    pc_bus_host_reset();
+    TEST_ASSERT_TRUE(pc_pca9685_begin(0x40, 50));
+
+    TEST_ASSERT_EQUAL_UINT32(5, pc_bus_host_count());
+    uint32_t n = 0;
+    const uint8_t *w = pc_bus_host_txn_bytes(0, &n);
+    TEST_ASSERT_EQUAL_HEX8(PCA9685_REG_MODE1, w[0]);
+    TEST_ASSERT_EQUAL_HEX8(0x10, w[1]); // SLEEP, required before PRESCALE
+
+    w = pc_bus_host_txn_bytes(1, &n);
+    TEST_ASSERT_EQUAL_HEX8(PCA9685_REG_PRESCALE, w[0]);
+    TEST_ASSERT_EQUAL_HEX8(pc_pca9685_prescale(50), w[1]);
+
+    // The oscillator needs real time between the wake and the RESTART.
+    TEST_ASSERT_GREATER_OR_EQUAL_UINT32(500, pc_bus_host_gap_us(2, 3));
+}
+
+// A channel write is the channel's base register then on/off little-endian.
+void test_set_pwm_on_the_wire()
+{
+    pc_bus_host_reset();
+    TEST_ASSERT_TRUE(pc_pca9685_set_pwm(0, 0, 2048));
+    const uint8_t want[5] = {PCA9685_REG_LED0_ON_L, 0x00, 0x00, (uint8_t)(2048 & 0xFF),
+                             (uint8_t)((2048 >> 8) & 0x1F)};
+    uint32_t n = 0;
+    const uint8_t *tx = pc_bus_host_written(&n);
+    TEST_ASSERT_EQUAL_UINT32(sizeof(want), n);
+    TEST_ASSERT_EQUAL_HEX8_ARRAY(want, tx, sizeof(want));
+
+    pc_bus_host_reset();
+    TEST_ASSERT_TRUE(pc_pca9685_set_servo_us(0, 1500));
+    uint16_t off = pc_pca9685_us_to_count(1500, PC_PCA9685_FREQ);
+    tx = pc_bus_host_written(&n);
+    TEST_ASSERT_EQUAL_UINT32(5, n);
+    TEST_ASSERT_EQUAL_HEX8((uint8_t)(off & 0xFF), tx[3]);
 }
 
 int main()
@@ -91,6 +128,8 @@ int main()
     RUN_TEST(test_channel_reg);
     RUN_TEST(test_us_to_count);
     RUN_TEST(test_set_pwm_bytes);
-    RUN_TEST(test_prescale_zero_and_host_stubs);
+    RUN_TEST(test_prescale_zero);
+    RUN_TEST(test_begin_sequence_on_the_wire);
+    RUN_TEST(test_set_pwm_on_the_wire);
     return UNITY_END();
 }

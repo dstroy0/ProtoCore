@@ -79,14 +79,14 @@ proto_bool wifi_frame_parse(const uint8_t *frame, uint16_t len, WifiFrameInfo *o
         out->bssid = a3;
     }
     // !to_ds && !from_ds is unreachable below: the `if` above already caught that combination.
-    else if (!out->to_ds && out->from_ds) // from the AP // GCOVR_EXCL_BR_LINE
+    else if (!out->to_ds && out->from_ds)
     {
         out->dst = a1;
         out->bssid = a2;
         out->src = a3;
     }
     // to_ds == false is unreachable below: ruled out by the two branches above.
-    else if (out->to_ds && !out->from_ds) // to the AP // GCOVR_EXCL_BR_LINE
+    else if (out->to_ds && !out->from_ds)
     {
         out->bssid = a1;
         out->src = a2;
@@ -145,12 +145,15 @@ void pc_promisc_end(void)
 
 #else // host build - no radio
 
-proto_bool pc_promisc_begin(uint8_t, pc_promisc_sink_fn)
+proto_bool pc_promisc_begin(uint8_t channel, pc_promisc_sink_fn sink)
 {
+    (void)channel;
+    (void)sink;
     return PROTO_FALSE;
 }
-void pc_promisc_set_channel(uint8_t)
+void pc_promisc_set_channel(uint8_t channel)
 {
+    (void)channel;
     // host build: no radio, no channel to set
 }
 void pc_promisc_end(void)

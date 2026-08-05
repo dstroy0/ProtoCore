@@ -35,6 +35,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_OIDC
 
 /** @brief RSA-2048 modulus size in bytes (the supported key size). */
@@ -128,4 +130,7 @@ pc_oidc_result pc_oidc_verify(const char *token, size_t token_len, const char *j
                               const char *expected_aud, uint32_t now_unix, pc_oidc_claims *claims);
 
 #endif // PC_ENABLE_OIDC
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_OIDC_H

@@ -27,6 +27,8 @@
 #include "network_drivers/presentation/ssh/connection/ssh_flow_control.h"
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 /** @brief Channel type (RFC 4254). */
 typedef enum PROTO_ENUM_PACKED
 {
@@ -239,5 +241,7 @@ int pc_ssh_channel_build_close(uint8_t i, uint32_t channel, uint8_t *out, size_t
  */
 int pc_ssh_channel_handle_close(uint8_t i, const uint8_t *payload, size_t len, uint8_t *out, size_t *out_len,
                                 size_t cap);
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_SSH_CHANNEL_H

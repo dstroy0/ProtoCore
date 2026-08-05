@@ -31,6 +31,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_OAUTH2
 
 /** @brief Tokens parsed from a token-endpoint response. Absent fields are empty / 0. */
@@ -100,4 +102,7 @@ int pc_oauth2_refresh(const char *token_url, const char *refresh_token, const ch
 #endif
 
 #endif // PC_ENABLE_OAUTH2
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_OAUTH2_H

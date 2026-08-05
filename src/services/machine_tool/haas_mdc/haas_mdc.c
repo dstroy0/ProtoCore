@@ -69,7 +69,7 @@ static proto_bool parse_u32(const char *s, size_t len, uint32_t *out)
     }
     // The false half is unreachable: parse_u32() is static and both call sites (pc_haas_mdc_parse_status,
     // pc_haas_mdc_parse_macro) always pass the address of a local, never NULL.
-    if (out) // GCOVR_EXCL_BR_LINE  out == nullptr half unreachable, see above
+    if (out)
     {
         *out = v;
     }

@@ -23,6 +23,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_SEP2
 
 /**
@@ -54,4 +56,7 @@ size_t pc_sep2_der_control(const char *mrid, uint32_t start, uint32_t duration, 
                            size_t cap);
 
 #endif // PC_ENABLE_SEP2
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_SEP2_H

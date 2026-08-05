@@ -96,7 +96,7 @@ void setup()
         send_text(id, rc == pc_gql_result::PC_GQL_OK ? 200 : 400, "application/json", body);
     });
 
-    begin_http(80);
+    begin_http(80, NULL);
 }
 
 void loop()

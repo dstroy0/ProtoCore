@@ -22,6 +22,8 @@
 #include "network_drivers/network/ip.h"
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_HAPPY_EYEBALLS
 
 #ifndef PC_HE_MAX
@@ -52,4 +54,7 @@ void pc_he_order(pc_ip *list, size_t n);
 proto_bool pc_he_attempt_due(uint32_t last_start_ms, uint32_t now_ms, uint32_t attempt_delay_ms);
 
 #endif // PC_ENABLE_HAPPY_EYEBALLS
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_HAPPY_EYEBALLS_H

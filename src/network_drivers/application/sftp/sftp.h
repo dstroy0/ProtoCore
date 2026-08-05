@@ -23,6 +23,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_SSH_SFTP
 
 #define PC_SFTP_VERSION 3
@@ -159,5 +161,7 @@ size_t pc_sftp_format_longname(proto_bool is_dir, uint32_t perms, uint64_t size,
                                char *out, size_t cap);
 
 #endif // PC_ENABLE_SSH_SFTP
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_SFTP_H

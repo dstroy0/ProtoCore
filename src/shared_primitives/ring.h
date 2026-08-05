@@ -19,6 +19,7 @@
  */
 
 #include "shared_primitives/rawmemcpy.h" // proto_raw_read: the producer span move
+#include <stdatomic.h>                   // _Atomic, atomic_load_explicit, atomic_store_explicit, memory_order_*
 
 // ---------------------------------------------------------------------------
 // Cross-thread field access
@@ -44,7 +45,6 @@
 // Under ThreadSanitizer these expand to instrumented calls that branch on the
 // memory-order argument. That order is a compile-time constant here, so only one arm is
 // ever reachable in a correct SPSC program (see test_spsc_ring_no_race) and the lines
-// below carry GCOVR_EXCL_BR_LINE for the residual arm.
 
 /** @brief Acquire-load the atomic at @p p. */
 #define PROTO_ATOMIC_LOAD(p) atomic_load_explicit((p), memory_order_acquire)
@@ -62,20 +62,20 @@
 /** @brief Bytes available to read (head - tail, modulo cap). */
 static inline size_t pc_ring_available(const _Atomic size_t *head, const _Atomic size_t *tail, size_t cap)
 {
-    return (PROTO_ATOMIC_LOAD(head) + cap - PROTO_ATOMIC_LOAD(tail)) % cap; // GCOVR_EXCL_BR_LINE
+    return (PROTO_ATOMIC_LOAD(head) + cap - PROTO_ATOMIC_LOAD(tail)) % cap;
 }
 
 /** @brief Pop one byte into @p out; false if empty. */
 static inline proto_bool pc_ring_read_byte(const uint8_t *buf, size_t cap, const _Atomic size_t *head,
                                            _Atomic size_t *tail, uint8_t *out)
 {
-    size_t t = PROTO_ATOMIC_LOAD(tail); // GCOVR_EXCL_BR_LINE
-    if (t == PROTO_ATOMIC_LOAD(head))   // GCOVR_EXCL_BR_LINE
+    size_t t = PROTO_ATOMIC_LOAD(tail);
+    if (t == PROTO_ATOMIC_LOAD(head))
     {
         return PROTO_FALSE;
     }
     *out = buf[t];
-    PROTO_ATOMIC_STORE(tail, (t + 1) % cap); // GCOVR_EXCL_BR_LINE
+    PROTO_ATOMIC_STORE(tail, (t + 1) % cap);
     return PROTO_TRUE;
 }
 
@@ -83,8 +83,8 @@ static inline proto_bool pc_ring_read_byte(const uint8_t *buf, size_t cap, const
 static inline size_t pc_ring_read(const uint8_t *buf, size_t cap, const _Atomic size_t *head, _Atomic size_t *tail,
                                   uint8_t *dst, size_t maxn)
 {
-    size_t h = PROTO_ATOMIC_LOAD(head); // GCOVR_EXCL_BR_LINE
-    size_t t = PROTO_ATOMIC_LOAD(tail); // GCOVR_EXCL_BR_LINE
+    size_t h = PROTO_ATOMIC_LOAD(head);
+    size_t t = PROTO_ATOMIC_LOAD(tail);
     size_t n = 0;
     while (n < maxn && t != h)
     {
@@ -92,7 +92,7 @@ static inline size_t pc_ring_read(const uint8_t *buf, size_t cap, const _Atomic 
         n++;
         t = (t + 1) % cap;
     }
-    PROTO_ATOMIC_STORE(tail, t); // GCOVR_EXCL_BR_LINE
+    PROTO_ATOMIC_STORE(tail, t);
     return n;
 }
 
@@ -100,7 +100,7 @@ static inline size_t pc_ring_read(const uint8_t *buf, size_t cap, const _Atomic 
 static inline void pc_ring_peek(const uint8_t *buf, size_t cap, const _Atomic size_t *tail, size_t off, uint8_t *dst,
                                 size_t n)
 {
-    size_t idx = (PROTO_ATOMIC_LOAD(tail) + off) % cap; // GCOVR_EXCL_BR_LINE
+    size_t idx = (PROTO_ATOMIC_LOAD(tail) + off) % cap;
     for (size_t i = 0; i < n; i++)
     {
         dst[i] = buf[idx];
@@ -111,7 +111,7 @@ static inline void pc_ring_peek(const uint8_t *buf, size_t cap, const _Atomic si
 /** @brief Drop @p n bytes from the tail (advance past already-peeked data). */
 static inline void pc_ring_consume(_Atomic size_t *tail, size_t cap, size_t n)
 {
-    PROTO_ATOMIC_STORE(tail, (PROTO_ATOMIC_LOAD(tail) + n) % cap); // GCOVR_EXCL_BR_LINE
+    PROTO_ATOMIC_STORE(tail, (PROTO_ATOMIC_LOAD(tail) + n) % cap);
 }
 
 // ---------------------------------------------------------------------------
@@ -125,7 +125,7 @@ static inline void pc_ring_consume(_Atomic size_t *tail, size_t cap, size_t n)
 /** @brief Free space to write: (cap-1) - used, one slot reserved to tell full from empty. */
 static inline size_t pc_ring_free(const _Atomic size_t *head, const _Atomic size_t *tail, size_t cap)
 {
-    size_t used = (PROTO_ATOMIC_LOAD(head) + cap - PROTO_ATOMIC_LOAD(tail)) % cap; // GCOVR_EXCL_BR_LINE
+    size_t used = (PROTO_ATOMIC_LOAD(head) + cap - PROTO_ATOMIC_LOAD(tail)) % cap;
     return (cap - 1) - used;
 }
 

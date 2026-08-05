@@ -21,7 +21,7 @@
 #ifndef PROTOCORE_PRESENTATION_H
 #define PROTOCORE_PRESENTATION_H
 
-#include "../transport/tcp.h"
+#include "../transport/tcp_evt.h" // EvtType: the event a handler is dispatched on
 #include "network_drivers/presentation/http/http_parser/http_parser.h"
 
 // ---------------------------------------------------------------------------

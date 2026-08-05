@@ -23,6 +23,8 @@
 
 #include "protocore_config.h" // the entry point: PROTO_ENUM_PACKED, and types.h for the widths
 
+PROTO_BEGIN_DECLS
+
 /** @brief RSA modulus / signature size in bytes (RSA-2048). */
 #define PC_RSA_KEY_BYTES 256
 
@@ -85,5 +87,7 @@ int pc_rsa_verify(const uint8_t n_be[PC_RSA_KEY_BYTES], const uint8_t e_be4[4], 
 int pc_rsa_sign_sw(const uint8_t n_be[PC_RSA_KEY_BYTES], const uint8_t d_be[PC_RSA_KEY_BYTES], const uint8_t *msg,
                    size_t msg_len, pc_rsa_hash hash, uint8_t sig[PC_RSA_SIG_BYTES]);
 #endif
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_RSA_H

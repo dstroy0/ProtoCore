@@ -18,6 +18,8 @@
 
 #include "protocore_config.h" // the entry point: types.h for proto_bool and the widths
 
+PROTO_BEGIN_DECLS
+
 /**
  * @brief SP800-108 KDF in counter mode with HMAC-SHA256 as the PRF (NIST SP800-108 §5.1; r = 32-bit
  *        counter placed before the fixed input).
@@ -36,5 +38,7 @@
  */
 proto_bool pc_kdf_ctr_hmac_sha256(const uint8_t *ki, size_t ki_len, const uint8_t *fixed, size_t fixed_len,
                                   uint8_t *out, size_t out_len);
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_KDF_H

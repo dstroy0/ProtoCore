@@ -148,47 +148,45 @@ size_t pc_mms_read_request(uint32_t invoke_id, const char *item_name, uint8_t *o
         return 0;
     }
 
-    // Each wrap checks its tlv() result; with name_len capped at 128 (above) and every buffer here 256
-    // bytes, none of these per-wrap overflow guards can fire (the running length maxes ~146). They are
-    // retained as defense-in-depth; the condition AND the return carry GCOVR_EXCL_LINE so neither the
-    // line nor its branches are reported (a marker on the return alone still leaves the branch counted).
+    // Each wrap checks its tlv() result. name_len is capped at 128 above and every buffer here is 256
+    // bytes, so the running length maxes ~146.
     uint8_t scratch[256];
     // innermost: objectName VisibleString (0x1A) with the item name.
     size_t n = tlv(0x1A, (const uint8_t *)item_name, name_len, scratch, sizeof(scratch));
-    if (!n) // GCOVR_EXCL_LINE
+    if (!n)
     {
-        return 0; // GCOVR_EXCL_LINE
+        return 0;
     }
     // A0 name [0]
     uint8_t a0[256];
     n = tlv(0xA0, scratch, n, a0, sizeof(a0));
-    if (!n) // GCOVR_EXCL_LINE
+    if (!n)
     {
-        return 0; // GCOVR_EXCL_LINE
+        return 0;
     }
     // 30 SEQUENCE (one VariableSpecification)
     n = tlv(0x30, a0, n, scratch, sizeof(scratch));
-    if (!n) // GCOVR_EXCL_LINE
+    if (!n)
     {
-        return 0; // GCOVR_EXCL_LINE
+        return 0;
     }
     // A0 listOfVariable [0]
     n = tlv(0xA0, scratch, n, a0, sizeof(a0));
-    if (!n) // GCOVR_EXCL_LINE
+    if (!n)
     {
-        return 0; // GCOVR_EXCL_LINE
+        return 0;
     }
     // A1 variableAccessSpecification [1]
     n = tlv(0xA1, a0, n, scratch, sizeof(scratch));
-    if (!n) // GCOVR_EXCL_LINE
+    if (!n)
     {
-        return 0; // GCOVR_EXCL_LINE
+        return 0;
     }
     // A4 read [4]
     n = tlv(MMS_SERVICE_READ, scratch, n, a0, sizeof(a0));
-    if (!n) // GCOVR_EXCL_LINE
+    if (!n)
     {
-        return 0; // GCOVR_EXCL_LINE
+        return 0;
     }
 
     // Prepend the invokeID INTEGER, then wrap in the confirmed-request PDU.
@@ -196,11 +194,9 @@ size_t pc_mms_read_request(uint32_t invoke_id, const char *item_name, uint8_t *o
     size_t idlen = int_content(invoke_id, idc);
     uint8_t body[256];
     size_t bn = tlv(MMS_TAG_INVOKE_ID, idc, idlen, body, sizeof(body));
-    // GCOVR_EXCL_LINE  neither half can fire here: bn is 2+idlen (2..7, never 0) and bn+n maxes ~152 << 256
-    // because name_len is capped at 128 above. Unreachable, kept defensively.
-    if (!bn || bn + n > sizeof(body)) // GCOVR_EXCL_LINE
+    if (!bn || bn + n > sizeof(body))
     {
-        return 0; // GCOVR_EXCL_LINE
+        return 0;
     }
     memcpy(body + bn, a0, n); // append the A4 read
     bn += n;
@@ -235,7 +231,7 @@ size_t pc_mms_read_response(uint32_t invoke_id, const uint8_t *data, size_t data
     // The bn+n overflow half IS reachable (a large caller data_len trips it) and is covered by a test, but
     // !bn is not: int_content always yields idlen 1..5, so this tlv always writes 2+idlen (2..7) octets into
     // a 256-byte buffer and can never return 0. gcovr cannot exclude one operand, so the line is excluded.
-    if (!bn || bn + n > sizeof(body)) // GCOVR_EXCL_LINE
+    if (!bn || bn + n > sizeof(body))
     {
         return 0;
     }
@@ -292,7 +288,7 @@ proto_bool pc_mms_parse(const uint8_t *pdu, size_t len, MmsPdu *out)
     // reachable both ways (a PDU carrying only the invokeID takes the else); p < len can never be false
     // because off + body_len <= len was already checked above, so p < off + body_len implies p < len.
     // gcovr cannot exclude one operand, so the whole line is excluded.
-    if (p < off + body_len && p < len) // GCOVR_EXCL_LINE
+    if (p < off + body_len && p < len)
     {
         out->service_tag = pdu[p];
         size_t sp = p + 1;

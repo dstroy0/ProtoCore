@@ -26,6 +26,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_SSH_SCP
 
 /**
@@ -36,5 +38,7 @@
 void pc_ssh_scp_begin(void);
 
 #endif // PC_ENABLE_SSH_SCP
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_SSH_SCP_H

@@ -42,6 +42,9 @@
 #include "network_drivers/network/ip.h" // pc_ip (family-tagged peer address)
 #include "protocore_config.h"
 #include "shared_primitives/ring.h" // PROTO_ATOMIC_LOAD/STORE + the shared SPSC ring drain primitive
+#include "tcp_evt.h"                // EvtType, TcpEvt: what this layer posts to a listener queue
+
+PROTO_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
 // Connection state
@@ -143,31 +146,8 @@ int32_t pc_conn_alloc_free(void);
 // Event queue
 // ---------------------------------------------------------------------------
 
-/**
- * @brief Type of connection event posted to a listener's event queue.
- */
-typedef enum PROTO_ENUM_PACKED
-{
-    EVT_CONNECT,    ///< New connection accepted.
-    EVT_DATA,       ///< Data received; bytes are already in the ring buffer.
-    EVT_DISCONNECT, ///< Remote peer closed the connection gracefully.
-    EVT_ERROR       ///< The stack reported an error (the control block may already be freed).
-} EvtType;
-static_assert(sizeof(EvtType) == 1,
-              "EvtType must stay one byte (PROTO_ENUM_PACKED); every listener's queue storage sizes itself on TcpEvt");
-
-/**
- * @brief Event record posted from the stack callbacks to the session layer.
- *
- * Small enough (≤12 bytes on 32-bit) that the queue copies it by
- * value - no pointer lifetime issues.
- */
-typedef struct TcpEvt
-{
-    EvtType type;    ///< What happened.
-    uint8_t slot_id; ///< Which connection slot is affected.
-    size_t data_len; ///< Bytes copied (EVT_DATA only); 0 for other types.
-} TcpEvt;
+// ::EvtType and ::TcpEvt are in tcp_evt.h, included above: they are what the layers over the
+// transport post and drain, and none of those layers touches a connection slot.
 
 // ---------------------------------------------------------------------------
 // Connection pool lifecycle
@@ -355,7 +335,7 @@ static inline size_t pc_conn_read(uint8_t slot, uint8_t *buf, size_t cap)
 static inline proto_bool pc_conn_active(uint8_t slot)
 {
     const TcpConn *c = &conn_pool[slot];
-    return PROTO_ATOMIC_LOAD(&c->state) == CONN_ACTIVE && c->pcb != NULL; // GCOVR_EXCL_BR_LINE
+    return PROTO_ATOMIC_LOAD(&c->state) == CONN_ACTIVE && c->pcb != NULL;
 }
 
 /** @brief The network interface (STA / AP / ANY) @p slot's connection arrived on. */
@@ -560,5 +540,7 @@ void lowlevel_err_cb(void *arg, pc_net_err err);
  * inactive listener) - the transport observes drops as PC_CONN_R_DEFER_DROP.
  */
 proto_bool listener_enqueue(uint8_t listener_id, const TcpEvt *evt);
+
+PROTO_END_DECLS
 
 #endif

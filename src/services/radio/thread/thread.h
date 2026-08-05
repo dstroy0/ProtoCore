@@ -31,6 +31,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_THREAD
 
 /** @brief HDLC-lite markers. */
@@ -267,5 +269,7 @@ uint16_t pc_spinel_frame_encode(const uint8_t *payload, uint16_t len, uint8_t *o
 int pc_spinel_frame_decode(const uint8_t *raw, uint16_t len, uint8_t *payload, uint16_t pay_cap, uint16_t *pay_len);
 
 #endif // PC_ENABLE_THREAD
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_THREAD_H

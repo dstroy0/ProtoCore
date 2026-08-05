@@ -24,6 +24,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_PROVISIONING
 
 /**
@@ -61,8 +63,10 @@ proto_bool pc_provisioning_load(char *ssid, size_t ssid_cap, char *psk, size_t p
 void pc_provisioning_begin(const char *ap_ssid);
 
 /** @brief Erase stored credentials (forces re-provisioning on next boot). */
-void pc_provisioning_clear();
+void pc_provisioning_clear(void);
 
 #endif // PC_ENABLE_PROVISIONING
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_PROVISIONING_H

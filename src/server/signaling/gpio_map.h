@@ -21,6 +21,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_GPIO_MAP
 
 /**
@@ -94,4 +96,7 @@ void pc_gpio_write(uint8_t pin, uint8_t level);
 void pc_gpio_map_begin(const char *path, pc_gpio_pin *pins, uint8_t count);
 
 #endif // PC_ENABLE_GPIO_MAP
+
+PROTO_END_DECLS
+
 #endif // PROTOCORE_GPIO_MAP_H

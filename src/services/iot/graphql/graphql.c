@@ -617,7 +617,7 @@ static void emit_field(Writer *w, int idx, int path_len)
         // scope_n cannot reach the cap: scope[] and args[] are both PC_GQL_MAX_ARGS long,
         // parse_field refuses to record arg number PC_GQL_MAX_ARGS, and the nodes on one
         // root-to-leaf path own disjoint slices of that pool - so the guard never bites.
-        if (s_gql.scope_n < PC_GQL_MAX_ARGS) // GCOVR_EXCL_LINE
+        if (s_gql.scope_n < PC_GQL_MAX_ARGS)
         {
             s_gql.scope[s_gql.scope_n++] = node->first_arg + a;
             pushed++;
@@ -743,7 +743,7 @@ pc_gql_result pc_graphql_execute(const char *query, size_t len, pc_gql_resolver_
         }
         // every path that makes parse_document() return false has already set s_gql.err, so the
         // PC_GQL_OK side of this test is unreachable
-        return s_gql.err != PC_GQL_OK ? s_gql.err : PC_GQL_ERR_PARSE; // GCOVR_EXCL_LINE
+        return s_gql.err != PC_GQL_OK ? s_gql.err : PC_GQL_ERR_PARSE;
     }
 
     Writer w = {out, cap, 0, PROTO_FALSE};

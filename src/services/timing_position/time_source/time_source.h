@@ -27,6 +27,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 /**
  * @brief A time source: returns the current Unix epoch seconds for this source,
  *        or 0 if it currently has no valid time.
@@ -74,5 +76,7 @@ void pc_time_source_reset(void);
 size_t pc_time_http_date(char *out, size_t out_cap);
 
 #endif // PC_ENABLE_TIME_SOURCE
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_TIME_SOURCE_H

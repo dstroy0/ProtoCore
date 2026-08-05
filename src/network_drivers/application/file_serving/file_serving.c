@@ -448,14 +448,10 @@ void serve_file_internal(uint8_t slot_id, proto_bool head, const pc_mnt_backend 
 void file_send_pump(uint8_t slot_id)
 {
     FileSend *s = &s_file.send[slot_id];
-    // GCOVR_EXCL_START  unreachable: both callers already established the state - serve_file_internal
-    // sets s->active immediately before its call, and the poll loop in protocore.c only pumps a slot
-    // whose s_file.send[i].active is set. Kept so the pump is safe to call unconditionally.
     if (!s->active)
     {
         return;
     }
-    // GCOVR_EXCL_STOP
 
     if (!pc_conn_active(slot_id))
     {
@@ -558,7 +554,7 @@ void serve_static_request(uint8_t slot_id, HttpReq *req, const Route *r)
     // unreachable: serve_static() always stores at least "*" (it appends the wildcard when the
     // prefix lacks one), so the pattern is never empty.
     size_t plen = strnlen(r->path, MAX_PATH_LEN);
-    if (plen > 0 && r->path[plen - 1] == '*') // GCOVR_EXCL_BR_LINE  plen == 0 unreachable (see above)
+    if (plen > 0 && r->path[plen - 1] == '*')
     {
         plen--;
     }
@@ -619,7 +615,7 @@ void serve_static_request(uint8_t slot_id, HttpReq *req, const Route *r)
         // always under gz's 260. Both are kept because the two buffer sizes are independent
         // constants. The exclusion is per-line, so it also drops the exists() halves - those ARE
         // exercised both ways (see the gzip tests).
-        if (gn > 0 && gn < (int)sizeof(gz) && pc_fs_exists(file_root(), gz, "")) // GCOVR_EXCL_BR_LINE  see above
+        if (gn > 0 && gn < (int)sizeof(gz) && pc_fs_exists(file_root(), gz, ""))
         {
             serve_file_internal(slot_id, head, r->static_fs, gz, ctype, "gzip");
             return;

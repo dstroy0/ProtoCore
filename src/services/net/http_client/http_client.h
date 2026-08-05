@@ -27,6 +27,8 @@
 
 #include "protocore_config.h"
 
+PROTO_BEGIN_DECLS
+
 #if PC_ENABLE_HTTP_CLIENT
 
 // Transport / result error codes (negative; HTTP status codes are positive).
@@ -120,5 +122,7 @@ void http_client_set_pin(const uint8_t sha256[32]);
 void http_client_clear_verify();
 
 #endif // PC_ENABLE_HTTP_CLIENT
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_HTTP_CLIENT_H

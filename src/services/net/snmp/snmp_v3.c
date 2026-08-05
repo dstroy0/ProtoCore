@@ -213,7 +213,7 @@ static long inner_request_id(const uint8_t *mdata, size_t mdata_len, proto_bool 
     // parse_scoped already read this exact header and sized pdu_len as (header bytes + content
     // length), so re-reading it from the start of pdu always succeeds; only the request-id
     // INTEGER read below can fail.
-    if (!pc_ber_read_header(&d, &tag, &l) || !pc_ber_read_integer(&d, &rid)) // GCOVR_EXCL_LINE  the header
+    if (!pc_ber_read_header(&d, &tag, &l) || !pc_ber_read_integer(&d, &rid))
     {
         return 0; // re-read cannot fail (see above)
     }
@@ -237,9 +237,9 @@ static size_t build_message(long msg_id, proto_bool auth, proto_bool priv, const
         pc_wr32be(iv, s_v3.boots);
         pc_wr32be(iv + 4, now);
         memcpy(iv + 8, salt, SNMP_V3_PRIV_PARAM_LEN);
-        if (scoped_len > sizeof(s_v3.v3_d)) // GCOVR_EXCL_LINE  see below
+        if (scoped_len > sizeof(s_v3.v3_d))
         {
-            return 0; // GCOVR_EXCL_LINE  scoped is built in v3_c, the same size (SNMP_MSG_BUF_SIZE) as v3_d
+            return 0;
         }
         pc_snmp_aes128_cfb(s_v3.priv_key, iv, scoped, s_v3.v3_d, scoped_len, PROTO_TRUE);
         data_ptr = s_v3.v3_d;
@@ -275,10 +275,10 @@ static size_t build_message(long msg_id, proto_bool auth, proto_bool priv, const
         pc_ber_put_octet_string(&se, (uint8_t)SNMP_TAG_BER_OCTET_STRING, NULL, 0);
     }
     pc_ber_seq_end(&se, ss);
-    if (!se.ok) // GCOVR_EXCL_LINE  see below
+    if (!se.ok)
     {
-        return 0; // GCOVR_EXCL_LINE  the static_assert on v3_sec above makes a secParams overflow a build error,
-                  // so se.ok always holds here
+        return 0;
+        // so se.ok always holds here
     }
     size_t sec_len = se.len;
 
@@ -345,9 +345,9 @@ static size_t build_report(long msg_id, proto_bool auth, uint32_t stat, uint32_t
     pc_ber_seq_end(&e, vb);
     pc_ber_seq_end(&e, vbl);
     pc_ber_seq_end(&e, pdu);
-    if (!e.ok) // GCOVR_EXCL_LINE  see below
+    if (!e.ok)
     {
-        return 0; // GCOVR_EXCL_LINE  the Report is one fixed usmStats varbind, far under v3_b (SNMP_MSG_BUF_SIZE)
+        return 0;
     }
 
     BerEnc sc;
@@ -357,9 +357,9 @@ static size_t build_report(long msg_id, proto_bool auth, uint32_t stat, uint32_t
     pc_ber_put_octet_string(&sc, (uint8_t)SNMP_TAG_BER_OCTET_STRING, NULL, 0);
     pc_ber_put_raw(&sc, s_v3.v3_b, e.len);
     pc_ber_seq_end(&sc, s);
-    if (!sc.ok) // GCOVR_EXCL_LINE  see below
+    if (!sc.ok)
     {
-        return 0; // GCOVR_EXCL_LINE  fixed tiny Report scopedPDU never overflows v3_c (SNMP_MSG_BUF_SIZE)
+        return 0;
     }
 
     return build_message(msg_id, auth, PROTO_FALSE, s_v3.v3_c, sc.len, resp, pc_resp_cap);
@@ -466,10 +466,10 @@ size_t pc_snmp_v3_process(const uint8_t *req, size_t req_len, uint8_t *resp, siz
     }
     const uint8_t *pparm = sd.buf + sd.pos;
     sd.pos += pparm_len;
-    if (!sd.ok) // GCOVR_EXCL_LINE  see below
+    if (!sd.ok)
     {
-        return 0; // GCOVR_EXCL_LINE  redundant: every secParams field read above returns on failure, so sd.ok holds
-                  // here
+        return 0;
+        // here
     }
 
     const uint8_t *mdata = d.buf + d.pos;
@@ -547,10 +547,10 @@ size_t pc_snmp_v3_process(const uint8_t *req, size_t req_len, uint8_t *resp, siz
         }
         const uint8_t *ct = md.buf + md.pos;
         size_t ct_len = l;
-        if (ct_len > sizeof(s_v3.v3_a)) // GCOVR_EXCL_LINE  see below
+        if (ct_len > sizeof(s_v3.v3_a))
         {
-            return 0; // GCOVR_EXCL_LINE  ct_len <= mdata_len < req_len, and req_len<=sizeof(v3_a) was enforced at the
-                      // digest step
+            return 0;
+            // digest step
         }
         uint8_t iv[16];
         pc_wr32be(iv, (uint32_t)req_boots);
