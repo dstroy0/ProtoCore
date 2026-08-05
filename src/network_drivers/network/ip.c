@@ -430,7 +430,7 @@ static pc_ip_scope classify_v6(const uint8_t *b)
 // Public API
 // -------------------------------------------------------------------------------------------
 
-proto_bool pc_ip_parse(const char *s, pc_ip *out)
+static proto_bool parse(const char *s, pc_ip *out)
 {
     if (!s || !out)
     {
@@ -482,7 +482,7 @@ proto_bool pc_ip_parse(const char *s, pc_ip *out)
     return PROTO_FALSE;
 }
 
-size_t pc_ip_format(const pc_ip *ip, char *out, size_t cap)
+static size_t format(const pc_ip *ip, char *out, size_t cap)
 {
     if (!ip || !out || cap == 0)
     {
@@ -562,7 +562,7 @@ proto_bool pc_ip_is_v4_mapped(const pc_ip *ip)
     return ip && ip->family == PC_IP_V6 && is_v4_mapped_bytes(ip->bytes);
 }
 
-pc_ip_scope pc_ip_classify(const pc_ip *ip)
+static pc_ip_scope classify(const pc_ip *ip)
 {
     if (!ip)
     {
@@ -579,7 +579,7 @@ pc_ip_scope pc_ip_classify(const pc_ip *ip)
     return PC_IP_SCOPE_UNSPECIFIED;
 }
 
-proto_bool pc_ip_equal(const pc_ip *a, const pc_ip *b)
+static proto_bool equal(const pc_ip *a, const pc_ip *b)
 {
     if (!a || !b || a->family != b->family)
     {
@@ -639,7 +639,7 @@ uint32_t pc_ip_to_v4_be(const pc_ip *ip)
     return 0;
 }
 
-proto_bool pc_ip_is_unspecified(const pc_ip *ip)
+static proto_bool is_unspecified(const pc_ip *ip)
 {
     if (!ip || ip->family == PC_IP_NONE)
     {
@@ -656,7 +656,7 @@ proto_bool pc_ip_is_unspecified(const pc_ip *ip)
     return PROTO_TRUE;
 }
 
-proto_bool pc_ip_prefix_match(const pc_ip *addr, const pc_ip *net, uint8_t prefix_len)
+static proto_bool prefix_match(const pc_ip *addr, const pc_ip *net, uint8_t prefix_len)
 {
     if (!addr || !net || addr->family != net->family)
     {
@@ -686,3 +686,5 @@ proto_bool pc_ip_prefix_match(const pc_ip *addr, const pc_ip *net, uint8_t prefi
     }
     return PROTO_TRUE;
 }
+
+const IpNs Ip = {parse, format, classify, equal, is_unspecified, prefix_match};

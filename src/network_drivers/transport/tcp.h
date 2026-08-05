@@ -420,7 +420,7 @@ uint32_t pc_conn_remote_ip(uint8_t slot);
  *
  * Unlike pc_conn_remote_ip() (which flattens to a v4 uint32 and cannot represent a v6 peer),
  * this reports the real address for a dual-stack build (PC_ENABLE_IPV6). Format it with
- * pc_ip_format() or classify it with pc_ip_classify().
+ * Ip.format() or classify it with Ip.classify().
  * @return true if @p slot has an active connection whose address was written to @p out.
  */
 proto_bool pc_conn_remote_addr(uint8_t slot, pc_ip *out);

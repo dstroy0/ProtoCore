@@ -83,7 +83,7 @@ proto_bool pc_forwarded_trust_add_cidr(const char *cidr)
 
     pc_ip net;
     net.family = PC_IP_NONE;
-    if (!pc_ip_parse(addr, &net))
+    if (!Ip.parse(addr, &net))
     {
         return PROTO_FALSE;
     }
@@ -125,7 +125,7 @@ proto_bool pc_forwarded_trust_contains(const pc_ip *peer)
     }
     for (uint8_t i = 0; i < s_trust.count; i++)
     {
-        if (pc_ip_prefix_match(peer, &s_trust.rules[i].network, s_trust.rules[i].prefix_len))
+        if (Ip.prefix_match(peer, &s_trust.rules[i].network, s_trust.rules[i].prefix_len))
         {
             return PROTO_TRUE;
         }
@@ -159,7 +159,7 @@ proto_bool pc_forwarded_effective_ip(const pc_ip *peer, const char *fwd_ip_str, 
 
     pc_ip fip;
     fip.family = PC_IP_NONE;
-    if (!pc_ip_parse(fwd_ip_str, &fip) || pc_ip_is_unspecified(&fip))
+    if (!Ip.parse(fwd_ip_str, &fip) || Ip.is_unspecified(&fip))
     {
         return PROTO_FALSE; // malformed / obfuscated / unspecified -> keep the proxy's address
     }

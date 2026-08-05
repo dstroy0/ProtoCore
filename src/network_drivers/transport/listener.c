@@ -93,7 +93,7 @@ static IpThrottleCtx s_iptt;
 
 proto_bool listener_accept_allowed_ip(const pc_ip *ip, uint32_t now_ms)
 {
-    if (pc_ip_is_unspecified(ip))
+    if (Ip.is_unspecified(ip))
     {
         return PROTO_TRUE; // untrackable source - defer to the global accept throttle
     }
@@ -104,7 +104,7 @@ proto_bool listener_accept_allowed_ip(const pc_ip *ip, uint32_t now_ms)
     for (int i = 0; i < PC_PER_IP_THROTTLE_SLOTS; i++)
     {
         IpThrottleBucket *b = &s_iptt.buckets[i];
-        if (b->addr.family != PC_IP_NONE && pc_ip_equal(&b->addr, ip))
+        if (b->addr.family != PC_IP_NONE && Ip.equal(&b->addr, ip))
         {
             // Unsigned subtraction wraps correctly across the millis() rollover.
             if ((uint32_t)(now_ms - b->window_start) >= PC_PER_IP_THROTTLE_WINDOW_MS)
@@ -231,7 +231,7 @@ proto_bool listener_ip_allow_add_cidr(const char *cidr)
 
     pc_ip net;
     net.family = PC_IP_NONE;
-    if (!pc_ip_parse(addr, &net))
+    if (!Ip.parse(addr, &net))
     {
         return PROTO_FALSE;
     }
@@ -274,7 +274,7 @@ proto_bool listener_ip_allowed(const pc_ip *ip)
     for (uint8_t i = 0; i < s_allow.count; i++)
     {
         // pc_ip_prefix_match requires the same family, so a v4 peer never matches a v6 rule.
-        if (pc_ip_prefix_match(ip, &s_allow.rules[i].network, s_allow.rules[i].prefix_len))
+        if (Ip.prefix_match(ip, &s_allow.rules[i].network, s_allow.rules[i].prefix_len))
         {
             return PROTO_TRUE;
         }

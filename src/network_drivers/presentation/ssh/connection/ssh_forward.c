@@ -376,7 +376,7 @@ static void rfwd_on_accept(uint8_t conn_slot)
     pc_ip rip;
     if (pc_conn_remote_addr(conn_slot, &rip))
     {
-        pc_ip_format(&rip, orig, sizeof(orig));
+        Ip.format(&rip, orig, sizeof(orig));
     }
     // Open the forwarded-tcpip channel back to the client, echoing the requested bind
     // address as the "address that was connected".

@@ -38,7 +38,7 @@ LockoutBucket *find_bucket(LockoutCtx *c, const pc_ip *ip)
 {
     for (int i = 0; i < PC_AUTH_LOCKOUT_SLOTS; i++)
     {
-        if (c->buckets[i].addr.family != PC_IP_NONE && pc_ip_equal(&c->buckets[i].addr, ip))
+        if (c->buckets[i].addr.family != PC_IP_NONE && Ip.equal(&c->buckets[i].addr, ip))
         {
             return &c->buckets[i];
         }
@@ -54,7 +54,7 @@ proto_bool bucket_locked(const LockoutBucket *b, uint32_t now_ms)
 
 uint32_t auth_lockout_remaining_ms(const pc_ip *ip, uint32_t now_ms)
 {
-    if (pc_ip_is_unspecified(ip))
+    if (Ip.is_unspecified(ip))
     {
         return 0; // untrackable source -> never reported as locked
     }
@@ -73,7 +73,7 @@ uint32_t auth_lockout_remaining_ms(const pc_ip *ip, uint32_t now_ms)
 
 void auth_lockout_fail(const pc_ip *ip, uint32_t now_ms)
 {
-    if (pc_ip_is_unspecified(ip))
+    if (Ip.is_unspecified(ip))
     {
         return; // untrackable source
     }
@@ -149,7 +149,7 @@ void auth_lockout_fail(const pc_ip *ip, uint32_t now_ms)
 
 void auth_lockout_succeed(const pc_ip *ip)
 {
-    if (pc_ip_is_unspecified(ip))
+    if (Ip.is_unspecified(ip))
     {
         return;
     }

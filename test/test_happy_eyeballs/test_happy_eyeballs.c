@@ -16,7 +16,7 @@ void tearDown(void)
 static pc_ip v6(const char *s)
 {
     pc_ip ip;
-    pc_ip_parse(s, &ip);
+    Ip.parse(s, &ip);
     return ip;
 }
 static pc_ip v4(uint8_t a, uint8_t b, uint8_t c, uint8_t d)
@@ -70,23 +70,23 @@ void test_pref_scopes_and_order_edges()
     // Exercise the multicast + unspecified scope arms of pc_he_pref (values are pc_ip-classified).
     pc_ip mc4 = pc_ip_from_v4_octets(239, 1, 2, 3); // admin-scoped IPv4 multicast
     pc_ip mc6;
-    pc_ip_parse("ff0e::1", &mc6); // global-scope IPv6 multicast
+    Ip.parse("ff0e::1", &mc6); // global-scope IPv6 multicast
     pc_ip un;
-    pc_ip_parse("::", &un); // unspecified
+    Ip.parse("::", &un); // unspecified
     (void)pc_he_pref(&mc4);
     (void)pc_he_pref(&mc6);
     (void)pc_he_pref(&un);
     // n <= 1 returns immediately (no reorder).
     pc_ip one[1];
-    pc_ip_parse("2606:4700::1", &one[0]);
+    Ip.parse("2606:4700::1", &one[0]);
     pc_he_order(one, 1);
     // A larger mixed list exercises the v4/v6 interleave.
     pc_ip many[5];
-    pc_ip_parse("2606:4700::1", &many[0]);
+    Ip.parse("2606:4700::1", &many[0]);
     many[1] = pc_ip_from_v4_octets(8, 8, 8, 8);
-    pc_ip_parse("2606:4700::2", &many[2]);
+    Ip.parse("2606:4700::2", &many[2]);
     many[3] = pc_ip_from_v4_octets(1, 1, 1, 1);
-    pc_ip_parse("2606:4700::3", &many[4]);
+    Ip.parse("2606:4700::3", &many[4]);
     pc_he_order(many, 5);
     TEST_PASS();
 }
@@ -111,8 +111,8 @@ void test_order_v4_mapped_treated_as_v4(void)
 {
     // ::ffff:a.b.c.d is family V6 but eff_is_v6() must treat it as V4 for interleave purposes.
     pc_ip list[2];
-    pc_ip_parse("::ffff:203.0.113.5", &list[0]); // v4-mapped v6, global scope
-    pc_ip_parse("2606:4700::1", &list[1]);       // native v6, global scope
+    Ip.parse("::ffff:203.0.113.5", &list[0]); // v4-mapped v6, global scope
+    Ip.parse("2606:4700::1", &list[1]);       // native v6, global scope
     pc_he_order(list, 2);
     // Native v6 outranks v4 (mapped or not) within the same scope, so it sorts first.
     TEST_ASSERT_EQUAL_UINT8(0x26, list[0].bytes[0]);
@@ -137,9 +137,9 @@ void test_order_family_imbalance_drains_v6(void)
     // 3 global v6 + 1 global v4, v6-first: v4 exhausts after one pick and the "preferred family
     // exhausted, drain the other" arm fires while it is still (nominally) v4's turn.
     pc_ip list[4];
-    pc_ip_parse("2606:4700::1", &list[0]);
-    pc_ip_parse("2606:4700::2", &list[1]);
-    pc_ip_parse("2606:4700::3", &list[2]);
+    Ip.parse("2606:4700::1", &list[0]);
+    Ip.parse("2606:4700::2", &list[1]);
+    Ip.parse("2606:4700::3", &list[2]);
     list[3] = v4(8, 8, 8, 8);
     pc_he_order(list, 4);
     TEST_ASSERT_EQUAL_INT(PC_IP_V6, list[0].family);

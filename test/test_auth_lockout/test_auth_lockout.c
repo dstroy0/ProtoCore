@@ -138,8 +138,8 @@ void test_v6_distinct_from_v4_and_each_other()
     v6a.family = PC_IP_NONE;
     pc_ip v6b;
     v6b.family = PC_IP_NONE;
-    TEST_ASSERT_TRUE(pc_ip_parse("2001:db8::1", &v6a));
-    TEST_ASSERT_TRUE(pc_ip_parse("2001:db8::2", &v6b));
+    TEST_ASSERT_TRUE(Ip.parse("2001:db8::1", &v6a));
+    TEST_ASSERT_TRUE(Ip.parse("2001:db8::2", &v6b));
     for (int i = 0; i < PC_AUTH_LOCKOUT_THRESHOLD; i++)
     {
         auth_lockout_fail(&v6a, 0);

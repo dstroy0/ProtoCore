@@ -90,8 +90,8 @@ void test_node_registry(void)
     pc_wisun_init(&fan, &br, storage, 3);
 
     pc_ip n1, n2;
-    pc_ip_parse("fd00::10", &n1);
-    pc_ip_parse("fd00::11", &n2);
+    Ip.parse("fd00::10", &n1);
+    Ip.parse("fd00::11", &n2);
     TEST_ASSERT_EQUAL_INT(0, pc_wisun_node_register(&fan, &n1, 100));
     TEST_ASSERT_EQUAL_INT(1, pc_wisun_node_register(&fan, &n2, 101));
     // Re-register n1 refreshes, does not add.
@@ -115,12 +115,12 @@ void test_registry_full_and_misses(void)
     WisunNode storage[2];
     WisunFan fan;
     pc_ip br;
-    pc_ip_parse("fd00::1", &br);
+    Ip.parse("fd00::1", &br);
     pc_wisun_init(&fan, &br, storage, 2);
     pc_ip a, b, c;
-    pc_ip_parse("fd00::a", &a);
-    pc_ip_parse("fd00::b", &b);
-    pc_ip_parse("fd00::c", &c);
+    Ip.parse("fd00::a", &a);
+    Ip.parse("fd00::b", &b);
+    Ip.parse("fd00::c", &c);
     TEST_ASSERT_EQUAL_INT(0, pc_wisun_node_register(&fan, &a, 1));
     TEST_ASSERT_EQUAL_INT(1, pc_wisun_node_register(&fan, &b, 2));
     TEST_ASSERT_EQUAL_INT(-1, pc_wisun_node_register(&fan, &c, 3)); // table full
@@ -198,10 +198,10 @@ void test_node_register_null_fan_and_addr(void)
     WisunNode storage[2];
     WisunFan fan;
     pc_ip br;
-    pc_ip_parse("fd00::1", &br);
+    Ip.parse("fd00::1", &br);
     pc_wisun_init(&fan, &br, storage, 2);
     pc_ip a;
-    pc_ip_parse("fd00::a", &a);
+    Ip.parse("fd00::a", &a);
     TEST_ASSERT_EQUAL_INT(-1, pc_wisun_node_register(NULL, &a, 1));   // null fan
     TEST_ASSERT_EQUAL_INT(-1, pc_wisun_node_register(&fan, NULL, 1)); // null addr
 }
@@ -215,10 +215,10 @@ void test_node_find_partial_null_and_found_idx_null(void)
     WisunNode storage[2];
     WisunFan fan;
     pc_ip br;
-    pc_ip_parse("fd00::1", &br);
+    Ip.parse("fd00::1", &br);
     pc_wisun_init(&fan, &br, storage, 2);
     pc_ip a;
-    pc_ip_parse("fd00::a", &a);
+    Ip.parse("fd00::a", &a);
     TEST_ASSERT_EQUAL_INT(0, pc_wisun_node_register(&fan, &a, 1));
 
     TEST_ASSERT_TRUE(pc_wisun_node_find(&fan, &a, NULL)); // found, idx not requested
@@ -242,11 +242,11 @@ void test_joined_count_and_json_unjoined_and_null_nodes(void)
     WisunNode storage[2];
     WisunFan fan;
     pc_ip br;
-    pc_ip_parse("fd00::1", &br);
+    Ip.parse("fd00::1", &br);
     pc_wisun_init(&fan, &br, storage, 2);
     pc_ip a, b;
-    pc_ip_parse("fd00::a", &a);
-    pc_ip_parse("fd00::b", &b);
+    Ip.parse("fd00::a", &a);
+    Ip.parse("fd00::b", &b);
     TEST_ASSERT_EQUAL_INT(0, pc_wisun_node_register(&fan, &a, 1));
     TEST_ASSERT_EQUAL_INT(1, pc_wisun_node_register(&fan, &b, 2));
     storage[1].joined = PROTO_FALSE;

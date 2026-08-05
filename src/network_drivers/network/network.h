@@ -19,6 +19,7 @@
 #define PROTOCORE_NETWORK_H
 
 #include "network_drivers/network/dns/dns.h"
+#include "network_drivers/network/ip.h"
 #include "network_drivers/network/route.h" // RouteNs: carried below as network.route
 #include "protocore_config.h"
 
@@ -43,6 +44,7 @@ typedef struct
     void (*init)(void);
     const RouteNs *route;
     const DnsNs *dns;
+    const IpNs *ip;
 } NetworkNs;
 
 /** @brief The one symbol this module exports. */

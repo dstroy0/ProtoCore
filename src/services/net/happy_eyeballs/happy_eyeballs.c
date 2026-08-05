@@ -18,7 +18,7 @@ static proto_bool eff_is_v6(const pc_ip *ip)
 
 static int scope_rank(const pc_ip *ip)
 {
-    switch (pc_ip_classify(ip))
+    switch (Ip.classify(ip))
     {
     case PC_IP_SCOPE_GLOBAL:
         return 5;

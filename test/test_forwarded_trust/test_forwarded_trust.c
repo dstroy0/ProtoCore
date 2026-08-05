@@ -20,7 +20,7 @@ static pc_ip v6(const char *s)
 {
     pc_ip ip;
     ip.family = PC_IP_NONE;
-    TEST_ASSERT_TRUE(pc_ip_parse(s, &ip));
+    TEST_ASSERT_TRUE(Ip.parse(s, &ip));
     return ip;
 }
 
@@ -39,7 +39,7 @@ void test_empty_table_trusts_nothing()
     TEST_ASSERT_FALSE(pc_forwarded_trust_contains(&peer));
     pc_ip out;
     TEST_ASSERT_FALSE(pc_forwarded_effective_ip(&peer, "198.51.100.9", &out));
-    TEST_ASSERT_TRUE(pc_ip_equal(&out, &peer)); // fell back to the real peer
+    TEST_ASSERT_TRUE(Ip.equal(&out, &peer)); // fell back to the real peer
 }
 
 // A v4 CIDR matches inside its range and rejects outside / a v6 peer.
@@ -100,7 +100,7 @@ void test_trusted_peer_honors_forwarded()
     pc_ip out;
     TEST_ASSERT_TRUE(pc_forwarded_effective_ip(&proxy, "198.51.100.42", &out));
     pc_ip client = v4(198, 51, 100, 42);
-    TEST_ASSERT_TRUE(pc_ip_equal(&out, &client));
+    TEST_ASSERT_TRUE(Ip.equal(&out, &client));
 }
 
 // A trusted proxy may forward a v6 client even over a v4 hop.
@@ -111,7 +111,7 @@ void test_trusted_peer_honors_v6_forwarded()
     pc_ip out;
     TEST_ASSERT_TRUE(pc_forwarded_effective_ip(&proxy, "2001:db8::abcd", &out));
     pc_ip client = v6("2001:db8::abcd");
-    TEST_ASSERT_TRUE(pc_ip_equal(&out, &client));
+    TEST_ASSERT_TRUE(Ip.equal(&out, &client));
 }
 
 // THE security property: an untrusted (direct) peer's forwarded header is IGNORED - no spoofing.
@@ -122,7 +122,7 @@ void test_untrusted_peer_ignores_forwarded()
     pc_ip out;
     // The attacker sets X-Forwarded-For to a victim's address to try to lock the victim out.
     TEST_ASSERT_FALSE(pc_forwarded_effective_ip(&attacker, "198.51.100.1", &out));
-    TEST_ASSERT_TRUE(pc_ip_equal(&out, &attacker)); // keyed on the attacker's own address
+    TEST_ASSERT_TRUE(Ip.equal(&out, &attacker)); // keyed on the attacker's own address
 }
 
 // A trusted proxy with a malformed / obfuscated / unspecified / absent token keeps the TCP peer.
@@ -133,16 +133,16 @@ void test_trusted_peer_bad_token_falls_back()
     pc_ip out;
 
     TEST_ASSERT_FALSE(pc_forwarded_effective_ip(&proxy, "unknown", &out)); // RFC 7239 obfuscated
-    TEST_ASSERT_TRUE(pc_ip_equal(&out, &proxy));
+    TEST_ASSERT_TRUE(Ip.equal(&out, &proxy));
 
     TEST_ASSERT_FALSE(pc_forwarded_effective_ip(&proxy, NULL, &out)); // no header
-    TEST_ASSERT_TRUE(pc_ip_equal(&out, &proxy));
+    TEST_ASSERT_TRUE(Ip.equal(&out, &proxy));
 
     TEST_ASSERT_FALSE(pc_forwarded_effective_ip(&proxy, "", &out)); // empty
-    TEST_ASSERT_TRUE(pc_ip_equal(&out, &proxy));
+    TEST_ASSERT_TRUE(Ip.equal(&out, &proxy));
 
     TEST_ASSERT_FALSE(pc_forwarded_effective_ip(&proxy, "0.0.0.0", &out)); // unspecified
-    TEST_ASSERT_TRUE(pc_ip_equal(&out, &proxy));
+    TEST_ASSERT_TRUE(Ip.equal(&out, &proxy));
 }
 
 // Null-argument guards: null out fails; null peer leaves an unspecified out (never uninitialized).
@@ -152,7 +152,7 @@ void test_null_guards()
     TEST_ASSERT_FALSE(pc_forwarded_effective_ip(&peer, "1.2.3.4", NULL));
     pc_ip out;
     TEST_ASSERT_FALSE(pc_forwarded_effective_ip(NULL, "1.2.3.4", &out));
-    TEST_ASSERT_TRUE(pc_ip_is_unspecified(&out)); // written, not left uninitialized
+    TEST_ASSERT_TRUE(Ip.is_unspecified(&out)); // written, not left uninitialized
 }
 
 // pc_forwarded_trust_add() rejects a null network pointer outright.

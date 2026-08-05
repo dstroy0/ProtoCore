@@ -65,20 +65,16 @@ typedef struct
  * @brief Parse an IPv4 or IPv6 textual address (RFC 4291 §2.2) into @p out.
  * @return true on success (@p out->family set to PC_IP_V4/V6), false if @p s is malformed.
  */
-proto_bool pc_ip_parse(const char *s, pc_ip *out);
 
 /**
  * @brief Format @p ip into @p out as its RFC 5952 canonical text.
  * @return the length written (excluding the NUL), or 0 if @p ip is empty or @p cap is too small
  *         (need up to ::PC_IP_STR_MAX).
  */
-size_t pc_ip_format(const pc_ip *ip, char *out, size_t cap);
 
 /** @brief Classify @p ip into a ::pc_ip_scope. */
-pc_ip_scope pc_ip_classify(const pc_ip *ip);
 
 /** @brief True if @p a and @p b are the same family and address. */
-proto_bool pc_ip_equal(const pc_ip *a, const pc_ip *b);
 
 /** @brief True if @p ip is an IPv4-mapped IPv6 address (::ffff:a.b.c.d, RFC 4291 §2.5.5.2). */
 proto_bool pc_ip_is_v4_mapped(const pc_ip *ip);
@@ -100,7 +96,6 @@ pc_ip pc_ip_from_v6_bytes(const uint8_t bytes[16]);
 uint32_t pc_ip_to_v4_be(const pc_ip *ip);
 
 /** @brief True if @p ip is empty (PC_IP_NONE) or the all-zero unspecified address (0.0.0.0 / ::). */
-proto_bool pc_ip_is_unspecified(const pc_ip *ip);
 
 /**
  * @brief CIDR containment: is @p addr inside the @p net / @p prefix_len block?
@@ -110,7 +105,33 @@ proto_bool pc_ip_is_unspecified(const pc_ip *ip);
  * This is the standard v4/v6 allowlist match.
  * @return true if @p addr is covered; false on a family mismatch or an out-of-range prefix.
  */
-proto_bool pc_ip_prefix_match(const pc_ip *addr, const pc_ip *net, uint8_t prefix_len);
+
+/**
+ * @brief An IP address, as a value.
+ *
+ * @var IpNs::parse           read a textual address, v4 or v6, into @c out
+ * @var IpNs::format          write @c ip as text into @c out, returning the length
+ * @var IpNs::classify        what scope the address names
+ * @var IpNs::equal           whether two addresses are the same address
+ * @var IpNs::is_unspecified  whether the address names nothing
+ * @var IpNs::prefix_match    whether @c addr falls inside @c net at @c prefix_len bits
+ *
+ * No storage member: every operation reads its operands and holds nothing. Reached as
+ * network.ip->parse(...), or directly as @ref Ip from inside the network layer.
+ * , or directly as @ref Ip from inside the network layer.
+ */
+typedef struct
+{
+    proto_bool (*parse)(const char *s, pc_ip *out);
+    size_t (*format)(const pc_ip *ip, char *out, size_t cap);
+    pc_ip_scope (*classify)(const pc_ip *ip);
+    proto_bool (*equal)(const pc_ip *a, const pc_ip *b);
+    proto_bool (*is_unspecified)(const pc_ip *ip);
+    proto_bool (*prefix_match)(const pc_ip *addr, const pc_ip *net, uint8_t prefix_len);
+} IpNs;
+
+/** @brief The one symbol this module exports. */
+extern const IpNs Ip;
 
 PROTO_END_DECLS
 

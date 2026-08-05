@@ -578,8 +578,8 @@ void test_per_ip_throttle_v6_distinct()
     a.family = PC_IP_NONE;
     pc_ip b;
     b.family = PC_IP_NONE;
-    TEST_ASSERT_TRUE(pc_ip_parse("2001:db8::1", &a));
-    TEST_ASSERT_TRUE(pc_ip_parse("2001:db8::2", &b));
+    TEST_ASSERT_TRUE(Ip.parse("2001:db8::1", &a));
+    TEST_ASSERT_TRUE(Ip.parse("2001:db8::2", &b));
     for (int i = 0; i < PC_PER_IP_THROTTLE_MAX; i++)
     {
         TEST_ASSERT_TRUE(listener_accept_allowed_ip(&a, 0));
@@ -684,8 +684,8 @@ void test_ip_allowlist_v6_cidr()
     in.family = PC_IP_NONE;
     pc_ip out;
     out.family = PC_IP_NONE;
-    TEST_ASSERT_TRUE(pc_ip_parse("2001:db8:0:0:1234::abcd", &in));
-    TEST_ASSERT_TRUE(pc_ip_parse("2001:db9::1", &out));
+    TEST_ASSERT_TRUE(Ip.parse("2001:db8:0:0:1234::abcd", &in));
+    TEST_ASSERT_TRUE(Ip.parse("2001:db9::1", &out));
     TEST_ASSERT_TRUE(listener_ip_allowed(&in));
     TEST_ASSERT_FALSE(listener_ip_allowed(&out));
     pc_ip v4peer = v4w(0xC0A80101u);

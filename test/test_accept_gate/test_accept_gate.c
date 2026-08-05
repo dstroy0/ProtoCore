@@ -37,7 +37,7 @@ static pc_ip v6(const char *s)
 {
     pc_ip ip;
     ip.family = PC_IP_NONE;
-    pc_ip_parse(s, &ip);
+    Ip.parse(s, &ip);
     return ip;
 }
 
