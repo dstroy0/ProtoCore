@@ -29,8 +29,8 @@
 #ifndef PROTOCORE_CODEC_H
 #define PROTOCORE_CODEC_H
 
+#include "mmgr/span.h"
 #include "protocore_config.h" // PC_NEED_CBOR / PC_ENABLE_MSGPACK gate the instances below
-#include "shared_primitives/span.h"
 
 PROTO_BEGIN_DECLS
 

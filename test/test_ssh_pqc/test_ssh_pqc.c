@@ -22,6 +22,7 @@
 #include "network_drivers/presentation/ssh/transport/ssh_keymat.h"
 #include "network_drivers/presentation/ssh/transport/ssh_packet.h" // SSH_MSG_KEXDH_INIT / _REPLY
 #include "network_drivers/presentation/ssh/transport/ssh_transport.h"
+#include <string.h>
 
 #include <unity.h>
 

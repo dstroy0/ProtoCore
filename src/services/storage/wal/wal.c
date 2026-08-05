@@ -10,7 +10,7 @@
 
 #if PC_ENABLE_WAL
 
-#include "shared_primitives/endian.h"
+#include "mmgr/endian.h"
 
 // CRC-32 (IEEE 802.3, reflected, poly 0xEDB88320) byte lookup table. A table-driven step is several times
 // faster than the bit-by-bit form on the ESP32-S3, where the WAL write path is CRC-bound (~4.4 MB/s ->

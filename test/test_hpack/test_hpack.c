@@ -8,6 +8,7 @@
 
 #include "network_drivers/presentation/codec/hpack_prim/hpack_prim.h" // prefix-int + Huffman primitives
 #include "network_drivers/presentation/http/http2/hpack.h"
+#include <string.h>
 
 #include <unity.h>
 

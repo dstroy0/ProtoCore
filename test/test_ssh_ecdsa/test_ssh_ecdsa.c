@@ -10,6 +10,7 @@
 
 #include "crypto/asymmetric/ecdsa.h"
 #include <stdint.h>
+#include <string.h>
 
 #include <unity.h>
 
@@ -396,7 +397,7 @@ static void test_ecdh_rejects_bad_scalar(void)
     TEST_ASSERT_FALSE(pc_ecdsa_p256_ecdh(out, rpub, priv)); // d = 2^256-1 > n
 }
 
-int main(int, char **)
+int main(void)
 {
     UNITY_BEGIN();
     RUN_TEST(test_ecdsa_pubkey_matches_rfc6979);

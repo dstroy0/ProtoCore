@@ -5,6 +5,7 @@
 // lookup, selector range matching, TSi/TSr bridging, and SPI-keyed SA management.
 
 #include "services/system/esp/ipsec_db.h"
+#include <string.h>
 
 #include <unity.h>
 

@@ -8,6 +8,7 @@
 
 #include "services/peripherals/hmmd/hmmd.h"
 #include <stdint.h>
+#include <string.h>
 
 #include <unity.h>
 

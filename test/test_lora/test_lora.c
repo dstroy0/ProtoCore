@@ -8,6 +8,7 @@
 // link itself needs the module).
 
 #include "services/radio/lora/lora.h"
+#include <string.h>
 
 #include <unity.h>
 

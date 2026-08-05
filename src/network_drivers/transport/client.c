@@ -24,7 +24,7 @@
 #include "diffserv.h" // DiffServ DSCP marking for outbound client connections (compiles out when off)
 #include "network_drivers/network/dns_resolver.h" // shared host->IP resolve (one DNS owner)
 #include "server/clock/clock.h"                   // pc_millis()
-#include "shared_primitives/ring.h" // PROTO_ATOMIC_LOAD/STORE + SPSC ring drain (same primitive as the server)
+#include "mmgr/ring.h" // PROTO_ATOMIC_LOAD/STORE + SPSC ring drain (same primitive as the server)
 
 typedef struct
 {

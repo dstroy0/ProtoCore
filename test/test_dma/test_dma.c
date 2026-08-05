@@ -10,6 +10,7 @@
 // The env sizes PC_DMA_BUF_SIZE = 8, PC_DMA_CHANNELS = 2 (staging = 24).
 
 #include "mmgr/dma.h"
+#include <string.h>
 
 #include <unity.h>
 

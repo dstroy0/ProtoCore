@@ -6,6 +6,7 @@
 
 #include "network_drivers/transport/udp.h"
 #include "services/net/syslog/syslog.h"
+#include <string.h>
 
 #include <unity.h>
 

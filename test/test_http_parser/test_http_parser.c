@@ -21,6 +21,7 @@
 
 #include "network_drivers/network/ip.h" // PC_IP_STR_MAX for the recovered-client buffer
 #include "network_drivers/presentation/http/http_parser/http_parser.h"
+#include <string.h>
 #include <unity.h>
 
 // ---- Helpers -----------------------------------------------------------

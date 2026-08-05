@@ -15,7 +15,7 @@
 #if PROTOCORE_HOT
 #include "mbedtls/sha1.h" // hardware-accelerated SHA-1 on ESP32
 #else
-#include "shared_primitives/endian.h" // native software SHA-1
+#include "mmgr/endian.h" // native software SHA-1
 #endif
 PC_CRYPTO_HOT
 

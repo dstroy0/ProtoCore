@@ -8,6 +8,7 @@
 
 #include "network_drivers/application/ptp/ptp.h"
 #include <stdio.h>
+#include <string.h>
 
 #include <unity.h>
 

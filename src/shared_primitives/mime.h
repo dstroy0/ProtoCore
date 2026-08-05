@@ -9,7 +9,7 @@
  * examples all name: reference the pointer, never re-type the string, so a value cannot silently
  * diverge across call sites.
  *
- * Header-only like hex.h / numparse.h - no .cpp to wire into every test
+ * Header-only like hex.h - no .cpp to wire into every test
  * env's src filter. Each is a `const char *const` to a string literal: the literal
  * lives in the linker's mergeable string section, so there is one copy in flash no
  * matter how many translation units reference it, and an unused one costs nothing.

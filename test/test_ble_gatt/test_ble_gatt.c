@@ -4,6 +4,7 @@
 // Host tests for services/ble_gatt: the ATT PDU codec + GATT characteristic JSON.
 
 #include "services/radio/ble_gatt/ble_gatt.h"
+#include <string.h>
 
 #include <unity.h>
 

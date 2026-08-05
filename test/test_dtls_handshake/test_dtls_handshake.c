@@ -9,6 +9,7 @@
 #include "crypto/mac/hmac_sha256.h" // PC_HMAC_SHA256_LEN (cookie MAC size)
 #include "network_drivers/presentation/security/dtls/dtls_handshake.h"
 #include <stdint.h>
+#include <string.h>
 
 #include <unity.h>
 
@@ -478,7 +479,7 @@ static void test_cookie_verify_structural_rejects(void)
                                             sizeof(COOKIE_WIRE), small, sizeof(small), &plen));
 }
 
-int main(int, char **)
+int main(void)
 {
     UNITY_BEGIN();
     RUN_TEST(test_hs_header_roundtrip);

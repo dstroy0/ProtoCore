@@ -15,7 +15,7 @@
 #if PC_ENABLE_CONFIG_IO
 
 #include "services/storage/config_store/config_store.h"
-#include "shared_primitives/numparse.h"
+#include "mmgr/protostr.h"
 #include <stdio.h>
 
 // An exported u32 field is one number.
@@ -103,7 +103,7 @@ static proto_bool config_apply_field(const pc_cfg_field *fields, size_t n, const
     }
     if (t == PC_CFG_U32)
     {
-        return pc_config_set_u32(key, (uint32_t)pc_strtoul(val, NULL));
+        return pc_config_set_u32(key, (uint32_t)str.to_ulong(val, NULL));
     }
     if (t == PC_CFG_STR)
     {

@@ -10,7 +10,7 @@
 
 #if PC_ENABLE_ADS
 
-#include "shared_primitives/endian.h"
+#include "mmgr/endian.h"
 
 // Write the AMS/TCP header (with the final total length) + the 32-octet AMS header. The payload
 // is appended by the caller; `payload_len` is cbData. Returns ADS_HDR_LEN, or 0 if too small.

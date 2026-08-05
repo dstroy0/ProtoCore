@@ -17,6 +17,7 @@
 #include "services/net/snmp/snmp_notify.h"
 #include "services/net/snmp/snmp_v3.h"
 #include <stdio.h>
+#include <string.h>
 
 #include <unity.h>
 

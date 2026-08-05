@@ -10,7 +10,7 @@
 
 #if PC_ENABLE_SMB
 
-#include "shared_primitives/endian.h"
+#include "mmgr/endian.h"
 
 static const uint8_t NTLMSSP_SIG[8] = {'N', 'T', 'L', 'M', 'S', 'S', 'P', 0};
 

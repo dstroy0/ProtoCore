@@ -548,7 +548,7 @@ void test_binding_poll_reads_the_library_clock()
     TEST_ASSERT_EQUAL_INT(1, g_event_calls);
 }
 
-int main(int, char **)
+int main(void)
 {
     UNITY_BEGIN();
     RUN_TEST(test_starts_absent_not_ready);

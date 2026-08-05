@@ -178,7 +178,7 @@ radio security storage system timing_position transportation web.
 the signature, because the target list includes c2000 where control-law code is written and reviewed
 as C. Internals between those two surfaces may be C++.
 
-`shared_primitives/bytes.h` is an internal primitive shared between codecs, so its 9 templated
+`mmgr/bytes.h` is an internal primitive shared between codecs, so its 9 templated
 helpers (`pc_bw_init/_len/_ok/_put/_put_be`, `pc_br_init/_ok/_take_be`) are **not** a C-API
 violation - I called them one and was wrong. New code still adds no templates, so anything added
 there is concrete.
@@ -939,7 +939,7 @@ Fixed in passing, each a real defect rather than a rename artifact:
   That is `pc_arena_scratch_reset()`; the accessor is a caller, not the mechanism.
 - `plaintext.h` named `xTaskGetCurrentTaskHandle` in the core. The implementation had already moved
   to `pc_platform_context_id()`; only the comment still named the RTOS. Also "DRAM" -> "RAM".
-- `native_span`'s matrix description still pointed at `shared_primitives/span.h`.
+- `native_span`'s matrix description still pointed at `mmgr/span.h`.
 
 `docs/BUGS.md` was deliberately NOT swept. It is a dated log, and rewriting the symbol names in a
 past entry falsifies the record of what the code said when the bug was found.
@@ -1003,7 +1003,7 @@ Fixed in passing:
 
 `base64.cpp` carried a private SWAR toolkit - `swar_ge` / `swar_le` / `swar_spread` / `swar_sub7`
 plus the `0x01010101` / `0x80808080` lane constants - in its anonymous namespace, gated behind
-`PC_BASE64_SWAR`. It is now `shared_primitives/swar.h` and base64 includes it; the classification
+`PC_BASE64_SWAR`. It is now `mmgr/swar.h` and base64 includes it; the classification
 of the base64 alphabet stays in base64, which is the part that is actually base64's.
 
 One op was genuinely missing: `pc_swar_has_zero`. With it, `pc_swar_scan_nul(s, cap)` tests four

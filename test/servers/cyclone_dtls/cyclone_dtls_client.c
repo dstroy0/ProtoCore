@@ -12,6 +12,7 @@
 //
 // --rpk registers a RawPublicKey verify callback, which makes CycloneSSL advertise the
 // server_certificate_type = RawPublicKey extension (RFC 7250) in the ClientHello.
+#include <string.h>
 
 #include <arpa/inet.h>
 #include <errno.h>

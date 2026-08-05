@@ -10,7 +10,7 @@
 
 #if PC_ENABLE_FLOW_EXPORT
 
-#include "shared_primitives/endian.h"
+#include "mmgr/endian.h"
 
 size_t flow_v5_write_header(uint8_t *buf, size_t cap, const FlowV5Header *h)
 {

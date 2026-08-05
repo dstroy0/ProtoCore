@@ -15,7 +15,7 @@
 
 #if PROTOCORE_HOT || PC_PLATFORM_HAS_BUS
 #include "services/peripherals/i2c.h"
-#include "shared_primitives/endian.h" // pc_wr16be: the commands and words are big-endian
+#include "mmgr/endian.h" // pc_wr16be: the commands and words are big-endian
 #endif
 uint8_t pc_sht3x_crc8(const uint8_t *data, size_t len)
 {

@@ -5,6 +5,7 @@
 // the service-worker precache manifest. Byte-range serving is network_drivers/application/http_range.h's job.
 
 #include "services/file_transfer/http_delivery/http_delivery.h"
+#include <string.h>
 
 #include <unity.h>
 

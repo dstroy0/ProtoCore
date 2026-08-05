@@ -9,6 +9,7 @@
 
 #include "network_drivers/presentation/security/dtls/dtls_record.h"
 #include <stdint.h>
+#include <string.h>
 
 #include <unity.h>
 
@@ -542,7 +543,7 @@ static void test_dtls_seq_reconstruction_overflow_guard(void)
         pc_dtls_ciphertext_unprotect(&k, 0xFFFFFFFFFFFFFFFFull, wire, n, out, sizeof(out), &info, NULL, 0));
 }
 
-int main(int, char **)
+int main(void)
 {
     UNITY_BEGIN();
     RUN_TEST(test_dtls_record_keys_derive_kat);

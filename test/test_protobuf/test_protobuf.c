@@ -5,6 +5,7 @@
 // writer and the cursor reader, anchored on the canonical spec vectors. Pure host tests.
 
 #include "services/iot/protobuf/protobuf.h"
+#include <string.h>
 
 #include <unity.h>
 

@@ -7,7 +7,7 @@
  */
 
 #include "services/radio/radio_sniff/radio_sniff.h"
-#include "shared_primitives/endian.h"
+#include "mmgr/endian.h"
 
 #if PC_ENABLE_RADIO_SNIFF
 

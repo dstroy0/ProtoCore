@@ -241,7 +241,7 @@ void test_json_zero_cap_is_rejected()
     TEST_ASSERT_EQUAL_UINT32(0, pc_power_json(&p, 41, buf, 0));
 }
 
-int main(int, char **)
+int main(void)
 {
     UNITY_BEGIN();
     RUN_TEST(test_idle_runs_at_the_floor);

@@ -17,6 +17,7 @@
 #include "../test_ssh_pqc/mlkem_ref.h"   // pc_mlkem768_decaps_ref (the client side)
 #include "crypto/pqc/mlkem.h"            // MLKEM768_EK_BYTES / MLKEM768_CT_BYTES
 #endif
+#include <string.h>
 
 #include <unity.h>
 
@@ -1208,7 +1209,7 @@ void test_quic_tls_message_dispatch_guards()
     TEST_ASSERT_NOT_NULL(pc_quic_tls_peer_params(&qt));
 }
 
-int main(int, char **)
+int main(void)
 {
     UNITY_BEGIN();
     RUN_TEST(test_quic_tls_message_dispatch_guards);

@@ -6,7 +6,8 @@ This is the mechanical guardrail behind that checklist: the pre-commit hook runs
 land. It scans for the machine-detectable hard bans - unbounded ``strlen``, ``<stdlib.h>`` and its
 heap / parse functions, the ``auto`` keyword, blocking ``delay()``, the non-reentrant ``gmtime`` /
 ``localtime`` / ``ctime`` / ``asctime`` family, em-dashes, runtime dispatch that is not resolvable
-from the binary (ban #22: ``virtual``, class hierarchies, RTTI, ``std::function``), and mid-file
+from the binary (ban #22: ``virtual``, class hierarchies, RTTI, ``std::function``), the conditional
+expression (ban #23: ``?:`` anywhere in a code body), and mid-file
 ``#include`` (ban #17: any
 ``#include`` after code - every include must be hoisted to the top of the file; the sole exemption is a
 justified ``// PC_ALLOW_LATE_INCLUDE:`` on an ordered include that derives from earlier macros).
@@ -55,6 +56,22 @@ _INHERIT_MSG = "class hierarchy; compose an owned context instead of inheriting 
 _RTTI_MSG = "RTTI (dynamic_cast/typeid); the type is known at the call site - state it (see ban #22)"
 _STDFUNCTION_MSG = "std::function type-erases through an allocation; use a plain function pointer (see ban #22)"
 
+# Ban #23: the conditional expression. MISRA governs src/ and bounds how many conditionals a line may
+# carry; a ternary hides a branch inside an expression, so one statement can hold any number of them
+# and the decision stops being visible where the value is set. A chain is an if/else-if ladder written
+# where the arms cannot be lined up against their conditions, and a nested one makes precedence
+# load-bearing for control flow.
+#
+# The detector is the bare `?`, not a `? ... :` shape, and that is exact rather than approximate:
+# comments and string/char literals are already blanked, and once they are gone `?` has exactly one
+# meaning left in C. Matching the pair would also miss the multi-line form, where the `?` and its `:`
+# land on different lines and the scan is per line.
+_TERNARY_MSG = (
+    "conditional expression (?:); every assignment and every conditional is its own statement. "
+    "Use if / else if / else - declare the variable with the fall-through value, then assign "
+    "inside the branch that owns it"
+)
+
 # (compiled pattern, ban number, message). Patterns run on comment/string-stripped code. Every
 # use-instead pattern (pcdelay, pc_millis, strnlen, gmtime_r) survives because the banned token is
 # not on a word boundary there ("pc_millis" has no boundary before "millis", etc.).
@@ -75,6 +92,7 @@ BANS = [
     (re.compile(r"\b(?:class|struct)\s+\w+\s*:\s*(?:public|protected|private|virtual)\b"), 22, _INHERIT_MSG),
     (re.compile(r"\b(?:dynamic_cast|typeid)\b"), 22, _RTTI_MSG),
     (re.compile(r"\bstd::function\b"), 22, _STDFUNCTION_MSG),
+    (re.compile(r"\?"), 23, _TERNARY_MSG),
     # Ban 18 is applied in scan_file, not here: it only fires at file/namespace scope.
     # A `static constexpr` MEMBER of a namespacing struct (LoraReg::REG_FIFO, the
     # pc_radio_ps pattern SYMBOLS.md endorses) is a scoped data table, not a value other
@@ -265,8 +283,9 @@ def collect(argv):
 
 
 # Ban 18 carries no baseline any more: all 165 free-scope sites were converted, so it fails on
-# sight. Bans 19 and 20 ride one while their sweeps run down to zero.
-BASELINED = {19, 20}
+# sight. Bans 19, 20 and 23 ride one while their sweeps run down to zero. Drop a number from this set
+# the moment its sweep reaches zero, and the ban fails on sight from then on.
+BASELINED = {19, 20, 23}
 BASELINE = bl.path_for(__file__, "sweep_baseline")
 
 
@@ -303,6 +322,10 @@ def _key(v):
     if ban_no == 20:
         # every snprintf shares one message, so the ordinal wrapper does the disambiguating
         return f"{path}|20|snprintf"
+    if ban_no == 23:
+        # one message for every ternary, and a line can hold several; the ordinal wrapper separates
+        # them, so removing one leaves the survivors' ordinals inside the recorded set
+        return f"{path}|23|ternary"
     return f"{path}|{ban_no}|{message}"
 
 

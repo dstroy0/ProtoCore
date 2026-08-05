@@ -11,6 +11,7 @@
 
 #include "sntrup761_kat.h"
 #include <stdint.h>
+#include <string.h>
 
 #include <unity.h>
 

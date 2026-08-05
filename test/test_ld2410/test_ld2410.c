@@ -9,6 +9,7 @@
 
 #include "services/peripherals/ld2410/ld2410.h"
 #include <stdint.h>
+#include <string.h>
 
 #include <unity.h>
 

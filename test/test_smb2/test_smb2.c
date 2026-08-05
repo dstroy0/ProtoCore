@@ -11,6 +11,7 @@
 #include "network_drivers/application/smb/ntlmssp.h"
 #include "network_drivers/application/smb/smb2.h"
 #include "network_drivers/application/smb/spnego.h"
+#include <string.h>
 
 #include <unity.h>
 

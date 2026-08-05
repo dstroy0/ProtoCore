@@ -8,6 +8,7 @@
 // Count, dynamic index/name, post-base representations). Static-table-only, pure host codec.
 
 #include "network_drivers/presentation/http/http3/qpack.h"
+#include <string.h>
 
 #include <unity.h>
 

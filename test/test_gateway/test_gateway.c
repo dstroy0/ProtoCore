@@ -11,6 +11,7 @@
 // The env sizes PC_GW_MAX_PORTS = 4.
 
 #include "services/net/gateway/gateway.h"
+#include <string.h>
 
 #include <unity.h>
 

@@ -5,6 +5,7 @@
 // Read resolver over a bound EmImm, including the UInt64 production counters.
 
 #include "services/machine_tool/euromap77/euromap77.h"
+#include <string.h>
 
 #include <unity.h>
 

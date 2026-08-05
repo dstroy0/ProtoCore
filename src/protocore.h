@@ -55,6 +55,7 @@ PROTO_BEGIN_DECLS
 #include "crypto/cipher/aes256ctr.h"
 #include "crypto/mac/hmac_sha256.h"
 
+#include "network_drivers/application/auth/auth.h"
 #include "network_drivers/physical/physical.h"
 
 #include "network_drivers/transport/client.h"
@@ -109,6 +110,7 @@ PROTO_BEGIN_DECLS
 #include "mmgr/dma.h"
 #include "mmgr/plaintext.h"
 #include "mmgr/secure.h"
+#include "mmgr/span.h"
 #include "network_drivers/application/file_serving/file_serving.h"
 #include "network_drivers/application/http_range.h"
 #include "network_drivers/application/mdns_adaptive/mdns_adaptive.h"
@@ -344,7 +346,6 @@ PROTO_BEGIN_DECLS
 #include "services/web/httpcache/httpcache.h"
 #include "services/web/spa_router/spa_router.h"
 #include "services/web/web_terminal/web_terminal.h"
-#include "shared_primitives/span.h"
 
 /**
  * @brief A storage backend (server/filesystem/mnt.h), named here only as a pointer.
@@ -557,11 +558,10 @@ typedef struct Route
 #endif
 
 #if PC_ENABLE_AUTH
-    proto_bool auth_required;      ///< True when this route requires authentication.
-    proto_bool auth_digest;        ///< True for Digest auth; false for Basic.
-    char auth_realm[MAX_AUTH_LEN]; ///< WWW-Authenticate realm string.
-    char auth_user[MAX_AUTH_LEN];  ///< Required username.
-    char auth_pass[MAX_AUTH_LEN];  ///< Required password.
+    /// The credential set this route needs, or PC_AUTH_NONE. The credentials themselves belong to
+    /// the auth module: a route decides where a request goes, and key material in a routing entry is
+    /// a copy of a secret in a place that has no reason to hold one.
+    uint8_t auth_id; ///< Required password.
 #endif
 
     proto_bool is_active;   ///< `false` for unused table slots.
@@ -684,29 +684,6 @@ int proto_append_resp_trailer(char *buf, size_t cap, int hlen, uint8_t slot_id, 
 /// @brief Resume a pending chunked response: pull + frame chunks until the send window is full, finish when
 /// drained.
 void chunk_send_pump(uint8_t slot_id);
-
-#if PC_ENABLE_AUTH
-/// @brief Validate the request's HTTP Basic credentials against route @p r. @return true if authorized.
-proto_bool check_basic_auth(uint8_t slot_id, HttpReq *req, const Route *r);
-/// @brief Validate an `Authorization: Digest` (RFC 7616, SHA-256, qop=auth) request against route @p r.
-/// @param stale  set true when the credentials verify but the nonce has expired (RFC 7616 3.3): the
-///               caller reissues a fresh challenge with `stale=true` so the client retries without a
-///               re-prompt. Left untouched on a credential mismatch or forged nonce.
-proto_bool check_digest_auth(uint8_t slot_id, HttpReq *req, const Route *r, proto_bool *stale);
-/// @brief Send 401 Unauthorized with a Basic or Digest `WWW-Authenticate` challenge per route @p r.
-/// @param stale  emit `stale=true` in the Digest challenge (expired-nonce transparent retry).
-void send_unauth(uint8_t slot_id, const Route *r, proto_bool stale);
-// The Digest keying secret is NOT here. It lives in network_drivers/application/auth/auth.c's AuthCtx, which is the
-// only file that reads it: a definition in this header gives every translation unit that includes it a separate copy of
-// the secret (and a multiple-definition link error), which is the opposite of one owner. See the comment on AuthCtx.
-/// @brief (Re)seed the Digest keying secret from the CSPRNG.
-void regen_digest_secret();
-/// @brief Mint a fresh stateless nonce (issue time + keyed MAC) into @p out (needs cap >= 48).
-void make_digest_nonce(char *out, size_t cap);
-/// @brief Verify a client nonce's MAC and freshness. @return true if the MAC is authentic (issued by
-///        this server); sets @p *expired when the nonce is authentic but older than its lifetime.
-proto_bool verify_digest_nonce(const char *nonce, proto_bool *expired);
-#endif
 
 // serve_static_request / serve_file_internal / file_send_pump: file_serving.h
 

@@ -5,9 +5,10 @@
 // (mountpoint, NTRIP version, HTTP Basic auth), the stream-accept / error responses, and the RTCM
 // source table (STR records + ENDSOURCETABLE, with a self-consistent Content-Length). Pure host tests.
 
+#include "mmgr/protostr.h"
 #include "services/timing_position/gnss/ntrip_caster.h"
-#include "shared_primitives/numparse.h"
 #include <stdio.h>
+#include <string.h>
 
 #include <unity.h>
 
@@ -149,7 +150,7 @@ static long content_length_of(const char *resp)
         return -1;
     }
     const char *end = h;
-    return pc_strtol(h + 15, &end);
+    return str.to_long(h + 15, &end);
 }
 
 void test_sourcetable_has_records_and_correct_length()

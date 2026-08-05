@@ -18,7 +18,7 @@
 #include "network_drivers/presentation/ssh/transport/ssh_packet.h" // SSH_MSG_KEXINIT, ssh_pkt[]
 #include "network_drivers/tls/ssh_rsa.h" // ssh_rsa_encode_pubkey/sign, ssh_host_pubkey, SSH_RSA_*
 #include "server/clock/clock.h"          // pc_millis() (re-key timer)
-#include "shared_primitives/bytes.h"     // pc_rd_str() - a name-list is an RFC 4251 sec 5 string
+#include "mmgr/bytes.h"     // pc_rd_str() - a name-list is an RFC 4251 sec 5 string
 #if PC_ENABLE_PQC_KEX
 #include "crypto/pqc/mlkem.h" // pc_mlkem768_encaps (PQ/T hybrid KEX responder)
 #endif

@@ -18,8 +18,8 @@
  * the tcpip_thread <-> worker/caller boundary on either core. No locks, no RMW.
  */
 
-#include "shared_primitives/rawmemcpy.h" // proto_raw_read: the producer span move
-#include <stdatomic.h>                   // _Atomic, atomic_load_explicit, atomic_store_explicit, memory_order_*
+#include "mmgr/rawmemcpy.h" // proto_raw_read: the producer span move
+#include <stdatomic.h>      // _Atomic, atomic_load_explicit, atomic_store_explicit, memory_order_*
 
 // ---------------------------------------------------------------------------
 // Cross-thread field access

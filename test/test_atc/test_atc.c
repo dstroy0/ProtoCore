@@ -5,6 +5,7 @@
 
 #include "mmgr/membuild.h"
 #include "services/machine_tool/atc/atc.h"
+#include <string.h>
 
 #include <unity.h>
 

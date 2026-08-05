@@ -35,8 +35,8 @@
 #ifndef PROTOCORE_SWAR_H
 #define PROTOCORE_SWAR_H
 
-#include "protocore_config.h"            // PROTO_SWAR_BITS: the platform's lane-carrier width
-#include "shared_primitives/rawmemcpy.h" // proto_raw_load: the one owner of an unaligned wider load
+#include "mmgr/rawmemcpy.h"   // proto_raw_load: the one owner of an unaligned wider load
+#include "protocore_config.h" // PROTO_SWAR_BITS: the platform's lane-carrier width
 
 /**
  * @brief The lane carrier, selected by the platform width knob.
@@ -253,11 +253,85 @@ PC_INLINE pc_swar_word pc_swar_eq_ci(pc_swar_word w, uint8_t c)
     return pc_swar_has_zero(pc_swar_xor_ci(w, PC_SWAR_ONES * (pc_swar_word)c));
 }
 
-/// @name What one step of ::proto_agree concluded
+/// @name What one step of a walk concluded
 /// @{
 #define PC_SWAR_GO 0  ///< undecided: keep stepping
 #define PC_SWAR_YES 1 ///< they agree, by whichever rule the caller asked for
 #define PC_SWAR_NO 2  ///< they do not
 /// @}
+
+/** @brief The exact syndrome: zero in exactly the lanes where @p wa and @p wb match. */
+PC_INLINE pc_swar_word pc_swar_xor(pc_swar_word wa, pc_swar_word wb)
+{
+    return wa ^ wb;
+}
+
+// Exact and case-folding are separate tests, so the bool names which one runs rather than travelling
+// into it.
+PC_INLINE pc_swar_word pc_swar_eq_sel(pc_swar_word w, uint8_t c, proto_bool ci)
+{
+    if (ci)
+    {
+        return pc_swar_eq_ci(w, c);
+    }
+    return pc_swar_eq(w, c);
+}
+
+PC_INLINE pc_swar_word pc_swar_xor_sel(pc_swar_word wa, pc_swar_word wb, proto_bool ci)
+{
+    if (ci)
+    {
+        return pc_swar_xor_ci(wa, wb);
+    }
+    return pc_swar_xor(wa, wb);
+}
+
+/**
+ * @brief The lane-math module. One word in, a per-lane answer out, branchless throughout.
+ *
+ * @var SwarNs::ge         per lane: 0x80 where the lane is >= @c v
+ * @var SwarNs::le         per lane: 0x80 where the lane is <= @c v
+ * @var SwarNs::spread     widen a 0x80-per-lane mask to 0xFF per lane
+ * @var SwarNs::sub7       per lane: (lane - @c lo) in the low 7 bits
+ * @var SwarNs::has_zero   0x80 in every zero lane of @c w, and only those
+ * @var SwarNs::eq         per lane: 0x80 where the lane equals @c c; @c ci folds ASCII case
+ * @var SwarNs::xor_       the syndrome of @c wa against @c wb; @c ci cancels a case-only difference
+ * @var SwarNs::zero_lane  which lane of a mask is the first one set, in address order
+ * @var SwarNs::load       one word from @c p, whatever its alignment
+ * @var SwarNs::load_al    the same, for an address already on a lane boundary
+ *
+ * The member is spelled `xor_` because `xor` is an alternative token in C++, and this header reaches
+ * the sketches.
+ *
+ * No storage member: every operation works on the value or pointer handed to it and holds nothing.
+ */
+typedef struct
+{
+    pc_swar_word (*ge)(pc_swar_word a, pc_swar_word v);
+    pc_swar_word (*le)(pc_swar_word a, pc_swar_word v);
+    pc_swar_word (*spread)(pc_swar_word m);
+    pc_swar_word (*sub7)(pc_swar_word a, pc_swar_word lo);
+    pc_swar_word (*has_zero)(pc_swar_word w);
+    pc_swar_word (*eq)(pc_swar_word w, uint8_t c, proto_bool ci);
+    pc_swar_word (*xor_)(pc_swar_word wa, pc_swar_word wb, proto_bool ci);
+    size_t (*zero_lane)(pc_swar_word m);
+    pc_swar_word (*load)(const char *p);
+    pc_swar_word (*load_al)(const char *p);
+} SwarNs;
+
+/**
+ * @brief The names, aliased.
+ *
+ * `static const` and initialized here beside the bodies, not declared `extern` against a definition
+ * in a .c: those are not the same object. A translation unit that can see this initializer knows
+ * `swar.ge` IS ::pc_swar_ge, so the member read folds away, the body inlines, and the table is left
+ * referenced by nothing for the linker to drop. One that can see only an `extern` declaration has to
+ * load the pointer and call through it.
+ *
+ * `unused` because a header this wide is included by files that take none of it.
+ */
+static const SwarNs swar
+    __attribute__((unused)) = {pc_swar_ge,     pc_swar_le,      pc_swar_spread,    pc_swar_sub7, pc_swar_has_zero,
+                               pc_swar_eq_sel, pc_swar_xor_sel, pc_swar_zero_lane, pc_swar_load, pc_swar_load_al};
 
 #endif // PROTOCORE_SWAR_H

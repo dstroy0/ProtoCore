@@ -24,6 +24,7 @@
 #include "network_drivers/presentation/http/http3/tls13_msg.h"
 #include "network_drivers/tls/tls13_kdf.h"
 #include "protocore.h"
+#include <string.h>
 
 #include <unity.h>
 
@@ -537,7 +538,7 @@ void test_h3_dispatch_edges()
     send_empty(0, 204);                   // send_empty(): pc_resp_sink == NULL
 }
 
-int main(int, char **)
+int main(void)
 {
     UNITY_BEGIN();
     RUN_TEST(test_h3_begin_edges); // first: before the h3 test latches pc_h3_running true

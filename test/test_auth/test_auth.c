@@ -14,6 +14,7 @@
 #include "crypto/hash/sha256.h" // recompute the Digest response test-side
 #include "protocore.h"
 #include <stdio.h>
+#include <string.h>
 
 #include <unity.h>
 

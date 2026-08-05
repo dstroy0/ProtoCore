@@ -22,7 +22,7 @@
 #include "crypto/ct_eq.h" // pc_ct_eq
 #include "crypto/mac/ghash.h"
 #include "mmgr/secure.h"
-#include "shared_primitives/rawmemcpy.h" // proto_raw_u32 - the aliasing-permitted word load
+#include "mmgr/rawmemcpy.h" // proto_raw_u32 - the aliasing-permitted word load
 
 #if !PC_HAS_HW_AESGCM
 

@@ -22,6 +22,7 @@
 #include "network_drivers/presentation/http/http3/quic_varint.h"
 #include "network_drivers/presentation/http/http3/tls13_msg.h"
 #include "network_drivers/tls/tls13_kdf.h"
+#include <string.h>
 
 #include <unity.h>
 
@@ -938,7 +939,7 @@ void test_quic_server_on_request_null()
     pc_quic_server_stop();
 }
 
-int main(int, char **)
+int main(void)
 {
     UNITY_BEGIN();
     RUN_TEST(test_quic_server_http3_get);

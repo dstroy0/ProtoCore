@@ -4,6 +4,7 @@
 // Host tests for services/hart: the HART command frame + HART-IP header codec.
 
 #include "services/fieldbus/hart/hart.h"
+#include <string.h>
 
 #include <unity.h>
 

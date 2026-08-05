@@ -5,6 +5,7 @@
 
 #include "protocore.h" // regex_match: matcher edges that cannot ride in a request-line path
 #include <stdio.h>
+#include <string.h>
 
 #include <unity.h>
 

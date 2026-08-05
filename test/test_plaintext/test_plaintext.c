@@ -6,6 +6,7 @@
 // host tests - no sockets, no FreeRTOS (the owner-task tripwire is ESP32-only).
 
 #include "mmgr/plaintext.h"
+#include "mmgr/secure.h"
 #include "network_drivers/session/worker.h"
 #include <stdint.h>
 #include <unity.h>
@@ -226,6 +227,76 @@ void test_zero_align_uses_default()
     TEST_ASSERT_EQUAL_size_t(0, (uintptr_t)p % 8); // default alignment is at least 8
 }
 
+// ---------------------------------------------------------------------------
+// The `plain` table names ten functions, and four of them (used, mark,
+// high_water, capacity) are size_t(void) - so a swapped pair type-checks and
+// links, and only identity catches it. The table is initialized in the header,
+// which is what keeps --gc-sections able to reclaim the pool storage from a
+// build that resets but never borrows; a definition in the .c would name every
+// member and anchor alloc -> bind -> the backing bytes.
+void test_plain_table_is_wired_to_the_named_functions()
+{
+    TEST_ASSERT_EQUAL_PTR(pc_plaintext_alloc, plain.alloc);
+    TEST_ASSERT_EQUAL_PTR(pc_plaintext_span, plain.span);
+    TEST_ASSERT_EQUAL_PTR(pc_plaintext_reset, plain.reset);
+    TEST_ASSERT_EQUAL_PTR(pc_plaintext_mark, plain.mark);
+    TEST_ASSERT_EQUAL_PTR(pc_plaintext_release, plain.release);
+    TEST_ASSERT_EQUAL_PTR(pc_plaintext_used, plain.used);
+    TEST_ASSERT_EQUAL_PTR(pc_plaintext_high_water, plain.high_water);
+    TEST_ASSERT_EQUAL_PTR(pc_plaintext_capacity, plain.capacity);
+    TEST_ASSERT_EQUAL_PTR(pc_plaintext_owns, plain.owns);
+    TEST_ASSERT_EQUAL_PTR(pc_plaintext_slot_of, plain.slot_of);
+}
+
+// The pool reached through the table rather than around it: borrow, own, mark,
+// release, and fail closed on an over-budget request.
+void test_plain_table_round_trip()
+{
+    plain.reset();
+    TEST_ASSERT_EQUAL_size_t(0, plain.used());
+    TEST_ASSERT_EQUAL_size_t(PC_PLAINTEXT_ARENA_SIZE, plain.capacity());
+
+    void *a = plain.alloc(64, 8);
+    TEST_ASSERT_NOT_NULL(a);
+    TEST_ASSERT_EQUAL_size_t(0, (uintptr_t)a % 8);
+    TEST_ASSERT_TRUE(plain.owns(a));
+    TEST_ASSERT_TRUE(plain.slot_of(a) >= 0 && plain.slot_of(a) < PC_REG_POOL_SLOTS);
+
+    // The foreign pointer is a secure-pool borrow, not a stack address: it is aligned and padded
+    // like every borrow, and the two pools are disjoint regions by construction, which is the
+    // property being asserted. A stack object would test an accident of the frame instead.
+    const pc_span secret = pc_secure_span(32, 8);
+    TEST_ASSERT_TRUE(pc_span_ok(secret));
+    TEST_ASSERT_FALSE(plain.owns(secret.buf));
+    TEST_ASSERT_EQUAL_INT(-1, plain.slot_of(secret.buf));
+    TEST_ASSERT_FALSE(plain.owns(NULL));
+    pc_secure_reset();
+
+    // mark() is the arena top and used() is size minus it, so the contract is
+    // that release puts used() back, not that the two numbers agree.
+    const size_t used_at_mark = plain.used();
+    const size_t mark = plain.mark();
+    void *b = plain.alloc(32, 8);
+    TEST_ASSERT_NOT_NULL(b);
+    TEST_ASSERT_TRUE(plain.used() >= used_at_mark + 32);
+    plain.release(mark);
+    TEST_ASSERT_EQUAL_size_t(used_at_mark, plain.used());
+    TEST_ASSERT_EQUAL_PTR(b, plain.alloc(32, 8));
+
+    plain.reset();
+    pc_span s = plain.span(48, 8);
+    TEST_ASSERT_TRUE(pc_span_ok(s));
+    TEST_ASSERT_EQUAL_size_t(48, s.cap);
+    TEST_ASSERT_TRUE(plain.owns(s.buf));
+
+    const pc_span too_big = plain.span(plain.capacity() * 4u, 8);
+    TEST_ASSERT_FALSE(pc_span_ok(too_big));
+    TEST_ASSERT_NULL(too_big.buf);
+    TEST_ASSERT_EQUAL_size_t(0, too_big.cap);
+
+    plain.reset();
+}
+
 int main()
 {
     UNITY_BEGIN();
@@ -246,5 +317,8 @@ int main()
     RUN_TEST(test_nested_scopes_reclaim_lifo);
     RUN_TEST(test_sequential_scopes_do_not_accumulate);
     RUN_TEST(test_borrow_comes_from_the_callers_slot);
+    // Last: the round trip borrows, which moves the high-water mark the tests above bound.
+    RUN_TEST(test_plain_table_is_wired_to_the_named_functions);
+    RUN_TEST(test_plain_table_round_trip);
     return UNITY_END();
 }

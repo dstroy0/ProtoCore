@@ -10,6 +10,7 @@
 
 #include "network_drivers/presentation/http/sse/sse.h"
 #include "network_drivers/presentation/presentation.h" // http_conn_open (SSE-teardown regression)
+#include <string.h>
 
 #include <unity.h>
 

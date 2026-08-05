@@ -7,6 +7,7 @@
 // parameters, and rejection of malformed or out-of-range input.
 
 #include "network_drivers/presentation/http/http3/quic_tp.h"
+#include <string.h>
 
 #include <unity.h>
 
@@ -330,7 +331,7 @@ void test_parse_range_check_value_decode_gaps()
     }
 }
 
-int main(int, char **)
+int main(void)
 {
     UNITY_BEGIN();
     RUN_TEST(test_defaults);

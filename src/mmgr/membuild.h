@@ -18,9 +18,9 @@
 #ifndef PROTOCORE_MEMBUILD_H
 #define PROTOCORE_MEMBUILD_H
 
-#include "shared_primitives/hex.h"       // PC_HEX_LOWER - the shared digit table
-#include "shared_primitives/rawmemcpy.h" // proto_raw_u64 - the IEEE-754 field reads below
-#include "shared_primitives/runops.h"    // proto_scan_nul - a word per test, bounded by a known width
+#include "mmgr/protostr.h"         // str.len - a word per test, bounded by a known width
+#include "mmgr/rawmemcpy.h"        // proto_raw_u64 - the IEEE-754 field reads below
+#include "shared_primitives/hex.h" // PC_HEX_LOWER - the shared digit table
 
 /** @brief Bump-append target; @c ok latches false once an append would overflow @c cap. */
 typedef struct
@@ -49,11 +49,9 @@ static inline void pc_sb_put_n(pc_sb *b, const char *s, size_t sl)
         b->ok = PROTO_FALSE;
         return;
     }
-    char *d = b->p + b->len;
-    for (size_t i = 0; i < sl; i++)
-    {
-        d[i] = s[i];
-    }
+    // The destination is a position inside the caller's buffer, so the exact mover: the bytes past
+    // the append still belong to whoever owns the rest of it.
+    proto_raw_read(b->p + b->len, s, sl);
     b->len += sl;
 }
 
@@ -64,7 +62,7 @@ static inline void pc_sb_put(pc_sb *b, const char *s)
     {
         return;
     }
-    pc_sb_put_n(b, s, proto_scan_nul(s, b->cap));
+    pc_sb_put_n(b, s, str.len(s, b->cap));
 }
 
 /**
@@ -96,12 +94,10 @@ static inline void pc_sb_put_clip(pc_sb *b, const char *s)
         return;
     }
     size_t room = b->cap - b->len - 1;
-    size_t sl = proto_scan_nul(s, room);
-    char *d = b->p + b->len;
-    for (size_t i = 0; i < sl; i++)
-    {
-        d[i] = s[i];
-    }
+    size_t sl = str.len(s, room);
+    // The destination is a position inside the caller's buffer, so the exact mover: the bytes past
+    // the append still belong to whoever owns the rest of it.
+    proto_raw_read(b->p + b->len, s, sl);
     b->len += sl;
 }
 

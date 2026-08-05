@@ -10,7 +10,7 @@
 
 #if PC_ENABLE_MSGPACK
 
-#include "shared_primitives/bytes.h"
+#include "mmgr/bytes.h"
 
 // Thin local names over the shared byte verbs (bytes.h) so the call sites
 // below read the same as before; the cursor invariants live in one place.

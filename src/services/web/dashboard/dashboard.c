@@ -16,7 +16,7 @@
 #if PC_ENABLE_DASHBOARD
 
 #include "mmgr/frame.h"
-#include "shared_primitives/numparse.h"
+#include "mmgr/protostr.h"
 
 // A message key as it appears in the JSON: quoted, so it cannot match a widget key containing it.
 static const pc_field QUOTED_KEY[] = {{PC_FK_LIT, 0, 1, "\""}, PC_STR, {PC_FK_LIT, 0, 1, "\""}, PC_END};
@@ -234,7 +234,7 @@ proto_bool pc_dashboard_parse_control(const char *msg, char *key_out, size_t key
     }
     key_out[i] = '\0';
     const char *end = NULL;
-    float v = pc_strtof(vp, &end);
+    float v = str.to_float(vp, &end);
     if (end == vp)
     {
         return PROTO_FALSE; // no numeric value

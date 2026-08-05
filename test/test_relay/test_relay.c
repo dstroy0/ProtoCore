@@ -7,6 +7,7 @@
 // in for the inbound and origin connections.
 
 #include "services/net/relay/relay.h"
+#include <string.h>
 
 #include <unity.h>
 

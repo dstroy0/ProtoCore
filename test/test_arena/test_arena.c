@@ -6,6 +6,7 @@
 
 #include "mmgr/arena.h"
 #include <stdint.h>
+#include <string.h>
 
 #include <unity.h>
 

@@ -17,6 +17,7 @@
 //
 //   usage: cyclone_ssh_client <host> <port> <user> <password> [--echo]
 //          cyclone_ssh_client <host> <port> <user> --key <privkey_file> <pubkey_file>
+#include <string.h>
 
 #include <arpa/inet.h>
 #include <errno.h>

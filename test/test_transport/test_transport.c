@@ -8,6 +8,7 @@
 #include "network_drivers/network/ip.h"
 #include "network_drivers/transport/listener.h"
 #include "network_drivers/transport/tcp.h"
+#include <string.h>
 #include <unity.h>
 
 // tcp.cpp + listener.cpp are compiled into the native env - no stubs needed.

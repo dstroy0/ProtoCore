@@ -5,6 +5,7 @@
 // PING/PONG builders and the inbound MSG/INFO/PING/+OK/-ERR parser. Pure host tests.
 
 #include "services/iot/nats/nats.h"
+#include <string.h>
 
 #include <unity.h>
 

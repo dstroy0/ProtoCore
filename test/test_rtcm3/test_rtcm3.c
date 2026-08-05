@@ -7,6 +7,7 @@
 // pyrtcm 1.2.0 (fields decode to the given DF values; RTCMReader validates the CRC).
 
 #include "services/timing_position/gnss/rtcm3.h"
+#include <string.h>
 
 #include <unity.h>
 

@@ -7,6 +7,7 @@
 // Pure host tests.
 
 #include "services/fieldbus/mbus/mbus.h"
+#include <string.h>
 
 #include <unity.h>
 

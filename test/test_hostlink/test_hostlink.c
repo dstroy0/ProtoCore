@@ -5,6 +5,7 @@
 // the command builder, and the FCS-validating parser. Pure host tests.
 
 #include "services/fieldbus/hostlink/hostlink.h"
+#include <string.h>
 
 #include <unity.h>
 

@@ -20,6 +20,7 @@
 #include "network_drivers/tls/tls13_kdf.h"
 #include "server/clock/clock.h"
 #include <stdint.h>
+#include <string.h>
 
 #include <unity.h>
 
@@ -2006,7 +2007,7 @@ static void test_local_cid_requires_nonempty_id(void)
     TEST_ASSERT_EQUAL_UINT8(0xEE, cid_out[0]); // the caller's buffer was left untouched
 }
 
-int main(int, char **)
+int main(void)
 {
     UNITY_BEGIN();
     RUN_TEST(test_full_handshake);

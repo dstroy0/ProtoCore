@@ -8,6 +8,7 @@
 #include "network_drivers/transport/udp.h" // pc_udp_inject / capture (host UDP mock)
 #include "server/clock/clock.h"            // pc_set_clock() to drive dedup freshness in tests
 #include "services/iot/coap/coap.h"
+#include <string.h>
 
 #include <unity.h>
 

@@ -14,7 +14,7 @@
 #if PC_ENABLE_HTTP_CLIENT
 
 #include "shared_primitives/mime.h"
-#include "shared_primitives/numparse.h"
+#include "mmgr/protostr.h"
 #include <stdio.h>
 
 // ---------------------------------------------------------------------------
@@ -327,7 +327,7 @@ int http_client_parse_response(uint8_t *buf, size_t len, size_t *body_off, size_
     const char *cl = find_header(buf, hdr_end, "Content-Length");
     if (cl)
     {
-        long n = pc_strtol(cl, NULL);
+        long n = str.to_long(cl, NULL);
         if (n < 0)
         {
             n = 0;

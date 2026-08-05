@@ -4,9 +4,10 @@
 // Unit tests for the CloudEvents v1.0 envelope (services/iot/cloudevents): the
 // structured-JSON builder and the binary-mode ce-* header reader. Pure host tests.
 
+#include "mmgr/protostr.h"
 #include "network_drivers/presentation/http/http_parser/http_parser.h"
 #include "services/iot/cloudevents/cloudevents.h"
-#include "shared_primitives/numparse.h"
+#include <string.h>
 
 #include <unity.h>
 
@@ -234,46 +235,46 @@ void test_from_headers_missing_id_then_missing_source()
     TEST_ASSERT_FALSE(pc_cloudevents_from_headers(&http_pool[1], &b));
 }
 
-// pc_np_ws / pc_np_digit: every whitespace class plus a non-matching fallthrough,
+// str.ws / str.digit: every whitespace class plus a non-matching fallthrough,
 // and digits below/at/above the '0'-'9' range, direct-called for full branch coverage
-// of these no-stdlib strtol/strtoul/strtod helpers (numparse.h).
+// of these no-stdlib number parsers (mmgr/protostr.h).
 void test_numparse_ws_digit_predicates()
 {
-    TEST_ASSERT_TRUE(pc_np_ws(' '));
-    TEST_ASSERT_TRUE(pc_np_ws('\t'));
-    TEST_ASSERT_TRUE(pc_np_ws('\n'));
-    TEST_ASSERT_TRUE(pc_np_ws('\r'));
-    TEST_ASSERT_TRUE(pc_np_ws('\f'));
-    TEST_ASSERT_TRUE(pc_np_ws('\v'));
-    TEST_ASSERT_FALSE(pc_np_ws('a')); // not whitespace: falls through every comparison
+    TEST_ASSERT_TRUE(str.ws(' '));
+    TEST_ASSERT_TRUE(str.ws('\t'));
+    TEST_ASSERT_TRUE(str.ws('\n'));
+    TEST_ASSERT_TRUE(str.ws('\r'));
+    TEST_ASSERT_TRUE(str.ws('\f'));
+    TEST_ASSERT_TRUE(str.ws('\v'));
+    TEST_ASSERT_FALSE(str.ws('a')); // not whitespace: falls through every comparison
 
-    TEST_ASSERT_FALSE(pc_np_digit('/')); // just below '0'
-    TEST_ASSERT_TRUE(pc_np_digit('5'));
-    TEST_ASSERT_FALSE(pc_np_digit(':')); // just above '9'
+    TEST_ASSERT_FALSE(str.digit('/')); // just below '0'
+    TEST_ASSERT_TRUE(str.digit('5'));
+    TEST_ASSERT_FALSE(str.digit(':')); // just above '9'
 }
 
-// pc_strtol: leading whitespace, both signs and no sign, a no-digits ("no number")
+// str.to_long: leading whitespace, both signs and no sign, a no-digits ("no number")
 // input, and a null end pointer, covering every branch in the function body.
 void test_numparse_strtol()
 {
     const char *end = NULL;
 
-    long v = pc_strtol(" 42", &end);
+    long v = str.to_long(" 42", &end);
     TEST_ASSERT_EQUAL(42, v);
     TEST_ASSERT_EQUAL_STRING("", end); // stopped at the terminating NUL
 
-    v = pc_strtol("-7", &end);
+    v = str.to_long("-7", &end);
     TEST_ASSERT_EQUAL(-7, v);
 
-    v = pc_strtol("+9", &end);
+    v = str.to_long("+9", &end);
     TEST_ASSERT_EQUAL(9, v);
 
     const char *s = "abc"; // no digits at all -> "no number": *end == s, result 0
-    v = pc_strtol(s, &end);
+    v = str.to_long(s, &end);
     TEST_ASSERT_EQUAL(0, v);
     TEST_ASSERT_TRUE(end == s);
 
-    v = pc_strtol("123", NULL); // null end pointer must not be dereferenced
+    v = str.to_long("123", NULL); // null end pointer must not be dereferenced
     TEST_ASSERT_EQUAL(123, v);
 }
 

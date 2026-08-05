@@ -5,6 +5,7 @@
 // the frame builder, and the CRC-validating, de-blocking parser. Pure host tests.
 
 #include "services/energy/dnp3/dnp3.h"
+#include <string.h>
 
 #include <unity.h>
 

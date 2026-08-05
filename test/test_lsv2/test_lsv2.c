@@ -9,6 +9,7 @@
 
 #include "services/machine_tool/lsv2/lsv2.h"
 #include <stdint.h>
+#include <string.h>
 
 #include <unity.h>
 

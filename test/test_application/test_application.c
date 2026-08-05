@@ -14,6 +14,7 @@
 #include "network_drivers/transport/listener.h"    // listener_stop_all() for proto_begin(NULL) test cleanup
 #include "protocore.h"                             // ws/sse upgrade entry points, pc_resp_holds_slot
 #include "server/filesystem/mnt.h" // pc_mnt_mount - storage is reached through the seam, not the route field
+#include <string.h>
 #include <unity.h>
 
 // All source layers compiled via native_app env - no stubs needed.

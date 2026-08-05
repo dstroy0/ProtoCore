@@ -14,7 +14,7 @@
 
 #if PC_NEED_NMEA0183
 #include "services/timing_position/nmea0183/nmea0183.h"
-#include "shared_primitives/numparse.h"
+#include "mmgr/protostr.h"
 #endif
 
 // WGS84 ellipsoid.
@@ -170,7 +170,7 @@ static proto_bool dm_to_deg(const char *field, uint8_t len, double *out)
         return PROTO_FALSE;
     }
     const char *end = field;
-    double dm = pc_strtod(field, &end);
+    double dm = str.to_double(field, &end);
     if (end == field)
     {
         return PROTO_FALSE;

@@ -15,6 +15,7 @@
 #include "services/web/edge_cache/edge_cache_sd.h"
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 
 #include <unity.h>
 

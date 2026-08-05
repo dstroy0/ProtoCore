@@ -8,6 +8,7 @@
 
 #include "network_drivers/application/smb/ntlm.h"
 #include "network_drivers/application/smb/ntlmssp.h"
+#include <string.h>
 
 #include <unity.h>
 

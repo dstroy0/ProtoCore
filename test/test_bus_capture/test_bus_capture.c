@@ -6,6 +6,7 @@
 // and the DLT_CAN_SOCKETCAN libpcap link type. Pure host tests.
 
 #include "server/signaling/bus_capture.h"
+#include <string.h>
 
 #include <unity.h>
 

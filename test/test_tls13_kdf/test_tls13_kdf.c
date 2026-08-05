@@ -230,7 +230,7 @@ void test_kdf_expand_label_wrapper()
     TEST_ASSERT_EQUAL_UINT8_ARRAY(via_quic, key, 16);
 }
 
-int main(int, char **)
+int main(void)
 {
     UNITY_BEGIN();
     RUN_TEST(test_early_secret);

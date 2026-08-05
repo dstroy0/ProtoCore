@@ -8,6 +8,7 @@
 // The env sizes PC_TC_MAX_WINDOW_SAMPLES = 32.
 
 #include "server/signaling/trace_capture.h"
+#include <string.h>
 #include <unity.h>
 
 typedef struct

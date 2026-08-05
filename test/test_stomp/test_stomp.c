@@ -6,6 +6,7 @@
 // Pure host tests.
 
 #include "services/iot/stomp/stomp.h"
+#include <string.h>
 
 #include <unity.h>
 

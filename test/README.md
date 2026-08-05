@@ -1,4 +1,4 @@
-# Test Suite
+#Test Suite
 
 Welcome to the testing documentation for `ProtoCore`. This repository is designed to be extremely robust, employing **100% hardware-free, deterministic testing**.
 
@@ -346,7 +346,7 @@ The native test matrix has **310 environments**, one per feature, generated from
 | `native_statsd` | `PC_ENABLE_STATSD=1` | `test_statsd` | StatsD metrics client (services/iot/statsd): the pure line formatter (name:value\|type, sample rate, DogStatsD tags) plus the count/gauge/timing/set emit helpers, whose sent bytes are captured through... |
 | `native_stomp` | `PC_ENABLE_STOMP=1` | `test_stomp` | STOMP 1.2 frame codec (services/iot/stomp): the zero-heap frame builder (command + escaped headers + NUL body) + the non-mutating parser (command/header slices/body, honoring content-length) + escape/... |
 | `native_sunspec` | `PC_ENABLE_SUNSPEC=1` | `test_sunspec` | SunSpec Modbus model codec (services/energy/sunspec): the map writer (marker / model headers / points / end model) + the model-chain walker + typed point readers (u16 / i16 / u32 / i32 / string). |
-| `native_swar` | default | `test_swar` | Lane math (shared_primitives/swar.h): one 32-bit word as four byte lanes. |
+| `native_swar` | default | `test_swar` | Lane math (mmgr/swar.h): one 32-bit word as four byte lanes. |
 | `native_syslog` | `PC_ENABLE_SYSLOG=1` | `test_syslog` | Syslog client (RFC 5424) line formatter. |
 | `native_telemetry` | `PC_ENABLE_TELEMETRY=1` | `test_telemetry` | Telemetry math (services/iot/telemetry): moving-window stats, rate-of-change, and totalizer. |
 | `native_telnet` | `PC_ENABLE_TELNET=1` | `test_telnet` | Telnet server (RFC 854 IAC negotiation + line editing) wired through the real transport ring buffer; output checked via the tcp_write capture mock. |
@@ -466,10 +466,10 @@ build only on Linux. Continuous integration runs on Linux, so a green run under
 **On Windows (PowerShell) - the everyday path:**
 
 ```powershell
-# one environment (fast)
+#one environment(fast)
 pio test -e native_hostlink
 
-# the formatting / lint gates, identical to CI:
+#the formatting / lint gates, identical to CI:
 clang-format -i src\services\hostlink\hostlink.cpp          # format C/C++ in place
 clang-format --dry-run --Werror (git diff --name-only)     # check only (CI gate)
 npx prettier@3.9.1 --write --end-of-line auto docs\*.md     # Markdown; --end-of-line auto avoids CRLF false flags
@@ -502,7 +502,7 @@ mangles arguments in two ways worth knowing:
   **stdin** (stripping carriage returns first) so no fragile quoting survives:
 
 ```bash
-# run a script file on WSL, robustly, from Git Bash:
+#run a script file on WSL, robustly, from Git Bash:
 tr -d '\r' < scripts/run_native.sh | MSYS_NO_PATHCONV=1 wsl -d Ubuntu -- bash -l
 ```
 
@@ -535,7 +535,7 @@ void test_http_parser_simple_get_request() {
     http_parser_t parser;
     http_parser_init(&parser, 0); // Slot ID 0
 
-    const char* request_bytes = "GET /index.html HTTP/1.1\r\nHost: localhost\r\n\r\n";
+    const char *request_bytes = "GET /index.html HTTP/1.1\r\nHost: localhost\r\n\r\n";
 
     // 2. Act: Feed bytes incrementally to simulate packet arrivals
     size_t bytes_fed = http_parser_feed(&parser, request_bytes, strlen(request_bytes));

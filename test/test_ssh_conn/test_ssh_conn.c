@@ -17,6 +17,7 @@
 #include "network_drivers/transport/tcp.h"
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <unity.h>
 

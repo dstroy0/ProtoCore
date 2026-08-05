@@ -8,6 +8,7 @@
 // multi-frame sequential parse and truncation rejection. Pure host codec.
 
 #include "network_drivers/presentation/http/http3/quic_frame.h"
+#include <string.h>
 
 #include <unity.h>
 

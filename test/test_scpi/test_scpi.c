@@ -7,6 +7,7 @@
 
 #include "services/instrumentation/scpi/scpi.h"
 #include <math.h>
+#include <string.h>
 
 #include <unity.h>
 

@@ -6,6 +6,7 @@
 // Pure host tests.
 
 #include "services/energy/c37118/c37118.h"
+#include <string.h>
 
 #include <unity.h>
 

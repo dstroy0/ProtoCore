@@ -26,6 +26,7 @@
 #include "crypto/mac/poly1305.h"
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 
 #include <unity.h>
 
@@ -390,7 +391,7 @@ static void test_poly1305(void)
     }
 }
 
-int main(int, char **)
+int main(void)
 {
     UNITY_BEGIN();
     RUN_TEST(test_hmac_sha256);

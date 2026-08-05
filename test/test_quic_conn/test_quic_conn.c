@@ -17,6 +17,7 @@
 #include "network_drivers/presentation/http/http3/quic_varint.h"
 #include "network_drivers/presentation/http/http3/tls13_msg.h"
 #include "network_drivers/tls/tls13_kdf.h"
+#include <string.h>
 
 #include <unity.h>
 
@@ -2128,7 +2129,7 @@ void test_quic_conn_pto_requeues_handshake_done_once()
     TEST_ASSERT_FALSE(qc.handshake_done_sent);
 }
 
-int main(int, char **)
+int main(void)
 {
     UNITY_BEGIN();
     RUN_TEST(test_full_handshake_and_stream);

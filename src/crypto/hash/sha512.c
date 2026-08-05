@@ -15,7 +15,7 @@
 #if PROTOCORE_HOT
 #include <mbedtls/sha512.h> // hardware SHA accelerator
 #else
-#include "shared_primitives/endian.h" // native software SHA-512
+#include "mmgr/endian.h" // native software SHA-512
 #endif
 PC_CRYPTO_HOT
 

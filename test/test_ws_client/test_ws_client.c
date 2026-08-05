@@ -4,6 +4,7 @@
 // Host unit tests for the outbound WebSocket client codec (env:native_ws_client).
 
 #include "services/net/ws_client/ws_client.h"
+#include <string.h>
 
 #include <unity.h>
 
@@ -334,7 +335,7 @@ void test_host_transport_stubs()
     ws_client_close();
 }
 
-int main(int, char **)
+int main(void)
 {
     UNITY_BEGIN();
     RUN_TEST(test_accept_for_key_guards);

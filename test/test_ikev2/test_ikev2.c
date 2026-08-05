@@ -9,6 +9,7 @@
 
 #include "crypto/asymmetric/ecdsa.h" // pc_ecdsa_p256_pubkey (test keygen)
 #include "services/security/ikev2/ikev2.h"
+#include <string.h>
 
 #include <unity.h>
 

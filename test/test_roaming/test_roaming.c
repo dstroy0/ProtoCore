@@ -8,6 +8,7 @@
 
 #include "mmgr/plaintext.h" // pc_roam_btm is written through mem, so it is borrowed, not declared
 #include "mmgr/protomem.h"  // mem.cpy / mem.zero
+#include <string.h>
 
 #include <unity.h>
 

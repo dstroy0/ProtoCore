@@ -24,8 +24,8 @@
 #ifndef PROTOCORE_GHASH_H
 #define PROTOCORE_GHASH_H
 
+#include "mmgr/endian.h"
 #include "protocore_config.h" // the entry point: PC_INLINE, and types.h for the widths
-#include "shared_primitives/endian.h"
 
 /** @brief 4-bit GHASH table for a fixed subkey H = E(K, 0^128): M[i] = i*H as four big-endian
  *         uint32 words (M[i][0] most significant). 256 bytes. */

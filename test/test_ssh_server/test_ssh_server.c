@@ -16,6 +16,7 @@
 #include "network_drivers/tls/ssh_rsa.h"
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 
 #include <unity.h>
 

@@ -11,6 +11,7 @@
 #include "protocore.h"
 #include "server/filesystem/mnt.h" // pc_mnt_mount
 #include <stdio.h>
+#include <string.h>
 
 #include <unity.h>
 

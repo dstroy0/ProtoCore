@@ -7,6 +7,7 @@
 // derived directly from the spec formula, then round-tripped. Pure host tests.
 
 #include "services/fieldbus/iolink/iolink.h"
+#include <string.h>
 
 #include <unity.h>
 

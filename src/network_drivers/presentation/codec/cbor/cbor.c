@@ -10,7 +10,7 @@
 
 #if PC_NEED_CBOR
 
-#include "shared_primitives/bytes.h"
+#include "mmgr/bytes.h"
 
 static void put(pc_span *w, uint8_t b)
 {

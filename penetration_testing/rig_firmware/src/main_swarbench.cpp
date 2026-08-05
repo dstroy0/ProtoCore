@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for shared_primitives/swar.h against the newlib string routines it
+// On-device CCOUNT microbenchmark for mmgr/swar.h against the newlib string routines it
 // replaces: scan_nul/strnlen, eq_str/strcmp, eq_str_ci/strcasecmp, diff_ci/strncasecmp, copy/strncpy,
 // find/strstr, has/strstr.
 //

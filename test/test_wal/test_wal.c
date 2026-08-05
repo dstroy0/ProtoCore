@@ -5,6 +5,7 @@
 
 #include "services/storage/wal/wal.h"
 #include <stdint.h>
+#include <string.h>
 
 #include <unity.h>
 

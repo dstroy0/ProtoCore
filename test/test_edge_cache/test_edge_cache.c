@@ -8,6 +8,7 @@
 #include "services/web/edge_cache/edge_cache.h"
 #include "services/web/httpcache/httpcache.h"
 #include <stdio.h>
+#include <string.h>
 
 #include <unity.h>
 

@@ -6,7 +6,7 @@
  * @brief Operations over a bounded run of bytes: where it ends, where two part company,
  *        whether one occurs inside another, and moving one into a bounded destination.
  *
- * Separate from shared_primitives/swar.h because that file is the access layer and this is
+ * Separate from mmgr/swar.h because that file is the access layer and this is
  * built on it. swar.h loads a word, tests its lanes and names the lane that fired; nothing in
  * it walks a buffer or takes a capacity. Everything here does both.
  *
@@ -26,7 +26,7 @@
 #ifndef PROTOCORE_RUNOPS_H
 #define PROTOCORE_RUNOPS_H
 
-#include "shared_primitives/swar.h" // the access layer every operation below is built on
+#include "mmgr/swar.h" // the access layer every operation below is built on
 
 /**
  * @brief Index of the first NUL in @p s within @p nul_cap bytes, or @p nul_cap if there is none.

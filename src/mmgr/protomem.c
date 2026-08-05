@@ -8,15 +8,14 @@
  * Every access is one register-width load or store. A span that does not end on a boundary is not
  * walked a byte at a time: the partial word is masked and stored whole, and the lanes past the span
  * go to zero, which is allocation padding because the arena rounds every size up to PC_ARENA_ALIGN.
- * A source that is not co-aligned with the destination is funnelled, the way rawmemcpy.h's mover
+ * A source that is not co-aligned with the destination is funnelled, the way the raw mover above it
  * does it.
  *
  * The one symbol this file exports is @ref mem.
  */
 
 #include "mmgr/protomem.h"
-#include "shared_primitives/rawmemcpy.h" // the aligned load/store rung and its width
-#include "shared_primitives/runops.h"    // proto_diff: the lane-tested first-difference scan
+#include "mmgr/swar.h" // the lane math the ordering walk reads its answer out of
 
 #define PC_MEM_MASK ((uintptr_t)(PROTO_RAW_WORD - 1u))
 
@@ -71,7 +70,7 @@ static proto_mv_word src_word(const unsigned char *p, size_t avail)
 #endif
 }
 
-static void cpy(void *dst, const void *src, size_t n)
+void pc_mem_cpy(void *dst, const void *src, size_t n)
 {
     unsigned char *d = (unsigned char *)dst;
     const unsigned char *s = (const unsigned char *)src;
@@ -88,7 +87,7 @@ static void cpy(void *dst, const void *src, size_t n)
     }
 }
 
-static void move(void *dst, const void *src, size_t n)
+void pc_mem_move(void *dst, const void *src, size_t n)
 {
     unsigned char *d = (unsigned char *)dst;
     const unsigned char *s = (const unsigned char *)src;
@@ -99,7 +98,7 @@ static void move(void *dst, const void *src, size_t n)
     }
     if (d < s || d >= s + n)
     {
-        cpy(dst, src, n);
+        pc_mem_cpy(dst, src, n);
         return;
     }
 
@@ -117,20 +116,89 @@ static void move(void *dst, const void *src, size_t n)
     }
 }
 
-static int cmp(const void *a, const void *b, size_t n)
+/**
+ * @brief Order @p n bytes at @p a against @p b, as unsigned.
+ *
+ * A word per step: XOR zeroes every lane that matches, so a nonzero syndrome means the two part
+ * inside this word and the lane math names which byte. That byte is the whole answer, because the
+ * ordering of two spans is decided where they first disagree and nothing after it is read.
+ *
+ * The tail runs the same rule a byte at a time. A partial word cannot be loaded whole without
+ * reading past what the caller offered: @p n is a promise about both operands, not a hint.
+ */
+int pc_mem_cmp(const void *a, const void *b, size_t n)
 {
     const char *x = (const char *)a;
     const char *y = (const char *)b;
-    const size_t k = proto_diff(x, y, n);
+    size_t i = 0;
 
-    if (k == n)
+    while (i + PC_SWAR_BYTES <= n)
     {
-        return 0;
+        pc_swar_word d = swar.load(x + i) ^ swar.load(y + i);
+        if (d != 0)
+        {
+            // The guard bit stands on every lane that differs, and the lowest one is where they part.
+            i += swar.zero_lane(PC_SWAR_HIGH & ~swar.has_zero(d));
+            return (int)(unsigned char)x[i] - (int)(unsigned char)y[i];
+        }
+        i += PC_SWAR_BYTES;
     }
-    return (int)(unsigned char)x[k] - (int)(unsigned char)y[k];
+    while (i < n)
+    {
+        if (x[i] != y[i])
+        {
+            return (int)(unsigned char)x[i] - (int)(unsigned char)y[i];
+        }
+        ++i;
+    }
+    return 0;
 }
 
-static void set(void *dst, unsigned char v, size_t n)
+/**
+ * @brief The first byte equal to @p c in @p n bytes at @p p, or NULL.
+ *
+ * A word per step: ::SwarNs::eq marks every lane holding @p c, and the lane math names the lowest
+ * one. @p n is the whole bound - there is no terminator test, because a span has no terminator, and
+ * the caller has already stated how far the bytes go.
+ *
+ * That is what separates this from ::StrNs::find, which stops at a NUL because it searches a string.
+ * A buffer that deliberately carries NULs - a decoded credential, a wire frame - needs this one.
+ */
+const void *pc_mem_chr(const void *p, size_t n, uint8_t c)
+{
+    const char *s = (const char *)p;
+    size_t i = 0;
+
+    while (i < n && ((uintptr_t)(s + i) & (PC_SWAR_BYTES - 1u)) != 0u)
+    {
+        if ((uint8_t)s[i] == c)
+        {
+            return s + i;
+        }
+        ++i;
+    }
+    while (i + PC_SWAR_BYTES <= n)
+    {
+        pc_swar_word m = swar.eq(swar.load_al(s + i), c, PROTO_FALSE);
+        if (m != 0)
+        {
+            return s + i + swar.zero_lane(m);
+        }
+        i += PC_SWAR_BYTES;
+    }
+    // The final partial word, a byte at a time: a whole load would read past what @p n offers.
+    while (i < n)
+    {
+        if ((uint8_t)s[i] == c)
+        {
+            return s + i;
+        }
+        ++i;
+    }
+    return NULL;
+}
+
+void pc_mem_set(void *dst, unsigned char v, size_t n)
 {
     unsigned char *d = (unsigned char *)dst;
     size_t i = 0;
@@ -151,9 +219,7 @@ static void set(void *dst, unsigned char v, size_t n)
     }
 }
 
-static void zero(void *dst, size_t n)
+void pc_mem_zero(void *dst, size_t n)
 {
-    set(dst, 0u, n);
+    pc_mem_set(dst, 0u, n);
 }
-
-const MemNs mem = {cpy, move, cmp, set, zero};

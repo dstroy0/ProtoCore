@@ -21,6 +21,7 @@
 #include "services/iot/coap/coap.h"
 #include "services/iot/coap/coaps_server.h"
 #include <stdint.h>
+#include <string.h>
 
 #include <unity.h>
 
@@ -889,7 +890,7 @@ static void test_cid_migration_same_port_different_ip(void)
     TEST_ASSERT_EQUAL_UINT8(1, pc_coaps_server_active_conns());
 }
 
-int main(int, char **)
+int main(void)
 {
     UNITY_BEGIN();
     RUN_TEST(test_server_single_peer);

@@ -4,6 +4,7 @@
 // Host tests for services/profibus: the PROFIBUS-DP FDL telegram codec.
 
 #include "services/fieldbus/profibus/profibus.h"
+#include <string.h>
 
 #include <unity.h>
 

@@ -39,10 +39,10 @@
 #define PROTOCORE_TCP_H
 
 #include "board_drivers/board_profiles/pc_platform.h"
+#include "mmgr/ring.h"                  // PROTO_ATOMIC_LOAD/STORE + the shared SPSC ring drain primitive
 #include "network_drivers/network/ip.h" // pc_ip (family-tagged peer address)
 #include "protocore_config.h"
-#include "shared_primitives/ring.h" // PROTO_ATOMIC_LOAD/STORE + the shared SPSC ring drain primitive
-#include "tcp_evt.h"                // EvtType, TcpEvt: what this layer posts to a listener queue
+#include "tcp_evt.h" // EvtType, TcpEvt: what this layer posts to a listener queue
 
 PROTO_BEGIN_DECLS
 

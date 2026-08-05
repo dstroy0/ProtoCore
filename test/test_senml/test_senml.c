@@ -7,6 +7,7 @@
 
 #include "network_drivers/presentation/codec/cbor/cbor.h"
 #include "services/iot/senml/senml.h"
+#include <string.h>
 
 #include <unity.h>
 

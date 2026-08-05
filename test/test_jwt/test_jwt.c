@@ -9,6 +9,7 @@
 #include "network_drivers/presentation/codec/base64/base64.h"
 #include "services/security/jwt/jwt.h"
 #include <stdio.h>
+#include <string.h>
 
 #include <unity.h>
 

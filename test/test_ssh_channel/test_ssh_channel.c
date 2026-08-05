@@ -7,6 +7,7 @@
 #include "network_drivers/presentation/ssh/connection/ssh_channel.h"
 #include "network_drivers/presentation/ssh/transport/ssh_packet.h"
 #include <stdint.h>
+#include <string.h>
 
 #include <unity.h>
 

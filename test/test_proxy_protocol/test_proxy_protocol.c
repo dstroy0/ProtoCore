@@ -5,6 +5,7 @@
 // and v2 (binary) builders + the unified parser. Per the HAProxy spec. Pure host tests.
 
 #include "services/net/proxy_protocol/proxy_protocol.h"
+#include <string.h>
 
 #include <unity.h>
 

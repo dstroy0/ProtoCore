@@ -27,7 +27,7 @@
 // Shared by the HTTP/3 (QUIC) packet protection and the DTLS 1.3 record layer.
 #if (PC_ENABLE_HTTP3 || PC_ENABLE_DTLS || PC_ENABLE_SMB)
 
-#include "shared_primitives/span.h" // pc_cspan: what the seal produced (empty == it did not)
+#include "mmgr/span.h" // pc_cspan: what the seal produced (empty == it did not)
 
 PROTO_BEGIN_DECLS
 

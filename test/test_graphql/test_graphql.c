@@ -8,6 +8,7 @@
 
 #include "services/iot/graphql/graphql.h"
 #include <stdio.h>
+#include <string.h>
 
 #include <unity.h>
 

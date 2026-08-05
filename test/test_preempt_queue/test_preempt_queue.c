@@ -8,6 +8,7 @@
 
 #include "network_drivers/session/preempt_queue.h"
 // memcpy
+#include <string.h>
 #include <unity.h>
 
 static uint32_t g_seen[256];

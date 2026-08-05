@@ -11,7 +11,7 @@
 
 #if PC_ENABLE_NTP_SERVER
 
-#include "shared_primitives/endian.h"
+#include "mmgr/endian.h"
 // memset, memcpy
 
 #if PROTOCORE_HOT

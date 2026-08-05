@@ -4,6 +4,7 @@
 // Host tests for services/mms: the IEC 61850 MMS Read PDU codec.
 
 #include "services/energy/mms/mms.h"
+#include <string.h>
 
 #include <unity.h>
 

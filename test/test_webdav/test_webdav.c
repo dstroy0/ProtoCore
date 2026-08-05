@@ -6,6 +6,7 @@
 
 #include "network_drivers/application/webdav/webdav.h"
 #include <stdio.h>
+#include <string.h>
 
 #include <unity.h>
 

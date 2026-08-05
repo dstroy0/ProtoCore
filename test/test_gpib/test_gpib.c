@@ -6,6 +6,7 @@
 // command-vs-data classifier, and the response parsers. Pure host tests.
 
 #include "services/instrumentation/gpib/gpib.h"
+#include <string.h>
 
 #include <unity.h>
 

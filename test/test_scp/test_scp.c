@@ -7,6 +7,7 @@
 
 #include "network_drivers/application/scp/scp.h"
 #include <stdint.h>
+#include <string.h>
 
 #include <unity.h>
 

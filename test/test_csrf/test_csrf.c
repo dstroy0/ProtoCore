@@ -6,6 +6,7 @@
 // round trip, tamper rejection, secret binding, format, and edge cases.
 
 #include "services/security/csrf/csrf.h"
+#include <string.h>
 
 #include <unity.h>
 

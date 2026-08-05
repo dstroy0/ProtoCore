@@ -17,8 +17,8 @@
 #ifndef PROTOCORE_PCAP_H
 #define PROTOCORE_PCAP_H
 
-#include "protocore_config.h"         // the entry point: types.h for the widths and PC_INLINE
-#include "shared_primitives/endian.h" // pc_wr32le / pc_wr16le - libpcap headers are little-endian
+#include "mmgr/endian.h"      // pc_wr32le / pc_wr16le - libpcap headers are little-endian
+#include "protocore_config.h" // the entry point: types.h for the widths and PC_INLINE
 
 /** @brief libpcap header sizes. */
 #define PC_PCAP_GLOBAL_HDR_LEN 24

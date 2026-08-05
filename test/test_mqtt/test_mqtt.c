@@ -4,6 +4,7 @@
 // Host unit tests for the MQTT 3.1.1 packet codec (env:native_mqtt).
 
 #include "services/iot/mqtt/mqtt.h"
+#include <string.h>
 
 #include <unity.h>
 
@@ -455,7 +456,7 @@ void test_parse_short_len_and_null_outparam_guards()
     TEST_ASSERT_TRUE(pc_mqtt_parse_suback(sb, 3, NULL, NULL)); // caller wants neither out-param
 }
 
-int main(int, char **)
+int main(void)
 {
     UNITY_BEGIN();
     RUN_TEST(test_build_guards_and_overflow);

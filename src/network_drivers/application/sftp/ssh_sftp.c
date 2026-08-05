@@ -23,7 +23,7 @@
 #include "network_drivers/presentation/ssh/connection/ssh_channel.h" // callbacks + setters
 #include "network_drivers/presentation/ssh/connection/ssh_conn.h"    // pc_ssh_conn_send / pc_ssh_conn_close_channel
 #include "server/filesystem/filesystem.h"
-#include "shared_primitives/endian.h" // the u32 <-> big-endian bytes serializers
+#include "mmgr/endian.h" // the u32 <-> big-endian bytes serializers
 #include "shared_primitives/runops.h" // the bounded word-at-a-time length scan
 
 // Leave headroom below one SSH packet for the CHANNEL_DATA framing, so pc_ssh_conn_send never rejects a response.

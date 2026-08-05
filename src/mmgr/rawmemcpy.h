@@ -6,34 +6,19 @@
  * @brief The raw load: bytes at a pointer read as a wider type, in the machine's own order.
  *
  * One owner for the operation every word-at-a-time reader needs - the lane math (swar.h), the
- * builder's float bit reads (mmgr/membuild.h), and the frame engine's word loads - so the alignment
- * rule is stated once and every reader inherits it.
+ * span walks (protomem.c), the builder's float bit reads (membuild.h) - so the alignment rule is
+ * stated once and every reader inherits it.
  *
  * **The two attributes are the whole implementation.** A bare `*(const uint32_t *)p` says the wrong
- * thing twice, and each attribute answers one of them:
- *
- * - `aligned(1)` states that the address carries no alignment guarantee. The compiler then emits
- *   whatever its target needs to read that width from an arbitrary byte - one instruction where the
- *   hardware allows an unaligned load, the fixup sequence where it does not. Without it the
- *   compiler is entitled to assume natural alignment and emit the wide load unconditionally, which
- *   is the fault on every strict-alignment part in the target list.
- * - `may_alias` states that this type may alias any other. Reading a `char` array or a `double`
- *   through a wider pointer is otherwise undefined, and the optimizer is free to reorder or discard
- *   the access on that basis.
- *
- * Together they are the load the machine already has, spelled so the compiler can prove it is
- * allowed to emit it. A byte-assembly loop would be correct too, but it imposes a byte order this
- * layer has no business choosing and costs shifts the hardware does not need: a load is already the
- * lowest common denominator, so nothing cheaper exists to fall back to.
+ * thing twice, and each attribute answers one of them: `aligned(1)` states that the address carries
+ * no alignment guarantee, and `may_alias` states that this type may alias any other.
  *
  * **Machine order, not wire order.** These reconstruct the value the way this machine stores it,
- * which is what reading a representation means (an IEEE-754 field, a lane-packed word). A defined
- * byte order on the wire is a different question and belongs to shared_primitives/endian.h; using
- * one where the other is meant is a bug on the first big-endian target.
+ * which is what reading a representation means. A defined byte order on the wire is a different
+ * question and belongs to mmgr/endian.h.
  *
- * **Past 64 bits the op just repeats.** C has no wider scalar, so 128 and 256 land in 32-bit limbs
- * - the layout crypto/asymmetric/bignum.h already stores (index 0 least significant), so a loaded
- * mpint needs no second pass to become a bignum.
+ * These are the primitives the span walks are built from. A caller that wants to move a span asks
+ * @ref mem for it.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -43,6 +28,8 @@
 #define PROTOCORE_RAWMEMCPY_H
 
 #include "protocore_config.h" // PROTO_WORD_BITS: the register width the die declared
+
+PROTO_BEGIN_DECLS
 
 /**
  * @brief The attributes that make a raw access legal, named once.
@@ -75,9 +62,11 @@
  * @brief The widest step a multi-byte move takes here: the register width the die declared.
  *
  * There are only three distinct operations in this file - load 2, load 4, load 8 - and every width
- * above the top rung is that same load repeated, not a new one. 128, 256, 512 and on are n limbs of
- * this width (::proto_raw_limbs), because C has no wider scalar and asking for one only makes the
- * compiler build it out of these anyway, with the halves parked in registers the caller cannot see.
+ * above the top rung is that same load repeated, not a new one, because C has no wider scalar and
+ * asking for one only makes the compiler build it out of these anyway, with the halves parked in
+ * registers the caller cannot see. Anything past 64 bits is the caller's own walk over @ref
+ * MemNs::u32, in whatever limb order that caller's arithmetic already stores.
+ *
  * Below the top rung a move shifts down: each rung is half the one above, so the tail costs at most
  * one pass each.
  *
@@ -329,31 +318,6 @@ static inline void proto_raw_read(void *dst, const void *p, size_t sz)
     }
 }
 
-/**
- * @brief Read @p n 32-bit limbs at @p p - the load repeated across a width no scalar covers.
- *
- * Limb 0 takes the lowest-addressed word, matching how bignum.h orders its magnitude, so nothing
- * has to reverse the result afterwards. The entry point for any width past 64 bits.
- */
-static inline void proto_raw_limbs(const void *p, uint32_t *out, size_t n)
-{
-    const unsigned char *u = (const unsigned char *)p;
-    for (size_t i = 0; i < n; i++)
-    {
-        out[i] = proto_raw_u32(u + i * 4);
-    }
-}
-
-/** @brief Read the 16 bytes at @p p as 4 32-bit limbs, least significant first. */
-static inline void proto_raw_u128(const void *p, uint32_t out[4])
-{
-    proto_raw_limbs(p, out, 4);
-}
-
-/** @brief Read the 32 bytes at @p p as 8 32-bit limbs, least significant first. */
-static inline void proto_raw_u256(const void *p, uint32_t out[8])
-{
-    proto_raw_limbs(p, out, 8);
-}
+PROTO_END_DECLS
 
 #endif // PROTOCORE_RAWMEMCPY_H

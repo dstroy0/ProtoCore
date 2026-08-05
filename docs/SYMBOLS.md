@@ -25,11 +25,11 @@ where it is most needed.
 
 **C11**, which every compiler in that target list ships. Three of its features are load-bearing here:
 
-| C11                                | what it buys                                                                                                |
-| ---------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `_Static_assert`                   | a sizing or layout invariant fails at compile time, naming itself when it trips                             |
-| `<stdatomic.h>`, `_Atomic`         | the acquire/release ordering the SPSC rings and slot-state writes are built on (`shared_primitives/ring.h`) |
-| anonymous struct and union members | a nested field is reached by its own name                                                                   |
+| C11                                | what it buys                                                                                   |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `_Static_assert`                   | a sizing or layout invariant fails at compile time, naming itself when it trips                |
+| `<stdatomic.h>`, `_Atomic`         | the acquire/release ordering the SPSC rings and slot-state writes are built on (`mmgr/ring.h`) |
+| anonymous struct and union members | a nested field is reached by its own name                                                      |
 
 The language is the guarantee rather than a detail above one. Every construct whose cost is decided
 at runtime, or whose call target is not in the image, is absent because the language does not offer

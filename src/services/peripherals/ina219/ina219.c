@@ -13,7 +13,7 @@
 
 #if PROTOCORE_HOT || PC_PLATFORM_HAS_BUS
 #include "services/peripherals/i2c.h"
-#include "shared_primitives/endian.h" // pc_wr16be / pc_rd16be: the registers are big-endian
+#include "mmgr/endian.h" // pc_wr16be / pc_rd16be: the registers are big-endian
 #endif
 int32_t pc_ina219_bus_mv(uint16_t raw)
 {

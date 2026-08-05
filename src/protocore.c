@@ -37,6 +37,7 @@
 #include "mmgr/frame.h"     // the diag document is a frame spec, not a concatenation
 #include "mmgr/membuild.h"  // pc_sb frame builder
 #include "mmgr/plaintext.h" // the diag document is borrowed, not a stack array
+#include "mmgr/rawmemcpy.h" // proto_raw_read: every move here is into our own buffer
 #include "network_drivers/network/route.h"
 #include "network_drivers/presentation/presentation.h" // http_proto_set_poll (install the instance-bound HTTP poll)
 #include "network_drivers/session/proto_handler.h"
@@ -46,8 +47,7 @@
 #include "network_drivers/transport/tcp.h" // TcpConn, conn_pool, pc_ap_ip: the slots this drives
 #include "shared_primitives/hex.h"
 #include "shared_primitives/mime.h"
-#include "shared_primitives/rawmemcpy.h" // proto_raw_read: every move here is into our own buffer
-#include "shared_primitives/runops.h"    // every string scan, compare, copy and search on this layer
+#include "shared_primitives/runops.h" // every string scan, compare, copy and search on this layer
 #if PC_ENABLE_HTTP2
 #include "network_drivers/presentation/http/http2/h2_server.h"
 #endif
@@ -592,7 +592,7 @@ int32_t proto_begin(const WebServerConfig *cfg)
     }
     proto_tcp_pool_init(cfg);
 #if PC_ENABLE_AUTH
-    regen_digest_secret(); // fresh server keying secret per begin()
+    Auth.rekey(); // fresh server keying secret per begin()
 #endif
 #if PC_ENABLE_CSRF
     {
@@ -874,6 +874,12 @@ void fill_route_base(Route *r, const char *path)
     r->is_param = proto_has(r->path, MAX_PATH_LEN, "/:", sizeof("/:"));
     r->is_regex = PROTO_FALSE;
     r->iface_filter = PC_IFACE_ANY;
+#if PC_ENABLE_AUTH
+    // Stated, not inherited from the zeroed slot: zero is a valid credential id, so a route that
+    // registers no credentials has to say so, or the first set anyone registers would guard every
+    // route in the table.
+    r->auth_id = PC_AUTH_NONE;
+#endif
 }
 
 void on_http(const char *path, HttpMethod method, Handler callback)
@@ -939,14 +945,8 @@ void on_http_auth(const char *path, HttpMethod method, Handler callback, const c
     r->type = ROUTE_HTTP;
     r->method = method;
     r->callback = callback;
-    r->auth_required = PROTO_TRUE;
-    r->auth_digest = digest;
-    // The lengths are discarded: a credential is only ever compared whole, so nothing downstream
-    // asks how long it was, and the route slot was zeroed on hand-out so a short copy leaves no
-    // previous tenant's bytes behind the terminator.
-    (void)proto_copy(r->auth_realm, realm, MAX_AUTH_LEN);
-    (void)proto_copy(r->auth_user, user, MAX_AUTH_LEN);
-    (void)proto_copy(r->auth_pass, pass, MAX_AUTH_LEN);
+    // The credential goes to the module that checks it; the route keeps only the id naming it.
+    r->auth_id = Auth.add(realm, user, pass, digest);
 }
 #endif // PC_ENABLE_AUTH
 
@@ -1794,7 +1794,7 @@ proto_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const Route *r
     }
 #endif
     proto_bool stale = PROTO_FALSE;
-    proto_bool ok = r->auth_digest ? check_digest_auth(slot_id, req, r, &stale) : check_basic_auth(slot_id, req, r);
+    proto_bool ok = Auth.check(slot_id, req, r->auth_id, &stale);
 #if PC_ENABLE_AUTH_LOCKOUT
     // A stale-nonce retry carries valid credentials, so it is not a failed
     // attempt: don't count it toward the lockout (nor reset the counter).
@@ -1809,7 +1809,7 @@ proto_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const Route *r
 #endif
     if (!ok)
     {
-        send_unauth(slot_id, r, stale);
+        Auth.challenge(slot_id, r->auth_id, stale);
         return PROTO_FALSE;
     }
     return PROTO_TRUE;
@@ -1870,7 +1870,7 @@ proto_bool dispatch_matched_route(uint8_t slot_id, HttpReq *req, HttpMethod meth
         return PROTO_FALSE;
     }
 #if PC_ENABLE_AUTH
-    if (r->auth_required && !proto_authorize_request(slot_id, req, r))
+    if (r->auth_id != PC_AUTH_NONE && !proto_authorize_request(slot_id, req, r))
     {
         return PROTO_TRUE; // 401/429 already sent
     }

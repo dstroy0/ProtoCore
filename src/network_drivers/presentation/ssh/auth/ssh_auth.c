@@ -14,8 +14,8 @@
 #include "network_drivers/presentation/ssh/transport/ssh_packet.h"    // SSH_MSG_* constants
 #include "network_drivers/presentation/ssh/transport/ssh_transport.h" // ssh_sess[], SshPhase
 #include "network_drivers/tls/ssh_rsa.h"                              // pc_rsa_verify(), PC_RSA_KEY_BYTES
-#include "shared_primitives/bytes.h"                                  // pc_rd_str() - the RFC 4251 sec 5 string reader
-#include "shared_primitives/endian.h" // pc_wr32be() - the one source of truth for wire integers
+#include "mmgr/bytes.h"                                  // pc_rd_str() - the RFC 4251 sec 5 string reader
+#include "mmgr/endian.h" // pc_wr32be() - the one source of truth for wire integers
 
 // ---------------------------------------------------------------------------
 // Application password callback

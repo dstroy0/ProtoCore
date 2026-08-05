@@ -9,6 +9,7 @@
 //     decryptor opens them in order).
 
 #include "crypto/aead/aesgcm.h"
+#include <string.h>
 
 #include <unity.h>
 

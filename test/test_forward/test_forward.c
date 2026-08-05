@@ -10,6 +10,7 @@
 // The env sizes PC_FWD_MAX_IFACES = 4, PC_FWD_MAX_RULES = 4.
 
 #include "services/net/forward/forward.h"
+#include <string.h>
 
 #include <unity.h>
 

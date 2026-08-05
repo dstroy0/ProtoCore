@@ -16,6 +16,7 @@
 #include "network_drivers/application/ntp_service/ntp_service.h" // pc_ntp_set_test_epoch() for the Date-header tests
 #include "protocore.h"
 #include <stdio.h>
+#include <string.h>
 
 #include <unity.h>
 

@@ -15,6 +15,7 @@
 #include "protocore.h"             // pc_file_holds_slot: does the file pump hold this slot
 #include "server/filesystem/mnt.h" // pc_mnt_mount: the fixture is the mounted store
 #include <stdio.h>
+#include <string.h>
 
 #include <unity.h>
 

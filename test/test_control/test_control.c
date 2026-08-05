@@ -8,6 +8,7 @@
 #include "services/system/control/control.h"
 #include <math.h>
 #include <stdint.h>
+#include <string.h>
 
 #include <unity.h>
 

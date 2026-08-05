@@ -8,6 +8,7 @@
 // response frees it. Built with PC_KEEPALIVE_MAX_REQUESTS=3 (see env).
 
 #include "protocore.h"
+#include <string.h>
 
 #include <unity.h>
 

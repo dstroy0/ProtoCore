@@ -6,6 +6,7 @@
 // freshness-lifetime calculation. Pure host tests.
 
 #include "services/web/httpcache/httpcache.h"
+#include <string.h>
 
 #include <unity.h>
 

@@ -6,6 +6,7 @@
 // malformed-input rejection. Pure host tests.
 
 #include "network_drivers/network/ip.h"
+#include <string.h>
 
 #include <unity.h>
 

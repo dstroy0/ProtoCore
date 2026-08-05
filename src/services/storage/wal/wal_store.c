@@ -10,7 +10,7 @@
 
 #if PC_ENABLE_WAL
 
-#include "shared_primitives/endian.h"
+#include "mmgr/endian.h"
 
 // SUPER_USED bytes are CRC-covered; the u32 CRC follows immediately.
 static const size_t SUPER_USED = 28;

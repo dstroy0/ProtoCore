@@ -6,6 +6,7 @@
 // variable, sum checksum). Frame layout checked against IEC 60870-5-101/-104. Pure host tests.
 
 #include "services/energy/iec60870/iec60870.h"
+#include <string.h>
 
 #include <unity.h>
 

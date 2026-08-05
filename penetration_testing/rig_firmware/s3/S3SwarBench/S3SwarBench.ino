@@ -5,7 +5,7 @@
 // (setup()/loop() + the CCOUNT sweep and the CHECK pairs against newlib); build_s3_swarbench.sh
 // stages that file into this sketch dir before compiling with arduino-cli. This .ino defines nothing.
 //
-// Purpose: decide on the die whether shared_primitives/swar.h's lane math beats the newlib string
+// Purpose: decide on the die whether mmgr/swar.h's lane math beats the newlib string
 // routines it replaces. The host answer is not evidence - an x86 host measures these against an AVX2
 // libc on a core with more load ports than the loop can use, and it ranked a one-load-per-step
 // routine BELOW an nlen-load one. An LX7 has one load port, no reordering to hide the extra loads,
@@ -13,6 +13,6 @@
 //
 // Deliberately NO `#include "protocore.h"`. The sibling benches pull a root header in so arduino-cli's
 // dependency finder attaches the library by name, but that also drags every other header into the
-// build - and this branch is mid C-conversion, so transport/tcp.h reaches shared_primitives/ring.h
-// whose _Atomic does not compile as C++. The bench needs shared_primitives/swar.h and nothing else,
+// build - and this branch is mid C-conversion, so transport/tcp.h reaches mmgr/ring.h
+// whose _Atomic does not compile as C++. The bench needs mmgr/swar.h and nothing else,
 // so the build script puts src/ on the include path directly and never attaches the library at all.

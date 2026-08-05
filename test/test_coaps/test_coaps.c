@@ -20,6 +20,7 @@
 #include "services/iot/coap/coap.h"
 #include "services/iot/coap/coaps.h"
 #include <stdint.h>
+#include <string.h>
 
 #include <unity.h>
 
@@ -449,7 +450,7 @@ static void test_aes256_key_expand_kat(void)
     TEST_ASSERT_EQUAL_MEMORY(expect_ct, ct, 16);
 }
 
-int main(int, char **)
+int main(void)
 {
     UNITY_BEGIN();
     RUN_TEST(test_coap_over_dtls);

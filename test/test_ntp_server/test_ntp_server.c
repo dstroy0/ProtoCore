@@ -7,6 +7,7 @@
 
 #include "network_drivers/application/ntp_server/ntp_server.h"
 #include <stdint.h>
+#include <string.h>
 
 #include <unity.h>
 

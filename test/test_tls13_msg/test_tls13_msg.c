@@ -13,6 +13,7 @@
 
 #include "crypto/asymmetric/ed25519.h"
 #include "network_drivers/presentation/http/http3/tls13_msg.h"
+#include <string.h>
 
 #include <unity.h>
 
@@ -715,7 +716,7 @@ void test_tls13_build_server_hello_conn_id()
     TEST_ASSERT_EQUAL_UINT8_ARRAY(tail, out + with - sizeof(tail), sizeof(tail));
 }
 
-int main(int, char **)
+int main(void)
 {
     UNITY_BEGIN();
     RUN_TEST(test_tls13_extension_and_truncation_coverage);

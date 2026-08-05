@@ -6,6 +6,7 @@
 #include "protocore.h"
 #include "shared_primitives/hex.h" // pc_hex_u32 (the chunk size-line writer)
 #include <stdio.h>
+#include <string.h>
 
 #include <unity.h>
 

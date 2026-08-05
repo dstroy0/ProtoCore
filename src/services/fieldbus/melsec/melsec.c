@@ -10,7 +10,7 @@
 
 #if PC_ENABLE_MELSEC
 
-#include "shared_primitives/endian.h"
+#include "mmgr/endian.h"
 
 size_t pc_melsec_build_read(uint8_t *buf, size_t cap, uint8_t device_code, uint32_t head_device, uint16_t points,
                             uint16_t monitoring_timer)

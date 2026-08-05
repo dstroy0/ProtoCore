@@ -8,6 +8,7 @@
 
 #include "network_drivers/transport/udp.h" // pc_udp_capture_* (host seam)
 #include "services/iot/statsd/statsd.h"
+#include <string.h>
 #include <unity.h>
 
 // The captured datagram as a NUL-terminated string. The capture is length-counted, so this

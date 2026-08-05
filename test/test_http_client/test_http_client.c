@@ -5,6 +5,7 @@
 // building, and response parsing (incl. chunked decode). No sockets.
 
 #include "services/net/http_client/http_client.h"
+#include <string.h>
 
 #include <unity.h>
 

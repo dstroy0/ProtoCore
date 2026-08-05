@@ -6,6 +6,7 @@
 // digital read / write are ESP32-only and no-ops on the host.
 
 #include "server/signaling/gpio_map.h"
+#include <string.h>
 
 #include <unity.h>
 

@@ -7,6 +7,7 @@
 // / GOAWAY / PING-ACK / HEADERS / DATA builders.
 
 #include "network_drivers/presentation/http/http2/h2_frame.h"
+#include <string.h>
 
 #include <unity.h>
 

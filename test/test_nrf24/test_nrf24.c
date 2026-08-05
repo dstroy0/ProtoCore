@@ -9,6 +9,7 @@
 // The env sizes PC_NRF24_PAYLOAD = 8.
 
 #include "services/radio/nrf24/nrf24.h"
+#include <string.h>
 
 #include <unity.h>
 

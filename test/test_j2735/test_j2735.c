@@ -4,6 +4,7 @@
 // Host tests for services/j2735: the ASN.1 UPER primitive codec + the BSMcore block.
 
 #include "services/transportation/j2735/j2735.h"
+#include <string.h>
 
 #include <unity.h>
 

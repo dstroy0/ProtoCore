@@ -107,8 +107,12 @@ typedef struct
  * only when `parse_state == PARSE_COMPLETE`.
  *
  * Call http_parser_reset() to recycle this struct for the next request.
+ *
+ * Tagged so a module that only passes the request through can name it without taking this header:
+ * an anonymous struct has no name to forward-declare, and `struct HttpReq` elsewhere would be a
+ * second, incomplete type rather than this one.
  */
-typedef struct
+typedef struct HttpReq
 {
     uint8_t slot_id;        ///< Transport slot index (set by presentation layer).
     ParseState parse_state; ///< Current parser state.

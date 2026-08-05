@@ -5,7 +5,7 @@
  * @file endian.h
  * @brief A fixed width moved between an integer and the bytes at a pointer.
  *
- * A width is all this file knows, so the bound is not its to check. shared_primitives/span.h holds
+ * A width is all this file knows, so the bound is not its to check. mmgr/span.h holds
  * the bound and hands out a pointer to bytes it has already proven; a width is read or written there.
  *
  * Writers return their width (2/4/8) so a caller can advance by it.

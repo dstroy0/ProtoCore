@@ -8,6 +8,7 @@
 
 #include "services/timing_position/gnss/gnss_survey.h"
 #include "services/timing_position/nmea0183/nmea0183.h"
+#include <string.h>
 
 #include <unity.h>
 

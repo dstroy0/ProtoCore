@@ -6,6 +6,7 @@
 // and the OK / ERROR / PENDING response classification. Pure host tests.
 
 #include "services/radio/sigfox/sigfox.h"
+#include <string.h>
 
 #include <unity.h>
 

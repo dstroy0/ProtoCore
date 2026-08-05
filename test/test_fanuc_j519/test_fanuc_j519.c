@@ -7,6 +7,7 @@
 // which share a type code in each direction (Start 8 vs Status 132, Request 16 vs Ack 184).
 
 #include "services/machine_tool/fanuc_j519/fanuc_j519.h"
+#include <string.h>
 
 #include <unity.h>
 

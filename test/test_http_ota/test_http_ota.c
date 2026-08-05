@@ -14,6 +14,7 @@
 #include "network_drivers/network/ip.h" // PC_IP_STR_MAX for the bracketed-IPv6 overflow case
 #include "network_drivers/presentation/http/http_parser/http_parser.h"
 #include <stdio.h>
+#include <string.h>
 
 #include <unity.h>
 

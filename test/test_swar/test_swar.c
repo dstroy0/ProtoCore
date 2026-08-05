@@ -1,15 +1,16 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the lane math (shared_primitives/swar.h).
+// Unit tests for the lane math (mmgr/swar.h).
 //
 // These answer a question about four bytes with two arithmetic operations and no branches, which is
 // only worth doing if the answer is right at every boundary. proto_scan_nul is diffed against
 // strnlen over every length and every NUL position within a window, including the offsets where the
 // word loop hands over to the byte tail - that handover is where a hand-rolled scan gets it wrong.
 
+#include "mmgr/swar.h"
 #include "shared_primitives/runops.h" // proto_scan_nul - the bounded scan moved here with the split
-#include "shared_primitives/swar.h"
+#include <string.h>
 
 #include <unity.h>
 

@@ -44,7 +44,7 @@
 // Platform widths
 // ---------------------------------------------------------------------------
 // The three numbers every primitive type and every lane mask is derived from
-// (shared_primitives/types.h, shared_primitives/swar.h). They are `#define`s rather than typedefs
+// (shared_primitives/types.h, mmgr/swar.h). They are `#define`s rather than typedefs
 // so they participate in preprocessor arithmetic, can be tested by `#if`, and can be overridden
 // from build_opt.h or -D like every other knob. Each is checked below, so a bad value stops the
 // build here, naming itself, instead of at the first expression that assumed it.

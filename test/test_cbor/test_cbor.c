@@ -5,6 +5,7 @@
 // byte sequences are the canonical RFC 8949 Appendix A diagnostic vectors.
 
 #include "network_drivers/presentation/codec/cbor/cbor.h"
+#include <string.h>
 #include <unity.h>
 
 void setUp()

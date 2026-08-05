@@ -13,6 +13,7 @@
 #include "network_drivers/presentation/http/http3/qpack.h"
 #include "network_drivers/presentation/http/http3/quic_conn.h"
 #include "network_drivers/presentation/http/http3/quic_varint.h"
+#include <string.h>
 
 #include <unity.h>
 
@@ -579,7 +580,7 @@ void test_h3_respond_no_content_type_empty_body()
     TEST_ASSERT_EQUAL_STRING("", e_ctype); // content-type was not emitted
 }
 
-int main(int, char **)
+int main(void)
 {
     UNITY_BEGIN();
     RUN_TEST(test_request_dispatch_and_response);

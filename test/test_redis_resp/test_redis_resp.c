@@ -6,6 +6,7 @@
 
 #include "services/iot/redis_resp/redis_resp.h"
 #include <math.h>
+#include <string.h>
 
 #include <unity.h>
 

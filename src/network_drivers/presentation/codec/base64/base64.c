@@ -21,7 +21,7 @@
 #include "base64.h"
 
 #include "protocore_config.h"       // PC_BASE64_SWAR (scalar vs SWAR constant-time decode; default SWAR)
-#include "shared_primitives/swar.h" // the lane math; the classification below is base64's own
+#include "mmgr/swar.h" // the lane math; the classification below is base64's own
                                     // strnlen
 
 static const char B64_TABLE[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -112,7 +112,7 @@ static inline uint32_t ct_b64_val_plus1(uint32_t c, int urlsafe)
 #if PC_BASE64_SWAR
 // ---------------------------------------------------------------------------
 // SWAR variant: classify 4 characters per 32-bit word instead of one at a time (opt-in, PC_BASE64_SWAR).
-// The lane math itself is shared_primitives/swar.h; what is base64's own is the classification below.
+// The lane math itself is mmgr/swar.h; what is base64's own is the classification below.
 // Every base64 character is < 0x80, so a byte lane never sets its own high bit, which is what lets the
 // guard-bit subtraction keep borrows inside their lane and the range masks stay data-independent -
 // same constant-time property as the scalar path, four lanes at once. Whether this actually wins is a HW

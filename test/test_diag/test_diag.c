@@ -7,6 +7,7 @@
 // rather than bit-rotting.
 
 #include "protocore.h"
+#include <string.h>
 
 #include <unity.h>
 

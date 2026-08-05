@@ -17,7 +17,7 @@
 
 #if PC_ENABLE_DMA
 
-#include "shared_primitives/rawmemcpy.h" // proto_raw_read: the submitted span into the TX buffer
+#include "mmgr/rawmemcpy.h" // proto_raw_read: the submitted span into the TX buffer
 
 #if PROTOCORE_HOT
 #include "server/clock/clock.h" // pc_millis(), pc_micros()

@@ -9,7 +9,7 @@
 #include "network_drivers/presentation/ssh/connection/ssh_flow_control.h"
 #include "network_drivers/presentation/ssh/transport/ssh_packet.h" // SSH_MSG_CHANNEL_*
 #include "protocore_config.h"                                      // SSH_CHAN_MAX_PACKET
-#include "shared_primitives/endian.h" // pc_wr32be - the one source of truth for wire integers
+#include "mmgr/endian.h" // pc_wr32be - the one source of truth for wire integers
 
 void pc_ssh_flow_init(SshFlow *f, uint32_t local_window, uint32_t peer_window, uint32_t peer_max_pkt)
 {

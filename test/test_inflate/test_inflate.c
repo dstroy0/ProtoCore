@@ -9,6 +9,7 @@
 // mirroring the receiver.
 
 #include "network_drivers/presentation/codec/inflate/inflate.h"
+#include <string.h>
 
 #include <unity.h>
 

@@ -13,7 +13,7 @@
 #include "crypto/kdf/kdf.h"
 #include "crypto/crypto_opt.h"
 #include "crypto/hash/sha256.h"
-#include "shared_primitives/endian.h"
+#include "mmgr/endian.h"
 
 PC_CRYPTO_HOT
 

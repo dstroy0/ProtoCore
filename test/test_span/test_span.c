@@ -15,8 +15,9 @@
 // The field names are the bytes.h write-cursor convention on purpose, so pc_bw_* drives a pc_span
 // with no second byte-append API; that pairing is exercised here too.
 
-#include "shared_primitives/bytes.h"
-#include "shared_primitives/span.h"
+#include "mmgr/bytes.h"
+#include "mmgr/span.h"
+#include <string.h>
 
 #include <unity.h>
 
@@ -249,7 +250,7 @@ static void test_a_wire_length_cannot_overflow_the_bound(void)
     TEST_ASSERT_EQUAL_UINT32(4, off); // a failed read leaves the offset on its own field
 }
 
-int main(int, char **)
+int main(void)
 {
     UNITY_BEGIN();
     RUN_TEST(test_capacity_is_the_constant_it_was_built_from);

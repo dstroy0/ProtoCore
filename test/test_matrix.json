@@ -44,7 +44,8 @@
         "+<services/storage/wal/wal_store.c>",
         "+<services/storage/dbm/dbm.c>",
         "+<services/storage/docstore/docstore.c>",
-        "+<network_drivers/presentation/codec/json/json.c>"
+        "+<network_drivers/presentation/codec/json/json.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": ["test_docstore"]
     },
@@ -84,7 +85,8 @@
         "+<services/web/edge_cache/edge_fetch.c>",
         "+<network_drivers/application/http_range.c>",
         "+<crypto/hash/sha256.c>",
-        "+<server/clock/clock.c>"
+        "+<server/clock/clock.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": ["test_edge_cache", "test_edge_fetch"]
     },
@@ -107,7 +109,8 @@
         "+<services/web/edge_cache/edge_cache.c>",
         "+<services/web/edge_cache/edge_cache_sd.c>",
         "+<crypto/hash/sha256.c>",
-        "+<server/clock/clock.c>"
+        "+<server/clock/clock.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": ["test_edge_cache_sd"]
     },
@@ -126,14 +129,15 @@
         "+<services/web/edge_cache/edge_cache_sd.c>",
         "+<services/web/edge_cache/edge_mesh.c>",
         "+<crypto/hash/sha256.c>",
-        "+<server/clock/clock.c>"
+        "+<server/clock/clock.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": ["test_edge_mesh"]
     },
     "native_primitives": {
       "desc": "Shared no-stdlib primitives (shared_primitives): the base-10 pc_strtol/strtoul/strtof\nnumber parsers (numparse.h), the strict RFC 3629 UTF-8 validator (utf8.h), and the parameterized\nRocksoft/Williams CRC engine (crc.h). Every preset is asserted against its published cataloge check\nvalue (the CRC of \"123456789\"), and the engine is then diffed against the hand-rolled CRC loops the\nin-tree services used to carry - X-25, CCITT-FALSE, ARC, MODBUS, DNP, CRC-32, ESP3 CRC-8 and the\nSensirion CRC-8 - across every length 0..64. Those loops are interop-proven against real peers, so\nthe 13 services now calling the engine are proven byte-identical to the code they retired rather\nthan merely plausible; the transcriptions here are what still pins that behaviour. Plus the streaming\nsplit, the reflect flags, width masking, and single-bit-flip detection. Header-only; pure host tests.",
       "flags": [],
-      "src": ["-<*>"],
+      "src": ["-<*>", "+<mmgr/protostr.c>"],
       "tests": ["test_primitives", "test_crc"]
     },
     "native_ip": {
@@ -234,7 +238,7 @@
     "native_sdi12": {
       "desc": "SDI-12 sensor-bus codec (services/peripherals/sdi12): the command builders, the measurement\nresponse parser (atttn), the data-value splitter, and the SDI-12 CRC (compute/encode/verify).\nPure host tests.",
       "flags": ["-DPC_ENABLE_SDI12=1"],
-      "src": ["+<services/peripherals/sdi12/sdi12.c>"],
+      "src": ["+<services/peripherals/sdi12/sdi12.c>", "+<mmgr/protostr.c>"],
       "tests": ["test_sdi12"]
     },
     "native_dmx": {
@@ -246,7 +250,10 @@
     "native_nmea0183": {
       "desc": "NMEA 0183 sentence codec (services/timing_position/nmea0183): the XOR checksum, sentence build, parse\n(field splitting, talker/type, checksum validation) against the canonical GGA vector, and the\nfield-value helpers. Pure host tests.",
       "flags": ["-DPC_ENABLE_NMEA0183=1"],
-      "src": ["+<services/timing_position/nmea0183/nmea0183.c>"],
+      "src": [
+        "+<services/timing_position/nmea0183/nmea0183.c>",
+        "+<mmgr/protostr.c>"
+      ],
       "tests": ["test_nmea0183"]
     },
     "native_ubx": {
@@ -459,7 +466,8 @@
         "+<network_drivers/session/worker.c>",
         "+<mmgr/secure.c>",
         "+<board_drivers/hal/portable/portable_platform.c>",
-        "+<server/clock/clock.c>"
+        "+<server/clock/clock.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": [
         "test_ssh_crypto",
@@ -503,7 +511,8 @@
         "+<network_drivers/session/worker.c>",
         "+<mmgr/secure.c>",
         "+<board_drivers/hal/portable/portable_platform.c>",
-        "+<server/clock/clock.c>"
+        "+<server/clock/clock.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": ["test_ssh_kbdint", "test_ssh_auth"]
     },
@@ -544,7 +553,8 @@
         "+<network_drivers/session/worker.c>",
         "+<mmgr/secure.c>",
         "+<board_drivers/hal/portable/portable_platform.c>",
-        "+<server/clock/clock.c>"
+        "+<server/clock/clock.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": ["test_ssh_pqc"]
     },
@@ -582,7 +592,8 @@
         "+<network_drivers/session/worker.c>",
         "+<mmgr/secure.c>",
         "+<board_drivers/hal/portable/portable_platform.c>",
-        "+<server/clock/clock.c>"
+        "+<server/clock/clock.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": ["test_ssh_hardening"]
     },
@@ -633,7 +644,8 @@
         "+<network_drivers/presentation/ssh/connection/ssh_conn.c>",
         "+<mmgr/secure.c>",
         "+<board_drivers/hal/portable/portable_platform.c>",
-        "+<server/clock/clock.c>"
+        "+<server/clock/clock.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": ["test_ssh_conn"]
     },
@@ -648,7 +660,8 @@
         "+<network_drivers/application/sftp/sftp.c>",
         "+<mmgr/frame.c>",
         "+<server/filesystem/filesystem.c>",
-        "+<server/filesystem/mnt.c>"
+        "+<server/filesystem/mnt.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": ["test_ssh_sftp"]
     },
@@ -663,7 +676,8 @@
         "+<network_drivers/application/scp/scp.c>",
         "+<server/filesystem/filesystem.c>",
         "+<server/filesystem/mnt.c>",
-        "+<mmgr/frame.c>"
+        "+<mmgr/frame.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": ["test_scp"]
     },
@@ -715,7 +729,8 @@
         "+<network_drivers/network/route.c>",
         "+<server/signaling/signaling.c>",
         "+<server/filesystem/filesystem.c>",
-        "+<server/filesystem/mnt.c>"
+        "+<server/filesystem/mnt.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": []
     },
@@ -860,7 +875,8 @@
         "+<server/filesystem/filesystem.c>",
         "+<server/filesystem/mnt.c>",
         "+<network_drivers/network/route.c>",
-        "+<server/signaling/signaling.c>"
+        "+<server/signaling/signaling.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": ["test_webdav_handler"]
     },
@@ -916,7 +932,8 @@
         "+<network_drivers/transport/listener.c>",
         "+<network_drivers/presentation/telnet/telnet.c>",
         "+<mmgr/frame.c>",
-        "+<server/clock/clock.c>"
+        "+<server/clock/clock.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": ["test_telnet"]
     },
@@ -970,7 +987,8 @@
         "+<network_drivers/network/ip.c>",
         "+<services/iot/cloudevents/cloudevents.c>",
         "+<network_drivers/presentation/codec/json/json.c>",
-        "+<network_drivers/presentation/http/http_parser/http_parser.c>"
+        "+<network_drivers/presentation/http/http_parser/http_parser.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": ["test_cloudevents"]
     },
@@ -1120,7 +1138,8 @@
       "flags": ["-DPC_ENABLE_WAMP=1"],
       "src": [
         "+<services/iot/wamp/wamp.c>",
-        "+<network_drivers/presentation/codec/json/json.c>"
+        "+<network_drivers/presentation/codec/json/json.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": ["test_wamp"]
     },
@@ -1169,7 +1188,11 @@
     "native_scpi": {
       "desc": "SCPI / IEEE 488.2 instrument-control codec (services/instrumentation/scpi): the command builder\n(:-hierarchy header + params + terminator), the response parsers (numeric NR1/NR2/NR3,\nboolean, quoted string, definite/indefinite arbitrary block), the STB/ESR/ESE/SRE +\nerror-queue status model, and the SCPI short/long-form header matcher. Pure host tests.",
       "flags": ["-DPC_ENABLE_SCPI=1", "-DUNITY_INCLUDE_DOUBLE"],
-      "src": ["+<services/instrumentation/scpi/scpi.c>", "+<mmgr/frame.c>"],
+      "src": [
+        "+<services/instrumentation/scpi/scpi.c>",
+        "+<mmgr/frame.c>",
+        "+<mmgr/protostr.c>"
+      ],
       "tests": ["test_scpi"]
     },
     "native_hislip": {
@@ -1187,13 +1210,16 @@
     "native_gpib": {
       "desc": "GPIB-over-LAN (Prologix-style) controller command codec (services/instrumentation/gpib): the ++ command\nbuilders (addr / mode / read / eoi / eos / spoll / clr / trg / ver), the data-line escaping\n(leading ESC before CR/LF/ESC/+ in instrument data), the command-vs-data classifier, and the\nresponse parsers (address, serial-poll status byte, version). Pure host tests.",
       "flags": ["-DPC_ENABLE_GPIB=1"],
-      "src": ["+<services/instrumentation/gpib/gpib.c>"],
+      "src": ["+<services/instrumentation/gpib/gpib.c>", "+<mmgr/protostr.c>"],
       "tests": ["test_gpib"]
     },
     "native_haas_mdc": {
       "desc": "Haas Machine Data Collection (MDC) Q-command codec (services/machine_tool/haas_mdc): the ?Q query\nbuilders (Q100 serial, Q101 software version, Q102 model, Q104 mode, Q300 power-on time, Q500\nprogram + run status + parts counter, Q600 <var> macro/system-variable read) and the parser for the\n>-wrapped comma-delimited responses plus the unprompted DPRNT(...) lines. Pure host tests.",
       "flags": ["-DPC_ENABLE_HAAS_MDC=1"],
-      "src": ["+<services/machine_tool/haas_mdc/haas_mdc.c>"],
+      "src": [
+        "+<services/machine_tool/haas_mdc/haas_mdc.c>",
+        "+<mmgr/protostr.c>"
+      ],
       "tests": ["test_haas_mdc"]
     },
     "native_packml": {
@@ -1275,7 +1301,8 @@
         "+<services/iot/senml/senml.c>",
         "+<network_drivers/presentation/codec/json/json.c>",
         "+<network_drivers/presentation/codec/cbor/cbor.c>",
-        "+<network_drivers/presentation/codec/codec.c>"
+        "+<network_drivers/presentation/codec/codec.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": ["test_senml"]
     },
@@ -1362,14 +1389,18 @@
       ],
       "src": [
         "+<services/timing_position/gnss/gnss_survey.c>",
-        "+<services/timing_position/nmea0183/nmea0183.c>"
+        "+<services/timing_position/nmea0183/nmea0183.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": ["test_gnss_survey"]
     },
     "native_ntrip_caster": {
       "desc": "NTRIP caster protocol codec (services/timing_position/gnss/ntrip_caster): rover request parsing\n(mountpoint, NTRIP 1.0/2.0 version, HTTP Basic auth), the stream-accept / error responses, and the RTCM\nsource table (STR records + ENDSOURCETABLE with a self-consistent Content-Length). Pure host tests.",
       "flags": ["-DPC_ENABLE_NTRIP_CASTER=1"],
-      "src": ["+<services/timing_position/gnss/ntrip_caster.c>"],
+      "src": [
+        "+<services/timing_position/gnss/ntrip_caster.c>",
+        "+<mmgr/protostr.c>"
+      ],
       "tests": ["test_ntrip_caster"]
     },
     "native_bacnet": {
@@ -1405,7 +1436,10 @@
     "native_proxy_protocol": {
       "desc": "HAProxy PROXY protocol codec (services/net/proxy_protocol): the v1 (text) + v2 (binary)\nTCP/IPv4 header builders and the unified parser (recover the real client IP behind a load\nbalancer). Pure host tests.",
       "flags": ["-DPC_ENABLE_PROXY_PROTOCOL=1"],
-      "src": ["+<services/net/proxy_protocol/proxy_protocol.c>"],
+      "src": [
+        "+<services/net/proxy_protocol/proxy_protocol.c>",
+        "+<mmgr/protostr.c>"
+      ],
       "tests": ["test_proxy_protocol"]
     },
     "native_sparkplug": {
@@ -1441,7 +1475,7 @@
     "native_webhook": {
       "desc": "Webhook / IFTTT builders (services/net/webhook): IFTTT URL + value1/2/3 JSON payload,\nhost-tested. Firing is via the http_client (ESP32).",
       "flags": ["-DPC_ENABLE_WEBHOOK=1"],
-      "src": ["+<services/net/webhook/webhook.c>"],
+      "src": ["+<services/net/webhook/webhook.c>", "+<mmgr/protostr.c>"],
       "tests": ["test_webhook"]
     },
     "native_radio_power": {
@@ -1465,7 +1499,8 @@
       "src": [
         "+<services/security/audit_log/audit_log.c>",
         "+<crypto/hash/sha256.c>",
-        "+<server/clock/clock.c>"
+        "+<server/clock/clock.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": ["test_audit_log"]
     },
@@ -1485,14 +1520,15 @@
         "+<mmgr/arena.c>",
         "+<network_drivers/session/worker.c>",
         "+<mmgr/secure.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>"
+        "+<board_drivers/hal/portable/portable_platform.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": ["test_oidc"]
     },
     "native_graphql": {
       "desc": "GraphQL query subset (services/iot/graphql) - pure parser + executor, host-tested\nwith a demo resolver. No heap; bounds are compile-time.",
       "flags": ["-DPC_ENABLE_GRAPHQL=1"],
-      "src": ["+<services/iot/graphql/graphql.c>"],
+      "src": ["+<services/iot/graphql/graphql.c>", "+<mmgr/protostr.c>"],
       "tests": ["test_graphql"]
     },
     "native_espnow": {
@@ -1506,7 +1542,8 @@
       "flags": ["-DPC_ENABLE_OAUTH2=1"],
       "src": [
         "+<services/security/oauth2/oauth2.c>",
-        "+<network_drivers/presentation/codec/json/json.c>"
+        "+<network_drivers/presentation/codec/json/json.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": ["test_oauth2"]
     },
@@ -1657,7 +1694,8 @@
         "+<network_drivers/session/worker.c>",
         "+<board_drivers/hal/portable/portable_platform.c>",
         "+<network_drivers/presentation/codec/codec.c>",
-        "+<server/clock/clock.c>"
+        "+<server/clock/clock.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": ["test_pentest"]
     },
@@ -1698,7 +1736,8 @@
         "+<mmgr/frame.c>",
         "+<server/clock/clock.c>",
         "+<network_drivers/network/route.c>",
-        "+<server/signaling/signaling.c>"
+        "+<server/signaling/signaling.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": ["test_keepalive"]
     },
@@ -1742,7 +1781,8 @@
         "+<server/webdav_handler.c>",
         "+<board_drivers/hal/portable/portable_platform.c>",
         "+<mmgr/frame.c>",
-        "+<server/clock/clock.c>"
+        "+<server/clock/clock.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": ["test_range"]
     },
@@ -1795,7 +1835,8 @@
       "src": [
         "+<services/net/smtp/smtp.c>",
         "+<network_drivers/presentation/codec/base64/base64.c>",
-        "+<server/clock/clock.c>"
+        "+<server/clock/clock.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": ["test_smtp"]
     },
@@ -1957,7 +1998,8 @@
         "+<network_drivers/presentation/http/http2/h2_conn.c>",
         "+<network_drivers/presentation/http/http2/h2_frame.c>",
         "+<network_drivers/presentation/codec/hpack_prim/hpack_prim.c>",
-        "+<network_drivers/presentation/http/http2/hpack.c>"
+        "+<network_drivers/presentation/http/http2/hpack.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": ["test_h2_conn"]
     },
@@ -1988,7 +2030,8 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<network_drivers/session/worker.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>"
+        "+<board_drivers/hal/portable/portable_platform.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": ["test_jwt"]
     },
@@ -2031,7 +2074,8 @@
         "+<server/clock/clock.c>",
         "+<network_drivers/network/route.c>",
         "+<server/filesystem/mnt.c>",
-        "+<server/signaling/signaling.c>"
+        "+<server/signaling/signaling.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": ["test_upload"]
     },
@@ -2040,7 +2084,8 @@
       "flags": ["-DPC_ENABLE_HTTP_CLIENT=1"],
       "src": [
         "+<services/net/http_client/http_client.c>",
-        "+<server/clock/clock.c>"
+        "+<server/clock/clock.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": ["test_http_client"]
     },
@@ -2063,7 +2108,8 @@
         "+<services/net/ws_client/ws_client.c>",
         "+<crypto/hash/sha1.c>",
         "+<network_drivers/presentation/codec/base64/base64.c>",
-        "+<server/clock/clock.c>"
+        "+<server/clock/clock.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": ["test_ws_client"]
     },
@@ -2073,7 +2119,8 @@
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
         "+<network_drivers/session/worker.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>"
+        "+<board_drivers/hal/portable/portable_platform.c>",
+        "+<mmgr/secure.c>"
       ],
       "tests": ["test_plaintext"]
     },
@@ -2158,7 +2205,8 @@
         "+<network_drivers/session/worker.c>",
         "+<mmgr/secure.c>",
         "+<board_drivers/hal/portable/portable_platform.c>",
-        "+<server/clock/clock.c>"
+        "+<server/clock/clock.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": ["test_ssh_comp"]
     },
@@ -2247,7 +2295,8 @@
         "+<mmgr/secure.c>",
         "+<mmgr/plaintext.c>",
         "+<network_drivers/session/worker.c>",
-        "+<board_drivers/hal/portable/portable_platform.c>"
+        "+<board_drivers/hal/portable/portable_platform.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": ["test_csrf"]
     },
@@ -2260,7 +2309,11 @@
     "native_dashboard": {
       "desc": "Dashboard widget-table JSON serializers (services/web/dashboard core). Pure logic;\nthe route/SSE wiring (dashboard_routes.cpp) is excluded so this tests on the\nhost without the server.",
       "flags": ["-DPC_ENABLE_DASHBOARD=1", "-DPC_ENABLE_SSE=1"],
-      "src": ["+<services/web/dashboard/dashboard.c>", "+<mmgr/frame.c>"],
+      "src": [
+        "+<services/web/dashboard/dashboard.c>",
+        "+<mmgr/frame.c>",
+        "+<mmgr/protostr.c>"
+      ],
       "tests": ["test_dashboard"]
     },
     "native_net_egress": {
@@ -2281,7 +2334,8 @@
       "flags": ["-DPC_ENABLE_PARTITION_MONITOR=1"],
       "src": [
         "+<services/storage/partition_monitor/partition_monitor.c>",
-        "+<mmgr/frame.c>"
+        "+<mmgr/frame.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": ["test_partition_monitor"]
     },
@@ -2309,14 +2363,18 @@
       "src": [
         "+<server/signaling/gpio_map.c>",
         "+<mmgr/frame.c>",
-        "+<server/clock/clock.c>"
+        "+<server/clock/clock.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": ["test_gpio_map"]
     },
     "native_udp_telemetry": {
       "desc": "UDP telemetry line builder (services/iot/udp_telemetry): InfluxDB line-protocol\nformatting, host-tested. The UDP cast is ESP32-only (#ifdef ARDUINO).",
       "flags": ["-DPC_ENABLE_UDP_TELEMETRY=1"],
-      "src": ["+<services/iot/udp_telemetry/udp_telemetry.c>"],
+      "src": [
+        "+<services/iot/udp_telemetry/udp_telemetry.c>",
+        "+<mmgr/protostr.c>"
+      ],
       "tests": ["test_udp_telemetry"]
     },
     "native_statsd": {
@@ -2331,7 +2389,10 @@
     "native_guardrails": {
       "desc": "Heap/stack guardrails (services/security/guardrails): threshold evaluator + JSON,\nhost-tested. Live sampling is ESP32-only (#ifdef ARDUINO).",
       "flags": ["-DPC_ENABLE_GUARDRAILS=1"],
-      "src": ["+<services/security/guardrails/guardrails.c>"],
+      "src": [
+        "+<services/security/guardrails/guardrails.c>",
+        "+<mmgr/protostr.c>"
+      ],
       "tests": ["test_guardrails"]
     },
     "native_failsafe": {
@@ -2453,7 +2514,7 @@
     "native_sep2": {
       "desc": "IEEE 2030.5 (SEP 2.0) resource codec (services/energy/sep2): the DeviceCapability, EndDevice,\nand DERControl XML documents (urn:ieee:std:2030.5:ns), XML-escaped. Pure host tests.",
       "flags": ["-DPC_ENABLE_SEP2=1"],
-      "src": ["+<services/energy/sep2/sep2.c>"],
+      "src": ["+<services/energy/sep2/sep2.c>", "+<mmgr/protostr.c>"],
       "tests": ["test_sep2"]
     },
     "native_profinet": {
@@ -2471,7 +2532,7 @@
     "native_openadr": {
       "desc": "OpenADR 3.0 JSON codec (services/energy/openadr): the event (programID + eventName + interval\npayloads) and report (VEN reading) JSON documents build, with escaping + a no-stdlib 3-decimal\nformatter. Pure host tests.",
       "flags": ["-DPC_ENABLE_OPENADR=1"],
-      "src": ["+<services/energy/openadr/openadr.c>"],
+      "src": ["+<services/energy/openadr/openadr.c>", "+<mmgr/protostr.c>"],
       "tests": ["test_openadr"]
     },
     "native_mms": {
@@ -2537,7 +2598,7 @@
     "native_utmc": {
       "desc": "UTMC common-database codec (services/transportation/utmc): the UTMCRequest (object id) and UTMCResponse\n(value + quality + timestamp) HTTP/XML documents build + the request-id parse, escaped. Pure host tests.",
       "flags": ["-DPC_ENABLE_UTMC=1"],
-      "src": ["+<services/transportation/utmc/utmc.c>"],
+      "src": ["+<services/transportation/utmc/utmc.c>", "+<mmgr/protostr.c>"],
       "tests": ["test_utmc"]
     },
     "native_ocit": {
@@ -2549,7 +2610,7 @@
     "native_atc": {
       "desc": "ATC field-I/O interop snapshot (services/machine_tool/atc): serialize this device's field-I/O map\nas {\"inputs\":[...],\"outputs\":[...]} JSON for an ATC engine over HTTP, plus the output setter and\nvalue getter. Pure host tests.",
       "flags": ["-DPC_ENABLE_ATC=1"],
-      "src": ["+<services/machine_tool/atc/atc.c>"],
+      "src": ["+<services/machine_tool/atc/atc.c>", "+<mmgr/protostr.c>"],
       "tests": ["test_atc"]
     },
     "native_southbound": {
@@ -2576,19 +2637,22 @@
     "native_exc_decoder": {
       "desc": "ESP32 panic / exception decoder (server/exc_decoder): parse a captured Guru Meditation\ndump (cause, register PC + EXCVADDR, backtrace PC:SP frames) into a structured ExcInfo and serialize it\nas JSON for a live /exception panel; tolerates missing fields + a trailing corruption marker. Pure host tests.",
       "flags": ["-DPC_ENABLE_EXC_DECODER=1"],
-      "src": ["+<server/exc_decoder.c>"],
+      "src": ["+<server/exc_decoder.c>", "+<mmgr/protostr.c>"],
       "tests": ["test_exc_decoder"]
     },
     "native_http_delivery": {
       "desc": "HTTP delivery optimizations (services/file_transfer/http_delivery): the RFC 5861 stale-while-revalidate\nfreshness decision + its Cache-Control builder, and the versioned service-worker precache manifest\n(including that a full PC_DELIVERY_PRECACHE_MAX manifest fits PC_DELIVERY_MANIFEST_BUF and that an\noversized one fails closed rather than truncating). Byte-range serving is network_drivers/application/http_range.h's job,\nnot this service's. Pure host tests.",
       "flags": ["-DPC_ENABLE_HTTP_DELIVERY=1"],
-      "src": ["+<services/file_transfer/http_delivery/http_delivery.c>"],
+      "src": [
+        "+<services/file_transfer/http_delivery/http_delivery.c>",
+        "+<mmgr/protostr.c>"
+      ],
       "tests": ["test_http_delivery"]
     },
     "native_hw_health": {
       "desc": "Hardware-health diagnostics (server/signaling/hw_health): power-rail voltage-drop logger (worst\ndroop + sag/brownout counts), SPI-bus CRC audit with hysteretic clock backoff, GPIO short-circuit test\n(driven vs readback), and capacitor-leakage diag (measured vs expected RC decay). Pure host tests.",
       "flags": ["-DPC_ENABLE_HW_HEALTH=1"],
-      "src": ["+<server/signaling/hw_health.c>"],
+      "src": ["+<server/signaling/hw_health.c>", "+<mmgr/protostr.c>"],
       "tests": ["test_hw_health"]
     },
     "native_mdns_adaptive": {
@@ -2669,7 +2733,7 @@
     "native_ble_gatt": {
       "desc": "Bluetooth ATT codec + GATT bridge (services/radio/ble_gatt): build/parse the common ATT PDUs\n(read/write/notify/error, LE handles) and serialize a GATT characteristic table as JSON for the web\nstack. Pure host tests.",
       "flags": ["-DPC_ENABLE_BLE_GATT=1"],
-      "src": ["+<services/radio/ble_gatt/ble_gatt.c>"],
+      "src": ["+<services/radio/ble_gatt/ble_gatt.c>", "+<mmgr/protostr.c>"],
       "tests": ["test_ble_gatt"]
     },
     "native_tls_policy": {
@@ -2683,20 +2747,21 @@
       "flags": ["-DPC_ENABLE_WISUN=1"],
       "src": [
         "+<services/radio/wisun/wisun.c>",
-        "+<network_drivers/network/ip.c>"
+        "+<network_drivers/network/ip.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": ["test_wisun"]
     },
     "native_logbuf": {
       "desc": "Rotating log ring + severity trap (server/logbuf): pure, fully host-tested.",
       "flags": ["-DPC_ENABLE_LOGBUF=1"],
-      "src": ["+<server/logbuf.c>", "+<mmgr/frame.c>"],
+      "src": ["+<server/logbuf.c>", "+<mmgr/frame.c>", "+<mmgr/protostr.c>"],
       "tests": ["test_logbuf"]
     },
     "native_power_mgmt": {
       "desc": "SoC power governor (server/power_mgmt): the pure clock decision from load, die\ntemperature and reset reason - load-based scaling, the thermal hysteresis that stops a part parked at\nthe limit from oscillating (asserted by feeding the plan's own output back for 20 ticks and counting\none transition), post-brownout recovery holding the floor even when busy and cool, the precedence\nbetween the three, and INT16_MIN meaning no sensor rather than ice-cold.",
       "flags": ["-DPC_ENABLE_POWER_MGMT=1"],
-      "src": ["+<server/power_mgmt.c>"],
+      "src": ["+<server/power_mgmt.c>", "+<mmgr/protostr.c>"],
       "tests": ["test_power_mgmt"]
     },
     "native_hotswap": {
@@ -2704,7 +2769,8 @@
       "flags": ["-DPC_ENABLE_HOTSWAP=1"],
       "src": [
         "+<services/storage/hotswap/hotswap.c>",
-        "+<server/clock/clock.c>"
+        "+<server/clock/clock.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": ["test_hotswap"]
     },
@@ -2714,7 +2780,8 @@
       "src": [
         "+<server/logbuf.c>",
         "+<shared_primitives/log.c>",
-        "+<mmgr/frame.c>"
+        "+<mmgr/frame.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": ["test_log"]
     },
@@ -2725,7 +2792,8 @@
         "+<services/storage/config_store/config_store.c>",
         "+<services/storage/config_io/config_io.c>",
         "+<board_drivers/hal/host/host_nvs.c>",
-        "+<mmgr/frame.c>"
+        "+<mmgr/frame.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": ["test_config_io"]
     },
@@ -2930,7 +2998,8 @@
         "+<network_drivers/session/worker.c>",
         "+<board_drivers/hal/portable/portable_platform.c>",
         "+<mmgr/frame.c>",
-        "+<network_drivers/presentation/codec/codec.c>"
+        "+<network_drivers/presentation/codec/codec.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": ["test_dispatch"]
     },
@@ -3423,7 +3492,7 @@
     "native_frame": {
       "desc": "The declarative frame builder (shared_primitives/frame.h + frame.cpp): the single engine that\nturns a static pc_field spec into wire bytes, so the ~160 formatting sites in this library carry\na table rather than a hand-written append sequence. Covers every field kind and width, the\nfail-closed contract at the exact byte boundary (a frame that does not fit reports 0 AND leaves a\nvalid empty string, which is what a length comparison against snprintf's would-be length silently\ngot wrong), the append rewind that keeps a header line whole-or-absent, NULL string handling, and\na differential check of the numeric and float conversions against the libc printf whose output\nthese frames replace byte for byte.",
       "flags": [],
-      "src": ["-<*>", "+<mmgr/frame.c>"],
+      "src": ["-<*>", "+<mmgr/frame.c>", "+<mmgr/protostr.c>"],
       "tests": ["test_frame"]
     },
     "native_span": {
@@ -3464,12 +3533,13 @@
       "src": [
         "+<server/filesystem/mnt.c>",
         "+<server/filesystem/filesystem.c>",
-        "+<mmgr/frame.c>"
+        "+<mmgr/frame.c>",
+        "+<mmgr/protostr.c>"
       ],
       "tests": ["test_mnt"]
     },
     "native_swar": {
-      "desc": "Lane math (shared_primitives/swar.h): one 32-bit word as four byte lanes. has-zero across\nevery lane, the guard-bit range compares the base64 decoder classifies with, and the bounded\nNUL scan diffed against strnlen at every length, NUL position, and alignment.",
+      "desc": "Lane math (mmgr/swar.h): one 32-bit word as four byte lanes. has-zero across\nevery lane, the guard-bit range compares the base64 decoder classifies with, and the bounded\nNUL scan diffed against strnlen at every length, NUL position, and alignment.",
       "flags": [],
       "src": [],
       "tests": ["test_swar"]

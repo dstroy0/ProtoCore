@@ -5,6 +5,7 @@
 
 #include "services/net/snmp/snmp_ber.h"
 #include "services/net/snmp/snmp_notify.h"
+#include <string.h>
 
 #include <unity.h>
 
@@ -227,7 +228,7 @@ void test_host_transport_stubs()
     TEST_ASSERT_FALSE(pc_snmp_inform_v2c("127.0.0.1", 162, "public", 1, TRAP_OID, tn, NULL, 0));
 }
 
-int main(int, char **)
+int main(void)
 {
     UNITY_BEGIN();
     RUN_TEST(test_trap_v2c_structure);

@@ -357,7 +357,7 @@ static void test_parse_every_extension_arm(void)
     TEST_ASSERT_NULL(hello.pc_quic_tp);
 }
 
-int main(int, char **)
+int main(void)
 {
     UNITY_BEGIN();
     RUN_TEST(test_parse_server_cert_type_malformed);

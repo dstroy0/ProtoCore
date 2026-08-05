@@ -20,6 +20,7 @@
 #include "network_drivers/presentation/ssh/transport/ssh_packet.h"
 #include "network_drivers/presentation/ssh/transport/ssh_transport.h" // KEXINIT s2c compression negotiation
 #include "network_drivers/tls/ssh_rsa.h"                              // host key for the KEXDH reply
+#include <string.h>
 
 #include <unity.h>
 

@@ -8,6 +8,7 @@
 // into a Cyclone error_t. A "Socket" is just a heap-allocated struct wrapping an int fd plus the
 // currently configured timeout (0 => non-blocking). The CycloneSSH client runs the socket
 // non-blocking during the session and waits for readiness with socketPoll (a select() wrapper).
+#include <string.h>
 
 #include <arpa/inet.h>
 #include <errno.h>

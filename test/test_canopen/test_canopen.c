@@ -7,6 +7,7 @@
 // Pure host tests.
 
 #include "services/fieldbus/canopen/canopen.h"
+#include <string.h>
 
 #include <unity.h>
 

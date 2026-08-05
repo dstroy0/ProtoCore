@@ -52,8 +52,8 @@
 #ifndef PROTOCORE_PLAINTEXT_H
 #define PROTOCORE_PLAINTEXT_H
 
+#include "mmgr/span.h"
 #include "protocore_config.h"
-#include "shared_primitives/span.h"
 
 PROTO_BEGIN_DECLS
 
@@ -158,6 +158,48 @@ proto_bool pc_plaintext_owns(const void *p);
  * way the lock-free single-accessor invariant can be violated, and this makes it checkable.
  */
 int pc_plaintext_slot_of(const void *p);
+
+/**
+ * @brief The plaintext pool.
+ *
+ * @var PlainNs::alloc       borrow @c n bytes aligned to @c align, or NULL if it does not fit
+ * @var PlainNs::span        the same borrow as a span, so the length travels with the pointer
+ * @var PlainNs::reset       empty the calling worker's arena
+ * @var PlainNs::mark        capture the arena offset, to release back to
+ * @var PlainNs::release     reclaim everything borrowed since a mark, LIFO
+ * @var PlainNs::used        bytes currently handed out
+ * @var PlainNs::high_water  the largest @c used any slot has reached, for sizing the arena
+ * @var PlainNs::capacity    one arena's total extent
+ * @var PlainNs::owns        whether a pointer lies inside the pool
+ * @var PlainNs::slot_of     which slot holds a pointer, or -1
+ *
+ * No storage member. The arenas and their backing bytes belong to plaintext.c, and a caller reaches
+ * its own by calling - the slot is resolved from the worker, never passed in.
+ */
+typedef struct
+{
+    void *(*alloc)(size_t n, size_t align);
+    pc_span (*span)(size_t n, size_t align);
+    void (*reset)(void);
+    size_t (*mark)(void);
+    void (*release)(size_t mark);
+    size_t (*used)(void);
+    size_t (*high_water)(void);
+    size_t (*capacity)(void);
+    proto_bool (*owns)(const void *p);
+    int (*slot_of)(const void *p);
+} PlainNs;
+
+/**
+ * @brief The names, aliased.
+ *
+ * `static const` and initialized here.
+ *
+ * `unused` because this header reaches files that take none of it.
+ */
+static const PlainNs plain __attribute__((unused)) = {
+    pc_plaintext_alloc, pc_plaintext_span,       pc_plaintext_reset,    pc_plaintext_mark, pc_plaintext_release,
+    pc_plaintext_used,  pc_plaintext_high_water, pc_plaintext_capacity, pc_plaintext_owns, pc_plaintext_slot_of};
 
 PROTO_END_DECLS
 

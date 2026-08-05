@@ -10,6 +10,7 @@
 #include "protocore.h"
 #include "server/clock/clock.h"
 #include <stdio.h>
+#include <string.h>
 
 #include <unity.h>
 

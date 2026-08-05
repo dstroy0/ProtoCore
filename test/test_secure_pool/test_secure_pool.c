@@ -16,6 +16,7 @@
 #include "mmgr/plaintext.h"
 #include "mmgr/secure.h"
 
+#include <string.h> // memset: test/ is exempt from the no-stdlib rule, and it must be DECLARED
 #include <unity.h>
 
 void setUp(void)
@@ -150,17 +151,30 @@ static void test_a_plaintext_pointer_is_not_a_secure_one(void)
     TEST_ASSERT_TRUE(pc_span_ok(s));
     TEST_ASSERT_TRUE(pc_plaintext_owns(s.buf));
     TEST_ASSERT_FALSE(pc_secure_owns(s.buf)); // cannot be mistaken for secure
+    pc_plaintext_release(scope);              // setUp resets the secure pool only, so hand this back
 }
 
-// A pointer from neither pool - a stack address, a literal, null - belongs to neither.
+// Storage outside both pools, aligned the way every borrow is. The probe is not a stack array: a
+// frame gives no alignment past 1, so testing with one would exercise a shape no pool pointer can
+// have, and the address range test is what is under examination here.
+static uint8_t g_outside[32] __attribute__((aligned(32)));
+
+// A pointer from neither pool - other BSS, a code address, null - belongs to neither.
 static void test_foreign_pointers_belong_to_neither_pool(void)
 {
-    uint8_t on_stack[8];
-    TEST_ASSERT_FALSE(pc_secure_owns(on_stack));
-    TEST_ASSERT_FALSE(pc_plaintext_owns(on_stack));
+    TEST_ASSERT_FALSE(pc_secure_owns(g_outside));
+    TEST_ASSERT_FALSE(pc_plaintext_owns(g_outside));
+    TEST_ASSERT_EQUAL_INT(-1, pc_secure_slot_of(g_outside));
+    TEST_ASSERT_EQUAL_INT(-1, pc_plaintext_slot_of(g_outside));
+
+    // A code address is aligned by construction and cannot be in either arena.
+    const void *code = (const void *)&pc_secure_reset;
+    TEST_ASSERT_FALSE(pc_secure_owns(code));
+    TEST_ASSERT_FALSE(pc_plaintext_owns(code));
+
     TEST_ASSERT_FALSE(pc_secure_owns(NULL));
     TEST_ASSERT_FALSE(pc_plaintext_owns(NULL));
-    TEST_ASSERT_EQUAL_INT(-1, pc_secure_slot_of(on_stack));
+    TEST_ASSERT_EQUAL_INT(-1, pc_secure_slot_of(NULL));
     TEST_ASSERT_EQUAL_INT(-1, pc_plaintext_slot_of(NULL));
 }
 
@@ -226,7 +240,79 @@ static void test_over_budget_fails_closed(void)
     TEST_ASSERT_EQUAL_UINT32(0, s.cap); // not a null with a live capacity
 }
 
-int main(int, char **)
+// The `secure` table names ten functions, four of them size_t(void) - used,
+// mark, high_water, capacity - so a swapped pair type-checks and links, and
+// only pointer identity catches it. The table is initialized in the header,
+// which is what keeps --gc-sections able to reclaim the pool storage from a
+// build that resets but never borrows a secret; a definition in secure.c would
+// name every member and anchor alloc -> bind -> the backing bytes.
+static void test_secure_table_is_wired_to_the_named_functions(void)
+{
+    TEST_ASSERT_EQUAL_PTR(pc_secure_alloc, secure.alloc);
+    TEST_ASSERT_EQUAL_PTR(pc_secure_span, secure.span);
+    TEST_ASSERT_EQUAL_PTR(pc_secure_reset, secure.reset);
+    TEST_ASSERT_EQUAL_PTR(pc_secure_mark, secure.mark);
+    TEST_ASSERT_EQUAL_PTR(pc_secure_release, secure.release);
+    TEST_ASSERT_EQUAL_PTR(pc_secure_used, secure.used);
+    TEST_ASSERT_EQUAL_PTR(pc_secure_high_water, secure.high_water);
+    TEST_ASSERT_EQUAL_PTR(pc_secure_capacity, secure.capacity);
+    TEST_ASSERT_EQUAL_PTR(pc_secure_owns, secure.owns);
+    TEST_ASSERT_EQUAL_PTR(pc_secure_slot_of, secure.slot_of);
+}
+
+// The pool reached through the table rather than around it, and the one control
+// that separates it from the plaintext side: reclaiming wipes.
+static void test_secure_table_round_trip(void)
+{
+    secure.reset();
+    TEST_ASSERT_EQUAL_size_t(0, secure.used());
+    TEST_ASSERT_EQUAL_size_t(PC_SECURE_ARENA_SIZE, secure.capacity());
+
+    const size_t mark = secure.mark();
+    pc_span s = secure.span(32, 8);
+    TEST_ASSERT_TRUE(pc_span_ok(s));
+    TEST_ASSERT_EQUAL_size_t(32, s.cap);
+    TEST_ASSERT_EQUAL_size_t(0, (uintptr_t)s.buf % 8);
+    TEST_ASSERT_TRUE(secure.owns(s.buf));
+    TEST_ASSERT_TRUE(secure.slot_of(s.buf) >= 0 && secure.slot_of(s.buf) < PC_SEC_POOL_SLOTS);
+
+    // A secret is never a plaintext borrow, and the reverse - disjoint regions.
+    TEST_ASSERT_FALSE(pc_plaintext_owns(s.buf));
+    const pc_span open = pc_plaintext_span(32, 8);
+    TEST_ASSERT_TRUE(pc_span_ok(open));
+    TEST_ASSERT_FALSE(secure.owns(open.buf));
+    TEST_ASSERT_EQUAL_INT(-1, secure.slot_of(open.buf));
+    pc_plaintext_reset();
+
+    uint8_t *key = s.buf;
+    memset(key, 0xC7, 32);
+    TEST_ASSERT_EQUAL_UINT8(0xC7, key[0]);
+    TEST_ASSERT_EQUAL_UINT8(0xC7, key[31]);
+
+    secure.release(mark);
+    TEST_ASSERT_EQUAL_size_t(0, secure.used());
+    // Zero at the instant of reclaim, not merely marked free.
+    for (size_t i = 0; i < 32; i++)
+    {
+        TEST_ASSERT_EQUAL_UINT8(0, key[i]);
+    }
+
+    // An over-budget request fails closed and leaves the offset where it was.
+    const size_t before = secure.used();
+    TEST_ASSERT_NULL(secure.alloc(secure.capacity() * 4u, 8));
+    TEST_ASSERT_EQUAL_size_t(before, secure.used());
+    const pc_span too_big = secure.span(secure.capacity() * 4u, 8);
+    TEST_ASSERT_FALSE(pc_span_ok(too_big));
+    TEST_ASSERT_NULL(too_big.buf);
+    TEST_ASSERT_EQUAL_size_t(0, too_big.cap);
+
+    TEST_ASSERT_FALSE(secure.owns(NULL));
+    TEST_ASSERT_TRUE(secure.high_water() >= 32);
+
+    secure.reset();
+}
+
+int main(void)
 {
     UNITY_BEGIN();
     RUN_TEST(test_release_wipes_the_reclaimed_region);
@@ -241,5 +327,8 @@ int main(int, char **)
     RUN_TEST(test_slot_of_reports_the_borrowing_slot);
     RUN_TEST(test_high_water_reports_peak_demand);
     RUN_TEST(test_over_budget_fails_closed);
+    // Last: the round trip borrows, which moves the high-water mark the test above reports on.
+    RUN_TEST(test_secure_table_is_wired_to_the_named_functions);
+    RUN_TEST(test_secure_table_round_trip);
     return UNITY_END();
 }

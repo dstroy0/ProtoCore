@@ -7,7 +7,7 @@
 // (utf8.h). Pure host tests.
 
 #include "mmgr/membuild.h"
-#include "shared_primitives/numparse.h"
+#include "mmgr/protostr.h"
 #include "shared_primitives/utf8.h"
 #include <stdio.h> // snprintf: the libc reference these tests check pc_sb_g/pc_sb_fixed against
 #include <unity.h>
@@ -193,13 +193,13 @@ void test_strtol()
 {
     const char *s = "  -42xyz";
     const char *end = NULL;
-    TEST_ASSERT_EQUAL_INT(-42, pc_strtol(s, &end)); // leading ws + sign + digits
-    TEST_ASSERT_EQUAL_PTR(s + 5, end);              // stopped at 'x'
-    TEST_ASSERT_EQUAL_INT(7, pc_strtol("+7", NULL));
+    TEST_ASSERT_EQUAL_INT(-42, str.to_long(s, &end)); // leading ws + sign + digits
+    TEST_ASSERT_EQUAL_PTR(s + 5, end);                // stopped at 'x'
+    TEST_ASSERT_EQUAL_INT(7, str.to_long("+7", NULL));
 
     const char *bad = "abc";
     const char *e2 = NULL;
-    TEST_ASSERT_EQUAL_INT(0, pc_strtol(bad, &e2));
+    TEST_ASSERT_EQUAL_INT(0, str.to_long(bad, &e2));
     TEST_ASSERT_EQUAL_PTR(bad, e2); // no digit converted -> end == s
 }
 
@@ -207,26 +207,26 @@ void test_strtoul()
 {
     const char *s = "  +123abc";
     const char *end = NULL;
-    TEST_ASSERT_EQUAL_UINT32(123, pc_strtoul(s, &end)); // ws + '+' + digits
+    TEST_ASSERT_EQUAL_UINT32(123, str.to_ulong(s, &end)); // ws + '+' + digits
     TEST_ASSERT_EQUAL_PTR(s + 6, end);
 
     const char *bad = "  x";
     const char *e2 = NULL;
-    TEST_ASSERT_EQUAL_UINT32(0, pc_strtoul(bad, &e2));
+    TEST_ASSERT_EQUAL_UINT32(0, str.to_ulong(bad, &e2));
     TEST_ASSERT_EQUAL_PTR(bad, e2); // no digits -> end == s
 }
 
 void test_strtof()
 {
     const char *end = NULL;
-    TEST_ASSERT_FLOAT_WITHIN(0.0001f, 3.14f, pc_strtof("  3.14", &end)); // ws + int + frac
-    TEST_ASSERT_FLOAT_WITHIN(0.0001f, -2.5f, pc_strtof("-2.5", NULL));
-    TEST_ASSERT_FLOAT_WITHIN(1.0f, 1500.0f, pc_strtof("1.5e3", &end));      // exponent
-    TEST_ASSERT_FLOAT_WITHIN(0.0001f, 0.0125f, pc_strtof("1.25E-2", &end)); // negative exponent
+    TEST_ASSERT_FLOAT_WITHIN(0.0001f, 3.14f, str.to_float("  3.14", &end)); // ws + int + frac
+    TEST_ASSERT_FLOAT_WITHIN(0.0001f, -2.5f, str.to_float("-2.5", NULL));
+    TEST_ASSERT_FLOAT_WITHIN(1.0f, 1500.0f, str.to_float("1.5e3", &end));      // exponent
+    TEST_ASSERT_FLOAT_WITHIN(0.0001f, 0.0125f, str.to_float("1.25E-2", &end)); // negative exponent
 
     const char *bad = "abc";
     const char *e2 = NULL;
-    TEST_ASSERT_FLOAT_WITHIN(0.0001f, 0.0f, pc_strtof(bad, &e2));
+    TEST_ASSERT_FLOAT_WITHIN(0.0001f, 0.0f, str.to_float(bad, &e2));
     TEST_ASSERT_EQUAL_PTR(bad, e2); // no digits -> end == s
 }
 
@@ -235,22 +235,22 @@ void test_numparse_branches()
     // pc_np_ws: exercise every whitespace operand (line 24) - a run of each
     // recognized whitespace char, then a digit that fails them all.
     const char *end = NULL;
-    TEST_ASSERT_EQUAL_INT(42, pc_strtol("\t\n\r\f\v42", &end));
+    TEST_ASSERT_EQUAL_INT(42, str.to_long("\t\n\r\f\v42", &end));
 
     // pc_strtoul with a null endptr - the `if (end)` false arm (line 61).
-    TEST_ASSERT_EQUAL_UINT32(9, pc_strtoul("9", NULL));
+    TEST_ASSERT_EQUAL_UINT32(9, str.to_ulong("9", NULL));
 
     // pc_strtod main sign: explicit '+' (line 105 first-operand-true, line 106
     // `== '-'` false). Negative and no-sign are covered by test_strtof.
-    TEST_ASSERT_FLOAT_WITHIN(0.0001f, 3.14f, pc_strtof("+3.14", &end));
+    TEST_ASSERT_FLOAT_WITHIN(0.0001f, 3.14f, str.to_float("+3.14", &end));
 
     // pc_strtod_exp sign: explicit '+' exponent (line 84 first-operand-true,
     // line 85 `== '-'` false). Negative exponent is covered by test_strtof.
-    TEST_ASSERT_FLOAT_WITHIN(1.0f, 1500.0f, pc_strtof("1.5e+3", &end));
+    TEST_ASSERT_FLOAT_WITHIN(1.0f, 1500.0f, str.to_float("1.5e+3", &end));
 
     // pc_strtod_exp clamp: a 4-digit exponent drives ex past 400 so the
     // `ex < 400 ? ... : ex` else (clamp) arm fires (line 89). 10^500 -> inf.
-    float big = pc_strtof("1e5000", &end);
+    float big = str.to_float("1e5000", &end);
     TEST_ASSERT_TRUE(big > 1e30f); // clamped/overflowed to a huge value
 }
 

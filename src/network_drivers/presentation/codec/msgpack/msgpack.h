@@ -28,9 +28,9 @@
 #ifndef PROTOCORE_MSGPACK_H
 #define PROTOCORE_MSGPACK_H
 
+#include "mmgr/span.h"                                // pc_span / pc_cspan - the region, bound with pc_span_from()
 #include "network_drivers/presentation/codec/codec.h" // pc_codec_type - one item vocabulary
 #include "protocore_config.h"
-#include "shared_primitives/span.h" // pc_span / pc_cspan - the region, bound with pc_span_from()
 
 PROTO_BEGIN_DECLS
 

@@ -6,6 +6,7 @@
 // Vectors verified against AB pub. 1770-6.5.16. Pure host tests.
 
 #include "services/fieldbus/df1/df1.h"
+#include <string.h>
 
 #include <unity.h>
 

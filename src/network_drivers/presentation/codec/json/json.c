@@ -9,7 +9,7 @@
 #include "json.h"
 #include "mmgr/membuild.h"         // pc_sb frame builder
 #include "shared_primitives/hex.h" // PC_HEX_LOWER - the shared digit table
-#include "shared_primitives/numparse.h"
+#include "mmgr/protostr.h"
 #include <stdio.h>
 
 // ---------------------------------------------------------------------------
@@ -642,7 +642,7 @@ proto_bool json_get_int(const char *json, const char *key, long *out)
         return PROTO_FALSE;
     }
     const char *end = NULL;
-    long val = pc_strtol(v, &end);
+    long val = str.to_long(v, &end);
     if (end == v)
     {
         return PROTO_FALSE; // no digits parsed

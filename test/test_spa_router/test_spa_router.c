@@ -4,6 +4,7 @@
 // Host tests for services/spa_router: the single-page-app routing decision.
 
 #include "services/web/spa_router/spa_router.h"
+#include <string.h>
 #include <unity.h>
 
 void setUp(void)

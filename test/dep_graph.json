@@ -8478,7 +8478,7 @@
 "native_upload",
 "native_web_terminal"
 ],
-"src/shared_primitives/bytes.h": [
+"src/mmgr/bytes.h": [
 "native_cbor",
 "native_msgpack",
 "native_senml",
@@ -8515,7 +8515,7 @@
 "native_thread",
 "native_zigbee"
 ],
-"src/shared_primitives/endian.h": [
+"src/mmgr/endian.h": [
 "native_accept_gate",
 "native_ads",
 "native_amqp",
@@ -8757,7 +8757,7 @@
 "native_workers",
 "native_ws_client"
 ],
-"src/shared_primitives/ring.h": [
+"src/mmgr/ring.h": [
 "native_accept_gate",
 "native_application",
 "native_base64",
@@ -8843,7 +8843,7 @@
 "native_wisun",
 "native_ws_client"
 ],
-"src/shared_primitives/span.h": [
+"src/mmgr/span.h": [
 "native_accept_gate",
 "native_application",
 "native_base64",
@@ -8918,7 +8918,7 @@
 "native_upload",
 "native_web_terminal"
 ],
-"src/shared_primitives/swar.h": [
+"src/mmgr/swar.h": [
 "native_accept_gate",
 "native_application",
 "native_atc",

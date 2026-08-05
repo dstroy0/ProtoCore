@@ -6,6 +6,7 @@
 // goes through the http_client (ESP32) and is not exercised here.
 
 #include "services/net/webhook/webhook.h"
+#include <string.h>
 
 #include <unity.h>
 

@@ -13,6 +13,7 @@
 #include "network_drivers/application/smb/smb_client.h"
 #include "network_drivers/application/smb/spnego.h"
 #include <stdio.h>
+#include <string.h>
 
 #include <unity.h>
 

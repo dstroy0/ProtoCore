@@ -6,6 +6,7 @@
 // with Python's uuid.uuid5, so the implementation is checked against the standard.
 
 #include "server/signaling/device_id.h"
+#include <string.h>
 
 #include <unity.h>
 

@@ -24,8 +24,8 @@
 #ifndef PROTOCORE_BYTES_H
 #define PROTOCORE_BYTES_H
 
-#include "shared_primitives/endian.h" // pc_rd32be - the fixed-width serializers live there
-#include "shared_primitives/span.h"   // pc_span / pc_cspan - the region these verbs act on
+#include "mmgr/endian.h" // pc_rd32be - the fixed-width serializers live there
+#include "mmgr/span.h"   // pc_span / pc_cspan - the region these verbs act on
 
 // --- append into a pc_span ---
 

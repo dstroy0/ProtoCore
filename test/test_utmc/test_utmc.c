@@ -4,6 +4,7 @@
 // Host tests for services/utmc: the UTMC common-database request/response codec.
 
 #include "services/transportation/utmc/utmc.h"
+#include <string.h>
 
 #include <unity.h>
 

@@ -8,6 +8,7 @@
 
 #include "lfs_mock.h"
 #include "protocore.h"
+#include <string.h>
 
 #include <unity.h>
 

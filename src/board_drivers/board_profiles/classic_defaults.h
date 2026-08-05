@@ -45,7 +45,7 @@
 
 // --- Vector unit ---
 // A register file wider than a GPR that the byte-lane primitives could be issued on. The classic
-// die's LX6 has none, and neither does a host build, so the floor is off and shared_primitives/swar.h
+// die's LX6 has none, and neither does a host build, so the floor is off and mmgr/swar.h
 // keeps doing its lane math in a general-purpose register. A profile raising this is asserting a
 // real unit out of its own die's TRM, never inferring one from the core name.
 #ifndef PC_HW_SIMD
@@ -80,7 +80,7 @@
 // 64-bit index arithmetic, none of which the target executes.
 //
 // Anything wider is not synthesized into one operation, it is done as n+1 of them: the move ladder
-// in shared_primitives/rawmemcpy.h enters at this width and steps down, and a lane carrier above it
+// in mmgr/protomem.h enters at this width and steps down, and a lane carrier above it
 // is refused in protocore_config.h rather than compiled into half-registers the caller cannot see.
 #ifndef PC_HW_WORD_BITS
 #define PC_HW_WORD_BITS 32

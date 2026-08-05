@@ -10,6 +10,7 @@
 #include "network_drivers/presentation/ssh/transport/ssh_transport.h"
 #include "protocore_config.h"
 #include <stdint.h>
+#include <string.h>
 
 #include <unity.h>
 

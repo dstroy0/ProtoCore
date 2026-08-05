@@ -10,10 +10,11 @@
 // reaches neither the sink nor the ring, with the argument-evaluation probe below proving the
 // arguments were never even evaluated.
 
+#include "mmgr/ring.h" // shared SPSC byte-ring primitive, exercised at the bottom
 #include "server/logbuf.h"
 #include "shared_primitives/log.h"
-#include "shared_primitives/ring.h" // shared SPSC byte-ring primitive, exercised at the bottom
 #include <stdio.h>
+#include <string.h>
 
 #include <unity.h>
 
@@ -172,7 +173,7 @@ void test_empty_message_is_still_a_line()
 }
 
 // ---------------------------------------------------------------------------
-// shared_primitives/ring.h - the single-producer / single-consumer byte-ring
+// mmgr/ring.h - the single-producer / single-consumer byte-ring
 // shared by both transports. It is header-only inline math with no .cpp of its
 // own, so it is exercised directly here rather than through a transport.
 // ---------------------------------------------------------------------------
@@ -274,7 +275,7 @@ void test_ring_write_span_wraps()
     TEST_ASSERT_EQUAL_size_t(4, pc_ring_write_span(buf, sizeof(buf), 4, (const uint8_t *)"", 0));
 }
 
-int main(int, char **)
+int main(void)
 {
     UNITY_BEGIN();
     RUN_TEST(test_debug_is_below_the_floor_and_emits_nothing);

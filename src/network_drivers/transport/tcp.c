@@ -30,7 +30,7 @@
 #include "board_drivers/board_profiles/pc_platform.h"
 #include "diffserv.h"           // DiffServ DSCP marking (pc_dscp_to_tos, pc_conn_set_dscp); compiles out when off
 #include "server/clock/clock.h" // pc_millis() pluggable monotonic clock
-#include "shared_primitives/rawmemcpy.h" // proto_raw_read: the unaligned v6 address load
+#include "mmgr/rawmemcpy.h" // proto_raw_read: the unaligned v6 address load
 
 #if PROTOCORE_HOT
 #include "network_drivers/session/worker.h" // pc_worker_wake() - resume a paced send when the window drains
