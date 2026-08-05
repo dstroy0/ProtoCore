@@ -18,6 +18,31 @@ matching `(block, host_id, reg_add, data)`; slot 168 sets six, matching the same
 
 `?` is an argument this could not follow to a constant, which means it is computed.
 
+## The primitive
+
+`ram_chip_i2c_writeReg` and `ram_chip_i2c_readReg` are not in ROM: `libphy.a` defines them
+in its own `.iram1`, so the hardware sequence is readable. They appear as undefined only
+because sibling objects in the archive reference them.
+
+Reading `ram_chip_i2c_writeReg(block, host_id, reg_add, data)` out of the disassembly:
+
+- each of the four arguments is masked to 8 bits (`extui aN, aN, 0, 8`),
+- the body runs inside `phy_enter_critical` / `phy_exit_critical`,
+- a `host_id` below 2 takes a path that calls `phy_dis_hw_set_freq` first, then clears
+  bit 8 of `0x3FF4E0C4` through `esp_dport_access_reg_read` and writes it back,
+- the per-transfer register address is `(0x0FFD3800 + host_id) << 2`, which is
+  `0x3FF4E000 + host_id * 4`. The base is pre-divided by four so the shift lands it.
+
+So the analog bus controller is at `0x3FF4E000` indexed by `host_id * 4`, with a control
+register at `+0xC4`. That base is not one of the documented ESP32 peripherals. `memw`
+separates the read from the write-back, and the DPORT read path is mandatory there.
+
+The `g_phyFuns` slots below are still numbered rather than named: `esp32.rom.ld` places the
+table at `g_phyFuns_instance = 0x3ffae0c4` in DRAM and it is filled at runtime by
+`phy_get_romfuncs` (`0x40004100`), so no static artifact carries the mapping. Reading it
+out of a live coredump and matching each pointer against the 1 601 `PROVIDE` addresses in
+`esp32.rom.ld` is what names them.
+
 ## `libphy.a`
 
 95 functions call through a table.
