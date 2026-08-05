@@ -2,14 +2,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file dns_resolver.c
+ * @file resolver.c
  * @brief IPv4 classifier / verifier (pure) + lwIP DNS resolve (ESP32).
  *
  * The resolve marshals dns_gethostbyname into tcpip_thread and polls a done flag
  * with a deadline - the same cross-thread pattern the http_client uses.
  */
 
-#include "network_drivers/network/dns_resolver.h"
+#include "network_drivers/network/dns/resolver.h"
 
 #if PC_NEED_DNS_RESOLVER
 
@@ -20,7 +20,7 @@
 #include "lwip/priv/tcpip_priv.h"
 #include "server/clock/clock.h" // pc_millis() - the single pluggable monotonic source
 #endif
-pc_ip_class pc_dns_resolver_classify(uint32_t ip)
+static pc_ip_class classify(uint32_t ip)
 {
     if (ip == 0u)
     {
@@ -59,9 +59,9 @@ pc_ip_class pc_dns_resolver_classify(uint32_t ip)
     return PC_IP_PUBLIC;
 }
 
-proto_bool pc_dns_resolver_verify(uint32_t ip)
+static proto_bool verify(uint32_t ip)
 {
-    switch (pc_dns_resolver_classify(ip))
+    switch (classify(ip))
     {
     case PC_IP_UNSPECIFIED: // 0.0.0.0 - blocked / no answer
     case PC_IP_BROADCAST:   // 255.255.255.255 - never a host
@@ -126,7 +126,7 @@ static uint32_t to_host_order(const ip_addr_t *a)
     return lwip_ntohl(ip4_addr_get_u32(ip_2_ip4(a)));
 }
 
-proto_bool pc_dns_resolver_resolve(const char *host, uint32_t *out_ip)
+static proto_bool resolve(const char *host, uint32_t *out_ip)
 {
     if (!host || !out_ip)
     {
@@ -163,7 +163,7 @@ proto_bool pc_dns_resolver_resolve(const char *host, uint32_t *out_ip)
 
 #else // host build - no real resolver; a host test can inject a synthetic answer
 
-// The synthetic answer pc_dns_resolver_resolve() returns, set by pc_dns_resolver_test_set_resolve().
+// The synthetic answer resolve() returns, set by test_set_resolve().
 typedef struct
 {
     proto_bool ok;
@@ -171,12 +171,12 @@ typedef struct
 } DnsTestCtx;
 static DnsTestCtx s_dns_test = {PROTO_FALSE, 0};
 
-void pc_dns_resolver_test_set_resolve(proto_bool ok, uint32_t ip)
+static void test_set_resolve(proto_bool ok, uint32_t ip)
 {
     s_dns_test.ok = ok;
     s_dns_test.ip = ip;
 }
-proto_bool pc_dns_resolver_resolve(const char *host, uint32_t *out_ip)
+static proto_bool resolve(const char *host, uint32_t *out_ip)
 {
     (void)host;
     if (!s_dns_test.ok)
@@ -192,14 +192,14 @@ proto_bool pc_dns_resolver_resolve(const char *host, uint32_t *out_ip)
 
 #endif // PROTOCORE_HOT
 
-proto_bool pc_dns_resolver_resolve_verified(const char *host, uint32_t *out_ip)
+static proto_bool resolve_verified(const char *host, uint32_t *out_ip)
 {
     uint32_t ip = 0;
-    if (!pc_dns_resolver_resolve(host, &ip))
+    if (!resolve(host, &ip))
     {
         return PROTO_FALSE;
     }
-    if (!pc_dns_resolver_verify(ip))
+    if (!verify(ip))
     {
         return PROTO_FALSE;
     }
@@ -209,5 +209,11 @@ proto_bool pc_dns_resolver_resolve_verified(const char *host, uint32_t *out_ip)
     }
     return PROTO_TRUE;
 }
+
+#if PROTOCORE_HOT
+const ResolverNs Resolver = {classify, verify, resolve, resolve_verified};
+#else
+const ResolverNs Resolver = {classify, verify, resolve, resolve_verified, test_set_resolve};
+#endif
 
 #endif // PC_NEED_DNS_RESOLVER

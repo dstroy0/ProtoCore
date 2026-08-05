@@ -131,7 +131,8 @@ PROTO_BEGIN_DECLS
 #include "network_drivers/application/upload_service/upload_service.h"
 #include "network_drivers/application/webdav/webdav.h"
 #include "network_drivers/datalink/roaming.h"
-#include "network_drivers/network/dns_resolver.h"
+#include "network_drivers/network/dns/resolver.h"
+#include "network_drivers/network/dns/server.h"
 #include "network_drivers/network/network.h"
 #include "network_drivers/network/route.h"
 #include "network_drivers/physical/radio_power.h"
@@ -238,7 +239,6 @@ PROTO_BEGIN_DECLS
 #include "services/machine_tool/robotics/robotics.h"
 #include "services/machine_tool/safety_scl/safety_scl.h"
 #include "services/machine_tool/umati/umati.h"
-#include "services/net/dns_server/dns_server.h"
 #include "services/net/flow_export/flow_export.h"
 #include "services/net/forward/forward.h"
 #include "services/net/gateway/gateway.h"
@@ -452,43 +452,6 @@ typedef enum
  */
 typedef MwResult (*Middleware)(uint8_t slot_id, HttpReq *request);
 
-#if PC_ENABLE_WEBSOCKET
-/**
- * @brief Callback fired when a WebSocket connection is established.
- *
- * @param ws_id  Index into ws_pool[] for this connection.
- */
-typedef void (*WsConnectHandler)(uint8_t ws_id);
-
-/**
- * @brief Callback fired when a WebSocket text or binary frame arrives.
- *
- * The payload is in ws_pool[ws_id].buf, null-terminated.  Length is in
- * ws_pool[ws_id].payload_len.  Opcode is in ws_pool[ws_id].opcode.
- *
- * @param ws_id  Index into ws_pool[].
- */
-typedef void (*WsMessageHandler)(uint8_t ws_id);
-
-/**
- * @brief Callback fired when a WebSocket connection closes.
- *
- * @param ws_id  Index into ws_pool[] (slot is still valid during callback).
- */
-typedef void (*WsCloseHandler)(uint8_t ws_id);
-#endif // PC_ENABLE_WEBSOCKET
-
-#if PC_ENABLE_SSE
-/**
- * @brief Callback fired when a new SSE client connects.
- *
- * Use pc_sse_send() inside this callback to push an initial event if needed.
- *
- * @param pc_sse_id  Index into pc_sse_pool[] for this connection.
- */
-typedef void (*SseConnectHandler)(uint8_t pc_sse_id);
-#endif // PC_ENABLE_SSE
-
 // ---------------------------------------------------------------------------
 // Route type discriminator
 // ---------------------------------------------------------------------------
@@ -543,18 +506,22 @@ typedef struct Route
     Handler callback;        ///< HTTP handler (ROUTE_HTTP only).
 
 #if PC_ENABLE_WEBSOCKET
-    WsConnectHandler ws_connect; ///< Fired on upgrade success.
-    WsMessageHandler ws_message; ///< Fired on each data frame.
-    WsCloseHandler ws_close;     ///< Fired on close.
+    /// The handler set this route serves, or PC_WS_NONE. The handlers belong to the websocket
+    /// module: a route decides where a request goes, and what runs once the socket is open is not
+    /// routing's business.
+    uint8_t ws_id;
 #endif
 
 #if PC_ENABLE_SSE
-    SseConnectHandler pc_sse_connect; ///< Fired when client subscribes.
+    /// The handler this route serves, or PC_SSE_NONE. The handler belongs to the sse module: a
+    /// route decides where a request goes, not what runs once a client subscribes.
+    uint8_t sse_id;
 #endif
 
 #if PC_ENABLE_FILE_SERVING
-    const pc_mnt_backend *static_fs; ///< Backend for this mount; NULL uses whatever is mounted.
-    const char *static_root;         ///< Subtree this mount serves, as a request-path piece.
+    /// The mount point this route serves, or PC_MNT_NONE. The backend and subtree belong to mnt:
+    /// two registrars describe a mount the same way, so the description lives with mounting.
+    uint8_t mnt_id;
 #endif
 
 #if PC_ENABLE_AUTH

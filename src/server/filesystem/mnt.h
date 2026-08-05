@@ -119,6 +119,25 @@ typedef struct pc_mnt_backend
 // and never has to enable a service just to name a type. The seam fails closed when nothing is
 // mounted, which is the honest answer rather than an error.
 /** @brief Mount the active backend (call once at setup; NULL unmounts). */
+/** @brief The id a route carries when it serves no mount point. */
+#define PC_MNT_NONE 0xFFu
+
+/**
+ * @brief Record a mount point - a backend and the subtree it serves - and return the id naming it,
+ *        or ::PC_MNT_NONE when full.
+ *
+ * Both registrars that offer a mount describe one with this pair, so it lives with mounting rather
+ * than being copied into each of their route entries. A null @p backend is legal and means whatever
+ * is currently mounted.
+ */
+uint8_t pc_mnt_point_add(const pc_mnt_backend *backend, const char *root);
+
+/// @brief The backend @p id names, or nullptr - which also means "use whatever is mounted".
+const pc_mnt_backend *pc_mnt_point_backend(uint8_t id);
+
+/// @brief The subtree @p id names, as a request-path piece. Empty, never null.
+const char *pc_mnt_point_root(uint8_t id);
+
 void pc_mnt_mount(const pc_mnt_backend *backend);
 
 /**

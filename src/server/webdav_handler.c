@@ -47,7 +47,7 @@ static_assert(PC_WEBDAV_BUF_SIZE / PC_WEBDAV_MIN_ENTRY_BYTES < PC_WEBDAV_MAX_ENT
 typedef struct
 {
     // The accessor root every operation here resolves against, bound in dav(). It is the whole
-    // mount: a DAV route carries its own subtree as a request-path piece (Route::static_root), so
+    // mount: a DAV route carries its own subtree as a request-path piece (the mount point), so
     // the subtree is part of the request and one root serves every mount registered.
     int root;
 
@@ -108,7 +108,7 @@ static int dav_resolve_path(const Route *r, const char *reqpath, char *out, size
     {
         return 403;
     }
-    const char *root = r->static_root ? r->static_root : "";
+    const char *root = pc_mnt_point_root(r->mnt_id);
     if (!dav_join(root, sub, out, cap))
     {
         return 414;
@@ -316,9 +316,8 @@ void dav(const char *url_prefix, const pc_mnt_backend *file_sys, const char *fs_
     }
     fill_route_base(r, pat);
     r->type = ROUTE_DAV;
-    r->method = HTTP_GET;    // unused: WebDAV dispatch keys off the raw method token
-    r->static_fs = file_sys; // null is legal: the accessor uses whatever is mounted
-    r->static_root = fs_root;
+    r->method = HTTP_GET;                            // unused: WebDAV dispatch keys off the raw method token
+    r->mnt_id = pc_mnt_point_add(file_sys, fs_root); // null backend is legal: whatever is mounted
 
     // Bind the root every operation in this file resolves against. Re-binding a name already bound
     // hands back the same handle, so a second mount costs nothing and both see the same storage.
@@ -398,7 +397,7 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const Route *r)
     {
         plen--;
     }
-    const char *root = r->static_root ? r->static_root : "";
+    const char *root = pc_mnt_point_root(r->mnt_id);
 
     // Expire any timed-out locks (RFC 4918 §6.6) before this request consults the table, so a stale lock
     // never gates a write. The clock is pc_millis() (pluggable); seconds are enough for lock lifetimes.
@@ -429,8 +428,8 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const Route *r)
             dav_send_status(slot_id, 405, ""); // GET on a collection is not a download
             return;
         }
-        serve_file_internal(slot_id, pc_webdav_method(req->method) == DAV_M_HEAD, r->static_fs, fs_path,
-                            mime_type(fs_path), NULL);
+        serve_file_internal(slot_id, pc_webdav_method(req->method) == DAV_M_HEAD, pc_mnt_point_backend(r->mnt_id),
+                            fs_path, mime_type(fs_path), NULL);
         return;
     }
 

@@ -121,11 +121,63 @@ void ws_reset_frame(WsConn *ws)
 // WebSocket presentation config, owned by one instance (internal linkage): the outbound
 // fragmentation size (RFC 6455 sec 5.4), payload bytes; 0 = one frame per message (default).
 // One named owner, unreachable cross-TU. (The ws_pool[] table is the shared substrate.)
+// One route's handlers. They belong here rather than in the route table: a route decides where a
+// request goes, and what runs once a socket is open is this module's business. A route carries the
+// id that names the set, so nothing above has to hold a pointer into this module.
+typedef struct
+{
+    WsConnectHandler on_connect;
+    WsMessageHandler on_message;
+    WsCloseHandler on_close;
+} WsRoute;
+
 typedef struct
 {
     uint16_t frag_size;
+    WsRoute route[MAX_ROUTES];
+    uint8_t route_count;
 } WsCtx;
 static WsCtx s_ws = {.frag_size = PC_WS_FRAG_SIZE};
+
+uint8_t ws_route_add(WsConnectHandler on_connect, WsMessageHandler on_message, WsCloseHandler on_close)
+{
+    if (s_ws.route_count >= MAX_ROUTES)
+    {
+        return PC_WS_NONE;
+    }
+    WsRoute *w = &s_ws.route[s_ws.route_count];
+    w->on_connect = on_connect;
+    w->on_message = on_message;
+    w->on_close = on_close;
+    return s_ws.route_count++;
+}
+
+WsConnectHandler ws_route_connect(uint8_t id)
+{
+    if (id >= s_ws.route_count)
+    {
+        return NULL;
+    }
+    return s_ws.route[id].on_connect;
+}
+
+WsMessageHandler ws_route_message(uint8_t id)
+{
+    if (id >= s_ws.route_count)
+    {
+        return NULL;
+    }
+    return s_ws.route[id].on_message;
+}
+
+WsCloseHandler ws_route_close(uint8_t id)
+{
+    if (id >= s_ws.route_count)
+    {
+        return NULL;
+    }
+    return s_ws.route[id].on_close;
+}
 void ws_set_frag_size(uint16_t bytes)
 {
     s_ws.frag_size = bytes;

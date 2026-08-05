@@ -3561,11 +3561,11 @@
 "native_upload",
 "native_web_terminal"
 ],
-"src/network_drivers/network/dns_resolver.c": [
+"src/network_drivers/network/dns/resolver.c": [
 "native_dns_resolver",
 "native_swar"
 ],
-"src/network_drivers/network/dns_resolver.h": [
+"src/network_drivers/network/dns/resolver.h": [
 "native_application",
 "native_dns_resolver",
 "native_h3_server",
@@ -6910,13 +6910,13 @@
 "native_upload",
 "native_web_terminal"
 ],
-"src/services/net/dns_server/dns_server.c": [
+"src/network_drivers/network/dns/server.c": [
 "native_swar"
 ],
-"src/services/net/dns_server/dns_server.cpp": [
+"src/network_drivers/network/dns/server.cpp": [
 "native_dns_server"
 ],
-"src/services/net/dns_server/dns_server.h": [
+"src/network_drivers/network/dns/server.h": [
 "native_application",
 "native_dns_server",
 "native_h3_server",

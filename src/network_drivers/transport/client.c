@@ -13,6 +13,7 @@
  */
 
 #include "client.h"
+#include "network_drivers/network/network.h"
 
 // Compiles only on a target build AND only when a client transport is actually enabled
 // (HTTP client / MQTT / WS client). A server-only build leaves DNS_RESOLVER off,
@@ -21,10 +22,10 @@
 #if PROTOCORE_HOT && PC_NEED_CLIENT
 
 #include "board_drivers/board_profiles/pc_platform.h" // the target's TCP, under our names
-#include "diffserv.h" // DiffServ DSCP marking for outbound client connections (compiles out when off)
-#include "network_drivers/network/dns_resolver.h" // shared host->IP resolve (one DNS owner)
-#include "server/clock/clock.h"                   // pc_millis()
+#include "diffserv.h"  // DiffServ DSCP marking for outbound client connections (compiles out when off)
 #include "mmgr/ring.h" // PROTO_ATOMIC_LOAD/STORE + SPSC ring drain (same primitive as the server)
+#include "network_drivers/network/dns/resolver.h" // shared host->IP resolve (one DNS owner)
+#include "server/clock/clock.h"                   // pc_millis()
 
 typedef struct
 {
@@ -45,7 +46,7 @@ typedef struct
 } pc_client_ctx;
 static pc_client_ctx s_client;
 
-// Hostname resolution calls pc_dns_resolver_resolve (network_drivers/network/dns_resolver).
+// Hostname resolution goes through network.dns->resolver.
 
 // --- lwIP callbacks (tcpip_thread); arg = the owning ClientConn* -------------
 
@@ -241,7 +242,7 @@ int pc_client_open(const char *host, uint16_t port, uint32_t timeout_ms)
     // Resolve through the shared DNS owner (its own PC_DNS_TIMEOUT_MS budget),
     // then give the connect its full timeout_ms.
     uint32_t ip = 0;
-    if (!pc_dns_resolver_resolve(host, &ip))
+    if (!network.dns->resolver->resolve(host, &ip))
     {
         c->in_use = PROTO_FALSE;
         return -2; // DNS failure

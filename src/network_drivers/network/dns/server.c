@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file dns_server.c
+ * @file server.c
  * @brief Authoritative DNS server - implementation. See dns_server.h.
  */
 
-#include "services/net/dns_server/dns_server.h"
+#include "network_drivers/network/dns/server.h"
 #include "protocore_config.h"
 
 #if PC_ENABLE_DNS_SERVER
@@ -98,8 +98,8 @@ static proto_bool parse_question(const uint8_t *q, size_t qlen, char *name, size
     return PROTO_TRUE;
 }
 
-size_t pc_dns_server_build_response(const uint8_t *query, size_t qlen, uint32_t ttl, DnsResolveFn resolve, uint8_t *out,
-                                    size_t out_cap)
+static size_t build_response(const uint8_t *query, size_t qlen, uint32_t ttl, DnsResolveFn resolve, uint8_t *out,
+                             size_t out_cap)
 {
     if (!query || !out || !resolve || qlen < 12)
     {
@@ -177,7 +177,7 @@ size_t pc_dns_server_build_response(const uint8_t *query, size_t qlen, uint32_t 
 }
 
 // ---------------------------------------------------------------------------
-// Built-in A-record table (host-testable; used by pc_dns_server_begin()).
+// Built-in A-record table (host-testable; used by begin()).
 // ---------------------------------------------------------------------------
 
 // All DNS-server state, owned by one instance (internal linkage): the A-record table,
@@ -190,7 +190,7 @@ typedef struct
 } DnsSrvCtx;
 static DnsSrvCtx s_dns;
 
-proto_bool pc_dns_server_add(const char *name, uint8_t a, uint8_t b, uint8_t c, uint8_t d)
+static proto_bool add(const char *name, uint8_t a, uint8_t b, uint8_t c, uint8_t d)
 {
     if (!name || !name[0])
     {
@@ -211,7 +211,7 @@ proto_bool pc_dns_server_add(const char *name, uint8_t a, uint8_t b, uint8_t c, 
     return PROTO_TRUE;
 }
 
-uint32_t pc_dns_server_lookup(const char *name)
+static uint32_t lookup(const char *name)
 {
     if (!name)
     {
@@ -227,36 +227,38 @@ uint32_t pc_dns_server_lookup(const char *name)
     return 0;
 }
 
-void pc_dns_server_clear()
+static void clear()
 {
     s_dns.count = 0;
 }
 
 #if PROTOCORE_HOT
 
-static void pc_dns_server_udp_handler(const uint8_t *data, size_t len, const struct pc_udp_peer *peer, void *ctx)
+static void udp_handler(const uint8_t *data, size_t len, const struct pc_udp_peer *peer, void *ctx)
 {
     (void)ctx;
     uint8_t resp[PC_DNS_NAME_MAX + 32]; // header + question + one A answer
-    size_t n = pc_dns_server_build_response(data, len, PC_DNS_SERVER_TTL, pc_dns_server_lookup, resp, sizeof(resp));
+    size_t n = build_response(data, len, PC_DNS_SERVER_TTL, lookup, resp, sizeof(resp));
     if (n)
     {
         pc_udp_send(peer, resp, n);
     }
 }
 
-proto_bool pc_dns_server_begin()
+static proto_bool begin()
 {
-    return pc_udp_listen(53, pc_dns_server_udp_handler, NULL);
+    return pc_udp_listen(53, udp_handler, NULL);
 }
 
 #else // host build: no lwIP. The codec + table above are host-tested; begin is a stub.
 
-proto_bool pc_dns_server_begin()
+static proto_bool begin()
 {
     return PROTO_FALSE;
 }
 
 #endif // PROTOCORE_HOT
+
+const DnsServerNs DnsServer = {build_response, add, clear, begin, lookup};
 
 #endif // PC_ENABLE_DNS_SERVER

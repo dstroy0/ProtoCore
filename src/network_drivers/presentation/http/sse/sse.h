@@ -62,6 +62,29 @@ extern SseConn pc_sse_pool[MAX_SSE_CONNS];
 // ---------------------------------------------------------------------------
 
 /**
+ * @brief Callback fired when a new SSE client connects.
+ *
+ * Use pc_sse_send() inside this callback to push an initial event if needed.
+ *
+ * @param pc_sse_id  Index into pc_sse_pool[] for this connection.
+ */
+typedef void (*SseConnectHandler)(uint8_t pc_sse_id);
+
+/** @brief The id a route carries when it serves no SSE stream. */
+#define PC_SSE_NONE 0xFFu
+
+/**
+ * @brief Record one route's subscribe handler and return the id naming it, or ::PC_SSE_NONE when full.
+ *
+ * The handler lives here, not in the route table: a route decides where a request goes, and what
+ * runs once a client subscribes belongs to this module.
+ */
+uint8_t pc_sse_route_add(SseConnectHandler on_connect);
+
+/// @brief The subscribe handler @p id names, or nullptr when @p id names nothing.
+SseConnectHandler pc_sse_route_connect(uint8_t id);
+
+/**
  * @brief Initialize all SSE pool slots to inactive.
  *
  * Called once from begin().

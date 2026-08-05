@@ -730,7 +730,8 @@
         "+<server/signaling/signaling.c>",
         "+<server/filesystem/filesystem.c>",
         "+<server/filesystem/mnt.c>",
-        "+<mmgr/protostr.c>"
+        "+<mmgr/protostr.c>",
+        "+<mmgr/secure.c>"
       ],
       "tests": []
     },
@@ -876,7 +877,8 @@
         "+<server/filesystem/mnt.c>",
         "+<network_drivers/network/route.c>",
         "+<server/signaling/signaling.c>",
-        "+<mmgr/protostr.c>"
+        "+<mmgr/protostr.c>",
+        "+<mmgr/secure.c>"
       ],
       "tests": ["test_webdav_handler"]
     },
@@ -1488,7 +1490,7 @@
       "desc": "DNS resolver answer classifier/verifier (network_drivers/network/dns_resolver): host-tested;\nthe lwIP resolve is ESP32-only.",
       "flags": ["-DPC_ENABLE_DNS_RESOLVER=1"],
       "src": [
-        "+<network_drivers/network/dns_resolver.c>",
+        "+<network_drivers/network/dns/resolver.c>",
         "+<server/clock/clock.c>"
       ],
       "tests": ["test_dns_resolver"]
@@ -1654,7 +1656,7 @@
         "+<services/iot/redis_resp/redis_resp.c>",
         "+<services/fieldbus/opcua/opcua.c>",
         "+<services/iot/graphql/graphql.c>",
-        "+<services/net/dns_server/dns_server.c>",
+        "+<network_drivers/network/dns/server.c>",
         "+<services/energy/dnp3/dnp3.c>",
         "+<services/iot/stomp/stomp.c>",
         "+<network_drivers/application/smb/smb2.c>",
@@ -1737,7 +1739,8 @@
         "+<server/clock/clock.c>",
         "+<network_drivers/network/route.c>",
         "+<server/signaling/signaling.c>",
-        "+<mmgr/protostr.c>"
+        "+<mmgr/protostr.c>",
+        "+<mmgr/secure.c>"
       ],
       "tests": ["test_keepalive"]
     },
@@ -1782,7 +1785,8 @@
         "+<board_drivers/hal/portable/portable_platform.c>",
         "+<mmgr/frame.c>",
         "+<server/clock/clock.c>",
-        "+<mmgr/protostr.c>"
+        "+<mmgr/protostr.c>",
+        "+<mmgr/secure.c>"
       ],
       "tests": ["test_range"]
     },
@@ -1852,7 +1856,7 @@
     "native_dns_server": {
       "desc": "Authoritative DNS server (services/net/dns_server): the pure A-record response builder\n(QNAME parse, compressed A answer, NXDOMAIN, non-A query, header flags, malformed\nguards) and the built-in name->IP table (add / case-insensitive lookup / clear). No lwIP.",
       "flags": ["-DPC_ENABLE_DNS_SERVER=1"],
-      "src": ["+<services/net/dns_server/dns_server.c>"],
+      "src": ["+<network_drivers/network/dns/server.c>"],
       "tests": ["test_dns_server"]
     },
     "native_rtc": {
@@ -2075,7 +2079,8 @@
         "+<network_drivers/network/route.c>",
         "+<server/filesystem/mnt.c>",
         "+<server/signaling/signaling.c>",
-        "+<mmgr/protostr.c>"
+        "+<mmgr/protostr.c>",
+        "+<mmgr/secure.c>"
       ],
       "tests": ["test_upload"]
     },

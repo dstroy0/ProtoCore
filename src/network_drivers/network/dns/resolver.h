@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file dns_resolver.h
+ * @file resolver.h
  * @brief DNS resolver with answer verification (PC_ENABLE_DNS_RESOLVER).
  *
  * Resolves a hostname to an IPv4 address via lwIP (dns_gethostbyname, marshalled
@@ -42,7 +42,6 @@ typedef enum PROTO_ENUM_PACKED
 // ---------------------------------------------------------------------------
 
 /** @brief Classify a host-order IPv4 word (e.g. (10u << 24) | (0u << 16) | (0u << 8) | 1u). */
-pc_ip_class pc_dns_resolver_classify(uint32_t ip);
 
 /**
  * @brief Is @p ip a plausible A-record answer for a remote host?
@@ -50,7 +49,6 @@ pc_ip_class pc_dns_resolver_classify(uint32_t ip);
  * Rejects unspecified / broadcast / loopback / multicast (spoof / rebinding
  * indicators); accepts private / link-local / public. Host order.
  */
-proto_bool pc_dns_resolver_verify(uint32_t ip);
 
 // ---------------------------------------------------------------------------
 // Resolve (ESP32; returns false on host)
@@ -62,18 +60,42 @@ proto_bool pc_dns_resolver_verify(uint32_t ip);
  * Accepts a dotted-quad directly; otherwise queries DNS with a
  * PC_DNS_TIMEOUT_MS deadline. Blocking. @return true on success.
  */
-proto_bool pc_dns_resolver_resolve(const char *host, uint32_t *out_ip);
 
 /**
- * @brief Resolve @p host and require the answer to pass pc_dns_resolver_verify().
+ * @brief Resolve @p host and require the answer to pass @ref ResolverNs::verify.
  * @return true only if it resolved AND the address is a plausible answer.
  */
-proto_bool pc_dns_resolver_resolve_verified(const char *host, uint32_t *out_ip);
 
 #if !PROTOCORE_HOT
-/** @brief Host test hook: make pc_dns_resolver_resolve() return @p ip (host order) when @p ok, else fail. */
-void pc_dns_resolver_test_set_resolve(proto_bool ok, uint32_t ip);
+/** @brief Host test hook: make @ref ResolverNs::resolve return @p ip (host order) when @p ok, else fail. */
+
 #endif
+
+/**
+ * @brief The DNS resolver.
+ *
+ * @var ResolverNs::classify  what kind of address a host-order IPv4 word names
+ * @var ResolverNs::verify    whether that word is a plausible A-record answer for a remote host
+ * @var ResolverNs::resolve   resolve a host to an IPv4 address, host order; blocking
+ * @var ResolverNs::resolve_verified  resolve, and require the answer to pass @ref ResolverNs::verify
+ *
+ * No storage member: the deadline and the in-flight call belong to dns_resolver.c, and a caller
+ * reaches them by calling.
+ */
+typedef struct
+{
+    pc_ip_class (*classify)(uint32_t ip);
+    proto_bool (*verify)(uint32_t ip);
+    proto_bool (*resolve)(const char *host, uint32_t *out_ip);
+    proto_bool (*resolve_verified)(const char *host, uint32_t *out_ip);
+#if !PROTOCORE_HOT
+    /// Host test hook: make @ref ResolverNs::resolve answer @c ip when @c ok, else fail.
+    void (*test_set_resolve)(proto_bool ok, uint32_t ip);
+#endif
+} ResolverNs;
+
+/** @brief The one symbol this module exports. */
+extern const ResolverNs Resolver;
 
 PROTO_END_DECLS
 

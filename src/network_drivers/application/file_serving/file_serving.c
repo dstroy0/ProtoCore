@@ -66,7 +66,7 @@ typedef struct
 static FileCtx s_file = {.root = -1};
 
 // The root file serving resolves against: the whole mount. A static route carries its own subtree as
-// a request-path piece (Route::static_root), so the subtree is part of the request rather than part
+// a request-path piece (the mount point mnt_id names), so the subtree is part of the request rather than part
 // of the root - which is what lets one bound root serve every static mount the application
 // registers, instead of spending a root table entry per serve_static() call.
 //
@@ -556,13 +556,12 @@ void serve_static(const char *url_prefix, const pc_mnt_backend *file_sys, const 
     fill_route_base(r, pat);
     r->type = ROUTE_STATIC;
     r->method = HTTP_GET;
-    r->static_fs = file_sys; // null is legal: the accessor uses whatever is mounted
-    r->static_root = fs_root;
+    r->mnt_id = pc_mnt_point_add(file_sys, fs_root); // null backend is legal: whatever is mounted
 }
 
 void serve_static_request(uint8_t slot_id, HttpReq *req, const Route *r)
 {
-    // No null-check on static_fs: storage is reached by layer, through the accessor, so the field
+    // No null-check on the backend: storage is reached by layer, through the accessor, so a null
     // names a preference and never the path. A null one is what serve_static() documents as legal
     // and means "whatever is mounted"; 404-ing on it refused every request a caller made without
     // naming a backend it had no way to choose anyway.
@@ -584,7 +583,7 @@ void serve_static_request(uint8_t slot_id, HttpReq *req, const Route *r)
         return;
     }
 
-    const char *root = r->static_root ? r->static_root : "";
+    const char *root = pc_mnt_point_root(r->mnt_id);
     size_t rlen = strnlen(root, MAX_PATH_LEN);
     proto_bool root_slash = (rlen > 0 && root[rlen - 1] == '/');
     if (root_slash && sub[0] == '/') // avoid a doubled separator
@@ -634,11 +633,11 @@ void serve_static_request(uint8_t slot_id, HttpReq *req, const Route *r)
         // exercised both ways (see the gzip tests).
         if (gn > 0 && gn < (int)sizeof(gz) && pc_fs_exists(file_root(), gz, ""))
         {
-            serve_file_internal(slot_id, head, r->static_fs, gz, ctype, "gzip");
+            serve_file_internal(slot_id, head, pc_mnt_point_backend(r->mnt_id), gz, ctype, "gzip");
             return;
         }
     }
 
-    serve_file_internal(slot_id, head, r->static_fs, fs_path, ctype, NULL);
+    serve_file_internal(slot_id, head, pc_mnt_point_backend(r->mnt_id), fs_path, ctype, NULL);
 }
 #endif // PC_ENABLE_FILE_SERVING

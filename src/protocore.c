@@ -880,6 +880,15 @@ void fill_route_base(Route *r, const char *path)
     // route in the table.
     r->auth_id = PC_AUTH_NONE;
 #endif
+#if PC_ENABLE_WEBSOCKET
+    r->ws_id = PC_WS_NONE; // same reason: zero names a real handler set
+#endif
+#if PC_ENABLE_SSE
+    r->sse_id = PC_SSE_NONE; // same reason
+#endif
+#if PC_ENABLE_FILE_SERVING
+    r->mnt_id = PC_MNT_NONE; // same reason
+#endif
 }
 
 void on_http(const char *path, HttpMethod method, Handler callback)
@@ -961,9 +970,7 @@ void on_ws(const char *path, WsConnectHandler on_connect, WsMessageHandler on_me
 
     fill_route_base(r, path);
     r->type = ROUTE_WS;
-    r->ws_connect = on_connect;
-    r->ws_message = on_message;
-    r->ws_close = on_close;
+    r->ws_id = ws_route_add(on_connect, on_message, on_close);
 }
 #endif // PC_ENABLE_WEBSOCKET
 
@@ -978,7 +985,7 @@ void on_sse(const char *path, SseConnectHandler on_connect)
 
     fill_route_base(r, path);
     r->type = ROUTE_SSE;
-    r->pc_sse_connect = on_connect;
+    r->sse_id = pc_sse_route_add(on_connect);
 }
 #endif // PC_ENABLE_SSE
 
@@ -1108,9 +1115,15 @@ void ws_dispatch_message(const WsConn *ws)
 {
     for (uint8_t r = 0; r < network.route->count(); r++)
     {
-        if (network.route->at(r)->type == ROUTE_WS && network.route->at(r)->ws_message)
+        const Route *rt = network.route->at(r);
+        if (rt->type != ROUTE_WS)
         {
-            network.route->at(r)->ws_message(ws->ws_id);
+            continue;
+        }
+        WsMessageHandler on_message = ws_route_message(rt->ws_id);
+        if (on_message != NULL)
+        {
+            on_message(ws->ws_id);
             break;
         }
     }
@@ -1120,9 +1133,15 @@ void ws_dispatch_close(const WsConn *ws)
 {
     for (uint8_t r = 0; r < network.route->count(); r++)
     {
-        if (network.route->at(r)->type == ROUTE_WS && network.route->at(r)->ws_close)
+        const Route *rt = network.route->at(r);
+        if (rt->type != ROUTE_WS)
         {
-            network.route->at(r)->ws_close(ws->ws_id);
+            continue;
+        }
+        WsCloseHandler on_close = ws_route_close(rt->ws_id);
+        if (on_close != NULL)
+        {
+            on_close(ws->ws_id);
             break;
         }
     }
@@ -1760,7 +1779,7 @@ void handle_ws_route(uint8_t slot_id, HttpReq *req, HttpMethod method, const Rou
     }
     // A failed upgrade here means a malformed/oversized Sec-WebSocket-Key (a
     // client error, RFC 6455 4.2.1), so answer 400 rather than 503.
-    if (!ws_do_upgrade(slot_id, req, r->ws_connect))
+    if (!ws_do_upgrade(slot_id, req, ws_route_connect(r->ws_id)))
     {
         send_text(slot_id, 400, PC_MIME_TEXT_PLAIN, "Bad WebSocket handshake");
     }
@@ -1830,7 +1849,7 @@ proto_bool dispatch_matched_route(uint8_t slot_id, HttpReq *req, HttpMethod meth
 #if PC_ENABLE_SSE
     if (r->type == ROUTE_SSE)
     {
-        if (!pc_sse_do_upgrade(slot_id, req, r->pc_sse_connect))
+        if (!pc_sse_do_upgrade(slot_id, req, pc_sse_route_connect(r->sse_id)))
         {
             send_text(slot_id, 503, PC_MIME_TEXT_PLAIN, "Service Unavailable");
         }
