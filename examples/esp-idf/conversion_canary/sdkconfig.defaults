@@ -1,0 +1,4 @@
+# Enough of a config for the library to build and link on the target. Feature flags the canary needs
+# go here.
+CONFIG_COMPILER_OPTIMIZATION_SIZE=y
+CONFIG_FREERTOS_HZ=1000
