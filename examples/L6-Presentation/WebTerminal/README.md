@@ -52,7 +52,7 @@ WebSocket primitive is [WebSocket](../WebSocket).
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_WEB_TERMINAL=1" \
+  --project-option="build_flags=-DPC_ENABLE_WEB_TERMINAL=1 -DPC_ENABLE_WEBSOCKET=1" \
   --lib="." examples/L6-Presentation/WebTerminal/WebTerminal.ino
 ```
 

@@ -21,6 +21,21 @@
 
 PROTO_BEGIN_DECLS
 
+/**
+ * @brief Format the current time as an RFC 7231 IMF-fixdate (HTTP `Date`).
+ *
+ * Writes e.g. "Sun, 06 Nov 1994 08:49:37 GMT" into @p out. Always GMT.
+ *
+ * Declared outside the PC_ENABLE_NTP gate because ntp_service.c defines it on both arms of its own
+ * gate, and PC_HTTP_EMIT_DATE reaches it whenever no PC_ENABLE_TIME_SOURCE registry is built.
+ *
+ * @param out      Destination buffer (>= 30 bytes recommended).
+ * @param out_cap  Capacity of @p out.
+ * @return Number of characters written (excluding the null), or 0 if time is
+ *         not yet available / disabled.
+ */
+size_t pc_ntp_http_date(char *out, size_t out_cap);
+
 #if PC_ENABLE_NTP
 
 /** @brief Server this asks when the caller names none. */
@@ -53,18 +68,6 @@ proto_bool pc_ntp_synced(void);
  * @brief Current Unix epoch seconds, or 0 if not yet synced (or disabled).
  */
 time_t pc_ntp_epoch(void);
-
-/**
- * @brief Format the current time as an RFC 7231 IMF-fixdate (HTTP `Date`).
- *
- * Writes e.g. "Sun, 06 Nov 1994 08:49:37 GMT" into @p out. Always GMT.
- *
- * @param out      Destination buffer (>= 30 bytes recommended).
- * @param out_cap  Capacity of @p out.
- * @return Number of characters written (excluding the null), or 0 if time is
- *         not yet available / disabled.
- */
-size_t pc_ntp_http_date(char *out, size_t out_cap);
 
 /**
  * @brief NTP as a time source for the multi-source registry (services/timing_position/time_source).

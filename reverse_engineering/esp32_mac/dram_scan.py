@@ -15,13 +15,14 @@ Attaching halts the cores, so resume (or `reset run`) afterwards or the board st
 
 Usage:  python reverse_engineering/esp32_mac/dram_scan.py <dump> [base-address-hex]
 """
+
 import struct
 import sys
 from collections import Counter
 
 data = open(sys.argv[1], "rb").read()
 BASE = int(sys.argv[2], 16) if len(sys.argv) > 2 else 0x3FC88000
-words = struct.unpack(f"<{len(data) // 4}I", data[:len(data) // 4 * 4])
+words = struct.unpack(f"<{len(data) // 4}I", data[: len(data) // 4 * 4])
 
 # ESP32-S3 address windows.
 RANGES = {
@@ -72,7 +73,7 @@ print(f"\n{len(runs)} runs of 6+ consecutive code pointers; longest 20:")
 print(f"  {'address':12s} {'entries':>7s} {'iram':>6s} {'flash':>6s} {'distinct':>8s}  verdict")
 for addr, n in runs[:20]:
     i0 = (addr - BASE) // 4
-    seg = words[i0:i0 + n]
+    seg = words[i0 : i0 + n]
     ir = sum(1 for w in seg if where(w) == "iram (code)")
     fl = sum(1 for w in seg if where(w) == "flash text")
     uniq = len(set(seg))
@@ -90,7 +91,7 @@ for addr, n in runs[:20]:
 print("\nIRAM-dominant runs with distinct entries, the shape a PHY dispatch table has:")
 for addr, n in runs:
     i0 = (addr - BASE) // 4
-    seg = words[i0:i0 + n]
+    seg = words[i0 : i0 + n]
     ir = sum(1 for w in seg if where(w) == "iram (code)")
     if ir > n // 2 and n >= 8 and len(set(seg)) > n // 2:
         print(f"  0x{addr:08X}  {n} entries, {ir} into IRAM, {len(set(seg))} distinct")

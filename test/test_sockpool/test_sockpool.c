@@ -44,10 +44,10 @@ void test_lru_recycle(void)
     uint32_t evicted = 0;
     TEST_ASSERT_EQUAL_INT(SOCK_ACQ_RECYCLED, pc_sockpool_acquire(&g_pool, 103, 40, &idx, &evicted));
     TEST_ASSERT_EQUAL_UINT32(100, evicted);
-    TEST_ASSERT_EQUAL_size_t(0, idx);                           // slot 0 held id 100
-    TEST_ASSERT_FALSE(pc_sockpool_find(&g_pool, 100, NULL)); // gone
-    TEST_ASSERT_TRUE(pc_sockpool_find(&g_pool, 103, NULL));  // now present
-    TEST_ASSERT_EQUAL_size_t(3, pc_sockpool_in_use(&g_pool));   // still full
+    TEST_ASSERT_EQUAL_size_t(0, idx);                         // slot 0 held id 100
+    TEST_ASSERT_FALSE(pc_sockpool_find(&g_pool, 100, NULL));  // gone
+    TEST_ASSERT_TRUE(pc_sockpool_find(&g_pool, 103, NULL));   // now present
+    TEST_ASSERT_EQUAL_size_t(3, pc_sockpool_in_use(&g_pool)); // still full
 }
 
 void test_touch_changes_lru(void)
@@ -87,7 +87,7 @@ void test_empty_pool_fails(void)
 void test_null_guard_subconditions()
 {
     pc_sockpool_init(NULL, NULL, 0); // null pool -> no-op
-    pc_sockpool_touch(NULL, 0, 0);      // null pool -> no-op
+    pc_sockpool_touch(NULL, 0, 0);   // null pool -> no-op
     size_t idx = 0;
     TEST_ASSERT_FALSE(pc_sockpool_find(NULL, 1, &idx));    // null pool -> false
     TEST_ASSERT_EQUAL_size_t(0, pc_sockpool_in_use(NULL)); // null pool -> 0

@@ -751,8 +751,6 @@ const char *pc_spinel_status_name(uint32_t status)
 uint16_t pc_spinel_fcs(const uint8_t *buf, uint16_t len)
 {
     // The HDLC-lite FCS is CRC-16/X-25 (reflected poly 0x8408, init 0xFFFF, xorout 0xFFFF).
-    // test_crc diffs the shared engine against the loop that used to live here over every length
-    // 0..64, and asserts the cataloge check value 0x906E that this suite already pinned.
     return (uint16_t)pc_crc(&PC_CRC16_X25, buf, len);
 }
 

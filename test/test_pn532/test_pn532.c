@@ -143,7 +143,7 @@ void test_ack_frame()
     TEST_ASSERT_FALSE(pc_pn532_is_ack(buf, n)); // a normal frame is not an ACK
     uint8_t small[3];
     TEST_ASSERT_EQUAL_UINT16(0, pc_pn532_build_ack(small, sizeof(small))); // too small
-    TEST_ASSERT_EQUAL_UINT16(0, pc_pn532_build_ack(NULL, 6));           // out == NULL
+    TEST_ASSERT_EQUAL_UINT16(0, pc_pn532_build_ack(NULL, 6));              // out == NULL
 }
 
 void test_build_frame_null_data_and_out_guards()
@@ -180,7 +180,7 @@ void test_frame_parse_and_ack_guards()
     TEST_ASSERT_EQUAL_INT(0, pc_pn532_parse_frame(NULL, 10, &tfi, &pdata, &pdata_len)); // null raw
     uint8_t tiny[1] = {0};
     TEST_ASSERT_FALSE(pc_pn532_is_ack(tiny, sizeof(tiny))); // too short
-    TEST_ASSERT_FALSE(pc_pn532_is_ack(NULL, 6));         // null
+    TEST_ASSERT_FALSE(pc_pn532_is_ack(NULL, 6));            // null
 }
 
 int main()

@@ -50,8 +50,7 @@ void test_build_data_and_goaway()
 
 void test_settings_roundtrip()
 {
-    const uint64_t ids[2] = {H3_SETTINGS_QPACK_MAX_TABLE_CAPACITY,
-                             H3_SETTINGS_MAX_FIELD_SECTION_SIZE};
+    const uint64_t ids[2] = {H3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, H3_SETTINGS_MAX_FIELD_SECTION_SIZE};
     const uint64_t vals[2] = {4096, 1048576};
     uint8_t b[32];
     size_t n = pc_h3_build_settings(b, sizeof b, ids, vals, 2);

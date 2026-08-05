@@ -171,8 +171,8 @@ void test_build_and_parse_guards()
     uint8_t buf[64];
     uint8_t payload[4] = {1, 2, 3, 4};
     TEST_ASSERT_EQUAL_size_t(0, pc_amqp_build_frame(NULL, sizeof(buf), 1, 0, payload, sizeof(payload))); // null buf
-    TEST_ASSERT_EQUAL_size_t(0, pc_amqp_build_frame(buf, sizeof(buf), 1, 0, NULL, 4));     // null payload
-    TEST_ASSERT_EQUAL_size_t(0, pc_amqp_build_frame(buf, 4, 1, 0, payload, sizeof(payload))); // cap < total
+    TEST_ASSERT_EQUAL_size_t(0, pc_amqp_build_frame(buf, sizeof(buf), 1, 0, NULL, 4));                   // null payload
+    TEST_ASSERT_EQUAL_size_t(0, pc_amqp_build_frame(buf, 4, 1, 0, payload, sizeof(payload)));            // cap < total
     AmqpFrame fr;
     size_t consumed = 0;
     uint8_t tiny[3] = {1, 0, 0};

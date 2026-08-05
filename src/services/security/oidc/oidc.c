@@ -51,6 +51,10 @@ static const char *mem_find(const char *hs, const char *he, const char *needle)
 static proto_bool find_field(const char *s, const char *e, const char *name, const char **vstart, size_t *vlen,
                              char *type)
 {
+    // Set before the first guard, so every failure path leaves the out-params defined.
+    *vstart = NULL;
+    *vlen = 0;
+    *type = '\0';
     char needle[96];
     pc_sb sb_needle = {needle, sizeof(needle), 0, PROTO_TRUE};
     pc_sb_put(&sb_needle, "\"");
@@ -137,9 +141,9 @@ static proto_bool find_field(const char *s, const char *e, const char *name, con
 // if absent / not a string / does not fit.
 static proto_bool get_str(const char *s, const char *e, const char *name, char *out, size_t cap)
 {
-    const char *v;
-    size_t vl;
-    char t;
+    const char *v = NULL;
+    size_t vl = 0;
+    char t = '\0';
     if (!find_field(s, e, name, &v, &vl, &t) || t != 's')
     {
         return PROTO_FALSE;
@@ -174,9 +178,9 @@ static proto_bool get_str(const char *s, const char *e, const char *name, char *
 // / not a number.
 static proto_bool get_int64(const char *s, const char *e, const char *name, int64_t *out)
 {
-    const char *v;
-    size_t vl;
-    char t;
+    const char *v = NULL;
+    size_t vl = 0;
+    char t = '\0';
     // vl == 0 is unreachable for a type-'n' value: find_field only reports 'n' after consuming a
     // leading '-' or at least one digit, so the extent it hands back is always >= 1 byte.
     if (!find_field(s, e, name, &v, &vl, &t) || t != 'n' || vl == 0)
@@ -185,21 +189,30 @@ static proto_bool get_int64(const char *s, const char *e, const char *name, int6
     }
     proto_bool neg = (*v == '-');
     size_t i = neg ? 1 : 0;
-    int64_t val = 0;
+    // Accumulate unsigned, refuse a digit run that leaves the 64-bit signed range, apply the sign after.
+    uint64_t val = 0U;
     for (; i < vl; i++)
     {
-        val = val * 10 + (v[i] - '0');
+        if (val > (uint64_t)INT64_MAX / 10U)
+        {
+            return PROTO_FALSE;
+        }
+        val = val * 10U + (uint64_t)(v[i] - '0');
+        if (val > (uint64_t)INT64_MAX)
+        {
+            return PROTO_FALSE;
+        }
     }
-    *out = neg ? -val : val;
+    *out = neg ? -(int64_t)val : (int64_t)val;
     return PROTO_TRUE;
 }
 
 // True if the `aud` member equals @p want (string form) or contains it (array).
 static proto_bool aud_contains(const char *s, const char *e, const char *want)
 {
-    const char *v;
-    size_t vl;
-    char t;
+    const char *v = NULL;
+    size_t vl = 0;
+    char t = '\0';
     if (!find_field(s, e, "aud", &v, &vl, &t))
     {
         return PROTO_FALSE;

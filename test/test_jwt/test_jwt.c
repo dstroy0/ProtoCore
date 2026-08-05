@@ -332,7 +332,7 @@ void test_bearer_valid_at()
 void test_bearer_header_guards()
 {
     uint8_t secret[8] = {1, 2, 3, 4, 5, 6, 7, 8};
-    TEST_ASSERT_FALSE(pc_jwt_bearer_valid(NULL, secret, sizeof(secret)));               // null header
+    TEST_ASSERT_FALSE(pc_jwt_bearer_valid(NULL, secret, sizeof(secret)));                  // null header
     TEST_ASSERT_FALSE(pc_jwt_bearer_valid("Basic abc", secret, sizeof(secret)));           // not a Bearer
     TEST_ASSERT_FALSE(pc_jwt_bearer_valid("Bearer    not.a.jwt", secret, sizeof(secret))); // leading spaces skipped
 }

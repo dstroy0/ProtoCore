@@ -22,6 +22,7 @@ header names the slots; the offset plus the argument count is what identifies ea
 
 Usage:  python reverse_engineering/esp32_mac/xtensa/blob_analog.py <repo-root>
 """
+
 import os
 import re
 import shutil
@@ -78,10 +79,10 @@ def walk_section(lines):
 
     out, calls = [], []
     fname = None
-    imm = {}    # register -> immediate it holds
-    syms = {}   # register -> symbol whose address it holds
-    base = {}   # register -> symbol it was dereferenced from
-    slot = {}   # register -> byte offset within that symbol
+    imm = {}  # register -> immediate it holds
+    syms = {}  # register -> symbol whose address it holds
+    base = {}  # register -> symbol it was dereferenced from
+    slot = {}  # register -> byte offset within that symbol
 
     def flush():
         if fname is not None and calls:
@@ -146,9 +147,9 @@ def walk_section(lines):
                 for t in (imm, syms, base, slot):
                     t.pop(d, None)
                 if sym is not None and o == 0:
-                    base[d] = sym          # a8 = *g_phyFuns, the table itself
+                    base[d] = sym  # a8 = *g_phyFuns, the table itself
                 elif prev is not None:
-                    base[d] = prev         # a8 = table[o], the slot
+                    base[d] = prev  # a8 = table[o], the slot
                     slot[d] = o
             continue
 
@@ -241,8 +242,9 @@ def main():
         for o in sorted(os.listdir(d)):
             if not o.endswith(".o"):
                 continue
-            text = subprocess.run([OBJDUMP, "-dr", os.path.join(d, o)],
-                                  capture_output=True, text=True, errors="replace").stdout
+            text = subprocess.run(
+                [OBJDUMP, "-dr", os.path.join(d, o)], capture_output=True, text=True, errors="replace"
+            ).stdout
             for lines in split_sections(text):
                 for fname, calls in walk_section(lines):
                     funcs.append((o, fname, calls))
@@ -262,16 +264,22 @@ def main():
                 # Show through the last argument that was set: the masked write uses all six,
                 # the plain one four, and trailing unknowns are registers the call never reads.
                 last = max((i for i, v in enumerate(vals) if v is not None), default=-1)
-                shown = " ".join("?" if v is None else f"0x{v & 0xFFFFFFFF:02X}" for v in vals[:last + 1])
+                shown = " ".join("?" if v is None else f"0x{v & 0xFFFFFFFF:02X}" for v in vals[: last + 1])
                 doc.append(f"{tbl}+{off:<4} ({shown})")
             doc += ["```", ""]
 
     doc += ["## Table slots by call count", "", "| Slot | Calls |", "| --- | ---: |"]
     for (tbl, off), n in sorted(slots.items(), key=lambda kv: -kv[1]):
         doc.append(f"| `{tbl}+{off}` | {n} |")
-    doc += ["", "## Analog blocks addressed", "",
-            "Argument 0 of the two serial-bus slots (160 and 168) only.", "",
-            "| Block | Accesses |", "| --- | ---: |"]
+    doc += [
+        "",
+        "## Analog blocks addressed",
+        "",
+        "Argument 0 of the two serial-bus slots (160 and 168) only.",
+        "",
+        "| Block | Accesses |",
+        "| --- | ---: |",
+    ]
     for b, n in sorted(blocks.items(), key=lambda kv: -kv[1]):
         doc.append(f"| `0x{b & 0xFF:02X}` | {n} |")
     doc.append("")

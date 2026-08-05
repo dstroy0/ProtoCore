@@ -95,8 +95,13 @@ _PREPROC = re.compile(r"^\s*#")
 # blank lines do NOT open the code region, so a top-of-file `#if ... #include ... #endif` block is fine.
 # A load-bearing ordered include that genuinely cannot be hoisted (it must run after earlier macros
 # resolve) is exempt only with a justified `// PC_ALLOW_LATE_INCLUDE: <reason>` on the include line.
+# The two linkage markers do not open the code region either: in C they expand to nothing at all, and
+# in C++ to `extern "C" {` and `}`, so an include after one is neither read-order-dependent nor
+# layering-hiding. protocore.h opens the block above its include list to give every header underneath
+# C linkage in one place.
 _MIDINC_MSG = "#include after code; hoist all includes to the top of the file"
 _ALLOW_LATE = "PC_ALLOW_LATE_INCLUDE"
+_LINKAGE = re.compile(r"^\s*PROTO_(?:BEGIN|END)_DECLS\s*$")
 
 # Ban #18: constexpr. A value the preprocessor cannot see cannot appear in an #if, set another
 # knob's #define default, or fail at config time - which is exactly how PC_ENABLE_EDGE_MESH
@@ -111,7 +116,8 @@ _ALLOW_CONSTEXPR = "PC_ALLOW_CONSTEXPR"
 #     is required before C++17 and is a definition of something already declared in a class.
 _CONSTEXPR = re.compile(
     r"\bconstexpr\b\s+(?:u?int(?:8|16|32|64)_t|size_t|int|long|short|char|unsigned(?:\s+\w+)?|bool|float|double)"
-    r"\s+\w+\s*[=;]")
+    r"\s+\w+\s*[=;]"
+)
 # Must NOT require the brace on the same line: this codebase uses Allman braces, so
 # `struct LoraReg` and its `{` are on separate lines. A trailing `;` means a forward
 # declaration, which opens no body.
@@ -160,7 +166,8 @@ _STACK_ARRAY = re.compile(
     r"^\s*(?:const\s+|volatile\s+|unsigned\s+|signed\s+|struct\s+|union\s+)*"
     r"(?!return\b|else\b|case\b|delete\b|new\b)"
     r"[A-Za-z_]\w*(?:\s*::\s*\w+)*(?:\s*<[^;>]*>)?(?:\s+|\s*\*+\s*)"
-    r"(\w+)\s*(?:\[[^\]]*\])+\s*[;={]")
+    r"(\w+)\s*(?:\[[^\]]*\])+\s*[;={]"
+)
 _STACK_ARRAY_MSG = (
     "function-local array; stack is outside the deterministic footprint. Borrow it: "
     "PlaintextScope + pc_plaintext_alloc() for handler/IO buffers (fail closed on null), or a "
@@ -184,11 +191,11 @@ def scan_file(path):
     hits = []
     seen_code = False
     pp_cont = False  # previous line was a preprocessor directive continued with a trailing backslash
-    brace = 0        # nesting depth, for ban 18's file/namespace-scope test
-    agg_at = []      # depths at which a struct/class/union body opened
+    brace = 0  # nesting depth, for ban 18's file/namespace-scope test
+    agg_at = []  # depths at which a struct/class/union body opened
     agg_pending = False  # saw a struct/class/union head, waiting for its brace (Allman style)
-    ns_depth = 0         # open namespace blocks; brace beyond this means a function body
-    ns_pending = False   # saw a namespace head, waiting for its brace
+    ns_depth = 0  # open namespace blocks; brace beyond this means a function body
+    ns_pending = False  # saw a namespace head, waiting for its brace
     for line_no, line in enumerate(clean.splitlines(), 1):
         # Ban 18: only a FREE constexpr (file or namespace scope) is a value other code
         # sizes itself against. Excluded: a member of a namespacing struct (a scoped data
@@ -196,16 +203,19 @@ def scan_file(path):
         # so it can never feed preprocessor arithmetic, and turning it into a #define
         # would leak it out of the function into the rest of the translation unit.
         in_block = brace > ns_depth
-        if (_CONSTEXPR.search(line) and not agg_at and not in_block
-                and _ALLOW_CONSTEXPR not in raw_lines[line_no - 1]):
+        if _CONSTEXPR.search(line) and not agg_at and not in_block and _ALLOW_CONSTEXPR not in raw_lines[line_no - 1]:
             hits.append((str(path), line_no, 18, _CONSTEXPR_MSG))
         # Ban 19: the mirror image - only a FUNCTION-LOCAL array is stack. A member of a
         # struct/class/union is the owned-context storage this codebase already mandates
         # (opcua's resp[2048] and udp's cap_buf[2048] are fields, not stack), and a
         # file-scope array is BSS. `static` locals are BSS too and belong to ban 16.
-        if (in_block and not agg_at and _STACK_ARRAY.match(line)
-                and not re.search(r"\bstatic\b", line)
-                and _ALLOW_STACK_ARRAY not in raw_lines[line_no - 1]):
+        if (
+            in_block
+            and not agg_at
+            and _STACK_ARRAY.match(line)
+            and not re.search(r"\bstatic\b", line)
+            and _ALLOW_STACK_ARRAY not in raw_lines[line_no - 1]
+        ):
             hits.append((str(path), line_no, 19, _STACK_ARRAY_MSG))
         if _SNPRINTF.search(line) and _ALLOW_SNPRINTF not in raw_lines[line_no - 1]:
             hits.append((str(path), line_no, 20, _SNPRINTF_MSG))
@@ -238,7 +248,7 @@ def scan_file(path):
         if _INCLUDE.match(line) and not pp_cont:
             if seen_code and _ALLOW_LATE not in raw_lines[line_no - 1]:
                 hits.append((str(path), line_no, 17, _MIDINC_MSG))
-        elif stripped and not is_pp:
+        elif stripped and not is_pp and not _LINKAGE.match(line):
             seen_code = True
         pp_cont = is_pp and stripped.endswith("\\")
     return hits
@@ -329,8 +339,7 @@ def main(argv):
 
     if "--baseline" in argv:
         n = bl.save(BASELINE, (ordinals[v] for v in ratcheted))
-        print(f"check_src_banned: recorded {n} known site(s) as the floor "
-              f"(bans {sorted(BASELINED)})")
+        print(f"check_src_banned: recorded {n} known site(s) as the floor " f"(bans {sorted(BASELINED)})")
         return 0
 
     new_ratcheted, known, fixed = bl.filter_new(ratcheted, lambda v: ordinals[v], BASELINE)
@@ -345,8 +354,10 @@ def main(argv):
         )
         return 1
     if known:
-        print(f"check_src_banned: OK - no new violations "
-              f"({known} known ratcheted site(s) remain{f', {fixed} fixed' if fixed else ''})")
+        print(
+            f"check_src_banned: OK - no new violations "
+            f"({known} known ratcheted site(s) remain{f', {fixed} fixed' if fixed else ''})"
+        )
     return 0
 
 

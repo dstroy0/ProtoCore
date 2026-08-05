@@ -35,6 +35,7 @@ auth out.
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
+  --project-option="build_flags=-DPC_ENABLE_AUTH=1" \
   --lib="." examples/L6-Presentation/BasicAuth/BasicAuth.ino
 ```
 

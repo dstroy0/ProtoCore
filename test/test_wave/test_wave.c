@@ -73,7 +73,7 @@ void test_wsmp_parse_rejects(void)
 {
     WsmpFrame f;
     uint8_t bad_ver[3] = {0x00, 0x20, 0x00};
-    TEST_ASSERT_FALSE(pc_wsmp_parse(bad_ver, 3, &f));              // wrong version
+    TEST_ASSERT_FALSE(pc_wsmp_parse(bad_ver, 3, &f));        // wrong version
     uint8_t truncated[4] = {WSMP_VERSION, 0x20, 0x05, 0x11}; // len says 5, only 1 present
     TEST_ASSERT_FALSE(pc_wsmp_parse(truncated, 4, &f));
 }
@@ -115,10 +115,10 @@ void test_wsmp_build_guards(void)
     uint8_t pl[4] = {1, 2, 3, 4};
     TEST_ASSERT_EQUAL_size_t(0, pc_wsmp_build(0x20, pl, 4, NULL, sizeof(out)));  // null out
     TEST_ASSERT_EQUAL_size_t(0, pc_wsmp_build(0x20, NULL, 4, out, sizeof(out))); // len but null payload
-    TEST_ASSERT_EQUAL_size_t(0, pc_wsmp_build(0x20, pl, 256, out, sizeof(out)));    // payload > 255
-    TEST_ASSERT_EQUAL_size_t(0, pc_wsmp_build(0x20, pl, 4, out, 0));                // cap 0
-    TEST_ASSERT_EQUAL_size_t(0, pc_wsmp_build(0x00654321, pl, 0, out, 2));          // PSID encode doesn't fit
-    TEST_ASSERT_EQUAL_size_t(0, pc_wsmp_build(0x20, pl, 4, out, 4));                // payload doesn't fit
+    TEST_ASSERT_EQUAL_size_t(0, pc_wsmp_build(0x20, pl, 256, out, sizeof(out))); // payload > 255
+    TEST_ASSERT_EQUAL_size_t(0, pc_wsmp_build(0x20, pl, 4, out, 0));             // cap 0
+    TEST_ASSERT_EQUAL_size_t(0, pc_wsmp_build(0x00654321, pl, 0, out, 2));       // PSID encode doesn't fit
+    TEST_ASSERT_EQUAL_size_t(0, pc_wsmp_build(0x20, pl, 4, out, 4));             // payload doesn't fit
 }
 
 // wsmp_parse rejects short/null frames, an undecodable PSID, and a missing WSM length byte.
@@ -126,8 +126,8 @@ void test_wsmp_parse_more_guards(void)
 {
     WsmpFrame f;
     uint8_t two[2] = {WSMP_VERSION, 0x20};
-    TEST_ASSERT_FALSE(pc_wsmp_parse(two, 2, &f));           // len < 3
-    TEST_ASSERT_FALSE(pc_wsmp_parse(NULL, 3, &f));       // null frame
+    TEST_ASSERT_FALSE(pc_wsmp_parse(two, 2, &f));     // len < 3
+    TEST_ASSERT_FALSE(pc_wsmp_parse(NULL, 3, &f));    // null frame
     uint8_t bad_psid[3] = {WSMP_VERSION, 0xC1, 0x00}; // 3-octet PSID prefix, only 2 bytes present
     TEST_ASSERT_FALSE(pc_wsmp_parse(bad_psid, 3, &f));
     uint8_t no_wlen[3] = {WSMP_VERSION, 0x81, 0x00}; // valid 2-octet PSID, no room for the length byte

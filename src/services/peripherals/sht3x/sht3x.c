@@ -19,9 +19,7 @@
 #endif
 uint8_t pc_sht3x_crc8(const uint8_t *data, size_t len)
 {
-    // The Sensirion CRC-8 is the cataloge's CRC-8/NRSC-5 (poly 0x31, init 0xFF, no reflection, no
-    // final XOR). The loop that used to live here is gone, not reworded: test_crc diffs the shared
-    // engine against that exact loop over every length 0..64, so this is byte-identical to it.
+    // The Sensirion CRC-8 is the cataloge's CRC-8/NRSC-5 (poly 0x31, init 0xFF, no reflection, no final XOR).
     return (uint8_t)pc_crc(&PC_CRC8_NRSC5, data, len);
 }
 

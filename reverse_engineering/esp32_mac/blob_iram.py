@@ -17,6 +17,7 @@ Reads section placement from the symbol table; no code is disassembled.
 
 Usage:  python reverse_engineering/esp32_mac/blob_iram.py <repo-root>
 """
+
 import os
 import re
 import shutil
@@ -57,8 +58,9 @@ def placement(objdump, ar, archive, work):
     for o in sorted(os.listdir(work)):
         if not o.endswith(".o"):
             continue
-        for line in subprocess.run([objdump, "-t", os.path.join(work, o)],
-                                   capture_output=True, text=True, errors="replace").stdout.split("\n"):
+        for line in subprocess.run(
+            [objdump, "-t", os.path.join(work, o)], capture_output=True, text=True, errors="replace"
+        ).stdout.split("\n"):
             m = SYM.match(line.rstrip())
             if m and "F" in m.group(2) and int(m.group(4), 16) > 0:
                 out[m.group(5)] = m.group(3)
@@ -102,8 +104,9 @@ def main():
             if not place:
                 continue
             per_target.setdefault(chip, {})[lib] = (len(place), iram)
-            doc.append(f"| `{chip}` | `{lib}` | {len(place)} | {len(iram)} | "
-                       f"{100 * len(iram) // max(1, len(place))}% |")
+            doc.append(
+                f"| `{chip}` | `{lib}` | {len(place)} | {len(iram)} | " f"{100 * len(iram) // max(1, len(place))}% |"
+            )
             print(f"  {chip:9s} {lib:16s} {len(place):5d} functions, {len(iram):4d} in IRAM")
 
     # The set every WiFi die keeps in IRAM is the floor a portable driver has to meet.
@@ -116,9 +119,15 @@ def main():
         sets.append(s)
     common = set.intersection(*sets) if sets else set()
 
-    doc += ["", "## IRAM-resident on every WiFi die", "",
-            f"{len(common)} functions. These are the ISR-reachable core: any replacement keeps them",
-            "in internal RAM on every target.", "", "```"]
+    doc += [
+        "",
+        "## IRAM-resident on every WiFi die",
+        "",
+        f"{len(common)} functions. These are the ISR-reachable core: any replacement keeps them",
+        "in internal RAM on every target.",
+        "",
+        "```",
+    ]
     doc += sorted(common)
     doc += ["```", ""]
 

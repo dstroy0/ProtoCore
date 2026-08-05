@@ -264,7 +264,7 @@ void test_file_send_write_fails_then_retries()
     TEST_ASSERT_EQUAL_UINT(0, body_len());                 // body write failed: nothing after the header
 
     mock_send_fail_after(-1); // send buffer recovers
-    handle();                    // worker poll retries the in-flight file response
+    handle();                 // worker poll retries the in-flight file response
     TEST_ASSERT_EQUAL_UINT(20, body_len());
     TEST_ASSERT_EQUAL_MEMORY(FILE_DATA, body_ptr(), 20); // exactly the file, no dup/loss
 }

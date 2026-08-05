@@ -75,7 +75,7 @@ void test_build_rejects_bad_args()
     TEST_ASSERT_EQUAL_UINT(0, pc_ubx_build(buf, 4, 0, 0, NULL, 0)); // cap too small
     const uint8_t p[] = {1};
     TEST_ASSERT_EQUAL_UINT(0, pc_ubx_build(buf, sizeof(buf), 0, 0, NULL, 1)); // len>0, null payload
-    TEST_ASSERT_EQUAL_UINT(0, pc_ubx_build(buf, sizeof(buf), 0, 0, p, 1));       // needs 9, cap 8
+    TEST_ASSERT_EQUAL_UINT(0, pc_ubx_build(buf, sizeof(buf), 0, 0, p, 1));    // needs 9, cap 8
 }
 
 // -- one-shot parse --
@@ -98,7 +98,7 @@ void test_parse_rejects()
     uint8_t buf[16];
     size_t n = pc_ubx_build(buf, sizeof(buf), 0x0A, 0x04, NULL, 0);
     pc_ubx m;
-    TEST_ASSERT_FALSE(pc_ubx_parse(buf, 7, &m));     // too short
+    TEST_ASSERT_FALSE(pc_ubx_parse(buf, 7, &m));  // too short
     TEST_ASSERT_FALSE(pc_ubx_parse(NULL, n, &m)); // null
     uint8_t bad_sync[8];
     memcpy(bad_sync, buf, 8);

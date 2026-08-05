@@ -106,9 +106,24 @@ class SideChannelStreamReceiver:
 
     def _decode_window(self, header_fields: tuple, payload: bytes) -> CapturedWindow:
         (
-            _magic, _version, _msg_type, frontend, trace_id, n_samples, pretrigger_samples,
-            sample_bytes, channel_count, x_inc, srate, y_inc, y_or, dropped, assembly_ns,
-            wall_clock_us, _payload_len, _crc,
+            _magic,
+            _version,
+            _msg_type,
+            frontend,
+            trace_id,
+            n_samples,
+            pretrigger_samples,
+            sample_bytes,
+            channel_count,
+            x_inc,
+            srate,
+            y_inc,
+            y_or,
+            dropped,
+            assembly_ns,
+            wall_clock_us,
+            _payload_len,
+            _crc,
         ) = header_fields
 
         dtype = np.uint8 if sample_bytes == 1 else np.dtype("<u2")
@@ -119,11 +134,22 @@ class SideChannelStreamReceiver:
 
         plaintext = self.plaintext_source(trace_id) if self.plaintext_source else None
         return CapturedWindow(
-            trace_id=trace_id, frontend=frontend, n_samples=n_samples,
-            pretrigger_samples=pretrigger_samples, sample_bytes=sample_bytes,
-            channel_count=channel_count, x_increment_s=x_inc, sample_rate_hz=srate,
-            y_increment=y_inc, y_origin=y_or, windows_dropped=dropped, assembly_ns=assembly_ns,
-            wall_clock_us=wall_clock_us, codes=codes, volts=volts, plaintext=plaintext,
+            trace_id=trace_id,
+            frontend=frontend,
+            n_samples=n_samples,
+            pretrigger_samples=pretrigger_samples,
+            sample_bytes=sample_bytes,
+            channel_count=channel_count,
+            x_increment_s=x_inc,
+            sample_rate_hz=srate,
+            y_increment=y_inc,
+            y_origin=y_or,
+            windows_dropped=dropped,
+            assembly_ns=assembly_ns,
+            wall_clock_us=wall_clock_us,
+            codes=codes,
+            volts=volts,
+            plaintext=plaintext,
         )
 
     def _listen_loop(self):
@@ -169,10 +195,33 @@ class SideChannelStreamReceiver:
                 return
             header_bytes = bytes(buffer[:HEADER_SIZE])
             fields = struct.unpack(HEADER_FORMAT, header_bytes)
-            magic, version, msg_type, _fe, _tid, _ns, _pre, _sb, _cc, _xi, _sr, _yi, _yo, _dr, _an, _wc, payload_len, crc = fields
+            (
+                magic,
+                version,
+                msg_type,
+                _fe,
+                _tid,
+                _ns,
+                _pre,
+                _sb,
+                _cc,
+                _xi,
+                _sr,
+                _yi,
+                _yo,
+                _dr,
+                _an,
+                _wc,
+                payload_len,
+                crc,
+            ) = fields
 
-            if magic != MAGIC or version != PROTO_VERSION or not _verify_header_crc(header_bytes, crc) \
-                    or payload_len > self.max_payload:
+            if (
+                magic != MAGIC
+                or version != PROTO_VERSION
+                or not _verify_header_crc(header_bytes, crc)
+                or payload_len > self.max_payload
+            ):
                 self.frames_rejected_crc += 1
                 del buffer[:1]  # one byte at a time - a false-positive magic match elsewhere still resyncs
                 continue
@@ -181,8 +230,8 @@ class SideChannelStreamReceiver:
             if len(buffer) < total_len:
                 return  # wait for the rest of this packet
 
-            payload = bytes(buffer[HEADER_SIZE:HEADER_SIZE + payload_len])
-            trailer = bytes(buffer[HEADER_SIZE + payload_len:total_len])
+            payload = bytes(buffer[HEADER_SIZE : HEADER_SIZE + payload_len])
+            trailer = bytes(buffer[HEADER_SIZE + payload_len : total_len])
             del buffer[:total_len]
 
             (payload_crc,) = struct.unpack(TRAILER_FORMAT, trailer)
@@ -215,7 +264,9 @@ def windows_to_volts_matrix(windows: List[CapturedWindow]) -> np.ndarray:
     if len(lens) != 1:
         raise ValueError(f"windows have mixed n_samples {sorted(lens)}; trim/pad before building a matrix")
     if windows[0].channel_count != 1:
-        raise ValueError("windows_to_volts_matrix is single-channel; index .volts[..., ch] per window for multi-channel")
+        raise ValueError(
+            "windows_to_volts_matrix is single-channel; index .volts[..., ch] per window for multi-channel"
+        )
     return np.stack([w.volts for w in windows])
 
 
@@ -238,8 +289,10 @@ if __name__ == "__main__":
         windows = receiver.gather_batch(batch_size=200)
         volts = windows_to_volts_matrix(windows)
         print(f"[+] Matrix built: {volts.shape[0]} traces x {volts.shape[1]} samples")
-        print(f"    frontend={windows[0].frontend} sample_rate_hz={windows[0].sample_rate_hz:.3g} "
-              f"y_increment={windows[0].y_increment:.6g} frames_rejected_crc={receiver.frames_rejected_crc}")
+        print(
+            f"    frontend={windows[0].frontend} sample_rate_hz={windows[0].sample_rate_hz:.3g} "
+            f"y_increment={windows[0].y_increment:.6g} frames_rejected_crc={receiver.frames_rejected_crc}"
+        )
         pt_volts, plaintexts = windows_with_plaintext(windows)
         if plaintexts is not None:
             print(f"[+] {plaintexts.shape[0]} windows carry a plaintext - ready for CPA key recovery")

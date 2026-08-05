@@ -52,13 +52,36 @@ SECRET_KEY = bytes([0xD3, 0x2A, 0x91, 0x5C, 0x7E, 0x08, 0xF1, 0x44, 0xB6, 0x1D, 
 LEAK_SAMPLE_BASE = 40  # each of the 16 key bytes leaks at LEAK_SAMPLE_BASE + 16*byte_index
 
 
-def build_packet(trace_id, codes_u16, y_increment=Y_INCREMENT, y_origin=0.0,
-                  pretrigger_samples=0, sample_rate_hz=SAMPLE_RATE_HZ, wall_clock_us=0):
+def build_packet(
+    trace_id,
+    codes_u16,
+    y_increment=Y_INCREMENT,
+    y_origin=0.0,
+    pretrigger_samples=0,
+    sample_rate_hz=SAMPLE_RATE_HZ,
+    wall_clock_us=0,
+):
     payload = codes_u16.astype("<u2").tobytes()
     header_no_crc = struct.pack(
-        HEADER_FORMAT, MAGIC, PROTO_VERSION, MSG_WINDOW, 0, trace_id, len(codes_u16),
-        pretrigger_samples, 2, 1, 0.0, sample_rate_hz, y_increment, y_origin, 0, 1234,
-        wall_clock_us, len(payload), 0,
+        HEADER_FORMAT,
+        MAGIC,
+        PROTO_VERSION,
+        MSG_WINDOW,
+        0,
+        trace_id,
+        len(codes_u16),
+        pretrigger_samples,
+        2,
+        1,
+        0.0,
+        sample_rate_hz,
+        y_increment,
+        y_origin,
+        0,
+        1234,
+        wall_clock_us,
+        len(payload),
+        0,
     )
     header_crc = crc16_ccitt_false(header_no_crc[:-2] + b"\x00\x00")
     header = header_no_crc[:-2] + struct.pack("<H", header_crc)
@@ -88,8 +111,17 @@ def synthesize_traces(rng, num_traces, secret_key, plaintexts=None, noise_sigma=
     return codes, plaintexts
 
 
-def synthesize_spa_trace(rng, bits, period=200, square_offset=20, square_width=30,
-                          mult_offset=60, mult_width=30, amplitude_codes=500, noise_sigma=0.01):
+def synthesize_spa_trace(
+    rng,
+    bits,
+    period=200,
+    square_offset=20,
+    square_width=30,
+    mult_offset=60,
+    mult_width=30,
+    amplitude_codes=500,
+    noise_sigma=0.01,
+):
     """A single square-and-multiply-shaped trace in 12-bit ADC code space: a fixed 'square'
     burst every period, plus a 'multiply' burst iff the corresponding bit is 1 - the absence
     of that second burst (silence where a multiply would have run) is what encodes a 0."""
@@ -98,9 +130,9 @@ def synthesize_spa_trace(rng, bits, period=200, square_offset=20, square_width=3
     trace = rng.normal(0, noise_sigma * FULL_SCALE_CODES, size=n_samples)
     for k, bit in enumerate(bits):
         base = k * period
-        trace[base + square_offset: base + square_offset + square_width] += amplitude_codes
+        trace[base + square_offset : base + square_offset + square_width] += amplitude_codes
         if bit == 1:
-            trace[base + mult_offset: base + mult_offset + mult_width] += amplitude_codes * 0.9
+            trace[base + mult_offset : base + mult_offset + mult_width] += amplitude_codes * 0.9
     codes = np.clip(base_code + trace, 0, FULL_SCALE_CODES - 1).astype(np.uint16)
     return codes
 
@@ -113,8 +145,9 @@ def run():
     codes, plaintexts = synthesize_traces(rng, NUM_TRACES, SECRET_KEY)
 
     plaintext_by_trace = {}
-    receiver = SideChannelStreamReceiver(host="127.0.0.1", port=18080,
-                                          plaintext_source=lambda tid: plaintext_by_trace.get(tid))
+    receiver = SideChannelStreamReceiver(
+        host="127.0.0.1", port=18080, plaintext_source=lambda tid: plaintext_by_trace.get(tid)
+    )
     receiver.start()
     time.sleep(0.2)  # let the listener thread's bind()/listen() land before we connect
 
@@ -153,7 +186,7 @@ def run():
 
     zero_trace = spa_codes.astype(np.float64).copy()
     zv_base = 6 * SPA_PERIOD  # SPA_BITS[6] == 1: its multiply burst becomes "multiply by zero"
-    zero_trace[zv_base + 60: zv_base + 90] = FULL_SCALE_CODES / 2 + rng.normal(0, 5, 30)
+    zero_trace[zv_base + 60 : zv_base + 90] = FULL_SCALE_CODES / 2 + rng.normal(0, 5, 30)
     zv_env = activity_envelope(zero_trace, window=9)
     zv_segments, _ = segment_activity(zv_env)
     flagged = zero_value_scan(zero_trace, zv_segments)
@@ -174,32 +207,29 @@ def run():
     fixed_pt = np.zeros(16, dtype=np.uint8)
     tvla_plaintexts = np.empty((TVLA_N, 16), dtype=np.uint8)
     tvla_plaintexts[: TVLA_N // 2] = fixed_pt
-    tvla_plaintexts[TVLA_N // 2:] = rng.integers(0, 256, size=(TVLA_N - TVLA_N // 2, 16), dtype=np.uint8)
+    tvla_plaintexts[TVLA_N // 2 :] = rng.integers(0, 256, size=(TVLA_N - TVLA_N // 2, 16), dtype=np.uint8)
     # A stronger leak_gain than the main CPA batch: TVLA here is a dedicated, independent
     # illustration of leakage *detection* (no key hypothesis, no per-guess correlation to
     # average over), not a rerun of the CPA scenario, so it does not need to match its SNR.
-    tvla_codes, tvla_plaintexts = synthesize_traces(rng, TVLA_N, SECRET_KEY, plaintexts=tvla_plaintexts,
-                                                      leak_gain=0.02)
+    tvla_codes, tvla_plaintexts = synthesize_traces(rng, TVLA_N, SECRET_KEY, plaintexts=tvla_plaintexts, leak_gain=0.02)
     tvla_volts = bandpass_filter(tvla_codes.astype(np.float64) * Y_INCREMENT, SAMPLE_RATE_HZ, 1e6, 20e6)
-    t_trace = tvla_t_test(tvla_volts[: TVLA_N // 2], tvla_volts[TVLA_N // 2:])
+    t_trace = tvla_t_test(tvla_volts[: TVLA_N // 2], tvla_volts[TVLA_N // 2 :])
     print(f"    peak |t| = {np.max(np.abs(t_trace)):.2f} (>4.5 => detectable leakage present)")
     assert np.max(np.abs(t_trace)) > TVLA_THRESHOLD, "TVLA failed to flag the injected leakage"
 
     print("[*] SNR against byte-0's intermediate state...")
     intermediate0 = AES_SBOX[plaintexts[:, 0] ^ SECRET_KEY[0]] ^ plaintexts[:, 0]
     snr = signal_to_noise_ratio(filtered, intermediate0)
-    print(f"    peak SNR = {np.max(snr):.4f} at sample {int(np.argmax(snr))} "
-          f"(expected near {LEAK_SAMPLE_BASE})")
+    print(f"    peak SNR = {np.max(snr):.4f} at sample {int(np.argmax(snr))} " f"(expected near {LEAK_SAMPLE_BASE})")
 
     print("[*] Streaming CPA sanity check (byte 0, 4 batches)...")
     cpa = IncrementalCPA(n_samples=filtered.shape[1])
     hyp = generate_hamming_distance_hypotheses(recv_plaintexts, 0)
     batch = len(filtered) // 4
     for b in range(4):
-        cpa.update(filtered[b * batch:(b + 1) * batch], hyp[b * batch:(b + 1) * batch])
+        cpa.update(filtered[b * batch : (b + 1) * batch], hyp[b * batch : (b + 1) * batch])
     guess, sample, corr = cpa.best_guess()
-    print(f"    byte 0: recovered={hex(guess)} expected={hex(SECRET_KEY[0])} "
-          f"sample={sample} |corr|={corr:.4f}")
+    print(f"    byte 0: recovered={hex(guess)} expected={hex(SECRET_KEY[0])} " f"sample={sample} |corr|={corr:.4f}")
     assert guess == SECRET_KEY[0], "streaming CPA failed to recover byte 0"
 
     print("[*] Full AES-128 key recovery (all 16 bytes)...")

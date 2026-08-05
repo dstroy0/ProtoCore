@@ -516,10 +516,16 @@ static void store_response(uint8_t slot, EdgeFetchSlot *fs, HttpReq *req, const 
     }
     if (edge_header_value(head, head_len, "Age", v, sizeof(v)))
     {
-        long a = 0;
+        // Clamp every digit so the accumulator stays at or below INT32_MAX and the next multiply-add
+        // stays inside int64_t however many digits the origin sent.
+        int64_t a = 0;
         for (const char *p = v; *p >= '0' && *p <= '9'; p++)
         {
             a = a * 10 + (*p - '0');
+            if (a > INT32_MAX)
+            {
+                a = INT32_MAX;
+            }
         }
         age = (int32_t)a;
     }

@@ -854,11 +854,17 @@ void edge_apply_304(EdgeEntry *e, const char *new_hdrs, size_t hdr_len, int64_t 
     int32_t age = 0;
     if (edge_header_value(new_hdrs, hdr_len, "Age", v, sizeof(v)))
     {
-        long a = 0;
+        // Clamp every digit so the accumulator stays at or below INT32_MAX and the next multiply-add
+        // stays inside int64_t however many digits the origin sent.
+        int64_t a = 0;
         proto_bool any = PROTO_FALSE;
         for (const char *p = v; *p >= '0' && *p <= '9'; p++)
         {
             a = a * 10 + (*p - '0');
+            if (a > INT32_MAX)
+            {
+                a = INT32_MAX;
+            }
             any = PROTO_TRUE;
         }
         if (any)

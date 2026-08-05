@@ -20,14 +20,11 @@ void tearDown()
 void test_config_word()
 {
     // ch0, +/-4.096V, 128 SPS: OS|MUX_AIN0|PGA1|MODE_SINGLE|DR128|COMP_DISABLE.
-    TEST_ASSERT_EQUAL_HEX16(0xC383,
-                            pc_ads1115_config_single(0, ADS1115_GAIN_1, ADS1115_DR_128));
+    TEST_ASSERT_EQUAL_HEX16(0xC383, pc_ads1115_config_single(0, ADS1115_GAIN_1, ADS1115_DR_128));
     // ch3, +/-6.144V, 860 SPS.
-    TEST_ASSERT_EQUAL_HEX16(
-        0xF1E3, pc_ads1115_config_single(3, ADS1115_GAIN_TWOTHIRDS, ADS1115_DR_860));
+    TEST_ASSERT_EQUAL_HEX16(0xF1E3, pc_ads1115_config_single(3, ADS1115_GAIN_TWOTHIRDS, ADS1115_DR_860));
     // ch1, +/-0.256V (gain 16), 8 SPS: OS|MUX_AIN1(0x5000)|PGA16(0x0A00)|MODE|DR8(0)|COMP.
-    TEST_ASSERT_EQUAL_HEX16(0xDB03,
-                            pc_ads1115_config_single(1, ADS1115_GAIN_16, ADS1115_DR_8));
+    TEST_ASSERT_EQUAL_HEX16(0xDB03, pc_ads1115_config_single(1, ADS1115_GAIN_16, ADS1115_DR_8));
 }
 
 void test_config_fallbacks()

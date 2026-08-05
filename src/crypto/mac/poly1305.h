@@ -17,8 +17,11 @@
 #ifndef PROTOCORE_POLY1305_H
 #define PROTOCORE_POLY1305_H
 
+#include "protocore_config.h" // the entry point: types.h for the widths and PROTO_BEGIN_DECLS
 #include <stddef.h>
 #include <stdint.h>
+
+PROTO_BEGIN_DECLS
 
 #define PC_POLY1305_KEY_LEN 32
 #define PC_POLY1305_TAG_LEN 16
@@ -26,5 +29,7 @@
 /** @brief Compute the 16-byte Poly1305 tag over @p msg under the 32-byte one-time @p key. */
 void pc_poly1305(uint8_t tag[PC_POLY1305_TAG_LEN], const uint8_t *msg, size_t len,
                  const uint8_t key[PC_POLY1305_KEY_LEN]);
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_POLY1305_H

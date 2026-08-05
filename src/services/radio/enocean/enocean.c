@@ -19,9 +19,8 @@
 
 uint8_t pc_esp3_crc8(const uint8_t *buf, uint16_t len)
 {
-    // The ESP3 CRC-8 (the u8CRC8Table generator) is the cataloge's CRC-8/SMBUS: poly 0x07,
-    // MSB-first, init 0, no final XOR. test_crc diffs the shared engine against the loop that used
-    // to live here over every length 0..64, so this is byte-identical to it.
+    // The ESP3 CRC-8 (the u8CRC8Table generator) is the cataloge's CRC-8/SMBUS: poly 0x07, MSB-first, init 0,
+    // no final XOR.
     return (uint8_t)pc_crc(&PC_CRC8_SMBUS, buf, len);
 }
 

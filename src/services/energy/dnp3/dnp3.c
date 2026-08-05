@@ -16,9 +16,8 @@
 
 uint16_t pc_dnp3_crc(const uint8_t *data, size_t len)
 {
-    // The DNP3 link-layer block check: reflected poly 0xA6BC = reflect(0x3D65), init 0, final XOR
-    // 0xFFFF - cataloged as CRC-16/DNP. test_crc diffs the shared engine against the loop that used
-    // to live here over every length 0..64, so this is byte-identical to it.
+    // The DNP3 link-layer block check: reflected poly 0xA6BC = reflect(0x3D65), init 0, final XOR 0xFFFF -
+    // cataloged as CRC-16/DNP.
     return (uint16_t)pc_crc(&PC_CRC16_DNP, data, len);
 }
 

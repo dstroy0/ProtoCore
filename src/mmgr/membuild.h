@@ -18,6 +18,7 @@
 #ifndef PROTOCORE_MEMBUILD_H
 #define PROTOCORE_MEMBUILD_H
 
+#include "shared_primitives/hex.h"       // PC_HEX_LOWER - the shared digit table
 #include "shared_primitives/rawmemcpy.h" // proto_raw_u64 - the IEEE-754 field reads below
 #include "shared_primitives/runops.h"    // proto_scan_nul - a word per test, bounded by a known width
 
@@ -267,7 +268,7 @@ static inline void pc_sb_uint(pc_sb *b, uint64_t v, unsigned base, unsigned min_
     {
         for (unsigned i = digits; i-- > 0;)
         {
-            b->p[b->len + i] = "0123456789abcdef"[v & digit_mask];
+            b->p[b->len + i] = PC_HEX_LOWER[v & digit_mask];
             v >>= bits_per_digit;
         }
     }

@@ -14,6 +14,7 @@ in the background while other work continues.
   covbase.py --out /tmp/base.xml  # somewhere else
   covbase.py --resume             # skip envs whose report already exists
 """
+
 from __future__ import annotations
 
 import argparse
@@ -63,8 +64,7 @@ def main() -> int:
         if not ok:
             failed.append(e)
         el = int(time.time() - t0)
-        print(f"[{i}/{len(envs)}] {'ok  ' if ok else 'FAIL'} {e}  ({el // 60}m{el % 60:02d}s)",
-              flush=True)
+        print(f"[{i}/{len(envs)}] {'ok  ' if ok else 'FAIL'} {e}  ({el // 60}m{el % 60:02d}s)", flush=True)
 
     print(f"\n{len(envs) - len(failed)}/{len(envs)} envs ok")
     if failed:
@@ -74,10 +74,17 @@ def main() -> int:
     # emits the report in one pass. Nothing stale can be carried forward because nothing is
     # carried forward.
     subprocess.run(
-        [covrun.gcovr_python(), "-m", "gcovr",
-         "--add-tracefile", os.path.join(a.reports_dir, "*.json"),
-         "--sonarqube", a.out],
-        cwd=ROOT, check=True,
+        [
+            covrun.gcovr_python(),
+            "-m",
+            "gcovr",
+            "--add-tracefile",
+            os.path.join(a.reports_dir, "*.json"),
+            "--sonarqube",
+            a.out,
+        ],
+        cwd=ROOT,
+        check=True,
     )
     print(f"wrote {a.out}")
     return 1 if failed else 0

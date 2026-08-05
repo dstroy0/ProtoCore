@@ -1,4 +1,4 @@
-name: Code Formatting Check
+name: Format Code
 
 on:
   push:
@@ -7,7 +7,8 @@ on:
     branches: [main, master]
 
 jobs:
-  clang-format:
+  format-code:
+    name: Format Code
     runs-on: ubuntu-latest
 
     steps:
@@ -48,7 +49,12 @@ jobs:
           # Bypasses hidden directories like .git automatically.
           # build_opt.h is excluded: despite the .h suffix it is an Arduino build-options file
           # (a list of -D compiler flags, not C++), and its name is fixed by the Arduino toolchain.
-          FILES=$(find . -type f \( -name "*.cpp" -o -name "*.h" -o -name "*.ino" \) -not -path "*/.*" -not -name "build_opt.h")
+          # .c is in the list because src/ is C11: the conversion renamed 351 implementation files
+          # out from under a glob that only named .cpp, leaving them unchecked.
+          # managed_components/ is what the IDF component manager downloads into an example. It is
+          # vendored third-party source, not ours to style, and it is gitignored - so a checkout
+          # restores it unformatted no matter what a local run did. 2026 files, all excluded.
+          FILES=$(find . -type f \( -name "*.c" -o -name "*.cpp" -o -name "*.h" -o -name "*.ino" \) -not -path "*/.*" -not -path "*/managed_components/*" -not -name "build_opt.h")
 
           # 3. Handle empty repository safety edge-case
           if [ -z "$FILES" ]; then
@@ -61,6 +67,14 @@ jobs:
           # --dry-run handles the formatting calculations safely
           # --Werror forces an exit code 1 if style rules are breached
           echo "$FILES" | xargs clang-format --style=file --dry-run --Werror
+
+      - name: Python formatting (Black)
+        # The C sources have been style-gated since the start; the ~120 Python files that generate,
+        # check and measure them were not, so half of them had drifted. Sonar reads this tree too.
+        # Line length comes from [tool.black] in pyproject.toml, so local and CI agree.
+        run: |
+          python3 -m pip install --quiet black
+          git ls-files '*.py' | xargs python3 -m black --check --diff
 
       - name: Owner-context guard (no loose file-scope mutables)
         # Enforces the least-privilege owner pattern: every subsystem's mutable state must live in

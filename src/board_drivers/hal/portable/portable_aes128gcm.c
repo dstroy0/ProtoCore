@@ -20,7 +20,8 @@
 #include "crypto/ct_eq.h" // pc_ct_eq
 #include "crypto/mac/ghash.h"
 #include "mmgr/secure.h"
-#include "protocore_config.h" // PC_ENABLE_* gate the whole file; pc_platform.h does not pull this in
+#include "protocore_config.h"            // PC_ENABLE_* gate the whole file; pc_platform.h does not pull this in
+#include "shared_primitives/rawmemcpy.h" // proto_raw_u32 - the aliasing-permitted word load
 #include <string.h>
 
 #if (PC_ENABLE_HTTP3 || PC_ENABLE_DTLS || PC_ENABLE_SMB)
@@ -81,22 +82,11 @@ static_assert(sizeof(Aes128GcmWork) <= PC_WORK_AES128GCM,
 
 static inline void xor16(uint8_t *dst, const uint8_t *src)
 {
-    // One block = four words. Both pointers must be 4-aligned: Xtensa has no native unaligned 32-bit
-    // load and the trap handler costs more than the byte loop, so test them together (OR then mask)
-    // and fall back rather than gamble.
-    if (((((uintptr_t)dst) | ((uintptr_t)src)) & 3u) == 0u)
+    // One block = four words. The raw accessors carry aligned(1) and may_alias, so each step is the
+    // machine's own load and store at any alignment, and the fixup sequence only where the die needs it.
+    for (int i = 0; i < 16; i += 4)
     {
-        uint32_t *d = (uint32_t *)dst;
-        const uint32_t *s = (const uint32_t *)src;
-        d[0] ^= s[0];
-        d[1] ^= s[1];
-        d[2] ^= s[2];
-        d[3] ^= s[3];
-        return;
-    }
-    for (int i = 0; i < 16; i++)
-    {
-        dst[i] ^= src[i];
+        proto_raw_put_u32(dst + i, proto_raw_u32(dst + i) ^ proto_raw_u32(src + i));
     }
 }
 

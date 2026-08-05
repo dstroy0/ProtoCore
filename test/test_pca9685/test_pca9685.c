@@ -106,8 +106,7 @@ void test_set_pwm_on_the_wire()
 {
     pc_bus_host_reset();
     TEST_ASSERT_TRUE(pc_pca9685_set_pwm(0, 0, 2048));
-    const uint8_t want[5] = {PCA9685_REG_LED0_ON_L, 0x00, 0x00, (uint8_t)(2048 & 0xFF),
-                             (uint8_t)((2048 >> 8) & 0x1F)};
+    const uint8_t want[5] = {PCA9685_REG_LED0_ON_L, 0x00, 0x00, (uint8_t)(2048 & 0xFF), (uint8_t)((2048 >> 8) & 0x1F)};
     uint32_t n = 0;
     const uint8_t *tx = pc_bus_host_written(&n);
     TEST_ASSERT_EQUAL_UINT32(sizeof(want), n);

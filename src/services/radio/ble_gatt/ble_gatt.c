@@ -7,7 +7,8 @@
  */
 
 #include "services/radio/ble_gatt/ble_gatt.h"
-#include "mmgr/membuild.h" // pc_sb frame builder
+#include "mmgr/membuild.h"         // pc_sb frame builder
+#include "shared_primitives/hex.h" // PC_HEX_LOWER - the shared digit table
 
 #if PC_ENABLE_BLE_GATT
 
@@ -140,10 +141,9 @@ proto_bool att_parse(const uint8_t *pdu, size_t len, AttPdu *out)
 static void put_hex16(pc_sb *b, uint16_t v)
 {
     char t[7] = "0x0000";
-    static const char *H = "0123456789abcdef";
     for (int i = 0; i < 4; i++)
     {
-        t[2 + i] = H[(v >> ((3 - i) * 4)) & 0xF];
+        t[2 + i] = PC_HEX_LOWER[(v >> ((3 - i) * 4)) & 0xF];
     }
     pc_sb_put(b, t);
 }

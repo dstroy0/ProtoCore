@@ -1,7 +1,7 @@
 %%{init: {'htmlLabels':false,'themeVariables':{'fontFamily':'monospace','fontSize':'12px','lineColor':'#3b4a5c'},'flowchart':{'curve':'basis','nodeSpacing':14,'rankSpacing':70,'padding':8,'useMaxWidth':true,'htmlLabels':false}}}%%
 flowchart LR
   %% Auto-generated from docs/FEATURES.md by ci_tooling/generate/gen_features_tree.py.
-  n_root["ProtoCore                 <br/>254 features              "]
+  n_root["ProtoCore                 <br/>256 features              "]
   n_Foundation["Foundation                <br/>17 features               "]
   n_root --> n_Foundation
   n_Physical___Data_Link__L1_L2_["Physical & Data Link (L1-…<br/>31 features               "]
@@ -14,9 +14,9 @@ flowchart LR
   n_root --> n_Session__L5_
   n_Presentation__L6_["Presentation (L6)         <br/>18 features               "]
   n_root --> n_Presentation__L6_
-  n_Application__L7_["Application (L7)          <br/>168 features              "]
+  n_Application__L7_["Application (L7)          <br/>170 features              "]
   n_root --> n_Application__L7_
-  n_Application__L7____Other["Application (L7) - Other  <br/>37                        "]
+  n_Application__L7____Other["Application (L7) - Other  <br/>39                        "]
   n_Application__L7_ --> n_Application__L7____Other
   n_Auth__Identity___Security["Auth, Identity & Security <br/>5                         "]
   n_Application__L7_ --> n_Auth__Identity___Security
@@ -49,7 +49,7 @@ flowchart LR
   click n_Transport__L4_ "features.html#transport-l4" "Transport (L4)"
   click n_Session__L5_ "features.html#session-l5" "Session (L5)"
   click n_Presentation__L6_ "features.html#presentation-l6" "Presentation (L6)"
-  click n_Application__L7____Other "features.html#application-l7---other" "Application (L7) - Other - 37 features"
+  click n_Application__L7____Other "features.html#application-l7---other" "Application (L7) - Other - 39 features"
   click n_Auth__Identity___Security "features.html#auth-identity--security" "Auth, Identity & Security - 5 features"
   click n_Clients___Gateways "features.html#clients--gateways" "Clients & Gateways - 9 features"
   click n_Firmware___System "features.html#firmware--system" "Firmware & System - 3 features"

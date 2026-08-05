@@ -96,7 +96,7 @@ void test_epl_build_guards()
     uint8_t out[64];
     uint8_t pdo[4] = {1, 2, 3, 4};
     TEST_ASSERT_EQUAL_size_t(0, pc_epl_build(0x01, 0, 0, NULL, 4, out, sizeof(out))); // null payload with len
-    TEST_ASSERT_EQUAL_size_t(0, pc_epl_build(0x01, 0, 0, pdo, sizeof(pdo), out, 2));     // cap too small
+    TEST_ASSERT_EQUAL_size_t(0, pc_epl_build(0x01, 0, 0, pdo, sizeof(pdo), out, 2));  // cap too small
 }
 
 void test_epl_build_null_out(void)

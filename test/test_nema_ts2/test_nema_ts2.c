@@ -68,12 +68,10 @@ void test_build_rejects_bad_args(void)
     uint8_t buf[8];
 
     // null output buffer.
-    TEST_ASSERT_EQUAL_size_t(
-        0, pc_nema_ts2_build(0x01, 0x00, NEMA_TS2_FT_CMD_MMU, data, 2, NULL, sizeof(buf)));
+    TEST_ASSERT_EQUAL_size_t(0, pc_nema_ts2_build(0x01, 0x00, NEMA_TS2_FT_CMD_MMU, data, 2, NULL, sizeof(buf)));
 
     // non-zero data_len with a null data pointer.
-    TEST_ASSERT_EQUAL_size_t(0,
-                             pc_nema_ts2_build(0x01, 0x00, NEMA_TS2_FT_CMD_MMU, NULL, 2, buf, sizeof(buf)));
+    TEST_ASSERT_EQUAL_size_t(0, pc_nema_ts2_build(0x01, 0x00, NEMA_TS2_FT_CMD_MMU, NULL, 2, buf, sizeof(buf)));
 }
 
 void test_build_rejects_undersized_cap(void)

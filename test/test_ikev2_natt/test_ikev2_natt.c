@@ -72,8 +72,8 @@ void test_natd_notify_build_parse()
 
     // A tiny buffer overflows to 0.
     uint8_t small[8];
-    TEST_ASSERT_EQUAL_size_t(0, pc_ike_natd_source_build(small, sizeof(small), IKE_PL_NONE, init_spi,
-                                                         resp_spi, ip4, 4, 500));
+    TEST_ASSERT_EQUAL_size_t(
+        0, pc_ike_natd_source_build(small, sizeof(small), IKE_PL_NONE, init_spi, resp_spi, ip4, 4, 500));
 }
 
 void test_natd_detection()

@@ -21,15 +21,8 @@ uint8_t pc_df1_bcc(const uint8_t *data, size_t len)
     return (uint8_t)(0u - s); // 2's complement (modulo 256)
 }
 
-// DF1's block check is the reflected CRC-16 (poly 0xA001 = reflect(0x8005), init 0, no final XOR),
-// cataloged as CRC-16/ARC. test_crc diffs the shared engine against the loop that used to live here
-// over every length 0..64.
-//
-// The CRC covers the data *plus* a trailing ETX that is not adjacent to it in memory, so the callers
-// below run the engine's begin/update/final split rather than assembling a scratch buffer. Note the
-// running value they carry is the engine's internal register, which for a reflected CRC is held
-// unreflected until final() - it is not interchangeable with the old right-shift intermediate, which
-// is why those call sites convert as a whole rather than swapping one call.
+// DF1's block check is the reflected CRC-16 (poly 0xA001 = reflect(0x8005), init 0, no final XOR), cataloged
+// as CRC-16/ARC.
 static uint16_t df1_crc_data_plus_etx(const uint8_t *data, size_t len, uint8_t etx)
 {
     uint32_t c = pc_crc_begin(&PC_CRC16_ARC);

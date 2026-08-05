@@ -41,7 +41,7 @@ static_assert(sizeof(pc_aes128) <= PC_WORK_AES128, "pc_aes128 outgrew PC_WORK_AE
 
 struct pc_aes128 *pc_aes128_wants(void)
 {
-    pc_span ws = pc_secure_span(sizeof(pc_aes128), alignof(pc_aes128));
+    pc_span ws = pc_secure_span(sizeof(pc_aes128), 8);
     return pc_span_ok(ws) ? (struct pc_aes128 *)(ws.buf) : NULL;
 }
 

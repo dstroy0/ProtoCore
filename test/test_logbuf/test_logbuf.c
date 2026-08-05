@@ -87,7 +87,7 @@ void test_dump_guards()
 {
     char out[64];
     TEST_ASSERT_EQUAL_INT(0, pc_log_dump(NULL, sizeof(out))); // null out
-    TEST_ASSERT_EQUAL_INT(0, pc_log_dump(out, 0));               // zero cap
+    TEST_ASSERT_EQUAL_INT(0, pc_log_dump(out, 0));            // zero cap
     // A dump buffer too small for the logged line fails closed.
     pc_logbuf_reset();
     pc_log(0, "a fairly long log line that will not fit a tiny dump buffer");

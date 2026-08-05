@@ -170,15 +170,22 @@
 #define PC_RSA_INTCLR (PC_RSA_BASE + 0x81Cu) // write 1 to clear the completion flag
 #define PC_RSA_INTENA (PC_RSA_BASE + 0x82Cu) // completion-interrupt enable (we poll: keep 0)
 
+/** @brief Iterations a hardware status poll takes before it gives up and the modmul zeroes its result. */
+#ifndef PC_RSA_SPIN_MAX
+#define PC_RSA_SPIN_MAX 100000u
+#endif
+
 /**
  * @brief Acquire the RSA accelerator for a run of modular multiplies (PC lock + direct-register bring-up).
  * @note  Bracket every batch of @ref pc_rsa_modmul with acquire/release. Implemented in esp_crypto_hal.cpp
  *        (the exclusivity mutex must be one global instance, so it cannot live in this header). Poll-only.
  */
+PROTO_BEGIN_DECLS
 void pc_rsa_hw_acquire(void);
 
 /** @brief Release the RSA accelerator (drop the PC lock). */
 void pc_rsa_hw_release(void);
+PROTO_END_DECLS
 
 /**
  * @brief `z = x*y mod m` (@p words limbs) on the RSA accelerator. Requires @ref pc_rsa_hw_acquire first.
@@ -207,8 +214,18 @@ static inline void pc_rsa_modmul(uint32_t *z, const uint32_t *x, const uint32_t 
     }
     PC_HW_REG(PC_RSA_INTCLR) = 1u; // clear any stale done flag before starting
     PC_HW_REG(PC_RSA_START) = 1u;
-    while (PC_HW_REG(PC_RSA_DONE) == 0u) // wait until the done bit reads 1
+    uint32_t spins = 0u;
+    while (PC_HW_REG(PC_RSA_DONE) == 0u) // wait until the done bit reads 1, bounded
     {
+        spins++;
+        if (spins >= PC_RSA_SPIN_MAX)
+        {
+            for (unsigned i = 0; i < words; i++)
+            {
+                z[i] = 0u; // a zero result fails every downstream check
+            }
+            return;
+        }
     }
     PC_HW_REG(PC_RSA_INTCLR) = 1u;
     for (unsigned i = 0; i < words; i++)

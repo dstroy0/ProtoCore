@@ -19,6 +19,7 @@ Relocation targets are NOT masked: which symbol a call reaches is functional.
 
 Usage:  python reverse_engineering/esp32_mac/blob_diff.py <repo-root> [--lib libphy.a] [--chip esp32] [--full]
 """
+
 import os
 import re
 import shutil
@@ -97,8 +98,9 @@ def functions(objdump, ar, archive, work):
 
         # Where each function lives: section, offset within it, and how many bytes it spans.
         syms = []
-        for line in subprocess.run([objdump, "-t", path], capture_output=True, text=True,
-                                   errors="replace").stdout.split("\n"):
+        for line in subprocess.run(
+            [objdump, "-t", path], capture_output=True, text=True, errors="replace"
+        ).stdout.split("\n"):
             m = SYMLINE.match(line.rstrip())
             if m and "F" in m.group(2):
                 syms.append((m.group(3), int(m.group(1), 16), int(m.group(4), 16), m.group(5)))
@@ -106,8 +108,9 @@ def functions(objdump, ar, archive, work):
         # Every section's instructions once, in order, so each function is a slice of one.
         secs = {}
         cur = None
-        for line in subprocess.run([objdump, "-dr", path], capture_output=True, text=True,
-                                   errors="replace").stdout.split("\n"):
+        for line in subprocess.run(
+            [objdump, "-dr", path], capture_output=True, text=True, errors="replace"
+        ).stdout.split("\n"):
             m = SECTION.match(line)
             if m:
                 cur = m.group(1)
@@ -133,9 +136,14 @@ def functions(objdump, ar, archive, work):
             ops = ANNOT.sub("", parts[3] if len(parts) > 3 else "").strip()
             # Two forms: one with addresses masked, for the identical/equivalent verdict, and
             # one left alone, so a caller can see which immediates actually changed.
-            secs[cur].append((int(mo.group(1), 16), parts[1].strip().replace(" ", ""),
-                              (mnem + " " + ADDR.sub("#", ops)).strip(),
-                              (mnem + " " + ops).strip()))
+            secs[cur].append(
+                (
+                    int(mo.group(1), 16),
+                    parts[1].strip().replace(" ", ""),
+                    (mnem + " " + ADDR.sub("#", ops)).strip(),
+                    (mnem + " " + ops).strip(),
+                )
+            )
 
         for sec, off, size, name in syms:
             if size == 0 or sec not in secs:
@@ -179,11 +187,23 @@ def main():
             same_bytes = [f for f in shared if fa[f][0] == fi[f][0]]
             equiv = [f for f in shared if fa[f][0] != fi[f][0] and fa[f][1] == fi[f][1]]
             diff = [f for f in shared if fa[f][0] != fi[f][0] and fa[f][1] != fi[f][1]]
-            rows.append((chip, lib, len(shared), len(same_bytes), len(equiv), len(diff),
-                         len(set(fa) - set(fi)), len(set(fi) - set(fa))))
+            rows.append(
+                (
+                    chip,
+                    lib,
+                    len(shared),
+                    len(same_bytes),
+                    len(equiv),
+                    len(diff),
+                    len(set(fa) - set(fi)),
+                    len(set(fi) - set(fa)),
+                )
+            )
             detail.append((chip, lib, diff, fa, fi))
-            print(f"  {chip:9s} {lib:18s} shared={len(shared):5d} identical={len(same_bytes):5d} "
-                  f"equivalent={len(equiv):4d} different={len(diff):5d}")
+            print(
+                f"  {chip:9s} {lib:18s} shared={len(shared):5d} identical={len(same_bytes):5d} "
+                f"equivalent={len(equiv):4d} different={len(diff):5d}"
+            )
 
     doc = [
         "# Radio blob code comparison between the Arduino and IDF installs",
@@ -219,9 +239,14 @@ def main():
     tot_sb = sum(r[3] for r in rows)
     tot_eq = sum(r[4] for r in rows)
     tot_df = sum(r[5] for r in rows)
-    doc += ["", "## Totals", "",
-            f"{tot_sh} functions are in both installs. {tot_sb} are byte-identical, {tot_eq} are",
-            f"equivalent once addresses are masked, and {tot_df} genuinely differ.", ""]
+    doc += [
+        "",
+        "## Totals",
+        "",
+        f"{tot_sh} functions are in both installs. {tot_sb} are byte-identical, {tot_eq} are",
+        f"equivalent once addresses are masked, and {tot_df} genuinely differ.",
+        "",
+    ]
 
     for chip, lib, diff, fa, fi in detail:
         if not diff:

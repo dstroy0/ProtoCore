@@ -9,8 +9,12 @@
 #include "shared_primitives/crc.h"
 #include <unity.h>
 
-void setUp(void) {}
-void tearDown(void) {}
+void setUp(void)
+{
+}
+void tearDown(void)
+{
+}
 
 // The address byte is the 7-bit address shifted up with the direction in bit 0.
 static void test_addr_byte(void)
@@ -38,8 +42,8 @@ static void test_pec_read_matches_engine(void)
 {
     const uint8_t sent[] = {0x08};
     const uint8_t got[] = {0xAB, 0xCD};
-    uint8_t seq[5] = {pc_smbus_addr_byte(0x2A, PC_SMBUS_WRITE), 0x08,
-                      pc_smbus_addr_byte(0x2A, PC_SMBUS_READ), 0xAB, 0xCD};
+    uint8_t seq[5] = {pc_smbus_addr_byte(0x2A, PC_SMBUS_WRITE), 0x08, pc_smbus_addr_byte(0x2A, PC_SMBUS_READ), 0xAB,
+                      0xCD};
     TEST_ASSERT_EQUAL_HEX8((uint8_t)pc_crc(&PC_CRC8_SMBUS, seq, sizeof(seq)),
                            pc_smbus_pec_read(0x2A, sent, sizeof(sent), got, sizeof(got)));
 }

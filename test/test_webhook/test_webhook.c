@@ -72,13 +72,13 @@ void test_builder_arg_guards()
 {
     char buf[64];
     buf[0] = 'x';
-    TEST_ASSERT_EQUAL_INT(0, pc_ifttt_url(NULL, "k", buf, sizeof(buf)));         // null event
-    TEST_ASSERT_EQUAL_STRING("", buf);                                              // cleared
-    TEST_ASSERT_EQUAL_INT(0, pc_ifttt_url("e", NULL, buf, sizeof(buf)));         // null key
-    TEST_ASSERT_EQUAL_INT(0, pc_ifttt_url("e", "k", NULL, 10));                  // null out (no clear)
-    TEST_ASSERT_EQUAL_INT(0, pc_ifttt_url("e", "k", buf, 0));                       // zero cap
+    TEST_ASSERT_EQUAL_INT(0, pc_ifttt_url(NULL, "k", buf, sizeof(buf)));   // null event
+    TEST_ASSERT_EQUAL_STRING("", buf);                                     // cleared
+    TEST_ASSERT_EQUAL_INT(0, pc_ifttt_url("e", NULL, buf, sizeof(buf)));   // null key
+    TEST_ASSERT_EQUAL_INT(0, pc_ifttt_url("e", "k", NULL, 10));            // null out (no clear)
+    TEST_ASSERT_EQUAL_INT(0, pc_ifttt_url("e", "k", buf, 0));              // zero cap
     TEST_ASSERT_EQUAL_INT(0, pc_ifttt_payload("a", NULL, NULL, NULL, 64)); // null out
-    TEST_ASSERT_EQUAL_INT(0, pc_ifttt_payload("a", NULL, NULL, buf, 0));      // zero cap
+    TEST_ASSERT_EQUAL_INT(0, pc_ifttt_payload("a", NULL, NULL, buf, 0));   // zero cap
 }
 
 // put_escaped fails closed when the escaped value would overrun the buffer, both on a

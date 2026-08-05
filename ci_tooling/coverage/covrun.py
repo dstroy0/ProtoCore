@@ -11,6 +11,7 @@ can run at once; test/coverage.xml is written only by covbase.py, over the whole
 
 Prints the remaining branch gaps for the touched sources when it is done.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -47,7 +48,10 @@ def run_env(env: str, jobs: int, _retry: bool = True) -> bool:
         os.unlink(gcda)
     p = subprocess.run(
         ["pio", "test", "-e", env],
-        cwd=ROOT, env=envvars, capture_output=True, text=True,
+        cwd=ROOT,
+        env=envvars,
+        capture_output=True,
+        text=True,
     )
     if p.returncode == 0:
         return True
@@ -75,8 +79,7 @@ def gcovr_python() -> str:
     if _GCOVR_PY:
         return _GCOVR_PY
     cands = [sys.executable, shutil.which("python"), shutil.which("python3")]
-    cands += sorted(glob.glob(os.path.expanduser(
-        r"~/AppData/Local/Programs/Python/Python*/python.exe")), reverse=True)
+    cands += sorted(glob.glob(os.path.expanduser(r"~/AppData/Local/Programs/Python/Python*/python.exe")), reverse=True)
     seen = []
     for cand in cands:
         if not cand or cand in seen:
@@ -86,8 +89,7 @@ def gcovr_python() -> str:
         if p.returncode == 0:
             _GCOVR_PY = cand
             return cand
-    raise SystemExit(f"no interpreter with gcovr installed (tried: {seen}); "
-                     f"run `<python> -m pip install gcovr`")
+    raise SystemExit(f"no interpreter with gcovr installed (tried: {seen}); " f"run `<python> -m pip install gcovr`")
 
 
 def gcovr(env: str) -> None:
@@ -98,10 +100,24 @@ def gcovr(env: str) -> None:
     # across envs instead of keeping only the best single env's aggregate.
     js = os.path.join(REPORTS, f"{env}.json")
     p = subprocess.run(
-        [gcovr_python(), "-m", "gcovr", "--root", ".", "--filter", "src/.*",
-         "--gcov-ignore-parse-errors", "--sonarqube", out, "--json", js,
-         os.path.join(BUILD_DIR, env)],
-        cwd=ROOT, capture_output=True, text=True,
+        [
+            gcovr_python(),
+            "-m",
+            "gcovr",
+            "--root",
+            ".",
+            "--filter",
+            "src/.*",
+            "--gcov-ignore-parse-errors",
+            "--sonarqube",
+            out,
+            "--json",
+            js,
+            os.path.join(BUILD_DIR, env),
+        ],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
     )
     if p.returncode != 0 or not os.path.exists(out):
         sys.stdout.write(p.stdout[-2000:] + p.stderr[-2000:])
@@ -155,10 +171,17 @@ def main() -> int:
     # run (covbase.py), so the committed report always covers all of src/.
     scratch = os.path.join(REPORTS, "_union.xml")
     subprocess.run(
-        [gcovr_python(), "-m", "gcovr",
-         "--add-tracefile", os.path.join(a.reports_dir, "*.json"),
-         "--sonarqube", scratch],
-        cwd=ROOT, check=True,
+        [
+            gcovr_python(),
+            "-m",
+            "gcovr",
+            "--add-tracefile",
+            os.path.join(a.reports_dir, "*.json"),
+            "--sonarqube",
+            scratch,
+        ],
+        cwd=ROOT,
+        check=True,
     )
     if srcs:
         subprocess.run([gcovr_python(), "ci_tooling/coverage/covmap.py", "gaps", "--cov", scratch, *srcs], cwd=ROOT)

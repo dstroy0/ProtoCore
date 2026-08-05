@@ -82,7 +82,8 @@ void test_engine_suspend_unsuspend()
 
 void test_engine_stop_from_many_states()
 {
-    const PackMlState from[] = {PACK_ML_STATE_IDLE, PACK_ML_STATE_EXECUTE, PACK_ML_STATE_HELD, PACK_ML_STATE_SUSPENDED, PACK_ML_STATE_COMPLETE, PACK_ML_STATE_RESETTING};
+    const PackMlState from[] = {PACK_ML_STATE_IDLE,      PACK_ML_STATE_EXECUTE,  PACK_ML_STATE_HELD,
+                                PACK_ML_STATE_SUSPENDED, PACK_ML_STATE_COMPLETE, PACK_ML_STATE_RESETTING};
     for (unsigned i = 0; i < sizeof(from) / sizeof(from[0]); i++)
     {
         TEST_ASSERT_EQUAL(PACK_ML_STATE_STOPPING, pc_packml_command(from[i], PACK_ML_COMMAND_STOP));

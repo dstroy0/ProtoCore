@@ -46,8 +46,6 @@ static proto_bool put_stuffed(uint8_t *out, uint16_t *p, uint16_t cap, uint8_t b
 uint16_t pc_ash_crc16(const uint8_t *buf, uint16_t len)
 {
     // ASH uses CRC-CCITT (poly 0x1021, init 0xFFFF, unreflected), cataloged as CRC-16/IBM-3740.
-    // test_crc diffs the shared engine against the loop that used to live here over every length
-    // 0..64, so this is byte-identical to it.
     return (uint16_t)pc_crc(&PC_CRC16_IBM_3740, buf, len);
 }
 

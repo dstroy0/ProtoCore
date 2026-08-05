@@ -190,7 +190,9 @@ def _src_hits(f, src_globs):
     hits = {name for name, g in src_globs if _match_glob(rel, g)}
     if hits:
         return hits
-    sd = _services_dir(f)  # e.g. a new services/instrumentation/scpi/scpi.h -> the envs building services/instrumentation/scpi/*
+    sd = _services_dir(
+        f
+    )  # e.g. a new services/instrumentation/scpi/scpi.h -> the envs building services/instrumentation/scpi/*
     if sd:
         return {name for name, g in src_globs if g.startswith(sd)}
     return set()

@@ -99,8 +99,10 @@ def affected_items(items, changed, base=None, head=None):
             continue
         if f.startswith(f"{EX_ROOT}/"):
             example_hits.append(f)
-        elif f == "src/protocore_config.h" and base is not None and ac.config_header_additive(
-            ac.file_at(base, f), ac.file_at(head, f)
+        elif (
+            f == "src/protocore_config.h"
+            and base is not None
+            and ac.config_header_additive(ac.file_at(base, f), ac.file_at(head, f))
         ):
             continue  # additive gate -> inert for every example that does not enable it
         elif f.startswith("src/services/") and f.count("/") >= 3:

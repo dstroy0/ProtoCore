@@ -20,7 +20,11 @@ def openssl_hs(group):
         t0 = time.monotonic()
         p = subprocess.run(
             ["openssl", "s_client", "-connect", "%s:443" % HOST, "-tls1_2", "-groups", group],
-            input=b"", stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=15)
+            input=b"",
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            timeout=15,
+        )
         times.append((time.monotonic() - t0) * 1000)
         if not stk:
             for line in p.stdout.decode(errors="ignore").splitlines():

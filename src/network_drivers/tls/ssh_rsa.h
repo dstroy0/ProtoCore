@@ -31,8 +31,8 @@
 #define PROTOCORE_SSH_RSA_H
 
 #include "crypto/asymmetric/rsa.h" // pc_rsa_hash, PC_RSA_KEY_BYTES/SIG_BYTES, pc_rsa_verify / pc_rsa_sign_sw
-#include <stddef.h>
-#include <stdint.h>
+
+PROTO_BEGIN_DECLS
 
 /** @brief Maximum DER size for a PKCS#1 RSAPrivateKey with 2048-bit fields. */
 #define SSH_RSA_KEY_DER_MAX 1700
@@ -100,5 +100,7 @@ int ssh_rsa_sign(const uint8_t *msg, size_t msg_len, pc_rsa_hash hash, uint8_t s
  * @return 0 on success (writing @p out_len), -1 if the key is not loaded or @p out_cap is too small.
  */
 int ssh_rsa_encode_pubkey(uint8_t *out, size_t *out_len, size_t out_cap);
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_SSH_RSA_H

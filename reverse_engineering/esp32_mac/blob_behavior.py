@@ -20,6 +20,7 @@ Reads the instruction streams `blob_diff.py` extracts, so the two agree by const
 
 Usage:  python reverse_engineering/esp32_mac/blob_behavior.py <repo-root> [--lib libphy.a] [--chip esp32]
 """
+
 import os
 import re
 import sys
@@ -162,13 +163,16 @@ def main():
         doc.append(f"| `{chip}` | `{lib}` | {n} | " + " | ".join(str(got[k]) for k in ORDER) + " |")
 
     tot = sum(totals.values())
-    doc += ["", "## Totals", "",
-            "| Bucket | Functions | Share |", "| --- | ---: | ---: |"]
+    doc += ["", "## Totals", "", "| Bucket | Functions | Share |", "| --- | ---: | ---: |"]
     for k in ORDER:
         doc.append(f"| `{k}` | {totals[k]} | {100 * totals[k] // max(1, tot)}% |")
     behavioral = totals["calls"] + totals["registers"] + totals["structural"]
-    doc += ["", f"{totals['reordered'] + totals['values']} of {tot} are reordering or tuning "
-                f"constants. {behavioral} touch calls, registers or structure.", ""]
+    doc += [
+        "",
+        f"{totals['reordered'] + totals['values']} of {tot} are reordering or tuning "
+        f"constants. {behavioral} touch calls, registers or structure.",
+        "",
+    ]
 
     for chip, lib, items in detail:
         doc += [f"## `{chip}` / `{lib}`", "", "```"]

@@ -21,6 +21,7 @@ refuses instead. A RISC-V port is a separate extraction, not a flag.
 
 Usage:  python reverse_engineering/esp32_mac/xtensa/blob_registers.py <repo-root> [--only <substring>]
 """
+
 import os
 import re
 import shutil
@@ -101,10 +102,10 @@ def walk(text):
 def walk_section(lines):
     """One section. Relocations are collected first: objdump prints each one on the line AFTER
     the instruction it applies to, so a single pass would never see a call's target."""
-    literals = {}   # byte offset -> 32-bit value
-    relocs = {}     # byte offset -> symbol
-    regs = {}       # address register -> literal value it holds
-    syms = {}       # address register -> symbol whose address it holds
+    literals = {}  # byte offset -> 32-bit value
+    relocs = {}  # byte offset -> symbol
+    regs = {}  # address register -> literal value it holds
+    syms = {}  # address register -> symbol whose address it holds
     events = []
     fname = None
     out = []

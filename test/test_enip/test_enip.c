@@ -219,8 +219,8 @@ void test_build_and_parse_guards()
     memset(&h, 0, sizeof(h));
     const uint8_t data[] = {0xAA, 0xBB};
 
-    TEST_ASSERT_EQUAL_size_t(0, pc_eip_build(NULL, sizeof(buf), &h, data, 2));   // null buf
-    TEST_ASSERT_EQUAL_size_t(0, pc_eip_build(buf, sizeof(buf), NULL, data, 2));  // null header
+    TEST_ASSERT_EQUAL_size_t(0, pc_eip_build(NULL, sizeof(buf), &h, data, 2));      // null buf
+    TEST_ASSERT_EQUAL_size_t(0, pc_eip_build(buf, sizeof(buf), NULL, data, 2));     // null header
     TEST_ASSERT_EQUAL_size_t(0, pc_eip_build(buf, sizeof(buf), &h, data, 0x10000)); // data_len > 0xFFFF
 
     // Passing a sender context exercises the memcpy in each convenience builder.
@@ -233,8 +233,7 @@ void test_build_and_parse_guards()
     TEST_ASSERT_EQUAL_HEX8_ARRAY(ctx, buf + 12, 8);
 
     TEST_ASSERT_EQUAL_size_t(0, pc_eip_build_send_rr_data(NULL, sizeof(buf), 1, NULL, 5, data, 2)); // null buf
-    TEST_ASSERT_EQUAL_size_t(
-        0, pc_eip_build_send_rr_data(buf, sizeof(buf), 1, NULL, 5, NULL, 2)); // pc_cip_len && !cip
+    TEST_ASSERT_EQUAL_size_t(0, pc_eip_build_send_rr_data(buf, sizeof(buf), 1, NULL, 5, NULL, 2)); // pc_cip_len && !cip
 
     const uint8_t *cip;
     size_t clen;

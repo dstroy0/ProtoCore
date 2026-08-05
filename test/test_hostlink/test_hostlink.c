@@ -59,7 +59,7 @@ void test_build_read_and_extract()
     TEST_ASSERT_EQUAL_HEX16(0x1234, w);
     TEST_ASSERT_TRUE(pc_hostlink_read_word(&rf, 1, &w));
     TEST_ASSERT_EQUAL_HEX16(0x5678, w);
-    TEST_ASSERT_FALSE(pc_hostlink_read_word(&rf, 2, &w));     // past the last word
+    TEST_ASSERT_FALSE(pc_hostlink_read_word(&rf, 2, &w));  // past the last word
     TEST_ASSERT_FALSE(pc_hostlink_read_word(NULL, 0, &w)); // null frame
 
     // A non-hex value character is rejected.
@@ -185,10 +185,10 @@ void test_guards_and_hex()
 {
     char buf[32];
     // build guards
-    TEST_ASSERT_EQUAL_size_t(0, pc_hostlink_build(NULL, sizeof(buf), 0, "RD", "0", 1)); // null buf
-    TEST_ASSERT_EQUAL_size_t(0, pc_hostlink_build(buf, sizeof(buf), 0, NULL, "0", 1));  // null header code
-    TEST_ASSERT_EQUAL_size_t(0, pc_hostlink_build(buf, sizeof(buf), 100, "RD", "0", 1));   // node > 99
-    TEST_ASSERT_EQUAL_size_t(0, pc_hostlink_build(buf, sizeof(buf), 0, "RD", NULL, 4)); // text_len but null text
+    TEST_ASSERT_EQUAL_size_t(0, pc_hostlink_build(NULL, sizeof(buf), 0, "RD", "0", 1));  // null buf
+    TEST_ASSERT_EQUAL_size_t(0, pc_hostlink_build(buf, sizeof(buf), 0, NULL, "0", 1));   // null header code
+    TEST_ASSERT_EQUAL_size_t(0, pc_hostlink_build(buf, sizeof(buf), 100, "RD", "0", 1)); // node > 99
+    TEST_ASSERT_EQUAL_size_t(0, pc_hostlink_build(buf, sizeof(buf), 0, "RD", NULL, 4));  // text_len but null text
 
     // parse: a non-digit node, and FCS characters that are not hex.
     HostlinkFrame f;

@@ -519,7 +519,14 @@ if [[ $COVERAGE -eq 1 ]]; then
     _cov_out="${PROJECT_ROOT}/test/coverage.xml"
     # gcovr unions the per-env tracefiles and emits the report. Every env ran (the guard above
     # refuses anything less), so this measures all of src/ with nothing carried over.
-    gcovr --add-tracefile "coverage_reports/*.json" --sonarqube "$_cov_out"
+    #
+    # separate, not the default strict: a build-time knob can put two definitions of one function in
+    # one file (pc_base64_decode sits under #if PC_BASE64_SWAR and again in the #else), and envs that
+    # compile different arms report it at different lines. strict calls that a merge conflict and
+    # aborts the whole union. separate keeps one entry per definition, so each arm carries the
+    # coverage its own envs measured; the line-merging modes would fold two implementations into one
+    # number instead.
+    gcovr --add-tracefile "coverage_reports/*.json" --merge-mode-functions=separate --sonarqube "$_cov_out"
     rm -rf coverage_reports
     echo "Coverage written: $_cov_out"
 fi

@@ -42,6 +42,8 @@ typedef struct
 } pc_sha512_ctx;
 #endif
 
+PROTO_BEGIN_DECLS
+
 /** @brief Initialize a streaming SHA-512 context (@p ctx must not be NULL). */
 void pc_sha512_init(pc_sha512_ctx *ctx);
 
@@ -57,5 +59,7 @@ void pc_sha512_final(pc_sha512_ctx *ctx, uint8_t digest[PC_SHA512_DIGEST_LEN]);
 
 /** @brief One-shot SHA-512: hash @p len bytes of @p data into @p digest (64 bytes). */
 void pc_sha512(const uint8_t *data, size_t len, uint8_t digest[PC_SHA512_DIGEST_LEN]);
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_SHA512_H

@@ -53,7 +53,9 @@ def add_args(p) -> None:
         action="store_true",
         help="force every KEX/host-key/cipher/MAC the server advertises, one at a time (full interop matrix)",
     )
-    p.add_argument("--ssh", default="ssh", help="path to the ssh client (e.g. a locally built OpenSSH >= 9.9 for mlkem)")
+    p.add_argument(
+        "--ssh", default="ssh", help="path to the ssh client (e.g. a locally built OpenSSH >= 9.9 for mlkem)"
+    )
 
 
 NAME = "ssh"
@@ -119,9 +121,7 @@ def run(args) -> bool:
     # --- optional full matrix: force every algorithm the server advertises --------------------------
     if args.matrix:
         offer = _server_offer(trace)
-        pr.info(
-            "server advertises: kex=[{kex}] hostkey=[{hostkey}] cipher=[{cipher}] mac=[{mac}]".format(**offer)
-        )
+        pr.info("server advertises: kex=[{kex}] hostkey=[{hostkey}] cipher=[{cipher}] mac=[{mac}]".format(**offer))
         client_kex = set(_client_supported(ssh))
         for kex in offer["kex"].split(","):
             if kex in ("ext-info-s", "kex-strict-s-v00@openssh.com") or not kex:

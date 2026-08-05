@@ -78,6 +78,7 @@ def blank_block_comments(text):
     about protocol states ("ReadState -> RUN / STOP / CONFIG"). Read as code, those
     words look like bare enum members.
     """
+
     def _blank(m):
         return re.sub(r"[^\n]", " ", m.group(0))
 
@@ -135,18 +136,25 @@ def check_sketch_include_order():
                 continue
             p = os.path.join(base, f)
             rel = os.path.relpath(p, ROOT).replace(os.sep, "/")
-            incs = [(n, ln) for n, ln in
-                    enumerate(open(p, encoding="utf-8", errors="replace").read().split("\n"), 1)
-                    if _ANY_INCLUDE.match(ln)]
+            incs = [
+                (n, ln)
+                for n, ln in enumerate(open(p, encoding="utf-8", errors="replace").read().split("\n"), 1)
+                if _ANY_INCLUDE.match(ln)
+            ]
             if not incs:
                 continue
             if not any(_CORE_INCLUDE.match(ln) for _n, ln in incs):
                 out.append((rel, incs[0][0], 'sketch has no #include "protocore.h"', incs[0][1].strip()))
             elif not _CORE_INCLUDE.match(incs[0][1]):
-                out.append((rel, incs[0][0],
-                            'protocore.h must be the FIRST include (Arduino resolves the library by '
-                            'scanning includes in order; anything src/-relative above it cannot resolve)',
-                            incs[0][1].strip()))
+                out.append(
+                    (
+                        rel,
+                        incs[0][0],
+                        "protocore.h must be the FIRST include (Arduino resolves the library by "
+                        "scanning includes in order; anything src/-relative above it cannot resolve)",
+                        incs[0][1].strip(),
+                    )
+                )
     return out
 
 
@@ -167,8 +175,10 @@ def main():
     findings.extend(check_sketch_include_order())
 
     if findings:
-        print(f"check_examples: {len(findings)} problem(s) in "
-              f"{len({f[0] for f in findings})} file(s)\n", file=sys.stderr)
+        print(
+            f"check_examples: {len(findings)} problem(s) in " f"{len({f[0] for f in findings})} file(s)\n",
+            file=sys.stderr,
+        )
         for rel, n, why, src in findings[: (len(findings) if verbose else 40)]:
             print(f"  {rel}:{n}: {why}", file=sys.stderr)
             print(f"      {src[:100]}", file=sys.stderr)
@@ -178,8 +188,7 @@ def main():
         return 1
 
     n_files = sum(1 for _ in os.walk(EXAMPLES))
-    print(f"check_examples: OK - example code uses the library API "
-          f"({n_files} dirs scanned).")
+    print(f"check_examples: OK - example code uses the library API " f"({n_files} dirs scanned).")
     return 0
 
 

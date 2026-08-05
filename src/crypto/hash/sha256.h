@@ -49,6 +49,8 @@ typedef struct
 } pc_sha256_ctx;
 #endif
 
+PROTO_BEGIN_DECLS
+
 /** @brief Initialize a streaming SHA-256 context (@p ctx must not be NULL). */
 void pc_sha256_init(pc_sha256_ctx *ctx);
 
@@ -64,5 +66,7 @@ void pc_sha256_final(pc_sha256_ctx *ctx, uint8_t digest[PC_SHA256_DIGEST_LEN]);
 
 /** @brief One-shot SHA-256: hash @p len bytes of @p data into @p digest (32 bytes). */
 void pc_sha256(const uint8_t *data, size_t len, uint8_t digest[PC_SHA256_DIGEST_LEN]);
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_SHA256_H

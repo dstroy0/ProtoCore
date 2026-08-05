@@ -159,7 +159,6 @@ def build_block(link_prefix):
     )
 
 
-
 def check_flag_coverage():
     """Fail if a PC_ENABLE_* flag in the config header has no FEATURES.md entry
     (excluding the internal derived flags). Guards against a shipped feature silently

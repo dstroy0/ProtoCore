@@ -50,5 +50,7 @@ if info:
     print("\nnegotiated:", info[0], "| cipher:", info[1], "| group:", info[2])
 if rows:
     print("=== TLS handshake (ms) over %d runs ===" % len(rows))
-    print("min=%.1f  median=%.1f  mean=%.1f  max=%.1f"
-          % (min(rows), statistics.median(rows), statistics.mean(rows), max(rows)))
+    print(
+        "min=%.1f  median=%.1f  mean=%.1f  max=%.1f"
+        % (min(rows), statistics.median(rows), statistics.mean(rows), max(rows))
+    )

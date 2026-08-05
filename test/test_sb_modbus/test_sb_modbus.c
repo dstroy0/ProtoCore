@@ -47,8 +47,7 @@ void tearDown()
 void test_read_single_holding()
 {
     pc_modbus_set_holding_reg(10, 0xBEEF);
-    TEST_ASSERT_EQUAL_INT(
-        SB_OK, pc_sb_modbus_init(&g_ctx, loopback_txn, NULL, MODBUS_FC_READ_HOLDING_REGS, 1));
+    TEST_ASSERT_EQUAL_INT(SB_OK, pc_sb_modbus_init(&g_ctx, loopback_txn, NULL, MODBUS_FC_READ_HOLDING_REGS, 1));
     TEST_ASSERT_EQUAL_INT(SB_OK, pc_sb_modbus_driver(&g_drv, "plc", &g_ctx));
     TEST_ASSERT_EQUAL_INT(SB_OK, pc_southbound_register(&g_drv));
 
@@ -184,12 +183,9 @@ void test_write_bounds()
 // init rejects a null seam and a function code that is not a read (only 0x03 / 0x04 are valid).
 void test_init_rejects_bad_args()
 {
-    TEST_ASSERT_EQUAL_INT(SB_ERR_ARG,
-                          pc_sb_modbus_init(&g_ctx, NULL, NULL, MODBUS_FC_READ_HOLDING_REGS, 1));
-    TEST_ASSERT_EQUAL_INT(SB_ERR_ARG, pc_sb_modbus_init(&g_ctx, loopback_txn, NULL,
-                                                            MODBUS_FC_WRITE_SINGLE_REG, 1));
-    TEST_ASSERT_EQUAL_INT(SB_ERR_ARG, pc_sb_modbus_init(NULL, loopback_txn, NULL,
-                                                            MODBUS_FC_READ_HOLDING_REGS, 1));
+    TEST_ASSERT_EQUAL_INT(SB_ERR_ARG, pc_sb_modbus_init(&g_ctx, NULL, NULL, MODBUS_FC_READ_HOLDING_REGS, 1));
+    TEST_ASSERT_EQUAL_INT(SB_ERR_ARG, pc_sb_modbus_init(&g_ctx, loopback_txn, NULL, MODBUS_FC_WRITE_SINGLE_REG, 1));
+    TEST_ASSERT_EQUAL_INT(SB_ERR_ARG, pc_sb_modbus_init(NULL, loopback_txn, NULL, MODBUS_FC_READ_HOLDING_REGS, 1));
 }
 
 // Bounds: a register address past 16 bits, a zero-length block, and a block wider than one Modbus

@@ -7,7 +7,8 @@
  */
 
 #include "json.h"
-#include "mmgr/membuild.h" // pc_sb frame builder
+#include "mmgr/membuild.h"         // pc_sb frame builder
+#include "shared_primitives/hex.h" // PC_HEX_LOWER - the shared digit table
 #include "shared_primitives/numparse.h"
 #include <stdio.h>
 #include <string.h>
@@ -104,13 +105,12 @@ static void json_put_escaped(pc_json_writer *w, const char *s)
             if (c < 0x20)
             {
                 // Control char -> \u00XX
-                static const char hexd[] = "0123456789abcdef";
                 json_put(w, '\\');
                 json_put(w, 'u');
                 json_put(w, '0');
                 json_put(w, '0');
-                json_put(w, hexd[(c >> 4) & 0x0f]);
-                json_put(w, hexd[c & 0x0f]);
+                json_put(w, PC_HEX_LOWER[(c >> 4) & 0x0f]);
+                json_put(w, PC_HEX_LOWER[c & 0x0f]);
             }
             else
             {

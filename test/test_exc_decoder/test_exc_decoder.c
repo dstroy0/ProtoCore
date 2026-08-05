@@ -115,7 +115,7 @@ void test_exc_edge_guards(void)
     char buf[128];
     TEST_ASSERT_EQUAL_size_t(0, pc_exc_json(NULL, buf, sizeof(buf))); // null info
     TEST_ASSERT_EQUAL_size_t(0, pc_exc_json(&info, NULL, 128));       // null out
-    TEST_ASSERT_EQUAL_size_t(0, pc_exc_json(&info, buf, 0));             // zero cap
+    TEST_ASSERT_EQUAL_size_t(0, pc_exc_json(&info, buf, 0));          // zero cap
 
     // "PC" on the very first line (strncmp anchor, not the "\nPC" search).
     TEST_ASSERT_TRUE(pc_exc_parse("PC      : 0x400dfeed  PS : 0x1\n", &info));

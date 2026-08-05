@@ -29,8 +29,8 @@
 #include "crypto/mac/hmac_sha256.h"
 #include "crypto/mac/hmac_sha512.h"
 #include "crypto/mac/poly1305.h"
+#include "mmgr/secure.h"
 #include "network_drivers/tls/ssh_rsa.h"
-#include "server/mmgr/secure.h"
 
 // --- QUIC / DTLS 1.3 record + KDF crypto (guarded) ---
 #if PC_ENABLE_HTTP3 || PC_ENABLE_DTLS
@@ -196,11 +196,12 @@ static void crypto_bench_task(void *)
             uint8_t hp16[16] = {0}, blk[16] = {0}, mask[16];
             BENCH_BULK(
                 "  ^ hp ctx+block per record", 300, BULK, do {
-                    SecureScope s;
+                    size_t _m = pc_secure_mark();
                     pc_aes128 *h = pc_aes128_wants();
                     pc_aes128_init(h, hp16);
                     pc_aes128_encrypt_block(h, blk, mask);
                     pc_aes128_wipe(h);
+                    pc_secure_release(_m);
                 } while (0));
             // The block alone, against a context already keyed - what the code does now. The difference
             // between these two is what keeping the context actually buys; the block itself is required
@@ -215,11 +216,11 @@ static void crypto_bench_task(void *)
         {
             DtlsRecordKeys keys;
             uint8_t secret[32] = {0};
-            pc_dtls_record_keys_derive(&keys, DtlsCipher::AES_128_GCM_SHA256, 1, secret);
+            pc_dtls_record_keys_derive(&keys, DTLS_CIPHER_AES_128_GCM_SHA256, 1, secret);
             static uint8_t rec[BULK + 64];
             BENCH_BULK(
                 "dtls_record protect (DTLS1.3)", 300, BULK,
-                pc_dtls_ciphertext_protect(keys, 0, PC_DTLS_CT_APPLICATION_DATA, buf, BULK, rec, sizeof rec, NULL, 0));
+                pc_dtls_ciphertext_protect(&keys, 0, PC_DTLS_CT_APPLICATION_DATA, buf, BULK, rec, sizeof rec, NULL, 0));
         }
 #endif
 
@@ -229,7 +230,8 @@ static void crypto_bench_task(void *)
             uint8_t salt[20] = {0}, ikm[32] = {0}, prk[32], okm[32], secret[32] = {0};
             pc_hkdf_extract(salt, 20, ikm, 32, prk);
             BENCH_OP("quic_hkdf_extract", 2000, pc_hkdf_extract(salt, 20, ikm, 32, prk));
-            BENCH_OP("quic_hkdf_expand_label(16)", 2000, pc_hkdf_expand_label(prk, "quic key", okm, 16));
+            BENCH_OP("quic_hkdf_expand_label(16)", 2000,
+                     pc_hkdf_expand_label(prk, "quic key", okm, 16, PC_HKDF_LABEL_PREFIX));
             BENCH_OP("tls13_kdf_expand_label(16)", 2000, pc_tls13_kdf_expand_label(&TLS13_KDF, secret, "key", okm, 16));
         }
 #endif
@@ -363,14 +365,14 @@ static void crypto_bench_task(void *)
         if (rsa_loaded)
         {
             uint8_t msg[32] = {0}, sig[256];
-            int sr = ssh_rsa_sign(msg, 32, pc_rsa_hash::SHA256, sig);
+            int sr = ssh_rsa_sign(msg, 32, PC_RSA_HASH_SHA256, sig);
             if (sr == 0)
             {
-                BENCH_OP("ssh_rsa_2048_sign (SHA256)", 4, ssh_rsa_sign(msg, 32, pc_rsa_hash::SHA256, sig));
+                BENCH_OP("ssh_rsa_2048_sign (SHA256)", 4, ssh_rsa_sign(msg, 32, PC_RSA_HASH_SHA256, sig));
                 volatile int vr = 0;
                 BENCH_OP("ssh_rsa_2048_verify (SHA256)", 8,
                          vr = pc_rsa_verify(ssh_host_pubkey.n, ssh_host_pubkey.e_bytes, msg, 32, sig, 256,
-                                            pc_rsa_hash::SHA256));
+                                            PC_RSA_HASH_SHA256));
                 (void)vr;
             }
             else

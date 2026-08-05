@@ -228,18 +228,16 @@ void test_inflate_error_paths()
     TEST_ASSERT_EQUAL_INT(INFLATE_ERR_OVERFLOW,
                           inflate_raw(k_hello_in, sizeof(k_hello_in), out, 4, &out_len, g_scratch, sizeof(g_scratch)));
     // A stored block into a too-small buffer also overflows.
-    TEST_ASSERT_EQUAL_INT(INFLATE_ERR_OVERFLOW, inflate_raw(k_stored_in, sizeof(k_stored_in), out, 3,
-                                                                           &out_len, g_scratch, sizeof(g_scratch)));
+    TEST_ASSERT_EQUAL_INT(INFLATE_ERR_OVERFLOW, inflate_raw(k_stored_in, sizeof(k_stored_in), out, 3, &out_len,
+                                                            g_scratch, sizeof(g_scratch)));
     // Reserved block type (BTYPE = 11) is malformed.
     const uint8_t bad_btype[2] = {0x06, 0x00};
-    TEST_ASSERT_EQUAL_INT(
-        INFLATE_ERR_MALFORMED,
-        inflate_raw(bad_btype, sizeof(bad_btype), out, sizeof(out), &out_len, g_scratch, sizeof(g_scratch)));
+    TEST_ASSERT_EQUAL_INT(INFLATE_ERR_MALFORMED, inflate_raw(bad_btype, sizeof(bad_btype), out, sizeof(out), &out_len,
+                                                             g_scratch, sizeof(g_scratch)));
     // Stored block whose NLEN is not the ones-complement of LEN.
     const uint8_t bad_stored[5] = {0x01, 0x03, 0x00, 0x00, 0x00}; // BFINAL=1 BTYPE=00 LEN=3 NLEN=0
-    TEST_ASSERT_EQUAL_INT(
-        INFLATE_ERR_MALFORMED,
-        inflate_raw(bad_stored, sizeof(bad_stored), out, sizeof(out), &out_len, g_scratch, sizeof(g_scratch)));
+    TEST_ASSERT_EQUAL_INT(INFLATE_ERR_MALFORMED, inflate_raw(bad_stored, sizeof(bad_stored), out, sizeof(out), &out_len,
+                                                             g_scratch, sizeof(g_scratch)));
     // A stored block truncated before its LEN/NLEN.
     const uint8_t trunc_stored[1] = {0x00};
     TEST_ASSERT_TRUE(inflate_raw(trunc_stored, 1, out, sizeof(out), &out_len, g_scratch, sizeof(g_scratch)) !=
@@ -255,7 +253,7 @@ void test_malformed_deflate_blocks()
     uint8_t out[64];
     size_t out_len = 0;
 #define BAD(v)                                                                                                         \
-    TEST_ASSERT_EQUAL_INT(INFLATE_ERR_MALFORMED,                                                        \
+    TEST_ASSERT_EQUAL_INT(INFLATE_ERR_MALFORMED,                                                                       \
                           inflate_raw(v, sizeof(v), out, sizeof(out), &out_len, g_scratch, sizeof(g_scratch)))
     BAD(k_bad_lencode_286);
     BAD(k_bad_distcode_30);
@@ -285,8 +283,8 @@ void test_malformed_deflate_blocks()
     BAD(k_dyn_dist_singlecode);
 #undef BAD
     // A back-reference whose copy length overflows the remaining output buffer -> OVERFLOW.
-    TEST_ASSERT_EQUAL_INT(INFLATE_ERR_OVERFLOW, inflate_raw(k_repeat_in, sizeof(k_repeat_in), out, 4,
-                                                                           &out_len, g_scratch, sizeof(g_scratch)));
+    TEST_ASSERT_EQUAL_INT(INFLATE_ERR_OVERFLOW, inflate_raw(k_repeat_in, sizeof(k_repeat_in), out, 4, &out_len,
+                                                            g_scratch, sizeof(g_scratch)));
 }
 
 int main()

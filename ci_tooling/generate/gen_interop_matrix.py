@@ -37,11 +37,9 @@ def sh(*a):
 
 def main() -> int:
     peers = [p for p in sh("git", "ls-files", "test/servers/peers/*_peer.py").split() if p]
-    benches = [p for p in sh("git", "ls-files", "performance_benching").split()
-               if p.endswith("platformio.ini")]
+    benches = [p for p in sh("git", "ls-files", "performance_benching").split() if p.endswith("platformio.ini")]
     services = [p for p in sh("git", "ls-files", "src/services").split()]
-    modules = sorted({"/".join(p.split("/")[:4]) for p in services
-                      if len(p.split("/")) >= 5})
+    modules = sorted({"/".join(p.split("/")[:4]) for p in services if len(p.split("/")) >= 5})
 
     # Adversarial coverage has TWO halves and they are not interchangeable:
     #   attacks - targeted, protocol-aware exploits fired at a LIVE rig over the network
@@ -51,14 +49,12 @@ def main() -> int:
     pentest = os.path.join(ROOT, "penetration_testing/pc_pentest.py")
     attacks = 0
     if os.path.exists(pentest):
-        attacks = len(re.findall(
-            r"^@attack\(", open(pentest, encoding="utf-8", errors="replace").read(), re.M))
+        attacks = len(re.findall(r"^@attack\(", open(pentest, encoding="utf-8", errors="replace").read(), re.M))
 
     fuzzer = os.path.join(ROOT, "test/test_pentest/test_pentest.c")
     fuzz = 0
     if os.path.exists(fuzzer):
-        fuzz = len(re.findall(
-            r"\bRUN_TEST\s*\(", open(fuzzer, encoding="utf-8", errors="replace").read()))
+        fuzz = len(re.findall(r"\bRUN_TEST\s*\(", open(fuzzer, encoding="utf-8", errors="replace").read()))
 
     peer_names = sorted(os.path.basename(p)[: -len("_peer.py")] for p in peers)
 
@@ -73,8 +69,7 @@ def main() -> int:
         "",
         f"Interop peers cover **{len(peers)} of {len(modules)}** service modules. Not every module needs a"
         " third-party",
-        "peer - many are pure codecs with pinned spec vectors, and some need hardware the project does not"
-        " have -",
+        "peer - many are pure codecs with pinned spec vectors, and some need hardware the project does not" " have -",
         "but the ratio is the honest measure of how much is judged by something other than ourselves.",
         "",
         "**Peers:** " + ", ".join(f"`{n}`" for n in peer_names),

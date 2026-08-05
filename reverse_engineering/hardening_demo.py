@@ -83,15 +83,19 @@ def masking_story():
     masked_traces[:, share2_pos] += HAMMING_WEIGHT[mask] * gain
 
     guess1, corr1 = _recover(masked_traces, plaintexts)
-    print(f"    first-order CPA on masked traces: recovered={hex(guess1)} expected={hex(KEY)} "
-          f"|corr|={corr1:.4f} (masking should defeat this - low correlation, likely wrong key)")
+    print(
+        f"    first-order CPA on masked traces: recovered={hex(guess1)} expected={hex(KEY)} "
+        f"|corr|={corr1:.4f} (masking should defeat this - low correlation, likely wrong key)"
+    )
 
     hyp = generate_hamming_distance_hypotheses(plaintexts, TARGET_BYTE)
     second = np.abs(compute_second_order_cpa(masked_traces, hyp, poi_indices=[share1_pos, share2_pos]))
     guess2 = int(np.argmax(np.max(second, axis=1)))
     corr2 = float(second.max())
-    print(f"    second-order CPA (centered product of both shares): recovered={hex(guess2)} "
-          f"expected={hex(KEY)} |corr|={corr2:.4f}")
+    print(
+        f"    second-order CPA (centered product of both shares): recovered={hex(guess2)} "
+        f"expected={hex(KEY)} |corr|={corr2:.4f}"
+    )
     assert guess2 == KEY, "second-order CPA should recover the key despite the masking"
     assert corr2 > 3 * corr1, "second-order CPA should clearly outperform first-order CPA against masking"
     print("    OK - masking defeated first-order CPA; second-order CPA defeated masking\n")
@@ -119,14 +123,18 @@ def desync_story():
     jittered = np.array([np.roll(base[i], int(shifts[i])) for i in range(num_traces)])
 
     guess_naive, corr_naive = _recover(jittered, plaintexts)
-    print(f"    naive (fixed-position) CPA on jittered traces: recovered={hex(guess_naive)} "
-          f"expected={hex(KEY)} |corr|={corr_naive:.4f}")
+    print(
+        f"    naive (fixed-position) CPA on jittered traces: recovered={hex(guess_naive)} "
+        f"expected={hex(KEY)} |corr|={corr_naive:.4f}"
+    )
     assert guess_naive != KEY, "desync should be strong enough to defeat a naive fixed-position CPA"
 
     realigned = align_trace_jitter(jittered, jittered[0], max_shift=2 * shift_range + 5)
     guess_aligned, corr_aligned = _recover(realigned, plaintexts)
-    print(f"    after align_trace_jitter (locks onto the marker): recovered={hex(guess_aligned)} "
-          f"expected={hex(KEY)} |corr|={corr_aligned:.4f}")
+    print(
+        f"    after align_trace_jitter (locks onto the marker): recovered={hex(guess_aligned)} "
+        f"expected={hex(KEY)} |corr|={corr_aligned:.4f}"
+    )
     assert guess_aligned == KEY, "realignment should recover the key after undoing the desync"
     print("    OK - desync defeated naive CPA; realignment (on a strong shared marker) defeated the desync\n")
 

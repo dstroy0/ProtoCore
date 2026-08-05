@@ -41,7 +41,7 @@ TCP source (the proxy) - only the auth lockout follows the forwarded client.
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_AUTH_LOCKOUT=1 -DPC_ENABLE_FORWARDED_TRUST=1" \
+  --project-option="build_flags=-DPC_ENABLE_AUTH=1 -DPC_ENABLE_AUTH_LOCKOUT=1 -DPC_ENABLE_FORWARDED_TRUST=1" \
   --lib="." examples/L6-Presentation/ForwardedTrust/ForwardedTrust.ino
 ```
 

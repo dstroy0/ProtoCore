@@ -295,11 +295,12 @@ and `performance_benching/` keeps `.cpp`; neither is governed by this document.
 
 **One exception, and it is the same boundary section 1 already draws.** A `board_drivers/` adapter
 whose entire job is to wrap a C++ vendor API keeps `.cpp`, because the extension is what selects the
-compiler and the vendor type cannot be named from C at all. Today that is two files:
+compiler and the vendor type cannot be named from C at all. Today that is three files:
 
 | File                                          | The C++ it wraps                                          |
 | --------------------------------------------- | --------------------------------------------------------- |
 | `board_drivers/hal/esp/esp_mnt_fs.cpp`        | an Arduino `fs::FS`, turned into a `pc_mnt_backend`       |
+| `board_drivers/hal/esp/esp_nvs.cpp`           | an Arduino `Preferences` namespace, behind `nvs.h`        |
 | `board_drivers/physical/esp/physical_esp.cpp` | the Arduino `WiFi` and `ETH` objects, behind `physical.h` |
 
 The exception is narrow in exactly the way section 1's is. It covers what a driver must _consume_,

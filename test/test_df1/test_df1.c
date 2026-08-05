@@ -136,22 +136,19 @@ void test_parse_edges_and_guards()
     uint8_t bbuf[16];
 
     // build guards
-    TEST_ASSERT_EQUAL_size_t(0, pc_df1_build_frame(NULL, sizeof(bbuf), d, 2, DF1_CHECK_BCC)); // null buf
-    TEST_ASSERT_EQUAL_size_t(
-        0, pc_df1_build_frame(bbuf, sizeof(bbuf), NULL, 2, DF1_CHECK_BCC)); // len but null data
+    TEST_ASSERT_EQUAL_size_t(0, pc_df1_build_frame(NULL, sizeof(bbuf), d, 2, DF1_CHECK_BCC));    // null buf
+    TEST_ASSERT_EQUAL_size_t(0, pc_df1_build_frame(bbuf, sizeof(bbuf), NULL, 2, DF1_CHECK_BCC)); // len but null data
 
     // parse guards
     const uint8_t ok5[5] = {DF1_DLE, DF1_STX, DF1_DLE, DF1_ETX, 0x00};
     TEST_ASSERT_FALSE(pc_df1_parse_frame(NULL, 8, DF1_CHECK_BCC, out, sizeof(out), &out_len)); // null buf
     TEST_ASSERT_FALSE(pc_df1_parse_frame(ok5, sizeof(ok5), DF1_CHECK_BCC, NULL, 0, &out_len)); // null out
     const uint8_t two[2] = {DF1_DLE, DF1_STX};
-    TEST_ASSERT_FALSE(
-        pc_df1_parse_frame(two, sizeof(two), DF1_CHECK_BCC, out, sizeof(out), &out_len)); // too short
+    TEST_ASSERT_FALSE(pc_df1_parse_frame(two, sizeof(two), DF1_CHECK_BCC, out, sizeof(out), &out_len)); // too short
 
     // a DLE as the final octet (no following byte)
     const uint8_t dle_end[5] = {DF1_DLE, DF1_STX, 0x41, 0x42, DF1_DLE};
-    TEST_ASSERT_FALSE(
-        pc_df1_parse_frame(dle_end, sizeof(dle_end), DF1_CHECK_BCC, out, sizeof(out), &out_len));
+    TEST_ASSERT_FALSE(pc_df1_parse_frame(dle_end, sizeof(dle_end), DF1_CHECK_BCC, out, sizeof(out), &out_len));
 
     // a doubled DLE while the output buffer is already full (out_cap 0)
     uint8_t dframe[16];
@@ -161,8 +158,7 @@ void test_parse_edges_and_guards()
 
     // a DLE followed by an unexpected control symbol
     const uint8_t bad_ctrl[5] = {DF1_DLE, DF1_STX, DF1_DLE, 0x41, 0x00};
-    TEST_ASSERT_FALSE(
-        pc_df1_parse_frame(bad_ctrl, sizeof(bad_ctrl), DF1_CHECK_BCC, out, sizeof(out), &out_len));
+    TEST_ASSERT_FALSE(pc_df1_parse_frame(bad_ctrl, sizeof(bad_ctrl), DF1_CHECK_BCC, out, sizeof(out), &out_len));
 
     // data that never reaches a DLE ETX terminator
     const uint8_t no_end[5] = {DF1_DLE, DF1_STX, 0x41, 0x42, 0x43};
@@ -170,8 +166,7 @@ void test_parse_edges_and_guards()
 
     // CRC selected but fewer than 2 check octets follow the ETX
     const uint8_t crc_trunc[6] = {DF1_DLE, DF1_STX, 0x41, DF1_DLE, DF1_ETX, 0x00};
-    TEST_ASSERT_FALSE(
-        pc_df1_parse_frame(crc_trunc, sizeof(crc_trunc), DF1_CHECK_CRC, out, sizeof(out), &out_len));
+    TEST_ASSERT_FALSE(pc_df1_parse_frame(crc_trunc, sizeof(crc_trunc), DF1_CHECK_CRC, out, sizeof(out), &out_len));
 
     // a valid CRC frame with a corrupted CRC byte
     uint8_t cbuf[16];

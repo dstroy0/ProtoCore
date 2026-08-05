@@ -57,11 +57,19 @@ class Client:
                 md = (await _descs(c, sysf["MotionDevices"]))["MotionDevice"]
                 mdc = await _descs(c, md)
                 if structure:
-                    for v in ("Manufacturer", "Model", "ProductCode", "SerialNumber",
-                              "MotionDeviceCategory", "ParameterSet", "Axes"):
+                    for v in (
+                        "Manufacturer",
+                        "Model",
+                        "ProductCode",
+                        "SerialNumber",
+                        "MotionDeviceCategory",
+                        "ParameterSet",
+                        "Axes",
+                    ):
                         pr.check(f"MotionDevice.{v}", v in mdc, str(list(mdc)))
-                    pr.check("MotionDeviceCategory is Int32 enum",
-                             int(await mdc["MotionDeviceCategory"].read_value()) >= 0)
+                    pr.check(
+                        "MotionDeviceCategory is Int32 enum", int(await mdc["MotionDeviceCategory"].read_value()) >= 0
+                    )
                 axes = await _descs(c, mdc["Axes"])
                 if structure:
                     pr.check("Axes browse (>=1 Axis_k)", "Axis_1" in axes, str(list(axes)))
@@ -70,12 +78,15 @@ class Client:
                         pr.check(f"Axis_1.{v}", v in ax1, str(list(ax1)))
                     ctrl = (await _descs(c, sysf["Controllers"]))["Controller"]
                     sw = (await _descs(c, ctrl))["Software"]
-                    pr.check("Controller.Software.SoftwareRevision readable",
-                             isinstance(await (await _descs(c, sw))["SoftwareRevision"].read_value(), str))
+                    pr.check(
+                        "Controller.Software.SoftwareRevision readable",
+                        isinstance(await (await _descs(c, sw))["SoftwareRevision"].read_value(), str),
+                    )
                     ss = (await _descs(c, sysf["SafetyStates"]))["SafetyState"]
                     ssps = await _descs(c, (await _descs(c, ss))["ParameterSet"])
-                    pr.check("SafetyState.OperationalMode readable",
-                             int(await ssps["OperationalMode"].read_value()) >= 0)
+                    pr.check(
+                        "SafetyState.OperationalMode readable", int(await ssps["OperationalMode"].read_value()) >= 0
+                    )
                 ax1v = await _descs(c, axes["Axis_1"])
                 r["ax1"] = round(await ax1v["ActualPosition"].read_value(), 4)
                 if "Axis_3" in axes:
@@ -88,11 +99,13 @@ class Client:
                 s1 = await snapshot(True)
                 await asyncio.sleep(1.5)
                 s2 = await snapshot(False)
-                pr.check("Axis_1.ActualPosition tracks the sim", s1["ax1"] != s2["ax1"],
-                         f"{s1['ax1']} -> {s2['ax1']}")
+                pr.check("Axis_1.ActualPosition tracks the sim", s1["ax1"] != s2["ax1"], f"{s1['ax1']} -> {s2['ax1']}")
                 if "ax3" in s2:
-                    pr.check("Axis_3 distinct from Axis_1 (per-axis decode)", s2["ax3"] != s2["ax1"],
-                             f"ax1={s2['ax1']} ax3={s2['ax3']}")
+                    pr.check(
+                        "Axis_3 distinct from Axis_1 (per-axis decode)",
+                        s2["ax3"] != s2["ax1"],
+                        f"ax1={s2['ax1']} ax3={s2['ax3']}",
+                    )
             except Exception as exc:  # noqa: BLE001
                 pr.check("session completed", False, str(exc))
 

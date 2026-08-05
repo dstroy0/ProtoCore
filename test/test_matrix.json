@@ -2719,6 +2719,7 @@
       "src": [
         "+<services/storage/config_store/config_store.c>",
         "+<services/storage/config_io/config_io.c>",
+        "+<board_drivers/hal/host/host_nvs.c>",
         "+<mmgr/frame.c>"
       ],
       "tests": ["test_config_io"]
@@ -2844,6 +2845,7 @@
         "+<services/security/auth_lockout/auth_lockout.c>",
         "+<services/timing_position/time_source/time_source.c>",
         "+<services/storage/config_store/config_store.c>",
+        "+<board_drivers/hal/host/host_nvs.c>",
         "+<server/signaling/device_id.c>",
         "+<network_drivers/presentation/codec/inflate/inflate.c>",
         "+<network_drivers/presentation/codec/deflate/deflate.c>",

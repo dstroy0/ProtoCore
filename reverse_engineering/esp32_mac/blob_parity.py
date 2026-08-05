@@ -10,6 +10,7 @@ Symbol tables only: this reads names, not code.
 
 Usage:  python reverse_engineering/esp32_mac/blob_parity.py <repo-root>
 """
+
 import os
 import re
 import subprocess
@@ -39,17 +40,42 @@ def objdump_for(chip):
     return (p if os.path.exists(p) else None), "riscv"
 
 
-BLOBS = ["libphy.a", "libpp.a", "libnet80211.a", "libcore.a", "libespnow.a", "libmesh.a",
-         "libsmartconfig.a", "libwapi.a", "libbtbb.a"]
+BLOBS = [
+    "libphy.a",
+    "libpp.a",
+    "libnet80211.a",
+    "libcore.a",
+    "libespnow.a",
+    "libmesh.a",
+    "libsmartconfig.a",
+    "libwapi.a",
+    "libbtbb.a",
+]
 
 # The entry points a replacement radio driver has to stand in for. Parity on these decides whether
 # one bring-up path covers every die or each needs its own.
 WATCH = [
-    "ram_chip_i2c_writeReg", "ram_chip_i2c_readReg", "g_phyFuns", "phy_get_romfuncs",
-    "phy_i2c_init", "i2c_rfpll_init", "i2c_bbtop_init", "i2c_bias_init", "i2c_xtal_init",
-    "i2cmst_reg_init", "ram_rfpll_set_freq", "ram_set_pbus_mem", "bb_init", "agc_reg_init",
-    "bb_reg_init", "RFChannelSel", "phy_enter_critical", "phy_dis_hw_set_freq",
-    "register_chipv7_phy", "phy_close_rf", "chip_v7_set_chan",
+    "ram_chip_i2c_writeReg",
+    "ram_chip_i2c_readReg",
+    "g_phyFuns",
+    "phy_get_romfuncs",
+    "phy_i2c_init",
+    "i2c_rfpll_init",
+    "i2c_bbtop_init",
+    "i2c_bias_init",
+    "i2c_xtal_init",
+    "i2cmst_reg_init",
+    "ram_rfpll_set_freq",
+    "ram_set_pbus_mem",
+    "bb_init",
+    "agc_reg_init",
+    "bb_reg_init",
+    "RFChannelSel",
+    "phy_enter_critical",
+    "phy_dis_hw_set_freq",
+    "register_chipv7_phy",
+    "phy_close_rf",
+    "chip_v7_set_chan",
 ]
 
 SYM = re.compile(r"^([0-9a-f]{8})\s+(.{7})\s+(\S+)\s+([0-9a-f]{8})\s+(\S+)\s*$")
@@ -95,8 +121,8 @@ def scan(objdump, path):
 
 def main():
     repo = os.path.abspath(sys.argv[1])
-    per_chip = {}      # chip -> set of every defined symbol
-    per_undef = {}     # chip -> set of names the blobs import
+    per_chip = {}  # chip -> set of every defined symbol
+    per_undef = {}  # chip -> set of names the blobs import
     per_chip_lib = {}  # (chip, lib) -> (funcs, objs, undef, size) or None
     present = []
 
@@ -129,9 +155,11 @@ def main():
     # A die that ships no 802.11 MAC has nothing to be at parity with on the WiFi path: H2 is
     # 802.15.4 and BLE only. Intersecting across those collapses the answer to noise, so the
     # parity figures below are over the dies that carry both libpp and libnet80211.
-    wifi = [c for c in chips
-            if per_chip_lib.get((c, "libpp.a")) is not None
-            and per_chip_lib.get((c, "libnet80211.a")) is not None]
+    wifi = [
+        c
+        for c in chips
+        if per_chip_lib.get((c, "libpp.a")) is not None and per_chip_lib.get((c, "libnet80211.a")) is not None
+    ]
     non_wifi = [c for c in chips if c not in wifi]
     common = set.intersection(*(per_chip[c] for c in wifi)) if wifi else set()
     union = set.union(*(per_chip[c] for c in wifi)) if wifi else set()
@@ -158,8 +186,13 @@ def main():
     for chip, arch in present:
         doc.append(f"| `{chip}` | {arch} | {len(per_chip[chip])} |")
 
-    doc += ["", "## Which blobs each variant ships", "", "| Library | " + " | ".join(f"`{c}`" for c in chips) + " |",
-            "| --- | " + " | ".join("---" for _ in chips) + " |"]
+    doc += [
+        "",
+        "## Which blobs each variant ships",
+        "",
+        "| Library | " + " | ".join(f"`{c}`" for c in chips) + " |",
+        "| --- | " + " | ".join("---" for _ in chips) + " |",
+    ]
     for lib in BLOBS:
         cells = []
         for c in chips:
@@ -171,32 +204,43 @@ def main():
         "",
         f"## Parity: {len(common)} of {len(union)} symbols are on every WiFi die",
         "",
-        "Over the dies that ship both `libpp.a` and `libnet80211.a`: "
-        + ", ".join(f"`{c}`" for c in wifi) + ".",
+        "Over the dies that ship both `libpp.a` and `libnet80211.a`: " + ", ".join(f"`{c}`" for c in wifi) + ".",
         "",
     ]
     if non_wifi:
-        doc += ["Excluded, having no 802.11 MAC to be at parity with: "
-                + ", ".join(f"`{c}`" for c in non_wifi) + ".", ""]
+        doc += [
+            "Excluded, having no 802.11 MAC to be at parity with: " + ", ".join(f"`{c}`" for c in non_wifi) + ".",
+            "",
+        ]
     doc += ["| Chip | Total | Shared with all WiFi dies | Only on this one |", "| --- | ---: | ---: | ---: |"]
     for chip in wifi:
         others = set.union(*(per_chip[c] for c in wifi if c != chip)) if len(wifi) > 1 else set()
         doc.append(f"| `{chip}` | {len(per_chip[chip])} | {len(common)} | {len(per_chip[chip] - others)} |")
 
-    doc += ["", "## The entry points a replacement driver stands in for", "",
-            "`def` is defined by that variant's blobs, `imp` is imported by them and has to come",
-            "from somewhere else, and `-` is absent entirely.", "",
-            "| Symbol | " + " | ".join(f"`{c}`" for c in chips) + " |",
-            "| --- | " + " | ".join("---" for _ in chips) + " |"]
+    doc += [
+        "",
+        "## The entry points a replacement driver stands in for",
+        "",
+        "`def` is defined by that variant's blobs, `imp` is imported by them and has to come",
+        "from somewhere else, and `-` is absent entirely.",
+        "",
+        "| Symbol | " + " | ".join(f"`{c}`" for c in chips) + " |",
+        "| --- | " + " | ".join("---" for _ in chips) + " |",
+    ]
     for w in WATCH:
         cells = []
         for c in chips:
             cells.append("def" if w in per_chip[c] else ("imp" if w in per_undef[c] else "-"))
         doc.append(f"| `{w}` | " + " | ".join(cells) + " |")
 
-    doc += ["", "## What the blobs import on every variant", "",
-            "Symbols no variant's blobs define, so a replacement has to supply them. This is the",
-            "porting surface that is the same everywhere.", ""]
+    doc += [
+        "",
+        "## What the blobs import on every variant",
+        "",
+        "Symbols no variant's blobs define, so a replacement has to supply them. This is the",
+        "porting surface that is the same everywhere.",
+        "",
+    ]
     common_imp = set.intersection(*(per_undef[c] for c in wifi)) if wifi else set()
     doc += [f"{len(common_imp)} symbols.", "", "```"]
     doc += sorted(common_imp)
@@ -214,8 +258,7 @@ def main():
         doc += only
         doc += ["```", ""]
         if missing:
-            doc += [f"### Absent from `{chip}` but on every other variant", "",
-                    f"{len(missing)} symbols.", "", "```"]
+            doc += [f"### Absent from `{chip}` but on every other variant", "", f"{len(missing)} symbols.", "", "```"]
             doc += missing
             doc += ["```", ""]
 

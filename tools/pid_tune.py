@@ -22,6 +22,7 @@ hardware.
 Requires numpy (identification + sim) and, for plots, matplotlib. scipy is used
 for --autotune if present, else a coarse grid search is used.
 """
+
 import argparse
 import csv
 import sys
@@ -37,8 +38,7 @@ except ImportError:
 # the simulation matches what the device will actually do).
 # --------------------------------------------------------------------------------------
 class Pid:
-    def __init__(self, kp, ki, kd, kff=0.0, out_min=-1e30, out_max=1e30,
-                 integ_min=-1e30, integ_max=1e30, d_alpha=0.0):
+    def __init__(self, kp, ki, kd, kff=0.0, out_min=-1e30, out_max=1e30, integ_min=-1e30, integ_max=1e30, d_alpha=0.0):
         self.kp, self.ki, self.kd, self.kff = kp, ki, kd, kff
         self.out_min, self.out_max = out_min, out_max
         self.integ_min, self.integ_max = integ_min, integ_max
@@ -62,8 +62,7 @@ class Pid:
         deriv = 0.0
         if self.primed:
             deriv = -(measurement - self.prev_meas) / dt
-            self.d_filt = (self.d_filt + self.d_alpha * (deriv - self.d_filt)
-                           if self.d_alpha > 0.0 else deriv)
+            self.d_filt = self.d_filt + self.d_alpha * (deriv - self.d_filt) if self.d_alpha > 0.0 else deriv
         self.prev_meas = measurement
         self.primed = True
 
@@ -176,7 +175,7 @@ def cost(y, u, setpoint, dt):
     span = max(abs(final), 1e-6)
     overshoot = max(0.0, (np.max(y) - final) / span) if final >= 0 else max(0.0, (final - np.min(y)) / span)
     effort = float(np.sum(np.diff(u) ** 2)) * 1e-4
-    return ise + 50.0 * overshoot ** 2 + effort
+    return ise + 50.0 * overshoot**2 + effort
 
 
 # --------------------------------------------------------------------------------------
@@ -193,6 +192,7 @@ def load_log(path):
 
 def _load_binary(path):
     import struct
+
     with open(path, "rb") as f:
         raw = f.read()
     magic, ver, flags, _resv, dt, kp, ki, kd, kff, omin, omax = struct.unpack_from("<4sBBH7f", raw, 0)
@@ -249,8 +249,8 @@ def autotune(plant_ctor, setpoint, dt, base, out_min, out_max):
 
     try:
         from scipy.optimize import minimize
-        res = minimize(obj, x0, method="Nelder-Mead",
-                       options={"xatol": 1e-3, "fatol": 1e-4, "maxiter": 400})
+
+        res = minimize(obj, x0, method="Nelder-Mead", options={"xatol": 1e-3, "fatol": 1e-4, "maxiter": 400})
         best = np.maximum(res.x, 0.0)
     except ImportError:
         # coarse grid fallback around the base gains
@@ -291,19 +291,28 @@ def main():
     if meta:
         print("log header: " + "  ".join(f"{k}={v:g}" for k, v in meta.items()))
     if sat is not None and np.any(sat):
-        print(f"  {100.0 * np.mean(sat):.1f}% of samples had a saturated output "
-              f"(kept for plant ID - the logged output is the true plant input).")
+        print(
+            f"  {100.0 * np.mean(sat):.1f}% of samples had a saturated output "
+            f"(kept for plant ID - the logged output is the true plant input)."
+        )
 
     plant0 = ArxPlant.identify(meas, out, na=args.na, nb=args.nb)
     r2 = plant0.fit_quality(meas, out)
-    print(f"identified ARX plant  na={args.na} nb={args.nb}  a={np.round(plant0.a,4)} "
-          f"b={np.round(plant0.b,4)}  fit R^2={r2:.3f}  dt={dt:.4g}s")
+    print(
+        f"identified ARX plant  na={args.na} nb={args.nb}  a={np.round(plant0.a,4)} "
+        f"b={np.round(plant0.b,4)}  fit R^2={r2:.3f}  dt={dt:.4g}s"
+    )
     if r2 < 0.5:
         print("  ! low fit quality - log a run with more excitation (a step or chirp on the setpoint).")
 
     def plant_ctor():
-        return ArxPlant(plant0.a, plant0.b, plant0.nk, [meas[0]] * max(args.na, plant0.nk + args.nb - 1),
-                        [out[0]] * max(args.na, plant0.nk + args.nb - 1))
+        return ArxPlant(
+            plant0.a,
+            plant0.b,
+            plant0.nk,
+            [meas[0]] * max(args.na, plant0.nk + args.nb - 1),
+            [out[0]] * max(args.na, plant0.nk + args.nb - 1),
+        )
 
     # baseline gains + output limits: CLI overrides, else the log header, else sane defaults.
     kp0 = args.kp if args.kp is not None else meta.get("kp", 1.0)

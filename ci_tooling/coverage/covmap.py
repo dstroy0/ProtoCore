@@ -11,6 +11,7 @@ Local coverage-raising helper. Three sub-commands:
 The env table is parsed from platformio.ini, which is generated from
 test/test_matrix.json - so this stays in sync with the suite automatically.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -116,9 +117,7 @@ def load_cov(path: str) -> dict[str, list[tuple[int, int, int]]]:
         for l in f.findall("lineToCover"):
             b = l.get("branchesToCover")
             if b:
-                rows.append(
-                    (int(l.get("lineNumber")), int(b), int(l.get("coveredBranches", "0")))
-                )
+                rows.append((int(l.get("lineNumber")), int(b), int(l.get("coveredBranches", "0"))))
         out[f.get("path").replace("\\", "/")] = rows
     return out
 

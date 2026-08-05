@@ -23,8 +23,11 @@
 #define PROTOCORE_HMAC_SHA256_H
 
 #include "crypto/hash/sha256.h"
+#include "protocore_config.h" // the entry point: types.h for the widths and PROTO_BEGIN_DECLS
 #include <stddef.h>
 #include <stdint.h>
+
+PROTO_BEGIN_DECLS
 
 /** @brief HMAC-SHA2-256 output length in bytes. */
 #define PC_HMAC_SHA256_LEN 32
@@ -72,5 +75,7 @@ void pc_hmac_sha256_update(pc_hmac_sha256_ctx *ctx, const uint8_t *data, size_t 
 
 /** @brief Finalize and write the 32-byte MAC. */
 void pc_hmac_sha256_final(pc_hmac_sha256_ctx *ctx, uint8_t mac[PC_HMAC_SHA256_LEN]);
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_HMAC_SHA256_H

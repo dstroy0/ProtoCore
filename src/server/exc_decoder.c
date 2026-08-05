@@ -7,7 +7,8 @@
  */
 
 #include "server/exc_decoder.h"
-#include "mmgr/membuild.h" // pc_sb frame builder
+#include "mmgr/membuild.h"         // pc_sb frame builder
+#include "shared_primitives/hex.h" // PC_HEX_LOWER - the shared digit table
 
 #if PC_ENABLE_EXC_DECODER
 
@@ -95,10 +96,9 @@ static void put_json_str(pc_sb *b, const char *s)
 static void put_hex32(pc_sb *b, uint32_t v)
 {
     char t[13] = "\"0x00000000\"";
-    static const char *H = "0123456789abcdef";
     for (int i = 0; i < 8; i++)
     {
-        t[3 + i] = H[(v >> ((7 - i) * 4)) & 0xF];
+        t[3 + i] = PC_HEX_LOWER[(v >> ((7 - i) * 4)) & 0xF];
     }
     pc_sb_put(b, t);
 }
