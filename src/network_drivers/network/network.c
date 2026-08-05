@@ -3,17 +3,20 @@
 
 /**
  * @file network.c
- * @brief Layer 3 (Network) - IP routing and packet forwarding stub.
+ * @brief Layer 3 (Network) - IP routing and packet forwarding stub. See network.h.
  *
- * IPv4/IPv6 routing, DHCP, ARP, ICMP, and DNS resolution are all
- * transparent to this library - they run inside the lwIP stack.  This
- * function is provided as an architectural extension point for future
- * work such as static-route injection or custom ICMP handling.
+ * IPv4/IPv6 routing, DHCP, ARP, ICMP, and DNS resolution are all transparent to this library - they
+ * run inside the lwIP stack. This is the extension point for static-route injection or custom ICMP
+ * handling.
+ *
+ * The one symbol this file exports is @ref Network.
  */
 
 #include "network.h"
 
-void init_network_layer(void)
+static void init(void)
 {
     // No-op: lwIP owns all L3 (IP) operations.
 }
+
+const NetworkNs Network = {init};
