@@ -1875,6 +1875,45 @@
       ],
       "tests": ["test_sht3x"]
     },
+    "native_smbus": {
+      "desc": "SMBus 3.1 Packet Error Code (services/peripherals/smbus): the address byte with its direction\nbit, the PEC over a write transaction and over a read transaction (which spans both halves and\nthe repeated-start address), and that the checksum depends on the address and the direction as\nwell as the payload. The PEC comes from the shared CRC engine, so each vector is checked against\npc_crc(&PC_CRC8_SMBUS) directly rather than against a second implementation.",
+      "flags": ["-DPC_ENABLE_SMBUS=1"],
+      "src": [
+        "+<services/peripherals/smbus.c>",
+        "+<services/peripherals/bus_host.c>"
+      ],
+      "tests": ["test_smbus"]
+    },
+    "native_pmbus": {
+      "desc": "PMBus 1.3 numeric encodings (services/peripherals/pmbus): the VOUT_MODE format selector and its\n5-bit signed exponent, the LINEAR11 11-bit signed mantissa and 5-bit signed exponent with decode\nand round trip, LINEAR16 against an exponent the part reports separately, the DIRECT coefficient\nform, and that a value the exponent pushes out of an int32 of micro-units is refused rather than\nwrapped.",
+      "flags": ["-DPC_ENABLE_SMBUS=1", "-DPC_ENABLE_PMBUS=1"],
+      "src": [
+        "+<services/peripherals/pmbus.c>",
+        "+<services/peripherals/smbus.c>",
+        "+<services/peripherals/bus_host.c>"
+      ],
+      "tests": ["test_pmbus"]
+    },
+    "native_bus_wire": {
+      "desc": "End to end from the host harness through the library: a real peripheral driver is called, it\ngoes through the real I2C / SPI bus owner, and the bytes it put on the wire are asserted. Covers\nthe SHT3x measurement command and its CRC-checked reply, the PCA9685 five-byte channel write,\nthe INA219 big-endian register order, the RTC register-pointer-then-burst read and its write,\nSMBus with and without the PEC, the little-endian SMBus word, a full bus scan, and that a device\nthat does not acknowledge makes the driver report failure.",
+      "flags": [
+        "-DPC_ENABLE_SHT3X=1",
+        "-DPC_ENABLE_PCA9685=1",
+        "-DPC_ENABLE_INA219=1",
+        "-DPC_ENABLE_RTC=1",
+        "-DPC_ENABLE_SMBUS=1"
+      ],
+      "src": [
+        "+<services/peripherals/bus_host.c>",
+        "+<services/peripherals/sht3x/sht3x.c>",
+        "+<services/peripherals/pca9685/pca9685.c>",
+        "+<services/peripherals/ina219/ina219.c>",
+        "+<services/peripherals/rtc/rtc.c>",
+        "+<services/peripherals/smbus.c>",
+        "+<server/clock/clock.c>"
+      ],
+      "tests": ["test_bus_wire"]
+    },
     "native_pca9685": {
       "desc": "PCA9685 PWM/servo codec (services/peripherals/pca9685): the PRESCALE computation from a PWM\nfrequency (with clamping), the per-channel register address, the servo pulse-width -> 12-bit\ncount conversion (with clamping), and the 5-byte channel PWM write encoder (including the\nfull-on/off flag). Pure - the I2C writes are ESP32-only.",
       "flags": ["-DPC_ENABLE_PCA9685=1"],

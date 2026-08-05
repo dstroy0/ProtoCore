@@ -37,6 +37,7 @@
 
 #include "board_drivers/board_profiles/pc_platform.h"
 #include "protocore_config.h"
+#include "services/peripherals/bus_host.h" // host builds record the wire instead of driving it
 
 /** @brief Bus clock for the shared peripheral bus; 1 MHz is safe on every part on it. */
 #ifndef PC_SPI_HZ
@@ -168,59 +169,44 @@ PC_INLINE proto_bool pc_spi_begin_on(uint8_t host, int mosi, int miso, int sclk,
     (void)sclk;
     (void)quadwp;
     (void)quadhd;
-    return PROTO_FALSE;
+    return PROTO_TRUE;
 }
 
 PC_INLINE proto_bool pc_spi_begin(void)
 {
-    return PROTO_FALSE;
+    return PROTO_TRUE;
 }
 
+// SPI clocks both directions at once, so a transfer that names both buffers records the outgoing
+// span and fills the incoming one from what a test queued.
 PC_INLINE proto_bool pc_spi_txn_on(uint8_t host, uint32_t hz, uint8_t bit_order, uint8_t mode, const uint8_t *tx,
                                    uint8_t *rx, size_t len)
 {
-    (void)host;
     (void)hz;
     (void)bit_order;
     (void)mode;
-    (void)tx;
-    (void)rx;
-    (void)len;
-    return PROTO_FALSE;
+    return pc_bus_host_write_read(PC_BUS_HOST_SPI, host, tx, tx != NULL ? len : 0u, rx, rx != NULL ? len : 0u) != 0;
 }
 
 PC_INLINE proto_bool pc_spi_txn_at(uint32_t hz, uint8_t bit_order, uint8_t mode, const uint8_t *tx, uint8_t *rx,
                                    size_t len)
 {
-    (void)hz;
-    (void)bit_order;
-    (void)mode;
-    (void)tx;
-    (void)rx;
-    (void)len;
-    return PROTO_FALSE;
+    return pc_spi_txn_on((uint8_t)PC_SPI_HOST, hz, bit_order, mode, tx, rx, len);
 }
 
 PC_INLINE proto_bool pc_spi_txn(const uint8_t *tx, uint8_t *rx, size_t len)
 {
-    (void)tx;
-    (void)rx;
-    (void)len;
-    return PROTO_FALSE;
+    return pc_spi_txn_at(PC_SPI_HZ, PC_SPI_MSBFIRST, (uint8_t)PC_SPI_MODE, tx, rx, len);
 }
 
 PC_INLINE proto_bool pc_spi_write(const uint8_t *tx, size_t len)
 {
-    (void)tx;
-    (void)len;
-    return PROTO_FALSE;
+    return pc_spi_txn(tx, NULL, len);
 }
 
 PC_INLINE proto_bool pc_spi_read(uint8_t *rx, size_t len)
 {
-    (void)rx;
-    (void)len;
-    return PROTO_FALSE;
+    return pc_spi_txn(NULL, rx, len);
 }
 
 PC_INLINE proto_bool pc_spi_txn_ext_on(uint8_t host, uint32_t hz, uint8_t bit_order, uint8_t mode, uint16_t cmd,

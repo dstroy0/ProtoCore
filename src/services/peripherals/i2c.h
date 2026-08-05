@@ -31,6 +31,7 @@
 
 #include "board_drivers/board_profiles/pc_platform.h"
 #include "protocore_config.h"
+#include "services/peripherals/bus_host.h" // host builds record the wire instead of driving it
 
 /** @brief Bus clock for the shared peripheral bus; 100 kHz standard mode. */
 #ifndef PC_I2C_HZ
@@ -185,7 +186,7 @@ PC_INLINE proto_bool pc_i2c_recover(void)
     return pc_i2c_recover_on((uint8_t)PC_I2C_BUS, (int)PC_I2C_SDA_PIN, (int)PC_I2C_SCL_PIN);
 }
 
-#else // host build: no bus
+#else // host build: no controller, so the transfers are recorded for a test to assert
 
 PC_INLINE proto_bool pc_i2c_begin_on(uint8_t bus, int sda, int scl, uint32_t hz)
 {
@@ -193,124 +194,100 @@ PC_INLINE proto_bool pc_i2c_begin_on(uint8_t bus, int sda, int scl, uint32_t hz)
     (void)sda;
     (void)scl;
     (void)hz;
-    return PROTO_FALSE;
+    return PROTO_TRUE;
 }
 
 PC_INLINE proto_bool pc_i2c_begin(void)
 {
-    return PROTO_FALSE;
+    return PROTO_TRUE;
 }
 
 PC_INLINE proto_bool pc_i2c_write_on(uint8_t bus, uint16_t addr, const uint8_t *buf, size_t len)
 {
     (void)bus;
-    (void)addr;
-    (void)buf;
-    (void)len;
-    return PROTO_FALSE;
+    return pc_bus_host_write(PC_BUS_HOST_I2C, addr, buf, len) != 0;
 }
 
 PC_INLINE proto_bool pc_i2c_write(uint16_t addr, const uint8_t *buf, size_t len)
 {
-    (void)addr;
-    (void)buf;
-    (void)len;
-    return PROTO_FALSE;
+    return pc_i2c_write_on((uint8_t)PC_I2C_BUS, addr, buf, len);
 }
 
 PC_INLINE proto_bool pc_i2c_read_on(uint8_t bus, uint16_t addr, uint8_t *buf, size_t len)
 {
     (void)bus;
-    (void)addr;
-    (void)buf;
-    (void)len;
-    return PROTO_FALSE;
+    return pc_bus_host_read(PC_BUS_HOST_I2C, addr, buf, len) != 0;
 }
 
 PC_INLINE proto_bool pc_i2c_read(uint16_t addr, uint8_t *buf, size_t len)
 {
-    (void)addr;
-    (void)buf;
-    (void)len;
-    return PROTO_FALSE;
+    return pc_i2c_read_on((uint8_t)PC_I2C_BUS, addr, buf, len);
 }
 
 PC_INLINE proto_bool pc_i2c_write_read_on(uint8_t bus, uint16_t addr, const uint8_t *w, size_t wlen, uint8_t *r,
                                           size_t rlen)
 {
     (void)bus;
-    (void)addr;
-    (void)w;
-    (void)wlen;
-    (void)r;
-    (void)rlen;
-    return PROTO_FALSE;
+    return pc_bus_host_write_read(PC_BUS_HOST_I2C, addr, w, wlen, r, rlen) != 0;
 }
 
 PC_INLINE proto_bool pc_i2c_write_read(uint16_t addr, const uint8_t *w, size_t wlen, uint8_t *r, size_t rlen)
 {
-    (void)addr;
-    (void)w;
-    (void)wlen;
-    (void)r;
-    (void)rlen;
-    return PROTO_FALSE;
+    return pc_i2c_write_read_on((uint8_t)PC_I2C_BUS, addr, w, wlen, r, rlen);
 }
 
 PC_INLINE proto_bool pc_i2c_set_clock_on(uint8_t bus, uint32_t hz)
 {
     (void)bus;
     (void)hz;
-    return PROTO_FALSE;
+    return PROTO_TRUE;
 }
 
 PC_INLINE proto_bool pc_i2c_set_clock(uint32_t hz)
 {
     (void)hz;
-    return PROTO_FALSE;
+    return PROTO_TRUE;
 }
 
+// A probe is an address cycle with no payload, which the capture records as a zero-length write.
 PC_INLINE proto_bool pc_i2c_probe_on(uint8_t bus, uint16_t addr)
 {
     (void)bus;
-    (void)addr;
-    return PROTO_FALSE;
+    return pc_bus_host_write(PC_BUS_HOST_I2C, addr, NULL, 0) != 0;
 }
 
 PC_INLINE proto_bool pc_i2c_probe(uint16_t addr)
 {
-    (void)addr;
-    return PROTO_FALSE;
+    return pc_i2c_probe_on((uint8_t)PC_I2C_BUS, addr);
 }
 
 PC_INLINE size_t pc_i2c_scan_on(uint8_t bus, uint8_t *out, size_t cap)
 {
-    (void)bus;
-    (void)out;
-    (void)cap;
-    return 0;
+    size_t n = 0;
+    for (uint16_t a = PC_I2C_SCAN_FIRST; a <= PC_I2C_SCAN_LAST && n < cap; a++)
+    {
+        if (pc_i2c_probe_on(bus, a))
+        {
+            out[n] = (uint8_t)a;
+            n++;
+        }
+    }
+    return n;
 }
 
 PC_INLINE size_t pc_i2c_scan(uint8_t *out, size_t cap)
 {
-    (void)out;
-    (void)cap;
-    return 0;
+    return pc_i2c_scan_on((uint8_t)PC_I2C_BUS, out, cap);
 }
 
 PC_INLINE proto_bool pc_i2c_general_call_on(uint8_t bus, const uint8_t *buf, size_t len)
 {
-    (void)bus;
-    (void)buf;
-    (void)len;
-    return PROTO_FALSE;
+    return pc_i2c_write_on(bus, PC_I2C_GENERAL_CALL, buf, len);
 }
 
 PC_INLINE proto_bool pc_i2c_general_call(const uint8_t *buf, size_t len)
 {
-    (void)buf;
-    (void)len;
-    return PROTO_FALSE;
+    return pc_i2c_general_call_on((uint8_t)PC_I2C_BUS, buf, len);
 }
 
 PC_INLINE proto_bool pc_i2c_recover_on(uint8_t bus, int sda, int scl)
