@@ -219,7 +219,7 @@ static void crypto_bench_task(void *)
             static uint8_t rec[BULK + 64];
             BENCH_BULK(
                 "dtls_record protect (DTLS1.3)", 300, BULK,
-                pc_dtls_ciphertext_protect(keys, 0, PC_DTLS_CT_APPLICATION_DATA, buf, BULK, rec, sizeof rec, NULL, 0));
+                pc_dtls_ciphertext_protect(&keys, 0, PC_DTLS_CT_APPLICATION_DATA, buf, BULK, rec, sizeof rec, NULL, 0));
         }
 #endif
 
