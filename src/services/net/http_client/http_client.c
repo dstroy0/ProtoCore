@@ -424,7 +424,7 @@ static int http_request(const char *method, const char *url, const char *content
         return (int)HTTP_CLIENT_ERR_URL;
     }
 
-    uint32_t deadline = millis() + PC_HTTP_CLIENT_TIMEOUT_MS;
+    uint32_t deadline = pc_millis() + PC_HTTP_CLIENT_TIMEOUT_MS;
 
     // Open the connection (DNS + connect) via the shared client transport.
     s_http.cid = pc_client_open(host, port, PC_HTTP_CLIENT_TIMEOUT_MS);
@@ -466,7 +466,7 @@ static int http_request(const char *method, const char *url, const char *content
             s_http.cid = -1;
             return (int)HTTP_CLIENT_ERR_SEND;
         }
-        while ((int32_t)(deadline - millis()) > 0)
+        while ((int32_t)(deadline - pc_millis()) > 0)
         {
             size_t n = pc_client_read(s_http.cid, s_http.rx + pc_resp_len, sizeof(s_http.rx) - pc_resp_len);
             pc_resp_len += n;

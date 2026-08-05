@@ -112,7 +112,7 @@ void regen_digest_secret(void)
         memcpy(seed + i * 4, &r, 4);
     }
     uint32_t c = counter;
-    uint32_t t = (uint32_t)millis();
+    uint32_t t = (uint32_t)pc_millis();
     memcpy(seed + 16, &c, 4);
     memcpy(seed + 20, &t, 4);
     uint8_t d[PC_SHA256_DIGEST_LEN];

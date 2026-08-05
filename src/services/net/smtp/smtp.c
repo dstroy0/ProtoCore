@@ -533,7 +533,7 @@ static int cl_send(void *ctx, const uint8_t *data, size_t len)
 static int cl_recv(void *ctx, uint8_t *buf, size_t cap)
 {
     SmtpXport *x = (SmtpXport *)ctx;
-    while ((int32_t)(x->deadline - millis()) > 0)
+    while ((int32_t)(x->deadline - pc_millis()) > 0)
     {
         size_t n = pc_client_read(x->cid, buf, cap);
         if (n > 0)
@@ -585,7 +585,7 @@ static int tls_send(void *ctx, const uint8_t *data, size_t len)
 static int tls_recv(void *ctx, uint8_t *buf, size_t cap)
 {
     SmtpXport *x = (SmtpXport *)ctx;
-    while ((int32_t)(x->deadline - millis()) > 0)
+    while ((int32_t)(x->deadline - pc_millis()) > 0)
     {
         int n = pc_tls_client_session_read(buf, cap);
         if (n > 0)
@@ -638,9 +638,9 @@ static proto_bool xp_starttls(void *ctx)
     // Fresh budget: the deadline carried here was set at connect time and has already funded the
     // greeting, EHLO and STARTTLS round trips. Reusing whatever is left of it can abandon the
     // handshake before the ClientHello even goes out, which the server sees as a silent hang.
-    x->deadline = millis() + PC_SMTP_TIMEOUT_MS;
+    x->deadline = pc_millis() + PC_SMTP_TIMEOUT_MS;
     int h;
-    while ((h = pc_tls_client_session_handshake()) == 0 && (int32_t)(x->deadline - millis()) > 0)
+    while ((h = pc_tls_client_session_handshake()) == 0 && (int32_t)(x->deadline - pc_millis()) > 0)
     {
         pcdelay(5);
     }
@@ -670,7 +670,7 @@ SmtpResult smtp_send(const SmtpConfig *cfg, const SmtpMessage *msg)
     {
         return SMTP_ERR_CONNECT;
     }
-    x.deadline = millis() + PC_SMTP_TIMEOUT_MS;
+    x.deadline = pc_millis() + PC_SMTP_TIMEOUT_MS;
     x.host = cfg->host;
     x.tls_active = PROTO_FALSE;
 #if PC_ENABLE_SMTP_TLS
@@ -687,7 +687,7 @@ SmtpResult smtp_send(const SmtpConfig *cfg, const SmtpMessage *msg)
             return SMTP_ERR_TLS;
         }
         int h;
-        while ((h = pc_tls_client_session_handshake()) == 0 && (int32_t)(x.deadline - millis()) > 0)
+        while ((h = pc_tls_client_session_handshake()) == 0 && (int32_t)(x.deadline - pc_millis()) > 0)
         {
             pcdelay(5);
         }

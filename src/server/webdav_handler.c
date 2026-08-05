@@ -646,7 +646,7 @@ void serve_dav_request(uint8_t slot_id, HttpReq *req, const Route *r)
             // to Depth: infinity when the header is absent (RFC 4918 §9.10.3).
             shared = req->body_len && dav_body_has(req, "shared");
             depth_inf = pc_webdav_depth(http_get_header(req, "Depth"), PC_DAV_DEPTH_INFINITY) != 0;
-            unsigned long tok = (unsigned long)millis();
+            unsigned long tok = (unsigned long)pc_millis();
 #if PROTOCORE_HOT
             tok ^= (unsigned long)pc_platform_rand_u32();
 #endif

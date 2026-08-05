@@ -628,7 +628,7 @@ static proto_bool mq_tx(const uint8_t *data, size_t len)
         ok = mq_tx_plain(data, len);
     if (ok)
     {
-        s_mqtt.last_tx_ms = millis();
+        s_mqtt.last_tx_ms = pc_millis();
     }
     return ok;
 }
@@ -763,7 +763,7 @@ static void handle_packet(uint8_t type, uint8_t flags, const uint8_t *body, uint
         if (s >= 0)
         {
             s_mqtt.inflight[s].state = 2;
-            s_mqtt.inflight[s].sent_ms = millis();
+            s_mqtt.inflight[s].sent_ms = pc_millis();
         }
         size_t n = pc_mqtt_build_ack(s_mqtt.tx, sizeof(s_mqtt.tx), MQTT_PUBREL, pid);
         mq_tx(s_mqtt.tx, n);
@@ -863,7 +863,7 @@ proto_bool pc_mqtt_connect(const char *host, uint16_t port, proto_bool use_tls, 
     s_mqtt.keepalive_s = opts->keepalive_s;
     s_mqtt.use_tls = use_tls;
 
-    uint32_t deadline = millis() + 8000;
+    uint32_t deadline = pc_millis() + 8000;
 
     // Open the TCP connection (DNS + connect) via the shared client transport.
     s_mqtt.cid = pc_client_open(host, port, 8000);
@@ -881,7 +881,7 @@ proto_bool pc_mqtt_connect(const char *host, uint16_t port, proto_bool use_tls, 
             return PROTO_FALSE;
         }
         int h;
-        while ((h = pc_tls_client_session_handshake()) == 0 && !s_mqtt.closed && (int32_t)(deadline - millis()) > 0)
+        while ((h = pc_tls_client_session_handshake()) == 0 && !s_mqtt.closed && (int32_t)(deadline - pc_millis()) > 0)
         {
             pcdelay(5);
         }
@@ -902,7 +902,7 @@ proto_bool pc_mqtt_connect(const char *host, uint16_t port, proto_bool use_tls, 
     }
 
     // Wait for CONNACK.
-    while (!s_mqtt.mqtt_up && s_mqtt.connack_code < 0 && !s_mqtt.closed && (int32_t)(deadline - millis()) > 0)
+    while (!s_mqtt.mqtt_up && s_mqtt.connack_code < 0 && !s_mqtt.closed && (int32_t)(deadline - pc_millis()) > 0)
     {
         process_rx();
         pcdelay(5);
@@ -912,7 +912,7 @@ proto_bool pc_mqtt_connect(const char *host, uint16_t port, proto_bool use_tls, 
         mq_close();
         return PROTO_FALSE;
     }
-    s_mqtt.last_tx_ms = millis();
+    s_mqtt.last_tx_ms = pc_millis();
     return PROTO_TRUE;
 }
 
@@ -954,7 +954,7 @@ proto_bool pc_mqtt_publish(const char *topic, const uint8_t *payload, size_t len
     s_mqtt.inflight[slot].pid = pid;
     s_mqtt.inflight[slot].state = 1;
     s_mqtt.inflight[slot].len = (uint16_t)n;
-    s_mqtt.inflight[slot].sent_ms = millis();
+    s_mqtt.inflight[slot].sent_ms = pc_millis();
     return mq_tx(s_mqtt.inflight[slot].pkt, n);
 }
 
@@ -991,7 +991,7 @@ proto_bool pc_mqtt_loop()
         return PROTO_FALSE;
     }
 
-    uint32_t now = millis();
+    uint32_t now = pc_millis();
 
     // Keep-alive: send PINGREQ when idle; drop the link if no PINGRESP comes back.
     if (s_mqtt.keepalive_s)

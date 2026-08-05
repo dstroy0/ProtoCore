@@ -21,6 +21,7 @@
 #include <string.h>
 #if PC_ENABLE_METRICS || PC_ENABLE_STATS
 #include "network_drivers/application/web_assets.h" // PC_STATS_JSON / PC_METRICS_PROM (generated)
+#include "server/clock/clock.h"                     // pc_millis: the library clock, not the platform's
 
 // Render @p v as decimal into the fixed field @p dst. Both exposition snapshots below fill a
 // dozen of these. Unlike snprintf, pc_sb_finish() does NOT terminate when the value would not
@@ -639,7 +640,7 @@ void stats(uint8_t slot_id)
 {
     int active = pc_conn_active_count();
 
-    unsigned long up = millis();
+    unsigned long up = pc_millis();
 #if PROTOCORE_HOT
     uint32_t heap = ESP.getFreeHeap();
 #else
@@ -744,7 +745,7 @@ void metrics(uint8_t slot_id)
 {
     int active = pc_conn_active_count();
 
-    unsigned long up = millis();
+    unsigned long up = pc_millis();
 #if PROTOCORE_HOT
     uint32_t heap = ESP.getFreeHeap();
     uint32_t min_heap = ESP.getMinFreeHeap();

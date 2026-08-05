@@ -12,6 +12,7 @@
 
 #include "mmgr/frame.h" // the one frame engine
 #include "protocore.h"
+#include "server/clock/clock.h"     // pc_millis: the library clock, not the platform's
 #include "shared_primitives/mime.h" // PC_MIME_TEXT_PLAIN
 #include <stdio.h>
 
@@ -76,7 +77,7 @@ void enable_rate_limit(uint16_t max_requests, uint32_t window_ms)
 {
     s_mw.rl_max = max_requests;
     s_mw.rl_window_ms = window_ms;
-    s_mw.rl_window_start = millis();
+    s_mw.rl_window_start = pc_millis();
     s_mw.rl_count = 0;
 }
 
@@ -89,7 +90,7 @@ proto_bool rate_limit_check(uint8_t slot_id)
         return PROTO_FALSE; // disabled
     }
 
-    uint32_t now = millis();
+    uint32_t now = pc_millis();
     if ((uint32_t)(now - s_mw.rl_window_start) >= s_mw.rl_window_ms)
     {
         s_mw.rl_window_start = now; // new window

@@ -568,7 +568,7 @@ proto_bool ws_client_connect(const char *host, uint16_t port, proto_bool use_tls
     s_wsc.msg_len = 0;
     s_wsc.use_tls = use_tls;
 
-    uint32_t deadline = millis() + 8000;
+    uint32_t deadline = pc_millis() + 8000;
 
     // Open the TCP connection (DNS + connect) via the shared client transport.
     s_wsc.cid = pc_client_open(host, port, 8000);
@@ -588,7 +588,7 @@ proto_bool ws_client_connect(const char *host, uint16_t port, proto_bool use_tls
             return PROTO_FALSE;
         }
         int h;
-        while ((h = pc_tls_client_session_handshake()) == 0 && !s_wsc.closed && (int32_t)(deadline - millis()) > 0)
+        while ((h = pc_tls_client_session_handshake()) == 0 && !s_wsc.closed && (int32_t)(deadline - pc_millis()) > 0)
         {
             pcdelay(5);
         }
@@ -621,7 +621,7 @@ proto_bool ws_client_connect(const char *host, uint16_t port, proto_bool use_tls
     uint8_t hs[512];
     size_t hl = 0;
     proto_bool done = PROTO_FALSE;
-    while (!done && !s_wsc.closed && (int32_t)(deadline - millis()) > 0)
+    while (!done && !s_wsc.closed && (int32_t)(deadline - pc_millis()) > 0)
     {
 #if PC_ENABLE_WS_CLIENT_TLS
         if (s_wsc.use_tls)
