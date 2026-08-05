@@ -28,7 +28,7 @@ void test_stay_when_link_strong()
     memcpy(nb[0].bssid, AP_A, 6);
     memcpy(nb[1].bssid, AP_B, 6);
     pc_roam_decision d;
-    pc_roam_decide(CUR, -50, nb, 2, NULL, &POLICY, &d);
+    Roam.decide(CUR, -50, nb, 2, NULL, &POLICY, &d);
     TEST_ASSERT_FALSE(d.roam);
     TEST_ASSERT_EQUAL(PC_ROAM_NONE, d.reason);
 }
@@ -40,7 +40,7 @@ void test_roam_on_low_rssi_to_strongest()
     memcpy(nb[0].bssid, AP_A, 6);
     memcpy(nb[1].bssid, AP_B, 6);
     pc_roam_decision d;
-    pc_roam_decide(CUR, -78, nb, 2, NULL, &POLICY, &d);
+    Roam.decide(CUR, -78, nb, 2, NULL, &POLICY, &d);
     TEST_ASSERT_TRUE(d.roam);
     TEST_ASSERT_EQUAL(PC_ROAM_LOW_RSSI, d.reason);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(AP_A, d.target_bssid, 6);
@@ -53,7 +53,7 @@ void test_hysteresis_blocks_marginal_roam()
     pc_roam_neighbor nb[1] = {{{0}, 6, -74}};
     memcpy(nb[0].bssid, AP_A, 6);
     pc_roam_decision d;
-    pc_roam_decide(CUR, -78, nb, 1, NULL, &POLICY, &d);
+    Roam.decide(CUR, -78, nb, 1, NULL, &POLICY, &d);
     TEST_ASSERT_FALSE(d.roam);
 }
 
@@ -72,14 +72,14 @@ void test_btm_imminent_forces_roam()
     // A strong current link (-45) would normally stay, but disassoc-imminent forces the roam to the
     // preferred AP_A.
     pc_roam_decision d;
-    pc_roam_decide(CUR, -45, nb, 2, &btm, &POLICY, &d);
+    Roam.decide(CUR, -45, nb, 2, &btm, &POLICY, &d);
     TEST_ASSERT_TRUE(d.roam);
     TEST_ASSERT_EQUAL(PC_ROAM_BTM_IMMINENT, d.reason);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(AP_A, d.target_bssid, 6);
 
     // No preferred -> roam to the strongest candidate (AP_B).
     btm.has_preferred = PROTO_FALSE;
-    pc_roam_decide(CUR, -45, nb, 2, &btm, &POLICY, &d);
+    Roam.decide(CUR, -45, nb, 2, &btm, &POLICY, &d);
     TEST_ASSERT_TRUE(d.roam);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(AP_B, d.target_bssid, 6);
 }
@@ -96,12 +96,12 @@ void test_btm_suggested_honoured_only_if_not_weaker()
 
     // Current link -50 (strong), suggested AP_B is -55 (weaker): do NOT chase into a worse AP.
     pc_roam_decision d;
-    pc_roam_decide(CUR, -50, nb, 1, &btm, &POLICY, &d);
+    Roam.decide(CUR, -50, nb, 1, &btm, &POLICY, &d);
     TEST_ASSERT_FALSE(d.roam);
 
     // If AP_B is at least as strong as the current link, honour the steering hint.
     nb[0].rssi_dbm = -48;
-    pc_roam_decide(CUR, -50, nb, 1, &btm, &POLICY, &d);
+    Roam.decide(CUR, -50, nb, 1, &btm, &POLICY, &d);
     TEST_ASSERT_TRUE(d.roam);
     TEST_ASSERT_EQUAL(PC_ROAM_BTM_SUGGESTED, d.reason);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(AP_B, d.target_bssid, 6);
@@ -113,19 +113,19 @@ void test_never_targets_current_and_guards()
     pc_roam_neighbor nb[1] = {{{0}, 6, -30}};
     memcpy(nb[0].bssid, CUR, 6);
     pc_roam_decision d;
-    pc_roam_decide(CUR, -90, nb, 1, NULL, &POLICY, &d);
+    Roam.decide(CUR, -90, nb, 1, NULL, &POLICY, &d);
     TEST_ASSERT_FALSE(d.roam);
 
     // A null policy falls back to a conservative default (threshold -75, hysteresis 8).
     pc_roam_neighbor good[1] = {{{0}, 6, -50}};
     memcpy(good[0].bssid, AP_A, 6);
-    pc_roam_decide(CUR, -80, good, 1, NULL, NULL, &d);
+    Roam.decide(CUR, -80, good, 1, NULL, NULL, &d);
     TEST_ASSERT_TRUE(d.roam);
     TEST_ASSERT_EQUAL(PC_ROAM_LOW_RSSI, d.reason);
 
     // Null out is a no-op (no crash); an empty neighbour list stays.
-    pc_roam_decide(CUR, -90, NULL, 0, NULL, &POLICY, NULL);
-    pc_roam_decide(CUR, -90, NULL, 0, NULL, &POLICY, &d);
+    Roam.decide(CUR, -90, NULL, 0, NULL, &POLICY, NULL);
+    Roam.decide(CUR, -90, NULL, 0, NULL, &POLICY, &d);
     TEST_ASSERT_FALSE(d.roam);
 }
 
@@ -159,7 +159,7 @@ void test_parse_neighbor_report()
     p = nr_elem(buf, p, AP_B, 11);
 
     pc_roam_neighbor nb[4];
-    uint8_t count = pc_roam_parse_neighbor_report(buf, p, nb, 4);
+    uint8_t count = Roam.parse_neighbor_report(buf, p, nb, 4);
     TEST_ASSERT_EQUAL_UINT8(2, count);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(AP_A, nb[0].bssid, 6);
     TEST_ASSERT_EQUAL_UINT8(6, nb[0].channel);
@@ -171,13 +171,13 @@ void test_parse_neighbor_report()
     nb[0].rssi_dbm = -50;
     nb[1].rssi_dbm = -80;
     pc_roam_decision d;
-    pc_roam_decide(CUR, -78, nb, count, NULL, &POLICY, &d);
+    Roam.decide(CUR, -78, nb, count, NULL, &POLICY, &d);
     TEST_ASSERT_TRUE(d.roam);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(AP_A, d.target_bssid, 6);
 
     // max cap + null guard.
-    TEST_ASSERT_EQUAL_UINT8(1, pc_roam_parse_neighbor_report(buf, p, nb, 1));
-    TEST_ASSERT_EQUAL_UINT8(0, pc_roam_parse_neighbor_report(NULL, p, nb, 4));
+    TEST_ASSERT_EQUAL_UINT8(1, Roam.parse_neighbor_report(buf, p, nb, 1));
+    TEST_ASSERT_EQUAL_UINT8(0, Roam.parse_neighbor_report(NULL, p, nb, 4));
 }
 
 void test_parse_neighbor_report_edges()
@@ -185,10 +185,10 @@ void test_parse_neighbor_report_edges()
     pc_roam_neighbor nb[4];
     // A neighbor element shorter than the 13-octet body is skipped (not decoded).
     uint8_t shortelem[12] = {52, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    TEST_ASSERT_EQUAL_UINT8(0, pc_roam_parse_neighbor_report(shortelem, sizeof(shortelem), nb, 4));
+    TEST_ASSERT_EQUAL_UINT8(0, Roam.parse_neighbor_report(shortelem, sizeof(shortelem), nb, 4));
     // A truncated element (claims 13 but the buffer holds less) ends the walk with nothing parsed.
     uint8_t trunc[5] = {52, 13, 0xAA, 0xAA, 0xAA};
-    TEST_ASSERT_EQUAL_UINT8(0, pc_roam_parse_neighbor_report(trunc, sizeof(trunc), nb, 4));
+    TEST_ASSERT_EQUAL_UINT8(0, Roam.parse_neighbor_report(trunc, sizeof(trunc), nb, 4));
 }
 
 void test_parse_btm_request()
@@ -206,7 +206,7 @@ void test_parse_btm_request()
     p = nr_elem(f, p, AP_A, 6); // candidate list
 
     pc_roam_btm btm;
-    TEST_ASSERT_TRUE(pc_roam_parse_btm_request(f, p, &btm));
+    TEST_ASSERT_TRUE(Roam.parse_btm_request(f, p, &btm));
     TEST_ASSERT_TRUE(btm.present);
     TEST_ASSERT_TRUE(btm.disassoc_imminent);
     TEST_ASSERT_TRUE(btm.has_preferred);
@@ -216,7 +216,7 @@ void test_parse_btm_request()
     pc_roam_neighbor nb[1] = {{{0}, 6, -60}};
     memcpy(nb[0].bssid, AP_A, 6);
     pc_roam_decision d;
-    pc_roam_decide(CUR, -45, nb, 1, &btm, &POLICY, &d);
+    Roam.decide(CUR, -45, nb, 1, &btm, &POLICY, &d);
     TEST_ASSERT_TRUE(d.roam);
     TEST_ASSERT_EQUAL(PC_ROAM_BTM_IMMINENT, d.reason);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(AP_A, d.target_bssid, 6);
@@ -242,22 +242,22 @@ void test_parse_btm_request_optional_fields_and_guards()
     p = nr_elem(f, p, AP_B, 11);
 
     pc_roam_btm btm;
-    TEST_ASSERT_TRUE(pc_roam_parse_btm_request(f, p, &btm));
+    TEST_ASSERT_TRUE(Roam.parse_btm_request(f, p, &btm));
     TEST_ASSERT_TRUE(btm.has_preferred);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(AP_B, btm.preferred_bssid, 6); // decoded past the termination field
     TEST_ASSERT_FALSE(btm.disassoc_imminent);                   // bit 2 not set
 
     // A request without the preferred-list bit yields no preferred target.
     uint8_t plain[7] = {0x0A, 0x07, 0x01, 0x04, 0x00, 0x00, 0x0A}; // disassoc only
-    TEST_ASSERT_TRUE(pc_roam_parse_btm_request(plain, sizeof(plain), &btm));
+    TEST_ASSERT_TRUE(Roam.parse_btm_request(plain, sizeof(plain), &btm));
     TEST_ASSERT_TRUE(btm.disassoc_imminent);
     TEST_ASSERT_FALSE(btm.has_preferred);
 
     // A non-BTM frame (wrong category/action) and a truncated frame are rejected.
     uint8_t wrong[7] = {0x05, 0x07, 0x01, 0x05, 0, 0, 0}; // category 5, not WNM
-    TEST_ASSERT_FALSE(pc_roam_parse_btm_request(wrong, sizeof(wrong), &btm));
-    TEST_ASSERT_FALSE(pc_roam_parse_btm_request(f, 5, &btm)); // too short
-    TEST_ASSERT_FALSE(pc_roam_parse_btm_request(NULL, 7, &btm));
+    TEST_ASSERT_FALSE(Roam.parse_btm_request(wrong, sizeof(wrong), &btm));
+    TEST_ASSERT_FALSE(Roam.parse_btm_request(f, 5, &btm)); // too short
+    TEST_ASSERT_FALSE(Roam.parse_btm_request(NULL, 7, &btm));
 }
 
 int main()

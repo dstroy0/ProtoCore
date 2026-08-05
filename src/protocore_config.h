@@ -1875,7 +1875,7 @@ from halves and is slower than the width it decomposes into"
  *
  * The pure policy that decides whether and where to roam to a better access point, given the current
  * link RSSI, a candidate neighbor list (from an 802.11k neighbor report or a scan), and an optional
- * 802.11v BSS-Transition-Management hint from the network. `pc_roam_decide` fuses those into a
+ * 802.11v BSS-Transition-Management hint from the network. `Roam.decide` fuses those into a
  * roam/stay decision with a target BSSID + channel and a reason (a disassociation-imminent BTM, a
  * network-suggested BTM, or a weak link with a clearly stronger candidate past a hysteresis margin).
  * Pure, stateless, host-tested; the actual scan / neighbor-report request and the 802.11r fast

@@ -56,8 +56,8 @@ static void pick(pc_roam_decision *out, const pc_roam_neighbor *nb, int idx, pc_
     out->reason = reason;
 }
 
-void pc_roam_decide(const uint8_t current_bssid[6], int8_t current_rssi_dbm, const pc_roam_neighbor *neighbors,
-                    uint8_t n, const pc_roam_btm *btm, const pc_roam_policy *policy, pc_roam_decision *out)
+static void decide(const uint8_t current_bssid[6], int8_t current_rssi_dbm, const pc_roam_neighbor *neighbors,
+                   uint8_t n, const pc_roam_btm *btm, const pc_roam_policy *policy, pc_roam_decision *out)
 {
     if (!out)
     {
@@ -122,7 +122,7 @@ void pc_roam_decide(const uint8_t current_bssid[6], int8_t current_rssi_dbm, con
     // 4. Otherwise stay put.
 }
 
-uint8_t pc_roam_parse_neighbor_report(const uint8_t *elems, size_t len, pc_roam_neighbor *out, uint8_t max)
+static uint8_t parse_neighbor_report(const uint8_t *elems, size_t len, pc_roam_neighbor *out, uint8_t max)
 {
     if (!elems || !out)
     {
@@ -154,7 +154,7 @@ uint8_t pc_roam_parse_neighbor_report(const uint8_t *elems, size_t len, pc_roam_
     return count;
 }
 
-proto_bool pc_roam_parse_btm_request(const uint8_t *frame, size_t len, pc_roam_btm *out)
+static proto_bool parse_btm_request(const uint8_t *frame, size_t len, pc_roam_btm *out)
 {
     if (!out)
     {
@@ -193,5 +193,7 @@ proto_bool pc_roam_parse_btm_request(const uint8_t *frame, size_t len, pc_roam_b
     }
     return PROTO_TRUE;
 }
+
+const RoamNs Roam = {decide, parse_neighbor_report, parse_btm_request};
 
 #endif // PC_ENABLE_ROAMING
