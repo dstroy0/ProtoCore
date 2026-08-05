@@ -11,27 +11,27 @@ followed, so absence of a register here is not proof the function leaves it alon
 
 `wr` and `rd` carry the access width in bits.
 
-Regenerate with `python tools/dev_env/blob_registers.py .`.
+Regenerate with `python reverse_engineering/esp32_mac/xtensa/blob_registers.py .`.
 
 ## `libphy.a` - RF, PLL, baseband and calibration
 
 122 functions touch a peripheral register.
 
-### `ram_disable_agc` <sub>phy_chip_v7.o</sub>
+### `ram_disable_agc`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
 wr32  0x3FF5C030
 ```
 
-### `ram_enable_agc` <sub>phy_chip_v7.o</sub>
+### `ram_enable_agc`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
 wr32  0x3FF5C030
 ```
 
-### `ram_write_gain_mem` <sub>phy_chip_v7.o</sub>
+### `ram_write_gain_mem`  <sub>phy_chip_v7.o</sub>
 
 ```
 wr32  0x3FF45038
@@ -44,21 +44,21 @@ call  esp_dport_access_reg_read
 wr32  0x3FF45034
 ```
 
-### `ram_set_txclk_en` <sub>phy_chip_v7.o</sub>
+### `ram_set_txclk_en`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
 wr32  0x3FF460A0
 ```
 
-### `ram_set_rxclk_en` <sub>phy_chip_v7.o</sub>
+### `ram_set_rxclk_en`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
 wr32  0x3FF460A0
 ```
 
-### `disable_wifi_agc` <sub>phy_chip_v7.o</sub>
+### `disable_wifi_agc`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -71,7 +71,7 @@ call  esp_dport_access_reg_read
 wr32  0x3FF5C080
 ```
 
-### `enable_wifi_agc` <sub>phy_chip_v7.o</sub>
+### `enable_wifi_agc`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -84,14 +84,14 @@ call  esp_dport_access_reg_read
 wr32  0x3FF5C038
 ```
 
-### `wr_bt_tx_atten` <sub>phy_chip_v7.o</sub>
+### `wr_bt_tx_atten`  <sub>phy_chip_v7.o</sub>
 
 ```
 wr32  0x3FF4600C
 wr32  0x3FF46010
 ```
 
-### `set_tx_gain_table` <sub>phy_chip_v7.o</sub>
+### `set_tx_gain_table`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -100,35 +100,35 @@ call  (indirect)
 call  (indirect)
 ```
 
-### `set_xpd_sar` <sub>phy_chip_v7.o</sub>
+### `set_xpd_sar`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
 wr32  0x3FF4880C
 ```
 
-### `bb_wdt_rst_enable` <sub>phy_chip_v7.o</sub>
+### `bb_wdt_rst_enable`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
 wr32  0x3FF5D040
 ```
 
-### `bb_wdt_int_enable` <sub>phy_chip_v7.o</sub>
+### `bb_wdt_int_enable`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
 wr32  0x3FF5D040
 ```
 
-### `bb_wdt_timeout_clear` <sub>phy_chip_v7.o</sub>
+### `bb_wdt_timeout_clear`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
 wr32  0x3FF5D040
 ```
 
-### `phy_wifi_enable_set` <sub>phy_chip_v7.o</sub>
+### `phy_wifi_enable_set`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -137,7 +137,7 @@ call  esp_dport_access_reg_read
 wr32  0x3FF5C080
 ```
 
-### `ram_set_noise_floor` <sub>phy_chip_v7.o</sub>
+### `ram_set_noise_floor`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -147,7 +147,7 @@ wr32  0x3FF5C018
 call  set_rx_sense
 ```
 
-### `phy_close_rf` <sub>phy_chip_v7.o</sub>
+### `phy_close_rf`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  phy_enter_critical
@@ -166,14 +166,14 @@ call  set_xpd_sar
 call  phy_exit_critical
 ```
 
-### `ram_bb_bss_cbw40_dig` <sub>phy_chip_v7.o</sub>
+### `ram_bb_bss_cbw40_dig`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
 wr32  0x3FF00024
 ```
 
-### `ram_set_pbus_mem` <sub>phy_chip_v7.o</sub>
+### `ram_set_pbus_mem`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  memcpy
@@ -187,14 +187,14 @@ call  esp_dport_access_reg_read
 wr32  0x3FF45034
 ```
 
-### `ram_bb_tx_ht20_cen` <sub>phy_chip_v7.o</sub>
+### `ram_bb_tx_ht20_cen`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
 wr32  0x60033C6C
 ```
 
-### `ram_phy_get_noisefloor` <sub>phy_chip_v7.o</sub>
+### `ram_phy_get_noisefloor`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -202,7 +202,7 @@ call  esp_dport_access_reg_read
 wr32  0x3FF5D050
 ```
 
-### `ram_check_noise_floor` <sub>phy_chip_v7.o</sub>
+### `ram_check_noise_floor`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -220,7 +220,7 @@ call  esp_dport_access_reg_read
 call  esp_dport_access_reg_read
 ```
 
-### `ram_cbw2040_cfg` <sub>phy_chip_v7.o</sub>
+### `ram_cbw2040_cfg`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -233,14 +233,14 @@ call  esp_dport_access_reg_read
 wr32  0x3FF5D000
 ```
 
-### `ram_bb_bss_bw_40_en` <sub>phy_chip_v7.o</sub>
+### `ram_bb_bss_bw_40_en`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
 wr32  0x3FF00024
 ```
 
-### `ram_spur_coef_cfg` <sub>phy_chip_v7.o</sub>
+### `ram_spur_coef_cfg`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  rtc_get_xtal
@@ -263,7 +263,7 @@ call  esp_dport_access_reg_read
 wr32  0x3FF5CC48
 ```
 
-### `set_chan_rxcomp` <sub>phy_chip_v7.o</sub>
+### `set_chan_rxcomp`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -274,7 +274,7 @@ call  esp_dport_access_reg_read
 wr32  0x3FF5C0D0
 ```
 
-### `phy_ant_init` <sub>phy_chip_v7.o</sub>
+### `phy_ant_init`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -283,7 +283,7 @@ wr32  0x3FF5C11C
 wr32  0x3FF5C120
 ```
 
-### `tx_delay_cfg` <sub>phy_chip_v7.o</sub>
+### `tx_delay_cfg`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -301,7 +301,7 @@ wr32  0x3FF5D000
 call  phy_bt_ifs_set
 ```
 
-### `bb_bss_cbw40` <sub>phy_chip_v7.o</sub>
+### `bb_bss_cbw40`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  g_phyFuns
@@ -323,7 +323,7 @@ call  esp_dport_access_reg_read
 wr32  0x3FF5C450
 ```
 
-### `tx_paon_set` <sub>phy_chip_v7.o</sub>
+### `tx_paon_set`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -341,7 +341,7 @@ wr32  0x3FF4E054
 call  tx_delay_cfg
 ```
 
-### `agc_reg_init` <sub>phy_chip_v7.o</sub>
+### `agc_reg_init`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -378,7 +378,7 @@ call  esp_dport_access_reg_read
 wr32  0x3FF5C07C
 ```
 
-### `bb_reg_init` <sub>phy_chip_v7.o</sub>
+### `bb_reg_init`  <sub>phy_chip_v7.o</sub>
 
 ```
 wr32  0x3FF5CC48
@@ -401,7 +401,7 @@ wr32  0x3FF5CC04
 wr32  0x3FF5CCD8
 ```
 
-### `mac_enable_bb` <sub>phy_chip_v7.o</sub>
+### `mac_enable_bb`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -420,7 +420,7 @@ call  esp_dport_access_reg_read
 wr32  0x3FF00024
 ```
 
-### `bb_wdg_cfg` <sub>phy_chip_v7.o</sub>
+### `bb_wdg_cfg`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -428,7 +428,7 @@ wr32  0x3FF5D040
 wr32  0x3FF5D03C
 ```
 
-### `rx_11b_opt` <sub>phy_chip_v7.o</sub>
+### `rx_11b_opt`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -457,7 +457,7 @@ call  esp_dport_access_reg_read
 wr32  0x3FF5C104
 ```
 
-### `opt_11b_resart` <sub>phy_chip_v7.o</sub>
+### `opt_11b_resart`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -472,7 +472,7 @@ call  esp_dport_access_reg_read
 wr32  0x3FF5C0B8
 ```
 
-### `phy_reg_init` <sub>phy_chip_v7.o</sub>
+### `phy_reg_init`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  tx_paon_set
@@ -493,7 +493,7 @@ call  opt_11b_resart
 call  rx_11b_opt
 ```
 
-### `set_chan_reg` <sub>phy_chip_v7.o</sub>
+### `set_chan_reg`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  chan_to_freq
@@ -530,7 +530,7 @@ call  esp_dport_access_reg_read
 call  phy_freq_correct_opt
 ```
 
-### `i2c_master_reset` <sub>phy_chip_v7.o</sub>
+### `i2c_master_reset`  <sub>phy_chip_v7.o</sub>
 
 ```
 rd32  0x60033C00
@@ -541,7 +541,7 @@ call  esp_dport_access_reg_read
 call  esp_dport_access_reg_read
 ```
 
-### `set_rx_gain_cal_iq` <sub>phy_chip_v7.o</sub>
+### `set_rx_gain_cal_iq`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  memcpy
@@ -581,7 +581,7 @@ wr32  0x3FF450DC
 call  (indirect)
 ```
 
-### `set_rx_gain_testchip_70` <sub>phy_chip_v7.o</sub>
+### `set_rx_gain_testchip_70`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  set_rx_gain_cal_iq
@@ -628,7 +628,7 @@ call  (indirect)
 call  (indirect)
 ```
 
-### `phy_wifitx_low_power` <sub>phy_chip_v7.o</sub>
+### `phy_wifitx_low_power`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  set_tx_gain_table
@@ -637,7 +637,7 @@ wr32  0x3FF46008
 call  tx_gain_table_set
 ```
 
-### `set_tx_dig_gain` <sub>phy_chip_v7.o</sub>
+### `set_tx_dig_gain`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -646,7 +646,7 @@ call  esp_dport_access_reg_read
 wr32  0x3FF46000
 ```
 
-### `chip_sleep_prot_en` <sub>phy_chip_v7.o</sub>
+### `chip_sleep_prot_en`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -660,7 +660,7 @@ call  esp_dport_access_reg_read
 call  g_phyFuns
 ```
 
-### `chip_sleep_prot_dis` <sub>phy_chip_v7.o</sub>
+### `chip_sleep_prot_dis`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  g_phyFuns
@@ -668,7 +668,7 @@ call  esp_dport_access_reg_read
 wr32  0x60033CB8
 ```
 
-### `set_cca` <sub>phy_chip_v7.o</sub>
+### `set_cca`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -679,7 +679,7 @@ call  esp_dport_access_reg_read
 wr32  0x3FF5C01C
 ```
 
-### `set_rx_sense` <sub>phy_chip_v7.o</sub>
+### `set_rx_sense`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -717,7 +717,7 @@ call  esp_dport_access_reg_read
 wr32  0x3FF5C124
 ```
 
-### `noise_check_loop` <sub>phy_chip_v7.o</sub>
+### `noise_check_loop`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -734,7 +734,7 @@ call  esp_dport_access_reg_read
 wr32  0x3FF5D044
 ```
 
-### `noise_init` <sub>phy_chip_v7.o</sub>
+### `noise_init`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -746,7 +746,7 @@ call  (indirect)
 call  g_phyFuns
 ```
 
-### `set_rx_gain_table` <sub>phy_chip_v7.o</sub>
+### `set_rx_gain_table`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  memcpy
@@ -772,7 +772,7 @@ call  esp_dport_access_reg_read
 wr32  0x3FF450DC
 ```
 
-### `phy_rx11blr_cfg` <sub>phy_chip_v7.o</sub>
+### `phy_rx11blr_cfg`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -783,14 +783,14 @@ call  esp_dport_access_reg_read
 wr32  0x3FF5C87C
 ```
 
-### `wifi_rifs_mode_en` <sub>phy_chip_v7.o</sub>
+### `wifi_rifs_mode_en`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
 wr32  0x3FF5C0F4
 ```
 
-### `phy_chan_filt_set` <sub>phy_chip_v7.o</sub>
+### `phy_chan_filt_set`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -811,7 +811,7 @@ call  esp_dport_access_reg_read
 wr32  0x3FF5C074
 ```
 
-### `rf_cal_data_backup` <sub>phy_chip_v7.o</sub>
+### `rf_cal_data_backup`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -819,7 +819,7 @@ wr32  0x3FF4E0C4
 call  esp_dport_access_reg_read
 ```
 
-### `i2cmst_reg_init` <sub>phy_chip_v7.o</sub>
+### `i2cmst_reg_init`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -836,7 +836,7 @@ call  esp_dport_access_reg_read
 wr32  0x3FF4E0C4
 ```
 
-### `fe_reg_init` <sub>phy_chip_v7.o</sub>
+### `fe_reg_init`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -853,7 +853,7 @@ call  esp_dport_access_reg_read
 wr32  0x3FF4609C
 ```
 
-### `reg_init_begin` <sub>phy_chip_v7.o</sub>
+### `reg_init_begin`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  g_phyFuns
@@ -865,7 +865,7 @@ call  fe_reg_init
 call  i2cmst_reg_init
 ```
 
-### `phy_wakeup_init` <sub>phy_chip_v7.o</sub>
+### `phy_wakeup_init`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  phy_enter_critical
@@ -887,7 +887,7 @@ wr32  0x3FF5C080
 call  phy_exit_critical
 ```
 
-### `reset_rf_dig` <sub>phy_chip_v7.o</sub>
+### `reset_rf_dig`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  disable_wifi_agc
@@ -904,7 +904,7 @@ call  ets_delay_us
 call  force_txrxoff
 ```
 
-### `register_chipv7_phy` <sub>phy_chip_v7.o</sub>
+### `register_chipv7_phy`  <sub>phy_chip_v7.o</sub>
 
 ```
 rd32  0x60033C00
@@ -936,7 +936,7 @@ call  esp_dport_access_reg_read
 wr32  0x3FF5C080
 ```
 
-### `phy_rx_sense_set` <sub>phy_chip_v7.o</sub>
+### `phy_rx_sense_set`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -951,14 +951,14 @@ call  esp_dport_access_reg_read
 wr32  0x3FF5C108
 ```
 
-### `ant_dft_cfg` <sub>phy_chip_v7.o</sub>
+### `ant_dft_cfg`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
 wr32  0x3FF5C11C
 ```
 
-### `ant_wifitx_cfg` <sub>phy_chip_v7.o</sub>
+### `ant_wifitx_cfg`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -967,7 +967,7 @@ call  esp_dport_access_reg_read
 wr32  0x3FF45104
 ```
 
-### `ant_wifirx_cfg` <sub>phy_chip_v7.o</sub>
+### `ant_wifirx_cfg`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -982,7 +982,7 @@ call  esp_dport_access_reg_read
 wr32  0x3FF45108
 ```
 
-### `ant_bttx_cfg` <sub>phy_chip_v7.o</sub>
+### `ant_bttx_cfg`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -991,7 +991,7 @@ call  esp_dport_access_reg_read
 wr32  0x3FF4510C
 ```
 
-### `ant_btrx_cfg` <sub>phy_chip_v7.o</sub>
+### `ant_btrx_cfg`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -1006,7 +1006,7 @@ call  esp_dport_access_reg_read
 wr32  0x3FF45110
 ```
 
-### `esp_tx_state_out` <sub>phy_chip_v7.o</sub>
+### `esp_tx_state_out`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -1021,7 +1021,7 @@ call  esp_dport_access_reg_read
 wr32  0x3FF45110
 ```
 
-### `phy_chan_dump_cfg` <sub>phy_chip_v7.o</sub>
+### `phy_chan_dump_cfg`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -1036,7 +1036,7 @@ call  esp_dport_access_reg_read
 wr32  0x3FF5CD0C
 ```
 
-### `chan14_mic_cfg` <sub>phy_chip_v7.o</sub>
+### `chan14_mic_cfg`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -1052,7 +1052,7 @@ call  (indirect)
 call  phy_set_most_tpw
 ```
 
-### `phy_get_adc_rand` <sub>phy_chip_v7.o</sub>
+### `phy_get_adc_rand`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -1078,7 +1078,7 @@ wr32  0x3FF66000
 call  (indirect)
 ```
 
-### `phy_enable_low_rate` <sub>phy_chip_v7.o</sub>
+### `phy_enable_low_rate`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -1090,7 +1090,7 @@ wr32  0x3FF5C87C
 call  write_txrate_power_offset
 ```
 
-### `phy_disable_low_rate` <sub>phy_chip_v7.o</sub>
+### `phy_disable_low_rate`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -1102,7 +1102,7 @@ wr32  0x3FF5C87C
 call  write_txrate_power_offset
 ```
 
-### `phy_close_pa` <sub>phy_chip_v7.o</sub>
+### `phy_close_pa`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -1119,7 +1119,7 @@ call  esp_dport_access_reg_read
 wr32  0x3FF460A0
 ```
 
-### `phy_dig_reg_backup` <sub>phy_chip_v7.o</sub>
+### `phy_dig_reg_backup`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -1166,7 +1166,7 @@ wr32  0x3FF5C0CC
 wr32  0x3FF5C124
 ```
 
-### `freq_offset_get_pwr_1` <sub>phy_chip_v7.o</sub>
+### `freq_offset_get_pwr_1`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  (indirect)
@@ -1184,7 +1184,7 @@ wr32  0x3FF460B8
 call  (indirect)
 ```
 
-### `get_spur4m_pwr` <sub>phy_chip_v7.o</sub>
+### `get_spur4m_pwr`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -1201,7 +1201,7 @@ call  esp_dport_access_reg_read
 wr32  0x3FF5C02C
 ```
 
-### `bt_opt_write_mem` <sub>phy_chip_v7.o</sub>
+### `bt_opt_write_mem`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -1214,7 +1214,7 @@ call  esp_dport_access_reg_read
 wr32  0x3FF4E0C4
 ```
 
-### `bt_rx_spur_opt` <sub>phy_chip_v7.o</sub>
+### `bt_rx_spur_opt`  <sub>phy_chip_v7.o</sub>
 
 ```
 call  (indirect)
@@ -1241,7 +1241,7 @@ call  esp_dport_access_reg_read
 wr32  0x3FF4E0C4
 ```
 
-### `pll_correct_dcap` <sub>phy_chip_v7_ana.o</sub>
+### `pll_correct_dcap`  <sub>phy_chip_v7_ana.o</sub>
 
 ```
 call  (indirect)
@@ -1258,7 +1258,7 @@ call  esp_dport_access_reg_read
 wr32  0x3FF4E0C4
 ```
 
-### `phy_dis_hw_set_freq` <sub>phy_chip_v7_ana.o</sub>
+### `phy_dis_hw_set_freq`  <sub>phy_chip_v7_ana.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -1270,7 +1270,7 @@ call  ets_delay_us
 call  esp_dport_access_reg_read
 ```
 
-### `phy_force_wifi_chan` <sub>phy_chip_v7_ana.o</sub>
+### `phy_force_wifi_chan`  <sub>phy_chip_v7_ana.o</sub>
 
 ```
 call  phy_enter_critical
@@ -1294,7 +1294,7 @@ call  phy_dis_hw_set_freq
 call  phy_dis_hw_set_freq
 ```
 
-### `phy_en_hw_set_freq` <sub>phy_chip_v7_ana.o</sub>
+### `phy_en_hw_set_freq`  <sub>phy_chip_v7_ana.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -1303,7 +1303,7 @@ call  esp_dport_access_reg_read
 wr32  0x3FF5C07C
 ```
 
-### `ram_chip_i2c_readReg` <sub>phy_chip_v7_ana.o</sub>
+### `ram_chip_i2c_readReg`  <sub>phy_chip_v7_ana.o</sub>
 
 ```
 call  phy_enter_critical
@@ -1321,7 +1321,7 @@ call  phy_en_hw_set_freq
 call  phy_exit_critical
 ```
 
-### `ram_chip_i2c_writeReg` <sub>phy_chip_v7_ana.o</sub>
+### `ram_chip_i2c_writeReg`  <sub>phy_chip_v7_ana.o</sub>
 
 ```
 call  phy_enter_critical
@@ -1334,7 +1334,7 @@ call  phy_en_hw_set_freq
 call  phy_exit_critical
 ```
 
-### `phy_unforce_wifi_chan` <sub>phy_chip_v7_ana.o</sub>
+### `phy_unforce_wifi_chan`  <sub>phy_chip_v7_ana.o</sub>
 
 ```
 call  phy_enter_critical
@@ -1348,7 +1348,7 @@ wr32  0x3FF51040
 call  phy_exit_critical
 ```
 
-### `btpwr_pll_track` <sub>phy_chip_v7_ana.o</sub>
+### `btpwr_pll_track`  <sub>phy_chip_v7_ana.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -1356,7 +1356,7 @@ wr32  0x3FF4E0C4
 call  esp_dport_access_reg_read
 ```
 
-### `phy_bt_ifs_set` <sub>phy_chip_v7_ana.o</sub>
+### `phy_bt_ifs_set`  <sub>phy_chip_v7_ana.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -1364,7 +1364,7 @@ call  esp_dport_access_reg_read
 wr32  0x3FF5103C
 ```
 
-### `tsens_code_read` <sub>phy_chip_v7_ana.o</sub>
+### `tsens_code_read`  <sub>phy_chip_v7_ana.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -1379,7 +1379,7 @@ call  esp_dport_access_reg_read
 wr32  0x3FF4884C
 ```
 
-### `ram_pbus_force_test` <sub>phy_chip_v7_ana.o</sub>
+### `ram_pbus_force_test`  <sub>phy_chip_v7_ana.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -1389,7 +1389,7 @@ call  esp_dport_access_reg_read
 wr32  0x3FF46094
 ```
 
-### `force_txrxoff` <sub>phy_chip_v7_ana.o</sub>
+### `force_txrxoff`  <sub>phy_chip_v7_ana.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -1409,7 +1409,7 @@ call  esp_dport_access_reg_read
 wr32  0x3FF460A0
 ```
 
-### `ram_pbus_force_mode` <sub>phy_chip_v7_ana.o</sub>
+### `ram_pbus_force_mode`  <sub>phy_chip_v7_ana.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -1431,7 +1431,7 @@ call  esp_dport_access_reg_read
 wr32  0x3FF5C02C
 ```
 
-### `phy_freq_correct_opt` <sub>phy_chip_v7_ana.o</sub>
+### `phy_freq_correct_opt`  <sub>phy_chip_v7_ana.o</sub>
 
 ```
 call  g_phyFuns
@@ -1441,7 +1441,7 @@ call  esp_dport_access_reg_read
 wr32  0x3FF4E054
 ```
 
-### `correct_rfpll_offset` <sub>phy_chip_v7_ana.o</sub>
+### `correct_rfpll_offset`  <sub>phy_chip_v7_ana.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -1454,7 +1454,7 @@ call  esp_dport_access_reg_read
 wr32  0x3FF4E0C4
 ```
 
-### `wr_rf_freq_mem` <sub>phy_chip_v7_ana.o</sub>
+### `wr_rf_freq_mem`  <sub>phy_chip_v7_ana.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -1466,7 +1466,7 @@ call  esp_dport_access_reg_read
 wr32  0x3FF4E0C4
 ```
 
-### `bt_i2c_read_set` <sub>phy_chip_v7_ana.o</sub>
+### `bt_i2c_read_set`  <sub>phy_chip_v7_ana.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -1483,7 +1483,7 @@ call  esp_dport_access_reg_read
 wr32  0x3FF4E150
 ```
 
-### `bt_i2c_read_mem` <sub>phy_chip_v7_ana.o</sub>
+### `bt_i2c_read_mem`  <sub>phy_chip_v7_ana.o</sub>
 
 ```
 call  phy_printf
@@ -1498,7 +1498,7 @@ call  esp_dport_access_reg_read
 call  phy_printf
 ```
 
-### `bt_i2c_write_set` <sub>phy_chip_v7_ana.o</sub>
+### `bt_i2c_write_set`  <sub>phy_chip_v7_ana.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -1544,7 +1544,7 @@ wr32  0x3FF4E164
 wr32  0x3FF4E164
 ```
 
-### `bt_i2c_set_wifi_data` <sub>phy_chip_v7_ana.o</sub>
+### `bt_i2c_set_wifi_data`  <sub>phy_chip_v7_ana.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -1555,7 +1555,7 @@ call  esp_dport_access_reg_read
 wr32  0x3FF4E140
 ```
 
-### `tsens_read_init` <sub>phy_chip_v7_ana.o</sub>
+### `tsens_read_init`  <sub>phy_chip_v7_ana.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -1568,7 +1568,7 @@ call  esp_dport_access_reg_read
 wr32  0x3FF4884C
 ```
 
-### `write_wifi_chan_data` <sub>phy_chip_v7_ana.o</sub>
+### `write_wifi_chan_data`  <sub>phy_chip_v7_ana.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -1578,7 +1578,7 @@ call  get_lna_vga_dcap_val
 call  bt_i2c_set_wifi_data
 ```
 
-### `set_chan_freq_hw_init` <sub>phy_chip_v7_ana.o</sub>
+### `set_chan_freq_hw_init`  <sub>phy_chip_v7_ana.o</sub>
 
 ```
 call  .text.get_rf_freq_init$part$2
@@ -1590,7 +1590,7 @@ wr32  0x60033D38
 call  i2cmst_reg_init
 ```
 
-### `phy_hw_set_freq_enable` <sub>phy_chip_v7_ana.o</sub>
+### `phy_hw_set_freq_enable`  <sub>phy_chip_v7_ana.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -1606,7 +1606,7 @@ call  esp_dport_access_reg_read
 wr32  0x3FF5C07C
 ```
 
-### `set_chan_freq_sw_start` <sub>phy_chip_v7_ana.o</sub>
+### `set_chan_freq_sw_start`  <sub>phy_chip_v7_ana.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -1642,7 +1642,7 @@ wr32  0x3FF4E0C4
 call  phy_en_hw_set_freq
 ```
 
-### `set_channel_rfpll_freq` <sub>phy_chip_v7_ana.o</sub>
+### `set_channel_rfpll_freq`  <sub>phy_chip_v7_ana.o</sub>
 
 ```
 call  g_phyFuns
@@ -1655,7 +1655,7 @@ call  esp_dport_access_reg_read
 wr32  0x3FF4E0C4
 ```
 
-### `chip_v7_set_chan_nomac` <sub>phy_chip_v7_ana.o</sub>
+### `chip_v7_set_chan_nomac`  <sub>phy_chip_v7_ana.o</sub>
 
 ```
 rd32  0x60033C00
@@ -1672,7 +1672,7 @@ call  chan14_mic_cfg
 call  enable_wifi_agc
 ```
 
-### `freq_write_wifi_chan` <sub>phy_chip_v7_ana.o</sub>
+### `freq_write_wifi_chan`  <sub>phy_chip_v7_ana.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -1691,7 +1691,7 @@ wr32  0x3FF4E0C4
 call  esp_dport_access_reg_read
 ```
 
-### `write_txrate_power_offset` <sub>phy_chip_v7_cal.o</sub>
+### `write_txrate_power_offset`  <sub>phy_chip_v7_cal.o</sub>
 
 ```
 wr32  0x3FF4506C
@@ -1710,7 +1710,7 @@ wr32  0x3FF45050
 wr32  0x3FF4504C
 ```
 
-### `force_txrx_off` <sub>phy_chip_v7_cal.o</sub>
+### `force_txrx_off`  <sub>phy_chip_v7_cal.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -1727,7 +1727,7 @@ wr32  0x3FF460A0
 call  ets_delay_us
 ```
 
-### `phy_pwdet_onetime_en` <sub>phy_chip_v7_cal.o</sub>
+### `phy_pwdet_onetime_en`  <sub>phy_chip_v7_cal.o</sub>
 
 ```
 call  pwdet_sar2_init
@@ -1737,14 +1737,14 @@ call  esp_dport_access_reg_read
 wr32  0x3FF4E060
 ```
 
-### `write_wifi_dig_gain` <sub>phy_chip_v7_cal.o</sub>
+### `write_wifi_dig_gain`  <sub>phy_chip_v7_cal.o</sub>
 
 ```
 wr32  0x3FF46004
 wr32  0x3FF46008
 ```
 
-### `phy_set_bbfreq_init` <sub>phy_chip_v7_cal.o</sub>
+### `phy_set_bbfreq_init`  <sub>phy_chip_v7_cal.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -1753,7 +1753,7 @@ call  esp_dport_access_reg_read
 wr32  0x3FF5C85C
 ```
 
-### `ram_tx_pwctrl_bg_init` <sub>phy_chip_v7_cal.o</sub>
+### `ram_tx_pwctrl_bg_init`  <sub>phy_chip_v7_cal.o</sub>
 
 ```
 call  g_phyFuns
@@ -1761,7 +1761,7 @@ call  esp_dport_access_reg_read
 wr32  0x3FF4E060
 ```
 
-### `pwdet_sar2_init` <sub>phy_chip_v7_cal.o</sub>
+### `pwdet_sar2_init`  <sub>phy_chip_v7_cal.o</sub>
 
 ```
 call  set_xpd_sar
@@ -1785,7 +1785,7 @@ call  esp_dport_access_reg_read
 wr32  0x3FF4882C
 ```
 
-### `ram_en_pwdet` <sub>phy_chip_v7_cal.o</sub>
+### `ram_en_pwdet`  <sub>phy_chip_v7_cal.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -1801,7 +1801,7 @@ wr32  0x3FF4E050
 call  pwdet_sar2_init
 ```
 
-### `ram_txdc_cal_v70` <sub>phy_chip_v7_cal.o</sub>
+### `ram_txdc_cal_v70`  <sub>phy_chip_v7_cal.o</sub>
 
 ```
 call  (indirect)
@@ -1822,7 +1822,7 @@ call  esp_dport_access_reg_read
 wr32  0x3FF4E04C
 ```
 
-### `ram_get_fm_sar_dout` <sub>phy_chip_v7_cal.o</sub>
+### `ram_get_fm_sar_dout`  <sub>phy_chip_v7_cal.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -1834,7 +1834,7 @@ call  esp_dport_access_reg_read
 call  g_phyFuns
 ```
 
-### `ram_txiq_get_mis_pwr` <sub>phy_chip_v7_cal.o</sub>
+### `ram_txiq_get_mis_pwr`  <sub>phy_chip_v7_cal.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -1850,7 +1850,7 @@ call  ets_delay_us
 call  (indirect)
 ```
 
-### `rfcal_txiq` <sub>phy_chip_v7_cal.o</sub>
+### `rfcal_txiq`  <sub>phy_chip_v7_cal.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -1876,7 +1876,7 @@ call  esp_dport_access_reg_read
 wr32  0x3FF450DC
 ```
 
-### `ram_iq_est_enable` <sub>phy_chip_v7_cal.o</sub>
+### `ram_iq_est_enable`  <sub>phy_chip_v7_cal.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -1893,7 +1893,7 @@ wr32  0x3FF4607C
 call  esp_dport_access_reg_read
 ```
 
-### `ram_iq_est_disable` <sub>phy_chip_v7_cal.o</sub>
+### `ram_iq_est_disable`  <sub>phy_chip_v7_cal.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -1903,7 +1903,7 @@ call  esp_dport_access_reg_read
 wr32  0x3FF4607C
 ```
 
-### `tx_pwctrl_init_cal` <sub>phy_chip_v7_cal.o</sub>
+### `tx_pwctrl_init_cal`  <sub>phy_chip_v7_cal.o</sub>
 
 ```
 call  set_channel_rfpll_freq
@@ -1918,7 +1918,7 @@ call  ram_rfcal_pwrctrl
 call  (indirect)
 ```
 
-### `ram_phy_get_vdd33` <sub>phy_chip_v7_cal.o</sub>
+### `ram_phy_get_vdd33`  <sub>phy_chip_v7_cal.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -1953,7 +1953,7 @@ call  esp_dport_access_reg_read
 wr32  0x3FF4E05C
 ```
 
-### `phy_pwdet_always_en` <sub>phy_chip_v7_cal.o</sub>
+### `phy_pwdet_always_en`  <sub>phy_chip_v7_cal.o</sub>
 
 ```
 call  esp_dport_access_reg_read
@@ -1968,7 +1968,7 @@ wr32  0x3FF4E050
 
 60 functions touch a peripheral register.
 
-### `BT_tx_8m_enable` <sub>bt_bb.o</sub>
+### `BT_tx_8m_enable`  <sub>bt_bb.o</sub>
 
 ```
 rd32  0x3FF51000
@@ -1982,7 +1982,7 @@ rd32  0x3FF51040
 wr32  0x3FF51040
 ```
 
-### `BT_tx_if_init` <sub>bt_bb.o</sub>
+### `BT_tx_if_init`  <sub>bt_bb.o</sub>
 
 ```
 rd32  0x3FF5103C
@@ -1998,7 +1998,7 @@ rd32  0x3FF5103C
 wr32  0x3FF5103C
 ```
 
-### `BT_init_rx_filters` <sub>bt_bb.o</sub>
+### `BT_init_rx_filters`  <sub>bt_bb.o</sub>
 
 ```
 wr32  0x3FF51028
@@ -2048,14 +2048,14 @@ rd32  0x3FF51084
 wr32  0x3FF51084
 ```
 
-### `bt_dgmixer_fstep_250k` <sub>bt_bb.o</sub>
+### `bt_dgmixer_fstep_250k`  <sub>bt_bb.o</sub>
 
 ```
 rd32  0x3FF51040
 wr32  0x3FF51040
 ```
 
-### `bt_rfoffset_en` <sub>bt_bb.o</sub>
+### `bt_rfoffset_en`  <sub>bt_bb.o</sub>
 
 ```
 rd32  0x3FF51020
@@ -2066,7 +2066,7 @@ rd32  0x3FF51020
 wr32  0x3FF51020
 ```
 
-### `bt_bb_init_cmplx` <sub>bt_bb.o</sub>
+### `bt_bb_init_cmplx`  <sub>bt_bb.o</sub>
 
 ```
 call  phy_dis_hw_set_freq
@@ -2111,7 +2111,7 @@ wr32  0x6000604C
 call  phy_en_hw_set_freq
 ```
 
-### `bt_bb_init_cmplx_reg` <sub>bt_bb.o</sub>
+### `bt_bb_init_cmplx_reg`  <sub>bt_bb.o</sub>
 
 ```
 rd32  0x3FF51000
@@ -2129,7 +2129,7 @@ rd32  0x3FF51040
 wr32  0x3FF51040
 ```
 
-### `rw_coex_on` <sub>bt_bb.o</sub>
+### `rw_coex_on`  <sub>bt_bb.o</sub>
 
 ```
 rd32  0x600310D0
@@ -2144,7 +2144,7 @@ rd32  0x60033D30
 wr32  0x60033D30
 ```
 
-### `force_bt_mode` <sub>bt_bb.o</sub>
+### `force_bt_mode`  <sub>bt_bb.o</sub>
 
 ```
 rd32  0x600310D0
@@ -2167,7 +2167,7 @@ rd32  0x3FF5D040
 wr32  0x3FF5D040
 ```
 
-### `force_wifi_mode` <sub>bt_bb.o</sub>
+### `force_wifi_mode`  <sub>bt_bb.o</sub>
 
 ```
 rd32  0x3FF51098
@@ -2185,7 +2185,7 @@ rd32  0x3FF5D040
 wr32  0x3FF5D040
 ```
 
-### `unforce_wifi_mode` <sub>bt_bb.o</sub>
+### `unforce_wifi_mode`  <sub>bt_bb.o</sub>
 
 ```
 rd32  0x3FF5110C
@@ -2201,7 +2201,7 @@ rd32  0x3FF51098
 wr32  0x3FF51098
 ```
 
-### `coex_bt_high_prio` <sub>bt_bb.o</sub>
+### `coex_bt_high_prio`  <sub>bt_bb.o</sub>
 
 ```
 rd32  0x3FF5C080
@@ -2232,7 +2232,7 @@ rd32  0x3FF5D040
 wr32  0x3FF5D040
 ```
 
-### `pm_wakeup_opt` <sub>pm.o</sub>
+### `pm_wakeup_opt`  <sub>pm.o</sub>
 
 ```
 rd32  0x3FF48038
@@ -2240,7 +2240,7 @@ wr32  0x3FF48038
 wr32  0x3FF48064
 ```
 
-### `pm_goto_sleep` <sub>pm.o</sub>
+### `pm_goto_sleep`  <sub>pm.o</sub>
 
 ```
 rd32  0x3FF48048
@@ -2250,7 +2250,7 @@ wr32  0x3FF48018
 rd32  0x3FF48040
 ```
 
-### `pm_sleep_set_mac` <sub>pm.o</sub>
+### `pm_sleep_set_mac`  <sub>pm.o</sub>
 
 ```
 rd32  0x60033CB8
@@ -2265,21 +2265,21 @@ call  ets_delay_us
 rd32  0x60033CB8
 ```
 
-### `pm_set_wakeup_mac` <sub>pm.o</sub>
+### `pm_set_wakeup_mac`  <sub>pm.o</sub>
 
 ```
 rd32  0x60033CB8
 wr32  0x60033CB8
 ```
 
-### `pm_mac_init` <sub>pm.o</sub>
+### `pm_mac_init`  <sub>pm.o</sub>
 
 ```
 rd32  0x60033CB8
 wr32  0x60033CB8
 ```
 
-### `pm_set_sleep_mode_full` <sub>pm.o</sub>
+### `pm_set_sleep_mode_full`  <sub>pm.o</sub>
 
 ```
 call  phy_close_rf
@@ -2322,7 +2322,7 @@ call  rtc_slp_prep
 call  rtc_slp_prep
 ```
 
-### `rtc_cmd_wakeup_conf` <sub>rtc.o</sub>
+### `rtc_cmd_wakeup_conf`  <sub>rtc.o</sub>
 
 ```
 rd32  0x3FF48830
@@ -2335,7 +2335,7 @@ rd32  0x3FF4882C
 wr32  0x3FF4882C
 ```
 
-### `rtc_pads_muxsel` <sub>rtc.o</sub>
+### `rtc_pads_muxsel`  <sub>rtc.o</sub>
 
 ```
 rd32  0x3FF4847C
@@ -2376,7 +2376,7 @@ rd32  0x3FF484B0
 wr32  0x3FF484B0
 ```
 
-### `rtc_pads_funsel` <sub>rtc.o</sub>
+### `rtc_pads_funsel`  <sub>rtc.o</sub>
 
 ```
 rd32  0x3FF4847C
@@ -2417,7 +2417,7 @@ rd32  0x3FF484B0
 wr32  0x3FF484B0
 ```
 
-### `rtc_pads_slpsel` <sub>rtc.o</sub>
+### `rtc_pads_slpsel`  <sub>rtc.o</sub>
 
 ```
 rd32  0x3FF4847C
@@ -2458,7 +2458,7 @@ rd32  0x3FF484B0
 wr32  0x3FF484B0
 ```
 
-### `rtc_pads_slpoe` <sub>rtc.o</sub>
+### `rtc_pads_slpoe`  <sub>rtc.o</sub>
 
 ```
 rd32  0x3FF48484
@@ -2487,7 +2487,7 @@ rd32  0x3FF484B0
 wr32  0x3FF484B0
 ```
 
-### `rtc_pads_slpie` <sub>rtc.o</sub>
+### `rtc_pads_slpie`  <sub>rtc.o</sub>
 
 ```
 rd32  0x3FF4847C
@@ -2528,7 +2528,7 @@ rd32  0x3FF484B0
 wr32  0x3FF484B0
 ```
 
-### `rtc_pads_funie` <sub>rtc.o</sub>
+### `rtc_pads_funie`  <sub>rtc.o</sub>
 
 ```
 rd32  0x3FF4847C
@@ -2569,7 +2569,7 @@ rd32  0x3FF484B0
 wr32  0x3FF484B0
 ```
 
-### `rtc_pads_pu` <sub>rtc.o</sub>
+### `rtc_pads_pu`  <sub>rtc.o</sub>
 
 ```
 rd32  0x3FF48484
@@ -2598,7 +2598,7 @@ rd32  0x3FF484B0
 wr32  0x3FF484B0
 ```
 
-### `rtc_pads_pd` <sub>rtc.o</sub>
+### `rtc_pads_pd`  <sub>rtc.o</sub>
 
 ```
 rd32  0x3FF48484
@@ -2627,7 +2627,7 @@ rd32  0x3FF484B0
 wr32  0x3FF484B0
 ```
 
-### `rtc_pads_hold` <sub>rtc.o</sub>
+### `rtc_pads_hold`  <sub>rtc.o</sub>
 
 ```
 rd32  0x3FF4847C
@@ -2668,40 +2668,40 @@ rd32  0x3FF484B0
 wr32  0x3FF484B0
 ```
 
-### `rtc_apbbridge_sel` <sub>rtc.o</sub>
+### `rtc_apbbridge_sel`  <sub>rtc.o</sub>
 
 ```
 rd32  0x3FF48018
 wr32  0x3FF48018
 ```
 
-### `rtc_powerup_rf` <sub>rtc.o</sub>
+### `rtc_powerup_rf`  <sub>rtc.o</sub>
 
 ```
 rd32  0x3FF48030
 wr32  0x3FF48030
 ```
 
-### `rtc_powerdown_rf` <sub>rtc.o</sub>
+### `rtc_powerdown_rf`  <sub>rtc.o</sub>
 
 ```
 rd32  0x3FF48030
 wr32  0x3FF48030
 ```
 
-### `rtc_get_st` <sub>rtc.o</sub>
+### `rtc_get_st`  <sub>rtc.o</sub>
 
 ```
 rd32  0x3FF480C0
 ```
 
-### `rtc_is_st_idle` <sub>rtc.o</sub>
+### `rtc_is_st_idle`  <sub>rtc.o</sub>
 
 ```
 rd32  0x3FF480C0
 ```
 
-### `rtc_soc_clk_ck12m` <sub>rtc.o</sub>
+### `rtc_soc_clk_ck12m`  <sub>rtc.o</sub>
 
 ```
 rd32  0x3FF48070
@@ -2710,7 +2710,7 @@ rd32  0x3FF48000
 wr32  0x3FF48000
 ```
 
-### `rtc_init_full` <sub>rtc.o</sub>
+### `rtc_init_full`  <sub>rtc.o</sub>
 
 ```
 rd32  0x3FF4808C
@@ -2789,7 +2789,7 @@ wr32  0x3FF4807C
 call  rtc_init_clk
 ```
 
-### `rtc_pad_gpio_wakeup` <sub>rtc.o</sub>
+### `rtc_pad_gpio_wakeup`  <sub>rtc.o</sub>
 
 ```
 call  rtc_pads_muxsel
@@ -2808,7 +2808,7 @@ rd32  0x3FF48428
 wr32  0x3FF48428
 ```
 
-### `rtc_pad_ext_wakeup` <sub>rtc.o</sub>
+### `rtc_pad_ext_wakeup`  <sub>rtc.o</sub>
 
 ```
 call  rtc_pads_muxsel
@@ -2827,7 +2827,7 @@ rd32  0x3FF48060
 wr32  0x3FF48060
 ```
 
-### `rtc_cmd_ext_wakeup` <sub>rtc.o</sub>
+### `rtc_cmd_ext_wakeup`  <sub>rtc.o</sub>
 
 ```
 call  rtc_pads_muxsel
@@ -2846,7 +2846,7 @@ rd32  0x3FF48060
 wr32  0x3FF48060
 ```
 
-### `rtc_wifi_force_pd` <sub>rtc.o</sub>
+### `rtc_wifi_force_pd`  <sub>rtc.o</sub>
 
 ```
 rd32  0x3FF000CC
@@ -2859,7 +2859,7 @@ rd32  0x3FF48084
 wr32  0x3FF48084
 ```
 
-### `rtc_sdreg_off` <sub>rtc.o</sub>
+### `rtc_sdreg_off`  <sub>rtc.o</sub>
 
 ```
 rd32  0x3FF48074
@@ -2870,7 +2870,7 @@ rd32  0x3FF48074
 wr32  0x3FF48074
 ```
 
-### `cfg_sdio_volt` <sub>rtc.o</sub>
+### `cfg_sdio_volt`  <sub>rtc.o</sub>
 
 ```
 rd32  0x3FF48074
@@ -2889,7 +2889,7 @@ rd32  0x3FF48074
 wr32  0x3FF48074
 ```
 
-### `temprature_sens_read` <sub>rtc_analog.o</sub>
+### `temprature_sens_read`  <sub>rtc_analog.o</sub>
 
 ```
 rd32  0x3FF4884C
@@ -2913,7 +2913,7 @@ rd32  0x3FF4884C
 wr32  0x3FF4884C
 ```
 
-### `dac_out` <sub>rtc_analog.o</sub>
+### `dac_out`  <sub>rtc_analog.o</sub>
 
 ```
 rd32  0x3FF48898
@@ -2962,7 +2962,7 @@ wr32  0x3FF48488
 wr32  0x3FF48488
 ```
 
-### `touch_init` <sub>rtc_analog.o</sub>
+### `touch_init`  <sub>rtc_analog.o</sub>
 
 ```
 rd32  0x3FF48490
@@ -2981,7 +2981,7 @@ rd32  0x3FF48494
 wr32  0x3FF48494
 ```
 
-### `touch_read` <sub>rtc_analog.o</sub>
+### `touch_read`  <sub>rtc_analog.o</sub>
 
 ```
 rd32  0x3FF48858
@@ -2995,7 +2995,7 @@ rd32  0x3FF48884
 wr32  0x3FF48884
 ```
 
-### `vdd33_init` <sub>rtc_analog.o</sub>
+### `vdd33_init`  <sub>rtc_analog.o</sub>
 
 ```
 rd32  0x3FF4882C
@@ -3025,7 +3025,7 @@ rd32  0x3FF66010
 wr32  0x3FF66010
 ```
 
-### `get_vdd33` <sub>rtc_analog.o</sub>
+### `get_vdd33`  <sub>rtc_analog.o</sub>
 
 ```
 call  (indirect)
@@ -3048,7 +3048,7 @@ rd32  0x3FF4E05C
 wr32  0x3FF4E05C
 ```
 
-### `adc1_read_test` <sub>rtc_analog.o</sub>
+### `adc1_read_test`  <sub>rtc_analog.o</sub>
 
 ```
 rd32  0x3FF4882C
@@ -3094,7 +3094,7 @@ rd32  0x3FF48854
 wr32  0x3FF48854
 ```
 
-### `adc1_amp_read_full` <sub>rtc_analog.o</sub>
+### `adc1_amp_read_full`  <sub>rtc_analog.o</sub>
 
 ```
 rd32  0x3FF4882C
@@ -3141,7 +3141,7 @@ call  ets_delay_us
 rd32  0x3FF48854
 ```
 
-### `hall_sens_read_full` <sub>rtc_analog.o</sub>
+### `hall_sens_read_full`  <sub>rtc_analog.o</sub>
 
 ```
 rd32  0x3FF48858
@@ -3165,7 +3165,7 @@ rd32  0x3FF48858
 wr32  0x3FF48858
 ```
 
-### `hall_sens_amp_read_full` <sub>rtc_analog.o</sub>
+### `hall_sens_amp_read_full`  <sub>rtc_analog.o</sub>
 
 ```
 rd32  0x3FF48858
@@ -3187,7 +3187,7 @@ rd32  0x3FF48858
 wr32  0x3FF48858
 ```
 
-### `adc2_read_test` <sub>rtc_analog.o</sub>
+### `adc2_read_test`  <sub>rtc_analog.o</sub>
 
 ```
 rd32  0x3FF4882C
@@ -3228,7 +3228,7 @@ rd32  0x3FF48890
 wr32  0x3FF48890
 ```
 
-### `adc_pad_init` <sub>rtc_analog.o</sub>
+### `adc_pad_init`  <sub>rtc_analog.o</sub>
 
 ```
 rd32  0x3FF4847C
@@ -3265,7 +3265,7 @@ rd32  0x3FF48480
 wr32  0x3FF48480
 ```
 
-### `dac_pad_init` <sub>rtc_analog.o</sub>
+### `dac_pad_init`  <sub>rtc_analog.o</sub>
 
 ```
 rd32  0x3FF4889C
@@ -3286,7 +3286,7 @@ rd32  0x3FF48488
 wr32  0x3FF48488
 ```
 
-### `rtc_wifi_force_pd_off` <sub>rtc_cntl.o</sub>
+### `rtc_wifi_force_pd_off`  <sub>rtc_cntl.o</sub>
 
 ```
 rd32  0x3FF48084
@@ -3299,7 +3299,7 @@ rd32  0x3FF000CC
 wr32  0x3FF000CC
 ```
 
-### `rtc_digital_lp_mode_off_stg1` <sub>rtc_cntl.o</sub>
+### `rtc_digital_lp_mode_off_stg1`  <sub>rtc_cntl.o</sub>
 
 ```
 rd32  0x3FF48000
@@ -3325,14 +3325,14 @@ wr32  0x3FF000CC
 call  rtc_dbias_cfg
 ```
 
-### `rtc_digital_lp_mode_off_stg2` <sub>rtc_cntl.o</sub>
+### `rtc_digital_lp_mode_off_stg2`  <sub>rtc_cntl.o</sub>
 
 ```
 rd32  0x3FF48000
 wr32  0x3FF48000
 ```
 
-### `rtc_sar_sleep_timer_start` <sub>rtc_cntl.o</sub>
+### `rtc_sar_sleep_timer_start`  <sub>rtc_cntl.o</sub>
 
 ```
 rd32  0x3FF4882C
@@ -3346,7 +3346,7 @@ rd32  0x3FF4882C
 wr32  0x3FF4882C
 ```
 
-### `rtc_mac_tx_init` <sub>rtc_mac.o</sub>
+### `rtc_mac_tx_init`  <sub>rtc_mac.o</sub>
 
 ```
 rd32  0x60033D24
@@ -3406,7 +3406,7 @@ rd32  0x60033CF0
 wr32  0x60033CF0
 ```
 
-### `rtc_mac_tx` <sub>rtc_mac.o</sub>
+### `rtc_mac_tx`  <sub>rtc_mac.o</sub>
 
 ```
 rd32  0x60033C4C
@@ -3424,7 +3424,7 @@ rd32  0x60034108
 
 83 functions touch a peripheral register.
 
-### `hal_ba_session_store` <sub>hal_ampdu.o</sub>
+### `hal_ba_session_store`  <sub>hal_ampdu.o</sub>
 
 ```
 rd32  0x3FF73250
@@ -3433,7 +3433,7 @@ rd32  0x3FF73268
 rd32  0x3FF7326C
 ```
 
-### `hal_ba_session_restore` <sub>hal_ampdu.o</sub>
+### `hal_ba_session_restore`  <sub>hal_ampdu.o</sub>
 
 ```
 rd32  0x3FF73250
@@ -3447,20 +3447,20 @@ rd32  0x3FF73250
 wr32  0x3FF73250
 ```
 
-### `hal_crypto_clr_key_entry` <sub>hal_crypto.o</sub>
+### `hal_crypto_clr_key_entry`  <sub>hal_crypto.o</sub>
 
 ```
 rd32  0x3FF73814
 wr32  0x3FF73814
 ```
 
-### `hal_crypto_get_using_key_idx` <sub>hal_crypto.o</sub>
+### `hal_crypto_get_using_key_idx`  <sub>hal_crypto.o</sub>
 
 ```
 rd32  0x3FF7442C
 ```
 
-### `hal_crypto_set_key_entry` <sub>hal_crypto.o</sub>
+### `hal_crypto_set_key_entry`  <sub>hal_crypto.o</sub>
 
 ```
 call  wifi_log
@@ -3469,13 +3469,13 @@ wr32  0x3FF73814
 call  memcpy
 ```
 
-### `hal_crypto_is_key_valid` <sub>hal_crypto.o</sub>
+### `hal_crypto_is_key_valid`  <sub>hal_crypto.o</sub>
 
 ```
 rd32  0x3FF73814
 ```
 
-### `hal_crypto_init` <sub>hal_crypto.o</sub>
+### `hal_crypto_init`  <sub>hal_crypto.o</sub>
 
 ```
 wr32  0x3FF73800
@@ -3485,14 +3485,14 @@ wr32  0x3FF7380C
 wr32  0x3FF73810
 ```
 
-### `hal_crypto_enable` <sub>hal_crypto.o</sub>
+### `hal_crypto_enable`  <sub>hal_crypto.o</sub>
 
 ```
 rd32  0x3FF73810
 wr32  0x3FF73810
 ```
 
-### `hal_crypto_disable` <sub>hal_crypto.o</sub>
+### `hal_crypto_disable`  <sub>hal_crypto.o</sub>
 
 ```
 wr32  0x3FF73804
@@ -3500,20 +3500,20 @@ rd32  0x3FF73814
 wr32  0x3FF73814
 ```
 
-### `hal_random` <sub>hal_mac.o</sub>
+### `hal_random`  <sub>hal_mac.o</sub>
 
 ```
 rd32  0x3FF75144
 ```
 
-### `hal_mac_tx_set_cca` <sub>hal_mac.o</sub>
+### `hal_mac_tx_set_cca`  <sub>hal_mac.o</sub>
 
 ```
 rd32  0x3FF73C58
 wr32  0x3FF73C58
 ```
 
-### `hal_mac_disable_low_rate` <sub>hal_mac.o</sub>
+### `hal_mac_disable_low_rate`  <sub>hal_mac.o</sub>
 
 ```
 call  phy_disable_low_rate
@@ -3527,7 +3527,7 @@ rd32  0x6001C87C
 wr32  0x6001C87C
 ```
 
-### `hal_mac_enable_low_rate` <sub>hal_mac.o</sub>
+### `hal_mac_enable_low_rate`  <sub>hal_mac.o</sub>
 
 ```
 call  phy_enable_low_rate
@@ -3541,14 +3541,14 @@ rd32  0x6001C87C
 wr32  0x6001C87C
 ```
 
-### `hal_mac_is_low_rate_enabled` <sub>hal_mac.o</sub>
+### `hal_mac_is_low_rate_enabled`  <sub>hal_mac.o</sub>
 
 ```
 rd32  0x6001C860
 rd32  0x6001C87C
 ```
 
-### `mac_rxbuf_init` <sub>hal_mac.o</sub>
+### `mac_rxbuf_init`  <sub>hal_mac.o</sub>
 
 ```
 wr32  0x3FF7311C
@@ -3562,7 +3562,7 @@ rd32  0x3FF73080
 wr32  0x3FF73080
 ```
 
-### `hal_disable_mac` <sub>hal_mac.o</sub>
+### `hal_disable_mac`  <sub>hal_mac.o</sub>
 
 ```
 rd32  0x3FF73C04
@@ -3573,7 +3573,7 @@ wr32  0x3FF73C44
 wr32  0x3FF73C30
 ```
 
-### `hal_enable_mac` <sub>hal_mac.o</sub>
+### `hal_enable_mac`  <sub>hal_mac.o</sub>
 
 ```
 rd32  0x3FF73C04
@@ -3582,25 +3582,25 @@ wr32  0x3FF73C40
 wr32  0x3FF73088
 ```
 
-### `hal_mac_rx_read_rxdscrlast` <sub>hal_mac.o</sub>
+### `hal_mac_rx_read_rxdscrlast`  <sub>hal_mac.o</sub>
 
 ```
 rd32  0x3FF73090
 ```
 
-### `hal_mac_rx_read_rxdscrnext` <sub>hal_mac.o</sub>
+### `hal_mac_rx_read_rxdscrnext`  <sub>hal_mac.o</sub>
 
 ```
 rd32  0x3FF7308C
 ```
 
-### `hal_mac_rx_set_base` <sub>hal_mac.o</sub>
+### `hal_mac_rx_set_base`  <sub>hal_mac.o</sub>
 
 ```
 wr32  0x3FF73088
 ```
 
-### `mac_txrx_init` <sub>hal_mac.o</sub>
+### `mac_txrx_init`  <sub>hal_mac.o</sub>
 
 ```
 rd32  0x3FF73C6C
@@ -3659,7 +3659,7 @@ rd32  0x3FF73084
 wr32  0x3FF73084
 ```
 
-### `mac_last_rxbuf_init` <sub>hal_mac.o</sub>
+### `mac_last_rxbuf_init`  <sub>hal_mac.o</sub>
 
 ```
 wr32  0x3FF7314C
@@ -3673,7 +3673,7 @@ rd32  0x3FF7309C
 wr32  0x3FF7309C
 ```
 
-### `mac_last_rxbuf_deinit` <sub>hal_mac.o</sub>
+### `mac_last_rxbuf_deinit`  <sub>hal_mac.o</sub>
 
 ```
 wr32  0x3FF7314C
@@ -3687,7 +3687,7 @@ rd32  0x3FF7309C
 wr32  0x3FF7309C
 ```
 
-### `hal_deinit` <sub>hal_mac.o</sub>
+### `hal_deinit`  <sub>hal_mac.o</sub>
 
 ```
 rd32  0x3FF73288
@@ -3701,26 +3701,26 @@ wr32  0x3FF73D24
 rd32  0x3FF73D24
 ```
 
-### `hal_mac_interrupt_get_event` <sub>hal_mac.o</sub>
+### `hal_mac_interrupt_get_event`  <sub>hal_mac.o</sub>
 
 ```
 rd32  0x3FF73C48
 ```
 
-### `hal_mac_interrupt_clr_event` <sub>hal_mac.o</sub>
+### `hal_mac_interrupt_clr_event`  <sub>hal_mac.o</sub>
 
 ```
 wr32  0x3FF73C4C
 ```
 
-### `hal_mac_interrupt_clr_watchdog` <sub>hal_mac.o</sub>
+### `hal_mac_interrupt_clr_watchdog`  <sub>hal_mac.o</sub>
 
 ```
 rd32  0x3FF73C4C
 wr32  0x3FF73C4C
 ```
 
-### `hal_init` <sub>hal_mac.o</sub>
+### `hal_init`  <sub>hal_mac.o</sub>
 
 ```
 rd32  0x3FF73D24
@@ -3742,7 +3742,7 @@ rd32  0x3FF7309C
 wr32  0x3FF7309C
 ```
 
-### `hal_mac_tsf_get_time` <sub>hal_mac.o</sub>
+### `hal_mac_tsf_get_time`  <sub>hal_mac.o</sub>
 
 ```
 rd32  0x3FF75010
@@ -3757,14 +3757,14 @@ rd32  0x3FF75010
 wr32  0x3FF75010
 ```
 
-### `wDev_Mesh_Disable_Tsf` <sub>hal_mac.o</sub>
+### `wDev_Mesh_Disable_Tsf`  <sub>hal_mac.o</sub>
 
 ```
 rd32  0x3FF75020
 wr32  0x3FF75020
 ```
 
-### `hal_get_tsf_time` <sub>hal_mac.o</sub>
+### `hal_get_tsf_time`  <sub>hal_mac.o</sub>
 
 ```
 rd32  0x3FF75010
@@ -3780,7 +3780,7 @@ rd32  0x3FF75010
 wr32  0x3FF75010
 ```
 
-### `hal_mac_tsf_set_time` <sub>hal_mac.o</sub>
+### `hal_mac_tsf_set_time`  <sub>hal_mac.o</sub>
 
 ```
 wr32  0x3FF75060
@@ -3789,7 +3789,7 @@ rd32  0x3FF75010
 wr32  0x3FF75010
 ```
 
-### `hal_mac_tsf_reset` <sub>hal_mac.o</sub>
+### `hal_mac_tsf_reset`  <sub>hal_mac.o</sub>
 
 ```
 rd32  0x3FF7505C
@@ -3819,7 +3819,7 @@ rd32  0x3FF7505C
 wr32  0x3FF7505C
 ```
 
-### `hal_mac_set_csi` <sub>hal_mac.o</sub>
+### `hal_mac_set_csi`  <sub>hal_mac.o</sub>
 
 ```
 call  config_get_wifi_csi_enable
@@ -3829,14 +3829,14 @@ rd32  0x3FF7309C
 wr32  0x3FF7309C
 ```
 
-### `hal_mac_init` <sub>hal_mac.o</sub>
+### `hal_mac_init`  <sub>hal_mac.o</sub>
 
 ```
 rd32  0x3FF73CB8
 wr32  0x3FF73CB8
 ```
 
-### `hal_mac_deinit` <sub>hal_mac.o</sub>
+### `hal_mac_deinit`  <sub>hal_mac.o</sub>
 
 ```
 rd32  0x3FF73CB8
@@ -3844,46 +3844,46 @@ wr32  0x3FF73CB8
 call  ets_delay_us
 ```
 
-### `hal_mac_rx_enable` <sub>hal_mac.o</sub>
+### `hal_mac_rx_enable`  <sub>hal_mac.o</sub>
 
 ```
 rd32  0x3FF73084
 wr32  0x3FF73084
 ```
 
-### `hal_mac_rx_disable` <sub>hal_mac.o</sub>
+### `hal_mac_rx_disable`  <sub>hal_mac.o</sub>
 
 ```
 rd32  0x3FF73084
 wr32  0x3FF73084
 ```
 
-### `hal_mac_rx_get_end_state` <sub>hal_mac_rx.o</sub>
+### `hal_mac_rx_get_end_state`  <sub>hal_mac_rx.o</sub>
 
 ```
 rd32  0x3FF730A4
 ```
 
-### `hal_mac_rx_get_last_dscr` <sub>hal_mac_rx.o</sub>
+### `hal_mac_rx_get_last_dscr`  <sub>hal_mac_rx.o</sub>
 
 ```
 rd32  0x3FF73090
 ```
 
-### `hal_mac_rx_is_dscr_reload` <sub>hal_mac_rx.o</sub>
+### `hal_mac_rx_is_dscr_reload`  <sub>hal_mac_rx.o</sub>
 
 ```
 rd32  0x3FF73084
 ```
 
-### `hal_mac_rx_set_dscr_reload` <sub>hal_mac_rx.o</sub>
+### `hal_mac_rx_set_dscr_reload`  <sub>hal_mac_rx.o</sub>
 
 ```
 rd32  0x3FF73084
 wr32  0x3FF73084
 ```
 
-### `hal_mac_rx_get_end_info` <sub>hal_mac_rx.o</sub>
+### `hal_mac_rx_get_end_info`  <sub>hal_mac_rx.o</sub>
 
 ```
 rd32  0x3FF73D84
@@ -3894,7 +3894,7 @@ rd32  0x3FF732F4
 rd32  0x3FF732F0
 ```
 
-### `hal_mac_get_txq_state` <sub>hal_mac_tx.o</sub>
+### `hal_mac_get_txq_state`  <sub>hal_mac_tx.o</sub>
 
 ```
 rd32  0x3FF73CC0
@@ -3902,7 +3902,7 @@ rd32  0x3FF73CC0
 rd32  0x3FF73CC8
 ```
 
-### `hal_mac_clr_txq_state` <sub>hal_mac_tx.o</sub>
+### `hal_mac_clr_txq_state`  <sub>hal_mac_tx.o</sub>
 
 ```
 rd32  0x3FF73CBC
@@ -3911,7 +3911,7 @@ rd32  0x3FF73CC4
 wr32  0x3FF73CC4
 ```
 
-### `hal_attenna_init` <sub>hal_mac_tx.o</sub>
+### `hal_attenna_init`  <sub>hal_mac_tx.o</sub>
 
 ```
 rd32  0x3FF73284
@@ -3920,7 +3920,7 @@ rd32  0x3FF73284
 wr32  0x3FF73284
 ```
 
-### `hal_mac_rate_autoack_init` <sub>hal_mac_tx.o</sub>
+### `hal_mac_rate_autoack_init`  <sub>hal_mac_tx.o</sub>
 
 ```
 wr32  0x3FF73404
@@ -3933,7 +3933,7 @@ wr32  0x3FF7341C
 wr32  0x3FF73418
 ```
 
-### `hal_sniffer_enable` <sub>hal_sniffer.o</sub>
+### `hal_sniffer_enable`  <sub>hal_sniffer.o</sub>
 
 ```
 rd32  0x3FF730E4
@@ -3954,7 +3954,7 @@ rd32  0x3FF730E4
 wr32  0x3FF730E4
 ```
 
-### `hal_sniffer_disable` <sub>hal_sniffer.o</sub>
+### `hal_sniffer_disable`  <sub>hal_sniffer.o</sub>
 
 ```
 rd32  0x3FF730E4
@@ -3975,7 +3975,7 @@ rd32  0x3FF730E4
 wr32  0x3FF730E4
 ```
 
-### `hal_sniffer_rx_set_promis` <sub>hal_sniffer.o</sub>
+### `hal_sniffer_rx_set_promis`  <sub>hal_sniffer.o</sub>
 
 ```
 rd32  0x3FF73C40
@@ -3997,7 +3997,7 @@ rd32  0x3FF730FC
 wr32  0x3FF730FC
 ```
 
-### `hal_sniffer_rx_clr_statistics` <sub>hal_sniffer.o</sub>
+### `hal_sniffer_rx_clr_statistics`  <sub>hal_sniffer.o</sub>
 
 ```
 rd32  0x3FF73D7C
@@ -4006,27 +4006,27 @@ rd32  0x3FF73D7C
 wr32  0x3FF73D7C
 ```
 
-### `hal_enable_sta_tsf` <sub>hal_tsf.o</sub>
+### `hal_enable_sta_tsf`  <sub>hal_tsf.o</sub>
 
 ```
 rd32  0x3FF75020
 wr32  0x3FF75020
 ```
 
-### `hal_disable_sta_tsf` <sub>hal_tsf.o</sub>
+### `hal_disable_sta_tsf`  <sub>hal_tsf.o</sub>
 
 ```
 rd32  0x3FF75020
 wr32  0x3FF75020
 ```
 
-### `bb_intr_handl` <sub>if_hwctrl.o</sub>
+### `bb_intr_handl`  <sub>if_hwctrl.o</sub>
 
 ```
 rd32  0x3FF5D04C
 ```
 
-### `ic_set_vif` <sub>if_hwctrl.o</sub>
+### `ic_set_vif`  <sub>if_hwctrl.o</sub>
 
 ```
 call  wifi_log
@@ -4050,21 +4050,21 @@ call  ic_disable_sniffer
 call  wifi_log
 ```
 
-### `ic_enable_rx` <sub>if_hwctrl.o</sub>
+### `ic_enable_rx`  <sub>if_hwctrl.o</sub>
 
 ```
 rd32  0x3FF73084
 wr32  0x3FF73084
 ```
 
-### `ic_disable_rx` <sub>if_hwctrl.o</sub>
+### `ic_disable_rx`  <sub>if_hwctrl.o</sub>
 
 ```
 rd32  0x3FF73084
 wr32  0x3FF73084
 ```
 
-### `lmacSetTxFrame` <sub>lmac.o</sub>
+### `lmacSetTxFrame`  <sub>lmac.o</sub>
 
 ```
 call  wDev_is_low_rate_enable
@@ -4074,7 +4074,7 @@ call  hal_mac_tx_config_timeout
 call  hal_mac_tx_set_ppdu
 ```
 
-### `lmacProcessRxSucData` <sub>lmac.o</sub>
+### `lmacProcessRxSucData`  <sub>lmac.o</sub>
 
 ```
 call  (indirect)
@@ -4082,20 +4082,20 @@ rd32  0x3FF73C00
 call  pp_post
 ```
 
-### `lmacMSDUAged` <sub>lmac.o</sub>
+### `lmacMSDUAged`  <sub>lmac.o</sub>
 
 ```
 call  (indirect)
 rd32  0x3FF73C00
 ```
 
-### `lmacAdjustTimestamp` <sub>lmac.o</sub>
+### `lmacAdjustTimestamp`  <sub>lmac.o</sub>
 
 ```
 rd32  0x3FF73C00
 ```
 
-### `pm_update_next_tbtt` <sub>pm.o</sub>
+### `pm_update_next_tbtt`  <sub>pm.o</sub>
 
 ```
 call  (indirect)
@@ -4125,7 +4125,7 @@ rd32  0x3FF73C00
 call  g_pm
 ```
 
-### `pm_coex_tbtt_process` <sub>pm.o</sub>
+### `pm_coex_tbtt_process`  <sub>pm.o</sub>
 
 ```
 call  (indirect)
@@ -4139,7 +4139,7 @@ wr32  0x3FF73CB8
 call  pm_go_to_wake
 ```
 
-### `pm_coex_slice_timeout_process` <sub>pm.o</sub>
+### `pm_coex_slice_timeout_process`  <sub>pm.o</sub>
 
 ```
 call  (indirect)
@@ -4154,7 +4154,7 @@ call  pm_enable_sleep_delay_timer
 call  wifi_gpio_debug
 ```
 
-### `pm_tbtt_process` <sub>pm.o</sub>
+### `pm_tbtt_process`  <sub>pm.o</sub>
 
 ```
 call  (indirect)
@@ -4172,7 +4172,7 @@ call  pm_set_next_tbtt
 call  pm_update_params
 ```
 
-### `pm_stop` <sub>pm.o</sub>
+### `pm_stop`  <sub>pm.o</sub>
 
 ```
 rd32  0x3FF73CB8
@@ -4202,7 +4202,7 @@ call  wifi_log
 call  ieee80211_hostapd_beacon_txcb
 ```
 
-### `ppRxFragmentProc` <sub>pp.o</sub>
+### `ppRxFragmentProc`  <sub>pp.o</sub>
 
 ```
 call  (indirect)
@@ -4229,7 +4229,7 @@ call  ppRecycleRxPkt
 call  ppRecycleRxPkt
 ```
 
-### `ppReSendBar` <sub>pp.o</sub>
+### `ppReSendBar`  <sub>pp.o</sub>
 
 ```
 call  (indirect)
@@ -4238,7 +4238,7 @@ call  rcGetRate
 call  lmacTxFrame
 ```
 
-### `ppTxPkt` <sub>pp.o</sub>
+### `ppTxPkt`  <sub>pp.o</sub>
 
 ```
 call  ic_interface_enabled
@@ -4260,7 +4260,7 @@ call  esf_buf_recycle
 call  pp_process_hmac_waiting_txq
 ```
 
-### `dbg_lmac_rxtx_statis_dump` <sub>pp_debug.o</sub>
+### `dbg_lmac_rxtx_statis_dump`  <sub>pp_debug.o</sub>
 
 ```
 call  wifi_log
@@ -4281,7 +4281,7 @@ rd32  0x3FF732DC
 call  wifi_log
 ```
 
-### `dbg_lmac_hw_statis_dump` <sub>pp_debug.o</sub>
+### `dbg_lmac_hw_statis_dump`  <sub>pp_debug.o</sub>
 
 ```
 call  wifi_log
@@ -4319,7 +4319,7 @@ rd32  0x3FF73D70
 call  wifi_log
 ```
 
-### `dbg_lmac_diag_statis_dump` <sub>pp_debug.o</sub>
+### `dbg_lmac_diag_statis_dump`  <sub>pp_debug.o</sub>
 
 ```
 call  wifi_log
@@ -4343,7 +4343,7 @@ rd32  0x3FF73DBC
 call  wifi_log
 ```
 
-### `dbg_perf_throughput_cal` <sub>pp_debug.o</sub>
+### `dbg_perf_throughput_cal`  <sub>pp_debug.o</sub>
 
 ```
 call  (indirect)
@@ -4351,7 +4351,7 @@ rd32  0x3FF73C00
 call  wifi_log
 ```
 
-### `rcLowerSched` <sub>trc.o</sub>
+### `rcLowerSched`  <sub>trc.o</sub>
 
 ```
 call  rcClearCurSched
@@ -4359,7 +4359,7 @@ call  (indirect)
 rd32  0x3FF73C00
 ```
 
-### `rcUpSched` <sub>trc.o</sub>
+### `rcUpSched`  <sub>trc.o</sub>
 
 ```
 call  rcClearCurSched
@@ -4367,7 +4367,7 @@ call  (indirect)
 rd32  0x3FF73C00
 ```
 
-### `rcAmpduLowerRate` <sub>trc.o</sub>
+### `rcAmpduLowerRate`  <sub>trc.o</sub>
 
 ```
 call  TRC_AMPDU_PER_DOWN_THRESHOLD
@@ -4381,7 +4381,7 @@ call  rcSetTxAmpduLimit
 call  rcClearCurAMPDUSched
 ```
 
-### `rcUpdateTxDoneAmpdu2` <sub>trc.o</sub>
+### `rcUpdateTxDoneAmpdu2`  <sub>trc.o</sub>
 
 ```
 call  rcUpdateAckSnr
@@ -4402,7 +4402,7 @@ call  rcSetTxAmpduLimit
 call  rcClearCurAMPDUSched
 ```
 
-### `rcUpdateRate` <sub>trc.o</sub>
+### `rcUpdateRate`  <sub>trc.o</sub>
 
 ```
 call  (indirect)
@@ -4419,7 +4419,7 @@ call  rcUpSched
 call  rcLowerSched
 ```
 
-### `wdev_mac_wakeup` <sub>wdev.o</sub>
+### `wdev_mac_wakeup`  <sub>wdev.o</sub>
 
 ```
 call  g_osi_funcs_p
@@ -4434,7 +4434,7 @@ rd32  0x3FF73084
 wr32  0x3FF73084
 ```
 
-### `wdev_mac_sleep` <sub>wdev.o</sub>
+### `wdev_mac_sleep`  <sub>wdev.o</sub>
 
 ```
 rd32  0x3FF73084
@@ -4448,7 +4448,7 @@ call  wdev_mac_reg_store
 call  g_osi_funcs_p
 ```
 
-### `wdev_set_promis_misc_pkt` <sub>wdev.o</sub>
+### `wdev_set_promis_misc_pkt`  <sub>wdev.o</sub>
 
 ```
 call  hal_sniffer_rx_set_promis
@@ -4459,7 +4459,7 @@ rd32  0x3FF730F4
 wr32  0x3FF730F4
 ```
 
-### `wdev_process_panic_watchdog` <sub>wdev.o</sub>
+### `wdev_process_panic_watchdog`  <sub>wdev.o</sub>
 
 ```
 call  hal_mac_rx_get_end_state
@@ -4472,7 +4472,7 @@ call  bb_wdt_timeout_clear
 call  hal_mac_interrupt_clr_watchdog
 ```
 
-### `wDev_ProcessFiq` <sub>wdev.o</sub>
+### `wDev_ProcessFiq`  <sub>wdev.o</sub>
 
 ```
 call  (indirect)
@@ -4496,7 +4496,7 @@ call  (indirect)
 
 25 functions touch a peripheral register.
 
-### `ieee80211_send_action_vendor_spec` <sub>ieee80211_action_vendor.o</sub>
+### `ieee80211_send_action_vendor_spec`  <sub>ieee80211_action_vendor.o</sub>
 
 ```
 call  wifi_get_macaddr
@@ -4518,7 +4518,7 @@ call  ieee80211_post_hmac_tx
 call  .data.s_global_vendor_seq$10155
 ```
 
-### `esp_wifi_stop` <sub>ieee80211_api.o</sub>
+### `esp_wifi_stop`  <sub>ieee80211_api.o</sub>
 
 ```
 call  wifi_api_lock
@@ -4543,7 +4543,7 @@ call  wifi_api_lock
 call  wifi_api_unlock
 ```
 
-### `ieee80211_hostap_send_beacon_process` <sub>ieee80211_hostap.o</sub>
+### `ieee80211_hostap_send_beacon_process`  <sub>ieee80211_hostap.o</sub>
 
 ```
 call  ic_interface_enabled
@@ -4566,7 +4566,7 @@ call  ic_get_next_tbtt
 call  g_osi_funcs_p
 ```
 
-### `hostap_handle_timer_process` <sub>ieee80211_hostap.o</sub>
+### `hostap_handle_timer_process`  <sub>ieee80211_hostap.o</sub>
 
 ```
 call  wifi_log
@@ -4583,7 +4583,7 @@ call  cnx_node_leave
 call  pwrsave_flushq
 ```
 
-### `ieee80211_hostapd_data_txcb` <sub>ieee80211_hostap.o</sub>
+### `ieee80211_hostapd_data_txcb`  <sub>ieee80211_hostap.o</sub>
 
 ```
 call  cnx_node_search
@@ -4591,7 +4591,7 @@ call  (indirect)
 rd32  0x3FF73C00
 ```
 
-### `hostap_auth_open` <sub>ieee80211_hostap.o</sub>
+### `hostap_auth_open`  <sub>ieee80211_hostap.o</sub>
 
 ```
 call  wifi_log
@@ -4614,7 +4614,7 @@ call  g_wifi_mac_time_delta
 call  g_osi_funcs_p
 ```
 
-### `hostap_recv_ctl` <sub>ieee80211_hostap.o</sub>
+### `hostap_recv_ctl`  <sub>ieee80211_hostap.o</sub>
 
 ```
 call  wifi_log
@@ -4628,7 +4628,7 @@ call  ic_tx_pkt
 call  ieee80211_recv_bar
 ```
 
-### `hostap_input` <sub>ieee80211_hostap.o</sub>
+### `hostap_input`  <sub>ieee80211_hostap.o</sub>
 
 ```
 call  wifi_get_macaddr
@@ -4669,21 +4669,21 @@ call  ic_ebuf_recycle_rx
 call  memcpy
 ```
 
-### `ieee80211_cal_tx_pps` <sub>ieee80211_ht.o</sub>
+### `ieee80211_cal_tx_pps`  <sub>ieee80211_ht.o</sub>
 
 ```
 call  (indirect)
 rd32  0x3FF73C00
 ```
 
-### `ieee80211_ampdu_enable` <sub>ieee80211_ht.o</sub>
+### `ieee80211_ampdu_enable`  <sub>ieee80211_ht.o</sub>
 
 ```
 call  (indirect)
 rd32  0x3FF73C00
 ```
 
-### `ieee80211_ampdu_request` <sub>ieee80211_ht.o</sub>
+### `ieee80211_ampdu_request`  <sub>ieee80211_ht.o</sub>
 
 ```
 call  (indirect)
@@ -4700,7 +4700,7 @@ call  (indirect)
 call  (indirect)
 ```
 
-### `.text.ieee80211_ampdu_age_bss` <sub>ieee80211_ht.o</sub>
+### `.text.ieee80211_ampdu_age_bss`  <sub>ieee80211_ht.o</sub>
 
 ```
 call  wifi_log
@@ -4709,7 +4709,7 @@ rd32  0x3FF73C00
 call  ampdu_dispatch_upto
 ```
 
-### `wifi_reset_mac` <sub>ieee80211_ioctl.o</sub>
+### `wifi_reset_mac`  <sub>ieee80211_ioctl.o</sub>
 
 ```
 call  (indirect)
@@ -4720,7 +4720,7 @@ rd32  0x3FF73084
 wr32  0x3FF73084
 ```
 
-### `ieee80211_output_raw_process` <sub>ieee80211_output.o</sub>
+### `ieee80211_output_raw_process`  <sub>ieee80211_output.o</sub>
 
 ```
 call  ic_ebuf_recycle_tx
@@ -4735,7 +4735,7 @@ call  ppTxPktForceWaked
 call  wifi_log
 ```
 
-### `ieee80211_set_tx_desc` <sub>ieee80211_output.o</sub>
+### `ieee80211_set_tx_desc`  <sub>ieee80211_output.o</sub>
 
 ```
 call  (indirect)
@@ -4743,7 +4743,7 @@ rd32  0x3FF73C00
 call  ic_get_trc
 ```
 
-### `pwrsave_flushq` <sub>ieee80211_power.o</sub>
+### `pwrsave_flushq`  <sub>ieee80211_power.o</sub>
 
 ```
 call  chm_is_at_home_channel
@@ -4753,7 +4753,7 @@ rd32  0x3FF73C00
 call  ic_ebuf_recycle_tx
 ```
 
-### `ieee80211_pwrsave_txcb` <sub>ieee80211_power.o</sub>
+### `ieee80211_pwrsave_txcb`  <sub>ieee80211_power.o</sub>
 
 ```
 call  (indirect)
@@ -4761,7 +4761,7 @@ rd32  0x3FF73C00
 call  ieee80211_set_tim
 ```
 
-### `.text.scan_done` <sub>ieee80211_scan.o</sub>
+### `.text.scan_done`  <sub>ieee80211_scan.o</sub>
 
 ```
 call  wifi_log
@@ -4794,7 +4794,7 @@ call  net80211_funcs
 call  pm_on_channel
 ```
 
-### `scan_enter_oper_channel_process` <sub>ieee80211_scan.o</sub>
+### `scan_enter_oper_channel_process`  <sub>ieee80211_scan.o</sub>
 
 ```
 call  (indirect)
@@ -4803,7 +4803,7 @@ call  wifi_log
 call  .text.scan_next_channel
 ```
 
-### `scan_start` <sub>ieee80211_scan.o</sub>
+### `scan_start`  <sub>ieee80211_scan.o</sub>
 
 ```
 call  connect_scan_flag
@@ -4825,7 +4825,7 @@ call  scan_inter_channel_timeout_process
 call  wifi_log
 ```
 
-### `sta_recv_assoc` <sub>ieee80211_sta.o</sub>
+### `sta_recv_assoc`  <sub>ieee80211_sta.o</sub>
 
 ```
 call  wifi_log
@@ -4874,7 +4874,7 @@ call  ieee80211_setup_lr_rates
 call  ieee80211_is_lr_only
 ```
 
-### `.text.cnx_connect_to_bss` <sub>wl_cnx.o</sub>
+### `.text.cnx_connect_to_bss`  <sub>wl_cnx.o</sub>
 
 ```
 call  chm_get_current_channel
@@ -4906,7 +4906,7 @@ call  chm_start_op
 call  .text.cnx_connect_op
 ```
 
-### `cnx_handshake_timeout_process` <sub>wl_cnx.o</sub>
+### `cnx_handshake_timeout_process`  <sub>wl_cnx.o</sub>
 
 ```
 call  (indirect)
@@ -4918,7 +4918,7 @@ call  wifi_station_get_reconnect_policy
 call  cnx_connect_timeout_process
 ```
 
-### `cnx_bss_alloc` <sub>wl_cnx.o</sub>
+### `cnx_bss_alloc`  <sub>wl_cnx.o</sub>
 
 ```
 call  (indirect)
@@ -4936,7 +4936,7 @@ call  memcmp
 call  cnx_remove_rc
 ```
 
-### `cnx_update_bss_more` <sub>wl_cnx.o</sub>
+### `cnx_update_bss_more`  <sub>wl_cnx.o</sub>
 
 ```
 call  esp_mesh_quick_funcs
@@ -4971,13 +4971,13 @@ call  ieee80211_parse_obss_scan_param
 
 4 functions touch a peripheral register.
 
-### `.iram1.0` <sub>coexist_hw.o</sub>
+### `.iram1.0`  <sub>coexist_hw.o</sub>
 
 ```
 rd32  0x3FF40078
 ```
 
-### `.iram1.12` <sub>coexist_hw.o</sub>
+### `.iram1.12`  <sub>coexist_hw.o</sub>
 
 ```
 call  (indirect)
@@ -4996,7 +4996,7 @@ wr32  0x3FF000CC
 call  g_coa_funcs_p
 ```
 
-### `coex_force_wifi_mode` <sub>coexist_hw.o</sub>
+### `coex_force_wifi_mode`  <sub>coexist_hw.o</sub>
 
 ```
 call  coex_time_now
@@ -5056,7 +5056,7 @@ rd32  0x3FF51110
 call  .iram1.12
 ```
 
-### `coex_unforce_wifi_mode` <sub>coexist_hw.o</sub>
+### `coex_unforce_wifi_mode`  <sub>coexist_hw.o</sub>
 
 ```
 call  btdm_rf_bb_reg_init
@@ -5469,3 +5469,4 @@ rd32  0x3FF5110C
 0x600340F8  1
 0x60034108  1
 ```
+

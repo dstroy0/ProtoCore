@@ -12,7 +12,14 @@ function, the ordered list of registers it touches and the calls it makes betwee
 
 Nothing is decompiled: this reads the instruction stream objdump prints.
 
-Usage:  python reverse_engineering/esp32_mac/blob_registers.py <repo-root> [--only <substring>]
+**XTENSA ONLY.** The extraction is built on `l32r` reading a literal pool, which is how xtensa
+reaches a 32-bit constant. The RISC-V dies (C2, C3, C5, C6, C61, H2) have no literal pool: they
+build an address from a `lui` / `addi` pair whose value comes from a relocation, and they call
+through `auipc` / `jalr` rather than a table. Pointed at one of those this would find nothing and
+report it as "touches no registers", which is a false negative rather than a result, so it
+refuses instead. A RISC-V port is a separate extraction, not a flag.
+
+Usage:  python reverse_engineering/esp32_mac/xtensa/blob_registers.py <repo-root> [--only <substring>]
 """
 import os
 import re
@@ -45,6 +52,20 @@ RELOC = re.compile(r"^\s+([0-9a-f]+): R_XTENSA\S*\s+(\S+)")
 
 LOADS = {"l32i": 32, "l32i.n": 32, "l16ui": 16, "l16si": 16, "l8ui": 8}
 STORES = {"s32i": 32, "s32i.n": 32, "s16i": 16, "s8i": 8}
+
+
+# Dies this extraction is valid for. Everything else is RISC-V, where none of the instruction
+# forms below exist.
+XTENSA = ("esp32", "esp32s2", "esp32s3")
+
+
+def require_xtensa(chip):
+    if chip not in XTENSA:
+        raise SystemExit(
+            f"{chip} is RISC-V: this reads xtensa l32r literal pools and callx8 tables, which it "
+            f"has none of. It would report every function as touching no registers. Use the "
+            f"arch-agnostic tools (blob_parity, blob_diff, blob_behavior, blob_iram) for that die."
+        )
 
 
 def in_range(v):
@@ -187,7 +208,7 @@ def main():
         "",
         "`wr` and `rd` carry the access width in bits.",
         "",
-        "Regenerate with `python reverse_engineering/esp32_mac/blob_registers.py .`.",
+        "Regenerate with `python reverse_engineering/esp32_mac/xtensa/blob_registers.py .`.",
         "",
     ]
     grand = {}
@@ -228,7 +249,7 @@ def main():
         doc.append(f"0x{addr:08X}  {n}")
     doc += ["```", ""]
 
-    dest = os.path.join(repo, "reverse_engineering", "esp32_mac", "RADIO_BLOB_REGISTERS.md")
+    dest = os.path.join(repo, "reverse_engineering", "esp32_mac", "xtensa", "RADIO_BLOB_REGISTERS.md")
     with open(dest, "w", encoding="utf-8", newline="\n") as fh:
         fh.write("\n".join(doc) + "\n")
     print(f"\n{len(grand)} distinct registers -> {dest}")
