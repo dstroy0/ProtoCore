@@ -95,8 +95,13 @@ _PREPROC = re.compile(r"^\s*#")
 # blank lines do NOT open the code region, so a top-of-file `#if ... #include ... #endif` block is fine.
 # A load-bearing ordered include that genuinely cannot be hoisted (it must run after earlier macros
 # resolve) is exempt only with a justified `// PC_ALLOW_LATE_INCLUDE: <reason>` on the include line.
+# The two linkage markers do not open the code region either: in C they expand to nothing at all, and
+# in C++ to `extern "C" {` and `}`, so an include after one is neither read-order-dependent nor
+# layering-hiding. protocore.h opens the block above its include list to give every header underneath
+# C linkage in one place.
 _MIDINC_MSG = "#include after code; hoist all includes to the top of the file"
 _ALLOW_LATE = "PC_ALLOW_LATE_INCLUDE"
+_LINKAGE = re.compile(r"^\s*PROTO_(?:BEGIN|END)_DECLS\s*$")
 
 # Ban #18: constexpr. A value the preprocessor cannot see cannot appear in an #if, set another
 # knob's #define default, or fail at config time - which is exactly how PC_ENABLE_EDGE_MESH
@@ -238,7 +243,7 @@ def scan_file(path):
         if _INCLUDE.match(line) and not pp_cont:
             if seen_code and _ALLOW_LATE not in raw_lines[line_no - 1]:
                 hits.append((str(path), line_no, 17, _MIDINC_MSG))
-        elif stripped and not is_pp:
+        elif stripped and not is_pp and not _LINKAGE.match(line):
             seen_code = True
         pp_cont = is_pp and stripped.endswith("\\")
     return hits
