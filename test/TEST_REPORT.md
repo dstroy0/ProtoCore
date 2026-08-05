@@ -1,8 +1,8 @@
 # Test Report
 
-**Generated:** 2026-08-04 01:51:24
+**Generated:** 2026-08-04 02:07:51
 **Command:** `pio test` over 304 auto-discovered native envs (excludes native_pentest, native_codeql)
-**Result:** ✅ 13 passed - 249s
+**Result:** ✅ 13 passed - 268s
 
 ---
 
@@ -85,7 +85,7 @@
 | `test_partition_monitor` | `native_partition`      |     0 |   ✅   | 00:00:00.816 |
 | `test_udp_telemetry`     | `native_udp_telemetry`  |     0 |   ✅   | 00:00:00.775 |
 | `test_sleep_sched`       | `native_sleep_sched`    |     0 |   ✅   | 00:00:00.791 |
-| `test_signaling`         | `native_signaling`      |     0 |   ✅   | 00:00:00.797 |
+| `test_signaling`         | `native_signaling`      |     0 |   ✅   | 00:00:00.853 |
 | `test_wearlevel`         | `native_wearlevel`      |     0 |   ✅   | 00:00:00.773 |
 | `test_netadapt`          | `native_netadapt`       |     0 |   ✅   | 00:00:00.768 |
 | `test_dshot`             | `native_dshot`          |     0 |   ✅   | 00:00:00.784 |
@@ -142,7 +142,7 @@
 | `test_syslog`            | `native_syslog`         |     0 |   ✅   | 00:00:00.850 |
 | `test_clock`             | `native_clock`          |     0 |   ✅   | 00:00:03.860 |
 | `test_forward`           | `native_forward`        |     0 |   ✅   | 00:00:10.158 |
-| `test_json`              | `native_json`           |     0 |   ✅   | 00:00:02.529 |
+| `test_json`              | `native_json`           |     0 |   ✅   | 00:00:02.196 |
 | `test_edge_cache`        | `native_edge_cache`     |     0 |   ✅   | 00:00:03.641 |
 | `test_edge_fetch`        | `native_edge_cache`     |     0 |   ✅   | 00:00:00.592 |
 | `test_http_client`       | `native_http_client`    |     0 |   ✅   | 00:00:00.835 |
@@ -162,17 +162,17 @@
 | `test_failsafe`          | `native_failsafe`       |     0 |   ✅   | 00:00:01.085 |
 | `test_focas`             | `native_focas`          |     0 |   ✅   | 00:00:01.050 |
 | `test_gpio_map`          | `native_gpio_map`       |     0 |   ✅   | 00:00:01.135 |
-| `test_upload`            | `native_upload`         |     0 |   ✅   | 00:00:02.404 |
+| `test_upload`            | `native_upload`         |     0 |   ✅   | 00:00:01.825 |
 | `test_gpib`              | `native_gpib`           |     0 |   ✅   | 00:00:03.772 |
 | `test_hislip`            | `native_hislip`         |     0 |   ✅   | 00:00:01.049 |
 | `test_iface_bridge`      | `native_iface_bridge`   |     0 |   ✅   | 00:00:01.064 |
 | `test_ipsec_db`          | `native_ipsec_db`       |     0 |   ✅   | 00:00:01.315 |
 | `test_log`               | `native_log`            |     0 |   ✅   | 00:00:01.141 |
 | `test_plaintext`         | `native_plaintext`      |     0 |   ✅   | 00:00:01.134 |
-| `test_plaintext`         | `native_pool_workers`   |     0 |   ✅   | 00:00:00.615 |
+| `test_plaintext`         | `native_pool_workers`   |     0 |   ✅   | 00:00:00.457 |
 | `test_safety_scl`        | `native_safety_scl`     |     0 |   ✅   | 00:00:01.066 |
 | `test_h3_e2e`            | `native_h3_e2e`         |     0 |   ✅   | 00:00:05.049 |
-| `test_h3_server`         | `native_h3_server`      |     0 |   ✅   | 00:00:02.824 |
+| `test_h3_server`         | `native_h3_server`      |     0 |   ✅   | 00:00:03.012 |
 | `test_j2735`             | `native_j2735`          |     0 |   ✅   | 00:00:00.898 |
 | `test_link_manager`      | `native_link_manager`   |     0 |   ✅   | 00:00:01.039 |
 | `test_openadr`           | `native_openadr`        |     0 |   ✅   | 00:00:00.913 |
@@ -185,14 +185,19 @@
 | `test_ssh_channel`       | `native_ssh`            |     0 |   ✅   | 00:00:00.713 |
 | `test_ssh_crypto`        | `native_ssh`            |     0 |   ✅   | 00:00:02.366 |
 | `test_tls13_kdf`         | `native_tls13_kdf`      |     0 |   ✅   | 00:00:01.210 |
-| `test_web_terminal`      | `native_web_terminal`   |     0 |   ✅   | 00:00:02.274 |
+| `test_web_terminal`      | `native_web_terminal`   |     0 |   ✅   | 00:00:01.914 |
 | `test_coap`              | `native_coap`           |     0 |   ✅   | 00:00:01.704 |
 | `test_coap`              | `native_coap_observe`   |     0 |   ✅   | 00:00:01.215 |
 | `test_csrf`              | `native_csrf`           |     0 |   ✅   | 00:00:01.367 |
 | `test_fins`              | `native_fins`           |     0 |   ✅   | 00:00:01.101 |
-| `test_keepalive`         | `native_keepalive`      |     0 |   ✅   | 00:00:02.401 |
+| `test_keepalive`         | `native_keepalive`      |     0 |   ✅   | 00:00:01.809 |
 | `test_crc`               | `native_primitives`     |     0 |   ✅   | 00:00:01.155 |
 | `test_redis_resp`        | `native_redis`          |     0 |   ✅   | 00:00:01.115 |
+| `test_application`       | `native_application`    |     0 |   ✅   | 00:00:02.118 |
+| `test_oidc`              | `native_oidc`           |     0 |   ✅   | 00:00:10.390 |
+| `test_secure_pool`       | `native_pool_workers`   |     0 |   ✅   | 00:00:00.924 |
+| `test_secure_pool`       | `native_secure_pool`    |     0 |   ✅   | 00:00:00.904 |
+| `test_swar`              | `native_swar`           |     0 |   ✅   | 00:00:06.729 |
 
 ---
 

@@ -479,6 +479,18 @@
 ".pio/libdeps/native_senml/littlefs/src/lfs_util.c": [
 "native_senml"
 ],
+".pio/libdeps/native_signaling/littlefs/include/lfs.h": [
+"native_signaling"
+],
+".pio/libdeps/native_signaling/littlefs/include/lfs_util.h": [
+"native_signaling"
+],
+".pio/libdeps/native_signaling/littlefs/src/lfs.c": [
+"native_signaling"
+],
+".pio/libdeps/native_signaling/littlefs/src/lfs_util.c": [
+"native_signaling"
+],
 ".pio/libdeps/native_smb/littlefs/include/lfs.h": [
 "native_smb"
 ],
@@ -1823,7 +1835,7 @@
 "native_swar",
 "native_tls13_msg"
 ],
-"src/board_drivers/hal/esp/esp_mnt_fs.c": [
+"src/board_drivers/hal/esp/esp_mnt_fs.cpp": [
 "native_swar"
 ],
 "src/board_drivers/hal/esp/esp_mnt_fs.h": [
@@ -9337,6 +9349,7 @@
 "native_sb_modbus",
 "native_secure_pool",
 "native_senml",
+"native_signaling",
 "native_smb",
 "native_southbound",
 "native_sqlite",
