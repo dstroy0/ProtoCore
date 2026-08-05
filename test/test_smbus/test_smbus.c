@@ -86,25 +86,59 @@ static void test_pec_flag(void)
     TEST_ASSERT_FALSE(pc_smbus_pec_enabled());
 }
 
-// A host build has no bus, so every transfer refuses rather than pretending to have run.
-static void test_host_transfers_refuse(void)
+// Each shape puts its own byte count on the wire, which is what distinguishes them: a send byte
+// carries no command code, a write byte carries one, and a write word carries a command and two
+// data bytes low first.
+static void test_shapes_on_the_wire(void)
 {
-    uint8_t b = 0;
-    uint16_t w = 0;
-    size_t n = 1;
-    uint8_t blk[4] = {0};
-    TEST_ASSERT_FALSE(pc_smbus_begin());
-    TEST_ASSERT_FALSE(pc_smbus_quick(0x2A, PC_SMBUS_WRITE));
-    TEST_ASSERT_FALSE(pc_smbus_send_byte(0x2A, 0x01));
-    TEST_ASSERT_FALSE(pc_smbus_receive_byte(0x2A, &b));
-    TEST_ASSERT_FALSE(pc_smbus_write_byte(0x2A, 0x00, 0x01));
-    TEST_ASSERT_FALSE(pc_smbus_read_byte(0x2A, 0x00, &b));
-    TEST_ASSERT_FALSE(pc_smbus_write_word(0x2A, 0x00, 0x1234));
-    TEST_ASSERT_FALSE(pc_smbus_read_word(0x2A, 0x00, &w));
-    TEST_ASSERT_FALSE(pc_smbus_write_block(0x2A, 0x00, blk, sizeof(blk)));
-    TEST_ASSERT_FALSE(pc_smbus_read_block(0x2A, 0x00, blk, sizeof(blk), &n));
-    TEST_ASSERT_FALSE(pc_smbus_process_call(0x2A, 0x00, 0x1234, &w));
-    TEST_ASSERT_FALSE(pc_smbus_block_process_call(0x2A, 0x00, blk, 2, blk, sizeof(blk), &n));
+    pc_smbus_set_pec(PROTO_FALSE);
+
+    pc_bus_host_reset();
+    TEST_ASSERT_TRUE(pc_smbus_send_byte(0x2A, 0x5A));
+    uint32_t n = 0;
+    const uint8_t *tx = pc_bus_host_written(&n);
+    TEST_ASSERT_EQUAL_UINT32(1, n);
+    TEST_ASSERT_EQUAL_HEX8(0x5A, tx[0]);
+
+    pc_bus_host_reset();
+    TEST_ASSERT_TRUE(pc_smbus_write_byte(0x2A, 0x10, 0x5A));
+    tx = pc_bus_host_written(&n);
+    TEST_ASSERT_EQUAL_UINT32(2, n);
+    TEST_ASSERT_EQUAL_HEX8(0x10, tx[0]);
+
+    pc_bus_host_reset();
+    TEST_ASSERT_TRUE(pc_smbus_write_word(0x2A, 0x20, 0xBEEF));
+    tx = pc_bus_host_written(&n);
+    TEST_ASSERT_EQUAL_UINT32(3, n);
+    TEST_ASSERT_EQUAL_HEX8(0xEF, tx[1]); // low byte first
+    TEST_ASSERT_EQUAL_HEX8(0xBE, tx[2]);
+}
+
+// A block write puts the count byte between the command and the payload.
+static void test_block_write_counts_the_payload(void)
+{
+    pc_smbus_set_pec(PROTO_FALSE);
+    pc_bus_host_reset();
+    const uint8_t payload[4] = {0xAA, 0xBB, 0xCC, 0xDD};
+    TEST_ASSERT_TRUE(pc_smbus_write_block(0x2A, 0x30, payload, sizeof(payload)));
+
+    uint32_t n = 0;
+    const uint8_t *tx = pc_bus_host_written(&n);
+    TEST_ASSERT_EQUAL_UINT32(2 + sizeof(payload), n);
+    TEST_ASSERT_EQUAL_HEX8(0x30, tx[0]);
+    TEST_ASSERT_EQUAL_HEX8((uint8_t)sizeof(payload), tx[1]);
+    TEST_ASSERT_EQUAL_HEX8_ARRAY(payload, &tx[2], sizeof(payload));
+}
+
+// A payload longer than the protocol carries is refused before anything reaches the bus.
+static void test_block_write_refuses_oversize(void)
+{
+    pc_bus_host_reset();
+    uint8_t big[PC_SMBUS_BLOCK_MAX + 1] = {0};
+    TEST_ASSERT_FALSE(pc_smbus_write_block(0x2A, 0x30, big, sizeof(big)));
+    uint32_t n = 1;
+    (void)pc_bus_host_written(&n);
+    TEST_ASSERT_EQUAL_UINT32(0, n);
 }
 
 int main(void)
@@ -118,6 +152,8 @@ int main(void)
     RUN_TEST(test_pec_depends_on_direction);
     RUN_TEST(test_pec_empty_payload);
     RUN_TEST(test_pec_flag);
-    RUN_TEST(test_host_transfers_refuse);
+    RUN_TEST(test_shapes_on_the_wire);
+    RUN_TEST(test_block_write_counts_the_payload);
+    RUN_TEST(test_block_write_refuses_oversize);
     return UNITY_END();
 }

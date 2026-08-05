@@ -6,6 +6,7 @@
 // extension of a 5-bit and an 11-bit field is where it goes wrong.
 
 #include "services/peripherals/pmbus.h"
+#include "services/peripherals/smbus.h" // pc_smbus_set_pec: the wire shape depends on it
 #include <unity.h>
 
 void setUp(void) {}
@@ -98,24 +99,66 @@ static void test_direct(void)
     TEST_ASSERT_EQUAL_INT32(PC_PMBUS_INVALID, pc_pmbus_direct_micro(5, 0, 0, 0));
 }
 
-// A host build has no bus, so every command refuses.
-static void test_host_commands_refuse(void)
+// Selecting a page is a write byte of the PAGE command, which is what a multi-rail part needs
+// before any reading means anything.
+static void test_set_page_wire(void)
 {
-    uint8_t b = 0;
-    uint16_t w = 0;
+    pc_smbus_set_pec(PROTO_FALSE);
+    pc_bus_host_reset();
+    TEST_ASSERT_TRUE(pc_pmbus_set_page(0x40, 1));
+
+    uint32_t n = 0;
+    const uint8_t *tx = pc_bus_host_written(&n);
+    TEST_ASSERT_EQUAL_UINT32(2, n);
+    TEST_ASSERT_EQUAL_HEX8(PC_PMBUS_PAGE, tx[0]);
+    TEST_ASSERT_EQUAL_HEX8(0x01, tx[1]);
+}
+
+// A telemetry read sends the command code and decodes the LINEAR11 word the part answers with.
+static void test_read_linear11_wire(void)
+{
+    pc_smbus_set_pec(PROTO_FALSE);
+    pc_bus_host_reset();
+    const uint8_t reply[2] = {0x00, 0xD3}; // 0xD300 little-endian: 768 * 2^-6 = 12.0
+    pc_bus_host_preload(reply, sizeof(reply));
+
     int32_t v = 0;
-    size_t n = 0;
-    uint8_t buf[8] = {0};
-    TEST_ASSERT_FALSE(pc_pmbus_begin());
-    TEST_ASSERT_FALSE(pc_pmbus_set_page(0x40, 0));
-    TEST_ASSERT_FALSE(pc_pmbus_read_vout_mode(0x40, &b));
-    TEST_ASSERT_FALSE(pc_pmbus_read_linear11(0x40, PC_PMBUS_READ_VIN, &v));
-    TEST_ASSERT_FALSE(pc_pmbus_read_linear16(0x40, PC_PMBUS_READ_VOUT, -9, &v));
-    TEST_ASSERT_FALSE(pc_pmbus_write_linear16(0x40, PC_PMBUS_VOUT_COMMAND, -9, 1200000));
-    TEST_ASSERT_FALSE(pc_pmbus_status_byte(0x40, &b));
-    TEST_ASSERT_FALSE(pc_pmbus_status_word(0x40, &w));
-    TEST_ASSERT_FALSE(pc_pmbus_clear_faults(0x40));
-    TEST_ASSERT_FALSE(pc_pmbus_read_mfr_string(0x40, PC_PMBUS_MFR_ID, buf, sizeof(buf), &n));
+    TEST_ASSERT_TRUE(pc_pmbus_read_linear11(0x40, PC_PMBUS_READ_VIN, &v));
+    TEST_ASSERT_EQUAL_INT32(12000000, v);
+
+    uint32_t n = 0;
+    const uint8_t *tx = pc_bus_host_written(&n);
+    TEST_ASSERT_EQUAL_UINT32(1, n);
+    TEST_ASSERT_EQUAL_HEX8(PC_PMBUS_READ_VIN, tx[0]);
+}
+
+// Clearing faults is a send byte: the command code alone, with no data after it.
+static void test_clear_faults_wire(void)
+{
+    pc_smbus_set_pec(PROTO_FALSE);
+    pc_bus_host_reset();
+    TEST_ASSERT_TRUE(pc_pmbus_clear_faults(0x40));
+
+    uint32_t n = 0;
+    const uint8_t *tx = pc_bus_host_written(&n);
+    TEST_ASSERT_EQUAL_UINT32(1, n);
+    TEST_ASSERT_EQUAL_HEX8(PC_PMBUS_CLEAR_FAULTS, tx[0]);
+}
+
+// Writing an output voltage encodes it against the exponent the part reports, low byte first.
+static void test_write_linear16_wire(void)
+{
+    pc_smbus_set_pec(PROTO_FALSE);
+    pc_bus_host_reset();
+    TEST_ASSERT_TRUE(pc_pmbus_write_linear16(0x40, PC_PMBUS_VOUT_COMMAND, -9, 1200000));
+
+    uint16_t want = pc_pmbus_linear16_encode(1200000, -9);
+    uint32_t n = 0;
+    const uint8_t *tx = pc_bus_host_written(&n);
+    TEST_ASSERT_EQUAL_UINT32(3, n);
+    TEST_ASSERT_EQUAL_HEX8(PC_PMBUS_VOUT_COMMAND, tx[0]);
+    TEST_ASSERT_EQUAL_HEX8((uint8_t)(want & 0xFF), tx[1]);
+    TEST_ASSERT_EQUAL_HEX8((uint8_t)(want >> 8), tx[2]);
 }
 
 int main(void)
@@ -129,6 +172,9 @@ int main(void)
     RUN_TEST(test_linear16_round_trip);
     RUN_TEST(test_out_of_range_refused);
     RUN_TEST(test_direct);
-    RUN_TEST(test_host_commands_refuse);
+    RUN_TEST(test_set_page_wire);
+    RUN_TEST(test_read_linear11_wire);
+    RUN_TEST(test_clear_faults_wire);
+    RUN_TEST(test_write_linear16_wire);
     return UNITY_END();
 }
