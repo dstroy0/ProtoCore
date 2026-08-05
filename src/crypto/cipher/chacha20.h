@@ -24,8 +24,11 @@
 #ifndef PROTOCORE_CHACHA20_H
 #define PROTOCORE_CHACHA20_H
 
+#include "protocore_config.h" // the entry point: types.h for the widths and PROTO_BEGIN_DECLS
 #include <stddef.h>
 #include <stdint.h>
+
+PROTO_BEGIN_DECLS
 
 #define PC_CHACHA20_KEY_LEN 32
 #define PC_CHACHA20_BLOCK_LEN 64
@@ -51,5 +54,7 @@ void pc_chacha20_xor(const uint8_t key[PC_CHACHA20_KEY_LEN], const uint8_t iv[8]
  */
 void pc_chacha20_block_ietf(const uint8_t key[PC_CHACHA20_KEY_LEN], uint32_t counter, const uint8_t nonce[12],
                             uint8_t out[PC_CHACHA20_BLOCK_LEN]);
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_CHACHA20_H

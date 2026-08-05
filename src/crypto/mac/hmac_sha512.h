@@ -18,8 +18,11 @@
 #define PROTOCORE_HMAC_SHA512_H
 
 #include "crypto/hash/sha512.h"
+#include "protocore_config.h" // the entry point: types.h for the widths and PROTO_BEGIN_DECLS
 #include <stddef.h>
 #include <stdint.h>
+
+PROTO_BEGIN_DECLS
 
 /** @brief HMAC-SHA2-512 output length in bytes. */
 #define PC_HMAC_SHA512_LEN 64
@@ -41,5 +44,7 @@ void pc_hmac_sha512_final(pc_hmac_sha512_ctx *ctx, uint8_t mac[PC_HMAC_SHA512_LE
 /** @brief One-shot HMAC-SHA2-512 over a single buffer. */
 void pc_hmac_sha512(const uint8_t *key, size_t key_len, const uint8_t *data, size_t len,
                     uint8_t mac[PC_HMAC_SHA512_LEN]);
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_HMAC_SHA512_H

@@ -37,8 +37,11 @@
 #ifndef PROTOCORE_AES256CTR_H
 #define PROTOCORE_AES256CTR_H
 
+#include "protocore_config.h" // the entry point: types.h for the widths and PROTO_BEGIN_DECLS
 #include <stddef.h>
 #include <stdint.h>
+
+PROTO_BEGIN_DECLS
 
 /** @brief AES-256-CTR key length (bytes). */
 #define PC_AES256CTR_KEY_LEN 32
@@ -75,5 +78,7 @@ void pc_aes256ctr_crypt(const uint8_t key[PC_AES256CTR_KEY_LEN], uint8_t counter
  */
 uint32_t pc_aes256ctr_get_length(const uint8_t key[PC_AES256CTR_KEY_LEN], const uint8_t counter[PC_AES256CTR_CTR_LEN],
                                  const uint8_t enc4[4]);
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_AES256CTR_H
