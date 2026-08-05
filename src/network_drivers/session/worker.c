@@ -13,8 +13,8 @@
 #include "network_drivers/session/worker.h"
 
 #include "board_drivers/board_profiles/pc_platform.h" // the target's queues and tasks, under our names
+#include "mmgr/arena.h"                               // pc_worker_set_self: identity lives with the pools it indexes
 #include "shared_primitives/ring.h"                   // PROTO_ATOMIC_LOAD/STORE: the run flag crosses tasks
-// Worker identity lives in mmgr/arena.c, with the pools it indexes.
 
 // ---------------------------------------------------------------------------
 // Worker tasks
