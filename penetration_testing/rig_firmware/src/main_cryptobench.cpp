@@ -196,11 +196,12 @@ static void crypto_bench_task(void *)
             uint8_t hp16[16] = {0}, blk[16] = {0}, mask[16];
             BENCH_BULK(
                 "  ^ hp ctx+block per record", 300, BULK, do {
-                    SecureScope s;
+                    size_t _m = pc_secure_mark();
                     pc_aes128 *h = pc_aes128_wants();
                     pc_aes128_init(h, hp16);
                     pc_aes128_encrypt_block(h, blk, mask);
                     pc_aes128_wipe(h);
+                    pc_secure_release(_m);
                 } while (0));
             // The block alone, against a context already keyed - what the code does now. The difference
             // between these two is what keeping the context actually buys; the block itself is required
