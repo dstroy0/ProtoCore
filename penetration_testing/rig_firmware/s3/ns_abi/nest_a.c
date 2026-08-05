@@ -12,11 +12,11 @@ extern const RouteNs Route; // defined in the other TU
 typedef struct
 {
     void (*init)(void);
-    RouteNs route;
+    const RouteNs *route;
 } NetworkNs;
 
 static void init(void)
 {
 }
 
-const NetworkNs network = {init, Route};
+const NetworkNs network = {init, &Route};
