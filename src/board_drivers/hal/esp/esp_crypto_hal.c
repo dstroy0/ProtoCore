@@ -82,8 +82,16 @@ static void rsa_bring_up(void)
     PC_HW_REG(PC_RSA_PD_REG) = v;
 #endif
 
+    // Bounded: this runs with interrupts off, so a clean bit that never clears would leave only the
+    // watchdog. On expiry the block is left as it is and the modmul that follows zeroes its result.
+    uint32_t spins = 0u;
     while (PC_HW_REG(PC_RSA_CLEAN) != 0u) // wait until the accelerator's memory init completes
     {
+        spins++;
+        if (spins >= PC_RSA_SPIN_MAX)
+        {
+            return;
+        }
     }
 }
 
@@ -116,7 +124,7 @@ void pc_rsa_hw_release(void)
     // Leave the peripheral clocked+powered for the next op (a MODMULT run is stateless; a per-op power-cycle is
     // both wasteful and, measured, non-deterministic). It is re-brought-up on the next acquire only if some
     // other user powered it down meanwhile.
-    xSemaphoreGiveRecursive(s_rsa.lock);
+    (void)xSemaphoreGiveRecursive(s_rsa.lock); // a give on a mutex this task holds has no failure to report
 }
 
 #endif // PC_RSA_MODMUL_HW
