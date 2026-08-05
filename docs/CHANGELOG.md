@@ -6,6 +6,28 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- the four auth examples now enable PC_ENABLE_AUTH ([`2eaec7a`](https://github.com/dstroy0/ProtoCore/commit/2eaec7a12c0ed9e7a8ae9a8a83e3a5a51fc64b28))
+- five examples still calling the C++ default-argument forms, and WebTerminal's missing dependency flag ([`98e6838`](https://github.com/dstroy0/ProtoCore/commit/98e683849b7fa4e3148f753dd7b8d3f17ff003dd))
+- the coverage union aborted on a function with two build-time definitions ([`1dd0cc0`](https://github.com/dstroy0/ProtoCore/commit/1dd0cc0a44a9b7959ee0a778f9d1246b88671c8f))
+- declare pc_ntp_http_date where it is defined, not behind PC_ENABLE_NTP ([`ad646a1`](https://github.com/dstroy0/ProtoCore/commit/ad646a1aa3990bde3ca744708da9243492034ee5))
+- give the whole public API C linkage at the umbrella, not header by header ([`4605ea5`](https://github.com/dstroy0/ProtoCore/commit/4605ea55a9fbf9a89e8ffecc97f75ee6c7d588c4))
+- extern C guards on the SHA headers ([`33fd865`](https://github.com/dstroy0/ProtoCore/commit/33fd865a7509bca41b2c567054979260bcc957b9))
+- extern C guards on the five MAC and stream-cipher headers ([`27bc4b0`](https://github.com/dstroy0/ProtoCore/commit/27bc4b0cd5dcbc28f1454d255e7f220537dc833c))
+- extern C guard on aes128gcm.h, and drop the std includes types.h already owns ([`75203df`](https://github.com/dstroy0/ProtoCore/commit/75203df623ac4d049651665b55cdb2585b5f0e87))
+- three headers declared C functions with no extern C guard ([`36f572a`](https://github.com/dstroy0/ProtoCore/commit/36f572a031f8e582f5bb95d950318edbfd5d5f70))
+- esp_aes128gcm named C++ alignof in a C11 file ([`6a82448`](https://github.com/dstroy0/ProtoCore/commit/6a82448766a810a4beab44b5d24521bcc1f2706f))
+- esp_aes128gcm used C++ alignof in a C11 file ([`81e3039`](https://github.com/dstroy0/ProtoCore/commit/81e3039fc9999ca3f701c0c0205c9c4a086dab8c))
+- the crypto bench's SecureScope use ([`fa68f69`](https://github.com/dstroy0/ProtoCore/commit/fa68f6924be5a2e428c05ac357bfa61d1ffdefa1))
+- the crypto bench passes the DTLS record keys by pointer ([`2af2fb2`](https://github.com/dstroy0/ProtoCore/commit/2af2fb2e6e3b4445d4d1defbe62f67ae52250f8d))
+- the crypto bench's hkdf_expand_label arity ([`7dae4a8`](https://github.com/dstroy0/ProtoCore/commit/7dae4a81ab8492f992e3a6b05d5c8df85a638f7f))
+- the crypto bench's scoped-enum uses, left over from the C11 conversion ([`6237858`](https://github.com/dstroy0/ProtoCore/commit/6237858f9a82aa8422cfe3e9fb6566a8d50f153f))
+- the crypto bench's stale mmgr include path ([`8bddf97`](https://github.com/dstroy0/ProtoCore/commit/8bddf97451f2f737a338b5130be975b350c55acb))
+- bound the two RSA accelerator status polls ([`99ba4e2`](https://github.com/dstroy0/ProtoCore/commit/99ba4e2e292c03a959efb5498717463395337051))
+- read the AES-GCM block through the raw accessors instead of a punned pointer ([`5b047bd`](https://github.com/dstroy0/ProtoCore/commit/5b047bd5fa4489eb424e6884f7b21ab27a69eef4))
+- nine dropped status returns in the SFTP and file-serving paths ([`24a6f97`](https://github.com/dstroy0/ProtoCore/commit/24a6f973127426f50a7626679e2dad63a061038d))
+- four signed-overflow parsers, an unbounded UART drain, and oidc's unwritten out-params ([`b8c11bf`](https://github.com/dstroy0/ProtoCore/commit/b8c11bffddbcc1bebc500e19709febc1a02798c8))
+- link the NVS backend into the codeql coverage env ([`6c5a2f2`](https://github.com/dstroy0/ProtoCore/commit/6c5a2f2562e1ecda3ed367250aaf2d8f0f4398fb))
+- two CI gates, the clang-format blind spot, and config_io's missing backend ([`f057523`](https://github.com/dstroy0/ProtoCore/commit/f057523207668c2e9b705d3cedf12011d7231c2e))
 - run the peripheral drivers' real body wherever a bus seam exists ([`52418a6`](https://github.com/dstroy0/ProtoCore/commit/52418a68302826128b5fbe25f53e01fa34613f7c))
 - route every timing call through the library clock ([`09e8d2b`](https://github.com/dstroy0/ProtoCore/commit/09e8d2b9dd85c5ece8a66b0c4e5071c7d3fe7263))
 - include the header declaring pc_worker_set_self in worker.c ([`c0a548e`](https://github.com/dstroy0/ProtoCore/commit/c0a548e3b4ad6cf0619a820036850752506a63a1))
@@ -19,17 +41,33 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- rename the format workflow, since clang-format is one step of several ([`098c792`](https://github.com/dstroy0/ProtoCore/commit/098c792fc28064d64095588d26dfb4ee841fc1a7))
+- gate Python formatting, and keep vendored components out of the C style sweep ([`225a20c`](https://github.com/dstroy0/ProtoCore/commit/225a20c2184840583c8e648516f07411fa991070))
+- unblock the two formatting gates ([`8660430`](https://github.com/dstroy0/ProtoCore/commit/86604301072979c929252f2c3c53ac0cee34b1e9))
+- update CHANGELOG.md [skip ci] ([`8a6e286`](https://github.com/dstroy0/ProtoCore/commit/8a6e286888f51f6db0c942df9cb799d964fb93d7))
+- update test report + coverage [skip ci] ([`bbb0215`](https://github.com/dstroy0/ProtoCore/commit/bbb02150fdd194463e43615dbe7932a5598ccc49))
+- update CHANGELOG.md [skip ci] ([`c247de8`](https://github.com/dstroy0/ProtoCore/commit/c247de8e010fb169d95742eac0b62e6aa8d7678c))
 - move to pioarduino so the toolchain is current ([`3e1561d`](https://github.com/dstroy0/ProtoCore/commit/3e1561d9287ee7e412194c4432355f689e1c9d9a))
 - unpin the espressif32 platform so the toolchain tracks latest ([`349cbf9`](https://github.com/dstroy0/ProtoCore/commit/349cbf9be4581565a483344071694b729e7016ea))
 - the naming law stops demanding a C++ construct, and reads the enum's real name ([`0eee3a2`](https://github.com/dstroy0/ProtoCore/commit/0eee3a2c6ed6dc7a2ceb79e072d3e2b5981e2bec))
 
 ### Changes
 
+- Merge pull request #24 from dstroy0/c11-target ([`4d9b245`](https://github.com/dstroy0/ProtoCore/commit/4d9b2457562f378c3c27da78300393c9e7f2fbe9))
+- Merge remote-tracking branch 'origin/main' into c11-target ([`a2a5fff`](https://github.com/dstroy0/ProtoCore/commit/a2a5fff60842e82fa7cb978a05eee75ac457d3e3))
 - Merge pull request #23 from dstroy0/c11-target ([`3d74266`](https://github.com/dstroy0/ProtoCore/commit/3d74266b1d59f5f7492bf27af1f41180a02f7958))
 - survey a JTAG DRAM dump for dispatch tables ([`744ca7f`](https://github.com/dstroy0/ProtoCore/commit/744ca7f3a62aacfbc6f752772f5a84bd6666aa53))
 
 ### Documentation
 
+- regenerate what the two new feature flags feed, and name the stack idemIP ([`c9587e6`](https://github.com/dstroy0/ProtoCore/commit/c9587e60135f1dc674abbc23b8b515d84377b0d4))
+- regenerate the README feature tables for SMBus and PMBus ([`5905026`](https://github.com/dstroy0/ProtoCore/commit/590502681bc0e295af698f92f9b822be283d74d7))
+- the docs badge names ProtoCore, not the host it sits on ([`1ec8834`](https://github.com/dstroy0/ProtoCore/commit/1ec88344dee7cf34c8bad2c5882b9275d3df0ef7))
+- state the namespace struct as the module's public surface ([`20bcec8`](https://github.com/dstroy0/ProtoCore/commit/20bcec88c1f7e8858ea69766d5f699219a200ce5))
+- state the C11 object as the endorsed shape in ban 22, and add the bench that prices it ([`7fa7048`](https://github.com/dstroy0/ProtoCore/commit/7fa70481b6e923c7ba5831285d8694f275e6a183))
+- update ESP32 build footprints [skip ci] ([`d3fde32`](https://github.com/dstroy0/ProtoCore/commit/d3fde3258a02d57be307f7a836816c6aa3574d46))
+- record the SMBus and PMBus flags, and the third .cpp exemption ([`3a46de4`](https://github.com/dstroy0/ProtoCore/commit/3a46de4143e0c88f4ccce276fcaa22c47b1a521f))
+- log three bugs the bus-owner work surfaced ([`a106b19`](https://github.com/dstroy0/ProtoCore/commit/a106b193e002e955f43713c15748b9eefc4d46f1))
 - inventory the radio functions that must stay in IRAM ([`bdfef8e`](https://github.com/dstroy0/ProtoCore/commit/bdfef8e697c1be111a8ae09e500f307d9dc93d71))
 - diff the radio blobs' code between installs, function by function ([`ebc29b6`](https://github.com/dstroy0/ProtoCore/commit/ebc29b6f0d627576404ed9a2b40da3c29653baa6))
 - compare the radio blob symbols between the Arduino and IDF installs ([`8b92f56`](https://github.com/dstroy0/ProtoCore/commit/8b92f56ddd678746c3b80596c4bcbd4693bad5e2))
@@ -41,6 +79,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Features
 
+- gate the comment law, and sweep the CRC history clause ([`f64a89f`](https://github.com/dstroy0/ProtoCore/commit/f64a89f2e00f5440e507d4940974d79c356105d2))
 - per-transfer log with timestamps in the host bus capture ([`4b4e0a3`](https://github.com/dstroy0/ProtoCore/commit/4b4e0a301e66a7ef74aca82df553df3886fb7f70))
 - record the wire on host builds, so driver output is testable end to end ([`af9fe85`](https://github.com/dstroy0/ProtoCore/commit/af9fe85441c08bc5d1eb7603f75828fa68feae65))
 - capture the live PHY dispatch table off an ESP32-S3 ([`affc928`](https://github.com/dstroy0/ProtoCore/commit/affc9280a48c7afc26bddf8a87dba92ff9aa49b1))
@@ -51,6 +90,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Refactor
 
+- fold five copies of the hex digit table onto PC_HEX_LOWER ([`9c0726a`](https://github.com/dstroy0/ProtoCore/commit/9c0726ada37ef9c4c0d8bb162946b4e308d7feff))
 - move the last three drivers onto the bus owners ([`6e5116a`](https://github.com/dstroy0/ProtoCore/commit/6e5116a140e7a81ba4f2daaf71d53b84cd278c93))
 - split the xtensa-only radio tools into their own subdirectory ([`0dd66cd`](https://github.com/dstroy0/ProtoCore/commit/0dd66cdd6656b47a97b5a5765d571da75a17e5fa))
 - move the radio reverse-engineering tooling to reverse_engineering/esp32_mac ([`2d7b324`](https://github.com/dstroy0/ProtoCore/commit/2d7b32475c51dd45a4b38ecc9000f98497d467d7))
@@ -59,6 +99,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Testing
 
+- price the namespace struct in C on the target toolchain ([`4628a54`](https://github.com/dstroy0/ProtoCore/commit/4628a543d55ff485ff3934cfdc8ff6967d600769))
+- keep the bench leaves out of line so the strip is what gets measured ([`1525354`](https://github.com/dstroy0/ProtoCore/commit/152535472471b6d83321c6f2f571b77b01ce2a46))
 - assert the INA219 wire output instead of a host refusal ([`0b3fc66`](https://github.com/dstroy0/ProtoCore/commit/0b3fc66b388e8f27ec061997124b0f323e7d1709))
 - assert the drivers' wire output instead of a host refusal ([`dfa44ac`](https://github.com/dstroy0/ProtoCore/commit/dfa44ac74a68803ece33d10c48d038ec276ef995))
 - assert the SMBus and PMBus wire output instead of a host refusal ([`8bc0806`](https://github.com/dstroy0/ProtoCore/commit/8bc0806a1ac2541ad86d84c0d90bc6b5292b457d))
@@ -95,8 +137,6 @@ All notable changes to ProtoCore are documented here.
 - measure coverage over all of src, with nothing excluded ([`6cf03ba`](https://github.com/dstroy0/ProtoCore/commit/6cf03baa893019b7c69a0cc07fc397dbdc057f9d))
 - esp32dev states the C standard src/ is written in ([`0a6b03e`](https://github.com/dstroy0/ProtoCore/commit/0a6b03e738984d3fe51958847c195c9afce59a8f))
 - library.json states the C standard src/ is written in ([`53f4893`](https://github.com/dstroy0/ProtoCore/commit/53f48933df5f34af833b02718d0970fed6ebc9ec))
-- update test report + coverage [skip ci] ([`bbb0215`](https://github.com/dstroy0/ProtoCore/commit/bbb02150fdd194463e43615dbe7932a5598ccc49))
-- update CHANGELOG.md [skip ci] ([`c247de8`](https://github.com/dstroy0/ProtoCore/commit/c247de8e010fb169d95742eac0b62e6aa8d7678c))
 - update test report + coverage [skip ci] ([`3620178`](https://github.com/dstroy0/ProtoCore/commit/3620178aec096b69e01fdf4a5036ff52fbdede74))
 - update CHANGELOG.md [skip ci] ([`3206307`](https://github.com/dstroy0/ProtoCore/commit/320630791cff9fa6a715da3698d163413e924879))
 - update test report + coverage [skip ci] ([`a112b07`](https://github.com/dstroy0/ProtoCore/commit/a112b071a235722428998020931c226afb9025a7))
