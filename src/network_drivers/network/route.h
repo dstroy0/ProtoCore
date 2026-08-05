@@ -24,16 +24,20 @@ typedef struct RouteCtx RouteCtx;
 /**
  * @brief The route-table module.
  *
- * @var RouteNs::ctx    the table, opaque to every caller.
+ * @var RouteNs::init   borrow the table from the secure pool. Runs once, before any registration.
  * @var RouteNs::add    take the next free entry, zeroed and ready to fill, or NULL when full.
  * @var RouteNs::count  entries currently registered.
  * @var RouteNs::at     entry @c i, or NULL if @c i is past the end.
  * @var RouteNs::reset  empty the table. For tests: a case that does not reset matches against every
  *                      route the previous cases registered.
+ *
+ * The storage handle is not a member. A borrow is obtained when @ref RouteNs::init runs, and this
+ * object is `const`, so a member could only ever hold an address settled before the program did.
+ * Nothing above this module needs the handle: a caller takes an entry or walks by index.
  */
 typedef struct
 {
-    RouteCtx *ctx;
+    void (*init)(void);
     Route *(*add)(void);
     uint8_t (*count)(void);
     Route *(*at)(uint8_t i);

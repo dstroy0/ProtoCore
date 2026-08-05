@@ -5,30 +5,45 @@
  * @file route.c
  * @brief The route table and its one owner. See route.h.
  *
+ * The table is internal server state, so it is borrowed from the secure pool: that borrow is
+ * aligned and padded like every other, and the pool wipes it on release rather than leaving a
+ * previous tenant's handler and backend pointers readable.
+ *
  * The one symbol this file exports is @ref RouteTable.
  */
 
 #include "network_drivers/network/route.h"
 #include "mmgr/protomem.h" // mem.zero: the hand-out wipe
+#include "mmgr/secure.h"   // where the table lives
 #include "protocore.h"     // completes Route; route.h names it only as an opaque tag
 
-// The table, owned by one instance with internal linkage. Nothing outside this file can name it;
-// callers take an entry or walk by index.
+// The table's layout, known only here. The handle is the module's one file-scope mutable; the
+// storage behind it belongs to the secure pool.
 struct RouteCtx
 {
     Route entry[MAX_ROUTES];
     uint8_t count;
 };
-static struct RouteCtx s_route;
+static struct RouteCtx *s_route;
+
+static void init(void)
+{
+    pc_span s = pc_secure_span(sizeof(struct RouteCtx), 8);
+    s_route = pc_span_ok(s) ? (struct RouteCtx *)s.buf : NULL;
+    if (s_route != NULL)
+    {
+        mem.zero(s_route, sizeof(*s_route)); // the pool hands back uninitialized bytes
+    }
+}
 
 static Route *add(void)
 {
-    if (s_route.count >= MAX_ROUTES)
+    if (s_route == NULL || s_route->count >= MAX_ROUTES)
     {
         return NULL;
     }
-    Route *r = &s_route.entry[s_route.count];
-    s_route.count++;
+    Route *r = &s_route->entry[s_route->count];
+    s_route->count++;
 
     // Zeroed on hand-out, not on release. A registration fills the fields its route kind uses and
     // leaves the rest, so an entry carrying a previous tenant's handler or backend pointer would
@@ -40,23 +55,26 @@ static Route *add(void)
 
 static uint8_t count(void)
 {
-    return s_route.count;
+    return s_route == NULL ? 0u : s_route->count;
 }
 
 static Route *at(uint8_t i)
 {
-    if (i >= s_route.count)
+    if (s_route == NULL || i >= s_route->count)
     {
         return NULL;
     }
-    return &s_route.entry[i];
+    return &s_route->entry[i];
 }
 
 static void reset(void)
 {
     // The count is the table: add() zeroes an entry on hand-out, so nothing below the count can carry
     // a previous tenant's fields and there is nothing to wipe here.
-    s_route.count = 0;
+    if (s_route != NULL)
+    {
+        s_route->count = 0;
+    }
 }
 
-const RouteNs RouteTable = {&s_route, add, count, at, reset};
+const RouteNs RouteTable = {init, add, count, at, reset};
