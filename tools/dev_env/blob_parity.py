@@ -16,18 +16,31 @@ import subprocess
 import sys
 
 PK = os.path.expanduser("~/.platformio/packages")
-SDK = os.path.join(PK, "framework-arduinoespressif32", "tools", "sdk")
 
-# Each die needs its own objdump: the S-series are xtensa with their own configuration, and the
-# C-series are RISC-V, so a single cross-objdump does not read all of them.
-CHIPS = [
-    ("esp32", os.path.join(PK, "toolchain-xtensa-esp32", "bin", "xtensa-esp32-elf-objdump.exe"), "xtensa"),
-    ("esp32s2", os.path.join(PK, "toolchain-xtensa-esp32s2", "bin", "xtensa-esp32s2-elf-objdump.exe"), "xtensa"),
-    ("esp32s3", os.path.join(PK, "toolchain-xtensa-esp32s3", "bin", "xtensa-esp32s3-elf-objdump.exe"), "xtensa"),
-    ("esp32c3", os.path.join(PK, "toolchain-riscv32-esp", "bin", "riscv32-esp-elf-objdump.exe"), "riscv"),
-]
+# ESP-IDF carries a blob set per target, and covers far more dies than the Arduino SDK does: the
+# Arduino tree stops at esp32 / s2 / s3 / c3, which leaves out every part shipped since.
+IDF = os.path.join(PK, "framework-espidf", "components")
+PHY_DIR = os.path.join(IDF, "esp_phy", "lib")
+WIFI_DIR = os.path.join(IDF, "esp_wifi", "lib")
 
-BLOBS = ["libphy.a", "librtc.a", "libpp.a", "libnet80211.a", "libcoexist.a"]
+XTENSA = ("esp32", "esp32s2", "esp32s3")
+
+
+def objdump_for(chip):
+    """The toolchain that reads this die. The C and H series are RISC-V, not xtensa, and each
+    xtensa die has its own configured toolchain."""
+    if chip in XTENSA:
+        p = os.path.join(PK, f"toolchain-xtensa-{chip}", "bin", f"xtensa-{chip}-elf-objdump.exe")
+        if os.path.exists(p):
+            return p, "xtensa"
+        p = os.path.join(PK, "toolchain-xtensa", "bin", f"xtensa-{chip}-elf-objdump.exe")
+        return (p if os.path.exists(p) else None), "xtensa"
+    p = os.path.join(PK, "toolchain-riscv32-esp", "bin", "riscv32-esp-elf-objdump.exe")
+    return (p if os.path.exists(p) else None), "riscv"
+
+
+BLOBS = ["libphy.a", "libpp.a", "libnet80211.a", "libcore.a", "libespnow.a", "libmesh.a",
+         "libsmartconfig.a", "libwapi.a", "libbtbb.a"]
 
 # The entry points a replacement radio driver has to stand in for. Parity on these decides whether
 # one bring-up path covers every die or each needs its own.
@@ -42,9 +55,16 @@ WATCH = [
 SYM = re.compile(r"^([0-9a-f]{8})\s+(.{7})\s+(\S+)\s+([0-9a-f]{8})\s+(\S+)\s*$")
 
 
+def idf_targets():
+    """Every target IDF ships a radio blob for."""
+    if not os.path.isdir(PHY_DIR):
+        return []
+    return sorted(d for d in os.listdir(PHY_DIR) if os.path.isdir(os.path.join(PHY_DIR, d)))
+
+
 def find_blob(chip, lib):
-    for sub in ("lib", "ld"):
-        p = os.path.join(SDK, chip, sub, lib)
+    for d in (PHY_DIR, WIFI_DIR):
+        p = os.path.join(d, chip, lib)
         if os.path.exists(p):
             return p
     return None
@@ -80,9 +100,10 @@ def main():
     per_chip_lib = {}  # (chip, lib) -> (funcs, objs, undef, size) or None
     present = []
 
-    for chip, objdump, arch in CHIPS:
-        if not os.path.exists(objdump):
-            print(f"  {chip}: no objdump, skipped")
+    for chip in idf_targets():
+        objdump, arch = objdump_for(chip)
+        if objdump is None:
+            print(f"  {chip}: no objdump for this die, skipped")
             continue
         allsyms, allundef = set(), set()
         got = False
@@ -105,16 +126,27 @@ def main():
             print(f"  {chip:9s} {arch:7s} {len(allsyms):5d} defined, {len(per_undef[chip]):4d} imported")
 
     chips = [c for c, _ in present]
-    common = set.intersection(*(per_chip[c] for c in chips)) if chips else set()
-    union = set.union(*(per_chip[c] for c in chips)) if chips else set()
+    # A die that ships no 802.11 MAC has nothing to be at parity with on the WiFi path: H2 is
+    # 802.15.4 and BLE only. Intersecting across those collapses the answer to noise, so the
+    # parity figures below are over the dies that carry both libpp and libnet80211.
+    wifi = [c for c in chips
+            if per_chip_lib.get((c, "libpp.a")) is not None
+            and per_chip_lib.get((c, "libnet80211.a")) is not None]
+    non_wifi = [c for c in chips if c not in wifi]
+    common = set.intersection(*(per_chip[c] for c in wifi)) if wifi else set()
+    union = set.union(*(per_chip[c] for c in wifi)) if wifi else set()
 
     doc = [
         "# Radio blob parity across the ESP variants",
         "",
         "Which radio entry points every ESP die has in common, and which belong to one part. Read",
-        "from the archives' symbol tables with each variant's own `objdump`: the C-series parts are",
+        "from the archives' symbol tables with each variant's own `objdump`: the C and H series are",
         "RISC-V rather than xtensa, so one cross-toolchain does not read all of them. Names only,",
         "no code.",
+        "",
+        "Sourced from ESP-IDF's `esp_phy` and `esp_wifi` component libraries, which carry a blob set",
+        "per target. The Arduino SDK stops at esp32 / s2 / s3 / c3 and leaves out every die shipped",
+        "since, so it cannot answer this question.",
         "",
         "Regenerate with `python tools/dev_env/blob_parity.py .`.",
         "",
@@ -137,13 +169,18 @@ def main():
 
     doc += [
         "",
-        f"## Parity: {len(common)} of {len(union)} symbols are on every variant",
+        f"## Parity: {len(common)} of {len(union)} symbols are on every WiFi die",
         "",
-        "| Chip | Total | Shared with all | Only on this one |",
-        "| --- | ---: | ---: | ---: |",
+        "Over the dies that ship both `libpp.a` and `libnet80211.a`: "
+        + ", ".join(f"`{c}`" for c in wifi) + ".",
+        "",
     ]
-    for chip in chips:
-        others = set.union(*(per_chip[c] for c in chips if c != chip)) if len(chips) > 1 else set()
+    if non_wifi:
+        doc += ["Excluded, having no 802.11 MAC to be at parity with: "
+                + ", ".join(f"`{c}`" for c in non_wifi) + ".", ""]
+    doc += ["| Chip | Total | Shared with all WiFi dies | Only on this one |", "| --- | ---: | ---: | ---: |"]
+    for chip in wifi:
+        others = set.union(*(per_chip[c] for c in wifi if c != chip)) if len(wifi) > 1 else set()
         doc.append(f"| `{chip}` | {len(per_chip[chip])} | {len(common)} | {len(per_chip[chip] - others)} |")
 
     doc += ["", "## The entry points a replacement driver stands in for", "",
@@ -160,7 +197,7 @@ def main():
     doc += ["", "## What the blobs import on every variant", "",
             "Symbols no variant's blobs define, so a replacement has to supply them. This is the",
             "porting surface that is the same everywhere.", ""]
-    common_imp = set.intersection(*(per_undef[c] for c in chips)) if chips else set()
+    common_imp = set.intersection(*(per_undef[c] for c in wifi)) if wifi else set()
     doc += [f"{len(common_imp)} symbols.", "", "```"]
     doc += sorted(common_imp)
     doc += ["```", ""]
@@ -169,10 +206,10 @@ def main():
     doc += sorted(common)
     doc += ["```", ""]
 
-    for chip in chips:
-        others = set.union(*(per_chip[c] for c in chips if c != chip)) if len(chips) > 1 else set()
+    for chip in wifi:
+        others = set.union(*(per_chip[c] for c in wifi if c != chip)) if len(wifi) > 1 else set()
         only = sorted(per_chip[chip] - others)
-        missing = sorted(common_missing(per_chip, chips, chip))
+        missing = sorted(common_missing(per_chip, wifi, chip))
         doc += [f"## `{chip}` alone", "", f"{len(only)} symbols no other variant defines.", "", "```"]
         doc += only
         doc += ["```", ""]
