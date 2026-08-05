@@ -229,7 +229,8 @@ static void crypto_bench_task(void *)
             uint8_t salt[20] = {0}, ikm[32] = {0}, prk[32], okm[32], secret[32] = {0};
             pc_hkdf_extract(salt, 20, ikm, 32, prk);
             BENCH_OP("quic_hkdf_extract", 2000, pc_hkdf_extract(salt, 20, ikm, 32, prk));
-            BENCH_OP("quic_hkdf_expand_label(16)", 2000, pc_hkdf_expand_label(prk, "quic key", okm, 16));
+            BENCH_OP("quic_hkdf_expand_label(16)", 2000,
+                     pc_hkdf_expand_label(prk, "quic key", okm, 16, PC_HKDF_LABEL_PREFIX));
             BENCH_OP("tls13_kdf_expand_label(16)", 2000, pc_tls13_kdf_expand_label(&TLS13_KDF, secret, "key", okm, 16));
         }
 #endif
