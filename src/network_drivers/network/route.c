@@ -4,21 +4,24 @@
 /**
  * @file route.c
  * @brief The route table and its one owner. See route.h.
+ *
+ * The one symbol this file exports is @ref RouteTable.
  */
 
 #include "network_drivers/network/route.h"
-#include "protocore.h" // completes Route; route.h names it only as an opaque tag
+#include "mmgr/protomem.h" // mem.zero: the hand-out wipe
+#include "protocore.h"     // completes Route; route.h names it only as an opaque tag
 
 // The table, owned by one instance with internal linkage. Nothing outside this file can name it;
 // callers take an entry or walk by index.
-typedef struct
+struct RouteCtx
 {
     Route entry[MAX_ROUTES];
     uint8_t count;
-} RouteCtx;
-static RouteCtx s_route;
+};
+static struct RouteCtx s_route;
 
-Route *pc_route_add(void)
+static Route *add(void)
 {
     if (s_route.count >= MAX_ROUTES)
     {
@@ -31,16 +34,16 @@ Route *pc_route_add(void)
     // leaves the rest, so an entry carrying a previous tenant's handler or backend pointer would
     // dispatch to it. There is no release path - routes are registered at setup and live forever -
     // so hand-out is the only moment this can be done.
-    memset(r, 0, sizeof(*r));
+    mem.zero(r, sizeof(*r));
     return r;
 }
 
-uint8_t pc_route_count(void)
+static uint8_t count(void)
 {
     return s_route.count;
 }
 
-Route *pc_route_at(uint8_t i)
+static Route *at(uint8_t i)
 {
     if (i >= s_route.count)
     {
@@ -49,9 +52,11 @@ Route *pc_route_at(uint8_t i)
     return &s_route.entry[i];
 }
 
-void pc_route_reset(void)
+static void reset(void)
 {
-    // The count is the table: pc_route_add zeroes an entry on hand-out, so nothing below the count
-    // can carry a previous tenant's fields and there is nothing to wipe here.
+    // The count is the table: add() zeroes an entry on hand-out, so nothing below the count can carry
+    // a previous tenant's fields and there is nothing to wipe here.
     s_route.count = 0;
 }
+
+const RouteNs RouteTable = {&s_route, add, count, at, reset};

@@ -19,4 +19,4 @@ static void init(void)
     // No-op: lwIP owns all L3 (IP) operations.
 }
 
-const NetworkNs Network = {init};
+const NetworkNs network = {init, &RouteTable};

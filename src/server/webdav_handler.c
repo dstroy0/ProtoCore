@@ -214,9 +214,9 @@ proto_bool dav_stream_put_begin(HttpReq *req)
         return PROTO_FALSE;
     }
     uint8_t slot = (uint8_t)(req - http_pool);
-    for (uint8_t i = 0; i < pc_route_count(); i++)
+    for (uint8_t i = 0; i < network.route->count(); i++)
     {
-        Route *r = pc_route_at(i);
+        Route *r = network.route->at(i);
         // The !is_active half cannot fire: every entry below route_count was filled by
         // fill_route_base, which sets is_active, and nothing ever clears it again.
         if (!r->is_active || r->type != ROUTE_DAV)
@@ -287,7 +287,7 @@ void dav_stream_put_data(HttpReq *req, const uint8_t *data, size_t len)
 
 void dav(const char *url_prefix, const pc_mnt_backend *file_sys, const char *fs_root)
 {
-    Route *r = pc_route_add();
+    Route *r = network.route->add();
     if (r == NULL)
     {
         return;
@@ -358,9 +358,9 @@ void dav_send_status(uint8_t slot_id, int code, const char *extra_headers)
 
 proto_bool try_serve_dav(uint8_t slot_id, HttpReq *req)
 {
-    for (uint8_t i = 0; i < pc_route_count(); i++)
+    for (uint8_t i = 0; i < network.route->count(); i++)
     {
-        Route *r = pc_route_at(i);
+        Route *r = network.route->at(i);
         // The !is_active half cannot fire: every entry below route_count was filled by
         // fill_route_base, which sets is_active, and nothing ever clears it again.
         if (!r->is_active || r->type != ROUTE_DAV)

@@ -293,7 +293,7 @@ void pc_server_reset(void)
     // materializes a sizeof(ServerCtx) temporary on the caller's stack.
     static const ServerCtx blank = {0};
     s_inst = blank;
-    pc_route_reset();
+    network.route->reset();
     pc_resp_reset();
     pc_middleware_reset();
     pc_signal_reset();
@@ -878,7 +878,7 @@ void fill_route_base(Route *r, const char *path)
 
 void on_http(const char *path, HttpMethod method, Handler callback)
 {
-    Route *r = pc_route_add();
+    Route *r = network.route->add();
     if (r == NULL)
     {
         return;
@@ -892,7 +892,7 @@ void on_http(const char *path, HttpMethod method, Handler callback)
 
 void on_http_iface(const char *path, HttpMethod method, Handler callback, pc_iface iface)
 {
-    Route *r = pc_route_add();
+    Route *r = network.route->add();
     if (r == NULL)
     {
         return;
@@ -912,7 +912,7 @@ void set_ap_ip(uint32_t ap_ip)
 
 void on_regex(const char *pattern, HttpMethod method, Handler callback)
 {
-    Route *r = pc_route_add();
+    Route *r = network.route->add();
     if (r == NULL)
     {
         return;
@@ -929,7 +929,7 @@ void on_regex(const char *pattern, HttpMethod method, Handler callback)
 void on_http_auth(const char *path, HttpMethod method, Handler callback, const char *realm, const char *user,
                   const char *pass, proto_bool digest)
 {
-    Route *r = pc_route_add();
+    Route *r = network.route->add();
     if (r == NULL)
     {
         return;
@@ -953,7 +953,7 @@ void on_http_auth(const char *path, HttpMethod method, Handler callback, const c
 #if PC_ENABLE_WEBSOCKET
 void on_ws(const char *path, WsConnectHandler on_connect, WsMessageHandler on_message, WsCloseHandler on_close)
 {
-    Route *r = pc_route_add();
+    Route *r = network.route->add();
     if (r == NULL)
     {
         return;
@@ -970,7 +970,7 @@ void on_ws(const char *path, WsConnectHandler on_connect, WsMessageHandler on_me
 #if PC_ENABLE_SSE
 void on_sse(const char *path, SseConnectHandler on_connect)
 {
-    Route *r = pc_route_add();
+    Route *r = network.route->add();
     if (r == NULL)
     {
         return;
@@ -1106,11 +1106,11 @@ static proto_bool match_path_params(const char *route, const char *path, HttpReq
 #if PC_ENABLE_WEBSOCKET
 void ws_dispatch_message(const WsConn *ws)
 {
-    for (uint8_t r = 0; r < pc_route_count(); r++)
+    for (uint8_t r = 0; r < network.route->count(); r++)
     {
-        if (pc_route_at(r)->type == ROUTE_WS && pc_route_at(r)->ws_message)
+        if (network.route->at(r)->type == ROUTE_WS && network.route->at(r)->ws_message)
         {
-            pc_route_at(r)->ws_message(ws->ws_id);
+            network.route->at(r)->ws_message(ws->ws_id);
             break;
         }
     }
@@ -1118,11 +1118,11 @@ void ws_dispatch_message(const WsConn *ws)
 
 void ws_dispatch_close(const WsConn *ws)
 {
-    for (uint8_t r = 0; r < pc_route_count(); r++)
+    for (uint8_t r = 0; r < network.route->count(); r++)
     {
-        if (pc_route_at(r)->type == ROUTE_WS && pc_route_at(r)->ws_close)
+        if (network.route->at(r)->type == ROUTE_WS && network.route->at(r)->ws_close)
         {
-            pc_route_at(r)->ws_close(ws->ws_id);
+            network.route->at(r)->ws_close(ws->ws_id);
             break;
         }
     }
@@ -1944,9 +1944,9 @@ void match_and_execute(uint8_t slot_id)
     char allow_buf[64];
     allow_buf[0] = '\0';
 
-    for (uint8_t i = 0; i < pc_route_count(); i++)
+    for (uint8_t i = 0; i < network.route->count(); i++)
     {
-        Route *r = pc_route_at(i);
+        Route *r = network.route->at(i);
         if (!route_admits(r, slot_id, req))
         {
             continue;

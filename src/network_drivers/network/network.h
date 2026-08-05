@@ -18,26 +18,33 @@
 #ifndef PROTOCORE_NETWORK_H
 #define PROTOCORE_NETWORK_H
 
+#include "network_drivers/network/route.h" // RouteNs: carried below as network.route
 #include "protocore_config.h"
 
 PROTO_BEGIN_DECLS
 
 /**
- * @brief The network module.
+ * @brief The network layer, and the modules it carries.
  *
  * @var NetworkNs::init  initialize the layer. Currently a no-op; lwIP manages IP routing internally.
  *                       Call it if static-route configuration, ICMP echo handling, or custom
  *                       network-layer diagnostics are added.
+ * @var NetworkNs::route the route table: @c network.route->add(), @c ->count(), @c ->at(), @c ->reset().
  *
- * No storage member: the layer holds nothing of its own.
+ * A child is a pointer, because a static initializer takes a constant expression and another
+ * object's value is not one, while its address is. A child behind a feature flag is declared under
+ * that flag, so the layer names only what the image already contains.
+ *
+ * No storage member: the layer itself holds nothing of its own.
  */
 typedef struct
 {
     void (*init)(void);
+    const RouteNs *route;
 } NetworkNs;
 
 /** @brief The one symbol this module exports. */
-extern const NetworkNs Network;
+extern const NetworkNs network;
 
 PROTO_END_DECLS
 

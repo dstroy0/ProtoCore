@@ -528,7 +528,7 @@ void serve_file(uint8_t slot_id, const pc_mnt_backend *file_sys, const char *fs_
 
 void serve_static(const char *url_prefix, const pc_mnt_backend *file_sys, const char *fs_root)
 {
-    Route *r = pc_route_add();
+    Route *r = network.route->add();
     if (r == NULL)
     {
         return;

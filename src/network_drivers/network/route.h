@@ -4,6 +4,9 @@
 /**
  * @file route.h
  * @brief The route table: where a request goes.
+ *
+ * The module exports one symbol, @ref RouteTable, which the network layer carries as
+ * @c network.route. Everything in route.c has internal linkage.
  */
 
 #ifndef PROTOCORE_ROUTE_H
@@ -15,25 +18,30 @@ PROTO_BEGIN_DECLS
 
 typedef struct Route Route;
 
-/**
- * @brief Take the next free entry.
- *
- * @return the entry, zeroed and ready to fill, or NULL when the table is full.
- */
-Route *pc_route_add(void);
-
-/** @brief Entries currently registered. */
-uint8_t pc_route_count(void);
-
-/** @brief Entry @p i, or NULL if @p i is past the end. */
-Route *pc_route_at(uint8_t i);
+/** @brief The table's storage. Declared, never defined here: the layout stays in route.c. */
+typedef struct RouteCtx RouteCtx;
 
 /**
- * @brief Empty the table.
+ * @brief The route-table module.
  *
- * For tests. A case that does not reset matches against every route the previous cases registered.
+ * @var RouteNs::ctx    the table, opaque to every caller.
+ * @var RouteNs::add    take the next free entry, zeroed and ready to fill, or NULL when full.
+ * @var RouteNs::count  entries currently registered.
+ * @var RouteNs::at     entry @c i, or NULL if @c i is past the end.
+ * @var RouteNs::reset  empty the table. For tests: a case that does not reset matches against every
+ *                      route the previous cases registered.
  */
-void pc_route_reset(void);
+typedef struct
+{
+    RouteCtx *ctx;
+    Route *(*add)(void);
+    uint8_t (*count)(void);
+    Route *(*at)(uint8_t i);
+    void (*reset)(void);
+} RouteNs;
+
+/** @brief The one symbol this module exports. */
+extern const RouteNs RouteTable;
 
 PROTO_END_DECLS
 

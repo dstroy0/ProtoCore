@@ -130,6 +130,7 @@ PROTO_BEGIN_DECLS
 #include "network_drivers/application/webdav/webdav.h"
 #include "network_drivers/datalink/roaming.h"
 #include "network_drivers/network/dns_resolver.h"
+#include "network_drivers/network/network.h"
 #include "network_drivers/network/route.h"
 #include "network_drivers/physical/radio_power.h"
 #include "network_drivers/session/preempt_queue.h"
