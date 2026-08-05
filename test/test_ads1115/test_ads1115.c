@@ -55,14 +55,47 @@ void test_raw_to_uv_gain_clamp()
     TEST_ASSERT_EQUAL_INT32(pc_ads1115_raw_to_uv(16384, ADS1115_GAIN_2), pc_ads1115_raw_to_uv(16384, 99));
 }
 
-void test_host_i2c_stubs_fail_closed()
+// A single-shot read writes the config register big-endian, waits the conversion time, then reads
+// the conversion register back. The host capture makes that whole sequence assertable.
+void test_read_drives_the_bus()
 {
-    // On a host build there is no I2C: begin and both reads fail closed (false).
-    TEST_ASSERT_FALSE(pc_ads1115_begin(0x48));
+    pc_bus_host_reset();
+    TEST_ASSERT_TRUE(pc_ads1115_begin(0x48));
+
+    const uint8_t reply[2] = {0x40, 0x00}; // 0x4000 = half scale
+    pc_bus_host_preload(reply, sizeof(reply));
+
+    int16_t raw = 0;
+    TEST_ASSERT_TRUE(pc_ads1115_read_raw(0, ADS1115_GAIN_2, &raw));
+    TEST_ASSERT_EQUAL_INT16(0x4000, raw);
+
+    // First the config write: the register byte then the config word, high byte first.
+    uint32_t n = 0;
+    const uint8_t *w = pc_bus_host_txn_bytes(0, &n);
+    TEST_ASSERT_EQUAL_UINT32(3, n);
+    TEST_ASSERT_EQUAL_HEX8(ADS1115_REG_CONFIG, w[0]);
+    uint16_t cfg = (uint16_t)(((uint16_t)w[1] << 8) | w[2]);
+    TEST_ASSERT_EQUAL_UINT16(pc_ads1115_config_single(0, ADS1115_GAIN_2, (uint8_t)PC_ADS1115_DR), cfg);
+
+    // Then the conversion register is addressed for the read back.
+    const uint8_t *r = pc_bus_host_txn_bytes(1, &n);
+    TEST_ASSERT_EQUAL_UINT32(1, n);
+    TEST_ASSERT_EQUAL_HEX8(ADS1115_REG_CONVERSION, r[0]);
+
+    // Every transfer went to the address begin() was given.
+    for (uint32_t i = 0; i < pc_bus_host_count(); i++)
+    {
+        TEST_ASSERT_EQUAL_UINT16(0x48, pc_bus_host_txn_at(i)->target);
+    }
+}
+
+// A part that does not acknowledge makes the read report failure rather than a stale value.
+void test_read_fails_when_the_part_is_silent()
+{
+    pc_bus_host_reset();
+    pc_bus_host_fail_next(1);
     int16_t raw = 0;
     TEST_ASSERT_FALSE(pc_ads1115_read_raw(0, ADS1115_GAIN_2, &raw));
-    int32_t uv = 0;
-    TEST_ASSERT_FALSE(pc_ads1115_read_uv(0, ADS1115_GAIN_2, &uv));
 }
 
 int main()
@@ -72,6 +105,7 @@ int main()
     RUN_TEST(test_config_fallbacks);
     RUN_TEST(test_raw_to_uv);
     RUN_TEST(test_raw_to_uv_gain_clamp);
-    RUN_TEST(test_host_i2c_stubs_fail_closed);
+    RUN_TEST(test_read_drives_the_bus);
+    RUN_TEST(test_read_fails_when_the_part_is_silent);
     return UNITY_END();
 }

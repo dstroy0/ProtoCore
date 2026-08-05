@@ -218,12 +218,13 @@ void test_command_encoders()
 
 void test_host_stubs_and_parse_guards()
 {
-    // Host build: the UART bind functions fail closed / return null.
-    TEST_ASSERT_FALSE(pc_ld2410_begin(16, 17));
+    // begin() opens the unit and the config commands reach the wire; nothing has arrived yet, so
+    // there is no report to hand back.
+    TEST_ASSERT_TRUE(pc_ld2410_begin(16, 17));
     TEST_ASSERT_FALSE(pc_ld2410_poll());
     TEST_ASSERT_NULL(pc_ld2410_last());
-    TEST_ASSERT_FALSE(pc_ld2410_set_engineering(PROTO_TRUE));
-    TEST_ASSERT_FALSE(pc_ld2410_restart());
+    TEST_ASSERT_TRUE(pc_ld2410_set_engineering(PROTO_TRUE));
+    TEST_ASSERT_TRUE(pc_ld2410_restart());
     // Malformed report frames fail closed.
     Ld2410Report rep;
     TEST_ASSERT_FALSE(pc_ld2410_parse_report(NULL, 20, &rep));
