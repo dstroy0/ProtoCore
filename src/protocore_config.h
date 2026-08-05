@@ -3010,6 +3010,11 @@ from halves and is slower than the width it decomposes into"
 #define PC_HMMD_BAUD 115200
 #endif
 
+/** @brief UART unit the HMMD is wired to. Unit 2 is the one free of the console on most boards. */
+#ifndef PC_HMMD_UART
+#define PC_HMMD_UART 2
+#endif
+
 /**
  * @brief IEC 61784-3 black-channel Safety Communication Layer primitives (`services/safety_scl`).
  *
@@ -3035,6 +3040,11 @@ from halves and is slower than the width it decomposes into"
 /** @brief LD2410 UART baud rate (the module's fixed factory default is 256000). */
 #ifndef PC_LD2410_BAUD
 #define PC_LD2410_BAUD 256000
+#endif
+
+/** @brief UART unit the LD2410 is wired to. Unit 2 is the one free of the console on most boards. */
+#ifndef PC_LD2410_UART
+#define PC_LD2410_UART 2
 #endif
 
 /**

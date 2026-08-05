@@ -164,14 +164,14 @@ proto_bool pc_hmmd_ack_matches(const HmmdAck *ack, uint16_t word);
 
 // --- Binding (no-ops on a host build) ----------------------------------------------------------
 
-/** @brief Open UART2 at PC_HMMD_BAUD on @p rx_pin / @p tx_pin. @return true on ESP32. */
+/** @brief Open PC_HMMD_UART at PC_HMMD_BAUD on @p rx_pin / @p tx_pin. @return true on ESP32. */
 proto_bool pc_hmmd_begin(int rx_pin, int tx_pin);
 
 /** @brief Pump the UART through the stream. @return true if a fresh report was decoded. */
-proto_bool pc_hmmd_poll();
+proto_bool pc_hmmd_poll(void);
 
-/** @brief The most recently decoded report, or nullptr before the first one arrives. */
-const HmmdReport *pc_hmmd_last();
+/** @brief The most recently decoded report, or NULL before the first one arrives. */
+const HmmdReport *pc_hmmd_last(void);
 
 #endif // PC_ENABLE_HMMD
 

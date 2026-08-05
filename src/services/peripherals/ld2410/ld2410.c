@@ -20,6 +20,7 @@
 #include <string.h>
 
 #if PROTOCORE_HOT
+#include "services/peripherals/uart.h" // the shared UART owner
 #endif
 static const uint8_t HDR[4] = {0xF4, 0xF3, 0xF2, 0xF1};
 static const uint8_t FTR[4] = {0xF8, 0xF7, 0xF6, 0xF5};
@@ -327,14 +328,24 @@ proto_bool pc_ld2410_ack_mac(const Ld2410Ack *ack, uint8_t mac[6])
 
 #if PROTOCORE_HOT
 
+// Bytes taken from the UART per poll. A report frame is far shorter, so one poll carries at least
+// a whole frame and the read stays bounded (SRC_LAW rule 5).
+#define LD2410_RX_CHUNK 64
+
+// Widest command frame this driver builds: header, length, word, value and footer.
+#define LD2410_CMD_MAX 16
+
 // All LD2410 UART-binding state, owned by one instance (internal linkage): the frame stream
-// assembler, the last decoded report, and the have-report flag, grouped so it is one named
-// owner, unreachable from any other translation unit.
+// assembler, the last decoded report, the have-report flag, the receive chunk, and the command
+// frame, grouped so it is one named owner, unreachable from any other translation unit. Both
+// buffers are members rather than locals because each is filled on the request path.
 typedef struct
 {
     Ld2410Stream stream;
     Ld2410Report last;
     proto_bool have;
+    uint8_t rx[LD2410_RX_CHUNK];
+    uint8_t cmd[LD2410_CMD_MAX];
 } Ld2410Ctx;
 static Ld2410Ctx s_ld;
 
@@ -342,17 +353,17 @@ proto_bool pc_ld2410_begin(int rx_pin, int tx_pin)
 {
     pc_ld2410_stream_reset(&s_ld.stream);
     s_ld.have = PROTO_FALSE;
-    Serial2.begin(PC_LD2410_BAUD, SERIAL_8N1, rx_pin, tx_pin);
-    return PROTO_TRUE;
+    return pc_uart_begin((uint8_t)PC_LD2410_UART, PC_LD2410_BAUD, rx_pin, tx_pin);
 }
 
-proto_bool pc_ld2410_poll()
+proto_bool pc_ld2410_poll(void)
 {
     proto_bool fresh = PROTO_FALSE;
-    while (Serial2.available())
+    size_t n = pc_uart_read((uint8_t)PC_LD2410_UART, s_ld.rx, sizeof(s_ld.rx), 0);
+    for (size_t i = 0; i < n; i++)
     {
         Ld2410Report r;
-        if (pc_ld2410_stream_push(&s_ld.stream, (uint8_t)Serial2.read(), &r))
+        if (pc_ld2410_stream_push(&s_ld.stream, s_ld.rx[i], &r))
         {
             s_ld.last = r;
             s_ld.have = PROTO_TRUE;
@@ -362,37 +373,32 @@ proto_bool pc_ld2410_poll()
     return fresh;
 }
 
-const Ld2410Report *pc_ld2410_last()
+const Ld2410Report *pc_ld2410_last(void)
 {
     return s_ld.have ? &s_ld.last : NULL;
 }
 
-proto_bool pc_ld2410_set_engineering(proto_bool on)
+// A configuration change is three frames: open the config window, carry the change, close it.
+// Each is built into the owned command buffer and put on the wire before the next is built.
+static proto_bool send_cmd(size_t n)
 {
-    uint8_t f[16];
-    size_t n;
-    n = pc_ld2410_cmd_config_enable(f, sizeof(f));
-    Serial2.write(f, n);
-    n = pc_ld2410_cmd_engineering(f, sizeof(f), on);
-    Serial2.write(f, n);
-    n = pc_ld2410_cmd_config_end(f, sizeof(f));
-    Serial2.write(f, n);
-    Serial2.flush();
-    return PROTO_TRUE;
+    return n > 0 && pc_uart_write((uint8_t)PC_LD2410_UART, s_ld.cmd, n);
 }
 
-proto_bool pc_ld2410_restart()
+proto_bool pc_ld2410_set_engineering(proto_bool on)
 {
-    uint8_t f[16];
-    size_t n;
-    n = pc_ld2410_cmd_config_enable(f, sizeof(f));
-    Serial2.write(f, n);
-    n = pc_ld2410_cmd_restart(f, sizeof(f));
-    Serial2.write(f, n);
-    n = pc_ld2410_cmd_config_end(f, sizeof(f));
-    Serial2.write(f, n);
-    Serial2.flush();
-    return PROTO_TRUE;
+    proto_bool ok = send_cmd(pc_ld2410_cmd_config_enable(s_ld.cmd, sizeof(s_ld.cmd)));
+    ok &= send_cmd(pc_ld2410_cmd_engineering(s_ld.cmd, sizeof(s_ld.cmd), on));
+    ok &= send_cmd(pc_ld2410_cmd_config_end(s_ld.cmd, sizeof(s_ld.cmd)));
+    return ok;
+}
+
+proto_bool pc_ld2410_restart(void)
+{
+    proto_bool ok = send_cmd(pc_ld2410_cmd_config_enable(s_ld.cmd, sizeof(s_ld.cmd)));
+    ok &= send_cmd(pc_ld2410_cmd_restart(s_ld.cmd, sizeof(s_ld.cmd)));
+    ok &= send_cmd(pc_ld2410_cmd_config_end(s_ld.cmd, sizeof(s_ld.cmd)));
+    return ok;
 }
 
 #else // host build: no UART. The codec above is host-tested.
@@ -403,11 +409,11 @@ proto_bool pc_ld2410_begin(int rx_pin, int tx_pin)
     (void)tx_pin;
     return PROTO_FALSE;
 }
-proto_bool pc_ld2410_poll()
+proto_bool pc_ld2410_poll(void)
 {
     return PROTO_FALSE;
 }
-const Ld2410Report *pc_ld2410_last()
+const Ld2410Report *pc_ld2410_last(void)
 {
     return NULL;
 }
@@ -416,7 +422,7 @@ proto_bool pc_ld2410_set_engineering(proto_bool on)
     (void)on;
     return PROTO_FALSE;
 }
-proto_bool pc_ld2410_restart()
+proto_bool pc_ld2410_restart(void)
 {
     return PROTO_FALSE;
 }
