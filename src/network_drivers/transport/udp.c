@@ -8,7 +8,7 @@
 
 #include "network_drivers/transport/udp.h"
 
-#include <string.h> // memcpy (both the lwIP and host builds)
+// memcpy (both the lwIP and host builds)
 
 #if PROTOCORE_HOT
 

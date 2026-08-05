@@ -5,7 +5,7 @@
 // json_get_* top-level object readers.
 
 #include "network_drivers/presentation/codec/json/json.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

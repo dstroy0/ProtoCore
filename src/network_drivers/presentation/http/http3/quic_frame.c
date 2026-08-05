@@ -11,7 +11,6 @@
 #if PC_ENABLE_HTTP3
 
 #include "network_drivers/presentation/http/http3/quic_varint.h"
-#include <string.h>
 
 // Decode a varint at buf[*pos], advancing *pos. Returns false on truncation.
 static proto_bool rd(const uint8_t *buf, size_t len, size_t *pos, uint64_t *v)

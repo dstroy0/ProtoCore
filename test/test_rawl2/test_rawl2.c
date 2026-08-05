@@ -4,7 +4,7 @@
 // Host tests for services/rawl2: the Ethernet II / 802.1Q frame codec + the FCS.
 
 #include "services/fieldbus/rawl2/rawl2.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp(void)

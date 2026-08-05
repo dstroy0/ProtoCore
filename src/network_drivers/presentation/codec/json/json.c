@@ -11,7 +11,6 @@
 #include "shared_primitives/hex.h" // PC_HEX_LOWER - the shared digit table
 #include "shared_primitives/numparse.h"
 #include <stdio.h>
-#include <string.h>
 
 // ---------------------------------------------------------------------------
 // pc_json_writer

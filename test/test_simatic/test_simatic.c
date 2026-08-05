@@ -6,7 +6,7 @@
 // timeouts, priority arbitration), and RK512 SEND/FETCH/reaction telegrams (big-endian words).
 
 #include "services/fieldbus/simatic/simatic.h"
-#include <string.h>
+
 #include <unity.h>
 
 // ---- tx / rx capture for the state machine --------------------------------

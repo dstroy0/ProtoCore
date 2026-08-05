@@ -15,8 +15,6 @@
 
 #if PC_ENABLE_FORWARD
 
-#include <string.h>
-
 #if PROTOCORE_HOT
 #include "server/clock/clock.h" // pc_millis()
 #endif

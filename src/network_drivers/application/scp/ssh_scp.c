@@ -24,7 +24,6 @@
 #include "network_drivers/presentation/ssh/connection/ssh_conn.h"
 #include "server/filesystem/filesystem.h"
 #include "shared_primitives/runops.h" // the bounded word-at-a-time length scan
-#include <string.h>
 
 typedef enum PROTO_ENUM_PACKED
 {

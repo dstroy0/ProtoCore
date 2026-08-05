@@ -4,7 +4,7 @@
 // Host tests for services/sercos: the SERCOS III telegram + IDN codec.
 
 #include "services/fieldbus/sercos/sercos.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp(void)

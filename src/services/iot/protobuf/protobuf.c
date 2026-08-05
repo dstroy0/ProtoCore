@@ -10,8 +10,6 @@
 
 #if PC_NEED_PROTOBUF
 
-#include <string.h>
-
 void pc_pb_writer_init(PbWriter *w, uint8_t *buf, size_t cap)
 {
     w->buf = buf;

@@ -8,7 +8,7 @@
 // / stored blocks, an empty payload, and a tiny 1-byte payload. Vectors: tools/gen_ssh_inflate_vectors.py.
 
 #include "network_drivers/presentation/ssh/transport/ssh_inflate.h"
-#include <string.h>
+
 #include <unity.h>
 
 #include "ssh_inflate_vectors.inc"

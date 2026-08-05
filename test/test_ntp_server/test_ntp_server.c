@@ -7,7 +7,7 @@
 
 #include "network_drivers/application/ntp_server/ntp_server.h"
 #include <stdint.h>
-#include <string.h>
+
 #include <unity.h>
 
 static uint32_t rd_be32(const uint8_t *p)

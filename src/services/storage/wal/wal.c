@@ -10,8 +10,6 @@
 
 #if PC_ENABLE_WAL
 
-#include <string.h>
-
 #include "shared_primitives/endian.h"
 
 // CRC-32 (IEEE 802.3, reflected, poly 0xEDB88320) byte lookup table. A table-driven step is several times

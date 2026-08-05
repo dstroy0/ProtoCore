@@ -6,7 +6,7 @@
 // interleaved-sequence handling). Pure host tests.
 
 #include "services/timing_position/nmea2000/nmea2000.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

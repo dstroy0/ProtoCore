@@ -8,7 +8,7 @@
 
 #include "services/machine_tool/dnc/dnc.h"
 #include "services/machine_tool/dnc/dnc_stream.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

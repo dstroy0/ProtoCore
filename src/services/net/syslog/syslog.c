@@ -12,7 +12,6 @@
 
 #include "network_drivers/transport/udp.h"
 #include <stdio.h>
-#include <string.h>
 
 // All syslog client state, owned by one instance (internal linkage): the collector endpoint,
 // the host/app identity, the facility, the ready flag, and the format scratch (all BSS, no

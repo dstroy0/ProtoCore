@@ -32,7 +32,7 @@
 #include "esp_camera.h"
 #include <ESP_I2S.h>
 #include <esp_heap_caps.h>
-#include <string.h>
+
 #else
 #define MEDIA_SUPPORTED 0
 #endif

@@ -16,7 +16,6 @@
 #include "device_bench.h"
 #include "services/peripherals/dmx/dmx.h"
 #include <Arduino.h>
-#include <string.h>
 
 static void dmx_bench_task(void *)
 {

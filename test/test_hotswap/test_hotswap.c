@@ -9,7 +9,7 @@
 #include "server/clock/clock.h"
 #include "services/storage/hotswap/hotswap.h"
 #include <stdio.h>
-#include <string.h>
+
 #include <unity.h>
 
 static HotswapCore c;

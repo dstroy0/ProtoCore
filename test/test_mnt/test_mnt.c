@@ -9,7 +9,7 @@
 
 #include "server/filesystem/filesystem.h"
 #include <stdio.h>
-#include <string.h>
+
 #include <unity.h>
 
 // The root every test resolves against. pc_fs_begin hands back a handle now, and a service is

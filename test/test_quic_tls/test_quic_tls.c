@@ -17,7 +17,7 @@
 #include "../test_ssh_pqc/mlkem_ref.h"   // pc_mlkem768_decaps_ref (the client side)
 #include "crypto/pqc/mlkem.h"            // MLKEM768_EK_BYTES / MLKEM768_CT_BYTES
 #endif
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

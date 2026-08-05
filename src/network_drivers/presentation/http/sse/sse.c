@@ -9,7 +9,6 @@
 #include "sse.h"
 #include "network_drivers/transport/tcp.h"
 #include <stdio.h>
-#include <string.h>
 
 SseConn pc_sse_pool[MAX_SSE_CONNS];
 

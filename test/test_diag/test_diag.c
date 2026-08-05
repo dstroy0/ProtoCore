@@ -7,7 +7,7 @@
 // rather than bit-rotting.
 
 #include "protocore.h"
-#include <string.h>
+
 #include <unity.h>
 
 static void push_str(uint8_t slot, const char *s)

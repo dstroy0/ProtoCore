@@ -6,7 +6,7 @@
 // round-tripped through the decoder.
 
 #include "services/net/snmp/snmp_ber.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

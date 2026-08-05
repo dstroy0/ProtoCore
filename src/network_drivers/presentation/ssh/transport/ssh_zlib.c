@@ -27,8 +27,6 @@
 
 #include "shared_primitives/bitio.h"
 
-#include <string.h>
-
 #define PC_MIN_MATCH 3   // shortest LZ77 back-reference
 #define PC_MAX_MATCH 258 // longest (RFC 1951 length code 285)
 #define PC_HASH_MASK (SSH_ZLIB_HASH_SIZE - 1)

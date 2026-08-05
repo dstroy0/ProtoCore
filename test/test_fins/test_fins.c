@@ -5,7 +5,7 @@
 // Memory Area Read convenience, and the command / response parsers. Pure host tests.
 
 #include "services/fieldbus/fins/fins.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

@@ -13,7 +13,6 @@
 #include "device_bench.h"
 #include "services/radio/promisc/promisc.h"
 #include <Arduino.h>
-#include <string.h>
 
 // Build a 3-address 802.11 MAC header (24 bytes): fc0, fc1, a1, a2, a3, seq. (from test/test_promisc)
 static void hdr3(uint8_t *f, uint8_t fc0, uint8_t fc1, const uint8_t *a1, const uint8_t *a2, const uint8_t *a3,

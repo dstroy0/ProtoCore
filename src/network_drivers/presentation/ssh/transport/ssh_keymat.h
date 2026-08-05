@@ -101,7 +101,6 @@
 #include "crypto/cipher/aes256ctr.h"
 #include "mmgr/secure.h" // pc_secure_wipe (the canonical secure wipe)
 #include "protocore_config.h"
-#include <string.h>
 
 // These two are anonymous enums: the constants are what the code names, and the negotiated value
 // travels as a uint8_t through ssh_dh_derive_keys_sid, ssh_mac_is_etm, ssh_mac_len, and the

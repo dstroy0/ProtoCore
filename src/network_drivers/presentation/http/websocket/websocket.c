@@ -18,7 +18,6 @@
 #include "websocket.h"
 #include "network_drivers/transport/tcp.h"
 #include "shared_primitives/utf8.h"
-#include <string.h>
 
 #if PC_ENABLE_WS_DEFLATE
 #include "mmgr/plaintext.h"

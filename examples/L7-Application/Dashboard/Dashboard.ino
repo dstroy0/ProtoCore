@@ -28,7 +28,7 @@
 #include "network_drivers/physical/physical.h"
 #include "services/web/dashboard/dashboard.h"
 #include <math.h>
-#include <string.h>
+
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";

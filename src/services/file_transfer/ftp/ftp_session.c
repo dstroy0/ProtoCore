@@ -16,7 +16,6 @@
 #include "services/file_transfer/ftp/ftp.h"
 #include "shared_primitives/log.h"
 #include <stdio.h>
-#include <string.h>
 
 /** @brief Owned session state. One transfer at a time; the buffers are too big for the stack. */
 typedef struct

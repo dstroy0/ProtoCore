@@ -4,7 +4,7 @@
 // Host tests for services/xmpp: the XMPP stanza builder + minimal reader.
 
 #include "services/iot/xmpp/xmpp.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp(void)

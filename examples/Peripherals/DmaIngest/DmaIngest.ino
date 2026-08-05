@@ -19,7 +19,7 @@
 #include "protocore.h" // discovers the library (adds src/ to the include path)
 #include "mmgr/dma.h"
 #include "network_drivers/session/preempt_queue.h"
-#include <string.h>
+
 
 // The preempting-queue item: a SELF-CONTAINED copy of the frame bytes, padded to the
 // queue item size (the queue copies a fixed PC_PQ_ITEM_SIZE bytes). We copy the bytes

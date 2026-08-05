@@ -15,7 +15,6 @@
 #include "network_drivers/presentation/ssh/transport/ssh_transport.h"
 #include "protocore.h"
 #include <WiFi.h>
-#include <string.h>
 
 #ifdef PC_SSH_BENCH
 #include "crypto/asymmetric/curve25519.h"

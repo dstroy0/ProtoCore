@@ -10,8 +10,6 @@
 
 #if PC_ENABLE_SERCOS
 
-#include <string.h>
-
 uint16_t pc_sercos_idn(proto_bool is_product, uint8_t param_set, uint16_t data_block)
 {
     return (uint16_t)(((is_product ? 1u : 0u) << 15) | ((uint32_t)(param_set & 0x7) << 12) | (data_block & 0x0FFF));

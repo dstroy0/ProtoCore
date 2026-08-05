@@ -11,7 +11,6 @@
 #include "device_bench.h"
 #include "network_drivers/application/scp/scp.h"
 #include <Arduino.h>
-#include <string.h>
 
 static void scp_bench_task(void *)
 {

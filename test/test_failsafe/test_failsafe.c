@@ -5,7 +5,7 @@
 // *_at(now) API with a synthetic clock, so no time mock is needed.
 
 #include "server/failsafe.h"
-#include <string.h>
+
 #include <unity.h>
 
 static int s_fired_id = -1;

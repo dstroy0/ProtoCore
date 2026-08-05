@@ -6,7 +6,7 @@
 // InfoSys AMS/ADS specification. Pure host tests.
 
 #include "services/fieldbus/ads/ads.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

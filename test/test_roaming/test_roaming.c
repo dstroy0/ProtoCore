@@ -5,7 +5,7 @@
 // current RSSI, a candidate neighbour list, and an optional 802.11v BTM hint into a roam/stay decision.
 
 #include "network_drivers/datalink/roaming.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

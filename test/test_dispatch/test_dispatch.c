@@ -7,7 +7,7 @@
 
 #include "protocore.h"
 #include <stdio.h>
-#include <string.h>
+
 #include <unity.h>
 #if PC_ENABLE_CSRF
 #include "services/security/csrf/csrf.h" // supply a valid token so an unsafe method reaches method dispatch

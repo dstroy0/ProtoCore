@@ -14,7 +14,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
+
 #include <unity.h>
 
 // The native RSA sign fixture (defined in ssh_rsa.cpp) lets us mint RS256 tokens with

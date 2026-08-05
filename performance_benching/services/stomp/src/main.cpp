@@ -10,7 +10,6 @@
 #include "device_bench.h"
 #include "services/iot/stomp/stomp.h"
 #include <Arduino.h>
-#include <string.h>
 
 static void stomp_bench_task(void *)
 {

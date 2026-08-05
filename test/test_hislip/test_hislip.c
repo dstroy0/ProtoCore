@@ -6,7 +6,7 @@
 // byte-exact vectors are built from the IVI-6.1 spec worked examples. Pure host tests.
 
 #include "services/instrumentation/hislip/hislip.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

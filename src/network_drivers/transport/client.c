@@ -25,7 +25,6 @@
 #include "network_drivers/network/dns_resolver.h" // shared host->IP resolve (one DNS owner)
 #include "server/clock/clock.h"                   // pc_millis()
 #include "shared_primitives/ring.h" // PROTO_ATOMIC_LOAD/STORE + SPSC ring drain (same primitive as the server)
-#include <string.h>
 
 typedef struct
 {

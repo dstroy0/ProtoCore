@@ -10,7 +10,7 @@
 #include "protocore.h"
 #include "server/clock/clock.h"
 #include <stdio.h>
-#include <string.h>
+
 #include <unity.h>
 
 // A test-controllable monotonic clock (ms) so the stale-nonce path can be exercised

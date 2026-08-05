@@ -6,7 +6,6 @@
 #if PC_ENABLE_PQC_KEX
 
 #include "crypto/hash/sha3.h"
-#include <string.h>
 
 // ML-KEM-768 parameters (FIPS 203).
 #define MK_N 256

@@ -6,7 +6,7 @@
 // host tests, with wire-byte assertions checked against the v1.2 spec layout.
 
 #include "services/iot/mqtt/mqtt_sn.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

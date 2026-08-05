@@ -42,7 +42,6 @@
 
 #include "crypto/asymmetric/ecdsa.h"
 #include "crypto/hash/sha256.h"
-#include <string.h>
 
 #if PROTOCORE_HOT
 #include "sdkconfig.h" // CONFIG_IDF_TARGET_ESP32S3 - selects the MODMULT field layer

@@ -8,7 +8,7 @@
 
 #include "services/security/audit_log/audit_log.h"
 #include "shared_primitives/hex.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

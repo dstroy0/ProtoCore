@@ -14,7 +14,7 @@
 #include "shared_primitives/log.h"
 #include "shared_primitives/ring.h" // shared SPSC byte-ring primitive, exercised at the bottom
 #include <stdio.h>
-#include <string.h>
+
 #include <unity.h>
 
 static uint8_t s_last_level = 0xFF;

@@ -161,7 +161,7 @@ def render_source(themes):
         "",
         "#if PC_ENABLE_THEMES",
         "",
-        "#include <string.h>",
+        "",
         "",
     ]
     for name, css in themes:

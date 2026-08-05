@@ -5,7 +5,7 @@
 // the MBAP/PDU codec (pc_modbus_process_adu). No sockets - pure host tests.
 
 #include "services/fieldbus/modbus/modbus.h"
-#include <string.h>
+
 #include <unity.h>
 
 // Last write reported via pc_modbus_on_write().

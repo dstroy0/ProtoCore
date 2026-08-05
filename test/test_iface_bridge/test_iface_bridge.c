@@ -7,7 +7,7 @@
 // bus I/O and listener are ESP32-only; these tests cover the portable logic.
 
 #include "services/net/iface_bridge/iface_bridge.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

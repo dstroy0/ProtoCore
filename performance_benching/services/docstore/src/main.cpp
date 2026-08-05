@@ -22,7 +22,6 @@
 #include "services/storage/wal/wal_store.h"
 #include <Arduino.h>
 #include <stdio.h>
-#include <string.h>
 
 // RAM-backed WalDev (same shape as test/test_docstore/test_docstore.cpp's RamDisk) - satisfies the WAL's
 // block-device seam with a plain buffer instead of a real fs::FS/SD transaction.

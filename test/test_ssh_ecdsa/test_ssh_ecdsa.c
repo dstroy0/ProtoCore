@@ -10,7 +10,7 @@
 
 #include "crypto/asymmetric/ecdsa.h"
 #include <stdint.h>
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

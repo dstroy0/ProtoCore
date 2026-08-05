@@ -26,7 +26,7 @@
 #include "crypto/mac/poly1305.h"
 #include <stdint.h>
 #include <stdio.h>
-#include <string.h>
+
 #include <unity.h>
 
 // --- Vector table row layouts (kat_data.inc initializes these) --------------

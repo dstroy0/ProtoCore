@@ -10,7 +10,7 @@
 
 #include "network_drivers/presentation/codec/deflate/deflate.h"
 #include "network_drivers/presentation/codec/inflate/inflate.h"
-#include <string.h>
+
 #include <unity.h>
 
 static uint8_t g_dscratch[DEFLATE_SCRATCH_SIZE];

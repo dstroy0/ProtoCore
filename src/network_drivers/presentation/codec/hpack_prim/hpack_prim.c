@@ -13,8 +13,6 @@
 
 #if PC_ENABLE_HTTP2 || PC_ENABLE_HTTP3
 
-#include <string.h>
-
 // --- Huffman tables generated from RFC 7541 Appendix B ---------------------------------------
 
 // MSB-aligned code and bit length per symbol 0..255, plus EOS(256).

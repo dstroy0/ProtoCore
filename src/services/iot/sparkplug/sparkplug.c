@@ -11,7 +11,6 @@
 #if PC_ENABLE_SPARKPLUG
 
 #include "services/iot/protobuf/protobuf.h"
-#include <string.h>
 
 // Tahu Payload field numbers.
 #define SPB_PL_TIMESTAMP 1

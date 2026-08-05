@@ -28,7 +28,6 @@
 #include "device_bench.h"
 #include "services/net/forward/forward.h"
 #include <Arduino.h>
-#include <string.h>
 
 // --- egress stubs (no hardware; same shape as the host test's cap_send) ----------------------
 static volatile uint32_t g_egress_bytes = 0;

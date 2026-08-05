@@ -9,7 +9,7 @@
 #include "crypto/aead/chachapoly.h"
 #include "crypto/cipher/chacha20.h"
 #include "crypto/mac/poly1305.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

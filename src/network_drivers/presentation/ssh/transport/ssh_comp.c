@@ -12,7 +12,6 @@
 
 #include "network_drivers/presentation/ssh/transport/ssh_inflate.h"
 #include "network_drivers/presentation/ssh/transport/ssh_zlib.h"
-#include <string.h>
 
 // The per-connection compressor holds a window-sized work buffer + a window-sized hash chain (tens
 // of KB); the pool does not fit internal DRAM alongside the SSH crypto stack, so it lives in PSRAM

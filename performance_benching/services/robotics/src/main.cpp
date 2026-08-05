@@ -10,7 +10,6 @@
 #include "services/fieldbus/opcua/opcua.h"
 #include "services/machine_tool/robotics/robotics.h"
 #include <Arduino.h>
-#include <string.h>
 
 static RoboticsMotionDeviceSystem g_mds;
 

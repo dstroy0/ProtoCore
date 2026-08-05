@@ -17,7 +17,7 @@
 #include "crypto/hash/sha256.h"           // anti-DoS COOKIE hash (RFC 7296 §2.6)
 #include "crypto/mac/hmac_sha256.h"       // PRF = HMAC-SHA2-256
 #include "mmgr/secure.h"                  // the per-call GCM context borrow
-#include <string.h>                       // memcpy / memset (framing is hand-rolled)
+                                          // memcpy / memset (framing is hand-rolled)
 
 // ── big-endian scalar helpers ─────────────────────────────────────────────────────────────────
 static inline void put16(uint8_t *p, uint16_t v)

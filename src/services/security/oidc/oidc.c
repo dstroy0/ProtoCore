@@ -21,7 +21,6 @@
 #include "network_drivers/presentation/codec/base64/base64.h" // shared pc_base64url_decode
 
 #include <stdio.h>
-#include <string.h>
 
 // base64url decoding is shared with JWT in the base64 module (pc_base64url_decode).
 

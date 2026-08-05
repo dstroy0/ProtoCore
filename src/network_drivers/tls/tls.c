@@ -20,7 +20,6 @@
 #include "lwip/tcp.h"
 #include "network_drivers/transport/tcp.h"
 #include <Arduino.h> // millis() for the blocking client loop
-#include <string.h>
 
 #include <mbedtls/error.h>
 #include <mbedtls/pk.h>

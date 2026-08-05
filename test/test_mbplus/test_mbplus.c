@@ -4,7 +4,7 @@
 // Host tests for services/mbplus: the Modbus Plus HDLC token-bus frame codec.
 
 #include "services/fieldbus/mbplus/mbplus.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp(void)

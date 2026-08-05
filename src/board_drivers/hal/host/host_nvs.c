@@ -15,8 +15,6 @@
 
 #if !PC_VENDOR_ESP
 
-#include <string.h>
-
 typedef struct
 {
     char ns[PC_CONFIG_KEY_MAX];

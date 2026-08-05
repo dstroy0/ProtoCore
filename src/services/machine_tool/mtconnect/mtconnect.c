@@ -10,8 +10,6 @@
 
 #if PC_ENABLE_MTCONNECT
 
-#include <string.h>
-
 static void put(pc_mtc_streams *s, const char *text)
 {
     // null text is a no-op: harden the helper itself, not just every call site.

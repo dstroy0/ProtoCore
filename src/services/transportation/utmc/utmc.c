@@ -11,8 +11,6 @@
 
 #if PC_ENABLE_UTMC
 
-#include <string.h>
-
 static void put_u(pc_sb *b, uint32_t v)
 {
     char tmp[11];

@@ -5,8 +5,6 @@
 
 #if PC_ENABLE_IFACE_BRIDGE
 
-#include <string.h>
-
 /// The one owned mutable: the address:port -> bus rule table.
 typedef struct
 {

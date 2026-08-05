@@ -23,7 +23,6 @@
 #include "services/fieldbus/opcua/opcua.h"
 #include "services/fieldbus/opcua_client/opcua_client.h"
 #include <Arduino.h>
-#include <string.h>
 
 // Browse resolver the server-side builder calls to manufacture a realistic BrowseResponse (two
 // forward references off the Objects folder) - copied verbatim from test/test_opcua_client.

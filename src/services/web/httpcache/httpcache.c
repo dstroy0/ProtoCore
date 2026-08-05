@@ -10,8 +10,6 @@
 
 #if PC_ENABLE_HTTP_CACHE
 
-#include <string.h>
-
 static const size_t CC_SENT = (size_t)-1; // overflow sentinel threaded through the emitters
 
 void cache_control_init(pc_cache_control *cc)

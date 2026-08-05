@@ -9,7 +9,7 @@
 #include "services/storage/wal/wal_store.h"
 #include <stdint.h>
 #include <stdio.h>
-#include <string.h>
+
 #include <unity.h>
 
 void setUp(void)

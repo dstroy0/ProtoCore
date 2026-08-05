@@ -20,7 +20,7 @@
 #include "services/iot/coap/coap.h"
 #include "services/iot/coap/coaps.h"
 #include <stdint.h>
-#include <string.h>
+
 #include <unity.h>
 
 // ---- fixed test key material (deterministic; matches test_dtls_conn) ----

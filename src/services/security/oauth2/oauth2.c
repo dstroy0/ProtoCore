@@ -12,7 +12,6 @@
 #if PC_ENABLE_OAUTH2
 
 #include "network_drivers/presentation/codec/json/json.h"
-#include <string.h>
 
 #if PC_ENABLE_HTTP_CLIENT
 #include "services/net/http_client/http_client.h"

@@ -16,7 +16,7 @@
 #if PC_ENABLE_FANUC_J519
 
 #include "shared_primitives/endian.h"
-#include <string.h> // memcpy (string.h is allowed; the no-stdlib rule is about stdlib.h/malloc)
+// memcpy (string.h is allowed; the no-stdlib rule is about stdlib.h/malloc)
 
 // --- float <-> little-endian binary32 --------------------------------------------------------
 static size_t wr_f32le(uint8_t *p, float v)

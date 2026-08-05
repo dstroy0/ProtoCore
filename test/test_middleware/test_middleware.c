@@ -6,7 +6,7 @@
 
 #include "protocore.h"
 #include <stdio.h>
-#include <string.h>
+
 #include <unity.h>
 
 // Cross-test observation state (middlewares are plain function pointers, so they

@@ -7,7 +7,7 @@
 // latency are HW-verified separately (the host has no tasks/ISRs).
 
 #include "network_drivers/session/preempt_queue.h"
-#include <string.h> // memcpy
+// memcpy
 #include <unity.h>
 
 static uint32_t g_seen[256];

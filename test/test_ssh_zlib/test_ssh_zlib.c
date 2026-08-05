@@ -17,7 +17,7 @@
 
 #include "network_drivers/presentation/codec/inflate/inflate.h"
 #include "network_drivers/presentation/ssh/transport/ssh_zlib.h"
-#include <string.h>
+
 #include <unity.h>
 
 // Compressor state + buffers (caller-owned).

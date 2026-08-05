@@ -20,7 +20,7 @@
 
 #if PC_VENDOR_MOCK
 
-#include <string.h> // memcpy / strnlen
+// memcpy / strnlen
 
 // IEEE 802.11-2020 9.4.2.2: an SSID element carries at most 32 octets, so this is the standard's
 // number and not a tuning choice. The +1 is the terminator pc_net_ssid() always writes.

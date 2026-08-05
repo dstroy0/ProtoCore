@@ -8,7 +8,7 @@
 // examples. Pure host codec.
 
 #include "network_drivers/presentation/http/http3/quic_packet.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

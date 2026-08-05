@@ -7,7 +7,7 @@
 // answer the way hardware does.
 
 #include "lfs_mock.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

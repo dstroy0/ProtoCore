@@ -3,7 +3,6 @@
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
 #include <WiFi.h>
-#include <string.h>
 
 #ifndef WIFI_SSID
 #define WIFI_SSID "YOUR_SSID"

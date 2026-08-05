@@ -12,7 +12,6 @@
 #if PC_ENABLE_SNMP_TRAP
 
 #include "services/net/snmp/snmp_ber.h"
-#include <string.h>
 
 // The two mandatory bindings of any v2c/v3 notification (RFC 3416 4.2.6).
 #if PROTOCORE_HOT

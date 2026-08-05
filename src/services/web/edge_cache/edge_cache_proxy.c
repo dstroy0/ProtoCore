@@ -33,7 +33,6 @@
 #include "services/web/edge_cache/edge_mesh.h"     // mesh sibling-cache codec + peer-query engine
 #endif
 #include <stdio.h>
-#include <string.h>
 
 typedef struct
 {

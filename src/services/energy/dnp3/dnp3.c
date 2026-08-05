@@ -12,8 +12,6 @@
 
 #if PC_ENABLE_DNP3
 
-#include <string.h>
-
 uint16_t pc_dnp3_crc(const uint8_t *data, size_t len)
 {
     // The DNP3 link-layer block check: reflected poly 0xA6BC = reflect(0x3D65), init 0, final XOR 0xFFFF -

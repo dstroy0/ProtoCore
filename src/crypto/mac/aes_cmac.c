@@ -12,7 +12,7 @@
 
 #include "crypto/mac/aes_cmac.h"
 #include "crypto/crypto_opt.h"
-#include <string.h>
+
 #if PROTOCORE_HOT
 #include <mbedtls/aes.h> // AES-128 single-block via the ESP32 AES peripheral
 #else

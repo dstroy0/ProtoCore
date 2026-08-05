@@ -26,7 +26,7 @@
 #include <Arduino.h> // the virtual clock the host time base reads: millis() / set_millis()
 #include <stddef.h>
 #include <stdint.h>
-#include <string.h>
+
 #include <time.h>
 
 // ---------------------------------------------------------------------------

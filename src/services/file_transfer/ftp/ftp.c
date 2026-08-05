@@ -10,8 +10,6 @@
 
 #if PC_ENABLE_FTP
 
-#include <string.h>
-
 static const size_t FTP_SENT = (size_t)-1; // "overflowed" sentinel threaded through the emitters
 
 // Append raw bytes; propagates the overflow sentinel.

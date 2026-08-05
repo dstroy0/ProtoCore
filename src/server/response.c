@@ -18,7 +18,7 @@
 #include "shared_primitives/hex.h"  // pc_hex_u32 (chunk size-line writer)
 #include "shared_primitives/mime.h" // PC_MIME_*, mime tables
 #include <stdio.h>
-#include <string.h>
+
 #if PC_ENABLE_METRICS || PC_ENABLE_STATS
 #include "network_drivers/application/web_assets.h" // PC_STATS_JSON / PC_METRICS_PROM (generated)
 #include "server/clock/clock.h"                     // pc_millis: the library clock, not the platform's

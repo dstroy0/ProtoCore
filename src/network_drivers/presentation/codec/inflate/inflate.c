@@ -16,8 +16,6 @@
 
 #if PC_ENABLE_WS_DEFLATE
 
-#include <string.h>
-
 #define PC_MAXBITS 15    // max bits in a Huffman code
 #define PC_MAXLCODES 288 // max literal/length codes
 #define PC_MAXDCODES 32  // max distance codes (30 used; 32 for safety)

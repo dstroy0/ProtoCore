@@ -11,7 +11,7 @@
 // be worth using at all (a single flipped bit must change it).
 
 #include "shared_primitives/crc.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp(void)

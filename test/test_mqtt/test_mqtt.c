@@ -4,7 +4,7 @@
 // Host unit tests for the MQTT 3.1.1 packet codec (env:native_mqtt).
 
 #include "services/iot/mqtt/mqtt.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

@@ -14,8 +14,6 @@
 
 #include "server/filesystem/mnt.h"
 
-#include <string.h>
-
 // --- the HAL: which store is mounted -------------------------------------------------------------
 // Ungated, because mnt.h declares it ungated: this is the seam every caller reads through, and the
 // filesystem accessor calls pc_mnt_active() on every operation whether or not the RAM disk is built.

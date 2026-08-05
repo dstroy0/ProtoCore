@@ -10,8 +10,6 @@
 
 #if PC_ENABLE_POWERLINK
 
-#include <string.h>
-
 size_t pc_epl_build(uint8_t msg_type, uint8_t dest, uint8_t source, const uint8_t *payload, size_t payload_len,
                     uint8_t *out, size_t cap)
 {

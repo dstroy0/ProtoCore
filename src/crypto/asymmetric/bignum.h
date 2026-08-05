@@ -71,7 +71,6 @@
 
 #include "mmgr/secure.h"
 #include "protocore_config.h"
-#include <string.h>
 
 PROTO_BEGIN_DECLS
 

@@ -19,7 +19,7 @@
 #include "device_bench.h"
 #include "services/security/ikev2/ikev2.h"
 #include <Arduino.h>
-#include <string.h> // memset
+// memset
 
 // ── scapy-generated golden vectors (from test/test_ikev2/test_ikev2.cpp) ────────────────────────
 // Bare IKE header: init SPI 11..88, resp SPI 0, next=None, ver 2.0, IKE_SA_INIT, Initiator, msgid 0.

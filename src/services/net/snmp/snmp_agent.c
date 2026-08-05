@@ -10,8 +10,6 @@
 
 #if PC_ENABLE_SNMP
 
-#include <string.h>
-
 #if PC_ENABLE_SNMP_V3
 #include "services/net/snmp/snmp_v3.h"
 #endif

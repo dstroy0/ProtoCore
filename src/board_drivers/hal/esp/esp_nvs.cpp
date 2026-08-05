@@ -18,7 +18,6 @@
 #if PC_VENDOR_ESP
 
 #include <Preferences.h>
-#include <string.h>
 
 // The one Preferences object every entry point below borrows, opened and closed within the call
 // (internal linkage). One named owner; nothing outside this file reaches it.

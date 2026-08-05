@@ -9,7 +9,7 @@
 // The env sizes PC_ENOCEAN_MAX_DATA = 16.
 
 #include "services/radio/enocean/enocean.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

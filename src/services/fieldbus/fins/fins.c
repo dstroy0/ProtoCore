@@ -10,8 +10,6 @@
 
 #if PC_ENABLE_FINS
 
-#include <string.h>
-
 static size_t write_header(uint8_t *buf, const FinsHeader *h)
 {
     buf[0] = h->icf;

@@ -11,8 +11,6 @@
 
 #if PC_ENABLE_HW_HEALTH
 
-#include <string.h>
-
 void pc_hwhealth_rail_init(HwRailMonitor *m, uint32_t nominal_mv, uint32_t warn_mv, uint32_t crit_mv)
 {
     if (!m)

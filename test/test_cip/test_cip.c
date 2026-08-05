@@ -6,7 +6,7 @@
 // encoding per the Wireshark CIP dissector. Pure host tests.
 
 #include "services/fieldbus/cip/cip.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

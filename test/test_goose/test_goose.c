@@ -4,7 +4,7 @@
 // Host tests for services/goose: the IEC 61850 GOOSE BER PDU + Ethernet frame codec.
 
 #include "services/energy/goose/goose.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp(void)

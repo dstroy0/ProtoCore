@@ -13,7 +13,6 @@
 #include "network_drivers/session/proto_handler.h"
 #include "network_drivers/transport/tcp.h"
 #include <stdarg.h>
-#include <string.h>
 
 // Telnet protocol bytes (RFC 854 / 858 / 857).
 #define T_SE 240

@@ -13,7 +13,6 @@
 
 #include "network_drivers/session/proto_handler.h"
 #include "network_drivers/transport/tcp.h"
-#include <string.h>
 
 // One published mountpoint on a listener.
 typedef struct

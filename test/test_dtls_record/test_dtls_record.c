@@ -9,7 +9,7 @@
 
 #include "network_drivers/presentation/security/dtls/dtls_record.h"
 #include <stdint.h>
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

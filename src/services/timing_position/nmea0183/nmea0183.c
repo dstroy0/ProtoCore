@@ -11,7 +11,6 @@
 #if PC_NEED_NMEA0183
 
 #include "shared_primitives/numparse.h"
-#include <string.h>
 
 uint8_t pc_nmea0183_checksum(const char *s, size_t len)
 {

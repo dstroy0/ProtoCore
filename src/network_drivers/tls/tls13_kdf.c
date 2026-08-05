@@ -13,7 +13,6 @@
 #include "crypto/hash/sha256.h"
 #include "crypto/kdf/hkdf.h"
 #include "crypto/mac/hmac_sha256.h"
-#include <string.h>
 
 // RFC 8446 sec 7.1 ("tls13 ") and RFC 9147 sec 5.9 ("dtls13") HKDF-Expand-Label prefixes.
 const Tls13Kdf TLS13_KDF = {"tls13 "};

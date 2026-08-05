@@ -12,7 +12,6 @@
 
 #include "crypto/hash/md.h"
 #include "mmgr/secure.h" // SecureScope: lifetime of the borrowed digest state
-#include <string.h>
 
 void pc_ntlm_nt_hash(const char *password, uint8_t nt_hash[16])
 {

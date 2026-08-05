@@ -11,7 +11,7 @@
 #if PC_ENABLE_COAP
 
 #include "network_drivers/transport/udp.h"
-#include <string.h>
+
 #if PC_ENABLE_COAP_OBSERVE || PC_COAP_DEDUP_ENTRIES > 0
 #include "server/clock/clock.h" // pc_millis(): Observe notification sequencing + dedup entry freshness
 #endif

@@ -9,7 +9,7 @@
 #include "network_drivers/presentation/http/http2/h2_conn.h"
 #include "network_drivers/presentation/http/http2/h2_frame.h"
 #include "network_drivers/presentation/http/http2/hpack.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp(void)

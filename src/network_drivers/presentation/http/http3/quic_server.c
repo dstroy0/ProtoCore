@@ -13,7 +13,6 @@
 #include "network_drivers/presentation/http/http3/quic_packet.h"
 #include "network_drivers/presentation/http/http3/quic_tp.h"
 #include "shared_primitives/ring.h" // pc_atomic
-#include <string.h>
 
 #if PROTOCORE_HOT
 #include "network_drivers/transport/udp.h"

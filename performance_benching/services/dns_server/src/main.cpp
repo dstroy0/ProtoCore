@@ -18,7 +18,6 @@
 #include "services/net/dns_server/dns_server.h"
 #include <Arduino.h>
 #include <stdio.h> // snprintf
-#include <string.h>
 
 // Build a DNS query: header + one question (QNAME / QTYPE / QCLASS=IN). Copied verbatim from
 // test/test_dns_server/test_dns_server.cpp (already known-good, spec-conformant wire encoding).

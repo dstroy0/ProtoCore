@@ -14,7 +14,7 @@
 #include "crypto/hash/sha256.h"
 #include "crypto/kdf/hkdf.h"
 #include "network_drivers/tls/tls13_kdf.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

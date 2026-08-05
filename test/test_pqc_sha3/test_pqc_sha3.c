@@ -8,7 +8,7 @@
 
 #include "crypto/hash/sha3.h"
 #include <stdint.h>
-#include <string.h>
+
 #include <unity.h>
 
 // The CSPRNG seam (forward-declared in sntrup761.cpp). This suite does not exercise sntrup761, but

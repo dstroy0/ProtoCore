@@ -28,7 +28,6 @@
 #if PC_ENABLE_SSH_SNTRUP761
 
 #include "crypto/hash/sha512.h"
-#include <string.h>
 
 // The CSPRNG seam (defined in ssh_dh.cpp) - forward-declared so this PQC primitive does not pull in
 // the SSH key-exchange machinery (ServerConfig / bignum / keymat) that ssh_dh.h transitively includes.

@@ -19,7 +19,6 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
 // Value of one hex digit, or -1 if the character is not one.
 static inline int throwaway_nib(char c)

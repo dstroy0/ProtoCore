@@ -7,7 +7,7 @@
 // pyrtcm 1.2.0 (fields decode to the given DF values; RTCMReader validates the CRC).
 
 #include "services/timing_position/gnss/rtcm3.h"
-#include <string.h>
+
 #include <unity.h>
 
 // Base antenna reference point (ECEF, 0.1 mm units) used for both reference frames.

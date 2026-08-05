@@ -6,7 +6,7 @@
 // parametric Axes (one Axis_k object per bound axis, four variables each).
 
 #include "services/machine_tool/robotics/robotics.h"
-#include <string.h>
+
 #include <unity.h>
 
 // Node ids (must track the internal enum in robotics.cpp).

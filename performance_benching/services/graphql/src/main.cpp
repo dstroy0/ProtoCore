@@ -23,7 +23,6 @@
 #include "device_bench.h"
 #include "services/iot/graphql/graphql.h"
 #include <Arduino.h>
-#include <string.h>
 
 // Demo schema resolver (mirrors test/test_graphql's): a handful of flat scalar fields, a nested
 // `device` object, and argument-driven `sensor`/`greet` leaves. Pure - no I/O of any kind.

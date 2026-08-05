@@ -22,8 +22,6 @@
 #include "network_drivers/transport/listener.h"
 #include "network_drivers/transport/tcp.h"
 
-#include <string.h>
-
 // One forwarded TCP connection: an SSH channel bridged to a client-transport slot.
 typedef struct
 {

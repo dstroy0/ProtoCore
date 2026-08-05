@@ -16,8 +16,6 @@
 
 #if PC_ENABLE_GPIO_MAP
 
-#include <string.h>
-
 #include "mmgr/frame.h"
 
 const char *pc_gpio_dir_name(pc_gpio_dir dir)

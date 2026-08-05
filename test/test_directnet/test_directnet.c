@@ -4,7 +4,7 @@
 // Host tests for services/directnet: the DirectNET serial frame codec.
 
 #include "services/fieldbus/directnet/directnet.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp(void)

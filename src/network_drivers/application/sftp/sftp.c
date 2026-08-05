@@ -14,7 +14,7 @@
 #if PC_ENABLE_SSH_SFTP
 
 #include <stdio.h>
-#include <string.h>
+
 #include <time.h>
 
 // --- reader (big-endian, bounds-checked) ---------------------------------------------------------

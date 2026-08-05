@@ -4,7 +4,7 @@
 // Host tests for services/wifi_sniffer: 802.11 header decode, traffic tally, roaming decision.
 
 #include "services/radio/wifi_sniffer/wifi_sniffer.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp(void)

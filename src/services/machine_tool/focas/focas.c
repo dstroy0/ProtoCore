@@ -10,8 +10,6 @@
 
 #if PC_ENABLE_FOCAS
 
-#include <string.h>
-
 // FOCAS is big-endian throughout.
 static size_t put16be(uint8_t *p, uint16_t v)
 {

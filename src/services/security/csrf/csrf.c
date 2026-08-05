@@ -18,7 +18,6 @@
 #include "crypto/ct_eq.h" // pc_ct_eq
 #include "crypto/mac/hmac_sha256.h"
 #include "shared_primitives/hex.h"
-#include <string.h>
 
 // nonce-hex "." signature-hex
 static const pc_field CSRF_TOKEN[] = {PC_STR, {PC_FK_LIT, 0, 1, "."}, PC_STR, PC_END};

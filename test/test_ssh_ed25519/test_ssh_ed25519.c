@@ -10,7 +10,7 @@
 #include "crypto/asymmetric/curve25519.h"
 #include "crypto/asymmetric/ed25519.h"
 #include "crypto/hash/sha512.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

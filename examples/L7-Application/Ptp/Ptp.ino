@@ -31,7 +31,7 @@
 #include "network_drivers/transport/udp.h"
 #include "server/clock/clock.h"
 #include "network_drivers/application/ptp/ptp.h"
-#include <string.h>
+
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";

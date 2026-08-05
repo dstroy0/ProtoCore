@@ -7,7 +7,7 @@
 // call sequence a service makes (join -> receive -> leave) is exercised end to end.
 
 #include "network_drivers/transport/udp.h"
-#include <string.h>
+
 #include <unity.h>
 
 static int g_calls = 0;

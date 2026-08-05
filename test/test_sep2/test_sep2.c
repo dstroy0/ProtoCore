@@ -4,7 +4,7 @@
 // Host tests for services/sep2: the IEEE 2030.5 resource document builders.
 
 #include "services/energy/sep2/sep2.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp(void)

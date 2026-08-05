@@ -4,7 +4,7 @@
 // Host tests for services/profinet: the PROFINET DCP frame codec.
 
 #include "services/fieldbus/profinet/profinet.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp(void)

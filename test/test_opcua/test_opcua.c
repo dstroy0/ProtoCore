@@ -9,7 +9,7 @@
 // (pc_opcua_rx) is ESP32-only and HW-verified (incl. python asyncua interop).
 
 #include "services/fieldbus/opcua/opcua.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

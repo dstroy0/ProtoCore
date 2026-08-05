@@ -9,7 +9,7 @@
 //     decryptor opens them in order).
 
 #include "crypto/aead/aesgcm.h"
-#include <string.h>
+
 #include <unity.h>
 
 // The keyed api needs a context, not a key. These are one-shot vectors, so one scratch context is

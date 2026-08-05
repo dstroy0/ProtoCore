@@ -31,7 +31,7 @@
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
 #include "services/security/oidc/oidc.h"
-#include <string.h>
+
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";

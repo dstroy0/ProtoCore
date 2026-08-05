@@ -12,8 +12,6 @@
 
 #if PC_ENABLE_PROMISC
 
-#include <string.h>
-
 #if PROTOCORE_HOT
 #include <esp_wifi.h>
 #endif

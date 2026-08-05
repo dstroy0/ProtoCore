@@ -10,8 +10,6 @@
 
 #if PC_ENABLE_SPA_ROUTER
 
-#include <string.h>
-
 proto_bool pc_spa_has_extension(const char *path)
 {
     if (!path)

@@ -5,7 +5,7 @@
 
 #include "services/machine_tool/mtconnect/mtconnect.h"
 #include <stdio.h>
-#include <string.h>
+
 #include <unity.h>
 
 void setUp(void)

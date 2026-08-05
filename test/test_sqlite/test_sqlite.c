@@ -12,7 +12,7 @@
 #include "services/storage/sqlite/sqlite_format.h"
 #include <stdint.h>
 #include <stdio.h>
-#include <string.h>
+
 #include <unity.h>
 
 void setUp(void)

@@ -14,7 +14,6 @@
 #include "network_drivers/presentation/http/http3/quic_frame.h"
 #include "network_drivers/presentation/http/http3/quic_packet.h"
 #include "network_drivers/presentation/http/http3/quic_varint.h"
-#include <string.h>
 
 // A single STREAM frame's payload cannot exceed one datagram, so it can never overflow a stream's
 // reassembly buffer - which is why that clamp in handle_stream carries a coverage exclusion. Both

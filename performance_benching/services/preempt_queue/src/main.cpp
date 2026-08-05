@@ -22,7 +22,6 @@
 #include "device_bench.h"
 #include "services/system/preempt_queue/preempt_queue.h"
 #include <Arduino.h>
-#include <string.h>
 
 // High-priority sink: pulls each posted item off the lane and touches it so the compiler cannot
 // elide the drain. Runs on core 0 (see task setup) while the bench posts from core 1.

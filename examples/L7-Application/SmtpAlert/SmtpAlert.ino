@@ -22,7 +22,7 @@
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
 #include "services/net/smtp/smtp.h"
-#include <string.h>
+
 
 // --- CHANGE ME: your WiFi ---
 static const char *SSID = "YOUR_SSID";

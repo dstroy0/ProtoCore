@@ -10,7 +10,6 @@
 #include "device_bench.h"
 #include "services/net/smtp/smtp.h"
 #include <Arduino.h>
-#include <string.h>
 
 // Scripted transport: recv() hands back canned server replies in sequence; send() is a sink.
 struct Script

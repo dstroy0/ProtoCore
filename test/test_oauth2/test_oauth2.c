@@ -7,7 +7,7 @@
 // ESP32-only and HW-verified.
 
 #include "services/security/oauth2/oauth2.h"
-#include <string.h>
+
 #include <unity.h>
 
 static char out[512];

@@ -6,7 +6,7 @@
 // and the TX/RX FIFO. init / send / tx_done / set_rx / recv / RSSI decode are verified without a radio.
 
 #include "services/radio/cc1101/cc1101.h"
-#include <string.h>
+
 #include <unity.h>
 
 typedef struct

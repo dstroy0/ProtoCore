@@ -12,8 +12,6 @@
 
 #if PC_ENABLE_WEBDAV
 
-#include <string.h>
-
 WebDavMethod pc_webdav_method(const char *m)
 {
     if (!m)

@@ -6,7 +6,7 @@
 // malformed rejection) and the libpcap header framing. Pure host tests.
 
 #include "services/radio/promisc/promisc.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

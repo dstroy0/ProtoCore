@@ -13,7 +13,6 @@
 #include "crypto/aead/aes128gcm.h"
 #include "mmgr/secure.h" // the secure pool: header-protection key schedule
 #include "network_drivers/tls/tls13_kdf.h"
-#include <string.h>
 
 // Unified-header first-byte fixed pattern and flag bits (RFC 9147 §4, Figure 3): 0 0 1 C S L E E.
 static const uint8_t DTLS_UH_FIXED = 0x20; // 001x xxxx

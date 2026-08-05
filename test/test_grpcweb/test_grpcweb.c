@@ -5,7 +5,7 @@
 // trailer frame builders and the frame parser. Pure host tests.
 
 #include "services/iot/grpcweb/grpcweb.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

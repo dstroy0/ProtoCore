@@ -14,7 +14,6 @@
 #include "crypto/hash/sha512.h"
 #include "mmgr/secure.h"
 #include "network_drivers/presentation/ssh/transport/ssh_keymat.h"
-#include <string.h>
 
 // Public host key (BSS - no secret material).
 #if PROTOCORE_HOT

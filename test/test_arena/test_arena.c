@@ -6,7 +6,7 @@
 
 #include "mmgr/arena.h"
 #include <stdint.h>
-#include <string.h>
+
 #include <unity.h>
 
 static uint8_t g_buf[4096];

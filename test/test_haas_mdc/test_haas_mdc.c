@@ -7,7 +7,7 @@
 // per the Haas MDC framing (payload between STX 0x02 and ETB 0x17, then CR LF and a '>' prompt).
 
 #include "services/machine_tool/haas_mdc/haas_mdc.h"
-#include <string.h>
+
 #include <unity.h>
 
 // Frame delimiters as string-literal pieces (concatenation keeps the \x.. escapes from greedily

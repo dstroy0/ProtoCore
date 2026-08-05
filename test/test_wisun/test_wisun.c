@@ -4,7 +4,7 @@
 // Host tests for services/wisun: the CoAP client request builder (RFC 7252) + the FAN node registry.
 
 #include "services/radio/wisun/wisun.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp(void)

@@ -15,7 +15,7 @@
 #include "crypto/hash/sha256.h"
 #include "crypto/hash/sha512.h"
 #include "mmgr/secure.h"
-#include <string.h>
+
 #if PROTOCORE_HOT
 #include <mbedtls/md.h>
 #include <mbedtls/rsa.h>

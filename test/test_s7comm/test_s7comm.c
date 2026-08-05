@@ -6,7 +6,7 @@
 // (length-in-bits + even-item padding). Constants per the Wireshark dissector. Pure host tests.
 
 #include "services/fieldbus/s7comm/s7comm.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

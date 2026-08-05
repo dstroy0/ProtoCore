@@ -4,7 +4,7 @@
 // Host tests for services/nts: the NTS-KE record + NTS NTP extension-field wire codec (RFC 8915).
 
 #include "network_drivers/application/nts/nts.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp(void)

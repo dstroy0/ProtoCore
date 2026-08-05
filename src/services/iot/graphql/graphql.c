@@ -17,7 +17,6 @@
 #if PC_ENABLE_GRAPHQL
 
 #include <stdio.h>
-#include <string.h>
 
 typedef struct pc_gql_args
 {

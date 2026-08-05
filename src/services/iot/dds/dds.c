@@ -10,8 +10,6 @@
 
 #if PC_ENABLE_DDS
 
-#include <string.h>
-
 const uint8_t RTPS_VERSION[2] = {2, 4};
 
 size_t pc_rtps_header(const uint8_t *guid_prefix, const uint8_t *vendor_id, uint8_t *out, size_t cap)

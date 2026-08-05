@@ -4,7 +4,7 @@
 // Host tests for services/interbus: the summation-frame codec.
 
 #include "services/fieldbus/interbus/interbus.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp(void)

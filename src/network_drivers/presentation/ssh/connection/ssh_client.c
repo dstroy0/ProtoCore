@@ -27,7 +27,6 @@
 #include "network_drivers/tls/ssh_kexhash.h" // SshKexHash (SHA-256/SHA-512 by method)
 #include "network_drivers/tls/ssh_rsa.h"     // rsa-sha2-256/512 host-key verify
 #include "shared_primitives/log.h"
-#include <string.h>
 
 #if PC_ENABLE_PQC_KEX
 #include "crypto/pqc/mlkem.h" // mlkem768x25519-sha256 hybrid (client: KeyGen + Decaps)

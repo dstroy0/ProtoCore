@@ -12,7 +12,6 @@
 #if PC_ENABLE_NTRIP_CASTER
 
 #include <stdio.h>
-#include <string.h>
 
 static char lower(char c)
 {

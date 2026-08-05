@@ -8,7 +8,6 @@
 #include "network_drivers/presentation/codec/deflate/deflate.h"
 #include "network_drivers/presentation/codec/inflate/inflate.h"
 #include <Arduino.h>
-#include <string.h>
 
 static const char *MSG = "{\"type\":\"telemetry\",\"ts\":1720700000,\"sensors\":["
                          "{\"id\":1,\"name\":\"temp\",\"unit\":\"C\",\"value\":21.4},"

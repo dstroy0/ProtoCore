@@ -7,7 +7,6 @@
 #include "device_bench.h"
 #include "network_drivers/presentation/http/http_parser/http_parser.h"
 #include <Arduino.h>
-#include <string.h>
 
 static const char *GET_REQ = "GET /api/v1/status?verbose=1 HTTP/1.1\r\n"
                              "Host: pc.local\r\nUser-Agent: curl/8.5\r\nAccept: */*\r\n"

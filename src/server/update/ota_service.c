@@ -16,7 +16,6 @@
 #include "protocore.h"
 #include "shared_primitives/mime.h"
 #include <Update.h>
-#include <string.h>
 
 // All OTA-service state, owned by one instance (internal linkage): the server handle, the
 // route path, the Basic-auth credentials, and the per-upload flags (one upload at a time on

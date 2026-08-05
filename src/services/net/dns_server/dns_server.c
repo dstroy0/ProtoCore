@@ -11,7 +11,7 @@
 
 #if PC_ENABLE_DNS_SERVER
 
-#include <string.h> // memcpy, strlen
+// memcpy, strlen
 
 #if PROTOCORE_HOT
 #include "network_drivers/transport/udp.h"

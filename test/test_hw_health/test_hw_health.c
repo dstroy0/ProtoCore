@@ -4,7 +4,7 @@
 // Host tests for services/hw_health: rail droop, SPI CRC backoff, GPIO short, cap leakage.
 
 #include "server/signaling/hw_health.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp(void)

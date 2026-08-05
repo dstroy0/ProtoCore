@@ -6,7 +6,7 @@
 // the LwM2M TLV type-byte layout. Pure host tests.
 
 #include "services/iot/lwm2m/lwm2m_tlv.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

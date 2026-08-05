@@ -47,7 +47,7 @@
 // feature is on) are dropped unparsed by the preprocessor.
 // ---------------------------------------------------------------------------
 #if PROTOCORE_HOT
-#include <string.h>
+
 #endif
 #if PC_ENABLE_OBSERVABILITY
 

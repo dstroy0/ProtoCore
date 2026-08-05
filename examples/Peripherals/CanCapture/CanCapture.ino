@@ -20,7 +20,7 @@
 #include "network_drivers/transport/udp.h"
 #include "services/net/forward/forward.h"
 #include "server/signaling/bus_capture.h"
-#include <string.h>
+
 
 static const char *COLLECTOR_IP = "192.168.1.50";
 static const uint16_t COLLECTOR_PORT = 5556;

@@ -13,8 +13,6 @@
 
 #if PC_ENABLE_ENOCEAN
 
-#include <string.h>
-
 #include "shared_primitives/crc.h" // PC_CRC8_SMBUS
 
 uint8_t pc_esp3_crc8(const uint8_t *buf, uint16_t len)

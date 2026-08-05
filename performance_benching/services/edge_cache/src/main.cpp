@@ -17,7 +17,7 @@
 #include "device_bench.h"
 #include "services/web/edge_cache/edge_cache.h"
 #include <Arduino.h>
-#include <string.h>
+
 #include <strings.h>
 
 // Response head fixture (verbatim from test/test_edge_cache/test_edge_cache.cpp's RESP_HEAD).

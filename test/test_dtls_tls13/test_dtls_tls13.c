@@ -10,7 +10,7 @@
 #include "crypto/asymmetric/ed25519.h"
 #include "network_drivers/presentation/http/http3/tls13_msg.h"
 #include <stdint.h>
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

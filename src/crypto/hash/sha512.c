@@ -11,7 +11,7 @@
 
 #include "crypto/hash/sha512.h"
 #include "crypto/crypto_opt.h"
-#include <string.h>
+
 #if PROTOCORE_HOT
 #include <mbedtls/sha512.h> // hardware SHA accelerator
 #else

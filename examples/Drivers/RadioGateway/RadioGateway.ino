@@ -23,7 +23,7 @@
 #include "services/net/gateway/gateway.h"
 #include "mmgr/dma.h"
 #include "network_drivers/session/preempt_queue.h"
-#include <string.h>
+
 
 static const uint8_t RADIO_PORT = 0; // DMA channel 0 == the LoRa module
 

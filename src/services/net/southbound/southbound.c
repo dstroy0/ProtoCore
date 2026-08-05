@@ -10,8 +10,6 @@
 
 #if PC_ENABLE_SOUTHBOUND
 
-#include <string.h>
-
 #ifndef PC_SOUTHBOUND_MAX_DRIVERS
 #define PC_SOUTHBOUND_MAX_DRIVERS 8 ///< bounded registry; no heap.
 #endif

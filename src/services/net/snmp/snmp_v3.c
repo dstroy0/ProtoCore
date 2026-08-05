@@ -15,7 +15,6 @@
 #include "services/net/snmp/snmp_ber.h"
 #include "services/net/snmp/snmp_crypto.h"
 #include "shared_primitives/endian.h"
-#include <string.h>
 
 #if PC_ENABLE_SNMP_TRAP
 #include "network_drivers/transport/udp.h"

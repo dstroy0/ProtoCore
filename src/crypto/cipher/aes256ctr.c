@@ -17,7 +17,7 @@
 #include "crypto/cipher/aes256ctr.h"
 #include "crypto/crypto_opt.h"
 #include "mmgr/secure.h"
-#include <string.h>
+
 #if PROTOCORE_HOT
 #include <mbedtls/aes.h>
 #else

@@ -10,8 +10,6 @@
 
 #if PC_ENABLE_ICCP
 
-#include <string.h>
-
 // Append a short-form TLV (value length < 128). Returns bytes written at out, or 0 on overflow.
 static size_t tlv(uint8_t tag, const uint8_t *val, size_t val_len, uint8_t *out, size_t cap)
 {

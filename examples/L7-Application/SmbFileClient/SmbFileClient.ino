@@ -29,7 +29,7 @@
 #include "network_drivers/transport/client.h"
 #include "network_drivers/application/smb/smb2.h" // SMB2_FILE_GENERIC_READ / SMB2_FILE_OPEN
 #include "network_drivers/application/smb/smb_client.h" // smb_open / smb_read / smb_close
-#include <string.h>
+
 
 // --- CHANGE ME: your WiFi ---
 static const char *SSID = "YOUR_SSID";

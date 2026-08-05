@@ -19,7 +19,6 @@
 #endif
 #include "mmgr/plaintext.h"
 #include "mmgr/secure.h"
-#include <string.h>
 
 #if PROTOCORE_HOT
 #include <Arduino.h> // pc_platform_rand_fill()

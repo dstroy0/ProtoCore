@@ -10,8 +10,6 @@
 
 #if PC_ENABLE_NTS
 
-#include <string.h>
-
 const char NTS_EXPORTER_LABEL[] = "EXPORTER-network-time-security";
 
 static void put_u16(uint8_t *p, uint16_t v)

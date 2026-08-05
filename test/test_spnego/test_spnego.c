@@ -6,7 +6,7 @@
 // responseToken from a realistic server NegTokenResp (skipping negState + supportedMech).
 
 #include "network_drivers/application/smb/spnego.h"
-#include <string.h>
+
 #include <unity.h>
 
 // One hex digit to its value.

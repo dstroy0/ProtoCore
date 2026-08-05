@@ -9,7 +9,7 @@
 #include "network_drivers/session/proto_handler.h" // ProtoHandler: full type needed to check pc_telnet_proto_handler()'s fields
 #include "network_drivers/transport/tcp.h"
 #include <stdint.h>
-#include <string.h>
+
 #include <unity.h>
 
 #define IAC 255

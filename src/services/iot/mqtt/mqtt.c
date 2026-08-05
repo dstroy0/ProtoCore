@@ -13,7 +13,6 @@
 #if PC_ENABLE_MQTT
 
 #include "shared_primitives/utf8.h"
-#include <string.h>
 
 // ---------------------------------------------------------------------------
 // Pure codec (host-testable)

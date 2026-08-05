@@ -5,7 +5,7 @@
 
 #include "server/exc_decoder.h"
 #include <stdio.h>
-#include <string.h>
+
 #include <unity.h>
 
 static const char *PANIC = "Guru Meditation Error: Core  1 panic'ed (LoadProhibited). Exception was unhandled.\n"

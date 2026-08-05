@@ -16,7 +16,6 @@
 
 #include "network_drivers/application/web_assets.h" // PC_TERMINAL_PAGE
 #include "shared_primitives/mime.h"
-#include <string.h>
 
 // ---------------------------------------------------------------------------
 // State (all static / BSS - no heap)

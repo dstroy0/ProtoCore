@@ -26,7 +26,7 @@
 #include "lwip/netif.h"
 #include <WiFi.h>
 #include <esp_wifi.h> // esp_wifi_set_channel / esp_wifi_sta_get_ap_info (raw-radio bring-up + SSID readout)
-#include <string.h>   // strnlen / memcpy
+                      // strnlen / memcpy
 #if PC_ENABLE_ETHERNET
 #include <ETH.h>
 #endif

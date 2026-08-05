@@ -4,7 +4,7 @@
 // Host tests for services/cclink: the CC-Link cyclic frame codec + process-image accessors.
 
 #include "services/fieldbus/cclink/cclink.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp(void)

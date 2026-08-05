@@ -10,7 +10,6 @@
 #include "device_bench.h"
 #include "services/fieldbus/rawl2/rawl2.h"
 #include <Arduino.h>
-#include <string.h>
 
 static void rawl2_bench_task(void *)
 {

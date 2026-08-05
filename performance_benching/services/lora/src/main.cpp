@@ -20,7 +20,6 @@
 #include "device_bench.h"
 #include "services/radio/lora/lora.h"
 #include <Arduino.h>
-#include <string.h>
 
 // --- Mock SX127x (the driver's register bus, memory-only - copied from test/test_lora) -------------
 // A register file plus a FIFO whose pointer auto-increments on RegFifo (0x00) access, mirroring the

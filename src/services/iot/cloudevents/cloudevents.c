@@ -11,7 +11,6 @@
 #if PC_ENABLE_CLOUDEVENTS
 
 #include "network_drivers/presentation/codec/json/json.h"
-#include <string.h>
 
 static proto_bool ce_present(const char *s)
 {

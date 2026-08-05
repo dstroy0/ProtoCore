@@ -18,7 +18,6 @@
 #if PC_ENABLE_RADIO_POWER
 #include "network_drivers/physical/radio_power.h" // keep the radio awake during a relayed transfer
 #endif
-#include <string.h>
 
 // One published front port -> origin.
 typedef struct

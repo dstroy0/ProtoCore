@@ -23,7 +23,6 @@
 #include "network_drivers/presentation/http/sse/sse.h"
 #endif
 #include <stdio.h>
-#include <string.h>
 
 #if PC_ENABLE_WEBSOCKET
 // Magic GUID concatenated to the client key for the WS accept hash (RFC 6455 4.2.2).

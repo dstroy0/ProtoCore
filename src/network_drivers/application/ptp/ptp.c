@@ -10,8 +10,6 @@
 
 #if PC_ENABLE_PTP
 
-#include <string.h>
-
 // -- big-endian field helpers --
 
 static void put_u16(uint8_t *p, uint16_t v)

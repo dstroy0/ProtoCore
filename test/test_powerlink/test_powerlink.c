@@ -4,7 +4,7 @@
 // Host tests for services/powerlink: the Ethernet POWERLINK basic frame codec.
 
 #include "services/fieldbus/powerlink/powerlink.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp(void)

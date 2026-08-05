@@ -11,8 +11,6 @@
 
 #if PC_ENABLE_ATC
 
-#include <string.h>
-
 static void put_json_str(pc_sb *b, const char *s)
 {
     pc_sb_put(b, "\"");

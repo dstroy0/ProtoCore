@@ -11,7 +11,6 @@
 #if PC_ENABLE_EDGE_CACHE
 
 #include "crypto/hash/sha256.h"
-#include <string.h>
 
 static char lc(char c)
 {

@@ -16,7 +16,6 @@
 #include "server/filesystem/mnt.h" // the storage seam: pc_mnt_active()
 #include "shared_primitives/mime.h"
 #include <stdio.h>
-#include <string.h>
 
 static const pc_field UPLOAD_OK[] = {{PC_FK_LIT, 0, 3, "OK "}, PC_U32, {PC_FK_LIT, 0, 6, " bytes"}, PC_END};
 

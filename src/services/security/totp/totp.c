@@ -14,7 +14,6 @@
 #if PC_ENABLE_TOTP
 
 #include "crypto/hash/sha1.h"
-#include <string.h>
 
 #define PC_BLOCK 64 // SHA-1 block size
 

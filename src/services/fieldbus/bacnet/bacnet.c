@@ -10,8 +10,6 @@
 
 #if PC_ENABLE_BACNET
 
-#include <string.h>
-
 size_t pc_bvlc_build(uint8_t *buf, size_t cap, uint8_t function, const uint8_t *npdu, size_t pc_npdu_len)
 {
     if (!buf || (pc_npdu_len && !npdu))

@@ -12,8 +12,6 @@
 
 #if PC_ENABLE_BLE_GATT
 
-#include <string.h>
-
 size_t att_read_req(uint16_t handle, uint8_t *out, size_t cap)
 {
     if (!out || cap < 3)

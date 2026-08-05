@@ -4,7 +4,7 @@
 // Host tests for services/snp: the GE Fanuc SNP serial frame codec.
 
 #include "services/fieldbus/snp/snp.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp(void)

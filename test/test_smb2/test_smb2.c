@@ -11,7 +11,7 @@
 #include "network_drivers/application/smb/ntlmssp.h"
 #include "network_drivers/application/smb/smb2.h"
 #include "network_drivers/application/smb/spnego.h"
-#include <string.h>
+
 #include <unity.h>
 
 // The keyed api needs a context, not a key. These are one-shot vectors, so one scratch context is

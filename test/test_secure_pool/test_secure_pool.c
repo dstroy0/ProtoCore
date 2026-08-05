@@ -15,7 +15,7 @@
 #include "mmgr/arena.h" // pc_worker_set_self()
 #include "mmgr/plaintext.h"
 #include "mmgr/secure.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp(void)

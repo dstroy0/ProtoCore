@@ -18,7 +18,6 @@
 #include "services/net/iface_bridge/iface_bridge.h"
 #include <Arduino.h>
 #include <stdint.h>
-#include <string.h>
 
 static void iface_bridge_bench_task(void *)
 {

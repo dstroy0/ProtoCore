@@ -19,7 +19,6 @@
 #include "device_bench.h"
 #include "server/exc_decoder.h"
 #include <Arduino.h>
-#include <string.h>
 
 static void exc_decoder_bench_task(void *)
 {

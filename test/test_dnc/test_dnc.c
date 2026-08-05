@@ -7,7 +7,7 @@
 // full encode -> decode round-trips for both tape codes. Pure host tests.
 
 #include "services/machine_tool/dnc/dnc.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

@@ -19,7 +19,6 @@
 #include "device_bench.h"
 #include "services/net/happy_eyeballs/happy_eyeballs.h"
 #include <Arduino.h>
-#include <string.h>
 
 static void happy_eyeballs_bench_task(void *)
 {

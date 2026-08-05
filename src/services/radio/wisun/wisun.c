@@ -11,8 +11,6 @@
 
 #if PC_ENABLE_WISUN
 
-#include <string.h>
-
 // Emit one CoAP option (RFC 7252 sec 3.1): the (delta,length) nibble header + extended bytes + value.
 static proto_bool emit_option(uint8_t *out, size_t *o, size_t cap, uint16_t delta, const uint8_t *val, uint16_t vlen)
 {

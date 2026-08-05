@@ -9,7 +9,7 @@
 
 #include "services/timing_position/ubx/ubx.h"
 #include <stdio.h>
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

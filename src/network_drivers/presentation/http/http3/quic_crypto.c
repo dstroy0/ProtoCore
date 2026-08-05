@@ -14,7 +14,6 @@
 #include "crypto/kdf/hkdf.h"
 #include "mmgr/secure.h" // the secure pool: header-protection key schedule
 #include "network_drivers/presentation/http/http3/quic_packet.h"
-#include <string.h>
 
 // RFC 9001 sec 5.2: the version-1 Initial salt.
 static const uint8_t INITIAL_SALT[20] = {0x38, 0x76, 0x2c, 0xf7, 0xf5, 0x59, 0x34, 0xb3, 0x4d, 0x17,

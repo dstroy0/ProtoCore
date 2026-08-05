@@ -6,7 +6,7 @@
 
 #include "services/web/edge_cache/edge_fetch.h"
 #include <stdint.h>
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

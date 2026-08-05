@@ -10,7 +10,7 @@
 #include "network_drivers/application/sftp/sftp.h"
 #include "server/filesystem/filesystem.h"
 #include <stdint.h>
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

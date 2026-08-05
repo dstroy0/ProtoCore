@@ -22,7 +22,7 @@
 
 #include "protocore_config.h"       // PC_BASE64_SWAR (scalar vs SWAR constant-time decode; default SWAR)
 #include "shared_primitives/swar.h" // the lane math; the classification below is base64's own
-#include <string.h>                 // strnlen
+                                    // strnlen
 
 static const char B64_TABLE[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 

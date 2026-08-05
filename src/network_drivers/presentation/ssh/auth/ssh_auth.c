@@ -16,7 +16,6 @@
 #include "network_drivers/tls/ssh_rsa.h"                              // pc_rsa_verify(), PC_RSA_KEY_BYTES
 #include "shared_primitives/bytes.h"                                  // pc_rd_str() - the RFC 4251 sec 5 string reader
 #include "shared_primitives/endian.h" // pc_wr32be() - the one source of truth for wire integers
-#include <string.h>
 
 // ---------------------------------------------------------------------------
 // Application password callback

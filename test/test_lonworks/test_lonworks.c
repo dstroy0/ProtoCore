@@ -4,7 +4,7 @@
 // Host tests for services/lonworks: the LonTalk NV PDU + SNVT scalar codec.
 
 #include "services/fieldbus/lonworks/lonworks.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp(void)

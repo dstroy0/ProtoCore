@@ -19,7 +19,6 @@
 #include "device_bench.h"
 #include "server/signaling/bus_capture.h"
 #include <Arduino.h>
-#include <string.h>
 
 static void bus_capture_bench_task(void *)
 {

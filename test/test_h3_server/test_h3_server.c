@@ -24,7 +24,7 @@
 #include "network_drivers/presentation/http/http3/tls13_msg.h"
 #include "network_drivers/tls/tls13_kdf.h"
 #include "protocore.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

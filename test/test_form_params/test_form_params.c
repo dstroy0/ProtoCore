@@ -6,7 +6,7 @@
 
 #include "protocore.h"
 #include <stdio.h>
-#include <string.h>
+
 #include <unity.h>
 
 static char g_a[64], g_b[64], g_missing[64];

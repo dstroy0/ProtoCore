@@ -6,7 +6,7 @@
 // rest of the provisioning module is ESP32-only (softAP / lwIP UDP / NVS).
 
 #include "services/system/provisioning_service/provisioning_service.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

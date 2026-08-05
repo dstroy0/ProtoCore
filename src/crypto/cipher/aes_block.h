@@ -24,7 +24,6 @@
 
 #include "crypto/cipher/aes_sbox.h" // PC_AES_SBOX
 #include "protocore_config.h"       // the entry point: PC_INLINE, and types.h for the widths
-#include <string.h>
 
 /** @brief GF(2^8) multiply-by-2 (xtime) for the AES MixColumns step. */
 PC_INLINE uint8_t pc_aes_xtime(uint8_t a)

@@ -10,7 +10,7 @@
 
 #if PC_ENABLE_RANGE
 
-#include <string.h> // strncasecmp, strchr
+// strncasecmp, strchr
 
 int http_parse_byte_range(const char *hdr, size_t size, size_t *out_start, size_t *out_end)
 {

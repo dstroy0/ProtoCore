@@ -15,7 +15,6 @@
 #if PC_ENABLE_HTTP2
 
 #include "network_drivers/presentation/codec/hpack_prim/hpack_prim.h" // shared prefix-int + Huffman
-#include <string.h>
 
 #define HPACK_BYTES PC_HPACK_TABLE_BYTES
 #define HPACK_ENTS PC_HPACK_MAX_ENTRIES

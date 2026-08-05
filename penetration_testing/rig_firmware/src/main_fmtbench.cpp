@@ -17,7 +17,6 @@
 // then capture the "CB " lines.
 #include <Arduino.h>
 #include <stdio.h>
-#include <string.h>
 
 // Both moved under mmgr/ when the memory-management layer was separated out, and strbuf became
 // membuild. This bench is built from the tree, so it follows the tree.

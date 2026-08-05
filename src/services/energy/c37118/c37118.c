@@ -10,8 +10,6 @@
 
 #if PC_ENABLE_C37118
 
-#include <string.h>
-
 #include "shared_primitives/crc.h" // PC_CRC16_IBM_3740
 #include "shared_primitives/endian.h"
 

@@ -23,7 +23,6 @@
 #include "crypto/mac/ghash.h"
 #include "mmgr/secure.h"
 #include "shared_primitives/rawmemcpy.h" // proto_raw_u32 - the aliasing-permitted word load
-#include <string.h>
 
 #if !PC_HAS_HW_AESGCM
 

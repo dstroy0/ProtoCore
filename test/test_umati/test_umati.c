@@ -5,7 +5,7 @@
 // the Browse hierarchy shape + the Read resolver over a bound UmatiMachineTool.
 
 #include "services/machine_tool/umati/umati.h"
-#include <string.h>
+
 #include <unity.h>
 
 // Node ids (must track the internal enum in umati.cpp).

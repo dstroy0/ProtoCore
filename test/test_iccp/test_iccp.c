@@ -4,7 +4,7 @@
 // Host tests for services/iccp: the ICCP / TASE.2 Data_Value codec.
 
 #include "services/energy/iccp/iccp.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp(void)

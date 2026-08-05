@@ -12,7 +12,6 @@
 #if PC_ENABLE_SCPI
 
 #include <stdio.h> // snprintf (number formatting only; parsing is hand-rolled - no stdlib)
-#include <string.h>
 
 // A response value is one number. 10 significant digits is the SCPI NR2/NR3 rendering.
 static const pc_field SCPI_REAL[] = {{PC_FK_G, 10, 0, NULL}, PC_END};

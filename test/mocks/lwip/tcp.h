@@ -1,6 +1,5 @@
 #pragma once
 #include <stdint.h>
-#include <string.h>
 
 typedef int8_t err_t;
 typedef uint16_t u16_t;

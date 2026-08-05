@@ -5,7 +5,7 @@
 // JsonWriter) and the positional array parser. Pure host tests.
 
 #include "services/iot/wamp/wamp.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

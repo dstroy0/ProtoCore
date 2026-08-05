@@ -12,7 +12,6 @@
 #if PC_ENABLE_HTTP2
 
 #include <stdio.h>
-#include <string.h>
 
 static uint32_t rd32(const uint8_t *p)
 {

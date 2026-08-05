@@ -10,8 +10,6 @@
 
 #if PC_ENABLE_SQLITE
 
-#include <string.h>
-
 static uint16_t be16(const uint8_t *p)
 {
     return (uint16_t)(((uint16_t)p[0] << 8) | p[1]);

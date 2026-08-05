@@ -6,7 +6,7 @@
 // Little-endian; constants per the Wireshark ENIP dissector. Pure host tests.
 
 #include "services/fieldbus/enip/enip.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

@@ -10,8 +10,6 @@
 
 #if PC_ENABLE_DIRECTNET
 
-#include <string.h>
-
 static char hex_digit(uint8_t nibble)
 {
     nibble &= 0x0F;

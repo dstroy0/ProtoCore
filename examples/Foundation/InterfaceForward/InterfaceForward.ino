@@ -23,7 +23,7 @@
 #include "services/net/forward/forward.h"
 #include "mmgr/dma.h"
 #include "network_drivers/session/preempt_queue.h"
-#include <string.h>
+
 
 static const uint8_t IF_A = 0; // ingress interface (DMA channel 0)
 static const uint8_t IF_B = 1; // egress interface

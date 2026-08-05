@@ -7,7 +7,7 @@
 
 #include "services/security/ikev2/ikev2.h"
 #include "services/security/ikev2/ikev2_natt.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

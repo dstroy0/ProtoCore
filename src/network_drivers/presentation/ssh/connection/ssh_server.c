@@ -16,7 +16,6 @@
 #if PC_ENABLE_SSH_ZLIB
 #include "network_drivers/presentation/ssh/transport/ssh_comp.h"
 #endif
-#include <string.h>
 
 // All SSH server-layer state, owned by one instance (internal linkage): the packet-emit
 // callback. One named owner, unreachable from any other translation unit.

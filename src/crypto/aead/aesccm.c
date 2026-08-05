@@ -20,7 +20,7 @@
 
 #include "crypto/crypto_opt.h"
 #include "crypto/ct_eq.h" // pc_ct_eq
-#include <string.h>
+
 #if !PROTOCORE_HOT
 #include "crypto/cipher/aes_block.h" // native software AES-128/256 (mbedtls path uses its own on the hot path)
 #endif

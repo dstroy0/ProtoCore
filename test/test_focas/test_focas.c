@@ -6,7 +6,7 @@
 // Pure host tests.
 
 #include "services/machine_tool/focas/focas.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

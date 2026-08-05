@@ -9,7 +9,7 @@
 // The env sizes PC_PN532_MAX_DATA = 8.
 
 #include "services/peripherals/pn532/pn532.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

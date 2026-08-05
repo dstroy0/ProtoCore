@@ -4,7 +4,7 @@
 // Host tests for services/dds: the RTPS message + submessage framing codec.
 
 #include "services/iot/dds/dds.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp(void)

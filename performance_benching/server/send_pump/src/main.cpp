@@ -10,7 +10,6 @@
 #include "shared_primitives/hex.h"
 #include <Arduino.h>
 #include <stdio.h>
-#include <string.h>
 
 static const size_t RESERVE = 8;
 static const size_t CHUNK = 1440; // CHUNK_BUF_SIZE (one TCP MSS)

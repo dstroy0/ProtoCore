@@ -20,7 +20,7 @@
 #include "network_drivers/tls/tls13_kdf.h"
 #include "server/clock/clock.h"
 #include <stdint.h>
-#include <string.h>
+
 #include <unity.h>
 
 // Two keyed AEAD contexts agree iff they seal the same input identically.

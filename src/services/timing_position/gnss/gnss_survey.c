@@ -11,7 +11,6 @@
 #if PC_ENABLE_NTRIP_CASTER
 
 #include <math.h>
-#include <string.h>
 
 #if PC_NEED_NMEA0183
 #include "services/timing_position/nmea0183/nmea0183.h"

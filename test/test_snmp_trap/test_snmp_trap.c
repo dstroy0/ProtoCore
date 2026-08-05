@@ -5,7 +5,7 @@
 
 #include "services/net/snmp/snmp_ber.h"
 #include "services/net/snmp/snmp_notify.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

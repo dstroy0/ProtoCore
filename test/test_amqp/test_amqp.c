@@ -5,7 +5,7 @@
 // and method builders, the heartbeat, and the frame/method parsers. Pure host tests.
 
 #include "services/iot/amqp/amqp.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

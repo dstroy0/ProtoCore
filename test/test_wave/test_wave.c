@@ -4,7 +4,7 @@
 // Host tests for services/wave: the IEEE 1609 WSMP + 1609.2 envelope + PSID codec.
 
 #include "services/transportation/wave/wave.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp(void)

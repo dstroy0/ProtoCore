@@ -10,8 +10,6 @@
 
 #if PC_ENABLE_ESPNOW
 
-#include <string.h>
-
 #if PROTOCORE_HOT
 #include <esp_idf_version.h> // ESP_IDF_VERSION / ESP_IDF_VERSION_VAL for the recv-cb ABI guard
 #include <esp_now.h>

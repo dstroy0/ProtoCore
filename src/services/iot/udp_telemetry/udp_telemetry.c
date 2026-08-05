@@ -15,7 +15,6 @@
 #if PC_ENABLE_UDP_TELEMETRY
 
 #include <stdio.h>
-#include <string.h>
 
 // ---------------------------------------------------------------------------
 // Line builder (pure)

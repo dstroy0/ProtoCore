@@ -11,7 +11,6 @@
 #if PC_ENABLE_VXI11
 
 #include "shared_primitives/endian.h"
-#include <string.h>
 
 static const uint32_t RPC_MSGTYPE_CALL = 0;
 static const uint32_t RPC_MSGTYPE_REPLY = 1;

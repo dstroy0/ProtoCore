@@ -11,7 +11,6 @@
 #include "device_bench.h"
 #include "services/instrumentation/scpi/scpi.h"
 #include <Arduino.h>
-#include <string.h>
 
 static void scpi_bench_task(void *)
 {

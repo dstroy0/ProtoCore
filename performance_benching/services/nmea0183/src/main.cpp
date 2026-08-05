@@ -18,7 +18,6 @@
 #include "device_bench.h"
 #include "services/timing_position/nmea0183/nmea0183.h"
 #include <Arduino.h>
-#include <string.h>
 
 // The standard GGA example; its documented checksum is 0x47 (test/test_nmea0183/test_nmea0183.cpp).
 static const char GGA[] = "$GPGGA,123519,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,*47\r\n";

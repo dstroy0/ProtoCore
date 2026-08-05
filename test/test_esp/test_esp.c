@@ -5,7 +5,7 @@
 // encapsulate/decapsulate a payload, cross-checked against an independent Python AES-256-GCM reference.
 
 #include "services/system/esp/esp.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

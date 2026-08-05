@@ -5,7 +5,7 @@
 // the NPDU header (control byte + optional addressing). Layout per ASHRAE 135. Pure host tests.
 
 #include "services/fieldbus/bacnet/bacnet.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

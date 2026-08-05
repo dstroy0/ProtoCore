@@ -8,7 +8,7 @@
 #include "network_drivers/transport/udp.h"
 #include "services/net/snmp/snmp_agent.h"
 #include "services/net/snmp/snmp_ber.h"
-#include <string.h>
+
 #include <unity.h>
 
 // ---------------------------------------------------------------------------

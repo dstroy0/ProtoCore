@@ -8,7 +8,7 @@
 
 #include "lfs_mock.h"
 #include "protocore.h"
-#include <string.h>
+
 #include <unity.h>
 
 static const char FILE_DATA[] = "0123456789ABCDEFGHIJ"; // 20 bytes

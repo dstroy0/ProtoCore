@@ -19,7 +19,6 @@
 #include "device_bench.h"
 #include "services/fieldbus/ads/ads.h"
 #include <Arduino.h>
-#include <string.h>
 
 // pc_ads_parse_notification requires a real callback (it fails closed on a null one); this just
 // counts samples so the walk itself - not the callback body - is what gets timed.

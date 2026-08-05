@@ -10,8 +10,6 @@
 
 #if PC_ENABLE_ADS
 
-#include <string.h>
-
 #include "shared_primitives/endian.h"
 
 // Write the AMS/TCP header (with the final total length) + the 32-octet AMS header. The payload

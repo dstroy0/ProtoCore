@@ -7,7 +7,7 @@
 // checked against the ODVA DeviceNet spec. Pure host tests.
 
 #include "services/fieldbus/devicenet/devicenet.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

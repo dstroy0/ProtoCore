@@ -10,8 +10,6 @@
 
 #if PC_ENABLE_NATS
 
-#include <string.h>
-
 // A tiny bounded append cursor; sets ok=false on overflow and stops.
 typedef struct
 {

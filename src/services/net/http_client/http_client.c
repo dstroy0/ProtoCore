@@ -16,7 +16,6 @@
 #include "shared_primitives/mime.h"
 #include "shared_primitives/numparse.h"
 #include <stdio.h>
-#include <string.h>
 
 // ---------------------------------------------------------------------------
 // Pure helpers (host-testable)

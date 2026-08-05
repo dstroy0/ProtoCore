@@ -7,7 +7,7 @@
 // parameters, and rejection of malformed or out-of-range input.
 
 #include "network_drivers/presentation/http/http3/quic_tp.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

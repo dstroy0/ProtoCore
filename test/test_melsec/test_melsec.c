@@ -6,7 +6,7 @@
 // MC implementation. Pure host tests.
 
 #include "services/fieldbus/melsec/melsec.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

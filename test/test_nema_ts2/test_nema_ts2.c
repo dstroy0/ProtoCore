@@ -4,7 +4,7 @@
 // Host tests for services/nema_ts2: the TS 2 SDLC frame codec + CRC-16/X-25.
 
 #include "services/transportation/nema_ts2/nema_ts2.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp(void)

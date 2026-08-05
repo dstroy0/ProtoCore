@@ -9,7 +9,7 @@
 #include "services/net/dns_server/dns_server.h"
 #include <stdint.h>
 #include <stdio.h> // snprintf
-#include <string.h>
+
 #include <unity.h>
 
 // Build a DNS query: header + one question (QNAME / QTYPE / QCLASS=IN).

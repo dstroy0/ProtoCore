@@ -8,7 +8,7 @@
 
 #include "services/fieldbus/opcua/opcua.h"
 #include "services/fieldbus/opcua_client/opcua_client.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

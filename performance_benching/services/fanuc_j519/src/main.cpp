@@ -16,7 +16,6 @@
 #include "device_bench.h"
 #include "services/machine_tool/fanuc_j519/fanuc_j519.h"
 #include <Arduino.h>
-#include <string.h>
 
 static void fanuc_j519_bench_task(void *)
 {

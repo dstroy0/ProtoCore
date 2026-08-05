@@ -14,7 +14,7 @@
 
 #include "crypto/hash/sha256.h"
 #include <stdio.h>
-#include <string.h>
+
 #include <unity.h>
 
 // --- Fixed scenario (must match the values fed to openssl when regenerating) --

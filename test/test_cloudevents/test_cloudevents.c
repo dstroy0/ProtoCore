@@ -7,7 +7,7 @@
 #include "network_drivers/presentation/http/http_parser/http_parser.h"
 #include "services/iot/cloudevents/cloudevents.h"
 #include "shared_primitives/numparse.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

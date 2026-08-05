@@ -26,7 +26,6 @@
 #include "services/machine_tool/dnc/dnc.h"
 #include "services/machine_tool/dnc/dnc_stream.h"
 #include <Arduino.h>
-#include <string.h>
 
 // Transport seam stub for dnc_stream: send just counts bytes (never touches a real UART/socket),
 // recv always reports "no reverse-channel bytes available" (i.e. the controller never asserts

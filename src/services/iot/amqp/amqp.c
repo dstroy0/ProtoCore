@@ -10,8 +10,6 @@
 
 #if PC_ENABLE_AMQP
 
-#include <string.h>
-
 #include "shared_primitives/endian.h"
 
 size_t pc_amqp_protocol_header(uint8_t *buf, size_t cap)

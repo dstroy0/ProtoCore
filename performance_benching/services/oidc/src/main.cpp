@@ -27,7 +27,6 @@
 #include "server/mmgr/plaintext.h" // pc_plaintext_reset() (the verify path borrows from this arena)
 #include "services/security/oidc/oidc.h"
 #include <Arduino.h>
-#include <string.h>
 
 // --- known-good RS256 vectors, copied verbatim from test/test_oidc/test_oidc.cpp ---
 // A valid RSA-2048 RS256 ID token (kid "test-key-1") whose signature verifies against K_JWKS.

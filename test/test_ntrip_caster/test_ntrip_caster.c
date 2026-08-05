@@ -8,7 +8,7 @@
 #include "services/timing_position/gnss/ntrip_caster.h"
 #include "shared_primitives/numparse.h"
 #include <stdio.h>
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

@@ -14,7 +14,6 @@
 #if PC_ENABLE_PQC_KEX
 #include "crypto/pqc/mlkem.h" // MLKEM768_EK_BYTES (X25519MLKEM768 share sizing)
 #endif
-#include <string.h>
 
 // TLS extension types used here (RFC 8446 sec 4.2 + RFC 9001).
 #define TLS_EXT_SERVER_NAME 0x0000

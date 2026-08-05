@@ -13,7 +13,7 @@
 #include "crypto/hash/sha1.h"
 #include "network_drivers/presentation/codec/base64/base64.h"
 #include "network_drivers/presentation/http/websocket/websocket.h"
-#include <string.h>
+
 #include <unity.h>
 
 #if PC_ENABLE_WS_DEFLATE

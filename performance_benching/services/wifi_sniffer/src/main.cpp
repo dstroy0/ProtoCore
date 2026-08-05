@@ -9,7 +9,6 @@
 #include "device_bench.h"
 #include "services/radio/wifi_sniffer/wifi_sniffer.h"
 #include <Arduino.h>
-#include <string.h>
 
 static void wifi_sniffer_bench_task(void *)
 {

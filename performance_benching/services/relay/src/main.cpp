@@ -10,7 +10,6 @@
 #include "device_bench.h"
 #include "services/net/relay/relay.h"
 #include <Arduino.h>
-#include <string.h>
 
 // A mock end: recv fills the buffer (never EOF, so the relay keeps pumping), send is a sink.
 static int mock_recv(void *, uint8_t *buf, size_t cap)

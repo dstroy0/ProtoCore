@@ -7,7 +7,7 @@
 
 #include "services/storage/config_store/config_store.h"
 #include <stdio.h>
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

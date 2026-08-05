@@ -10,8 +10,6 @@
 
 #if PC_ENABLE_WAL
 
-#include <string.h>
-
 #include "shared_primitives/endian.h"
 
 // SUPER_USED bytes are CRC-covered; the u32 CRC follows immediately.

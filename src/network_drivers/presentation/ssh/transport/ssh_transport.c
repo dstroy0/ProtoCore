@@ -29,7 +29,6 @@
 #include "network_drivers/presentation/ssh/transport/ssh_comp.h" // s2c compression negotiation
 #endif
 #include <stdio.h> // snprintf (name-list assembly)
-#include <string.h>
 
 #ifdef PC_SSH_KEX_BENCH
 #include <esp_timer.h> // esp_timer_get_time() - microsecond wall clock for the KEX span probe

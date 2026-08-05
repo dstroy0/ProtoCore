@@ -7,7 +7,7 @@
 
 #include "services/iot/protobuf/protobuf.h"
 #include "services/iot/sparkplug/sparkplug.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

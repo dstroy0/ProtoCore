@@ -17,7 +17,7 @@
 #include "network_drivers/presentation/http/http3/quic_varint.h"
 #include "network_drivers/presentation/http/http3/tls13_msg.h"
 #include "network_drivers/tls/tls13_kdf.h"
-#include <string.h>
+
 #include <unity.h>
 
 // Two keyed AEAD contexts agree iff they seal the same input identically. The raw key is no longer

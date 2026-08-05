@@ -9,7 +9,7 @@
 #include "crypto/mac/hmac_sha256.h" // PC_HMAC_SHA256_LEN (cookie MAC size)
 #include "network_drivers/presentation/security/dtls/dtls_handshake.h"
 #include <stdint.h>
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

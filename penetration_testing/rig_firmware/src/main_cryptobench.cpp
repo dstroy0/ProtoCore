@@ -12,7 +12,6 @@
 // pulse RTS once to reset and re-run the one-shot bench under capture).
 #include <Arduino.h>
 #include <Preferences.h>
-#include <string.h>
 
 // --- self-implemented crypto (no PC_ENABLE_* guard: part of src/) ---
 #include "crypto/aead/aesgcm.h"

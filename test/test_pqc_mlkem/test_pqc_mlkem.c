@@ -11,7 +11,7 @@
 #include "crypto/pqc/mlkem.h"
 #include "mlkem_kat.h"
 #include <stdint.h>
-#include <string.h>
+
 #include <unity.h>
 
 // The native_pqc environment links every pqc source into each of its test programs, and

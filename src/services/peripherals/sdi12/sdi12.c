@@ -12,7 +12,6 @@
 
 #include "shared_primitives/crc.h" // PC_CRC16_ARC
 #include "shared_primitives/numparse.h"
-#include <string.h>
 
 size_t pc_sdi12_build(char *buf, size_t cap, char addr, const char *body)
 {

@@ -10,8 +10,6 @@
 
 #if PC_ENABLE_SMB
 
-#include <string.h>
-
 #include "crypto/aead/aes128gcm.h"  // pc_aes128gcm_* keyed AEAD (SMB 3.x AES-128-GCM)
 #include "crypto/aead/aesccm.h"     // pc_aesccm_seal_tag/open_tag (SMB 3.x AES-128/256-CCM)
 #include "crypto/aead/aesgcm.h"     // pc_aesgcm_* keyed AEAD (SMB 3.x AES-256-GCM)

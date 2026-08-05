@@ -4,7 +4,7 @@
 // Host tests for services/openadr: the OpenADR 3.0 event / report JSON builders.
 
 #include "services/energy/openadr/openadr.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp(void)

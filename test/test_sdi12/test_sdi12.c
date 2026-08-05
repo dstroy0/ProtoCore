@@ -6,7 +6,7 @@
 // verify round-trip). Pure host tests.
 
 #include "services/peripherals/sdi12/sdi12.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

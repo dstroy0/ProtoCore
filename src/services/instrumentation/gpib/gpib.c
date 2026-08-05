@@ -11,8 +11,6 @@
 
 #if PC_ENABLE_GPIB
 
-#include <string.h>
-
 size_t pc_gpib_command(char *buf, size_t cap, const char *cmd)
 {
     if (!buf || cap == 0 || !cmd)

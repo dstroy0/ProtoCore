@@ -7,7 +7,7 @@
 // decode is verified separately on the ESP32-S3 (CCOUNT).
 
 #include "network_drivers/presentation/codec/base64/base64.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

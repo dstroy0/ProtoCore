@@ -6,7 +6,7 @@
 // per RFC 1006 / ISO 8073. Pure host tests.
 
 #include "services/fieldbus/cotp/cotp.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

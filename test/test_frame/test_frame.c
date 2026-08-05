@@ -11,7 +11,7 @@
 
 #include "mmgr/frame.h"
 #include <stdio.h> // snprintf: the libc reference the frames are diffed against
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

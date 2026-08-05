@@ -17,7 +17,7 @@
 #include "mmgr/secure.h"
 #include "network_drivers/presentation/http/http3/quic_crypto.h"
 #include "network_drivers/presentation/http/http3/quic_packet.h" // QUIC_MAX_CID_LEN (retry-tag guard bound)
-#include <string.h>
+
 #include <unity.h>
 
 // The keyed api needs a context, not a key. One scratch context, rebuilt per call and released first so

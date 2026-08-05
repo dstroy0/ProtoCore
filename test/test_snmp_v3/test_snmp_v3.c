@@ -17,7 +17,7 @@
 #include "services/net/snmp/snmp_notify.h"
 #include "services/net/snmp/snmp_v3.h"
 #include <stdio.h>
-#include <string.h>
+
 #include <unity.h>
 
 static const uint32_t OID_SYSDESCR[] = {1, 3, 6, 1, 2, 1, 1, 1, 0};

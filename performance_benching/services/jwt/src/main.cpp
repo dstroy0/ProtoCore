@@ -18,7 +18,6 @@
 #include "device_bench.h"
 #include "services/security/jwt/jwt.h"
 #include <Arduino.h>
-#include <string.h>
 
 // Reference token + secret straight out of test/test_jwt/test_jwt.cpp: HS256 over payload
 // {"sub":"alice","role":"admin","exp":2000000000,"iat":1700000000} with secret "s3cr3t-key".

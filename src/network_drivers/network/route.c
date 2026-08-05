@@ -8,7 +8,6 @@
 
 #include "network_drivers/network/route.h"
 #include "protocore.h" // completes Route; route.h names it only as an opaque tag
-#include <string.h>
 
 // The table, owned by one instance with internal linkage. Nothing outside this file can name it;
 // callers take an entry or walk by index.

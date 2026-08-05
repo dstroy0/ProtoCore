@@ -9,7 +9,6 @@
 #include "crypto/hash/sha256.h"
 #include "device_bench.h"
 #include <Arduino.h>
-#include <string.h>
 
 static void ssh_bench_task(void *)
 {

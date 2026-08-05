@@ -11,7 +11,6 @@
 #if PC_ENABLE_DOCSTORE
 
 #include "network_drivers/presentation/codec/json/json.h"
-#include <string.h>
 
 void pc_docstore_open(pc_doc_store *ds, struct pc_dbm *db)
 {

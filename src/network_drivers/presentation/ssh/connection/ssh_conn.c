@@ -21,7 +21,6 @@
 #include "network_drivers/session/proto_handler.h"
 #include "network_drivers/transport/tcp.h"
 #include "server/clock/clock.h" // pc_millis() for the server-initiated re-key timer
-#include <string.h>
 
 // All SSH connection-layer state, owned by one instance (internal linkage): the SSH-slot ->
 // TCP-conn-slot mapping (0xFF = free), the one-time init flag, and the per-slot deferred-close

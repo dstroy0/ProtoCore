@@ -12,7 +12,6 @@
 
 #include "crypto/aead/aesgcm.h"
 #include "mmgr/secure.h" // the per-call GCM context borrow
-#include <string.h>
 
 static void put32be(uint8_t *p, uint32_t v)
 {

@@ -8,7 +8,7 @@
 // Count, dynamic index/name, post-base representations). Static-table-only, pure host codec.
 
 #include "network_drivers/presentation/http/http3/qpack.h"
-#include <string.h>
+
 #include <unity.h>
 
 // Fixed collection of the emitted field lines: the decoder hands each field back as a pointer +

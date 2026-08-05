@@ -10,8 +10,6 @@
 
 #if PC_ENABLE_MMS
 
-#include <string.h>
-
 // BER definite-length octet count for a length value < 64 KiB.
 static size_t len_octets(size_t len)
 {

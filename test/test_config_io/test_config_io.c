@@ -7,7 +7,7 @@
 
 #include "services/storage/config_io/config_io.h"
 #include "services/storage/config_store/config_store.h"
-#include <string.h>
+
 #include <unity.h>
 
 static const pc_cfg_field SCHEMA[] = {

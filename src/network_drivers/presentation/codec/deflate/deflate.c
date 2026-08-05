@@ -21,8 +21,6 @@
 
 #if PC_ENABLE_WS_DEFLATE
 
-#include <string.h>
-
 #include "shared_primitives/bitio.h"
 
 #define PC_MIN_MATCH 3   // shortest LZ77 back-reference

@@ -14,7 +14,6 @@
 #include "crypto/asymmetric/bignum.h"
 #include "crypto/crypto_opt.h"
 #include "mmgr/secure.h"
-#include <string.h>
 
 #if PC_HAS_HW_BIGNUM
 

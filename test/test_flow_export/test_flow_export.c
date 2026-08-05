@@ -6,7 +6,7 @@
 // wire-byte assertions checked against RFC 7011 / RFC 3954 / the v5 layout.
 
 #include "services/net/flow_export/flow_export.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

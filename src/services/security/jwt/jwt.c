@@ -14,7 +14,6 @@
 #include "crypto/mac/hmac_sha256.h"
 #include "network_drivers/presentation/codec/base64/base64.h"
 #include <stdio.h>
-#include <string.h>
 
 // Constant-time equality over @p n bytes (no early-out timing oracle).
 static proto_bool ct_eq(const char *a, const char *b, size_t n)

@@ -11,7 +11,6 @@
 #include "device_bench.h"
 #include "services/peripherals/sdi12/sdi12.h"
 #include <Arduino.h>
-#include <string.h>
 
 static void sdi12_bench_task(void *)
 {

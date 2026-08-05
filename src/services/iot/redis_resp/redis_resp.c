@@ -10,8 +10,6 @@
 
 #if PC_ENABLE_REDIS
 
-#include <string.h>
-
 // Write a "<tag><decimal>\r\n" length prefix into buf at *pos, advancing it. A hand-rolled decimal is
 // several times faster than snprintf on the ESP32-S3, where this was the dominant cost of encoding a
 // command (docs/FEATURE_PERFORMANCE.md section 4). Reserves a trailing byte for the final NUL, as before.

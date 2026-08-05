@@ -4,7 +4,7 @@
 // Host tests for services/ocit: the OCIT-Outstations message codec.
 
 #include "services/transportation/ocit/ocit.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp(void)

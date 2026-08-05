@@ -17,7 +17,7 @@
 #include "throwaway_key.h"
 #include <stdint.h>
 #include <stdio.h>
-#include <string.h>
+
 #include <unity.h>
 
 // The keyed api needs a context, not a key. These are one-shot vectors, so one scratch context is

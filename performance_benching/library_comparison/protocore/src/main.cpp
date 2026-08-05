@@ -5,7 +5,6 @@
 #include "protocore.h"
 #include <Arduino.h>
 #include <WiFi.h>
-#include <string.h>
 
 #ifndef WIFI_SSID
 #define WIFI_SSID "YOUR_SSID"

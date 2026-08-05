@@ -18,7 +18,7 @@
 #include "network_drivers/transport/udp.h"
 #include "services/net/forward/forward.h"
 #include "services/radio/promisc/promisc.h"
-#include <string.h>
+
 
 // Where to stream the captured frames on the wired side.
 static const char *COLLECTOR_IP = "192.168.1.50";

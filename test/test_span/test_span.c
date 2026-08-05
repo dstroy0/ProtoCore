@@ -17,7 +17,7 @@
 
 #include "shared_primitives/bytes.h"
 #include "shared_primitives/span.h"
-#include <string.h>
+
 #include <unity.h>
 
 #define SMALL_N 7

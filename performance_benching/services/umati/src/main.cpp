@@ -11,7 +11,6 @@
 #include "services/fieldbus/opcua/opcua.h"
 #include "services/machine_tool/umati/umati.h"
 #include <Arduino.h>
-#include <string.h>
 
 static UmatiMachineTool g_mt;
 

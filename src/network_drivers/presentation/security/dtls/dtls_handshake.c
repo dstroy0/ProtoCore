@@ -12,7 +12,6 @@
 
 #include "crypto/ct_eq.h" // pc_ct_eq
 #include "crypto/mac/hmac_sha256.h"
-#include <string.h>
 
 static void put_u64(uint8_t *p, uint64_t v)
 {

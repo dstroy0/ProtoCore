@@ -19,7 +19,6 @@
 #include "protocore.h"
 #include "server/clock/clock.h"
 #include "shared_primitives/mime.h"
-#include <string.h>
 
 #if PC_ENABLE_WEBDAV
 

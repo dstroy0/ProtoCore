@@ -5,7 +5,7 @@
 // marker check, the model-chain walker, and the typed point readers. Pure host tests.
 
 #include "services/energy/sunspec/sunspec.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

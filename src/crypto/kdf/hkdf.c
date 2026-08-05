@@ -11,7 +11,6 @@
 #if (PC_ENABLE_HTTP3 || PC_ENABLE_DTLS)
 
 #include "crypto/mac/hmac_sha256.h"
-#include <string.h>
 
 void pc_hkdf_extract(const uint8_t *salt, size_t salt_len, const uint8_t *ikm, size_t ikm_len,
                      uint8_t prk[PC_HKDF_HASH_LEN])

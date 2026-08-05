@@ -8,7 +8,7 @@
 
 #include "services/iot/graphql/graphql.h"
 #include <stdio.h>
-#include <string.h>
+
 #include <unity.h>
 
 // Demo schema: a flat handful of fields + a nested `device` object and an

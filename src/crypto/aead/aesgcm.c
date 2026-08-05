@@ -20,7 +20,6 @@
 #include "crypto/crypto_opt.h"
 #include "crypto/mac/ghash.h"
 #include "mmgr/secure.h"
-#include <string.h>
 
 PC_CRYPTO_HOT
 

@@ -11,7 +11,6 @@
 #if PC_ENABLE_HTTP3
 
 #include "network_drivers/presentation/http/http3/quic_varint.h"
-#include <string.h>
 
 void pc_quic_tp_defaults(QuicTransportParams *tp)
 {

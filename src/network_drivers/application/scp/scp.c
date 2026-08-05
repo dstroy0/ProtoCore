@@ -12,7 +12,6 @@
 #if PC_ENABLE_SSH_SCP
 
 #include <stdio.h>
-#include <string.h>
 
 // Apply one scp flag token (e.g. "-t", "-rf"): -t selects the sink role, -f the source; other letters
 // (-v/-r/-p/-d and combinations) are accepted and ignored.

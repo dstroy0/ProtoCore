@@ -28,7 +28,7 @@
 #include "network_drivers/physical/physical.h"
 #include "network_drivers/transport/client.h"
 #include "services/machine_tool/dnc/dnc_stream.h" // dnc_stream + DncCfg / DncCode
-#include <string.h>
+
 
 // --- CHANGE ME: your WiFi ---
 static const char *SSID = "YOUR_SSID";

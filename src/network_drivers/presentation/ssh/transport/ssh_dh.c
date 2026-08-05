@@ -11,7 +11,6 @@
 #include "mmgr/secure.h"
 #include "network_drivers/tls/ssh_kexhash.h"
 #include <Arduino.h> // for pc_platform_rand_u32() / pc_platform_rand_fill() (real or mock)
-#include <string.h>
 
 // ---------------------------------------------------------------------------
 // RNG

@@ -14,7 +14,6 @@
 #include "server/clock/clock.h"      // pc_millis() - idle-reap clock (the DTLS PTO uses it internally too)
 #include "services/iot/coap/coaps.h" // pc_coaps_process()
 #include "shared_primitives/ring.h"  // pc_atomic (SPSC ingest-ring cursors)
-#include <string.h>
 
 #if PROTOCORE_HOT
 #include "network_drivers/transport/udp.h"

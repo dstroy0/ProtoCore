@@ -5,7 +5,7 @@
 
 #include "protocore.h"
 #include <stdio.h>
-#include <string.h>
+
 #include <unity.h>
 
 static void push_str(uint8_t slot, const char *s)

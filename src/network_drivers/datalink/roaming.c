@@ -7,14 +7,16 @@
  */
 
 #include "network_drivers/datalink/roaming.h"
+#include "shared_primitives/rawmemcpy.h" // proto_raw_cmp / proto_raw_read / proto_raw_zero
 
 #if PC_ENABLE_ROAMING
 
-#include <string.h>
+/** @brief A BSSID is six octets, and every compare and copy below moves exactly that. */
+#define PC_ROAM_BSSID_LEN 6u
 
 static proto_bool mac_eq(const uint8_t *a, const uint8_t *b)
 {
-    return memcmp(a, b, 6) == 0;
+    return proto_raw_cmp(a, b, PC_ROAM_BSSID_LEN) == 0;
 }
 
 // Index of the strongest candidate that is not the current AP, or -1 if there is none.
@@ -51,7 +53,7 @@ static int find_bssid(const uint8_t *target, const pc_roam_neighbor *nb, uint8_t
 static void pick(pc_roam_decision *out, const pc_roam_neighbor *nb, int idx, pc_roam_reason reason)
 {
     out->roam = PROTO_TRUE;
-    memcpy(out->target_bssid, nb[idx].bssid, 6);
+    proto_raw_read(out->target_bssid, nb[idx].bssid, PC_ROAM_BSSID_LEN);
     out->target_channel = nb[idx].channel;
     out->reason = reason;
 }

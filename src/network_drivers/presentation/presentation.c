@@ -31,7 +31,7 @@
 #if PC_ENABLE_HTTP2
 #include "network_drivers/presentation/http/http2/h2_server.h"
 #endif
-#include <string.h> // strcmp (ALPN check)
+// strcmp (ALPN check)
 #endif
 
 #if PC_ENABLE_KEEPALIVE

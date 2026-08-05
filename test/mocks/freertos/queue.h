@@ -6,7 +6,6 @@
 #pragma once
 #include "FreeRTOS.h"
 #include <stdlib.h>
-#include <string.h>
 
 inline QueueHandle_t xQueueCreate(uint32_t, size_t)
 {

@@ -27,7 +27,6 @@
 #include "device_bench.h"
 #include "services/iot/coap/coap.h"
 #include <Arduino.h>
-#include <string.h>
 
 // A resource handler mirroring test_coap.cpp's h_resource: GET returns a 2-byte text body, the
 // other allowed methods return an empty success body.

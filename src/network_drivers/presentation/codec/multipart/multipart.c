@@ -7,7 +7,6 @@
  */
 
 #include "multipart.h"
-#include <string.h>
 
 // Length-bounded, binary-safe forward search for needle[0..nlen) within hay[0..hlen).
 // Unlike strstr, it does not stop at a NUL, so a body containing NUL bytes scans correctly.

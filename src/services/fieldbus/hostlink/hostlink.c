@@ -10,8 +10,6 @@
 
 #if PC_ENABLE_HOSTLINK
 
-#include <string.h>
-
 uint8_t pc_hostlink_fcs(const char *data, size_t len)
 {
     uint8_t f = 0;

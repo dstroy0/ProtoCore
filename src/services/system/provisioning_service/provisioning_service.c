@@ -13,7 +13,6 @@
 #include "server/clock/clock.h" // pcdelay
 #include "shared_primitives/hex.h"
 #include "shared_primitives/mime.h"
-#include <string.h>
 
 // ---------------------------------------------------------------------------
 // Form-field parser (always compiled; the only non-trivial logic, unit-tested).

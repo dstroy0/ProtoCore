@@ -15,7 +15,6 @@
 
 #include "crypto/hash/sha3.h"
 #include <stdint.h>
-#include <string.h>
 
 static const int Q = 3329;
 static const int NREF = 256;

@@ -6,7 +6,7 @@
 // ESP32-only (a no-op on host).
 
 #include "services/iot/udp_telemetry/udp_telemetry.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

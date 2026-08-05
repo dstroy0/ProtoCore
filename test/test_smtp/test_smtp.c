@@ -8,7 +8,7 @@
 
 #include "services/net/smtp/smtp.h"
 #include <stdio.h>
-#include <string.h>
+
 #include <unity.h>
 
 // The scripted server. Replies are pointers into string literals or into a test's own buffer;

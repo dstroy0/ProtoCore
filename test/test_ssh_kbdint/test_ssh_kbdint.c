@@ -11,7 +11,7 @@
 #include "network_drivers/presentation/ssh/transport/ssh_transport.h"
 #include "network_drivers/tls/ssh_rsa.h" // host key for the KEXDH reply
 #include <stdint.h>
-#include <string.h>
+
 #include <unity.h>
 
 // Native RSA test fixture (defined in ssh_rsa.cpp native path).

@@ -17,7 +17,6 @@
 #include "services/storage/config_store/config_store.h"
 #include "shared_primitives/numparse.h"
 #include <stdio.h>
-#include <string.h>
 
 // An exported u32 field is one number.
 static const pc_field CFG_U32[] = {PC_U32, PC_END};

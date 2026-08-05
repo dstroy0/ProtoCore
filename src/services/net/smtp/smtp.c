@@ -17,8 +17,8 @@
 #if PC_ENABLE_SMTP
 
 #include "network_drivers/presentation/codec/base64/base64.h"
-#include <stdio.h>  // snprintf
-#include <string.h> // strlen, memcmp
+#include <stdio.h> // snprintf
+                   // strlen, memcmp
 
 #if PROTOCORE_HOT
 #include "network_drivers/transport/client.h"

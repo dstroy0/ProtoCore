@@ -6,7 +6,7 @@
 // vectors are authentic strings captured from a live server (test.rebex.net). Pure host tests.
 
 #include "services/file_transfer/ftp/ftp.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

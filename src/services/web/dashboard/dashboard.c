@@ -17,7 +17,6 @@
 
 #include "mmgr/frame.h"
 #include "shared_primitives/numparse.h"
-#include <string.h>
 
 // A message key as it appears in the JSON: quoted, so it cannot match a widget key containing it.
 static const pc_field QUOTED_KEY[] = {{PC_FK_LIT, 0, 1, "\""}, PC_STR, {PC_FK_LIT, 0, 1, "\""}, PC_END};

@@ -5,7 +5,7 @@
 // (HMAC-SHA1, 8-digit), the verifier window, and base32 decode.
 
 #include "services/security/totp/totp.h"
-#include <string.h>
+
 #include <unity.h>
 
 // RFC 6238 SHA-1 secret: the ASCII "12345678901234567890" (20 bytes).

@@ -10,7 +10,7 @@
 
 #include "shared_primitives/runops.h" // proto_scan_nul - the bounded scan moved here with the split
 #include "shared_primitives/swar.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

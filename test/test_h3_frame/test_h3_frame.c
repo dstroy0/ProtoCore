@@ -7,7 +7,7 @@
 // and the reserved HTTP/2 frame-type check.
 
 #include "network_drivers/presentation/http/http3/h3_frame.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

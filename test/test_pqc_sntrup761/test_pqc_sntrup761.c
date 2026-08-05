@@ -11,7 +11,7 @@
 
 #include "sntrup761_kat.h"
 #include <stdint.h>
-#include <string.h>
+
 #include <unity.h>
 
 // The CSPRNG seam (forward-declared in sntrup761.cpp): a deterministic test source so the round-trip

@@ -23,7 +23,7 @@
 #include "shared_primitives/mime.h"        // mime_type, PC_MIME_*
 #include "shared_primitives/time_compat.h" // pc_gmtime_r (portable reentrant UTC)
 #include <stdio.h>                         // snprintf, sscanf
-#include <string.h>                        // strncasecmp, strchr, strstr, strncmp, strnlen
+                                           // strncasecmp, strchr, strstr, strncmp, strnlen
 #include <time.h> // strftime (RFC 1123 / conditional-GET dates) (RFC 1123 / conditional-GET dates)
 
 // ---------------------------------------------------------------------------

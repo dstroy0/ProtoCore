@@ -16,7 +16,6 @@
 #include "device_bench.h"
 #include "services/instrumentation/hislip/hislip.h"
 #include <Arduino.h>
-#include <string.h>
 
 static void hislip_bench_task(void *)
 {

@@ -7,7 +7,7 @@
 // NTOWFv2 matches the published value (so the whole pipeline is validated).
 
 #include "network_drivers/application/smb/ntlm.h"
-#include <string.h>
+
 #include <unity.h>
 
 // One hex digit to its value.

@@ -20,7 +20,6 @@
 // ProtoHandler is named by pc_opcua_proto_handler() in BOTH build arms, so it cannot sit behind
 // the PROTOCORE_HOT guard below.
 #include "network_drivers/session/proto_handler.h"
-#include <string.h>
 
 // ---------------------------------------------------------------------------
 // Built-in type codec

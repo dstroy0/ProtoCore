@@ -19,7 +19,6 @@
 // Build/flash: see ../BENCH.md and s3/build_s3_swarbench.sh.
 #include <Arduino.h>
 #include <stdio.h>
-#include <string.h>
 
 #include "shared_primitives/runops.h"
 

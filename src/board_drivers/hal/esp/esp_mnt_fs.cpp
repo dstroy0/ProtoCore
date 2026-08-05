@@ -16,7 +16,6 @@
 #if PC_ENABLE_MNT && defined(ARDUINO)
 
 #include <FS.h>
-#include <string.h>
 
 // The bound filesystem plus the open-handle pool, owned by one instance (internal linkage). The FS
 // ops are fixed-signature vtable entries, so they reach this single owner directly.

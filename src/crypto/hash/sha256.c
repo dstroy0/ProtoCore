@@ -12,7 +12,7 @@
 
 #include "crypto/hash/sha256.h"
 #include "crypto/crypto_opt.h"
-#include <string.h>
+
 #if PROTOCORE_HOT
 #include <mbedtls/sha256.h> // hardware SHA accelerator
 #else

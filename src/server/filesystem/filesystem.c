@@ -11,7 +11,7 @@
 
 #include "server/filesystem/filesystem.h"
 #include "shared_primitives/runops.h" // the bounded word-at-a-time length scan
-#include <string.h>                   // strncmp (root-name match), memcpy
+                                      // strncmp (root-name match), memcpy
 
 // One bound root. The prefix is a copy, not the caller's pointer, and always ends '/', so the join
 // concatenates `root` and `dir` without adding a separator.

@@ -6,7 +6,7 @@
 // (driven by hand-built reply buffers). Pure host tests.
 
 #include "services/instrumentation/vxi11/vxi11.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

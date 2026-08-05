@@ -13,7 +13,7 @@
 #include "network_drivers/presentation/http/http3/qpack.h"
 #include "network_drivers/presentation/http/http3/quic_conn.h"
 #include "network_drivers/presentation/http/http3/quic_varint.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

@@ -11,7 +11,7 @@
 
 #include "crypto/hash/sha1.h"
 #include "crypto/crypto_opt.h"
-#include <string.h>
+
 #if PROTOCORE_HOT
 #include "mbedtls/sha1.h" // hardware-accelerated SHA-1 on ESP32
 #else

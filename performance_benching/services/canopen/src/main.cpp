@@ -17,7 +17,6 @@
 #include "device_bench.h"
 #include "services/fieldbus/canopen/canopen.h"
 #include <Arduino.h>
-#include <string.h>
 
 static void canopen_bench_task(void *)
 {

@@ -27,7 +27,6 @@
 #include "device_bench.h"
 #include "services/fieldbus/opcua/opcua.h"
 #include <Arduino.h>
-#include <string.h>
 
 // Build a `HEL` Hello (mirrors test_opcua.cpp build_hello): UACP header + 5 x UInt32 + EndpointUrl.
 static size_t build_hello(uint8_t *out, size_t cap, uint32_t recv, uint32_t send, uint32_t maxmsg)

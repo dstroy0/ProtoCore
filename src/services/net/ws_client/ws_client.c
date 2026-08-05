@@ -16,7 +16,6 @@
 #include "crypto/hash/sha1.h"
 #include "network_drivers/presentation/codec/base64/base64.h"
 #include <stdio.h>
-#include <string.h>
 
 // ---------------------------------------------------------------------------
 // Pure codec (host-testable)

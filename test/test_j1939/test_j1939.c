@@ -6,7 +6,7 @@
 // (BAM announce + TP.DT packets) round-tripped through the reassembler. Pure host tests.
 
 #include "services/fieldbus/j1939/j1939.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

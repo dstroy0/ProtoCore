@@ -13,7 +13,6 @@
 
 #include "network_drivers/presentation/ssh/connection/ssh_channel.h"
 #include "network_drivers/presentation/ssh/transport/ssh_packet.h" // SSH_MSG_CHANNEL_*
-#include <string.h>
 
 SshChannel ssh_chan[MAX_SSH_CONNS][PC_SSH_MAX_CHANNELS];
 

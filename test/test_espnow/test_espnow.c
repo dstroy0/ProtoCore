@@ -6,7 +6,7 @@
 // bounded peer registry. The radio binding is ESP32-only and HW-verified.
 
 #include "services/radio/espnow/espnow.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

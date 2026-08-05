@@ -15,7 +15,6 @@
 #if PC_ENABLE_HTTP3
 
 #include "network_drivers/presentation/codec/hpack_prim/hpack_prim.h" // shared prefix-int + Huffman
-#include <string.h>
 
 // QPACK static table (RFC 9204 Appendix A, 0-indexed). {name, value}. Generated from the RFC.
 static const char *const QPACK_STATIC[99][2] = {

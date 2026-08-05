@@ -68,7 +68,6 @@
 #include <Arduino.h>
 #include <WiFi.h>
 #include <math.h>
-#include <string.h>
 
 #if DAQ_FRONTEND == DAQ_FRONTEND_SCPI_SCOPE
 #include "services/instrumentation/scpi/scpi.h"

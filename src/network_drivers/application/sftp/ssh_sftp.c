@@ -25,7 +25,6 @@
 #include "server/filesystem/filesystem.h"
 #include "shared_primitives/endian.h" // the u32 <-> big-endian bytes serializers
 #include "shared_primitives/runops.h" // the bounded word-at-a-time length scan
-#include <string.h>
 
 // Leave headroom below one SSH packet for the CHANNEL_DATA framing, so pc_ssh_conn_send never rejects a response.
 #define PC_SFTP_RESP_CAP (SSH_PKT_BUF_SIZE - 16)

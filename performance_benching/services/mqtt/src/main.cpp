@@ -17,7 +17,6 @@
 #include "device_bench.h"
 #include "services/iot/mqtt/mqtt.h"
 #include <Arduino.h>
-#include <string.h>
 
 // A realistic ~55-byte JSON telemetry payload (the kind of message a sensor node PUBLISHes).
 static const uint8_t kPubPayload[] = "{\"t\":23.5,\"h\":48.2,\"p\":1013.2,\"batt\":97,\"ts\":1721764800}";

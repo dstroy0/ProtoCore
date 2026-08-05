@@ -9,7 +9,7 @@
 #include "protocore.h"                     // PROTO_HTTP, the ws/sse entry points
 #include "services/web/web_terminal/web_terminal.h"
 #include <stdio.h>
-#include <string.h>
+
 #include <unity.h>
 
 static char g_cmd[64];

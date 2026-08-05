@@ -11,7 +11,6 @@
 #if PC_ENABLE_HISLIP
 
 #include "shared_primitives/endian.h"
-#include <string.h>
 
 size_t pc_hislip_build_header(uint8_t *buf, size_t cap, HislipMsg type, uint8_t control, uint32_t parameter,
                               uint64_t payload_len)

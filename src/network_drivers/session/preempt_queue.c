@@ -15,7 +15,6 @@
 #if PC_ENABLE_PREEMPT_QUEUE
 
 #include "board_drivers/board_profiles/pc_platform.h"
-#include <string.h>
 
 // Common preempt-queue state (both host + device), owned by one instance (internal linkage):
 // the per-lane handler, its context, and the high-water mark. The backend-specific state (the

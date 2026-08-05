@@ -6,7 +6,7 @@
 // host tests.
 
 #include "services/peripherals/dmx/dmx.h"
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()

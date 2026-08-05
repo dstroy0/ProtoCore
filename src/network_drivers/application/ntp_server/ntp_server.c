@@ -12,7 +12,7 @@
 #if PC_ENABLE_NTP_SERVER
 
 #include "shared_primitives/endian.h"
-#include <string.h> // memset, memcpy
+// memset, memcpy
 
 #if PROTOCORE_HOT
 #include "network_drivers/transport/udp.h"

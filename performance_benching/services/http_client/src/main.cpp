@@ -24,7 +24,6 @@
 #include "device_bench.h"
 #include "services/net/http_client/http_client.h"
 #include <Arduino.h>
-#include <string.h>
 
 // Known-good, spec-conformant sample data lifted straight out of test/test_http_client.cpp.
 static const char *const URL_HTTP = "http://example.com/api/v1"; // scheme + host + path

@@ -8,7 +8,7 @@
 
 #include "services/timing_position/nmea0183/nmea0183.h"
 #include <stdio.h>
-#include <string.h>
+
 #include <unity.h>
 
 void setUp()
