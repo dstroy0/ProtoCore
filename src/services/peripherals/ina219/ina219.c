@@ -11,7 +11,7 @@
 
 #if PC_ENABLE_INA219
 
-#if PROTOCORE_HOT
+#if PROTOCORE_HOT || PC_PLATFORM_HAS_BUS
 #include "services/peripherals/i2c.h"
 #include "shared_primitives/endian.h" // pc_wr16be / pc_rd16be: the registers are big-endian
 #endif
@@ -51,7 +51,7 @@ int32_t pc_ina219_power_uw(int16_t raw, uint32_t current_lsb_ua)
 // I2C binding
 // ---------------------------------------------------------------------------
 
-#if PROTOCORE_HOT
+#if PROTOCORE_HOT || PC_PLATFORM_HAS_BUS
 
 // All INA219 I2C-binding state, owned by one instance (internal linkage): the device address,
 // the current LSB, and the bus frame, grouped so it is one named owner, unreachable from any

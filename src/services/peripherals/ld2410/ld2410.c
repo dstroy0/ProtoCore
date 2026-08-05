@@ -19,7 +19,7 @@
 
 #include <string.h>
 
-#if PROTOCORE_HOT
+#if PROTOCORE_HOT || PC_PLATFORM_HAS_BUS
 #include "services/peripherals/uart.h" // the shared UART owner
 #endif
 static const uint8_t HDR[4] = {0xF4, 0xF3, 0xF2, 0xF1};
@@ -326,7 +326,7 @@ proto_bool pc_ld2410_ack_mac(const Ld2410Ack *ack, uint8_t mac[6])
 // UART binding
 // ---------------------------------------------------------------------------
 
-#if PROTOCORE_HOT
+#if PROTOCORE_HOT || PC_PLATFORM_HAS_BUS
 
 // Bytes taken from the UART per poll. A report frame is far shorter, so one poll carries at least
 // a whole frame and the read stays bounded (SRC_LAW rule 5).

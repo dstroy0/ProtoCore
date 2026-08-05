@@ -13,7 +13,7 @@
 
 #if PC_ENABLE_SHT3X
 
-#if PROTOCORE_HOT
+#if PROTOCORE_HOT || PC_PLATFORM_HAS_BUS
 #include "services/peripherals/i2c.h"
 #include "shared_primitives/endian.h" // pc_wr16be: the commands and words are big-endian
 #endif
@@ -60,7 +60,7 @@ proto_bool pc_sht3x_parse(const uint8_t resp[6], int32_t *temp_mc, int32_t *rh_m
 // I2C binding
 // ---------------------------------------------------------------------------
 
-#if PROTOCORE_HOT
+#if PROTOCORE_HOT || PC_PLATFORM_HAS_BUS
 
 // All SHT3x I2C-binding state, owned by one instance (internal linkage): the device address and
 // the bus frame, so it is one named owner, unreachable from any other translation unit. The frame

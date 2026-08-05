@@ -14,7 +14,7 @@
 
 #if PC_ENABLE_PCA9685
 
-#if PROTOCORE_HOT
+#if PROTOCORE_HOT || PC_PLATFORM_HAS_BUS
 #include "server/clock/clock.h" // pc_delay_us: the oscillator settle in begin()
 #include "services/peripherals/i2c.h"
 #endif
@@ -78,7 +78,7 @@ size_t pc_pca9685_set_pwm_bytes(uint8_t *buf, size_t cap, uint8_t channel, uint1
 // I2C binding
 // ---------------------------------------------------------------------------
 
-#if PROTOCORE_HOT
+#if PROTOCORE_HOT || PC_PLATFORM_HAS_BUS
 
 // All PCA9685 I2C-binding state, owned by one instance (internal linkage): the device address,
 // the configured PWM frequency, and the bus frame, grouped so it is one named owner, unreachable

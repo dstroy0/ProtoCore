@@ -18,7 +18,7 @@
 
 #include <string.h>
 
-#if PROTOCORE_HOT
+#if PROTOCORE_HOT || PC_PLATFORM_HAS_BUS
 #include "services/peripherals/i2c.h"
 #endif
 uint16_t pc_mpr121_touched(uint8_t status_lo, uint8_t status_hi)
@@ -92,7 +92,7 @@ size_t pc_mpr121_build_init(uint8_t *buf, size_t cap, uint8_t n, uint8_t touch_t
 // I2C binding
 // ---------------------------------------------------------------------------
 
-#if PROTOCORE_HOT
+#if PROTOCORE_HOT || PC_PLATFORM_HAS_BUS
 
 // All MPR121 I2C-binding state, owned by one instance (internal linkage): the device address, the
 // register-pair frame, and the bring-up sequence buffer, so it is one named owner, unreachable

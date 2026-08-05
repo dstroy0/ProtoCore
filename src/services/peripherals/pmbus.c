@@ -187,7 +187,7 @@ int32_t pc_pmbus_direct_micro(uint16_t word, int16_t m, int16_t b, int8_t r)
     return (int32_t)v;
 }
 
-#if PROTOCORE_HOT
+#if PROTOCORE_HOT || PC_PLATFORM_HAS_BUS
 
 proto_bool pc_pmbus_begin(void)
 {

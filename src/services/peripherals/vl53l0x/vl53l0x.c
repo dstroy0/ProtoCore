@@ -11,7 +11,7 @@
 
 #if PC_ENABLE_VL53L0X
 
-#if PROTOCORE_HOT
+#if PROTOCORE_HOT || PC_PLATFORM_HAS_BUS
 #include "services/peripherals/i2c.h"
 #endif
 uint16_t pc_vl53l0x_range_mm(uint8_t hi, uint8_t lo)
@@ -34,7 +34,7 @@ proto_bool pc_vl53l0x_range_valid(uint8_t range_status_reg)
     return pc_vl53l0x_range_status(range_status_reg) == VL53L0X_RANGE_VALID;
 }
 
-#if PROTOCORE_HOT
+#if PROTOCORE_HOT || PC_PLATFORM_HAS_BUS
 
 // All VL53L0X I2C-binding state, owned by one instance (internal linkage): the device address, the
 // register-pair frame, and the result block, so it is one named owner, unreachable from any other

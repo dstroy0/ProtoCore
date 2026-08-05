@@ -16,7 +16,7 @@
 
 #if PC_ENABLE_SMBUS
 
-#if PROTOCORE_HOT
+#if PROTOCORE_HOT || PC_PLATFORM_HAS_BUS
 #include "services/peripherals/i2c.h"
 #endif
 
@@ -77,7 +77,7 @@ proto_bool pc_smbus_pec_enabled(void)
     return s_smb.pec;
 }
 
-#if PROTOCORE_HOT
+#if PROTOCORE_HOT || PC_PLATFORM_HAS_BUS
 
 proto_bool pc_smbus_begin(void)
 {

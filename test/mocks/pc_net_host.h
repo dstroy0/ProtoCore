@@ -676,9 +676,16 @@ static inline uint32_t pc_platform_task_wait(int clear, uint32_t ticks)
     (void)ticks;
     return 0;
 }
+// Advances the virtual clock by the tick count. The host has no tick timer, so a wait that hands
+// off here is what moves time forward; leaving this inert made any driver's pcdelay spin on a
+// millisecond count that never changed. A test that drives the clock itself with set_millis is
+// unaffected, since nothing calls this unless code under test is waiting.
 static inline void pc_platform_task_delay(uint32_t ticks)
 {
-    (void)ticks;
+    if (ticks)
+    {
+        set_millis(millis() + ticks);
+    }
 }
 static inline void pc_platform_task_yield_from_isr(int woke)
 {

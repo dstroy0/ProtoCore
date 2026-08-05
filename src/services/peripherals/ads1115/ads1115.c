@@ -12,7 +12,7 @@
 
 #if PC_ENABLE_ADS1115
 
-#if PROTOCORE_HOT
+#if PROTOCORE_HOT || PC_PLATFORM_HAS_BUS
 #include "services/peripherals/i2c.h"
 #include "shared_primitives/endian.h" // pc_wr16be / pc_rd16be: the registers are big-endian
 #endif
@@ -66,7 +66,7 @@ int32_t pc_ads1115_raw_to_uv(int16_t raw, uint8_t gain)
 // I2C binding
 // ---------------------------------------------------------------------------
 
-#if PROTOCORE_HOT
+#if PROTOCORE_HOT || PC_PLATFORM_HAS_BUS
 
 // All ADS1115 I2C-binding state, owned by one instance (internal linkage): the device address and
 // the bus frame, so it is one named owner, unreachable from any other translation unit. The frame

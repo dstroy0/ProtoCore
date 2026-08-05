@@ -78,7 +78,10 @@ PC_INLINE void pcdelay(uint32_t ms)
     uint32_t start = pc_millis();
     while (pc_millis() - start < ms)
     {
-        // host: spin on the monotonic clock (device-only code paths call this; host tests do not sleep here)
+        // Same one-tick hand-off the RTOS arm makes. A host has no tick timer, so its clock only
+        // moves when something moves it, and this is what gives the platform that hook: without a
+        // call in the loop a driver's wait would spin on a value that never changes.
+        pc_platform_task_delay(1);
     }
 #endif
 }
