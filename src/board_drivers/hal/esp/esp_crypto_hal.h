@@ -180,10 +180,12 @@
  * @note  Bracket every batch of @ref pc_rsa_modmul with acquire/release. Implemented in esp_crypto_hal.cpp
  *        (the exclusivity mutex must be one global instance, so it cannot live in this header). Poll-only.
  */
+PROTO_BEGIN_DECLS
 void pc_rsa_hw_acquire(void);
 
 /** @brief Release the RSA accelerator (drop the PC lock). */
 void pc_rsa_hw_release(void);
+PROTO_END_DECLS
 
 /**
  * @brief `z = x*y mod m` (@p words limbs) on the RSA accelerator. Requires @ref pc_rsa_hw_acquire first.

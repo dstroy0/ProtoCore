@@ -18,8 +18,11 @@
 #ifndef PROTOCORE_CURVE25519_H
 #define PROTOCORE_CURVE25519_H
 
+#include "protocore_config.h" // the entry point: types.h for PROTO_BEGIN_DECLS
 #include <stddef.h>
 #include <stdint.h>
+
+PROTO_BEGIN_DECLS
 
 /** @brief A field element of GF(2^255 - 19): 16 limbs, radix 2^16 (limb i weighs 2^(16i)). */
 typedef int64_t pc_gf[16];
@@ -49,5 +52,7 @@ void pc_x25519(uint8_t out[32], const uint8_t scalar[32], const uint8_t point[32
 
 /** @brief X25519 with the standard base point u=9: @p out = @p scalar * G. */
 void pc_x25519_base(uint8_t out[32], const uint8_t scalar[32]);
+
+PROTO_END_DECLS
 
 #endif // PROTOCORE_CURVE25519_H
