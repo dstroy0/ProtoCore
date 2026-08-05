@@ -9,8 +9,12 @@
 #include "services/peripherals/smbus.h" // pc_smbus_set_pec: the wire shape depends on it
 #include <unity.h>
 
-void setUp(void) {}
-void tearDown(void) {}
+void setUp(void)
+{
+}
+void tearDown(void)
+{
+}
 
 // VOUT_MODE splits into a 3-bit format selector and a 5-bit signed exponent.
 static void test_vout_mode(void)
@@ -93,7 +97,7 @@ static void test_direct(void)
 {
     TEST_ASSERT_EQUAL_INT32(5000000, pc_pmbus_direct_micro(5, 1, 0, 0));
     TEST_ASSERT_EQUAL_INT32(2000000, pc_pmbus_direct_micro(4, 2, 0, 0));
-    TEST_ASSERT_EQUAL_INT32(500000, pc_pmbus_direct_micro(5, 1, 0, 1)); // R shifts the decimal
+    TEST_ASSERT_EQUAL_INT32(500000, pc_pmbus_direct_micro(5, 1, 0, 1));  // R shifts the decimal
     TEST_ASSERT_EQUAL_INT32(4000000, pc_pmbus_direct_micro(5, 1, 1, 0)); // b offsets first
     // A zero slope has no inverse, so it is refused rather than dividing.
     TEST_ASSERT_EQUAL_INT32(PC_PMBUS_INVALID, pc_pmbus_direct_micro(5, 0, 0, 0));

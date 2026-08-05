@@ -48,7 +48,9 @@ jobs:
           # Bypasses hidden directories like .git automatically.
           # build_opt.h is excluded: despite the .h suffix it is an Arduino build-options file
           # (a list of -D compiler flags, not C++), and its name is fixed by the Arduino toolchain.
-          FILES=$(find . -type f \( -name "*.cpp" -o -name "*.h" -o -name "*.ino" \) -not -path "*/.*" -not -name "build_opt.h")
+          # .c is in the list because src/ is C11: the conversion renamed 351 implementation files
+          # out from under a glob that only named .cpp, leaving them unchecked.
+          FILES=$(find . -type f \( -name "*.c" -o -name "*.cpp" -o -name "*.h" -o -name "*.ino" \) -not -path "*/.*" -not -name "build_opt.h")
 
           # 3. Handle empty repository safety edge-case
           if [ -z "$FILES" ]; then

@@ -21,7 +21,9 @@ void setUp(void)
 {
     pc_bus_host_reset();
 }
-void tearDown(void) {}
+void tearDown(void)
+{
+}
 
 // Assert the whole recorded write stream in one go.
 static void expect_tx(const uint8_t *want, size_t len, const char *what)
@@ -72,8 +74,8 @@ static void test_sht3x_bad_crc_rejected(void)
 static void test_pca9685_set_pwm_wire(void)
 {
     TEST_ASSERT_TRUE(pc_pca9685_set_pwm(3, 0, 2048));
-    const uint8_t want[5] = {
-        (uint8_t)(PCA9685_REG_LED0_ON_L + 4 * 3), 0x00, 0x00, (uint8_t)(2048 & 0xFF), (uint8_t)((2048 >> 8) & 0x1F)};
+    const uint8_t want[5] = {(uint8_t)(PCA9685_REG_LED0_ON_L + 4 * 3), 0x00, 0x00, (uint8_t)(2048 & 0xFF),
+                             (uint8_t)((2048 >> 8) & 0x1F)};
     expect_tx(want, sizeof(want), "pca9685 channel 3 write");
 }
 
