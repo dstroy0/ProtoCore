@@ -229,9 +229,8 @@ proto_bool pc_sdi12_parse_identify(const char *resp, size_t len, Sdi12Identity *
 
 uint16_t pc_sdi12_crc16(const uint8_t *data, size_t len)
 {
-    // SDI-12 v1.3 uses the reflected CRC-16 (SDI12_CRC_POLY = 0xA001 = reflect(0x8005), init 0, no
-    // final XOR) - cataloged as CRC-16/ARC. test_crc diffs the shared engine against the loop that
-    // used to live here over every length 0..64, so this is byte-identical to it.
+    // SDI-12 v1.3 uses the reflected CRC-16 (SDI12_CRC_POLY = 0xA001 = reflect(0x8005), init 0, no final XOR)
+    // - cataloged as CRC-16/ARC.
     return (uint16_t)pc_crc(&PC_CRC16_ARC, data, len);
 }
 

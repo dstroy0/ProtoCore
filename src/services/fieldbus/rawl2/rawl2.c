@@ -102,8 +102,6 @@ proto_bool pc_eth_parse(const uint8_t *frame, size_t len, EthFrame *out)
 uint32_t pc_eth_fcs(const uint8_t *bytes, size_t len)
 {
     // CRC-32/ISO-HDLC (the Ethernet FCS): reflected poly 0xEDB88320, init/xorout 0xFFFFFFFF.
-    // test_crc diffs the shared engine against the loop that used to live here over every length
-    // 0..64, so this is byte-identical to it.
     return pc_crc(&PC_CRC32_ISO_HDLC, bytes, len);
 }
 

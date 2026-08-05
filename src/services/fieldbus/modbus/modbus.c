@@ -451,8 +451,7 @@ size_t pc_modbus_process_adu(const uint8_t *req, size_t req_len, uint8_t *resp, 
 }
 
 #if PC_ENABLE_MODBUS_RTU
-// CRC16-Modbus (init 0xFFFF, reflected poly 0xA001); transmitted low byte first. test_crc diffs the
-// shared engine against the loop that used to live here over every length 0..64.
+// CRC16-Modbus (init 0xFFFF, reflected poly 0xA001); transmitted low byte first.
 static uint16_t pc_modbus_crc16(const uint8_t *data, size_t len)
 {
     return (uint16_t)pc_crc(&PC_CRC16_MODBUS, data, len);

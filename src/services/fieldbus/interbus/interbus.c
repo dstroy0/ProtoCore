@@ -14,9 +14,7 @@
 
 uint16_t pc_interbus_fcs(const uint8_t *bytes, size_t len)
 {
-    // CRC-16/CCITT-FALSE: poly 0x1021, init 0xFFFF, no reflection, xorout 0 - cataloged as
-    // CRC-16/IBM-3740. test_crc diffs the shared engine against the loop that used to live here
-    // over every length 0..64, so this is byte-identical to it.
+    // CRC-16/CCITT-FALSE: poly 0x1021, init 0xFFFF, no reflection, xorout 0 - cataloged as CRC-16/IBM-3740.
     return (uint16_t)pc_crc(&PC_CRC16_IBM_3740, bytes, len);
 }
 

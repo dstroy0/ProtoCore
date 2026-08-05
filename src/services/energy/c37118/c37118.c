@@ -17,9 +17,7 @@
 
 uint16_t pc_c37118_crc(const uint8_t *data, size_t len)
 {
-    // IEEE C37.118 uses CRC-CCITT (poly 0x1021, init 0xFFFF, unreflected), cataloged as
-    // CRC-16/IBM-3740. test_crc diffs the shared engine against the loop that used to live here
-    // over every length 0..64, so this is byte-identical to it.
+    // IEEE C37.118 uses CRC-CCITT (poly 0x1021, init 0xFFFF, unreflected), cataloged as CRC-16/IBM-3740.
     return (uint16_t)pc_crc(&PC_CRC16_IBM_3740, data, len);
 }
 
