@@ -122,9 +122,9 @@ solves it with a lock:
 
     **The namespace struct is the public surface and the flat `pc_*` functions are internal.** The
     flat function is the implementation and the struct is the interface, which is what a dispatch
-    table is in C; a module carrying both is not an alias kept for old callers (ban #13) because
-    there is no old caller to keep, and the flat name leaves the public header once the module is
-    converted.
+    table is in C. Converting a module is one change, not a transition: the flat names leave the
+    public header and every caller moves to the struct in the same commit. A module that publishes
+    both surfaces at once is a shim, and ban #13 covers it like any other.
 
     It costs nothing. A `static const` table is const-propagated into a direct call and then dropped,
     and `--gc-sections` strips every entry point nothing reached: measured on xtensa-esp32s3 at

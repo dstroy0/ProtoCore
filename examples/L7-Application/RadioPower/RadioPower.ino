@@ -39,12 +39,12 @@ void setup()
 
     // Apply the configured modem-sleep / TX settings AFTER the link is up (the
     // WiFi connect path may set its own default first).
-    pc_radio_power_apply();
-    Serial.printf("radio modem-sleep: %s\n", pc_radio_ps_name(pc_radio_ps_get()));
+    Radio.power();
+    Serial.printf("radio modem-sleep: %s\n", Radio.ps_name(Radio.ps_get()));
 
     on_http("/radio", HTTP_GET, [](uint8_t id, HttpReq *) {
         char b[48];
-        snprintf(b, sizeof(b), "{\"modem_sleep\":\"%s\"}", pc_radio_ps_name(pc_radio_ps_get()));
+        snprintf(b, sizeof(b), "{\"modem_sleep\":\"%s\"}", Radio.ps_name(Radio.ps_get()));
         send_text(id, 200, "application/json", b);
     });
     begin_http(80, NULL);

@@ -5,10 +5,13 @@
  * @file radio_power.h
  * @brief WiFi radio power controls (PC_ENABLE_RADIO_POWER).
  *
- * Applies the WiFi modem-sleep mode (PC_RADIO_WIFI_PS) and an optional max-TX
- * cap (PC_RADIO_MAX_TX_DBM) in one call - trade throughput/latency for lower
- * average power on a battery device. The mode names are pure/host-tested; the
- * apply + readback use esp_wifi on ESP32 (no-ops on host).
+ * Applies the WiFi modem-sleep mode (PC_RADIO_WIFI_PS) and an optional max-TX cap
+ * (PC_RADIO_MAX_TX_DBM) in one call - trade throughput/latency for lower average power on a battery
+ * device. The mode names are pure/host-tested; the apply + readback use the L1 phy contract on ESP32
+ * (no-ops on host).
+ *
+ * The module exports one symbol, @ref Radio. Everything in radio_power.c has internal linkage, so no
+ * name from this module reaches the library-wide symbol space and none of them can collide.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -30,28 +33,37 @@ PROTO_BEGIN_DECLS
 #define PC_PS_MIN_MODEM 1 ///< wake at every DTIM (balanced).
 #define PC_PS_MAX_MODEM 2 ///< wake at a listen interval (lowest power, higher latency).
 
-/** @brief Name for a modem-sleep mode ("none" / "min_modem" / "max_modem"). */
-const char *pc_radio_ps_name(uint8_t mode);
-
-/** @brief Apply PC_RADIO_WIFI_PS (+ TX cap) to the radio. No-op on host. */
-void pc_radio_power_apply(void);
-
-/** @brief Current modem-sleep mode read back from the radio (PC_PS_* ; 0 on host). */
-uint8_t pc_radio_ps_get(void);
+/** @brief The module's storage. Declared, never defined here: the layout stays in radio_power.c. */
+typedef struct RadioCtx RadioCtx;
 
 /**
- * @brief Hold the radio awake for the duration of a bulk transfer (reference-counted).
+ * @brief The radio-power module.
  *
- * The first hold forces modem sleep off so a long transfer is not interrupted by DTIM
- * wakeups; the matching release, once the count returns to zero, restores the configured
- * PC_RADIO_WIFI_PS mode. Balance every @ref pc_radio_busy_hold with exactly one
- * @ref pc_radio_busy_release. The relay/DNAT listener holds one while any bridge is active; other
- * bulk paths (large file serves, streaming PUT) can do the same. No-op on host.
+ * @var RadioNs::ctx          the module's storage, opaque to every caller.
+ * @var RadioNs::power        apply PC_RADIO_WIFI_PS (+ TX cap) to the radio. No-op on host.
+ * @var RadioNs::ps_name      name for a modem-sleep mode ("none" / "min_modem" / "max_modem").
+ * @var RadioNs::ps_get       modem-sleep mode read back from the radio (PC_PS_* ; 0 on host).
+ * @var RadioNs::busy_hold    hold the radio awake for a bulk transfer (reference-counted).
+ * @var RadioNs::busy_release release one bulk-transfer hold.
+ *
+ * The first @ref RadioNs::busy_hold forces modem sleep off so a long transfer is not interrupted by
+ * DTIM wakeups; the matching release, once the count returns to zero, restores the configured
+ * PC_RADIO_WIFI_PS mode. Balance every hold with exactly one release. The relay/DNAT listener holds
+ * one while any bridge is active; other bulk paths (large file serves, streaming PUT) can do the
+ * same. Both are no-ops on host.
  */
-void pc_radio_busy_hold(void);
+typedef struct
+{
+    RadioCtx *ctx;
+    void (*power)(void);
+    const char *(*ps_name)(uint8_t mode);
+    uint8_t (*ps_get)(void);
+    void (*busy_hold)(void);
+    void (*busy_release)(void);
+} RadioNs;
 
-/** @brief Release a bulk-transfer hold; restores the configured modem-sleep mode at zero. No-op on host. */
-void pc_radio_busy_release(void);
+/** @brief The one symbol this module exports. */
+extern const RadioNs Radio;
 
 #endif // PC_ENABLE_RADIO_POWER
 

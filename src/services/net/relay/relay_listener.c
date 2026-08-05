@@ -132,7 +132,7 @@ static void teardown(RelayBridge *br, proto_bool close_inbound)
 {
     br->active = PROTO_FALSE;
 #if PC_ENABLE_RADIO_POWER
-    pc_radio_busy_release(); // this bridge is done relaying
+    Radio.busy_release(); // this bridge is done relaying
 #endif
     pc_client_close(br->origin_cid);
     if (close_inbound)
@@ -202,7 +202,7 @@ static void relay_on_accept(uint8_t slot)
     pc_relay_end b = {b_recv, b_send, NULL, br};
     pc_relay_init(&br->relay, &a, &b);
 #if PC_ENABLE_RADIO_POWER
-    pc_radio_busy_hold(); // hold the radio awake for the life of this bridge
+    Radio.busy_hold(); // hold the radio awake for the life of this bridge
 #endif
 }
 
@@ -279,7 +279,7 @@ void pc_relay_listener_reset(void)
         {
             s_ctx.bridges[i].active = PROTO_FALSE;
 #if PC_ENABLE_RADIO_POWER
-            pc_radio_busy_release(); // balance the hold taken when the bridge was opened
+            Radio.busy_release(); // balance the hold taken when the bridge was opened
 #endif
         }
     }

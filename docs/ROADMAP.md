@@ -136,15 +136,27 @@ Wanted, not yet scoped.
           writes and what has to have run first.
     - [ ] Resolve the 222 indirect calls that dispatch through `g_phyFuns` and `g_osi_funcs_p`, so
           the function tables are a closed list.
-    - [ ] Then the stack, **idemIP**: a deterministic TCP/IP with fixed pools and no allocation after
-          `begin()`, replacing lwIP behind the existing `network_drivers/transport` seam, which
-          already hides it from everything above.
+    - [ ] Then the stack, **idemIP**: its own tree under `src/`, carrying its own name, with nothing
+          in it yet. The name is the contract: *idem*, the same every time. An operation's runtime is a number the build states, not a distribution measured
+          afterwards. Fixed pools and no allocation after `begin()` are the memory half, already the
+          law here; the timing half is the new part.
 
-        **Licensing.** The blobs ship under terms that restrict reverse engineering. Reading an
-        instruction stream for interoperability has explicit protection in the EU Software Directive
-        Article 6 and US DMCA 1201(f), and prior art exists in the open (esp32-open-mac), but the
-        question is a real one and belongs in front of a lawyer before any of this ships, not after.
-        The register map above is a disassembly listing, which is the least exposed form of the work.
+          - **No jitter, or jitter normalized.** An operation that finishes early is held to its
+            declared budget, so the observed runtime is the stated one rather than a range. That
+            makes the cost composable and takes protocol timing off the side-channel list.
+          - **Guaranteed runtimes.** Every operation declares a budget the way every module declares
+            `PC_WORK_*` today. Memory is proven by a `static_assert` that fails the build; the timing
+            equivalent is what has to be settled.
+          - **A wait services thread 0.** Waiting is not blocking: while an operation waits it runs
+            thread 0's work. Dead time becomes a bounded service slice, so an operation costs its own
+            work plus a known number of slices, which is still a constant.
+          - **The budgets are the user's.** Knobs in `protocore_config.h` like every other bound, so
+            an application picks its own latency and throughput trade rather than inheriting ours.
+
+          `network_drivers/` stays organized by OSI layer and pulls from idemIP, so the layering a
+          reader follows does not change: the stack is what the layers are built on, not a peer of
+          them. It takes lwIP's place behind the existing `network_drivers/transport` seam, which
+          already hides the stack from everything above.
 
 <!-- prettier-ignore-end -->
 

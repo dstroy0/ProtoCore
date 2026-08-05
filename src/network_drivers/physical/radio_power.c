@@ -3,7 +3,10 @@
 
 /**
  * @file radio_power.c
- * @brief Modem-sleep mode names (pure) + esp_wifi apply/readback (ESP32).
+ * @brief Modem-sleep mode names (pure) + phy apply/readback (ESP32). See radio_power.h.
+ *
+ * Every function here has internal linkage. The module reaches callers through @ref Radio, which is
+ * the only symbol it exports, so nothing in this file can collide with a name anywhere else.
  */
 
 #include "network_drivers/physical/radio_power.h"
@@ -11,10 +14,15 @@
 
 #if PC_ENABLE_RADIO_POWER
 
-#if PROTOCORE_HOT
-#include "esp_wifi.h"
-#endif
-const char *pc_radio_ps_name(uint8_t mode)
+// The module's storage, whose layout radio_power.h only declares. Present on both arms so the
+// module's shape does not change with the build.
+struct RadioCtx
+{
+    int held; ///< bulk-transfer keep-awake refcount
+};
+static struct RadioCtx s_radio;
+
+static const char *ps_name(uint8_t mode)
 {
     switch (mode)
     {
@@ -45,14 +53,7 @@ static pc_phy_ps to_phy_ps(uint8_t mode)
     return PC_PHY_PS_NONE;
 }
 
-// Bulk-transfer keep-awake refcount, owned in one context (owner-context guard).
-typedef struct
-{
-    int held;
-} RadioBusyCtx;
-static RadioBusyCtx s_busy;
-
-void pc_radio_power_apply(void)
+static void power(void)
 {
     pc_phy_ps_set(to_phy_ps(PC_RADIO_WIFI_PS));
 #if PC_RADIO_MAX_TX_DBM > 0
@@ -60,7 +61,7 @@ void pc_radio_power_apply(void)
 #endif
 }
 
-uint8_t pc_radio_ps_get(void)
+static uint8_t ps_get(void)
 {
     const pc_phy_ps m = pc_phy_ps_get();
     if (m == PC_PHY_PS_MIN_MODEM)
@@ -74,41 +75,48 @@ uint8_t pc_radio_ps_get(void)
     return PC_PS_NONE;
 }
 
-void pc_radio_busy_hold(void)
+static void busy_hold(void)
 {
-    if (s_busy.held++ == 0)
+    if (s_radio.held == 0)
     {
         pc_phy_ps_set(PC_PHY_PS_NONE); // modem sleep off during a bulk transfer
     }
+    s_radio.held++;
 }
 
-void pc_radio_busy_release(void)
+static void busy_release(void)
 {
-    if (s_busy.held > 0 && --s_busy.held == 0)
+    if (s_radio.held > 0)
     {
-        pc_radio_power_apply(); // last transfer done: restore the configured mode
+        s_radio.held--;
+        if (s_radio.held == 0)
+        {
+            power(); // last transfer done: restore the configured mode
+        }
     }
 }
 
 #else // host build - no radio
 
-void pc_radio_power_apply(void)
+static void power(void)
 {
 }
-uint8_t pc_radio_ps_get(void)
+static uint8_t ps_get(void)
 {
     return PC_PS_NONE;
 }
-void pc_radio_busy_hold(void)
+static void busy_hold(void)
 {
     // no-op on the host build: there is no radio to keep awake (the ESP32 branch above holds the
     // modem-sleep refcount).
 }
-void pc_radio_busy_release(void)
+static void busy_release(void)
 {
-    // no-op on the host build (see pc_radio_busy_hold).
+    // no-op on the host build (see busy_hold).
 }
 
 #endif // PROTOCORE_HOT
+
+const RadioNs Radio = {&s_radio, power, ps_name, ps_get, busy_hold, busy_release};
 
 #endif // PC_ENABLE_RADIO_POWER
