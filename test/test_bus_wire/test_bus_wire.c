@@ -86,16 +86,25 @@ static void test_pca9685_servo_wire(void)
     expect_tx(want, sizeof(want), "pca9685 servo write");
 }
 
-// INA219 registers are big-endian: the register byte, then the value high byte first.
+// INA219 registers are big-endian: a register byte, then the value high byte first. Each register
+// is its own transaction, so the log is what separates them; the concatenated stream cannot.
 static void test_ina219_wire_is_big_endian(void)
 {
     TEST_ASSERT_TRUE(pc_ina219_begin(0x40, 100, 100));
-    uint32_t got = 0;
-    const uint8_t *tx = pc_bus_host_written(&got);
-    TEST_ASSERT_EQUAL_UINT32(3, got); // begin writes the calibration register and nothing else
-    TEST_ASSERT_EQUAL_HEX8(INA219_REG_CALIBRATION, tx[0]);
-    uint16_t cal = (uint16_t)(((uint16_t)tx[1] << 8) | tx[2]);
+
+    TEST_ASSERT_GREATER_OR_EQUAL_UINT32(1, pc_bus_host_count());
+    uint32_t n = 0;
+    const uint8_t *first = pc_bus_host_txn_bytes(0, &n);
+    TEST_ASSERT_EQUAL_UINT32(3, n); // one register write: the register byte and a 16-bit value
+    TEST_ASSERT_EQUAL_HEX8(INA219_REG_CALIBRATION, first[0]);
+    uint16_t cal = (uint16_t)(((uint16_t)first[1] << 8) | first[2]);
     TEST_ASSERT_EQUAL_UINT16(pc_ina219_calibration(100, 100), cal);
+
+    // Every transaction on this part goes to the address begin() was given.
+    for (uint32_t i = 0; i < pc_bus_host_count(); i++)
+    {
+        TEST_ASSERT_EQUAL_UINT16(0x40, pc_bus_host_txn_at(i)->target);
+    }
 }
 
 // An RTC read points at register 0 and burst-reads the seven time registers, so only the register
