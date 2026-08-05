@@ -67,9 +67,9 @@ void setup()
     // Required for STA/AP classification.
     set_ap_ip(ap_ip);
 
-    on_http("/setup", HTTP_GET, handle_setup, pc_iface::PC_IFACE_AP);   // softAP only
-    on_http("/api/data", HTTP_GET, handle_api, pc_iface::PC_IFACE_STA); // station only
-    on_http("/", HTTP_GET, handle_root);                                // any interface
+    on_http_iface("/setup", HTTP_GET, handle_setup, PC_IFACE_AP);   // softAP only
+    on_http_iface("/api/data", HTTP_GET, handle_api, PC_IFACE_STA); // station only
+    on_http("/", HTTP_GET, handle_root);                            // any interface
 
     int32_t result = begin_http(80, NULL);
     if (result < 0)

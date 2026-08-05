@@ -62,10 +62,10 @@ void setup()
 
     // Protected route. Behind a trusted proxy the lockout counts failures per ORIGINAL client, so one
     // abuser does not lock out everyone sharing the proxy's address.
-    on_http(
+    on_http_auth(
         "/secret", HTTP_GET,
         [](uint8_t id, HttpReq *) { send_text(id, 200, "text/plain", "authenticated!"); }, "Restricted", "admin",
-        "s3cret");
+        "s3cret", PROTO_FALSE);
 
     begin_http(80, NULL);
 }

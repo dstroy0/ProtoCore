@@ -43,10 +43,10 @@ void setup()
               [](uint8_t id, HttpReq *) { send_text(id, 200, "text/plain", "public page"); });
 
     // Basic auth (digest defaults to false): realm, username, password.
-    on_http(
+    on_http_auth(
         "/secret", HTTP_GET,
         [](uint8_t id, HttpReq *) { send_text(id, 200, "text/plain", "authenticated!"); }, "Restricted", "admin",
-        "s3cret");
+        "s3cret", PROTO_FALSE);
 
     begin_http(80, NULL);
 }

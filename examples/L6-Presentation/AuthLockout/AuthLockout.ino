@@ -50,10 +50,10 @@ void setup()
     // Protected route. Repeated wrong passwords from one IP trip the lockout
     // (429) with exponential backoff; the tuning lives in protocore_config.h
     // (PC_AUTH_LOCKOUT_THRESHOLD / _BASE_MS / _MAX_MS).
-    on_http(
+    on_http_auth(
         "/secret", HTTP_GET,
         [](uint8_t id, HttpReq *) { send_text(id, 200, "text/plain", "authenticated!"); }, "Restricted", "admin",
-        "s3cret");
+        "s3cret", PROTO_FALSE);
 
     begin_http(80, NULL);
 }

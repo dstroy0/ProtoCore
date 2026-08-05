@@ -50,7 +50,7 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // on(path, method, handler, realm, user, pass, digest=true)
-    on_http("/secret", HTTP_GET, handle_secret, "demo", "admin", "s3cret", true);
+    on_http_auth("/secret", HTTP_GET, handle_secret, "demo", "admin", "s3cret", PROTO_TRUE);
 
     int32_t result = begin_http(80, NULL);
     if (result < 0)
