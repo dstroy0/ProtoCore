@@ -34,7 +34,7 @@ flags alongside the enable flag.
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPC_ENABLE_AUTH_LOCKOUT=1" \
+  --project-option="build_flags=-DPC_ENABLE_AUTH=1 -DPC_ENABLE_AUTH_LOCKOUT=1" \
   --lib="." examples/L6-Presentation/AuthLockout/AuthLockout.ino
 ```
 
