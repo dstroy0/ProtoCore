@@ -29,8 +29,8 @@
 #include "crypto/mac/hmac_sha256.h"
 #include "crypto/mac/hmac_sha512.h"
 #include "crypto/mac/poly1305.h"
+#include "mmgr/secure.h"
 #include "network_drivers/tls/ssh_rsa.h"
-#include "server/mmgr/secure.h"
 
 // --- QUIC / DTLS 1.3 record + KDF crypto (guarded) ---
 #if PC_ENABLE_HTTP3 || PC_ENABLE_DTLS
