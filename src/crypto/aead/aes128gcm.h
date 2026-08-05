@@ -29,6 +29,8 @@
 
 #include "shared_primitives/span.h" // pc_cspan: what the seal produced (empty == it did not)
 
+PROTO_BEGIN_DECLS
+
 /** @brief AEAD_AES_128_GCM key length in bytes. */
 #define PC_AES128GCM_KEY_LEN 16
 /** @brief AEAD_AES_128_GCM nonce length in bytes. */
@@ -119,6 +121,8 @@ pc_cspan pc_aes128gcm_seal(struct pc_aes128gcm_key *k, const uint8_t nonce[PC_AE
 proto_bool pc_aes128gcm_open(struct pc_aes128gcm_key *k, const uint8_t nonce[PC_AES128GCM_IV_LEN], const uint8_t *aad,
                              size_t aad_len, const uint8_t *ct, size_t ct_len, const uint8_t tag[PC_AES128GCM_TAG_LEN],
                              uint8_t *out);
+
+PROTO_END_DECLS
 
 #endif // PC_ENABLE_HTTP3 || PC_ENABLE_DTLS || PC_ENABLE_SMB
 

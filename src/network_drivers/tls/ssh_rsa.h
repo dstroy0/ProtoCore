@@ -31,8 +31,6 @@
 #define PROTOCORE_SSH_RSA_H
 
 #include "crypto/asymmetric/rsa.h" // pc_rsa_hash, PC_RSA_KEY_BYTES/SIG_BYTES, pc_rsa_verify / pc_rsa_sign_sw
-#include <stddef.h>
-#include <stdint.h>
 
 PROTO_BEGIN_DECLS
 

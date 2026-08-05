@@ -18,9 +18,7 @@
 #ifndef PROTOCORE_CURVE25519_H
 #define PROTOCORE_CURVE25519_H
 
-#include "protocore_config.h" // the entry point: types.h for PROTO_BEGIN_DECLS
-#include <stddef.h>
-#include <stdint.h>
+#include "protocore_config.h" // the entry point: types.h for the widths and PROTO_BEGIN_DECLS
 
 PROTO_BEGIN_DECLS
 
