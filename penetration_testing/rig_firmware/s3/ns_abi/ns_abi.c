@@ -28,9 +28,31 @@ volatile uint32_t sink = 0;
         sink += v * 40503u;                                                                                            \
     }
 
-LEAF(00) LEAF(01) LEAF(02) LEAF(03) LEAF(04) LEAF(05) LEAF(06) LEAF(07)
-LEAF(08) LEAF(09) LEAF(10) LEAF(11) LEAF(12) LEAF(13) LEAF(14) LEAF(15)
-LEAF(16) LEAF(17) LEAF(18) LEAF(19) LEAF(20) LEAF(21) LEAF(22) LEAF(23)
+// One per line: clang-format reflows a run of macro invocations and then indents what follows them.
+LEAF(00)
+LEAF(01)
+LEAF(02)
+LEAF(03)
+LEAF(04)
+LEAF(05)
+LEAF(06)
+LEAF(07)
+LEAF(08)
+LEAF(09)
+LEAF(10)
+LEAF(11)
+LEAF(12)
+LEAF(13)
+LEAF(14)
+LEAF(15)
+LEAF(16)
+LEAF(17)
+LEAF(18)
+LEAF(19)
+LEAF(20)
+LEAF(21)
+LEAF(22)
+LEAF(23)
 
 #if PC_NS_FORM
 

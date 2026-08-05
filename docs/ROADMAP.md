@@ -96,6 +96,11 @@ Wanted, not yet scoped.
 - [ ] **RP2350 Arm-vs-RISC-V comparison** (M, dual-ISA die) - it ships Cortex-M33 and Hazard3 RISC-V cores on one
       die, so an identical build can be A/B'd across architectures without changing boards.
 
+<!-- prettier-ignore-start -->
+<!-- The entry below nests prose and a checklist inside one list item at mixed indent widths, which
+     prettier does not reach a fixed point on: its own output re-indents on the next pass, so
+     --check can never go green by reformatting. Same mechanism the generated regions use. -->
+
 - [ ] **Our own radio bring-up and TCP/IP stack on ESP32** (XL, replaces the vendor blobs and lwIP) -
       the WiFi MAC and PHY are driven today by precompiled Espressif libraries, and the IP stack
       above them is lwIP. Both are opaque: the pools, the locking and the worst-case paths are
@@ -140,6 +145,8 @@ Wanted, not yet scoped.
         Article 6 and US DMCA 1201(f), and prior art exists in the open (esp32-open-mac), but the
         question is a real one and belongs in front of a lawyer before any of this ships, not after.
         The register map above is a disassembly listing, which is the least exposed form of the work.
+
+<!-- prettier-ignore-end -->
 
 ### Industrial & standards protocols
 
