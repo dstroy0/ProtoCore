@@ -49,12 +49,36 @@ void test_current_and_power()
     TEST_ASSERT_EQUAL_INT32(1000000, pc_ina219_power_uw(500, 100));   // 1 W
 }
 
-void test_host_i2c_stubs_fail_closed()
+// begin() writes the calibration register big-endian, and each read addresses its own register.
+void test_begin_and_read_drive_the_bus()
 {
-    // On a host build there is no I2C: begin and every read fail closed (return false), so a caller
-    // never mistakes an unavailable sensor for a zero reading.
-    TEST_ASSERT_FALSE(pc_ina219_begin(0x40, 100, 100));
+    pc_bus_host_reset();
+    TEST_ASSERT_TRUE(pc_ina219_begin(0x40, 100, 100));
+
+    uint32_t n = 0;
+    const uint8_t *w = pc_bus_host_txn_bytes(0, &n);
+    TEST_ASSERT_EQUAL_UINT32(3, n);
+    TEST_ASSERT_EQUAL_HEX8(INA219_REG_CALIBRATION, w[0]);
+    uint16_t cal = (uint16_t)(((uint16_t)w[1] << 8) | w[2]);
+    TEST_ASSERT_EQUAL_UINT16(pc_ina219_calibration(100, 100), cal);
+
+    pc_bus_host_reset();
+    const uint8_t reply[2] = {0x1F, 0xA0}; // bus voltage register, LSB 4 mV after the 3-bit shift
+    pc_bus_host_preload(reply, sizeof(reply));
+    int32_t v = 0;
+    TEST_ASSERT_TRUE(pc_ina219_read_bus_mv(&v));
+    w = pc_bus_host_txn_bytes(0, &n);
+    TEST_ASSERT_EQUAL_UINT32(1, n);
+    TEST_ASSERT_EQUAL_HEX8(INA219_REG_BUS_VOLTAGE, w[0]);
+}
+
+// A sensor that does not acknowledge reports failure, so a caller never mistakes an unavailable
+// part for a zero reading.
+void test_reads_fail_closed_when_silent()
+{
+    pc_bus_host_reset();
     int32_t v = 123;
+    pc_bus_host_fail_next(4);
     TEST_ASSERT_FALSE(pc_ina219_read_bus_mv(&v));
     TEST_ASSERT_FALSE(pc_ina219_read_shunt_uv(&v));
     TEST_ASSERT_FALSE(pc_ina219_read_current_ua(&v));
@@ -68,6 +92,7 @@ int main()
     RUN_TEST(test_shunt_uv);
     RUN_TEST(test_calibration);
     RUN_TEST(test_current_and_power);
-    RUN_TEST(test_host_i2c_stubs_fail_closed);
+    RUN_TEST(test_begin_and_read_drive_the_bus);
+    RUN_TEST(test_reads_fail_closed_when_silent);
     return UNITY_END();
 }
