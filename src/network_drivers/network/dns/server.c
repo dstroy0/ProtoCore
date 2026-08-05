@@ -7,8 +7,8 @@
  */
 
 #include "network_drivers/network/dns/server.h"
-#include "mmgr/protomem.h" // proto_raw_read: the exact mover, for a destination inside a buffer
-#include "mmgr/protostr.h" // str.len
+#include "mmgr/protostr.h"  // str.len
+#include "mmgr/rawmemcpy.h" // proto_raw_read: the exact mover, for a destination inside a buffer
 #include "protocore_config.h"
 
 #if PC_ENABLE_DNS_SERVER
