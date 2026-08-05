@@ -35,9 +35,11 @@ digraph flag_deps {
   OIDC [label="OIDC", fillcolor="#1c2338", color="#7c85e8", URL="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#oidc", target="_blank", tooltip="PC_ENABLE_OIDC - needs SSH"];
   OPCUA [label="OPCUA", fillcolor="#173626", color="#3fb950", URL="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#opcua", target="_blank", tooltip="PC_ENABLE_OPCUA - enables 4"];
   OPCUA_CLIENT [label="OPCUA_CLIENT", fillcolor="#1c2338", color="#7c85e8", URL="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#opcua-client", target="_blank", tooltip="PC_ENABLE_OPCUA_CLIENT - needs OPCUA"];
+  PMBUS [label="PMBUS", fillcolor="#1c2338", color="#7c85e8", URL="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#pmbus", target="_blank", tooltip="PC_ENABLE_PMBUS - needs SMBUS"];
   PQC_KEX [label="PQC_KEX", fillcolor="#1c2338", color="#7c85e8", URL="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#pqc-kex", target="_blank", tooltip="PC_ENABLE_PQC_KEX - needs SSH_SNTRUP761"];
   RANGE [label="RANGE", fillcolor="#1c2338", color="#7c85e8", URL="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#range", target="_blank", tooltip="PC_ENABLE_RANGE - needs FILE_SERVING"];
   ROBOTICS [label="ROBOTICS", fillcolor="#1c2338", color="#7c85e8", URL="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#robotics", target="_blank", tooltip="PC_ENABLE_ROBOTICS - needs OPCUA"];
+  SMBUS [label="SMBUS", fillcolor="#173626", color="#3fb950", URL="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#smbus", target="_blank", tooltip="PC_ENABLE_SMBUS - enables 1"];
   SMTP [label="SMTP", fillcolor="#173626", color="#3fb950", URL="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#smtp", target="_blank", tooltip="PC_ENABLE_SMTP - enables 1"];
   SMTP_TLS [label="SMTP_TLS", fillcolor="#1c2338", color="#7c85e8", URL="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#smtp-tls", target="_blank", tooltip="PC_ENABLE_SMTP_TLS - needs SMTP"];
   SNMP [label="SNMP", fillcolor="#173626", color="#3fb950", URL="https://github.com/dstroy0/ProtoCore/blob/main/docs/FEATURES.md#snmp", target="_blank", tooltip="PC_ENABLE_SNMP - enables 2"];
@@ -80,6 +82,7 @@ digraph flag_deps {
   OPCUA -> OPCUA_CLIENT;
   OPCUA -> ROBOTICS;
   OPCUA -> UMATI;
+  SMBUS -> PMBUS;
   SMTP -> SMTP_TLS;
   SNMP -> SNMP_TRAP;
   SNMP -> SNMP_V3;

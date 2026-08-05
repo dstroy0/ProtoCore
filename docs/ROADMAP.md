@@ -101,7 +101,7 @@ Wanted, not yet scoped.
      prettier does not reach a fixed point on: its own output re-indents on the next pass, so
      --check can never go green by reformatting. Same mechanism the generated regions use. -->
 
-- [ ] **Our own radio bring-up and TCP/IP stack on ESP32** (XL, replaces the vendor blobs and lwIP) -
+- [ ] **Our own radio bring-up and idemIP, our TCP/IP stack, on ESP32** (XL, replaces the vendor blobs and lwIP) -
       the WiFi MAC and PHY are driven today by precompiled Espressif libraries, and the IP stack
       above them is lwIP. Both are opaque: the pools, the locking and the worst-case paths are
       exactly the things this library states as numbers everywhere else, and neither can be
@@ -136,9 +136,9 @@ Wanted, not yet scoped.
           writes and what has to have run first.
     - [ ] Resolve the 222 indirect calls that dispatch through `g_phyFuns` and `g_osi_funcs_p`, so
           the function tables are a closed list.
-    - [ ] Then the stack: a deterministic TCP/IP with fixed pools and no allocation after `begin()`,
-          replacing lwIP behind the existing `network_drivers/transport` seam, which already hides
-          it from everything above.
+    - [ ] Then the stack, **idemIP**: a deterministic TCP/IP with fixed pools and no allocation after
+          `begin()`, replacing lwIP behind the existing `network_drivers/transport` seam, which
+          already hides it from everything above.
 
         **Licensing.** The blobs ship under terms that restrict reverse engineering. Reading an
         instruction stream for interoperability has explicit protection in the EU Software Directive

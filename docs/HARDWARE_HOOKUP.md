@@ -995,7 +995,7 @@ pinout and none is documented here. Pure codecs have no bring-up call at all: yo
 
 | Module | Attaches via | Bring-up call | Feature flag |
 | ------ | ------------ | ------------- | ------------ |
-| `rtc` | I2C | `pc_rtc_begin()` | `PC_ENABLE_RTC` |
+| `rtc` | I2C | `pc_rtc_begin(void)` | `PC_ENABLE_RTC` |
 | `time_source` | codec only - caller owns the link | _none (pure codec)_ | `PC_ENABLE_TIME_SOURCE` |
 
 ### Physical & Data Link (L1-L2)
