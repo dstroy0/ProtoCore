@@ -35,8 +35,13 @@ XTENSA = ("esp32", "esp32s2", "esp32s3")
 LIBS = ["libphy.a", "libpp.a", "libnet80211.a", "libmesh.a", "libsmartconfig.a"]
 
 SECTION = re.compile(r"^Disassembly of section (\S+):")
-INSN = re.compile(r"^\s*([0-9a-f]+):\s+((?:[0-9a-f]{2} )+)\s*(\S+)?\s*(.*?)\s*$")
 RELOC = re.compile(r"^\s+([0-9a-f]+): (R_\S+)\s+(\S+)")
+
+# objdump lays a disassembly line out tab-separated: "  64:\t01a136        \tentry\ta1, 208".
+# The byte column runs its hex together for an instruction and space-separates it for data, so
+# matching on the byte spelling drops one of the two. Splitting on the tabs reads both.
+OFFSET = re.compile(r"^\s*([0-9a-f]+):$")
+HEXRUN = re.compile(r"^[0-9a-f]{2}(?:[0-9a-f]| )*$")
 
 # A hex address in an operand is placement, not behavior: mask it. A branch prints its target as
 # an absolute offset plus a <symbol+0x..> annotation, and both move when code moves.
@@ -113,25 +118,37 @@ def functions(objdump, ar, archive, work):
             m = RELOC.match(line)
             if m:
                 # Which symbol a call or a literal resolves to is behavior, so it is compared.
-                secs[cur].append((int(m.group(1), 16), None, f"@{m.group(2)}:{m.group(3)}"))
+                tag = f"@{m.group(2)}:{m.group(3)}"
+                secs[cur].append((int(m.group(1), 16), None, tag, tag))
                 continue
-            m = INSN.match(line)
-            if m and m.group(3):
-                ops = ANNOT.sub("", m.group(4))
-                secs[cur].append((int(m.group(1), 16), m.group(2).replace(" ", ""),
-                                  m.group(3) + " " + ADDR.sub("#", ops).strip()))
+            parts = line.split("\t")
+            if len(parts) < 3:
+                continue
+            mo = OFFSET.match(parts[0])
+            if mo is None or not HEXRUN.match(parts[1].strip()):
+                continue
+            mnem = parts[2].strip()
+            if not mnem:
+                continue
+            ops = ANNOT.sub("", parts[3] if len(parts) > 3 else "").strip()
+            # Two forms: one with addresses masked, for the identical/equivalent verdict, and
+            # one left alone, so a caller can see which immediates actually changed.
+            secs[cur].append((int(mo.group(1), 16), parts[1].strip().replace(" ", ""),
+                              (mnem + " " + ADDR.sub("#", ops)).strip(),
+                              (mnem + " " + ops).strip()))
 
         for sec, off, size, name in syms:
             if size == 0 or sec not in secs:
                 continue
-            raw, norm = [], []
-            for a, b, n in secs[sec]:
+            raw, norm, exact = [], [], []
+            for a, b, n, e in secs[sec]:
                 if off <= a < off + size:
                     if b is not None:
                         raw.append(b)
                     norm.append(n)
+                    exact.append(e)
             if norm:
-                out[name] = ("".join(raw), tuple(norm))
+                out[name] = ("".join(raw), tuple(norm), tuple(exact))
     return out
 
 
@@ -222,4 +239,5 @@ def main():
     print(f"\nshared {tot_sh}: identical {tot_sb}, equivalent {tot_eq}, different {tot_df} -> {dest}")
 
 
-main()
+if __name__ == "__main__":
+    main()
