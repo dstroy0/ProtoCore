@@ -1856,7 +1856,7 @@
     "native_dns_server": {
       "desc": "Authoritative DNS server (services/net/dns_server): the pure A-record response builder\n(QNAME parse, compressed A answer, NXDOMAIN, non-A query, header flags, malformed\nguards) and the built-in name->IP table (add / case-insensitive lookup / clear). No lwIP.",
       "flags": ["-DPC_ENABLE_DNS_SERVER=1"],
-      "src": ["+<network_drivers/network/dns/server.c>"],
+      "src": ["+<network_drivers/network/dns/server.c>", "+<mmgr/protostr.c>"],
       "tests": ["test_dns_server"]
     },
     "native_rtc": {

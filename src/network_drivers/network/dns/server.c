@@ -7,6 +7,8 @@
  */
 
 #include "network_drivers/network/dns/server.h"
+#include "mmgr/protomem.h" // proto_raw_read: the exact mover, for a destination inside a buffer
+#include "mmgr/protostr.h" // str.len
 #include "protocore_config.h"
 
 #if PC_ENABLE_DNS_SERVER
@@ -114,7 +116,7 @@ static size_t build_response(const uint8_t *query, size_t qlen, uint32_t ttl, Dn
         {
             return 0;
         }
-        memcpy(out, query, 12);
+        proto_raw_read(out, query, 12);
         out[2] = (uint8_t)(0x84 | (query[2] & 0x01)); // QR=1, AA=1, RD copied
         out[3] = 0x04;                                // NOTIMP
         out[6] = out[7] = 0;                          // ANCOUNT 0
@@ -134,7 +136,7 @@ static size_t build_response(const uint8_t *query, size_t qlen, uint32_t ttl, Dn
     {
         return 0;
     }
-    memcpy(out, query, qend);                     // header + question (preserves id + question bytes)
+    proto_raw_read(out, query, qend);             // header + question (preserves id + question bytes)
     out[2] = (uint8_t)(0x84 | (query[2] & 0x01)); // QR=1, OPCODE=0, AA=1, RD copied
     out[3] = 0x00;                                // RA=0, RCODE=0
     out[4] = 0x00;
@@ -196,7 +198,7 @@ static proto_bool add(const char *name, uint8_t a, uint8_t b, uint8_t c, uint8_t
     {
         return PROTO_FALSE;
     }
-    size_t nlen = strnlen(name, PC_DNS_NAME_MAX);
+    size_t nlen = str.len(name, PC_DNS_NAME_MAX);
     if (nlen >= PC_DNS_NAME_MAX)
     {
         return PROTO_FALSE;
@@ -205,7 +207,7 @@ static proto_bool add(const char *name, uint8_t a, uint8_t b, uint8_t c, uint8_t
     {
         return PROTO_FALSE;
     }
-    memcpy(s_dns.names[s_dns.count], name, nlen + 1);
+    proto_raw_read(s_dns.names[s_dns.count], name, nlen + 1);
     s_dns.ips[s_dns.count] = ((uint32_t)a << 24) | ((uint32_t)b << 16) | ((uint32_t)c << 8) | (uint32_t)d;
     s_dns.count++;
     return PROTO_TRUE;
