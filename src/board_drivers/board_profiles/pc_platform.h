@@ -248,7 +248,8 @@ typedef struct tcpip_api_call_data pc_net_call; ///< the marshal record for a st
 #endif
 #define PC_UART_UNITS SOC_UART_NUM
 
-PC_INLINE int pc_platform_uart_begin(uint8_t unit, uint32_t baud)
+// 8N1, no flow control, on @p rx and @p tx; -1 on either leaves that pin at the unit's default.
+PC_INLINE int pc_platform_uart_begin(uint8_t unit, uint32_t baud, int rx, int tx)
 {
     if (unit >= PC_UART_UNITS)
     {
@@ -270,6 +271,12 @@ PC_INLINE int pc_platform_uart_begin(uint8_t unit, uint32_t baud)
     {
         return 0;
     }
+    // The pins are routed through the GPIO matrix before the driver installs its ring.
+    if (uart_set_pin((uart_port_t)unit, tx < 0 ? UART_PIN_NO_CHANGE : tx, rx < 0 ? UART_PIN_NO_CHANGE : rx,
+                     UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE) != ESP_OK)
+    {
+        return 0;
+    }
     if (!uart_is_driver_installed((uart_port_t)unit))
     {
         return uart_driver_install((uart_port_t)unit, PC_UART_RX_BUF, 0, 0, NULL, 0) == ESP_OK ? 1 : 0;
@@ -287,20 +294,56 @@ PC_INLINE uint32_t pc_platform_uart_available(uint8_t unit)
 #define PC_SPI_MSBFIRST 0
 #define PC_SPI_LSBFIRST 1
 
+// Bits clocked per SCLK in the data phase.
+#define PC_SPI_LANES_1 1
+#define PC_SPI_LANES_2 2
+#define PC_SPI_LANES_4 4
+
 // SPI. The pins come from the caller because they are a board fact, not a library one - a bridge
-// target names its own bus. Bring the bus up once with the pins, then run transactions on it.
-int pc_platform_spi_begin(int mosi, int miso, int sclk);
-int pc_platform_spi_txn(uint32_t hz, uint8_t bit_order, uint8_t mode, const uint8_t *tx, uint8_t *rx, uint32_t len);
+// target names its own bus. Bring a host up once with the pins, then run transactions on it.
+// @p host selects the controller: 0 is the general-purpose one, 1 the second where the die has it.
+// @p quadwp and @p quadhd are the third and fourth data lines, -1 when the bus is single or dual.
+int pc_platform_spi_begin(uint8_t host, int mosi, int miso, int sclk, int quadwp, int quadhd);
+int pc_platform_spi_txn(uint8_t host, uint32_t hz, uint8_t bit_order, uint8_t mode, const uint8_t *tx, uint8_t *rx,
+                        uint32_t len);
+
+// A framed transfer: a @p cmd_bits command, an @p addr_bits address, @p dummy_bits idle clocks,
+// then the data phase at @p lanes bits per clock. The controller drives each phase, so the data
+// buffer holds data alone. A zero bit count omits that phase; @p tx or @p rx may be NULL for a
+// one-way data phase, and @p len 0 sends the phases with no data phase at all.
+int pc_platform_spi_txn_ext(uint8_t host, uint32_t hz, uint8_t bit_order, uint8_t mode, uint16_t cmd, uint8_t cmd_bits,
+                            uint32_t addr, uint8_t addr_bits, uint8_t dummy_bits, uint8_t lanes, const uint8_t *tx,
+                            uint8_t *rx, uint32_t len);
 
 // I2C, on the same terms: install the port once on the caller's pins, then address a device on it.
-// Each call carries its own timeout in milliseconds, so a wedged device stops one transfer rather
-// than the loop (SRC_LAW rule 5). write_read is one transaction with a repeated start, which is
-// what a register read is: name the register, then turn the bus around without releasing it.
-// A byte count of 0 or a null buffer is refused rather than issued as an address-only cycle.
-int pc_platform_i2c_begin(int sda, int scl, uint32_t hz);
-int pc_platform_i2c_write(uint8_t addr, const uint8_t *buf, uint32_t len, uint32_t ms);
-int pc_platform_i2c_read(uint8_t addr, uint8_t *buf, uint32_t len, uint32_t ms);
-int pc_platform_i2c_write_read(uint8_t addr, const uint8_t *w, uint32_t wlen, uint8_t *r, uint32_t rlen, uint32_t ms);
+// @p bus selects the controller. Each call carries its own timeout in milliseconds, so a wedged
+// device stops one transfer rather than the loop (SRC_LAW rule 5). write_read is one transaction
+// with a repeated start, which is what a register read is: name the register, then turn the bus
+// around without releasing it.
+//
+// An address is 7-bit unless it carries PC_I2C_ADDR_10BIT, which selects the two-byte form: a
+// 11110xx byte holding the two high bits, then the low eight. The flag rides in bit 15, so both
+// address widths are the same argument type.
+#define PC_I2C_ADDR_10BIT 0x8000u
+#define PC_I2C_ADDR_MASK 0x03FFu
+#define PC_I2C_GENERAL_CALL 0x00u ///< the address every device on the bus answers
+
+int pc_platform_i2c_begin(uint8_t bus, int sda, int scl, uint32_t hz);
+int pc_platform_i2c_write(uint8_t bus, uint16_t addr, const uint8_t *buf, uint32_t len, uint32_t ms);
+int pc_platform_i2c_read(uint8_t bus, uint16_t addr, uint8_t *buf, uint32_t len, uint32_t ms);
+int pc_platform_i2c_write_read(uint8_t bus, uint16_t addr, const uint8_t *w, uint32_t wlen, uint8_t *r, uint32_t rlen,
+                               uint32_t ms);
+
+// Set @p bus to @p hz. Standard mode is 100 kHz, fast 400 kHz, fast-plus 1 MHz.
+int pc_platform_i2c_set_clock(uint8_t bus, uint32_t hz);
+
+// Address @p addr and stop, reporting whether anything drove ACK. This is the address-only cycle
+// the transfer calls refuse, and what a bus scan is built from.
+int pc_platform_i2c_probe(uint8_t bus, uint16_t addr, uint32_t ms);
+
+// Clock SCL until the device holding SDA low releases it, then drive a stop. The port is
+// uninstalled for the duration and reinstalled on the same pins afterwards.
+int pc_platform_i2c_recover(uint8_t bus, int sda, int scl);
 
 // Entropy. The ESP32 RNG is a true hardware source: it samples thermal / RF analog noise rather
 // than running a deterministic generator, so this is the one the key material is drawn from.
