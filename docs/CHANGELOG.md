@@ -6,6 +6,82 @@ All notable changes to ProtoCore are documented here.
 
 ### Bug Fixes
 
+- run the peripheral drivers' real body wherever a bus seam exists ([`52418a6`](https://github.com/dstroy0/ProtoCore/commit/52418a68302826128b5fbe25f53e01fa34613f7c))
+- route every timing call through the library clock ([`09e8d2b`](https://github.com/dstroy0/ProtoCore/commit/09e8d2b9dd85c5ece8a66b0c4e5071c7d3fe7263))
+- include the header declaring pc_worker_set_self in worker.c ([`c0a548e`](https://github.com/dstroy0/ProtoCore/commit/c0a548e3b4ad6cf0619a820036850752506a63a1))
+- read instruction bytes, and classify what each blob difference changes ([`652052d`](https://github.com/dstroy0/ProtoCore/commit/652052df7ffb3044a12d177ea3c35c78ed48d70f))
+- give the ESP-NOW radio callbacks C internal linkage ([`ff4649e`](https://github.com/dstroy0/ProtoCore/commit/ff4649edfbf45b0f17c6a552c1104827b6316521))
+- define the SSH client identification frame spec ([`1526bc4`](https://github.com/dstroy0/ProtoCore/commit/1526bc4d4c1bd1aaff33101a2c228c9f75881ebe))
+- name every omitted parameter, and move the I2C drivers onto the bus owner ([`f3cf57d`](https://github.com/dstroy0/ProtoCore/commit/f3cf57dca53eb225f959c22e97a8e9172ee9bd68))
+- the service headers give their declarations C linkage ([`375a461`](https://github.com/dstroy0/ProtoCore/commit/375a46164dc254004d652c26444e813e1f80773c))
+- examples pointed at pre-migration header paths ([`d704047`](https://github.com/dstroy0/ProtoCore/commit/d7040474521240bd9dc7cc12a4b24fab10560b0c))
+- the conversion left .cpp paths in the asset generator and two docs ([`fcf87ac`](https://github.com/dstroy0/ProtoCore/commit/fcf87ac8e6d13670879a8dcce8c6c7c4e98a6e17))
+
+### CI / Build
+
+- move to pioarduino so the toolchain is current ([`3e1561d`](https://github.com/dstroy0/ProtoCore/commit/3e1561d9287ee7e412194c4432355f689e1c9d9a))
+- unpin the espressif32 platform so the toolchain tracks latest ([`349cbf9`](https://github.com/dstroy0/ProtoCore/commit/349cbf9be4581565a483344071694b729e7016ea))
+- the naming law stops demanding a C++ construct, and reads the enum's real name ([`0eee3a2`](https://github.com/dstroy0/ProtoCore/commit/0eee3a2c6ed6dc7a2ceb79e072d3e2b5981e2bec))
+
+### Changes
+
+- Merge pull request #23 from dstroy0/c11-target ([`3d74266`](https://github.com/dstroy0/ProtoCore/commit/3d74266b1d59f5f7492bf27af1f41180a02f7958))
+- survey a JTAG DRAM dump for dispatch tables ([`744ca7f`](https://github.com/dstroy0/ProtoCore/commit/744ca7f3a62aacfbc6f752772f5a84bd6666aa53))
+
+### Documentation
+
+- inventory the radio functions that must stay in IRAM ([`bdfef8e`](https://github.com/dstroy0/ProtoCore/commit/bdfef8e697c1be111a8ae09e500f307d9dc93d71))
+- diff the radio blobs' code between installs, function by function ([`ebc29b6`](https://github.com/dstroy0/ProtoCore/commit/ebc29b6f0d627576404ed9a2b40da3c29653baa6))
+- compare the radio blob symbols between the Arduino and IDF installs ([`8b92f56`](https://github.com/dstroy0/ProtoCore/commit/8b92f56ddd678746c3b80596c4bcbd4693bad5e2))
+- extend radio blob parity to every ESP die IDF ships ([`3f565c0`](https://github.com/dstroy0/ProtoCore/commit/3f565c0ea14a2c3c6380468bfbcc55fafdc83890))
+- cross-reference the radio blobs across every ESP variant ([`2969c14`](https://github.com/dstroy0/ProtoCore/commit/2969c1441e3f9d01390f825ee6526b97dd50b1a0))
+- decode the analog bus primitive out of libphy's own iram1 ([`87a5ed2`](https://github.com/dstroy0/ProtoCore/commit/87a5ed27599a1e240407f6c52ef78a19e4972e5b))
+- capture the analog RF programming sequences from the radio blobs ([`01f13e6`](https://github.com/dstroy0/ProtoCore/commit/01f13e61e24912d0c4e76ff04c86ff6e7e283949))
+- map the radio blobs' registers by function, and roadmap our own stack ([`06e1168`](https://github.com/dstroy0/ProtoCore/commit/06e116876aa732e97db98d995a6a5d07844f0936))
+
+### Features
+
+- per-transfer log with timestamps in the host bus capture ([`4b4e0a3`](https://github.com/dstroy0/ProtoCore/commit/4b4e0a301e66a7ef74aca82df553df3886fb7f70))
+- record the wire on host builds, so driver output is testable end to end ([`af9fe85`](https://github.com/dstroy0/ProtoCore/commit/af9fe85441c08bc5d1eb7603f75828fa68feae65))
+- capture the live PHY dispatch table off an ESP32-S3 ([`affc928`](https://github.com/dstroy0/ProtoCore/commit/affc9280a48c7afc26bddf8a87dba92ff9aa49b1))
+- the full I2C and SPI master protocol behind the bus owners ([`411026f`](https://github.com/dstroy0/ProtoCore/commit/411026f8a1221fa12c1900a22435c72d0cdd2e92))
+- a microsecond delay, measured on the raw counter ([`0ef3ae6`](https://github.com/dstroy0/ProtoCore/commit/0ef3ae60f865c2bb5adb8a3e6cd06313bde6ef0f))
+- a microsecond delay beside the millisecond one ([`f33c51d`](https://github.com/dstroy0/ProtoCore/commit/f33c51d70a018b84dfbb5af401c767f3a1abc75c))
+- a shared SPI bus owner beside the I2C one ([`f3f7e59`](https://github.com/dstroy0/ProtoCore/commit/f3f7e59e56f76974f93898710114ef8ac6f2b571))
+
+### Refactor
+
+- move the last three drivers onto the bus owners ([`6e5116a`](https://github.com/dstroy0/ProtoCore/commit/6e5116a140e7a81ba4f2daaf71d53b84cd278c93))
+- split the xtensa-only radio tools into their own subdirectory ([`0dd66cd`](https://github.com/dstroy0/ProtoCore/commit/0dd66cdd6656b47a97b5a5765d571da75a17e5fa))
+- move the radio reverse-engineering tooling to reverse_engineering/esp32_mac ([`2d7b324`](https://github.com/dstroy0/ProtoCore/commit/2d7b32475c51dd45a4b38ecc9000f98497d467d7))
+- the INA219 driver reaches the bus through the i2c owner ([`4cf6985`](https://github.com/dstroy0/ProtoCore/commit/4cf6985f2fda5020327630aa55cd88bd77011534))
+- the DMA submit moves its span through proto_raw_read ([`4c2c420`](https://github.com/dstroy0/ProtoCore/commit/4c2c420b2d9c00e55677fde3bba43400df724dca))
+
+### Testing
+
+- assert the INA219 wire output instead of a host refusal ([`0b3fc66`](https://github.com/dstroy0/ProtoCore/commit/0b3fc66b388e8f27ec061997124b0f323e7d1709))
+- assert the drivers' wire output instead of a host refusal ([`dfa44ac`](https://github.com/dstroy0/ProtoCore/commit/dfa44ac74a68803ece33d10c48d038ec276ef995))
+- assert the SMBus and PMBus wire output instead of a host refusal ([`8bc0806`](https://github.com/dstroy0/ProtoCore/commit/8bc0806a1ac2541ad86d84c0d90bc6b5292b457d))
+- assert the INA219 register write per transaction, not across the stream ([`9d3db6c`](https://github.com/dstroy0/ProtoCore/commit/9d3db6c9a5994dcbca5f0cf8cd476668f52291ba))
+
+## [1.0.1] - 2026-08-04
+
+<details>
+<summary><b>Show Changelog for version 1.0.1 - 2026-08-04</b></summary>
+
+### Bug Fixes
+
+- drop an unreachable release left behind the return in ssh_conn ([`c48abc0`](https://github.com/dstroy0/ProtoCore/commit/c48abc08e71ace0d7f02b8022b248e7e9d880ffc))
+- the RSA HAL reaches the entry point for the widths it is written in ([`3824d55`](https://github.com/dstroy0/ProtoCore/commit/3824d55945c35bee2f96134f171a2f880460c2ab))
+- protocore.h gives its declarations C linkage, so a C++ sketch can link them ([`0a5950c`](https://github.com/dstroy0/ProtoCore/commit/0a5950cf176754fb7932ac2046f83a003624513e))
+- the last two bodies that inherited tcp.h now name it ([`14514c8`](https://github.com/dstroy0/ProtoCore/commit/14514c81b67eab6b73b9401cb5d3f80f2cd29ba5))
+- the transport and session bodies include tcp.h themselves ([`289f442`](https://github.com/dstroy0/ProtoCore/commit/289f4423ff95973b180f2557e1bfd20eec1f5231))
+- listener.h names the address type it uses instead of inheriting it ([`2266af4`](https://github.com/dstroy0/ProtoCore/commit/2266af48341156228ee82d89aa4086963f9b7518))
+- examples spell the cfg argument the C API no longer defaults, and Mnt carries its root ([`f1c1abf`](https://github.com/dstroy0/ProtoCore/commit/f1c1abf245a932356b79a08bebd594cabca98dee))
+- tls.h stubs had unnamed parameters and empty parameter lists ([`b62eb53`](https://github.com/dstroy0/ProtoCore/commit/b62eb53aa398bc081fb133ecb9016c8c01e05508))
+- crypto headers reach the entry point, not stdint and a board header ([`fe142bf`](https://github.com/dstroy0/ProtoCore/commit/fe142bf5742f6d0435da02dc51b465819d09b7a1))
+- crypto headers tested PROTOCORE_HOT before anything defined it ([`1b229f7`](https://github.com/dstroy0/ProtoCore/commit/1b229f708c580ba55a903e75424e61db8633e658))
+- physical_esp is C++ (Arduino WiFi/ETH), so it is .cpp again ([`6bcb1fe`](https://github.com/dstroy0/ProtoCore/commit/6bcb1fe3fba892245153a0574e6c33aa135c9779))
 - an OIDC arena leak that rejected every token, and two more lost scope guards ([`713d3a7`](https://github.com/dstroy0/ProtoCore/commit/713d3a7ad34e5de1109d509e06cab8b4bdb569c3))
 - the last of the test/ residue, and three envs that never linked their own deps ([`fc0a924`](https://github.com/dstroy0/ProtoCore/commit/fc0a92455f1caa10d72cb10d914da00e61baf4c9))
 - brace assignment, lambdas, and six more defaulted arguments in test/ ([`463ddae`](https://github.com/dstroy0/ProtoCore/commit/463ddaef3e2d5d2bfd6f1d2accb657ecaeaddb61))
@@ -15,6 +91,12 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- gcovr unions the coverage tracefiles; merge_coverage.py is gone ([`0dd3fde`](https://github.com/dstroy0/ProtoCore/commit/0dd3fdecae339876666e4b404c7ac4e338ec4676))
+- measure coverage over all of src, with nothing excluded ([`6cf03ba`](https://github.com/dstroy0/ProtoCore/commit/6cf03baa893019b7c69a0cc07fc397dbdc057f9d))
+- esp32dev states the C standard src/ is written in ([`0a6b03e`](https://github.com/dstroy0/ProtoCore/commit/0a6b03e738984d3fe51958847c195c9afce59a8f))
+- library.json states the C standard src/ is written in ([`53f4893`](https://github.com/dstroy0/ProtoCore/commit/53f48933df5f34af833b02718d0970fed6ebc9ec))
+- update test report + coverage [skip ci] ([`bbb0215`](https://github.com/dstroy0/ProtoCore/commit/bbb02150fdd194463e43615dbe7932a5598ccc49))
+- update CHANGELOG.md [skip ci] ([`c247de8`](https://github.com/dstroy0/ProtoCore/commit/c247de8e010fb169d95742eac0b62e6aa8d7678c))
 - update test report + coverage [skip ci] ([`3620178`](https://github.com/dstroy0/ProtoCore/commit/3620178aec096b69e01fdf4a5036ff52fbdede74))
 - update CHANGELOG.md [skip ci] ([`3206307`](https://github.com/dstroy0/ProtoCore/commit/320630791cff9fa6a715da3698d163413e924879))
 - update test report + coverage [skip ci] ([`a112b07`](https://github.com/dstroy0/ProtoCore/commit/a112b071a235722428998020931c226afb9025a7))
@@ -27,7 +109,26 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- Bump version: 1.0.0 → 1.0.1 ([`cb08808`](https://github.com/dstroy0/ProtoCore/commit/cb08808a5592e173de340869b31a1389a7076c6a))
+- target build fixes ([`648b862`](https://github.com/dstroy0/ProtoCore/commit/648b86252ed200cd2f60be95ae991a3441663dd4))
 - Merge branch 'main' of https://github.com/dstroy0/ProtoCore ([`b2f6458`](https://github.com/dstroy0/ProtoCore/commit/b2f6458969da5b8e64398737a0a2bcd7a055cb8b))
+
+### Features
+
+- an NVS seam in board_drivers; the core stops naming Preferences, String and FreeRTOS ([`136c8df`](https://github.com/dstroy0/ProtoCore/commit/136c8df0ddc9f9cacf59e50a49a068127604d106))
+
+### Refactor
+
+- drop the rationale that only justified a coverage exclusion ([`a05bf55`](https://github.com/dstroy0/ProtoCore/commit/a05bf55cd30a951ece558935ccd47259fce565df))
+- remove every gcovr exclusion marker from src/ ([`bfd0d5f`](https://github.com/dstroy0/ProtoCore/commit/bfd0d5f996613ade4a85970ff4e99bade584f8e8))
+- the event record leaves tcp.h, so the sketches stop parsing the slots ([`a798027`](https://github.com/dstroy0/ProtoCore/commit/a79802731a72f7233ace094d60e492dc44c4d1b0))
+- move stdatomic.h from types.h to ring.h ([`26ea42b`](https://github.com/dstroy0/ProtoCore/commit/26ea42b8af0977d310d393d7bb8af3595766c9c4))
+
+### Testing
+
+- the config-store env builds the host NVS backend it now sits on ([`d553ce1`](https://github.com/dstroy0/ProtoCore/commit/d553ce1ecb39a217c0baeafc054fe73ca2eae884))
+
+</details>
 
 ## [1.0.0] - 2026-08-04
 
