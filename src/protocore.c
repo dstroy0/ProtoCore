@@ -105,7 +105,6 @@ typedef struct
     uint8_t listener_count;                 ///< Registered listeners.
 
 #if PC_ENABLE_HTTP3
-    proto_bool pc_h3_running;
     const uint8_t *h3_cert;
     size_t h3_cert_len;
     uint8_t h3_seed[32];
@@ -402,8 +401,9 @@ int32_t proto_begin(const WebServerConfig *cfg)
         h3cfg.cert_len = s_inst.h3_cert_len;
         proto_raw_read(h3cfg.ed25519_seed, s_inst.h3_seed, sizeof(h3cfg.ed25519_seed));
         h3cfg.rng = pc_h3_rng;
-        // No app pointer: the trampoline dispatches through the global route table.
-        s_inst.pc_h3_running = pc_quic_server_begin(s_inst.h3_port, &h3cfg, pc_h3_request_trampoline, NULL);
+        // No app pointer: the trampoline dispatches through the global route table. The QUIC server
+        // records whether it came up and pc_quic_server_poll() reads its own answer.
+        (void)pc_quic_server_begin(s_inst.h3_port, &h3cfg, pc_h3_request_trampoline, NULL);
     }
 #endif
 #if PROTOCORE_HOT
@@ -847,7 +847,7 @@ void service_once(int worker_id)
 #if PC_ENABLE_HTTP3
     // Drive the QUIC/HTTP-3 server: ingest queued datagrams, run the engines (which dispatch requests
     // through the route table), flush replies. One worker owns it, so requests stay single-threaded.
-    if (worker_id == 0 && s_inst.pc_h3_running)
+    if (worker_id == 0)
     {
         pc_quic_server_poll(pc_millis());
     }
