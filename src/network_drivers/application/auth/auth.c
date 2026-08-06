@@ -135,17 +135,19 @@ typedef struct
 } AuthCtx;
 static AuthCtx *s_auth;
 
+_Static_assert(sizeof(AuthCtx) <= PC_WORK_AUTH_TABLE, "credential table outgrew PC_WORK_AUTH_TABLE");
+
 // Bound on first use rather than at an init the caller has to remember: registration and the
-// first rekey both arrive before any request is served, and either one is a fine moment.
+// first rekey both arrive before any request is served, and either one is a fine moment. The borrow
+// is from the persistent end, which no mark walks and no release reclaims, and it comes back zeroed.
 static AuthCtx *bind_auth(void)
 {
     if (s_auth == NULL)
     {
-        pc_span sp = pc_secure_span(sizeof(AuthCtx), 8);
+        pc_span sp = pc_secure_persist_span(sizeof(AuthCtx));
         if (pc_span_ok(sp))
         {
             s_auth = (AuthCtx *)sp.buf;
-            mem.zero(s_auth, sizeof(*s_auth));
         }
     }
     return s_auth;

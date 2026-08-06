@@ -6522,6 +6522,17 @@ from halves and is slower than the width it decomposes into"
 #define PC_WORK_MD 96
 #endif
 
+// The two tables a module holds for the life of the program rather than for the life of a call.
+// They take the persistent end of the arena, so they are stated here for the same reason every
+// working set is: the pool is sized off what the build declares, and an undeclared borrow is one
+// the pool has no room for.
+#ifndef PC_WORK_ROUTE_TABLE
+#define PC_WORK_ROUTE_TABLE (MAX_ROUTES * 104 + 16) // Route is 88 with every gated id compiled
+#endif
+#ifndef PC_WORK_AUTH_TABLE
+#define PC_WORK_AUTH_TABLE (MAX_ROUTES * (3 * MAX_AUTH_LEN + 8) + 32) // AuthCred is 3*MAX_AUTH_LEN + 1
+#endif
+
 /**
  * @brief Size in bytes of the per-slot SECURE pool (see mmgr/secure.h), DERIVED.
  *
@@ -6566,9 +6577,16 @@ from halves and is slower than the width it decomposes into"
 #define PC_SECURE_WORK_SSHCIPHER 0
 #endif
 
+#if PC_ENABLE_AUTH
+#define PC_SECURE_WORK_AUTH PC_WORK_AUTH_TABLE
+#else
+#define PC_SECURE_WORK_AUTH 0
+#endif
+
 #define PC_SECURE_ARENA_SIZE                                                                                           \
     (PC_SECURE_WORK_BIGNUM + PC_SECURE_WORK_AEAD + PC_SECURE_WORK_MAC + PC_SECURE_WORK_SMB +                           \
-     PC_SECURE_WORK_SSHCIPHER + 256) // + 256: alignment round-up across the individual borrows
+     PC_SECURE_WORK_SSHCIPHER + PC_WORK_ROUTE_TABLE + PC_SECURE_WORK_AUTH +                                            \
+     256) // + 256: alignment round-up across the individual borrows
 #endif
 
 // ---------------------------------------------------------------------------

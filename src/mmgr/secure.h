@@ -113,6 +113,18 @@ void *pc_secure_alloc(size_t n, size_t align);
  */
 pc_span pc_secure_span(size_t n, size_t align);
 
+/**
+ * @brief Borrow @p n secure bytes that outlive every mark and release.
+ *
+ * The arena is double ended (mmgr/arena.h): this takes the persistent end, which grows up from the
+ * base, while pc_secure_span() bumps down from the top. A mark walks the top end only, so a table
+ * taken here is not reclaimed by any release, nor by pc_secure_reset(). The bytes come back zeroed.
+ *
+ * For storage a module holds for the life of the program: a credential table, a key schedule bound
+ * once at setup. A working set borrowed and returned within one call takes pc_secure_span().
+ */
+pc_span pc_secure_persist_span(size_t n);
+
 /** @brief Capture the current position, to be handed to pc_secure_release(). */
 size_t pc_secure_mark(void);
 
@@ -153,8 +165,9 @@ int pc_secure_slot_of(const void *p);
 /**
  * @brief The secure pool: the same mechanism as @ref plain, with reclaiming that wipes.
  *
- * @var SecureNs::alloc       borrow @c n bytes aligned to @c align, or NULL if it does not fit
- * @var SecureNs::span        the same borrow as a span, so the length travels with the pointer
+ * @var SecureNs::alloc         borrow @c n bytes aligned to @c align, or NULL if it does not fit
+ * @var SecureNs::span          the same borrow as a span, so the length travels with the pointer
+ * @var SecureNs::persist_span  borrow from the end no mark walks, zeroed, for the life of the program
  * @var SecureNs::reset       wipe and empty the calling worker's arena
  * @var SecureNs::mark        capture the arena offset, to release back to
  * @var SecureNs::release     wipe everything borrowed since a mark, then reclaim it, LIFO
@@ -174,6 +187,7 @@ typedef struct
 {
     void *(*alloc)(size_t n, size_t align);
     pc_span (*span)(size_t n, size_t align);
+    pc_span (*persist_span)(size_t n);
     void (*reset)(void);
     size_t (*mark)(void);
     void (*release)(size_t mark);
@@ -197,8 +211,8 @@ typedef struct
  * `unused` because this header reaches files that take none of it.
  */
 static const SecureNs secure __attribute__((unused)) = {
-    pc_secure_alloc, pc_secure_span,       pc_secure_reset,    pc_secure_mark, pc_secure_release,
-    pc_secure_used,  pc_secure_high_water, pc_secure_capacity, pc_secure_owns, pc_secure_slot_of};
+    pc_secure_alloc, pc_secure_span,       pc_secure_persist_span, pc_secure_reset, pc_secure_mark,   pc_secure_release,
+    pc_secure_used,  pc_secure_high_water, pc_secure_capacity,     pc_secure_owns,  pc_secure_slot_of};
 
 PROTO_END_DECLS
 

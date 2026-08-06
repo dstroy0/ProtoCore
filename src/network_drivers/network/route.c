@@ -26,17 +26,19 @@ struct RouteCtx
 };
 static struct RouteCtx *s_route;
 
+_Static_assert(sizeof(struct RouteCtx) <= PC_WORK_ROUTE_TABLE, "route table outgrew PC_WORK_ROUTE_TABLE");
+
 // Bound on first use rather than at an init the caller has to remember: a registration is the first
-// thing that touches the table, and every reader runs after one.
+// thing that touches the table, and every reader runs after one. The borrow is from the persistent
+// end, which no mark walks and no release reclaims, and it comes back zeroed.
 static struct RouteCtx *bind_route(void)
 {
     if (s_route == NULL)
     {
-        pc_span s = pc_secure_span(sizeof(struct RouteCtx), 8);
+        pc_span s = pc_secure_persist_span(sizeof(struct RouteCtx));
         if (pc_span_ok(s))
         {
             s_route = (struct RouteCtx *)s.buf;
-            mem.zero(s_route, sizeof(*s_route)); // the pool hands back uninitialized bytes
         }
     }
     return s_route;
