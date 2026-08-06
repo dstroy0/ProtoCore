@@ -23,7 +23,8 @@
  * no DENY rule does (a DENY always wins). A frame is never reflected to its source
  * interface. **Fail-closed**: an exceeded rate cap or a send callback returning false
  * drops the frame for that destination and is counted - it never blocks. Storage is
- * static (zero heap): PC_FWD_MAX_IFACES interfaces, PC_FWD_MAX_RULES rules.
+ * static (zero heap): PC_FWD_MAX_RULES rules. The interfaces are layer 1's, over
+ * PC_PHY_MAX_IFACES rows, and this plane reads that registry rather than keeping its own.
  *
  * **Policy routing** (route-by-tag): a policy route (pc_forward_route_add) matches a frame by
  * the same byte-pattern primitive as the ACL - so it keys on any field at a known offset

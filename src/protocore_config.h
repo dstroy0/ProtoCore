@@ -565,13 +565,10 @@ from halves and is slower than the width it decomposes into"
 #define PC_ENABLE_FORWARD 0
 #endif
 
-/** @brief Max interfaces the forwarding plane tracks (static-allocated). */
+/** @brief Interfaces layer 1 can carry: wifi station and softAP, ethernet, a bridged bus, a radio.
+ *  The registry is L1's because an interface is a physical thing; the forwarding plane reads it. */
 #ifndef PC_PHY_MAX_IFACES
-#define PC_PHY_MAX_IFACES 4 ///< interfaces layer 1 can carry (wifi sta/ap, ethernet, a bridged bus)
-#endif
-
-#ifndef PC_FWD_MAX_IFACES
-#define PC_FWD_MAX_IFACES 4
+#define PC_PHY_MAX_IFACES 4
 #endif
 
 /** @brief Max forwarding rules (src -> dst allow/deny + rate cap; static-allocated). */
@@ -603,8 +600,8 @@ from halves and is slower than the width it decomposes into"
 #define PC_FWD_INSPECT 0
 #endif
 
-#if PC_ENABLE_FORWARD && (PC_FWD_MAX_IFACES < 1 || PC_FWD_MAX_RULES < 1 || PC_FWD_ACL_PATLEN < 1)
-#error "ProtoCore: PC_FWD_MAX_IFACES / PC_FWD_MAX_RULES / PC_FWD_ACL_PATLEN must be >= 1"
+#if PC_ENABLE_FORWARD && (PC_PHY_MAX_IFACES < 1 || PC_FWD_MAX_RULES < 1 || PC_FWD_ACL_PATLEN < 1)
+#error "ProtoCore: PC_PHY_MAX_IFACES / PC_FWD_MAX_RULES / PC_FWD_ACL_PATLEN must be >= 1"
 #endif
 
 // ---------------------------------------------------------------------------

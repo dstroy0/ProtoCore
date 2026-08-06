@@ -7,7 +7,7 @@
 // and the interface / rule table limits. Pure host tests. The DMA-driven wiring (DMA-
 // complete -> FORWARD lane -> ingress -> egress DMA) is HW-verified separately.
 //
-// The env sizes PC_FWD_MAX_IFACES = 4, PC_FWD_MAX_RULES = 4.
+// The env sizes PC_PHY_MAX_IFACES = 4 (layer 1 owns the interfaces), PC_FWD_MAX_RULES = 4.
 
 #include "network_drivers/network/forward/forward.h"
 #include <string.h>
@@ -174,7 +174,7 @@ void test_add_if_validation_and_table_full()
     TEST_ASSERT_TRUE(add_if(2));
     TEST_ASSERT_TRUE(add_if(3));
     TEST_ASSERT_TRUE(add_if(4));
-    TEST_ASSERT_FALSE(add_if(5)); // table full (PC_FWD_MAX_IFACES = 4)
+    TEST_ASSERT_FALSE(add_if(5)); // table full (PC_PHY_MAX_IFACES = 4)
 }
 
 void test_add_rule_table_full()

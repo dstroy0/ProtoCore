@@ -2442,6 +2442,15 @@
       ],
       "tests": ["unit/web/test_dashboard"]
     },
+    "native_phy_iface": {
+      "desc": "The layer 1 interface registry (network_drivers/physical, Physical.iface): an interface is\nan id, a kind and the callback that puts bytes on the wire, and a device carries several of mixed\nkind. Registration and its refusals (duplicate id, null send, table full), the readbacks, reset,\nrow walking, and that send hands the callback the id and ctx it was registered with. Every\nforwarded byte leaves through this send, so it is covered here and not only through forward.",
+      "flags": ["-DPC_PHY_MAX_IFACES=4"],
+      "src": [
+        "+<network_drivers/physical/physical.c>",
+        "+<network_drivers/physical/radio_power.c>"
+      ],
+      "tests": ["unit/physical/test_iface"]
+    },
     "native_net_egress": {
       "desc": "Egress-interface reporting (network_drivers/physical). The esp_netif default-\nroute lookups are ESP32-only; the pure interface-key classifier host-tests here.",
       "src": [
