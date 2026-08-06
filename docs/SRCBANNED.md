@@ -58,10 +58,10 @@ Numbers are stable and cited from source comments. #16 is folded into #12 and ke
 ### 2. `<stdlib.h>` and everything in it
 
 **Banned.** `<stdlib.h>` / `<cstdlib>`, and `malloc` / `free` / `calloc` / `realloc`, `atoi` / `atol`
-/ `strtol` / `strtoll` / `strtod`, `qsort`, `rand`, `abs`.
+/ `strtol` / `strtoll` / `strtod`, `qsort`, `rand`, `abs`. `<stdio.h>` with them: its formatting is
+#20 and its file I/O is the filesystem accessor's.
 **Use.** Fixed BSS buffers; hand-rolled integer and float parse. `<string.h>` (`memcpy`, `memcmp`,
-`memset`, `strnlen`) is allowed. `<stdio.h>` is allowed for everything except the runtime format
-family, which #20 bans.
+`memset`, `strnlen`) is allowed.
 **Why.** No heap after `begin()`. Hidden allocation and locale-dependent parsing.
 **Catch.** `check_src_banned.py`
 
@@ -75,14 +75,14 @@ family, which #20 bans.
 ### 4. `delay(...)`
 
 **Banned.** `delay(...)`.
-**Use.** `pcdelay(ms)` from `services/clock.h`.
+**Use.** `pcdelay(ms)` from `server/clock/clock.h`.
 **Why.** Blocks the worker and bypasses the pluggable clock.
 **Catch.** `check_src_banned.py`
 
 ### 5. Bare `millis()` for new timing
 
 **Banned.** `millis()` in new timing code.
-**Use.** `pc_millis()` from `services/clock.h`.
+**Use.** `pc_millis()` from `server/clock/clock.h`.
 **Why.** Bypasses the pluggable clock, so the timing cannot be driven in a test.
 **Catch.** review, `rg -n '\bmillis\s*\(' src/`
 
@@ -209,10 +209,10 @@ target: a stack array inside `begin()` or a one-shot init path is exempt with
 ### 20. `snprintf` / `vsnprintf`
 
 **Banned.** Runtime format-string formatting.
-**Use.** Declare the frame: a `static const pc_field[]` spec in `shared_primitives/frame.h` plus one
+**Use.** Declare the frame: a `static const pc_field[]` spec in `mmgr/frame.h` plus one
 `pc_frame_build` / `pc_frame_append` call. The spec is pre-decoded data in rodata, so nothing is
 parsed at runtime. For a short frame built by hand, the appenders it is built on are `pc_sb` in
-`shared_primitives/strbuf.h`: `pc_sb_put` / `pc_sb_u32` / `pc_sb_json` / `pc_sb_xml` bump-append into
+`mmgr/membuild.h`: `pc_sb_put` / `pc_sb_u32` / `pc_sb_json` / `pc_sb_xml` bump-append into
 a caller-owned buffer and latch `ok = false` the first time something would not fit, so overflow is
 one flag test at `pc_sb_finish` instead of a truncation nobody notices.
 **Why.** A format string makes the CPU re-parse at runtime what the code knew at compile time, and it
