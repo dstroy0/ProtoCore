@@ -89,7 +89,7 @@ format_output() {
         clean_line = line
         gsub(/\x1b\[[0-9;?]*[a-zA-Z]/, "", clean_line)
         
-        # Test line: "test/test_X/test_X.cpp:829: test_name\t[PASSED]"
+        # Test line: "test/unit/<group>/test_X/test_X.c:829: test_name\t[PASSED]"
         if (clean_line ~ /\[(PASSED|FAILED)\]$/) {
             match(line, /[[:space:]]+(\x1b\[[0-9;?]*[a-zA-Z])*\[(PASSED|FAILED)\](\x1b\[[0-9;?]*[a-zA-Z])*$/)
             if (RSTART > 0) {
@@ -291,15 +291,15 @@ while IFS= read -r line; do
     fi
 
     # Individual test result
-    if [[ "$line" =~ ([^[:space:]]+\.cpp):([0-9]+):[[:space:]]+([^[:space:]]+)[[:space:]]+\[(PASSED|FAILED)\] ]]; then
+    if [[ "$line" =~ ([^[:space:]]+\.c(pp)?):([0-9]+):[[:space:]]+([^[:space:]]+)[[:space:]]+\[(PASSED|FAILED)\] ]]; then
         rel_file="${BASH_REMATCH[1]//\\//}"
-        suite="$(basename "${rel_file%.cpp}")"
+        suite="$(basename "${rel_file%.*}")"
         T_ENV[$T_IDX]="$CUR_ENV"
         T_SUITE[$T_IDX]="$suite"
         T_FILE[$T_IDX]="$rel_file"
-        T_LINE[$T_IDX]="${BASH_REMATCH[2]}"
-        T_NAME[$T_IDX]="${BASH_REMATCH[3]}"
-        T_STATUS[$T_IDX]="${BASH_REMATCH[4]}"
+        T_LINE[$T_IDX]="${BASH_REMATCH[3]}"
+        T_NAME[$T_IDX]="${BASH_REMATCH[4]}"
+        T_STATUS[$T_IDX]="${BASH_REMATCH[5]}"
         (( T_IDX++ )) || true
         continue
     fi
@@ -366,8 +366,10 @@ get_test_comment() {
 # Returns the first meaningful description line from the file-level comment block.
 get_suite_brief() {
     local suite="$1"
-    local abs_file="${PROJECT_ROOT}/test/${suite}/${suite}.cpp"
-    [[ -f "$abs_file" ]] || return 0
+    # Suites sit at test/<tier>/<group>/<suite>/, so the group is not known from the name.
+    local abs_file
+    abs_file="$(find "${PROJECT_ROOT}/test" -type f \( -name "${suite}.c" -o -name "${suite}.cpp" \) -print -quit 2>/dev/null)"
+    [[ -n "$abs_file" && -f "$abs_file" ]] || return 0
 
     awk '
         /^\/\/ (Copyright|SPDX)/ { past_header=1; next }

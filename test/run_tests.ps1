@@ -77,8 +77,8 @@ $FormattedLines = $RawLines | ForEach-Object {
     $line = $_.ToString().TrimEnd()
     $cleanLine = $line -replace '\x1b\[[0-9;?]*[a-zA-Z]', ''
 
-    # Test line: "test\test_X\test_X.cpp:829: test_name  [PASSED]"
-    if ($cleanLine -match '(\S+\.cpp:\d+:\s+\S+)\s+\[(PASSED|FAILED)\]$') {
+    # Test line: "test\unit\<group>\test_X\test_X.c:829: test_name  [PASSED]"
+    if ($cleanLine -match '(\S+\.c(?:pp)?:\d+:\s+\S+)\s+\[(PASSED|FAILED)\]$') {
         $left = $Matches[1]
         $status = "[$($Matches[2])]"
 
@@ -136,8 +136,8 @@ foreach ($line in $Lines) {
         $CurSuite = $Matches[1]; $CurEnv = $Matches[2]
     }
 
-    # "test\test_X\test_X.cpp:829: test_name  [PASSED]"
-    if ($line -match '(\S+\.cpp):(\d+):\s+(\S+)\s+\[(PASSED|FAILED)\]') {
+    # "test\unit\<group>\test_X\test_X.c:829: test_name  [PASSED]"
+    if ($line -match '(\S+\.c(?:pp)?):(\d+):\s+(\S+)\s+\[(PASSED|FAILED)\]') {
         $rel = $Matches[1] -replace '\\', [IO.Path]::DirectorySeparatorChar
         $suite = [IO.Path]::GetFileNameWithoutExtension($rel)
         $Tests.Add(@{
@@ -214,7 +214,11 @@ function Get-TestComment([string]$relFile, [string]$fnName) {
 
 # Returns the first meaningful description line from the file-level comment block.
 function Get-SuiteBrief([string]$suiteName) {
-    $rel = "test/$suiteName/$suiteName.cpp"
+    # Suites sit at test/<tier>/<group>/<suite>/, so the group is not known from the name.
+    $hit = Get-ChildItem -Path (Join-Path $PSScriptRoot '.') -Recurse -File `
+        -Include "$suiteName.c", "$suiteName.cpp" -ErrorAction SilentlyContinue | Select-Object -First 1
+    if (-not $hit) { return $null }
+    $rel = [IO.Path]::GetRelativePath((Split-Path $PSScriptRoot -Parent), $hit.FullName) -replace '\\', '/'
     $src = Read-Source $rel
     $pastHeader = $false
     foreach ($line in $src) {
