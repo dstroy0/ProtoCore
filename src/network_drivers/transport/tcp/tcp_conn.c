@@ -26,7 +26,7 @@
 
 #include "tcp_conn.h"
 #include "board_drivers/board_profiles/pc_platform.h"
-#include "../diffserv.h"           // DiffServ DSCP marking (pc_dscp_to_tos, pc_conn_set_dscp); compiles out when off
+#include "../diffserv.h" // pc_dscp_to_tos and the server-wide default this connection starts from
 #include "tcp_listener.h"           // listener_enqueue(): the owning listener posts the event, not this file
 #include "../net_addr.h"           // NetAddr.to_ip(): the stack's address as a pc_ip
 #include "server/clock/clock.h" // pc_millis() pluggable monotonic clock
@@ -585,7 +585,7 @@ void pc_conn_flush(uint8_t slot)
 }
 
 #if PC_ENABLE_DIFFSERV
-proto_bool pc_conn_set_dscp(uint8_t slot, uint8_t dscp)
+static proto_bool set_dscp(uint8_t slot, uint8_t dscp)
 {
     if (slot >= MAX_CONNS || conn_pool[slot].pcb == NULL)
     {
@@ -912,7 +912,11 @@ proto_bool pc_conn_remote_addr(uint8_t slot, pc_ip *out)
     {
         return PROTO_FALSE;
     }
-    NetAddr.to_ip(&conn->pcb->remote_ip, out);
+    NetAddr.to_ip(&conn->pcb->
+#if PC_ENABLE_DIFFSERV
+                                 set_dscp,
+#endif
+                                 remote_ip, out);
     return PROTO_TRUE;
 #else
     (void)slot;
@@ -1209,6 +1213,9 @@ const ConnPoolNs ConnPool = {proto_tcp_pool_init,
                              pc_conn_detach,
                              pc_conn_abort,
                              pc_conn_abort_slot,
+#if PC_ENABLE_DIFFSERV
+                             set_dscp,
+#endif
                              pc_conn_remote_ip,
                              pc_conn_remote_addr,
 #if PC_ENABLE_OBSERVABILITY

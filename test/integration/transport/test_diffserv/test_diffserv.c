@@ -61,18 +61,18 @@ static void test_conn_set_dscp_writes_pcb_tos()
     pcb.tos = 0;
     conn_pool[0].pcb = &pcb;
 
-    TEST_ASSERT_TRUE(pc_conn_set_dscp(0, PC_DSCP_EF));
+    TEST_ASSERT_TRUE(Tcp.conn->set_dscp(0, PC_DSCP_EF));
     TEST_ASSERT_EQUAL_UINT8(0xB8, pcb.tos); // EF stamped into the DS field
 
-    TEST_ASSERT_TRUE(pc_conn_set_dscp(0, PC_DSCP_CS0)); // live re-tag to best-effort
+    TEST_ASSERT_TRUE(Tcp.conn->set_dscp(0, PC_DSCP_CS0)); // live re-tag to best-effort
     TEST_ASSERT_EQUAL_UINT8(0, pcb.tos);
 }
 
 static void test_conn_set_dscp_rejects_bad_slot()
 {
     conn_pool[0].pcb = NULL;
-    TEST_ASSERT_FALSE(pc_conn_set_dscp(0, PC_DSCP_EF));   // no live pcb
-    TEST_ASSERT_FALSE(pc_conn_set_dscp(255, PC_DSCP_EF)); // slot out of range
+    TEST_ASSERT_FALSE(Tcp.conn->set_dscp(0, PC_DSCP_EF));   // no live pcb
+    TEST_ASSERT_FALSE(Tcp.conn->set_dscp(255, PC_DSCP_EF)); // slot out of range
 }
 
 static void test_listen_set_dscp_override_and_sentinel()
@@ -80,16 +80,16 @@ static void test_listen_set_dscp_override_and_sentinel()
     TEST_ASSERT_EQUAL(1, listener_add(0, 8080, PROTO_HTTP, PROTO_FALSE));
     TEST_ASSERT_EQUAL_UINT8(PC_DSCP_UNSET, listener_pool[0].dscp); // no override until set
 
-    TEST_ASSERT_TRUE(pc_listen_set_dscp(8080, PC_DSCP_EF));
+    TEST_ASSERT_TRUE(Tcp.listener->set_dscp(8080, PC_DSCP_EF));
     TEST_ASSERT_EQUAL_UINT8(46, listener_pool[0].dscp);
 
-    TEST_ASSERT_TRUE(pc_listen_set_dscp(8080, 0x7E)); // wide value masked to 6 bits (0x3E = 62)
+    TEST_ASSERT_TRUE(Tcp.listener->set_dscp(8080, 0x7E)); // wide value masked to 6 bits (0x3E = 62)
     TEST_ASSERT_EQUAL_UINT8(62, listener_pool[0].dscp);
 
-    TEST_ASSERT_TRUE(pc_listen_set_dscp(8080, PC_DSCP_UNSET)); // sentinel preserved, not masked to 63
+    TEST_ASSERT_TRUE(Tcp.listener->set_dscp(8080, PC_DSCP_UNSET)); // sentinel preserved, not masked to 63
     TEST_ASSERT_EQUAL_UINT8(PC_DSCP_UNSET, listener_pool[0].dscp);
 
-    TEST_ASSERT_FALSE(pc_listen_set_dscp(9999, PC_DSCP_EF)); // no listener on that port
+    TEST_ASSERT_FALSE(Tcp.listener->set_dscp(9999, PC_DSCP_EF)); // no listener on that port
     Tcp.listener->stop(0);
 }
 
@@ -99,7 +99,7 @@ static void test_accept_cb_applies_per_listener_dscp_override()
 {
     Tcp.conn->init(NULL);
     TEST_ASSERT_EQUAL(1, listener_add(0, 8080, PROTO_HTTP, PROTO_FALSE));
-    TEST_ASSERT_TRUE(pc_listen_set_dscp(8080, PC_DSCP_EF));
+    TEST_ASSERT_TRUE(Tcp.listener->set_dscp(8080, PC_DSCP_EF));
 
     pc_pcb pcb;
     pcb.tos = 0;

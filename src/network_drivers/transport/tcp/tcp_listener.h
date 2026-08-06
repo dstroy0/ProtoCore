@@ -240,6 +240,7 @@ void listener_ip_allowlist_reset(void);
  * @var TcpListenerNs::stop_all             tear every listener down
  * @var TcpListenerNs::stop_dynamic         tear down only the dynamically started listeners
  * @var TcpListenerNs::enqueue              post an event to the owning worker's queue
+ * @var TcpListenerNs::set_dscp             the mark every connection accepted on a port takes
  * @var TcpListenerNs::worker_queues_init   create the per-worker queues
  * @var TcpListenerNs::worker_queue         the queue a worker drains
  * @var TcpListenerNs::accept_allowed       the global fixed-window accept throttle
@@ -257,6 +258,9 @@ typedef struct
     void (*stop_all)(void);
     void (*stop_dynamic)(uint8_t idx);
     proto_bool (*enqueue)(uint8_t listener_id, const TcpEvt *evt);
+#if PC_ENABLE_DIFFSERV
+    proto_bool (*set_dscp)(uint16_t port, uint8_t dscp);
+#endif
 #if PC_WORKER_COUNT > 1
     // One worker owns every slot at N=1, so there are no per-worker queues to name.
     void (*worker_queues_init)(void);

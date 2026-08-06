@@ -719,7 +719,7 @@ static pc_net_err listener_lwip_marshal(uint8_t idx, uint16_t port, proto_bool c
 #endif // PROTOCORE_HOT
 
 #if PC_ENABLE_DIFFSERV
-proto_bool pc_listen_set_dscp(uint16_t port, uint8_t dscp)
+static proto_bool set_dscp(uint16_t port, uint8_t dscp)
 {
     for (uint8_t i = 0; i < MAX_LISTENERS; i++)
     {
@@ -810,6 +810,9 @@ const TcpListenerNs TcpListener = {listener_stop,
                                    listener_stop_all,
                                    listener_stop_dynamic,
                                    listener_enqueue,
+#if PC_ENABLE_DIFFSERV
+                                   set_dscp,
+#endif
 #if PC_WORKER_COUNT > 1
                                    listener_worker_queues_init,
                                    listener_worker_queue,

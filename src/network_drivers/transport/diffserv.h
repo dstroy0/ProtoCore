@@ -12,11 +12,12 @@
  * the send hot path. This module owns the two server-wide DSCP defaults; the per-listener and per-connection
  * overrides live with their pcb (listener.c / tcp.c) but read the defaults through here.
  *
- * Three levels of control, coarse to fine:
- *   - pc_set_default_dscp(): every outbound TCP connection (accepted + client) gets this DSCP.
- *   - pc_listen_set_dscp(): all connections accepted on one port get a DSCP (overrides the default).
- *   - pc_conn_set_dscp(): tag one live connection with any DSCP - real QoS, or arbitrary network testing.
- * Plus pc_udp_set_dscp() for outbound datagrams. A DSCP of 0 means best-effort (no marking / TOS left 0).
+ * Three levels of control, coarse to fine, each set through the object it marks:
+ *   - DiffServ.set_default(): every outbound TCP connection, accepted and client, starts here.
+ *   - Tcp.listener->set_dscp(): every connection accepted on one port, overriding that default.
+ *   - Tcp.conn->set_dscp(): one live connection, any DSCP, at any time.
+ * DiffServ.set_udp() is the same default for outbound datagrams. A DSCP of 0 is best-effort: no
+ * marking, TOS left 0.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -44,39 +45,6 @@ static inline uint8_t pc_dscp_to_tos(uint8_t dscp)
 {
     return (uint8_t)((dscp & 0x3F) << 2);
 }
-
-/**
- * @brief Set the server-wide default DSCP for every outbound TCP connection (accepted + client).
- * @param dscp 0-63; 0 means best-effort (no marking). Takes effect for connections opened after the call.
- */
-
-/** @brief The current server-wide TCP default DSCP (read by the accept / connect paths). */
-
-/**
- * @brief Set the default DSCP for outbound UDP datagrams.
- * @param dscp 0-63; 0 means best-effort. Applied to each UDP pcb as it is created.
- */
-
-/** @brief The current UDP default DSCP (read when a UDP pcb is created). */
-
-/**
- * @brief Tag one accepted server connection with a DSCP (per-connection override).
- *
- * Lets an individual flow carry any DSCP - real per-flow QoS, or arbitrary QoS tagging for network testing.
- * Also works mid-connection: the DS field is read per outbound segment.
- * @param slot connection-pool slot.
- * @param dscp 0-63.
- * @return false if @p slot is out of range or no longer holds a live pcb.
- */
-proto_bool pc_conn_set_dscp(uint8_t slot, uint8_t dscp);
-
-/**
- * @brief Set the DSCP applied to every connection accepted on @p port (per-listener override).
- * @param port the listening port.
- * @param dscp 0-63, or PC_DSCP_UNSET to clear the override (fall back to the server default).
- * @return false if no active listener binds @p port.
- */
-proto_bool pc_listen_set_dscp(uint16_t port, uint8_t dscp);
 
 #endif // PC_ENABLE_DIFFSERV
 

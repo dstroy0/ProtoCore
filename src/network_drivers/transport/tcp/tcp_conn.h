@@ -547,6 +547,7 @@ void lowlevel_err_cb(void *arg, pc_net_err err);
  * @var ConnPoolNs::detach         drop a control block without touching its slot
  * @var ConnPoolNs::abort          reset a control block
  * @var ConnPoolNs::abort_slot     reset the connection a slot holds
+ * @var ConnPoolNs::set_dscp   tag one live connection, overriding the server-wide default
  * @var ConnPoolNs::remote_ip      the peer's IPv4 address as a word
  * @var ConnPoolNs::remote_addr    the peer's address, either family
  * @var ConnPoolNs::on_event       install the slot-transition observer
@@ -572,6 +573,9 @@ typedef struct
     void (*detach)(pc_pcb *pcb);
     void (*abort)(pc_pcb *pcb);
     void (*abort_slot)(uint8_t slot);
+#if PC_ENABLE_DIFFSERV
+    proto_bool (*set_dscp)(uint8_t slot, uint8_t dscp);
+#endif
     uint32_t (*remote_ip)(uint8_t slot);
     proto_bool (*remote_addr)(uint8_t slot, pc_ip *out);
 #if PC_ENABLE_OBSERVABILITY
