@@ -207,7 +207,7 @@ static proto_bool acl_permits(const ForwardCtx *f, uint8_t src, const uint8_t *d
 
 static void pc_forward_reset(void)
 {
-    memset(s_fwd.if_, 0, sizeof(s_fwd.if_));
+    // The interfaces are L1's; emptying this plane leaves them registered.
     memset(s_fwd.rules, 0, sizeof(s_fwd.rules));
     memset(s_fwd.acl, 0, sizeof(s_fwd.acl));
     memset(s_fwd.routes, 0, sizeof(s_fwd.routes));
