@@ -21,7 +21,7 @@
 #ifndef PROTOCORE_BASE64_H
 #define PROTOCORE_BASE64_H
 
-#include "shared_primitives/types.h" // PROTO_BEGIN_DECLS: the .cpp benches and sketches include this
+#include "protocore_config.h" // PROTO_BEGIN_DECLS: the .cpp benches and sketches include this header
 #include <stddef.h>
 #include <stdint.h>
 
