@@ -56,6 +56,7 @@ REPORT_PATH="${PROJECT_ROOT}/test/TEST_REPORT.md"
 PIO=""
 for _candidate in \
     "pio" \
+    "${HOME}/.pio-venv/bin/pio" \
     "${HOME}/.platformio/penv/bin/pio" \
     "${HOME}/.local/bin/pio" \
     "/usr/local/bin/pio"; do
