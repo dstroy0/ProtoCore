@@ -122,8 +122,8 @@ Positive**, each with a justification. Genuine reviewer signals - `cpp:S134`,
 re-flags the same style rules, so re-run it after a scan:
 
 ```sh
-SONAR_TOKEN=<token> python ci_tooling/sonar/accept_style_conflicts.py --dry-run  # preview
-SONAR_TOKEN=<token> python ci_tooling/sonar/accept_style_conflicts.py            # apply
+SONAR_TOKEN=<token> python -m ci_tooling.sonar.accept_style_conflicts --dry-run  # preview
+SONAR_TOKEN=<token> python -m ci_tooling.sonar.accept_style_conflicts            # apply
 ```
 
 Real `BUG` / `VULNERABILITY` findings are always fixed at source, never marked.

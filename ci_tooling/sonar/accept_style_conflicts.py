@@ -13,7 +13,7 @@
 #   S134 (deep nesting), S3776 (cognitive complexity), S107 (too many params),
 #   S5813 (bounds when computing string length). Fix real BUG/VULNERABILITY findings at source.
 #
-# Usage: SONAR_TOKEN=<token> python ci_tooling/sonar/accept_style_conflicts.py [--dry-run]
+# Usage: SONAR_TOKEN=<token> python -m ci_tooling.sonar.accept_style_conflicts [--dry-run]
 
 import json
 import os

@@ -260,24 +260,34 @@ src/
 │   │   ├── mlkem.h
 │   │   ├── sntrup761.c
 │   │   └── sntrup761.h
+│   ├── rng/  (rng.h, rng.c)
 │   ├── crypto_opt.h
 │   └── ct_eq.h
 ├── mmgr/
 │   ├── arena.c
 │   ├── arena.h
+│   ├── bitio.h
+│   ├── bytes.h
 │   ├── dma.c
 │   ├── dma.h
+│   ├── endian.h
 │   ├── frame.c
 │   ├── frame.h
 │   ├── membuild.h
 │   ├── plaintext.c
 │   ├── plaintext.h
+│   ├── protomem.c
+│   ├── protomem.h
+│   ├── protostr.c
+│   ├── protostr.h
+│   ├── rawmemcpy.h
+│   ├── ring.h
 │   ├── secure.c
-│   └── secure.h
+│   ├── secure.h
+│   ├── span.h
+│   └── swar.h
 ├── network_drivers/
 │   ├── application/
-│   │   ├── auth/
-│   │   │   └── auth.c
 │   │   ├── file_serving/  (file_serving.h, file_serving.c)
 │   │   ├── mdns_adaptive/  (mdns_adaptive.h, mdns_adaptive.c)
 │   │   ├── mdns_service/  (mdns_service.h, mdns_service.c)
@@ -320,14 +330,16 @@ src/
 │   │   ├── roaming.c
 │   │   └── roaming.h
 │   ├── network/
-│   │   ├── dns_resolver.c
-│   │   ├── dns_resolver.h
-│   │   ├── ip.c
-│   │   ├── ip.h
+│   │   ├── dns/
+│   │   │   ├── dns.c
+│   │   │   ├── dns.h
+│   │   │   ├── dns_resolver.c
+│   │   │   ├── dns_resolver.h
+│   │   │   ├── dns_server.c
+│   │   │   └── dns_server.h
+│   │   ├── forward/  (forward.h, forward.c)
 │   │   ├── network.c
-│   │   ├── network.h
-│   │   ├── route.c
-│   │   └── route.h
+│   │   └── network.h
 │   ├── physical/
 │   │   ├── physical.c
 │   │   ├── physical.h
@@ -343,9 +355,9 @@ src/
 │   │   │   ├── json/  (json.h, json.c)
 │   │   │   ├── msgpack/  (msgpack.h, msgpack.c)
 │   │   │   ├── multipart/  (multipart.h, multipart.c)
-│   │   │   ├── codec.c
 │   │   │   └── codec.h
 │   │   ├── http/
+│   │   │   ├── auth/  (auth.h, auth.c)
 │   │   │   ├── http2/
 │   │   │   │   ├── h2_conn.c
 │   │   │   │   ├── h2_conn.h
@@ -360,6 +372,8 @@ src/
 │   │   │   │   ├── h3_conn.h
 │   │   │   │   ├── h3_frame.c
 │   │   │   │   ├── h3_frame.h
+│   │   │   │   ├── h3_server.c
+│   │   │   │   ├── h3_server.h
 │   │   │   │   ├── qpack.c
 │   │   │   │   ├── qpack.h
 │   │   │   │   ├── quic_conn.c
@@ -381,8 +395,11 @@ src/
 │   │   │   │   ├── tls13_msg.c
 │   │   │   │   └── tls13_msg.h
 │   │   │   ├── http_parser/  (http_parser.h, http_parser.c)
+│   │   │   ├── route/  (http_route.h, http_route.c)
 │   │   │   ├── sse/  (sse.h, sse.c)
-│   │   │   └── websocket/  (websocket.h, websocket.c)
+│   │   │   ├── websocket/  (websocket.h, websocket.c)
+│   │   │   ├── http.c
+│   │   │   └── http.h
 │   │   ├── security/
 │   │   │   └── dtls/
 │   │   │       ├── dtls_conn.c
@@ -441,12 +458,23 @@ src/
 │   │   ├── tls13_kdf.c
 │   │   └── tls13_kdf.h
 │   └── transport/
-│       ├── client.c
-│       ├── client.h
+│       ├── tcp/
+│       │   ├── tcp_client.c
+│       │   ├── tcp_client.h
+│       │   ├── tcp_conn.c
+│       │   ├── tcp_conn.h
+│       │   ├── tcp_listener.c
+│       │   └── tcp_listener.h
+│       ├── udp/
+│       │   ├── udp_client.c
+│       │   ├── udp_client.h
+│       │   ├── udp_datagram.h
+│       │   ├── udp_listener.c
+│       │   └── udp_listener.h
 │       ├── diffserv.c
 │       ├── diffserv.h
-│       ├── listener.c
-│       ├── listener.h
+│       ├── net_addr.c
+│       ├── net_addr.h
 │       ├── tcp.c
 │       ├── tcp.h
 │       ├── tcp_evt.h
@@ -611,9 +639,7 @@ src/
 │   │   ├── safety_scl/  (safety_scl.h, safety_scl.c)
 │   │   └── umati/  (umati.h, umati.c)
 │   ├── net/
-│   │   ├── dns_server/  (dns_server.h, dns_server.c)
 │   │   ├── flow_export/  (flow_export.h, flow_export.c)
-│   │   ├── forward/  (forward.h, forward.c)
 │   │   ├── gateway/  (gateway.h, gateway.c)
 │   │   ├── happy_eyeballs/  (happy_eyeballs.h, happy_eyeballs.c)
 │   │   ├── http_client/  (http_client.h, http_client.c)
@@ -774,24 +800,18 @@ src/
 │       ├── spa_router/  (spa_router.h, spa_router.c)
 │       └── web_terminal/  (web_terminal.h, web_terminal.c)
 ├── shared_primitives/
-│   ├── bitio.h
-│   ├── bytes.h
 │   ├── can.h
 │   ├── crc.h
-│   ├── endian.h
 │   ├── hex.h
 │   ├── http_date.h
+│   ├── ip.c
+│   ├── ip.h
 │   ├── log.c
 │   ├── log.h
 │   ├── mime.h
-│   ├── numparse.h
 │   ├── pcap.h
-│   ├── rawmemcpy.h
-│   ├── ring.h
 │   ├── runops.h
-│   ├── span.h
 │   ├── speed_opt.h
-│   ├── swar.h
 │   ├── time_compat.h
 │   ├── types.h
 │   └── utf8.h
@@ -1106,7 +1126,7 @@ The complete set of `PC_ENABLE_*` flags and their defaults, scraped from
 | `PC_ENABLE_ENOCEAN` | `0` | Enable the EnOcean ESP3 serial codec (default off). |
 | `PC_ENABLE_ESPNOW` | `0` | ESP-NOW peer messaging. |
 | `PC_ENABLE_ETAG` | `0` | Conditional GET (ETag + Last-Modified) for served files. |
-| `PC_ENABLE_ETHERNET` | `0` | Enable wired Ethernet bring-up (Physical.eth->init / Physical.eth->ready). |
+| `PC_ENABLE_ETHERNET` | `0` | Enable wired Ethernet bring-up (init_eth_physical / eth_ready). |
 | `PC_ENABLE_EUROMAP77` | `0` | EUROMAP 77 (OPC 40077) - OPC UA for injection moulding machines (IMM <-> MES). |
 | `PC_ENABLE_EXC_DECODER` | `0` | Opt-in ESP32 panic / exception decoder for a live diagnostics panel. |
 | `PC_ENABLE_FAILSAFE` | `0` | Opt-in software watchdog: deadlock detection + fail-safe safe-state. |
@@ -1395,7 +1415,6 @@ guards at compile time.
 | `PC_DELIVERY_PRECACHE_MAX` | `16` | Most asset paths a service-worker precache manifest may list. |
 | `PC_DMA_BUF_SIZE` | `256` | Bytes per DMA transfer buffer (RX is double-buffered at this size). |
 | `PC_DMA_CHANNELS` | `2` | Number of DMA channels (static-allocated; each is one peripheral link). |
-| `PC_DMA_SIMULATE` | `1` | HttpRoute DMA transfers through the ingress/egress simulator (default on). |
 | `PC_DNC_LEADER_LEN` | `32` | Default leader/trailer runout length for the DNC encoder. |
 | `PC_DNC_LINE_MAX` | `128` | Largest G-code block (one line) the DNC decoder reassembles. |
 | `PC_DNC_XOFF_MAX_POLLS` | `200000` | Safety cap on how many times the DNC stream engine polls the reverse channel while paused by an XOFF, before giving up with an I/O error. |
@@ -1421,7 +1440,6 @@ guards at compile time.
 | `PC_FWD_ACL_PATLEN` | `4` | Bytes an ACL entry can match (its pattern / mask length). |
 | `PC_FWD_INSPECT` | `0` | Build-time toggle for the forwarding-path inspection hook (default off, for cost + privacy). |
 | `PC_FWD_MAX_ACL` | `8` | Max ingress access-control entries (byte-pattern permit/deny; static). |
-| `PC_FWD_MAX_IFACES` | `4` | Max interfaces the forwarding plane tracks (static-allocated). |
 | `PC_FWD_MAX_ROUTES` | `8` | Max policy routes (byte-pattern -> egress interface; static). |
 | `PC_FWD_MAX_RULES` | `8` | Max forwarding rules (src -> dst allow/deny + rate cap; static-allocated). |
 | `PC_GPIO_JSON_BUF` | `1024` | Stack buffer for the GPIO-map JSON (bytes). |
@@ -1476,6 +1494,7 @@ guards at compile time.
 | `PC_MQTT_RX_QOS2_SLOTS` | `8` | Inbound QoS 2 packet-id de-duplication ring depth (PUBREC-acknowledged, awaiting PUBREL). |
 | `PC_MTLS_SUBJECT_MAX` | `128` | Maximum length of a verified mTLS peer subject DN string (incl. |
 | `PC_NEED_CLIENT` | `0` |  |
+| `PC_NEED_UDP` | `0` |  |
 | `PC_NRF24_PAYLOAD` | `32` | nRF24 fixed payload width in bytes (1..32; the chip's static payload size). |
 | `PC_NTP_SERVER_STRATUM` | `3` | Stratum the NTP server advertises (distance from a reference clock; 1-15). |
 | `PC_NTRIP_MAX_MOUNTS` | `2` | Max distinct mountpoints a single caster serves (each = one RTCM stream). |
@@ -1491,6 +1510,7 @@ guards at compile time.
 | `PC_PER_IP_THROTTLE_MAX` | `10` | Max accepted connections per window from one source IP (see PC_ENABLE_PER_IP_THROTTLE). |
 | `PC_PER_IP_THROTTLE_SLOTS` | `16` | Number of source IPv4 addresses tracked by the per-IP throttle (BSS bucket table). |
 | `PC_PER_IP_THROTTLE_WINDOW_MS` | `10000` | Per-IP throttle window length in milliseconds (see PC_ENABLE_PER_IP_THROTTLE). |
+| `PC_PHY_MAX_IFACES` | `4` | Interfaces layer 1 can carry: wifi station and softAP, ethernet, a bridged bus, a radio. |
 | `PC_PLAINTEXT_ARENA_SIZE` | `8192` | Size in bytes of the shared per-dispatch scratch arena. |
 | `PC_PN532_MAX_DATA` | `254` | Reject a PN532 normal frame whose declared length exceeds this (framing sanity). |
 | `PC_POWER_BUSY_PCT` | `40` | Load percentage at/above which the ceiling clock is used. |
@@ -1566,8 +1586,10 @@ guards at compile time.
 | `PC_TLS_MAX_FRAG_LEN` | `0` | Cap TLS records via the Maximum Fragment Length extension (RFC 6066). |
 | `PC_TLS_TICKET_LIFETIME_S` | `86400` | Session-ticket lifetime / key-rotation period in seconds (see PC_ENABLE_TLS_RESUMPTION). |
 | `PC_TRUSTED_PROXY_MAX` | `2` | Number of trusted-upstream CIDR rules the forwarded-client resolver holds (BSS table). |
-| `PC_UDP_RX_BUF_SIZE` | `1472` | Shared receive-scratch size for the transport-layer UDP service. |
+| `PC_UDP_RX_BUF_SIZE` | `1472` | Largest UDP datagram a bound port accepts, in bytes. |
+| `PC_UDP_RX_RING` | `2048` | Per-slot UDP receive ring, in bytes. |
 | `PC_UDP_TELEMETRY_BUF` | `256` | Stack buffer for one telemetry line (bytes). |
+| `PC_UDP_TX_RING` | `4096` | UDP send ring, in bytes: per slot on the listener side, one on the client side. |
 | `PC_UMATI_NS` | `1` | NamespaceIndex the umati MachineTool nodes live at (default 1). |
 | `PC_WEBDAV_BUF_SIZE` | `2048` | Buffer (BSS) for a WebDAV 207 Multi-Status response, in bytes (see PC_ENABLE_WEBDAV). |
 | `PC_WEBDAV_MAX_ENTRIES` | `32` | Maximum children listed in a WebDAV Depth-1 PROPFIND (bounds the response). |
@@ -1791,7 +1813,7 @@ The suite's own generator lives with the tests: [`test/gen_test_readme.py`](../t
 | `gen_favicons.py`    | build the favicon library + gallery                                                       |
 
 ```bash
-python ci_tooling/generate/gen_readme_sections.py   # refresh this file's generated sections
+python -m ci_tooling.generate.gen_readme_sections   # refresh this file's generated sections
 python web_assets/wizard/build_assets.py          # rebuild the embedded web assets
 ```
 

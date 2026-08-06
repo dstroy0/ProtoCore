@@ -21,8 +21,7 @@ import shutil
 import subprocess
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import covmap  # noqa: E402
+from ci_tooling.coverage import covmap
 
 ROOT = covmap.ROOT
 
@@ -184,13 +183,13 @@ def main() -> int:
         check=True,
     )
     if srcs:
-        subprocess.run([gcovr_python(), "ci_tooling/coverage/covmap.py", "gaps", "--cov", scratch, *srcs], cwd=ROOT)
+        covmap.main(["gaps", "--cov", scratch, *srcs])
     print(f"gaps reported against {scratch}; run covbase.py to refresh test/coverage.xml")
 
     if not a.keep_reports:
         shutil.rmtree(REPORTS, ignore_errors=True)
     if srcs:
-        subprocess.run([gcovr_python(), "ci_tooling/coverage/covmap.py", "gaps", *srcs], cwd=ROOT)
+        covmap.main(["gaps", *srcs])
     return 0
 
 

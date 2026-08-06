@@ -18,15 +18,13 @@ in the background while other work continues.
 from __future__ import annotations
 
 import argparse
-import glob
 import os
 import subprocess
 import sys
 import time
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import covmap  # noqa: E402
-import covrun  # noqa: E402
+from ci_tooling.coverage import covmap
+from ci_tooling.coverage import covrun
 
 ROOT = covmap.ROOT
 SKIP = {"native_pentest", "native_codeql", "native_tsan", "esp32dev"}

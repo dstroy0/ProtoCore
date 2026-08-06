@@ -132,13 +132,13 @@ void setup()
 {
     Serial.begin(115200);
 
-    init_wifi_physical(SSID, PASSWORD);
-    while (!wifi_ready())
+    Physical.wifi->init(SSID, PASSWORD);
+    while (!Physical.wifi->ready())
     {
         delay(250);
     }
 
-    uint32_t ip = pc_net_egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("IP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
@@ -160,7 +160,7 @@ void loop()
     // Drives the full pipeline each iteration:
     //   1. Timeout sweep (force-closes idle connections)
     //   2. Event queue drain (TCP connect/data/disconnect events)
-    //   3. Route dispatch for completed requests
+    //   3. HttpRoute dispatch for completed requests
     //   4. Auto-sends 400 / 413 / 414 / 501 for parser error states
     // No request is processed off this call, so loop() must never block.
     handle();

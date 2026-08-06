@@ -20,7 +20,6 @@ push (base ref vs working tree) or any historical commit range (base ref vs head
 
 import difflib
 import json
-import os
 import re
 import subprocess
 

@@ -22,20 +22,18 @@ merely *named* in a comment ("without <string.h> / strlen") is not a violation -
 
 Usage::
 
-    python ci_tooling/check/check_src_banned.py <file>...   # scan the given files (pre-commit: the staged set)
-    python ci_tooling/check/check_src_banned.py --all        # scan every C/C++ file under src/
+    python -m ci_tooling.check.check_src_banned <file>...   # scan the given files (pre-commit: the staged set)
+    python -m ci_tooling.check.check_src_banned --all        # scan every C/C++ file under src/
 
 Exit status is 1 if any violation is found (with a file:line report on stderr), else 0.
 Only paths under ``src/`` are scanned; ``examples/`` and ``test/`` are exempt per docs/SRCBANNED.md.
 """
 
 import pathlib
-import os
 import re
 import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "lib"))
-import baseline as bl  # noqa: E402  (path set above)
+from ci_tooling.lib import baseline as bl
 
 SRC = pathlib.Path("src")
 EXTS = {".c", ".cc", ".cpp", ".h", ".hpp", ".ino"}

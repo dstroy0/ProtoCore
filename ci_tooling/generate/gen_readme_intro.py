@@ -25,15 +25,14 @@ PROJECT STATUS replaces prose that claimed coverage "is lacking" while the
 committed coverage report said 99.0% line / 96.1% branch. A progress claim
 written by hand is wrong the week after it is written, in either direction.
 
-Usage:  python ci_tooling/generate/gen_readme_intro.py [--check]
+Usage:  python -m ci_tooling.generate.gen_readme_intro [--check]
 """
 
 import os
 import re
 import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "lib"))
-import doc_region as dr  # noqa: E402  (path set above)
+from ci_tooling.lib import doc_region as dr
 
 ROOT = dr.repo_root(__file__)
 README = os.path.join(ROOT, "README.md")

@@ -68,9 +68,9 @@ jobs:
             FULL=1 # first push on a branch / unknown base -> be safe
           fi
           if [ "$FULL" = "1" ]; then
-            M="$(python ci_tooling/generate/example_footprints.py matrix </dev/null)"
+            M="$(python -m ci_tooling.generate.example_footprints matrix </dev/null)"
           else
-            M="$(git diff --name-only "$BASE" "$HEAD" | python ci_tooling/generate/example_footprints.py matrix --base "$BASE" --head "$HEAD")"
+            M="$(git diff --name-only "$BASE" "$HEAD" | python -m ci_tooling.generate.example_footprints matrix --base "$BASE" --head "$HEAD")"
           fi
           N="$(printf '%s' "$M" | python -c 'import sys,json;print(len(json.load(sys.stdin)))')"
           echo "full=$FULL selected=$N example(s)"
@@ -135,7 +135,7 @@ jobs:
             "$EX_INO" 2>&1 | tee build.log
           ccache -s 2>/dev/null | grep -iE "Cacheable|Hits:" || true
           mkdir -p frag
-          python ci_tooling/generate/example_footprints.py fragment build.log frag/footprint.json
+          python -m ci_tooling.generate.example_footprints fragment build.log frag/footprint.json
       - name: Upload footprint fragment
         if: ${{ always() }}
         uses: actions/upload-artifact@v7
@@ -168,8 +168,8 @@ jobs:
           pattern: fp-*
       - name: Merge footprints + regenerate the table
         run: |
-          python ci_tooling/generate/example_footprints.py merge frags docs/footprints.json
-          python ci_tooling/generate/example_footprints.py table docs/footprints.json docs/FOOTPRINTS.md
+          python -m ci_tooling.generate.example_footprints merge frags docs/footprints.json
+          python -m ci_tooling.generate.example_footprints table docs/footprints.json docs/FOOTPRINTS.md
       - name: Format with Prettier
         run: npx prettier@3.9.6 --write docs/footprints.json docs/FOOTPRINTS.md
       - name: Configure SSH commit signing

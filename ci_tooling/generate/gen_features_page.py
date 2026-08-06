@@ -9,16 +9,14 @@ Why a page and not more markdown: 150+ features in a markdown table is a wall no
 set is filterable, the rows are one line each until you want more, and the whole tree is bound in a
 scroll box so the page itself stays a page.
 
-    python ci_tooling/generate/gen_features_page.py
+    python -m ci_tooling.generate.gen_features_page
 """
 
 import html
 import os
-import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "lib"))
 
-import feature_taxonomy as tax  # noqa: E402
+from ci_tooling.lib import feature_taxonomy as tax
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 OUT = os.path.join(ROOT, "docs", "features.html")

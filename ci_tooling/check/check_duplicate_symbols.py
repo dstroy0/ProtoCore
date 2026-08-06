@@ -19,7 +19,7 @@ header, or defined non-``const`` (externally linked with no declaration needed).
 
 Usage::
 
-    python ci_tooling/check/check_duplicate_symbols.py          # scan src/
+    python -m ci_tooling.check.check_duplicate_symbols          # scan src/
 
 Exit status is 1 if any symbol is defined twice, else 0.
 """

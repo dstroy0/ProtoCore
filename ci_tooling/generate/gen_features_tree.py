@@ -9,17 +9,15 @@ The features themselves are deliberately NOT in here. Putting all 254 in produce
 duplicated docs/FEATURES.md into a picture nobody could read - the data lives in FEATURES.md and in
 the scroll-box list on the features page, and this points at it.
 
-    python ci_tooling/generate/gen_features_tree.py
+    python -m ci_tooling.generate.gen_features_tree
     bash ci_tooling/assets/render_diagrams.sh        # -> docs/diagrams/features_map.svg
 """
 
 import os
 import re
-import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "lib"))
 
-import feature_taxonomy as tax  # noqa: E402
+from ci_tooling.lib import feature_taxonomy as tax
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 OUT = os.path.join(ROOT, "docs", "diagrams", "features_map.mmd")

@@ -17,16 +17,15 @@ transport), which is the library's architecture (docs/ARCHITECTURE.md). The diag
 into the README "Overview" between generated markers.
 
 Run from the repo root:
-    python ci_tooling/generate/gen_api_flow.py            # rewrite the README block
-    python ci_tooling/generate/gen_api_flow.py --check    # CI: exit 1 if stale
+    python -m ci_tooling.generate.gen_api_flow            # rewrite the README block
+    python -m ci_tooling.generate.gen_api_flow --check    # CI: exit 1 if stale
 """
 
 import os
 import re
 import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "lib"))
-import doc_region as dr  # noqa: E402  (path set above)
+from ci_tooling.lib import doc_region as dr
 
 ROOT = dr.repo_root(__file__)
 API_H = os.path.join(ROOT, "src", "protocore.h")

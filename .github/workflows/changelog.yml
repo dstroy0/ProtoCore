@@ -33,7 +33,7 @@ jobs:
           OUTPUT: docs/CHANGELOG.md
 
       - name: Decorate CHANGELOG.md with collapsible sections
-        run: python ci_tooling/generate/decorate_changelog.py
+        run: python -m ci_tooling.generate.decorate_changelog
 
       - name: Format CHANGELOG.md with Prettier
         run: npx prettier@3.9.6 --write docs/CHANGELOG.md

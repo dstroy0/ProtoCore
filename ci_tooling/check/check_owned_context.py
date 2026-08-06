@@ -26,8 +26,7 @@ import re
 import sys
 from pathlib import Path
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "lib"))
-import baseline as bl  # noqa: E402  (path set above)
+from ci_tooling.lib import baseline as bl
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 SRC = ROOT / "src"

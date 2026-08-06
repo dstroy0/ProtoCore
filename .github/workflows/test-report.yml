@@ -209,9 +209,9 @@ jobs:
         continue-on-error: true
         run: |
           if [ "${{ steps.sel.outputs.mode }}" = "full" ]; then
-            python3 ci_tooling/generate/gen_dep_graph.py --out test/dep_graph.json
+            python3 -m ci_tooling.generate.gen_dep_graph --out test/dep_graph.json
           else
-            python3 ci_tooling/generate/gen_dep_graph.py --merge --out test/dep_graph.json --envs ${{ steps.sel.outputs.envs }}
+            python3 -m ci_tooling.generate.gen_dep_graph --merge --out test/dep_graph.json --envs ${{ steps.sel.outputs.envs }}
           fi
 
       - name: Commit updated report + coverage

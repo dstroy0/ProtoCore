@@ -17,7 +17,7 @@ For each module under the hardware-touching groups this emits:
 Wiring CONCEPTS (transceivers, termination, 3.3 V, grounding) stay hand-written in the
 prose above this block: those are taught once per bus type, not once per module.
 
-Usage:  python ci_tooling/generate/gen_hardware_ref.py [--check]
+Usage:  python -m ci_tooling.generate.gen_hardware_ref [--check]
 """
 
 import os
@@ -25,9 +25,8 @@ import re
 import subprocess
 import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "lib"))
-import doc_region as dr  # noqa: E402  (path set above)
-import feature_taxonomy as tax  # noqa: E402  (path set above)
+from ci_tooling.lib import doc_region as dr
+from ci_tooling.lib import feature_taxonomy as tax
 
 ROOT = dr.repo_root(__file__)
 DOC = os.path.join(ROOT, "docs/HARDWARE_HOOKUP.md")

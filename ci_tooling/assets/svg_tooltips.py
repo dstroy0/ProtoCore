@@ -9,10 +9,9 @@ This rewrites each `<a ... title="X">` to carry `<title>X</title>` as its first 
 native SVG hover tooltip and works everywhere the picture does: GitHub, the docs site, Doxygen, and
 the file opened on its own.
 
-    python ci_tooling/assets/svg_tooltips.py docs/diagrams/foo.svg [more.svg ...]
+    python -m ci_tooling.assets.svg_tooltips docs/diagrams/foo.svg [more.svg ...]
 """
 
-import html
 import pathlib
 import re
 import sys

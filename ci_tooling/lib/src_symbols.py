@@ -12,7 +12,7 @@ belongs to.
 import os
 import re
 
-import doc_region as dr
+from ci_tooling.lib import doc_region as dr
 
 _BLOCK = re.compile(r"/\*.*?\*/", re.S)
 _LINE = re.compile(r"//[^\n]*")

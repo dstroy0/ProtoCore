@@ -45,11 +45,11 @@ for e in "${ENVS[@]}"; do
 done
 
 if [ "$MODE" = "full" ]; then
-    python3 ci_tooling/sonar/merge_compiledb.py "$BASELINE" "$FRAGS/*.json" --root "$ROOT"
+    python3 -m ci_tooling.sonar.merge_compiledb "$BASELINE" "$FRAGS/*.json" --root "$ROOT"
 else
     # Overlay this run's affected envs onto the committed baseline (in place: the merge reads
     # the baseline fully before writing it back).
-    python3 ci_tooling/sonar/merge_compiledb.py "$BASELINE" "$FRAGS/*.json" --baseline "$BASELINE" --root "$ROOT"
+    python3 -m ci_tooling.sonar.merge_compiledb "$BASELINE" "$FRAGS/*.json" --baseline "$BASELINE" --root "$ROOT"
 fi
 rm -rf "$FRAGS"
 

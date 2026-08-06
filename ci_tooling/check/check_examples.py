@@ -23,15 +23,14 @@ Checked (in `.ino`/`.cpp` and in README fenced code alike):
   1. vendor networking calls           - the library owns the transport
   2. banned socket classes (rule 6)    - WiFiClient / WiFiUDP / AsyncUDP
 
-Usage:  python ci_tooling/check/check_examples.py [--verbose]
+Usage:  python -m ci_tooling.check.check_examples [--verbose]
 """
 
 import os
 import re
 import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "lib"))
-import doc_region as dr  # noqa: E402  (path set above)
+from ci_tooling.lib import doc_region as dr
 
 ROOT = dr.repo_root(__file__)
 EXAMPLES = os.path.join(ROOT, "examples")

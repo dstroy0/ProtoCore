@@ -11,8 +11,8 @@ the marked region of README.md and docs/README.md. The hover tooltip is the
 feature's description; the link target is the FEATURES.md anchor.
 
 Run from the repo root:
-    python ci_tooling/generate/gen_feature_tables.py            # rewrite the tables
-    python ci_tooling/generate/gen_feature_tables.py --check    # CI: fail if stale
+    python -m ci_tooling.generate.gen_feature_tables            # rewrite the tables
+    python -m ci_tooling.generate.gen_feature_tables --check    # CI: fail if stale
 
 Keeping the tables generated means they can never drift from FEATURES.md (a
 hand-maintained grid silently lost 28 of 106 features before this existed).
@@ -22,25 +22,19 @@ import os
 import re
 import sys
 
-import os
-import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "lib"))
-
-import feature_taxonomy as tax
-from feature_taxonomy import (
+from ci_tooling.lib import feature_taxonomy as tax
+from ci_tooling.lib.feature_taxonomy import (
     APPLICATION_LAYER,
     CATEGORY_MEMBERS,
-    CATEGORY_ORDER,
     LAYER_MEMBERS,
     LAYER_ORDER,
-    category_of,
     github_anchor,
     html_escape,
     layer_of,
 )
 
-import doc_region as dr  # noqa: E402  (path set above)
+from ci_tooling.lib import doc_region as dr
 
 ROOT = dr.repo_root(__file__)
 FEATURES_MD = os.path.join(ROOT, "docs", "FEATURES.md")

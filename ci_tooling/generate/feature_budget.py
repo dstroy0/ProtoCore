@@ -23,11 +23,9 @@ case (most it adds - the number to budget with).
 
 import json
 import os
-import re
 import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "lib"))
-import doc_region as dr  # noqa: E402  (path set above)
+from ci_tooling.lib import doc_region as dr
 
 ROOT = dr.repo_root(__file__)
 FLASH_CAP = 1310720

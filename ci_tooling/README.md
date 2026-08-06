@@ -137,11 +137,11 @@ A law worth enforcing is worth testing against the tree before trusting it.
 
 ```sh
 for g in ci_tooling/generate/gen_*.py; do python3 "$g" --check || echo "STALE: $g"; done
-python3 ci_tooling/check/check_docs.py
-python3 ci_tooling/check/check_owned_context.py
-python3 ci_tooling/check/check_src_banned.py --all
-python3 ci_tooling/check/check_test_coverage.py
-python3 ci_tooling/check/check_examples.py
+python3 -m ci_tooling.check.check_docs
+python3 -m ci_tooling.check.check_owned_context
+python3 -m ci_tooling.check.check_src_banned --all
+python3 -m ci_tooling.check.check_test_coverage
+python3 -m ci_tooling.check.check_examples
 ```
 
 `check_test_coverage.py` asserts that every `src/` translation unit outside

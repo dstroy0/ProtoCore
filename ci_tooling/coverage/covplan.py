@@ -15,11 +15,9 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import covmap  # noqa: E402
+from ci_tooling.coverage import covmap
 
 SKIP_ENVS = {"native_pentest", "native_codeql", "native_tsan"}
 

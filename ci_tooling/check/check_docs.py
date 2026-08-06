@@ -17,7 +17,7 @@ Deliberately NOT checked, because they produce false positives rather than findi
 Doxygen ``@ref`` targets (resolved by Doxygen against parsed source, not the filesystem),
 C++ lambdas ``[](args)`` which are syntactically identical to a markdown link, and URLs.
 
-Run: python ci_tooling/check/check_docs.py [--all]
+Run: python -m ci_tooling.check.check_docs [--all]
 """
 
 import os

@@ -11,16 +11,14 @@ section carrying its layer badge and example count, its example dirs sorted
 alphabetically into a grid.
 
 Run from the repo root:
-    python ci_tooling/generate/gen_examples.py            # rewrite the index
-    python ci_tooling/generate/gen_examples.py --check    # CI: fail if stale
+    python -m ci_tooling.generate.gen_examples            # rewrite the index
+    python -m ci_tooling.generate.gen_examples --check    # CI: fail if stale
 """
 
 import os
-import re
 import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "lib"))
-import doc_region as dr  # noqa: E402  (path set above)
+from ci_tooling.lib import doc_region as dr
 
 ROOT = dr.repo_root(__file__)
 EXAMPLES_DIR = os.path.join(ROOT, "examples")

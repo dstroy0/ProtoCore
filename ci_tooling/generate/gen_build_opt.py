@@ -13,8 +13,8 @@ Single source of truth: the first `build_flags=...` line documented in each exam
 README.md (the same one ci_tooling/generate/example_footprints.py reads). Regenerate whenever an
 example's flags change; the CI check fails if a committed build_opt.h drifts.
 
-    python ci_tooling/generate/gen_build_opt.py          # write / prune build_opt.h files
-    python ci_tooling/generate/gen_build_opt.py check     # CI gate: fail if any is stale/missing
+    python -m ci_tooling.generate.gen_build_opt          # write / prune build_opt.h files
+    python -m ci_tooling.generate.gen_build_opt check     # CI gate: fail if any is stale/missing
 """
 
 import glob
@@ -71,7 +71,7 @@ def main():
             pruned += 1
     if check:
         if stale:
-            print("build_opt.h out of date; run: python ci_tooling/generate/gen_build_opt.py")
+            print("build_opt.h out of date; run: python -m ci_tooling.generate.gen_build_opt")
             for s in stale:
                 print("  ", s)
             sys.exit(1)

@@ -27,16 +27,15 @@ the "Build-flag dependencies" section of README.md between generated markers, so
 from the guards the compiler actually enforces.
 
 Run from the repo root:
-    python ci_tooling/generate/gen_flag_deps.py            # rewrite the README block
-    python ci_tooling/generate/gen_flag_deps.py --check    # CI: exit 1 if stale
+    python -m ci_tooling.generate.gen_flag_deps            # rewrite the README block
+    python -m ci_tooling.generate.gen_flag_deps --check    # CI: exit 1 if stale
 """
 
 import os
 import re
 import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "lib"))
-import doc_region as dr  # noqa: E402  (path set above)
+from ci_tooling.lib import doc_region as dr
 
 ROOT = dr.repo_root(__file__)
 CONFIG_H = os.path.join(ROOT, "src", "protocore_config.h")

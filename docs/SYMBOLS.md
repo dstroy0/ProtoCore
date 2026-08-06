@@ -204,9 +204,9 @@ A prefix prevents collisions in a shared global namespace; a test environment na
 ## 5. Enforcement
 
 ```sh
-python ci_tooling/check/check_symbols.py --all     # this document
-python ci_tooling/check/check_src_banned.py --all  # docs/SRCBANNED.md hard bans
-python ci_tooling/check/check_owned_context.py     # single-owner state rule
+python -m ci_tooling.check.check_symbols --all     # this document
+python -m ci_tooling.check.check_src_banned --all  # docs/SRCBANNED.md hard bans
+python -m ci_tooling.check.check_owned_context     # single-owner state rule
 ```
 
 `check_symbols.py` decides only what is decidable: prefix and casing, macro scope and length,

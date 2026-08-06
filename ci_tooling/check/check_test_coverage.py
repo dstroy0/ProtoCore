@@ -17,9 +17,9 @@ arrives with its `native_<name>` env or it does not merge - which is the rule
 docs/SRCBANNED.md already states under "Required", now enforced instead of remembered.
 
 Usage:
-    python ci_tooling/check/check_test_coverage.py           # fail on a TU with no env
-    python ci_tooling/check/check_test_coverage.py --list    # print the uncovered set
-    python ci_tooling/check/check_test_coverage.py --save    # re-record the floor
+    python -m ci_tooling.check.check_test_coverage           # fail on a TU with no env
+    python -m ci_tooling.check.check_test_coverage --list    # print the uncovered set
+    python -m ci_tooling.check.check_test_coverage --save    # re-record the floor
 """
 
 import json
@@ -27,8 +27,7 @@ import os
 import re
 import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "lib"))
-import baseline  # noqa: E402
+from ci_tooling.lib import baseline
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 MATRIX = os.path.join(ROOT, "test", "test_matrix.json")

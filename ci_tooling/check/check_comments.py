@@ -22,16 +22,15 @@ Exempt: docs/, test/, examples/, performance_benching/; file-header Doxygen bloc
 @param / @return / @brief lines; SPDX and license headers; the PC_ALLOW_* and NOSONAR
 justification markers the other checkers require.
 
-  python ci_tooling/check/check_comments.py --all      # report, honor the baseline
-  python ci_tooling/check/check_comments.py --save     # re-record the floor after a sweep
+  python -m ci_tooling.check.check_comments --all      # report, honor the baseline
+  python -m ci_tooling.check.check_comments --save     # re-record the floor after a sweep
 """
 
 import os
 import re
 import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "lib"))
-import baseline  # noqa: E402
+from ci_tooling.lib import baseline
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 SRC = os.path.join(ROOT, "src")

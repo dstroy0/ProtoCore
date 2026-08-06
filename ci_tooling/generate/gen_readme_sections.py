@@ -14,8 +14,8 @@ into a marked region:
   BUILD-FOOTPRINT  measured flash/RAM per feature                   (docs/footprints.json)
 
 Run from the repo root:
-    python ci_tooling/generate/gen_readme_sections.py            # rewrite the regions
-    python ci_tooling/generate/gen_readme_sections.py --check    # CI: fail if stale
+    python -m ci_tooling.generate.gen_readme_sections            # rewrite the regions
+    python -m ci_tooling.generate.gen_readme_sections --check    # CI: fail if stale
 """
 
 import json
@@ -23,8 +23,7 @@ import os
 import re
 import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "lib"))
-import doc_region as dr  # noqa: E402  (path set above)
+from ci_tooling.lib import doc_region as dr
 
 ROOT = dr.repo_root(__file__)
 CONFIG_H = os.path.join(ROOT, "src", "protocore_config.h")

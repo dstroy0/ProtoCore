@@ -15,8 +15,8 @@ their knobs, and copy out either a platformio.ini `build_flags` block or a set o
 Because it is generated, the configurator never drifts from the real config:
 re-run it whenever protocore_config.h changes.
 
-    python ci_tooling/generate/gen_configurator.py          # write docs/configurator.html
-    python ci_tooling/generate/gen_configurator.py check    # CI gate: fail if stale
+    python -m ci_tooling.generate.gen_configurator          # write docs/configurator.html
+    python -m ci_tooling.generate.gen_configurator check    # CI gate: fail if stale
 """
 
 import json
@@ -24,12 +24,8 @@ import os
 import re
 import sys
 
-import os
-import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "lib"))
-
-import feature_taxonomy as tax
+from ci_tooling.lib import feature_taxonomy as tax
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, "..", ".."))
@@ -918,7 +914,7 @@ def main():
     if check:
         cur = open(OUT, "r", encoding="utf-8").read() if os.path.exists(OUT) else ""
         if cur.replace("\r\n", "\n") != html.replace("\r\n", "\n"):
-            print("configurator.html is stale; run: python ci_tooling/generate/gen_configurator.py")
+            print("configurator.html is stale; run: python -m ci_tooling.generate.gen_configurator")
             sys.exit(1)
         print("configurator.html up to date")
         return

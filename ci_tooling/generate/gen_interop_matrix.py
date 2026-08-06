@@ -15,7 +15,7 @@ Counted from:
   fuzz           RUN_TEST count in test/unit/fieldbus/test_pentest/test_pentest.c
   services       src/services/<group>/<module>/
 
-Usage:  python ci_tooling/generate/gen_interop_matrix.py [--check]
+Usage:  python -m ci_tooling.generate.gen_interop_matrix [--check]
 """
 
 import os
@@ -23,8 +23,7 @@ import re
 import subprocess
 import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "lib"))
-import doc_region as dr  # noqa: E402  (path set above)
+from ci_tooling.lib import doc_region as dr
 
 ROOT = dr.repo_root(__file__)
 DOC = os.path.join(ROOT, "docs/INTEROP_MATRIX.md")

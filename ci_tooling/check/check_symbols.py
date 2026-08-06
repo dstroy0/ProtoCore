@@ -31,10 +31,10 @@ writes the current set; CI runs `--check` and fails only on violations NOT in th
 file, so the count can ratchet down and never up.
 
 Usage:
-    python ci_tooling/check/check_symbols.py            # report everything
-    python ci_tooling/check/check_symbols.py --summary  # counts only
-    python ci_tooling/check/check_symbols.py --baseline # record current state
-    python ci_tooling/check/check_symbols.py --check    # CI: fail on NEW violations
+    python -m ci_tooling.check.check_symbols            # report everything
+    python -m ci_tooling.check.check_symbols --summary  # counts only
+    python -m ci_tooling.check.check_symbols --baseline # record current state
+    python -m ci_tooling.check.check_symbols --check    # CI: fail on NEW violations
 """
 
 import json
@@ -42,9 +42,8 @@ import os
 import re
 import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "lib"))
-import doc_region as dr  # noqa: E402  (path set above)
-import src_symbols  # noqa: E402  (path set above)
+from ci_tooling.lib import doc_region as dr
+from ci_tooling.lib import src_symbols
 
 ROOT = dr.repo_root(__file__)
 SRC = os.path.join(ROOT, "src")

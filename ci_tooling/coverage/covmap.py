@@ -160,7 +160,7 @@ def src_line(path: str, n: int) -> str:
     return "<unavailable>"
 
 
-def main() -> int:
+def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
 
@@ -182,7 +182,7 @@ def main() -> int:
     p.add_argument("--summary", action="store_true")
     p.add_argument("--limit", type=int, default=0)
 
-    a = ap.parse_args()
+    a = ap.parse_args(argv)
     envs = parse_envs()
 
     if a.cmd == "envs":
