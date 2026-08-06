@@ -467,7 +467,16 @@ static void unbind_port(UdpBind *b)
 
 static proto_bool listen_on(uint16_t port, pc_udp_handler handler, void *ctx)
 {
-    UdpBind *b = free_bind();
+    // A port already bound rebinds its own slot: a second slot on one port is one find_bind() can
+    // never reach, and it spends a slot the pool has two of.
+    UdpBind *b = find_bind(port);
+    if (b != NULL)
+    {
+        b->handler = handler;
+        b->ctx = ctx;
+        return PROTO_TRUE;
+    }
+    b = free_bind();
     if (b == NULL)
     {
         return PROTO_FALSE; // pool exhausted

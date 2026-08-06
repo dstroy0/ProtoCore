@@ -150,19 +150,20 @@ void test_listen_rebinds_existing_port()
     TEST_ASSERT_TRUE(Udp.listener->listen(9999, on_datagram, NULL));
 }
 
-// PC_MAX_UDP_LISTENERS == 2: once both slots are taken, binding a third distinct
-// port evicts slot 0 (host-test-only fallback) rather than failing.
-void test_listen_evicts_slot_zero_when_pool_full()
+// PC_MAX_UDP_LISTENERS == 2: once both slots are taken, a third distinct port is refused. Taking
+// a bound port's slot would stop a service that is still using it, with nothing to tell it so.
+void test_listen_refuses_a_third_port_when_the_pool_is_full()
 {
-    TEST_ASSERT_TRUE(Udp.listener->listen(1111, on_datagram, NULL)); // slot 0
-    TEST_ASSERT_TRUE(Udp.listener->listen(2222, on_datagram, NULL)); // slot 1, pool now full
-    TEST_ASSERT_TRUE(Udp.listener->listen(3333, on_datagram, NULL)); // evicts slot 0 (1111)
+    TEST_ASSERT_TRUE(Udp.listener->listen(1111, on_datagram, NULL));  // slot 0
+    TEST_ASSERT_TRUE(Udp.listener->listen(2222, on_datagram, NULL));  // slot 1, pool now full
+    TEST_ASSERT_FALSE(Udp.listener->listen(3333, on_datagram, NULL)); // refused, nothing evicted
 
-    // The evicted port no longer delivers; the evicting port does.
+    // Both bound ports still deliver, and the refused one does not.
     Udp.listener->inject(1111, "10.0.0.1", 1, (const uint8_t *)"a", 1);
-    TEST_ASSERT_EQUAL_INT(0, g_calls);
-    Udp.listener->inject(3333, "10.0.0.1", 1, (const uint8_t *)"b", 1);
-    TEST_ASSERT_EQUAL_INT(1, g_calls);
+    Udp.listener->inject(2222, "10.0.0.1", 1, (const uint8_t *)"b", 1);
+    TEST_ASSERT_EQUAL_INT(2, g_calls);
+    Udp.listener->inject(3333, "10.0.0.1", 1, (const uint8_t *)"c", 1);
+    TEST_ASSERT_EQUAL_INT(2, g_calls);
 }
 
 // A multicast group string that is a valid dotted-quad in [224,239]/4 but padded with enough
@@ -333,21 +334,23 @@ static proto_bool g_edge_had_port_out = PROTO_FALSE;
 static void on_datagram_edge_cases(const uint8_t *, size_t, const struct pc_udp_peer *peer, void *)
 {
     uint16_t port_tmp = 0;
-    g_edge_had_ip_out = Udp.listener->peer_addr(peer, NULL, sizeof(g_edge_ip), &port_tmp);           // ip_out null
-    g_edge_had_ip_out = g_edge_had_ip_out && Udp.listener->peer_addr(peer, g_edge_ip, 0, &port_tmp); // ip_cap == 0
-    g_edge_had_port_out = Udp.listener->peer_addr(peer, g_edge_ip, sizeof(g_edge_ip), NULL);         // port_out null
+    // No buffer, or one too small to hold any address, is refused rather than half-filled.
+    g_edge_had_ip_out = Udp.listener->peer_addr(peer, NULL, sizeof(g_edge_ip), &port_tmp) ||
+                        Udp.listener->peer_addr(peer, g_edge_ip, 0, &port_tmp) ||
+                        Udp.listener->peer_addr(peer, g_edge_ip, 4, &port_tmp);
+    // A null port_out is the one out-param that is genuinely optional: the address still copies.
+    g_edge_had_port_out = Udp.listener->peer_addr(peer, g_edge_ip, sizeof(g_edge_ip), NULL);
 }
 
-void test_peer_addr_tolerates_null_ip_out_and_zero_cap_and_null_port_out()
+void test_peer_addr_refuses_a_buffer_it_cannot_fill_and_allows_a_null_port_out()
 {
-    g_edge_had_ip_out = PROTO_FALSE;
+    g_edge_had_ip_out = PROTO_TRUE;
     g_edge_had_port_out = PROTO_FALSE;
     TEST_ASSERT_TRUE(Udp.listener->listen(7002, on_datagram_edge_cases, NULL));
     Udp.listener->inject(7002, "198.51.100.5", 9, (const uint8_t *)"e", 1);
-    // Udp.listener->peer_addr() still returns true in every case above (peer non-null); the point is
-    // that none of the null/zero out-params crashed and the copy was skipped, not performed.
-    TEST_ASSERT_TRUE(g_edge_had_ip_out);
-    TEST_ASSERT_TRUE(g_edge_had_port_out);
+    TEST_ASSERT_FALSE(g_edge_had_ip_out);  // every unwritable buffer was refused
+    TEST_ASSERT_TRUE(g_edge_had_port_out); // the port is the optional half
+    TEST_ASSERT_EQUAL_STRING("198.51.100.5", g_edge_ip);
 }
 
 int main(void)
@@ -362,7 +365,7 @@ int main(void)
     RUN_TEST(test_leave_releases_the_slot);
     RUN_TEST(test_leave_ignores_a_plain_listener);
     RUN_TEST(test_listen_rebinds_existing_port);
-    RUN_TEST(test_listen_evicts_slot_zero_when_pool_full);
+    RUN_TEST(test_listen_refuses_a_third_port_when_the_pool_is_full);
     RUN_TEST(test_multicast_group_too_long_for_buffer_rejected);
     RUN_TEST(test_multicast_join_finds_slot_past_an_unrelated_listener);
     RUN_TEST(test_multicast_rejoin_scans_past_a_freed_lower_slot);
@@ -374,6 +377,6 @@ int main(void)
     RUN_TEST(test_inject_skips_a_listener_with_no_handler);
     RUN_TEST(test_inject_null_src_ip_becomes_empty_string);
     RUN_TEST(test_multicast_lookup_skips_a_different_multicast_group);
-    RUN_TEST(test_peer_addr_tolerates_null_ip_out_and_zero_cap_and_null_port_out);
+    RUN_TEST(test_peer_addr_refuses_a_buffer_it_cannot_fill_and_allows_a_null_port_out);
     return UNITY_END();
 }
