@@ -574,9 +574,13 @@ typedef struct
     void (*abort_slot)(uint8_t slot);
     uint32_t (*remote_ip)(uint8_t slot);
     proto_bool (*remote_addr)(uint8_t slot, pc_ip *out);
+#if PC_ENABLE_OBSERVABILITY
+    // The callback and counter types exist only with the feature, so the members do too. A caller
+    // tests the pointer rather than repeating the flag.
     void (*on_event)(pc_conn_event_cb cb);
     pc_conn_counters (*counters_get)(void);
     void (*counters_reset)(void);
+#endif
 } ConnPoolNs;
 
 /** @brief The one symbol this module exports. */

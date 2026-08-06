@@ -26,9 +26,9 @@
 
 #include "tcp_conn.h"
 #include "board_drivers/board_profiles/pc_platform.h"
-#include "diffserv.h"           // DiffServ DSCP marking (pc_dscp_to_tos, pc_conn_set_dscp); compiles out when off
+#include "../diffserv.h"           // DiffServ DSCP marking (pc_dscp_to_tos, pc_conn_set_dscp); compiles out when off
 #include "tcp_listener.h"           // listener_enqueue(): the owning listener posts the event, not this file
-#include "net_addr.h"           // NetAddr.to_ip(): the stack's address as a pc_ip
+#include "../net_addr.h"           // NetAddr.to_ip(): the stack's address as a pc_ip
 #include "server/clock/clock.h" // pc_millis() pluggable monotonic clock
 #include "mmgr/rawmemcpy.h" // proto_raw_read: the unaligned v6 address load
 
@@ -1211,6 +1211,9 @@ const ConnPoolNs ConnPool = {proto_tcp_pool_init,
                              pc_conn_abort_slot,
                              pc_conn_remote_ip,
                              pc_conn_remote_addr,
+#if PC_ENABLE_OBSERVABILITY
                              pc_conn_on_event,
                              pc_conn_counters_get,
-                             pc_conn_counters_reset};
+                             pc_conn_counters_reset
+#endif
+};

@@ -22,7 +22,7 @@
 #if PROTOCORE_HOT && PC_NEED_CLIENT
 
 #include "board_drivers/board_profiles/pc_platform.h" // the target's TCP, under our names
-#include "diffserv.h"  // DiffServ DSCP marking for outbound client connections (compiles out when off)
+#include "../diffserv.h"  // DiffServ DSCP marking for outbound client connections (compiles out when off)
 #include "mmgr/ring.h" // PROTO_ATOMIC_LOAD/STORE + SPSC ring drain (same primitive as the server)
 #include "network_drivers/network/dns/resolver.h" // shared host->IP resolve (one DNS owner)
 #include "server/clock/clock.h"                   // pc_millis()
