@@ -71,6 +71,15 @@ static void busy_release(void)
 static void power(void)
 {
 }
+static void busy_hold(void)
+{
+    // no-op on the host build: there is no radio to keep awake (the target branch above holds the
+    // modem-sleep refcount).
+}
+static void busy_release(void)
+{
+    // no-op on the host build (see busy_hold).
+}
 #endif // PROTOCORE_HOT
 
 const RadioNs Radio = {
