@@ -1190,6 +1190,20 @@
       ],
       "tests": ["integration/transport/test_udp_transport"]
     },
+    "native_tcp_hot": {
+      "desc": "The TCP target path, driven on the host (base native_hot_base, so PROTOCORE_HOT is 1\nand board_drivers/*/mock stands in for silicon). This is the only env that compiles the marshaled\narm of tcp_conn.c - every send, output, close, abort and recved the target routes through\npc_tcp_marshal - and the only one that drives a segment through the callbacks listener_accept_cb\ninstalled on the pcb rather than naming lowlevel_recv_cb directly.",
+      "base": "native_hot_base",
+      "flags": [],
+      "src": [
+        "+<network_drivers/transport/tcp/tcp_conn.c>",
+        "+<network_drivers/transport/tcp/tcp_listener.c>",
+        "+<network_drivers/transport/net_addr.c>",
+        "+<network_drivers/transport/diffserv.c>",
+        "+<shared_primitives/ip.c>",
+        "+<server/clock/clock.c>"
+      ],
+      "tests": ["protocols/transport/test_tcp_hot"]
+    },
     "native_udp_hot": {
       "desc": "The UDP target path, driven on the host (base native_hot_base, so PROTOCORE_HOT is 1\nand board_drivers/*/mock stands in for silicon). Covers udp_listener + udp_client against the\nhost pcb driver: the send ring filling and draining, NetAddr carrying v4 and v6 both ways, the\npbuf pool refusing, and the datagrams the core handed to the stack read back as a DLT_RAW libpcap\ncapture with synthesized IP and UDP headers (test/mocks/pc_net_pcap.h).",
       "base": "native_hot_base",

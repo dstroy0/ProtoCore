@@ -71,7 +71,7 @@ To isolate our application code from physical hardware and the operating system'
 
 <!-- BEGIN GENERATED test-environments (edit test/test_matrix.json, run test/gen_test_readme.py) -->
 
-The native test matrix has **311 environments**, one per feature, generated from [test_matrix.json](test_matrix.json) into [platformio.ini](../platformio.ini) by [gen_test_envs.py](gen_test_envs.py). Each compiles a strict per-feature slice of `src/` with its own flags and runs that feature's suite in isolation, so "this feature builds and tests on its own" stays guaranteed.
+The native test matrix has **312 environments**, one per feature, generated from [test_matrix.json](test_matrix.json) into [platformio.ini](../platformio.ini) by [gen_test_envs.py](gen_test_envs.py). Each compiles a strict per-feature slice of `src/` with its own flags and runs that feature's suite in isolation, so "this feature builds and tests on its own" stays guaranteed.
 
 | Environment | Feature flag(s) | Test suite(s) | Purpose |
 | :--- | :--- | :--- | :--- |
@@ -348,6 +348,7 @@ The native test matrix has **311 environments**, one per feature, generated from
 | `native_sunspec` | `PC_ENABLE_SUNSPEC=1` | `unit/energy/test_sunspec` | SunSpec Modbus model codec (services/energy/sunspec): the map writer (marker / model headers / points / end model) + the model-chain walker + typed point readers (u16 / i16 / u32 / i32 / string). |
 | `native_swar` | default | `unit/mmgr/test_swar` | Lane math (mmgr/swar.h): one 32-bit word as four byte lanes. |
 | `native_syslog` | `PC_ENABLE_SYSLOG=1` | `protocols/transport/test_syslog` | Syslog client (RFC 5424) line formatter. |
+| `native_tcp_hot` | default | `protocols/transport/test_tcp_hot` | The TCP target path, driven on the host (base native_hot_base, so PROTOCORE_HOT is 1 and board_drivers/*/mock stands in for silicon). |
 | `native_telemetry` | `PC_ENABLE_TELEMETRY=1` | `unit/iot/test_telemetry` | Telemetry math (services/iot/telemetry): moving-window stats, rate-of-change, and totalizer. |
 | `native_telnet` | `PC_ENABLE_TELNET=1` | `integration/session/test_telnet` | Telnet server (RFC 854 IAC negotiation + line editing) wired through the real transport ring buffer; output checked via the tcp_write capture mock. |
 | `native_template` | default | `integration/transport/test_template` | test_template against the native_stack_http stack. |
