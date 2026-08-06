@@ -44,8 +44,8 @@
 #include "network_drivers/session/proto_handler.h"
 #include "network_drivers/session/worker.h"
 #include "network_drivers/tls/tls.h"
-#include "network_drivers/transport/tcp.h"
 #include "network_drivers/transport/tcp.h" // TcpConn, conn_pool, pc_ap_ip: the slots this drives
+#include "server/clock/clock.h"            // pc_millis(): the QUIC poll stamp and the request timeout
 #include "shared_primitives/hex.h"
 #include "shared_primitives/mime.h"
 #include "shared_primitives/runops.h" // every string scan, compare, copy and search on this layer
@@ -55,31 +55,11 @@
 #if PC_ENABLE_HTTP3
 #include "network_drivers/presentation/http/http3/quic_server.h"
 #endif
-#if PC_ENABLE_WEBSOCKET
-#include "crypto/hash/sha1.h"
-#include "network_drivers/presentation/codec/base64/base64.h"
-#elif PC_ENABLE_AUTH
-#include "network_drivers/presentation/codec/base64/base64.h"
-#endif
-#if PC_ENABLE_AUTH
-#include "crypto/hash/sha256.h"
-#include "server/clock/clock.h" // pc_millis() for the stateless Digest nonce timestamp
 #if PC_ENABLE_HTTP_DELIVERY
 #include "services/file_transfer/http_delivery/http_delivery.h" // pc_delivery_cache_control (SWR directive)
 #endif
-#if PC_ENABLE_AUTH_LOCKOUT
-#include "services/security/auth_lockout/auth_lockout.h"
-#endif
-#if PC_ENABLE_FORWARDED_TRUST
-#include "services/security/forwarded_trust/forwarded_trust.h"
-#endif
-#if PROTOCORE_HOT
-#endif
-#endif
 #if PC_ENABLE_CSRF
 #include "services/security/csrf/csrf.h"
-#if PROTOCORE_HOT
-#endif
 #endif
 #if PC_ENABLE_WEBDAV
 #include "network_drivers/application/webdav/webdav.h"
@@ -1238,30 +1218,6 @@ void diag(uint8_t slot_id)
     pc_plaintext_release(mark);
 }
 #endif
-
-// ---------------------------------------------------------------------------
-// Route dispatch
-// ---------------------------------------------------------------------------
-
-
-
-
-
-#if PC_ENABLE_AUTH_LOCKOUT
-
-#endif // PC_ENABLE_AUTH_LOCKOUT
-
-
-#if PC_ENABLE_CSRF
-#endif // PC_ENABLE_CSRF
-
-#if PC_ENABLE_WEBSOCKET
-#endif // PC_ENABLE_WEBSOCKET
-
-#if PC_ENABLE_AUTH
-#endif // PC_ENABLE_AUTH
-
-
 
 /**
  * @brief Send an HTTP response whose body is a null-terminated string.

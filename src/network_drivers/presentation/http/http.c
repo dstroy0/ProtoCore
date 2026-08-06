@@ -14,6 +14,16 @@
 #include "protocore.h"                // http_pool, and the request and route widths
 #include "network_drivers/presentation/http/auth/auth.h"
 #include "shared_primitives/runops.h" // every scan and compare here
+#if PC_ENABLE_AUTH_LOCKOUT
+#include "server/clock/clock.h" // pc_millis() stamps the attempt the lockout counts
+#include "services/security/auth_lockout/auth_lockout.h"
+#if PC_ENABLE_FORWARDED_TRUST
+#include "services/security/forwarded_trust/forwarded_trust.h"
+#endif
+#endif
+#if PC_ENABLE_CSRF
+#include "services/security/csrf/csrf.h"
+#endif
 
 // The root's one file-scope mutable: the handler a request runs when no route matched.
 typedef struct
@@ -380,6 +390,7 @@ static void send_method_not_allowed(uint8_t slot_id, const char *allow)
     send_error_close(slot_id, "405 Method Not Allowed", extra, "Method Not Allowed");
 }
 
+#if PC_ENABLE_AUTH_LOCKOUT
 // The peer's family-tagged source address for the connection in slot_id (unspecified on native /
 // no pcb). Used as the auth-lockout bucket key - the full IPv4 or IPv6 address, so a v6 peer is
 // never flattened onto a shared v4 bucket nor folded into a collideable hash.
@@ -406,6 +417,7 @@ static void send_too_many_requests(uint8_t slot_id, uint32_t retry_after_s)
     }
     send_error_close(slot_id, "429 Too Many Requests", extra, "Too Many Requests");
 }
+#endif // PC_ENABLE_AUTH_LOCKOUT
 
 static proto_bool route_admits(const Route *r, uint8_t slot_id, HttpReq *req)
 {
@@ -429,6 +441,7 @@ static proto_bool route_admits(const Route *r, uint8_t slot_id, HttpReq *req)
     return PROTO_TRUE;
 }
 
+#if PC_ENABLE_CSRF
 static proto_bool pc_csrf_gate(uint8_t slot_id, HttpReq *req, HttpMethod method)
 {
     // Built-in token endpoint: GET /csrf issues a signed token (also set as the
@@ -470,7 +483,9 @@ static proto_bool pc_csrf_gate(uint8_t slot_id, HttpReq *req, HttpMethod method)
     }
     return PROTO_FALSE;
 }
+#endif // PC_ENABLE_CSRF
 
+#if PC_ENABLE_WEBSOCKET
 static void handle_ws_route(uint8_t slot_id, HttpReq *req, HttpMethod method, const Route *r)
 {
     const char *upgrade_hdr = http_get_header(req, "Upgrade");
@@ -498,7 +513,9 @@ static void handle_ws_route(uint8_t slot_id, HttpReq *req, HttpMethod method, co
         send_text(slot_id, 400, PC_MIME_TEXT_PLAIN, "Bad WebSocket handshake");
     }
 }
+#endif // PC_ENABLE_WEBSOCKET
 
+#if PC_ENABLE_AUTH
 static proto_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const Route *r)
 {
 #if PC_ENABLE_AUTH_LOCKOUT
@@ -545,6 +562,7 @@ static proto_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const R
     }
     return PROTO_TRUE;
 }
+#endif // PC_ENABLE_AUTH
 
 static proto_bool dispatch_matched_route(uint8_t slot_id, HttpReq *req, HttpMethod method, Route *r, proto_bool *path_matched,
                                   char *allow_buf, size_t allow_cap)
