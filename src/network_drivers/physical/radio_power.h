@@ -25,13 +25,6 @@
 
 PROTO_BEGIN_DECLS
 
-/** @brief Modem-sleep modes (match PC_RADIO_WIFI_PS). Config/compare values, so integer constants in
- *  a namespacing struct (cast-free at ==/switch). The service maps these onto the L1 `pc_phy_ps`
- *  contract; what the radio backend calls them is its own business. */
-#define PC_PS_NONE 0      ///< no modem sleep (max performance).
-#define PC_PS_MIN_MODEM 1 ///< wake at every DTIM (balanced).
-#define PC_PS_MAX_MODEM 2 ///< wake at a listen interval (lowest power, higher latency).
-
 #if PC_ENABLE_RADIO_POWER
 /** @brief The module's storage. Declared, never defined here: the layout stays in radio_power.c. */
 typedef struct RadioCtx RadioCtx;
@@ -43,7 +36,6 @@ typedef struct RadioCtx RadioCtx;
  * @var RadioNs::ctx          the module's storage, opaque to every caller.
  * @var RadioNs::power        apply PC_RADIO_WIFI_PS (+ TX cap) to the radio. No-op on host.
  * @var RadioNs::ps_name      name for a modem-sleep mode ("none" / "min_modem" / "max_modem").
- * @var RadioNs::ps_get       modem-sleep mode read back from the radio (PC_PS_* ; 0 on host).
  * @var RadioNs::busy_hold    hold the radio awake for a bulk transfer (reference-counted).
  * @var RadioNs::busy_release release one bulk-transfer hold.
  * @var RadioNs::ps_set       set the modem-sleep mode on the radio.
@@ -64,8 +56,7 @@ typedef struct RadioNs
 #if PC_ENABLE_RADIO_POWER
     RadioCtx *ctx;
     void (*power)(void);
-    const char *(*ps_name)(uint8_t mode);
-    uint8_t (*ps_get)(void);
+    const char *(*ps_name)(pc_phy_ps mode);
     void (*busy_hold)(void);
     void (*busy_release)(void);
 #endif

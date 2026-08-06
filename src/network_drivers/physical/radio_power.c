@@ -20,15 +20,15 @@ struct RadioCtx
 };
 static struct RadioCtx s_radio;
 
-static const char *ps_name(uint8_t mode)
+static const char *ps_name(pc_phy_ps mode)
 {
     switch (mode)
     {
-    case PC_PS_MIN_MODEM:
+    case PC_PHY_PS_MIN_MODEM:
         return "min_modem";
-    case PC_PS_MAX_MODEM:
+    case PC_PHY_PS_MAX_MODEM:
         return "max_modem";
-    case PC_PS_NONE:
+    case PC_PHY_PS_NONE:
         return "none";
     default:
         return "none";
@@ -37,40 +37,12 @@ static const char *ps_name(uint8_t mode)
 
 #if PROTOCORE_HOT
 
-// Service vocabulary -> L1 vocabulary. Both are ours; neither is the vendor's.
-static pc_phy_ps to_phy_ps(uint8_t mode)
-{
-    if (mode == PC_PS_MIN_MODEM)
-    {
-        return PC_PHY_PS_MIN_MODEM;
-    }
-    if (mode == PC_PS_MAX_MODEM)
-    {
-        return PC_PHY_PS_MAX_MODEM;
-    }
-    return PC_PHY_PS_NONE;
-}
-
 static void power(void)
 {
-    pc_phy_ps_set(to_phy_ps(PC_RADIO_WIFI_PS));
+    pc_phy_ps_set((pc_phy_ps)PC_RADIO_WIFI_PS);
 #if PC_RADIO_MAX_TX_DBM > 0
     pc_phy_tx_power_set((int8_t)PC_RADIO_MAX_TX_DBM); // whole dBm; the backend owns the unit
 #endif
-}
-
-static uint8_t ps_get(void)
-{
-    const pc_phy_ps m = pc_phy_ps_get();
-    if (m == PC_PHY_PS_MIN_MODEM)
-    {
-        return PC_PS_MIN_MODEM;
-    }
-    if (m == PC_PHY_PS_MAX_MODEM)
-    {
-        return PC_PS_MAX_MODEM;
-    }
-    return PC_PS_NONE;
 }
 
 static void busy_hold(void)
@@ -94,25 +66,11 @@ static void busy_release(void)
     }
 }
 
-#else // host build - no radio
+#else  // host build - no radio
 
 static void power(void)
 {
 }
-static uint8_t ps_get(void)
-{
-    return PC_PS_NONE;
-}
-static void busy_hold(void)
-{
-    // no-op on the host build: there is no radio to keep awake (the ESP32 branch above holds the
-    // modem-sleep refcount).
-}
-static void busy_release(void)
-{
-    // no-op on the host build (see busy_hold).
-}
-
 #endif // PROTOCORE_HOT
 
 const RadioNs Radio = {
@@ -120,7 +78,6 @@ const RadioNs Radio = {
     &s_radio,
     power,
     ps_name,
-    ps_get,
     busy_hold,
     busy_release,
 #endif

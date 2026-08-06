@@ -21,7 +21,7 @@ static void radio_power_bench_task(void *)
         Serial.printf("DB ==== radio_power device microbench start (CCOUNT @ %u MHz) ====\n",
                       (unsigned)getCpuFrequencyMhz());
         volatile uintptr_t sink = 0;
-        DBENCH_OP("pc_radio_ps_name", 200000, sink += (uintptr_t)pc_radio_ps_name(pc_radio_ps::PC_PS_MAX_MODEM));
+        DBENCH_OP("pc_radio_ps_name", 200000, sink += (uintptr_t)pc_radio_ps_name(pc_radio_ps::PC_PHY_PS_MAX_MODEM));
         DBENCH_OP("pc_radio_ps_get", 200000, sink += pc_radio_ps_get());
         (void)sink;
         Serial.println("DB ==== DONE ====");

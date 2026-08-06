@@ -29,7 +29,7 @@ void app_main(void)
     // what makes the linker resolve the entry points behind it.
     Radio.power();
     Radio.busy_hold();
-    printf("pc: radio modem-sleep %s\n", Radio.ps_name(Radio.ps_get()));
+    printf("pc: radio modem-sleep %s\n", Radio.ps_name(Radio.ps_mode()));
     Radio.busy_release();
 #endif
 }

@@ -16,16 +16,16 @@ void tearDown()
 
 void test_ps_names()
 {
-    TEST_ASSERT_EQUAL_STRING("none", Radio.ps_name(PC_PS_NONE));
-    TEST_ASSERT_EQUAL_STRING("min_modem", Radio.ps_name(PC_PS_MIN_MODEM));
-    TEST_ASSERT_EQUAL_STRING("max_modem", Radio.ps_name(PC_PS_MAX_MODEM));
+    TEST_ASSERT_EQUAL_STRING("none", Radio.ps_name(PC_PHY_PS_NONE));
+    TEST_ASSERT_EQUAL_STRING("min_modem", Radio.ps_name(PC_PHY_PS_MIN_MODEM));
+    TEST_ASSERT_EQUAL_STRING("max_modem", Radio.ps_name(PC_PHY_PS_MAX_MODEM));
     TEST_ASSERT_EQUAL_STRING("none", Radio.ps_name(99)); // unknown -> none
 }
 
 void test_apply_is_noop_on_host()
 {
     Radio.power(); // must not crash
-    TEST_ASSERT_EQUAL_UINT8(PC_PS_NONE, Radio.ps_get());
+    TEST_ASSERT_EQUAL_UINT8(PC_PHY_PS_NONE, Radio.ps_mode());
 }
 
 void test_busy_hold_release_is_noop_on_host()
@@ -33,12 +33,12 @@ void test_busy_hold_release_is_noop_on_host()
     // Bulk-transfer keep-awake refcount is ESP32-only; on host both calls are no-ops
     // that must not crash and must not perturb the readback.
     Radio.busy_hold();
-    TEST_ASSERT_EQUAL_UINT8(PC_PS_NONE, Radio.ps_get());
+    TEST_ASSERT_EQUAL_UINT8(PC_PHY_PS_NONE, Radio.ps_mode());
     Radio.busy_release();
-    TEST_ASSERT_EQUAL_UINT8(PC_PS_NONE, Radio.ps_get());
+    TEST_ASSERT_EQUAL_UINT8(PC_PHY_PS_NONE, Radio.ps_mode());
     // Unbalanced release (no matching hold) is still a no-op on host.
     Radio.busy_release();
-    TEST_ASSERT_EQUAL_UINT8(PC_PS_NONE, Radio.ps_get());
+    TEST_ASSERT_EQUAL_UINT8(PC_PHY_PS_NONE, Radio.ps_mode());
 }
 
 int main()

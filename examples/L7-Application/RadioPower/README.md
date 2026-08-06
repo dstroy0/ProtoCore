@@ -14,13 +14,13 @@ so the settings are applied once association completes:
 
 ```cpp
 Radio.power();   // applies the build-flag-configured modem-sleep / TX cap
-Serial.printf("radio modem-sleep: %s\n", Radio.ps_name(Radio.ps_get()));
+Serial.printf("radio modem-sleep: %s\n", Radio.ps_name(Radio.ps_mode()));
 ```
 
 **The mode is a build flag, not a runtime call**, so it reaches the
 separately-compiled library: `PC_RADIO_WIFI_PS` is `0` (none), `1` (min modem
 sleep), or `2` (max modem sleep), with an optional `PC_RADIO_MAX_TX_DBM` cap.
-`Radio.ps_get()` reads the live mode back and `Radio.ps_name()` turns
+`Radio.ps_mode()` reads the live mode back and `Radio.ps_name()` turns
 it into a string for the endpoint.
 
 ## Build and run
@@ -69,11 +69,11 @@ void setup()
     // Apply the configured modem-sleep / TX settings AFTER the link is up (the
     // WiFi connect path may set its own default first).
     Radio.power();
-    Serial.printf("radio modem-sleep: %s\n", Radio.ps_name(Radio.ps_get()));
+    Serial.printf("radio modem-sleep: %s\n", Radio.ps_name(Radio.ps_mode()));
 
     server.on("/radio", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
         char b[48];
-        snprintf(b, sizeof(b), "{\"modem_sleep\":\"%s\"}", Radio.ps_name(Radio.ps_get()));
+        snprintf(b, sizeof(b), "{\"modem_sleep\":\"%s\"}", Radio.ps_name(Radio.ps_mode()));
         server.send(id, 200, "application/json", b);
     });
     server.begin(80);
