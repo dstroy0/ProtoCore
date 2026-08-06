@@ -8,6 +8,111 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ---
 
+## Every OAuth2 request builder passes a Buf ** where a Buf * is expected, and segfaults
+
+- **Status:** OPEN, found by a spec audit of the security services. Verified in source.
+- **Symptom:** `pc_oauth2_build_code_request()` and `pc_oauth2_build_refresh_request()` crash. Every
+  parameter goes through the broken helper, so the first one does it.
+- **Root cause:** `oauth2.c:77` takes `Buf *b` and then calls `put_raw(&b, "&")` at `:79`, `:80`,
+  `:81` and `put_enc(&b, val)` at `:82`. `put_raw` and `put_enc` take `Buf *` (`:28`, `:48`), so each
+  call passes the address of the pointer. The callee then treats a `Buf **` as a `Buf *` and writes
+  through whatever the first members alias.
+- **Why it compiles:** `-std=c11` makes an incompatible pointer type a warning. This file was a
+  `.cpp` until `667989ac9`, where the C++ compiler rejected it outright as an error; the conversion
+  to C demoted it to a warning and it has been broken since.
+- **Why nothing caught it:** `native_oauth2` builds and the suite passes, because no case calls a
+  builder. `test_oauth2` covers the percent-encoder and the response parser only.
+- **Fix:** not applied, by owner decision. It is `put_raw(b, ...)` four times.
+
+---
+
+## The forwarded-client resolver reads the leftmost element, which is the one the client controls
+
+- **Status:** OPEN, found in the same audit.
+- **Symptom:** an auth lockout is evaded by rotating a header value, and any chosen address can be
+  made to take the blame for another peer's failures.
+- **Root cause:** `http_parser.c:789` returns the first element of `X-Forwarded-For`, and `:743`
+  does the same for `Forwarded`. A proxy appends, so the element it added is the last one and
+  everything left of it came from the client. RFC 7239 section 7.1 says only the element the trusted
+  proxy added may be believed. The trust check still passes, because the peer genuinely is the
+  proxy.
+- **`http.c:538` states the opposite in a comment:** "a spoofed header can neither evade a lockout
+  nor frame another address."
+- **Why nothing caught it:** `test_http_parser.c:417`, `:422` and `:446` assert the leftmost element
+  is what comes back, so the suite pins it. `test_forwarded_trust` never supplies a comma list at
+  all, so the module that exists to stop this never sees the shape.
+- **Fix:** not applied.
+
+---
+
+## pc_totp accepts digits = 0, and then every code verifies
+
+- **Status:** OPEN, found in the same audit.
+- **Root cause:** `totp.c:53` computes `pow10u(digits)` with no range check. At `digits = 0` the
+  modulus is 1, so the generated code is always 0 and `pc_totp_verify()` accepts 0 from anyone. At
+  `digits = 10` the value overflows `uint32_t`. RFC 4226 section 5.3 fixes the range at 6 to 8.
+- **Related, same module:** the verifier is stateless, so a code stays valid for its whole window;
+  RFC 6238 section 5.2 requires a used code to be refused. `pc_base32_decode` (`:147`) discards a
+  trailing partial group instead of rejecting it, so two different secrets can decode to the same
+  key, and it accepts `=` anywhere rather than only as trailing padding.
+- **Why nothing caught it:** no case passes a `digits` outside 6 to 8, and none replays a code.
+- **Fix:** not applied.
+
+---
+
+## Three writers discard a send result the caller is told succeeded
+
+- **Status:** OPEN. `sse.c` found by the transport audit and verified; the pattern is the one
+  BUGS.md already records under "TX truncation on large responses".
+- **Root cause:** `sse.c:158` calls `Tcp.conn->send(...)` and returns `PROTO_TRUE` unconditionally.
+  Once the TCP send buffer fills, the event is dropped and the subscriber is told it was delivered.
+- **Also found, not send-related but the same class of unbuilt code:**
+    - `udp_telemetry.c:206` names `s_ut.ip`; the member is `collector` (`:188`). It sits under
+      `#if PROTOCORE_HOT`, which no host env compiles, so the file does not build for the target.
+    - `sockpool.c:56` picks its LRU victim by comparing absolute `last_used` values with `<`, which
+      inverts across a `millis()` rollover and evicts the newest slot. Every other window
+      comparison in the tree uses an unsigned delta.
+    - `udp_listener.c:498` (`listen_group`) omits the `find_bind(port)` rebind that `listen_on`
+      carries at `:472` with a comment explaining why, so two slots can hold one port and one is
+      unreachable.
+- **Fix:** none applied.
+
+---
+
+## The accept path wires four callbacks and no test reads any of them
+
+- **Status:** OPEN, found by the transport audit.
+- **Symptom:** none locally. On target, deleting the wiring makes every accepted connection deaf to
+  data, ACKs and errors, and the whole host suite stays green.
+- **Root cause:** `tcp_listener.c:527` registers `pc_net_on_recv`, `pc_net_on_sent` and
+  `pc_net_on_err` on each accepted pcb. The mock stores all four. No test reads them, and the mock's
+  own `pc_net_host_deliver()` and `pc_net_host_close_peer()`, which fire a callback through a pcb,
+  have zero callers. Every TCP test calls `lowlevel_recv_cb` and friends directly.
+  `test_transport.c:1373` is named `test_accept_cb_claims_slot_and_wires_connection` and asserts
+  nine fields, none of them a callback.
+- **The pattern to copy is one directory over:** `test_udp_hot.c:101` asserts `p->on_recv` and
+  drives delivery through it.
+- **Fix:** not applied.
+
+---
+
+## test_concurrency compiles no library source, and ring.h cites it as its proof
+
+- **Status:** OPEN, found by the transport audit.
+- **Root cause:** `native_concurrency` and `native_tsan` both declare `"src": ["-<*>"]` and
+  `"test_build_src": "no"`, so no ProtoCore file is in either binary. The suite hand-rolls its own
+  ring with plain assignments on `_Atomic size_t`, which are sequentially consistent. Production
+  uses acquire/release through `PROTO_ATOMIC_LOAD` and `PROTO_ATOMIC_STORE` (`ring.h:50`, `:53`) and
+  the `pc_ring_*` helpers, none of which are linked into that binary. Weakening the production
+  ordering to relaxed leaves both envs green.
+- **The citation is circular:** `ring.h:44` justifies its ordering by pointing at
+  `test_spsc_ring_no_race`, the test that cannot reach it.
+- **Also:** `test_state_handoff_no_race` discards its observation at `:122` and its only assertion
+  restates the writer thread's last statement after a join, so it cannot fail.
+- **Fix:** not applied.
+
+---
+
 ## The QUIC server acknowledges every packet number it never received
 
 - **Status:** OPEN, found by a spec audit of the QUIC engine against RFC 9000.
