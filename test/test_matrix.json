@@ -731,7 +731,8 @@
         "+<server/filesystem/filesystem.c>",
         "+<server/filesystem/mnt.c>",
         "+<mmgr/protostr.c>",
-        "+<mmgr/secure.c>"
+        "+<mmgr/secure.c>",
+        "+<mmgr/protomem.c>"
       ],
       "tests": []
     },
