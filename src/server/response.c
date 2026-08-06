@@ -18,7 +18,6 @@
 #include "network_drivers/presentation/http/http.h"
 #include "shared_primitives/hex.h"  // pc_hex_u32 (chunk size-line writer)
 #include "shared_primitives/mime.h" // PC_MIME_*, mime tables
-#include <stdio.h>
 
 #if PC_ENABLE_METRICS || PC_ENABLE_STATS
 #include "network_drivers/application/web_assets.h" // PC_STATS_JSON / PC_METRICS_PROM (generated)
@@ -777,3 +776,311 @@ void metrics(uint8_t slot_id)
     send_template(slot_id, 200, "text/plain; version=0.0.4; charset=utf-8", PC_METRICS_PROM, metrics_var);
 }
 #endif // PC_ENABLE_METRICS
+
+// Finish a response: flush, then either begin the graceful CONN_CLOSING dwell
+// (close path) or leave the slot active for reuse (keep-alive). The HTTP parser
+// is reset either way, returning a kept-alive slot to PARSE_METHOD ready for the
+// next request. The slot stays CONN_ACTIVE through the write on BOTH paths so its
+// callbacks stay live; the close path then dwells in CONN_CLOSING from here, so the
+// slot is reclaimed only once the peer ACKs the response (or the CLOSING timeout fires), not
+// before it is delivered.
+//
+// The connection is addressed by slot alone and the transport resolves the pcb internally, the
+// same way the RX read path does: no pcb is threaded through the app layer, so the send target
+// cannot disagree with the slot.
+void pc_resp_end(uint8_t slot_id, int code, int body_len, proto_bool keep, proto_bool pre_flushed)
+{
+    if (!pre_flushed)
+    {
+        Tcp.conn->flush(slot_id); // a pre_flushed caller already did tcp_output in its final send
+    }
+    if (!keep)
+    {
+        Tcp.conn->begin_close(slot_id); // ACTIVE -> CONN_CLOSING; finalizes on ACK
+    }
+    note_response(slot_id, code, body_len);
+    http_reset(slot_id);
+}
+
+// Resolve the Connection response header (and report keep-alive intent) in one
+// place so every response path agrees. Keep-alive compiled out always closes.
+const char *pc_resp_conn_hdr(uint8_t slot_id, proto_bool *keep_out)
+{
+    proto_bool keep = PROTO_FALSE;
+#if PC_ENABLE_KEEPALIVE
+    keep = keepalive_eval(slot_id);
+#else
+    (void)slot_id;
+#endif
+    // The null half cannot fire: every call site passes the address of its own local `keep`. Kept so
+    // the signature keeps saying the report-back is optional.
+    if (keep_out)
+    {
+        *keep_out = keep;
+    }
+    return keep ? "Connection: keep-alive\r\n" : "Connection: close\r\n";
+}
+
+// Append the shared response trailer (CORS block + custom headers + Connection +
+// the terminating blank line) to a header buffer already holding the status line
+// and per-response headers. One owner for the trailer every dynamic response ends
+// with. Returns the new total length.
+const char PC_RESP_HDR_OVERFLOW[] = "HTTP/1.1 500 Internal Server Error\r\n"
+                                    "Content-Length: 0\r\n"
+                                    "Connection: close\r\n\r\n";
+// Taken with sizeof at the definition, where the array bound is still visible. The send site sees
+// only `extern const char[]`, so measuring it there would mean scanning a string whose length was
+// known when it was written.
+const size_t PC_RESP_HDR_OVERFLOW_LEN = sizeof(PC_RESP_HDR_OVERFLOW) - 1;
+
+int proto_append_resp_trailer(char *buf, size_t cap, int hlen, uint8_t slot_id, const char *cl)
+{
+    // hlen is the caller's status-line length from pc_sb_finish, which reports 0 for a status line
+    // that did not fit. Appending the trailer at offset 0 in that case would emit a response with
+    // no status line at all, so 0 propagates as failure and the caller sends a canned reply.
+    //
+    // A response either fits or is refused; it is never clamped to cap and sent. A header block cut
+    // mid-field has no terminating CRLF, so the peer reads the body as continued headers and the
+    // connection desynchronizes - worse than sending nothing.
+    if (hlen <= 0)
+    {
+        return 0;
+    }
+    if ((size_t)hlen >= cap)
+    {
+        return 0;
+    }
+#if PC_HTTP_EMIT_DATE
+    // RFC 7231 7.1.1.2: emit Date only when a real wall-clock time exists; a clock-less device (no
+    // synced/valid time source yet) omits it. The time comes from the multi-source registry (any
+    // enabled NTP / GPS / RTC / ... by priority) when PC_ENABLE_TIME_SOURCE is set, else straight
+    // from NTP.
+    char date_hdr[48] = "";
+    char imf[40];
+#if PC_ENABLE_TIME_SOURCE
+    if (pc_time_http_date(imf, sizeof(imf)) > 0)
+#else
+    if (pc_ntp_http_date(imf, sizeof(imf)) > 0)
+#endif
+    {
+        pc_sb sb_date_hdr = {date_hdr, sizeof(date_hdr), 0, PROTO_TRUE};
+        pc_sb_put(&sb_date_hdr, "Date: ");
+        pc_sb_put(&sb_date_hdr, imf);
+        pc_sb_put(&sb_date_hdr, "\r\n");
+        if (pc_sb_finish(&sb_date_hdr) == 0)
+        {
+            date_hdr[0] = '\0';
+        }
+    }
+#else
+    const char *date_hdr = "";
+#endif
+    pc_sb sb411 = {buf + hlen, cap - (size_t)hlen, 0, PROTO_TRUE};
+    pc_sb_put(&sb411, date_hdr);
+    pc_sb_put(&sb411, pc_resp_cors_enabled() ? pc_resp_cors_header() : "");
+    pc_sb_put(&sb411, pc_resp_extra_hdr(slot_id));
+    pc_sb_put(&sb411, cl);
+    pc_sb_put(&sb411, "\r\n");
+    int n = (int)pc_sb_finish(&sb411);
+    if (!sb411.ok)
+    {
+        return 0; // trailer does not fit: refuse the response rather than send a headless one
+    }
+    return hlen + n;
+}
+
+/**
+ * @brief Send an HTTP response whose body is a null-terminated string.
+ *
+ * @param slot_id      Connection slot index.
+ * @param code         HTTP status code, e.g. 200.
+ * @param content_type MIME type string, e.g. "application/json".
+ * @param payload      Null-terminated body string to send; null sends an empty body.
+ */
+void send_text(uint8_t slot_id, int code, const char *content_type, const char *payload)
+{
+    // Null-terminated convenience wrapper over the explicit-length send: the only difference between
+    // the two is who scans for the length, so text is bin plus one scan rather than a second sender.
+    // 0xFFFF is how far the scan is willing to look, not a claim the caller's string is that long:
+    // a body is a handler's string of unstated capacity, and the bound is what keeps a missing
+    // terminator from becoming an unbounded walk.
+    send_bin(slot_id, code, content_type, (const uint8_t *)payload,
+             (payload != NULL) ? proto_scan_nul(payload, 0xFFFF) : 0);
+}
+
+void send_bin(uint8_t slot_id, int code, const char *content_type, const uint8_t *body, size_t body_len)
+{
+    if (slot_id >= CONN_POOL_SLOTS)
+    {
+        return; // guard the public entry: never index conn_pool out of range
+    }
+    const char *payload = (const char *)body;
+    TcpConn *conn = &conn_pool[slot_id];
+#if PC_ENABLE_HTTP2 || PC_ENABLE_HTTP3
+    // A self-framing protocol (HTTP/2, HTTP/3) installed its own response sink at negotiation /
+    // dispatch time; route through it and let it own its framing + connection lifecycle. This runs
+    // before the HTTP/1.1 pcb check because that check is a TCP-transport concern (the HTTP/3 slot
+    // has no pcb by design, and an h2 connection manages its own).
+    if (conn->pc_resp_sink)
+    {
+        conn->pc_resp_sink(slot_id, code, content_type, payload, body_len);
+        return;
+    }
+#endif
+    if (conn->state != CONN_ACTIVE || conn->pcb == NULL)
+    {
+        http_reset(slot_id);
+        return;
+    }
+
+    int payload_len = (int)(body_len > 0xFFFF ? 0xFFFF : body_len);
+
+    proto_bool keep;
+    const char *cl = pc_resp_conn_hdr(slot_id, &keep);
+
+    char header[RESP_HDR_BUF_SIZE];
+    pc_sb sb_header2 = {header, sizeof(header), 0, PROTO_TRUE};
+    pc_sb_put(&sb_header2, "HTTP/1.1 ");
+    pc_sb_i64(&sb_header2, (int64_t)(code));
+    pc_sb_put(&sb_header2, " ");
+    pc_sb_put(&sb_header2, Http.status_text(code));
+    pc_sb_put(&sb_header2, "\r\nContent-Type: ");
+    pc_sb_put(&sb_header2, content_type);
+    pc_sb_put(&sb_header2, "\r\nContent-Length: ");
+    pc_sb_i64(&sb_header2, (int64_t)(payload_len));
+    pc_sb_put(&sb_header2, "\r\n");
+    int hlen = (int)pc_sb_finish(&sb_header2);
+    hlen = proto_append_resp_trailer(header, sizeof(header), hlen, slot_id, cl);
+    if (hlen == 0)
+    {
+        // The headers do not fit RESP_HDR_BUF_SIZE (an over-long content type, or a custom-header
+        // block that filled the buffer). Truncating them would emit a header block with no
+        // terminating CRLF and desync the connection, so a fixed reply that always fits goes out
+        // instead and the connection closes.
+        Tcp.conn->send_flush(slot_id, PC_RESP_HDR_OVERFLOW, (proto_u16)PC_RESP_HDR_OVERFLOW_LEN);
+        pc_resp_end(slot_id, 500, 0, PROTO_FALSE, /*pre_flushed=*/PROTO_FALSE);
+        return;
+    }
+
+    // The slot stays CONN_ACTIVE through the write for both paths; pc_resp_end then
+    // begins the CONN_CLOSING dwell on the close path (finalized once ACKed).
+
+    proto_bool head = Http.req_is_head(slot_id);
+
+    // HEAD responses carry the headers (incl. Content-Length) but no body. For a
+    // body that fits the header scratch, coalesce headers+body into a single send
+    // so the response costs one tcpip_thread round-trip rather than two. The final
+    // write carries the flush (Tcp.conn->send_flush) and pc_resp_end skips it, so a
+    // small keep-alive response is one marshal (write+output).
+    if (!head && payload_len > 0 && (size_t)hlen + (size_t)payload_len <= sizeof(header))
+    {
+        proto_raw_read(header + hlen, payload, (size_t)payload_len);
+        Tcp.conn->send_flush(slot_id, header, (proto_u16)(hlen + payload_len));
+    }
+    else if (!head && payload_len > 0)
+    {
+        Tcp.conn->send(slot_id, header, (proto_u16)hlen);
+        Tcp.conn->send_flush(slot_id, payload, (proto_u16)payload_len);
+    }
+    else
+    {
+        Tcp.conn->send_flush(slot_id, header, (proto_u16)hlen);
+    }
+
+    pc_resp_end(slot_id, code, payload_len, keep, /*pre_flushed=*/PROTO_TRUE);
+}
+
+/**
+ * @brief Send a status-line-and-headers response with `Content-Length: 0`.
+ *
+ * Used for CORS preflight (204) and any response where only status headers are needed. Takes the
+ * same slot lifecycle as send_bin(): a self-framing protocol's sink wins if one is installed, an
+ * inactive slot is reset without writing, and pc_resp_end() owns the close-or-recycle decision.
+ *
+ * @param slot_id Connection slot index.
+ * @param code    HTTP status code, e.g. 204.
+ */
+void send_empty(uint8_t slot_id, int code)
+{
+    if (slot_id >= CONN_POOL_SLOTS)
+    {
+        return;
+    }
+    TcpConn *conn = &conn_pool[slot_id];
+#if PC_ENABLE_HTTP2 || PC_ENABLE_HTTP3
+    if (conn->pc_resp_sink)
+    {
+        conn->pc_resp_sink(slot_id, code, "text/plain", "", 0);
+        return;
+    }
+#endif
+    if (conn->state != CONN_ACTIVE || conn->pcb == NULL)
+    {
+        http_reset(slot_id);
+        return;
+    }
+
+    proto_bool keep;
+    const char *cl = pc_resp_conn_hdr(slot_id, &keep);
+
+    char header[RESP_HDR_BUF_SIZE];
+    pc_sb sb_header3 = {header, sizeof(header), 0, PROTO_TRUE};
+    pc_sb_put(&sb_header3, "HTTP/1.1 ");
+    pc_sb_i64(&sb_header3, (int64_t)(code));
+    pc_sb_put(&sb_header3, " ");
+    pc_sb_put(&sb_header3, Http.status_text(code));
+    pc_sb_put(&sb_header3, "\r\nContent-Length: 0\r\n");
+    int hlen = (int)pc_sb_finish(&sb_header3);
+    hlen = proto_append_resp_trailer(header, sizeof(header), hlen, slot_id, cl);
+
+    Tcp.conn->send_flush(slot_id, header, (proto_u16)hlen);
+
+    pc_resp_end(slot_id, code, 0, keep, /*pre_flushed=*/PROTO_TRUE);
+}
+
+void redirect(uint8_t slot_id, int code, const char *location)
+{
+    if (slot_id >= MAX_CONNS)
+    {
+        return;
+    }
+    TcpConn *conn = &conn_pool[slot_id];
+    if (conn->state != CONN_ACTIVE || conn->pcb == NULL)
+    {
+        http_reset(slot_id);
+        return;
+    }
+
+    // Only the redirect status codes are valid here; anything else → 302.
+    switch (code)
+    {
+    case 301:
+    case 302:
+    case 303:
+    case 307:
+    case 308:
+        break;
+    default:
+        code = 302;
+        break;
+    }
+
+    proto_bool keep;
+    const char *cl = pc_resp_conn_hdr(slot_id, &keep);
+
+    char header[RESP_HDR_BUF_SIZE];
+    pc_sb sb_header4 = {header, sizeof(header), 0, PROTO_TRUE};
+    pc_sb_put(&sb_header4, "HTTP/1.1 ");
+    pc_sb_i64(&sb_header4, (int64_t)(code));
+    pc_sb_put(&sb_header4, " ");
+    pc_sb_put(&sb_header4, Http.status_text(code));
+    pc_sb_put(&sb_header4, "\r\nLocation: ");
+    pc_sb_put(&sb_header4, location);
+    pc_sb_put(&sb_header4, "\r\nContent-Length: 0\r\n");
+    int hlen = (int)pc_sb_finish(&sb_header4);
+    hlen = proto_append_resp_trailer(header, sizeof(header), hlen, slot_id, cl);
+
+    Tcp.conn->send_flush(slot_id, header, (proto_u16)hlen);
+
+    pc_resp_end(slot_id, code, 0, keep, /*pre_flushed=*/PROTO_TRUE);
+}
