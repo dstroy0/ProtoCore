@@ -44,9 +44,9 @@ In flight. Each of these is either being worked or blocks something that is.
       form. `PROTOCORE_` rather than `PC_` because a guard has to be unique in someone else's build,
       where `PC_*` is a plausible name for their own. Two headers exceed the 31-character limit and take
       the documented word-elision exception in [SYMBOLS.md](SYMBOLS.md#4-include-guards-files-and-test-targets).
-      Also fix the 18 macros over the same limit. Measure with `ci_tooling/check/check_symbols.py`, then
+      Also fix the 18 macros over the same limit. Measure with `tools/ci_tooling/check/check_symbols.py`, then
       re-run `--baseline` so the gate ratchets down.
-- [ ] **`ci_tooling/check/check_symbols.py`** (M, CI guard) - enforce the naming law mechanically (prefix and casing per
+- [ ] **`tools/ci_tooling/check/check_symbols.py`** (M, CI guard) - enforce the naming law mechanically (prefix and casing per
       symbol kind, macro scope and length, guard form, absence of `namespace`). Must also check
       TYPE-vs-FUNCTION collisions: normalizing types to snake_case collapsed `PCConnCounters`
       onto `pc_conn_counters()` and only a link error caught it.
@@ -85,7 +85,7 @@ Committed and scoped, not started.
 - [ ] **Migrate the remaining 6 generators onto `doc_region`** (S, dedupe) - `feature_budget`,
       `gen_api_flow`, `gen_examples`, `gen_feature_tables`, `gen_flag_deps`, and
       `gen_readme_sections` still hand-roll the marked-region read/replace/`--check` logic that
-      [`ci_tooling/lib/doc_region.py`](../ci_tooling/lib/doc_region.py) now owns. They use the
+      [`tools/ci_tooling/lib/doc_region.py`](../ci_tooling/lib/doc_region.py) now owns. They use the
       correct `prettier-ignore` mechanism, so they are duplicated rather than wrong; the gate is
       that every `--check` stays green and prettier stays clean.
 
@@ -209,7 +209,7 @@ Grouped by the area each belongs to.
       grid.
 - [ ] **Per-base-service flash-cost table** (M) - measure and document the incremental flash (and static
       RAM) each base service adds on top of the bare-bones baseline, so a user can budget a build. Extend the
-      footprint tooling (`ci_tooling/generate/example_footprints.py`) to emit a "cost of enabling service X alone" delta
+      footprint tooling (`tools/ci_tooling/generate/example_footprints.py`) to emit a "cost of enabling service X alone" delta
       against the minimal build and land it as a table in `docs/FOOTPRINTS.md`.
 
 #### Split protocore.cpp into single-purpose files
@@ -891,7 +891,7 @@ Built-in radio:
 ### Build / tooling
 
 - [~] Hierarchical build-flag tree (M); virtual protocol-mocking toggles (M) _(tree shipped)_ - the
-  `ci_tooling/generate/gen_configurator.py` generator parses `src/protocore_config.h` and builds the flags
+  `tools/ci_tooling/generate/gen_configurator.py` generator parses `src/protocore_config.h` and builds the flags
   as a hierarchy grouped under the file's section titles, with the hard dependency edges (`#if child &&
 !parent` guards) encoded - the build-flag tree, kept from drifting by the `check` CI gate. _Remaining:_
   the virtual protocol-mocking toggles (swap a real driver for a mock transport at build time).
@@ -909,7 +909,7 @@ Built-in radio:
   (`asyncua`) 3/3 - all seven protocol families. Adding a protocol is one module in
   `peers/` (documented in its README). Remaining: wiring it into CI containers, and a
   peer per new protocol as it lands.
-- [~] **Server build configurator (CLI + GUI in `configurator/`)** (L) _(GUI + source-of-truth shipped)_ - a guided front end for the ~200 `PC_ENABLE_*` and sizing flags so a user assembles a firmware build without hand-editing `build_flags`. Shipped as `ci_tooling/generate/gen_configurator.py` -> `docs/configurator.html`: it parses [protocore_config.h](../src/protocore_config.h) (the single source of truth, so it never drifts - a `check` CI gate fails on staleness) for every feature flag + tuning knob + section group + the hard `#if child && !parent` dependencies, and emits one self-contained page that ticks features, tunes knobs, resolves dependencies (mutual-exclusion), and copies out a `platformio.ini` `build_flags` block or a `#define` set (only the values that differ from the defaults). Beginner-friendly, ships to Pages. _Remaining:_ a live per-option build-footprint estimate (flash + RAM from the FEATURES tables), advisory "this is unwise, but here you go" guardrails, and a standalone CLI backend (the emission is client-side today).
+- [~] **Server build configurator (CLI + GUI in `configurator/`)** (L) _(GUI + source-of-truth shipped)_ - a guided front end for the ~200 `PC_ENABLE_*` and sizing flags so a user assembles a firmware build without hand-editing `build_flags`. Shipped as `tools/ci_tooling/generate/gen_configurator.py` -> `docs/configurator.html`: it parses [protocore_config.h](../src/protocore_config.h) (the single source of truth, so it never drifts - a `check` CI gate fails on staleness) for every feature flag + tuning knob + section group + the hard `#if child && !parent` dependencies, and emits one self-contained page that ticks features, tunes knobs, resolves dependencies (mutual-exclusion), and copies out a `platformio.ini` `build_flags` block or a `#define` set (only the values that differ from the defaults). Beginner-friendly, ships to Pages. _Remaining:_ a live per-option build-footprint estimate (flash + RAM from the FEATURES tables), advisory "this is unwise, but here you go" guardrails, and a standalone CLI backend (the emission is client-side today).
 
 ### Protocol & transport versions
 

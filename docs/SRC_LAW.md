@@ -4,8 +4,8 @@ The determinism and allocation rules every `src/` file obeys, derived from the s
 standards in the bibliography. Two companion documents carry the other halves:
 
 - [SRCBANNED.md](SRCBANNED.md) - the exact constructs banned in `src/`, enforced by
-  `ci_tooling/check/check_src_banned.py`.
-- [SYMBOLS.md](SYMBOLS.md) - the naming law, enforced by `ci_tooling/check/check_symbols.py`.
+  `tools/ci_tooling/check/check_src_banned.py`.
+- [SYMBOLS.md](SYMBOLS.md) - the naming law, enforced by `tools/ci_tooling/check/check_symbols.py`.
 
 ## 0. The language is C11
 

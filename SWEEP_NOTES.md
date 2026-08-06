@@ -932,7 +932,7 @@ Fixed in passing, each a real defect rather than a rename artifact:
 
 - `performance_benching/services/oidc/src/main.cpp` included
   `network_drivers/session/scratch.h`, a path that has not existed since the file moved to mmgr.
-- `docs/SRCBANNED.md` and `ci_tooling/check/check_src_banned.py` both asserted
+- `docs/SRCBANNED.md` and `tools/ci_tooling/check/check_src_banned.py` both asserted
   `PC_SCRATCH_SLOTS == PC_WORKER_COUNT`. That was already false before this work - the SSH client
   slot made it `+ 1`.
 - `arena.h` credited the pool accessor's `scratch_reset()` with emptying the arena's scratch end.

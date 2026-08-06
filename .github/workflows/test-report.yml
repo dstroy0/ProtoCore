@@ -146,9 +146,9 @@ jobs:
         if: ${{ env.SONAR_TOKEN != '' && steps.sel.outputs.mode != 'none' }}
         run: |
           if [ "${{ steps.sel.outputs.mode }}" = "affected" ]; then
-            bash ci_tooling/sonar/gen_compiledb.sh ${{ steps.sel.outputs.envs }}
+            bash tools/ci_tooling/sonar/gen_compiledb.sh ${{ steps.sel.outputs.envs }}
           else
-            bash ci_tooling/sonar/gen_compiledb.sh
+            bash tools/ci_tooling/sonar/gen_compiledb.sh
           fi
 
       # Failing TESTS must not fail this job - the report exists to document them. A failure to
@@ -209,9 +209,9 @@ jobs:
         continue-on-error: true
         run: |
           if [ "${{ steps.sel.outputs.mode }}" = "full" ]; then
-            python3 -m ci_tooling.generate.gen_dep_graph --out test/dep_graph.json
+            python3 -m tools.ci_tooling.generate.gen_dep_graph --out test/dep_graph.json
           else
-            python3 -m ci_tooling.generate.gen_dep_graph --merge --out test/dep_graph.json --envs ${{ steps.sel.outputs.envs }}
+            python3 -m tools.ci_tooling.generate.gen_dep_graph --merge --out test/dep_graph.json --envs ${{ steps.sel.outputs.envs }}
           fi
 
       - name: Commit updated report + coverage

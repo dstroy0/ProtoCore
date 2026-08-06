@@ -60,7 +60,7 @@ A multi-protocol network server for microcontrollers with a fully deterministic 
 >
 >     [docs/AUDIT.md](docs/AUDIT.md) [docs/STANDARDS.md](docs/STANDARDS.md)
 
-<!-- BEGIN GENERATED PROJECT STATUS (ci_tooling/generate/gen_readme_intro.py) -->
+<!-- BEGIN GENERATED PROJECT STATUS (tools/ci_tooling/generate/gen_readme_intro.py) -->
 
 <!-- prettier-ignore-start -->
 
@@ -78,11 +78,11 @@ Coverage is measured over all of `src/`, with nothing excluded. Numbers come fro
 
 ## Overview
 
-<!-- BEGIN GENERATED API FLOW (ci_tooling/generate/gen_api_flow.py) -->
+<!-- BEGIN GENERATED API FLOW (tools/ci_tooling/generate/gen_api_flow.py) -->
 
 <!-- prettier-ignore-start -->
 
-> Generated from the public API, `proto_builtins.c`, and `presentation/` by `ci_tooling/generate/gen_api_flow.py` - do not edit by hand. The picture is an SVG (native text labels, so it stays sharp at any zoom and the type is selectable); its mermaid source is [`docs/diagrams/api_flow.mmd`](docs/diagrams/api_flow.mmd).
+> Generated from the public API, `proto_builtins.c`, and `presentation/` by `tools/ci_tooling/generate/gen_api_flow.py` - do not edit by hand. The picture is an SVG (native text labels, so it stays sharp at any zoom and the type is selectable); its mermaid source is [`docs/diagrams/api_flow.mmd`](docs/diagrams/api_flow.mmd).
 
 **How to read it:** follow the arrows. A **request comes in** at the top from a client, travels **down** through the four OSI layers - L4 wire bytes, L5 protocol pick, L6 decode into a request, L7 your routes - your handler runs, and the **response goes back out** along the **green** arrows. Each box shows a plain-English step with the exact function underneath. You only write the two **amber** parts: register your routes (top) and your handler (middle).
 
@@ -106,7 +106,7 @@ The one idea worth taking away: every HTTP version (1.1, 2, 3) is decoded into t
 
 ## Quick start
 
-<!-- BEGIN GENERATED QUICK START (ci_tooling/generate/gen_readme_intro.py) -->
+<!-- BEGIN GENERATED QUICK START (tools/ci_tooling/generate/gen_readme_intro.py) -->
 
 <!-- prettier-ignore-start -->
 
@@ -199,7 +199,7 @@ The technical reference documentation has been moved to a dedicated landing page
 
 **Everything is opt-in.** A build carries the HTTP/1.1 core and nothing else until you name a flag, so the footprint is what you asked for rather than what the library ships with. The map below is live: click a layer to browse that group.
 
-<!-- BEGIN GENERATED FEATURE TABLES (ci_tooling/generate/gen_feature_tables.py) -->
+<!-- BEGIN GENERATED FEATURE TABLES (tools/ci_tooling/generate/gen_feature_tables.py) -->
 
 <!-- prettier-ignore-start -->
 
@@ -232,11 +232,11 @@ compile without it; those hard dependencies are enforced at compile time with a
 clear `#error` (so an illegal combination fails fast instead of producing a
 cryptic linker error). Enable a child flag only together with its parent.
 
-<!-- BEGIN GENERATED FLAG DEPS (ci_tooling/generate/gen_flag_deps.py) -->
+<!-- BEGIN GENERATED FLAG DEPS (tools/ci_tooling/generate/gen_flag_deps.py) -->
 
 <!-- prettier-ignore-start -->
 
-> Generated from the declared `PC_ENABLE_<A>_NEEDS_<B>` symbols in [src/protocore_config.h](src/protocore_config.h) by `ci_tooling/generate/gen_flag_deps.py` - do not edit by hand. The picture is an SVG: every node is a link to that feature's entry and carries a hover tooltip naming what it needs. Graphviz source: [`docs/diagrams/flag_deps.dot`](docs/diagrams/flag_deps.dot).
+> Generated from the declared `PC_ENABLE_<A>_NEEDS_<B>` symbols in [src/protocore_config.h](src/protocore_config.h) by `tools/ci_tooling/generate/gen_flag_deps.py` - do not edit by hand. The picture is an SVG: every node is a link to that feature's entry and carries a hover tooltip naming what it needs. Graphviz source: [`docs/diagrams/flag_deps.dot`](docs/diagrams/flag_deps.dot).
 
 Each **green** node is a parent feature and each **blue** node a child that needs it (a hard `#error` otherwise) - enable the parent to build the child. A green **`TLS`** badge on a node means that feature also needs `PC_ENABLE_TLS` (shown as a badge rather than an edge so no lines cross). **Hover a flag for what it needs; click it to read the feature.** (Auto-derived flags and PSRAM-class features are listed below the picture rather than drawn as edges, so the graph stays a clean family forest.)
 
@@ -277,11 +277,11 @@ _44 hard dependencies, 2 PSRAM gates, 7 derived flags._
 
 The jump from a bare sketch to a running server is almost entirely the WiFi/lwIP stack, not this library: an empty RTOS/Arduino sketch is already ~228 KB flash / ~21 KB RAM. TLS's larger RAM is the fixed mbedTLS arena (`PC_TLS_ARENA_SIZE`, 48 KB default); an outbound client links no code until a sketch actually calls it.
 
-<!-- BEGIN GENERATED FOOTPRINT BUDGET (ci_tooling/generate/feature_budget.py) -->
+<!-- BEGIN GENERATED FOOTPRINT BUDGET (tools/ci_tooling/generate/feature_budget.py) -->
 
 <!-- prettier-ignore-start -->
 
-> Autogenerated by `ci_tooling/generate/feature_budget.py` from isolated ESP32 builds - do not edit by hand.
+> Autogenerated by `tools/ci_tooling/generate/feature_budget.py` from isolated ESP32 builds - do not edit by hand.
 
 Measured on `esp32dev` (Arduino core). The **default server** (HTTP + WebSocket + SSE + multipart + file serving + Basic auth) is **735 KB flash / 64.6 KB RAM** on a chip with 1,280 KB flash / 320 KB RAM. Everything past that is opt-in and links only what you name.
 

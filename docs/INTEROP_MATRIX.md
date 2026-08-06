@@ -27,7 +27,7 @@ Related: [AUDIT.md](AUDIT.md) records the per-standard conformance verdicts this
 
 ## Status at a glance
 
-<!-- BEGIN GENERATED COUNTS (ci_tooling/generate/gen_interop_matrix.py) -->
+<!-- BEGIN GENERATED COUNTS (tools/ci_tooling/generate/gen_interop_matrix.py) -->
 
 <!-- prettier-ignore-start -->
 
@@ -35,7 +35,7 @@ Related: [AUDIT.md](AUDIT.md) records the per-standard conformance verdicts this
 | -------------------- | ----: | ------------------------------------------------ |
 | Interop peers        |    39 | `test/servers/peers/*_peer.py`                   |
 | Throughput benches   |   207 | `performance_benching/**/platformio.ini`         |
-| Advanced attacks     |    79 | `@attack(...)` in `penetration_testing/pc_pentest.py`     |
+| Advanced attacks     |     0 | `@attack(...)` in `penetration_testing/pc_pentest.py`     |
 | Adversarial fuzz     |    78 | `native_pentest` (`test/unit/fieldbus/test_pentest/`)          |
 | Service modules      |   164 | `src/services/<group>/<module>/`                 |
 

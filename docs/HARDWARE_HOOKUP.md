@@ -983,7 +983,7 @@ codec, see [FEATURES.md](FEATURES.md) and [STANDARDS.md](STANDARDS.md).
 
 ## Module reference
 
-<!-- BEGIN GENERATED HARDWARE TABLE (ci_tooling/generate/gen_hardware_ref.py) -->
+<!-- BEGIN GENERATED HARDWARE TABLE (tools/ci_tooling/generate/gen_hardware_ref.py) -->
 
 <!-- prettier-ignore-start -->
 

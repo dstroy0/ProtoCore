@@ -14,7 +14,7 @@ and prints exactly one of:
     native_x native_y ...   the space-separated set of affected envs
 
 The mapping is exact. For BOTH sources and headers under src/ it consults the compiler
-dependency graph (test/dep_graph.json, built by ci_tooling/generate/gen_dep_graph.py from `g++ -MM`):
+dependency graph (test/dep_graph.json, built by tools/ci_tooling/generate/gen_dep_graph.py from `g++ -MM`):
 a file maps to exactly the envs whose translation units include it, so a feature header
 like coap.h hits only native_coap / native_coap_observe, not the whole matrix. A changed
 `test/test_x/` maps via the envs whose `test_filter` names it. Only a file absent from the

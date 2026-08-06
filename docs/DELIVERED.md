@@ -707,7 +707,7 @@ every layer. The current HTTP/1.1 core already tracks the modern HTTP specs
       footprint tables now track the current build automatically: the **ESP32 Build** workflow
       (`.github/workflows/esp32-build.yml`) rebuilds every example on each push to main, merges the
       totals into `docs/footprints.json`, regenerates `docs/FOOTPRINTS.md` and the per-feature ranges
-      (`ci_tooling/generate/example_footprints.py` + `feature_budget.py`), and commits them
+      (`tools/ci_tooling/generate/example_footprints.py` + `feature_budget.py`), and commits them
       (`docs: update ESP32 build footprints [skip ci]`). So the documented numbers stay current after a
       batch of changes with no manual step - the opt-in codec services added since track through their
       flags, and the auto-commit lands right after each release bump.

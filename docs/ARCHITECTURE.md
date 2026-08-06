@@ -217,11 +217,11 @@ both sit behind one uniform per-connection seam.
 The fully expanded twin of the simplified chart in the README - the same top-to-bottom waterfall, but
 every public API method, every registered protocol, and every Layer-6 module on disk is listed.
 
-<!-- BEGIN GENERATED API FLOW DETAIL (ci_tooling/generate/gen_api_flow.py) -->
+<!-- BEGIN GENERATED API FLOW DETAIL (tools/ci_tooling/generate/gen_api_flow.py) -->
 
 <!-- prettier-ignore-start -->
 
-> Generated from the public API, `proto_builtins.c`, and `presentation/` by `ci_tooling/generate/gen_api_flow.py` - do not edit by hand. This is the fully expanded twin of the simplified request-lifecycle chart in the [README](../README.md): the same top-to-bottom waterfall, but every public method, every registered protocol, and every Layer-6 module on disk is listed (nothing is capped). Color is the OSI layer; the green path is the response. Mermaid source: [`diagrams/api_flow_detail.mmd`](diagrams/api_flow_detail.mmd).
+> Generated from the public API, `proto_builtins.c`, and `presentation/` by `tools/ci_tooling/generate/gen_api_flow.py` - do not edit by hand. This is the fully expanded twin of the simplified request-lifecycle chart in the [README](../README.md): the same top-to-bottom waterfall, but every public method, every registered protocol, and every Layer-6 module on disk is listed (nothing is capped). Color is the OSI layer; the green path is the response. Mermaid source: [`diagrams/api_flow_detail.mmd`](diagrams/api_flow_detail.mmd).
 
 <img alt="Full request lifecycle with every method, protocol, and module" src="diagrams/api_flow_detail.svg">
 

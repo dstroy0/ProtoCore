@@ -46,9 +46,9 @@ See `examples/Foundation/Configuration/Configuration.ino` for a full reference o
 
 ## Features
 
-A compile-time menu grouped by the OSI layer each feature lives at, alphabetized within each layer: each cell is an optional `PC_ENABLE_*` subsystem (core HTTP/1.1, routing, middleware, JSON, templating, and chunked responses are always on). **Hover an entry for its summary; click through to [FEATURES.md](FEATURES.md) for the full description.** The tables are generated from [FEATURES.md](FEATURES.md) by `ci_tooling/generate/gen_feature_tables.py`, so they never drift.
+A compile-time menu grouped by the OSI layer each feature lives at, alphabetized within each layer: each cell is an optional `PC_ENABLE_*` subsystem (core HTTP/1.1, routing, middleware, JSON, templating, and chunked responses are always on). **Hover an entry for its summary; click through to [FEATURES.md](FEATURES.md) for the full description.** The tables are generated from [FEATURES.md](FEATURES.md) by `tools/ci_tooling/generate/gen_feature_tables.py`, so they never drift.
 
-<!-- BEGIN GENERATED FEATURE TABLES (ci_tooling/generate/gen_feature_tables.py) -->
+<!-- BEGIN GENERATED FEATURE TABLES (tools/ci_tooling/generate/gen_feature_tables.py) -->
 
 <!-- prettier-ignore-start -->
 
@@ -119,87 +119,19 @@ L1  src/network_drivers/physical/
 ```
 
 The conceptual layer map above is a summary; the complete file layout is generated
-below from `src/` by `ci_tooling/generate/gen_readme_sections.py` (single-`.h`/`.cpp`
+below from `src/` by `tools/ci_tooling/generate/gen_readme_sections.py` (single-`.h`/`.cpp`
 service folders are collapsed to their name; generated web-asset blobs are counted,
 not listed).
 
 <details>
 <summary><b>Full source tree (every library file)</b></summary>
 
-<!-- BEGIN GENERATED SOURCE-TREE (ci_tooling/generate/gen_readme_sections.py) -->
+<!-- BEGIN GENERATED SOURCE-TREE (tools/ci_tooling/generate/gen_readme_sections.py) -->
 
 <!-- prettier-ignore-start -->
 
 ```text
 src/
-├── board_drivers/
-│   ├── board_profiles/
-│   │   ├── esp/
-│   │   │   ├── 16mbflash.h
-│   │   │   ├── 16mbpsram.h
-│   │   │   ├── 2mbflash.h
-│   │   │   ├── 2mbpsram.h
-│   │   │   ├── 32mbflash.h
-│   │   │   ├── 32mbpsram.h
-│   │   │   ├── 4mbflash.h
-│   │   │   ├── 4mbpsram.h
-│   │   │   ├── 8mbflash.h
-│   │   │   ├── 8mbpsram.h
-│   │   │   ├── c2_defaults.h
-│   │   │   ├── c3_defaults.h
-│   │   │   ├── c5_defaults.h
-│   │   │   ├── c61_defaults.h
-│   │   │   ├── c6_defaults.h
-│   │   │   ├── h21_defaults.h
-│   │   │   ├── h2_defaults.h
-│   │   │   ├── h4_defaults.h
-│   │   │   ├── p4_defaults.h
-│   │   │   ├── s2_defaults.h
-│   │   │   ├── s31_defaults.h
-│   │   │   └── s3_defaults.h
-│   │   ├── board_profile.h
-│   │   ├── classic_defaults.h
-│   │   ├── derived_sizing.h
-│   │   └── pc_platform.h
-│   ├── hal/
-│   │   ├── esp/
-│   │   │   ├── C2_AND_S.md
-│   │   │   ├── C3_CRYPTO_REG_SYMBOLS.md
-│   │   │   ├── C6_CRYPTO_REG_SYMBOLS.md
-│   │   │   ├── CLASSIC_CRYPTO_REG_SYMBOLS.md
-│   │   │   ├── DMA_GDMA.md
-│   │   │   ├── E_CRYPTO_REG_SYMBOLS.md
-│   │   │   ├── esp_aes128gcm.c
-│   │   │   ├── esp_aesgcm.c
-│   │   │   ├── esp_bignum.c
-│   │   │   ├── esp_bus.c
-│   │   │   ├── esp_crypto_hal.c
-│   │   │   ├── esp_crypto_hal.h
-│   │   │   ├── esp_mnt_fs.cpp
-│   │   │   ├── esp_mnt_fs.h
-│   │   │   ├── esp_nvs.cpp
-│   │   │   ├── esp_platform.c
-│   │   │   ├── H2_CRYPTO_REG_SYMBOLS.md
-│   │   │   ├── P4_CRYPTO_REG_SYMBOLS.md
-│   │   │   ├── P4_MIPI_DSI_CSI.md
-│   │   │   ├── P4_MIPI_HELPERS.md
-│   │   │   ├── S2.md
-│   │   │   └── S3_CRYPTO_REG_SYMBOLS.md
-│   │   ├── host/
-│   │   │   └── host_nvs.c
-│   │   ├── mock/
-│   │   │   └── mock_platform.c
-│   │   ├── portable/
-│   │   │   ├── portable_aes128gcm.c
-│   │   │   ├── portable_aesgcm.c
-│   │   │   ├── portable_bignum.c
-│   │   │   └── portable_platform.c
-│   │   └── nvs.h
-│   └── physical/
-│       ├── esp/
-│       │   └── physical_esp.cpp
-│       └── mock/
-│           └── physical_mock.c
 ├── crypto/
 │   ├── aead/
 │   │   ├── aes128gcm.h
@@ -830,12 +762,12 @@ src/
 
 Measured flash + static RAM for each optional feature, built in isolation over the
 base server on `esp32dev`. Generated from `docs/footprints.json` (produced by the
-RPi build matrix) by `ci_tooling/generate/gen_readme_sections.py`.
+RPi build matrix) by `tools/ci_tooling/generate/gen_readme_sections.py`.
 
 <details>
 <summary><b>Per-feature build footprint</b></summary>
 
-<!-- BEGIN GENERATED BUILD-FOOTPRINT (ci_tooling/generate/gen_readme_sections.py) -->
+<!-- BEGIN GENERATED BUILD-FOOTPRINT (tools/ci_tooling/generate/gen_readme_sections.py) -->
 
 <!-- prettier-ignore-start -->
 
@@ -1061,13 +993,13 @@ Any feature flag set to `0` strips the corresponding code and its includes from 
 ### Feature Flags
 
 The complete set of `PC_ENABLE_*` flags and their defaults, scraped from
-`src/protocore_config.h` by `ci_tooling/generate/gen_readme_sections.py` (see
+`src/protocore_config.h` by `tools/ci_tooling/generate/gen_readme_sections.py` (see
 [FEATURES.md](FEATURES.md) for the full description of each):
 
 <details>
 <summary><b>All feature flags and their defaults</b></summary>
 
-<!-- BEGIN GENERATED FEATURE-FLAGS (ci_tooling/generate/gen_readme_sections.py) -->
+<!-- BEGIN GENERATED FEATURE-FLAGS (tools/ci_tooling/generate/gen_readme_sections.py) -->
 
 <!-- prettier-ignore-start -->
 
@@ -1338,11 +1270,11 @@ All constants can be overridden using compiler build flags (e.g. `-DMAX_CONNS=6`
 <summary><b>Expand Configuration constants and options</b></summary>
 
 The full list of tunable `#define` constants and their defaults, scraped from
-`src/protocore_config.h` by `ci_tooling/generate/gen_readme_sections.py`. Override any
+`src/protocore_config.h` by `tools/ci_tooling/generate/gen_readme_sections.py`. Override any
 with a build flag (e.g. `-DMAX_CONNS=6`); illegal combinations are caught by `#error`
 guards at compile time.
 
-<!-- BEGIN GENERATED CONFIG-OVERRIDES (ci_tooling/generate/gen_readme_sections.py) -->
+<!-- BEGIN GENERATED CONFIG-OVERRIDES (tools/ci_tooling/generate/gen_readme_sections.py) -->
 
 <!-- prettier-ignore-start -->
 
@@ -1789,7 +1721,7 @@ drifts; run any of them locally from the repo root.
 <details>
 <summary><b>Expand Utility Tools and Scripts Guide</b></summary>
 
-**Documentation generators** (`ci_tooling/generate/`)
+**Documentation generators** (`tools/ci_tooling/generate/`)
 
 | Script                   | Generates                                                                            |
 | ------------------------ | ------------------------------------------------------------------------------------ |
@@ -1813,7 +1745,7 @@ The suite's own generator lives with the tests: [`test/gen_test_readme.py`](../t
 | `gen_favicons.py`    | build the favicon library + gallery                                                       |
 
 ```bash
-python -m ci_tooling.generate.gen_readme_sections   # refresh this file's generated sections
+python -m tools.ci_tooling.generate.gen_readme_sections   # refresh this file's generated sections
 python web_assets/wizard/build_assets.py          # rebuild the embedded web assets
 ```
 
@@ -1848,7 +1780,7 @@ own reason; they do not overlap by accident.
 | Document                     | Contents                                                                  |
 | ---------------------------- | ------------------------------------------------------------------------- |
 | [SRC_LAW.md](SRC_LAW.md)     | The **why**: determinism and allocation law, derived from MISRA / AUTOSAR  |
-| [ci_tooling/README.md](../ci_tooling/README.md) | The **tooling** law: how generators and checkers must be written, and why. |
+| [tools/ci_tooling/README.md](../ci_tooling/README.md) | The **tooling** law: how generators and checkers must be written, and why. |
 | [SRCBANNED.md](SRCBANNED.md) | The **what**: constructs banned in `src/`, enforced by a checker           |
 | [SYMBOLS.md](SYMBOLS.md)     | The **naming** law: prefixes, macros, enums, include guards                |
 

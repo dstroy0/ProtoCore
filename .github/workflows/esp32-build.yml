@@ -14,7 +14,7 @@ on:
       - "src/**"
       - "examples/**"
       - "platformio.ini"
-      - "ci_tooling/generate/example_footprints.py"
+      - "tools/ci_tooling/generate/example_footprints.py"
       - ".github/workflows/esp32-build.yml"
   pull_request:
     branches: [main, master]
@@ -45,7 +45,7 @@ jobs:
       # Rebuild only the examples the diff touches: an example whose own dir changed, or that
       # includes a changed src/services/<sub>/ feature. Shared/core src, platformio.ini, this
       # workflow, or the matrix generator -> FULL; dispatch / schedule / first push / [ci full]
-      # / a full-ci PR label -> FULL. See ci_tooling/generate/example_footprints.py.
+      # / a full-ci PR label -> FULL. See tools/ci_tooling/generate/example_footprints.py.
       - id: set
         env:
           EVENT: ${{ github.event_name }}
@@ -68,9 +68,9 @@ jobs:
             FULL=1 # first push on a branch / unknown base -> be safe
           fi
           if [ "$FULL" = "1" ]; then
-            M="$(python -m ci_tooling.generate.example_footprints matrix </dev/null)"
+            M="$(python -m tools.ci_tooling.generate.example_footprints matrix </dev/null)"
           else
-            M="$(git diff --name-only "$BASE" "$HEAD" | python -m ci_tooling.generate.example_footprints matrix --base "$BASE" --head "$HEAD")"
+            M="$(git diff --name-only "$BASE" "$HEAD" | python -m tools.ci_tooling.generate.example_footprints matrix --base "$BASE" --head "$HEAD")"
           fi
           N="$(printf '%s' "$M" | python -c 'import sys,json;print(len(json.load(sys.stdin)))')"
           echo "full=$FULL selected=$N example(s)"
@@ -112,7 +112,7 @@ jobs:
       # xtensa toolchain so those compiles hit ccache - across examples (each matrix job restores the
       # same ~/.ccache) and across runs. No-op on a cold ~/.platformio (the next run wraps it).
       - name: Enable ccache for the xtensa toolchain
-        run: bash ci_tooling/build/ccache_wrap.sh ~/.platformio/packages xtensa-esp32-elf-gcc xtensa-esp32-elf-g++
+        run: bash tools/ci_tooling/build/ccache_wrap.sh ~/.platformio/packages xtensa-esp32-elf-gcc xtensa-esp32-elf-g++
       - name: Compile and capture footprint
         env:
           EX_NAME: ${{ matrix.example.name }}
@@ -135,7 +135,7 @@ jobs:
             "$EX_INO" 2>&1 | tee build.log
           ccache -s 2>/dev/null | grep -iE "Cacheable|Hits:" || true
           mkdir -p frag
-          python -m ci_tooling.generate.example_footprints fragment build.log frag/footprint.json
+          python -m tools.ci_tooling.generate.example_footprints fragment build.log frag/footprint.json
       - name: Upload footprint fragment
         if: ${{ always() }}
         uses: actions/upload-artifact@v7
@@ -168,8 +168,8 @@ jobs:
           pattern: fp-*
       - name: Merge footprints + regenerate the table
         run: |
-          python -m ci_tooling.generate.example_footprints merge frags docs/footprints.json
-          python -m ci_tooling.generate.example_footprints table docs/footprints.json docs/FOOTPRINTS.md
+          python -m tools.ci_tooling.generate.example_footprints merge frags docs/footprints.json
+          python -m tools.ci_tooling.generate.example_footprints table docs/footprints.json docs/FOOTPRINTS.md
       - name: Format with Prettier
         run: npx prettier@3.9.6 --write docs/footprints.json docs/FOOTPRINTS.md
       - name: Commit footprints + table

@@ -37,7 +37,7 @@ No `namespace`. No `using namespace`. The table is the rule; the sections below 
 
 **The tree is mid-rename.** `pc_` / `PC_` is the internal spelling the library carries today;
 `proto_` / `PROTO_` is what it publishes. `check_symbols.py` still gates the internal spelling and
-`ci_tooling/check/symbols_baseline.json` counts the distance left, which ratchets down only. The
+`tools/ci_tooling/check/symbols_baseline.json` counts the distance left, which ratchets down only. The
 table above is the destination, and the rename lands before 1.0.0.
 
 **One prefix, two cases: `proto_` for anything callable, `PROTO_` for anything the preprocessor
@@ -204,9 +204,9 @@ A prefix prevents collisions in a shared global namespace; a test environment na
 ## 5. Enforcement
 
 ```sh
-python -m ci_tooling.check.check_symbols --all     # this document
-python -m ci_tooling.check.check_src_banned --all  # docs/SRCBANNED.md hard bans
-python -m ci_tooling.check.check_owned_context     # single-owner state rule
+python -m tools.ci_tooling.check.check_symbols --all     # this document
+python -m tools.ci_tooling.check.check_src_banned --all  # docs/SRCBANNED.md hard bans
+python -m tools.ci_tooling.check.check_owned_context     # single-owner state rule
 ```
 
 `check_symbols.py` decides only what is decidable: prefix and casing, macro scope and length,

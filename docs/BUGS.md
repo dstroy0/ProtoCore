@@ -507,7 +507,7 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
   above a peer can append bytes to whatever request is being assembled.
 - **Blast radius:** every concurrent HTTP/2 request. Multiplexing is the reason HTTP/2 exists.
 - **Why nothing caught it:** `h2_server.c` is built by no test environment. It is recorded in
-  `ci_tooling/check/check_test_coverage_baseline.json` as knowingly uncovered, and its only exercise
+  `tools/ci_tooling/check/check_test_coverage_baseline.json` as knowingly uncovered, and its only exercise
   is the hardware-rig interop probe in `test/servers/`. Its HTTP/3 counterpart, `h3_server.c`, is
   built by two envs. `pc_h2_server_data()` also sends GOAWAY on a recv failure and returns with the
   socket still open, and the hand-rolled content-length parse at `:115` accepts a partial value and
@@ -1021,7 +1021,7 @@ member named 'auth_id'`, and `'CSRF_TOKEN_BUF' undeclared`.
 - **Fix:** deleted `web.cpp` and `web.h`. `web_assets.*` is the generated pair
   (`web_assets/wizard/build_assets.py` emits it) and all six consumers already included
   `web_assets.h`; nothing included `web.h`, not even `web.cpp`.
-- **Gate:** `ci_tooling/check/check_duplicate_symbols.py`, wired into CI. It reports a file-scope
+- **Gate:** `tools/ci_tooling/check/check_duplicate_symbols.py`, wired into CI. It reports a file-scope
   variable defined in two `.cpp` files, but only when the definition actually carries external
   linkage - non-`const`, or `const` with an `extern` declaration in a header. That distinction is
   load-bearing: without it the check flags the four codecs that each define their own
@@ -1204,13 +1204,13 @@ member named 'auth_id'`, and `'CSRF_TOKEN_BUF' undeclared`.
 ## 86 example READMEs teach the banned `WiFi.*` API that rule 6 forbids, and no guardrail scans them
 
 - **Status:** FIXED (2026-07-30). 446 vendor calls and 144 bare enum members corrected across 83 READMEs
-  plus the two esp-idf examples; guarded by `ci_tooling/check/check_examples.py`, which reads sketches AND
+  plus the two esp-idf examples; guarded by `tools/ci_tooling/check/check_examples.py`, which reads sketches AND
   README fenced code. The guard was verified by injecting a regression and confirming a non-zero exit.
 - **Second defect, found while writing the guard:** the enum-member harvester used a lazy `.*?` body match,
   so it mis-attributed members between enums and missed most of them entirely - it saw 376 members where
   the tree has 894. The first scoping pass therefore fixed 68 and silently left 76. Bounding the body with
   `[^{}]*` and stripping `#if` lines from it (enum bodies are conditionally compiled, so the flag names were
-  being harvested as members) fixed both. The harvester now lives in `ci_tooling/lib/src_symbols.py` so the
+  being harvested as members) fixed both. The harvester now lives in `tools/ci_tooling/lib/src_symbols.py` so the
   sweep and the checker cannot disagree.
 
 - **Symptom:** 86 of 154 `examples/**/README.md` teach `#include <WiFi.h>`, `WiFi.localIP()`, `WiFiClient`, or
@@ -1222,7 +1222,7 @@ member named 'auth_id'`, and `'CSRF_TOKEN_BUF' undeclared`.
   hand-rolled on purpose - the heavy annotation is the teaching content and cannot be generated - so the
   migration updated the code and left 86 hand-written copies behind. (2) `docs/SRCBANNED.md` rule 6 explicitly
   states **"Applies to `examples/` too"** and even documents the check
-  (`rg -n 'WiFiClient|WiFiUDP|AsyncUDP' src/ examples/`), but `ci_tooling/check/check_src_banned.py` scans only `src/`,
+  (`rg -n 'WiFiClient|WiFiUDP|AsyncUDP' src/ examples/`), but `tools/ci_tooling/check/check_src_banned.py` scans only `src/`,
   explicitly exempts `examples/`, and never scans markdown at all. The rule that would have caught this was
   written down and never enforced where it claimed to apply.
 - **Second class, same cause:** 62 READMEs also use **unscoped enum members** - `server.on("/", HTTP_GET, h)`
@@ -1677,7 +1677,7 @@ SSH_KEXINIT_S_MAX` guard (which had been marked "never exceeds"). The production
 - **Symptom:** the **ESP32 Build** CI job for `InterfaceBridge` failed at link with an undefined reference to
   `pc_bridge_publish()` - chronically red since the example shipped (v6.8.0).
 - **Root cause:** the ESP32 Build discovers each example's `build_flags` by scraping the first documented
-  `pio ci` command from its `README.md` (`ci_tooling/generate/example_footprints.py`). InterfaceBridge's README had no
+  `pio ci` command from its `README.md` (`tools/ci_tooling/generate/example_footprints.py`). InterfaceBridge's README had no
   such command, so CI built it with _empty_ flags: the library's `iface_bridge_hw.cpp` guards its body under
   `#if PC_ENABLE_IFACE_BRIDGE`, so with the flag absent `pc_bridge_publish()` compiled to nothing while the
   sketch (which sets the flag only in its own translation unit) still referenced it. An in-sketch `#define`

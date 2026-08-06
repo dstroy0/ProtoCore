@@ -68,9 +68,9 @@ jobs:
             FULL=1 # first push on a branch / unknown base -> be safe
           fi
           if [ "$FULL" = "1" ]; then
-            M="$(python -m ci_tooling.generate.example_footprints matrix </dev/null)"
+            M="$(python -m tools.ci_tooling.generate.example_footprints matrix </dev/null)"
           else
-            M="$(git diff --name-only "$BASE" "$HEAD" | python -m ci_tooling.generate.example_footprints matrix --base "$BASE" --head "$HEAD")"
+            M="$(git diff --name-only "$BASE" "$HEAD" | python -m tools.ci_tooling.generate.example_footprints matrix --base "$BASE" --head "$HEAD")"
           fi
           N="$(printf '%s' "$M" | python -c 'import sys,json;print(len(json.load(sys.stdin)))')"
           echo "full=$FULL selected=$N example(s)"

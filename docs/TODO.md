@@ -157,7 +157,7 @@ Ideas and intentions captured from the [Working Thread discussion](https://githu
 
 ### Refactor / security hardening
 
-- [x] Owner-refactor endgame _(done)_: remove the remaining globals now that the core is integrated, and switch to known security patterns for owners. The mutable global pointers that supported a speedy implementation are no longer necessary. Every file-scope mutable in `src/` now lives in one feature-gated owned `<Name>Ctx` (least-privilege / object-capability), enforced by `ci_tooling/check/check_owned_context.py` (wired into CI) so any new loose mutable fails the build; the guard passes clean on `main`. The allow-list is the documented `extern` cross-TU substrate (the shared connection pools + SSH session state).
+- [x] Owner-refactor endgame _(done)_: remove the remaining globals now that the core is integrated, and switch to known security patterns for owners. The mutable global pointers that supported a speedy implementation are no longer necessary. Every file-scope mutable in `src/` now lives in one feature-gated owned `<Name>Ctx` (least-privilege / object-capability), enforced by `tools/ci_tooling/check/check_owned_context.py` (wired into CI) so any new loose mutable fails the build; the guard passes clean on `main`. The allow-list is the documented `extern` cross-TU substrate (the shared connection pools + SSH session state).
 - [ ] Remediate SonarQube code smells and CodeQL gripes. _(SonarCloud: 0 bugs / 0 vulnerabilities project-wide; remaining are style-conflict code smells to disable in the quality profile, not churn.)_
 
 ### Test coverage
