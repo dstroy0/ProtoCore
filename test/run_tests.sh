@@ -165,8 +165,8 @@ trap 'rm -f "$RAW_FILE" "$CLEAN_FILE"' EXIT
 #   native_pentest - heavy adversarial fuzzer, run separately (pentest.yml)
 #   native_codeql  - compile-only umbrella for the CodeQL workflow
 #   native_tsan    - ThreadSanitizer; Linux/clang only (run in CI, skipped elsewhere)
-# The stack bases are not listed: "tests": [] emits test_ignore = *, so they build their library
-# and report no suite, which is what a base env is.
+# The stack bases are not listed because they are not envs: an entry naming no suite is emitted as a
+# plain [name] section, which this discovery regex does not match.
 EXCLUDE=("native_pentest" "native_codeql")
 if [[ "$(uname -s 2>/dev/null)" != Linux* ]]; then
     EXCLUDE+=("native_tsan")
