@@ -8,6 +8,24 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ---
 
+## The OAuth2 form-body builder took the address of its own parameter, and every token request crashed
+
+- **Status:** FIXED, found while building the codec conversion. Pre-existing; not caused by that work.
+- **Root cause:** `put_param` (`oauth2.c:77`) receives a `Buf *b` and then passed `&b` to `put_raw`
+  and `put_enc`, which take a `Buf *`. That is a `Buf **`, so the callee read the stack slot holding
+  the pointer as though it were the struct: `b->o` came out as whatever the adjacent stack held, and
+  the first `b->o[b->n++] = *s` wrote through it. `native_oauth2` did not fail a case, it took
+  SIGSEGV. All four calls at `:79-82` were wrong.
+- **Why nothing caught it:** the compiler did emit `-Wincompatible-pointer-types` on every one of the
+  four, which is a warning rather than an error in this build, and the suite ERRORs rather than
+  FAILs on a signal, so a summary line reading `0 succeeded` never named a case.
+- **Related:** the invariant comment at `:89` argues `b->n < b->cap` holds "for as long as b->ok
+  remains true". That argument was sound for the functions themselves and said nothing about the
+  caller passing the wrong level of indirection.
+- **Fix:** pass `b`. The four calls now match the declarations.
+
+---
+
 ## base64.h declared a C API with no C linkage, so every C++ caller asked the linker for a mangled name
 
 - **Status:** FIXED, found during the presentation-layer namespace conversion.

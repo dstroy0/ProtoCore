@@ -76,10 +76,10 @@ static void put_enc(Buf *b, const char *s)
 // Append "&key=<encoded value>".
 static void put_param(Buf *b, const char *key, const char *val)
 {
-    put_raw(&b, "&");
-    put_raw(&b, key);
-    put_raw(&b, "=");
-    put_enc(&b, val);
+    put_raw(b, "&");
+    put_raw(b, key);
+    put_raw(b, "=");
+    put_enc(b, val);
 }
 
 static int finish(Buf *b)
