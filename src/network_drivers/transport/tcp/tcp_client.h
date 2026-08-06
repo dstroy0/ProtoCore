@@ -29,32 +29,6 @@
 PROTO_BEGIN_DECLS
 
 /**
- * @brief Resolve @p host (dotted-quad fast path, else DNS) and connect to
- *        @p host : @p port, blocking up to @p timeout_ms.
- * @return A client id in [0, PC_CLIENT_CONNS) on success, or < 0 on failure
- *         (pool full, DNS failure, connect timeout/refused).
- */
-int pc_client_open(const char *host, uint16_t port, uint32_t timeout_ms);
-
-/** @brief True once the TCP handshake has completed for @p cid. */
-proto_bool pc_client_connected(int cid);
-
-/** @brief True once the peer closed (FIN) or the connection errored. */
-proto_bool pc_client_is_closed(int cid);
-
-/** @brief Queue @p len wire bytes for transmission (marshaled tcp_write + output). */
-proto_bool pc_client_send(int cid, const void *data, size_t len);
-
-/** @brief Wire bytes currently buffered and ready to read. */
-size_t pc_client_available(int cid);
-
-/** @brief Drain up to @p cap buffered wire bytes into @p buf; returns the count. */
-size_t pc_client_read(int cid, uint8_t *buf, size_t cap);
-
-/** @brief Tear down the connection (marshaled) and return the slot to the pool. */
-void pc_client_close(int cid);
-
-/**
  * @brief The outbound side of TCP.
  *
  * @var TcpClientNs::open       resolve and connect, blocking up to a deadline

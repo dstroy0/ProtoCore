@@ -215,7 +215,7 @@ static pc_net_err cc_do_recved(pc_net_call *cd)
 
 // --- public API --------------------------------------------------------------
 
-int pc_client_open(const char *host, uint16_t port, uint32_t timeout_ms)
+static int pc_client_open(const char *host, uint16_t port, uint32_t timeout_ms)
 {
     int cid = -1;
     for (int i = 0; i < PC_CLIENT_CONNS; i++)
@@ -272,13 +272,13 @@ int pc_client_open(const char *host, uint16_t port, uint32_t timeout_ms)
     return cid;
 }
 
-proto_bool pc_client_connected(int cid)
+static proto_bool pc_client_connected(int cid)
 {
     return cid >= 0 && cid < PC_CLIENT_CONNS && s_client.cc[cid].in_use && s_client.cc[cid].connected &&
            !s_client.cc[cid].closed;
 }
 
-proto_bool pc_client_is_closed(int cid)
+static proto_bool pc_client_is_closed(int cid)
 {
     if (cid < 0 || cid >= PC_CLIENT_CONNS)
     {
@@ -287,7 +287,7 @@ proto_bool pc_client_is_closed(int cid)
     return s_client.cc[cid].closed;
 }
 
-proto_bool pc_client_send(int cid, const void *data, size_t len)
+static proto_bool pc_client_send(int cid, const void *data, size_t len)
 {
     if (cid < 0 || cid >= PC_CLIENT_CONNS || !s_client.cc[cid].in_use)
     {
@@ -302,7 +302,7 @@ proto_bool pc_client_send(int cid, const void *data, size_t len)
     return k.result == PC_NET_OK;
 }
 
-size_t pc_client_available(int cid)
+static size_t pc_client_available(int cid)
 {
     if (cid < 0 || cid >= PC_CLIENT_CONNS)
     {
@@ -312,7 +312,7 @@ size_t pc_client_available(int cid)
     return pc_ring_available(&c->head, &c->tail, PC_CLIENT_RX_BUF);
 }
 
-size_t pc_client_read(int cid, uint8_t *buf, size_t cap)
+static size_t pc_client_read(int cid, uint8_t *buf, size_t cap)
 {
     if (cid < 0 || cid >= PC_CLIENT_CONNS)
     {
@@ -332,7 +332,7 @@ size_t pc_client_read(int cid, uint8_t *buf, size_t cap)
     return n;
 }
 
-void pc_client_close(int cid)
+static void pc_client_close(int cid)
 {
     if (cid < 0 || cid >= PC_CLIENT_CONNS || !s_client.cc[cid].in_use)
     {
@@ -347,43 +347,43 @@ void pc_client_close(int cid)
 
 #else // host stub - the clients need a target's TCP, so a host build no-ops
 
-int pc_client_open(const char *host, uint16_t port, uint32_t timeout_ms)
+static int pc_client_open(const char *host, uint16_t port, uint32_t timeout_ms)
 {
     (void)host;
     (void)port;
     (void)timeout_ms;
     return -1;
 }
-proto_bool pc_client_connected(int cid)
+static proto_bool pc_client_connected(int cid)
 {
     (void)cid;
     return PROTO_FALSE;
 }
-proto_bool pc_client_is_closed(int cid)
+static proto_bool pc_client_is_closed(int cid)
 {
     (void)cid;
     return PROTO_TRUE;
 }
-proto_bool pc_client_send(int cid, const void *data, size_t len)
+static proto_bool pc_client_send(int cid, const void *data, size_t len)
 {
     (void)cid;
     (void)data;
     (void)len;
     return PROTO_FALSE;
 }
-size_t pc_client_available(int cid)
+static size_t pc_client_available(int cid)
 {
     (void)cid;
     return 0;
 }
-size_t pc_client_read(int cid, uint8_t *buf, size_t cap)
+static size_t pc_client_read(int cid, uint8_t *buf, size_t cap)
 {
     (void)cid;
     (void)buf;
     (void)cap;
     return 0;
 }
-void pc_client_close(int cid)
+static void pc_client_close(int cid)
 {
     (void)cid;
     // no-op: the native stub owns no socket to close
