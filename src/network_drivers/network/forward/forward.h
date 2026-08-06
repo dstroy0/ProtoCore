@@ -92,61 +92,6 @@ typedef struct
     uint32_t inspect_dropped; ///< frames dropped by the inspection hook (PC_FWD_INSPECT)
 } pc_forward_stats;
 
-/** @brief Clear all interfaces, rules, and stats (start from empty). */
-void pc_forward_reset(void);
-
-/**
- * @brief Register an interface and its egress send callback.
- * @return true; false if @p if_id is already registered, @p send is null, or the table
- *         is full (PC_FWD_MAX_IFACES).
- */
-proto_bool pc_forward_add_if(uint8_t if_id, pc_if_kind kind, pc_if_send_fn send, void *ctx);
-
-/**
- * @brief Add a forwarding rule. @p rate_cap_per_sec caps ALLOW rules (0 = unlimited); it
- *        is ignored for DENY rules.
- * @return true; false if the table is full (PC_FWD_MAX_RULES).
- */
-proto_bool pc_forward_add_rule(uint8_t src_if, uint8_t dst_if, pc_fwd_action action, uint16_t rate_cap_per_sec);
-
-/**
- * @brief Set the ACL default action - what happens to a frame that matches no ACL entry.
- *        Default PC_FWD_ALLOW (an empty ACL passes everything, so the ACL is opt-in);
- *        set PC_FWD_DENY for allowlist semantics (only explicitly permitted frames pass).
- */
-void pc_forward_acl_set_default(pc_fwd_action action);
-
-/**
- * @brief Add an ingress access-control entry (evaluated in add order, first match wins).
- *
- * A frame is matched when it arrived on @p src_if (or PC_FWD_IF_ANY) and its bytes at
- * `[offset, offset + patlen)` equal @p pattern under @p mask (each `byte & mask == pattern`).
- * @p patlen 0 matches any content (interface-only entry); a frame shorter than
- * `offset + patlen` does not match the entry (evaluation continues). The first matching
- * entry's @p action (permit/deny) decides; if none match, the ACL default applies.
- * Denied frames are dropped at ingress before any forwarding rule runs.
- * @return false if the ACL table is full or @p patlen exceeds PC_FWD_ACL_PATLEN.
- */
-proto_bool pc_forward_acl_add(uint8_t src_if, uint16_t offset, const uint8_t *pattern, const uint8_t *mask,
-                              uint8_t patlen, pc_fwd_action action);
-
-/**
- * @brief Add a policy route: a frame matching this byte pattern is forwarded only to
- *        @p egress_if, taking precedence over the src->dst rules (first matching route wins).
- *
- * The match is the same offset/pattern/mask primitive as the ACL (each `byte & mask == pattern`
- * at `[offset, offset + patlen)`), keyed on frames from @p src_if or PC_FWD_IF_ANY; @p patlen 0
- * matches any content (a default route). On a match the frame goes only to @p egress_if -
- * subject to the same guarantees as a rule: never reflected to the source, dropped (counted) if
- * @p egress_if is not registered, if @p rate_cap_per_sec (0 = unlimited) is exceeded, or if the
- * egress send fails. A matched route ends the decision (the normal fan-out is skipped).
- *
- * @return true; false if @p patlen exceeds PC_FWD_ACL_PATLEN, a non-zero @p patlen has a null
- *         pattern/mask, or the table is full (PC_FWD_MAX_ROUTES).
- */
-proto_bool pc_forward_route_add(uint8_t src_if, uint16_t offset, const uint8_t *pattern, const uint8_t *mask,
-                                uint8_t patlen, uint8_t egress_if, uint16_t rate_cap_per_sec);
-
 #if PC_FWD_INSPECT
 /** @brief The verdict an inspection hook returns for a frame. */
 typedef enum PROTO_ENUM_PACKED
@@ -162,31 +107,6 @@ typedef enum PROTO_ENUM_PACKED
  */
 typedef pc_fwd_verdict (*pc_fwd_inspect_fn)(uint8_t src_if, const uint8_t *data, uint16_t len, void *ctx);
 
-/**
- * @brief Install (or clear, with @p fn null) the ingress inspection hook.
- *
- * Opt-in twice over: compiled in only when PC_FWD_INSPECT is set (cost + privacy), and inert
- * until an inspector is registered. A DROP verdict discards the frame before any forwarding.
- */
-void pc_forward_set_inspector(pc_fwd_inspect_fn fn, void *ctx);
-#endif
-
-/**
- * @brief Forward a frame that arrived on @p src_if to every allowed destination.
- *
- * Evaluates the rules against each registered interface (never the source), applies the
- * per-rule rate cap, and calls the destination's send callback. Fail-closed.
- * @return the number of destinations the frame was successfully forwarded to.
- */
-uint8_t pc_forward_ingress(uint8_t src_if, const uint8_t *data, uint16_t len);
-
-/** @brief Copy the current forwarding counters into @p out. */
-void pc_forward_get_stats(pc_forward_stats *out);
-
-#if !PROTOCORE_HOT
-/** @brief Host only: set the millisecond clock the rate cap uses (tests drive the window).
- *         On device the plane reads pc_millis(). */
-void pc_forward_test_set_now(uint32_t ms);
 #endif
 
 /**
