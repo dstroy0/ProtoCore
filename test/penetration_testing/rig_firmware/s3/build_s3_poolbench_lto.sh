@@ -16,9 +16,9 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-ROOT=$(cd ../../.. && pwd)
+ROOT=$(git rev-parse --show-toplevel)
 SKETCH="$PWD/S3PoolBench"
-SHARED="$ROOT/penetration_testing/rig_firmware/src/main_poolbench.cpp"
+SHARED="$ROOT/test/penetration_testing/rig_firmware/src/main_poolbench.cpp"
 ACLI=$(command -v arduino-cli || echo "$HOME/bin/arduino-cli")
 FQBN="${PC_FQBN:-esp32:esp32:esp32s3:PSRAM=opi,FlashMode=qio,FlashSize=16M,CDCOnBoot=cdc,USBMode=hwcdc}"
 LIBDIR="$HOME/Arduino/libraries"
@@ -38,7 +38,7 @@ trap 'rm -f "$SKETCH/main_poolbench.cpp"' EXIT
 
 echo ">> compiling for $FQBN WITH -flto (compile AND link)"
 "$ACLI" compile --fqbn "$FQBN" --libraries "$LIBDIR" \
-    --build-property "compiler.cpp.extra_flags=-flto" \
+    --build-property "compiler.cpp.extra_flags=-flto -I$ROOT/test/performance_benching/common" \
     --build-property "compiler.c.extra_flags=-flto" \
     --build-property "compiler.c.elf.extra_flags=-flto -fuse-linker-plugin" \
     --build-path "$SKETCH/build-lto" "$SKETCH" 2>&1 | tail -20

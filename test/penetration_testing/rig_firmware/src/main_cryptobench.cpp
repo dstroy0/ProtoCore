@@ -53,12 +53,8 @@
 #include "mbedtls/gcm.h" // reference AES-GCM (HW AES + mbedtls table GHASH) to set the optimization target
 #endif
 #include "crypto/crypto_opt.h" // build the bench's inline ops at the crypto opt level under test
+#include "device_bench.h"      // DBENCH_CYCLES
 PC_CRYPTO_HOT
-
-static inline uint32_t cyc_now()
-{
-    return ESP.getCycleCount();
-}
 
 // CCOUNT ticks at the CPU clock, which differs per die (S3 240 MHz, P4 360 MHz), so the cycle->time
 // conversion must read the live frequency - a hardcoded 240 inflates every P4 us/ns/MB/s by 1.5x. Set from
@@ -69,13 +65,8 @@ static double g_mhz = 240.0;
 #define BENCH_OP(label, N, expr)                                                                                       \
     do                                                                                                                 \
     {                                                                                                                  \
-        expr; /* warm */                                                                                               \
-        uint32_t _c0 = cyc_now();                                                                                      \
-        for (uint32_t _i = 0; _i < (uint32_t)(N); _i++)                                                                \
-        {                                                                                                              \
-            expr;                                                                                                      \
-        }                                                                                                              \
-        double _cy = (double)(cyc_now() - _c0) / (double)(N);                                                          \
+        double _cy = 0.0;                                                                                              \
+        DBENCH_CYCLES(N, expr, _cy);                                                                                   \
         Serial.printf("CB %-30s cyc=%-11.0f us=%-9.2f ns=%.0f\n", label, _cy, _cy / g_mhz, _cy * 1000.0 / g_mhz);      \
         vTaskDelay(1);                                                                                                 \
     } while (0)
@@ -84,13 +75,8 @@ static double g_mhz = 240.0;
 #define BENCH_BULK(label, N, bytes, expr)                                                                              \
     do                                                                                                                 \
     {                                                                                                                  \
-        expr; /* warm */                                                                                               \
-        uint32_t _c0 = cyc_now();                                                                                      \
-        for (uint32_t _i = 0; _i < (uint32_t)(N); _i++)                                                                \
-        {                                                                                                              \
-            expr;                                                                                                      \
-        }                                                                                                              \
-        double _cy = (double)(cyc_now() - _c0) / (double)(N);                                                          \
+        double _cy = 0.0;                                                                                              \
+        DBENCH_CYCLES(N, expr, _cy);                                                                                   \
         double _nspb = (_cy * 1000.0 / g_mhz) / (double)(bytes);                                                       \
         double _mbs = (_nspb > 0.0) ? (1000.0 / _nspb) : 0.0;                                                          \
         Serial.printf("CB %-30s cyc=%-11.0f ns/B=%-8.2f MB/s=%-8.1f (%uB)\n", label, _cy, _nspb, _mbs,                 \

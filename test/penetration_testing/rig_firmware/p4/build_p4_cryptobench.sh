@@ -9,7 +9,7 @@
 # the printed esptool command (WSL cannot reach the COM port). COM9 = the P4.
 set -eu
 
-REPO="${REPO:-$(cd "$(dirname "$0")/../../.." && pwd)}"
+REPO="${REPO:-$(git -C "$(dirname "$0")" rev-parse --show-toplevel)}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 LIB=~/Arduino/libraries/ProtoCore
 STAGE=~/pctest/ex_p4cb
@@ -40,7 +40,7 @@ cd "$STAGE/P4CryptoBench"
 echo ">> compiling for $FQBN"
 # --library: the bench's first library include is crypto/... (not a top-level header like protocore.h), so
 # arduino-cli's dependency finder never attaches the library on its own - force it onto the include path.
-arduino-cli compile --fqbn "$FQBN" --library "$LIB" --build-path "$STAGE/build" .
+arduino-cli compile --fqbn "$FQBN" --library "$LIB" --build-property "compiler.cpp.extra_flags=-I$REPO/test/performance_benching/common" --build-path "$STAGE/build" .
 
 mkdir -p "$OUT"
 cp "$STAGE"/build/P4CryptoBench.ino.bin "$OUT/"

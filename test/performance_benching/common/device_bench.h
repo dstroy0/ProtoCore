@@ -15,9 +15,9 @@
 #include "server/clock/clock.h"
 #include <Arduino.h>
 
-/// One-shot op (build/encode/decode/parse call that isn't a bulk byte stream). Warms once, runs
-/// N iterations, reports the mean in cycles / us / ns.
-#define DBENCH_OP(label, N, expr)                                                                                      \
+/// Warm once, run N iterations, leave the mean cycle count in `out_cy` (a double lvalue).
+/// The measurement; every reporting macro is a printf around it.
+#define DBENCH_CYCLES(N, expr, out_cy)                                                                                 \
     do                                                                                                                 \
     {                                                                                                                  \
         expr; /* warm */                                                                                               \
@@ -26,8 +26,16 @@
         {                                                                                                              \
             expr;                                                                                                      \
         }                                                                                                              \
-        uint32_t _dc = pc_cycles() - _c0;                                                                              \
-        double _cy = (double)_dc / (double)(N);                                                                        \
+        (out_cy) = (double)(pc_cycles() - _c0) / (double)(N);                                                          \
+    } while (0)
+
+/// One-shot op (build/encode/decode/parse call that isn't a bulk byte stream). Warms once, runs
+/// N iterations, reports the mean in cycles / us / ns.
+#define DBENCH_OP(label, N, expr)                                                                                      \
+    do                                                                                                                 \
+    {                                                                                                                  \
+        double _cy = 0.0;                                                                                              \
+        DBENCH_CYCLES(N, expr, _cy);                                                                                   \
         uint32_t _mhz = getCpuFrequencyMhz();                                                                          \
         Serial.printf("DB %-30s cyc=%-11.0f us=%-9.2f ns=%.0f\n", label, _cy, _cy / (double)_mhz,                      \
                       (_cy * 1000.0) / (double)_mhz);                                                                  \
@@ -38,14 +46,8 @@
 #define DBENCH_BULK(label, N, bytes, expr)                                                                             \
     do                                                                                                                 \
     {                                                                                                                  \
-        expr; /* warm */                                                                                               \
-        uint32_t _c0 = pc_cycles();                                                                                    \
-        for (uint32_t _i = 0; _i < (uint32_t)(N); _i++)                                                                \
-        {                                                                                                              \
-            expr;                                                                                                      \
-        }                                                                                                              \
-        uint32_t _dc = pc_cycles() - _c0;                                                                              \
-        double _cy = (double)_dc / (double)(N);                                                                        \
+        double _cy = 0.0;                                                                                              \
+        DBENCH_CYCLES(N, expr, _cy);                                                                                   \
         uint32_t _mhz = getCpuFrequencyMhz();                                                                          \
         double _nspb = ((_cy * 1000.0) / (double)_mhz) / (double)(bytes);                                              \
         double _mbs = (_nspb > 0.0) ? (1000.0 / _nspb) : 0.0;                                                          \

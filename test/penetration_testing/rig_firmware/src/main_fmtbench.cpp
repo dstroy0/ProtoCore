@@ -20,13 +20,9 @@
 
 // Both moved under mmgr/ when the memory-management layer was separated out, and strbuf became
 // membuild. This bench is built from the tree, so it follows the tree.
+#include "device_bench.h" // DBENCH_CYCLES
 #include "mmgr/frame.h"
 #include "mmgr/membuild.h"
-
-static inline uint32_t cyc_now()
-{
-    return ESP.getCycleCount();
-}
 
 static double g_mhz = 240.0;
 
@@ -37,13 +33,8 @@ static volatile uint32_t g_sink = 0;
 #define BENCH(label, N, expr)                                                                                          \
     do                                                                                                                 \
     {                                                                                                                  \
-        expr; /* warm: first call faults in the code path and any libc tables */                                       \
-        uint32_t _c0 = cyc_now();                                                                                      \
-        for (uint32_t _i = 0; _i < (uint32_t)(N); _i++)                                                                \
-        {                                                                                                              \
-            expr;                                                                                                      \
-        }                                                                                                              \
-        double _cy = (double)(cyc_now() - _c0) / (double)(N);                                                          \
+        double _cy = 0.0;                                                                                              \
+        DBENCH_CYCLES(N, expr, _cy);                                                                                   \
         Serial.printf("CB %-34s cyc=%-9.0f ns=%.0f\n", label, _cy, _cy * 1000.0 / g_mhz);                              \
         vTaskDelay(1);                                                                                                 \
     } while (0)

@@ -7,9 +7,9 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-ROOT=$(cd ../../.. && pwd)
+ROOT=$(git rev-parse --show-toplevel)
 SKETCH="$PWD/S3CryptoBench"
-SHARED="$ROOT/penetration_testing/rig_firmware/src/main_cryptobench.cpp"
+SHARED="$ROOT/test/penetration_testing/rig_firmware/src/main_cryptobench.cpp"
 ACLI=$(command -v arduino-cli || echo "$HOME/bin/arduino-cli")
 FQBN="${PC_FQBN:-esp32:esp32:esp32s3:PSRAM=opi,FlashMode=qio,FlashSize=16M,CDCOnBoot=cdc,USBMode=hwcdc}"
 LIBDIR="$HOME/Arduino/libraries"
@@ -31,6 +31,6 @@ cp "$ROOT/test/fixtures/ssh_test_host_key/ssh_test_host_key.h" "$SKETCH/"
 trap 'rm -f "$SKETCH/main_cryptobench.cpp" "$SKETCH/ssh_test_host_key.h"' EXIT
 
 echo ">> compiling for $FQBN"
-"$ACLI" compile --fqbn "$FQBN" --libraries "$LIBDIR" --build-path "$OUTDIR" "$SKETCH" 2>&1 | tail -20
+"$ACLI" compile --fqbn "$FQBN" --build-property "compiler.cpp.extra_flags=-I$ROOT/test/performance_benching/common" --libraries "$LIBDIR" --build-path "$OUTDIR" "$SKETCH" 2>&1 | tail -20
 echo ">> compile rc=${PIPESTATUS[0]}"
 ls -la "$OUTDIR"/*.ino.bin 2>/dev/null

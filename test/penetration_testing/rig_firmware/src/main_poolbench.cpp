@@ -26,7 +26,8 @@
 #include "mmgr/plaintext.h"
 #include "mmgr/secure.h"
 
-#include <stdlib.h> // malloc/free/qsort for the traditional comparison
+#include "device_bench.h" // DBENCH_CYCLES
+#include <stdlib.h>       // malloc/free/qsort for the traditional comparison
 
 static inline uint32_t cyc_now()
 {
@@ -42,13 +43,8 @@ static double g_mhz = 240.0;
 #define BENCH_OP(label, N, expr)                                                                                       \
     do                                                                                                                 \
     {                                                                                                                  \
-        expr; /* warm */                                                                                               \
-        uint32_t _c0 = cyc_now();                                                                                      \
-        for (uint32_t _i = 0; _i < (uint32_t)(N); _i++)                                                                \
-        {                                                                                                              \
-            expr;                                                                                                      \
-        }                                                                                                              \
-        double _cy = (double)(cyc_now() - _c0) / (double)(N);                                                          \
+        double _cy = 0.0;                                                                                              \
+        DBENCH_CYCLES(N, expr, _cy);                                                                                   \
         Serial.printf("PB %-34s cyc=%-9.1f ns=%.1f\n", label, _cy, _cy * 1000.0 / g_mhz);                              \
         vTaskDelay(1);                                                                                                 \
     } while (0)

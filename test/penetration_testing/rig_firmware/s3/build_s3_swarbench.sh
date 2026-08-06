@@ -9,9 +9,9 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-ROOT=$(cd ../../.. && pwd)
+ROOT=$(git rev-parse --show-toplevel)
 SKETCH="$PWD/S3SwarBench"
-SHARED="$ROOT/penetration_testing/rig_firmware/src/main_swarbench.cpp"
+SHARED="$ROOT/test/penetration_testing/rig_firmware/src/main_swarbench.cpp"
 ACLI=$(command -v arduino-cli || echo "$HOME/bin/arduino-cli")
 FQBN="${PC_FQBN:-esp32:esp32:esp32s3:PSRAM=opi,FlashMode=qio,FlashSize=16M,CDCOnBoot=cdc,USBMode=hwcdc}"
 
@@ -25,7 +25,7 @@ trap 'rm -f "$SKETCH/main_swarbench.cpp"' EXIT
 
 echo ">> compiling for $FQBN"
 "$ACLI" compile --fqbn "$FQBN" \
-    --build-property "compiler.cpp.extra_flags=-I$ROOT/src -DPROTO_SWAR_BITS=32" \
+    --build-property "compiler.cpp.extra_flags=-I$ROOT/src -I$ROOT/test/performance_benching/common -DPROTO_SWAR_BITS=32" \
     --build-path "$SKETCH/build" "$SKETCH" 2>&1 | tail -40
 echo ">> compile rc=${PIPESTATUS[0]}"
 ls -la "$SKETCH/build"/*.bin 2>/dev/null | head

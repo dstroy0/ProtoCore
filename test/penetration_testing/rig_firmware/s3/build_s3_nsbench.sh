@@ -7,7 +7,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-ROOT=$(cd ../../.. && pwd)
+ROOT=$(git rev-parse --show-toplevel)
 SKETCH="$PWD/S3NsBench"
 ACLI=$(command -v arduino-cli || echo "$HOME/bin/arduino-cli")
 FQBN="${PC_FQBN:-esp32:esp32:esp32s3:PSRAM=opi,FlashMode=qio,FlashSize=16M,CDCOnBoot=cdc,USBMode=hwcdc}"
