@@ -80,7 +80,7 @@ void handle_tag(uint8_t slot, HttpReq *req)
 
 void setup()
 {
-    // ... bring up Wi-Fi (init_wifi_physical / wifi_ready) ...
+    // ... bring up Wi-Fi (Physical.wifi->init / Physical.wifi->ready) ...
 
     pc_set_default_dscp(PC_DSCP_EF); // mark every outbound connection EF
     pc_udp_set_dscp(PC_DSCP_EF);     // and outbound UDP datagrams

@@ -266,7 +266,7 @@ preempting queue, so sensing shares the real-time ingest path.
 
 ## Networking / connectivity
 
-- [x] Egress-interface reporting _(shipped)_ - `pc_net_egress()` / `pc_net_egress_ip()` read the live lwIP default route so the app always knows which interface (WiFi STA / softAP / Ethernet) its traffic is leaving on; the stack owns the actual failover, so no manager or polling tick is added (example NetEgress). - RNG stays out of the pure core) and `pc_ike_initiator_on_sa_init` consumes the responder's
+- [x] Egress-interface reporting _(shipped)_ - `Physical.link->egress()` / `Physical.link->egress_ip()` read the live lwIP default route so the app always knows which interface (WiFi STA / softAP / Ethernet) its traffic is leaving on; the stack owns the actual failover, so no manager or polling tick is added (example NetEgress). - RNG stays out of the pure core) and `pc_ike_initiator_on_sa_init` consumes the responder's
       reply, captures the responder SPI, and derives the SA keys, failing closed to `IKE_ST_FAILED` on a
       wrong-SPI / non-response / wrong-state message. Driven against a hand-built responder message it
       establishes the same keys the responder derives. **The initiator's IKE_AUTH send is shipped too**:

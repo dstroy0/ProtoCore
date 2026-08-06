@@ -62,7 +62,7 @@ if (result < 0) { Serial.printf("begin() failed (error %d)\n", result); return; 
 ```
 
 **Getting the device's address.** Use the library's own accessor,
-`pc_net_egress_ip()`, which returns the egress IP in network byte order. The
+`Physical.link->egress_ip()`, which returns the egress IP in network byte order. The
 Arduino `WiFi` classes are not used anywhere in this library or its examples:
 all networking goes through the library transport, so the same sketch works
 regardless of which interface carries the traffic.
@@ -127,8 +127,8 @@ comments:
 // (http_get_query / http_get_header). Any PC_ENABLE_* override must be
 // #defined BEFORE this include to take effect in the sketch.
 #include "protocore.h"
-// init_wifi_physical() / wifi_ready(): the physical-layer (L1) WiFi bring-up
-// helpers, plus pc_net_egress_ip() for the assigned address.
+// Physical.wifi->init() / Physical.wifi->ready(): the physical-layer (L1) WiFi bring-up
+// helpers, plus Physical.link->egress_ip() for the assigned address.
 #include "network_drivers/physical/physical.h"
 
 // Credentials. Replace these with your network before flashing.
@@ -152,15 +152,15 @@ void setup()
     Serial.begin(115200);
 
     // Bring up WiFi (station mode) and poll until the link + IP are ready.
-    // wifi_ready() is non-blocking; this loop is the one place a sketch spins.
-    init_wifi_physical(SSID, PASSWORD);
-    while (!wifi_ready())
+    // Physical.wifi->ready() is non-blocking; this loop is the one place a sketch spins.
+    Physical.wifi->init(SSID, PASSWORD);
+    while (!Physical.wifi->ready())
         delay(250);
 
     // The library's own egress-IP accessor, in network byte order. No Arduino
     // WiFi class is involved, so this works whichever interface is carrying
     // the traffic.
-    uint32_t ip = pc_net_egress_ip();
+    uint32_t ip = Physical.link->egress_ip();
     Serial.printf("IP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 

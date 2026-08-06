@@ -35,7 +35,7 @@ void setup()
     delay(300);
 
     // Radio up for capture only - promiscuous mode does not associate.
-    init_wifi_radio_physical(0);
+    Physical.wifi->init_radio(0);
 
     if (!pc_wifi_sniffer_begin(CHAN_FIRST, CHAN_LAST, DWELL_MS))
     {

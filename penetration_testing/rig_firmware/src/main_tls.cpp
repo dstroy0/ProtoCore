@@ -169,9 +169,9 @@ void setup()
 {
     Serial.begin(115200);
     delay(300);
-    init_wifi_physical(SSID, PASSWORD);
+    Physical.wifi->init(SSID, PASSWORD);
     uint32_t t0 = millis();
-    while (!wifi_ready() && millis() - t0 < 30000)
+    while (!Physical.wifi->ready() && millis() - t0 < 30000)
     {
         delay(200);
     }

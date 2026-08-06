@@ -46,8 +46,8 @@ static void root_handler(uint8_t slot_id, HttpReq *req)
 void setup()
 {
     Serial.begin(115200);
-    init_wifi_physical(WIFI_SSID, WIFI_PASS);
-    while (!wifi_ready())
+    Physical.wifi->init(WIFI_SSID, WIFI_PASS);
+    while (!Physical.wifi->ready())
     {
         delay(250);
     }
@@ -74,7 +74,7 @@ void setup()
 
     begin_http(80, NULL);
 
-    uint32_t ip = pc_net_egress_ip();
+    uint32_t ip = Physical.link->egress_ip();
     Serial.printf("http://%u.%u.%u.%u/  (sw /sw.js, manifest /precache.json, files /files/...)\n",
                   (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF), (unsigned)((ip >> 16) & 0xFF),
                   (unsigned)((ip >> 24) & 0xFF));

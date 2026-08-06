@@ -5,8 +5,8 @@
 ## What this example teaches
 
 A device with both WiFi and Ethernet has a "default route" the OS picks for
-outbound traffic, and it can flip on a cable pull. `pc_net_egress()` reports the
-live egress interface and `pc_net_egress_ip()` its IP, queried on demand - no
+outbound traffic, and it can flip on a cable pull. `Physical.link->egress()` reports the
+live egress interface and `Physical.link->egress_ip()` its IP, queried on demand - no
 manager and no polling loop. The OS (`esp_netif`) does the failover; this just
 reports the current state, useful for logging, telemetry tags, or an "online via
 Ethernet / WiFi" badge in a UI.
@@ -14,8 +14,8 @@ Ethernet / WiFi" badge in a UI.
 **Query on demand:**
 
 ```cpp
-pc_iface i = pc_net_egress();       // PC_IFACE_ETH / PC_IFACE_STA / PC_IFACE_AP / none
-uint32_t ip = pc_net_egress_ip();   // current egress IP (network byte order)
+pc_iface i = Physical.link->egress();       // PC_IFACE_ETH / PC_IFACE_STA / PC_IFACE_AP / none
+uint32_t ip = Physical.link->egress_ip();   // current egress IP (network byte order)
 ```
 
 The handler maps the enum to a name and formats the IP as JSON. Wire an Ethernet
@@ -68,23 +68,23 @@ static const char *iface_name(pc_iface i)
 void setup()
 {
     Serial.begin(115200);
-    init_wifi_physical(SSID, PASSWORD);
+    Physical.wifi->init(SSID, PASSWORD);
     Serial.print("Connecting to WiFi");
-    while (!wifi_ready())
+    while (!Physical.wifi->ready())
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = pc_net_egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("IP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    Serial.printf("egress interface: %s\n", iface_name(pc_net_egress()));
+    Serial.printf("egress interface: %s\n", iface_name(Physical.link->egress()));
 
     server.on("/net", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
-        uint32_t ip = pc_net_egress_ip(); // network byte order
+        uint32_t ip = Physical.link->egress_ip(); // network byte order
         char body[96];
-        snprintf(body, sizeof(body), "{\"egress\":\"%s\",\"ip\":\"%u.%u.%u.%u\"}", iface_name(pc_net_egress()),
+        snprintf(body, sizeof(body), "{\"egress\":\"%s\",\"ip\":\"%u.%u.%u.%u\"}", iface_name(Physical.link->egress()),
                  (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF), (unsigned)((ip >> 16) & 0xFF),
                  (unsigned)((ip >> 24) & 0xFF));
         server.send(id, 200, "application/json", body);

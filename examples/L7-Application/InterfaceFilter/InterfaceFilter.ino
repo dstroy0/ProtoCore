@@ -9,7 +9,7 @@
  * different interfaces: a setup/config page visible only on the softAP, and an
  * app API visible only on the station link. The interface is determined by
  * comparing each connection's local IP to the softAP IP, so call
- * set_ap_ip(pc_net_ap_ip()) once after starting the AP.
+ * set_ap_ip(Physical.wifi->ap_ip()) once after starting the AP.
  *
  * Test from a station client (your LAN):    curl http://<sta-ip>/api/data   -> 200
  *                                            curl http://<sta-ip>/setup      -> 404
@@ -49,16 +49,16 @@ void setup()
     Serial.begin(115200);
 
     // AP + STA so both interfaces exist simultaneously.
-    init_wifi_ap_physical(AP_SSID, AP_PASS); // softAP (also enables AP+STA coexistence)
-    init_wifi_physical(SSID, PASSWORD);      // station link
+    Physical.wifi->init_ap(AP_SSID, AP_PASS); // softAP (also enables AP+STA coexistence)
+    Physical.wifi->init(SSID, PASSWORD);      // station link
     Serial.print("Connecting to WiFi");
-    while (!wifi_ready())
+    while (!Physical.wifi->ready())
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t sta_ip = pc_net_egress_ip();
-    uint32_t ap_ip = pc_net_ap_ip();
+    uint32_t sta_ip = Physical.link->egress_ip();
+    uint32_t ap_ip = Physical.wifi->ap_ip();
     Serial.printf("\nSTA IP: %u.%u.%u.%u\n", (unsigned)(sta_ip & 0xFF), (unsigned)((sta_ip >> 8) & 0xFF),
                   (unsigned)((sta_ip >> 16) & 0xFF), (unsigned)((sta_ip >> 24) & 0xFF));
     Serial.printf("AP  IP: %u.%u.%u.%u\n", (unsigned)(ap_ip & 0xFF), (unsigned)((ap_ip >> 8) & 0xFF),

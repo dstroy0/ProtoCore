@@ -24,10 +24,10 @@
 
 static void lt_report(const char *tag)
 {
-    uint32_t ip = pc_net_egress_ip();
+    uint32_t ip = Physical.link->egress_ip();
     Serial.printf("LT %s RIG_IP=%u.%u.%u.%u\n", tag, ip & 0xFFu, (ip >> 8) & 0xFFu, (ip >> 16) & 0xFFu,
                   (ip >> 24) & 0xFFu);
-    pc_iface iface = pc_net_egress();
+    pc_iface iface = Physical.link->egress();
     static const char *const names[] = {"ANY", "STA", "AP", "ETH"};
     int i = (int)iface;
     Serial.printf("LT %s egress_iface=%d (%s)\n", tag, i, (i >= 0 && i <= 3) ? names[i] : "?");
@@ -40,7 +40,7 @@ void setup()
     Serial.println("LT boot: physical (L1) link-bringup test");
 
     uint8_t mac[6] = {0};
-    if (pc_net_mac(mac)) // WiFi STA MAC (zeros on an Ethernet-only device that never starts WiFi)
+    if (Physical.link->mac(mac)) // WiFi STA MAC (zeros on an Ethernet-only device that never starts WiFi)
     {
         Serial.printf("LT wifi_sta_mac=%02x:%02x:%02x:%02x:%02x:%02x\n", mac[0], mac[1], mac[2], mac[3], mac[4],
                       mac[5]);
@@ -48,34 +48,35 @@ void setup()
 
 #if PC_ENABLE_ETHERNET
     Serial.println("LT link=ethernet (init_eth_physical)");
-    bool started = init_eth_physical();
+    bool started = Physical.eth->init();
     Serial.printf("LT init_eth_physical=%d\n", (int)started);
     uint32_t t0 = millis();
-    while (!eth_ready() && (millis() - t0) < 20000u)
+    while (!Physical.eth->ready() && (millis() - t0) < 20000u)
     {
         delay(250);
     }
-    Serial.printf("LT eth_ready=%d after %lums\n", (int)eth_ready(), (unsigned long)(millis() - t0));
+    Serial.printf("LT eth_ready=%d after %lums\n", (int)Physical.eth->ready(), (unsigned long)(millis() - t0));
 #else
     Serial.printf("LT link=wifi-sta ssid=%s (init_wifi_physical)\n", WIFI_SSID);
-    bool started = init_wifi_physical(WIFI_SSID, WIFI_PASS);
+    bool started = Physical.wifi->init(WIFI_SSID, WIFI_PASS);
     Serial.printf("LT init_wifi_physical=%d\n", (int)started);
     uint32_t t0 = millis();
-    while (!wifi_ready() && (millis() - t0) < 25000u)
+    while (!Physical.wifi->ready() && (millis() - t0) < 25000u)
     {
         delay(250);
     }
-    Serial.printf("LT wifi_ready=%d after %lums\n", (int)wifi_ready(), (unsigned long)(millis() - t0));
-    if (wifi_ready())
+    Serial.printf("LT wifi_ready=%d after %lums\n", (int)Physical.wifi->ready(), (unsigned long)(millis() - t0));
+    if (Physical.wifi->ready())
     {
         char ssid[33] = {0};
-        pc_net_ssid(ssid, sizeof(ssid));
-        Serial.printf("LT wifi ssid=%s channel=%u rssi=%d\n", ssid, (unsigned)pc_net_channel(), (int)pc_net_rssi());
+        Physical.wifi->ssid(ssid, sizeof(ssid));
+        Serial.printf("LT wifi ssid=%s channel=%u rssi=%d\n", ssid, (unsigned)Physical.wifi->channel(),
+                      (int)Physical.wifi->rssi());
     }
 #endif
 
     uint8_t emac[6] = {0}; // the MAC actually on the wire (Ethernet PHY MAC on the P4, WiFi STA MAC on the S3)
-    if (pc_net_egress_mac(emac))
+    if (Physical.link->egress_mac(emac))
     {
         Serial.printf("LT egress_mac=%02x:%02x:%02x:%02x:%02x:%02x\n", emac[0], emac[1], emac[2], emac[3], emac[4],
                       emac[5]);

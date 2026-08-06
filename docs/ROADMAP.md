@@ -764,7 +764,7 @@ Built-in radio:
   a higher-priority interface when it comes up, failover to the next best when it drops, and change
   detection so the app reconfigures the netif only on a real transition. Pure, host-tested
   (`native_link_manager`). The PHY init is **HW-verified (2026-07-19)** on a Waveshare ESP32-P4-POE-ETH
-  (onboard IP101 RMII PHY, arduino-esp32 3.x): the shipped `init_eth_physical()` brought the link up (100M
+  (onboard IP101 RMII PHY, arduino-esp32 3.x): the shipped `Physical.eth->init()` brought the link up (100M
   full-duplex + DHCP) and the PC server answered real HTTP over pure wired Ethernet. _Remaining:_ the
   multi-interface bridge / packet forwarding (the v5 interface-forwarding milestone).
 - [~] IPv6 dual-stack + fallback (L); VPN tunneling + reverse-SSH tunnel to a relay (L) _(dual-stack +

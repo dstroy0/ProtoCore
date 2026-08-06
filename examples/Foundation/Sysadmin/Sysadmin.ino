@@ -297,8 +297,8 @@ void handle_get_sysinfo(uint8_t slot_id, HttpReq *req)
     }
 
     char ssid[33];
-    pc_net_ssid(ssid, sizeof(ssid));
-    uint32_t ip = pc_net_egress_ip();
+    Physical.wifi->ssid(ssid, sizeof(ssid));
+    uint32_t ip = Physical.link->egress_ip();
     char ip_str[16];
     snprintf(ip_str, sizeof(ip_str), "%u.%u.%u.%u", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
              (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
@@ -319,8 +319,8 @@ void handle_get_sysinfo(uint8_t slot_id, HttpReq *req)
              "\"ip_address\":\"%s\""
              "}",
              ESP.getFreeHeap(), ESP.getMinFreeHeap(), ESP.getMaxAllocHeap(), millis(),
-             get_reset_reason_string(esp_reset_reason()), ESP.getChipRevision(), ESP.getCpuFreqMHz(), pc_net_rssi(),
-             ssid, pc_net_channel(), ip_str);
+             get_reset_reason_string(esp_reset_reason()), ESP.getChipRevision(), ESP.getCpuFreqMHz(), Physical.wifi->rssi(),
+             ssid, Physical.wifi->channel(), ip_str);
 
     send_text(slot_id, 200, "application/json", response_buf);
 }
@@ -347,14 +347,14 @@ void setup()
     delay(1000);
     Serial.println("\n--- PC SysAdmin Control Console ---");
 
-    init_wifi_physical(SSID, PASSWORD);
-    while (!wifi_ready())
+    Physical.wifi->init(SSID, PASSWORD);
+    while (!Physical.wifi->ready())
     {
         delay(500);
         Serial.print(".");
     }
     Serial.println("\nWiFi Online!");
-    uint32_t ip = pc_net_egress_ip();
+    uint32_t ip = Physical.link->egress_ip();
     Serial.printf("Access the dashboard via: http://%u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 

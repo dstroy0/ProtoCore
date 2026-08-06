@@ -7,7 +7,7 @@ ESP32-P4 (HW ECC)".
 
 The P4 is not an S3, so it does not use the `penetration_testing/rig_firmware` PlatformIO envs (those pin the S3
 arduino-2.x core). It builds with **arduino-cli + the arduino-esp32 3.x core** (`esp32:esp32`), and — having
-no radio — brings up the **wired PHY** (`init_eth_physical`) instead of WiFi.
+no radio — brings up the **wired PHY** (`Physical.eth->init`) instead of WiFi.
 
 ## What it exposes
 

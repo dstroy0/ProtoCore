@@ -39,7 +39,7 @@ void setup()
 {
     Serial.begin(115200);
     // ESP-NOW needs the radio up but not associated; STA mode pinned to a fixed channel.
-    init_wifi_radio_physical(CHANNEL);
+    Physical.wifi->init_radio(CHANNEL);
 
     if (!pc_espnow_begin(CHANNEL, on_espnow))
     {
@@ -47,7 +47,7 @@ void setup()
         return;
     }
     uint8_t mac[6];
-    pc_net_mac(mac);
+    Physical.link->mac(mac);
     Serial.printf("ESP-NOW up on channel %u, my MAC %02x:%02x:%02x:%02x:%02x:%02x\n", CHANNEL, mac[0], mac[1], mac[2],
                   mac[3], mac[4], mac[5]);
 }

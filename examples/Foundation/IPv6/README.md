@@ -9,15 +9,15 @@ moment the interface has an IPv6 address it answers over v6 as well as v4. All y
 turning IPv6 on for the network interface:
 
 ```cpp
-init_wifi_physical(SSID, PASSWORD);
-while (!wifi_ready()) delay(250);
-init_ipv6_physical();            // enable IPv6 (SLAAC) on the Wi-Fi netif
-while (!pc_ipv6_ready()) delay(250); // waits for a global (routable) v6 address
+Physical.wifi->init(SSID, PASSWORD);
+while (!Physical.wifi->ready()) delay(250);
+Physical.ip6->init();            // enable IPv6 (SLAAC) on the Wi-Fi netif
+while (!Physical.ip6->ready()) delay(250); // waits for a global (routable) v6 address
 ```
 
-`PC_ENABLE_IPV6` gates the bring-up. `init_ipv6_physical()` enables IPv6 on the netif
+`PC_ENABLE_IPV6` gates the bring-up. `Physical.ip6->init()` enables IPv6 on the netif
 (SLAAC gives a `fe80::` link-local address, plus a global one if a router advertises a prefix).
-`net_global_ipv6()` reads the acquired global address straight from lwIP into a `pc_ip`.
+`Physical.ip6->global_addr()` reads the acquired global address straight from lwIP into a `pc_ip`.
 
 ## The pc_ip address core
 

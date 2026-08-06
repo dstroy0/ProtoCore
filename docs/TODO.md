@@ -127,7 +127,7 @@ non-goal or needs hardware / proprietary docs) - **DONE** (`[x]`, the shipped re
 - **Concurrent TLS** (`MAX_TLS_CONNS`>1) - library + PSRAM build done; only the live 2-client soak remains
   (the reserved **two-rig HW test**, held per the user's "keep looping, hold the rigs").
 - **Ethernet PHY** - RMII bring-up shipped + **HW-verified (2026-07-19)** on a Waveshare ESP32-P4-POE-ETH
-  (onboard IP101 PHY): the shipped `init_eth_physical()` serves real HTTP over pure wired Ethernet. See the `[x]` entry below.
+  (onboard IP101 PHY): the shipped `Physical.eth->init()` serves real HTTP over pure wired Ethernet. See the `[x]` entry below.
 - **CoAP scope** - `/.well-known/core` discovery shipped; separate/deferred responses + CON dedup are
   deliberately out of scope.
 - **SSH channels** - `direct-tcpip` (`ssh -L`) **and** `forwarded-tcpip` (`ssh -R`) both shipped +
@@ -593,17 +593,17 @@ Open follow-ups discovered during the above:
       to add a route - the same topology the interop harness works around with a device-out broker),
       not a code limitation.
 - [x] **Ethernet PHY abstraction** - _(bring-up shipped; HW-verified 2026-07-19)_ `PC_ENABLE_ETHERNET`:
-      `init_eth_physical()` / `eth_ready()` in `network_drivers/physical` wrap the Arduino
+      `Physical.eth->init()` / `Physical.eth->ready()` in `network_drivers/physical` wrap the Arduino
       ETH library for an RMII PHY (LAN8720 / IP101 / ...), configured by the standard `ETH_PHY_*`
       build flags (or a board variant that supplies them). The egress reporting + per-route interface
       classifier already handle a wired route (PC_IFACE_ETH, host-tested), so the server serves over
       Ethernet - or dual-homed with Wi-Fi - once the link has an IP. **HW-verified on a Waveshare
-      ESP32-P4-POE-ETH** (onboard IP101 RMII PHY, arduino-esp32 3.x): the shipped `init_eth_physical()`
-      brought the PHY up (link 100M full-duplex + DHCP), `pc_net_egress_ip()` reported the wired
+      ESP32-P4-POE-ETH** (onboard IP101 RMII PHY, arduino-esp32 3.x): the shipped `Physical.eth->init()`
+      brought the PHY up (link 100M full-duplex + DHCP), `Physical.link->egress_ip()` reported the wired
       address, and the PC server answered real HTTP `GET`s over pure wired Ethernet (no W5500, no
       Wi-Fi) from an on-LAN host. No library change was needed. Example Ethernet.
 - [x] **IPv6 dual-stack** - _phase 1 landed (v4.83.0); phase 2 landed (v4.89.0); HW-verified 2026-07-19._ `PC_ENABLE_IPV6`
-      enables IPv6 on the netif (`init_ipv6_physical` / `net_global_ipv6` / `pc_ipv6_ready`); the
+      enables IPv6 on the netif (`Physical.ip6->init` / `Physical.ip6->global_addr` / `Physical.ip6->ready`); the
       listeners already bind `IPADDR_TYPE_ANY`, so the server accepts v6 once an address is up. The
       `pc_ip` address core (`shared_primitives/ip.h`) parses / formats / classifies both
       families (`native_ip`; RFC 4291 + 5952). Example IPv6; both cores compiled. **Phase 2
@@ -616,8 +616,8 @@ Open follow-ups discovered during the above:
       32-bit hash key, which was collidable (see docs/BUGS.md); no abuse-prevention state is keyed on
       a hash or a uint32 flattening any more (the audit log has no client-IP field). **HW-verified
       (2026-07-19):** an ESP32-S3 (arduino-esp32 2.x) joined to a dual-stack Wi-Fi network formed a
-      full SLAAC address set via the shipped `init_ipv6_physical()` - link-local, a unique-local
-      (`fd00::/8`), and a router-advertised global (`2600:.../64`); `net_global_ipv6()` read the
+      full SLAAC address set via the shipped `Physical.ip6->init()` - link-local, a unique-local
+      (`fd00::/8`), and a router-advertised global (`2600:.../64`); `Physical.ip6->global_addr()` read the
       global correctly, and the dual-stack `IPADDR_TYPE_ANY` `:80` listener answered real HTTP `GET`s
       over both the global and the ULA (curled from an on-link Linux host, byte-exact body). The 3.x
       path is the analogous `WiFi.enableIPv6()` (CI-compiled on the Arduino 3.x core).

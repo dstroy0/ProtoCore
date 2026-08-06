@@ -28,8 +28,8 @@ void handle_status(uint8_t slot_id, HttpReq *req)
 
 void setup()
 {
-    init_wifi_physical("SSID", "PASSWORD");
-    while (!wifi_ready()) delay(250);
+    Physical.wifi->init("SSID", "PASSWORD");
+    while (!Physical.wifi->ready()) delay(250);
 
     server.on("/status", HTTP_GET, handle_status);
     server.set_cors("*");
@@ -1106,7 +1106,7 @@ The complete set of `PC_ENABLE_*` flags and their defaults, scraped from
 | `PC_ENABLE_ENOCEAN` | `0` | Enable the EnOcean ESP3 serial codec (default off). |
 | `PC_ENABLE_ESPNOW` | `0` | ESP-NOW peer messaging. |
 | `PC_ENABLE_ETAG` | `0` | Conditional GET (ETag + Last-Modified) for served files. |
-| `PC_ENABLE_ETHERNET` | `0` | Enable wired Ethernet bring-up (init_eth_physical / eth_ready). |
+| `PC_ENABLE_ETHERNET` | `0` | Enable wired Ethernet bring-up (Physical.eth->init / Physical.eth->ready). |
 | `PC_ENABLE_EUROMAP77` | `0` | EUROMAP 77 (OPC 40077) - OPC UA for injection moulding machines (IMM <-> MES). |
 | `PC_ENABLE_EXC_DECODER` | `0` | Opt-in ESP32 panic / exception decoder for a live diagnostics panel. |
 | `PC_ENABLE_FAILSAFE` | `0` | Opt-in software watchdog: deadlock detection + fail-safe safe-state. |

@@ -16,7 +16,7 @@ Preferences (NVS).
 ```cpp
 char ssid[33], psk[64];
 if (pc_provisioning_load(ssid, sizeof(ssid), psk, sizeof(psk))) {
-    init_wifi_physical(ssid, psk);          // we have creds -> normal station
+    Physical.wifi->init(ssid, psk);          // we have creds -> normal station
     server.on("/", HttpMethod::HTTP_GET, handle_root);
     server.begin(80);
 } else {
@@ -74,12 +74,12 @@ void setup()
     if (pc_provisioning_load(ssid, sizeof(ssid), psk, sizeof(psk)))
     {
         // Credentials present: connect as a normal station.
-        init_wifi_physical(ssid, psk);
+        Physical.wifi->init(ssid, psk);
         Serial.print("Connecting to ");
         Serial.println(ssid);
-        while (!wifi_ready())
+        while (!Physical.wifi->ready())
             delay(250);
-        uint32_t ip = pc_net_egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+        uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
         Serial.printf("IP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                       (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 

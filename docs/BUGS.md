@@ -1148,7 +1148,7 @@ member named 'auth_id'`, and `'CSRF_TOKEN_BUF' undeclared`.
   follows a README instead of reading the sketch next to it writes exactly the code the library bans, and it
   will not link against the transport API the sketch actually uses.
 - **Root cause:** two independent gaps that only bite together. (1) The sketches were migrated to the library
-  transport (`pc_client_*` / `pc_udp_*` / `pc_net_egress_ip()`), but the annotated-source blocks are
+  transport (`pc_client_*` / `pc_udp_*` / `Physical.link->egress_ip()`), but the annotated-source blocks are
   hand-rolled on purpose - the heavy annotation is the teaching content and cannot be generated - so the
   migration updated the code and left 86 hand-written copies behind. (2) `docs/SRCBANNED.md` rule 6 explicitly
   states **"Applies to `examples/` too"** and even documents the check
@@ -1201,13 +1201,13 @@ member named 'auth_id'`, and `'CSRF_TOKEN_BUF' undeclared`.
 - **Symptom:** the physical (L1) link test printed `MAC=00:00:00:00:00:00` on the P4 - an Ethernet-only board
   whose PHY plainly has a MAC (`e8:f6:0a:e0:a7:8d`). The library exposed no way to read the active interface's
   hardware address.
-- **Root cause:** `pc_net_mac()` returns the WiFi _station_ MAC via `WiFi.macAddress()` (what ESP-NOW / WiFi
+- **Root cause:** `Physical.link->mac()` returns the WiFi _station_ MAC via `WiFi.macAddress()` (what ESP-NOW / WiFi
   diagnostics need), which reads back zeros when the WiFi driver was never started, as on the wired P4. It does
   exactly what it is documented to do; the real gap was the absence of an interface-neutral "MAC on the wire"
   accessor for the egress link. Not a regression - the physical-layer vendor-partition HW test just exposed it.
-- **Fix:** added `pc_net_egress_mac()` - reads the live default-route netif's `hwaddr` (lwIP), so it returns
+- **Fix:** added `Physical.link->egress_mac()` - reads the live default-route netif's `hwaddr` (lwIP), so it returns
   the Ethernet PHY's MAC on a wired link and the WiFi STA MAC on a wireless one, independent of which driver
-  started; fallback stub on host / no-backend builds. Clarified `pc_net_mac()`'s doc as WiFi-STA-specific and
+  started; fallback stub on host / no-backend builds. Clarified `Physical.link->mac()`'s doc as WiFi-STA-specific and
   cross-referenced the new accessor. HW-verified: P4 `egress_mac=e8:f6:0a:e0:a7:8d` (with `wifi_sta_mac` zeros);
   S3 `egress_mac=94:a9:90:d1:7a:b8` == its `wifi_sta_mac` (WiFi is the egress there).
 

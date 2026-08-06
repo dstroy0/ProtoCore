@@ -22,20 +22,20 @@ void setup()
 {
     Serial.begin(115200);
     delay(200);
-    init_wifi_physical(WIFI_SSID, WIFI_PASS);
+    Physical.wifi->init(WIFI_SSID, WIFI_PASS);
     Serial.print("WiFi connecting");
     uint32_t t0 = millis();
-    while (!wifi_ready() && millis() - t0 < 20000)
+    while (!Physical.wifi->ready() && millis() - t0 < 20000)
     {
         delay(250);
         Serial.print('.');
     }
-    if (!wifi_ready())
+    if (!Physical.wifi->ready())
     {
         Serial.println(" no WiFi");
         return;
     }
-    uint32_t ip = pc_net_egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("IP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 

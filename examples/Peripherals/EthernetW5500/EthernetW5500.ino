@@ -2,7 +2,7 @@
 //
 // The RMII path (example Ethernet) needs an ESP32 with an on-chip Ethernet MAC. The S3 has
 // no RMII MAC, so a wired link there uses an SPI Ethernet controller - the WIZnet W5500 - over
-// the HSPI bus. With PC_ETH_W5500=1, init_eth_physical() calls the arduino-esp32 3.x ETH SPI
+// the HSPI bus. With PC_ETH_W5500=1, Physical.eth->init() calls the arduino-esp32 3.x ETH SPI
 // API (ETH.begin(ETH_PHY_W5500, ...)); once the link has a DHCP IP the server accepts on it with
 // no other change (the egress reporting classifies the wired route as pc_iface::PC_IFACE_ETH).
 //
@@ -37,10 +37,10 @@ void setup()
 {
     Serial.begin(115200);
 
-    // init_eth_physical() installs the W5500 driver (ETH.begin with the PC_ETH_W5500_* pins). It
+    // Physical.eth->init() installs the W5500 driver (ETH.begin with the PC_ETH_W5500_* pins). It
     // returns false if the MAC never answered on SPI - check the return before polling for a link, or a
     // never-installed driver reboot-loops the poll below.
-    if (!init_eth_physical())
+    if (!Physical.eth->init())
     {
         Serial.println("W5500 init failed: the MAC did not answer on SPI. Check 3V3 power and the SPI "
                        "wiring (CS/SCK/MISO/MOSI + RST/INT). Not polling for a link.");
@@ -48,17 +48,17 @@ void setup()
     }
     Serial.print("Bringing up W5500 Ethernet");
     unsigned long t0 = millis();
-    while (!eth_ready() && millis() - t0 < 15000)
+    while (!Physical.eth->ready() && millis() - t0 < 15000)
     {
         delay(250);
         Serial.print('.');
     }
-    if (!eth_ready())
+    if (!Physical.eth->ready())
     {
         Serial.println("\nW5500 link did not come up (check wiring / DHCP)");
         return;
     }
-    uint32_t ip = pc_net_egress_ip(); // Ethernet is the egress here
+    uint32_t ip = Physical.link->egress_ip(); // Ethernet is the egress here
     Serial.printf("\nETH_IP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 

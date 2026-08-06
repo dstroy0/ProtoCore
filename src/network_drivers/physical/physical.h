@@ -39,6 +39,14 @@
 // linkage and the C callers above this layer link against them unchanged.
 PROTO_BEGIN_DECLS
 
+// ---------------------------------------------------------------------------
+// The backend contract: what a vendor's physical driver implements.
+//
+// These are the seam between this layer and board_drivers/physical/<vendor>/. Nothing above L1
+// names them. A caller reaches the interfaces through @ref Physical and the radio through
+// @ref Radio, declared at the end of this file, which is what the sub-tables are built from.
+// ---------------------------------------------------------------------------
+
 /**
  * @brief Connect to a WiFi access point.
  *

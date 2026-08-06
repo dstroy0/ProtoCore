@@ -52,9 +52,9 @@ void setup()
     Serial.begin(115200);
     delay(300);
     memset(big4k, 'A', sizeof(big4k));
-    init_wifi_physical(WIFI_SSID, WIFI_PASS);
+    Physical.wifi->init(WIFI_SSID, WIFI_PASS);
     uint32_t t0 = millis();
-    while (!wifi_ready() && millis() - t0 < 30000)
+    while (!Physical.wifi->ready() && millis() - t0 < 30000)
     {
         delay(200);
     }

@@ -14,10 +14,10 @@ connection's local IP to the softAP IP, so you must register it once after
 starting the AP:
 
 ```cpp
-init_wifi_ap_physical(AP_SSID, AP_PASS);
-init_wifi_physical(SSID, PASSWORD);
+Physical.wifi->init_ap(AP_SSID, AP_PASS);
+Physical.wifi->init(SSID, PASSWORD);
 ...
-server.set_ap_ip(pc_net_ap_ip());   // required for STA/AP classification
+server.set_ap_ip(Physical.wifi->ap_ip());   // required for STA/AP classification
 ```
 
 **Gate routes by interface.** Pass `PC_IFACE_AP` or `PC_IFACE_STA` as the last
@@ -87,24 +87,24 @@ void setup()
     Serial.begin(115200);
 
     // AP + STA so both interfaces exist simultaneously.
-    init_wifi_ap_physical(AP_SSID, AP_PASS);
-    init_wifi_physical(SSID, PASSWORD);
+    Physical.wifi->init_ap(AP_SSID, AP_PASS);
+    Physical.wifi->init(SSID, PASSWORD);
     Serial.print("Connecting to WiFi");
-    while (!wifi_ready())
+    while (!Physical.wifi->ready())
     {
         delay(250);
         Serial.print('.');
     }
     Serial.print("\nSTA IP: ");
-    uint32_t ip = pc_net_egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("IP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
     Serial.print("AP  IP: ");
-    Serial.println(pc_net_ap_ip());
+    Serial.println(Physical.wifi->ap_ip());
 
 
     // Required for STA/AP classification (IPAddress converts to uint32_t).
-    server.set_ap_ip(pc_net_ap_ip());
+    server.set_ap_ip(Physical.wifi->ap_ip());
 
     server.on("/setup", HttpMethod::HTTP_GET, handle_setup, pc_iface::PC_IFACE_AP);   // softAP only
     server.on("/api/data", HttpMethod::HTTP_GET, handle_api, pc_iface::PC_IFACE_STA); // station only

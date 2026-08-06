@@ -235,12 +235,12 @@ static void run_client(uint32_t ip)
 void setup()
 {
     Serial.begin(115200);
-    init_wifi_physical(SSID, PASSWORD);
-    while (!wifi_ready())
+    Physical.wifi->init(SSID, PASSWORD);
+    while (!Physical.wifi->ready())
     {
         delay(250);
     }
-    uint32_t ip = pc_net_egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
@@ -266,6 +266,6 @@ void loop()
     if (!done && millis() > 4000)
     {
         done = true;
-        run_client(pc_net_egress_ip()); // Tcp.client->open resolves the dotted-quad host directly
+        run_client(Physical.link->egress_ip()); // Tcp.client->open resolves the dotted-quad host directly
     }
 }

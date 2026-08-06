@@ -50,13 +50,13 @@ static bool resolver(const char *path, const pc_gql_args *args, pc_gql_value *ou
     if (!strcmp(path, "net.rssi"))
     {
         out->type = pc_gql_type::PC_GQL_INT;
-        out->i = pc_net_rssi();
+        out->i = Physical.wifi->rssi();
         return true;
     }
     if (!strcmp(path, "net.ip"))
     {
         static char ip[20];
-        uint32_t v4 = pc_net_egress_ip();
+        uint32_t v4 = Physical.link->egress_ip();
         snprintf(ip, sizeof(ip), "%u.%u.%u.%u", (unsigned)(v4 & 0xFF), (unsigned)((v4 >> 8) & 0xFF),
                  (unsigned)((v4 >> 16) & 0xFF), (unsigned)((v4 >> 24) & 0xFF));
         out->type = pc_gql_type::PC_GQL_STR;
@@ -79,12 +79,12 @@ static bool resolver(const char *path, const pc_gql_args *args, pc_gql_value *ou
 void setup()
 {
     Serial.begin(115200);
-    init_wifi_physical(SSID, PASSWORD);
-    while (!wifi_ready())
+    Physical.wifi->init(SSID, PASSWORD);
+    while (!Physical.wifi->ready())
     {
         delay(250);
     }
-    uint32_t ip = pc_net_egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 

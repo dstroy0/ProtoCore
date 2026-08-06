@@ -1,8 +1,8 @@
 // Ethernet - run the server over a wired Ethernet PHY instead of Wi-Fi.
 //
 // Some deployments want a wired uplink (PoE cameras, panel-mount controllers, noisy RF
-// environments). With PC_ENABLE_ETHERNET the physical layer gains init_eth_physical()
-// alongside init_wifi_physical() - a thin wrapper over the Arduino ETH library for an RMII
+// environments). With PC_ENABLE_ETHERNET the physical layer gains Physical.eth->init()
+// alongside Physical.wifi->init() - a thin wrapper over the Arduino ETH library for an RMII
 // PHY (LAN8720 / TLK110 / RTL8201 / DP83848). Once the link has an IP the server accepts on
 // it with no other change: the egress reporting already classifies a wired route as
 // pc_iface::PC_IFACE_ETH, so per-route interface filters and everything else just work.
@@ -40,9 +40,9 @@ void setup()
 {
     Serial.begin(115200);
 
-    // init_eth_physical() brings up the RMII PHY (ETH.begin with the ETH_PHY_* flags). Check the return
+    // Physical.eth->init() brings up the RMII PHY (ETH.begin with the ETH_PHY_* flags). Check the return
     // before polling for a link - a PHY that never installed would spin this loop forever.
-    if (!init_eth_physical())
+    if (!Physical.eth->init())
     {
         Serial.println("Ethernet init failed: the PHY did not come up. Check the ETH_PHY_* pin / clock / "
                        "power flags for your board. Not polling for a link.");
@@ -50,17 +50,17 @@ void setup()
     }
     Serial.print("Bringing up Ethernet");
     unsigned long t0 = millis();
-    while (!eth_ready() && millis() - t0 < 15000)
+    while (!Physical.eth->ready() && millis() - t0 < 15000)
     {
         delay(250);
         Serial.print('.');
     }
-    if (!eth_ready())
+    if (!Physical.eth->ready())
     {
         Serial.println("\nEthernet link did not come up (cable / DHCP?)");
         return;
     }
-    uint32_t ip = pc_net_egress_ip(); // Ethernet is the egress here
+    uint32_t ip = Physical.link->egress_ip(); // Ethernet is the egress here
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 

@@ -146,11 +146,11 @@ void setup()
     Serial.begin(115200);
     delay(300);
     // The P4-POE-ETH has no radio - bring up the wired PHY instead of WiFi.
-    init_eth_physical();
+    Physical.eth->init();
     uint32_t t0 = millis();
-    while (!eth_ready() && millis() - t0 < 30000)
+    while (!Physical.eth->ready() && millis() - t0 < 30000)
         delay(200);
-    uint32_t ip = pc_net_egress_ip(); // network byte order
+    uint32_t ip = Physical.link->egress_ip(); // network byte order
     Serial.printf("RIG_IP=%u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 

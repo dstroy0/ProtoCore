@@ -95,14 +95,14 @@ static void on_decode(uint8_t id, HttpReq *req)
 void setup()
 {
     Serial.begin(115200);
-    init_wifi_physical(SSID, PASSWORD);
+    Physical.wifi->init(SSID, PASSWORD);
     Serial.print("Connecting to WiFi");
-    while (!wifi_ready())
+    while (!Physical.wifi->ready())
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = pc_net_egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
@@ -116,7 +116,7 @@ void setup()
         pc_msgpack_str(&w, "uptime");
         pc_msgpack_uint(&w, millis() / 1000);
         pc_msgpack_str(&w, "rssi");
-        pc_msgpack_int(&w, pc_net_rssi());
+        pc_msgpack_int(&w, Physical.wifi->rssi());
         ctx.len = pc_span_ok(w) ? pc_span_len(w) : 0;
         ctx.off = 0;
         send_chunked(id, 200, "application/msgpack", pc_msgpack_source, &ctx);
