@@ -149,7 +149,9 @@ void setup()
     Physical.eth->init();
     uint32_t t0 = millis();
     while (!Physical.eth->ready() && millis() - t0 < 30000)
+    {
         delay(200);
+    }
     uint32_t ip = Physical.link->egress_ip(); // network byte order
     Serial.printf("RIG_IP=%u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
