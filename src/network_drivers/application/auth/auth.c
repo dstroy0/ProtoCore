@@ -530,7 +530,6 @@ static proto_bool check_digest(uint8_t slot_id, HttpReq *req, const AuthCred *c,
     }
     return PROTO_TRUE;
 }
-#endif // PC_ENABLE_AUTH
 
 // The scheme belongs to the credential, so the caller states which credential set applies and
 // nothing above this file has to know whether that set is Basic or Digest.
@@ -549,3 +548,5 @@ static proto_bool check(uint8_t slot_id, HttpReq *req, uint8_t id, proto_bool *s
 }
 
 const AuthNs Auth = {add, check, challenge, rekey, mint_nonce, verify_nonce};
+
+#endif // PC_ENABLE_AUTH
