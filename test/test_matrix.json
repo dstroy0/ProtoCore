@@ -765,7 +765,7 @@
     "native_auth": {
       "desc": "test_auth against the native_stack_http stack.",
       "base": "env:native_stack_http",
-      "tests": ["integration/crypto/test_auth"],
+      "tests": ["integration/http/test_auth"],
       "flags": ["-DPC_ENABLE_AUTH=1"]
     },
     "native_file_serving": {
@@ -808,13 +808,13 @@
     "native_digest_auth": {
       "desc": "test_digest_auth against the native_stack_http stack.",
       "base": "env:native_stack_http",
-      "tests": ["integration/crypto/test_digest_auth"],
+      "tests": ["integration/http/test_digest_auth"],
       "flags": ["-DPC_ENABLE_AUTH=1"]
     },
     "native_digest_vectors": {
       "desc": "test_digest_vectors against the native_stack_http stack.",
       "base": "env:native_stack_http",
-      "tests": ["unit/crypto/test_digest_vectors"],
+      "tests": ["unit/http/test_digest_vectors"],
       "flags": ["-DPC_ENABLE_AUTH=1"]
     },
     "native_template": {
@@ -1327,7 +1327,7 @@
         "+<network_drivers/session/worker.c>",
         "+<board_drivers/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/crypto/test_ikev2", "unit/crypto/test_ikev2_natt"]
+      "tests": ["unit/security/test_ikev2", "unit/security/test_ikev2_natt"]
     },
     "native_esp": {
       "desc": "ESP (RFC 4303) packet transform with AES-256-GCM (RFC 4106) - the IPsec datapath crypto core\n(services/system/esp): encapsulate a payload into SPI|Seq|IV|AES-GCM(payload|pad|padlen|nexthdr)|ICV and\nverify + decapsulate it, with the SPI|Seq AAD + salt||IV nonce. Gated on the IKEv2 feature. Pure host\ntests cross-checked against a Python AES-256-GCM reference.",
@@ -1593,7 +1593,7 @@
         "+<board_drivers/hal/portable/portable_platform.c>",
         "+<mmgr/protostr.c>"
       ],
-      "tests": ["unit/crypto/test_oidc"]
+      "tests": ["unit/security/test_oidc"]
     },
     "native_graphql": {
       "desc": "GraphQL query subset (services/iot/graphql) - pure parser + executor, host-tested\nwith a demo resolver. No heap; bounds are compile-time.",
@@ -2015,7 +2015,7 @@
       "desc": "SMBus 3.1 Packet Error Code (services/peripherals/smbus): the address byte with its direction\nbit, the PEC over a write transaction and over a read transaction (which spans both halves and\nthe repeated-start address), and that the checksum depends on the address and the direction as\nwell as the payload. The PEC comes from the shared CRC engine, so each vector is checked against\npc_crc(&PC_CRC8_SMBUS) directly rather than against a second implementation.",
       "flags": ["-DPC_ENABLE_SMBUS=1"],
       "src": ["+<services/peripherals/smbus.c>"],
-      "tests": ["unit/smb/test_smbus"]
+      "tests": ["unit/peripherals/test_smbus"]
     },
     "native_pmbus": {
       "desc": "PMBus 1.3 numeric encodings (services/peripherals/pmbus): the VOUT_MODE format selector and its\n5-bit signed exponent, the LINEAR11 11-bit signed mantissa and 5-bit signed exponent with decode\nand round trip, LINEAR16 against an exponent the part reports separately, the DIRECT coefficient\nform, and that a value the exponent pushes out of an int32 of micro-units is refused rather than\nwrapped.",
@@ -2123,7 +2123,7 @@
         "+<board_drivers/hal/portable/portable_platform.c>",
         "+<mmgr/protostr.c>"
       ],
-      "tests": ["unit/crypto/test_jwt"]
+      "tests": ["unit/security/test_jwt"]
     },
     "native_upload": {
       "desc": "Streaming file upload: POST body -> FS file via the parser streaming hook.\nSmall BODY_BUF_SIZE exercises multi-chunk streaming; the mock FS captures the\nwritten bytes (test/mocks/FS.h write-capture).",
@@ -2398,7 +2398,7 @@
         "+<board_drivers/hal/portable/portable_platform.c>",
         "+<mmgr/protostr.c>"
       ],
-      "tests": ["unit/crypto/test_csrf"]
+      "tests": ["unit/security/test_csrf"]
     },
     "native_telemetry": {
       "desc": "Telemetry math (services/iot/telemetry): moving-window stats, rate-of-change, and\ntotalizer. Pure computation (synthetic clock passed in), so it unit-tests on\nthe host.",
@@ -3277,7 +3277,7 @@
         "+<board_drivers/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>"
       ],
-      "tests": ["integration/crypto/test_coaps"]
+      "tests": ["integration/iot/test_coaps"]
     },
     "native_coaps_server": {
       "desc": "CoAP-over-DTLS server front-end (services/iot/coap/coaps_server): the per-peer DtlsConn pool +\ningest/poll seam on top of pc_coaps_process(). An in-test DTLS 1.3 client drives the server only through\ncoaps_server_ingest() and an output sink, exercising peer-address routing, the handshake + CoAP\nexchange, the poll-driven retransmission timer (RFC 9147 sec 5.8), and idle-connection reaping. Two\nsimultaneous peers are routed to their own connections. Pure host tests.",
@@ -3309,7 +3309,7 @@
         "+<board_drivers/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>"
       ],
-      "tests": ["integration/crypto/test_coaps_server"]
+      "tests": ["integration/iot/test_coaps_server"]
     },
     "native_tls13_kdf": {
       "desc": "TLS 1.3 key schedule for the QUIC handshake (network_drivers/tls/tls13_kdf,\nRFC 8446 sec 7.1 / 4.4.4): Early/Handshake/Master secret Extract chain, client/server handshake +\napplication traffic secrets, the server handshake write key/iv label path, and the server Finished\nverify_data over a full ClientHello..CertificateVerify transcript. Pinned to RFC 8448 sec 3.",
