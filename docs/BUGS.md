@@ -8,6 +8,35 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ---
 
+## The TCP transport did not compile for a target, and one env was the only witness
+
+- **Status:** FIXED, found by running the transport envs during the ring work. Pre-existing on
+  `c11-target`; confirmed by building `8b329ffd7` and getting the identical three errors.
+- **Root cause:** three sites of namespace-conversion residue, all inside `#if PROTOCORE_HOT`.
+  `worker.c` defines `pc_worker_wake` once in each build arm (`:129` under `PROTOCORE_HOT`, `:188`
+  under `#else`) and `pc_defer` calls it at `:125`, above both. With no declaration in scope the
+  call was an implicit non-static declaration, and the static definition below it then contradicted
+  that. Separately, `tcp_conn.c:1156` and `tcp_listener.c:368` called `Session.workers->wake()`;
+  `Session` is declared in `session.h`, which neither file includes. Both already include
+  `worker.h`, whose only purpose is to export `Workers`.
+- **Why nothing caught it:** `native_tcp_hot` is the only env that compiles the `PROTOCORE_HOT`
+  arms of the transport. Every host env takes the `#else` arm, where the offending call sites do
+  not exist, so 19 of the 20 SSH and transport envs were green with the target build broken.
+- **Fix:** a forward declaration above both arms in `worker.c`, so one declaration covers both
+  definitions; and `Workers.wake()` at the call sites, which is the owner they already hold the
+  header for rather than a reach up through the join and back down.
+- **A third site the compiler never named:** `tcp_listener.c:351` had the same
+  `Session.workers->wake()`, under `#if PC_WORKER_COUNT > 1` inside `#if PROTOCORE_HOT`.
+  `native_tcp_hot` builds single-worker so it took the `#else` arm, and the two envs that do set
+  `-DPC_WORKER_COUNT=2` are host builds where `PROTOCORE_HOT` is 0. **`PROTOCORE_HOT` with
+  `PC_WORKER_COUNT > 1` is compiled by nothing in the matrix**, so that arm was carrying the same
+  break with no witness at all. Fixed the same way; the coverage gap is still open.
+- **Still wrong, and not fixed here:** the call is upward whichever table it names. The worker
+  blocks on a task notification (`worker_task`: `pc_platform_task_wait`), not on the queue it
+  drains, so every producer does `pc_platform_queue_send()` and then a separate wake - and it is
+  that second act that makes layer 4 name layer 5. Three of the four wake sites are literally an
+  enqueue followed by a wake on the next line.
+
 ## The OAuth2 form-body builder took the address of its own parameter, and every token request crashed
 
 - **Status:** FIXED, found while building the codec conversion. Pre-existing; not caused by that work.

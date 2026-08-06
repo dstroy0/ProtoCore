@@ -348,7 +348,7 @@ static proto_bool listener_enqueue(uint8_t listener_id, const TcpEvt *evt)
         return PROTO_FALSE;
     }
 #if PROTOCORE_HOT
-    Session.workers->wake(owner); // nudge the owning worker so it services this now
+    Workers.wake(owner); // nudge the owning worker so it services this now
 #endif
 #else
     if (listener_id >= MAX_LISTENERS)
