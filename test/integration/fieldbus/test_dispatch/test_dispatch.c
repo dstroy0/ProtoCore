@@ -13,19 +13,11 @@
 #if PC_ENABLE_CSRF
 #include "services/security/csrf/csrf.h" // supply a valid token so an unsafe method reaches method dispatch
 #include "network_drivers/transport/tcp.h"
+#include "rx_feed.h"
 #endif
 
 static proto_bool handler_called = PROTO_FALSE;
 
-static void push_str(uint8_t slot, const char *s)
-{
-    TcpConn *c = &conn_pool[slot];
-    for (size_t i = 0; s[i]; i++)
-    {
-        c->rx_buffer[c->rx_head] = (uint8_t)s[i];
-        c->rx_head = (c->rx_head + 1) % RX_BUF_SIZE;
-    }
-}
 
 static void handle_ok(uint8_t slot_id, HttpReq *req)
 {

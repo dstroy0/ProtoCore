@@ -16,19 +16,10 @@
 
 #include <unity.h>
 #include "network_drivers/transport/tcp.h"
+#include "rx_feed.h"
 
 static const pc_mnt_backend *davfs; // the store WebDAV walks; bound in setUp
 
-static void push_str(uint8_t slot, const char *s)
-{
-    TcpConn *c = &conn_pool[slot];
-    for (size_t i = 0; s[i]; i++)
-    {
-        size_t next = (c->rx_head + 1) % RX_BUF_SIZE;
-        c->rx_buffer[c->rx_head] = (uint8_t)s[i];
-        c->rx_head = next;
-    }
-}
 
 static void feed_and_handle(uint8_t slot, const char *req)
 {
@@ -273,15 +264,6 @@ void test_get_file_through_mount()
 // --- streaming-PUT helpers -------------------------------------------------
 // Push `len` raw bytes into slot's rx ring (a body may exceed any single ring
 // so feed it in chunks, draining after each - as the real transport does).
-static void push_bytes(uint8_t slot, const uint8_t *b, size_t len)
-{
-    TcpConn *c = &conn_pool[slot];
-    for (size_t i = 0; i < len; i++)
-    {
-        c->rx_buffer[c->rx_head] = b[i];
-        c->rx_head = (c->rx_head + 1) % RX_BUF_SIZE;
-    }
-}
 
 // Feed a complete PUT with an arbitrary-length body and run the handler. The
 // body streams to the DAV file via dav_stream_put_*; chunked feeding keeps the

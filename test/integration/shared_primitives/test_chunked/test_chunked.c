@@ -10,6 +10,7 @@
 
 #include <unity.h>
 #include "network_drivers/transport/tcp.h"
+#include "rx_feed.h"
 
 static int g_log_status;
 static int g_log_len;
@@ -21,16 +22,6 @@ static void log_cb(const char *method, const char *path, int status, int body_le
     g_log_len = body_len;
 }
 
-static void push_str(uint8_t slot, const char *s)
-{
-    TcpConn *c = &conn_pool[slot];
-    for (size_t i = 0; s[i]; i++)
-    {
-        size_t next = (c->rx_head + 1) % RX_BUF_SIZE;
-        c->rx_buffer[c->rx_head] = (uint8_t)s[i];
-        c->rx_head = next;
-    }
-}
 
 // ---- Chunk sources (pull generators) ---------------------------------------
 // Each returns the next body piece (one chunk per call) and 0 to end. A single

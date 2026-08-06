@@ -22,6 +22,7 @@
 #include "network_drivers/presentation/codec/deflate/deflate.h" // DEFLATE_SCRATCH_SIZE for the starved-send path
 #include "network_drivers/presentation/codec/inflate/inflate.h"
 #include "network_drivers/transport/tcp.h"
+#include "rx_feed.h"
 #endif
 
 // ---------------------------------------------------------------------------
@@ -29,20 +30,6 @@
 // ---------------------------------------------------------------------------
 
 // Push raw bytes into slot's ring buffer (simulates lwIP recv callback)
-static void push_bytes(uint8_t slot, const uint8_t *data, size_t len)
-{
-    TcpConn *s = &conn_pool[slot];
-    for (size_t i = 0; i < len; i++)
-    {
-        size_t next = (s->rx_head + 1) % RX_BUF_SIZE;
-        if (next == s->rx_tail)
-        {
-            break; // ring full
-        }
-        s->rx_buffer[s->rx_head] = data[i];
-        s->rx_head = next;
-    }
-}
 
 // Build a WebSocket frame into dst.
 // Uses mask key {0,0,0,0} so the stored payload equals the unmasked input.

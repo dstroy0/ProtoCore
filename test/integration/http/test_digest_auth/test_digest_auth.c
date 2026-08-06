@@ -14,6 +14,7 @@
 
 #include <unity.h>
 #include "network_drivers/transport/tcp.h"
+#include "rx_feed.h"
 
 // A test-controllable monotonic clock (ms) so the stale-nonce path can be exercised
 // deterministically: tests advance g_fake_ms and the library reads it via pc_millis().
@@ -29,16 +30,6 @@ static const char *kUser = "admin";
 static const char *kRealm = "secure area";
 static const char *kPass = "s3cret";
 
-static void push_str(uint8_t slot, const char *s)
-{
-    TcpConn *c = &conn_pool[slot];
-    for (size_t i = 0; s[i]; i++)
-    {
-        size_t next = (c->rx_head + 1) % RX_BUF_SIZE;
-        c->rx_buffer[c->rx_head] = (uint8_t)s[i];
-        c->rx_head = next;
-    }
-}
 
 static void h_secure(uint8_t slot, HttpReq *req)
 {

@@ -15,16 +15,8 @@
 
 #include <unity.h>
 #include "network_drivers/transport/tcp.h"
+#include "rx_feed.h"
 
-static void push_bytes(uint8_t slot, const char *data, size_t n)
-{
-    TcpConn *c = &conn_pool[slot];
-    for (size_t i = 0; i < n; i++)
-    {
-        c->rx_buffer[c->rx_head] = (uint8_t)data[i];
-        c->rx_head = (c->rx_head + 1) % RX_BUF_SIZE;
-    }
-}
 
 void setUp()
 {

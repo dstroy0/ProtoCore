@@ -9,20 +9,11 @@
 
 #include <unity.h>
 #include "network_drivers/transport/tcp.h"
+#include "rx_feed.h"
 
 static char g_a[64], g_b[64], g_missing[64];
 static proto_bool g_found_a, g_found_b, g_found_missing;
 
-static void push_str(uint8_t slot, const char *s)
-{
-    TcpConn *c = &conn_pool[slot];
-    for (size_t i = 0; s[i]; i++)
-    {
-        size_t next = (c->rx_head + 1) % RX_BUF_SIZE;
-        c->rx_buffer[c->rx_head] = (uint8_t)s[i];
-        c->rx_head = next;
-    }
-}
 
 static void h_form(uint8_t slot, HttpReq *req)
 {

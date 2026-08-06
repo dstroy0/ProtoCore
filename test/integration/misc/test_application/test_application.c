@@ -17,6 +17,7 @@
 #include <string.h>
 #include <unity.h>
 #include "network_drivers/transport/tcp.h"
+#include "rx_feed.h"
 
 // All source layers compiled via native_app env - no stubs needed.
 
@@ -54,16 +55,6 @@ static void arm_slot(uint8_t slot, const char *raw)
 }
 
 // Push raw bytes into a ring buffer without resetting or parsing.
-static void push_bytes(uint8_t slot, const char *data)
-{
-    TcpConn *s = &conn_pool[slot];
-    for (size_t i = 0; data[i]; i++)
-    {
-        size_t next = (s->rx_head + 1) % RX_BUF_SIZE;
-        s->rx_buffer[s->rx_head] = (uint8_t)data[i];
-        s->rx_head = next;
-    }
-}
 
 // ---- named handlers (the C form of what were lambdas) --------------------
 
@@ -378,7 +369,7 @@ void test_slot_not_stuck_in_complete_after_handle(void)
 
 void test_parse_error_slot_auto_reset(void)
 {
-    push_bytes(0, "TOOLONGMETHODNAME /path HTTP/1.1\r\n\r\n");
+    push_str(0, "TOOLONGMETHODNAME /path HTTP/1.1\r\n\r\n");
     http_reset(0);
     http_parse(0);
     TEST_ASSERT_EQUAL(PARSE_ERROR, http_pool[0].parse_state);
@@ -581,7 +572,7 @@ void race_error_and_valid_slot_in_same_handle(void)
     on_http("/ok", HTTP_GET, mark0);
 
     // Slot 0: inject a parse error
-    push_bytes(0, "TOOLONGMETHODNAME /path HTTP/1.1\r\n\r\n");
+    push_str(0, "TOOLONGMETHODNAME /path HTTP/1.1\r\n\r\n");
     http_reset(0);
     http_parse(0);
     TEST_ASSERT_EQUAL(PARSE_ERROR, http_pool[0].parse_state);
@@ -627,7 +618,7 @@ void test_uri_too_long_auto_resets_slot(void)
     idx += 13;
     req[idx] = '\0';
 
-    push_bytes(0, req);
+    push_str(0, req);
     http_reset(0);
     http_parse(0);
     TEST_ASSERT_EQUAL(PARSE_URI_TOO_LONG, http_pool[0].parse_state);
@@ -1304,7 +1295,7 @@ void test_sse_broadcast_after_upgrade_matches_path(void)
     conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].proto = PROTO_HTTP; // dispatch requires an explicit protocol
     conn_pool[0].pcb = pc_net_host_pcb();
-    push_bytes(0, "GET /events HTTP/1.1\r\n\r\n");
+    push_str(0, "GET /events HTTP/1.1\r\n\r\n");
     http_reset(0);
     http_parse(0);
 

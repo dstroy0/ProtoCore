@@ -12,6 +12,7 @@
 #include <string.h>
 
 #include <unity.h>
+#include "rx_feed.h"
 
 static char g_cmd[64];
 static uint8_t g_cmd_client;
@@ -22,27 +23,7 @@ static void on_cmd(const char *line, uint8_t client_id)
     g_cmd_client = client_id;
 }
 
-static void push_str(uint8_t slot, const char *s)
-{
-    TcpConn *c = &conn_pool[slot];
-    for (size_t i = 0; s[i]; i++)
-    {
-        size_t next = (c->rx_head + 1) % RX_BUF_SIZE;
-        c->rx_buffer[c->rx_head] = (uint8_t)s[i];
-        c->rx_head = next;
-    }
-}
 
-static void push_bytes(uint8_t slot, const uint8_t *data, size_t len)
-{
-    TcpConn *c = &conn_pool[slot];
-    for (size_t i = 0; i < len; i++)
-    {
-        size_t next = (c->rx_head + 1) % RX_BUF_SIZE;
-        c->rx_buffer[c->rx_head] = data[i];
-        c->rx_head = next;
-    }
-}
 
 // Build a WS frame (mask key all-zero so the stored payload equals the input).
 static size_t build_frame(uint8_t *dst, WsOpcode opcode, const uint8_t *payload, uint16_t len)

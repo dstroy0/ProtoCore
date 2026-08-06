@@ -11,16 +11,8 @@
 
 #include <unity.h>
 #include "network_drivers/transport/tcp.h"
+#include "rx_feed.h"
 
-static void push_str(uint8_t slot, const char *s)
-{
-    TcpConn *c = &conn_pool[slot];
-    for (size_t i = 0; s[i]; i++)
-    {
-        c->rx_buffer[c->rx_head] = (uint8_t)s[i];
-        c->rx_head = (c->rx_head + 1) % RX_BUF_SIZE;
-    }
-}
 
 static void diag_handler(uint8_t slot, HttpReq *req)
 {

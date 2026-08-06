@@ -12,6 +12,7 @@
 #include <string.h>
 
 #include <unity.h>
+#include "rx_feed.h"
 
 #define IAC 255
 #define WILL 251
@@ -54,19 +55,6 @@ void tearDown()
     tcp_capture_disable();
 }
 
-static void push_bytes(uint8_t slot, const uint8_t *d, size_t n)
-{
-    TcpConn *c = &conn_pool[slot];
-    for (size_t i = 0; i < n; i++)
-    {
-        c->rx_buffer[c->rx_head] = d[i];
-        c->rx_head = (c->rx_head + 1) % RX_BUF_SIZE;
-    }
-}
-static void push_str(uint8_t slot, const char *s)
-{
-    push_bytes(slot, (const uint8_t *)s, strlen(s));
-}
 
 // ---------------------------------------------------------------------------
 

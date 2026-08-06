@@ -20,6 +20,7 @@
 #include <string.h>
 
 #include <unity.h>
+#include "rx_feed.h"
 
 // Native RSA test fixture (defined in ssh_rsa.cpp native path).
 extern uint8_t _test_rsa_n[256];
@@ -58,15 +59,6 @@ void tearDown()
     tcp_capture_disable();
 }
 
-static void push_bytes(uint8_t slot, const uint8_t *d, size_t n)
-{
-    TcpConn *c = &conn_pool[slot];
-    for (size_t i = 0; i < n; i++)
-    {
-        c->rx_buffer[c->rx_head] = d[i];
-        c->rx_head = (c->rx_head + 1) % RX_BUF_SIZE;
-    }
-}
 
 static void hex2bytes(uint8_t *out, const char *hex, size_t n)
 {

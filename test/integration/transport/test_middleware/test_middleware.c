@@ -10,6 +10,7 @@
 
 #include <unity.h>
 #include "network_drivers/transport/tcp.h"
+#include "rx_feed.h"
 
 // Cross-test observation state (middlewares are plain function pointers, so they
 // communicate through file-static globals + the global server, just like the
@@ -28,16 +29,6 @@ static void order_push(char c)
     }
 }
 
-static void push_str(uint8_t slot, const char *s)
-{
-    TcpConn *c = &conn_pool[slot];
-    for (size_t i = 0; s[i]; i++)
-    {
-        size_t next = (c->rx_head + 1) % RX_BUF_SIZE;
-        c->rx_buffer[c->rx_head] = (uint8_t)s[i];
-        c->rx_head = next;
-    }
-}
 
 // Re-arm a connection slot (send() frees it) and clear the response sink so each
 // request in a test is observed in isolation.

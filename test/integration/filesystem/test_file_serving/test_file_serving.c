@@ -19,20 +19,11 @@
 
 #include "network_drivers/transport/tcp.h"
 #include <unity.h>
+#include "rx_feed.h"
 
 static const pc_mnt_backend *g_fs; // the mock store the serve_static mounts read through
 static proto_bool handler_called = PROTO_FALSE;
 
-static void push_str(uint8_t slot, const char *s)
-{
-    TcpConn *c = &conn_pool[slot];
-    for (size_t i = 0; s[i]; i++)
-    {
-        size_t next = (c->rx_head + 1) % RX_BUF_SIZE;
-        c->rx_buffer[c->rx_head] = (uint8_t)s[i];
-        c->rx_head = next;
-    }
-}
 
 static void handle_html(uint8_t slot_id, HttpReq *req)
 {
