@@ -19,6 +19,7 @@
  */
 
 #include "mmgr/rawmemcpy.h" // proto_raw_read: the producer span move
+#include "mmgr/span.h"      // pc_cspan: the region a held slot keeps out
 #include <stdatomic.h>      // _Atomic, atomic_load_explicit, atomic_store_explicit, memory_order_*
 
 // ---------------------------------------------------------------------------
@@ -233,6 +234,105 @@ static inline void pc_seg_release(_Atomic size_t *rel)
 static inline uint8_t *pc_seg_at(uint8_t *buf, size_t seg_size, size_t idx)
 {
     return &buf[idx * seg_size];
+}
+
+// ---------------------------------------------------------------------------
+// Slot view: a mask per meaning, and the region a hold keeps out
+// ---------------------------------------------------------------------------
+// The views above index a slot the caller already chose; this one answers which slot. A
+// slot count that fits a word makes that a ctz rather than a scan, and a hold one fetch_or
+// whose return says whether it was won, so a loser moves on instead of retrying.
+//
+// A held slot carries the region the wire is still reading. A forward hands the egress
+// that pointer and walks its length rather than copying, so the slot cannot be reused
+// until the transmit completes and drops it.
+
+/** @brief Slots a mask can address. A wider pool falls back to the head/tail view. */
+#define PC_RING_SLOTS_MAX 32
+
+/** @brief Every slot below @p count, as a mask. */
+static inline uint32_t pc_slot_all(size_t count)
+{
+    if (count >= PC_RING_SLOTS_MAX)
+    {
+        return 0xFFFFFFFFu;
+    }
+    return (1u << count) - 1u;
+}
+
+/**
+ * @brief Take slot @p idx if no one holds it.
+ * @return true when this caller took it; false when another already had it.
+ */
+static inline proto_bool pc_slot_take(_Atomic uint32_t *held, size_t idx)
+{
+    const uint32_t bit = 1u << idx;
+    uint32_t prev = atomic_fetch_or_explicit(held, bit, memory_order_acquire);
+    return (prev & bit) == 0u;
+}
+
+/**
+ * @brief Take slot @p idx and record the @p len bytes at @p ptr that the wire will read.
+ *
+ * The recorded region is the keepout: it stays valid until pc_slot_drop(), so an egress
+ * handed @p ptr walks it in place.
+ * @return true when this caller took it; false when another already had it.
+ */
+static inline proto_bool pc_slot_hold(_Atomic uint32_t *held, pc_cspan *keepout, size_t idx, const uint8_t *ptr,
+                                      size_t len)
+{
+    if (!pc_slot_take(held, idx))
+    {
+        return PROTO_FALSE;
+    }
+    keepout[idx].buf = ptr;
+    keepout[idx].len = len;
+    keepout[idx].pos = 0;
+    keepout[idx].err = PROTO_FALSE;
+    return PROTO_TRUE;
+}
+
+/** @brief The region slot @p idx is keeping out, for the egress to walk. */
+static inline const pc_cspan *pc_slot_keepout(const pc_cspan *keepout, size_t idx)
+{
+    return &keepout[idx];
+}
+
+/** @brief Give slot @p idx back: the wire has taken its bytes. */
+static inline void pc_slot_drop(_Atomic uint32_t *held, size_t idx)
+{
+    atomic_fetch_and_explicit(held, ~(1u << idx), memory_order_release);
+}
+
+/** @brief Mark slot @p idx in @p mask, published after the slot is written. */
+static inline void pc_slot_mark(_Atomic uint32_t *mask, size_t idx)
+{
+    atomic_fetch_or_explicit(mask, 1u << idx, memory_order_release);
+}
+
+/** @brief Clear slot @p idx in @p mask, before the slot is written. */
+static inline void pc_slot_clear(_Atomic uint32_t *mask, size_t idx)
+{
+    atomic_fetch_and_explicit(mask, ~(1u << idx), memory_order_release);
+}
+
+/** @brief The slots @p mask names, minus the held ones, within @p count. */
+static inline uint32_t pc_slot_ready(const _Atomic uint32_t *mask, const _Atomic uint32_t *held, size_t count)
+{
+    return PROTO_ATOMIC_LOAD(mask) & ~PROTO_ATOMIC_LOAD(held) & pc_slot_all(count);
+}
+
+/**
+ * @brief Lowest slot set in @p m.
+ * @return its index, or -1 when @p m is empty.
+ */
+static inline int32_t pc_slot_next(uint32_t m)
+{
+    if (m == 0u)
+    {
+        return -1;
+    }
+    return (int32_t)__builtin_ctz(m);
 }
 
 #endif // PROTOCORE_RING_H
