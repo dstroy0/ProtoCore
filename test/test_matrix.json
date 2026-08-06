@@ -895,6 +895,7 @@
         "+<server/filesystem/filesystem.c>",
         "+<server/filesystem/mnt.c>",
         "+<network_drivers/network/route.c>",
+        "+<mmgr/protomem.c>",
         "+<server/signaling/signaling.c>",
         "+<mmgr/protostr.c>",
         "+<mmgr/secure.c>"
@@ -1794,6 +1795,7 @@
         "+<mmgr/frame.c>",
         "+<server/clock/clock.c>",
         "+<network_drivers/network/route.c>",
+        "+<mmgr/protomem.c>",
         "+<server/signaling/signaling.c>",
         "+<mmgr/protostr.c>",
         "+<mmgr/secure.c>"
@@ -1831,6 +1833,7 @@
         "+<network_drivers/network/network.c>",
         "+<network_drivers/network/dns/dns.c>",
         "+<network_drivers/network/route.c>",
+        "+<mmgr/protomem.c>",
         "+<server/signaling/signaling.c>",
         "+<server/filesystem/filesystem.c>",
         "+<server/filesystem/mnt.c>",
@@ -2144,6 +2147,7 @@
         "+<mmgr/frame.c>",
         "+<server/clock/clock.c>",
         "+<network_drivers/network/route.c>",
+        "+<mmgr/protomem.c>",
         "+<server/filesystem/mnt.c>",
         "+<server/signaling/signaling.c>",
         "+<mmgr/protostr.c>",
