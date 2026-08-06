@@ -161,7 +161,7 @@ int32_t pc_conn_alloc_free(void);
  * @brief Initialize the connection pool and store the runtime config.
  *
  * Zeroes all connection slots and sets the idle timeout from @p cfg.
- * Call this before calling listener_add() for each port.
+ * Call this before calling Tcp.listener->add() for each port.
  *
  * @param cfg  Runtime config, or NULL to use the compile-time default
  *             (CONN_TIMEOUT_MS).
@@ -171,7 +171,7 @@ void proto_tcp_pool_init(const WebServerConfig *cfg);
 /**
  * @brief Abort all active connections and reset the pool to CONN_FREE.
  *
- * Does not touch listener control blocks or listener queues - call listener_stop_all()
+ * Does not touch listener control blocks or listener queues - call Tcp.listener->stop_all()
  * before this if you also want to close the listening sockets.
  * Safe to call from the main-loop task.
  */

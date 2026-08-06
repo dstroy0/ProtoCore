@@ -239,7 +239,7 @@ int32_t proto_begin(const WebServerConfig *cfg)
 #endif
     for (uint8_t i = 0; i < s_inst.listener_count; i++)
     {
-        if (listener_add(i, s_inst.listen_ports[i], s_inst.listen_protos[i], s_inst.listen_tls[i]) < 0)
+        if (Tcp.listener->add(i, s_inst.listen_ports[i], s_inst.listen_protos[i], s_inst.listen_tls[i]) < 0)
         {
             return (int32_t)PC_ERR_LISTEN_FAILED;
         }

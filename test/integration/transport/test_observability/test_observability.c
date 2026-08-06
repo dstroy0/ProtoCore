@@ -31,7 +31,7 @@ void setUp()
 {
     set_millis(0);
     Tcp.conn->init(NULL);
-    listener_add(0, 80, PROTO_HTTP, PROTO_FALSE);
+    Tcp.listener->add(0, 80, PROTO_HTTP, PROTO_FALSE);
     Tcp.conn->on_event(on_event);
     Tcp.conn->counters_reset();
     g_calls = 0;
@@ -330,7 +330,7 @@ void test_enqueue_failure_from_recv_cb_counts_defer_drop()
     conn_pool[0].pcb = &pcb;
     conn_pool[0].rx_head = 0;
     conn_pool[0].rx_tail = 0;
-    conn_pool[0].listener_id = 1;          // listener 1 was never listener_add()'ed by setUp()
+    conn_pool[0].listener_id = 1;          // listener 1 was never Tcp.listener->add()'ed by setUp()
     listener_pool[1].active = PROTO_FALSE; // -> Tcp.listener->enqueue() reports failure
 
     uint8_t byte = 'x';

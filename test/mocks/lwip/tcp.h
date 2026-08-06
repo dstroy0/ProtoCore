@@ -45,7 +45,7 @@ typedef err_t (*tcp_sent_fn)(void *arg, struct tcp_pcb *tpcb, u16_t len);
 typedef void (*tcp_err_fn)(void *arg, err_t err);
 
 // Test hooks: force the next call to report failure, modeling the real-lwIP cases
-// listener_add() guards against (out of PCBs / a port already bound / backlog alloc
+// Tcp.listener->add() guards against (out of PCBs / a port already bound / backlog alloc
 // failure). Each auto-clears after one use.
 inline proto_bool &mock_new_pcb_fail_once()
 {

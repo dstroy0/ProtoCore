@@ -18,11 +18,11 @@
  */
 
 #include "tcp_listener.h"
+#include "../diffserv.h" // DiffServ DSCP marking for accepted connections (compiles out when off)
+#include "../net_addr.h" // NetAddr.to_ip(): the stack's address as a pc_ip
 #include "board_drivers/board_profiles/pc_platform.h" // the target's queues, under our names
-#include "../diffserv.h"                // DiffServ DSCP marking for accepted connections (compiles out when off)
-#include "../net_addr.h"                // NetAddr.to_ip(): the stack's address as a pc_ip
-#include "network_drivers/tls/tls.h" // TLS handshake begin (self-stubbing)
-#include "tcp_conn.h"                     // TcpConn, conn_pool: the slots an accept claims
+#include "network_drivers/tls/tls.h"                  // TLS handshake begin (self-stubbing)
+#include "tcp_conn.h"                                 // TcpConn, conn_pool: the slots an accept claims
 #if PROTOCORE_HOT
 #include "network_drivers/session/worker.h" // pc_worker_wake() - nudge the owning worker task
 #endif
@@ -50,7 +50,7 @@ typedef struct
 } AcceptThrottleCtx;
 static AcceptThrottleCtx s_accept;
 
-proto_bool listener_accept_allowed(uint32_t now_ms)
+static proto_bool listener_accept_allowed(uint32_t now_ms)
 {
     // Unsigned subtraction wraps correctly across the millis() rollover.
     if ((uint32_t)(now_ms - s_accept.window_start) >= PC_ACCEPT_THROTTLE_WINDOW_MS)
@@ -66,7 +66,7 @@ proto_bool listener_accept_allowed(uint32_t now_ms)
     return PROTO_TRUE;
 }
 
-void listener_accept_throttle_reset(void)
+static void listener_accept_throttle_reset(void)
 {
     s_accept.window_start = 0;
     s_accept.count = 0;
@@ -92,7 +92,7 @@ typedef struct
 } IpThrottleCtx;
 static IpThrottleCtx s_iptt;
 
-proto_bool listener_accept_allowed_ip(const pc_ip *ip, uint32_t now_ms)
+static proto_bool listener_accept_allowed_ip(const pc_ip *ip, uint32_t now_ms)
 {
     if (Ip.is_unspecified(ip))
     {
@@ -151,7 +151,7 @@ proto_bool listener_accept_allowed_ip(const pc_ip *ip, uint32_t now_ms)
     return PROTO_TRUE; // first connection of a fresh window is always allowed
 }
 
-void listener_per_ip_throttle_reset(void)
+static void listener_per_ip_throttle_reset(void)
 {
     for (int i = 0; i < PC_PER_IP_THROTTLE_SLOTS; i++)
     {
@@ -182,7 +182,7 @@ typedef struct
 } IpAllowCtx;
 static IpAllowCtx s_allow;
 
-proto_bool listener_ip_allow_add(const pc_ip *network, uint8_t prefix_len)
+static proto_bool listener_ip_allow_add(const pc_ip *network, uint8_t prefix_len)
 {
     if (!network)
     {
@@ -203,7 +203,7 @@ proto_bool listener_ip_allow_add(const pc_ip *network, uint8_t prefix_len)
     return PROTO_TRUE;
 }
 
-proto_bool listener_ip_allow_add_cidr(const char *cidr)
+static proto_bool listener_ip_allow_add_cidr(const char *cidr)
 {
     if (!cidr)
     {
@@ -266,7 +266,7 @@ proto_bool listener_ip_allow_add_cidr(const char *cidr)
     return listener_ip_allow_add(&net, prefix);
 }
 
-proto_bool listener_ip_allowed(const pc_ip *ip)
+static proto_bool listener_ip_allowed(const pc_ip *ip)
 {
     if (s_allow.count == 0)
     {
@@ -283,7 +283,7 @@ proto_bool listener_ip_allowed(const pc_ip *ip)
     return PROTO_FALSE;
 }
 
-void listener_ip_allowlist_reset(void)
+static void listener_ip_allowlist_reset(void)
 {
     for (int i = 0; i < PC_IP_ALLOWLIST_SLOTS; i++)
     {
@@ -306,7 +306,7 @@ typedef struct
 } ListenerQueueCtx;
 static ListenerQueueCtx s_lq;
 
-void listener_worker_queues_init(void)
+static void listener_worker_queues_init(void)
 {
     for (int i = 0; i < PC_WORKER_COUNT; i++)
     {
@@ -318,7 +318,7 @@ void listener_worker_queues_init(void)
     }
 }
 
-pc_platform_queue listener_worker_queue(int worker_id)
+static pc_platform_queue listener_worker_queue(int worker_id)
 {
     if (worker_id < 0 || worker_id >= PC_WORKER_COUNT)
     {
@@ -328,7 +328,7 @@ pc_platform_queue listener_worker_queue(int worker_id)
 }
 #endif // PC_WORKER_COUNT > 1
 
-proto_bool listener_enqueue(uint8_t listener_id, const TcpEvt *evt)
+static proto_bool listener_enqueue(uint8_t listener_id, const TcpEvt *evt)
 {
 #if PC_WORKER_COUNT > 1
     // HttpRoute by the slot's owner so the owning worker is the sole consumer.
@@ -543,7 +543,7 @@ pc_net_err listener_accept_cb(void *arg, pc_pcb *newpcb, pc_net_err err)
 static pc_net_err listener_lwip_marshal(uint8_t idx, uint16_t port, proto_bool create);
 #endif
 
-int32_t listener_add(uint8_t idx, uint16_t port, ConnProto proto, proto_bool tls)
+static int32_t listener_add(uint8_t idx, uint16_t port, ConnProto proto, proto_bool tls)
 {
     if (idx >= MAX_LISTENERS)
     {
@@ -611,7 +611,7 @@ int32_t listener_add(uint8_t idx, uint16_t port, ConnProto proto, proto_bool tls
     return 1;
 }
 
-void listener_stop(uint8_t idx)
+static void listener_stop(uint8_t idx)
 {
     if (idx >= MAX_LISTENERS)
     {
@@ -642,7 +642,7 @@ void listener_stop(uint8_t idx)
     }
 }
 
-void listener_stop_all(void)
+static void listener_stop_all(void)
 {
     for (uint8_t i = 0; i < MAX_LISTENERS; i++)
     {
@@ -739,7 +739,7 @@ static proto_bool set_dscp(uint16_t port, uint8_t dscp)
 }
 #endif // PC_ENABLE_DIFFSERV
 
-int32_t listener_add_dynamic(uint8_t idx, uint16_t port, ConnProto proto)
+static int32_t listener_add_dynamic(uint8_t idx, uint16_t port, ConnProto proto)
 {
     if (idx >= MAX_LISTENERS)
     {
@@ -782,7 +782,7 @@ int32_t listener_add_dynamic(uint8_t idx, uint16_t port, ConnProto proto)
     return 1;
 }
 
-void listener_stop_dynamic(uint8_t idx)
+static void listener_stop_dynamic(uint8_t idx)
 {
     if (idx >= MAX_LISTENERS)
     {
@@ -806,7 +806,9 @@ void listener_stop_dynamic(uint8_t idx)
     }
 }
 
-const TcpListenerNs TcpListener = {listener_stop,
+const TcpListenerNs TcpListener = {listener_add,
+                                   listener_add_dynamic,
+                                   listener_stop,
                                    listener_stop_all,
                                    listener_stop_dynamic,
                                    listener_enqueue,

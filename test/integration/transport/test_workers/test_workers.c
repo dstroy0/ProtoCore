@@ -130,9 +130,9 @@ void test_enqueue_routes_by_slot_owner_and_rejects_bad_owner(void)
 void test_accept_cb_round_robins_slot_owner(void)
 {
     Tcp.conn->init(NULL);
-    TEST_ASSERT_EQUAL_INT32(1, listener_add(0, 80, PROTO_HTTP, PROTO_FALSE)); // also exercises the
+    TEST_ASSERT_EQUAL_INT32(1, Tcp.listener->add(0, 80, PROTO_HTTP, PROTO_FALSE)); // also exercises the
                                                                               // WORKER_COUNT>1 branch
-                                                                              // of listener_add() itself
+                                                                              // of Tcp.listener->add() itself
     pc_pcb pcb1 = {0}, pcb2 = {0}, pcb3 = {0};
     TEST_ASSERT_EQUAL_INT(PC_NET_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb1, PC_NET_OK));
     TEST_ASSERT_EQUAL_INT(PC_NET_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb2, PC_NET_OK));
@@ -147,12 +147,12 @@ void test_accept_cb_round_robins_slot_owner(void)
     Tcp.listener->stop(0);
 }
 
-// listener_add_dynamic() also creates the per-worker queues (idempotent with the static
-// listener_add() path above).
+// Tcp.listener->add_dynamic() also creates the per-worker queues (idempotent with the static
+// Tcp.listener->add() path above).
 void test_dynamic_listener_creates_worker_queues(void)
 {
     Tcp.conn->init(NULL);
-    TEST_ASSERT_EQUAL_INT32(1, listener_add_dynamic(2, 4444, PROTO_HTTP));
+    TEST_ASSERT_EQUAL_INT32(1, Tcp.listener->add_dynamic(2, 4444, PROTO_HTTP));
     TEST_ASSERT_NOT_NULL(Tcp.listener->worker_queue(0));
     TEST_ASSERT_NOT_NULL(Tcp.listener->worker_queue(1));
     Tcp.listener->stop_dynamic(2);

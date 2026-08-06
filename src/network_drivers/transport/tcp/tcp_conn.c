@@ -20,17 +20,17 @@
  *
  * **Listener coupling**
  * Each TcpConn carries `listener_id`, set at accept time by listener_accept_cb. The `enqueue()`
- * helper posts events through `listener_enqueue()`, so this file names the listener that owns the
+ * helper posts events through `Tcp.listener->enqueue()`, so this file names the listener that owns the
  * queue and never the queue itself.
  */
 
 #include "tcp_conn.h"
-#include "board_drivers/board_profiles/pc_platform.h"
 #include "../diffserv.h" // pc_dscp_to_tos and the server-wide default this connection starts from
-#include "tcp_listener.h"           // listener_enqueue(): the owning listener posts the event, not this file
-#include "../net_addr.h"           // NetAddr.to_ip(): the stack's address as a pc_ip
+#include "../net_addr.h" // NetAddr.to_ip(): the stack's address as a pc_ip
+#include "board_drivers/board_profiles/pc_platform.h"
+#include "mmgr/rawmemcpy.h"     // proto_raw_read: the unaligned v6 address load
 #include "server/clock/clock.h" // pc_millis() pluggable monotonic clock
-#include "mmgr/rawmemcpy.h" // proto_raw_read: the unaligned v6 address load
+#include "tcp_listener.h"       // Tcp.listener->enqueue(): the owning listener posts the event, not this file
 
 #if PROTOCORE_HOT
 #include "network_drivers/session/worker.h" // pc_worker_wake() - resume a paced send when the window drains
@@ -821,7 +821,7 @@ void pc_conn_begin_close(uint8_t slot_id)
  */
 static inline void enqueue(TcpConn *slot, const TcpEvt *evt)
 {
-    if (!listener_enqueue(slot->listener_id, evt))
+    if (!Tcp.listener->enqueue(slot->listener_id, evt))
     {
         PC_OBS_NOTICE(slot->id, PROTO_ATOMIC_LOAD(&slot->state), PC_CONN_R_DEFER_DROP);
     }
@@ -847,7 +847,7 @@ void proto_tcp_pool_init(const WebServerConfig *cfg)
 void proto_tcp_stop(void)
 {
     // Abort all active connections - listener control blocks and queues are owned by
-    // the listener layer and must be cleaned up via listener_stop_all() first.
+    // the listener layer and must be cleaned up via Tcp.listener->stop_all() first.
     for (int i = 0; i < MAX_CONNS; i++)
     {
         ConnState st = PROTO_ATOMIC_LOAD(&conn_pool[i].state);
@@ -914,9 +914,9 @@ proto_bool pc_conn_remote_addr(uint8_t slot, pc_ip *out)
     }
     NetAddr.to_ip(&conn->pcb->
 #if PC_ENABLE_DIFFSERV
-                                 set_dscp,
+                   set_dscp,
 #endif
-                                 remote_ip, out);
+                  remote_ip, out);
     return PROTO_TRUE;
 #else
     (void)slot;

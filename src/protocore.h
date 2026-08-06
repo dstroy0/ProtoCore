@@ -648,7 +648,7 @@ int32_t listen(uint16_t port, ConnProto proto);
  * @brief Initialize all connection slots and open all registered listeners.
  *
  * Resets the HTTP parser pool, calls DeterministicAsyncTCP::pool_init(),
- * then calls listener_add() for each port registered via listen().
+ * then calls Tcp.listener->add() for each port registered via listen().
  * Requires at least one prior listen() call.  For the common single-port
  * case use begin(port, cfg) instead.
  *

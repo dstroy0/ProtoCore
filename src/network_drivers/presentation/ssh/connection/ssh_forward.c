@@ -300,7 +300,7 @@ static int on_rforward_open(uint8_t ssh_slot, const char *addr, size_t addr_len,
         return -1; // no listener capacity
     }
     // Dynamic (tcpip_thread-marshaled) create: this runs in the SSH worker task.
-    if (listener_add_dynamic((uint8_t)li, bind_port, PROTO_SSH_RFWD) != 1)
+    if (Tcp.listener->add_dynamic((uint8_t)li, bind_port, PROTO_SSH_RFWD) != 1)
     {
         return -1; // bind failed (port already in use, etc.)
     }

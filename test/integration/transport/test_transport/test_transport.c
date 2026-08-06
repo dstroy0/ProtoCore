@@ -25,7 +25,7 @@ void setUp()
 {
     set_millis(0);
     Tcp.conn->init(NULL);
-    listener_add(0, 80, PROTO_HTTP, PROTO_FALSE);
+    Tcp.listener->add(0, 80, PROTO_HTTP, PROTO_FALSE);
 }
 
 void tearDown()
@@ -221,33 +221,33 @@ void test_pool_init_applies_custom_config()
 void test_init_succeeds_on_native()
 {
     Tcp.conn->init(NULL);
-    int32_t ok = listener_add(0, 80, PROTO_HTTP, PROTO_FALSE);
+    int32_t ok = Tcp.listener->add(0, 80, PROTO_HTTP, PROTO_FALSE);
     TEST_ASSERT_EQUAL(1, ok);
 }
 
-// listener_add()'s bound check, and its full lwIP error surface on the host (non-ARDUINO)
+// Tcp.listener->add()'s bound check, and its full lwIP error surface on the host (non-ARDUINO)
 // path: out of PCBs, the port already bound, and a listen-backlog allocation failure -
 // each must fail closed (-1) without leaving a half-initialized listener behind.
 void test_listener_add_bounds_and_lwip_failure_paths()
 {
-    TEST_ASSERT_EQUAL_INT32(-1, listener_add((uint8_t)MAX_LISTENERS, 80, PROTO_HTTP, PROTO_FALSE));
+    TEST_ASSERT_EQUAL_INT32(-1, Tcp.listener->add((uint8_t)MAX_LISTENERS, 80, PROTO_HTTP, PROTO_FALSE));
 
     mock_new_pcb_fail_once();
-    TEST_ASSERT_EQUAL_INT32(-1, listener_add(1, 81, PROTO_HTTP, PROTO_FALSE));
+    TEST_ASSERT_EQUAL_INT32(-1, Tcp.listener->add(1, 81, PROTO_HTTP, PROTO_FALSE));
 
     mock_bind_fail_once();
-    TEST_ASSERT_EQUAL_INT32(-1, listener_add(1, 81, PROTO_HTTP, PROTO_FALSE));
+    TEST_ASSERT_EQUAL_INT32(-1, Tcp.listener->add(1, 81, PROTO_HTTP, PROTO_FALSE));
 
     mock_listen_fail_once();
     int before = mock_abort_call_count();
-    TEST_ASSERT_EQUAL_INT32(-1, listener_add(1, 81, PROTO_HTTP, PROTO_FALSE));
+    TEST_ASSERT_EQUAL_INT32(-1, Tcp.listener->add(1, 81, PROTO_HTTP, PROTO_FALSE));
     TEST_ASSERT_EQUAL_INT(before + 1, mock_abort_call_count()); // the allocated pcb is aborted, not leaked
 
     mock_queue_create_fail_once();
-    TEST_ASSERT_EQUAL_INT32(-1, listener_add(1, 81, PROTO_HTTP, PROTO_FALSE));
+    TEST_ASSERT_EQUAL_INT32(-1, Tcp.listener->add(1, 81, PROTO_HTTP, PROTO_FALSE));
 
     // A normal call afterward still succeeds (the failure knobs auto-cleared).
-    TEST_ASSERT_EQUAL_INT32(1, listener_add(1, 81, PROTO_HTTP, PROTO_FALSE));
+    TEST_ASSERT_EQUAL_INT32(1, Tcp.listener->add(1, 81, PROTO_HTTP, PROTO_FALSE));
     Tcp.listener->stop(1);
 }
 
@@ -267,7 +267,7 @@ void test_listener_stop_and_stop_dynamic_tolerate_a_missing_queue()
     Tcp.listener->stop(0); // must not crash; still deactivates
     TEST_ASSERT_FALSE(listener_pool[0].active);
 
-    TEST_ASSERT_EQUAL_INT32(1, listener_add_dynamic(1, 5555, PROTO_HTTP));
+    TEST_ASSERT_EQUAL_INT32(1, Tcp.listener->add_dynamic(1, 5555, PROTO_HTTP));
     listener_pool[1].queue = NULL;
     Tcp.listener->stop_dynamic(1);
     TEST_ASSERT_FALSE(listener_pool[1].active);
@@ -780,28 +780,28 @@ void test_enqueue_rejects_out_of_range_listener_id()
     TEST_ASSERT_FALSE(Tcp.listener->enqueue(0, &evt)); // listener 0 is active (setUp's listener_add)
 
     listener_pool[0].active = PROTO_TRUE; // active but no queue - an inconsistent state a real
-    listener_pool[0].queue = NULL;        // listener_add() never leaves, but guarded independently
+    listener_pool[0].queue = NULL;        // Tcp.listener->add() never leaves, but guarded independently
     TEST_ASSERT_FALSE(Tcp.listener->enqueue(0, &evt));
 }
 
-// listener_add_dynamic() / Tcp.listener->stop_dynamic(): the SSH-remote-forward-owned dynamic
+// Tcp.listener->add_dynamic() / Tcp.listener->stop_dynamic(): the SSH-remote-forward-owned dynamic
 // listener lifecycle - bounds-checked, idempotent stop, and (on the native host) no real
 // lwIP pcb to create or close.
 void test_dynamic_listener_lifecycle()
 {
-    TEST_ASSERT_EQUAL_INT32(-1, listener_add_dynamic((uint8_t)MAX_LISTENERS, 2222, PROTO_HTTP));
+    TEST_ASSERT_EQUAL_INT32(-1, Tcp.listener->add_dynamic((uint8_t)MAX_LISTENERS, 2222, PROTO_HTTP));
 
     mock_queue_create_fail_once();
-    TEST_ASSERT_EQUAL_INT32(-1, listener_add_dynamic(1, 2222, PROTO_HTTP));
+    TEST_ASSERT_EQUAL_INT32(-1, Tcp.listener->add_dynamic(1, 2222, PROTO_HTTP));
 
-    TEST_ASSERT_EQUAL_INT32(1, listener_add_dynamic(1, 2222, PROTO_HTTP));
+    TEST_ASSERT_EQUAL_INT32(1, Tcp.listener->add_dynamic(1, 2222, PROTO_HTTP));
     TEST_ASSERT_TRUE(listener_pool[1].active);
     TEST_ASSERT_FALSE(listener_pool[1].tls); // forwarded ports are always plaintext
     TEST_ASSERT_NOT_NULL(listener_pool[1].queue);
     TEST_ASSERT_NULL(listener_pool[1].listen_pcb); // host build: no real lwIP pcb
 
     // Re-adding on the same slot cleans up the prior instance first (idempotent create).
-    TEST_ASSERT_EQUAL_INT32(1, listener_add_dynamic(1, 3333, PROTO_HTTP));
+    TEST_ASSERT_EQUAL_INT32(1, Tcp.listener->add_dynamic(1, 3333, PROTO_HTTP));
     TEST_ASSERT_EQUAL_UINT16(3333, listener_pool[1].port);
 
     Tcp.listener->stop_dynamic((uint8_t)MAX_LISTENERS); // out of range: no-op, no crash
@@ -1197,7 +1197,7 @@ void test_recv_cb_accepts_and_copies_a_two_pbuf_segment()
     pc_pcb fake = {0};
     conn_pool[0].id = 0;
     conn_pool[0].pcb = &fake;
-    conn_pool[0].listener_id = 0; // listener 0 is armed by setUp()'s listener_add(0, 80, ..., PROTO_FALSE)
+    conn_pool[0].listener_id = 0; // listener 0 is armed by setUp()'s Tcp.listener->add(0, 80, ..., PROTO_FALSE)
     Tcp.conn->set_state(0, CONN_ACTIVE);
     conn_pool[0].rx_head = 0;
     conn_pool[0].rx_tail = 0;

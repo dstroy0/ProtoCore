@@ -36,7 +36,7 @@ void setUp()
 {
     pc_net_host_reset();
     Tcp.conn->init(NULL);
-    listener_add(0, PORT, PROTO_HTTP, PROTO_FALSE);
+    Tcp.listener->add(0, PORT, PROTO_HTTP, PROTO_FALSE);
 }
 
 void tearDown()

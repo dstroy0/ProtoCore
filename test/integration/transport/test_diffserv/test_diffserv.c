@@ -77,7 +77,7 @@ static void test_conn_set_dscp_rejects_bad_slot()
 
 static void test_listen_set_dscp_override_and_sentinel()
 {
-    TEST_ASSERT_EQUAL(1, listener_add(0, 8080, PROTO_HTTP, PROTO_FALSE));
+    TEST_ASSERT_EQUAL(1, Tcp.listener->add(0, 8080, PROTO_HTTP, PROTO_FALSE));
     TEST_ASSERT_EQUAL_UINT8(PC_DSCP_UNSET, listener_pool[0].dscp); // no override until set
 
     TEST_ASSERT_TRUE(Tcp.listener->set_dscp(8080, PC_DSCP_EF));
@@ -98,7 +98,7 @@ static void test_listen_set_dscp_override_and_sentinel()
 static void test_accept_cb_applies_per_listener_dscp_override()
 {
     Tcp.conn->init(NULL);
-    TEST_ASSERT_EQUAL(1, listener_add(0, 8080, PROTO_HTTP, PROTO_FALSE));
+    TEST_ASSERT_EQUAL(1, Tcp.listener->add(0, 8080, PROTO_HTTP, PROTO_FALSE));
     TEST_ASSERT_TRUE(Tcp.listener->set_dscp(8080, PC_DSCP_EF));
 
     pc_pcb pcb;
@@ -113,7 +113,7 @@ static void test_accept_cb_applies_per_listener_dscp_override()
 static void test_accept_cb_falls_back_to_server_default_dscp()
 {
     Tcp.conn->init(NULL);
-    TEST_ASSERT_EQUAL(1, listener_add(0, 8080, PROTO_HTTP, PROTO_FALSE)); // no override -> UNSET
+    TEST_ASSERT_EQUAL(1, Tcp.listener->add(0, 8080, PROTO_HTTP, PROTO_FALSE)); // no override -> UNSET
     DiffServ.set_default(PC_DSCP_AF41);
 
     pc_pcb pcb;
@@ -128,7 +128,7 @@ static void test_accept_cb_falls_back_to_server_default_dscp()
 static void test_accept_cb_skips_tos_write_at_best_effort()
 {
     Tcp.conn->init(NULL);
-    TEST_ASSERT_EQUAL(1, listener_add(0, 8080, PROTO_HTTP, PROTO_FALSE)); // UNSET override, default dscp == 0
+    TEST_ASSERT_EQUAL(1, Tcp.listener->add(0, 8080, PROTO_HTTP, PROTO_FALSE)); // UNSET override, default dscp == 0
 
     pc_pcb pcb;
     pcb.tos = 0x77; // sentinel: must survive untouched
@@ -137,11 +137,11 @@ static void test_accept_cb_skips_tos_write_at_best_effort()
     Tcp.listener->stop(0);
 }
 
-// listener_add_dynamic() (the SSH-remote-forward listener path) also resets the
-// per-listener DSCP override to UNSET, same as the static listener_add() path.
+// Tcp.listener->add_dynamic() (the SSH-remote-forward listener path) also resets the
+// per-listener DSCP override to UNSET, same as the static Tcp.listener->add() path.
 static void test_dynamic_listener_inherits_default_dscp()
 {
-    TEST_ASSERT_EQUAL_INT32(1, listener_add_dynamic(1, 2222, PROTO_HTTP));
+    TEST_ASSERT_EQUAL_INT32(1, Tcp.listener->add_dynamic(1, 2222, PROTO_HTTP));
     TEST_ASSERT_EQUAL_UINT8(PC_DSCP_UNSET, listener_pool[1].dscp);
     Tcp.listener->stop_dynamic(1);
 }
