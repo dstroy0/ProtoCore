@@ -34,8 +34,13 @@ import re
 import sys
 
 from ci_tooling.lib import baseline as bl
+from ci_tooling.lib import doc_region as dr
+from ci_tooling.lib import src_symbols
 
-SRC = pathlib.Path("src")
+# Anchored to the repo, not to cwd: a relative Path("src") resolves to nothing from any other
+# directory, and a scan of nothing exits 0.
+_ROOT = dr.repo_root(__file__)
+SRC = pathlib.Path(_ROOT) / "src"
 EXTS = {".c", ".cc", ".cpp", ".h", ".hpp", ".ino"}
 
 # Ban #22: runtime dispatch that is not resolvable from the binary. A virtual call reads a vtable
@@ -108,7 +113,6 @@ BANS = [
 
 # Blank out // line comments, /* */ block comments, and string / char literals, keeping newlines so
 # reported line numbers stay accurate. The leftmost-match rule protects "http://" inside a string.
-_STRIP = re.compile(r'//[^\n]*|/\*.*?\*/|"(?:\\.|[^"\\\n])*"|\'(?:\\.|[^\'\\\n])*\'', re.DOTALL)
 
 _INCLUDE = re.compile(r"^\s*#\s*include\b")
 _PREPROC = re.compile(r"^\s*#")
@@ -200,17 +204,13 @@ _STACK_ARRAY_MSG = (
 )
 
 
-def _blank(match):
-    return re.sub(r"[^\n]", " ", match.group(0))
-
-
 def scan_file(path):
     """Return a list of (path, line_no, ban_no, message) violations in one file."""
     try:
         code = pathlib.Path(path).read_text(encoding="utf-8", errors="replace")
     except OSError:
         return []
-    clean = _STRIP.sub(_blank, code)
+    clean = src_symbols.blank_comments_and_strings(code)
     raw_lines = code.splitlines()
     hits = []
     seen_code = False
@@ -279,7 +279,17 @@ def scan_file(path):
 
 
 def _norm(path):
-    return str(path).replace("\\", "/")
+    """Repo-relative, forward slashes: the shape the committed baseline is keyed on.
+
+    Scanning is anchored to the repo so cwd cannot make it a no-op, which makes the scanned
+    paths absolute; the key has to come back to repo-relative or every recorded site reads as
+    new, and it must not carry the host's separator either.
+    """
+    s = str(path).replace("\\", "/")
+    root = _ROOT.replace("\\", "/").rstrip("/") + "/"
+    if s.startswith(root):
+        return s[len(root) :]
+    return s
 
 
 def collect(argv):
@@ -316,7 +326,7 @@ def _key(v):
     if ban_no in (18, 19):
         # falls through to the name-based key; ban 19 wraps this with an occurrence ordinal
         try:
-            raw = pathlib.Path(path).read_text(encoding="utf-8", errors="replace").splitlines()
+            raw = pathlib.Path(raw_path).read_text(encoding="utf-8", errors="replace").splitlines()
             src_line = raw[line_no - 1]
             m = _DECL.search(src_line) if ban_no == 18 else _STACK_ARRAY.match(src_line)
             if m:

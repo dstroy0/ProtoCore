@@ -38,6 +38,22 @@ def _decomment(text):
     return blank_comments(text)
 
 
+_NOISE = re.compile(r'//[^\n]*|/\*.*?\*/|"(?:\\.|[^"\\\n])*"|\'(?:\\.|[^\'\\\n])*\'', re.DOTALL)
+
+
+def blank_comments_and_strings(text):
+    """Blank comments AND string/char literals, PRESERVING every newline.
+
+    What a scanner for code patterns wants: a symbol named in prose or quoted in a message is
+    not a definition, and blanking rather than deleting keeps reported line numbers exact.
+    """
+
+    def _blank(m):
+        return re.sub(r"[^\n]", " ", m.group(0))
+
+    return _NOISE.sub(_blank, text)
+
+
 def headers(root=None):
     """Every .h under src/, absolute paths."""
     root = root or dr.repo_root(__file__)

@@ -29,7 +29,23 @@ import pathlib
 import re
 import sys
 
-SRC = pathlib.Path("src")
+from ci_tooling.lib import doc_region as dr
+from ci_tooling.lib import src_symbols
+
+# Anchored to the repo, not to cwd: a relative Path("src") resolves to nothing from any other
+# directory, and a scan of nothing exits 0.
+_ROOT = dr.repo_root(__file__)
+SRC = pathlib.Path(_ROOT) / "src"
+
+
+def _rel(path):
+    """Repo-relative, forward slashes, so a report reads the same from any directory."""
+    s = str(path).replace("\\", "/")
+    root = _ROOT.replace("\\", "/").rstrip("/") + "/"
+    if s.startswith(root):
+        return s[len(root) :]
+    return s
+
 
 # A file-scope definition of an array or scalar with external linkage. Anchored at column 0, which
 # is what makes it file scope: this codebase indents every function body, so a match at the margin
@@ -42,14 +58,6 @@ _DEF = re.compile(
     re.M,
 )
 
-# Comments and string literals are blanked first so a symbol merely named in prose is not a match.
-_STRIP = re.compile(r'//[^\n]*|/\*.*?\*/|"(?:\\.|[^"\\\n])*"|\'(?:\\.|[^\'\\\n])*\'', re.DOTALL)
-
-
-def _blank(match):
-    return re.sub(r"[^\n]", " ", match.group(0))
-
-
 _EXTERN_DECL = re.compile(
     r"^\s*extern\s+(?:const\s+|volatile\s+|unsigned\s+|signed\s+)*"
     r"[A-Za-z_]\w*(?:\s*::\s*\w+)*\s*\**\s*([A-Za-z_]\w*)\s*(?:\[[^\]]*\])*\s*;",
@@ -61,7 +69,7 @@ def externs(root=SRC):
     """Names some header declares `extern` - the ones that carry external linkage into a .cpp."""
     names = set()
     for path in sorted(root.rglob("*.h")):
-        clean = _STRIP.sub(_blank, path.read_text(encoding="utf-8", errors="replace"))
+        clean = src_symbols.blank_comments_and_strings(path.read_text(encoding="utf-8", errors="replace"))
         names.update(m.group(1) for m in _EXTERN_DECL.finditer(clean))
     return names
 
@@ -70,11 +78,11 @@ def scan(root=SRC):
     """Return {symbol: [(path, line, is_const), ...]} for every file-scope definition."""
     seen = collections.defaultdict(list)
     for path in sorted(p for p in root.rglob("*") if p.suffix in (".c", ".cpp")):
-        clean = _STRIP.sub(_blank, path.read_text(encoding="utf-8", errors="replace"))
+        clean = src_symbols.blank_comments_and_strings(path.read_text(encoding="utf-8", errors="replace"))
         for m in _DEF.finditer(clean):
             line_no = clean.count("\n", 0, m.start()) + 1
             is_const = m.group(0).lstrip().startswith("const")
-            seen[m.group(1)].append((str(path).replace("\\", "/"), line_no, is_const))
+            seen[m.group(1)].append((_rel(path), line_no, is_const))
     return seen
 
 

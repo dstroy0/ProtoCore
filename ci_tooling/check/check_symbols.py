@@ -37,17 +37,17 @@ Usage:
     python -m ci_tooling.check.check_symbols --check    # CI: fail on NEW violations
 """
 
-import json
 import os
 import re
 import sys
 
+from ci_tooling.lib import baseline as bl
 from ci_tooling.lib import doc_region as dr
 from ci_tooling.lib import src_symbols
 
 ROOT = dr.repo_root(__file__)
 SRC = os.path.join(ROOT, "src")
-BASELINE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "symbols_baseline.json")
+BASELINE = bl.path_for(__file__, "symbols_baseline")
 
 MACRO_LIMIT = 31
 
@@ -255,10 +255,8 @@ def main():
         counts[f["kind"]] = counts.get(f["kind"], 0) + 1
 
     if "--baseline" in args:
-        with open(BASELINE, "w", encoding="utf-8", newline="") as fh:
-            json.dump(sorted(key(f) for f in findings), fh, indent=1)
-            fh.write("\n")
-        print(f"check_symbols: baseline written, {len(findings)} known violations")
+        n = bl.save(BASELINE, (key(f) for f in findings))
+        print(f"check_symbols: baseline written, {n} known violations")
         for k in sorted(counts, key=lambda k: -counts[k]):
             print(f"  {counts[k]:>5}  {k}")
         return 0
@@ -267,17 +265,15 @@ def main():
         if not os.path.exists(BASELINE):
             print("check_symbols: no baseline; run --baseline first", file=sys.stderr)
             return 1
-        known = set(json.load(open(BASELINE, encoding="utf-8")))
-        new = [f for f in findings if key(f) not in known]
+        new, still, fixed = bl.filter_new(findings, key, BASELINE)
         if new:
             print(f"check_symbols: {len(new)} NEW naming-law violation(s) " f"(see docs/SYMBOLS.md)", file=sys.stderr)
             for f in new[:40]:
                 print(f"  {f['file']}:{f['line']}: [{f['kind']}] {f['msg']}", file=sys.stderr)
             return 1
-        fixed = len(known) - (len(findings) - 0)
         print(
             f"check_symbols: OK - no new violations "
-            f"({len(findings)} known remain{f', {fixed} fixed since baseline' if fixed > 0 else ''})"
+            f"({still} known remain{f', {fixed} fixed since baseline' if fixed > 0 else ''})"
         )
         return 0
 
