@@ -23,8 +23,8 @@
 
 #include "protocore.h"
 
-#include "server/mmgr/plaintext.h"
-#include "server/mmgr/secure.h"
+#include "mmgr/plaintext.h"
+#include "mmgr/secure.h"
 
 #include <stdlib.h> // malloc/free/qsort for the traditional comparison
 

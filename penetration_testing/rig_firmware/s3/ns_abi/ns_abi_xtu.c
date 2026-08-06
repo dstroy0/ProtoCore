@@ -58,7 +58,7 @@ void app_main(void);
 void app_main(void)
 {
     Radio.power(1);
-    Radio.ps_mode(2);
+    Radio.ps_get(2);
     Radio.busy_hold(3);
 }
 

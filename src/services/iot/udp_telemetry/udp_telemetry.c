@@ -203,7 +203,7 @@ proto_bool pc_udp_telemetry_send(const char *data, size_t len)
     {
         return PROTO_FALSE;
     }
-    return Udp.client->sendto(s_ut.ip, s_ut.port, (const uint8_t *)data, len);
+    return Udp.client->sendto(&s_ut.collector, s_ut.port, (const uint8_t *)data, len);
 }
 
 #else // host build - no network

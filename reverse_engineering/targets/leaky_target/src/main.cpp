@@ -36,7 +36,7 @@
  *     pio run -e hardened   -t upload --upload-port COM7
  */
 
-#include "shared_primitives/aes_sbox.h"
+#include "crypto/cipher/aes_sbox.h"
 #include <Arduino.h>
 #include <esp_random.h>
 

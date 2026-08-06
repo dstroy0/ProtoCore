@@ -16,7 +16,7 @@ rm -rf "$STAGE"
 mkdir -p "$STAGE/HalRegmapVerify"
 cp "$HERE/HalRegmapVerify/HalRegmapVerify.ino" "$STAGE/HalRegmapVerify/"
 # The HAL is self-contained; stage just it next to the sketch (no library attach -> no WiFi drag-in on H2).
-cp "$REPO/src/hal/esp/esp_crypto_hal.h" "$STAGE/HalRegmapVerify/esp_crypto_hal.h"
+cp "$REPO/src/board_drivers/hal/esp/esp_crypto_hal.h" "$STAGE/HalRegmapVerify/esp_crypto_hal.h"
 
 rc=0
 for fqbn in $DIES; do
