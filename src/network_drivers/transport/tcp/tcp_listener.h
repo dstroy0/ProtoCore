@@ -117,30 +117,6 @@ void listener_stop(uint8_t idx);
 void listener_stop_all(void);
 
 /**
- * @brief Reserve the next listener row for @p port, without binding it.
- *
- * An application names its ports before begin() has initialized the slots, so the row that port
- * will occupy carries the port, the protocol and the TLS bit while it is still inactive.
- * listener_bind_reserved() is the pass that brings every reserved row up.
- *
- * Reservations run from index 0 up. The index returned is the listener id the accept path stamps
- * onto every connection from that port, which is what pc_relay_publish() and pc_ssh_forward_begin()
- * match against.
- *
- * @return The listener index, or -1 when every row is reserved.
- */
-int32_t listener_reserve(uint16_t port, ConnProto proto, proto_bool tls);
-
-/** @brief Reserved rows. Rows below this are reserved, rows from it up are free. */
-uint8_t listener_reserved(void);
-
-/** @brief Bind every reserved row. False on the first row that fails to bind. */
-proto_bool listener_bind_reserved(void);
-
-/** @brief Drop every reservation. Does not stop a listener already bound. */
-void listener_reserve_reset(void);
-
-/**
  * @brief Add / stop a listener from a running task.
  *
  * Used by the SSH remote-forward owner (`ssh -R`), which opens a listener when a client requests
@@ -264,10 +240,6 @@ void listener_ip_allowlist_reset(void);
  * @var TcpListenerNs::stop_all             tear every listener down
  * @var TcpListenerNs::stop_dynamic         tear down only the dynamically started listeners
  * @var TcpListenerNs::enqueue              post an event to the owning worker's queue
- * @var TcpListenerNs::reserve              claim the next row for a port, without binding it
- * @var TcpListenerNs::reserved             how many rows carry a reservation
- * @var TcpListenerNs::bind_reserved        bring every reserved row up
- * @var TcpListenerNs::reserve_reset        drop every reservation
  * @var TcpListenerNs::worker_queues_init   create the per-worker queues
  * @var TcpListenerNs::worker_queue         the queue a worker drains
  * @var TcpListenerNs::accept_allowed       the global fixed-window accept throttle
@@ -285,10 +257,6 @@ typedef struct
     void (*stop_all)(void);
     void (*stop_dynamic)(uint8_t idx);
     proto_bool (*enqueue)(uint8_t listener_id, const TcpEvt *evt);
-    int32_t (*reserve)(uint16_t port, ConnProto proto, proto_bool tls);
-    uint8_t (*reserved)(void);
-    proto_bool (*bind_reserved)(void);
-    void (*reserve_reset)(void);
 #if PC_WORKER_COUNT > 1
     // One worker owns every slot at N=1, so there are no per-worker queues to name.
     void (*worker_queues_init)(void);

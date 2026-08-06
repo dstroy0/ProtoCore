@@ -651,58 +651,6 @@ void listener_stop_all(void)
 }
 
 // ---------------------------------------------------------------------------
-// Reservations. A port is named before the slots exist, so the row it will occupy carries the
-// port, the protocol and the TLS bit while inactive, and binding is a later pass over the same
-// rows. Reservations run from index 0 up, so a row above the count is free for a dynamic listener.
-// ---------------------------------------------------------------------------
-
-// Reservation state, owned by one instance (internal linkage): how many rows of listener_pool[]
-// carry a port the application named. The port, protocol and TLS bit live in the row itself.
-typedef struct
-{
-    uint8_t count;
-} ListenerReserveCtx;
-static ListenerReserveCtx s_reserve;
-
-int32_t listener_reserve(uint16_t port, ConnProto proto, proto_bool tls)
-{
-    if (s_reserve.count >= MAX_LISTENERS)
-    {
-        return -1;
-    }
-    Listener *lst = &listener_pool[s_reserve.count];
-    lst->port = port;
-    lst->proto = proto;
-    lst->tls = tls;
-    s_reserve.count++;
-    return (int32_t)(s_reserve.count - 1);
-}
-
-uint8_t listener_reserved(void)
-{
-    return s_reserve.count;
-}
-
-proto_bool listener_bind_reserved(void)
-{
-    for (uint8_t i = 0; i < s_reserve.count; i++)
-    {
-        if (listener_add(i, listener_pool[i].port, listener_pool[i].proto, listener_pool[i].tls) < 0)
-        {
-            return PROTO_FALSE;
-        }
-    }
-    return PROTO_TRUE;
-}
-
-void listener_reserve_reset(void)
-{
-    // The count is the registry: a row above it is free, and listener_reserve() writes every field
-    // it reads before the count reaches the row.
-    s_reserve.count = 0;
-}
-
-// ---------------------------------------------------------------------------
 // tcpip_thread-marshaled listener create / close. Raw lwIP tcp_new/bind/listen/close
 // must run in tcpip_thread: with lwIP core-locking (arduino-esp32 3.x / IDF 5.x) a
 // call from any other task asserts, and without it a call off tcpip_thread races the
@@ -862,10 +810,6 @@ const TcpListenerNs TcpListener = {listener_stop,
                                    listener_stop_all,
                                    listener_stop_dynamic,
                                    listener_enqueue,
-                                   listener_reserve,
-                                   listener_reserved,
-                                   listener_bind_reserved,
-                                   listener_reserve_reset,
 #if PC_WORKER_COUNT > 1
                                    listener_worker_queues_init,
                                    listener_worker_queue,
