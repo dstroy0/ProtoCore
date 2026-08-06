@@ -142,7 +142,7 @@ static void drain(void)
 
 static proto_bool send_to(const pc_ip *dst, uint16_t dst_port, const uint8_t *data, size_t len)
 {
-    if (data == NULL || len == 0 || len > PC_UDP_RX_BUF_SIZE || dst == NULL || dst->type == PC_IP_NONE)
+    if (data == NULL || len == 0 || len > PC_UDP_RX_BUF_SIZE || dst == NULL || dst->family == PC_IP_NONE)
     {
         return PROTO_FALSE;
     }

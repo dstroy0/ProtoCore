@@ -595,7 +595,7 @@ static proto_bool peer_addr_of(const struct pc_udp_peer *peer, char *ip_out, siz
 static proto_bool send_from(uint16_t listen_port, const pc_ip *dst, uint16_t dst_port, const uint8_t *data, size_t len)
 {
     UdpBind *b = find_bind(listen_port);
-    if (b == NULL || dst == NULL || dst->type == PC_IP_NONE)
+    if (b == NULL || dst == NULL || dst->family == PC_IP_NONE)
     {
         return PROTO_FALSE;
     }
