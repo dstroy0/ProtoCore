@@ -42,30 +42,4 @@
  */
 void server_tick(int worker_id);
 
-// ---------------------------------------------------------------------------
-// Forward declarations for Layer 6 functions used by server_tick()
-// ---------------------------------------------------------------------------
-
-/*
- * Reset a presentation-layer parser slot (Layer 6 forward decl).
- * @param slot_id Connection slot to reset.
- * @see http_reset in presentation.h
- */
-void http_reset(uint8_t slot_id);
-
-/*
- * Initialize a slot for a freshly-accepted HTTP connection (Layer 6 forward decl).
- * Resets the parser and (keep-alive) the per-connection request tally.
- * @param slot_id Connection slot to open.
- * @see http_conn_open in presentation.h
- */
-void http_conn_open(uint8_t slot_id);
-
-/*
- * Advance the HTTP parser for a slot (Layer 6 forward decl).
- * @param slot_id Connection slot to parse.
- * @see http_parse in presentation.h
- */
-void http_parse(uint8_t slot_id);
-
 #endif
