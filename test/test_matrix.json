@@ -739,6 +739,7 @@
         "+<mmgr/frame.c>",
         "+<server/clock/clock.c>",
         "+<network_drivers/network/route.c>",
+        "+<network_drivers/network/network.c>",
         "+<server/signaling/signaling.c>",
         "+<server/filesystem/filesystem.c>",
         "+<server/filesystem/mnt.c>",
