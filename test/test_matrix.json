@@ -1803,7 +1803,8 @@
         "+<server/signaling/signaling.c>",
         "+<mmgr/protostr.c>",
         "+<mmgr/secure.c>",
-        "+<network_drivers/presentation/http/http.c>"
+        "+<network_drivers/presentation/http/http.c>",
+        "+<server/filesystem/mnt.c>"
       ],
       "tests": ["test_keepalive"]
     },
