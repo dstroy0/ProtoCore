@@ -1113,7 +1113,7 @@
       "desc": "Interface forwarding plane (network_drivers/network/forward), v5 bridge / router: default-deny,\nan ALLOW rule forwards, a DENY wins, multi-destination fan-out, no reflection to the\nsource, the per-rule rate cap (host test clock), send-failure counting, the interface /\nrule table limits, the ingress ACL (byte-pattern permit/deny, first-match, default\naction), policy routing (byte-pattern -> egress, precedence + fail-closed), and the opt-in\ninspection hook. Pure host tests; the DMA-driven wiring is HW-verified.",
       "flags": [
         "-DPC_ENABLE_FORWARD=1",
-        "-DPC_FWD_MAX_IFACES=4",
+        "-DPC_PHY_MAX_IFACES=4",
         "-DPC_FWD_MAX_RULES=4",
         "-DPC_FWD_MAX_ACL=4",
         "-DPC_FWD_MAX_ROUTES=4",
@@ -1121,6 +1121,8 @@
       ],
       "src": [
         "+<network_drivers/network/forward/forward.c>",
+        "+<network_drivers/physical/physical.c>",
+        "+<network_drivers/physical/radio_power.c>",
         "+<server/clock/clock.c>"
       ],
       "tests": ["protocols/net/test_forward"]
