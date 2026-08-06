@@ -16,13 +16,13 @@
 #include <string.h>
 
 #include <unity.h>
+#include "rx_feed.h"
 
 #if PC_ENABLE_WS_DEFLATE
 #include "mmgr/plaintext.h"                                     // arena-exhaustion drive for the fail-closed path
 #include "network_drivers/presentation/codec/deflate/deflate.h" // DEFLATE_SCRATCH_SIZE for the starved-send path
 #include "network_drivers/presentation/codec/inflate/inflate.h"
 #include "network_drivers/transport/tcp.h"
-#include "rx_feed.h"
 #endif
 
 // ---------------------------------------------------------------------------

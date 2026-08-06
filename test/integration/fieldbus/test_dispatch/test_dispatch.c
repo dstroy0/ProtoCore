@@ -10,10 +10,10 @@
 #include <string.h>
 
 #include <unity.h>
+#include "rx_feed.h"
 #if PC_ENABLE_CSRF
 #include "services/security/csrf/csrf.h" // supply a valid token so an unsafe method reaches method dispatch
 #include "network_drivers/transport/tcp.h"
-#include "rx_feed.h"
 #endif
 
 static proto_bool handler_called = PROTO_FALSE;
