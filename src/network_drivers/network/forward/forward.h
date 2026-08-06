@@ -189,6 +189,43 @@ void pc_forward_get_stats(pc_forward_stats *out);
 void pc_forward_test_set_now(uint32_t ms);
 #endif
 
+/**
+ * @brief The forwarding plane.
+ *
+ * @var ForwardNs::reset           clear every interface, rule, route and counter
+ * @var ForwardNs::add_if          register an interface and its egress callback
+ * @var ForwardNs::add_rule        add a (src, dst) rule with an optional rate cap
+ * @var ForwardNs::acl_set_default what happens to a frame no ACL entry matches
+ * @var ForwardNs::acl_add         add an ingress access-control entry, first match wins
+ * @var ForwardNs::route_add       add a policy route, taking precedence over the rules
+ * @var ForwardNs::set_inspector   install the ingress inspection hook
+ * @var ForwardNs::ingress         forward one received frame; returns the destinations it reached
+ * @var ForwardNs::get_stats       copy out the counters
+ * @var ForwardNs::test_set_now    host only: drive the clock the rate cap reads
+ */
+typedef struct
+{
+    void (*reset)(void);
+    proto_bool (*add_if)(uint8_t if_id, pc_if_kind kind, pc_if_send_fn send, void *ctx);
+    proto_bool (*add_rule)(uint8_t src_if, uint8_t dst_if, pc_fwd_action action, uint16_t rate_cap_per_sec);
+    void (*acl_set_default)(pc_fwd_action action);
+    proto_bool (*acl_add)(uint8_t src_if, uint16_t offset, const uint8_t *pattern, const uint8_t *mask,
+                          uint8_t patlen, pc_fwd_action action);
+    proto_bool (*route_add)(uint8_t src_if, uint16_t offset, const uint8_t *pattern, const uint8_t *mask,
+                            uint8_t patlen, uint8_t egress_if, uint16_t rate_cap_per_sec);
+#if PC_FWD_INSPECT
+    void (*set_inspector)(pc_fwd_inspect_fn fn, void *ctx);
+#endif
+    uint8_t (*ingress)(uint8_t src_if, const uint8_t *data, uint16_t len);
+    void (*get_stats)(pc_forward_stats *out);
+#if !PROTOCORE_HOT
+    void (*test_set_now)(uint32_t ms);
+#endif
+} ForwardNs;
+
+/** @brief The one symbol this module exports. */
+extern const ForwardNs Forward;
+
 #endif // PC_ENABLE_FORWARD
 
 PROTO_END_DECLS

@@ -38,7 +38,7 @@
   "src/services/machine_tool/robotics/robotics.c|s_robotics#1",
   "src/services/machine_tool/umati/umati.c|s_umati#1",
   "src/services/net/dns_server/dns_server.c|s_dns#1",
-  "src/services/net/forward/forward.c|s_fwd#1",
+  "src/network_drivers/network/forward/forward.c|s_fwd#1",
   "src/services/net/gateway/gateway.c|s_gw#1",
   "src/services/net/iface_bridge/iface_bridge.c|s_bridge#1",
   "src/services/net/iface_bridge/iface_bridge_hw.c|s_ctx#1",

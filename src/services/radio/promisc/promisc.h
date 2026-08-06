@@ -7,7 +7,7 @@
  *
  * A read-only capture path: instead of joining a network and terminating traffic, listen to
  * every 802.11 frame on a channel and hand it to a sink. The canonical wiring feeds the sink
- * into the forwarding plane (services/net/forward), so captured Wi-Fi frames are bridged to another
+ * into the forwarding plane (network_drivers/network/forward), so captured Wi-Fi frames are bridged to another
  * interface (e.g. Ethernet) for a wired collector - "capture on Wi-Fi, forward to Ethernet".
  *
  * Two host-testable pieces plus the ESP32 radio binding:

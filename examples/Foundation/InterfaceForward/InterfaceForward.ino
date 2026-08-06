@@ -20,7 +20,7 @@
 //   PC_ENABLE_DMA=1 PC_ENABLE_PREEMPT_QUEUE=1 PC_ENABLE_FORWARD=1 PC_DMA_SIMULATE=1
 
 #include "protocore.h" // discovers the library (adds src/ to the include path)
-#include "services/net/forward/forward.h"
+#include "network_drivers/network/forward/forward.h"
 #include "mmgr/dma.h"
 #include "network_drivers/session/preempt_queue.h"
 

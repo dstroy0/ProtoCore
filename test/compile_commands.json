@@ -702,10 +702,10 @@
     "output": ".pio/build/native_swar/src/services/machine_tool/focas/focas.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/services/net/forward/forward.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/services/net/forward/forward.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/network_drivers/network/forward/forward.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/network_drivers/network/forward/forward.c",
     "directory": "@ROOT@",
-    "file": "src/services/net/forward/forward.c",
-    "output": ".pio/build/native_swar/src/services/net/forward/forward.o"
+    "file": "src/network_drivers/network/forward/forward.c",
+    "output": ".pio/build/native_swar/src/network_drivers/network/forward/forward.o"
   },
   {
     "command": "/usr/bin/gcc -o .pio/build/native_swar/src/services/security/forwarded_trust/forwarded_trust.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/services/security/forwarded_trust/forwarded_trust.c",

@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the interface forwarding plane (services/net/forward): default-deny, an
+// Unit tests for the interface forwarding plane (network_drivers/network/forward): default-deny, an
 // ALLOW rule forwards, a DENY wins, multi-destination fan-out, no reflection to the
 // source, the per-rule rate cap (driven by the host test clock), send-failure counting,
 // and the interface / rule table limits. Pure host tests. The DMA-driven wiring (DMA-
@@ -9,7 +9,7 @@
 //
 // The env sizes PC_FWD_MAX_IFACES = 4, PC_FWD_MAX_RULES = 4.
 
-#include "services/net/forward/forward.h"
+#include "network_drivers/network/forward/forward.h"
 #include <string.h>
 
 #include <unity.h>

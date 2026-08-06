@@ -101,7 +101,7 @@
   "enum-name|src/services/machine_tool/safety_scl/safety_scl.h|enum type SclState is not pc_snake_case",
   "enum-name|src/services/machine_tool/umati/umati.h|enum type UmatiChannelState is not pc_snake_case",
   "enum-name|src/services/machine_tool/umati/umati.h|enum type UmatiOperationMode is not pc_snake_case",
-  "enum-name|src/services/net/forward/forward.c|enum type resolve_result is not pc_snake_case",
+  "enum-name|src/network_drivers/network/forward/forward.c|enum type resolve_result is not pc_snake_case",
   "enum-name|src/services/net/http_client/http_client.h|enum type HttpClientError is not pc_snake_case",
   "enum-name|src/services/net/iface_bridge/iface_bridge.h|enum type BridgeBus is not pc_snake_case",
   "enum-name|src/services/net/iface_bridge/iface_bridge.h|enum type BridgeMode is not pc_snake_case",

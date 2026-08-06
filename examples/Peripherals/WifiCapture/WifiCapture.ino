@@ -1,7 +1,7 @@
 // WifiCapture - capture 802.11 frames on Wi-Fi and forward them out Ethernet.
 //
 // A wireless tap: put the radio in promiscuous mode (services/radio/promisc), and hand every captured
-// frame to the forwarding plane (services/net/forward), which bridges it to the Ethernet interface.
+// frame to the forwarding plane (network_drivers/network/forward), which bridges it to the Ethernet interface.
 // The Ethernet egress here streams each frame as a libpcap record over UDP to a wired collector
 // (run `tcpdump -i any -w -` style capture, or a tiny socket that writes a .pcap Wireshark opens
 // as DLT_IEEE802_11). Capture is strictly passive; a rate cap protects the wired uplink.
@@ -16,7 +16,7 @@
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
 #include "network_drivers/transport/udp.h"
-#include "services/net/forward/forward.h"
+#include "network_drivers/network/forward/forward.h"
 #include "services/radio/promisc/promisc.h"
 
 

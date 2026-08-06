@@ -11,7 +11,7 @@
  * callback. Zero heap, fail-closed.
  */
 
-#include "services/net/forward/forward.h"
+#include "network_drivers/network/forward/forward.h"
 
 #if PC_ENABLE_FORWARD
 

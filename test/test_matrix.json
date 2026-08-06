@@ -1110,7 +1110,7 @@
       "tests": ["unit/peripherals/test_ad9238"]
     },
     "native_forward": {
-      "desc": "Interface forwarding plane (services/net/forward), v5 bridge / router: default-deny,\nan ALLOW rule forwards, a DENY wins, multi-destination fan-out, no reflection to the\nsource, the per-rule rate cap (host test clock), send-failure counting, the interface /\nrule table limits, the ingress ACL (byte-pattern permit/deny, first-match, default\naction), policy routing (byte-pattern -> egress, precedence + fail-closed), and the opt-in\ninspection hook. Pure host tests; the DMA-driven wiring is HW-verified.",
+      "desc": "Interface forwarding plane (network_drivers/network/forward), v5 bridge / router: default-deny,\nan ALLOW rule forwards, a DENY wins, multi-destination fan-out, no reflection to the\nsource, the per-rule rate cap (host test clock), send-failure counting, the interface /\nrule table limits, the ingress ACL (byte-pattern permit/deny, first-match, default\naction), policy routing (byte-pattern -> egress, precedence + fail-closed), and the opt-in\ninspection hook. Pure host tests; the DMA-driven wiring is HW-verified.",
       "flags": [
         "-DPC_ENABLE_FORWARD=1",
         "-DPC_FWD_MAX_IFACES=4",
@@ -1119,7 +1119,10 @@
         "-DPC_FWD_MAX_ROUTES=4",
         "-DPC_FWD_INSPECT=1"
       ],
-      "src": ["+<services/net/forward/forward.c>", "+<server/clock/clock.c>"],
+      "src": [
+        "+<network_drivers/network/forward/forward.c>",
+        "+<server/clock/clock.c>"
+      ],
       "tests": ["protocols/net/test_forward"]
     },
     "native_gateway": {

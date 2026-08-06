@@ -6940,11 +6940,11 @@
 "native_upload",
 "native_web_terminal"
 ],
-"src/services/net/forward/forward.c": [
+"src/network_drivers/network/forward/forward.c": [
 "native_forward",
 "native_swar"
 ],
-"src/services/net/forward/forward.h": [
+"src/network_drivers/network/forward/forward.h": [
 "native_application",
 "native_forward",
 "native_h3_server",

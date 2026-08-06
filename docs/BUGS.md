@@ -8,6 +8,127 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ---
 
+## Content-Length wraps, so an oversized value frames a short body and desynchronizes the connection
+
+- **Status:** OPEN, found by a spec audit of the HTTP/1.1 parser. Verified in source.
+- **Symptom:** a request whose Content-Length exceeds the width of `size_t` is accepted with a
+  wrapped length. The parser frames that many bytes, reports PARSE_COMPLETE, and leaves the rest in
+  the ring, where it is read as the beginning of the next request. That is request smuggling.
+- **Root cause:** `http_parser.c:380` accumulates `cl = cl * 10 + (*q - '0')` with no overflow
+  check, and the value buffer holds up to `MAX_VAL_LEN - 1` digits. `Content-Length: 4294967301`
+  wraps to 5 on the 32-bit target; `18446744073709551621` wraps to 5 on a 64-bit host. RFC 9112
+  section 6.3 item 5 makes an invalid Content-Length an unrecoverable error requiring 400 and close.
+- **Blast radius:** every HTTP listener, unauthenticated, first request.
+- **Why nothing caught it:** the suites cover a non-digit value, an empty value, a leading `+`, and
+  a conflicting duplicate, but never a value that overflows. The analogous overflow IS tested for
+  Range at `test_range.c:195`, so the pattern was known and not applied here.
+- **Fix:** not applied, by owner decision.
+
+---
+
+## A HEAD request with a Range header is answered 206 with a Content-Range
+
+- **Status:** OPEN, found in the same audit.
+- **Root cause:** RFC 9110 section 14.2: "A server MUST ignore a Range header field received with a
+  request method that is unrecognized or for which range handling is not defined. For this
+  specification, GET is the only method for which range handling is defined." HEAD with a Range must
+  answer 200 with the full representation length.
+- **Why nothing caught it:** `test_range.c:221` asserts the 206, the `Content-Range: bytes 0-3/20`
+  and the `Content-Length: 4` as the expected result, so the suite pins the violation and a fix
+  fails that test.
+- **Fix:** not applied.
+
+---
+
+## A captured Digest Authorization header replays for the whole nonce lifetime
+
+- **Status:** OPEN, found in the same audit.
+- **Root cause:** the nonce is stateless (a timestamp plus a keyed MAC) and the client nonce count
+  is not tracked, so nothing detects reuse. RFC 7616 section 3.4 says that if the same nc value is
+  seen twice the request is a replay. The window is `PC_DIGEST_NONCE_LIFETIME_MS`, five minutes.
+- **Why nothing caught it:** every case in `test_digest_auth` uses `nc=00000001`, and no test
+  asserts either refusal or a deliberate decision to accept.
+- **Related:** `test_digest_vectors` exists to be the independent oracle for the Digest chain, but
+  the server's construction lives in a `static` function (`auth.c:408`) that no test can call, so
+  the suite rebuilds the chain itself exactly as `test_digest_auth` does. Both pass if the server
+  drops a field or changes a separator; only the SHA-256 primitive is genuinely pinned.
+- **Fix:** not applied.
+
+---
+
+## One spoofed UDP datagram permanently tears down a DTLS association
+
+- **Status:** OPEN, found by a spec audit of the DTLS layer against RFC 9147.
+- **Symptom:** a CoAPS peer's connection dies and does not recover. The attacker needs no keys and no
+  position in the flow, only the address pair.
+- **Root cause:** `dtls_conn.c:567` answers any AEAD failure with `fail(c, ALERT_DECRYPT_ERROR)` and
+  `DTLS_REC_STEP_FATAL`. RFC 9147 section 4.5.2 says the opposite: "invalid records SHOULD be
+  silently discarded, thus preserving the association", and calls generating alerts "extremely
+  susceptible to denial-of-service" and NOT RECOMMENDED over a datagram transport. The path is
+  reachable from the only in-tree caller: `coaps.c:21` routes every datagram into
+  `pc_dtls_conn_process` during the handshake, and `:45` routes any non-epoch-3 ciphertext there
+  afterwards.
+- **Why nothing caught it:** no case injects a tampered epoch-2 ciphertext into
+  `pc_dtls_conn_process`. The sibling path is correct and is tested: `pc_dtls_conn_open_app`
+  (`dtls_conn.c:763`) returns false without failing the association, covered at
+  `test_dtls_conn.c:1642`. The record layer's own bad-MAC rejection is covered too. Only the
+  connection layer's reaction to it is not.
+- **Fix:** not applied, by owner decision.
+
+---
+
+## The DTLS record layer rejects a legacy_record_version the RFC says to ignore
+
+- **Status:** OPEN, found in the same audit.
+- **Root cause:** `dtls_record.c:118` drops any DTLSPlaintext whose version is not 0xFEFD. RFC 9147
+  section 4 allows {254,255} on an initial ClientHello for compatibility and says the field "MUST be
+  ignored for all purposes". A backward-compatible initial ClientHello is dropped. Separately, the
+  `epoch` field is parsed at `:123` and never validated, so a plaintext record claiming epoch 7 is
+  processed as if it claimed 0.
+- **Why nothing caught it:** `test_dtls_record.c:207` and `:467` both assert the rejection, so the
+  suite pins the non-conformance and a fix would fail those tests.
+- **Fix:** not applied.
+
+---
+
+## SSH_MSG_NEWKEYS is accepted in any phase, which skips the key exchange entirely
+
+- **Status:** OPEN, found by a spec audit of the SSH server against RFC 4253. Verified in source.
+- **Symptom:** none observed. A peer reaches password authentication without a key exchange and
+  without the host ever proving its key.
+- **Root cause:** `ssh_server.c:146` handles `SSH_MSG_NEWKEYS` with no phase guard. `ssh_transport.c`
+  defines `SSH_PHASE_NEWKEYS` and assigns it at `:1405`, and nothing in `src/` ever reads it. From
+  `SSH_PHASE_KEXINIT`, one plaintext packet carrying the single byte 21 runs
+  `ssh_newkeys_complete()` (`ssh_transport.c:1427`), which sets `enc_in`, clears `kex_active`, and
+  moves the phase to `SSH_PHASE_SERVICE`. No KEX ran, so the key material is still zeroed; the
+  receive path does not consult `ssh_keys[i].active`, and `SSH_CIPHER_AES256CTR` and
+  `SSH_MAC_HMAC_SHA256` are both 0, so the connection proceeds under an all-zero key, IV and MAC
+  key. `SERVICE_REQUEST` and `USERAUTH_REQUEST` then pass the phase checks that were supposed to
+  stop exactly this.
+- **Blast radius:** every SSH listener. Remote, pre-authentication, no credentials needed.
+- **Why nothing caught it:** the guard on `SSH_MSG_SERVICE_REQUEST` (`ssh_server.c:168`) was added
+  for this attack and its comment names it - "stops a client from jumping from DH_INIT straight to
+  userauth in cleartext". `test_ssh_server.c:294` proves that guard works. `SSH_MSG_NEWKEYS` is
+  dispatched in seven places across the suites and every one is in the correct phase, so the door
+  beside the guarded one is never tried.
+- **Fix:** not applied, by owner decision. The guard is to refuse `SSH_MSG_NEWKEYS` unless the phase
+  is `SSH_PHASE_NEWKEYS`, plus a negative test for each of the earlier phases.
+
+---
+
+## The plaintext SSH receive path does not enforce the four-byte minimum padding
+
+- **Status:** OPEN, found in the same audit.
+- **Root cause:** `ssh_packet.c:707` (`ssh_recv_plain`) checks only `pad_len_byte >= pkt_len`. All
+  four encrypted paths also check `pad_len_byte < 4`. RFC 4253 section 6 requires at least four
+  bytes of padding, and the same path skips the block-size multiple rule.
+- **Blast radius:** the pre-NEWKEYS path only, which is the unauthenticated one.
+- **Why nothing caught it:** `test_ssh_server.c:591` exercises only the `pad >= pkt_len` branch on
+  this path.
+- **Fix:** not applied.
+
+---
+
 ## The HTTP/2 engine accepts frames RFC 9113 requires it to reject
 
 - **Status:** OPEN, found by a spec audit of `h2_conn.c` against RFC 9113.

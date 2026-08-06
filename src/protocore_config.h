@@ -558,7 +558,7 @@ from halves and is slower than the width it decomposes into"
 // FORWARD lane) is forwarded to every allowed destination, so the device bridges / routes
 // between its interfaces instead of only terminating traffic. Default-deny and fail-closed
 // (a full destination or an exceeded rate cap drops, never blocks). Static tables (zero
-// heap). See services/net/forward/forward.h.
+// heap). See network_drivers/network/forward/forward.h.
 
 /** @brief Enable the interface forwarding plane (default off). */
 #ifndef PC_ENABLE_FORWARD
