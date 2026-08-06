@@ -250,6 +250,18 @@ static inline uint8_t *pc_seg_at(uint8_t *buf, size_t seg_size, size_t idx)
 /** @brief Slots a mask can address. A wider pool falls back to the head/tail view. */
 #define PC_RING_SLOTS_MAX 32
 
+// A shift past the word is undefined, and every index below comes from a ctz that cannot produce
+// one - so the bound is here rather than at each call site, the way the pool's state setter carries
+// its own. An out-of-range slot names nothing, so it reads as held and is never handed out.
+static inline uint32_t pc_slot_bit(size_t idx)
+{
+    if (idx >= PC_RING_SLOTS_MAX)
+    {
+        return 0u;
+    }
+    return 1u << idx;
+}
+
 /** @brief Every slot below @p count, as a mask. */
 static inline uint32_t pc_slot_all(size_t count)
 {
@@ -266,7 +278,11 @@ static inline uint32_t pc_slot_all(size_t count)
  */
 static inline proto_bool pc_slot_take(_Atomic uint32_t *held, size_t idx)
 {
-    const uint32_t bit = 1u << idx;
+    const uint32_t bit = pc_slot_bit(idx);
+    if (bit == 0u)
+    {
+        return PROTO_FALSE;
+    }
     uint32_t prev = atomic_fetch_or_explicit(held, bit, memory_order_acquire);
     return (prev & bit) == 0u;
 }
@@ -301,19 +317,19 @@ static inline const pc_cspan *pc_slot_keepout(const pc_cspan *keepout, size_t id
 /** @brief Give slot @p idx back: the wire has taken its bytes. */
 static inline void pc_slot_drop(_Atomic uint32_t *held, size_t idx)
 {
-    atomic_fetch_and_explicit(held, ~(1u << idx), memory_order_release);
+    atomic_fetch_and_explicit(held, ~pc_slot_bit(idx), memory_order_release);
 }
 
 /** @brief Mark slot @p idx in @p mask, published after the slot is written. */
 static inline void pc_slot_mark(_Atomic uint32_t *mask, size_t idx)
 {
-    atomic_fetch_or_explicit(mask, 1u << idx, memory_order_release);
+    atomic_fetch_or_explicit(mask, pc_slot_bit(idx), memory_order_release);
 }
 
 /** @brief Clear slot @p idx in @p mask, before the slot is written. */
 static inline void pc_slot_clear(_Atomic uint32_t *mask, size_t idx)
 {
-    atomic_fetch_and_explicit(mask, ~(1u << idx), memory_order_release);
+    atomic_fetch_and_explicit(mask, ~pc_slot_bit(idx), memory_order_release);
 }
 
 /** @brief The slots @p mask names, minus the held ones, within @p count. */

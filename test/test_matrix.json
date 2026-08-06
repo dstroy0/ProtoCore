@@ -3686,6 +3686,12 @@
       "src": ["-<*>"],
       "tests": ["unit/mmgr/test_span"]
     },
+    "native_ring": {
+      "desc": "The shared ring primitive (mmgr/ring.h) and its three views: bytes by head/tail, whole\nmessages by segment, and claimable slots by mask. Both TCP transports and both UDP rings sit on\nthis file and it had no suite of its own - it was only ever exercised as a side effect of theirs,\nwhich is how the wrap could move from a modulo to a mask on the strength of transport envs alone.\nCovers the power-of-two capacity the mask index requires, a wrapped entry reading back whole, a\nsegment staying invisible until it is published and refusing rather than overwriting one in\nflight, and the slot view: first taker wins, ready is marked minus held, next is the lowest set,\nand a losing hold cannot redirect the wire by clobbering the winner's keepout.",
+      "flags": [],
+      "src": ["-<*>"],
+      "tests": ["unit/mmgr/test_ring"]
+    },
     "native_secure_pool": {
       "desc": "The secure pool accessor (mmgr/secure): the SAME pool mechanism as the plaintext side\n(mmgr/arena) instantiated a second time at a disjoint address, so only what differs is\ncovered here - the access and control layer. Reclaiming WIPES, and wipes before the bytes become\navailable again, so a secret cannot survive its borrow or reach the next tenant; the scope guard\nmakes that hold on the early-return paths a hand-written wipe gets forgotten on. And the two\npools being disjoint regions means ownership is decided by address alone - a secure pointer can\nnever be accepted where a plaintext one is required, or the reverse, with no per-allocation\nmetadata. Allocator mechanics themselves belong to test_arena.",
       "flags": [],
