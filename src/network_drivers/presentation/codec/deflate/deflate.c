@@ -166,8 +166,8 @@ static void emit_match(pc_bit_writer *w, const Tables *t, int len, int dist)
     }
 }
 
-DeflateResult deflate_raw(const uint8_t *src, size_t src_len, uint8_t *dst, size_t dst_cap, size_t *out_len,
-                          void *scratch, size_t scratch_len)
+static DeflateResult deflate_raw(const uint8_t *src, size_t src_len, uint8_t *dst, size_t dst_cap, size_t *out_len,
+                                 void *scratch, size_t scratch_len)
 {
     if (scratch_len < DEFLATE_SCRATCH_SIZE)
     {
@@ -293,3 +293,5 @@ DeflateResult deflate_raw(const uint8_t *src, size_t src_len, uint8_t *dst, size
 }
 
 #endif // PC_ENABLE_WS_DEFLATE
+
+const DeflateNs Deflate = {deflate_raw};

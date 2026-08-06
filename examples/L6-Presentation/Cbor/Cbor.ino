@@ -71,13 +71,13 @@ void setup()
         static CborCtx ctx; // static: must outlive send_chunked
         pc_span w;
         w = pc_span_from(ctx.buf, sizeof(ctx.buf));
-        pc_cbor_map(&w, 3);
-        pc_cbor_str(&w, "heap");
-        pc_cbor_uint(&w, ESP.getFreeHeap());
-        pc_cbor_str(&w, "uptime");
-        pc_cbor_uint(&w, millis() / 1000);
-        pc_cbor_str(&w, "rssi");
-        pc_cbor_int(&w, Physical.wifi->rssi());
+        Cbor.put_map(&w, 3);
+        Cbor.put_str(&w, "heap");
+        Cbor.put_uint(&w, ESP.getFreeHeap());
+        Cbor.put_str(&w, "uptime");
+        Cbor.put_uint(&w, millis() / 1000);
+        Cbor.put_str(&w, "rssi");
+        Cbor.put_int(&w, Physical.wifi->rssi());
         ctx.len = pc_span_ok(w) ? pc_span_len(w) : 0;
         ctx.off = 0;
         send_chunked(id, 200, "application/cbor", pc_cbor_source, &ctx);

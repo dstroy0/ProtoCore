@@ -5,7 +5,7 @@
  * @file Json.ino
  * @brief Zero-heap JSON: build responses with JsonWriter, read requests with json_get_*.
  *
- * JsonWriter formats into a fixed stack buffer (no heap); json_get_str/int/bool
+ * JsonWriter formats into a fixed stack buffer (no heap); Json.get_str/int/bool
  * read top-level members of a JSON request body in place. See json.h.
  *
  * Flash, open Serial @ 115200 for the IP, then:
@@ -55,9 +55,9 @@ void handle_echo(uint8_t slot_id, HttpReq *req)
     char name[32];
     long age = 0;
     bool admin = false;
-    bool have_name = json_get_str((const char *)req->body, "name", name, sizeof(name));
-    json_get_int((const char *)req->body, "age", &age);
-    json_get_bool((const char *)req->body, "admin", &admin);
+    bool have_name = Json.get_str((const char *)req->body, "name", name, sizeof(name));
+    Json.get_int((const char *)req->body, "age", &age);
+    Json.get_bool((const char *)req->body, "admin", &admin);
 
     char buf[128];
     JsonWriter w(buf, sizeof(buf));

@@ -84,35 +84,35 @@ void test_cbor_round_trip()
     r.value_kind = SENML_V_FLOAT;
     r.value = 42; // integral -> emitted as a CBOR integer
     uint8_t buf[64];
-    size_t n = pc_senml_build(pc_codec_cbor(), buf, sizeof(buf), &r, 1);
+    size_t n = pc_senml_build(&Cbor, buf, sizeof(buf), &r, 1);
     TEST_ASSERT_GREATER_THAN(0, (int)n);
 
     pc_cspan rd;
     rd = pc_cspan_from(buf, n);
     size_t arr;
-    TEST_ASSERT_TRUE(pc_cbor_read_array(&rd, &arr));
+    TEST_ASSERT_TRUE(Cbor.get_array(&rd, &arr));
     TEST_ASSERT_EQUAL_size_t(1, arr);
     size_t fields;
-    TEST_ASSERT_TRUE(pc_cbor_read_map(&rd, &fields));
+    TEST_ASSERT_TRUE(Cbor.get_map(&rd, &fields));
     TEST_ASSERT_EQUAL_size_t(3, fields);
 
     int64_t key;
     const char *s;
     size_t slen;
-    TEST_ASSERT_TRUE(pc_cbor_read_int(&rd, &key));
+    TEST_ASSERT_TRUE(Cbor.get_int(&rd, &key));
     TEST_ASSERT_EQUAL_INT64(0, key); // n
-    TEST_ASSERT_TRUE(pc_cbor_read_str(&rd, &s, &slen));
+    TEST_ASSERT_TRUE(Cbor.get_str(&rd, &s, &slen));
     TEST_ASSERT_EQUAL_MEMORY("temp", s, slen);
 
-    TEST_ASSERT_TRUE(pc_cbor_read_int(&rd, &key));
+    TEST_ASSERT_TRUE(Cbor.get_int(&rd, &key));
     TEST_ASSERT_EQUAL_INT64(1, key); // u
-    TEST_ASSERT_TRUE(pc_cbor_read_str(&rd, &s, &slen));
+    TEST_ASSERT_TRUE(Cbor.get_str(&rd, &s, &slen));
     TEST_ASSERT_EQUAL_MEMORY("Cel", s, slen);
 
-    TEST_ASSERT_TRUE(pc_cbor_read_int(&rd, &key));
+    TEST_ASSERT_TRUE(Cbor.get_int(&rd, &key));
     TEST_ASSERT_EQUAL_INT64(2, key); // v
     int64_t v;
-    TEST_ASSERT_TRUE(pc_cbor_read_int(&rd, &v));
+    TEST_ASSERT_TRUE(Cbor.get_int(&rd, &v));
     TEST_ASSERT_EQUAL_INT64(42, v);
     TEST_ASSERT_TRUE(pc_cspan_ok(rd));
 }
@@ -124,15 +124,15 @@ void test_cbor_base_name_key()
     r.base_name = "dev1";
     r.value_kind = SENML_V_NONE;
     uint8_t buf[32];
-    size_t n = pc_senml_build(pc_codec_cbor(), buf, sizeof(buf), &r, 1);
+    size_t n = pc_senml_build(&Cbor, buf, sizeof(buf), &r, 1);
     pc_cspan rd;
     rd = pc_cspan_from(buf, n);
     size_t arr, fields;
-    TEST_ASSERT_TRUE(pc_cbor_read_array(&rd, &arr));
-    TEST_ASSERT_TRUE(pc_cbor_read_map(&rd, &fields));
+    TEST_ASSERT_TRUE(Cbor.get_array(&rd, &arr));
+    TEST_ASSERT_TRUE(Cbor.get_map(&rd, &fields));
     TEST_ASSERT_EQUAL_size_t(1, fields);
     int64_t key;
-    TEST_ASSERT_TRUE(pc_cbor_read_int(&rd, &key));
+    TEST_ASSERT_TRUE(Cbor.get_int(&rd, &key));
     TEST_ASSERT_EQUAL_INT64(-2, key); // bn
 }
 
@@ -146,7 +146,7 @@ void test_overflow_fails_closed()
     char small[16];
     TEST_ASSERT_EQUAL_size_t(0, pc_senml_json_build(small, sizeof(small), &r, 1));
     uint8_t csmall[4];
-    TEST_ASSERT_EQUAL_size_t(0, pc_senml_build(pc_codec_cbor(), csmall, sizeof(csmall), &r, 1));
+    TEST_ASSERT_EQUAL_size_t(0, pc_senml_build(&Cbor, csmall, sizeof(csmall), &r, 1));
 }
 
 // JSON with a base time and a value-less (PC_NONE) record.
@@ -174,32 +174,32 @@ void test_cbor_all_kinds()
     r.has_time = PROTO_TRUE;
     r.time = 9;
     uint8_t buf[64];
-    size_t n = pc_senml_build(pc_codec_cbor(), buf, sizeof(buf), &r, 1);
+    size_t n = pc_senml_build(&Cbor, buf, sizeof(buf), &r, 1);
     TEST_ASSERT_GREATER_THAN(0, (int)n);
 
     pc_cspan rd;
     rd = pc_cspan_from(buf, n);
     size_t arr, fields;
-    TEST_ASSERT_TRUE(pc_cbor_read_array(&rd, &arr));
-    TEST_ASSERT_TRUE(pc_cbor_read_map(&rd, &fields));
+    TEST_ASSERT_TRUE(Cbor.get_array(&rd, &arr));
+    TEST_ASSERT_TRUE(Cbor.get_map(&rd, &fields));
     TEST_ASSERT_EQUAL_size_t(4, fields); // bt, n, vs, t
     int64_t key, iv;
     const char *s;
     size_t sl;
-    TEST_ASSERT_TRUE(pc_cbor_read_int(&rd, &key));
+    TEST_ASSERT_TRUE(Cbor.get_int(&rd, &key));
     TEST_ASSERT_EQUAL_INT64(-3, key); // bt
-    TEST_ASSERT_TRUE(pc_cbor_read_int(&rd, &iv));
+    TEST_ASSERT_TRUE(Cbor.get_int(&rd, &iv));
     TEST_ASSERT_EQUAL_INT64(5, iv);
-    TEST_ASSERT_TRUE(pc_cbor_read_int(&rd, &key));
+    TEST_ASSERT_TRUE(Cbor.get_int(&rd, &key));
     TEST_ASSERT_EQUAL_INT64(0, key); // n
-    TEST_ASSERT_TRUE(pc_cbor_read_str(&rd, &s, &sl));
-    TEST_ASSERT_TRUE(pc_cbor_read_int(&rd, &key));
+    TEST_ASSERT_TRUE(Cbor.get_str(&rd, &s, &sl));
+    TEST_ASSERT_TRUE(Cbor.get_int(&rd, &key));
     TEST_ASSERT_EQUAL_INT64(3, key); // vs
-    TEST_ASSERT_TRUE(pc_cbor_read_str(&rd, &s, &sl));
+    TEST_ASSERT_TRUE(Cbor.get_str(&rd, &s, &sl));
     TEST_ASSERT_EQUAL_MEMORY("hi", s, sl);
-    TEST_ASSERT_TRUE(pc_cbor_read_int(&rd, &key));
+    TEST_ASSERT_TRUE(Cbor.get_int(&rd, &key));
     TEST_ASSERT_EQUAL_INT64(6, key); // t
-    TEST_ASSERT_TRUE(pc_cbor_read_int(&rd, &iv));
+    TEST_ASSERT_TRUE(Cbor.get_int(&rd, &iv));
     TEST_ASSERT_EQUAL_INT64(9, iv);
 
     SenmlRecord rb = {0};
@@ -207,19 +207,19 @@ void test_cbor_all_kinds()
     rb.value_kind = SENML_V_BOOL;
     rb.value_bool = PROTO_TRUE;
     uint8_t bb[32];
-    size_t bn = pc_senml_build(pc_codec_cbor(), bb, sizeof(bb), &rb, 1);
+    size_t bn = pc_senml_build(&Cbor, bb, sizeof(bb), &rb, 1);
     TEST_ASSERT_GREATER_THAN(0, (int)bn);
     pc_cspan rd2;
     rd2 = pc_cspan_from(bb, bn);
-    TEST_ASSERT_TRUE(pc_cbor_read_array(&rd2, &arr));
-    TEST_ASSERT_TRUE(pc_cbor_read_map(&rd2, &fields));
+    TEST_ASSERT_TRUE(Cbor.get_array(&rd2, &arr));
+    TEST_ASSERT_TRUE(Cbor.get_map(&rd2, &fields));
     TEST_ASSERT_EQUAL_size_t(2, fields); // n, vb
-    TEST_ASSERT_TRUE(pc_cbor_read_int(&rd2, &key));
-    TEST_ASSERT_TRUE(pc_cbor_read_str(&rd2, &s, &sl));
-    TEST_ASSERT_TRUE(pc_cbor_read_int(&rd2, &key));
+    TEST_ASSERT_TRUE(Cbor.get_int(&rd2, &key));
+    TEST_ASSERT_TRUE(Cbor.get_str(&rd2, &s, &sl));
+    TEST_ASSERT_TRUE(Cbor.get_int(&rd2, &key));
     TEST_ASSERT_EQUAL_INT64(4, key); // vb
     proto_bool bv = PROTO_FALSE;
-    TEST_ASSERT_TRUE(pc_cbor_read_bool(&rd2, &bv));
+    TEST_ASSERT_TRUE(Cbor.get_bool(&rd2, &bv));
     TEST_ASSERT_TRUE(bv);
 }
 
@@ -230,8 +230,8 @@ void test_senml_null_args()
     uint8_t cb[32];
     TEST_ASSERT_EQUAL_size_t(0, pc_senml_json_build(NULL, sizeof(jb), &r, 1));
     TEST_ASSERT_EQUAL_size_t(0, pc_senml_json_build(jb, sizeof(jb), NULL, 1)); // count && !records
-    TEST_ASSERT_EQUAL_size_t(0, pc_senml_build(pc_codec_cbor(), NULL, sizeof(cb), &r, 1));
-    TEST_ASSERT_EQUAL_size_t(0, pc_senml_build(pc_codec_cbor(), cb, sizeof(cb), NULL, 1));
+    TEST_ASSERT_EQUAL_size_t(0, pc_senml_build(&Cbor, NULL, sizeof(cb), &r, 1));
+    TEST_ASSERT_EQUAL_size_t(0, pc_senml_build(&Cbor, cb, sizeof(cb), NULL, 1));
 }
 
 // A magnitude outside the int64 range is emitted as a float rather than being truncated
@@ -266,21 +266,21 @@ void test_string_kind_without_value()
     TEST_ASSERT_EQUAL_STRING("[{\"n\":\"s\"}]", jb);
 
     uint8_t cb[32];
-    size_t n = pc_senml_build(pc_codec_cbor(), cb, sizeof(cb), &r, 1);
+    size_t n = pc_senml_build(&Cbor, cb, sizeof(cb), &r, 1);
     TEST_ASSERT_GREATER_THAN(0, (int)n);
     pc_cspan rd;
     rd = pc_cspan_from(cb, n);
     size_t arr, fields;
-    TEST_ASSERT_TRUE(pc_cbor_read_array(&rd, &arr));
+    TEST_ASSERT_TRUE(Cbor.get_array(&rd, &arr));
     TEST_ASSERT_EQUAL_size_t(1, arr);
-    TEST_ASSERT_TRUE(pc_cbor_read_map(&rd, &fields));
+    TEST_ASSERT_TRUE(Cbor.get_map(&rd, &fields));
     TEST_ASSERT_EQUAL_size_t(1, fields); // only n - the absent vs is not counted
     int64_t key;
     const char *s;
     size_t sl;
-    TEST_ASSERT_TRUE(pc_cbor_read_int(&rd, &key));
+    TEST_ASSERT_TRUE(Cbor.get_int(&rd, &key));
     TEST_ASSERT_EQUAL_INT64(0, key); // n
-    TEST_ASSERT_TRUE(pc_cbor_read_str(&rd, &s, &sl));
+    TEST_ASSERT_TRUE(Cbor.get_str(&rd, &s, &sl));
     TEST_ASSERT_EQUAL_MEMORY("s", s, sl);
 }
 
@@ -292,12 +292,12 @@ void test_empty_pack_allows_null_records()
     TEST_ASSERT_EQUAL_STRING("[]", jb);
 
     uint8_t cb[16];
-    size_t cn = pc_senml_build(pc_codec_cbor(), cb, sizeof(cb), NULL, 0);
+    size_t cn = pc_senml_build(&Cbor, cb, sizeof(cb), NULL, 0);
     TEST_ASSERT_GREATER_THAN(0, (int)cn);
     pc_cspan rd;
     size_t arr;
     rd = pc_cspan_from(cb, cn);
-    TEST_ASSERT_TRUE(pc_cbor_read_array(&rd, &arr));
+    TEST_ASSERT_TRUE(Cbor.get_array(&rd, &arr));
     TEST_ASSERT_EQUAL_size_t(0, arr);
 }
 

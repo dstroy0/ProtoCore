@@ -5,7 +5,7 @@
 // the compression owner (ssh_comp) + its activation + the packet-layer compress path in
 // ssh_pkt_send. It drives the packet layer directly (before NEWKEYS, so no cipher) with compression
 // activated, then reconstructs the continuous zlib stream from the framed packets and decodes it via
-// inflate_raw (validated vs Python zlib in test_inflate) - proving payloads are compressed on the
+// Inflate.raw (validated vs Python zlib in test_inflate) - proving payloads are compressed on the
 // wire and the whole session forms one valid, context-takeover zlib stream.
 
 #include "crypto/cipher/aes256ctr.h" // native software AES-256-CTR path
@@ -66,7 +66,7 @@ static void verify()
     TEST_ASSERT_EQUAL_HEX8(0x78, g_stream[0]);
     TEST_ASSERT_EQUAL_HEX8(0x9C, g_stream[1]);
     size_t dlen = 0;
-    int rc = (int)inflate_raw(g_stream + 2, g_stream_len - 2, g_decoded, sizeof(g_decoded), &dlen, g_iscratch,
+    int rc = (int)Inflate.raw(g_stream + 2, g_stream_len - 2, g_decoded, sizeof(g_decoded), &dlen, g_iscratch,
                               sizeof(g_iscratch));
     TEST_ASSERT_EQUAL_INT(INFLATE_OK, rc);
     TEST_ASSERT_EQUAL_size_t(g_orig_len, dlen);

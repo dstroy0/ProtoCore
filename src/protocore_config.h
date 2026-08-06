@@ -1177,7 +1177,7 @@ from halves and is slower than the width it decomposes into"
 #endif
 
 // ---------------------------------------------------------------------------
-// Multipart form-data sizing constants
+// MultipartBody form-data sizing constants
 // ---------------------------------------------------------------------------
 
 /**
@@ -1390,8 +1390,8 @@ from halves and is slower than the width it decomposes into"
  *
  * Default off. When set, network_drivers/presentation/codec/msgpack/msgpack.h provides a
  * writer that serializes ints, strings, byte strings, arrays, maps, booleans, nil,
- * and float32 into a caller-provided buffer, plus a cursor decoder (pc_msgpack_peek /
- * pc_msgpack_read_*, no-copy strings) over a caller buffer - the MessagePack-format
+ * and float32 into a caller-provided buffer, plus a cursor decoder (MsgPack.peek /
+ * MsgPack.get_*, no-copy strings) over a caller buffer - the MessagePack-format
  * sibling of the CBOR / JSON readers and writers. Pure, no heap, host-tested
  * against the spec encodings and round-trip.
  */

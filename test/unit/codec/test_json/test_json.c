@@ -24,11 +24,11 @@ void test_writer_simple_object()
 {
     char buf[64];
     pc_json_writer w;
-    pc_json_init(&w, buf, sizeof(buf));
-    pc_json_begin_object(&w);
-    pc_json_kv_str(&w, "status", "ok");
-    pc_json_kv_int(&w, "count", 3);
-    pc_json_end_object(&w);
+    Json.init(&w, buf, sizeof(buf));
+    Json.begin_object(&w);
+    Json.kv_str(&w, "status", "ok");
+    Json.kv_int(&w, "count", 3);
+    Json.end_object(&w);
     TEST_ASSERT_TRUE(pc_json_ok(&w));
     TEST_ASSERT_EQUAL_STRING("{\"status\":\"ok\",\"count\":3}", pc_json_c_str(&w));
 }
@@ -37,19 +37,19 @@ void test_writer_nested_and_array()
 {
     char buf[96];
     pc_json_writer w;
-    pc_json_init(&w, buf, sizeof(buf));
-    pc_json_begin_object(&w);
-    pc_json_key(&w, "a");
-    pc_json_begin_array(&w);
-    pc_json_int(&w, 1);
-    pc_json_int(&w, 2);
-    pc_json_end_array(&w);
-    pc_json_kv_bool(&w, "b", PROTO_TRUE);
-    pc_json_key(&w, "c");
-    pc_json_begin_object(&w);
-    pc_json_kv_null(&w, "n");
-    pc_json_end_object(&w);
-    pc_json_end_object(&w);
+    Json.init(&w, buf, sizeof(buf));
+    Json.begin_object(&w);
+    Json.key(&w, "a");
+    Json.begin_array(&w);
+    Json.put_int(&w, 1);
+    Json.put_int(&w, 2);
+    Json.end_array(&w);
+    Json.kv_bool(&w, "b", PROTO_TRUE);
+    Json.key(&w, "c");
+    Json.begin_object(&w);
+    Json.kv_null(&w, "n");
+    Json.end_object(&w);
+    Json.end_object(&w);
     TEST_ASSERT_TRUE(pc_json_ok(&w));
     TEST_ASSERT_EQUAL_STRING("{\"a\":[1,2],\"b\":true,\"c\":{\"n\":null}}", pc_json_c_str(&w));
 }
@@ -58,15 +58,15 @@ void test_writer_value_types()
 {
     char buf[96];
     pc_json_writer w;
-    pc_json_init(&w, buf, sizeof(buf));
-    pc_json_begin_object(&w);
-    pc_json_kv_int(&w, "i", -7);
-    pc_json_kv_uint(&w, "u", 42u);
-    pc_json_kv_bool(&w, "t", PROTO_TRUE);
-    pc_json_kv_bool(&w, "f", PROTO_FALSE);
-    pc_json_kv_null(&w, "z");
-    pc_json_kv_raw(&w, "r", "3.14");
-    pc_json_end_object(&w);
+    Json.init(&w, buf, sizeof(buf));
+    Json.begin_object(&w);
+    Json.kv_int(&w, "i", -7);
+    Json.kv_uint(&w, "u", 42u);
+    Json.kv_bool(&w, "t", PROTO_TRUE);
+    Json.kv_bool(&w, "f", PROTO_FALSE);
+    Json.kv_null(&w, "z");
+    Json.kv_raw(&w, "r", "3.14");
+    Json.end_object(&w);
     TEST_ASSERT_TRUE(pc_json_ok(&w));
     TEST_ASSERT_EQUAL_STRING("{\"i\":-7,\"u\":42,\"t\":true,\"f\":false,\"z\":null,\"r\":3.14}", pc_json_c_str(&w));
 }
@@ -75,10 +75,10 @@ void test_writer_escapes_strings()
 {
     char buf[64];
     pc_json_writer w;
-    pc_json_init(&w, buf, sizeof(buf));
-    pc_json_begin_object(&w);
-    pc_json_kv_str(&w, "k", "a\"b\nc\t\\d");
-    pc_json_end_object(&w);
+    Json.init(&w, buf, sizeof(buf));
+    Json.begin_object(&w);
+    Json.kv_str(&w, "k", "a\"b\nc\t\\d");
+    Json.end_object(&w);
     TEST_ASSERT_TRUE(pc_json_ok(&w));
     // a " b \n c \t \ d  ->  a\"b\nc\t\\d
     TEST_ASSERT_EQUAL_STRING("{\"k\":\"a\\\"b\\nc\\t\\\\d\"}", pc_json_c_str(&w));
@@ -88,10 +88,10 @@ void test_writer_control_char_unicode_escape()
 {
     char buf[48];
     pc_json_writer w;
-    pc_json_init(&w, buf, sizeof(buf));
-    pc_json_begin_object(&w);
-    pc_json_kv_str(&w, "c", "\x01"); // SOH -> 
-    pc_json_end_object(&w);
+    Json.init(&w, buf, sizeof(buf));
+    Json.begin_object(&w);
+    Json.kv_str(&w, "c", "\x01"); // SOH -> 
+    Json.end_object(&w);
     TEST_ASSERT_TRUE(pc_json_ok(&w));
     TEST_ASSERT_EQUAL_STRING("{\"c\":\"\\u0001\"}", pc_json_c_str(&w));
 }
@@ -100,10 +100,10 @@ void test_writer_overflow_sets_not_ok_and_stays_terminated()
 {
     char buf[8];
     pc_json_writer w;
-    pc_json_init(&w, buf, sizeof(buf));
-    pc_json_begin_object(&w);
-    pc_json_kv_str(&w, "aaaa", "bbbb"); // cannot fit in 8 bytes
-    pc_json_end_object(&w);
+    Json.init(&w, buf, sizeof(buf));
+    Json.begin_object(&w);
+    Json.kv_str(&w, "aaaa", "bbbb"); // cannot fit in 8 bytes
+    Json.end_object(&w);
     TEST_ASSERT_FALSE(pc_json_ok(&w));
     TEST_ASSERT_TRUE(strlen(pc_json_c_str(&w)) < sizeof(buf)); // never overran the buffer
 }
@@ -112,10 +112,10 @@ void test_writer_depth_overflow_sets_not_ok()
 {
     char buf[64];
     pc_json_writer w;
-    pc_json_init(&w, buf, sizeof(buf));
+    Json.init(&w, buf, sizeof(buf));
     for (int i = 0; i < JSON_MAX_DEPTH + 1; i++)
     {
-        pc_json_begin_object(&w);
+        Json.begin_object(&w);
     }
     TEST_ASSERT_FALSE(pc_json_ok(&w)); // nesting past JSON_MAX_DEPTH
 }
@@ -130,21 +130,21 @@ static const char *kBody = "{\"name\":\"ada\",\"port\":8080,\"on\":true,"
 void test_reader_get_string()
 {
     char out[16];
-    TEST_ASSERT_TRUE(json_get_str(kBody, "name", out, sizeof(out)));
+    TEST_ASSERT_TRUE(Json.get_str(kBody, "name", out, sizeof(out)));
     TEST_ASSERT_EQUAL_STRING("ada", out);
 }
 
 void test_reader_get_int()
 {
     long v = 0;
-    TEST_ASSERT_TRUE(json_get_int(kBody, "port", &v));
+    TEST_ASSERT_TRUE(Json.get_int(kBody, "port", &v));
     TEST_ASSERT_EQUAL_INT(8080, v);
 }
 
 void test_reader_get_bool()
 {
     proto_bool b = PROTO_FALSE;
-    TEST_ASSERT_TRUE(json_get_bool(kBody, "on", &b));
+    TEST_ASSERT_TRUE(Json.get_bool(kBody, "on", &b));
     TEST_ASSERT_TRUE(b);
 }
 
@@ -152,7 +152,7 @@ void test_reader_only_matches_top_level_key()
 {
     // "x" exists both nested and at top level; the top-level one must win.
     char out[16];
-    TEST_ASSERT_TRUE(json_get_str(kBody, "x", out, sizeof(out)));
+    TEST_ASSERT_TRUE(Json.get_str(kBody, "x", out, sizeof(out)));
     TEST_ASSERT_EQUAL_STRING("shallow", out);
 }
 
@@ -161,9 +161,9 @@ void test_reader_missing_key()
     char out[16];
     long v;
     proto_bool b;
-    TEST_ASSERT_FALSE(json_get_str(kBody, "nope", out, sizeof(out)));
-    TEST_ASSERT_FALSE(json_get_int(kBody, "nope", &v));
-    TEST_ASSERT_FALSE(json_get_bool(kBody, "nope", &b));
+    TEST_ASSERT_FALSE(Json.get_str(kBody, "nope", out, sizeof(out)));
+    TEST_ASSERT_FALSE(Json.get_int(kBody, "nope", &v));
+    TEST_ASSERT_FALSE(Json.get_bool(kBody, "nope", &b));
 }
 
 void test_reader_type_mismatch()
@@ -171,17 +171,17 @@ void test_reader_type_mismatch()
     long v;
     proto_bool b;
     // "name" is a string, not an int or bool.
-    TEST_ASSERT_FALSE(json_get_int(kBody, "name", &v));
-    TEST_ASSERT_FALSE(json_get_bool(kBody, "name", &b));
+    TEST_ASSERT_FALSE(Json.get_int(kBody, "name", &v));
+    TEST_ASSERT_FALSE(Json.get_bool(kBody, "name", &b));
 }
 
 void test_reader_unescapes_value()
 {
     const char *body = "{\"msg\":\"line1\\nline2\",\"q\":\"a\\\"b\"}";
     char out[32];
-    TEST_ASSERT_TRUE(json_get_str(body, "msg", out, sizeof(out)));
+    TEST_ASSERT_TRUE(Json.get_str(body, "msg", out, sizeof(out)));
     TEST_ASSERT_EQUAL_STRING("line1\nline2", out);
-    TEST_ASSERT_TRUE(json_get_str(body, "q", out, sizeof(out)));
+    TEST_ASSERT_TRUE(Json.get_str(body, "q", out, sizeof(out)));
     TEST_ASSERT_EQUAL_STRING("a\"b", out);
 }
 
@@ -189,17 +189,17 @@ void test_reader_unicode_escape_to_byte()
 {
     const char *body = "{\"u\":\"A\\u0042C\"}"; // B == 'B'
     char out[16];
-    TEST_ASSERT_TRUE(json_get_str(body, "u", out, sizeof(out)));
+    TEST_ASSERT_TRUE(Json.get_str(body, "u", out, sizeof(out)));
     TEST_ASSERT_EQUAL_STRING("ABC", out);
 }
 
 void test_reader_truncates_to_capacity()
 {
     char out[4]; // room for 3 chars + NUL
-    TEST_ASSERT_TRUE(json_get_str(kBody, "name", out, sizeof(out)));
+    TEST_ASSERT_TRUE(Json.get_str(kBody, "name", out, sizeof(out)));
     TEST_ASSERT_EQUAL_STRING("ada", out); // "ada" is exactly 3
     char small[3];                        // room for 2 chars + NUL
-    TEST_ASSERT_TRUE(json_get_str(kBody, "name", small, sizeof(small)));
+    TEST_ASSERT_TRUE(Json.get_str(kBody, "name", small, sizeof(small)));
     TEST_ASSERT_EQUAL_STRING("ad", small); // truncated, still terminated
 }
 
@@ -207,7 +207,7 @@ void test_reader_negative_int()
 {
     const char *body = "{\"t\":-12345}";
     long v = 0;
-    TEST_ASSERT_TRUE(json_get_int(body, "t", &v));
+    TEST_ASSERT_TRUE(Json.get_int(body, "t", &v));
     TEST_ASSERT_EQUAL_INT(-12345, v);
 }
 
@@ -217,24 +217,24 @@ void test_writer_null_and_remaining_escapes()
 {
     char buf[32];
     pc_json_writer w;
-    pc_json_init(&w, buf, sizeof(buf));
-    pc_json_begin_array(&w);
-    pc_json_str(&w, NULL); // put_escaped(NULL) is a no-op
-    pc_json_raw(&w, NULL); // put_raw(NULL) is a no-op
-    pc_json_end_array(&w);
+    Json.init(&w, buf, sizeof(buf));
+    Json.begin_array(&w);
+    Json.put_str(&w, NULL); // put_escaped(NULL) is a no-op
+    Json.put_raw(&w, NULL); // put_raw(NULL) is a no-op
+    Json.end_array(&w);
     TEST_ASSERT_TRUE(pc_json_ok(&w)); // no overrun / crash
 
     char b2[16];
     pc_json_writer e;
-    pc_json_init(&e, b2, sizeof(b2));
-    pc_json_str(&e, "\r\b\f");
+    Json.init(&e, b2, sizeof(b2));
+    Json.put_str(&e, "\r\b\f");
     TEST_ASSERT_TRUE(pc_json_ok(&e));
     TEST_ASSERT_EQUAL_STRING("\"\\r\\b\\f\"", pc_json_c_str(&e));
 
     char b3[16];
     pc_json_writer u;
-    pc_json_init(&u, b3, sizeof(b3));
-    pc_json_end_object(&u); // nothing open -> unbalanced
+    Json.init(&u, b3, sizeof(b3));
+    Json.end_object(&u); // nothing open -> unbalanced
     TEST_ASSERT_FALSE(pc_json_ok(&u));
 }
 
@@ -244,13 +244,13 @@ void test_reader_null_guards()
     char out[8];
     long v = 0;
     proto_bool b = PROTO_FALSE;
-    TEST_ASSERT_FALSE(json_get_str(kBody, "name", NULL, 8));
-    TEST_ASSERT_FALSE(json_get_str(kBody, "name", out, 0));
-    TEST_ASSERT_FALSE(json_get_int(kBody, "port", NULL));
-    TEST_ASSERT_FALSE(json_get_bool(kBody, "on", NULL));
-    TEST_ASSERT_FALSE(json_get_str(NULL, "name", out, 8));
-    TEST_ASSERT_FALSE(json_get_int(NULL, "port", &v));
-    TEST_ASSERT_FALSE(json_get_bool(NULL, "on", &b));
+    TEST_ASSERT_FALSE(Json.get_str(kBody, "name", NULL, 8));
+    TEST_ASSERT_FALSE(Json.get_str(kBody, "name", out, 0));
+    TEST_ASSERT_FALSE(Json.get_int(kBody, "port", NULL));
+    TEST_ASSERT_FALSE(Json.get_bool(kBody, "on", NULL));
+    TEST_ASSERT_FALSE(Json.get_str(NULL, "name", out, 8));
+    TEST_ASSERT_FALSE(Json.get_int(NULL, "port", &v));
+    TEST_ASSERT_FALSE(Json.get_bool(NULL, "on", &b));
 }
 
 // Reader decodes every backslash escape, treating an unknown escape literally.
@@ -258,7 +258,7 @@ void test_reader_all_escapes()
 {
     const char *body = "{\"s\":\"\\t\\r\\b\\f\\\\\\/\\q\"}"; // \t \r \b \f \\ \/ \q
     char out[16];
-    TEST_ASSERT_TRUE(json_get_str(body, "s", out, sizeof(out)));
+    TEST_ASSERT_TRUE(Json.get_str(body, "s", out, sizeof(out)));
     const char expect[] = {'\t', '\r', '\b', '\f', '\\', '/', 'q', '\0'};
     TEST_ASSERT_EQUAL_STRING(expect, out);
 }
@@ -268,12 +268,12 @@ void test_reader_all_escapes()
 void test_writer_null_buffer_and_zero_capacity()
 {
     pc_json_writer w1;
-    pc_json_init(&w1, NULL, 16);
+    Json.init(&w1, NULL, 16);
     TEST_ASSERT_FALSE(pc_json_ok(&w1));
 
     char buf[4];
     pc_json_writer w2;
-    pc_json_init(&w2, buf, 0);
+    Json.init(&w2, buf, 0);
     TEST_ASSERT_FALSE(pc_json_ok(&w2));
 }
 
@@ -283,24 +283,24 @@ void test_reader_whitespace_between_tokens()
 {
     const char *body = "{\n\t \"a\" \r\n : \t 1 ,\n \"b\" : 2 }";
     long v = 0;
-    TEST_ASSERT_TRUE(json_get_int(body, "a", &v));
+    TEST_ASSERT_TRUE(Json.get_int(body, "a", &v));
     TEST_ASSERT_EQUAL_INT(1, v);
-    TEST_ASSERT_TRUE(json_get_int(body, "b", &v));
+    TEST_ASSERT_TRUE(Json.get_int(body, "b", &v));
     TEST_ASSERT_EQUAL_INT(2, v);
 }
 
-// json_get_str rejects a non-string value (found, but not '"') instead of only the missing-key case.
+// Json.get_str rejects a non-string value (found, but not '"') instead of only the missing-key case.
 void test_reader_get_str_on_non_string_value()
 {
     char out[16];
-    TEST_ASSERT_FALSE(json_get_str(kBody, "port", out, sizeof(out))); // bare number, not a string
+    TEST_ASSERT_FALSE(Json.get_str(kBody, "port", out, sizeof(out))); // bare number, not a string
 }
 
 // A null key is rejected the same way as a null json body.
 void test_reader_null_key_guard()
 {
     char out[8];
-    TEST_ASSERT_FALSE(json_get_str(kBody, NULL, out, sizeof(out)));
+    TEST_ASSERT_FALSE(Json.get_str(kBody, NULL, out, sizeof(out)));
 }
 
 // A string value is skipped (not the target key) while it is unterminated: the trailing '\'
@@ -309,7 +309,7 @@ void test_reader_null_key_guard()
 void test_reader_skips_unterminated_string_with_trailing_backslash()
 {
     long v = 0;
-    TEST_ASSERT_FALSE(json_get_int("{\"a\":\"x\\", "b", &v));
+    TEST_ASSERT_FALSE(Json.get_int("{\"a\":\"x\\", "b", &v));
 }
 
 // The target value itself ends in a trailing backslash with nothing after it: the backslash
@@ -317,16 +317,16 @@ void test_reader_skips_unterminated_string_with_trailing_backslash()
 void test_reader_get_str_trailing_backslash_no_escape()
 {
     char out[8];
-    TEST_ASSERT_TRUE(json_get_str("{\"a\":\"x\\", "a", out, sizeof(out)));
+    TEST_ASSERT_TRUE(Json.get_str("{\"a\":\"x\\", "a", out, sizeof(out)));
     TEST_ASSERT_EQUAL_STRING("x\\", out);
 }
 
-// json_get_str on a value that is never closed by a '"' still returns true, copying what it
+// Json.get_str on a value that is never closed by a '"' still returns true, copying what it
 // found up to the NUL (the while loop's "ran out of buffer" exit, not the "hit a quote" exit).
 void test_reader_get_str_unterminated_value()
 {
     char out[32];
-    TEST_ASSERT_TRUE(json_get_str("{\"a\":\"unterminated", "a", out, sizeof(out)));
+    TEST_ASSERT_TRUE(Json.get_str("{\"a\":\"unterminated", "a", out, sizeof(out)));
     TEST_ASSERT_EQUAL_STRING("unterminated", out);
 }
 
@@ -336,11 +336,11 @@ void test_reader_skips_array_and_doubly_nested_value()
 {
     const char *body = "{\"skip\":[1,2,{\"x\":1}],\"keep\":7}";
     long v = 0;
-    TEST_ASSERT_TRUE(json_get_int(body, "keep", &v));
+    TEST_ASSERT_TRUE(Json.get_int(body, "keep", &v));
     TEST_ASSERT_EQUAL_INT(7, v);
 
     const char *nested = "{\"a\":{\"b\":{\"c\":1}},\"z\":2}";
-    TEST_ASSERT_TRUE(json_get_int(nested, "z", &v));
+    TEST_ASSERT_TRUE(Json.get_int(nested, "z", &v));
     TEST_ASSERT_EQUAL_INT(2, v);
 }
 
@@ -349,9 +349,9 @@ void test_reader_skips_array_and_doubly_nested_value()
 void test_reader_malformed_primitive_terminators()
 {
     long v = 0;
-    TEST_ASSERT_FALSE(json_get_int("{\"a\":1],\"b\":2}", "b", &v)); // stray ']' stops the scan
-    TEST_ASSERT_FALSE(json_get_int("{\"a\":1,", "b", &v));          // trailing comma, then NUL
-    TEST_ASSERT_FALSE(json_get_int("{\"a\":1", "z", &v));           // no terminator at all, then NUL
+    TEST_ASSERT_FALSE(Json.get_int("{\"a\":1],\"b\":2}", "b", &v)); // stray ']' stops the scan
+    TEST_ASSERT_FALSE(Json.get_int("{\"a\":1,", "b", &v));          // trailing comma, then NUL
+    TEST_ASSERT_FALSE(Json.get_int("{\"a\":1", "z", &v));           // no terminator at all, then NUL
 }
 
 // A truncated member name ("{\"" with nothing after the opening quote) makes json_find_value's
@@ -359,14 +359,14 @@ void test_reader_malformed_primitive_terminators()
 void test_reader_truncated_member_name()
 {
     char out[8];
-    TEST_ASSERT_FALSE(json_get_str("{\"", "a", out, sizeof(out)));
+    TEST_ASSERT_FALSE(Json.get_str("{\"", "a", out, sizeof(out)));
 }
 
 // A trailing comma immediately followed by the end of the buffer (no next member, no '}').
 void test_reader_trailing_comma_then_end()
 {
     char out[8];
-    TEST_ASSERT_FALSE(json_get_str("{\"a\":1,", "b", out, sizeof(out)));
+    TEST_ASSERT_FALSE(Json.get_str("{\"a\":1,", "b", out, sizeof(out)));
 }
 
 // hex_val: a lowercase letter past 'f' (still >= 'a') is rejected, the missing arm of its
@@ -374,7 +374,7 @@ void test_reader_trailing_comma_then_end()
 void test_reader_unicode_hex_lowercase_out_of_range()
 {
     char out[16];
-    TEST_ASSERT_TRUE(json_get_str("{\"u\":\"\\u00g1\"}", "u", out, sizeof(out)));
+    TEST_ASSERT_TRUE(Json.get_str("{\"u\":\"\\u00g1\"}", "u", out, sizeof(out)));
     TEST_ASSERT_EQUAL_STRING("?00g1", out); // 'g' is not a hex digit -> '?' then the rest literally
 }
 
@@ -382,7 +382,7 @@ void test_reader_unicode_hex_lowercase_out_of_range()
 void test_reader_unicode_escape_nothing_after_u()
 {
     char out[8];
-    TEST_ASSERT_TRUE(json_get_str("{\"u\":\"\\u", "u", out, sizeof(out)));
+    TEST_ASSERT_TRUE(Json.get_str("{\"u\":\"\\u", "u", out, sizeof(out)));
     TEST_ASSERT_EQUAL_STRING("?", out);
 }
 
@@ -392,7 +392,7 @@ void test_reader_unicode_escape_nothing_after_u()
 void test_reader_unicode_escape_three_digits_then_end()
 {
     char out[16];
-    TEST_ASSERT_TRUE(json_get_str("{\"u\":\"\\uABC", "u", out, sizeof(out)));
+    TEST_ASSERT_TRUE(Json.get_str("{\"u\":\"\\uABC", "u", out, sizeof(out)));
     TEST_ASSERT_EQUAL_STRING("?ABC", out);
 }
 
@@ -402,9 +402,9 @@ void test_reader_unicode_escape_three_digits_then_end()
 void test_reader_unicode_escape_one_and_two_digits_then_end()
 {
     char out[8];
-    TEST_ASSERT_TRUE(json_get_str("{\"u\":\"\\u0", "u", out, sizeof(out)));
+    TEST_ASSERT_TRUE(Json.get_str("{\"u\":\"\\u0", "u", out, sizeof(out)));
     TEST_ASSERT_EQUAL_STRING("?0", out);
-    TEST_ASSERT_TRUE(json_get_str("{\"u\":\"\\u01", "u", out, sizeof(out)));
+    TEST_ASSERT_TRUE(Json.get_str("{\"u\":\"\\u01", "u", out, sizeof(out)));
     TEST_ASSERT_EQUAL_STRING("?01", out);
 }
 
@@ -413,7 +413,7 @@ void test_reader_unicode_escape_one_and_two_digits_then_end()
 void test_reader_skips_primitive_terminated_by_close_brace()
 {
     long v = 0;
-    TEST_ASSERT_FALSE(json_get_int("{\"a\":1}", "z", &v));
+    TEST_ASSERT_FALSE(Json.get_int("{\"a\":1}", "z", &v));
 }
 
 // "false" immediately followed by ',' with no separating whitespace (the "true" case already
@@ -421,7 +421,7 @@ void test_reader_skips_primitive_terminated_by_close_brace()
 void test_reader_false_bool_before_comma()
 {
     proto_bool b = PROTO_TRUE;
-    TEST_ASSERT_TRUE(json_get_bool("{\"a\":false,\"b\":1}", "a", &b));
+    TEST_ASSERT_TRUE(Json.get_bool("{\"a\":false,\"b\":1}", "a", &b));
     TEST_ASSERT_FALSE(b);
 }
 
@@ -431,7 +431,7 @@ void test_reader_false_bool_before_comma()
 void test_reader_unicode_high_surrogate_followed_by_non_u_escape()
 {
     char out[16];
-    TEST_ASSERT_TRUE(json_get_str("{\"u\":\"\\uD800\\n\"}", "u", out, sizeof(out)));
+    TEST_ASSERT_TRUE(Json.get_str("{\"u\":\"\\uD800\\n\"}", "u", out, sizeof(out)));
     TEST_ASSERT_EQUAL_HEX8(0xEF, (unsigned char)out[0]);
     TEST_ASSERT_EQUAL_HEX8(0xBF, (unsigned char)out[1]);
     TEST_ASSERT_EQUAL_HEX8(0xBD, (unsigned char)out[2]);
@@ -445,13 +445,13 @@ void test_reader_unicode_high_surrogate_followed_by_non_low_surrogate()
 {
     char out[16];
     // Codepoint 0x0041 ('A') is well below the low-surrogate range (0xDC00..0xDFFF).
-    TEST_ASSERT_TRUE(json_get_str("{\"u\":\"\\uD800\\u0041\"}", "u", out, sizeof(out)));
+    TEST_ASSERT_TRUE(Json.get_str("{\"u\":\"\\uD800\\u0041\"}", "u", out, sizeof(out)));
     TEST_ASSERT_EQUAL_HEX8(0xEF, (unsigned char)out[0]);
     TEST_ASSERT_EQUAL_HEX8(0xBF, (unsigned char)out[1]);
     TEST_ASSERT_EQUAL_HEX8(0xBD, (unsigned char)out[2]);
     TEST_ASSERT_EQUAL_UINT8('A', (unsigned char)out[3]);
     // Codepoint 0xE001 is above the low-surrogate range.
-    TEST_ASSERT_TRUE(json_get_str("{\"u\":\"\\uD800\\uE001\"}", "u", out, sizeof(out)));
+    TEST_ASSERT_TRUE(Json.get_str("{\"u\":\"\\uD800\\uE001\"}", "u", out, sizeof(out)));
     TEST_ASSERT_EQUAL_HEX8(0xEF, (unsigned char)out[0]);
     TEST_ASSERT_EQUAL_HEX8(0xBF, (unsigned char)out[1]);
     TEST_ASSERT_EQUAL_HEX8(0xBD, (unsigned char)out[2]);
@@ -462,41 +462,41 @@ void test_reader_unicode_high_surrogate_followed_by_non_low_surrogate()
 void test_reader_unicode_above_surrogate_range_standalone()
 {
     char out[8];
-    TEST_ASSERT_TRUE(json_get_str("{\"u\":\"\\uE000\"}", "u", out, sizeof(out)));
+    TEST_ASSERT_TRUE(Json.get_str("{\"u\":\"\\uE000\"}", "u", out, sizeof(out)));
     TEST_ASSERT_EQUAL_HEX8(0xEE, (unsigned char)out[0]); // U+E000 -> 3-byte UTF-8 EE 80 80
     TEST_ASSERT_EQUAL_HEX8(0x80, (unsigned char)out[1]);
     TEST_ASSERT_EQUAL_HEX8(0x80, (unsigned char)out[2]);
     TEST_ASSERT_EQUAL_UINT8(0, (unsigned char)out[3]);
 }
 
-// json_get_bool's terminator set after "true"/"false": '}', a space, no terminator at all
+// Json.get_bool's terminator set after "true"/"false": '}', a space, no terminator at all
 // (buffer ends right after the literal), and a stray ']' all count as valid ends; any other
 // trailing character does not.
 void test_reader_bool_terminators()
 {
     proto_bool b = PROTO_FALSE;
-    TEST_ASSERT_TRUE(json_get_bool("{\"a\":true}", "a", &b));
+    TEST_ASSERT_TRUE(Json.get_bool("{\"a\":true}", "a", &b));
     TEST_ASSERT_TRUE(b);
-    TEST_ASSERT_TRUE(json_get_bool("{\"a\":false}", "a", &b));
+    TEST_ASSERT_TRUE(Json.get_bool("{\"a\":false}", "a", &b));
     TEST_ASSERT_FALSE(b);
 
-    TEST_ASSERT_TRUE(json_get_bool("{\"a\":true , \"b\":1}", "a", &b));
+    TEST_ASSERT_TRUE(Json.get_bool("{\"a\":true , \"b\":1}", "a", &b));
     TEST_ASSERT_TRUE(b);
-    TEST_ASSERT_TRUE(json_get_bool("{\"a\":false , \"b\":1}", "a", &b));
+    TEST_ASSERT_TRUE(Json.get_bool("{\"a\":false , \"b\":1}", "a", &b));
     TEST_ASSERT_FALSE(b);
 
-    TEST_ASSERT_TRUE(json_get_bool("{\"a\":true", "a", &b));
+    TEST_ASSERT_TRUE(Json.get_bool("{\"a\":true", "a", &b));
     TEST_ASSERT_TRUE(b);
-    TEST_ASSERT_TRUE(json_get_bool("{\"a\":false", "a", &b));
+    TEST_ASSERT_TRUE(Json.get_bool("{\"a\":false", "a", &b));
     TEST_ASSERT_FALSE(b);
 
-    TEST_ASSERT_TRUE(json_get_bool("{\"a\":true]}", "a", &b));
+    TEST_ASSERT_TRUE(Json.get_bool("{\"a\":true]}", "a", &b));
     TEST_ASSERT_TRUE(b);
-    TEST_ASSERT_TRUE(json_get_bool("{\"a\":false]}", "a", &b));
+    TEST_ASSERT_TRUE(Json.get_bool("{\"a\":false]}", "a", &b));
     TEST_ASSERT_FALSE(b);
 
-    TEST_ASSERT_FALSE(json_get_bool("{\"a\":truex}", "a", &b));
-    TEST_ASSERT_FALSE(json_get_bool("{\"a\":falsex}", "a", &b));
+    TEST_ASSERT_FALSE(Json.get_bool("{\"a\":truex}", "a", &b));
+    TEST_ASSERT_FALSE(Json.get_bool("{\"a\":falsex}", "a", &b));
 }
 
 // \uXXXX with lower- and upper-case hex letters each decode to their UTF-8 encoding.
@@ -504,7 +504,7 @@ void test_reader_unicode_hex_case()
 {
     const char *body = "{\"a\":\"\\u00ab\\u00CD\"}"; // U+00AB, U+00CD -> two 2-byte UTF-8 sequences
     char out[8];
-    TEST_ASSERT_TRUE(json_get_str(body, "a", out, sizeof(out)));
+    TEST_ASSERT_TRUE(Json.get_str(body, "a", out, sizeof(out)));
     TEST_ASSERT_EQUAL_HEX8(0xC2, (unsigned char)out[0]); // U+00AB
     TEST_ASSERT_EQUAL_HEX8(0xAB, (unsigned char)out[1]);
     TEST_ASSERT_EQUAL_HEX8(0xC3, (unsigned char)out[2]); // U+00CD
@@ -518,13 +518,13 @@ void test_reader_unicode_utf8_multibyte()
 {
     char out[16];
     // U+20AC EURO SIGN -> 3-byte UTF-8 E2 82 AC.
-    TEST_ASSERT_TRUE(json_get_str("{\"u\":\"\\u20AC\"}", "u", out, sizeof(out)));
+    TEST_ASSERT_TRUE(Json.get_str("{\"u\":\"\\u20AC\"}", "u", out, sizeof(out)));
     TEST_ASSERT_EQUAL_HEX8(0xE2, (unsigned char)out[0]);
     TEST_ASSERT_EQUAL_HEX8(0x82, (unsigned char)out[1]);
     TEST_ASSERT_EQUAL_HEX8(0xAC, (unsigned char)out[2]);
     TEST_ASSERT_EQUAL_UINT8(0, (unsigned char)out[3]);
     // U+1F600 GRINNING FACE as the surrogate pair D83D DE00 -> 4-byte UTF-8 F0 9F 98 80.
-    TEST_ASSERT_TRUE(json_get_str("{\"u\":\"\\uD83D\\uDE00\"}", "u", out, sizeof(out)));
+    TEST_ASSERT_TRUE(Json.get_str("{\"u\":\"\\uD83D\\uDE00\"}", "u", out, sizeof(out)));
     TEST_ASSERT_EQUAL_HEX8(0xF0, (unsigned char)out[0]);
     TEST_ASSERT_EQUAL_HEX8(0x9F, (unsigned char)out[1]);
     TEST_ASSERT_EQUAL_HEX8(0x98, (unsigned char)out[2]);
@@ -537,24 +537,24 @@ void test_reader_unicode_utf8_multibyte()
 void test_reader_unicode_surrogate_edges()
 {
     char out[16];
-    TEST_ASSERT_TRUE(json_get_str("{\"u\":\"\\uD800Z\"}", "u", out, sizeof(out))); // high, no low
+    TEST_ASSERT_TRUE(Json.get_str("{\"u\":\"\\uD800Z\"}", "u", out, sizeof(out))); // high, no low
     TEST_ASSERT_EQUAL_HEX8(0xEF, (unsigned char)out[0]);
     TEST_ASSERT_EQUAL_HEX8(0xBF, (unsigned char)out[1]);
     TEST_ASSERT_EQUAL_HEX8(0xBD, (unsigned char)out[2]);
     TEST_ASSERT_EQUAL_HEX8('Z', (unsigned char)out[3]);
-    TEST_ASSERT_TRUE(json_get_str("{\"u\":\"\\uDC00\"}", "u", out, sizeof(out))); // lone low
+    TEST_ASSERT_TRUE(Json.get_str("{\"u\":\"\\uDC00\"}", "u", out, sizeof(out))); // lone low
     TEST_ASSERT_EQUAL_HEX8(0xEF, (unsigned char)out[0]);
     // A 4-byte sequence that will not fit truncates before it rather than writing a partial char.
     char tiny[3];
-    TEST_ASSERT_TRUE(json_get_str("{\"u\":\"\\uD83D\\uDE00\"}", "u", tiny, sizeof(tiny)));
+    TEST_ASSERT_TRUE(Json.get_str("{\"u\":\"\\uD83D\\uDE00\"}", "u", tiny, sizeof(tiny)));
     TEST_ASSERT_EQUAL_UINT8(0, (unsigned char)tiny[0]); // nothing fit -> empty, still NUL-terminated
 }
 
-// json_get_bool decodes false as well as true.
+// Json.get_bool decodes false as well as true.
 void test_reader_false_bool()
 {
     proto_bool b = PROTO_TRUE;
-    TEST_ASSERT_TRUE(json_get_bool("{\"f\":false}", "f", &b));
+    TEST_ASSERT_TRUE(Json.get_bool("{\"f\":false}", "f", &b));
     TEST_ASSERT_FALSE(b);
 }
 
@@ -563,40 +563,40 @@ void test_reader_malformed()
 {
     char out[8];
     long v = 0;
-    TEST_ASSERT_FALSE(json_get_str("{\"name", "x", out, sizeof(out)));   // unterminated key
-    TEST_ASSERT_FALSE(json_get_int("{\"a\":{\"b\":1", "z", &v));         // unterminated value object
-    TEST_ASSERT_FALSE(json_get_str("{\"a\" 5}", "a", out, sizeof(out))); // key with no ':'
+    TEST_ASSERT_FALSE(Json.get_str("{\"name", "x", out, sizeof(out)));   // unterminated key
+    TEST_ASSERT_FALSE(Json.get_int("{\"a\":{\"b\":1", "z", &v));         // unterminated value object
+    TEST_ASSERT_FALSE(Json.get_str("{\"a\" 5}", "a", out, sizeof(out))); // key with no ':'
 }
 
 // A non-object top level, an empty object, and a non-string member name each yield no match.
 void test_reader_non_object_and_bad_member()
 {
     char out[16];
-    TEST_ASSERT_FALSE(json_get_str("[1,2,3]", "k", out, sizeof(out))); // top level is not '{'
-    TEST_ASSERT_FALSE(json_get_str("{}", "k", out, sizeof(out)));      // empty object -> '}'
-    TEST_ASSERT_FALSE(json_get_str("{42:1}", "k", out, sizeof(out)));  // member name is not a string
+    TEST_ASSERT_FALSE(Json.get_str("[1,2,3]", "k", out, sizeof(out))); // top level is not '{'
+    TEST_ASSERT_FALSE(Json.get_str("{}", "k", out, sizeof(out)));      // empty object -> '}'
+    TEST_ASSERT_FALSE(Json.get_str("{42:1}", "k", out, sizeof(out)));  // member name is not a string
 }
 
-// json_get_int rejects a quoted (string) value and a value with no digits.
+// Json.get_int rejects a quoted (string) value and a value with no digits.
 void test_reader_int_rejects_string_and_nondigits()
 {
     long v = 0;
-    TEST_ASSERT_FALSE(json_get_int("{\"n\":\"42\"}", "n", &v)); // "42" is a string, not a bare number
-    TEST_ASSERT_FALSE(json_get_int("{\"n\":xyz}", "n", &v));    // no digits parse
+    TEST_ASSERT_FALSE(Json.get_int("{\"n\":\"42\"}", "n", &v)); // "42" is a string, not a bare number
+    TEST_ASSERT_FALSE(Json.get_int("{\"n\":xyz}", "n", &v));    // no digits parse
 }
 
 // A valid \uXXXX above 0xFF now emits UTF-8; malformed / short hex still collapses to '?'.
 void test_reader_unicode_escape_invalid_and_wide()
 {
     char out[16];
-    TEST_ASSERT_TRUE(json_get_str("{\"u\":\"\\u01F6\"}", "u", out, sizeof(out)));
+    TEST_ASSERT_TRUE(Json.get_str("{\"u\":\"\\u01F6\"}", "u", out, sizeof(out)));
     TEST_ASSERT_EQUAL_HEX8(0xC7, (unsigned char)out[0]); // U+01F6 -> 2-byte UTF-8 C7 B6
     TEST_ASSERT_EQUAL_HEX8(0xB6, (unsigned char)out[1]);
     TEST_ASSERT_EQUAL_UINT8(0, (unsigned char)out[2]);
     // Invalid / short \u emits '?' without consuming the bad chars, so they trail as literals.
-    TEST_ASSERT_TRUE(json_get_str("{\"u\":\"\\uZZZZ\"}", "u", out, sizeof(out)));
+    TEST_ASSERT_TRUE(Json.get_str("{\"u\":\"\\uZZZZ\"}", "u", out, sizeof(out)));
     TEST_ASSERT_EQUAL_STRING("?ZZZZ", out); // invalid hex digit
-    TEST_ASSERT_TRUE(json_get_str("{\"u\":\"\\u0A\"}", "u", out, sizeof(out)));
+    TEST_ASSERT_TRUE(Json.get_str("{\"u\":\"\\u0A\"}", "u", out, sizeof(out)));
     TEST_ASSERT_EQUAL_STRING("?0A", out); // short \u
 }
 

@@ -136,10 +136,10 @@ int main()
         bool tls = false;
         volatile size_t sink = 0;
         double ns = bench_ns(500000, [&] {
-            json_get_str(body, "ssid", ssid, sizeof(ssid));
-            json_get_int(body, "port", &port);
-            json_get_bool(body, "tls", &tls);
-            json_get_int(body, "chan", &chan);
+            Json.get_str(body, "ssid", ssid, sizeof(ssid));
+            Json.get_int(body, "port", &port);
+            Json.get_bool(body, "tls", &tls);
+            Json.get_int(body, "chan", &chan);
             sink += (size_t)ssid[0] + (size_t)port + (size_t)tls + (size_t)chan;
         });
         row("json", "decode (4 fields)", ns, (double)n);

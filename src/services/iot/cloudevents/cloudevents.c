@@ -35,39 +35,39 @@ size_t pc_cloudevents_build_json(char *buf, size_t cap, const CloudEvent *ce)
     }
 
     pc_json_writer w = {0};
-    pc_json_init(&w, buf, cap);
-    pc_json_begin_object(&w);
-    pc_json_kv_str(&w, "specversion", "1.0");
-    pc_json_kv_str(&w, "id", ce->id);
-    pc_json_kv_str(&w, "source", ce->source);
-    pc_json_kv_str(&w, "type", ce->type);
+    Json.init(&w, buf, cap);
+    Json.begin_object(&w);
+    Json.kv_str(&w, "specversion", "1.0");
+    Json.kv_str(&w, "id", ce->id);
+    Json.kv_str(&w, "source", ce->source);
+    Json.kv_str(&w, "type", ce->type);
     if (ce_present(ce->subject))
     {
-        pc_json_kv_str(&w, "subject", ce->subject);
+        Json.kv_str(&w, "subject", ce->subject);
     }
 
     // data: a pre-formatted JSON value (verbatim) or a plain string (escaped).
     if (ce->data_json && ce->data_json[0] != '\0')
     {
-        pc_json_kv_str(&w, CE_KEY_DATACONTENTTYPE,
-                       ce_present(ce->datacontenttype) ? ce->datacontenttype : "application/json");
-        pc_json_key(&w, CE_KEY_DATA);
-        pc_json_raw(&w, ce->data_json);
+        Json.kv_str(&w, CE_KEY_DATACONTENTTYPE,
+                    ce_present(ce->datacontenttype) ? ce->datacontenttype : "application/json");
+        Json.key(&w, CE_KEY_DATA);
+        Json.put_raw(&w, ce->data_json);
     }
     else if (ce->data_str)
     {
         if (ce_present(ce->datacontenttype))
         {
-            pc_json_kv_str(&w, CE_KEY_DATACONTENTTYPE, ce->datacontenttype);
+            Json.kv_str(&w, CE_KEY_DATACONTENTTYPE, ce->datacontenttype);
         }
-        pc_json_kv_str(&w, CE_KEY_DATA, ce->data_str);
+        Json.kv_str(&w, CE_KEY_DATA, ce->data_str);
     }
     else if (ce_present(ce->datacontenttype))
     {
-        pc_json_kv_str(&w, CE_KEY_DATACONTENTTYPE, ce->datacontenttype);
+        Json.kv_str(&w, CE_KEY_DATACONTENTTYPE, ce->datacontenttype);
     }
 
-    pc_json_end_object(&w);
+    Json.end_object(&w);
     return pc_json_ok(&w) ? strnlen(buf, cap) : 0;
 }
 

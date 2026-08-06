@@ -294,7 +294,7 @@ void test_qpack_field_int_truncation(void)
 {
     Sink s = {0};
     // Indexed Field Line (T=1 static), prefix-6 integer 63 (all-ones) with no continuation byte:
-    // pc_hpack_decode_int fails, so line 220's first || arm rejects it (before the idx >= 99 check).
+    // HpackPrim.decode_int fails, so line 220's first || arm rejects it (before the idx >= 99 check).
     const uint8_t idx_trunc[3] = {0x00, 0x00, 0xFF}; // 1 1 111111 = indexed, static, prefix 63, truncated
     TEST_ASSERT_FALSE(decode_all(idx_trunc, 3, &s));
     // Literal Field Line with Name Reference (T=1 static), prefix-4 integer 15 with no continuation:

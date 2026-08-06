@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device CCOUNT microbenchmark for the permessage-deflate codec (network_drivers/presentation/
-// deflate): deflate_raw() + inflate_raw() over a JSON telemetry frame. Pure (caller scratch).
+// deflate): Deflate.raw() + Inflate.raw() over a JSON telemetry frame. Pure (caller scratch).
 // Build/flash: pio run -d performance_benching/network_drivers/presentation/deflate -t upload
 #include "device_bench.h"
 #include "network_drivers/presentation/codec/deflate/deflate.h"
@@ -20,7 +20,7 @@ static void deflate_bench_task(void *)
     const size_t n = strlen(MSG);
     static uint8_t comp[512], plain[512];
     size_t clen = 0;
-    deflate_raw((const uint8_t *)MSG, n, comp, sizeof(comp), &clen, dscratch, DEFLATE_SCRATCH_SIZE);
+    Deflate.raw((const uint8_t *)MSG, n, comp, sizeof(comp), &clen, dscratch, DEFLATE_SCRATCH_SIZE);
     comp[clen] = 0x00;
     comp[clen + 1] = 0x00;
     comp[clen + 2] = 0xFF;
@@ -30,13 +30,13 @@ static void deflate_bench_task(void *)
         Serial.printf("DB ==== deflate device microbench start (CCOUNT @ %u MHz) ====\n",
                       (unsigned)getCpuFrequencyMhz());
         volatile int sink = 0;
-        DBENCH_BULK("deflate_raw (json msg)", 20000, n, {
+        DBENCH_BULK("Deflate.raw (json msg)", 20000, n, {
             size_t o = 0;
-            sink += (int)deflate_raw((const uint8_t *)MSG, n, comp, sizeof(comp), &o, dscratch, DEFLATE_SCRATCH_SIZE);
+            sink += (int)Deflate.raw((const uint8_t *)MSG, n, comp, sizeof(comp), &o, dscratch, DEFLATE_SCRATCH_SIZE);
         });
-        DBENCH_BULK("inflate_raw (json msg)", 20000, n, {
+        DBENCH_BULK("Inflate.raw (json msg)", 20000, n, {
             size_t plen = 0;
-            sink += (int)inflate_raw(comp, clen + 4, plain, sizeof(plain), &plen, iscratch, INFLATE_SCRATCH_SIZE);
+            sink += (int)Inflate.raw(comp, clen + 4, plain, sizeof(plain), &plen, iscratch, INFLATE_SCRATCH_SIZE);
         });
         (void)sink;
         Serial.println("DB ==== DONE ====");

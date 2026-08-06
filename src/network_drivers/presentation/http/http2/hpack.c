@@ -248,7 +248,7 @@ static proto_bool decode_literal(HpackDynTable *t, const uint8_t *block, size_t 
 {
     size_t c = 0;
     uint32_t name_idx = 0;
-    if (!pc_hpack_decode_int(block + *pos, len - *pos, prefix_bits, &c, &name_idx))
+    if (!HpackPrim.decode_int(block + *pos, len - *pos, prefix_bits, &c, &name_idx))
     {
         return PROTO_FALSE;
     }
@@ -256,7 +256,7 @@ static proto_bool decode_literal(HpackDynTable *t, const uint8_t *block, size_t 
     size_t name_len = 0;
     if (name_idx == 0)
     {
-        if (!pc_hpack_decode_str(block, len, pos, scratch, cap, &name_len))
+        if (!HpackPrim.decode_str(block, len, pos, scratch, cap, &name_len))
         {
             return PROTO_FALSE;
         }
@@ -266,7 +266,7 @@ static proto_bool decode_literal(HpackDynTable *t, const uint8_t *block, size_t 
         return PROTO_FALSE;
     }
     size_t val_len = 0;
-    if (!pc_hpack_decode_str(block, len, pos, scratch + name_len, cap - name_len, &val_len))
+    if (!HpackPrim.decode_str(block, len, pos, scratch + name_len, cap - name_len, &val_len))
     {
         return PROTO_FALSE;
     }
@@ -300,7 +300,7 @@ proto_bool pc_hpack_decode(HpackDynTable *t, const uint8_t *block, size_t len, c
         { // 6.1 Indexed Header Field
             size_t c = 0;
             uint32_t idx = 0;
-            if (!pc_hpack_decode_int(block + pos, len - pos, 7, &c, &idx) || idx == 0)
+            if (!HpackPrim.decode_int(block + pos, len - pos, 7, &c, &idx) || idx == 0)
             {
                 return PROTO_FALSE;
             }
@@ -321,7 +321,7 @@ proto_bool pc_hpack_decode(HpackDynTable *t, const uint8_t *block, size_t len, c
         { // 6.3 Dynamic table size update (prefix 5)
             size_t c = 0;
             uint32_t nm = 0;
-            if (!pc_hpack_decode_int(block + pos, len - pos, 5, &c, &nm))
+            if (!HpackPrim.decode_int(block + pos, len - pos, 5, &c, &nm))
             {
                 return PROTO_FALSE;
             }
@@ -361,24 +361,24 @@ size_t pc_hpack_encode_header(uint8_t *out, size_t cap, const char *name, size_t
     }
     if (full_idx)
     {
-        return pc_hpack_encode_int(out, cap, 7, 0x80, (uint32_t)full_idx);
+        return HpackPrim.encode_int(out, cap, 7, 0x80, (uint32_t)full_idx);
     }
     // Literal without indexing (top nibble 0000), name prefix 4.
-    size_t o = pc_hpack_encode_int(out, cap, 4, 0x00, (uint32_t)name_idx);
+    size_t o = HpackPrim.encode_int(out, cap, 4, 0x00, (uint32_t)name_idx);
     if (!o)
     {
         return 0;
     }
     if (name_idx == 0)
     {
-        size_t ns = pc_hpack_encode_str(out + o, cap - o, name, name_len);
+        size_t ns = HpackPrim.encode_str(out + o, cap - o, name, name_len);
         if (!ns)
         {
             return 0;
         }
         o += ns;
     }
-    size_t vs = pc_hpack_encode_str(out + o, cap - o, value, value_len);
+    size_t vs = HpackPrim.encode_str(out + o, cap - o, value, value_len);
     if (!vs)
     {
         return 0;

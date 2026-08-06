@@ -55,7 +55,7 @@ static void json_num(pc_json_writer *w, double d)
             tmp[0] = '\0';
         }
     }
-    pc_json_raw(w, tmp);
+    Json.put_raw(w, tmp);
 }
 
 size_t pc_senml_json_build(char *buf, size_t cap, const SenmlRecord *records, size_t count)
@@ -65,57 +65,57 @@ size_t pc_senml_json_build(char *buf, size_t cap, const SenmlRecord *records, si
         return 0;
     }
     pc_json_writer w = {0};
-    pc_json_init(&w, buf, cap);
-    pc_json_begin_array(&w);
+    Json.init(&w, buf, cap);
+    Json.begin_array(&w);
     for (size_t i = 0; i < count; i++)
     {
         const SenmlRecord *r = &records[i];
-        pc_json_begin_object(&w);
+        Json.begin_object(&w);
         if (r->base_name)
         {
-            pc_json_kv_str(&w, "bn", r->base_name);
+            Json.kv_str(&w, "bn", r->base_name);
         }
         if (r->has_base_time)
         {
-            pc_json_key(&w, "bt");
+            Json.key(&w, "bt");
             json_num(&w, r->base_time);
         }
         if (r->name)
         {
-            pc_json_kv_str(&w, "n", r->name);
+            Json.kv_str(&w, "n", r->name);
         }
         if (r->unit)
         {
-            pc_json_kv_str(&w, "u", r->unit);
+            Json.kv_str(&w, "u", r->unit);
         }
         // Every SenmlValueKind enumerator has a case below, so the default edge the compiler
         // emits for the uint8_t-backed enum is unreachable for any value the API admits.
         switch (r->value_kind)
         {
         case SENML_V_FLOAT:
-            pc_json_key(&w, "v");
+            Json.key(&w, "v");
             json_num(&w, r->value);
             break;
         case SENML_V_STRING:
             if (r->value_str)
             {
-                pc_json_kv_str(&w, "vs", r->value_str);
+                Json.kv_str(&w, "vs", r->value_str);
             }
             break;
         case SENML_V_BOOL:
-            pc_json_kv_bool(&w, "vb", r->value_bool);
+            Json.kv_bool(&w, "vb", r->value_bool);
             break;
         case SENML_V_NONE:
             break;
         }
         if (r->has_time)
         {
-            pc_json_key(&w, "t");
+            Json.key(&w, "t");
             json_num(&w, r->time);
         }
-        pc_json_end_object(&w);
+        Json.end_object(&w);
     }
-    pc_json_end_array(&w);
+    Json.end_array(&w);
     return pc_json_ok(&w) ? pc_json_length(&w) : 0;
 }
 

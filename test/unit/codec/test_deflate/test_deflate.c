@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // Unit tests for the RFC 1951 DEFLATE core (network_drivers/presentation/codec/deflate).
-// The encoder is checked by round-tripping through inflate_raw(), which is itself
+// The encoder is checked by round-tripping through Inflate.raw(), which is itself
 // validated against Python zlib in test_inflate - so a successful round-trip
-// proves deflate_raw() emits a valid RFC 1951 stream. The permessage-deflate
+// proves Deflate.raw() emits a valid RFC 1951 stream. The permessage-deflate
 // payload (tail 00 00 ff ff stripped, RFC 7692 sender) gets the marker appended
 // back before inflating, mirroring the receiver.
 
@@ -33,7 +33,7 @@ void tearDown()
 static size_t roundtrip(const uint8_t *src, size_t src_len)
 {
     size_t clen = 0;
-    int rc = (int)deflate_raw(src, src_len, g_comp, sizeof(g_comp), &clen, g_dscratch, sizeof(g_dscratch));
+    int rc = (int)Deflate.raw(src, src_len, g_comp, sizeof(g_comp), &clen, g_dscratch, sizeof(g_dscratch));
     TEST_ASSERT_EQUAL_INT(DEFLATE_OK, rc);
 
     // Append the 00 00 ff ff marker the sender stripped (RFC 7692 sec 7.2.2).
@@ -44,7 +44,7 @@ static size_t roundtrip(const uint8_t *src, size_t src_len)
     g_comp[clen + 3] = 0xff;
 
     size_t dlen = 0;
-    rc = (int)inflate_raw(g_comp, clen + 4, g_decompressed, sizeof(g_decompressed), &dlen, g_iscratch,
+    rc = (int)Inflate.raw(g_comp, clen + 4, g_decompressed, sizeof(g_decompressed), &dlen, g_iscratch,
                           sizeof(g_iscratch));
     TEST_ASSERT_EQUAL_INT(INFLATE_OK, rc);
     TEST_ASSERT_EQUAL_size_t(src_len, dlen);
@@ -193,7 +193,7 @@ void test_output_overflow_fails_closed()
     }
     uint8_t tiny[16];
     size_t clen = 0;
-    int rc = (int)deflate_raw(buf, sizeof(buf), tiny, sizeof(tiny), &clen, g_dscratch, sizeof(g_dscratch));
+    int rc = (int)Deflate.raw(buf, sizeof(buf), tiny, sizeof(tiny), &clen, g_dscratch, sizeof(g_dscratch));
     TEST_ASSERT_EQUAL_INT(DEFLATE_ERR_OVERFLOW, rc);
 }
 
@@ -202,7 +202,7 @@ void test_scratch_too_small_fails_closed()
     uint8_t small[DEFLATE_SCRATCH_SIZE - 1];
     size_t clen = 0;
     const char *s = "anything";
-    int rc = (int)deflate_raw((const uint8_t *)s, strlen(s), g_comp, sizeof(g_comp), &clen, small, sizeof(small));
+    int rc = (int)Deflate.raw((const uint8_t *)s, strlen(s), g_comp, sizeof(g_comp), &clen, small, sizeof(small));
     TEST_ASSERT_EQUAL_INT(DEFLATE_ERR_SCRATCH, rc);
 }
 

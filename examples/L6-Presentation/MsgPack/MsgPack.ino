@@ -9,7 +9,7 @@
  * zero-heap MessagePack writer into a stack buffer and streams the bytes as
  * application/msgpack (via the binary-safe chunked writer). POST /decode runs the
  * other direction: it parses a posted MessagePack map with the cursor decoder
- * (pc_msgpack_peek / pc_msgpack_read_*, no heap, pointing into the request buffer) and
+ * (MsgPack.peek / MsgPack.get_*, no heap, pointing into the request buffer) and
  * echoes the parsed integer fields as text. MessagePack is a widely-supported
  * compact binary format - the same idea as the CBOR example, in the format your
  * stack may prefer.
@@ -66,7 +66,7 @@ static void on_decode(uint8_t id, HttpReq *req)
     pc_cspan r;
     r = pc_cspan_from(req->body, req->body_len);
     size_t count;
-    if (!pc_msgpack_read_map(&r, &count))
+    if (!MsgPack.get_map(&r, &count))
     {
         send_text(id, 400, "text/plain", "expected a MessagePack map");
         return;
@@ -78,7 +78,7 @@ static void on_decode(uint8_t id, HttpReq *req)
         const char *key;
         size_t klen;
         int64_t val;
-        if (!pc_msgpack_read_str(&r, &key, &klen) || !pc_msgpack_read_int(&r, &val))
+        if (!MsgPack.get_str(&r, &key, &klen) || !MsgPack.get_int(&r, &val))
         {
             break;
         }
@@ -110,13 +110,13 @@ void setup()
         static MpCtx ctx; // static: must outlive send_chunked
         pc_span w;
         w = pc_span_from(ctx.buf, sizeof(ctx.buf));
-        pc_msgpack_map(&w, 3);
-        pc_msgpack_str(&w, "heap");
-        pc_msgpack_uint(&w, ESP.getFreeHeap());
-        pc_msgpack_str(&w, "uptime");
-        pc_msgpack_uint(&w, millis() / 1000);
-        pc_msgpack_str(&w, "rssi");
-        pc_msgpack_int(&w, Physical.wifi->rssi());
+        MsgPack.put_map(&w, 3);
+        MsgPack.put_str(&w, "heap");
+        MsgPack.put_uint(&w, ESP.getFreeHeap());
+        MsgPack.put_str(&w, "uptime");
+        MsgPack.put_uint(&w, millis() / 1000);
+        MsgPack.put_str(&w, "rssi");
+        MsgPack.put_int(&w, Physical.wifi->rssi());
         ctx.len = pc_span_ok(w) ? pc_span_len(w) : 0;
         ctx.off = 0;
         send_chunked(id, 200, "application/msgpack", pc_msgpack_source, &ctx);

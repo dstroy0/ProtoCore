@@ -10,7 +10,7 @@
 //   - missing Content-Type returns false
 //   - missing boundary in Content-Type returns false
 //   - malformed body (no delimiter found) returns false
-//   - pc_multipart_get_field() returns correct value or NULL
+//   - Multipart.get_field() returns correct value or NULL
 //   - part_count is accurate
 //   - data_len is accurate
 //   - boundary extraction: quoted, unquoted, with extra params
@@ -131,8 +131,8 @@ void test_no_content_type_returns_false()
     }
     http_parse(0);
 
-    Multipart mp;
-    proto_bool ok = pc_multipart_parse(&http_pool[0], &mp);
+    MultipartBody mp;
+    proto_bool ok = Multipart.parse(&http_pool[0], &mp);
     TEST_ASSERT_FALSE(ok);
 }
 
@@ -153,8 +153,8 @@ void test_no_boundary_in_content_type_returns_false()
     }
     http_parse(0);
 
-    Multipart mp;
-    TEST_ASSERT_FALSE(pc_multipart_parse(&http_pool[0], &mp));
+    MultipartBody mp;
+    TEST_ASSERT_FALSE(Multipart.parse(&http_pool[0], &mp));
 }
 
 void test_body_missing_delimiter_returns_false()
@@ -163,8 +163,8 @@ void test_body_missing_delimiter_returns_false()
     const char *body = "this has no multipart delimiters at all";
     HttpReq *req = build_multipart_req(0, "BOUND", body, buf, sizeof(buf));
 
-    Multipart mp;
-    TEST_ASSERT_FALSE(pc_multipart_parse(req, &mp));
+    MultipartBody mp;
+    TEST_ASSERT_FALSE(Multipart.parse(req, &mp));
 }
 
 void test_single_text_field_parsed()
@@ -177,8 +177,8 @@ void test_single_text_field_parsed()
                        "--BOUND--\r\n";
 
     HttpReq *req = build_multipart_req(0, "BOUND", body, buf, sizeof(buf));
-    Multipart mp;
-    TEST_ASSERT_TRUE(pc_multipart_parse(req, &mp));
+    MultipartBody mp;
+    TEST_ASSERT_TRUE(Multipart.parse(req, &mp));
     TEST_ASSERT_EQUAL_INT(1, mp.part_count);
     TEST_ASSERT_NOT_NULL(mp.parts[0].name);
     TEST_ASSERT_EQUAL_STRING("field1", mp.parts[0].name);
@@ -200,8 +200,8 @@ void test_two_text_fields_parsed()
                        "--BOUND--\r\n";
 
     HttpReq *req = build_multipart_req(0, "BOUND", body, buf, sizeof(buf));
-    Multipart mp;
-    TEST_ASSERT_TRUE(pc_multipart_parse(req, &mp));
+    MultipartBody mp;
+    TEST_ASSERT_TRUE(Multipart.parse(req, &mp));
     TEST_ASSERT_EQUAL_INT(2, mp.part_count);
 
     TEST_ASSERT_EQUAL_STRING("username", mp.parts[0].name);
@@ -229,8 +229,8 @@ void test_three_text_fields_parsed()
                        "--B--\r\n";
 
     HttpReq *req = build_multipart_req(0, "B", body, buf, sizeof(buf));
-    Multipart mp;
-    TEST_ASSERT_TRUE(pc_multipart_parse(req, &mp));
+    MultipartBody mp;
+    TEST_ASSERT_TRUE(Multipart.parse(req, &mp));
     TEST_ASSERT_EQUAL_INT(3, mp.part_count);
     TEST_ASSERT_EQUAL_STRING("AAA", mp.parts[0].data);
     TEST_ASSERT_EQUAL_STRING("BBB", mp.parts[1].data);
@@ -248,8 +248,8 @@ void test_file_upload_part()
                        "--BOUND--\r\n";
 
     HttpReq *req = build_multipart_req(0, "BOUND", body, buf, sizeof(buf));
-    Multipart mp;
-    TEST_ASSERT_TRUE(pc_multipart_parse(req, &mp));
+    MultipartBody mp;
+    TEST_ASSERT_TRUE(Multipart.parse(req, &mp));
     TEST_ASSERT_EQUAL_INT(1, mp.part_count);
 
     TEST_ASSERT_NOT_NULL(mp.parts[0].name);
@@ -277,8 +277,8 @@ void test_file_upload_with_text_field()
                        "--B--\r\n";
 
     HttpReq *req = build_multipart_req(0, "B", body, buf, sizeof(buf));
-    Multipart mp;
-    TEST_ASSERT_TRUE(pc_multipart_parse(req, &mp));
+    MultipartBody mp;
+    TEST_ASSERT_TRUE(Multipart.parse(req, &mp));
     TEST_ASSERT_EQUAL_INT(2, mp.part_count);
 
     TEST_ASSERT_EQUAL_STRING("desc", mp.parts[0].name);
@@ -301,10 +301,10 @@ void test_get_field_found()
                        "--B--\r\n";
 
     HttpReq *req = build_multipart_req(0, "B", body, buf, sizeof(buf));
-    Multipart mp;
-    pc_multipart_parse(req, &mp);
+    MultipartBody mp;
+    Multipart.parse(req, &mp);
 
-    const char *val = pc_multipart_get_field(&mp, "token");
+    const char *val = Multipart.get_field(&mp, "token");
     TEST_ASSERT_NOT_NULL(val);
     TEST_ASSERT_EQUAL_STRING("abc123", val);
 }
@@ -319,10 +319,10 @@ void test_get_field_not_found_returns_null()
                        "--B--\r\n";
 
     HttpReq *req = build_multipart_req(0, "B", body, buf, sizeof(buf));
-    Multipart mp;
-    pc_multipart_parse(req, &mp);
+    MultipartBody mp;
+    Multipart.parse(req, &mp);
 
-    TEST_ASSERT_NULL(pc_multipart_get_field(&mp, "notexist"));
+    TEST_ASSERT_NULL(Multipart.get_field(&mp, "notexist"));
 }
 
 void test_get_field_multiple_fields()
@@ -339,12 +339,12 @@ void test_get_field_multiple_fields()
                        "--B--\r\n";
 
     HttpReq *req = build_multipart_req(0, "B", body, buf, sizeof(buf));
-    Multipart mp;
-    pc_multipart_parse(req, &mp);
+    MultipartBody mp;
+    Multipart.parse(req, &mp);
 
-    TEST_ASSERT_EQUAL_STRING("one", pc_multipart_get_field(&mp, "first"));
-    TEST_ASSERT_EQUAL_STRING("two", pc_multipart_get_field(&mp, "second"));
-    TEST_ASSERT_NULL(pc_multipart_get_field(&mp, "third"));
+    TEST_ASSERT_EQUAL_STRING("one", Multipart.get_field(&mp, "first"));
+    TEST_ASSERT_EQUAL_STRING("two", Multipart.get_field(&mp, "second"));
+    TEST_ASSERT_NULL(Multipart.get_field(&mp, "third"));
 }
 
 void test_data_len_is_correct()
@@ -361,8 +361,8 @@ void test_data_len_is_correct()
              data_str);
 
     HttpReq *req = build_multipart_req(0, "B", body, buf, sizeof(buf));
-    Multipart mp;
-    TEST_ASSERT_TRUE(pc_multipart_parse(req, &mp));
+    MultipartBody mp;
+    TEST_ASSERT_TRUE(Multipart.parse(req, &mp));
     TEST_ASSERT_EQUAL_UINT(strlen(data_str), mp.parts[0].data_len);
 }
 
@@ -385,8 +385,8 @@ void test_max_parts_captured()
 
     char buf[2048];
     HttpReq *req = build_multipart_req(0, "BND", body, buf, sizeof(buf));
-    Multipart mp;
-    TEST_ASSERT_TRUE(pc_multipart_parse(req, &mp));
+    MultipartBody mp;
+    TEST_ASSERT_TRUE(Multipart.parse(req, &mp));
     TEST_ASSERT_EQUAL_INT(MAX_MULTIPART_PARTS, mp.part_count);
 }
 
@@ -400,8 +400,8 @@ void test_empty_field_value()
                        "--B--\r\n";
 
     HttpReq *req = build_multipart_req(0, "B", body, buf, sizeof(buf));
-    Multipart mp;
-    TEST_ASSERT_TRUE(pc_multipart_parse(req, &mp));
+    MultipartBody mp;
+    TEST_ASSERT_TRUE(Multipart.parse(req, &mp));
     TEST_ASSERT_EQUAL_INT(1, mp.part_count);
     TEST_ASSERT_EQUAL_UINT(0, mp.parts[0].data_len);
 }
@@ -416,8 +416,8 @@ void test_part_without_filename_has_null_filename()
                        "--B--\r\n";
 
     HttpReq *req = build_multipart_req(0, "B", body, buf, sizeof(buf));
-    Multipart mp;
-    pc_multipart_parse(req, &mp);
+    MultipartBody mp;
+    Multipart.parse(req, &mp);
     TEST_ASSERT_NULL(mp.parts[0].filename);
 }
 
@@ -431,8 +431,8 @@ void test_part_without_content_type_has_null_type()
                        "--B--\r\n";
 
     HttpReq *req = build_multipart_req(0, "B", body, buf, sizeof(buf));
-    Multipart mp;
-    pc_multipart_parse(req, &mp);
+    MultipartBody mp;
+    Multipart.parse(req, &mp);
     TEST_ASSERT_NULL(mp.parts[0].type);
 }
 
@@ -455,8 +455,8 @@ void test_long_boundary_string()
 
     char buf[512];
     HttpReq *req = build_multipart_req(0, boundary, body, buf, sizeof(buf));
-    Multipart mp;
-    TEST_ASSERT_TRUE(pc_multipart_parse(req, &mp));
+    MultipartBody mp;
+    TEST_ASSERT_TRUE(Multipart.parse(req, &mp));
     TEST_ASSERT_EQUAL_STRING("long_boundary_test", mp.parts[0].data);
 }
 
@@ -483,8 +483,8 @@ void stress_parse_100_requests()
 
         char buf[256];
         HttpReq *req = build_multipart_req(slot, "B", body, buf, sizeof(buf));
-        Multipart mp;
-        TEST_ASSERT_TRUE_MESSAGE(pc_multipart_parse(req, &mp), "parse failed");
+        MultipartBody mp;
+        TEST_ASSERT_TRUE_MESSAGE(Multipart.parse(req, &mp), "parse failed");
         TEST_ASSERT_EQUAL_STRING_MESSAGE(val, mp.parts[0].data, "value mismatch");
     }
 }
@@ -499,15 +499,15 @@ void stress_get_field_100_lookups()
                        "--B--\r\n";
 
     HttpReq *req = build_multipart_req(0, "B", body, buf, sizeof(buf));
-    Multipart mp;
-    pc_multipart_parse(req, &mp);
+    MultipartBody mp;
+    Multipart.parse(req, &mp);
 
     for (int i = 0; i < 100; i++)
     {
-        const char *v = pc_multipart_get_field(&mp, "key");
+        const char *v = Multipart.get_field(&mp, "key");
         TEST_ASSERT_NOT_NULL_MESSAGE(v, "field not found");
         TEST_ASSERT_EQUAL_STRING_MESSAGE("found_it", v, "wrong value");
-        TEST_ASSERT_NULL_MESSAGE(pc_multipart_get_field(&mp, "missing"), "expected null");
+        TEST_ASSERT_NULL_MESSAGE(Multipart.get_field(&mp, "missing"), "expected null");
     }
 }
 
@@ -532,8 +532,8 @@ void test_binary_part_not_truncated()
     n += strlen(post);
 
     HttpReq *req = build_multipart_req_bin(0, "BND", body, n);
-    Multipart mp;
-    TEST_ASSERT_TRUE(pc_multipart_parse(req, &mp));
+    MultipartBody mp;
+    TEST_ASSERT_TRUE(Multipart.parse(req, &mp));
     TEST_ASSERT_EQUAL_INT(1, mp.part_count);                   // not split at the embedded token
     TEST_ASSERT_EQUAL_size_t(plen, mp.parts[0].data_len);      // full length, not truncated at NUL / --BND
     TEST_ASSERT_EQUAL_MEMORY(payload, mp.parts[0].data, plen); // bytes intact
@@ -547,8 +547,8 @@ void test_quoted_boundary()
     char bb[256];
     const char *body = "--BND\r\nContent-Disposition: form-data; name=\"f\"\r\n\r\nval\r\n--BND--\r\n";
     HttpReq *req = build_multipart_req(0, "\"BND\"", body, bb, sizeof(bb)); // Content-Type: boundary="BND"
-    Multipart mp;
-    TEST_ASSERT_TRUE(pc_multipart_parse(req, &mp));
+    MultipartBody mp;
+    TEST_ASSERT_TRUE(Multipart.parse(req, &mp));
     TEST_ASSERT_EQUAL_INT(1, mp.part_count);
     TEST_ASSERT_EQUAL_STRING("val", mp.parts[0].data);
 }
@@ -558,25 +558,25 @@ void test_empty_boundary_returns_false()
 {
     char bb[128];
     HttpReq *req = build_multipart_req(0, "\"\"", "--\r\n\r\n", bb, sizeof(bb));
-    Multipart mp;
-    TEST_ASSERT_FALSE(pc_multipart_parse(req, &mp));
+    MultipartBody mp;
+    TEST_ASSERT_FALSE(Multipart.parse(req, &mp));
 }
 
 // An unquoted or unterminated Content-Disposition value yields a null field (not a crash).
 void test_malformed_disposition_values()
 {
     char bb[256];
-    Multipart mp;
+    MultipartBody mp;
     // unquoted name= value
     const char *b1 = "--BND\r\nContent-Disposition: form-data; name=nq\r\n\r\nx\r\n--BND--\r\n";
     HttpReq *r1 = build_multipart_req(0, "BND", b1, bb, sizeof(bb));
-    TEST_ASSERT_TRUE(pc_multipart_parse(r1, &mp));
+    TEST_ASSERT_TRUE(Multipart.parse(r1, &mp));
     TEST_ASSERT_EQUAL_INT(1, mp.part_count);
     TEST_ASSERT_NULL(mp.parts[0].name);
     // opening quote with no closing quote
     const char *b2 = "--BND\r\nContent-Disposition: form-data; name=\"unclosed\r\n\r\nx\r\n--BND--\r\n";
     HttpReq *r2 = build_multipart_req(0, "BND", b2, bb, sizeof(bb));
-    TEST_ASSERT_TRUE(pc_multipart_parse(r2, &mp));
+    TEST_ASSERT_TRUE(Multipart.parse(r2, &mp));
     TEST_ASSERT_NULL(mp.parts[0].name);
 }
 
@@ -585,20 +585,20 @@ void test_body_shorter_than_delimiter()
 {
     char bb[64];
     HttpReq *req = build_multipart_req(0, "BND", "--B", bb, sizeof(bb));
-    Multipart mp;
-    TEST_ASSERT_FALSE(pc_multipart_parse(req, &mp));
+    MultipartBody mp;
+    TEST_ASSERT_FALSE(Multipart.parse(req, &mp));
 }
 
 // A part header with no CRLF, and part data with no closing delimiter, both fail closed.
 void test_truncated_part_fails_closed()
 {
     char bb[256];
-    Multipart mp;
+    MultipartBody mp;
     HttpReq *r1 = build_multipart_req(0, "BND", "--BND\r\nContent-Disposition: form-data; name=\"f\"", bb, sizeof(bb));
-    TEST_ASSERT_FALSE(pc_multipart_parse(r1, &mp)); // header without CRLF
+    TEST_ASSERT_FALSE(Multipart.parse(r1, &mp)); // header without CRLF
     HttpReq *r2 = build_multipart_req(
         0, "BND", "--BND\r\nContent-Disposition: form-data; name=\"f\"\r\n\r\ndata-no-end", bb, sizeof(bb));
-    TEST_ASSERT_FALSE(pc_multipart_parse(r2, &mp)); // data without closing "\r\n--boundary"
+    TEST_ASSERT_FALSE(Multipart.parse(r2, &mp)); // data without closing "\r\n--boundary"
 }
 
 // A boundary value that stops at a ';' (more Content-Type params follow) or a ' ' (unquoted,
@@ -606,15 +606,15 @@ void test_truncated_part_fails_closed()
 void test_boundary_stops_at_semicolon_or_space()
 {
     char bb[512];
-    Multipart mp;
+    MultipartBody mp;
     const char *b1 = "--BND\r\nContent-Disposition: form-data; name=\"f\"\r\n\r\nv1\r\n--BND--\r\n";
     HttpReq *r1 = build_multipart_req(0, "BND;charset=utf-8", b1, bb, sizeof(bb));
-    TEST_ASSERT_TRUE(pc_multipart_parse(r1, &mp));
+    TEST_ASSERT_TRUE(Multipart.parse(r1, &mp));
     TEST_ASSERT_EQUAL_STRING("v1", mp.parts[0].data);
 
     const char *b2 = "--BND\r\nContent-Disposition: form-data; name=\"f\"\r\n\r\nv2\r\n--BND--\r\n";
     HttpReq *r2 = build_multipart_req(0, "BND extra", b2, bb, sizeof(bb));
-    TEST_ASSERT_TRUE(pc_multipart_parse(r2, &mp));
+    TEST_ASSERT_TRUE(Multipart.parse(r2, &mp));
     TEST_ASSERT_EQUAL_STRING("v2", mp.parts[0].data);
 }
 
@@ -625,8 +625,8 @@ void test_empty_multipart_body_has_no_parts()
 {
     char bb[64];
     HttpReq *req = build_multipart_req(0, "BND", "--BND--\r\n", bb, sizeof(bb));
-    Multipart mp;
-    TEST_ASSERT_FALSE(pc_multipart_parse(req, &mp));
+    MultipartBody mp;
+    TEST_ASSERT_FALSE(Multipart.parse(req, &mp));
     TEST_ASSERT_EQUAL_INT(0, mp.part_count);
 }
 
@@ -636,24 +636,24 @@ void test_lone_cr_after_delimiter_fails_closed()
 {
     char bb[64];
     HttpReq *req = build_multipart_req(0, "BND", "--BND\rzzz", bb, sizeof(bb));
-    Multipart mp;
-    TEST_ASSERT_FALSE(pc_multipart_parse(req, &mp));
+    MultipartBody mp;
+    TEST_ASSERT_FALSE(Multipart.parse(req, &mp));
 }
 
 // A per-part header line that matches neither Content-Disposition nor Content-Type is simply
-// ignored (not a parse error), leaving name/filename/type null; pc_multipart_get_field must
+// ignored (not a parse error), leaving name/filename/type null; Multipart.get_field must
 // skip such a nameless part without crashing.
 void test_unrecognized_header_line_yields_null_name()
 {
     char bb[128];
     const char *body = "--BND\r\n-X\r\n\r\ndata\r\n--BND--\r\n";
     HttpReq *req = build_multipart_req(0, "BND", body, bb, sizeof(bb));
-    Multipart mp;
-    TEST_ASSERT_TRUE(pc_multipart_parse(req, &mp));
+    MultipartBody mp;
+    TEST_ASSERT_TRUE(Multipart.parse(req, &mp));
     TEST_ASSERT_EQUAL_INT(1, mp.part_count);
     TEST_ASSERT_NULL(mp.parts[0].name);
     TEST_ASSERT_EQUAL_STRING("data", mp.parts[0].data);
-    TEST_ASSERT_NULL(pc_multipart_get_field(&mp, "anything")); // skips the nameless part, no crash
+    TEST_ASSERT_NULL(Multipart.get_field(&mp, "anything")); // skips the nameless part, no crash
 }
 
 // A part's data runs right up to the last byte of the buffer (the closing "\r\n--boundary" is
@@ -664,8 +664,8 @@ void test_part_data_ends_exactly_at_buffer_end()
     char bb[128];
     HttpReq *req = build_multipart_req(
         0, "BND", "--BND\r\nContent-Disposition: form-data; name=\"f\"\r\n\r\ndata\r\n--BND", bb, sizeof(bb));
-    Multipart mp;
-    TEST_ASSERT_FALSE(pc_multipart_parse(req, &mp));
+    MultipartBody mp;
+    TEST_ASSERT_FALSE(Multipart.parse(req, &mp));
 }
 
 // The body is exactly the opening delimiter with nothing after it at all (not even a CRLF) -
@@ -675,8 +675,8 @@ void test_delimiter_with_nothing_after_it()
 {
     char bb[32];
     HttpReq *req = build_multipart_req(0, "BND", "--BND", bb, sizeof(bb));
-    Multipart mp;
-    TEST_ASSERT_FALSE(pc_multipart_parse(req, &mp));
+    MultipartBody mp;
+    TEST_ASSERT_FALSE(Multipart.parse(req, &mp));
 }
 
 // After a part's data delimiter, a lone '\r' not followed by '\n' fails closed instead of being
@@ -686,8 +686,8 @@ void test_lone_cr_after_data_delimiter_fails_closed()
     char bb[128];
     const char *body = "--BND\r\nContent-Disposition: form-data; name=\"f\"\r\n\r\ndata\r\n--BND\rZ";
     HttpReq *req = build_multipart_req(0, "BND", body, bb, sizeof(bb));
-    Multipart mp;
-    TEST_ASSERT_FALSE(pc_multipart_parse(req, &mp));
+    MultipartBody mp;
+    TEST_ASSERT_FALSE(Multipart.parse(req, &mp));
 }
 
 // A Content-Disposition header with no space after the colon still parses (the leading-space
@@ -697,8 +697,8 @@ void test_content_disposition_no_space_after_colon()
     char bb[256];
     const char *body = "--BND\r\nContent-Disposition:form-data; name=\"f\"\r\n\r\nval\r\n--BND--\r\n";
     HttpReq *req = build_multipart_req(0, "BND", body, bb, sizeof(bb));
-    Multipart mp;
-    TEST_ASSERT_TRUE(pc_multipart_parse(req, &mp));
+    MultipartBody mp;
+    TEST_ASSERT_TRUE(Multipart.parse(req, &mp));
     TEST_ASSERT_EQUAL_STRING("f", mp.parts[0].name);
     TEST_ASSERT_EQUAL_STRING("val", mp.parts[0].data);
 }

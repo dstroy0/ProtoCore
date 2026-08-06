@@ -60,7 +60,7 @@
  * SSE:        MAX_SSE_CONNS (2), SSE_BUF_SIZE (256)
  * Files:      FILE_CHUNK_SIZE (512, <= RX_BUF_SIZE)
  * Auth:       MAX_AUTH_LEN (32, >= 2)
- * Multipart:  MAX_MULTIPART_PARTS (4), MAX_BOUNDARY_LEN (72)
+ * MultipartBody:  MAX_MULTIPART_PARTS (4), MAX_BOUNDARY_LEN (72)
  * Constraint: MAX_WS_CONNS + MAX_SSE_CONNS <= MAX_CONNS
  *
  * ============================================================

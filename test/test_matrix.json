@@ -1390,7 +1390,6 @@
         "+<services/iot/senml/senml.c>",
         "+<network_drivers/presentation/codec/json/json.c>",
         "+<network_drivers/presentation/codec/cbor/cbor.c>",
-        "+<network_drivers/presentation/codec/codec.c>",
         "+<mmgr/protostr.c>"
       ],
       "tests": ["unit/codec/test_senml"]
@@ -1791,7 +1790,6 @@
         "+<mmgr/plaintext.c>",
         "+<network_drivers/session/worker.c>",
         "+<board_drivers/hal/portable/portable_platform.c>",
-        "+<network_drivers/presentation/codec/codec.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>"
       ],
@@ -2484,19 +2482,13 @@
     "native_cbor": {
       "desc": "CBOR (RFC 8949) encoder (network_drivers/presentation/codec/cbor): a pure byte-output\ncodec, host-tested against the RFC 8949 Appendix A vectors.",
       "flags": ["-DPC_ENABLE_CBOR=1"],
-      "src": [
-        "+<network_drivers/presentation/codec/cbor/cbor.c>",
-        "+<network_drivers/presentation/codec/codec.c>"
-      ],
+      "src": ["+<network_drivers/presentation/codec/cbor/cbor.c>"],
       "tests": ["unit/codec/test_cbor"]
     },
     "native_msgpack": {
       "desc": "MessagePack encoder (network_drivers/presentation/codec/msgpack): a pure byte-output\ncodec, host-tested against the spec encodings.",
       "flags": ["-DPC_ENABLE_MSGPACK=1"],
-      "src": [
-        "+<network_drivers/presentation/codec/msgpack/msgpack.c>",
-        "+<network_drivers/presentation/codec/codec.c>"
-      ],
+      "src": ["+<network_drivers/presentation/codec/msgpack/msgpack.c>"],
       "tests": ["unit/codec/test_msgpack"]
     },
     "native_gpio_map": {
@@ -3151,7 +3143,6 @@
         "+<network_drivers/session/worker.c>",
         "+<board_drivers/hal/portable/portable_platform.c>",
         "+<mmgr/frame.c>",
-        "+<network_drivers/presentation/codec/codec.c>",
         "+<mmgr/protostr.c>"
       ],
       "tests": ["integration/fieldbus/test_dispatch"]

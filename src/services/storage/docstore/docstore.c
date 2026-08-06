@@ -85,7 +85,7 @@ static proto_bool find_cb(const char *key, uint16_t key_len, void *vctx)
     proto_bool match = PROTO_FALSE;
     if (f->kind == FIND_STR)
     {
-        if (json_get_str(json, f->field, f->fieldtmp, sizeof(f->fieldtmp)))
+        if (Json.get_str(json, f->field, f->fieldtmp, sizeof(f->fieldtmp)))
         {
             match = (strcmp(f->fieldtmp, f->sval) == 0);
         }
@@ -93,7 +93,7 @@ static proto_bool find_cb(const char *key, uint16_t key_len, void *vctx)
     else if (f->kind == FIND_INT)
     {
         long v = 0;
-        if (json_get_int(json, f->field, &v))
+        if (Json.get_int(json, f->field, &v))
         {
             match = (v == f->ival);
         }
@@ -101,7 +101,7 @@ static proto_bool find_cb(const char *key, uint16_t key_len, void *vctx)
     else
     {
         proto_bool b = PROTO_FALSE;
-        if (json_get_bool(json, f->field, &b))
+        if (Json.get_bool(json, f->field, &b))
         {
             match = (b == f->bval);
         }

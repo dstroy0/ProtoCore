@@ -243,10 +243,10 @@ proto_bool ws_send_frame(WsConn *ws, WsOpcode opcode, const uint8_t *payload, ui
         if (scr && cbuf)
         {
             size_t clen = 0;
-            DeflateResult rc = deflate_raw(payload, len, cbuf, cap, &clen, scr, DEFLATE_SCRATCH_SIZE);
+            DeflateResult rc = Deflate.raw(payload, len, cbuf, cap, &clen, scr, DEFLATE_SCRATCH_SIZE);
             // Only adopt it if it actually shrank the message; otherwise send it
             // uncompressed (the per-message RSV1 flag makes that legal).
-            // rc != DEFLATE_OK is unreachable here: deflate_raw returns non-OK only on
+            // rc != DEFLATE_OK is unreachable here: Deflate.raw returns non-OK only on
             // ERR_SCRATCH (we always pass the full DEFLATE_SCRATCH_SIZE) or ERR_OVERFLOW,
             // and cap = len + len/8 + 16 exactly bounds the fixed-Huffman worst case
             // (all-9-bit literals = 1.125*len, matches only shrink, +16 covers the fixed
@@ -391,7 +391,7 @@ static void ws_finish_frame(WsConn *ws, TcpConn *conn)
             in[comp_len + 2] = 0xff;
             in[comp_len + 3] = 0xff;
             size_t dlen = 0;
-            InflateResult rc = inflate_raw(in, comp_len + 4, out, WS_FRAME_SIZE, &dlen, tbl, INFLATE_SCRATCH_SIZE);
+            InflateResult rc = Inflate.raw(in, comp_len + 4, out, WS_FRAME_SIZE, &dlen, tbl, INFLATE_SCRATCH_SIZE);
             if (rc == INFLATE_ERR_OVERFLOW)
             {
                 pc_plaintext_release(pt_mark);

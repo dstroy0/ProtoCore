@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Host-side microbenchmark for the permessage-deflate codec (RFC 7692): deflate_raw() + inflate_raw(),
+// Host-side microbenchmark for the permessage-deflate codec (RFC 7692): Deflate.raw() + Inflate.raw(),
 // the compress/decompress hot ops on every WebSocket data frame when permessage-deflate is negotiated
 // (also the SSH zlib@openssh path). Both are pure (no sockets, no heap - a caller scratch), so they link
 // standalone. The device number comes from the rig /bench endpoint; this host ns/op + MB/s is a RELATIVE
@@ -54,9 +54,9 @@ int main()
     uint8_t plain[512];
     size_t clen = 0, plen = 0;
 
-    deflate_raw((const uint8_t *)MSG, n, comp, sizeof(comp), &clen, dscratch, DEFLATE_SCRATCH_SIZE);
+    Deflate.raw((const uint8_t *)MSG, n, comp, sizeof(comp), &clen, dscratch, DEFLATE_SCRATCH_SIZE);
     // permessage-deflate (RFC 7692) strips the 00 00 FF FF sync-flush trailer on send; the receiver
-    // appends it back before inflating (inflate_raw is called with comp_len + 4).
+    // appends it back before inflating (Inflate.raw is called with comp_len + 4).
     comp[clen] = 0x00;
     comp[clen + 1] = 0x00;
     comp[clen + 2] = 0xFF;
@@ -70,7 +70,7 @@ int main()
         volatile int sink = 0;
         double ns = bench_ns(200000, [&] {
             size_t o = 0;
-            sink += (int)deflate_raw((const uint8_t *)MSG, n, comp, sizeof(comp), &o, dscratch, DEFLATE_SCRATCH_SIZE);
+            sink += (int)Deflate.raw((const uint8_t *)MSG, n, comp, sizeof(comp), &o, dscratch, DEFLATE_SCRATCH_SIZE);
         });
         row("ws-deflate", "deflate (json msg)", ns, (double)n);
         (void)sink;
@@ -80,7 +80,7 @@ int main()
         volatile int sink = 0;
         double ns = bench_ns(200000, [&] {
             plen = 0;
-            sink += (int)inflate_raw(comp, clen + 4, plain, sizeof(plain), &plen, iscratch, INFLATE_SCRATCH_SIZE);
+            sink += (int)Inflate.raw(comp, clen + 4, plain, sizeof(plain), &plen, iscratch, INFLATE_SCRATCH_SIZE);
         });
         row("ws-deflate", "inflate (json msg)", ns, (double)plen);
         (void)sink;

@@ -27,23 +27,23 @@ void test_uint()
     uint8_t b[16];
     pc_span w;
     w = pc_span_from(b, sizeof(b));
-    pc_msgpack_uint(&w, 0);
+    MsgPack.put_uint(&w, 0);
     uint8_t e0[] = {0x00};
     check(b, pc_span_len(w), e0, 1);
     w = pc_span_from(b, sizeof(b));
-    pc_msgpack_uint(&w, 127);
+    MsgPack.put_uint(&w, 127);
     uint8_t e7f[] = {0x7f};
     check(b, pc_span_len(w), e7f, 1);
     w = pc_span_from(b, sizeof(b));
-    pc_msgpack_uint(&w, 128);
+    MsgPack.put_uint(&w, 128);
     uint8_t e80[] = {0xcc, 0x80};
     check(b, pc_span_len(w), e80, 2);
     w = pc_span_from(b, sizeof(b));
-    pc_msgpack_uint(&w, 256);
+    MsgPack.put_uint(&w, 256);
     uint8_t e256[] = {0xcd, 0x01, 0x00};
     check(b, pc_span_len(w), e256, 3);
     w = pc_span_from(b, sizeof(b));
-    pc_msgpack_uint(&w, 65536);
+    MsgPack.put_uint(&w, 65536);
     uint8_t e64k[] = {0xce, 0x00, 0x01, 0x00, 0x00};
     check(b, pc_span_len(w), e64k, 5);
 }
@@ -53,23 +53,23 @@ void test_int()
     uint8_t b[16];
     pc_span w;
     w = pc_span_from(b, sizeof(b));
-    pc_msgpack_int(&w, -1);
+    MsgPack.put_int(&w, -1);
     uint8_t e[] = {0xff};
     check(b, pc_span_len(w), e, 1);
     w = pc_span_from(b, sizeof(b));
-    pc_msgpack_int(&w, -32);
+    MsgPack.put_int(&w, -32);
     uint8_t e32[] = {0xe0};
     check(b, pc_span_len(w), e32, 1);
     w = pc_span_from(b, sizeof(b));
-    pc_msgpack_int(&w, -33);
+    MsgPack.put_int(&w, -33);
     uint8_t e33[] = {0xd0, 0xdf};
     check(b, pc_span_len(w), e33, 2);
     w = pc_span_from(b, sizeof(b));
-    pc_msgpack_int(&w, -129);
+    MsgPack.put_int(&w, -129);
     uint8_t e129[] = {0xd1, 0xff, 0x7f};
     check(b, pc_span_len(w), e129, 3);
     w = pc_span_from(b, sizeof(b));
-    pc_msgpack_int(&w, 42); // positive via pc_msgpack_int -> fixint
+    MsgPack.put_int(&w, 42); // positive via MsgPack.put_int -> fixint
     uint8_t e42[] = {0x2a};
     check(b, pc_span_len(w), e42, 1);
 }
@@ -79,27 +79,27 @@ void test_str()
     uint8_t b[40];
     pc_span w;
     w = pc_span_from(b, sizeof(b));
-    pc_msgpack_str(&w, "");
+    MsgPack.put_str(&w, "");
     uint8_t e[] = {0xa0};
     check(b, pc_span_len(w), e, 1);
     w = pc_span_from(b, sizeof(b));
-    pc_msgpack_str(&w, "a");
+    MsgPack.put_str(&w, "a");
     uint8_t e2[] = {0xa1, 0x61};
     check(b, pc_span_len(w), e2, 2);
     w = pc_span_from(b, sizeof(b));
-    pc_msgpack_str(&w, "hello");
+    MsgPack.put_str(&w, "hello");
     uint8_t e3[] = {0xa5, 0x68, 0x65, 0x6c, 0x6c, 0x6f};
     check(b, pc_span_len(w), e3, 6);
 }
 
-// A NULL string pointer takes the "" branch of pc_msgpack_str's length ternary.
+// A NULL string pointer takes the "" branch of MsgPack.put_str's length ternary.
 void test_str_null_pointer()
 {
     uint8_t b[4];
     pc_span w;
     w = pc_span_from(b, sizeof(b));
-    pc_msgpack_str(&w, NULL);
-    uint8_t e[] = {0xa0}; // zero-length fixstr, same as pc_msgpack_str(&w, "")
+    MsgPack.put_str(&w, NULL);
+    uint8_t e[] = {0xa0}; // zero-length fixstr, same as MsgPack.put_str(&w, "")
     check(b, pc_span_len(w), e, 1);
 }
 
@@ -109,7 +109,7 @@ void test_bytes()
     pc_span w;
     w = pc_span_from(b, sizeof(b));
     uint8_t data[] = {1, 2, 3};
-    pc_msgpack_bytes(&w, data, 3);
+    MsgPack.put_bytes(&w, data, 3);
     uint8_t e[] = {0xc4, 0x03, 0x01, 0x02, 0x03};
     check(b, pc_span_len(w), e, 5);
 }
@@ -119,15 +119,15 @@ void test_simple()
     uint8_t b[8];
     pc_span w;
     w = pc_span_from(b, sizeof(b));
-    pc_msgpack_bool(&w, PROTO_FALSE);
+    MsgPack.put_bool(&w, PROTO_FALSE);
     uint8_t e[] = {0xc2};
     check(b, pc_span_len(w), e, 1);
     w = pc_span_from(b, sizeof(b));
-    pc_msgpack_bool(&w, PROTO_TRUE);
+    MsgPack.put_bool(&w, PROTO_TRUE);
     uint8_t e2[] = {0xc3};
     check(b, pc_span_len(w), e2, 1);
     w = pc_span_from(b, sizeof(b));
-    pc_msgpack_null(&w);
+    MsgPack.put_null(&w);
     uint8_t e3[] = {0xc0};
     check(b, pc_span_len(w), e3, 1);
 }
@@ -137,7 +137,7 @@ void test_float()
     uint8_t b[8];
     pc_span w;
     w = pc_span_from(b, sizeof(b));
-    pc_msgpack_float(&w, 1.0f);
+    MsgPack.put_float(&w, 1.0f);
     uint8_t e[] = {0xca, 0x3f, 0x80, 0x00, 0x00};
     check(b, pc_span_len(w), e, 5);
 }
@@ -147,16 +147,16 @@ void test_array_and_map()
     uint8_t b[16];
     pc_span w;
     w = pc_span_from(b, sizeof(b));
-    pc_msgpack_array(&w, 3);
-    pc_msgpack_uint(&w, 1);
-    pc_msgpack_uint(&w, 2);
-    pc_msgpack_uint(&w, 3);
+    MsgPack.put_array(&w, 3);
+    MsgPack.put_uint(&w, 1);
+    MsgPack.put_uint(&w, 2);
+    MsgPack.put_uint(&w, 3);
     uint8_t e[] = {0x93, 0x01, 0x02, 0x03};
     check(b, pc_span_len(w), e, 4);
     w = pc_span_from(b, sizeof(b));
-    pc_msgpack_map(&w, 1);
-    pc_msgpack_uint(&w, 1);
-    pc_msgpack_uint(&w, 2);
+    MsgPack.put_map(&w, 1);
+    MsgPack.put_uint(&w, 1);
+    MsgPack.put_uint(&w, 2);
     uint8_t e2[] = {0x81, 0x01, 0x02};
     check(b, pc_span_len(w), e2, 3);
 }
@@ -166,7 +166,7 @@ void test_overflow_fails_closed()
     uint8_t b[2];
     pc_span w;
     w = pc_span_from(b, sizeof(b));
-    pc_msgpack_uint(&w, 65536); // needs 5 bytes
+    MsgPack.put_uint(&w, 65536); // needs 5 bytes
     TEST_ASSERT_FALSE(pc_span_ok(w));
     TEST_ASSERT_EQUAL_size_t(5, pc_span_len(w));
 }
@@ -183,21 +183,21 @@ void test_decode_uint()
     pc_cspan r;
     r = pc_cspan_from(in, sizeof(in));
     uint64_t v;
-    TEST_ASSERT_EQUAL(PC_CODEC_UINT, pc_msgpack_peek(&r));
-    TEST_ASSERT_TRUE(pc_msgpack_read_uint(&r, &v));
+    TEST_ASSERT_EQUAL(PC_CODEC_UINT, MsgPack.peek(&r));
+    TEST_ASSERT_TRUE(MsgPack.get_uint(&r, &v));
     TEST_ASSERT_EQUAL_UINT64(0, v);
-    TEST_ASSERT_TRUE(pc_msgpack_read_uint(&r, &v));
+    TEST_ASSERT_TRUE(MsgPack.get_uint(&r, &v));
     TEST_ASSERT_EQUAL_UINT64(127, v);
-    TEST_ASSERT_TRUE(pc_msgpack_read_uint(&r, &v));
+    TEST_ASSERT_TRUE(MsgPack.get_uint(&r, &v));
     TEST_ASSERT_EQUAL_UINT64(128, v);
-    TEST_ASSERT_TRUE(pc_msgpack_read_uint(&r, &v));
+    TEST_ASSERT_TRUE(MsgPack.get_uint(&r, &v));
     TEST_ASSERT_EQUAL_UINT64(256, v);
-    TEST_ASSERT_TRUE(pc_msgpack_read_uint(&r, &v));
+    TEST_ASSERT_TRUE(MsgPack.get_uint(&r, &v));
     TEST_ASSERT_EQUAL_UINT64(65536, v);
-    TEST_ASSERT_TRUE(pc_msgpack_read_uint(&r, &v));
+    TEST_ASSERT_TRUE(MsgPack.get_uint(&r, &v));
     TEST_ASSERT_EQUAL_UINT64(0x100000000ULL, v);
     TEST_ASSERT_TRUE(pc_cspan_ok(r));
-    TEST_ASSERT_EQUAL(PC_CODEC_INVALID, pc_msgpack_peek(&r)); // exhausted
+    TEST_ASSERT_EQUAL(PC_CODEC_INVALID, MsgPack.peek(&r)); // exhausted
 }
 
 void test_decode_int()
@@ -207,22 +207,22 @@ void test_decode_int()
     pc_cspan r;
     r = pc_cspan_from(in, sizeof(in));
     int64_t v;
-    TEST_ASSERT_EQUAL(PC_CODEC_INT, pc_msgpack_peek(&r));
-    TEST_ASSERT_TRUE(pc_msgpack_read_int(&r, &v));
+    TEST_ASSERT_EQUAL(PC_CODEC_INT, MsgPack.peek(&r));
+    TEST_ASSERT_TRUE(MsgPack.get_int(&r, &v));
     TEST_ASSERT_EQUAL_INT64(-1, v);
-    TEST_ASSERT_TRUE(pc_msgpack_read_int(&r, &v));
+    TEST_ASSERT_TRUE(MsgPack.get_int(&r, &v));
     TEST_ASSERT_EQUAL_INT64(-32, v);
-    TEST_ASSERT_TRUE(pc_msgpack_read_int(&r, &v));
+    TEST_ASSERT_TRUE(MsgPack.get_int(&r, &v));
     TEST_ASSERT_EQUAL_INT64(-128, v);
-    TEST_ASSERT_TRUE(pc_msgpack_read_int(&r, &v));
+    TEST_ASSERT_TRUE(MsgPack.get_int(&r, &v));
     TEST_ASSERT_EQUAL_INT64(-32768, v);
-    TEST_ASSERT_TRUE(pc_msgpack_read_int(&r, &v));
+    TEST_ASSERT_TRUE(MsgPack.get_int(&r, &v));
     TEST_ASSERT_EQUAL_INT64(-2147483648LL, v);
     TEST_ASSERT_TRUE(pc_cspan_ok(r));
     // read_int also accepts an unsigned encoding
     uint8_t u[] = {0xcc, 0x80};
     r = pc_cspan_from(u, sizeof(u));
-    TEST_ASSERT_TRUE(pc_msgpack_read_int(&r, &v));
+    TEST_ASSERT_TRUE(MsgPack.get_int(&r, &v));
     TEST_ASSERT_EQUAL_INT64(128, v);
 }
 
@@ -233,13 +233,13 @@ void test_decode_str_and_bytes()
     r = pc_cspan_from(in, sizeof(in));
     const char *s;
     size_t n;
-    TEST_ASSERT_EQUAL(PC_CODEC_STR, pc_msgpack_peek(&r));
-    TEST_ASSERT_TRUE(pc_msgpack_read_str(&r, &s, &n));
+    TEST_ASSERT_EQUAL(PC_CODEC_STR, MsgPack.peek(&r));
+    TEST_ASSERT_TRUE(MsgPack.get_str(&r, &s, &n));
     TEST_ASSERT_EQUAL_size_t(3, n);
     TEST_ASSERT_EQUAL_CHAR_ARRAY("abc", s, 3);
     const uint8_t *bin;
-    TEST_ASSERT_EQUAL(PC_CODEC_BYTES, pc_msgpack_peek(&r));
-    TEST_ASSERT_TRUE(pc_msgpack_read_bytes(&r, &bin, &n));
+    TEST_ASSERT_EQUAL(PC_CODEC_BYTES, MsgPack.peek(&r));
+    TEST_ASSERT_TRUE(MsgPack.get_bytes(&r, &bin, &n));
     TEST_ASSERT_EQUAL_size_t(2, n);
     TEST_ASSERT_EQUAL_UINT8(0xde, bin[0]);
     TEST_ASSERT_EQUAL_UINT8(0xad, bin[1]);
@@ -252,20 +252,20 @@ void test_decode_simple_and_float()
     r = pc_cspan_from(in, sizeof(in));
     proto_bool bv;
     float fv;
-    TEST_ASSERT_EQUAL(PC_CODEC_NULL, pc_msgpack_peek(&r));
-    TEST_ASSERT_TRUE(pc_msgpack_read_null(&r));
-    TEST_ASSERT_EQUAL(PC_CODEC_BOOL, pc_msgpack_peek(&r));
-    TEST_ASSERT_TRUE(pc_msgpack_read_bool(&r, &bv));
+    TEST_ASSERT_EQUAL(PC_CODEC_NULL, MsgPack.peek(&r));
+    TEST_ASSERT_TRUE(MsgPack.get_null(&r));
+    TEST_ASSERT_EQUAL(PC_CODEC_BOOL, MsgPack.peek(&r));
+    TEST_ASSERT_TRUE(MsgPack.get_bool(&r, &bv));
     TEST_ASSERT_FALSE(bv);
-    TEST_ASSERT_TRUE(pc_msgpack_read_bool(&r, &bv));
+    TEST_ASSERT_TRUE(MsgPack.get_bool(&r, &bv));
     TEST_ASSERT_TRUE(bv);
-    TEST_ASSERT_EQUAL(PC_CODEC_FLOAT, pc_msgpack_peek(&r));
-    TEST_ASSERT_TRUE(pc_msgpack_read_float(&r, &fv));
+    TEST_ASSERT_EQUAL(PC_CODEC_FLOAT, MsgPack.peek(&r));
+    TEST_ASSERT_TRUE(MsgPack.get_float(&r, &fv));
     TEST_ASSERT_EQUAL_FLOAT(1.0f, fv);
     // float64 (0xcb) narrows to float
     uint8_t d[] = {0xcb, 0x40, 0x09, 0x21, 0xfb, 0x54, 0x44, 0x2d, 0x18}; // pi as double
     r = pc_cspan_from(d, sizeof(d));
-    TEST_ASSERT_TRUE(pc_msgpack_read_float(&r, &fv));
+    TEST_ASSERT_TRUE(MsgPack.get_float(&r, &fv));
     TEST_ASSERT_FLOAT_WITHIN(0.0001f, 3.14159f, fv);
 }
 
@@ -275,23 +275,23 @@ void test_decode_array_and_map()
     pc_cspan r;
     r = pc_cspan_from(in, sizeof(in));
     size_t count;
-    TEST_ASSERT_EQUAL(PC_CODEC_ARRAY, pc_msgpack_peek(&r));
-    TEST_ASSERT_TRUE(pc_msgpack_read_array(&r, &count));
+    TEST_ASSERT_EQUAL(PC_CODEC_ARRAY, MsgPack.peek(&r));
+    TEST_ASSERT_TRUE(MsgPack.get_array(&r, &count));
     TEST_ASSERT_EQUAL_size_t(3, count);
     uint64_t v;
     for (size_t i = 0; i < count; i++)
     {
-        TEST_ASSERT_TRUE(pc_msgpack_read_uint(&r, &v));
+        TEST_ASSERT_TRUE(MsgPack.get_uint(&r, &v));
         TEST_ASSERT_EQUAL_UINT64(i + 1, v);
     }
-    TEST_ASSERT_EQUAL(PC_CODEC_MAP, pc_msgpack_peek(&r));
-    TEST_ASSERT_TRUE(pc_msgpack_read_map(&r, &count));
+    TEST_ASSERT_EQUAL(PC_CODEC_MAP, MsgPack.peek(&r));
+    TEST_ASSERT_TRUE(MsgPack.get_map(&r, &count));
     TEST_ASSERT_EQUAL_size_t(1, count);
     const char *s;
     size_t n;
-    TEST_ASSERT_TRUE(pc_msgpack_read_str(&r, &s, &n));
+    TEST_ASSERT_TRUE(MsgPack.get_str(&r, &s, &n));
     TEST_ASSERT_EQUAL_CHAR_ARRAY("k", s, 1);
-    TEST_ASSERT_TRUE(pc_msgpack_read_uint(&r, &v));
+    TEST_ASSERT_TRUE(MsgPack.get_uint(&r, &v));
     TEST_ASSERT_EQUAL_UINT64(42, v);
 }
 
@@ -301,36 +301,36 @@ void test_decode_roundtrip()
     uint8_t b[64];
     pc_span w;
     w = pc_span_from(b, sizeof(b));
-    pc_msgpack_map(&w, 3);
-    pc_msgpack_str(&w, "id");
-    pc_msgpack_uint(&w, 4242);
-    pc_msgpack_str(&w, "t");
-    pc_msgpack_float(&w, 21.5f);
-    pc_msgpack_str(&w, "ok");
-    pc_msgpack_bool(&w, PROTO_TRUE);
+    MsgPack.put_map(&w, 3);
+    MsgPack.put_str(&w, "id");
+    MsgPack.put_uint(&w, 4242);
+    MsgPack.put_str(&w, "t");
+    MsgPack.put_float(&w, 21.5f);
+    MsgPack.put_str(&w, "ok");
+    MsgPack.put_bool(&w, PROTO_TRUE);
     TEST_ASSERT_TRUE(pc_span_ok(w));
 
     pc_cspan r;
     r = pc_cspan_from(b, pc_span_len(w));
     size_t count;
-    TEST_ASSERT_TRUE(pc_msgpack_read_map(&r, &count));
+    TEST_ASSERT_TRUE(MsgPack.get_map(&r, &count));
     TEST_ASSERT_EQUAL_size_t(3, count);
     const char *k;
     size_t kn;
     uint64_t uv;
     float fv;
     proto_bool bv;
-    TEST_ASSERT_TRUE(pc_msgpack_read_str(&r, &k, &kn));
+    TEST_ASSERT_TRUE(MsgPack.get_str(&r, &k, &kn));
     TEST_ASSERT_EQUAL_CHAR_ARRAY("id", k, 2);
-    TEST_ASSERT_TRUE(pc_msgpack_read_uint(&r, &uv));
+    TEST_ASSERT_TRUE(MsgPack.get_uint(&r, &uv));
     TEST_ASSERT_EQUAL_UINT64(4242, uv);
-    TEST_ASSERT_TRUE(pc_msgpack_read_str(&r, &k, &kn));
+    TEST_ASSERT_TRUE(MsgPack.get_str(&r, &k, &kn));
     TEST_ASSERT_EQUAL_CHAR_ARRAY("t", k, 1);
-    TEST_ASSERT_TRUE(pc_msgpack_read_float(&r, &fv));
+    TEST_ASSERT_TRUE(MsgPack.get_float(&r, &fv));
     TEST_ASSERT_EQUAL_FLOAT(21.5f, fv);
-    TEST_ASSERT_TRUE(pc_msgpack_read_str(&r, &k, &kn));
+    TEST_ASSERT_TRUE(MsgPack.get_str(&r, &k, &kn));
     TEST_ASSERT_EQUAL_CHAR_ARRAY("ok", k, 2);
-    TEST_ASSERT_TRUE(pc_msgpack_read_bool(&r, &bv));
+    TEST_ASSERT_TRUE(MsgPack.get_bool(&r, &bv));
     TEST_ASSERT_TRUE(bv);
     TEST_ASSERT_TRUE(pc_cspan_ok(r));
 }
@@ -342,29 +342,29 @@ void test_decode_fails_closed()
     uint8_t t1[] = {0xcd, 0x01};
     r = pc_cspan_from(t1, sizeof(t1));
     uint64_t v;
-    TEST_ASSERT_FALSE(pc_msgpack_read_uint(&r, &v));
+    TEST_ASSERT_FALSE(MsgPack.get_uint(&r, &v));
     TEST_ASSERT_FALSE(pc_cspan_ok(r));
     // truncated str (len 5, only 2 bytes present)
     uint8_t t2[] = {0xa5, 'h', 'i'};
     r = pc_cspan_from(t2, sizeof(t2));
     const char *s;
     size_t n;
-    TEST_ASSERT_FALSE(pc_msgpack_read_str(&r, &s, &n));
+    TEST_ASSERT_FALSE(MsgPack.get_str(&r, &s, &n));
     TEST_ASSERT_FALSE(pc_cspan_ok(r));
     // type mismatch: read_uint on a bool
     uint8_t t3[] = {0xc3};
     r = pc_cspan_from(t3, sizeof(t3));
-    TEST_ASSERT_FALSE(pc_msgpack_read_uint(&r, &v));
+    TEST_ASSERT_FALSE(MsgPack.get_uint(&r, &v));
     TEST_ASSERT_FALSE(pc_cspan_ok(r));
     // unsupported byte (0xc1) peeks INVALID and any read fails
     uint8_t t4[] = {0xc1};
     r = pc_cspan_from(t4, sizeof(t4));
-    TEST_ASSERT_EQUAL(PC_CODEC_INVALID, pc_msgpack_peek(&r));
-    TEST_ASSERT_FALSE(pc_msgpack_read_int(&r, (int64_t *)&v));
+    TEST_ASSERT_EQUAL(PC_CODEC_INVALID, MsgPack.peek(&r));
+    TEST_ASSERT_FALSE(MsgPack.get_int(&r, (int64_t *)&v));
     // empty buffer
     r = pc_cspan_from(t4, 0);
-    TEST_ASSERT_EQUAL(PC_CODEC_INVALID, pc_msgpack_peek(&r));
-    TEST_ASSERT_FALSE(pc_msgpack_read_null(&r));
+    TEST_ASSERT_EQUAL(PC_CODEC_INVALID, MsgPack.peek(&r));
+    TEST_ASSERT_FALSE(MsgPack.get_null(&r));
 }
 
 // Round-trip every wide encoding so both the encoder width branches (u64, i32,
@@ -381,30 +381,30 @@ void test_wide_roundtrip()
     const uint8_t *bp;
 
     w = pc_span_from(b, sizeof(b));
-    pc_msgpack_uint(&w, 0x123456789ULL); // uint64 (0xcf)
+    MsgPack.put_uint(&w, 0x123456789ULL); // uint64 (0xcf)
     TEST_ASSERT_EQUAL_UINT8(0xcf, b[0]);
     r = pc_cspan_from(b, pc_span_len(w));
-    TEST_ASSERT_TRUE(pc_msgpack_read_uint(&r, &uv));
+    TEST_ASSERT_TRUE(MsgPack.get_uint(&r, &uv));
     TEST_ASSERT_EQUAL_UINT64(0x123456789ULL, uv);
 
     w = pc_span_from(b, sizeof(b));
-    pc_msgpack_int(&w, -70000); // int32 (0xd2)
+    MsgPack.put_int(&w, -70000); // int32 (0xd2)
     TEST_ASSERT_EQUAL_UINT8(0xd2, b[0]);
     r = pc_cspan_from(b, pc_span_len(w));
-    TEST_ASSERT_TRUE(pc_msgpack_read_int(&r, &iv));
+    TEST_ASSERT_TRUE(MsgPack.get_int(&r, &iv));
     TEST_ASSERT_EQUAL_INT64(-70000, iv);
 
     w = pc_span_from(b, sizeof(b));
-    pc_msgpack_int(&w, -5000000000LL); // int64 (0xd3)
+    MsgPack.put_int(&w, -5000000000LL); // int64 (0xd3)
     TEST_ASSERT_EQUAL_UINT8(0xd3, b[0]);
     r = pc_cspan_from(b, pc_span_len(w));
-    TEST_ASSERT_TRUE(pc_msgpack_read_int(&r, &iv));
+    TEST_ASSERT_TRUE(MsgPack.get_int(&r, &iv));
     TEST_ASSERT_EQUAL_INT64(-5000000000LL, iv);
 
     w = pc_span_from(b, sizeof(b));
-    pc_msgpack_int(&w, 5000000000LL); // positive crossing into a wide int
+    MsgPack.put_int(&w, 5000000000LL); // positive crossing into a wide int
     r = pc_cspan_from(b, pc_span_len(w));
-    TEST_ASSERT_TRUE(pc_msgpack_read_int(&r, &iv));
+    TEST_ASSERT_TRUE(MsgPack.get_int(&r, &iv));
     TEST_ASSERT_EQUAL_INT64(5000000000LL, iv);
 
     char s40[41];
@@ -414,10 +414,10 @@ void test_wide_roundtrip()
     }
     s40[40] = '\0';
     w = pc_span_from(b, sizeof(b));
-    pc_msgpack_str(&w, s40); // str8 (0xd9)
+    MsgPack.put_str(&w, s40); // str8 (0xd9)
     TEST_ASSERT_EQUAL_UINT8(0xd9, b[0]);
     r = pc_cspan_from(b, pc_span_len(w));
-    TEST_ASSERT_TRUE(pc_msgpack_read_str(&r, &sp, &n));
+    TEST_ASSERT_TRUE(MsgPack.get_str(&r, &sp, &n));
     TEST_ASSERT_EQUAL_size_t(40, n);
 
     char s300[301];
@@ -427,16 +427,16 @@ void test_wide_roundtrip()
     }
     s300[300] = '\0';
     w = pc_span_from(b, sizeof(b));
-    pc_msgpack_str(&w, s300); // str16 (0xda)
+    MsgPack.put_str(&w, s300); // str16 (0xda)
     TEST_ASSERT_EQUAL_UINT8(0xda, b[0]);
     r = pc_cspan_from(b, pc_span_len(w));
-    TEST_ASSERT_TRUE(pc_msgpack_read_str(&r, &sp, &n));
+    TEST_ASSERT_TRUE(MsgPack.get_str(&r, &sp, &n));
     TEST_ASSERT_EQUAL_size_t(300, n);
 
     w = pc_span_from(b, sizeof(b));
-    pc_msgpack_str_n(&w, "hi", 2); // explicit-length fixstr
+    MsgPack.put_str_n(&w, "hi", 2); // explicit-length fixstr
     r = pc_cspan_from(b, pc_span_len(w));
-    TEST_ASSERT_TRUE(pc_msgpack_read_str(&r, &sp, &n));
+    TEST_ASSERT_TRUE(MsgPack.get_str(&r, &sp, &n));
     TEST_ASSERT_EQUAL_size_t(2, n);
 
     static uint8_t big[300];
@@ -445,38 +445,38 @@ void test_wide_roundtrip()
         big[i] = (uint8_t)i;
     }
     w = pc_span_from(b, sizeof(b));
-    pc_msgpack_bytes(&w, big, 300); // bin16 (0xc5)
+    MsgPack.put_bytes(&w, big, 300); // bin16 (0xc5)
     TEST_ASSERT_EQUAL_UINT8(0xc5, b[0]);
     r = pc_cspan_from(b, pc_span_len(w));
-    TEST_ASSERT_TRUE(pc_msgpack_read_bytes(&r, &bp, &n));
+    TEST_ASSERT_TRUE(MsgPack.get_bytes(&r, &bp, &n));
     TEST_ASSERT_EQUAL_size_t(300, n);
 
     w = pc_span_from(b, sizeof(b));
-    pc_msgpack_array(&w, 20); // array16 (0xdc)
+    MsgPack.put_array(&w, 20); // array16 (0xdc)
     for (int i = 0; i < 20; i++)
     {
-        pc_msgpack_uint(&w, (uint64_t)i);
+        MsgPack.put_uint(&w, (uint64_t)i);
     }
     TEST_ASSERT_EQUAL_UINT8(0xdc, b[0]);
     r = pc_cspan_from(b, pc_span_len(w));
-    TEST_ASSERT_TRUE(pc_msgpack_read_array(&r, &cnt));
+    TEST_ASSERT_TRUE(MsgPack.get_array(&r, &cnt));
     TEST_ASSERT_EQUAL_size_t(20, cnt);
     for (int i = 0; i < 20; i++)
     {
-        TEST_ASSERT_TRUE(pc_msgpack_read_uint(&r, &uv));
+        TEST_ASSERT_TRUE(MsgPack.get_uint(&r, &uv));
         TEST_ASSERT_EQUAL_UINT64((uint64_t)i, uv);
     }
 
     w = pc_span_from(b, sizeof(b));
-    pc_msgpack_map(&w, 20); // map16 (0xde)
+    MsgPack.put_map(&w, 20); // map16 (0xde)
     for (int i = 0; i < 20; i++)
     {
-        pc_msgpack_uint(&w, (uint64_t)i);
-        pc_msgpack_uint(&w, (uint64_t)i);
+        MsgPack.put_uint(&w, (uint64_t)i);
+        MsgPack.put_uint(&w, (uint64_t)i);
     }
     TEST_ASSERT_EQUAL_UINT8(0xde, b[0]);
     r = pc_cspan_from(b, pc_span_len(w));
-    TEST_ASSERT_TRUE(pc_msgpack_read_map(&r, &cnt));
+    TEST_ASSERT_TRUE(MsgPack.get_map(&r, &cnt));
     TEST_ASSERT_EQUAL_size_t(20, cnt);
 }
 
@@ -490,22 +490,22 @@ void test_decode_wide_fails_closed()
     // str16 header claims 300 bytes, body absent
     uint8_t t1[] = {0xda, 0x01, 0x2c, 'a'};
     r = pc_cspan_from(t1, sizeof(t1));
-    TEST_ASSERT_FALSE(pc_msgpack_read_str(&r, &s, &n));
+    TEST_ASSERT_FALSE(MsgPack.get_str(&r, &s, &n));
     TEST_ASSERT_FALSE(pc_cspan_ok(r));
     // bin16 truncated header (only one length byte)
     uint8_t t2[] = {0xc5, 0x01};
     r = pc_cspan_from(t2, sizeof(t2));
-    TEST_ASSERT_FALSE(pc_msgpack_read_bytes(&r, &bp, &n));
+    TEST_ASSERT_FALSE(MsgPack.get_bytes(&r, &bp, &n));
     // array16 header truncated
     uint8_t t3[] = {0xdc, 0x00};
     r = pc_cspan_from(t3, sizeof(t3));
     size_t cnt;
-    TEST_ASSERT_FALSE(pc_msgpack_read_array(&r, &cnt));
+    TEST_ASSERT_FALSE(MsgPack.get_array(&r, &cnt));
     // uint64 truncated
     uint8_t t4[] = {0xcf, 0x00, 0x00};
     r = pc_cspan_from(t4, sizeof(t4));
     uint64_t uv;
-    TEST_ASSERT_FALSE(pc_msgpack_read_uint(&r, &uv));
+    TEST_ASSERT_FALSE(MsgPack.get_uint(&r, &uv));
 }
 
 // str32/bin32/array32/map32 headers (len/count > 0xffff): the widest encoder branch.
@@ -516,7 +516,7 @@ void test_encode_wide32()
     pc_span w;
 
     w = pc_span_from(out, sizeof(out));
-    pc_msgpack_str_n(&w, (const char *)data, 0x10000); // str32 (0xdb)
+    MsgPack.put_str_n(&w, (const char *)data, 0x10000); // str32 (0xdb)
     TEST_ASSERT_TRUE(pc_span_ok(w));
     TEST_ASSERT_EQUAL_UINT8(0xdb, out[0]);
     TEST_ASSERT_EQUAL_size_t(5 + 0x10000, pc_span_len(w));
@@ -525,21 +525,21 @@ void test_encode_wide32()
     r = pc_cspan_from(out, pc_span_len(w));
     const char *sp;
     size_t n;
-    TEST_ASSERT_TRUE(pc_msgpack_read_str(&r, &sp, &n));
+    TEST_ASSERT_TRUE(MsgPack.get_str(&r, &sp, &n));
     TEST_ASSERT_EQUAL_size_t(0x10000, n);
 
     w = pc_span_from(out, sizeof(out));
-    pc_msgpack_bytes(&w, data, 0x10000); // bin32 (0xc6)
+    MsgPack.put_bytes(&w, data, 0x10000); // bin32 (0xc6)
     TEST_ASSERT_EQUAL_UINT8(0xc6, out[0]);
 
     uint8_t hdr[8];
     w = pc_span_from(hdr, sizeof(hdr));
-    pc_msgpack_array(&w, 0x10000); // array32 (0xdd)
+    MsgPack.put_array(&w, 0x10000); // array32 (0xdd)
     TEST_ASSERT_EQUAL_UINT8(0xdd, hdr[0]);
     TEST_ASSERT_EQUAL_size_t(5, pc_span_len(w));
 
     w = pc_span_from(hdr, sizeof(hdr));
-    pc_msgpack_map(&w, 0x10000); // map32 (0xdf)
+    MsgPack.put_map(&w, 0x10000); // map32 (0xdf)
     TEST_ASSERT_EQUAL_UINT8(0xdf, hdr[0]);
     TEST_ASSERT_EQUAL_size_t(5, pc_span_len(w));
 }
@@ -548,7 +548,7 @@ static void peek_is(uint8_t byte, pc_codec_type want)
 {
     pc_cspan r;
     r = pc_cspan_from(&byte, 1);
-    TEST_ASSERT_EQUAL(want, pc_msgpack_peek(&r));
+    TEST_ASSERT_EQUAL(want, MsgPack.peek(&r));
 }
 
 // peek reports the right type for every wide (multi-byte) format marker.
@@ -578,23 +578,23 @@ void test_read_int_all_widths()
     int64_t v;
     uint8_t fixp[] = {0x05}; // positive fixint via read_int
     r = pc_cspan_from(fixp, sizeof(fixp));
-    TEST_ASSERT_TRUE(pc_msgpack_read_int(&r, &v));
+    TEST_ASSERT_TRUE(MsgPack.get_int(&r, &v));
     TEST_ASSERT_EQUAL_INT64(5, v);
     uint8_t u16[] = {0xcd, 0x01, 0x00}; // uint16 via read_int
     r = pc_cspan_from(u16, sizeof(u16));
-    TEST_ASSERT_TRUE(pc_msgpack_read_int(&r, &v));
+    TEST_ASSERT_TRUE(MsgPack.get_int(&r, &v));
     TEST_ASSERT_EQUAL_INT64(256, v);
     uint8_t u32[] = {0xce, 0x00, 0x01, 0x00, 0x00}; // uint32 via read_int
     r = pc_cspan_from(u32, sizeof(u32));
-    TEST_ASSERT_TRUE(pc_msgpack_read_int(&r, &v));
+    TEST_ASSERT_TRUE(MsgPack.get_int(&r, &v));
     TEST_ASSERT_EQUAL_INT64(65536, v);
     uint8_t u64[] = {0xcf, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00}; // uint64 via read_int
     r = pc_cspan_from(u64, sizeof(u64));
-    TEST_ASSERT_TRUE(pc_msgpack_read_int(&r, &v));
+    TEST_ASSERT_TRUE(MsgPack.get_int(&r, &v));
     TEST_ASSERT_EQUAL_INT64(0x100000000LL, v);
     uint8_t i64[] = {0xd3, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00}; // int64
     r = pc_cspan_from(i64, sizeof(i64));
-    TEST_ASSERT_TRUE(pc_msgpack_read_int(&r, &v));
+    TEST_ASSERT_TRUE(MsgPack.get_int(&r, &v));
     TEST_ASSERT_EQUAL_INT64((int64_t)0xffffffff00000000ULL, v);
 }
 
@@ -611,21 +611,21 @@ void test_read_on_empty_reader()
     const uint8_t *bp;
     size_t n, c;
     r = pc_cspan_from(&dummy, 0);
-    TEST_ASSERT_FALSE(pc_msgpack_read_uint(&r, &uv));
+    TEST_ASSERT_FALSE(MsgPack.get_uint(&r, &uv));
     r = pc_cspan_from(&dummy, 0);
-    TEST_ASSERT_FALSE(pc_msgpack_read_int(&r, &iv));
+    TEST_ASSERT_FALSE(MsgPack.get_int(&r, &iv));
     r = pc_cspan_from(&dummy, 0);
-    TEST_ASSERT_FALSE(pc_msgpack_read_bool(&r, &bv));
+    TEST_ASSERT_FALSE(MsgPack.get_bool(&r, &bv));
     r = pc_cspan_from(&dummy, 0);
-    TEST_ASSERT_FALSE(pc_msgpack_read_float(&r, &fv));
+    TEST_ASSERT_FALSE(MsgPack.get_float(&r, &fv));
     r = pc_cspan_from(&dummy, 0);
-    TEST_ASSERT_FALSE(pc_msgpack_read_str(&r, &s, &n));
+    TEST_ASSERT_FALSE(MsgPack.get_str(&r, &s, &n));
     r = pc_cspan_from(&dummy, 0);
-    TEST_ASSERT_FALSE(pc_msgpack_read_bytes(&r, &bp, &n));
+    TEST_ASSERT_FALSE(MsgPack.get_bytes(&r, &bp, &n));
     r = pc_cspan_from(&dummy, 0);
-    TEST_ASSERT_FALSE(pc_msgpack_read_array(&r, &c));
+    TEST_ASSERT_FALSE(MsgPack.get_array(&r, &c));
     r = pc_cspan_from(&dummy, 0);
-    TEST_ASSERT_FALSE(pc_msgpack_read_map(&r, &c));
+    TEST_ASSERT_FALSE(MsgPack.get_map(&r, &c));
 }
 
 // A typed reader on a byte of the wrong family fails closed (default/else branches).
@@ -639,20 +639,20 @@ void test_read_wrong_type_byte()
     const uint8_t *bp;
     size_t n, c;
     r = pc_cspan_from(&nilb, 1);
-    TEST_ASSERT_FALSE(pc_msgpack_read_bool(&r, &bv));
+    TEST_ASSERT_FALSE(MsgPack.get_bool(&r, &bv));
     r = pc_cspan_from(&nilb, 1);
-    TEST_ASSERT_FALSE(pc_msgpack_read_float(&r, &fv));
+    TEST_ASSERT_FALSE(MsgPack.get_float(&r, &fv));
     r = pc_cspan_from(&nilb, 1);
-    TEST_ASSERT_FALSE(pc_msgpack_read_str(&r, &s, &n));
+    TEST_ASSERT_FALSE(MsgPack.get_str(&r, &s, &n));
     r = pc_cspan_from(&nilb, 1);
-    TEST_ASSERT_FALSE(pc_msgpack_read_bytes(&r, &bp, &n));
+    TEST_ASSERT_FALSE(MsgPack.get_bytes(&r, &bp, &n));
     r = pc_cspan_from(&nilb, 1);
-    TEST_ASSERT_FALSE(pc_msgpack_read_array(&r, &c));
+    TEST_ASSERT_FALSE(MsgPack.get_array(&r, &c));
     r = pc_cspan_from(&nilb, 1);
-    TEST_ASSERT_FALSE(pc_msgpack_read_map(&r, &c));
+    TEST_ASSERT_FALSE(MsgPack.get_map(&r, &c));
     int64_t iv;
     r = pc_cspan_from(&nilb, 1);
-    TEST_ASSERT_FALSE(pc_msgpack_read_int(&r, &iv)); // switch default
+    TEST_ASSERT_FALSE(MsgPack.get_int(&r, &iv)); // switch default
 }
 
 // Each width's argument bytes are truncated: take_be fails and the read returns false.
@@ -666,52 +666,52 @@ void test_read_truncated_widths()
     size_t n, c;
     uint8_t u8[] = {0xcc};
     r = pc_cspan_from(u8, sizeof(u8)); // uint8 arg missing
-    TEST_ASSERT_FALSE(pc_msgpack_read_uint(&r, &uv));
+    TEST_ASSERT_FALSE(MsgPack.get_uint(&r, &uv));
     uint8_t u32[] = {0xce, 0x00, 0x00};
     r = pc_cspan_from(u32, sizeof(u32)); // uint32 short
-    TEST_ASSERT_FALSE(pc_msgpack_read_uint(&r, &uv));
+    TEST_ASSERT_FALSE(MsgPack.get_uint(&r, &uv));
     uint8_t iu8[] = {0xcc};
     r = pc_cspan_from(iu8, sizeof(iu8));
-    TEST_ASSERT_FALSE(pc_msgpack_read_int(&r, &iv));
+    TEST_ASSERT_FALSE(MsgPack.get_int(&r, &iv));
     uint8_t iu16[] = {0xcd, 0x00};
     r = pc_cspan_from(iu16, sizeof(iu16));
-    TEST_ASSERT_FALSE(pc_msgpack_read_int(&r, &iv));
+    TEST_ASSERT_FALSE(MsgPack.get_int(&r, &iv));
     uint8_t iu32[] = {0xce, 0x00, 0x00};
     r = pc_cspan_from(iu32, sizeof(iu32));
-    TEST_ASSERT_FALSE(pc_msgpack_read_int(&r, &iv));
+    TEST_ASSERT_FALSE(MsgPack.get_int(&r, &iv));
     uint8_t iu64[] = {0xcf, 0x00};
     r = pc_cspan_from(iu64, sizeof(iu64));
-    TEST_ASSERT_FALSE(pc_msgpack_read_int(&r, &iv));
+    TEST_ASSERT_FALSE(MsgPack.get_int(&r, &iv));
     uint8_t i8[] = {0xd0};
     r = pc_cspan_from(i8, sizeof(i8));
-    TEST_ASSERT_FALSE(pc_msgpack_read_int(&r, &iv));
+    TEST_ASSERT_FALSE(MsgPack.get_int(&r, &iv));
     uint8_t i16[] = {0xd1, 0x00};
     r = pc_cspan_from(i16, sizeof(i16));
-    TEST_ASSERT_FALSE(pc_msgpack_read_int(&r, &iv));
+    TEST_ASSERT_FALSE(MsgPack.get_int(&r, &iv));
     uint8_t i32[] = {0xd2, 0x00, 0x00};
     r = pc_cspan_from(i32, sizeof(i32));
-    TEST_ASSERT_FALSE(pc_msgpack_read_int(&r, &iv));
+    TEST_ASSERT_FALSE(MsgPack.get_int(&r, &iv));
     uint8_t i64[] = {0xd3, 0x00, 0x00};
     r = pc_cspan_from(i64, sizeof(i64));
-    TEST_ASSERT_FALSE(pc_msgpack_read_int(&r, &iv));
+    TEST_ASSERT_FALSE(MsgPack.get_int(&r, &iv));
     uint8_t f32[] = {0xca, 0x00, 0x00};
     r = pc_cspan_from(f32, sizeof(f32)); // float32 short
-    TEST_ASSERT_FALSE(pc_msgpack_read_float(&r, &fv));
+    TEST_ASSERT_FALSE(MsgPack.get_float(&r, &fv));
     uint8_t f64[] = {0xcb, 0x00, 0x00};
     r = pc_cspan_from(f64, sizeof(f64)); // float64 short
-    TEST_ASSERT_FALSE(pc_msgpack_read_float(&r, &fv));
+    TEST_ASSERT_FALSE(MsgPack.get_float(&r, &fv));
     uint8_t s8[] = {0xd9};
     r = pc_cspan_from(s8, sizeof(s8)); // str8 length missing
-    TEST_ASSERT_FALSE(pc_msgpack_read_str(&r, &s, &n));
+    TEST_ASSERT_FALSE(MsgPack.get_str(&r, &s, &n));
     uint8_t s32[] = {0xdb, 0x00, 0x00};
     r = pc_cspan_from(s32, sizeof(s32)); // str32 length short
-    TEST_ASSERT_FALSE(pc_msgpack_read_str(&r, &s, &n));
+    TEST_ASSERT_FALSE(MsgPack.get_str(&r, &s, &n));
     uint8_t a32[] = {0xdd, 0x00, 0x00};
     r = pc_cspan_from(a32, sizeof(a32)); // array32 count short
-    TEST_ASSERT_FALSE(pc_msgpack_read_array(&r, &c));
+    TEST_ASSERT_FALSE(MsgPack.get_array(&r, &c));
     uint8_t m32[] = {0xdf, 0x00, 0x00};
     r = pc_cspan_from(m32, sizeof(m32)); // map32 count short
-    TEST_ASSERT_FALSE(pc_msgpack_read_map(&r, &c));
+    TEST_ASSERT_FALSE(MsgPack.get_map(&r, &c));
 }
 
 // read_nil's byte check fails closed when a value is present but isn't 0xc0
@@ -721,7 +721,7 @@ void test_read_nil_wrong_byte()
     pc_cspan r;
     uint8_t b = 0xc3; // bool `true`, not nil
     r = pc_cspan_from(&b, 1);
-    TEST_ASSERT_FALSE(pc_msgpack_read_null(&r));
+    TEST_ASSERT_FALSE(MsgPack.get_null(&r));
     TEST_ASSERT_FALSE(pc_cspan_ok(r));
 }
 
@@ -735,7 +735,7 @@ void test_reads_after_sticky_error()
     pc_cspan r;
     r = pc_cspan_from(truncated, sizeof(truncated));
     uint64_t uv;
-    TEST_ASSERT_FALSE(pc_msgpack_read_uint(&r, &uv)); // sets r->err = true
+    TEST_ASSERT_FALSE(MsgPack.get_uint(&r, &uv)); // sets r->err = true
     TEST_ASSERT_FALSE(pc_cspan_ok(r));
 
     int64_t iv;
@@ -744,16 +744,16 @@ void test_reads_after_sticky_error()
     const char *sp;
     const uint8_t *bp;
     size_t n, c;
-    TEST_ASSERT_EQUAL(PC_CODEC_INVALID, pc_msgpack_peek(&r));
-    TEST_ASSERT_FALSE(pc_msgpack_read_uint(&r, &uv));
-    TEST_ASSERT_FALSE(pc_msgpack_read_int(&r, &iv));
-    TEST_ASSERT_FALSE(pc_msgpack_read_bool(&r, &bv));
-    TEST_ASSERT_FALSE(pc_msgpack_read_null(&r));
-    TEST_ASSERT_FALSE(pc_msgpack_read_float(&r, &fv));
-    TEST_ASSERT_FALSE(pc_msgpack_read_str(&r, &sp, &n));
-    TEST_ASSERT_FALSE(pc_msgpack_read_bytes(&r, &bp, &n));
-    TEST_ASSERT_FALSE(pc_msgpack_read_array(&r, &c));
-    TEST_ASSERT_FALSE(pc_msgpack_read_map(&r, &c));
+    TEST_ASSERT_EQUAL(PC_CODEC_INVALID, MsgPack.peek(&r));
+    TEST_ASSERT_FALSE(MsgPack.get_uint(&r, &uv));
+    TEST_ASSERT_FALSE(MsgPack.get_int(&r, &iv));
+    TEST_ASSERT_FALSE(MsgPack.get_bool(&r, &bv));
+    TEST_ASSERT_FALSE(MsgPack.get_null(&r));
+    TEST_ASSERT_FALSE(MsgPack.get_float(&r, &fv));
+    TEST_ASSERT_FALSE(MsgPack.get_str(&r, &sp, &n));
+    TEST_ASSERT_FALSE(MsgPack.get_bytes(&r, &bp, &n));
+    TEST_ASSERT_FALSE(MsgPack.get_array(&r, &c));
+    TEST_ASSERT_FALSE(MsgPack.get_map(&r, &c));
 }
 
 // read_blob's fixstr check (want_str && b>=0xa0 && b<=0xbf) needs a byte below
@@ -766,7 +766,7 @@ void test_read_str_below_fixstr_range()
     r = pc_cspan_from(&b, 1);
     const char *s;
     size_t n;
-    TEST_ASSERT_FALSE(pc_msgpack_read_str(&r, &s, &n));
+    TEST_ASSERT_FALSE(MsgPack.get_str(&r, &s, &n));
 }
 
 // read_count's fix-range check (b>=fix_lo && b<=fix_hi) needs a byte below
@@ -778,7 +778,7 @@ void test_read_array_below_fixarray_range()
     uint8_t b = 0x05; // positive fixint: below fixarray's 0x90 lower bound
     r = pc_cspan_from(&b, 1);
     size_t c;
-    TEST_ASSERT_FALSE(pc_msgpack_read_array(&r, &c));
+    TEST_ASSERT_FALSE(MsgPack.get_array(&r, &c));
 }
 
 // read_count's f32 (array32/map32) header take_be call has only been exercised
@@ -790,12 +790,12 @@ void test_read_count_wide32_success()
     uint8_t arr32[] = {0xdd, 0x00, 0x00, 0x00, 0x02}; // array32 header, count = 2
     r = pc_cspan_from(arr32, sizeof(arr32));
     size_t c;
-    TEST_ASSERT_TRUE(pc_msgpack_read_array(&r, &c));
+    TEST_ASSERT_TRUE(MsgPack.get_array(&r, &c));
     TEST_ASSERT_EQUAL_size_t(2, c);
 
     uint8_t map32[] = {0xdf, 0x00, 0x00, 0x00, 0x03}; // map32 header, count = 3
     r = pc_cspan_from(map32, sizeof(map32));
-    TEST_ASSERT_TRUE(pc_msgpack_read_map(&r, &c));
+    TEST_ASSERT_TRUE(MsgPack.get_map(&r, &c));
     TEST_ASSERT_EQUAL_size_t(3, c);
 }
 

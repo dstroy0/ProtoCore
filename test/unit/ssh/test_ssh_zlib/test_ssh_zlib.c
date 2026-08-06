@@ -9,7 +9,7 @@
 // Correctness is checked two ways:
 //   1. The whole session is one continuous zlib stream: header(2) + block + marker + block + marker...
 //      Concatenating every packet's output, stripping the 2-byte zlib header, yields a valid RFC 1951
-//      stream that inflate_raw() (validated against Python zlib in test_inflate) decodes to the
+//      stream that Inflate.raw() (validated against Python zlib in test_inflate) decodes to the
 //      concatenation of the originals - proving cross-packet back-references resolve.
 //   2. The exact packet-by-packet decodability under a REFERENCE zlib (Python zlib.decompressobj,
 //      i.e. OpenSSH's model) is verified out-of-tree by tools' cross-check (see the module header);
@@ -70,7 +70,7 @@ static void verify_stream()
     TEST_ASSERT_EQUAL_HEX8(0x78, g_stream[0]); // zlib CMF (deflate, 32 KB window)
     TEST_ASSERT_EQUAL_HEX8(0x9C, g_stream[1]); // zlib FLG (default level)
     size_t dlen = 0;
-    int rc = (int)inflate_raw(g_stream + 2, g_stream_len - 2, g_decoded, sizeof(g_decoded), &dlen, g_iscratch,
+    int rc = (int)Inflate.raw(g_stream + 2, g_stream_len - 2, g_decoded, sizeof(g_decoded), &dlen, g_iscratch,
                               sizeof(g_iscratch));
     TEST_ASSERT_EQUAL_INT(INFLATE_OK, rc);
     TEST_ASSERT_EQUAL_size_t(g_orig_len, dlen);

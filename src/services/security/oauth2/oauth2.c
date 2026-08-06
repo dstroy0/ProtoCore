@@ -148,15 +148,15 @@ proto_bool pc_oauth2_parse_token_response(const char *json, pc_o_auth2_tokens *o
     out->token_type[0] = '\0';
     out->expires_in = 0;
 
-    if (!json_get_str(json, "access_token", out->access_token, sizeof(out->access_token)))
+    if (!Json.get_str(json, "access_token", out->access_token, sizeof(out->access_token)))
     {
         return PROTO_FALSE; // an error response (e.g. {"error":"invalid_grant"}) has no access_token
     }
-    json_get_str(json, "id_token", out->id_token, sizeof(out->id_token));
-    json_get_str(json, "refresh_token", out->refresh_token, sizeof(out->refresh_token));
-    json_get_str(json, "token_type", out->token_type, sizeof(out->token_type));
+    Json.get_str(json, "id_token", out->id_token, sizeof(out->id_token));
+    Json.get_str(json, "refresh_token", out->refresh_token, sizeof(out->refresh_token));
+    Json.get_str(json, "token_type", out->token_type, sizeof(out->token_type));
     long e = 0;
-    if (json_get_int(json, "expires_in", &e))
+    if (Json.get_int(json, "expires_in", &e))
     {
         out->expires_in = e;
     }

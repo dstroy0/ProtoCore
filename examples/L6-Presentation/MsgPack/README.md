@@ -19,10 +19,10 @@ size, emit pairs, check `pc_span_ok()`, write `pc_span_len()` bytes:
 uint8_t buf[64];
 pc_span w;
 w = pc_span_from( buf, sizeof(buf));
-pc_msgpack_map(&w, 3);
-pc_msgpack_str(&w, "heap"); pc_msgpack_uint(&w, ESP.getFreeHeap());
-pc_msgpack_str(&w, "uptime"); pc_msgpack_uint(&w, millis() / 1000);
-pc_msgpack_str(&w, "rssi"); pc_msgpack_int(&w, Physical.wifi->rssi());
+MsgPack.put_map(&w, 3);
+MsgPack.put_str(&w, "heap"); MsgPack.put_uint(&w, ESP.getFreeHeap());
+MsgPack.put_str(&w, "uptime"); MsgPack.put_uint(&w, millis() / 1000);
+MsgPack.put_str(&w, "rssi"); MsgPack.put_int(&w, Physical.wifi->rssi());
 ctx.len = pc_span_ok(w) ? pc_span_len(w) : 0;   // page these bytes out below
 ```
 
@@ -40,17 +40,17 @@ whole parse). Strings point straight into the source buffer, no copy:
 pc_cspan r;
 r = pc_cspan_from( req->body, req->body_len);
 size_t count;
-if (!pc_msgpack_read_map(&r, &count)) { /* not a map */ }
+if (!MsgPack.get_map(&r, &count)) { /* not a map */ }
 for (size_t i = 0; i < count && pc_cspan_ok(r); i++) {
     const char *key; size_t klen; int64_t val;
-    if (!pc_msgpack_read_str(&r, &key, &klen) || !pc_msgpack_read_int(&r, &val)) break;
+    if (!MsgPack.get_str(&r, &key, &klen) || !MsgPack.get_int(&r, &val)) break;
     // use key[0..klen) and val
 }
 if (!pc_cspan_ok(r)) { /* malformed / truncated */ }
 ```
 
 Every read is bounds-checked, so malformed or truncated input fails closed rather
-than over-reading. `pc_msgpack_peek()` reports the next object's type if you need to
+than over-reading. `MsgPack.peek()` reports the next object's type if you need to
 branch on it.
 
 ## Build and run
@@ -113,7 +113,7 @@ static void on_decode(uint8_t id, HttpReq *req)
     pc_cspan r;
     r = pc_cspan_from( req->body, req->body_len); // cursor over the request body
     size_t count;
-    if (!pc_msgpack_read_map(&r, &count)) // header must be a map
+    if (!MsgPack.get_map(&r, &count)) // header must be a map
     {
         server.send(id, 400, "text/plain", "expected a MessagePack map");
         return;
@@ -125,7 +125,7 @@ static void on_decode(uint8_t id, HttpReq *req)
         const char *key;
         size_t klen;
         int64_t val;
-        if (!pc_msgpack_read_str(&r, &key, &klen) || !pc_msgpack_read_int(&r, &val)) // key then value
+        if (!MsgPack.get_str(&r, &key, &klen) || !MsgPack.get_int(&r, &val)) // key then value
             break;
         o += snprintf(out + o, sizeof(out) - o, "%.*s=%lld\n", (int)klen, key, (long long)val);
     }
@@ -155,13 +155,13 @@ void setup()
         static MpCtx ctx; // static: must outlive send_chunked
         pc_span w;
         w = pc_span_from( ctx.buf, sizeof(ctx.buf));
-        pc_msgpack_map(&w, 3);
-        pc_msgpack_str(&w, "heap");
-        pc_msgpack_uint(&w, ESP.getFreeHeap());
-        pc_msgpack_str(&w, "uptime");
-        pc_msgpack_uint(&w, millis() / 1000);
-        pc_msgpack_str(&w, "rssi");
-        pc_msgpack_int(&w, Physical.wifi->rssi());
+        MsgPack.put_map(&w, 3);
+        MsgPack.put_str(&w, "heap");
+        MsgPack.put_uint(&w, ESP.getFreeHeap());
+        MsgPack.put_str(&w, "uptime");
+        MsgPack.put_uint(&w, millis() / 1000);
+        MsgPack.put_str(&w, "rssi");
+        MsgPack.put_int(&w, Physical.wifi->rssi());
         ctx.len = pc_span_ok(w) ? pc_span_len(w) : 0;
         ctx.off = 0;
         server.send_chunked(id, 200, "application/msgpack", pc_msgpack_source, &ctx);

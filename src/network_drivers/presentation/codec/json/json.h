@@ -15,14 +15,14 @@
  * @code
  *   char buf[128];
  *   pc_json_writer w;
- *   pc_json_init(&w, buf, sizeof(buf));
- *   pc_json_begin_object(&w);
- *     pc_json_kv_str(&w, "status", "ok");
- *     pc_json_kv_int(&w, "count", 3);
- *     pc_json_key(&w, "items"); pc_json_begin_array(&w);
- *       pc_json_str(&w, "a"); pc_json_str(&w, "b");
- *     pc_json_end_array(&w);
- *   pc_json_end_object(&w);
+ *   Json.init(&w, buf, sizeof(buf));
+ *   Json.begin_object(&w);
+ *     Json.kv_str(&w, "status", "ok");
+ *     Json.kv_int(&w, "count", 3);
+ *     Json.key(&w, "items"); Json.begin_array(&w);
+ *       Json.put_str(&w, "a"); Json.put_str(&w, "b");
+ *     Json.end_array(&w);
+ *   Json.end_object(&w);
  *   if (pc_json_ok(&w)) server.send(slot, 200, "application/json", pc_json_c_str(&w));
  *   // -> {"status":"ok","count":3,"items":["a","b"]}
  * @endcode
@@ -30,9 +30,9 @@
  * ## Reading (top-level keys of an object body)
  * @code
  *   char ssid[33];
- *   if (json_get_str(req->body, "ssid", ssid, sizeof(ssid))) { ... }
+ *   if (Json.get_str(req->body, "ssid", ssid, sizeof(ssid))) { ... }
  *   long port;
- *   if (json_get_int(req->body, "port", &port)) { ... }
+ *   if (Json.get_int(req->body, "port", &port)) { ... }
  * @endcode
  */
 
@@ -67,33 +67,66 @@ typedef struct
 } pc_json_writer;
 
 /**
- * @brief Bind @p w to a caller buffer.
- * @param buf  Destination (must be non-null, cap >= 1).
- * @param cap  Capacity in bytes including the NUL terminator.
+ * @brief The writer's calls, the key+value shorthands, and the top-level reader.
+ *
+ * `int` and `bool` are keywords, so the bare-value group carries the `put_` prefix the codec
+ * interface uses for the same reason, and the shorthands `kv_`. A member emitted through `key()`
+ * takes one value call after it; `kv_*` is that pair in one call.
+ *
+ * @var JsonNs::init          bind the writer to a caller buffer, capacity including the NUL
+ * @var JsonNs::begin_object  open `{`, as a value or an element where that applies
+ * @var JsonNs::end_object    close `}`
+ * @var JsonNs::begin_array   open `[`
+ * @var JsonNs::end_array     close `]`
+ * @var JsonNs::key           an object member name (`"k":`); one value call follows it
+ * @var JsonNs::put_str       a quoted, escaped string value
+ * @var JsonNs::put_int       a signed integer value
+ * @var JsonNs::put_uint      an unsigned integer value
+ * @var JsonNs::put_bool      `true` or `false`
+ * @var JsonNs::put_null      `null`
+ * @var JsonNs::put_raw       a pre-formatted literal, verbatim
+ * @var JsonNs::kv_str        `"k":"v"`, escaped
+ * @var JsonNs::kv_int        `"k":<int>`
+ * @var JsonNs::kv_uint       `"k":<uint>`
+ * @var JsonNs::kv_bool       `"k":true|false`
+ * @var JsonNs::kv_null       `"k":null`
+ * @var JsonNs::kv_raw        `"k":<literal>`
+ * @var JsonNs::get_str       a top-level string member, unescaped into @p out and bounded by
+ *                            @p out_cap. Nested objects, arrays and string contents are skipped, so
+ *                            a same-named nested key does not match
+ * @var JsonNs::get_int       a top-level member that parses as an integer
+ * @var JsonNs::get_bool      a top-level member that is a JSON boolean
  */
-void pc_json_init(pc_json_writer *w, char *buf, size_t cap);
+typedef struct
+{
+    void (*init)(pc_json_writer *w, char *buf, size_t cap);
+    void (*begin_object)(pc_json_writer *w);
+    void (*end_object)(pc_json_writer *w);
+    void (*begin_array)(pc_json_writer *w);
+    void (*end_array)(pc_json_writer *w);
+    void (*key)(pc_json_writer *w, const char *k);
 
-void pc_json_begin_object(pc_json_writer *w); ///< Open `{` (as a value/element where applicable).
-void pc_json_end_object(pc_json_writer *w);   ///< Close `}`.
-void pc_json_begin_array(pc_json_writer *w);  ///< Open `[`.
-void pc_json_end_array(pc_json_writer *w);    ///< Close `]`.
+    void (*put_str)(pc_json_writer *w, const char *v);
+    void (*put_int)(pc_json_writer *w, long v);
+    void (*put_uint)(pc_json_writer *w, unsigned long v);
+    void (*put_bool)(pc_json_writer *w, proto_bool v);
+    void (*put_null)(pc_json_writer *w);
+    void (*put_raw)(pc_json_writer *w, const char *literal);
 
-/// @brief Emit an object member name (`"k":`); follow with one value.
-void pc_json_key(pc_json_writer *w, const char *k);
+    void (*kv_str)(pc_json_writer *w, const char *k, const char *v);
+    void (*kv_int)(pc_json_writer *w, const char *k, long v);
+    void (*kv_uint)(pc_json_writer *w, const char *k, unsigned long v);
+    void (*kv_bool)(pc_json_writer *w, const char *k, proto_bool v);
+    void (*kv_null)(pc_json_writer *w, const char *k);
+    void (*kv_raw)(pc_json_writer *w, const char *k, const char *literal);
 
-void pc_json_str(pc_json_writer *w, const char *v);       ///< Emit a quoted, escaped string value.
-void pc_json_int(pc_json_writer *w, long v);              ///< Emit a signed integer value.
-void pc_json_uint(pc_json_writer *w, unsigned long v);    ///< Emit an unsigned integer value.
-void pc_json_bool(pc_json_writer *w, proto_bool v);       ///< Emit `true`/`false`.
-void pc_json_null(pc_json_writer *w);                     ///< Emit `null`.
-void pc_json_raw(pc_json_writer *w, const char *literal); ///< Emit a pre-formatted literal verbatim.
+    proto_bool (*get_str)(const char *json, const char *key, char *out, size_t out_cap);
+    proto_bool (*get_int)(const char *json, const char *key, long *out);
+    proto_bool (*get_bool)(const char *json, const char *key, proto_bool *out);
+} JsonNs;
 
-void pc_json_kv_str(pc_json_writer *w, const char *k, const char *v);       ///< `"k":"v"` (escaped).
-void pc_json_kv_int(pc_json_writer *w, const char *k, long v);              ///< `"k":<int>`.
-void pc_json_kv_uint(pc_json_writer *w, const char *k, unsigned long v);    ///< `"k":<uint>`.
-void pc_json_kv_bool(pc_json_writer *w, const char *k, proto_bool v);       ///< `"k":true|false`.
-void pc_json_kv_null(pc_json_writer *w, const char *k);                     ///< `"k":null`.
-void pc_json_kv_raw(pc_json_writer *w, const char *k, const char *literal); ///< `"k":<literal>`.
+/** @brief The one symbol this module exports. The three below inline against the caller's writer. */
+extern const JsonNs Json;
 
 /** @brief False after any overflow / structural error. */
 PC_INLINE proto_bool pc_json_ok(const pc_json_writer *w)
@@ -110,34 +143,6 @@ PC_INLINE const char *pc_json_c_str(const pc_json_writer *w)
 {
     return w->buf;
 }
-
-/**
- * @brief Read a top-level string member from a JSON object body.
- *
- * Finds `"key": "..."` at the root object level (nested objects/arrays and
- * string contents are skipped, so a same-named nested key is not matched),
- * unescapes the value, and copies it (NUL-terminated, bounded by @p out_cap)
- * into @p out.
- *
- * @param json     NUL-terminated JSON object text.
- * @param key      Member name to find.
- * @param out      Destination buffer.
- * @param out_cap  Capacity of @p out including the NUL.
- * @return true if a string member was found and copied; false otherwise.
- */
-proto_bool json_get_str(const char *json, const char *key, char *out, size_t out_cap);
-
-/**
- * @brief Read a top-level integer member from a JSON object body.
- * @return true if the member exists and parses as an integer; false otherwise.
- */
-proto_bool json_get_int(const char *json, const char *key, long *out);
-
-/**
- * @brief Read a top-level boolean member (`true`/`false`) from a JSON object body.
- * @return true if the member exists and is a JSON boolean; false otherwise.
- */
-proto_bool json_get_bool(const char *json, const char *key, proto_bool *out);
 
 PROTO_END_DECLS
 

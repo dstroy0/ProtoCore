@@ -91,21 +91,9 @@ typedef struct
     proto_bool (*get_float)(pc_cspan *r, float *out);
 } pc_codec;
 
-// --- the formats, as instances ---
-//
-// Storage is opaque: each table is internal linkage in codec.c and reached only through its
-// accessor, so no caller can name it, copy it, or keep a second one. Guarded so a build that
-// compiles a format out has no accessor to call and no table to link.
-
-#if PC_NEED_CBOR
-/** @brief CBOR (RFC 8949) as an instance of the codec interface. */
-const pc_codec *pc_codec_cbor(void);
-#endif
-
-#if PC_ENABLE_MSGPACK
-/** @brief MessagePack as an instance of the codec interface. */
-const pc_codec *pc_codec_msgpack(void);
-#endif
+// Each format declares its own instance in its own header: cbor.h has Cbor, msgpack.h has
+// MsgPack. The instance is the storage, so the format that owns the operations owns the
+// table built from them, and a build that compiles a format out has neither.
 
 PROTO_END_DECLS
 

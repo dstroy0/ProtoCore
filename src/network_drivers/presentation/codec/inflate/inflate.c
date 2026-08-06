@@ -382,8 +382,8 @@ static InflateResult dynamic(State *s, Huffman *lencode, Huffman *distcode, shor
     return codes(s, lencode, distcode);
 }
 
-InflateResult inflate_raw(const uint8_t *src, size_t src_len, uint8_t *dst, size_t dst_cap, size_t *out_len,
-                          void *scratch, size_t scratch_len)
+static InflateResult inflate_raw(const uint8_t *src, size_t src_len, uint8_t *dst, size_t dst_cap, size_t *out_len,
+                                 void *scratch, size_t scratch_len)
 {
     if (scratch_len < INFLATE_SCRATCH_SIZE)
     {
@@ -451,3 +451,5 @@ InflateResult inflate_raw(const uint8_t *src, size_t src_len, uint8_t *dst, size
 }
 
 #endif // PC_ENABLE_WS_DEFLATE
+
+const InflateNs Inflate = {inflate_raw};

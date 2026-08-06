@@ -706,7 +706,7 @@ Mitsubishi MELSEC MC protocol (binary 3E frame) codec. Default off. services/fie
 
 `PC_ENABLE_MSGPACK`
 
-Zero-heap MessagePack encoder and decoder for compact binary payloads. Default off. When set, network_drivers/presentation/codec/msgpack/msgpack.h provides a writer that serializes ints, strings, byte strings, arrays, maps, booleans, nil, and float32 into a caller-provided buffer, plus a cursor decoder (pc_msgpack_peek / pc_msgpack_read_\*, no-copy strings) over a caller buffer - the MessagePack-format sibling of the CBOR / JSON readers and writers. Pure, no heap, host-tested against the spec encodings and round-trip.
+Zero-heap MessagePack encoder and decoder for compact binary payloads. Default off. When set, network_drivers/presentation/codec/msgpack/msgpack.h provides a writer that serializes ints, strings, byte strings, arrays, maps, booleans, nil, and float32 into a caller-provided buffer, plus a cursor decoder (MsgPack.peek / MsgPack.get_\*, no-copy strings) over a caller buffer - the MessagePack-format sibling of the CBOR / JSON readers and writers. Pure, no heap, host-tested against the spec encodings and round-trip.
 
 ## Metrics
 

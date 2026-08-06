@@ -54,19 +54,19 @@ void test_int_coding()
     size_t c;
     uint32_t v;
     // C.1.1: 10, prefix 5 -> 0x0a
-    TEST_ASSERT_EQUAL_INT(1, (int)pc_hpack_encode_int(b, sizeof b, 5, 0, 10));
+    TEST_ASSERT_EQUAL_INT(1, (int)HpackPrim.encode_int(b, sizeof b, 5, 0, 10));
     TEST_ASSERT_EQUAL_HEX8(0x0a, b[0]);
-    TEST_ASSERT_TRUE(pc_hpack_decode_int(b, 1, 5, &c, &v));
+    TEST_ASSERT_TRUE(HpackPrim.decode_int(b, 1, 5, &c, &v));
     TEST_ASSERT_EQUAL_UINT32(10, v);
     // C.1.2: 1337, prefix 5 -> 1f 9a 0a
-    TEST_ASSERT_EQUAL_INT(3, (int)pc_hpack_encode_int(b, sizeof b, 5, 0, 1337));
+    TEST_ASSERT_EQUAL_INT(3, (int)HpackPrim.encode_int(b, sizeof b, 5, 0, 1337));
     const uint8_t exp[3] = {0x1f, 0x9a, 0x0a};
     TEST_ASSERT_EQUAL_UINT8_ARRAY(exp, b, 3);
-    TEST_ASSERT_TRUE(pc_hpack_decode_int(b, 3, 5, &c, &v));
+    TEST_ASSERT_TRUE(HpackPrim.decode_int(b, 3, 5, &c, &v));
     TEST_ASSERT_EQUAL_UINT32(1337, v);
     TEST_ASSERT_EQUAL_INT(3, (int)c);
     // C.1.3: 42, prefix 8 -> 0x2a
-    TEST_ASSERT_EQUAL_INT(1, (int)pc_hpack_encode_int(b, sizeof b, 8, 0, 42));
+    TEST_ASSERT_EQUAL_INT(1, (int)HpackPrim.encode_int(b, sizeof b, 8, 0, 42));
     TEST_ASSERT_EQUAL_HEX8(0x2a, b[0]);
 }
 
@@ -75,13 +75,13 @@ void test_huffman()
     const char *s = "www.example.com";
     size_t n = strlen(s);
     const uint8_t exp[12] = {0xf1, 0xe3, 0xc2, 0xe5, 0xf2, 0x3a, 0x6b, 0xa0, 0xab, 0x90, 0xf4, 0xff};
-    TEST_ASSERT_EQUAL_INT(12, (int)pc_hpack_huff_len(s, n));
+    TEST_ASSERT_EQUAL_INT(12, (int)HpackPrim.huff_len(s, n));
     uint8_t out[32];
-    TEST_ASSERT_EQUAL_INT(12, (int)pc_hpack_huff_encode(out, sizeof out, s, n));
+    TEST_ASSERT_EQUAL_INT(12, (int)HpackPrim.huff_encode(out, sizeof out, s, n));
     TEST_ASSERT_EQUAL_UINT8_ARRAY(exp, out, 12);
     char dec[32];
     size_t dl;
-    TEST_ASSERT_TRUE(pc_hpack_huff_decode(exp, 12, dec, sizeof dec, &dl));
+    TEST_ASSERT_TRUE(HpackPrim.huff_decode(exp, 12, dec, sizeof dec, &dl));
     TEST_ASSERT_EQUAL_INT((int)n, (int)dl);
     TEST_ASSERT_EQUAL_MEMORY(s, dec, n);
 }
@@ -209,7 +209,7 @@ void test_dyn_size_update()
     TEST_ASSERT_TRUE(pc_hpack_decode(&t, ins, sizeof ins, scratch, sizeof scratch, collect, &c));
     TEST_ASSERT_EQUAL_INT(1, (int)t.ecount);
     uint8_t up[8]; // size update to 100000 -> clamped to the table storage (no eviction here)
-    size_t un = pc_hpack_encode_int(up, sizeof up, 5, 0x20, 100000);
+    size_t un = HpackPrim.encode_int(up, sizeof up, 5, 0x20, 100000);
     Collected c2 = {0};
     TEST_ASSERT_TRUE(pc_hpack_decode(&t, up, un, scratch, sizeof scratch, collect, &c2));
     TEST_ASSERT_EQUAL_INT(1, (int)t.ecount);
@@ -411,33 +411,33 @@ void test_hpack_encode_repeated_static_name(void)
 void test_hpack_prim_edge_guards()
 {
     uint8_t b[8];
-    TEST_ASSERT_EQUAL_INT(0, (int)pc_hpack_encode_int(b, 1, 7, 0, 20000)); // overflow mid-continuation
-    TEST_ASSERT_EQUAL_INT(0, (int)pc_hpack_encode_int(b, 1, 7, 0, 200));   // overflow on the final byte
+    TEST_ASSERT_EQUAL_INT(0, (int)HpackPrim.encode_int(b, 1, 7, 0, 20000)); // overflow mid-continuation
+    TEST_ASSERT_EQUAL_INT(0, (int)HpackPrim.encode_int(b, 1, 7, 0, 200));   // overflow on the final byte
 
     size_t c;
     uint32_t v;
-    TEST_ASSERT_FALSE(pc_hpack_decode_int(b, 0, 5, &c, &v)); // empty input
+    TEST_ASSERT_FALSE(HpackPrim.decode_int(b, 0, 5, &c, &v)); // empty input
 
     uint8_t enc[8];
-    TEST_ASSERT_EQUAL_INT(0, (int)pc_hpack_huff_encode(enc, 0, "a", 1)); // no room for the trailing byte
+    TEST_ASSERT_EQUAL_INT(0, (int)HpackPrim.huff_encode(enc, 0, "a", 1)); // no room for the trailing byte
 
     char out[32];
     size_t ol;
     const uint8_t eos[4] = {0xff, 0xff, 0xff, 0xff}; // 30 one-bits resolve to the EOS symbol
-    TEST_ASSERT_FALSE(pc_hpack_huff_decode(eos, sizeof eos, out, sizeof out, &ol));
+    TEST_ASSERT_FALSE(HpackPrim.huff_decode(eos, sizeof eos, out, sizeof out, &ol));
 
-    size_t el = pc_hpack_huff_encode(enc, sizeof enc, "00", 2); // two symbols
+    size_t el = HpackPrim.huff_encode(enc, sizeof enc, "00", 2); // two symbols
     TEST_ASSERT_TRUE(el > 0);
-    TEST_ASSERT_FALSE(pc_hpack_huff_decode(enc, el, out, 1, &ol)); // second symbol overflows the output
+    TEST_ASSERT_FALSE(HpackPrim.huff_decode(enc, el, out, 1, &ol)); // second symbol overflows the output
 
     const uint8_t pad[1] = {0xff}; // 8 unmatched bits -> more than a byte of padding
-    TEST_ASSERT_FALSE(pc_hpack_huff_decode(pad, 1, out, sizeof out, &ol));
+    TEST_ASSERT_FALSE(HpackPrim.huff_decode(pad, 1, out, sizeof out, &ol));
 
     // A continuation that would push the accumulated shift past a 32-bit result: 0x1f opens a
     // prefix-5 varint at max, then five 0x80 continuation bytes carry the shift m to 35 (> 28)
     // while bytes remain, so decode_int's "m > 28" guard rejects it (line 135) rather than i >= len.
     const uint8_t overlong[8] = {0x1f, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x00};
-    TEST_ASSERT_FALSE(pc_hpack_decode_int(overlong, sizeof overlong, 5, &c, &v));
+    TEST_ASSERT_FALSE(HpackPrim.decode_int(overlong, sizeof overlong, 5, &c, &v));
 }
 
 int main()
