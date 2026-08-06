@@ -616,7 +616,6 @@ void note_response(uint8_t slot_id, int code, int body_len);
  * incremented; the PC_KEEPALIVE_MAX_REQUESTS-th request returns false so
  * the connection is closed deliberately. Always false with keep-alive off.
  */
-proto_bool keepalive_eval(uint8_t slot_id);
 #endif
 
 /**

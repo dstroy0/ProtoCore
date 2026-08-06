@@ -320,84 +320,7 @@ void note_response(uint8_t slot_id, int code, int body_len)
     }
 }
 
-#if PC_ENABLE_KEEPALIVE || PC_ENABLE_WEBSOCKET
-// Case-insensitive search for @p token as a comma/space-delimited element of a
-// Connection header value (e.g. "keep-alive" in "Keep-Alive, Upgrade"). Shared by
-// keep-alive evaluation and the WebSocket Upgrade-token check.
-static proto_bool conn_has_token(const char *hdr, const char *token)
-{
-    if (hdr == NULL)
-    {
-        return PROTO_FALSE;
-    }
-    size_t tlen = proto_scan_nul(token, 32);
-    const char *p = hdr;
-    while (*p)
-    {
-        while (*p == ' ' || *p == ',' || *p == '\t')
-        {
-            p++;
-        }
-        const char *start = p;
-        while (*p && *p != ',')
-        {
-            p++;
-        }
-        size_t len = (size_t)(p - start);
-        while (len && (start[len - 1] == ' ' || start[len - 1] == '\t'))
-        {
-            len--;
-        }
-        // The element is a slice of the header value, not its own string, so it has no terminator to
-        // measure against: the trimmed length is the bound, and the length test above it is what
-        // stops a longer token matching on its prefix.
-        if (len == tlen && proto_diff_ci(start, token, tlen) == tlen)
-        {
-            return PROTO_TRUE;
-        }
-        if (*p == ',')
-        {
-            p++;
-        }
-    }
-    return PROTO_FALSE;
-}
-#endif // PC_ENABLE_KEEPALIVE || PC_ENABLE_WEBSOCKET
 
-#if PC_ENABLE_KEEPALIVE
-proto_bool keepalive_eval(uint8_t slot_id)
-{
-    HttpReq *req = &http_pool[slot_id];
-    // Only a cleanly-parsed request has a known message boundary; errors close.
-    if (req->parse_state != PARSE_COMPLETE)
-    {
-        return PROTO_FALSE;
-    }
-
-    const char *c = http_get_header(req, "Connection");
-    proto_bool keep;
-    if (req->version == HTTP_11)
-    {
-        keep = !conn_has_token(c, "close"); // 1.1 default: persistent
-    }
-    else
-    {
-        keep = conn_has_token(c, "keep-alive"); // 1.0/unknown default: close
-    }
-    if (!keep)
-    {
-        return PROTO_FALSE;
-    }
-
-    // Fairness bound: serve at most PC_KEEPALIVE_MAX_REQUESTS, then close.
-    http_req_count[slot_id]++;
-    if (http_req_count[slot_id] >= PC_KEEPALIVE_MAX_REQUESTS)
-    {
-        return PROTO_FALSE;
-    }
-    return PROTO_TRUE;
-}
-#endif // PC_ENABLE_KEEPALIVE
 
 // Finish a response: flush, then either begin the graceful CONN_CLOSING dwell
 // (close path) or leave the slot active for reuse (keep-alive). The HTTP parser
@@ -1764,7 +1687,7 @@ void handle_ws_route(uint8_t slot_id, HttpReq *req, HttpMethod method, const Rou
     // header that includes the "Upgrade" token.
     proto_bool is_ws_upgrade = (method == HTTP_GET) && (upgrade_hdr != NULL) &&
                                proto_eq_str_ci(upgrade_hdr, "websocket", sizeof("websocket")) &&
-                               conn_has_token(http_get_header(req, "Connection"), "upgrade");
+                               pc_http_conn_has_token(http_get_header(req, "Connection"), "upgrade");
     if (!is_ws_upgrade)
     {
         send_text(slot_id, 400, PC_MIME_TEXT_PLAIN, "WebSocket upgrade required");
