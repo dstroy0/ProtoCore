@@ -19,8 +19,6 @@
 // forwarded-tcpip channel.
 #include "shared_primitives/ip.h"
 #include "network_drivers/session/proto_handler.h"
-#include "network_drivers/transport/tcp.h"
-#include "network_drivers/transport/tcp.h"
 
 // One forwarded TCP connection: an SSH channel bridged to a client-transport slot.
 typedef struct
@@ -287,9 +285,10 @@ static int on_rforward_open(uint8_t ssh_slot, const char *addr, size_t addr_len,
     {
         return -1; // remote-forward table full
     }
-    // Find a free listener_pool slot (the app's own listeners are .active).
+    // Find a free listener row. The app's own ports occupy the rows below the reserved count,
+    // whether or not begin() has brought them up yet, so the search starts above them.
     int li = -1;
-    for (int k = 0; k < MAX_LISTENERS; k++)
+    for (int k = (int)Tcp.listener->reserved(); k < MAX_LISTENERS; k++)
     {
         if (!listener_pool[k].active)
         {

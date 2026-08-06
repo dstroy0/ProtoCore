@@ -88,21 +88,11 @@
 
 
 
-// The server's own state, owned here (internal linkage): who answers a request that matched nothing,
-// where the access log goes, which ports were registered, and the HTTP/3 credentials held until
-// begin() binds them. Nothing outside this file reads any of it.
-//
-// The three listener arrays are registration intent, not a second copy of listener_pool[]. A port is
-// named by listen() before pool_init() has run, so it cannot be bound where it will live yet; begin()
-// is what turns each entry into a listener_pool[] binding, and from then on transport owns it.
+// The server's own state, owned here (internal linkage): where the access log goes, and the HTTP/3
+// credentials held until begin() binds them. Nothing outside this file reads any of it.
 typedef struct
 {
-    RequestLogCb log_cb;       ///< Per-request access-log hook; may be null.
-
-    uint16_t listen_ports[MAX_LISTENERS];   ///< Ports registered via listen() / begin_http().
-    ConnProto listen_protos[MAX_LISTENERS]; ///< Protocol for each registered listener.
-    proto_bool listen_tls[MAX_LISTENERS];   ///< True for TLS listeners (listen_tls()).
-    uint8_t listener_count;                 ///< Registered listeners.
+    RequestLogCb log_cb; ///< Per-request access-log hook; may be null.
 
 #if PC_ENABLE_HTTP3
     proto_bool pc_h3_running;
@@ -125,6 +115,7 @@ void pc_server_reset(void)
     // materializes a sizeof(ServerCtx) temporary on the caller's stack.
     static const ServerCtx blank = {0};
     s_inst = blank;
+    Tcp.listener->reserve_reset(); // the ports the app named, which begin() would bind again
     network.route->reset();
 #if PC_ENABLE_AUTH
     // A credential id names a row by index and a route holds that id, so the two tables empty
@@ -274,18 +265,15 @@ int proto_append_resp_trailer(char *buf, size_t cap, int hlen, uint8_t slot_id, 
 
 int32_t listen(uint16_t port, ConnProto proto)
 {
-    if (s_inst.listener_count >= MAX_LISTENERS)
+    // Returns the listener id (its index), not PC_OK: the accept path stamps that same index onto
+    // every slot it claims, so this id is what pc_relay_publish() and pc_ssh_forward_begin() match
+    // against. Errors are negative.
+    int32_t id = Tcp.listener->reserve(port, proto, PROTO_FALSE);
+    if (id < 0)
     {
         return (int32_t)PC_ERR_LISTENER_FULL;
     }
-    s_inst.listen_ports[s_inst.listener_count] = port;
-    s_inst.listen_protos[s_inst.listener_count] = proto;
-    s_inst.listen_tls[s_inst.listener_count] = PROTO_FALSE;
-    s_inst.listener_count++;
-    // Return the listener id (its index), not PC_OK: begin() binds listener_pool[i] from
-    // s_inst.listen_ports[i] and the accept path stamps that same index onto the slot, so this id is what
-    // pc_relay_publish() / pc_ssh_forward_begin() must match against. (Errors are negative.)
-    return (int32_t)(s_inst.listener_count - 1);
+    return id;
 }
 
 #if PROTOCORE_HOT
@@ -343,7 +331,7 @@ static void pc_http_on_poll(uint8_t slot)
 
 int32_t proto_begin(const WebServerConfig *cfg)
 {
-    if (s_inst.listener_count == 0
+    if (Tcp.listener->reserved() == 0
 #if PC_ENABLE_HTTP3
         && !s_inst.h3_enabled // an HTTP/3-only server binds UDP, not a TCP listener
 #endif
@@ -385,12 +373,9 @@ int32_t proto_begin(const WebServerConfig *cfg)
 #if PC_ENABLE_SSE
     pc_sse_init();
 #endif
-    for (uint8_t i = 0; i < s_inst.listener_count; i++)
+    if (!Tcp.listener->bind_reserved())
     {
-        if (listener_add(i, s_inst.listen_ports[i], s_inst.listen_protos[i], s_inst.listen_tls[i]) < 0)
-        {
-            return (int32_t)PC_ERR_LISTEN_FAILED;
-        }
+        return (int32_t)PC_ERR_LISTEN_FAILED;
     }
 #if PC_ENABLE_HTTP3
     // Bind the HTTP/3 QUIC server (UDP on device; on host it is fed via pc_quic_server_ingest). Requests
@@ -543,14 +528,10 @@ proto_bool tls_cert(const uint8_t *cert, size_t cert_len, const uint8_t *key, si
 
 int32_t listen_tls(uint16_t port)
 {
-    if (s_inst.listener_count >= MAX_LISTENERS)
+    if (Tcp.listener->reserve(port, PROTO_HTTP, PROTO_TRUE) < 0)
     {
         return (int32_t)PC_ERR_LISTENER_FULL;
     }
-    s_inst.listen_ports[s_inst.listener_count] = port;
-    s_inst.listen_protos[s_inst.listener_count] = PROTO_HTTP;
-    s_inst.listen_tls[s_inst.listener_count] = PROTO_TRUE;
-    s_inst.listener_count++;
     return (int32_t)PC_OK;
 }
 
@@ -584,7 +565,7 @@ int tls_client_subject(uint8_t slot_id, char *out, size_t out_len)
 
 int32_t restart(const WebServerConfig *cfg)
 {
-    if (s_inst.listener_count == 0)
+    if (Tcp.listener->reserved() == 0)
     {
         return (int32_t)PC_ERR_NO_LISTENERS;
     }

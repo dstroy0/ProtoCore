@@ -8,6 +8,42 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ---
 
+## Two includes in protocore.c were gated on a flag their callers do not carry
+
+- **Status:** FIXED (2026-08-06), found auditing the include block after the dispatch-chain move.
+- **Symptom:** none in any env the matrix builds today, because no env sets `PC_ENABLE_HTTP3` or a
+  nonzero `PC_REQUEST_TIMEOUT_MS` or `PC_ENABLE_HTTP_DELIVERY` with `PC_ENABLE_AUTH` off. Any build
+  that does fails to compile on an implicit declaration.
+- **Root cause:** `server/clock/clock.h` and `http_delivery.h` sat inside `#if PC_ENABLE_AUTH`. Their
+  callers are elsewhere: `pc_millis()` runs the QUIC poll under `PC_ENABLE_HTTP3` and the request
+  timeout under `PC_REQUEST_TIMEOUT_MS`, and `pc_delivery_cache_control()` runs under
+  `PC_ENABLE_HTTP_DELIVERY` alone. An include nested under a flag it does not belong to reads as
+  correct as long as one flag implies the other in every configuration anyone has built.
+- **Fix:** `clock.h` is unconditional and `http_delivery.h` takes its own `PC_ENABLE_HTTP_DELIVERY`
+  guard. `sha1.h`, `base64.h` and `sha256.h` came out with them: nothing in the file names a symbol
+  from any of the three.
+
+---
+
+## Moving a function out of a file left its `#if` behind
+
+- **Status:** FIXED (2026-08-06), found on the first build after the dispatch chain moved to
+  `presentation/http/http.c`.
+- **Symptom:** `native_application` fails to compile with `'Auth' undeclared`, `'Route' has no
+member named 'auth_id'`, and `'CSRF_TOKEN_BUF' undeclared`.
+- **Root cause:** the extraction script took each function's body and the comment block above it,
+  but not the `#if` on the line before that, and not the `#endif` after. `pc_csrf_gate`,
+  `handle_ws_route`, `proto_authorize_request`, `lockout_client_ip` and `send_too_many_requests`
+  arrived in the new file unguarded, while `protocore.c` kept four `#if`/`#endif` pairs with nothing
+  between them. Every call site was still guarded, so the guards read as intact.
+- **Blast radius:** any build with the moved feature off, which is every env except the ones that
+  set the matching flag.
+- **Fix:** the four guards are restored around the functions in `http.c`, the empty pairs are gone
+  from `protocore.c`, and the CSRF, lockout and forwarded-trust includes moved with the code that
+  names them.
+
+---
+
 ## Every id table a route indexes grew forever, because only the route table had a reset
 
 - **Status:** FIXED (2026-08-06), found with the route-table fix above, which unblocked the suites.
