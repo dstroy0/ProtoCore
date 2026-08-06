@@ -8,6 +8,61 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ---
 
+## The HTTP/2 engine accepts frames RFC 9113 requires it to reject
+
+- **Status:** OPEN, found by a spec audit of `h2_conn.c` against RFC 9113.
+- **Symptom:** none locally. Every case here is a peer-reachable frame the engine takes instead of
+  answering with the connection or stream error the RFC names.
+- **The set, each with the clause it violates:**
+    - RST_STREAM on stream 0 is accepted (`h2_conn.c:316`). Sec 6.4 makes it a connection error,
+      PROTOCOL_ERROR. `test_h2_conn.c:767` asserts the acceptance, so the suite pins the violation.
+    - DATA on a stream that was never opened is accepted and handed to the application
+      (`h2_conn.c:203`, no state check). Sec 5.1 makes any non-HEADERS/PRIORITY frame on an idle
+      stream a connection error. `test_h2_conn.c:791` asserts the acceptance.
+    - WINDOW_UPDATE with a zero increment is accepted (`h2_conn.c:290`). Sec 6.9 makes it a stream
+      error, or a connection error on stream 0.
+    - WINDOW_UPDATE overflows the window rather than raising FLOW_CONTROL_ERROR (`h2_conn.c:298`
+      and `:305`). Sec 6.9.1 caps a window at 2^31-1. `send_window` starts at the peer's declared
+      `initial_window_size`, so a peer that declares 2^31-1 overflows a signed int32 with a single
+      increment of 1, which is undefined behavior on a remotely supplied value.
+    - The stream identifier on SETTINGS, PING and GOAWAY is never checked (`h2_conn.c:262`), against
+      sec 6.5, 6.7 and 6.8. RST_STREAM, PRIORITY and GOAWAY lengths are never checked, against
+      sec 6.4 and 6.3.
+    - Send-side flow control is accounted and never consulted (`h2_conn.c:471`), so a body past the
+      65535-byte connection window ships anyway, against sec 6.9.1.
+    - A second HEADERS on an open stream is rejected as a connection error (`h2_conn.c:156`), which
+      makes trailers (sec 8.1) unusable. Sec 5.1.1's ascending-id rule governs newly opened streams.
+    - No request-validity checking at all (sec 8.2.2, 8.3.1): the mandatory pseudo-headers are not
+      required and the connection-specific header fields are not banned, and `h2_server.c:107` copies
+      any name and value straight into `HttpReq::headers`.
+- **Fix:** not applied. Each is a separate guard and two of them require deleting a test assertion
+  that currently pins the wrong behavior.
+
+---
+
+## The HTTP/2 request bridge collapses N streams onto one request, and no env builds it
+
+- **Status:** OPEN, found in the same audit.
+- **Symptom:** two concurrent HTTP/2 streams on one connection answer the wrong stream, or one
+  request is lost. Not observed, because nothing exercises it.
+- **Root cause:** `h2_conn` carries `PC_H2_MAX_STREAMS` concurrent streams (8, or 32 on the large
+  PSRAM profiles). The bridge above it keeps one `HttpReq` per connection slot and one
+  `conn_pool[slot].pc_h2_stream`, written at `h2_server.c:127` and read back by
+  `pc_h2_server_respond()` at `:176`. A second stream's HEADERS overwrites both before the first is
+  dispatched. `cb_data` (`:135`) also discards the stream id entirely, so with the idle-stream defect
+  above a peer can append bytes to whatever request is being assembled.
+- **Blast radius:** every concurrent HTTP/2 request. Multiplexing is the reason HTTP/2 exists.
+- **Why nothing caught it:** `h2_server.c` is built by no test environment. It is recorded in
+  `ci_tooling/check/check_test_coverage_baseline.json` as knowingly uncovered, and its only exercise
+  is the hardware-rig interop probe in `test/servers/`. Its HTTP/3 counterpart, `h3_server.c`, is
+  built by two envs. `pc_h2_server_data()` also sends GOAWAY on a recv failure and returns with the
+  socket still open, and the hand-rolled content-length parse at `:115` accepts a partial value and
+  has no overflow guard.
+- **Fix:** not applied. The bridge needs per-stream request state before the guards above are worth
+  adding, so this is a design change rather than a patch.
+
+---
+
 ## Two includes in protocore.c were gated on a flag their callers do not carry
 
 - **Status:** FIXED (2026-08-06), found auditing the include block after the dispatch-chain move.
