@@ -8,6 +8,57 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ---
 
+## Four length fields off the wire wrap on a 32-bit target and pass their own bounds check
+
+- **Status:** OPEN, found across the protocol audits. One class, four sites.
+- **Symptom:** a peer-supplied length near `UINT32_MAX` makes the guard compute a small total, the
+  check passes, and the parser hands back a multi-gigabyte span into a small buffer.
+- **The sites:**
+    - `vxi11.c:89` - `pad = (4 - (len & 3)) & 3` then `r->off + len + pad > r->len`. With `len`
+      0xFFFFFFFD or above, `len + pad` wraps to 0 and `pc_vxi11_parse_read_resp` returns a ~4 GB
+      `data_len`. Reachable from a device reply (RFC 4506 section 4.10 makes the opaque length a
+      wire-supplied unsigned int).
+    - `lsv2.c:90` - `size_t total = PC_LSV2_HEADER_LEN + plen` with `plen` raw off the wire. At
+      0xFFFFFFF9 and above, `total` wraps to 1..7, `len < total` is false, and the telegram is
+      accepted with a payload length up to 4 GB.
+    - `wal.c:112` - `off + WAL_RECORD_HEADER + plen > len`, then `crc32_step(crc, r + 20, plen)`.
+      Same shape at `wal_store.c:273` and `dbm.c:129`.
+- **Why nothing caught it:** `size_t` is 64-bit on the host, so no host suite can reach any of them.
+  The targets that matter (ESP32, Cortex-M, C2000) are all 32-bit.
+- **Fix:** none applied.
+
+---
+
+## Two NMEA 2000 decoders return a not-available sentinel as a real measurement
+
+- **Status:** OPEN, found by the timing and positioning audit.
+- **Root cause:** `nmea2000.c:389` decodes `offset_m` with no validity check, so the
+  not-available `0x7FFF` reads back as +32.767 m of depth offset. `:403` has the same defect on
+  `deviation_rad` and `variation_rad`, where `0x7FFF` becomes +3.2767 rad.
+- **Also in the same cluster:** `ntrip_caster.c:134` `pc_ntrip_request_parse` dereferences `out`
+  through `memset` with no null guard, where every sibling parser guards; and
+  `rtcm3.c:154` `pc_rtcm3_frame_build` with a null payload and a non-zero length skips the copy and
+  CRCs uninitialized bytes, where `pc_ubx_build` refuses the same call.
+- **Fix:** none applied.
+
+---
+
+## A test overflows its own signature buffer before the length guard runs
+
+- **Status:** OPEN, found by the crypto audit.
+- **Root cause:** `test_crypto_kat.c:301` decodes into `uint8_t sig[64]` and only then checks
+  `slen != 64`. Five pinned Ed25519 vectors carry longer signatures, including tcId 34 at 96 bytes,
+  which overruns by 32. Undefined behavior that ASan would trip.
+- **Related, same suite:** the AES-128-GCM table is 40 rows and every one is `result: valid`. The
+  curator's `flagged[:40]` cap consumes exactly the valid rows and truncates immediately before the
+  first `ModifiedTag`, so `KatAead.valid` is emitted and never read. The file header claims
+  "adversarial edge cases: wrong tags, modified IVs"; for AES-128-GCM there are none of either, and
+  the only negative is the test's own tag flip.
+- **Fix:** none applied. `sig[96]` closes the overflow; the coverage gap needs the cap raised or the
+  buckets split.
+
+---
+
 ## Every OAuth2 request builder passes a Buf ** where a Buf * is expected, and segfaults
 
 - **Status:** OPEN, found by a spec audit of the security services. Verified in source.
