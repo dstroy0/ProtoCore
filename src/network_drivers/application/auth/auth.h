@@ -72,6 +72,12 @@ struct HttpReq;
  * is authentic but the issue time falls outside the nonce lifetime - authentic and fresh are
  * separate answers, and only the pair of them justifies trusting the credential that arrived with it.
  *
+ * @var AuthNs::reset
+ * Empty the credential table. An id names a row by index and a route holds that id, so the table
+ * empties with the routes it is indexed from: pc_server_reset() calls both. A table that kept its
+ * rows across a reset would reach @ref PC_AUTH_NONE after MAX_ROUTES registrations and hand every
+ * later route an id that guards nothing.
+ *
  * The keying secret is the module's own storage and is not a member: it is written at
  * @ref AuthNs::rekey and read by nothing outside auth.c, so exposing a handle to it would widen the
  * surface without giving any caller something it can use.
@@ -84,6 +90,7 @@ typedef struct
     void (*rekey)(void);
     void (*mint_nonce)(char *out, size_t cap);
     proto_bool (*verify_nonce)(const char *nonce, proto_bool *expired);
+    void (*reset)(void);
 } AuthNs;
 
 /** @brief The one symbol this module exports. */

@@ -294,6 +294,11 @@ void pc_server_reset(void)
     static const ServerCtx blank = {0};
     s_inst = blank;
     network.route->reset();
+#if PC_ENABLE_AUTH
+    // A credential id names a row by index and a route holds that id, so the two tables empty
+    // together: routes left behind rows the table has no way to reach, and the table is bounded.
+    Auth.reset();
+#endif
     pc_resp_reset();
     pc_middleware_reset();
     pc_signal_reset();

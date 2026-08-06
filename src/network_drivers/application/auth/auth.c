@@ -549,6 +549,17 @@ static proto_bool check(uint8_t slot_id, HttpReq *req, uint8_t id, proto_bool *s
     return check_basic(slot_id, req, c);
 }
 
-const AuthNs Auth = {add, check, challenge, rekey, mint_nonce, verify_nonce};
+// The count is the table, and a row is wiped on hand-out, so nothing below the count can carry a
+// previous tenant's credential and there is nothing to wipe here. The keying secret survives: it is
+// the server's, not a route's, and rekey() is what replaces it.
+static void reset(void)
+{
+    if (s_auth != NULL)
+    {
+        s_auth->count = 0;
+    }
+}
+
+const AuthNs Auth = {add, check, challenge, rekey, mint_nonce, verify_nonce, reset};
 
 #endif // PC_ENABLE_AUTH
