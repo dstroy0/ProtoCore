@@ -8,7 +8,7 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ---
 
-## The TCP transport did not compile for a target, and one env was the only witness
+## The TCP transport's hot path did not compile, and one env was the only witness
 
 - **Status:** FIXED, found by running the transport envs during the ring work. Pre-existing on
   `c11-target`; confirmed by building `8b329ffd7` and getting the identical three errors.
@@ -20,17 +20,24 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
   `Session` is declared in `session.h`, which neither file includes. Both already include
   `worker.h`, whose only purpose is to export `Workers`.
 - **Why nothing caught it:** `native_tcp_hot` is the only env that compiles the `PROTOCORE_HOT`
-  arms of the transport. Every host env takes the `#else` arm, where the offending call sites do
-  not exist, so 19 of the 20 SSH and transport envs were green with the target build broken.
+  arms of the transport. It runs on the host - `native_hot_base` sets `PROTOCORE_HOT` and the board
+  mocks stand in for silicon - but every other env takes the `#else` arm, where the offending call
+  sites do not exist, so 19 of the 20 SSH and transport envs were green with the hot path broken.
 - **Fix:** a forward declaration above both arms in `worker.c`, so one declaration covers both
   definitions; and `Workers.wake()` at the call sites, which is the owner they already hold the
   header for rather than a reach up through the join and back down.
 - **A third site the compiler never named:** `tcp_listener.c:351` had the same
   `Session.workers->wake()`, under `#if PC_WORKER_COUNT > 1` inside `#if PROTOCORE_HOT`.
   `native_tcp_hot` builds single-worker so it took the `#else` arm, and the two envs that do set
-  `-DPC_WORKER_COUNT=2` are host builds where `PROTOCORE_HOT` is 0. **`PROTOCORE_HOT` with
-  `PC_WORKER_COUNT > 1` is compiled by nothing in the matrix**, so that arm was carrying the same
-  break with no witness at all. Fixed the same way; the coverage gap is still open.
+  `-DPC_WORKER_COUNT=2` do not set `PROTOCORE_HOT`. **`PROTOCORE_HOT` with `PC_WORKER_COUNT > 1` is
+  compiled by nothing in the matrix**, so that arm was carrying the same break with no witness at
+  all. Fixed the same way. The gap is closable on the host - `native_hot_base` with
+  `-DPC_WORKER_COUNT=2` - and is still open.
+- **A second gap the matrix already names:** `native_workers` records that per-worker queue routing
+  is "hardware-verified (the host queue mock ignores the handle)". `pc_platform_queue_send` in
+  `test/mocks/pc_net_host.h` discards the item and reports success, and the receive drains a
+  separately staged buffer, so no host env can observe an enqueue reaching its consumer. That is
+  what makes the enqueue-then-wake pair untestable here.
 - **Still wrong, and not fixed here:** the call is upward whichever table it names. The worker
   blocks on a task notification (`worker_task`: `pc_platform_task_wait`), not on the queue it
   drains, so every producer does `pc_platform_queue_send()` and then a separate wake - and it is

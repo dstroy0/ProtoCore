@@ -13,7 +13,6 @@
 #include "network_drivers/session/session.h"
 #include "network_drivers/transport/tcp.h"
 #include <unity.h>
-#include "network_drivers/transport/tcp.h"
 
 // tcp.cpp + presentation.cpp + session.cpp compiled into native env.
 // No stubs required.
@@ -33,7 +32,7 @@ static void push_to_slot(uint8_t slot, const char *data)
 void setUp()
 {
     set_millis(0);
-    queue_stage_reset(); // clear any staged events from previous test
+    queue_stage_reset(); // no case inherits another's queued events
     Tcp.conn->init(NULL);
     Tcp.listener->add(0, 80, PROTO_HTTP, PROTO_FALSE);
     for (int i = 0; i < MAX_CONNS; i++)
@@ -196,9 +195,8 @@ void stress_mixed_fresh_stale_slots_many_ticks()
 // ====================================================================
 // EVENT DISPATCH TESTS - Session.tick(0) queue-drain path
 //
-// The FreeRTOS queue mock supports staged events via queue_stage_raw().
-// These tests verify the while(xQueueReceive…) loop in Session.tick(0)
-// dispatches each event type correctly.
+// Each case posts through Tcp.listener->enqueue(), the seam the transport itself
+// posts through, and Session.tick(0) drains it.
 // ====================================================================
 
 // EVT_CONNECT → http_reset(slot_id)
@@ -208,7 +206,7 @@ void test_evt_connect_calls_http_reset()
     http_pool[1].header_count = 3;
 
     TcpEvt evt = {EVT_CONNECT, 1, 0};
-    queue_stage_raw(&evt, sizeof(evt));
+    (void)Tcp.listener->enqueue(0, &evt);
     Session.tick(0);
 
     TEST_ASSERT_EQUAL(PARSE_METHOD, http_pool[1].parse_state);
@@ -222,7 +220,7 @@ void test_evt_disconnect_calls_http_reset()
     http_pool[0].header_count = 2;
 
     TcpEvt evt = {EVT_DISCONNECT, 0, 0};
-    queue_stage_raw(&evt, sizeof(evt));
+    (void)Tcp.listener->enqueue(0, &evt);
     Session.tick(0);
 
     TEST_ASSERT_EQUAL(PARSE_METHOD, http_pool[0].parse_state);
@@ -235,7 +233,7 @@ void test_evt_error_calls_http_reset()
     http_pool[2].parse_state = PARSE_ERROR;
 
     TcpEvt evt = {EVT_ERROR, 2, 0};
-    queue_stage_raw(&evt, sizeof(evt));
+    (void)Tcp.listener->enqueue(0, &evt);
     Session.tick(0);
 
     TEST_ASSERT_EQUAL(PARSE_METHOD, http_pool[2].parse_state);
@@ -247,7 +245,7 @@ void test_evt_data_calls_http_parse()
     push_to_slot(0, "GET /evt HTTP/1.1\r\n\r\n");
 
     TcpEvt evt = {EVT_DATA, 0, 0};
-    queue_stage_raw(&evt, sizeof(evt));
+    (void)Tcp.listener->enqueue(0, &evt);
     Session.tick(0);
 
     TEST_ASSERT_EQUAL(PARSE_COMPLETE, http_pool[0].parse_state);
@@ -261,17 +259,17 @@ void test_multiple_events_drained_in_one_tick()
     // Slot 0: dirty state → EVT_CONNECT → reset
     http_pool[0].parse_state = PARSE_COMPLETE;
     TcpEvt e0 = {EVT_CONNECT, 0, 0};
-    queue_stage_raw(&e0, sizeof(e0));
+    (void)Tcp.listener->enqueue(0, &e0);
 
     // Slot 1: ring buffer with a GET → EVT_DATA → PARSE_COMPLETE
     push_to_slot(1, "GET / HTTP/1.1\r\n\r\n");
     TcpEvt e1 = {EVT_DATA, 1, 0};
-    queue_stage_raw(&e1, sizeof(e1));
+    (void)Tcp.listener->enqueue(0, &e1);
 
     // Slot 2: dirty header state → EVT_DISCONNECT → reset
     http_pool[2].parse_state = PARSE_HEADER_VAL;
     TcpEvt e2 = {EVT_DISCONNECT, 2, 0};
-    queue_stage_raw(&e2, sizeof(e2));
+    (void)Tcp.listener->enqueue(0, &e2);
 
     Session.tick(0);
 
@@ -305,7 +303,7 @@ void test_dispatch_drops_unregistered_protocol_event()
     http_pool[0].parse_state = PARSE_COMPLETE; // sentinel: must survive untouched
 
     TcpEvt evt = {EVT_CONNECT, 0, 0};
-    queue_stage_raw(&evt, sizeof(evt));
+    (void)Tcp.listener->enqueue(0, &evt);
     Session.tick(0);
 
     TEST_ASSERT_EQUAL(PARSE_COMPLETE, http_pool[0].parse_state); // handler never ran
@@ -323,17 +321,17 @@ void test_dispatch_skips_null_callback_fields()
     http_pool[0].parse_state = PARSE_COMPLETE; // sentinel across all three events
 
     TcpEvt e0 = {EVT_CONNECT, 0, 0};
-    queue_stage_raw(&e0, sizeof(e0));
+    (void)Tcp.listener->enqueue(0, &e0);
     Session.tick(0);
     TEST_ASSERT_EQUAL(PARSE_COMPLETE, http_pool[0].parse_state); // on_accept null -> no-op
 
     TcpEvt e1 = {EVT_DATA, 0, 0};
-    queue_stage_raw(&e1, sizeof(e1));
+    (void)Tcp.listener->enqueue(0, &e1);
     Session.tick(0);
     TEST_ASSERT_EQUAL(PARSE_COMPLETE, http_pool[0].parse_state); // on_data null -> no-op
 
     TcpEvt e2 = {EVT_DISCONNECT, 0, 0};
-    queue_stage_raw(&e2, sizeof(e2));
+    (void)Tcp.listener->enqueue(0, &e2);
     Session.tick(0);
     TEST_ASSERT_EQUAL(PARSE_COMPLETE, http_pool[0].parse_state); // on_close null -> no-op
 
@@ -348,7 +346,7 @@ void test_dispatch_ignores_unknown_evt_type()
     http_pool[0].parse_state = PARSE_COMPLETE; // sentinel: must survive untouched
 
     TcpEvt evt = {(EvtType)99, 0, 0};
-    queue_stage_raw(&evt, sizeof(evt));
+    (void)Tcp.listener->enqueue(0, &evt);
     Session.tick(0);
 
     TEST_ASSERT_EQUAL(PARSE_COMPLETE, http_pool[0].parse_state); // no case matched -> no-op

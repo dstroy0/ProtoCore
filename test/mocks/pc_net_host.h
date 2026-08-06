@@ -525,8 +525,34 @@ typedef uint32_t pc_platform_ticks;
 #define PC_PLATFORM_WAIT_FOREVER 0xFFFFFFFFu
 #define PC_PLATFORM_CORES 1
 
-// The host runs the pipeline inline, so a queue is a handle the core can hold and compare and a
-// task never starts. Depth/'item size' are accepted and ignored.
+// Keyed by the handle create hands back, so an enqueue is observable at its consumer and
+// per-worker routing is checkable here rather than only on hardware.
+#define PC_QUEUE_MAX 24
+#define PC_QUEUE_DEPTH 32
+#define PC_QUEUE_ITEM 64
+
+typedef struct
+{
+    void *handle[PC_QUEUE_MAX];
+    size_t item[PC_QUEUE_MAX];
+    size_t head[PC_QUEUE_MAX];
+    size_t tail[PC_QUEUE_MAX];
+    uint8_t buf[PC_QUEUE_MAX][PC_QUEUE_DEPTH * PC_QUEUE_ITEM];
+} PcQueueTable;
+__attribute__((weak)) PcQueueTable g_pc_queues;
+
+static inline int pc_queue_slot(pc_platform_queue q)
+{
+    for (int i = 0; i < PC_QUEUE_MAX; i++)
+    {
+        if (g_pc_queues.handle[i] == q)
+        {
+            return i;
+        }
+    }
+    return -1;
+}
+
 // One-shot creation failure: the next queue create reports no room, the way a kernel out of
 // queue objects does, so the caller has to unwind the listener it was building.
 __attribute__((weak)) int pc_platform_queue_create_fail_once;
@@ -539,14 +565,35 @@ static inline void mock_queue_create_fail_once(void)
 static inline pc_platform_queue pc_platform_queue_create(size_t depth, size_t item, void *storage, void *ctrl)
 {
     (void)depth;
-    (void)item;
     (void)ctrl;
     if (pc_platform_queue_create_fail_once)
     {
         pc_platform_queue_create_fail_once = 0;
         return NULL;
     }
-    return storage ? storage : (void *)1;
+    pc_platform_queue h = storage;
+    if (h == NULL)
+    {
+        h = (void *)1;
+    }
+    size_t sz = item;
+    if (sz > PC_QUEUE_ITEM)
+    {
+        sz = PC_QUEUE_ITEM;
+    }
+    int slot = pc_queue_slot(h);
+    if (slot < 0)
+    {
+        slot = pc_queue_slot(NULL);
+    }
+    if (slot >= 0)
+    {
+        g_pc_queues.handle[slot] = h;
+        g_pc_queues.item[slot] = sz;
+        g_pc_queues.head[slot] = 0;
+        g_pc_queues.tail[slot] = 0;
+    }
+    return h;
 }
 // One-shot send failure: the next pc_platform_queue_send() reports a full queue and clears the
 // latch. Lets a test drive the enqueue path's rejection branch.
@@ -557,95 +604,111 @@ static inline void mock_queue_send_fail_once(void)
     pc_platform_queue_send_fail_once = 1;
 }
 
+// The two send entry points differ only in which end they write, so the bounds and the copy live here.
+static inline int pc_queue_push(pc_platform_queue q, const void *item, size_t at)
+{
+    int slot = pc_queue_slot(q);
+    if (slot < 0 || item == NULL)
+    {
+        return PC_PLATFORM_FALSE;
+    }
+    if ((g_pc_queues.head[slot] - g_pc_queues.tail[slot]) >= PC_QUEUE_DEPTH)
+    {
+        return PC_PLATFORM_FALSE; // full, the way a kernel queue refuses
+    }
+    memcpy(&g_pc_queues.buf[slot][(at % PC_QUEUE_DEPTH) * PC_QUEUE_ITEM], item, g_pc_queues.item[slot]);
+    return PC_PLATFORM_OK;
+}
+
 static inline int pc_platform_queue_send(pc_platform_queue q, const void *item, uint32_t ticks)
 {
-    (void)q;
-    (void)item;
     (void)ticks;
     if (pc_platform_queue_send_fail_once)
     {
         pc_platform_queue_send_fail_once = 0;
         return PC_PLATFORM_FALSE;
     }
-    return PC_PLATFORM_OK;
+    int slot = pc_queue_slot(q);
+    if (slot < 0)
+    {
+        return PC_PLATFORM_FALSE;
+    }
+    int ok = pc_queue_push(q, item, g_pc_queues.head[slot]);
+    if (ok == PC_PLATFORM_OK)
+    {
+        g_pc_queues.head[slot]++;
+    }
+    return ok;
 }
+
 static inline int pc_platform_queue_send_front(pc_platform_queue q, const void *item, uint32_t ticks)
 {
-    (void)q;
-    (void)item;
     (void)ticks;
-    return PC_PLATFORM_OK;
+    int slot = pc_queue_slot(q);
+    if (slot < 0)
+    {
+        return PC_PLATFORM_FALSE;
+    }
+    int ok = pc_queue_push(q, item, g_pc_queues.tail[slot] - 1);
+    if (ok == PC_PLATFORM_OK)
+    {
+        g_pc_queues.tail[slot]--;
+    }
+    return ok;
 }
+
 static inline int pc_platform_queue_send_isr(pc_platform_queue q, const void *item, int *woke)
 {
-    (void)q;
-    (void)item;
     if (woke)
     {
         *woke = 0;
     }
-    return PC_PLATFORM_OK;
-}
-// Staged-event buffer: a test calls queue_stage_raw() before Session.tick(), and the receive below
-// drains those items FIFO and then reports empty, which is what a real queue does once emptied.
-// A send is still inert (the host runs the pipeline inline), so the only way an item enters is a
-// test staging it deliberately. One instance for the whole program - the test stages from its own
-// translation unit and the session layer drains from another - so the definition is weak and the
-// linker collapses it, the same way the millis counter in Arduino.h is shared.
-#define PC_QUEUE_STAGE_MAX 16
-#define PC_QUEUE_STAGE_ITEM 32
-
-typedef struct
-{
-    uint8_t items[PC_QUEUE_STAGE_MAX][PC_QUEUE_STAGE_ITEM];
-    int item_sz[PC_QUEUE_STAGE_MAX];
-    int count;
-    int idx;
-} PcQueueStage;
-__attribute__((weak)) PcQueueStage g_pc_queue_stage;
-
-static inline void queue_stage_raw(const void *item, int sz)
-{
-    if (sz > 0 && sz <= PC_QUEUE_STAGE_ITEM && g_pc_queue_stage.count < PC_QUEUE_STAGE_MAX)
-    {
-        memcpy(g_pc_queue_stage.items[g_pc_queue_stage.count], item, (size_t)sz);
-        g_pc_queue_stage.item_sz[g_pc_queue_stage.count] = sz;
-        g_pc_queue_stage.count++;
-    }
+    return pc_platform_queue_send(q, item, 0);
 }
 
+// Called from setUp so one case cannot inherit another's backlog.
 static inline void queue_stage_reset(void)
 {
-    g_pc_queue_stage.count = 0;
-    g_pc_queue_stage.idx = 0;
+    for (int i = 0; i < PC_QUEUE_MAX; i++)
+    {
+        g_pc_queues.head[i] = 0;
+        g_pc_queues.tail[i] = 0;
+    }
 }
 
 static inline int pc_platform_queue_recv(pc_platform_queue q, void *item, uint32_t ticks)
 {
-    (void)q;
     (void)ticks;
-    if (g_pc_queue_stage.idx < g_pc_queue_stage.count)
+    int slot = pc_queue_slot(q);
+    if (slot < 0 || item == NULL || g_pc_queues.head[slot] == g_pc_queues.tail[slot])
     {
-        memcpy(item, g_pc_queue_stage.items[g_pc_queue_stage.idx],
-               (size_t)g_pc_queue_stage.item_sz[g_pc_queue_stage.idx]);
-        g_pc_queue_stage.idx++;
-        return PC_PLATFORM_OK;
+        return 0;
     }
-    return 0;
+    memcpy(item, &g_pc_queues.buf[slot][(g_pc_queues.tail[slot] % PC_QUEUE_DEPTH) * PC_QUEUE_ITEM],
+           g_pc_queues.item[slot]);
+    g_pc_queues.tail[slot]++;
+    return PC_PLATFORM_OK;
 }
 static inline size_t pc_platform_queue_waiting(pc_platform_queue q)
 {
-    (void)q;
-    return 0;
+    int slot = pc_queue_slot(q);
+    if (slot < 0)
+    {
+        return 0;
+    }
+    return g_pc_queues.head[slot] - g_pc_queues.tail[slot];
 }
 static inline size_t pc_platform_queue_waiting_isr(pc_platform_queue q)
 {
-    (void)q;
-    return 0;
+    return pc_platform_queue_waiting(q);
 }
 static inline void pc_platform_queue_delete(pc_platform_queue q)
 {
-    (void)q;
+    int slot = pc_queue_slot(q);
+    if (slot >= 0)
+    {
+        g_pc_queues.handle[slot] = NULL;
+    }
 }
 
 static inline int pc_platform_task_start(pc_platform_task_fn fn, const char *name, uint32_t stack, void *arg, int prio,
