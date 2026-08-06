@@ -7,8 +7,8 @@
  */
 
 #include "services/energy/dnp3/dnp3.h"
-#include "shared_primitives/crc.h"    // PC_CRC16_DNP
-#include "mmgr/endian.h" // pc_rd16le / pc_rd32le
+#include "mmgr/endian.h"           // pc_rd16le / pc_rd32le
+#include "shared_primitives/crc.h" // PC_CRC16_DNP
 
 #if PC_ENABLE_DNP3
 

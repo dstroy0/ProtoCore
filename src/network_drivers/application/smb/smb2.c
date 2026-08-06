@@ -17,8 +17,8 @@
 #include "crypto/kdf/kdf.h"         // pc_kdf_ctr_hmac_sha256 for SMB 3.x key derivation
 #include "crypto/mac/aes_cmac.h"    // pc_aes_cmac for SMB 3.x message signing
 #include "crypto/mac/hmac_sha256.h" // pc_hmac_sha256 for SMB 2.x message signing
-#include "mmgr/secure.h"            // the per-call GCM context borrow
 #include "mmgr/endian.h"
+#include "mmgr/secure.h" // the per-call GCM context borrow
 
 static const uint8_t SMB2_PROTOCOL_ID[4] = {0xFE, 'S', 'M', 'B'};
 

@@ -10,12 +10,11 @@
 #include "protocore.h"
 #include <string.h>
 
-#include <unity.h>
 #include "network_drivers/transport/tcp.h"
 #include "rx_feed.h"
+#include <unity.h>
 
 static int handler_calls = 0;
-
 
 static void handle_ok(uint8_t slot_id, HttpReq *req)
 {

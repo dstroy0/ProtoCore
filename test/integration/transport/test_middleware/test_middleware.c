@@ -8,9 +8,9 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <unity.h>
 #include "network_drivers/transport/tcp.h"
 #include "rx_feed.h"
+#include <unity.h>
 
 // Cross-test observation state (middlewares are plain function pointers, so they
 // communicate through file-static globals + the global server, just like the
@@ -28,7 +28,6 @@ static void order_push(char c)
         g_order[g_order_len] = '\0';
     }
 }
-
 
 // Re-arm a connection slot (send() frees it) and clear the response sink so each
 // request in a test is observed in isolation.

@@ -13,8 +13,8 @@
 #if PC_ENABLE_ADS1115
 
 #if PROTOCORE_HOT || PC_PLATFORM_HAS_BUS
-#include "services/peripherals/i2c.h"
 #include "mmgr/endian.h" // pc_wr16be / pc_rd16be: the registers are big-endian
+#include "services/peripherals/i2c.h"
 #endif
 // Config-register field values (per the ADS1115 datasheet).
 static const uint16_t OS_SINGLE = 0x8000;   // start a single conversion

@@ -29,8 +29,8 @@ void tearDown()
 void test_defer_runs_inline_on_host()
 {
     TEST_ASSERT_TRUE(Session.workers->defer(0, inc, &g_ran));
-    TEST_ASSERT_EQUAL_INT(1, g_ran); // executed inline (no worker task on host)
-    Session.workers->run_deferred(0);       // no-op on host: must not double-run
+    TEST_ASSERT_EQUAL_INT(1, g_ran);  // executed inline (no worker task on host)
+    Session.workers->run_deferred(0); // no-op on host: must not double-run
     TEST_ASSERT_EQUAL_INT(1, g_ran);
 }
 

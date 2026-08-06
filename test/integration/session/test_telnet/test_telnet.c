@@ -11,8 +11,8 @@
 #include <stdint.h>
 #include <string.h>
 
-#include <unity.h>
 #include "rx_feed.h"
+#include <unity.h>
 
 #define IAC 255
 #define WILL 251
@@ -54,7 +54,6 @@ void tearDown()
     Telnet.close(0);
     tcp_capture_disable();
 }
-
 
 // ---------------------------------------------------------------------------
 

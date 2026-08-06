@@ -13,8 +13,8 @@
 
 #if PC_ENABLE_HTTP_CLIENT
 
-#include "shared_primitives/mime.h"
 #include "mmgr/protostr.h"
+#include "shared_primitives/mime.h"
 #include <stdio.h>
 
 // ---------------------------------------------------------------------------
@@ -23,7 +23,7 @@
 
 #if PROTOCORE_HOT
 #include "network_drivers/transport/tcp.h" // shared outbound TCP client (L4)
-#include <Arduino.h>                          // millis()
+#include <Arduino.h>                       // millis()
 #endif
 #if PROTOCORE_HOT && PC_ENABLE_HTTP_CLIENT_TLS
 #include "network_drivers/tls/tls.h"

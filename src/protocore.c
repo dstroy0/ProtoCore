@@ -34,11 +34,11 @@
  */
 
 #include "protocore.h"
-#include "network_drivers/presentation/http/http.h"
 #include "mmgr/frame.h"     // the diag document is a frame spec, not a concatenation
 #include "mmgr/membuild.h"  // pc_sb frame builder
 #include "mmgr/plaintext.h" // the diag document is borrowed, not a stack array
 #include "mmgr/rawmemcpy.h" // proto_raw_read: every move here is into our own buffer
+#include "network_drivers/presentation/http/http.h"
 #include "network_drivers/presentation/http/route/http_route.h"
 #include "network_drivers/presentation/presentation.h" // http_proto_set_poll (install the instance-bound HTTP poll)
 #include "network_drivers/session/proto_handler.h"
@@ -95,7 +95,7 @@
 // is what turns each entry into a listener_pool[] binding, and from then on transport owns it.
 typedef struct
 {
-    RequestLogCb log_cb;       ///< Per-request access-log hook; may be null.
+    RequestLogCb log_cb; ///< Per-request access-log hook; may be null.
 
     uint16_t listen_ports[MAX_LISTENERS];   ///< Ports registered via listen() / begin_http().
     ConnProto listen_protos[MAX_LISTENERS]; ///< Protocol for each registered listener.
@@ -802,4 +802,3 @@ void diag(uint8_t slot_id)
     pc_plaintext_release(mark);
 }
 #endif
-

@@ -9,12 +9,12 @@
  */
 
 #include "network_drivers/presentation/http/http.h"
-#include "network_drivers/presentation/http/route/http_route.h" // HttpRoutes
-#include "mmgr/membuild.h"            // pc_sb: the Allow list is appended, not formatted
-#include "mmgr/rawmemcpy.h"           // proto_raw_read: a captured segment moves into our own buffer
-#include "protocore.h"                // http_pool, and the request and route widths
+#include "mmgr/membuild.h"  // pc_sb: the Allow list is appended, not formatted
+#include "mmgr/rawmemcpy.h" // proto_raw_read: a captured segment moves into our own buffer
 #include "network_drivers/presentation/http/auth/auth.h"
-#include "shared_primitives/runops.h" // every scan and compare here
+#include "network_drivers/presentation/http/route/http_route.h" // HttpRoutes
+#include "protocore.h"                                          // http_pool, and the request and route widths
+#include "shared_primitives/runops.h"                           // every scan and compare here
 #if PC_ENABLE_AUTH_LOCKOUT
 #include "server/clock/clock.h" // pc_millis() stamps the attempt the lockout counts
 #include "services/security/auth_lockout/auth_lockout.h"
@@ -577,8 +577,8 @@ static proto_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const H
 }
 #endif // PC_ENABLE_AUTH
 
-static proto_bool dispatch_matched_route(uint8_t slot_id, HttpReq *req, HttpMethod method, HttpRoute *r, proto_bool *path_matched,
-                                  char *allow_buf, size_t allow_cap)
+static proto_bool dispatch_matched_route(uint8_t slot_id, HttpReq *req, HttpMethod method, HttpRoute *r,
+                                         proto_bool *path_matched, char *allow_buf, size_t allow_cap)
 {
 #if PC_ENABLE_WEBSOCKET
     if (r->type == ROUTE_WS)
@@ -897,8 +897,8 @@ static void poll_slot(uint8_t i)
     }
 }
 
-const HttpNs Http = {status_text,       parse_method, method_name,      path_matches,
-                     match_path_params, req_is_head,  allow_append,     match_and_execute, set_not_found, poll_slot,
+const HttpNs Http = {status_text,  parse_method, method_name,       path_matches,  match_path_params,
+                     req_is_head,  allow_append, match_and_execute, set_not_found, poll_slot,
 #if PC_ENABLE_EDGE_CACHE
                      set_edge_poll
 #endif

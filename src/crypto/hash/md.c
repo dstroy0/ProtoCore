@@ -8,8 +8,8 @@
 
 #include "crypto/hash/md.h"
 #include "crypto/crypto_opt.h"
-#include "mmgr/secure.h" // the secure pool: digest state, wiped on release
 #include "mmgr/endian.h"
+#include "mmgr/secure.h" // the secure pool: digest state, wiped on release
 
 PC_CRYPTO_HOT
 

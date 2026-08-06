@@ -5,9 +5,8 @@
 // ring-buffer arithmetic, timeout logic, event-queue behavior, and
 // sustained-load correctness.
 
+#include "network_drivers/transport/tcp.h"
 #include "shared_primitives/ip.h"
-#include "network_drivers/transport/tcp.h"
-#include "network_drivers/transport/tcp.h"
 #include <string.h>
 #include <unity.h>
 
@@ -201,7 +200,7 @@ void test_active_send_not_reaped()
     conn_pool[1].last_activity_ms = 0; // equally stale, but NOT touched
 
     set_millis(CONN_TIMEOUT_MS + 10); // past the idle deadline
-    Tcp.conn->touch_active(0);          // the pump's per-poll refresh for an in-flight body
+    Tcp.conn->touch_active(0);        // the pump's per-poll refresh for an in-flight body
     Tcp.conn->check_timeouts(0);
 
     TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)conn_pool[0].state); // survives (streaming)
@@ -1385,9 +1384,9 @@ void test_accept_cb_claims_slot_and_wires_connection()
     TEST_ASSERT_EQUAL(0u, (size_t)c->rx_head);
     TEST_ASSERT_EQUAL(0u, (size_t)c->rx_tail);
     TEST_ASSERT_EQUAL_UINT8(0, c->listener_id);
-    TEST_ASSERT_EQUAL_INT((int)PROTO_HTTP, (int)c->proto);   // from listener_pool[0] (setUp's listener_add)
-    TEST_ASSERT_EQUAL_INT((int)PC_IF_ANY, (int)c->iface); // host build: no real pcb IP to classify
-    TEST_ASSERT_EQUAL_UINT8(0, c->tls);                      // PC_ENABLE_TLS is off on native
+    TEST_ASSERT_EQUAL_INT((int)PROTO_HTTP, (int)c->proto); // from listener_pool[0] (setUp's listener_add)
+    TEST_ASSERT_EQUAL_INT((int)PC_IF_ANY, (int)c->iface);  // host build: no real pcb IP to classify
+    TEST_ASSERT_EQUAL_UINT8(0, c->tls);                    // PC_ENABLE_TLS is off on native
 }
 
 // Two back-to-back accepts on the same listener claim two DIFFERENT slots (not a stale

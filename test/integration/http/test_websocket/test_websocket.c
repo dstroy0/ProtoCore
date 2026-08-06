@@ -15,8 +15,8 @@
 #include "network_drivers/presentation/http/websocket/websocket.h"
 #include <string.h>
 
-#include <unity.h>
 #include "rx_feed.h"
+#include <unity.h>
 
 #if PC_ENABLE_WS_DEFLATE
 #include "mmgr/plaintext.h"                                     // arena-exhaustion drive for the fail-closed path

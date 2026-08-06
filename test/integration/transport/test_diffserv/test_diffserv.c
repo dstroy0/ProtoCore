@@ -9,7 +9,6 @@
 
 #include "network_drivers/transport/diffserv.h"
 #include "network_drivers/transport/tcp.h"
-#include "network_drivers/transport/tcp.h"
 #include <unity.h>
 
 void setUp()

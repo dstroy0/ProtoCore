@@ -7,13 +7,12 @@
 #include "protocore.h"
 #include <stdio.h>
 
-#include <unity.h>
 #include "network_drivers/transport/tcp.h"
 #include "rx_feed.h"
+#include <unity.h>
 
 static char g_a[64], g_b[64], g_missing[64];
 static proto_bool g_found_a, g_found_b, g_found_missing;
-
 
 static void h_form(uint8_t slot, HttpReq *req)
 {

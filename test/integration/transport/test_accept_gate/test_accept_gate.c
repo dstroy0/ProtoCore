@@ -15,12 +15,11 @@
 //   ACCEPT_THROTTLE_MAX 3 / PC_WINDOW 1000   PER_IP_MAX 2 / PC_WINDOW 1000 / SLOTS 4   ALLOWLIST_SLOTS 4
 // Pure host tests.
 
-#include "shared_primitives/ip.h"
 #include "network_drivers/session/proto_handler.h"
 #include "network_drivers/transport/tcp.h"
 #include "server/clock/clock.h"
+#include "shared_primitives/ip.h"
 #include <unity.h>
-#include "network_drivers/transport/tcp.h"
 
 // A fake tick source for the pc_millis() override tests below.
 static uint32_t g_fake_ticks = 0;
@@ -66,7 +65,7 @@ void test_accept_throttle_window()
 void test_accept_throttle_rollover()
 {
     Tcp.listener->accept_throttle_reset();
-    uint32_t base = 0xFFFFFE00u;                           // ~512 ticks before wrap
+    uint32_t base = 0xFFFFFE00u;                                // ~512 ticks before wrap
     TEST_ASSERT_TRUE(Tcp.listener->accept_allowed(base));       // window starts here, 1
     TEST_ASSERT_TRUE(Tcp.listener->accept_allowed(base + 100)); // 2
     TEST_ASSERT_TRUE(Tcp.listener->accept_allowed(5));          // wrapped; elapsed ~517 < 1000, 3
@@ -227,7 +226,7 @@ void test_ip_allowlist_rejects_bad_and_full()
     Tcp.listener->ip_allowlist_reset();
     pc_ip bad = v4(1, 0, 0, 0);
     TEST_ASSERT_FALSE(Tcp.listener->ip_allow_add(&bad, 33)); // prefix > 32
-    for (int i = 0; i < 4; i++)                         // SLOTS == 4
+    for (int i = 0; i < 4; i++)                              // SLOTS == 4
     {
         pc_ip r = v4(10, 0, 0, (uint8_t)i);
         TEST_ASSERT_TRUE(Tcp.listener->ip_allow_add(&r, 32));

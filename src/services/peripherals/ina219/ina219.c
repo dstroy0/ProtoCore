@@ -12,8 +12,8 @@
 #if PC_ENABLE_INA219
 
 #if PROTOCORE_HOT || PC_PLATFORM_HAS_BUS
-#include "services/peripherals/i2c.h"
 #include "mmgr/endian.h" // pc_wr16be / pc_rd16be: the registers are big-endian
+#include "services/peripherals/i2c.h"
 #endif
 int32_t pc_ina219_bus_mv(uint16_t raw)
 {

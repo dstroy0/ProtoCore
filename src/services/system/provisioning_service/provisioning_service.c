@@ -211,7 +211,7 @@ static void prov_save_handler(uint8_t slot_id, HttpReq *req)
 void pc_provisioning_begin(const char *ap_ssid)
 {
     Physical.wifi->init_ap(ap_ssid, NULL); // AP mode is implied by which bring-up you call
-    uint32_t ip = Physical.wifi->ap_ip();         // network byte order
+    uint32_t ip = Physical.wifi->ap_ip();  // network byte order
     s_prov.ap_ip[0] = (uint8_t)(ip & 0xFF);
     s_prov.ap_ip[1] = (uint8_t)((ip >> 8) & 0xFF);
     s_prov.ap_ip[2] = (uint8_t)((ip >> 16) & 0xFF);

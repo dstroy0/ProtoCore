@@ -10,12 +10,12 @@
 
 #if PC_ENABLE_HTTP3
 
-#include "board_drivers/board_profiles/pc_platform.h"  // pc_platform_rand_u32: the device TRNG
-#include "mmgr/rawmemcpy.h"                            // proto_raw_read: each field moves into the slot
-#include "network_drivers/presentation/http/http.h"    // Http.match_and_execute
-#include "network_drivers/transport/tcp.h"             // TcpConn, conn_pool: the reserved dispatch slot
-#include "protocore.h"                                 // http_pool, PC_H3_DISPATCH_SLOT, http_reset
-#include "shared_primitives/runops.h"                  // every scan and search on the mapped fields
+#include "board_drivers/board_profiles/pc_platform.h" // pc_platform_rand_u32: the device TRNG
+#include "mmgr/rawmemcpy.h"                           // proto_raw_read: each field moves into the slot
+#include "network_drivers/presentation/http/http.h"   // Http.match_and_execute
+#include "network_drivers/transport/tcp.h"            // TcpConn, conn_pool: the reserved dispatch slot
+#include "protocore.h"                                // http_pool, PC_H3_DISPATCH_SLOT, http_reset
+#include "shared_primitives/runops.h"                 // every scan and search on the mapped fields
 
 // Randomness for the QUIC ephemeral X25519 key, the ServerHello random, and our connection IDs: the
 // hardware TRNG on device; a deterministic PRNG on host (test builds carry no security context and

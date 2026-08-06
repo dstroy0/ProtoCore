@@ -1552,7 +1552,7 @@ void test_coap_observe_targeted_removal()
     Udp.listener->inject(5683, "10.0.0.9", 40000, req, rl); // peer A
     rl = build_observe_get(req, "temp", 0, tok_a, 2, 0x0402);
     Udp.listener->inject(5683, "10.0.0.20", 40000, req, rl); // peer B: same port + token, other IP
-    pc_coap_notify("/temp");                          // both advance to sequence 2
+    pc_coap_notify("/temp");                                 // both advance to sequence 2
 
     // Observe:1 from peer A carrying an unknown token removes nothing.
     rl = build_observe_get(req, "temp", 1, tok_b, 2, 0x0403);
@@ -1792,7 +1792,7 @@ void test_dedup_handler_replays_without_rerunning()
     g_called = PROTO_FALSE;
     Udp.listener->capture_reset();
     Udp.listener->inject(5683, "10.0.0.9", 5555, req, rl); // duplicate CON (same mid + source)
-    TEST_ASSERT_FALSE(g_called);                    // deduplicated: handler skipped
+    TEST_ASSERT_FALSE(g_called);                           // deduplicated: handler skipped
     TEST_ASSERT_EQUAL_size_t(n1, Udp.listener->captured_len());
     TEST_ASSERT_EQUAL_HEX8_ARRAY(saved, Udp.listener->captured(), n1); // same cached response resent
 

@@ -18,9 +18,9 @@
  */
 
 #include "presentation.h"
-#include "shared_primitives/runops.h" // the bounded scan and case-insensitive compare the Connection header needs
 #include "network_drivers/session/proto_handler.h" // ProtoHandler (the L5 dispatch seam this registers into)
 #include "network_drivers/transport/tcp.h"         // conn_pool: the slot a handler is dispatched on
+#include "shared_primitives/runops.h" // the bounded scan and case-insensitive compare the Connection header needs
 #if PC_ENABLE_WEBSOCKET
 #include "network_drivers/presentation/http/websocket/websocket.h" // ws_find()/ws_free(): a WS-upgraded slot must never be HTTP-parsed
 #endif

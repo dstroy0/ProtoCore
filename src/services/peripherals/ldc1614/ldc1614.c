@@ -12,8 +12,8 @@
 #if PC_ENABLE_LDC1614
 
 #if PROTOCORE_HOT || PC_PLATFORM_HAS_BUS
-#include "services/peripherals/i2c.h"
 #include "mmgr/endian.h" // pc_wr16be / pc_rd16be: the registers are big-endian
+#include "services/peripherals/i2c.h"
 #endif
 uint32_t pc_ldc1614_data(uint16_t msb_reg, uint16_t lsb_reg)
 {

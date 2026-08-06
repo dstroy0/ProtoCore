@@ -13,8 +13,8 @@
 #include <math.h>
 
 #if PC_NEED_NMEA0183
-#include "services/timing_position/nmea0183/nmea0183.h"
 #include "mmgr/protostr.h"
+#include "services/timing_position/nmea0183/nmea0183.h"
 #endif
 
 // WGS84 ellipsoid.

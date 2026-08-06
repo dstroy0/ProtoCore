@@ -16,9 +16,9 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <unity.h>
 #include "network_drivers/transport/tcp.h"
 #include "rx_feed.h"
+#include <unity.h>
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -26,7 +26,6 @@
 
 static proto_bool handler_called = PROTO_FALSE;
 static uint8_t handler_slot = 0xFF;
-
 
 static void handle_ok(uint8_t slot_id, HttpReq *req)
 {

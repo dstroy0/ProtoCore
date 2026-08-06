@@ -14,12 +14,11 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <unity.h>
 #include "network_drivers/transport/tcp.h"
 #include "rx_feed.h"
+#include <unity.h>
 
 static const pc_mnt_backend *davfs; // the store WebDAV walks; bound in setUp
-
 
 static void feed_and_handle(uint8_t slot, const char *req)
 {

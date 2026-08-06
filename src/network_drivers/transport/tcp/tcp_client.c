@@ -25,7 +25,7 @@
 #include "board_drivers/board_profiles/pc_platform.h" // the target's TCP, under our names
 #include "mmgr/ring.h" // PROTO_ATOMIC_LOAD/STORE + SPSC ring drain (same primitive as the server)
 #include "network_drivers/network/dns/dns_resolver.h" // shared host->IP resolve (one DNS owner)
-#include "server/clock/clock.h"                   // pc_millis()
+#include "server/clock/clock.h"                       // pc_millis()
 
 typedef struct
 {

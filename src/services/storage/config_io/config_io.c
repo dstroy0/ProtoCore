@@ -14,8 +14,8 @@
 
 #if PC_ENABLE_CONFIG_IO
 
-#include "services/storage/config_store/config_store.h"
 #include "mmgr/protostr.h"
+#include "services/storage/config_store/config_store.h"
 #include <stdio.h>
 
 // An exported u32 field is one number.

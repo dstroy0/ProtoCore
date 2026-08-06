@@ -7,7 +7,6 @@
 // the right counter and fire the hook.
 
 #include "network_drivers/transport/tcp.h"
-#include "network_drivers/transport/tcp.h"
 #include <string.h>
 
 #include <unity.h>
@@ -110,7 +109,7 @@ void test_no_hook_after_unregister()
 {
     Tcp.conn->on_event(NULL);
     pc_obs_transition(0, CONN_FREE, CONN_ACTIVE, PC_CONN_R_ACCEPT);
-    TEST_ASSERT_EQUAL(0, g_calls);                               // hook silent
+    TEST_ASSERT_EQUAL(0, g_calls);                                 // hook silent
     TEST_ASSERT_EQUAL_UINT32(1, Tcp.conn->counters_get().accepts); // counters still move
 }
 

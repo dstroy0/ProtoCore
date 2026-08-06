@@ -19,9 +19,9 @@
 #include "crypto/crypto_opt.h"
 #include "crypto/ct_eq.h" // pc_ct_eq
 #include "crypto/mac/ghash.h"
-#include "mmgr/secure.h"
-#include "protocore_config.h"            // PC_ENABLE_* gate the whole file; pc_platform.h does not pull this in
 #include "mmgr/rawmemcpy.h" // proto_raw_u32 - the aliasing-permitted word load
+#include "mmgr/secure.h"
+#include "protocore_config.h" // PC_ENABLE_* gate the whole file; pc_platform.h does not pull this in
 
 #if (PC_ENABLE_HTTP3 || PC_ENABLE_DTLS || PC_ENABLE_SMB)
 #if !PC_HAS_HW_AESGCM

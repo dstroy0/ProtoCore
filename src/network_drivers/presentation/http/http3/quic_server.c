@@ -10,9 +10,9 @@
 
 #if PC_ENABLE_HTTP3
 
+#include "mmgr/ring.h" // pc_atomic
 #include "network_drivers/presentation/http/http3/quic_packet.h"
 #include "network_drivers/presentation/http/http3/quic_tp.h"
-#include "mmgr/ring.h" // pc_atomic
 
 #if PROTOCORE_HOT
 #include "network_drivers/transport/udp.h"

@@ -12,8 +12,8 @@
 #include "network_drivers/presentation/presentation.h" // http_conn_open (SSE-teardown regression)
 #include <string.h>
 
-#include <unity.h>
 #include "network_drivers/transport/tcp.h"
+#include <unity.h>
 
 void setUp()
 {

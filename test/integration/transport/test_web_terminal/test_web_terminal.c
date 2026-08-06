@@ -11,8 +11,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <unity.h>
 #include "rx_feed.h"
+#include <unity.h>
 
 static char g_cmd[64];
 static uint8_t g_cmd_client;
@@ -22,8 +22,6 @@ static void on_cmd(const char *line, uint8_t client_id)
     snprintf(g_cmd, sizeof(g_cmd), "%s", line);
     g_cmd_client = client_id;
 }
-
-
 
 // Build a WS frame (mask key all-zero so the stored payload equals the input).
 static size_t build_frame(uint8_t *dst, WsOpcode opcode, const uint8_t *payload, uint16_t len)

@@ -17,8 +17,8 @@
 // Remote forwarding (ssh -R) uses the inbound transport + listener layer directly:
 // it allocates a real listener and bridges each accepted socket to a server-initiated
 // forwarded-tcpip channel.
-#include "shared_primitives/ip.h"
 #include "network_drivers/session/proto_handler.h"
+#include "shared_primitives/ip.h"
 
 // One forwarded TCP connection: an SSH channel bridged to a client-transport slot.
 typedef struct

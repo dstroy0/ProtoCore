@@ -18,12 +18,11 @@
 #include <string.h>
 
 #include "network_drivers/transport/tcp.h"
-#include <unity.h>
 #include "rx_feed.h"
+#include <unity.h>
 
 static const pc_mnt_backend *g_fs; // the mock store the serve_static mounts read through
 static proto_bool handler_called = PROTO_FALSE;
-
 
 static void handle_html(uint8_t slot_id, HttpReq *req)
 {

@@ -9,10 +9,9 @@
 #include "protocore.h"
 #include <string.h>
 
-#include <unity.h>
 #include "network_drivers/transport/tcp.h"
 #include "rx_feed.h"
-
+#include <unity.h>
 
 static void diag_handler(uint8_t slot, HttpReq *req)
 {

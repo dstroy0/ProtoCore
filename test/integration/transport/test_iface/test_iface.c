@@ -9,12 +9,11 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <unity.h>
 #include "network_drivers/transport/tcp.h"
 #include "rx_feed.h"
+#include <unity.h>
 
 static proto_bool g_called;
-
 
 static void h_ok(uint8_t slot, HttpReq *req)
 {

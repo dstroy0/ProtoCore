@@ -18,7 +18,7 @@
 // heap), grouped so it is one named owner, unreachable from any other translation unit.
 typedef struct
 {
-    pc_ip server; // the collector, parsed once by pc_syslog_init()
+    pc_ip server;  // the collector, parsed once by pc_syslog_init()
     uint16_t port; // set by pc_syslog_init(); every read is gated on `ready`
     char hostname[PC_SYSLOG_FIELD_MAX];
     char appname[PC_SYSLOG_FIELD_MAX];

@@ -14,6 +14,7 @@
 #include "crypto/asymmetric/curve25519.h"
 #include "crypto/hash/sha256.h"
 #include "network_drivers/presentation/http/http3/h3_frame.h"
+#include "network_drivers/presentation/http/http3/h3_server.h"
 #include "network_drivers/presentation/http/http3/qpack.h"
 #include "network_drivers/presentation/http/http3/quic_crypto.h"
 #include "network_drivers/presentation/http/http3/quic_frame.h"
@@ -24,11 +25,10 @@
 #include "network_drivers/presentation/http/http3/tls13_msg.h"
 #include "network_drivers/tls/tls13_kdf.h"
 #include "protocore.h"
-#include "network_drivers/presentation/http/http3/h3_server.h"
 #include <string.h>
 
-#include <unity.h>
 #include "network_drivers/transport/tcp.h"
+#include <unity.h>
 
 void setUp()
 {

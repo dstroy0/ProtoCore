@@ -8,9 +8,9 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <unity.h>
 #include "network_drivers/transport/tcp.h"
 #include "rx_feed.h"
+#include <unity.h>
 
 static int g_log_status;
 static int g_log_len;
@@ -21,7 +21,6 @@ static void log_cb(const char *method, const char *path, int status, int body_le
     g_log_status = status;
     g_log_len = body_len;
 }
-
 
 // ---- Chunk sources (pull generators) ---------------------------------------
 // Each returns the next body piece (one chunk per call) and 0 to end. A single

@@ -19,8 +19,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <unity.h>
 #include "rx_feed.h"
+#include <unity.h>
 
 // Native RSA test fixture (defined in ssh_rsa.cpp native path).
 extern uint8_t _test_rsa_n[256];
@@ -58,7 +58,6 @@ void tearDown()
     pc_ssh_conn_close(0);
     tcp_capture_disable();
 }
-
 
 static void hex2bytes(uint8_t *out, const char *hex, size_t n)
 {

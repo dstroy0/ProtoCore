@@ -14,9 +14,9 @@
 #if PC_ENABLE_WEBSOCKET
 #include "network_drivers/presentation/http/websocket/websocket.h" // ws_alloc(): upgraded-slot guard in http_parse()
 #endif
+#include "network_drivers/transport/tcp.h"
 #include <string.h>
 #include <unity.h>
-#include "network_drivers/transport/tcp.h"
 
 // tcp.cpp + presentation.cpp are compiled into the native env.
 // No stubs or redefinitions needed.

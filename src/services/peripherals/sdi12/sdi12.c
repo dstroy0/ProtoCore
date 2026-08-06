@@ -10,8 +10,8 @@
 
 #if PC_ENABLE_SDI12
 
-#include "shared_primitives/crc.h" // PC_CRC16_ARC
 #include "mmgr/protostr.h"
+#include "shared_primitives/crc.h" // PC_CRC16_ARC
 
 size_t pc_sdi12_build(char *buf, size_t cap, char addr, const char *body)
 {

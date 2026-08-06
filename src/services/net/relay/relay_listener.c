@@ -13,7 +13,6 @@
 
 #include "network_drivers/session/proto_handler.h"
 #include "network_drivers/transport/tcp.h"
-#include "network_drivers/transport/tcp.h"
 #include "relay.h"
 #if PC_ENABLE_RADIO_POWER
 #include "network_drivers/physical/radio_power.h" // keep the radio awake during a relayed transfer

@@ -11,9 +11,9 @@
 
 #if PC_ENABLE_EDGE_CACHE
 
-#include "network_drivers/presentation/http/http_parser/http_parser.h" // HttpReq, http_get_header, http_pool
 #include "network_drivers/presentation/http/http.h"                    // Http.set_edge_poll
-#include "network_drivers/transport/tcp.h"                          // pc_client_*
+#include "network_drivers/presentation/http/http_parser/http_parser.h" // HttpReq, http_get_header, http_pool
+#include "network_drivers/transport/tcp.h"                             // pc_client_*
 #include "network_drivers/transport/tcp.h"                             // pc_conn_active
 #include "protocore.h"                                                 // PC, Middleware, MwResult, ChunkSource
 #include "server/clock/clock.h"                                        // pc_millis
