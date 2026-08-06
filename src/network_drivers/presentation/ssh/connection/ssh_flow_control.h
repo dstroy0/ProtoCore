@@ -35,6 +35,19 @@ typedef struct
     uint32_t peer_max_pkt; ///< Peer's maximum packet size; caps a single send independently of the window.
 } SshFlow;
 
+// ---------------------------------------------------------------------------
+// Channel signaling (RFC 4254 sec 5)
+//
+// Every channel-related message is a transition on the window state above: OPEN / OPEN_CONFIRMATION
+// establish it (they carry the initial window and maximum packet size), WINDOW_ADJUST increments it,
+// DATA consumes it, EOF / CLOSE terminate it. Because the transitions and the state are the same
+// concern, they live together - the RFC's rule that no data may be sent until the window allows it is
+// only enforceable where the window is.
+//
+// These take the flow plus the ids the wire carries, never a channel struct: resolving a recipient
+// channel number to a channel is multiplexing, and that stays in ssh_channel.
+// ---------------------------------------------------------------------------
+
 /**
  * @brief Per-channel windowing (RFC 4254 sec 5.2) and the message builders that carry it. SshFlow is
  * one channel's window; this is the arithmetic over it. Owns no state of its own.
@@ -86,19 +99,6 @@ typedef struct
 
 /** @brief The one symbol this module exports. */
 extern const SshFlowControlNs SshFlowControl;
-
-// ---------------------------------------------------------------------------
-// Channel signaling (RFC 4254 sec 5)
-//
-// Every channel-related message is a transition on the window state above: OPEN / OPEN_CONFIRMATION
-// establish it (they carry the initial window and maximum packet size), WINDOW_ADJUST increments it,
-// DATA consumes it, EOF / CLOSE terminate it. Because the transitions and the state are the same
-// concern, they live together - the RFC's rule that no data may be sent until the window allows it is
-// only enforceable where the window is.
-//
-// These take the flow plus the ids the wire carries, never a channel struct: resolving a recipient
-// channel number to a channel is multiplexing, and that stays in ssh_channel.
-// ---------------------------------------------------------------------------
 
 PROTO_END_DECLS
 

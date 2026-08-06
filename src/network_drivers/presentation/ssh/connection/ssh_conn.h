@@ -17,6 +17,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
+/** @brief The SSH connection ProtoHandler (accessor; installed by the builtins list, no session dep). */
+struct ProtoHandler;
+
 /**
  * @brief The session layer's seam: the four arms a PROTO_SSH slot is turned through, the two an
  * application sends on, and the ProtoHandler the builtins list installs.
@@ -54,8 +57,5 @@ typedef struct
 
 /** @brief The one symbol this module exports. */
 extern const SshProtoNs SshProto;
-
-/** @brief The SSH connection ProtoHandler (accessor; installed by the builtins list, no session dep). */
-struct ProtoHandler;
 
 #endif // PROTOCORE_SSH_CONN_H

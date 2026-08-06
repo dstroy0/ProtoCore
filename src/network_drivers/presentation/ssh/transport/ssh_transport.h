@@ -144,6 +144,79 @@ extern SshSession ssh_sess[MAX_SSH_CONNS];
 // API
 // ---------------------------------------------------------------------------
 
+#ifdef PC_SSH_KEX_BENCH
+// Wall-clock KEX bench (perf / FEATURE_PERFORMANCE): one owned context holding the two device-side compute
+// spans of a key exchange, in microseconds. SshKex.generate records the ephemeral-keygen span (one X25519
+// base multiply for a curve25519 KEX) into last_kexgen_us; SshKex.dh_handle records the reply span
+// (shared-secret X25519 + host-key sign + exchange hash + KDF + reply assembly) into last_kexreply_us and
+// bumps kex_count. The rig firmware watches kex_count and prints both over its own serial - src writes no
+// output. Compiled out entirely unless PC_SSH_KEX_BENCH is defined (a rig-only measurement build).
+typedef struct
+{
+    volatile long long last_kexgen_us;   ///< SshKex.generate: ephemeral X25519 base-multiply span.
+    volatile long long last_kexreply_us; ///< SshKex.dh_handle: reply span (shared secret + sign + hash + KDF).
+    volatile unsigned kex_count;         ///< bumped after each completed KEX; the rig prints on change.
+} SshKexBenchCtx;
+extern SshKexBenchCtx pc_ssh_kex_bench;
+#endif
+
+/**
+ * @brief The server's host keys: install one, and ask whether it is installed.
+ *
+ * @var SshHostkeyNs::ed25519_set        Install an ssh-ed25519 host key from its 32-byte seed (RFC 8032 private
+ *                                       key)
+ * @var SshHostkeyNs::ed25519_available  True if an ssh-ed25519 host key has been installed
+ * @var SshHostkeyNs::ecdsa_set          Install an ecdsa-sha2-nistp256 host key from its 32-byte P-256 private
+ *                                       scalar
+ * @var SshHostkeyNs::ecdsa_available    True if an ecdsa-sha2-nistp256 host key has been installed
+ */
+typedef struct
+{
+    void (*ed25519_set)(const uint8_t seed[32]);
+    proto_bool (*ed25519_available)(void);
+    void (*ecdsa_set)(const uint8_t priv[32]);
+    proto_bool (*ecdsa_available)(void);
+} SshHostkeyNs;
+
+/** @brief The one symbol this module exports. */
+extern const SshHostkeyNs SshHostkey;
+
+/**
+ * @brief Key exchange (RFC 4253 sec 7): KEXINIT, the algorithm preference, the exchange hash, and the
+ * Diffie-Hellman reply. The arithmetic underneath is @ref SshDh.
+ *
+ * @var SshKexNs::init_build      Build the server KEXINIT payload for slot @p i (RFC 4253 §7.1)
+ * @var SshKexNs::init_parse      Parse and negotiate the client KEXINIT payload (RFC 4253 §7.1)
+ * @var SshKexNs::set_prefer_rsa  Steer KEX / host-key negotiation toward RSA + DH-group14 (default) or toward
+ *                                the modern curve25519 + ed25519 suite
+ * @var SshKexNs::prefer_rsa      Current negotiation preference (true = prefer RSA/DH, the ESP32-accelerated
+ *                                path)
+ * @var SshKexNs::generate        Generate the server ephemeral for the negotiated KEX method (call after parse)
+ * @var SshKexNs::exchange_hash   Compute the SSH exchange hash H (RFC 4253 §8)
+ * @var SshKexNs::dh_parse_init   Parse SSH_MSG_KEXDH_INIT, extracting the client DH value e
+ * @var SshKexNs::dh_build_reply  Build SSH_MSG_KEXDH_REPLY (RFC 4253 §8, RFC 8332 §3)
+ * @var SshKexNs::dh_handle       Handle KEXDH/ECDH_INIT (msg 30) end-to-end and produce the reply payload
+ * @var SshKexNs::dh                   @ref SshDh
+ */
+typedef struct
+{
+    int (*init_build)(uint8_t i, uint8_t *payload, size_t *len, size_t cap);
+    int (*init_parse)(uint8_t i, const uint8_t *payload, size_t len);
+    void (*set_prefer_rsa)(proto_bool prefer);
+    proto_bool (*prefer_rsa)(void);
+    int (*generate)(uint8_t i);
+    int (*exchange_hash)(uint8_t i, const uint8_t *e_be, const uint8_t *f_be, const uint8_t *k_be, const uint8_t *ks,
+                         size_t ks_len, uint8_t out[PC_SHA256_DIGEST_LEN]);
+    int (*dh_parse_init)(const uint8_t *payload, size_t len, uint8_t e_be[256]);
+    int (*dh_build_reply)(const uint8_t *ks, size_t ks_len, const uint8_t *f_be, const uint8_t *sig, size_t sig_len,
+                          uint8_t *out, size_t *out_len, size_t cap);
+    int (*dh_handle)(uint8_t i, const uint8_t *payload, size_t len, uint8_t *reply_out, size_t *reply_len, size_t cap);
+    const SshDhNs *dh;
+} SshKexNs;
+
+/** @brief The one symbol this module exports. */
+extern const SshKexNs SshKex;
+
 /**
  * @brief The transport layer (RFC 4253): the banner exchange, EXT_INFO, NEWKEYS, and the rekey trigger.
  * Key exchange, the host keys, the packet protocol and compression hang off it.
@@ -186,79 +259,6 @@ typedef struct
 
 /** @brief The one symbol this module exports. */
 extern const SshTransportNs SshTransport;
-
-/**
- * @brief Key exchange (RFC 4253 sec 7): KEXINIT, the algorithm preference, the exchange hash, and the
- * Diffie-Hellman reply. The arithmetic underneath is @ref SshDh.
- *
- * @var SshKexNs::init_build      Build the server KEXINIT payload for slot @p i (RFC 4253 §7.1)
- * @var SshKexNs::init_parse      Parse and negotiate the client KEXINIT payload (RFC 4253 §7.1)
- * @var SshKexNs::set_prefer_rsa  Steer KEX / host-key negotiation toward RSA + DH-group14 (default) or toward
- *                                the modern curve25519 + ed25519 suite
- * @var SshKexNs::prefer_rsa      Current negotiation preference (true = prefer RSA/DH, the ESP32-accelerated
- *                                path)
- * @var SshKexNs::generate        Generate the server ephemeral for the negotiated KEX method (call after parse)
- * @var SshKexNs::exchange_hash   Compute the SSH exchange hash H (RFC 4253 §8)
- * @var SshKexNs::dh_parse_init   Parse SSH_MSG_KEXDH_INIT, extracting the client DH value e
- * @var SshKexNs::dh_build_reply  Build SSH_MSG_KEXDH_REPLY (RFC 4253 §8, RFC 8332 §3)
- * @var SshKexNs::dh_handle       Handle KEXDH/ECDH_INIT (msg 30) end-to-end and produce the reply payload
- * @var SshKexNs::dh                   @ref SshDh
- */
-typedef struct
-{
-    int (*init_build)(uint8_t i, uint8_t *payload, size_t *len, size_t cap);
-    int (*init_parse)(uint8_t i, const uint8_t *payload, size_t len);
-    void (*set_prefer_rsa)(proto_bool prefer);
-    proto_bool (*prefer_rsa)(void);
-    int (*generate)(uint8_t i);
-    int (*exchange_hash)(uint8_t i, const uint8_t *e_be, const uint8_t *f_be, const uint8_t *k_be, const uint8_t *ks,
-                         size_t ks_len, uint8_t out[PC_SHA256_DIGEST_LEN]);
-    int (*dh_parse_init)(const uint8_t *payload, size_t len, uint8_t e_be[256]);
-    int (*dh_build_reply)(const uint8_t *ks, size_t ks_len, const uint8_t *f_be, const uint8_t *sig, size_t sig_len,
-                          uint8_t *out, size_t *out_len, size_t cap);
-    int (*dh_handle)(uint8_t i, const uint8_t *payload, size_t len, uint8_t *reply_out, size_t *reply_len, size_t cap);
-    const SshDhNs *dh;
-} SshKexNs;
-
-/** @brief The one symbol this module exports. */
-extern const SshKexNs SshKex;
-
-/**
- * @brief The server's host keys: install one, and ask whether it is installed.
- *
- * @var SshHostkeyNs::ed25519_set        Install an ssh-ed25519 host key from its 32-byte seed (RFC 8032 private
- *                                       key)
- * @var SshHostkeyNs::ed25519_available  True if an ssh-ed25519 host key has been installed
- * @var SshHostkeyNs::ecdsa_set          Install an ecdsa-sha2-nistp256 host key from its 32-byte P-256 private
- *                                       scalar
- * @var SshHostkeyNs::ecdsa_available    True if an ecdsa-sha2-nistp256 host key has been installed
- */
-typedef struct
-{
-    void (*ed25519_set)(const uint8_t seed[32]);
-    proto_bool (*ed25519_available)(void);
-    void (*ecdsa_set)(const uint8_t priv[32]);
-    proto_bool (*ecdsa_available)(void);
-} SshHostkeyNs;
-
-/** @brief The one symbol this module exports. */
-extern const SshHostkeyNs SshHostkey;
-
-#ifdef PC_SSH_KEX_BENCH
-// Wall-clock KEX bench (perf / FEATURE_PERFORMANCE): one owned context holding the two device-side compute
-// spans of a key exchange, in microseconds. SshKex.generate records the ephemeral-keygen span (one X25519
-// base multiply for a curve25519 KEX) into last_kexgen_us; SshKex.dh_handle records the reply span
-// (shared-secret X25519 + host-key sign + exchange hash + KDF + reply assembly) into last_kexreply_us and
-// bumps kex_count. The rig firmware watches kex_count and prints both over its own serial - src writes no
-// output. Compiled out entirely unless PC_SSH_KEX_BENCH is defined (a rig-only measurement build).
-typedef struct
-{
-    volatile long long last_kexgen_us;   ///< SshKex.generate: ephemeral X25519 base-multiply span.
-    volatile long long last_kexreply_us; ///< SshKex.dh_handle: reply span (shared secret + sign + hash + KDF).
-    volatile unsigned kex_count;         ///< bumped after each completed KEX; the rig prints on change.
-} SshKexBenchCtx;
-extern SshKexBenchCtx pc_ssh_kex_bench;
-#endif
 
 PROTO_END_DECLS
 

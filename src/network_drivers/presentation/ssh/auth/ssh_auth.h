@@ -55,6 +55,14 @@ typedef struct
 typedef proto_bool (*SshPasswordCb)(const char *user, const char *password);
 
 /**
+ * @brief Application callback that decides whether a public key is authorized
+ *        for @p user. @p blob is the "ssh-rsa" public-key blob.
+ * @return true if the key may authenticate this user.
+ */
+typedef proto_bool (*SshPubkeyCb)(const char *user, const uint8_t *blob, size_t blob_len);
+
+#if PC_ENABLE_SSH_KEYBOARD_INTERACTIVE
+/**
  * @brief Userauth (RFC 4252): the two credential callbacks an application installs, and the arms
  * that turn one request.
  *
@@ -84,14 +92,6 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern const SshAuthNs SshAuth;
 
-/**
- * @brief Application callback that decides whether a public key is authorized
- *        for @p user. @p blob is the "ssh-rsa" public-key blob.
- * @return true if the key may authenticate this user.
- */
-typedef proto_bool (*SshPubkeyCb)(const char *user, const uint8_t *blob, size_t blob_len);
-
-#if PC_ENABLE_SSH_KEYBOARD_INTERACTIVE
 #endif
 
 PROTO_END_DECLS

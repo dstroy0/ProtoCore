@@ -62,6 +62,9 @@ PROTO_BEGIN_DECLS
 // DH key exchange
 // ---------------------------------------------------------------------------
 
+/** @brief Max bytes SshDh.kdf_derive() can produce (4 SHA-256 blocks). */
+#define SSH_KDF_MAX (4 * PC_SHA256_DIGEST_LEN)
+
 /**
  * @brief The Diffie-Hellman arithmetic and the key derivation that follows it (RFC 4253 sec 7.2).
  *
@@ -83,9 +86,6 @@ typedef struct
 
 /** @brief The one symbol this module exports. */
 extern const SshDhNs SshDh;
-
-/** @brief Max bytes SshDh.kdf_derive() can produce (4 SHA-256 blocks). */
-#define SSH_KDF_MAX (4 * PC_SHA256_DIGEST_LEN)
 
 PROTO_END_DECLS
 

@@ -58,6 +58,60 @@ extern SshChannel ssh_chan[MAX_SSH_CONNS][PC_SSH_MAX_CHANNELS];
 /** @brief Application callback for inbound channel data (raw bytes), tagged with
  *  the channel id it arrived on. */
 typedef void (*SshChannelDataCb)(uint8_t slot, uint32_t channel, const uint8_t *data, size_t len);
+
+/**
+ * @brief "direct-tcpip" forward request: a client asked the server to open a TCP
+ *        connection to @p host : @p port (ssh -L). The forwarding owner (which
+ *        does the actual TCP I/O - this codec does not) decides whether to allow
+ *        it; @p host is not NUL-terminated (@p host_len bytes).
+ * @return 0 to accept (the channel is opened and confirmed), < 0 to refuse
+ *         (CHANNEL_OPEN_FAILURE, administratively prohibited / connect failed).
+ *
+ * If no callback is installed, all forward requests are refused - so forwarding is
+ * opt-in (no open relay by default).
+ */
+typedef int (*SshForwardOpenCb)(uint8_t slot, uint32_t channel, const char *host, size_t host_len, uint16_t port);
+/** @brief Inbound data on a direct-tcpip channel (the owner writes it to the
+ *  forwarded TCP socket). Kept separate from the session data callback. */
+typedef void (*SshForwardDataCb)(uint8_t slot, uint32_t channel, const uint8_t *data, size_t len);
+
+/**
+ * @brief "tcpip-forward" remote-forward request (ssh -R): the client asks the server
+ *        to listen on @p bind_addr : @p bind_port and open a channel back for each
+ *        accepted connection (RFC 4254 §7.1). @p bind_addr is @p addr_len bytes (not
+ *        NUL-terminated). The forwarding owner (which allocates the real listener -
+ *        this codec does no I/O) decides.
+ * @return the bound port on success (echo @p bind_port, or the port the owner picked
+ *         when @p bind_port == 0), or < 0 to refuse. If no callback is installed every
+ *         request is refused, so remote forwarding is opt-in (no listener is opened).
+ */
+typedef int (*SshRemoteForwardOpenCb)(uint8_t slot, const char *bind_addr, size_t addr_len, uint16_t bind_port);
+/** @brief "cancel-tcpip-forward" request (RFC 4254 §7.1): drop a remote forward.
+ *  @return 0 if a matching forward was cancelled, < 0 if none / unsupported. */
+typedef int (*SshRemoteForwardCancelCb)(uint8_t slot, const char *bind_addr, size_t addr_len, uint16_t bind_port);
+
+/**
+ * @brief Result of the client's reply to a server-initiated forwarded-tcpip channel:
+ *        @p ok = true on CHANNEL_OPEN_CONFIRMATION (the bridge may start), false on
+ *        CHANNEL_OPEN_FAILURE (the owner tears the bridge down). @p channel is the
+ *        local id returned by SshChannels.open_forwarded().
+ */
+typedef void (*SshForwardConfirmCb)(uint8_t slot, uint32_t channel, proto_bool ok);
+
+#if PC_ENABLE_SSH_SFTP
+/** @brief A `subsystem "sftp"` request was accepted on @p channel; the binding starts an SFTP session. */
+typedef void (*SshSftpOpenCb)(uint8_t slot, uint32_t channel);
+/** @brief Inbound bytes on an SFTP channel (the raw SSH_FXP_* stream) - kept out of the session data cb. */
+typedef void (*SshSftpDataCb)(uint8_t slot, uint32_t channel, const uint8_t *data, size_t len);
+#endif
+
+#if PC_ENABLE_SSH_SCP
+/** @brief An `exec "scp …"` request was accepted on @p channel (@p cmd is @p cmd_len bytes, not NUL-terminated). */
+typedef void (*SshScpOpenCb)(uint8_t slot, uint32_t channel, const char *cmd, size_t cmd_len);
+/** @brief Inbound bytes on an SCP channel (the RCP protocol stream). */
+typedef void (*SshScpDataCb)(uint8_t slot, uint32_t channel, const uint8_t *data, size_t len);
+#endif
+
 /**
  * @brief The channel layer (RFC 4254): the callbacks each channel kind is delivered through, and the
  * arms that turn one peer message. SshChannel is one channel; this drives them.
@@ -125,59 +179,6 @@ typedef struct
 
 /** @brief The one symbol this module exports. */
 extern const SshChannelNs SshChannels;
-
-/**
- * @brief "direct-tcpip" forward request: a client asked the server to open a TCP
- *        connection to @p host : @p port (ssh -L). The forwarding owner (which
- *        does the actual TCP I/O - this codec does not) decides whether to allow
- *        it; @p host is not NUL-terminated (@p host_len bytes).
- * @return 0 to accept (the channel is opened and confirmed), < 0 to refuse
- *         (CHANNEL_OPEN_FAILURE, administratively prohibited / connect failed).
- *
- * If no callback is installed, all forward requests are refused - so forwarding is
- * opt-in (no open relay by default).
- */
-typedef int (*SshForwardOpenCb)(uint8_t slot, uint32_t channel, const char *host, size_t host_len, uint16_t port);
-/** @brief Inbound data on a direct-tcpip channel (the owner writes it to the
- *  forwarded TCP socket). Kept separate from the session data callback. */
-typedef void (*SshForwardDataCb)(uint8_t slot, uint32_t channel, const uint8_t *data, size_t len);
-
-/**
- * @brief "tcpip-forward" remote-forward request (ssh -R): the client asks the server
- *        to listen on @p bind_addr : @p bind_port and open a channel back for each
- *        accepted connection (RFC 4254 §7.1). @p bind_addr is @p addr_len bytes (not
- *        NUL-terminated). The forwarding owner (which allocates the real listener -
- *        this codec does no I/O) decides.
- * @return the bound port on success (echo @p bind_port, or the port the owner picked
- *         when @p bind_port == 0), or < 0 to refuse. If no callback is installed every
- *         request is refused, so remote forwarding is opt-in (no listener is opened).
- */
-typedef int (*SshRemoteForwardOpenCb)(uint8_t slot, const char *bind_addr, size_t addr_len, uint16_t bind_port);
-/** @brief "cancel-tcpip-forward" request (RFC 4254 §7.1): drop a remote forward.
- *  @return 0 if a matching forward was cancelled, < 0 if none / unsupported. */
-typedef int (*SshRemoteForwardCancelCb)(uint8_t slot, const char *bind_addr, size_t addr_len, uint16_t bind_port);
-
-/**
- * @brief Result of the client's reply to a server-initiated forwarded-tcpip channel:
- *        @p ok = true on CHANNEL_OPEN_CONFIRMATION (the bridge may start), false on
- *        CHANNEL_OPEN_FAILURE (the owner tears the bridge down). @p channel is the
- *        local id returned by SshChannels.open_forwarded().
- */
-typedef void (*SshForwardConfirmCb)(uint8_t slot, uint32_t channel, proto_bool ok);
-
-#if PC_ENABLE_SSH_SFTP
-/** @brief A `subsystem "sftp"` request was accepted on @p channel; the binding starts an SFTP session. */
-typedef void (*SshSftpOpenCb)(uint8_t slot, uint32_t channel);
-/** @brief Inbound bytes on an SFTP channel (the raw SSH_FXP_* stream) - kept out of the session data cb. */
-typedef void (*SshSftpDataCb)(uint8_t slot, uint32_t channel, const uint8_t *data, size_t len);
-#endif
-
-#if PC_ENABLE_SSH_SCP
-/** @brief An `exec "scp …"` request was accepted on @p channel (@p cmd is @p cmd_len bytes, not NUL-terminated). */
-typedef void (*SshScpOpenCb)(uint8_t slot, uint32_t channel, const char *cmd, size_t cmd_len);
-/** @brief Inbound bytes on an SCP channel (the RCP protocol stream). */
-typedef void (*SshScpDataCb)(uint8_t slot, uint32_t channel, const uint8_t *data, size_t len);
-#endif
 
 PROTO_END_DECLS
 

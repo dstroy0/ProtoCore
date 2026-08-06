@@ -62,6 +62,17 @@ typedef struct
 } SshDeflate;
 
 /**
+ * @brief Worst-case compressed size for @p src_len input (header + block overhead + sync marker).
+ *
+ * Callers size @p dst with this. Fixed-Huffman can expand incompressible data slightly; the bound
+ * covers the 2-byte header, per-byte worst case, end-of-block, and the 4-byte sync marker.
+ */
+static inline size_t ssh_deflate_bound(size_t src_len)
+{
+    return 2 + src_len + (src_len >> 3) + 32;
+}
+
+/**
  * @brief The send half of zlib packet compression. SshDeflate is the stream state; this runs it.
  *
  * @var SshDeflateNs::init    Bind caller memory to a compressor and reset it to stream start
@@ -76,17 +87,6 @@ typedef struct
 
 /** @brief The one symbol this module exports. */
 extern const SshDeflateNs SshDeflater;
-
-/**
- * @brief Worst-case compressed size for @p src_len input (header + block overhead + sync marker).
- *
- * Callers size @p dst with this. Fixed-Huffman can expand incompressible data slightly; the bound
- * covers the 2-byte header, per-byte worst case, end-of-block, and the 4-byte sync marker.
- */
-static inline size_t ssh_deflate_bound(size_t src_len)
-{
-    return 2 + src_len + (src_len >> 3) + 32;
-}
 
 #endif // PC_ENABLE_SSH_ZLIB
 

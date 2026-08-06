@@ -207,6 +207,16 @@ extern SshPacketState ssh_pkt[MAX_SSH_CONNS];
 // ---------------------------------------------------------------------------
 
 /**
+ * @brief Callback invoked once per complete, verified inbound SSH message.
+ *
+ * @param slot         SSH slot index.
+ * @param msg_type     First payload byte (SSH message number).
+ * @param payload      Decrypted message payload (includes @p msg_type at [0]).
+ * @param payload_len  Length of @p payload.
+ */
+typedef void (*ssh_msg_handler_t)(uint8_t slot, uint8_t msg_type, const uint8_t *payload, size_t payload_len);
+
+/**
  * @brief The binary packet protocol (RFC 4253 sec 6): framing, the MAC, and DISCONNECT.
  *
  * @var SshPacketNs::init        Initialize the packet state for SSH connection slot @p i
@@ -226,16 +236,6 @@ typedef struct
 
 /** @brief The one symbol this module exports. */
 extern const SshPacketNs SshPacket;
-
-/**
- * @brief Callback invoked once per complete, verified inbound SSH message.
- *
- * @param slot         SSH slot index.
- * @param msg_type     First payload byte (SSH message number).
- * @param payload      Decrypted message payload (includes @p msg_type at [0]).
- * @param payload_len  Length of @p payload.
- */
-typedef void (*ssh_msg_handler_t)(uint8_t slot, uint8_t msg_type, const uint8_t *payload, size_t payload_len);
 
 PROTO_END_DECLS
 
