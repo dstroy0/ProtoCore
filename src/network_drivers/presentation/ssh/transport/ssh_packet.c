@@ -92,7 +92,7 @@ static void compute_mac_mode(uint8_t mac_mode, const uint8_t *mac_key, uint32_t 
 // Init
 // ---------------------------------------------------------------------------
 
-void ssh_pkt_init(uint8_t i)
+static void ssh_pkt_init(uint8_t i)
 {
     if (i >= MAX_SSH_CONNS)
     {
@@ -105,7 +105,7 @@ void ssh_pkt_init(uint8_t i)
     s->enc_in = PROTO_FALSE;
 }
 
-void ssh_pkt_set_client(uint8_t i)
+static void ssh_pkt_set_client(uint8_t i)
 {
     if (i < MAX_SSH_CONNS)
     {
@@ -167,7 +167,8 @@ static inline const uint8_t *km_recv_mac(const SshKeyMat *km, proto_bool cli)
 // Send
 // ---------------------------------------------------------------------------
 
-int ssh_pkt_send(uint8_t i, const uint8_t *payload, size_t payload_len, uint8_t *out, size_t *out_len, size_t out_cap)
+static int ssh_pkt_send(uint8_t i, const uint8_t *payload, size_t payload_len, uint8_t *out, size_t *out_len,
+                        size_t out_cap)
 {
     size_t comp_scope = pc_plaintext_mark();
     if (i >= MAX_SSH_CONNS)
@@ -190,12 +191,12 @@ int ssh_pkt_send(uint8_t i, const uint8_t *payload, size_t payload_len, uint8_t 
     // stream is active. The compressor is stateful (context takeover), so this call must be followed
     // by a full send - the same atomicity the stateful cipher below already requires. The wire buffer
     // is sized (SSH_WIRE_CAP) so the compressed payload can never overflow out_cap and desync.
-    if (ssh_comp_s2c_active(i))
+    if (SshComp.s2c_active(i))
     {
         size_t bound = ssh_deflate_bound(payload_len);
         uint8_t *cbuf = (uint8_t *)pc_plaintext_alloc(bound, 16);
         size_t clen = 0;
-        if (!cbuf || ssh_comp_s2c(i, payload, payload_len, cbuf, bound, &clen) != 0)
+        if (!cbuf || SshComp.s2c(i, payload, payload_len, cbuf, bound, &clen) != 0)
         {
             pc_plaintext_release(comp_scope);
             return -1;
@@ -316,11 +317,11 @@ static int ssh_dispatch_payload(uint8_t i, const uint8_t *payload, size_t payloa
 {
     size_t inflate_scope = pc_plaintext_mark();
 #if PC_ENABLE_SSH_ZLIB
-    if (ssh_comp_c2s_active(i))
+    if (SshComp.c2s_active(i))
     {
         uint8_t *dbuf = (uint8_t *)pc_plaintext_alloc(SSH_PKT_BUF_SIZE, 16);
         size_t dlen = 0;
-        if (!dbuf || ssh_comp_c2s(i, payload, payload_len, dbuf, SSH_PKT_BUF_SIZE, &dlen) != 0)
+        if (!dbuf || SshComp.c2s(i, payload, payload_len, dbuf, SSH_PKT_BUF_SIZE, &dlen) != 0)
         {
             pc_plaintext_release(inflate_scope);
             return -1; // malformed stream, or a payload that decompresses beyond the uncompressed limit
@@ -721,7 +722,7 @@ static int ssh_recv_plain(uint8_t i, SshPacketState *s, const SshKeyMat *km, ssh
     return 1;
 }
 
-int ssh_pkt_recv(uint8_t i, const uint8_t *data, size_t len, ssh_msg_handler_t handler)
+static int ssh_pkt_recv(uint8_t i, const uint8_t *data, size_t len, ssh_msg_handler_t handler)
 {
     if (i >= MAX_SSH_CONNS)
     {
@@ -794,7 +795,7 @@ int ssh_pkt_recv(uint8_t i, const uint8_t *data, size_t len, ssh_msg_handler_t h
 // Disconnect
 // ---------------------------------------------------------------------------
 
-int ssh_pkt_disconnect(uint8_t i, uint32_t reason_code, uint8_t *out, size_t *out_len, size_t out_cap)
+static int ssh_pkt_disconnect(uint8_t i, uint32_t reason_code, uint8_t *out, size_t *out_len, size_t out_cap)
 {
     if (i >= MAX_SSH_CONNS)
     {
@@ -830,3 +831,5 @@ int ssh_pkt_disconnect(uint8_t i, uint32_t reason_code, uint8_t *out, size_t *ou
 
     return rc;
 }
+
+const SshPacketNs SshPacket = {ssh_pkt_init, ssh_pkt_set_client, ssh_pkt_send, ssh_pkt_recv, ssh_pkt_disconnect};

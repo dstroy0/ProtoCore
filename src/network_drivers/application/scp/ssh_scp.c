@@ -85,12 +85,12 @@ static const char SCP_ERR_WRITE[] = "\x02"
 
 static void ack(ScpConn *c, uint8_t byte)
 {
-    pc_ssh_conn_send(c->slot, c->channel, &byte, 1);
+    SshProto.send(c->slot, c->channel, &byte, 1);
 }
 /** @brief Send one complete error record. @p len is `sizeof(record) - 1`, resolved at compile time. */
 static void err_ack(ScpConn *c, const char *rec, size_t len)
 {
-    pc_ssh_conn_send(c->slot, c->channel, (const uint8_t *)(rec), len);
+    SshProto.send(c->slot, c->channel, (const uint8_t *)(rec), len);
 }
 static void close_file(ScpConn *c)
 {
@@ -104,7 +104,7 @@ static void pc_scp_end(ScpConn *c)
 {
     close_file(c);
     c->active = PROTO_FALSE;
-    pc_ssh_conn_close_channel(c->slot, c->channel);
+    SshProto.close_channel(c->slot, c->channel);
 }
 
 static void pc_scp_on_open(uint8_t slot, uint32_t channel, const char *cmd, size_t cmd_len)
@@ -258,8 +258,8 @@ void pc_ssh_scp_begin(void)
     }
     if (!s_scp.registered)
     {
-        pc_ssh_channel_set_scp_open_cb(pc_scp_on_open);
-        pc_ssh_channel_set_scp_data_cb(pc_scp_on_data);
+        SshChannels.set_scp_open_cb(pc_scp_on_open);
+        SshChannels.set_scp_data_cb(pc_scp_on_data);
         s_scp.registered = PROTO_TRUE;
     }
 }

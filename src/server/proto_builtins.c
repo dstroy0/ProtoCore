@@ -8,7 +8,7 @@
  * Each built-in exposes a `*_proto_handler()` accessor in its own module; this calls
  * Protocols.add() for each one behind the matching feature flag.
  *
- * PROTO_SSH_RFWD self-registers at runtime from pc_ssh_forward_begin().
+ * PROTO_SSH_RFWD self-registers at runtime from SshForward.begin().
  */
 
 #include "network_drivers/session/proto_handler.h"
@@ -43,7 +43,7 @@ void proto_register_builtins(void)
     register_if(PROTO_TELNET, Telnet.proto_handler());
 #endif
 #if PC_ENABLE_SSH
-    register_if(PROTO_SSH, ssh_proto_handler());
+    register_if(PROTO_SSH, SshProto.handler());
 #endif
 #if PC_NEED_MODBUS
     register_if(PROTO_MODBUS, pc_modbus_proto_handler());

@@ -18,7 +18,7 @@
  *
  *   HOST_KEY_PROVISION 1  (default) - COMPILE TIME. The 32-byte Ed25519 seed in
  *       host_key.h is compiled into the firmware and installed with
- *       pc_ssh_hostkey_ed25519_set(). Simplest; the key ships inside the image.
+ *       SshHostkey.ed25519_set(). Simplest; the key ships inside the image.
  *
  *   HOST_KEY_PROVISION 2  - RUNTIME SERVICE. The RSA-2048 private key lives in NVS
  *       (namespace "ssh_host_key", key "priv_der"); pc_ssh_rsa_load_pubkey() loads its
@@ -45,7 +45,7 @@
 #include "network_drivers/presentation/ssh/connection/ssh_channel.h"
 #include "network_drivers/presentation/ssh/connection/ssh_conn.h"
 #include "network_drivers/tls/ssh_rsa.h"          // pc_ssh_rsa_load_pubkey (NVS path)
-#include "network_drivers/presentation/ssh/transport/ssh_transport.h" // pc_ssh_hostkey_ed25519_set (embed path)
+#include "network_drivers/presentation/ssh/transport/ssh_transport.h" // SshHostkey.ed25519_set (embed path)
 
 #if HOST_KEY_PROVISION == 1
 // Prefer a generated key if you made one (gen_ssh_host_key.py ... --header host_key.h);
@@ -76,7 +76,7 @@ static bool ssh_password_auth(const char *user, const char *pass)
 
 static void ssh_on_data(uint8_t slot, uint32_t channel, const uint8_t *data, size_t len)
 {
-    pc_ssh_conn_send(slot, channel, data, len); // echo
+    SshProto.send(slot, channel, data, len); // echo
 }
 
 // Install the host key. Returns true on success. The two provisioning paths differ
@@ -85,7 +85,7 @@ static bool install_host_key()
 {
 #if HOST_KEY_PROVISION == 1
     // Compile-time: the seed is embedded in the firmware image.
-    pc_ssh_hostkey_ed25519_set(HOST_KEY_SEED);
+    SshHostkey.ed25519_set(HOST_KEY_SEED);
     Serial.println("Host key: Ed25519, embedded at compile time");
     return true;
 #else
@@ -129,8 +129,8 @@ void setup()
         return;
     }
 
-    pc_ssh_auth_set_password_cb(ssh_password_auth);
-    pc_ssh_channel_set_data_cb(ssh_on_data);
+    SshAuth.set_password_cb(ssh_password_auth);
+    SshChannels.set_data_cb(ssh_on_data);
 
     listen(22, PROTO_SSH);
     int32_t result = begin();
@@ -139,7 +139,7 @@ void setup()
         Serial.printf("begin() failed (error %d)\n", result);
         return;
     }
-    pc_ssh_conn_setup();
+    SshProto.setup();
     Serial.println("SSH server started on port 22");
 }
 

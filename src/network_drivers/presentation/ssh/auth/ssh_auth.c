@@ -9,13 +9,13 @@
 #include "network_drivers/presentation/ssh/auth/ssh_auth.h"
 #include "crypto/asymmetric/ecdsa.h"   // pc_ecdsa_p256_verify() (ecdsa-sha2-nistp256)
 #include "crypto/asymmetric/ed25519.h" // pc_ed25519_verify() (ssh-ed25519 client keys)
+#include "mmgr/bytes.h"                // pc_rd_str() - the RFC 4251 sec 5 string reader
+#include "mmgr/endian.h"               // pc_wr32be() - the one source of truth for wire integers
 #include "mmgr/plaintext.h"            // pc_plaintext_span() for the verify buffers
 #include "mmgr/secure.h"
 #include "network_drivers/presentation/ssh/transport/ssh_packet.h"    // SSH_MSG_* constants
 #include "network_drivers/presentation/ssh/transport/ssh_transport.h" // ssh_sess[], SshPhase
 #include "network_drivers/tls/ssh_rsa.h"                              // pc_rsa_verify(), PC_RSA_KEY_BYTES
-#include "mmgr/bytes.h"                                  // pc_rd_str() - the RFC 4251 sec 5 string reader
-#include "mmgr/endian.h" // pc_wr32be() - the one source of truth for wire integers
 
 // ---------------------------------------------------------------------------
 // Application password callback
@@ -40,12 +40,12 @@ typedef struct
 } SshAuthCtx;
 static SshAuthCtx s_auth;
 
-void pc_ssh_auth_set_password_cb(SshPasswordCb cb)
+static void pc_ssh_auth_set_password_cb(SshPasswordCb cb)
 {
     s_auth.pw_cb = cb;
 }
 
-void pc_ssh_auth_set_pubkey_cb(SshPubkeyCb cb)
+static void pc_ssh_auth_set_pubkey_cb(SshPubkeyCb cb)
 {
     s_auth.pk_cb = cb;
 }
@@ -227,7 +227,8 @@ static proto_bool parse_ecdsa_sig(const uint8_t *sig, uint32_t slen, uint8_t out
 // Service request (RFC 4253 §10)
 // ---------------------------------------------------------------------------
 
-int pc_ssh_auth_handle_service_request(const uint8_t *payload, size_t len, uint8_t *out, size_t *out_len, size_t cap)
+static int pc_ssh_auth_handle_service_request(const uint8_t *payload, size_t len, uint8_t *out, size_t *out_len,
+                                              size_t cap)
 {
     if (len < 1 || payload[0] != SSH_MSG_SERVICE_REQUEST)
     {
@@ -263,7 +264,7 @@ int pc_ssh_auth_handle_service_request(const uint8_t *payload, size_t len, uint8
 // USERAUTH_REQUEST parse (RFC 4252 §5)
 // ---------------------------------------------------------------------------
 
-int pc_ssh_auth_parse_request(const uint8_t *payload, size_t len, SshAuthReq *req)
+static int pc_ssh_auth_parse_request(const uint8_t *payload, size_t len, SshAuthReq *req)
 {
     memset(req, 0, sizeof(*req));
     if (len < 1 || payload[0] != SSH_MSG_USERAUTH_REQUEST)
@@ -358,7 +359,7 @@ int pc_ssh_auth_parse_request(const uint8_t *payload, size_t len, SshAuthReq *re
 // Response builders
 // ---------------------------------------------------------------------------
 
-int pc_ssh_auth_build_failure(uint8_t *out, size_t *out_len, size_t cap, proto_bool partial)
+static int pc_ssh_auth_build_failure(uint8_t *out, size_t *out_len, size_t cap, proto_bool partial)
 {
     // SSH_MSG_USERAUTH_FAILURE || name-list(authentications) || boolean(partial)
 #if PC_SSH_ALLOW_PASSWORD
@@ -383,7 +384,7 @@ int pc_ssh_auth_build_failure(uint8_t *out, size_t *out_len, size_t cap, proto_b
     return 0;
 }
 
-int pc_ssh_auth_build_success(uint8_t *out, size_t *out_len, size_t cap)
+static int pc_ssh_auth_build_success(uint8_t *out, size_t *out_len, size_t cap)
 {
     if (cap < 1)
     {
@@ -559,7 +560,8 @@ static int pc_ssh_auth_handle_pubkey(uint8_t i, const SshAuthReq *req, uint8_t *
     return pc_ssh_auth_build_failure(out, out_len, cap, PROTO_FALSE);
 }
 
-int pc_ssh_auth_handle_request(uint8_t i, const uint8_t *payload, size_t len, uint8_t *out, size_t *out_len, size_t cap)
+static int pc_ssh_auth_handle_request(uint8_t i, const uint8_t *payload, size_t len, uint8_t *out, size_t *out_len,
+                                      size_t cap)
 {
     if (i >= MAX_SSH_CONNS)
     {
@@ -615,8 +617,8 @@ int pc_ssh_auth_handle_request(uint8_t i, const uint8_t *payload, size_t len, ui
 }
 
 #if PC_ENABLE_SSH_KEYBOARD_INTERACTIVE
-int pc_ssh_auth_handle_info_response(uint8_t i, const uint8_t *payload, size_t len, uint8_t *out, size_t *out_len,
-                                     size_t cap)
+static int pc_ssh_auth_handle_info_response(uint8_t i, const uint8_t *payload, size_t len, uint8_t *out,
+                                            size_t *out_len, size_t cap)
 {
     if (i >= MAX_SSH_CONNS)
     {
@@ -662,4 +664,9 @@ int pc_ssh_auth_handle_info_response(uint8_t i, const uint8_t *payload, size_t l
     }
     return pc_ssh_auth_build_failure(out, out_len, cap, PROTO_FALSE);
 }
+
+const SshAuthNs SshAuth = {pc_ssh_auth_set_password_cb,        pc_ssh_auth_set_pubkey_cb,
+                           pc_ssh_auth_handle_service_request, pc_ssh_auth_parse_request,
+                           pc_ssh_auth_build_failure,          pc_ssh_auth_build_success,
+                           pc_ssh_auth_handle_request,         pc_ssh_auth_handle_info_response};
 #endif

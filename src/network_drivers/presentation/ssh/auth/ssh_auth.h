@@ -54,8 +54,35 @@ typedef struct
  */
 typedef proto_bool (*SshPasswordCb)(const char *user, const char *password);
 
-/** @brief Install the password-verification callback (nullptr → all fail). */
-void pc_ssh_auth_set_password_cb(SshPasswordCb cb);
+/**
+ * @brief Userauth (RFC 4252): the two credential callbacks an application installs, and the arms
+ * that turn one request.
+ *
+ * @var SshAuthNs::set_password_cb         Install the password-verification callback (nullptr → all fail)
+ * @var SshAuthNs::set_pubkey_cb           Install the publickey-authorization callback (nullptr → all fail)
+ * @var SshAuthNs::handle_service_request  Handle SSH_MSG_SERVICE_REQUEST; emit SERVICE_ACCEPT for ssh-userauth
+ * @var SshAuthNs::parse_request           Parse an SSH_MSG_USERAUTH_REQUEST into @p req
+ * @var SshAuthNs::build_failure           Build SSH_MSG_USERAUTH_FAILURE advertising "password"
+ * @var SshAuthNs::build_success           Build SSH_MSG_USERAUTH_SUCCESS
+ * @var SshAuthNs::handle_request          Handle a USERAUTH_REQUEST end-to-end for slot @p i
+ * @var SshAuthNs::handle_info_response    Handle an SSH_MSG_USERAUTH_INFO_RESPONSE (RFC 4256 §3.4) for slot @p
+ *                                         i
+ */
+typedef struct
+{
+    void (*set_password_cb)(SshPasswordCb cb);
+    void (*set_pubkey_cb)(SshPubkeyCb cb);
+    int (*handle_service_request)(const uint8_t *payload, size_t len, uint8_t *out, size_t *out_len, size_t cap);
+    int (*parse_request)(const uint8_t *payload, size_t len, SshAuthReq *req);
+    int (*build_failure)(uint8_t *out, size_t *out_len, size_t cap, proto_bool partial);
+    int (*build_success)(uint8_t *out, size_t *out_len, size_t cap);
+    int (*handle_request)(uint8_t i, const uint8_t *payload, size_t len, uint8_t *out, size_t *out_len, size_t cap);
+    int (*handle_info_response)(uint8_t i, const uint8_t *payload, size_t len, uint8_t *out, size_t *out_len,
+                                size_t cap);
+} SshAuthNs;
+
+/** @brief The one symbol this module exports. */
+extern const SshAuthNs SshAuth;
 
 /**
  * @brief Application callback that decides whether a public key is authorized
@@ -64,54 +91,7 @@ void pc_ssh_auth_set_password_cb(SshPasswordCb cb);
  */
 typedef proto_bool (*SshPubkeyCb)(const char *user, const uint8_t *blob, size_t blob_len);
 
-/** @brief Install the publickey-authorization callback (nullptr → all fail). */
-void pc_ssh_auth_set_pubkey_cb(SshPubkeyCb cb);
-
-/**
- * @brief Handle SSH_MSG_SERVICE_REQUEST; emit SERVICE_ACCEPT for ssh-userauth.
- * @return 0 and writes SERVICE_ACCEPT to @p out, or -1 if the service is not
- *         "ssh-userauth" or the message is malformed.
- */
-int pc_ssh_auth_handle_service_request(const uint8_t *payload, size_t len, uint8_t *out, size_t *out_len, size_t cap);
-
-/**
- * @brief Parse an SSH_MSG_USERAUTH_REQUEST into @p req.
- * @return 0 on success, -1 if malformed.
- */
-int pc_ssh_auth_parse_request(const uint8_t *payload, size_t len, SshAuthReq *req);
-
-/** @brief Build SSH_MSG_USERAUTH_FAILURE advertising "password". */
-int pc_ssh_auth_build_failure(uint8_t *out, size_t *out_len, size_t cap, proto_bool partial);
-
-/** @brief Build SSH_MSG_USERAUTH_SUCCESS. */
-int pc_ssh_auth_build_success(uint8_t *out, size_t *out_len, size_t cap);
-
-/**
- * @brief Handle a USERAUTH_REQUEST end-to-end for slot @p i.
- *
- * Parses the request, checks "password" credentials via the installed callback,
- * and writes either USERAUTH_SUCCESS or USERAUTH_FAILURE to @p out. On success
- * the session is marked authenticated and advanced to the connection phase.
- *
- * @return 0 if a response was produced (check the message type), -1 on parse
- *         error.
- */
-int pc_ssh_auth_handle_request(uint8_t i, const uint8_t *payload, size_t len, uint8_t *out, size_t *out_len,
-                               size_t cap);
-
 #if PC_ENABLE_SSH_KEYBOARD_INTERACTIVE
-/**
- * @brief Handle an SSH_MSG_USERAUTH_INFO_RESPONSE (RFC 4256 §3.4) for slot @p i.
- *
- * The response to the single "Password:" prompt this server sends is verified through the installed
- * password callback (keyboard-interactive is the challenge-response face of password auth here). Writes
- * USERAUTH_SUCCESS or USERAUTH_FAILURE to @p out. Only valid while a keyboard-interactive exchange is
- * pending for the slot (a prior USERAUTH_REQUEST selected it); otherwise fails.
- *
- * @return 0 if a response was produced (check the message type), -1 on parse error / no exchange pending.
- */
-int pc_ssh_auth_handle_info_response(uint8_t i, const uint8_t *payload, size_t len, uint8_t *out, size_t *out_len,
-                                     size_t cap);
 #endif
 
 PROTO_END_DECLS

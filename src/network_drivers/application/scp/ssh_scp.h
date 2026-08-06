@@ -15,7 +15,7 @@
  * the root once with pc_mnt_mount() + pc_fs_begin(); every server over that storage then answers
  * from the same root by construction rather than by each being told the same string.
  *
- * Streamed writes, fixed buffers, no heap. Call pc_ssh_scp_begin() once after pc_ssh_conn_setup().
+ * Streamed writes, fixed buffers, no heap. Call pc_ssh_scp_begin() once after SshProto.setup().
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -32,7 +32,7 @@ PROTO_BEGIN_DECLS
 
 /**
  * @brief Serve SCP uploads onto the mounted filesystem. Installs the channel exec-"scp" + data
- *        callbacks. Call once, after pc_ssh_conn_setup() and pc_fs_begin(). Coexists with
+ *        callbacks. Call once, after SshProto.setup() and pc_fs_begin(). Coexists with
  *        pc_ssh_sftp_begin (they share the SSH channel layer).
  */
 void pc_ssh_scp_begin(void);

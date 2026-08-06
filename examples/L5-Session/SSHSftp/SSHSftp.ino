@@ -76,7 +76,7 @@ void setup()
         Serial.println("No SSH host key in NVS - see docs/SSH.md (Host key provisioning)");
         return;
     }
-    pc_ssh_auth_set_password_cb(ssh_password_auth);
+    SshAuth.set_password_cb(ssh_password_auth);
 
     listen(22, PROTO_SSH);
     if (begin() < 0)
@@ -84,7 +84,7 @@ void setup()
         Serial.println("begin() failed");
         return;
     }
-    pc_ssh_conn_setup();
+    SshProto.setup();
 
     // Serve SFTP + SCP from the whole LittleFS volume. A "subsystem sftp" request opens an SFTP session;
     // `scp localfile admin@<ip>:/path` drops a file onto the volume.

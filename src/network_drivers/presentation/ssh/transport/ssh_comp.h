@@ -35,39 +35,44 @@ typedef enum PROTO_ENUM_PACKED
     SSH_COMP_ZLIB_DELAYED = 2 ///< "zlib@openssh.com" - starts after SSH_MSG_USERAUTH_SUCCESS
 } SshCompAlg;
 
-/** @brief Reset compression state for slot @p i (fresh connection). Does NOT run on a re-key. */
-void ssh_comp_reset(uint8_t i);
-
-/** @brief Record the s2c algorithm negotiated in KEXINIT (::SshCompAlg). */
-void ssh_comp_set_s2c(uint8_t i, SshCompAlg alg);
-
-/** @brief NEWKEYS completed: start the stream now if `zlib` was negotiated (idempotent). */
-void ssh_comp_on_newkeys(uint8_t i);
-
-/** @brief SSH_MSG_USERAUTH_SUCCESS sent: start the stream if `zlib@openssh.com` was negotiated. */
-void ssh_comp_on_auth_success(uint8_t i);
-
-/** @brief True once the s2c stream is active and outbound payloads must be compressed. */
-proto_bool ssh_comp_s2c_active(uint8_t i);
-
 /**
- * @brief Compress one outbound payload, continuing the session's zlib stream.
- * @return 0 on success (*out_len set), -1 on overflow / oversized input / inactive slot.
+ * @brief Packet compression (RFC 4253 sec 6.2), each direction on its own, including the delayed form
+ * that only starts once userauth has succeeded. The two stream engines hang off it.
+ *
+ * @var SshCompNs::reset            Reset compression state for slot @p i (fresh connection). Does NOT run on a
+ *                                  re-key
+ * @var SshCompNs::set_s2c          Record the s2c algorithm negotiated in KEXINIT (::SshCompAlg)
+ * @var SshCompNs::on_newkeys       NEWKEYS completed: start the stream now if `zlib` was negotiated
+ *                                  (idempotent)
+ * @var SshCompNs::on_auth_success  SSH_MSG_USERAUTH_SUCCESS sent: start the stream if `zlib@openssh.com` was
+ *                                  negotiated
+ * @var SshCompNs::s2c_active       True once the s2c stream is active and outbound payloads must be compressed
+ * @var SshCompNs::s2c              Compress one outbound payload, continuing the session's zlib stream
+ * @var SshCompNs::set_c2s          Record the client-to-server algorithm negotiated in KEXINIT (::SshCompAlg)
+ * @var SshCompNs::c2s_active       True once the c2s stream is active and inbound payloads must be decompressed
+ * @var SshCompNs::c2s              Decompress one inbound payload, continuing the session's client-to-server
+ *                                  zlib stream. The peer (OpenSSH) flushes with Z_PARTIAL_FLUSH, so this
+ *                                  resumes a context-takeover inflate
+ * @var SshCompNs::deflate              @ref SshDeflater
+ * @var SshCompNs::inflate              @ref SshInflater
  */
-int ssh_comp_s2c(uint8_t i, const uint8_t *src, size_t src_len, uint8_t *dst, size_t dst_cap, size_t *out_len);
+typedef struct
+{
+    void (*reset)(uint8_t i);
+    void (*set_s2c)(uint8_t i, SshCompAlg alg);
+    void (*on_newkeys)(uint8_t i);
+    void (*on_auth_success)(uint8_t i);
+    proto_bool (*s2c_active)(uint8_t i);
+    int (*s2c)(uint8_t i, const uint8_t *src, size_t src_len, uint8_t *dst, size_t dst_cap, size_t *out_len);
+    void (*set_c2s)(uint8_t i, SshCompAlg alg);
+    proto_bool (*c2s_active)(uint8_t i);
+    int (*c2s)(uint8_t i, const uint8_t *src, size_t src_len, uint8_t *dst, size_t dst_cap, size_t *out_len);
+    const SshDeflateNs *deflate;
+    const SshInflateNs *inflate;
+} SshCompNs;
 
-/** @brief Record the client-to-server algorithm negotiated in KEXINIT (::SshCompAlg). */
-void ssh_comp_set_c2s(uint8_t i, SshCompAlg alg);
-
-/** @brief True once the c2s stream is active and inbound payloads must be decompressed. */
-proto_bool ssh_comp_c2s_active(uint8_t i);
-
-/**
- * @brief Decompress one inbound payload, continuing the session's client-to-server zlib stream. The
- *        peer (OpenSSH) flushes with Z_PARTIAL_FLUSH, so this resumes a context-takeover inflate.
- * @return 0 on success (*out_len set), -1 on a malformed stream / output overflow / inactive slot.
- */
-int ssh_comp_c2s(uint8_t i, const uint8_t *src, size_t src_len, uint8_t *dst, size_t dst_cap, size_t *out_len);
+/** @brief The one symbol this module exports. */
+extern const SshCompNs SshComp;
 
 #endif // PC_ENABLE_SSH_ZLIB
 

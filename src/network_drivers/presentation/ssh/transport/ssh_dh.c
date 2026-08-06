@@ -16,7 +16,7 @@
 // DH key generation
 // ---------------------------------------------------------------------------
 
-int ssh_dh_generate(uint8_t i)
+static int ssh_dh_generate(uint8_t i)
 {
     if (i >= MAX_SSH_CONNS)
     {
@@ -107,8 +107,9 @@ static inline void hash_K(SshKexHash *h, const uint8_t K_be[256], proto_bool k_i
 //   key = K1 || K2 || ...   For the first KEX session_id == H; on a re-key it is the first KEX's H.
 // @p h_len / @p sid_len are the exchange-hash / session-id lengths. When K is a hybrid string it is
 // @p k_str_len octets (the KEX hash length). @p out_len up to SSH_KDF_MAX.
-void ssh_kdf_derive(const uint8_t K_be[256], const uint8_t *H, const uint8_t *session_id, char label, uint8_t *out,
-                    size_t out_len, proto_bool k_is_string, size_t h_len, size_t sid_len, proto_bool is512)
+static void ssh_kdf_derive(const uint8_t K_be[256], const uint8_t *H, const uint8_t *session_id, char label,
+                           uint8_t *out, size_t out_len, proto_bool k_is_string, size_t h_len, size_t sid_len,
+                           proto_bool is512)
 {
     const size_t blk = ssh_kexhash_len(is512); // 32 or 64
     const size_t k_str_len = ssh_kexhash_len(is512);
@@ -154,9 +155,9 @@ static void derive_key(const uint8_t K_be[256], const uint8_t *H, const uint8_t 
     ssh_kdf_derive(K_be, H, session_id, label, out, PC_SHA256_DIGEST_LEN, k_is_string, h_len, sid_len, is512);
 }
 
-void ssh_dh_derive_keys_sid(uint8_t i, const uint8_t K_be[256], const uint8_t *H, const uint8_t *session_id,
-                            uint8_t cipher_alg, uint8_t mac_alg, proto_bool k_is_string, size_t h_len, size_t sid_len,
-                            proto_bool is512)
+static void ssh_dh_derive_keys_sid(uint8_t i, const uint8_t K_be[256], const uint8_t *H, const uint8_t *session_id,
+                                   uint8_t cipher_alg, uint8_t mac_alg, proto_bool k_is_string, size_t h_len,
+                                   size_t sid_len, proto_bool is512)
 {
     if (i >= MAX_SSH_CONNS)
     {
@@ -244,10 +245,12 @@ void ssh_dh_derive_keys_sid(uint8_t i, const uint8_t K_be[256], const uint8_t *H
     km->active = PROTO_TRUE;
 }
 
-void ssh_dh_derive_keys(uint8_t i, const uint8_t K_be[256], const uint8_t H[PC_SHA256_DIGEST_LEN])
+static void ssh_dh_derive_keys(uint8_t i, const uint8_t K_be[256], const uint8_t H[PC_SHA256_DIGEST_LEN])
 {
     // First-KEX convenience: session id equals H; aes256-ctr + hmac-sha2-256 (pre-negotiation defaults),
     // SHA-256 exchange hash (h_len / sid_len / is512 default).
     ssh_dh_derive_keys_sid(i, K_be, H, H, SSH_CIPHER_AES256CTR, SSH_MAC_HMAC_SHA256, PROTO_FALSE, PC_SHA256_DIGEST_LEN,
                            PC_SHA256_DIGEST_LEN, PROTO_FALSE);
 }
+
+const SshDhNs SshDh = {ssh_dh_generate, ssh_dh_derive_keys, ssh_dh_derive_keys_sid, ssh_kdf_derive};

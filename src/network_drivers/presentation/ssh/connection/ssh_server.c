@@ -25,7 +25,7 @@ typedef struct
 } SshServerCtx;
 static SshServerCtx s_srv;
 
-void pc_ssh_server_set_emit_cb(SshEmitCb cb)
+static void pc_ssh_server_set_emit_cb(SshEmitCb cb)
 {
     s_srv.emit_cb = cb;
 }
@@ -69,7 +69,7 @@ static void emit_auth_failure_disconnect(uint8_t i, pc_span out)
     emit(i, out.buf, o);
 }
 
-int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, size_t len)
+static int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, size_t len)
 {
     if (i >= MAX_SSH_CONNS)
     {
@@ -103,18 +103,18 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
     case SSH_MSG_KEXINIT:
         // Initial KEX or an in-session re-key request. Negotiate, reply with our
         // own KEXINIT, generate a fresh ephemeral, and await KEXDH_INIT.
-        if (ssh_kexinit_parse(i, payload, len) != 0)
+        if (SshKex.init_parse(i, payload, len) != 0)
         {
             pc_plaintext_release(mark);
             return -1;
         }
-        if (ssh_kexinit_build(i, reply.buf, &n, reply.cap) != 0)
+        if (SshKex.init_build(i, reply.buf, &n, reply.cap) != 0)
         {
             pc_plaintext_release(mark);
             return -1;
         }
         emit(i, reply.buf, n);
-        if (ssh_kex_generate(i) != 0)
+        if (SshKex.generate(i) != 0)
         {
             pc_plaintext_release(mark);
             return -1;
@@ -129,7 +129,7 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
             pc_plaintext_release(mark);
             return -1;
         }
-        if (ssh_kexdh_handle(i, payload, len, reply.buf, &n, reply.cap) != 0)
+        if (SshKex.dh_handle(i, payload, len, reply.buf, &n, reply.cap) != 0)
         {
             pc_plaintext_release(mark);
             return -1;
@@ -137,19 +137,19 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         emit(i, reply.buf, n); // KEXDH_REPLY
         {
             uint8_t newkeys = SSH_MSG_NEWKEYS;
-            emit(i, &newkeys, 1); // server NEWKEYS (this one still goes out unencrypted)
-            ssh_newkeys_sent(i);  // ...but our outbound is encrypted from the next packet on
+            emit(i, &newkeys, 1);         // server NEWKEYS (this one still goes out unencrypted)
+            SshTransport.newkeys_sent(i); // ...but our outbound is encrypted from the next packet on
         }
         pc_plaintext_release(mark);
-        return 0; // ssh_kexdh_handle advanced phase to NEWKEYS
+        return 0; // SshKex.dh_handle advanced phase to NEWKEYS
 
     case SSH_MSG_NEWKEYS:
-        ssh_newkeys_complete(i); // activate encryption; → SERVICE or OPEN
+        SshTransport.newkeys_complete(i); // activate encryption; → SERVICE or OPEN
         // RFC 8308: with encryption now active, advertise the signature algorithms
         // we accept for pubkey userauth (server-sig-algs) so a modern client will
         // sign an RSA key - it otherwise reports "no mutual signature algorithm".
         // First encrypted message, before the client's SERVICE_REQUEST.
-        if (s->ext_info_c && ssh_extinfo_build(reply.buf, &n, reply.cap) == 0)
+        if (s->ext_info_c && SshTransport.extinfo_build(reply.buf, &n, reply.cap) == 0)
         {
             emit(i, reply.buf, n); // fail: EXT_INFO is ~90 bytes and buf is SSH_PKT_BUF_SIZE
         }
@@ -170,7 +170,7 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
             pc_plaintext_release(mark);
             return -1;
         }
-        if (pc_ssh_auth_handle_service_request(payload, len, reply.buf, &n, reply.cap) != 0)
+        if (SshAuth.handle_service_request(payload, len, reply.buf, &n, reply.cap) != 0)
         {
             pc_plaintext_release(mark);
             return -1;
@@ -186,7 +186,7 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
             pc_plaintext_release(mark);
             return -1;
         }
-        if (pc_ssh_auth_handle_request(i, payload, len, reply.buf, &n, reply.cap) != 0)
+        if (SshAuth.handle_request(i, payload, len, reply.buf, &n, reply.cap) != 0)
         {
             pc_plaintext_release(mark);
             return -1;
@@ -197,7 +197,7 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         // (which itself just went out uncompressed). Idempotent - a later re-auth cannot restart it.
         if (n > 0 && reply.buf[0] == SSH_MSG_USERAUTH_SUCCESS)
         {
-            ssh_comp_on_auth_success(i); // returns 0 has written a reply
+            SshComp.on_auth_success(i); // returns 0 has written a reply
         }
 #endif
         // Brute-force defense (RFC 4252 §4): bound failed attempts per connection. Only an actual
@@ -226,7 +226,7 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
             pc_plaintext_release(mark);
             return -1;
         }
-        if (pc_ssh_auth_handle_info_response(i, payload, len, reply.buf, &n, reply.cap) != 0)
+        if (SshAuth.handle_info_response(i, payload, len, reply.buf, &n, reply.cap) != 0)
         {
             pc_plaintext_release(mark);
             return -1;
@@ -235,7 +235,7 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
 #if PC_ENABLE_SSH_ZLIB
         if (n > 0 && reply.buf[0] == SSH_MSG_USERAUTH_SUCCESS)
         {
-            ssh_comp_on_auth_success(i);
+            SshComp.on_auth_success(i);
         }
 #endif
         if (n > 0 && reply.buf[0] == SSH_MSG_USERAUTH_FAILURE)
@@ -259,7 +259,7 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
             pc_plaintext_release(mark);
             return -1;
         }
-        if (ssh_global_request_handle(i, payload, len, reply.buf, &n, reply.cap) != 0)
+        if (SshChannels.global_request(i, payload, len, reply.buf, &n, reply.cap) != 0)
         {
             pc_plaintext_release(mark);
             return -1;
@@ -277,7 +277,7 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
             pc_plaintext_release(mark);
             return -1;
         }
-        if (pc_ssh_channel_handle_open(i, payload, len, reply.buf, &n, reply.cap) != 0)
+        if (SshChannels.handle_open(i, payload, len, reply.buf, &n, reply.cap) != 0)
         {
             pc_plaintext_release(mark);
             return -1;
@@ -294,7 +294,7 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
             pc_plaintext_release(mark);
             return -1;
         }
-        pc_ssh_channel_handle_open_confirm(i, payload, len);
+        SshChannels.handle_open_confirm(i, payload, len);
         pc_plaintext_release(mark);
         return 0;
 
@@ -305,7 +305,7 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
             pc_plaintext_release(mark);
             return -1;
         }
-        pc_ssh_channel_handle_open_failure(i, payload, len);
+        SshChannels.handle_open_failure(i, payload, len);
         pc_plaintext_release(mark);
         return 0;
 
@@ -315,7 +315,7 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
             pc_plaintext_release(mark);
             return -1;
         }
-        if (pc_ssh_channel_handle_request(i, payload, len, reply.buf, &n, reply.cap) != 0)
+        if (SshChannels.handle_request(i, payload, len, reply.buf, &n, reply.cap) != 0)
         {
             pc_plaintext_release(mark);
             return -1;
@@ -330,7 +330,7 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
             pc_plaintext_release(mark);
             return -1;
         }
-        if (pc_ssh_channel_handle_data(i, payload, len, reply.buf, &n, reply.cap) != 0)
+        if (SshChannels.handle_data(i, payload, len, reply.buf, &n, reply.cap) != 0)
         {
             pc_plaintext_release(mark);
             return -1;
@@ -340,7 +340,7 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         return 0;
 
     case SSH_MSG_CHANNEL_WINDOW_ADJUST:
-        pc_ssh_channel_handle_window_adjust(i, payload, len);
+        SshChannels.handle_window_adjust(i, payload, len);
         pc_plaintext_release(mark);
         return 0;
 
@@ -353,7 +353,7 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         // message must travel in its own binary packet (RFC 4253 6): a strict peer
         // runs packet_check_eom() after every message and rejects two in one. Emit
         // the two halves as separate packets.
-        if (pc_ssh_channel_handle_close(i, payload, len, reply.buf, &n, reply.cap) == 0 && n == 10)
+        if (SshChannels.handle_close(i, payload, len, reply.buf, &n, reply.cap) == 0 && n == 10)
         {
             emit(i, reply.buf, 5);     // CHANNEL_EOF
             emit(i, reply.buf + 5, 5); // CHANNEL_CLOSE
@@ -364,7 +364,7 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
     default: {
         // RFC 4253 §11.4: reply to an unrecognized message with
         // SSH_MSG_UNIMPLEMENTED carrying the rejected packet's sequence number.
-        // ssh_pkt_recv() has already incremented seq_no_recv past this packet,
+        // SshPacket.recv() has already incremented seq_no_recv past this packet,
         // so the rejected packet's number is seq_no_recv - 1.
         uint32_t rej = ssh_pkt[i].seq_no_recv - 1u;
         reply.buf[0] = SSH_MSG_UNIMPLEMENTED;
@@ -379,3 +379,5 @@ int pc_ssh_server_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
     }
     pc_plaintext_release(mark);
 }
+
+const SshServerNs SshServer = {pc_ssh_server_set_emit_cb, pc_ssh_server_dispatch};

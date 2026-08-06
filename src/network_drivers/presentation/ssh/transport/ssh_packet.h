@@ -160,7 +160,7 @@ typedef struct
     // SSH keys are named by direction (client->server "c2s", server->client "s2c"), fixed by RFC 4253
     // §7.2 regardless of role. A server sends s2c / receives c2s; a client is the mirror. This flag
     // selects the direction at each cipher/MAC site so one packet implementation serves both roles.
-    // Default false = server (so existing server code is unchanged); ssh_pkt_set_client() flips it.
+    // Default false = server (so existing server code is unchanged); SshPacket.set_client() flips it.
     proto_bool is_client;
 
     // Receive reassembly: we may receive partial packets across TCP segments.
@@ -207,43 +207,25 @@ extern SshPacketState ssh_pkt[MAX_SSH_CONNS];
 // ---------------------------------------------------------------------------
 
 /**
- * @brief Initialize the packet state for SSH connection slot @p i.
+ * @brief The binary packet protocol (RFC 4253 sec 6): framing, the MAC, and DISCONNECT.
  *
- * Zeroes seq numbers; sets encrypted=false, kex_active=true.
- *
- * @param i  SSH slot index.
+ * @var SshPacketNs::init        Initialize the packet state for SSH connection slot @p i
+ * @var SshPacketNs::set_client  Mark slot @p i as the SSH client role (call once, right after SshPacket.init)
+ * @var SshPacketNs::send        Build and send one SSH binary packet
+ * @var SshPacketNs::recv        Receive and process one or more SSH binary packets from @p data
+ * @var SshPacketNs::disconnect  Send SSH_MSG_DISCONNECT with reason @p reason_code
  */
-void ssh_pkt_init(uint8_t i);
+typedef struct
+{
+    void (*init)(uint8_t i);
+    void (*set_client)(uint8_t i);
+    int (*send)(uint8_t i, const uint8_t *payload, size_t payload_len, uint8_t *out, size_t *out_len, size_t out_cap);
+    int (*recv)(uint8_t i, const uint8_t *data, size_t len, ssh_msg_handler_t handler);
+    int (*disconnect)(uint8_t i, uint32_t reason_code, uint8_t *out, size_t *out_len, size_t out_cap);
+} SshPacketNs;
 
-/**
- * @brief Mark slot @p i as the SSH client role (call once, right after ssh_pkt_init).
- *
- * Flips the send/receive key direction: the client encrypts with the c2s key set and decrypts with
- * the s2c one, the mirror of the server. Without this a slot defaults to the server role.
- */
-void ssh_pkt_set_client(uint8_t i);
-
-/**
- * @brief Build and send one SSH binary packet.
- *
- * Frames @p payload according to RFC 4253 §6:
- *   - Adds random padding to align to 16-byte boundary.
- *   - If encrypted: encrypts with AES-256-CTR, appends HMAC-SHA2-256 MAC.
- *   - Increments seq_no_send; closes connection if threshold reached.
- *
- * The serialized packet is written into @p out.  *@p out_len is set to the
- * number of bytes written.  @p out must be at least
- * (4 + 1 + payload_len + 16 + 32) bytes.
- *
- * @param i           SSH slot index.
- * @param payload     Plaintext SSH message payload.
- * @param payload_len Length of @p payload.
- * @param out         Output buffer for the wire packet.
- * @param out_len     Set to the number of bytes written into @p out.
- * @param out_cap     Capacity of @p out.
- * @return 0 on success, -1 on overflow or sequence-number exhaustion.
- */
-int ssh_pkt_send(uint8_t i, const uint8_t *payload, size_t payload_len, uint8_t *out, size_t *out_len, size_t out_cap);
+/** @brief The one symbol this module exports. */
+extern const SshPacketNs SshPacket;
 
 /**
  * @brief Callback invoked once per complete, verified inbound SSH message.
@@ -254,39 +236,6 @@ int ssh_pkt_send(uint8_t i, const uint8_t *payload, size_t payload_len, uint8_t 
  * @param payload_len  Length of @p payload.
  */
 typedef void (*ssh_msg_handler_t)(uint8_t slot, uint8_t msg_type, const uint8_t *payload, size_t payload_len);
-
-/**
- * @brief Receive and process one or more SSH binary packets from @p data.
- *
- * Appends @p len bytes from @p data to the receive buffer for slot @p i,
- * then extracts complete packets.  For each complete packet:
- *   - If encrypted: decrypts with AES-256-CTR, verifies HMAC-SHA2-256.
- *     Closes connection (returns -1) on MAC failure without processing payload.
- *   - Increments seq_no_recv; closes connection if threshold reached.
- *   - Calls @p handler(slot, msg_type, payload, payload_len) for the payload.
- *
- * @param i        SSH slot index.
- * @param data     Received bytes (from TCP).
- * @param len      Number of bytes in @p data.
- * @param handler  Callback invoked once per complete, verified packet.
- * @return 0 on success, -1 on MAC failure or sequence-number exhaustion
- *         (caller must close the TCP connection).
- */
-int ssh_pkt_recv(uint8_t i, const uint8_t *data, size_t len, ssh_msg_handler_t handler);
-
-/**
- * @brief Send SSH_MSG_DISCONNECT with reason @p reason_code.
- *
- * Sends the packet, then zeroes the packet state and key material for slot @p i.
- *
- * @param i            SSH slot index.
- * @param reason_code  One of SSH_DISCONNECT_* constants.
- * @param out          Output buffer for the wire packet.
- * @param out_len      Set to the number of bytes written.
- * @param out_cap      Capacity of @p out.
- * @return 0 on success, -1 on error.
- */
-int ssh_pkt_disconnect(uint8_t i, uint32_t reason_code, uint8_t *out, size_t *out_len, size_t out_cap);
 
 PROTO_END_DECLS
 

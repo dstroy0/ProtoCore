@@ -157,22 +157,22 @@ void test_decaps_ref_matches_kat()
 // A client that offers the hybrid gets it negotiated over classical curve25519.
 void test_hybrid_negotiated()
 {
-    ssh_transport_init(0);
-    pc_ssh_hostkey_ed25519_set(kat_m); // any 32-byte seed; just enables ed25519 host-key negotiation
+    SshTransport.init(0);
+    SshHostkey.ed25519_set(kat_m); // any 32-byte seed; just enables ed25519 host-key negotiation
     uint8_t buf[512];
     size_t n = build_client_kexinit(buf, "mlkem768x25519-sha256,curve25519-sha256");
-    TEST_ASSERT_EQUAL_INT(0, ssh_kexinit_parse(0, buf, n));
+    TEST_ASSERT_EQUAL_INT(0, SshKex.init_parse(0, buf, n));
     TEST_ASSERT_EQUAL(SSH_KEX_MLKEM768_X25519, ssh_sess[0].kex_alg);
 }
 
 // A client that does not offer the hybrid still negotiates a classical method (no PQC is forced).
 void test_hybrid_absent_falls_back()
 {
-    ssh_transport_init(0);
-    pc_ssh_hostkey_ed25519_set(kat_m);
+    SshTransport.init(0);
+    SshHostkey.ed25519_set(kat_m);
     uint8_t buf[512];
     size_t n = build_client_kexinit(buf, "curve25519-sha256");
-    TEST_ASSERT_EQUAL_INT(0, ssh_kexinit_parse(0, buf, n));
+    TEST_ASSERT_EQUAL_INT(0, SshKex.init_parse(0, buf, n));
     TEST_ASSERT_EQUAL(SSH_KEX_CURVE25519, ssh_sess[0].kex_alg);
 }
 
@@ -181,8 +181,8 @@ void test_hybrid_kex_end_to_end()
     static const uint8_t seed[32] = {0x9a, 0x1b, 0x2c, 0x3d, 0x4e, 0x5f, 0x60, 0x71, 0x82, 0x93, 0xa4,
                                      0xb5, 0xc6, 0xd7, 0xe8, 0xf9, 0x0a, 0x1b, 0x2c, 0x3d, 0x4e, 0x5f,
                                      0x60, 0x71, 0x82, 0x93, 0xa4, 0xb5, 0xc6, 0xd7, 0xe8, 0xf9};
-    ssh_transport_init(0);
-    pc_ssh_hostkey_ed25519_set(seed);
+    SshTransport.init(0);
+    SshHostkey.ed25519_set(seed);
     SshSession *s = &ssh_sess[0];
     s->kex_alg = SSH_KEX_MLKEM768_X25519;
     s->hostkey_alg = SSH_HOSTKEY_ED25519;
@@ -199,7 +199,7 @@ void test_hybrid_kex_end_to_end()
     s->i_c_len = s->i_s_len = 30;
 
     // Server ephemeral (X25519 half). Client uses the KAT ML-KEM key pair + a fixed X25519 scalar.
-    TEST_ASSERT_EQUAL_INT(0, ssh_kex_generate(0));
+    TEST_ASSERT_EQUAL_INT(0, SshKex.generate(0));
     uint8_t client_sk[32];
     uint8_t qc[32];
     for (int j = 0; j < 32; j++)
@@ -218,7 +218,7 @@ void test_hybrid_kex_end_to_end()
 
     static uint8_t reply[2048];
     size_t rlen = 0;
-    TEST_ASSERT_EQUAL_INT(0, ssh_kexdh_handle(0, pkt, plen, reply, &rlen, sizeof(reply)));
+    TEST_ASSERT_EQUAL_INT(0, SshKex.dh_handle(0, pkt, plen, reply, &rlen, sizeof(reply)));
     TEST_ASSERT_EQUAL(SSH_MSG_KEXDH_REPLY, reply[0]);
     TEST_ASSERT_EQUAL(SSH_PHASE_NEWKEYS, s->phase);
     TEST_ASSERT_TRUE(ssh_keys[0].active);
@@ -302,18 +302,18 @@ static const uint8_t PQC_ED_SEED[32] = {0x9a, 0x1b, 0x2c, 0x3d, 0x4e, 0x5f, 0x60
 // A session ready to run @p alg as the server, with an ed25519 host key and a fresh ephemeral.
 static void prepare_session(SshKexAlg alg)
 {
-    ssh_transport_init(0);
-    pc_ssh_hostkey_ed25519_set(PQC_ED_SEED);
+    SshTransport.init(0);
+    SshHostkey.ed25519_set(PQC_ED_SEED);
     ssh_sess[0].kex_alg = alg;
     ssh_sess[0].hostkey_alg = SSH_HOSTKEY_ED25519;
     ssh_sess[0].cipher_alg = SSH_CIPHER_CHACHA20POLY1305;
     ssh_sess[0].v_c_len = 0;
     ssh_sess[0].i_c_len = 0;
     ssh_sess[0].i_s_len = 0;
-    TEST_ASSERT_EQUAL_INT(0, ssh_kex_generate(0));
+    TEST_ASSERT_EQUAL_INT(0, SshKex.generate(0));
 }
 
-// ssh_kex_generate produces the right ephemeral for every method a PQC build offers: the three
+// SshKex.generate produces the right ephemeral for every method a PQC build offers: the three
 // X25519-based ones derive an X25519 public, the two others do not.
 void test_kex_generate_per_method()
 {
@@ -321,9 +321,9 @@ void test_kex_generate_per_method()
                                SSH_KEX_ECDH_NISTP256, SSH_KEX_DH_GROUP14};
     for (int a = 0; a < 5; a++)
     {
-        ssh_transport_init(0);
+        SshTransport.init(0);
         ssh_sess[0].kex_alg = algs[a];
-        TEST_ASSERT_EQUAL_INT(0, ssh_kex_generate(0));
+        TEST_ASSERT_EQUAL_INT(0, SshKex.generate(0));
         if (a < 3) // curve25519 and both hybrids share the X25519 ephemeral
         {
             uint8_t acc = 0;
@@ -334,18 +334,18 @@ void test_kex_generate_per_method()
             TEST_ASSERT_NOT_EQUAL(0, acc);
         }
     }
-    TEST_ASSERT_EQUAL_INT(-1, ssh_kex_generate(MAX_SSH_CONNS));
+    TEST_ASSERT_EQUAL_INT(-1, SshKex.generate(MAX_SSH_CONNS));
 }
 
 // The advertised kex_algorithms list leads with the post-quantum hybrids (OpenSSH 9.9+ order), so a
 // PQC-capable peer negotiates one over classical X25519 without being forced to.
 void test_kexinit_advertises_both_hybrids_first()
 {
-    ssh_transport_init(0);
-    pc_ssh_hostkey_ed25519_set(PQC_ED_SEED);
+    SshTransport.init(0);
+    SshHostkey.ed25519_set(PQC_ED_SEED);
     static uint8_t buf[SSH_KEXINIT_MAX];
     size_t n = 0;
-    TEST_ASSERT_EQUAL_INT(0, ssh_kexinit_build(0, buf, &n, sizeof(buf)));
+    TEST_ASSERT_EQUAL_INT(0, SshKex.init_build(0, buf, &n, sizeof(buf)));
     size_t off = 1 + 16; // skip the message byte and the cookie
     const uint8_t *list;
     uint32_t ll;
@@ -397,7 +397,7 @@ void test_sntrup761_hybrid_kex_end_to_end()
 
     static uint8_t reply[2048];
     size_t rlen = 0;
-    TEST_ASSERT_EQUAL_INT(0, ssh_kexdh_handle(0, pkt, plen, reply, &rlen, sizeof(reply)));
+    TEST_ASSERT_EQUAL_INT(0, SshKex.dh_handle(0, pkt, plen, reply, &rlen, sizeof(reply)));
     TEST_ASSERT_EQUAL(SSH_MSG_KEXDH_REPLY, reply[0]);
     TEST_ASSERT_EQUAL_UINT8(PC_SHA512_DIGEST_LEN, s->session_id_len); // SHA-512 exchange hash
     TEST_ASSERT_EQUAL(SSH_PHASE_NEWKEYS, s->phase);
@@ -474,7 +474,7 @@ void test_classical_dh_kex_in_pqc_build()
 
     static uint8_t reply[2048];
     size_t rlen = 0;
-    TEST_ASSERT_EQUAL_INT(0, ssh_kexdh_handle(0, pkt, n, reply, &rlen, sizeof(reply)));
+    TEST_ASSERT_EQUAL_INT(0, SshKex.dh_handle(0, pkt, n, reply, &rlen, sizeof(reply)));
     TEST_ASSERT_EQUAL(SSH_MSG_KEXDH_REPLY, reply[0]);
     TEST_ASSERT_EQUAL_UINT8(PC_SHA256_DIGEST_LEN, s->session_id_len); // not the SHA-512 hybrid hash
     TEST_ASSERT_EQUAL(SSH_PHASE_NEWKEYS, s->phase);
@@ -495,22 +495,22 @@ void test_hybrid_init_malformed_rejected()
     {
         uint8_t tooshort[4] = {SSH_MSG_KEXDH_INIT, 0, 0, 0};
         prepare_session(algs[a]);
-        TEST_ASSERT_EQUAL_INT(-1, ssh_kexdh_handle(0, tooshort, sizeof(tooshort), reply, &rlen, sizeof(reply)));
+        TEST_ASSERT_EQUAL_INT(-1, SshKex.dh_handle(0, tooshort, sizeof(tooshort), reply, &rlen, sizeof(reply)));
 
         memset(buf, 0, sizeof(buf));
         buf[0] = SSH_MSG_KEXDH_REPLY; // right size, wrong message number
         put_u32(buf + 1, want[a]);
         prepare_session(algs[a]);
-        TEST_ASSERT_EQUAL_INT(-1, ssh_kexdh_handle(0, buf, 5 + want[a], reply, &rlen, sizeof(reply)));
+        TEST_ASSERT_EQUAL_INT(-1, SshKex.dh_handle(0, buf, 5 + want[a], reply, &rlen, sizeof(reply)));
 
         buf[0] = SSH_MSG_KEXDH_INIT;
         put_u32(buf + 1, want[a] - 1); // C_INIT of the wrong length
         prepare_session(algs[a]);
-        TEST_ASSERT_EQUAL_INT(-1, ssh_kexdh_handle(0, buf, 5 + want[a], reply, &rlen, sizeof(reply)));
+        TEST_ASSERT_EQUAL_INT(-1, SshKex.dh_handle(0, buf, 5 + want[a], reply, &rlen, sizeof(reply)));
 
         put_u32(buf + 1, want[a]); // right length, but one byte short on the wire
         prepare_session(algs[a]);
-        TEST_ASSERT_EQUAL_INT(-1, ssh_kexdh_handle(0, buf, 5 + want[a] - 1, reply, &rlen, sizeof(reply)));
+        TEST_ASSERT_EQUAL_INT(-1, SshKex.dh_handle(0, buf, 5 + want[a] - 1, reply, &rlen, sizeof(reply)));
     }
 }
 
@@ -537,14 +537,14 @@ void test_hybrid_rejects_low_order_point_and_bad_ek()
     memset(c_init + MLKEM768_EK_BYTES, 0, 32);
     pkt[0] = SSH_MSG_KEXDH_INIT;
     size_t plen = 1 + put_string(pkt + 1, c_init, MLKEM768_EK_BYTES + 32);
-    TEST_ASSERT_EQUAL_INT(-1, ssh_kexdh_handle(0, pkt, plen, reply, &rlen, sizeof(reply)));
+    TEST_ASSERT_EQUAL_INT(-1, SshKex.dh_handle(0, pkt, plen, reply, &rlen, sizeof(reply)));
 
     // ML-KEM: a well-formed Q_C, but an encapsulation key that fails the modulus check.
     prepare_session(SSH_KEX_MLKEM768_X25519);
     memset(c_init, 0xFF, MLKEM768_EK_BYTES);
     memcpy(c_init + MLKEM768_EK_BYTES, qc, 32);
     plen = 1 + put_string(pkt + 1, c_init, MLKEM768_EK_BYTES + 32);
-    TEST_ASSERT_EQUAL_INT(-1, ssh_kexdh_handle(0, pkt, plen, reply, &rlen, sizeof(reply)));
+    TEST_ASSERT_EQUAL_INT(-1, SshKex.dh_handle(0, pkt, plen, reply, &rlen, sizeof(reply)));
 
     // sntrup761: a real public key, but Q_C is the all-zero point.
     static uint8_t pk[PC_SNTRUP761_PK_BYTES];
@@ -554,7 +554,7 @@ void test_hybrid_rejects_low_order_point_and_bad_ek()
     memcpy(c_init, pk, PC_SNTRUP761_PK_BYTES);
     memset(c_init + PC_SNTRUP761_PK_BYTES, 0, 32);
     plen = 1 + put_string(pkt + 1, c_init, PC_SNTRUP761_PK_BYTES + 32);
-    TEST_ASSERT_EQUAL_INT(-1, ssh_kexdh_handle(0, pkt, plen, reply, &rlen, sizeof(reply)));
+    TEST_ASSERT_EQUAL_INT(-1, SshKex.dh_handle(0, pkt, plen, reply, &rlen, sizeof(reply)));
 }
 
 int main()

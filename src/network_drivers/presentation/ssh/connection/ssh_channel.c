@@ -38,59 +38,59 @@ typedef struct
 } SshChannelCtx;
 static SshChannelCtx s_chcb;
 
-void pc_ssh_channel_set_data_cb(SshChannelDataCb cb)
+static void pc_ssh_channel_set_data_cb(SshChannelDataCb cb)
 {
     s_chcb.data_cb = cb;
 }
 
 #if PC_ENABLE_SSH_SFTP
-void pc_ssh_channel_set_sftp_open_cb(SshSftpOpenCb cb)
+static void pc_ssh_channel_set_sftp_open_cb(SshSftpOpenCb cb)
 {
     s_chcb.pc_sftp_open_cb = cb;
 }
-void pc_ssh_channel_set_sftp_data_cb(SshSftpDataCb cb)
+static void pc_ssh_channel_set_sftp_data_cb(SshSftpDataCb cb)
 {
     s_chcb.pc_sftp_data_cb = cb;
 }
 #endif
 
 #if PC_ENABLE_SSH_SCP
-void pc_ssh_channel_set_scp_open_cb(SshScpOpenCb cb)
+static void pc_ssh_channel_set_scp_open_cb(SshScpOpenCb cb)
 {
     s_chcb.pc_scp_open_cb = cb;
 }
-void pc_ssh_channel_set_scp_data_cb(SshScpDataCb cb)
+static void pc_ssh_channel_set_scp_data_cb(SshScpDataCb cb)
 {
     s_chcb.pc_scp_data_cb = cb;
 }
 #endif
 
-void pc_ssh_channel_set_forward_open_cb(SshForwardOpenCb cb)
+static void pc_ssh_channel_set_forward_open_cb(SshForwardOpenCb cb)
 {
     s_chcb.forward_open_cb = cb;
 }
 
-void pc_ssh_channel_set_forward_data_cb(SshForwardDataCb cb)
+static void pc_ssh_channel_set_forward_data_cb(SshForwardDataCb cb)
 {
     s_chcb.forward_data_cb = cb;
 }
 
-void pc_ssh_channel_set_rforward_open_cb(SshRemoteForwardOpenCb cb)
+static void pc_ssh_channel_set_rforward_open_cb(SshRemoteForwardOpenCb cb)
 {
     s_chcb.rfwd_open_cb = cb;
 }
 
-void pc_ssh_channel_set_rforward_cancel_cb(SshRemoteForwardCancelCb cb)
+static void pc_ssh_channel_set_rforward_cancel_cb(SshRemoteForwardCancelCb cb)
 {
     s_chcb.rfwd_cancel_cb = cb;
 }
 
-void pc_ssh_channel_set_forward_confirm_cb(SshForwardConfirmCb cb)
+static void pc_ssh_channel_set_forward_confirm_cb(SshForwardConfirmCb cb)
 {
     s_chcb.forward_confirm_cb = cb;
 }
 
-void pc_ssh_channel_init(uint8_t i)
+static void pc_ssh_channel_init(uint8_t i)
 {
     if (i >= MAX_SSH_CONNS)
     {
@@ -182,19 +182,20 @@ static int chan_alloc(uint8_t i)
 // channel it resolved and the ids the wire carries.
 static int build_open_failure(uint8_t *out, size_t cap, uint32_t sender, uint32_t reason, size_t *out_len)
 {
-    return pc_ssh_sig_build_open_failure(out, cap, sender, reason, out_len);
+    return SshFlowControl.build_open_failure(out, cap, sender, reason, out_len);
 }
 
 static int build_open_confirm(const SshChannel *c, uint8_t *out, size_t cap, size_t *out_len)
 {
-    return pc_ssh_sig_build_open_confirm(&c->flow, c->peer_id, c->local_id, out, cap, out_len);
+    return SshFlowControl.build_open_confirm(&c->flow, c->peer_id, c->local_id, out, cap, out_len);
 }
 
 // ---------------------------------------------------------------------------
 // GLOBAL_REQUEST (RFC 4254 §4; §7.1 tcpip-forward / cancel-tcpip-forward)
 // ---------------------------------------------------------------------------
 
-int ssh_global_request_handle(uint8_t i, const uint8_t *payload, size_t len, uint8_t *out, size_t *out_len, size_t cap)
+static int ssh_global_request_handle(uint8_t i, const uint8_t *payload, size_t len, uint8_t *out, size_t *out_len,
+                                     size_t cap)
 {
     *out_len = 0;
     if (i >= MAX_SSH_CONNS || len < 1 || payload[0] != SSH_MSG_GLOBAL_REQUEST)
@@ -300,8 +301,8 @@ int ssh_global_request_handle(uint8_t i, const uint8_t *payload, size_t len, uin
 // Server-initiated CHANNEL_OPEN (forwarded-tcpip, ssh -R) + its CONFIRM / FAILURE
 // ---------------------------------------------------------------------------
 
-int pc_ssh_channel_open_forwarded(uint8_t i, const char *conn_addr, uint16_t conn_port, const char *orig_addr,
-                                  uint16_t orig_port, uint8_t *out, size_t *out_len, size_t cap)
+static int pc_ssh_channel_open_forwarded(uint8_t i, const char *conn_addr, uint16_t conn_port, const char *orig_addr,
+                                         uint16_t orig_port, uint8_t *out, size_t *out_len, size_t cap)
 {
     *out_len = 0;
     if (i >= MAX_SSH_CONNS || !conn_addr || !orig_addr)
@@ -350,13 +351,13 @@ int pc_ssh_channel_open_forwarded(uint8_t i, const char *conn_addr, uint16_t con
     c->type = SSH_CHAN_FORWARDED_TCPIP;
     c->local_id = (uint32_t)slot;
     c->peer_id = 0;
-    pc_ssh_flow_init(&c->flow, SSH_CHAN_WINDOW, 0, 0);
+    SshFlowControl.init(&c->flow, SSH_CHAN_WINDOW, 0, 0);
 
     *out_len = off;
     return slot;
 }
 
-int pc_ssh_channel_handle_open_confirm(uint8_t i, const uint8_t *payload, size_t len)
+static int pc_ssh_channel_handle_open_confirm(uint8_t i, const uint8_t *payload, size_t len)
 {
     // byte || recipient(our local id) || sender(peer id) || window || max packet.
     if (i >= MAX_SSH_CONNS || len < 17 || payload[0] != SSH_MSG_CHANNEL_OPEN_CONFIRM)
@@ -369,7 +370,7 @@ int pc_ssh_channel_handle_open_confirm(uint8_t i, const uint8_t *payload, size_t
         return -1;
     }
     c->peer_id = rd_u32(payload + 5);
-    pc_ssh_flow_peer_add(&c->flow, rd_u32(payload + 9));
+    SshFlowControl.peer_add(&c->flow, rd_u32(payload + 9));
     c->flow.peer_max_pkt = rd_u32(payload + 13);
     c->pending = PROTO_FALSE;
     c->open = PROTO_TRUE;
@@ -380,7 +381,7 @@ int pc_ssh_channel_handle_open_confirm(uint8_t i, const uint8_t *payload, size_t
     return 0;
 }
 
-int pc_ssh_channel_handle_open_failure(uint8_t i, const uint8_t *payload, size_t len)
+static int pc_ssh_channel_handle_open_failure(uint8_t i, const uint8_t *payload, size_t len)
 {
     // byte || recipient(our local id) || reason || desc || lang.
     if (i >= MAX_SSH_CONNS || len < 5 || payload[0] != SSH_MSG_CHANNEL_OPEN_FAILURE)
@@ -402,7 +403,8 @@ int pc_ssh_channel_handle_open_failure(uint8_t i, const uint8_t *payload, size_t
     return 0;
 }
 
-int pc_ssh_channel_handle_open(uint8_t i, const uint8_t *payload, size_t len, uint8_t *out, size_t *out_len, size_t cap)
+static int pc_ssh_channel_handle_open(uint8_t i, const uint8_t *payload, size_t len, uint8_t *out, size_t *out_len,
+                                      size_t cap)
 {
     if (i >= MAX_SSH_CONNS || len < 1 || payload[0] != SSH_MSG_CHANNEL_OPEN)
     {
@@ -460,7 +462,7 @@ int pc_ssh_channel_handle_open(uint8_t i, const uint8_t *payload, size_t len, ui
     c->type = is_dtcpip ? SSH_CHAN_DIRECT_TCPIP : SSH_CHAN_SESSION;
     c->local_id = (uint32_t)slot;
     c->peer_id = sender;
-    pc_ssh_flow_init(&c->flow, SSH_CHAN_WINDOW, init_window, max_pkt);
+    SshFlowControl.init(&c->flow, SSH_CHAN_WINDOW, init_window, max_pkt);
 
     if (is_dtcpip)
     {
@@ -525,8 +527,8 @@ static void classify_file_transfer_request(uint8_t i, SshChannel *c, const uint8
 }
 #endif
 
-int pc_ssh_channel_handle_request(uint8_t i, const uint8_t *payload, size_t len, uint8_t *out, size_t *out_len,
-                                  size_t cap)
+static int pc_ssh_channel_handle_request(uint8_t i, const uint8_t *payload, size_t len, uint8_t *out, size_t *out_len,
+                                         size_t cap)
 {
     *out_len = 0;
     if (i >= MAX_SSH_CONNS || len < 1 || payload[0] != SSH_MSG_CHANNEL_REQUEST)
@@ -586,7 +588,8 @@ int pc_ssh_channel_handle_request(uint8_t i, const uint8_t *payload, size_t len,
 // CHANNEL_DATA (inbound) + flow control
 // ---------------------------------------------------------------------------
 
-int pc_ssh_channel_handle_data(uint8_t i, const uint8_t *payload, size_t len, uint8_t *out, size_t *out_len, size_t cap)
+static int pc_ssh_channel_handle_data(uint8_t i, const uint8_t *payload, size_t len, uint8_t *out, size_t *out_len,
+                                      size_t cap)
 {
     *out_len = 0;
     if (i >= MAX_SSH_CONNS || len < 1 || payload[0] != SSH_MSG_CHANNEL_DATA)
@@ -613,7 +616,7 @@ int pc_ssh_channel_handle_data(uint8_t i, const uint8_t *payload, size_t len, ui
     {
         return -1;
     }
-    if (!pc_ssh_flow_recv_take(&c->flow, dlen))
+    if (!SshFlowControl.recv_take(&c->flow, dlen))
     {
         return -1; // peer overran the advertised window (RFC 4254 §5.2)
     }
@@ -656,13 +659,13 @@ int pc_ssh_channel_handle_data(uint8_t i, const uint8_t *payload, size_t len, ui
 
     // Replenish the window once it drops below half.
     uint32_t add = 0;
-    if (cap >= 9 && pc_ssh_flow_replenish_due(&c->flow, &add))
+    if (cap >= 9 && SshFlowControl.replenish_due(&c->flow, &add))
     {
         out[0] = SSH_MSG_CHANNEL_WINDOW_ADJUST;
         wr_u32(out + 1, c->peer_id);
         wr_u32(out + 5, add);
         *out_len = 9;
-        pc_ssh_flow_local_credit(&c->flow, add); // the caller emits *out_len unconditionally
+        SshFlowControl.local_credit(&c->flow, add); // the caller emits *out_len unconditionally
     }
     return 0;
 }
@@ -671,22 +674,22 @@ int pc_ssh_channel_handle_data(uint8_t i, const uint8_t *payload, size_t len, ui
 // CHANNEL_DATA (outbound)
 // ---------------------------------------------------------------------------
 
-int pc_ssh_channel_build_data(uint8_t i, uint32_t channel, const uint8_t *data, size_t len, uint8_t *out,
-                              size_t *out_len, size_t cap)
+static int pc_ssh_channel_build_data(uint8_t i, uint32_t channel, const uint8_t *data, size_t len, uint8_t *out,
+                                     size_t *out_len, size_t cap)
 {
     SshChannel *c = (i < MAX_SSH_CONNS) ? chan_by_id(i, channel) : NULL;
     if (!c)
     {
         return -1;
     }
-    return pc_ssh_sig_build_data(&c->flow, c->peer_id, data, len, out, cap, out_len);
+    return SshFlowControl.build_data(&c->flow, c->peer_id, data, len, out, cap, out_len);
 }
 
 // ---------------------------------------------------------------------------
 // WINDOW_ADJUST (inbound)
 // ---------------------------------------------------------------------------
 
-int pc_ssh_channel_handle_window_adjust(uint8_t i, const uint8_t *payload, size_t len)
+static int pc_ssh_channel_handle_window_adjust(uint8_t i, const uint8_t *payload, size_t len)
 {
     if (i >= MAX_SSH_CONNS || len < 9 || payload[0] != SSH_MSG_CHANNEL_WINDOW_ADJUST)
     {
@@ -697,7 +700,7 @@ int pc_ssh_channel_handle_window_adjust(uint8_t i, const uint8_t *payload, size_
     {
         return -1;
     }
-    pc_ssh_flow_peer_add(&c->flow, rd_u32(payload + 5));
+    SshFlowControl.peer_add(&c->flow, rd_u32(payload + 5));
     return 0;
 }
 
@@ -709,7 +712,7 @@ int pc_ssh_channel_handle_window_adjust(uint8_t i, const uint8_t *payload, size_
 // handler and the app/teardown path).
 static int build_close_chan(SshChannel *c, uint8_t *out, size_t *out_len, size_t cap)
 {
-    if (!c || pc_ssh_sig_build_close(c->peer_id, out, cap, out_len) < 0)
+    if (!c || SshFlowControl.build_close(c->peer_id, out, cap, out_len) < 0)
     {
         return -1;
     }
@@ -717,7 +720,7 @@ static int build_close_chan(SshChannel *c, uint8_t *out, size_t *out_len, size_t
     return 0;
 }
 
-int pc_ssh_channel_build_close(uint8_t i, uint32_t channel, uint8_t *out, size_t *out_len, size_t cap)
+static int pc_ssh_channel_build_close(uint8_t i, uint32_t channel, uint8_t *out, size_t *out_len, size_t cap)
 {
     if (i >= MAX_SSH_CONNS)
     {
@@ -726,8 +729,8 @@ int pc_ssh_channel_build_close(uint8_t i, uint32_t channel, uint8_t *out, size_t
     return build_close_chan(chan_by_id(i, channel), out, out_len, cap);
 }
 
-int pc_ssh_channel_handle_close(uint8_t i, const uint8_t *payload, size_t len, uint8_t *out, size_t *out_len,
-                                size_t cap)
+static int pc_ssh_channel_handle_close(uint8_t i, const uint8_t *payload, size_t len, uint8_t *out, size_t *out_len,
+                                       size_t cap)
 {
     *out_len = 0;
     if (i >= MAX_SSH_CONNS || len < 5 || payload[0] != SSH_MSG_CHANNEL_CLOSE)
@@ -736,3 +739,26 @@ int pc_ssh_channel_handle_close(uint8_t i, const uint8_t *payload, size_t len, u
     }
     return build_close_chan(chan_by_id(i, rd_u32(payload + 1)), out, out_len, cap);
 }
+
+const SshChannelNs SshChannels = {pc_ssh_channel_set_data_cb,
+                                  pc_ssh_channel_set_forward_open_cb,
+                                  pc_ssh_channel_set_forward_data_cb,
+                                  pc_ssh_channel_set_rforward_open_cb,
+                                  pc_ssh_channel_set_rforward_cancel_cb,
+                                  pc_ssh_channel_set_forward_confirm_cb,
+                                  pc_ssh_channel_set_sftp_open_cb,
+                                  pc_ssh_channel_set_sftp_data_cb,
+                                  pc_ssh_channel_set_scp_open_cb,
+                                  pc_ssh_channel_set_scp_data_cb,
+                                  pc_ssh_channel_init,
+                                  pc_ssh_channel_open_forwarded,
+                                  pc_ssh_channel_handle_open,
+                                  pc_ssh_channel_handle_open_confirm,
+                                  pc_ssh_channel_handle_open_failure,
+                                  pc_ssh_channel_handle_request,
+                                  pc_ssh_channel_handle_data,
+                                  pc_ssh_channel_build_data,
+                                  pc_ssh_channel_handle_window_adjust,
+                                  pc_ssh_channel_build_close,
+                                  pc_ssh_channel_handle_close,
+                                  ssh_global_request_handle};

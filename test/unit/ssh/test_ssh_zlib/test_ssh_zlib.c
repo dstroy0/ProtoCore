@@ -42,7 +42,7 @@ static uint8_t g_iscratch[INFLATE_SCRATCH_SIZE];
 
 static void reset_stream()
 {
-    ssh_deflate_init(&g_z, g_work, g_head, g_prev, g_llc, g_lll, g_dc, g_dl);
+    SshDeflater.init(&g_z, g_work, g_head, g_prev, g_llc, g_lll, g_dc, g_dl);
     g_stream_len = 0;
     g_orig_len = 0;
 }
@@ -51,7 +51,7 @@ static void reset_stream()
 static size_t feed(const uint8_t *src, size_t n)
 {
     size_t olen = 0;
-    int rc = ssh_deflate_packet(&g_z, src, n, g_out, sizeof(g_out), &olen);
+    int rc = SshDeflater.packet(&g_z, src, n, g_out, sizeof(g_out), &olen);
     TEST_ASSERT_EQUAL_INT(0, rc);
     TEST_ASSERT_TRUE(g_stream_len + olen <= sizeof(g_stream));
     memcpy(g_stream + g_stream_len, g_out, olen);
@@ -199,7 +199,7 @@ void test_oversize_input_rejected()
     static uint8_t buf[PC_SSH_ZLIB_MAX_IN + 1];
     memset(buf, 'x', sizeof(buf));
     size_t olen = 0;
-    int rc = ssh_deflate_packet(&g_z, buf, sizeof(buf), g_out, sizeof(g_out), &olen);
+    int rc = SshDeflater.packet(&g_z, buf, sizeof(buf), g_out, sizeof(g_out), &olen);
     TEST_ASSERT_EQUAL_INT(-1, rc);
 }
 
@@ -213,7 +213,7 @@ void test_output_overflow_fails_closed()
     }
     uint8_t tiny[8];
     size_t olen = 0;
-    int rc = ssh_deflate_packet(&g_z, buf, sizeof(buf), tiny, sizeof(tiny), &olen);
+    int rc = SshDeflater.packet(&g_z, buf, sizeof(buf), tiny, sizeof(tiny), &olen);
     TEST_ASSERT_EQUAL_INT(-1, rc);
 }
 
@@ -225,7 +225,7 @@ void test_hist_overflow_invariant_rejected()
     g_z.hist = SSH_ZLIB_WORK_SIZE; // hist + src_len will exceed the work buffer capacity
     uint8_t buf[1] = {'x'};
     size_t olen = 0;
-    int rc = ssh_deflate_packet(&g_z, buf, sizeof(buf), g_out, sizeof(g_out), &olen);
+    int rc = SshDeflater.packet(&g_z, buf, sizeof(buf), g_out, sizeof(g_out), &olen);
     TEST_ASSERT_EQUAL_INT(-1, rc);
 }
 

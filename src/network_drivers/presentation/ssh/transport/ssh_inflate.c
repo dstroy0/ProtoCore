@@ -441,7 +441,7 @@ static int do_block(BitIn *b, OutCtx *o, Tables *t)
     return PC_BLK_ERR; // type 3 is reserved
 }
 
-void ssh_inflate_init(SshInflate *z, uint8_t *window)
+static void ssh_inflate_init(SshInflate *z, uint8_t *window)
 {
     z->window = window;
     z->wpos = 0;
@@ -451,7 +451,8 @@ void ssh_inflate_init(SshInflate *z, uint8_t *window)
     z->header_seen = PROTO_FALSE;
 }
 
-int ssh_inflate_packet(SshInflate *z, const uint8_t *src, size_t src_len, uint8_t *dst, size_t dst_cap, size_t *out_len)
+static int ssh_inflate_packet(SshInflate *z, const uint8_t *src, size_t src_len, uint8_t *dst, size_t dst_cap,
+                              size_t *out_len)
 {
     if (!z || (src_len && !src) || !out_len)
     {
@@ -567,5 +568,7 @@ int ssh_inflate_packet(SshInflate *z, const uint8_t *src, size_t src_len, uint8_
     *out_len = o.cnt;
     return 0;
 }
+
+const SshInflateNs SshInflater = {ssh_inflate_init, ssh_inflate_packet};
 
 #endif // PC_ENABLE_SSH_ZLIB

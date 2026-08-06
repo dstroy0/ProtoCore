@@ -167,7 +167,7 @@ void test_nested_scopes_reclaim_lifo()
 
 void test_sequential_scopes_do_not_accumulate()
 {
-    // Mirrors ssh_pkt_recv's multi-packet loop: each iteration borrows then
+    // Mirrors SshPacket.recv's multi-packet loop: each iteration borrows then
     // releases, so the peak stays at one borrow regardless of iteration count -
     // the property that keeps a busy connection from exhausting the arena.
     for (int k = 0; k < 100; k++)
