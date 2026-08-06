@@ -16,21 +16,21 @@
 #include "radio_power.h" // Radio: the layer carries the radio interface
 
 // Map the live egress IP to the interface it belongs to.
-pc_iface pc_net_classify_ip(uint32_t egress_ip, uint32_t sta_ip, uint32_t ap_ip)
+pc_if_kind pc_net_classify_ip(uint32_t egress_ip, uint32_t sta_ip, uint32_t ap_ip)
 {
     if (egress_ip == 0)
     {
-        return PC_IFACE_ANY;
+        return PC_IF_ANY;
     }
     if (sta_ip != 0 && egress_ip == sta_ip)
     {
-        return PC_IFACE_STA;
+        return PC_IF_WIFI_STA;
     }
     if (ap_ip != 0 && egress_ip == ap_ip)
     {
-        return PC_IFACE_AP;
+        return PC_IF_WIFI_AP;
     }
-    return PC_IFACE_ETH; // a live route that is neither WiFi IP -> wired
+    return PC_IF_ETH; // a live route that is neither WiFi IP -> wired
 }
 
 #if !PC_PHYSICAL_HAS_BACKEND
@@ -83,9 +83,9 @@ uint32_t pc_net_egress_ip(void)
 {
     return 0;
 }
-pc_iface pc_net_egress(void)
+pc_if_kind pc_net_egress(void)
 {
-    return PC_IFACE_ANY;
+    return PC_IF_ANY;
 }
 uint32_t pc_net_ap_ip(void)
 {
@@ -224,7 +224,7 @@ static pc_if_kind iface_kind(uint8_t id)
     const IfaceRow *r = row_of(id);
     if (r == NULL)
     {
-        return PC_IF_OTHER;
+        return PC_IF_ANY;
     }
     return r->kind;
 }

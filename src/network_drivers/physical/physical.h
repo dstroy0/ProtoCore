@@ -21,7 +21,7 @@
 #define PROTOCORE_PHYSICAL_H
 
 #include "board_drivers/board_profiles/pc_platform.h" // PC_VENDOR_* selector (picks the L1 backend)
-#include "protocore_config.h"                         // pc_iface
+#include "protocore_config.h"                         // pc_if_kind
 #include "shared_primitives/ip.h"
 
 // Does the selected vendor ship a physical (L1) backend? The real bring-up (radio / Ethernet PHY /
@@ -86,7 +86,7 @@ proto_bool init_wifi_ap_physical(const char *ssid, const char *password);
  * A thin wrapper over the Arduino ETH library (`ETH.begin()`); the RMII PHY pins / type /
  * clock come from the standard `ETH_PHY_*` build flags for your board. Returns immediately
  * (bring-up is asynchronous); poll eth_ready(). The egress reporting already classifies a
- * wired route as PC_IFACE_ETH, so the server accepts on the link once it has an IP.
+ * wired route as PC_IF_ETH, so the server accepts on the link once it has an IP.
  *
  * @return true if ETH.begin() started the driver; false if Ethernet is disabled at build
  *         time or the driver failed to start (and always false on host builds).
@@ -122,10 +122,10 @@ proto_bool pc_ipv6_ready(void);
  * @brief Which interface currently carries outbound traffic.
  *
  * Reads the live lwIP default route, so it reflects the current state after any
- * failover the stack performed - no polling, no cached state. Returns PC_IFACE_ETH /
- * PC_IFACE_STA / PC_IFACE_AP, or PC_IFACE_ANY when no route is up (and on host builds).
+ * failover the stack performed - no polling, no cached state. Returns PC_IF_ETH /
+ * PC_IF_WIFI_STA / PC_IF_WIFI_AP, or PC_IF_ANY when no route is up (and on host builds).
  */
-pc_iface pc_net_egress(void);
+pc_if_kind pc_net_egress(void);
 
 /** @brief IPv4 (network byte order) of the current egress interface, or 0 if none. */
 uint32_t pc_net_egress_ip(void);
@@ -179,7 +179,7 @@ uint8_t pc_net_channel(void);
  * @param sta_ip    WiFi station IPv4 (network order), 0 if not connected.
  * @param ap_ip     softAP IPv4 (network order), 0 if the softAP is not up.
  */
-pc_iface pc_net_classify_ip(uint32_t egress_ip, uint32_t sta_ip, uint32_t ap_ip);
+pc_if_kind pc_net_classify_ip(uint32_t egress_ip, uint32_t sta_ip, uint32_t ap_ip);
 
 /* --------------------------------------------------------------------------------------------
  * Radio control (L1 capability contract)
@@ -267,9 +267,9 @@ typedef struct
 typedef struct
 {
     proto_bool (*egress_mac)(uint8_t out[6]);
-    pc_iface (*classify_ip)(uint32_t egress_ip, uint32_t sta_ip, uint32_t ap_ip);
+    pc_if_kind (*classify_ip)(uint32_t egress_ip, uint32_t sta_ip, uint32_t ap_ip);
     uint32_t (*egress_ip)(void);
-    pc_iface (*egress)(void);
+    pc_if_kind (*egress)(void);
     proto_bool (*mac)(uint8_t out[6]);
 } PhysicalLinkNs;
 
@@ -280,16 +280,7 @@ typedef struct
 // Ethernet ports, a station and a softAP, a bus bridged to a socket.
 // ---------------------------------------------------------------------------
 
-/** @brief What an interface is. Informational to the layers above; L1 treats them alike. */
-typedef enum PROTO_ENUM_PACKED
-{
-    PC_IF_OTHER = 0,
-    PC_IF_WIFI_STA,
-    PC_IF_WIFI_AP,
-    PC_IF_ETH,
-    PC_IF_BUS,
-    PC_IF_RADIO,
-} pc_if_kind;
+// pc_if_kind is protocore_config.h's: one vocabulary for the kind and the filter.
 
 /**
  * @brief Put @p len bytes on interface @p if_id.

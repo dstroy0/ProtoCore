@@ -20,12 +20,12 @@ Physical.wifi->init(SSID, PASSWORD);
 server.set_ap_ip(Physical.wifi->ap_ip());   // required for STA/AP classification
 ```
 
-**Gate routes by interface.** Pass `PC_IFACE_AP` or `PC_IFACE_STA` as the last
+**Gate routes by interface.** Pass `PC_IF_WIFI_AP` or `PC_IF_WIFI_STA` as the last
 `on()` argument; omit it for "any interface":
 
 ```cpp
-server.on("/setup",    HttpMethod::HTTP_GET, handle_setup, pc_iface::PC_IFACE_AP);  // softAP only
-server.on("/api/data", HttpMethod::HTTP_GET, handle_api,   pc_iface::PC_IFACE_STA); // station only
+server.on("/setup",    HttpMethod::HTTP_GET, handle_setup, pc_if_kind::PC_IF_WIFI_AP);  // softAP only
+server.on("/api/data", HttpMethod::HTTP_GET, handle_api,   pc_if_kind::PC_IF_WIFI_STA); // station only
 server.on("/",         HttpMethod::HTTP_GET, handle_root);                // any interface
 ```
 
@@ -106,8 +106,8 @@ void setup()
     // Required for STA/AP classification (IPAddress converts to uint32_t).
     server.set_ap_ip(Physical.wifi->ap_ip());
 
-    server.on("/setup", HttpMethod::HTTP_GET, handle_setup, pc_iface::PC_IFACE_AP);   // softAP only
-    server.on("/api/data", HttpMethod::HTTP_GET, handle_api, pc_iface::PC_IFACE_STA); // station only
+    server.on("/setup", HttpMethod::HTTP_GET, handle_setup, pc_if_kind::PC_IF_WIFI_AP);   // softAP only
+    server.on("/api/data", HttpMethod::HTTP_GET, handle_api, pc_if_kind::PC_IF_WIFI_STA); // station only
     server.on("/", HttpMethod::HTTP_GET, handle_root);                      // any interface
 
     int32_t result = server.begin(80);

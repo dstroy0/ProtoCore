@@ -155,12 +155,12 @@ uint32_t pc_net_egress_ip(void)
     return netif_default ? ip4_addr_get_u32(ip_2_ip4(&netif_default->ip_addr)) : 0;
 }
 
-pc_iface pc_net_egress(void)
+pc_if_kind pc_net_egress(void)
 {
     uint32_t egress = pc_net_egress_ip();
     if (egress == 0)
     {
-        return PC_IFACE_ANY;
+        return PC_IF_ANY;
     }
     uint32_t sta = WiFi.isConnected() ? (uint32_t)WiFi.localIP() : 0;
     uint32_t ap = pc_net_ap_ip();

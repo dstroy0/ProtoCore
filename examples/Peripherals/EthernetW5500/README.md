@@ -17,7 +17,7 @@ while (!Physical.eth->ready()) delay(250);
 ```
 
 Nothing else changes: the egress reporting already classifies the wired route as
-`pc_iface::PC_IFACE_ETH`, so `Physical.link->egress()`, per-route STA/AP/ETH interface filters, and every
+`pc_if_kind::PC_IF_ETH`, so `Physical.link->egress()`, per-route STA/AP/ETH interface filters, and every
 protocol work over the link the moment it has an IP.
 
 ## Wiring (ESP32-S3-DevKitC, HSPI)

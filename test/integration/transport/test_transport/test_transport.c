@@ -1386,7 +1386,7 @@ void test_accept_cb_claims_slot_and_wires_connection()
     TEST_ASSERT_EQUAL(0u, (size_t)c->rx_tail);
     TEST_ASSERT_EQUAL_UINT8(0, c->listener_id);
     TEST_ASSERT_EQUAL_INT((int)PROTO_HTTP, (int)c->proto);   // from listener_pool[0] (setUp's listener_add)
-    TEST_ASSERT_EQUAL_INT((int)PC_IFACE_ANY, (int)c->iface); // host build: no real pcb IP to classify
+    TEST_ASSERT_EQUAL_INT((int)PC_IF_ANY, (int)c->iface); // host build: no real pcb IP to classify
     TEST_ASSERT_EQUAL_UINT8(0, c->tls);                      // PC_ENABLE_TLS is off on native
 }
 

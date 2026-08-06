@@ -27,7 +27,7 @@ static void lt_report(const char *tag)
     uint32_t ip = Physical.link->egress_ip();
     Serial.printf("LT %s RIG_IP=%u.%u.%u.%u\n", tag, ip & 0xFFu, (ip >> 8) & 0xFFu, (ip >> 16) & 0xFFu,
                   (ip >> 24) & 0xFFu);
-    pc_iface iface = Physical.link->egress();
+    pc_if_kind iface = Physical.link->egress();
     static const char *const names[] = {"ANY", "STA", "AP", "ETH"};
     int i = (int)iface;
     Serial.printf("LT %s egress_iface=%d (%s)\n", tag, i, (i >= 0 && i <= 3) ? names[i] : "?");

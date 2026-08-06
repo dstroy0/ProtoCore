@@ -124,7 +124,7 @@ void pc_h3_server_request(void *app, uint32_t conn_id, uint64_t stream_id, const
     c->pc_h3_conn_id = conn_id;
     c->pc_h3_stream = stream_id;
     c->pc_resp_sink = pc_h3_resp_sink;
-    c->iface = PC_IFACE_STA;
+    c->iface = PC_IF_WIFI_STA;
     Tcp.conn->set_state(slot, CONN_ACTIVE); // reserved slot: no bitmask bit (slot >= MAX_CONNS)
     c->pcb = NULL;
 

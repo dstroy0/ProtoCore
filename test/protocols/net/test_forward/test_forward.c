@@ -58,7 +58,7 @@ static proto_bool cap_send(uint8_t id, const uint8_t *d, uint16_t n, void *ctx)
 
 static proto_bool add_if(uint8_t id)
 {
-    return Physical.iface->add(id, PC_IF_OTHER, cap_send, NULL);
+    return Physical.iface->add(id, PC_IF_ANY, cap_send, NULL);
 }
 
 static uint8_t ingress(uint8_t src, const char *s)
@@ -170,7 +170,7 @@ void test_add_if_validation_and_table_full()
 {
     TEST_ASSERT_TRUE(add_if(1));
     TEST_ASSERT_FALSE(add_if(1));                                     // duplicate id
-    TEST_ASSERT_FALSE(Physical.iface->add(9, PC_IF_OTHER, NULL, NULL)); // null send
+    TEST_ASSERT_FALSE(Physical.iface->add(9, PC_IF_ANY, NULL, NULL)); // null send
     TEST_ASSERT_TRUE(add_if(2));
     TEST_ASSERT_TRUE(add_if(3));
     TEST_ASSERT_TRUE(add_if(4));

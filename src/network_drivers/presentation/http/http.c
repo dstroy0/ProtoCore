@@ -447,7 +447,7 @@ static proto_bool route_admits(const HttpRoute *r, uint8_t slot_id, HttpReq *req
     }
     // Per-route interface gate: a route bound to STA/AP is invisible on the
     // other interface (falls through to other routes / 404).
-    if (r->iface_filter != PC_IFACE_ANY && r->iface_filter != pc_conn_iface(slot_id))
+    if (r->iface_filter != PC_IF_ANY && r->iface_filter != pc_conn_iface(slot_id))
     {
         return PROTO_FALSE;
     }

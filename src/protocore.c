@@ -393,7 +393,7 @@ void fill_route_base(HttpRoute *r, const char *path)
     // the first `/`, which a route path is full of.
     r->is_param = proto_has(r->path, MAX_PATH_LEN, "/:", sizeof("/:"));
     r->is_regex = PROTO_FALSE;
-    r->iface_filter = PC_IFACE_ANY;
+    r->iface_filter = PC_IF_ANY;
 #if PC_ENABLE_AUTH
     // Stated, not inherited from the zeroed slot: zero is a valid credential id, so a route that
     // registers no credentials has to say so, or the first set anyone registers would guard every
@@ -425,7 +425,7 @@ void on_http(const char *path, HttpMethod method, Handler callback)
     r->callback = callback;
 }
 
-void on_http_iface(const char *path, HttpMethod method, Handler callback, pc_iface iface)
+void on_http_iface(const char *path, HttpMethod method, Handler callback, pc_if_kind iface)
 {
     HttpRoute *r = HttpRoutes.add();
     if (r == NULL)

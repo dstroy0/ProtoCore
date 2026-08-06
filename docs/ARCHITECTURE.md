@@ -14,7 +14,7 @@ special-cased. The piping is straight; what remains below is the map, not a to-d
 src/network_drivers/
   physical/     WiFi / Ethernet bring-up, link state
   datalink/     L2 framing concerns
-  network/      IPv4 / interface tagging (pc_iface: STA vs AP)
+  network/      IPv4 / interface tagging (pc_if_kind: STA vs AP)
   transport/    lwIP raw-API callbacks, the per-connection RX ring, the TcpEvt
                 event queue, and the pc_conn_* I/O API. OWNS all socket I/O.
   tls/          mbedTLS record layer (static-pool BIO) - plaintext <-> ciphertext

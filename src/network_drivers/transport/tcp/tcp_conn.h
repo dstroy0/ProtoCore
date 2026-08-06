@@ -95,9 +95,9 @@ typedef struct TcpConn
     uint8_t owner;       ///< Worker that owns this slot (round-robin at accept). Always 0 at N=1.
     ConnProto proto;     ///< Application protocol for this connection.
     uint8_t
-        proto_slot; ///< Per-protocol session/pool index (0xFF = none): the SSH session, an MQTT/Modbus session, etc.
-    pc_iface iface; ///< Interface this connection arrived on; set at accept time.
-    uint8_t tls;    ///< Non-zero when this connection is TLS (set at accept time).
+        proto_slot;   ///< Per-protocol session/pool index (0xFF = none): the SSH session, an MQTT/Modbus session, etc.
+    pc_if_kind iface; ///< Interface this connection arrived on; set at accept time.
+    uint8_t tls;      ///< Non-zero when this connection is TLS (set at accept time).
 #if PC_ENABLE_HTTP2 || PC_ENABLE_HTTP3
     /// Self-framing protocol response sink (Layer 5 TX seam): HTTP/2 installs it at ALPN, HTTP/3 at
     /// dispatch, so the response methods route through it instead of building an HTTP/1.1 message.
@@ -123,8 +123,8 @@ typedef struct TcpConn
  * @brief Access-point IPv4 address (network byte order) for STA/AP interface tagging.
  *
  * Zero when no access point is configured. Set via set_ap_ip(); the
- * accept callback tags each connection PC_IFACE_AP when its local IP equals
- * this, else PC_IFACE_STA. Used by per-route interface filters.
+ * accept callback tags each connection PC_IF_WIFI_AP when its local IP equals
+ * this, else PC_IF_WIFI_STA. Used by per-route interface filters.
  */
 extern uint32_t pc_ap_ip;
 
@@ -221,7 +221,7 @@ static inline proto_bool pc_conn_active(uint8_t slot)
 }
 
 /** @brief The network interface (STA / AP / ANY) @p slot's connection arrived on. */
-static inline pc_iface pc_conn_iface(uint8_t slot)
+static inline pc_if_kind pc_conn_iface(uint8_t slot)
 {
     return conn_pool[slot].iface;
 }

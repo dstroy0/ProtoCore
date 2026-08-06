@@ -228,7 +228,7 @@ proto_bool dav_stream_put_begin(HttpReq *req)
         {
             continue;
         }
-        if (r->iface_filter != PC_IFACE_ANY && r->iface_filter != pc_conn_iface(slot))
+        if (r->iface_filter != PC_IF_ANY && r->iface_filter != pc_conn_iface(slot))
         {
             continue;
         }
@@ -371,7 +371,7 @@ proto_bool try_serve_dav(uint8_t slot_id, HttpReq *req)
         {
             continue;
         }
-        if (r->iface_filter != PC_IFACE_ANY && r->iface_filter != pc_conn_iface(slot_id))
+        if (r->iface_filter != PC_IF_ANY && r->iface_filter != pc_conn_iface(slot_id))
         {
             continue;
         }

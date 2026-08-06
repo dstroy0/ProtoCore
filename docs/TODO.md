@@ -457,8 +457,8 @@ native Unity tests before moving on. Each must keep the "no heap after
         readers (`src/network_drivers/presentation/json.*`). ArduinoJson stays optional (it heap-allocates).
         Tested by `test_json` (17 cases); example `Json`.
   - [x] Interface filters _(done)_: per-route STA/AP gate via
-        [`on(..., pc_iface)`](@ref PC::on) + [`set_ap_ip()`](@ref PC::set_ap_ip).
-        Each connection is tagged `PC_IFACE_STA`/`PC_IFACE_AP` at accept time by
+        [`on(..., pc_if_kind)`](@ref PC::on) + [`set_ap_ip()`](@ref PC::set_ap_ip).
+        Each connection is tagged `PC_IF_WIFI_STA`/`PC_IF_WIFI_AP` at accept time by
         comparing its local IP to the softAP IP. Tested by `test_iface` (7 cases);
         example `InterfaceFilter`.
   - [x] Portability beyond ESP32 (ESP8266 / RP2040 / RP2350). **Won't do (closed):** deferred at the
@@ -596,7 +596,7 @@ Open follow-ups discovered during the above:
       `Physical.eth->init()` / `Physical.eth->ready()` in `network_drivers/physical` wrap the Arduino
       ETH library for an RMII PHY (LAN8720 / IP101 / ...), configured by the standard `ETH_PHY_*`
       build flags (or a board variant that supplies them). The egress reporting + per-route interface
-      classifier already handle a wired route (PC_IFACE_ETH, host-tested), so the server serves over
+      classifier already handle a wired route (PC_IF_ETH, host-tested), so the server serves over
       Ethernet - or dual-homed with Wi-Fi - once the link has an IP. **HW-verified on a Waveshare
       ESP32-P4-POE-ETH** (onboard IP101 RMII PHY, arduino-esp32 3.x): the shipped `Physical.eth->init()`
       brought the PHY up (link 100M full-duplex + DHCP), `Physical.link->egress_ip()` reported the wired

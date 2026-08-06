@@ -1583,7 +1583,7 @@ void test_route_registration_variants_table_full(void)
         on_http("/x", HTTP_GET, record_handler);
     }
 
-    on_http_iface("/i", HTTP_GET, record_handler, PC_IFACE_STA); // on(..., iface)
+    on_http_iface("/i", HTTP_GET, record_handler, PC_IF_WIFI_STA); // on(..., iface)
     on_regex("/re.*", HTTP_GET, record_handler);
 #if PC_ENABLE_AUTH
     on_http_auth("/a", HTTP_GET, record_handler, "realm", "u", "p", PROTO_FALSE);

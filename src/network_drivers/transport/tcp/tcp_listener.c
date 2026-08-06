@@ -490,10 +490,10 @@ pc_net_err listener_accept_cb(void *arg, pc_pcb *newpcb, pc_net_err err)
 #if PROTOCORE_HOT
     {
         uint32_t lip = pc_net_ip4_u32(pc_net_ip_as_v4(&newpcb->local_ip));
-        slot->iface = (pc_ap_ip != 0 && lip == pc_ap_ip) ? PC_IFACE_AP : PC_IFACE_STA;
+        slot->iface = (pc_ap_ip != 0 && lip == pc_ap_ip) ? PC_IF_WIFI_AP : PC_IF_WIFI_STA;
     }
 #else
-    slot->iface = PC_IFACE_ANY;
+    slot->iface = PC_IF_ANY;
 #endif
 
     pc_net_arg(newpcb, slot);

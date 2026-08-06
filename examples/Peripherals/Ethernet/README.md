@@ -16,7 +16,7 @@ while (!Physical.eth->ready()) delay(250);
 
 It is a thin wrapper over the Arduino **ETH** library for an RMII PHY (LAN8720 / TLK110 /
 RTL8201 / DP83848). Nothing else changes: the egress reporting already classifies a wired
-route as `PC_IFACE_ETH`, so `Physical.link->egress()`, per-route STA/AP/ETH interface filters, and
+route as `PC_IF_ETH`, so `Physical.link->egress()`, per-route STA/AP/ETH interface filters, and
 every protocol work over the wired link the moment it has an IP. Wi-Fi and Ethernet can also
 run together (dual-homed) - the stack picks the default route.
 

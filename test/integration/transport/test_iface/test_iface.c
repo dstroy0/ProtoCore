@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for per-route STA/AP interface filters (PC::on(..., pc_iface)).
+// Unit tests for per-route STA/AP interface filters (PC::on(..., pc_if_kind)).
 // The connection's interface is normally stamped at accept time from its local
 // IP; here we set conn_pool[slot].iface directly to exercise the routing gate.
 
@@ -72,7 +72,7 @@ void tearDown()
 }
 
 // Arm slot 0 with a given ingress interface, then dispatch one request.
-static const char *do_req(pc_iface iface, const char *req_str)
+static const char *do_req(pc_if_kind iface, const char *req_str)
 {
     conn_pool[0] = (TcpConn){0};
     conn_pool[0].id = 0;
@@ -94,45 +94,45 @@ static const char *do_req(pc_iface iface, const char *req_str)
 
 void test_ap_only_matches_on_ap()
 {
-    on_http_iface("/cfg", HTTP_GET, h_ok, PC_IFACE_AP);
-    const char *r = do_req(PC_IFACE_AP, "GET /cfg HTTP/1.1\r\n\r\n");
+    on_http_iface("/cfg", HTTP_GET, h_ok, PC_IF_WIFI_AP);
+    const char *r = do_req(PC_IF_WIFI_AP, "GET /cfg HTTP/1.1\r\n\r\n");
     TEST_ASSERT_TRUE(g_called);
     TEST_ASSERT_NOT_NULL(strstr(r, "200 OK"));
 }
 
 void test_ap_only_hidden_on_sta()
 {
-    on_http_iface("/cfg", HTTP_GET, h_ok, PC_IFACE_AP);
-    const char *r = do_req(PC_IFACE_STA, "GET /cfg HTTP/1.1\r\n\r\n");
+    on_http_iface("/cfg", HTTP_GET, h_ok, PC_IF_WIFI_AP);
+    const char *r = do_req(PC_IF_WIFI_STA, "GET /cfg HTTP/1.1\r\n\r\n");
     TEST_ASSERT_FALSE(g_called); // route invisible on STA
     TEST_ASSERT_NOT_NULL(strstr(r, "404 Not Found"));
 }
 
 void test_sta_only_matches_on_sta()
 {
-    on_http_iface("/api", HTTP_GET, h_ok, PC_IFACE_STA);
-    const char *r = do_req(PC_IFACE_STA, "GET /api HTTP/1.1\r\n\r\n");
+    on_http_iface("/api", HTTP_GET, h_ok, PC_IF_WIFI_STA);
+    const char *r = do_req(PC_IF_WIFI_STA, "GET /api HTTP/1.1\r\n\r\n");
     TEST_ASSERT_TRUE(g_called);
     TEST_ASSERT_NOT_NULL(strstr(r, "200 OK"));
 }
 
 void test_sta_only_hidden_on_ap()
 {
-    on_http_iface("/api", HTTP_GET, h_ok, PC_IFACE_STA);
-    const char *r = do_req(PC_IFACE_AP, "GET /api HTTP/1.1\r\n\r\n");
+    on_http_iface("/api", HTTP_GET, h_ok, PC_IF_WIFI_STA);
+    const char *r = do_req(PC_IF_WIFI_AP, "GET /api HTTP/1.1\r\n\r\n");
     TEST_ASSERT_FALSE(g_called);
     TEST_ASSERT_NOT_NULL(strstr(r, "404 Not Found"));
 }
 
 void test_unfiltered_route_matches_any_interface()
 {
-    on_http("/x", HTTP_GET, h_ok); // PC_IFACE_ANY
-    const char *r1 = do_req(PC_IFACE_AP, "GET /x HTTP/1.1\r\n\r\n");
+    on_http("/x", HTTP_GET, h_ok); // PC_IF_ANY
+    const char *r1 = do_req(PC_IF_WIFI_AP, "GET /x HTTP/1.1\r\n\r\n");
     TEST_ASSERT_TRUE(g_called);
     TEST_ASSERT_NOT_NULL(strstr(r1, "200 OK"));
 
     g_called = PROTO_FALSE;
-    const char *r2 = do_req(PC_IFACE_STA, "GET /x HTTP/1.1\r\n\r\n");
+    const char *r2 = do_req(PC_IF_WIFI_STA, "GET /x HTTP/1.1\r\n\r\n");
     TEST_ASSERT_TRUE(g_called);
     TEST_ASSERT_NOT_NULL(strstr(r2, "200 OK"));
 }
@@ -141,10 +141,10 @@ void test_same_path_two_interfaces_picks_correct()
 {
     // Same path bound to different interfaces; the request's interface decides.
     g_ap_hit = g_sta_hit = PROTO_FALSE;
-    on_http_iface("/p", HTTP_GET, h_ap, PC_IFACE_AP);
-    on_http_iface("/p", HTTP_GET, h_sta, PC_IFACE_STA);
+    on_http_iface("/p", HTTP_GET, h_ap, PC_IF_WIFI_AP);
+    on_http_iface("/p", HTTP_GET, h_sta, PC_IF_WIFI_STA);
 
-    const char *r = do_req(PC_IFACE_STA, "GET /p HTTP/1.1\r\n\r\n");
+    const char *r = do_req(PC_IF_WIFI_STA, "GET /p HTTP/1.1\r\n\r\n");
     TEST_ASSERT_TRUE(g_sta_hit);
     TEST_ASSERT_FALSE(g_ap_hit);
     TEST_ASSERT_NOT_NULL(strstr(r, "sta"));

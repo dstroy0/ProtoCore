@@ -796,7 +796,7 @@ void on_http(const char *path, HttpMethod method, Handler callback);
  * @brief Register a route that only matches on a specific network interface.
  *
  * Identical to on(path, method, callback) but the route is invisible unless
- * the request arrived on @p iface (pc_iface::PC_IFACE_STA or pc_iface::PC_IFACE_AP). A
+ * the request arrived on @p iface (pc_if_kind::PC_IF_WIFI_STA or pc_if_kind::PC_IF_WIFI_AP). A
  * non-matching interface falls through to other routes / 404, so you can,
  * e.g., expose a provisioning UI only on the softAP and the app API only on
  * the station link. Requires set_ap_ip() to have been called so connections
@@ -805,9 +805,9 @@ void on_http(const char *path, HttpMethod method, Handler callback);
  * @param path     URL path pattern.
  * @param method   HTTP method.
  * @param callback Handler invoked on a match.
- * @param iface    pc_iface::PC_IFACE_STA or pc_iface::PC_IFACE_AP (pc_iface::PC_IFACE_ANY = no filter).
+ * @param iface    pc_if_kind::PC_IF_WIFI_STA or pc_if_kind::PC_IF_WIFI_AP (pc_if_kind::PC_IF_ANY = no filter).
  */
-void on_http_iface(const char *path, HttpMethod method, Handler callback, pc_iface iface);
+void on_http_iface(const char *path, HttpMethod method, Handler callback, pc_if_kind iface);
 
 /**
  * @brief Register a route whose path is a regular expression.
@@ -835,10 +835,10 @@ void on_regex(const char *pattern, HttpMethod method, Handler callback);
 /**
  * @brief Tell the server the softAP IPv4 address for STA/AP route filtering.
  *
- * Each accepted connection is tagged pc_iface::PC_IFACE_AP when its local IP equals
- * @p ap_ip, else pc_iface::PC_IFACE_STA. Call once after starting the softAP, e.g.
+ * Each accepted connection is tagged pc_if_kind::PC_IF_WIFI_AP when its local IP equals
+ * @p ap_ip, else pc_if_kind::PC_IF_WIFI_STA. Call once after starting the softAP, e.g.
  * `server.set_ap_ip(Physical.wifi->ap_ip())` (already network byte order).
- * Without it, every connection is treated as pc_iface::PC_IFACE_STA.
+ * Without it, every connection is treated as pc_if_kind::PC_IF_WIFI_STA.
  *
  * @param ap_ip softAP IPv4 address in network byte order (0 to clear).
  */

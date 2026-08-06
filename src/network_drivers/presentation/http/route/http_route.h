@@ -77,11 +77,11 @@ typedef struct HttpRoute
     uint8_t auth_id; ///< Required password.
 #endif
 
-    proto_bool is_active;   ///< `false` for unused table slots.
-    proto_bool is_wildcard; ///< `true` when path ends with `*`.
-    proto_bool is_param;    ///< `true` when the path contains a `:name` segment.
-    proto_bool is_regex;    ///< `true` when the path is a regex (see on_regex()).
-    pc_iface iface_filter;  ///< Interface gate; PC_IFACE_ANY (0) = match any interface.
+    proto_bool is_active;    ///< `false` for unused table slots.
+    proto_bool is_wildcard;  ///< `true` when path ends with `*`.
+    proto_bool is_param;     ///< `true` when the path contains a `:name` segment.
+    proto_bool is_regex;     ///< `true` when the path is a regex (see on_regex()).
+    pc_if_kind iface_filter; ///< Interface gate; PC_IF_ANY (0) = match any interface.
 } HttpRoute;
 
 /** @brief The table's storage. Declared, never defined here: the layout stays in route.c. */

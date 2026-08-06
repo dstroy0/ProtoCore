@@ -853,7 +853,7 @@ from halves and is slower than the width it decomposes into"
 // server runs over Ethernet instead of (or alongside) Wi-Fi. Physical.eth->init() is a thin
 // wrapper over the Arduino ETH library; the PHY pins / type / clock come from the standard
 // ETH_PHY_* build flags for your board (see example Ethernet). The egress reporting
-// (pc_net_egress -> PC_IFACE_ETH) and the per-route interface classifier already handle a
+// (Physical.link->egress -> PC_IF_ETH) and the per-route interface classifier already handle a
 // wired route, so once the link has an IP the server accepts on it with no other change.
 // Default off (zero cost / the ETH library is not linked). ESP32-only.
 
@@ -6710,25 +6710,29 @@ typedef enum PROTO_ENUM_PACKED
 } ConnProto;
 
 /**
- * @brief Network interface a connection arrived on (for per-route filtering).
+ * @brief What an interface is, and the filter that selects one.
  *
- * Stamped onto each TcpConn at accept time by comparing the connection's local
- * IP to the softAP IP (see set_ap_ip()). Used to gate routes to
- * the station or softAP interface only (on(..., pc_iface)).
+ * One vocabulary for both jobs. A registered interface carries its kind (layer 1 keeps the
+ * registry); a route or a connection carries the same value as a filter, where PC_IF_ANY means
+ * "no filter". The wifi/eth values are what a connection is stamped with at accept time by
+ * comparing its local IP to the softAP IP; a bus or radio interface is registered by the
+ * application and forwarded to like any other.
  */
 typedef enum PROTO_ENUM_PACKED
 {
-    PC_IFACE_ANY = 0, ///< Unknown / no filter (matches any interface).
-    PC_IFACE_STA = 1, ///< Station interface (joined to an AP / your LAN).
-    PC_IFACE_AP = 2,  ///< softAP interface (clients joined to the device).
-    PC_IFACE_ETH = 3, ///< Ethernet interface (wired PHY).
-} pc_iface;
+    PC_IF_ANY = 0,      ///< unspecified kind, and the filter that matches any interface
+    PC_IF_WIFI_STA = 1, ///< station interface (joined to an AP / your LAN)
+    PC_IF_WIFI_AP = 2,  ///< softAP interface (clients joined to the device)
+    PC_IF_ETH = 3,      ///< wired Ethernet PHY
+    PC_IF_BUS = 4,      ///< a bus bridged onto the network (uart, spi, can)
+    PC_IF_RADIO = 5,    ///< a non-wifi radio
+} pc_if_kind;
 
 // Both of these are struct members (TcpConn::proto, TcpConn::iface, Listener::proto, and a route's
 // interface gate), so their width is per-slot BSS rather than a detail of the type. Pinned here
 // because the pool sizes in this file are what the footprint is computed from.
 static_assert(sizeof(ConnProto) == 1, "ConnProto must stay one byte: it is a per-slot struct member");
-static_assert(sizeof(pc_iface) == 1, "pc_iface must stay one byte: it is a per-slot struct member");
+static_assert(sizeof(pc_if_kind) == 1, "pc_if_kind must stay one byte: it is a per-slot struct member");
 
 // ---------------------------------------------------------------------------
 // Compile-time sanity checks

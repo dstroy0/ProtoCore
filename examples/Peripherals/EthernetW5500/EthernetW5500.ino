@@ -4,7 +4,7 @@
 // no RMII MAC, so a wired link there uses an SPI Ethernet controller - the WIZnet W5500 - over
 // the HSPI bus. With PC_ETH_W5500=1, Physical.eth->init() calls the arduino-esp32 3.x ETH SPI
 // API (ETH.begin(ETH_PHY_W5500, ...)); once the link has a DHCP IP the server accepts on it with
-// no other change (the egress reporting classifies the wired route as pc_iface::PC_IFACE_ETH).
+// no other change (the egress reporting classifies the wired route as pc_if_kind::PC_IF_ETH).
 //
 // W5500 SPI Ethernet is arduino-esp32 3.x only (the 2.x ETH library has no W5500). Build this
 // with the arduino-cli / IDF-5.x core.
