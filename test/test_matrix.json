@@ -3486,6 +3486,7 @@
       "flags": ["-DPC_ENABLE_HTTP3=1"],
       "src": [
         "+<network_drivers/presentation/http/http3/quic_server.c>",
+        "+<network_drivers/presentation/http/http3/h3_server.c>",
         "+<network_drivers/presentation/http/http3/h3_conn.c>",
         "+<network_drivers/presentation/http/http3/h3_frame.c>",
         "+<network_drivers/presentation/http/http3/qpack.c>",
@@ -3525,6 +3526,7 @@
         "+<network_drivers/transport/udp/udp_listener.c>",
         "+<network_drivers/transport/udp/udp_client.c>",
         "+<network_drivers/presentation/http/http3/quic_server.c>",
+        "+<network_drivers/presentation/http/http3/h3_server.c>",
         "+<network_drivers/presentation/http/http3/quic_conn.c>",
         "+<network_drivers/presentation/http/http3/quic_tls.c>",
         "+<network_drivers/tls/tls13_kdf.c>",

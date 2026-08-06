@@ -24,6 +24,7 @@
 #include "network_drivers/presentation/http/http3/tls13_msg.h"
 #include "network_drivers/tls/tls13_kdf.h"
 #include "protocore.h"
+#include "network_drivers/presentation/http/http3/h3_server.h"
 #include <string.h>
 
 #include <unity.h>
@@ -431,7 +432,7 @@ void test_h3_request_served_by_route()
 
     g_out_n = 0;
     TEST_ASSERT_TRUE(pc_quic_server_ingest(s1, s1l, "192.0.2.10", 40000));
-    service_once(0); // -> pc_quic_server_poll -> dispatch_h3_request -> h_hello -> send -> respond
+    service_once(0); // -> pc_quic_server_poll -> pc_h3_server_request -> h_hello -> send -> respond
 
     TEST_ASSERT_TRUE(g_handler_ran);                               // the registered route actually ran
     TEST_ASSERT_TRUE(response_ok(&ap_s));                          // its 200 + body came back on the request stream
@@ -466,7 +467,7 @@ static void h_empty(uint8_t slot, HttpReq *)
     send_empty(slot, 204); // -> conn->pc_resp_sink -> pc_quic_server_respond (send_empty sink branch)
 }
 
-// Directly drive PC::dispatch_h3_request / pc_h3_cert / send_empty over the edge inputs that the
+// Directly drive pc_h3_server_request / pc_h3_cert / send_empty over the edge inputs that the
 // full end-to-end path never produces: bad cert args, oversized method/path/query/authority, a query
 // string, an empty/absent :authority, and a request body. There is no live QUIC connection here, so
 // pc_quic_server_respond() harmlessly returns false for the bogus conn id; we only care that the
@@ -488,11 +489,11 @@ void test_h3_dispatch_edges()
     char long_method[32];
     memset(long_method, 'A', sizeof(long_method) - 1);
     long_method[sizeof(long_method) - 1] = 0;
-    dispatch_h3_request(CID, 0, long_method, "/hello", "h3.test", NULL, 0);
+    pc_h3_server_request(NULL, CID, 0, long_method, "/hello", "h3.test", NULL, 0);
 
     // Path carrying a short query string: '?' split + query copied (short, no truncation).
     g_handler_ran = PROTO_FALSE;
-    dispatch_h3_request(CID, 0, "GET", "/hello?a=1&b=2", "h3.test", NULL, 0);
+    pc_h3_server_request(NULL, CID, 0, "GET", "/hello?a=1&b=2", "h3.test", NULL, 0);
     TEST_ASSERT_TRUE(g_handler_ran); // route still matched on the query-stripped path
 
     // Oversized query (> MAX_QUERY_LEN) -> query truncated.
@@ -501,34 +502,34 @@ void test_h3_dispatch_edges()
     memcpy(long_query + 1, "hello?", 6);
     memset(long_query + 7, 'q', sizeof(long_query) - 8);
     long_query[sizeof(long_query) - 1] = 0;
-    dispatch_h3_request(CID, 0, "GET", long_query, "h3.test", NULL, 0);
+    pc_h3_server_request(NULL, CID, 0, "GET", long_query, "h3.test", NULL, 0);
 
     // Oversized path (> MAX_PATH_LEN, no query) -> path truncated; no route matches -> 404 via sink.
     char long_path[256];
     long_path[0] = '/';
     memset(long_path + 1, 'p', sizeof(long_path) - 2);
     long_path[sizeof(long_path) - 1] = 0;
-    dispatch_h3_request(CID, 0, "GET", long_path, "h3.test", NULL, 0);
+    pc_h3_server_request(NULL, CID, 0, "GET", long_path, "h3.test", NULL, 0);
 
     // Oversized :authority (> MAX_VAL_LEN) -> Host header value truncated.
     char long_auth[128];
     memset(long_auth, 'h', sizeof(long_auth) - 1);
     long_auth[sizeof(long_auth) - 1] = 0;
-    dispatch_h3_request(CID, 0, "GET", "/hello", long_auth, NULL, 0);
+    pc_h3_server_request(NULL, CID, 0, "GET", "/hello", long_auth, NULL, 0);
 
     // Absent and empty :authority -> the authority guard's short-circuit branches.
-    dispatch_h3_request(CID, 0, "GET", "/hello", NULL, NULL, 0);
-    dispatch_h3_request(CID, 0, "GET", "/hello", "", NULL, 0);
+    pc_h3_server_request(NULL, CID, 0, "GET", "/hello", NULL, NULL, 0);
+    pc_h3_server_request(NULL, CID, 0, "GET", "/hello", "", NULL, 0);
 
     // Request body present (non-empty) -> body copied into the slot's HttpReq.
     static const uint8_t BODY[16] = {'h', 'e', 'l', 'l', 'o', '-', 'b', 'o', 'd', 'y', '!', '!', '!', '!', '!', '!'};
-    dispatch_h3_request(CID, 0, "GET", "/hello", "h3.test", BODY, sizeof(BODY));
+    pc_h3_server_request(NULL, CID, 0, "GET", "/hello", "h3.test", BODY, sizeof(BODY));
     // Non-null body pointer but zero length -> the body_len half of the guard is false.
-    dispatch_h3_request(CID, 0, "GET", "/hello", "h3.test", BODY, 0);
+    pc_h3_server_request(NULL, CID, 0, "GET", "/hello", "h3.test", BODY, 0);
 
     // A handler that calls send_empty() -> exercises send_empty()'s pc_resp_sink branch.
     g_empty_ran = PROTO_FALSE;
-    dispatch_h3_request(CID, 0, "GET", "/empty", "h3.test", NULL, 0);
+    pc_h3_server_request(NULL, CID, 0, "GET", "/empty", "h3.test", NULL, 0);
     TEST_ASSERT_TRUE(g_empty_ran);
 
     // send() / send_empty() on a slot with NO HTTP/3 sink -> the non-sink (TCP-transport) branch of the
