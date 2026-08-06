@@ -24,7 +24,7 @@
 
 #include "protocore.h" // library entry header (also sets the src/ include root)
 #include "network_drivers/physical/physical.h"
-#include "network_drivers/transport/client.h"
+#include "network_drivers/transport/tcp.h"
 #include "services/instrumentation/vxi11/vxi11.h"
 
 static const char *SSID = "YOUR_SSID";
@@ -39,7 +39,7 @@ static uint8_t c_resp[512];
 // mark) into c_resp. Returns the reply length, or 0 on timeout / overflow.
 static size_t rpc_call(int cid, size_t req_len)
 {
-    if (req_len == 0 || !pc_client_send(cid, c_req, req_len))
+    if (req_len == 0 || !Tcp.client->send(cid, c_req, req_len))
     {
         return 0;
     }
@@ -48,9 +48,9 @@ static size_t rpc_call(int cid, size_t req_len)
     unsigned long deadline = millis() + 3000;
     while (got < 4 && millis() < deadline)
     {
-        if (pc_client_available(cid))
+        if (Tcp.client->available(cid))
         {
-            got += pc_client_read(cid, rm + got, 4 - got);
+            got += Tcp.client->read(cid, rm + got, 4 - got);
         }
     }
     bool last = false;
@@ -62,9 +62,9 @@ static size_t rpc_call(int cid, size_t req_len)
     got = 0;
     while (got < frag && millis() < deadline)
     {
-        if (pc_client_available(cid))
+        if (Tcp.client->available(cid))
         {
-            got += pc_client_read(cid, c_resp + got, frag - got);
+            got += Tcp.client->read(cid, c_resp + got, frag - got);
         }
     }
     return got == frag ? got : 0;
@@ -73,7 +73,7 @@ static size_t rpc_call(int cid, size_t req_len)
 static void run_session(const char *host)
 {
     // 1) Ask the portmapper (TCP 111) for the DEVICE_CORE port.
-    int pmap_cid = pc_client_open(host, PC_RPC_PMAP_PORT, 8000);
+    int pmap_cid = Tcp.client->open(host, PC_RPC_PMAP_PORT, 8000);
     if (pmap_cid < 0)
     {
         Serial.println("[vxi11] portmap connect failed");
@@ -85,14 +85,14 @@ static void run_session(const char *host)
     if (!pc_vxi11_parse_getport_resp(c_resp, rpc_call(pmap_cid, n), &core_port) || core_port == 0)
     {
         Serial.println("[vxi11] GETPORT failed");
-        pc_client_close(pmap_cid);
+        Tcp.client->close(pmap_cid);
         return;
     }
-    pc_client_close(pmap_cid);
+    Tcp.client->close(pmap_cid);
     Serial.printf("[vxi11] DEVICE_CORE port = %u\n", core_port);
 
     // 2) Open the core channel and create a link to "inst0".
-    int core_cid = pc_client_open(host, (uint16_t)core_port, 8000);
+    int core_cid = Tcp.client->open(host, (uint16_t)core_port, 8000);
     if (core_cid < 0)
     {
         Serial.println("[vxi11] core connect failed");
@@ -103,7 +103,7 @@ static void run_session(const char *host)
     if (!pc_vxi11_parse_create_link_resp(c_resp, rpc_call(core_cid, n), &link) || link.error != PC_VXI11_ERR_NONE)
     {
         Serial.println("[vxi11] create_link failed");
-        pc_client_close(core_cid);
+        Tcp.client->close(core_cid);
         return;
     }
     Serial.printf("[vxi11] link=%d maxRecv=%u\n", link.lid, link.max_recv_size);
@@ -129,7 +129,7 @@ static void run_session(const char *host)
     n = pc_vxi11_build_destroy_link(c_req, sizeof(c_req), 5, link.lid);
     int32_t err = 0;
     pc_vxi11_parse_error_resp(c_resp, rpc_call(core_cid, n), &err);
-    pc_client_close(core_cid);
+    Tcp.client->close(core_cid);
     Serial.println("[vxi11] done");
 }
 
@@ -152,7 +152,7 @@ void loop()
     if (!done && millis() > 2000)
     {
         done = true;
-        run_session(INSTRUMENT_IP); // pc_client_open resolves the dotted-quad host directly
+        run_session(INSTRUMENT_IP); // Tcp.client->open resolves the dotted-quad host directly
     }
     delay(10);
 }

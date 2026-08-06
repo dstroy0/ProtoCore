@@ -303,8 +303,8 @@ void ws_reset_frame(WsConn *ws);
  * @brief Send a WebSocket frame to the client.
  *
  * Builds the header (no masking -- server-to-client frames are never masked)
- * and hands both to the transport layer (pc_conn_send()).  The caller is
- * responsible for flushing afterwards (pc_conn_flush()).
+ * and hands both to the transport layer (Tcp.conn->send()).  The caller is
+ * responsible for flushing afterwards (Tcp.conn->flush()).
  *
  * @param ws       WebSocket connection.
  * @param opcode   Frame opcode (WS_OP_TEXT, WS_OP_BINARY, WS_OP_PONG, etc.).

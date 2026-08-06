@@ -116,7 +116,7 @@ size_t pc_tls_arena_peak(void);
  *        abstraction the engine reads/writes ciphertext through.
  *
  * Both sides conform to this: the server registers BIO functions that read the
- * connection's rx ring and write via the transport (pc_conn_raw_send), and the
+ * connection's rx ring and write via the transport (Tcp.conn->raw_send), and the
  * outbound client passes its own pair to pc_tls_client_run(). The engine itself
  * never touches lwIP directly.
  */

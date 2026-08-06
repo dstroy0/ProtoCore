@@ -351,7 +351,7 @@ void dav_send_status(uint8_t slot_id, int code, const char *extra_headers)
     pc_sb_put(&sb_header, cl);
     pc_sb_put(&sb_header, "\r\n");
     int hlen = (int)pc_sb_finish(&sb_header);
-    pc_conn_send(slot_id, header, (proto_u16)hlen);
+    Tcp.conn->send(slot_id, header, (proto_u16)hlen);
     pc_resp_end(slot_id, code, 0, keep, /*pre_flushed=*/PROTO_FALSE);
 }
 

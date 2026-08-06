@@ -213,8 +213,8 @@ from halves and is slower than the width it decomposes into"
  * @brief Compile-time default for connection idle timeout in milliseconds.
  *
  * The actual runtime value is stored in `WebServerConfig::conn_timeout_ms`,
- * loaded by `proto_tcp_pool_init()` and read back with
- * `proto_tcp_conn_timeout_ms()`.
+ * loaded by `Tcp.conn->init()` and read back with
+ * `Tcp.conn->timeout_ms()`.
  */
 #ifndef CONN_TIMEOUT_MS
 #define CONN_TIMEOUT_MS 5000
@@ -3979,7 +3979,7 @@ from halves and is slower than the width it decomposes into"
  *
  * Each active relay holds two buffers of this size (one per direction) for bytes read from one peer
  * but not yet accepted by the other (backpressure carry). Larger buffers raise throughput per step
- * (fewer cross-thread pc_conn_send marshals per KB) at the cost of RAM per concurrent relay
+ * (fewer cross-thread Tcp.conn->send marshals per KB) at the cost of RAM per concurrent relay
  * (2 * PC_RELAY_BUF * PC_RELAY_MAX_CONNS bytes).
  */
 #ifndef PC_RELAY_BUF
@@ -5509,7 +5509,7 @@ from halves and is slower than the width it decomposes into"
 // build that does not enable a client must not reference the resolver symbols).
 // Every feature that drives the outbound client transport must pull it in: the direct callers
 // (http_client / mqtt / ws_client / relay / smtp / ssh port-forward) and the seam-based engines
-// whose shipped example binds the seam to pc_client (smb / dnc). Miss one and its pc_client_open
+// whose shipped example binds the seam to pc_client (smb / dnc). Miss one and its Tcp.client->open
 // resolves to the !NEED stub that returns -1, so the feature silently never connects on device.
 #if PC_ENABLE_HTTP_CLIENT || PC_ENABLE_MQTT || PC_ENABLE_WS_CLIENT || PC_ENABLE_RELAY || PC_ENABLE_SMTP ||             \
     PC_SSH_PORT_FORWARD || PC_ENABLE_SMB || PC_ENABLE_DNC || PC_ENABLE_FTP_SESSION || PC_ENABLE_SSH_CLIENT
@@ -5579,10 +5579,10 @@ from halves and is slower than the width it decomposes into"
  *
  * Default off (zero cost when unset - the notify points compile to nothing).
  * When set, the transport (L4) fires an application callback on every connection
- * state transition - pc_conn_on_event(slot, old_state, new_state, reason) - and
+ * state transition - Tcp.conn->on_event(slot, old_state, new_state, reason) - and
  * maintains lock-free counters (accepts, closes by reason, idle timeouts, RX
  * backpressure events, dropped deferred events, and a live CONN_CLOSING gauge)
- * readable via pc_conn_counters_get(). This is the only state-transition trace the
+ * readable via Tcp.conn->counters_get(). This is the only state-transition trace the
  * L4/L5 core exposes; pair it with PC_ENABLE_STATS for request-level metrics.
  */
 #ifndef PC_ENABLE_OBSERVABILITY
@@ -6070,7 +6070,7 @@ from halves and is slower than the width it decomposes into"
  *
  * Default off (zero cost / no behavior change). When set, the accept callback
  * drops any connection whose source address is not contained in a configured
- * CIDR rule (add rules with listener_ip_allow_add_cidr("192.168.1.0/24") /
+ * CIDR rule (add rules with Tcp.listener->ip_allow_add_cidr("192.168.1.0/24") /
  * "2001:db8::/32"). Matching is a full-address prefix compare per family, so a v4
  * peer never matches a v6 rule and vice versa. An empty allowlist allows
  * everything, so enabling the feature before adding rules never locks the device
@@ -6649,7 +6649,7 @@ from halves and is slower than the width it decomposes into"
  *
  * Can be declared as `const PROGMEM` (flash) or as a mutable variable (RAM).
  * Pass a pointer to proto_begin() / begin_http() / begin_tls(), which hand it
- * to proto_tcp_pool_init().
+ * to Tcp.conn->init().
  */
 typedef struct WebServerConfig
 {
@@ -7236,7 +7236,7 @@ static_assert((unsigned)PROTO_MESH < PROTO_MAX_HANDLERS, "PROTO_MAX_HANDLERS mus
  * @brief Per-connection wire receive ring size (bytes).
  *
  * Holds plaintext (plain) or ciphertext (TLS). The transport ACKs on consume
- * (pc_client_read reopens the window), so for a large inbound transfer to never
+ * (Tcp.client->read reopens the window), so for a large inbound transfer to never
  * stall the ring must hold a full TCP receive window: keep PC_CLIENT_RX_BUF >=
  * TCP_WND (~5.7 KB). The 8192 default clears that and a multi-KB TLS handshake
  * flight; a ring below TCP_WND can deadlock a sustained download (the peer would be

@@ -24,13 +24,13 @@
  *
  * **Connection teardown ownership**
  * All TCP I/O and teardown go through the transport connection API
- * (pc_conn_send / pc_conn_flush / pc_conn_begin_close / pc_conn_close /
- * pc_conn_abort_slot). This layer addresses a connection by slot index and owns
+ * (Tcp.conn->send / Tcp.conn->flush / Tcp.conn->begin_close / Tcp.conn->close /
+ * Tcp.conn->abort_slot). This layer addresses a connection by slot index and owns
  * no part of its lifecycle: transport releases the slot before it emits the
  * FIN/RST, so a stack event that fires mid-teardown finds the slot already free
- * and does nothing. L7 chooses only the kind of close: pc_conn_close(slot) for a
- * graceful local close, pc_conn_abort_slot(slot) for a hard reset, and
- * pc_conn_begin_close(slot) for the drain-then-close dwell.
+ * and does nothing. L7 chooses only the kind of close: Tcp.conn->close(slot) for a
+ * graceful local close, Tcp.conn->abort_slot(slot) for a hard reset, and
+ * Tcp.conn->begin_close(slot) for the drain-then-close dwell.
  */
 
 #include "protocore.h"
@@ -43,7 +43,7 @@
 #include "network_drivers/session/proto_handler.h"
 #include "network_drivers/session/worker.h"
 #include "network_drivers/tls/tls.h"
-#include "network_drivers/transport/listener.h"
+#include "network_drivers/transport/tcp.h"
 #include "network_drivers/transport/tcp.h" // TcpConn, conn_pool, pc_ap_ip: the slots this drives
 #include "shared_primitives/hex.h"
 #include "shared_primitives/mime.h"
@@ -414,11 +414,11 @@ void pc_resp_end(uint8_t slot_id, int code, int body_len, proto_bool keep, proto
 {
     if (!pre_flushed)
     {
-        pc_conn_flush(slot_id); // a pre_flushed caller already did tcp_output in its final send
+        Tcp.conn->flush(slot_id); // a pre_flushed caller already did tcp_output in its final send
     }
     if (!keep)
     {
-        pc_conn_begin_close(slot_id); // ACTIVE -> CONN_CLOSING; finalizes on ACK
+        Tcp.conn->begin_close(slot_id); // ACTIVE -> CONN_CLOSING; finalizes on ACK
     }
     note_response(slot_id, code, body_len);
     http_reset(slot_id);
@@ -590,7 +590,7 @@ int32_t proto_begin(const WebServerConfig *cfg)
     {
         return (int32_t)PC_ERR_NO_LISTENERS;
     }
-    proto_tcp_pool_init(cfg);
+    Tcp.conn->init(cfg);
 #if PC_ENABLE_AUTH
     Auth.rekey(); // fresh server keying secret per begin()
 #endif
@@ -761,7 +761,7 @@ void dispatch_h3_request(uint32_t conn_id, uint64_t stream_id, const char *metho
     c->pc_h3_stream = stream_id;
     c->pc_resp_sink = pc_h3_resp_sink;
     c->iface = PC_IFACE_STA;
-    pc_conn_set_state(slot, CONN_ACTIVE); // reserved slot: no bitmask bit (slot >= MAX_CONNS)
+    Tcp.conn->set_state(slot, CONN_ACTIVE); // reserved slot: no bitmask bit (slot >= MAX_CONNS)
     c->pcb = NULL;
 
     match_and_execute(slot); // -> handler -> send_text() -> pc_resp_sink -> pc_quic_server_respond()
@@ -769,7 +769,7 @@ void dispatch_h3_request(uint32_t conn_id, uint64_t stream_id, const char *metho
     // Release the dispatch slot for the next request (a no-response handler simply leaves the stream open).
     c->h3 = 0;
     c->pc_resp_sink = NULL;
-    pc_conn_set_state(slot, CONN_FREE); // reserved slot: no bitmask bit (slot >= MAX_CONNS)
+    Tcp.conn->set_state(slot, CONN_FREE); // reserved slot: no bitmask bit (slot >= MAX_CONNS)
     http_reset(slot);
 }
 #endif // PC_ENABLE_HTTP3
@@ -837,8 +837,8 @@ void stop(void)
     // Stop the worker task(s) before tearing down the slots they service.
     pc_workers_stop();
 #endif
-    listener_stop_all();
-    proto_tcp_stop();
+    Tcp.listener->stop_all();
+    Tcp.conn->stop();
     for (uint8_t i = 0; i < MAX_CONNS; i++)
     {
         http_reset(i);
@@ -1199,7 +1199,7 @@ void service_once(int worker_id)
         // Ack-on-consume: reopen the TCP receive window by whatever any consumer
         // (HTTP/WS/TLS/service) drained from this slot's ring on the previous pass.
         // Transport owns the window math; we just nudge it once per slot per loop.
-        pc_conn_ack_consumed(i);
+        Tcp.conn->ack_consumed(i);
 
         // Every protocol - HTTP included - is pumped through the one uniform ProtoHandler.on_poll
         // seam, so there is no per-protocol branch here. HTTP reaches it via http_proto_set_poll()
@@ -1293,7 +1293,7 @@ void http_poll_slot(uint8_t i)
             {
                 ws_dispatch_close(ws);
                 ws_free(i);
-                pc_conn_abort_slot(i); // transport owns TLS-free + detach + reset + RST
+                Tcp.conn->abort_slot(i); // transport owns TLS-free + detach + reset + RST
                 http_reset(i);
             }
             return;
@@ -1315,7 +1315,7 @@ void http_poll_slot(uint8_t i)
             // handshake. begin_close moves the slot out of CONN_ACTIVE so the
             // post-close bytes are NOT re-parsed as a new HTTP request (the
             // close-frame the WS layer queued still flushes during the dwell).
-            pc_conn_begin_close(i);
+            Tcp.conn->begin_close(i);
             http_reset(i);
         }
         return; // slot is owned by WS; skip HTTP dispatch
@@ -1631,18 +1631,18 @@ static void send_error_close(uint8_t slot_id, const char *status, const char *ex
     pc_sb_put(&sb_header, "\r\nConnection: close\r\n\r\n");
     int hlen = (int)pc_sb_finish(&sb_header);
 
-    // The last write carries the flush: pc_conn_send_flush is write+tcp_output in one marshal, so
+    // The last write carries the flush: Tcp.conn->send_flush is write+tcp_output in one marshal, so
     // the response leaves in a single trip whether or not a body follows the header.
     if (blen > 0 && !req_is_head(slot_id))
     {
-        pc_conn_send(slot_id, header, (proto_u16)hlen);
-        pc_conn_send_flush(slot_id, body, (proto_u16)blen);
+        Tcp.conn->send(slot_id, header, (proto_u16)hlen);
+        Tcp.conn->send_flush(slot_id, body, (proto_u16)blen);
     }
     else
     {
-        pc_conn_send_flush(slot_id, header, (proto_u16)hlen);
+        Tcp.conn->send_flush(slot_id, header, (proto_u16)hlen);
     }
-    pc_conn_begin_close(slot_id); // dwell in CONN_CLOSING until the response drains
+    Tcp.conn->begin_close(slot_id); // dwell in CONN_CLOSING until the response drains
     http_reset(slot_id);
 }
 
@@ -1669,7 +1669,7 @@ static pc_ip lockout_client_ip(uint8_t slot_id)
 {
     pc_ip ip;
     ip.family = PC_IP_NONE;
-    pc_conn_remote_addr(slot_id, &ip);
+    Tcp.conn->remote_addr(slot_id, &ip);
     return ip;
 }
 
@@ -2061,7 +2061,7 @@ void send_bin(uint8_t slot_id, int code, const char *content_type, const uint8_t
         // block that filled the buffer). Truncating them would emit a header block with no
         // terminating CRLF and desync the connection, so a fixed reply that always fits goes out
         // instead and the connection closes.
-        pc_conn_send_flush(slot_id, PC_RESP_HDR_OVERFLOW, (proto_u16)PC_RESP_HDR_OVERFLOW_LEN);
+        Tcp.conn->send_flush(slot_id, PC_RESP_HDR_OVERFLOW, (proto_u16)PC_RESP_HDR_OVERFLOW_LEN);
         pc_resp_end(slot_id, 500, 0, PROTO_FALSE, /*pre_flushed=*/PROTO_FALSE);
         return;
     }
@@ -2074,21 +2074,21 @@ void send_bin(uint8_t slot_id, int code, const char *content_type, const uint8_t
     // HEAD responses carry the headers (incl. Content-Length) but no body. For a
     // body that fits the header scratch, coalesce headers+body into a single send
     // so the response costs one tcpip_thread round-trip rather than two. The final
-    // write carries the flush (pc_conn_send_flush) and pc_resp_end skips it, so a
+    // write carries the flush (Tcp.conn->send_flush) and pc_resp_end skips it, so a
     // small keep-alive response is one marshal (write+output).
     if (!head && payload_len > 0 && (size_t)hlen + (size_t)payload_len <= sizeof(header))
     {
         proto_raw_read(header + hlen, payload, (size_t)payload_len);
-        pc_conn_send_flush(slot_id, header, (proto_u16)(hlen + payload_len));
+        Tcp.conn->send_flush(slot_id, header, (proto_u16)(hlen + payload_len));
     }
     else if (!head && payload_len > 0)
     {
-        pc_conn_send(slot_id, header, (proto_u16)hlen);
-        pc_conn_send_flush(slot_id, payload, (proto_u16)payload_len);
+        Tcp.conn->send(slot_id, header, (proto_u16)hlen);
+        Tcp.conn->send_flush(slot_id, payload, (proto_u16)payload_len);
     }
     else
     {
-        pc_conn_send_flush(slot_id, header, (proto_u16)hlen);
+        Tcp.conn->send_flush(slot_id, header, (proto_u16)hlen);
     }
 
     pc_resp_end(slot_id, code, payload_len, keep, /*pre_flushed=*/PROTO_TRUE);
@@ -2137,7 +2137,7 @@ void send_empty(uint8_t slot_id, int code)
     int hlen = (int)pc_sb_finish(&sb_header3);
     hlen = proto_append_resp_trailer(header, sizeof(header), hlen, slot_id, cl);
 
-    pc_conn_send_flush(slot_id, header, (proto_u16)hlen);
+    Tcp.conn->send_flush(slot_id, header, (proto_u16)hlen);
 
     pc_resp_end(slot_id, code, 0, keep, /*pre_flushed=*/PROTO_TRUE);
 }
@@ -2184,7 +2184,7 @@ void redirect(uint8_t slot_id, int code, const char *location)
     int hlen = (int)pc_sb_finish(&sb_header4);
     hlen = proto_append_resp_trailer(header, sizeof(header), hlen, slot_id, cl);
 
-    pc_conn_send_flush(slot_id, header, (proto_u16)hlen);
+    Tcp.conn->send_flush(slot_id, header, (proto_u16)hlen);
 
     pc_resp_end(slot_id, code, 0, keep, /*pre_flushed=*/PROTO_TRUE);
 }

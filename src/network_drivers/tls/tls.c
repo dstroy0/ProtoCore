@@ -290,7 +290,7 @@ static int server_bio_recv(void *ctx, unsigned char *buf, size_t len)
 }
 
 // Server BIO send (a pc_tls_bio_send_fn): emit ciphertext through the transport's
-// context-safe raw write (pc_conn_raw_send), so the handshake - pumped from the
+// context-safe raw write (Tcp.conn->raw_send), so the handshake - pumped from the
 // main loop - never does an unsynchronized tcp_write racing the lwIP thread, while
 // app-data writes (already in the lwIP thread) still go out directly. Uses the pcb
 // captured at begin() because the response senders null conn->pcb before writing.
@@ -317,7 +317,7 @@ static int server_bio_send(void *ctx, const unsigned char *buf, size_t len)
         to = 0xFFFF;
     }
 
-    if (pc_conn_raw_send(e->pcb, buf, (proto_u16)to))
+    if (Tcp.conn->raw_send(e->pcb, buf, (proto_u16)to))
     {
         return (int)to;
     }

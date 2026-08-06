@@ -63,7 +63,7 @@ planned and then marked done.
       whatever your clock's rate; default is the platform `millis()` (host-tested).
 - [x] Notification-driven worker drain _(shipped)_ - the worker blocks on its
       FreeRTOS task notification instead of free-running the `vTaskDelay` poll;
-      producers (`listener_enqueue`, `pc_defer`) nudge it the moment work is
+      producers (`Tcp.listener->enqueue`, `pc_defer`) nudge it the moment work is
       queued, so events are serviced immediately. This decouples event latency from
       the idle-sweep cadence: `PC_WORKER_POLL_TICKS` is now purely the idle
       interval (default 1, unchanged), so raising it cuts idle wakeups (CPU/power)
@@ -444,7 +444,7 @@ preempting queue, so sensing shares the real-time ingest path.
 
 ## Security & auth
 
-- [x] Source-IP allowlist / firewall in the accept callback _(shipped)_ - `listener_ip_allow_add_cidr("192.168.1.0/24")` / `listener_ip_allowed` (IPv4 + IPv6 CIDR rules matched on the full address, `PC_ENABLE_IP_ALLOWLIST`; example IpAllowlist).
+- [x] Source-IP allowlist / firewall in the accept callback _(shipped)_ - `Tcp.listener->ip_allow_add_cidr("192.168.1.0/24")` / `Tcp.listener->ip_allowed` (IPv4 + IPv6 CIDR rules matched on the full address, `PC_ENABLE_IP_ALLOWLIST`; example IpAllowlist).
 - [x] Brute-force per-IP exponential lockout _(shipped)_ - `PC_ENABLE_AUTH_LOCKOUT`; `auth_lockout_*` table (keyed on the full IPv4/IPv6 address) issues 429 + Retry-After on the HTTP auth gate (example AuthLockout).
 - [x] CSRF token verification _(shipped)_ - `PC_ENABLE_CSRF`; global enforcement on POST/PUT/PATCH/DELETE via a stateless HMAC-signed `X-CSRF-Token` (built-in `GET /csrf` issues it; example Csrf).
 - [x] Granular API-token scoping _(shipped)_ - `pc_jwt_claim_str()` reads string claims (sub / role / scope) and `pc_jwt_scope_allows()` matches a space-separated OAuth2 scope claim, so a handler can authorize per role/scope on the verified JWT (example JWTAuth).
@@ -612,7 +612,7 @@ aes256-gcm + aes256-ctr, hmac-sha2-256/512 (+ETM), zlib@openssh.com s2c, passwor
       dump uploaded to a live FTP server and then parsed by Espressif's own `esp-coredump -t raw`, which
       reported `StoreProhibitedCause` / `excvaddr 0x0` / `pc <crash_handler+33>` / task `pc_worker`).
       Example CoreDump. The HW run caught a real bug: the new session driver was missing from
-      `PC_NEED_DET_CLIENT`, so `pc_client_open` resolved to the stub that returns -1 and the offload
+      `PC_NEED_DET_CLIENT`, so `Tcp.client->open` resolved to the stub that returns -1 and the offload
       silently never connected.
 - [x] Runtime heap/stack guardrails _(shipped)_ - `PC_ENABLE_GUARDRAILS`: `services/guardrails` samples free heap, the heap low-water mark, the largest free block (fragmentation), and a task's remaining stack, and fires a breach callback when any crosses its `PC_GUARDRAIL_*` floor - a proactive fail-safe hook on top of the passive /metrics numbers; evaluator + JSON host-tested, served at `/health` (example Guardrails).
 - [x] Fail-safe safe-state + deadlock-detection WDT + watchdog-protected coroutine lifelines (M)
@@ -697,7 +697,7 @@ every layer. The current HTTP/1.1 core already tracks the modern HTTP specs
       request/response, the protocol-service parse/build pairs) against the rule that a
       value at a position on ingress sits at the same position on egress. Result: the
       surfaces are symmetric, with one real fix applied - the egress transport API
-      (`pc_conn_send` / `pc_conn_sndbuf` / `pc_conn_flush`, plus the private
+      (`Tcp.conn->send` / `pc_conn_sndbuf` / `Tcp.conn->flush`, plus the private
       `pc_resp_end`) no longer threads a `tcp_pcb *`; it resolves the slot's pcb
       internally, exactly as the RX read path and the client surface already do, so a
       caller can no longer pass a pcb that disagrees with the slot. The remaining LOW
@@ -1014,7 +1014,7 @@ BSS, no heap, behind a build flag.
 
 - [x] **Replace the accept free-slot scan with a live-slot bitmask** (M) - DONE. `ConnPoolCtx::free_mask` (a
       `std::atomic<uint32_t>`, bit i = slot i is CONN_FREE) is kept in lock-step with every `conn_pool[i].state`
-      write through one choke point, `pc_conn_set_state()` (the owner pattern - the ~13 scattered state writes
+      write through one choke point, `Tcp.conn->set_state()` (the owner pattern - the ~13 scattered state writes
       now route through it), so the accept path's free-slot lookup is one `__builtin_ctz` (`pc_conn_alloc_free`)
       instead of a `MAX_CONNS` linear scan. Atomic because CONN_FREE is written from both the tcpip callbacks and
       the worker (`check_timeouts`). Measured on the ESP32-S3, worst case (only the last slot free): the real

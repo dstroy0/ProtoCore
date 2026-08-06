@@ -75,8 +75,8 @@ static void raw_send(uint8_t slot, const void *data, size_t n)
     {
         return;
     }
-    pc_conn_send(slot, data, (proto_u16)n);
-    pc_conn_flush(slot);
+    Tcp.conn->send(slot, data, (proto_u16)n);
+    Tcp.conn->flush(slot);
 }
 
 // Send Telnet *data* (echo + application output): a literal IAC byte (0xFF) MUST be
@@ -97,17 +97,17 @@ static void send_escaped(uint8_t slot, const void *data, size_t n)
         {
             if (i > start)
             {
-                pc_conn_send(slot, b + start, (proto_u16)(i - start));
+                Tcp.conn->send(slot, b + start, (proto_u16)(i - start));
             }
-            pc_conn_send(slot, "\xff\xff", 2); // doubled IAC
+            Tcp.conn->send(slot, "\xff\xff", 2); // doubled IAC
             start = i + 1;
         }
     }
     if (n > start)
     {
-        pc_conn_send(slot, b + start, (proto_u16)(n - start));
+        Tcp.conn->send(slot, b + start, (proto_u16)(n - start));
     }
-    pc_conn_flush(slot);
+    Tcp.conn->flush(slot);
 }
 
 // ---------------------------------------------------------------------------
@@ -128,7 +128,7 @@ void pc_telnet_accept(uint8_t slot)
     if (!t)
     {
         // No Telnet capacity: drop the connection (transport owns the teardown).
-        pc_conn_close(slot);
+        Tcp.conn->close(slot);
         return;
     }
     memset(t, 0, sizeof(*t));

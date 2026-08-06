@@ -12,7 +12,7 @@
  * per-client implementations this consolidates.
  */
 
-#include "client.h"
+#include "tcp_client.h"
 #include "network_drivers/network/network.h"
 
 // Compiles only on a target build AND only when a client transport is actually enabled
@@ -390,3 +390,6 @@ void pc_client_close(int cid)
 }
 
 #endif // PROTOCORE_HOT && PC_NEED_CLIENT
+
+const TcpClientNs TcpClient = {pc_client_open,      pc_client_connected, pc_client_is_closed, pc_client_send,
+                               pc_client_available, pc_client_read,      pc_client_close};

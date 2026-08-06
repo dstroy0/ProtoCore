@@ -58,9 +58,8 @@ PROTO_BEGIN_DECLS
 #include "network_drivers/application/auth/auth.h"
 #include "network_drivers/physical/physical.h"
 
-#include "network_drivers/transport/client.h"
 #include "network_drivers/transport/diffserv.h"
-#include "network_drivers/transport/listener.h"
+#include "network_drivers/transport/tcp.h"
 #include "network_drivers/transport/udp.h"
 
 #include "network_drivers/session/session.h"
@@ -626,7 +625,7 @@ proto_bool keepalive_eval(uint8_t slot_id);
  *        response and resets the HTTP parser either way. Addresses the
  *        connection by slot alone; the transport resolves the pcb internally.
  *
- * @param pre_flushed the caller already emitted the final bytes with pc_conn_send_flush()
+ * @param pre_flushed the caller already emitted the final bytes with Tcp.conn->send_flush()
  *        (write+tcp_output coalesced into one marshal), so skip the redundant flush here.
  */
 void pc_resp_end(uint8_t slot_id, int code, int body_len, proto_bool keep, proto_bool pre_flushed);

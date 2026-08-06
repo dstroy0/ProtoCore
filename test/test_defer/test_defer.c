@@ -19,7 +19,7 @@ static void inc(void *arg)
 
 void setUp()
 {
-    proto_tcp_pool_init(NULL);
+    Tcp.conn->init(NULL);
     g_ran = 0;
 }
 void tearDown()

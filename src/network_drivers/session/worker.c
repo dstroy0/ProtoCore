@@ -34,7 +34,7 @@ static WorkerCtx s_worker;
 
 // Each worker binds its id, then pumps until asked to stop. Between iterations it
 // blocks on its task notification instead of free-running the poll: a producer
-// (listener_enqueue, pc_defer) nudges it the moment work arrives, so events are
+// (Tcp.listener->enqueue, pc_defer) nudges it the moment work arrives, so events are
 // serviced immediately rather than on the next tick. The block still times out
 // after PC_WORKER_POLL_TICKS so the idle timeout sweep (check_timeouts) keeps
 // reaping stale connections with no events in flight; raising that knob now lowers

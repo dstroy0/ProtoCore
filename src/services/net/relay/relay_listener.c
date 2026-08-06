@@ -12,7 +12,7 @@
 #if PC_ENABLE_RELAY
 
 #include "network_drivers/session/proto_handler.h"
-#include "network_drivers/transport/client.h"
+#include "network_drivers/transport/tcp.h"
 #include "network_drivers/transport/tcp.h"
 #include "relay.h"
 #if PC_ENABLE_RADIO_POWER
@@ -106,23 +106,23 @@ static int a_send(void *c, const uint8_t *buf, size_t len)
         return 0;
     }
     proto_u16 n = (len < (size_t)room) ? (proto_u16)len : room;
-    return pc_conn_send(br->conn_slot, buf, n) ? (int)n : 0;
+    return Tcp.conn->send(br->conn_slot, buf, n) ? (int)n : 0;
 }
 // Origin (b) = the outbound pc_client; it reports EOF through the recv seam.
 static int b_recv(void *c, uint8_t *buf, size_t cap)
 {
     RelayBridge *br = (RelayBridge *)c;
-    size_t n = pc_client_read(br->origin_cid, buf, cap);
+    size_t n = Tcp.client->read(br->origin_cid, buf, cap);
     if (n)
     {
         return (int)n;
     }
-    return pc_client_is_closed(br->origin_cid) ? -1 : 0;
+    return Tcp.client->is_closed(br->origin_cid) ? -1 : 0;
 }
 static int b_send(void *c, const uint8_t *buf, size_t len)
 {
     RelayBridge *br = (RelayBridge *)c;
-    return pc_client_send(br->origin_cid, buf, len) ? (int)len : 0;
+    return Tcp.client->send(br->origin_cid, buf, len) ? (int)len : 0;
 }
 
 // Close the origin (and optionally the inbound) and free the bridge. active=false first so a
@@ -133,10 +133,10 @@ static void teardown(RelayBridge *br, proto_bool close_inbound)
 #if PC_ENABLE_RADIO_POWER
     Radio.busy_release(); // this bridge is done relaying
 #endif
-    pc_client_close(br->origin_cid);
+    Tcp.client->close(br->origin_cid);
     if (close_inbound)
     {
-        pc_conn_close(br->conn_slot);
+        Tcp.conn->close(br->conn_slot);
     }
 }
 
@@ -166,7 +166,7 @@ static void service(uint8_t slot)
         }
     }
     // origin closed and everything it sent has been forwarded -> nothing more to do
-    if (pc_client_is_closed(br->origin_cid) && pc_client_available(br->origin_cid) == 0 &&
+    if (Tcp.client->is_closed(br->origin_cid) && Tcp.client->available(br->origin_cid) == 0 &&
         br->relay.b2a_off >= br->relay.b2a_len)
     {
         teardown(br, PROTO_TRUE);
@@ -178,19 +178,19 @@ static void relay_on_accept(uint8_t slot)
     RelayBind *bd = bind_by_listener(pc_conn_listener_id(slot));
     if (!bd)
     {
-        pc_conn_close(slot); // no origin published for this listener
+        Tcp.conn->close(slot); // no origin published for this listener
         return;
     }
     int idx = bridge_find_free();
     if (idx < 0)
     {
-        pc_conn_close(slot); // bridge table full
+        Tcp.conn->close(slot); // bridge table full
         return;
     }
-    int cid = pc_client_open(bd->host, bd->port, PC_RELAY_CONNECT_MS); // blocking connect (LAN origin)
+    int cid = Tcp.client->open(bd->host, bd->port, PC_RELAY_CONNECT_MS); // blocking connect (LAN origin)
     if (cid < 0)
     {
-        pc_conn_close(slot); // origin unreachable
+        Tcp.conn->close(slot); // origin unreachable
         return;
     }
     RelayBridge *br = &s_ctx.bridges[idx];

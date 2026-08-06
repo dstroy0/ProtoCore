@@ -11,7 +11,7 @@
 
 #include "lfs_mock.h"
 #include "network_drivers/session/proto_handler.h" // proto_register/proto_get: the slot-poll dispatch table
-#include "network_drivers/transport/listener.h"    // listener_stop_all() for proto_begin(NULL) test cleanup
+#include "network_drivers/transport/tcp.h"    // Tcp.listener->stop_all() for proto_begin(NULL) test cleanup
 #include "protocore.h"                             // ws/sse upgrade entry points, pc_resp_holds_slot
 #include "server/filesystem/mnt.h" // pc_mnt_mount - storage is reached through the seam, not the route field
 #include <string.h>
@@ -152,7 +152,7 @@ void setUp(void)
 {
     memset(g_mark, 0, sizeof(g_mark));
     set_millis(0);
-    proto_tcp_pool_init(NULL);
+    Tcp.conn->init(NULL);
     for (int i = 0; i < MAX_CONNS; i++)
     {
         conn_pool[i] = (TcpConn){0};
@@ -1521,7 +1521,7 @@ void test_allow_header_lists_methods(void)
 // listen() registers listener slots and rejects once the table (MAX_LISTENERS)
 // is full; proto_begin() requires at least one listener, then brings up the pools and
 // listeners. Uses a local server so the global listener slots are the only
-// shared state (released with listener_stop_all()).
+// shared state (released with Tcp.listener->stop_all()).
 void test_listen_and_begin(void)
 {
 
@@ -1538,7 +1538,7 @@ void test_listen_and_begin(void)
 
     // proto_begin() now brings the registered listeners up.
     TEST_ASSERT_EQUAL_INT32(PC_OK, proto_begin(NULL));
-    listener_stop_all(); // release the global listener slots for later tests
+    Tcp.listener->stop_all(); // release the global listener slots for later tests
 }
 
 // begin(port) is the one-call convenience: listen(port) then proto_begin(). When the
@@ -1547,7 +1547,7 @@ void test_listen_and_begin(void)
 void test_begin_port_convenience(void)
 {
     TEST_ASSERT_EQUAL_INT32(PC_OK, begin_http((uint16_t)8080, NULL));
-    listener_stop_all();
+    Tcp.listener->stop_all();
 
     for (int i = 0; i < MAX_LISTENERS; i++)
     {
@@ -1571,7 +1571,7 @@ void test_restart_and_stop(void)
     // stop() tears everything down; a second stop() with nothing active is a safe no-op.
     stop();
     stop();
-    listener_stop_all();
+    Tcp.listener->stop_all();
 }
 
 // Every route-registration variant guards `_route_count >= MAX_ROUTES` and silently drops the route.

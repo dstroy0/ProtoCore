@@ -35,13 +35,13 @@ bytes (the whole transport contract in ~20 lines):
 
 ```cpp
 static size_t exchange(int cid, size_t reqlen) {
-    if (reqlen == 0 || !pc_client_send(cid, c_req, reqlen)) return 0;
+    if (reqlen == 0 || !Tcp.client->send(cid, c_req, reqlen)) return 0;
     size_t got = 0; uint32_t deadline = millis() + 3000;
-    while (got < 8 && millis() < deadline) if (pc_client_available(cid)) got += pc_client_read(cid, c_resp + got, 8 - got);
+    while (got < 8 && millis() < deadline) if (Tcp.client->available(cid)) got += Tcp.client->read(cid, c_resp + got, 8 - got);
     if (got < 8) return 0;
     uint32_t size = (uint32_t)c_resp[4] | ((uint32_t)c_resp[5] << 8) | ((uint32_t)c_resp[6] << 16) | ((uint32_t)c_resp[7] << 24);
     if (size < 8 || size > sizeof(c_resp)) return 0;
-    while (got < size && millis() < deadline) if (pc_client_available(cid)) got += pc_client_read(cid, c_resp + got, size - got);
+    while (got < size && millis() < deadline) if (Tcp.client->available(cid)) got += Tcp.client->read(cid, c_resp + got, size - got);
     return got == size ? size : 0;
 }
 ```
@@ -149,14 +149,14 @@ static uint8_t c_resp[2048];
 
 static size_t exchange(int cid, size_t reqlen)
 {
-    if (reqlen == 0 || !pc_client_send(cid, c_req, reqlen))
+    if (reqlen == 0 || !Tcp.client->send(cid, c_req, reqlen))
         return 0;
     // Read the 8-byte UACP header, then the rest of MessageSize.
     size_t got = 0;
     uint32_t deadline = millis() + 3000;
     while (got < 8 && millis() < deadline)
-        if (pc_client_available(cid))
-            got += pc_client_read(cid, c_resp + got, 8 - got);
+        if (Tcp.client->available(cid))
+            got += Tcp.client->read(cid, c_resp + got, 8 - got);
     if (got < 8)
         return 0;
     uint32_t size =
@@ -164,8 +164,8 @@ static size_t exchange(int cid, size_t reqlen)
     if (size < 8 || size > sizeof(c_resp))
         return 0;
     while (got < size && millis() < deadline)
-        if (pc_client_available(cid))
-            got += pc_client_read(cid, c_resp + got, size - got);
+        if (Tcp.client->available(cid))
+            got += Tcp.client->read(cid, c_resp + got, size - got);
     return got == size ? size : 0;
 }
 
@@ -174,7 +174,7 @@ static void run_client(uint32_t ip)
     char host[16];
     snprintf(host, sizeof(host), "%u.%u.%u.%u", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
              (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
-    int cid = pc_client_open(host, 4840, 8000);
+    int cid = Tcp.client->open(host, 4840, 8000);
     if (cid < 0)
     {
         Serial.println("[opcua-client] connect failed");

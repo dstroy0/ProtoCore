@@ -7,7 +7,7 @@
 // what is worth testing is exactly that: what is deposited comes back unchanged, a read is a copy
 // rather than a window onto live storage, and kill reaches the transport with the slot it was given.
 //
-// pc_conn_close() is stubbed here rather than linked from tcp.cpp. Signaling's kill is a forward, and
+// Tcp.conn->close() is stubbed here rather than linked from tcp.cpp. Signaling's kill is a forward, and
 // a stub is what makes the forward observable; linking the real transport would test lwIP instead.
 
 #include "server/signaling/signaling.h"
@@ -16,7 +16,7 @@
 static int g_close_calls = 0;
 static uint8_t g_close_slot = 0xFF;
 
-void pc_conn_close(uint8_t slot)
+void Tcp.conn->close(uint8_t slot)
 {
     g_close_calls++;
     g_close_slot = slot;

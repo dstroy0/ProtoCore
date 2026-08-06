@@ -163,7 +163,7 @@ static void stream_uart_to_sock(uint8_t slot, const BridgeTarget *t)
         }
         if (pc_conn_active(slot))
         {
-            (void)pc_conn_send(slot, s_ctx.stream, (proto_u16)n);
+            (void)Tcp.conn->send(slot, s_ctx.stream, (proto_u16)n);
         }
     }
 }
@@ -216,7 +216,7 @@ static void service_txn(uint8_t slot, const BridgeTarget *t)
         uint16_t rlen = (uint16_t)((hdr[2] << 8) | hdr[3]);
         if (wlen > PC_BRIDGE_TXN_MAX || rlen > PC_BRIDGE_TXN_MAX)
         {
-            pc_conn_close(slot); // frame exceeds the configured cap - protocol error
+            Tcp.conn->close(slot); // frame exceeds the configured cap - protocol error
             return;
         }
         size_t need = (size_t)PC_BRIDGE_TXN_HDR + wlen;
@@ -230,18 +230,18 @@ static void service_txn(uint8_t slot, const BridgeTarget *t)
         const uint8_t *wd = NULL;
         if (pc_iface_bridge_txn_parse(frame, need, &pw, &pr, &wd) != need)
         {
-            pc_conn_close(slot); // codec disagreed with the header - drop the connection
+            Tcp.conn->close(slot); // codec disagreed with the header - drop the connection
             return;
         }
         pc_conn_consume(slot, need);
         if (!bus_txn(t, wd, pw, rbuf, pr))
         {
-            pc_conn_close(slot); // bus fault
+            Tcp.conn->close(slot); // bus fault
             return;
         }
         if (pr && pc_conn_active(slot))
         {
-            pc_conn_send(slot, rbuf, pr);
+            Tcp.conn->send(slot, rbuf, pr);
         }
     }
 }
@@ -254,7 +254,7 @@ static void bridge_on_accept(uint8_t slot)
 {
     if (!rule_for_slot(slot))
     {
-        pc_conn_close(slot); // no rule published for this listener
+        Tcp.conn->close(slot); // no rule published for this listener
     }
 }
 
@@ -263,7 +263,7 @@ static void bridge_on_data(uint8_t slot)
     const BridgeRule *r = rule_for_slot(slot);
     if (!r)
     {
-        pc_conn_close(slot);
+        Tcp.conn->close(slot);
         return;
     }
     if (r->target.mode == BRIDGE_MODE_STREAM)

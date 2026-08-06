@@ -36,7 +36,7 @@
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
-#include "network_drivers/transport/client.h"
+#include "network_drivers/transport/tcp.h"
 #include "services/timing_position/gnss/gnss_survey.h"
 #include "services/timing_position/gnss/rtcm3.h"
 #include "services/timing_position/nmea0183/nmea0183.h"
@@ -199,7 +199,7 @@ static bool s_streaming = false;
 static void connect_ntrip()
 {
     Serial.printf("connecting to caster %s:%u /%s ...\n", BASE_IP, CASTER_PORT, MOUNTPOINT);
-    s_client = pc_client_open(BASE_IP, CASTER_PORT, 8000);
+    s_client = Tcp.client->open(BASE_IP, CASTER_PORT, 8000);
     if (s_client < 0)
     {
         Serial.println("connect failed; retrying");
@@ -211,7 +211,7 @@ static void connect_ntrip()
         snprintf(req, sizeof(req), "GET /%s HTTP/1.0\r\nUser-Agent: NTRIP PC/1.0\r\nAccept: */*\r\n\r\n", MOUNTPOINT);
     if (rn > 0)
     {
-        pc_client_send(s_client, req, (size_t)rn);
+        Tcp.client->send(s_client, req, (size_t)rn);
     }
     s_streaming = false;
     s_rtcm_len = 0;
@@ -283,16 +283,16 @@ static void pc_rtcm_push(uint8_t b)
 
 void loop()
 {
-    if (pc_client_is_closed(s_client))
+    if (Tcp.client->is_closed(s_client))
     {
         delay(2000);
         connect_ntrip();
         return;
     }
-    while (pc_client_available(s_client))
+    while (Tcp.client->available(s_client))
     {
         uint8_t b = 0;
-        if (pc_client_read(s_client, &b, 1) != 1)
+        if (Tcp.client->read(s_client, &b, 1) != 1)
         {
             break;
         }

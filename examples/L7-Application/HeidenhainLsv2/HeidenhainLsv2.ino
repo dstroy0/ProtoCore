@@ -25,7 +25,7 @@
 
 #include "protocore.h" // library entry header (also sets the src/ include root)
 #include "network_drivers/physical/physical.h"
-#include "network_drivers/transport/client.h"
+#include "network_drivers/transport/tcp.h"
 #include "services/machine_tool/lsv2/lsv2.h"
 
 static const char *SSID = "YOUR_SSID";
@@ -44,12 +44,12 @@ static size_t read_response(int cid, uint8_t *out, size_t cap)
     unsigned long deadline = millis() + 3000;
     while (got < PC_LSV2_HEADER_LEN && millis() < deadline)
     {
-        if (!pc_client_available(cid))
+        if (!Tcp.client->available(cid))
         {
             continue;
         }
         uint8_t ch = 0;
-        if (pc_client_read(cid, &ch, 1) != 1)
+        if (Tcp.client->read(cid, &ch, 1) != 1)
         {
             continue;
         }
@@ -67,12 +67,12 @@ static size_t read_response(int cid, uint8_t *out, size_t cap)
     size_t need = PC_LSV2_HEADER_LEN + plen;
     while (got < need && got < cap && millis() < deadline)
     {
-        if (!pc_client_available(cid))
+        if (!Tcp.client->available(cid))
         {
             continue;
         }
         uint8_t ch = 0;
-        if (pc_client_read(cid, &ch, 1) != 1)
+        if (Tcp.client->read(cid, &ch, 1) != 1)
         {
             continue;
         }
@@ -89,7 +89,7 @@ static bool txrx(int cid, size_t tx_len, Lsv2Telegram *r, const char *label)
         Serial.printf("[lsv2] %s: request build failed\n", label);
         return false;
     }
-    pc_client_send(cid, c_tx, tx_len);
+    Tcp.client->send(cid, c_tx, tx_len);
     size_t n = read_response(cid, c_rx, sizeof(c_rx));
     size_t consumed = 0;
     if (!pc_lsv2_parse(c_rx, n, r, &consumed))
@@ -124,7 +124,7 @@ static void query_run_info(int cid, uint16_t sel, const char *label)
 
 static void run_session(const char *host)
 {
-    int cid = pc_client_open(host, PC_LSV2_TCP_PORT, 8000);
+    int cid = Tcp.client->open(host, PC_LSV2_TCP_PORT, 8000);
     if (cid < 0)
     {
         Serial.println("[lsv2] connect failed");
@@ -137,7 +137,7 @@ static void run_session(const char *host)
         !pc_lsv2_is_ok(&r))
     {
         Serial.println("[lsv2] login INSPECT failed");
-        pc_client_close(cid);
+        Tcp.client->close(cid);
         return;
     }
     Serial.println("[lsv2] login INSPECT: T_OK");
@@ -148,7 +148,7 @@ static void run_session(const char *host)
 
     // drop all access rights
     txrx(cid, pc_lsv2_build_logout(c_tx, sizeof(c_tx), nullptr), &r, "logout");
-    pc_client_close(cid);
+    Tcp.client->close(cid);
     Serial.println("[lsv2] done");
 }
 
@@ -171,7 +171,7 @@ void loop()
     if (!done && millis() > 2000)
     {
         done = true;
-        run_session(TNC_IP); // pc_client_open resolves the dotted-quad host directly
+        run_session(TNC_IP); // Tcp.client->open resolves the dotted-quad host directly
     }
     delay(10);
 }

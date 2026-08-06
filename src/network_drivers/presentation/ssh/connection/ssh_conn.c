@@ -79,8 +79,8 @@ static void ssh_emit(uint8_t i, const uint8_t *payload, size_t len)
         pc_plaintext_release(mark);
         return;
     }
-    pc_conn_send(conn->id, wire, (proto_u16)wlen);
-    pc_conn_flush(conn->id);
+    Tcp.conn->send(conn->id, wire, (proto_u16)wlen);
+    Tcp.conn->flush(conn->id);
     pc_plaintext_release(mark);
 }
 
@@ -150,8 +150,8 @@ int pc_ssh_conn_send(uint8_t ssh_slot, uint32_t channel, const uint8_t *data, si
         pc_plaintext_release(mark);
         return -1;
     }
-    pc_conn_send(conn->id, wire, (proto_u16)wlen);
-    pc_conn_flush(conn->id);
+    Tcp.conn->send(conn->id, wire, (proto_u16)wlen);
+    Tcp.conn->flush(conn->id);
     pc_plaintext_release(mark);
     return (int)len;
 }
@@ -194,9 +194,9 @@ int pc_ssh_conn_close_channel(uint8_t ssh_slot, uint32_t channel)
             pc_plaintext_release(mark);
             return -1;
         }
-        pc_conn_send(conn->id, wire, (proto_u16)wlen);
+        Tcp.conn->send(conn->id, wire, (proto_u16)wlen);
     }
-    pc_conn_flush(conn->id);
+    Tcp.conn->flush(conn->id);
     pc_plaintext_release(mark);
     return 0;
 }
@@ -239,8 +239,8 @@ int pc_ssh_conn_open_forwarded(uint8_t ssh_slot, const char *conn_addr, uint16_t
         pc_plaintext_release(mark);
         return -1;
     }
-    pc_conn_send(conn->id, wire, (proto_u16)wlen);
-    pc_conn_flush(conn->id);
+    Tcp.conn->send(conn->id, wire, (proto_u16)wlen);
+    Tcp.conn->flush(conn->id);
     pc_plaintext_release(mark);
     return ch;
 }
@@ -306,7 +306,7 @@ void pc_ssh_conn_accept(uint8_t conn_slot)
     if (j == 0xFF)
     {
         // No SSH capacity: drop the connection (transport owns the teardown).
-        pc_conn_close(conn->id);
+        Tcp.conn->close(conn->id);
         return;
     }
 
@@ -326,14 +326,14 @@ void pc_ssh_conn_accept(uint8_t conn_slot)
     size_t blen = 0;
     if (ssh_transport_server_banner(banner, &blen, sizeof(banner)) == 0 && pc_conn_active(conn->id))
     {
-        pc_conn_send(conn->id, banner, (proto_u16)blen);
-        pc_conn_flush(conn->id);
+        Tcp.conn->send(conn->id, banner, (proto_u16)blen);
+        Tcp.conn->flush(conn->id);
     }
 }
 
 static void close_conn(uint8_t conn_slot)
 {
-    pc_conn_close(conn_slot); // transport owns detach + slot reset + close
+    Tcp.conn->close(conn_slot); // transport owns detach + slot reset + close
     pc_ssh_conn_close(conn_slot);
 }
 

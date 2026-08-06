@@ -40,7 +40,7 @@
 
 #if PROTOCORE_HOT
 #include "mmgr/arena.h"                       // pc_worker_set_self (own scratch slot)
-#include "network_drivers/transport/client.h" // pc_client_*
+#include "network_drivers/transport/tcp.h" // pc_client_*
 #include "server/clock/clock.h"               // pc_millis, pcdelay
 #endif
 
@@ -399,7 +399,7 @@ static proto_bool cli_send(const uint8_t *payload, size_t len)
     {
         return PROTO_FALSE;
     }
-    return pc_client_send(s_cli.cid, s_cli.wire, wlen);
+    return Tcp.client->send(s_cli.cid, s_cli.wire, wlen);
 }
 
 // The identification line RFC 4253 4.2 puts on the wire first: the version string, then CR LF.
@@ -431,12 +431,12 @@ static void cli_fail(const char *why)
     {
         if (s_cli.chan[i].used && s_cli.chan[i].local_cid >= 0)
         {
-            pc_client_close(s_cli.chan[i].local_cid);
+            Tcp.client->close(s_cli.chan[i].local_cid);
         }
     }
     if (s_cli.cid >= 0)
     {
-        pc_client_close(s_cli.cid);
+        Tcp.client->close(s_cli.cid);
     }
     s_cli.cid = -1;
     ssh_keymat_wipe(SSH_CLI_SLOT);
@@ -1190,7 +1190,7 @@ static void handle_channel_open(const uint8_t *p, size_t len)
     }
 
     // Open the local bridge connection (to the device's own service).
-    int lc = pc_client_open("127.0.0.1", s_cli.cfg.local_port, 3000);
+    int lc = Tcp.client->open("127.0.0.1", s_cli.cfg.local_port, 3000);
     PC_LOGD(LOG_TUNNEL_FWD_OPEN, (uint32_t)s_cli.cfg.local_port, (int64_t)lc);
     if (lc < 0)
     {
@@ -1246,7 +1246,7 @@ static void channel_close(CliChannel *ch)
     }
     if (ch->local_cid >= 0)
     {
-        pc_client_close(ch->local_cid);
+        Tcp.client->close(ch->local_cid);
     }
     memset(ch, 0, sizeof(*ch));
     ch->local_cid = -1;
@@ -1267,7 +1267,7 @@ static void handle_channel_data(const uint8_t *p, size_t len)
     }
     if (ch->local_cid >= 0 && dn)
     {
-        pc_client_send(ch->local_cid, d, dn);
+        Tcp.client->send(ch->local_cid, d, dn);
     }
 
     // Refill the relay's window as we consume, so it can keep sending.
@@ -1314,7 +1314,7 @@ static void pump_channel(CliChannel *ch)
         {
             want = SSH_CLI_MAXPKT;
         }
-        size_t got = pc_client_read(ch->local_cid, buf, want);
+        size_t got = Tcp.client->read(ch->local_cid, buf, want);
         if (got == 0)
         {
             break;
@@ -1338,7 +1338,7 @@ static void pump_channel(CliChannel *ch)
     // closed, or the relay half-closed (relay_eof - the forwarded peer finished, e.g. an HTTP client
     // that already has the full response). The drain loop above exits with got==0, so all currently
     // available local bytes have been forwarded before we half-close.
-    proto_bool local_done = pc_client_is_closed(ch->local_cid) && pc_client_available(ch->local_cid) == 0;
+    proto_bool local_done = Tcp.client->is_closed(ch->local_cid) && Tcp.client->available(ch->local_cid) == 0;
     if ((local_done || ch->relay_eof) && !ch->eof_sent)
     {
         uint8_t out[8];
@@ -1553,7 +1553,7 @@ proto_bool pc_ssh_tunnel_begin(const pc_ssh_tunnel_cfg *cfg)
     pc_worker_set_self(PC_GHOST_WORKER_SLOT);
 
     uint16_t port = cfg->port ? cfg->port : 22;
-    s_cli.cid = pc_client_open(cfg->host, port, 8000);
+    s_cli.cid = Tcp.client->open(cfg->host, port, 8000);
     if (s_cli.cid < 0)
     {
         s_cli.state = PC_TUN_FAILED;
@@ -1567,7 +1567,7 @@ proto_bool pc_ssh_tunnel_begin(const pc_ssh_tunnel_cfg *cfg)
     // Send our identification string, then our KEXINIT.
     char banner[64];
     size_t n = pc_frame_build(banner, sizeof(banner), CLI_BANNER, CLIENT_BANNER);
-    if (n == 0 || !pc_client_send(s_cli.cid, (const uint8_t *)banner, n))
+    if (n == 0 || !Tcp.client->send(s_cli.cid, (const uint8_t *)banner, n))
     {
         cli_fail("banner send failed");
         return PROTO_FALSE;
@@ -1622,7 +1622,7 @@ void pc_ssh_tunnel_poll(void)
         return;
     }
 
-    if (pc_client_is_closed(s_cli.cid) && pc_client_available(s_cli.cid) == 0)
+    if (Tcp.client->is_closed(s_cli.cid) && Tcp.client->available(s_cli.cid) == 0)
     {
         cli_fail("relay closed the connection");
         return;
@@ -1634,7 +1634,7 @@ void pc_ssh_tunnel_poll(void)
     }
 
     uint8_t buf[1024];
-    size_t got = pc_client_read(s_cli.cid, buf, sizeof(buf));
+    size_t got = Tcp.client->read(s_cli.cid, buf, sizeof(buf));
     if (got)
     {
         size_t off = 0;
@@ -1665,12 +1665,12 @@ void pc_ssh_tunnel_end(void)
     {
         if (s_cli.chan[i].used && s_cli.chan[i].local_cid >= 0)
         {
-            pc_client_close(s_cli.chan[i].local_cid);
+            Tcp.client->close(s_cli.chan[i].local_cid);
         }
     }
     if (s_cli.cid >= 0)
     {
-        pc_client_close(s_cli.cid);
+        Tcp.client->close(s_cli.cid);
     }
     ssh_keymat_wipe(SSH_CLI_SLOT);
     pc_secure_wipe(s_cli.kex_priv, sizeof(s_cli.kex_priv));

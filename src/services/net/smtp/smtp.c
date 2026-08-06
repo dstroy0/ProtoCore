@@ -21,7 +21,7 @@
                    // strlen, memcmp
 
 #if PROTOCORE_HOT
-#include "network_drivers/transport/client.h"
+#include "network_drivers/transport/tcp.h"
 #include <Arduino.h> // millis, delay
 #endif
 #if PROTOCORE_HOT && PC_ENABLE_SMTP_TLS
@@ -522,7 +522,7 @@ static int cl_send(void *ctx, const uint8_t *data, size_t len)
         {
             chunk = 0xFFFF;
         }
-        if (!pc_client_send(x->cid, data + sent, chunk))
+        if (!Tcp.client->send(x->cid, data + sent, chunk))
         {
             return -1;
         }
@@ -535,12 +535,12 @@ static int cl_recv(void *ctx, uint8_t *buf, size_t cap)
     SmtpXport *x = (SmtpXport *)ctx;
     while ((int32_t)(x->deadline - pc_millis()) > 0)
     {
-        size_t n = pc_client_read(x->cid, buf, cap);
+        size_t n = Tcp.client->read(x->cid, buf, cap);
         if (n > 0)
         {
             return (int)n;
         }
-        if (pc_client_is_closed(x->cid) && pc_client_available(x->cid) == 0)
+        if (Tcp.client->is_closed(x->cid) && Tcp.client->available(x->cid) == 0)
         {
             return -1;
         }
@@ -559,7 +559,7 @@ static int tls_bio_send(void *ctx, const unsigned char *buf, size_t len)
     {
         return MBEDTLS_ERR_SSL_WANT_WRITE;
     }
-    return pc_client_send(x->cid, buf, len) ? (int)len : MBEDTLS_ERR_SSL_WANT_WRITE;
+    return Tcp.client->send(x->cid, buf, len) ? (int)len : MBEDTLS_ERR_SSL_WANT_WRITE;
 }
 static int tls_bio_recv(void *ctx, unsigned char *buf, size_t len)
 {
@@ -569,10 +569,10 @@ static int tls_bio_recv(void *ctx, unsigned char *buf, size_t len)
     {
         return MBEDTLS_ERR_SSL_WANT_READ;
     }
-    size_t n = pc_client_read(x->cid, buf, len);
+    size_t n = Tcp.client->read(x->cid, buf, len);
     if (n == 0)
     {
-        return pc_client_is_closed(x->cid) ? 0 : MBEDTLS_ERR_SSL_WANT_READ;
+        return Tcp.client->is_closed(x->cid) ? 0 : MBEDTLS_ERR_SSL_WANT_READ;
     }
     return (int)n;
 }
@@ -665,7 +665,7 @@ SmtpResult smtp_send(const SmtpConfig *cfg, const SmtpMessage *msg)
     }
 
     SmtpXport x;
-    x.cid = pc_client_open(cfg->host, cfg->port, PC_SMTP_TIMEOUT_MS);
+    x.cid = Tcp.client->open(cfg->host, cfg->port, PC_SMTP_TIMEOUT_MS);
     if (x.cid < 0)
     {
         return SMTP_ERR_CONNECT;
@@ -683,7 +683,7 @@ SmtpResult smtp_send(const SmtpConfig *cfg, const SmtpMessage *msg)
 #if PC_ENABLE_SMTP_TLS
         if (!pc_tls_client_session_begin(cfg->host, tls_bio_send, tls_bio_recv))
         {
-            pc_client_close(x.cid);
+            Tcp.client->close(x.cid);
             return SMTP_ERR_TLS;
         }
         int h;
@@ -694,13 +694,13 @@ SmtpResult smtp_send(const SmtpConfig *cfg, const SmtpMessage *msg)
         if (h != 1) // 1 = established; 0 = still pending at timeout; <0 = fatal
         {
             pc_tls_client_session_end();
-            pc_client_close(x.cid);
+            Tcp.client->close(x.cid);
             return SMTP_ERR_TLS;
         }
         rc = smtp_run(cfg, msg, tls_send, tls_recv, NULL, &x);
         pc_tls_client_session_end();
 #else
-        pc_client_close(x.cid);
+        Tcp.client->close(x.cid);
         return SMTP_ERR_TLS; // SMTPS requested but TLS not built in
 #endif
     }
@@ -709,7 +709,7 @@ SmtpResult smtp_send(const SmtpConfig *cfg, const SmtpMessage *msg)
         rc = smtp_run(cfg, msg, xp_send, xp_recv, xp_starttls, &x);
     }
 
-    pc_client_close(x.cid);
+    Tcp.client->close(x.cid);
 #if PC_ENABLE_SMTP_TLS
     s_smtp_tls.xport = NULL; // x is about to go out of scope
 #endif

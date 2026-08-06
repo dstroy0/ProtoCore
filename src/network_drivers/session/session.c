@@ -16,7 +16,7 @@
  */
 
 #include "session.h"
-#include "../transport/listener.h"
+#include "../transport/tcp.h"
 #include "../transport/tcp.h" // TcpConn, conn_pool: the slot an event names
 #include "../transport/udp.h" // Udp: the datagram rings this tick drains
 #include "mmgr/plaintext.h"
@@ -111,7 +111,7 @@ void server_tick(int worker_id)
      * http_reset() call for that event is then a clean no-op. Each worker
      * sweeps only the slots it owns.
      */
-    proto_tcp_check_timeouts(worker_id);
+    Tcp.conn->check_timeouts(worker_id);
 
 #if PC_NEED_UDP
     // One set of datagram rings serves the whole server rather than one per worker, so worker 0
@@ -126,7 +126,7 @@ void server_tick(int worker_id)
 
 #if PC_WORKER_COUNT > 1
     // Drain only this worker's queue: it is the sole consumer of its slots.
-    pc_platform_queue q = listener_worker_queue(worker_id);
+    pc_platform_queue q = Tcp.listener->worker_queue(worker_id);
     if (!q)
     {
         return;

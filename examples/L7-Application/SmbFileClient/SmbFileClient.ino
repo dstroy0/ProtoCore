@@ -26,7 +26,7 @@
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
-#include "network_drivers/transport/client.h"
+#include "network_drivers/transport/tcp.h"
 #include "network_drivers/application/smb/smb2.h" // SMB2_FILE_GENERIC_READ / SMB2_FILE_OPEN
 #include "network_drivers/application/smb/smb_client.h" // smb_open / smb_read / smb_close
 
@@ -62,7 +62,7 @@ static int cl_send(void *ctx, const uint8_t *data, size_t len)
         {
             chunk = 0xFFFF;
         }
-        if (!pc_client_send(x->cid, data + sent, chunk))
+        if (!Tcp.client->send(x->cid, data + sent, chunk))
         {
             return -1;
         }
@@ -76,12 +76,12 @@ static int cl_recv(void *ctx, uint8_t *buf, size_t cap)
     SmbXport *x = (SmbXport *)ctx;
     while ((int32_t)(x->deadline - millis()) > 0)
     {
-        size_t n = pc_client_read(x->cid, buf, cap);
+        size_t n = Tcp.client->read(x->cid, buf, cap);
         if (n > 0)
         {
             return (int)n;
         }
-        if (pc_client_is_closed(x->cid) && pc_client_available(x->cid) == 0)
+        if (Tcp.client->is_closed(x->cid) && Tcp.client->available(x->cid) == 0)
         {
             return -1;
         }
@@ -92,7 +92,7 @@ static int cl_recv(void *ctx, uint8_t *buf, size_t cap)
 
 void read_program()
 {
-    int cid = pc_client_open(SMB_HOST, SMB_PORT, 8000);
+    int cid = Tcp.client->open(SMB_HOST, SMB_PORT, 8000);
     if (cid < 0)
     {
         Serial.println("connect failed - is the server reachable on port 445?");
@@ -117,7 +117,7 @@ void read_program()
     if (rc != SMB_OK)
     {
         Serial.printf("smb_open failed (SmbResult %d) - see the README troubleshooting table\n", (int)rc);
-        pc_client_close(cid);
+        Tcp.client->close(cid);
         return;
     }
     Serial.printf("opened %s (%llu bytes)\n", SMB_PATH, (unsigned long long)h.file_size);
@@ -142,7 +142,7 @@ void read_program()
 
     x.deadline = millis() + 8000;
     smb_close(&h, cl_send, cl_recv, &x);
-    pc_client_close(cid);
+    Tcp.client->close(cid);
 }
 
 void setup()

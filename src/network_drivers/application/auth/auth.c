@@ -18,7 +18,7 @@
 #include "mmgr/protostr.h"      // str.len / find / starts / eq / copy
 #include "mmgr/secure.h"        // the credential table is key material
 #include "network_drivers/presentation/codec/base64/base64.h" // pc_base64_decode (Basic)
-#include "network_drivers/transport/tcp.h"                    // conn_pool, pc_conn_send, TcpConn/ConnState
+#include "network_drivers/transport/tcp.h"                    // conn_pool, Tcp.conn->send, TcpConn/ConnState
 #include "protocore.h"
 #include "server/clock/clock.h"    // pc_millis() for the stateless nonce
 #include "shared_primitives/hex.h" // pc_hex_encode/decode
@@ -351,12 +351,12 @@ static void challenge(uint8_t slot_id, uint8_t id, proto_bool stale)
     // follows the header.
     if (!req_is_head(slot_id))
     {
-        pc_conn_send(slot_id, header, (proto_u16)hlen);
-        pc_conn_send_flush(slot_id, body, (proto_u16)(sizeof(body) - 1));
+        Tcp.conn->send(slot_id, header, (proto_u16)hlen);
+        Tcp.conn->send_flush(slot_id, body, (proto_u16)(sizeof(body) - 1));
     }
     else
     {
-        pc_conn_send_flush(slot_id, header, (proto_u16)hlen);
+        Tcp.conn->send_flush(slot_id, header, (proto_u16)hlen);
     }
 
     pc_resp_end(slot_id, 401, (int)(sizeof(body) - 1), keep, /*pre_flushed=*/PROTO_TRUE);

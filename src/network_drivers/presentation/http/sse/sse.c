@@ -155,6 +155,6 @@ proto_bool pc_sse_write(SseConn *sse, const char *data, const char *event, const
         return PROTO_FALSE;
     }
 
-    pc_conn_send(sse->slot_id, buf, (proto_u16)pos);
+    Tcp.conn->send(sse->slot_id, buf, (proto_u16)pos);
     return PROTO_TRUE;
 }

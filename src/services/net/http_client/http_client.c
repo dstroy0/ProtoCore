@@ -22,7 +22,7 @@
 // ---------------------------------------------------------------------------
 
 #if PROTOCORE_HOT
-#include "network_drivers/transport/client.h" // shared outbound TCP client (L4)
+#include "network_drivers/transport/tcp.h" // shared outbound TCP client (L4)
 #include <Arduino.h>                          // millis()
 #endif
 #if PROTOCORE_HOT && PC_ENABLE_HTTP_CLIENT_TLS
@@ -375,15 +375,15 @@ static int cl_tls_send(void *ctx, const unsigned char *buf, size_t len)
 {
     (void)ctx;
     size_t cap = len > 0xFFFF ? 0xFFFF : len;
-    return pc_client_send(s_http.cid, buf, cap) ? (int)cap : -1;
+    return Tcp.client->send(s_http.cid, buf, cap) ? (int)cap : -1;
 }
 static int cl_tls_recv(void *ctx, unsigned char *buf, size_t len)
 {
     (void)ctx;
-    size_t n = pc_client_read(s_http.cid, buf, len);
+    size_t n = Tcp.client->read(s_http.cid, buf, len);
     if (n == 0)
     {
-        return pc_client_is_closed(s_http.cid) ? 0 : MBEDTLS_ERR_SSL_WANT_READ;
+        return Tcp.client->is_closed(s_http.cid) ? 0 : MBEDTLS_ERR_SSL_WANT_READ;
     }
     return (int)n;
 }
@@ -426,8 +426,8 @@ static int http_request(const char *method, const char *url, const char *content
     uint32_t deadline = pc_millis() + PC_HTTP_CLIENT_TIMEOUT_MS;
 
     // Open the connection (DNS + connect) via the shared client transport.
-    s_http.cid = pc_client_open(host, port, PC_HTTP_CLIENT_TIMEOUT_MS);
-    CL_DBG("[hc] pc_client_open cid=%d\n", s_http.cid);
+    s_http.cid = Tcp.client->open(host, port, PC_HTTP_CLIENT_TIMEOUT_MS);
+    CL_DBG("[hc] Tcp.client->open cid=%d\n", s_http.cid);
     if (s_http.cid < 0)
     {
         return (s_http.cid == -2) ? (int)HTTP_CLIENT_ERR_DNS : (int)HTTP_CLIENT_ERR_CONNECT;
@@ -445,12 +445,12 @@ static int http_request(const char *method, const char *url, const char *content
         CL_DBG("[hc] tls rc=%d pt_len=%u\n", rc, (unsigned)pc_resp_len);
         if (rc < 0)
         {
-            pc_client_close(s_http.cid);
+            Tcp.client->close(s_http.cid);
             s_http.cid = -1;
             return (int)HTTP_CLIENT_ERR_TLS;
         }
 #else
-        pc_client_close(s_http.cid);
+        Tcp.client->close(s_http.cid);
         s_http.cid = -1;
         return (int)HTTP_CLIENT_ERR_TLS;
 #endif
@@ -459,21 +459,21 @@ static int http_request(const char *method, const char *url, const char *content
     {
         // Plaintext: send the request, then drain wire bytes into s_http.rx until the
         // peer closes (and the ring is empty), the buffer fills, or we time out.
-        if (!pc_client_send(s_http.cid, req, reqlen))
+        if (!Tcp.client->send(s_http.cid, req, reqlen))
         {
-            pc_client_close(s_http.cid);
+            Tcp.client->close(s_http.cid);
             s_http.cid = -1;
             return (int)HTTP_CLIENT_ERR_SEND;
         }
         while ((int32_t)(deadline - pc_millis()) > 0)
         {
-            size_t n = pc_client_read(s_http.cid, s_http.rx + pc_resp_len, sizeof(s_http.rx) - pc_resp_len);
+            size_t n = Tcp.client->read(s_http.cid, s_http.rx + pc_resp_len, sizeof(s_http.rx) - pc_resp_len);
             pc_resp_len += n;
             if (pc_resp_len >= sizeof(s_http.rx))
             {
                 break;
             }
-            if (pc_client_is_closed(s_http.cid) && pc_client_available(s_http.cid) == 0)
+            if (Tcp.client->is_closed(s_http.cid) && Tcp.client->available(s_http.cid) == 0)
             {
                 break;
             }
@@ -485,7 +485,7 @@ static int http_request(const char *method, const char *url, const char *content
     }
 
     CL_DBG("[hc] done pc_resp_len=%u\n", (unsigned)pc_resp_len);
-    pc_client_close(s_http.cid);
+    Tcp.client->close(s_http.cid);
     s_http.cid = -1;
 
     if (pc_resp_len == 0)

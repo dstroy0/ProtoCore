@@ -11,7 +11,7 @@
 
 #if PC_ENABLE_FTP_SESSION
 
-#include "network_drivers/transport/client.h"
+#include "network_drivers/transport/tcp.h"
 #include "server/clock/clock.h" // pc_millis, pcdelay
 #include "services/file_transfer/ftp/ftp.h"
 #include "shared_primitives/log.h"
@@ -68,7 +68,7 @@ static proto_bool ftp_send(const char *verb, const char *arg)
         return PROTO_FALSE;
     }
     PC_LOGD(LOG_SENT, verb);
-    return pc_client_send(s_ftp.ctrl, s_ftp.cmd, n);
+    return Tcp.client->send(s_ftp.ctrl, s_ftp.cmd, n);
 }
 
 /**
@@ -106,7 +106,7 @@ static proto_bool ftp_await(int *code, size_t *rlen)
             PC_LOGW(LOG_REPLY_TOO_BIG, (uint32_t)sizeof(s_ftp.rx));
             return PROTO_FALSE; // a reply that cannot fit is malformed, not incomplete
         }
-        if (pc_client_is_closed(s_ftp.ctrl) && pc_client_available(s_ftp.ctrl) == 0)
+        if (Tcp.client->is_closed(s_ftp.ctrl) && Tcp.client->available(s_ftp.ctrl) == 0)
         {
             PC_LOGW(LOG_CTRL_CLOSED, (uint32_t)s_ftp.rx_len);
             return PROTO_FALSE;
@@ -118,7 +118,7 @@ static proto_bool ftp_await(int *code, size_t *rlen)
             return PROTO_FALSE;
         }
 
-        size_t got = pc_client_read(s_ftp.ctrl, (uint8_t *)s_ftp.rx + s_ftp.rx_len, sizeof(s_ftp.rx) - s_ftp.rx_len);
+        size_t got = Tcp.client->read(s_ftp.ctrl, (uint8_t *)s_ftp.rx + s_ftp.rx_len, sizeof(s_ftp.rx) - s_ftp.rx_len);
         if (got == 0)
         {
             pcdelay(5);
@@ -186,7 +186,7 @@ static proto_bool ftp_open_data(const FtpTarget *target)
     {
         return PROTO_FALSE;
     }
-    s_ftp.data = pc_client_open(host, port, PC_FTP_TIMEOUT_MS);
+    s_ftp.data = Tcp.client->open(host, port, PC_FTP_TIMEOUT_MS);
     if (s_ftp.data < 0)
     {
         PC_LOGW(LOG_DATA_CONNECT_FAILED, host, (uint32_t)port);
@@ -199,12 +199,12 @@ static void ftp_teardown(void)
 {
     if (s_ftp.data >= 0)
     {
-        pc_client_close(s_ftp.data);
+        Tcp.client->close(s_ftp.data);
         s_ftp.data = -1;
     }
     if (s_ftp.ctrl >= 0)
     {
-        pc_client_close(s_ftp.ctrl);
+        Tcp.client->close(s_ftp.ctrl);
         s_ftp.ctrl = -1;
     }
     s_ftp.rx_len = 0;
@@ -229,7 +229,7 @@ proto_bool pc_ftp_store(const FtpTarget *target, const char *remote_path, size_t
     uint16_t ctrl_port = target->port ? target->port : 21;
     s_ftp.rx_len = 0;
     s_ftp.rx_consumed = 0;
-    s_ftp.ctrl = pc_client_open(target->host, ctrl_port, PC_FTP_TIMEOUT_MS);
+    s_ftp.ctrl = Tcp.client->open(target->host, ctrl_port, PC_FTP_TIMEOUT_MS);
     if (s_ftp.ctrl < 0)
     {
         PC_LOGW(LOG_CTRL_CONNECT_FAILED, target->host, (uint32_t)ctrl_port);
@@ -283,7 +283,7 @@ proto_bool pc_ftp_store(const FtpTarget *target, const char *remote_path, size_t
     {
         size_t want = (total - off < sizeof(s_ftp.chunk)) ? total - off : sizeof(s_ftp.chunk);
         size_t got = src(ctx, off, s_ftp.chunk, want);
-        if (got != want || !pc_client_send(s_ftp.data, s_ftp.chunk, got))
+        if (got != want || !Tcp.client->send(s_ftp.data, s_ftp.chunk, got))
         {
             ok = PROTO_FALSE;
             break;
@@ -293,7 +293,7 @@ proto_bool pc_ftp_store(const FtpTarget *target, const char *remote_path, size_t
 
     // Closing the data connection is what marks end-of-file for a STOR, so it happens before the
     // completion reply is read - and it happens even on failure, so the server stops waiting.
-    pc_client_close(s_ftp.data);
+    Tcp.client->close(s_ftp.data);
     s_ftp.data = -1;
 
     if (ok)

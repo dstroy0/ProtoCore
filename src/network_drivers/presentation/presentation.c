@@ -102,7 +102,7 @@ void http_parse(uint8_t slot_id)
 
     // Drain via the transport read API - the parser never touches the ring itself.
     // Check the terminal state BEFORE consuming so a pipelined next request is left
-    // in the ring; the window is reopened by the worker's pc_conn_ack_consumed().
+    // in the ring; the window is reopened by the worker's Tcp.conn->ack_consumed().
     while (pc_conn_available(slot_id) > 0)
     {
         switch (req->parse_state)
@@ -148,12 +148,12 @@ void http_parse(uint8_t slot_id)
 // ---------------------------------------------------------------------------
 
 #if PC_ENABLE_TLS
-// Abort a TLS connection (fatal handshake/read error). pc_conn_abort_slot owns
+// Abort a TLS connection (fatal handshake/read error). Tcp.conn->abort_slot owns
 // the whole teardown: free the TLS context (abrupt), detach the pcb, reset the
 // slot, then RST - so this never reaches into the raw tcp_pcb.
 static void tls_abort(uint8_t slot)
 {
-    pc_conn_abort_slot(slot);
+    Tcp.conn->abort_slot(slot);
     http_reset(slot);
 }
 

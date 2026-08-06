@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
-#ifndef PROTOCORE_CLIENT_H
-#define PROTOCORE_CLIENT_H
+#ifndef PROTOCORE_TCP_CLIENT_H
+#define PROTOCORE_TCP_CLIENT_H
 
 /**
  * @file client.h
@@ -54,6 +54,31 @@ size_t pc_client_read(int cid, uint8_t *buf, size_t cap);
 /** @brief Tear down the connection (marshaled) and return the slot to the pool. */
 void pc_client_close(int cid);
 
+/**
+ * @brief The outbound side of TCP.
+ *
+ * @var TcpClientNs::open       resolve and connect, blocking up to a deadline
+ * @var TcpClientNs::connected  the handshake completed
+ * @var TcpClientNs::is_closed  the peer closed or the connection errored
+ * @var TcpClientNs::send       queue wire bytes for transmission
+ * @var TcpClientNs::available  wire bytes buffered and ready to read
+ * @var TcpClientNs::read       drain buffered wire bytes
+ * @var TcpClientNs::close      tear the connection down and free the slot
+ */
+typedef struct
+{
+    int (*open)(const char *host, uint16_t port, uint32_t timeout_ms);
+    proto_bool (*connected)(int cid);
+    proto_bool (*is_closed)(int cid);
+    proto_bool (*send)(int cid, const void *data, size_t len);
+    size_t (*available)(int cid);
+    size_t (*read)(int cid, uint8_t *buf, size_t cap);
+    void (*close)(int cid);
+} TcpClientNs;
+
+/** @brief The one symbol this module exports. */
+extern const TcpClientNs TcpClient;
+
 PROTO_END_DECLS
 
-#endif // PROTOCORE_CLIENT_H
+#endif // PROTOCORE_TCP_CLIENT_H

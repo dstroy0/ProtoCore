@@ -13,7 +13,7 @@
 
 #include "network_drivers/presentation/http/http_parser/http_parser.h" // HttpReq, http_get_header, http_pool
 #include "network_drivers/presentation/presentation.h"                 // pc_http_set_edge_poll
-#include "network_drivers/transport/client.h"                          // pc_client_*
+#include "network_drivers/transport/tcp.h"                          // pc_client_*
 #include "network_drivers/transport/tcp.h"                             // pc_conn_active
 #include "protocore.h"                                                 // PC, Middleware, MwResult, ChunkSource
 #include "server/clock/clock.h"                                        // pc_millis
@@ -160,27 +160,27 @@ static void edge_on_evict(void *ctx, const EdgeEntry *victim)
 static int t_open(void *c, const char *host, uint16_t port, uint32_t timeout)
 {
     (void)c;
-    return pc_client_open(host, port, timeout);
+    return Tcp.client->open(host, port, timeout);
 }
 static proto_bool t_send(void *c, int cid, const void *d, size_t l)
 {
     (void)c;
-    return pc_client_send(cid, d, l);
+    return Tcp.client->send(cid, d, l);
 }
 static size_t t_read(void *c, int cid, uint8_t *b, size_t cap)
 {
     (void)c;
-    return pc_client_read(cid, b, cap);
+    return Tcp.client->read(cid, b, cap);
 }
 static proto_bool t_closed(void *c, int cid)
 {
     (void)c;
-    return pc_client_is_closed(cid);
+    return Tcp.client->is_closed(cid);
 }
 static void t_close(void *c, int cid)
 {
     (void)c;
-    pc_client_close(cid);
+    Tcp.client->close(cid);
 }
 
 #if PC_ENABLE_EDGE_ORIGIN_TLS
@@ -192,15 +192,15 @@ static int edge_tls_bio_send(void *ctx, const unsigned char *buf, size_t len)
 {
     (void)ctx;
     size_t cap = len > 0xFFFF ? 0xFFFF : len;
-    return pc_client_send(s_ctx.tls_cid, buf, cap) ? (int)cap : MBEDTLS_ERR_SSL_WANT_WRITE;
+    return Tcp.client->send(s_ctx.tls_cid, buf, cap) ? (int)cap : MBEDTLS_ERR_SSL_WANT_WRITE;
 }
 static int edge_tls_bio_recv(void *ctx, unsigned char *buf, size_t len)
 {
     (void)ctx;
-    size_t n = pc_client_read(s_ctx.tls_cid, buf, len);
+    size_t n = Tcp.client->read(s_ctx.tls_cid, buf, len);
     if (n == 0)
     {
-        return pc_client_is_closed(s_ctx.tls_cid) ? 0 : MBEDTLS_ERR_SSL_WANT_READ;
+        return Tcp.client->is_closed(s_ctx.tls_cid) ? 0 : MBEDTLS_ERR_SSL_WANT_READ;
     }
     return (int)n;
 }
@@ -208,7 +208,7 @@ static int edge_tls_bio_recv(void *ctx, unsigned char *buf, size_t len)
 static int t_tls_open(void *c, const char *host, uint16_t port, uint32_t timeout)
 {
     (void)c;
-    s_ctx.tls_cid = pc_client_open(host, port, timeout);
+    s_ctx.tls_cid = Tcp.client->open(host, port, timeout);
     if (s_ctx.tls_cid < 0)
     {
         return -1;
@@ -216,17 +216,17 @@ static int t_tls_open(void *c, const char *host, uint16_t port, uint32_t timeout
     s_ctx.tls_peer_closed = PROTO_FALSE;
     if (!pc_tls_client_session_begin(host, edge_tls_bio_send, edge_tls_bio_recv))
     {
-        pc_client_close(s_ctx.tls_cid);
+        Tcp.client->close(s_ctx.tls_cid);
         s_ctx.tls_cid = -1;
         return -1;
     }
     // Block through the handshake at connect - the same brief block the MQTT/WS clients take (and that the
-    // plaintext pc_client_open already takes on DNS+connect). edge_fetch_begin sends the request
+    // plaintext Tcp.client->open already takes on DNS+connect). edge_fetch_begin sends the request
     // synchronously right after open returns, so the session must be established first. pcdelay() yields to
     // the network stack between handshake flights so the peer's records arrive.
     uint32_t deadline = pc_millis() + timeout;
     int h = 0;
-    while ((h = pc_tls_client_session_handshake()) == 0 && !pc_client_is_closed(s_ctx.tls_cid) &&
+    while ((h = pc_tls_client_session_handshake()) == 0 && !Tcp.client->is_closed(s_ctx.tls_cid) &&
            (int32_t)(deadline - pc_millis()) > 0)
     {
         pcdelay(5);
@@ -234,7 +234,7 @@ static int t_tls_open(void *c, const char *host, uint16_t port, uint32_t timeout
     if (h != 1)
     {
         pc_tls_client_session_end();
-        pc_client_close(s_ctx.tls_cid);
+        Tcp.client->close(s_ctx.tls_cid);
         s_ctx.tls_cid = -1;
         return -1;
     }
@@ -260,13 +260,13 @@ static size_t t_tls_read(void *c, int cid, uint8_t *b, size_t cap)
 static proto_bool t_tls_closed(void *c, int cid)
 {
     (void)c;
-    return s_ctx.tls_peer_closed || pc_client_is_closed(cid);
+    return s_ctx.tls_peer_closed || Tcp.client->is_closed(cid);
 }
 static void t_tls_close(void *c, int cid)
 {
     (void)c;
     pc_tls_client_session_end();
-    pc_client_close(cid);
+    Tcp.client->close(cid);
     s_ctx.tls_cid = -1;
 }
 #endif // PC_ENABLE_EDGE_ORIGIN_TLS
@@ -1086,7 +1086,7 @@ static void mesh_answer(MeshConn *mc, const uint8_t digest[32], const char *cano
 static void mesh_serve_end(MeshConn *mc)
 {
     mc->active = PROTO_FALSE;
-    pc_conn_close(mc->conn_slot);
+    Tcp.conn->close(mc->conn_slot);
 }
 
 // Drive one serve connection: accumulate the request, answer it, then page the response out with backpressure.
@@ -1127,18 +1127,18 @@ static void mesh_serve_pump(MeshConn *mc)
         }
         uint16_t remaining = (uint16_t)(mc->out_len - mc->out_off);
         proto_u16 n = remaining < room ? remaining : room;
-        if (!pc_conn_send(slot, mc->outbuf + mc->out_off, n))
+        if (!Tcp.conn->send(slot, mc->outbuf + mc->out_off, n))
         {
             return; // retry next poll
         }
         mc->out_off = (uint16_t)(mc->out_off + n);
     }
     // Whole response queued: flush it out, then dwell in CONN_CLOSING until the peer ACKs (a plain
-    // pc_conn_close would RST and discard the response the peer has not read yet). pc_conn_send already
+    // Tcp.conn->close would RST and discard the response the peer has not read yet). Tcp.conn->send already
     // COPY'd the bytes into the TCP buffer and the graceful finalize does not call on_close, so free the
     // MeshConn now - the transport owns the drain from here.
-    pc_conn_flush(slot);
-    pc_conn_begin_close(slot);
+    Tcp.conn->flush(slot);
+    Tcp.conn->begin_close(slot);
     mc->active = PROTO_FALSE;
 }
 
@@ -1158,7 +1158,7 @@ static void mesh_on_accept(uint8_t slot)
             return;
         }
     }
-    pc_conn_close(slot); // no free serve slot
+    Tcp.conn->close(slot); // no free serve slot
 }
 
 static void mesh_on_data(uint8_t slot)

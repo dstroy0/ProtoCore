@@ -13,7 +13,7 @@
  */
 
 #include "mmgr/membuild.h"                 // pc_sb frame builder (replaces snprintf)
-#include "network_drivers/transport/tcp.h" // conn_pool, pc_conn_send, TcpConn/ConnState
+#include "network_drivers/transport/tcp.h" // conn_pool, Tcp.conn->send, TcpConn/ConnState
 #include "protocore.h"
 #include "shared_primitives/hex.h"  // pc_hex_u32 (chunk size-line writer)
 #include "shared_primitives/mime.h" // PC_MIME_*, mime tables
@@ -182,7 +182,7 @@ static void tmpl_take_placeholder(uint8_t slot, const char **p, TemplateVar reso
         *total += 2;
         if (emit)
         {
-            pc_conn_send(slot, "{{", 2);
+            Tcp.conn->send(slot, "{{", 2);
         }
         *p = at + 2;
         return;
@@ -201,7 +201,7 @@ static void tmpl_take_placeholder(uint8_t slot, const char **p, TemplateVar reso
     *total += vlen;
     if (emit && vlen)
     {
-        pc_conn_send(slot, val, (proto_u16)vlen);
+        Tcp.conn->send(slot, val, (proto_u16)vlen);
     }
     *p = end + 2;
 }
@@ -231,7 +231,7 @@ static size_t tmpl_walk(uint8_t slot, const char *tmpl, TemplateVar resolver, pr
         // always >= 1. (The vlen test in tmpl_take_placeholder, which CAN be 0, is exercised.)
         if (emit && rlen)
         {
-            pc_conn_send(slot, run, (proto_u16)rlen);
+            Tcp.conn->send(slot, run, (proto_u16)rlen);
         }
     }
     return total;
@@ -271,7 +271,7 @@ void send_template(uint8_t slot_id, int code, const char *content_type, const ch
 
     proto_bool head = req_is_head(slot_id);
 
-    pc_conn_send(slot_id, header, (proto_u16)hlen);
+    Tcp.conn->send(slot_id, header, (proto_u16)hlen);
     // Pass 2: stream the rendered body (HEAD carries headers only).
     if (!head && body_len > 0)
     {
@@ -335,7 +335,7 @@ void send_chunked(uint8_t slot_id, int code, const char *content_type, ChunkSour
     int hlen = (int)pc_sb_finish(&hb2);
     hlen = proto_append_resp_trailer(header, RESP_HDR_BUF_SIZE, hlen, slot_id, cl);
 
-    pc_conn_send(slot_id, header, (proto_u16)hlen);
+    Tcp.conn->send(slot_id, header, (proto_u16)hlen);
 
     // HEAD carries the headers but no body or terminator.
     if (req_is_head(slot_id) || !source)
@@ -373,12 +373,12 @@ void chunk_send_pump(uint8_t slot_id)
 
     // A body still being paged out is active, not idle: keep the CONN_TIMEOUT_MS idle sweep off
     // it so a transient send stall on a large stream cannot reap the slot mid-transfer.
-    pc_conn_touch_active(slot_id);
+    Tcp.conn->touch_active(slot_id);
 
     // Frame each chunk in ONE buffer so it goes out in a single tcpip_thread round-trip (was three -
     // size line, body, CRLF - each a ~23 us marshal on-device). Reserve CHUNK_HDR_RESERVE bytes ahead
     // of the body for the "<hex>\r\n" size line and 2 after for the trailing CRLF, so the source writes
-    // the body in place and the whole "<hex>\r\n<body>\r\n" is one pc_conn_send with no extra copy.
+    // the body in place and the whole "<hex>\r\n<body>\r\n" is one Tcp.conn->send with no extra copy.
     // FRAME reserves send-window room for that framing; the raw (HTTP/1.0) path sends the body verbatim.
     static const proto_u16 CHUNK_HDR_RESERVE = 8; // "<hex>\r\n" is <= 6 bytes for a chunk <= 0xFFFF
     const proto_u16 FRAME = s->raw ? 0 : 12;
@@ -388,7 +388,7 @@ void chunk_send_pump(uint8_t slot_id)
         proto_u16 avail = pc_conn_sndbuf(slot_id);
         if (avail <= FRAME)
         {
-            pc_conn_flush(slot_id); // no room for a useful chunk; resume next loop
+            Tcp.conn->flush(slot_id); // no room for a useful chunk; resume next loop
             return;
         }
         size_t cap = (size_t)(avail - FRAME);
@@ -403,9 +403,9 @@ void chunk_send_pump(uint8_t slot_id)
         {
             if (!s->raw)
             {
-                pc_conn_send(slot_id, "0\r\n\r\n", 5); // terminating chunk (1.1 only)
+                Tcp.conn->send(slot_id, "0\r\n\r\n", 5); // terminating chunk (1.1 only)
             }
-            pc_conn_flush(slot_id);
+            Tcp.conn->flush(slot_id);
             s->active = PROTO_FALSE;
             pc_resp_end(slot_id, s->status, s->total, s->keep,
                         /*pre_flushed=*/PROTO_FALSE); // raw: keep==false -> connection close ends the body
@@ -418,7 +418,7 @@ void chunk_send_pump(uint8_t slot_id)
 
         if (s->raw)
         {
-            pc_conn_send(slot_id, body, (proto_u16)n); // close-delimited: no chunk framing
+            Tcp.conn->send(slot_id, body, (proto_u16)n); // close-delimited: no chunk framing
         }
         else
         {
@@ -435,7 +435,7 @@ void chunk_send_pump(uint8_t slot_id)
             start[nd + 1] = '\n';
             body[n] = '\r';
             body[n + 1] = '\n';
-            pc_conn_send(slot_id, start, (proto_u16)(sn + n + 2));
+            Tcp.conn->send(slot_id, start, (proto_u16)(sn + n + 2));
         }
         s->total += (int)n;
     }
@@ -638,7 +638,7 @@ static const char *stats_var(const char *name)
 
 void stats(uint8_t slot_id)
 {
-    int active = pc_conn_active_count();
+    int active = Tcp.conn->active_count();
 
     unsigned long up = pc_millis();
 #if PROTOCORE_HOT
@@ -743,7 +743,7 @@ static const char *metrics_var(const char *name)
 
 void metrics(uint8_t slot_id)
 {
-    int active = pc_conn_active_count();
+    int active = Tcp.conn->active_count();
 
     unsigned long up = pc_millis();
 #if PROTOCORE_HOT

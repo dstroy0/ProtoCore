@@ -173,8 +173,8 @@ network. To run it on a real device you provide the glue that connects the seam
 to a socket. In this sketch that glue is `cl_send` / `cl_recv`, which sit on top
 of `pc_client`, the library's shared outbound TCP transport:
 
-- `cl_send` writes all the bytes with `pc_client_send`.
-- `cl_recv` polls `pc_client_read` until data arrives, the peer closes, or a
+- `cl_send` writes all the bytes with `Tcp.client->send`.
+- `cl_recv` polls `Tcp.client->read` until data arrives, the peer closes, or a
   deadline passes (SMB's messages are length-prefixed, and the engine reads
   exactly one message at a time).
 

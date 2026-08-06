@@ -25,7 +25,7 @@
  * the same question already has three answers, and a fourth reader would write a fourth.
  *
  * **Kill, for applications that do not talk transport.** An application at this layer has no
- * transport dependency and should not acquire one just to hang up: reaching for pc_conn_close() would
+ * transport dependency and should not acquire one just to hang up: reaching for Tcp.conn->close() would
  * put an L4 include in L7 code and make every such application know about slots and PCBs. This is the
  * seam instead. The decision is the application's and the teardown is the transport's.
  *
@@ -34,7 +34,7 @@
  * rather than a check, which is why there is no permission test here and no way to forge past one.
  *
  * A module that already speaks transport keeps calling transport directly. This does not replace
- * pc_conn_close(); it means an application never has to reach for it.
+ * Tcp.conn->close(); it means an application never has to reach for it.
  *
  * This is not SSH signaling. RFC 4254 signaling delivers a POSIX signal to a remote process over a
  * channel and is implemented in ssh_flow_control; the two share a word and nothing else.

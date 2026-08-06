@@ -1204,7 +1204,7 @@ Notes:
 
 The response side: `chunk_send_pump` (`src/server/response.c`) frames every body piece as an HTTP/1.1
 chunk - `"<hexlen>\r\n<body>\r\n"` - into one send-window buffer so it goes out in a single
-`pc_conn_send`. The body itself is written in place by the `ChunkSource` (file read = section 1, template
+`Tcp.conn->send`. The body itself is written in place by the `ChunkSource` (file read = section 1, template
 render = the request path above), so the pump's own hot cost is just that per-chunk size line. It used
 `snprintf("%x\r\n", n)`; the benchmark measured framing one 1440-byte chunk (one TCP MSS) and pumping a
 64 KiB body (46 chunks). Host = Raspberry Pi 5 `-O2` (relative baseline); ESP32-S3 = the real device at

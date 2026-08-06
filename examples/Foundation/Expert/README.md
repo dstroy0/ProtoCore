@@ -15,7 +15,7 @@ connection in a fixed BSS array `conn_pool[MAX_CONNS]`. Including
 and how many unread bytes sit in each slot's RX ring:
 
 ```cpp
-#include "network_drivers/transport/tcp.h" // conn_pool, TcpConn, ConnState
+#include "network_drivers/transport/tcp/tcp_conn.h" // conn_pool, TcpConn, ConnState
 ...
 TcpConn *conn = &conn_pool[i];
 switch (conn->state) { case ConnState::CONN_FREE: ...; case ConnState::CONN_ACTIVE: ...; case ConnState::CONN_CLOSING: ...; }
@@ -90,7 +90,7 @@ added explanatory comments:
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
-#include "network_drivers/transport/tcp.h" // access conn_pool and ConnState
+#include "network_drivers/transport/tcp/tcp_conn.h" // access conn_pool and ConnState
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";

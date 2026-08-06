@@ -291,8 +291,9 @@
       "src": [
         "+<shared_primitives/ip.c>",
         "+<network_drivers/presentation/http/http_parser/http_parser.c>",
-        "+<network_drivers/transport/listener.c>",
+        "+<network_drivers/transport/tcp/tcp_listener.c>",
         "+<network_drivers/transport/tcp.c>",
+        "+<network_drivers/transport/tcp/tcp_conn.c>",
         "+<network_drivers/presentation/presentation.c>",
         "+<network_drivers/session/session.c>",
         "+<server/proto_builtins.c>",
@@ -351,7 +352,8 @@
       "src": [
         "+<shared_primitives/ip.c>",
         "+<network_drivers/transport/tcp.c>",
-        "+<network_drivers/transport/listener.c>",
+        "+<network_drivers/transport/tcp/tcp_conn.c>",
+        "+<network_drivers/transport/tcp/tcp_listener.c>",
         "+<server/clock/clock.c>"
       ],
       "tests": ["test_observability"]
@@ -368,7 +370,8 @@
       "src": [
         "+<shared_primitives/ip.c>",
         "+<network_drivers/transport/tcp.c>",
-        "+<network_drivers/transport/listener.c>",
+        "+<network_drivers/transport/tcp/tcp_conn.c>",
+        "+<network_drivers/transport/tcp/tcp_listener.c>",
         "+<network_drivers/transport/diffserv.c>",
         "+<server/clock/clock.c>"
       ],
@@ -391,8 +394,9 @@
       "src": [
         "+<shared_primitives/ip.c>",
         "+<network_drivers/presentation/http/http_parser/http_parser.c>",
-        "+<network_drivers/transport/listener.c>",
+        "+<network_drivers/transport/tcp/tcp_listener.c>",
         "+<network_drivers/transport/tcp.c>",
+        "+<network_drivers/transport/tcp/tcp_conn.c>",
         "+<network_drivers/presentation/presentation.c>",
         "+<network_drivers/session/session.c>",
         "+<server/proto_builtins.c>",
@@ -603,8 +607,9 @@
       "src": [
         "+<shared_primitives/ip.c>",
         "+<network_drivers/presentation/http/http_parser/http_parser.c>",
-        "+<network_drivers/transport/listener.c>",
+        "+<network_drivers/transport/tcp/tcp_listener.c>",
         "+<network_drivers/transport/tcp.c>",
+        "+<network_drivers/transport/tcp/tcp_conn.c>",
         "+<network_drivers/presentation/presentation.c>",
         "+<network_drivers/session/session.c>",
         "+<server/proto_builtins.c>",
@@ -696,8 +701,9 @@
       "src": [
         "+<shared_primitives/ip.c>",
         "+<network_drivers/presentation/http/http_parser/http_parser.c>",
-        "+<network_drivers/transport/listener.c>",
+        "+<network_drivers/transport/tcp/tcp_listener.c>",
         "+<network_drivers/transport/tcp.c>",
+        "+<network_drivers/transport/tcp/tcp_conn.c>",
         "+<network_drivers/presentation/presentation.c>",
         "+<network_drivers/session/session.c>",
         "+<server/proto_builtins.c>",
@@ -844,8 +850,9 @@
       "src": [
         "+<shared_primitives/ip.c>",
         "+<network_drivers/presentation/http/http_parser/http_parser.c>",
-        "+<network_drivers/transport/listener.c>",
+        "+<network_drivers/transport/tcp/tcp_listener.c>",
         "+<network_drivers/transport/tcp.c>",
+        "+<network_drivers/transport/tcp/tcp_conn.c>",
         "+<network_drivers/presentation/presentation.c>",
         "+<network_drivers/session/session.c>",
         "+<server/proto_builtins.c>",
@@ -938,7 +945,8 @@
       "src": [
         "+<shared_primitives/ip.c>",
         "+<network_drivers/transport/tcp.c>",
-        "+<network_drivers/transport/listener.c>",
+        "+<network_drivers/transport/tcp/tcp_conn.c>",
+        "+<network_drivers/transport/tcp/tcp_listener.c>",
         "+<network_drivers/presentation/telnet/telnet.c>",
         "+<mmgr/frame.c>",
         "+<server/clock/clock.c>",
@@ -1743,8 +1751,9 @@
       "src": [
         "+<shared_primitives/ip.c>",
         "+<network_drivers/presentation/http/http_parser/http_parser.c>",
-        "+<network_drivers/transport/listener.c>",
+        "+<network_drivers/transport/tcp/tcp_listener.c>",
         "+<network_drivers/transport/tcp.c>",
+        "+<network_drivers/transport/tcp/tcp_conn.c>",
         "+<network_drivers/presentation/presentation.c>",
         "+<network_drivers/session/session.c>",
         "+<server/proto_builtins.c>",
@@ -1787,8 +1796,9 @@
       "src": [
         "+<shared_primitives/ip.c>",
         "+<network_drivers/presentation/http/http_parser/http_parser.c>",
-        "+<network_drivers/transport/listener.c>",
+        "+<network_drivers/transport/tcp/tcp_listener.c>",
         "+<network_drivers/transport/tcp.c>",
+        "+<network_drivers/transport/tcp/tcp_conn.c>",
         "+<network_drivers/presentation/presentation.c>",
         "+<network_drivers/session/session.c>",
         "+<server/proto_builtins.c>",
@@ -2084,8 +2094,9 @@
       "src": [
         "+<shared_primitives/ip.c>",
         "+<network_drivers/presentation/http/http_parser/http_parser.c>",
-        "+<network_drivers/transport/listener.c>",
+        "+<network_drivers/transport/tcp/tcp_listener.c>",
         "+<network_drivers/transport/tcp.c>",
+        "+<network_drivers/transport/tcp/tcp_conn.c>",
         "+<network_drivers/presentation/presentation.c>",
         "+<network_drivers/session/session.c>",
         "+<server/proto_builtins.c>",
@@ -2260,8 +2271,9 @@
       "src": [
         "+<shared_primitives/ip.c>",
         "+<network_drivers/presentation/http/http_parser/http_parser.c>",
-        "+<network_drivers/transport/listener.c>",
+        "+<network_drivers/transport/tcp/tcp_listener.c>",
         "+<network_drivers/transport/tcp.c>",
+        "+<network_drivers/transport/tcp/tcp_conn.c>",
         "+<network_drivers/presentation/presentation.c>",
         "+<network_drivers/session/session.c>",
         "+<server/proto_builtins.c>",
@@ -2362,9 +2374,9 @@
       "tests": ["test_net_egress"]
     },
     "native_client": {
-      "desc": "Outbound TCP client transport (network_drivers/transport/client.cpp), the pooled\nlayer-4 peer of tcp.cpp used by http_client / mqtt / ws_client / relay / smtp / ssh\nport-forward (PC_NEED_DET_CLIENT). The tcpip_api_call-marshaled lwIP path is\nARDUINO-only; on native this file compiles to just the !NEED stub (fail-closed: no\nlwIP on the host, so every call reports no connection), host-tested here for its own sake\nsince no other env's build_src_filter pulls this file in at all.",
+      "desc": "Outbound TCP client transport (network_drivers/transport/tcp/tcp_client.cpp), the pooled\nlayer-4 peer of tcp.cpp used by http_client / mqtt / ws_client / relay / smtp / ssh\nport-forward (PC_NEED_DET_CLIENT). The tcpip_api_call-marshaled lwIP path is\nARDUINO-only; on native this file compiles to just the !NEED stub (fail-closed: no\nlwIP on the host, so every call reports no connection), host-tested here for its own sake\nsince no other env's build_src_filter pulls this file in at all.",
       "src": [
-        "+<network_drivers/transport/client.c>",
+        "+<network_drivers/transport/tcp/tcp_client.c>",
         "+<server/clock/clock.c>"
       ],
       "tests": ["test_client"]
@@ -2846,7 +2858,8 @@
       "src": [
         "+<shared_primitives/ip.c>",
         "+<network_drivers/transport/tcp.c>",
-        "+<network_drivers/transport/listener.c>",
+        "+<network_drivers/transport/tcp/tcp_conn.c>",
+        "+<network_drivers/transport/tcp/tcp_listener.c>",
         "+<network_drivers/session/worker.c>",
         "+<mmgr/arena.c>",
         "+<server/clock/clock.c>"

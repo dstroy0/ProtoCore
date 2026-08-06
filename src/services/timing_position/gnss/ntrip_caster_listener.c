@@ -108,10 +108,10 @@ static void reply_and_close(CasterRover *r, const char *resp, size_t len)
 {
     if (len && pc_conn_active(r->conn_slot))
     {
-        pc_conn_send(r->conn_slot, resp, (proto_u16)len);
+        Tcp.conn->send(r->conn_slot, resp, (proto_u16)len);
     }
     r->active = PROTO_FALSE;
-    pc_conn_close(r->conn_slot);
+    Tcp.conn->close(r->conn_slot);
 }
 
 // Constant-length credential compare (auth strings are short and app-configured).
@@ -170,10 +170,10 @@ static void dispatch(CasterRover *r, const NtripRequest *req)
         return;
     }
     size_t n = pc_ntrip_build_stream_response(buf, sizeof(buf), req->version);
-    if (n == 0 || !pc_conn_active(r->conn_slot) || !pc_conn_send(r->conn_slot, buf, (proto_u16)n))
+    if (n == 0 || !pc_conn_active(r->conn_slot) || !Tcp.conn->send(r->conn_slot, buf, (proto_u16)n))
     {
         r->active = PROTO_FALSE;
-        pc_conn_close(r->conn_slot);
+        Tcp.conn->close(r->conn_slot);
         return;
     }
     r->streaming = PROTO_TRUE;
@@ -185,7 +185,7 @@ static void caster_on_accept(uint8_t slot)
     int idx = rover_find_free();
     if (idx < 0)
     {
-        pc_conn_close(slot); // rover table full
+        Tcp.conn->close(slot); // rover table full
         return;
     }
     CasterRover *r = &s_ctx.rovers[idx];
@@ -201,7 +201,7 @@ static void caster_on_data(uint8_t slot)
     CasterRover *r = rover_by_conn(slot);
     if (!r)
     {
-        pc_conn_close(slot);
+        Tcp.conn->close(slot);
         return;
     }
     if (r->streaming)
@@ -314,7 +314,7 @@ int pc_ntrip_caster_broadcast(const char *mountpoint, const uint8_t *data, size_
         {
             continue;
         }
-        if (pc_conn_send(r->conn_slot, data, (proto_u16)len))
+        if (Tcp.conn->send(r->conn_slot, data, (proto_u16)len))
         {
             sent++;
         }

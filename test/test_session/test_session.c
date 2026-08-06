@@ -11,7 +11,7 @@
 #include "network_drivers/presentation/presentation.h"
 #include "network_drivers/session/proto_handler.h" // proto_register()/proto_get()/ProtoHandler (dispatch table edge cases)
 #include "network_drivers/session/session.h"
-#include "network_drivers/transport/listener.h"
+#include "network_drivers/transport/tcp.h"
 #include <unity.h>
 #include "network_drivers/transport/tcp.h"
 
@@ -34,7 +34,7 @@ void setUp()
 {
     set_millis(0);
     queue_stage_reset(); // clear any staged events from previous test
-    proto_tcp_pool_init(NULL);
+    Tcp.conn->init(NULL);
     listener_add(0, 80, PROTO_HTTP, PROTO_FALSE);
     for (int i = 0; i < MAX_CONNS; i++)
     {
@@ -95,7 +95,7 @@ void test_tick_does_not_free_fresh_connection()
 // FUNCTION I/O TESTS - server_tick(0)
 // ====================================================================
 
-// tick() must call proto_tcp_check_timeouts() BEFORE event drain, so a timed-out
+// tick() must call Tcp.conn->check_timeouts() BEFORE event drain, so a timed-out
 // slot is already freed if an EVT_DISCONNECT arrives for the same slot.
 void test_fn_tick_timeout_before_event_drain_ordering()
 {

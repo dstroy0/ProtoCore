@@ -25,7 +25,7 @@
 
 #include "protocore.h"
 #include "network_drivers/physical/physical.h"
-#include "network_drivers/transport/listener.h" // listener_ip_allow_add_cidr
+#include "network_drivers/transport/tcp.h" // Tcp.listener->ip_allow_add_cidr
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
@@ -46,9 +46,9 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // Only these sources may connect; everything else is dropped at accept time.
-    listener_ip_allow_add_cidr("192.168.1.0/24"); // local /24
-    listener_ip_allow_add_cidr("10.0.0.5");       // one trusted host (bare address -> /32)
-    listener_ip_allow_add_cidr("2001:db8::/32");  // an IPv6 prefix
+    Tcp.listener->ip_allow_add_cidr("192.168.1.0/24"); // local /24
+    Tcp.listener->ip_allow_add_cidr("10.0.0.5");       // one trusted host (bare address -> /32)
+    Tcp.listener->ip_allow_add_cidr("2001:db8::/32");  // an IPv6 prefix
 
     on_http("/", HTTP_GET,
               [](uint8_t id, HttpReq *) { send_text(id, 200, "text/plain", "hello from an allowed address"); });

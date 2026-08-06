@@ -91,9 +91,9 @@ void ws_send_version_required(uint8_t slot_id)
                                "Content-Length: 0\r\n"
                                "Connection: close\r\n\r\n";
 
-    pc_conn_send(slot_id, resp, (proto_u16)(sizeof(resp) - 1));
-    pc_conn_flush(slot_id);
-    pc_conn_begin_close(slot_id); // dwell in CONN_CLOSING until the response drains
+    Tcp.conn->send(slot_id, resp, (proto_u16)(sizeof(resp) - 1));
+    Tcp.conn->flush(slot_id);
+    Tcp.conn->begin_close(slot_id); // dwell in CONN_CLOSING until the response drains
 
     http_reset(slot_id);
 }
@@ -152,8 +152,8 @@ proto_bool ws_do_upgrade(uint8_t slot_id, HttpReq *req, WsConnectHandler on_conn
     hlen = (int)pc_sb_finish(&sb_hdr2);
 #endif
 
-    pc_conn_send(slot_id, hdr, (proto_u16)hlen);
-    pc_conn_flush(slot_id);
+    Tcp.conn->send(slot_id, hdr, (proto_u16)hlen);
+    Tcp.conn->flush(slot_id);
 
     // Reset HTTP parser but keep the TCP slot -- WS owns it now
     http_reset(slot_id);
@@ -162,7 +162,7 @@ proto_bool ws_do_upgrade(uint8_t slot_id, HttpReq *req, WsConnectHandler on_conn
     if (!ws)
     {
         // No WS slot available -- abort the connection (transport owns the teardown)
-        pc_conn_abort_slot(slot_id);
+        Tcp.conn->abort_slot(slot_id);
         return PROTO_FALSE;
     }
 
@@ -198,8 +198,8 @@ proto_bool pc_sse_do_upgrade(uint8_t slot_id, HttpReq *req, SseConnectHandler on
                                   "Cache-Control: no-cache\r\n"
                                   "Connection: keep-alive\r\n\r\n";
 
-    pc_conn_send(slot_id, SSE_HDR, (proto_u16)(sizeof(SSE_HDR) - 1));
-    pc_conn_flush(slot_id);
+    Tcp.conn->send(slot_id, SSE_HDR, (proto_u16)(sizeof(SSE_HDR) - 1));
+    Tcp.conn->flush(slot_id);
 
     // Copy the path BEFORE resetting the parser: http_reset() zeroes the whole
     // HttpReq (including req->path), so a pointer into it would dangle. The saved
@@ -212,7 +212,7 @@ proto_bool pc_sse_do_upgrade(uint8_t slot_id, HttpReq *req, SseConnectHandler on
     SseConn *sse = pc_sse_alloc(slot_id, path);
     if (!sse)
     {
-        pc_conn_abort_slot(slot_id); // transport owns detach + reset + RST
+        Tcp.conn->abort_slot(slot_id); // transport owns detach + reset + RST
         return PROTO_FALSE;
     }
 
@@ -248,7 +248,7 @@ void ws_send_text(uint8_t ws_id, const char *text)
         // on a single-threaded run. It is a re-check for the marshalled (ARDUINO) send path.
         if (pc_conn_active(ws->slot_id))
         {
-            pc_conn_flush(ws->slot_id);
+            Tcp.conn->flush(ws->slot_id);
         }
     }
 }
@@ -269,7 +269,7 @@ void ws_send_binary(uint8_t ws_id, const uint8_t *data, uint16_t len)
         // connection, so the false half of this re-check is unreachable from a host test.
         if (pc_conn_active(ws->slot_id))
         {
-            pc_conn_flush(ws->slot_id);
+            Tcp.conn->flush(ws->slot_id);
         }
     }
 }
@@ -284,7 +284,7 @@ void ws_disconnect(uint8_t ws_id)
     ws_close(ws, WS_CLOSE_NORMAL);
     if (pc_conn_active(ws->slot_id))
     {
-        pc_conn_flush(ws->slot_id);
+        Tcp.conn->flush(ws->slot_id);
     }
     // handle() detects WS_CLOSED next tick and fires ws_close callback
 }
@@ -307,7 +307,7 @@ void pc_sse_send(uint8_t pc_sse_id, const char *data, const char *event, const c
         // has itself checked pc_conn_active(), so the slot is still live here.
         if (pc_conn_active(sse->slot_id))
         {
-            pc_conn_flush(sse->slot_id);
+            Tcp.conn->flush(sse->slot_id);
         }
     }
 }
@@ -330,7 +330,7 @@ void pc_sse_broadcast(const char *path, const char *data, const char *event, con
             // connection, so the false half of this re-check is unreachable from a host test.
             if (pc_conn_active(sse->slot_id))
             {
-                pc_conn_flush(sse->slot_id);
+                Tcp.conn->flush(sse->slot_id);
             }
         }
     }

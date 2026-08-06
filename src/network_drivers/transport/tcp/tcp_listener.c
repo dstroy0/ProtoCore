@@ -17,12 +17,12 @@
  * (listener.h includes tcp.h; tcp.c includes listener.h).
  */
 
-#include "listener.h"
+#include "tcp_listener.h"
 #include "board_drivers/board_profiles/pc_platform.h" // the target's queues, under our names
 #include "diffserv.h"                // DiffServ DSCP marking for accepted connections (compiles out when off)
 #include "net_addr.h"                // NetAddr.to_ip(): the stack's address as a pc_ip
 #include "network_drivers/tls/tls.h" // TLS handshake begin (self-stubbing)
-#include "tcp.h"                     // TcpConn, conn_pool: the slots an accept claims
+#include "tcp_conn.h"                     // TcpConn, conn_pool: the slots an accept claims
 #if PROTOCORE_HOT
 #include "network_drivers/session/worker.h" // pc_worker_wake() - nudge the owning worker task
 #endif
@@ -805,3 +805,18 @@ void listener_stop_dynamic(uint8_t idx)
         lst->queue = NULL;
     }
 }
+
+const TcpListenerNs TcpListener = {listener_stop,
+                                   listener_stop_all,
+                                   listener_stop_dynamic,
+                                   listener_enqueue,
+                                   listener_worker_queues_init,
+                                   listener_worker_queue,
+                                   listener_accept_allowed,
+                                   listener_accept_throttle_reset,
+                                   listener_accept_allowed_ip,
+                                   listener_per_ip_throttle_reset,
+                                   listener_ip_allow_add,
+                                   listener_ip_allow_add_cidr,
+                                   listener_ip_allowed,
+                                   listener_ip_allowlist_reset};

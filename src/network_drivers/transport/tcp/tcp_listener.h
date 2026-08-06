@@ -27,8 +27,8 @@
  * @date    2026
  */
 
-#ifndef PROTOCORE_LISTENER_H
-#define PROTOCORE_LISTENER_H
+#ifndef PROTOCORE_TCP_LISTENER_H
+#define PROTOCORE_TCP_LISTENER_H
 
 #include "board_drivers/board_profiles/pc_platform.h" // the target's queues and TCP, under our names
 #include "protocore_config.h"
@@ -232,6 +232,45 @@ proto_bool listener_ip_allowed(const pc_ip *ip);
 
 /** @brief Clear all allowlist rules (the allowlist becomes empty = allow all). */
 void listener_ip_allowlist_reset(void);
+
+/**
+ * @brief The accepting side of TCP: bound ports, their worker queues, and the accept-time gates.
+ *
+ * @var TcpListenerNs::stop                 tear one listener down
+ * @var TcpListenerNs::stop_all             tear every listener down
+ * @var TcpListenerNs::stop_dynamic         tear down only the dynamically started listeners
+ * @var TcpListenerNs::enqueue              post an event to the owning worker's queue
+ * @var TcpListenerNs::worker_queues_init   create the per-worker queues
+ * @var TcpListenerNs::worker_queue         the queue a worker drains
+ * @var TcpListenerNs::accept_allowed       the global fixed-window accept throttle
+ * @var TcpListenerNs::accept_throttle_reset  clear the global window
+ * @var TcpListenerNs::accept_allowed_ip    the per-source-address throttle bucket
+ * @var TcpListenerNs::per_ip_throttle_reset  clear every per-address bucket
+ * @var TcpListenerNs::ip_allow_add         add one address to the allowlist
+ * @var TcpListenerNs::ip_allow_add_cidr    add one CIDR rule to the allowlist
+ * @var TcpListenerNs::ip_allowed           the allowlist verdict for an address
+ * @var TcpListenerNs::ip_allowlist_reset   clear every allowlist rule
+ */
+typedef struct
+{
+    void (*stop)(uint8_t idx);
+    void (*stop_all)(void);
+    void (*stop_dynamic)(uint8_t idx);
+    proto_bool (*enqueue)(uint8_t listener_id, const TcpEvt *evt);
+    void (*worker_queues_init)(void);
+    pc_platform_queue (*worker_queue)(int worker_id);
+    proto_bool (*accept_allowed)(uint32_t now_ms);
+    void (*accept_throttle_reset)(void);
+    proto_bool (*accept_allowed_ip)(const pc_ip *ip, uint32_t now_ms);
+    void (*per_ip_throttle_reset)(void);
+    proto_bool (*ip_allow_add)(const pc_ip *network, uint8_t prefix_len);
+    proto_bool (*ip_allow_add_cidr)(const char *cidr);
+    proto_bool (*ip_allowed)(const pc_ip *ip);
+    void (*ip_allowlist_reset)(void);
+} TcpListenerNs;
+
+/** @brief The one symbol this module exports. */
+extern const TcpListenerNs TcpListener;
 
 PROTO_END_DECLS
 

@@ -9,14 +9,14 @@
 // that ignores the queue handle).
 
 #include "network_drivers/session/worker.h"
-#include "network_drivers/transport/listener.h"
+#include "network_drivers/transport/tcp.h"
 #include "network_drivers/transport/tcp.h"
 #include <Arduino.h> // set_millis
 #include <unity.h>
 
 void setUp(void)
 {
-    proto_tcp_pool_init(NULL);
+    Tcp.conn->init(NULL);
 }
 void tearDown(void)
 {
@@ -42,12 +42,12 @@ void test_check_timeouts_reaps_only_owned_slots(void)
     conn_pool[1].last_activity_ms = 0;
 
     // Worker 0 sweeps: only its own slot is reaped; worker 1's slot is untouched.
-    proto_tcp_check_timeouts(0);
+    Tcp.conn->check_timeouts(0);
     TEST_ASSERT_EQUAL_INT(CONN_FREE, (ConnState)conn_pool[0].state);
     TEST_ASSERT_EQUAL_INT(CONN_ACTIVE, (ConnState)conn_pool[1].state);
 
     // Worker 1 sweeps: now its own slot is reaped.
-    proto_tcp_check_timeouts(1);
+    Tcp.conn->check_timeouts(1);
     TEST_ASSERT_EQUAL_INT(CONN_FREE, (ConnState)conn_pool[1].state);
 }
 
@@ -96,40 +96,40 @@ void test_host_defer_runs_inline_and_rejects_null(void)
 // looked up by worker id, out-of-range ids (negative or >= count) report no queue.
 void test_listener_worker_queues_init_and_lookup(void)
 {
-    listener_worker_queues_init();
-    TEST_ASSERT_NOT_NULL(listener_worker_queue(0));
-    TEST_ASSERT_NOT_NULL(listener_worker_queue(1));
-    TEST_ASSERT_NULL(listener_worker_queue(-1));
-    TEST_ASSERT_NULL(listener_worker_queue(PC_WORKER_COUNT));
+    Tcp.listener->worker_queues_init();
+    TEST_ASSERT_NOT_NULL(Tcp.listener->worker_queue(0));
+    TEST_ASSERT_NOT_NULL(Tcp.listener->worker_queue(1));
+    TEST_ASSERT_NULL(Tcp.listener->worker_queue(-1));
+    TEST_ASSERT_NULL(Tcp.listener->worker_queue(PC_WORKER_COUNT));
 
-    listener_worker_queues_init(); // idempotent: a second call must not crash or reset queues
-    TEST_ASSERT_NOT_NULL(listener_worker_queue(0));
+    Tcp.listener->worker_queues_init(); // idempotent: a second call must not crash or reset queues
+    TEST_ASSERT_NOT_NULL(Tcp.listener->worker_queue(0));
 }
 
-// listener_enqueue() in multi-worker mode routes by the event's slot owner (not the
+// Tcp.listener->enqueue() in multi-worker mode routes by the event's slot owner (not the
 // listener id) and rejects an out-of-range owner before touching any queue.
 void test_enqueue_routes_by_slot_owner_and_rejects_bad_owner(void)
 {
-    listener_worker_queues_init();
-    proto_tcp_pool_init(NULL);
+    Tcp.listener->worker_queues_init();
+    Tcp.conn->init(NULL);
 
     conn_pool[0].owner = 1; // route to worker 1's queue
     TcpEvt evt = {EVT_DATA, 0, 0};
-    TEST_ASSERT_TRUE(listener_enqueue(0, &evt)); // listener_id is ignored in multi-worker mode
+    TEST_ASSERT_TRUE(Tcp.listener->enqueue(0, &evt)); // listener_id is ignored in multi-worker mode
 
     conn_pool[0].owner = PC_WORKER_COUNT; // out-of-range owner -> rejected
-    TEST_ASSERT_FALSE(listener_enqueue(0, &evt));
+    TEST_ASSERT_FALSE(Tcp.listener->enqueue(0, &evt));
 
     conn_pool[0].owner = 0;
     mock_queue_send_fail_once();
-    TEST_ASSERT_FALSE(listener_enqueue(0, &evt)); // full queue reported, not silently dropped
+    TEST_ASSERT_FALSE(Tcp.listener->enqueue(0, &evt)); // full queue reported, not silently dropped
 }
 
 // listener_accept_cb() round-robins each new connection's owner across the workers
 // (PC_WORKER_COUNT > 1 only) so slots partition evenly, wrapping back to 0.
 void test_accept_cb_round_robins_slot_owner(void)
 {
-    proto_tcp_pool_init(NULL);
+    Tcp.conn->init(NULL);
     TEST_ASSERT_EQUAL_INT32(1, listener_add(0, 80, PROTO_HTTP, PROTO_FALSE)); // also exercises the
                                                                               // WORKER_COUNT>1 branch
                                                                               // of listener_add() itself
@@ -144,18 +144,18 @@ void test_accept_cb_round_robins_slot_owner(void)
     TEST_ASSERT_TRUE(conn_pool[2].owner <= 1);
     TEST_ASSERT_NOT_EQUAL(conn_pool[0].owner, conn_pool[1].owner);
     TEST_ASSERT_EQUAL_UINT8(conn_pool[0].owner, conn_pool[2].owner); // wrapped back to the first owner
-    listener_stop(0);
+    Tcp.listener->stop(0);
 }
 
 // listener_add_dynamic() also creates the per-worker queues (idempotent with the static
 // listener_add() path above).
 void test_dynamic_listener_creates_worker_queues(void)
 {
-    proto_tcp_pool_init(NULL);
+    Tcp.conn->init(NULL);
     TEST_ASSERT_EQUAL_INT32(1, listener_add_dynamic(2, 4444, PROTO_HTTP));
-    TEST_ASSERT_NOT_NULL(listener_worker_queue(0));
-    TEST_ASSERT_NOT_NULL(listener_worker_queue(1));
-    listener_stop_dynamic(2);
+    TEST_ASSERT_NOT_NULL(Tcp.listener->worker_queue(0));
+    TEST_ASSERT_NOT_NULL(Tcp.listener->worker_queue(1));
+    Tcp.listener->stop_dynamic(2);
 }
 
 int main(void)

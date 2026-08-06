@@ -8,7 +8,7 @@
 // directly with a fabricated pcb rather than needing a real lwIP accept event).
 
 #include "network_drivers/transport/diffserv.h"
-#include "network_drivers/transport/listener.h"
+#include "network_drivers/transport/tcp.h"
 #include "network_drivers/transport/tcp.h"
 #include <unity.h>
 
@@ -90,14 +90,14 @@ static void test_listen_set_dscp_override_and_sentinel()
     TEST_ASSERT_EQUAL_UINT8(PC_DSCP_UNSET, listener_pool[0].dscp);
 
     TEST_ASSERT_FALSE(pc_listen_set_dscp(9999, PC_DSCP_EF)); // no listener on that port
-    listener_stop(0);
+    Tcp.listener->stop(0);
 }
 
 // listener_accept_cb() applies the resolved per-connection DSCP straight to the new pcb's TOS
 // field at accept time: a per-listener override wins over the server-wide default.
 static void test_accept_cb_applies_per_listener_dscp_override()
 {
-    proto_tcp_pool_init(NULL);
+    Tcp.conn->init(NULL);
     TEST_ASSERT_EQUAL(1, listener_add(0, 8080, PROTO_HTTP, PROTO_FALSE));
     TEST_ASSERT_TRUE(pc_listen_set_dscp(8080, PC_DSCP_EF));
 
@@ -105,14 +105,14 @@ static void test_accept_cb_applies_per_listener_dscp_override()
     pcb.tos = 0;
     TEST_ASSERT_EQUAL_INT(PC_NET_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb, PC_NET_OK));
     TEST_ASSERT_EQUAL_UINT8(0xB8, pcb.tos); // EF, straight from the listener override
-    listener_stop(0);
+    Tcp.listener->stop(0);
 }
 
 // With no per-listener override (PC_DSCP_UNSET, the default), the accept path falls back to
 // the server-wide default DSCP.
 static void test_accept_cb_falls_back_to_server_default_dscp()
 {
-    proto_tcp_pool_init(NULL);
+    Tcp.conn->init(NULL);
     TEST_ASSERT_EQUAL(1, listener_add(0, 8080, PROTO_HTTP, PROTO_FALSE)); // no override -> UNSET
     DiffServ.set_default(PC_DSCP_AF41);
 
@@ -120,21 +120,21 @@ static void test_accept_cb_falls_back_to_server_default_dscp()
     pcb.tos = 0;
     TEST_ASSERT_EQUAL_INT(PC_NET_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb, PC_NET_OK));
     TEST_ASSERT_EQUAL_UINT8(0x88, pcb.tos); // server-wide default applied
-    listener_stop(0);
+    Tcp.listener->stop(0);
 }
 
 // A resolved DSCP of 0 (best-effort, the setUp() baseline) leaves the pcb's TOS field alone
 // rather than writing a redundant 0 over it.
 static void test_accept_cb_skips_tos_write_at_best_effort()
 {
-    proto_tcp_pool_init(NULL);
+    Tcp.conn->init(NULL);
     TEST_ASSERT_EQUAL(1, listener_add(0, 8080, PROTO_HTTP, PROTO_FALSE)); // UNSET override, default dscp == 0
 
     pc_pcb pcb;
     pcb.tos = 0x77; // sentinel: must survive untouched
     TEST_ASSERT_EQUAL_INT(PC_NET_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb, PC_NET_OK));
     TEST_ASSERT_EQUAL_UINT8(0x77, pcb.tos);
-    listener_stop(0);
+    Tcp.listener->stop(0);
 }
 
 // listener_add_dynamic() (the SSH-remote-forward listener path) also resets the
@@ -143,7 +143,7 @@ static void test_dynamic_listener_inherits_default_dscp()
 {
     TEST_ASSERT_EQUAL_INT32(1, listener_add_dynamic(1, 2222, PROTO_HTTP));
     TEST_ASSERT_EQUAL_UINT8(PC_DSCP_UNSET, listener_pool[1].dscp);
-    listener_stop_dynamic(1);
+    Tcp.listener->stop_dynamic(1);
 }
 
 int main()

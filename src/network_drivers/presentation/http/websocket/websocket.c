@@ -202,11 +202,11 @@ static proto_bool ws_emit_one(TcpConn *conn, uint8_t b0, const uint8_t *payload,
         header[3] = (uint8_t)len;
         hlen = 4;
     }
-    if (!pc_conn_send(conn->id, header, hlen))
+    if (!Tcp.conn->send(conn->id, header, hlen))
     {
         return PROTO_FALSE;
     }
-    if (len > 0 && payload && !pc_conn_send(conn->id, payload, len))
+    if (len > 0 && payload && !Tcp.conn->send(conn->id, payload, len))
     {
         return PROTO_FALSE;
     }
@@ -227,7 +227,7 @@ proto_bool ws_send_frame(WsConn *ws, WsOpcode opcode, const uint8_t *payload, ui
     // Compress data frames when permessage-deflate is negotiated. Control frames
     // (close/ping/pong) are never compressed (RFC 7692 sec 5.1). Scratch + output
     // are borrowed from the per-dispatch arena and released when this scope exits;
-    // pc_conn_send copies (TCP_WRITE_FLAG_COPY) so the buffer can go immediately.
+    // Tcp.conn->send copies (TCP_WRITE_FLAG_COPY) so the buffer can go immediately.
     // PC_WS_DEFLATE_MAX bounds what the compressor accepts, so the borrow below has a compile-time
     // worst case and cannot fail. A longer message is sent uncompressed, which the per-message RSV1
     // flag makes legal.
@@ -310,7 +310,7 @@ void ws_close(WsConn *ws, WsCloseCode code)
 
     if (pc_conn_active(ws->slot_id))
     {
-        pc_conn_flush(ws->slot_id);
+        Tcp.conn->flush(ws->slot_id);
     }
 
     ws->parse_state = WS_CLOSED;
@@ -343,7 +343,7 @@ static void ws_finish_frame(WsConn *ws, TcpConn *conn)
             ws_send_frame(ws, WS_OP_PONG, ws->ctl_buf, (uint16_t)ws->payload_idx);
             if (pc_conn_active(conn->id))
             {
-                pc_conn_flush(conn->id);
+                Tcp.conn->flush(conn->id);
             }
         }
         else if (ws->opcode == WS_OP_CLOSE)

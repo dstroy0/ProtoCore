@@ -63,14 +63,14 @@ Every layer that sends bytes calls the transport API; nobody calls lwIP `tcp_*`
 directly:
 
 ```
-app / presentation  -->  pc_conn_send / pc_conn_flush / pc_conn_sndbuf
+app / presentation  -->  Tcp.conn->send / Tcp.conn->flush / pc_conn_sndbuf
                          (TLS slots route through pc_tls_write)
                               |
                          pc_tcp_marshal (PC_OP_*)  -->  tcpip_thread: tcp_write / tcp_output
 ```
 
 The **same marshal rule covers every raw lwIP call, not just app data**: the TCP
-listener bring-up (`listener_add` / `listener_stop`), the UDP transport (`pc_udp_*`,
+listener bring-up (`listener_add` / `Tcp.listener->stop`), the UDP transport (`pc_udp_*`,
 used by SNMP / CoAP / captive-DNS / syslog / telemetry), the outbound client
 (`pc_client`), and the DNS resolver all route their `tcp_*` / `udp_*` through
 `tcpip_api_call`. This is mandatory on arduino-esp32 3.x, where lwIP core-locking
@@ -87,7 +87,7 @@ worker:       server_tick -> dispatch_event -> on_data  -->  drain the ring (adv
 ```
 
 **Receive-window flow control: now single-owner (transport).** `recv_cb` no longer
-ACKs on copy. The worker calls `pc_conn_ack_consumed(slot)` once per slot per loop
+ACKs on copy. The worker calls `Tcp.conn->ack_consumed(slot)` once per slot per loop
 and transport reopens the TCP window by exactly the bytes drained since the last ACK
 (ack-on-consume; `tcp_recved` marshaled). The window therefore tracks ring occupancy
 and a slow consumer cannot overflow the ring. **TCP-level requirement:**
@@ -102,7 +102,7 @@ See docs/BUGS.md "RX flow-control deadlock".
 `tls/tls.cpp`, and the conn_pool-ring services `modbus.cpp` / `opcua.cpp` (their
 duplicated `ring_peek/consume/avail` are now thin adapters over the API). The read
 functions only consume; the window is reopened by the worker's single
-`pc_conn_ack_consumed()` per loop - so there is exactly one place that touches the
+`Tcp.conn->ack_consumed()` per loop - so there is exactly one place that touches the
 ring indices for draining and one that ACKs.
 
 ## Outbound clients - the unified client transport (pc_client)
@@ -111,10 +111,10 @@ The device's clients (`http_client`, `mqtt`, `ws_client`) do not each own a raw 
 stack: they share **`pc_client`** (`network_drivers/transport/pc_client.*`), the
 client-side peer of the server transport. It is a small fixed pool of outbound
 connections with the same rules - every raw `tcp_*()` marshaled to tcpip_thread, a
-per-connection wire ring, and **ack-on-consume** (`pc_client_read()` reopens the
+per-connection wire ring, and **ack-on-consume** (`Tcp.client->read()` reopens the
 window as the caller drains; `PC_CLIENT_RX_BUF >= TCP_WND`), so client and server
 share one flow-control model. TLS clients layer `pc_tls_client_session_*` on top, pointing
-the BIO at `pc_client_send` / `pc_client_read` (the ring carries ciphertext).
+the BIO at `Tcp.client->send` / `Tcp.client->read` (the ring carries ciphertext).
 
 The `s_rx` ring inside `mqtt.cpp` / `ws_client.cpp` is a separate **plaintext frame
 buffer** (post-decrypt for TLS, the assembly buffer the protocol parser reads),
@@ -145,7 +145,7 @@ each connection streams to its own file. This fixed the concurrent-PUT clobber
 | Concern              | Owner (target)          | Status                                            |
 | -------------------- | ----------------------- | ------------------------------------------------- |
 | Socket TX            | transport `pc_conn_*`   | DONE                                              |
-| RX receive window    | transport               | DONE (`pc_conn_ack_consumed`, ack-on-consume)     |
+| RX receive window    | transport               | DONE (`Tcp.conn->ack_consumed`, ack-on-consume)   |
 | RX ring read/drain   | transport (read API)    | DONE (`pc_conn_read*`; consumers off the ring)    |
 | Streaming sink state | per-slot, slot-aware    | DONE (`g_dav_put[MAX_CONNS]`, slot-aware hooks)   |
 | Event routing        | session (owner queue)   | DONE                                              |
@@ -158,7 +158,7 @@ each connection streams to its own file. This fixed the concurrent-PUT clobber
    / `pc_conn_read` / `pc_conn_peek` / `pc_conn_consume` (inline, tcp.h).
 2. **DONE - migrate the consumers** - HTTP / websocket / telnet / ssh / tls + the
    conn_pool-ring services (modbus / opcua) all drain through the API; no external
-   `rx_tail` modulo remains. The read functions consume only; `pc_conn_ack_consumed`
+   `rx_tail` modulo remains. The read functions consume only; `Tcp.conn->ack_consumed`
    stays the one place that reopens the window (per loop), so draining and ACKing
    each have exactly one owner. HW: 10/10 50 KB byte-exact, backpressure 0.
 3. **DONE - slot-aware streaming hooks** - `HttpStreamDataCb(HttpReq*, ...)` +
@@ -192,7 +192,7 @@ struct ProtoHandler { on_accept; on_data; on_close; on_poll; }; // all take a sl
 `conn_pool[slot].proto`; `handle()` calls `on_poll` for each active slot. Every
 handler reads its bytes through the transport RX API (`pc_conn_read` copy-out, or
 `pc_conn_peek`+`pc_conn_consume` zero-copy - never the ring internals) and writes
-through `pc_conn_send`/`pc_conn_flush`. So Telnet, SSH (+ `PROTO_SSH_RFWD`), Modbus,
+through `Tcp.conn->send`/`Tcp.conn->flush`. So Telnet, SSH (+ `PROTO_SSH_RFWD`), Modbus,
 and OPC UA are fully homogeneous: each is a module that exposes a `ProtoHandler` and
 touches the core only through those two APIs.
 

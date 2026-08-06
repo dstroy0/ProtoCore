@@ -1267,12 +1267,12 @@ static void raw_send(uint8_t slot, const void *data, size_t n)
     {
         return;
     }
-    pc_conn_send(slot, data, (proto_u16)n);
-    pc_conn_flush(slot);
+    Tcp.conn->send(slot, data, (proto_u16)n);
+    Tcp.conn->flush(slot);
 }
 static void close_conn(uint8_t slot)
 {
-    pc_conn_close(slot); // transport owns detach + slot reset + close
+    Tcp.conn->close(slot); // transport owns detach + slot reset + close
 }
 
 void pc_opcua_rx(uint8_t slot)

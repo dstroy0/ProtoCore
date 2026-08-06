@@ -587,7 +587,7 @@ worst cases instead of guessed.
 (a different group) and already carry file-scope owned contexts `s_stats` / `s_metrics`, which is
 the shape the group needs.
 
-- **`u16_t` is an lwIP type used in the core** - `pc_conn_send(slot, val, (u16_t)vlen)` (82, 113 and
+- **`u16_t` is an lwIP type used in the core** - `Tcp.conn->send(slot, val, (u16_t)vlen)` (82, 113 and
   throughout). It is defined nowhere in `src/`; it comes from lwIP's headers. **31 occurrences**
   across `src/server/` and `protocore.*`. Vendor type in the core's own code, which is what
   `board_drivers/` exists to contain.
