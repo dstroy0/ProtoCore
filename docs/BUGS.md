@@ -8,22 +8,6 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ---
 
-## begin() reports success when the HTTP/3 server failed to bind
-
-- **Status:** OPEN, found tracing `pc_h3_running` while deciding what belongs to `ServerCtx`.
-- **Symptom:** with `PC_ENABLE_HTTP3` and `pc_h3_cert()` set, `proto_begin()` returns `PC_OK` when
-  the QUIC server did not come up. The application serves HTTP/1.1 and believes it is also serving
-  HTTP/3. Nothing reports otherwise.
-- **Root cause:** a TCP listener that fails to bind makes `proto_begin()` return
-  `PC_ERR_LISTEN_FAILED`. `pc_quic_server_begin()` returns the same kind of answer and it was stored
-  in a `ServerCtx` flag rather than tested, so the UDP half of the same function has no failure
-  path. Fail-open, the same direction as the credential and mount-table defects above.
-- **Fix:** not applied. Making it return `PC_ERR_LISTEN_FAILED` changes what `begin()` reports to
-  every HTTP/3 application, which is a behavior change rather than a repair, so it is the owner's
-  call. The redundant `ServerCtx` copy of the flag is gone; the discard is now explicit at the call.
-
----
-
 ## Two includes in protocore.c were gated on a flag their callers do not carry
 
 - **Status:** FIXED (2026-08-06), found auditing the include block after the dispatch-chain move.
