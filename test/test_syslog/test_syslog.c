@@ -10,6 +10,18 @@
 
 #include <unity.h>
 
+// The client queues; poll() moves the frame to the wire, which is where the capture is written.
+static const uint8_t *udp_cap(void)
+{
+    Udp.client->poll();
+    return Udp.client->captured();
+}
+static size_t udp_cap_len(void)
+{
+    Udp.client->poll();
+    return Udp.client->captured_len();
+}
+
 void setUp()
 {
 }
@@ -71,23 +83,23 @@ void test_length_matches_strlen()
 // pc_syslog_init + pc_syslog_log format the record and hand it to Udp.client->sendto.
 void test_init_and_log_captured()
 {
-    Udp.listener->capture_enable();
-    Udp.listener->capture_reset();
+    Udp.client->capture_enable();
+    Udp.client->capture_reset();
     pc_syslog_init("192.168.1.1", 514, "host1", "myapp", SYSLOG_FAC_LOCAL0);
     TEST_ASSERT_TRUE(pc_syslog_log(SYSLOG_INFO, "hello"));
     const char *expect = "<134>1 - host1 myapp - - - hello";
-    TEST_ASSERT_EQUAL_UINT(strlen(expect), Udp.listener->captured_len());
-    TEST_ASSERT_EQUAL_MEMORY(expect, Udp.listener->captured(), Udp.listener->captured_len());
+    TEST_ASSERT_EQUAL_UINT(strlen(expect), udp_cap_len());
+    TEST_ASSERT_EQUAL_MEMORY(expect, udp_cap(), udp_cap_len());
 }
 
 // With no server configured the client is not ready and sends nothing.
 void test_log_not_ready_when_no_server()
 {
-    Udp.listener->capture_enable();
-    Udp.listener->capture_reset();
+    Udp.client->capture_enable();
+    Udp.client->capture_reset();
     pc_syslog_init(NULL, 514, "h", "a", SYSLOG_FAC_USER); // null server_ip -> copy_field empties it
     TEST_ASSERT_FALSE(pc_syslog_log(SYSLOG_INFO, "x"));
-    TEST_ASSERT_EQUAL_UINT(0, Udp.listener->captured_len());
+    TEST_ASSERT_EQUAL_UINT(0, udp_cap_len());
 }
 
 // A null output, a zero cap, and out-of-range PRI values are handled defensively.
@@ -106,14 +118,14 @@ void test_format_null_and_pri_clamp()
 // An over-long hostname is truncated to PC_SYSLOG_FIELD_MAX - 1 characters.
 void test_init_truncates_long_fields()
 {
-    Udp.listener->capture_enable();
-    Udp.listener->capture_reset();
+    Udp.client->capture_enable();
+    Udp.client->capture_reset();
     char longname[PC_SYSLOG_FIELD_MAX + 16];
     memset(longname, 'H', sizeof(longname) - 1);
     longname[sizeof(longname) - 1] = '\0';
     pc_syslog_init("10.0.0.1", 514, longname, "a", SYSLOG_FAC_LOCAL0);
     TEST_ASSERT_TRUE(pc_syslog_log(SYSLOG_INFO, "m"));
-    const char *sent = (const char *)Udp.listener->captured();
+    const char *sent = (const char *)udp_cap();
     const char *host = strstr(sent, "1 - ") + 4; // start of the HOSTNAME field
     size_t hcount = 0;
     while (host[hcount] == 'H')
@@ -128,11 +140,11 @@ void test_init_truncates_long_fields()
 // not-ready, since server_ip[0] is '\0'.
 void test_init_empty_server_ip_not_ready()
 {
-    Udp.listener->capture_enable();
-    Udp.listener->capture_reset();
+    Udp.client->capture_enable();
+    Udp.client->capture_reset();
     pc_syslog_init("", 514, "host", "app", SYSLOG_FAC_LOCAL0);
     TEST_ASSERT_FALSE(pc_syslog_log(SYSLOG_INFO, "x"));
-    TEST_ASSERT_EQUAL_UINT(0, Udp.listener->captured_len());
+    TEST_ASSERT_EQUAL_UINT(0, udp_cap_len());
 }
 
 // An empty (non-null) hostname and a null appname exercise the remaining branch of each field's
@@ -172,8 +184,8 @@ void test_format_append_boundaries()
 // (the `n == 0` true arm, never reached by test_init_and_log_captured's fitting message).
 void test_log_overflow_when_ready()
 {
-    Udp.listener->capture_enable();
-    Udp.listener->capture_reset();
+    Udp.client->capture_enable();
+    Udp.client->capture_reset();
     char longname[PC_SYSLOG_FIELD_MAX + 16];
     memset(longname, 'H', sizeof(longname) - 1);
     longname[sizeof(longname) - 1] = '\0';
@@ -184,7 +196,7 @@ void test_log_overflow_when_ready()
     // header (~1 + 3 + 5 + 31 + 1 + 31 + 7 = 79 bytes) + a 239-byte message overflows the 256-byte
     // scratch buffer, so the format call inside pc_syslog_log() returns 0.
     TEST_ASSERT_FALSE(pc_syslog_log(SYSLOG_INFO, longmsg));
-    TEST_ASSERT_EQUAL_UINT(0, Udp.listener->captured_len());
+    TEST_ASSERT_EQUAL_UINT(0, udp_cap_len());
 }
 
 int main()

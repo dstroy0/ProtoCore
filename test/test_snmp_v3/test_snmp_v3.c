@@ -21,6 +21,18 @@
 
 #include <unity.h>
 
+// The client queues; poll() moves the frame to the wire, which is where the capture is written.
+static const uint8_t *udp_cap(void)
+{
+    Udp.client->poll();
+    return Udp.client->captured();
+}
+static size_t udp_cap_len(void)
+{
+    Udp.client->poll();
+    return Udp.client->captured_len();
+}
+
 static const uint32_t OID_SYSDESCR[] = {1, 3, 6, 1, 2, 1, 1, 1, 0};
 static const char *SYSDESCR_VAL = "PC v3 agent";
 
@@ -573,15 +585,15 @@ static proto_bool find_inform_with_reqid(const uint8_t *d, size_t n, uint32_t re
 void test_inform_v3_builds_informrequest()
 {
     pc_snmp_v3_set_user("myuser", "authpass12", ""); // auth-only -> plaintext scopedPDU
-    Udp.listener->capture_enable();
-    Udp.listener->capture_reset();
+    Udp.client->capture_enable();
+    Udp.client->capture_reset();
 
     const uint32_t reqid = 0x4321;
     proto_bool ok = pc_snmp_inform_v3("127.0.0.1", 162, reqid, OID_SYSDESCR, 9, NULL, 0);
     TEST_ASSERT_TRUE(ok); // built + "sent" through the capturing stub
 
-    const uint8_t *d = Udp.listener->captured();
-    size_t n = Udp.listener->captured_len();
+    const uint8_t *d = udp_cap();
+    size_t n = udp_cap_len();
     TEST_ASSERT_NOT_NULL(d);
     TEST_ASSERT_GREATER_THAN(0, (int)n);
     TEST_ASSERT_EQUAL_HEX8(0x30, d[0]); // outer SEQUENCE
@@ -686,9 +698,9 @@ void test_v3_notify_paths()
     TEST_ASSERT_FALSE(pc_snmp_trap_v3("192.168.1.1", 162, trap_oid, 9, NULL, 0));
 
     pc_snmp_v3_set_user("myuser", "authpass12", "privpass12");
-    Udp.listener->capture_enable();
+    Udp.client->capture_enable();
     TEST_ASSERT_TRUE(pc_snmp_trap_v3("192.168.1.1", 162, trap_oid, 9, NULL, 0));
-    TEST_ASSERT_TRUE(Udp.listener->captured_len() > 0);
+    TEST_ASSERT_TRUE(udp_cap_len() > 0);
 }
 
 // Build a v3 message wrapping a caller-supplied (possibly malformed) *plaintext*
@@ -934,7 +946,7 @@ void test_v3_auth_edge_rejections(void)
 void test_v3_notify_overflow_guards()
 {
     pc_snmp_v3_set_user("myuser", "authpass12", "privpass12");
-    Udp.listener->capture_enable();
+    Udp.client->capture_enable();
     uint32_t trap_oid[] = {1, 3, 6, 1, 4, 1, 49374, 0, 1};
     uint32_t vb_oid[] = {1, 3, 6, 1, 4, 1, 49374, 5, 0};
     static uint8_t big[1600];
@@ -1344,18 +1356,18 @@ void test_v3_init_length_guards_and_null_user()
 
 // A v3 trap reports failure when the transport refuses the datagram. The host UDP stub
 // only accepts a send while capture is armed, so this test MUST run before any test that
-// calls Udp.listener->capture_enable() - there is no way to disarm it again.
+// calls Udp.client->capture_enable() - there is no way to disarm it again.
 void test_v3_trap_reports_transport_failure()
 {
     uint32_t trap_oid[] = {1, 3, 6, 1, 4, 1, 49374, 0, 1};
-    TEST_ASSERT_EQUAL_size_t(0, Udp.listener->captured_len()); // capture still disarmed
+    TEST_ASSERT_EQUAL_size_t(0, udp_cap_len()); // capture still disarmed
     TEST_ASSERT_FALSE(pc_snmp_trap_v3("192.168.1.1", 162, trap_oid, 9, NULL, 0));
 }
 
 int main()
 {
     UNITY_BEGIN();
-    RUN_TEST(test_v3_trap_reports_transport_failure); // must precede any Udp.listener->capture_enable()
+    RUN_TEST(test_v3_trap_reports_transport_failure); // must precede any Udp.client->capture_enable()
     RUN_TEST(test_v3_truncated_fields_fail_closed);
     RUN_TEST(test_v3_outer_tag_and_empty_flags);
     RUN_TEST(test_v3_scoped_truncated_headers);
