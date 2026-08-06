@@ -307,5 +307,389 @@ void allow_append(char *buf, size_t cap, const char *m)
     }
 }
 
-const HttpNs Http = {status_text,       parse_method, method_name, path_matches,
-                     match_path_params, req_is_head,  allow_append};
+// Send a terminal text/plain error response that closes the connection: the
+// status reason (e.g. "405 Method Not Allowed"), one optional pre-formatted extra
+// header (CRLF-terminated, e.g. "Allow: GET\r\n"), then Content-Type/Length and
+// "Connection: close". Begins the CONN_CLOSING dwell so the bytes drain before
+// teardown; HEAD omits the body. One owner for the error-and-close path.
+static void send_error_close(uint8_t slot_id, const char *status, const char *extra_hdr, const char *body)
+{
+    TcpConn *conn = &conn_pool[slot_id];
+    if (conn->state != CONN_ACTIVE || conn->pcb == NULL)
+    {
+        http_reset(slot_id);
+        return;
+    }
+
+    int blen = (int)proto_scan_nul(body, 0xFFFF);
+    char header[RESP_HDR_BUF_SIZE];
+    // (send_method_not_allowed, send_too_many_requests) build a non-null header string. Kept so the
+    // parameter stays optional for a future caller with nothing extra to add.
+    pc_sb sb_header = {header, sizeof(header), 0, PROTO_TRUE};
+    pc_sb_put(&sb_header, "HTTP/1.1 ");
+    pc_sb_put(&sb_header, status);
+    pc_sb_put(&sb_header, "\r\n");
+    pc_sb_put(&sb_header, extra_hdr ? extra_hdr : "");
+    pc_sb_put(&sb_header, "Content-Type: ");
+    pc_sb_put(&sb_header, PC_MIME_TEXT_PLAIN);
+    pc_sb_put(&sb_header, "\r\nContent-Length: ");
+    pc_sb_i64(&sb_header, (int64_t)(blen));
+    pc_sb_put(&sb_header, "\r\nConnection: close\r\n\r\n");
+    int hlen = (int)pc_sb_finish(&sb_header);
+
+    // The last write carries the flush: Tcp.conn->send_flush is write+tcp_output in one marshal, so
+    // the response leaves in a single trip whether or not a body follows the header.
+    if (blen > 0 && !Http.req_is_head(slot_id))
+    {
+        Tcp.conn->send(slot_id, header, (proto_u16)hlen);
+        Tcp.conn->send_flush(slot_id, body, (proto_u16)blen);
+    }
+    else
+    {
+        Tcp.conn->send_flush(slot_id, header, (proto_u16)hlen);
+    }
+    Tcp.conn->begin_close(slot_id); // dwell in CONN_CLOSING until the response drains
+    http_reset(slot_id);
+}
+
+// Send 405 Method Not Allowed with the required Allow header (RFC 7231 §6.5.5).
+static void send_method_not_allowed(uint8_t slot_id, const char *allow)
+{
+    char extra[80];
+    pc_sb sb_extra = {extra, sizeof(extra), 0, PROTO_TRUE};
+    pc_sb_put(&sb_extra, "Allow: ");
+    pc_sb_put(&sb_extra, allow);
+    pc_sb_put(&sb_extra, "\r\n");
+    if (pc_sb_finish(&sb_extra) == 0)
+    {
+        extra[0] = '\0';
+    }
+    send_error_close(slot_id, "405 Method Not Allowed", extra, "Method Not Allowed");
+}
+
+// The peer's family-tagged source address for the connection in slot_id (unspecified on native /
+// no pcb). Used as the auth-lockout bucket key - the full IPv4 or IPv6 address, so a v6 peer is
+// never flattened onto a shared v4 bucket nor folded into a collideable hash.
+static pc_ip lockout_client_ip(uint8_t slot_id)
+{
+    pc_ip ip;
+    ip.family = PC_IP_NONE;
+    Tcp.conn->remote_addr(slot_id, &ip);
+    return ip;
+}
+
+// 429 Too Many Requests with Retry-After (auth lockout active). Closes the
+// connection - mirrors send_method_not_allowed's PCB lifecycle.
+static void send_too_many_requests(uint8_t slot_id, uint32_t retry_after_s)
+{
+    char extra[40];
+    pc_sb sb_extra2 = {extra, sizeof(extra), 0, PROTO_TRUE};
+    pc_sb_put(&sb_extra2, "Retry-After: ");
+    pc_sb_u32(&sb_extra2, (uint32_t)((unsigned long)retry_after_s));
+    pc_sb_put(&sb_extra2, "\r\n");
+    if (pc_sb_finish(&sb_extra2) == 0)
+    {
+        extra[0] = '\0';
+    }
+    send_error_close(slot_id, "429 Too Many Requests", extra, "Too Many Requests");
+}
+
+static proto_bool route_admits(const Route *r, uint8_t slot_id, HttpReq *req)
+{
+    if (!r->is_active)
+    {
+        return PROTO_FALSE;
+    }
+    proto_bool matched = r->is_regex   ? regex_match(r->path, req->path)
+                         : r->is_param ? Http.match_path_params(r->path, req->path, req)
+                                       : Http.path_matches(r->path, r->is_wildcard, req->path);
+    if (!matched)
+    {
+        return PROTO_FALSE;
+    }
+    // Per-route interface gate: a route bound to STA/AP is invisible on the
+    // other interface (falls through to other routes / 404).
+    if (r->iface_filter != PC_IFACE_ANY && r->iface_filter != pc_conn_iface(slot_id))
+    {
+        return PROTO_FALSE;
+    }
+    return PROTO_TRUE;
+}
+
+static proto_bool pc_csrf_gate(uint8_t slot_id, HttpReq *req, HttpMethod method)
+{
+    // Built-in token endpoint: GET /csrf issues a signed token (also set as the
+    // csrf cookie) for clients to echo in X-CSRF-Token on state-changing requests.
+    if (method == HTTP_GET && proto_eq_str(req->path, "/csrf", sizeof("/csrf")))
+    {
+        char tok[CSRF_TOKEN_BUF];
+        if (pc_csrf_issue(tok, sizeof(tok)) > 0)
+        {
+            set_cookie(slot_id, "csrf", tok, "Path=/; SameSite=Strict");
+            char body[CSRF_TOKEN_BUF + 16];
+            pc_sb sb_body = {body, sizeof(body), 0, PROTO_TRUE};
+            pc_sb_put(&sb_body, "{\"token\":\"");
+            pc_sb_put(&sb_body, tok);
+            pc_sb_put(&sb_body, "\"}");
+            if (pc_sb_finish(&sb_body) == 0)
+            {
+                body[0] = '\0';
+            }
+            send_text(slot_id, 200, PC_MIME_JSON, body);
+        }
+        else
+        {
+            send_text(slot_id, 500, PC_MIME_TEXT_PLAIN, "CSRF unavailable");
+        }
+        return PROTO_TRUE;
+    }
+
+    // Enforce CSRF on every state-changing method: require a valid signed
+    // X-CSRF-Token header (GET / HEAD / OPTIONS are exempt - not state-changing).
+    if (method == HTTP_POST || method == HTTP_PUT || method == HTTP_PATCH || method == HTTP_DELETE)
+    {
+        const char *tok = http_get_header(req, "X-CSRF-Token");
+        if (!tok || !pc_csrf_verify(tok))
+        {
+            send_text(slot_id, 403, PC_MIME_TEXT_PLAIN, "CSRF token missing or invalid");
+            return PROTO_TRUE;
+        }
+    }
+    return PROTO_FALSE;
+}
+
+static void handle_ws_route(uint8_t slot_id, HttpReq *req, HttpMethod method, const Route *r)
+{
+    const char *upgrade_hdr = http_get_header(req, "Upgrade");
+    // RFC 6455 4.2.1: a valid handshake needs Upgrade: websocket AND a Connection
+    // header that includes the "Upgrade" token.
+    proto_bool is_ws_upgrade = (method == HTTP_GET) && (upgrade_hdr != NULL) &&
+                               proto_eq_str_ci(upgrade_hdr, "websocket", sizeof("websocket")) &&
+                               pc_http_conn_has_token(http_get_header(req, "Connection"), "upgrade");
+    if (!is_ws_upgrade)
+    {
+        send_text(slot_id, 400, PC_MIME_TEXT_PLAIN, "WebSocket upgrade required");
+        return;
+    }
+    // RFC 6455 §4.2.1: only version 13 is supported; otherwise 426.
+    const char *ws_ver = http_get_header(req, "Sec-WebSocket-Version");
+    if (ws_ver == NULL || !proto_eq_str(ws_ver, "13", sizeof("13")))
+    {
+        ws_send_version_required(slot_id);
+        return;
+    }
+    // A failed upgrade here means a malformed/oversized Sec-WebSocket-Key (a
+    // client error, RFC 6455 4.2.1), so answer 400 rather than 503.
+    if (!ws_do_upgrade(slot_id, req, ws_route_connect(r->ws_id)))
+    {
+        send_text(slot_id, 400, PC_MIME_TEXT_PLAIN, "Bad WebSocket handshake");
+    }
+}
+
+static proto_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const Route *r)
+{
+#if PC_ENABLE_AUTH_LOCKOUT
+    pc_ip cip = lockout_client_ip(slot_id);
+#if PC_ENABLE_FORWARDED_TRUST
+    // Behind a trusted reverse proxy, key the lockout on the original client (the proxy's Forwarded /
+    // X-Forwarded-For), not the proxy's shared TCP address. Ignored for a direct/untrusted peer, so a
+    // spoofed header can neither evade a lockout nor frame another address.
+    {
+        char fbuf[PC_IP_STR_MAX];
+        const char *fwd = http_forwarded_client(req, fbuf, sizeof(fbuf), NULL) ? fbuf : NULL;
+        pc_ip eff;
+        pc_forwarded_effective_ip(&cip, fwd, &eff);
+        cip = eff;
+    }
+#endif
+    uint32_t now = (uint32_t)pc_millis();
+    uint32_t remain = auth_lockout_remaining_ms(&cip, now);
+    if (remain > 0)
+    {
+        // Address is locked out: 429 + Retry-After, no credential check.
+        send_too_many_requests(slot_id, (remain + 999) / 1000);
+        return PROTO_FALSE;
+    }
+#endif
+    proto_bool stale = PROTO_FALSE;
+    proto_bool ok = Auth.check(slot_id, req, r->auth_id, &stale);
+#if PC_ENABLE_AUTH_LOCKOUT
+    // A stale-nonce retry carries valid credentials, so it is not a failed
+    // attempt: don't count it toward the lockout (nor reset the counter).
+    if (ok)
+    {
+        auth_lockout_succeed(&cip);
+    }
+    else if (!stale)
+    {
+        auth_lockout_fail(&cip, now);
+    }
+#endif
+    if (!ok)
+    {
+        Auth.challenge(slot_id, r->auth_id, stale);
+        return PROTO_FALSE;
+    }
+    return PROTO_TRUE;
+}
+
+static proto_bool dispatch_matched_route(uint8_t slot_id, HttpReq *req, HttpMethod method, Route *r, proto_bool *path_matched,
+                                  char *allow_buf, size_t allow_cap)
+{
+#if PC_ENABLE_WEBSOCKET
+    if (r->type == ROUTE_WS)
+    {
+        handle_ws_route(slot_id, req, method, r);
+        return PROTO_TRUE;
+    }
+#endif // PC_ENABLE_WEBSOCKET
+
+#if PC_ENABLE_SSE
+    if (r->type == ROUTE_SSE)
+    {
+        if (!pc_sse_do_upgrade(slot_id, req, pc_sse_route_connect(r->sse_id)))
+        {
+            send_text(slot_id, 503, PC_MIME_TEXT_PLAIN, "Service Unavailable");
+        }
+        return PROTO_TRUE;
+    }
+#endif // PC_ENABLE_SSE
+
+#if PC_ENABLE_FILE_SERVING
+    if (r->type == ROUTE_STATIC)
+    {
+        // Static mounts answer GET (and HEAD via GET); other methods → 405.
+        if (method != HTTP_GET && method != HTTP_HEAD)
+        {
+            *path_matched = PROTO_TRUE;
+            Http.allow_append(allow_buf, allow_cap, "GET");
+            Http.allow_append(allow_buf, allow_cap, "HEAD");
+            return PROTO_FALSE;
+        }
+        serve_static_request(slot_id, req, r);
+        return PROTO_TRUE;
+    }
+#endif // PC_ENABLE_FILE_SERVING
+
+    // ROUTE_HTTP - a HEAD request is served by the GET handler with the
+    // response body suppressed (RFC 7231 §4.3.2).
+    proto_bool method_ok = (r->method == method) || (method == HTTP_HEAD && r->method == HTTP_GET);
+    if (!method_ok)
+    {
+        // Path matches but method differs - record it for a 405 + Allow.
+        *path_matched = PROTO_TRUE;
+        Http.allow_append(allow_buf, allow_cap, Http.method_name(r->method));
+        // A GET route also answers HEAD, so advertise it in Allow.
+        if (r->method == HTTP_GET)
+        {
+            Http.allow_append(allow_buf, allow_cap, "HEAD");
+        }
+        return PROTO_FALSE;
+    }
+#if PC_ENABLE_AUTH
+    if (r->auth_id != PC_AUTH_NONE && !proto_authorize_request(slot_id, req, r))
+    {
+        return PROTO_TRUE; // 401/429 already sent
+    }
+#endif // PC_ENABLE_AUTH
+    r->callback(slot_id, req);
+    return PROTO_TRUE;
+}
+
+void match_and_execute(uint8_t slot_id)
+{
+    HttpReq *req = &http_pool[slot_id];
+    HttpMethod method = Http.parse_method(req->method);
+
+    // Start each request with no carried-over custom response headers or
+    // captured path parameters.
+    pc_resp_extra_hdr(slot_id)[0] = '\0';
+    req->path_param_count = 0;
+
+    // Built-in rate limiter first (cheapest rejection under flood), then the
+    // user middleware chain. Either may short-circuit with a response.
+    if (rate_limit_check(slot_id))
+    {
+        return;
+    }
+    if (run_middleware(slot_id, req))
+    {
+        return;
+    }
+
+#if PC_ENABLE_WEBDAV
+    // A WebDAV mount owns its whole subtree and every method on it (including
+    // PROPFIND/MKCOL/etc., which Http.parse_method() does not recognize), so intercept
+    // before the unknown-method 501 and the normal route loop.
+    if (try_serve_dav(slot_id, req))
+    {
+        return;
+    }
+#endif
+
+    // CORS preflight
+    if (method == HTTP_OPTIONS && pc_resp_cors_enabled())
+    {
+        send_empty(slot_id, 204);
+        return;
+    }
+
+#if PC_ENABLE_CSRF
+    if (pc_csrf_gate(slot_id, req, method))
+    {
+        return;
+    }
+#endif
+
+    // RFC 7230 §3.3.1: reject Transfer-Encoding
+    if (http_get_header(req, "Transfer-Encoding") != NULL)
+    {
+        send_text(slot_id, 501, PC_MIME_TEXT_PLAIN, "Not Implemented");
+        return;
+    }
+
+    // RFC 7231 §6.5.2: a method the server does not implement → 501.
+    if (method == HTTP_METHOD_UNKNOWN)
+    {
+        send_text(slot_id, 501, PC_MIME_TEXT_PLAIN, "Not Implemented");
+        return;
+    }
+
+    // For RFC 7231 §6.5.5: if a path matches but no method does, answer 405
+    // with an Allow header listing the methods registered for that path.
+    proto_bool path_matched = PROTO_FALSE;
+    char allow_buf[64];
+    allow_buf[0] = '\0';
+
+    for (uint8_t i = 0; i < network.route->count(); i++)
+    {
+        Route *r = network.route->at(i);
+        if (!route_admits(r, slot_id, req))
+        {
+            continue;
+        }
+        if (dispatch_matched_route(slot_id, req, method, r, &path_matched, allow_buf, sizeof(allow_buf)))
+        {
+            return;
+        }
+    }
+
+    // Path existed but the method was not allowed (RFC 7231 §6.5.5).
+    if (path_matched)
+    {
+        send_method_not_allowed(slot_id, allow_buf);
+        return;
+    }
+
+    if (s_inst.not_found_handler)
+    {
+        s_inst.not_found_handler(slot_id, req);
+    }
+    else
+    {
+        send_text(slot_id, 404, PC_MIME_TEXT_PLAIN, "Not Found");
+    }
+}
+
+const HttpNs Http = {status_text,       parse_method, method_name,      path_matches,
+                     match_path_params, req_is_head,  allow_append,     match_and_execute};

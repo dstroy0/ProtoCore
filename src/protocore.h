@@ -646,34 +646,27 @@ void chunk_send_pump(uint8_t slot_id);
  *
  * @param slot_id Connection slot to dispatch.
  */
-void match_and_execute(uint8_t slot_id);
 
 /// @brief Route-selection predicate: true if route @p r is active, its path pattern matches
 ///        @p req, and its interface filter admits this slot's connection. Matching a param route
 ///        captures its path parameters into @p req as a side effect (as the inline match did).
-proto_bool route_admits(const Route *r, uint8_t slot_id, HttpReq *req);
 
 /// @brief Dispatch a route whose path + interface already matched (WS/SSE/STATIC/HTTP + auth).
 /// @return true when a response was sent (the caller stops); false to keep scanning later routes,
 ///         with @p path_matched / @p allow_buf updated for a possible 405.
-proto_bool dispatch_matched_route(uint8_t slot_id, HttpReq *req, HttpMethod method, Route *r, proto_bool *path_matched,
-                                  char *allow_buf, size_t allow_cap);
 
 #if PC_ENABLE_CSRF
 /// @brief Built-in CSRF gate: serve the `GET /csrf` token endpoint and enforce a valid
 ///        `X-CSRF-Token` on every state-changing method. @return true if a response was sent.
-proto_bool pc_csrf_gate(uint8_t slot_id, HttpReq *req, HttpMethod method);
 #endif
 
 #if PC_ENABLE_WEBSOCKET
 /// @brief Complete (or reject) a ROUTE_WS handshake per RFC 6455 §4.2.1. Always responds.
-void handle_ws_route(uint8_t slot_id, HttpReq *req, HttpMethod method, const Route *r);
 #endif
 
 #if PC_ENABLE_AUTH
 /// @brief Enforce route @p r's auth (lockout gate + Digest/Basic credential check, with lockout
 ///        accounting). @return true if authorized; on failure the 401/429 is already sent.
-proto_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const Route *r);
 #endif
 
 #if PC_ENABLE_WEBSOCKET

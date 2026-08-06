@@ -51,6 +51,7 @@ typedef struct
     proto_bool (*match_path_params)(const char *route, const char *path, HttpReq *req);
     proto_bool (*req_is_head)(uint8_t slot_id);
     void (*allow_append)(char *buf, size_t cap, const char *m);
+    void (*match_and_execute)(uint8_t slot_id);
 } HttpNs;
 
 /** @brief The one symbol this module exports. */
