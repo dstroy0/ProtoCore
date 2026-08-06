@@ -278,4 +278,4 @@ static const PhysicalIp6Ns s_ip6 = {init_ipv6_physical, net_global_ipv6, pc_ipv6
 static const PhysicalLinkNs s_link = {pc_net_egress_mac, pc_net_classify_ip, pc_net_egress_ip, pc_net_egress,
                                       pc_net_mac};
 
-const PhysicalNs Physical = {&s_wifi, &s_eth, &s_ip6, &s_link, &Radio};
+const PhysicalNs Physical = {&s_wifi, &s_eth, &s_ip6, &s_link, &s_iface_ns, &Radio};
