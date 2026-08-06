@@ -26,7 +26,7 @@
  * it across several transfers. ::pc_spi_cs_idle / ::pc_spi_cs_select / ::pc_spi_cs_release drive
  * it through the GPIO seam.
  *
- * Host builds compile the bodies to a refusal.
+ * The bodies compile wherever the platform states a bus.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026

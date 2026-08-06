@@ -8,8 +8,8 @@
  * Mirrors the server transport's cross-thread rule: every raw lwIP call runs in
  * tcpip_thread via tcpip_api_call(). Each slot owns its pcb and an SPSC wire ring
  * (producer = the lwIP recv callback in tcpip_thread; consumer = the caller's
- * loop/blocking task). The rings use `volatile` indices, matching the shipped
- * per-client implementations this consolidates.
+ * loop/blocking task). The rings use atomic indices, per the ordering rule in mmgr/ring.h,
+ * which is what makes a producer's writes visible before the advanced index.
  */
 
 #include "tcp_client.h"

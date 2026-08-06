@@ -419,7 +419,7 @@ static void flush_bind(UdpBind *b)
     }
 }
 
-#else // host build: no stack, so the seam ends at a capture a test reads back
+#else // no stack backend: the seam ends at a capture a test reads back
 
 // The host wire is the capture a test reads back.
 static proto_bool wire_send(const uint8_t *data, size_t len)

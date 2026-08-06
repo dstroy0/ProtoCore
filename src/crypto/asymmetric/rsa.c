@@ -20,7 +20,7 @@
 #include <mbedtls/md.h>
 #include <mbedtls/rsa.h>
 #else
-#include "crypto/asymmetric/bignum.h" // native software RSA (test reference)
+#include "crypto/asymmetric/bignum.h" // SW path RSA
 #endif
 PC_CRYPTO_HOT
 
@@ -49,7 +49,7 @@ const uint8_t pc_pkcs1_sha512_digestinfo[PC_PKCS1_SHA512_DIGESTINFO_LEN] = {
 #if PROTOCORE_HOT
 
 // ---------------------------------------------------------------------------
-// Arduino - mbedtls verify path
+// HW path - mbedtls verify
 // ---------------------------------------------------------------------------
 
 int pc_rsa_verify(const uint8_t n_be[PC_RSA_KEY_BYTES], const uint8_t e_be4[4], const uint8_t *msg, size_t msg_len,
@@ -110,7 +110,7 @@ int pc_rsa_verify(const uint8_t n_be[PC_RSA_KEY_BYTES], const uint8_t e_be4[4], 
 #else
 
 // ---------------------------------------------------------------------------
-// Native - software RSA path (test reference; NOT constant-time)
+// SW path RSA. NOT constant time - see SECURITY.md, timing.
 // ---------------------------------------------------------------------------
 
 // Hash msg with the selected algorithm and return the matching DigestInfo.

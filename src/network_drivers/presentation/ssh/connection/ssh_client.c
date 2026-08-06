@@ -1693,7 +1693,7 @@ proto_bool pc_ssh_tunnel_up(void)
     return s_cli.state == PC_TUN_UP;
 }
 
-#else // !PROTOCORE_HOT - host builds have no lwIP client transport; the tunnel is device-only.
+#else // !PROTOCORE_HOT - no client transport in this build; the tunnel stands down.
 
 proto_bool pc_ssh_tunnel_begin(const pc_ssh_tunnel_cfg *cfg)
 {

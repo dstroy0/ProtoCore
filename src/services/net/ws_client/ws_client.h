@@ -87,7 +87,7 @@ proto_bool ws_client_parse_frame(const uint8_t *buf, size_t avail, uint8_t *opco
                                  size_t *payload_off, size_t *payload_len, size_t *consumed);
 
 // ---------------------------------------------------------------------------
-// Transport (ESP32 only; no-ops / false on a host build)
+// Transport (needs a client transport)
 // ---------------------------------------------------------------------------
 
 /** @brief Callback for an inbound text/binary message (opcode is WSC_OP_TEXT/BINARY). */

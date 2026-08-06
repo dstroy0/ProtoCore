@@ -162,7 +162,7 @@ int pc_mqtt_parse_connack(const uint8_t *buf, uint32_t remaining_len, proto_bool
 proto_bool pc_mqtt_parse_suback(const uint8_t *buf, uint32_t remaining_len, uint16_t *packet_id, uint8_t *return_code);
 
 // ---------------------------------------------------------------------------
-// Transport (ESP32 only; the calls are no-ops / false on a host build)
+// Transport (needs a client transport)
 // ---------------------------------------------------------------------------
 
 /** @brief Callback for an inbound PUBLISH delivered to a subscription. */

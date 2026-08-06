@@ -5,7 +5,7 @@
  * @file sha256.c
  * @brief SHA-256 implementation (FIPS 180-4).
  *
- * On Arduino builds streaming + one-shot delegate to mbedtls (ESP32 hardware SHA accelerator); on
+ * HW path: streaming + one-shot delegate to mbedtls. SW path: the implementation below. On
  * native builds the software path below is used. Shared by SSH, TLS 1.3 / QUIC / DTLS, SNMPv3, JWT,
  * CSRF, and SMB 2.x message signing.
  */
@@ -23,7 +23,7 @@ PC_CRYPTO_HOT
 #if PROTOCORE_HOT
 
 // ---------------------------------------------------------------------------
-// Arduino (ESP32): streaming + one-shot via mbedtls (hardware SHA accelerator).
+// HW path: streaming + one-shot via mbedtls.
 // ---------------------------------------------------------------------------
 
 void pc_sha256_init(pc_sha256_ctx *ctx)
@@ -63,7 +63,7 @@ void pc_sha256(const uint8_t *data, size_t len, uint8_t digest[PC_SHA256_DIGEST_
 #else // native software path
 
 // ---------------------------------------------------------------------------
-// Software SHA-256 (FIPS 180-4) - native/test builds only
+// SW path: software SHA-256 (FIPS 180-4).
 // ---------------------------------------------------------------------------
 
 static const uint32_t K256[64] = {
@@ -214,4 +214,4 @@ void pc_sha256(const uint8_t *data, size_t len, uint8_t digest[PC_SHA256_DIGEST_
     pc_sha256_final(&ctx, digest);
 }
 
-#endif // !PROTOCORE_HOT (native software path)
+#endif // !PROTOCORE_HOT (SW path)

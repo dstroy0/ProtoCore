@@ -175,7 +175,7 @@ static proto_bool pc_workers_running(void)
     return PROTO_ATOMIC_LOAD(&s_worker.run);
 }
 
-#else // host build - no tasks; handle()/tests drive the pipeline inline
+#else // no task backend: handle()/tests drive the pipeline inline
 
 static void pc_workers_start(pc_worker_pump_fn pump)
 {
@@ -190,7 +190,7 @@ static proto_bool pc_workers_running(void)
 }
 static void pc_worker_wake(int worker_id)
 {
-    (void)worker_id; // no worker task on host - nothing to wake
+    (void)worker_id; // no worker task in this build - nothing to wake
 }
 
 // No worker task on host: the caller and the pipeline are the same thread, so a

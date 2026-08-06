@@ -20,7 +20,7 @@
  *
  * An address is 7-bit unless it is wrapped in ::PC_I2C_ADDR10, which selects the 10-bit form.
  *
- * Host builds compile the bodies to a refusal.
+ * The bodies compile wherever the platform states a bus.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026

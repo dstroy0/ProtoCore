@@ -24,7 +24,7 @@ static uint32_t pc_snmp_uptime_cs()
 #else
 static uint32_t pc_snmp_uptime_cs()
 {
-    return 0; // host build has no clock; tests assert type, not value
+    return 0; // no clock in this build; tests assert type, not value
 }
 #endif
 

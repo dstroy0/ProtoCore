@@ -77,7 +77,7 @@ PC_CRYPTO_HOT
 #endif
 
 // ---------------------------------------------------------------------------
-// Other Arduino (non-S3) - mbedTLS path (portable, hardware-accelerated)
+// HW path without MPI modmult - mbedTLS
 // ---------------------------------------------------------------------------
 
 #if PROTOCORE_HOT && !defined(PC_ECDSA_MPI_HW)

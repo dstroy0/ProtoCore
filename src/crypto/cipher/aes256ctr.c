@@ -65,7 +65,7 @@ void pc_aes256ctr_crypt(const uint8_t key[PC_AES256CTR_KEY_LEN], uint8_t counter
 }
 
 // ============================================================================
-// Test build - software AES-256 (for host-side unit tests only)
+// SW path: software AES-256.
 // ============================================================================
 
 #else

@@ -86,7 +86,7 @@ PROTO_END_DECLS
 
 #else
 
-// A build with no stack has no address to convert. The typedef keeps the translation unit non-empty.
+// A build with no stack has no address to convert. The typedef keeps the unit non-empty.
 typedef int pc_net_addr_no_stack;
 
 #endif // PROTOCORE_HOT

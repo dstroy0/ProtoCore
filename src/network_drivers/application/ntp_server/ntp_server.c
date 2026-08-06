@@ -87,7 +87,7 @@ proto_bool pc_ntp_server_begin(uint8_t stratum, uint32_t refid)
     return Udp.listener->listen(123, pc_ntp_server_udp_handler, NULL);
 }
 
-#else // host build: no lwIP. The codec above is host-tested; the binding is a stub.
+#else // no UDP backend. The codec above is host-tested; the binding is a stub.
 
 proto_bool pc_ntp_server_begin(uint8_t stratum, uint32_t refid)
 {

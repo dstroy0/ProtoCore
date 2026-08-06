@@ -11,10 +11,10 @@
 #if PC_ENABLE_SNMP_V3
 
 #include "crypto/mac/hmac_sha256.h"
+#include "mmgr/endian.h"
 #include "services/net/snmp/snmp_agent.h"
 #include "services/net/snmp/snmp_ber.h"
 #include "services/net/snmp/snmp_crypto.h"
-#include "mmgr/endian.h"
 
 #if PC_ENABLE_SNMP_TRAP
 #include "network_drivers/transport/udp.h"
@@ -29,7 +29,7 @@ static uint32_t pc_snmp_v3_uptime_s()
 #else
 static uint32_t pc_snmp_v3_uptime_s()
 {
-    return 0; // host build: tests drive boots/time via the discovery handshake
+    return 0; // no clock in this build; tests drive boots/time via the discovery handshake
 }
 #endif
 

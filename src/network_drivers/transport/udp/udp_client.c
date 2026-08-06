@@ -120,7 +120,7 @@ static void drain(void)
     (void)pc_net_call_marshal(flush_do, &k.base);
 }
 
-#else // host build: the wire is a capture a test reads back
+#else // no stack backend: the wire is a capture a test reads back
 
 static void drain(void)
 {

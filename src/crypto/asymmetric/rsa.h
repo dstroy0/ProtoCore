@@ -71,10 +71,10 @@ int pc_rsa_verify(const uint8_t n_be[PC_RSA_KEY_BYTES], const uint8_t e_be4[4], 
 
 #if !PROTOCORE_HOT
 /**
- * @brief Software RSA-2048 PKCS#1 v1.5 sign with a raw private key (native reference path).
+ * @brief Software RSA-2048 PKCS#1 v1.5 sign with a raw private key (SW path).
  *
  * Full-width square-and-multiply modexp (s = pkcs1(H(msg))^d mod n). NOT constant-time - the native
- * path is test-only; on-device signing uses the SSH layer's cached mbedtls host-key context.
+ * on the HW path, signing uses the SSH layer's cached mbedtls host-key context.
  *
  * @param n_be     Modulus n, 256 bytes big-endian.
  * @param d_be     Private exponent d, 256 bytes big-endian (SENSITIVE; caller wipes).

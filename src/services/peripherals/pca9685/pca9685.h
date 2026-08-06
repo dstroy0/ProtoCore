@@ -64,7 +64,7 @@ uint16_t pc_pca9685_us_to_count(uint32_t microseconds, uint32_t freq_hz);
  */
 size_t pc_pca9685_set_pwm_bytes(uint8_t *buf, size_t cap, uint8_t channel, uint16_t on, uint16_t off);
 
-// --- ESP32 binding (I2C via Wire; no-ops on a host build) ------------------------------------
+// --- ESP32 binding (I2C via Wire) ------------------------------------
 
 /** @brief Reset the PCA9685 at @p addr and set the PWM frequency @p freq_hz. @return true on ack. */
 proto_bool pc_pca9685_begin(uint8_t addr, uint32_t freq_hz);

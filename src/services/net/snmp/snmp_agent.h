@@ -155,7 +155,7 @@ size_t pc_snmp_dispatch_pdu(const uint8_t *pdu, size_t pdu_len, proto_bool allow
                             size_t out_cap);
 
 // ---------------------------------------------------------------------------
-// UDP transport (ESP32 only; no-op stub elsewhere)
+// UDP transport (needs a UDP transport)
 // ---------------------------------------------------------------------------
 
 /**

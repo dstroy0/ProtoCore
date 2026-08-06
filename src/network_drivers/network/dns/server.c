@@ -252,7 +252,7 @@ static proto_bool begin()
     return Udp.listener->listen(53, udp_handler, NULL);
 }
 
-#else // host build: no lwIP. The codec + table above are host-tested; begin is a stub.
+#else // no UDP backend. The codec + table above are host-tested; begin is a stub.
 
 static proto_bool begin()
 {

@@ -716,7 +716,7 @@ SmtpResult smtp_send(const SmtpConfig *cfg, const SmtpMessage *msg)
     return rc;
 }
 
-#else // host build: no lwIP. smtp_run() above is host-testable; smtp_send() is a stub.
+#else // no client transport. smtp_run() above is host-testable; smtp_send() is a stub.
 
 SmtpResult smtp_send(const SmtpConfig *cfg, const SmtpMessage *msg)
 {

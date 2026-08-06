@@ -93,7 +93,7 @@ size_t http_client_build_request(const char *method, const char *host, uint16_t 
 int http_client_parse_response(uint8_t *buf, size_t len, size_t *body_off, size_t *body_len);
 
 // ---------------------------------------------------------------------------
-// Transport (ESP32 only; returns HTTP_CLIENT_ERR_* on a host build)
+// Transport (needs a client transport)
 // ---------------------------------------------------------------------------
 
 /** @brief Blocking GET @p url. @return the status code (>0) or a negative HttpClientError. */

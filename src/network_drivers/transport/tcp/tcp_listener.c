@@ -780,7 +780,7 @@ static int32_t listener_add_dynamic(uint8_t idx, uint16_t port, ConnProto proto)
         return -1;
     }
 #else
-    lst->listen_pcb = NULL; // native host: no lwIP, exercised via the accept-gate unit paths
+    lst->listen_pcb = NULL; // no stack backend; exercised via the accept-gate unit paths
 #endif
 
     lst->active = PROTO_TRUE;

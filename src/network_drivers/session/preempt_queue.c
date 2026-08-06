@@ -185,7 +185,8 @@ static proto_bool pc_pq_post_lane_from_isr(pc_pq_lane lane, const void *item)
 static void pc_pq_drain_lane(pc_pq_lane lane)
 {
     (void)lane;
-    // The lane's task drains on device; nothing to do here.
+    // The lane's task drains it; a build whose task backend does not run the entry function
+    // drains nothing, so a caller that relies on this must pump the lane itself.
 }
 
 static void pc_pq_stop_lane(pc_pq_lane lane)
@@ -212,7 +213,7 @@ static size_t pc_pq_high_water_lane(pc_pq_lane lane)
     return lane_ok(lane) ? s_pq.high_water[(size_t)lane] : 0;
 }
 
-#else // host build - fixed per-lane rings, no tasks; pc_pq_drain_lane() runs the handler
+#else // no task backend: fixed per-lane rings, and pc_pq_drain_lane() runs the handler
 
 // All host-backend state, owned by one instance (internal linkage): the per-lane ring buffer,
 // its head/tail/count cursors, and the started flag. One named owner, unreachable cross-TU.

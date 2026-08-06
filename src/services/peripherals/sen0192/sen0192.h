@@ -69,7 +69,7 @@ uint32_t pc_sen0192_motion_events(const Sen0192Motion *m);
 /** @brief Milliseconds since the last active-level sample (0 if none yet). */
 uint32_t pc_sen0192_motion_active_age_ms(const Sen0192Motion *m, uint32_t now_ms);
 
-// --- ESP32 binding (GPIO poll; no-ops on a host build) ---------------------------------------
+// --- ESP32 binding (GPIO poll) ---------------------------------------
 
 /**
  * @brief Configure PC_SEN0192_PIN as an input and start tracking (polarity / hold from ServerConfig).

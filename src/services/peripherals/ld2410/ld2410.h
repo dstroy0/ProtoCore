@@ -164,7 +164,7 @@ proto_bool pc_ld2410_ack_ok(const Ld2410Ack *ack);
  */
 proto_bool pc_ld2410_ack_mac(const Ld2410Ack *ack, uint8_t mac[6]);
 
-// --- ESP32 binding (UART pump; no-ops on a host build) ---------------------------------------
+// --- ESP32 binding (UART pump) ---------------------------------------
 
 /** @brief Open PC_LD2410_UART at PC_LD2410_BAUD on @p rx_pin / @p tx_pin. @return true on ESP32. */
 proto_bool pc_ld2410_begin(int rx_pin, int tx_pin);

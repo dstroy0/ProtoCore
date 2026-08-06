@@ -65,7 +65,7 @@ uint64_t pc_ldc1614_sensor_freq_hz(uint32_t data28, uint32_t fref_hz);
  */
 size_t pc_ldc1614_build_config(uint8_t *buf, size_t cap, uint16_t rcount, uint16_t settlecount);
 
-// --- ESP32 binding (I2C via Wire; no-ops on a host build) ------------------------------------
+// --- ESP32 binding (I2C via Wire) ------------------------------------
 
 /** @brief Verify the device id and apply the CH0 config at @p addr. @return true if present + acked. */
 proto_bool pc_ldc1614_begin(uint8_t addr, uint16_t rcount, uint16_t settlecount);
