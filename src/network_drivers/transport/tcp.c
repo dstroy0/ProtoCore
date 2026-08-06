@@ -19,16 +19,16 @@
  * math itself is the shared `ring.h` primitive.
  *
  * **Listener coupling**
- * Each TcpConn carries `listener_id` (set at accept time by listener_accept_cb
- * in listener.cpp).  The `enqueue()` helper forwards events to
- * `listener_enqueue()` - defined in listener.cpp - so this file needs no
- * direct knowledge of the Listener struct.  `listener_enqueue()` is forward-
- * declared in tcp.h to avoid a circular include.
+ * Each TcpConn carries `listener_id`, set at accept time by listener_accept_cb. The `enqueue()`
+ * helper posts events through `listener_enqueue()`, so this file names the listener that owns the
+ * queue and never the queue itself.
  */
 
 #include "tcp.h"
 #include "board_drivers/board_profiles/pc_platform.h"
 #include "diffserv.h"           // DiffServ DSCP marking (pc_dscp_to_tos, pc_conn_set_dscp); compiles out when off
+#include "listener.h"           // listener_enqueue(): the owning listener posts the event, not this file
+#include "net_addr.h"           // NetAddr.to_ip(): the stack's address as a pc_ip
 #include "server/clock/clock.h" // pc_millis() pluggable monotonic clock
 #include "mmgr/rawmemcpy.h" // proto_raw_read: the unaligned v6 address load
 
@@ -896,28 +896,6 @@ uint32_t pc_conn_remote_ip(uint8_t slot)
     return 0;
 }
 
-#if PROTOCORE_HOT
-// Convert a stack address (itself a family-tagged union) into the portable pc_ip, network-order
-// bytes preserved. The one owner of that mapping, for the per-slot accessor
-// below and the accept callback (which has the connection but no slot yet).
-void pc_lwip_to_ip(const pc_net_ip *ra, pc_ip *out)
-{
-#if LWIP_IPV6
-    if (pc_net_ip_is_v6(ra))
-    {
-        uint8_t b[16]; // PC_ALLOW_STACK_ARRAY: 16 bytes on a cold accept path, no borrowable arena here
-        proto_raw_read(b, pc_net_ip_as_v6(ra)->addr, 16); // the stack holds the 16 bytes in network order
-        *out = pc_ip_from_v6_bytes(b);
-        return;
-    }
-#endif
-    // The v4 accessor yields network order; on a little-endian target the first octet is the low
-    // byte. Peel the octets so pc_ip holds them left-to-right.
-    uint32_t be = pc_net_ip4_u32(pc_net_ip_as_v4(ra));
-    *out = pc_ip_from_v4_octets((uint8_t)be, (uint8_t)(be >> 8), (uint8_t)(be >> 16), (uint8_t)(be >> 24));
-}
-#endif
-
 proto_bool pc_conn_remote_addr(uint8_t slot, pc_ip *out)
 {
     if (out != NULL)
@@ -934,7 +912,7 @@ proto_bool pc_conn_remote_addr(uint8_t slot, pc_ip *out)
     {
         return PROTO_FALSE;
     }
-    pc_lwip_to_ip(&conn->pcb->remote_ip, out);
+    NetAddr.to_ip(&conn->pcb->remote_ip, out);
     return PROTO_TRUE;
 #else
     (void)slot;

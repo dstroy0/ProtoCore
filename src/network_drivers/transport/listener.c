@@ -20,6 +20,7 @@
 #include "listener.h"
 #include "board_drivers/board_profiles/pc_platform.h" // the target's queues, under our names
 #include "diffserv.h"                // DiffServ DSCP marking for accepted connections (compiles out when off)
+#include "net_addr.h"                // NetAddr.to_ip(): the stack's address as a pc_ip
 #include "network_drivers/tls/tls.h" // TLS handshake begin (self-stubbing)
 #include "tcp.h"                     // TcpConn, conn_pool: the slots an accept claims
 #if PROTOCORE_HOT
@@ -411,7 +412,7 @@ pc_net_err listener_accept_cb(void *arg, pc_pcb *newpcb, pc_net_err err)
     pc_ip remote;
     remote.family = PC_IP_NONE;
 #if PROTOCORE_HOT
-    pc_lwip_to_ip(&newpcb->remote_ip, &remote);
+    NetAddr.to_ip(&newpcb->remote_ip, &remote);
 #endif
 #endif
 

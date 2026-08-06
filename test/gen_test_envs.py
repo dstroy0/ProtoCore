@@ -101,7 +101,10 @@ build_flags =
     -I test/mocks
     -I test/support
     -I src
-    -DPROTOCORE_HOST=1
+    ; PROTOCORE_HOST is NOT defined here. board_profiles/pc_platform.h derives it from the vendor
+    ; axis: nothing on a native build matches a vendor, so its else-arm defines it. Passing it on
+    ; the command line as well made a second source of truth that the vendor axis could not
+    ; override, so -DPROTOCORE_HOT_FORCE selected PC_VENDOR_MOCK and still compiled the host path.
     ; libm is a separate library to the C driver. g++ pulled it in behind libstdc++, so nothing here
     ; ever named it; gcc does not, and every env whose sources call sin / cos / sqrt / atan2 / fabs
     ; fails at the link with an undefined reference instead. It sits in the shared block because
@@ -112,7 +115,16 @@ build_flags =
 ; include lfs.h build it - the dependency finder does not compile what nothing reaches for.
 lib_deps =
     anurag3301/littlefs@^2.11.6
-test_build_src = yes"""
+test_build_src = yes
+
+; The target path, on a machine that can run the suite. PROTOCORE_HOT_FORCE selects PC_VENDOR_MOCK,
+; so PROTOCORE_HOT is 1 and the backends under board_drivers/*/mock/ stand in for silicon. An env
+; sets "base": "native_hot_base" in test/test_matrix.json to build here.
+[native_hot_base]
+extends = native_base
+build_flags =
+    ${native_base.build_flags}
+    -DPROTOCORE_HOT_FORCE"""
 
 
 def render_block(table):

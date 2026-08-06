@@ -8,6 +8,67 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ---
 
+## The native base flags defeat PROTOCORE_HOT_FORCE, so the target path had no test env
+
+- **Status:** FIXED (2026-08-05), found while adding the first env that builds the target path.
+- **Symptom:** a native env that adds `-DPROTOCORE_HOT_FORCE` still compiles the host path.
+  `PC_VENDOR_MOCK` comes out 1 and `PROTOCORE_HOT` comes out 0 at the same time, which the
+  platform header states is impossible ("exact complements, there is no third"). No diagnostic:
+  the env builds and its tests pass, against the wrong arm.
+- **Root cause:** two sources of truth for one macro. `pc_platform.h` derives `PROTOCORE_HOST` from
+  the vendor axis, defining it only in the else-arm reached when no vendor matched, and
+  `PROTOCORE_HOT_FORCE` selects `PC_VENDOR_MOCK` in the arm above it. But `gen_test_envs.py` also
+  passed `-DPROTOCORE_HOST=1` in the flags every native env extends. The command-line define wins:
+  the guard that would have set it is skipped, `#ifndef PROTOCORE_HOST` then finds it already
+  defined, and `#if PROTOCORE_HOST` selects the host path under a mock vendor. The vendor axis
+  cannot override a value handed to it from outside, and `#undef` is banned (SRC_LAW rule 13), so
+  no arrangement inside the header could have recovered.
+- **Blast radius:** every one of the 310 native envs carried the flag, and the whole
+  `PROTOCORE_HOT` half of the tree had no test env at all - `board_drivers/*/mock/` exists to stand
+  in for silicon and nothing was compiling against it. That is how the `pc_lwip_to_ip` bug above
+  survived: its arm was unreachable from the suite.
+- **Fix:** drop `-DPROTOCORE_HOST=1` from `native_base`. It was redundant - nothing on a native
+  build matches a vendor, so the else-arm defines it anyway - and dropping it makes the vendor axis
+  the only decider. A new `native_hot_base` extends the base with `-DPROTOCORE_HOT_FORCE`, and an
+  env opts in with `"base": "native_hot_base"`.
+- **Verified:** only 4 files under `src/` read `PROTOCORE_HOST` and each includes the platform
+  chain in its first 40 lines; nothing in `test/mocks` or `test/support` reads it. The first env on
+  the new base (`native_udp_hot`) carries `#error` on `!PROTOCORE_HOT`, so the fallback cannot
+  return silently.
+
+---
+
+## pc_lwip_to_ip reverses the octets on the mock arm
+
+- **Status:** FIXED (2026-08-05), found while giving UDP a wire layout built on `pc_ip`.
+- **Symptom:** `pc_conn_remote_addr()` and the accept-callback address both report `5.0.0.10` where
+  the peer is `10.0.0.5`, on any build that selects `PC_VENDOR_MOCK` (`-DPROTOCORE_HOT_FORCE`). No
+  host suite catches it because the non-hot arm returns `PC_IP_NONE` and never reaches the mapping.
+- **Root cause:** the two backends disagree on what `pc_net_ip4_u32` returns. lwIP's
+  `ip4_addr_get_u32` hands back the stored `u32_t`, whose **memory bytes** are the network octets.
+  The mock (`test/mocks/pc_net_host.h:730`) instead composes a **numeric** value,
+  `bytes[0]<<24 | bytes[1]<<16 | bytes[2]<<8 | bytes[3]`. On a little-endian host those are byte
+  reversed. `pc_lwip_to_ip` (`src/network_drivers/transport/tcp.c:915`) peels with
+  `(uint8_t)be, (uint8_t)(be >> 8), ...`, which is right for lwIP on a little-endian target and
+  backwards for the mock.
+- **Second defect in the same three lines:** that peel is itself endianness-dependent. lwIP's value
+  is network order in memory, so on a big-endian target the first octet is the high byte and the
+  same code reverses there too. The portable read is of the u32's bytes, not of its value.
+- **Blast radius:** `pc_net_ip4_u32` has two other callers that compare or return the value
+  opaquely (`listener.c:486` interface tagging, `tcp.c:890` `pc_conn_remote_ip`), so changing the
+  mock to match lwIP moves those too and needs its own verification pass.
+- **Fix:** the mock returns the u32 lwIP does (the four bytes copied, not composed arithmetically),
+  and the mapping moved out of `tcp.c` into `network_drivers/transport/net_addr.c` as
+  `NetAddr.to_ip()`, where it reads the word's bytes instead of shifting its value and is therefore
+  correct on either endianness. TCP needed it on accept and on the per-slot accessor and UDP needs
+  it per received datagram, so one owner sits beside both rather than inside either.
+- **Verified:** `10.0.0.5`, `192.168.4.1`, `224.0.0.251`, `255.254.253.252` round-trip through
+  `NetAddr.to_ip()` and back out of `Ip.format()` unchanged on the mock arm; a null source leaves
+  the out-param `PC_IP_NONE` rather than stale. Still to re-run: `native_tcp`, the listener suites,
+  and `test_iface` (which asserts on `pc_ap_ip`, the value `listener.c` compares against).
+
+---
+
 ## test_coaps segfaults after its last test passes
 
 - **Status:** OPEN (found 2026-08-05, by the first clean run of the whole native matrix).

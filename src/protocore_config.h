@@ -5936,14 +5936,55 @@ from halves and is slower than the width it decomposes into"
 #endif
 
 /**
- * @brief Shared receive-scratch size for the transport-layer UDP service.
+ * @brief Largest UDP datagram a bound port accepts, in bytes.
  *
- * One static buffer (lwIP delivers a single datagram at a time) into which each
- * incoming datagram is copied before the handler runs. Must hold the largest
- * datagram any UDP service expects (SNMP messages are the largest user).
+ * Bounds one datagram, both directions: a longer inbound datagram is truncated to this at the
+ * receive trampoline, and a longer send is refused. Sizes the per-slot staging buffer the drain
+ * hands the handler. Must hold the largest datagram any UDP service expects (SNMP messages are the
+ * largest user).
  */
 #ifndef PC_UDP_RX_BUF_SIZE
 #define PC_UDP_RX_BUF_SIZE 1472
+#endif
+
+/**
+ * @brief Per-slot UDP receive ring, in bytes.
+ *
+ * Backs one bound port's receive ring. The stack's trampoline frames each datagram into it and the
+ * drain reads them out, so this is how many bytes of datagram, plus a header each, may wait between
+ * two poll() calls. A datagram that does not fit the free space is dropped.
+ */
+#ifndef PC_UDP_RX_RING
+#define PC_UDP_RX_RING 2048
+#endif
+
+/**
+ * @brief UDP send ring, in bytes: per slot on the listener side, one on the client side.
+ *
+ * Holds framed datagrams between the call that queues one and the poll() that moves it to the wire,
+ * so a burst is written at memory speed and drains at wire speed. A send that does not fit the free
+ * space is refused rather than blocking.
+ */
+#ifndef PC_UDP_TX_RING
+#define PC_UDP_TX_RING 4096
+#endif
+
+// The rings index with `% cap` (mmgr/ring.h). A power-of-two capacity makes that an AND; any other
+// value emits a divide, which on a target without one is a call into a software routine per access.
+#if (PC_UDP_RX_RING & (PC_UDP_RX_RING - 1)) != 0
+#error "ProtoCore: PC_UDP_RX_RING must be a power of two"
+#endif
+#if (PC_UDP_TX_RING & (PC_UDP_TX_RING - 1)) != 0
+#error "ProtoCore: PC_UDP_TX_RING must be a power of two"
+#endif
+
+// A ring holds a frame header plus a payload, and keeps one slot free to tell full from empty, so a
+// ring that cannot take one largest datagram would refuse every send and drop every receive.
+#if PC_UDP_RX_RING < (PC_UDP_RX_BUF_SIZE + 64)
+#error "ProtoCore: PC_UDP_RX_RING must exceed PC_UDP_RX_BUF_SIZE by at least one frame header"
+#endif
+#if PC_UDP_TX_RING < (PC_UDP_RX_BUF_SIZE + 64)
+#error "ProtoCore: PC_UDP_TX_RING must exceed PC_UDP_RX_BUF_SIZE by at least one frame header"
 #endif
 
 /**

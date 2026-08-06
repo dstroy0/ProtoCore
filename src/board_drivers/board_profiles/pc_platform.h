@@ -438,11 +438,17 @@ typedef ip_addr_t pc_net_ip;
 #define pc_net_ip_is_v6 IP_IS_V6
 #define pc_net_ip_as_v4 ip_2_ip4
 #define pc_net_ip_as_v6 ip_2_ip6
+// The v6 address is four network-order words, so its sixteen bytes are the address as it travels.
+// Reached as bytes rather than words: a word read gives the host's byte order, not the wire's.
+#define pc_net_ip6_bytes(a) ((const uint8_t *)ip_2_ip6(a)->addr)
+#define pc_net_ip6_wbytes(a) ((uint8_t *)ip_2_ip6(a)->addr)
+#define pc_net_ip6_mark(a) IP_SET_TYPE_VAL(*(a), IPADDR_TYPE_V6)
 #define pc_net_ip4_u32 ip4_addr_get_u32
 #define pc_net_ip4_set IP_ADDR4
 #define pc_net_rcv_wnd_update tcp_update_rcv_ann_wnd
 #define pc_net_ip4_is_multicast ip4_addr_ismulticast
 #define PC_NET_HAS_IGMP LWIP_IGMP
+#define PC_NET_HAS_IPV6 LWIP_IPV6
 #define pc_net_igmp_join igmp_joingroup
 #define pc_net_igmp_leave igmp_leavegroup
 

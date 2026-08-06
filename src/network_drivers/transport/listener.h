@@ -18,12 +18,10 @@
  * in the control block's user data so a single static `listener_accept_cb`
  * handles all ports.
  *
- * **Circular-dependency resolution**
- * tcp.c needs to post events to listener queues but cannot include
- * this header (listener.h already includes tcp.h).  The symbol
- * `listener_enqueue()` is exported from listener.c; tcp.c calls it
- * via a forward declaration added to tcp.h so no circular include
- * is introduced.
+ * **Event posting**
+ * The queue belongs to the listener, so the connection callbacks in tcp.c post to it through
+ * `listener_enqueue()`, declared here and defined in listener.c, rather than writing a queue they
+ * do not own.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026

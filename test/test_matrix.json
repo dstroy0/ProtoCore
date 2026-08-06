@@ -1135,6 +1135,18 @@
       "src": ["+<network_drivers/transport/udp.c>"],
       "tests": ["test_udp_transport"]
     },
+    "native_udp_hot": {
+      "desc": "The UDP target path, driven on the host (base native_hot_base, so PROTOCORE_HOT is 1\nand board_drivers/*/mock stands in for silicon). Covers udp_listener + udp_client against the\nhost pcb driver: the send ring filling and draining, NetAddr carrying v4 and v6 both ways, the\npbuf pool refusing, and the datagrams the core handed to the stack read back as a DLT_RAW libpcap\ncapture with synthesized IP and UDP headers (test/mocks/pc_net_pcap.h).",
+      "base": "native_hot_base",
+      "flags": [],
+      "src": [
+        "+<network_drivers/transport/udp/udp_listener.c>",
+        "+<network_drivers/transport/udp/udp_client.c>",
+        "+<network_drivers/transport/net_addr.c>",
+        "+<shared_primitives/ip.c>"
+      ],
+      "tests": ["test_udp_hot"]
+    },
     "native_wamp": {
       "desc": "WAMP messaging codec (services/iot/wamp): the JSON-array message builders (HELLO /\nSUBSCRIBE / PUBLISH / CALL / REGISTER / YIELD / GOODBYE over JsonWriter) + the positional\narray parser (type / ids / URIs, nesting-aware). Pure host tests.",
       "flags": ["-DPC_ENABLE_WAMP=1"],

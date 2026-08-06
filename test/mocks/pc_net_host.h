@@ -26,6 +26,7 @@
 #include <Arduino.h> // the virtual clock the host time base reads: millis() / set_millis()
 #include <stddef.h>
 #include <stdint.h>
+#include <string.h> // memcpy / memset: the staging copies below
 
 #include <time.h>
 
@@ -726,14 +727,24 @@ static inline pc_net_ip *pc_net_host_any(void)
 #define pc_net_ip_as_v4(a) (a)
 #define pc_net_ip_as_v6(a) (a)
 
+// The v6 address as bytes, and the v6 tag: lwIP keeps four network-order words, this keeps the
+// sixteen bytes those words hold, so both answer the same question.
+#define pc_net_ip6_bytes(a) ((const uint8_t *)(a)->bytes)
+#define pc_net_ip6_wbytes(a) ((uint8_t *)(a)->bytes)
+#define pc_net_ip6_mark(a) ((a)->type = PC_NET_TYPE_V6)
+
+// The four octets as a word, the way lwIP's ip4_addr_get_u32 hands them back: the word's memory
+// bytes are the address in network order. Composing the value arithmetically instead would byte
+// reverse it on a little-endian host, and every caller here reads it as lwIP's.
 static inline uint32_t pc_net_ip4_u32(const pc_net_ip *a)
 {
+    uint32_t v = 0;
     if (!a)
     {
         return 0;
     }
-    return ((uint32_t)a->bytes[0] << 24) | ((uint32_t)a->bytes[1] << 16) | ((uint32_t)a->bytes[2] << 8) |
-           (uint32_t)a->bytes[3];
+    memcpy(&v, a->bytes, 4);
+    return v;
 }
 static inline void pc_net_ip4_set(pc_net_ip *a, uint8_t b0, uint8_t b1, uint8_t b2, uint8_t b3)
 {
@@ -1172,9 +1183,72 @@ static inline void pc_net_opt_set(void *p, uint32_t opt)
     (void)opt;
 }
 
+// ---------------------------------------------------------------------------
+// Packet buffers and the UDP send capture
+// ---------------------------------------------------------------------------
+//
+// pc_net_udp_sendto is where a datagram leaves the core, so it is the only place a test can see
+// what the wire would have carried. It records the destination, the ports and the payload; the
+// renderer in pc_net_pcap.h turns that log into a .pcap the test parses and Wireshark opens.
+//
+// The log holds the fields rather than the pcap bytes because this header is parsed from inside
+// protocore_config.h, before shared_primitives/types.h supplies PC_INLINE - so pcap.h cannot be
+// included here.
+
+#ifndef PC_NET_HOST_PBUFS
+#define PC_NET_HOST_PBUFS 8
+#endif
+#ifndef PC_NET_HOST_DGRAM_LEN
+#define PC_NET_HOST_DGRAM_LEN 1472 // an Ethernet MTU less the IPv4 and UDP headers
+#endif
+#ifndef PC_NET_HOST_DGRAMS
+#define PC_NET_HOST_DGRAMS 64
+#endif
+
+typedef struct
+{
+    pc_pbuf p;
+    uint8_t data[PC_NET_HOST_DGRAM_LEN];
+    int in_use;
+} pc_net_host_pbuf_slot;
+
+__attribute__((weak)) pc_net_host_pbuf_slot pc_net_host_pbuf_pool[PC_NET_HOST_PBUFS];
+__attribute__((weak)) int pc_net_host_pbuf_fail_once;
+
+/** @brief One datagram the core handed to the stack. */
+typedef struct
+{
+    uint8_t type;     // PC_NET_TYPE_V4 / PC_NET_TYPE_V6
+    uint8_t addr[16]; // destination, network order; v4 in the first four
+    uint16_t src_port;
+    uint16_t dst_port;
+    uint8_t tos;
+    uint32_t ms; // virtual-clock millisecond the send happened, the pcap record timestamp
+    uint16_t len;
+    uint8_t data[PC_NET_HOST_DGRAM_LEN];
+} pc_net_host_dgram;
+
+__attribute__((weak)) pc_net_host_dgram pc_net_host_dgrams[PC_NET_HOST_DGRAMS];
+__attribute__((weak)) size_t pc_net_host_dgram_n;    // records kept
+__attribute__((weak)) size_t pc_net_host_dgram_sent; // sends seen, kept or not
+
+// The next pc_net_pbuf_alloc() reports the pool spent, so the send path's refuse branch is reachable.
+static inline void mock_pbuf_fail_once(void)
+{
+    pc_net_host_pbuf_fail_once = 1;
+}
+
+// A pbuf a test built on the stack is not in the pool, so it is left alone.
 static inline void pc_net_pbuf_free(pc_pbuf *p)
 {
-    (void)p;
+    for (int i = 0; i < PC_NET_HOST_PBUFS; i++)
+    {
+        if (&pc_net_host_pbuf_pool[i].p == p)
+        {
+            pc_net_host_pbuf_pool[i].in_use = 0;
+            return;
+        }
+    }
 }
 static inline uint16_t pc_net_pbuf_copy(const pc_pbuf *p, void *dst, uint16_t len, uint16_t off)
 {
@@ -1191,8 +1265,28 @@ static inline pc_pbuf *pc_net_pbuf_alloc(int layer, uint16_t len, int type)
 {
     (void)layer;
     (void)type;
-    (void)len;
-    return NULL; // a test that needs a pbuf builds one and calls the callback directly
+    if (pc_net_host_pbuf_fail_once)
+    {
+        pc_net_host_pbuf_fail_once = 0;
+        return NULL;
+    }
+    if (len > PC_NET_HOST_DGRAM_LEN)
+    {
+        return NULL;
+    }
+    for (int i = 0; i < PC_NET_HOST_PBUFS; i++)
+    {
+        if (!pc_net_host_pbuf_pool[i].in_use)
+        {
+            pc_net_host_pbuf_pool[i].in_use = 1;
+            pc_net_host_pbuf_pool[i].p.next = NULL;
+            pc_net_host_pbuf_pool[i].p.payload = pc_net_host_pbuf_pool[i].data;
+            pc_net_host_pbuf_pool[i].p.len = len;
+            pc_net_host_pbuf_pool[i].p.tot_len = len;
+            return &pc_net_host_pbuf_pool[i].p;
+        }
+    }
+    return NULL;
 }
 
 // First member of the core's call record; fn casts back to that record. lwIP puts a semaphore here.
@@ -1237,12 +1331,28 @@ static inline void pc_net_udp_recv(pc_udp_pcb *p, pc_net_udp_recv_fn fn, void *a
         p->arg = arg;
     }
 }
+// Record the datagram. The count keeps rising past the log so a test can tell "sent more than the
+// log holds" from "stopped sending".
 static inline pc_net_err pc_net_udp_sendto(pc_udp_pcb *p, pc_pbuf *b, const pc_net_ip *a, uint16_t port)
 {
-    (void)p;
-    (void)b;
-    (void)a;
-    (void)port;
+    if (!p || !b || !a)
+    {
+        return PC_NET_ERR_ARG;
+    }
+    pc_net_host_dgram_sent++;
+    if (pc_net_host_dgram_n < PC_NET_HOST_DGRAMS)
+    {
+        pc_net_host_dgram *d = &pc_net_host_dgrams[pc_net_host_dgram_n];
+        memset(d, 0, sizeof(*d));
+        d->type = a->type;
+        memcpy(d->addr, a->bytes, sizeof(d->addr));
+        d->src_port = p->local_port;
+        d->dst_port = port;
+        d->tos = p->tos;
+        d->ms = (uint32_t)millis();
+        d->len = pc_net_pbuf_copy(b, d->data, (uint16_t)sizeof(d->data), 0);
+        pc_net_host_dgram_n++;
+    }
     return PC_NET_OK;
 }
 static inline void pc_net_udp_remove(pc_udp_pcb *p)
@@ -1253,6 +1363,7 @@ static inline void pc_net_udp_remove(pc_udp_pcb *p)
     }
 }
 #define PC_NET_HAS_IGMP 1
+#define PC_NET_HAS_IPV6 1
 
 static inline pc_net_err pc_net_igmp_join(const pc_net_ip *nif, const pc_net_ip *grp)
 {
@@ -1281,12 +1392,44 @@ static inline const uint8_t *pc_net_host_sent(size_t *len)
     return pc_net_host_tx;
 }
 
+/** @brief Datagrams held in the log. */
+static inline size_t pc_net_host_udp_count(void)
+{
+    return pc_net_host_dgram_n;
+}
+
+/** @brief Datagrams the core handed to the stack, whether or not the log had room. */
+static inline size_t pc_net_host_udp_sent(void)
+{
+    return pc_net_host_dgram_sent;
+}
+
+/** @brief Datagram @p i, or NULL past the end of the log. */
+static inline const pc_net_host_dgram *pc_net_host_udp_at(size_t i)
+{
+    if (i >= pc_net_host_dgram_n)
+    {
+        return NULL;
+    }
+    return &pc_net_host_dgrams[i];
+}
+
+/** @brief Drop the datagram log and release every pbuf. */
+static inline void pc_net_host_udp_reset(void)
+{
+    pc_net_host_dgram_n = 0;
+    pc_net_host_dgram_sent = 0;
+    pc_net_host_pbuf_fail_once = 0;
+    memset(pc_net_host_pbuf_pool, 0, sizeof(pc_net_host_pbuf_pool));
+}
+
 /** @brief Drop the capture and every pcb, so each test starts from a known state. */
 static inline void pc_net_host_reset(void)
 {
     pc_net_host_tx_len = 0;
     memset(pc_net_host_pcbs, 0, sizeof(pc_net_host_pcbs));
     memset(pc_net_host_udp_pcbs, 0, sizeof(pc_net_host_udp_pcbs));
+    pc_net_host_udp_reset();
 }
 
 // The same capture read as text. A response is a string for most of the suite - it asserts on a

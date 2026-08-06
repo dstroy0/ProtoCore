@@ -430,13 +430,6 @@ proto_bool pc_conn_remote_addr(uint8_t slot, pc_ip *out);
  *        v6 address). For rate-limit / auth-lockout buckets, where a v6 peer must not silently
  *        share the all-zero v4 bucket. Returns 0 if the slot has no active connection.
  */
-#if PROTOCORE_HOT
-/**
- * @brief Convert a raw stack address to the portable family-tagged pc_ip - for the accept callback,
- *        which has the connection but no slot yet. Target builds only (the parameter is a stack type).
- */
-void pc_lwip_to_ip(const pc_net_ip *ra, pc_ip *out);
-#endif
 
 // ---------------------------------------------------------------------------
 // Observability (PC_ENABLE_OBSERVABILITY) - connection event hook + counters
@@ -528,18 +521,6 @@ pc_net_err lowlevel_sent_cb(void *arg, pc_pcb *tpcb, proto_u16 len);
  * @see tcp.c
  */
 void lowlevel_err_cb(void *arg, pc_net_err err);
-
-// ---------------------------------------------------------------------------
-// Event enqueue (defined in listener.c, called from tcp.c)
-// ---------------------------------------------------------------------------
-
-/*
- * Forward declaration of listener_enqueue() to break the circular include.
- * See listener.h for the full documentation of this function.
- * Returns true if the event was queued, false if it was dropped (queue full or
- * inactive listener) - the transport observes drops as PC_CONN_R_DEFER_DROP.
- */
-proto_bool listener_enqueue(uint8_t listener_id, const TcpEvt *evt);
 
 PROTO_END_DECLS
 
