@@ -21,6 +21,7 @@
 #include "mmgr/plaintext.h"                                     // arena-exhaustion drive for the fail-closed path
 #include "network_drivers/presentation/codec/deflate/deflate.h" // DEFLATE_SCRATCH_SIZE for the starved-send path
 #include "network_drivers/presentation/codec/inflate/inflate.h"
+#include "network_drivers/transport/tcp.h"
 #endif
 
 // ---------------------------------------------------------------------------

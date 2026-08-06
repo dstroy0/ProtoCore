@@ -8,6 +8,38 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ---
 
+## The tcp_evt.h split cut 24 test suites off from tcp.h
+
+- **Status:** FIXED (2026-08-05), found on a full-matrix run.
+- **Symptom:** `ConnState`, `TcpConn`, `conn_pool` and `CONN_*` come out undeclared in a test that
+  changed nothing. `native_accept_gate`, `native_presentation` and `native_session` fail to build.
+- **Root cause:** `TcpEvt` and `EvtType` moved out of `tcp.h` into their own `tcp_evt.h`, and
+  `presentation.h`, `session.h` and `listener.h` each narrowed their include to the new header,
+  which is what they need. The slot types stayed in `tcp.h`. 24 white-box suites named the slot
+  types while including only a layer header, so they were reaching `tcp.h` transitively and lost it
+  the moment the layer stopped needing it.
+- **Fix:** each of the 24 suites includes `network_drivers/transport/tcp.h` for the names it uses.
+  The layer headers keep the narrow include.
+- **Note:** only three of the 24 had been reached when the run stopped, so the count is what the
+  symbol sweep found, not what the run reported.
+
+---
+
+## frame.c calls proto_scan_nul without including runops.h
+
+- **Status:** FIXED (2026-08-05), found on the same run.
+- **Symptom:** `native_scp` and `native_ssh_sftp` fail at link with `undefined reference to
+'proto_scan_nul'`, preceded by an implicit-declaration warning at `src/mmgr/frame.c:113`.
+- **Root cause:** `pc_frame_append` calls `proto_scan_nul`, which is a `static inline` in
+  `shared_primitives/runops.h`, and `frame.c` includes only `mmgr/frame.h` and
+  `shared_primitives/speed_opt.h`. Under C99 rules the implicit declaration makes it an external
+  call to a name no TU defines, so it survives compilation and dies at link. Every other env that
+  builds `frame.c` also builds a TU that pulls `runops.h` in ahead of it, which is why only the two
+  filesystem-application envs showed it.
+- **Fix:** `frame.c` includes `shared_primitives/runops.h`.
+
+---
+
 ## The native base flags defeat PROTOCORE_HOT_FORCE, so the target path had no test env
 
 - **Status:** FIXED (2026-08-05), found while adding the first env that builds the target path.

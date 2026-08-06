@@ -8,6 +8,7 @@
 #include <stdio.h>
 
 #include <unity.h>
+#include "network_drivers/transport/tcp.h"
 
 static char g_a[64], g_b[64], g_missing[64];
 static proto_bool g_found_a, g_found_b, g_found_missing;

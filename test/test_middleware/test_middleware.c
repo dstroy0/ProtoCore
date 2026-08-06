@@ -9,6 +9,7 @@
 #include <string.h>
 
 #include <unity.h>
+#include "network_drivers/transport/tcp.h"
 
 // Cross-test observation state (middlewares are plain function pointers, so they
 // communicate through file-static globals + the global server, just like the

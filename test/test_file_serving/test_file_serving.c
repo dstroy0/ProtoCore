@@ -18,6 +18,7 @@
 #include <string.h>
 
 #include <unity.h>
+#include "network_drivers/transport/tcp.h"
 
 static const pc_mnt_backend *g_fs; // the mock store the serve_static mounts read through
 static proto_bool handler_called = PROTO_FALSE;

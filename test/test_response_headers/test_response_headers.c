@@ -19,6 +19,7 @@
 #include <string.h>
 
 #include <unity.h>
+#include "network_drivers/transport/tcp.h"
 
 static void push_str(uint8_t slot, const char *s)
 {

@@ -11,6 +11,7 @@
 #include <string.h>
 
 #include <unity.h>
+#include "network_drivers/transport/tcp.h"
 
 static const char FILE_DATA[] = "0123456789ABCDEFGHIJ"; // 20 bytes
 

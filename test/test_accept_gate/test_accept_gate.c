@@ -20,6 +20,7 @@
 #include "network_drivers/transport/listener.h"
 #include "server/clock/clock.h"
 #include <unity.h>
+#include "network_drivers/transport/tcp.h"
 
 // A fake tick source for the pc_millis() override tests below.
 static uint32_t g_fake_ticks = 0;

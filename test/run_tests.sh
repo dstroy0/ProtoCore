@@ -165,7 +165,10 @@ trap 'rm -f "$RAW_FILE" "$CLEAN_FILE"' EXIT
 #   native_pentest - heavy adversarial fuzzer, run separately (pentest.yml)
 #   native_codeql  - compile-only umbrella for the CodeQL workflow
 #   native_tsan    - ThreadSanitizer; Linux/clang only (run in CI, skipped elsewhere)
-EXCLUDE=("native_pentest" "native_codeql")
+#   native_stack_* - stack bases other envs extend; "tests": [] in test_matrix.json emits no
+#                    test_filter, so pio runs every suite in test/ against them and all but the
+#                    few that fit their build_src_filter fail to build
+EXCLUDE=("native_pentest" "native_codeql" "native_stack_l46" "native_stack_http")
 if [[ "$(uname -s 2>/dev/null)" != Linux* ]]; then
     EXCLUDE+=("native_tsan")
 fi

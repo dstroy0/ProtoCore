@@ -13,6 +13,7 @@
 #include <string.h>
 
 #include <unity.h>
+#include "network_drivers/transport/tcp.h"
 
 // A test-controllable monotonic clock (ms) so the stale-nonce path can be exercised
 // deterministically: tests advance g_fake_ms and the library reads it via pc_millis().

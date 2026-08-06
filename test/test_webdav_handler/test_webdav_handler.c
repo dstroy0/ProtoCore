@@ -15,6 +15,7 @@
 #include <string.h>
 
 #include <unity.h>
+#include "network_drivers/transport/tcp.h"
 
 static const pc_mnt_backend *davfs; // the store WebDAV walks; bound in setUp
 

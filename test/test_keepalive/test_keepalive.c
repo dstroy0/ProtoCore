@@ -11,6 +11,7 @@
 #include <string.h>
 
 #include <unity.h>
+#include "network_drivers/transport/tcp.h"
 
 static int handler_calls = 0;
 

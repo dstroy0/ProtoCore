@@ -13,6 +13,7 @@
 #include "network_drivers/session/session.h"
 #include "network_drivers/transport/listener.h"
 #include <unity.h>
+#include "network_drivers/transport/tcp.h"
 
 // tcp.cpp + presentation.cpp + session.cpp compiled into native env.
 // No stubs required.

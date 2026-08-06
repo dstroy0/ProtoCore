@@ -9,6 +9,7 @@
 #include <string.h>
 
 #include <unity.h>
+#include "network_drivers/transport/tcp.h"
 
 static int g_log_status;
 static int g_log_len;
