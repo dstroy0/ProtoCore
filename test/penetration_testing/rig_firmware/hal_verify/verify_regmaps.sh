@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Ground-truth check for src/board_drivers/hal/esp/esp_crypto_hal.h: compile HalRegmapVerify for every supported die. Each build
+# Ground-truth check for core_setup/hal/esp/esp_crypto_hal.h: compile HalRegmapVerify for every supported die. Each build
 # static_asserts our PC_ register values EQUAL the manufacturer's soc macros for that die, so a clean compile
 # proves the map matches Espressif's own implementation - including dies we have no board for. Run in WSL with
 # the arduino-esp32 3.x core installed (arduino-cli on PATH):
@@ -16,7 +16,7 @@ rm -rf "$STAGE"
 mkdir -p "$STAGE/HalRegmapVerify"
 cp "$HERE/HalRegmapVerify/HalRegmapVerify.ino" "$STAGE/HalRegmapVerify/"
 # The HAL is self-contained; stage just it next to the sketch (no library attach -> no WiFi drag-in on H2).
-cp "$REPO/src/board_drivers/hal/esp/esp_crypto_hal.h" "$STAGE/HalRegmapVerify/esp_crypto_hal.h"
+cp "$REPO/core_setup/hal/esp/esp_crypto_hal.h" "$STAGE/HalRegmapVerify/esp_crypto_hal.h"
 
 rc=0
 for fqbn in $DIES; do

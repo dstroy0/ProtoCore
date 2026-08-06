@@ -5,7 +5,7 @@
 #   ./test/run_tests.sh      # from project root
 #   ./run_tests.sh           # from test/ directory
 #
-# Writes: docs/TEST_REPORT.md
+# Writes: test/TEST_REPORT.md
 #
 # Requires: bash 4.2+, pio (PlatformIO Core), awk, sed, grep, mktemp
 

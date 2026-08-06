@@ -169,13 +169,13 @@
       "tests": ["unit/ssh/test_ssh_ed25519"]
     },
     "native_ssh_inflate": {
-      "desc": "SSH client-to-server resumable INFLATE (ssh_inflate): decompresses OpenSSH's per-packet\nZ_PARTIAL_FLUSH zlib stream across packets with a 32 KB context-takeover window. Verified against\ngolden vectors produced by real zlib (windowBits 15, Z_PARTIAL_FLUSH per packet; tools/gen_ssh_inflate_vectors.py),\ncovering fixed/dynamic/stored blocks, cross-packet back-references, and empty/tiny payloads. Pure host tests.",
+      "desc": "SSH client-to-server resumable INFLATE (ssh_inflate): decompresses OpenSSH's per-packet\nZ_PARTIAL_FLUSH zlib stream across packets with a 32 KB context-takeover window. Verified against\ngolden vectors produced by real zlib (windowBits 15, Z_PARTIAL_FLUSH per packet; tools/crypto/gen_ssh_inflate_vectors.py),\ncovering fixed/dynamic/stored blocks, cross-packet back-references, and empty/tiny payloads. Pure host tests.",
       "flags": ["-DPC_ENABLE_SSH=1", "-DPC_ENABLE_SSH_ZLIB=1"],
       "src": ["+<network_drivers/presentation/ssh/transport/ssh_inflate.c>"],
       "tests": ["unit/ssh/test_ssh_inflate"]
     },
     "native_crypto_kat": {
-      "desc": "Data-driven external crypto known-answer tests: HMAC-SHA256/512, AEAD_AES_128_GCM,\nX25519, and Ed25519 verify from Project Wycheproof (including its adversarial edge cases),\nplus HKDF-SHA256 Extract (RFC 5869), the ChaCha20 block (RFC 8439 2.4.2), and Poly1305\n(RFC 8439 2.5.2). Vectors are vendored as auditable JSON (test/vectors) and compiled to a\ntable by tools/gen_crypto_vectors.py. Pure host tests.",
+      "desc": "Data-driven external crypto known-answer tests: HMAC-SHA256/512, AEAD_AES_128_GCM,\nX25519, and Ed25519 verify from Project Wycheproof (including its adversarial edge cases),\nplus HKDF-SHA256 Extract (RFC 5869), the ChaCha20 block (RFC 8439 2.4.2), and Poly1305\n(RFC 8439 2.5.2). Vectors are vendored as auditable JSON (test/vectors) and compiled to a\ntable by tools/crypto/gen_crypto_vectors.py. Pure host tests.",
       "flags": ["-DPC_ENABLE_HTTP3=1"],
       "src": [
         "+<crypto/hash/sha256.c>",

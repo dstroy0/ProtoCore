@@ -5,7 +5,7 @@
 
 .DESCRIPTION
     Runs the native test suites, parses every test result, extracts per-test
-    descriptions from source-file comments, and writes docs/TEST_REPORT.md.
+    descriptions from source-file comments, and writes test/TEST_REPORT.md.
 
 .EXAMPLE
     # From project root:
@@ -25,7 +25,7 @@ $ProjectRoot = if ((Split-Path -Leaf $ScriptDir) -eq 'test') {
     Split-Path -Parent $ScriptDir
 }
 else { $ScriptDir }
-$ReportPath = Join-Path (Join-Path $ProjectRoot 'docs') 'TEST_REPORT.md'
+$ReportPath = Join-Path (Join-Path $ProjectRoot 'test') 'TEST_REPORT.md'
 
 # ── Find pio ──────────────────────────────────────────────────────────────────
 
