@@ -9,7 +9,7 @@
  * with a deadline - the same cross-thread pattern the http_client uses.
  */
 
-#include "network_drivers/network/dns/resolver.h"
+#include "network_drivers/network/dns/dns_resolver.h"
 
 #if PC_NEED_DNS_RESOLVER
 

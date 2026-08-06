@@ -266,13 +266,13 @@ DNP3 (IEEE 1815) data-link frame codec. Default off. services/energy/dnp3 is a z
 
 `PC_ENABLE_DNS_RESOLVER`
 
-Opt-in DNS resolver with answer verification. Default off. network_drivers/network/dns_resolver resolves a hostname to an IPv4 address (lwIP dns_gethostbyname, marshalled to tcpip_thread like the http_client) and can reject suspicious answers - 0.0.0.0, broadcast, loopback, multicast - which are spoofing / DNS-rebinding indicators for a remote host. The address classifier / verifier is pure and host-tested; the resolve is ESP32-only (blocking, so call it off the request hot path).
+Opt-in DNS resolver with answer verification. Default off. network_drivers/network/dns/dns_resolver resolves a hostname to an IPv4 address (lwIP dns_gethostbyname, marshalled to tcpip_thread like the http_client) and can reject suspicious answers - 0.0.0.0, broadcast, loopback, multicast - which are spoofing / DNS-rebinding indicators for a remote host. The address classifier / verifier is pure and host-tested; the resolve is ESP32-only (blocking, so call it off the request hot path).
 
 ## DNS Server
 
 `PC_ENABLE_DNS_SERVER`
 
-Authoritative DNS server on UDP/53. Default off. services/net/dns_server answers A/IN queries from a small fixed table of `name -> IPv4` records you register with `pc_dns_server_add()`, so devices on an offline / air-gapped LAN can use names (`printer.lan`) instead of raw IPs - a companion to the NTP server for self-hosted infrastructure. It parses the question, looks the name up case-insensitively, and on a hit appends one answer record using DNS name compression (a 2-byte pointer back to the question); an unknown name returns NXDOMAIN and non-A queries return no answer. The response builder (`pc_dns_server_build_response`) is pure and host-tested against the wire format; the binding is the transport UDP service. Zero heap. This is a general resolver, distinct from the provisioning captive-portal DNS (which points every name at the softAP) - do not enable both. Example DnsServer. See src/network_drivers/network/dns/server.h.
+Authoritative DNS server on UDP/53. Default off. network_drivers/network/dns/dns_server answers A/IN queries from a small fixed table of `name -> IPv4` records you register with `pc_dns_server_add()`, so devices on an offline / air-gapped LAN can use names (`printer.lan`) instead of raw IPs - a companion to the NTP server for self-hosted infrastructure. It parses the question, looks the name up case-insensitively, and on a hit appends one answer record using DNS name compression (a 2-byte pointer back to the question); an unknown name returns NXDOMAIN and non-A queries return no answer. The response builder (`pc_dns_server_build_response`) is pure and host-tested against the wire format; the binding is the transport UDP service. Zero heap. This is a general resolver, distinct from the provisioning captive-portal DNS (which points every name at the softAP) - do not enable both. Example DnsServer. See src/network_drivers/network/dns/dns_server.h.
 
 ## Document Store
 

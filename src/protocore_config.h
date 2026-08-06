@@ -2829,7 +2829,7 @@ from halves and is slower than the width it decomposes into"
 #endif
 
 /**
- * @brief Authoritative DNS server (services/net/dns_server) on UDP/53.
+ * @brief Authoritative DNS server (network_drivers/network/dns/dns_server) on UDP/53.
  *
  * Default off. Resolves a small fixed table of `name -> IPv4` A records you register with
  * pc_dns_server_add(), so devices on an offline / air-gapped LAN can use names instead of raw
@@ -4974,7 +4974,7 @@ from halves and is slower than the width it decomposes into"
 /**
  * @brief Opt-in DNS resolver with answer verification (PC_ENABLE_DNS_RESOLVER).
  *
- * Default off. network_drivers/network/dns_resolver resolves a hostname to an IPv4 address (lwIP
+ * Default off. network_drivers/network/dns/dns_resolver resolves a hostname to an IPv4 address (lwIP
  * dns_gethostbyname, marshalled to tcpip_thread like the http_client) and can
  * reject suspicious answers - 0.0.0.0, broadcast, loopback, multicast - which are
  * spoofing / DNS-rebinding indicators for a remote host. The address classifier /

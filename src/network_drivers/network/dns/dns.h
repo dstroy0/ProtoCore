@@ -20,8 +20,8 @@
 #ifndef PROTOCORE_DNS_H
 #define PROTOCORE_DNS_H
 
-#include "network_drivers/network/dns/resolver.h"
-#include "network_drivers/network/dns/server.h"
+#include "network_drivers/network/dns/dns_resolver.h"
+#include "network_drivers/network/dns/dns_server.h"
 #include "protocore_config.h"
 
 PROTO_BEGIN_DECLS

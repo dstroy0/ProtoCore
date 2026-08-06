@@ -1608,10 +1608,10 @@
       "tests": ["unit/physical/test_radio_power"]
     },
     "native_dns_resolver": {
-      "desc": "DNS resolver answer classifier/verifier (network_drivers/network/dns_resolver): host-tested;\nthe lwIP resolve is ESP32-only.",
+      "desc": "DNS resolver answer classifier/verifier (network_drivers/network/dns/dns_resolver): host-tested;\nthe lwIP resolve is ESP32-only.",
       "flags": ["-DPC_ENABLE_DNS_RESOLVER=1"],
       "src": [
-        "+<network_drivers/network/dns/resolver.c>",
+        "+<network_drivers/network/dns/dns_resolver.c>",
         "+<server/clock/clock.c>"
       ],
       "tests": ["unit/network/test_dns_resolver"]
@@ -1779,7 +1779,7 @@
         "+<services/iot/redis_resp/redis_resp.c>",
         "+<services/fieldbus/opcua/opcua.c>",
         "+<services/iot/graphql/graphql.c>",
-        "+<network_drivers/network/dns/server.c>",
+        "+<network_drivers/network/dns/dns_server.c>",
         "+<services/energy/dnp3/dnp3.c>",
         "+<services/iot/stomp/stomp.c>",
         "+<network_drivers/application/smb/smb2.c>",
@@ -1992,9 +1992,12 @@
       "tests": ["unit/application/test_ntp_server"]
     },
     "native_dns_server": {
-      "desc": "Authoritative DNS server (services/net/dns_server): the pure A-record response builder\n(QNAME parse, compressed A answer, NXDOMAIN, non-A query, header flags, malformed\nguards) and the built-in name->IP table (add / case-insensitive lookup / clear). No lwIP.",
+      "desc": "Authoritative DNS server (network_drivers/network/dns/dns_server): the pure A-record response builder\n(QNAME parse, compressed A answer, NXDOMAIN, non-A query, header flags, malformed\nguards) and the built-in name->IP table (add / case-insensitive lookup / clear). No lwIP.",
       "flags": ["-DPC_ENABLE_DNS_SERVER=1"],
-      "src": ["+<network_drivers/network/dns/server.c>", "+<mmgr/protostr.c>"],
+      "src": [
+        "+<network_drivers/network/dns/dns_server.c>",
+        "+<mmgr/protostr.c>"
+      ],
       "tests": ["protocols/network/test_dns_server"]
     },
     "native_rtc": {

@@ -6,7 +6,7 @@
  * @brief Authoritative DNS server - implementation. See dns_server.h.
  */
 
-#include "network_drivers/network/dns/server.h"
+#include "network_drivers/network/dns/dns_server.h"
 #include "mmgr/protostr.h"  // str.len
 #include "mmgr/rawmemcpy.h" // proto_raw_read: the exact mover, for a destination inside a buffer
 #include "protocore_config.h"

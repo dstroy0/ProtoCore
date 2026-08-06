@@ -1,11 +1,11 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Unit tests for the authoritative DNS server (services/net/dns_server): the pure response
+// Unit tests for the authoritative DNS server (network_drivers/network/dns/dns_server): the pure response
 // builder (A-record answer, NXDOMAIN, non-A query, malformed guards, header flags) and the
 // built-in name->IP table (add / case-insensitive lookup / clear).
 
-#include "network_drivers/network/dns/server.h"
+#include "network_drivers/network/dns/dns_server.h"
 #include "protocore_config.h" // PC_DNS_NAME_MAX / PC_DNS_SERVER_MAX_RECORDS
 #include <stdint.h>
 #include <stdio.h> // snprintf
