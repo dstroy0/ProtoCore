@@ -1,7 +1,7 @@
 # Banned in `src/` (and what to use instead)
 
-Hard rules for library code. If a change violates one of these, it is wrong - no exceptions, no
-"it was simpler," no "just this once." This file is the checklist a reviewer hammers me with.
+Hard rules for library code. If a change violates one of these, it is wrong: no exceptions, no
+"it was simpler," no "just this once."
 
 **Scope**
 
@@ -11,126 +11,267 @@ Hard rules for library code. If a change violates one of these, it is wrong - no
   library's own transport, never `WiFiClient` / `WiFiUDP`.
 - **`test/`** - anything goes (any C++ / STL / stdlib). Do **not** apply these rules to tests.
 
-**Enforcement.** `ci_tooling/check/check_src_banned.py` is the mechanical gate for the machine-detectable bans
-(#1 `strlen`, #2 `<stdlib.h>` / heap / parse functions, #3 `auto`, #4 `delay()`, #8 the non-reentrant
-`gmtime` family, #7 em-dashes, #22 virtual dispatch / RTTI). The pre-commit hook runs it on the staged `src/` sources and **refuses
-the commit** on any hit; the `Banned-constructs guard` CI step runs it over the whole tree
-(`--all`). Comments and string literals are exempt, so only real code trips it. Bans that need
-human or diff-aware judgment (#5 bare `millis()` "for new timing", #6 networking, #9-#16) stay review
-items with the `rg` recipes below. Run it yourself with `python ci_tooling/check/check_src_banned.py --all`.
+**Enforcement.** `ci_tooling/check/check_src_banned.py` gates the machine-detectable bans; the
+pre-commit hook runs it on the staged `src/` sources and refuses the commit on any hit. Comments and
+string literals are exempt. The rest are review items, and each block below says which it is under
+**Catch**. Command list: [SYMBOLS.md](SYMBOLS.md) section 5.
+
+Numbers are stable and cited from source comments. #16 is folded into #12 and keeps its number.
+
+## Index
+
+| #   | Banned                                           | Use instead                              |
+| --- | ------------------------------------------------ | ---------------------------------------- |
+| 1   | `strlen`                                         | `strnlen(p, cap)`                        |
+| 2   | `<stdlib.h>` and everything in it                | fixed BSS, hand-rolled parse             |
+| 3   | `auto`                                           | the explicit type                        |
+| 4   | `delay()`                                        | `pcdelay(ms)`                            |
+| 5   | bare `millis()` for new timing                   | `pc_millis()`                            |
+| 6   | outside networking libs, raw lwIP                | `Tcp.client->`, `Udp.listener->`         |
+| 7   | em-dash (U+2014)                                 | comma, parentheses, a linking word       |
+| 8   | `gmtime` / `localtime` / `ctime`                 | the `_r` forms                           |
+| 9   | casting an enum to an integer to compile         | propagate the enum type                  |
+| 10  | signed-overflow UB in a parser                   | accumulate unsigned, then apply sign     |
+| 11  | uninitialized variables and out-params           | initialize at the declaration            |
+| 12  | file-scope mutable outside one `<Name>Ctx`       | one owned context struct                 |
+| 13  | back-compat shims, compat aliases                | make the breaking change, bump major     |
+| 14  | British spelling                                 | American spelling                        |
+| 15  | duplicated or inline config strings              | a named `const`, or `protocore_config.h` |
+| 16  | (see #12)                                        |                                          |
+| 17  | a mid-file `#include`                            | hoist every include to the top           |
+| 18  | `constexpr` for a size other code uses           | `#define` in `protocore_config.h`        |
+| 19  | a function-local array, any size                 | borrow a `pc_span` from a pool           |
+| 20  | `snprintf` / `vsnprintf`                         | a `pc_field` frame spec, or `pc_sb`      |
+| 21  | a braceless `if` / `else` / `for` / `while` body | always brace the body                    |
+| 22  | `virtual`, `: public`, RTTI, `std::function`     | the C11 object                           |
+| 23  | the conditional expression `?:` in a body        | `if` / `else if` / `else`                |
 
 ## The bans
 
-| #   | Banned                                                                                                                                                  | Why                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | Use instead                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | Catch it                                                  |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| 1   | `strlen`                                                                                                                                                | unbounded read on a non-terminated buffer                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | `strnlen(p, cap)`, or carry an explicit length                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | `rg -n '\bstrlen\s*\(' src/`                              |
-| 2   | `<stdlib.h>` / `<cstdlib>` and everything in it - `malloc`/`free`/`calloc`/`realloc`, `atoi`/`atol`/`strtol`/`strtoll`/`strtod`, `qsort`, `rand`, `abs` | no heap after `begin()`; hidden allocation / locale-dependent parsing                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | fixed BSS buffers; hand-rolled integer/float parse; `<stdio.h>` (`snprintf`) and `<string.h>` (`memcpy`/`memcmp`/`memset`/`strnlen`) are allowed                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | `rg -n '#include <c?stdlib' src/`                         |
-| 3   | `auto` keyword                                                                                                                                          | hides the type; obscures conversions                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | spell the explicit type (captureless lambda -> `static` fn; capturing `[&]` -> `static` fn taking state explicitly). Suppress Sonar S5827, do not apply it                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | `rg -n '\bauto\b' src/`                                   |
-| 4   | `delay(...)`                                                                                                                                            | blocks the worker; not clock-pluggable                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | `pcdelay(ms)` from `services/clock.h`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | `rg -n '\bdelay\s*\(' src/`                               |
-| 5   | bare `millis()` for new timing                                                                                                                          | bypasses the pluggable clock                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | `pc_millis()` from `services/clock.h`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | `rg -n '\bmillis\s*\(' src/`                              |
-| 6   | `WiFiClient`, `WiFiUDP`, `AsyncUDP`, `ETH.*`, any outside networking lib, and raw lwIP (`udp_*` / `tcp_*` / `pbuf`) outside `transport/` + `tls/`       | breaks the OSI layering; ties code to one platform stack                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | **TCP:** `pc_client_*` (`network_drivers/transport/client.h`) - `Tcp.client->open` / `_send` / `_read` / `_available` / `_is_closed` / `_close`. **UDP:** `Udp` (`network_drivers/transport/udp.h`) - `Udp.listener->listen` / `->reply` / `->sendto`, and `Udp.client->sendto`. **Applies to `examples/` too.**                                                                                                                                                                                                                                                                                                                                          | `rg -n 'WiFiClient\|WiFiUDP\|AsyncUDP' src/ examples/`    |
-| 7   | em-dashes (`-` U+2014)                                                                                                                                  | house style                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | commas, parentheses, or a linking word                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | `rg -n $'—' src/ docs/`                                   |
-| 8   | `gmtime` / `localtime` / `ctime` / `asctime`                                                                                                            | non-reentrant (shared static)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | the `_r` forms: `gmtime_r` / `localtime_r`. Never put a time bug in a test seam either                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | `rg -n '\b(gmtime\|localtime\|ctime\|asctime)\s*\(' src/` |
-| 9   | casting an enum member to `int`/`byte`/`uint8_t` to make it compile                                                                                     | silences the type check                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | propagate the enum type through the call chain; cast **only** at the literal wire byte read/written                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | review any `(int)`/`(uint8_t)` on an enum                 |
-| 10  | signed-overflow UB in hand-rolled parsers (`v = v*10 + d` on a signed int, `neg << 8`)                                                                  | UB; UBSan `-fno-sanitize-recover=all` traps it                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | accumulate in an `unsigned` type, then apply sign; guard against overflow                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | `-fsanitize=undefined` in the pentest build               |
-| 11  | uninitialized variables / out-params                                                                                                                    | analyzers + real bugs; a `return false` guard is **not** enough                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | initialize at declaration; write every out-param on **every** path, including the false-return path                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Sonar / `-Wmaybe-uninitialized`                           |
-| 12  | file-scope mutable state not inside one owned `<Name>Ctx` struct                                                                                        | scattered ownership -> interlayer bugs                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | put every mutable file-scope variable in a single owned context struct                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | `python ci_tooling/check/check_owned_context.py`          |
-| 13  | back-compat shims / compat aliases                                                                                                                      | this library prefers industry best practice over internal back-compat                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | make the breaking change; bump major                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | review                                                    |
-| 14  | British spelling in identifiers / comments (`color`, `initialize`, `behavior`)                                                                          | house style                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | American spelling everywhere                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | `cspell`                                                  |
-| 15  | duplicated string literals; config/default strings inline                                                                                               | drift; unconfigurable                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | dedup to a named `const`; put config/default strings in `protocore_config.h` under a `PC_ENABLE_*` guard                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | review                                                    |
-| 16  | a new `src/` file whose mutable state is not in a Ctx from the start                                                                                    | see #12                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | design with the owned context up front                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | `check_owned_context.py`                                  |
-| 17  | a mid-file `#include` (an `#include` after any code)                                                                                                    | makes the dependency graph read-order-dependent; hides layering                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | hoist every `#include` to the top of the file. A vendor header belongs in `board_drivers/`, never behind a conditional in the core. A genuinely ordered include that derives from earlier macros is exempt only with a justified `// PC_ALLOW_LATE_INCLUDE: <reason>` on the include line                                                                                                                                                                                                                                                                                                                                                                 | `python ci_tooling/check/check_src_banned.py --all`       |
-| 18  | `constexpr` for a value other code sizes itself against, unless the standard being implemented dictates it                                              | **symbol-kind mismatch.** A `#define` is an untyped preprocessor token; a `constexpr` is a typed object the preprocessor cannot see. A capacity declared `constexpr` cannot appear in an `#if`, cannot set another knob's `#define` default, and cannot fail at config time - its check degrades to a `static_assert` firing mid-compile. That is exactly why `PC_ENABLE_EDGE_MESH` could not be compiled at all. Separately, a `constexpr` **function** is a permission rather than a mandate: it is only _allowed_ to fold, and may emit runtime evaluation with no diagnostic, unless the call site forces constant evaluation (initializing a `constexpr` variable, an array bound, a `case` label) | `#define` it in `protocore_config.h` (or the module header) under the usual `#ifndef` guard, so it participates in preprocessor arithmetic like every other knob and its value is fixed before the compiler runs                                                                                                                                                                                                                                                                                                                                                                                                                                          | `check_src_banned.py`                                     |
-| 19  | a function-local array (a stack buffer) of any size                                                                                                     | **stack is the one allocation the footprint cannot see.** Every other byte here is a fixed BSS pool sized at config time, so peak DRAM is a number you can compute before flashing. A local array is outside that accounting, and worst-case stack depth silently becomes whatever the deepest call chain happens to allocate - which is why the size of the array is irrelevant to the ban. There is no cost to complying, because the work buffers are already reentrant by construction                                                                                                                                                                                                              | borrow it. `pc_plaintext_mark()` / `pc_plaintext_span()` / `pc_plaintext_release()` (`mmgr/plaintext.h`) for handler and I/O buffers, failing closed with an empty span the `pc_span_ok()` check catches; `pc_secure_mark()` / `pc_secure_span()` / `pc_secure_release()` (`mmgr/secure.h`) for crypto leaf math, where the pool zeroes the region on release so key material never outlives the call. Both hand back a `pc_span`, so the run length travels with the pointer instead of being carried alongside it. `static` locals are BSS and belong to #16. Justify a true exception with `// PC_ALLOW_STACK_ARRAY: <reason>` on the declaration line | `check_src_banned.py` (ratcheted baseline)                |
+### 1. `strlen`
 
-| 20 | `snprintf` / `vsnprintf` (runtime format-string formatting) | a format string makes the CPU re-parse at runtime, on every call, what the code already knew at compile time. **Measured on an S3 at 240 MHz: 2.4x on a real HTTP response header, 2.8x on a JSON object, 6.6x on a bare `%u`, 8.0x on `%.2f`** (see [FEATURE_PERFORMANCE.md](FEATURE_PERFORMANCE.md) 2b for the table and method). It also drags the libc float formatter into the image whether or not a `%f` is ever used. Note the one case that goes the other way: a **pure-literal** frame is faster through `snprintf` than through the frame engine, so do not wrap one in a spec | declare the frame: a `static const pc_field[]` spec in `shared_primitives/frame.h` plus one `pc_frame_build` / `pc_frame_append` call. The spec is pre-decoded data in rodata, so nothing is parsed at runtime and the engine that walks it is the only place a conversion can be wrong. For a short frame built by hand, the appenders it is built on are `pc_sb` in `shared_primitives/strbuf.h` - `pc_sb_put` / `pc_sb_u32` / `pc_sb_json` / `pc_sb_xml` bump-append into a caller-owned buffer and latch `ok = false` the first time something would not fit, so overflow is one flag test at the end (`pc_sb_finish`) instead of a truncation nobody notices. Justify a true exception with `// PC_ALLOW_SNPRINTF: <reason>` | `check_src_banned.py` (ratcheted baseline) |
+**Banned.** `strlen`.
+**Use.** `strnlen(p, cap)`, or carry an explicit length.
+**Why.** Unbounded read on a buffer that may not be terminated.
+**Catch.** `check_src_banned.py`
 
-| 21 | a braceless body after `if` / `else` / `for` / `while` (`if (x) return;`, or the body on the next line unbraced) | one statement silently becomes two. Adding a line to an unbraced body puts it OUTSIDE the condition and the code still compiles, still looks right, and is wrong at runtime - the goto-fail class of bug. It also breaks every mechanical rewrite: converting one `snprintf` into a `pc_sb` frame build turned unbraced bodies into code that ran unconditionally, and only a declaration-in-a-braceless-body happening to be a hard C++ error made it visible at all | always brace the body. `InsertBraces: true` in `.clang-format` does this automatically and without changing semantics, so the fix is a reformat rather than an edit - it braced 7 553 of the 7 564 sites in one pass. What it cannot reach is a condition split across `#if` / `#else`, because the brace and its `if` land in different preprocessor branches | `check_src_banned.py` + `clang-format` |
+### 2. `<stdlib.h>` and everything in it
 
-| 22 | `virtual` functions, class hierarchies (`: public`), RTTI (`dynamic_cast` / `typeid`), and `std::function` | **the call target is not in the binary.** A virtual call reads a vtable pointer out of the object and jumps through it, so which function runs is decided by a value that does not exist until runtime. Nothing downstream can be established from the image: the worst-case path is unknown, the call cannot be inlined or devirtualized, and a corrupted object turns every later call through it into an arbitrary jump. That is the same nondeterminism this library refuses everywhere else, where the pools are fixed, the sizes are compile-time and the worst case is a number. RTTI adds an unbounded runtime type walk on top; `std::function` type-erases through an allocation | **the C11 object, and it is the endorsed shape rather than an exception to this row.** An opaque context plus a `static const` table of that concern's entry points, with the context carried as a member of the table (`ProtoHandler` is the model: one table of `{on_accept, on_data, on_close, on_poll}` per protocol). What this row bans is a call target read out of a **mutable** object at runtime; a `static const` table is written at compile time, lives in rodata, and cannot be reassigned, so the set of reachable targets is fixed in the image and the linker sees the whole closed list. That is the property the row is protecting, and this pattern has it. Or walk a spec table (`pc_field`) | `check_src_banned.py` |
+**Banned.** `<stdlib.h>` / `<cstdlib>`, and `malloc` / `free` / `calloc` / `realloc`, `atoi` / `atol`
+/ `strtol` / `strtoll` / `strtod`, `qsort`, `rand`, `abs`.
+**Use.** Fixed BSS buffers; hand-rolled integer and float parse. `<string.h>` (`memcpy`, `memcmp`,
+`memset`, `strnlen`) is allowed. `<stdio.h>` is allowed for everything except the runtime format
+family, which #20 bans.
+**Why.** No heap after `begin()`. Hidden allocation and locale-dependent parsing.
+**Catch.** `check_src_banned.py`
 
-| 23 | the conditional expression `?:` in a code body - as an assignment (`x = c ? a : b`), as a return (`return c ? a : b`), chained (`c1 ? a : c2 ? b : d`), or nested inside another expression | MISRA governs `src/`, and it bounds how many conditionals a line may carry. A ternary hides a branch inside an expression, so a single statement can hold an unbounded number of them and the decision stops being visible at the point where the value is set. A chain is worse: it is an `if` / `else if` ladder written where the arms cannot be lined up against their conditions, and a nested one makes operator precedence load-bearing for the control flow. Every assignment and every conditional is its own statement | `if` / `else if` / `else`, one conditional per statement. Declare the variable with the value the fall-through case wants, then assign inside the branch that owns it: `size_t w = 1u; if (n >= PC_SWAR_BYTES) { w = PC_SWAR_BYTES; } else if (n >= 4u) { w = 4u; }`. For a selector between two implementations, brace both arms - `if (ci) { return eq_ci(a, b, cap); } return eq_cs(a, b, cap);` | `rg -n '\?[^)]*:' src/` |
+### 3. `auto`
 
-### Sweep #20 before #19
+**Banned.** The `auto` keyword, anywhere, including a local.
+**Use.** Spell the type. Suppress Sonar S5827, do not apply it.
+**Why.** Hides the type and the conversions at the point they happen.
+**Catch.** `check_src_banned.py`
 
-The two bans meet on the same line, and the order is load-bearing. `snprintf(buf, sizeof(buf), ...)`
-is correct only while `buf` is an array: the moment #19 turns it into a borrowed pointer,
-`sizeof(buf)` silently becomes 4 and the call truncates to three characters, with no diagnostic from
-any compiler or checker. Converting to `pc_sb` first states the capacity explicitly at the builder's
-init, so the later pointer conversion has nothing left to silently change. Doing it the other way
-round means 592 chances to lose a buffer size without noticing.
+### 4. `delay(...)`
 
-### Two rules, not one
+**Banned.** `delay(...)`.
+**Use.** `pcdelay(ms)` from `services/clock.h`.
+**Why.** Blocks the worker and bypasses the pluggable clock.
+**Catch.** `check_src_banned.py`
 
-**Nothing gets allocated on the heap after `begin()`** is the older and simpler of the two: every
-pool, arena and table is reserved during setup, and the steady-state server never calls an
-allocator. That is what makes the footprint a fixed number.
+### 5. Bare `millis()` for new timing
 
-Ban #19 closes the other half. The heap rule alone still leaves the stack free to grow without
-anyone accounting for it, so "fixed footprint" would mean fixed _except_ for whatever the deepest
-call chain happens to put in a frame. Reserving everything up front and then allocating working
-buffers per call is only half a guarantee.
+**Banned.** `millis()` in new timing code.
+**Use.** `pc_millis()` from `services/clock.h`.
+**Why.** Bypasses the pluggable clock, so the timing cannot be driven in a test.
+**Catch.** review, `rg -n '\bmillis\s*\(' src/`
 
-Setup-time code is not the target of #19: a stack array inside `begin()` or a one-shot init path
-runs before steady state, and is exempt with a `// PC_ALLOW_STACK_ARRAY: begin()-time only`
-justification. The request path is where the rule bites, because that is the path whose worst case
-has to be knowable.
+### 6. Outside networking libraries and raw lwIP
 
-### Why the work buffers are safe to share
+**Banned.** `WiFiClient`, `WiFiUDP`, `AsyncUDP`, `ETH.*`, any outside networking library, and raw
+lwIP (`udp_*` / `tcp_*` / `pbuf`) outside `transport/` and `tls/`. **Applies to `examples/` too.**
+**Use.** TCP: `Tcp.client->open` / `->send` / `->read` / `->available` / `->is_closed` / `->close`
+(`network_drivers/transport/tcp.h`). UDP: `Udp.listener->listen` / `->reply` / `->sendto`, and
+`Udp.client->sendto` (`network_drivers/transport/udp.h`).
+**Why.** Breaks the OSI layering and ties code to one platform stack.
+**Catch.** review, `rg -n 'WiFiClient|WiFiUDP|AsyncUDP' src/ examples/`
 
-The obvious objection to hoisting a local buffer into shared storage is reentrancy: two tasks in the
-same function would then scribble on one buffer. Neither destination has that problem, and neither
-solves it with a lock:
+### 7. Em-dashes
 
-- **`pc_plaintext_alloc()` is per-worker.** The pool has one slot per server worker plus the ghost
-  (`PC_REG_POOL_SLOTS`), and a borrow comes from the arena belonging to the calling worker.
-  Concurrent callers touch different memory. The arena is reset per dispatch, so a borrow cannot
-  outlive the handler and a forgotten release cannot accumulate.
-- **`crypto_work` regions are disjoint by construction.** The region map hands each sub-primitive a
-  fixed offset via a running total, so a caller and its callee never overlap, and the total is a
-  compile-time number rather than a runtime allocation.
+**Banned.** U+2014, the em-dash.
+**Use.** A comma, parentheses, or a linking word.
+**Why.** House style.
+**Catch.** `check_src_banned.py`. An `rg` recipe must exclude this file, which names the codepoint.
 
-## Required (the positive side)
+### 8. `gmtime` / `localtime` / `ctime` / `asctime`
 
-- **Pure, host-tested codecs.** A new protocol codec is `src/services/<name>/<name>.{h,c}` behind a
-  `PC_ENABLE_<NAME>` flag (default 0), no sockets/crypto in the codec, with a `native_<name>` Unity
-  suite added to `test/test_matrix.json` (regen with `test/gen_test_envs.py`).
-- **Implement protocols faithfully** in spec field order; verify against the live standard **and** a
-  real third-party implementation; byte-exact golden vectors.
-- **snake_case, terse names**, `const char *` (pointer binds to the type), and comments that state
-  what the code does and how it does it, in plain language. Code is math; the comment is its
-  description. Nothing else goes in one.
-- **A module publishes a namespace struct, not a list of names.** Its storage is the owned `<Name>Ctx`
-  from ban #12, declared in the header as an opaque tag and defined only in the owning `.c`, so the
-  layout never leaves the TU that carries its `static_assert` and its `PC_WORK_*` budget. **Every
-  storage pointer a header hands out is opaque**; a wire or message struct is the opposite case and
-  keeps its layout published, because there the layout is the contract.
-  The struct holds that context pointer plus the module's entry points, and the modules join into the
-  layer objects a caller actually uses:
+**Banned.** All four.
+**Use.** The `_r` forms: `gmtime_r`, `localtime_r`. Never put a time bug in a test seam either.
+**Why.** Non-reentrant: they return a pointer to one shared static.
+**Catch.** `check_src_banned.py`
 
-    ```c
-    typedef struct AuthCtx AuthCtx;  /* opaque: storage stays in auth.c */
+### 9. Casting an enum to an integer to make it compile
 
-    typedef struct
-    {
-        AuthCtx *ctx;
-        proto_bool (*login)(const char *user, const char *pass);
-        void (*begin)(void);
-    } AuthNs;
-    ```
+**Banned.** `(int)` / `(byte)` / `(uint8_t)` on an enum member to silence a type error.
+**Use.** Propagate the enum type through the call chain. Cast only at the literal wire byte read or
+written.
+**Why.** Silences the type check at the point it was doing its job.
+**Catch.** review any `(int)` / `(uint8_t)` on an enum
 
-    so a caller writes `Network.auth.login(user, pass)` and `Server.signaling.peek()`. The chain is
-    the layer, which is what makes a `begin` or an `on` say which one it is at the call site.
+### 10. Signed-overflow UB in hand-rolled parsers
 
-    **The namespace struct is the public surface and the flat `pc_*` functions are internal.** The
-    flat function is the implementation and the struct is the interface, which is what a dispatch
-    table is in C. Converting a module is one change, not a transition: the flat names leave the
-    public header and every caller moves to the struct in the same commit. A module that publishes
-    both surfaces at once is a shim, and ban #13 covers it like any other.
+**Banned.** `v = v * 10 + d` on a signed int, `neg << 8`, and their kind.
+**Use.** Accumulate in an unsigned type, guard against overflow, then apply the sign.
+**Why.** Undefined behavior. `-fno-sanitize-recover=all` traps it.
+**Catch.** `-fsanitize=undefined` in the pentest build
 
-    It costs nothing. A `static const` table is const-propagated into a direct call and then dropped,
-    and `--gc-sections` strips every entry point nothing reached: measured on xtensa-esp32s3 at
-    **+13 bytes of `.text`**, with the tables absent from both images and the same 3 of 24 leaves
-    surviving either way (`penetration_testing/rig_firmware/s3/build_s3_nsabi.sh`). A layer object
-    names only the children whose `PC_ENABLE_*` gate is on, so it can never reference something the
-    image does not already contain.
+### 11. Uninitialized variables and out-params
+
+**Banned.** A declaration that names storage without setting it. A `return false` guard does not
+count as setting an out-param.
+**Use.** Initialize at the declaration; write every out-param on **every** path, the false-return
+path included. See [SRC_LAW.md](SRC_LAW.md) rule 7 for the two initializer forms.
+**Why.** An object read before it is set has no value the standard defines.
+**Catch.** Sonar, `-Wmaybe-uninitialized`
+
+### 12. File-scope mutable state outside one owned `<Name>Ctx`
+
+**Banned.** A mutable file-scope variable that is not a member of the file's single owned context
+struct. A new `src/` file is designed with that context from the start (this is #16).
+**Use.** One `<Name>Ctx` per file, declared in the header as an opaque tag and defined only in the
+owning `.c`, so the layout never leaves the translation unit that carries its `static_assert` and
+its `PC_WORK_*` budget. A wire or message struct is the opposite case and keeps its layout
+published, because there the layout is the contract.
+**Why.** Scattered ownership produces interlayer bugs.
+**Catch.** `python ci_tooling/check/check_owned_context.py`
+
+### 13. Back-compat shims and compat aliases
+
+**Banned.** An alias, wrapper, or second spelling kept so old callers still compile. A module that
+publishes both a namespace struct and its flat functions is a shim and this covers it.
+**Use.** Make the breaking change and bump major.
+**Why.** This library prefers industry best practice over internal back-compat.
+**Catch.** review
+
+### 14. British spelling
+
+**Banned.** British spelling in identifiers and comments.
+**Use.** American spelling everywhere.
+**Why.** House style.
+**Catch.** `cspell`
+
+### 15. Duplicated string literals, inline config strings
+
+**Banned.** The same literal written twice; a configurable or default string written at its use site.
+**Use.** Dedup to a named `const`. Put config and default strings in `protocore_config.h` under a
+`PC_ENABLE_*` guard.
+**Why.** They drift, and an inline one cannot be configured.
+**Catch.** review
+
+### 17. A mid-file `#include`
+
+**Banned.** An `#include` after any code. A vendor header behind a conditional in the core.
+**Use.** Hoist every include to the top of the file. A vendor header belongs in `board_drivers/`.
+**Why.** Makes the dependency graph read-order-dependent and hides the layering.
+**Escape.** `// PC_ALLOW_LATE_INCLUDE: <reason>` on the include line, for an include that genuinely
+derives from an earlier macro.
+**Catch.** `check_src_banned.py`
+
+### 18. `constexpr` for a value other code sizes itself against
+
+**Banned.** `constexpr` for a capacity, size, or knob, unless the standard being implemented dictates
+it.
+**Use.** `#define` it in `protocore_config.h` (or the module header) under the usual `#ifndef` guard.
+**Why.** Symbol-kind mismatch. A `#define` is an untyped preprocessor token; a `constexpr` is a typed
+object the preprocessor cannot see, so it cannot appear in an `#if`, cannot set another knob's
+default, and cannot fail at config time. Separately, a `constexpr` **function** is a permission
+rather than a mandate: it may emit runtime evaluation with no diagnostic unless the call site forces
+constant evaluation.
+**Catch.** `check_src_banned.py`
+
+### 19. A function-local array, any size
+
+**Banned.** A function-local array (a stack buffer) of any size. `static` locals are BSS and belong
+to #12.
+**Use.** Borrow it. `pc_plaintext_mark()` / `pc_plaintext_span()` / `pc_plaintext_release()`
+(`mmgr/plaintext.h`) for handler and I/O buffers; `pc_secure_mark()` / `pc_secure_span()` /
+`pc_secure_release()` (`mmgr/secure.h`) for crypto leaf math, where the pool zeroes the region on
+release so key material never outlives the call. Both hand back a `pc_span`, so the run length
+travels with the pointer. Both fail closed with an empty span that `pc_span_ok()` catches.
+**Why.** Stack is the one allocation the footprint cannot see. Every other byte is a fixed BSS pool
+sized at config time, so peak DRAM is computable before flashing; a local array puts worst-case stack
+depth outside that accounting, which is why the size of the array is irrelevant to the ban.
+**Escape.** `// PC_ALLOW_STACK_ARRAY: <reason>` on the declaration line. Setup-time code is not the
+target: a stack array inside `begin()` or a one-shot init path is exempt with
+`// PC_ALLOW_STACK_ARRAY: begin()-time only`.
+**Catch.** `check_src_banned.py` (ratcheted baseline)
+
+### 20. `snprintf` / `vsnprintf`
+
+**Banned.** Runtime format-string formatting.
+**Use.** Declare the frame: a `static const pc_field[]` spec in `shared_primitives/frame.h` plus one
+`pc_frame_build` / `pc_frame_append` call. The spec is pre-decoded data in rodata, so nothing is
+parsed at runtime. For a short frame built by hand, the appenders it is built on are `pc_sb` in
+`shared_primitives/strbuf.h`: `pc_sb_put` / `pc_sb_u32` / `pc_sb_json` / `pc_sb_xml` bump-append into
+a caller-owned buffer and latch `ok = false` the first time something would not fit, so overflow is
+one flag test at `pc_sb_finish` instead of a truncation nobody notices.
+**Why.** A format string makes the CPU re-parse at runtime what the code knew at compile time, and it
+drags the libc float formatter into the image whether or not `%f` is ever used. Measurements:
+[FEATURE_PERFORMANCE.md](FEATURE_PERFORMANCE.md) 2b. One case goes the other way: a **pure-literal**
+frame is faster through `snprintf`, so do not wrap one in a spec.
+**Escape.** `// PC_ALLOW_SNPRINTF: <reason>`
+**Catch.** `check_src_banned.py` (ratcheted baseline)
+
+### 21. A braceless body
+
+**Banned.** A body after `if` / `else` / `for` / `while` with no braces, whether on the same line or
+the next.
+**Use.** Always brace the body. `InsertBraces: true` in `.clang-format` does it without changing
+semantics, so the fix is a reformat rather than an edit. What it cannot reach is a condition split
+across `#if` / `#else`, where the brace and its `if` land in different preprocessor branches.
+**Why.** One statement silently becomes two: a line added to an unbraced body lands outside the
+condition, still compiles, still looks right, and is wrong at runtime. It also breaks every
+mechanical rewrite.
+**Catch.** `check_src_banned.py` and `clang-format`
+
+### 22. `virtual`, class hierarchies, RTTI, `std::function`
+
+**Banned.** `virtual` functions, `: public`, `dynamic_cast`, `typeid`, `std::function`.
+**Use.** **The C11 object, and it is the endorsed shape rather than an exception to this row.** An
+opaque context plus a `static const` table of that concern's entry points, with the context carried
+as a member of the table. `ProtoHandler` is the model: one table of
+`{on_accept, on_data, on_close, on_poll}` per protocol. Modules join into the layer objects a caller
+uses, so a call site reads `Network.auth.login(user, pass)`. Or walk a spec table (`pc_field`).
+**Why.** The call target is not in the binary: a virtual call jumps through a value that does not
+exist until runtime, so the worst-case path is unknown, the call cannot be devirtualized, and a
+corrupted object turns every later call into an arbitrary jump. RTTI adds an unbounded runtime type
+walk; `std::function` type-erases through an allocation. A `static const` table is written at compile
+time, lives in rodata, and cannot be reassigned, so the reachable target set is fixed in the image
+and the linker sees the whole closed list. That is the property this row protects.
+**Catch.** `check_src_banned.py`
+
+### 23. The conditional expression `?:` in a code body
+
+**Banned.** `x = c ? a : b`, `return c ? a : b`, a chain `c1 ? a : c2 ? b : d`, or one nested inside
+another expression.
+**Use.** `if` / `else if` / `else`, one conditional per statement. Declare the variable with the value
+the fall-through case wants, then assign inside the branch that owns it:
+
+```c
+size_t w = 1u;
+if (n >= PC_SWAR_BYTES) { w = PC_SWAR_BYTES; }
+else if (n >= 4u)       { w = 4u; }
+```
+
+For a selector between two implementations, brace both arms:
+`if (ci) { return eq_ci(a, b, cap); } return eq_cs(a, b, cap);`
+**Why.** MISRA bounds how many conditionals a line may carry. A ternary hides a branch inside an
+expression, so the decision stops being visible where the value is set; a chain is an `if` / `else if`
+ladder whose arms cannot be lined up against their conditions.
+**Catch.** review, `rg -n '\?[^)]*:' src/`
+
+## See also
+
+- [SRC_LAW.md](SRC_LAW.md), the determinism and allocation law
+- [SYMBOLS.md](SYMBOLS.md), the naming law and the checker commands
+- [ARCHITECTURE.md](ARCHITECTURE.md), the module and layer shape the namespace struct builds

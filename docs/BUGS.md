@@ -115,7 +115,7 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
   passed `-DPROTOCORE_HOST=1` in the flags every native env extends. The command-line define wins:
   the guard that would have set it is skipped, `#ifndef PROTOCORE_HOST` then finds it already
   defined, and `#if PROTOCORE_HOST` selects the host path under a mock vendor. The vendor axis
-  cannot override a value handed to it from outside, and `#undef` is banned (SRC_LAW rule 13), so
+  cannot override a value handed to it from outside, and `#undef` is banned (SRC_LAW rule 11), so
   no arrangement inside the header could have recovered.
 - **Blast radius:** every one of the 310 native envs carried the flag, and the whole
   `PROTOCORE_HOT` half of the tree had no test env at all - `board_drivers/*/mock/` exists to stand
