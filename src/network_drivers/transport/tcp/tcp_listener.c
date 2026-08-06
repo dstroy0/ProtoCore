@@ -36,6 +36,10 @@ extern pc_net_err lowlevel_recv_cb(void *arg, pc_pcb *tpcb, pc_pbuf *p, pc_net_e
 extern pc_net_err lowlevel_sent_cb(void *arg, pc_pcb *tpcb, proto_u16 len);
 extern void lowlevel_err_cb(void *arg, pc_net_err err);
 
+// Both teardowns are called by the add that replaces an active row, above their definitions.
+static void listener_stop(uint8_t idx);
+static void listener_stop_dynamic(uint8_t idx);
+
 // ---------------------------------------------------------------------------
 // Accept-rate throttle (fixed window, global). State persists across accepts.
 // Always compiled (unit-testable); only consulted when the feature is enabled.

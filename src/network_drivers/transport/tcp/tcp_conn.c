@@ -27,10 +27,11 @@
 #include "tcp_conn.h"
 #include "../diffserv.h" // pc_dscp_to_tos and the server-wide default this connection starts from
 #include "../net_addr.h" // NetAddr.to_ip(): the stack's address as a pc_ip
+#include "../tcp.h"      // Tcp.listener->enqueue(): the owning listener posts the event, not this file
 #include "board_drivers/board_profiles/pc_platform.h"
 #include "mmgr/rawmemcpy.h"     // proto_raw_read: the unaligned v6 address load
 #include "server/clock/clock.h" // pc_millis() pluggable monotonic clock
-#include "tcp_listener.h"       // Tcp.listener->enqueue(): the owning listener posts the event, not this file
+#include "tcp_listener.h"       // Listener, listener_pool: the row the accept path stamps onto a slot
 
 #if PROTOCORE_HOT
 #include "network_drivers/session/worker.h" // pc_worker_wake() - resume a paced send when the window drains
