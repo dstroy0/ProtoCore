@@ -18,6 +18,19 @@
 
 PROTO_BEGIN_DECLS
 
+/** @brief The request methods a route binds to. */
+typedef enum
+{
+    HTTP_GET,           ///< Safe, idempotent read
+    HTTP_POST,          ///< Non-idempotent create / action
+    HTTP_PUT,           ///< Idempotent replace
+    HTTP_DELETE,        ///< Idempotent delete
+    HTTP_PATCH,         ///< Partial update
+    HTTP_HEAD,          ///< Same as GET but no response body
+    HTTP_OPTIONS,       ///< Capability query / CORS preflight
+    HTTP_METHOD_UNKNOWN ///< Unrecognized method token, answered 501
+} HttpMethod;
+
 /**
  * @brief The version-agnostic HTTP surface.
  *

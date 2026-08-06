@@ -62,6 +62,7 @@ PROTO_BEGIN_DECLS
 #include "network_drivers/transport/tcp.h"
 #include "network_drivers/transport/udp.h"
 
+#include "network_drivers/presentation/http/http.h"
 #include "network_drivers/session/session.h"
 #include "network_drivers/session/worker.h"
 
@@ -360,24 +361,7 @@ typedef struct pc_mnt_backend pc_mnt_backend;
 // HTTP method enumeration
 // ---------------------------------------------------------------------------
 
-/**
- * @brief HTTP request methods supported by the router.
- *
- * Pass one of these values to on() to bind a route to a
- * specific method.  PATCH, HEAD, and OPTIONS were added in v1.0 alongside
- * CORS preflight support.
- */
-typedef enum
-{
-    HTTP_GET,           ///< Safe, idempotent read
-    HTTP_POST,          ///< Non-idempotent create / action
-    HTTP_PUT,           ///< Idempotent replace
-    HTTP_DELETE,        ///< Idempotent delete
-    HTTP_PATCH,         ///< Partial update
-    HTTP_HEAD,          ///< Same as GET but no response body
-    HTTP_OPTIONS,       ///< Capability query / CORS preflight
-    HTTP_METHOD_UNKNOWN ///< Unrecognized method token → 501 Not Implemented
-} HttpMethod;
+// HttpMethod is the presentation layer's, declared in network_drivers/presentation/http/http.h.
 
 // ---------------------------------------------------------------------------
 // Handler and route types
