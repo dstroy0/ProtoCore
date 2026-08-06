@@ -817,26 +817,26 @@ void test_dynamic_listener_lifecycle()
 // lowest-first, and that CONN_CLOSING keeps a slot reserved. setUp() ran Tcp.conn->init() -> all slots free.
 void test_freeslot_bitmask_alloc()
 {
-    TEST_ASSERT_EQUAL_INT32(0, pc_conn_alloc_free()); // first free is slot 0
+    TEST_ASSERT_EQUAL_INT32(0, Tcp.conn->alloc_free()); // first free is slot 0
 
     Tcp.conn->set_state(0, CONN_ACTIVE); // claim 0
-    TEST_ASSERT_EQUAL_INT32(1, pc_conn_alloc_free());
+    TEST_ASSERT_EQUAL_INT32(1, Tcp.conn->alloc_free());
 
     for (uint8_t i = 1; i < MAX_CONNS; i++) // claim the rest -> full
     {
         Tcp.conn->set_state(i, CONN_ACTIVE);
     }
-    TEST_ASSERT_EQUAL_INT32(-1, pc_conn_alloc_free());
+    TEST_ASSERT_EQUAL_INT32(-1, Tcp.conn->alloc_free());
 
     Tcp.conn->set_state(3, CONN_FREE); // free 3 -> allocator hands out 3
-    TEST_ASSERT_EQUAL_INT32(3, pc_conn_alloc_free());
+    TEST_ASSERT_EQUAL_INT32(3, Tcp.conn->alloc_free());
 
     Tcp.conn->set_state(1, CONN_FREE); // free 1 too -> lowest free is now 1
-    TEST_ASSERT_EQUAL_INT32(1, pc_conn_alloc_free());
+    TEST_ASSERT_EQUAL_INT32(1, Tcp.conn->alloc_free());
 
     Tcp.conn->set_state(1, CONN_ACTIVE);                // 1 active again
     Tcp.conn->set_state(1, CONN_CLOSING);               // CLOSING is not free
-    TEST_ASSERT_EQUAL_INT32(3, pc_conn_alloc_free()); // 3 free, 1 reserved (CLOSING)
+    TEST_ASSERT_EQUAL_INT32(3, Tcp.conn->alloc_free()); // 3 free, 1 reserved (CLOSING)
 }
 
 // ====================================================================
@@ -849,9 +849,9 @@ void test_freeslot_bitmask_alloc()
 // prove they return without touching pool state.
 void test_bounds_guards_reject_out_of_range_slots()
 {
-    int32_t before = pc_conn_alloc_free();
+    int32_t before = Tcp.conn->alloc_free();
     Tcp.conn->set_state((uint8_t)CONN_POOL_SLOTS, CONN_ACTIVE); // no-op: out of range
-    TEST_ASSERT_EQUAL_INT32(before, pc_conn_alloc_free());
+    TEST_ASSERT_EQUAL_INT32(before, Tcp.conn->alloc_free());
 
     Tcp.conn->ack_consumed((uint8_t)(MAX_CONNS + 50)); // no-op, must not crash
     Tcp.conn->close((uint8_t)(MAX_CONNS + 50));
@@ -870,13 +870,13 @@ void test_bounds_guards_reject_out_of_range_slots()
 void test_null_pcb_slots_are_safe_no_ops()
 {
     conn_pool[0].pcb = NULL;
-    TEST_ASSERT_EQUAL_UINT16(0, pc_conn_sndbuf(0));
+    TEST_ASSERT_EQUAL_UINT16(0, Tcp.conn->sndbuf(0));
     Tcp.conn->close(0);      // no pcb -> returns before touching state
     Tcp.conn->abort_slot(0); // same
 
     pc_pcb fake = {0};
     conn_pool[1].pcb = &fake;
-    TEST_ASSERT_EQUAL_UINT16(MOCK_SNDBUF_DEFAULT, pc_conn_sndbuf(1));
+    TEST_ASSERT_EQUAL_UINT16(MOCK_SNDBUF_DEFAULT, Tcp.conn->sndbuf(1));
 }
 
 // Tcp.conn->ack_consumed(): out-of-range slot and an inactive slot are no-ops; an ACTIVE
@@ -1334,13 +1334,13 @@ void test_err_cb_null_active_and_closing()
 void test_accept_cb_rejects_error_and_null_pcb()
 {
     pc_pcb fake = {0};
-    int32_t before = pc_conn_alloc_free();
+    int32_t before = Tcp.conn->alloc_free();
 
     TEST_ASSERT_EQUAL_INT(PC_NET_ERR_VAL, listener_accept_cb((void *)(uintptr_t)0, &fake, PC_NET_ERR_ABRT));
-    TEST_ASSERT_EQUAL_INT32(before, pc_conn_alloc_free()); // no slot claimed
+    TEST_ASSERT_EQUAL_INT32(before, Tcp.conn->alloc_free()); // no slot claimed
 
     TEST_ASSERT_EQUAL_INT(PC_NET_ERR_VAL, listener_accept_cb((void *)(uintptr_t)0, NULL, PC_NET_OK));
-    TEST_ASSERT_EQUAL_INT32(before, pc_conn_alloc_free());
+    TEST_ASSERT_EQUAL_INT32(before, Tcp.conn->alloc_free());
 }
 
 // An out-of-range listener index (the PCB user-data arg) is rejected before any pool work.
@@ -1359,7 +1359,7 @@ void test_accept_cb_rejects_when_pool_full()
     {
         Tcp.conn->set_state(i, CONN_ACTIVE);
     }
-    TEST_ASSERT_EQUAL_INT32(-1, pc_conn_alloc_free());
+    TEST_ASSERT_EQUAL_INT32(-1, Tcp.conn->alloc_free());
 
     pc_pcb fake = {0};
     int before_aborts = mock_abort_call_count();

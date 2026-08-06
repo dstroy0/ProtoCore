@@ -386,7 +386,7 @@ void chunk_send_pump(uint8_t slot_id)
     uint8_t framed[CHUNK_HDR_RESERVE + CHUNK_BUF_SIZE + 2];
     for (;;)
     {
-        proto_u16 avail = pc_conn_sndbuf(slot_id);
+        proto_u16 avail = Tcp.conn->sndbuf(slot_id);
         if (avail <= FRAME)
         {
             Tcp.conn->flush(slot_id); // no room for a useful chunk; resume next loop

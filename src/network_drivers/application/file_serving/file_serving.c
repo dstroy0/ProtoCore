@@ -40,7 +40,7 @@
 // A file larger than the TCP send window cannot go out in one dispatch: tcp_write returns ERR_MEM
 // once the window fills and the remainder would be dropped. serve_file_internal sends the headers,
 // opens the file and hands it to this per-slot state; file_send_pump pages out at most
-// pc_conn_sndbuf() bytes per worker loop and resumes as the window drains. One transfer per slot.
+// Tcp.conn->sndbuf() bytes per worker loop and resumes as the window drains. One transfer per slot.
 // Nothing outside this file can name the state: the poll asks pc_file_holds_slot().
 
 // Per-slot file-send continuation: the open file and how much of it is left.
@@ -452,7 +452,7 @@ void serve_file_internal(uint8_t slot_id, proto_bool head, const pc_mnt_backend 
     file_send_pump(slot_id);
 }
 
-// Page out a pending file response across worker loops: send up to pc_conn_sndbuf()
+// Page out a pending file response across worker loops: send up to Tcp.conn->sndbuf()
 // bytes now and return; the next loop resumes (woken by the sent callback) until the
 // whole body has been queued, then finish the response. Bounded per loop, never
 // truncates, never blocks the worker.
@@ -479,7 +479,7 @@ void file_send_pump(uint8_t slot_id)
     uint8_t chunk[FILE_CHUNK_SIZE];
     while (s->remaining > 0)
     {
-        proto_u16 avail = pc_conn_sndbuf(slot_id);
+        proto_u16 avail = Tcp.conn->sndbuf(slot_id);
         if (avail == 0)
         {
             Tcp.conn->flush(slot_id); // push what is queued; resume on a later loop

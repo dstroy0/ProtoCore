@@ -452,9 +452,9 @@ pc_net_err listener_accept_cb(void *arg, pc_pcb *newpcb, pc_net_err err)
 #endif
 
     // First free slot as one ctz on the live-slot bitmask (was a MAX_CONNS scan). Runs in tcpip_thread, and
-    // accepts are serialized here, so the slot found is claimed by the pc_conn_set_state() below before any
+    // accepts are serialized here, so the slot found is claimed by the Tcp.conn->set_state() below before any
     // other accept runs.
-    int32_t free_slot = pc_conn_alloc_free();
+    int32_t free_slot = Tcp.conn->alloc_free();
     if (free_slot < 0)
     {
         pc_net_abort(newpcb);
@@ -473,7 +473,7 @@ pc_net_err listener_accept_cb(void *arg, pc_pcb *newpcb, pc_net_err err)
 #else
     slot->owner = 0;
 #endif
-    pc_conn_set_state((uint8_t)free_slot, CONN_ACTIVE); // reserves the slot in the bitmask
+    Tcp.conn->set_state((uint8_t)free_slot, CONN_ACTIVE); // reserves the slot in the bitmask
     slot->pcb = newpcb;
     slot->last_activity_ms = pc_millis();
     slot->req_start_ms = 0; // no request yet; armed on the first RX byte (request-completion deadline)

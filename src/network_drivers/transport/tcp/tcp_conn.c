@@ -66,12 +66,12 @@ typedef struct
 } ObsCtx;
 static ObsCtx s_obs;
 
-void pc_conn_on_event(pc_conn_event_cb cb)
+static void pc_conn_on_event(pc_conn_event_cb cb)
 {
     s_obs.conn_event_cb = cb;
 }
 
-pc_conn_counters pc_conn_counters_get(void)
+static pc_conn_counters pc_conn_counters_get(void)
 {
     pc_conn_counters c;
     c.accepts = atomic_load_explicit(&s_obs.ctr[0], memory_order_relaxed);
@@ -94,7 +94,7 @@ pc_conn_counters pc_conn_counters_get(void)
     return c;
 }
 
-void pc_conn_counters_reset(void)
+static void pc_conn_counters_reset(void)
 {
     for (int i = 0; i < 8; i++)
     {
@@ -451,7 +451,7 @@ _Static_assert(MAX_CONNS <= 32, "the free-slot bitmask (s_pool.free_mask) is a u
 // CONN_FREE - the caller has already cleaned the slot - and reserve (clear the bit) BEFORE the store to any
 // non-free state, so a concurrent allocator never picks a slot that is mid-claim. The bit ops are atomic
 // because CONN_FREE is written from the stack callbacks and from the worker (the timeout sweep).
-void pc_conn_set_state(uint8_t slot, ConnState st)
+static void pc_conn_set_state(uint8_t slot, ConnState st)
 {
     // Bound every write to the real array size up front (CONN_POOL_SLOTS = MAX_CONNS + the reserved internal
     // slots), so the setter is memory-safe on its own rather than relying on the caller never over-indexing.
@@ -485,7 +485,7 @@ void pc_conn_set_state(uint8_t slot, ConnState st)
 
 // First free slot as one ctz on the bitmask, rather than a MAX_CONNS linear scan. Returns -1 if the pool
 // is full. Runs in stack context (accept); the acquire load pairs with the release stores above.
-int32_t pc_conn_alloc_free(void)
+static int32_t pc_conn_alloc_free(void)
 {
     const uint32_t valid = (MAX_CONNS >= 32) ? 0xFFFFFFFFu : ((1u << MAX_CONNS) - 1u);
     uint32_t m = atomic_load_explicit(&s_pool.free_mask, memory_order_acquire) & valid;
@@ -494,7 +494,7 @@ int32_t pc_conn_alloc_free(void)
 
 uint32_t pc_ap_ip = 0;
 
-uint32_t proto_tcp_conn_timeout_ms(void)
+static uint32_t proto_tcp_conn_timeout_ms(void)
 {
     return s_pool.conn_timeout_ms;
 }
@@ -508,7 +508,7 @@ uint32_t proto_tcp_conn_timeout_ms(void)
 // they go out as plaintext or through the TLS record layer. With
 // PC_ENABLE_TLS off this is a bare write and flush.
 
-proto_bool pc_conn_send(uint8_t slot, const void *data, proto_u16 len)
+static proto_bool pc_conn_send(uint8_t slot, const void *data, proto_u16 len)
 {
     // The write target is always the slot's own pcb (ingress reads resolve it the
     // same way) - callers no longer thread it through, so it cannot disagree.
@@ -526,7 +526,7 @@ proto_bool pc_conn_send(uint8_t slot, const void *data, proto_u16 len)
 #endif
 }
 
-proto_bool pc_conn_send_flush(uint8_t slot, const void *data, proto_u16 len)
+static proto_bool pc_conn_send_flush(uint8_t slot, const void *data, proto_u16 len)
 {
     // Terminal single-shot write: the bytes AND their flush happen in one round-trip into stack
     // context, so a small response costs one marshal instead of the send()+flush() pair (each
@@ -550,7 +550,7 @@ proto_bool pc_conn_send_flush(uint8_t slot, const void *data, proto_u16 len)
 #endif
 }
 
-proto_u16 pc_conn_sndbuf(uint8_t slot)
+static proto_u16 pc_conn_sndbuf(uint8_t slot)
 {
     pc_pcb *pcb = conn_pool[slot].pcb;
     if (pcb == NULL)
@@ -569,7 +569,7 @@ proto_u16 pc_conn_sndbuf(uint8_t slot)
     return avail;
 }
 
-void pc_conn_flush(uint8_t slot)
+static void pc_conn_flush(uint8_t slot)
 {
 #if PC_ENABLE_TLS
     if (conn_pool[slot].tls)
@@ -604,7 +604,7 @@ static proto_bool set_dscp(uint8_t slot, uint8_t dscp)
 }
 #endif // PC_ENABLE_DIFFSERV
 
-void pc_conn_ack_consumed(uint8_t slot)
+static void pc_conn_ack_consumed(uint8_t slot)
 {
     if (slot >= MAX_CONNS)
     {
@@ -632,7 +632,7 @@ void pc_conn_ack_consumed(uint8_t slot)
 #endif
 }
 
-proto_bool pc_conn_raw_send(pc_pcb *pcb, const void *data, proto_u16 len)
+static proto_bool pc_conn_raw_send(pc_pcb *pcb, const void *data, proto_u16 len)
 {
     if (pcb == NULL)
     {
@@ -654,7 +654,7 @@ proto_bool pc_conn_raw_send(pc_pcb *pcb, const void *data, proto_u16 len)
 #endif
 }
 
-void pc_conn_close(uint8_t slot)
+static void pc_conn_close(uint8_t slot)
 {
     if (slot >= MAX_CONNS)
     {
@@ -691,7 +691,7 @@ void pc_conn_close(uint8_t slot)
 #endif
 }
 
-void pc_conn_abort_slot(uint8_t slot)
+static void pc_conn_abort_slot(uint8_t slot)
 {
     if (slot >= MAX_CONNS)
     {
@@ -717,7 +717,7 @@ void pc_conn_abort_slot(uint8_t slot)
     pc_conn_abort(pcb);
 }
 
-void pc_conn_detach(pc_pcb *pcb)
+static void pc_conn_detach(pc_pcb *pcb)
 {
     // Disassociate the slot from this pcb's stack callbacks before freeing the
     // slot, so any late callback for the pcb finds a null arg and does nothing.
@@ -728,7 +728,7 @@ void pc_conn_detach(pc_pcb *pcb)
 #endif
 }
 
-void pc_conn_abort(pc_pcb *pcb)
+static void pc_conn_abort(pc_pcb *pcb)
 {
     // Hard reset (RST) for a fatal condition - no graceful FIN.
 #if PROTOCORE_HOT
@@ -787,7 +787,7 @@ static void closing_check(uint8_t slot, pc_pcb *pcb)
     }
 }
 
-void pc_conn_begin_close(uint8_t slot_id)
+static void pc_conn_begin_close(uint8_t slot_id)
 {
     if (slot_id >= MAX_CONNS)
     {
@@ -828,7 +828,7 @@ static inline void enqueue(TcpConn *slot, const TcpEvt *evt)
     }
 }
 
-void proto_tcp_pool_init(const WebServerConfig *cfg)
+static void proto_tcp_pool_init(const WebServerConfig *cfg)
 {
     s_pool.conn_timeout_ms = (cfg != NULL) ? cfg->conn_timeout_ms : CONN_TIMEOUT_MS;
     // Reset from a single zeroed template in BSS rather than a compound literal per slot: the
@@ -845,7 +845,7 @@ void proto_tcp_pool_init(const WebServerConfig *cfg)
     }
 }
 
-void proto_tcp_stop(void)
+static void proto_tcp_stop(void)
 {
     // Abort all active connections - listener control blocks and queues are owned by
     // the listener layer and must be cleaned up via Tcp.listener->stop_all() first.
@@ -866,7 +866,7 @@ void proto_tcp_stop(void)
     }
 }
 
-uint8_t pc_conn_active_count(void)
+static uint8_t pc_conn_active_count(void)
 {
     uint8_t n = 0;
     for (uint8_t i = 0; i < MAX_CONNS; i++)
@@ -879,7 +879,7 @@ uint8_t pc_conn_active_count(void)
     return n;
 }
 
-uint32_t pc_conn_remote_ip(uint8_t slot)
+static uint32_t pc_conn_remote_ip(uint8_t slot)
 {
 #if PROTOCORE_HOT
     if (slot >= MAX_CONNS)
@@ -897,7 +897,7 @@ uint32_t pc_conn_remote_ip(uint8_t slot)
     return 0;
 }
 
-proto_bool pc_conn_remote_addr(uint8_t slot, pc_ip *out)
+static proto_bool pc_conn_remote_addr(uint8_t slot, pc_ip *out)
 {
     if (out != NULL)
     {
@@ -934,7 +934,7 @@ proto_bool pc_conn_remote_addr(uint8_t slot, pc_ip *out)
 // timers, which abort a black-holed connection through the error callback. Worker-context safe: it
 // only writes our own last_activity_ms hint (the sent callback writes the same uint32 from stack
 // context; a torn read of a timestamp is benign).
-void pc_conn_touch_active(uint8_t slot_id)
+static void pc_conn_touch_active(uint8_t slot_id)
 {
     if (slot_id >= MAX_CONNS)
     {
@@ -947,7 +947,7 @@ void pc_conn_touch_active(uint8_t slot_id)
     }
 }
 
-void proto_tcp_check_timeouts(int worker_id)
+static void proto_tcp_check_timeouts(int worker_id)
 {
     uint32_t now = pc_millis();
     for (int i = 0; i < MAX_CONNS; i++)
@@ -1197,7 +1197,9 @@ void lowlevel_err_cb(void *arg, pc_net_err err)
     (void)err;
 }
 
-const ConnPoolNs ConnPool = {proto_tcp_pool_init,
+const ConnPoolNs ConnPool = {pc_conn_alloc_free,
+                             pc_conn_sndbuf,
+                             proto_tcp_pool_init,
                              proto_tcp_stop,
                              proto_tcp_check_timeouts,
                              proto_tcp_conn_timeout_ms,

@@ -1120,7 +1120,7 @@ static void mesh_serve_pump(MeshConn *mc)
     }
     while (mc->out_off < mc->out_len)
     {
-        proto_u16 room = pc_conn_sndbuf(slot);
+        proto_u16 room = Tcp.conn->sndbuf(slot);
         if (room == 0)
         {
             return; // backpressure; retry next poll

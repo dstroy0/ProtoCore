@@ -133,15 +133,6 @@ extern uint32_t pc_ap_ip;
  *  (HTTP/3); the TCP accept path only ever uses [0, MAX_CONNS). */
 extern TcpConn conn_pool[CONN_POOL_SLOTS];
 
-/** @brief The single conn_pool[slot].state write path. Writes the state (release) and keeps the free-slot
- *  bitmask consistent so allocation is one ctz. ALL state transitions must go through this - a raw
- *  `conn_pool[i].state = ...` would desync the mask. */
-void pc_conn_set_state(uint8_t slot, ConnState st);
-
-/** @brief First CONN_FREE slot via a ctz on the bitmask (rather than a MAX_CONNS scan); -1 if the pool
- *  is full. Runs in the stack's callback context (accept). */
-int32_t pc_conn_alloc_free(void);
-
 // ---------------------------------------------------------------------------
 // Event queue
 // ---------------------------------------------------------------------------
@@ -157,53 +148,6 @@ int32_t pc_conn_alloc_free(void);
 // the listener layer (see listener.h); these manage only the shared conn_pool[] and the
 // idle-timeout sweep.
 
-/**
- * @brief Initialize the connection pool and store the runtime config.
- *
- * Zeroes all connection slots and sets the idle timeout from @p cfg.
- * Call this before calling Tcp.listener->add() for each port.
- *
- * @param cfg  Runtime config, or NULL to use the compile-time default
- *             (CONN_TIMEOUT_MS).
- */
-void proto_tcp_pool_init(const WebServerConfig *cfg);
-
-/**
- * @brief Abort all active connections and reset the pool to CONN_FREE.
- *
- * Does not touch listener control blocks or listener queues - call Tcp.listener->stop_all()
- * before this if you also want to close the listening sockets.
- * Safe to call from the main-loop task.
- */
-void proto_tcp_stop(void);
-
-/**
- * @brief Scan the pool and force-close connections idle for longer than the timeout.
- *
- * Called at the start of every server_tick() call, before any event queue
- * is drained.  Aborts (RST) rather than closing gracefully, because the
- * connection has already timed out and a FIN exchange is not warranted.
- *
- * A timed-out slot has its state set to `CONN_FREE` and `pcb` cleared
- * *before* the abort is issued, so any in-flight stack callback for
- * that connection will see `slot->state != CONN_ACTIVE` and exit without
- * touching the slot.
- *
- * Only sweeps slots owned by @p worker_id, so each worker reaps just its own
- * connections (no cross-worker writes). At PC_WORKER_COUNT=1 every slot is
- * owned by worker 0, so it sweeps the whole pool.
- */
-void proto_tcp_check_timeouts(int worker_id);
-
-/**
- * @brief The runtime connection-idle timeout in milliseconds.
- *
- * Loaded from WebServerConfig::conn_timeout_ms at proto_tcp_pool_init() time, defaulting to
- * CONN_TIMEOUT_MS when no config was supplied. The value belongs to the pool context that
- * the sweep reads it from, so callers ask for it here rather than reaching a global.
- */
-uint32_t proto_tcp_conn_timeout_ms(void);
-
 // ---------------------------------------------------------------------------
 // Connection output API (defined in tcp.c)
 // ---------------------------------------------------------------------------
@@ -212,68 +156,6 @@ uint32_t proto_tcp_conn_timeout_ms(void);
 // transport layer stays the sole owner of TCP I/O. pc_conn_send/flush are
 // TLS-aware (route through the TLS record layer when the slot is a TLS conn);
 // with PC_ENABLE_TLS off they are a bare write and flush.
-
-/**
- * @brief Send @p len bytes on connection @p slot (copies @p data; TLS-aware).
- * @return true if the bytes were queued; false if the send buffer was full and
- *         the write was refused. A streaming producer should pace with
- *         pc_conn_sndbuf() and resume on a later loop; existing fixed-size
- *         senders may ignore the result.
- */
-proto_bool pc_conn_send(uint8_t slot, const void *data, proto_u16 len);
-
-/**
- * @brief Send @p len bytes on @p slot and flush in a single round-trip to the stack.
- *
- * The terminal-write analogue of pc_conn_send(): the write and its flush run inside
- * one marshaled op, so a small single-shot response costs one ~23 us on-device marshal instead of
- * the pc_conn_send()+pc_conn_flush() pair (two). Use for the LAST write of a response whose body
- * is already fully buffered (send / send_empty / redirect); a streaming producer that pages across
- * loops must keep using pc_conn_send() + a single trailing pc_conn_flush(). TLS-identical to
- * pc_conn_send (the record BIO already outputs per record). Same return contract as pc_conn_send.
- */
-proto_bool pc_conn_send_flush(uint8_t slot, const void *data, proto_u16 len);
-
-/**
- * @brief Bytes that can currently be queued for sending on @p slot.
- *
- * Advisory free space in the TCP send buffer: a producer can send at most this
- * many bytes per handle() loop and resume on the next loop as the window drains
- * (the on_poll hook is the natural resume point). For a TLS slot the usable
- * plaintext is somewhat less (TLS record + cipher overhead). Returns 0 when
- * the slot has no live connection.
- */
-proto_u16 pc_conn_sndbuf(uint8_t slot);
-
-/** @brief Flush queued bytes / finish the send on @p slot (TLS-aware). */
-void pc_conn_flush(uint8_t slot);
-
-/**
- * @brief Refresh @p slot's idle-timeout timestamp while a response body is in flight.
- *
- * The file/chunk send pumps call this each poll they run: a slot still paging out a body is
- * actively streaming (or briefly blocked on a full window / a transient link stall), not idle,
- * so the CONN_TIMEOUT_MS idle sweep must not reap it mid-transfer - that truncates any body
- * larger than one TCP window. A genuinely dead peer is still reclaimed by the stack's
- * retransmission timers (the error callback), not this sweep.
- */
-void pc_conn_touch_active(uint8_t slot);
-
-/**
- * @brief Reopen the TCP receive window by however much @p slot has drained.
- *
- * Ack-on-consume, owned entirely by the transport layer: the window tracks how much the
- * application has actually drained from the ring (rx_tail) since the last ACK, rather
- * than how much was copied in, so it never advertises more than the ring can hold and the
- * peer is paced to the consumer; a slow sink (e.g. flash writes during a streamed upload)
- * can never overflow the ring and deadlock.
- *
- * Other layers do not touch the ring indices to manage flow control - the worker
- * just calls this once per owned slot per loop and transport does the rest
- * (computes the delta vs rx_acked, marshals the window update into the stack's callback
- * context, advances rx_acked). A no-op when nothing was drained or @p slot is not active.
- */
-void pc_conn_ack_consumed(uint8_t slot);
 
 // ---------------------------------------------------------------------------
 // RX ring read API - the single way any layer drains received bytes.
@@ -351,81 +233,6 @@ static inline uint8_t pc_conn_listener_id(uint8_t slot)
 }
 
 /**
- * @brief Number of server connection slots currently in the CONN_ACTIVE state.
- *
- * The connection pool owns this aggregate: callers (stats / metrics) ask transport for the
- * count instead of sweeping conn_pool[] and testing .state themselves.
- */
-uint8_t pc_conn_active_count(void);
-
-/**
- * @brief Write raw bytes straight to @p pcb (no TLS), context-safe.
- *
- * This is the one safe path for the TLS engine's BIO to emit ciphertext: it
- * writes directly when already running inside the stack's callback context (the
- * marshaled app-data send path) and marshals a raw write when called from the
- * main-loop task (the handshake / read pump), so a TLS handshake never does an
- * unsynchronized write from the main loop. Flushes on success.
- * @return true if the bytes were queued; false on a full send buffer.
- */
-proto_bool pc_conn_raw_send(pc_pcb *pcb, const void *data, proto_u16 len);
-
-/**
- * @brief Close connection @p slot gracefully, aborting if the FIN
- *        cannot be queued. The transport owns the whole teardown: it detaches the
- *        connection from its stack callbacks, frees the slot, and (TLS slot) emits
- *        close_notify + frees the per-connection TLS context - so callers pass
- *        only the slot and never touch the raw control block. A no-op if the slot
- *        has no live connection.
- */
-void pc_conn_close(uint8_t slot);
-
-/**
- * @brief Begin a graceful close that dwells in CONN_CLOSING until the peer ACKs.
- *
- * Unlike pc_conn_close() (immediate teardown), this leaves the slot's control block and
- * callbacks live and moves it ACTIVE -> CONN_CLOSING. The slot finalizes (connection
- * closed, slot freed) from the sent callback once the response has fully drained,
- * or from the idle sweep after PC_CLOSING_TIMEOUT_MS if the peer never ACKs.
- * The caller must already have queued (pc_conn_send) + flushed the response.
- * A no-op if the slot is not CONN_ACTIVE (e.g. an error freed it mid-write).
- */
-void pc_conn_begin_close(uint8_t slot_id);
-
-/** @brief Detach @p pcb from its slot's stack callbacks before the slot is freed. */
-void pc_conn_detach(pc_pcb *pcb);
-
-/** @brief Hard-abort @p pcb (RST) for a fatal condition; no graceful FIN. */
-void pc_conn_abort(pc_pcb *pcb);
-
-/**
- * @brief Hard-abort connection @p slot (RST) for a fatal condition. The transport
- *        owns the teardown order: free the per-connection TLS context (abrupt, no
- *        close_notify), detach the connection from its callbacks, reset the slot, then
- *        abort - so callers pass only the slot and never touch the raw control block. A
- *        no-op if the slot has no live connection.
- */
-void pc_conn_abort_slot(uint8_t slot);
-
-/**
- * @brief Raw source IPv4 of the connection in @p slot, or 0 if the slot has no
- *        active connection (or on host builds). Byte order is irrelevant: this is an
- *        identity key (e.g. for the auth lockout), not for display. Keeps the
- *        control-block access inside L4 so callers never reach into it directly.
- */
-uint32_t pc_conn_remote_ip(uint8_t slot);
-
-/**
- * @brief The connected peer's address as a family-tagged ::pc_ip (IPv4 or IPv6).
- *
- * Unlike pc_conn_remote_ip() (which flattens to a v4 uint32 and cannot represent a v6 peer),
- * this reports the real address for a dual-stack build (PC_ENABLE_IPV6). Format it with
- * Ip.format() or classify it with Ip.classify().
- * @return true if @p slot has an active connection whose address was written to @p out.
- */
-proto_bool pc_conn_remote_addr(uint8_t slot, pc_ip *out);
-
-/**
  * @brief A stable per-peer 32-bit identity key for @p slot (the v4 address, or an FNV-1a hash of a
  *        v6 address). For rate-limit / auth-lockout buckets, where a v6 peer must not silently
  *        share the all-zero v4 bucket. Returns 0 if the slot has no active connection.
@@ -475,15 +282,6 @@ typedef struct pc_conn_counters
  */
 typedef void (*pc_conn_event_cb)(uint8_t slot, ConnState old_state, ConnState new_state, pc_conn_reason reason);
 
-/** @brief Register (or clear, with NULL) the connection event callback. */
-void pc_conn_on_event(pc_conn_event_cb cb);
-
-/** @brief Read a consistent snapshot of the transport counters. */
-pc_conn_counters pc_conn_counters_get(void);
-
-/** @brief Zero the cumulative counters (the live CONN_CLOSING gauge is untouched). */
-void pc_conn_counters_reset(void);
-
 // Internal notify points (tcp.c), reached via the macros below so both
 // tcp.c and listener.c (accept) record through one path.
 void pc_obs_transition(uint8_t slot, ConnState olds, ConnState news, pc_conn_reason reason);
@@ -530,6 +328,8 @@ void lowlevel_err_cb(void *arg, pc_net_err err);
  * The per-slot ring accessors above stay inline and are not members here. A member is an indirect
  * call through rodata; those accessors are a load and a compare on the request path.
  *
+ * @var ConnPoolNs::alloc_free   claim the lowest free slot, or -1 when every slot is taken
+ * @var ConnPoolNs::sndbuf       room the stack will accept for this slot right now
  * @var ConnPoolNs::init           size and clear the pool from the server config
  * @var ConnPoolNs::stop           tear every slot down
  * @var ConnPoolNs::check_timeouts sweep the slots one worker owns
@@ -556,6 +356,8 @@ void lowlevel_err_cb(void *arg, pc_net_err err);
  */
 typedef struct
 {
+    int32_t (*alloc_free)(void);
+    proto_u16 (*sndbuf)(uint8_t slot);
     void (*init)(const WebServerConfig *cfg);
     void (*stop)(void);
     void (*check_timeouts)(int worker_id);
