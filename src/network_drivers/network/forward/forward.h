@@ -47,21 +47,13 @@
 #define PROTOCORE_FORWARD_H
 
 #include "protocore_config.h"
+// An interface is a physical thing: its id, its kind, and how bytes reach the wire all live at L1.
+// This plane decides which interface a frame goes to and asks L1 to put it there.
+#include "network_drivers/physical/physical.h"
 
 PROTO_BEGIN_DECLS
 
 #if PC_ENABLE_FORWARD
-
-/** @brief Interface kind (informational; the plane treats all interfaces the same). */
-typedef enum PROTO_ENUM_PACKED
-{
-    PC_IF_OTHER = 0,
-    PC_IF_WIFI_STA,
-    PC_IF_WIFI_AP,
-    PC_IF_ETH,
-    PC_IF_BUS,
-    PC_IF_RADIO,
-} pc_if_kind;
 
 /** @brief Rule action for a `(src, dst)` interface pair or an ACL entry. */
 typedef enum PROTO_ENUM_PACKED
@@ -72,12 +64,6 @@ typedef enum PROTO_ENUM_PACKED
 
 /** @brief Wildcard source interface for an ACL entry (matches a frame from any source). */
 #define PC_FWD_IF_ANY 0xFF
-
-/**
- * @brief Egress: emit @p len bytes on interface @p if_id.
- * @return true if the interface accepted the bytes; false drops (counted as a send fail).
- */
-typedef proto_bool (*pc_if_send_fn)(uint8_t if_id, const uint8_t *data, uint16_t len, void *ctx);
 
 /** @brief Forwarding counters (monotonic since the last pc_forward_reset()). */
 typedef struct
@@ -112,8 +98,7 @@ typedef pc_fwd_verdict (*pc_fwd_inspect_fn)(uint8_t src_if, const uint8_t *data,
 /**
  * @brief The forwarding plane.
  *
- * @var ForwardNs::reset           clear every interface, rule, route and counter
- * @var ForwardNs::add_if          register an interface and its egress callback
+ * @var ForwardNs::reset           clear every rule, route and counter
  * @var ForwardNs::add_rule        add a (src, dst) rule with an optional rate cap
  * @var ForwardNs::acl_set_default what happens to a frame no ACL entry matches
  * @var ForwardNs::acl_add         add an ingress access-control entry, first match wins
@@ -126,7 +111,6 @@ typedef pc_fwd_verdict (*pc_fwd_inspect_fn)(uint8_t src_if, const uint8_t *data,
 typedef struct
 {
     void (*reset)(void);
-    proto_bool (*add_if)(uint8_t if_id, pc_if_kind kind, pc_if_send_fn send, void *ctx);
     proto_bool (*add_rule)(uint8_t src_if, uint8_t dst_if, pc_fwd_action action, uint16_t rate_cap_per_sec);
     void (*acl_set_default)(pc_fwd_action action);
     proto_bool (*acl_add)(uint8_t src_if, uint16_t offset, const uint8_t *pattern, const uint8_t *mask, uint8_t patlen,

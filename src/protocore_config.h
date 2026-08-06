@@ -566,6 +566,10 @@ from halves and is slower than the width it decomposes into"
 #endif
 
 /** @brief Max interfaces the forwarding plane tracks (static-allocated). */
+#ifndef PC_PHY_MAX_IFACES
+#define PC_PHY_MAX_IFACES 4 ///< interfaces layer 1 can carry (wifi sta/ap, ethernet, a bridged bus)
+#endif
+
 #ifndef PC_FWD_MAX_IFACES
 #define PC_FWD_MAX_IFACES 4
 #endif

@@ -150,6 +150,120 @@ uint8_t pc_net_channel(void)
 
 #endif // !PC_PHYSICAL_HAS_BACKEND
 
+// ---------------------------------------------------------------------------
+// The interface registry. One row per interface the application registered, each carrying how to
+// put bytes on it. The forwarding plane reads this to fan a frame out; nothing else needs it.
+// ---------------------------------------------------------------------------
+
+typedef struct
+{
+    pc_if_send_fn send;
+    void *ctx;
+    uint8_t id;
+    pc_if_kind kind;
+    proto_bool used;
+} IfaceRow;
+
+// Every registered interface, owned by one instance (internal linkage).
+typedef struct
+{
+    IfaceRow row[PC_PHY_MAX_IFACES];
+} IfaceCtx;
+static IfaceCtx s_iface;
+
+static IfaceRow *row_of(uint8_t id)
+{
+    for (uint8_t i = 0; i < PC_PHY_MAX_IFACES; i++)
+    {
+        if (s_iface.row[i].used && s_iface.row[i].id == id)
+        {
+            return &s_iface.row[i];
+        }
+    }
+    return NULL;
+}
+
+static proto_bool iface_add(uint8_t id, pc_if_kind kind, pc_if_send_fn send, void *ctx)
+{
+    if (send == NULL || row_of(id) != NULL)
+    {
+        return PROTO_FALSE;
+    }
+    for (uint8_t i = 0; i < PC_PHY_MAX_IFACES; i++)
+    {
+        if (s_iface.row[i].used)
+        {
+            continue;
+        }
+        s_iface.row[i].send = send;
+        s_iface.row[i].ctx = ctx;
+        s_iface.row[i].id = id;
+        s_iface.row[i].kind = kind;
+        s_iface.row[i].used = PROTO_TRUE;
+        return PROTO_TRUE;
+    }
+    return PROTO_FALSE;
+}
+
+static void iface_reset(void)
+{
+    // The used flag is the row: add() writes every other field before setting it.
+    for (uint8_t i = 0; i < PC_PHY_MAX_IFACES; i++)
+    {
+        s_iface.row[i].used = PROTO_FALSE;
+    }
+}
+
+static proto_bool iface_present(uint8_t id)
+{
+    return row_of(id) != NULL;
+}
+
+static pc_if_kind iface_kind(uint8_t id)
+{
+    const IfaceRow *r = row_of(id);
+    if (r == NULL)
+    {
+        return PC_IF_OTHER;
+    }
+    return r->kind;
+}
+
+static int16_t iface_at(uint8_t i)
+{
+    if (i >= PC_PHY_MAX_IFACES || !s_iface.row[i].used)
+    {
+        return PC_IF_NONE;
+    }
+    return (int16_t)s_iface.row[i].id;
+}
+
+static uint8_t iface_count(void)
+{
+    uint8_t n = 0;
+    for (uint8_t i = 0; i < PC_PHY_MAX_IFACES; i++)
+    {
+        if (s_iface.row[i].used)
+        {
+            n++;
+        }
+    }
+    return n;
+}
+
+static proto_bool iface_send(uint8_t id, const uint8_t *data, uint16_t len)
+{
+    IfaceRow *r = row_of(id);
+    if (r == NULL)
+    {
+        return PROTO_FALSE;
+    }
+    return r->send(r->id, data, len, r->ctx);
+}
+
+static const PhysicalIfaceNs s_iface_ns = {iface_add, iface_reset, iface_present, iface_kind,
+                                           iface_at,  iface_count, iface_send};
+
 // The sub-tables and the layer handle. Defined here, in the vendor-neutral core, so they name
 // whichever backend the PC_VENDOR_* selector compiled: the stubs below, board_drivers/physical/esp,
 // or the mock. A caller reaches L1 through Physical and never through a vendor symbol.

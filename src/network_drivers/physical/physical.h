@@ -273,6 +273,55 @@ typedef struct
     proto_bool (*mac)(uint8_t out[6]);
 } PhysicalLinkNs;
 
+// ---------------------------------------------------------------------------
+// The interfaces this device has. An interface is an id, a kind, and the callback that puts bytes
+// on the wire - all three physical facts, which is why the registry is here and not in the
+// forwarding plane that merely chooses between them. A device can carry several, of mixed kind: two
+// Ethernet ports, a station and a softAP, a bus bridged to a socket.
+// ---------------------------------------------------------------------------
+
+/** @brief What an interface is. Informational to the layers above; L1 treats them alike. */
+typedef enum PROTO_ENUM_PACKED
+{
+    PC_IF_OTHER = 0,
+    PC_IF_WIFI_STA,
+    PC_IF_WIFI_AP,
+    PC_IF_ETH,
+    PC_IF_BUS,
+    PC_IF_RADIO,
+} pc_if_kind;
+
+/**
+ * @brief Put @p len bytes on interface @p if_id.
+ * @return true if the interface accepted them; false drops.
+ */
+typedef proto_bool (*pc_if_send_fn)(uint8_t if_id, const uint8_t *data, uint16_t len, void *ctx);
+
+/**
+ * @brief The interface registry.
+ *
+ * @var PhysicalIfaceNs::add     register an interface and how to send on it
+ * @var PhysicalIfaceNs::reset   forget every interface
+ * @var PhysicalIfaceNs::present whether @c id is registered
+ * @var PhysicalIfaceNs::kind    what @c id is
+ * @var PhysicalIfaceNs::at      the id held in registry row @c i, or PC_IF_NONE
+ * @var PhysicalIfaceNs::count   registered interfaces
+ * @var PhysicalIfaceNs::send    put bytes on @c id
+ */
+typedef struct
+{
+    proto_bool (*add)(uint8_t id, pc_if_kind kind, pc_if_send_fn send, void *ctx);
+    void (*reset)(void);
+    proto_bool (*present)(uint8_t id);
+    pc_if_kind (*kind)(uint8_t id);
+    int16_t (*at)(uint8_t i);
+    uint8_t (*count)(void);
+    proto_bool (*send)(uint8_t id, const uint8_t *data, uint16_t len);
+} PhysicalIfaceNs;
+
+/** @brief No interface. Returned by PhysicalIfaceNs::at for an empty row. */
+#define PC_IF_NONE (-1)
+
 /**
  * @brief The radio interface, defined in radio_power.h.
  *
@@ -295,6 +344,7 @@ typedef struct
     const PhysicalEthNs *eth;
     const PhysicalIp6Ns *ip6;
     const PhysicalLinkNs *link;
+    const PhysicalIfaceNs *iface;
     const RadioNs *radio;
 } PhysicalNs;
 

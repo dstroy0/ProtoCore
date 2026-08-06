@@ -58,7 +58,7 @@ static proto_bool cap_send(uint8_t id, const uint8_t *d, uint16_t n, void *ctx)
 
 static proto_bool add_if(uint8_t id)
 {
-    return Forward.add_if(id, PC_IF_OTHER, cap_send, NULL);
+    return Physical.iface->add(id, PC_IF_OTHER, cap_send, NULL);
 }
 
 static uint8_t ingress(uint8_t src, const char *s)
@@ -76,11 +76,14 @@ static pc_forward_stats stats(void)
 void setUp()
 {
     cap_reset();
+    // The interfaces belong to L1 now, so emptying the plane no longer empties them.
+    Physical.iface->reset();
     Forward.reset();
     Forward.test_set_now(0);
 }
 void tearDown()
 {
+    Physical.iface->reset();
     Forward.reset();
 }
 
@@ -167,7 +170,7 @@ void test_add_if_validation_and_table_full()
 {
     TEST_ASSERT_TRUE(add_if(1));
     TEST_ASSERT_FALSE(add_if(1));                                     // duplicate id
-    TEST_ASSERT_FALSE(Forward.add_if(9, PC_IF_OTHER, NULL, NULL)); // null send
+    TEST_ASSERT_FALSE(Physical.iface->add(9, PC_IF_OTHER, NULL, NULL)); // null send
     TEST_ASSERT_TRUE(add_if(2));
     TEST_ASSERT_TRUE(add_if(3));
     TEST_ASSERT_TRUE(add_if(4));

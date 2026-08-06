@@ -21,15 +21,6 @@
 
 typedef struct
 {
-    pc_if_send_fn send;
-    void *ctx;
-    uint8_t id;
-    pc_if_kind kind;
-    proto_bool used;
-} iface;
-
-typedef struct
-{
     uint32_t window_start; // ms of the current rate window
     uint16_t rate_cap;     // frames per second (0 = unlimited)
     uint16_t count;        // frames forwarded in the current window
@@ -65,11 +56,11 @@ typedef struct
     proto_bool used;
 } route;
 
-// All forwarding-plane state, owned by one instance (internal linkage): interfaces,
-// rules, ACL, and stats grouped so it is one named owner, unreachable cross-TU.
+// All forwarding-plane state, owned by one instance (internal linkage): rules, ACL, routes and
+// stats grouped so it is one named owner, unreachable cross-TU. The interfaces themselves are not
+// here: an interface is a physical thing and L1 owns the registry, which this reads to fan out.
 typedef struct
 {
-    iface if_[PC_FWD_MAX_IFACES];
     rule rules[PC_FWD_MAX_RULES];
     acl_entry acl[PC_FWD_MAX_ACL];
     route routes[PC_FWD_MAX_ROUTES];
@@ -101,18 +92,6 @@ static uint32_t fwd_now()
     return s_fwd.now_ms;
 }
 #endif
-
-static const iface *find_if(const ForwardCtx *f, uint8_t id)
-{
-    for (uint8_t i = 0; i < PC_FWD_MAX_IFACES; i++)
-    {
-        if (f->if_[i].used && f->if_[i].id == id)
-        {
-            return &f->if_[i];
-        }
-    }
-    return NULL;
-}
 
 // Resolve the action for (src -> dst): a DENY wins; otherwise the first matching ALLOW
 // governs (its index is returned via @p allow_idx); otherwise default-deny (no route).
@@ -308,28 +287,6 @@ static proto_bool pc_forward_route_add(uint8_t src_if, uint16_t offset, const ui
     return PROTO_FALSE; // table full
 }
 
-static proto_bool pc_forward_add_if(uint8_t if_id, pc_if_kind kind, pc_if_send_fn send, void *ctx)
-{
-    if (!send || find_if(&s_fwd, if_id))
-    {
-        return PROTO_FALSE;
-    }
-    for (uint8_t i = 0; i < PC_FWD_MAX_IFACES; i++)
-    {
-        if (s_fwd.if_[i].used)
-        {
-            continue;
-        }
-        s_fwd.if_[i].send = send;
-        s_fwd.if_[i].ctx = ctx;
-        s_fwd.if_[i].id = if_id;
-        s_fwd.if_[i].kind = kind;
-        s_fwd.if_[i].used = PROTO_TRUE;
-        return PROTO_TRUE;
-    }
-    return PROTO_FALSE; // table full
-}
-
 static proto_bool pc_forward_add_rule(uint8_t src_if, uint8_t dst_if, pc_fwd_action action, uint16_t rate_cap_per_sec)
 {
     for (uint8_t i = 0; i < PC_FWD_MAX_RULES; i++)
@@ -371,8 +328,7 @@ static uint8_t forward_policy_route(uint8_t src_if, const uint8_t *data, uint16_
         {
             return 0;
         }
-        const iface *out = find_if(&s_fwd, rt->egress);
-        if (!out) // egress not registered -> drop, fail-closed
+        if (!Physical.iface->present(rt->egress)) // egress not registered -> drop, fail-closed
         {
             s_fwd.stats.send_fail++;
             return 0;
@@ -382,7 +338,7 @@ static uint8_t forward_policy_route(uint8_t src_if, const uint8_t *data, uint16_
             s_fwd.stats.rate_dropped++;
             return 0;
         }
-        if (out->send(out->id, data, len, out->ctx))
+        if (Physical.iface->send(rt->egress, data, len))
         {
             s_fwd.stats.forwarded++;
             return 1;
@@ -419,14 +375,15 @@ static uint8_t pc_forward_ingress(uint8_t src_if, const uint8_t *data, uint16_t 
         return verdict;
     }
     uint8_t n = 0;
-    for (uint8_t i = 0; i < PC_FWD_MAX_IFACES; i++)
+    for (uint8_t i = 0; i < PC_PHY_MAX_IFACES; i++)
     {
-        if (!s_fwd.if_[i].used || s_fwd.if_[i].id == src_if) // never reflect to the source interface
+        int16_t dst = Physical.iface->at(i);
+        if (dst == PC_IF_NONE || (uint8_t)dst == src_if) // never reflect to the source interface
         {
             continue;
         }
         int idx = -1;
-        resolve_result r = resolve(&s_fwd, src_if, s_fwd.if_[i].id, &idx);
+        resolve_result r = resolve(&s_fwd, src_if, (uint8_t)dst, &idx);
         if (r == RESOLVE_RESULT_R_NOROUTE)
         {
             continue; // default-deny, silent
@@ -441,7 +398,7 @@ static uint8_t pc_forward_ingress(uint8_t src_if, const uint8_t *data, uint16_t 
             s_fwd.stats.rate_dropped++;
             continue;
         }
-        if (s_fwd.if_[i].send(s_fwd.if_[i].id, data, len, s_fwd.if_[i].ctx))
+        if (Physical.iface->send((uint8_t)dst, data, len))
         {
             s_fwd.stats.forwarded++;
             n++;
@@ -478,7 +435,6 @@ static void pc_forward_test_set_now(uint32_t ms)
 #endif
 
 const ForwardNs Forward = {pc_forward_reset,
-                           pc_forward_add_if,
                            pc_forward_add_rule,
                            pc_forward_acl_set_default,
                            pc_forward_acl_add,
