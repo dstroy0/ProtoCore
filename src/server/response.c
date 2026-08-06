@@ -18,6 +18,7 @@
 #include "network_drivers/presentation/http/http.h"
 #include "shared_primitives/hex.h"  // pc_hex_u32 (chunk size-line writer)
 #include "shared_primitives/mime.h" // PC_MIME_*, mime tables
+#include "shared_primitives/runops.h" // proto_scan_nul: send_text measures its own body
 
 #if PC_ENABLE_METRICS || PC_ENABLE_STATS
 #include "network_drivers/application/web_assets.h" // PC_STATS_JSON / PC_METRICS_PROM (generated)
