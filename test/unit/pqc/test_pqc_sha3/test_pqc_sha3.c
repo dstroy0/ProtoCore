@@ -16,7 +16,7 @@
 // to satisfy the symbol too or it does not link - the sibling suites (test_pqc_mlkem,
 // test_pqc_sntrup761) each define the same deterministic source for their own round-trips.
 static uint32_t s_rng = 0xA5A5F00Du;
-void ssh_rng_fill(uint8_t *b, size_t n)
+void pc_rand_fill(uint8_t *b, size_t n)
 {
     for (size_t i = 0; i < n; ++i)
     {

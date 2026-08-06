@@ -21,7 +21,8 @@
 #include "crypto/asymmetric/ecdsa.h"      // ecdh-sha2-nistp256 + ecdsa host-key verify
 #include "crypto/asymmetric/ed25519.h"    // ssh-ed25519 host key + client auth
 #include "crypto/hash/sha256.h"
-#include "network_drivers/presentation/ssh/transport/ssh_dh.h"     // ssh_dh_derive_keys_sid, ssh_rng_fill
+#include "crypto/rng/rng.h"                                        // pc_rand_fill
+#include "network_drivers/presentation/ssh/transport/ssh_dh.h"     // ssh_dh_derive_keys_sid, pc_rand_fill
 #include "network_drivers/presentation/ssh/transport/ssh_keymat.h" // ssh_keys[], SshKeyMat, SSH_CIPHER_*, SSH_MAC_*
 #include "network_drivers/presentation/ssh/transport/ssh_packet.h"
 #include "network_drivers/tls/ssh_kexhash.h" // SshKexHash (SHA-256/SHA-512 by method)
@@ -39,9 +40,9 @@
 #endif
 
 #if PROTOCORE_HOT
-#include "mmgr/arena.h"                       // pc_worker_set_self (own scratch slot)
+#include "mmgr/arena.h"                    // pc_worker_set_self (own scratch slot)
 #include "network_drivers/transport/tcp.h" // pc_client_*
-#include "server/clock/clock.h"               // pc_millis, pcdelay
+#include "server/clock/clock.h"            // pc_millis, pcdelay
 #endif
 
 // ---------------------------------------------------------------------------
@@ -506,7 +507,7 @@ static proto_bool build_kexinit(void)
     Wr w = {s_cli.i_c, sizeof(s_cli.i_c), 0, PROTO_TRUE};
     w_u8(&w, SSH_MSG_KEXINIT);
     uint8_t cookie[16];
-    ssh_rng_fill(cookie, 16);
+    pc_rand_fill(cookie, 16);
     w_bytes(&w, cookie, 16);
     w_namelist(&w, KEX_NAMES, sizeof(KEX_NAMES) / sizeof(KEX_NAMES[0]));             // kex
     w_namelist(&w, HOSTKEY_NAMES, sizeof(HOSTKEY_NAMES) / sizeof(HOSTKEY_NAMES[0])); // host key
@@ -534,7 +535,7 @@ static proto_bool build_kex_public(void)
     switch (s_cli.kex)
     {
     case CLI_KEX_CURVE25519:
-        ssh_rng_fill(s_cli.kex_priv, 32);
+        pc_rand_fill(s_cli.kex_priv, 32);
         pc_x25519_base(s_cli.qc, s_cli.kex_priv);
         s_cli.qc_len = 32;
         return PROTO_TRUE;
@@ -542,7 +543,7 @@ static proto_bool build_kex_public(void)
         // Draw a valid P-256 scalar (pubkey derivation rejects 0 / >= group order).
         for (int tries = 0; tries < 8; tries++)
         {
-            ssh_rng_fill(s_cli.kex_priv, 32);
+            pc_rand_fill(s_cli.kex_priv, 32);
             if (pc_ecdsa_p256_pubkey(s_cli.qc, s_cli.kex_priv))
             {
                 s_cli.qc_len = PC_ECDSA_P256_PUB_LEN; // 65
@@ -552,7 +553,7 @@ static proto_bool build_kex_public(void)
         return PROTO_FALSE;
     case CLI_KEX_DH_GROUP14: {
         // e = g^x mod p, g = 2 (RFC 3526 group 14). x is a 256-bit exponent.
-        ssh_rng_fill(s_cli.kex_priv, 32);
+        pc_rand_fill(s_cli.kex_priv, 32);
         pc_bignum g, x, e;
         uint8_t two = 2;
         bn_from_bytes(&g, &two, 1);
@@ -569,13 +570,13 @@ static proto_bool build_kex_public(void)
         // ML-KEM-768 keypair (dk kept for Decaps; ek is embedded in dk) + an X25519 ephemeral. C_INIT
         // (ek || Q_C) is assembled at send time; Q_C lives in qc[0..31].
         uint8_t d[32], z[32], ek[MLKEM768_EK_BYTES];
-        ssh_rng_fill(d, sizeof(d));
-        ssh_rng_fill(z, sizeof(z));
+        pc_rand_fill(d, sizeof(d));
+        pc_rand_fill(z, sizeof(z));
         pc_mlkem768_keygen(d, z, ek, s_cli.hyb.mlkem_dk);
         pc_secure_wipe(d, sizeof(d));
         pc_secure_wipe(z, sizeof(z));
         pc_secure_wipe(ek, sizeof(ek)); // ek persists inside mlkem_dk
-        ssh_rng_fill(s_cli.kex_priv, 32);
+        pc_rand_fill(s_cli.kex_priv, 32);
         pc_x25519_base(s_cli.qc, s_cli.kex_priv);
         s_cli.qc_len = 32;
         return PROTO_TRUE;
@@ -594,7 +595,7 @@ static proto_bool build_kex_public(void)
         }
         pc_sntrup761_keypair(pk, s_cli.hyb.sntrup_sk);
         pc_plaintext_release(mark); // pk persists inside sntrup_sk at PC_SNTRUP761_SK_PK_OFFSET
-        ssh_rng_fill(s_cli.kex_priv, 32);
+        pc_rand_fill(s_cli.kex_priv, 32);
         pc_x25519_base(s_cli.qc, s_cli.kex_priv);
         s_cli.qc_len = 32;
         return PROTO_TRUE;

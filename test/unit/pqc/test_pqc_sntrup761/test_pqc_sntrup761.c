@@ -19,11 +19,11 @@
 // is reproducible. sntrup761 interop does not depend on how r/keys are drawn, only that they are valid.
 static uint32_t s_rng = 0xA5A5F00Du;
 
-// KeyGen's g-draw retry hook: while > 0, ssh_rng_fill returns bytes that make Small_random's ternary
+// KeyGen's g-draw retry hook: while > 0, pc_rand_fill returns bytes that make Small_random's ternary
 // map (see sntrup761.cpp) produce coefficient 0 rather than drawing from the LCG, and decrements by
 // one per call. Left at 0 for every other test, so it is a no-op there.
 static int s_force_zero_calls = 0;
-void ssh_rng_fill(uint8_t *b, size_t n)
+void pc_rand_fill(uint8_t *b, size_t n)
 {
     if (s_force_zero_calls > 0)
     {

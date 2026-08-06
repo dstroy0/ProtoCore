@@ -8,18 +8,9 @@
 
 #include "network_drivers/presentation/ssh/transport/ssh_dh.h"
 #include "crypto/mac/hmac_sha256.h"
+#include "crypto/rng/rng.h" // pc_rand_fill: crypto owns the generator, this layer only draws
 #include "mmgr/secure.h"
 #include "network_drivers/tls/ssh_kexhash.h"
-#include <Arduino.h> // for pc_platform_rand_u32() / pc_platform_rand_fill() (real or mock)
-
-// ---------------------------------------------------------------------------
-// RNG
-// ---------------------------------------------------------------------------
-
-void ssh_rng_fill(uint8_t *buf, size_t len)
-{
-    pc_platform_rand_fill(buf, len);
-}
 
 // ---------------------------------------------------------------------------
 // DH key generation
@@ -37,7 +28,7 @@ int ssh_dh_generate(uint8_t i)
     // RFC 4253 §8 does not specify a minimum bit-length for y beyond requiring
     // it to be in [1, p-1].  Common practice is a full 2048-bit random value,
     // which ensures the discrete-log is as hard as the group order.
-    ssh_rng_fill((uint8_t *)dh->y.d, sizeof(pc_bignum));
+    pc_rand_fill((uint8_t *)dh->y.d, sizeof(pc_bignum));
 
     // Ensure y < p by clearing the two MSBs (conservative; not strictly
     // required since rejection sampling would also work, but a single mask

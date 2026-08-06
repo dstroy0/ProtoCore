@@ -20,7 +20,7 @@
 // not build). Without a definition here the ML-KEM program does not link at all. ML-KEM itself is
 // derandomized - the seeds come from the caller - so nothing below depends on what this returns.
 static uint32_t s_rng = 0x1234567u;
-void ssh_rng_fill(uint8_t *buf, size_t len)
+void pc_rand_fill(uint8_t *buf, size_t len)
 {
     for (size_t i = 0; i < len; ++i)
     {

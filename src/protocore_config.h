@@ -6429,6 +6429,22 @@ from halves and is slower than the width it decomposes into"
 #endif
 
 /**
+ * @brief Bytes a worker's generator draws before it redraws its seed from the platform.
+ *
+ * The generator's own pace, not a caller's: nothing in crypto/rng/rng.h lets a consumer ask for a
+ * reseed, because a consumer that could ask would set the rate, and the module that asked most often
+ * would set it for everyone. A draw is answered from the keystream and the seed is redrawn once this
+ * budget is spent.
+ *
+ * Lower spends more platform entropy for a shorter window per seed; higher does the reverse. The
+ * forward ratchet already makes an earlier draw unrecoverable from the current state, so this bounds
+ * the other direction - how long one platform draw is relied on - rather than backward secrecy.
+ */
+#ifndef PC_RAND_RESEED_BYTES
+#define PC_RAND_RESEED_BYTES (1u << 20)
+#endif
+
+/**
  * @brief Worst-case bytes each module borrows from the secure pool in a single call.
  *
  * Declared here because PC_SECURE_ARENA_SIZE below is derived from them and this is the one
@@ -6533,6 +6549,9 @@ from halves and is slower than the width it decomposes into"
 #ifndef PC_WORK_AUTH_TABLE
 #define PC_WORK_AUTH_TABLE (MAX_ROUTES * (3 * MAX_AUTH_LEN + 8) + 32) // AuthCred is 3*MAX_AUTH_LEN + 1
 #endif
+#ifndef PC_WORK_RNG
+#define PC_WORK_RNG 72 // the generator: seed(32) + nonce(8) + ratchet scratch(32), for the program's life
+#endif
 
 /**
  * @brief Size in bytes of the per-slot SECURE pool (see mmgr/secure.h), DERIVED.
@@ -6586,7 +6605,7 @@ from halves and is slower than the width it decomposes into"
 
 #define PC_SECURE_ARENA_SIZE                                                                                           \
     (PC_SECURE_WORK_BIGNUM + PC_SECURE_WORK_AEAD + PC_SECURE_WORK_MAC + PC_SECURE_WORK_SMB +                           \
-     PC_SECURE_WORK_SSHCIPHER + PC_WORK_ROUTE_TABLE + PC_SECURE_WORK_AUTH +                                            \
+     PC_SECURE_WORK_SSHCIPHER + PC_WORK_ROUTE_TABLE + PC_SECURE_WORK_AUTH + PC_WORK_RNG +                              \
      256) // + 256: alignment round-up across the individual borrows
 #endif
 

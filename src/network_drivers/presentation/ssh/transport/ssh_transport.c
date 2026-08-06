@@ -12,13 +12,14 @@
 #include "crypto/asymmetric/ecdsa.h"      // pc_ecdsa_p256_* (ecdsa-sha2-nistp256 host key)
 #include "crypto/asymmetric/ed25519.h"    // pc_ed25519 host-key sign
 #include "crypto/hash/sha256.h"
-#include "mmgr/membuild.h" // pc_sb frame builder
+#include "crypto/rng/rng.h" // pc_rand_fill
+#include "mmgr/bytes.h"     // pc_rd_str() - a name-list is an RFC 4251 sec 5 string
+#include "mmgr/membuild.h"  // pc_sb frame builder
 #include "mmgr/secure.h"
-#include "network_drivers/presentation/ssh/transport/ssh_dh.h" // ssh_rng_fill(), ssh_dh[], ssh_dh_generate/derive_keys
+#include "network_drivers/presentation/ssh/transport/ssh_dh.h" // pc_rand_fill(), ssh_dh[], ssh_dh_generate/derive_keys
 #include "network_drivers/presentation/ssh/transport/ssh_packet.h" // SSH_MSG_KEXINIT, ssh_pkt[]
 #include "network_drivers/tls/ssh_rsa.h" // ssh_rsa_encode_pubkey/sign, ssh_host_pubkey, SSH_RSA_*
 #include "server/clock/clock.h"          // pc_millis() (re-key timer)
-#include "mmgr/bytes.h"     // pc_rd_str() - a name-list is an RFC 4251 sec 5 string
 #if PC_ENABLE_PQC_KEX
 #include "crypto/pqc/mlkem.h" // pc_mlkem768_encaps (PQ/T hybrid KEX responder)
 #endif
@@ -492,7 +493,7 @@ int ssh_kexinit_build(uint8_t i, uint8_t *payload, size_t *len, size_t cap)
     w_u8(&w, SSH_MSG_KEXINIT);
 
     uint8_t cookie[16];
-    ssh_rng_fill(cookie, sizeof(cookie));
+    pc_rand_fill(cookie, sizeof(cookie));
     w_bytes(&w, cookie, sizeof(cookie));
 
     char kexlist[192];
@@ -1086,7 +1087,7 @@ int ssh_kex_generate(uint8_t i)
 #ifdef PC_SSH_KEX_BENCH
         int64_t kexgen_t0 = esp_timer_get_time();
 #endif
-        ssh_rng_fill(ssh_sess[i].ecdh_sk, 32);
+        pc_rand_fill(ssh_sess[i].ecdh_sk, 32);
         pc_x25519_base(ssh_sess[i].ecdh_pk, ssh_sess[i].ecdh_sk);
 #ifdef PC_SSH_KEX_BENCH
         pc_ssh_kex_bench.last_kexgen_us = (long long)(esp_timer_get_time() - kexgen_t0);
@@ -1101,7 +1102,7 @@ int ssh_kex_generate(uint8_t i)
         uint8_t qtmp[PC_ECDSA_P256_PUB_LEN];
         for (int t = 0; t < 8; t++)
         { // hands back an invalid P-256 scalar, which no host build can provoke
-            ssh_rng_fill(ssh_sess[i].ecdh_sk, 32);
+            pc_rand_fill(ssh_sess[i].ecdh_sk, 32);
             if (pc_ecdsa_p256_pubkey(qtmp, ssh_sess[i].ecdh_sk))
             {
                 return 0; // valid scalar with overwhelming probability
@@ -1134,7 +1135,7 @@ static int hybrid_mlkem_x25519(uint8_t i, const uint8_t *payload, size_t len, ui
     const uint8_t *qc = payload + 5 + MLKEM768_EK_BYTES; // C_PK1: client X25519 public
 
     uint8_t m[32];
-    ssh_rng_fill(m, sizeof(m));
+    pc_rand_fill(m, sizeof(m));
     uint8_t k_pq[32];
     proto_bool ok = pc_mlkem768_encaps(ek, m, s_reply, k_pq); // ciphertext -> s_reply[0..1087]
     pc_secure_wipe(m, sizeof(m));
