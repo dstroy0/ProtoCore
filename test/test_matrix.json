@@ -1195,10 +1195,13 @@
       "base": "native_hot_base",
       "flags": [],
       "src": [
+        "+<network_drivers/transport/tcp.c>",
         "+<network_drivers/transport/tcp/tcp_conn.c>",
         "+<network_drivers/transport/tcp/tcp_listener.c>",
+        "+<network_drivers/transport/tcp/tcp_client.c>",
         "+<network_drivers/transport/net_addr.c>",
         "+<network_drivers/transport/diffserv.c>",
+        "+<network_drivers/session/worker.c>",
         "+<shared_primitives/ip.c>",
         "+<server/clock/clock.c>"
       ],
