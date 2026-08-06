@@ -2392,6 +2392,7 @@
         "+<network_drivers/transport/tcp/tcp_conn.c>",
         "+<network_drivers/transport/tcp/tcp_listener.c>",
         "+<network_drivers/transport/tcp/tcp_client.c>",
+        "+<shared_primitives/ip.c>",
         "+<server/clock/clock.c>"
       ],
       "tests": ["test_client"]
