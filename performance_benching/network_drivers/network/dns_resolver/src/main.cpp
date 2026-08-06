@@ -17,7 +17,7 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "network_drivers/network/dns_resolver.h"
+#include "network_drivers/network/dns/dns_resolver.h"
 #include <Arduino.h>
 
 #define IPV4(a, b, c, d) (((uint32_t)(a) << 24) | ((uint32_t)(b) << 16) | ((uint32_t)(c) << 8) | (uint32_t)(d))

@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // On-device CCOUNT microbenchmark for the authoritative DNS server codec (services/net/dns_server):
-// pc_dns_server_build_response() (QNAME parse + compressed A answer / NXDOMAIN) and the
-// built-in name->IP table (pc_dns_server_add / pc_dns_server_lookup) - all pure (no clock, no
+// DnsServer.build_response() (QNAME parse + compressed A answer / NXDOMAIN) and the
+// built-in name->IP table (DnsServer.add / DnsServer.lookup) - all pure (no clock, no
 // sockets, no heap). Worked example category: a pure protocol codec with no hardware involved
 // (contrast with performance_benching/device/ads1115, a peripheral driver where the bus transaction is stubbed).
-// pc_dns_server_begin() (binds UDP/53 via the transport UDP service) is out of scope everywhere
+// DnsServer.begin() (binds UDP/53 via the transport UDP service) is out of scope everywhere
 // on this rig - it is a thin wrapper with no CPU-bound work of its own to measure.
 //
 // Build/flash (JTAG-capable S3 over its USB-Serial/JTAG port):
@@ -14,8 +14,8 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
+#include "network_drivers/network/dns/dns_server.h"
 #include "protocore_config.h" // PC_DNS_SERVER_MAX_RECORDS
-#include "services/net/dns_server/dns_server.h"
 #include <Arduino.h>
 #include <stdio.h> // snprintf
 
@@ -84,26 +84,25 @@ static void dns_server_bench_task(void *)
         volatile uint32_t sink32 = 0;
         volatile bool sinkb = false;
 
-        DBENCH_OP("pc_dns_server_build_response A", 20000,
-                  sink += pc_dns_server_build_response(q_hit, qlen_hit, 60, resolve_foo, out, sizeof(out)));
-        DBENCH_OP("pc_dns_server_build_response NXDOMAIN", 20000,
-                  sink += pc_dns_server_build_response(q_miss, qlen_miss, 60, resolve_none, out, sizeof(out)));
+        DBENCH_OP("DnsServer.build_response A", 20000,
+                  sink += DnsServer.build_response(q_hit, qlen_hit, 60, resolve_foo, out, sizeof(out)));
+        DBENCH_OP("DnsServer.build_response NXDOMAIN", 20000,
+                  sink += DnsServer.build_response(q_miss, qlen_miss, 60, resolve_none, out, sizeof(out)));
 
         // Re-seed the built-in table (8 records, matching test_dns_add_and_lookup_guards) so the
         // lookup benches below always run against a full, known table before the add bench (which
         // clears it) runs last.
-        pc_dns_server_clear();
+        DnsServer.clear();
         for (int i = 0; i < PC_DNS_SERVER_MAX_RECORDS; i++)
         {
             snprintf(nm, sizeof(nm), "h%d.lan", i);
-            pc_dns_server_add(nm, 10, 0, 0, (uint8_t)i);
+            DnsServer.add(nm, 10, 0, 0, (uint8_t)i);
         }
 
-        DBENCH_OP("pc_dns_server_lookup hit", 50000,
-                  sink32 += pc_dns_server_lookup("H7.LAN")); // worst-case scan, case-insensitive
-        DBENCH_OP("pc_dns_server_lookup miss", 50000, sink32 += pc_dns_server_lookup("absent.lan"));
-        DBENCH_OP("pc_dns_server_add", 50000,
-                  (pc_dns_server_clear(), sinkb = pc_dns_server_add("bench.lan", 10, 0, 0, 1)));
+        DBENCH_OP("DnsServer.lookup hit", 50000,
+                  sink32 += DnsServer.lookup("H7.LAN")); // worst-case scan, case-insensitive
+        DBENCH_OP("DnsServer.lookup miss", 50000, sink32 += DnsServer.lookup("absent.lan"));
+        DBENCH_OP("DnsServer.add", 50000, (DnsServer.clear(), sinkb = DnsServer.add("bench.lan", 10, 0, 0, 1)));
 
         (void)sink;
         (void)sink32;

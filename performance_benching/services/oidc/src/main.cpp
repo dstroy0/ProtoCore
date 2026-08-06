@@ -24,7 +24,7 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "server/mmgr/plaintext.h" // pc_plaintext_reset() (the verify path borrows from this arena)
+#include "mmgr/plaintext.h" // pc_plaintext_reset() (the verify path borrows from this arena)
 #include "services/security/oidc/oidc.h"
 #include <Arduino.h>
 

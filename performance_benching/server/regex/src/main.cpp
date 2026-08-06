@@ -5,7 +5,7 @@
 // request path against a route pattern - the per-route hot op during dispatch. Pure.
 // Build/flash: pio run -d performance_benching/server/regex -t upload
 #include "device_bench.h"
-#include "server/protocore_internal.h" // regex_match declaration
+#include "protocore.h" // regex_match declaration
 #include <Arduino.h>
 
 static void regex_bench_task(void *)

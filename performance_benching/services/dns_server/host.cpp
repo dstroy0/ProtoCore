@@ -1,16 +1,16 @@
 // Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Host-side microbenchmark for the authoritative DNS server (RFC 1035): pc_dns_server_build_response() parses
+// Host-side microbenchmark for the authoritative DNS server (RFC 1035): DnsServer.build_response() parses
 // an A/IN query and appends the compressed A answer (or NXDOMAIN on a miss). Pure (no clock, no socket), so
 // it links standalone; the ARDUINO UDP binding is compiled out on host. The device figure comes from the rig
 // /bench op; this host ns/op + MB/s is a RELATIVE baseline. Build + run:
-//   g++ -O2 -std=c++17 -Isrc -Itest/mocks -Itest/support -DPC_ENABLE_DNS_SERVER=1
-//   performance_benching/services/dns_server/host.cpp \
-//       src/services/net/dns_server/dns_server.cpp -o /tmp/bd && /tmp/bd
+//   g++ -O2 -std=c++17 -Isrc -Itest/mocks -Itest/support -DPC_ENABLE_DNS_SERVER=1 \
+//       performance_benching/services/dns_server/host.cpp \
+//       src/network_drivers/network/dns/dns_server.c -o /tmp/bd && /tmp/bd
 
 #define PC_ENABLE_DNS_SERVER 1
-#include "services/net/dns_server/dns_server.h"
+#include "network_drivers/network/dns/dns_server.h"
 
 #include <chrono>
 #include <cstdint>
@@ -61,8 +61,8 @@ int main()
     // A hit: parse question + append the compressed A answer.
     {
         volatile size_t sink = 0;
-        double ns = bench_ns(
-            5000000, [&] { sink += pc_dns_server_build_response(query, qlen, 60, resolve_hit, out, sizeof(out)); });
+        double ns = bench_ns(5000000,
+                             [&] { sink += DnsServer.build_response(query, qlen, 60, resolve_hit, out, sizeof(out)); });
         row("dns", "build_response (A hit)", ns, (double)qlen);
         (void)sink;
     }
@@ -70,7 +70,7 @@ int main()
     {
         volatile size_t sink = 0;
         double ns = bench_ns(
-            5000000, [&] { sink += pc_dns_server_build_response(query, qlen, 60, resolve_miss, out, sizeof(out)); });
+            5000000, [&] { sink += DnsServer.build_response(query, qlen, 60, resolve_miss, out, sizeof(out)); });
         row("dns", "build_response (NXDOMAIN)", ns, (double)qlen);
         (void)sink;
     }

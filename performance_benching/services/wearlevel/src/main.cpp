@@ -7,7 +7,7 @@
 //
 // Build/flash:  pio run -d performance_benching/device/wearlevel -t upload --upload-port COM7
 #include "device_bench.h"
-#include "services/storage/wearlevel/wearlevel.h"
+#include "server/filesystem/wearlevel.h"
 #include <Arduino.h>
 
 #define SLOTS 16

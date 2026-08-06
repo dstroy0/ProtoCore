@@ -26,7 +26,7 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "services/net/forward/forward.h"
+#include "network_drivers/network/forward/forward.h"
 #include <Arduino.h>
 
 // --- egress stubs (no hardware; same shape as the host test's cap_send) ----------------------

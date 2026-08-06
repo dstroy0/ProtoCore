@@ -16,8 +16,8 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "network_drivers/network/ip.h"
 #include "services/security/forwarded_trust/forwarded_trust.h"
+#include "shared_primitives/ip.h"
 #include <Arduino.h>
 
 // v4()/v6() mirror the helpers in test/test_forwarded_trust/test_forwarded_trust.cpp (already
