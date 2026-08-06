@@ -14,8 +14,8 @@
 
 void setUp()
 {
-    pc_set_default_dscp(0); // best-effort baseline so each test starts clean
-    pc_udp_set_dscp(0);
+    DiffServ.set_default(0); // best-effort baseline so each test starts clean
+    DiffServ.set_udp(0);
     for (uint8_t i = 0; i < MAX_CONNS; i++)
     {
         conn_pool[i].pcb = NULL;
@@ -39,20 +39,20 @@ static void test_dscp_to_tos_encode()
 
 static void test_default_dscp_roundtrip()
 {
-    TEST_ASSERT_EQUAL_UINT8(0, pc_diffserv_default_dscp());
-    pc_set_default_dscp(PC_DSCP_EF);
-    TEST_ASSERT_EQUAL_UINT8(46, pc_diffserv_default_dscp());
-    pc_set_default_dscp(0xFF); // masked to the low 6 bits, not stored raw
-    TEST_ASSERT_EQUAL_UINT8(63, pc_diffserv_default_dscp());
+    TEST_ASSERT_EQUAL_UINT8(0, DiffServ.default_dscp());
+    DiffServ.set_default(PC_DSCP_EF);
+    TEST_ASSERT_EQUAL_UINT8(46, DiffServ.default_dscp());
+    DiffServ.set_default(0xFF); // masked to the low 6 bits, not stored raw
+    TEST_ASSERT_EQUAL_UINT8(63, DiffServ.default_dscp());
 }
 
 static void test_udp_dscp_roundtrip()
 {
-    TEST_ASSERT_EQUAL_UINT8(0, pc_diffserv_udp_dscp());
-    pc_udp_set_dscp(PC_DSCP_AF31);
-    TEST_ASSERT_EQUAL_UINT8(26, pc_diffserv_udp_dscp());
-    pc_udp_set_dscp(0);
-    TEST_ASSERT_EQUAL_UINT8(0, pc_diffserv_udp_dscp());
+    TEST_ASSERT_EQUAL_UINT8(0, DiffServ.udp_dscp());
+    DiffServ.set_udp(PC_DSCP_AF31);
+    TEST_ASSERT_EQUAL_UINT8(26, DiffServ.udp_dscp());
+    DiffServ.set_udp(0);
+    TEST_ASSERT_EQUAL_UINT8(0, DiffServ.udp_dscp());
 }
 
 static void test_conn_set_dscp_writes_pcb_tos()
@@ -114,7 +114,7 @@ static void test_accept_cb_falls_back_to_server_default_dscp()
 {
     proto_tcp_pool_init(NULL);
     TEST_ASSERT_EQUAL(1, listener_add(0, 8080, PROTO_HTTP, PROTO_FALSE)); // no override -> UNSET
-    pc_set_default_dscp(PC_DSCP_AF41);
+    DiffServ.set_default(PC_DSCP_AF41);
 
     pc_pcb pcb;
     pcb.tos = 0;

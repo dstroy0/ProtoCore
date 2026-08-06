@@ -157,7 +157,7 @@ static pc_net_err cc_do_connect(pc_net_call *cd)
     {
         // Mark the outbound connection with the server-wide default DSCP (the SYN onward). Runs in
         // tcpip_thread (this is the marshalled connect op), so touching the pcb is race-free.
-        uint8_t dscp = pc_diffserv_default_dscp();
+        uint8_t dscp = DiffServ.default_dscp();
         if (dscp)
         {
             c->pcb->tos = pc_dscp_to_tos(dscp);

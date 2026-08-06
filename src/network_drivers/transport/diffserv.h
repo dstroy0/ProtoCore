@@ -49,19 +49,15 @@ static inline uint8_t pc_dscp_to_tos(uint8_t dscp)
  * @brief Set the server-wide default DSCP for every outbound TCP connection (accepted + client).
  * @param dscp 0-63; 0 means best-effort (no marking). Takes effect for connections opened after the call.
  */
-void pc_set_default_dscp(uint8_t dscp);
 
 /** @brief The current server-wide TCP default DSCP (read by the accept / connect paths). */
-uint8_t pc_diffserv_default_dscp(void);
 
 /**
  * @brief Set the default DSCP for outbound UDP datagrams.
  * @param dscp 0-63; 0 means best-effort. Applied to each UDP pcb as it is created.
  */
-void pc_udp_set_dscp(uint8_t dscp);
 
 /** @brief The current UDP default DSCP (read when a UDP pcb is created). */
-uint8_t pc_diffserv_udp_dscp(void);
 
 /**
  * @brief Tag one accepted server connection with a DSCP (per-connection override).
@@ -83,6 +79,30 @@ proto_bool pc_conn_set_dscp(uint8_t slot, uint8_t dscp);
 proto_bool pc_listen_set_dscp(uint16_t port, uint8_t dscp);
 
 #endif // PC_ENABLE_DIFFSERV
+
+/**
+ * @brief The DSCP marks this server sets on what it sends.
+ *
+ * @var DiffServNs::set_default   the mark new TCP connections take
+ * @var DiffServNs::default_dscp  that mark
+ * @var DiffServNs::set_udp       the mark UDP sends take
+ * @var DiffServNs::udp_dscp      that mark
+ *
+ * Per-connection and per-listener marks are set through the connection and the listener, which own
+ * those objects; this table holds only the defaults they start from.
+ *
+ * No storage member: the two marks belong to diffserv.c.
+ */
+typedef struct
+{
+    void (*set_default)(uint8_t dscp);
+    uint8_t (*default_dscp)(void);
+    void (*set_udp)(uint8_t dscp);
+    uint8_t (*udp_dscp)(void);
+} DiffServNs;
+
+/** @brief The one symbol this module exports. */
+extern const DiffServNs DiffServ;
 
 PROTO_END_DECLS
 

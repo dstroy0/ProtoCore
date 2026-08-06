@@ -116,11 +116,11 @@ typedef struct
 
 // Stamp a UDP pcb with the configured default DSCP (DiffServ) so its outbound datagrams carry the class.
 // No-op when marking is off or the DSCP is 0 (best-effort). Applied per outbound send so a live
-// pc_udp_set_dscp() change takes effect on the next datagram - useful for network testing.
+// DiffServ.set_udp() change takes effect on the next datagram - useful for network testing.
 static inline void apply_udp_dscp(pc_udp_pcb *pcb)
 {
 #if PC_ENABLE_DIFFSERV
-    uint8_t dscp = pc_diffserv_udp_dscp();
+    uint8_t dscp = DiffServ.udp_dscp();
     if (pcb && dscp)
     {
         pcb->tos = pc_dscp_to_tos(dscp);
@@ -210,7 +210,7 @@ static pc_net_err udp_do(pc_net_call *c)
         }
         if (s_udp.out)
         {
-            apply_udp_dscp(s_udp.out); // per-send: a live pc_udp_set_dscp() change takes effect immediately
+            apply_udp_dscp(s_udp.out); // per-send: a live DiffServ.set_udp() change takes effect immediately
             k->result = udp_pbuf_send(s_udp.out, &k->addr, k->port, k->data, k->len);
         }
         break;

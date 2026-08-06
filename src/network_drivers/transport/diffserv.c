@@ -22,24 +22,26 @@ typedef struct
 } DiffServCtx;
 static DiffServCtx s_diffserv = {0, 0};
 
-void pc_set_default_dscp(uint8_t dscp)
+static void set_default(uint8_t dscp)
 {
     s_diffserv.tcp_dscp = (uint8_t)(dscp & 0x3F);
 }
 
-uint8_t pc_diffserv_default_dscp(void)
+static uint8_t default_dscp(void)
 {
     return s_diffserv.tcp_dscp;
 }
 
-void pc_udp_set_dscp(uint8_t dscp)
+static void set_udp(uint8_t dscp)
 {
     s_diffserv.udp_dscp = (uint8_t)(dscp & 0x3F);
 }
 
-uint8_t pc_diffserv_udp_dscp(void)
+static uint8_t udp_dscp(void)
 {
     return s_diffserv.udp_dscp;
 }
+
+const DiffServNs DiffServ = {set_default, default_dscp, set_udp, udp_dscp};
 
 #endif // PC_ENABLE_DIFFSERV

@@ -505,7 +505,7 @@ pc_net_err listener_accept_cb(void *arg, pc_pcb *newpcb, pc_net_err err)
     // (leave the lwIP default of 0). Safe here: the accept callback runs in tcpip_thread, so touching the
     // pcb is race-free (same context as pc_net_nagle_disable above).
     {
-        uint8_t dscp = (lst->dscp != PC_DSCP_UNSET) ? lst->dscp : pc_diffserv_default_dscp();
+        uint8_t dscp = (lst->dscp != PC_DSCP_UNSET) ? lst->dscp : DiffServ.default_dscp();
         if (dscp)
         {
             newpcb->tos = pc_dscp_to_tos(dscp);
