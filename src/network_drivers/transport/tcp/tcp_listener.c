@@ -25,7 +25,7 @@
 #include "network_drivers/tls/tls.h"                  // TLS handshake begin (self-stubbing)
 #include "tcp_conn.h"                                 // TcpConn, conn_pool: the slots an accept claims
 #if PROTOCORE_HOT
-#include "network_drivers/session/worker.h" // Session.workers->wake() - nudge the owning worker task
+#include "network_drivers/session/worker.h" // Workers.wake() - nudge the owning worker task
 #endif
 #include "server/clock/clock.h" // pc_millis() pluggable monotonic clock (host-safe)
 
@@ -365,7 +365,7 @@ static proto_bool listener_enqueue(uint8_t listener_id, const TcpEvt *evt)
         return PROTO_FALSE;
     }
 #if PROTOCORE_HOT
-    Session.workers->wake(0); // single worker owns every slot - nudge it now
+    Workers.wake(0); // single worker owns every slot - nudge it now
 #endif
 #endif
     return PROTO_TRUE;

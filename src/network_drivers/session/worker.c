@@ -20,6 +20,9 @@
 // Worker tasks
 // ---------------------------------------------------------------------------
 
+// Defined once in each build arm below, and called above both.
+static void pc_worker_wake(int worker_id);
+
 #if PROTOCORE_HOT
 
 // All worker-task state, owned by one instance (internal linkage): the pump callback, the task

@@ -34,7 +34,7 @@
 #include "tcp_listener.h"       // Listener, listener_pool: the row the accept path stamps onto a slot
 
 #if PROTOCORE_HOT
-#include "network_drivers/session/worker.h" // Session.workers->wake() - resume a paced send when the window drains
+#include "network_drivers/session/worker.h" // Workers.wake() - resume a paced send when the window drains
 #endif
 
 #if PC_ENABLE_TLS
@@ -1155,7 +1155,7 @@ pc_net_err lowlevel_sent_cb(void *arg, pc_pcb *tpcb, proto_u16 len)
         // (e.g. a large file) resumes now rather than on the next idle sweep.
         else
         {
-            Session.workers->wake(slot->owner);
+            Workers.wake(slot->owner);
         }
 #endif
     }
