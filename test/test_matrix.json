@@ -1202,6 +1202,7 @@
         "+<network_drivers/transport/net_addr.c>",
         "+<network_drivers/transport/diffserv.c>",
         "+<network_drivers/session/worker.c>",
+        "+<mmgr/arena.c>",
         "+<shared_primitives/ip.c>",
         "+<server/clock/clock.c>"
       ],
