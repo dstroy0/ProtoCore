@@ -27,6 +27,8 @@ import subprocess
 import sys
 import tempfile
 
+from tools.ci_tooling.lib import doc_region as dr
+
 # Pinned Wycheproof revision for reproducible provenance. Refreshing the vectors
 # is a deliberate act: bump this, re-run, and review the JSON diff.
 WYCHEPROOF_REPO = "https://github.com/C2SP/wycheproof"
@@ -35,8 +37,8 @@ WYCHEPROOF_REF = "master"
 CAP_FLAGGED = 40  # adversarial / edge-case vectors kept per primitive
 CAP_PLAIN = 12  # plain happy-path vectors kept per primitive
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-OUT_DIR = os.path.join(HERE, "..", "test", "vectors")
+ROOT = dr.repo_root(__file__)
+OUT_DIR = os.path.join(ROOT, "test", "vectors")
 
 
 def _clone_pinned():
@@ -108,7 +110,7 @@ def write(name, doc):
     with open(p, "w", encoding="utf-8", newline="\n") as f:
         json.dump(doc, f, indent=1, sort_keys=False)
         f.write("\n")
-    print("wrote %s (%d vectors)" % (os.path.relpath(p, os.path.join(HERE, "..")), len(doc["vectors"])))
+    print("wrote %s (%d vectors)" % (os.path.relpath(p, ROOT), len(doc["vectors"])))
 
 
 # --- RFC appendix vectors (small, canonical; transcribed from the RFC text and

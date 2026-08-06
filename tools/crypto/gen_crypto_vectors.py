@@ -12,9 +12,11 @@
 import json
 import os
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-VEC_DIR = os.path.join(HERE, "..", "test", "vectors")
-OUT = os.path.join(HERE, "..", "test", "unit", "crypto", "test_crypto_kat", "kat_data.inc")
+from tools.ci_tooling.lib import doc_region as dr
+
+ROOT = dr.repo_root(__file__)
+VEC_DIR = os.path.join(ROOT, "test", "vectors")
+OUT = os.path.join(ROOT, "test", "unit", "crypto", "test_crypto_kat", "kat_data.inc")
 
 # json file -> (C array name, C struct type, ordered emit fields). Each field is
 # (json_key, kind); kind "hex"/"int" pull that key, "valid" derives 1/0 from the
@@ -98,10 +100,7 @@ def main():
     for fname, arr, struct, _ in SPECS:
         with open(os.path.join(VEC_DIR, fname)) as f:
             total += len(json.load(f)["vectors"])
-    print(
-        "wrote %s (%d vectors across %d primitives)"
-        % (os.path.relpath(OUT, os.path.join(HERE, "..")), total, len(SPECS))
-    )
+    print("wrote %s (%d vectors across %d primitives)" % (os.path.relpath(OUT, ROOT), total, len(SPECS)))
 
 
 if __name__ == "__main__":

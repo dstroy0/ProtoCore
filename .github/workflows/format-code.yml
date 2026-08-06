@@ -111,5 +111,5 @@ jobs:
         # test/unit/crypto/test_crypto_kat/kat_data.inc is generated from the vendored external vectors in
         # test/vectors/*.json. Regenerate and fail if the committed table drifted from its source.
         run: |
-          python3 tools/crypto/gen_crypto_vectors.py
+          python3 -m tools.crypto.gen_crypto_vectors
           git diff --exit-code test/unit/crypto/test_crypto_kat/kat_data.inc
