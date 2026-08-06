@@ -6,7 +6,7 @@
 // command dispatch via the tcp_write capture mock.
 
 #include "network_drivers/presentation/telnet/telnet.h"
-#include "network_drivers/session/proto_handler.h" // ProtoHandler: full type needed to check pc_telnet_proto_handler()'s fields
+#include "network_drivers/session/proto_handler.h" // ProtoHandler: full type needed to check Telnet.proto_handler()'s fields
 #include "network_drivers/transport/tcp.h"
 #include <stdint.h>
 #include <string.h>
@@ -44,13 +44,13 @@ void setUp()
     }
     g_last_cmd[0] = '\0';
     g_cmd_count = 0;
-    pc_telnet_on_command(cmd_cb);
+    Telnet.on_command(cmd_cb);
     tcp_capture_reset();
 }
 
 void tearDown()
 {
-    pc_telnet_close(0);
+    Telnet.close(0);
     tcp_capture_disable();
 }
 
@@ -72,21 +72,21 @@ static void push_str(uint8_t slot, const char *s)
 
 void test_accept_negotiates_echo_and_sga()
 {
-    pc_telnet_accept(0);
+    Telnet.accept(0);
     const uint8_t *out = (const uint8_t *)tcp_captured();
     TEST_ASSERT_TRUE(tcp_captured_len() >= 6);
     // IAC WILL ECHO, IAC WILL SUPPRESS-GO-AHEAD
     const uint8_t expect[6] = {IAC, WILL, OPT_ECHO, IAC, WILL, OPT_SGA};
     TEST_ASSERT_EQUAL_HEX8_ARRAY(expect, out, 6);
-    TEST_ASSERT_EQUAL_UINT8(1, pc_telnet_client_count());
+    TEST_ASSERT_EQUAL_UINT8(1, Telnet.client_count());
 }
 
 void test_line_echoed_and_dispatched()
 {
-    pc_telnet_accept(0);
+    Telnet.accept(0);
     tcp_capture_reset();
     push_str(0, "hello\n");
-    pc_telnet_rx(0);
+    Telnet.rx(0);
     TEST_ASSERT_EQUAL_STRING("hello", g_last_cmd);
     TEST_ASSERT_EQUAL_INT(1, g_cmd_count);
     // Each typed char was echoed back.
@@ -96,20 +96,20 @@ void test_line_echoed_and_dispatched()
 
 void test_backspace_first_line()
 {
-    pc_telnet_accept(0);
+    Telnet.accept(0);
     tcp_capture_reset();
     push_str(0, "ab\x08\n"); // 0x08 backspace removes 'b' -> "a"
-    pc_telnet_rx(0);
+    Telnet.rx(0);
     TEST_ASSERT_EQUAL_STRING("a", g_last_cmd);
 }
 
 void test_iac_will_gets_dont()
 {
-    pc_telnet_accept(0);
+    Telnet.accept(0);
     tcp_capture_reset();
     const uint8_t seq[3] = {IAC, WILL, 24}; // client WILL TERMINAL-TYPE
     push_bytes(0, seq, 3);
-    pc_telnet_rx(0);
+    Telnet.rx(0);
     const uint8_t *out = (const uint8_t *)tcp_captured();
     TEST_ASSERT_EQUAL_UINT(3, tcp_captured_len());
     const uint8_t expect[3] = {IAC, DONT, 24};
@@ -118,11 +118,11 @@ void test_iac_will_gets_dont()
 
 void test_iac_do_unsupported_gets_wont()
 {
-    pc_telnet_accept(0);
+    Telnet.accept(0);
     tcp_capture_reset();
     const uint8_t seq[3] = {IAC, DO, 31}; // client DO NAWS (window size) - unsupported
     push_bytes(0, seq, 3);
-    pc_telnet_rx(0);
+    Telnet.rx(0);
     const uint8_t *out = (const uint8_t *)tcp_captured();
     TEST_ASSERT_EQUAL_UINT(3, tcp_captured_len());
     const uint8_t expect[3] = {IAC, WONT, 31};
@@ -131,65 +131,65 @@ void test_iac_do_unsupported_gets_wont()
 
 void test_iac_do_echo_is_silent()
 {
-    pc_telnet_accept(0);
+    Telnet.accept(0);
     tcp_capture_reset();
     const uint8_t seq[3] = {IAC, DO, OPT_ECHO}; // already offered WILL ECHO -> no reply
     push_bytes(0, seq, 3);
-    pc_telnet_rx(0);
+    Telnet.rx(0);
     TEST_ASSERT_EQUAL_UINT(0, tcp_captured_len());
 }
 
 void test_iac_stripped_from_data()
 {
-    pc_telnet_accept(0);
+    Telnet.accept(0);
     tcp_capture_reset();
     // "a" IAC-NOP "b" \n  -> line should be "ab" (IAC sequence consumed)
     const uint8_t seq[] = {'a', IAC, 241 /*NOP*/, 'b', '\n'};
     push_bytes(0, seq, sizeof(seq));
-    pc_telnet_rx(0);
+    Telnet.rx(0);
     TEST_ASSERT_EQUAL_STRING("ab", g_last_cmd);
 }
 
 void test_print_broadcast()
 {
-    pc_telnet_accept(0);
+    Telnet.accept(0);
     tcp_capture_reset();
-    pc_telnet_println("hi there");
+    Telnet.println("hi there");
     const char *out = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(out, "hi there"));
     TEST_ASSERT_NOT_NULL(strstr(out, "\r\n"));
 }
 
-// pc_telnet_rx / pc_telnet_close on a slot with no Telnet connection are safe no-ops.
+// Telnet.rx / Telnet.close on a slot with no Telnet connection are safe no-ops.
 void test_unknown_slot_is_noop()
 {
-    pc_telnet_accept(0);
+    Telnet.accept(0);
     tcp_capture_reset();
-    pc_telnet_rx(1); // no TelnetConn for slot 1
-    pc_telnet_close(1);
+    Telnet.rx(1); // no TelnetConn for slot 1
+    Telnet.close(1);
     TEST_ASSERT_EQUAL_UINT(0, tcp_captured_len());
-    TEST_ASSERT_EQUAL_UINT8(1, pc_telnet_client_count());
+    TEST_ASSERT_EQUAL_UINT8(1, Telnet.client_count());
 }
 
 // A bare CR waits for its LF, and control characters are ignored in a line.
 void test_cr_and_control_ignored()
 {
-    pc_telnet_accept(0);
+    Telnet.accept(0);
     tcp_capture_reset();
     const uint8_t seq[] = {'a', '\r', 0x01, 'b', '\n'}; // CR held, 0x01 dropped
     push_bytes(0, seq, sizeof(seq));
-    pc_telnet_rx(0);
+    Telnet.rx(0);
     TEST_ASSERT_EQUAL_STRING("ab", g_last_cmd);
 }
 
 // IAC IAC in the data stream is an escaped literal 0xFF added to the line.
 void test_iac_escaped_literal()
 {
-    pc_telnet_accept(0);
+    Telnet.accept(0);
     tcp_capture_reset();
     const uint8_t seq[] = {'x', IAC, IAC, '\n'};
     push_bytes(0, seq, sizeof(seq));
-    pc_telnet_rx(0);
+    Telnet.rx(0);
     TEST_ASSERT_EQUAL_UINT8('x', (uint8_t)g_last_cmd[0]);
     TEST_ASSERT_EQUAL_HEX8(0xFF, (uint8_t)g_last_cmd[1]);
     TEST_ASSERT_EQUAL_UINT8(0, (uint8_t)g_last_cmd[2]);
@@ -198,11 +198,11 @@ void test_iac_escaped_literal()
 // A subnegotiation (IAC SB ... SE) is consumed; following data resumes normally.
 void test_subnegotiation_consumed()
 {
-    pc_telnet_accept(0);
+    Telnet.accept(0);
     tcp_capture_reset();
     const uint8_t seq[] = {IAC, 250 /*SB*/, 24, 'a', 'b', 240 /*SE*/, 'h', 'i', '\n'};
     push_bytes(0, seq, sizeof(seq));
-    pc_telnet_rx(0);
+    Telnet.rx(0);
     TEST_ASSERT_EQUAL_STRING("hi", g_last_cmd);
 }
 
@@ -211,24 +211,24 @@ void test_accept_no_capacity()
 {
     for (uint8_t s = 0; s < MAX_TELNET_CONNS; s++)
     {
-        pc_telnet_accept(s);
+        Telnet.accept(s);
     }
-    TEST_ASSERT_EQUAL_UINT8(MAX_TELNET_CONNS, pc_telnet_client_count());
-    pc_telnet_accept(MAX_TELNET_CONNS); // one past capacity -> dropped
-    TEST_ASSERT_EQUAL_UINT8(MAX_TELNET_CONNS, pc_telnet_client_count());
+    TEST_ASSERT_EQUAL_UINT8(MAX_TELNET_CONNS, Telnet.client_count());
+    Telnet.accept(MAX_TELNET_CONNS); // one past capacity -> dropped
+    TEST_ASSERT_EQUAL_UINT8(MAX_TELNET_CONNS, Telnet.client_count());
     for (uint8_t s = 0; s < MAX_TELNET_CONNS; s++)
     {
-        pc_telnet_close(s);
+        Telnet.close(s);
     }
 }
 
 // Application output doubles a literal IAC (RFC 854); printf formats and broadcasts.
 void test_output_escaping_and_printf()
 {
-    pc_telnet_accept(0);
+    Telnet.accept(0);
     tcp_capture_reset();
-    pc_telnet_print("a\xff"
-                    "b");
+    Telnet.print("a\xff"
+                 "b");
     const uint8_t *out = (const uint8_t *)tcp_captured();
     const uint8_t expect[] = {'a', 0xFF, 0xFF, 'b'};
     TEST_ASSERT_EQUAL_UINT(4, tcp_captured_len());
@@ -236,19 +236,19 @@ void test_output_escaping_and_printf()
 
     tcp_capture_reset();
     static const pc_field NEQ[] = {{PC_FK_LIT, 0, 2, "n="}, PC_U32, PC_END};
-    pc_telnet_frame(NEQ, (uint32_t)7);
+    Telnet.frame(NEQ, (uint32_t)7);
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "n=7"));
 }
 
 // An inactive connection (no pcb) swallows both raw and escaped sends.
 void test_inactive_conn_sends_nothing()
 {
-    pc_telnet_accept(0);
+    Telnet.accept(0);
     conn_pool[0].pcb = NULL; // connection went away under us
     tcp_capture_reset();
-    pc_telnet_print("\xff"); // send_escaped bails on the inactive conn
-    push_str(0, "x\n");      // handle_data -> raw_send bails too
-    pc_telnet_rx(0);
+    Telnet.print("\xff"); // send_escaped bails on the inactive conn
+    push_str(0, "x\n");   // handle_data -> raw_send bails too
+    Telnet.rx(0);
     TEST_ASSERT_EQUAL_UINT(0, tcp_captured_len());
     TEST_ASSERT_EQUAL_STRING("x", g_last_cmd); // line still dispatched
 }
@@ -257,16 +257,16 @@ void test_inactive_conn_sends_nothing()
 // bytes are consumed and the parser returns to TN_NORMAL either way.
 void test_iac_wont_and_dont_are_silent()
 {
-    pc_telnet_accept(0);
+    Telnet.accept(0);
     tcp_capture_reset();
     const uint8_t wont[3] = {IAC, WONT, 24};
     push_bytes(0, wont, 3);
-    pc_telnet_rx(0);
+    Telnet.rx(0);
     TEST_ASSERT_EQUAL_UINT(0, tcp_captured_len());
 
     const uint8_t dont[3] = {IAC, DONT, 24};
     push_bytes(0, dont, 3);
-    pc_telnet_rx(0);
+    Telnet.rx(0);
     TEST_ASSERT_EQUAL_UINT(0, tcp_captured_len());
 }
 
@@ -274,11 +274,11 @@ void test_iac_wont_and_dont_are_silent()
 // "don't answer an option we already offered" guard.
 void test_iac_do_sga_is_silent()
 {
-    pc_telnet_accept(0);
+    Telnet.accept(0);
     tcp_capture_reset();
     const uint8_t seq[3] = {IAC, DO, OPT_SGA};
     push_bytes(0, seq, 3);
-    pc_telnet_rx(0);
+    Telnet.rx(0);
     TEST_ASSERT_EQUAL_UINT(0, tcp_captured_len());
 }
 
@@ -286,11 +286,11 @@ void test_iac_do_sga_is_silent()
 // dispatches nothing (the null-callback half of the guard in handle_data).
 void test_line_no_cmd_cb_is_noop()
 {
-    pc_telnet_accept(0);
-    pc_telnet_on_command(NULL);
+    Telnet.accept(0);
+    Telnet.on_command(NULL);
     tcp_capture_reset();
     push_str(0, "hello\n");
-    pc_telnet_rx(0);
+    Telnet.rx(0);
     TEST_ASSERT_EQUAL_INT(0, g_cmd_count);
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "> "));
 }
@@ -299,11 +299,11 @@ void test_line_no_cmd_cb_is_noop()
 // character exactly like backspace (0x08) does.
 void test_backspace_del_and_empty_noop()
 {
-    pc_telnet_accept(0);
+    Telnet.accept(0);
     tcp_capture_reset();
     const uint8_t seq[] = {0x08, 'a', 0x7F, '\n'}; // BS on empty line (no-op), then 'a', then DEL removes it
     push_bytes(0, seq, sizeof(seq));
-    pc_telnet_rx(0);
+    Telnet.rx(0);
     TEST_ASSERT_EQUAL_STRING("", g_last_cmd);
 }
 
@@ -311,7 +311,7 @@ void test_backspace_del_and_empty_noop()
 // newline are dropped rather than overflowing t->line[].
 void test_line_buffer_overflow_truncates()
 {
-    pc_telnet_accept(0);
+    Telnet.accept(0);
     tcp_capture_reset();
     uint8_t seq[TELNET_BUF_SIZE + 10];
     for (int i = 0; i < TELNET_BUF_SIZE + 9; i++)
@@ -320,43 +320,43 @@ void test_line_buffer_overflow_truncates()
     }
     seq[TELNET_BUF_SIZE + 9] = '\n';
     push_bytes(0, seq, sizeof(seq));
-    pc_telnet_rx(0);
+    Telnet.rx(0);
     TEST_ASSERT_EQUAL_UINT(TELNET_BUF_SIZE - 1, strlen(g_last_cmd));
 }
 
-// pc_telnet_print/println swallow a null pointer instead of dereferencing it, and a printf
+// Telnet.print/println swallow a null pointer instead of dereferencing it, and a printf
 // whose format yields zero output broadcasts nothing. Also exercises send_escaped's n==0
 // guard via an empty (non-null) string on an active connection.
 void test_print_println_null_and_printf_empty()
 {
-    pc_telnet_accept(0);
+    Telnet.accept(0);
 
     tcp_capture_reset();
-    pc_telnet_print(NULL);
+    Telnet.print(NULL);
     TEST_ASSERT_EQUAL_UINT(0, tcp_captured_len());
 
     tcp_capture_reset();
-    pc_telnet_print(""); // strnlen("") == 0 -> send_escaped's n==0 guard while the conn is active
+    Telnet.print(""); // strnlen("") == 0 -> send_escaped's n==0 guard while the conn is active
     TEST_ASSERT_EQUAL_UINT(0, tcp_captured_len());
 
     tcp_capture_reset();
-    pc_telnet_println(NULL);
+    Telnet.println(NULL);
     TEST_ASSERT_EQUAL_STRING("\r\n", tcp_captured()); // the unconditional CRLF still goes out
 
     tcp_capture_reset();
     static const pc_field EMPTY[] = {PC_END};
-    pc_telnet_frame(EMPTY);
+    Telnet.frame(EMPTY);
     TEST_ASSERT_EQUAL_UINT(0, tcp_captured_len());
 }
 
 // The Layer 5 ProtoHandler accessor exposes the installed dispatch table.
 void test_proto_handler_accessor()
 {
-    const ProtoHandler *h = pc_telnet_proto_handler();
+    const ProtoHandler *h = Telnet.proto_handler();
     TEST_ASSERT_NOT_NULL(h);
-    TEST_ASSERT_TRUE((void *)h->on_accept == (void *)pc_telnet_accept);
-    TEST_ASSERT_TRUE((void *)h->on_data == (void *)pc_telnet_rx);
-    TEST_ASSERT_TRUE((void *)h->on_close == (void *)pc_telnet_close);
+    TEST_ASSERT_TRUE((void *)h->on_accept == (void *)Telnet.accept);
+    TEST_ASSERT_TRUE((void *)h->on_data == (void *)Telnet.rx);
+    TEST_ASSERT_TRUE((void *)h->on_close == (void *)Telnet.close);
     TEST_ASSERT_NULL(h->on_poll);
 }
 

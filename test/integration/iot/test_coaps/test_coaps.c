@@ -163,7 +163,7 @@ static proto_bool sh_keyshare(const uint8_t *sh, size_t len, uint8_t pub[32])
 static size_t frag_to_tls(const uint8_t *payload, size_t plen, uint8_t *tls_out)
 {
     DtlsHsHeader hh;
-    if (!pc_dtls_hs_header_parse(payload, plen, &hh) || hh.frag_offset != 0 || hh.frag_length != hh.length)
+    if (!DtlsHandshake.header_parse(payload, plen, &hh) || hh.frag_offset != 0 || hh.frag_length != hh.length)
     {
         return 0;
     }
@@ -198,7 +198,7 @@ static void handshake(DtlsConn *conn, DtlsRecordKeys *cli_app_write, DtlsRecordK
     cfg.ephemeral_priv = SERVER_X25519_PRIV;
     cfg.server_random = SERVER_RANDOM;
     cfg.cookie_key = SERVER_COOKIE_KEY;
-    pc_dtls_conn_init(conn, &cfg, NULL, 0);
+    DtlsServer.init(conn, &cfg, NULL, 0);
 
     uint8_t ch[256];
     size_t ch_len = build_client_hello(ch, client_pub);
@@ -206,18 +206,18 @@ static void handshake(DtlsConn *conn, DtlsRecordKeys *cli_app_write, DtlsRecordK
     pc_sha256_init(&tr);
     pc_sha256_update(&tr, ch, ch_len);
     uint8_t ch_frag[300];
-    size_t ch_fl = pc_dtls_hs_frag_build(ch[0], 0, (uint32_t)(ch_len - 4), 0, ch + 4, (uint32_t)(ch_len - 4), ch_frag,
-                                         sizeof(ch_frag));
+    size_t ch_fl = DtlsHandshake.frag_build(ch[0], 0, (uint32_t)(ch_len - 4), 0, ch + 4, (uint32_t)(ch_len - 4),
+                                            ch_frag, sizeof(ch_frag));
     uint8_t ch_rec[320];
-    size_t ch_rl = pc_dtls_plaintext_build(PC_DTLS_CT_HANDSHAKE, 0, 0, ch_frag, ch_fl, ch_rec, sizeof(ch_rec));
+    size_t ch_rl = DtlsRecord.plaintext_build(PC_DTLS_CT_HANDSHAKE, 0, 0, ch_frag, ch_fl, ch_rec, sizeof(ch_rec));
 
     uint8_t flight[2048];
-    int fl = pc_dtls_conn_process(conn, ch_rec, ch_rl, flight, sizeof(flight));
+    int fl = DtlsServer.process(conn, ch_rec, ch_rl, flight, sizeof(flight));
     TEST_ASSERT_TRUE(fl > 0);
 
     size_t off = 0;
     DtlsPlaintext pt;
-    size_t rl = pc_dtls_plaintext_parse(flight, (size_t)fl, &pt);
+    size_t rl = DtlsRecord.plaintext_parse(flight, (size_t)fl, &pt);
     TEST_ASSERT_TRUE(rl > 0);
     off += rl;
     uint8_t sh[512];
@@ -236,7 +236,7 @@ static void handshake(DtlsConn *conn, DtlsRecordKeys *cli_app_write, DtlsRecordK
     pc_tls13_ks_early(&DTLS13_KDF, &cks);
     pc_tls13_ks_handshake(&cks, ecdhe, h, 32);
     DtlsRecordKeys srv_read;
-    pc_dtls_record_keys_derive(&srv_read, DTLS_CIPHER_AES_128_GCM_SHA256, 2, cks.server_hs_traffic);
+    DtlsRecord.keys_derive(&srv_read, DTLS_CIPHER_AES_128_GCM_SHA256, 2, cks.server_hs_traffic);
 
     uint64_t exp_seq = 0;
     while (off < (size_t)fl)
@@ -246,7 +246,7 @@ static void handshake(DtlsConn *conn, DtlsRecordKeys *cli_app_write, DtlsRecordK
         uint8_t inner[512];
         DtlsCiphertext info;
         TEST_ASSERT_TRUE(
-            pc_dtls_ciphertext_unprotect(&srv_read, exp_seq, flight + off, crl, inner, sizeof(inner), &info, NULL, 0));
+            DtlsRecord.unprotect(&srv_read, exp_seq, flight + off, crl, inner, sizeof(inner), &info, NULL, 0));
         exp_seq = info.seq + 1;
         off += crl;
         uint8_t msg[512];
@@ -264,19 +264,19 @@ static void handshake(DtlsConn *conn, DtlsRecordKeys *cli_app_write, DtlsRecordK
     uint8_t cfin[64];
     size_t cfin_len = pc_tls13_build_finished(cfin, sizeof(cfin), cfin_verify);
     DtlsRecordKeys cli_write;
-    pc_dtls_record_keys_derive(&cli_write, DTLS_CIPHER_AES_128_GCM_SHA256, 2, cks.client_hs_traffic);
+    DtlsRecord.keys_derive(&cli_write, DTLS_CIPHER_AES_128_GCM_SHA256, 2, cks.client_hs_traffic);
     uint8_t cfin_frag[80];
-    size_t cff = pc_dtls_hs_frag_build(cfin[0], 1, (uint32_t)(cfin_len - 4), 0, cfin + 4, (uint32_t)(cfin_len - 4),
-                                       cfin_frag, sizeof(cfin_frag));
+    size_t cff = DtlsHandshake.frag_build(cfin[0], 1, (uint32_t)(cfin_len - 4), 0, cfin + 4, (uint32_t)(cfin_len - 4),
+                                          cfin_frag, sizeof(cfin_frag));
     uint8_t cfin_rec[128];
-    size_t cfr = pc_dtls_ciphertext_protect(&cli_write, 0, PC_DTLS_CT_HANDSHAKE, cfin_frag, cff, cfin_rec,
-                                            sizeof(cfin_rec), NULL, 0);
+    size_t cfr =
+        DtlsRecord.protect(&cli_write, 0, PC_DTLS_CT_HANDSHAKE, cfin_frag, cff, cfin_rec, sizeof(cfin_rec), NULL, 0);
     uint8_t out2[64];
-    TEST_ASSERT_TRUE(pc_dtls_conn_process(conn, cfin_rec, cfr, out2, sizeof(out2)) > 0);
-    TEST_ASSERT_TRUE(pc_dtls_conn_established(conn));
+    TEST_ASSERT_TRUE(DtlsServer.process(conn, cfin_rec, cfr, out2, sizeof(out2)) > 0);
+    TEST_ASSERT_TRUE(DtlsServer.established(conn));
 
-    pc_dtls_record_keys_derive(cli_app_read, DTLS_CIPHER_AES_128_GCM_SHA256, 3, cks.server_ap_traffic);
-    pc_dtls_record_keys_derive(cli_app_write, DTLS_CIPHER_AES_128_GCM_SHA256, 3, cks.client_ap_traffic);
+    DtlsRecord.keys_derive(cli_app_read, DTLS_CIPHER_AES_128_GCM_SHA256, 3, cks.server_ap_traffic);
+    DtlsRecord.keys_derive(cli_app_write, DTLS_CIPHER_AES_128_GCM_SHA256, 3, cks.client_ap_traffic);
 }
 
 static void test_coap_over_dtls(void)
@@ -288,8 +288,8 @@ static void test_coap_over_dtls(void)
     // A CoAP CON GET /temp (Ver 1, TKL 0, MID 0x1234; Uri-Path option 11 = "temp").
     const uint8_t coap_get[] = {0x40, 0x01, 0x12, 0x34, 0xB4, 't', 'e', 'm', 'p'};
     uint8_t app_rec[128];
-    size_t ar = pc_dtls_ciphertext_protect(&cli_app_write, 0, PC_DTLS_CT_APPLICATION_DATA, coap_get, sizeof(coap_get),
-                                           app_rec, sizeof(app_rec), NULL, 0);
+    size_t ar = DtlsRecord.protect(&cli_app_write, 0, PC_DTLS_CT_APPLICATION_DATA, coap_get, sizeof(coap_get), app_rec,
+                                   sizeof(app_rec), NULL, 0);
     TEST_ASSERT_TRUE(ar > 0);
 
     uint8_t out[256];
@@ -300,7 +300,7 @@ static void test_coap_over_dtls(void)
     uint8_t coap_resp[256];
     DtlsCiphertext info;
     TEST_ASSERT_TRUE(
-        pc_dtls_ciphertext_unprotect(&cli_app_read, 1, out, (size_t)on, coap_resp, sizeof(coap_resp), &info, NULL, 0));
+        DtlsRecord.unprotect(&cli_app_read, 1, out, (size_t)on, coap_resp, sizeof(coap_resp), &info, NULL, 0));
     TEST_ASSERT_EQUAL_UINT8(PC_DTLS_CT_APPLICATION_DATA, info.content_type);
 
     // CoAP response: piggybacked ACK, code 2.05 Content (0x45), MID echoed, token echoed (none),
@@ -324,8 +324,8 @@ static void test_coap_over_dtls_replay_dropped(void)
 
     const uint8_t coap_get[] = {0x40, 0x01, 0x12, 0x34, 0xB4, 't', 'e', 'm', 'p'};
     uint8_t app_rec[128];
-    size_t ar = pc_dtls_ciphertext_protect(&cli_app_write, 0, PC_DTLS_CT_APPLICATION_DATA, coap_get, sizeof(coap_get),
-                                           app_rec, sizeof(app_rec), NULL, 0);
+    size_t ar = DtlsRecord.protect(&cli_app_write, 0, PC_DTLS_CT_APPLICATION_DATA, coap_get, sizeof(coap_get), app_rec,
+                                   sizeof(app_rec), NULL, 0);
     uint8_t out[256];
     TEST_ASSERT_TRUE(pc_coaps_process(&conn, app_rec, ar, out, sizeof(out)) > 0);     // first: answered
     TEST_ASSERT_EQUAL_INT(0, pc_coaps_process(&conn, app_rec, ar, out, sizeof(out))); // replay: dropped
@@ -342,8 +342,8 @@ static void test_coaps_no_coap_response(void)
 
     const uint8_t coap_ack[] = {0x60, 0x00, 0x12, 0x34}; // Ver 1, Type ACK (2), TKL 0, MID 0x1234
     uint8_t app_rec[128];
-    size_t ar = pc_dtls_ciphertext_protect(&cli_app_write, 0, PC_DTLS_CT_APPLICATION_DATA, coap_ack, sizeof(coap_ack),
-                                           app_rec, sizeof(app_rec), NULL, 0);
+    size_t ar = DtlsRecord.protect(&cli_app_write, 0, PC_DTLS_CT_APPLICATION_DATA, coap_ack, sizeof(coap_ack), app_rec,
+                                   sizeof(app_rec), NULL, 0);
     TEST_ASSERT_TRUE(ar > 0);
 
     uint8_t out[256];
@@ -351,7 +351,7 @@ static void test_coaps_no_coap_response(void)
 }
 
 // After establishment a datagram that is not an epoch-3 application record is routed back to the DTLS
-// state machine (pc_coaps_process's fall-through return pc_dtls_conn_process). A zero-length datagram (the
+// state machine (pc_coaps_process's fall-through return DtlsServer.process). A zero-length datagram (the
 // length guard fails first) and a DTLSPlaintext-content-type byte (not a 0b001xxxxx ciphertext header)
 // both take that path and, being nothing the established machine needs to answer, produce no output.
 static void test_coaps_non_app_record(void)
@@ -364,7 +364,7 @@ static void test_coaps_non_app_record(void)
     uint8_t byte[1] = {0x16}; // 0x16: a DTLSPlaintext content-type, not a ciphertext unified header
     TEST_ASSERT_EQUAL_INT(0, pc_coaps_process(&conn, byte, 0, out, sizeof(out))); // len < 1
     TEST_ASSERT_EQUAL_INT(0, pc_coaps_process(&conn, byte, 1, out, sizeof(out))); // not (b0 & 0xE0) == 0x20
-    TEST_ASSERT_TRUE(pc_dtls_conn_established(&conn));                            // neither disturbed the connection
+    TEST_ASSERT_TRUE(DtlsServer.established(&conn));                              // neither disturbed the connection
 }
 
 // A DTLSCiphertext record whose epoch is not 3 (0b001xxx with epoch bits != 3) is also routed to the
@@ -384,8 +384,8 @@ static void test_coaps_wrong_epoch_record(void)
 }
 
 // Before establishment pc_coaps_process forwards the datagram straight to the DTLS handshake state
-// machine (the !pc_dtls_conn_established branch). Driving the ClientHello through pc_coaps_process must emit
-// the server's flight, exactly as feeding pc_dtls_conn_process directly does.
+// machine (the !DtlsServer.established branch). Driving the ClientHello through pc_coaps_process must emit
+// the server's flight, exactly as feeding DtlsServer.process directly does.
 static void test_coaps_forwards_handshake(void)
 {
     uint8_t client_pub[32];
@@ -401,17 +401,17 @@ static void test_coaps_forwards_handshake(void)
     cfg.server_random = SERVER_RANDOM;
     cfg.cookie_key = SERVER_COOKIE_KEY;
     DtlsConn conn;
-    pc_dtls_conn_init(&conn, &cfg, NULL, 0);
+    DtlsServer.init(&conn, &cfg, NULL, 0);
 
     uint8_t ch[256];
     size_t ch_len = build_client_hello(ch, client_pub);
     uint8_t ch_frag[300];
-    size_t ch_fl = pc_dtls_hs_frag_build(ch[0], 0, (uint32_t)(ch_len - 4), 0, ch + 4, (uint32_t)(ch_len - 4), ch_frag,
-                                         sizeof(ch_frag));
+    size_t ch_fl = DtlsHandshake.frag_build(ch[0], 0, (uint32_t)(ch_len - 4), 0, ch + 4, (uint32_t)(ch_len - 4),
+                                            ch_frag, sizeof(ch_frag));
     uint8_t ch_rec[320];
-    size_t ch_rl = pc_dtls_plaintext_build(PC_DTLS_CT_HANDSHAKE, 0, 0, ch_frag, ch_fl, ch_rec, sizeof(ch_rec));
+    size_t ch_rl = DtlsRecord.plaintext_build(PC_DTLS_CT_HANDSHAKE, 0, 0, ch_frag, ch_fl, ch_rec, sizeof(ch_rec));
 
-    TEST_ASSERT_FALSE(pc_dtls_conn_established(&conn));
+    TEST_ASSERT_FALSE(DtlsServer.established(&conn));
     uint8_t flight[2048];
     int fl = pc_coaps_process(&conn, ch_rec, ch_rl, flight, sizeof(flight));
     TEST_ASSERT_TRUE(fl > 0); // the server flight was produced via the handshake-forward path

@@ -106,25 +106,25 @@ int main(int argc, char **argv)
             uint8_t paddr[6];
             memcpy(paddr, &peer.sin_addr.s_addr, 4);
             memcpy(paddr + 4, &peer.sin_port, 2);
-            pc_dtls_conn_init(&conn, &cfg, paddr, sizeof paddr);
+            DtlsServer.init(&conn, &cfg, paddr, sizeof paddr);
             inited = PROTO_TRUE;
         }
-        if (!pc_dtls_conn_established(&conn))
+        if (!DtlsServer.established(&conn))
         {
-            int r = pc_dtls_conn_process(&conn, dgram, (size_t)n, out, sizeof out);
+            int r = DtlsServer.process(&conn, dgram, (size_t)n, out, sizeof out);
             if (r < 0)
             {
-                fprintf(stderr, "HANDSHAKE FAIL alert=%u\n", pc_dtls_conn_alert(&conn));
+                fprintf(stderr, "HANDSHAKE FAIL alert=%u\n", DtlsServer.alert(&conn));
                 return 1;
             }
             if (r > 0)
             {
                 sendto(fd, out, (size_t)r, 0, (sockaddr *)&peer, plen);
             }
-            if (pc_dtls_conn_established(&conn))
+            if (DtlsServer.established(&conn))
             {
                 uint8_t cid[PC_DTLS_CID_MAX];
-                size_t cidlen = pc_dtls_conn_local_cid(&conn, cid);
+                size_t cidlen = DtlsServer.local_cid(&conn, cid);
                 fprintf(stderr, "HANDSHAKE OK%s%s", pre_flights >= 2 ? " (via HelloRetryRequest)" : "",
                         cidlen ? " (with connection ID, " : "\n");
                 if (cidlen)
@@ -140,15 +140,15 @@ int main(int argc, char **argv)
         else
         {
             // epoch-3 application data: decrypt and echo back, exercising the same seal/open helpers a
-            // CoAP-over-DTLS front-end uses (pc_dtls_conn_open_app / pc_dtls_conn_seal_app - a shared epoch-3
+            // CoAP-over-DTLS front-end uses (DtlsServer.open_app / DtlsServer.seal_app - a shared epoch-3
             // send sequence, so the echo never collides with the handshake-completion ACK).
             uint8_t inner[8192];
             size_t plen_in = 0;
-            if (pc_dtls_conn_open_app(&conn, dgram, (size_t)n, inner, sizeof inner, &plen_in))
+            if (DtlsServer.open_app(&conn, dgram, (size_t)n, inner, sizeof inner, &plen_in))
             {
                 fprintf(stderr, "APPDATA RX %zu bytes: %.*s\n", plen_in, (int)plen_in, inner);
                 uint8_t rec[8192];
-                size_t rn = pc_dtls_conn_seal_app(&conn, inner, plen_in, rec, sizeof rec);
+                size_t rn = DtlsServer.seal_app(&conn, inner, plen_in, rec, sizeof rec);
                 if (rn)
                 {
                     sendto(fd, rec, rn, 0, (sockaddr *)&peer, plen);

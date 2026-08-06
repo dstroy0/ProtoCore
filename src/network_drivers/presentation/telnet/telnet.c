@@ -114,7 +114,7 @@ static void send_escaped(uint8_t slot, const void *data, size_t n)
 // Connection lifecycle (called from the session layer)
 // ---------------------------------------------------------------------------
 
-void pc_telnet_accept(uint8_t slot)
+static void pc_telnet_accept(uint8_t slot)
 {
     TelnetConn *t = NULL;
     for (int i = 0; i < MAX_TELNET_CONNS; i++)
@@ -142,7 +142,7 @@ void pc_telnet_accept(uint8_t slot)
     raw_send(slot, "PC Telnet ready\r\n> ", 22);
 }
 
-void pc_telnet_close(uint8_t slot)
+static void pc_telnet_close(uint8_t slot)
 {
     TelnetConn *t = find_conn(slot);
     if (t)
@@ -190,7 +190,7 @@ static void handle_data(uint8_t slot, TelnetConn *t, uint8_t b)
     }
 }
 
-void pc_telnet_rx(uint8_t slot)
+static void pc_telnet_rx(uint8_t slot)
 {
     TelnetConn *t = find_conn(slot);
     if (!t)
@@ -269,7 +269,7 @@ void pc_telnet_rx(uint8_t slot)
 // Application API
 // ---------------------------------------------------------------------------
 
-void pc_telnet_on_command(TelnetCommandCb cb)
+static void pc_telnet_on_command(TelnetCommandCb cb)
 {
     s_telnet.cmd_cb = cb;
 }
@@ -285,7 +285,7 @@ static void broadcast(const char *s, size_t n)
     }
 }
 
-void pc_telnet_print(const char *s)
+static void pc_telnet_print(const char *s)
 {
     if (s)
     {
@@ -293,7 +293,7 @@ void pc_telnet_print(const char *s)
     }
 }
 
-void pc_telnet_println(const char *s)
+static void pc_telnet_println(const char *s)
 {
     if (s)
     {
@@ -302,7 +302,7 @@ void pc_telnet_println(const char *s)
     broadcast("\r\n", 2);
 }
 
-void pc_telnet_frame(const pc_field *spec, ...)
+static void pc_telnet_frame(const pc_field *spec, ...)
 {
     char buf[TELNET_BUF_SIZE];
     va_list ap;
@@ -315,7 +315,7 @@ void pc_telnet_frame(const pc_field *spec, ...)
     }
 }
 
-uint8_t pc_telnet_client_count()
+static uint8_t pc_telnet_client_count()
 {
     uint8_t c = 0;
     for (int i = 0; i < MAX_TELNET_CONNS; i++)
@@ -331,9 +331,13 @@ uint8_t pc_telnet_client_count()
 // The Telnet ProtoHandler (Layer 5 dispatch seam) - installed by Session.proto->register_builtins() via this
 // accessor, so this module carries no dependency on the session layer.
 static const ProtoHandler s_telnet_handler = {pc_telnet_accept, pc_telnet_rx, pc_telnet_close, NULL};
-const ProtoHandler *pc_telnet_proto_handler(void)
+static const ProtoHandler *pc_telnet_proto_handler(void)
 {
     return &s_telnet_handler;
 }
+
+const TelnetNs Telnet = {pc_telnet_on_command, pc_telnet_print,        pc_telnet_println,
+                         pc_telnet_frame,      pc_telnet_client_count, pc_telnet_accept,
+                         pc_telnet_rx,         pc_telnet_close,        pc_telnet_proto_handler};
 
 #endif // PC_ENABLE_TELNET

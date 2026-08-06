@@ -10,10 +10,10 @@
 
 #if PC_ENABLE_DTLS && PC_ENABLE_COAP
 
+#include "mmgr/ring.h" // pc_atomic (SPSC ingest-ring cursors)
 #include "network_drivers/presentation/security/dtls/dtls_conn.h"
 #include "server/clock/clock.h"      // pc_millis() - idle-reap clock (the DTLS PTO uses it internally too)
 #include "services/iot/coap/coaps.h" // pc_coaps_process()
-#include "mmgr/ring.h"  // pc_atomic (SPSC ingest-ring cursors)
 
 #if PROTOCORE_HOT
 #include "network_drivers/transport/udp.h"
@@ -225,7 +225,7 @@ static CoapsSlot *slot_by_cid(const uint8_t *cid, size_t avail)
         {
             continue;
         }
-        size_t sl = pc_dtls_conn_local_cid(&s->conn, sc);
+        size_t sl = DtlsServer.local_cid(&s->conn, sc);
         if (sl && sl <= avail && memcmp(cid, sc, sl) == 0)
         {
             return s;
@@ -267,7 +267,7 @@ static CoapsSlot *open_conn(const char *ip, uint16_t port)
     s->cfg.cookie_key = s_coaps.cookie_key;
     uint8_t paddr[PC_COAPS_PEER_SER];
     proto_bool ok = serialize_peer(ip, port, paddr);
-    pc_dtls_conn_init(&s->conn, &s->cfg, ok ? paddr : NULL, ok ? sizeof paddr : 0);
+    DtlsServer.init(&s->conn, &s->cfg, ok ? paddr : NULL, ok ? sizeof paddr : 0);
     copy_str(s->peer_ip, sizeof s->peer_ip, ip);
     s->peer_port = port;
     return s;
@@ -334,9 +334,9 @@ static void coaps_service_slot(CoapsSlot *s, uint32_t now, uint8_t *out, size_t 
     {
         return;
     }
-    if (pc_dtls_conn_timeout_ms(&s->conn) == 0) // 0 == due now (-1 == no timer, >0 == still pending)
+    if (DtlsServer.timeout_ms(&s->conn) == 0) // 0 == due now (-1 == no timer, >0 == still pending)
     {
-        int n = pc_dtls_conn_on_timeout(&s->conn, out, out_cap);
+        int n = DtlsServer.on_timeout(&s->conn, out, out_cap);
         if (n > 0)
         {
             server_send(s->peer_ip, s->peer_port, out, (size_t)n);

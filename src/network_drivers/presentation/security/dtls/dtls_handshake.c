@@ -83,7 +83,7 @@ static int reasm_merge(DtlsHsReasm *r, uint32_t lo, uint32_t hi)
 // Handshake message header (RFC 9147 §5.2)
 // ---------------------------------------------------------------------------
 
-size_t pc_dtls_hs_header_parse(const uint8_t *p, size_t len, DtlsHsHeader *out)
+static size_t pc_dtls_hs_header_parse(const uint8_t *p, size_t len, DtlsHsHeader *out)
 {
     if (len < PC_DTLS_HS_HDR_LEN)
     {
@@ -106,8 +106,8 @@ size_t pc_dtls_hs_header_parse(const uint8_t *p, size_t len, DtlsHsHeader *out)
     return PC_DTLS_HS_HDR_LEN + out->frag_length;
 }
 
-size_t pc_dtls_hs_frag_build(uint8_t msg_type, uint16_t msg_seq, uint32_t full_len, uint32_t frag_offset,
-                             const uint8_t *frag, uint32_t frag_len, uint8_t *out, size_t out_cap)
+static size_t pc_dtls_hs_frag_build(uint8_t msg_type, uint16_t msg_seq, uint32_t full_len, uint32_t frag_offset,
+                                    const uint8_t *frag, uint32_t frag_len, uint8_t *out, size_t out_cap)
 {
     if (full_len > 0xFFFFFF || frag_offset > 0xFFFFFF || frag_len > 0xFFFFFF)
     {
@@ -145,7 +145,7 @@ size_t pc_dtls_hs_frag_build(uint8_t msg_type, uint16_t msg_seq, uint32_t full_l
 // Message reassembly (RFC 9147 §5.4)
 // ---------------------------------------------------------------------------
 
-void pc_dtls_hs_reasm_init(DtlsHsReasm *r, uint16_t msg_seq, uint8_t *buf, size_t buf_cap)
+static void pc_dtls_hs_reasm_init(DtlsHsReasm *r, uint16_t msg_seq, uint8_t *buf, size_t buf_cap)
 {
     r->active = PROTO_FALSE;
     r->have_len = PROTO_FALSE;
@@ -157,7 +157,7 @@ void pc_dtls_hs_reasm_init(DtlsHsReasm *r, uint16_t msg_seq, uint8_t *buf, size_
     r->range_count = 0;
 }
 
-int pc_dtls_hs_reasm_add(DtlsHsReasm *r, const DtlsHsHeader *frag)
+static int pc_dtls_hs_reasm_add(DtlsHsReasm *r, const DtlsHsHeader *frag)
 {
     if (frag->msg_seq != r->msg_seq)
     {
@@ -208,7 +208,7 @@ int pc_dtls_hs_reasm_add(DtlsHsReasm *r, const DtlsHsHeader *frag)
 // ACK message (RFC 9147 §7)
 // ---------------------------------------------------------------------------
 
-size_t pc_dtls_ack_build(const DtlsRecordNumber *nums, size_t count, uint8_t *out, size_t out_cap)
+static size_t pc_dtls_ack_build(const DtlsRecordNumber *nums, size_t count, uint8_t *out, size_t out_cap)
 {
     size_t list_len = count * 16;
     if (list_len > 0xFFFF)
@@ -232,7 +232,8 @@ size_t pc_dtls_ack_build(const DtlsRecordNumber *nums, size_t count, uint8_t *ou
     return total;
 }
 
-proto_bool pc_dtls_ack_parse(const uint8_t *body, size_t len, DtlsRecordNumber *out, size_t out_cap, size_t *out_count)
+static proto_bool pc_dtls_ack_parse(const uint8_t *body, size_t len, DtlsRecordNumber *out, size_t out_cap,
+                                    size_t *out_count)
 {
     if (len < 2)
     {
@@ -263,9 +264,9 @@ proto_bool pc_dtls_ack_parse(const uint8_t *body, size_t len, DtlsRecordNumber *
 // HelloRetryRequest cookie (RFC 9147 §5.1)
 // ---------------------------------------------------------------------------
 
-size_t pc_dtls_cookie_make(const uint8_t pc_hmac_key[32], uint64_t timestamp, const uint8_t *payload,
-                           size_t payload_len, const uint8_t *client_addr, size_t addr_len, uint8_t *out,
-                           size_t out_cap)
+static size_t pc_dtls_cookie_make(const uint8_t pc_hmac_key[32], uint64_t timestamp, const uint8_t *payload,
+                                  size_t payload_len, const uint8_t *client_addr, size_t addr_len, uint8_t *out,
+                                  size_t out_cap)
 {
     if (payload_len > 0xFFFF)
     {
@@ -296,9 +297,10 @@ size_t pc_dtls_cookie_make(const uint8_t pc_hmac_key[32], uint64_t timestamp, co
     return total;
 }
 
-proto_bool pc_dtls_cookie_verify(const uint8_t pc_hmac_key[32], uint64_t now, uint64_t max_age,
-                                 const uint8_t *client_addr, size_t addr_len, const uint8_t *cookie, size_t cookie_len,
-                                 uint8_t *payload_out, size_t payload_cap, size_t *payload_len_out)
+static proto_bool pc_dtls_cookie_verify(const uint8_t pc_hmac_key[32], uint64_t now, uint64_t max_age,
+                                        const uint8_t *client_addr, size_t addr_len, const uint8_t *cookie,
+                                        size_t cookie_len, uint8_t *payload_out, size_t payload_cap,
+                                        size_t *payload_len_out)
 {
     if (cookie_len < 1 + 8 + 2 + PC_HMAC_SHA256_LEN || cookie[0] != 1)
     {
@@ -341,4 +343,7 @@ proto_bool pc_dtls_cookie_verify(const uint8_t pc_hmac_key[32], uint64_t now, ui
     return PROTO_TRUE;
 }
 
+const DtlsHandshakeNs DtlsHandshake = {pc_dtls_hs_header_parse, pc_dtls_hs_frag_build, pc_dtls_hs_reasm_init,
+                                       pc_dtls_hs_reasm_add,    pc_dtls_ack_build,     pc_dtls_ack_parse,
+                                       pc_dtls_cookie_make,     pc_dtls_cookie_verify};
 #endif // PC_ENABLE_DTLS

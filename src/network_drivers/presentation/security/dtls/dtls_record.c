@@ -56,7 +56,7 @@ static uint64_t seq_decode(uint64_t expected, uint64_t truncated, unsigned bits)
     return candidate;
 }
 
-void pc_dtls_record_keys_derive(DtlsRecordKeys *out, DtlsCipher cipher, uint16_t epoch, const uint8_t secret[32])
+static void pc_dtls_record_keys_derive(DtlsRecordKeys *out, DtlsCipher cipher, uint16_t epoch, const uint8_t secret[32])
 {
     out->cipher = cipher;
     out->epoch = epoch;
@@ -81,8 +81,8 @@ void pc_dtls_record_keys_derive(DtlsRecordKeys *out, DtlsCipher cipher, uint16_t
 // DTLSPlaintext
 // ---------------------------------------------------------------------------
 
-size_t pc_dtls_plaintext_build(uint8_t content_type, uint16_t epoch, uint64_t seq, const uint8_t *fragment,
-                               size_t frag_len, uint8_t *out, size_t out_cap)
+static size_t pc_dtls_plaintext_build(uint8_t content_type, uint16_t epoch, uint64_t seq, const uint8_t *fragment,
+                                      size_t frag_len, uint8_t *out, size_t out_cap)
 {
     size_t total = PC_DTLS_PLAINTEXT_HDR_LEN + frag_len;
     if (total > out_cap || frag_len > 0xFFFF)
@@ -109,7 +109,7 @@ size_t pc_dtls_plaintext_build(uint8_t content_type, uint16_t epoch, uint64_t se
     return total;
 }
 
-size_t pc_dtls_plaintext_parse(const uint8_t *rec, size_t rec_len, DtlsPlaintext *out)
+static size_t pc_dtls_plaintext_parse(const uint8_t *rec, size_t rec_len, DtlsPlaintext *out)
 {
     if (rec_len < PC_DTLS_PLAINTEXT_HDR_LEN)
     {
@@ -137,8 +137,9 @@ size_t pc_dtls_plaintext_parse(const uint8_t *rec, size_t rec_len, DtlsPlaintext
 // DTLSCiphertext
 // ---------------------------------------------------------------------------
 
-size_t pc_dtls_ciphertext_protect(DtlsRecordKeys *keys, uint64_t seq, uint8_t content_type, const uint8_t *plaintext,
-                                  size_t pt_len, uint8_t *out, size_t out_cap, const uint8_t *cid, size_t cid_len)
+static size_t pc_dtls_ciphertext_protect(DtlsRecordKeys *keys, uint64_t seq, uint8_t content_type,
+                                         const uint8_t *plaintext, size_t pt_len, uint8_t *out, size_t out_cap,
+                                         const uint8_t *cid, size_t cid_len)
 {
     if (keys->cipher != DTLS_CIPHER_AES_128_GCM_SHA256)
     {
@@ -197,9 +198,9 @@ size_t pc_dtls_ciphertext_protect(DtlsRecordKeys *keys, uint64_t seq, uint8_t co
     return total;
 }
 
-proto_bool pc_dtls_ciphertext_unprotect(DtlsRecordKeys *keys, uint64_t next_seq, const uint8_t *rec, size_t rec_len,
-                                        uint8_t *out, size_t out_cap, DtlsCiphertext *info, const uint8_t *expected_cid,
-                                        size_t expected_cid_len)
+static proto_bool pc_dtls_ciphertext_unprotect(DtlsRecordKeys *keys, uint64_t next_seq, const uint8_t *rec,
+                                               size_t rec_len, uint8_t *out, size_t out_cap, DtlsCiphertext *info,
+                                               const uint8_t *expected_cid, size_t expected_cid_len)
 {
     if (keys->cipher != DTLS_CIPHER_AES_128_GCM_SHA256 || rec_len < 1)
     {
@@ -326,14 +327,14 @@ proto_bool pc_dtls_ciphertext_unprotect(DtlsRecordKeys *keys, uint64_t next_seq,
 // Anti-replay sliding window (RFC 9147 §4.5.1)
 // ---------------------------------------------------------------------------
 
-void pc_dtls_replay_init(DtlsReplayWindow *w)
+static void pc_dtls_replay_init(DtlsReplayWindow *w)
 {
     w->highest = 0;
     w->bitmap = 0;
     w->seeded = PROTO_FALSE;
 }
 
-proto_bool pc_dtls_replay_check(const DtlsReplayWindow *w, uint64_t seq)
+static proto_bool pc_dtls_replay_check(const DtlsReplayWindow *w, uint64_t seq)
 {
     if (!w->seeded || seq > w->highest)
     {
@@ -347,7 +348,7 @@ proto_bool pc_dtls_replay_check(const DtlsReplayWindow *w, uint64_t seq)
     return ((w->bitmap >> diff) & 1u) == 0; // set bit => already seen (replay)
 }
 
-void pc_dtls_replay_mark(DtlsReplayWindow *w, uint64_t seq)
+static void pc_dtls_replay_mark(DtlsReplayWindow *w, uint64_t seq)
 {
     if (!w->seeded)
     {
@@ -370,4 +371,7 @@ void pc_dtls_replay_mark(DtlsReplayWindow *w, uint64_t seq)
     }
 }
 
+const DtlsRecordNs DtlsRecord = {pc_dtls_record_keys_derive, pc_dtls_plaintext_build,      pc_dtls_plaintext_parse,
+                                 pc_dtls_ciphertext_protect, pc_dtls_ciphertext_unprotect, pc_dtls_replay_init,
+                                 pc_dtls_replay_check,       pc_dtls_replay_mark};
 #endif // PC_ENABLE_DTLS

@@ -40,7 +40,7 @@ void proto_register_builtins(void)
 {
     register_if(PROTO_HTTP, http_proto_handler()); // always present
 #if PC_ENABLE_TELNET
-    register_if(PROTO_TELNET, pc_telnet_proto_handler());
+    register_if(PROTO_TELNET, Telnet.proto_handler());
 #endif
 #if PC_ENABLE_SSH
     register_if(PROTO_SSH, ssh_proto_handler());
