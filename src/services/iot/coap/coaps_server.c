@@ -287,7 +287,7 @@ static void udp_ingest_cb(const uint8_t *data, size_t len, const struct pc_udp_p
 }
 #endif
 
-// Route one ingested datagram to its peer slot (opening one for a fresh peer's ClientHello) and drive
+// HttpRoute one ingested datagram to its peer slot (opening one for a fresh peer's ClientHello) and drive
 // the DTLS handshake / CoAP exchange through the bridge.
 static void coaps_route_datagram(const CoapsIngest *ig, uint32_t now, uint8_t *out, size_t out_cap)
 {

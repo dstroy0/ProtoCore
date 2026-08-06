@@ -872,7 +872,7 @@ Built-in radio:
       the first and every root resolves through whichever store was mounted last. Register mount
       points instead, resolve a path to the longest match, and let the backend a caller names select
       among them. The callers are already written for it: `serve_file()`, `serve_static()` and
-      WebDAV all take a `pc_mnt_backend *`, and `Route::static_fs` is documented as "NULL uses
+      WebDAV all take a `pc_mnt_backend *`, and `HttpRoute::static_fs` is documented as "NULL uses
       whatever is mounted" - the selection is passed in and then dropped, because there is only one
       place to resolve to.
 

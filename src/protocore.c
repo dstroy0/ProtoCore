@@ -16,8 +16,8 @@
  *        PARSE_URI_TOO_LONG      → send_text(414)
  * ```
  *
- * **Route table**
- * Routes are stored in a fixed-size array of `Route` structs.  Both exact
+ * **HttpRoute table**
+ * Routes are stored in a fixed-size array of `HttpRoute` structs.  Both exact
  * and wildcard (suffix `*`) routes are supported; exact routes always take
  * priority because the loop checks them in insertion order and returns on
  * the first match.
@@ -39,7 +39,7 @@
 #include "mmgr/membuild.h"  // pc_sb frame builder
 #include "mmgr/plaintext.h" // the diag document is borrowed, not a stack array
 #include "mmgr/rawmemcpy.h" // proto_raw_read: every move here is into our own buffer
-#include "network_drivers/network/route.h"
+#include "network_drivers/presentation/http/route/http_route.h"
 #include "network_drivers/presentation/presentation.h" // http_proto_set_poll (install the instance-bound HTTP poll)
 #include "network_drivers/session/proto_handler.h"
 #include "network_drivers/session/worker.h"
@@ -122,7 +122,7 @@ void pc_server_reset(void)
     // materializes a sizeof(ServerCtx) temporary on the caller's stack.
     static const ServerCtx blank = {0};
     s_inst = blank;
-    network.route->reset();
+    HttpRoutes.reset();
 #if PC_ENABLE_AUTH
     // A credential id names a row by index and a route holds that id, so the two tables empty
     // together: routes left behind rows the table has no way to reach, and the table is bounded.
@@ -379,10 +379,10 @@ void stop(void)
  * match, and a `/:` anywhere marks a path-parameter route. Regex and the interface filter are set
  * to their inactive defaults for the caller to override.
  *
- * @param r    Route to initialize.
+ * @param r    HttpRoute to initialize.
  * @param path URL path to match, e.g. a trailing-star prefix or a `:name` segment.
  */
-void fill_route_base(Route *r, const char *path)
+void fill_route_base(HttpRoute *r, const char *path)
 {
     // The copy terminates the destination itself and hands back what it wrote, so the length the
     // two shape tests need comes out of the move rather than from a second walk over those bytes.
@@ -413,7 +413,7 @@ void fill_route_base(Route *r, const char *path)
 
 void on_http(const char *path, HttpMethod method, Handler callback)
 {
-    Route *r = network.route->add();
+    HttpRoute *r = HttpRoutes.add();
     if (r == NULL)
     {
         return;
@@ -427,7 +427,7 @@ void on_http(const char *path, HttpMethod method, Handler callback)
 
 void on_http_iface(const char *path, HttpMethod method, Handler callback, pc_iface iface)
 {
-    Route *r = network.route->add();
+    HttpRoute *r = HttpRoutes.add();
     if (r == NULL)
     {
         return;
@@ -447,7 +447,7 @@ void set_ap_ip(uint32_t ap_ip)
 
 void on_regex(const char *pattern, HttpMethod method, Handler callback)
 {
-    Route *r = network.route->add();
+    HttpRoute *r = HttpRoutes.add();
     if (r == NULL)
     {
         return;
@@ -464,7 +464,7 @@ void on_regex(const char *pattern, HttpMethod method, Handler callback)
 void on_http_auth(const char *path, HttpMethod method, Handler callback, const char *realm, const char *user,
                   const char *pass, proto_bool digest)
 {
-    Route *r = network.route->add();
+    HttpRoute *r = HttpRoutes.add();
     if (r == NULL)
     {
         return;
@@ -482,7 +482,7 @@ void on_http_auth(const char *path, HttpMethod method, Handler callback, const c
 #if PC_ENABLE_WEBSOCKET
 void on_ws(const char *path, WsConnectHandler on_connect, WsMessageHandler on_message, WsCloseHandler on_close)
 {
-    Route *r = network.route->add();
+    HttpRoute *r = HttpRoutes.add();
     if (r == NULL)
     {
         return;
@@ -497,7 +497,7 @@ void on_ws(const char *path, WsConnectHandler on_connect, WsMessageHandler on_me
 #if PC_ENABLE_SSE
 void on_sse(const char *path, SseConnectHandler on_connect)
 {
-    Route *r = network.route->add();
+    HttpRoute *r = HttpRoutes.add();
     if (r == NULL)
     {
         return;
@@ -534,9 +534,9 @@ proto_bool set_cache_control_swr(uint32_t max_age_s, uint32_t swr_s)
 #if PC_ENABLE_WEBSOCKET
 void ws_dispatch_message(const WsConn *ws)
 {
-    for (uint8_t r = 0; r < network.route->count(); r++)
+    for (uint8_t r = 0; r < HttpRoutes.count(); r++)
     {
-        const Route *rt = network.route->at(r);
+        const HttpRoute *rt = HttpRoutes.at(r);
         if (rt->type != ROUTE_WS)
         {
             continue;
@@ -552,9 +552,9 @@ void ws_dispatch_message(const WsConn *ws)
 
 void ws_dispatch_close(const WsConn *ws)
 {
-    for (uint8_t r = 0; r < network.route->count(); r++)
+    for (uint8_t r = 0; r < HttpRoutes.count(); r++)
     {
-        const Route *rt = network.route->at(r);
+        const HttpRoute *rt = HttpRoutes.at(r);
         if (rt->type != ROUTE_WS)
         {
             continue;
@@ -643,7 +643,7 @@ proto_bool defer(uint8_t slot, pc_deferred_fn fn, void *arg)
     {
         return PROTO_FALSE;
     }
-    // Route to the worker that owns the slot so the callback runs single-threaded
+    // HttpRoute to the worker that owns the slot so the callback runs single-threaded
     // alongside that slot's own processing.
     return pc_defer(conn_pool[slot].owner, fn, arg);
 }

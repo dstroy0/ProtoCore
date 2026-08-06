@@ -198,7 +198,7 @@ bool json_get_bool(const char *json, const char *key, bool &out_val)
     return false;
 }
 
-// --- Route Handlers ---
+// --- HttpRoute Handlers ---
 
 /**
  * GET /api/sensors  - list all live sensors as a JSON array.

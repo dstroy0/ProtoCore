@@ -134,8 +134,8 @@ PROTO_BEGIN_DECLS
 #include "network_drivers/network/dns/resolver.h"
 #include "network_drivers/network/dns/server.h"
 #include "network_drivers/network/network.h"
-#include "network_drivers/network/route.h"
 #include "network_drivers/physical/radio_power.h"
+#include "network_drivers/presentation/http/route/http_route.h"
 #include "network_drivers/session/preempt_queue.h"
 #include "server/clock/clock.h"
 #include "server/exc_decoder.h"
@@ -436,26 +436,8 @@ typedef enum
 typedef MwResult (*Middleware)(uint8_t slot_id, HttpReq *request);
 
 // ---------------------------------------------------------------------------
-// Route type discriminator
+// HttpRoute type discriminator
 // ---------------------------------------------------------------------------
-
-/** @brief Discriminates between HTTP, WebSocket, and SSE route entries. */
-typedef enum
-{
-    ROUTE_HTTP, ///< Standard HTTP request/response.
-#if PC_ENABLE_WEBSOCKET
-    ROUTE_WS, ///< WebSocket upgrade route.
-#endif
-#if PC_ENABLE_SSE
-    ROUTE_SSE, ///< Server-Sent Events route.
-#endif
-#if PC_ENABLE_FILE_SERVING
-    ROUTE_STATIC, ///< Static-file subtree mount (serve_static()).
-#endif
-#if PC_ENABLE_WEBDAV
-    ROUTE_DAV, ///< WebDAV subtree mount (dav()).
-#endif
-} RouteType;
 
 // ---------------------------------------------------------------------------
 // begin() / listen() / restart() result codes
@@ -474,52 +456,6 @@ typedef enum
     PC_ERR_LISTENER_FULL = -2, ///< listen(): listener pool (MAX_LISTENERS) is full.
     PC_ERR_LISTEN_FAILED = -3  ///< A listener failed to open (bind/listen/lwIP error).
 } pc_result;
-
-/**
- * @brief Internal route entry stored in the routing table.
- *
- * Populated by on(), on_ws(), or on_sse().
- * Application code does not interact with this struct directly.
- */
-typedef struct Route
-{
-    char path[MAX_PATH_LEN]; ///< Null-terminated path pattern.
-    RouteType type;          ///< HTTP, WS, or SSE.
-    HttpMethod method;       ///< HTTP method (ROUTE_HTTP only).
-    Handler callback;        ///< HTTP handler (ROUTE_HTTP only).
-
-#if PC_ENABLE_WEBSOCKET
-    /// The handler set this route serves, or PC_WS_NONE. The handlers belong to the websocket
-    /// module: a route decides where a request goes, and what runs once the socket is open is not
-    /// routing's business.
-    uint8_t ws_id;
-#endif
-
-#if PC_ENABLE_SSE
-    /// The handler this route serves, or PC_SSE_NONE. The handler belongs to the sse module: a
-    /// route decides where a request goes, not what runs once a client subscribes.
-    uint8_t sse_id;
-#endif
-
-#if PC_ENABLE_FILE_SERVING
-    /// The mount point this route serves, or PC_MNT_NONE. The backend and subtree belong to mnt:
-    /// two registrars describe a mount the same way, so the description lives with mounting.
-    uint8_t mnt_id;
-#endif
-
-#if PC_ENABLE_AUTH
-    /// The credential set this route needs, or PC_AUTH_NONE. The credentials themselves belong to
-    /// the auth module: a route decides where a request goes, and key material in a routing entry is
-    /// a copy of a secret in a place that has no reason to hold one.
-    uint8_t auth_id; ///< Required password.
-#endif
-
-    proto_bool is_active;   ///< `false` for unused table slots.
-    proto_bool is_wildcard; ///< `true` when path ends with `*`.
-    proto_bool is_param;    ///< `true` when the path contains a `:name` segment.
-    proto_bool is_regex;    ///< `true` when the path is a regex (see on_regex()).
-    pc_iface iface_filter;  ///< Interface gate; PC_IFACE_ANY (0) = match any interface.
-} Route;
 
 // ---------------------------------------------------------------------------
 // Chunked (streaming) response writer
@@ -647,7 +583,7 @@ void chunk_send_pump(uint8_t slot_id);
  * @param slot_id Connection slot to dispatch.
  */
 
-/// @brief Route-selection predicate: true if route @p r is active, its path pattern matches
+/// @brief HttpRoute-selection predicate: true if route @p r is active, its path pattern matches
 ///        @p req, and its interface filter admits this slot's connection. Matching a param route
 ///        captures its path parameters into @p req as a side effect (as the inline match did).
 
@@ -1410,7 +1346,7 @@ extern const char PC_RESP_HDR_OVERFLOW[];
 extern const size_t PC_RESP_HDR_OVERFLOW_LEN;
 
 /** @brief Initialize the common fields (path, flags) of a route-table entry from its pattern. */
-void fill_route_base(Route *r, const char *path);
+void fill_route_base(HttpRoute *r, const char *path);
 
 /** @brief Format @p t as an RFC 1123 GMT date into @p out (cap bytes); @p out is emptied for t <= 0. */
 // http_rfc1123: file_serving.h

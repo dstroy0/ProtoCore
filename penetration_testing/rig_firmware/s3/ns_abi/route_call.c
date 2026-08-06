@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // A consumer of the converted route module, in its own TU. Linked against
-// src/network_drivers/network/route.c and disassembled, it shows whether network.route->count() is
+// src/network_drivers/presentation/http/route/http_route.c and disassembled, it shows whether network.route->count() is
 // a direct call under LTO and an indirect one without it.
 
 #include "network_drivers/network/network.h"

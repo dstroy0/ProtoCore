@@ -101,7 +101,7 @@ void print_connection_pool_stats()
     Serial.println("---------------------------------");
 }
 
-// --- Route handlers with microsecond profiling ---
+// --- HttpRoute handlers with microsecond profiling ---
 
 /**
  * @brief GET /api/diagnostics

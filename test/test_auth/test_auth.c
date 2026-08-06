@@ -187,7 +187,7 @@ void test_auth_route_returns_404_for_wrong_path()
 
 void test_auth_checked_per_method()
 {
-    // Route only handles POST; a GET to that path is 405 Method Not Allowed
+    // HttpRoute only handles POST; a GET to that path is 405 Method Not Allowed
     // (RFC 7231 §6.5.5) - auth is never evaluated for the wrong method, so the
     // response must not be 401.
     on_http_auth("/upload", HTTP_POST, handle_ok, "Upload", "u", "p", PROTO_FALSE);

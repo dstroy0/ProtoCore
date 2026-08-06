@@ -435,7 +435,7 @@ void test_wildcard_before_exact_wildcard_wins(void)
 // STRESS TESTS
 // ====================================================================
 
-// Route table full (MAX_ROUTES entries); request matches the LAST route -
+// HttpRoute table full (MAX_ROUTES entries); request matches the LAST route -
 // worst-case O(N) linear scan must not corrupt any route or crash.
 void stress_last_route_dispatched_in_full_table(void)
 {

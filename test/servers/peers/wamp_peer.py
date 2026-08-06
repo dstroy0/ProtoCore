@@ -205,7 +205,7 @@ class _Router(threading.Thread):
                     pub_id = self._next_id()
                     if options.get("acknowledge"):
                         self._send_wamp(conn, [PUBLISHED, request, pub_id])
-                    # Route the event back to the publisher's own subscription when exclude_me is false.
+                    # HttpRoute the event back to the publisher's own subscription when exclude_me is false.
                     if topic in subs and options.get("exclude_me", True) is False:
                         self._send_wamp(conn, [EVENT, subs[topic], pub_id, {}, args])
                 elif mtype == CALL:  # [48, request, options, procedure, args?, kwargs?]

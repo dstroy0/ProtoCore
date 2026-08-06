@@ -24,7 +24,7 @@ int pc_coaps_process(DtlsConn *c, const uint8_t *dgram, size_t len, uint8_t *out
     }
 
     // Established. A DTLSCiphertext unified header is 0b001CSLEE; the low two bits are the epoch mod 4,
-    // so epoch 3 (application data) is 0b001xxx11. Route application data through CoAP; route anything
+    // so epoch 3 (application data) is 0b001xxx11. HttpRoute application data through CoAP; route anything
     // else (a retransmitted epoch-2 client Finished) back to the state machine to be re-acknowledged.
     if (len >= 1 && (dgram[0] & 0xE0) == 0x20 && (dgram[0] & 0x03) == 3)
     {

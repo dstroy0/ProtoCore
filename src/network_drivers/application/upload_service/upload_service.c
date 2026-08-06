@@ -95,7 +95,7 @@ static void upload_stream_data(HttpReq *req, const uint8_t *data, size_t len)
     }
 }
 
-/// @brief Route handler (runs at PARSE_COMPLETE): close the file and reply.
+/// @brief HttpRoute handler (runs at PARSE_COMPLETE): close the file and reply.
 static void upload_handle(uint8_t slot_id, HttpReq *req)
 {
     if (!req->body_streaming)

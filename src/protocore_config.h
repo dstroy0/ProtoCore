@@ -493,7 +493,7 @@ from halves and is slower than the width it decomposes into"
 #endif
 
 /**
- * @brief Route DMA transfers through the ingress/egress simulator (default on).
+ * @brief HttpRoute DMA transfers through the ingress/egress simulator (default on).
  *        Set to 0 to drive real silicon via the pc_dma_hw_* backend hooks.
  */
 #ifndef PC_DMA_SIMULATE
@@ -6527,7 +6527,7 @@ from halves and is slower than the width it decomposes into"
 // working set is: the pool is sized off what the build declares, and an undeclared borrow is one
 // the pool has no room for.
 #ifndef PC_WORK_ROUTE_TABLE
-#define PC_WORK_ROUTE_TABLE (MAX_ROUTES * 104 + 16) // Route is 88 with every gated id compiled
+#define PC_WORK_ROUTE_TABLE (MAX_ROUTES * 104 + 16) // HttpRoute is 88 with every gated id compiled
 #endif
 #ifndef PC_WORK_AUTH_TABLE
 #define PC_WORK_AUTH_TABLE (MAX_ROUTES * (3 * MAX_AUTH_LEN + 8) + 32) // AuthCred is 3*MAX_AUTH_LEN + 1

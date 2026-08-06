@@ -70,7 +70,7 @@ static inline void dispatch_event(const TcpEvt *evt)
     // release from accumulating across events.
     pc_plaintext_reset();
 
-    // Route to the slot's protocol handler. PROTO_NONE and any unregistered
+    // HttpRoute to the slot's protocol handler. PROTO_NONE and any unregistered
     // protocol have no handler, so the event is dropped.
     const ProtoHandler *h = proto_get(conn_pool[evt->slot_id].proto);
     if (!h)

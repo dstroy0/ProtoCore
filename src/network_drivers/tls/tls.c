@@ -421,7 +421,7 @@ proto_bool pc_tls_global_init(const uint8_t *cert, size_t cert_len, const uint8_
         return PROTO_FALSE;
     }
 
-    // Route ALL mbedTLS allocations through our static arena before any mbedTLS
+    // HttpRoute ALL mbedTLS allocations through our static arena before any mbedTLS
     // object is initialized.
     pool_init();
     mbedtls_platform_set_calloc_free(pool_calloc, pool_free);
@@ -740,7 +740,7 @@ typedef struct
 } TlsClientAuthCtx;
 static TlsClientAuthCtx s_cli;
 
-// Route mbedTLS allocations through the static arena (the client may run before
+// HttpRoute mbedTLS allocations through the static arena (the client may run before
 // any server-side TLS init has installed the allocator).
 static void client_arena_ensure()
 {

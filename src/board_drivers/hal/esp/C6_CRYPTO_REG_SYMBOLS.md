@@ -23,13 +23,13 @@ hardware pipelines, using an interlock matrix to route the data paths.
 0x044 | AES_ENDIAN_REG | R/W | [5:0]: In-silicon byte/word swapping for Key, In, and Out
 0x048 | AES_TRIGGER_REG | W |: Set bit high (1) to strobe manual computation loop
 0x04C | AES_STATE_REG | R | [1:0]: State tracker: 0=IDLE, 1=LOAD, 2=CALC, 3=DONE
-0x054 | AES_DMA_IN_CTRL_REG | R/W |: 1=Route GDMA master streams straight to AES input FIFO
-0x058 | AES_DMA_OUT_CTRL_REG | R/W |: 1=Route finished AES output FIFO to GDMA stream lanes
+0x054 | AES_DMA_IN_CTRL_REG | R/W |: 1=HttpRoute GDMA master streams straight to AES input FIFO
+0x058 | AES_DMA_OUT_CTRL_REG | R/W |: 1=HttpRoute finished AES output FIFO to GDMA stream lanes
 0x05C | SHA_MODE_REG | R/W | [2:0]: Hash type (1=SHA-1, 2=SHA-256) -> *Note: C6 lacks 384/512
 0x060 | SHA_START_REG | W |: Strobe high (1) to execute initial message block
 0x064 | SHA_CONTINUE_REG | W |: Strobe high (1) to hash consecutive sequence blocks
 0x068 | SHA_BUSY_REG | R |: 1=SHA state machine active, 0=Ready/Idle
-0x06C | SHA_DMA_IN_CTRL_REG | R/W |: 1=Route GDMA channel directly to SHA block input registers
+0x06C | SHA_DMA_IN_CTRL_REG | R/W |: 1=HttpRoute GDMA channel directly to SHA block input registers
 
 ---
 

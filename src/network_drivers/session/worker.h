@@ -72,7 +72,7 @@ proto_bool pc_workers_running(void);
 // Deferred work (thread-safe app -> worker submission)
 // ---------------------------------------------------------------------------
 //
-// Route a callback to a worker so it runs in that worker's single-thread context.
+// HttpRoute a callback to a worker so it runs in that worker's single-thread context.
 // This is how application code on loop() (or any other task) safely pushes to a
 // connection - e.g. an SSE broadcast on a timer, or ws_send from a sensor task:
 // instead of calling the send API directly (which would race the worker that owns

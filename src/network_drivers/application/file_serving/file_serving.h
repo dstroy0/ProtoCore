@@ -17,8 +17,8 @@
 #ifndef PROTOCORE_FILE_SERVING_H
 #define PROTOCORE_FILE_SERVING_H
 
-#include "network_drivers/network/route.h"                             // Route (by pointer)
 #include "network_drivers/presentation/http/http_parser/http_parser.h" // HttpReq
+#include "network_drivers/presentation/http/route/http_route.h"        // HttpRoute (by pointer)
 #include "protocore_config.h"
 #include "server/filesystem/mnt.h" // pc_mnt_backend
 
@@ -30,7 +30,7 @@ void http_rfc1123(int64_t epoch, char *out, size_t cap);
 #if PC_ENABLE_FILE_SERVING
 
 /** @brief Dispatch a ROUTE_STATIC match: resolve the FS path and serve it (MIME/index/gzip). */
-void serve_static_request(uint8_t slot_id, HttpReq *req, const Route *r);
+void serve_static_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r);
 
 /**
  * @brief Open @p fs_path on @p file_sys and stream it as 200 with the given type and optional

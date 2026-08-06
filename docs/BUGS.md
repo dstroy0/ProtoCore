@@ -29,7 +29,7 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 - **Status:** FIXED (2026-08-06), found on the first build after the dispatch chain moved to
   `presentation/http/http.c`.
-- **Symptom:** `native_application` fails to compile with `'Auth' undeclared`, `'Route' has no
+- **Symptom:** `native_application` fails to compile with `'Auth' undeclared`, `'HttpRoute' has no
 member named 'auth_id'`, and `'CSRF_TOKEN_BUF' undeclared`.
 - **Root cause:** the extraction script took each function's body and the comment block above it,
   but not the `#if` on the line before that, and not the `#endif` after. `pc_csrf_gate`,
@@ -92,7 +92,7 @@ member named 'auth_id'`, and `'CSRF_TOKEN_BUF' undeclared`.
   response that keeps the connection alive. Four `test_keepalive` cases fail on the response body and
   the handler tally; the ones that only assert the Connection header pass.
 - **Root cause:** moving the route table into the secure pool (3ef5c5a50) replaced its BSS with a
-  borrow taken in a new `RouteNs::init`, and no caller anywhere in `src/` calls it. BSS needed no
+  borrow taken in a new `HttpRouteNs::init`, and no caller anywhere in `src/` calls it. BSS needed no
   init, so nothing existed to update. `s_route` stays NULL, `add()` returns NULL on its first guard,
   and every registration path drops the route it was handed. `pc_server_reset()` calls
   `network.route->reset()`, which is also a no-op on a NULL handle, so the table reads empty and
@@ -101,7 +101,7 @@ member named 'auth_id'`, and `'CSRF_TOKEN_BUF' undeclared`.
   envs that would have caught it were the ones failing to link for unrelated reasons, so it stayed
   invisible from 2026-08-05 until those were fixed.
 - **Fix:** the borrow moves into a `bind_route()` taken on first use, the shape `auth.c` already
-  uses for the same reason, and `init` leaves `RouteNs`. A registration is the first thing that
+  uses for the same reason, and `init` leaves `HttpRouteNs`. A registration is the first thing that
   touches the table and every reader runs after one, so there is no moment a caller has to remember.
 
 ---

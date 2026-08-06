@@ -331,7 +331,7 @@ pc_platform_queue listener_worker_queue(int worker_id)
 proto_bool listener_enqueue(uint8_t listener_id, const TcpEvt *evt)
 {
 #if PC_WORKER_COUNT > 1
-    // Route by the slot's owner so the owning worker is the sole consumer.
+    // HttpRoute by the slot's owner so the owning worker is the sole consumer.
     (void)listener_id;
     uint8_t owner = conn_pool[evt->slot_id].owner;
     if (owner >= PC_WORKER_COUNT || !s_lq.wq[owner])

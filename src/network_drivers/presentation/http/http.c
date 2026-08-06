@@ -9,6 +9,7 @@
  */
 
 #include "network_drivers/presentation/http/http.h"
+#include "network_drivers/presentation/http/route/http_route.h" // HttpRoutes
 #include "mmgr/membuild.h"            // pc_sb: the Allow list is appended, not formatted
 #include "mmgr/rawmemcpy.h"           // proto_raw_read: a captured segment moves into our own buffer
 #include "protocore.h"                // http_pool, and the request and route widths
@@ -431,7 +432,7 @@ static void send_too_many_requests(uint8_t slot_id, uint32_t retry_after_s)
 }
 #endif // PC_ENABLE_AUTH_LOCKOUT
 
-static proto_bool route_admits(const Route *r, uint8_t slot_id, HttpReq *req)
+static proto_bool route_admits(const HttpRoute *r, uint8_t slot_id, HttpReq *req)
 {
     if (!r->is_active)
     {
@@ -498,7 +499,7 @@ static proto_bool pc_csrf_gate(uint8_t slot_id, HttpReq *req, HttpMethod method)
 #endif // PC_ENABLE_CSRF
 
 #if PC_ENABLE_WEBSOCKET
-static void handle_ws_route(uint8_t slot_id, HttpReq *req, HttpMethod method, const Route *r)
+static void handle_ws_route(uint8_t slot_id, HttpReq *req, HttpMethod method, const HttpRoute *r)
 {
     const char *upgrade_hdr = http_get_header(req, "Upgrade");
     // RFC 6455 4.2.1: a valid handshake needs Upgrade: websocket AND a Connection
@@ -528,7 +529,7 @@ static void handle_ws_route(uint8_t slot_id, HttpReq *req, HttpMethod method, co
 #endif // PC_ENABLE_WEBSOCKET
 
 #if PC_ENABLE_AUTH
-static proto_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const Route *r)
+static proto_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
 {
 #if PC_ENABLE_AUTH_LOCKOUT
     pc_ip cip = lockout_client_ip(slot_id);
@@ -576,7 +577,7 @@ static proto_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const R
 }
 #endif // PC_ENABLE_AUTH
 
-static proto_bool dispatch_matched_route(uint8_t slot_id, HttpReq *req, HttpMethod method, Route *r, proto_bool *path_matched,
+static proto_bool dispatch_matched_route(uint8_t slot_id, HttpReq *req, HttpMethod method, HttpRoute *r, proto_bool *path_matched,
                                   char *allow_buf, size_t allow_cap)
 {
 #if PC_ENABLE_WEBSOCKET
@@ -704,9 +705,9 @@ void match_and_execute(uint8_t slot_id)
     char allow_buf[64];
     allow_buf[0] = '\0';
 
-    for (uint8_t i = 0; i < network.route->count(); i++)
+    for (uint8_t i = 0; i < HttpRoutes.count(); i++)
     {
-        Route *r = network.route->at(i);
+        HttpRoute *r = HttpRoutes.at(i);
         if (!route_admits(r, slot_id, req))
         {
             continue;

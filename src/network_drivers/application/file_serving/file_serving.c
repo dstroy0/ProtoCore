@@ -17,7 +17,7 @@
 
 #include "mmgr/membuild.h"                          // pc_sb frame builder
 #include "network_drivers/application/http_range.h" // http_parse_byte_range (shared with the edge cache)
-#include "network_drivers/network/route.h"
+#include "network_drivers/presentation/http/route/http_route.h"
 #include "network_drivers/transport/tcp.h" // conn_pool, pc_conn_*, TcpConn/ConnState
 #include "protocore.h"
 #include "server/filesystem/filesystem.h"  // pc_fs_* - the accessor owns the root, the join, and the .. guard
@@ -529,7 +529,7 @@ void serve_file(uint8_t slot_id, const pc_mnt_backend *file_sys, const char *fs_
 
 void serve_static(const char *url_prefix, const pc_mnt_backend *file_sys, const char *fs_root)
 {
-    Route *r = network.route->add();
+    HttpRoute *r = HttpRoutes.add();
     if (r == NULL)
     {
         return;
@@ -560,7 +560,7 @@ void serve_static(const char *url_prefix, const pc_mnt_backend *file_sys, const 
     r->mnt_id = pc_mnt_point_add(file_sys, fs_root); // null backend is legal: whatever is mounted
 }
 
-void serve_static_request(uint8_t slot_id, HttpReq *req, const Route *r)
+void serve_static_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
 {
     // No null-check on the backend: storage is reached by layer, through the accessor, so a null
     // names a preference and never the path. A null one is what serve_static() documents as legal

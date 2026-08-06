@@ -158,7 +158,7 @@ void print_connection_pool_stats()
     Serial.println("---------------------------------");
 }
 
-// --- Route handlers with microsecond profiling ---
+// --- HttpRoute handlers with microsecond profiling ---
 
 /** GET /api/diagnostics - telemetry; rate-limited; reports stack headroom. */
 void handle_diagnostics(uint8_t slot_id, HttpReq *req)

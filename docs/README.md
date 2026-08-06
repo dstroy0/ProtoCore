@@ -91,7 +91,7 @@ Each OSI layer lives in its own subdirectory under `src/network_drivers/`:
 <summary><b>View Directory and OSI Layer Layout</b></summary>
 
 ```
-L7  src/protocore.h/cpp     Route table, dispatch, send()
+L7  src/protocore.h/cpp     HttpRoute table, dispatch, send()
 L6  src/network_drivers/presentation/
         presentation.h/cpp                        Drains ring buffer → parser
         http_parser.h/cpp                         RFC 7230 byte-stream state machine
@@ -1004,7 +1004,7 @@ Every byte of memory the library uses is accounted for at compile time:
 | `sse_pool[MAX_SSE_CONNS]` - SSE connection state                               | BSS                            |
 | `_queue_storage[EVT_QUEUE_DEPTH * sizeof(TcpEvt)]` - event queue backing store | BSS                            |
 | `_queue_struct` - FreeRTOS `StaticQueue_t`                                     | BSS                            |
-| Route table `_routes[MAX_ROUTES]`                                              | BSS (inside [`PC`](@ref PC)) |
+| HttpRoute table `_routes[MAX_ROUTES]`                                              | BSS (inside [`PC`](@ref PC)) |
 
 </details>
 
@@ -1395,7 +1395,7 @@ guards at compile time.
 | `PC_DELIVERY_PRECACHE_MAX` | `16` | Most asset paths a service-worker precache manifest may list. |
 | `PC_DMA_BUF_SIZE` | `256` | Bytes per DMA transfer buffer (RX is double-buffered at this size). |
 | `PC_DMA_CHANNELS` | `2` | Number of DMA channels (static-allocated; each is one peripheral link). |
-| `PC_DMA_SIMULATE` | `1` | Route DMA transfers through the ingress/egress simulator (default on). |
+| `PC_DMA_SIMULATE` | `1` | HttpRoute DMA transfers through the ingress/egress simulator (default on). |
 | `PC_DNC_LEADER_LEN` | `32` | Default leader/trailer runout length for the DNC encoder. |
 | `PC_DNC_LINE_MAX` | `128` | Largest G-code block (one line) the DNC decoder reassembles. |
 | `PC_DNC_XOFF_MAX_POLLS` | `200000` | Safety cap on how many times the DNC stream engine polls the reverse channel while paused by an XOFF, before giving up with an I/O error. |

@@ -84,7 +84,7 @@ router guarantees is only that whatever you decide is applied consistently.
 
 ## Routes
 
-| Route        | What it does                                         |
+| HttpRoute    | What it does                                         |
 | ------------ | ---------------------------------------------------- |
 | `/`          | shell, or the fallback page                          |
 | `/dashboard` | same (a client-side route)                           |

@@ -16,7 +16,7 @@ drift apart.
 
 **2. A service worker.** `pc_delivery_serve_sw()` registers two routes:
 
-| Route            | Serves                                                  |
+| HttpRoute        | Serves                                                  |
 | ---------------- | ------------------------------------------------------- |
 | `/sw.js`         | the worker (flash-resident asset)                       |
 | `/precache.json` | the versioned manifest from `pc_delivery_sw_manifest()` |

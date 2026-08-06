@@ -10,7 +10,7 @@ and any bug it surfaces is traceable to an exact build.
 
 ## What it exposes
 
-| Route                                      | Purpose                                                                 |
+| HttpRoute                                  | Purpose                                                                 |
 | ------------------------------------------ | ----------------------------------------------------------------------- |
 | `GET /`                                    | liveness baseline                                                       |
 | `GET /health`                              | `{"heap":<free>}` - the determinism-oracle heap source                  |

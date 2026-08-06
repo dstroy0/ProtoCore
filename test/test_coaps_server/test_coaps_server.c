@@ -531,7 +531,7 @@ static void test_pto_retransmit_driven_by_poll(void)
     TEST_ASSERT_EQUAL_UINT8(1, pc_coaps_server_active_conns()); // still handshaking, not reaped
 }
 
-// Route-by-CID + address migration (RFC 9146 / RFC 9147 §9): a connection that negotiated a connection id
+// HttpRoute-by-CID + address migration (RFC 9146 / RFC 9147 §9): a connection that negotiated a connection id
 // is found by that id even after the peer's source address changes, and the reply follows to the new
 // address - the NAT-rebinding survival the CID is for.
 static void test_cid_address_migration(void)

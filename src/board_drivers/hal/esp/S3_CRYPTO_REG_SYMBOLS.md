@@ -40,7 +40,7 @@ overhead completely if enabled via the control registers.
 | 0x00C  | SHA_BUSY_REG        | R   | : 1=Hash Core active, 0=Ready/Idle Saturated                       |
 | 0x010  | SHA_H_0..15_REG     | R   | [31:0] Internal Digest State registers (16 sequential registers)   |
 | 0x050  | SHA_M_0..15_REG     | W   | [31:0] Raw Message Block Input registers (16 sequential registers) |
-| 0x090  | SHA_DMA_IN_CTRL_REG | R/W | : Bit 0: 1=Route GDMA controller directly into SHA block array     |
+| 0x090  | SHA_DMA_IN_CTRL_REG | R/W | : Bit 0: 1=HttpRoute GDMA controller directly into SHA block array |
 
 ---
 

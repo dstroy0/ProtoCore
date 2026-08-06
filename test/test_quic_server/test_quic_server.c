@@ -554,7 +554,7 @@ void test_quic_server_input_guards()
     // respond() with an unknown connection id fails.
     TEST_ASSERT_FALSE(pc_quic_server_respond(999999, 0, 200, "text/plain", NULL, 0));
 
-    // Route guards via poll: a malformed long header, a too-short short header, and a short header
+    // HttpRoute guards via poll: a malformed long header, a too-short short header, and a short header
     // with an unknown DCID each route to nothing and are dropped.
     uint8_t bad_long[1] = {0xC0}; // long-header bit set but truncated -> parse fails
     TEST_ASSERT_TRUE(pc_quic_server_ingest(bad_long, 1, "192.0.2.1", 1));

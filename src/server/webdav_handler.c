@@ -15,7 +15,7 @@
 #include "network_drivers/presentation/http/http.h"
 #include "mmgr/membuild.h"
 #include "network_drivers/application/webdav/webdav.h"
-#include "network_drivers/network/route.h"
+#include "network_drivers/presentation/http/route/http_route.h"
 #include "network_drivers/transport/tcp.h"
 #include "protocore.h"
 #include "server/clock/clock.h"
@@ -92,7 +92,7 @@ static proto_bool dav_join(const char *root, const char *sub, char *out, size_t 
 // '/'. Returns 0 on success, else the HTTP error code (403 traversal, 414 too
 // long) - the single source of truth for the path check, shared by the request
 // handler and the streaming-PUT begin hook.
-static int dav_resolve_path(const Route *r, const char *reqpath, char *out, size_t cap)
+static int dav_resolve_path(const HttpRoute *r, const char *reqpath, char *out, size_t cap)
 {
     size_t plen = strnlen(r->path, MAX_PATH_LEN);
     // plen == 0 is unreachable: dav() always stores at least "*" - it appends the wildcard when the
@@ -215,9 +215,9 @@ proto_bool dav_stream_put_begin(HttpReq *req)
         return PROTO_FALSE;
     }
     uint8_t slot = (uint8_t)(req - http_pool);
-    for (uint8_t i = 0; i < network.route->count(); i++)
+    for (uint8_t i = 0; i < HttpRoutes.count(); i++)
     {
-        Route *r = network.route->at(i);
+        HttpRoute *r = HttpRoutes.at(i);
         // The !is_active half cannot fire: every entry below route_count was filled by
         // fill_route_base, which sets is_active, and nothing ever clears it again.
         if (!r->is_active || r->type != ROUTE_DAV)
@@ -288,7 +288,7 @@ void dav_stream_put_data(HttpReq *req, const uint8_t *data, size_t len)
 
 void dav(const char *url_prefix, const pc_mnt_backend *file_sys, const char *fs_root)
 {
-    Route *r = network.route->add();
+    HttpRoute *r = HttpRoutes.add();
     if (r == NULL)
     {
         return;
@@ -358,9 +358,9 @@ void dav_send_status(uint8_t slot_id, int code, const char *extra_headers)
 
 proto_bool try_serve_dav(uint8_t slot_id, HttpReq *req)
 {
-    for (uint8_t i = 0; i < network.route->count(); i++)
+    for (uint8_t i = 0; i < HttpRoutes.count(); i++)
     {
-        Route *r = network.route->at(i);
+        HttpRoute *r = HttpRoutes.at(i);
         // The !is_active half cannot fire: every entry below route_count was filled by
         // fill_route_base, which sets is_active, and nothing ever clears it again.
         if (!r->is_active || r->type != ROUTE_DAV)
@@ -381,7 +381,7 @@ proto_bool try_serve_dav(uint8_t slot_id, HttpReq *req)
     return PROTO_FALSE;
 }
 
-void serve_dav_request(uint8_t slot_id, HttpReq *req, const Route *r)
+void serve_dav_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
 {
     char fs_path[256];
     int rc = dav_resolve_path(r, req->path, fs_path, sizeof(fs_path));

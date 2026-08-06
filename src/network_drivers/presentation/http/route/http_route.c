@@ -9,49 +9,49 @@
  * aligned and padded like every other, and the pool wipes it on release rather than leaving a
  * previous tenant's handler and backend pointers readable.
  *
- * The one symbol this file exports is @ref RouteTable.
+ * The one symbol this file exports is @ref HttpRoutes.
  */
 
-#include "network_drivers/network/route.h"
+#include "network_drivers/presentation/http/route/http_route.h"
 #include "mmgr/protomem.h" // mem.zero: the hand-out wipe
 #include "mmgr/secure.h"   // where the table lives
-#include "protocore.h"     // completes Route; route.h names it only as an opaque tag
+#include "protocore.h"     // completes HttpRoute; route.h names it only as an opaque tag
 
 // The table's layout, known only here. The handle is the module's one file-scope mutable; the
 // storage behind it belongs to the secure pool.
-struct RouteCtx
+struct HttpRouteCtx
 {
-    Route entry[MAX_ROUTES];
+    HttpRoute entry[MAX_ROUTES];
     uint8_t count;
 };
-static struct RouteCtx *s_route;
+static struct HttpRouteCtx *s_route;
 
-_Static_assert(sizeof(struct RouteCtx) <= PC_WORK_ROUTE_TABLE, "route table outgrew PC_WORK_ROUTE_TABLE");
+_Static_assert(sizeof(struct HttpRouteCtx) <= PC_WORK_ROUTE_TABLE, "route table outgrew PC_WORK_ROUTE_TABLE");
 
 // Bound on first use rather than at an init the caller has to remember: a registration is the first
 // thing that touches the table, and every reader runs after one. The borrow is from the persistent
 // end, which no mark walks and no release reclaims, and it comes back zeroed.
-static struct RouteCtx *bind_route(void)
+static struct HttpRouteCtx *bind_route(void)
 {
     if (s_route == NULL)
     {
-        pc_span s = pc_secure_persist_span(sizeof(struct RouteCtx));
+        pc_span s = pc_secure_persist_span(sizeof(struct HttpRouteCtx));
         if (pc_span_ok(s))
         {
-            s_route = (struct RouteCtx *)s.buf;
+            s_route = (struct HttpRouteCtx *)s.buf;
         }
     }
     return s_route;
 }
 
-static Route *add(void)
+static HttpRoute *add(void)
 {
-    struct RouteCtx *t = bind_route();
+    struct HttpRouteCtx *t = bind_route();
     if (t == NULL || t->count >= MAX_ROUTES)
     {
         return NULL;
     }
-    Route *r = &t->entry[t->count];
+    HttpRoute *r = &t->entry[t->count];
     t->count++;
 
     // Zeroed on hand-out, not on release. A registration fills the fields its route kind uses and
@@ -67,7 +67,7 @@ static uint8_t count(void)
     return s_route == NULL ? 0u : s_route->count;
 }
 
-static Route *at(uint8_t i)
+static HttpRoute *at(uint8_t i)
 {
     if (s_route == NULL || i >= s_route->count)
     {
@@ -86,4 +86,4 @@ static void reset(void)
     }
 }
 
-const RouteNs RouteTable = {add, count, at, reset};
+const HttpRouteNs HttpRoutes = {add, count, at, reset};

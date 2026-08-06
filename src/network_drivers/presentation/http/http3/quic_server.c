@@ -256,7 +256,7 @@ static QuicSlot *open_conn(const QuicLongHeader *lh, const char *ip, uint16_t po
     return s; // last_ms is set by the poll that received this datagram
 }
 
-// Route a datagram to its connection by Destination Connection ID. Sets *is_initial when it is an
+// HttpRoute a datagram to its connection by Destination Connection ID. Sets *is_initial when it is an
 // unmatched Initial (the caller opens a new connection) and copies the parsed long header out.
 static QuicSlot *route(const uint8_t *dg, size_t len, proto_bool *is_initial, QuicLongHeader *lh_out)
 {

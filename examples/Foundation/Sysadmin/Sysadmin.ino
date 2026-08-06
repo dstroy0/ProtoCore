@@ -279,7 +279,7 @@ bool verify_admin_privileges(const HttpReq *req)
     return (token && strcmp(token, ADMIN_TOKEN) == 0);
 }
 
-// --- Route Handlers ---
+// --- HttpRoute Handlers ---
 
 /** @brief GET /: serve the embedded single-page dashboard. */
 void handle_serve_dashboard(uint8_t slot_id, HttpReq *req)
