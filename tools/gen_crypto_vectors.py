@@ -3,18 +3,18 @@
 #
 # Compile the vendored external crypto KAT vectors (test/vectors/*.json, produced
 # by tools/curate_crypto_vectors.py) into a C table the native test loops over:
-# test/test_crypto_kat/kat_data.inc. Deterministic and offline - it only reads the
+# test/unit/crypto/test_crypto_kat/kat_data.inc. Deterministic and offline - it only reads the
 # committed JSON, so CI can re-run it and diff to catch a stale .inc.
 #
 # Each vector is emitted as a struct of hex C-strings (decoded at runtime by the
-# host test); the struct layouts live in test/test_crypto_kat/test_crypto_kat.cpp.
+# host test); the struct layouts live in test/unit/crypto/test_crypto_kat/test_crypto_kat.cpp.
 
 import json
 import os
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 VEC_DIR = os.path.join(HERE, "..", "test", "vectors")
-OUT = os.path.join(HERE, "..", "test", "test_crypto_kat", "kat_data.inc")
+OUT = os.path.join(HERE, "..", "test", "unit", "crypto", "test_crypto_kat", "kat_data.inc")
 
 # json file -> (C array name, C struct type, ordered emit fields). Each field is
 # (json_key, kind); kind "hex"/"int" pull that key, "valid" derives 1/0 from the

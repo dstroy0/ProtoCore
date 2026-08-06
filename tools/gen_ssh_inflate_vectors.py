@@ -53,7 +53,9 @@ out.append(", ".join(str(len(c)) for c in comp_packets) + "};\n")
 
 import os
 
-dest = os.path.join(os.path.dirname(__file__), "..", "test", "test_ssh_inflate", "ssh_inflate_vectors.inc")
+dest = os.path.join(
+    os.path.dirname(__file__), "..", "test", "unit", "ssh", "test_ssh_inflate", "ssh_inflate_vectors.inc"
+)
 with open(dest, "w", newline="\n") as f:
     f.write("".join(out))
 print("wrote", os.path.normpath(dest))

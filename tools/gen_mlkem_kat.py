@@ -7,7 +7,7 @@ uses kyber-py (a FIPS 203 reference that tracks the NIST ACVP vectors) with fixe
 and a fixed encapsulation message m, then cross-checks the shared secret by decapsulating the
 ciphertext (round-trip) and, when liboqs is installed, against it too, before emitting the header.
 
-    python3 tools/gen_mlkem_kat.py > test/test_pqc_mlkem/mlkem_kat.h
+    python3 tools/gen_mlkem_kat.py > test/unit/pqc/test_pqc_mlkem/mlkem_kat.h
 
 Run once and commit the result; the C Encaps must reproduce it byte for byte.
 """

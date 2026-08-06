@@ -12,7 +12,7 @@ Counted from:
   interop peers  test/servers/peers/*_peer.py
   benches        performance_benching/**/platformio.ini  (one per benchable unit)
   attacks        @attack(...) decorators in penetration_testing/pc_pentest.py
-  fuzz           RUN_TEST count in test/test_pentest/test_pentest.c
+  fuzz           RUN_TEST count in test/unit/fieldbus/test_pentest/test_pentest.c
   services       src/services/<group>/<module>/
 
 Usage:  python ci_tooling/generate/gen_interop_matrix.py [--check]
@@ -51,7 +51,7 @@ def main() -> int:
     if os.path.exists(pentest):
         attacks = len(re.findall(r"^@attack\(", open(pentest, encoding="utf-8", errors="replace").read(), re.M))
 
-    fuzzer = os.path.join(ROOT, "test/test_pentest/test_pentest.c")
+    fuzzer = os.path.join(ROOT, "test/unit/fieldbus/test_pentest/test_pentest.c")
     fuzz = 0
     if os.path.exists(fuzzer):
         fuzz = len(re.findall(r"\bRUN_TEST\s*\(", open(fuzzer, encoding="utf-8", errors="replace").read()))
@@ -64,7 +64,7 @@ def main() -> int:
         f"| Interop peers        | {len(peers):>5} | `test/servers/peers/*_peer.py`                   |",
         f"| Throughput benches   | {len(benches):>5} | `performance_benching/**/platformio.ini`         |",
         f"| Advanced attacks     | {attacks:>5} | `@attack(...)` in `penetration_testing/pc_pentest.py`     |",
-        f"| Adversarial fuzz     | {fuzz:>5} | `native_pentest` (`test/test_pentest/`)          |",
+        f"| Adversarial fuzz     | {fuzz:>5} | `native_pentest` (`test/unit/fieldbus/test_pentest/`)          |",
         f"| Service modules      | {len(modules):>5} | `src/services/<group>/<module>/`                 |",
         "",
         f"Interop peers cover **{len(peers)} of {len(modules)}** service modules. Not every module needs a"
