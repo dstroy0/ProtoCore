@@ -43,14 +43,20 @@ BEGIN = "; >>> GENERATED TEST ENVS - do not edit below; edit test/test_matrix.js
 END = "; <<< END GENERATED TEST ENVS <<<"
 
 
-def render_env(name, e):
+def render_env(name, e, bases=frozenset()):
+    # A stack base carries flags and a build_src_filter for the envs that extend it and owns no
+    # suite. It is emitted as a plain section rather than [env:...] so pio never treats it as a
+    # target: an env with no test_filter runs every suite in test/, and test_ignore on it would be
+    # inherited by every child, suppressing theirs. A section is neither.
     base = e.get("base", "native_base")
+    if base.startswith("env:") and base[len("env:") :] in bases:
+        base = base[len("env:") :]
     lines = []
     desc = e.get("desc", "").strip()
     if desc:
         for dl in desc.split("\n"):
             lines.append(f"; {dl}".rstrip())
-    lines.append(f"[env:{name}]")
+    lines.append(f"[{name}]" if name in bases else f"[env:{name}]")
     lines.append(f"extends = {base}")
     flags = e.get("flags", [])
     if flags:
@@ -62,16 +68,14 @@ def render_env(name, e):
     if src:
         lines.append("build_src_filter =")
         for s in src:
+            for b in bases:
+                s = s.replace(f"${{env:{b}.", f"${{{b}.")
             lines.append(f"    {s}")
     tests = e.get("tests", [])
     if tests:
         lines.append("test_filter =")
         for t in tests:
             lines.append(f"    {t}")
-    else:
-        # A base env other envs extend for its build_src_filter. Without this, pio takes an absent
-        # filter as "every suite in test/" and runs all of them against a src list built for none.
-        lines.append("test_ignore = *")
     if e.get("test_build_src"):
         lines.append(f"test_build_src = {e['test_build_src']}")
     return "\n".join(lines)
@@ -133,15 +137,21 @@ build_flags =
 
 def render_block(table):
     envs = table["envs"]
+    # An entry that names no suite is a stack base: a section others extend, never a target.
+    bases = frozenset(n for n, e in envs.items() if not e.get("tests"))
     parts = [
         BEGIN,
-        "; Single source of truth: test/test_matrix.json  (" + str(len(envs)) + " native envs)",
+        "; Single source of truth: test/test_matrix.json  ("
+        + str(len(envs) - len(bases))
+        + " native envs, "
+        + str(len(bases))
+        + " stack bases)",
         "",
         NATIVE_BASE,
     ]
     for name, e in envs.items():
         parts.append("")
-        parts.append(render_env(name, e))
+        parts.append(render_env(name, e, bases))
     parts.append("")
     parts.append(END)
     return "\n".join(parts) + "\n"
