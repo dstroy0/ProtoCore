@@ -102,7 +102,7 @@ void test_format_guards()
 
 void test_emit_counter_and_negative()
 {
-    pc_statsd_begin("collector.local", 8125, NULL);
+    pc_statsd_begin("192.0.2.10", 8125, NULL);
     pc_statsd_count("api.hits", 3);
     TEST_ASSERT_EQUAL_STRING("api.hits:3|c", captured());
     Udp.client->capture_reset();
@@ -112,7 +112,7 @@ void test_emit_counter_and_negative()
 
 void test_emit_gauge_and_delta()
 {
-    pc_statsd_begin("h", 0, NULL); // 0 -> default port
+    pc_statsd_begin("192.0.2.10", 0, NULL); // 0 -> default port
     pc_statsd_gauge("heap.free", 200000);
     TEST_ASSERT_EQUAL_STRING("heap.free:200000|g", captured());
     Udp.client->capture_reset();
@@ -125,7 +125,7 @@ void test_emit_gauge_and_delta()
 
 void test_emit_timing_set_sampled()
 {
-    pc_statsd_begin("h", 8125, NULL);
+    pc_statsd_begin("192.0.2.10", 8125, NULL);
     pc_statsd_timing("db.query", 120);
     TEST_ASSERT_EQUAL_STRING("db.query:120|ms", captured());
     Udp.client->capture_reset();
@@ -138,7 +138,7 @@ void test_emit_timing_set_sampled()
 
 void test_emit_global_tags()
 {
-    pc_statsd_begin("h", 8125, "env:prod,region:us");
+    pc_statsd_begin("192.0.2.10", 8125, "env:prod,region:us");
     pc_statsd_count("x", 1);
     TEST_ASSERT_EQUAL_STRING("x:1|c|#env:prod,region:us", captured());
 }
@@ -206,7 +206,7 @@ void test_format_rate_zero_and_empty_tags()
 
 void test_emit_zero_value_and_set_null_member()
 {
-    pc_statsd_begin("h", 8125, NULL);
+    pc_statsd_begin("192.0.2.10", 8125, NULL);
     pc_statsd_timing("db.zero", 0);
     TEST_ASSERT_EQUAL_STRING("db.zero:0|ms", captured());
     Udp.client->capture_reset();
@@ -216,7 +216,7 @@ void test_emit_zero_value_and_set_null_member()
 
 void test_emit_overlong_name_is_noop()
 {
-    pc_statsd_begin("h", 8125, NULL);
+    pc_statsd_begin("192.0.2.10", 8125, NULL);
     char longname[300];
     for (size_t i = 0; i < sizeof(longname) - 1; i++)
     {
