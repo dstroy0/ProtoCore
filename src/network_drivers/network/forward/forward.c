@@ -226,7 +226,7 @@ static proto_bool acl_permits(const ForwardCtx *f, uint8_t src, const uint8_t *d
     return f->acl_default == PC_FWD_ALLOW;
 }
 
-void pc_forward_reset(void)
+static void pc_forward_reset(void)
 {
     memset(s_fwd.if_, 0, sizeof(s_fwd.if_));
     memset(s_fwd.rules, 0, sizeof(s_fwd.rules));
@@ -240,13 +240,13 @@ void pc_forward_reset(void)
     memset(&s_fwd.stats, 0, sizeof(s_fwd.stats));
 }
 
-void pc_forward_acl_set_default(pc_fwd_action action)
+static void pc_forward_acl_set_default(pc_fwd_action action)
 {
     s_fwd.acl_default = action;
 }
 
-proto_bool pc_forward_acl_add(uint8_t src_if, uint16_t offset, const uint8_t *pattern, const uint8_t *mask,
-                              uint8_t patlen, pc_fwd_action action)
+static proto_bool pc_forward_acl_add(uint8_t src_if, uint16_t offset, const uint8_t *pattern, const uint8_t *mask,
+                                     uint8_t patlen, pc_fwd_action action)
 {
     if (patlen > PC_FWD_ACL_PATLEN || (patlen > 0 && (!pattern || !mask)))
     {
@@ -275,8 +275,8 @@ proto_bool pc_forward_acl_add(uint8_t src_if, uint16_t offset, const uint8_t *pa
     return PROTO_FALSE; // table full
 }
 
-proto_bool pc_forward_route_add(uint8_t src_if, uint16_t offset, const uint8_t *pattern, const uint8_t *mask,
-                                uint8_t patlen, uint8_t egress_if, uint16_t rate_cap_per_sec)
+static proto_bool pc_forward_route_add(uint8_t src_if, uint16_t offset, const uint8_t *pattern, const uint8_t *mask,
+                                       uint8_t patlen, uint8_t egress_if, uint16_t rate_cap_per_sec)
 {
     if (patlen > PC_FWD_ACL_PATLEN || (patlen > 0 && (!pattern || !mask)))
     {
@@ -308,7 +308,7 @@ proto_bool pc_forward_route_add(uint8_t src_if, uint16_t offset, const uint8_t *
     return PROTO_FALSE; // table full
 }
 
-proto_bool pc_forward_add_if(uint8_t if_id, pc_if_kind kind, pc_if_send_fn send, void *ctx)
+static proto_bool pc_forward_add_if(uint8_t if_id, pc_if_kind kind, pc_if_send_fn send, void *ctx)
 {
     if (!send || find_if(&s_fwd, if_id))
     {
@@ -330,7 +330,7 @@ proto_bool pc_forward_add_if(uint8_t if_id, pc_if_kind kind, pc_if_send_fn send,
     return PROTO_FALSE; // table full
 }
 
-proto_bool pc_forward_add_rule(uint8_t src_if, uint8_t dst_if, pc_fwd_action action, uint16_t rate_cap_per_sec)
+static proto_bool pc_forward_add_rule(uint8_t src_if, uint8_t dst_if, pc_fwd_action action, uint16_t rate_cap_per_sec)
 {
     for (uint8_t i = 0; i < PC_FWD_MAX_RULES; i++)
     {
@@ -394,7 +394,7 @@ static uint8_t forward_policy_route(uint8_t src_if, const uint8_t *data, uint16_
     return 0;
 }
 
-uint8_t pc_forward_ingress(uint8_t src_if, const uint8_t *data, uint16_t len)
+static uint8_t pc_forward_ingress(uint8_t src_if, const uint8_t *data, uint16_t len)
 {
     s_fwd.stats.frames_in++;
     if (!acl_permits(&s_fwd, src_if, data, len)) // ingress ACL runs before any forwarding rule
@@ -454,7 +454,7 @@ uint8_t pc_forward_ingress(uint8_t src_if, const uint8_t *data, uint16_t len)
     return n;
 }
 
-void pc_forward_get_stats(pc_forward_stats *out)
+static void pc_forward_get_stats(pc_forward_stats *out)
 {
     if (out)
     {
@@ -463,7 +463,7 @@ void pc_forward_get_stats(pc_forward_stats *out)
 }
 
 #if PC_FWD_INSPECT
-void pc_forward_set_inspector(pc_fwd_inspect_fn fn, void *ctx)
+static void pc_forward_set_inspector(pc_fwd_inspect_fn fn, void *ctx)
 {
     s_fwd.inspector = fn;
     s_fwd.inspect_ctx = ctx;
@@ -471,10 +471,27 @@ void pc_forward_set_inspector(pc_fwd_inspect_fn fn, void *ctx)
 #endif
 
 #if !PROTOCORE_HOT
-void pc_forward_test_set_now(uint32_t ms)
+static void pc_forward_test_set_now(uint32_t ms)
 {
     s_fwd.now_ms = ms;
 }
 #endif
+
+const ForwardNs Forward = {pc_forward_reset,
+                           pc_forward_add_if,
+                           pc_forward_add_rule,
+                           pc_forward_acl_set_default,
+                           pc_forward_acl_add,
+                           pc_forward_route_add,
+#if PC_FWD_INSPECT
+                           pc_forward_set_inspector,
+#endif
+                           pc_forward_ingress,
+                           pc_forward_get_stats
+#if !PROTOCORE_HOT
+                           ,
+                           pc_forward_test_set_now
+#endif
+};
 
 #endif // PC_ENABLE_FORWARD

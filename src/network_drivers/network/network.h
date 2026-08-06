@@ -19,8 +19,11 @@
 #define PROTOCORE_NETWORK_H
 
 #include "network_drivers/network/dns/dns.h"
-#include "protocore_config.h"
+#include "protocore_config.h" // first: the feature flags the includes below are gated on
 #include "shared_primitives/ip.h"
+#if PC_ENABLE_FORWARD
+#include "network_drivers/network/forward/forward.h" // ForwardNs: carried below as network.forward
+#endif
 
 PROTO_BEGIN_DECLS
 
@@ -30,6 +33,7 @@ PROTO_BEGIN_DECLS
  * @var NetworkNs::init  initialize the layer. Currently a no-op; lwIP manages IP routing internally.
  *                       Call it if static-route configuration, ICMP echo handling, or custom
  *                       network-layer diagnostics are added.
+ * @var NetworkNs::forward the forwarding plane: the ingress ACL, the policy routes, the fan-out
  *
  * A child is a pointer, because a static initializer takes a constant expression and another
  * object's value is not one, while its address is. A child behind a feature flag is declared under
@@ -41,6 +45,9 @@ typedef struct
 {
     void (*init)(void);
     const DnsNs *dns;
+#if PC_ENABLE_FORWARD
+    const ForwardNs *forward;
+#endif
     const IpNs *ip;
 } NetworkNs;
 
