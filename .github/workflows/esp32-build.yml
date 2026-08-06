@@ -129,7 +129,7 @@ jobs:
           ccache -z >/dev/null 2>&1 || true
           pio ci --board=esp32dev \
             --project-option="framework=arduino" \
-            --project-option="platform=espressif32@^6.0.0" \
+            --project-option="platform=https://github.com/pioarduino/platform-espressif32.git" \
             --lib="." \
             --project-option="build_flags=$EX_FLAGS" \
             "$EX_INO" 2>&1 | tee build.log
@@ -172,38 +172,9 @@ jobs:
           python -m ci_tooling.generate.example_footprints table docs/footprints.json docs/FOOTPRINTS.md
       - name: Format with Prettier
         run: npx prettier@3.9.6 --write docs/footprints.json docs/FOOTPRINTS.md
-      - name: Configure SSH commit signing
-        env:
-          CI_SIGNING_KEY: ${{ secrets.CI_SIGNING_KEY }}
-        run: |
-          if [ -n "$CI_SIGNING_KEY" ]; then
-            mkdir -p ~/.ssh
-            printf '%s\n' "$CI_SIGNING_KEY" > ~/.ssh/ci_signing_key
-            chmod 600 ~/.ssh/ci_signing_key
-            git config gpg.format ssh
-            git config user.signingkey ~/.ssh/ci_signing_key
-            git config commit.gpgsign true
-          fi
-      # Rebase-and-retry push: the per-ref concurrency group above stops two ESP32
-      # Build runs from overlapping, but it cannot stop OTHER workflows (changelog,
-      # test-report) or a plain push from advancing main during this multi-minute
-      # build. git-auto-commit-action has no rebase/retry, so a concurrent push made
-      # this step fail with "failed to push some refs". Commit, then rebase onto the
-      # latest main and retry the push instead of failing.
       - name: Commit footprints + table
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add docs/footprints.json docs/FOOTPRINTS.md
-          if git diff --cached --quiet; then
-            echo "no footprint changes to commit"
-            exit 0
-          fi
-          git commit -m "docs: update ESP32 build footprints [skip ci]"
-          for attempt in 1 2 3 4 5; do
-            if git push origin HEAD:main; then exit 0; fi
-            echo "push rejected (attempt $attempt/5), rebasing onto origin/main"
-            git pull --rebase origin main
-          done
-          echo "footprint push still failing after 5 rebase+retry attempts"
-          exit 1
+        uses: ./.github/actions/bot-commit
+        with:
+          files: docs/footprints.json docs/FOOTPRINTS.md
+          message: "docs: update ESP32 build footprints [skip ci]"
+          signing-key: ${{ secrets.CI_SIGNING_KEY }}

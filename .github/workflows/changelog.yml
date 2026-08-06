@@ -38,42 +38,9 @@ jobs:
       - name: Format CHANGELOG.md with Prettier
         run: npx prettier@3.9.6 --write docs/CHANGELOG.md
 
-      - name: Configure SSH commit signing
-        env:
-          CI_SIGNING_KEY: ${{ secrets.CI_SIGNING_KEY }}
-        run: |
-          # SSH-sign the bot commit (Verified) when the signing key is available;
-          # skip signing if the secret is unset so CI never breaks.
-          if [ -n "$CI_SIGNING_KEY" ]; then
-            mkdir -p ~/.ssh
-            printf '%s\n' "$CI_SIGNING_KEY" > ~/.ssh/ci_signing_key
-            chmod 600 ~/.ssh/ci_signing_key
-            git config gpg.format ssh
-            git config user.signingkey ~/.ssh/ci_signing_key
-            git config commit.gpgsign true
-          fi
-
-      # Rebase-and-retry push: the per-ref concurrency group only serializes this
-      # workflow against itself; it cannot stop the other auto-committing workflows
-      # (feature-tables, test-report, esp32-build) from advancing main while this runs.
-      # git-auto-commit-action has no rebase/retry, so a concurrent push made this fail
-      # with "failed to push some refs". Commit, then rebase onto latest main and retry.
       - name: Commit changelog
-        run: |
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add docs/CHANGELOG.md
-          if git diff --cached --quiet; then
-            echo "no changelog changes to commit"
-            exit 0
-          fi
-          git commit -m "chore: update CHANGELOG.md [skip ci]"
-          for attempt in 1 2 3 4 5; do
-            if git push origin HEAD:main; then exit 0; fi
-            echo "push rejected (attempt $attempt/5), rebasing onto origin/main"
-            git pull --rebase origin main
-          done
-          echo "changelog push still failing after 5 rebase+retry attempts"
-          exit 1
-          commit_user_name: "github-actions[bot]"
-          commit_user_email: "github-actions[bot]@users.noreply.github.com"
+        uses: ./.github/actions/bot-commit
+        with:
+          files: docs/CHANGELOG.md
+          message: "chore: update CHANGELOG.md [skip ci]"
+          signing-key: ${{ secrets.CI_SIGNING_KEY }}

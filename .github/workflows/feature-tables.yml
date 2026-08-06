@@ -109,44 +109,15 @@ jobs:
       - name: Format with Prettier
         run: npx prettier@3.9.6 --write README.md docs/README.md docs/EXAMPLES.md docs/THEMES.md docs/FAVICONS.md
 
-      - name: Configure SSH commit signing
-        env:
-          CI_SIGNING_KEY: ${{ secrets.CI_SIGNING_KEY }}
-        run: |
-          # SSH-sign the bot commit (Verified) when the signing key is available;
-          # skip signing if the secret is unset so CI never breaks.
-          if [ -n "$CI_SIGNING_KEY" ]; then
-            mkdir -p ~/.ssh
-            printf '%s\n' "$CI_SIGNING_KEY" > ~/.ssh/ci_signing_key
-            chmod 600 ~/.ssh/ci_signing_key
-            git config gpg.format ssh
-            git config user.signingkey ~/.ssh/ci_signing_key
-            git config commit.gpgsign true
-          fi
-
-      # Rebase-and-retry push: the per-ref concurrency group only serializes this
-      # workflow against itself; it cannot stop the other auto-committing workflows
-      # (changelog, test-report, esp32-build) from advancing main during this multi-minute
-      # regeneration. git-auto-commit-action has no rebase/retry, so a concurrent push made
-      # this fail with "failed to push some refs". Commit, then rebase onto latest main and
-      # retry the push. (The non-doc bots touch different files, so the rebase applies clean.)
       - name: Commit regenerated tables
-        run: |
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add README.md docs/README.md docs/ARCHITECTURE.md docs/configurator.html docs/EXAMPLES.md docs/THEMES.md docs/FAVICONS.md \
-            test/README.md docs/diagrams web_assets/themes/generated web_assets/favicons \
-            src/network_drivers/application/binary_asset_blobs.c src/network_drivers/application/binary_asset_blobs.h \
+        uses: ./.github/actions/bot-commit
+        with:
+          files: >-
+            README.md docs/README.md docs/ARCHITECTURE.md docs/configurator.html docs/EXAMPLES.md
+            docs/THEMES.md docs/FAVICONS.md test/README.md docs/diagrams
+            web_assets/themes/generated web_assets/favicons
+            src/network_drivers/application/binary_asset_blobs.c
+            src/network_drivers/application/binary_asset_blobs.h
             examples/*/*/build_opt.h
-          if git diff --cached --quiet; then
-            echo "no regenerated files changed"
-            exit 0
-          fi
-          git commit -m "docs: regenerate feature tables + configurator + build_opt.h + example index [skip ci]"
-          for attempt in 1 2 3 4 5; do
-            if git push origin HEAD:main; then exit 0; fi
-            echo "push rejected (attempt $attempt/5), rebasing onto origin/main"
-            git pull --rebase origin main
-          done
-          echo "feature-tables push still failing after 5 rebase+retry attempts"
-          exit 1
+          message: "docs: regenerate feature tables + configurator + build_opt.h + example index [skip ci]"
+          signing-key: ${{ secrets.CI_SIGNING_KEY }}

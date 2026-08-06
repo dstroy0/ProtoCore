@@ -57,7 +57,7 @@ jobs:
         run: |
           set -e
           FULL=0
-          case "$EVENT" in workflow_dispatch | schedule) FULL=1 ;; esac
+          case "$EVENT" in workflow_dispatch) FULL=1 ;; esac
           printf '%s' "$PR_LABELS" | grep -q '"full-ci"' && FULL=1 || true
           if [ "$EVENT" = "pull_request" ]; then BASE="$PR_BASE"; HEAD="$PR_HEAD"; else BASE="$BEFORE"; HEAD="$HEAD_SHA"; fi
           if git rev-parse --verify -q "$HEAD^{commit}" >/dev/null; then

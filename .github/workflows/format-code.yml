@@ -49,7 +49,7 @@ jobs:
           # Bypasses hidden directories like .git automatically.
           # build_opt.h is excluded: despite the .h suffix it is an Arduino build-options file
           # (a list of -D compiler flags, not C++), and its name is fixed by the Arduino toolchain.
-          # .c is in the list because src/ is C11: the conversion renamed 351 implementation files
+          # .c is in the list because src/ is C11: the conversion renamed every implementation file
           # out from under a glob that only named .cpp, leaving them unchecked.
           # managed_components/ is what the IDF component manager downloads into an example. It is
           # vendored third-party source, not ours to style, and it is gitignored - so a checkout
@@ -58,7 +58,7 @@ jobs:
 
           # 3. Handle empty repository safety edge-case
           if [ -z "$FILES" ]; then
-            echo "No source files found matching (.cpp, .h, .ino). Skipping check."
+            echo "No source files found matching (.c, .cpp, .h, .ino). Skipping check."
             exit 0
           fi
 
@@ -100,6 +100,12 @@ jobs:
         # link time with the host suite still green - which is how a byte-identical second copy of
         # web_assets.cpp shipped.
         run: python3 -m ci_tooling.check.check_duplicate_symbols
+
+      - name: Frame literals declare their real length
+        # Every PC_FK_LIT carries its length as a literal the compiler cannot check. This verifies
+        # each declared length against the string it names, across src/, examples/ and
+        # penetration_testing/. It was written and never wired to anything.
+        run: python3 -m ci_tooling.check.check_frame_specs
 
       - name: Crypto KAT vectors up to date (generated .inc matches vendored JSON)
         # test/unit/crypto/test_crypto_kat/kat_data.inc is generated from the vendored external vectors in

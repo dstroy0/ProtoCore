@@ -1,0 +1,64 @@
+name: Bot commit
+description: Sign, commit and push a generated change to main, rebasing onto concurrent pushes.
+
+inputs:
+  files:
+    description: Paths to stage, whitespace separated.
+    required: true
+  message:
+    description: Commit message.
+    required: true
+  signing-key:
+    description: SSH key the commit is signed with. Unset skips signing.
+    required: false
+    default: ""
+  rebase-flags:
+    description: Extra flags for the rebase pull, e.g. -X theirs to keep this run's regenerated files.
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        CI_SIGNING_KEY: ${{ inputs.signing-key }}
+        BOT_FILES: ${{ inputs.files }}
+        BOT_MESSAGE: ${{ inputs.message }}
+        REBASE_FLAGS: ${{ inputs.rebase-flags }}
+      run: |
+        # Sign the commit (Verified) when the key is available; skip when the secret is
+        # unset so a fork or a fresh checkout still runs.
+        if [ -n "$CI_SIGNING_KEY" ]; then
+          mkdir -p ~/.ssh
+          printf '%s\n' "$CI_SIGNING_KEY" > ~/.ssh/ci_signing_key
+          chmod 600 ~/.ssh/ci_signing_key
+          git config gpg.format ssh
+          git config user.signingkey ~/.ssh/ci_signing_key
+          git config commit.gpgsign true
+        fi
+
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+
+        # Pull, commit, push. Several workflows auto-commit, so main advances during a
+        # multi-minute run: rebasing before the push is what keeps this run's work on top of
+        # theirs. A failed rebase is aborted so no conflict markers reach the tree.
+        for attempt in 1 2 3 4 5; do
+          # --autostash: the generated files are unstaged at this point and a rebase refuses to
+          # start on a dirty tree.
+          git pull --rebase --autostash $REBASE_FLAGS origin main || { git rebase --abort 2>/dev/null || true; }
+          # Unquoted: the input carries several paths and each is its own pathspec.
+          git add $BOT_FILES
+          if git diff --cached --quiet; then
+            echo "no changes to commit"
+            exit 0
+          fi
+          git commit -m "$BOT_MESSAGE"
+          if git push origin HEAD:main; then exit 0; fi
+          echo "push rejected (attempt $attempt/5), retrying"
+          git reset --soft HEAD~1
+          sleep 5
+        done
+        echo "push still failing after 5 pull+commit+push attempts"
+        exit 1
