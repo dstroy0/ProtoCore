@@ -8,6 +8,28 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ---
 
+## The route table borrowed its storage from an init nothing called, so every route registration failed
+
+- **Status:** FIXED (2026-08-06), found on the first matrix run that could link `native_keepalive`.
+- **Symptom:** `on_http("/res", ...)` registers nothing. Every request answers 404 and no handler
+  fires, while the keep-alive machinery around it behaves correctly, because a 404 is a normal
+  response that keeps the connection alive. Four `test_keepalive` cases fail on the response body and
+  the handler tally; the ones that only assert the Connection header pass.
+- **Root cause:** moving the route table into the secure pool (3ef5c5a50) replaced its BSS with a
+  borrow taken in a new `RouteNs::init`, and no caller anywhere in `src/` calls it. BSS needed no
+  init, so nothing existed to update. `s_route` stays NULL, `add()` returns NULL on its first guard,
+  and every registration path drops the route it was handed. `pc_server_reset()` calls
+  `network.route->reset()`, which is also a no-op on a NULL handle, so the table reads empty and
+  consistent at every seam.
+- **Blast radius:** every HTTP, WebSocket, SSE, file-serving and WebDAV route in the library. The
+  envs that would have caught it were the ones failing to link for unrelated reasons, so it stayed
+  invisible from 2026-08-05 until those were fixed.
+- **Fix:** the borrow moves into a `bind_route()` taken on first use, the shape `auth.c` already
+  uses for the same reason, and `init` leaves `RouteNs`. A registration is the first thing that
+  touches the table and every reader runs after one, so there is no moment a caller has to remember.
+
+---
+
 ## The tcp_evt.h split cut 24 test suites off from tcp.h
 
 - **Status:** FIXED (2026-08-05), found on a full-matrix run.

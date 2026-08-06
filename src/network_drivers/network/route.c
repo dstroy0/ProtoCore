@@ -26,24 +26,31 @@ struct RouteCtx
 };
 static struct RouteCtx *s_route;
 
-static void init(void)
+// Bound on first use rather than at an init the caller has to remember: a registration is the first
+// thing that touches the table, and every reader runs after one.
+static struct RouteCtx *bind_route(void)
 {
-    pc_span s = pc_secure_span(sizeof(struct RouteCtx), 8);
-    s_route = pc_span_ok(s) ? (struct RouteCtx *)s.buf : NULL;
-    if (s_route != NULL)
+    if (s_route == NULL)
     {
-        mem.zero(s_route, sizeof(*s_route)); // the pool hands back uninitialized bytes
+        pc_span s = pc_secure_span(sizeof(struct RouteCtx), 8);
+        if (pc_span_ok(s))
+        {
+            s_route = (struct RouteCtx *)s.buf;
+            mem.zero(s_route, sizeof(*s_route)); // the pool hands back uninitialized bytes
+        }
     }
+    return s_route;
 }
 
 static Route *add(void)
 {
-    if (s_route == NULL || s_route->count >= MAX_ROUTES)
+    struct RouteCtx *t = bind_route();
+    if (t == NULL || t->count >= MAX_ROUTES)
     {
         return NULL;
     }
-    Route *r = &s_route->entry[s_route->count];
-    s_route->count++;
+    Route *r = &t->entry[t->count];
+    t->count++;
 
     // Zeroed on hand-out, not on release. A registration fills the fields its route kind uses and
     // leaves the rest, so an entry carrying a previous tenant's handler or backend pointer would
@@ -77,4 +84,4 @@ static void reset(void)
     }
 }
 
-const RouteNs RouteTable = {init, add, count, at, reset};
+const RouteNs RouteTable = {add, count, at, reset};
