@@ -34,7 +34,7 @@ Related: [AUDIT.md](AUDIT.md) records the per-standard conformance verdicts this
 | Dimension            | Count | Source of truth                                  |
 | -------------------- | ----: | ------------------------------------------------ |
 | Interop peers        |    39 | `test/servers/peers/*_peer.py`                   |
-| Throughput benches   |   207 | `performance_benching/**/platformio.ini`         |
+| Throughput benches   |     0 | `performance_benching/**/platformio.ini`         |
 | Advanced attacks     |     0 | `@attack(...)` in `penetration_testing/pc_pentest.py`     |
 | Adversarial fuzz     |    78 | `native_pentest` (`test/unit/fieldbus/test_pentest/`)          |
 | Service modules      |   164 | `src/services/<group>/<module>/`                 |

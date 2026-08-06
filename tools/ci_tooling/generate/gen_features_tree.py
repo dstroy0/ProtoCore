@@ -15,6 +15,7 @@ the scroll-box list on the features page, and this points at it.
 
 import os
 import re
+import sys
 
 
 from tools.ci_tooling.lib import feature_taxonomy as tax
@@ -104,12 +105,25 @@ def main():
     out.append("")
     out.extend(styles)
 
+    doc = "\n".join(out) + "\n"
+    if "--check" in sys.argv[1:] or "check" in sys.argv[1:]:
+        have = ""
+        if os.path.exists(OUT):
+            with open(OUT, encoding="utf-8") as f:
+                have = f.read().replace("\r\n", "\n")
+        if have != doc:
+            print(f"STALE: {os.path.relpath(OUT, ROOT)} is out of date", file=sys.stderr)
+            return 1
+        print(f"{os.path.relpath(OUT, ROOT)}: up to date")
+        return 0
+
     with open(OUT, "w", encoding="utf-8", newline="\n") as f:
-        f.write("\n".join(out) + "\n")
+        f.write(doc)
 
     nodes = 1 + len([ly for ly in tax.LAYER_ORDER if per_layer.get(ly)]) + len(per_group)
     print(f"wrote {os.path.relpath(OUT, ROOT)}: {nodes} nodes mapping {total} features")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

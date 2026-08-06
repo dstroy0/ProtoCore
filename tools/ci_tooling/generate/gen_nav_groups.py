@@ -17,11 +17,12 @@ The grouping answers the question a reader actually arrives with: I am new / I n
 I want to know how it works / is it correct and safe / where is this going.
 """
 
+import sys
 from pathlib import Path
+from tools.ci_tooling.lib import doc_region as dr
 
-ROOT = Path(__file__).resolve().parent.parent.parent
+ROOT = Path(dr.repo_root(__file__))
 NAV = ROOT / "docs/nav"
-NAV.mkdir(exist_ok=True)
 
 GROUPS = [
     (
@@ -95,11 +96,37 @@ GROUPS = [
     ),
 ]
 
+
 # Filenames carry a numeric prefix because Doxygen orders root pages by the order it
 # reads them, which is filename order - without it "Start here" sorted fifth.
-for slug, title, blurb, pages in GROUPS:
+def render(group):
+    slug, title, blurb, pages = group
     body = [f"# {title}", "", blurb, ""]
     body += [f'- @subpage {pid} "{label}"' for pid, label in pages]
     body.append("")
-    (NAV / f"{slug}.md").write_text("\n".join(body), encoding="utf-8", newline="\n")
-print(f"docs/nav: {len(GROUPS)} hub pages claiming {sum(len(g[3]) for g in GROUPS)} pages")
+    return "\n".join(body)
+
+
+def main(argv):
+    total = sum(len(g[3]) for g in GROUPS)
+    if "--check" in argv or "check" in argv:
+        stale = []
+        for g in GROUPS:
+            p = NAV / f"{g[0]}.md"
+            if not p.exists() or p.read_text(encoding="utf-8").replace("\r\n", "\n") != render(g):
+                stale.append(p.name)
+        if stale:
+            print(f"STALE: docs/nav is out of date ({', '.join(stale)})", file=sys.stderr)
+            return 1
+        print(f"docs/nav: {len(GROUPS)} hub pages up to date")
+        return 0
+
+    NAV.mkdir(parents=True, exist_ok=True)
+    for g in GROUPS:
+        (NAV / f"{g[0]}.md").write_text(render(g), encoding="utf-8", newline="\n")
+    print(f"docs/nav: {len(GROUPS)} hub pages claiming {total} pages")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

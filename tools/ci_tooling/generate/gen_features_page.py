@@ -14,6 +14,7 @@ scroll box so the page itself stays a page.
 
 import html
 import os
+import sys
 
 
 from tools.ci_tooling.lib import feature_taxonomy as tax
@@ -348,11 +349,23 @@ def main():
 </html>
 """
 
+    if "--check" in sys.argv[1:] or "check" in sys.argv[1:]:
+        have = ""
+        if os.path.exists(OUT):
+            with open(OUT, encoding="utf-8") as f:
+                have = f.read().replace("\r\n", "\n")
+        if have != doc:
+            print(f"STALE: {os.path.relpath(OUT, ROOT)} is out of date", file=sys.stderr)
+            return 1
+        print(f"{os.path.relpath(OUT, ROOT)}: up to date")
+        return 0
+
     with open(OUT, "w", encoding="utf-8", newline="\n") as f:
         f.write(doc)
 
     print(f"wrote {os.path.relpath(OUT, ROOT)}: {len(entries)} features in {len(order)} groups")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

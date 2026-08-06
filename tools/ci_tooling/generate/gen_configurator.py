@@ -26,9 +26,10 @@ import sys
 
 
 from tools.ci_tooling.lib import feature_taxonomy as tax
+from tools.ci_tooling.lib import doc_region as dr
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.normpath(os.path.join(HERE, "..", ".."))
+ROOT = dr.repo_root(__file__)
 CONFIG = os.path.join(ROOT, "src", "protocore_config.h")
 OUT = os.path.join(ROOT, "docs", "configurator.html")
 CORE_GROUP = "Core / always-on knobs"
