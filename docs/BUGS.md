@@ -8,6 +8,56 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ---
 
+## A robotics Read indexes past the axis array, in the exact state a test sets up
+
+- **Status:** OPEN, found by the fieldbus audit. Verified in source.
+- **Root cause:** `decode_axis` (`robotics.c:111`) bounds `k` by `axis_count` and nothing else. The
+  Browse path adds `&& a <= PC_ROBOTICS_AXES` at `:357`; the Read path at `:210` does not, and then
+  takes `&mds->device.axes[k - 1]` on an array declared `axes[PC_ROBOTICS_AXES]` (6). A caller that
+  declares `axis_count = 7` and reads axis 7 reads `axes[6]`, one past the end.
+- **Why nothing caught it:** `test_robotics.c:407` is named
+  `test_browse_axes_clamped_to_compiled_maximum` and sets `axis_count = PC_ROBOTICS_AXES + 1`, which
+  is precisely the state that triggers it, but exercises only Browse. The Read path in that state is
+  untested.
+- **Fix:** not applied.
+
+---
+
+## The umati enumerations do not match the companion spec, and the tests compare them to themselves
+
+- **Status:** OPEN, found by the fieldbus audit.
+- **Root cause:** OPC 40501-1 section 12.5 defines `OperationalMode` as Manual=0, Automatic=1,
+  Setup=2, AutoWithManualIntervention=3, Service=4, Other=5. `umati.h:58` has OTHER=0, MANUAL=1,
+  MDA=2, AUTOMATIC=3, SETUP=4: every value differs, and MDA is not in the spec at all. `ChannelState`
+  is wrong the same way against section 12.1 (Active=0, Interrupted=1, Reset=2). `umati.h:56` claims
+  the values follow the companion spec.
+- **Why nothing caught it:** `test_umati.c:194` and `:197` assert the enumerator against itself, so
+  no value is ever pinned to the document.
+- **Same shape elsewhere in the group:** `test_iccp.c:51` pins `0x17` for a timestamp where
+  `utc-time [17] IMPLICIT` is `0x91` and eight octets, not four; `:62` uses `0xA3` for RealQ against
+  `0xA2` for StateQ at `:39`, though both are structures and cannot differ. `test_mms.c:47` pins a
+  bare `0x1A` inside `name [0] ObjectName` where the ASN.1 requires `0x80`, `0xA1{...}` or `0x82`.
+- **Fix:** none applied.
+
+---
+
+## The SunSpec suite would pass with the byte order reversed
+
+- **Status:** OPEN, found by the fieldbus audit.
+- **Root cause:** no big-endian 16-bit register is pinned anywhere in `test_sunspec.c`, on either
+  side. The 32-bit paths are pinned, but `be16` and `write_u16` meet only each other: the truncation
+  case returns false under either order, and the end-of-model marker `0xFFFF` is a palindrome. A
+  symmetric swap in `sunspec.c:14` and `:137` passes the whole suite.
+- **Also open in the same group:** the GOOSE Reserved1 simulation bit is hardcoded to zero
+  (`goose.c:204`) so a simulated frame is indistinguishable to a subscriber; the GOOSE Length field
+  is never validated and VLAN-tagged frames, the normal on-wire form, are rejected (`goose.c:226`);
+  the BACnet Forwarded-NPDU returns the six-octet originating address as the head of the NPDU
+  (`bacnet.c:35`); and the EUROMAP 77 namespace URI is the pre-harmonization `euromap.org` form
+  rather than OPC 40077's.
+- **Fix:** none applied.
+
+---
+
 ## Four length fields off the wire wrap on a 32-bit target and pass their own bounds check
 
 - **Status:** OPEN, found across the protocol audits. One class, four sites.
