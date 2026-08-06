@@ -40,11 +40,9 @@
 PROTO_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
-// The backend contract: what a vendor's physical driver implements.
-//
-// These are the seam between this layer and board_drivers/physical/<vendor>/. Nothing above L1
-// names them. A caller reaches the interfaces through @ref Physical and the radio through
-// @ref Radio, declared at the end of this file, which is what the sub-tables are built from.
+// Layer 1's own functions. @ref Physical is built from them and is how the layer is reached; the
+// bodies come from whichever backend the PC_VENDOR_* selector compiled, which is a detail of this
+// layer rather than a boundary of it.
 // ---------------------------------------------------------------------------
 
 /**
@@ -294,12 +292,8 @@ typedef struct RadioNs RadioNs;
 typedef struct
 {
     const PhysicalWifiNs *wifi;
-#if PC_ENABLE_ETHERNET
     const PhysicalEthNs *eth;
-#endif
-#if PC_ENABLE_IPV6
     const PhysicalIp6Ns *ip6;
-#endif
     const PhysicalLinkNs *link;
     const RadioNs *radio;
 } PhysicalNs;
