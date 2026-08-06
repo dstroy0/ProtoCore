@@ -138,6 +138,15 @@ const pc_mnt_backend *pc_mnt_point_backend(uint8_t id);
 /// @brief The subtree @p id names, as a request-path piece. Empty, never null.
 const char *pc_mnt_point_root(uint8_t id);
 
+/**
+ * @brief Empty the mount-point table.
+ *
+ * An id names a row by index and a route holds that id, so the table empties with the routes it is
+ * indexed from: pc_server_reset() calls both. A table that kept its rows across a reset would reach
+ * ::PC_MNT_NONE after MAX_ROUTES mounts and hand every later mount an id that serves nothing.
+ */
+void pc_mnt_point_reset(void);
+
 void pc_mnt_mount(const pc_mnt_backend *backend);
 
 /**

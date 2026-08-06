@@ -299,6 +299,7 @@ void pc_server_reset(void)
     // together: routes left behind rows the table has no way to reach, and the table is bounded.
     Auth.reset();
 #endif
+    pc_mnt_point_reset(); // the same, for the mount id a static or DAV route holds
     pc_resp_reset();
     pc_middleware_reset();
     pc_signal_reset();

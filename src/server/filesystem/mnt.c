@@ -76,6 +76,13 @@ const char *pc_mnt_point_root(uint8_t id)
     return s_point.point[id].root;
 }
 
+void pc_mnt_point_reset(void)
+{
+    // The count is the table: a row above it is unreachable, and add() writes both fields before the
+    // count reaches it, so there is nothing to clear here.
+    s_point.count = 0;
+}
+
 void pc_mnt_mount(const pc_mnt_backend *backend)
 {
     s_hal.backend = backend;
