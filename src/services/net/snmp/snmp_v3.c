@@ -635,7 +635,7 @@ static proto_bool send_v3_notify(const char *dst_ip, uint16_t port, uint8_t pdu_
 
     uint8_t out[SNMP_MSG_BUF_SIZE];
     size_t len = build_message((long)request_id, s_v3.auth_set, s_v3.priv_set, s_v3.v3_c, sc.len, out, sizeof(out));
-    return len && pc_udp_sendto(dst_ip, port, out, len);
+    return len && Udp.client->sendto(dst_ip, port, out, len);
 }
 
 proto_bool pc_snmp_trap_v3(const char *dst_ip, uint16_t port, const uint32_t *trap_oid, size_t trap_oid_len,

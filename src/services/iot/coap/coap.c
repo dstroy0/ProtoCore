@@ -799,7 +799,7 @@ void pc_coap_dedup_store(const char *src_ip, uint16_t src_port, uint16_t mid, co
 #endif // PC_COAP_DEDUP_ENTRIES > 0
 
 // ---------------------------------------------------------------------------
-// UDP transport (pc_udp_listen is a host stub on non-Arduino builds)
+// UDP transport (Udp.listener->listen is a host stub on non-Arduino builds)
 // ---------------------------------------------------------------------------
 
 #if PC_COAP_DEDUP_ENTRIES > 0
@@ -819,7 +819,7 @@ static proto_bool coap_dedup_replay(const uint8_t *data, size_t len, const struc
     {
         return PROTO_FALSE;
     }
-    pc_udp_send(peer, cached, clen);
+    Udp.listener->reply(peer, cached, clen);
     return PROTO_TRUE;
 }
 
@@ -947,7 +947,7 @@ void pc_coap_notify(const char *path)
             n = emit_options_payload(s_coap.tx, sizeof(s_coap.tx), n, cresp.code, (int32_t)s_coap.obs[i].seq,
                                      cresp.content_format, -1, -1, cresp.payload, cresp.payload_len);
         }
-        if (!n || !pc_udp_listener_sendto(s_coap.port, s_coap.obs[i].ip, s_coap.obs[i].port, s_coap.tx, n))
+        if (!n || !Udp.listener->sendto(s_coap.port, s_coap.obs[i].ip, s_coap.obs[i].port, s_coap.tx, n))
         {
             s_coap.obs[i].active = PROTO_FALSE; // unreachable -> drop the observer
         }
@@ -959,7 +959,7 @@ static void coap_udp_handler(const uint8_t *data, size_t len, const struct pc_ud
     (void)ctx;
     char ip[16];
     uint16_t pport = 0;
-    proto_bool have_peer = pc_udp_peer_addr(peer, ip, sizeof(ip), &pport);
+    proto_bool have_peer = Udp.listener->peer_addr(peer, ip, sizeof(ip), &pport);
 
     // A Reset from a client rejects our notification -> drop its observations.
     if (len >= 1 && ((data[0] >> 4) & 0x03) == (uint8_t)COAP_TYPE_RST)
@@ -1016,7 +1016,7 @@ static void coap_udp_handler(const uint8_t *data, size_t len, const struct pc_ud
 #if PC_COAP_DEDUP_ENTRIES > 0
     coap_dedup_remember(data, len, ip, pport, have_peer, s_coap.tx, rn); // cache for a future retransmission
 #endif
-    pc_udp_send(peer, s_coap.tx, rn);
+    Udp.listener->reply(peer, s_coap.tx, rn);
 }
 
 void pc_coap_server_begin(uint16_t port)
@@ -1026,7 +1026,7 @@ void pc_coap_server_begin(uint16_t port)
     {
         s_coap.obs[i].active = PROTO_FALSE;
     }
-    pc_udp_listen(port, coap_udp_handler, NULL);
+    Udp.listener->listen(port, coap_udp_handler, NULL);
 }
 
 #else // Observe disabled: the basic request/response handler
@@ -1037,7 +1037,7 @@ static void coap_udp_handler(const uint8_t *data, size_t len, const struct pc_ud
 #if PC_COAP_DEDUP_ENTRIES > 0
     char ip[16];
     uint16_t pport = 0;
-    proto_bool have_peer = pc_udp_peer_addr(peer, ip, sizeof(ip), &pport);
+    proto_bool have_peer = Udp.listener->peer_addr(peer, ip, sizeof(ip), &pport);
     if (coap_dedup_replay(data, len, peer, ip, pport, have_peer))
     {
         return;
@@ -1049,13 +1049,13 @@ static void coap_udp_handler(const uint8_t *data, size_t len, const struct pc_ud
 #if PC_COAP_DEDUP_ENTRIES > 0
         coap_dedup_remember(data, len, ip, pport, have_peer, s_coap.tx, rn);
 #endif
-        pc_udp_send(peer, s_coap.tx, rn);
+        Udp.listener->reply(peer, s_coap.tx, rn);
     }
 }
 
 void pc_coap_server_begin(uint16_t port)
 {
-    pc_udp_listen(port, coap_udp_handler, NULL);
+    Udp.listener->listen(port, coap_udp_handler, NULL);
 }
 
 #endif // PC_ENABLE_COAP_OBSERVE

@@ -90,5 +90,5 @@ pio ci examples/L7-Application/StatsdMetrics \
 Each `pc_statsd_*` call renders the value by hand (no `printf` float/64-bit formatting, which
 needs extra support on some targets), builds the `name:value|type[|@rate][|#tags]` line with
 the pure `pc_statsd_format()` builder, and sends it with the transport UDP service
-(`pc_udp_sendto`). Zero heap; the line format is unit-tested on a PC against the StatsD spec
+(`Udp.client->sendto`). Zero heap; the line format is unit-tested on a PC against the StatsD spec
 (see `test/test_statsd`).

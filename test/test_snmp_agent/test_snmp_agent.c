@@ -733,17 +733,17 @@ void test_dispatch_malformed_pdu()
 
 void test_udp_handler_via_inject()
 {
-    pc_udp_reset_listeners();
-    pc_udp_capture_enable();
-    pc_udp_capture_reset();
+    Udp.listener->reset();
+    Udp.listener->capture_enable();
+    Udp.listener->capture_reset();
     pc_snmp_agent_begin_udp(161);
     uint8_t req[256];
     size_t rl = build_req(req, sizeof(req), (int)SNMP_V2C, "public", (uint8_t)SNMP_TAG_SNMP_PDU_GET, 50, 0, 0,
                           OID_SYSDESCR, 9, NULL);
-    pc_udp_inject(161, "192.0.2.1", 40000, req, rl);
+    Udp.listener->inject(161, "192.0.2.1", 40000, req, rl);
     // The bound handler processed the datagram and sent a reply (captured).
-    TEST_ASSERT_TRUE(pc_udp_captured_len() > 0);
-    pc_udp_reset_listeners();
+    TEST_ASSERT_TRUE(Udp.listener->captured_len() > 0);
+    Udp.listener->reset();
 }
 
 void test_malformed_message_guards()
@@ -1083,14 +1083,14 @@ void test_message_truncated_before_community()
 // datagram), rather than sending an empty reply.
 void test_udp_handler_drops_unanswerable()
 {
-    pc_udp_reset_listeners();
-    pc_udp_capture_enable();
-    pc_udp_capture_reset();
+    Udp.listener->reset();
+    Udp.listener->capture_enable();
+    Udp.listener->capture_reset();
     pc_snmp_agent_begin_udp(161);
     const uint8_t junk[] = {0x02, 0x01, 0x00}; // not a message wrapper -> agent returns 0
-    pc_udp_inject(161, "192.0.2.1", 40000, junk, sizeof(junk));
-    TEST_ASSERT_EQUAL_size_t(0, pc_udp_captured_len()); // nothing sent
-    pc_udp_reset_listeners();
+    Udp.listener->inject(161, "192.0.2.1", 40000, junk, sizeof(junk));
+    TEST_ASSERT_EQUAL_size_t(0, Udp.listener->captured_len()); // nothing sent
+    Udp.listener->reset();
 }
 
 int main()

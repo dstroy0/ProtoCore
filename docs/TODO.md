@@ -1137,7 +1137,7 @@ by how often a deployed device needs it.
         exceptions (`noSuchObject`/`endOfMibView`) and v1 error-status/-index,
         SET gated by a separate read-write community. `pc_snmp_agent_process()` is a
         pure, host-testable core (13 tests); the transport-layer UDP service
-        (`pc_udp_listen`) on :161 carries datagrams (the same service the
+        (`Udp.listener->listen`) on :161 carries datagrams (the same service the
         provisioning DNS responder uses). `pc_snmp_agent_*` API, example `SNMP`.
         **HW-verified** with a UDP client: `snmpget`/walk of the system group in
         OID order, GetBulk, dynamic Gauge32, SET authorization (RO→noAccess,

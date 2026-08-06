@@ -5,7 +5,7 @@
  * @file udp_telemetry.c
  * @brief InfluxDB line-protocol builder (pure) + UDP cast to a collector.
  *
- * The builder is host-tested; the cast uses pc_udp_sendto on ESP32 and is a
+ * The builder is host-tested; the cast uses Udp.client->sendto on ESP32 and is a
  * no-op on host builds (no transport dependency pulled into the unit test).
  */
 
@@ -205,7 +205,7 @@ proto_bool pc_udp_telemetry_send(const char *data, size_t len)
     {
         return PROTO_FALSE;
     }
-    return pc_udp_sendto(s_ut.ip, s_ut.port, (const uint8_t *)data, len);
+    return Udp.client->sendto(s_ut.ip, s_ut.port, (const uint8_t *)data, len);
 }
 
 #else // host build - no network

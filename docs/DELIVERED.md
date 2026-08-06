@@ -398,7 +398,7 @@ preempting queue, so sensing shares the real-time ingest path.
       turn the responder announce-only. (The 5353 approach was tried and reverted: bound after the ESP-IDF
       responder the join fails, bound before it the responder browses but every SRV/TXT/A query times out,
       because lwIP hands a datagram to the first matching PCB and `SO_REUSE_RXTOALL` does not rescue a raw
-      PCB sharing a port with a socket-layer one. The `pc_udp_listen_multicast` primitive built for it was
+      PCB sharing a port with a socket-layer one. The `Udp.listener->listen_multicast` primitive built for it was
       kept - it is correct for any group nothing else owns.) `pc_mdns_contention_sample` turns the capture's
       running frame total into a per-window value (host-tested incl. counter/clock wrap + saturation); the
       transmit is `mdns_service_txt_item_set()` re-applied at its current value (re-announces on every PCB
@@ -407,7 +407,7 @@ preempting queue, so sensing shares the real-time ingest path.
       undiscoverable. Host-tested (`native_mdns_adaptive`, 14 cases). HW-verified on an **S3** against
       avahi: A+SRV+TXT kept resolving while capture ran (the exact case the 5353 approach broke), real
       ambient frames drove the backoff, and it capped below the TTL. Example MdnsAdaptive.
-- [x] Raw-UDP telemetry cast _(shipped)_ - `PC_ENABLE_UDP_TELEMETRY`: `services/udp_telemetry` builds InfluxDB line-protocol records (`measurement field=val,...`, host-tested) and casts them to a collector over UDP via `pc_udp_sendto`, zero-heap fire-and-forget (example UdpTelemetry).
+- [x] Raw-UDP telemetry cast _(shipped)_ - `PC_ENABLE_UDP_TELEMETRY`: `services/udp_telemetry` builds InfluxDB line-protocol records (`measurement field=val,...`, host-tested) and casts them to a collector over UDP via `Udp.client->sendto`, zero-heap fire-and-forget (example UdpTelemetry).
 - [x] **Static-IP fallback + TCP window auto-scaling by free RAM (M)** _(shipped)_ -
       `PC_ENABLE_NETADAPT`: `services/netadapt` `pc_netadapt_window()` sizes the TCP receive window
       from the free heap (a reserve left untouched, then a quarter of the spare, clamped to [min, max]) so
@@ -913,7 +913,7 @@ the LXI transports (VXI-11 / HiSLIP) and a GPIB gateway extend reach to older an
       typed parsers for CONNACK / REGACK / PUBACK / SUBACK / PUBLISH / REGISTER, with a
       `pc_mqttsn_make_flags()` helper (DUP / QoS / retain / will / clean / TopicIdType). Wire
       bytes verified against the spec + the Eclipse Paho reference; pure, host-tested. The
-      datagram send (`pc_udp_sendto`), topic-ID registry, and sleep/retransmit state are
+      datagram send (`Udp.client->sendto`), topic-ID registry, and sleep/retransmit state are
       the application's. Pairs with the existing MQTT client.
 
 ### Network telemetry
@@ -927,7 +927,7 @@ the LXI transports (VXI-11 / HiSLIP) and a GPIB gateway extend reach to older an
       (matching Data Set), and `flow_export_finish()` which patches the IPFIX message length
       or the v9 record count (and pads each v9 FlowSet to a 4-octet boundary). Field offsets
       verified against RFC 7011 / RFC 3954 / the published v5 layout; pure, host-tested. The
-      flow cache (5-tuple + counters) and the UDP send (`pc_udp_sendto`) are the app's.
+      flow cache (5-tuple + counters) and the UDP send (`Udp.client->sendto`) are the app's.
 
 ### Building automation
 

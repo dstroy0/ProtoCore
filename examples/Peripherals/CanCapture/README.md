@@ -20,7 +20,7 @@ bitrate, sink)`) and hands each decoded `CanFrame` to your sink; `bus_capture_po
 - **`can_to_socketcan()`** (pure) formats a frame as a 16-byte Linux **SocketCAN** frame -
   big-endian `can_id` with the EFF (extended) / RTR flags, length, and data.
 - **`services/forward`** bridges `CAN → ETH`; the Ethernet egress wraps each SocketCAN frame in a
-  libpcap record (`PC_DLT_CAN_SOCKETCAN`) and `pc_udp_sendto()`s it to the collector.
+  libpcap record (`PC_DLT_CAN_SOCKETCAN`) and `Udp.client->sendto()`s it to the collector.
 
 On the collector, prepend one `pc_pcap_global_header(..., PC_DLT_CAN_SOCKETCAN)` and **Wireshark**
 decodes the stream as CAN.

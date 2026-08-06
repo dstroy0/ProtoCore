@@ -6,7 +6,7 @@
  * @brief Zero-heap RFC 5424 syslog client over UDP.
  *
  * Ships device log lines to a remote syslog server as RFC 5424 UDP datagrams via
- * the transport-layer UDP service (pc_udp_sendto). Split, like the other
+ * the transport-layer UDP service (Udp.client->sendto). Split, like the other
  * network services, into a pure host-testable formatter and an ESP32-only send:
  *
  *  - pc_syslog_format() builds one RFC 5424 line into a caller buffer (no sockets,

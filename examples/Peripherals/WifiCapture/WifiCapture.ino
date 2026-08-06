@@ -33,7 +33,7 @@ enum
 };
 
 // Ethernet egress: wrap the frame in a libpcap record (DLT_IEEE802_11) and UDP it to the
-// collector. pc_udp_sendto() routes over the default interface, which is the wired uplink.
+// collector. Udp.client->sendto() routes over the default interface, which is the wired uplink.
 static bool eth_send(uint8_t, const uint8_t *frame, uint16_t len, void *)
 {
     static uint8_t buf[PC_PCAP_REC_HDR_LEN + 2048];
@@ -44,7 +44,7 @@ static bool eth_send(uint8_t, const uint8_t *frame, uint16_t len, void *)
     uint32_t us = (uint32_t)micros();
     pc_pcap_record_header(buf, sizeof(buf), us / 1000000u, us % 1000000u, len, len);
     memcpy(buf + PC_PCAP_REC_HDR_LEN, frame, len);
-    return pc_udp_sendto(COLLECTOR_IP, COLLECTOR_PORT, buf, PC_PCAP_REC_HDR_LEN + len);
+    return Udp.client->sendto(COLLECTOR_IP, COLLECTOR_PORT, buf, PC_PCAP_REC_HDR_LEN + len);
 }
 
 // Wi-Fi is a source only - no rule forwards *to* it, so this is never called.

@@ -778,13 +778,13 @@ static void pc_snmp_udp_handler(const uint8_t *data, size_t len, const struct pc
     size_t rn = pc_snmp_agent_process(data, len, s_snmp_udp.tx, sizeof(s_snmp_udp.tx));
     if (rn)
     {
-        pc_udp_send(peer, s_snmp_udp.tx, rn);
+        Udp.listener->reply(peer, s_snmp_udp.tx, rn);
     }
 }
 
 void pc_snmp_agent_begin_udp(uint16_t port)
 {
-    pc_udp_listen(port, pc_snmp_udp_handler, NULL);
+    Udp.listener->listen(port, pc_snmp_udp_handler, NULL);
 }
 
 #endif // PC_ENABLE_SNMP

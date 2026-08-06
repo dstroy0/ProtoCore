@@ -16,8 +16,8 @@
 static const char *captured(void)
 {
     static char buf[512];
-    const uint8_t *p = pc_udp_captured();
-    size_t n = p ? pc_udp_captured_len() : 0;
+    const uint8_t *p = Udp.listener->captured();
+    size_t n = p ? Udp.listener->captured_len() : 0;
     if (n >= sizeof(buf))
     {
         n = sizeof(buf) - 1;
@@ -32,8 +32,8 @@ static const char *captured(void)
 
 void setUp()
 {
-    pc_udp_capture_enable();
-    pc_udp_capture_reset();
+    Udp.listener->capture_enable();
+    Udp.listener->capture_reset();
 }
 void tearDown()
 {
@@ -93,7 +93,7 @@ void test_emit_counter_and_negative()
     pc_statsd_begin("collector.local", 8125, NULL);
     pc_statsd_count("api.hits", 3);
     TEST_ASSERT_EQUAL_STRING("api.hits:3|c", captured());
-    pc_udp_capture_reset();
+    Udp.listener->capture_reset();
     pc_statsd_count("api.hits", -4); // counters may go negative
     TEST_ASSERT_EQUAL_STRING("api.hits:-4|c", captured());
 }
@@ -103,10 +103,10 @@ void test_emit_gauge_and_delta()
     pc_statsd_begin("h", 0, NULL); // 0 -> default port
     pc_statsd_gauge("heap.free", 200000);
     TEST_ASSERT_EQUAL_STRING("heap.free:200000|g", captured());
-    pc_udp_capture_reset();
+    Udp.listener->capture_reset();
     pc_statsd_gauge_delta("conns", 5);
     TEST_ASSERT_EQUAL_STRING("conns:+5|g", captured());
-    pc_udp_capture_reset();
+    Udp.listener->capture_reset();
     pc_statsd_gauge_delta("conns", -2);
     TEST_ASSERT_EQUAL_STRING("conns:-2|g", captured());
 }
@@ -116,10 +116,10 @@ void test_emit_timing_set_sampled()
     pc_statsd_begin("h", 8125, NULL);
     pc_statsd_timing("db.query", 120);
     TEST_ASSERT_EQUAL_STRING("db.query:120|ms", captured());
-    pc_udp_capture_reset();
+    Udp.listener->capture_reset();
     pc_statsd_set("uniques", "device-7");
     TEST_ASSERT_EQUAL_STRING("uniques:device-7|s", captured());
-    pc_udp_capture_reset();
+    Udp.listener->capture_reset();
     pc_statsd_count_sampled("rare", 1, 0.25f);
     TEST_ASSERT_EQUAL_STRING("rare:1|c|@0.25", captured());
 }
@@ -134,9 +134,9 @@ void test_emit_global_tags()
 void test_emit_noop_until_begin()
 {
     pc_statsd_begin(NULL, 0, NULL); // clears the target
-    pc_udp_capture_reset();
+    Udp.listener->capture_reset();
     pc_statsd_count("x", 1); // no target -> nothing sent, no crash
-    TEST_ASSERT_EQUAL_UINT(0, pc_udp_captured_len());
+    TEST_ASSERT_EQUAL_UINT(0, Udp.listener->captured_len());
 }
 
 void test_rate_clamp_and_stage_overflow()
@@ -197,7 +197,7 @@ void test_emit_zero_value_and_set_null_member()
     pc_statsd_begin("h", 8125, NULL);
     pc_statsd_timing("db.zero", 0);
     TEST_ASSERT_EQUAL_STRING("db.zero:0|ms", captured());
-    pc_udp_capture_reset();
+    Udp.listener->capture_reset();
     pc_statsd_set("uniques", NULL); // null member -> emitted as an empty value, not a crash
     TEST_ASSERT_EQUAL_STRING("uniques:|s", captured());
 }
@@ -211,9 +211,9 @@ void test_emit_overlong_name_is_noop()
         longname[i] = 'a';
     }
     longname[sizeof(longname) - 1] = '\0';
-    pc_udp_capture_reset();
+    Udp.listener->capture_reset();
     pc_statsd_count(longname, 1); // overflows PC_STATSD_LINE_MAX -> format fails -> nothing sent
-    TEST_ASSERT_EQUAL_UINT(0, pc_udp_captured_len());
+    TEST_ASSERT_EQUAL_UINT(0, Udp.listener->captured_len());
 }
 
 int main()

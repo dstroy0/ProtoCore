@@ -789,7 +789,7 @@ device from the rig `/bench` `smtp_run` op.
 ### syslog client formatter (PC_ENABLE_SYSLOG)
 
 The RFC 5424 syslog client formats one `<PRI>1 - HOSTNAME APP-NAME - - - MSG` line per log call and ships
-it as a UDP datagram (`pc_udp_sendto`). `pc_syslog_format` is the pure per-line hot op (no socket, no heap).
+it as a UDP datagram (`Udp.client->sendto`). `pc_syslog_format` is the pure per-line hot op (no socket, no heap).
 Host from [`performance_benching/bench_syslog.cpp`](../performance_benching/services/syslog/); device from the rig `/bench` `pc_syslog_format`
 op.
 
@@ -911,7 +911,7 @@ from the rig `/bench` `pc_stomp_parse_frame` op.
 ### StatsD metrics client (PC_ENABLE_STATSD)
 
 The StatsD line client the device uses to push metrics: `pc_statsd_format` builds one `name:value|type[|@rate]
-[|#tags]` line and the emit helpers `pc_udp_sendto` it (fire-and-forget UDP). `pc_statsd_format` is the pure
+[|#tags]` line and the emit helpers `Udp.client->sendto` it (fire-and-forget UDP). `pc_statsd_format` is the pure
 per-metric hot op. Host from [`performance_benching/bench_statsd.cpp`](../performance_benching/services/statsd/); device from the rig
 `/bench` `pc_statsd_format` op.
 

@@ -197,7 +197,7 @@ and OPC UA are fully homogeneous: each is a module that exposes a `ProtoHandler`
 touches the core only through those two APIs.
 
 **Connectionless (UDP) services** (SNMP, CoAP, DNS, syslog, flow-export) attach through
-a _different_ but deliberately separate seam - `pc_udp_listen(port, handler, arg)`, one
+a _different_ but deliberately separate seam - `Udp.listener->listen(port, handler, arg)`, one
 datagram-in/datagram-out callback. This heterogeneity is correct, not a defect: UDP has
 no accept/close/slot lifecycle, so folding it into the slot-based `ProtoHandler` table
 would be a forced fit. Two transport models, two matched seams.

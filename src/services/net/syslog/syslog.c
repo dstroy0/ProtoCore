@@ -125,7 +125,7 @@ proto_bool pc_syslog_log(SyslogSeverity severity, const char *msg)
     {
         return PROTO_FALSE;
     }
-    return pc_udp_sendto(s_syslog.server_ip, s_syslog.port, (const uint8_t *)s_syslog.buf, n);
+    return Udp.client->sendto(s_syslog.server_ip, s_syslog.port, (const uint8_t *)s_syslog.buf, n);
 }
 
 #endif // PC_ENABLE_SYSLOG

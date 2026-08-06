@@ -112,21 +112,21 @@ static void master_tick()
     a.time_source = 0x20; // GPS
     pc_ptp_ts_from_ns(master_time_ns(), &a.origin);
     size_t n = pc_ptp_build_announce(buf, sizeof(buf), &h, &a);
-    pc_udp_listener_sendto(PC_PTP_GENERAL_PORT, PTP_GROUP, PC_PTP_GENERAL_PORT, buf, n);
+    Udp.listener->sendto(PC_PTP_GENERAL_PORT, PTP_GROUP, PC_PTP_GENERAL_PORT, buf, n);
 
     // Sync (two-step: the precise time follows in Follow_Up).
     h.flags = 0x0200; // twoStepFlag
     pc_ptp_timestamp zero = {0, 0};
     n = pc_ptp_build_sync(buf, sizeof(buf), &h, &zero);
     int64_t t1 = master_time_ns(); // precise egress instant
-    pc_udp_listener_sendto(PC_PTP_EVENT_PORT, PTP_GROUP, PC_PTP_EVENT_PORT, buf, n);
+    Udp.listener->sendto(PC_PTP_EVENT_PORT, PTP_GROUP, PC_PTP_EVENT_PORT, buf, n);
 
     // Follow_Up carries t1.
     h.flags = 0;
     pc_ptp_timestamp ts1;
     pc_ptp_ts_from_ns(t1, &ts1);
     n = pc_ptp_build_follow_up(buf, sizeof(buf), &h, &ts1);
-    pc_udp_listener_sendto(PC_PTP_GENERAL_PORT, PTP_GROUP, PC_PTP_GENERAL_PORT, buf, n);
+    Udp.listener->sendto(PC_PTP_GENERAL_PORT, PTP_GROUP, PC_PTP_GENERAL_PORT, buf, n);
 
     m_seq++;
 }
@@ -144,7 +144,7 @@ static void master_on_delay_req(const pc_ptp_header *req)
     pc_ptp_ts_from_ns(t4, &t4ts);
     uint8_t buf[64];
     size_t n = pc_ptp_build_delay_resp(buf, sizeof(buf), &h, &t4ts, req->clock_identity, req->port_number);
-    pc_udp_listener_sendto(PC_PTP_GENERAL_PORT, PTP_GROUP, PC_PTP_GENERAL_PORT, buf, n);
+    Udp.listener->sendto(PC_PTP_GENERAL_PORT, PTP_GROUP, PC_PTP_GENERAL_PORT, buf, n);
 }
 
 static void on_event(const uint8_t *data, size_t len, const struct pc_udp_peer *peer, void *ctx)
@@ -180,7 +180,7 @@ static void send_delay_req()
     uint8_t buf[PC_PTP_HEADER_LEN + PC_PTP_TS_LEN];
     size_t n = pc_ptp_build_delay_req(buf, sizeof(buf), &h, &zero);
     t3 = now_ns();
-    pc_udp_listener_sendto(PC_PTP_EVENT_PORT, PTP_GROUP, PC_PTP_EVENT_PORT, buf, n);
+    Udp.listener->sendto(PC_PTP_EVENT_PORT, PTP_GROUP, PC_PTP_EVENT_PORT, buf, n);
 }
 
 static void on_event(const uint8_t *data, size_t len, const struct pc_udp_peer *peer, void *ctx)
@@ -272,8 +272,8 @@ void setup()
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
-    bool e = pc_udp_listen_multicast(PTP_GROUP, PC_PTP_EVENT_PORT, on_event, nullptr);
-    bool g = pc_udp_listen_multicast(PTP_GROUP, PC_PTP_GENERAL_PORT, on_general, nullptr);
+    bool e = Udp.listener->listen_multicast(PTP_GROUP, PC_PTP_EVENT_PORT, on_event, nullptr);
+    bool g = Udp.listener->listen_multicast(PTP_GROUP, PC_PTP_GENERAL_PORT, on_general, nullptr);
     Serial.printf("PTP on 319/320 (event=%d general=%d)\n", e, g);
 }
 

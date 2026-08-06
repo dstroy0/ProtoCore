@@ -5,7 +5,7 @@
 // real RFC 7252 request datagram, runs it through the server, and decodes the
 // response - no sockets, no heap.
 
-#include "network_drivers/transport/udp.h" // pc_udp_inject / capture (host UDP mock)
+#include "network_drivers/transport/udp.h" // Udp.listener->inject / capture (host UDP mock)
 #include "server/clock/clock.h"            // pc_set_clock() to drive dedup freshness in tests
 #include "services/iot/coap/coap.h"
 #include <string.h>
@@ -1136,23 +1136,23 @@ void test_response_option_capacity_stop()
 // answered, and a received ACK (not a request) produces no reply.
 void test_coap_udp_handler_basic()
 {
-    pc_udp_reset_listeners();
+    Udp.listener->reset();
     pc_coap_server_begin(5683);
-    pc_udp_capture_enable();
+    Udp.listener->capture_enable();
 
     const char *paths[] = {"temp"};
     uint8_t req[64];
     size_t rl = build(req, (uint8_t)COAP_TYPE_CON, (uint8_t)COAP_GET, NULL, 0, 0x9001, paths, 1, NULL, 0, -1, NULL, 0);
-    pc_udp_capture_reset();
-    pc_udp_inject(5683, "10.0.0.5", 5000, req, rl);
-    TEST_ASSERT_TRUE(pc_udp_captured_len() > 0); // 2.05 response served
+    Udp.listener->capture_reset();
+    Udp.listener->inject(5683, "10.0.0.5", 5000, req, rl);
+    TEST_ASSERT_TRUE(Udp.listener->captured_len() > 0); // 2.05 response served
 
     uint8_t ack[8];
     CoapEnc e;
     enc_init(&e, ack, 2 /* ACK */, 0, NULL, 0, 0x9001);
-    pc_udp_capture_reset();
-    pc_udp_inject(5683, "10.0.0.5", 5000, ack, e.len);
-    TEST_ASSERT_EQUAL_UINT(0, pc_udp_captured_len()); // an ACK is not a request -> nothing sent
+    Udp.listener->capture_reset();
+    Udp.listener->inject(5683, "10.0.0.5", 5000, ack, e.len);
+    TEST_ASSERT_EQUAL_UINT(0, Udp.listener->captured_len()); // an ACK is not a request -> nothing sent
 }
 
 // RFC 7252 4.2/4.3: a malformed CON is rejected with a Reset, but the identical malformation in a
@@ -1376,54 +1376,54 @@ static size_t build_observe_get(uint8_t *buf, const char *path, int observe, con
 // NON notification; an unreachable peer, an Observe:1, and a Reset each drop the observation.
 void test_coap_observe_over_udp()
 {
-    pc_udp_reset_listeners();
+    Udp.listener->reset();
     pc_coap_server_begin(5683);
-    pc_udp_capture_enable();
+    Udp.listener->capture_enable();
     const uint8_t tok[2] = {0xAA, 0xBB};
     uint8_t req[64];
 
     // Register.
-    pc_udp_capture_reset();
+    Udp.listener->capture_reset();
     size_t rl = build_observe_get(req, "temp", 0, tok, sizeof(tok), 0x0001);
-    pc_udp_inject(5683, "10.0.0.9", 40000, req, rl);
-    TEST_ASSERT_TRUE(pc_udp_captured_len() > 0); // registration answered
+    Udp.listener->inject(5683, "10.0.0.9", 40000, req, rl);
+    TEST_ASSERT_TRUE(Udp.listener->captured_len() > 0); // registration answered
 
     // The identical GET again is a refresh of the same observation (dedup path).
     rl = build_observe_get(req, "temp", 0, tok, sizeof(tok), 0x0005);
-    pc_udp_inject(5683, "10.0.0.9", 40000, req, rl);
+    Udp.listener->inject(5683, "10.0.0.9", 40000, req, rl);
 
     // Notify the registered observer.
-    pc_udp_capture_reset();
+    Udp.listener->capture_reset();
     pc_coap_notify("/temp");
-    TEST_ASSERT_TRUE(pc_udp_captured_len() > 0);
+    TEST_ASSERT_TRUE(Udp.listener->captured_len() > 0);
 
     // A notification to an unreachable peer drops the observer.
-    pc_udp_set_listener_sendto_result(PROTO_FALSE);
+    Udp.listener->set_sendto_result(PROTO_FALSE);
     pc_coap_notify("/temp");
-    pc_udp_set_listener_sendto_result(PROTO_TRUE);
-    pc_udp_capture_reset();
+    Udp.listener->set_sendto_result(PROTO_TRUE);
+    Udp.listener->capture_reset();
     pc_coap_notify("/temp"); // observer gone -> nothing sent
-    TEST_ASSERT_EQUAL_UINT(0, pc_udp_captured_len());
+    TEST_ASSERT_EQUAL_UINT(0, Udp.listener->captured_len());
 
     // Re-register, then deregister with Observe:1.
     rl = build_observe_get(req, "temp", 0, tok, sizeof(tok), 0x0002);
-    pc_udp_inject(5683, "10.0.0.9", 40000, req, rl);
+    Udp.listener->inject(5683, "10.0.0.9", 40000, req, rl);
     rl = build_observe_get(req, "temp", 1, tok, sizeof(tok), 0x0003);
-    pc_udp_inject(5683, "10.0.0.9", 40000, req, rl);
-    pc_udp_capture_reset();
+    Udp.listener->inject(5683, "10.0.0.9", 40000, req, rl);
+    Udp.listener->capture_reset();
     pc_coap_notify("/temp");
-    TEST_ASSERT_EQUAL_UINT(0, pc_udp_captured_len());
+    TEST_ASSERT_EQUAL_UINT(0, Udp.listener->captured_len());
 
     // Re-register, then a Reset from the peer drops all its observations.
     rl = build_observe_get(req, "temp", 0, tok, sizeof(tok), 0x0004);
-    pc_udp_inject(5683, "10.0.0.9", 40000, req, rl);
+    Udp.listener->inject(5683, "10.0.0.9", 40000, req, rl);
     uint8_t rst[8];
     CoapEnc re;
     enc_init(&re, rst, (uint8_t)COAP_TYPE_RST, 0, NULL, 0, 0x0004);
-    pc_udp_inject(5683, "10.0.0.9", 40000, rst, re.len);
-    pc_udp_capture_reset();
+    Udp.listener->inject(5683, "10.0.0.9", 40000, rst, re.len);
+    Udp.listener->capture_reset();
     pc_coap_notify("/temp");
-    TEST_ASSERT_EQUAL_UINT(0, pc_udp_captured_len());
+    TEST_ASSERT_EQUAL_UINT(0, Udp.listener->captured_len());
 
     // A notification for an unknown resource path is a no-op.
     pc_coap_notify("/no-such-resource");
@@ -1432,9 +1432,9 @@ void test_coap_observe_over_udp()
 // A full observer registry declines further registrations; the resource is still served.
 void test_coap_observe_registry_full()
 {
-    pc_udp_reset_listeners();
+    Udp.listener->reset();
     pc_coap_server_begin(5683);
-    pc_udp_capture_enable();
+    Udp.listener->capture_enable();
     uint8_t req[64];
     // Distinct tokens from one peer fill the PC_COAP_MAX_OBSERVERS slots; extras are declined
     // but still answered (RFC 7641: observation is best-effort, the GET response is unconditional).
@@ -1442,9 +1442,9 @@ void test_coap_observe_registry_full()
     {
         uint8_t tok[1] = {(uint8_t)i};
         size_t rl = build_observe_get(req, "temp", 0, tok, 1, (uint16_t)(0x100 + i));
-        pc_udp_capture_reset();
-        pc_udp_inject(5683, "10.0.0.9", 40000, req, rl);
-        TEST_ASSERT_TRUE(pc_udp_captured_len() > 0);
+        Udp.listener->capture_reset();
+        Udp.listener->inject(5683, "10.0.0.9", 40000, req, rl);
+        TEST_ASSERT_TRUE(Udp.listener->captured_len() > 0);
     }
     pc_coap_notify("/temp"); // deliver to the registered observers
 }
@@ -1454,7 +1454,7 @@ void test_coap_observe_registry_full()
 static int observe_seq_of_last_reply()
 {
     CoapDec d;
-    if (!pc_udp_captured_len() || !dec(pc_udp_captured(), pc_udp_captured_len(), &d))
+    if (!Udp.listener->captured_len() || !dec(Udp.listener->captured(), Udp.listener->captured_len(), &d))
     {
         return -2;
     }
@@ -1466,74 +1466,74 @@ static int observe_seq_of_last_reply()
 // visible as a reply carrying the observer's already-advanced sequence instead of a fresh 1.
 void test_coap_observe_registry_key_fields()
 {
-    pc_udp_reset_listeners();
+    Udp.listener->reset();
     pc_coap_server_begin(5683);
-    pc_udp_capture_enable();
+    Udp.listener->capture_enable();
     const uint8_t tok[2] = {0xAA, 0xBB};
     uint8_t req[64];
 
-    pc_udp_capture_reset();
+    Udp.listener->capture_reset();
     size_t rl = build_observe_get(req, "temp", 0, tok, sizeof(tok), 0x0201);
-    pc_udp_inject(5683, "10.0.0.9", 40000, req, rl);
+    Udp.listener->inject(5683, "10.0.0.9", 40000, req, rl);
     TEST_ASSERT_EQUAL_INT(1, observe_seq_of_last_reply()); // new observation
 
     pc_coap_notify("/temp"); // advances that observer to sequence 2
 
-    pc_udp_capture_reset();
+    Udp.listener->capture_reset();
     rl = build_observe_get(req, "temp", 0, tok, sizeof(tok), 0x0202);
-    pc_udp_inject(5683, "10.0.0.9", 40000, req, rl);
+    Udp.listener->inject(5683, "10.0.0.9", 40000, req, rl);
     TEST_ASSERT_EQUAL_INT(2, observe_seq_of_last_reply()); // all four keys matched -> a refresh
 
-    pc_udp_capture_reset(); // same peer + token, different resource
+    Udp.listener->capture_reset(); // same peer + token, different resource
     rl = build_observe_get(req, "ro", 0, tok, sizeof(tok), 0x0203);
-    pc_udp_inject(5683, "10.0.0.9", 40000, req, rl);
+    Udp.listener->inject(5683, "10.0.0.9", 40000, req, rl);
     TEST_ASSERT_EQUAL_INT(1, observe_seq_of_last_reply());
 
-    pc_udp_capture_reset(); // same peer IP + token + resource, different source port
+    Udp.listener->capture_reset(); // same peer IP + token + resource, different source port
     rl = build_observe_get(req, "temp", 0, tok, sizeof(tok), 0x0204);
-    pc_udp_inject(5683, "10.0.0.9", 40001, req, rl);
+    Udp.listener->inject(5683, "10.0.0.9", 40001, req, rl);
     TEST_ASSERT_EQUAL_INT(1, observe_seq_of_last_reply());
 
-    pc_udp_capture_reset(); // same port + token + resource, different peer IP
+    Udp.listener->capture_reset(); // same port + token + resource, different peer IP
     rl = build_observe_get(req, "temp", 0, tok, sizeof(tok), 0x0205);
-    pc_udp_inject(5683, "10.0.0.11", 40000, req, rl);
+    Udp.listener->inject(5683, "10.0.0.11", 40000, req, rl);
     TEST_ASSERT_EQUAL_INT(1, observe_seq_of_last_reply());
 
     // Four distinct observations now exist, one of them on /ro: notifying /ro must not re-render
     // the /temp observers and vice versa.
-    pc_udp_capture_reset();
+    Udp.listener->capture_reset();
     pc_coap_notify("/ro");
-    TEST_ASSERT_TRUE(pc_udp_captured_len() > 0);
-    pc_udp_capture_reset();
+    TEST_ASSERT_TRUE(Udp.listener->captured_len() > 0);
+    Udp.listener->capture_reset();
     pc_coap_notify("/temp");
-    TEST_ASSERT_TRUE(pc_udp_captured_len() > 0);
+    TEST_ASSERT_TRUE(Udp.listener->captured_len() > 0);
 }
 
 // A zero-length token is a legal Observe registration: the registry stores it, matches it on a
 // refresh, and never confuses it with an observation whose token is a different length.
 void test_coap_observe_zero_length_token()
 {
-    pc_udp_reset_listeners();
+    Udp.listener->reset();
     pc_coap_server_begin(5683);
-    pc_udp_capture_enable();
+    Udp.listener->capture_enable();
     const uint8_t tok[2] = {0xAA, 0xBB};
     uint8_t req[64];
 
     // A 2-byte-token observation first, so the empty-token registration below has to reject it on
     // token *length* rather than on token content.
     size_t rl = build_observe_get(req, "temp", 0, tok, sizeof(tok), 0x0301);
-    pc_udp_inject(5683, "10.0.0.9", 40000, req, rl);
+    Udp.listener->inject(5683, "10.0.0.9", 40000, req, rl);
 
-    pc_udp_capture_reset();
+    Udp.listener->capture_reset();
     rl = build_observe_get(req, "temp", 0, NULL, 0, 0x0302);
-    pc_udp_inject(5683, "10.0.0.9", 40000, req, rl);
+    Udp.listener->inject(5683, "10.0.0.9", 40000, req, rl);
     TEST_ASSERT_EQUAL_INT(1, observe_seq_of_last_reply()); // a second observation, not the first
 
     pc_coap_notify("/temp"); // both observers advance to sequence 2
 
-    pc_udp_capture_reset();
+    Udp.listener->capture_reset();
     rl = build_observe_get(req, "temp", 0, NULL, 0, 0x0303);
-    pc_udp_inject(5683, "10.0.0.9", 40000, req, rl);
+    Udp.listener->inject(5683, "10.0.0.9", 40000, req, rl);
     TEST_ASSERT_EQUAL_INT(2, observe_seq_of_last_reply()); // refreshed the empty-token observation
 }
 
@@ -1541,48 +1541,48 @@ void test_coap_observe_zero_length_token()
 // IP but the wrong port, both leave the registry untouched; only an exact peer match drops it.
 void test_coap_observe_targeted_removal()
 {
-    pc_udp_reset_listeners();
+    Udp.listener->reset();
     pc_coap_server_begin(5683);
-    pc_udp_capture_enable();
+    Udp.listener->capture_enable();
     const uint8_t tok_a[2] = {0xAA, 0xBB};
     const uint8_t tok_b[2] = {0xCC, 0xDD};
     uint8_t req[64], rst[8];
 
     size_t rl = build_observe_get(req, "temp", 0, tok_a, 2, 0x0401);
-    pc_udp_inject(5683, "10.0.0.9", 40000, req, rl); // peer A
+    Udp.listener->inject(5683, "10.0.0.9", 40000, req, rl); // peer A
     rl = build_observe_get(req, "temp", 0, tok_a, 2, 0x0402);
-    pc_udp_inject(5683, "10.0.0.20", 40000, req, rl); // peer B: same port + token, other IP
+    Udp.listener->inject(5683, "10.0.0.20", 40000, req, rl); // peer B: same port + token, other IP
     pc_coap_notify("/temp");                          // both advance to sequence 2
 
     // Observe:1 from peer A carrying an unknown token removes nothing.
     rl = build_observe_get(req, "temp", 1, tok_b, 2, 0x0403);
-    pc_udp_inject(5683, "10.0.0.9", 40000, req, rl);
-    pc_udp_capture_reset();
+    Udp.listener->inject(5683, "10.0.0.9", 40000, req, rl);
+    Udp.listener->capture_reset();
     rl = build_observe_get(req, "temp", 0, tok_a, 2, 0x0404);
-    pc_udp_inject(5683, "10.0.0.9", 40000, req, rl);
+    Udp.listener->inject(5683, "10.0.0.9", 40000, req, rl);
     TEST_ASSERT_EQUAL_INT(2, observe_seq_of_last_reply()); // A's observation survived
 
     // A Reset from A's IP but a different source port removes nothing either.
     CoapEnc re;
     enc_init(&re, rst, (uint8_t)COAP_TYPE_RST, 0, NULL, 0, 0x0405);
-    pc_udp_inject(5683, "10.0.0.9", 49999, rst, re.len);
-    pc_udp_capture_reset();
+    Udp.listener->inject(5683, "10.0.0.9", 49999, rst, re.len);
+    Udp.listener->capture_reset();
     rl = build_observe_get(req, "temp", 0, tok_a, 2, 0x0406);
-    pc_udp_inject(5683, "10.0.0.9", 40000, req, rl);
+    Udp.listener->inject(5683, "10.0.0.9", 40000, req, rl);
     TEST_ASSERT_EQUAL_INT(2, observe_seq_of_last_reply());
 
     // A Reset from A's exact address does drop it: the next registration starts over at 1.
     enc_init(&re, rst, (uint8_t)COAP_TYPE_RST, 0, NULL, 0, 0x0407);
-    pc_udp_inject(5683, "10.0.0.9", 40000, rst, re.len);
-    pc_udp_capture_reset();
+    Udp.listener->inject(5683, "10.0.0.9", 40000, rst, re.len);
+    Udp.listener->capture_reset();
     rl = build_observe_get(req, "temp", 0, tok_a, 2, 0x0408);
-    pc_udp_inject(5683, "10.0.0.9", 40000, req, rl);
+    Udp.listener->inject(5683, "10.0.0.9", 40000, req, rl);
     TEST_ASSERT_EQUAL_INT(1, observe_seq_of_last_reply());
 
     // Peer B was never addressed by any of that and is still observing at sequence 2.
-    pc_udp_capture_reset();
+    Udp.listener->capture_reset();
     rl = build_observe_get(req, "temp", 0, tok_a, 2, 0x0409);
-    pc_udp_inject(5683, "10.0.0.20", 40000, req, rl);
+    Udp.listener->inject(5683, "10.0.0.20", 40000, req, rl);
     TEST_ASSERT_EQUAL_INT(2, observe_seq_of_last_reply());
 }
 
@@ -1590,20 +1590,20 @@ void test_coap_observe_targeted_removal()
 // reports more than the payload buffer holds is truncated rather than allowed to overrun it.
 void test_coap_notify_clamps_oversized_body()
 {
-    pc_udp_reset_listeners();
+    Udp.listener->reset();
     TEST_ASSERT_TRUE(pc_coap_server_add_resource("/of", COAP_ALLOW_GET, h_overflow));
     pc_coap_server_begin(5683);
-    pc_udp_capture_enable();
+    Udp.listener->capture_enable();
     const uint8_t tok[1] = {0x5A};
     uint8_t req[64];
     size_t rl = build_observe_get(req, "of", 0, tok, 1, 0x0501);
-    pc_udp_inject(5683, "10.0.0.9", 40000, req, rl);
+    Udp.listener->inject(5683, "10.0.0.9", 40000, req, rl);
 
-    pc_udp_capture_reset();
+    Udp.listener->capture_reset();
     pc_coap_notify("/of");
-    TEST_ASSERT_TRUE(pc_udp_captured_len() > 0);
+    TEST_ASSERT_TRUE(Udp.listener->captured_len() > 0);
     CoapDec d;
-    TEST_ASSERT_TRUE(dec(pc_udp_captured(), pc_udp_captured_len(), &d));
+    TEST_ASSERT_TRUE(dec(Udp.listener->captured(), Udp.listener->captured_len(), &d));
     TEST_ASSERT_EQUAL_UINT(PC_COAP_MAX_PAYLOAD, d.payload_len); // clamped, not payload_cap + 1000
 }
 
@@ -1611,20 +1611,20 @@ void test_coap_notify_clamps_oversized_body()
 // register against: the listing is still served, but the reply carries no Observe option.
 void test_coap_observe_on_discovery_is_not_registered()
 {
-    pc_udp_reset_listeners();
+    Udp.listener->reset();
     pc_coap_server_begin(5683);
-    pc_udp_capture_enable();
+    Udp.listener->capture_enable();
     uint8_t req[64], tok[1] = {0x77};
     CoapEnc e;
     enc_init(&e, req, (uint8_t)COAP_TYPE_CON, (uint8_t)COAP_GET, tok, 1, 0x0601);
     enc_option(&e, 6, NULL, 0); // Observe: register
     enc_option(&e, 11, (const uint8_t *)".well-known", 11);
     enc_option(&e, 11, (const uint8_t *)"core", 4);
-    pc_udp_capture_reset();
-    pc_udp_inject(5683, "10.0.0.9", 40000, req, e.len);
-    TEST_ASSERT_TRUE(pc_udp_captured_len() > 0);
+    Udp.listener->capture_reset();
+    Udp.listener->inject(5683, "10.0.0.9", 40000, req, e.len);
+    TEST_ASSERT_TRUE(Udp.listener->captured_len() > 0);
     CoapDec d;
-    TEST_ASSERT_TRUE(dec(pc_udp_captured(), pc_udp_captured_len(), &d));
+    TEST_ASSERT_TRUE(dec(Udp.listener->captured(), Udp.listener->captured_len(), &d));
     TEST_ASSERT_EQUAL_UINT((uint8_t)COAP_RSP_CONTENT, d.code);
     TEST_ASSERT_EQUAL_INT(-1, d.observe);
 }
@@ -1633,32 +1633,32 @@ void test_coap_observe_on_discovery_is_not_registered()
 // option on a POST is not a registration (only a GET establishes an observation).
 void test_coap_udp_edge_datagrams()
 {
-    pc_udp_reset_listeners();
+    Udp.listener->reset();
     pc_coap_server_begin(5683);
-    pc_udp_capture_enable();
+    Udp.listener->capture_enable();
 
     uint8_t empty[1] = {0};
-    pc_udp_capture_reset();
-    pc_udp_inject(5683, "10.0.0.9", 40000, empty, 0);
-    TEST_ASSERT_EQUAL_UINT(0, pc_udp_captured_len()); // dropped, nothing emitted
+    Udp.listener->capture_reset();
+    Udp.listener->inject(5683, "10.0.0.9", 40000, empty, 0);
+    TEST_ASSERT_EQUAL_UINT(0, Udp.listener->captured_len()); // dropped, nothing emitted
 
     uint8_t req[64];
     CoapEnc e;
     enc_init(&e, req, (uint8_t)COAP_TYPE_CON, (uint8_t)COAP_POST, NULL, 0, 0x0701);
     enc_option(&e, 6, NULL, 0); // Observe on a POST
     enc_option(&e, 11, (const uint8_t *)"temp", 4);
-    pc_udp_capture_reset();
-    pc_udp_inject(5683, "10.0.0.9", 40000, req, e.len);
-    TEST_ASSERT_TRUE(pc_udp_captured_len() > 0);
+    Udp.listener->capture_reset();
+    Udp.listener->inject(5683, "10.0.0.9", 40000, req, e.len);
+    TEST_ASSERT_TRUE(Udp.listener->captured_len() > 0);
     CoapDec d;
-    TEST_ASSERT_TRUE(dec(pc_udp_captured(), pc_udp_captured_len(), &d));
+    TEST_ASSERT_TRUE(dec(Udp.listener->captured(), Udp.listener->captured_len(), &d));
     TEST_ASSERT_EQUAL_UINT((uint8_t)COAP_RSP_CREATED, d.code);
     TEST_ASSERT_EQUAL_INT(-1, d.observe); // no observation established
 
     // ...and no observation was created, so a notify on /temp reaches nobody.
-    pc_udp_capture_reset();
+    Udp.listener->capture_reset();
     pc_coap_notify("/temp");
-    TEST_ASSERT_EQUAL_UINT(0, pc_udp_captured_len());
+    TEST_ASSERT_EQUAL_UINT(0, Udp.listener->captured_len());
 }
 #endif // PC_ENABLE_COAP_OBSERVE
 
@@ -1772,33 +1772,33 @@ void test_dedup_handler_replays_without_rerunning()
 {
     pc_set_clock(mock_clock, 1000);
     g_now_ms = 5000;
-    pc_udp_reset_listeners();
+    Udp.listener->reset();
     pc_coap_server_begin(5683);
-    pc_udp_capture_enable();
+    Udp.listener->capture_enable();
 
     const char *paths[] = {"temp"};
     uint8_t req[64];
     size_t rl = build(req, (uint8_t)COAP_TYPE_CON, (uint8_t)COAP_GET, NULL, 0, 0x4242, paths, 1, NULL, 0, -1, NULL, 0);
 
     g_called = PROTO_FALSE;
-    pc_udp_capture_reset();
-    pc_udp_inject(5683, "10.0.0.9", 5555, req, rl);
+    Udp.listener->capture_reset();
+    Udp.listener->inject(5683, "10.0.0.9", 5555, req, rl);
     TEST_ASSERT_TRUE(g_called); // handler ran
-    size_t n1 = pc_udp_captured_len();
+    size_t n1 = Udp.listener->captured_len();
     TEST_ASSERT_TRUE(n1 > 0);
     uint8_t saved[64];
-    memcpy(saved, pc_udp_captured(), n1);
+    memcpy(saved, Udp.listener->captured(), n1);
 
     g_called = PROTO_FALSE;
-    pc_udp_capture_reset();
-    pc_udp_inject(5683, "10.0.0.9", 5555, req, rl); // duplicate CON (same mid + source)
+    Udp.listener->capture_reset();
+    Udp.listener->inject(5683, "10.0.0.9", 5555, req, rl); // duplicate CON (same mid + source)
     TEST_ASSERT_FALSE(g_called);                    // deduplicated: handler skipped
-    TEST_ASSERT_EQUAL_size_t(n1, pc_udp_captured_len());
-    TEST_ASSERT_EQUAL_HEX8_ARRAY(saved, pc_udp_captured(), n1); // same cached response resent
+    TEST_ASSERT_EQUAL_size_t(n1, Udp.listener->captured_len());
+    TEST_ASSERT_EQUAL_HEX8_ARRAY(saved, Udp.listener->captured(), n1); // same cached response resent
 
     g_called = PROTO_FALSE;
-    pc_udp_capture_reset();
-    pc_udp_inject(5683, "10.0.0.10", 5555, req, rl); // different source, same mid -> new exchange
+    Udp.listener->capture_reset();
+    Udp.listener->inject(5683, "10.0.0.10", 5555, req, rl); // different source, same mid -> new exchange
     TEST_ASSERT_TRUE(g_called);
 
     pc_set_clock(NULL, 1000);

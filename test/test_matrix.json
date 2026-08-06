@@ -897,6 +897,8 @@
         "+<services/net/snmp/snmp_ber.c>",
         "+<services/net/snmp/snmp_agent.c>",
         "+<network_drivers/transport/udp.c>",
+        "+<network_drivers/transport/udp/udp_listener.c>",
+        "+<network_drivers/transport/udp/udp_client.c>",
         "+<server/clock/clock.c>"
       ],
       "tests": ["test_snmp_ber", "test_snmp_agent"]
@@ -915,6 +917,8 @@
         "+<services/net/snmp/snmp_v3.c>",
         "+<services/net/snmp/snmp_notify.c>",
         "+<network_drivers/transport/udp.c>",
+        "+<network_drivers/transport/udp/udp_listener.c>",
+        "+<network_drivers/transport/udp/udp_client.c>",
         "+<crypto/hash/sha256.c>",
         "+<crypto/mac/hmac_sha256.c>",
         "+<mmgr/arena.c>",
@@ -951,6 +955,8 @@
       "src": [
         "+<services/iot/coap/coap.c>",
         "+<network_drivers/transport/udp.c>",
+        "+<network_drivers/transport/udp/udp_listener.c>",
+        "+<network_drivers/transport/udp/udp_client.c>",
         "+<server/clock/clock.c>"
       ],
       "tests": ["test_coap"]
@@ -967,6 +973,8 @@
       "src": [
         "+<services/iot/coap/coap.c>",
         "+<network_drivers/transport/udp.c>",
+        "+<network_drivers/transport/udp/udp_listener.c>",
+        "+<network_drivers/transport/udp/udp_client.c>",
         "+<server/clock/clock.c>"
       ],
       "tests": ["test_coap"]
@@ -1133,7 +1141,11 @@
     "native_udp_transport": {
       "desc": "UDP transport multicast receive (network_drivers/transport/udp.cpp): joining an IPv4\nmulticast group by dotted-quad, rejecting a non-multicast or malformed group, delivering a group\ndatagram to the registered handler, and leaving the group (releasing the listener slot). Drives the\nhost UDP mock's inject seam.",
       "flags": [],
-      "src": ["+<network_drivers/transport/udp.c>"],
+      "src": [
+        "+<network_drivers/transport/udp.c>",
+        "+<network_drivers/transport/udp/udp_listener.c>",
+        "+<network_drivers/transport/udp/udp_client.c>"
+      ],
       "tests": ["test_udp_transport"]
     },
     "native_udp_hot": {
@@ -1664,6 +1676,8 @@
         "+<services/net/snmp/snmp_ber.c>",
         "+<services/net/snmp/snmp_agent.c>",
         "+<network_drivers/transport/udp.c>",
+        "+<network_drivers/transport/udp/udp_listener.c>",
+        "+<network_drivers/transport/udp/udp_client.c>",
         "+<crypto/hash/sha1.c>",
         "+<services/storage/sqlite/sqlite_format.c>",
         "+<services/iot/redis_resp/redis_resp.c>",
@@ -1808,7 +1822,9 @@
       "flags": ["-DPC_ENABLE_SYSLOG=1"],
       "src": [
         "+<services/net/syslog/syslog.c>",
-        "+<network_drivers/transport/udp.c>"
+        "+<network_drivers/transport/udp.c>",
+        "+<network_drivers/transport/udp/udp_listener.c>",
+        "+<network_drivers/transport/udp/udp_client.c>"
       ],
       "tests": ["test_syslog"]
     },
@@ -2400,7 +2416,9 @@
       "flags": ["-DPC_ENABLE_STATSD=1"],
       "src": [
         "+<services/iot/statsd/statsd.c>",
-        "+<network_drivers/transport/udp.c>"
+        "+<network_drivers/transport/udp.c>",
+        "+<network_drivers/transport/udp/udp_listener.c>",
+        "+<network_drivers/transport/udp/udp_client.c>"
       ],
       "tests": ["test_statsd"]
     },
@@ -2919,6 +2937,9 @@
       "src": [
         "+<shared_primitives/ip.c>",
         "${env:native_stack_http.build_src_filter}",
+        "+<network_drivers/transport/udp.c>",
+        "+<network_drivers/transport/udp/udp_listener.c>",
+        "+<network_drivers/transport/udp/udp_client.c>",
         "+<services/security/audit_log/audit_log.c>",
         "+<services/security/oidc/oidc.c>",
         "+<server/filesystem/mnt.c>",
@@ -3158,6 +3179,8 @@
         "+<services/iot/coap/coaps.c>",
         "+<services/iot/coap/coap.c>",
         "+<network_drivers/transport/udp.c>",
+        "+<network_drivers/transport/udp/udp_listener.c>",
+        "+<network_drivers/transport/udp/udp_client.c>",
         "+<network_drivers/presentation/security/dtls/dtls_conn.c>",
         "+<network_drivers/presentation/security/dtls/dtls_record.c>",
         "+<network_drivers/presentation/security/dtls/dtls_handshake.c>",
@@ -3187,6 +3210,8 @@
         "+<services/iot/coap/coaps.c>",
         "+<services/iot/coap/coap.c>",
         "+<network_drivers/transport/udp.c>",
+        "+<network_drivers/transport/udp/udp_listener.c>",
+        "+<network_drivers/transport/udp/udp_client.c>",
         "+<network_drivers/presentation/security/dtls/dtls_conn.c>",
         "+<network_drivers/presentation/security/dtls/dtls_record.c>",
         "+<network_drivers/presentation/security/dtls/dtls_handshake.c>",
@@ -3434,6 +3459,9 @@
       "flags": ["-DPC_ENABLE_HTTP3=1"],
       "src": [
         "${env:native_stack_http.build_src_filter}",
+        "+<network_drivers/transport/udp.c>",
+        "+<network_drivers/transport/udp/udp_listener.c>",
+        "+<network_drivers/transport/udp/udp_client.c>",
         "+<network_drivers/presentation/http/http3/quic_server.c>",
         "+<network_drivers/presentation/http/http3/quic_conn.c>",
         "+<network_drivers/presentation/http/http3/quic_tls.c>",

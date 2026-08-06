@@ -76,7 +76,7 @@ static void pc_ntp_server_udp_handler(const uint8_t *data, size_t len, const str
                                             resp, sizeof(resp));
     if (n)
     {
-        pc_udp_send(peer, resp, n);
+        Udp.listener->reply(peer, resp, n);
     }
 }
 
@@ -84,7 +84,7 @@ proto_bool pc_ntp_server_begin(uint8_t stratum, uint32_t refid)
 {
     s_ntp.stratum = stratum;
     s_ntp.refid = refid;
-    return pc_udp_listen(123, pc_ntp_server_udp_handler, NULL);
+    return Udp.listener->listen(123, pc_ntp_server_udp_handler, NULL);
 }
 
 #else // host build: no lwIP. The codec above is host-tested; the binding is a stub.

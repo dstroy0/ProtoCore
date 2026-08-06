@@ -243,13 +243,13 @@ static void udp_handler(const uint8_t *data, size_t len, const struct pc_udp_pee
     size_t n = build_response(data, len, PC_DNS_SERVER_TTL, lookup, resp, sizeof(resp));
     if (n)
     {
-        pc_udp_send(peer, resp, n);
+        Udp.listener->reply(peer, resp, n);
     }
 }
 
 static proto_bool begin()
 {
-    return pc_udp_listen(53, udp_handler, NULL);
+    return Udp.listener->listen(53, udp_handler, NULL);
 }
 
 #else // host build: no lwIP. The codec + table above are host-tested; begin is a stub.

@@ -151,7 +151,7 @@ static proto_bool serialize_peer(const char *ip, uint16_t port, uint8_t out[PC_C
 static void server_send(const char *ip, uint16_t port, const uint8_t *data, size_t len)
 {
 #if PROTOCORE_HOT
-    pc_udp_listener_sendto(s_coaps.port, ip, port, data, len);
+    Udp.listener->sendto(s_coaps.port, ip, port, data, len);
 #else
     if (s_coaps.out_sink)
     {
@@ -275,7 +275,7 @@ static void udp_ingest_cb(const uint8_t *data, size_t len, const struct pc_udp_p
     (void)ctx;
     char ip[16];
     uint16_t port = 0;
-    if (!pc_udp_peer_addr(peer, ip, sizeof ip, &port))
+    if (!Udp.listener->peer_addr(peer, ip, sizeof ip, &port))
     {
         return;
     }
@@ -369,7 +369,7 @@ proto_bool pc_coaps_server_begin(uint16_t port, const CoapsServerConfig *cfg)
     s_coaps.ring_tail = 0;
     s_coaps.running = PROTO_TRUE;
 #if PROTOCORE_HOT
-    return pc_udp_listen(s_coaps.port, udp_ingest_cb, NULL);
+    return Udp.listener->listen(s_coaps.port, udp_ingest_cb, NULL);
 #else
     return PROTO_TRUE; // host: fed through pc_coaps_server_ingest()
 #endif

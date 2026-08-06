@@ -120,7 +120,7 @@ static proto_bool cid_eq(const uint8_t *a, uint8_t alen, const uint8_t *b, uint8
 static void server_send(const char *ip, uint16_t port, const uint8_t *data, size_t len)
 {
 #if PROTOCORE_HOT
-    pc_udp_listener_sendto(s_quic.port, ip, port, data, len);
+    Udp.listener->sendto(s_quic.port, ip, port, data, len);
 #else
     if (s_quic.out_sink)
     {
@@ -338,7 +338,7 @@ static void udp_ingest_cb(const uint8_t *data, size_t len, const struct pc_udp_p
     (void)ctx;
     char ip[16];
     uint16_t port = 0;
-    if (!pc_udp_peer_addr(peer, ip, sizeof ip, &port))
+    if (!Udp.listener->peer_addr(peer, ip, sizeof ip, &port))
     {
         return;
     }
@@ -365,7 +365,7 @@ proto_bool pc_quic_server_begin(uint16_t port, const QuicServerConfig *cfg, Quic
     s_quic.next_id = 1;
     s_quic.running = PROTO_TRUE;
 #if PROTOCORE_HOT
-    return pc_udp_listen(s_quic.port, udp_ingest_cb, NULL);
+    return Udp.listener->listen(s_quic.port, udp_ingest_cb, NULL);
 #else
     return PROTO_TRUE; // host: fed through pc_quic_server_ingest()
 #endif

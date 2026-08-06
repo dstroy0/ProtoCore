@@ -741,7 +741,7 @@ the ESP32's built-in Wi-Fi supplies the link.
   number usually matches the last octet of the PLC's IP by convention.
 - **Codec:** `pc_fins_build_command` / `pc_fins_build_memory_area_read` /
   `pc_fins_parse_response`, carried over this library's UDP transport
-  (`pc_udp_sendto`). See `src/services/fieldbus/fins/fins.h`.
+  (`Udp.client->sendto`). See `src/services/fieldbus/fins/fins.h`.
 
 ### BACnet/IP
 

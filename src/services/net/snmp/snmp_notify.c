@@ -129,7 +129,7 @@ proto_bool pc_snmp_trap_v2c(const char *dst_ip, uint16_t port, const char *commu
     uint32_t up = (uint32_t)(pc_millis() / 10); // TimeTicks = hundredths of a second
     size_t len = pc_snmp_notify_build_v2c(buf, sizeof(buf), community, (uint8_t)SNMP_TAG_SNMP_PDU_TRAPV2,
                                           s_notify.trap_reqid++, trap_oid, trap_oid_len, up, vbs, n);
-    return len && pc_udp_sendto(dst_ip, port, buf, len);
+    return len && Udp.client->sendto(dst_ip, port, buf, len);
 }
 
 proto_bool pc_snmp_inform_v2c(const char *dst_ip, uint16_t port, const char *community, uint32_t request_id,
@@ -139,7 +139,7 @@ proto_bool pc_snmp_inform_v2c(const char *dst_ip, uint16_t port, const char *com
     uint32_t up = (uint32_t)(pc_millis() / 10);
     size_t len = pc_snmp_notify_build_v2c(buf, sizeof(buf), community, 0xA6 /* InformRequest */, request_id, trap_oid,
                                           trap_oid_len, up, vbs, n);
-    return len && pc_udp_sendto(dst_ip, port, buf, len);
+    return len && Udp.client->sendto(dst_ip, port, buf, len);
 }
 
 #else // host build: transport is a stub

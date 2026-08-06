@@ -1611,7 +1611,7 @@ from halves and is slower than the width it decomposes into"
  * strings, gateway discovery, sleeping-client keep-alive). Builds CONNECT / REGISTER /
  * PUBLISH / SUBSCRIBE / PINGREQ / DISCONNECT / SEARCHGW and parses CONNACK / REGACK /
  * PUBACK / SUBACK / PUBLISH / REGISTER, including the 1- and 3-octet Length forms. Pure
- * codec, host-tested; the datagram send (pc_udp_sendto) and topic registry are the app's.
+ * codec, host-tested; the datagram send (Udp.client->sendto) and topic registry are the app's.
  */
 #ifndef PC_ENABLE_MQTT_SN
 #define PC_ENABLE_MQTT_SN 0
@@ -1624,7 +1624,7 @@ from halves and is slower than the width it decomposes into"
  * (fixed 24-octet header + 48-octet records), NetFlow v9 (RFC 3954), and IPFIX (RFC 7011),
  * the latter two via a small cursor that emits a Template then matching Data records and
  * patches the message length (IPFIX) or record count (v9) on finish. Pure codec,
- * host-tested; the flow cache (5-tuple + counters) and the UDP send (pc_udp_sendto) are
+ * host-tested; the flow cache (5-tuple + counters) and the UDP send (Udp.client->sendto) are
  * the application's. Pairs with the telemetry / observability services.
  */
 #ifndef PC_ENABLE_FLOW_EXPORT
@@ -1963,7 +1963,7 @@ from halves and is slower than the width it decomposes into"
  * Network Service (FINS/UDP): `pc_fins_build_command` / `pc_fins_build_memory_area_read` emit the
  * 10-octet routing header + command code + parameters, and `pc_fins_parse_command` /
  * `pc_fins_parse_response` read them back (the response end code MRES/SRES included). Talks to
- * an Omron PLC over the shipped UDP transport (pc_udp_sendto). Pure codec, host-tested.
+ * an Omron PLC over the shipped UDP transport (Udp.client->sendto). Pure codec, host-tested.
  */
 #ifndef PC_ENABLE_FINS
 #define PC_ENABLE_FINS 0
@@ -3402,7 +3402,7 @@ from halves and is slower than the width it decomposes into"
  *
  * Default off. When set, services/iot/udp_telemetry casts metric lines (InfluxDB line
  * protocol: `measurement field=val,field2=val2`) to a configured collector over
- * UDP via pc_udp_sendto - zero-heap, fire-and-forget (no ACK, no retry), ideal
+ * UDP via Udp.client->sendto - zero-heap, fire-and-forget (no ACK, no retry), ideal
  * for shipping device metrics to Telegraf/InfluxDB/a log sink. The line builder is
  * pure and host-tested; only the send touches the network.
  */
@@ -3423,7 +3423,7 @@ from halves and is slower than the width it decomposes into"
  * Graphite/StatsD, Telegraf, Datadog, InfluxDB, etc. Counters, gauges (absolute + delta),
  * timings, and sets, with optional sample-rate (`|@0.1`) and DogStatsD tags (`|#env:prod`).
  * This is the push counterpart to the pull-based Prometheus `/metrics`. The line formatter
- * is pure and host-tested; only the send (pc_udp_sendto) touches the network. Zero heap.
+ * is pure and host-tested; only the send (Udp.client->sendto) touches the network. Zero heap.
  */
 #ifndef PC_ENABLE_STATSD
 #define PC_ENABLE_STATSD 0
@@ -5521,6 +5521,19 @@ from halves and is slower than the width it decomposes into"
 
 // The client dials by name, so anything that needs the client needs the resolver.
 #define PC_NEED_DNS_RESOLVER (PC_ENABLE_DNS_RESOLVER || PC_NEED_CLIENT)
+
+// PC_NEED_UDP marks when the datagram transport is built. The listener and client hold rings that
+// only move when someone drains them, and server_tick() is that someone, so the tick references the
+// Udp table only where a feature put it in the image. Every feature that binds a UDP port or sends a
+// datagram lists itself here. Miss one and its rings fill and stop, with nothing on the wire.
+#if PC_ENABLE_COAP || PC_ENABLE_DTLS || PC_ENABLE_STATSD || PC_ENABLE_UDP_TELEMETRY || PC_ENABLE_SNMP ||               \
+    PC_ENABLE_SNMP_TRAP || PC_ENABLE_SNMP_V3 || PC_ENABLE_SYSLOG || PC_ENABLE_FLOW_EXPORT || PC_ENABLE_PROVISIONING || \
+    PC_ENABLE_NTP_SERVER || PC_ENABLE_DNS_SERVER || PC_ENABLE_HTTP3
+#define PC_NEED_UDP 1
+#endif
+#ifndef PC_NEED_UDP
+#define PC_NEED_UDP 0
+#endif
 
 // ---------------------------------------------------------------------------
 // Full Authorization-header capture (internal)

@@ -150,7 +150,7 @@ size_t pc_statsd_format(char *out, size_t cap, const char *name, const char *val
 
 // ---------------------------------------------------------------------------
 // Emit helpers: render the value, then send via the transport UDP service. Host builds
-// send through pc_udp_sendto's stub + capture seam, so these are host-testable too.
+// send through Udp.client->sendto's stub + capture seam, so these are host-testable too.
 // ---------------------------------------------------------------------------
 
 // All StatsD client state, owned by one instance (internal linkage): destination host/port,
@@ -174,7 +174,7 @@ static void emit(const StatsdCtx *c, const char *name, const char *value, Statsd
     size_t n = pc_statsd_format(line, sizeof(line), name, value, type, rate, c->tags[0] ? c->tags : NULL);
     if (n)
     {
-        pc_udp_sendto(c->host, c->port, (const uint8_t *)line, n);
+        Udp.client->sendto(c->host, c->port, (const uint8_t *)line, n);
     }
 }
 
