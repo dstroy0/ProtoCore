@@ -496,9 +496,6 @@ from halves and is slower than the width it decomposes into"
  * @brief HttpRoute DMA transfers through the ingress/egress simulator (default on).
  *        Set to 0 to drive real silicon via the pc_dma_hw_* backend hooks.
  */
-#ifndef PC_DMA_SIMULATE
-#define PC_DMA_SIMULATE 1
-#endif
 
 #if PC_ENABLE_DMA && (PC_DMA_CHANNELS < 1 || PC_DMA_BUF_SIZE < 1)
 #error "ProtoCore: PC_DMA_CHANNELS and PC_DMA_BUF_SIZE must be >= 1"

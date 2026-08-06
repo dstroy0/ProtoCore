@@ -25,15 +25,6 @@
  * do the real work off the interrupt. pc_dma stays decoupled from the queue: it just
  * hands you the event.
  *
- * **Simulator (PC_DMA_SIMULATE, default on).** With no physical loopback wire the
- * transfers run through an in-memory model of the peripheral: pc_dma_sim_feed() injects
- * bytes as if they arrived on the RX line, pc_dma_sim_capture() reads back what egress
- * DMA "transmitted", and a channel opened with `loopback` feeds its own TX egress into
- * its RX ingress (an internal jumper). pc_dma_poll() advances the engine and fires the
- * completions. This exercises the entire ingress -> event -> (queue) -> handler and
- * produce -> egress pipeline identically on the host bench and on-device. It is the
- * shipped, tested backend; a real silicon driver plugs into pc_dma_hw_* when the flag
- * is 0 (see docs/KNOWN_LIMITATIONS.md).
  *
  * Zero-heap: PC_DMA_CHANNELS channels, each with 2x PC_DMA_BUF_SIZE RX + one TX
  * buffer + the simulator's ingress/egress staging, all static and compile-time sized.
@@ -136,25 +127,6 @@ void pc_dma_close(uint8_t ch);
  *        This is how the host and the on-device self-test step the pipeline.
  */
 void pc_dma_poll(void);
-
-#if PC_DMA_SIMULATE
-
-/**
- * @brief Simulator: inject @p len bytes as if they arrived on channel @p ch's RX line.
- *        Delivered as one or more RX events on the next pc_dma_poll().
- * @return true if staged; false if the ingress staging is full (fail-closed) or the
- *         channel is closed.
- */
-proto_bool pc_dma_sim_feed(uint8_t ch, const uint8_t *bytes, uint16_t len);
-
-/**
- * @brief Simulator: read back up to @p max bytes that channel @p ch transmitted via
- *        egress DMA. Consumes them from the capture buffer.
- * @return number of bytes copied into @p out.
- */
-uint16_t pc_dma_sim_capture(uint8_t ch, uint8_t *out, uint16_t max);
-
-#endif // PC_DMA_SIMULATE
 
 #endif // PC_ENABLE_DMA
 

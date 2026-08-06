@@ -9,6 +9,7 @@
 //
 // The env sizes PC_DMA_BUF_SIZE = 8, PC_DMA_CHANNELS = 2 (staging = 24).
 
+#include "../../../mocks/pc_dma_host.h"
 #include "mmgr/dma.h"
 #include <string.h>
 
@@ -125,7 +126,7 @@ void test_ingress_emits_rx_event()
 {
     TEST_ASSERT_TRUE(open_ch(0, PROTO_FALSE));
     const uint8_t msg[] = {'h', 'e', 'l', 'l', 'o'};
-    TEST_ASSERT_TRUE(pc_dma_sim_feed(0, msg, sizeof(msg)));
+    TEST_ASSERT_TRUE(pc_dma_host_feed(0, msg, sizeof(msg)));
     TEST_ASSERT_EQUAL_size_t(0, g_ev_n); // nothing until we pump the engine
     pc_dma_poll();
     TEST_ASSERT_EQUAL_size_t(1, count_dir(PC_DMA_RX));
@@ -142,7 +143,7 @@ void test_buffer_fills_then_partial_flush()
     {
         msg[i] = (uint8_t)i;
     }
-    TEST_ASSERT_TRUE(pc_dma_sim_feed(0, msg, sizeof(msg)));
+    TEST_ASSERT_TRUE(pc_dma_host_feed(0, msg, sizeof(msg)));
     pc_dma_poll();
     // one full-buffer completion + one partial idle-line flush
     TEST_ASSERT_EQUAL_size_t(2, count_dir(PC_DMA_RX));
@@ -161,7 +162,7 @@ void test_ping_pong_flips_buffer()
     {
         msg[i] = (uint8_t)(0x40 + i);
     }
-    TEST_ASSERT_TRUE(pc_dma_sim_feed(0, msg, sizeof(msg)));
+    TEST_ASSERT_TRUE(pc_dma_host_feed(0, msg, sizeof(msg)));
     pc_dma_poll();
     TEST_ASSERT_EQUAL_size_t(2, count_dir(PC_DMA_RX));
     // consecutive completions use different buffers (the engine flipped, not reused)
@@ -184,7 +185,7 @@ void test_egress_captures_tx()
     TEST_ASSERT_NULL(g_ev[0].ptr); // TX events carry no buffer
 
     uint8_t cap[16];
-    uint16_t n = pc_dma_sim_capture(0, cap, sizeof(cap));
+    uint16_t n = pc_dma_host_capture(0, cap, sizeof(cap));
     TEST_ASSERT_EQUAL_UINT16(4, n);
     TEST_ASSERT_EQUAL_MEMORY(out, cap, 4);
 }
@@ -229,21 +230,21 @@ void test_feed_fail_closed_when_full()
 {
     TEST_ASSERT_TRUE(open_ch(0, PROTO_FALSE));
     uint8_t big[PC_DMA_BUF_SIZE * 3 + 1] = {0};
-    TEST_ASSERT_FALSE(pc_dma_sim_feed(0, big, sizeof(big))); // past staging -> reject whole
+    TEST_ASSERT_FALSE(pc_dma_host_feed(0, big, sizeof(big))); // past staging -> reject whole
     uint8_t ok[PC_DMA_BUF_SIZE * 3] = {0};
-    TEST_ASSERT_TRUE(pc_dma_sim_feed(0, ok, sizeof(ok))); // exactly fits
+    TEST_ASSERT_TRUE(pc_dma_host_feed(0, ok, sizeof(ok))); // exactly fits
 }
 
 void test_closed_channel_is_inert()
 {
     const uint8_t x[] = {1, 2, 3};
-    TEST_ASSERT_FALSE(pc_dma_sim_feed(0, x, sizeof(x))); // never opened
+    TEST_ASSERT_FALSE(pc_dma_host_feed(0, x, sizeof(x))); // never opened
     TEST_ASSERT_FALSE(pc_dma_tx_submit(0, x, sizeof(x)));
     pc_dma_poll();
     TEST_ASSERT_EQUAL_size_t(0, g_ev_n);
     TEST_ASSERT_TRUE(open_ch(0, PROTO_FALSE));
     pc_dma_close(0);
-    TEST_ASSERT_FALSE(pc_dma_sim_feed(0, x, sizeof(x))); // closed again
+    TEST_ASSERT_FALSE(pc_dma_host_feed(0, x, sizeof(x))); // closed again
 }
 
 void test_two_channels_independent()
@@ -252,8 +253,8 @@ void test_two_channels_independent()
     TEST_ASSERT_TRUE(open_ch(1, PROTO_FALSE));
     const uint8_t a[] = {0xA0, 0xA1};
     const uint8_t b[] = {0xB0, 0xB1, 0xB2};
-    TEST_ASSERT_TRUE(pc_dma_sim_feed(0, a, sizeof(a)));
-    TEST_ASSERT_TRUE(pc_dma_sim_feed(1, b, sizeof(b)));
+    TEST_ASSERT_TRUE(pc_dma_host_feed(0, a, sizeof(a)));
+    TEST_ASSERT_TRUE(pc_dma_host_feed(1, b, sizeof(b)));
     pc_dma_poll();
     size_t ch0 = 0, ch1 = 0;
     for (size_t i = 0; i < g_ev_n; i++)
@@ -282,17 +283,17 @@ void test_channel_guard_subconditions()
     pc_dma_close(255); // out-of-range close is a no-op
     pc_dma_close(0);   // ensure channel 0 is closed
     uint8_t b[4] = {0};
-    TEST_ASSERT_FALSE(pc_dma_sim_feed(0, b, sizeof(b)));        // channel not open
-    TEST_ASSERT_EQUAL_UINT16(0, pc_dma_sim_capture(0, b, 4));   // channel not open
-    TEST_ASSERT_EQUAL_UINT16(0, pc_dma_sim_capture(255, b, 4)); // bad channel
+    TEST_ASSERT_FALSE(pc_dma_host_feed(0, b, sizeof(b)));        // channel not open
+    TEST_ASSERT_EQUAL_UINT16(0, pc_dma_host_capture(0, b, 4));   // channel not open
+    TEST_ASSERT_EQUAL_UINT16(0, pc_dma_host_capture(255, b, 4)); // bad channel
 
     // the remaining guard subconditions on sim_feed / tx_submit / sim_capture, each not
     // otherwise exercised: a bad channel id and a null pointer are independent reasons to
     // fail closed, so both must be hit on their own (not only in combination).
-    TEST_ASSERT_FALSE(pc_dma_sim_feed(PC_DMA_CHANNELS, b, sizeof(b)));  // bad channel
-    TEST_ASSERT_FALSE(pc_dma_sim_feed(0, NULL, sizeof(b)));             // null bytes, valid channel
+    TEST_ASSERT_FALSE(pc_dma_host_feed(PC_DMA_CHANNELS, b, sizeof(b))); // bad channel
+    TEST_ASSERT_FALSE(pc_dma_host_feed(0, NULL, sizeof(b)));            // null bytes, valid channel
     TEST_ASSERT_FALSE(pc_dma_tx_submit(PC_DMA_CHANNELS, b, sizeof(b))); // bad channel
-    TEST_ASSERT_EQUAL_UINT16(0, pc_dma_sim_capture(0, NULL, 4));        // null out, valid channel
+    TEST_ASSERT_EQUAL_UINT16(0, pc_dma_host_capture(0, NULL, 4));       // null out, valid channel
 }
 
 int main()
