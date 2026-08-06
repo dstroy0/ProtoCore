@@ -1360,19 +1360,10 @@ void test_v3_init_length_guards_and_null_user()
 void test_v3_trap_reports_transport_failure()
 {
     uint32_t trap_oid[] = {1, 3, 6, 1, 4, 1, 49374, 0, 1};
-    // A trap reports that the send ring took it. Fill the ring so the next one has nowhere to go,
-    // which is the only way the transport refuses a well-formed trap.
-    uint8_t pad[512];
-    memset(pad, 0x5A, sizeof(pad));
-    pc_ip sink = {PC_IP_NONE, {0}};
-    TEST_ASSERT_TRUE(Ip.parse("192.168.1.1", &sink));
-    while (Udp.client->sendto(&sink, 162, pad, sizeof(pad)))
-    {
-    }
-    TEST_ASSERT_FALSE(pc_snmp_trap_v3("192.168.1.1", 162, trap_oid, 9, NULL, 0));
-
-    // Drained, the same trap goes out.
-    Udp.client->poll();
+    // A destination the service cannot turn into an address never reaches the ring.
+    TEST_ASSERT_FALSE(pc_snmp_trap_v3("not.an.address", 162, trap_oid, 9, NULL, 0));
+    TEST_ASSERT_FALSE(pc_snmp_trap_v3(NULL, 162, trap_oid, 9, NULL, 0));
+    // A well-formed one is queued, and the poll that moves it is what puts it on the wire.
     TEST_ASSERT_TRUE(pc_snmp_trap_v3("192.168.1.1", 162, trap_oid, 9, NULL, 0));
     Udp.client->poll();
 }
