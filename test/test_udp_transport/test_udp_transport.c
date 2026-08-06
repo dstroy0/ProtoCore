@@ -11,6 +11,15 @@
 
 #include <unity.h>
 
+// The sends take an address; a test spelling a literal turns it into one here.
+static const pc_ip *addr(const char *s)
+{
+    static pc_ip a;
+    a = (pc_ip){PC_IP_NONE, {0}};
+    Ip.parse(s, &a);
+    return &a;
+}
+
 static int g_calls = 0;
 static char g_last[64];
 static size_t g_last_len = 0;
@@ -248,12 +257,12 @@ void test_send_paths_are_captured()
 
     Udp.client->capture_enable();
     TEST_ASSERT_NULL(Udp.client->captured());
-    TEST_ASSERT_TRUE(Udp.client->sendto("192.168.1.10", 514, (const uint8_t *)"syslog!", 7));
+    TEST_ASSERT_TRUE(Udp.client->sendto(addr("192.168.1.10"), 514, (const uint8_t *)"syslog!", 7));
     Udp.client->poll();
     TEST_ASSERT_EQUAL_UINT(7, (unsigned)Udp.client->captured_len());
 
     Udp.listener->capture_reset();
-    TEST_ASSERT_TRUE(Udp.listener->sendto(5683, "192.168.1.20", 5683, (const uint8_t *)"notify", 6));
+    TEST_ASSERT_TRUE(Udp.listener->sendto(5683, addr("192.168.1.20"), 5683, (const uint8_t *)"notify", 6));
     Udp.listener->poll();
     TEST_ASSERT_EQUAL_UINT(6, (unsigned)Udp.listener->captured_len());
 }
@@ -265,7 +274,7 @@ void test_sendto_result_knob_acts_at_the_wire()
     Udp.listener->capture_enable();
     TEST_ASSERT_TRUE(Udp.listener->listen(5683, on_datagram, NULL));
     Udp.listener->set_sendto_result(PROTO_FALSE);
-    TEST_ASSERT_TRUE(Udp.listener->sendto(5683, "192.168.1.20", 5683, (const uint8_t *)"x", 1)); // queued
+    TEST_ASSERT_TRUE(Udp.listener->sendto(5683, addr("192.168.1.20"), 5683, (const uint8_t *)"x", 1)); // queued
     Udp.listener->poll();
     Udp.listener->set_sendto_result(PROTO_TRUE); // restore for any test that runs after this one
 }
@@ -276,10 +285,10 @@ void test_send_rejects_null_zero_and_oversized_payload()
 {
     Udp.listener->capture_enable();
     TEST_ASSERT_TRUE(Udp.listener->listen(6100, on_datagram, NULL));
-    TEST_ASSERT_FALSE(Udp.listener->sendto(6100, "192.168.1.20", 6100, NULL, 5));                 // null data
-    TEST_ASSERT_FALSE(Udp.listener->sendto(6100, "192.168.1.20", 6100, (const uint8_t *)"x", 0)); // zero length
+    TEST_ASSERT_FALSE(Udp.listener->sendto(6100, addr("192.168.1.20"), 6100, NULL, 5));                 // null data
+    TEST_ASSERT_FALSE(Udp.listener->sendto(6100, addr("192.168.1.20"), 6100, (const uint8_t *)"x", 0)); // zero length
     static uint8_t big[3000] = {0}; // larger than one ring frame's payload
-    TEST_ASSERT_FALSE(Udp.listener->sendto(6100, "192.168.1.20", 6100, big, sizeof(big)));
+    TEST_ASSERT_FALSE(Udp.listener->sendto(6100, addr("192.168.1.20"), 6100, big, sizeof(big)));
     TEST_ASSERT_FALSE(Udp.listener->reply(NULL, (const uint8_t *)"x", 1)); // no peer token
     Udp.listener->poll();
     TEST_ASSERT_NULL(Udp.listener->captured()); // none of the above landed anything

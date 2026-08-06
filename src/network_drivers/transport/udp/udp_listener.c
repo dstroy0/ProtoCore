@@ -592,20 +592,14 @@ static proto_bool peer_addr_of(const struct pc_udp_peer *peer, char *ip_out, siz
     return PROTO_TRUE;
 }
 
-static proto_bool send_from(uint16_t listen_port, const char *dst_ip, uint16_t dst_port, const uint8_t *data,
-                            size_t len)
+static proto_bool send_from(uint16_t listen_port, const pc_ip *dst, uint16_t dst_port, const uint8_t *data, size_t len)
 {
     UdpBind *b = find_bind(listen_port);
-    if (b == NULL)
+    if (b == NULL || dst == NULL || dst->type == PC_IP_NONE)
     {
         return PROTO_FALSE;
     }
-    pc_ip dst = {PC_IP_NONE, {0}};
-    if (!Ip.parse(dst_ip, &dst))
-    {
-        return PROTO_FALSE;
-    }
-    return queue_tx(b, &dst, dst_port, data, len);
+    return queue_tx(b, dst, dst_port, data, len);
 }
 
 static size_t sndbuf_of(uint16_t listen_port)

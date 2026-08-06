@@ -153,11 +153,12 @@ size_t pc_statsd_format(char *out, size_t cap, const char *name, const char *val
 // send through Udp.client->sendto's stub + capture seam, so these are host-testable too.
 // ---------------------------------------------------------------------------
 
-// All StatsD client state, owned by one instance (internal linkage): destination host/port,
+// All StatsD client state, owned by one instance (internal linkage): destination address/port,
 // global tags, and the ready flag, grouped so it is one named owner, unreachable cross-TU.
+// The destination is an address, resolved at begin(): a metric call is a format and a queue.
 typedef struct
 {
-    char host[64];
+    pc_ip dst;
     uint16_t port;
     char tags[96];
     proto_bool ready;
@@ -174,7 +175,7 @@ static void emit(const StatsdCtx *c, const char *name, const char *value, Statsd
     size_t n = pc_statsd_format(line, sizeof(line), name, value, type, rate, c->tags[0] ? c->tags : NULL);
     if (n)
     {
-        Udp.client->sendto(c->host, c->port, (const uint8_t *)line, n);
+        Udp.client->sendto(&c->dst, c->port, (const uint8_t *)line, n);
     }
 }
 
@@ -185,8 +186,11 @@ void pc_statsd_begin(const char *host, uint16_t port, const char *global_tags)
         s_statsd.ready = PROTO_FALSE;
         return;
     }
-    strncpy(s_statsd.host, host, sizeof(s_statsd.host) - 1);
-    s_statsd.host[sizeof(s_statsd.host) - 1] = '\0';
+    if (!Ip.parse(host, &s_statsd.dst))
+    {
+        s_statsd.ready = PROTO_FALSE;
+        return;
+    }
     s_statsd.port = port ? port : PC_STATSD_PORT;
     if (global_tags)
     {

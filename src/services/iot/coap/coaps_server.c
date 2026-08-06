@@ -151,7 +151,11 @@ static proto_bool serialize_peer(const char *ip, uint16_t port, uint8_t out[PC_C
 static void server_send(const char *ip, uint16_t port, const uint8_t *data, size_t len)
 {
 #if PROTOCORE_HOT
-    Udp.listener->sendto(s_coaps.port, ip, port, data, len);
+    pc_ip dst = {PC_IP_NONE, {0}};
+    if (Ip.parse(ip, &dst))
+    {
+        Udp.listener->sendto(s_coaps.port, &dst, port, data, len);
+    }
 #else
     if (s_coaps.out_sink)
     {

@@ -13,6 +13,10 @@
  * Both halves own their stack plumbing (`udp_pcb`, `pbuf`) and hand out framed rings instead, so no
  * stack type reaches a layer above this one.
  *
+ * Every send here takes a `pc_ip`, never a name or its text. A caller that starts from either turns
+ * it into an address once, where it enters, and keeps that: resolving a name or parsing a string
+ * per datagram puts that work on the send path of every call.
+ *
  * Reached as `Udp.listener->listen(...)` and `Udp.client->sendto(...)`. The halves are pointers
  * rather than values because a table in one translation unit is not a constant expression in
  * another, so a by-value member could not be initialized from here.

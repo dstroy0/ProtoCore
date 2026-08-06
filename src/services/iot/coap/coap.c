@@ -947,7 +947,9 @@ void pc_coap_notify(const char *path)
             n = emit_options_payload(s_coap.tx, sizeof(s_coap.tx), n, cresp.code, (int32_t)s_coap.obs[i].seq,
                                      cresp.content_format, -1, -1, cresp.payload, cresp.payload_len);
         }
-        if (!n || !Udp.listener->sendto(s_coap.port, s_coap.obs[i].ip, s_coap.obs[i].port, s_coap.tx, n))
+        pc_ip dst = {PC_IP_NONE, {0}};
+        if (!n || !Ip.parse(s_coap.obs[i].ip, &dst) ||
+            !Udp.listener->sendto(s_coap.port, &dst, s_coap.obs[i].port, s_coap.tx, n))
         {
             s_coap.obs[i].active = PROTO_FALSE; // unreachable -> drop the observer
         }

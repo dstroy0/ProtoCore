@@ -120,7 +120,11 @@ static proto_bool cid_eq(const uint8_t *a, uint8_t alen, const uint8_t *b, uint8
 static void server_send(const char *ip, uint16_t port, const uint8_t *data, size_t len)
 {
 #if PROTOCORE_HOT
-    Udp.listener->sendto(s_quic.port, ip, port, data, len);
+    pc_ip dst = {PC_IP_NONE, {0}};
+    if (Ip.parse(ip, &dst))
+    {
+        Udp.listener->sendto(s_quic.port, &dst, port, data, len);
+    }
 #else
     if (s_quic.out_sink)
     {

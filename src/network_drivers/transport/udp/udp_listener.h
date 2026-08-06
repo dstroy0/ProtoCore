@@ -26,6 +26,7 @@
 #define PROTOCORE_UDP_LISTENER_H
 
 #include "protocore_config.h"
+#include "shared_primitives/ip.h" // pc_ip: the destination, already an address
 
 PROTO_BEGIN_DECLS
 
@@ -72,7 +73,7 @@ typedef struct
     void (*poll)(void);
     proto_bool (*reply)(const struct pc_udp_peer *peer, const uint8_t *data, size_t len);
     proto_bool (*peer_addr)(const struct pc_udp_peer *peer, char *ip_out, size_t ip_cap, uint16_t *port_out);
-    proto_bool (*sendto)(uint16_t listen_port, const char *dst_ip, uint16_t dst_port, const uint8_t *data, size_t len);
+    proto_bool (*sendto)(uint16_t listen_port, const pc_ip *dst, uint16_t dst_port, const uint8_t *data, size_t len);
     size_t (*sndbuf)(uint16_t listen_port);
 #if !PROTOCORE_HOT
     // Host test seams. inject() frames a datagram into the addressed slot's receive ring, the same

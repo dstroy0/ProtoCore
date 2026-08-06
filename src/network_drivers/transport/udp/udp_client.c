@@ -140,17 +140,13 @@ static void drain(void)
 // The bodies behind the table
 // ---------------------------------------------------------------------------
 
-static proto_bool send_to(const char *dst_ip, uint16_t dst_port, const uint8_t *data, size_t len)
+static proto_bool send_to(const pc_ip *dst, uint16_t dst_port, const uint8_t *data, size_t len)
 {
-    if (data == NULL || len == 0 || len > PC_UDP_RX_BUF_SIZE)
+    if (data == NULL || len == 0 || len > PC_UDP_RX_BUF_SIZE || dst == NULL || dst->type == PC_IP_NONE)
     {
         return PROTO_FALSE;
     }
-    pc_udp_dgram d = {{PC_IP_NONE, {0}}, dst_port, (uint16_t)len};
-    if (!Ip.parse(dst_ip, &d.addr))
-    {
-        return PROTO_FALSE;
-    }
+    pc_udp_dgram d = {*dst, dst_port, (uint16_t)len};
     return pc_udp_dgram_put(s_cli.tx, PC_UDP_TX_RING, &s_cli.tx_head, &s_cli.tx_tail, s_cli.whdr, &d, data, len);
 }
 

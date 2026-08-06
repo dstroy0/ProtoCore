@@ -34,6 +34,7 @@ static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
 
 static const char *GATEWAY_IP = ""; // e.g. "192.168.1.1"; leave "" to only build + self-parse
+static pc_ip g_gateway;                   // GATEWAY_IP, parsed once in setup()
 
 static uint8_t msg[512];
 
@@ -173,7 +174,7 @@ static void run_once()
         Serial.println("[ike] could not bind UDP 500");
         return;
     }
-    if (!Udp.listener->sendto(PC_IKEV2_PORT, GATEWAY_IP, PC_IKEV2_PORT, msg, n))
+    if (!Udp.listener->sendto(PC_IKEV2_PORT, &g_gateway, PC_IKEV2_PORT, msg, n))
     {
         Serial.println("[ike] send failed");
         return;
@@ -183,6 +184,8 @@ static void run_once()
 
 void setup()
 {
+    Ip.parse(GATEWAY_IP, &g_gateway); // the tag becomes an address once, here
+
     Serial.begin(115200);
     init_wifi_physical(SSID, PASSWORD);
     while (!wifi_ready())

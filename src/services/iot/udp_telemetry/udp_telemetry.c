@@ -185,7 +185,7 @@ proto_bool pc_line_ok(const pc_line *l)
 // endpoint and the begun flag, grouped so it is one named owner, unreachable cross-TU.
 typedef struct
 {
-    char ip[16];
+    pc_ip collector; // parsed once by begin(); a cast is a build and a queue
     uint16_t port;
     proto_bool begun;
 } UdpTelemetryCtx;
@@ -193,10 +193,8 @@ static UdpTelemetryCtx s_ut;
 
 void pc_udp_telemetry_begin(const char *collector_ip, uint16_t port)
 {
-    strncpy(s_ut.ip, collector_ip ? collector_ip : "", sizeof(s_ut.ip) - 1);
-    s_ut.ip[sizeof(s_ut.ip) - 1] = '\0';
+    s_ut.begun = Ip.parse(collector_ip, &s_ut.collector);
     s_ut.port = port;
-    s_ut.begun = PROTO_TRUE;
 }
 
 proto_bool pc_udp_telemetry_send(const char *data, size_t len)

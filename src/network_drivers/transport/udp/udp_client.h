@@ -25,13 +25,14 @@
 #define PROTOCORE_UDP_CLIENT_H
 
 #include "protocore_config.h"
+#include "shared_primitives/ip.h" // pc_ip: the destination, already an address
 
 PROTO_BEGIN_DECLS
 
 /**
  * @brief The sending side of UDP.
  *
- * @var UdpClientNs::sendto  queue a datagram to a dotted-quad address and port
+ * @var UdpClientNs::sendto  queue a datagram to an address and port
  * @var UdpClientNs::poll    move queued frames to the wire
  * @var UdpClientNs::sndbuf  bytes the send ring can still take
  *
@@ -41,7 +42,7 @@ PROTO_BEGIN_DECLS
  */
 typedef struct
 {
-    proto_bool (*sendto)(const char *dst_ip, uint16_t dst_port, const uint8_t *data, size_t len);
+    proto_bool (*sendto)(const pc_ip *dst, uint16_t dst_port, const uint8_t *data, size_t len);
     void (*poll)(void);
     size_t (*sndbuf)(void);
 #if !PROTOCORE_HOT
