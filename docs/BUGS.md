@@ -8,6 +8,63 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ---
 
+## The QUIC server acknowledges every packet number it never received
+
+- **Status:** OPEN, found by a spec audit of the QUIC engine against RFC 9000.
+- **Symptom:** a peer that skips packet numbers to probe for this sees them acknowledged and is
+  entitled to close the connection with PROTOCOL_VIOLATION (RFC 9000 section 21.4).
+- **Root cause:** `quic_conn.c:452` builds every ACK as
+  `pc_quic_build_ack(buf, cap, s->largest_rx, 0, s->largest_rx)`. Per section 19.3.1 the smallest
+  acknowledged is `largest - ack_range`, which is 0, so the frame claims one contiguous range from
+  packet 0 upward. The engine drops undecryptable packets at `:396` and silently ignores
+  out-of-window CRYPTO and STREAM data, so the claim is routinely false.
+- **Why nothing caught it:** no test decodes the ACK range fields. The suites only assert that an
+  ACK frame is present.
+- **Fix:** not applied.
+
+---
+
+## Six QUIC and HTTP/3 conformance checks the RFC requires are absent
+
+- **Status:** OPEN, found in the same audit. Grouped because each is one missing guard.
+- **The set:**
+    - The Fixed Bit (0x40) is never tested on either header form (`quic_packet.c:30` and `:85`).
+      RFC 9000 section 17.2 requires a packet with it clear to be discarded.
+    - An Initial carried in a datagram under 1200 bytes is accepted, and outbound ack-eliciting
+      Initials are not padded to 1200. RFC 9000 section 14.1 requires both. `test_quic_server.c:517`
+      builds a ~60-byte Initial and asserts it opens a connection, so the suite pins the gap.
+    - Server-only transport parameters from a client are accepted (`quic_tp.c:127`, `:182`):
+      original_destination_connection_id and retry_source_connection_id are applied,
+      stateless_reset_token and preferred_address ignored. RFC 9000 section 18.2 requires
+      TRANSPORT_PARAMETER_ERROR. This parser only ever runs server-side.
+    - `initial_max_streams_*` has no 2^60 ceiling (`quic_tp.c:164`), against section 4.6.
+    - An ACK whose first range exceeds the largest acknowledged is accepted (`quic_frame.c:42`); the
+      parser skips ranges without computing them, so the negative-packet-number check section 19.3.1
+      requires never runs.
+    - SETTINGS identifier 0x00 is silently ignored (`h3_frame.c:93`), against RFC 9114 section
+      7.2.4.1, which requires H3_SETTINGS_ERROR. The switch rejects 0x02 to 0x05 only.
+    - The HTTP/3 control stream does not enforce SETTINGS-first, single-control-stream, or
+      one-SETTINGS-only (RFC 9114 section 6.2.1, 7.2.4). `test_h3_conn.c:502` asserts the opposite,
+      that a GOAWAY arriving first is consumed and ignored.
+- **Also:** `pc_quic_build_version_negotiation` has no caller. Sending a Version Negotiation packet
+  is the server's obligation under RFC 9000 section 6.1; `quic_conn.c:325` drops unknown versions
+  and its comment says version negotiation is a client concern, which is backwards.
+- **Fix:** none applied.
+
+---
+
+## A secure-arena borrow in test_quic_crypto is marked and never released
+
+- **Status:** OPEN, found in the same audit.
+- **Root cause:** `test_quic_crypto.c:113` takes `size_t scope = pc_secure_mark();`, never uses the
+  value and never calls `pc_secure_release(scope)`, while `pc_aes128_wants()` at `:118` borrows from
+  the secure arena. The borrow is held for the life of the process, and the variable is an
+  unused-variable warning.
+- **Blast radius:** the test binary only.
+- **Fix:** not applied.
+
+---
+
 ## Content-Length wraps, so an oversized value frames a short body and desynchronizes the connection
 
 - **Status:** OPEN, found by a spec audit of the HTTP/1.1 parser. Verified in source.

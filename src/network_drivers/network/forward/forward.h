@@ -209,8 +209,8 @@ typedef struct
     proto_bool (*add_if)(uint8_t if_id, pc_if_kind kind, pc_if_send_fn send, void *ctx);
     proto_bool (*add_rule)(uint8_t src_if, uint8_t dst_if, pc_fwd_action action, uint16_t rate_cap_per_sec);
     void (*acl_set_default)(pc_fwd_action action);
-    proto_bool (*acl_add)(uint8_t src_if, uint16_t offset, const uint8_t *pattern, const uint8_t *mask,
-                          uint8_t patlen, pc_fwd_action action);
+    proto_bool (*acl_add)(uint8_t src_if, uint16_t offset, const uint8_t *pattern, const uint8_t *mask, uint8_t patlen,
+                          pc_fwd_action action);
     proto_bool (*route_add)(uint8_t src_if, uint16_t offset, const uint8_t *pattern, const uint8_t *mask,
                             uint8_t patlen, uint8_t egress_if, uint16_t rate_cap_per_sec);
 #if PC_FWD_INSPECT
