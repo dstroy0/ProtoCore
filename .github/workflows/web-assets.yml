@@ -26,4 +26,4 @@ jobs:
       # Fails if src/network_drivers/application/web.{h,cpp} are stale
       # relative to the source documents under web_assets/input/.
       - name: Verify generated assets match web_assets/input
-        run: python web_assets/wizard/build_assets.py check
+        run: python -m web_assets.wizard.build_assets check

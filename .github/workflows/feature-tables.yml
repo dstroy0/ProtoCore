@@ -77,11 +77,11 @@ jobs:
       # tools/ci_tooling/assets/render_theme_previews.cjs; the favicon tarballs by tools/ci_tooling/assets/pack_favicons.sh.)
       - name: Regenerate theme + favicon libraries
         run: |
-          python web_assets/wizard/gen_themes.py
-          python web_assets/wizard/gen_themes.py gallery
-          python web_assets/wizard/gen_theme_blobs.py
-          python web_assets/wizard/gen_favicons.py
-          python web_assets/wizard/gen_favicons.py gallery
+          python -m web_assets.wizard.gen_themes
+          python -m web_assets.wizard.gen_themes gallery
+          python -m web_assets.wizard.gen_theme_blobs
+          python -m web_assets.wizard.gen_favicons
+          python -m web_assets.wizard.gen_favicons gallery
 
       # Regenerate each example's Arduino build_opt.h from its README build_flags so the
       # examples keep building unmodified in the Arduino IDE.

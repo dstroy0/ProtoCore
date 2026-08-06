@@ -27,22 +27,10 @@ import os
 import re
 import sys
 
+from tools.ci_tooling.lib import doc_region as dr
+
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-
-
-# Repo root, located by marker rather than by counting `..` levels: these scripts
-# have moved once already (src/web/wizard -> web_assets/wizard) and level-counting
-# silently retargeted them outside the tree.
-def _repo_root(start):
-    d = os.path.abspath(start)
-    while d != os.path.dirname(d):
-        if os.path.exists(os.path.join(d, "library.json")):
-            return d
-        d = os.path.dirname(d)
-    raise RuntimeError("repo root not found (no library.json above %s)" % start)
-
-
-REPO_ROOT = _repo_root(SCRIPT_DIR)
+REPO_ROOT = dr.repo_root(__file__)
 
 INPUT_DIR = os.path.normpath(os.path.join(SCRIPT_DIR, "..", "input"))
 THEMES_DIR = os.path.normpath(os.path.join(SCRIPT_DIR, "..", "themes"))
@@ -347,7 +335,6 @@ def load_assets():
 # ---------------------------------------------------------------------------
 # Code generation
 # ---------------------------------------------------------------------------
-
 
 # All assets land in one translation unit (web.{h,cpp}). The source file's
 # extension only selects lint/transforms - it does NOT name an output file, so a

@@ -9,9 +9,9 @@ without hand-drawing each. Each favicon is written as a crisp SVG under web_asse
 step (tools/ci_tooling/assets/pack_favicons.sh) rasterizes each to the standard sizes (16/32/48/180/192/512 + .ico) and
 packs a ready-to-drop-in tarball, plus a preview PNG for the gallery.
 
-    python web_assets/wizard/gen_favicons.py            # write web_assets/favicons/*.svg
-    python web_assets/wizard/gen_favicons.py --check     # CI: fail if stale
-    python web_assets/wizard/gen_favicons.py --list       # print every favicon name
+    python -m web_assets.wizard.gen_favicons            # write web_assets/favicons/*.svg
+    python -m web_assets.wizard.gen_favicons --check     # CI: fail if stale
+    python -m web_assets.wizard.gen_favicons --list       # print every favicon name
 """
 
 import os
