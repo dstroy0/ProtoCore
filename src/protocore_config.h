@@ -846,7 +846,7 @@ from halves and is slower than the width it decomposes into"
 // ---------------------------------------------------------------------------
 //
 // Bring up a wired Ethernet link (an RMII PHY: LAN8720 / TLK110 / RTL8201 / DP83848) so the
-// server runs over Ethernet instead of (or alongside) Wi-Fi. init_eth_physical() is a thin
+// server runs over Ethernet instead of (or alongside) Wi-Fi. Physical.eth->init() is a thin
 // wrapper over the Arduino ETH library; the PHY pins / type / clock come from the standard
 // ETH_PHY_* build flags for your board (see example Ethernet). The egress reporting
 // (pc_net_egress -> PC_IFACE_ETH) and the per-route interface classifier already handle a
@@ -860,7 +860,7 @@ from halves and is slower than the width it decomposes into"
 
 // W5500 SPI Ethernet (arduino-esp32 3.x only). Set PC_ETH_W5500=1 to select the SPI PHY over the RMII
 // default; the pins below are the ESP32-S3-DevKitC wiring (HSPI / SPI3). The 2.x ETH library has no W5500,
-// so init_eth_physical() falls back to the RMII ETH.begin() when the core is older.
+// so Physical.eth->init() falls back to the RMII ETH.begin() when the core is older.
 #ifndef PC_ETH_W5500
 #define PC_ETH_W5500 0
 #endif
@@ -892,7 +892,7 @@ from halves and is slower than the width it decomposes into"
 /**
  * @brief Enable IPv6 on the network interface (dual-stack). Default off.
  *
- * When set, init_ipv6_physical() turns on IPv6 for the Wi-Fi netif (SLAAC link-local plus any
+ * When set, Physical.ip6->init() turns on IPv6 for the Wi-Fi netif (SLAAC link-local plus any
  * router-advertised global address). The TCP and UDP listeners already bind IPADDR_TYPE_ANY, so
  * the server accepts IPv6 connections the moment the interface has a v6 address; the pc_ip core
  * (shared_primitives/ip.h) parses / formats / classifies both families. Requires an

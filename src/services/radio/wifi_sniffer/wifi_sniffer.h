@@ -160,7 +160,7 @@ proto_bool pc_wifi_survey_best(const WifiSurvey *s, uint8_t exclude_channel, uin
 /**
  * @brief Start a live channel-hopping sniff across [first_chan, last_chan].
  *
- * Requires the radio to be up (init_wifi_physical() or init_wifi_radio_physical()).
+ * Requires the radio to be up (Physical.wifi->init() or Physical.wifi->init_radio()).
  * Resets the stats + survey.
  * @return true if capture started.
  */

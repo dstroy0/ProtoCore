@@ -122,7 +122,7 @@ proto_bool pc_promisc_begin(uint8_t channel, pc_promisc_sink_fn sink)
     s_promisc.sink = sink;
     // pc_promisc_sink_fn and pc_phy_frame_fn are the same neutral shape, so the sink goes
     // straight down; the vendor packet struct is unwrapped in the backend.
-    if (!pc_phy_monitor_begin(channel, sink))
+    if (!Radio.monitor_begin(channel, sink))
     {
         s_promisc.sink = NULL;
         return PROTO_FALSE;
@@ -132,12 +132,12 @@ proto_bool pc_promisc_begin(uint8_t channel, pc_promisc_sink_fn sink)
 
 void pc_promisc_set_channel(uint8_t channel)
 {
-    pc_phy_monitor_set_channel(channel);
+    Radio.monitor_set_channel(channel);
 }
 
 void pc_promisc_end(void)
 {
-    pc_phy_monitor_end();
+    Radio.monitor_end();
     s_promisc.sink = NULL;
 }
 

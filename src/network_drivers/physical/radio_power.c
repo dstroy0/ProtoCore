@@ -12,8 +12,6 @@
 #include "network_drivers/physical/radio_power.h"
 #include "network_drivers/physical/physical.h"
 
-#if PC_ENABLE_RADIO_POWER
-
 // The module's storage, whose layout radio_power.h only declares. Present on both arms so the
 // module's shape does not change with the build.
 struct RadioCtx
@@ -117,6 +115,18 @@ static void busy_release(void)
 
 #endif // PROTOCORE_HOT
 
-const RadioNs Radio = {&s_radio, power, ps_name, ps_get, busy_hold, busy_release};
-
-#endif // PC_ENABLE_RADIO_POWER
+const RadioNs Radio = {
+#if PC_ENABLE_RADIO_POWER
+    &s_radio,
+    power,
+    ps_name,
+    ps_get,
+    busy_hold,
+    busy_release,
+#endif
+    pc_phy_ps_set,
+    pc_phy_ps_get,
+    pc_phy_tx_power_set,
+    pc_phy_monitor_begin,
+    pc_phy_monitor_set_channel,
+    pc_phy_monitor_end};

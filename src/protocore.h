@@ -493,7 +493,7 @@ typedef size_t (*ChunkSource)(uint8_t *buf, size_t cap, void *ctx);
 //
 // Usage:
 //   void handle_api(uint8_t slot_id, HttpReq *req) { send_text(slot_id, 200, "application/json", "{}"); }
-//   void setup()  { init_wifi_physical("SSID", "PW"); on("/api", HTTP_GET, handle_api); begin(80); }
+//   void setup()  { Physical.wifi->init("SSID", "PW"); on("/api", HTTP_GET, handle_api); begin(80); }
 //   void loop()   { handle(); }
 
 /**
@@ -837,7 +837,7 @@ void on_regex(const char *pattern, HttpMethod method, Handler callback);
  *
  * Each accepted connection is tagged pc_iface::PC_IFACE_AP when its local IP equals
  * @p ap_ip, else pc_iface::PC_IFACE_STA. Call once after starting the softAP, e.g.
- * `server.set_ap_ip(pc_net_ap_ip())` (already network byte order).
+ * `server.set_ap_ip(Physical.wifi->ap_ip())` (already network byte order).
  * Without it, every connection is treated as pc_iface::PC_IFACE_STA.
  *
  * @param ap_ip softAP IPv4 address in network byte order (0 to clear).

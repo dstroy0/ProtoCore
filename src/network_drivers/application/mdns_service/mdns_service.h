@@ -25,7 +25,7 @@ PROTO_BEGIN_DECLS
 /**
  * @brief Start mDNS responder and advertise an HTTP service.
  *
- * Call once after the WiFi link is up (wifi_ready()) and after begin(). The
+ * Call once after the WiFi link is up (Physical.wifi->ready()) and after begin(). The
  * device becomes reachable at `<hostname>.local` and advertises
  * `_http._tcp` on @p http_port.
  *

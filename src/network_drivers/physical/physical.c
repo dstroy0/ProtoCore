@@ -13,6 +13,7 @@
  */
 
 #include "physical.h"
+#include "radio_power.h" // Radio: the layer carries the radio interface
 
 // Map the live egress IP to the interface it belongs to.
 pc_iface pc_net_classify_ip(uint32_t egress_ip, uint32_t sta_ip, uint32_t ap_ip)
@@ -148,3 +149,30 @@ uint8_t pc_net_channel(void)
 }
 
 #endif // !PC_PHYSICAL_HAS_BACKEND
+
+// The sub-tables and the layer handle. Defined here, in the vendor-neutral core, so they name
+// whichever backend the PC_VENDOR_* selector compiled: the stubs below, board_drivers/physical/esp,
+// or the mock. A caller reaches L1 through Physical and never through a vendor symbol.
+static const PhysicalWifiNs s_wifi = {
+    init_wifi_radio_physical, init_wifi_ap_physical, init_wifi_physical, wifi_ready, pc_net_ssid,
+    pc_net_channel,           pc_net_rssi,           pc_net_ap_ip};
+
+#if PC_ENABLE_ETHERNET
+static const PhysicalEthNs s_eth = {init_eth_physical, eth_ready};
+#endif
+
+#if PC_ENABLE_IPV6
+static const PhysicalIp6Ns s_ip6 = {init_ipv6_physical, net_global_ipv6, pc_ipv6_ready};
+#endif
+
+static const PhysicalLinkNs s_link = {pc_net_egress_mac, pc_net_classify_ip, pc_net_egress_ip, pc_net_egress,
+                                      pc_net_mac};
+
+const PhysicalNs Physical = {&s_wifi,
+#if PC_ENABLE_ETHERNET
+                             &s_eth,
+#endif
+#if PC_ENABLE_IPV6
+                             &s_ip6,
+#endif
+                             &s_link, &Radio};

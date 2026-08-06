@@ -229,6 +229,68 @@ void pc_phy_monitor_set_channel(uint8_t channel);
 /** @brief Leave monitor mode. */
 void pc_phy_monitor_end(void);
 
+/** @brief The Wi-Fi station and softAP interface. */
+typedef struct
+{
+    proto_bool (*init_radio)(uint8_t channel);
+    proto_bool (*init_ap)(const char *ssid, const char *password);
+    proto_bool (*init)(const char *ssid, const char *password);
+    proto_bool (*ready)(void);
+    size_t (*ssid)(char *out, size_t cap);
+    uint8_t (*channel)(void);
+    int8_t (*rssi)(void);
+    uint32_t (*ap_ip)(void);
+} PhysicalWifiNs;
+
+/** @brief The wired Ethernet interface. */
+typedef struct
+{
+    proto_bool (*init)(void);
+    proto_bool (*ready)(void);
+} PhysicalEthNs;
+
+/** @brief The IPv6 dual-stack interface. */
+typedef struct
+{
+    proto_bool (*init)(void);
+    proto_bool (*global_addr)(pc_ip *out);
+    proto_bool (*ready)(void);
+} PhysicalIp6Ns;
+
+/** @brief What the live link reports about itself. */
+typedef struct
+{
+    proto_bool (*egress_mac)(uint8_t out[6]);
+    pc_iface (*classify_ip)(uint32_t egress_ip, uint32_t sta_ip, uint32_t ap_ip);
+    uint32_t (*egress_ip)(void);
+    pc_iface (*egress)(void);
+    proto_bool (*mac)(uint8_t out[6]);
+} PhysicalLinkNs;
+
+/**
+ * @brief Layer 1: the interfaces this device actually has.
+ *
+ * A child is a pointer because a table in one translation unit is not a constant
+ * expression in another, the same reason Tcp carries conn, listener and client that way.
+ * A child behind a feature flag is declared under it, so the layer names only what the
+ * image contains.
+ */
+typedef struct
+{
+    const PhysicalWifiNs *wifi;
+#if PC_ENABLE_ETHERNET
+    const PhysicalEthNs *eth;
+#endif
+#if PC_ENABLE_IPV6
+    const PhysicalIp6Ns *ip6;
+#endif
+    const PhysicalLinkNs *link;
+    const RadioNs *radio;
+} PhysicalNs;
+
+/** @brief The one symbol this module exports. */
+extern const PhysicalNs Physical;
+
 PROTO_END_DECLS
 
 #endif
