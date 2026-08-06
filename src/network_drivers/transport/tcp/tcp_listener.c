@@ -810,8 +810,10 @@ const TcpListenerNs TcpListener = {listener_stop,
                                    listener_stop_all,
                                    listener_stop_dynamic,
                                    listener_enqueue,
+#if PC_WORKER_COUNT > 1
                                    listener_worker_queues_init,
                                    listener_worker_queue,
+#endif
                                    listener_accept_allowed,
                                    listener_accept_throttle_reset,
                                    listener_accept_allowed_ip,

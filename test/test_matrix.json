@@ -2388,6 +2388,9 @@
     "native_client": {
       "desc": "Outbound TCP client transport (network_drivers/transport/tcp/tcp_client.cpp), the pooled\nlayer-4 peer of tcp.cpp used by http_client / mqtt / ws_client / relay / smtp / ssh\nport-forward (PC_NEED_DET_CLIENT). The tcpip_api_call-marshaled lwIP path is\nARDUINO-only; on native this file compiles to just the !NEED stub (fail-closed: no\nlwIP on the host, so every call reports no connection), host-tested here for its own sake\nsince no other env's build_src_filter pulls this file in at all.",
       "src": [
+        "+<network_drivers/transport/tcp.c>",
+        "+<network_drivers/transport/tcp/tcp_conn.c>",
+        "+<network_drivers/transport/tcp/tcp_listener.c>",
         "+<network_drivers/transport/tcp/tcp_client.c>",
         "+<server/clock/clock.c>"
       ],

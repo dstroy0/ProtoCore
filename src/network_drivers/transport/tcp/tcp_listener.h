@@ -257,8 +257,11 @@ typedef struct
     void (*stop_all)(void);
     void (*stop_dynamic)(uint8_t idx);
     proto_bool (*enqueue)(uint8_t listener_id, const TcpEvt *evt);
+#if PC_WORKER_COUNT > 1
+    // One worker owns every slot at N=1, so there are no per-worker queues to name.
     void (*worker_queues_init)(void);
     pc_platform_queue (*worker_queue)(int worker_id);
+#endif
     proto_bool (*accept_allowed)(uint32_t now_ms);
     void (*accept_throttle_reset)(void);
     proto_bool (*accept_allowed_ip)(const pc_ip *ip, uint32_t now_ms);
