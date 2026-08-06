@@ -84,6 +84,14 @@ BANS = [
         2,
         "stdlib parse/util function; hand-roll it",
     ),
+    (
+        re.compile(r"\b(?:memcpy|memmove|memcmp|memchr|memset)\s*\("),
+        24,
+        "libc byte op; use mem.cpy / .move / .cmp / .chr / .set / .zero (mmgr/protomem.h), "
+        "or proto_raw_read / proto_raw_u16|u32|u64 (mmgr/rawmemcpy.h) for a raw unaligned move",
+    ),
+    (re.compile(r"#\s*include\s*<c?stdio\.h>"), 25, "<stdio.h>/<cstdio>; nothing in src/ formats"),
+    (re.compile(r"#\s*include\s*<c?string\.h>"), 25, "<string.h>/<cstring>; use mem.* / str.*"),
     (re.compile(r"\bauto\b"), 3, "auto keyword; spell the explicit type"),
     (re.compile(r"\bdelay\s*\("), 4, "delay(); use pcdelay(ms) from server/clock/clock.h"),
     (re.compile(r"\b(?:gmtime|localtime|ctime|asctime)\s*\("), 8, "non-reentrant time; use the _r form"),
@@ -282,10 +290,10 @@ def collect(argv):
     return [f for f in argv if pathlib.Path(f).suffix in EXTS and _norm(f).startswith("src/")]
 
 
-# Ban 18 carries no baseline any more: all 165 free-scope sites were converted, so it fails on
-# sight. Bans 19, 20 and 23 ride one while their sweeps run down to zero. Drop a number from this set
-# the moment its sweep reaches zero, and the ban fails on sight from then on.
-BASELINED = {19, 20, 23}
+# Bans 18 and 20 carry no baseline any more: their sweeps reached zero, so they fail on sight. Bans
+# 19, 23, 24 and 25 ride one while theirs run down. Drop a number from this set the moment its sweep
+# reaches zero, and the ban fails on sight from then on.
+BASELINED = {19, 23, 24, 25}
 BASELINE = bl.path_for(__file__, "sweep_baseline")
 
 
