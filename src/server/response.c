@@ -18,7 +18,7 @@
 #include "network_drivers/presentation/http/http.h"
 #include "shared_primitives/hex.h"  // pc_hex_u32 (chunk size-line writer)
 #include "shared_primitives/mime.h" // PC_MIME_*, mime tables
-#include "shared_primitives/runops.h" // proto_scan_nul: send_text measures its own body
+#include "mmgr/protostr.h" // str.len: send_text measures the body it was handed
 
 #if PC_ENABLE_METRICS || PC_ENABLE_STATS
 #include "network_drivers/application/web_assets.h" // PC_STATS_JSON / PC_METRICS_PROM (generated)
@@ -906,7 +906,7 @@ void send_text(uint8_t slot_id, int code, const char *content_type, const char *
     // a body is a handler's string of unstated capacity, and the bound is what keeps a missing
     // terminator from becoming an unbounded walk.
     send_bin(slot_id, code, content_type, (const uint8_t *)payload,
-             (payload != NULL) ? proto_scan_nul(payload, 0xFFFF) : 0);
+             (payload != NULL) ? str.len(payload, 0xFFFF) : 0);
 }
 
 void send_bin(uint8_t slot_id, int code, const char *content_type, const uint8_t *body, size_t body_len)
