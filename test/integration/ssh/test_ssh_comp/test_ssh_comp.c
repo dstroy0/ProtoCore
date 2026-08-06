@@ -3,7 +3,7 @@
 //
 // Integration test for SSH server-to-client compression WIRING (network_drivers/presentation/ssh):
 // the compression owner (ssh_comp) + its activation + the packet-layer compress path in
-// SshPacket.send. It drives the packet layer directly (before NEWKEYS, so no cipher) with compression
+// ssh_pkt_send. It drives the packet layer directly (before NEWKEYS, so no cipher) with compression
 // activated, then reconstructs the continuous zlib stream from the framed packets and decodes it via
 // Inflate.raw (validated vs Python zlib in test_inflate) - proving payloads are compressed on the
 // wire and the whole session forms one valid, context-takeover zlib stream.
@@ -36,13 +36,13 @@ static size_t g_orig_len;
 static uint8_t g_decoded[64 * 1024];
 static uint8_t g_iscratch[INFLATE_SCRATCH_SIZE];
 
-// Send one payload through SshPacket.send (unencrypted framing so the payload is visible), then pull
+// Send one payload through ssh_pkt_send (unencrypted framing so the payload is visible), then pull
 // the on-wire (compressed) payload out of the packet and accumulate it + the original.
 static void send_and_capture(const uint8_t *payload, size_t n)
 {
     uint8_t wire[SSH_WIRE_CAP];
     size_t wlen = 0;
-    int rc = SshPacket.send(0, payload, n, wire, &wlen, sizeof(wire));
+    int rc = ssh_pkt_send(0, payload, n, wire, &wlen, sizeof(wire));
     TEST_ASSERT_EQUAL_INT(0, rc);
 
     // Unencrypted packet: [packet_length(4)] [padding_length(1)] [payload...] [padding].
@@ -75,8 +75,8 @@ static void verify()
 
 void setUp()
 {
-    SshPacket.init(0);
-    SshComp.reset(0);
+    ssh_pkt_init(0);
+    ssh_comp_reset(0);
     g_stream_len = 0;
     g_orig_len = 0;
 }
@@ -87,40 +87,40 @@ void tearDown()
 // zlib@openssh.com is delayed: not active until USERAUTH_SUCCESS, then active for every packet.
 void test_delayed_activation()
 {
-    SshComp.set_s2c(0, SSH_COMP_ZLIB_DELAYED);
-    TEST_ASSERT_FALSE(SshComp.s2c_active(0)); // negotiated but not started
-    SshComp.on_newkeys(0);                    // must NOT start a delayed stream
-    TEST_ASSERT_FALSE(SshComp.s2c_active(0));
-    SshComp.on_auth_success(0); // now it starts
-    TEST_ASSERT_TRUE(SshComp.s2c_active(0));
+    ssh_comp_set_s2c(0, SSH_COMP_ZLIB_DELAYED);
+    TEST_ASSERT_FALSE(ssh_comp_s2c_active(0)); // negotiated but not started
+    ssh_comp_on_newkeys(0);                    // must NOT start a delayed stream
+    TEST_ASSERT_FALSE(ssh_comp_s2c_active(0));
+    ssh_comp_on_auth_success(0); // now it starts
+    TEST_ASSERT_TRUE(ssh_comp_s2c_active(0));
 }
 
 // zlib (non-delayed) starts right at NEWKEYS.
 void test_immediate_activation()
 {
-    SshComp.set_s2c(0, SSH_COMP_ZLIB);
-    TEST_ASSERT_FALSE(SshComp.s2c_active(0));
-    SshComp.on_newkeys(0);
-    TEST_ASSERT_TRUE(SshComp.s2c_active(0));
+    ssh_comp_set_s2c(0, SSH_COMP_ZLIB);
+    TEST_ASSERT_FALSE(ssh_comp_s2c_active(0));
+    ssh_comp_on_newkeys(0);
+    TEST_ASSERT_TRUE(ssh_comp_s2c_active(0));
 }
 
 // "none": never activates, whatever the events.
 void test_none_never_activates()
 {
-    SshComp.set_s2c(0, SSH_COMP_NONE);
-    SshComp.on_newkeys(0);
-    SshComp.on_auth_success(0);
-    TEST_ASSERT_FALSE(SshComp.s2c_active(0));
+    ssh_comp_set_s2c(0, SSH_COMP_NONE);
+    ssh_comp_on_newkeys(0);
+    ssh_comp_on_auth_success(0);
+    TEST_ASSERT_FALSE(ssh_comp_s2c_active(0));
 }
 
 // c2s zlib (immediate) activates at NEWKEYS and decompresses a real-zlib Z_PARTIAL_FLUSH packet
 // byte-exact through the ssh_comp glue (the inflate engine itself is covered in native_ssh_inflate).
 void test_c2s_activation_and_decompress()
 {
-    SshComp.set_c2s(0, SSH_COMP_ZLIB);
-    TEST_ASSERT_FALSE(SshComp.c2s_active(0));
-    SshComp.on_newkeys(0);
-    TEST_ASSERT_TRUE(SshComp.c2s_active(0));
+    ssh_comp_set_c2s(0, SSH_COMP_ZLIB);
+    TEST_ASSERT_FALSE(ssh_comp_c2s_active(0));
+    ssh_comp_on_newkeys(0);
+    TEST_ASSERT_TRUE(ssh_comp_c2s_active(0));
 
     // First packet of a real-zlib stream (compressobj level 6, windowBits 15, Z_PARTIAL_FLUSH).
     static const uint8_t comp0[42] = {120, 156, 114, 119, 13,  81,  208, 87,  240, 8,   9,   9,   208, 55,
@@ -131,33 +131,33 @@ void test_c2s_activation_and_decompress()
                                        99, 101, 46, 108, 111, 99,  97,  108, 13, 10,  13,  10};
     uint8_t out[128];
     size_t out_len = 0;
-    TEST_ASSERT_EQUAL_INT(0, SshComp.c2s(0, comp0, sizeof(comp0), out, sizeof(out), &out_len));
+    TEST_ASSERT_EQUAL_INT(0, ssh_comp_c2s(0, comp0, sizeof(comp0), out, sizeof(out), &out_len));
     TEST_ASSERT_EQUAL_size_t(sizeof(plain0), out_len);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(plain0, out, sizeof(plain0));
 
     // An inactive slot refuses to decompress.
-    SshComp.reset(0);
-    TEST_ASSERT_FALSE(SshComp.c2s_active(0));
-    TEST_ASSERT_EQUAL_INT(-1, SshComp.c2s(0, comp0, sizeof(comp0), out, sizeof(out), &out_len));
+    ssh_comp_reset(0);
+    TEST_ASSERT_FALSE(ssh_comp_c2s_active(0));
+    TEST_ASSERT_EQUAL_INT(-1, ssh_comp_c2s(0, comp0, sizeof(comp0), out, sizeof(out), &out_len));
 }
 
 // c2s zlib@openssh.com is delayed like s2c: not active until USERAUTH_SUCCESS.
 void test_c2s_delayed_activation()
 {
-    SshComp.set_c2s(0, SSH_COMP_ZLIB_DELAYED);
-    SshComp.on_newkeys(0);
-    TEST_ASSERT_FALSE(SshComp.c2s_active(0));
-    SshComp.on_auth_success(0);
-    TEST_ASSERT_TRUE(SshComp.c2s_active(0));
+    ssh_comp_set_c2s(0, SSH_COMP_ZLIB_DELAYED);
+    ssh_comp_on_newkeys(0);
+    TEST_ASSERT_FALSE(ssh_comp_c2s_active(0));
+    ssh_comp_on_auth_success(0);
+    TEST_ASSERT_TRUE(ssh_comp_c2s_active(0));
 }
 
 // The full path: activate, push a realistic terminal session, and prove the framed packets form one
 // valid context-takeover zlib stream that decodes back to the originals.
 void test_packet_layer_stream_roundtrip()
 {
-    SshComp.set_s2c(0, SSH_COMP_ZLIB_DELAYED);
-    SshComp.on_auth_success(0);
-    TEST_ASSERT_TRUE(SshComp.s2c_active(0));
+    ssh_comp_set_s2c(0, SSH_COMP_ZLIB_DELAYED);
+    ssh_comp_on_auth_success(0);
+    TEST_ASSERT_TRUE(ssh_comp_s2c_active(0));
 
     const char *prompt = "user@esp32:~$ ";
     send_and_capture((const uint8_t *)prompt, strlen(prompt));
@@ -173,8 +173,8 @@ void test_packet_layer_stream_roundtrip()
 // A longer session that slides the window, driven through the packet layer.
 void test_packet_layer_window_slide()
 {
-    SshComp.set_s2c(0, SSH_COMP_ZLIB_DELAYED);
-    SshComp.on_auth_success(0);
+    ssh_comp_set_s2c(0, SSH_COMP_ZLIB_DELAYED);
+    ssh_comp_on_auth_success(0);
     uint8_t buf[1000];
     for (int k = 0; k < 30; k++)
     {
@@ -191,16 +191,16 @@ void test_packet_layer_window_slide()
 // send fails closed rather than emitting an uncompressed (desynced) packet.
 void test_packet_compress_scratch_exhausted()
 {
-    SshComp.set_s2c(0, SSH_COMP_ZLIB);
-    SshComp.on_newkeys(0);
-    TEST_ASSERT_TRUE(SshComp.s2c_active(0));
+    ssh_comp_set_s2c(0, SSH_COMP_ZLIB);
+    ssh_comp_on_newkeys(0);
+    TEST_ASSERT_TRUE(ssh_comp_s2c_active(0));
     pc_plaintext_reset();
     while (pc_plaintext_alloc(8, 1))
         ; // drain the arena
     uint8_t payload[8] = {SSH_MSG_IGNORE, 1, 2, 3, 4, 5, 6, 7};
     uint8_t wire[SSH_WIRE_CAP];
     size_t wlen = 0;
-    TEST_ASSERT_EQUAL_INT(-1, SshPacket.send(0, payload, sizeof(payload), wire, &wlen, sizeof(wire)));
+    TEST_ASSERT_EQUAL_INT(-1, ssh_pkt_send(0, payload, sizeof(payload), wire, &wlen, sizeof(wire)));
     pc_plaintext_reset();
 }
 
@@ -208,19 +208,19 @@ void test_packet_compress_scratch_exhausted()
 // but inactive slot cannot compress.
 void test_comp_slot_guards()
 {
-    SshComp.reset(MAX_SSH_CONNS); // out-of-range: no-op, no crash
-    SshComp.set_s2c(MAX_SSH_CONNS, SSH_COMP_ZLIB);
-    SshComp.on_newkeys(MAX_SSH_CONNS);                    // out-of-range: no-op
-    SshComp.on_auth_success(MAX_SSH_CONNS);               // out-of-range: no-op
-    TEST_ASSERT_FALSE(SshComp.s2c_active(MAX_SSH_CONNS)); // out-of-range slot is never active
+    ssh_comp_reset(MAX_SSH_CONNS); // out-of-range: no-op, no crash
+    ssh_comp_set_s2c(MAX_SSH_CONNS, SSH_COMP_ZLIB);
+    ssh_comp_on_newkeys(MAX_SSH_CONNS);                    // out-of-range: no-op
+    ssh_comp_on_auth_success(MAX_SSH_CONNS);               // out-of-range: no-op
+    TEST_ASSERT_FALSE(ssh_comp_s2c_active(MAX_SSH_CONNS)); // out-of-range slot is never active
 
     uint8_t src[8] = {0};
     uint8_t dst[64];
     size_t out_len = 0;
-    TEST_ASSERT_EQUAL_INT(-1, SshComp.s2c(MAX_SSH_CONNS, src, sizeof(src), dst, sizeof(dst), &out_len));
-    SshComp.reset(0); // slot 0 valid but no stream started
-    TEST_ASSERT_FALSE(SshComp.s2c_active(0));
-    TEST_ASSERT_EQUAL_INT(-1, SshComp.s2c(0, src, sizeof(src), dst, sizeof(dst), &out_len)); // inactive slot
+    TEST_ASSERT_EQUAL_INT(-1, ssh_comp_s2c(MAX_SSH_CONNS, src, sizeof(src), dst, sizeof(dst), &out_len));
+    ssh_comp_reset(0); // slot 0 valid but no stream started
+    TEST_ASSERT_FALSE(ssh_comp_s2c_active(0));
+    TEST_ASSERT_EQUAL_INT(-1, ssh_comp_s2c(0, src, sizeof(src), dst, sizeof(dst), &out_len)); // inactive slot
 }
 
 // Activation is idempotent: a second NEWKEYS (zlib) or a second USERAUTH_SUCCESS (delayed) must not
@@ -230,25 +230,25 @@ void test_comp_activation_idempotent()
 {
     // zlib: NEWKEYS starts it; a second NEWKEYS is a no-op (s2c_active already true), and USERAUTH is
     // the wrong event so it does nothing.
-    SshComp.reset(0);
-    SshComp.set_s2c(0, SSH_COMP_ZLIB);
-    SshComp.on_newkeys(0);
-    TEST_ASSERT_TRUE(SshComp.s2c_active(0));
-    SshComp.on_newkeys(0); // idempotent
-    TEST_ASSERT_TRUE(SshComp.s2c_active(0));
-    SshComp.on_auth_success(0); // wrong event for zlib
-    TEST_ASSERT_TRUE(SshComp.s2c_active(0));
+    ssh_comp_reset(0);
+    ssh_comp_set_s2c(0, SSH_COMP_ZLIB);
+    ssh_comp_on_newkeys(0);
+    TEST_ASSERT_TRUE(ssh_comp_s2c_active(0));
+    ssh_comp_on_newkeys(0); // idempotent
+    TEST_ASSERT_TRUE(ssh_comp_s2c_active(0));
+    ssh_comp_on_auth_success(0); // wrong event for zlib
+    TEST_ASSERT_TRUE(ssh_comp_s2c_active(0));
 
     // zlib@openssh.com (delayed): USERAUTH_SUCCESS starts it; a second one is idempotent, and NEWKEYS
     // is the wrong event.
-    SshComp.reset(0);
-    SshComp.set_s2c(0, SSH_COMP_ZLIB_DELAYED);
-    SshComp.on_newkeys(0); // wrong event for delayed: must NOT start
-    TEST_ASSERT_FALSE(SshComp.s2c_active(0));
-    SshComp.on_auth_success(0);
-    TEST_ASSERT_TRUE(SshComp.s2c_active(0));
-    SshComp.on_auth_success(0); // idempotent
-    TEST_ASSERT_TRUE(SshComp.s2c_active(0));
+    ssh_comp_reset(0);
+    ssh_comp_set_s2c(0, SSH_COMP_ZLIB_DELAYED);
+    ssh_comp_on_newkeys(0); // wrong event for delayed: must NOT start
+    TEST_ASSERT_FALSE(ssh_comp_s2c_active(0));
+    ssh_comp_on_auth_success(0);
+    TEST_ASSERT_TRUE(ssh_comp_s2c_active(0));
+    ssh_comp_on_auth_success(0); // idempotent
+    TEST_ASSERT_TRUE(ssh_comp_s2c_active(0));
 }
 
 // ---- KEXINIT negotiation + the dispatcher's activation trigger -------------
@@ -296,7 +296,7 @@ static size_t build_client_kexinit(uint8_t *out, const char *const rows[8])
 // (zlib@openssh.com > zlib > none) and refuses a client that offers none of the three.
 void test_kexinit_negotiates_s2c_compression()
 {
-    SshHostkey.ed25519_set(COMP_ED_SEED);
+    pc_ssh_hostkey_ed25519_set(COMP_ED_SEED);
     const char *K = "curve25519-sha256";
     const char *H = "ssh-ed25519";
     const char *C = "aes256-ctr";
@@ -304,86 +304,86 @@ void test_kexinit_negotiates_s2c_compression()
     uint8_t buf[512];
 
     // zlib@openssh.com is delayed: negotiated at KEXINIT, started only at USERAUTH_SUCCESS.
-    SshTransport.init(0);
-    SshComp.reset(0);
+    ssh_transport_init(0);
+    ssh_comp_reset(0);
     const char *delayed[8] = {K, H, C, C, M, M, "none", "zlib@openssh.com,none"};
-    TEST_ASSERT_EQUAL_INT(0, SshKex.init_parse(0, buf, build_client_kexinit(buf, delayed)));
-    TEST_ASSERT_FALSE(SshComp.s2c_active(0));
-    SshComp.on_newkeys(0);
-    TEST_ASSERT_FALSE(SshComp.s2c_active(0));
-    SshComp.on_auth_success(0);
-    TEST_ASSERT_TRUE(SshComp.s2c_active(0));
+    TEST_ASSERT_EQUAL_INT(0, ssh_kexinit_parse(0, buf, build_client_kexinit(buf, delayed)));
+    TEST_ASSERT_FALSE(ssh_comp_s2c_active(0));
+    ssh_comp_on_newkeys(0);
+    TEST_ASSERT_FALSE(ssh_comp_s2c_active(0));
+    ssh_comp_on_auth_success(0);
+    TEST_ASSERT_TRUE(ssh_comp_s2c_active(0));
 
     // Plain "zlib" is chosen when the delayed variant is not offered, and starts at NEWKEYS.
-    SshTransport.init(0);
-    SshComp.reset(0);
+    ssh_transport_init(0);
+    ssh_comp_reset(0);
     const char *immediate[8] = {K, H, C, C, M, M, "none", "zlib,none"};
-    TEST_ASSERT_EQUAL_INT(0, SshKex.init_parse(0, buf, build_client_kexinit(buf, immediate)));
-    SshComp.on_newkeys(0);
-    TEST_ASSERT_TRUE(SshComp.s2c_active(0));
+    TEST_ASSERT_EQUAL_INT(0, ssh_kexinit_parse(0, buf, build_client_kexinit(buf, immediate)));
+    ssh_comp_on_newkeys(0);
+    TEST_ASSERT_TRUE(ssh_comp_s2c_active(0));
 
     // "none" is still a valid outcome and never starts a stream.
-    SshTransport.init(0);
-    SshComp.reset(0);
+    ssh_transport_init(0);
+    ssh_comp_reset(0);
     const char *plain[8] = {K, H, C, C, M, M, "none", "none"};
-    TEST_ASSERT_EQUAL_INT(0, SshKex.init_parse(0, buf, build_client_kexinit(buf, plain)));
-    SshComp.on_newkeys(0);
-    SshComp.on_auth_success(0);
-    TEST_ASSERT_FALSE(SshComp.s2c_active(0));
+    TEST_ASSERT_EQUAL_INT(0, ssh_kexinit_parse(0, buf, build_client_kexinit(buf, plain)));
+    ssh_comp_on_newkeys(0);
+    ssh_comp_on_auth_success(0);
+    TEST_ASSERT_FALSE(ssh_comp_s2c_active(0));
 
     // A client offering nothing we implement for s2c has no mutual algorithm.
-    SshTransport.init(0);
-    SshComp.reset(0);
+    ssh_transport_init(0);
+    ssh_comp_reset(0);
     const char *unknown[8] = {K, H, C, C, M, M, "none", "lzo@openssh.com"};
-    TEST_ASSERT_EQUAL_INT(-1, SshKex.init_parse(0, buf, build_client_kexinit(buf, unknown)));
+    TEST_ASSERT_EQUAL_INT(-1, ssh_kexinit_parse(0, buf, build_client_kexinit(buf, unknown)));
 }
 
-// Before the s2c stream starts, SshPacket.send frames the payload verbatim - the compress step is
+// Before the s2c stream starts, ssh_pkt_send frames the payload verbatim - the compress step is
 // skipped entirely, so the bytes on the wire are the payload itself.
 void test_packet_send_uncompressed_before_activation()
 {
-    SshPacket.init(0);
-    SshComp.reset(0);
-    TEST_ASSERT_FALSE(SshComp.s2c_active(0));
+    ssh_pkt_init(0);
+    ssh_comp_reset(0);
+    TEST_ASSERT_FALSE(ssh_comp_s2c_active(0));
     const uint8_t payload[6] = {SSH_MSG_IGNORE, 'p', 'l', 'a', 'i', 'n'};
     static uint8_t wire[SSH_WIRE_CAP];
     size_t wlen = 0;
-    TEST_ASSERT_EQUAL_INT(0, SshPacket.send(0, payload, sizeof(payload), wire, &wlen, sizeof(wire)));
+    TEST_ASSERT_EQUAL_INT(0, ssh_pkt_send(0, payload, sizeof(payload), wire, &wlen, sizeof(wire)));
     TEST_ASSERT_EQUAL_MEMORY(payload, wire + 5, sizeof(payload));
 }
 
-// SshTransport.newkeys_sent turns the outbound direction on and starts a non-delayed "zlib" stream with it;
+// ssh_newkeys_sent turns the outbound direction on and starts a non-delayed "zlib" stream with it;
 // zlib@openssh.com is untouched (it waits for USERAUTH_SUCCESS).
 void test_newkeys_sent_starts_immediate_stream_only()
 {
-    SshPacket.init(0);
-    SshComp.reset(0);
-    SshComp.set_s2c(0, SSH_COMP_ZLIB);
-    SshTransport.newkeys_sent(0);
+    ssh_pkt_init(0);
+    ssh_comp_reset(0);
+    ssh_comp_set_s2c(0, SSH_COMP_ZLIB);
+    ssh_newkeys_sent(0);
     TEST_ASSERT_TRUE(ssh_pkt[0].enc_out);
-    TEST_ASSERT_TRUE(SshComp.s2c_active(0));
+    TEST_ASSERT_TRUE(ssh_comp_s2c_active(0));
 
-    SshPacket.init(0);
-    SshComp.reset(0);
-    SshComp.set_s2c(0, SSH_COMP_ZLIB_DELAYED);
-    SshTransport.newkeys_sent(0);
+    ssh_pkt_init(0);
+    ssh_comp_reset(0);
+    ssh_comp_set_s2c(0, SSH_COMP_ZLIB_DELAYED);
+    ssh_newkeys_sent(0);
     TEST_ASSERT_TRUE(ssh_pkt[0].enc_out);
-    TEST_ASSERT_FALSE(SshComp.s2c_active(0));
+    TEST_ASSERT_FALSE(ssh_comp_s2c_active(0));
 
-    SshTransport.newkeys_sent(MAX_SSH_CONNS); // out-of-range slot: no-op, no crash
-    SshPacket.init(0);
-    SshComp.reset(0);
+    ssh_newkeys_sent(MAX_SSH_CONNS); // out-of-range slot: no-op, no crash
+    ssh_pkt_init(0);
+    ssh_comp_reset(0);
 }
 
 // A payload larger than the compressor's maximum input fails the send closed. Emitting it
 // uncompressed instead would desync the context-takeover stream for every packet after it.
 void test_packet_compress_rejects_oversized_payload()
 {
-    SshPacket.init(0);
-    SshComp.reset(0);
-    SshComp.set_s2c(0, SSH_COMP_ZLIB);
-    SshComp.on_newkeys(0);
-    TEST_ASSERT_TRUE(SshComp.s2c_active(0));
+    ssh_pkt_init(0);
+    ssh_comp_reset(0);
+    ssh_comp_set_s2c(0, SSH_COMP_ZLIB);
+    ssh_comp_on_newkeys(0);
+    TEST_ASSERT_TRUE(ssh_comp_s2c_active(0));
     pc_plaintext_reset();
 
     static uint8_t payload[PC_SSH_ZLIB_MAX_IN + 1];
@@ -391,9 +391,9 @@ void test_packet_compress_rejects_oversized_payload()
     payload[0] = SSH_MSG_IGNORE;
     static uint8_t wire[SSH_WIRE_CAP];
     size_t wlen = 0;
-    TEST_ASSERT_EQUAL_INT(-1, SshPacket.send(0, payload, sizeof(payload), wire, &wlen, sizeof(wire)));
-    SshComp.reset(0);
-    SshPacket.init(0);
+    TEST_ASSERT_EQUAL_INT(-1, ssh_pkt_send(0, payload, sizeof(payload), wire, &wlen, sizeof(wire)));
+    ssh_comp_reset(0);
+    ssh_pkt_init(0);
 }
 
 static uint8_t comp_emt[16];
@@ -415,12 +415,12 @@ static proto_bool comp_pw_cb(const char *u, const char *p)
 // fires the trigger on a success and leaves it alone on a failure.
 void test_dispatch_auth_success_starts_delayed_compression()
 {
-    SshTransport.init(0);
-    SshPacket.init(0);
-    SshComp.reset(0);
-    SshComp.set_s2c(0, SSH_COMP_ZLIB_DELAYED);
-    SshAuth.set_password_cb(comp_pw_cb);
-    SshServer.set_emit_cb(comp_rec_emit);
+    ssh_transport_init(0);
+    ssh_pkt_init(0);
+    ssh_comp_reset(0);
+    ssh_comp_set_s2c(0, SSH_COMP_ZLIB_DELAYED);
+    pc_ssh_auth_set_password_cb(comp_pw_cb);
+    pc_ssh_server_set_emit_cb(comp_rec_emit);
 
     uint8_t pkt[128];
     size_t n = 0;
@@ -435,25 +435,25 @@ void test_dispatch_auth_success_starts_delayed_compression()
     n = base + put_str(pkt + base, "wrong");
     ssh_sess[0].phase = SSH_PHASE_AUTH;
     comp_emt_n = 0;
-    TEST_ASSERT_EQUAL_INT(0, SshServer.dispatch(0, SSH_MSG_USERAUTH_REQUEST, pkt, n));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_server_dispatch(0, SSH_MSG_USERAUTH_REQUEST, pkt, n));
     TEST_ASSERT_EQUAL_UINT8(SSH_MSG_USERAUTH_FAILURE, comp_emt[0]);
-    TEST_ASSERT_FALSE(SshComp.s2c_active(0));
+    TEST_ASSERT_FALSE(ssh_comp_s2c_active(0));
 
     // The accepted password starts it.
     n = base + put_str(pkt + base, "s3cret");
     ssh_sess[0].phase = SSH_PHASE_AUTH;
     comp_emt_n = 0;
-    TEST_ASSERT_EQUAL_INT(0, SshServer.dispatch(0, SSH_MSG_USERAUTH_REQUEST, pkt, n));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_server_dispatch(0, SSH_MSG_USERAUTH_REQUEST, pkt, n));
     TEST_ASSERT_EQUAL_UINT8(SSH_MSG_USERAUTH_SUCCESS, comp_emt[0]);
     TEST_ASSERT_TRUE(ssh_sess[0].authed);
-    TEST_ASSERT_TRUE(SshComp.s2c_active(0));
-    SshComp.reset(0);
+    TEST_ASSERT_TRUE(ssh_comp_s2c_active(0));
+    ssh_comp_reset(0);
 }
 
 // ============================================================================
 // AES-256-CTR (crypto/cipher/aes256ctr.cpp)
 // ============================================================================
-// This env's own tests only drive SshPacket.send before NEWKEYS (no cipher active), so the native
+// This env's own tests only drive ssh_pkt_send before NEWKEYS (no cipher active), so the native
 // software AES-256-CTR path is otherwise never called here. Exercised directly below.
 
 static void aes_hex_to_bytes(uint8_t *out, const char *hex, size_t n)
@@ -527,15 +527,15 @@ void test_aes256ctr_counter_full_wraparound(void)
 // ============================================================================
 // DH-group14-SHA256 KEX (network_drivers/presentation/ssh/transport/ssh_dh.cpp)
 // ============================================================================
-// No KEX ever runs in this env's own tests, so SshDh.generate()/the RFC 4253 §7.2 key derivation
+// No KEX ever runs in this env's own tests, so ssh_dh_generate()/the RFC 4253 §7.2 key derivation
 // chain are otherwise never called here. Exercised directly below.
 
 // Out-of-range slot is rejected; a valid slot generates y/f and leaves kex_done false (NEWKEYS has
 // not happened yet).
 void test_dh_generate_slot_guard_and_state(void)
 {
-    TEST_ASSERT_EQUAL_INT(-1, SshDh.generate(MAX_SSH_CONNS));
-    TEST_ASSERT_EQUAL_INT(0, SshDh.generate(0));
+    TEST_ASSERT_EQUAL_INT(-1, ssh_dh_generate(MAX_SSH_CONNS));
+    TEST_ASSERT_EQUAL_INT(0, ssh_dh_generate(0));
     TEST_ASSERT_FALSE(ssh_dh[0].kex_done);
     proto_bool f_nonzero = PROTO_FALSE;
     for (int j = 0; j < PC_BN_LIMBS; j++)
@@ -549,8 +549,8 @@ void test_dh_generate_slot_guard_and_state(void)
     ssh_dh_wipe(0);
 }
 
-// SshDh.derive_keys() is the first-KEX convenience wrapper (session_id == H, aes256-ctr + hmac-sha2-256
-// default); SshDh.derive_keys_sid() rejects an out-of-range slot as a no-op.
+// ssh_dh_derive_keys() is the first-KEX convenience wrapper (session_id == H, aes256-ctr + hmac-sha2-256
+// default); ssh_dh_derive_keys_sid() rejects an out-of-range slot as a no-op.
 void test_dh_derive_keys_default_wrapper_and_slot_guard(void)
 {
     uint8_t K[256];
@@ -563,18 +563,18 @@ void test_dh_derive_keys_default_wrapper_and_slot_guard(void)
     }
 
     ssh_keymat_wipe(0);
-    SshDh.derive_keys(0, K, H);
+    ssh_dh_derive_keys(0, K, H);
     TEST_ASSERT_TRUE(ssh_keys[0].active);
     TEST_ASSERT_EQUAL_UINT8(SSH_CIPHER_AES256CTR, ssh_keys[0].cipher_mode);
     TEST_ASSERT_EQUAL_UINT8(SSH_MAC_HMAC_SHA256, ssh_keys[0].mac_mode);
     ssh_keymat_wipe(0);
 
     // Out-of-range slot: must not crash and must not touch any real slot's state.
-    SshDh.derive_keys_sid(MAX_SSH_CONNS, K, H, H, SSH_CIPHER_AES256CTR, SSH_MAC_HMAC_SHA256, PROTO_FALSE,
-                          PC_SHA256_DIGEST_LEN, PC_SHA256_DIGEST_LEN, PROTO_FALSE);
+    ssh_dh_derive_keys_sid(MAX_SSH_CONNS, K, H, H, SSH_CIPHER_AES256CTR, SSH_MAC_HMAC_SHA256, PROTO_FALSE,
+                           PC_SHA256_DIGEST_LEN, PC_SHA256_DIGEST_LEN, PROTO_FALSE);
 }
 
-// The cipher_alg dispatch inside SshDh.derive_keys_sid(): chacha20-poly1305 installs two 512-bit keys
+// The cipher_alg dispatch inside ssh_dh_derive_keys_sid(): chacha20-poly1305 installs two 512-bit keys
 // (no separate MAC key), aes256-gcm installs a stateful AEAD context per direction (no separate MAC key
 // either). Both are otherwise-untested branches - only the aes256-ctr default (the "neither" fallthrough)
 // is reached via test_dh_derive_keys_default_wrapper_and_slot_guard.
@@ -591,14 +591,14 @@ void test_dh_derive_keys_chachapoly_and_gcm_branches(void)
     }
 
     ssh_keymat_wipe(0);
-    SshDh.derive_keys_sid(0, K, H, sid, SSH_CIPHER_CHACHA20POLY1305, SSH_MAC_HMAC_SHA256, PROTO_FALSE,
-                          PC_SHA256_DIGEST_LEN, PC_SHA256_DIGEST_LEN, PROTO_FALSE);
+    ssh_dh_derive_keys_sid(0, K, H, sid, SSH_CIPHER_CHACHA20POLY1305, SSH_MAC_HMAC_SHA256, PROTO_FALSE,
+                           PC_SHA256_DIGEST_LEN, PC_SHA256_DIGEST_LEN, PROTO_FALSE);
     TEST_ASSERT_TRUE(ssh_keys[0].active);
     TEST_ASSERT_EQUAL_UINT8(SSH_CIPHER_CHACHA20POLY1305, ssh_keys[0].cipher_mode);
 
     ssh_keymat_wipe(0);
-    SshDh.derive_keys_sid(0, K, H, sid, SSH_CIPHER_AES256GCM, SSH_MAC_HMAC_SHA256, PROTO_FALSE, PC_SHA256_DIGEST_LEN,
-                          PC_SHA256_DIGEST_LEN, PROTO_FALSE);
+    ssh_dh_derive_keys_sid(0, K, H, sid, SSH_CIPHER_AES256GCM, SSH_MAC_HMAC_SHA256, PROTO_FALSE, PC_SHA256_DIGEST_LEN,
+                           PC_SHA256_DIGEST_LEN, PROTO_FALSE);
     TEST_ASSERT_TRUE(ssh_keys[0].active);
     TEST_ASSERT_EQUAL_UINT8(SSH_CIPHER_AES256GCM, ssh_keys[0].cipher_mode);
     ssh_keymat_wipe(0);
@@ -643,7 +643,7 @@ static void expected_kdf_k1(const uint8_t K[256], const uint8_t H[PC_SHA256_DIGE
 }
 
 // hash_mpint_K has three edge branches a real DH secret never hits on its own, but the public
-// SshDh.kdf_derive() entry point can be driven through directly with any K: an all-zero K (empty mpint),
+// ssh_kdf_derive() entry point can be driven through directly with any K: an all-zero K (empty mpint),
 // leading zero bytes stripped before a nonzero byte with the MSB clear (no pad), and a leading byte
 // with the MSB set (needs the extra 0x00 pad byte so K is not misread as a negative mpint).
 void test_kdf_mpint_k_edge_encodings(void)
@@ -657,8 +657,8 @@ void test_kdf_mpint_k_edge_encodings(void)
     uint8_t K_zero[256];
     memset(K_zero, 0, sizeof(K_zero));
     uint8_t out_zero[PC_SHA256_DIGEST_LEN], expected_zero[PC_SHA256_DIGEST_LEN];
-    SshDh.kdf_derive(K_zero, H, H, 'A', out_zero, PC_SHA256_DIGEST_LEN, PROTO_FALSE, PC_SHA256_DIGEST_LEN,
-                     PC_SHA256_DIGEST_LEN, PROTO_FALSE);
+    ssh_kdf_derive(K_zero, H, H, 'A', out_zero, PC_SHA256_DIGEST_LEN, PROTO_FALSE, PC_SHA256_DIGEST_LEN,
+                   PC_SHA256_DIGEST_LEN, PROTO_FALSE);
     expected_kdf_k1(K_zero, H, 'A', H, PC_SHA256_DIGEST_LEN, expected_zero);
     TEST_ASSERT_EQUAL_MEMORY(expected_zero, out_zero, PC_SHA256_DIGEST_LEN);
 
@@ -669,8 +669,8 @@ void test_kdf_mpint_k_edge_encodings(void)
         K_lead_zero[j] = (uint8_t)(j & 0x7F); // K_lead_zero[2] != 0 and its MSB is clear -> no pad
     }
     uint8_t out_lz[PC_SHA256_DIGEST_LEN], expected_lz[PC_SHA256_DIGEST_LEN];
-    SshDh.kdf_derive(K_lead_zero, H, H, 'B', out_lz, PC_SHA256_DIGEST_LEN, PROTO_FALSE, PC_SHA256_DIGEST_LEN,
-                     PC_SHA256_DIGEST_LEN, PROTO_FALSE);
+    ssh_kdf_derive(K_lead_zero, H, H, 'B', out_lz, PC_SHA256_DIGEST_LEN, PROTO_FALSE, PC_SHA256_DIGEST_LEN,
+                   PC_SHA256_DIGEST_LEN, PROTO_FALSE);
     expected_kdf_k1(K_lead_zero, H, 'B', H, PC_SHA256_DIGEST_LEN, expected_lz);
     TEST_ASSERT_EQUAL_MEMORY(expected_lz, out_lz, PC_SHA256_DIGEST_LEN);
 
@@ -678,8 +678,8 @@ void test_kdf_mpint_k_edge_encodings(void)
     memset(K_msb, 0, sizeof(K_msb));
     K_msb[0] = 0x91; // MSB set on the very first byte -> pad byte required
     uint8_t out_msb[PC_SHA256_DIGEST_LEN], expected_msb[PC_SHA256_DIGEST_LEN];
-    SshDh.kdf_derive(K_msb, H, H, 'C', out_msb, PC_SHA256_DIGEST_LEN, PROTO_FALSE, PC_SHA256_DIGEST_LEN,
-                     PC_SHA256_DIGEST_LEN, PROTO_FALSE);
+    ssh_kdf_derive(K_msb, H, H, 'C', out_msb, PC_SHA256_DIGEST_LEN, PROTO_FALSE, PC_SHA256_DIGEST_LEN,
+                   PC_SHA256_DIGEST_LEN, PROTO_FALSE);
     expected_kdf_k1(K_msb, H, 'C', H, PC_SHA256_DIGEST_LEN, expected_msb);
     TEST_ASSERT_EQUAL_MEMORY(expected_msb, out_msb, PC_SHA256_DIGEST_LEN);
 }
@@ -700,8 +700,8 @@ void test_kdf_string_k_hybrid_branch(void)
     }
 
     uint8_t got_string[PC_SHA256_DIGEST_LEN];
-    SshDh.kdf_derive(K, H, H, 'C', got_string, PC_SHA256_DIGEST_LEN, PROTO_TRUE, PC_SHA256_DIGEST_LEN,
-                     PC_SHA256_DIGEST_LEN, PROTO_FALSE);
+    ssh_kdf_derive(K, H, H, 'C', got_string, PC_SHA256_DIGEST_LEN, PROTO_TRUE, PC_SHA256_DIGEST_LEN,
+                   PC_SHA256_DIGEST_LEN, PROTO_FALSE);
 
     uint8_t len_be[4] = {0, 0, 0, 32};
     pc_sha256_ctx c;
@@ -717,8 +717,8 @@ void test_kdf_string_k_hybrid_branch(void)
     TEST_ASSERT_EQUAL_MEMORY(expected, got_string, PC_SHA256_DIGEST_LEN);
 
     uint8_t got_mpint[PC_SHA256_DIGEST_LEN];
-    SshDh.kdf_derive(K, H, H, 'C', got_mpint, PC_SHA256_DIGEST_LEN, PROTO_FALSE, PC_SHA256_DIGEST_LEN,
-                     PC_SHA256_DIGEST_LEN, PROTO_FALSE);
+    ssh_kdf_derive(K, H, H, 'C', got_mpint, PC_SHA256_DIGEST_LEN, PROTO_FALSE, PC_SHA256_DIGEST_LEN,
+                   PC_SHA256_DIGEST_LEN, PROTO_FALSE);
     TEST_ASSERT_NOT_EQUAL(0, memcmp(got_string, got_mpint, PC_SHA256_DIGEST_LEN));
 }
 
@@ -739,12 +739,12 @@ void test_kdf_out_len_clamp_matches_exact_max(void)
     }
 
     uint8_t clamped[SSH_KDF_MAX];
-    SshDh.kdf_derive(K, H, H, 'X', clamped, SSH_KDF_MAX + 64, PROTO_FALSE, PC_SHA256_DIGEST_LEN, PC_SHA256_DIGEST_LEN,
-                     PROTO_FALSE); // over SSH_KDF_MAX -> clamps
+    ssh_kdf_derive(K, H, H, 'X', clamped, SSH_KDF_MAX + 64, PROTO_FALSE, PC_SHA256_DIGEST_LEN, PC_SHA256_DIGEST_LEN,
+                   PROTO_FALSE); // over SSH_KDF_MAX -> clamps
 
     uint8_t exact[SSH_KDF_MAX];
-    SshDh.kdf_derive(K, H, H, 'X', exact, SSH_KDF_MAX, PROTO_FALSE, PC_SHA256_DIGEST_LEN, PC_SHA256_DIGEST_LEN,
-                     PROTO_FALSE); // already at the max -> no clamp needed
+    ssh_kdf_derive(K, H, H, 'X', exact, SSH_KDF_MAX, PROTO_FALSE, PC_SHA256_DIGEST_LEN, PC_SHA256_DIGEST_LEN,
+                   PROTO_FALSE); // already at the max -> no clamp needed
     TEST_ASSERT_EQUAL_MEMORY(exact, clamped, SSH_KDF_MAX);
 
     // K1 (the first 32 bytes of the chain) is a direct, independently-computed hash.
@@ -766,7 +766,7 @@ void test_kdf_out_len_clamp_matches_exact_max(void)
 }
 
 // ---------------------------------------------------------------------------
-// Full SshServer.dispatch() switch coverage: every SSH_MSG_* arm of the message
+// Full pc_ssh_server_dispatch() switch coverage: every SSH_MSG_* arm of the message
 // dispatcher (ssh_server.cpp) driven once. Keyboard-interactive is off in this env, so the
 // SSH_MSG_USERAUTH_INFO_RESPONSE arm is not compiled - the switch has 18 arms here (incl. default).
 // ---------------------------------------------------------------------------
@@ -865,13 +865,13 @@ static void dsp_on_chan_data(uint8_t slot, uint32_t ch, const uint8_t *d, size_t
 void test_dispatch_all_switch_arms()
 {
     dsp_load_rsa_hostkey();
-    SshTransport.init(0);
-    SshPacket.init(0);
-    SshComp.reset(0);
-    SshChannels.init(0);
-    SshAuth.set_password_cb(dsp_pw_cb);
-    SshChannels.set_data_cb(dsp_on_chan_data);
-    SshServer.set_emit_cb(dsp_emit);
+    ssh_transport_init(0);
+    ssh_pkt_init(0);
+    ssh_comp_reset(0);
+    pc_ssh_channel_init(0);
+    pc_ssh_auth_set_password_cb(dsp_pw_cb);
+    pc_ssh_channel_set_data_cb(dsp_on_chan_data);
+    pc_ssh_server_set_emit_cb(dsp_emit);
 
     SshSession *s = &ssh_sess[0];
     strcpy(s->v_c, "SSH-2.0-DispatchClient");
@@ -884,7 +884,7 @@ void test_dispatch_all_switch_arms()
     // KEXINIT -> server KEXINIT, phase DH_INIT.
     n = dsp_build_kexinit_ext(pkt);
     dsp_reset();
-    TEST_ASSERT_EQUAL_INT(0, SshServer.dispatch(0, SSH_MSG_KEXINIT, pkt, n));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_server_dispatch(0, SSH_MSG_KEXINIT, pkt, n));
     TEST_ASSERT_EQUAL(SSH_PHASE_DH_INIT, s->phase);
 
     // KEXDH_INIT (e = 2) -> KEXDH_REPLY + NEWKEYS.
@@ -894,18 +894,18 @@ void test_dispatch_all_switch_arms()
     n = 0;
     pkt[n++] = SSH_MSG_KEXDH_INIT;
     n += dsp_put_mpint(pkt + n, e_be, 256);
-    TEST_ASSERT_EQUAL_INT(0, SshServer.dispatch(0, SSH_MSG_KEXDH_INIT, pkt, n));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_server_dispatch(0, SSH_MSG_KEXDH_INIT, pkt, n));
 
     // NEWKEYS -> encryption active, EXT_INFO emitted (ext-info-c advertised), SERVICE phase.
     uint8_t nk = SSH_MSG_NEWKEYS;
-    TEST_ASSERT_EQUAL_INT(0, SshServer.dispatch(0, SSH_MSG_NEWKEYS, &nk, 1));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_server_dispatch(0, SSH_MSG_NEWKEYS, &nk, 1));
     TEST_ASSERT_EQUAL(SSH_PHASE_SERVICE, s->phase);
 
     // SERVICE_REQUEST -> SERVICE_ACCEPT, AUTH phase.
     n = 0;
     pkt[n++] = SSH_MSG_SERVICE_REQUEST;
     n += put_str(pkt + n, "ssh-userauth");
-    TEST_ASSERT_EQUAL_INT(0, SshServer.dispatch(0, SSH_MSG_SERVICE_REQUEST, pkt, n));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_server_dispatch(0, SSH_MSG_SERVICE_REQUEST, pkt, n));
     TEST_ASSERT_EQUAL(SSH_PHASE_AUTH, s->phase);
 
     // USERAUTH_REQUEST (password) -> SUCCESS, OPEN phase, authed (and starts delayed s2c compression).
@@ -916,7 +916,7 @@ void test_dispatch_all_switch_arms()
     n += put_str(pkt + n, "password");
     pkt[n++] = 0;
     n += put_str(pkt + n, "s3cret");
-    TEST_ASSERT_EQUAL_INT(0, SshServer.dispatch(0, SSH_MSG_USERAUTH_REQUEST, pkt, n));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_server_dispatch(0, SSH_MSG_USERAUTH_REQUEST, pkt, n));
     TEST_ASSERT_TRUE(s->authed);
 
     // CHANNEL_OPEN (session) -> CONFIRMATION.
@@ -927,7 +927,7 @@ void test_dispatch_all_switch_arms()
     dsp_wr_u32(pkt + n + 4, 4096);
     dsp_wr_u32(pkt + n + 8, 32768);
     n += 12;
-    TEST_ASSERT_EQUAL_INT(0, SshServer.dispatch(0, SSH_MSG_CHANNEL_OPEN, pkt, n));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_server_dispatch(0, SSH_MSG_CHANNEL_OPEN, pkt, n));
     TEST_ASSERT_TRUE(ssh_chan[0][0].open);
 
     // CHANNEL_REQUEST (shell, want_reply) -> SUCCESS.
@@ -937,7 +937,7 @@ void test_dispatch_all_switch_arms()
     n += 4;
     n += put_str(pkt + n, "shell");
     pkt[n++] = 1;
-    TEST_ASSERT_EQUAL_INT(0, SshServer.dispatch(0, SSH_MSG_CHANNEL_REQUEST, pkt, n));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_server_dispatch(0, SSH_MSG_CHANNEL_REQUEST, pkt, n));
 
     // CHANNEL_DATA -> delivered to the app callback.
     n = 0;
@@ -945,15 +945,15 @@ void test_dispatch_all_switch_arms()
     dsp_wr_u32(pkt + n, 0);
     n += 4;
     n += put_str(pkt + n, "hi");
-    TEST_ASSERT_EQUAL_INT(0, SshServer.dispatch(0, SSH_MSG_CHANNEL_DATA, pkt, n));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_server_dispatch(0, SSH_MSG_CHANNEL_DATA, pkt, n));
 
     // CHANNEL_WINDOW_ADJUST -> accepted, no reply.
     uint8_t w[9] = {SSH_MSG_CHANNEL_WINDOW_ADJUST, 0, 0, 0, 0, 0, 0, 0, 10};
-    TEST_ASSERT_EQUAL_INT(0, SshServer.dispatch(0, SSH_MSG_CHANNEL_WINDOW_ADJUST, w, sizeof(w)));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_server_dispatch(0, SSH_MSG_CHANNEL_WINDOW_ADJUST, w, sizeof(w)));
 
     // CHANNEL_EOF -> accepted, no reply.
     uint8_t eofm[5] = {SSH_MSG_CHANNEL_EOF, 0, 0, 0, 0};
-    TEST_ASSERT_EQUAL_INT(0, SshServer.dispatch(0, SSH_MSG_CHANNEL_EOF, eofm, sizeof(eofm)));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_server_dispatch(0, SSH_MSG_CHANNEL_EOF, eofm, sizeof(eofm)));
 
     // GLOBAL_REQUEST (tcpip-forward, want_reply) -> REQUEST_SUCCESS/FAILURE.
     n = 0;
@@ -964,44 +964,44 @@ void test_dispatch_all_switch_arms()
     dsp_wr_u32(pkt + n, 8080);
     n += 4;
     dsp_reset();
-    TEST_ASSERT_EQUAL_INT(0, SshServer.dispatch(0, SSH_MSG_GLOBAL_REQUEST, pkt, n));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_server_dispatch(0, SSH_MSG_GLOBAL_REQUEST, pkt, n));
     TEST_ASSERT_EQUAL_INT(1, dsp_n);
 
     // CHANNEL_OPEN_CONFIRM / CHANNEL_OPEN_FAILURE -> stray, accepted-and-ignored (authed).
     uint8_t oc[9] = {SSH_MSG_CHANNEL_OPEN_CONFIRM, 0, 0, 0, 0, 0, 0, 0, 0};
-    TEST_ASSERT_EQUAL_INT(0, SshServer.dispatch(0, SSH_MSG_CHANNEL_OPEN_CONFIRM, oc, sizeof(oc)));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_server_dispatch(0, SSH_MSG_CHANNEL_OPEN_CONFIRM, oc, sizeof(oc)));
     uint8_t of[5] = {SSH_MSG_CHANNEL_OPEN_FAILURE, 0, 0, 0, 0};
-    TEST_ASSERT_EQUAL_INT(0, SshServer.dispatch(0, SSH_MSG_CHANNEL_OPEN_FAILURE, of, sizeof(of)));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_server_dispatch(0, SSH_MSG_CHANNEL_OPEN_FAILURE, of, sizeof(of)));
 
     // CHANNEL_CLOSE -> EOF + CLOSE emitted, channel closed.
     uint8_t cl[5];
     cl[0] = SSH_MSG_CHANNEL_CLOSE;
     dsp_wr_u32(cl + 1, 0);
-    TEST_ASSERT_EQUAL_INT(0, SshServer.dispatch(0, SSH_MSG_CHANNEL_CLOSE, cl, sizeof(cl)));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_server_dispatch(0, SSH_MSG_CHANNEL_CLOSE, cl, sizeof(cl)));
     TEST_ASSERT_FALSE(ssh_chan[0][0].open);
 
     // IGNORE -> no-op.
     uint8_t ign = SSH_MSG_IGNORE;
-    TEST_ASSERT_EQUAL_INT(0, SshServer.dispatch(0, SSH_MSG_IGNORE, &ign, 1));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_server_dispatch(0, SSH_MSG_IGNORE, &ign, 1));
 
     // EXT_INFO (inbound) -> ignored.
     uint8_t ext = SSH_MSG_EXT_INFO;
-    TEST_ASSERT_EQUAL_INT(0, SshServer.dispatch(0, SSH_MSG_EXT_INFO, &ext, 1));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_server_dispatch(0, SSH_MSG_EXT_INFO, &ext, 1));
 
     // default (unrecognized) -> UNIMPLEMENTED.
     ssh_pkt[0].seq_no_recv = 3;
     uint8_t unk = 200;
     dsp_reset();
-    TEST_ASSERT_EQUAL_INT(0, SshServer.dispatch(0, 200, &unk, 1));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_server_dispatch(0, 200, &unk, 1));
     TEST_ASSERT_EQUAL(SSH_MSG_UNIMPLEMENTED, dsp_type[0]);
 
     // DISCONNECT -> peer closing.
     uint8_t disc = SSH_MSG_DISCONNECT;
-    TEST_ASSERT_EQUAL_INT(-1, SshServer.dispatch(0, SSH_MSG_DISCONNECT, &disc, 1));
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_server_dispatch(0, SSH_MSG_DISCONNECT, &disc, 1));
 
     // Out-of-range slot -> rejected before the switch.
-    TEST_ASSERT_EQUAL_INT(-1, SshServer.dispatch(MAX_SSH_CONNS, SSH_MSG_IGNORE, &ign, 1));
-    SshComp.reset(0);
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_server_dispatch(MAX_SSH_CONNS, SSH_MSG_IGNORE, &ign, 1));
+    ssh_comp_reset(0);
 }
 
 // The rejection half of every guarded switch arm: wrong-phase, unauthenticated, and malformed-payload
@@ -1009,41 +1009,41 @@ void test_dispatch_all_switch_arms()
 void test_dispatch_guard_and_error_arms()
 {
     dsp_load_rsa_hostkey();
-    SshTransport.init(0);
-    SshPacket.init(0);
-    SshComp.reset(0);
-    SshChannels.init(0);
-    SshAuth.set_password_cb(dsp_pw_cb);
-    SshChannels.set_data_cb(dsp_on_chan_data);
-    SshServer.set_emit_cb(dsp_emit);
+    ssh_transport_init(0);
+    ssh_pkt_init(0);
+    ssh_comp_reset(0);
+    pc_ssh_channel_init(0);
+    pc_ssh_auth_set_password_cb(dsp_pw_cb);
+    pc_ssh_channel_set_data_cb(dsp_on_chan_data);
+    pc_ssh_server_set_emit_cb(dsp_emit);
 
     SshSession *s = &ssh_sess[0];
 
     // KEXINIT with a payload too short to negotiate -> parse fails.
     s->phase = SSH_PHASE_KEXINIT;
     uint8_t badkex[4] = {SSH_MSG_KEXINIT, 0, 0, 0};
-    TEST_ASSERT_EQUAL_INT(-1, SshServer.dispatch(0, SSH_MSG_KEXINIT, badkex, sizeof(badkex)));
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_server_dispatch(0, SSH_MSG_KEXINIT, badkex, sizeof(badkex)));
 
     // KEXDH_INIT outside DH_INIT phase -> rejected; in phase but malformed -> handler fails.
     s->phase = SSH_PHASE_KEXINIT;
     uint8_t badkexdh[4] = {SSH_MSG_KEXDH_INIT, 0, 0, 0};
-    TEST_ASSERT_EQUAL_INT(-1, SshServer.dispatch(0, SSH_MSG_KEXDH_INIT, badkexdh, sizeof(badkexdh)));
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_server_dispatch(0, SSH_MSG_KEXDH_INIT, badkexdh, sizeof(badkexdh)));
     s->phase = SSH_PHASE_DH_INIT;
-    TEST_ASSERT_EQUAL_INT(-1, SshServer.dispatch(0, SSH_MSG_KEXDH_INIT, badkexdh, sizeof(badkexdh)));
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_server_dispatch(0, SSH_MSG_KEXDH_INIT, badkexdh, sizeof(badkexdh)));
 
     // SERVICE_REQUEST outside SERVICE phase -> rejected; in phase but truncated -> handler fails.
     s->phase = SSH_PHASE_AUTH;
     uint8_t badsvc[2] = {SSH_MSG_SERVICE_REQUEST, 0};
-    TEST_ASSERT_EQUAL_INT(-1, SshServer.dispatch(0, SSH_MSG_SERVICE_REQUEST, badsvc, sizeof(badsvc)));
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_server_dispatch(0, SSH_MSG_SERVICE_REQUEST, badsvc, sizeof(badsvc)));
     s->phase = SSH_PHASE_SERVICE;
-    TEST_ASSERT_EQUAL_INT(-1, SshServer.dispatch(0, SSH_MSG_SERVICE_REQUEST, badsvc, sizeof(badsvc)));
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_server_dispatch(0, SSH_MSG_SERVICE_REQUEST, badsvc, sizeof(badsvc)));
 
     // USERAUTH_REQUEST outside AUTH phase -> rejected; in phase but truncated -> handler fails.
     s->phase = SSH_PHASE_SERVICE;
     uint8_t badua[2] = {SSH_MSG_USERAUTH_REQUEST, 0};
-    TEST_ASSERT_EQUAL_INT(-1, SshServer.dispatch(0, SSH_MSG_USERAUTH_REQUEST, badua, sizeof(badua)));
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_server_dispatch(0, SSH_MSG_USERAUTH_REQUEST, badua, sizeof(badua)));
     s->phase = SSH_PHASE_AUTH;
-    TEST_ASSERT_EQUAL_INT(-1, SshServer.dispatch(0, SSH_MSG_USERAUTH_REQUEST, badua, sizeof(badua)));
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_server_dispatch(0, SSH_MSG_USERAUTH_REQUEST, badua, sizeof(badua)));
 
     // A wrong password below the limit -> FAILURE, connection stays open (limit not tripped).
     s->phase = SSH_PHASE_AUTH;
@@ -1057,13 +1057,13 @@ void test_dispatch_guard_and_error_arms()
     pn += put_str(pw + pn, "password");
     pw[pn++] = 0;
     pn += put_str(pw + pn, "wrong");
-    TEST_ASSERT_EQUAL_INT(0, SshServer.dispatch(0, SSH_MSG_USERAUTH_REQUEST, pw, pn));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_server_dispatch(0, SSH_MSG_USERAUTH_REQUEST, pw, pn));
     TEST_ASSERT_EQUAL_INT(1, s->auth_failures);
 
     // Repeated failures trip the brute-force limit: FAILURE then DISCONNECT, return -1.
     s->auth_failures = SSH_MAX_AUTH_ATTEMPTS - 1;
     dsp_reset();
-    TEST_ASSERT_EQUAL_INT(-1, SshServer.dispatch(0, SSH_MSG_USERAUTH_REQUEST, pw, pn));
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_server_dispatch(0, SSH_MSG_USERAUTH_REQUEST, pw, pn));
     TEST_ASSERT_EQUAL(SSH_MSG_DISCONNECT, dsp_type[dsp_n - 1]);
 
     // Every post-auth connection message is rejected while unauthenticated.
@@ -1073,7 +1073,7 @@ void test_dispatch_guard_and_error_arms()
     for (size_t j = 0; j < sizeof(authed_arms) / sizeof(authed_arms[0]); j++)
     {
         uint8_t p[8] = {authed_arms[j], 0, 0, 0, 0, 0, 0, 0};
-        TEST_ASSERT_EQUAL_INT(-1, SshServer.dispatch(0, authed_arms[j], p, sizeof(p)));
+        TEST_ASSERT_EQUAL_INT(-1, pc_ssh_server_dispatch(0, authed_arms[j], p, sizeof(p)));
     }
 
     // Authenticated but malformed -> the arm's handler fails.
@@ -1083,16 +1083,16 @@ void test_dispatch_guard_and_error_arms()
     for (size_t j = 0; j < sizeof(handler_arms) / sizeof(handler_arms[0]); j++)
     {
         uint8_t p[2] = {handler_arms[j], 0};
-        TEST_ASSERT_EQUAL_INT(-1, SshServer.dispatch(0, handler_arms[j], p, sizeof(p)));
+        TEST_ASSERT_EQUAL_INT(-1, pc_ssh_server_dispatch(0, handler_arms[j], p, sizeof(p)));
     }
 
     // With no emit callback wired, a reply-producing dispatch (UNIMPLEMENTED) drops the frame.
-    SshServer.set_emit_cb(NULL);
+    pc_ssh_server_set_emit_cb(NULL);
     ssh_pkt[0].seq_no_recv = 1;
     uint8_t unk = 201;
-    TEST_ASSERT_EQUAL_INT(0, SshServer.dispatch(0, 201, &unk, 1));
-    SshServer.set_emit_cb(dsp_emit);
-    SshComp.reset(0);
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_server_dispatch(0, 201, &unk, 1));
+    pc_ssh_server_set_emit_cb(dsp_emit);
+    ssh_comp_reset(0);
 }
 
 int main()

@@ -69,32 +69,42 @@ typedef enum PROTO_ENUM_PACKED
 } pc_ssh_tunnel_state;
 
 /**
- * @brief The client role: dial, turn and tear down one outbound tunnel.
+ * @brief Start (or restart) the tunnel: connect to the relay, handshake, authenticate, and request
+ *        the remote forward. Non-blocking after the initial connect; drive it with poll().
+ * @return true if the connection and handshake started; false on bad args or immediate failure.
  *
- * @var SshTunnelNs::begin      Start (or restart) the tunnel: connect to the relay, handshake, authenticate,
- *                              and request the remote forward. Non-blocking after the initial connect; drive it
- *                              with poll()
- * @var SshTunnelNs::poll       Pump the tunnel: advance the handshake, service the relay's keepalives, accept
- *                              forwarded-tcpip channels and bridge their bytes to/from the local service. Call
- *                              every loop, from the same (adequately-stacked) task that called begin() - see
- *                              the begin() @warning
- * @var SshTunnelNs::end        Tear the tunnel down and close the relay connection
- * @var SshTunnelNs::state_get  Current lifecycle state
- * @var SshTunnelNs::up         True once authenticated and the remote forward is live
- * @var SshTunnelNs::pubkey     Derive the ssh-ed25519 public key (32 bytes) from a private @p seed
+ * @warning Call begin() and poll() from the SAME task, and give that task enough stack for the
+ * negotiated KEX. The handshake's field arithmetic runs in the caller's task: curve25519/ed25519
+ * peak ~10.5 KB, and the mlkem768x25519 hybrid (PC_ENABLE_PQC_KEX) adds ML-KEM-768 for ~16 KB total.
+ * The Arduino loop() task's default 8 KB is NOT enough - run the tunnel from a dedicated task created
+ * with a >= 20480-byte stack (see the example). begin() claims a private scratch arena for the calling
+ * task, so poll() must run in that same task or the packet-decrypt tripwire fires.
  */
-typedef struct
-{
-    proto_bool (*begin)(const pc_ssh_tunnel_cfg *cfg);
-    void (*poll)(void);
-    void (*end)(void);
-    pc_ssh_tunnel_state (*state_get)(void);
-    proto_bool (*up)(void);
-    void (*pubkey)(const uint8_t seed[32], uint8_t pub[32]);
-} SshTunnelNs;
+proto_bool pc_ssh_tunnel_begin(const pc_ssh_tunnel_cfg *cfg);
 
-/** @brief The one symbol this module exports. */
-extern const SshTunnelNs SshTunnel;
+/**
+ * @brief Pump the tunnel: advance the handshake, service the relay's keepalives, accept
+ *        forwarded-tcpip channels and bridge their bytes to/from the local service. Call every loop,
+ *        from the same (adequately-stacked) task that called begin() - see the begin() @warning.
+ */
+void pc_ssh_tunnel_poll(void);
+
+/** @brief Tear the tunnel down and close the relay connection. */
+void pc_ssh_tunnel_end(void);
+
+/** @brief Current lifecycle state. */
+pc_ssh_tunnel_state pc_ssh_tunnel_state_get(void);
+
+/** @brief True once authenticated and the remote forward is live. */
+proto_bool pc_ssh_tunnel_up(void);
+
+/**
+ * @brief Derive the ssh-ed25519 public key (32 bytes) from a private @p seed.
+ *
+ * Convenience for provisioning: print/serve this so it can be added to the relay's `authorized_keys`
+ * (as `ssh-ed25519 <base64(0x0000000b "ssh-ed25519" 0x00000020 <pub>)>`).
+ */
+void pc_ssh_tunnel_pubkey(const uint8_t seed[32], uint8_t pub[32]);
 
 #endif // PC_ENABLE_SSH_CLIENT
 

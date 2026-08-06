@@ -191,8 +191,8 @@ static void zlib_chain_match(const SshDeflate *z, const uint8_t *buf, size_t i, 
     }
 }
 
-static void ssh_deflate_init(SshDeflate *z, uint8_t *work, uint16_t *head, uint16_t *prev, uint16_t *ll_code,
-                             uint8_t *ll_len, uint16_t *d_code, uint8_t *d_len)
+void ssh_deflate_init(SshDeflate *z, uint8_t *work, uint16_t *head, uint16_t *prev, uint16_t *ll_code, uint8_t *ll_len,
+                      uint16_t *d_code, uint8_t *d_len)
 {
     z->work = work;
     z->head = head;
@@ -206,8 +206,7 @@ static void ssh_deflate_init(SshDeflate *z, uint8_t *work, uint16_t *head, uint1
     build_fixed(z);
 }
 
-static int ssh_deflate_packet(SshDeflate *z, const uint8_t *src, size_t src_len, uint8_t *dst, size_t dst_cap,
-                              size_t *out_len)
+int ssh_deflate_packet(SshDeflate *z, const uint8_t *src, size_t src_len, uint8_t *dst, size_t dst_cap, size_t *out_len)
 {
     if (src_len > (size_t)PC_SSH_ZLIB_MAX_IN)
     {
@@ -333,7 +332,5 @@ static int ssh_deflate_packet(SshDeflate *z, const uint8_t *src, size_t src_len,
     *out_len = w.cnt;
     return 0;
 }
-
-const SshDeflateNs SshDeflater = {ssh_deflate_init, ssh_deflate_packet};
 
 #endif // PC_ENABLE_SSH_ZLIB

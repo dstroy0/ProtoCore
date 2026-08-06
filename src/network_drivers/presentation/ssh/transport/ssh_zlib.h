@@ -46,7 +46,7 @@ PROTO_BEGIN_DECLS
  *
  * The window (history) lives at the front of @ref work; @ref hist bytes are valid. Hash chains
  * (@ref head / @ref prev) are rebuilt over the history each packet, so a slid buffer needs no chain
- * fix-up. All pointers are caller-owned; SshDeflater.init() wires them and seeds the fixed tables.
+ * fix-up. All pointers are caller-owned; ssh_deflate_init() wires them and seeds the fixed tables.
  */
 typedef struct
 {
@@ -62,6 +62,35 @@ typedef struct
 } SshDeflate;
 
 /**
+ * @brief Bind caller memory to a compressor and reset it to stream start.
+ *
+ * @param z        the compressor to initialize.
+ * @param work     work buffer, >= SSH_ZLIB_WORK_SIZE bytes.
+ * @param head     hash heads, SSH_ZLIB_HASH_SIZE uint16 entries.
+ * @param prev     hash chain, SSH_ZLIB_WORK_SIZE uint16 entries.
+ * @param ll_code,ll_len,d_code,d_len  fixed-Huffman tables (288/288/30/30 entries); seeded here.
+ */
+void ssh_deflate_init(SshDeflate *z, uint8_t *work, uint16_t *head, uint16_t *prev, uint16_t *ll_code, uint8_t *ll_len,
+                      uint16_t *d_code, uint8_t *d_len);
+
+/**
+ * @brief Compress one packet payload, continuing the session's zlib stream.
+ *
+ * Emits the 2-byte zlib header on the first call, then a fixed-Huffman block for @p src followed by a
+ * Z_SYNC_FLUSH boundary (`00 00 ff ff`, kept on the wire). Back-references may reach into the
+ * persistent window (prior packets), then the window slides to keep the last PC_SSH_ZLIB_WINDOW
+ * bytes for the next call.
+ *
+ * @param z            the compressor.
+ * @param src,src_len  uncompressed payload (src_len <= PC_SSH_ZLIB_MAX_IN).
+ * @param dst,dst_cap  output buffer for the on-wire compressed payload.
+ * @param out_len      set to the compressed length on success.
+ * @return 0 on success, -1 on bad input length or output overflow.
+ */
+int ssh_deflate_packet(SshDeflate *z, const uint8_t *src, size_t src_len, uint8_t *dst, size_t dst_cap,
+                       size_t *out_len);
+
+/**
  * @brief Worst-case compressed size for @p src_len input (header + block overhead + sync marker).
  *
  * Callers size @p dst with this. Fixed-Huffman can expand incompressible data slightly; the bound
@@ -71,22 +100,6 @@ static inline size_t ssh_deflate_bound(size_t src_len)
 {
     return 2 + src_len + (src_len >> 3) + 32;
 }
-
-/**
- * @brief The send half of zlib packet compression. SshDeflate is the stream state; this runs it.
- *
- * @var SshDeflateNs::init    Bind caller memory to a compressor and reset it to stream start
- * @var SshDeflateNs::packet  Compress one packet payload, continuing the session's zlib stream
- */
-typedef struct
-{
-    void (*init)(SshDeflate *z, uint8_t *work, uint16_t *head, uint16_t *prev, uint16_t *ll_code, uint8_t *ll_len,
-                 uint16_t *d_code, uint8_t *d_len);
-    int (*packet)(SshDeflate *z, const uint8_t *src, size_t src_len, uint8_t *dst, size_t dst_cap, size_t *out_len);
-} SshDeflateNs;
-
-/** @brief The one symbol this module exports. */
-extern const SshDeflateNs SshDeflater;
 
 #endif // PC_ENABLE_SSH_ZLIB
 

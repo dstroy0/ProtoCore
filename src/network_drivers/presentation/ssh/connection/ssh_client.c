@@ -6,7 +6,7 @@
  * @brief Outbound SSH client + reverse tunnel state machine (see ssh_client.h).
  *
  * Client-role driver over the shipped transport primitives: it reuses the role-aware binary packet
- * layer (ssh_pkt_* with SshPacket.set_client), the curve25519 / ed25519 / chacha-poly crypto, and the
+ * layer (ssh_pkt_* with ssh_pkt_set_client), the curve25519 / ed25519 / chacha-poly crypto, and the
  * RFC 4253 §7.2 KDF. Only the client-side handshake, auth, and forward logic lives here.
  */
 
@@ -22,7 +22,7 @@
 #include "crypto/asymmetric/ed25519.h"    // ssh-ed25519 host key + client auth
 #include "crypto/hash/sha256.h"
 #include "crypto/rng/rng.h"                                        // pc_rand_fill
-#include "network_drivers/presentation/ssh/transport/ssh_dh.h"     // SshDh.derive_keys_sid, pc_rand_fill
+#include "network_drivers/presentation/ssh/transport/ssh_dh.h"     // ssh_dh_derive_keys_sid, pc_rand_fill
 #include "network_drivers/presentation/ssh/transport/ssh_keymat.h" // ssh_keys[], SshKeyMat, SSH_CIPHER_*, SSH_MAC_*
 #include "network_drivers/presentation/ssh/transport/ssh_packet.h"
 #include "network_drivers/tls/ssh_kexhash.h" // SshKexHash (SHA-256/SHA-512 by method)
@@ -43,9 +43,6 @@
 #include "mmgr/arena.h"                    // pc_worker_set_self (own scratch slot)
 #include "network_drivers/transport/tcp.h" // pc_client_*
 #include "server/clock/clock.h"            // pc_millis, pcdelay
-
-// Called above their definitions; static made the header's declaration unavailable.
-static void pc_ssh_tunnel_end(void);
 #endif
 
 // ---------------------------------------------------------------------------
@@ -399,7 +396,7 @@ static CliChannel *chan_alloc(void)
 static proto_bool cli_send(const uint8_t *payload, size_t len)
 {
     size_t wlen = 0;
-    if (SshPacket.send(SSH_CLI_SLOT, payload, len, s_cli.wire, &wlen, sizeof(s_cli.wire)) != 0)
+    if (ssh_pkt_send(SSH_CLI_SLOT, payload, len, s_cli.wire, &wlen, sizeof(s_cli.wire)) != 0)
     {
         return PROTO_FALSE;
     }
@@ -1023,7 +1020,7 @@ static proto_bool handle_kexdh_reply(const uint8_t *p, size_t len)
         s_cli.have_sid = PROTO_TRUE;
     }
 
-    // SshDh.derive_keys_sid populates c2s/s2c per the RFC 4253 §7.2 letters for the negotiated
+    // ssh_dh_derive_keys_sid populates c2s/s2c per the RFC 4253 §7.2 letters for the negotiated
     // cipher/MAC; the packet layer's is_client flag selects the send/receive direction. The hybrids
     // encode K as a fixed 32/64-byte string (k_is_string); the classical methods as an mpint. The
     // -sha512 method derives over SHA-512 (is512), so H and the session_id are 64 bytes.
@@ -1035,8 +1032,8 @@ static proto_bool handle_kexdh_reply(const uint8_t *p, size_t len)
 #if PC_ENABLE_SSH_SNTRUP761
     k_is_string = k_is_string || (s_cli.kex == CLI_KEX_SNTRUP761_X25519);
 #endif
-    SshDh.derive_keys_sid(SSH_CLI_SLOT, k_be, H, s_cli.session_id, s_cli.cipher, s_cli.mac, k_is_string, h_len,
-                          s_cli.session_id_len, is512);
+    ssh_dh_derive_keys_sid(SSH_CLI_SLOT, k_be, H, s_cli.session_id, s_cli.cipher, s_cli.mac, k_is_string, h_len,
+                           s_cli.session_id_len, is512);
     pc_secure_wipe(k_be, sizeof(k_be));
     pc_secure_wipe(s_cli.kex_priv, sizeof(s_cli.kex_priv));
 #if PC_ENABLE_PQC_KEX || PC_ENABLE_SSH_SNTRUP761
@@ -1371,7 +1368,7 @@ static void pump_local_to_relay(void)
 }
 
 // ---------------------------------------------------------------------------
-// Inbound message dispatch (called by SshPacket.recv per verified packet)
+// Inbound message dispatch (called by ssh_pkt_recv per verified packet)
 // ---------------------------------------------------------------------------
 
 static void cli_msg_handler(uint8_t slot, uint8_t type, const uint8_t *payload, size_t len)
@@ -1535,7 +1532,7 @@ static void cli_msg_handler(uint8_t slot, uint8_t type, const uint8_t *payload, 
 // Public API
 // ---------------------------------------------------------------------------
 
-static proto_bool pc_ssh_tunnel_begin(const pc_ssh_tunnel_cfg *cfg)
+proto_bool pc_ssh_tunnel_begin(const pc_ssh_tunnel_cfg *cfg)
 {
     if (!cfg || !cfg->host || !cfg->user || !cfg->auth_seed || !cfg->host_pin)
     {
@@ -1564,8 +1561,8 @@ static proto_bool pc_ssh_tunnel_begin(const pc_ssh_tunnel_cfg *cfg)
         return PROTO_FALSE;
     }
 
-    SshPacket.init(SSH_CLI_SLOT);
-    SshPacket.set_client(SSH_CLI_SLOT);
+    ssh_pkt_init(SSH_CLI_SLOT);
+    ssh_pkt_set_client(SSH_CLI_SLOT);
     ssh_keymat_wipe(SSH_CLI_SLOT);
 
     // Send our identification string, then our KEXINIT.
@@ -1619,7 +1616,7 @@ static void drain_banner(const uint8_t *data, size_t len, size_t *consumed)
     *consumed = len; // whole chunk consumed into the accumulator
 }
 
-static void pc_ssh_tunnel_poll(void)
+void pc_ssh_tunnel_poll(void)
 {
     if (s_cli.cid < 0 || s_cli.phase == CLI_PHASE_IDLE || s_cli.phase == CLI_PHASE_FAILED)
     {
@@ -1650,7 +1647,7 @@ static void pc_ssh_tunnel_poll(void)
         }
         if (off < got && s_cli.phase != CLI_PHASE_FAILED)
         {
-            if (SshPacket.recv(SSH_CLI_SLOT, buf + off, got - off, cli_msg_handler) != 0)
+            if (ssh_pkt_recv(SSH_CLI_SLOT, buf + off, got - off, cli_msg_handler) != 0)
             {
                 cli_fail("packet error (MAC / framing)");
             }
@@ -1663,7 +1660,7 @@ static void pc_ssh_tunnel_poll(void)
     }
 }
 
-static void pc_ssh_tunnel_end(void)
+void pc_ssh_tunnel_end(void)
 {
     for (int i = 0; i < PC_SSH_CLIENT_MAX_CHANNELS; i++)
     {
@@ -1684,12 +1681,12 @@ static void pc_ssh_tunnel_end(void)
     s_cli.state = PC_TUN_IDLE;
 }
 
-static pc_ssh_tunnel_state pc_ssh_tunnel_state_get(void)
+pc_ssh_tunnel_state pc_ssh_tunnel_state_get(void)
 {
     return s_cli.state;
 }
 
-static proto_bool pc_ssh_tunnel_up(void)
+proto_bool pc_ssh_tunnel_up(void)
 {
     return s_cli.state == PC_TUN_UP;
 }
@@ -1719,12 +1716,9 @@ proto_bool pc_ssh_tunnel_up(void)
 #endif // PROTOCORE_HOT
 
 // Available on both host and device: pure key derivation for provisioning.
-static void pc_ssh_tunnel_pubkey(const uint8_t seed[32], uint8_t pub[32])
+void pc_ssh_tunnel_pubkey(const uint8_t seed[32], uint8_t pub[32])
 {
     pc_ed25519_pubkey(pub, seed);
 }
-
-const SshTunnelNs SshTunnel = {pc_ssh_tunnel_begin,     pc_ssh_tunnel_poll, pc_ssh_tunnel_end,
-                               pc_ssh_tunnel_state_get, pc_ssh_tunnel_up,   pc_ssh_tunnel_pubkey};
 
 #endif // PC_ENABLE_SSH_CLIENT

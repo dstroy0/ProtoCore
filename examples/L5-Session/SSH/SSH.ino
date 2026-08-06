@@ -10,14 +10,14 @@
  *   - Loading the RSA-2048 host key from NVS (see docs/SSH.md "Host key
  *     provisioning" - you must store a DER key under namespace "ssh_host_key",
  *     key "priv_der" once per device before this runs)
- *   - Password auth (SshAuth.set_password_cb) and publickey auth
- *     (SshAuth.set_pubkey_cb)
+ *   - Password auth (pc_ssh_auth_set_password_cb) and publickey auth
+ *     (pc_ssh_auth_set_pubkey_cb)
  *   - A channel data callback that echoes received bytes back to the client
- *     with SshProto.send()
+ *     with pc_ssh_conn_send()
  *   - Optional TCP port forwarding via the ssh_forward owner, gated by
  *     PC_SSH_PORT_FORWARD (off here; see the block below to enable it):
  *     local (ssh -L, outbound) AND remote (ssh -R, a listener on the device that
- *     tunnels back to the client) - SshForward.begin() enables both.
+ *     tunnels back to the client) - pc_ssh_forward_begin() enables both.
  *
  * Hardening: define PC_SSH_ALLOW_PASSWORD 0 to compile password auth out and
  * accept publickey only. Failed attempts are bounded by SSH_MAX_AUTH_ATTEMPTS.
@@ -76,7 +76,7 @@ static bool ssh_pubkey_auth(const char *user, const uint8_t *blob, size_t blob_l
 
 static void ssh_on_data(uint8_t slot, uint32_t channel, const uint8_t *data, size_t len)
 {
-    SshProto.send(slot, channel, data, len); // echo back on the same channel
+    pc_ssh_conn_send(slot, channel, data, len); // echo back on the same channel
 }
 
 #if PC_SSH_PORT_FORWARD
@@ -113,9 +113,9 @@ void setup()
     }
 
     // Install SSH callbacks before begin().
-    SshAuth.set_password_cb(ssh_password_auth);
-    SshAuth.set_pubkey_cb(ssh_pubkey_auth);
-    SshChannels.set_data_cb(ssh_on_data);
+    pc_ssh_auth_set_password_cb(ssh_password_auth);
+    pc_ssh_auth_set_pubkey_cb(ssh_pubkey_auth);
+    pc_ssh_channel_set_data_cb(ssh_on_data);
 
     // Listen for SSH on port 22 (and, optionally, HTTP on 80 alongside it).
     listen(22, PROTO_SSH);
@@ -127,15 +127,15 @@ void setup()
     }
 
     // One-time wiring of the SSH dispatcher's outbound path. Call after begin().
-    SshProto.setup();
+    pc_ssh_conn_setup();
 
 #if PC_SSH_PORT_FORWARD
     // Enable forwarding (opt-in; nothing is forwarded until this runs). This turns on
     // BOTH local (ssh -L, gated by the policy below) and remote (ssh -R, a listener the
     // client asks the device to open). For ssh -R also raise PC_SSH_MAX_CHANNELS and,
     // if you expect concurrent tunnels, PC_SSH_RFWD_MAX / PC_SSH_RFWD_BRIDGE_MAX.
-    SshForward.set_policy_cb(pc_ssh_forward_policy);
-    SshForward.begin();
+    pc_ssh_forward_set_policy_cb(pc_ssh_forward_policy);
+    pc_ssh_forward_begin();
     Serial.println("SSH port forwarding enabled (ssh -L to 80/443; ssh -R listeners)");
 #endif
 

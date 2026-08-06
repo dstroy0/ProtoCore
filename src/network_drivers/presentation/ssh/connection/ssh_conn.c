@@ -22,9 +22,6 @@
 #include "network_drivers/transport/tcp.h"
 #include "server/clock/clock.h" // pc_millis() for the server-initiated re-key timer
 
-// Called above their definitions; static made the header's declaration unavailable.
-static void pc_ssh_conn_close(uint8_t conn_slot);
-
 // All SSH connection-layer state, owned by one instance (internal linkage): the SSH-slot ->
 // TCP-conn-slot mapping (0xFF = free), the one-time init flag, and the per-slot deferred-close
 // flags. Grouped so it is one named owner, unreachable from any other translation unit.
@@ -77,7 +74,7 @@ static void ssh_emit(uint8_t i, const uint8_t *payload, size_t len)
         return; // arena exhausted: drop the outbound message (fail closed)
     }
     size_t wlen = 0;
-    if (SshPacket.send(i, payload, len, wire, &wlen, wire_cap) != 0)
+    if (ssh_pkt_send(i, payload, len, wire, &wlen, wire_cap) != 0)
     {
         pc_plaintext_release(mark);
         return;
@@ -87,25 +84,25 @@ static void ssh_emit(uint8_t i, const uint8_t *payload, size_t len)
     pc_plaintext_release(mark);
 }
 
-// SshPacket.recv handler: dispatch one decrypted message, remember fatal results.
+// ssh_pkt_recv handler: dispatch one decrypted message, remember fatal results.
 static void ssh_msg_handler(uint8_t i, uint8_t msg_type, const uint8_t *payload, size_t len)
 {
-    if (SshServer.dispatch(i, msg_type, payload, len) < 0)
+    if (pc_ssh_server_dispatch(i, msg_type, payload, len) < 0)
     {
         s_sshc.close[i] = PROTO_TRUE;
     }
 }
 
-static void pc_ssh_conn_setup()
+void pc_ssh_conn_setup()
 {
     ensure_init();
-    SshServer.set_emit_cb(ssh_emit);
+    pc_ssh_server_set_emit_cb(ssh_emit);
 }
 
 // The SSH connection ProtoHandler (Layer 5 dispatch seam) - installed by Session.proto->register_builtins()
 // via this accessor, so this module carries no dependency on the session layer.
 static const ProtoHandler s_ssh_handler = {pc_ssh_conn_accept, pc_ssh_conn_rx, pc_ssh_conn_close, pc_ssh_conn_poll};
-static const ProtoHandler *ssh_proto_handler(void)
+const ProtoHandler *ssh_proto_handler(void)
 {
     // Wire the dispatcher's binary-packet emit callback here, at the one seam every consumer must go
     // through to install SSH: a consumer that registers this handler can then never be left with the
@@ -116,7 +113,7 @@ static const ProtoHandler *ssh_proto_handler(void)
     return &s_ssh_handler;
 }
 
-static int pc_ssh_conn_send(uint8_t ssh_slot, uint32_t channel, const uint8_t *data, size_t len)
+int pc_ssh_conn_send(uint8_t ssh_slot, uint32_t channel, const uint8_t *data, size_t len)
 {
     if (ssh_slot >= MAX_SSH_CONNS || s_sshc.conn_for_ssh[ssh_slot] == 0xFF)
     {
@@ -142,13 +139,13 @@ static int pc_ssh_conn_send(uint8_t ssh_slot, uint32_t channel, const uint8_t *d
         return -1;
     }
     size_t plen = 0;
-    if (SshChannels.build_data(ssh_slot, channel, data, len, payload, &plen, SSH_PKT_BUF_SIZE) != 0)
+    if (pc_ssh_channel_build_data(ssh_slot, channel, data, len, payload, &plen, SSH_PKT_BUF_SIZE) != 0)
     {
         pc_plaintext_release(mark);
         return -1;
     }
     size_t wlen = 0;
-    if (SshPacket.send(ssh_slot, payload, plen, wire, &wlen, wire_cap) != 0)
+    if (ssh_pkt_send(ssh_slot, payload, plen, wire, &wlen, wire_cap) != 0)
     {
         pc_plaintext_release(mark);
         return -1;
@@ -159,7 +156,7 @@ static int pc_ssh_conn_send(uint8_t ssh_slot, uint32_t channel, const uint8_t *d
     return (int)len;
 }
 
-static int pc_ssh_conn_close_channel(uint8_t ssh_slot, uint32_t channel)
+int pc_ssh_conn_close_channel(uint8_t ssh_slot, uint32_t channel)
 {
     if (ssh_slot >= MAX_SSH_CONNS || s_sshc.conn_for_ssh[ssh_slot] == 0xFF)
     {
@@ -173,7 +170,7 @@ static int pc_ssh_conn_close_channel(uint8_t ssh_slot, uint32_t channel)
 
     uint8_t close_msgs[10];
     size_t clen = 0;
-    if (SshChannels.build_close(ssh_slot, channel, close_msgs, &clen, sizeof(close_msgs)) != 0 || clen != 10)
+    if (pc_ssh_channel_build_close(ssh_slot, channel, close_msgs, &clen, sizeof(close_msgs)) != 0 || clen != 10)
     {
         return -1;
     }
@@ -192,7 +189,7 @@ static int pc_ssh_conn_close_channel(uint8_t ssh_slot, uint32_t channel)
     for (size_t off = 0; off < 10; off += 5)
     {
         size_t wlen = 0;
-        if (SshPacket.send(ssh_slot, close_msgs + off, 5, wire, &wlen, wire_cap) != 0)
+        if (ssh_pkt_send(ssh_slot, close_msgs + off, 5, wire, &wlen, wire_cap) != 0)
         {
             pc_plaintext_release(mark);
             return -1;
@@ -204,8 +201,8 @@ static int pc_ssh_conn_close_channel(uint8_t ssh_slot, uint32_t channel)
     return 0;
 }
 
-static int pc_ssh_conn_open_forwarded(uint8_t ssh_slot, const char *conn_addr, uint16_t conn_port,
-                                      const char *orig_addr, uint16_t orig_port)
+int pc_ssh_conn_open_forwarded(uint8_t ssh_slot, const char *conn_addr, uint16_t conn_port, const char *orig_addr,
+                               uint16_t orig_port)
 {
     if (ssh_slot >= MAX_SSH_CONNS || s_sshc.conn_for_ssh[ssh_slot] == 0xFF)
     {
@@ -229,15 +226,15 @@ static int pc_ssh_conn_open_forwarded(uint8_t ssh_slot, const char *conn_addr, u
         return -1;
     }
     size_t plen = 0;
-    int ch = SshChannels.open_forwarded(ssh_slot, conn_addr, conn_port, orig_addr, orig_port, payload, &plen,
-                                        SSH_PKT_BUF_SIZE);
+    int ch = pc_ssh_channel_open_forwarded(ssh_slot, conn_addr, conn_port, orig_addr, orig_port, payload, &plen,
+                                           SSH_PKT_BUF_SIZE);
     if (ch < 0)
     {
         pc_plaintext_release(mark);
         return -1; // channel pool full / build failed
     }
     size_t wlen = 0;
-    if (SshPacket.send(ssh_slot, payload, plen, wire, &wlen, wire_cap) != 0)
+    if (ssh_pkt_send(ssh_slot, payload, plen, wire, &wlen, wire_cap) != 0)
     {
         pc_plaintext_release(mark);
         return -1;
@@ -248,7 +245,7 @@ static int pc_ssh_conn_open_forwarded(uint8_t ssh_slot, const char *conn_addr, u
     return ch;
 }
 
-static void pc_ssh_conn_poll(uint8_t conn_slot)
+void pc_ssh_conn_poll(uint8_t conn_slot)
 {
     // Skip a slot that is not ACTIVE.
     TcpConn *conn = &conn_pool[conn_slot];
@@ -270,12 +267,12 @@ static void pc_ssh_conn_poll(uint8_t conn_slot)
     if (s->phase == SSH_PHASE_OPEN && !ssh_pkt[j].kex_active)
     {
         uint32_t elapsed = pc_millis() - s->last_kex_ms;
-        if (SshTransport.rekey_due(ssh_pkt[j].seq_no_send, ssh_pkt[j].seq_no_recv, elapsed, SSH_REKEY_PACKET_THRESHOLD,
-                                   SSH_REKEY_TIME_MS))
+        if (ssh_rekey_due(ssh_pkt[j].seq_no_send, ssh_pkt[j].seq_no_recv, elapsed, SSH_REKEY_PACKET_THRESHOLD,
+                          SSH_REKEY_TIME_MS))
         {
             uint8_t buf[SSH_PKT_BUF_SIZE];
             size_t n = 0;
-            if (SshTransport.begin_rekey(j, buf, &n, sizeof(buf)) == 0)
+            if (ssh_transport_begin_rekey(j, buf, &n, sizeof(buf)) == 0)
             {
                 ssh_emit(j, buf, n);
             }
@@ -283,7 +280,7 @@ static void pc_ssh_conn_poll(uint8_t conn_slot)
     }
 
 #if PC_SSH_PORT_FORWARD
-    SshForward.pump(j);
+    pc_ssh_forward_pump(j);
 #endif
 }
 
@@ -291,7 +288,7 @@ static void pc_ssh_conn_poll(uint8_t conn_slot)
 // Connection lifecycle
 // ---------------------------------------------------------------------------
 
-static void pc_ssh_conn_accept(uint8_t conn_slot)
+void pc_ssh_conn_accept(uint8_t conn_slot)
 {
     ensure_init();
     TcpConn *conn = &conn_pool[conn_slot];
@@ -317,17 +314,17 @@ static void pc_ssh_conn_accept(uint8_t conn_slot)
     conn->proto_slot = j;
     s_sshc.close[j] = PROTO_FALSE;
 
-    SshTransport.init(j);
-    SshPacket.init(j);
-    SshChannels.init(j);
+    ssh_transport_init(j);
+    ssh_pkt_init(j);
+    pc_ssh_channel_init(j);
 #if PC_ENABLE_SSH_ZLIB
-    SshComp.reset(j); // clear compression state for the new connection (not run on a re-key)
+    ssh_comp_reset(j); // clear compression state for the new connection (not run on a re-key)
 #endif
 
     // Send the server identification banner (raw, before any binary packet).
     uint8_t banner[64];
     size_t blen = 0;
-    if (SshTransport.server_banner(banner, &blen, sizeof(banner)) == 0 && pc_conn_active(conn->id))
+    if (ssh_transport_server_banner(banner, &blen, sizeof(banner)) == 0 && pc_conn_active(conn->id))
     {
         Tcp.conn->send(conn->id, banner, (proto_u16)blen);
         Tcp.conn->flush(conn->id);
@@ -340,7 +337,7 @@ static void close_conn(uint8_t conn_slot)
     pc_ssh_conn_close(conn_slot);
 }
 
-static void pc_ssh_conn_rx(uint8_t conn_slot)
+void pc_ssh_conn_rx(uint8_t conn_slot)
 {
     TcpConn *conn = &conn_pool[conn_slot];
     uint8_t j = conn->proto_slot;
@@ -361,7 +358,7 @@ static void pc_ssh_conn_rx(uint8_t conn_slot)
     if (ssh_sess[j].phase == SSH_PHASE_BANNER)
     {
         size_t consumed = 0;
-        int rc = SshTransport.recv_banner(j, buf, n, &consumed);
+        int rc = ssh_transport_recv_banner(j, buf, n, &consumed);
         if (rc < 0)
         {
             close_conn(conn_slot);
@@ -377,7 +374,7 @@ static void pc_ssh_conn_rx(uint8_t conn_slot)
 
     if (off < n)
     {
-        SshPacket.recv(j, buf + off, n - off, ssh_msg_handler);
+        ssh_pkt_recv(j, buf + off, n - off, ssh_msg_handler);
     }
 
     pc_secure_wipe(buf, n);
@@ -388,14 +385,14 @@ static void pc_ssh_conn_rx(uint8_t conn_slot)
     }
 }
 
-static void pc_ssh_conn_close(uint8_t conn_slot)
+void pc_ssh_conn_close(uint8_t conn_slot)
 {
     TcpConn *conn = &conn_pool[conn_slot];
     uint8_t j = conn->proto_slot;
     if (j < MAX_SSH_CONNS)
     {
 #if PC_SSH_PORT_FORWARD
-        SshForward.reset(j); // close any forwarded TCP sockets this connection owned
+        pc_ssh_forward_reset(j); // close any forwarded TCP sockets this connection owned
 #endif
         // Zero all key material and session state for this slot.
         ssh_keymat_wipe(j);
@@ -405,7 +402,3 @@ static void pc_ssh_conn_close(uint8_t conn_slot)
     }
     conn->proto_slot = PC_PROTO_SLOT_NONE;
 }
-
-const SshProtoNs SshProto = {pc_ssh_conn_setup,         pc_ssh_conn_accept,         pc_ssh_conn_rx,
-                             pc_ssh_conn_close,         pc_ssh_conn_poll,           pc_ssh_conn_send,
-                             pc_ssh_conn_close_channel, pc_ssh_conn_open_forwarded, ssh_proto_handler};

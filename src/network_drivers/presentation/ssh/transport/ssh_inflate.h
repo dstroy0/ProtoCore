@@ -11,7 +11,7 @@
  * OpenSSH compresses its outbound (our inbound, client-to-server) traffic with `Z_PARTIAL_FLUSH`,
  * which ends each packet at a DEFLATE block boundary but NOT on a byte boundary: the last bits of a
  * packet spill into the next packet's first byte. Decoding it therefore needs a *resumable* inflate
- * that carries the bit position and the window across `SshInflater.packet()` calls.
+ * that carries the bit position and the window across `ssh_inflate_packet()` calls.
  *
  * The engine keeps that state small by only ever decoding *complete* DEFLATE blocks: after each feed
  * it retains the few un-decoded tail bytes (the incomplete flush block) plus the bit offset into the
@@ -44,7 +44,7 @@ PROTO_BEGIN_DECLS
  * @brief Streaming client-to-server DEFLATE decompressor (one per SSH connection).
  *
  * The 32 KB circular @ref window is caller-supplied (it lives in PSRAM alongside the s2c compressor).
- * SshInflater.init() binds it and resets the stream; the small carry/bit state is inline.
+ * ssh_inflate_init() binds it and resets the stream; the small carry/bit state is inline.
  */
 typedef struct
 {
@@ -58,19 +58,27 @@ typedef struct
 } SshInflate;
 
 /**
- * @brief The receive half of zlib packet compression. SshInflate is the stream state; this runs it.
- *
- * @var SshInflateNs::init    Bind a caller-owned 32 KB window to a decompressor and reset it to stream start
- * @var SshInflateNs::packet  Decompress one inbound packet payload, continuing the session's zlib stream
+ * @brief Bind a caller-owned 32 KB window to a decompressor and reset it to stream start.
+ * @param z       the decompressor to initialize.
+ * @param window  back-reference window, >= SSH_INFLATE_WINDOW bytes.
  */
-typedef struct
-{
-    void (*init)(SshInflate *z, uint8_t *window);
-    int (*packet)(SshInflate *z, const uint8_t *src, size_t src_len, uint8_t *dst, size_t dst_cap, size_t *out_len);
-} SshInflateNs;
+void ssh_inflate_init(SshInflate *z, uint8_t *window);
 
-/** @brief The one symbol this module exports. */
-extern const SshInflateNs SshInflater;
+/**
+ * @brief Decompress one inbound packet payload, continuing the session's zlib stream.
+ *
+ * Consumes the 2-byte zlib header on the first call, then decodes every complete DEFLATE block that
+ * @p src (prefixed by any carried tail) makes available, writing the decompressed bytes to @p dst and
+ * into the window. The incomplete trailing flush block is carried to the next call.
+ *
+ * @param z            the decompressor.
+ * @param src,src_len  one inbound compressed payload.
+ * @param dst,dst_cap  output buffer for the decompressed payload.
+ * @param out_len      set to the decompressed length on success (may be 0 if a packet carried only flush bits).
+ * @return 0 on success, -1 on a malformed stream, an output overflow, or a carry overflow (peer did not flush).
+ */
+int ssh_inflate_packet(SshInflate *z, const uint8_t *src, size_t src_len, uint8_t *dst, size_t dst_cap,
+                       size_t *out_len);
 
 #endif // PC_ENABLE_SSH_ZLIB
 

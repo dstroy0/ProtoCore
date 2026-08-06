@@ -6,7 +6,7 @@
  * @brief SFTP server subsystem - the SSH_FXP_* state machine. See ssh_sftp.h.
  *
  * Accumulates SSH_FXP_* request packets from the channel byte stream, runs each against the filesystem
- * accessor, and frames responses back with SshProto.send. A large WRITE is streamed straight to the file
+ * accessor, and frames responses back with pc_ssh_conn_send. A large WRITE is streamed straight to the file
  * (never buffered whole); a READ returns a short DATA (the client re-requests). A fixed handle table holds
  * open files and directory cursors.
  *
@@ -19,14 +19,14 @@
 
 #if PC_ENABLE_SSH_SFTP
 
-#include "mmgr/endian.h" // the u32 <-> big-endian bytes serializers
 #include "network_drivers/application/sftp/sftp.h"
 #include "network_drivers/presentation/ssh/connection/ssh_channel.h" // callbacks + setters
-#include "network_drivers/presentation/ssh/connection/ssh_conn.h"    // SshProto.send / SshProto.close_channel
+#include "network_drivers/presentation/ssh/connection/ssh_conn.h"    // pc_ssh_conn_send / pc_ssh_conn_close_channel
 #include "server/filesystem/filesystem.h"
+#include "mmgr/endian.h" // the u32 <-> big-endian bytes serializers
 #include "shared_primitives/runops.h" // the bounded word-at-a-time length scan
 
-// Leave headroom below one SSH packet for the CHANNEL_DATA framing, so SshProto.send never rejects a response.
+// Leave headroom below one SSH packet for the CHANNEL_DATA framing, so pc_ssh_conn_send never rejects a response.
 #define PC_SFTP_RESP_CAP (SSH_PKT_BUF_SIZE - 16)
 // Worst-case one READDIR NAME entry (filename + longname + attrs), used to stash an entry that did not fit.
 #define PC_SFTP_ENTRY_MAX (PC_FILESYSTEM_PATH_MAX + 320)
@@ -166,7 +166,7 @@ static void send_resp(SftpSession *s, size_t n)
 {
     if (n > 0)
     {
-        SshProto.send(s->slot, s->channel, s_sftp.out, n);
+        pc_ssh_conn_send(s->slot, s->channel, s_sftp.out, n);
     }
 }
 static void send_status(SftpSession *s, uint32_t id, uint32_t code, const char *msg)
@@ -743,7 +743,7 @@ static void pc_sftp_on_data(uint8_t slot, uint32_t channel, const uint8_t *data,
         size_t space = sizeof(s->acc) - s->acc_len;
         if (space == 0)
         {
-            SshProto.close_channel(slot, s->channel); // a non-WRITE packet too big to buffer
+            pc_ssh_conn_close_channel(slot, s->channel); // a non-WRITE packet too big to buffer
             s->active = PROTO_FALSE;
             return;
         }
@@ -754,7 +754,7 @@ static void pc_sftp_on_data(uint8_t slot, uint32_t channel, const uint8_t *data,
         len -= take;
         if (!process_acc(s))
         {
-            SshProto.close_channel(slot, s->channel);
+            pc_ssh_conn_close_channel(slot, s->channel);
             s->active = PROTO_FALSE;
             return;
         }
@@ -778,8 +778,8 @@ void pc_ssh_sftp_begin(void)
     }
     if (!s_sftp.registered)
     {
-        SshChannels.set_sftp_open_cb(pc_sftp_on_open);
-        SshChannels.set_sftp_data_cb(pc_sftp_on_data);
+        pc_ssh_channel_set_sftp_open_cb(pc_sftp_on_open);
+        pc_ssh_channel_set_sftp_data_cb(pc_sftp_on_data);
         s_sftp.registered = PROTO_TRUE;
     }
 }

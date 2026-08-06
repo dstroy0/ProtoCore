@@ -20,8 +20,8 @@
 
 void setUp()
 {
-    SshTransport.init(0);
-    SshAuth.set_password_cb(NULL);
+    ssh_transport_init(0);
+    pc_ssh_auth_set_password_cb(NULL);
 }
 void tearDown()
 {
@@ -69,7 +69,7 @@ void test_password_refused_even_with_correct_callback()
 {
     // Even a callback that accepts everything must not authenticate, because
     // the password method is compiled out.
-    SshAuth.set_password_cb(always_ok);
+    pc_ssh_auth_set_password_cb(always_ok);
     uint8_t pkt[128];
     size_t n = 0;
     pkt[n++] = SSH_MSG_USERAUTH_REQUEST;
@@ -81,7 +81,7 @@ void test_password_refused_even_with_correct_callback()
 
     uint8_t out[64];
     size_t olen = 0;
-    TEST_ASSERT_EQUAL_INT(0, SshAuth.handle_request(0, pkt, n, out, &olen, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_auth_handle_request(0, pkt, n, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL(SSH_MSG_USERAUTH_FAILURE, out[0]);
     TEST_ASSERT_FALSE(ssh_sess[0].authed);
 }
@@ -90,7 +90,7 @@ void test_failure_advertises_publickey_only()
 {
     uint8_t out[64];
     size_t olen = 0;
-    TEST_ASSERT_EQUAL_INT(0, SshAuth.build_failure(out, &olen, sizeof(out), PROTO_FALSE));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_auth_build_failure(out, &olen, sizeof(out), PROTO_FALSE));
     // name-list at out[1..]: must contain "publickey" and not "password".
     proto_bool has_pk = PROTO_FALSE, has_pw = PROTO_FALSE;
     for (size_t k = 0; k + 9 <= olen; k++)
@@ -157,7 +157,7 @@ void test_ecdsa_direct_sign_verify_ecdh_roundtrip(void)
 // by hand (RFC 4252 §7 / RFC 5656 §3.1) and sign it with a real key, the way a genuine client would.
 void test_ecdsa_publickey_auth_succeeds_when_password_disabled(void)
 {
-    SshAuth.set_pubkey_cb(accept_any_pubkey);
+    pc_ssh_auth_set_pubkey_cb(accept_any_pubkey);
 
     // A real client only has a signature to make once the first KEX has produced a session id.
     ssh_sess[0].session_id_len = 32;
@@ -218,7 +218,7 @@ void test_ecdsa_publickey_auth_succeeds_when_password_disabled(void)
 
     uint8_t out[256];
     size_t olen = 0;
-    TEST_ASSERT_EQUAL_INT(0, SshAuth.handle_request(0, pkt, n, out, &olen, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_auth_handle_request(0, pkt, n, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL(SSH_MSG_USERAUTH_SUCCESS, out[0]);
     TEST_ASSERT_TRUE(ssh_sess[0].authed);
 }

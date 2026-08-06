@@ -16,7 +16,7 @@
  * operation as the bytes the client sent, and the accessor frames it onto the mount root and
  * rejects `..`. Mount the backend and set the root once with pc_mnt_mount() + pc_fs_begin().
  *
- * Call pc_ssh_sftp_begin() once after SshProto.setup(); it installs the channel subsystem + data
+ * Call pc_ssh_sftp_begin() once after pc_ssh_conn_setup(); it installs the channel subsystem + data
  * callbacks.
  *
  * @author  Douglas Quigg (dstroy0)
@@ -34,7 +34,7 @@ PROTO_BEGIN_DECLS
 
 /**
  * @brief Serve the SFTP subsystem from the mounted filesystem. Installs the channel subsystem +
- *        data callbacks. Call once, after SshProto.setup() and pc_fs_begin().
+ *        data callbacks. Call once, after pc_ssh_conn_setup() and pc_fs_begin().
  */
 void pc_ssh_sftp_begin(void);
 

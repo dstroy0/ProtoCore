@@ -16,7 +16,7 @@
 #include "mmgr/bytes.h"     // pc_rd_str() - a name-list is an RFC 4251 sec 5 string
 #include "mmgr/membuild.h"  // pc_sb frame builder
 #include "mmgr/secure.h"
-#include "network_drivers/presentation/ssh/transport/ssh_dh.h" // pc_rand_fill(), ssh_dh[], SshDh.generate/derive_keys
+#include "network_drivers/presentation/ssh/transport/ssh_dh.h" // pc_rand_fill(), ssh_dh[], ssh_dh_generate/derive_keys
 #include "network_drivers/presentation/ssh/transport/ssh_packet.h" // SSH_MSG_KEXINIT, ssh_pkt[]
 #include "network_drivers/tls/ssh_rsa.h" // ssh_rsa_encode_pubkey/sign, ssh_host_pubkey, SSH_RSA_*
 #include "server/clock/clock.h"          // pc_millis() (re-key timer)
@@ -33,11 +33,6 @@
 
 #ifdef PC_SSH_KEX_BENCH
 #include <esp_timer.h> // esp_timer_get_time() - microsecond wall clock for the KEX span probe
-
-// Called above their definitions; static made the header's declaration unavailable.
-static void ssh_kex_set_prefer_rsa(proto_bool prefer);
-static int ssh_kexdh_handle(uint8_t i, const uint8_t *payload, size_t len, uint8_t *reply_out, size_t *reply_len,
-                            size_t cap);
 // The one owned KEX-bench context (see ssh_transport.h). Set by ssh_kex_generate / ssh_kexdh_handle; the
 // rig firmware prints it. Single active connection during a bench run, so a plain instance suffices.
 SshKexBenchCtx pc_ssh_kex_bench = {0, 0, 0};
@@ -106,26 +101,26 @@ typedef struct
 // prefer_rsa starts set; every other field starts at the zero it would take anyway.
 static SshTransportCtx s_sshtr = {PROTO_TRUE, {0}, {0}, PROTO_FALSE, {0}, {0}, PROTO_FALSE};
 
-static void ssh_kex_set_prefer_rsa(proto_bool prefer)
+void ssh_kex_set_prefer_rsa(proto_bool prefer)
 {
     s_sshtr.prefer_rsa = prefer;
 }
-static proto_bool ssh_kex_prefer_rsa(void)
+proto_bool ssh_kex_prefer_rsa(void)
 {
     return s_sshtr.prefer_rsa;
 }
 
-static void pc_ssh_hostkey_ed25519_set(const uint8_t seed[32])
+void pc_ssh_hostkey_ed25519_set(const uint8_t seed[32])
 {
     memcpy(s_sshtr.ed_seed, seed, 32);
     pc_ed25519_pubkey(s_sshtr.ed_pub, s_sshtr.ed_seed);
     s_sshtr.ed_have = PROTO_TRUE;
 }
-static proto_bool pc_ssh_hostkey_ed25519_available(void)
+proto_bool pc_ssh_hostkey_ed25519_available(void)
 {
     return s_sshtr.ed_have;
 }
-static void pc_ssh_hostkey_ecdsa_set(const uint8_t priv[PC_ECDSA_P256_PRIV_LEN])
+void pc_ssh_hostkey_ecdsa_set(const uint8_t priv[PC_ECDSA_P256_PRIV_LEN])
 {
     // Derive and cache the public point; reject an invalid scalar (leaves ecdsa_have false).
     if (!pc_ecdsa_p256_pubkey(s_sshtr.ecdsa_pub, priv))
@@ -135,13 +130,10 @@ static void pc_ssh_hostkey_ecdsa_set(const uint8_t priv[PC_ECDSA_P256_PRIV_LEN])
     memcpy(s_sshtr.ecdsa_priv, priv, PC_ECDSA_P256_PRIV_LEN);
     s_sshtr.ecdsa_have = PROTO_TRUE;
 }
-static proto_bool pc_ssh_hostkey_ecdsa_available(void)
+proto_bool pc_ssh_hostkey_ecdsa_available(void)
 {
     return s_sshtr.ecdsa_have;
 }
-
-const SshHostkeyNs SshHostkey = {pc_ssh_hostkey_ed25519_set, pc_ssh_hostkey_ed25519_available, pc_ssh_hostkey_ecdsa_set,
-                                 pc_ssh_hostkey_ecdsa_available};
 static proto_bool hostkey_rsa_available(void)
 {
     return ssh_host_pubkey.loaded;
@@ -403,7 +395,7 @@ static proto_bool negotiate_alg(const uint8_t *client_list, uint32_t nlen, const
 // Init
 // ---------------------------------------------------------------------------
 
-static void ssh_transport_init(uint8_t i)
+void ssh_transport_init(uint8_t i)
 {
     if (i >= MAX_SSH_CONNS)
     {
@@ -418,7 +410,7 @@ static void ssh_transport_init(uint8_t i)
 // Identification string exchange (RFC 4253 §4.2)
 // ---------------------------------------------------------------------------
 
-static int ssh_transport_server_banner(uint8_t *out, size_t *out_len, size_t cap)
+int ssh_transport_server_banner(uint8_t *out, size_t *out_len, size_t cap)
 {
     size_t vlen = sizeof(SSH_SERVER_VERSION) - 1;
     if (vlen + 2 > cap)
@@ -432,7 +424,7 @@ static int ssh_transport_server_banner(uint8_t *out, size_t *out_len, size_t cap
     return 0;
 }
 
-static int ssh_transport_recv_banner(uint8_t i, const uint8_t *data, size_t len, size_t *consumed)
+int ssh_transport_recv_banner(uint8_t i, const uint8_t *data, size_t len, size_t *consumed)
 {
     if (i >= MAX_SSH_CONNS)
     {
@@ -489,7 +481,7 @@ static int ssh_transport_recv_banner(uint8_t i, const uint8_t *data, size_t len,
 // KEXINIT (RFC 4253 §7.1)
 // ---------------------------------------------------------------------------
 
-static int ssh_kexinit_build(uint8_t i, uint8_t *payload, size_t *len, size_t cap)
+int ssh_kexinit_build(uint8_t i, uint8_t *payload, size_t *len, size_t cap)
 {
     if (i >= MAX_SSH_CONNS)
     {
@@ -609,7 +601,7 @@ static proto_bool negotiate_hostkey(const uint8_t *list, uint32_t nlen, SshHostk
     return PROTO_TRUE;
 }
 
-static int ssh_kexinit_parse(uint8_t i, const uint8_t *payload, size_t len)
+int ssh_kexinit_parse(uint8_t i, const uint8_t *payload, size_t len)
 {
     if (i >= MAX_SSH_CONNS)
     {
@@ -717,12 +709,12 @@ static int ssh_kexinit_parse(uint8_t i, const uint8_t *payload, size_t len)
         {
             return -1;
         }
-        SshComp.set_c2s(i, comp);
+        ssh_comp_set_c2s(i, comp);
         if (!pc_rd_str(payload, len, &off, &list, &nlen) || !negotiate_alg(list, nlen, compc, 3, &comp))
         {
             return -1;
         }
-        SshComp.set_s2c(i, comp);
+        ssh_comp_set_s2c(i, comp);
     }
 #else
     // Both directions must offer "none" (no compression built in).
@@ -740,7 +732,7 @@ static int ssh_kexinit_parse(uint8_t i, const uint8_t *payload, size_t len)
     return 0;
 }
 
-static int ssh_extinfo_build(uint8_t *out, size_t *len, size_t cap)
+int ssh_extinfo_build(uint8_t *out, size_t *len, size_t cap)
 {
     // byte SSH_MSG_EXT_INFO || uint32 nr-extensions || (string name, string value)*
     Writer w = {out, cap, 0, PROTO_TRUE};
@@ -865,8 +857,8 @@ static int compute_exchange_hash(uint8_t i, proto_bool pub_is_string, const uint
     return 0;
 }
 
-static int ssh_kex_exchange_hash(uint8_t i, const uint8_t *e_be, const uint8_t *f_be, const uint8_t *k_be,
-                                 const uint8_t *ks, size_t ks_len, uint8_t out[PC_SHA256_DIGEST_LEN])
+int ssh_kex_exchange_hash(uint8_t i, const uint8_t *e_be, const uint8_t *f_be, const uint8_t *k_be, const uint8_t *ks,
+                          size_t ks_len, uint8_t out[PC_SHA256_DIGEST_LEN])
 {
     size_t out_len = 0; // dh-group14-sha256 is always SHA-256
     return compute_exchange_hash(i, PROTO_FALSE, e_be, 256, f_be, 256, k_be, 256, ks, ks_len, out, &out_len,
@@ -877,7 +869,7 @@ static int ssh_kex_exchange_hash(uint8_t i, const uint8_t *e_be, const uint8_t *
 // KEXDH (RFC 4253 §8)
 // ---------------------------------------------------------------------------
 
-static int ssh_kexdh_parse_init(const uint8_t *payload, size_t len, uint8_t e_be[256])
+int ssh_kexdh_parse_init(const uint8_t *payload, size_t len, uint8_t e_be[256])
 {
     if (len < 1 + 4 || payload[0] != SSH_MSG_KEXDH_INIT)
     {
@@ -908,8 +900,8 @@ static int ssh_kexdh_parse_init(const uint8_t *payload, size_t len, uint8_t e_be
     return 0;
 }
 
-static int ssh_kexdh_build_reply(const uint8_t *ks, size_t ks_len, const uint8_t *f_be, const uint8_t *sig,
-                                 size_t sig_len, uint8_t *out, size_t *out_len, size_t cap)
+int ssh_kexdh_build_reply(const uint8_t *ks, size_t ks_len, const uint8_t *f_be, const uint8_t *sig, size_t sig_len,
+                          uint8_t *out, size_t *out_len, size_t cap)
 {
     Writer w = {out, cap, 0, PROTO_TRUE};
     w_u8(&w, SSH_MSG_KEXDH_REPLY);
@@ -1077,7 +1069,7 @@ static int build_kex_reply(uint8_t i, const uint8_t *ks, size_t ks_len, const ui
     return 0;
 }
 
-static int ssh_kex_generate(uint8_t i)
+int ssh_kex_generate(uint8_t i)
 {
     if (i >= MAX_SSH_CONNS)
     {
@@ -1118,7 +1110,7 @@ static int ssh_kex_generate(uint8_t i)
         }
         return -1;
     }
-    return SshDh.generate(i);
+    return ssh_dh_generate(i);
 }
 
 #if PC_ENABLE_PQC_KEX
@@ -1228,8 +1220,7 @@ static int hybrid_sntrup761_x25519(uint8_t i, const uint8_t *payload, size_t len
 }
 #endif // PC_ENABLE_SSH_SNTRUP761
 
-static int ssh_kexdh_handle(uint8_t i, const uint8_t *payload, size_t len, uint8_t *reply_out, size_t *reply_len,
-                            size_t cap)
+int ssh_kexdh_handle(uint8_t i, const uint8_t *payload, size_t len, uint8_t *reply_out, size_t *reply_len, size_t cap)
 {
     if (i >= MAX_SSH_CONNS)
     {
@@ -1408,8 +1399,8 @@ static int ssh_kexdh_handle(uint8_t i, const uint8_t *payload, size_t len, uint8
         pc_secure_wipe(k_be, sizeof(k_be));
         return -1;
     }
-    SshDh.derive_keys_sid(i, k_be, H, s->session_id, s->cipher_alg, s->mac_alg, k_is_string, h_len, s->session_id_len,
-                          is512);
+    ssh_dh_derive_keys_sid(i, k_be, H, s->session_id, s->cipher_alg, s->mac_alg, k_is_string, h_len, s->session_id_len,
+                           is512);
     pc_secure_wipe(k_be, sizeof(k_be));
 
     s->phase = SSH_PHASE_NEWKEYS;
@@ -1420,11 +1411,7 @@ static int ssh_kexdh_handle(uint8_t i, const uint8_t *payload, size_t len, uint8
     return 0;
 }
 
-const SshKexNs SshKex = {
-    ssh_kexinit_build,     ssh_kexinit_parse,    ssh_kex_set_prefer_rsa, ssh_kex_prefer_rsa, ssh_kex_generate,
-    ssh_kex_exchange_hash, ssh_kexdh_parse_init, ssh_kexdh_build_reply,  ssh_kexdh_handle,   &SshDh};
-
-static void ssh_newkeys_sent(uint8_t i)
+void ssh_newkeys_sent(uint8_t i)
 {
     if (i >= MAX_SSH_CONNS)
     {
@@ -1434,11 +1421,11 @@ static void ssh_newkeys_sent(uint8_t i)
     ssh_pkt[i].enc_out = PROTO_TRUE;
 #if PC_ENABLE_SSH_ZLIB
     // "zlib" (non-delayed) starts its s2c (outbound) stream here; idempotent, so a re-key does not restart it.
-    SshComp.on_newkeys(i);
+    ssh_comp_on_newkeys(i);
 #endif
 }
 
-static void ssh_newkeys_complete(uint8_t i)
+void ssh_newkeys_complete(uint8_t i)
 {
     if (i >= MAX_SSH_CONNS)
     {
@@ -1455,7 +1442,7 @@ static void ssh_newkeys_complete(uint8_t i)
     ssh_sess[i].last_kex_ms = pc_millis();
 }
 
-static proto_bool ssh_rekey_needed(uint8_t i)
+proto_bool ssh_rekey_needed(uint8_t i)
 {
     if (i >= MAX_SSH_CONNS)
     {
@@ -1464,8 +1451,8 @@ static proto_bool ssh_rekey_needed(uint8_t i)
     return ssh_pkt[i].seq_no_send >= SSH_REKEY_PACKET_THRESHOLD || ssh_pkt[i].seq_no_recv >= SSH_REKEY_PACKET_THRESHOLD;
 }
 
-static proto_bool ssh_rekey_due(uint32_t seq_send, uint32_t seq_recv, uint32_t elapsed_ms, uint32_t pkt_threshold,
-                                uint32_t time_threshold_ms)
+proto_bool ssh_rekey_due(uint32_t seq_send, uint32_t seq_recv, uint32_t elapsed_ms, uint32_t pkt_threshold,
+                         uint32_t time_threshold_ms)
 {
     if (seq_send >= pkt_threshold || seq_recv >= pkt_threshold)
     {
@@ -1478,7 +1465,7 @@ static proto_bool ssh_rekey_due(uint32_t seq_send, uint32_t seq_recv, uint32_t e
     return PROTO_FALSE;
 }
 
-static int ssh_transport_begin_rekey(uint8_t i, uint8_t *out, size_t *out_len, size_t cap)
+int ssh_transport_begin_rekey(uint8_t i, uint8_t *out, size_t *out_len, size_t cap)
 {
     if (i >= MAX_SSH_CONNS)
     {
@@ -1498,21 +1485,3 @@ static int ssh_transport_begin_rekey(uint8_t i, uint8_t *out, size_t *out_len, s
     ssh_sess[i].phase = SSH_PHASE_KEXINIT;
     return 0;
 }
-
-const SshTransportNs SshTransport = {
-    ssh_transport_init,
-    ssh_transport_server_banner,
-    ssh_transport_recv_banner,
-    ssh_extinfo_build,
-    ssh_newkeys_sent,
-    ssh_newkeys_complete,
-    ssh_rekey_needed,
-    ssh_rekey_due,
-    ssh_transport_begin_rekey,
-    &SshKex,
-    &SshHostkey,
-    &SshPacket,
-#if PC_ENABLE_SSH_ZLIB
-    &SshComp,
-#endif
-};

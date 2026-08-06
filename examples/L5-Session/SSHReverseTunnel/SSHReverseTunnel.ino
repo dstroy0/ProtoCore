@@ -68,15 +68,15 @@ static void tunnel_task(void *)
     cfg.bind_addr = "";   // relay binds the forward on localhost (GatewayPorts no)
     cfg.bind_port = 8022; // relay listens here; connections tunnel back to us
     cfg.local_port = 80;  // bridged to our own web server
-    SshTunnel.begin(&cfg);
+    pc_ssh_tunnel_begin(&cfg);
     for (;;)
     {
-        SshTunnel.poll();
+        pc_ssh_tunnel_poll();
         // Reconnect with a backoff if the relay drops us or the pin/auth fails.
-        if (SshTunnel.state_get() == pc_ssh_tunnel_state::PC_TUN_FAILED)
+        if (pc_ssh_tunnel_state_get() == pc_ssh_tunnel_state::PC_TUN_FAILED)
         {
             delay(5000);
-            SshTunnel.begin(&cfg);
+            pc_ssh_tunnel_begin(&cfg);
         }
         delay(5);
     }
@@ -94,7 +94,7 @@ void setup()
 
     // Print our public key so you can add it to the relay's authorized_keys.
     uint8_t pub[32];
-    SshTunnel.pubkey(AUTH_SEED, pub);
+    pc_ssh_tunnel_pubkey(AUTH_SEED, pub);
     Serial.print("device ssh-ed25519 raw pubkey (add to relay authorized_keys): ");
     for (int i = 0; i < 32; i++)
     {
@@ -112,7 +112,7 @@ void setup()
 void loop()
 {
     handle();
-    if (SshTunnel.up())
+    if (pc_ssh_tunnel_up())
     {
         static bool announced = false;
         if (!announced)

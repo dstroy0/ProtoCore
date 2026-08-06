@@ -351,7 +351,7 @@ from halves and is slower than the width it decomposes into"
  * arithmetic peaks at ~10.5 KB of worker stack; 12 KB leaves ~1.8 KB of margin
  * for the rest of the handshake call chain (comparable to the RSA floor's
  * margin). Raise both this and ::PC_WORKER_TASK_STACK together if you extend
- * the handshake, or force RSA/DH only (SshKex.set_prefer_rsa) on a very tight
+ * the handshake, or force RSA/DH only (ssh_kex_set_prefer_rsa) on a very tight
  * build - but the server still advertises the modern suite, so a modern-only
  * client would still exercise it.
  */
@@ -5895,7 +5895,7 @@ from halves and is slower than the width it decomposes into"
  *
  * Adds the "keyboard-interactive" method alongside password/publickey. On selection the server sends
  * one SSH_MSG_USERAUTH_INFO_REQUEST with a single non-echoed "Password: " prompt and verifies the
- * client's SSH_MSG_USERAUTH_INFO_RESPONSE through the same ::SshAuth.set_password_cb callback -
+ * client's SSH_MSG_USERAUTH_INFO_RESPONSE through the same ::pc_ssh_auth_set_password_cb callback -
  * so it is the challenge-response face of password auth (the common OpenSSH `-o
  * PreferredAuthentications=keyboard-interactive` / PAM-password case), not a second credential store.
  * Requires PC_ENABLE_SSH and, because it is password-backed, PC_SSH_ALLOW_PASSWORD.
@@ -6220,7 +6220,7 @@ from halves and is slower than the width it decomposes into"
  * `ssh_forward` owner does the I/O via the outbound client transport (pc_client),
  * so it needs `PC_CLIENT_CONNS >= PC_SSH_FWD_MAX` and a channel pool
  * (`PC_SSH_MAX_CHANNELS > 1`) to be useful. Forwarding is still opt-in at
- * runtime: nothing is forwarded until the application calls `SshForward.begin()`.
+ * runtime: nothing is forwarded until the application calls `pc_ssh_forward_begin()`.
  * Off = the channel codec refuses every `direct-tcpip` open (no open relay).
  */
 #ifndef PC_SSH_PORT_FORWARD
@@ -6254,7 +6254,7 @@ from halves and is slower than the width it decomposes into"
  * ports on the device; each binding consumes one `listener_pool[]` slot, so
  * `MAX_LISTENERS` must have that much headroom above the app's own listeners.
  * Remote forwarding shares `PC_SSH_PORT_FORWARD` (compiled in) and is inert
- * until `SshForward.begin()`.
+ * until `pc_ssh_forward_begin()`.
  */
 #ifndef PC_SSH_RFWD_MAX
 #define PC_SSH_RFWD_MAX 1

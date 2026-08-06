@@ -64,17 +64,17 @@ static PC_SSH_COMP_ATTR SshCompCtx s_ssh_comp;
 
 static void start_s2c(SshCompState *c)
 {
-    SshDeflater.init(&c->z, c->work, c->head, c->prev, c->ll_code, c->ll_len, c->d_code, c->d_len);
+    ssh_deflate_init(&c->z, c->work, c->head, c->prev, c->ll_code, c->ll_len, c->d_code, c->d_len);
     c->s2c_active = PROTO_TRUE;
 }
 
 static void start_c2s(SshCompState *c)
 {
-    SshInflater.init(&c->inf, c->inf_window);
+    ssh_inflate_init(&c->inf, c->inf_window);
     c->c2s_active = PROTO_TRUE;
 }
 
-static void ssh_comp_reset(uint8_t i)
+void ssh_comp_reset(uint8_t i)
 {
     if (i >= MAX_SSH_CONNS)
     {
@@ -87,7 +87,7 @@ static void ssh_comp_reset(uint8_t i)
     c->c2s_active = PROTO_FALSE;
 }
 
-static void ssh_comp_set_s2c(uint8_t i, SshCompAlg alg)
+void ssh_comp_set_s2c(uint8_t i, SshCompAlg alg)
 {
     if (i >= MAX_SSH_CONNS)
     {
@@ -96,7 +96,7 @@ static void ssh_comp_set_s2c(uint8_t i, SshCompAlg alg)
     s_ssh_comp.comp[i].s2c_alg = alg;
 }
 
-static void ssh_comp_set_c2s(uint8_t i, SshCompAlg alg)
+void ssh_comp_set_c2s(uint8_t i, SshCompAlg alg)
 {
     if (i >= MAX_SSH_CONNS)
     {
@@ -106,7 +106,7 @@ static void ssh_comp_set_c2s(uint8_t i, SshCompAlg alg)
 }
 
 // "zlib" (non-delayed) starts both directions at NEWKEYS; "zlib@openssh.com" waits for auth success.
-static void ssh_comp_on_newkeys(uint8_t i)
+void ssh_comp_on_newkeys(uint8_t i)
 {
     if (i >= MAX_SSH_CONNS)
     {
@@ -123,7 +123,7 @@ static void ssh_comp_on_newkeys(uint8_t i)
     }
 }
 
-static void ssh_comp_on_auth_success(uint8_t i)
+void ssh_comp_on_auth_success(uint8_t i)
 {
     if (i >= MAX_SSH_CONNS)
     {
@@ -140,36 +140,32 @@ static void ssh_comp_on_auth_success(uint8_t i)
     }
 }
 
-static proto_bool ssh_comp_s2c_active(uint8_t i)
+proto_bool ssh_comp_s2c_active(uint8_t i)
 {
     return i < MAX_SSH_CONNS && s_ssh_comp.comp[i].s2c_active;
 }
 
-static int ssh_comp_s2c(uint8_t i, const uint8_t *src, size_t src_len, uint8_t *dst, size_t dst_cap, size_t *out_len)
+int ssh_comp_s2c(uint8_t i, const uint8_t *src, size_t src_len, uint8_t *dst, size_t dst_cap, size_t *out_len)
 {
     if (i >= MAX_SSH_CONNS || !s_ssh_comp.comp[i].s2c_active)
     {
         return -1;
     }
-    return SshDeflater.packet(&s_ssh_comp.comp[i].z, src, src_len, dst, dst_cap, out_len);
+    return ssh_deflate_packet(&s_ssh_comp.comp[i].z, src, src_len, dst, dst_cap, out_len);
 }
 
-static proto_bool ssh_comp_c2s_active(uint8_t i)
+proto_bool ssh_comp_c2s_active(uint8_t i)
 {
     return i < MAX_SSH_CONNS && s_ssh_comp.comp[i].c2s_active;
 }
 
-static int ssh_comp_c2s(uint8_t i, const uint8_t *src, size_t src_len, uint8_t *dst, size_t dst_cap, size_t *out_len)
+int ssh_comp_c2s(uint8_t i, const uint8_t *src, size_t src_len, uint8_t *dst, size_t dst_cap, size_t *out_len)
 {
     if (i >= MAX_SSH_CONNS || !s_ssh_comp.comp[i].c2s_active)
     {
         return -1;
     }
-    return SshInflater.packet(&s_ssh_comp.comp[i].inf, src, src_len, dst, dst_cap, out_len);
+    return ssh_inflate_packet(&s_ssh_comp.comp[i].inf, src, src_len, dst, dst_cap, out_len);
 }
-
-const SshCompNs SshComp = {ssh_comp_reset,      ssh_comp_set_s2c, ssh_comp_on_newkeys, ssh_comp_on_auth_success,
-                           ssh_comp_s2c_active, ssh_comp_s2c,     ssh_comp_set_c2s,    ssh_comp_c2s_active,
-                           ssh_comp_c2s,        &SshDeflater,     &SshInflater};
 
 #endif // PC_ENABLE_SSH_ZLIB

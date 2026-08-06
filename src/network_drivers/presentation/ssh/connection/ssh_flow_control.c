@@ -7,11 +7,11 @@
  */
 
 #include "network_drivers/presentation/ssh/connection/ssh_flow_control.h"
-#include "mmgr/endian.h" // pc_wr32be - the one source of truth for wire integers
 #include "network_drivers/presentation/ssh/transport/ssh_packet.h" // SSH_MSG_CHANNEL_*
 #include "protocore_config.h"                                      // SSH_CHAN_MAX_PACKET
+#include "mmgr/endian.h" // pc_wr32be - the one source of truth for wire integers
 
-static void pc_ssh_flow_init(SshFlow *f, uint32_t local_window, uint32_t peer_window, uint32_t peer_max_pkt)
+void pc_ssh_flow_init(SshFlow *f, uint32_t local_window, uint32_t peer_window, uint32_t peer_max_pkt)
 {
     f->local_window = local_window;
     f->local_max = local_window;
@@ -19,7 +19,7 @@ static void pc_ssh_flow_init(SshFlow *f, uint32_t local_window, uint32_t peer_wi
     f->peer_max_pkt = peer_max_pkt;
 }
 
-static proto_bool pc_ssh_flow_recv_take(SshFlow *f, uint32_t n)
+proto_bool pc_ssh_flow_recv_take(SshFlow *f, uint32_t n)
 {
     if (n > f->local_window)
     {
@@ -29,7 +29,7 @@ static proto_bool pc_ssh_flow_recv_take(SshFlow *f, uint32_t n)
     return PROTO_TRUE;
 }
 
-static proto_bool pc_ssh_flow_replenish_due(const SshFlow *f, uint32_t *add)
+proto_bool pc_ssh_flow_replenish_due(const SshFlow *f, uint32_t *add)
 {
     if (f->local_window >= f->local_max / 2)
     {
@@ -39,17 +39,17 @@ static proto_bool pc_ssh_flow_replenish_due(const SshFlow *f, uint32_t *add)
     return PROTO_TRUE;
 }
 
-static void pc_ssh_flow_local_credit(SshFlow *f, uint32_t add)
+void pc_ssh_flow_local_credit(SshFlow *f, uint32_t add)
 {
     f->local_window += add;
 }
 
-static proto_bool pc_ssh_flow_send_allows(const SshFlow *f, size_t len)
+proto_bool pc_ssh_flow_send_allows(const SshFlow *f, size_t len)
 {
     return len <= f->peer_window && len <= f->peer_max_pkt;
 }
 
-static uint32_t pc_ssh_flow_send_cap(const SshFlow *f, uint32_t want)
+uint32_t pc_ssh_flow_send_cap(const SshFlow *f, uint32_t want)
 {
     uint32_t cap = want;
     if (cap > f->peer_window)
@@ -63,18 +63,18 @@ static uint32_t pc_ssh_flow_send_cap(const SshFlow *f, uint32_t want)
     return cap;
 }
 
-static void pc_ssh_flow_send_take(SshFlow *f, uint32_t n)
+void pc_ssh_flow_send_take(SshFlow *f, uint32_t n)
 {
     f->peer_window -= n;
 }
 
-static void pc_ssh_flow_peer_add(SshFlow *f, uint32_t add)
+void pc_ssh_flow_peer_add(SshFlow *f, uint32_t add)
 {
     uint32_t w = f->peer_window;
     f->peer_window = (w + add < w) ? 0xFFFFFFFFu : (w + add);
 }
 
-static uint32_t pc_ssh_flow_peer_window(const SshFlow *f)
+uint32_t pc_ssh_flow_peer_window(const SshFlow *f)
 {
     return f->peer_window;
 }
@@ -83,8 +83,7 @@ static uint32_t pc_ssh_flow_peer_window(const SshFlow *f)
 // Channel signaling (RFC 4254 sec 5)
 // ---------------------------------------------------------------------------
 
-static int32_t pc_ssh_sig_build_open_failure(uint8_t *out, size_t cap, uint32_t peer_id, uint32_t reason,
-                                             size_t *out_len)
+int32_t pc_ssh_sig_build_open_failure(uint8_t *out, size_t cap, uint32_t peer_id, uint32_t reason, size_t *out_len)
 {
     if (cap < 17)
     {
@@ -99,8 +98,8 @@ static int32_t pc_ssh_sig_build_open_failure(uint8_t *out, size_t cap, uint32_t 
     return 0;
 }
 
-static int32_t pc_ssh_sig_build_open_confirm(const SshFlow *f, uint32_t peer_id, uint32_t local_id, uint8_t *out,
-                                             size_t cap, size_t *out_len)
+int32_t pc_ssh_sig_build_open_confirm(const SshFlow *f, uint32_t peer_id, uint32_t local_id, uint8_t *out, size_t cap,
+                                      size_t *out_len)
 {
     if (cap < 17)
     {
@@ -115,8 +114,8 @@ static int32_t pc_ssh_sig_build_open_confirm(const SshFlow *f, uint32_t peer_id,
     return 0;
 }
 
-static int32_t pc_ssh_sig_build_data(SshFlow *f, uint32_t peer_id, const uint8_t *data, size_t len, uint8_t *out,
-                                     size_t cap, size_t *out_len)
+int32_t pc_ssh_sig_build_data(SshFlow *f, uint32_t peer_id, const uint8_t *data, size_t len, uint8_t *out, size_t cap,
+                              size_t *out_len)
 {
     if (!pc_ssh_flow_send_allows(f, len))
     {
@@ -135,7 +134,7 @@ static int32_t pc_ssh_sig_build_data(SshFlow *f, uint32_t peer_id, const uint8_t
     return 0;
 }
 
-static int32_t pc_ssh_sig_build_window_adjust(uint32_t peer_id, uint32_t add, uint8_t *out, size_t cap, size_t *out_len)
+int32_t pc_ssh_sig_build_window_adjust(uint32_t peer_id, uint32_t add, uint8_t *out, size_t cap, size_t *out_len)
 {
     if (cap < 9)
     {
@@ -148,7 +147,7 @@ static int32_t pc_ssh_sig_build_window_adjust(uint32_t peer_id, uint32_t add, ui
     return 0;
 }
 
-static int32_t pc_ssh_sig_build_close(uint32_t peer_id, uint8_t *out, size_t cap, size_t *out_len)
+int32_t pc_ssh_sig_build_close(uint32_t peer_id, uint8_t *out, size_t cap, size_t *out_len)
 {
     if (cap < 10)
     {
@@ -161,18 +160,3 @@ static int32_t pc_ssh_sig_build_close(uint32_t peer_id, uint8_t *out, size_t cap
     *out_len = 10;
     return 0;
 }
-
-const SshFlowControlNs SshFlowControl = {pc_ssh_flow_init,
-                                         pc_ssh_flow_recv_take,
-                                         pc_ssh_flow_replenish_due,
-                                         pc_ssh_flow_local_credit,
-                                         pc_ssh_flow_send_allows,
-                                         pc_ssh_flow_send_cap,
-                                         pc_ssh_flow_send_take,
-                                         pc_ssh_flow_peer_add,
-                                         pc_ssh_flow_peer_window,
-                                         pc_ssh_sig_build_open_failure,
-                                         pc_ssh_sig_build_open_confirm,
-                                         pc_ssh_sig_build_data,
-                                         pc_ssh_sig_build_window_adjust,
-                                         pc_ssh_sig_build_close};

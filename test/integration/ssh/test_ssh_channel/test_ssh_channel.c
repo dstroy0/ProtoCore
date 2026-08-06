@@ -103,13 +103,13 @@ static void confirm_cb(uint8_t slot, uint32_t channel, proto_bool ok)
 
 void setUp()
 {
-    SshChannels.init(0);
-    SshChannels.set_data_cb(data_cb);
-    SshChannels.set_forward_open_cb(NULL); // forwarding off by default
-    SshChannels.set_forward_data_cb(NULL);
-    SshChannels.set_rforward_open_cb(NULL); // remote forwarding off by default
-    SshChannels.set_rforward_cancel_cb(NULL);
-    SshChannels.set_forward_confirm_cb(NULL);
+    pc_ssh_channel_init(0);
+    pc_ssh_channel_set_data_cb(data_cb);
+    pc_ssh_channel_set_forward_open_cb(NULL); // forwarding off by default
+    pc_ssh_channel_set_forward_data_cb(NULL);
+    pc_ssh_channel_set_rforward_open_cb(NULL); // remote forwarding off by default
+    pc_ssh_channel_set_rforward_cancel_cb(NULL);
+    pc_ssh_channel_set_forward_confirm_cb(NULL);
     memset(rfwd_addr, 0, sizeof(rfwd_addr));
     rfwd_addr_len = 0;
     rfwd_port = 0;
@@ -172,7 +172,7 @@ static uint32_t open_session(uint32_t peer_id, uint32_t peer_window)
 
     uint8_t out[64];
     size_t olen = 0;
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.handle_open(0, pkt, n, out, &olen, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_open(0, pkt, n, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL(SSH_MSG_CHANNEL_OPEN_CONFIRM, out[0]);
     return rd_u32(out + 5); // local channel id
 }
@@ -230,7 +230,7 @@ void test_open_unknown_type_fails()
 
     uint8_t out[64];
     size_t olen = 0;
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.handle_open(0, pkt, n, out, &olen, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_open(0, pkt, n, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL(SSH_MSG_CHANNEL_OPEN_FAILURE, out[0]);
     TEST_ASSERT_EQUAL_UINT32(3u, rd_u32(out + 5)); // unknown channel type
     TEST_ASSERT_FALSE(ssh_chan[0][0].open);
@@ -245,7 +245,7 @@ void test_direct_tcpip_no_cb_prohibited()
     size_t n = make_direct_tcpip(pkt, 7, "example.com", 80);
     uint8_t out[64];
     size_t olen = 0;
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.handle_open(0, pkt, n, out, &olen, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_open(0, pkt, n, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL(SSH_MSG_CHANNEL_OPEN_FAILURE, out[0]);
     TEST_ASSERT_EQUAL_UINT32(1u, rd_u32(out + 5)); // administratively prohibited
     TEST_ASSERT_FALSE(ssh_chan[0][0].open);
@@ -253,13 +253,13 @@ void test_direct_tcpip_no_cb_prohibited()
 
 void test_direct_tcpip_accept_confirms()
 {
-    SshChannels.set_forward_open_cb(fwd_open_cb);
+    pc_ssh_channel_set_forward_open_cb(fwd_open_cb);
     fwd_open_ret = 0; // owner accepts (connected)
     uint8_t pkt[96];
     size_t n = make_direct_tcpip(pkt, 9, "example.com", 443);
     uint8_t out[64];
     size_t olen = 0;
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.handle_open(0, pkt, n, out, &olen, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_open(0, pkt, n, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL(SSH_MSG_CHANNEL_OPEN_CONFIRM, out[0]);
     uint32_t id = rd_u32(out + 5);
     TEST_ASSERT_TRUE(ssh_chan[0][id].open);
@@ -272,13 +272,13 @@ void test_direct_tcpip_accept_confirms()
 
 void test_direct_tcpip_refused_connect_failed()
 {
-    SshChannels.set_forward_open_cb(fwd_open_cb);
+    pc_ssh_channel_set_forward_open_cb(fwd_open_cb);
     fwd_open_ret = -1; // owner could not connect
     uint8_t pkt[96];
     size_t n = make_direct_tcpip(pkt, 9, "10.0.0.9", 22);
     uint8_t out[64];
     size_t olen = 0;
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.handle_open(0, pkt, n, out, &olen, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_open(0, pkt, n, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL(SSH_MSG_CHANNEL_OPEN_FAILURE, out[0]);
     TEST_ASSERT_EQUAL_UINT32(2u, rd_u32(out + 5)); // connect failed
     TEST_ASSERT_FALSE(ssh_chan[0][0].open);        // channel freed on refusal
@@ -286,20 +286,20 @@ void test_direct_tcpip_refused_connect_failed()
 
 void test_forward_data_routes_to_forward_cb()
 {
-    SshChannels.set_forward_open_cb(fwd_open_cb);
-    SshChannels.set_forward_data_cb(fwd_data_cb);
+    pc_ssh_channel_set_forward_open_cb(fwd_open_cb);
+    pc_ssh_channel_set_forward_data_cb(fwd_data_cb);
     fwd_open_ret = 0;
     uint8_t pkt[96];
     size_t n = make_direct_tcpip(pkt, 9, "h", 80);
     uint8_t out[64];
     size_t olen = 0;
-    SshChannels.handle_open(0, pkt, n, out, &olen, sizeof(out));
+    pc_ssh_channel_handle_open(0, pkt, n, out, &olen, sizeof(out));
     uint32_t id = rd_u32(out + 5);
 
     uint8_t dpkt[32];
     size_t dn = make_data(dpkt, id, "GET /");
     olen = 0;
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.handle_data(0, dpkt, dn, out, &olen, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_data(0, dpkt, dn, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL_INT(1, fwd_data_count); // routed to the forward owner
     TEST_ASSERT_EQUAL_INT(0, data_cb_count);  // NOT the session callback
     TEST_ASSERT_EQUAL_UINT32(id, fwd_data_channel);
@@ -321,7 +321,7 @@ void test_shell_request_success_with_reply()
 
     uint8_t out[16];
     size_t olen = 0;
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.handle_request(0, pkt, n, out, &olen, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_request(0, pkt, n, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL(SSH_MSG_CHANNEL_SUCCESS, out[0]);
     TEST_ASSERT_EQUAL_UINT32(5, rd_u32(out + 1));
 }
@@ -339,7 +339,7 @@ void test_unknown_request_failure()
 
     uint8_t out[16];
     size_t olen = 0;
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.handle_request(0, pkt, n, out, &olen, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_request(0, pkt, n, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL(SSH_MSG_CHANNEL_FAILURE, out[0]);
 }
 
@@ -356,7 +356,7 @@ void test_request_no_reply_produces_nothing()
 
     uint8_t out[16];
     size_t olen = 99;
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.handle_request(0, pkt, n, out, &olen, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_request(0, pkt, n, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)olen);
 }
 
@@ -370,7 +370,7 @@ void test_inbound_data_invokes_callback()
 
     uint8_t out[16];
     size_t olen = 0;
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.handle_data(0, pkt, n, out, &olen, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_data(0, pkt, n, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL_INT(1, data_cb_count);
     TEST_ASSERT_EQUAL_UINT32(id, last_channel);
     TEST_ASSERT_EQUAL_INT(5, (int)last_data_len);
@@ -394,7 +394,7 @@ void test_inbound_data_window_replenish()
 
     uint8_t out[16];
     size_t olen = 0;
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.handle_data(0, pkt, n, out, &olen, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_data(0, pkt, n, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL(SSH_MSG_CHANNEL_WINDOW_ADJUST, out[0]);
     TEST_ASSERT_EQUAL_UINT32(5, rd_u32(out + 1)); // peer channel
     TEST_ASSERT_EQUAL_UINT32(SSH_CHAN_WINDOW, ssh_chan[0][id].flow.local_window);
@@ -408,7 +408,7 @@ void test_inbound_data_exceeding_window_rejected()
     size_t n = make_data(pkt, id, "toolong"); // 7 bytes > 4
     uint8_t out[16];
     size_t olen = 0;
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.handle_data(0, pkt, n, out, &olen, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_handle_data(0, pkt, n, out, &olen, sizeof(out)));
 }
 
 void test_outbound_data_frames_and_decrements_window()
@@ -416,7 +416,7 @@ void test_outbound_data_frames_and_decrements_window()
     uint32_t id = open_session(5, 1000);
     uint8_t out[64];
     size_t olen = 0;
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.build_data(0, id, (const uint8_t *)"abc", 3, out, &olen, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_build_data(0, id, (const uint8_t *)"abc", 3, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL(SSH_MSG_CHANNEL_DATA, out[0]);
     TEST_ASSERT_EQUAL_UINT32(5, rd_u32(out + 1)); // peer channel
     TEST_ASSERT_EQUAL_UINT32(3, rd_u32(out + 5)); // data length
@@ -429,7 +429,7 @@ void test_outbound_data_exceeding_peer_window_rejected()
     uint32_t id = open_session(5, 2); // tiny peer window
     uint8_t out[64];
     size_t olen = 0;
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.build_data(0, id, (const uint8_t *)"abc", 3, out, &olen, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_build_data(0, id, (const uint8_t *)"abc", 3, out, &olen, sizeof(out)));
 }
 
 void test_window_adjust_grows_peer_window()
@@ -439,7 +439,7 @@ void test_window_adjust_grows_peer_window()
     pkt[0] = SSH_MSG_CHANNEL_WINDOW_ADJUST;
     wr_u32(pkt + 1, id);
     wr_u32(pkt + 5, 500);
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.handle_window_adjust(0, pkt, sizeof(pkt)));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_window_adjust(0, pkt, sizeof(pkt)));
     TEST_ASSERT_EQUAL_UINT32(600, ssh_chan[0][id].flow.peer_window);
 }
 
@@ -448,7 +448,7 @@ void test_build_close_emits_eof_and_close()
     uint32_t id = open_session(5, 1000);
     uint8_t out[16];
     size_t olen = 0;
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.build_close(0, id, out, &olen, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_build_close(0, id, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL_UINT32(10, (uint32_t)olen);
     TEST_ASSERT_EQUAL(SSH_MSG_CHANNEL_EOF, out[0]);
     TEST_ASSERT_EQUAL_UINT32(5, rd_u32(out + 1));
@@ -465,7 +465,7 @@ void test_inbound_close_routes_to_channel()
     wr_u32(pkt + 1, id);
     uint8_t out[16];
     size_t olen = 0;
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.handle_close(0, pkt, 5, out, &olen, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_close(0, pkt, 5, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL(SSH_MSG_CHANNEL_EOF, out[0]);
     TEST_ASSERT_EQUAL_UINT32(5, rd_u32(out + 1));
     TEST_ASSERT_FALSE(ssh_chan[0][id].open);
@@ -488,28 +488,28 @@ void test_multiplex_two_channels_route_independently()
     size_t n = make_data(pkt, b, "to-b");
     uint8_t out[16];
     size_t olen = 0;
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.handle_data(0, pkt, n, out, &olen, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_data(0, pkt, n, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL_UINT32(b, last_channel);
     TEST_ASSERT_EQUAL_MEMORY("to-b", last_data, 4);
 
     // Outbound on channel a targets peer 5, on b targets peer 7.
     olen = 0;
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.build_data(0, a, (const uint8_t *)"x", 1, out, &olen, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_build_data(0, a, (const uint8_t *)"x", 1, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL_UINT32(5, rd_u32(out + 1));
     olen = 0;
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.build_data(0, b, (const uint8_t *)"y", 1, out, &olen, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_build_data(0, b, (const uint8_t *)"y", 1, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL_UINT32(7, rd_u32(out + 1));
 
     // Closing a leaves b open and routable.
     olen = 0;
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.build_close(0, a, out, &olen, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_build_close(0, a, out, &olen, sizeof(out)));
     TEST_ASSERT_FALSE(ssh_chan[0][a].open);
     TEST_ASSERT_TRUE(ssh_chan[0][b].open);
     olen = 0;
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.build_data(0, b, (const uint8_t *)"z", 1, out, &olen, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_build_data(0, b, (const uint8_t *)"z", 1, out, &olen, sizeof(out)));
     // a is now closed: addressing it fails.
     olen = 0;
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.build_data(0, a, (const uint8_t *)"z", 1, out, &olen, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_build_data(0, a, (const uint8_t *)"z", 1, out, &olen, sizeof(out)));
 }
 
 void test_pool_full_open_fails()
@@ -529,7 +529,7 @@ void test_pool_full_open_fails()
     n += 12;
     uint8_t out[64];
     size_t olen = 0;
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.handle_open(0, pkt, n, out, &olen, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_open(0, pkt, n, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL(SSH_MSG_CHANNEL_OPEN_FAILURE, out[0]);
     TEST_ASSERT_EQUAL_UINT32(4u, rd_u32(out + 5)); // reason 4 = resource shortage
 }
@@ -541,7 +541,7 @@ void test_data_to_unknown_channel_rejected()
     size_t n = make_data(pkt, PC_SSH_MAX_CHANNELS + 5, "x"); // out-of-range recipient
     uint8_t out[16];
     size_t olen = 0;
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.handle_data(0, pkt, n, out, &olen, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_handle_data(0, pkt, n, out, &olen, sizeof(out)));
 }
 
 // ---- global request (RFC 4254 §4; §7.1 tcpip-forward, ssh -R) --------------
@@ -576,7 +576,7 @@ void test_rforward_no_cb_refused()
     uint8_t pkt[64], out[16];
     size_t olen = 99;
     size_t n = make_global_fwd(pkt, "tcpip-forward", PROTO_TRUE, "", 8080);
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.global_request(0, pkt, n, out, &olen, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, ssh_global_request_handle(0, pkt, n, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL(1u, olen);
     TEST_ASSERT_EQUAL(SSH_MSG_REQUEST_FAILURE, out[0]);
     TEST_ASSERT_EQUAL_INT(0, rfwd_open_count);
@@ -585,12 +585,12 @@ void test_rforward_no_cb_refused()
 // An accepted specific-port forward replies with a bare REQUEST_SUCCESS.
 void test_rforward_accept_specific_port()
 {
-    SshChannels.set_rforward_open_cb(rfwd_open_cb);
+    pc_ssh_channel_set_rforward_open_cb(rfwd_open_cb);
     rfwd_open_ret = 8080;
     uint8_t pkt[64], out[16];
     size_t olen = 99;
     size_t n = make_global_fwd(pkt, "tcpip-forward", PROTO_TRUE, "0.0.0.0", 8080);
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.global_request(0, pkt, n, out, &olen, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, ssh_global_request_handle(0, pkt, n, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL(1u, olen);
     TEST_ASSERT_EQUAL(SSH_MSG_REQUEST_SUCCESS, out[0]);
     TEST_ASSERT_EQUAL_INT(1, rfwd_open_count);
@@ -601,12 +601,12 @@ void test_rforward_accept_specific_port()
 // A port-0 request that is accepted echoes the allocated port (RFC 4254 §7.1).
 void test_rforward_port0_echoes_allocated()
 {
-    SshChannels.set_rforward_open_cb(rfwd_open_cb);
+    pc_ssh_channel_set_rforward_open_cb(rfwd_open_cb);
     rfwd_open_ret = 54321;
     uint8_t pkt[64], out[16];
     size_t olen = 99;
     size_t n = make_global_fwd(pkt, "tcpip-forward", PROTO_TRUE, "", 0);
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.global_request(0, pkt, n, out, &olen, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, ssh_global_request_handle(0, pkt, n, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL(5u, olen);
     TEST_ASSERT_EQUAL(SSH_MSG_REQUEST_SUCCESS, out[0]);
     TEST_ASSERT_EQUAL_UINT32(54321u, rd_u32(out + 1));
@@ -615,12 +615,12 @@ void test_rforward_port0_echoes_allocated()
 // Accepted but want_reply = false -> the callback still runs, but no reply is emitted.
 void test_rforward_no_reply_silent()
 {
-    SshChannels.set_rforward_open_cb(rfwd_open_cb);
+    pc_ssh_channel_set_rforward_open_cb(rfwd_open_cb);
     rfwd_open_ret = 8080;
     uint8_t pkt[64], out[16];
     size_t olen = 99;
     size_t n = make_global_fwd(pkt, "tcpip-forward", PROTO_FALSE, "", 8080);
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.global_request(0, pkt, n, out, &olen, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, ssh_global_request_handle(0, pkt, n, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL(0u, olen);
     TEST_ASSERT_EQUAL_INT(1, rfwd_open_count);
 }
@@ -628,12 +628,12 @@ void test_rforward_no_reply_silent()
 // cancel-tcpip-forward routes to the cancel callback and replies REQUEST_SUCCESS.
 void test_rforward_cancel()
 {
-    SshChannels.set_rforward_cancel_cb(rfwd_cancel_cb);
+    pc_ssh_channel_set_rforward_cancel_cb(rfwd_cancel_cb);
     rfwd_cancel_ret = 0;
     uint8_t pkt[64], out[16];
     size_t olen = 99;
     size_t n = make_global_fwd(pkt, "cancel-tcpip-forward", PROTO_TRUE, "", 8080);
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.global_request(0, pkt, n, out, &olen, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, ssh_global_request_handle(0, pkt, n, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL(1u, olen);
     TEST_ASSERT_EQUAL(SSH_MSG_REQUEST_SUCCESS, out[0]);
     TEST_ASSERT_EQUAL_INT(1, rfwd_cancel_count);
@@ -647,13 +647,13 @@ void test_global_unknown_request()
     uint8_t pkt[64], out[16];
     size_t olen = 99;
     size_t n = make_global_other(pkt, "keepalive@openssh.com", PROTO_TRUE);
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.global_request(0, pkt, n, out, &olen, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, ssh_global_request_handle(0, pkt, n, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL(1u, olen);
     TEST_ASSERT_EQUAL(SSH_MSG_REQUEST_FAILURE, out[0]);
 
     olen = 99;
     n = make_global_other(pkt, "hostkeys-00@openssh.com", PROTO_FALSE);
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.global_request(0, pkt, n, out, &olen, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, ssh_global_request_handle(0, pkt, n, out, &olen, sizeof(out)));
     TEST_ASSERT_EQUAL(0u, olen); // no reply when want_reply is unset
 }
 
@@ -663,7 +663,7 @@ void test_global_malformed()
     uint8_t pkt[4], out[16];
     pkt[0] = SSH_MSG_GLOBAL_REQUEST;
     size_t olen = 99;
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.global_request(0, pkt, 1, out, &olen, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(-1, ssh_global_request_handle(0, pkt, 1, out, &olen, sizeof(out)));
 }
 
 // ---- forwarded-tcpip: server-initiated channel (ssh -R) -------------------
@@ -679,13 +679,13 @@ static size_t make_open_confirm(uint8_t *pkt, uint32_t recipient, uint32_t sende
     return 17;
 }
 
-// SshChannels.open_forwarded builds a valid forwarded-tcpip CHANNEL_OPEN and marks
+// pc_ssh_channel_open_forwarded builds a valid forwarded-tcpip CHANNEL_OPEN and marks
 // the channel pending (a session open cannot reuse the pending slot).
 void test_forwarded_open_builds_channel()
 {
     uint8_t out[128];
     size_t olen = 0;
-    int ch = SshChannels.open_forwarded(0, "10.0.0.1", 8080, "192.168.1.9", 51000, out, &olen, sizeof(out));
+    int ch = pc_ssh_channel_open_forwarded(0, "10.0.0.1", 8080, "192.168.1.9", 51000, out, &olen, sizeof(out));
     TEST_ASSERT_TRUE(ch >= 0);
     TEST_ASSERT_EQUAL(SSH_MSG_CHANNEL_OPEN, out[0]);
     // string "forwarded-tcpip" then our sender channel id.
@@ -700,15 +700,15 @@ void test_forwarded_open_builds_channel()
 // A CONFIRMATION marks the channel open, records the peer window, and fires the cb.
 void test_forwarded_confirm_opens_channel()
 {
-    SshChannels.set_forward_confirm_cb(confirm_cb);
+    pc_ssh_channel_set_forward_confirm_cb(confirm_cb);
     uint8_t out[128];
     size_t olen = 0;
-    int ch = SshChannels.open_forwarded(0, "10.0.0.1", 22, "1.2.3.4", 40000, out, &olen, sizeof(out));
+    int ch = pc_ssh_channel_open_forwarded(0, "10.0.0.1", 22, "1.2.3.4", 40000, out, &olen, sizeof(out));
     TEST_ASSERT_TRUE(ch >= 0);
 
     uint8_t pkt[17];
     size_t n = make_open_confirm(pkt, (uint32_t)ch, 99, 5000, 16384);
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.handle_open_confirm(0, pkt, n));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_open_confirm(0, pkt, n));
     TEST_ASSERT_EQUAL_INT(1, confirm_count);
     TEST_ASSERT_TRUE(confirm_ok);
     TEST_ASSERT_EQUAL_UINT32((uint32_t)ch, confirm_channel);
@@ -716,8 +716,8 @@ void test_forwarded_confirm_opens_channel()
     // Now that it is open, the server can frame outbound data toward the peer window.
     uint8_t dout[64];
     size_t dlen = 0;
-    TEST_ASSERT_EQUAL_INT(0,
-                          SshChannels.build_data(0, (uint32_t)ch, (const uint8_t *)"hi", 2, dout, &dlen, sizeof(dout)));
+    TEST_ASSERT_EQUAL_INT(
+        0, pc_ssh_channel_build_data(0, (uint32_t)ch, (const uint8_t *)"hi", 2, dout, &dlen, sizeof(dout)));
     TEST_ASSERT_EQUAL(SSH_MSG_CHANNEL_DATA, dout[0]);
     TEST_ASSERT_EQUAL_UINT32(99u, rd_u32(dout + 1)); // addressed to the peer's channel id
 }
@@ -725,10 +725,10 @@ void test_forwarded_confirm_opens_channel()
 // A FAILURE frees the pending channel (its slot is reusable) and fires cb(ok=false).
 void test_forwarded_failure_frees_channel()
 {
-    SshChannels.set_forward_confirm_cb(confirm_cb);
+    pc_ssh_channel_set_forward_confirm_cb(confirm_cb);
     uint8_t out[128];
     size_t olen = 0;
-    int ch = SshChannels.open_forwarded(0, "10.0.0.1", 22, "1.2.3.4", 40000, out, &olen, sizeof(out));
+    int ch = pc_ssh_channel_open_forwarded(0, "10.0.0.1", 22, "1.2.3.4", 40000, out, &olen, sizeof(out));
     TEST_ASSERT_TRUE(ch >= 0);
 
     uint8_t pkt[17];
@@ -737,7 +737,7 @@ void test_forwarded_failure_frees_channel()
     wr_u32(pkt + 5, 2u); // reason: connect failed
     wr_u32(pkt + 9, 0);  // empty description
     wr_u32(pkt + 13, 0); // empty language
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.handle_open_failure(0, pkt, 17));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_open_failure(0, pkt, 17));
     TEST_ASSERT_EQUAL_INT(1, confirm_count);
     TEST_ASSERT_FALSE(confirm_ok);
 
@@ -751,29 +751,29 @@ void test_forwarded_confirm_unknown_rejected()
 {
     uint8_t pkt[17];
     size_t n = make_open_confirm(pkt, 0, 5, 1000, 8192);
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.handle_open_confirm(0, pkt, n)); // nothing pending
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_handle_open_confirm(0, pkt, n)); // nothing pending
     pkt[0] = SSH_MSG_CHANNEL_OPEN_FAILURE;
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.handle_open_failure(0, pkt, 17));
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_handle_open_failure(0, pkt, 17));
 }
 
 // Inbound data on a confirmed forwarded-tcpip channel routes to the forward owner,
 // not the session data callback (ssh -R return path).
 void test_forwarded_inbound_data_routes_to_forward_cb()
 {
-    SshChannels.set_forward_data_cb(fwd_data_cb);
+    pc_ssh_channel_set_forward_data_cb(fwd_data_cb);
     uint8_t out[128];
     size_t olen = 0;
-    int ch = SshChannels.open_forwarded(0, "10.0.0.1", 22, "1.2.3.4", 40000, out, &olen, sizeof(out));
+    int ch = pc_ssh_channel_open_forwarded(0, "10.0.0.1", 22, "1.2.3.4", 40000, out, &olen, sizeof(out));
     TEST_ASSERT_TRUE(ch >= 0);
     uint8_t cpkt[17];
     make_open_confirm(cpkt, (uint32_t)ch, 42, 5000, 16384);
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.handle_open_confirm(0, cpkt, 17));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_open_confirm(0, cpkt, 17));
 
     uint8_t pkt[64];
     size_t n = make_data(pkt, (uint32_t)ch, "payload");
     uint8_t dout[16];
     size_t dolen = 0;
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.handle_data(0, pkt, n, dout, &dolen, sizeof(dout)));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_data(0, pkt, n, dout, &dolen, sizeof(dout)));
     TEST_ASSERT_EQUAL_INT(1, fwd_data_count);
     TEST_ASSERT_EQUAL_INT(0, data_cb_count); // NOT delivered as session data
     TEST_ASSERT_EQUAL_UINT32((uint32_t)ch, fwd_data_channel);
@@ -787,17 +787,17 @@ void test_chan_slot_and_msgtype_guards()
 {
     uint8_t out[32];
     size_t ol = 0;
-    uint8_t z[17] = {0};             // leading byte 0 != any handled message type
-    SshChannels.init(MAX_SSH_CONNS); // no-op
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.global_request(0, z, sizeof(z), out, &ol, sizeof(out)));     // 175
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.handle_open(MAX_SSH_CONNS, z, 1, out, &ol, sizeof(out)));    // 346
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.handle_open_confirm(MAX_SSH_CONNS, z, 17));                  // 312
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.handle_open_failure(0, z, 5));                               // 331
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.handle_request(MAX_SSH_CONNS, z, 1, out, &ol, sizeof(out))); // 412
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.handle_data(MAX_SSH_CONNS, z, 1, out, &ol, sizeof(out)));    // 454
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.handle_window_adjust(0, z, 9));                              // 533
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.build_close(MAX_SSH_CONNS, 0, out, &ol, sizeof(out)));       // 567
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.handle_close(0, z, 5, out, &ol, sizeof(out)));               // 575
+    uint8_t z[17] = {0};                // leading byte 0 != any handled message type
+    pc_ssh_channel_init(MAX_SSH_CONNS); // no-op
+    TEST_ASSERT_EQUAL_INT(-1, ssh_global_request_handle(0, z, sizeof(z), out, &ol, sizeof(out)));         // 175
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_handle_open(MAX_SSH_CONNS, z, 1, out, &ol, sizeof(out)));    // 346
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_handle_open_confirm(MAX_SSH_CONNS, z, 17));                  // 312
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_handle_open_failure(0, z, 5));                               // 331
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_handle_request(MAX_SSH_CONNS, z, 1, out, &ol, sizeof(out))); // 412
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_handle_data(MAX_SSH_CONNS, z, 1, out, &ol, sizeof(out)));    // 454
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_handle_window_adjust(0, z, 9));                              // 533
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_build_close(MAX_SSH_CONNS, 0, out, &ol, sizeof(out)));       // 567
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_handle_close(0, z, 5, out, &ol, sizeof(out)));               // 575
 }
 
 // Malformed payloads (over-long strings, missing trailing fields, unknown channel) are rejected.
@@ -808,15 +808,15 @@ void test_chan_malformed_payloads()
     size_t n = 0;
 
     uint8_t over[5] = {SSH_MSG_CHANNEL_OPEN, 0x00, 0x00, 0x00, 0xFF}; // type len 255 overruns -> rd_string (96)
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.handle_open(0, over, sizeof(over), out, &ol, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_handle_open(0, over, sizeof(over), out, &ol, sizeof(out)));
 
     uint8_t shortpkt[16];
     n = 0;
     shortpkt[n++] = SSH_MSG_CHANNEL_OPEN;
     n += put_string(shortpkt + n, "x"); // type ok but < 12 trailing bytes (354)
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.handle_open(0, shortpkt, n, out, &ol, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_handle_open(0, shortpkt, n, out, &ol, sizeof(out)));
 
-    SshChannels.set_forward_open_cb(fwd_open_cb); // forwarding on so direct-tcpip reaches the host parse
+    pc_ssh_channel_set_forward_open_cb(fwd_open_cb); // forwarding on so direct-tcpip reaches the host parse
     uint8_t dt[40];
     n = 0;
     dt[n++] = SSH_MSG_CHANNEL_OPEN;
@@ -829,7 +829,7 @@ void test_chan_malformed_payloads()
     dt[n++] = 0;
     dt[n++] = 0;
     dt[n++] = 0xFF; // host string len 255, truncated (374)
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.handle_open(0, dt, n, out, &ol, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_handle_open(0, dt, n, out, &ol, sizeof(out)));
 
     uint8_t rq[32];
     n = 0;
@@ -840,20 +840,20 @@ void test_chan_malformed_payloads()
     rq[n++] = 0;
     rq[n++] = 0;
     rq[n++] = 0xFF; // rtype len 255 -> rd_string fail (422)
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.handle_request(0, rq, n, out, &ol, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_handle_request(0, rq, n, out, &ol, sizeof(out)));
     n = 0;
     rq[n++] = SSH_MSG_CHANNEL_REQUEST;
     wr_u32(rq + n, 0);
     n += 4;
     n += put_string(rq + n, "shell"); // no want_reply byte (424)
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.handle_request(0, rq, n, out, &ol, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_handle_request(0, rq, n, out, &ol, sizeof(out)));
     n = 0;
     rq[n++] = SSH_MSG_CHANNEL_REQUEST;
     wr_u32(rq + n, 99);
     n += 4;
     n += put_string(rq + n, "shell");
     rq[n++] = 1; // recipient 99 not open (429)
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.handle_request(0, rq, n, out, &ol, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_handle_request(0, rq, n, out, &ol, sizeof(out)));
 
     uint8_t dp[16];
     n = 0;
@@ -864,13 +864,13 @@ void test_chan_malformed_payloads()
     dp[n++] = 0;
     dp[n++] = 0;
     dp[n++] = 0xFF; // data len 255 truncated (464)
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.handle_data(0, dp, n, out, &ol, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_handle_data(0, dp, n, out, &ol, sizeof(out)));
 
     uint8_t g[40];
     n = 0;
     g[n++] = SSH_MSG_GLOBAL_REQUEST;
     n += put_string(g + n, "x"); // name but no want_reply byte (183)
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.global_request(0, g, n, out, &ol, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(-1, ssh_global_request_handle(0, g, n, out, &ol, sizeof(out)));
     n = 0;
     g[n++] = SSH_MSG_GLOBAL_REQUEST;
     n += put_string(g + n, "tcpip-forward");
@@ -879,7 +879,7 @@ void test_chan_malformed_payloads()
     g[n++] = 0;
     g[n++] = 0;
     g[n++] = 0xFF; // truncated bind address (195)
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.global_request(0, g, n, out, &ol, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(-1, ssh_global_request_handle(0, g, n, out, &ol, sizeof(out)));
 }
 
 // build_open_failure / build_open_confirm reject an output buffer smaller than 17 bytes.
@@ -894,7 +894,8 @@ void test_chan_open_cap_guards()
     wr_u32(unk + n + 4, 32768);
     wr_u32(unk + n + 8, 32768);
     n += 12;
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.handle_open(0, unk, n, out, &ol, 10)); // unknown type -> failure cap<17 (143)
+    TEST_ASSERT_EQUAL_INT(-1,
+                          pc_ssh_channel_handle_open(0, unk, n, out, &ol, 10)); // unknown type -> failure cap<17 (143)
 
     n = 0;
     uint8_t ses[32];
@@ -904,7 +905,7 @@ void test_chan_open_cap_guards()
     wr_u32(ses + n + 4, 32768);
     wr_u32(ses + n + 8, 32768);
     n += 12;
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.handle_open(0, ses, n, out, &ol, 10)); // session -> confirm cap<17 (157)
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_handle_open(0, ses, n, out, &ol, 10)); // session -> confirm cap<17 (157)
 }
 
 // open_forwarded guards (null addr, tiny cap, pool full) + per-channel cap guards.
@@ -913,8 +914,8 @@ void test_chan_forward_and_channel_guards()
     uint8_t out[64];
     size_t ol = 0, n = 0;
     // While a slot is free: null address (262) and a too-small buffer (273).
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.open_forwarded(0, NULL, 80, "x", 90, out, &ol, sizeof(out)));    // 262
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.open_forwarded(0, "10.0.0.1", 80, "1.2.3.4", 90, out, &ol, 10)); // 273
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_open_forwarded(0, NULL, 80, "x", 90, out, &ol, sizeof(out)));    // 262
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_open_forwarded(0, "10.0.0.1", 80, "1.2.3.4", 90, out, &ol, 10)); // 273
 
     uint32_t ch = open_session(5, 32768);
     uint8_t rq[32];
@@ -924,20 +925,20 @@ void test_chan_forward_and_channel_guards()
     n += 4;
     n += put_string(rq + n, "shell");
     rq[n++] = 1;
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.handle_request(0, rq, n, out, &ol, 3)); // want_reply cap<5 (439)
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_handle_request(0, rq, n, out, &ol, 3)); // want_reply cap<5 (439)
 
     ssh_chan[0][ch].flow.peer_window = 1000;
     ssh_chan[0][ch].flow.peer_max_pkt = 1000;
-    TEST_ASSERT_EQUAL_INT(-1,
-                          SshChannels.build_data(0, ch, (const uint8_t *)"hello", 5, out, &ol, 5)); // cap<9+len (515)
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.build_close(0, 99, out, &ol, sizeof(out)));               // null chan (553)
+    TEST_ASSERT_EQUAL_INT(
+        -1, pc_ssh_channel_build_data(0, ch, (const uint8_t *)"hello", 5, out, &ol, 5)); // cap<9+len (515)
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_build_close(0, 99, out, &ol, sizeof(out))); // null chan (553)
 
     // With every channel slot occupied, a server-initiated open is refused (265).
     for (int c = 0; c < PC_SSH_MAX_CHANNELS; c++)
     {
         ssh_chan[0][c].open = PROTO_TRUE;
     }
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.open_forwarded(0, "10.0.0.1", 80, "1.2.3.4", 90, out, &ol, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_open_forwarded(0, "10.0.0.1", 80, "1.2.3.4", 90, out, &ol, sizeof(out)));
 }
 
 // GLOBAL_REQUEST reply paths that cannot fit the (tiny) output buffer.
@@ -950,7 +951,7 @@ void test_chan_global_request_reply_caps()
     g[n++] = SSH_MSG_GLOBAL_REQUEST;
     n += put_string(g + n, "unknown-req");
     g[n++] = 1;
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.global_request(0, g, n, out, &ol, 0)); // 246
+    TEST_ASSERT_EQUAL_INT(-1, ssh_global_request_handle(0, g, n, out, &ol, 0)); // 246
 
     // tcpip-forward refused (no cb), want_reply, no room (210).
     n = 0;
@@ -960,10 +961,10 @@ void test_chan_global_request_reply_caps()
     n += put_string(g + n, "0.0.0.0");
     wr_u32(g + n, 8080);
     n += 4;
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.global_request(0, g, n, out, &ol, 0)); // 210
+    TEST_ASSERT_EQUAL_INT(-1, ssh_global_request_handle(0, g, n, out, &ol, 0)); // 210
 
     // tcpip-forward accepted with port 0 (echo), want_reply, no room for the 5-byte reply (224).
-    SshChannels.set_rforward_open_cb(rfwd_open_cb);
+    pc_ssh_channel_set_rforward_open_cb(rfwd_open_cb);
     rfwd_open_ret = 9000;
     n = 0;
     g[n++] = SSH_MSG_GLOBAL_REQUEST;
@@ -972,10 +973,10 @@ void test_chan_global_request_reply_caps()
     n += put_string(g + n, "0.0.0.0");
     wr_u32(g + n, 0);
     n += 4;
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.global_request(0, g, n, out, &ol, 3)); // 224
+    TEST_ASSERT_EQUAL_INT(-1, ssh_global_request_handle(0, g, n, out, &ol, 3)); // 224
 
     // cancel accepted, want_reply, no room for the bare success (232).
-    SshChannels.set_rforward_cancel_cb(rfwd_cancel_cb);
+    pc_ssh_channel_set_rforward_cancel_cb(rfwd_cancel_cb);
     rfwd_cancel_ret = 0;
     n = 0;
     g[n++] = SSH_MSG_GLOBAL_REQUEST;
@@ -984,7 +985,7 @@ void test_chan_global_request_reply_caps()
     n += put_string(g + n, "0.0.0.0");
     wr_u32(g + n, 8080);
     n += 4;
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.global_request(0, g, n, out, &ol, 0)); // 232
+    TEST_ASSERT_EQUAL_INT(-1, ssh_global_request_handle(0, g, n, out, &ol, 0)); // 232
 }
 
 // Every entry point that leads with a message byte rejects BOTH a zero-length payload (no message
@@ -995,35 +996,35 @@ void test_chan_empty_and_mistyped_payloads()
     size_t ol = 0;
     uint8_t z[17] = {0}; // leading byte 0 is not any handled message type
 
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.global_request(MAX_SSH_CONNS, z, sizeof(z), out, &ol, sizeof(out)));
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.global_request(0, z, 0, out, &ol, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(-1, ssh_global_request_handle(MAX_SSH_CONNS, z, sizeof(z), out, &ol, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(-1, ssh_global_request_handle(0, z, 0, out, &ol, sizeof(out)));
 
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.handle_open(0, z, 0, out, &ol, sizeof(out)));
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.handle_open(0, z, sizeof(z), out, &ol, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_handle_open(0, z, 0, out, &ol, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_handle_open(0, z, sizeof(z), out, &ol, sizeof(out)));
 
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.handle_request(0, z, 0, out, &ol, sizeof(out)));
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.handle_request(0, z, sizeof(z), out, &ol, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_handle_request(0, z, 0, out, &ol, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_handle_request(0, z, sizeof(z), out, &ol, sizeof(out)));
 
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.handle_data(0, z, 0, out, &ol, sizeof(out)));
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.handle_data(0, z, sizeof(z), out, &ol, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_handle_data(0, z, 0, out, &ol, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_handle_data(0, z, sizeof(z), out, &ol, sizeof(out)));
 
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.handle_open_confirm(0, z, 16)); // one byte short of 17
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.handle_open_failure(MAX_SSH_CONNS, z, 5));
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.handle_open_failure(0, z, 4)); // one byte short of 5
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.handle_window_adjust(MAX_SSH_CONNS, z, 9));
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.handle_window_adjust(0, z, 8)); // one byte short of 9
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.handle_close(MAX_SSH_CONNS, z, 5, out, &ol, sizeof(out)));
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.handle_close(0, z, 4, out, &ol, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_handle_open_confirm(0, z, 16)); // one byte short of 17
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_handle_open_failure(MAX_SSH_CONNS, z, 5));
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_handle_open_failure(0, z, 4)); // one byte short of 5
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_handle_window_adjust(MAX_SSH_CONNS, z, 9));
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_handle_window_adjust(0, z, 8)); // one byte short of 9
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_handle_close(MAX_SSH_CONNS, z, 5, out, &ol, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_handle_close(0, z, 4, out, &ol, sizeof(out)));
 
     // A full-length CONFIRMATION payload carrying some other message number.
     uint8_t cf[17] = {0};
     cf[0] = SSH_MSG_CHANNEL_OPEN_FAILURE;
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.handle_open_confirm(0, cf, sizeof(cf)));
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_handle_open_confirm(0, cf, sizeof(cf)));
 
     // A CONFIRMATION naming a channel id past the table finds nothing pending.
     cf[0] = SSH_MSG_CHANNEL_OPEN_CONFIRM;
     wr_u32(cf + 1, PC_SSH_MAX_CHANNELS + 4u);
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.handle_open_confirm(0, cf, sizeof(cf)));
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_handle_open_confirm(0, cf, sizeof(cf)));
 }
 
 // Name matching compares the whole element, not just its length: a request name / channel type /
@@ -1037,13 +1038,13 @@ void test_chan_same_length_names_do_not_match()
 
     // "tcpip-forwarX" is 13 chars like "tcpip-forward"; "cancel-tcpip-forwarX" is 20 like the cancel
     // form. Both fall through to the unrecognized-request reply instead of the forward handler.
-    SshChannels.set_rforward_open_cb(rfwd_open_cb);
-    SshChannels.set_rforward_cancel_cb(rfwd_cancel_cb);
+    pc_ssh_channel_set_rforward_open_cb(rfwd_open_cb);
+    pc_ssh_channel_set_rforward_cancel_cb(rfwd_cancel_cb);
     n = make_global_other(g, "tcpip-forwarX", PROTO_TRUE);
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.global_request(0, g, n, out, &ol, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, ssh_global_request_handle(0, g, n, out, &ol, sizeof(out)));
     TEST_ASSERT_EQUAL(SSH_MSG_REQUEST_FAILURE, out[0]);
     n = make_global_other(g, "cancel-tcpip-forwarX", PROTO_TRUE);
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.global_request(0, g, n, out, &ol, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, ssh_global_request_handle(0, g, n, out, &ol, sizeof(out)));
     TEST_ASSERT_EQUAL(SSH_MSG_REQUEST_FAILURE, out[0]);
     TEST_ASSERT_EQUAL_INT(0, rfwd_open_count);
     TEST_ASSERT_EQUAL_INT(0, rfwd_cancel_count);
@@ -1060,7 +1061,7 @@ void test_chan_same_length_names_do_not_match()
         wr_u32(op + n + 4, 32768);
         wr_u32(op + n + 8, 32768);
         n += 12;
-        TEST_ASSERT_EQUAL_INT(0, SshChannels.handle_open(0, op, n, out, &ol, sizeof(out)));
+        TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_open(0, op, n, out, &ol, sizeof(out)));
         TEST_ASSERT_EQUAL(SSH_MSG_CHANNEL_OPEN_FAILURE, out[0]);
         TEST_ASSERT_EQUAL_UINT32(3u, rd_u32(out + 5)); // unknown channel type
     }
@@ -1083,7 +1084,7 @@ void test_chan_request_accept_set()
         n += 4;
         n += put_string(rq + n, accepted[k]);
         rq[n++] = 1; // want_reply
-        TEST_ASSERT_EQUAL_INT(0, SshChannels.handle_request(0, rq, n, out, &ol, sizeof(out)));
+        TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_request(0, rq, n, out, &ol, sizeof(out)));
         TEST_ASSERT_EQUAL(SSH_MSG_CHANNEL_SUCCESS, out[0]);
     }
     const char *refused[4] = {"shelX", "exeX", "pty-reX", "enX"};
@@ -1096,7 +1097,7 @@ void test_chan_request_accept_set()
         n += 4;
         n += put_string(rq + n, refused[k]);
         rq[n++] = 1;
-        TEST_ASSERT_EQUAL_INT(0, SshChannels.handle_request(0, rq, n, out, &ol, sizeof(out)));
+        TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_request(0, rq, n, out, &ol, sizeof(out)));
         TEST_ASSERT_EQUAL(SSH_MSG_CHANNEL_FAILURE, out[0]);
     }
 }
@@ -1113,9 +1114,9 @@ void test_chan_missing_trailing_port()
     n += put_string(g + n, "tcpip-forward");
     g[n++] = 1;                        // want_reply
     n += put_string(g + n, "0.0.0.0"); // address parses, then the payload ends
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.global_request(0, g, n, out, &ol, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(-1, ssh_global_request_handle(0, g, n, out, &ol, sizeof(out)));
 
-    SshChannels.set_forward_open_cb(fwd_open_cb);
+    pc_ssh_channel_set_forward_open_cb(fwd_open_cb);
     uint8_t dt[64];
     n = 0;
     dt[n++] = SSH_MSG_CHANNEL_OPEN;
@@ -1125,7 +1126,7 @@ void test_chan_missing_trailing_port()
     wr_u32(dt + n + 8, 32768);
     n += 12;
     n += put_string(dt + n, "127.0.0.1"); // host parses, then the payload ends
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.handle_open(0, dt, n, out, &ol, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_handle_open(0, dt, n, out, &ol, sizeof(out)));
     TEST_ASSERT_EQUAL_INT(0, fwd_open_count); // never reached the connect hook
 }
 
@@ -1138,12 +1139,12 @@ void test_chan_rforward_refused_paths()
     uint8_t g[64];
 
     size_t n = make_global_fwd(g, "tcpip-forward", PROTO_FALSE, "0.0.0.0", 8080); // no owner, no reply wanted
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.global_request(0, g, n, out, &ol, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, ssh_global_request_handle(0, g, n, out, &ol, sizeof(out)));
     TEST_ASSERT_EQUAL(0u, ol);
 
     ol = 99;
     n = make_global_fwd(g, "cancel-tcpip-forward", PROTO_TRUE, "0.0.0.0", 8080); // no cancel owner
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.global_request(0, g, n, out, &ol, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, ssh_global_request_handle(0, g, n, out, &ol, sizeof(out)));
     TEST_ASSERT_EQUAL(1u, ol);
     TEST_ASSERT_EQUAL(SSH_MSG_REQUEST_FAILURE, out[0]);
     TEST_ASSERT_EQUAL_INT(0, rfwd_cancel_count);
@@ -1156,15 +1157,15 @@ void test_chan_forwarded_open_guards_and_silent_failure()
     uint8_t out[128];
     size_t ol = 0;
     TEST_ASSERT_EQUAL_INT(
-        -1, SshChannels.open_forwarded(MAX_SSH_CONNS, "10.0.0.1", 80, "1.2.3.4", 90, out, &ol, sizeof(out)));
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.open_forwarded(0, "10.0.0.1", 80, NULL, 90, out, &ol, sizeof(out)));
+        -1, pc_ssh_channel_open_forwarded(MAX_SSH_CONNS, "10.0.0.1", 80, "1.2.3.4", 90, out, &ol, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_open_forwarded(0, "10.0.0.1", 80, NULL, 90, out, &ol, sizeof(out)));
 
-    int ch = SshChannels.open_forwarded(0, "10.0.0.1", 22, "1.2.3.4", 40000, out, &ol, sizeof(out));
+    int ch = pc_ssh_channel_open_forwarded(0, "10.0.0.1", 22, "1.2.3.4", 40000, out, &ol, sizeof(out));
     TEST_ASSERT_TRUE(ch >= 0);
     uint8_t pkt[17] = {0};
     pkt[0] = SSH_MSG_CHANNEL_OPEN_FAILURE;
     wr_u32(pkt + 1, (uint32_t)ch);
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.handle_open_failure(0, pkt, sizeof(pkt))); // no confirm cb installed
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_open_failure(0, pkt, sizeof(pkt))); // no confirm cb installed
     TEST_ASSERT_EQUAL_INT(0, confirm_count);
     TEST_ASSERT_FALSE(ssh_chan[0][ch].pending);
     TEST_ASSERT_FALSE(ssh_chan[0][ch].open);
@@ -1180,33 +1181,33 @@ void test_chan_data_without_sinks_and_empty_payload()
     uint8_t pkt[64];
 
     // Session channel with no data callback.
-    SshChannels.set_data_cb(NULL);
+    pc_ssh_channel_set_data_cb(NULL);
     uint32_t id = open_session(31, 32768);
     size_t n = make_data(pkt, id, "abc");
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.handle_data(0, pkt, n, out, &ol, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_data(0, pkt, n, out, &ol, sizeof(out)));
     TEST_ASSERT_EQUAL_INT(0, data_cb_count);
     TEST_ASSERT_EQUAL_UINT32(SSH_CHAN_WINDOW - 3u, ssh_chan[0][id].flow.local_window);
 
     // A zero-length data string is accepted and delivers nothing.
     n = make_data(pkt, id, "");
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.handle_data(0, pkt, n, out, &ol, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_data(0, pkt, n, out, &ol, sizeof(out)));
     TEST_ASSERT_EQUAL_UINT32(SSH_CHAN_WINDOW - 3u, ssh_chan[0][id].flow.local_window);
 
     // direct-tcpip channel with no forward-data callback.
-    SshChannels.set_forward_open_cb(fwd_open_cb);
-    SshChannels.set_forward_data_cb(NULL);
+    pc_ssh_channel_set_forward_open_cb(fwd_open_cb);
+    pc_ssh_channel_set_forward_data_cb(NULL);
     n = make_direct_tcpip(pkt, 32, "10.1.2.3", 443);
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.handle_open(0, pkt, n, out, &ol, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_open(0, pkt, n, out, &ol, sizeof(out)));
     uint32_t fid = rd_u32(out + 5);
     n = make_data(pkt, fid, "xyz");
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.handle_data(0, pkt, n, out, &ol, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_data(0, pkt, n, out, &ol, sizeof(out)));
     TEST_ASSERT_EQUAL_INT(0, fwd_data_count);
 
     // The window falls below half but the caller's buffer cannot hold a WINDOW_ADJUST.
     ssh_chan[0][id].flow.local_window = 100;
     n = make_data(pkt, id, "0123456789");
     ol = 99;
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.handle_data(0, pkt, n, out, &ol, 5));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_data(0, pkt, n, out, &ol, 5));
     TEST_ASSERT_EQUAL(0u, ol);
     TEST_ASSERT_EQUAL_UINT32(90u, ssh_chan[0][id].flow.local_window); // not replenished
 }
@@ -1219,21 +1220,21 @@ void test_chan_outbound_limits_and_window_saturation()
     uint8_t out[64];
     size_t ol = 0;
     const uint8_t data[5] = {1, 2, 3, 4, 5};
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.build_data(MAX_SSH_CONNS, 0, data, sizeof(data), out, &ol, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_build_data(MAX_SSH_CONNS, 0, data, sizeof(data), out, &ol, sizeof(out)));
 
     uint32_t id = open_session(44, 32768);
     ssh_chan[0][id].flow.peer_window = 1000;
     ssh_chan[0][id].flow.peer_max_pkt = 2; // window is ample, the per-packet cap is not
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.build_data(0, id, data, sizeof(data), out, &ol, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_build_data(0, id, data, sizeof(data), out, &ol, sizeof(out)));
 
-    TEST_ASSERT_EQUAL_INT(-1, SshChannels.build_close(0, id, out, &ol, 9)); // one byte short of EOF+CLOSE
+    TEST_ASSERT_EQUAL_INT(-1, pc_ssh_channel_build_close(0, id, out, &ol, 9)); // one byte short of EOF+CLOSE
 
     ssh_chan[0][id].flow.peer_window = 0xFFFFFFF0u;
     uint8_t wa[9];
     wa[0] = SSH_MSG_CHANNEL_WINDOW_ADJUST;
     wr_u32(wa + 1, id);
     wr_u32(wa + 5, 0x40u); // would wrap past 2^32
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.handle_window_adjust(0, wa, sizeof(wa)));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_window_adjust(0, wa, sizeof(wa)));
     TEST_ASSERT_EQUAL_UINT32(0xFFFFFFFFu, ssh_chan[0][id].flow.peer_window);
 }
 
@@ -1289,8 +1290,8 @@ void test_sftp_subsystem_routes()
     pc_sftp_open_count = 0;
     pc_sftp_data_count = 0;
     data_cb_count = 0;
-    SshChannels.set_sftp_open_cb(t_sftp_open);
-    SshChannels.set_sftp_data_cb(t_sftp_data);
+    pc_ssh_channel_set_sftp_open_cb(t_sftp_open);
+    pc_ssh_channel_set_sftp_data_cb(t_sftp_data);
     uint32_t id = open_session(7, 32768);
 
     uint8_t rq[64];
@@ -1303,14 +1304,14 @@ void test_sftp_subsystem_routes()
     n += put_string(rq + n, "sftp");
     uint8_t out[64];
     size_t ol = 0;
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.handle_request(0, rq, n, out, &ol, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_request(0, rq, n, out, &ol, sizeof(out)));
     TEST_ASSERT_EQUAL(SSH_MSG_CHANNEL_SUCCESS, out[0]);
     TEST_ASSERT_EQUAL_INT(1, pc_sftp_open_count);
     TEST_ASSERT_EQUAL_UINT32(id, pc_sftp_open_channel);
 
     uint8_t dp[32];
     size_t dn = make_data(dp, id, "FXP");
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.handle_data(0, dp, dn, out, &ol, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_data(0, dp, dn, out, &ol, sizeof(out)));
     TEST_ASSERT_EQUAL_INT(1, pc_sftp_data_count);
     TEST_ASSERT_EQUAL_INT(0, data_cb_count); // the session data cb is NOT called for an sftp channel
     TEST_ASSERT_EQUAL_MEMORY("FXP", pc_sftp_data_buf, 3);
@@ -1330,7 +1331,7 @@ void test_unknown_subsystem_refused()
     n += put_string(rq + n, "netconf");
     uint8_t out[64];
     size_t ol = 0;
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.handle_request(0, rq, n, out, &ol, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_request(0, rq, n, out, &ol, sizeof(out)));
     TEST_ASSERT_EQUAL(SSH_MSG_CHANNEL_FAILURE, out[0]);
 }
 
@@ -1339,8 +1340,8 @@ void test_unknown_subsystem_refused()
 // truncated argument are all refused, while "sftp" is accepted even with no binding installed.
 void test_sftp_subsystem_match_and_missing_cb()
 {
-    SshChannels.set_sftp_open_cb(NULL);
-    SshChannels.set_sftp_data_cb(NULL);
+    pc_ssh_channel_set_sftp_open_cb(NULL);
+    pc_ssh_channel_set_sftp_data_cb(NULL);
     pc_sftp_open_count = 0;
     pc_sftp_data_count = 0;
     uint32_t id = open_session(9, 32768);
@@ -1349,27 +1350,27 @@ void test_sftp_subsystem_match_and_missing_cb()
     size_t ol = 0;
 
     size_t n = make_chan_request(rq, id, "subsystex", "sftp", PROTO_FALSE); // 9 chars, not "subsystem"
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.handle_request(0, rq, n, out, &ol, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_request(0, rq, n, out, &ol, sizeof(out)));
     TEST_ASSERT_EQUAL(SSH_MSG_CHANNEL_FAILURE, out[0]);
 
     n = make_chan_request(rq, id, "subsystem", "sftq", PROTO_FALSE); // 4 chars, not "sftp"
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.handle_request(0, rq, n, out, &ol, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_request(0, rq, n, out, &ol, sizeof(out)));
     TEST_ASSERT_EQUAL(SSH_MSG_CHANNEL_FAILURE, out[0]);
 
     n = make_chan_request(rq, id, "subsystem", NULL, PROTO_TRUE); // argument length header only
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.handle_request(0, rq, n, out, &ol, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_request(0, rq, n, out, &ol, sizeof(out)));
     TEST_ASSERT_EQUAL(SSH_MSG_CHANNEL_FAILURE, out[0]);
     TEST_ASSERT_EQUAL_INT(0, pc_sftp_open_count);
 
     // Accepted with no binding: the channel is tagged SFTP and its data is simply dropped.
     n = make_chan_request(rq, id, "subsystem", "sftp", PROTO_FALSE);
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.handle_request(0, rq, n, out, &ol, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_request(0, rq, n, out, &ol, sizeof(out)));
     TEST_ASSERT_EQUAL(SSH_MSG_CHANNEL_SUCCESS, out[0]);
     TEST_ASSERT_EQUAL_INT(0, pc_sftp_open_count);
 
     uint8_t dp[32];
     size_t dn = make_data(dp, id, "FXP");
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.handle_data(0, dp, dn, out, &ol, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_data(0, dp, dn, out, &ol, sizeof(out)));
     TEST_ASSERT_EQUAL_INT(0, pc_sftp_data_count);
     TEST_ASSERT_EQUAL_INT(0, data_cb_count); // and never mistaken for session data
 }
@@ -1403,8 +1404,8 @@ void test_scp_exec_routes()
 {
     pc_scp_open_count = 0;
     pc_scp_data_count = 0;
-    SshChannels.set_scp_open_cb(t_scp_open);
-    SshChannels.set_scp_data_cb(t_scp_data);
+    pc_ssh_channel_set_scp_open_cb(t_scp_open);
+    pc_ssh_channel_set_scp_data_cb(t_scp_data);
     uint32_t id = open_session(8, 32768);
     uint8_t rq[64];
     size_t n = 0;
@@ -1416,14 +1417,14 @@ void test_scp_exec_routes()
     n += put_string(rq + n, "scp -t /gcode/part.nc");
     uint8_t out[64];
     size_t ol = 0;
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.handle_request(0, rq, n, out, &ol, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_request(0, rq, n, out, &ol, sizeof(out)));
     TEST_ASSERT_EQUAL(SSH_MSG_CHANNEL_SUCCESS, out[0]);
     TEST_ASSERT_EQUAL_INT(1, pc_scp_open_count);
     TEST_ASSERT_EQUAL_MEMORY("scp -t /gcode/part.nc", pc_scp_cmd, pc_scp_cmd_len);
 
     uint8_t dp[32];
     size_t dn = make_data(dp, id, "C0644");
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.handle_data(0, dp, dn, out, &ol, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_data(0, dp, dn, out, &ol, sizeof(out)));
     TEST_ASSERT_EQUAL_INT(1, pc_scp_data_count);
 }
 
@@ -1433,9 +1434,9 @@ void test_scp_exec_routes()
 // With no SCP binding installed the exec is still accepted and its data is dropped.
 void test_scp_exec_match_and_missing_cb()
 {
-    SshChannels.set_scp_open_cb(NULL);
-    SshChannels.set_scp_data_cb(NULL);
-    SshChannels.set_data_cb(data_cb);
+    pc_ssh_channel_set_scp_open_cb(NULL);
+    pc_ssh_channel_set_scp_data_cb(NULL);
+    pc_ssh_channel_set_data_cb(data_cb);
     pc_scp_open_count = 0;
     pc_scp_data_count = 0;
     data_cb_count = 0;
@@ -1445,14 +1446,14 @@ void test_scp_exec_match_and_missing_cb()
     size_t ol = 0;
 
     size_t n = make_chan_request(rq, id, "exeX", "scp -t /x", PROTO_FALSE); // 4 chars, not "exec"
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.handle_request(0, rq, n, out, &ol, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_request(0, rq, n, out, &ol, sizeof(out)));
     TEST_ASSERT_EQUAL(SSH_MSG_CHANNEL_FAILURE, out[0]);
 
     const char *not_scp[3] = {"ls", "scpX -t /x", NULL};
     for (int k = 0; k < 3; k++)
     {
         n = make_chan_request(rq, id, "exec", not_scp[k], not_scp[k] == NULL);
-        TEST_ASSERT_EQUAL_INT(0, SshChannels.handle_request(0, rq, n, out, &ol, sizeof(out)));
+        TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_request(0, rq, n, out, &ol, sizeof(out)));
         TEST_ASSERT_EQUAL(SSH_MSG_CHANNEL_SUCCESS, out[0]); // exec is accepted, just not tagged SCP
     }
     TEST_ASSERT_EQUAL_INT(0, pc_scp_open_count);
@@ -1460,16 +1461,16 @@ void test_scp_exec_match_and_missing_cb()
     // Data on the untagged channel is still ordinary session data.
     uint8_t dp[32];
     size_t dn = make_data(dp, id, "hello");
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.handle_data(0, dp, dn, out, &ol, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_data(0, dp, dn, out, &ol, sizeof(out)));
     TEST_ASSERT_EQUAL_INT(1, data_cb_count);
 
     // A real "scp " command with no binding installed: accepted, tagged, and its data dropped.
     n = make_chan_request(rq, id, "exec", "scp -f /gcode/part.nc", PROTO_FALSE);
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.handle_request(0, rq, n, out, &ol, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_request(0, rq, n, out, &ol, sizeof(out)));
     TEST_ASSERT_EQUAL(SSH_MSG_CHANNEL_SUCCESS, out[0]);
     TEST_ASSERT_EQUAL_INT(0, pc_scp_open_count);
     dn = make_data(dp, id, "C0644");
-    TEST_ASSERT_EQUAL_INT(0, SshChannels.handle_data(0, dp, dn, out, &ol, sizeof(out)));
+    TEST_ASSERT_EQUAL_INT(0, pc_ssh_channel_handle_data(0, dp, dn, out, &ol, sizeof(out)));
     TEST_ASSERT_EQUAL_INT(0, pc_scp_data_count);
     TEST_ASSERT_EQUAL_INT(1, data_cb_count); // unchanged: an SCP channel is not session data
 }
