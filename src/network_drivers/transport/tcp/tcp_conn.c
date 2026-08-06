@@ -186,6 +186,10 @@ void pc_obs_notice(uint8_t slot, ConnState st, pc_conn_reason reason)
 // declared so the in-context op dispatch can reach closing_check().
 static void closing_check(uint8_t slot, pc_pcb *pcb);
 
+// Both are called by the close paths above their definitions.
+static void pc_conn_detach(pc_pcb *pcb);
+static void pc_conn_abort(pc_pcb *pcb);
+
 #if PROTOCORE_HOT
 
 typedef enum PROTO_ENUM_PACKED
