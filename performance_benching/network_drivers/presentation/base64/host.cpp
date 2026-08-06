@@ -47,9 +47,9 @@ int main()
     char enc[((N + 2) / 3) * 4 + 1];
     uint8_t dec[N];
     volatile size_t sink = 0;
-    double ns_e = bench_ns(200000, [&] { pc_base64_encode(src, N, enc); });
+    double ns_e = bench_ns(200000, [&] { Base64.encode(src, N, enc); });
     row("base64", "encode 1 KiB", ns_e, (double)N);
-    double ns_d = bench_ns(200000, [&] { sink += pc_base64_decode(enc, dec, sizeof(dec)); });
+    double ns_d = bench_ns(200000, [&] { sink += Base64.decode(enc, dec, sizeof(dec)); });
     row("base64", "decode 1 KiB", ns_d, (double)N);
     (void)sink;
     return 0;

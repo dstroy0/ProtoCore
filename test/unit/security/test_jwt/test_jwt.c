@@ -80,15 +80,15 @@ void test_alg_not_hs256_rejected()
     const char *hdr_json = "{\"alg\":\"none\",\"typ\":\"JWT\"}";
     const char *pl_json = "{\"sub\":\"alice\"}";
     char hdr[64], payload[64];
-    pc_base64url_encode((const uint8_t *)hdr_json, strlen(hdr_json), hdr);
-    pc_base64url_encode((const uint8_t *)pl_json, strlen(pl_json), payload);
+    Base64.url_encode((const uint8_t *)hdr_json, strlen(hdr_json), hdr);
+    Base64.url_encode((const uint8_t *)pl_json, strlen(pl_json), payload);
 
     char signing[160];
     int sl = snprintf(signing, sizeof(signing), "%s.%s", hdr, payload);
     uint8_t mac[PC_HMAC_SHA256_LEN];
     pc_hmac_sha256(sec(), seclen(), (const uint8_t *)signing, (size_t)sl, mac);
     char sig[48];
-    pc_base64url_encode(mac, sizeof(mac), sig);
+    Base64.url_encode(mac, sizeof(mac), sig);
 
     char token[256];
     snprintf(token, sizeof(token), "%s.%s.%s", hdr, payload, sig);
@@ -98,10 +98,10 @@ void test_alg_not_hs256_rejected()
     // Sanity: the same construction with alg "HS256" verifies (proves the test rig).
     const char *ok_hdr_json = "{\"alg\":\"HS256\",\"typ\":\"JWT\"}";
     char ok_hdr[64];
-    pc_base64url_encode((const uint8_t *)ok_hdr_json, strlen(ok_hdr_json), ok_hdr);
+    Base64.url_encode((const uint8_t *)ok_hdr_json, strlen(ok_hdr_json), ok_hdr);
     sl = snprintf(signing, sizeof(signing), "%s.%s", ok_hdr, payload);
     pc_hmac_sha256(sec(), seclen(), (const uint8_t *)signing, (size_t)sl, mac);
-    pc_base64url_encode(mac, sizeof(mac), sig);
+    Base64.url_encode(mac, sizeof(mac), sig);
     snprintf(token, sizeof(token), "%s.%s.%s", ok_hdr, payload, sig);
     TEST_ASSERT_TRUE(pc_jwt_verify_hs256(token, strlen(token), sec(), seclen()));
 }
@@ -164,20 +164,20 @@ void test_base64url_strict_alphabet()
 {
     uint8_t out[8];
     // URL-safe characters decode.
-    TEST_ASSERT_EQUAL_size_t(2, pc_base64url_decode("-_8", 3, out, sizeof(out)));
+    TEST_ASSERT_EQUAL_size_t(2, Base64.url_decode("-_8", 3, out, sizeof(out)));
     TEST_ASSERT_EQUAL_HEX8(0xFB, out[0]);
     TEST_ASSERT_EQUAL_HEX8(0xFF, out[1]);
     // Standard-alphabet '+' and '/' are not valid base64url -> reject.
-    TEST_ASSERT_EQUAL_size_t(0, pc_base64url_decode("+/8", 3, out, sizeof(out)));
-    TEST_ASSERT_EQUAL_size_t(0, pc_base64url_decode("ab+c", 4, out, sizeof(out)));
-    TEST_ASSERT_EQUAL_size_t(0, pc_base64url_decode("ab/c", 4, out, sizeof(out)));
+    TEST_ASSERT_EQUAL_size_t(0, Base64.url_decode("+/8", 3, out, sizeof(out)));
+    TEST_ASSERT_EQUAL_size_t(0, Base64.url_decode("ab+c", 4, out, sizeof(out)));
+    TEST_ASSERT_EQUAL_size_t(0, Base64.url_decode("ab/c", 4, out, sizeof(out)));
     // Encode produces only the URL alphabet (no '+', '/', or '=').
     const uint8_t raw[] = {0xFB, 0xFF, 0xBF};
     char enc[8];
-    size_t n = pc_base64url_encode(raw, sizeof(raw), enc);
+    size_t n = Base64.url_encode(raw, sizeof(raw), enc);
     TEST_ASSERT_NULL(strpbrk(enc, "+/="));
     uint8_t back[8];
-    TEST_ASSERT_EQUAL_size_t(sizeof(raw), pc_base64url_decode(enc, n, back, sizeof(back)));
+    TEST_ASSERT_EQUAL_size_t(sizeof(raw), Base64.url_decode(enc, n, back, sizeof(back)));
     TEST_ASSERT_EQUAL_MEMORY(raw, back, sizeof(raw));
 }
 
@@ -186,8 +186,8 @@ void test_base64url_strict_alphabet()
 static void mk_token(char *out, size_t cap, const char *hdr_json, const char *pl_json, const char *sig)
 {
     char h[128], p[256];
-    pc_base64url_encode((const uint8_t *)hdr_json, strlen(hdr_json), h);
-    pc_base64url_encode((const uint8_t *)pl_json, strlen(pl_json), p);
+    Base64.url_encode((const uint8_t *)hdr_json, strlen(hdr_json), h);
+    Base64.url_encode((const uint8_t *)pl_json, strlen(pl_json), p);
     snprintf(out, cap, "%s.%s.%s", h, p, sig);
 }
 
@@ -269,11 +269,11 @@ static void mk_signed(char *out, size_t cap, const char *pl_json)
     char signing[400], sig[48];
     uint8_t mac[PC_HMAC_SHA256_LEN];
     char h[128], p[256];
-    pc_base64url_encode((const uint8_t *)hdr_json, strlen(hdr_json), h);
-    pc_base64url_encode((const uint8_t *)pl_json, strlen(pl_json), p);
+    Base64.url_encode((const uint8_t *)hdr_json, strlen(hdr_json), h);
+    Base64.url_encode((const uint8_t *)pl_json, strlen(pl_json), p);
     int sl = snprintf(signing, sizeof(signing), "%s.%s", h, p);
     pc_hmac_sha256(sec(), seclen(), (const uint8_t *)signing, (size_t)sl, mac);
-    pc_base64url_encode(mac, sizeof(mac), sig);
+    Base64.url_encode(mac, sizeof(mac), sig);
     snprintf(out, cap, "%s.%s", signing, sig);
 }
 
@@ -344,11 +344,11 @@ static void mk_signed_hdr(char *out, size_t cap, const char *hdr_json, const cha
 {
     char h[128], p[256], signing[400], sig[48];
     uint8_t mac[PC_HMAC_SHA256_LEN];
-    pc_base64url_encode((const uint8_t *)hdr_json, strlen(hdr_json), h);
-    pc_base64url_encode((const uint8_t *)pl_json, strlen(pl_json), p);
+    Base64.url_encode((const uint8_t *)hdr_json, strlen(hdr_json), h);
+    Base64.url_encode((const uint8_t *)pl_json, strlen(pl_json), p);
     int sl = snprintf(signing, sizeof(signing), "%s.%s", h, p);
     pc_hmac_sha256(sec(), seclen(), (const uint8_t *)signing, (size_t)sl, mac);
-    pc_base64url_encode(mac, sizeof(mac), sig);
+    Base64.url_encode(mac, sizeof(mac), sig);
     snprintf(out, cap, "%s.%s", signing, sig);
 }
 

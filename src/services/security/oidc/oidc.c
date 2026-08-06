@@ -18,11 +18,11 @@
 
 #include "crypto/asymmetric/rsa.h"
 #include "mmgr/plaintext.h" // per-dispatch arena (keeps the decode buffers off the worker stack)
-#include "network_drivers/presentation/codec/base64/base64.h" // shared pc_base64url_decode
+#include "network_drivers/presentation/codec/base64/base64.h" // shared Base64.url_decode
 
 #include <stdio.h>
 
-// base64url decoding is shared with JWT in the base64 module (pc_base64url_decode).
+// base64url decoding is shared with JWT in the base64 module (Base64.url_decode).
 
 // Bounded substring search of [hs, he) for the NUL-terminated needle.
 static const char *mem_find(const char *hs, const char *he, const char *needle)
@@ -306,7 +306,7 @@ static proto_bool parse_rsa_jwk(const char *s, const char *e, pc_oidc_key *key)
         return PROTO_FALSE;
     }
     uint8_t tmp[PC_OIDC_RSA_BYTES + 8];
-    size_t nlen = pc_base64url_decode(b64, strnlen(b64, sizeof(b64)), tmp, sizeof(tmp));
+    size_t nlen = Base64.url_decode(b64, strnlen(b64, sizeof(b64)), tmp, sizeof(tmp));
     if (nlen == 0 || !right_align(tmp, nlen, key->n, PC_OIDC_RSA_BYTES))
     {
         return PROTO_FALSE;
@@ -317,7 +317,7 @@ static proto_bool parse_rsa_jwk(const char *s, const char *e, pc_oidc_key *key)
         return PROTO_FALSE;
     }
     uint8_t e_tmp[8];
-    size_t elen = pc_base64url_decode(b64, strnlen(b64, sizeof(b64)), e_tmp, sizeof(e_tmp));
+    size_t elen = Base64.url_decode(b64, strnlen(b64, sizeof(b64)), e_tmp, sizeof(e_tmp));
     if (elen == 0 || !right_align(e_tmp, elen, key->e, 4))
     {
         return PROTO_FALSE;
@@ -339,7 +339,7 @@ proto_bool pc_oidc_token_kid(const char *token, size_t token_len, char *kid_out,
         return PROTO_FALSE;
     }
     uint8_t hdr[512];
-    size_t hn = pc_base64url_decode(seg[0], seglen[0], hdr, sizeof(hdr) - 1);
+    size_t hn = Base64.url_decode(seg[0], seglen[0], hdr, sizeof(hdr) - 1);
     if (hn == 0)
     {
         return PROTO_FALSE;
@@ -440,7 +440,7 @@ pc_oidc_result pc_oidc_verify_with_key(const char *token, size_t token_len, cons
     }
 
     // Header: require alg == RS256 (rejects alg:none / HS256 confusion).
-    size_t hn = pc_base64url_decode(seg[0], seglen[0], hdr, PC_OIDC_HDR_LEN - 1);
+    size_t hn = Base64.url_decode(seg[0], seglen[0], hdr, PC_OIDC_HDR_LEN - 1);
     if (hn == 0)
     {
         pc_plaintext_release(scope);
@@ -455,7 +455,7 @@ pc_oidc_result pc_oidc_verify_with_key(const char *token, size_t token_len, cons
     }
 
     // Signature: RSA-2048 -> exactly 256 bytes.
-    if (pc_base64url_decode(seg[2], seglen[2], sig, PC_OIDC_RSA_BYTES) != PC_OIDC_RSA_BYTES)
+    if (Base64.url_decode(seg[2], seglen[2], sig, PC_OIDC_RSA_BYTES) != PC_OIDC_RSA_BYTES)
     {
         pc_plaintext_release(scope);
         return PC_OIDC_ERR_FORMAT;
@@ -471,7 +471,7 @@ pc_oidc_result pc_oidc_verify_with_key(const char *token, size_t token_len, cons
     }
 
     // Claims (trusted only now that the signature is valid).
-    size_t pn = pc_base64url_decode(seg[1], seglen[1], pl, PC_OIDC_MAX_LEN - 1);
+    size_t pn = Base64.url_decode(seg[1], seglen[1], pl, PC_OIDC_MAX_LEN - 1);
     if (pn == 0)
     {
         pc_plaintext_release(scope);

@@ -22,11 +22,11 @@ static void base64_bench_task(void *)
         Serial.printf("DB ==== base64 device microbench start (CCOUNT @ %u MHz) ====\n",
                       (unsigned)getCpuFrequencyMhz());
         volatile size_t sink = 0;
-        DBENCH_BULK("pc_base64_encode (1 KiB)", 100000, 1024, {
-            pc_base64_encode(src, 1024, enc);
+        DBENCH_BULK("Base64.encode (1 KiB)", 100000, 1024, {
+            Base64.encode(src, 1024, enc);
             sink += 1;
         });
-        DBENCH_BULK("pc_base64_decode (1 KiB)", 100000, 1024, sink += pc_base64_decode(enc, dec, sizeof(dec)));
+        DBENCH_BULK("Base64.decode (1 KiB)", 100000, 1024, sink += Base64.decode(enc, dec, sizeof(dec)));
         (void)sink;
         Serial.println("DB ==== DONE ====");
         vTaskDelay(5000 / portTICK_PERIOD_MS);

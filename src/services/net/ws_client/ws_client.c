@@ -57,7 +57,7 @@ void ws_client_accept_for_key(const char *key_b64, char *out, size_t out_cap)
     {
         return;
     }
-    pc_base64_encode(digest, PC_SHA1_DIGEST_LEN, out);
+    Base64.encode(digest, PC_SHA1_DIGEST_LEN, out);
 }
 
 size_t ws_client_build_handshake(uint8_t *out, size_t cap, const char *host, const char *path, const char *key_b64,
@@ -605,7 +605,7 @@ proto_bool ws_client_connect(const char *host, uint16_t port, proto_bool use_tls
     uint8_t keyraw[16];
     pc_platform_rand_fill(keyraw, sizeof(keyraw));
     char key_b64[25];
-    pc_base64_encode(keyraw, sizeof(keyraw), key_b64);
+    Base64.encode(keyraw, sizeof(keyraw), key_b64);
     char expect[32];
     ws_client_accept_for_key(key_b64, expect, sizeof(expect));
 

@@ -8,6 +8,22 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ---
 
+## base64.h declared a C API with no C linkage, so every C++ caller asked the linker for a mangled name
+
+- **Status:** FIXED, found during the presentation-layer namespace conversion.
+- **Root cause:** `base64.h` carried no `PROTO_BEGIN_DECLS` / `PROTO_END_DECLS`. It was the only
+  header under `presentation/codec/` missing them; the other eight all have the pair. `base64.c`
+  compiles as C and emits `pc_base64_encode`, while a C++ translation unit that included the header
+  read the declarations as C++ and asked for the Itanium-mangled spelling.
+- **Who reached it:** `performance_benching/network_drivers/presentation/base64/src/main.cpp` and
+  `host.cpp` both include it directly, as does the ota_service bench. Every `src/` caller is C, which
+  is why no library build ever showed it.
+- **Fix:** added the pair, and the `shared_primitives/types.h` include that defines it. The module's
+  four functions are now `static` behind `Base64`, so the object is the only symbol crossing the
+  boundary, and a `const` object at namespace scope is unmangled under the Itanium ABI either way.
+
+---
+
 ## A robotics Read indexes past the axis array, in the exact state a test sets up
 
 - **Status:** OPEN, found by the fieldbus audit. Verified in source.

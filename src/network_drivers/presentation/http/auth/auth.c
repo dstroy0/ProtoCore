@@ -17,10 +17,10 @@
 #include "mmgr/protomem.h"      // mem.chr: a span scan, for the decoded credential that carries NULs
 #include "mmgr/protostr.h"      // str.len / find / starts / eq / copy
 #include "mmgr/secure.h"        // the credential table is key material
-#include "network_drivers/presentation/codec/base64/base64.h" // pc_base64_decode (Basic)
-#include "network_drivers/transport/tcp.h"                    // conn_pool, Tcp.conn->send, TcpConn/ConnState
-#include "protocore.h"
+#include "network_drivers/presentation/codec/base64/base64.h" // Base64.decode (Basic)
 #include "network_drivers/presentation/http/http.h"
+#include "network_drivers/transport/tcp.h" // conn_pool, Tcp.conn->send, TcpConn/ConnState
+#include "protocore.h"
 #include "server/clock/clock.h"    // pc_millis() for the stateless nonce
 #include "shared_primitives/hex.h" // pc_hex_encode/decode
 
@@ -377,7 +377,7 @@ static proto_bool check_basic(uint8_t slot_id, HttpReq *req, const AuthCred *c)
     uint8_t decoded[MAX_AUTH_LEN * 2 + 2];
     // Bound the write to leave room for the null terminator at decoded[n]; an
     // over-long Authorization value now fails the decode instead of overrunning.
-    size_t n = pc_base64_decode(auth_hdr + 6, decoded, sizeof(decoded) - 1);
+    size_t n = Base64.decode(auth_hdr + 6, decoded, sizeof(decoded) - 1);
     if (n == 0)
     {
         return PROTO_FALSE;

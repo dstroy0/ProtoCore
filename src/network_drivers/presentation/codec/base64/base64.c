@@ -20,13 +20,13 @@
 
 #include "base64.h"
 
-#include "protocore_config.h"       // PC_BASE64_SWAR (scalar vs SWAR constant-time decode; default SWAR)
-#include "mmgr/swar.h" // the lane math; the classification below is base64's own
-                                    // strnlen
+#include "mmgr/swar.h"        // the lane math; the classification below is base64's own
+#include "protocore_config.h" // PC_BASE64_SWAR (scalar vs SWAR constant-time decode; default SWAR)
+                              // strnlen
 
 static const char B64_TABLE[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-void pc_base64_encode(const uint8_t *src, size_t src_len, char *dst)
+static void pc_base64_encode(const uint8_t *src, size_t src_len, char *dst)
 {
     size_t i = 0;
     size_t j = 0;
@@ -139,7 +139,7 @@ static inline uint32_t swar_quad(uint32_t a, uint32_t *ok)
     return val;
 }
 
-size_t pc_base64_decode(const char *src, uint8_t *dst, size_t dst_cap)
+static size_t pc_base64_decode(const char *src, uint8_t *dst, size_t dst_cap)
 {
     size_t src_len = strnlen(src, ((dst_cap + 2) / 3) * 4 + 4);
     if (src_len == 0 || (src_len & 3u) != 0)
@@ -202,7 +202,7 @@ size_t pc_base64_decode(const char *src, uint8_t *dst, size_t dst_cap)
     return out;
 }
 #else
-size_t pc_base64_decode(const char *src, uint8_t *dst, size_t dst_cap)
+static size_t pc_base64_decode(const char *src, uint8_t *dst, size_t dst_cap)
 {
     // Bounded length (a missing NUL cannot run past what dst_cap could ever hold). Canonical base64 is
     // whole 4-character quads.
@@ -289,7 +289,7 @@ size_t pc_base64_decode(const char *src, uint8_t *dst, size_t dst_cap)
 // buffer or re-padding.
 // ---------------------------------------------------------------------------
 
-size_t pc_base64url_encode(const uint8_t *src, size_t src_len, char *dst)
+static size_t pc_base64url_encode(const uint8_t *src, size_t src_len, char *dst)
 {
     pc_base64_encode(src, src_len, dst); // standard base64, '='-padded, NUL-terminated
     size_t n = 0;
@@ -351,3 +351,5 @@ size_t pc_base64url_decode(const char *src, size_t src_len, uint8_t *dst, size_t
     }
     return o;
 }
+
+const Base64Ns Base64 = {pc_base64_encode, pc_base64_decode, pc_base64url_encode, pc_base64url_decode};

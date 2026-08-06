@@ -153,7 +153,7 @@ void test_base64_encode_one_byte()
 {
     const uint8_t src[] = {0x4D}; // 'M'
     char out[8] = {0};
-    pc_base64_encode(src, 1, out);
+    Base64.encode(src, 1, out);
     TEST_ASSERT_EQUAL_STRING("TQ==", out);
 }
 
@@ -162,7 +162,7 @@ void test_base64_encode_two_bytes()
 {
     const uint8_t src[] = {0x4D, 0x61}; // "Ma"
     char out[8] = {0};
-    pc_base64_encode(src, 2, out);
+    Base64.encode(src, 2, out);
     TEST_ASSERT_EQUAL_STRING("TWE=", out);
 }
 
@@ -171,7 +171,7 @@ void test_base64_encode_three_bytes()
 {
     const uint8_t src[] = {0x4D, 0x61, 0x6E}; // "Man"
     char out[8] = {0};
-    pc_base64_encode(src, 3, out);
+    Base64.encode(src, 3, out);
     TEST_ASSERT_EQUAL_STRING("TWFu", out);
 }
 
@@ -181,7 +181,7 @@ void test_base64_encode_ws_accept_key()
     const uint8_t digest[PC_SHA1_DIGEST_LEN] = {0xB3, 0x7A, 0x4F, 0x2C, 0xC0, 0x62, 0x4F, 0x16, 0x90, 0xF6,
                                                 0x46, 0x06, 0xCF, 0x38, 0x59, 0x45, 0xB2, 0xBE, 0xC4, 0xEA};
     char out[32] = {0};
-    pc_base64_encode(digest, PC_SHA1_DIGEST_LEN, out);
+    Base64.encode(digest, PC_SHA1_DIGEST_LEN, out);
     TEST_ASSERT_EQUAL_STRING("s3pPLMBiTxaQ9kYGzzhZRbK+xOo=", out);
 }
 
@@ -189,7 +189,7 @@ void test_base64_encode_ws_accept_key()
 void test_base64_decode_one_byte()
 {
     uint8_t dst[4] = {0};
-    size_t n = pc_base64_decode("TQ==", dst, sizeof(dst));
+    size_t n = Base64.decode("TQ==", dst, sizeof(dst));
     TEST_ASSERT_EQUAL(1, (int)n);
     TEST_ASSERT_EQUAL(0x4D, (int)dst[0]);
 }
@@ -198,7 +198,7 @@ void test_base64_decode_one_byte()
 void test_base64_decode_two_bytes()
 {
     uint8_t dst[4] = {0};
-    size_t n = pc_base64_decode("TWE=", dst, sizeof(dst));
+    size_t n = Base64.decode("TWE=", dst, sizeof(dst));
     TEST_ASSERT_EQUAL(2, (int)n);
     TEST_ASSERT_EQUAL(0x4D, (int)dst[0]);
     TEST_ASSERT_EQUAL(0x61, (int)dst[1]);
@@ -208,7 +208,7 @@ void test_base64_decode_two_bytes()
 void test_base64_decode_three_bytes()
 {
     uint8_t dst[4] = {0};
-    size_t n = pc_base64_decode("TWFu", dst, sizeof(dst));
+    size_t n = Base64.decode("TWFu", dst, sizeof(dst));
     TEST_ASSERT_EQUAL(3, (int)n);
     TEST_ASSERT_EQUAL(0x4D, (int)dst[0]);
     TEST_ASSERT_EQUAL(0x61, (int)dst[1]);
@@ -219,7 +219,7 @@ void test_base64_decode_three_bytes()
 void test_base64_decode_ws_accept_key()
 {
     uint8_t dst[PC_SHA1_DIGEST_LEN + 4] = {0};
-    size_t n = pc_base64_decode("s3pPLMBiTxaQ9kYGzzhZRbK+xOo=", dst, sizeof(dst));
+    size_t n = Base64.decode("s3pPLMBiTxaQ9kYGzzhZRbK+xOo=", dst, sizeof(dst));
     TEST_ASSERT_EQUAL(PC_SHA1_DIGEST_LEN, (int)n);
     const uint8_t expected[PC_SHA1_DIGEST_LEN] = {0xB3, 0x7A, 0x4F, 0x2C, 0xC0, 0x62, 0x4F, 0x16, 0x90, 0xF6,
                                                   0x46, 0x06, 0xCF, 0x38, 0x59, 0x45, 0xB2, 0xBE, 0xC4, 0xEA};
@@ -232,8 +232,8 @@ void test_base64_round_trip()
     const uint8_t src[] = {0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF, 0xFE, 0xDC, 0xBA, 0x98};
     char encoded[24] = {0};
     uint8_t decoded[16] = {0};
-    pc_base64_encode(src, sizeof(src), encoded);
-    size_t n = pc_base64_decode(encoded, decoded, sizeof(decoded));
+    Base64.encode(src, sizeof(src), encoded);
+    size_t n = Base64.decode(encoded, decoded, sizeof(decoded));
     TEST_ASSERT_EQUAL((int)sizeof(src), (int)n);
     TEST_ASSERT_EQUAL_MEMORY(src, decoded, sizeof(src));
 }
@@ -243,14 +243,14 @@ void test_base64_round_trip()
 void test_base64_decode_rejects_misplaced_padding()
 {
     uint8_t dst[8] = {0};
-    TEST_ASSERT_EQUAL(0, (int)pc_base64_decode("A=BC", dst, sizeof(dst)));     // pad in pos 2
-    TEST_ASSERT_EQUAL(0, (int)pc_base64_decode("AB=C", dst, sizeof(dst)));     // single pad in pos 3
-    TEST_ASSERT_EQUAL(0, (int)pc_base64_decode("=BCD", dst, sizeof(dst)));     // pad in pos 1
-    TEST_ASSERT_EQUAL(0, (int)pc_base64_decode("TWE=TWFu", dst, sizeof(dst))); // padding before end
-    TEST_ASSERT_EQUAL(0, (int)pc_base64_decode("TWF", dst, sizeof(dst)));      // not a multiple of 4
+    TEST_ASSERT_EQUAL(0, (int)Base64.decode("A=BC", dst, sizeof(dst)));     // pad in pos 2
+    TEST_ASSERT_EQUAL(0, (int)Base64.decode("AB=C", dst, sizeof(dst)));     // single pad in pos 3
+    TEST_ASSERT_EQUAL(0, (int)Base64.decode("=BCD", dst, sizeof(dst)));     // pad in pos 1
+    TEST_ASSERT_EQUAL(0, (int)Base64.decode("TWE=TWFu", dst, sizeof(dst))); // padding before end
+    TEST_ASSERT_EQUAL(0, (int)Base64.decode("TWF", dst, sizeof(dst)));      // not a multiple of 4
     // Well-formed padded inputs still decode.
-    TEST_ASSERT_EQUAL(1, (int)pc_base64_decode("TQ==", dst, sizeof(dst)));
-    TEST_ASSERT_EQUAL(2, (int)pc_base64_decode("TWE=", dst, sizeof(dst)));
+    TEST_ASSERT_EQUAL(1, (int)Base64.decode("TQ==", dst, sizeof(dst)));
+    TEST_ASSERT_EQUAL(2, (int)Base64.decode("TWE=", dst, sizeof(dst)));
 }
 
 // An input that decodes to more than dst_cap bytes must fail (return 0) rather
@@ -259,11 +259,11 @@ void test_base64_decode_respects_capacity()
 {
     // "TWFu" decodes to 3 bytes ("Man"); a 2-byte buffer is too small.
     uint8_t dst[2] = {0};
-    size_t n = pc_base64_decode("TWFu", dst, sizeof(dst));
+    size_t n = Base64.decode("TWFu", dst, sizeof(dst));
     TEST_ASSERT_EQUAL(0, (int)n);
     // Exact capacity (3) succeeds.
     uint8_t dst3[3] = {0};
-    TEST_ASSERT_EQUAL(3, (int)pc_base64_decode("TWFu", dst3, sizeof(dst3)));
+    TEST_ASSERT_EQUAL(3, (int)Base64.decode("TWFu", dst3, sizeof(dst3)));
 }
 
 // ====================================================================

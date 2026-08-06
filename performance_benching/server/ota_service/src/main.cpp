@@ -15,7 +15,7 @@
 // (Update.begin / Update.write / Update.end / Update.abort), replies over the socket (server.send),
 // and on success reboots (ESP.restart()). The only pure CPU-side logic in the module is the HTTP
 // Basic-auth check (ota_check_auth), which is a static internal function that just delegates to the
-// shared pc_base64_decode primitive (RFC 7617 credential decode) - that primitive is benched under
+// shared Base64.decode primitive (RFC 7617 credential decode) - that primitive is benched under
 // its own umbrella, and it is not a separable part of ota_service's own surface. Unlike
 // performance_benching/device/ads1115 - where the I2C transaction is stubbed but a deterministic config-word /
 // conversion codec remains to bench - ota_service has no such codec to isolate, so the honest result

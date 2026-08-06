@@ -21,14 +21,14 @@ void tearDown()
 static void expect_encode(const char *in, const char *want)
 {
     char out[128];
-    pc_base64_encode((const uint8_t *)in, strlen(in), out);
+    Base64.encode((const uint8_t *)in, strlen(in), out);
     TEST_ASSERT_EQUAL_STRING(want, out);
 }
 
 static void expect_decode(const char *in, const char *want)
 {
     uint8_t out[128];
-    size_t n = pc_base64_decode(in, out, sizeof(out));
+    size_t n = Base64.decode(in, out, sizeof(out));
     TEST_ASSERT_EQUAL_UINT(strlen(want), n);
     TEST_ASSERT_EQUAL_UINT8_ARRAY((const uint8_t *)want, out, n);
 }
@@ -57,39 +57,39 @@ static void test_alphabets()
 {
     const uint8_t in[3] = {0xFF, 0xEF, 0xFF}; // -> six-bit values 63,62,63,63
     char std_enc[8], url_enc[8];
-    pc_base64_encode(in, 3, std_enc);
-    pc_base64url_encode(in, 3, url_enc);
+    Base64.encode(in, 3, std_enc);
+    Base64.url_encode(in, 3, url_enc);
     TEST_ASSERT_EQUAL_STRING("/+//", std_enc);
     TEST_ASSERT_EQUAL_STRING("_-__", url_enc);
 
     uint8_t out[4];
-    TEST_ASSERT_EQUAL_UINT(3, pc_base64url_decode("_-__", 4, out, sizeof(out)));
+    TEST_ASSERT_EQUAL_UINT(3, Base64.url_decode("_-__", 4, out, sizeof(out)));
     TEST_ASSERT_EQUAL_UINT8_ARRAY(in, out, 3);
     // base64url must reject the standard '+' '/' (RFC 7515 - one alphabet, not a mix).
-    TEST_ASSERT_EQUAL_UINT(0, pc_base64url_decode("/+//", 4, out, sizeof(out)));
+    TEST_ASSERT_EQUAL_UINT(0, Base64.url_decode("/+//", 4, out, sizeof(out)));
     // standard decode must reject the url '-' '_'.
-    TEST_ASSERT_EQUAL_UINT(0, pc_base64_decode("_-__", out, sizeof(out)));
+    TEST_ASSERT_EQUAL_UINT(0, Base64.decode("_-__", out, sizeof(out)));
 }
 
 static void test_decode_rejects_malformed()
 {
     uint8_t out[64];
-    TEST_ASSERT_EQUAL_UINT(0, pc_base64_decode("Zm9", out, sizeof(out)));          // length not a multiple of 4
-    TEST_ASSERT_EQUAL_UINT(0, pc_base64_decode("Zm=v", out, sizeof(out)));         // '=' not at the tail
-    TEST_ASSERT_EQUAL_UINT(0, pc_base64_decode("Zg=x", out, sizeof(out)));         // lone pad in the 3rd slot
-    TEST_ASSERT_EQUAL_UINT(0, pc_base64_decode("Zm9vYg==Zm9v", out, sizeof(out))); // padding mid-stream
-    TEST_ASSERT_EQUAL_UINT(0, pc_base64_decode("Zm9 ", out, sizeof(out)));         // space is not in the alphabet
-    TEST_ASSERT_EQUAL_UINT(0, pc_base64_decode("Z@9v", out, sizeof(out)));         // '@' is not in the alphabet
+    TEST_ASSERT_EQUAL_UINT(0, Base64.decode("Zm9", out, sizeof(out)));          // length not a multiple of 4
+    TEST_ASSERT_EQUAL_UINT(0, Base64.decode("Zm=v", out, sizeof(out)));         // '=' not at the tail
+    TEST_ASSERT_EQUAL_UINT(0, Base64.decode("Zg=x", out, sizeof(out)));         // lone pad in the 3rd slot
+    TEST_ASSERT_EQUAL_UINT(0, Base64.decode("Zm9vYg==Zm9v", out, sizeof(out))); // padding mid-stream
+    TEST_ASSERT_EQUAL_UINT(0, Base64.decode("Zm9 ", out, sizeof(out)));         // space is not in the alphabet
+    TEST_ASSERT_EQUAL_UINT(0, Base64.decode("Z@9v", out, sizeof(out)));         // '@' is not in the alphabet
 }
 
 static void test_decode_capacity_guard()
 {
     uint8_t out[2];
     // "foobar" decodes to 6 bytes; a 2-byte buffer must fail rather than overrun.
-    TEST_ASSERT_EQUAL_UINT(0, pc_base64_decode("Zm9vYmFy", out, sizeof(out)));
+    TEST_ASSERT_EQUAL_UINT(0, Base64.decode("Zm9vYmFy", out, sizeof(out)));
     // Exactly-fitting capacity succeeds.
     uint8_t exact[6];
-    TEST_ASSERT_EQUAL_UINT(6, pc_base64_decode("Zm9vYmFy", exact, sizeof(exact)));
+    TEST_ASSERT_EQUAL_UINT(6, Base64.decode("Zm9vYmFy", exact, sizeof(exact)));
 }
 
 // Zero and one-byte capacities exercise the per-output-byte guard on the *first* and *second* byte of an
@@ -97,9 +97,9 @@ static void test_decode_capacity_guard()
 static void test_decode_capacity_guard_first_and_second_byte()
 {
     uint8_t out0[1];
-    TEST_ASSERT_EQUAL_UINT(0, pc_base64_decode("Zm9v", out0, 0)); // dst_cap==0: fails before byte 0
+    TEST_ASSERT_EQUAL_UINT(0, Base64.decode("Zm9v", out0, 0)); // dst_cap==0: fails before byte 0
     uint8_t out1[1];
-    TEST_ASSERT_EQUAL_UINT(0, pc_base64_decode("Zm9v", out1, 1)); // dst_cap==1: fails before byte 1
+    TEST_ASSERT_EQUAL_UINT(0, Base64.decode("Zm9v", out1, 1)); // dst_cap==1: fails before byte 1
 }
 
 // Round-trip fuzz: encode a pseudo-random byte string, decode it back, require an exact match. Cross-checks
@@ -116,16 +116,16 @@ static void test_roundtrip_fuzz()
             in[i] = (uint8_t)(s >> 24);
         }
         char enc[132];
-        pc_base64_encode(in, len, enc);
+        Base64.encode(in, len, enc);
         uint8_t dec[96];
-        size_t n = pc_base64_decode(enc, dec, sizeof(dec));
+        size_t n = Base64.decode(enc, dec, sizeof(dec));
         TEST_ASSERT_EQUAL_UINT(len, n);
 
         // base64url round-trip (no padding), decoded with the explicit length.
         char uenc[132];
-        size_t ulen = pc_base64url_encode(in, len, uenc);
+        size_t ulen = Base64.url_encode(in, len, uenc);
         uint8_t udec[96];
-        size_t un = pc_base64url_decode(uenc, ulen, udec, sizeof(udec));
+        size_t un = Base64.url_decode(uenc, ulen, udec, sizeof(udec));
         TEST_ASSERT_EQUAL_UINT(len, un);
 
         if (len > 0) // Unity rejects a zero-length array compare (empty input is covered by the n==0 check)
@@ -141,7 +141,7 @@ static void test_roundtrip_fuzz()
 static void test_url_decode_stops_at_padding()
 {
     uint8_t out[8];
-    size_t n = pc_base64url_decode("Zm9v=", 5, out, sizeof(out));
+    size_t n = Base64.url_decode("Zm9v=", 5, out, sizeof(out));
     TEST_ASSERT_EQUAL_UINT(3, n);
     TEST_ASSERT_EQUAL_UINT8_ARRAY((const uint8_t *)"foo", out, 3);
 }
@@ -151,7 +151,7 @@ static void test_url_decode_stops_at_padding()
 static void test_url_decode_capacity_guard()
 {
     uint8_t out[1];
-    TEST_ASSERT_EQUAL_UINT(0, pc_base64url_decode("Zm9v", 4, out, 0));
+    TEST_ASSERT_EQUAL_UINT(0, Base64.url_decode("Zm9v", 4, out, 0));
 }
 
 int main()

@@ -178,7 +178,7 @@ static int auth_send_b64(SmtpSendFn send, SmtpRecvFn recv, void *ctx, const char
     {
         return (int)SMTP_ERR_OVERFLOW;
     }
-    pc_base64_encode((const uint8_t *)secret, slen, b64);
+    Base64.encode((const uint8_t *)secret, slen, b64);
     pc_sb sb_line = {line, sizeof(line), 0, PROTO_TRUE};
     pc_sb_put(&sb_line, b64);
     pc_sb_put(&sb_line, "\r\n");

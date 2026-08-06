@@ -223,17 +223,17 @@ measured in-firmware by the pentest rig's `/bench` endpoint ([`penetration_testi
 N=20000 warm iterations; three runs agree to within 0.3%, so the figures are stable). These are the real
 device costs of hot pure primitives on the auth and ETag/Digest paths - no network in the measurement.
 
-| Operation                                 | ESP32-S3 cyc/op | ESP32-S3 ns/op |
-| ----------------------------------------- | --------------: | -------------: |
-| `pc_hex_encode` (16 B -> 32 hex)          |             462 |           1925 |
-| `pc_hex_decode` (32 hex -> 16 B)          |             689 |           2870 |
-| `pc_base64_decode` ("admin:admin", 16 ch) |             882 |           3675 |
-| `mime_type` (extension -> content-type)   |             470 |           1958 |
+| Operation                               | ESP32-S3 cyc/op | ESP32-S3 ns/op |
+| --------------------------------------- | --------------: | -------------: |
+| `pc_hex_encode` (16 B -> 32 hex)        |             462 |           1925 |
+| `pc_hex_decode` (32 hex -> 16 B)        |             689 |           2870 |
+| `Base64.decode` ("admin:admin", 16 ch)  |             882 |           3675 |
+| `mime_type` (extension -> content-type) |             470 |           1958 |
 
 - The hex codecs are the in-house table-lookup path: ~1.9 us to hex-encode a 16-byte value (an ETag or a
   Digest-nonce MAC), ~2.9 us to decode. Cheap enough that the conditional-GET / Digest machinery is never
   the bottleneck.
-- `pc_base64_decode` of an 11-byte Basic-auth credential costs ~3.7 us with the default **SWAR** codec -
+- `Base64.decode` of an 11-byte Basic-auth credential costs ~3.7 us with the default **SWAR** codec -
   down from ~21 us (mbedTLS), a **5.36x** speedup (882 vs 4728 cyc); the scalar constant-time fallback
   (`PC_BASE64_SWAR=0`) is ~6.8 us (1639 cyc, 2.88x). SWAR classifies 4 characters per 32-bit word with
   guard-bit range masks and stays constant-time - HW-verified on the ESP32-S3: same-length inputs with wildly
