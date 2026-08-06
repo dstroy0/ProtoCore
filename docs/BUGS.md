@@ -8,6 +8,46 @@ Status key: **OPEN** (found, not fixed) - **FIXED** (fixed, validated) - **SHIPP
 
 ---
 
+## Every id table a route indexes grew forever, because only the route table had a reset
+
+- **Status:** FIXED (2026-08-06), found with the route-table fix above, which unblocked the suites.
+- **Symptom:** `test_auth` passes its early cases and fails its late ones. `test_application` serves
+  a static file in one case and 404s the identical setup two cases later. Nothing distinguishes a
+  passing case from a failing one except how many ran before it.
+- **Root cause:** a route stores an id naming a row in another module's table, and `add()` returns
+  the row index. `pc_server_reset()` emptied the route table and left every one of those tables
+  full. `Auth` and the mount registry both cap at `MAX_ROUTES`, so once the count reached it
+  `Auth.add()` returned `PC_AUTH_NONE` and `pc_mnt_point_add()` returned `PC_MNT_NONE`. A route that
+  holds those answers dispatches unguarded and serves nothing, silently, and both are the
+  fail-open direction.
+- **Blast radius:** any long-lived server that re-registers its routes, and every test suite that
+  registers more than `MAX_ROUTES` protected routes or mounts across its cases.
+- **Fix:** `Auth` publishes a `reset`, `mnt.c` publishes `pc_mnt_point_reset()`, and
+  `pc_server_reset()` calls both beside `network.route->reset()`. An id is a row index, so the
+  tables empty with the routes that index them.
+
+---
+
+## Two long-lived tables borrowed from a pool sized only for crypto working sets
+
+- **Status:** FIXED (2026-08-06), found while chasing the `test_auth` failures above.
+- **Symptom:** in `native_auth`, `Auth.add()` returns `PC_AUTH_NONE` for the first credential set
+  ever registered, so every protected route dispatches unguarded. 17 of 23 cases fail.
+- **Root cause:** `PC_SECURE_ARENA_SIZE` is the sum of the `PC_WORK_*` terms a build compiles, and
+  `protocore_config.h` states the rule that every borrow declares one, proved by a `static_assert`
+  in the owning module. `route.c` and `auth.c` both borrow from the pool and neither declared a
+  term. Measured under `native_auth`: the arena is 1664 bytes (bignum 1408 + 256 round-up), the
+  route table is 1416 and the credential table 1569. The route table binds first and leaves 248,
+  so the credential table never binds.
+- **Both were also on the wrong end of the arena.** `pc_secure_span()` bumps down from the scratch
+  end, which `mark` walks and `release` reclaims. Both tables are held for the life of the program.
+- **Fix:** `secure.h` publishes `pc_secure_persist_span()`, over the arena's persistent end, which
+  no mark reaches and which hands back zeroed bytes. Both tables take it, `PC_WORK_ROUTE_TABLE` and
+  `PC_WORK_AUTH_TABLE` join `PC_SECURE_ARENA_SIZE`, and each module `static_assert`s its struct
+  against its term.
+
+---
+
 ## The route table borrowed its storage from an init nothing called, so every route registration failed
 
 - **Status:** FIXED (2026-08-06), found on the first matrix run that could link `native_keepalive`.
