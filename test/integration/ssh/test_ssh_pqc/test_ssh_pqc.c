@@ -10,7 +10,7 @@
 // K_CL order, string-vs-mpint K, K alignment - fails the check. Pure host test; needs a valid ML-KEM
 // key pair, so it reuses the kyber-py KAT fixture (ek, dk).
 
-#include "../test_pqc_mlkem/mlkem_kat.h" // kat_ek, kat_dk, kat_ct, kat_ss
+#include "../../../unit/pqc/test_pqc_mlkem/mlkem_kat.h" // kat_ek, kat_dk, kat_ct, kat_ss
 #include "crypto/asymmetric/curve25519.h"
 #include "crypto/asymmetric/ed25519.h"
 #include "crypto/hash/sha256.h"
