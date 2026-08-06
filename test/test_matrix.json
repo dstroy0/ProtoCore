@@ -5,7 +5,7 @@
       "desc": "CANopen (CiA 301) message codec (services/fieldbus/canopen): NMT, SYNC, heartbeat, EMCY,\nPDO, and expedited SDO read/write/abort + the COB-ID classifier, over the shared CAN\nframe (shared_primitives/can.h). Pure host tests.",
       "flags": ["-DPC_ENABLE_CANOPEN=1"],
       "src": ["+<services/fieldbus/canopen/canopen.c>"],
-      "tests": ["test_canopen"]
+      "tests": ["unit/fieldbus/test_canopen"]
     },
     "native_cia402": {
       "desc": "CiA 402 / IEC 61800-7-201 drive profile (services/fieldbus/cia402): the Statusword power-state\ndecode (mask/value table), the Controlword commands + enable sequence, Statusword flags, the\nCANopen SDO setters (Controlword / Modes / target position-velocity-torque) and cyclic PDO\npack/unpack. Layers on services/canopen. Pure host tests.",
@@ -14,13 +14,13 @@
         "+<services/fieldbus/cia402/cia402.c>",
         "+<services/fieldbus/canopen/canopen.c>"
       ],
-      "tests": ["test_cia402"]
+      "tests": ["unit/fieldbus/test_cia402"]
     },
     "native_control": {
       "desc": "PID control law (services/system/control): the P/I/D terms, output clamping, anti-windup by\nconditional integration, derivative-on-measurement (no setpoint kick) + optional low-pass,\nfeed-forward, the batched multi-axis update, and the inline control-law primitives (clamp /\ndeadband / slew / low-pass). Pure single-precision float; host tests.",
       "flags": ["-DPC_ENABLE_CONTROL=1"],
       "src": ["+<services/system/control/control.c>"],
-      "tests": ["test_control"]
+      "tests": ["unit/system/test_control"]
     },
     "native_dbm": {
       "desc": "Log-structured hash key-value store on the WAL (services/storage/dbm): put/get/delete with an\nin-RAM open-addressed index and value data appended to the write-ahead log, plus index rebuild by\nreplaying the log on open. Pure host tests over a RAM-backed WalDev, incl. overwrite, tombstone\nresurrection, persistence across a remount (with and without checkpoint), collisions, index-full\nfail-closed, key/value bounds, and a max-size value round-trip.",
@@ -30,7 +30,7 @@
         "+<services/storage/wal/wal_store.c>",
         "+<services/storage/dbm/dbm.c>"
       ],
-      "tests": ["test_dbm"]
+      "tests": ["protocols/storage/test_dbm"]
     },
     "native_docstore": {
       "desc": "Local JSON document store on the WAL (services/storage/docstore): JSON documents addressed by id,\nstored via dbm on the write-ahead log, plus top-level field queries (find documents whose JSON field\nequals a value) via the zero-heap JSON reader. Pure host tests over a RAM-backed WalDev, incl.\nput/get/delete, string/int/bool field finds, persistence + query across a remount, and early stop.",
@@ -47,7 +47,7 @@
         "+<network_drivers/presentation/codec/json/json.c>",
         "+<mmgr/protostr.c>"
       ],
-      "tests": ["test_docstore"]
+      "tests": ["protocols/storage/test_docstore"]
     },
     "native_dnc": {
       "desc": "CNC DNC drip-feed (services/machine_tool/dnc): the EIA RS-244 <-> ISO/ASCII tape-code translation\n(odd-parity EIA table), ISO even parity, G-code block framing with '%' rewind-stop and leader\nrunout, XON/XOFF flow-control state, a streaming block reassembling decoder, and the dnc_stream\ndrip-feed engine (leader / markers / blocks over a send/recv seam, paced on reverse-channel\nXON/XOFF). Pure host tests, incl. an odd-parity + exact-inverse table guardrail, full encode ->\ndecode program round-trips for both tape codes, and a scripted mock controller that decodes the\nstreamed program back and exercises the XOFF/XON pause-resume path.",
@@ -56,19 +56,22 @@
         "+<services/machine_tool/dnc/dnc.c>",
         "+<services/machine_tool/dnc/dnc_stream.c>"
       ],
-      "tests": ["test_dnc", "test_dnc_stream"]
+      "tests": [
+        "unit/machine_tool/test_dnc",
+        "protocols/machine_tool/test_dnc_stream"
+      ]
     },
     "native_ftp": {
       "desc": "FTP client wire codec (services/file_transfer/ftp, RFC 959 + RFC 2428): the control-command\nbuilders (generic verb + PORT + EPRT), the single/multi-line 3-digit reply parser, and the\nPASV / EPSV data-address decoders. Pure host tests with authentic reply strings captured from a\nlive FTP server (multiline greeting + FEAT, PASV/EPSV tuples).",
       "flags": ["-DPC_ENABLE_FTP=1"],
       "src": ["+<services/file_transfer/ftp/ftp.c>"],
-      "tests": ["test_ftp"]
+      "tests": ["unit/file_transfer/test_ftp"]
     },
     "native_httpcache": {
       "desc": "HTTP Cache-Control helpers (services/web/httpcache, RFC 9111 + 8246 + 5861): the\nstructured directive builder + first-class origin presets (immutable asset / shared / no-store /\nrevalidatable), the tolerant directive parser (case-insensitive, quoted deltas, unknown ignored),\nand the RFC 9111 freshness-lifetime precedence. Pure host tests incl. a build->parse round-trip.",
       "flags": ["-DPC_ENABLE_HTTP_CACHE=1"],
       "src": ["+<services/web/httpcache/httpcache.c>"],
-      "tests": ["test_httpcache"]
+      "tests": ["unit/http/test_httpcache"]
     },
     "native_edge_cache": {
       "desc": "CDN edge-cache engine (services/web/edge_cache): the pure freshness/validator core (response\nheader-field access, HTTP-date parsing over IMF-fixdate / RFC 850 / asctime, RFC 9111 lifetime +\nExpires-Date + heuristic + corrected age, the canonical cache key + SHA-256 digest + Vary secondary\nkey, and the L1 LRU/TTL store + storeability rules), plus the async origin-fetch engine (completion\ndetection over Content-Length / chunked / connection-close, and the state machine over a mock transport\nseam), plus the shared single-range `Range: bytes=...` parser (http_parse_byte_range) that backs serving\n206 Partial Content windows from a cached body. Pure host tests.",
@@ -88,7 +91,7 @@
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>"
       ],
-      "tests": ["test_edge_cache", "test_edge_fetch"]
+      "tests": ["unit/web/test_edge_cache", "protocols/web/test_edge_fetch"]
     },
     "native_edge_cache_sd": {
       "desc": "CDN edge-cache L2 SD-persistence tier (services/web/edge_cache/edge_cache_sd): the entry <->\ndbm-value serialization roundtrip (all response metadata, Vary variants, binary and max-size bodies),\nthe spill/promote/del/purge API over a dbm on a RAM-backed WalDev, the L1 store's on_evict write-back\nhook, the storeability gates (no-validator and oversize entries stay L1-only), reboot survival via\nremount + index replay, and that a shared dbm's foreign values are never touched. PC_DBM_VAL_MAX is\nsized below a full entry so the oversize-stays-L1 path is exercised. Pure host tests.",
@@ -112,7 +115,7 @@
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>"
       ],
-      "tests": ["test_edge_cache_sd"]
+      "tests": ["protocols/web/test_edge_cache_sd"]
     },
     "native_edge_mesh": {
       "desc": "CDN edge-cache mesh sibling-cache codec (services/web/edge_cache/edge_mesh): the request/response\nwire frames (build + tri-state accumulating parse over partial reads, magic/version/opcode validation),\nthe freshness-carrying entry frame (the shared edge_sd body plus a timing trailer) round-tripped\nbyte-exact, RFC 9111 age propagation (a peer's corrected age transfers so the receiver stays fresh for\nthe remaining lifetime and its Age keeps growing), and the async peer-query engine reaching HIT / MISS /\nFAILED (timeout, peer close, malformed) over a scripted mock transport seam. Pure host tests.",
@@ -132,25 +135,28 @@
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>"
       ],
-      "tests": ["test_edge_mesh"]
+      "tests": ["protocols/web/test_edge_mesh"]
     },
     "native_primitives": {
       "desc": "Shared no-stdlib primitives (shared_primitives): the base-10 pc_strtol/strtoul/strtof\nnumber parsers (numparse.h), the strict RFC 3629 UTF-8 validator (utf8.h), and the parameterized\nRocksoft/Williams CRC engine (crc.h). Every preset is asserted against its published cataloge check\nvalue (the CRC of \"123456789\"), and the engine is then diffed against the hand-rolled CRC loops the\nin-tree services used to carry - X-25, CCITT-FALSE, ARC, MODBUS, DNP, CRC-32, ESP3 CRC-8 and the\nSensirion CRC-8 - across every length 0..64. Those loops are interop-proven against real peers, so\nthe 13 services now calling the engine are proven byte-identical to the code they retired rather\nthan merely plausible; the transcriptions here are what still pins that behaviour. Plus the streaming\nsplit, the reflect flags, width masking, and single-bit-flip detection. Header-only; pure host tests.",
       "flags": [],
       "src": ["-<*>", "+<mmgr/protostr.c>"],
-      "tests": ["test_primitives", "test_crc"]
+      "tests": [
+        "unit/shared_primitives/test_primitives",
+        "unit/shared_primitives/test_crc"
+      ]
     },
     "native_ip": {
       "desc": "IP address core (network_drivers/network/pc_ip): RFC 4291 IPv4/IPv6 text parsing,\nRFC 5952 canonical formatting (:: zero-compression, v4-mapped), and scope classification\n(loopback / link-local / private-ULA / multicast / global). Pure host tests.",
       "flags": [],
       "src": ["+<shared_primitives/ip.c>"],
-      "tests": ["test_ip"]
+      "tests": ["unit/shared_primitives/test_ip"]
     },
     "native_arena": {
       "desc": "Unified double-ended server arena (network_drivers/session/pc_arena): first-fit\npersistent end (bottom, individual free + coalesce + boundary shrink) + bump scratch end\n(top, mark/release/reset) sharing a floating middle; fail-closed at the boundary. Host tests.",
       "flags": [],
       "src": ["+<mmgr/arena.c>"],
-      "tests": ["test_arena"]
+      "tests": ["unit/session/test_arena"]
     },
     "native_ssh_ed25519": {
       "desc": "Modern SSH crypto KATs (curve25519-sha256 KEX + ssh-ed25519 host key / client auth):\nSHA-512 (FIPS 180-4), X25519 (RFC 7748), Ed25519 (RFC 8032). Vectors are the published RFC\ntest vectors + tool-generated digests, grounding the impl against the standards. Pure host tests.",
@@ -160,13 +166,13 @@
         "+<crypto/asymmetric/curve25519.c>",
         "+<crypto/asymmetric/ed25519.c>"
       ],
-      "tests": ["test_ssh_ed25519"]
+      "tests": ["unit/ssh/test_ssh_ed25519"]
     },
     "native_ssh_inflate": {
       "desc": "SSH client-to-server resumable INFLATE (ssh_inflate): decompresses OpenSSH's per-packet\nZ_PARTIAL_FLUSH zlib stream across packets with a 32 KB context-takeover window. Verified against\ngolden vectors produced by real zlib (windowBits 15, Z_PARTIAL_FLUSH per packet; tools/gen_ssh_inflate_vectors.py),\ncovering fixed/dynamic/stored blocks, cross-packet back-references, and empty/tiny payloads. Pure host tests.",
       "flags": ["-DPC_ENABLE_SSH=1", "-DPC_ENABLE_SSH_ZLIB=1"],
       "src": ["+<network_drivers/presentation/ssh/transport/ssh_inflate.c>"],
-      "tests": ["test_ssh_inflate"]
+      "tests": ["unit/ssh/test_ssh_inflate"]
     },
     "native_crypto_kat": {
       "desc": "Data-driven external crypto known-answer tests: HMAC-SHA256/512, AEAD_AES_128_GCM,\nX25519, and Ed25519 verify from Project Wycheproof (including its adversarial edge cases),\nplus HKDF-SHA256 Extract (RFC 5869), the ChaCha20 block (RFC 8439 2.4.2), and Poly1305\n(RFC 8439 2.5.2). Vectors are vendored as auditable JSON (test/vectors) and compiled to a\ntable by tools/gen_crypto_vectors.py. Pure host tests.",
@@ -188,31 +194,31 @@
         "+<network_drivers/session/worker.c>",
         "+<board_drivers/hal/portable/portable_platform.c>"
       ],
-      "tests": ["test_crypto_kat"]
+      "tests": ["unit/crypto/test_crypto_kat"]
     },
     "native_promisc": {
       "desc": "Wi-Fi promiscuous capture helpers (services/radio/promisc): the pure 802.11 MAC header parser\n(to/from-DS src/dst/bssid resolution, QoS, WDS 4-address, control frames, malformed\nrejection) and libpcap (DLT_IEEE802_11) framing. Pure host tests.",
       "flags": ["-DPC_ENABLE_PROMISC=1"],
       "src": ["+<services/radio/promisc/promisc.c>"],
-      "tests": ["test_promisc"]
+      "tests": ["unit/radio/test_promisc"]
     },
     "native_bus_capture": {
       "desc": "CAN listen-only capture framing (server/signaling/bus_capture): can_to_socketcan() building the\n16-byte Linux SocketCAN frame (big-endian can_id, EFF/RTR flags, length, data) and the\nDLT_CAN_SOCKETCAN libpcap link type. Pure host tests.",
       "flags": ["-DPC_ENABLE_BUS_CAPTURE=1"],
       "src": ["+<server/signaling/bus_capture.c>"],
-      "tests": ["test_bus_capture"]
+      "tests": ["unit/server/test_bus_capture"]
     },
     "native_j1939": {
       "desc": "SAE J1939 codec (services/fieldbus/j1939): 29-bit id encode/decode (PDU1 + PDU2), single-frame\nmessages, Request PGN, Address Claimed + NAME, and the Transport Protocol (BAM + TP.DT)\nreassembler, over the shared CAN frame. Pure host tests.",
       "flags": ["-DPC_ENABLE_J1939=1"],
       "src": ["+<services/fieldbus/j1939/j1939.c>"],
-      "tests": ["test_j1939"]
+      "tests": ["unit/fieldbus/test_j1939"]
     },
     "native_devicenet": {
       "desc": "DeviceNet link-adaptation codec (services/fieldbus/devicenet): the 4-group 11-bit CAN id,\nexplicit-message header octet, single-frame explicit messages, and the fragmentation\nreassembler (CIP over CAN; the CIP body is built with the cip codec). Pure host tests.",
       "flags": ["-DPC_ENABLE_DEVICENET=1"],
       "src": ["+<services/fieldbus/devicenet/devicenet.c>"],
-      "tests": ["test_devicenet"]
+      "tests": ["unit/fieldbus/test_devicenet"]
     },
     "native_nmea2000": {
       "desc": "NMEA 2000 codec (services/timing_position/nmea2000): single-frame messages plus the Fast Packet\ntransport (frame count, build, reassembly), built on the J1939 id codec (implied). Pure\nhost tests.",
@@ -221,31 +227,31 @@
         "+<services/timing_position/nmea2000/nmea2000.c>",
         "+<services/fieldbus/j1939/j1939.c>"
       ],
-      "tests": ["test_nmea2000"]
+      "tests": ["unit/timing_position/test_nmea2000"]
     },
     "native_mbus": {
       "desc": "Wired M-Bus codec (services/fieldbus/mbus): the ACK / short / long frame builders + parser\n(start/stop, doubled length, 8-bit sum checksum) and the EN 13757-3 variable-data record\nwalker (DIF/VIF, DIFE/VIFE chains, LVAR). Pure host tests.",
       "flags": ["-DPC_ENABLE_MBUS=1"],
       "src": ["+<services/fieldbus/mbus/mbus.c>"],
-      "tests": ["test_mbus"]
+      "tests": ["unit/fieldbus/test_mbus"]
     },
     "native_iec60870": {
       "desc": "IEC 60870-5-101/-104 codec (services/energy/iec60870): the -104 APCI (I/S/U), the ASDU\nheader + 3-octet IOA, and the -101 FT1.2 fixed/variable link frames (sum checksum). Pure\nhost tests.",
       "flags": ["-DPC_ENABLE_IEC60870=1"],
       "src": ["+<services/energy/iec60870/iec60870.c>"],
-      "tests": ["test_iec60870"]
+      "tests": ["unit/energy/test_iec60870"]
     },
     "native_sdi12": {
       "desc": "SDI-12 sensor-bus codec (services/peripherals/sdi12): the command builders, the measurement\nresponse parser (atttn), the data-value splitter, and the SDI-12 CRC (compute/encode/verify).\nPure host tests.",
       "flags": ["-DPC_ENABLE_SDI12=1"],
       "src": ["+<services/peripherals/sdi12/sdi12.c>", "+<mmgr/protostr.c>"],
-      "tests": ["test_sdi12"]
+      "tests": ["unit/peripherals/test_sdi12"]
     },
     "native_dmx": {
       "desc": "DMX512 + RDM lighting codec (services/peripherals/dmx): the DMX512 slot packet (build/get) and the\nRDM (ANSI E1.20) packet build/parse with 48-bit UIDs and the 16-bit additive checksum. Pure\nhost tests.",
       "flags": ["-DPC_ENABLE_DMX=1"],
       "src": ["+<services/peripherals/dmx/dmx.c>"],
-      "tests": ["test_dmx"]
+      "tests": ["unit/peripherals/test_dmx"]
     },
     "native_nmea0183": {
       "desc": "NMEA 0183 sentence codec (services/timing_position/nmea0183): the XOR checksum, sentence build, parse\n(field splitting, talker/type, checksum validation) against the canonical GGA vector, and the\nfield-value helpers. Pure host tests.",
@@ -254,19 +260,19 @@
         "+<services/timing_position/nmea0183/nmea0183.c>",
         "+<mmgr/protostr.c>"
       ],
-      "tests": ["test_nmea0183"]
+      "tests": ["unit/timing_position/test_nmea0183"]
     },
     "native_ubx": {
       "desc": "UBX (u-blox binary GNSS protocol) codec (services/timing_position/ubx): B5 62 framing, 8-bit Fletcher checksum,\nbuild/poll/parse, and the streaming NMEA+UBX demultiplexer. KATs are the published MON-VER /\nCFG-PRT poll frames. Pure host tests.",
       "flags": ["-DPC_ENABLE_UBX=1"],
       "src": ["+<services/timing_position/ubx/ubx.c>"],
-      "tests": ["test_ubx"]
+      "tests": ["unit/timing_position/test_ubx"]
     },
     "native_ptp": {
       "desc": "PTP / IEEE 1588-2008 (PTPv2) message codec + slave clock math (network_drivers/application/ptp): the 34-octet common\nheader, 10-octet timestamp, Sync/Delay_Req/Follow_Up/Delay_Resp/Announce build+parse, and the\noffset/mean-path-delay calculation from t1..t4. Pure host tests.",
       "flags": ["-DPC_ENABLE_PTP=1"],
       "src": ["+<network_drivers/application/ptp/ptp.c>"],
-      "tests": ["test_ptp"]
+      "tests": ["unit/application/test_ptp"]
     },
     "native_roaming": {
       "desc": "Wi-Fi roaming decision layer (network_drivers/network/roaming): the pure policy that fuses the current RSSI, a\ncandidate neighbour list, and an optional 802.11v BTM hint into a roam/stay decision (target BSSID +\nchannel + reason), with a hysteresis margin and a disassoc-imminent override. Pure host tests.",
@@ -277,13 +283,13 @@
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>"
       ],
-      "tests": ["test_roaming"]
+      "tests": ["unit/datalink/test_roaming"]
     },
     "native_iolink": {
       "desc": "IO-Link (SDCI) data-link message codec (services/fieldbus/iolink): the MC / CKT / CKS control\noctets and the SDCI checksum (seed 0x52 + the 8->6 compression of IO-Link spec A.1.6), with a\nhand-computed known-answer vector. Pure host tests.",
       "flags": ["-DPC_ENABLE_IOLINK=1"],
       "src": ["+<services/fieldbus/iolink/iolink.c>"],
-      "tests": ["test_iolink"]
+      "tests": ["unit/fieldbus/test_iolink"]
     },
     "native_stack_l46": {
       "desc": "Layers 4-6 stack: transport + session + presentation + the standalone parser, no app layer. Base env for the suites that build on it; it runs no suite of its own.\nThese suites predate the RFC 7230 §5.4 Host rule and feed bare HTTP/1.1\nrequest lines to exercise parser mechanics; Host enforcement is verified\nseparately in env:native_compliance.",
@@ -315,38 +321,38 @@
     "native_transport": {
       "desc": "test_transport against the native_stack_l46 stack.",
       "base": "env:native_stack_l46",
-      "tests": ["test_transport"]
+      "tests": ["integration/transport/test_transport"]
     },
     "native_presentation": {
       "desc": "test_presentation against the native_stack_l46 stack.",
       "base": "env:native_stack_l46",
-      "tests": ["test_presentation"]
+      "tests": ["integration/presentation/test_presentation"]
     },
     "native_session": {
       "desc": "test_session against the native_stack_l46 stack.",
       "base": "env:native_stack_l46",
-      "tests": ["test_session"]
+      "tests": ["integration/presentation/test_session"]
     },
     "native_http_parser": {
       "desc": "test_http_parser against the native_stack_l46 stack.",
       "base": "env:native_stack_l46",
-      "tests": ["test_http_parser"]
+      "tests": ["unit/http/test_http_parser"]
     },
     "native_websocket": {
       "desc": "test_websocket against the native_stack_l46 stack.",
       "base": "env:native_stack_l46",
-      "tests": ["test_websocket"]
+      "tests": ["integration/http/test_websocket"]
     },
     "native_sse": {
       "desc": "test_sse against the native_stack_l46 stack.",
       "base": "env:native_stack_l46",
       "flags": ["-DPC_ENABLE_SSE=1"],
-      "tests": ["test_sse"]
+      "tests": ["integration/http/test_sse"]
     },
     "native_base64": {
       "desc": "test_base64 against the native_stack_l46 stack.",
       "base": "env:native_stack_l46",
-      "tests": ["test_base64"]
+      "tests": ["unit/codec/test_base64"]
     },
     "native_observability": {
       "desc": "Transport observability (PC_ENABLE_OBSERVABILITY): the pc_conn_on_event\nhook, by-reason counters, the live CONN_CLOSING gauge, and that the real lwIP\ncallbacks (recv FIN / error / timeout / local close / backpressure) drive the\nright counter. Pure L4 core - host-tested.",
@@ -359,13 +365,13 @@
         "+<network_drivers/transport/tcp/tcp_listener.c>",
         "+<server/clock/clock.c>"
       ],
-      "tests": ["test_observability"]
+      "tests": ["integration/transport/test_observability"]
     },
     "native_base64_scalar": {
       "desc": "base64 scalar constant-time decode fallback (PC_BASE64_SWAR=0): classify one character at a\ntime instead of the default SWAR four-per-word path. Runs the same RFC 4648 vectors, both alphabets,\nmalformed-input rejection, capacity guard, and round-trip fuzz as the SWAR path (covered by the same\ntest_base64 in env:native, where SWAR is the default) - proving the two decoders are byte-identical.",
       "flags": ["-DPC_BASE64_SWAR=0"],
       "src": ["+<network_drivers/presentation/codec/base64/base64.c>"],
-      "tests": ["test_base64"]
+      "tests": ["unit/codec/test_base64"]
     },
     "native_diffserv": {
       "desc": "DiffServ QoS marking (PC_ENABLE_DIFFSERV): the DSCP->TOS encode (DSCP << 2, ECN 0),\nthe server-wide and UDP DSCP defaults (set/get, 6-bit mask), the per-connection setter\n(pc_conn_set_dscp writes pcb->tos on the host path), and the per-listener override\n(pc_listen_set_dscp incl. the UNSET sentinel + mask + unknown-port miss). Compiles the\nflag-guarded transport paths no other env builds. Pure L4 core - host-tested.",
@@ -379,7 +385,7 @@
         "+<network_drivers/transport/diffserv.c>",
         "+<server/clock/clock.c>"
       ],
-      "tests": ["test_diffserv"]
+      "tests": ["integration/transport/test_diffserv"]
     },
     "native_accept_gate": {
       "desc": "Accept-time connection gates with their flags ON (PC_ENABLE_ACCEPT_THROTTLE\n/ PER_IP_THROTTLE / IP_ALLOWLIST): the global fixed-window throttle, the per-source-IP\nbucket table (independent budgets, window rollover, the millis() wrap, bounded LRU\neviction), and the CIDR source-IP allowlist. Compiles the flag-guarded accept-callback\npaths that no other env builds. Budgets overridden small so the boundaries are explicit.",
@@ -417,7 +423,7 @@
         "+<board_drivers/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>"
       ],
-      "tests": ["test_accept_gate"]
+      "tests": ["integration/transport/test_accept_gate"]
     },
     "native_ota": {
       "desc": "Parser streaming-body hook (OTA) - exercises http_parser with PC_ENABLE_OTA=1\nusing a mock sink (no ESP32 Update dependency).",
@@ -426,7 +432,7 @@
         "+<network_drivers/presentation/http/http_parser/http_parser.c>",
         "+<shared_primitives/ip.c>"
       ],
-      "tests": ["test_http_ota"]
+      "tests": ["integration/http/test_http_ota"]
     },
     "native_prov": {
       "desc": "Provisioning form-field parser - the only host-testable part of the captive\nportal (softAP / lwIP UDP / NVS are ESP32-only and compiled out here).",
@@ -434,7 +440,7 @@
         "+<services/system/provisioning_service/provisioning_service.c>",
         "+<server/clock/clock.c>"
       ],
-      "tests": ["test_provisioning"]
+      "tests": ["unit/system/test_provisioning"]
     },
     "native_ssh": {
       "desc": "SSH crypto layer (native software paths only, no mbedtls dependency); channels multiplexed (PC_SSH_MAX_CHANNELS=3) to exercise routing; SFTP/SCP subsystem routing on (MNT satisfies the guard - the file-transfer servers reach storage through the mount, not through FILE_SERVING)",
@@ -480,11 +486,11 @@
         "+<mmgr/protostr.c>"
       ],
       "tests": [
-        "test_ssh_crypto",
-        "test_ssh_transport",
-        "test_ssh_auth",
-        "test_ssh_channel",
-        "test_ssh_server"
+        "unit/ssh/test_ssh_crypto",
+        "integration/ssh/test_ssh_transport",
+        "integration/ssh/test_ssh_auth",
+        "integration/ssh/test_ssh_channel",
+        "integration/ssh/test_ssh_server"
       ]
     },
     "native_ssh_kbdint": {
@@ -524,7 +530,10 @@
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>"
       ],
-      "tests": ["test_ssh_kbdint", "test_ssh_auth"]
+      "tests": [
+        "integration/ssh/test_ssh_kbdint",
+        "integration/ssh/test_ssh_auth"
+      ]
     },
     "native_ssh_pqc": {
       "desc": "mlkem768x25519-sha256 SSH hybrid KEX (draft-ietf-sshm-mlkem-hybrid-kex) end to end: the\nfull SSH transport built with PC_ENABLE_PQC_KEX=1 plus the ML-KEM-768 / SHA-3 core. Verifies the\nhybrid is negotiated, then runs a real server-side key exchange and checks it as a conforming client\nwould - ML-KEM Decaps (an independent reference) + X25519, K = SHA256(K_PQ || K_CL), the string-K\nexchange hash and KDF, and the ed25519 signature over H.",
@@ -566,7 +575,7 @@
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>"
       ],
-      "tests": ["test_ssh_pqc"]
+      "tests": ["integration/ssh/test_ssh_pqc"]
     },
     "native_ssh_hardened": {
       "desc": "SSH built with password auth disabled (publickey-only hardening)",
@@ -605,7 +614,7 @@
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>"
       ],
-      "tests": ["test_ssh_hardening"]
+      "tests": ["integration/ssh/test_ssh_hardening"]
     },
     "native_ssh_conn": {
       "desc": "SSH wired through the real transport/session layers (PROTO_SSH byte-pump)",
@@ -659,7 +668,7 @@
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>"
       ],
-      "tests": ["test_ssh_conn"]
+      "tests": ["integration/ssh/test_ssh_conn"]
     },
     "native_ssh_sftp": {
       "desc": "SFTP protocol v3 wire codec (network_drivers/application/sftp): the SSH_FXP_* request reader + response builders\n(VERSION / STATUS / HANDLE / DATA / ATTRS / NAME), the ATTRS blob encode/decode round-trip (size / perms /\nmtime + the flag word, skipping unknown/extended fields), packet length-framing (need-more vs\nmalformed/too-big), and the ls -l longname formatter. Pure host tests (no fs / no SSH).",
@@ -675,7 +684,7 @@
         "+<server/filesystem/mnt.c>",
         "+<mmgr/protostr.c>"
       ],
-      "tests": ["test_ssh_sftp"]
+      "tests": ["unit/ssh/test_ssh_sftp"]
     },
     "native_scp": {
       "desc": "SCP (RCP) protocol wire codec (network_drivers/application/scp): parse an `scp -t/-f <path>` exec command into its\nsink/source role + target, parse + build the `C<mode> <size> <name>` control line (octal mode, decimal\nsize, name; malformed lines rejected), and the ack byte constants. Pure host tests.",
@@ -691,7 +700,7 @@
         "+<mmgr/frame.c>",
         "+<mmgr/protostr.c>"
       ],
-      "tests": ["test_scp"]
+      "tests": ["unit/server/test_scp"]
     },
     "native_stack_http": {
       "desc": "Full HTTP/1.1 server stack through Layer 7. Base env for the suites that build on it; it runs no suite of its own.",
@@ -756,97 +765,97 @@
     "native_auth": {
       "desc": "test_auth against the native_stack_http stack.",
       "base": "env:native_stack_http",
-      "tests": ["test_auth"],
+      "tests": ["integration/crypto/test_auth"],
       "flags": ["-DPC_ENABLE_AUTH=1"]
     },
     "native_file_serving": {
       "desc": "test_file_serving against the native_stack_http stack.",
       "base": "env:native_stack_http",
-      "tests": ["test_file_serving"],
+      "tests": ["integration/filesystem/test_file_serving"],
       "flags": ["-DPC_ENABLE_FILE_SERVING=1"]
     },
     "native_multipart": {
       "desc": "test_multipart against the native_stack_http stack.",
       "base": "env:native_stack_http",
-      "tests": ["test_multipart"]
+      "tests": ["integration/codec/test_multipart"]
     },
     "native_dispatch": {
       "desc": "test_dispatch against the native_stack_http stack.",
       "base": "env:native_stack_http",
-      "tests": ["test_dispatch"]
+      "tests": ["integration/fieldbus/test_dispatch"]
     },
     "native_application": {
       "desc": "test_application against the native_stack_http stack.",
       "base": "env:native_stack_http",
-      "tests": ["test_application"],
+      "tests": ["integration/misc/test_application"],
       "flags": ["-DPC_ENABLE_FILE_SERVING=1"]
     },
     "native_response_headers": {
       "desc": "test_response_headers against the native_stack_http stack.",
       "base": "env:native_stack_http",
-      "tests": ["test_response_headers"]
+      "tests": ["integration/application/test_response_headers"]
     },
     "native_form_params": {
       "desc": "test_form_params against the native_stack_http stack.",
       "base": "env:native_stack_http",
-      "tests": ["test_form_params"]
+      "tests": ["integration/transport/test_form_params"]
     },
     "native_path_params": {
       "desc": "test_path_params against the native_stack_http stack.",
       "base": "env:native_stack_http",
-      "tests": ["test_path_params"]
+      "tests": ["integration/transport/test_path_params"]
     },
     "native_digest_auth": {
       "desc": "test_digest_auth against the native_stack_http stack.",
       "base": "env:native_stack_http",
-      "tests": ["test_digest_auth"],
+      "tests": ["integration/crypto/test_digest_auth"],
       "flags": ["-DPC_ENABLE_AUTH=1"]
     },
     "native_digest_vectors": {
       "desc": "test_digest_vectors against the native_stack_http stack.",
       "base": "env:native_stack_http",
-      "tests": ["test_digest_vectors"],
+      "tests": ["unit/crypto/test_digest_vectors"],
       "flags": ["-DPC_ENABLE_AUTH=1"]
     },
     "native_template": {
       "desc": "test_template against the native_stack_http stack.",
       "base": "env:native_stack_http",
-      "tests": ["test_template"]
+      "tests": ["integration/transport/test_template"]
     },
     "native_middleware": {
       "desc": "test_middleware against the native_stack_http stack.",
       "base": "env:native_stack_http",
-      "tests": ["test_middleware"]
+      "tests": ["integration/transport/test_middleware"]
     },
     "native_chunked": {
       "desc": "test_chunked against the native_stack_http stack.",
       "base": "env:native_stack_http",
-      "tests": ["test_chunked"]
+      "tests": ["integration/shared_primitives/test_chunked"]
     },
     "native_json": {
       "desc": "test_json against the native_stack_http stack.",
       "base": "env:native_stack_http",
-      "tests": ["test_json"]
+      "tests": ["unit/codec/test_json"]
     },
     "native_iface": {
       "desc": "test_iface against the native_stack_http stack.",
       "base": "env:native_stack_http",
-      "tests": ["test_iface"]
+      "tests": ["integration/transport/test_iface"]
     },
     "native_regex": {
       "desc": "test_regex against the native_stack_http stack.",
       "base": "env:native_stack_http",
-      "tests": ["test_regex"]
+      "tests": ["integration/transport/test_regex"]
     },
     "native_web_terminal": {
       "desc": "test_web_terminal against the native_stack_http stack.",
       "base": "env:native_stack_http",
-      "tests": ["test_web_terminal"]
+      "tests": ["integration/transport/test_web_terminal"]
     },
     "native_defer": {
       "desc": "test_defer against the native_stack_http stack.",
       "base": "env:native_stack_http",
-      "tests": ["test_defer"]
+      "tests": ["integration/session/test_defer"]
     },
     "native_webdav_handler": {
       "desc": "WebDAV request handler over a directory-capable FS mock (recursive COPY/MOVE/DELETE)",
@@ -904,14 +913,14 @@
         "+<mmgr/secure.c>",
         "+<network_drivers/presentation/http/http.c>"
       ],
-      "tests": ["test_webdav_handler"]
+      "tests": ["integration/http/test_webdav_handler"]
     },
     "native_diag": {
       "desc": "Build-flag reporter (diag() / PC_ENABLE_DIAG). The gated diag() entry point\nand its DIAG_DOC frame spec are enabled by no other env, so this one keeps them\ncompiled + exercised in CI. Reuses the full app src via the native_stack_http\nbase.",
       "base": "env:native_stack_http",
       "flags": ["-DPC_ENABLE_DIAG=1"],
       "src": ["${env:native_stack_http.build_src_filter}"],
-      "tests": ["test_diag"]
+      "tests": ["integration/transport/test_diag"]
     },
     "native_snmp": {
       "desc": "SNMP ASN.1 BER codec (the version-agnostic base for the SNMP agent). Pure\ncodec - no lwIP/UDP - so it unit-tests on the host.",
@@ -925,7 +934,7 @@
         "+<shared_primitives/ip.c>",
         "+<server/clock/clock.c>"
       ],
-      "tests": ["test_snmp_ber", "test_snmp_agent"]
+      "tests": ["unit/iot/test_snmp_ber", "protocols/iot/test_snmp_agent"]
     },
     "native_snmp_v3": {
       "desc": "SNMPv3 USM layer: auth (HMAC-SHA-256), privacy (AES-128-CFB), engine discovery,\ntimeliness. Pulls in the SHA-256/HMAC primitives from the SSH crypto layer.",
@@ -953,7 +962,7 @@
         "+<board_drivers/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>"
       ],
-      "tests": ["test_snmp_v3"]
+      "tests": ["protocols/iot/test_snmp_v3"]
     },
     "native_telnet": {
       "desc": "Telnet server (RFC 854 IAC negotiation + line editing) wired through the real\ntransport ring buffer; output checked via the tcp_write capture mock.",
@@ -969,7 +978,7 @@
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>"
       ],
-      "tests": ["test_telnet"]
+      "tests": ["integration/session/test_telnet"]
     },
     "native_coap": {
       "desc": "CoAP server (RFC 7252) message codec + resource dispatch. Pure core - no\nlwIP/UDP - so it unit-tests on the host (udp_transport provides host stubs).",
@@ -987,7 +996,7 @@
         "+<shared_primitives/ip.c>",
         "+<server/clock/clock.c>"
       ],
-      "tests": ["test_coap"]
+      "tests": ["protocols/transport/test_coap"]
     },
     "native_coap_observe": {
       "desc": "CoAP with resource observation (RFC 7641) enabled. Compiles + runs test_coap\nwith PC_ENABLE_COAP_OBSERVE on, so the Observe-gated code (request Observe\nrecording, the observer registry, pc_coap_notify) is actually built in CI instead\nof bit-rotting (it is enabled by no other env).",
@@ -1006,19 +1015,19 @@
         "+<shared_primitives/ip.c>",
         "+<server/clock/clock.c>"
       ],
-      "tests": ["test_coap"]
+      "tests": ["protocols/transport/test_coap"]
     },
     "native_webdav": {
       "desc": "WebDAV server core (RFC 4918): method classification, header parsing, XML\nescaping, and the 207 Multi-Status builder. Pure core - no FS/sockets - so it\nunit-tests on the host. The FS-backed handling is HW-tested on a real LittleFS.",
       "flags": ["-DPC_ENABLE_WEBDAV=1", "-DPC_ENABLE_FILE_SERVING=1"],
       "src": ["+<network_drivers/application/webdav/webdav.c>"],
-      "tests": ["test_webdav"]
+      "tests": ["unit/http/test_webdav"]
     },
     "native_modbus": {
       "desc": "Modbus TCP slave core + RTU framing (Modbus Application Protocol): the data\nmodel + MBAP/PDU codec + the RTU ADU codec (CRC16 + [addr][PDU][CRC]). Pure core\n- the transports are ARDUINO-gated - so it unit-tests on the host from modbus.cpp alone.",
       "flags": ["-DPC_ENABLE_MODBUS=1", "-DPC_ENABLE_MODBUS_RTU=1"],
       "src": ["+<services/fieldbus/modbus/modbus.c>"],
-      "tests": ["test_modbus"]
+      "tests": ["unit/fieldbus/test_modbus"]
     },
     "native_cloudevents": {
       "desc": "CloudEvents v1.0 envelope (services/iot/cloudevents): the structured-JSON builder\n(over the JSON writer) + the binary-mode ce-* header reader. Pure host tests.",
@@ -1030,43 +1039,43 @@
         "+<network_drivers/presentation/http/http_parser/http_parser.c>",
         "+<mmgr/protostr.c>"
       ],
-      "tests": ["test_cloudevents"]
+      "tests": ["unit/shared_primitives/test_cloudevents"]
     },
     "native_redis": {
       "desc": "Redis RESP2/RESP3 codec (services/iot/redis_resp): the zero-heap command encoder + the\ncursor reply parser (RESP2 simple/error/integer/bulk/array/nil plus RESP3 null/boolean/double/big\nnumber/bulk error/verbatim/map/set/push). Pure host tests against Redis spec vectors.",
       "flags": ["-DPC_ENABLE_REDIS=1"],
       "src": ["+<services/iot/redis_resp/redis_resp.c>"],
-      "tests": ["test_redis_resp"]
+      "tests": ["unit/iot/test_redis_resp"]
     },
     "native_sqlite": {
       "desc": "SQLite3 on-disk file-format reader (services/storage/sqlite): the 100-byte database header, the\nb-tree page header, the record varint, and record serial types, parsed by hand. Pure host tests\nagainst a real database built by the sqlite3 CLI (page-1 header + b-tree header + first-cell varints)\nplus varint and serial-type spec vectors.",
       "flags": ["-DPC_ENABLE_SQLITE=1"],
       "src": ["+<services/storage/sqlite/sqlite_format.c>"],
-      "tests": ["test_sqlite"]
+      "tests": ["unit/storage/test_sqlite"]
     },
     "native_stomp": {
       "desc": "STOMP 1.2 frame codec (services/iot/stomp): the zero-heap frame builder (command +\nescaped headers + NUL body) + the non-mutating parser (command/header slices/body,\nhonoring content-length) + escape/unescape. Pure host tests.",
       "flags": ["-DPC_ENABLE_STOMP=1"],
       "src": ["+<services/iot/stomp/stomp.c>"],
-      "tests": ["test_stomp"]
+      "tests": ["unit/iot/test_stomp"]
     },
     "native_mqtt_sn": {
       "desc": "MQTT-SN v1.2 wire codec (services/iot/mqtt/mqtt_sn): the zero-heap message builders\n(CONNECT/REGISTER/PUBLISH/SUBSCRIBE/PINGREQ/DISCONNECT/SEARCHGW) + the Length+MsgType\nheader parser (1- and 3-octet forms) + typed payload parsers. Pure host tests.",
       "flags": ["-DPC_ENABLE_MQTT_SN=1"],
       "src": ["+<services/iot/mqtt/mqtt_sn.c>"],
-      "tests": ["test_mqtt_sn"]
+      "tests": ["unit/iot/test_mqtt_sn"]
     },
     "native_flow_export": {
       "desc": "Flow-record export codec (services/net/flow_export): NetFlow v5 fixed header/record\nbuilders + the NetFlow v9 / IPFIX template-then-data cursor (length/count patching,\nv9 4-octet padding). Pure host tests with wire-byte assertions.",
       "flags": ["-DPC_ENABLE_FLOW_EXPORT=1"],
       "src": ["+<services/net/flow_export/flow_export.c>"],
-      "tests": ["test_flow_export"]
+      "tests": ["unit/net/test_flow_export"]
     },
     "native_protobuf": {
       "desc": "Protocol Buffers wire codec (services/iot/protobuf): the zero-heap streaming writer\n(varint / ZigZag / fixed32 / fixed64 / length-delimited) + the cursor reader, host-tested\nagainst the spec vectors. Pure host tests.",
       "flags": ["-DPC_ENABLE_PROTOBUF=1"],
       "src": ["+<services/iot/protobuf/protobuf.c>"],
-      "tests": ["test_protobuf"]
+      "tests": ["unit/iot/test_protobuf"]
     },
     "native_preempt_queue": {
       "desc": "Preempting work queue (services/system/preempt_queue), v5 real-time ingest: the host\nfixed-ring core - FIFO order, urgent-to-front, fail-closed when full, high-water,\nand drain/handler dispatch. The ARDUINO FreeRTOS task + ISR post + preempt latency\nare HW-verified separately (the host has no tasks/ISRs).",
@@ -1076,7 +1085,7 @@
         "-DPC_PQ_ITEM_SIZE=4"
       ],
       "src": ["+<network_drivers/session/preempt_queue.c>"],
-      "tests": ["test_preempt_queue"]
+      "tests": ["unit/session/test_preempt_queue"]
     },
     "native_dma": {
       "desc": "DMA peripheral ingest / egress simulator (mmgr/dma), v5 hardware ingest: an\ningress feed surfaces as RX completion events, a full buffer ping-pongs and re-arms,\negress DMA is captured, TX is one-in-flight fail-closed, and a loopback channel\nround-trips its own TX into RX. The ARDUINO ISR-post + preempt-queue hand-off is\nHW-verified separately (the host has no ISRs).",
@@ -1086,19 +1095,19 @@
         "-DPC_DMA_CHANNELS=2"
       ],
       "src": ["+<mmgr/dma.c>", "+<server/clock/clock.c>"],
-      "tests": ["test_dma"]
+      "tests": ["protocols/mmgr/test_dma"]
     },
     "native_trace_capture": {
       "desc": "Pre/post-trigger sample-window assembler (server/signaling/trace_capture), v5 high-rate\nacquisition: a continuously-running pre-trigger ring, trigger() freezing it as the window's\npre-trigger half, feed() filling the post-trigger half and firing the sink on completion,\none capture in flight fail-closed (dropped triggers counted), samples fed before begin() /\nafter end() counted dropped, and multiple sequential windows with a correct trace_id\nsequence. Pure host tests (pc_cycles() falls back to a coarse host stand-in; only ordering,\nnot magnitude, is asserted for assembly_cycles).",
       "flags": ["-DPC_ENABLE_TRACE_CAPTURE=1", "-DPC_TC_MAX_WINDOW_SAMPLES=32"],
       "src": ["+<server/signaling/trace_capture.c>", "+<server/clock/clock.c>"],
-      "tests": ["test_trace_capture"]
+      "tests": ["unit/server/test_trace_capture"]
     },
     "native_ad9238": {
       "desc": "AD9238 SPI configuration-port codec (services/peripherals/ad9238): the 16-bit instruction word\n(R/W + byte-count + 13-bit address) for single-byte register writes/reads, the device-update\ntransfer transaction, and the input-validation fail-closed paths (null buffer, undersized\ncap, zero/oversize byte count, out-of-range address). Pure host tests - the SPI clocking and\nthe per-register bit-field meanings are the datasheet's / the application's, not this codec's.",
       "flags": ["-DPC_ENABLE_AD9238=1"],
       "src": ["+<services/peripherals/ad9238/ad9238.c>"],
-      "tests": ["test_ad9238"]
+      "tests": ["unit/peripherals/test_ad9238"]
     },
     "native_forward": {
       "desc": "Interface forwarding plane (services/net/forward), v5 bridge / router: default-deny,\nan ALLOW rule forwards, a DENY wins, multi-destination fan-out, no reflection to the\nsource, the per-rule rate cap (host test clock), send-failure counting, the interface /\nrule table limits, the ingress ACL (byte-pattern permit/deny, first-match, default\naction), policy routing (byte-pattern -> egress, precedence + fail-closed), and the opt-in\ninspection hook. Pure host tests; the DMA-driven wiring is HW-verified.",
@@ -1111,61 +1120,61 @@
         "-DPC_FWD_INSPECT=1"
       ],
       "src": ["+<services/net/forward/forward.c>", "+<server/clock/clock.c>"],
-      "tests": ["test_forward"]
+      "tests": ["protocols/net/test_forward"]
     },
     "native_gateway": {
       "desc": "Radio / wireless gateway bridge (services/net/gateway), v5 southbound-to-northbound: an\nuplink envelopes a received frame (src address / port / rssi / seq) and publishes it,\nfail-closed on no sink / unknown port / rate cap / sink refusal; a downlink routes to the\nport transmit callback; the topic helper formats <prefix>/<port>/<addr>; port table limits.\nPure host tests; the DMA + FORWARD-lane ingest is HW-verified separately.",
       "flags": ["-DPC_ENABLE_GATEWAY=1", "-DPC_GW_MAX_PORTS=4"],
       "src": ["+<services/net/gateway/gateway.c>", "+<server/clock/clock.c>"],
-      "tests": ["test_gateway"]
+      "tests": ["protocols/net/test_gateway"]
     },
     "native_lora": {
       "desc": "LoRa codec + SX127x driver (services/radio/lora), v5 radio plugin: the RadioHead 4-byte\nheader parse/build, and the SX127x register protocol (init / send / tx-done / set-rx /\nrecv) exercised against a mock chip - a register file plus a FIFO with the auto-\nincrementing address pointer. Pure host tests; the RF link needs the module.",
       "flags": ["-DPC_ENABLE_LORA=1"],
       "src": ["+<services/radio/lora/lora.c>"],
-      "tests": ["test_lora"]
+      "tests": ["protocols/radio/test_lora"]
     },
     "native_nrf24": {
       "desc": "nRF24L01+ driver (services/radio/nrf24), v5 radio plugin: the Nordic SPI command protocol\n(STATUS shifted out first, W/R_REGISTER, W_TX/R_RX_PAYLOAD, write-1-to-clear) exercised\nagainst a mock chip - init / send (padded to the static width) / tx-done / set-rx / recv\n(pipe-addressed). Pure host tests; the RF link needs the module.",
       "flags": ["-DPC_ENABLE_NRF24=1", "-DPC_NRF24_PAYLOAD=8"],
       "src": ["+<services/radio/nrf24/nrf24.c>"],
-      "tests": ["test_nrf24"]
+      "tests": ["protocols/radio/test_nrf24"]
     },
     "native_enocean": {
       "desc": "EnOcean ESP3 serial codec (services/radio/enocean), v5 radio plugin: the CRC-8 (poly 0x07)\nagainst known answers, a build -> parse round trip, malformed framing (bad sync / header\nCRC / data CRC), incomplete telegrams, over-length rejection, and resynchronisation.\nPure host tests.",
       "flags": ["-DPC_ENABLE_ENOCEAN=1", "-DPC_ENOCEAN_MAX_DATA=16"],
       "src": ["+<services/radio/enocean/enocean.c>"],
-      "tests": ["test_enocean"]
+      "tests": ["unit/radio/test_enocean"]
     },
     "native_pn532": {
       "desc": "PN532 NFC frame codec (services/peripherals/pn532), v5 radio plugin: the normal-information-frame\nbuild/parse against the documented GetFirmwareVersion command + response frames (LEN/LCS +\nDCS checksums), a round trip, malformed framing (bad preamble / start / LCS / DCS), the ACK\nframe, and over-length rejection. Pure host tests.",
       "flags": ["-DPC_ENABLE_PN532=1", "-DPC_PN532_MAX_DATA=8"],
       "src": ["+<services/peripherals/pn532/pn532.c>"],
-      "tests": ["test_pn532"]
+      "tests": ["unit/peripherals/test_pn532"]
     },
     "native_sigfox": {
       "desc": "Sigfox modem AT-command codec (services/radio/sigfox), v5 radio plugin: the AT$SF uplink\ncommand (uppercase hex encoding of the payload), its bounds (12-byte cap, output cap), and\nthe OK / ERROR / PENDING response classification. Pure host tests.",
       "flags": ["-DPC_ENABLE_SIGFOX=1"],
       "src": ["+<services/radio/sigfox/sigfox.c>"],
-      "tests": ["test_sigfox"]
+      "tests": ["unit/radio/test_sigfox"]
     },
     "native_zwave": {
       "desc": "Z-Wave Serial API frame codec (services/radio/zwave), v5 radio plugin: the data-frame\nbuild/parse against the documented GetVersion request (01 03 00 15 E9), the XOR checksum, a\nround trip, malformed framing (bad SOF / checksum / length), incomplete frames, and the ACK\n/ NAK / CAN control bytes. Pure host tests.",
       "flags": ["-DPC_ENABLE_ZWAVE=1", "-DPC_ZWAVE_MAX_DATA=16"],
       "src": ["+<services/radio/zwave/zwave.c>"],
-      "tests": ["test_zwave"]
+      "tests": ["unit/radio/test_zwave"]
     },
     "native_zigbee": {
       "desc": "Zigbee EZSP / ASH framing codec (services/radio/zigbee), v5 radio plugin: the CRC-16/CCITT\nand the encoded RST frame against their documented values (C0 38 BC 7E), an encode -> decode\nround trip, the byte-stuffing of reserved bytes, and malformed framing (bad CRC, dangling\nescape, buffer-too-small, no flag). Pure host tests.",
       "flags": ["-DPC_ENABLE_ZIGBEE=1", "-DPC_ZIGBEE_MAX_DATA=32"],
       "src": ["+<services/radio/zigbee/zigbee.c>"],
-      "tests": ["test_zigbee"]
+      "tests": ["unit/radio/test_zigbee"]
     },
     "native_thread": {
       "desc": "Thread spinel / HDLC-lite codec (services/radio/thread), v5 radio plugin: the FCS\n(CRC-16/X-25) against its catalog check value (0x906E), an encode -> decode round trip, the\nbyte-stuffing of reserved bytes, malformed framing (bad FCS, dangling escape,\nbuffer-too-small, no flag), the spinel command layer (packed-uint KATs, command build/parse\nthrough HDLC), and the property registry + typed value semantics (reader/writer round trip\nacross every spinel datatype, little-endian wire layout, PROTOCOL_VERSION / CAPS decode,\nUTF8 + length-prefixed data, bounds/overflow latching, prop + status name lookup). Pure host tests.",
       "flags": ["-DPC_ENABLE_THREAD=1", "-DPC_THREAD_MAX_DATA=64"],
       "src": ["+<services/radio/thread/thread.c>"],
-      "tests": ["test_thread"]
+      "tests": ["unit/radio/test_thread"]
     },
     "native_udp_transport": {
       "desc": "UDP transport multicast receive (network_drivers/transport/udp.cpp): joining an IPv4\nmulticast group by dotted-quad, rejecting a non-multicast or malformed group, delivering a group\ndatagram to the registered handler, and leaving the group (releasing the listener slot). Drives the\nhost UDP mock's inject seam.",
@@ -1176,7 +1185,7 @@
         "+<network_drivers/transport/udp/udp_client.c>",
         "+<shared_primitives/ip.c>"
       ],
-      "tests": ["test_udp_transport"]
+      "tests": ["integration/transport/test_udp_transport"]
     },
     "native_udp_hot": {
       "desc": "The UDP target path, driven on the host (base native_hot_base, so PROTOCORE_HOT is 1\nand board_drivers/*/mock stands in for silicon). Covers udp_listener + udp_client against the\nhost pcb driver: the send ring filling and draining, NetAddr carrying v4 and v6 both ways, the\npbuf pool refusing, and the datagrams the core handed to the stack read back as a DLT_RAW libpcap\ncapture with synthesized IP and UDP headers (test/mocks/pc_net_pcap.h).",
@@ -1188,7 +1197,7 @@
         "+<network_drivers/transport/net_addr.c>",
         "+<shared_primitives/ip.c>"
       ],
-      "tests": ["test_udp_hot"]
+      "tests": ["integration/transport/test_udp_hot"]
     },
     "native_wamp": {
       "desc": "WAMP messaging codec (services/iot/wamp): the JSON-array message builders (HELLO /\nSUBSCRIBE / PUBLISH / CALL / REGISTER / YIELD / GOODBYE over JsonWriter) + the positional\narray parser (type / ids / URIs, nesting-aware). Pure host tests.",
@@ -1198,49 +1207,49 @@
         "+<network_drivers/presentation/codec/json/json.c>",
         "+<mmgr/protostr.c>"
       ],
-      "tests": ["test_wamp"]
+      "tests": ["unit/iot/test_wamp"]
     },
     "native_sunspec": {
       "desc": "SunSpec Modbus model codec (services/energy/sunspec): the map writer (marker / model\nheaders / points / end model) + the model-chain walker + typed point readers\n(u16 / i16 / u32 / i32 / string). Pure host tests.",
       "flags": ["-DPC_ENABLE_SUNSPEC=1"],
       "src": ["+<services/energy/sunspec/sunspec.c>"],
-      "tests": ["test_sunspec"]
+      "tests": ["unit/energy/test_sunspec"]
     },
     "native_c37118": {
       "desc": "IEEE C37.118.2 synchrophasor frame codec (services/energy/c37118): CRC-CCITT, the frame\nbuilder + Command frame, and the CRC-validating parser (type / ids / timestamp / payload).\nPure host tests.",
       "flags": ["-DPC_ENABLE_C37118=1"],
       "src": ["+<services/energy/c37118/c37118.c>"],
-      "tests": ["test_c37118"]
+      "tests": ["unit/energy/test_c37118"]
     },
     "native_dnp3": {
       "desc": "DNP3 (IEEE 1815) data-link frame codec (services/energy/dnp3): CRC-16/DNP, the frame\nbuilder (0x0564 header + CRC'd 16-octet data blocks) and the CRC-validating, de-blocking\nparser. Pure host tests.",
       "flags": ["-DPC_ENABLE_DNP3=1"],
       "src": ["+<services/energy/dnp3/dnp3.c>"],
-      "tests": ["test_dnp3"]
+      "tests": ["unit/energy/test_dnp3"]
     },
     "native_grpcweb": {
       "desc": "gRPC-Web message framing codec (services/iot/grpcweb): the 5-octet length-prefixed\nmessage frame builder + the 0x80 trailers frame (grpc-status / grpc-message) + the frame\nparser. Pure host tests.",
       "flags": ["-DPC_ENABLE_GRPC_WEB=1"],
       "src": ["+<services/iot/grpcweb/grpcweb.c>"],
-      "tests": ["test_grpcweb"]
+      "tests": ["unit/iot/test_grpcweb"]
     },
     "native_lwm2m_tlv": {
       "desc": "OMA LwM2M TLV codec (services/iot/lwm2m): the writer (raw + int / bool / string /\nfloat value helpers, 8-/16-bit ids, inline / 8-/16-/24-bit lengths) + the cursor reader\n+ integer value decoding. Pure host tests.",
       "flags": ["-DPC_ENABLE_LWM2M=1"],
       "src": ["+<services/iot/lwm2m/lwm2m_tlv.c>"],
-      "tests": ["test_lwm2m_tlv"]
+      "tests": ["unit/iot/test_lwm2m_tlv"]
     },
     "native_fins": {
       "desc": "Omron FINS frame codec (services/fieldbus/fins): the command builder + Memory Area Read\nconvenience + the command / response parsers (10-octet header, MRC/SRC, MRES/SRES end\ncode). Pure host tests.",
       "flags": ["-DPC_ENABLE_FINS=1"],
       "src": ["+<services/fieldbus/fins/fins.c>"],
-      "tests": ["test_fins"]
+      "tests": ["unit/fieldbus/test_fins"]
     },
     "native_hostlink": {
       "desc": "Omron Host Link (C-mode) frame codec (services/fieldbus/hostlink): the FCS (XOR), the ASCII\ncommand builder (@UU + header + text + FCS + *CR), and the FCS-validating parser +\nend-code reader. Pure host tests.",
       "flags": ["-DPC_ENABLE_HOSTLINK=1"],
       "src": ["+<services/fieldbus/hostlink/hostlink.c>"],
-      "tests": ["test_hostlink"]
+      "tests": ["unit/fieldbus/test_hostlink"]
     },
     "native_scpi": {
       "desc": "SCPI / IEEE 488.2 instrument-control codec (services/instrumentation/scpi): the command builder\n(:-hierarchy header + params + terminator), the response parsers (numeric NR1/NR2/NR3,\nboolean, quoted string, definite/indefinite arbitrary block), the STB/ESR/ESE/SRE +\nerror-queue status model, and the SCPI short/long-form header matcher. Pure host tests.",
@@ -1250,25 +1259,25 @@
         "+<mmgr/frame.c>",
         "+<mmgr/protostr.c>"
       ],
-      "tests": ["test_scpi"]
+      "tests": ["unit/instrumentation/test_scpi"]
     },
     "native_hislip": {
       "desc": "HiSLIP (High-Speed LAN Instrument Protocol, IVI-6.1) message codec (services/instrumentation/hislip):\nthe fixed 16-byte header build/parse (HS prologue + type + control + 32-bit param + 64-bit\npayload length, big-endian), the Initialize / AsyncInitialize handshake helpers, and the\nData / DataEND SCPI-payload framing with message ids. Pure host tests.",
       "flags": ["-DPC_ENABLE_HISLIP=1"],
       "src": ["+<services/instrumentation/hislip/hislip.c>"],
-      "tests": ["test_hislip"]
+      "tests": ["unit/instrumentation/test_hislip"]
     },
     "native_vxi11": {
       "desc": "VXI-11 (TCP/IP Instrument Protocol) codec over ONC RPC / XDR (services/instrumentation/vxi11): the XDR\nwrite/read helpers (4-byte-aligned, big-endian, length-prefixed opaque/string), the ONC-RPC\nrecord-marking + CALL/REPLY framing with AUTH_NONE, the portmapper GETPORT call, and the\nDEVICE_CORE procedures (create_link / device_write / device_read / device_readstb /\ndestroy_link). Pure host tests with byte-exact vectors.",
       "flags": ["-DPC_ENABLE_VXI11=1"],
       "src": ["+<services/instrumentation/vxi11/vxi11.c>"],
-      "tests": ["test_vxi11"]
+      "tests": ["unit/instrumentation/test_vxi11"]
     },
     "native_gpib": {
       "desc": "GPIB-over-LAN (Prologix-style) controller command codec (services/instrumentation/gpib): the ++ command\nbuilders (addr / mode / read / eoi / eos / spoll / clr / trg / ver), the data-line escaping\n(leading ESC before CR/LF/ESC/+ in instrument data), the command-vs-data classifier, and the\nresponse parsers (address, serial-poll status byte, version). Pure host tests.",
       "flags": ["-DPC_ENABLE_GPIB=1"],
       "src": ["+<services/instrumentation/gpib/gpib.c>", "+<mmgr/protostr.c>"],
-      "tests": ["test_gpib"]
+      "tests": ["unit/instrumentation/test_gpib"]
     },
     "native_haas_mdc": {
       "desc": "Haas Machine Data Collection (MDC) Q-command codec (services/machine_tool/haas_mdc): the ?Q query\nbuilders (Q100 serial, Q101 software version, Q102 model, Q104 mode, Q300 power-on time, Q500\nprogram + run status + parts counter, Q600 <var> macro/system-variable read) and the parser for the\n>-wrapped comma-delimited responses plus the unprompted DPRNT(...) lines. Pure host tests.",
@@ -1277,7 +1286,7 @@
         "+<services/machine_tool/haas_mdc/haas_mdc.c>",
         "+<mmgr/protostr.c>"
       ],
-      "tests": ["test_haas_mdc"]
+      "tests": ["unit/machine_tool/test_haas_mdc"]
     },
     "native_packml": {
       "desc": "PackML / OMAC packaging-machine state model (services/machine_tool/packml), ISA-TR88.00.02: the pure\n17-state transition engine (command / state-complete / execute-complete + command validity) and the\nowned PackTags service (state advance, production counters, unit-mode rules, machine speed, and the\nstate/reset timers). Pure host tests.",
@@ -1286,13 +1295,13 @@
         "+<services/machine_tool/packml/packml.c>",
         "+<server/clock/clock.c>"
       ],
-      "tests": ["test_packml"]
+      "tests": ["unit/machine_tool/test_packml"]
     },
     "native_lsv2": {
       "desc": "Heidenhain LSV/2 telegram codec (services/machine_tool/lsv2): the framer (4-byte big-endian payload-length\nprefix + 4-char mnemonic + payload), the typed request builders (login A_LG / logout A_LO,\nnull-terminated-filename file commands, R_RI run-info with a 2-byte big-endian selector), and the\nresponse readers (T_OK, the T_ER/T_BD 2-byte error-class + error-code, data replies, stream\nre-framing). Byte-exact vectors cross-checked against pyLSV2. Pure host tests.",
       "flags": ["-DPC_ENABLE_LSV2=1"],
       "src": ["+<services/machine_tool/lsv2/lsv2.c>"],
-      "tests": ["test_lsv2"]
+      "tests": ["unit/machine_tool/test_lsv2"]
     },
     "native_ikev2": {
       "desc": "IKEv2 (RFC 7296) message + payload codec (services/security/ikev2): the 28-octet IKE header, the generic\npayload chain walker, the SA -> proposal -> transform tree (incl. the key-length attribute), and the\nKE / Nonce / Notify / Delete / IDi-IDr / AUTH / CERT / TSi-TSr / SK-envelope build + parse. Byte-exact\ngolden vectors generated by scapy's IKEv2 codec (key-length attribute verified against scapy's\ndecoder). Pure host tests.",
@@ -1318,7 +1327,7 @@
         "+<network_drivers/session/worker.c>",
         "+<board_drivers/hal/portable/portable_platform.c>"
       ],
-      "tests": ["test_ikev2", "test_ikev2_natt"]
+      "tests": ["unit/crypto/test_ikev2", "unit/crypto/test_ikev2_natt"]
     },
     "native_esp": {
       "desc": "ESP (RFC 4303) packet transform with AES-256-GCM (RFC 4106) - the IPsec datapath crypto core\n(services/system/esp): encapsulate a payload into SPI|Seq|IV|AES-GCM(payload|pad|padlen|nexthdr)|ICV and\nverify + decapsulate it, with the SPI|Seq AAD + salt||IV nonce. Gated on the IKEv2 feature. Pure host\ntests cross-checked against a Python AES-256-GCM reference.",
@@ -1333,7 +1342,7 @@
         "+<network_drivers/session/worker.c>",
         "+<board_drivers/hal/portable/portable_platform.c>"
       ],
-      "tests": ["test_esp"]
+      "tests": ["unit/system/test_esp"]
     },
     "native_ipsec_db": {
       "desc": "IPsec Security Policy Database + Security Association Database (RFC 4301, services/system/esp/ipsec_db):\nordered first-match-wins SPD policy lookup over source/destination/protocol/port selector ranges,\nan SPD selector built from an IKEv2-negotiated TSi/TSr pair, and SPI-keyed SAD add/find/remove with\nper-SA outbound sequence allocation + inbound anti-replay window. Pure host-testable datapath logic.",
@@ -1349,7 +1358,7 @@
         "+<network_drivers/session/worker.c>",
         "+<board_drivers/hal/portable/portable_platform.c>"
       ],
-      "tests": ["test_ipsec_db"]
+      "tests": ["unit/system/test_ipsec_db"]
     },
     "native_senml": {
       "desc": "SenML (RFC 8428) pack builder (services/iot/senml): the SenML-JSON encoder (over the\nJSON writer) + the SenML-CBOR encoder (over the CBOR writer, integer labels), integral\nnumbers emitted as integers. Pure host tests.",
@@ -1361,55 +1370,55 @@
         "+<network_drivers/presentation/codec/codec.c>",
         "+<mmgr/protostr.c>"
       ],
-      "tests": ["test_senml"]
+      "tests": ["unit/codec/test_senml"]
     },
     "native_df1": {
       "desc": "Allen-Bradley DF1 full-duplex frame codec (services/fieldbus/df1): BCC + CRC-16/ARC, the\nframe builder with DLE byte-stuffing, and the validating, un-stuffing parser. Vectors from\nAB pub. 1770-6.5.16. Pure host tests.",
       "flags": ["-DPC_ENABLE_DF1=1"],
       "src": ["+<services/fieldbus/df1/df1.c>"],
-      "tests": ["test_df1"]
+      "tests": ["unit/fieldbus/test_df1"]
     },
     "native_simatic": {
       "desc": "Siemens SIMATIC serial (services/fieldbus/simatic): 3964R block framing (DLE-double + XOR BCC)\n+ the 3964R link state machine (STX/DLE handshake, NAK/QVZ retry, ZVZ timeout, priority\narbitration) + RK512 SEND/FETCH/reaction telegram build/parse (big-endian words). Pure host tests.",
       "flags": ["-DPC_ENABLE_SIMATIC=1"],
       "src": ["+<services/fieldbus/simatic/simatic.c>"],
-      "tests": ["test_simatic"]
+      "tests": ["unit/fieldbus/test_simatic"]
     },
     "native_cotp": {
       "desc": "TPKT (RFC 1006) + COTP X.224 class-0 frame codec (services/fieldbus/cotp): the TPKT\nenvelope, the COTP Data TPDU + Connection Request builders, and the COTP parser. The\nISO-on-TCP foundation under S7comm / IEC 61850 MMS. Pure host tests.",
       "flags": ["-DPC_ENABLE_COTP=1"],
       "src": ["+<services/fieldbus/cotp/cotp.c>"],
-      "tests": ["test_cotp"]
+      "tests": ["unit/fieldbus/test_cotp"]
     },
     "native_s7comm": {
       "desc": "Siemens S7comm PDU codec (services/fieldbus/s7comm): the Setup Communication + Read Var\nrequest builders, the header parser, and the response data-item reader (length-in-bits +\neven padding). Constants per the Wireshark dissector. Pure host tests.",
       "flags": ["-DPC_ENABLE_S7COMM=1"],
       "src": ["+<services/fieldbus/s7comm/s7comm.c>"],
-      "tests": ["test_s7comm"]
+      "tests": ["unit/fieldbus/test_s7comm"]
     },
     "native_melsec": {
       "desc": "Mitsubishi MELSEC MC binary 3E codec (services/fieldbus/melsec): the batch-read request\nbuilder (little-endian, subheader 0x5000, command 0x0401, device code + 24-bit head device)\n+ the 0xD000 response parser. Pure host tests.",
       "flags": ["-DPC_ENABLE_MELSEC=1"],
       "src": ["+<services/fieldbus/melsec/melsec.c>"],
-      "tests": ["test_melsec"]
+      "tests": ["unit/fieldbus/test_melsec"]
     },
     "native_ads": {
       "desc": "Beckhoff ADS / AMS codec (services/fieldbus/ads): the AMS/TCP + AMS-header request builders\n(little-endian, target-before-source addressing, cmd id + state flags + cbData + invoke id) for\nRead/Write/ReadWrite/ReadState/ReadDeviceInfo/WriteControl/Add+DeleteNotification + the response\nparsers incl. the DeviceNotification stamp/sample walk. TwinCAT PC-based control. Pure host tests.",
       "flags": ["-DPC_ENABLE_ADS=1"],
       "src": ["+<services/fieldbus/ads/ads.c>"],
-      "tests": ["test_ads"]
+      "tests": ["unit/fieldbus/test_ads"]
     },
     "native_focas": {
       "desc": "FANUC FOCAS Ethernet codec (services/machine_tool/focas): the big-endian frame envelope\n(magic/version/type/length) + open/close handshake, the generic command request (6-octet function\nselector + five i32 args), and the response parsers (echoed selector + FOCAS return code + data),\nincl. ODBSYS SysInfo, the alarm bitmask, and the 8-octet data/base^exp value encoding. FANUC CNC\ndata over TCP 8193, reverse-engineered vs diohpix/pyfanuc. Pure host tests.",
       "flags": ["-DPC_ENABLE_FOCAS=1"],
       "src": ["+<services/machine_tool/focas/focas.c>"],
-      "tests": ["test_focas"]
+      "tests": ["unit/machine_tool/test_focas"]
     },
     "native_fanuc_j519": {
       "desc": "FANUC Stream Motion / option J519 UDP codec (services/machine_tool/fanuc_j519): the robot\ncounterpart to FOCAS. The 8-octet little-endian header, all six packets (Start/Motion/Stop/Request\nPC->robot, Robot Status/Ack robot->PC), the 9-axis IEEE-754 binary32 pose/joint/current blocks, and\nthe 20-entry threshold tables - byte-checked at every field offset against the public Wireshark\ndissector, plus symmetric build->parse round trips. Includes the length guards that separate the two\npackets sharing a type code per direction (Start 8 vs Status 132, Request 16 vs Ack 184). No heap,\nno stdlib. Pure host tests.",
       "flags": ["-DPC_ENABLE_FANUC_J519=1"],
       "src": ["+<services/machine_tool/fanuc_j519/fanuc_j519.c>"],
-      "tests": ["test_fanuc_j519"]
+      "tests": ["unit/machine_tool/test_fanuc_j519"]
     },
     "native_pqc": {
       "desc": "Post-quantum hybrid KEX primitives (network_drivers/presentation/pqc): the\nKeccak/SHA-3/SHAKE sponge (FIPS 202) and ML-KEM-768 Encaps (FIPS 203) - the responder half of the\nmlkem768x25519-sha256 (SSH) and X25519MLKEM768 (TLS 1.3) hybrid key exchanges - plus the full\nStreamlined NTRU Prime sntrup761 KEM (keypair/enc/dec) for sntrup761x25519-sha512@openssh.com.\nSHA-3/SHAKE digests pinned from NIST FIPS 202 vectors; ML-KEM Encaps byte-checked against a kyber-py\nvector; sntrup761 decapsulation checked against an OpenSSH-reference KAT plus a keypair/enc/dec\nround-trip. Pure host tests.",
@@ -1420,7 +1429,11 @@
         "+<crypto/pqc/sntrup761.c>",
         "+<crypto/hash/sha512.c>"
       ],
-      "tests": ["test_pqc_sha3", "test_pqc_mlkem", "test_pqc_sntrup761"]
+      "tests": [
+        "unit/pqc/test_pqc_sha3",
+        "unit/pqc/test_pqc_mlkem",
+        "unit/pqc/test_pqc_sntrup761"
+      ]
     },
     "native_iface_bridge": {
       "desc": "Interface bridge pure core (services/net/iface_bridge): the user-defined address:port -> bus\nrule table (register / find / dedup / capacity, keyed by port+proto with the full pc_ip bind address\npreserved) and the write-then-read transaction frame codec (big-endian write_len/read_len header,\npartial-frame handling, build/parse round-trip). Bus I/O + listener are ESP32-only. Pure host tests.",
@@ -1429,13 +1442,13 @@
         "+<services/net/iface_bridge/iface_bridge.c>",
         "+<shared_primitives/ip.c>"
       ],
-      "tests": ["test_iface_bridge"]
+      "tests": ["protocols/net/test_iface_bridge"]
     },
     "native_rtcm3": {
       "desc": "RTCM 3.x framing + station-reference codec (services/timing_position/gnss/rtcm3), the pure core of the\nGNSS RTK base / NTRIP caster: the transport frame (0xD3 preamble, 10-bit length, CRC-24Q), MSB-first\nbit I/O, and 1005/1006 Stationary Antenna Reference Point encode/decode. Frames verified byte-for-byte\nagainst pyrtcm. Pure host tests.",
       "flags": ["-DPC_ENABLE_NTRIP_CASTER=1"],
       "src": ["+<services/timing_position/gnss/rtcm3.c>"],
-      "tests": ["test_rtcm3"]
+      "tests": ["unit/timing_position/test_rtcm3"]
     },
     "native_gnss_survey": {
       "desc": "GNSS survey-in core (services/timing_position/gnss/gnss_survey): the exact WGS84 geodetic<->ECEF\ntransform (matched against pyproj EPSG:4979->EPSG:4978), the shifted-origin position averager with a\n3-D accuracy estimate, and the GGA->geodetic fold. Pure host tests.",
@@ -1449,7 +1462,7 @@
         "+<services/timing_position/nmea0183/nmea0183.c>",
         "+<mmgr/protostr.c>"
       ],
-      "tests": ["test_gnss_survey"]
+      "tests": ["unit/timing_position/test_gnss_survey"]
     },
     "native_ntrip_caster": {
       "desc": "NTRIP caster protocol codec (services/timing_position/gnss/ntrip_caster): rover request parsing\n(mountpoint, NTRIP 1.0/2.0 version, HTTP Basic auth), the stream-accept / error responses, and the RTCM\nsource table (STR records + ENDSOURCETABLE with a self-consistent Content-Length). Pure host tests.",
@@ -1458,37 +1471,37 @@
         "+<services/timing_position/gnss/ntrip_caster.c>",
         "+<mmgr/protostr.c>"
       ],
-      "tests": ["test_ntrip_caster"]
+      "tests": ["unit/timing_position/test_ntrip_caster"]
     },
     "native_bacnet": {
       "desc": "BACnet/IP BVLC + NPDU codec (services/fieldbus/bacnet): the BVLC envelope (type 0x81,\nfunction, length) + the NPDU header (version + NPCI control + optional DNET/DADR + hop\ncount) builders and parsers, slicing the APDU. ASHRAE 135. Pure host tests.",
       "flags": ["-DPC_ENABLE_BACNET=1"],
       "src": ["+<services/fieldbus/bacnet/bacnet.c>"],
-      "tests": ["test_bacnet"]
+      "tests": ["unit/fieldbus/test_bacnet"]
     },
     "native_enip": {
       "desc": "EtherNet/IP encapsulation codec (services/fieldbus/enip): the 24-octet header, RegisterSession\n+ SendRRData builders (Common Packet Format), and the SendRRData reply extractor. Constants\nper the Wireshark ENIP dissector. Pure host tests.",
       "flags": ["-DPC_ENABLE_ENIP=1"],
       "src": ["+<services/fieldbus/enip/enip.c>"],
-      "tests": ["test_enip"]
+      "tests": ["unit/fieldbus/test_enip"]
     },
     "native_amqp": {
       "desc": "AMQP 0-9-1 frame codec (services/iot/amqp): the protocol header, the frame + method\nbuilders, the heartbeat, and the frame/method parsers (type/channel/size/payload/0xCE).\nPure host tests.",
       "flags": ["-DPC_ENABLE_AMQP=1"],
       "src": ["+<services/iot/amqp/amqp.c>"],
-      "tests": ["test_amqp"]
+      "tests": ["unit/iot/test_amqp"]
     },
     "native_cip": {
       "desc": "CIP message codec (services/fieldbus/cip): the EPATH logical-segment builder, the request\nbuilders (Get_Attribute_Single), and the response parser (service / status / data). Rides\nan EtherNet/IP Unconnected Data item. Pure host tests.",
       "flags": ["-DPC_ENABLE_CIP=1"],
       "src": ["+<services/fieldbus/cip/cip.c>"],
-      "tests": ["test_cip"]
+      "tests": ["unit/fieldbus/test_cip"]
     },
     "native_nats": {
       "desc": "NATS client protocol codec (services/iot/nats): the CONNECT / PUB / SUB / UNSUB / PING /\nPONG builders + the inbound MSG / INFO / PING / +OK / -ERR parser (subject/sid/reply/payload).\nPure host tests.",
       "flags": ["-DPC_ENABLE_NATS=1"],
       "src": ["+<services/iot/nats/nats.c>"],
-      "tests": ["test_nats"]
+      "tests": ["unit/iot/test_nats"]
     },
     "native_proxy_protocol": {
       "desc": "HAProxy PROXY protocol codec (services/net/proxy_protocol): the v1 (text) + v2 (binary)\nTCP/IPv4 header builders and the unified parser (recover the real client IP behind a load\nbalancer). Pure host tests.",
@@ -1497,7 +1510,7 @@
         "+<services/net/proxy_protocol/proxy_protocol.c>",
         "+<mmgr/protostr.c>"
       ],
-      "tests": ["test_proxy_protocol"]
+      "tests": ["unit/net/test_proxy_protocol"]
     },
     "native_sparkplug": {
       "desc": "Sparkplug B codec (services/iot/sparkplug): the topic builder + the Metric / Payload\nprotobuf serializers (over the protobuf codec). Field numbers per the Eclipse Tahu proto.\nPure host tests.",
@@ -1506,7 +1519,7 @@
         "+<services/iot/sparkplug/sparkplug.c>",
         "+<services/iot/protobuf/protobuf.c>"
       ],
-      "tests": ["test_sparkplug"]
+      "tests": ["unit/iot/test_sparkplug"]
     },
     "native_modbus_master": {
       "desc": "Modbus master codec + scanner (services/fieldbus/modbus/modbus_master): build read\nrequests, parse responses; host-tested as a round-trip against the slave codec.",
@@ -1515,31 +1528,31 @@
         "+<services/fieldbus/modbus/modbus.c>",
         "+<services/fieldbus/modbus/modbus_master.c>"
       ],
-      "tests": ["test_modbus_master"]
+      "tests": ["integration/fieldbus/test_modbus_master"]
     },
     "native_ota_rollback": {
       "desc": "OTA rollback decision (server/update/ota_rollback): pure decision matrix host-tested;\nthe esp_ota commit/rollback are ESP32-only.",
       "flags": ["-DPC_ENABLE_OTA_ROLLBACK=1"],
       "src": ["+<server/update/ota_rollback.c>", "+<server/clock/clock.c>"],
-      "tests": ["test_ota_rollback"]
+      "tests": ["unit/server/test_ota_rollback"]
     },
     "native_totp": {
       "desc": "TOTP two-factor (services/security/totp): HMAC-SHA1 HOTP/TOTP + base32, host-tested\nagainst the RFC 6238 vectors (builds on the software SHA-1).",
       "flags": ["-DPC_ENABLE_TOTP=1"],
       "src": ["+<services/security/totp/totp.c>", "+<crypto/hash/sha1.c>"],
-      "tests": ["test_totp"]
+      "tests": ["unit/security/test_totp"]
     },
     "native_webhook": {
       "desc": "Webhook / IFTTT builders (services/net/webhook): IFTTT URL + value1/2/3 JSON payload,\nhost-tested. Firing is via the http_client (ESP32).",
       "flags": ["-DPC_ENABLE_WEBHOOK=1"],
       "src": ["+<services/net/webhook/webhook.c>", "+<mmgr/protostr.c>"],
-      "tests": ["test_webhook"]
+      "tests": ["unit/net/test_webhook"]
     },
     "native_radio_power": {
       "desc": "WiFi radio power controls (network_drivers/physical/radio_power): modem-sleep mode names\nhost-tested; the apply/readback are ESP32-only (esp_wifi).",
       "flags": ["-DPC_ENABLE_RADIO_POWER=1"],
       "src": ["+<network_drivers/physical/radio_power.c>"],
-      "tests": ["test_radio_power"]
+      "tests": ["unit/physical/test_radio_power"]
     },
     "native_dns_resolver": {
       "desc": "DNS resolver answer classifier/verifier (network_drivers/network/dns_resolver): host-tested;\nthe lwIP resolve is ESP32-only.",
@@ -1548,7 +1561,7 @@
         "+<network_drivers/network/dns/resolver.c>",
         "+<server/clock/clock.c>"
       ],
-      "tests": ["test_dns_resolver"]
+      "tests": ["unit/network/test_dns_resolver"]
     },
     "native_audit_log": {
       "desc": "Tamper-evident hash-chained audit log (services/security/audit_log). Pure - the chain is\nidentical on host and ESP32 - so it unit-tests on the host; SHA-256 comes from\ncrypto/sha256 (software path on native), the timestamp from the pluggable clock.",
@@ -1559,7 +1572,7 @@
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>"
       ],
-      "tests": ["test_audit_log"]
+      "tests": ["unit/security/test_audit_log"]
     },
     "native_oidc": {
       "desc": "OIDC RS256 ID-token verifier (services/security/oidc). Pure relying-party verification -\nthe signature check is real RSA modexp (ssh_rsa + ssh_bignum), so it host-tests\nagainst openssl-signed RS256 vectors with the matching JWKS public key.",
@@ -1580,19 +1593,19 @@
         "+<board_drivers/hal/portable/portable_platform.c>",
         "+<mmgr/protostr.c>"
       ],
-      "tests": ["test_oidc"]
+      "tests": ["unit/crypto/test_oidc"]
     },
     "native_graphql": {
       "desc": "GraphQL query subset (services/iot/graphql) - pure parser + executor, host-tested\nwith a demo resolver. No heap; bounds are compile-time.",
       "flags": ["-DPC_ENABLE_GRAPHQL=1"],
       "src": ["+<services/iot/graphql/graphql.c>", "+<mmgr/protostr.c>"],
-      "tests": ["test_graphql"]
+      "tests": ["unit/iot/test_graphql"]
     },
     "native_espnow": {
       "desc": "ESP-NOW peer messaging (services/radio/espnow) - the envelope codec + peer registry\nare host-tested here; the esp_now radio binding is ESP32-only. No heap.",
       "flags": ["-DPC_ENABLE_ESPNOW=1"],
       "src": ["+<services/radio/espnow/espnow.c>"],
-      "tests": ["test_espnow"]
+      "tests": ["unit/radio/test_espnow"]
     },
     "native_oauth2": {
       "desc": "OAuth2 token-endpoint client (services/security/oauth2) - the form-body builder + JSON\ntoken-response parser are host-tested (the parser reuses the JSON reader); the\nHTTP exchange is ESP32-only. No heap, no stdlib.",
@@ -1602,13 +1615,13 @@
         "+<network_drivers/presentation/codec/json/json.c>",
         "+<mmgr/protostr.c>"
       ],
-      "tests": ["test_oauth2"]
+      "tests": ["unit/security/test_oauth2"]
     },
     "native_opcua": {
       "desc": "OPC UA Binary increment 1 (services/fieldbus/opcua) - the type codec, UACP framing, and\nHello/Acknowledge handshake are host-tested here; the TCP server (opcua_rx) is\nESP32-only. No heap, no stdlib.",
       "flags": ["-DPC_ENABLE_OPCUA=1"],
       "src": ["+<services/fieldbus/opcua/opcua.c>"],
-      "tests": ["test_opcua"]
+      "tests": ["unit/fieldbus/test_opcua"]
     },
     "native_opcua_client": {
       "flags": ["-DPC_ENABLE_OPCUA=1", "-DPC_ENABLE_OPCUA_CLIENT=1"],
@@ -1616,7 +1629,7 @@
         "+<services/fieldbus/opcua/opcua.c>",
         "+<services/fieldbus/opcua_client/opcua_client.c>"
       ],
-      "tests": ["test_opcua_client"]
+      "tests": ["integration/fieldbus/test_opcua_client"]
     },
     "native_umati": {
       "desc": "umati / OPC UA for Machine Tools (OPC 40501-1) MachineTool model (services/machine_tool/umati) - the\nBrowse hierarchy + the Read resolver over a bound UmatiMachineTool are host-tested here.\nRequires the OPC UA codec. No heap, no stdlib.",
@@ -1625,7 +1638,7 @@
         "+<services/fieldbus/opcua/opcua.c>",
         "+<services/machine_tool/umati/umati.c>"
       ],
-      "tests": ["test_umati"]
+      "tests": ["unit/fieldbus/test_umati"]
     },
     "native_robotics": {
       "desc": "OPC UA for Robotics (OPC 40010-1) MotionDeviceSystem model (services/machine_tool/robotics) - the Browse\nhierarchy + the Read resolver over a bound RoboticsMotionDeviceSystem, including the parametric\nAxes, are host-tested here. Requires the OPC UA codec. No heap, no stdlib.",
@@ -1634,7 +1647,7 @@
         "+<services/fieldbus/opcua/opcua.c>",
         "+<services/machine_tool/robotics/robotics.c>"
       ],
-      "tests": ["test_robotics"]
+      "tests": ["unit/fieldbus/test_robotics"]
     },
     "native_euromap77": {
       "desc": "EUROMAP 77 (OPC 40077) IMM_MES_Interface model (services/machine_tool/euromap77) - OPC UA for injection\nmolding machines. The Browse hierarchy + the Read resolver over a bound EmImm, including the\nUInt64 production counters, are host-tested here. Requires the OPC UA codec. No heap, no stdlib.",
@@ -1643,7 +1656,7 @@
         "+<services/fieldbus/opcua/opcua.c>",
         "+<services/machine_tool/euromap77/euromap77.c>"
       ],
-      "tests": ["test_euromap77"]
+      "tests": ["unit/fieldbus/test_euromap77"]
     },
     "native_pentest": {
       "desc": "Adversarial / pentest harness - run SEPARATELY (`pio test -e native_pentest`),\nNOT part of run_tests.sh. Fuzzes the untrusted-input parsers (HTTP, multipart,\nCoAP, SNMP+BER, Modbus, CBOR, MessagePack, JSON, base64/base32, the SQLite\non-disk file-format reader, the Redis RESP reply decoder, the OPC UA Binary\nmessage parsers, the SMB2 client response parsers + the SPNEGO DER walker +\nNTLMSSP CHALLENGE, the DNC block decoder, the FTP client reply parsers, and the\nindustrial client response parsers FINS / MELSEC / CIP / EtherNet-IP / DF1, the\nBACnet/IP + ISO-transport TPKT/COTP frame parsers, the IEEE C37.118\nsynchrophasor + FINS command parsers, the JWT HS256 token verifier, the\nDirectNET / CC-Link / AMQP / MMS frame parsers, the DDS/RTPS UDP submessage\nwalker, the WebDAV (RFC 4918) PROPPATCH body walker + Destination-header\npercent-decoder, and the HPACK HTTP/2 + QPACK HTTP/3 header-block decoders) with malformed/oversized/partial/random/mutated input and asserts bounded\nbuffers + fail-closed + termination (no crash, no over-read, no hang). Pairs with\nthe live driver penetration_testing/pc_pentest.py. See docs/PENTEST.md.",
@@ -1756,7 +1769,7 @@
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>"
       ],
-      "tests": ["test_pentest"]
+      "tests": ["unit/fieldbus/test_pentest"]
     },
     "native_keepalive": {
       "desc": "HTTP/1.1 keep-alive (persistent connections): full server built with\nPC_ENABLE_KEEPALIVE=1; a small per-connection request cap makes the\nfairness-bound test fast. Drives requests through the real transport ring +\ntcp_write capture mock.",
@@ -1806,7 +1819,7 @@
         "+<network_drivers/presentation/http/http.c>",
         "+<server/filesystem/mnt.c>"
       ],
-      "tests": ["test_keepalive"]
+      "tests": ["integration/server/test_keepalive"]
     },
     "native_range": {
       "desc": "HTTP Range requests / 206 Partial Content (RFC 7233): full server built with\nPC_ENABLE_RANGE=1, serving a real littlefs volume through the mount seam and\nreading the responses back off the tcp_write capture.",
@@ -1858,7 +1871,7 @@
         "+<mmgr/secure.c>",
         "+<network_drivers/presentation/http/http.c>"
       ],
-      "tests": ["test_range"]
+      "tests": ["integration/server/test_range"]
     },
     "native_syslog": {
       "desc": "Syslog client (RFC 5424) line formatter. Pure formatter - no lwIP/UDP - so it\nunit-tests on the host (udp_transport provides host stubs for pc_udp_sendto).",
@@ -1870,7 +1883,7 @@
         "+<network_drivers/transport/udp/udp_client.c>",
         "+<shared_primitives/ip.c>"
       ],
-      "tests": ["test_syslog"]
+      "tests": ["protocols/transport/test_syslog"]
     },
     "native_smb": {
       "desc": "SMB2 client (network_drivers/application/smb, MS-SMB2 / MS-NLMP): the SMB2 wire codec (transport frame,\nsync header, NEGOTIATE, SESSION_SETUP, TREE_CONNECT/CREATE/CLOSE/READ/WRITE); the NTLM digests\nMD4 (RFC 1320) / MD5 (RFC 1321) / HMAC-MD5 (RFC 2104) KAT-verified vs the RFC vectors; the\nNTLMv2 response (NThash / NTOWFv2 / NTProofStr / SessionBaseKey) vs the MS-NLMP section 4.2\nworked example; the NTLMSSP message codec; the SPNEGO GSS-API DER wrapping (RFC 4178) verified\nbyte-exact + independently vs openssl; and the smb_client dialogue engine (the full NEGOTIATE\n-> NTLMv2 SESSION_SETUP -> TREE_CONNECT -> CREATE -> CLOSE handshake) driven by a scripted mock\nSMB2 server over a send/recv seam. Pure host tests.",
@@ -1898,12 +1911,12 @@
         "+<board_drivers/hal/portable/portable_platform.c>"
       ],
       "tests": [
-        "test_smb2",
-        "test_smb_crypto",
-        "test_ntlm",
-        "test_ntlmssp",
-        "test_spnego",
-        "test_smb_client"
+        "unit/smb/test_smb2",
+        "unit/smb/test_smb_crypto",
+        "unit/smb/test_ntlm",
+        "unit/smb/test_ntlmssp",
+        "unit/smb/test_spnego",
+        "integration/smb/test_smb_client"
       ]
     },
     "native_smtp": {
@@ -1915,7 +1928,7 @@
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>"
       ],
-      "tests": ["test_smtp"]
+      "tests": ["protocols/net/test_smtp"]
     },
     "native_ntp_server": {
       "desc": "NTP/SNTP server (RFC 5905 server mode) response codec (ntp_server_build_response):\nversion echo, mode/LI/stratum, origin-timestamp copy, reference/receive/transmit\nstamps, big-endian encoding, and the length guards. Pure - host-tested, no lwIP.",
@@ -1924,43 +1937,43 @@
         "+<network_drivers/application/ntp_server/ntp_server.c>",
         "+<server/clock/clock.c>"
       ],
-      "tests": ["test_ntp_server"]
+      "tests": ["unit/application/test_ntp_server"]
     },
     "native_dns_server": {
       "desc": "Authoritative DNS server (services/net/dns_server): the pure A-record response builder\n(QNAME parse, compressed A answer, NXDOMAIN, non-A query, header flags, malformed\nguards) and the built-in name->IP table (add / case-insensitive lookup / clear). No lwIP.",
       "flags": ["-DPC_ENABLE_DNS_SERVER=1"],
       "src": ["+<network_drivers/network/dns/server.c>", "+<mmgr/protostr.c>"],
-      "tests": ["test_dns_server"]
+      "tests": ["protocols/network/test_dns_server"]
     },
     "native_rtc": {
       "desc": "DS1307/DS3231 RTC conversions (services/peripherals/rtc): BCD time registers <-> Unix epoch in\n24- and 12-hour encodings, leap years, clock-halt/century bit masks, range validation,\nand a round-trip over the 2000-2099 range. Pure - the I2C read/write is ESP32-only.",
       "flags": ["-DPC_ENABLE_RTC=1"],
       "src": ["+<services/peripherals/rtc/rtc.c>"],
-      "tests": ["test_rtc"]
+      "tests": ["unit/peripherals/test_rtc"]
     },
     "native_relay": {
       "desc": "TCP relay / DNAT byte pump (services/net/relay): the bidirectional relay engine that\npublishes an internal host:port through the server. Tests cover a bidirectional transfer, the\nbackpressure carry (a send that accepts partial writes), independent half-close with shutdown\npropagation, a large multi-step transfer (byte-exact), and a seam error - driven by two mock\nsockets over the send/recv seams. Pure host tests.",
       "flags": ["-DPC_ENABLE_RELAY=1"],
       "src": ["+<services/net/relay/relay.c>"],
-      "tests": ["test_relay"]
+      "tests": ["protocols/net/test_relay"]
     },
     "native_ld2410": {
       "desc": "LD2410 mmWave radar codec (services/peripherals/ld2410): decoding a basic and an engineering-mode\nreport frame, rejecting malformed frames, the byte-by-byte stream reassembler (resync past\nnoise, split feeds, absurd-length drop), the presence/distance helpers, and the exact bytes\nof the config-command encoders. Pure - the UART pump is ESP32-only.",
       "flags": ["-DPC_ENABLE_LD2410=1"],
       "src": ["+<services/peripherals/ld2410/ld2410.c>"],
-      "tests": ["test_ld2410"]
+      "tests": ["unit/peripherals/test_ld2410"]
     },
     "native_safety_scl": {
       "desc": "IEC 61784-3 black-channel Safety Communication Layer primitives (services/machine_tool/safety_scl):\nthe monitoring-counter state machine, the receive watchdog, and the fail-safe latch the four safety\nprofiles compose. Covers each way a black channel misbehaves - corruption, loss, duplication,\nreordering, insertion - plus the watchdog (incl. a millis() rollover and the disabled case), the\nno-silent-reheal latch, counter wrapping at a narrow modulus, and the explicit re-establish. The\nCRC is the profile's, not this module's. Pure core on a synthetic clock. Pure host tests.",
       "flags": ["-DPC_ENABLE_SAFETY_SCL=1"],
       "src": ["+<services/machine_tool/safety_scl/safety_scl.c>"],
-      "tests": ["test_safety_scl"]
+      "tests": ["unit/machine_tool/test_safety_scl"]
     },
     "native_hmmd": {
       "desc": "Waveshare HMMD 24GHz mmWave micro-motion radar codec (services/peripherals/hmmd): the LD2410-family\nlittle-endian framing, the report parse (detection flag, distance, all 16 gate energies), rejecting\nmalformed frames, the byte-by-byte stream reassembler (resync past noise, split feeds, absurd-length\ndrop), the exact bytes of the command encoders (open/close command mode, firmware 0x0000, serial\n0x0011, config 0x0008, register 0x0002), and ACK decoding. Pure - the UART pump is ESP32-only.",
       "flags": ["-DPC_ENABLE_HMMD=1"],
       "src": ["+<services/peripherals/hmmd/hmmd.c>"],
-      "tests": ["test_hmmd"]
+      "tests": ["unit/peripherals/test_hmmd"]
     },
     "native_rcwl0516": {
       "desc": "RCWL-0516 Doppler presence sensor + the shared one-GPIO presence facade\n(services/peripherals/rcwl0516): the debounce that swallows comparator chatter, the hold that bridges the\nmodule's ~2s retrigger gaps into one continuous presence span, the consume-once edge event,\nwrap-safety across a millis() rollover, and the degenerate zero-debounce / zero-hold configs.\nPure core driven by a synthetic clock - no GPIO, no real time. Pure host tests.",
@@ -1969,7 +1982,7 @@
         "+<services/peripherals/rcwl0516/rcwl0516.c>",
         "+<server/clock/clock.c>"
       ],
-      "tests": ["test_rcwl0516"]
+      "tests": ["unit/peripherals/test_rcwl0516"]
     },
     "native_sen0192": {
       "desc": "SEN0192 microwave motion sensor presence state machine (services/peripherals/sen0192): presence\nasserts on an active sample and holds for the configured window after the last active sample, clears\nafter it, counts clear->present edges, and honors OUT polarity. Pure - the GPIO read is ESP32-only.",
@@ -1978,7 +1991,7 @@
         "+<services/peripherals/sen0192/sen0192.c>",
         "+<server/clock/clock.c>"
       ],
-      "tests": ["test_sen0192"]
+      "tests": ["unit/peripherals/test_sen0192"]
     },
     "native_mpr121": {
       "desc": "MPR121 capacitive-touch codec (services/peripherals/mpr121): decoding the touch-status word into\nan electrode bitmask (masking proximity / over-current), the per-electrode touched test, the\nproximity / over-current flags, the 10-bit filtered/baseline word, and the exact bytes of the\nregister bring-up sequence. Pure - the I2C read/write is ESP32-only.",
@@ -1987,7 +2000,7 @@
         "+<services/peripherals/mpr121/mpr121.c>",
         "+<server/clock/clock.c>"
       ],
-      "tests": ["test_mpr121"]
+      "tests": ["unit/peripherals/test_mpr121"]
     },
     "native_sht3x": {
       "desc": "Sensirion SHT3x temperature/humidity codec (services/peripherals/sht3x): the CRC-8 against the\ndatasheet check value (0xBEEF -> 0x92), the raw-tick -> milli-unit temperature/humidity\nconversions at the range endpoints and a mid value, and the six-byte single-shot response\nparse (both CRCs checked, corrupt CRC rejected). Pure - the I2C transfer is ESP32-only.",
@@ -1996,13 +2009,13 @@
         "+<services/peripherals/sht3x/sht3x.c>",
         "+<server/clock/clock.c>"
       ],
-      "tests": ["test_sht3x"]
+      "tests": ["unit/peripherals/test_sht3x"]
     },
     "native_smbus": {
       "desc": "SMBus 3.1 Packet Error Code (services/peripherals/smbus): the address byte with its direction\nbit, the PEC over a write transaction and over a read transaction (which spans both halves and\nthe repeated-start address), and that the checksum depends on the address and the direction as\nwell as the payload. The PEC comes from the shared CRC engine, so each vector is checked against\npc_crc(&PC_CRC8_SMBUS) directly rather than against a second implementation.",
       "flags": ["-DPC_ENABLE_SMBUS=1"],
       "src": ["+<services/peripherals/smbus.c>"],
-      "tests": ["test_smbus"]
+      "tests": ["unit/smb/test_smbus"]
     },
     "native_pmbus": {
       "desc": "PMBus 1.3 numeric encodings (services/peripherals/pmbus): the VOUT_MODE format selector and its\n5-bit signed exponent, the LINEAR11 11-bit signed mantissa and 5-bit signed exponent with decode\nand round trip, LINEAR16 against an exponent the part reports separately, the DIRECT coefficient\nform, and that a value the exponent pushes out of an int32 of micro-units is refused rather than\nwrapped.",
@@ -2011,7 +2024,7 @@
         "+<services/peripherals/pmbus.c>",
         "+<services/peripherals/smbus.c>"
       ],
-      "tests": ["test_pmbus"]
+      "tests": ["unit/peripherals/test_pmbus"]
     },
     "native_bus_wire": {
       "desc": "End to end from the host harness through the library: a real peripheral driver is called, it\ngoes through the real I2C / SPI bus owner, and the bytes it put on the wire are asserted. Covers\nthe SHT3x measurement command and its CRC-checked reply, the PCA9685 five-byte channel write,\nthe INA219 big-endian register order, the RTC register-pointer-then-burst read and its write,\nSMBus with and without the PEC, the little-endian SMBus word, a full bus scan, and that a device\nthat does not acknowledge makes the driver report failure.",
@@ -2030,13 +2043,13 @@
         "+<services/peripherals/smbus.c>",
         "+<server/clock/clock.c>"
       ],
-      "tests": ["test_bus_wire"]
+      "tests": ["integration/peripherals/test_bus_wire"]
     },
     "native_pca9685": {
       "desc": "PCA9685 PWM/servo codec (services/peripherals/pca9685): the PRESCALE computation from a PWM\nfrequency (with clamping), the per-channel register address, the servo pulse-width -> 12-bit\ncount conversion (with clamping), and the 5-byte channel PWM write encoder (including the\nfull-on/off flag). Pure - the I2C writes are ESP32-only.",
       "flags": ["-DPC_ENABLE_PCA9685=1"],
       "src": ["+<services/peripherals/pca9685/pca9685.c>"],
-      "tests": ["test_pca9685"]
+      "tests": ["unit/peripherals/test_pca9685"]
     },
     "native_ads1115": {
       "desc": "ADS1115 16-bit ADC codec (services/peripherals/ads1115): building the 16-bit config word for a\nsingle-shot single-ended reading (channel MUX, gain, data rate, start/mode/comparator bits,\nwith out-of-range fallbacks), and converting a signed 16-bit sample to microvolts across the\ngain's full-scale range. Pure - the I2C transfer is ESP32-only.",
@@ -2045,13 +2058,13 @@
         "+<services/peripherals/ads1115/ads1115.c>",
         "+<server/clock/clock.c>"
       ],
-      "tests": ["test_ads1115"]
+      "tests": ["unit/peripherals/test_ads1115"]
     },
     "native_ina219": {
       "desc": "INA219 current/power codec (services/peripherals/ina219): decoding the bus-voltage register (bits\n[15:3], LSB 4 mV, status bits ignored) and the shunt-voltage register (signed, LSB 10 uV),\ncomputing the calibration register from the current LSB and shunt resistance, and scaling the\nraw current / power registers. Pure - the I2C transfer is ESP32-only.",
       "flags": ["-DPC_ENABLE_INA219=1"],
       "src": ["+<services/peripherals/ina219/ina219.c>"],
-      "tests": ["test_ina219"]
+      "tests": ["unit/peripherals/test_ina219"]
     },
     "native_hpack": {
       "desc": "HPACK header compression for HTTP/2 (RFC 7541): prefix-integer coding (App C.1), the\nHuffman string code (App B / C.4.1), the first-request decode with dynamic-table insertion\n(C.3.1), dynamic-table indexing + FIFO eviction + size updates, and the server encoder\n(static indexing + literal round-trip). Pure host codec.",
@@ -2060,13 +2073,13 @@
         "+<network_drivers/presentation/codec/hpack_prim/hpack_prim.c>",
         "+<network_drivers/presentation/http/http2/hpack.c>"
       ],
-      "tests": ["test_hpack"]
+      "tests": ["unit/http/test_hpack"]
     },
     "native_h2frame": {
       "desc": "HTTP/2 binary framing (network_drivers/presentation/http/http2/h2_frame, RFC 9113): the\n9-byte frame header parse/write (24-bit length, reserved-bit masking), SETTINGS build + parse\nwith validation, and the exact bytes of the SETTINGS-ACK / WINDOW_UPDATE / RST_STREAM / GOAWAY\n/ PING-ACK / HEADERS / DATA builders. Pure host codec.",
       "flags": ["-DPC_ENABLE_HTTP2=1"],
       "src": ["+<network_drivers/presentation/http/http2/h2_frame.c>"],
-      "tests": ["test_h2_frame"]
+      "tests": ["unit/http/test_h2_frame"]
     },
     "native_h2conn": {
       "desc": "HTTP/2 connection engine (network_drivers/presentation/http/http2/h2_conn, RFC 9113):\ninitial SETTINGS on init, preface + client SETTINGS -> SETTINGS ACK, decoding a real\nHPACK-encoded request into the header callbacks, PING -> PING ACK, split-across-reads frame\nreassembly, and h2_conn_respond serializing a HEADERS + DATA response decoded back.",
@@ -2078,13 +2091,13 @@
         "+<network_drivers/presentation/http/http2/hpack.c>",
         "+<mmgr/protostr.c>"
       ],
-      "tests": ["test_h2_conn"]
+      "tests": ["protocols/http/test_h2_conn"]
     },
     "native_quic_varint": {
       "desc": "QUIC variable-length integer codec (network_drivers/presentation/http/http3/quic_varint,\nRFC 9000 sec 16) - the foundational HTTP/3 primitive: the Appendix A.1 worked examples (1/2/4/8\nbyte encodings), the non-minimal decode, length computation, and overflow / truncation guards.",
       "flags": ["-DPC_ENABLE_HTTP3=1"],
       "src": ["+<network_drivers/presentation/http/http3/quic_varint.c>"],
-      "tests": ["test_quic_varint"]
+      "tests": ["unit/http/test_quic_varint"]
     },
     "native_h3frame": {
       "desc": "HTTP/3 framing (network_drivers/presentation/http/http3/h3_frame, RFC 9114 sec 7): the\ntype+length varint header parse/write (incl. a multi-byte length), the DATA / HEADERS /\nSETTINGS / GOAWAY builders, the SETTINGS payload round-trip + reserved-id rejection, and the\nreserved HTTP/2 frame-type check. Pure host codec.",
@@ -2093,7 +2106,7 @@
         "+<network_drivers/presentation/http/http3/h3_frame.c>",
         "+<network_drivers/presentation/http/http3/quic_varint.c>"
       ],
-      "tests": ["test_h3_frame"]
+      "tests": ["unit/http/test_h3_frame"]
     },
     "native_jwt": {
       "desc": "JWT (HS256) bearer-auth verification. Pure crypto/codec - reuses the SSH\nHMAC-SHA-256 + base64 primitives - so it unit-tests on the host.",
@@ -2110,7 +2123,7 @@
         "+<board_drivers/hal/portable/portable_platform.c>",
         "+<mmgr/protostr.c>"
       ],
-      "tests": ["test_jwt"]
+      "tests": ["unit/crypto/test_jwt"]
     },
     "native_upload": {
       "desc": "Streaming file upload: POST body -> FS file via the parser streaming hook.\nSmall BODY_BUF_SIZE exercises multi-chunk streaming; the mock FS captures the\nwritten bytes (test/mocks/FS.h write-capture).",
@@ -2161,7 +2174,7 @@
         "+<mmgr/secure.c>",
         "+<network_drivers/presentation/http/http.c>"
       ],
-      "tests": ["test_upload"]
+      "tests": ["integration/server/test_upload"]
     },
     "native_http_client": {
       "desc": "Outbound HTTP client: URL parser + request builder + response parser. Pure\nstring logic (the lwIP/mbedTLS transport is ESP32-only) so it unit-tests host.",
@@ -2171,7 +2184,7 @@
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>"
       ],
-      "tests": ["test_http_client"]
+      "tests": ["unit/http/test_http_client"]
     },
     "native_compliance": {
       "desc": "RFC-compliance suite: builds with all enforcement at production defaults\n(PC_ENFORCE_HOST_HEADER=1) and exercises the strict behaviors.",
@@ -2179,12 +2192,12 @@
         "+<network_drivers/presentation/http/http_parser/http_parser.c>",
         "+<shared_primitives/ip.c>"
       ],
-      "tests": ["test_compliance"]
+      "tests": ["integration/http/test_compliance"]
     },
     "native_mqtt": {
       "flags": ["-DPC_ENABLE_MQTT=1"],
       "src": ["+<services/iot/mqtt/mqtt.c>", "+<server/clock/clock.c>"],
-      "tests": ["test_mqtt"]
+      "tests": ["unit/iot/test_mqtt"]
     },
     "native_ws_client": {
       "flags": ["-DPC_ENABLE_WS_CLIENT=1"],
@@ -2195,7 +2208,7 @@
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>"
       ],
-      "tests": ["test_ws_client"]
+      "tests": ["unit/http/test_ws_client"]
     },
     "native_plaintext": {
       "desc": "The plaintext pool accessor (server/mmgr/plaintext): bump-allocate + reset semantics,\nalignment, and fail-closed exhaustion. Pure host tests - no lwIP/sockets - so it builds from\nthe accessor and the pool mechanism alone.",
@@ -2206,7 +2219,7 @@
         "+<board_drivers/hal/portable/portable_platform.c>",
         "+<mmgr/secure.c>"
       ],
-      "tests": ["test_plaintext"]
+      "tests": ["unit/mmgr/test_plaintext"]
     },
     "native_snmp_trap": {
       "flags": ["-DPC_ENABLE_SNMP=1", "-DPC_ENABLE_SNMP_TRAP=1"],
@@ -2215,13 +2228,13 @@
         "+<services/net/snmp/snmp_ber.c>",
         "+<server/clock/clock.c>"
       ],
-      "tests": ["test_snmp_trap"]
+      "tests": ["unit/iot/test_snmp_trap"]
     },
     "native_inflate": {
       "desc": "RFC 1951 INFLATE core (the WebSocket permessage-deflate decompressor). Pure\ncodec - no sockets - so it unit-tests on the host against zlib-generated\nvectors (scratchpad/gen_vectors.py).",
       "flags": ["-DPC_ENABLE_WS_DEFLATE=1", "-DPC_ENABLE_WEBSOCKET=1"],
       "src": ["+<network_drivers/presentation/codec/inflate/inflate.c>"],
-      "tests": ["test_inflate"]
+      "tests": ["unit/codec/test_inflate"]
     },
     "native_deflate": {
       "desc": "RFC 1951 DEFLATE core (the WebSocket permessage-deflate compressor). Pure codec\n- no sockets - so it unit-tests on the host by round-tripping through INFLATE\n(which test_inflate validates against zlib), proving the emitted streams are\nvalid RFC 1951.",
@@ -2230,7 +2243,7 @@
         "+<network_drivers/presentation/codec/deflate/deflate.c>",
         "+<network_drivers/presentation/codec/inflate/inflate.c>"
       ],
-      "tests": ["test_deflate"]
+      "tests": ["unit/codec/test_deflate"]
     },
     "native_ssh_zlib": {
       "desc": "SSH server-to-client streaming compressor (zlib@openssh.com / zlib): a context-takeover\nDEFLATE stream (persistent sliding window across packets, sync-flush per packet, zlib\nwrapper). The whole session is one zlib stream, so concatenating packets and decoding via\ninflate_raw (validated vs Python zlib in test_inflate) proves cross-packet back-references\nresolve; packet-by-packet decodability under a reference zlib.decompressobj (OpenSSH's model)\nis cross-checked out-of-tree.",
@@ -2244,7 +2257,7 @@
         "+<network_drivers/presentation/ssh/transport/ssh_zlib.c>",
         "+<network_drivers/presentation/codec/inflate/inflate.c>"
       ],
-      "tests": ["test_ssh_zlib"]
+      "tests": ["unit/ssh/test_ssh_zlib"]
     },
     "native_ssh_comp": {
       "desc": "SSH s2c compression WIRING with the full SSH stack built with PC_ENABLE_SSH_ZLIB=1:\nthe compression owner (ssh_comp) + its NEWKEYS / USERAUTH_SUCCESS activation + the packet-layer\ncompress path in ssh_pkt_send. Drives the packet layer directly and reconstructs the continuous\nzlib stream from the framed packets, decoding via inflate_raw. Compile-verifies every #if\nPC_ENABLE_SSH_ZLIB block across transport / server / packet.",
@@ -2292,7 +2305,7 @@
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>"
       ],
-      "tests": ["test_ssh_comp"]
+      "tests": ["integration/ssh/test_ssh_comp"]
     },
     "native_ws_deflate": {
       "desc": "WebSocket permessage-deflate (RFC 7692) inbound path wired through the real WS\nstack: handshake negotiation, the RSV1 frame path, and INFLATE delivery (with\nthe table scratch borrowed from the shared arena). Runs test_websocket with the\nfeature on (the deflate cases are #if-gated).",
@@ -2325,13 +2338,13 @@
         "+<board_drivers/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>"
       ],
-      "tests": ["test_websocket"]
+      "tests": ["integration/http/test_websocket"]
     },
     "native_time_source": {
       "desc": "Multi-source time fallback matrix (services/timing_position/time_source): priority-ordered\nquery of user time sources with first-valid-wins fallback. Pure core - no\nsockets/RTC - so it unit-tests on the host with mock sources.",
       "flags": ["-DPC_ENABLE_TIME_SOURCE=1"],
       "src": ["+<services/timing_position/time_source/time_source.c>"],
-      "tests": ["test_time_source"]
+      "tests": ["unit/timing_position/test_time_source"]
     },
     "native_config_store": {
       "desc": "Typed NVS config store (services/storage/config_store): string/u32/blob round-trips,\ndefaults, capacity, erase/clear - run against the host NVS backend that hal/nvs.h\nselects off-target (the ESP32 Preferences backend is compiled in only on-target).",
@@ -2340,13 +2353,13 @@
         "+<services/storage/config_store/config_store.c>",
         "+<board_drivers/hal/host/host_nvs.c>"
       ],
-      "tests": ["test_config_store"]
+      "tests": ["unit/storage/test_config_store"]
     },
     "native_device_id": {
       "desc": "MAC-derived device UUID (server/signaling/device_id): RFC 4122 v5 from a MAC via SHA-1.\nPure core - the ESP32 MAC read is ARDUINO-gated - so it unit-tests on the host\nagainst Python uuid.uuid5 reference values.",
       "flags": ["-DPC_ENABLE_DEVICE_ID=1"],
       "src": ["+<server/signaling/device_id.c>", "+<crypto/hash/sha1.c>"],
-      "tests": ["test_device_id"]
+      "tests": ["unit/server/test_device_id"]
     },
     "native_auth_lockout": {
       "desc": "Per-IP brute-force auth lockout (services/security/auth_lockout): exponential-backoff\nlockout state machine. Pure core (the millisecond clock is passed in), so it\nunit-tests on the host. PC_ENABLE_AUTH_LOCKOUT (and its required parent\nPC_ENABLE_AUTH) are set so the flag-guarded code compiles.",
@@ -2355,7 +2368,7 @@
         "+<services/security/auth_lockout/auth_lockout.c>",
         "+<shared_primitives/ip.c>"
       ],
-      "tests": ["test_auth_lockout"]
+      "tests": ["unit/security/test_auth_lockout"]
     },
     "native_forwarded_trust": {
       "desc": "Trusted-reverse-proxy forwarded-client resolver (services/security/forwarded_trust): a\nForwarded / X-Forwarded-For client address is honored only when the real TCP peer\nis a configured trusted-upstream CIDR, else the TCP peer is kept. Pure (no\nsockets), so it host-tests; a direct/untrusted peer's spoofed header is never\nbelieved. PC_ENABLE_FORWARDED_TRUST (+ its required parents AUTH / AUTH_LOCKOUT)\nare set so the flag-guarded config compiles.",
@@ -2368,7 +2381,7 @@
         "+<services/security/forwarded_trust/forwarded_trust.c>",
         "+<shared_primitives/ip.c>"
       ],
-      "tests": ["test_forwarded_trust"]
+      "tests": ["unit/security/test_forwarded_trust"]
     },
     "native_csrf": {
       "desc": "Stateless HMAC-signed CSRF token (services/security/csrf): issue/verify with a fixed\nsecret unit-tests on the host (PC_ENABLE_CSRF set). Pulls in the SSH\nHMAC-SHA256 + SHA-256 core.",
@@ -2385,13 +2398,13 @@
         "+<board_drivers/hal/portable/portable_platform.c>",
         "+<mmgr/protostr.c>"
       ],
-      "tests": ["test_csrf"]
+      "tests": ["unit/crypto/test_csrf"]
     },
     "native_telemetry": {
       "desc": "Telemetry math (services/iot/telemetry): moving-window stats, rate-of-change, and\ntotalizer. Pure computation (synthetic clock passed in), so it unit-tests on\nthe host.",
       "flags": ["-DPC_ENABLE_TELEMETRY=1"],
       "src": ["+<services/iot/telemetry/telemetry.c>"],
-      "tests": ["test_telemetry"]
+      "tests": ["unit/iot/test_telemetry"]
     },
     "native_dashboard": {
       "desc": "Dashboard widget-table JSON serializers (services/web/dashboard core). Pure logic;\nthe route/SSE wiring (dashboard_routes.cpp) is excluded so this tests on the\nhost without the server.",
@@ -2401,12 +2414,12 @@
         "+<mmgr/frame.c>",
         "+<mmgr/protostr.c>"
       ],
-      "tests": ["test_dashboard"]
+      "tests": ["unit/web/test_dashboard"]
     },
     "native_net_egress": {
       "desc": "Egress-interface reporting (network_drivers/physical). The esp_netif default-\nroute lookups are ESP32-only; the pure interface-key classifier host-tests here.",
       "src": ["+<network_drivers/physical/physical.c>"],
-      "tests": ["test_net_egress"]
+      "tests": ["unit/physical/test_net_egress"]
     },
     "native_client": {
       "desc": "Outbound TCP client transport (network_drivers/transport/tcp/tcp_client.cpp), the pooled\nlayer-4 peer of tcp.cpp used by http_client / mqtt / ws_client / relay / smtp / ssh\nport-forward (PC_NEED_DET_CLIENT). The tcpip_api_call-marshaled lwIP path is\nARDUINO-only; on native this file compiles to just the !NEED stub (fail-closed: no\nlwIP on the host, so every call reports no connection), host-tested here for its own sake\nsince no other env's build_src_filter pulls this file in at all.",
@@ -2418,7 +2431,7 @@
         "+<shared_primitives/ip.c>",
         "+<server/clock/clock.c>"
       ],
-      "tests": ["test_client"]
+      "tests": ["protocols/transport/test_client"]
     },
     "native_partition": {
       "desc": "Flash partition-map monitor (services/storage/partition_monitor core): the kind\nclassifier + JSON serializer host-test here; the esp_partition walk is ESP32-only.",
@@ -2428,7 +2441,7 @@
         "+<mmgr/frame.c>",
         "+<mmgr/protostr.c>"
       ],
-      "tests": ["test_partition_monitor"]
+      "tests": ["unit/storage/test_partition_monitor"]
     },
     "native_cbor": {
       "desc": "CBOR (RFC 8949) encoder (network_drivers/presentation/codec/cbor): a pure byte-output\ncodec, host-tested against the RFC 8949 Appendix A vectors.",
@@ -2437,7 +2450,7 @@
         "+<network_drivers/presentation/codec/cbor/cbor.c>",
         "+<network_drivers/presentation/codec/codec.c>"
       ],
-      "tests": ["test_cbor"]
+      "tests": ["unit/codec/test_cbor"]
     },
     "native_msgpack": {
       "desc": "MessagePack encoder (network_drivers/presentation/codec/msgpack): a pure byte-output\ncodec, host-tested against the spec encodings.",
@@ -2446,7 +2459,7 @@
         "+<network_drivers/presentation/codec/msgpack/msgpack.c>",
         "+<network_drivers/presentation/codec/codec.c>"
       ],
-      "tests": ["test_msgpack"]
+      "tests": ["unit/codec/test_msgpack"]
     },
     "native_gpio_map": {
       "desc": "GPIO pin-mapper / browser diag core (server/signaling/gpio_map): direction names, JSON\nserializer, control-POST parser, output guard - all pure and host-tested.",
@@ -2457,7 +2470,7 @@
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>"
       ],
-      "tests": ["test_gpio_map"]
+      "tests": ["unit/server/test_gpio_map"]
     },
     "native_udp_telemetry": {
       "desc": "UDP telemetry line builder (services/iot/udp_telemetry): InfluxDB line-protocol\nformatting, host-tested. The UDP cast is ESP32-only (#ifdef ARDUINO).",
@@ -2466,7 +2479,7 @@
         "+<services/iot/udp_telemetry/udp_telemetry.c>",
         "+<mmgr/protostr.c>"
       ],
-      "tests": ["test_udp_telemetry"]
+      "tests": ["unit/transport/test_udp_telemetry"]
     },
     "native_statsd": {
       "desc": "StatsD metrics client (services/iot/statsd): the pure line formatter (name:value|type,\nsample rate, DogStatsD tags) plus the count/gauge/timing/set emit helpers, whose sent\nbytes are captured through the transport UDP service's host seam.",
@@ -2478,7 +2491,7 @@
         "+<network_drivers/transport/udp/udp_client.c>",
         "+<shared_primitives/ip.c>"
       ],
-      "tests": ["test_statsd"]
+      "tests": ["protocols/transport/test_statsd"]
     },
     "native_guardrails": {
       "desc": "Heap/stack guardrails (services/security/guardrails): threshold evaluator + JSON,\nhost-tested. Live sampling is ESP32-only (#ifdef ARDUINO).",
@@ -2487,90 +2500,90 @@
         "+<services/security/guardrails/guardrails.c>",
         "+<mmgr/protostr.c>"
       ],
-      "tests": ["test_guardrails"]
+      "tests": ["unit/security/test_guardrails"]
     },
     "native_failsafe": {
       "desc": "Software watchdog / deadlock detection + safe-state (server/failsafe): the wrap-safe\noverdue predicate, the lifeline registry, fire-once-per-episode breach callback, and JSON.\nPure host tests with a synthetic clock.",
       "flags": ["-DPC_ENABLE_FAILSAFE=1"],
       "src": ["+<server/failsafe.c>", "+<server/clock/clock.c>"],
-      "tests": ["test_failsafe"]
+      "tests": ["unit/server/test_failsafe"]
     },
     "native_sleep_sched": {
       "desc": "Dynamic sleep-cycle scheduler (server/sleep_sched): the wrap-safe idle->sleep-window\ndecision core with a doubling ramp clamped to a ceiling. Pure host tests, synthetic clock.",
       "flags": ["-DPC_ENABLE_SLEEP_SCHED=1"],
       "src": ["+<server/sleep_sched.c>"],
-      "tests": ["test_sleep_sched"]
+      "tests": ["unit/server/test_sleep_sched"]
     },
     "native_signaling": {
       "desc": "Application-layer signaling (server/signaling): the state bucket. Deposits go in from the loop\n(response class tallies, and the uptime + conn/listener bitmasks a tick already has in hand), a\nread hands back a copy rather than a window, and kill forwards a slot to the transport unchanged.\nThe module holds no logic by design, so the tests assert exactly that. pc_conn_close is stubbed:\nthe forward is what is under test, not lwIP.",
       "src": ["+<server/signaling/signaling.c>"],
-      "tests": ["test_signaling"]
+      "tests": ["unit/server/test_signaling"]
     },
     "native_wearlevel": {
       "desc": "Flash wear-leveling slot selector (server/filesystem/wearlevel): least-worn pick (ties -> lowest\nindex), saturating mark, and the wear-imbalance spread metric. Pure host tests - a 4000-write\npick+mark loop must level every slot exactly.",
       "flags": ["-DPC_ENABLE_WEARLEVEL=1"],
       "src": ["+<server/filesystem/wearlevel.c>"],
-      "tests": ["test_wearlevel"]
+      "tests": ["unit/storage/test_wearlevel"]
     },
     "native_netadapt": {
       "desc": "Network adaptation decisions (services/net/netadapt): TCP receive-window sizing from the free\nheap (reserve + quarter-of-spare, clamped) and the DHCP->static-IP fallback trigger. Pure host tests.",
       "flags": ["-DPC_ENABLE_NETADAPT=1"],
       "src": ["+<services/net/netadapt/netadapt.c>"],
-      "tests": ["test_netadapt"]
+      "tests": ["unit/net/test_netadapt"]
     },
     "native_dshot": {
       "desc": "DShot ESC throttle codec (services/peripherals/dshot): the 16-bit frame (11-bit value + telemetry +\n4-bit nibble-xor CRC), the bidirectional inverted-CRC variant, decode/validate, and per-rate bit\ntiming. Pure host tests with hand-computed vectors.",
       "flags": ["-DPC_ENABLE_DSHOT=1"],
       "src": ["+<services/peripherals/dshot/dshot.c>"],
-      "tests": ["test_dshot"]
+      "tests": ["unit/peripherals/test_dshot"]
     },
     "native_hart": {
       "desc": "HART / HART-IP codec (services/fieldbus/hart): the HART command frame (longitudinal XOR checksum,\nshort + long addressing) build/parse and the 8-octet HART-IP message header. Pure host tests with\nhand-verified vectors (command-0 checksum 0x82).",
       "flags": ["-DPC_ENABLE_HART=1"],
       "src": ["+<services/fieldbus/hart/hart.c>"],
-      "tests": ["test_hart"]
+      "tests": ["unit/fieldbus/test_hart"]
     },
     "native_nts": {
       "desc": "Network Time Security codec (network_drivers/application/nts, RFC 8915): the NTS-KE TLV records (build the\nstandard request, parse a response) and the NTS NTP extension-field framing (unique id / cookie,\nRFC 7822 4-byte padding). Pure host tests with spec-derived vectors.",
       "flags": ["-DPC_ENABLE_NTS=1"],
       "src": ["+<network_drivers/application/nts/nts.c>"],
-      "tests": ["test_nts"]
+      "tests": ["unit/application/test_nts"]
     },
     "native_dds": {
       "desc": "DDS / RTPS framing codec (services/iot/dds): the 20-octet RTPS header (magic/version/vendor/\nguidPrefix) and the submessage TLV (id/flags/octetsToNextHeader, endianness flag), build + parse.\nPure host tests with spec-derived vectors.",
       "flags": ["-DPC_ENABLE_DDS=1"],
       "src": ["+<services/iot/dds/dds.c>"],
-      "tests": ["test_dds"]
+      "tests": ["unit/iot/test_dds"]
     },
     "native_xmpp": {
       "desc": "XMPP stanza codec (services/iot/xmpp, RFC 6120): XML-escaped stream/message/presence/iq\nbuilders and the stanza-name + attribute readers. Pure host tests with exact-output vectors.",
       "flags": ["-DPC_ENABLE_XMPP=1"],
       "src": ["+<services/iot/xmpp/xmpp.c>"],
-      "tests": ["test_xmpp"]
+      "tests": ["unit/iot/test_xmpp"]
     },
     "native_rawl2": {
       "desc": "Raw L2 Ethernet frame codec (services/fieldbus/rawl2): Ethernet II + 802.1Q VLAN build/parse and the\n802.3 FCS (CRC-32). Pure host tests (FCS check value 0xCBF43926).",
       "flags": ["-DPC_ENABLE_RAWL2=1"],
       "src": ["+<services/fieldbus/rawl2/rawl2.c>"],
-      "tests": ["test_rawl2"]
+      "tests": ["unit/fieldbus/test_rawl2"]
     },
     "native_spa_router": {
       "desc": "Single-page-app micro-routing (services/web/spa_router): the serve-file / serve-shell /\npassthrough decision from a request path (extension test + API prefix). Pure host tests.",
       "flags": ["-DPC_ENABLE_SPA_ROUTER=1"],
       "src": ["+<services/web/spa_router/spa_router.c>"],
-      "tests": ["test_spa_router"]
+      "tests": ["unit/web/test_spa_router"]
     },
     "native_goose": {
       "desc": "IEC 61850 GOOSE publisher codec (services/energy/goose): the BER IECGoosePdu (gocbRef..allData,\nminimal-length INTEGERs with the positive leading-zero rule) + the GOOSE header + Ethernet frame\n(ethertype 0x88B8). Pure host tests with structural + spec-derived vectors.",
       "flags": ["-DPC_ENABLE_GOOSE=1"],
       "src": ["+<services/energy/goose/goose.c>"],
-      "tests": ["test_goose"]
+      "tests": ["unit/energy/test_goose"]
     },
     "native_mtconnect": {
       "desc": "MTConnect agent response codec (services/machine_tool/mtconnect, ANSI/MTC1.4): the incremental\nMTConnectStreams builder (header + Samples/Events/Condition), the MTConnectDevices probe (device\nmodel), the MTConnectAssets response (CuttingTool life cycle), the sample sequence cursor (a rolling\nobservation ring replayed as a from/count long-poll window), and the MTConnectError document,\nXML-escaped. Pure host tests with structural assertions.",
       "flags": ["-DPC_ENABLE_MTCONNECT=1"],
       "src": ["+<services/machine_tool/mtconnect/mtconnect.c>"],
-      "tests": ["test_mtconnect"]
+      "tests": ["unit/machine_tool/test_mtconnect"]
     },
     "native_wal": {
       "desc": "Write-ahead store for atomic buffer-to-flash storage (services/storage/wal): CRC32 record\nframing + crash-recovery replay (the atomicity core), plus the A/B superblock + checkpoint + mount\nlayer over a block-device seam. Pure host tests, incl. the CRC-32 check vector, torn/truncated-tail\nrecovery to the last good record, checkpoint durability, and superblock fallback.",
@@ -2579,139 +2592,142 @@
         "+<services/storage/wal/wal.c>",
         "+<services/storage/wal/wal_store.c>"
       ],
-      "tests": ["test_wal", "test_wal_store"]
+      "tests": [
+        "protocols/storage/test_wal",
+        "protocols/storage/test_wal_store"
+      ]
     },
     "native_j2735": {
       "desc": "SAE J2735 V2X codec (services/transportation/j2735): the ASN.1 UPER bit primitive layer (constrained\nINTEGER / BOOLEAN / bit fields) and the BSMcore block encode/decode. Pure host tests with\nhand-computed bit patterns (162-bit BSMcore -> 21 octets).",
       "flags": ["-DPC_ENABLE_J2735=1"],
       "src": ["+<services/transportation/j2735/j2735.c>"],
-      "tests": ["test_j2735"]
+      "tests": ["unit/transportation/test_j2735"]
     },
     "native_nema_ts2": {
       "desc": "NEMA TS 2 SDLC frame codec (services/transportation/nema_ts2): the traffic-cabinet bus frame\n([address][control][frame-type][data][CRC-16/X-25]) build + validate. Pure host tests (CRC check\nvalue 0x906E).",
       "flags": ["-DPC_ENABLE_NEMA_TS2=1"],
       "src": ["+<services/transportation/nema_ts2/nema_ts2.c>"],
-      "tests": ["test_nema_ts2"]
+      "tests": ["unit/transportation/test_nema_ts2"]
     },
     "native_snp": {
       "desc": "GE Fanuc SNP serial frame codec (services/fieldbus/snp): the Series Ninety Protocol frame\n([control][length][data][arithmetic-sum BCC]) build + validate. Pure host tests.",
       "flags": ["-DPC_ENABLE_SNP=1"],
       "src": ["+<services/fieldbus/snp/snp.c>"],
-      "tests": ["test_snp"]
+      "tests": ["unit/fieldbus/test_snp"]
     },
     "native_directnet": {
       "desc": "AutomationDirect DirectNET serial frame codec (services/fieldbus/directnet): the header (SOH +\nASCII-hex slave/type/addr/blocks + ETB + LRC) and data (STX + data + ETX + LRC) frames build/parse.\nPure host tests.",
       "flags": ["-DPC_ENABLE_DIRECTNET=1"],
       "src": ["+<services/fieldbus/directnet/directnet.c>"],
-      "tests": ["test_directnet"]
+      "tests": ["unit/fieldbus/test_directnet"]
     },
     "native_sep2": {
       "desc": "IEEE 2030.5 (SEP 2.0) resource codec (services/energy/sep2): the DeviceCapability, EndDevice,\nand DERControl XML documents (urn:ieee:std:2030.5:ns), XML-escaped. Pure host tests.",
       "flags": ["-DPC_ENABLE_SEP2=1"],
       "src": ["+<services/energy/sep2/sep2.c>", "+<mmgr/protostr.c>"],
-      "tests": ["test_sep2"]
+      "tests": ["unit/energy/test_sep2"]
     },
     "native_profinet": {
       "desc": "PROFINET DCP frame codec (services/fieldbus/profinet): the 10-octet DCP header + option/suboption\nblocks (even-padding) build + parse/walk, for Identify/Set over raw L2 (ethertype 0x8892). Pure host\ntests with spec-derived vectors.",
       "flags": ["-DPC_ENABLE_PROFINET=1"],
       "src": ["+<services/fieldbus/profinet/profinet.c>"],
-      "tests": ["test_profinet"]
+      "tests": ["unit/fieldbus/test_profinet"]
     },
     "native_ntcip": {
       "desc": "NTCIP transportation object OIDs (services/transportation/ntcip): the NTCIP 1202 signal-controller +\n1203 DMS object roots under 1.3.6.1.4.1.1206.4.2 and the OID builder (root + instance index), for the\nshipped SNMP agent. Pure host tests.",
       "flags": ["-DPC_ENABLE_NTCIP=1"],
       "src": ["+<services/transportation/ntcip/ntcip.c>"],
-      "tests": ["test_ntcip"]
+      "tests": ["unit/transportation/test_ntcip"]
     },
     "native_openadr": {
       "desc": "OpenADR 3.0 JSON codec (services/energy/openadr): the event (programID + eventName + interval\npayloads) and report (VEN reading) JSON documents build, with escaping + a no-stdlib 3-decimal\nformatter. Pure host tests.",
       "flags": ["-DPC_ENABLE_OPENADR=1"],
       "src": ["+<services/energy/openadr/openadr.c>", "+<mmgr/protostr.c>"],
-      "tests": ["test_openadr"]
+      "tests": ["unit/energy/test_openadr"]
     },
     "native_mms": {
       "desc": "IEC 61850 MMS PDU codec (services/energy/mms): the BER confirmed-request/response Read PDUs\n(invokeID + read service + named ObjectName), build + parse. Pure host tests with structural vectors.",
       "flags": ["-DPC_ENABLE_MMS=1"],
       "src": ["+<services/energy/mms/mms.c>"],
-      "tests": ["test_mms"]
+      "tests": ["unit/energy/test_mms"]
     },
     "native_cclink": {
       "desc": "CC-Link cyclic fieldbus frame codec (services/fieldbus/cclink): the frame ([station][command][bit\ndata][word data][sum]) build + parse and the bit/word process-image accessors. Pure host tests.",
       "flags": ["-DPC_ENABLE_CCLINK=1"],
       "src": ["+<services/fieldbus/cclink/cclink.c>"],
-      "tests": ["test_cclink"]
+      "tests": ["unit/fieldbus/test_cclink"]
     },
     "native_powerlink": {
       "desc": "Ethernet POWERLINK basic frame codec (services/fieldbus/powerlink): the EPL cyclic frames\n([messageType][dest][source][payload]) - SoC/PReq/PRes/SoA - build + parse, over raw L2 (0x88AB).\nPure host tests.",
       "flags": ["-DPC_ENABLE_POWERLINK=1"],
       "src": ["+<services/fieldbus/powerlink/powerlink.c>"],
-      "tests": ["test_powerlink"]
+      "tests": ["unit/fieldbus/test_powerlink"]
     },
     "native_sercos": {
       "desc": "SERCOS III motion-bus codec (services/fieldbus/sercos): the MDT/AT telegram (type + phase + cycle\n+ data) build + parse and the 16-bit IDN encode/decode (S/P + set + block). Pure host tests.",
       "flags": ["-DPC_ENABLE_SERCOS=1"],
       "src": ["+<services/fieldbus/sercos/sercos.c>"],
-      "tests": ["test_sercos"]
+      "tests": ["unit/fieldbus/test_sercos"]
     },
     "native_profibus": {
       "desc": "PROFIBUS-DP FDL telegram codec (services/fieldbus/profibus): the SD1 (no-data) + SD2 (variable\ndata, LE/LEr + arithmetic-sum FCS) telegrams build + validate. Pure host tests with spec-derived\nvectors.",
       "flags": ["-DPC_ENABLE_PROFIBUS=1"],
       "src": ["+<services/fieldbus/profibus/profibus.c>"],
-      "tests": ["test_profibus"]
+      "tests": ["unit/fieldbus/test_profibus"]
     },
     "native_lonworks": {
       "desc": "LonWorks / LON-IP network-variable codec (services/fieldbus/lonworks): the LonTalk NV PDU\n([msg-code][14-bit selector][value]) build + parse and the SNVT_temp / SNVT_switch scalar encodings.\nPure host tests.",
       "flags": ["-DPC_ENABLE_LONWORKS=1"],
       "src": ["+<services/fieldbus/lonworks/lonworks.c>"],
-      "tests": ["test_lonworks"]
+      "tests": ["unit/fieldbus/test_lonworks"]
     },
     "native_mbplus": {
       "desc": "Modbus Plus HDLC token-bus codec (services/fieldbus/mbplus): the HDLC frame (7E addr ctrl payload\nCRC-16/X-25 7E) build + validate and the token-rotation ring helper. Pure host tests (CRC 0x906E).",
       "flags": ["-DPC_ENABLE_MBPLUS=1"],
       "src": ["+<services/fieldbus/mbplus/mbplus.c>"],
-      "tests": ["test_mbplus"]
+      "tests": ["unit/fieldbus/test_mbplus"]
     },
     "native_interbus": {
       "desc": "INTERBUS summation-frame codec (services/fieldbus/interbus): the summation frame (loopback +\nper-device 16-bit slices + CRC-16/CCITT FCS) assemble + disassemble. Pure host tests (FCS 0x29B1).",
       "flags": ["-DPC_ENABLE_INTERBUS=1"],
       "src": ["+<services/fieldbus/interbus/interbus.c>"],
-      "tests": ["test_interbus"]
+      "tests": ["unit/fieldbus/test_interbus"]
     },
     "native_iccp": {
       "desc": "ICCP / TASE.2 (IEC 60870-6) Data_Value codec (services/energy/iccp): the StateQ (state + quality)\nand RealQ (scaled INTEGER + quality) indication-point BER structures with optional timestamp. Pure\nhost tests with spec-derived vectors.",
       "flags": ["-DPC_ENABLE_ICCP=1"],
       "src": ["+<services/energy/iccp/iccp.c>"],
-      "tests": ["test_iccp"]
+      "tests": ["unit/energy/test_iccp"]
     },
     "native_wave": {
       "desc": "IEEE 1609 WAVE codec (services/transportation/wave): the 1609.3 WSMP header (version + P-encoded PSID +\nlength) build + parse, the PSID p-encoding, and the 1609.2 secured-message envelope header. Pure host\ntests (carries J2735).",
       "flags": ["-DPC_ENABLE_WAVE=1"],
       "src": ["+<services/transportation/wave/wave.c>"],
-      "tests": ["test_wave"]
+      "tests": ["unit/transportation/test_wave"]
     },
     "native_utmc": {
       "desc": "UTMC common-database codec (services/transportation/utmc): the UTMCRequest (object id) and UTMCResponse\n(value + quality + timestamp) HTTP/XML documents build + the request-id parse, escaped. Pure host tests.",
       "flags": ["-DPC_ENABLE_UTMC=1"],
       "src": ["+<services/transportation/utmc/utmc.c>", "+<mmgr/protostr.c>"],
-      "tests": ["test_utmc"]
+      "tests": ["unit/transportation/test_utmc"]
     },
     "native_ocit": {
       "desc": "OCIT-Outstations message codec (services/transportation/ocit): the object message\n([msg-type][object-type][instance][data-type][value]) build + parse and the typed-value accessors.\nPure host tests.",
       "flags": ["-DPC_ENABLE_OCIT=1"],
       "src": ["+<services/transportation/ocit/ocit.c>"],
-      "tests": ["test_ocit"]
+      "tests": ["unit/transportation/test_ocit"]
     },
     "native_atc": {
       "desc": "ATC field-I/O interop snapshot (services/machine_tool/atc): serialize this device's field-I/O map\nas {\"inputs\":[...],\"outputs\":[...]} JSON for an ATC engine over HTTP, plus the output setter and\nvalue getter. Pure host tests.",
       "flags": ["-DPC_ENABLE_ATC=1"],
       "src": ["+<services/machine_tool/atc/atc.c>", "+<mmgr/protostr.c>"],
-      "tests": ["test_atc"]
+      "tests": ["unit/machine_tool/test_atc"]
     },
     "native_southbound": {
       "desc": "Southbound protocol-driver framework (services/net/southbound): the bounded driver registry\n(register / find / clear / count) and the name-dispatched read/write/read_block/write_block facade,\nincluding capability + not-found handling and transport-error passthrough. Pure host tests.",
       "flags": ["-DPC_ENABLE_SOUTHBOUND=1"],
       "src": ["+<services/net/southbound/southbound.c>"],
-      "tests": ["test_southbound"]
+      "tests": ["protocols/net/test_southbound"]
     },
     "native_sb_modbus": {
       "desc": "Modbus-master southbound driver adapter (services/net/southbound/sb_modbus): binds the\ntransport-agnostic Modbus TCP master codec into the southbound driver framework, so an app\nreads/writes register points by driver name through the one facade. Host-tested end to end\nagainst the real slave codec (pc_modbus_process_adu) over a mock transaction seam.",
@@ -2726,13 +2742,13 @@
         "+<services/fieldbus/modbus/modbus.c>",
         "+<services/fieldbus/modbus/modbus_master.c>"
       ],
-      "tests": ["test_sb_modbus"]
+      "tests": ["integration/net/test_sb_modbus"]
     },
     "native_exc_decoder": {
       "desc": "ESP32 panic / exception decoder (server/exc_decoder): parse a captured Guru Meditation\ndump (cause, register PC + EXCVADDR, backtrace PC:SP frames) into a structured ExcInfo and serialize it\nas JSON for a live /exception panel; tolerates missing fields + a trailing corruption marker. Pure host tests.",
       "flags": ["-DPC_ENABLE_EXC_DECODER=1"],
       "src": ["+<server/exc_decoder.c>", "+<mmgr/protostr.c>"],
-      "tests": ["test_exc_decoder"]
+      "tests": ["unit/server/test_exc_decoder"]
     },
     "native_http_delivery": {
       "desc": "HTTP delivery optimizations (services/file_transfer/http_delivery): the RFC 5861 stale-while-revalidate\nfreshness decision + its Cache-Control builder, and the versioned service-worker precache manifest\n(including that a full PC_DELIVERY_PRECACHE_MAX manifest fits PC_DELIVERY_MANIFEST_BUF and that an\noversized one fails closed rather than truncating). Byte-range serving is network_drivers/application/http_range.h's job,\nnot this service's. Pure host tests.",
@@ -2741,13 +2757,13 @@
         "+<services/file_transfer/http_delivery/http_delivery.c>",
         "+<mmgr/protostr.c>"
       ],
-      "tests": ["test_http_delivery"]
+      "tests": ["unit/http/test_http_delivery"]
     },
     "native_hw_health": {
       "desc": "Hardware-health diagnostics (server/signaling/hw_health): power-rail voltage-drop logger (worst\ndroop + sag/brownout counts), SPI-bus CRC audit with hysteretic clock backoff, GPIO short-circuit test\n(driven vs readback), and capacitor-leakage diag (measured vs expected RC decay). Pure host tests.",
       "flags": ["-DPC_ENABLE_HW_HEALTH=1"],
       "src": ["+<server/signaling/hw_health.c>", "+<mmgr/protostr.c>"],
-      "tests": ["test_hw_health"]
+      "tests": ["unit/server/test_hw_health"]
     },
     "native_mdns_adaptive": {
       "desc": "Adaptive mDNS beacon scheduling (network_drivers/application/mdns_adaptive): RF-contention backoff/recovery\nof the announce interval, the TTL/2 continuous-refresher cadence, the announce-due check, and the\nauto-sleep beacon (announce before a sleep that would lapse the record). Wrap-safe. Pure host tests.",
@@ -2756,19 +2772,19 @@
         "+<network_drivers/application/mdns_adaptive/mdns_adaptive.c>",
         "+<server/clock/clock.c>"
       ],
-      "tests": ["test_mdns_adaptive"]
+      "tests": ["unit/application/test_mdns_adaptive"]
     },
     "native_sockpool": {
       "desc": "Dynamic socket recycling (services/net/sockpool): a fixed LRU connection-slot pool - acquire\n(free slot, else recycle the least-recently-used and report the evicted id), touch, release, find, and\nin-use count. Pure host tests.",
       "flags": ["-DPC_ENABLE_SOCKPOOL=1"],
       "src": ["+<services/net/sockpool/sockpool.c>"],
-      "tests": ["test_sockpool"]
+      "tests": ["unit/transport/test_sockpool"]
     },
     "native_psram_pool": {
       "desc": "Buffer placement policy + DMA ping-pong (services/storage/psram_pool): pc_psram_place picks\nDRAM vs PSRAM by size / DMA requirement / free-heap headroom (large-cold to PSRAM, small-hot + DMA to\nDRAM, leaving a DRAM reserve), plus the SPI DMA ping-pong double-buffer index bookkeeping. Pure host tests.",
       "flags": ["-DPC_ENABLE_PSRAM_POOL=1"],
       "src": ["+<services/storage/psram_pool/psram_pool.c>"],
-      "tests": ["test_psram_pool"]
+      "tests": ["unit/storage/test_psram_pool"]
     },
     "native_happy_eyeballs": {
       "desc": "Dual-stack Happy Eyeballs selection (services/net/happy_eyeballs): RFC 6724 destination\npreference scoring, the candidate-list sort + RFC 8305 address-family interleave, and the Connection\nAttempt Delay gate, over the shipped pc_ip. Pure host tests.",
@@ -2777,7 +2793,7 @@
         "+<services/net/happy_eyeballs/happy_eyeballs.c>",
         "+<shared_primitives/ip.c>"
       ],
-      "tests": ["test_happy_eyeballs"]
+      "tests": ["unit/net/test_happy_eyeballs"]
     },
     "native_wifi_sniffer": {
       "desc": "802.11 sniffer / traffic analyzer (services/radio/wifi_sniffer): decode an 802.11 MAC header\n(frame-control type/subtype + flags, ToDS/FromDS-dependent addresses), tally frames by type, the\nRSSI-hysteresis channel-agility roaming decision, the channel-hop dwell schedule (hop/wrap/sweep\ncounting, clamping, millis-rollover safety), and the per-channel RSSI survey (best RSSI + BSSID per\nchannel, out-of-range rejection, strongest-other-channel candidate feeding the roam decision).\nPure host tests.",
@@ -2786,55 +2802,55 @@
         "+<services/radio/wifi_sniffer/wifi_sniffer.c>",
         "+<server/clock/clock.c>"
       ],
-      "tests": ["test_wifi_sniffer"]
+      "tests": ["unit/radio/test_wifi_sniffer"]
     },
     "native_link_manager": {
       "desc": "Multi-interface egress selection (server/signaling/link_manager): a table of interfaces (kind +\npriority + up/down) with deterministic best-link-up selection, graceful escalation to a higher-priority\ninterface, failover when it drops, and real-transition change detection. Pure host tests.",
       "flags": ["-DPC_ENABLE_LINK_MANAGER=1"],
       "src": ["+<server/signaling/link_manager.c>"],
-      "tests": ["test_link_manager"]
+      "tests": ["unit/server/test_link_manager"]
     },
     "native_cc1101": {
       "desc": "CC1101 sub-GHz radio driver (services/radio/cc1101): the TI SPI header protocol (config\nregisters, command strobes, status registers, TX/RX FIFO) - init/detect, variable-length send, TX-done,\nset-rx, packet recv with appended RSSI/LQI, and RSSI-to-dBm decode, against a mock chip. Host tests.",
       "flags": ["-DPC_ENABLE_CC1101=1"],
       "src": ["+<services/radio/cc1101/cc1101.c>"],
-      "tests": ["test_cc1101"]
+      "tests": ["protocols/radio/test_cc1101"]
     },
     "native_fdc2214": {
       "desc": "FDC2114/2214 capacitance-to-digital field sensor (services/peripherals/fdc2214): the 28-bit data\ncombine + error flags, the frequency scale (data/2^28 * fref), and the single-channel config-sequence\nbuilder. Pure codec host tests (the I2C binding is ESP32-only).",
       "flags": ["-DPC_ENABLE_FDC2214=1"],
       "src": ["+<services/peripherals/fdc2214/fdc2214.c>"],
-      "tests": ["test_fdc2214"]
+      "tests": ["unit/peripherals/test_fdc2214"]
     },
     "native_ldc1614": {
       "desc": "LDC1614 inductance-to-digital field sensor (services/peripherals/ldc1614): the 28-bit data combine +\nerror flags, the frequency scale (data/2^28 * fref), and the single-channel config-sequence builder.\nPure codec host tests (the I2C binding is ESP32-only).",
       "flags": ["-DPC_ENABLE_LDC1614=1"],
       "src": ["+<services/peripherals/ldc1614/ldc1614.c>"],
-      "tests": ["test_ldc1614"]
+      "tests": ["unit/peripherals/test_ldc1614"]
     },
     "native_vl53l0x": {
       "desc": "VL53L0X time-of-flight ranging codec (services/peripherals/vl53l0x): the range byte-pair combine to\nmillimeters, the interrupt-status data-ready decode, and the device range-status validity check. Pure\ncodec host tests (the I2C ranging binding is ESP32-only).",
       "flags": ["-DPC_ENABLE_VL53L0X=1"],
       "src": ["+<services/peripherals/vl53l0x/vl53l0x.c>"],
-      "tests": ["test_vl53l0x"]
+      "tests": ["unit/peripherals/test_vl53l0x"]
     },
     "native_radio_sniff": {
       "desc": "Receive-only radio channel sniffer -> pcap (services/radio/radio_sniff): the int->float32 RSSI\nencode, the pcap global header (DLT 802.15.4 TAP), and the per-frame TAP record (RSSI + channel TLVs +\nMAC frame) so a sniffed radio channel opens in Wireshark. Pure host tests.",
       "flags": ["-DPC_ENABLE_RADIO_SNIFF=1"],
       "src": ["+<services/radio/radio_sniff/radio_sniff.c>"],
-      "tests": ["test_radio_sniff"]
+      "tests": ["unit/radio/test_radio_sniff"]
     },
     "native_ble_gatt": {
       "desc": "Bluetooth ATT codec + GATT bridge (services/radio/ble_gatt): build/parse the common ATT PDUs\n(read/write/notify/error, LE handles) and serialize a GATT characteristic table as JSON for the web\nstack. Pure host tests.",
       "flags": ["-DPC_ENABLE_BLE_GATT=1"],
       "src": ["+<services/radio/ble_gatt/ble_gatt.c>", "+<mmgr/protostr.c>"],
-      "tests": ["test_ble_gatt"]
+      "tests": ["unit/radio/test_ble_gatt"]
     },
     "native_tls_policy": {
       "desc": "TLS version negotiation + pinned cipher policy (services/security/tls_policy): the server-style\nversion pick (highest supported not above the client's), the version name, cipher selection by server\npreference from the offered set, and the AEAD-suite classifier. Pure host tests.",
       "flags": ["-DPC_ENABLE_TLS_POLICY=1"],
       "src": ["+<services/security/tls_policy/tls_policy.c>"],
-      "tests": ["test_tls_policy"]
+      "tests": ["unit/tls/test_tls_policy"]
     },
     "native_wisun": {
       "desc": "Wi-SUN FAN border-router connector (services/radio/wisun): the CoAP client request builder (RFC\n7252 header + Uri-Path options with extended-length + payload) and the FAN node registry (register / find\n/ joined-count / JSON) over pc_ip. Pure host tests.",
@@ -2844,19 +2860,19 @@
         "+<shared_primitives/ip.c>",
         "+<mmgr/protostr.c>"
       ],
-      "tests": ["test_wisun"]
+      "tests": ["unit/radio/test_wisun"]
     },
     "native_logbuf": {
       "desc": "Rotating log ring + severity trap (server/logbuf): pure, fully host-tested.",
       "flags": ["-DPC_ENABLE_LOGBUF=1"],
       "src": ["+<server/logbuf.c>", "+<mmgr/frame.c>", "+<mmgr/protostr.c>"],
-      "tests": ["test_logbuf"]
+      "tests": ["unit/server/test_logbuf"]
     },
     "native_power_mgmt": {
       "desc": "SoC power governor (server/power_mgmt): the pure clock decision from load, die\ntemperature and reset reason - load-based scaling, the thermal hysteresis that stops a part parked at\nthe limit from oscillating (asserted by feeding the plan's own output back for 20 ticks and counting\none transition), post-brownout recovery holding the floor even when busy and cool, the precedence\nbetween the three, and INT16_MIN meaning no sensor rather than ice-cold.",
       "flags": ["-DPC_ENABLE_POWER_MGMT=1"],
       "src": ["+<server/power_mgmt.c>", "+<mmgr/protostr.c>"],
-      "tests": ["test_power_mgmt"]
+      "tests": ["unit/server/test_power_mgmt"]
     },
     "native_hotswap": {
       "desc": "Removable-storage hot-swap safeties (services/storage/hotswap): the ABSENT/READY/FAULTED state\nmachine - a run of consecutive I/O errors faults a volume while a single one does not, any success\nresets the run, the fail counter saturates instead of wrapping, probe attempts are rate-limited (and\nwrap-safe across a millis() rollover), present-but-unmountable stays absent, and a full\nremoval/reinsertion cycle returns to a clean mount. Pure host tests with a synthetic clock.",
@@ -2866,7 +2882,7 @@
         "+<server/clock/clock.c>",
         "+<mmgr/protostr.c>"
       ],
-      "tests": ["test_hotswap"]
+      "tests": ["protocols/storage/test_hotswap"]
     },
     "native_log": {
       "desc": "Abstract logging macros (shared_primitives/log.h) whose disabled levels are discarded by\nthe preprocessor: built at PC_LOG_LEVEL_INFO so DEBUG is below the floor. Asserts that a discarded\ncall reaches neither the sink nor the ring and never even evaluates its arguments, that INFO/WARN/ERROR\nemit with the right level, that the PC_LOG_LEVEL_* values agree with pc_log_level's, and the formatting\nedges (truncation, null format, empty message).",
@@ -2877,7 +2893,7 @@
         "+<mmgr/frame.c>",
         "+<mmgr/protostr.c>"
       ],
-      "tests": ["test_log"]
+      "tests": ["unit/server/test_log"]
     },
     "native_config_io": {
       "desc": "Schema-driven config export/restore (services/storage/config_io) over the config store;\nround-trip host-tested against the in-memory backend.",
@@ -2889,7 +2905,7 @@
         "+<mmgr/frame.c>",
         "+<mmgr/protostr.c>"
       ],
-      "tests": ["test_config_io"]
+      "tests": ["unit/storage/test_config_io"]
     },
     "native_workers": {
       "desc": "Core-partitioning invariant at N=2 (PC_WORKER_COUNT=2): each worker reaps\nonly its owned slots (check_timeouts ownership). Per-worker queue routing is\nhardware-verified (the host queue mock ignores the handle).",
@@ -2904,7 +2920,7 @@
         "+<mmgr/arena.c>",
         "+<server/clock/clock.c>"
       ],
-      "tests": ["test_workers"]
+      "tests": ["integration/transport/test_workers"]
     },
     "native_codeql": {
       "desc": "CodeQL coverage env: the full app compiled with every new feature flag ON so\nCodeQL traces the integration paths (CSRF / lockout / allowlist gates,\npermessage-deflate) AND the new service modules, which the per-feature envs scan\nonly in isolation. Built (--without-testing) by the CodeQL workflow; one test\nin the filter is enough to pull in the whole src set.",
@@ -3100,25 +3116,25 @@
         "+<network_drivers/presentation/codec/codec.c>",
         "+<mmgr/protostr.c>"
       ],
-      "tests": ["test_dispatch"]
+      "tests": ["integration/fieldbus/test_dispatch"]
     },
     "native_clock": {
       "desc": "Pluggable monotonic clock (server/clock): default millis(), custom clock\ndivided down to the internal 1000 Hz, plus the microsecond base and latency\nbudgeting. Builds server/clock/clock.c, which owns the installed-clock state.",
       "src": ["-<*>", "+<server/clock/clock.c>"],
-      "tests": ["test_clock"]
+      "tests": ["protocols/pc_clock/test_clock"]
     },
     "native_concurrency": {
       "desc": "Concurrency proof for the cross-thread slot fields (pc_atomic state / rx_head /\nrx_tail). Two threads drive one slot's SPSC ring with the production access\npattern; asserts byte-exact in-order delivery. Portable (-pthread), runs on any\nhost including Windows - this verifies the data integrity / logic.",
       "flags": ["-O1", "-pthread"],
       "src": ["-<*>"],
-      "tests": ["test_concurrency"],
+      "tests": ["integration/transport/test_concurrency"],
       "test_build_src": "no"
     },
     "native_tsan": {
       "desc": "Same harness under ThreadSanitizer: proves ZERO data races on the slot fields\n(the pc_atomic acquire/release happens-before lets the plain rx_buffer[] writes\nbe read on the other core safely). TSan ships with clang/gcc on Linux, so this\nenv is run by the test CI (ubuntu); it is not buildable on the Windows host.",
       "flags": ["-g", "-O1", "-fsanitize=thread", "-pthread"],
       "src": ["-<*>"],
-      "tests": ["test_concurrency"],
+      "tests": ["integration/transport/test_concurrency"],
       "test_build_src": "no"
     },
     "native_qpack": {
@@ -3128,13 +3144,13 @@
         "+<network_drivers/presentation/codec/hpack_prim/hpack_prim.c>",
         "+<network_drivers/presentation/http/http3/qpack.c>"
       ],
-      "tests": ["test_qpack"]
+      "tests": ["unit/http/test_qpack"]
     },
     "native_quic_packet": {
       "desc": "QUIC packet header + packet-number codec (network_drivers/presentation/http/http3/quic_packet,\nRFC 9000 sec 17): the long-header build/parse round-trip, a Version Negotiation packet (Version 0\n+ supported-version list), the short (1-RTT) header parse, and packet-number truncation coding\nagainst the Appendix A.2 (encode) and A.3 (decode) worked examples. Pure host codec.",
       "flags": ["-DPC_ENABLE_HTTP3=1"],
       "src": ["+<network_drivers/presentation/http/http3/quic_packet.c>"],
-      "tests": ["test_quic_packet"]
+      "tests": ["unit/http/test_quic_packet"]
     },
     "native_quic_frame": {
       "desc": "QUIC frame codec (network_drivers/presentation/http/http3/quic_frame, RFC 9000 sec 19):\nbuilder/parser round-trips for PADDING/PING/HANDSHAKE_DONE, ACK (single-range + a hand-built\nmulti-range-with-ECN cursor advance), CRYPTO, STREAM (with/without Offset, LEN-absent to packet\nend), MAX_DATA, CONNECTION_CLOSE (transport + app), a multi-frame sequential parse, truncation.",
@@ -3143,7 +3159,7 @@
         "+<network_drivers/presentation/http/http3/quic_frame.c>",
         "+<network_drivers/presentation/http/http3/quic_varint.c>"
       ],
-      "tests": ["test_quic_frame"]
+      "tests": ["unit/http/test_quic_frame"]
     },
     "native_quic_crypto": {
       "desc": "QUIC Initial packet crypto (crypto/hkdf + quic_aead +\nquic_crypto, RFC 9001): HKDF-Expand-Label key derivation, AEAD_AES_128_GCM (software AES-128 +\nGHASH) and header protection. Checked against FIPS 197 (AES block), GCM Test Case 4, and RFC 9001\nAppendix A - A.1 secrets, A.3 server Initial byte-exact, A.2 client Initial + sample, A.4 Retry tag.",
@@ -3161,7 +3177,7 @@
         "+<network_drivers/session/worker.c>",
         "+<board_drivers/hal/portable/portable_platform.c>"
       ],
-      "tests": ["test_quic_crypto"]
+      "tests": ["unit/http/test_quic_crypto"]
     },
     "native_dtls": {
       "desc": "DTLS 1.3 record layer (network_drivers/presentation/security/dtls/dtls_record, RFC 9147 sec 4):\nDTLSPlaintext + DTLSCiphertext protect/unprotect, the unified header, sequence-number encryption\n(sec 4.2.3) and reconstruction (sec 4.2.2), the AEAD nonce, and the anti-replay window (sec 4.5.1).\nThe key + record KAT is byte-exact against an independent HKDF-Expand-Label + AEAD_AES_128_GCM +\nAES-ECB reconstruction (RFC 5869 / RFC 8446 / SP 800-38D). Pure host tests.",
@@ -3179,7 +3195,7 @@
         "+<network_drivers/session/worker.c>",
         "+<board_drivers/hal/portable/portable_platform.c>"
       ],
-      "tests": ["test_dtls_record"]
+      "tests": ["unit/tls/test_dtls_record"]
     },
     "native_dtls_hs": {
       "desc": "DTLS 1.3 handshake framing + reliability (network_drivers/presentation/security/dtls/dtls_handshake,\nRFC 9147 sec 5 + 7): the 12-byte DTLS handshake header, overlap-tolerant message reassembly, the\nACK message (content type 26), and the stateless HelloRetryRequest cookie (sec 5.1). The cookie\nwire format is byte-exact against an independent Python-stdlib HMAC-SHA256, proving the field\nlayout and the client-address binding. Pure host tests.",
@@ -3194,7 +3210,7 @@
         "+<network_drivers/session/worker.c>",
         "+<board_drivers/hal/portable/portable_platform.c>"
       ],
-      "tests": ["test_dtls_handshake"]
+      "tests": ["protocols/tls/test_dtls_handshake"]
     },
     "native_dtls_tls13": {
       "desc": "TLS 1.3 messages the DTLS 1.3 handshake adds to tls13_msg (RFC 8446 sec 4.1.4 / 4.4.1),\ncompiled for the DTLS path (PC_ENABLE_DTLS, not HTTP/3): the HelloRetryRequest builder, the\ncookie extension parse, the empty EncryptedExtensions, and the message_hash transcript wrapper.\nThe HelloRetryRequest is byte-exact, anchored on the RFC 8446 sec 4.1.3 magic random. Also the RFC\n7250 Raw Public Keys codec (PC_ENABLE_TLS_RPK): the Ed25519 SubjectPublicKeyInfo encoder, the\nRawPublicKey Certificate message, the server_certificate_type EncryptedExtensions, and the\nserver_certificate_type ClientHello parse. Pure host tests.",
@@ -3205,7 +3221,7 @@
         "+<crypto/asymmetric/curve25519.c>",
         "+<crypto/asymmetric/ed25519.c>"
       ],
-      "tests": ["test_dtls_tls13"]
+      "tests": ["unit/tls/test_dtls_tls13"]
     },
     "native_dtls_conn": {
       "desc": "DTLS 1.3 server handshake state machine (network_drivers/presentation/security/dtls/dtls_conn,\nRFC 9147 sec 5-6): the one-round-trip full handshake (TLS_AES_128_GCM_SHA256 / X25519 / Ed25519)\nover the DTLS record + framing layers, reusing the TLS 1.3 messages + key schedule. A minimal\nin-test DTLS client completes the handshake end to end - deprotecting the server flight, verifying\nthe CertificateVerify signature and Finished MAC over the real transcript, and confirming both\nsides install identical application-traffic keys. Also drives the HelloRetryRequest group\nrenegotiation (sec 5.1): a ClientHello with no X25519 key_share draws an HRR + address-bound cookie,\nand the retry that echoes it completes over the message_hash || HRR || ClientHello2 transcript; a\nretry without the cookie is rejected. An RFC 7250 Raw Public Keys case (PC_ENABLE_TLS_RPK) offers\nserver_certificate_type = RawPublicKey and confirms the server answers with a 44-byte Ed25519\nSubjectPublicKeyInfo whose key CertificateVerify signs. Pure host tests.",
@@ -3230,7 +3246,7 @@
         "+<board_drivers/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>"
       ],
-      "tests": ["test_dtls_conn"]
+      "tests": ["protocols/tls/test_dtls_conn"]
     },
     "native_coaps": {
       "desc": "CoAP over DTLS (services/iot/coap/coaps, RFC 7252 sec 9): the bridge that drives a DtlsConn\nhandshake and, once established, unwraps each epoch-3 application record, answers it with\ncoap_server_process(), and re-wraps the response. An in-test DTLS 1.3 client completes the handshake\nand exchanges a CoAP GET, decrypting the CoAP response from the returned DTLS record; a replayed\napplication record is dropped. Pure host tests.",
@@ -3261,7 +3277,7 @@
         "+<board_drivers/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>"
       ],
-      "tests": ["test_coaps"]
+      "tests": ["integration/crypto/test_coaps"]
     },
     "native_coaps_server": {
       "desc": "CoAP-over-DTLS server front-end (services/iot/coap/coaps_server): the per-peer DtlsConn pool +\ningest/poll seam on top of pc_coaps_process(). An in-test DTLS 1.3 client drives the server only through\ncoaps_server_ingest() and an output sink, exercising peer-address routing, the handshake + CoAP\nexchange, the poll-driven retransmission timer (RFC 9147 sec 5.8), and idle-connection reaping. Two\nsimultaneous peers are routed to their own connections. Pure host tests.",
@@ -3293,7 +3309,7 @@
         "+<board_drivers/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>"
       ],
-      "tests": ["test_coaps_server"]
+      "tests": ["integration/crypto/test_coaps_server"]
     },
     "native_tls13_kdf": {
       "desc": "TLS 1.3 key schedule for the QUIC handshake (network_drivers/tls/tls13_kdf,\nRFC 8446 sec 7.1 / 4.4.4): Early/Handshake/Master secret Extract chain, client/server handshake +\napplication traffic secrets, the server handshake write key/iv label path, and the server Finished\nverify_data over a full ClientHello..CertificateVerify transcript. Pinned to RFC 8448 sec 3.",
@@ -3309,7 +3325,7 @@
         "+<network_drivers/session/worker.c>",
         "+<board_drivers/hal/portable/portable_platform.c>"
       ],
-      "tests": ["test_tls13_kdf"]
+      "tests": ["unit/tls/test_tls13_kdf"]
     },
     "native_quic_tp": {
       "desc": "QUIC transport parameters codec (network_drivers/presentation/http/http3/quic_tp, RFC 9000\nsec 18): the sec 18.2 defaults, an encode/parse round-trip over the connection IDs + every varint\nparameter + the migration flag, parsing a hand-built byte string, skipping unknown/GREASE ids, and\nrejecting a duplicate parameter, an oversized connection ID, and out-of-range values.",
@@ -3318,7 +3334,7 @@
         "+<network_drivers/presentation/http/http3/quic_tp.c>",
         "+<network_drivers/presentation/http/http3/quic_varint.c>"
       ],
-      "tests": ["test_quic_tp"]
+      "tests": ["unit/http/test_quic_tp"]
     },
     "native_tls13_msg": {
       "desc": "TLS 1.3 handshake messages for the QUIC handshake (network_drivers/presentation/http/http3/\ntls13_msg, RFC 8446 sec 4): ClientHello parse (X25519 key_share + capability flags), and the server\nflight. Byte-exact vs RFC 8448 sec 3 for ServerHello / Certificate / Finished, plus the ALPN + QUIC\ntransport-params EncryptedExtensions and an Ed25519 CertificateVerify sign/verify round-trip.",
@@ -3329,7 +3345,7 @@
         "+<crypto/asymmetric/curve25519.c>",
         "+<crypto/asymmetric/ed25519.c>"
       ],
-      "tests": ["test_tls13_msg"]
+      "tests": ["unit/tls/test_tls13_msg"]
     },
     "native_quic_tls": {
       "desc": "TLS 1.3 server handshake state machine for QUIC (network_drivers/presentation/http/http3/\nquic_tls, RFC 9001 / RFC 8446): a full interop round-trip - drive the server with a hand-built\nClientHello, run the client half of the key schedule independently, and confirm both sides derive\nidentical handshake + application secrets and the server accepts the client Finished. Plus\ncapability-negotiation rejections (no h3 ALPN, bad Finished) and partial-CRYPTO handling.",
@@ -3355,7 +3371,7 @@
         "+<network_drivers/session/worker.c>",
         "+<board_drivers/hal/portable/portable_platform.c>"
       ],
-      "tests": ["test_quic_tls"]
+      "tests": ["unit/http/test_quic_tls"]
     },
     "native_quic_tls_pqc": {
       "desc": "TLS 1.3 QUIC handshake with the X25519MLKEM768 post-quantum hybrid group (IANA 0x11ec,\nPC_ENABLE_PQC_KEX=1): drives the server with a hybrid ClientHello, then verifies it as a conforming\nclient - ML-KEM Decaps (an independent reference) + X25519, the 64-byte ML-KEM||X25519 secret, and\nboth Finished MACs. Reuses the classical test_quic_tls suite plus the added hybrid round-trip.",
@@ -3387,7 +3403,7 @@
         "+<network_drivers/session/worker.c>",
         "+<board_drivers/hal/portable/portable_platform.c>"
       ],
-      "tests": ["test_quic_tls"]
+      "tests": ["unit/http/test_quic_tls"]
     },
     "native_quic_conn": {
       "desc": "QUIC v1 server connection engine (network_drivers/presentation/http/http3/quic_conn, RFC 9000\n/ RFC 9001): the test acts as a QUIC client - builds real Initial / Handshake / 1-RTT packets and\ndrives a server QuicConn through a full handshake (per-level AEAD, CRYPTO reassembly, ACKs,\ncoalescing, HANDSHAKE_DONE) and a 1-RTT request/response stream exchange.",
@@ -3415,7 +3431,7 @@
         "+<network_drivers/session/worker.c>",
         "+<board_drivers/hal/portable/portable_platform.c>"
       ],
-      "tests": ["test_quic_conn"]
+      "tests": ["protocols/http/test_quic_conn"]
     },
     "native_h3_conn": {
       "desc": "HTTP/3 application engine (network_drivers/presentation/http/http3/h3_conn, RFC 9114): drives\nh3_conn through the quic_conn callback seam - a QPACK-encoded request on a request stream dispatches\nthe right method/path (+ a POST body), the control stream sends SETTINGS on handshake completion,\nand a response (HEADERS + DATA) round-trips through the QUIC stream send buffer.",
@@ -3447,7 +3463,7 @@
         "+<network_drivers/session/worker.c>",
         "+<board_drivers/hal/portable/portable_platform.c>"
       ],
-      "tests": ["test_h3_conn"]
+      "tests": ["protocols/http/test_h3_conn"]
     },
     "native_h3_e2e": {
       "desc": "End-to-end HTTP/3 capstone (network_drivers/presentation/http/http3): a QUIC client in the\ntest completes the TLS 1.3 handshake against a quic_conn + h3_conn server, sends a real HTTP/3 GET\n(QPACK HEADERS in a STREAM frame), and verifies the app-served response (HEADERS :status 200 + DATA\nbody) - the whole stack composed: QUIC crypto/framing, TLS 1.3, streams, HTTP/3 framing, QPACK.",
@@ -3479,7 +3495,7 @@
         "+<network_drivers/session/worker.c>",
         "+<board_drivers/hal/portable/portable_platform.c>"
       ],
-      "tests": ["test_h3_e2e"]
+      "tests": ["integration/http/test_h3_e2e"]
     },
     "native_quic_server": {
       "desc": "HTTP/3 server glue (network_drivers/presentation/http/http3/quic_server): the UDP-facing pool\nthat routes datagrams by Destination Connection ID to a pool of QuicConn + H3Conn engines. A QUIC\nclient in the test injects datagrams through the host ingest seam and captures the server's replies\nthrough the output sink, driving a full handshake + HTTP/3 GET and verifying the 200 + body - the\nsame end-to-end flow as test_h3_e2e but through pc_quic_server_begin / poll / respond, exercising the\nconnection-ID routing, the ingest ring, and new-connection creation from a client Initial.",
@@ -3514,7 +3530,7 @@
         "+<board_drivers/hal/portable/portable_platform.c>",
         "+<server/clock/clock.c>"
       ],
-      "tests": ["test_quic_server"]
+      "tests": ["integration/http/test_quic_server"]
     },
     "native_h3_server": {
       "desc": "HTTP/3 dispatch bridge end-to-end through PC (the full Layer-7 app built with\nPC_ENABLE_HTTP3=1): a QUIC client completes the handshake and sends an HTTP/3 GET, quic_server\nroutes it to the reserved dispatch slot, match_and_execute runs the registered route, and the\nhandler's send() is routed back onto the request stream via pc_quic_server_respond. Verifies the whole\nwire: a real route handler answers an HTTP/3 request. Reuses the native_stack_http full-app base.",
@@ -3553,7 +3569,7 @@
         "+<network_drivers/session/worker.c>",
         "+<board_drivers/hal/portable/portable_platform.c>"
       ],
-      "tests": ["test_h3_server"]
+      "tests": ["integration/http/test_h3_server"]
     },
     "native_ssh_chachapoly": {
       "desc": "chacha20-poly1305@openssh.com AEAD (network_drivers/presentation/ssh): ChaCha20 vs RFC\n8439 sec 2.3.2 block vector, Poly1305 vs RFC 8439 sec 2.5.2, and the OpenSSH construction\n(length decode, encrypt/decrypt round-trip, tag-tamper + wrong-seqnr rejection). Pure host crypto.",
@@ -3568,7 +3584,7 @@
         "+<network_drivers/session/worker.c>",
         "+<board_drivers/hal/portable/portable_platform.c>"
       ],
-      "tests": ["test_ssh_chachapoly"]
+      "tests": ["unit/ssh/test_ssh_chachapoly"]
     },
     "native_ssh_aesgcm": {
       "desc": "AES-256-GCM AEAD for aes256-gcm@openssh.com (RFC 5647) host-tested here: seal/open vs the\nNIST/McGrew AES-256-GCM Test Case 16 vector, tamper rejection, and the invocation-counter\nadvance. Software AES-256 + GHASH; no heap, no stdlib.",
@@ -3582,7 +3598,7 @@
         "+<network_drivers/session/worker.c>",
         "+<board_drivers/hal/portable/portable_platform.c>"
       ],
-      "tests": ["test_ssh_aesgcm"]
+      "tests": ["unit/ssh/test_ssh_aesgcm"]
     },
     "native_ssh_ecdsa": {
       "desc": "ECDSA P-256 for ecdsa-sha2-nistp256 (RFC 5656) host-tested on the software path: pubkey,\ndeterministic sign, and verify pinned byte-exact to the RFC 6979 A.2.5 (P-256/SHA-256)\nvectors, plus tamper rejection. Self-contained field/point math + RFC 6979 (HMAC-SHA256).",
@@ -3597,19 +3613,19 @@
         "+<network_drivers/session/worker.c>",
         "+<board_drivers/hal/portable/portable_platform.c>"
       ],
-      "tests": ["test_ssh_ecdsa"]
+      "tests": ["unit/ssh/test_ssh_ecdsa"]
     },
     "native_frame": {
       "desc": "The declarative frame builder (shared_primitives/frame.h + frame.cpp): the single engine that\nturns a static pc_field spec into wire bytes, so the ~160 formatting sites in this library carry\na table rather than a hand-written append sequence. Covers every field kind and width, the\nfail-closed contract at the exact byte boundary (a frame that does not fit reports 0 AND leaves a\nvalid empty string, which is what a length comparison against snprintf's would-be length silently\ngot wrong), the append rewind that keeps a header line whole-or-absent, NULL string handling, and\na differential check of the numeric and float conversions against the libc printf whose output\nthese frames replace byte for byte.",
       "flags": [],
       "src": ["-<*>", "+<mmgr/frame.c>", "+<mmgr/protostr.c>"],
-      "tests": ["test_frame"]
+      "tests": ["unit/mmgr/test_frame"]
     },
     "native_span": {
       "desc": "The bounded byte region (server/mmgr/span.h): a pointer and the capacity that belongs to\nit, bound together. Rule 19 converts stack arrays - whose length the compiler ties to the object -\ninto borrowed regions, and the naive rewrite to a bare pointer plus a separate cap argument is\nwhere a 4-byte sizeof() or a mismatched capacity slips through with no diagnostic. Covers the\nextent recovered from the array type, the normalization that makes {nullptr, n} unconstructible\nso an omitted check writes nothing instead of dereferencing null, and the sub-span clamping that\nkeeps a truncated frame from producing a pointer past the allocation.",
       "flags": [],
       "src": ["-<*>"],
-      "tests": ["test_span"]
+      "tests": ["unit/mmgr/test_span"]
     },
     "native_secure_pool": {
       "desc": "The secure pool accessor (server/mmgr/secure): the SAME pool mechanism as the plaintext side\n(server/mmgr/arena) instantiated a second time at a disjoint address, so only what differs is\ncovered here - the access and control layer. Reclaiming WIPES, and wipes before the bytes become\navailable again, so a secret cannot survive its borrow or reach the next tenant; the scope guard\nmakes that hold on the early-return paths a hand-written wipe gets forgotten on. And the two\npools being disjoint regions means ownership is decided by address alone - a secure pointer can\nnever be accepted where a plaintext one is required, or the reverse, with no per-allocation\nmetadata. Allocator mechanics themselves belong to test_arena.",
@@ -3622,7 +3638,7 @@
         "+<network_drivers/session/worker.c>",
         "+<board_drivers/hal/portable/portable_platform.c>"
       ],
-      "tests": ["test_secure_pool"]
+      "tests": ["unit/mmgr/test_secure_pool"]
     },
     "native_pool_workers": {
       "desc": "Both pool accessors at PC_WORKER_COUNT=2. Slot resolution is unobservable in a single-worker\nbuild - pc_worker_self() is an inline compile-time 0 there, so a test cannot present any other\nidentity and every borrow lands on slot 0 whatever the accessor does. Only here does the id\nbecome a real per-task read, so this is the only env in which a worker borrowing from its OWN\nslot, and a caller that is not a server worker landing on the ghost instead of colliding with\nworker 0, are distinguishable from each other.",
@@ -3635,7 +3651,7 @@
         "+<network_drivers/session/worker.c>",
         "+<board_drivers/hal/portable/portable_platform.c>"
       ],
-      "tests": ["test_plaintext", "test_secure_pool"]
+      "tests": ["unit/mmgr/test_plaintext", "unit/mmgr/test_secure_pool"]
     },
     "native_mnt": {
       "desc": "Mounted storage (server/filesystem/mnt) - the backend vtable and its built-in RAM backend,\nhost-tested through that backend (the Arduino FS backend is board-layer and HW-verified).\nFiles, directories, stat, and the readdir cursor. Pure, no heap.",
@@ -3646,19 +3662,19 @@
         "+<mmgr/frame.c>",
         "+<mmgr/protostr.c>"
       ],
-      "tests": ["test_mnt"]
+      "tests": ["protocols/storage/test_mnt"]
     },
     "native_swar": {
       "desc": "Lane math (mmgr/swar.h): one 32-bit word as four byte lanes. has-zero across\nevery lane, the guard-bit range compares the base64 decoder classifies with, and the bounded\nNUL scan diffed against strnlen at every length, NUL position, and alignment.",
       "flags": [],
       "src": [],
-      "tests": ["test_swar"]
+      "tests": ["unit/mmgr/test_swar"]
     },
     "native_lfs_mock": {
       "desc": "The littlefs-backed pc_mnt_backend used by the host tests that need a real tree\n(test/mocks/lfs_mock.h): round-trip, seek, directory listing, stat, rename/remove,\nappend, and a full volume refusing rather than pretending. Real littlefs on a RAM\nblock device, so the host answers the way the device does.",
       "flags": ["-DPC_ENABLE_MNT=1"],
       "src": ["-<*>", "+<server/filesystem/mnt.c>"],
-      "tests": ["test_lfs_mock"]
+      "tests": ["protocols/storage/test_lfs_mock"]
     }
   }
 }

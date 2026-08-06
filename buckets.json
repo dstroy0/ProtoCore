@@ -1,0 +1,1278 @@
+{
+  "test_accept_gate": {
+    "bucket": "integration",
+    "category": "transport"
+  },
+  "test_ad9238": {
+    "bucket": "unit",
+    "category": "peripherals"
+  },
+  "test_ads": {
+    "bucket": "unit",
+    "category": "fieldbus"
+  },
+  "test_ads1115": {
+    "bucket": "unit",
+    "category": "peripherals"
+  },
+  "test_amqp": {
+    "bucket": "unit",
+    "category": "iot"
+  },
+  "test_application": {
+    "bucket": "integration",
+    "category": "misc"
+  },
+  "test_arena": {
+    "bucket": "unit",
+    "category": "session"
+  },
+  "test_atc": {
+    "bucket": "unit",
+    "category": "machine_tool"
+  },
+  "test_audit_log": {
+    "bucket": "unit",
+    "category": "security"
+  },
+  "test_auth": {
+    "bucket": "integration",
+    "category": "crypto"
+  },
+  "test_auth_lockout": {
+    "bucket": "unit",
+    "category": "security"
+  },
+  "test_bacnet": {
+    "bucket": "unit",
+    "category": "fieldbus"
+  },
+  "test_base64": {
+    "bucket": "unit",
+    "category": "codec"
+  },
+  "test_ble_gatt": {
+    "bucket": "unit",
+    "category": "radio"
+  },
+  "test_bus_capture": {
+    "bucket": "unit",
+    "category": "server"
+  },
+  "test_bus_wire": {
+    "bucket": "integration",
+    "category": "peripherals"
+  },
+  "test_c37118": {
+    "bucket": "unit",
+    "category": "energy"
+  },
+  "test_canopen": {
+    "bucket": "unit",
+    "category": "fieldbus"
+  },
+  "test_cbor": {
+    "bucket": "unit",
+    "category": "codec"
+  },
+  "test_cc1101": {
+    "bucket": "protocols",
+    "category": "radio"
+  },
+  "test_cclink": {
+    "bucket": "unit",
+    "category": "fieldbus"
+  },
+  "test_chunked": {
+    "bucket": "integration",
+    "category": "shared_primitives"
+  },
+  "test_cia402": {
+    "bucket": "unit",
+    "category": "fieldbus"
+  },
+  "test_cip": {
+    "bucket": "unit",
+    "category": "fieldbus"
+  },
+  "test_client": {
+    "bucket": "protocols",
+    "category": "transport"
+  },
+  "test_clock": {
+    "bucket": "protocols",
+    "category": "pc_clock"
+  },
+  "test_cloudevents": {
+    "bucket": "unit",
+    "category": "shared_primitives"
+  },
+  "test_coap": {
+    "bucket": "protocols",
+    "category": "transport"
+  },
+  "test_coaps": {
+    "bucket": "integration",
+    "category": "crypto"
+  },
+  "test_coaps_server": {
+    "bucket": "integration",
+    "category": "crypto"
+  },
+  "test_compliance": {
+    "bucket": "integration",
+    "category": "http"
+  },
+  "test_concurrency": {
+    "bucket": "integration",
+    "category": "transport"
+  },
+  "test_config_io": {
+    "bucket": "unit",
+    "category": "storage"
+  },
+  "test_config_store": {
+    "bucket": "unit",
+    "category": "storage"
+  },
+  "test_control": {
+    "bucket": "unit",
+    "category": "system"
+  },
+  "test_cotp": {
+    "bucket": "unit",
+    "category": "fieldbus"
+  },
+  "test_crc": {
+    "bucket": "unit",
+    "category": "shared_primitives"
+  },
+  "test_crypto_kat": {
+    "bucket": "unit",
+    "category": "crypto"
+  },
+  "test_csrf": {
+    "bucket": "unit",
+    "category": "crypto"
+  },
+  "test_dashboard": {
+    "bucket": "unit",
+    "category": "web"
+  },
+  "test_dbm": {
+    "bucket": "protocols",
+    "category": "storage"
+  },
+  "test_dds": {
+    "bucket": "unit",
+    "category": "iot"
+  },
+  "test_defer": {
+    "bucket": "integration",
+    "category": "session"
+  },
+  "test_deflate": {
+    "bucket": "unit",
+    "category": "codec"
+  },
+  "test_device_id": {
+    "bucket": "unit",
+    "category": "server"
+  },
+  "test_devicenet": {
+    "bucket": "unit",
+    "category": "fieldbus"
+  },
+  "test_df1": {
+    "bucket": "unit",
+    "category": "fieldbus"
+  },
+  "test_diag": {
+    "bucket": "integration",
+    "category": "transport"
+  },
+  "test_diffserv": {
+    "bucket": "integration",
+    "category": "transport"
+  },
+  "test_digest_auth": {
+    "bucket": "integration",
+    "category": "crypto"
+  },
+  "test_digest_vectors": {
+    "bucket": "unit",
+    "category": "crypto"
+  },
+  "test_directnet": {
+    "bucket": "unit",
+    "category": "fieldbus"
+  },
+  "test_dispatch": {
+    "bucket": "integration",
+    "category": "fieldbus"
+  },
+  "test_dma": {
+    "bucket": "protocols",
+    "category": "mmgr"
+  },
+  "test_dmx": {
+    "bucket": "unit",
+    "category": "peripherals"
+  },
+  "test_dnc": {
+    "bucket": "unit",
+    "category": "machine_tool"
+  },
+  "test_dnc_stream": {
+    "bucket": "protocols",
+    "category": "machine_tool"
+  },
+  "test_dnp3": {
+    "bucket": "unit",
+    "category": "energy"
+  },
+  "test_dns_resolver": {
+    "bucket": "unit",
+    "category": "network"
+  },
+  "test_dns_server": {
+    "bucket": "protocols",
+    "category": "network"
+  },
+  "test_docstore": {
+    "bucket": "protocols",
+    "category": "storage"
+  },
+  "test_dshot": {
+    "bucket": "unit",
+    "category": "peripherals"
+  },
+  "test_dtls_conn": {
+    "bucket": "protocols",
+    "category": "tls"
+  },
+  "test_dtls_handshake": {
+    "bucket": "protocols",
+    "category": "tls"
+  },
+  "test_dtls_record": {
+    "bucket": "unit",
+    "category": "tls"
+  },
+  "test_dtls_tls13": {
+    "bucket": "unit",
+    "category": "tls"
+  },
+  "test_edge_cache": {
+    "bucket": "unit",
+    "category": "web"
+  },
+  "test_edge_cache_sd": {
+    "bucket": "protocols",
+    "category": "web"
+  },
+  "test_edge_fetch": {
+    "bucket": "protocols",
+    "category": "web"
+  },
+  "test_edge_mesh": {
+    "bucket": "protocols",
+    "category": "web"
+  },
+  "test_enip": {
+    "bucket": "unit",
+    "category": "fieldbus"
+  },
+  "test_enocean": {
+    "bucket": "unit",
+    "category": "radio"
+  },
+  "test_esp": {
+    "bucket": "unit",
+    "category": "system"
+  },
+  "test_espnow": {
+    "bucket": "unit",
+    "category": "radio"
+  },
+  "test_euromap77": {
+    "bucket": "unit",
+    "category": "fieldbus"
+  },
+  "test_exc_decoder": {
+    "bucket": "unit",
+    "category": "server"
+  },
+  "test_failsafe": {
+    "bucket": "unit",
+    "category": "server"
+  },
+  "test_fanuc_j519": {
+    "bucket": "unit",
+    "category": "machine_tool"
+  },
+  "test_fdc2214": {
+    "bucket": "unit",
+    "category": "peripherals"
+  },
+  "test_file_serving": {
+    "bucket": "integration",
+    "category": "filesystem"
+  },
+  "test_fins": {
+    "bucket": "unit",
+    "category": "fieldbus"
+  },
+  "test_flow_export": {
+    "bucket": "unit",
+    "category": "net"
+  },
+  "test_focas": {
+    "bucket": "unit",
+    "category": "machine_tool"
+  },
+  "test_form_params": {
+    "bucket": "integration",
+    "category": "transport"
+  },
+  "test_forward": {
+    "bucket": "protocols",
+    "category": "net"
+  },
+  "test_forwarded_trust": {
+    "bucket": "unit",
+    "category": "security"
+  },
+  "test_frame": {
+    "bucket": "unit",
+    "category": "mmgr"
+  },
+  "test_ftp": {
+    "bucket": "unit",
+    "category": "file_transfer"
+  },
+  "test_gateway": {
+    "bucket": "protocols",
+    "category": "net"
+  },
+  "test_gnss_survey": {
+    "bucket": "unit",
+    "category": "timing_position"
+  },
+  "test_goose": {
+    "bucket": "unit",
+    "category": "energy"
+  },
+  "test_gpib": {
+    "bucket": "unit",
+    "category": "instrumentation"
+  },
+  "test_gpio_map": {
+    "bucket": "unit",
+    "category": "server"
+  },
+  "test_graphql": {
+    "bucket": "unit",
+    "category": "iot"
+  },
+  "test_grpcweb": {
+    "bucket": "unit",
+    "category": "iot"
+  },
+  "test_guardrails": {
+    "bucket": "unit",
+    "category": "security"
+  },
+  "test_h2_conn": {
+    "bucket": "protocols",
+    "category": "http"
+  },
+  "test_h2_frame": {
+    "bucket": "unit",
+    "category": "http"
+  },
+  "test_h3_conn": {
+    "bucket": "protocols",
+    "category": "http"
+  },
+  "test_h3_e2e": {
+    "bucket": "integration",
+    "category": "http"
+  },
+  "test_h3_frame": {
+    "bucket": "unit",
+    "category": "http"
+  },
+  "test_h3_server": {
+    "bucket": "integration",
+    "category": "http"
+  },
+  "test_haas_mdc": {
+    "bucket": "unit",
+    "category": "machine_tool"
+  },
+  "test_happy_eyeballs": {
+    "bucket": "unit",
+    "category": "net"
+  },
+  "test_hart": {
+    "bucket": "unit",
+    "category": "fieldbus"
+  },
+  "test_hislip": {
+    "bucket": "unit",
+    "category": "instrumentation"
+  },
+  "test_hmmd": {
+    "bucket": "unit",
+    "category": "peripherals"
+  },
+  "test_hostlink": {
+    "bucket": "unit",
+    "category": "fieldbus"
+  },
+  "test_hotswap": {
+    "bucket": "protocols",
+    "category": "storage"
+  },
+  "test_hpack": {
+    "bucket": "unit",
+    "category": "http"
+  },
+  "test_http_client": {
+    "bucket": "unit",
+    "category": "http"
+  },
+  "test_http_delivery": {
+    "bucket": "unit",
+    "category": "http"
+  },
+  "test_http_ota": {
+    "bucket": "integration",
+    "category": "http"
+  },
+  "test_http_parser": {
+    "bucket": "unit",
+    "category": "http"
+  },
+  "test_httpcache": {
+    "bucket": "unit",
+    "category": "http"
+  },
+  "test_hw_health": {
+    "bucket": "unit",
+    "category": "server"
+  },
+  "test_iccp": {
+    "bucket": "unit",
+    "category": "energy"
+  },
+  "test_iec60870": {
+    "bucket": "unit",
+    "category": "energy"
+  },
+  "test_iface": {
+    "bucket": "integration",
+    "category": "transport"
+  },
+  "test_iface_bridge": {
+    "bucket": "protocols",
+    "category": "net"
+  },
+  "test_ikev2": {
+    "bucket": "unit",
+    "category": "crypto"
+  },
+  "test_ikev2_natt": {
+    "bucket": "unit",
+    "category": "crypto"
+  },
+  "test_ina219": {
+    "bucket": "unit",
+    "category": "peripherals"
+  },
+  "test_inflate": {
+    "bucket": "unit",
+    "category": "codec"
+  },
+  "test_interbus": {
+    "bucket": "unit",
+    "category": "fieldbus"
+  },
+  "test_iolink": {
+    "bucket": "unit",
+    "category": "fieldbus"
+  },
+  "test_ip": {
+    "bucket": "unit",
+    "category": "shared_primitives"
+  },
+  "test_ipsec_db": {
+    "bucket": "unit",
+    "category": "system"
+  },
+  "test_j1939": {
+    "bucket": "unit",
+    "category": "fieldbus"
+  },
+  "test_j2735": {
+    "bucket": "unit",
+    "category": "transportation"
+  },
+  "test_json": {
+    "bucket": "unit",
+    "category": "codec"
+  },
+  "test_jwt": {
+    "bucket": "unit",
+    "category": "crypto"
+  },
+  "test_keepalive": {
+    "bucket": "integration",
+    "category": "server"
+  },
+  "test_ld2410": {
+    "bucket": "unit",
+    "category": "peripherals"
+  },
+  "test_ldc1614": {
+    "bucket": "unit",
+    "category": "peripherals"
+  },
+  "test_lfs_mock": {
+    "bucket": "protocols",
+    "category": "storage"
+  },
+  "test_link_manager": {
+    "bucket": "unit",
+    "category": "server"
+  },
+  "test_log": {
+    "bucket": "unit",
+    "category": "server"
+  },
+  "test_logbuf": {
+    "bucket": "unit",
+    "category": "server"
+  },
+  "test_lonworks": {
+    "bucket": "unit",
+    "category": "fieldbus"
+  },
+  "test_lora": {
+    "bucket": "protocols",
+    "category": "radio"
+  },
+  "test_lsv2": {
+    "bucket": "unit",
+    "category": "machine_tool"
+  },
+  "test_lwm2m_tlv": {
+    "bucket": "unit",
+    "category": "iot"
+  },
+  "test_mbplus": {
+    "bucket": "unit",
+    "category": "fieldbus"
+  },
+  "test_mbus": {
+    "bucket": "unit",
+    "category": "fieldbus"
+  },
+  "test_mdns_adaptive": {
+    "bucket": "unit",
+    "category": "application"
+  },
+  "test_melsec": {
+    "bucket": "unit",
+    "category": "fieldbus"
+  },
+  "test_middleware": {
+    "bucket": "integration",
+    "category": "transport"
+  },
+  "test_mms": {
+    "bucket": "unit",
+    "category": "energy"
+  },
+  "test_mnt": {
+    "bucket": "protocols",
+    "category": "storage"
+  },
+  "test_modbus": {
+    "bucket": "unit",
+    "category": "fieldbus"
+  },
+  "test_modbus_master": {
+    "bucket": "integration",
+    "category": "fieldbus"
+  },
+  "test_mpr121": {
+    "bucket": "unit",
+    "category": "peripherals"
+  },
+  "test_mqtt": {
+    "bucket": "unit",
+    "category": "iot"
+  },
+  "test_mqtt_sn": {
+    "bucket": "unit",
+    "category": "iot"
+  },
+  "test_msgpack": {
+    "bucket": "unit",
+    "category": "codec"
+  },
+  "test_mtconnect": {
+    "bucket": "unit",
+    "category": "machine_tool"
+  },
+  "test_multipart": {
+    "bucket": "integration",
+    "category": "codec"
+  },
+  "test_nats": {
+    "bucket": "unit",
+    "category": "iot"
+  },
+  "test_nema_ts2": {
+    "bucket": "unit",
+    "category": "transportation"
+  },
+  "test_net_egress": {
+    "bucket": "unit",
+    "category": "physical"
+  },
+  "test_netadapt": {
+    "bucket": "unit",
+    "category": "net"
+  },
+  "test_nmea0183": {
+    "bucket": "unit",
+    "category": "timing_position"
+  },
+  "test_nmea2000": {
+    "bucket": "unit",
+    "category": "timing_position"
+  },
+  "test_nrf24": {
+    "bucket": "protocols",
+    "category": "radio"
+  },
+  "test_ntcip": {
+    "bucket": "unit",
+    "category": "transportation"
+  },
+  "test_ntlm": {
+    "bucket": "unit",
+    "category": "smb"
+  },
+  "test_ntlmssp": {
+    "bucket": "unit",
+    "category": "smb"
+  },
+  "test_ntp_server": {
+    "bucket": "unit",
+    "category": "application"
+  },
+  "test_ntrip_caster": {
+    "bucket": "unit",
+    "category": "timing_position"
+  },
+  "test_nts": {
+    "bucket": "unit",
+    "category": "application"
+  },
+  "test_oauth2": {
+    "bucket": "unit",
+    "category": "security"
+  },
+  "test_observability": {
+    "bucket": "integration",
+    "category": "transport"
+  },
+  "test_ocit": {
+    "bucket": "unit",
+    "category": "transportation"
+  },
+  "test_oidc": {
+    "bucket": "unit",
+    "category": "crypto"
+  },
+  "test_opcua": {
+    "bucket": "unit",
+    "category": "fieldbus"
+  },
+  "test_opcua_client": {
+    "bucket": "integration",
+    "category": "fieldbus"
+  },
+  "test_openadr": {
+    "bucket": "unit",
+    "category": "energy"
+  },
+  "test_ota_rollback": {
+    "bucket": "unit",
+    "category": "server"
+  },
+  "test_packml": {
+    "bucket": "unit",
+    "category": "machine_tool"
+  },
+  "test_partition_monitor": {
+    "bucket": "unit",
+    "category": "storage"
+  },
+  "test_path_params": {
+    "bucket": "integration",
+    "category": "transport"
+  },
+  "test_pca9685": {
+    "bucket": "unit",
+    "category": "peripherals"
+  },
+  "test_pentest": {
+    "bucket": "unit",
+    "category": "fieldbus"
+  },
+  "test_plaintext": {
+    "bucket": "unit",
+    "category": "mmgr"
+  },
+  "test_pmbus": {
+    "bucket": "unit",
+    "category": "peripherals"
+  },
+  "test_pn532": {
+    "bucket": "unit",
+    "category": "peripherals"
+  },
+  "test_power_mgmt": {
+    "bucket": "unit",
+    "category": "server"
+  },
+  "test_powerlink": {
+    "bucket": "unit",
+    "category": "fieldbus"
+  },
+  "test_pqc_mlkem": {
+    "bucket": "unit",
+    "category": "pqc"
+  },
+  "test_pqc_sha3": {
+    "bucket": "unit",
+    "category": "pqc"
+  },
+  "test_pqc_sntrup761": {
+    "bucket": "unit",
+    "category": "pqc"
+  },
+  "test_preempt_queue": {
+    "bucket": "unit",
+    "category": "session"
+  },
+  "test_presentation": {
+    "bucket": "integration",
+    "category": "presentation"
+  },
+  "test_primitives": {
+    "bucket": "unit",
+    "category": "shared_primitives"
+  },
+  "test_profibus": {
+    "bucket": "unit",
+    "category": "fieldbus"
+  },
+  "test_profinet": {
+    "bucket": "unit",
+    "category": "fieldbus"
+  },
+  "test_promisc": {
+    "bucket": "unit",
+    "category": "radio"
+  },
+  "test_protobuf": {
+    "bucket": "unit",
+    "category": "iot"
+  },
+  "test_provisioning": {
+    "bucket": "unit",
+    "category": "system"
+  },
+  "test_proxy_protocol": {
+    "bucket": "unit",
+    "category": "net"
+  },
+  "test_psram_pool": {
+    "bucket": "unit",
+    "category": "storage"
+  },
+  "test_ptp": {
+    "bucket": "unit",
+    "category": "application"
+  },
+  "test_qpack": {
+    "bucket": "unit",
+    "category": "http"
+  },
+  "test_quic_conn": {
+    "bucket": "protocols",
+    "category": "http"
+  },
+  "test_quic_crypto": {
+    "bucket": "unit",
+    "category": "http"
+  },
+  "test_quic_frame": {
+    "bucket": "unit",
+    "category": "http"
+  },
+  "test_quic_packet": {
+    "bucket": "unit",
+    "category": "http"
+  },
+  "test_quic_server": {
+    "bucket": "integration",
+    "category": "http"
+  },
+  "test_quic_tls": {
+    "bucket": "unit",
+    "category": "http"
+  },
+  "test_quic_tp": {
+    "bucket": "unit",
+    "category": "http"
+  },
+  "test_quic_varint": {
+    "bucket": "unit",
+    "category": "http"
+  },
+  "test_radio_power": {
+    "bucket": "unit",
+    "category": "physical"
+  },
+  "test_radio_sniff": {
+    "bucket": "unit",
+    "category": "radio"
+  },
+  "test_range": {
+    "bucket": "integration",
+    "category": "server"
+  },
+  "test_rawl2": {
+    "bucket": "unit",
+    "category": "fieldbus"
+  },
+  "test_rcwl0516": {
+    "bucket": "unit",
+    "category": "peripherals"
+  },
+  "test_redis_resp": {
+    "bucket": "unit",
+    "category": "iot"
+  },
+  "test_regex": {
+    "bucket": "integration",
+    "category": "transport"
+  },
+  "test_relay": {
+    "bucket": "protocols",
+    "category": "net"
+  },
+  "test_response_headers": {
+    "bucket": "integration",
+    "category": "application"
+  },
+  "test_roaming": {
+    "bucket": "unit",
+    "category": "datalink"
+  },
+  "test_robotics": {
+    "bucket": "unit",
+    "category": "fieldbus"
+  },
+  "test_rtc": {
+    "bucket": "unit",
+    "category": "peripherals"
+  },
+  "test_rtcm3": {
+    "bucket": "unit",
+    "category": "timing_position"
+  },
+  "test_s7comm": {
+    "bucket": "unit",
+    "category": "fieldbus"
+  },
+  "test_safety_scl": {
+    "bucket": "unit",
+    "category": "machine_tool"
+  },
+  "test_sb_modbus": {
+    "bucket": "integration",
+    "category": "net"
+  },
+  "test_scp": {
+    "bucket": "unit",
+    "category": "server"
+  },
+  "test_scpi": {
+    "bucket": "unit",
+    "category": "instrumentation"
+  },
+  "test_sdi12": {
+    "bucket": "unit",
+    "category": "peripherals"
+  },
+  "test_secure_pool": {
+    "bucket": "unit",
+    "category": "mmgr"
+  },
+  "test_sen0192": {
+    "bucket": "unit",
+    "category": "peripherals"
+  },
+  "test_senml": {
+    "bucket": "unit",
+    "category": "codec"
+  },
+  "test_sep2": {
+    "bucket": "unit",
+    "category": "energy"
+  },
+  "test_sercos": {
+    "bucket": "unit",
+    "category": "fieldbus"
+  },
+  "test_session": {
+    "bucket": "integration",
+    "category": "presentation"
+  },
+  "test_sht3x": {
+    "bucket": "unit",
+    "category": "peripherals"
+  },
+  "test_sigfox": {
+    "bucket": "unit",
+    "category": "radio"
+  },
+  "test_signaling": {
+    "bucket": "unit",
+    "category": "server"
+  },
+  "test_simatic": {
+    "bucket": "unit",
+    "category": "fieldbus"
+  },
+  "test_sleep_sched": {
+    "bucket": "unit",
+    "category": "server"
+  },
+  "test_smb2": {
+    "bucket": "unit",
+    "category": "smb"
+  },
+  "test_smb_client": {
+    "bucket": "integration",
+    "category": "smb"
+  },
+  "test_smb_crypto": {
+    "bucket": "unit",
+    "category": "smb"
+  },
+  "test_smbus": {
+    "bucket": "unit",
+    "category": "smb"
+  },
+  "test_smtp": {
+    "bucket": "protocols",
+    "category": "net"
+  },
+  "test_snmp_agent": {
+    "bucket": "protocols",
+    "category": "iot"
+  },
+  "test_snmp_ber": {
+    "bucket": "unit",
+    "category": "iot"
+  },
+  "test_snmp_trap": {
+    "bucket": "unit",
+    "category": "iot"
+  },
+  "test_snmp_v3": {
+    "bucket": "protocols",
+    "category": "iot"
+  },
+  "test_snp": {
+    "bucket": "unit",
+    "category": "fieldbus"
+  },
+  "test_sockpool": {
+    "bucket": "unit",
+    "category": "transport"
+  },
+  "test_southbound": {
+    "bucket": "protocols",
+    "category": "net"
+  },
+  "test_spa_router": {
+    "bucket": "unit",
+    "category": "web"
+  },
+  "test_span": {
+    "bucket": "unit",
+    "category": "mmgr"
+  },
+  "test_sparkplug": {
+    "bucket": "unit",
+    "category": "iot"
+  },
+  "test_spnego": {
+    "bucket": "unit",
+    "category": "smb"
+  },
+  "test_sqlite": {
+    "bucket": "unit",
+    "category": "storage"
+  },
+  "test_sse": {
+    "bucket": "integration",
+    "category": "http"
+  },
+  "test_ssh_aesgcm": {
+    "bucket": "unit",
+    "category": "ssh"
+  },
+  "test_ssh_auth": {
+    "bucket": "integration",
+    "category": "ssh"
+  },
+  "test_ssh_chachapoly": {
+    "bucket": "unit",
+    "category": "ssh"
+  },
+  "test_ssh_channel": {
+    "bucket": "integration",
+    "category": "ssh"
+  },
+  "test_ssh_comp": {
+    "bucket": "integration",
+    "category": "ssh"
+  },
+  "test_ssh_conn": {
+    "bucket": "integration",
+    "category": "ssh"
+  },
+  "test_ssh_crypto": {
+    "bucket": "unit",
+    "category": "ssh"
+  },
+  "test_ssh_ecdsa": {
+    "bucket": "unit",
+    "category": "ssh"
+  },
+  "test_ssh_ed25519": {
+    "bucket": "unit",
+    "category": "ssh"
+  },
+  "test_ssh_hardening": {
+    "bucket": "integration",
+    "category": "ssh"
+  },
+  "test_ssh_inflate": {
+    "bucket": "unit",
+    "category": "ssh"
+  },
+  "test_ssh_kbdint": {
+    "bucket": "integration",
+    "category": "ssh"
+  },
+  "test_ssh_pqc": {
+    "bucket": "integration",
+    "category": "ssh"
+  },
+  "test_ssh_server": {
+    "bucket": "integration",
+    "category": "ssh"
+  },
+  "test_ssh_sftp": {
+    "bucket": "unit",
+    "category": "ssh"
+  },
+  "test_ssh_transport": {
+    "bucket": "integration",
+    "category": "ssh"
+  },
+  "test_ssh_zlib": {
+    "bucket": "unit",
+    "category": "ssh"
+  },
+  "test_statsd": {
+    "bucket": "protocols",
+    "category": "transport"
+  },
+  "test_stomp": {
+    "bucket": "unit",
+    "category": "iot"
+  },
+  "test_sunspec": {
+    "bucket": "unit",
+    "category": "energy"
+  },
+  "test_swar": {
+    "bucket": "unit",
+    "category": "mmgr"
+  },
+  "test_syslog": {
+    "bucket": "protocols",
+    "category": "transport"
+  },
+  "test_telemetry": {
+    "bucket": "unit",
+    "category": "iot"
+  },
+  "test_telnet": {
+    "bucket": "integration",
+    "category": "session"
+  },
+  "test_template": {
+    "bucket": "integration",
+    "category": "transport"
+  },
+  "test_thread": {
+    "bucket": "unit",
+    "category": "radio"
+  },
+  "test_time_source": {
+    "bucket": "unit",
+    "category": "timing_position"
+  },
+  "test_tls13_kdf": {
+    "bucket": "unit",
+    "category": "tls"
+  },
+  "test_tls13_msg": {
+    "bucket": "unit",
+    "category": "tls"
+  },
+  "test_tls_policy": {
+    "bucket": "unit",
+    "category": "tls"
+  },
+  "test_totp": {
+    "bucket": "unit",
+    "category": "security"
+  },
+  "test_trace_capture": {
+    "bucket": "unit",
+    "category": "server"
+  },
+  "test_transport": {
+    "bucket": "integration",
+    "category": "transport"
+  },
+  "test_ubx": {
+    "bucket": "unit",
+    "category": "timing_position"
+  },
+  "test_udp_hot": {
+    "bucket": "integration",
+    "category": "transport"
+  },
+  "test_udp_telemetry": {
+    "bucket": "unit",
+    "category": "transport"
+  },
+  "test_udp_transport": {
+    "bucket": "integration",
+    "category": "transport"
+  },
+  "test_umati": {
+    "bucket": "unit",
+    "category": "fieldbus"
+  },
+  "test_upload": {
+    "bucket": "integration",
+    "category": "server"
+  },
+  "test_utmc": {
+    "bucket": "unit",
+    "category": "transportation"
+  },
+  "test_vl53l0x": {
+    "bucket": "unit",
+    "category": "peripherals"
+  },
+  "test_vxi11": {
+    "bucket": "unit",
+    "category": "instrumentation"
+  },
+  "test_wal": {
+    "bucket": "protocols",
+    "category": "storage"
+  },
+  "test_wal_store": {
+    "bucket": "protocols",
+    "category": "storage"
+  },
+  "test_wamp": {
+    "bucket": "unit",
+    "category": "iot"
+  },
+  "test_wave": {
+    "bucket": "unit",
+    "category": "transportation"
+  },
+  "test_wearlevel": {
+    "bucket": "unit",
+    "category": "storage"
+  },
+  "test_web_terminal": {
+    "bucket": "integration",
+    "category": "transport"
+  },
+  "test_webdav": {
+    "bucket": "unit",
+    "category": "http"
+  },
+  "test_webdav_handler": {
+    "bucket": "integration",
+    "category": "http"
+  },
+  "test_webhook": {
+    "bucket": "unit",
+    "category": "net"
+  },
+  "test_websocket": {
+    "bucket": "integration",
+    "category": "http"
+  },
+  "test_wifi_sniffer": {
+    "bucket": "unit",
+    "category": "radio"
+  },
+  "test_wisun": {
+    "bucket": "unit",
+    "category": "radio"
+  },
+  "test_workers": {
+    "bucket": "integration",
+    "category": "transport"
+  },
+  "test_ws_client": {
+    "bucket": "unit",
+    "category": "http"
+  },
+  "test_xmpp": {
+    "bucket": "unit",
+    "category": "iot"
+  },
+  "test_zigbee": {
+    "bucket": "unit",
+    "category": "radio"
+  },
+  "test_zwave": {
+    "bucket": "unit",
+    "category": "radio"
+  }
+}
