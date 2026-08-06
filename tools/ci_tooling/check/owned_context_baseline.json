@@ -1,6 +1,4 @@
 [
-  "core_setup/hal/esp/esp_crypto_hal.c|s_rsa#1",
-  "core_setup/physical/esp/physical_esp.cpp|s_phy_monitor#1",
   "src/mmgr/dma.c|s_dma#1",
   "src/mmgr/secure.c|s_secure#1",
   "src/mmgr/secure.c|s_secure_storage#1",
@@ -10,6 +8,7 @@
   "src/network_drivers/application/sftp/ssh_sftp.c|s_sftp#1",
   "src/network_drivers/network/dns_resolver.c|s_dns_test#1",
   "src/network_drivers/network/dns_resolver.c|s_dr#1",
+  "src/network_drivers/network/forward/forward.c|s_fwd#1",
   "src/network_drivers/physical/radio_power.c|s_busy#1",
   "src/network_drivers/presentation/http/http3/quic_server.c|s_qpool#1",
   "src/network_drivers/presentation/http/http3/quic_server.c|s_quic#1",
@@ -38,7 +37,6 @@
   "src/services/machine_tool/robotics/robotics.c|s_robotics#1",
   "src/services/machine_tool/umati/umati.c|s_umati#1",
   "src/services/net/dns_server/dns_server.c|s_dns#1",
-  "src/network_drivers/network/forward/forward.c|s_fwd#1",
   "src/services/net/gateway/gateway.c|s_gw#1",
   "src/services/net/iface_bridge/iface_bridge.c|s_bridge#1",
   "src/services/net/iface_bridge/iface_bridge_hw.c|s_ctx#1",
