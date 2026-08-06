@@ -268,6 +268,14 @@ typedef struct
 } PhysicalLinkNs;
 
 /**
+ * @brief The radio interface, defined in radio_power.h.
+ *
+ * Named here rather than included: radio_power.h needs this file's pc_phy_ps and pc_phy_frame_fn, so
+ * the dependency runs one way. A child is a pointer, so its declaration is all this needs.
+ */
+typedef struct RadioNs RadioNs;
+
+/**
  * @brief Layer 1: the interfaces this device actually has.
  *
  * A child is a pointer because a table in one translation unit is not a constant

@@ -59,7 +59,7 @@ typedef struct RadioCtx RadioCtx;
  * one while any bridge is active; other bulk paths (large file serves, streaming PUT) can do the
  * same. Both are no-ops on host.
  */
-typedef struct
+typedef struct RadioNs
 {
 #if PC_ENABLE_RADIO_POWER
     RadioCtx *ctx;
